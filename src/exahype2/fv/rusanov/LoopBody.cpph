@@ -817,10 +817,8 @@ void exahype2::fv::rusanov::internal::computeNonconservativeFlux_LoopBody(
   );
 
 
-  std::cout << leftAdjacentVolume << " ->" << QInEnumerator(patchIndex,leftAdjacentVolume,0)
+//  std::cout << leftAdjacentVolume << " ->" << QInEnumerator(patchIndex,leftAdjacentVolume,0)
             ;
-
-/*
   if (pick==PickAllEntriesFromOutputVector) {
     // scatter
     for (int unknown=0; unknown<QInEnumerator._unknowns; unknown++) {
@@ -830,7 +828,6 @@ void exahype2::fv::rusanov::internal::computeNonconservativeFlux_LoopBody(
   else {
     QNcp[ QNcpEnumerator(patchIndex,volumeIndex,pick) ] = QFluxGathered[pick];
   }
-*/
 }
 
 

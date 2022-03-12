@@ -157,7 +157,6 @@ am__objects_1 = libExaHyPE2Core2d_a-CellData.$(OBJEXT) \
 	aderdg/tests/libExaHyPE2Core2d_a-ADERDGTest.$(OBJEXT) \
 	fv/libExaHyPE2Core2d_a-BoundaryConditions.$(OBJEXT) \
 	fv/libExaHyPE2Core2d_a-PatchUtils.$(OBJEXT) \
-	fv/libExaHyPE2Core2d_a-Rusanov.$(OBJEXT) \
 	fv/enumerator/libExaHyPE2Core2d_a-AoSLexicographicVolumeEnumerator.$(OBJEXT) \
 	fv/enumerator/libExaHyPE2Core2d_a-SoALexicographicVolumeEnumerator.$(OBJEXT) \
 	fv/enumerator/libExaHyPE2Core2d_a-AoSoALexicographicVolumeEnumerator.$(OBJEXT) \
@@ -186,7 +185,6 @@ am__objects_2 = libExaHyPE2Core2d_asserts_a-CellData.$(OBJEXT) \
 	aderdg/tests/libExaHyPE2Core2d_asserts_a-ADERDGTest.$(OBJEXT) \
 	fv/libExaHyPE2Core2d_asserts_a-BoundaryConditions.$(OBJEXT) \
 	fv/libExaHyPE2Core2d_asserts_a-PatchUtils.$(OBJEXT) \
-	fv/libExaHyPE2Core2d_asserts_a-Rusanov.$(OBJEXT) \
 	fv/enumerator/libExaHyPE2Core2d_asserts_a-AoSLexicographicVolumeEnumerator.$(OBJEXT) \
 	fv/enumerator/libExaHyPE2Core2d_asserts_a-SoALexicographicVolumeEnumerator.$(OBJEXT) \
 	fv/enumerator/libExaHyPE2Core2d_asserts_a-AoSoALexicographicVolumeEnumerator.$(OBJEXT) \
@@ -216,7 +214,6 @@ am__objects_3 = libExaHyPE2Core2d_debug_a-CellData.$(OBJEXT) \
 	aderdg/tests/libExaHyPE2Core2d_debug_a-ADERDGTest.$(OBJEXT) \
 	fv/libExaHyPE2Core2d_debug_a-BoundaryConditions.$(OBJEXT) \
 	fv/libExaHyPE2Core2d_debug_a-PatchUtils.$(OBJEXT) \
-	fv/libExaHyPE2Core2d_debug_a-Rusanov.$(OBJEXT) \
 	fv/enumerator/libExaHyPE2Core2d_debug_a-AoSLexicographicVolumeEnumerator.$(OBJEXT) \
 	fv/enumerator/libExaHyPE2Core2d_debug_a-SoALexicographicVolumeEnumerator.$(OBJEXT) \
 	fv/enumerator/libExaHyPE2Core2d_debug_a-AoSoALexicographicVolumeEnumerator.$(OBJEXT) \
@@ -246,7 +243,6 @@ am__objects_4 = libExaHyPE2Core2d_stats_a-CellData.$(OBJEXT) \
 	aderdg/tests/libExaHyPE2Core2d_stats_a-ADERDGTest.$(OBJEXT) \
 	fv/libExaHyPE2Core2d_stats_a-BoundaryConditions.$(OBJEXT) \
 	fv/libExaHyPE2Core2d_stats_a-PatchUtils.$(OBJEXT) \
-	fv/libExaHyPE2Core2d_stats_a-Rusanov.$(OBJEXT) \
 	fv/enumerator/libExaHyPE2Core2d_stats_a-AoSLexicographicVolumeEnumerator.$(OBJEXT) \
 	fv/enumerator/libExaHyPE2Core2d_stats_a-SoALexicographicVolumeEnumerator.$(OBJEXT) \
 	fv/enumerator/libExaHyPE2Core2d_stats_a-AoSoALexicographicVolumeEnumerator.$(OBJEXT) \
@@ -276,7 +272,6 @@ am__objects_5 = libExaHyPE2Core2d_trace_a-CellData.$(OBJEXT) \
 	aderdg/tests/libExaHyPE2Core2d_trace_a-ADERDGTest.$(OBJEXT) \
 	fv/libExaHyPE2Core2d_trace_a-BoundaryConditions.$(OBJEXT) \
 	fv/libExaHyPE2Core2d_trace_a-PatchUtils.$(OBJEXT) \
-	fv/libExaHyPE2Core2d_trace_a-Rusanov.$(OBJEXT) \
 	fv/enumerator/libExaHyPE2Core2d_trace_a-AoSLexicographicVolumeEnumerator.$(OBJEXT) \
 	fv/enumerator/libExaHyPE2Core2d_trace_a-SoALexicographicVolumeEnumerator.$(OBJEXT) \
 	fv/enumerator/libExaHyPE2Core2d_trace_a-AoSoALexicographicVolumeEnumerator.$(OBJEXT) \
@@ -306,7 +301,6 @@ am__objects_6 = libExaHyPE2Core3d_a-CellData.$(OBJEXT) \
 	aderdg/tests/libExaHyPE2Core3d_a-ADERDGTest.$(OBJEXT) \
 	fv/libExaHyPE2Core3d_a-BoundaryConditions.$(OBJEXT) \
 	fv/libExaHyPE2Core3d_a-PatchUtils.$(OBJEXT) \
-	fv/libExaHyPE2Core3d_a-Rusanov.$(OBJEXT) \
 	fv/enumerator/libExaHyPE2Core3d_a-AoSLexicographicVolumeEnumerator.$(OBJEXT) \
 	fv/enumerator/libExaHyPE2Core3d_a-SoALexicographicVolumeEnumerator.$(OBJEXT) \
 	fv/enumerator/libExaHyPE2Core3d_a-AoSoALexicographicVolumeEnumerator.$(OBJEXT) \
@@ -335,7 +329,6 @@ am__objects_7 = libExaHyPE2Core3d_asserts_a-CellData.$(OBJEXT) \
 	aderdg/tests/libExaHyPE2Core3d_asserts_a-ADERDGTest.$(OBJEXT) \
 	fv/libExaHyPE2Core3d_asserts_a-BoundaryConditions.$(OBJEXT) \
 	fv/libExaHyPE2Core3d_asserts_a-PatchUtils.$(OBJEXT) \
-	fv/libExaHyPE2Core3d_asserts_a-Rusanov.$(OBJEXT) \
 	fv/enumerator/libExaHyPE2Core3d_asserts_a-AoSLexicographicVolumeEnumerator.$(OBJEXT) \
 	fv/enumerator/libExaHyPE2Core3d_asserts_a-SoALexicographicVolumeEnumerator.$(OBJEXT) \
 	fv/enumerator/libExaHyPE2Core3d_asserts_a-AoSoALexicographicVolumeEnumerator.$(OBJEXT) \
@@ -365,7 +358,6 @@ am__objects_8 = libExaHyPE2Core3d_debug_a-CellData.$(OBJEXT) \
 	aderdg/tests/libExaHyPE2Core3d_debug_a-ADERDGTest.$(OBJEXT) \
 	fv/libExaHyPE2Core3d_debug_a-BoundaryConditions.$(OBJEXT) \
 	fv/libExaHyPE2Core3d_debug_a-PatchUtils.$(OBJEXT) \
-	fv/libExaHyPE2Core3d_debug_a-Rusanov.$(OBJEXT) \
 	fv/enumerator/libExaHyPE2Core3d_debug_a-AoSLexicographicVolumeEnumerator.$(OBJEXT) \
 	fv/enumerator/libExaHyPE2Core3d_debug_a-SoALexicographicVolumeEnumerator.$(OBJEXT) \
 	fv/enumerator/libExaHyPE2Core3d_debug_a-AoSoALexicographicVolumeEnumerator.$(OBJEXT) \
@@ -395,7 +387,6 @@ am__objects_9 = libExaHyPE2Core3d_stats_a-CellData.$(OBJEXT) \
 	aderdg/tests/libExaHyPE2Core3d_stats_a-ADERDGTest.$(OBJEXT) \
 	fv/libExaHyPE2Core3d_stats_a-BoundaryConditions.$(OBJEXT) \
 	fv/libExaHyPE2Core3d_stats_a-PatchUtils.$(OBJEXT) \
-	fv/libExaHyPE2Core3d_stats_a-Rusanov.$(OBJEXT) \
 	fv/enumerator/libExaHyPE2Core3d_stats_a-AoSLexicographicVolumeEnumerator.$(OBJEXT) \
 	fv/enumerator/libExaHyPE2Core3d_stats_a-SoALexicographicVolumeEnumerator.$(OBJEXT) \
 	fv/enumerator/libExaHyPE2Core3d_stats_a-AoSoALexicographicVolumeEnumerator.$(OBJEXT) \
@@ -425,7 +416,6 @@ am__objects_10 = libExaHyPE2Core3d_trace_a-CellData.$(OBJEXT) \
 	aderdg/tests/libExaHyPE2Core3d_trace_a-ADERDGTest.$(OBJEXT) \
 	fv/libExaHyPE2Core3d_trace_a-BoundaryConditions.$(OBJEXT) \
 	fv/libExaHyPE2Core3d_trace_a-PatchUtils.$(OBJEXT) \
-	fv/libExaHyPE2Core3d_trace_a-Rusanov.$(OBJEXT) \
 	fv/enumerator/libExaHyPE2Core3d_trace_a-AoSLexicographicVolumeEnumerator.$(OBJEXT) \
 	fv/enumerator/libExaHyPE2Core3d_trace_a-SoALexicographicVolumeEnumerator.$(OBJEXT) \
 	fv/enumerator/libExaHyPE2Core3d_trace_a-AoSoALexicographicVolumeEnumerator.$(OBJEXT) \
@@ -621,34 +611,24 @@ am__depfiles_remade = ./$(DEPDIR)/libExaHyPE2Core2d_a-CellData.Po \
 	aderdg/tests/$(DEPDIR)/libExaHyPE2Core3d_trace_a-ADERDGTest.Po \
 	fv/$(DEPDIR)/libExaHyPE2Core2d_a-BoundaryConditions.Po \
 	fv/$(DEPDIR)/libExaHyPE2Core2d_a-PatchUtils.Po \
-	fv/$(DEPDIR)/libExaHyPE2Core2d_a-Rusanov.Po \
 	fv/$(DEPDIR)/libExaHyPE2Core2d_asserts_a-BoundaryConditions.Po \
 	fv/$(DEPDIR)/libExaHyPE2Core2d_asserts_a-PatchUtils.Po \
-	fv/$(DEPDIR)/libExaHyPE2Core2d_asserts_a-Rusanov.Po \
 	fv/$(DEPDIR)/libExaHyPE2Core2d_debug_a-BoundaryConditions.Po \
 	fv/$(DEPDIR)/libExaHyPE2Core2d_debug_a-PatchUtils.Po \
-	fv/$(DEPDIR)/libExaHyPE2Core2d_debug_a-Rusanov.Po \
 	fv/$(DEPDIR)/libExaHyPE2Core2d_stats_a-BoundaryConditions.Po \
 	fv/$(DEPDIR)/libExaHyPE2Core2d_stats_a-PatchUtils.Po \
-	fv/$(DEPDIR)/libExaHyPE2Core2d_stats_a-Rusanov.Po \
 	fv/$(DEPDIR)/libExaHyPE2Core2d_trace_a-BoundaryConditions.Po \
 	fv/$(DEPDIR)/libExaHyPE2Core2d_trace_a-PatchUtils.Po \
-	fv/$(DEPDIR)/libExaHyPE2Core2d_trace_a-Rusanov.Po \
 	fv/$(DEPDIR)/libExaHyPE2Core3d_a-BoundaryConditions.Po \
 	fv/$(DEPDIR)/libExaHyPE2Core3d_a-PatchUtils.Po \
-	fv/$(DEPDIR)/libExaHyPE2Core3d_a-Rusanov.Po \
 	fv/$(DEPDIR)/libExaHyPE2Core3d_asserts_a-BoundaryConditions.Po \
 	fv/$(DEPDIR)/libExaHyPE2Core3d_asserts_a-PatchUtils.Po \
-	fv/$(DEPDIR)/libExaHyPE2Core3d_asserts_a-Rusanov.Po \
 	fv/$(DEPDIR)/libExaHyPE2Core3d_debug_a-BoundaryConditions.Po \
 	fv/$(DEPDIR)/libExaHyPE2Core3d_debug_a-PatchUtils.Po \
-	fv/$(DEPDIR)/libExaHyPE2Core3d_debug_a-Rusanov.Po \
 	fv/$(DEPDIR)/libExaHyPE2Core3d_stats_a-BoundaryConditions.Po \
 	fv/$(DEPDIR)/libExaHyPE2Core3d_stats_a-PatchUtils.Po \
-	fv/$(DEPDIR)/libExaHyPE2Core3d_stats_a-Rusanov.Po \
 	fv/$(DEPDIR)/libExaHyPE2Core3d_trace_a-BoundaryConditions.Po \
 	fv/$(DEPDIR)/libExaHyPE2Core3d_trace_a-PatchUtils.Po \
-	fv/$(DEPDIR)/libExaHyPE2Core3d_trace_a-Rusanov.Po \
 	fv/enumerator/$(DEPDIR)/libExaHyPE2Core2d_a-AoSLexicographicVolumeEnumerator.Po \
 	fv/enumerator/$(DEPDIR)/libExaHyPE2Core2d_a-AoSoALexicographicVolumeEnumerator.Po \
 	fv/enumerator/$(DEPDIR)/libExaHyPE2Core2d_a-SoALexicographicVolumeEnumerator.Po \
@@ -946,7 +926,6 @@ ExaHyPE2Sources = \
   aderdg/tests/ADERDGTest.cpp \
   fv/BoundaryConditions.cpp \
   fv/PatchUtils.cpp \
-  fv/Rusanov.cpp \
   fv/enumerator/AoSLexicographicVolumeEnumerator.cpp \
   fv/enumerator/SoALexicographicVolumeEnumerator.cpp \
   fv/enumerator/AoSoALexicographicVolumeEnumerator.cpp \
@@ -1074,8 +1053,6 @@ fv/libExaHyPE2Core2d_a-BoundaryConditions.$(OBJEXT):  \
 	fv/$(am__dirstamp) fv/$(DEPDIR)/$(am__dirstamp)
 fv/libExaHyPE2Core2d_a-PatchUtils.$(OBJEXT): fv/$(am__dirstamp) \
 	fv/$(DEPDIR)/$(am__dirstamp)
-fv/libExaHyPE2Core2d_a-Rusanov.$(OBJEXT): fv/$(am__dirstamp) \
-	fv/$(DEPDIR)/$(am__dirstamp)
 fv/enumerator/$(am__dirstamp):
 	@$(MKDIR_P) fv/enumerator
 	@: > fv/enumerator/$(am__dirstamp)
@@ -1125,8 +1102,6 @@ fv/libExaHyPE2Core2d_asserts_a-BoundaryConditions.$(OBJEXT):  \
 	fv/$(am__dirstamp) fv/$(DEPDIR)/$(am__dirstamp)
 fv/libExaHyPE2Core2d_asserts_a-PatchUtils.$(OBJEXT):  \
 	fv/$(am__dirstamp) fv/$(DEPDIR)/$(am__dirstamp)
-fv/libExaHyPE2Core2d_asserts_a-Rusanov.$(OBJEXT): fv/$(am__dirstamp) \
-	fv/$(DEPDIR)/$(am__dirstamp)
 fv/enumerator/libExaHyPE2Core2d_asserts_a-AoSLexicographicVolumeEnumerator.$(OBJEXT):  \
 	fv/enumerator/$(am__dirstamp) \
 	fv/enumerator/$(DEPDIR)/$(am__dirstamp)
@@ -1163,8 +1138,6 @@ aderdg/tests/libExaHyPE2Core2d_debug_a-ADERDGTest.$(OBJEXT):  \
 fv/libExaHyPE2Core2d_debug_a-BoundaryConditions.$(OBJEXT):  \
 	fv/$(am__dirstamp) fv/$(DEPDIR)/$(am__dirstamp)
 fv/libExaHyPE2Core2d_debug_a-PatchUtils.$(OBJEXT): fv/$(am__dirstamp) \
-	fv/$(DEPDIR)/$(am__dirstamp)
-fv/libExaHyPE2Core2d_debug_a-Rusanov.$(OBJEXT): fv/$(am__dirstamp) \
 	fv/$(DEPDIR)/$(am__dirstamp)
 fv/enumerator/libExaHyPE2Core2d_debug_a-AoSLexicographicVolumeEnumerator.$(OBJEXT):  \
 	fv/enumerator/$(am__dirstamp) \
@@ -1203,8 +1176,6 @@ fv/libExaHyPE2Core2d_stats_a-BoundaryConditions.$(OBJEXT):  \
 	fv/$(am__dirstamp) fv/$(DEPDIR)/$(am__dirstamp)
 fv/libExaHyPE2Core2d_stats_a-PatchUtils.$(OBJEXT): fv/$(am__dirstamp) \
 	fv/$(DEPDIR)/$(am__dirstamp)
-fv/libExaHyPE2Core2d_stats_a-Rusanov.$(OBJEXT): fv/$(am__dirstamp) \
-	fv/$(DEPDIR)/$(am__dirstamp)
 fv/enumerator/libExaHyPE2Core2d_stats_a-AoSLexicographicVolumeEnumerator.$(OBJEXT):  \
 	fv/enumerator/$(am__dirstamp) \
 	fv/enumerator/$(DEPDIR)/$(am__dirstamp)
@@ -1241,8 +1212,6 @@ aderdg/tests/libExaHyPE2Core2d_trace_a-ADERDGTest.$(OBJEXT):  \
 fv/libExaHyPE2Core2d_trace_a-BoundaryConditions.$(OBJEXT):  \
 	fv/$(am__dirstamp) fv/$(DEPDIR)/$(am__dirstamp)
 fv/libExaHyPE2Core2d_trace_a-PatchUtils.$(OBJEXT): fv/$(am__dirstamp) \
-	fv/$(DEPDIR)/$(am__dirstamp)
-fv/libExaHyPE2Core2d_trace_a-Rusanov.$(OBJEXT): fv/$(am__dirstamp) \
 	fv/$(DEPDIR)/$(am__dirstamp)
 fv/enumerator/libExaHyPE2Core2d_trace_a-AoSLexicographicVolumeEnumerator.$(OBJEXT):  \
 	fv/enumerator/$(am__dirstamp) \
@@ -1281,8 +1250,6 @@ fv/libExaHyPE2Core3d_a-BoundaryConditions.$(OBJEXT):  \
 	fv/$(am__dirstamp) fv/$(DEPDIR)/$(am__dirstamp)
 fv/libExaHyPE2Core3d_a-PatchUtils.$(OBJEXT): fv/$(am__dirstamp) \
 	fv/$(DEPDIR)/$(am__dirstamp)
-fv/libExaHyPE2Core3d_a-Rusanov.$(OBJEXT): fv/$(am__dirstamp) \
-	fv/$(DEPDIR)/$(am__dirstamp)
 fv/enumerator/libExaHyPE2Core3d_a-AoSLexicographicVolumeEnumerator.$(OBJEXT):  \
 	fv/enumerator/$(am__dirstamp) \
 	fv/enumerator/$(DEPDIR)/$(am__dirstamp)
@@ -1320,8 +1287,6 @@ fv/libExaHyPE2Core3d_asserts_a-BoundaryConditions.$(OBJEXT):  \
 	fv/$(am__dirstamp) fv/$(DEPDIR)/$(am__dirstamp)
 fv/libExaHyPE2Core3d_asserts_a-PatchUtils.$(OBJEXT):  \
 	fv/$(am__dirstamp) fv/$(DEPDIR)/$(am__dirstamp)
-fv/libExaHyPE2Core3d_asserts_a-Rusanov.$(OBJEXT): fv/$(am__dirstamp) \
-	fv/$(DEPDIR)/$(am__dirstamp)
 fv/enumerator/libExaHyPE2Core3d_asserts_a-AoSLexicographicVolumeEnumerator.$(OBJEXT):  \
 	fv/enumerator/$(am__dirstamp) \
 	fv/enumerator/$(DEPDIR)/$(am__dirstamp)
@@ -1358,8 +1323,6 @@ aderdg/tests/libExaHyPE2Core3d_debug_a-ADERDGTest.$(OBJEXT):  \
 fv/libExaHyPE2Core3d_debug_a-BoundaryConditions.$(OBJEXT):  \
 	fv/$(am__dirstamp) fv/$(DEPDIR)/$(am__dirstamp)
 fv/libExaHyPE2Core3d_debug_a-PatchUtils.$(OBJEXT): fv/$(am__dirstamp) \
-	fv/$(DEPDIR)/$(am__dirstamp)
-fv/libExaHyPE2Core3d_debug_a-Rusanov.$(OBJEXT): fv/$(am__dirstamp) \
 	fv/$(DEPDIR)/$(am__dirstamp)
 fv/enumerator/libExaHyPE2Core3d_debug_a-AoSLexicographicVolumeEnumerator.$(OBJEXT):  \
 	fv/enumerator/$(am__dirstamp) \
@@ -1398,8 +1361,6 @@ fv/libExaHyPE2Core3d_stats_a-BoundaryConditions.$(OBJEXT):  \
 	fv/$(am__dirstamp) fv/$(DEPDIR)/$(am__dirstamp)
 fv/libExaHyPE2Core3d_stats_a-PatchUtils.$(OBJEXT): fv/$(am__dirstamp) \
 	fv/$(DEPDIR)/$(am__dirstamp)
-fv/libExaHyPE2Core3d_stats_a-Rusanov.$(OBJEXT): fv/$(am__dirstamp) \
-	fv/$(DEPDIR)/$(am__dirstamp)
 fv/enumerator/libExaHyPE2Core3d_stats_a-AoSLexicographicVolumeEnumerator.$(OBJEXT):  \
 	fv/enumerator/$(am__dirstamp) \
 	fv/enumerator/$(DEPDIR)/$(am__dirstamp)
@@ -1436,8 +1397,6 @@ aderdg/tests/libExaHyPE2Core3d_trace_a-ADERDGTest.$(OBJEXT):  \
 fv/libExaHyPE2Core3d_trace_a-BoundaryConditions.$(OBJEXT):  \
 	fv/$(am__dirstamp) fv/$(DEPDIR)/$(am__dirstamp)
 fv/libExaHyPE2Core3d_trace_a-PatchUtils.$(OBJEXT): fv/$(am__dirstamp) \
-	fv/$(DEPDIR)/$(am__dirstamp)
-fv/libExaHyPE2Core3d_trace_a-Rusanov.$(OBJEXT): fv/$(am__dirstamp) \
 	fv/$(DEPDIR)/$(am__dirstamp)
 fv/enumerator/libExaHyPE2Core3d_trace_a-AoSLexicographicVolumeEnumerator.$(OBJEXT):  \
 	fv/enumerator/$(am__dirstamp) \
@@ -1641,34 +1600,24 @@ include aderdg/tests/$(DEPDIR)/libExaHyPE2Core3d_stats_a-ADERDGTest.Po # am--inc
 include aderdg/tests/$(DEPDIR)/libExaHyPE2Core3d_trace_a-ADERDGTest.Po # am--include-marker
 include fv/$(DEPDIR)/libExaHyPE2Core2d_a-BoundaryConditions.Po # am--include-marker
 include fv/$(DEPDIR)/libExaHyPE2Core2d_a-PatchUtils.Po # am--include-marker
-include fv/$(DEPDIR)/libExaHyPE2Core2d_a-Rusanov.Po # am--include-marker
 include fv/$(DEPDIR)/libExaHyPE2Core2d_asserts_a-BoundaryConditions.Po # am--include-marker
 include fv/$(DEPDIR)/libExaHyPE2Core2d_asserts_a-PatchUtils.Po # am--include-marker
-include fv/$(DEPDIR)/libExaHyPE2Core2d_asserts_a-Rusanov.Po # am--include-marker
 include fv/$(DEPDIR)/libExaHyPE2Core2d_debug_a-BoundaryConditions.Po # am--include-marker
 include fv/$(DEPDIR)/libExaHyPE2Core2d_debug_a-PatchUtils.Po # am--include-marker
-include fv/$(DEPDIR)/libExaHyPE2Core2d_debug_a-Rusanov.Po # am--include-marker
 include fv/$(DEPDIR)/libExaHyPE2Core2d_stats_a-BoundaryConditions.Po # am--include-marker
 include fv/$(DEPDIR)/libExaHyPE2Core2d_stats_a-PatchUtils.Po # am--include-marker
-include fv/$(DEPDIR)/libExaHyPE2Core2d_stats_a-Rusanov.Po # am--include-marker
 include fv/$(DEPDIR)/libExaHyPE2Core2d_trace_a-BoundaryConditions.Po # am--include-marker
 include fv/$(DEPDIR)/libExaHyPE2Core2d_trace_a-PatchUtils.Po # am--include-marker
-include fv/$(DEPDIR)/libExaHyPE2Core2d_trace_a-Rusanov.Po # am--include-marker
 include fv/$(DEPDIR)/libExaHyPE2Core3d_a-BoundaryConditions.Po # am--include-marker
 include fv/$(DEPDIR)/libExaHyPE2Core3d_a-PatchUtils.Po # am--include-marker
-include fv/$(DEPDIR)/libExaHyPE2Core3d_a-Rusanov.Po # am--include-marker
 include fv/$(DEPDIR)/libExaHyPE2Core3d_asserts_a-BoundaryConditions.Po # am--include-marker
 include fv/$(DEPDIR)/libExaHyPE2Core3d_asserts_a-PatchUtils.Po # am--include-marker
-include fv/$(DEPDIR)/libExaHyPE2Core3d_asserts_a-Rusanov.Po # am--include-marker
 include fv/$(DEPDIR)/libExaHyPE2Core3d_debug_a-BoundaryConditions.Po # am--include-marker
 include fv/$(DEPDIR)/libExaHyPE2Core3d_debug_a-PatchUtils.Po # am--include-marker
-include fv/$(DEPDIR)/libExaHyPE2Core3d_debug_a-Rusanov.Po # am--include-marker
 include fv/$(DEPDIR)/libExaHyPE2Core3d_stats_a-BoundaryConditions.Po # am--include-marker
 include fv/$(DEPDIR)/libExaHyPE2Core3d_stats_a-PatchUtils.Po # am--include-marker
-include fv/$(DEPDIR)/libExaHyPE2Core3d_stats_a-Rusanov.Po # am--include-marker
 include fv/$(DEPDIR)/libExaHyPE2Core3d_trace_a-BoundaryConditions.Po # am--include-marker
 include fv/$(DEPDIR)/libExaHyPE2Core3d_trace_a-PatchUtils.Po # am--include-marker
-include fv/$(DEPDIR)/libExaHyPE2Core3d_trace_a-Rusanov.Po # am--include-marker
 include fv/enumerator/$(DEPDIR)/libExaHyPE2Core2d_a-AoSLexicographicVolumeEnumerator.Po # am--include-marker
 include fv/enumerator/$(DEPDIR)/libExaHyPE2Core2d_a-AoSoALexicographicVolumeEnumerator.Po # am--include-marker
 include fv/enumerator/$(DEPDIR)/libExaHyPE2Core2d_a-SoALexicographicVolumeEnumerator.Po # am--include-marker
@@ -2016,20 +1965,6 @@ fv/libExaHyPE2Core2d_a-PatchUtils.obj: fv/PatchUtils.cpp
 #	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) \
 #	$(AM_V_CXX_no)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libExaHyPE2Core2d_a_CXXFLAGS) $(CXXFLAGS) -c -o fv/libExaHyPE2Core2d_a-PatchUtils.obj `if test -f 'fv/PatchUtils.cpp'; then $(CYGPATH_W) 'fv/PatchUtils.cpp'; else $(CYGPATH_W) '$(srcdir)/fv/PatchUtils.cpp'; fi`
 
-fv/libExaHyPE2Core2d_a-Rusanov.o: fv/Rusanov.cpp
-	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libExaHyPE2Core2d_a_CXXFLAGS) $(CXXFLAGS) -MT fv/libExaHyPE2Core2d_a-Rusanov.o -MD -MP -MF fv/$(DEPDIR)/libExaHyPE2Core2d_a-Rusanov.Tpo -c -o fv/libExaHyPE2Core2d_a-Rusanov.o `test -f 'fv/Rusanov.cpp' || echo '$(srcdir)/'`fv/Rusanov.cpp
-	$(AM_V_at)$(am__mv) fv/$(DEPDIR)/libExaHyPE2Core2d_a-Rusanov.Tpo fv/$(DEPDIR)/libExaHyPE2Core2d_a-Rusanov.Po
-#	$(AM_V_CXX)source='fv/Rusanov.cpp' object='fv/libExaHyPE2Core2d_a-Rusanov.o' libtool=no \
-#	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) \
-#	$(AM_V_CXX_no)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libExaHyPE2Core2d_a_CXXFLAGS) $(CXXFLAGS) -c -o fv/libExaHyPE2Core2d_a-Rusanov.o `test -f 'fv/Rusanov.cpp' || echo '$(srcdir)/'`fv/Rusanov.cpp
-
-fv/libExaHyPE2Core2d_a-Rusanov.obj: fv/Rusanov.cpp
-	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libExaHyPE2Core2d_a_CXXFLAGS) $(CXXFLAGS) -MT fv/libExaHyPE2Core2d_a-Rusanov.obj -MD -MP -MF fv/$(DEPDIR)/libExaHyPE2Core2d_a-Rusanov.Tpo -c -o fv/libExaHyPE2Core2d_a-Rusanov.obj `if test -f 'fv/Rusanov.cpp'; then $(CYGPATH_W) 'fv/Rusanov.cpp'; else $(CYGPATH_W) '$(srcdir)/fv/Rusanov.cpp'; fi`
-	$(AM_V_at)$(am__mv) fv/$(DEPDIR)/libExaHyPE2Core2d_a-Rusanov.Tpo fv/$(DEPDIR)/libExaHyPE2Core2d_a-Rusanov.Po
-#	$(AM_V_CXX)source='fv/Rusanov.cpp' object='fv/libExaHyPE2Core2d_a-Rusanov.obj' libtool=no \
-#	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) \
-#	$(AM_V_CXX_no)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libExaHyPE2Core2d_a_CXXFLAGS) $(CXXFLAGS) -c -o fv/libExaHyPE2Core2d_a-Rusanov.obj `if test -f 'fv/Rusanov.cpp'; then $(CYGPATH_W) 'fv/Rusanov.cpp'; else $(CYGPATH_W) '$(srcdir)/fv/Rusanov.cpp'; fi`
-
 fv/enumerator/libExaHyPE2Core2d_a-AoSLexicographicVolumeEnumerator.o: fv/enumerator/AoSLexicographicVolumeEnumerator.cpp
 	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libExaHyPE2Core2d_a_CXXFLAGS) $(CXXFLAGS) -MT fv/enumerator/libExaHyPE2Core2d_a-AoSLexicographicVolumeEnumerator.o -MD -MP -MF fv/enumerator/$(DEPDIR)/libExaHyPE2Core2d_a-AoSLexicographicVolumeEnumerator.Tpo -c -o fv/enumerator/libExaHyPE2Core2d_a-AoSLexicographicVolumeEnumerator.o `test -f 'fv/enumerator/AoSLexicographicVolumeEnumerator.cpp' || echo '$(srcdir)/'`fv/enumerator/AoSLexicographicVolumeEnumerator.cpp
 	$(AM_V_at)$(am__mv) fv/enumerator/$(DEPDIR)/libExaHyPE2Core2d_a-AoSLexicographicVolumeEnumerator.Tpo fv/enumerator/$(DEPDIR)/libExaHyPE2Core2d_a-AoSLexicographicVolumeEnumerator.Po
@@ -2365,20 +2300,6 @@ fv/libExaHyPE2Core2d_asserts_a-PatchUtils.obj: fv/PatchUtils.cpp
 #	$(AM_V_CXX)source='fv/PatchUtils.cpp' object='fv/libExaHyPE2Core2d_asserts_a-PatchUtils.obj' libtool=no \
 #	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) \
 #	$(AM_V_CXX_no)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libExaHyPE2Core2d_asserts_a_CXXFLAGS) $(CXXFLAGS) -c -o fv/libExaHyPE2Core2d_asserts_a-PatchUtils.obj `if test -f 'fv/PatchUtils.cpp'; then $(CYGPATH_W) 'fv/PatchUtils.cpp'; else $(CYGPATH_W) '$(srcdir)/fv/PatchUtils.cpp'; fi`
-
-fv/libExaHyPE2Core2d_asserts_a-Rusanov.o: fv/Rusanov.cpp
-	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libExaHyPE2Core2d_asserts_a_CXXFLAGS) $(CXXFLAGS) -MT fv/libExaHyPE2Core2d_asserts_a-Rusanov.o -MD -MP -MF fv/$(DEPDIR)/libExaHyPE2Core2d_asserts_a-Rusanov.Tpo -c -o fv/libExaHyPE2Core2d_asserts_a-Rusanov.o `test -f 'fv/Rusanov.cpp' || echo '$(srcdir)/'`fv/Rusanov.cpp
-	$(AM_V_at)$(am__mv) fv/$(DEPDIR)/libExaHyPE2Core2d_asserts_a-Rusanov.Tpo fv/$(DEPDIR)/libExaHyPE2Core2d_asserts_a-Rusanov.Po
-#	$(AM_V_CXX)source='fv/Rusanov.cpp' object='fv/libExaHyPE2Core2d_asserts_a-Rusanov.o' libtool=no \
-#	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) \
-#	$(AM_V_CXX_no)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libExaHyPE2Core2d_asserts_a_CXXFLAGS) $(CXXFLAGS) -c -o fv/libExaHyPE2Core2d_asserts_a-Rusanov.o `test -f 'fv/Rusanov.cpp' || echo '$(srcdir)/'`fv/Rusanov.cpp
-
-fv/libExaHyPE2Core2d_asserts_a-Rusanov.obj: fv/Rusanov.cpp
-	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libExaHyPE2Core2d_asserts_a_CXXFLAGS) $(CXXFLAGS) -MT fv/libExaHyPE2Core2d_asserts_a-Rusanov.obj -MD -MP -MF fv/$(DEPDIR)/libExaHyPE2Core2d_asserts_a-Rusanov.Tpo -c -o fv/libExaHyPE2Core2d_asserts_a-Rusanov.obj `if test -f 'fv/Rusanov.cpp'; then $(CYGPATH_W) 'fv/Rusanov.cpp'; else $(CYGPATH_W) '$(srcdir)/fv/Rusanov.cpp'; fi`
-	$(AM_V_at)$(am__mv) fv/$(DEPDIR)/libExaHyPE2Core2d_asserts_a-Rusanov.Tpo fv/$(DEPDIR)/libExaHyPE2Core2d_asserts_a-Rusanov.Po
-#	$(AM_V_CXX)source='fv/Rusanov.cpp' object='fv/libExaHyPE2Core2d_asserts_a-Rusanov.obj' libtool=no \
-#	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) \
-#	$(AM_V_CXX_no)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libExaHyPE2Core2d_asserts_a_CXXFLAGS) $(CXXFLAGS) -c -o fv/libExaHyPE2Core2d_asserts_a-Rusanov.obj `if test -f 'fv/Rusanov.cpp'; then $(CYGPATH_W) 'fv/Rusanov.cpp'; else $(CYGPATH_W) '$(srcdir)/fv/Rusanov.cpp'; fi`
 
 fv/enumerator/libExaHyPE2Core2d_asserts_a-AoSLexicographicVolumeEnumerator.o: fv/enumerator/AoSLexicographicVolumeEnumerator.cpp
 	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libExaHyPE2Core2d_asserts_a_CXXFLAGS) $(CXXFLAGS) -MT fv/enumerator/libExaHyPE2Core2d_asserts_a-AoSLexicographicVolumeEnumerator.o -MD -MP -MF fv/enumerator/$(DEPDIR)/libExaHyPE2Core2d_asserts_a-AoSLexicographicVolumeEnumerator.Tpo -c -o fv/enumerator/libExaHyPE2Core2d_asserts_a-AoSLexicographicVolumeEnumerator.o `test -f 'fv/enumerator/AoSLexicographicVolumeEnumerator.cpp' || echo '$(srcdir)/'`fv/enumerator/AoSLexicographicVolumeEnumerator.cpp
@@ -2716,20 +2637,6 @@ fv/libExaHyPE2Core2d_debug_a-PatchUtils.obj: fv/PatchUtils.cpp
 #	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) \
 #	$(AM_V_CXX_no)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libExaHyPE2Core2d_debug_a_CXXFLAGS) $(CXXFLAGS) -c -o fv/libExaHyPE2Core2d_debug_a-PatchUtils.obj `if test -f 'fv/PatchUtils.cpp'; then $(CYGPATH_W) 'fv/PatchUtils.cpp'; else $(CYGPATH_W) '$(srcdir)/fv/PatchUtils.cpp'; fi`
 
-fv/libExaHyPE2Core2d_debug_a-Rusanov.o: fv/Rusanov.cpp
-	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libExaHyPE2Core2d_debug_a_CXXFLAGS) $(CXXFLAGS) -MT fv/libExaHyPE2Core2d_debug_a-Rusanov.o -MD -MP -MF fv/$(DEPDIR)/libExaHyPE2Core2d_debug_a-Rusanov.Tpo -c -o fv/libExaHyPE2Core2d_debug_a-Rusanov.o `test -f 'fv/Rusanov.cpp' || echo '$(srcdir)/'`fv/Rusanov.cpp
-	$(AM_V_at)$(am__mv) fv/$(DEPDIR)/libExaHyPE2Core2d_debug_a-Rusanov.Tpo fv/$(DEPDIR)/libExaHyPE2Core2d_debug_a-Rusanov.Po
-#	$(AM_V_CXX)source='fv/Rusanov.cpp' object='fv/libExaHyPE2Core2d_debug_a-Rusanov.o' libtool=no \
-#	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) \
-#	$(AM_V_CXX_no)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libExaHyPE2Core2d_debug_a_CXXFLAGS) $(CXXFLAGS) -c -o fv/libExaHyPE2Core2d_debug_a-Rusanov.o `test -f 'fv/Rusanov.cpp' || echo '$(srcdir)/'`fv/Rusanov.cpp
-
-fv/libExaHyPE2Core2d_debug_a-Rusanov.obj: fv/Rusanov.cpp
-	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libExaHyPE2Core2d_debug_a_CXXFLAGS) $(CXXFLAGS) -MT fv/libExaHyPE2Core2d_debug_a-Rusanov.obj -MD -MP -MF fv/$(DEPDIR)/libExaHyPE2Core2d_debug_a-Rusanov.Tpo -c -o fv/libExaHyPE2Core2d_debug_a-Rusanov.obj `if test -f 'fv/Rusanov.cpp'; then $(CYGPATH_W) 'fv/Rusanov.cpp'; else $(CYGPATH_W) '$(srcdir)/fv/Rusanov.cpp'; fi`
-	$(AM_V_at)$(am__mv) fv/$(DEPDIR)/libExaHyPE2Core2d_debug_a-Rusanov.Tpo fv/$(DEPDIR)/libExaHyPE2Core2d_debug_a-Rusanov.Po
-#	$(AM_V_CXX)source='fv/Rusanov.cpp' object='fv/libExaHyPE2Core2d_debug_a-Rusanov.obj' libtool=no \
-#	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) \
-#	$(AM_V_CXX_no)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libExaHyPE2Core2d_debug_a_CXXFLAGS) $(CXXFLAGS) -c -o fv/libExaHyPE2Core2d_debug_a-Rusanov.obj `if test -f 'fv/Rusanov.cpp'; then $(CYGPATH_W) 'fv/Rusanov.cpp'; else $(CYGPATH_W) '$(srcdir)/fv/Rusanov.cpp'; fi`
-
 fv/enumerator/libExaHyPE2Core2d_debug_a-AoSLexicographicVolumeEnumerator.o: fv/enumerator/AoSLexicographicVolumeEnumerator.cpp
 	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libExaHyPE2Core2d_debug_a_CXXFLAGS) $(CXXFLAGS) -MT fv/enumerator/libExaHyPE2Core2d_debug_a-AoSLexicographicVolumeEnumerator.o -MD -MP -MF fv/enumerator/$(DEPDIR)/libExaHyPE2Core2d_debug_a-AoSLexicographicVolumeEnumerator.Tpo -c -o fv/enumerator/libExaHyPE2Core2d_debug_a-AoSLexicographicVolumeEnumerator.o `test -f 'fv/enumerator/AoSLexicographicVolumeEnumerator.cpp' || echo '$(srcdir)/'`fv/enumerator/AoSLexicographicVolumeEnumerator.cpp
 	$(AM_V_at)$(am__mv) fv/enumerator/$(DEPDIR)/libExaHyPE2Core2d_debug_a-AoSLexicographicVolumeEnumerator.Tpo fv/enumerator/$(DEPDIR)/libExaHyPE2Core2d_debug_a-AoSLexicographicVolumeEnumerator.Po
@@ -3065,20 +2972,6 @@ fv/libExaHyPE2Core2d_stats_a-PatchUtils.obj: fv/PatchUtils.cpp
 #	$(AM_V_CXX)source='fv/PatchUtils.cpp' object='fv/libExaHyPE2Core2d_stats_a-PatchUtils.obj' libtool=no \
 #	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) \
 #	$(AM_V_CXX_no)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libExaHyPE2Core2d_stats_a_CXXFLAGS) $(CXXFLAGS) -c -o fv/libExaHyPE2Core2d_stats_a-PatchUtils.obj `if test -f 'fv/PatchUtils.cpp'; then $(CYGPATH_W) 'fv/PatchUtils.cpp'; else $(CYGPATH_W) '$(srcdir)/fv/PatchUtils.cpp'; fi`
-
-fv/libExaHyPE2Core2d_stats_a-Rusanov.o: fv/Rusanov.cpp
-	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libExaHyPE2Core2d_stats_a_CXXFLAGS) $(CXXFLAGS) -MT fv/libExaHyPE2Core2d_stats_a-Rusanov.o -MD -MP -MF fv/$(DEPDIR)/libExaHyPE2Core2d_stats_a-Rusanov.Tpo -c -o fv/libExaHyPE2Core2d_stats_a-Rusanov.o `test -f 'fv/Rusanov.cpp' || echo '$(srcdir)/'`fv/Rusanov.cpp
-	$(AM_V_at)$(am__mv) fv/$(DEPDIR)/libExaHyPE2Core2d_stats_a-Rusanov.Tpo fv/$(DEPDIR)/libExaHyPE2Core2d_stats_a-Rusanov.Po
-#	$(AM_V_CXX)source='fv/Rusanov.cpp' object='fv/libExaHyPE2Core2d_stats_a-Rusanov.o' libtool=no \
-#	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) \
-#	$(AM_V_CXX_no)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libExaHyPE2Core2d_stats_a_CXXFLAGS) $(CXXFLAGS) -c -o fv/libExaHyPE2Core2d_stats_a-Rusanov.o `test -f 'fv/Rusanov.cpp' || echo '$(srcdir)/'`fv/Rusanov.cpp
-
-fv/libExaHyPE2Core2d_stats_a-Rusanov.obj: fv/Rusanov.cpp
-	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libExaHyPE2Core2d_stats_a_CXXFLAGS) $(CXXFLAGS) -MT fv/libExaHyPE2Core2d_stats_a-Rusanov.obj -MD -MP -MF fv/$(DEPDIR)/libExaHyPE2Core2d_stats_a-Rusanov.Tpo -c -o fv/libExaHyPE2Core2d_stats_a-Rusanov.obj `if test -f 'fv/Rusanov.cpp'; then $(CYGPATH_W) 'fv/Rusanov.cpp'; else $(CYGPATH_W) '$(srcdir)/fv/Rusanov.cpp'; fi`
-	$(AM_V_at)$(am__mv) fv/$(DEPDIR)/libExaHyPE2Core2d_stats_a-Rusanov.Tpo fv/$(DEPDIR)/libExaHyPE2Core2d_stats_a-Rusanov.Po
-#	$(AM_V_CXX)source='fv/Rusanov.cpp' object='fv/libExaHyPE2Core2d_stats_a-Rusanov.obj' libtool=no \
-#	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) \
-#	$(AM_V_CXX_no)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libExaHyPE2Core2d_stats_a_CXXFLAGS) $(CXXFLAGS) -c -o fv/libExaHyPE2Core2d_stats_a-Rusanov.obj `if test -f 'fv/Rusanov.cpp'; then $(CYGPATH_W) 'fv/Rusanov.cpp'; else $(CYGPATH_W) '$(srcdir)/fv/Rusanov.cpp'; fi`
 
 fv/enumerator/libExaHyPE2Core2d_stats_a-AoSLexicographicVolumeEnumerator.o: fv/enumerator/AoSLexicographicVolumeEnumerator.cpp
 	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libExaHyPE2Core2d_stats_a_CXXFLAGS) $(CXXFLAGS) -MT fv/enumerator/libExaHyPE2Core2d_stats_a-AoSLexicographicVolumeEnumerator.o -MD -MP -MF fv/enumerator/$(DEPDIR)/libExaHyPE2Core2d_stats_a-AoSLexicographicVolumeEnumerator.Tpo -c -o fv/enumerator/libExaHyPE2Core2d_stats_a-AoSLexicographicVolumeEnumerator.o `test -f 'fv/enumerator/AoSLexicographicVolumeEnumerator.cpp' || echo '$(srcdir)/'`fv/enumerator/AoSLexicographicVolumeEnumerator.cpp
@@ -3416,20 +3309,6 @@ fv/libExaHyPE2Core2d_trace_a-PatchUtils.obj: fv/PatchUtils.cpp
 #	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) \
 #	$(AM_V_CXX_no)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libExaHyPE2Core2d_trace_a_CXXFLAGS) $(CXXFLAGS) -c -o fv/libExaHyPE2Core2d_trace_a-PatchUtils.obj `if test -f 'fv/PatchUtils.cpp'; then $(CYGPATH_W) 'fv/PatchUtils.cpp'; else $(CYGPATH_W) '$(srcdir)/fv/PatchUtils.cpp'; fi`
 
-fv/libExaHyPE2Core2d_trace_a-Rusanov.o: fv/Rusanov.cpp
-	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libExaHyPE2Core2d_trace_a_CXXFLAGS) $(CXXFLAGS) -MT fv/libExaHyPE2Core2d_trace_a-Rusanov.o -MD -MP -MF fv/$(DEPDIR)/libExaHyPE2Core2d_trace_a-Rusanov.Tpo -c -o fv/libExaHyPE2Core2d_trace_a-Rusanov.o `test -f 'fv/Rusanov.cpp' || echo '$(srcdir)/'`fv/Rusanov.cpp
-	$(AM_V_at)$(am__mv) fv/$(DEPDIR)/libExaHyPE2Core2d_trace_a-Rusanov.Tpo fv/$(DEPDIR)/libExaHyPE2Core2d_trace_a-Rusanov.Po
-#	$(AM_V_CXX)source='fv/Rusanov.cpp' object='fv/libExaHyPE2Core2d_trace_a-Rusanov.o' libtool=no \
-#	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) \
-#	$(AM_V_CXX_no)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libExaHyPE2Core2d_trace_a_CXXFLAGS) $(CXXFLAGS) -c -o fv/libExaHyPE2Core2d_trace_a-Rusanov.o `test -f 'fv/Rusanov.cpp' || echo '$(srcdir)/'`fv/Rusanov.cpp
-
-fv/libExaHyPE2Core2d_trace_a-Rusanov.obj: fv/Rusanov.cpp
-	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libExaHyPE2Core2d_trace_a_CXXFLAGS) $(CXXFLAGS) -MT fv/libExaHyPE2Core2d_trace_a-Rusanov.obj -MD -MP -MF fv/$(DEPDIR)/libExaHyPE2Core2d_trace_a-Rusanov.Tpo -c -o fv/libExaHyPE2Core2d_trace_a-Rusanov.obj `if test -f 'fv/Rusanov.cpp'; then $(CYGPATH_W) 'fv/Rusanov.cpp'; else $(CYGPATH_W) '$(srcdir)/fv/Rusanov.cpp'; fi`
-	$(AM_V_at)$(am__mv) fv/$(DEPDIR)/libExaHyPE2Core2d_trace_a-Rusanov.Tpo fv/$(DEPDIR)/libExaHyPE2Core2d_trace_a-Rusanov.Po
-#	$(AM_V_CXX)source='fv/Rusanov.cpp' object='fv/libExaHyPE2Core2d_trace_a-Rusanov.obj' libtool=no \
-#	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) \
-#	$(AM_V_CXX_no)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libExaHyPE2Core2d_trace_a_CXXFLAGS) $(CXXFLAGS) -c -o fv/libExaHyPE2Core2d_trace_a-Rusanov.obj `if test -f 'fv/Rusanov.cpp'; then $(CYGPATH_W) 'fv/Rusanov.cpp'; else $(CYGPATH_W) '$(srcdir)/fv/Rusanov.cpp'; fi`
-
 fv/enumerator/libExaHyPE2Core2d_trace_a-AoSLexicographicVolumeEnumerator.o: fv/enumerator/AoSLexicographicVolumeEnumerator.cpp
 	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libExaHyPE2Core2d_trace_a_CXXFLAGS) $(CXXFLAGS) -MT fv/enumerator/libExaHyPE2Core2d_trace_a-AoSLexicographicVolumeEnumerator.o -MD -MP -MF fv/enumerator/$(DEPDIR)/libExaHyPE2Core2d_trace_a-AoSLexicographicVolumeEnumerator.Tpo -c -o fv/enumerator/libExaHyPE2Core2d_trace_a-AoSLexicographicVolumeEnumerator.o `test -f 'fv/enumerator/AoSLexicographicVolumeEnumerator.cpp' || echo '$(srcdir)/'`fv/enumerator/AoSLexicographicVolumeEnumerator.cpp
 	$(AM_V_at)$(am__mv) fv/enumerator/$(DEPDIR)/libExaHyPE2Core2d_trace_a-AoSLexicographicVolumeEnumerator.Tpo fv/enumerator/$(DEPDIR)/libExaHyPE2Core2d_trace_a-AoSLexicographicVolumeEnumerator.Po
@@ -3765,20 +3644,6 @@ fv/libExaHyPE2Core3d_a-PatchUtils.obj: fv/PatchUtils.cpp
 #	$(AM_V_CXX)source='fv/PatchUtils.cpp' object='fv/libExaHyPE2Core3d_a-PatchUtils.obj' libtool=no \
 #	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) \
 #	$(AM_V_CXX_no)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libExaHyPE2Core3d_a_CXXFLAGS) $(CXXFLAGS) -c -o fv/libExaHyPE2Core3d_a-PatchUtils.obj `if test -f 'fv/PatchUtils.cpp'; then $(CYGPATH_W) 'fv/PatchUtils.cpp'; else $(CYGPATH_W) '$(srcdir)/fv/PatchUtils.cpp'; fi`
-
-fv/libExaHyPE2Core3d_a-Rusanov.o: fv/Rusanov.cpp
-	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libExaHyPE2Core3d_a_CXXFLAGS) $(CXXFLAGS) -MT fv/libExaHyPE2Core3d_a-Rusanov.o -MD -MP -MF fv/$(DEPDIR)/libExaHyPE2Core3d_a-Rusanov.Tpo -c -o fv/libExaHyPE2Core3d_a-Rusanov.o `test -f 'fv/Rusanov.cpp' || echo '$(srcdir)/'`fv/Rusanov.cpp
-	$(AM_V_at)$(am__mv) fv/$(DEPDIR)/libExaHyPE2Core3d_a-Rusanov.Tpo fv/$(DEPDIR)/libExaHyPE2Core3d_a-Rusanov.Po
-#	$(AM_V_CXX)source='fv/Rusanov.cpp' object='fv/libExaHyPE2Core3d_a-Rusanov.o' libtool=no \
-#	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) \
-#	$(AM_V_CXX_no)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libExaHyPE2Core3d_a_CXXFLAGS) $(CXXFLAGS) -c -o fv/libExaHyPE2Core3d_a-Rusanov.o `test -f 'fv/Rusanov.cpp' || echo '$(srcdir)/'`fv/Rusanov.cpp
-
-fv/libExaHyPE2Core3d_a-Rusanov.obj: fv/Rusanov.cpp
-	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libExaHyPE2Core3d_a_CXXFLAGS) $(CXXFLAGS) -MT fv/libExaHyPE2Core3d_a-Rusanov.obj -MD -MP -MF fv/$(DEPDIR)/libExaHyPE2Core3d_a-Rusanov.Tpo -c -o fv/libExaHyPE2Core3d_a-Rusanov.obj `if test -f 'fv/Rusanov.cpp'; then $(CYGPATH_W) 'fv/Rusanov.cpp'; else $(CYGPATH_W) '$(srcdir)/fv/Rusanov.cpp'; fi`
-	$(AM_V_at)$(am__mv) fv/$(DEPDIR)/libExaHyPE2Core3d_a-Rusanov.Tpo fv/$(DEPDIR)/libExaHyPE2Core3d_a-Rusanov.Po
-#	$(AM_V_CXX)source='fv/Rusanov.cpp' object='fv/libExaHyPE2Core3d_a-Rusanov.obj' libtool=no \
-#	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) \
-#	$(AM_V_CXX_no)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libExaHyPE2Core3d_a_CXXFLAGS) $(CXXFLAGS) -c -o fv/libExaHyPE2Core3d_a-Rusanov.obj `if test -f 'fv/Rusanov.cpp'; then $(CYGPATH_W) 'fv/Rusanov.cpp'; else $(CYGPATH_W) '$(srcdir)/fv/Rusanov.cpp'; fi`
 
 fv/enumerator/libExaHyPE2Core3d_a-AoSLexicographicVolumeEnumerator.o: fv/enumerator/AoSLexicographicVolumeEnumerator.cpp
 	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libExaHyPE2Core3d_a_CXXFLAGS) $(CXXFLAGS) -MT fv/enumerator/libExaHyPE2Core3d_a-AoSLexicographicVolumeEnumerator.o -MD -MP -MF fv/enumerator/$(DEPDIR)/libExaHyPE2Core3d_a-AoSLexicographicVolumeEnumerator.Tpo -c -o fv/enumerator/libExaHyPE2Core3d_a-AoSLexicographicVolumeEnumerator.o `test -f 'fv/enumerator/AoSLexicographicVolumeEnumerator.cpp' || echo '$(srcdir)/'`fv/enumerator/AoSLexicographicVolumeEnumerator.cpp
@@ -4116,20 +3981,6 @@ fv/libExaHyPE2Core3d_asserts_a-PatchUtils.obj: fv/PatchUtils.cpp
 #	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) \
 #	$(AM_V_CXX_no)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libExaHyPE2Core3d_asserts_a_CXXFLAGS) $(CXXFLAGS) -c -o fv/libExaHyPE2Core3d_asserts_a-PatchUtils.obj `if test -f 'fv/PatchUtils.cpp'; then $(CYGPATH_W) 'fv/PatchUtils.cpp'; else $(CYGPATH_W) '$(srcdir)/fv/PatchUtils.cpp'; fi`
 
-fv/libExaHyPE2Core3d_asserts_a-Rusanov.o: fv/Rusanov.cpp
-	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libExaHyPE2Core3d_asserts_a_CXXFLAGS) $(CXXFLAGS) -MT fv/libExaHyPE2Core3d_asserts_a-Rusanov.o -MD -MP -MF fv/$(DEPDIR)/libExaHyPE2Core3d_asserts_a-Rusanov.Tpo -c -o fv/libExaHyPE2Core3d_asserts_a-Rusanov.o `test -f 'fv/Rusanov.cpp' || echo '$(srcdir)/'`fv/Rusanov.cpp
-	$(AM_V_at)$(am__mv) fv/$(DEPDIR)/libExaHyPE2Core3d_asserts_a-Rusanov.Tpo fv/$(DEPDIR)/libExaHyPE2Core3d_asserts_a-Rusanov.Po
-#	$(AM_V_CXX)source='fv/Rusanov.cpp' object='fv/libExaHyPE2Core3d_asserts_a-Rusanov.o' libtool=no \
-#	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) \
-#	$(AM_V_CXX_no)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libExaHyPE2Core3d_asserts_a_CXXFLAGS) $(CXXFLAGS) -c -o fv/libExaHyPE2Core3d_asserts_a-Rusanov.o `test -f 'fv/Rusanov.cpp' || echo '$(srcdir)/'`fv/Rusanov.cpp
-
-fv/libExaHyPE2Core3d_asserts_a-Rusanov.obj: fv/Rusanov.cpp
-	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libExaHyPE2Core3d_asserts_a_CXXFLAGS) $(CXXFLAGS) -MT fv/libExaHyPE2Core3d_asserts_a-Rusanov.obj -MD -MP -MF fv/$(DEPDIR)/libExaHyPE2Core3d_asserts_a-Rusanov.Tpo -c -o fv/libExaHyPE2Core3d_asserts_a-Rusanov.obj `if test -f 'fv/Rusanov.cpp'; then $(CYGPATH_W) 'fv/Rusanov.cpp'; else $(CYGPATH_W) '$(srcdir)/fv/Rusanov.cpp'; fi`
-	$(AM_V_at)$(am__mv) fv/$(DEPDIR)/libExaHyPE2Core3d_asserts_a-Rusanov.Tpo fv/$(DEPDIR)/libExaHyPE2Core3d_asserts_a-Rusanov.Po
-#	$(AM_V_CXX)source='fv/Rusanov.cpp' object='fv/libExaHyPE2Core3d_asserts_a-Rusanov.obj' libtool=no \
-#	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) \
-#	$(AM_V_CXX_no)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libExaHyPE2Core3d_asserts_a_CXXFLAGS) $(CXXFLAGS) -c -o fv/libExaHyPE2Core3d_asserts_a-Rusanov.obj `if test -f 'fv/Rusanov.cpp'; then $(CYGPATH_W) 'fv/Rusanov.cpp'; else $(CYGPATH_W) '$(srcdir)/fv/Rusanov.cpp'; fi`
-
 fv/enumerator/libExaHyPE2Core3d_asserts_a-AoSLexicographicVolumeEnumerator.o: fv/enumerator/AoSLexicographicVolumeEnumerator.cpp
 	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libExaHyPE2Core3d_asserts_a_CXXFLAGS) $(CXXFLAGS) -MT fv/enumerator/libExaHyPE2Core3d_asserts_a-AoSLexicographicVolumeEnumerator.o -MD -MP -MF fv/enumerator/$(DEPDIR)/libExaHyPE2Core3d_asserts_a-AoSLexicographicVolumeEnumerator.Tpo -c -o fv/enumerator/libExaHyPE2Core3d_asserts_a-AoSLexicographicVolumeEnumerator.o `test -f 'fv/enumerator/AoSLexicographicVolumeEnumerator.cpp' || echo '$(srcdir)/'`fv/enumerator/AoSLexicographicVolumeEnumerator.cpp
 	$(AM_V_at)$(am__mv) fv/enumerator/$(DEPDIR)/libExaHyPE2Core3d_asserts_a-AoSLexicographicVolumeEnumerator.Tpo fv/enumerator/$(DEPDIR)/libExaHyPE2Core3d_asserts_a-AoSLexicographicVolumeEnumerator.Po
@@ -4465,20 +4316,6 @@ fv/libExaHyPE2Core3d_debug_a-PatchUtils.obj: fv/PatchUtils.cpp
 #	$(AM_V_CXX)source='fv/PatchUtils.cpp' object='fv/libExaHyPE2Core3d_debug_a-PatchUtils.obj' libtool=no \
 #	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) \
 #	$(AM_V_CXX_no)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libExaHyPE2Core3d_debug_a_CXXFLAGS) $(CXXFLAGS) -c -o fv/libExaHyPE2Core3d_debug_a-PatchUtils.obj `if test -f 'fv/PatchUtils.cpp'; then $(CYGPATH_W) 'fv/PatchUtils.cpp'; else $(CYGPATH_W) '$(srcdir)/fv/PatchUtils.cpp'; fi`
-
-fv/libExaHyPE2Core3d_debug_a-Rusanov.o: fv/Rusanov.cpp
-	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libExaHyPE2Core3d_debug_a_CXXFLAGS) $(CXXFLAGS) -MT fv/libExaHyPE2Core3d_debug_a-Rusanov.o -MD -MP -MF fv/$(DEPDIR)/libExaHyPE2Core3d_debug_a-Rusanov.Tpo -c -o fv/libExaHyPE2Core3d_debug_a-Rusanov.o `test -f 'fv/Rusanov.cpp' || echo '$(srcdir)/'`fv/Rusanov.cpp
-	$(AM_V_at)$(am__mv) fv/$(DEPDIR)/libExaHyPE2Core3d_debug_a-Rusanov.Tpo fv/$(DEPDIR)/libExaHyPE2Core3d_debug_a-Rusanov.Po
-#	$(AM_V_CXX)source='fv/Rusanov.cpp' object='fv/libExaHyPE2Core3d_debug_a-Rusanov.o' libtool=no \
-#	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) \
-#	$(AM_V_CXX_no)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libExaHyPE2Core3d_debug_a_CXXFLAGS) $(CXXFLAGS) -c -o fv/libExaHyPE2Core3d_debug_a-Rusanov.o `test -f 'fv/Rusanov.cpp' || echo '$(srcdir)/'`fv/Rusanov.cpp
-
-fv/libExaHyPE2Core3d_debug_a-Rusanov.obj: fv/Rusanov.cpp
-	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libExaHyPE2Core3d_debug_a_CXXFLAGS) $(CXXFLAGS) -MT fv/libExaHyPE2Core3d_debug_a-Rusanov.obj -MD -MP -MF fv/$(DEPDIR)/libExaHyPE2Core3d_debug_a-Rusanov.Tpo -c -o fv/libExaHyPE2Core3d_debug_a-Rusanov.obj `if test -f 'fv/Rusanov.cpp'; then $(CYGPATH_W) 'fv/Rusanov.cpp'; else $(CYGPATH_W) '$(srcdir)/fv/Rusanov.cpp'; fi`
-	$(AM_V_at)$(am__mv) fv/$(DEPDIR)/libExaHyPE2Core3d_debug_a-Rusanov.Tpo fv/$(DEPDIR)/libExaHyPE2Core3d_debug_a-Rusanov.Po
-#	$(AM_V_CXX)source='fv/Rusanov.cpp' object='fv/libExaHyPE2Core3d_debug_a-Rusanov.obj' libtool=no \
-#	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) \
-#	$(AM_V_CXX_no)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libExaHyPE2Core3d_debug_a_CXXFLAGS) $(CXXFLAGS) -c -o fv/libExaHyPE2Core3d_debug_a-Rusanov.obj `if test -f 'fv/Rusanov.cpp'; then $(CYGPATH_W) 'fv/Rusanov.cpp'; else $(CYGPATH_W) '$(srcdir)/fv/Rusanov.cpp'; fi`
 
 fv/enumerator/libExaHyPE2Core3d_debug_a-AoSLexicographicVolumeEnumerator.o: fv/enumerator/AoSLexicographicVolumeEnumerator.cpp
 	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libExaHyPE2Core3d_debug_a_CXXFLAGS) $(CXXFLAGS) -MT fv/enumerator/libExaHyPE2Core3d_debug_a-AoSLexicographicVolumeEnumerator.o -MD -MP -MF fv/enumerator/$(DEPDIR)/libExaHyPE2Core3d_debug_a-AoSLexicographicVolumeEnumerator.Tpo -c -o fv/enumerator/libExaHyPE2Core3d_debug_a-AoSLexicographicVolumeEnumerator.o `test -f 'fv/enumerator/AoSLexicographicVolumeEnumerator.cpp' || echo '$(srcdir)/'`fv/enumerator/AoSLexicographicVolumeEnumerator.cpp
@@ -4816,20 +4653,6 @@ fv/libExaHyPE2Core3d_stats_a-PatchUtils.obj: fv/PatchUtils.cpp
 #	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) \
 #	$(AM_V_CXX_no)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libExaHyPE2Core3d_stats_a_CXXFLAGS) $(CXXFLAGS) -c -o fv/libExaHyPE2Core3d_stats_a-PatchUtils.obj `if test -f 'fv/PatchUtils.cpp'; then $(CYGPATH_W) 'fv/PatchUtils.cpp'; else $(CYGPATH_W) '$(srcdir)/fv/PatchUtils.cpp'; fi`
 
-fv/libExaHyPE2Core3d_stats_a-Rusanov.o: fv/Rusanov.cpp
-	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libExaHyPE2Core3d_stats_a_CXXFLAGS) $(CXXFLAGS) -MT fv/libExaHyPE2Core3d_stats_a-Rusanov.o -MD -MP -MF fv/$(DEPDIR)/libExaHyPE2Core3d_stats_a-Rusanov.Tpo -c -o fv/libExaHyPE2Core3d_stats_a-Rusanov.o `test -f 'fv/Rusanov.cpp' || echo '$(srcdir)/'`fv/Rusanov.cpp
-	$(AM_V_at)$(am__mv) fv/$(DEPDIR)/libExaHyPE2Core3d_stats_a-Rusanov.Tpo fv/$(DEPDIR)/libExaHyPE2Core3d_stats_a-Rusanov.Po
-#	$(AM_V_CXX)source='fv/Rusanov.cpp' object='fv/libExaHyPE2Core3d_stats_a-Rusanov.o' libtool=no \
-#	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) \
-#	$(AM_V_CXX_no)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libExaHyPE2Core3d_stats_a_CXXFLAGS) $(CXXFLAGS) -c -o fv/libExaHyPE2Core3d_stats_a-Rusanov.o `test -f 'fv/Rusanov.cpp' || echo '$(srcdir)/'`fv/Rusanov.cpp
-
-fv/libExaHyPE2Core3d_stats_a-Rusanov.obj: fv/Rusanov.cpp
-	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libExaHyPE2Core3d_stats_a_CXXFLAGS) $(CXXFLAGS) -MT fv/libExaHyPE2Core3d_stats_a-Rusanov.obj -MD -MP -MF fv/$(DEPDIR)/libExaHyPE2Core3d_stats_a-Rusanov.Tpo -c -o fv/libExaHyPE2Core3d_stats_a-Rusanov.obj `if test -f 'fv/Rusanov.cpp'; then $(CYGPATH_W) 'fv/Rusanov.cpp'; else $(CYGPATH_W) '$(srcdir)/fv/Rusanov.cpp'; fi`
-	$(AM_V_at)$(am__mv) fv/$(DEPDIR)/libExaHyPE2Core3d_stats_a-Rusanov.Tpo fv/$(DEPDIR)/libExaHyPE2Core3d_stats_a-Rusanov.Po
-#	$(AM_V_CXX)source='fv/Rusanov.cpp' object='fv/libExaHyPE2Core3d_stats_a-Rusanov.obj' libtool=no \
-#	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) \
-#	$(AM_V_CXX_no)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libExaHyPE2Core3d_stats_a_CXXFLAGS) $(CXXFLAGS) -c -o fv/libExaHyPE2Core3d_stats_a-Rusanov.obj `if test -f 'fv/Rusanov.cpp'; then $(CYGPATH_W) 'fv/Rusanov.cpp'; else $(CYGPATH_W) '$(srcdir)/fv/Rusanov.cpp'; fi`
-
 fv/enumerator/libExaHyPE2Core3d_stats_a-AoSLexicographicVolumeEnumerator.o: fv/enumerator/AoSLexicographicVolumeEnumerator.cpp
 	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libExaHyPE2Core3d_stats_a_CXXFLAGS) $(CXXFLAGS) -MT fv/enumerator/libExaHyPE2Core3d_stats_a-AoSLexicographicVolumeEnumerator.o -MD -MP -MF fv/enumerator/$(DEPDIR)/libExaHyPE2Core3d_stats_a-AoSLexicographicVolumeEnumerator.Tpo -c -o fv/enumerator/libExaHyPE2Core3d_stats_a-AoSLexicographicVolumeEnumerator.o `test -f 'fv/enumerator/AoSLexicographicVolumeEnumerator.cpp' || echo '$(srcdir)/'`fv/enumerator/AoSLexicographicVolumeEnumerator.cpp
 	$(AM_V_at)$(am__mv) fv/enumerator/$(DEPDIR)/libExaHyPE2Core3d_stats_a-AoSLexicographicVolumeEnumerator.Tpo fv/enumerator/$(DEPDIR)/libExaHyPE2Core3d_stats_a-AoSLexicographicVolumeEnumerator.Po
@@ -5165,20 +4988,6 @@ fv/libExaHyPE2Core3d_trace_a-PatchUtils.obj: fv/PatchUtils.cpp
 #	$(AM_V_CXX)source='fv/PatchUtils.cpp' object='fv/libExaHyPE2Core3d_trace_a-PatchUtils.obj' libtool=no \
 #	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) \
 #	$(AM_V_CXX_no)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libExaHyPE2Core3d_trace_a_CXXFLAGS) $(CXXFLAGS) -c -o fv/libExaHyPE2Core3d_trace_a-PatchUtils.obj `if test -f 'fv/PatchUtils.cpp'; then $(CYGPATH_W) 'fv/PatchUtils.cpp'; else $(CYGPATH_W) '$(srcdir)/fv/PatchUtils.cpp'; fi`
-
-fv/libExaHyPE2Core3d_trace_a-Rusanov.o: fv/Rusanov.cpp
-	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libExaHyPE2Core3d_trace_a_CXXFLAGS) $(CXXFLAGS) -MT fv/libExaHyPE2Core3d_trace_a-Rusanov.o -MD -MP -MF fv/$(DEPDIR)/libExaHyPE2Core3d_trace_a-Rusanov.Tpo -c -o fv/libExaHyPE2Core3d_trace_a-Rusanov.o `test -f 'fv/Rusanov.cpp' || echo '$(srcdir)/'`fv/Rusanov.cpp
-	$(AM_V_at)$(am__mv) fv/$(DEPDIR)/libExaHyPE2Core3d_trace_a-Rusanov.Tpo fv/$(DEPDIR)/libExaHyPE2Core3d_trace_a-Rusanov.Po
-#	$(AM_V_CXX)source='fv/Rusanov.cpp' object='fv/libExaHyPE2Core3d_trace_a-Rusanov.o' libtool=no \
-#	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) \
-#	$(AM_V_CXX_no)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libExaHyPE2Core3d_trace_a_CXXFLAGS) $(CXXFLAGS) -c -o fv/libExaHyPE2Core3d_trace_a-Rusanov.o `test -f 'fv/Rusanov.cpp' || echo '$(srcdir)/'`fv/Rusanov.cpp
-
-fv/libExaHyPE2Core3d_trace_a-Rusanov.obj: fv/Rusanov.cpp
-	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libExaHyPE2Core3d_trace_a_CXXFLAGS) $(CXXFLAGS) -MT fv/libExaHyPE2Core3d_trace_a-Rusanov.obj -MD -MP -MF fv/$(DEPDIR)/libExaHyPE2Core3d_trace_a-Rusanov.Tpo -c -o fv/libExaHyPE2Core3d_trace_a-Rusanov.obj `if test -f 'fv/Rusanov.cpp'; then $(CYGPATH_W) 'fv/Rusanov.cpp'; else $(CYGPATH_W) '$(srcdir)/fv/Rusanov.cpp'; fi`
-	$(AM_V_at)$(am__mv) fv/$(DEPDIR)/libExaHyPE2Core3d_trace_a-Rusanov.Tpo fv/$(DEPDIR)/libExaHyPE2Core3d_trace_a-Rusanov.Po
-#	$(AM_V_CXX)source='fv/Rusanov.cpp' object='fv/libExaHyPE2Core3d_trace_a-Rusanov.obj' libtool=no \
-#	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) \
-#	$(AM_V_CXX_no)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libExaHyPE2Core3d_trace_a_CXXFLAGS) $(CXXFLAGS) -c -o fv/libExaHyPE2Core3d_trace_a-Rusanov.obj `if test -f 'fv/Rusanov.cpp'; then $(CYGPATH_W) 'fv/Rusanov.cpp'; else $(CYGPATH_W) '$(srcdir)/fv/Rusanov.cpp'; fi`
 
 fv/enumerator/libExaHyPE2Core3d_trace_a-AoSLexicographicVolumeEnumerator.o: fv/enumerator/AoSLexicographicVolumeEnumerator.cpp
 	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libExaHyPE2Core3d_trace_a_CXXFLAGS) $(CXXFLAGS) -MT fv/enumerator/libExaHyPE2Core3d_trace_a-AoSLexicographicVolumeEnumerator.o -MD -MP -MF fv/enumerator/$(DEPDIR)/libExaHyPE2Core3d_trace_a-AoSLexicographicVolumeEnumerator.Tpo -c -o fv/enumerator/libExaHyPE2Core3d_trace_a-AoSLexicographicVolumeEnumerator.o `test -f 'fv/enumerator/AoSLexicographicVolumeEnumerator.cpp' || echo '$(srcdir)/'`fv/enumerator/AoSLexicographicVolumeEnumerator.cpp
@@ -5565,34 +5374,24 @@ distclean: distclean-am
 	-rm -f aderdg/tests/$(DEPDIR)/libExaHyPE2Core3d_trace_a-ADERDGTest.Po
 	-rm -f fv/$(DEPDIR)/libExaHyPE2Core2d_a-BoundaryConditions.Po
 	-rm -f fv/$(DEPDIR)/libExaHyPE2Core2d_a-PatchUtils.Po
-	-rm -f fv/$(DEPDIR)/libExaHyPE2Core2d_a-Rusanov.Po
 	-rm -f fv/$(DEPDIR)/libExaHyPE2Core2d_asserts_a-BoundaryConditions.Po
 	-rm -f fv/$(DEPDIR)/libExaHyPE2Core2d_asserts_a-PatchUtils.Po
-	-rm -f fv/$(DEPDIR)/libExaHyPE2Core2d_asserts_a-Rusanov.Po
 	-rm -f fv/$(DEPDIR)/libExaHyPE2Core2d_debug_a-BoundaryConditions.Po
 	-rm -f fv/$(DEPDIR)/libExaHyPE2Core2d_debug_a-PatchUtils.Po
-	-rm -f fv/$(DEPDIR)/libExaHyPE2Core2d_debug_a-Rusanov.Po
 	-rm -f fv/$(DEPDIR)/libExaHyPE2Core2d_stats_a-BoundaryConditions.Po
 	-rm -f fv/$(DEPDIR)/libExaHyPE2Core2d_stats_a-PatchUtils.Po
-	-rm -f fv/$(DEPDIR)/libExaHyPE2Core2d_stats_a-Rusanov.Po
 	-rm -f fv/$(DEPDIR)/libExaHyPE2Core2d_trace_a-BoundaryConditions.Po
 	-rm -f fv/$(DEPDIR)/libExaHyPE2Core2d_trace_a-PatchUtils.Po
-	-rm -f fv/$(DEPDIR)/libExaHyPE2Core2d_trace_a-Rusanov.Po
 	-rm -f fv/$(DEPDIR)/libExaHyPE2Core3d_a-BoundaryConditions.Po
 	-rm -f fv/$(DEPDIR)/libExaHyPE2Core3d_a-PatchUtils.Po
-	-rm -f fv/$(DEPDIR)/libExaHyPE2Core3d_a-Rusanov.Po
 	-rm -f fv/$(DEPDIR)/libExaHyPE2Core3d_asserts_a-BoundaryConditions.Po
 	-rm -f fv/$(DEPDIR)/libExaHyPE2Core3d_asserts_a-PatchUtils.Po
-	-rm -f fv/$(DEPDIR)/libExaHyPE2Core3d_asserts_a-Rusanov.Po
 	-rm -f fv/$(DEPDIR)/libExaHyPE2Core3d_debug_a-BoundaryConditions.Po
 	-rm -f fv/$(DEPDIR)/libExaHyPE2Core3d_debug_a-PatchUtils.Po
-	-rm -f fv/$(DEPDIR)/libExaHyPE2Core3d_debug_a-Rusanov.Po
 	-rm -f fv/$(DEPDIR)/libExaHyPE2Core3d_stats_a-BoundaryConditions.Po
 	-rm -f fv/$(DEPDIR)/libExaHyPE2Core3d_stats_a-PatchUtils.Po
-	-rm -f fv/$(DEPDIR)/libExaHyPE2Core3d_stats_a-Rusanov.Po
 	-rm -f fv/$(DEPDIR)/libExaHyPE2Core3d_trace_a-BoundaryConditions.Po
 	-rm -f fv/$(DEPDIR)/libExaHyPE2Core3d_trace_a-PatchUtils.Po
-	-rm -f fv/$(DEPDIR)/libExaHyPE2Core3d_trace_a-Rusanov.Po
 	-rm -f fv/enumerator/$(DEPDIR)/libExaHyPE2Core2d_a-AoSLexicographicVolumeEnumerator.Po
 	-rm -f fv/enumerator/$(DEPDIR)/libExaHyPE2Core2d_a-AoSoALexicographicVolumeEnumerator.Po
 	-rm -f fv/enumerator/$(DEPDIR)/libExaHyPE2Core2d_a-SoALexicographicVolumeEnumerator.Po
@@ -5860,34 +5659,24 @@ maintainer-clean: maintainer-clean-am
 	-rm -f aderdg/tests/$(DEPDIR)/libExaHyPE2Core3d_trace_a-ADERDGTest.Po
 	-rm -f fv/$(DEPDIR)/libExaHyPE2Core2d_a-BoundaryConditions.Po
 	-rm -f fv/$(DEPDIR)/libExaHyPE2Core2d_a-PatchUtils.Po
-	-rm -f fv/$(DEPDIR)/libExaHyPE2Core2d_a-Rusanov.Po
 	-rm -f fv/$(DEPDIR)/libExaHyPE2Core2d_asserts_a-BoundaryConditions.Po
 	-rm -f fv/$(DEPDIR)/libExaHyPE2Core2d_asserts_a-PatchUtils.Po
-	-rm -f fv/$(DEPDIR)/libExaHyPE2Core2d_asserts_a-Rusanov.Po
 	-rm -f fv/$(DEPDIR)/libExaHyPE2Core2d_debug_a-BoundaryConditions.Po
 	-rm -f fv/$(DEPDIR)/libExaHyPE2Core2d_debug_a-PatchUtils.Po
-	-rm -f fv/$(DEPDIR)/libExaHyPE2Core2d_debug_a-Rusanov.Po
 	-rm -f fv/$(DEPDIR)/libExaHyPE2Core2d_stats_a-BoundaryConditions.Po
 	-rm -f fv/$(DEPDIR)/libExaHyPE2Core2d_stats_a-PatchUtils.Po
-	-rm -f fv/$(DEPDIR)/libExaHyPE2Core2d_stats_a-Rusanov.Po
 	-rm -f fv/$(DEPDIR)/libExaHyPE2Core2d_trace_a-BoundaryConditions.Po
 	-rm -f fv/$(DEPDIR)/libExaHyPE2Core2d_trace_a-PatchUtils.Po
-	-rm -f fv/$(DEPDIR)/libExaHyPE2Core2d_trace_a-Rusanov.Po
 	-rm -f fv/$(DEPDIR)/libExaHyPE2Core3d_a-BoundaryConditions.Po
 	-rm -f fv/$(DEPDIR)/libExaHyPE2Core3d_a-PatchUtils.Po
-	-rm -f fv/$(DEPDIR)/libExaHyPE2Core3d_a-Rusanov.Po
 	-rm -f fv/$(DEPDIR)/libExaHyPE2Core3d_asserts_a-BoundaryConditions.Po
 	-rm -f fv/$(DEPDIR)/libExaHyPE2Core3d_asserts_a-PatchUtils.Po
-	-rm -f fv/$(DEPDIR)/libExaHyPE2Core3d_asserts_a-Rusanov.Po
 	-rm -f fv/$(DEPDIR)/libExaHyPE2Core3d_debug_a-BoundaryConditions.Po
 	-rm -f fv/$(DEPDIR)/libExaHyPE2Core3d_debug_a-PatchUtils.Po
-	-rm -f fv/$(DEPDIR)/libExaHyPE2Core3d_debug_a-Rusanov.Po
 	-rm -f fv/$(DEPDIR)/libExaHyPE2Core3d_stats_a-BoundaryConditions.Po
 	-rm -f fv/$(DEPDIR)/libExaHyPE2Core3d_stats_a-PatchUtils.Po
-	-rm -f fv/$(DEPDIR)/libExaHyPE2Core3d_stats_a-Rusanov.Po
 	-rm -f fv/$(DEPDIR)/libExaHyPE2Core3d_trace_a-BoundaryConditions.Po
 	-rm -f fv/$(DEPDIR)/libExaHyPE2Core3d_trace_a-PatchUtils.Po
-	-rm -f fv/$(DEPDIR)/libExaHyPE2Core3d_trace_a-Rusanov.Po
 	-rm -f fv/enumerator/$(DEPDIR)/libExaHyPE2Core2d_a-AoSLexicographicVolumeEnumerator.Po
 	-rm -f fv/enumerator/$(DEPDIR)/libExaHyPE2Core2d_a-AoSoALexicographicVolumeEnumerator.Po
 	-rm -f fv/enumerator/$(DEPDIR)/libExaHyPE2Core2d_a-SoALexicographicVolumeEnumerator.Po

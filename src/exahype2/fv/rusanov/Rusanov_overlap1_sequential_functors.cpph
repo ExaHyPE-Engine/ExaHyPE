@@ -39,6 +39,8 @@ void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_sequential(
   exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator ncpEnumerator       (patchData.numberOfPatches, numberOfVolumesPerAxisInPatch,haloSize,unknowns,0);
   exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator eigenvalueEnumerator(patchData.numberOfPatches, numberOfVolumesPerAxisInPatch,haloSize,1,0);
 
+  assertion2( ncpEnumerator.size()<=faceDoFs, ncpEnumerator.size(), faceDoFs );
+
   for (int patchIndex=0; patchIndex<patchData.numberOfPatches; patchIndex++) {
     logDebug( "timeStepWithRusanov_overlap1_sequential(...)", "evaluate source terms and/or copy solution over" );
     if (Dimensions==2 and evaluateSource) {
@@ -546,7 +548,6 @@ void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_sequential(
         for (int y = -haloSize; y < numberOfVolumesPerAxisInPatch+haloSize-1; y++)
         for (int z =         0; z < numberOfVolumesPerAxisInPatch;            z++) {
           otterLoopIterationBegin();
-/*
           internal::computeNonconservativeFlux_LoopBody(
             patchData.QIn[patchIndex],
             QInEnumerator,
@@ -561,7 +562,6 @@ void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_sequential(
             tempNonconservativeProductY,
             ncpEnumerator
           );
-*/
           otterLoopIterationEnd();
         }
         otterLoopEnd();
@@ -571,7 +571,6 @@ void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_sequential(
         for (int y =         0; y < numberOfVolumesPerAxisInPatch;            y++)
         for (int z = -haloSize; z < numberOfVolumesPerAxisInPatch+haloSize-1; z++) {
           otterLoopIterationBegin();
-/*
           internal::computeNonconservativeFlux_LoopBody(
             patchData.QIn[patchIndex],
             QInEnumerator,
@@ -586,7 +585,6 @@ void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_sequential(
             tempNonconservativeProductZ,
             ncpEnumerator
           );
-*/
           otterLoopIterationEnd();
         }
         otterLoopEnd();
@@ -597,7 +595,6 @@ void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_sequential(
         for (int z = 0; z < numberOfVolumesPerAxisInPatch; z++)
         for (int unknown=0; unknown<unknowns+auxiliaryVariables; unknown++) {
           otterLoopIterationBegin();
-/*
           internal::updateSolutionWithNonconservativeFlux_LoopBody(
             tempNonconservativeProductX, tempNonconservativeProductY, tempNonconservativeProductZ,
             ncpEnumerator,
@@ -610,7 +607,6 @@ void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_sequential(
             *(patchData.QOut + patchIndex),
             QOutEnumerator
           );
-*/
           otterLoopIterationEnd();
         }
         otterLoopEnd();
