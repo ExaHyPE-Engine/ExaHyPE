@@ -3,8 +3,6 @@
 
 #include "tarch/multicore/Core.h"
 
-#include "exahype2/fv/Generic.h"
-
 
 tarch::logging::Log  exahype2::EnclaveTask::_log( "exahype2::EnclaveTask" );
 

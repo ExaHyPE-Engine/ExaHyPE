@@ -10,8 +10,8 @@
 #include "tarch/multicore/sycl/Core.h"
 #endif
 
-#include "exahype2/fv/Generic.h"
 #include "exahype2/fv/Rusanov.h"
+#include "exahype2/CellData.h"
 #include "exahype2/EnclaveBookkeeping.h"
 #include "exahype2/EnclaveTask.h"
 
@@ -70,7 +70,7 @@ double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::applyKernelToCell(
   double* __restrict__                        reconstructedPatch,
   double* __restrict__                        targetPatch
 ) {
-  ::exahype2::fv::PatchData  patchData( reconstructedPatch, marker.x(), marker.h(), t, dt, targetPatch );
+  ::exahype2::CellData  patchData( reconstructedPatch, marker.x(), marker.h(), t, dt, targetPatch );
 
   ::exahype2::fv::rusanov::{{COMPUTE_KERNEL_CALL}}
 
@@ -348,7 +348,7 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::canFuse() const {
 bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse( const std::list<Task*>& otherTasks, int targetDevice ) {
   logDebug( "fuse(...)", "asked to fuse " << (otherTasks.size()+1) << " tasks into one large GPU task" );
 
-  ::exahype2::fv::PatchData patchData(otherTasks.size()+1);
+  ::exahype2::CellData patchData(otherTasks.size()+1);
   int currentTask = 0;
   for (auto& p: otherTasks) {
     patchData.QIn[currentTask]         = static_cast<{{NAMESPACE | join("::")}}::{{CLASSNAME}}*>(p)->_inputValues;

@@ -8,6 +8,8 @@
 #include "Functors.h"
 #include "LoopBody.h"
 
+#include "exahype2/CellData.h"
+
 
 namespace exahype2 {
   namespace fv {
@@ -75,10 +77,10 @@ namespace exahype2 {
        *
        * ## Memory management
        *
-       * See PatchData() for details
+       * See ::exahype2::CellData() for details
        */
       static void timeStepWithRusanov_overlap1_sequential(
-        PatchData&              patchData,
+        ::exahype2::CellData&              patchData,
         int                     numberOfVolumesPerAxisInPatch,
         int                     unknowns,
         int                     auxiliaryVariables,
@@ -98,7 +100,7 @@ namespace exahype2 {
 
 
       static void timeStepWithRusanov_overlap1_batched(
-        PatchData&              patchData,
+        ::exahype2::CellData&              patchData,
         int                     numberOfVolumesPerAxisInPatch,
         int                     unknowns,
         int                     auxiliaryVariables,
@@ -122,7 +124,7 @@ namespace exahype2 {
         typename TempDataEnumerator = exahype2::fv::enumerator::AoSoALexicographicVolumeEnumerator
       >
       static void timeStepWithRusanov_overlap1_sequential(
-        PatchData&              patchData,
+        ::exahype2::CellData&              patchData,
         int                     numberOfVolumesPerAxisInPatch,
         int                     unknowns,
         int                     auxiliaryVariables,
@@ -142,7 +144,7 @@ namespace exahype2 {
         typename TempDataEnumerator = exahype2::fv::enumerator::AoSoALexicographicVolumeEnumerator
       >
       static void timeStepWithRusanov_overlap1_sequential_split_terms(
-        PatchData&              patchData,
+        ::exahype2::CellData&              patchData,
         int                     numberOfVolumesPerAxisInPatch,
         int                     unknowns,
         int                     auxiliaryVariables,
@@ -162,7 +164,7 @@ namespace exahype2 {
         typename TempDataEnumerator = exahype2::fv::enumerator::AoSoALexicographicVolumeEnumerator
       >
       static void timeStepWithRusanov_overlap1_batched(
-        PatchData&              patchData,
+        ::exahype2::CellData&              patchData,
         int                     numberOfVolumesPerAxisInPatch,
         int                     unknowns,
         int                     auxiliaryVariables,

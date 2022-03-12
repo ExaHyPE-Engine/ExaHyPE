@@ -7,8 +7,9 @@
 
 #include "Functors.h"
 
-#include "../Generic.h"
-#include "../PatchUtils.h"
+#include "exahype2/fv/enumerator/AoSLexicographicVolumeEnumerator.h"
+#include "exahype2/fv/enumerator/SoALexicographicVolumeEnumerator.h"
+#include "exahype2/fv/enumerator/AoSoALexicographicVolumeEnumerator.h"
 
 #include "tarch/multicore/multicore.h"
 

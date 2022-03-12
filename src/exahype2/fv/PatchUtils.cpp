@@ -135,3 +135,43 @@ void exahype2::fv::validatePatch (
   #endif
 }
 
+
+
+
+int exahype2::fv::getTotalNumberOfVolumeDoFs(
+  int numberOfPatches,
+  int numberOfVolumesPerAxisInPatch,
+  int overlap
+) {
+  return Dimensions==2
+       ? numberOfPatches * (numberOfVolumesPerAxisInPatch+2*overlap) * (numberOfVolumesPerAxisInPatch+2*overlap)
+       : numberOfPatches * (numberOfVolumesPerAxisInPatch+2*overlap) * (numberOfVolumesPerAxisInPatch+2*overlap) * (numberOfVolumesPerAxisInPatch+2*overlap);
+}
+
+
+int exahype2::fv::getTotalNumberOfInnerVolumeDoFs(
+  int numberOfPatches,
+  int numberOfVolumesPerAxisInPatch,
+  int overlap
+) {
+  return Dimensions==2
+       ? numberOfPatches * numberOfVolumesPerAxisInPatch * numberOfVolumesPerAxisInPatch
+       : numberOfPatches * numberOfVolumesPerAxisInPatch * numberOfVolumesPerAxisInPatch * numberOfVolumesPerAxisInPatch;
+}
+
+
+int exahype2::fv::getTotalNumberOfFaceDoFs(
+  int numberOfPatches,
+  int numberOfVolumesPerAxisInPatch,
+  int overlap
+) {
+  return getTotalNumberOfVolumeDoFs(numberOfPatches, numberOfVolumesPerAxisInPatch+1, overlap);
+/*
+  return Dimensions==2
+       ? numberOfPatches * (numberOfVolumesPerAxisInPatch+2*overlap-1) * (numberOfVolumesPerAxisInPatch+2*overlap)
+       : numberOfPatches * (numberOfVolumesPerAxisInPatch+2*overlap-1) * (numberOfVolumesPerAxisInPatch+2*overlap) * (numberOfVolumesPerAxisInPatch+2*overlap);
+*/
+}
+
+
+

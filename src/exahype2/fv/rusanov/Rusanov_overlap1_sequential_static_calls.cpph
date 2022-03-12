@@ -7,7 +7,7 @@ template <
   typename TempDataEnumerator
 >
 void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_sequential(
-  PatchData&              patchData,
+  ::exahype2::CellData&              patchData,
   int      numberOfVolumesPerAxisInPatch,
   int      unknowns,
   int      auxiliaryVariables,

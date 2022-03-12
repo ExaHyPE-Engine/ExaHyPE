@@ -11,8 +11,6 @@
 #include <algorithm>
 
 
-#include "exahype2/fv/Generic.h"
-
 
 tarch::logging::Log
 exahype2::EnclaveBookkeeping::_log( "exahype2::EnclaveBookkeeping" );

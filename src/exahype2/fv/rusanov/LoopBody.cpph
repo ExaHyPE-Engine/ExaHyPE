@@ -1,5 +1,5 @@
 #include "tarch/compiler/CompilerSpecificSettings.h"
-
+#include "exahype2/fv/PatchUtils.h"
 
 
 template <class QInEnumeratorType, class QOutEnumeratorType>
@@ -816,6 +816,11 @@ void exahype2::fv::rusanov::internal::computeNonconservativeFlux_LoopBody(
     QFluxGathered
   );
 
+
+  std::cout << leftAdjacentVolume << " ->" << QInEnumerator(patchIndex,leftAdjacentVolume,0)
+            ;
+
+/*
   if (pick==PickAllEntriesFromOutputVector) {
     // scatter
     for (int unknown=0; unknown<QInEnumerator._unknowns; unknown++) {
@@ -825,6 +830,7 @@ void exahype2::fv::rusanov::internal::computeNonconservativeFlux_LoopBody(
   else {
     QNcp[ QNcpEnumerator(patchIndex,volumeIndex,pick) ] = QFluxGathered[pick];
   }
+*/
 }
 
 
