@@ -299,11 +299,10 @@ def create_compute_Riemann_kernel_for_Rusanov(flux_implementation, ncp_implement
   """  
   template = """
   {% if USE_STATELESS_FUNCTION_CALLS==True %}
-  timeStepWithRusanov_overlap1_sequential<
   //timeStepWithRusanov_overlap1_sequential_split_terms<
-    {{SOLVER_NAME}}
-//    ::exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator    
-    ::exahype2::fv::enumerator::AoSoALexicographicVolumeEnumerator    
+  //  ::exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator    
+  timeStepWithRusanov_overlap1_sequential<
+    {{SOLVER_NAME}},  ::exahype2::fv::enumerator::AoSoALexicographicVolumeEnumerator    
   >(
   {% else %}  
   timeStepWithRusanov_overlap1_sequential(
@@ -354,7 +353,7 @@ def create_compute_Riemann_kernel_for_Rusanov(flux_implementation, ncp_implement
     double * __restrict__ S
   )->void {
     {% if SOURCE_IMPLEMENTATION!="<none>" %}
-    repositories::{{SOLVER_INSTANCE}}.sourceTerm( Q, volumeX, volumeH, t, dt, BgradQ );
+    repositories::{{SOLVER_INSTANCE}}.sourceTerm( Q, volumeX, volumeH, t, dt, S );
     {% endif %}
   },
   [&](
