@@ -4646,9 +4646,9 @@ Args:
   - Type:            ''
   - String:          ' not eliminated'
   - String:          ' because it is clobbered by '
-  - ClobberedBy:     call
+  - ClobberedBy:     store
     DebugLoc:        { File: 'fv/tests/applySplit1DRiemannToPatch_Overlap1AoSTest.cpp', 
-                       Line: 213, Column: 9 }
+                       Line: 227, Column: 86 }
 ...
 --- !Missed
 Pass:            gvn
@@ -4661,9 +4661,9 @@ Args:
   - Type:            ''
   - String:          ' not eliminated'
   - String:          ' because it is clobbered by '
-  - ClobberedBy:     store
+  - ClobberedBy:     call
     DebugLoc:        { File: 'fv/tests/applySplit1DRiemannToPatch_Overlap1AoSTest.cpp', 
-                       Line: 227, Column: 86 }
+                       Line: 213, Column: 9 }
 ...
 --- !Missed
 Pass:            gvn
@@ -4826,9 +4826,9 @@ Args:
   - Type:            ''
   - String:          ' not eliminated'
   - String:          ' because it is clobbered by '
-  - ClobberedBy:     call
+  - ClobberedBy:     store
     DebugLoc:        { File: 'fv/tests/applySplit1DRiemannToPatch_Overlap1AoSTest.cpp', 
-                       Line: 213, Column: 9 }
+                       Line: 227, Column: 86 }
 ...
 --- !Missed
 Pass:            gvn
@@ -4841,9 +4841,9 @@ Args:
   - Type:            ''
   - String:          ' not eliminated'
   - String:          ' because it is clobbered by '
-  - ClobberedBy:     store
+  - ClobberedBy:     call
     DebugLoc:        { File: 'fv/tests/applySplit1DRiemannToPatch_Overlap1AoSTest.cpp', 
-                       Line: 227, Column: 86 }
+                       Line: 213, Column: 9 }
 ...
 --- !Missed
 Pass:            gvn

@@ -4655,25 +4655,6 @@ Args:
     DebugLoc:        { File: '/usr/lib/gcc/x86_64-linux-gnu/11/../../../../include/c++/11/bits/stl_list.h', 
                        Line: 151, Column: 16 }
   - String:          ' because it is clobbered by '
-  - ClobberedBy:     call
-    DebugLoc:        { File: '/usr/lib/gcc/x86_64-linux-gnu/11/../../../../include/c++/11/ext/new_allocator.h', 
-                       Line: 145, Column: 2 }
-...
---- !Missed
-Pass:            gvn
-Name:            LoadClobbered
-DebugLoc:        { File: '/usr/lib/gcc/x86_64-linux-gnu/11/../../../../include/c++/11/bits/list.tcc', 
-                   Line: 70, Column: 58 }
-Function:        _ZN8exahype217RefinementControlC2Ed
-Args:
-  - String:          'load of type '
-  - Type:            ''
-  - String:          ' not eliminated'
-  - String:          ' in favor of '
-  - OtherAccess:     store
-    DebugLoc:        { File: '/usr/lib/gcc/x86_64-linux-gnu/11/../../../../include/c++/11/bits/stl_list.h', 
-                       Line: 151, Column: 16 }
-  - String:          ' because it is clobbered by '
   - ClobberedBy:     invoke
     DebugLoc:        { File: RefinementControl.cpp, Line: 51, Column: 3 }
 ...
@@ -4713,6 +4694,25 @@ Args:
   - String:          ' because it is clobbered by '
   - ClobberedBy:     invoke
     DebugLoc:        { File: RefinementControl.cpp, Line: 51, Column: 53 }
+...
+--- !Missed
+Pass:            gvn
+Name:            LoadClobbered
+DebugLoc:        { File: '/usr/lib/gcc/x86_64-linux-gnu/11/../../../../include/c++/11/bits/list.tcc', 
+                   Line: 70, Column: 58 }
+Function:        _ZN8exahype217RefinementControlC2Ed
+Args:
+  - String:          'load of type '
+  - Type:            ''
+  - String:          ' not eliminated'
+  - String:          ' in favor of '
+  - OtherAccess:     store
+    DebugLoc:        { File: '/usr/lib/gcc/x86_64-linux-gnu/11/../../../../include/c++/11/bits/stl_list.h', 
+                       Line: 151, Column: 16 }
+  - String:          ' because it is clobbered by '
+  - ClobberedBy:     call
+    DebugLoc:        { File: '/usr/lib/gcc/x86_64-linux-gnu/11/../../../../include/c++/11/ext/new_allocator.h', 
+                       Line: 145, Column: 2 }
 ...
 --- !Missed
 Pass:            gvn
@@ -23175,25 +23175,6 @@ Args:
     DebugLoc:        { File: '/usr/lib/gcc/x86_64-linux-gnu/11/../../../../include/c++/11/bits/stl_list.h', 
                        Line: 151, Column: 16 }
   - String:          ' because it is clobbered by '
-  - ClobberedBy:     call
-    DebugLoc:        { File: '/usr/lib/gcc/x86_64-linux-gnu/11/../../../../include/c++/11/ext/new_allocator.h', 
-                       Line: 145, Column: 2 }
-...
---- !Missed
-Pass:            gvn
-Name:            LoadClobbered
-DebugLoc:        { File: '/usr/lib/gcc/x86_64-linux-gnu/11/../../../../include/c++/11/bits/list.tcc', 
-                   Line: 70, Column: 58 }
-Function:        _ZN8exahype217RefinementControlC2Ed
-Args:
-  - String:          'load of type '
-  - Type:            ''
-  - String:          ' not eliminated'
-  - String:          ' in favor of '
-  - OtherAccess:     store
-    DebugLoc:        { File: '/usr/lib/gcc/x86_64-linux-gnu/11/../../../../include/c++/11/bits/stl_list.h', 
-                       Line: 151, Column: 16 }
-  - String:          ' because it is clobbered by '
   - ClobberedBy:     invoke
     DebugLoc:        { File: RefinementControl.cpp, Line: 51, Column: 3 }
 ...
@@ -23233,6 +23214,25 @@ Args:
   - String:          ' because it is clobbered by '
   - ClobberedBy:     invoke
     DebugLoc:        { File: RefinementControl.cpp, Line: 51, Column: 53 }
+...
+--- !Missed
+Pass:            gvn
+Name:            LoadClobbered
+DebugLoc:        { File: '/usr/lib/gcc/x86_64-linux-gnu/11/../../../../include/c++/11/bits/list.tcc', 
+                   Line: 70, Column: 58 }
+Function:        _ZN8exahype217RefinementControlC2Ed
+Args:
+  - String:          'load of type '
+  - Type:            ''
+  - String:          ' not eliminated'
+  - String:          ' in favor of '
+  - OtherAccess:     store
+    DebugLoc:        { File: '/usr/lib/gcc/x86_64-linux-gnu/11/../../../../include/c++/11/bits/stl_list.h', 
+                       Line: 151, Column: 16 }
+  - String:          ' because it is clobbered by '
+  - ClobberedBy:     call
+    DebugLoc:        { File: '/usr/lib/gcc/x86_64-linux-gnu/11/../../../../include/c++/11/ext/new_allocator.h', 
+                       Line: 145, Column: 2 }
 ...
 --- !Missed
 Pass:            gvn

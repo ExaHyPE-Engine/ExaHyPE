@@ -13,10 +13,19 @@
 #include "tarch/logging/Log.h"
 
 
-namespace examples {namespace exahype2 {namespace ccz4 {
-  class FiniteVolumeCCZ4;
+#include <cstring>
 
-}}}
+
+#include "CCZ4Kernels.h"
+
+
+namespace examples {
+  namespace exahype2 {
+    namespace ccz4 {
+      class FiniteVolumeCCZ4;
+    }
+  }
+}
 
 
 class examples::exahype2::ccz4::FiniteVolumeCCZ4: public AbstractFiniteVolumeCCZ4 {
@@ -151,7 +160,10 @@ class examples::exahype2::ccz4::FiniteVolumeCCZ4: public AbstractFiniteVolumeCCZ
        double                                       dt,
        double * __restrict__ S,
        Offloadable
-     );
+     ) GPUCallableMethod {
+      memset(S, 0, NumberOfUnknowns*sizeof(double));
+      source(S,Q, CCZ4LapseType, CCZ4ds, CCZ4c, CCZ4e, CCZ4f, CCZ4bs, CCZ4sk, CCZ4xi, CCZ4itau, CCZ4eta, CCZ4k1, CCZ4k2, CCZ4k3);
+    }
     #if defined(OpenMPGPUOffloading)
     #pragma omp end declare target
     #endif
@@ -184,7 +196,28 @@ class examples::exahype2::ccz4::FiniteVolumeCCZ4: public AbstractFiniteVolumeCCZ
       double                                       dt,
       int                                          normal,
       Offloadable
-    );
+    ) {
+      #if defined(CCZ4EINSTEIN)
+      const double qmin = std::min({Q[0],Q[3],Q[5]});
+      const double alpha = std::max({1.0, std::exp(Q[16])}) * std::max({1.0, std::exp(Q[54])}) / std::sqrt(qmin);
+      #else
+      const double alpha = 1.0;
+      #endif
+
+  constexpr double sqrtwo = 1.4142135623730951;
+  // NOTE parameters are stored in Constants.h
+  const double tempA = alpha * std::max({sqrtwo, CCZ4e, CCZ4ds, CCZ4GLMc/alpha, CCZ4GLMd/alpha});
+  const double tempB = Q[17+normal];//DOT_PRODUCT(Q(18:20),nv(:))
+  double tem = std::max({1.0, std::abs(-tempA-tempB), std::abs(tempA-tempB)});
+  bool flag = false;
+  //for(int i=0; i<(NumberOfUnknowns-1); i++){
+  //  if ( std::abs(Q[i]) > 2.0) { flag = true; break; }
+  //}
+  //return flag? 2*tem: tem;
+  return tem;
+   //return examples::exahype2::ccz4::FiniteVolumeCCZ4::maxEigenvalue(Q, faceCentre, volumeH, t , normal);
+}
+
     #if defined(OpenMPGPUOffloading)
     #pragma omp end declare target
     #endif

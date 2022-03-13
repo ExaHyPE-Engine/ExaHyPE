@@ -32304,6 +32304,44 @@ Args:
                        Line: 195, Column: 28 }
   - String:          ' because it is clobbered by '
   - ClobberedBy:     invoke
+    DebugLoc:        { File: '/usr/lib/gcc/x86_64-linux-gnu/11/../../../../include/c++/11/ostream', 
+                       Line: 682, Column: 25 }
+...
+--- !Missed
+Pass:            gvn
+Name:            LoadClobbered
+DebugLoc:        { File: '/usr/lib/gcc/x86_64-linux-gnu/11/../../../../include/c++/11/bits/basic_string.h', 
+                   Line: 195, Column: 28 }
+Function:        _ZN8exahype26aderdg38riemann_maxAbsoluteEigenvalue_loop_AoSESt8functionIFdPKdRKN5tarch2la6VectorILi3EdEEdiEEPdPKSC_S3_S9_dddiii
+Args:
+  - String:          'load of type '
+  - Type:            ''
+  - String:          ' not eliminated'
+  - String:          ' in favor of '
+  - OtherAccess:     load
+    DebugLoc:        { File: '/usr/lib/gcc/x86_64-linux-gnu/11/../../../../include/c++/11/bits/basic_string.h', 
+                       Line: 195, Column: 28 }
+  - String:          ' because it is clobbered by '
+  - ClobberedBy:     invoke
+    DebugLoc:        { File: '/usr/lib/gcc/x86_64-linux-gnu/11/../../../../include/c++/11/ostream', 
+                       Line: 704, Column: 19 }
+...
+--- !Missed
+Pass:            gvn
+Name:            LoadClobbered
+DebugLoc:        { File: '/usr/lib/gcc/x86_64-linux-gnu/11/../../../../include/c++/11/bits/basic_string.h', 
+                   Line: 195, Column: 28 }
+Function:        _ZN8exahype26aderdg38riemann_maxAbsoluteEigenvalue_loop_AoSESt8functionIFdPKdRKN5tarch2la6VectorILi3EdEEdiEEPdPKSC_S3_S9_dddiii
+Args:
+  - String:          'load of type '
+  - Type:            ''
+  - String:          ' not eliminated'
+  - String:          ' in favor of '
+  - OtherAccess:     load
+    DebugLoc:        { File: '/usr/lib/gcc/x86_64-linux-gnu/11/../../../../include/c++/11/bits/basic_string.h', 
+                       Line: 195, Column: 28 }
+  - String:          ' because it is clobbered by '
+  - ClobberedBy:     invoke
     DebugLoc:        { File: '/usr/lib/gcc/x86_64-linux-gnu/11/../../../../include/c++/11/bits/locale_facets.h', 
                        Line: 879, Column: 8 }
 ...
@@ -32344,44 +32382,6 @@ Args:
   - ClobberedBy:     invoke
     DebugLoc:        { File: '/usr/lib/gcc/x86_64-linux-gnu/11/../../../../include/c++/11/bits/basic_ios.h', 
                        Line: 50, Column: 2 }
-...
---- !Missed
-Pass:            gvn
-Name:            LoadClobbered
-DebugLoc:        { File: '/usr/lib/gcc/x86_64-linux-gnu/11/../../../../include/c++/11/bits/basic_string.h', 
-                   Line: 195, Column: 28 }
-Function:        _ZN8exahype26aderdg38riemann_maxAbsoluteEigenvalue_loop_AoSESt8functionIFdPKdRKN5tarch2la6VectorILi3EdEEdiEEPdPKSC_S3_S9_dddiii
-Args:
-  - String:          'load of type '
-  - Type:            ''
-  - String:          ' not eliminated'
-  - String:          ' in favor of '
-  - OtherAccess:     load
-    DebugLoc:        { File: '/usr/lib/gcc/x86_64-linux-gnu/11/../../../../include/c++/11/bits/basic_string.h', 
-                       Line: 195, Column: 28 }
-  - String:          ' because it is clobbered by '
-  - ClobberedBy:     invoke
-    DebugLoc:        { File: '/usr/lib/gcc/x86_64-linux-gnu/11/../../../../include/c++/11/ostream', 
-                       Line: 682, Column: 25 }
-...
---- !Missed
-Pass:            gvn
-Name:            LoadClobbered
-DebugLoc:        { File: '/usr/lib/gcc/x86_64-linux-gnu/11/../../../../include/c++/11/bits/basic_string.h', 
-                   Line: 195, Column: 28 }
-Function:        _ZN8exahype26aderdg38riemann_maxAbsoluteEigenvalue_loop_AoSESt8functionIFdPKdRKN5tarch2la6VectorILi3EdEEdiEEPdPKSC_S3_S9_dddiii
-Args:
-  - String:          'load of type '
-  - Type:            ''
-  - String:          ' not eliminated'
-  - String:          ' in favor of '
-  - OtherAccess:     load
-    DebugLoc:        { File: '/usr/lib/gcc/x86_64-linux-gnu/11/../../../../include/c++/11/bits/basic_string.h', 
-                       Line: 195, Column: 28 }
-  - String:          ' because it is clobbered by '
-  - ClobberedBy:     invoke
-    DebugLoc:        { File: '/usr/lib/gcc/x86_64-linux-gnu/11/../../../../include/c++/11/ostream', 
-                       Line: 704, Column: 19 }
 ...
 --- !Missed
 Pass:            gvn
@@ -36362,6 +36362,44 @@ Args:
                        Line: 195, Column: 28 }
   - String:          ' because it is clobbered by '
   - ClobberedBy:     invoke
+    DebugLoc:        { File: '/usr/lib/gcc/x86_64-linux-gnu/11/../../../../include/c++/11/ostream', 
+                       Line: 682, Column: 25 }
+...
+--- !Missed
+Pass:            gvn
+Name:            LoadClobbered
+DebugLoc:        { File: '/usr/lib/gcc/x86_64-linux-gnu/11/../../../../include/c++/11/bits/basic_string.h', 
+                   Line: 195, Column: 28 }
+Function:        _ZN8exahype26aderdg38riemann_maxAbsoluteEigenvalue_loop_AoSESt8functionIFdPKdRKN5tarch2la6VectorILi3EdEEdiEEPdPKSC_S3_S9_dddiii
+Args:
+  - String:          'load of type '
+  - Type:            ''
+  - String:          ' not eliminated'
+  - String:          ' in favor of '
+  - OtherAccess:     load
+    DebugLoc:        { File: '/usr/lib/gcc/x86_64-linux-gnu/11/../../../../include/c++/11/bits/basic_string.h', 
+                       Line: 195, Column: 28 }
+  - String:          ' because it is clobbered by '
+  - ClobberedBy:     invoke
+    DebugLoc:        { File: '/usr/lib/gcc/x86_64-linux-gnu/11/../../../../include/c++/11/ostream', 
+                       Line: 704, Column: 19 }
+...
+--- !Missed
+Pass:            gvn
+Name:            LoadClobbered
+DebugLoc:        { File: '/usr/lib/gcc/x86_64-linux-gnu/11/../../../../include/c++/11/bits/basic_string.h', 
+                   Line: 195, Column: 28 }
+Function:        _ZN8exahype26aderdg38riemann_maxAbsoluteEigenvalue_loop_AoSESt8functionIFdPKdRKN5tarch2la6VectorILi3EdEEdiEEPdPKSC_S3_S9_dddiii
+Args:
+  - String:          'load of type '
+  - Type:            ''
+  - String:          ' not eliminated'
+  - String:          ' in favor of '
+  - OtherAccess:     load
+    DebugLoc:        { File: '/usr/lib/gcc/x86_64-linux-gnu/11/../../../../include/c++/11/bits/basic_string.h', 
+                       Line: 195, Column: 28 }
+  - String:          ' because it is clobbered by '
+  - ClobberedBy:     invoke
     DebugLoc:        { File: '/usr/lib/gcc/x86_64-linux-gnu/11/../../../../include/c++/11/bits/locale_facets.h', 
                        Line: 879, Column: 8 }
 ...
@@ -36402,44 +36440,6 @@ Args:
   - ClobberedBy:     invoke
     DebugLoc:        { File: '/usr/lib/gcc/x86_64-linux-gnu/11/../../../../include/c++/11/bits/basic_ios.h', 
                        Line: 50, Column: 2 }
-...
---- !Missed
-Pass:            gvn
-Name:            LoadClobbered
-DebugLoc:        { File: '/usr/lib/gcc/x86_64-linux-gnu/11/../../../../include/c++/11/bits/basic_string.h', 
-                   Line: 195, Column: 28 }
-Function:        _ZN8exahype26aderdg38riemann_maxAbsoluteEigenvalue_loop_AoSESt8functionIFdPKdRKN5tarch2la6VectorILi3EdEEdiEEPdPKSC_S3_S9_dddiii
-Args:
-  - String:          'load of type '
-  - Type:            ''
-  - String:          ' not eliminated'
-  - String:          ' in favor of '
-  - OtherAccess:     load
-    DebugLoc:        { File: '/usr/lib/gcc/x86_64-linux-gnu/11/../../../../include/c++/11/bits/basic_string.h', 
-                       Line: 195, Column: 28 }
-  - String:          ' because it is clobbered by '
-  - ClobberedBy:     invoke
-    DebugLoc:        { File: '/usr/lib/gcc/x86_64-linux-gnu/11/../../../../include/c++/11/ostream', 
-                       Line: 682, Column: 25 }
-...
---- !Missed
-Pass:            gvn
-Name:            LoadClobbered
-DebugLoc:        { File: '/usr/lib/gcc/x86_64-linux-gnu/11/../../../../include/c++/11/bits/basic_string.h', 
-                   Line: 195, Column: 28 }
-Function:        _ZN8exahype26aderdg38riemann_maxAbsoluteEigenvalue_loop_AoSESt8functionIFdPKdRKN5tarch2la6VectorILi3EdEEdiEEPdPKSC_S3_S9_dddiii
-Args:
-  - String:          'load of type '
-  - Type:            ''
-  - String:          ' not eliminated'
-  - String:          ' in favor of '
-  - OtherAccess:     load
-    DebugLoc:        { File: '/usr/lib/gcc/x86_64-linux-gnu/11/../../../../include/c++/11/bits/basic_string.h', 
-                       Line: 195, Column: 28 }
-  - String:          ' because it is clobbered by '
-  - ClobberedBy:     invoke
-    DebugLoc:        { File: '/usr/lib/gcc/x86_64-linux-gnu/11/../../../../include/c++/11/ostream', 
-                       Line: 704, Column: 19 }
 ...
 --- !Missed
 Pass:            gvn

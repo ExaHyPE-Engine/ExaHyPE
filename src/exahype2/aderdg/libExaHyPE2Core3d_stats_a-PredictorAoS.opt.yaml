@@ -23932,7 +23932,8 @@ Args:
   - String:          ' not eliminated'
   - String:          ' because it is clobbered by '
   - ClobberedBy:     call
-    DebugLoc:        { File: 'aderdg/PredictorAoS.cpp', Line: 175, Column: 57 }
+    DebugLoc:        { File: '/usr/lib/gcc/x86_64-linux-gnu/11/../../../../include/c++/11/bits/std_function.h', 
+                       Line: 560, Column: 9 }
 ...
 --- !Missed
 Pass:            gvn
@@ -23945,8 +23946,7 @@ Args:
   - String:          ' not eliminated'
   - String:          ' because it is clobbered by '
   - ClobberedBy:     call
-    DebugLoc:        { File: '/usr/lib/gcc/x86_64-linux-gnu/11/../../../../include/c++/11/bits/std_function.h', 
-                       Line: 560, Column: 9 }
+    DebugLoc:        { File: 'aderdg/PredictorAoS.cpp', Line: 175, Column: 57 }
 ...
 --- !Missed
 Pass:            gvn

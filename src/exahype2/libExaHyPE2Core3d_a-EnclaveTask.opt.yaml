@@ -248,7 +248,7 @@ Args:
 --- !Missed
 Pass:            inline
 Name:            NoDefinition
-DebugLoc:        { File: EnclaveTask.cpp, Line: 44, Column: 19 }
+DebugLoc:        { File: EnclaveTask.cpp, Line: 42, Column: 19 }
 Function:        _ZN8exahype211EnclaveTask3runEv
 Args:
   - Callee:          _ZN5tarch14allocateMemoryEiNS_14MemoryLocationE
@@ -256,49 +256,49 @@ Args:
                        Column: 0 }
   - String:          ' will not be inlined into '
   - Caller:          _ZN8exahype211EnclaveTask3runEv
-    DebugLoc:        { File: EnclaveTask.cpp, Line: 37, Column: 0 }
+    DebugLoc:        { File: EnclaveTask.cpp, Line: 35, Column: 0 }
   - String:          ' because its definition is unavailable'
 ...
 --- !Missed
 Pass:            inline
 Name:            NoDefinition
-DebugLoc:        { File: EnclaveTask.cpp, Line: 49, Column: 3 }
+DebugLoc:        { File: EnclaveTask.cpp, Line: 47, Column: 3 }
 Function:        _ZN8exahype211EnclaveTask3runEv
 Args:
   - Callee:          _ZN8exahype218EnclaveBookkeeping11getInstanceEv
   - String:          ' will not be inlined into '
   - Caller:          _ZN8exahype211EnclaveTask3runEv
-    DebugLoc:        { File: EnclaveTask.cpp, Line: 37, Column: 0 }
+    DebugLoc:        { File: EnclaveTask.cpp, Line: 35, Column: 0 }
   - String:          ' because its definition is unavailable'
 ...
 --- !Missed
 Pass:            inline
 Name:            NoDefinition
-DebugLoc:        { File: EnclaveTask.cpp, Line: 49, Column: 50 }
+DebugLoc:        { File: EnclaveTask.cpp, Line: 47, Column: 50 }
 Function:        _ZN8exahype211EnclaveTask3runEv
 Args:
   - Callee:          _ZNK5tarch9multicore4Task9getTaskIdEv
   - String:          ' will not be inlined into '
   - Caller:          _ZN8exahype211EnclaveTask3runEv
-    DebugLoc:        { File: EnclaveTask.cpp, Line: 37, Column: 0 }
+    DebugLoc:        { File: EnclaveTask.cpp, Line: 35, Column: 0 }
   - String:          ' because its definition is unavailable'
 ...
 --- !Missed
 Pass:            inline
 Name:            NoDefinition
-DebugLoc:        { File: EnclaveTask.cpp, Line: 49, Column: 37 }
+DebugLoc:        { File: EnclaveTask.cpp, Line: 47, Column: 37 }
 Function:        _ZN8exahype211EnclaveTask3runEv
 Args:
   - Callee:          _ZN8exahype218EnclaveBookkeeping12finishedTaskEiiPdd
   - String:          ' will not be inlined into '
   - Caller:          _ZN8exahype211EnclaveTask3runEv
-    DebugLoc:        { File: EnclaveTask.cpp, Line: 37, Column: 0 }
+    DebugLoc:        { File: EnclaveTask.cpp, Line: 35, Column: 0 }
   - String:          ' because its definition is unavailable'
 ...
 --- !Passed
 Pass:            inline
 Name:            Inlined
-DebugLoc:        { File: EnclaveTask.cpp, Line: 45, Column: 3 }
+DebugLoc:        { File: EnclaveTask.cpp, Line: 43, Column: 3 }
 Function:        _ZN8exahype211EnclaveTask3runEv
 Args:
   - String:          ''''
@@ -307,7 +307,7 @@ Args:
                        Line: 557, Column: 0 }
   - String:          ''' inlined into '''
   - Caller:          _ZN8exahype211EnclaveTask3runEv
-    DebugLoc:        { File: EnclaveTask.cpp, Line: 37, Column: 0 }
+    DebugLoc:        { File: EnclaveTask.cpp, Line: 35, Column: 0 }
   - String:          ''''
   - String:          ' with '
   - String:          '(cost='
@@ -335,7 +335,7 @@ Args:
   - String:          ' not eliminated'
   - String:          ' because it is clobbered by '
   - ClobberedBy:     call
-    DebugLoc:        { File: EnclaveTask.cpp, Line: 44, Column: 19 }
+    DebugLoc:        { File: EnclaveTask.cpp, Line: 42, Column: 19 }
 ...
 --- !Missed
 Pass:            gvn
@@ -349,12 +349,12 @@ Args:
   - String:          ' not eliminated'
   - String:          ' because it is clobbered by '
   - ClobberedBy:     call
-    DebugLoc:        { File: EnclaveTask.cpp, Line: 44, Column: 19 }
+    DebugLoc:        { File: EnclaveTask.cpp, Line: 42, Column: 19 }
 ...
 --- !Missed
 Pass:            gvn
 Name:            LoadClobbered
-DebugLoc:        { File: EnclaveTask.cpp, Line: 49, Column: 62 }
+DebugLoc:        { File: EnclaveTask.cpp, Line: 47, Column: 62 }
 Function:        _ZN8exahype211EnclaveTask3runEv
 Args:
   - String:          'load of type '
@@ -362,15 +362,15 @@ Args:
   - String:          ' not eliminated'
   - String:          ' in favor of '
   - OtherAccess:     load
-    DebugLoc:        { File: EnclaveTask.cpp, Line: 44, Column: 42 }
+    DebugLoc:        { File: EnclaveTask.cpp, Line: 42, Column: 42 }
   - String:          ' because it is clobbered by '
   - ClobberedBy:     call
-    DebugLoc:        { File: EnclaveTask.cpp, Line: 49, Column: 50 }
+    DebugLoc:        { File: EnclaveTask.cpp, Line: 47, Column: 50 }
 ...
 --- !Missed
 Pass:            gvn
 Name:            LoadClobbered
-DebugLoc:        { File: EnclaveTask.cpp, Line: 49, Column: 84 }
+DebugLoc:        { File: EnclaveTask.cpp, Line: 47, Column: 84 }
 Function:        _ZN8exahype211EnclaveTask3runEv
 Args:
   - String:          'load of type '
@@ -378,15 +378,15 @@ Args:
   - String:          ' not eliminated'
   - String:          ' in favor of '
   - OtherAccess:     store
-    DebugLoc:        { File: EnclaveTask.cpp, Line: 44, Column: 17 }
+    DebugLoc:        { File: EnclaveTask.cpp, Line: 42, Column: 17 }
   - String:          ' because it is clobbered by '
   - ClobberedBy:     call
-    DebugLoc:        { File: EnclaveTask.cpp, Line: 49, Column: 50 }
+    DebugLoc:        { File: EnclaveTask.cpp, Line: 47, Column: 50 }
 ...
 --- !Missed
 Pass:            gvn
 Name:            LoadClobbered
-DebugLoc:        { File: EnclaveTask.cpp, Line: 49, Column: 98 }
+DebugLoc:        { File: EnclaveTask.cpp, Line: 47, Column: 98 }
 Function:        _ZN8exahype211EnclaveTask3runEv
 Args:
   - String:          'load of type '
@@ -394,7 +394,7 @@ Args:
   - String:          ' not eliminated'
   - String:          ' because it is clobbered by '
   - ClobberedBy:     call
-    DebugLoc:        { File: EnclaveTask.cpp, Line: 49, Column: 50 }
+    DebugLoc:        { File: EnclaveTask.cpp, Line: 47, Column: 50 }
 ...
 --- !Passed
 Pass:            inline
@@ -2705,7 +2705,7 @@ Args:
 --- !Missed
 Pass:            inline
 Name:            NoDefinition
-DebugLoc:        { File: EnclaveTask.cpp, Line: 22, Column: 26 }
+DebugLoc:        { File: EnclaveTask.cpp, Line: 20, Column: 26 }
 Function:        _ZN8exahype211EnclaveTaskC2EiRKN6peano414datamanagement10CellMarkerEddPdiiSt8functionIFvvEE
 Args:
   - Callee:          _ZN5tarch9multicore17reserveTaskNumberEv
@@ -2713,25 +2713,25 @@ Args:
                        Column: 0 }
   - String:          ' will not be inlined into '
   - Caller:          _ZN8exahype211EnclaveTaskC2EiRKN6peano414datamanagement10CellMarkerEddPdiiSt8functionIFvvEE
-    DebugLoc:        { File: EnclaveTask.cpp, Line: 31, Column: 0 }
+    DebugLoc:        { File: EnclaveTask.cpp, Line: 29, Column: 0 }
   - String:          ' because its definition is unavailable'
 ...
 --- !Missed
 Pass:            inline
 Name:            NoDefinition
-DebugLoc:        { File: EnclaveTask.cpp, Line: 22, Column: 3 }
+DebugLoc:        { File: EnclaveTask.cpp, Line: 20, Column: 3 }
 Function:        _ZN8exahype211EnclaveTaskC2EiRKN6peano414datamanagement10CellMarkerEddPdiiSt8functionIFvvEE
 Args:
   - Callee:          _ZN5tarch9multicore4TaskC2Eiii
   - String:          ' will not be inlined into '
   - Caller:          _ZN8exahype211EnclaveTaskC2EiRKN6peano414datamanagement10CellMarkerEddPdiiSt8functionIFvvEE
-    DebugLoc:        { File: EnclaveTask.cpp, Line: 31, Column: 0 }
+    DebugLoc:        { File: EnclaveTask.cpp, Line: 29, Column: 0 }
   - String:          ' because its definition is unavailable'
 ...
 --- !Passed
 Pass:            inline
 Name:            Inlined
-DebugLoc:        { File: EnclaveTask.cpp, Line: 23, Column: 3 }
+DebugLoc:        { File: EnclaveTask.cpp, Line: 21, Column: 3 }
 Function:        _ZN8exahype211EnclaveTaskC2EiRKN6peano414datamanagement10CellMarkerEddPdiiSt8functionIFvvEE
 Args:
   - String:          ''''
@@ -2740,7 +2740,7 @@ Args:
                        Line: 32, Column: 0 }
   - String:          ''' inlined into '''
   - Caller:          _ZN8exahype211EnclaveTaskC2EiRKN6peano414datamanagement10CellMarkerEddPdiiSt8functionIFvvEE
-    DebugLoc:        { File: EnclaveTask.cpp, Line: 31, Column: 0 }
+    DebugLoc:        { File: EnclaveTask.cpp, Line: 29, Column: 0 }
   - String:          ''''
   - String:          ' with '
   - String:          '(cost='
@@ -2759,7 +2759,7 @@ Args:
 --- !Passed
 Pass:            inline
 Name:            Inlined
-DebugLoc:        { File: EnclaveTask.cpp, Line: 34, Column: 1 }
+DebugLoc:        { File: EnclaveTask.cpp, Line: 32, Column: 1 }
 Function:        _ZN8exahype211EnclaveTaskC2EiRKN6peano414datamanagement10CellMarkerEddPdiiSt8functionIFvvEE
 Args:
   - String:          ''''
@@ -2768,7 +2768,7 @@ Args:
                        Column: 0 }
   - String:          ''' inlined into '''
   - Caller:          _ZN8exahype211EnclaveTaskC2EiRKN6peano414datamanagement10CellMarkerEddPdiiSt8functionIFvvEE
-    DebugLoc:        { File: EnclaveTask.cpp, Line: 31, Column: 0 }
+    DebugLoc:        { File: EnclaveTask.cpp, Line: 29, Column: 0 }
   - String:          ''''
   - String:          ' with '
   - String:          '(cost='
@@ -2787,7 +2787,7 @@ Args:
 --- !Passed
 Pass:            inline
 Name:            Inlined
-DebugLoc:        { File: EnclaveTask.cpp, Line: 30, Column: 3 }
+DebugLoc:        { File: EnclaveTask.cpp, Line: 28, Column: 3 }
 Function:        _ZN8exahype211EnclaveTaskC2EiRKN6peano414datamanagement10CellMarkerEddPdiiSt8functionIFvvEE
 Args:
   - String:          ''''
@@ -2796,7 +2796,7 @@ Args:
                        Line: 375, Column: 0 }
   - String:          ''' inlined into '''
   - Caller:          _ZN8exahype211EnclaveTaskC2EiRKN6peano414datamanagement10CellMarkerEddPdiiSt8functionIFvvEE
-    DebugLoc:        { File: EnclaveTask.cpp, Line: 31, Column: 0 }
+    DebugLoc:        { File: EnclaveTask.cpp, Line: 29, Column: 0 }
   - String:          ''''
   - String:          ' with '
   - String:          '(cost='
@@ -2823,7 +2823,7 @@ Args:
   - Callee:          __clang_call_terminate
   - String:          ''' not inlined into '''
   - Caller:          _ZN8exahype211EnclaveTaskC2EiRKN6peano414datamanagement10CellMarkerEddPdiiSt8functionIFvvEE
-    DebugLoc:        { File: EnclaveTask.cpp, Line: 31, Column: 0 }
+    DebugLoc:        { File: EnclaveTask.cpp, Line: 29, Column: 0 }
   - String:          ''' because it should never be inlined '
   - String:          '(cost=never)'
   - String:          ': '
@@ -2840,7 +2840,7 @@ Args:
   - Callee:          __clang_call_terminate
   - String:          ''' not inlined into '''
   - Caller:          _ZN8exahype211EnclaveTaskC2EiRKN6peano414datamanagement10CellMarkerEddPdiiSt8functionIFvvEE
-    DebugLoc:        { File: EnclaveTask.cpp, Line: 31, Column: 0 }
+    DebugLoc:        { File: EnclaveTask.cpp, Line: 29, Column: 0 }
   - String:          ''' because it should never be inlined '
   - String:          '(cost=never)'
   - String:          ': '
@@ -2942,7 +2942,7 @@ Args:
 --- !Missed
 Pass:            inline
 Name:            NoDefinition
-DebugLoc:        { File: EnclaveTask.cpp, Line: 9, Column: 45 }
+DebugLoc:        { File: EnclaveTask.cpp, Line: 7, Column: 45 }
 Function:        __cxx_global_var_init.1
 Args:
   - Callee:          _ZN5tarch7logging3LogC1ERKNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEE
@@ -2966,7 +2966,7 @@ Args:
 --- !Passed
 Pass:            inline
 Name:            Inlined
-DebugLoc:        { File: EnclaveTask.cpp, Line: 9, Column: 51 }
+DebugLoc:        { File: EnclaveTask.cpp, Line: 7, Column: 51 }
 Function:        __cxx_global_var_init.1
 Args:
   - String:          ''''
@@ -2986,7 +2986,7 @@ Args:
   - String:          ' at callsite '
   - String:          __cxx_global_var_init.1
   - String:          ':'
-  - Line:            '9'
+  - Line:            '7'
   - String:          ':'
   - Column:          '51'
   - String:          ';'
@@ -2994,7 +2994,7 @@ Args:
 --- !Passed
 Pass:            inline
 Name:            Inlined
-DebugLoc:        { File: EnclaveTask.cpp, Line: 9, Column: 45 }
+DebugLoc:        { File: EnclaveTask.cpp, Line: 7, Column: 45 }
 Function:        __cxx_global_var_init.1
 Args:
   - String:          ''''
@@ -3014,7 +3014,7 @@ Args:
   - String:          ' at callsite '
   - String:          __cxx_global_var_init.1
   - String:          ':'
-  - Line:            '9'
+  - Line:            '7'
   - String:          ':'
   - Column:          '45'
   - String:          ';'
@@ -3022,7 +3022,7 @@ Args:
 --- !Passed
 Pass:            inline
 Name:            Inlined
-DebugLoc:        { File: EnclaveTask.cpp, Line: 9, Column: 45 }
+DebugLoc:        { File: EnclaveTask.cpp, Line: 7, Column: 45 }
 Function:        __cxx_global_var_init.1
 Args:
   - String:          ''''
@@ -3042,7 +3042,7 @@ Args:
   - String:          ' at callsite '
   - String:          __cxx_global_var_init.1
   - String:          ':'
-  - Line:            '9'
+  - Line:            '7'
   - String:          ':'
   - Column:          '45'
   - String:          ';'
@@ -3050,7 +3050,7 @@ Args:
 --- !Passed
 Pass:            inline
 Name:            Inlined
-DebugLoc:        { File: EnclaveTask.cpp, Line: 9, Column: 51 }
+DebugLoc:        { File: EnclaveTask.cpp, Line: 7, Column: 51 }
 Function:        __cxx_global_var_init.1
 Args:
   - String:          ''''
@@ -3070,7 +3070,7 @@ Args:
   - String:          ' at callsite '
   - String:          __cxx_global_var_init.1
   - String:          ':'
-  - Line:            '9'
+  - Line:            '7'
   - String:          ':'
   - Column:          '51'
   - String:          ';'
@@ -3078,7 +3078,7 @@ Args:
 --- !Passed
 Pass:            inline
 Name:            Inlined
-DebugLoc:        { File: EnclaveTask.cpp, Line: 9, Column: 45 }
+DebugLoc:        { File: EnclaveTask.cpp, Line: 7, Column: 45 }
 Function:        __cxx_global_var_init.1
 Args:
   - String:          ''''
@@ -3098,7 +3098,7 @@ Args:
   - String:          ' at callsite '
   - String:          __cxx_global_var_init.1
   - String:          ':'
-  - Line:            '9'
+  - Line:            '7'
   - String:          ':'
   - Column:          '45'
   - String:          ';'
@@ -3106,7 +3106,7 @@ Args:
 --- !Passed
 Pass:            inline
 Name:            Inlined
-DebugLoc:        { File: EnclaveTask.cpp, Line: 9, Column: 45 }
+DebugLoc:        { File: EnclaveTask.cpp, Line: 7, Column: 45 }
 Function:        __cxx_global_var_init.1
 Args:
   - String:          ''''
@@ -3126,7 +3126,7 @@ Args:
   - String:          ' at callsite '
   - String:          __cxx_global_var_init.1
   - String:          ':'
-  - Line:            '9'
+  - Line:            '7'
   - String:          ':'
   - Column:          '45'
   - String:          ';'
@@ -3185,7 +3185,7 @@ Args:
                        Line: 195, Column: 28 }
   - String:          ' because it is clobbered by '
   - ClobberedBy:     invoke
-    DebugLoc:        { File: EnclaveTask.cpp, Line: 9, Column: 45 }
+    DebugLoc:        { File: EnclaveTask.cpp, Line: 7, Column: 45 }
 ...
 --- !Missed
 Pass:            gvn
@@ -3203,7 +3203,7 @@ Args:
                        Line: 195, Column: 28 }
   - String:          ' because it is clobbered by '
   - ClobberedBy:     invoke
-    DebugLoc:        { File: EnclaveTask.cpp, Line: 9, Column: 45 }
+    DebugLoc:        { File: EnclaveTask.cpp, Line: 7, Column: 45 }
 ...
 --- !Missed
 Pass:            gvn
@@ -3259,7 +3259,7 @@ Args:
                        Line: 195, Column: 28 }
   - String:          ' because it is clobbered by '
   - ClobberedBy:     invoke
-    DebugLoc:        { File: EnclaveTask.cpp, Line: 9, Column: 45 }
+    DebugLoc:        { File: EnclaveTask.cpp, Line: 7, Column: 45 }
 ...
 --- !Missed
 Pass:            gvn
@@ -3277,7 +3277,7 @@ Args:
                        Line: 195, Column: 28 }
   - String:          ' because it is clobbered by '
   - ClobberedBy:     invoke
-    DebugLoc:        { File: EnclaveTask.cpp, Line: 9, Column: 45 }
+    DebugLoc:        { File: EnclaveTask.cpp, Line: 7, Column: 45 }
 ...
 --- !Passed
 Pass:            inline
@@ -3387,7 +3387,7 @@ Args:
                        Line: 195, Column: 28 }
   - String:          ' because it is clobbered by '
   - ClobberedBy:     invoke
-    DebugLoc:        { File: EnclaveTask.cpp, Line: 9, Column: 45 }
+    DebugLoc:        { File: EnclaveTask.cpp, Line: 7, Column: 45 }
 ...
 --- !Missed
 Pass:            gvn
@@ -3405,7 +3405,7 @@ Args:
                        Line: 195, Column: 28 }
   - String:          ' because it is clobbered by '
   - ClobberedBy:     invoke
-    DebugLoc:        { File: EnclaveTask.cpp, Line: 9, Column: 45 }
+    DebugLoc:        { File: EnclaveTask.cpp, Line: 7, Column: 45 }
 ...
 --- !Missed
 Pass:            gvn
@@ -3419,7 +3419,7 @@ Args:
   - String:          ' not eliminated'
   - String:          ' because it is clobbered by '
   - ClobberedBy:     call
-    DebugLoc:        { File: EnclaveTask.cpp, Line: 44, Column: 19 }
+    DebugLoc:        { File: EnclaveTask.cpp, Line: 42, Column: 19 }
 ...
 --- !Missed
 Pass:            gvn
@@ -3433,12 +3433,12 @@ Args:
   - String:          ' not eliminated'
   - String:          ' because it is clobbered by '
   - ClobberedBy:     call
-    DebugLoc:        { File: EnclaveTask.cpp, Line: 44, Column: 19 }
+    DebugLoc:        { File: EnclaveTask.cpp, Line: 42, Column: 19 }
 ...
 --- !Missed
 Pass:            gvn
 Name:            LoadClobbered
-DebugLoc:        { File: EnclaveTask.cpp, Line: 49, Column: 62 }
+DebugLoc:        { File: EnclaveTask.cpp, Line: 47, Column: 62 }
 Function:        _ZN8exahype211EnclaveTask3runEv
 Args:
   - String:          'load of type '
@@ -3446,15 +3446,15 @@ Args:
   - String:          ' not eliminated'
   - String:          ' in favor of '
   - OtherAccess:     load
-    DebugLoc:        { File: EnclaveTask.cpp, Line: 44, Column: 42 }
+    DebugLoc:        { File: EnclaveTask.cpp, Line: 42, Column: 42 }
   - String:          ' because it is clobbered by '
   - ClobberedBy:     call
-    DebugLoc:        { File: EnclaveTask.cpp, Line: 49, Column: 50 }
+    DebugLoc:        { File: EnclaveTask.cpp, Line: 47, Column: 50 }
 ...
 --- !Missed
 Pass:            gvn
 Name:            LoadClobbered
-DebugLoc:        { File: EnclaveTask.cpp, Line: 49, Column: 84 }
+DebugLoc:        { File: EnclaveTask.cpp, Line: 47, Column: 84 }
 Function:        _ZN8exahype211EnclaveTask3runEv
 Args:
   - String:          'load of type '
@@ -3462,15 +3462,15 @@ Args:
   - String:          ' not eliminated'
   - String:          ' in favor of '
   - OtherAccess:     store
-    DebugLoc:        { File: EnclaveTask.cpp, Line: 44, Column: 17 }
+    DebugLoc:        { File: EnclaveTask.cpp, Line: 42, Column: 17 }
   - String:          ' because it is clobbered by '
   - ClobberedBy:     call
-    DebugLoc:        { File: EnclaveTask.cpp, Line: 49, Column: 50 }
+    DebugLoc:        { File: EnclaveTask.cpp, Line: 47, Column: 50 }
 ...
 --- !Missed
 Pass:            gvn
 Name:            LoadClobbered
-DebugLoc:        { File: EnclaveTask.cpp, Line: 49, Column: 98 }
+DebugLoc:        { File: EnclaveTask.cpp, Line: 47, Column: 98 }
 Function:        _ZN8exahype211EnclaveTask3runEv
 Args:
   - String:          'load of type '
@@ -3478,7 +3478,7 @@ Args:
   - String:          ' not eliminated'
   - String:          ' because it is clobbered by '
   - ClobberedBy:     call
-    DebugLoc:        { File: EnclaveTask.cpp, Line: 49, Column: 50 }
+    DebugLoc:        { File: EnclaveTask.cpp, Line: 47, Column: 50 }
 ...
 --- !Missed
 Pass:            gvn
@@ -3728,7 +3728,7 @@ Args:
                        Line: 195, Column: 28 }
   - String:          ' because it is clobbered by '
   - ClobberedBy:     invoke
-    DebugLoc:        { File: EnclaveTask.cpp, Line: 9, Column: 45 }
+    DebugLoc:        { File: EnclaveTask.cpp, Line: 7, Column: 45 }
 ...
 --- !Missed
 Pass:            gvn
@@ -3746,7 +3746,7 @@ Args:
                        Line: 195, Column: 28 }
   - String:          ' because it is clobbered by '
   - ClobberedBy:     invoke
-    DebugLoc:        { File: EnclaveTask.cpp, Line: 9, Column: 45 }
+    DebugLoc:        { File: EnclaveTask.cpp, Line: 7, Column: 45 }
 ...
 --- !Missed
 Pass:            inline
@@ -3819,7 +3819,7 @@ Args:
 --- !Missed
 Pass:            inline
 Name:            NoDefinition
-DebugLoc:        { File: EnclaveTask.cpp, Line: 44, Column: 19 }
+DebugLoc:        { File: EnclaveTask.cpp, Line: 42, Column: 19 }
 Function:        _ZN8exahype211EnclaveTask3runEv
 Args:
   - Callee:          _ZN5tarch14allocateMemoryEiNS_14MemoryLocationE
@@ -3827,7 +3827,7 @@ Args:
                        Column: 0 }
   - String:          ' will not be inlined into '
   - Caller:          _ZN8exahype211EnclaveTask3runEv
-    DebugLoc:        { File: EnclaveTask.cpp, Line: 37, Column: 0 }
+    DebugLoc:        { File: EnclaveTask.cpp, Line: 35, Column: 0 }
   - String:          ' because its definition is unavailable'
 ...
 --- !Missed
@@ -3840,49 +3840,49 @@ Args:
   - Callee:          _ZSt25__throw_bad_function_callv
   - String:          ' will not be inlined into '
   - Caller:          _ZN8exahype211EnclaveTask3runEv
-    DebugLoc:        { File: EnclaveTask.cpp, Line: 37, Column: 0 }
+    DebugLoc:        { File: EnclaveTask.cpp, Line: 35, Column: 0 }
   - String:          ' because its definition is unavailable'
 ...
 --- !Missed
 Pass:            inline
 Name:            NoDefinition
-DebugLoc:        { File: EnclaveTask.cpp, Line: 49, Column: 3 }
+DebugLoc:        { File: EnclaveTask.cpp, Line: 47, Column: 3 }
 Function:        _ZN8exahype211EnclaveTask3runEv
 Args:
   - Callee:          _ZN8exahype218EnclaveBookkeeping11getInstanceEv
   - String:          ' will not be inlined into '
   - Caller:          _ZN8exahype211EnclaveTask3runEv
-    DebugLoc:        { File: EnclaveTask.cpp, Line: 37, Column: 0 }
+    DebugLoc:        { File: EnclaveTask.cpp, Line: 35, Column: 0 }
   - String:          ' because its definition is unavailable'
 ...
 --- !Missed
 Pass:            inline
 Name:            NoDefinition
-DebugLoc:        { File: EnclaveTask.cpp, Line: 49, Column: 50 }
+DebugLoc:        { File: EnclaveTask.cpp, Line: 47, Column: 50 }
 Function:        _ZN8exahype211EnclaveTask3runEv
 Args:
   - Callee:          _ZNK5tarch9multicore4Task9getTaskIdEv
   - String:          ' will not be inlined into '
   - Caller:          _ZN8exahype211EnclaveTask3runEv
-    DebugLoc:        { File: EnclaveTask.cpp, Line: 37, Column: 0 }
+    DebugLoc:        { File: EnclaveTask.cpp, Line: 35, Column: 0 }
   - String:          ' because its definition is unavailable'
 ...
 --- !Missed
 Pass:            inline
 Name:            NoDefinition
-DebugLoc:        { File: EnclaveTask.cpp, Line: 49, Column: 37 }
+DebugLoc:        { File: EnclaveTask.cpp, Line: 47, Column: 37 }
 Function:        _ZN8exahype211EnclaveTask3runEv
 Args:
   - Callee:          _ZN8exahype218EnclaveBookkeeping12finishedTaskEiiPdd
   - String:          ' will not be inlined into '
   - Caller:          _ZN8exahype211EnclaveTask3runEv
-    DebugLoc:        { File: EnclaveTask.cpp, Line: 37, Column: 0 }
+    DebugLoc:        { File: EnclaveTask.cpp, Line: 35, Column: 0 }
   - String:          ' because its definition is unavailable'
 ...
 --- !Missed
 Pass:            inline
 Name:            NoDefinition
-DebugLoc:        { File: EnclaveTask.cpp, Line: 22, Column: 26 }
+DebugLoc:        { File: EnclaveTask.cpp, Line: 20, Column: 26 }
 Function:        _ZN8exahype211EnclaveTaskC2EiRKN6peano414datamanagement10CellMarkerEddPdiiSt8functionIFvvEE
 Args:
   - Callee:          _ZN5tarch9multicore17reserveTaskNumberEv
@@ -3890,19 +3890,19 @@ Args:
                        Column: 0 }
   - String:          ' will not be inlined into '
   - Caller:          _ZN8exahype211EnclaveTaskC2EiRKN6peano414datamanagement10CellMarkerEddPdiiSt8functionIFvvEE
-    DebugLoc:        { File: EnclaveTask.cpp, Line: 31, Column: 0 }
+    DebugLoc:        { File: EnclaveTask.cpp, Line: 29, Column: 0 }
   - String:          ' because its definition is unavailable'
 ...
 --- !Missed
 Pass:            inline
 Name:            NoDefinition
-DebugLoc:        { File: EnclaveTask.cpp, Line: 22, Column: 3 }
+DebugLoc:        { File: EnclaveTask.cpp, Line: 20, Column: 3 }
 Function:        _ZN8exahype211EnclaveTaskC2EiRKN6peano414datamanagement10CellMarkerEddPdiiSt8functionIFvvEE
 Args:
   - Callee:          _ZN5tarch9multicore4TaskC2Eiii
   - String:          ' will not be inlined into '
   - Caller:          _ZN8exahype211EnclaveTaskC2EiRKN6peano414datamanagement10CellMarkerEddPdiiSt8functionIFvvEE
-    DebugLoc:        { File: EnclaveTask.cpp, Line: 31, Column: 0 }
+    DebugLoc:        { File: EnclaveTask.cpp, Line: 29, Column: 0 }
   - String:          ' because its definition is unavailable'
 ...
 --- !Missed
@@ -3916,7 +3916,7 @@ Args:
   - Callee:          __clang_call_terminate
   - String:          ''' not inlined into '''
   - Caller:          _ZN8exahype211EnclaveTaskC2EiRKN6peano414datamanagement10CellMarkerEddPdiiSt8functionIFvvEE
-    DebugLoc:        { File: EnclaveTask.cpp, Line: 31, Column: 0 }
+    DebugLoc:        { File: EnclaveTask.cpp, Line: 29, Column: 0 }
   - String:          ''' because it should never be inlined '
   - String:          '(cost=never)'
   - String:          ': '
@@ -3963,7 +3963,7 @@ Args:
 --- !Missed
 Pass:            inline
 Name:            NoDefinition
-DebugLoc:        { File: EnclaveTask.cpp, Line: 9, Column: 45 }
+DebugLoc:        { File: EnclaveTask.cpp, Line: 7, Column: 45 }
 Function:        _GLOBAL__sub_I_EnclaveTask.cpp
 Args:
   - Callee:          _ZN5tarch7logging3LogC1ERKNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEE
@@ -4085,7 +4085,7 @@ Args:
 --- !Missed
 Pass:            inline
 Name:            NoDefinition
-DebugLoc:        { File: EnclaveTask.cpp, Line: 44, Column: 19 }
+DebugLoc:        { File: EnclaveTask.cpp, Line: 42, Column: 19 }
 Function:        _ZN8exahype211EnclaveTask3runEv
 Args:
   - Callee:          _ZN5tarch14allocateMemoryEiNS_14MemoryLocationE
@@ -4093,7 +4093,7 @@ Args:
                        Column: 0 }
   - String:          ' will not be inlined into '
   - Caller:          _ZN8exahype211EnclaveTask3runEv
-    DebugLoc:        { File: EnclaveTask.cpp, Line: 37, Column: 0 }
+    DebugLoc:        { File: EnclaveTask.cpp, Line: 35, Column: 0 }
   - String:          ' because its definition is unavailable'
 ...
 --- !Missed
@@ -4106,49 +4106,49 @@ Args:
   - Callee:          _ZSt25__throw_bad_function_callv
   - String:          ' will not be inlined into '
   - Caller:          _ZN8exahype211EnclaveTask3runEv
-    DebugLoc:        { File: EnclaveTask.cpp, Line: 37, Column: 0 }
+    DebugLoc:        { File: EnclaveTask.cpp, Line: 35, Column: 0 }
   - String:          ' because its definition is unavailable'
 ...
 --- !Missed
 Pass:            inline
 Name:            NoDefinition
-DebugLoc:        { File: EnclaveTask.cpp, Line: 49, Column: 3 }
+DebugLoc:        { File: EnclaveTask.cpp, Line: 47, Column: 3 }
 Function:        _ZN8exahype211EnclaveTask3runEv
 Args:
   - Callee:          _ZN8exahype218EnclaveBookkeeping11getInstanceEv
   - String:          ' will not be inlined into '
   - Caller:          _ZN8exahype211EnclaveTask3runEv
-    DebugLoc:        { File: EnclaveTask.cpp, Line: 37, Column: 0 }
+    DebugLoc:        { File: EnclaveTask.cpp, Line: 35, Column: 0 }
   - String:          ' because its definition is unavailable'
 ...
 --- !Missed
 Pass:            inline
 Name:            NoDefinition
-DebugLoc:        { File: EnclaveTask.cpp, Line: 49, Column: 50 }
+DebugLoc:        { File: EnclaveTask.cpp, Line: 47, Column: 50 }
 Function:        _ZN8exahype211EnclaveTask3runEv
 Args:
   - Callee:          _ZNK5tarch9multicore4Task9getTaskIdEv
   - String:          ' will not be inlined into '
   - Caller:          _ZN8exahype211EnclaveTask3runEv
-    DebugLoc:        { File: EnclaveTask.cpp, Line: 37, Column: 0 }
+    DebugLoc:        { File: EnclaveTask.cpp, Line: 35, Column: 0 }
   - String:          ' because its definition is unavailable'
 ...
 --- !Missed
 Pass:            inline
 Name:            NoDefinition
-DebugLoc:        { File: EnclaveTask.cpp, Line: 49, Column: 37 }
+DebugLoc:        { File: EnclaveTask.cpp, Line: 47, Column: 37 }
 Function:        _ZN8exahype211EnclaveTask3runEv
 Args:
   - Callee:          _ZN8exahype218EnclaveBookkeeping12finishedTaskEiiPdd
   - String:          ' will not be inlined into '
   - Caller:          _ZN8exahype211EnclaveTask3runEv
-    DebugLoc:        { File: EnclaveTask.cpp, Line: 37, Column: 0 }
+    DebugLoc:        { File: EnclaveTask.cpp, Line: 35, Column: 0 }
   - String:          ' because its definition is unavailable'
 ...
 --- !Missed
 Pass:            inline
 Name:            NoDefinition
-DebugLoc:        { File: EnclaveTask.cpp, Line: 22, Column: 26 }
+DebugLoc:        { File: EnclaveTask.cpp, Line: 20, Column: 26 }
 Function:        _ZN8exahype211EnclaveTaskC2EiRKN6peano414datamanagement10CellMarkerEddPdiiSt8functionIFvvEE
 Args:
   - Callee:          _ZN5tarch9multicore17reserveTaskNumberEv
@@ -4156,19 +4156,19 @@ Args:
                        Column: 0 }
   - String:          ' will not be inlined into '
   - Caller:          _ZN8exahype211EnclaveTaskC2EiRKN6peano414datamanagement10CellMarkerEddPdiiSt8functionIFvvEE
-    DebugLoc:        { File: EnclaveTask.cpp, Line: 31, Column: 0 }
+    DebugLoc:        { File: EnclaveTask.cpp, Line: 29, Column: 0 }
   - String:          ' because its definition is unavailable'
 ...
 --- !Missed
 Pass:            inline
 Name:            NoDefinition
-DebugLoc:        { File: EnclaveTask.cpp, Line: 22, Column: 3 }
+DebugLoc:        { File: EnclaveTask.cpp, Line: 20, Column: 3 }
 Function:        _ZN8exahype211EnclaveTaskC2EiRKN6peano414datamanagement10CellMarkerEddPdiiSt8functionIFvvEE
 Args:
   - Callee:          _ZN5tarch9multicore4TaskC2Eiii
   - String:          ' will not be inlined into '
   - Caller:          _ZN8exahype211EnclaveTaskC2EiRKN6peano414datamanagement10CellMarkerEddPdiiSt8functionIFvvEE
-    DebugLoc:        { File: EnclaveTask.cpp, Line: 31, Column: 0 }
+    DebugLoc:        { File: EnclaveTask.cpp, Line: 29, Column: 0 }
   - String:          ' because its definition is unavailable'
 ...
 --- !Missed
@@ -4182,7 +4182,7 @@ Args:
   - Callee:          __clang_call_terminate
   - String:          ''' not inlined into '''
   - Caller:          _ZN8exahype211EnclaveTaskC2EiRKN6peano414datamanagement10CellMarkerEddPdiiSt8functionIFvvEE
-    DebugLoc:        { File: EnclaveTask.cpp, Line: 31, Column: 0 }
+    DebugLoc:        { File: EnclaveTask.cpp, Line: 29, Column: 0 }
   - String:          ''' because it should never be inlined '
   - String:          '(cost=never)'
   - String:          ': '
@@ -4229,7 +4229,7 @@ Args:
 --- !Missed
 Pass:            inline
 Name:            NoDefinition
-DebugLoc:        { File: EnclaveTask.cpp, Line: 9, Column: 45 }
+DebugLoc:        { File: EnclaveTask.cpp, Line: 7, Column: 45 }
 Function:        _GLOBAL__sub_I_EnclaveTask.cpp
 Args:
   - Callee:          _ZN5tarch7logging3LogC1ERKNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEE
@@ -4431,7 +4431,7 @@ Args:
 --- !Analysis
 Pass:            prologepilog
 Name:            StackSize
-DebugLoc:        { File: EnclaveTask.cpp, Line: 37, Column: 0 }
+DebugLoc:        { File: EnclaveTask.cpp, Line: 35, Column: 0 }
 Function:        _ZN8exahype211EnclaveTask3runEv
 Args:
   - NumStackBytes:   '24'
@@ -4484,7 +4484,7 @@ Args:
 --- !Analysis
 Pass:            asm-printer
 Name:            InstructionCount
-DebugLoc:        { File: EnclaveTask.cpp, Line: 37, Column: 0 }
+DebugLoc:        { File: EnclaveTask.cpp, Line: 35, Column: 0 }
 Function:        _ZN8exahype211EnclaveTask3runEv
 Args:
   - NumInstructions: '28'
@@ -4522,7 +4522,7 @@ Args:
 --- !Missed
 Pass:            regalloc
 Name:            SpillReloadCopies
-DebugLoc:        { File: EnclaveTask.cpp, Line: 12, Column: 1 }
+DebugLoc:        { File: EnclaveTask.cpp, Line: 10, Column: 1 }
 Function:        _ZN8exahype211EnclaveTaskC2EiRKN6peano414datamanagement10CellMarkerEddPdiiSt8functionIFvvEE
 Args:
   - NumSpills:       '3'
@@ -4542,7 +4542,7 @@ Args:
 --- !Analysis
 Pass:            prologepilog
 Name:            StackSize
-DebugLoc:        { File: EnclaveTask.cpp, Line: 31, Column: 0 }
+DebugLoc:        { File: EnclaveTask.cpp, Line: 29, Column: 0 }
 Function:        _ZN8exahype211EnclaveTaskC2EiRKN6peano414datamanagement10CellMarkerEddPdiiSt8functionIFvvEE
 Args:
   - NumStackBytes:   '72'
@@ -4666,7 +4666,7 @@ Args:
 --- !Analysis
 Pass:            asm-printer
 Name:            InstructionCount
-DebugLoc:        { File: EnclaveTask.cpp, Line: 31, Column: 0 }
+DebugLoc:        { File: EnclaveTask.cpp, Line: 29, Column: 0 }
 Function:        _ZN8exahype211EnclaveTaskC2EiRKN6peano414datamanagement10CellMarkerEddPdiiSt8functionIFvvEE
 Args:
   - NumInstructions: '96'

@@ -62813,9 +62813,9 @@ Args:
     DebugLoc:        { File: '/usr/lib/gcc/x86_64-linux-gnu/11/../../../../include/c++/11/bits/stl_list.h', 
                        Line: 151, Column: 16 }
   - String:          ' because it is clobbered by '
-  - ClobberedBy:     call
+  - ClobberedBy:     invoke
     DebugLoc:        { File: '/usr/lib/gcc/x86_64-linux-gnu/11/../../../../include/c++/11/ext/new_allocator.h', 
-                       Line: 145, Column: 2 }
+                       Line: 127, Column: 27 }
 ...
 --- !Missed
 Pass:            gvn
@@ -62832,9 +62832,9 @@ Args:
     DebugLoc:        { File: '/usr/lib/gcc/x86_64-linux-gnu/11/../../../../include/c++/11/bits/stl_list.h', 
                        Line: 151, Column: 16 }
   - String:          ' because it is clobbered by '
-  - ClobberedBy:     invoke
+  - ClobberedBy:     call
     DebugLoc:        { File: '/usr/lib/gcc/x86_64-linux-gnu/11/../../../../include/c++/11/ext/new_allocator.h', 
-                       Line: 127, Column: 27 }
+                       Line: 145, Column: 2 }
 ...
 --- !Missed
 Pass:            gvn

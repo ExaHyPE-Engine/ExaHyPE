@@ -764,7 +764,7 @@ CTAGS = ctags
 CXX = icpx
 CXXCPP = icpx -E
 CXXDEPMODE = depmode=gcc3
-CXXFLAGS = -Ofast -xCORE-AVX2 --std=c++17 -fopenmp -g -qopt-report=3
+CXXFLAGS = -DInlineCCZ4Kernels -Ofast -xCORE-AVX2 --std=c++17 -fopenmp -g -qopt-report=3
 CXXFLAGS_PEANO_2D_ASSERTS =  -DDimensions=2 -DPeanoDebug=2 -g3 -O0
 CXXFLAGS_PEANO_2D_DEBUG =    -DDimensions=2 -DPeanoDebug=4 -g3 -O0
 CXXFLAGS_PEANO_2D_RELEASE =  -DDimensions=2 -DPeanoDebug=0

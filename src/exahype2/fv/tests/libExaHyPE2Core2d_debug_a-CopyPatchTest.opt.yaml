@@ -25422,9 +25422,9 @@ Args:
     DebugLoc:        { File: '/usr/lib/gcc/x86_64-linux-gnu/11/../../../../include/c++/11/bits/basic_string.tcc', 
                        Line: 215, Column: 12 }
   - String:          ' because it is clobbered by '
-  - ClobberedBy:     call
+  - ClobberedBy:     store
     DebugLoc:        { File: '/usr/lib/gcc/x86_64-linux-gnu/11/../../../../include/c++/11/bits/char_traits.h', 
-                       Line: 409, Column: 33 }
+                       Line: 329, Column: 14 }
 ...
 --- !Missed
 Pass:            gvn
@@ -25441,9 +25441,9 @@ Args:
     DebugLoc:        { File: '/usr/lib/gcc/x86_64-linux-gnu/11/../../../../include/c++/11/bits/basic_string.tcc', 
                        Line: 215, Column: 12 }
   - String:          ' because it is clobbered by '
-  - ClobberedBy:     store
+  - ClobberedBy:     call
     DebugLoc:        { File: '/usr/lib/gcc/x86_64-linux-gnu/11/../../../../include/c++/11/bits/char_traits.h', 
-                       Line: 329, Column: 14 }
+                       Line: 409, Column: 33 }
 ...
 --- !Missed
 Pass:            gvn
@@ -27674,6 +27674,20 @@ Args:
   - Type:            ''
   - String:          ' not eliminated'
   - String:          ' because it is clobbered by '
+  - ClobberedBy:     store
+    DebugLoc:        { File: '/usr/lib/gcc/x86_64-linux-gnu/11/../../../../include/c++/11/ext/new_allocator.h', 
+                       Line: 162, Column: 4 }
+...
+--- !Missed
+Pass:            gvn
+Name:            LoadClobbered
+DebugLoc:        { File: 'fv/tests/CopyPatchTest.cpp', Line: 59, Column: 26 }
+Function:        _ZN8exahype22fv5tests13CopyPatchTest6testMeEv
+Args:
+  - String:          'load of type '
+  - Type:            ''
+  - String:          ' not eliminated'
+  - String:          ' because it is clobbered by '
   - ClobberedBy:     call
     DebugLoc:        { File: '/usr/lib/gcc/x86_64-linux-gnu/11/../../../../include/c++/11/ext/new_allocator.h', 
                        Line: 145, Column: 2 }
@@ -27691,20 +27705,6 @@ Args:
   - ClobberedBy:     call
     DebugLoc:        { File: '/usr/lib/gcc/x86_64-linux-gnu/11/../../../../include/c++/11/bits/stl_uninitialized.h', 
                        Line: 1011, Column: 2 }
-...
---- !Missed
-Pass:            gvn
-Name:            LoadClobbered
-DebugLoc:        { File: 'fv/tests/CopyPatchTest.cpp', Line: 59, Column: 26 }
-Function:        _ZN8exahype22fv5tests13CopyPatchTest6testMeEv
-Args:
-  - String:          'load of type '
-  - Type:            ''
-  - String:          ' not eliminated'
-  - String:          ' because it is clobbered by '
-  - ClobberedBy:     store
-    DebugLoc:        { File: '/usr/lib/gcc/x86_64-linux-gnu/11/../../../../include/c++/11/ext/new_allocator.h', 
-                       Line: 162, Column: 4 }
 ...
 --- !Missed
 Pass:            gvn
@@ -28160,20 +28160,6 @@ Args:
   - Type:            ''
   - String:          ' not eliminated'
   - String:          ' because it is clobbered by '
-  - ClobberedBy:     store
-    DebugLoc:        { File: '/usr/lib/gcc/x86_64-linux-gnu/11/../../../../include/c++/11/ext/new_allocator.h', 
-                       Line: 162, Column: 4 }
-...
---- !Missed
-Pass:            gvn
-Name:            LoadClobbered
-DebugLoc:        { File: 'fv/tests/CopyPatchTest.cpp', Line: 65, Column: 21 }
-Function:        _ZN8exahype22fv5tests13CopyPatchTest6testMeEv
-Args:
-  - String:          'load of type '
-  - Type:            ''
-  - String:          ' not eliminated'
-  - String:          ' because it is clobbered by '
   - ClobberedBy:     call
     DebugLoc:        { File: '/usr/lib/gcc/x86_64-linux-gnu/11/../../../../include/c++/11/ext/new_allocator.h', 
                        Line: 145, Column: 2 }
@@ -28191,6 +28177,20 @@ Args:
   - ClobberedBy:     call
     DebugLoc:        { File: '/usr/lib/gcc/x86_64-linux-gnu/11/../../../../include/c++/11/bits/stl_uninitialized.h', 
                        Line: 1011, Column: 2 }
+...
+--- !Missed
+Pass:            gvn
+Name:            LoadClobbered
+DebugLoc:        { File: 'fv/tests/CopyPatchTest.cpp', Line: 65, Column: 21 }
+Function:        _ZN8exahype22fv5tests13CopyPatchTest6testMeEv
+Args:
+  - String:          'load of type '
+  - Type:            ''
+  - String:          ' not eliminated'
+  - String:          ' because it is clobbered by '
+  - ClobberedBy:     store
+    DebugLoc:        { File: '/usr/lib/gcc/x86_64-linux-gnu/11/../../../../include/c++/11/ext/new_allocator.h', 
+                       Line: 162, Column: 4 }
 ...
 --- !Missed
 Pass:            gvn
@@ -28677,6 +28677,20 @@ Args:
   - Type:            ''
   - String:          ' not eliminated'
   - String:          ' because it is clobbered by '
+  - ClobberedBy:     store
+    DebugLoc:        { File: '/usr/lib/gcc/x86_64-linux-gnu/11/../../../../include/c++/11/ext/new_allocator.h', 
+                       Line: 162, Column: 4 }
+...
+--- !Missed
+Pass:            gvn
+Name:            LoadClobbered
+DebugLoc:        { File: 'fv/tests/CopyPatchTest.cpp', Line: 59, Column: 26 }
+Function:        _ZN8exahype22fv5tests13CopyPatchTest6testMeEv
+Args:
+  - String:          'load of type '
+  - Type:            ''
+  - String:          ' not eliminated'
+  - String:          ' because it is clobbered by '
   - ClobberedBy:     call
     DebugLoc:        { File: '/usr/lib/gcc/x86_64-linux-gnu/11/../../../../include/c++/11/ext/new_allocator.h', 
                        Line: 145, Column: 2 }
@@ -28694,20 +28708,6 @@ Args:
   - ClobberedBy:     call
     DebugLoc:        { File: '/usr/lib/gcc/x86_64-linux-gnu/11/../../../../include/c++/11/bits/stl_uninitialized.h', 
                        Line: 1011, Column: 2 }
-...
---- !Missed
-Pass:            gvn
-Name:            LoadClobbered
-DebugLoc:        { File: 'fv/tests/CopyPatchTest.cpp', Line: 59, Column: 26 }
-Function:        _ZN8exahype22fv5tests13CopyPatchTest6testMeEv
-Args:
-  - String:          'load of type '
-  - Type:            ''
-  - String:          ' not eliminated'
-  - String:          ' because it is clobbered by '
-  - ClobberedBy:     store
-    DebugLoc:        { File: '/usr/lib/gcc/x86_64-linux-gnu/11/../../../../include/c++/11/ext/new_allocator.h', 
-                       Line: 162, Column: 4 }
 ...
 --- !Missed
 Pass:            gvn
@@ -29163,20 +29163,6 @@ Args:
   - Type:            ''
   - String:          ' not eliminated'
   - String:          ' because it is clobbered by '
-  - ClobberedBy:     store
-    DebugLoc:        { File: '/usr/lib/gcc/x86_64-linux-gnu/11/../../../../include/c++/11/ext/new_allocator.h', 
-                       Line: 162, Column: 4 }
-...
---- !Missed
-Pass:            gvn
-Name:            LoadClobbered
-DebugLoc:        { File: 'fv/tests/CopyPatchTest.cpp', Line: 65, Column: 21 }
-Function:        _ZN8exahype22fv5tests13CopyPatchTest6testMeEv
-Args:
-  - String:          'load of type '
-  - Type:            ''
-  - String:          ' not eliminated'
-  - String:          ' because it is clobbered by '
   - ClobberedBy:     call
     DebugLoc:        { File: '/usr/lib/gcc/x86_64-linux-gnu/11/../../../../include/c++/11/ext/new_allocator.h', 
                        Line: 145, Column: 2 }
@@ -29194,6 +29180,20 @@ Args:
   - ClobberedBy:     call
     DebugLoc:        { File: '/usr/lib/gcc/x86_64-linux-gnu/11/../../../../include/c++/11/bits/stl_uninitialized.h', 
                        Line: 1011, Column: 2 }
+...
+--- !Missed
+Pass:            gvn
+Name:            LoadClobbered
+DebugLoc:        { File: 'fv/tests/CopyPatchTest.cpp', Line: 65, Column: 21 }
+Function:        _ZN8exahype22fv5tests13CopyPatchTest6testMeEv
+Args:
+  - String:          'load of type '
+  - Type:            ''
+  - String:          ' not eliminated'
+  - String:          ' because it is clobbered by '
+  - ClobberedBy:     store
+    DebugLoc:        { File: '/usr/lib/gcc/x86_64-linux-gnu/11/../../../../include/c++/11/ext/new_allocator.h', 
+                       Line: 162, Column: 4 }
 ...
 --- !Missed
 Pass:            gvn
