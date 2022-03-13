@@ -18,18 +18,18 @@ void exahype2::fv::rusanov::internal::copySolution_LoopBody(
 
 template <class QInEnumeratorType, class QOutEnumeratorType>
 void exahype2::fv::rusanov::internal::copySolutionAndAddSourceTerm_LoopBody(
-    const double* __restrict__                QIn,
-    QInEnumeratorType                         QInEnumerator,
-    exahype2::fv::rusanov::Source             source,
-    const tarch::la::Vector<Dimensions,double>&  patchCentre,
-    const tarch::la::Vector<Dimensions,double>&  patchSize,
-    int                                       patchIndex,
-    const tarch::la::Vector<Dimensions,int>&  volumeIndex,
-    double                                    t,
-    double                                    dt,
-    double* __restrict__                      QOut,
-    QOutEnumeratorType                        QOutEnumerator
-  ) {
+  const double* __restrict__                QIn,
+  QInEnumeratorType                         QInEnumerator,
+  exahype2::fv::rusanov::Source             source,
+  const tarch::la::Vector<Dimensions,double>&  patchCentre,
+  const tarch::la::Vector<Dimensions,double>&  patchSize,
+  int                                       patchIndex,
+  const tarch::la::Vector<Dimensions,int>&  volumeIndex,
+  double                                    t,
+  double                                    dt,
+  double* __restrict__                      QOut,
+  QOutEnumeratorType                        QOutEnumerator
+) {
     double QInGathered[QInEnumerator._unknowns+QInEnumerator._numberOfAuxiliaryVariables];
     double QSourceGathered[QInEnumerator._unknowns];
 
@@ -50,45 +50,72 @@ void exahype2::fv::rusanov::internal::copySolutionAndAddSourceTerm_LoopBody(
     for (int unknown=0; unknown<QInEnumerator._unknowns; unknown++) {
       QOut[ QOutEnumerator(patchIndex,volumeIndex,unknown) ] = QIn[QInEnumerator(patchIndex,volumeIndex,unknown)]
                                                              + dt * QSourceGathered[unknown];
+      #if !defined(OpenMPGPUOffloading) and !defined(SYCLGPUOffloading) and !defined(HIPGPUOffloading)
+      assertion4(
+        QOut[ QOutEnumerator(patchIndex, volumeIndex,unknown) ]==QOut[ QOutEnumerator(patchIndex, volumeIndex,unknown) ],
+        dt, unknown, volumeIndex,
+        QOutEnumerator(patchIndex, volumeIndex,unknown)
+      );
+      #endif
     }
-    for (int unknown=QInEnumerator._unknowns; unknown<QInEnumerator._unknowns+QInEnumerator._numberOfAuxiliaryVariables; unknown++) {
-      QOut[ QOutEnumerator(patchIndex,volumeIndex,unknown) ] = QIn[QInEnumerator(patchIndex,volumeIndex,unknown)];
-    }
+  for (int unknown=QInEnumerator._unknowns; unknown<QInEnumerator._unknowns+QInEnumerator._numberOfAuxiliaryVariables; unknown++) {
+    QOut[ QOutEnumerator(patchIndex,volumeIndex,unknown) ] = QIn[QInEnumerator(patchIndex,volumeIndex,unknown)];
+    #if !defined(OpenMPGPUOffloading) and !defined(SYCLGPUOffloading) and !defined(HIPGPUOffloading)
+    assertion4(
+      QOut[ QOutEnumerator(patchIndex, volumeIndex,unknown) ]==QOut[ QOutEnumerator(patchIndex, volumeIndex,unknown) ],
+      dt, unknown, volumeIndex,
+      QOutEnumerator(patchIndex, volumeIndex,unknown)
+    );
+    #endif
   }
+}
 
 
 template <>
 void exahype2::fv::rusanov::internal::copySolutionAndAddSourceTerm_LoopBody(
-    const double* __restrict__                QIn,
-    exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator QInEnumerator,
-    exahype2::fv::rusanov::Source             source,
-    const tarch::la::Vector<Dimensions,double>&  patchCentre,
-    const tarch::la::Vector<Dimensions,double>&  patchSize,
-    int                                       patchIndex,
-    const tarch::la::Vector<Dimensions,int>&  volumeIndex,
-    double                                    t,
-    double                                    dt,
-    double* __restrict__                      QOut,
-    exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator QOutEnumerator
-  ) {
-    double QSourceGathered[QInEnumerator._unknowns];
+  const double* __restrict__                QIn,
+  exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator QInEnumerator,
+  exahype2::fv::rusanov::Source             source,
+  const tarch::la::Vector<Dimensions,double>&  patchCentre,
+  const tarch::la::Vector<Dimensions,double>&  patchSize,
+  int                                       patchIndex,
+  const tarch::la::Vector<Dimensions,int>&  volumeIndex,
+  double                                    t,
+  double                                    dt,
+  double* __restrict__                      QOut,
+  exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator QOutEnumerator
+) {
+  source(
+    QIn + QInEnumerator(patchIndex,volumeIndex,0),
+    ::exahype2::fv::getVolumeCentre( patchCentre, patchSize, QInEnumerator._numberOfVolumesPerAxisInPatch, volumeIndex ),
+    ::exahype2::fv::getVolumeSize( patchSize, QInEnumerator._numberOfVolumesPerAxisInPatch ),
+    t,
+    dt,
+    QOut + QOutEnumerator(patchIndex,volumeIndex,0)
+  );
 
-    source(
-      QIn + QInEnumerator(patchIndex,volumeIndex,0),
-      ::exahype2::fv::getVolumeCentre( patchCentre, patchSize, QInEnumerator._numberOfVolumesPerAxisInPatch, volumeIndex ),
-      ::exahype2::fv::getVolumeSize( patchSize, QInEnumerator._numberOfVolumesPerAxisInPatch ),
-      t,
-      dt,
-      QSourceGathered
+  for (int unknown=0; unknown<QInEnumerator._unknowns; unknown++) {
+    QOut[ QOutEnumerator(patchIndex,volumeIndex,unknown) ] =
+         dt * QOut[ QOutEnumerator(patchIndex,volumeIndex,unknown) ]
+      + QIn[QInEnumerator(patchIndex,volumeIndex,unknown)];
+    #if !defined(OpenMPGPUOffloading) and !defined(SYCLGPUOffloading) and !defined(HIPGPUOffloading)
+    assertion4(
+      QOut[ QOutEnumerator(patchIndex, volumeIndex,unknown) ]==QOut[ QOutEnumerator(patchIndex, volumeIndex,unknown) ],
+      dt, unknown, volumeIndex,
+      QOutEnumerator(patchIndex, volumeIndex,unknown)
     );
-
-    for (int unknown=0; unknown<QInEnumerator._unknowns; unknown++) {
-      QOut[ QOutEnumerator(patchIndex,volumeIndex,unknown) ] = QIn[QInEnumerator(patchIndex,volumeIndex,unknown)]
-                                                             + dt * QSourceGathered[unknown];
-    }
-    for (int unknown=QInEnumerator._unknowns; unknown<QInEnumerator._unknowns+QInEnumerator._numberOfAuxiliaryVariables; unknown++) {
-      QOut[ QOutEnumerator(patchIndex,volumeIndex,unknown) ] = QIn[QInEnumerator(patchIndex,volumeIndex,unknown)];
-    }
+    #endif
+  }
+  for (int unknown=QInEnumerator._unknowns; unknown<QInEnumerator._unknowns+QInEnumerator._numberOfAuxiliaryVariables; unknown++) {
+    QOut[ QOutEnumerator(patchIndex,volumeIndex,unknown) ] = QIn[QInEnumerator(patchIndex,volumeIndex,unknown)];
+    #if !defined(OpenMPGPUOffloading) and !defined(SYCLGPUOffloading) and !defined(HIPGPUOffloading)
+    assertion4(
+      QOut[ QOutEnumerator(patchIndex, volumeIndex,unknown) ]==QOut[ QOutEnumerator(patchIndex, volumeIndex,unknown) ],
+      dt, unknown, volumeIndex,
+      QOutEnumerator(patchIndex, volumeIndex,unknown)
+    );
+    #endif
+  }
 }
 
 
@@ -133,14 +160,28 @@ void exahype2::fv::rusanov::internal::copySolutionAndAddSourceTerm_LoopBody(
     for (int unknown=0; unknown<QInEnumerator._unknowns; unknown++) {
       QOut[ QOutEnumerator(patchIndex,volumeIndex,unknown) ] = QIn[QInEnumerator(patchIndex,volumeIndex,unknown)]
                                                              + dt * QSourceGathered[unknown];
+      #if !defined(OpenMPGPUOffloading) and !defined(SYCLGPUOffloading) and !defined(HIPGPUOffloading)
+      assertion4(
+        QOut[ QOutEnumerator(patchIndex, volumeIndex,unknown) ]==QOut[ QOutEnumerator(patchIndex, volumeIndex,unknown) ],
+        dt, unknown, volumeIndex,
+        QOutEnumerator(patchIndex, volumeIndex,unknown)
+      );
+      #endif
     }
 #if defined(SharedOMP)
 #pragma omp simd
 #endif
     for (int unknown=QInEnumerator._unknowns; unknown<QInEnumerator._unknowns+QInEnumerator._numberOfAuxiliaryVariables; unknown++) {
       QOut[ QOutEnumerator(patchIndex,volumeIndex,unknown) ] = QIn[QInEnumerator(patchIndex,volumeIndex,unknown)];
-    }
+      #if !defined(OpenMPGPUOffloading) and !defined(SYCLGPUOffloading) and !defined(HIPGPUOffloading)
+      assertion4(
+        QOut[ QOutEnumerator(patchIndex, volumeIndex,unknown) ]==QOut[ QOutEnumerator(patchIndex, volumeIndex,unknown) ],
+        dt, unknown, volumeIndex,
+        QOutEnumerator(patchIndex, volumeIndex,unknown)
+      );
+      #endif
   }
+}
 
 
 template <typename Solver>
@@ -156,32 +197,40 @@ void exahype2::fv::rusanov::internal::copySolutionAndAddSourceTerm_LoopBody(
     double* __restrict__                      QOut,
     exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator QOutEnumerator
 ) {
-  double QSourceGathered[QInEnumerator._unknowns];
-
   Solver::sourceTerm(
-      QIn + QInEnumerator(patchIndex,volumeIndex,0),
-      ::exahype2::fv::getVolumeCentre( patchCentre, patchSize, QInEnumerator._numberOfVolumesPerAxisInPatch, volumeIndex ),
-      ::exahype2::fv::getVolumeSize( patchSize, QInEnumerator._numberOfVolumesPerAxisInPatch ),
-      t,
-      dt,
-      QSourceGathered,
-      ::exahype2::Solver::Offloadable::Yes
-    );
+    QIn + QInEnumerator(patchIndex,volumeIndex,0),
+    ::exahype2::fv::getVolumeCentre( patchCentre, patchSize, QInEnumerator._numberOfVolumesPerAxisInPatch, volumeIndex ),
+    ::exahype2::fv::getVolumeSize( patchSize, QInEnumerator._numberOfVolumesPerAxisInPatch ),
+    t,
+    dt,
+    QOut + QOutEnumerator(patchIndex,volumeIndex,0),
+    ::exahype2::Solver::Offloadable::Yes
+  );
 
-    // scatter
-#if defined(SharedOMP)
-#pragma omp simd
-#endif
-    for (int unknown=0; unknown<QInEnumerator._unknowns; unknown++) {
-      QOut[ QOutEnumerator(patchIndex,volumeIndex,unknown) ] = QIn[QInEnumerator(patchIndex,volumeIndex,unknown)]
-                                                             + dt * QSourceGathered[unknown];
-    }
-#if defined(SharedOMP)
-#pragma omp simd
-#endif
-    for (int unknown=QInEnumerator._unknowns; unknown<QInEnumerator._unknowns+QInEnumerator._numberOfAuxiliaryVariables; unknown++) {
-      QOut[ QOutEnumerator(patchIndex,volumeIndex,unknown) ] = QIn[QInEnumerator(patchIndex,volumeIndex,unknown)];
-    }
+  // scatter
+  for (int unknown=0; unknown<QInEnumerator._unknowns; unknown++) {
+    QOut[ QOutEnumerator(patchIndex,volumeIndex,unknown) ] =
+        dt * QOut[ QOutEnumerator(patchIndex,volumeIndex,unknown) ]
+      + QIn[QInEnumerator(patchIndex,volumeIndex,unknown)];
+
+    #if !defined(OpenMPGPUOffloading) and !defined(SYCLGPUOffloading) and !defined(HIPGPUOffloading)
+    assertion4(
+      QOut[ QOutEnumerator(patchIndex, volumeIndex,unknown) ]==QOut[ QOutEnumerator(patchIndex, volumeIndex,unknown) ],
+      dt, unknown, volumeIndex,
+      QOutEnumerator(patchIndex, volumeIndex,unknown)
+    );
+    #endif
+  }
+  for (int unknown=QInEnumerator._unknowns; unknown<QInEnumerator._unknowns+QInEnumerator._numberOfAuxiliaryVariables; unknown++) {
+    QOut[ QOutEnumerator(patchIndex,volumeIndex,unknown) ] = QIn[QInEnumerator(patchIndex,volumeIndex,unknown)];
+    #if !defined(OpenMPGPUOffloading) and !defined(SYCLGPUOffloading) and !defined(HIPGPUOffloading)
+    assertion4(
+      QOut[ QOutEnumerator(patchIndex, volumeIndex,unknown) ]==QOut[ QOutEnumerator(patchIndex, volumeIndex,unknown) ],
+      dt, unknown, volumeIndex,
+      QOutEnumerator(patchIndex, volumeIndex,unknown)
+    );
+    #endif
+  }
 }
 
 
@@ -766,6 +815,15 @@ void exahype2::fv::rusanov::internal::updateSolutionWithEigenvalueDamping_LoopBo
     double fluxRight = - lambdaRight * (QIn[QInEnumerator(patchIndex, rightVolume,unknown)] - QIn[QInEnumerator(patchIndex, volumeIndex,unknown)]);
 
     QOut[ QOutEnumerator(patchIndex, volumeIndex,unknown) ] +=  dt / patchSize(normal) * QOutEnumerator._numberOfVolumesPerAxisInPatch * (fluxLeft - fluxRight);
+
+    #if !defined(OpenMPGPUOffloading) and !defined(SYCLGPUOffloading) and !defined(HIPGPUOffloading)
+    assertion7(
+      QOut[ QOutEnumerator(patchIndex, volumeIndex,unknown) ]==QOut[ QOutEnumerator(patchIndex, volumeIndex,unknown) ],
+      dt, unknown, volumeIndex, normal,
+      fluxLeft, fluxRight,
+      QOutEnumerator(patchIndex, volumeIndex,unknown)
+    );
+    #endif
   };
 
                      updateAlongOneDirection(tempMaxEigenvalueX,0);
@@ -817,8 +875,6 @@ void exahype2::fv::rusanov::internal::computeNonconservativeFlux_LoopBody(
   );
 
 
-//  std::cout << leftAdjacentVolume << " ->" << QInEnumerator(patchIndex,leftAdjacentVolume,0)
-            ;
   if (pick==PickAllEntriesFromOutputVector) {
     // scatter
     for (int unknown=0; unknown<QInEnumerator._unknowns; unknown++) {
@@ -916,6 +972,16 @@ void exahype2::fv::rusanov::internal::updateSolutionWithNonconservativeFlux_Loop
 
     QOut[ QOutEnumerator(patchIndex, volumeIndex,unknown) ] += dt / patchSize(normal) * QOutEnumerator._numberOfVolumesPerAxisInPatch *
        (fluxLeft + fluxRight);
+
+    #if !defined(OpenMPGPUOffloading) and !defined(SYCLGPUOffloading) and !defined(HIPGPUOffloading)
+    assertion8(
+      QOut[ QOutEnumerator(patchIndex, volumeIndex,unknown) ]==QOut[ QOutEnumerator(patchIndex, volumeIndex,unknown) ],
+      fluxLeft, fluxRight,
+      dt, normal, unknown, patchSize,
+      volumeIndex,
+      QOutEnumerator(patchIndex, volumeIndex,unknown)
+    );
+    #endif
   };
 
                      updateAlongOneCoordinateDirection( QNcpX, 0 );

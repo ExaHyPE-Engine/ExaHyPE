@@ -26,9 +26,9 @@ void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_sequential(
   double* tempFluxX                  = evaluateFlux                     ? tarch::allocateMemory( volumeDoFs * unknowns,      tarch::MemoryLocation::Heap ) : nullptr;
   double* tempFluxY                  = evaluateFlux                     ? tarch::allocateMemory( volumeDoFs * unknowns,      tarch::MemoryLocation::Heap ) : nullptr;
   double* tempFluxZ                  = (evaluateFlux and Dimensions==3) ? tarch::allocateMemory( volumeDoFs * unknowns,      tarch::MemoryLocation::Heap ) : nullptr;
-  double* tempNonconservativeProductX = evaluateNonconservativeProduct                     ? tarch::allocateMemory( faceDoFs,        tarch::MemoryLocation::Heap ) : nullptr;
-  double* tempNonconservativeProductY = evaluateNonconservativeProduct                     ? tarch::allocateMemory( faceDoFs,        tarch::MemoryLocation::Heap ) : nullptr;
-  double* tempNonconservativeProductZ = (evaluateNonconservativeProduct and Dimensions==3) ? tarch::allocateMemory( faceDoFs,        tarch::MemoryLocation::Heap ) : nullptr;
+  double* tempNonconservativeProductX = evaluateNonconservativeProduct                     ? tarch::allocateMemory( faceDoFs * unknowns,        tarch::MemoryLocation::Heap ) : nullptr;
+  double* tempNonconservativeProductY = evaluateNonconservativeProduct                     ? tarch::allocateMemory( faceDoFs * unknowns,        tarch::MemoryLocation::Heap ) : nullptr;
+  double* tempNonconservativeProductZ = (evaluateNonconservativeProduct and Dimensions==3) ? tarch::allocateMemory( faceDoFs * unknowns,        tarch::MemoryLocation::Heap ) : nullptr;
   double* tempEigenvalueX            =                                    tarch::allocateMemory( volumeDoFs,      tarch::MemoryLocation::Heap );
   double* tempEigenvalueY            =                                    tarch::allocateMemory( volumeDoFs,      tarch::MemoryLocation::Heap );
   double* tempEigenvalueZ            = (Dimensions==3)                  ? tarch::allocateMemory( volumeDoFs,      tarch::MemoryLocation::Heap ) : nullptr;
@@ -340,7 +340,7 @@ void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_sequential(
               volumeIndex3d(x,y,z),
               patchData.t[patchIndex], patchData.dt[patchIndex],
               2,
-              tempEigenvalueY,
+              tempEigenvalueZ,
               eigenvalueEnumerator
             );
         }
