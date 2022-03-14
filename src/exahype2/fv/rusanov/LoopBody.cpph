@@ -638,15 +638,12 @@ void exahype2::fv::rusanov::internal::computeFlux_LoopBody(
   double QInGathered[QInEnumerator._unknowns+QInEnumerator._numberOfAuxiliaryVariables];
   double QFluxGathered[QInEnumerator._unknowns];
 
-    // gather
-    #if defined(SharedOMP)
-    #pragma omp simd
-    #endif
-    for (int unknown=0; unknown<QInEnumerator._unknowns+QInEnumerator._numberOfAuxiliaryVariables; unknown++) {
-      QInGathered[unknown] = QIn[ QInEnumerator(patchIndex,volumeIndex,unknown) ];
-    }
+  // gather
+  for (int unknown=0; unknown<QInEnumerator._unknowns+QInEnumerator._numberOfAuxiliaryVariables; unknown++) {
+    QInGathered[unknown] = QIn[ QInEnumerator(patchIndex,volumeIndex,unknown) ];
+  }
 
-    Solver::flux(
+  Solver::flux(
       QInGathered,
       ::exahype2::fv::getVolumeCentre( patchCentre, patchSize, QInEnumerator._numberOfVolumesPerAxisInPatch, volumeIndex ),
       ::exahype2::fv::getVolumeSize( patchSize, QInEnumerator._numberOfVolumesPerAxisInPatch ),
@@ -655,15 +652,12 @@ void exahype2::fv::rusanov::internal::computeFlux_LoopBody(
       normal,
       QFluxGathered,
       ::exahype2::Solver::Offloadable::Yes
-    );
+  );
 
-    // scatter
-    #if defined(SharedOMP)
-    #pragma omp simd
-    #endif
-    for (int unknown=0; unknown<QInEnumerator._unknowns; unknown++) {
-      QFlux[ QFluxEnumerator(patchIndex,volumeIndex,unknown) ] = QFluxGathered[unknown];
-    }
+  // scatter
+  for (int unknown=0; unknown<QInEnumerator._unknowns; unknown++) {
+    QFlux[ QFluxEnumerator(patchIndex,volumeIndex,unknown) ] = QFluxGathered[unknown];
+  }
 }
 
 
@@ -697,9 +691,6 @@ void exahype2::fv::rusanov::internal::computeFlux_LoopBody(
 
   if (pick==PickAllEntriesFromOutputVector) {
     // scatter
-    #if defined(SharedOMP)
-    #pragma omp simd
-    #endif
     for (int unknown=0; unknown<QInEnumerator._unknowns; unknown++) {
       QFlux[ QFluxEnumerator(patchIndex,volumeIndex,unknown) ] = QFluxGathered[unknown];
     }

@@ -352,6 +352,9 @@ namespace exahype2 {
          * user signatures require an AoS data format whereas the loop body
          * itself is generic.
          */
+        #if defined(SharedOMP)
+        #pragma omp declare simd
+        #endif
         template <class QInEnumeratorType, class QFluxEnumeratorType>
         static void computeFlux_LoopBody(
           const double* __restrict__                QIn,
@@ -388,6 +391,10 @@ namespace exahype2 {
 */
 
 
+        /**
+         * This one does not have to be declared as simd. For whatever
+         * reason ...
+         */
         static void computeFlux_LoopBody(
           const double* __restrict__                                  QIn,
           exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator  QInEnumerator,
@@ -404,6 +411,9 @@ namespace exahype2 {
         ) InlineMethod;
 
 
+        #if defined(SharedOMP)
+        #pragma omp declare simd
+        #endif
         template <typename Solver, class QInEnumeratorType, class QFluxEnumeratorType>
         static void computeFlux_LoopBody(
           const double* __restrict__                   QIn,
@@ -421,6 +431,9 @@ namespace exahype2 {
         ) InlineMethod;
 
 
+        #if defined(SharedOMP)
+        #pragma omp declare simd
+        #endif
         template <typename Solver, class QFluxEnumeratorType>
         static void computeFlux_LoopBody(
           const double* __restrict__                                  QIn,
@@ -438,6 +451,9 @@ namespace exahype2 {
         ) InlineMethod;
 
 
+        #if defined(SharedOMP)
+        #pragma omp declare simd
+        #endif
         template <typename Solver>
         static void computeFlux_LoopBody(
           const double* __restrict__                                  QIn,
