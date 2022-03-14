@@ -22,6 +22,8 @@ namespace exahype2 {
       /**
        * @namespace internal
        *
+       * ## Storage
+       *
        * The static storage class qualifier is required to avoid that we get
        * multiple defined instances errors in Clang: We need all functions to
        * be defined in headers to allow the single-pass compiler to get the
@@ -30,16 +32,23 @@ namespace exahype2 {
        *
        *
        * Please note that the compiler will likely complain that it can't inline.
-       * In this case, search for the code location twice: If you call the whole
-       * thing without static function calls, it won't be inlined. But if you use
-       * the kernel also with static function calls, then the code snippet
-       * should be inlined.
-       *
+       * If you compile the code, you'll get warning like
+       * <pre>
+../../..//src/exahype2/fv/rusanov/LoopBody.h:239:23: warning: explicit specialization cannot have a storage class
+</pre>
+       * but it is safe to ignore these. Without a static qualifier (which led to
+       * this warning), the linking will fail due to multiple definitions.
        *
        * As I've moved all the definitions into the header file, the compiler
        * can and does successfully inline all function calls within the Rusanov
        * solvers.
        *
+       * This whole thing breaks down once I use the GNU toolchain. GNU is more
+       * picky re the C++ standard and throws an error. In return, it does not
+       * generate duplicate symbols. So I use this "static" trick if and only
+       * if I'm on Clang.
+       *
+       * ## Specialisation
        *
        * Where it makes sense, I provide specialisations of the routines which
        * exploit that input data and output data are available as AoS. All of
@@ -59,27 +68,12 @@ namespace exahype2 {
        * special cases refer to the actual static routines which are there to
        * support accelerators.
        *
+       * ## SIMD
        *
-       * If you compile the code, you'll get warning like
-       * <pre>
-../../..//src/exahype2/fv/rusanov/LoopBody.h:239:23: warning: explicit specialization cannot have a storage class
-</pre>
-       * but it is safe to ignore these. Without a static qualifier (which led to
-       * this warning), the linking will fail due to multiple definitions.
-       *
-       */
-
-
-      /******
-       *
-       * Don't use code like this one
-       *
-       * <pre>
-  tarch::la::Vector<Dimensions,int> leftVolume   = volumeIndex;
-  tarch::la::Vector<Dimensions,int> rightVolume  = volumeIndex;
-  leftVolume(normal)--;
-  rightVolume(normal)++;
-         </pre>
+       * It seems that the compilers refuse to vectorise over the loop body
+       * routines. It expects them to be declared as SIMD. This is strange
+       * given that we inline everything, but if the compile wants it, we can
+       * give it to the tool.
        *
        */
       namespace internal {
