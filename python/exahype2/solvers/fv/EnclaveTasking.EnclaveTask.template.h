@@ -14,7 +14,6 @@
 #include "tarch/multicore/Tasks.h"
 
 
-#include "exahype2/fv/Generic.h"
 #include "exahype2/fv/Rusanov.h"
 #include "exahype2/EnclaveBookkeeping.h"
 #include "exahype2/EnclaveTask.h"

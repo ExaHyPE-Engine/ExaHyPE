@@ -3,12 +3,13 @@
 
 
 #include "config.h"
+#include "tarch/compiler/CompilerSpecificSettings.h"
 
 
 #include <string>
 
 
-#if defined(SharedOMP) || defined(SharedSYCL) || defined(SharedCPP)
+#if defined(SharedOMP) || defined(SharedTBB) || defined(SharedCPP)
   #define SharedMemoryParallelisation
 #endif
 
@@ -229,19 +230,6 @@ and
 
  */
   namespace multicore {
-     #if defined(GPUOffloading) and defined(UseAMD)
-       #define  GPUCallableMethod __global__ __device__
-       #undef   OpenMPGPUOffloading
-     #elif defined(GPUOffloading) and defined(SharedOMP)
-       #define  GPUCallableMethod
-       #define  OpenMPGPUOffloading
-     #elif defined(GPUOffloading)
-       #error GPU Offloading without HIP and OpenMP requested. Not supported
-     #else
-      #define  GPUCallableMethod 
-      #undef   OpenMPGPUOffloading
-     #endif
-
      /**
       * Switch on SmartMPI
       *
@@ -265,6 +253,20 @@ and
      */
     ManagedAcceleratorMemory
   };
+
+  #if defined(HIPGPUOffloading)
+    #define GPUCallableMethod __global__ __device__
+  #elif defined(UseManualInlining)
+    #define GPUCallableMethod
+  #else
+    #define GPUCallableMethod
+  #endif
+
+  #if defined(UseManualInlining)
+    #define InlineMethod __attribute__((always_inline))
+  #else
+    #define InlineMethod
+  #endif
 
   #if defined(OpenMPGPUOffloading)
   #pragma omp declare target

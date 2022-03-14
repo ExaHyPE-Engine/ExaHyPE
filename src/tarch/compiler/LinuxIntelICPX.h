@@ -18,9 +18,17 @@
 #define UseManualInlining
 #endif
 
-#if !defined(ExaHyPEFusedKernelAlignment)
-#define ExaHyPEFusedKernelAlignment 64
+#if !defined(Alignment)
+#define Alignment 64
 #endif
 
 #define LittleEndian
+
+#if !defined(UseManualInlining) &&  !defined(noUseManualInlining)
+/**
+ * I use this flag to switch on __attribute__((always_inline))
+ * which I otherwise mask out.
+ */
+#define UseManualInlining
+#endif
 

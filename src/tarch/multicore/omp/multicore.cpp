@@ -10,21 +10,15 @@ double* tarch::allocateMemory(int size, MemoryLocation location) {
   double* result = nullptr;
   switch (location) {
     case MemoryLocation::Heap:
-      //#pragma omp allocate(result) allocator(allocator) memspace(memspace) memtraits(optimized=latency)
-      //#pragma omp allocate(result) memtraits(optimized=latency)
-      result = new double[size];
+      result = new (std::align_val_t(Alignment)) double[size];
       break;
     case MemoryLocation::ManagedAcceleratorMemory:
-      //#if defined(OpenMPGPUOffloading) and defined(UseNVIDIA)
-      //cudaMallocManaged((void**)&result, size*sizeof(double), cudaMemAttachGlobal);
-      //#elif defined(OpenMPGPUOffloading) and defined(UseAMD)
-      //result = new double[size];
-      //// AMD does not (yet) support managed memory
-      //// hipMallocManaged(&result, size*sizeof(double));
-      //#else
+      #if defined(OpenMPGPUOffloading) and defined(UseNVIDIA)
+      cudaMallocManaged((void**)&result, size*sizeof(double), cudaMemAttachGlobal);
+      #else
       //// #pragma omp allocate ()
-      result = new double[size];
-      //#endif
+      result = new (std::align_val_t(Alignment)) double[size];
+      #endif
       break;
   }
   return result;

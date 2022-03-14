@@ -4,6 +4,8 @@
 #define _EXAHYPE2_FV_GENERIC_H_
 
 
+// @todo kann raus komplett
+
 
 #include "tarch/la/Vector.h"
 #include "peano4/utils/Globals.h"
@@ -15,56 +17,22 @@
 
 namespace exahype2 {
   namespace fv {
-    /**
-     * Helper routine that I need in the log statements.
-     *
-     * @return Data of one volume as tuple.
-     */
-    std::string plotVolume(
-      const double* __restrict__ Q,
-      int    unknowns
-    );
 
-    /**
-     * Just runs over the patch and ensures that no entry is non or infinite. In
-     * ExaHyPE, we primarily work with split approaches. That is, diagonal halo
-     * entries are never initialised properly: We can copy over the face-connected
-     * data, but we lack information through the diagonals. This routine takes
-     * this into account when it validates the entries.
-     *
-     * @param location String that tells system from where this routine got called
-     * @param minValues Is either a nullptr or it points to a double array with
-     *   exactly unknowns+auxiliaryVariables entries
-     */
-    void validatePatch(
-      const double* __restrict__ Q,
-      int    unknowns,
-      int    auxiliaryVariables,
-      int    numberOfVolumesPerAxisInPatch,
-      int    haloSize,
-      const std::string& location = "",
-      bool   triggerNonCriticalAssertion = true,
-      double* minValues = nullptr,
-      double* maxValues = nullptr
-    );
+    //
+    // ====================
+    //         old
+    // ====================
+    //
 
-    /**
-     * Plot patch.
-     *
-     * Usually used for debugging
-     */
-    std::string plotPatch(
-      const double* __restrict__ Q,
-      int    unknowns,
-      int    auxiliaryVariables,
-      int    numberOfVolumesPerAxisInPatch,
-      int    haloSize
-    );
+
 
     /**
      * Copy the patch data from a patch representation with halo into
      * a representation without halo. If you set haloSize to zero, then
      * it is a direct memcopy.
+     *
+     * It is important to recognise that this routine does also copy the
+     * auxiliary values.
      */
     void copyPatch(
       const double* __restrict__  QinWithHalo,
@@ -75,7 +43,8 @@ namespace exahype2 {
       int    haloSize
     );
 
-    
+
+    // @todo raus
     double maxEigenvalue_AoS(
       std::function< double(
         const double * __restrict__ Q,
@@ -264,6 +233,8 @@ namespace exahype2 {
      *        axis.
      * @param copyPredicate Define per image volume whether to copy over or not, i.e. 
      *        argument in functor is position of image voxel (0<=i<numberOfVolumesPerAxisInPatch).
+     *
+     *        //  @todo raus
      */
     void copyPatch(
       const double* __restrict__  QinWithHalo,
@@ -286,6 +257,8 @@ namespace exahype2 {
      * @param numberOfVolumesPerAxisInPatch That's the number of volumes in QOut, i.e.
      *        Qin has numberOfVolumesPerAxisInPatch-2*haloSizeAroundQin volumes per 
      *        axis.
+     *
+     *        // @todo raus
      */
     void insertPatch(
       const double* __restrict__  Qin,

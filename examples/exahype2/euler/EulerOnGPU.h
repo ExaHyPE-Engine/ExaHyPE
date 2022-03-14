@@ -93,6 +93,7 @@ class examples::exahype2::euler::EulerOnGPU: public AbstractEulerOnGPU {
       const tarch::la::Vector<Dimensions,double>&  faceCentre,
       const tarch::la::Vector<Dimensions,double>&  volumeH,
       double                                       t,
+      double                                       dt,
       int                                          normal
     ) override;
     
@@ -104,6 +105,7 @@ class examples::exahype2::euler::EulerOnGPU: public AbstractEulerOnGPU {
       const tarch::la::Vector<Dimensions,double>&  faceCentre,
       const tarch::la::Vector<Dimensions,double>&  volumeH,
       double                                       t,
+      double                                       dt,
       int                                          normal,
       double * __restrict__ F // F[5]
     ) override;
@@ -132,6 +134,7 @@ class examples::exahype2::euler::EulerOnGPU: public AbstractEulerOnGPU {
       const tarch::la::Vector<Dimensions,double>&  faceCentre,
       const tarch::la::Vector<Dimensions,double>&  volumeH,
       double                                       t,
+      double                                       dt,
       int                                          normal,
       Offloadable
     )
@@ -168,6 +171,7 @@ class examples::exahype2::euler::EulerOnGPU: public AbstractEulerOnGPU {
       const tarch::la::Vector<Dimensions,double>&  faceCentre,
       const tarch::la::Vector<Dimensions,double>&  volumeH,
       double                                       t,
+      double                                       dt,
       int                                          normal,
       double * __restrict__                        F, // F[5]
       Offloadable
