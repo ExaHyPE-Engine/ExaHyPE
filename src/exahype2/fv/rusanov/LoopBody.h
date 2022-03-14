@@ -104,34 +104,40 @@ namespace exahype2 {
          * @param volumeIndex: Which volume is to be updated within the target
          *   patch. This index refers to the target index.
          */
+        #if defined(SharedOMP)
+        #pragma omp declare simd
+        #endif
         template <class QInEnumeratorType, class QOutEnumeratorType>
         static void copySolution_LoopBody(
           const double* __restrict__                QIn,
-          QInEnumeratorType                         QInEnumerator,
+          const QInEnumeratorType&                  QInEnumerator,
           int                                       patchIndex,
           const tarch::la::Vector<Dimensions,int>&  volumeIndex,
           int                                       unknown,
           double* __restrict__                      QOut,
-          QOutEnumeratorType                        QOutEnumerator
+          const QOutEnumeratorType&                 QOutEnumerator
         ) InlineMethod;
 
 
         /**
+         * No SIMD declaration here, as we can't SIMDise over functors
+         * anyway.
+         *
          * @see copySolution_LoopBody() for vectorisation details.
          */
         template <class QInEnumeratorType, class QOutEnumeratorType>
         static void copySolutionAndAddSourceTerm_LoopBody(
-          const double* __restrict__                QIn,
-          QInEnumeratorType                         QInEnumerator,
-          exahype2::fv::rusanov::Source             source,
+          const double* __restrict__                   QIn,
+          const QInEnumeratorType&                     QInEnumerator,
+          exahype2::fv::rusanov::Source                source,
           const tarch::la::Vector<Dimensions,double>&  patchCentre,
           const tarch::la::Vector<Dimensions,double>&  patchSize,
-          int                                       patchIndex,
-          const tarch::la::Vector<Dimensions,int>&  volumeIndex,
-          double                                    t,
-          double                                    dt,
-          double* __restrict__                      QOut,
-          QOutEnumeratorType                        QOutEnumerator
+          int                                          patchIndex,
+          const tarch::la::Vector<Dimensions,int>&     volumeIndex,
+          double                                       t,
+          double                                       dt,
+          double* __restrict__                         QOut,
+          const QOutEnumeratorType&                    QOutEnumerator
         ) InlineMethod;
 
 
@@ -151,7 +157,7 @@ namespace exahype2 {
         KeywordToAvoidDuplicateSymbols
         void copySolutionAndAddSourceTerm_LoopBody(
           const double* __restrict__                QIn,
-          exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator QInEnumerator,
+          const exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator& QInEnumerator,
           exahype2::fv::rusanov::Source             source,
           const tarch::la::Vector<Dimensions,double>&  patchCentre,
           const tarch::la::Vector<Dimensions,double>&  patchSize,
@@ -160,7 +166,7 @@ namespace exahype2 {
           double                                    t,
           double                                    dt,
           double* __restrict__                      QOut,
-          exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator QOutEnumerator
+          const exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator& QOutEnumerator
         )  InlineMethod;
 
 

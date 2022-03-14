@@ -5,12 +5,12 @@
 template <class QInEnumeratorType, class QOutEnumeratorType>
 void exahype2::fv::rusanov::internal::copySolution_LoopBody(
   const double* __restrict__                QIn,
-  QInEnumeratorType                         QInEnumerator,
+  const QInEnumeratorType&                  QInEnumerator,
   int                                       patchIndex,
   const tarch::la::Vector<Dimensions,int>&  volumeIndex,
   int                                       unknown,
   double* __restrict__                      QOut,
-  QOutEnumeratorType                        QOutEnumerator
+  const QOutEnumeratorType&                 QOutEnumerator
 ) {
   QOut[ QOutEnumerator(patchIndex,volumeIndex,unknown) ] = QIn[QInEnumerator(patchIndex,volumeIndex,unknown)];
 }
@@ -19,7 +19,7 @@ void exahype2::fv::rusanov::internal::copySolution_LoopBody(
 template <class QInEnumeratorType, class QOutEnumeratorType>
 void exahype2::fv::rusanov::internal::copySolutionAndAddSourceTerm_LoopBody(
   const double* __restrict__                QIn,
-  QInEnumeratorType                         QInEnumerator,
+  const QInEnumeratorType&                     QInEnumerator,
   exahype2::fv::rusanov::Source             source,
   const tarch::la::Vector<Dimensions,double>&  patchCentre,
   const tarch::la::Vector<Dimensions,double>&  patchSize,
@@ -28,7 +28,7 @@ void exahype2::fv::rusanov::internal::copySolutionAndAddSourceTerm_LoopBody(
   double                                    t,
   double                                    dt,
   double* __restrict__                      QOut,
-  QOutEnumeratorType                        QOutEnumerator
+  const QOutEnumeratorType&                    QOutEnumerator
 ) {
     double QInGathered[QInEnumerator._unknowns+QInEnumerator._numberOfAuxiliaryVariables];
     double QSourceGathered[QInEnumerator._unknowns];
@@ -74,7 +74,7 @@ void exahype2::fv::rusanov::internal::copySolutionAndAddSourceTerm_LoopBody(
 template <>
 void exahype2::fv::rusanov::internal::copySolutionAndAddSourceTerm_LoopBody(
   const double* __restrict__                QIn,
-  exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator QInEnumerator,
+  const exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator& QInEnumerator,
   exahype2::fv::rusanov::Source             source,
   const tarch::la::Vector<Dimensions,double>&  patchCentre,
   const tarch::la::Vector<Dimensions,double>&  patchSize,
@@ -83,7 +83,7 @@ void exahype2::fv::rusanov::internal::copySolutionAndAddSourceTerm_LoopBody(
   double                                    t,
   double                                    dt,
   double* __restrict__                      QOut,
-  exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator QOutEnumerator
+  const exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator&  QOutEnumerator
 ) {
   source(
     QIn + QInEnumerator(patchIndex,volumeIndex,0),
