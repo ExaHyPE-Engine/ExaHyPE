@@ -170,25 +170,31 @@ namespace exahype2 {
         )  InlineMethod;
 
 
+        #if defined(SharedOMP)
+        #pragma omp declare simd
+        #endif
         template <typename Solver, class QInEnumeratorType, class QOutEnumeratorType>
         static void copySolutionAndAddSourceTerm_LoopBody(
-          const double* __restrict__                QIn,
-          QInEnumeratorType                         QInEnumerator,
+          const double* __restrict__                   QIn,
+          const QInEnumeratorType&                     QInEnumerator,
           const tarch::la::Vector<Dimensions,double>&  patchCentre,
           const tarch::la::Vector<Dimensions,double>&  patchSize,
-          int                                       patchIndex,
-          const tarch::la::Vector<Dimensions,int>&  volumeIndex,
-          double                                    t,
-          double                                    dt,
-          double* __restrict__                      QOut,
-          QOutEnumeratorType                        QOutEnumerator
+          int                                          patchIndex,
+          const tarch::la::Vector<Dimensions,int>&     volumeIndex,
+          double                                       t,
+          double                                       dt,
+          double* __restrict__                         QOut,
+          const QOutEnumeratorType&                    QOutEnumerator
         ) InlineMethod;
 
 
+        #if defined(SharedOMP)
+        #pragma omp declare simd
+        #endif
         template <typename Solver>
         static void copySolutionAndAddSourceTerm_LoopBody(
           const double* __restrict__                QIn,
-          exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator QInEnumerator,
+          const exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator&  QInEnumerator,
           const tarch::la::Vector<Dimensions,double>&  patchCentre,
           const tarch::la::Vector<Dimensions,double>&  patchSize,
           int                                       patchIndex,
@@ -196,7 +202,7 @@ namespace exahype2 {
           double                                    t,
           double                                    dt,
           double* __restrict__                      QOut,
-          exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator QOutEnumerator
+          const exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator&  QOutEnumerator
         )  InlineMethod;
 
 

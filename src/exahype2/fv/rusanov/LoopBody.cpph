@@ -122,7 +122,7 @@ void exahype2::fv::rusanov::internal::copySolutionAndAddSourceTerm_LoopBody(
 template <typename Solver, class QInEnumeratorType, class QOutEnumeratorType>
 void exahype2::fv::rusanov::internal::copySolutionAndAddSourceTerm_LoopBody(
     const double* __restrict__                QIn,
-    QInEnumeratorType                         QInEnumerator,
+    const QInEnumeratorType&                         QInEnumerator,
     const tarch::la::Vector<Dimensions,double>&  patchCentre,
     const tarch::la::Vector<Dimensions,double>&  patchSize,
     int                                       patchIndex,
@@ -130,7 +130,7 @@ void exahype2::fv::rusanov::internal::copySolutionAndAddSourceTerm_LoopBody(
     double                                    t,
     double                                    dt,
     double* __restrict__                      QOut,
-    QOutEnumeratorType                        QOutEnumerator
+    const QOutEnumeratorType&                    QOutEnumerator
 ) {
     double QInGathered[QInEnumerator._unknowns+QInEnumerator._numberOfAuxiliaryVariables];
     double QSourceGathered[QInEnumerator._unknowns];
@@ -187,7 +187,7 @@ void exahype2::fv::rusanov::internal::copySolutionAndAddSourceTerm_LoopBody(
 template <typename Solver>
 void exahype2::fv::rusanov::internal::copySolutionAndAddSourceTerm_LoopBody(
     const double* __restrict__                QIn,
-    exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator QInEnumerator,
+    const exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator& QInEnumerator,
     const tarch::la::Vector<Dimensions,double>&  patchCentre,
     const tarch::la::Vector<Dimensions,double>&  patchSize,
     int                                       patchIndex,
@@ -195,7 +195,7 @@ void exahype2::fv::rusanov::internal::copySolutionAndAddSourceTerm_LoopBody(
     double                                    t,
     double                                    dt,
     double* __restrict__                      QOut,
-    exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator QOutEnumerator
+    const exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator& QOutEnumerator
 ) {
   Solver::sourceTerm(
     QIn + QInEnumerator(patchIndex,volumeIndex,0),
