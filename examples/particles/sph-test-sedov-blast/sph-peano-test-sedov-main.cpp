@@ -253,8 +253,8 @@ int main(int argc, char** argv) {
         peano4::parallel::SpacetreeSet::getInstance().traverse(driftpart);
 
 //        /* Predictor step*/
-//        peano4::parallel::SpacetreeSet::getInstance().traverse(kickpart);
-//        peano4::parallel::SpacetreeSet::getInstance().traverse(kickExtra);
+        peano4::parallel::SpacetreeSet::getInstance().traverse(kickpart);
+        peano4::parallel::SpacetreeSet::getInstance().traverse(kickExtra);
 
         /* Second Force loop */
         peano4::parallel::SpacetreeSet::getInstance().traverse(prepareForce);
@@ -264,11 +264,11 @@ int main(int argc, char** argv) {
         peano4::parallel::SpacetreeSet::getInstance().traverse(kickpart);
         peano4::parallel::SpacetreeSet::getInstance().traverse(kickExtra);
 
-//        /* Corrector step (mini-Kick) current time-step */
-//        examples::particles::observers::KickCorrector correctpart;
-//        peano4::parallel::SpacetreeSet::getInstance().traverse(correctpart);
-//	// TBA: corrector for U
-////        peano4::parallel::SpacetreeSet::getInstance().traverse(kickExtra);
+        /* Corrector step (mini-Kick) current time-step */
+       examples::particles::observers::KickCorrector correctpart;
+       peano4::parallel::SpacetreeSet::getInstance().traverse(correctpart);
+// TBA: corrector for U
+//       peano4::parallel::SpacetreeSet::getInstance().traverse(kickExtra);
 
       }
       logInfo( "main()", "plot" )
