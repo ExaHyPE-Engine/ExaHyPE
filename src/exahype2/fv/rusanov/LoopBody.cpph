@@ -694,17 +694,17 @@ void exahype2::fv::rusanov::internal::computeFlux_LoopBody(
 
 template<typename Solver>
 void exahype2::fv::rusanov::internal::computeFlux_LoopBody(
-    const double* __restrict__                                  QIn,
-    exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator  QInEnumerator,
-    const tarch::la::Vector<Dimensions,double>&                 patchCentre,
-    const tarch::la::Vector<Dimensions,double>&                 patchSize,
-    int                                                         patchIndex,
-    const tarch::la::Vector<Dimensions,int>&                    volumeIndex,
-    double                                                      t,
-    double                                                      dt,
-    int                                                         normal,
-    double* __restrict__                                        QFlux,
-    exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator  QFluxEnumerator
+  const double* __restrict__                                         QIn,
+  const exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator&  QInEnumerator,
+  const tarch::la::Vector<Dimensions,double>&                        patchCentre,
+  const tarch::la::Vector<Dimensions,double>&                        patchSize,
+  int                                                                patchIndex,
+  const tarch::la::Vector<Dimensions,int>&                           volumeIndex,
+  double                                                             t,
+  double                                                             dt,
+  int                                                                normal,
+  double* __restrict__                                               QFlux,
+  const exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator&  QFluxEnumerator
 ) {
   Solver::flux(
     QIn + QInEnumerator(patchIndex,volumeIndex,0),

@@ -481,7 +481,7 @@ namespace exahype2 {
         template <typename Solver>
         static void computeFlux_LoopBody(
           const double* __restrict__                                  QIn,
-          exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator  QInEnumerator,
+          const exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator&  QInEnumerator,
           const tarch::la::Vector<Dimensions,double>&                 patchCentre,
           const tarch::la::Vector<Dimensions,double>&                 patchSize,
           int                                                         patchIndex,
@@ -490,7 +490,7 @@ namespace exahype2 {
           double                                                      dt,
           int                                                         normal,
           double* __restrict__                                        QFlux,
-          exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator  QFluxEnumerator
+          const exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator&  QFluxEnumerator
         ) InlineMethod;
 
 
