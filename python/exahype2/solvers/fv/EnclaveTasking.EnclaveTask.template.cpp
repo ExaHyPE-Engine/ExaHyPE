@@ -380,7 +380,14 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse( const std::list<Task*>& ot
   #if OpenMPGPUOffloading>0
   if (targetDevice>=0) {
     foundOffloadingBranch = true;
-    ::exahype2::fv::rusanov::omp::{{FUSED_COMPUTE_KERNEL_CALL}}
+    ::exahype2::fv::rusanov::omp::{{FUSED_COMPUTE_KERNEL_CALL_GPU}}
+  }
+  #endif
+
+  #if HIPGPUOffloading>0
+  if (targetDevice>=0) {
+    foundOffloadingBranch = true;
+    ::exahype2::fv::rusanov::hip::{{FUSED_COMPUTE_KERNEL_CALL_GPU}}
   }
   #endif
 
@@ -388,8 +395,9 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse( const std::list<Task*>& ot
   if (targetDevice>=0 or targetDevice==Host) {
     foundOffloadingBranch = true;
 
-    ::exahype2::fv::rusanov::sycl::{{FUSED_COMPUTE_KERNEL_CALL}}
+    ::exahype2::fv::rusanov::sycl::{{FUSED_COMPUTE_KERNEL_CALL_GPU}}
 
+/*
     #if Dimensions==2
     ::exahype2::fv::Fusanov_2D_with_SYCL_offloading
     #elif Dimensions==3
@@ -405,11 +413,12 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse( const std::list<Task*>& ot
 	  {1,1,1} // if we really have to, we can make the range qualifiers template parameters. If there's a
               // way to pass them in as arrays, then I'd prefer it that way. Up to you
     );
+*/
   }
   #endif
 
   if (not foundOffloadingBranch) {
-    ::exahype2::fv::rusanov::{{FUSED_COMPUTE_KERNEL_CALL}}
+    ::exahype2::fv::rusanov::{{FUSED_COMPUTE_KERNEL_CALL_CPU}}
   }
 
   //
