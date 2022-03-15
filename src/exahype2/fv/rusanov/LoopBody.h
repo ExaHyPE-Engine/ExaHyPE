@@ -22,6 +22,8 @@ namespace exahype2 {
       /**
        * @namespace internal
        *
+       * ## Storage
+       *
        * The static storage class qualifier is required to avoid that we get
        * multiple defined instances errors in Clang: We need all functions to
        * be defined in headers to allow the single-pass compiler to get the
@@ -30,16 +32,23 @@ namespace exahype2 {
        *
        *
        * Please note that the compiler will likely complain that it can't inline.
-       * In this case, search for the code location twice: If you call the whole
-       * thing without static function calls, it won't be inlined. But if you use
-       * the kernel also with static function calls, then the code snippet
-       * should be inlined.
-       *
+       * If you compile the code, you'll get warning like
+       * <pre>
+../../..//src/exahype2/fv/rusanov/LoopBody.h:239:23: warning: explicit specialization cannot have a storage class
+</pre>
+       * but it is safe to ignore these. Without a static qualifier (which led to
+       * this warning), the linking will fail due to multiple definitions.
        *
        * As I've moved all the definitions into the header file, the compiler
        * can and does successfully inline all function calls within the Rusanov
        * solvers.
        *
+       * This whole thing breaks down once I use the GNU toolchain. GNU is more
+       * picky re the C++ standard and throws an error. In return, it does not
+       * generate duplicate symbols. So I use this "static" trick if and only
+       * if I'm on Clang.
+       *
+       * ## Specialisation
        *
        * Where it makes sense, I provide specialisations of the routines which
        * exploit that input data and output data are available as AoS. All of
@@ -59,27 +68,12 @@ namespace exahype2 {
        * special cases refer to the actual static routines which are there to
        * support accelerators.
        *
+       * ## SIMD
        *
-       * If you compile the code, you'll get warning like
-       * <pre>
-../../..//src/exahype2/fv/rusanov/LoopBody.h:239:23: warning: explicit specialization cannot have a storage class
-</pre>
-       * but it is safe to ignore these. Without a static qualifier (which led to
-       * this warning), the linking will fail due to multiple definitions.
-       *
-       */
-
-
-      /******
-       *
-       * Don't use code like this one
-       *
-       * <pre>
-  tarch::la::Vector<Dimensions,int> leftVolume   = volumeIndex;
-  tarch::la::Vector<Dimensions,int> rightVolume  = volumeIndex;
-  leftVolume(normal)--;
-  rightVolume(normal)++;
-         </pre>
+       * It seems that the compilers refuse to vectorise over the loop body
+       * routines. It expects them to be declared as SIMD. This is strange
+       * given that we inline everything, but if the compile wants it, we can
+       * give it to the tool.
        *
        */
       namespace internal {
@@ -110,34 +104,40 @@ namespace exahype2 {
          * @param volumeIndex: Which volume is to be updated within the target
          *   patch. This index refers to the target index.
          */
+        #if defined(SharedOMP)
+        #pragma omp declare simd
+        #endif
         template <class QInEnumeratorType, class QOutEnumeratorType>
         static void copySolution_LoopBody(
           const double* __restrict__                QIn,
-          QInEnumeratorType                         QInEnumerator,
+          const QInEnumeratorType&                  QInEnumerator,
           int                                       patchIndex,
           const tarch::la::Vector<Dimensions,int>&  volumeIndex,
           int                                       unknown,
           double* __restrict__                      QOut,
-          QOutEnumeratorType                        QOutEnumerator
+          const QOutEnumeratorType&                 QOutEnumerator
         ) InlineMethod;
 
 
         /**
+         * No SIMD declaration here, as we can't SIMDise over functors
+         * anyway.
+         *
          * @see copySolution_LoopBody() for vectorisation details.
          */
         template <class QInEnumeratorType, class QOutEnumeratorType>
         static void copySolutionAndAddSourceTerm_LoopBody(
-          const double* __restrict__                QIn,
-          QInEnumeratorType                         QInEnumerator,
-          exahype2::fv::rusanov::Source             source,
+          const double* __restrict__                   QIn,
+          const QInEnumeratorType&                     QInEnumerator,
+          exahype2::fv::rusanov::Source                source,
           const tarch::la::Vector<Dimensions,double>&  patchCentre,
           const tarch::la::Vector<Dimensions,double>&  patchSize,
-          int                                       patchIndex,
-          const tarch::la::Vector<Dimensions,int>&  volumeIndex,
-          double                                    t,
-          double                                    dt,
-          double* __restrict__                      QOut,
-          QOutEnumeratorType                        QOutEnumerator
+          int                                          patchIndex,
+          const tarch::la::Vector<Dimensions,int>&     volumeIndex,
+          double                                       t,
+          double                                       dt,
+          double* __restrict__                         QOut,
+          const QOutEnumeratorType&                    QOutEnumerator
         ) InlineMethod;
 
 
@@ -154,9 +154,10 @@ namespace exahype2 {
          * @see copySolution_LoopBody() for vectorisation details.
          */
         template <>
-        static void copySolutionAndAddSourceTerm_LoopBody(
+        KeywordToAvoidDuplicateSymbols
+        void copySolutionAndAddSourceTerm_LoopBody(
           const double* __restrict__                QIn,
-          exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator QInEnumerator,
+          const exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator& QInEnumerator,
           exahype2::fv::rusanov::Source             source,
           const tarch::la::Vector<Dimensions,double>&  patchCentre,
           const tarch::la::Vector<Dimensions,double>&  patchSize,
@@ -165,29 +166,35 @@ namespace exahype2 {
           double                                    t,
           double                                    dt,
           double* __restrict__                      QOut,
-          exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator QOutEnumerator
+          const exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator& QOutEnumerator
         )  InlineMethod;
 
 
+        #if defined(SharedOMP)
+        #pragma omp declare simd
+        #endif
         template <typename Solver, class QInEnumeratorType, class QOutEnumeratorType>
         static void copySolutionAndAddSourceTerm_LoopBody(
-          const double* __restrict__                QIn,
-          QInEnumeratorType                         QInEnumerator,
+          const double* __restrict__                   QIn,
+          const QInEnumeratorType&                     QInEnumerator,
           const tarch::la::Vector<Dimensions,double>&  patchCentre,
           const tarch::la::Vector<Dimensions,double>&  patchSize,
-          int                                       patchIndex,
-          const tarch::la::Vector<Dimensions,int>&  volumeIndex,
-          double                                    t,
-          double                                    dt,
-          double* __restrict__                      QOut,
-          QOutEnumeratorType                        QOutEnumerator
+          int                                          patchIndex,
+          const tarch::la::Vector<Dimensions,int>&     volumeIndex,
+          double                                       t,
+          double                                       dt,
+          double* __restrict__                         QOut,
+          const QOutEnumeratorType&                    QOutEnumerator
         ) InlineMethod;
 
 
+        #if defined(SharedOMP)
+        #pragma omp declare simd
+        #endif
         template <typename Solver>
         static void copySolutionAndAddSourceTerm_LoopBody(
           const double* __restrict__                QIn,
-          exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator QInEnumerator,
+          const exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator&  QInEnumerator,
           const tarch::la::Vector<Dimensions,double>&  patchCentre,
           const tarch::la::Vector<Dimensions,double>&  patchSize,
           int                                       patchIndex,
@@ -195,7 +202,7 @@ namespace exahype2 {
           double                                    t,
           double                                    dt,
           double* __restrict__                      QOut,
-          exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator QOutEnumerator
+          const exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator&  QOutEnumerator
         )  InlineMethod;
 
 
@@ -257,10 +264,13 @@ namespace exahype2 {
         /**
          * Specialisation invoking the static eigenvalue variant (for GPUs).
          */
+        #if defined(SharedOMP)
+        #pragma omp declare simd
+        #endif
         template <typename Solver, class QInEnumeratorType, class QMaxEigenvalueEnumeratorType>
         static void computeMaxEigenvalue_LoopBody(
           const double* __restrict__                   QIn,
-          QInEnumeratorType                            QInEnumerator,
+          const QInEnumeratorType&                     QInEnumerator,
           const tarch::la::Vector<Dimensions,double>&  patchCentre,
           const tarch::la::Vector<Dimensions,double>&  patchSize,
           int                                          patchIndex,
@@ -269,17 +279,20 @@ namespace exahype2 {
           double                                       dt,
           int                                          normal,
           double* __restrict__                         QMaxEigenvalue,
-          QMaxEigenvalueEnumeratorType                 QMaxEigenvalueEnumerator
+          const QMaxEigenvalueEnumeratorType&          QMaxEigenvalueEnumerator
         )  InlineMethod;
 
 
         /**
          * Specialisation for static eigenvalue call plus AoS input data.
          */
+        #if defined(SharedOMP)
+        #pragma omp declare simd
+        #endif
         template <typename Solver, class QMaxEigenvalueEnumeratorType>
         static void computeMaxEigenvalue_LoopBody(
           const double* __restrict__                   QIn,
-          exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator  QInEnumerator,
+          const exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator&  QInEnumerator,
           const tarch::la::Vector<Dimensions,double>&  patchCentre,
           const tarch::la::Vector<Dimensions,double>&  patchSize,
           int                                          patchIndex,
@@ -288,7 +301,7 @@ namespace exahype2 {
           double                                       dt,
           int                                          normal,
           double* __restrict__                         QMaxEigenvalue,
-          QMaxEigenvalueEnumeratorType                 QMaxEigenvalueEnumerator
+          const QMaxEigenvalueEnumeratorType&          QMaxEigenvalueEnumerator
         ) InlineMethod;
 
 
@@ -311,7 +324,7 @@ namespace exahype2 {
 
 
         template <>
-        static double reduceMaxEigenvalue_LoopBody(
+        KeywordToAvoidDuplicateSymbols double reduceMaxEigenvalue_LoopBody(
           const double* __restrict__                   QIn,
           exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator QInEnumerator,
           exahype2::fv::rusanov::MaxEigenvalue         maxEigenvalue,
@@ -324,10 +337,13 @@ namespace exahype2 {
         ) InlineMethod;
 
 
+        #if defined(SharedOMP)
+        #pragma omp declare simd
+        #endif
         template <typename Solver, class QInEnumeratorType>
         static double reduceMaxEigenvalue_LoopBody(
           const double* __restrict__                   QIn,
-          QInEnumeratorType                            QInEnumerator,
+          const QInEnumeratorType&                     QInEnumerator,
           const tarch::la::Vector<Dimensions,double>&  patchCentre,
           const tarch::la::Vector<Dimensions,double>&  patchSize,
           int                                          patchIndex,
@@ -337,10 +353,13 @@ namespace exahype2 {
         ) InlineMethod;
 
 
+        #if defined(SharedOMP)
+        #pragma omp declare simd
+        #endif
         template <typename Solver>
         static double reduceMaxEigenvalue_LoopBody(
           const double* __restrict__                   QIn,
-          exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator QInEnumerator,
+          const exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator&  QInEnumerator,
           const tarch::la::Vector<Dimensions,double>&  patchCentre,
           const tarch::la::Vector<Dimensions,double>&  patchSize,
           int                                          patchIndex,
@@ -357,6 +376,9 @@ namespace exahype2 {
          * user signatures require an AoS data format whereas the loop body
          * itself is generic.
          */
+        #if defined(SharedOMP)
+        #pragma omp declare simd
+        #endif
         template <class QInEnumeratorType, class QFluxEnumeratorType>
         static void computeFlux_LoopBody(
           const double* __restrict__                QIn,
@@ -393,6 +415,10 @@ namespace exahype2 {
 */
 
 
+        /**
+         * This one does not have to be declared as simd. For whatever
+         * reason ...
+         */
         static void computeFlux_LoopBody(
           const double* __restrict__                                  QIn,
           exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator  QInEnumerator,
@@ -409,6 +435,9 @@ namespace exahype2 {
         ) InlineMethod;
 
 
+        #if defined(SharedOMP)
+        #pragma omp declare simd
+        #endif
         template <typename Solver, class QInEnumeratorType, class QFluxEnumeratorType>
         static void computeFlux_LoopBody(
           const double* __restrict__                   QIn,
@@ -426,6 +455,9 @@ namespace exahype2 {
         ) InlineMethod;
 
 
+        #if defined(SharedOMP)
+        #pragma omp declare simd
+        #endif
         template <typename Solver, class QFluxEnumeratorType>
         static void computeFlux_LoopBody(
           const double* __restrict__                                  QIn,
@@ -443,10 +475,13 @@ namespace exahype2 {
         ) InlineMethod;
 
 
+        #if defined(SharedOMP)
+        #pragma omp declare simd
+        #endif
         template <typename Solver>
         static void computeFlux_LoopBody(
           const double* __restrict__                                  QIn,
-          exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator  QInEnumerator,
+          const exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator&  QInEnumerator,
           const tarch::la::Vector<Dimensions,double>&                 patchCentre,
           const tarch::la::Vector<Dimensions,double>&                 patchSize,
           int                                                         patchIndex,
@@ -455,16 +490,19 @@ namespace exahype2 {
           double                                                      dt,
           int                                                         normal,
           double* __restrict__                                        QFlux,
-          exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator  QFluxEnumerator
+          const exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator&  QFluxEnumerator
         ) InlineMethod;
 
 
+        #if defined(SharedOMP)
+        #pragma omp declare simd
+        #endif
         template <typename QFluxEnumeratorType, typename QOutEnumeratorType>
         static void updateSolutionWithFlux_LoopBody(
           const double* __restrict__                   tempFluxX,
           const double* __restrict__                   tempFluxY,
           const double* __restrict__                   tempFluxZ,
-          QFluxEnumeratorType                          fluxEnumerator,
+          const QFluxEnumeratorType&                   fluxEnumerator,
           const tarch::la::Vector<Dimensions,double>&  patchCentre,
           const tarch::la::Vector<Dimensions,double>&  patchSize,
           int                                          patchIndex,
@@ -472,7 +510,7 @@ namespace exahype2 {
           int                                          unknown,
           double                                       dt,
           double* __restrict__                         QOut,
-          QOutEnumeratorType                           QOutEnumerator
+          const QOutEnumeratorType&                    QOutEnumerator
         ) InlineMethod;
 
 
@@ -506,6 +544,9 @@ namespace exahype2 {
          * the template further. We need to do this scattering/gathering anyway, so
          * what's the point of specialising for particular data formats?
          */
+        #if defined(SharedOMP)
+        #pragma omp declare simd
+        #endif
         template <typename QInEnumeratorType, typename QMaxEigenvalueEnumeratorType, typename QOutEnumeratorType>
         static void updateSolutionWithEigenvalueDamping_LoopBody(
           const double* __restrict__                   QIn,
@@ -517,7 +558,7 @@ namespace exahype2 {
           const tarch::la::Vector<Dimensions,double>&  patchCentre,
           const tarch::la::Vector<Dimensions,double>&  patchSize,
           int                                          patchIndex,
-          tarch::la::Vector<Dimensions,int>            volumeIndex,
+          const tarch::la::Vector<Dimensions,int>&     volumeIndex,
           int                                          unknown,
           double                                       dt,
           double* __restrict__                         QOut,
@@ -553,10 +594,13 @@ namespace exahype2 {
         ) InlineMethod;
 
 
+        #if defined(SharedOMP)
+        #pragma omp declare simd
+        #endif
         template <typename Solver, class QInEnumeratorType, class QNCPFaceEnumeratorType>
         static void computeNonconservativeFlux_LoopBody(
           const double* __restrict__                     QIn,
-          QInEnumeratorType                              QInEnumerator,
+          const QInEnumeratorType&                       QInEnumerator,
           const tarch::la::Vector<Dimensions,double>&    patchCentre,
           const tarch::la::Vector<Dimensions,double>&    patchSize,
           int                                            patchIndex,
@@ -565,8 +609,8 @@ namespace exahype2 {
           double                              dt,
           int                                 normal,
           double* __restrict__                QNcp,
-          QNCPFaceEnumeratorType              QNcpEnumerator,
-          int                                                         pick = PickAllEntriesFromOutputVector
+          const QNCPFaceEnumeratorType&                  QNcpEnumerator,
+          int                                            pick = PickAllEntriesFromOutputVector
         ) InlineMethod;
 
 
@@ -574,12 +618,15 @@ namespace exahype2 {
          * See remarks in updateSolutionWithNonconservativeFlux_LoopBody() for
          * some rationale.
          */
+        #if defined(SharedOMP)
+        #pragma omp declare simd
+        #endif
         template <typename QNCPFaceEnumeratorType, typename QOutEnumeratorType>
         static void updateSolutionWithNonconservativeFlux_LoopBody(
           const double* __restrict__                   QNcpX,
           const double* __restrict__                   QNcpY,
           const double* __restrict__                   QNcpZ,
-          QNCPFaceEnumeratorType                       ncpEnumerator,
+          const QNCPFaceEnumeratorType&                ncpEnumerator,
           const tarch::la::Vector<Dimensions,double>&  patchCentre,
           const tarch::la::Vector<Dimensions,double>&  patchSize,
           int                                          patchIndex,
@@ -587,7 +634,7 @@ namespace exahype2 {
           int                                          unknown,
           double                                       dt,
           double* __restrict__                         QOut,
-          QOutEnumeratorType                           QOutEnumerator
+          const QOutEnumeratorType&                    QOutEnumerator
         ) InlineMethod;
       }
     }

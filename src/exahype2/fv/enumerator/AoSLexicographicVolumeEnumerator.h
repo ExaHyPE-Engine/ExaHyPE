@@ -65,7 +65,22 @@ namespace exahype2 {
           }
 
           std::string toString() const;
-          int size() const;
+
+          int size() const {
+            if (Dimensions==2) {
+              return _numberOfPatches
+                  * (_numberOfVolumesPerAxisInPatch+2*_haloSize)
+                  * (_numberOfVolumesPerAxisInPatch+2*_haloSize)
+                  * (_unknowns+_numberOfAuxiliaryVariables);
+            }
+            else {
+              return _numberOfPatches
+                  * (_numberOfVolumesPerAxisInPatch+2*_haloSize)
+                  * (_numberOfVolumesPerAxisInPatch+2*_haloSize)
+                  * (_numberOfVolumesPerAxisInPatch+2*_haloSize)
+                  * (_unknowns+_numberOfAuxiliaryVariables);
+            }
+          }
 
           const int _numberOfPatches;
           const int _numberOfVolumesPerAxisInPatch;

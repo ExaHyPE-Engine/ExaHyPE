@@ -33,19 +33,3 @@ std::string exahype2::fv::enumerator::SoALexicographicVolumeEnumerator::toString
   return msg.str();
 }
 
-
-
-int exahype2::fv::enumerator::SoALexicographicVolumeEnumerator::size() const {
-  #if Dimensions==2
-  return _numberOfPatches
-      * (_numberOfVolumesPerAxisInPatch+2*_haloSize)
-      * (_numberOfVolumesPerAxisInPatch+2*_haloSize)
-      * (_unknowns+_numberOfAuxiliaryVariables);
-  #else
-  return _numberOfPatches
-      * (_numberOfVolumesPerAxisInPatch+2*_haloSize)
-      * (_numberOfVolumesPerAxisInPatch+2*_haloSize)
-      * (_numberOfVolumesPerAxisInPatch+2*_haloSize)
-      * (_unknowns+_numberOfAuxiliaryVariables);
-  #endif
-}
