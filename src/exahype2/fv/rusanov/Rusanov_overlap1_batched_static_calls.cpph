@@ -23,6 +23,7 @@ void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_batched(
   const int volumeDoFs      = exahype2::fv::getTotalNumberOfVolumeDoFs(      patchData.numberOfPatches, numberOfVolumesPerAxisInPatch, haloSize );
   const int innerVolumeDoFs = exahype2::fv::getTotalNumberOfInnerVolumeDoFs( patchData.numberOfPatches, numberOfVolumesPerAxisInPatch, haloSize );
 
+// has to be aligned an in-place. No delete
   double* tempFluxX                  = evaluateFlux                     ? tarch::allocateMemory( volumeDoFs * unknowns,      tarch::MemoryLocation::Heap ) : nullptr;
   double* tempFluxY                  = evaluateFlux                     ? tarch::allocateMemory( volumeDoFs * unknowns,      tarch::MemoryLocation::Heap ) : nullptr;
   double* tempFluxZ                  = (evaluateFlux and Dimensions==3) ? tarch::allocateMemory( volumeDoFs * unknowns,      tarch::MemoryLocation::Heap ) : nullptr;
@@ -39,15 +40,14 @@ void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_batched(
   TempDataEnumerator ncpEnumerator       (patchData.numberOfPatches, numberOfVolumesPerAxisInPatch,haloSize,unknowns,0);
   TempDataEnumerator eigenvalueEnumerator(patchData.numberOfPatches, numberOfVolumesPerAxisInPatch,haloSize,1,0);
 
-  logDebug( "timeStepWithRusanov_overlap1_sequential(...)", "evaluate source terms and/or copy solution over" );
   if (Dimensions==2 and evaluateSource) {
     otterLoopBegin();
+    for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
     #if defined(SharedOMP)
-    #pragma omp simd collapse(3) aligned(tempFluxX,tempFluxY,tempFluxZ,tempEigenvalueX,tempEigenvalueY,tempEigenvalueZ,tempNonconservativeProductX,tempNonconservativeProductY,tempNonconservativeProductZ:Alignment)
+    #pragma omp simd collapse(2)
     #endif
     for (int patchIndex=0; patchIndex<patchData.numberOfPatches; patchIndex++)
-    for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++)
-    for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++) {
+    for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++) {
       otterLoopIterationBegin();
       internal::copySolutionAndAddSourceTerm_LoopBody<Solver>(
         patchData.QIn[patchIndex],
@@ -67,13 +67,13 @@ void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_batched(
   }
   else if (Dimensions==3 and evaluateSource) {
     otterLoopBegin();
+    for (int z = 0; z < numberOfVolumesPerAxisInPatch; z++)
+    for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
     #if defined(SharedOMP)
-    #pragma omp simd collapse(4) aligned(tempFluxX,tempFluxY,tempFluxZ,tempEigenvalueX,tempEigenvalueY,tempEigenvalueZ,tempNonconservativeProductX,tempNonconservativeProductY,tempNonconservativeProductZ:Alignment)
+    #pragma omp simd collapse(2)
     #endif
     for (int patchIndex=0; patchIndex<patchData.numberOfPatches; patchIndex++)
-    for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++)
-    for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
-    for (int z = 0; z < numberOfVolumesPerAxisInPatch; z++) {
+    for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++) {
       otterLoopIterationBegin();
       internal::copySolutionAndAddSourceTerm_LoopBody<Solver>(
         patchData.QIn[patchIndex],
@@ -93,12 +93,12 @@ void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_batched(
   }
   else if (Dimensions==2) {
     otterLoopBegin();
+    for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
     #if defined(SharedOMP)
-    #pragma omp simd collapse(4) aligned(tempFluxX,tempFluxY,tempFluxZ,tempEigenvalueX,tempEigenvalueY,tempEigenvalueZ,tempNonconservativeProductX,tempNonconservativeProductY,tempNonconservativeProductZ:Alignment)
+    #pragma omp simd collapse(3)
     #endif
     for (int patchIndex=0; patchIndex<patchData.numberOfPatches; patchIndex++)
     for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++)
-    for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
     for (int unknown=0; unknown<unknowns+auxiliaryVariables; unknown++) {
       otterLoopIterationBegin();
       internal::copySolution_LoopBody(
@@ -116,13 +116,13 @@ void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_batched(
   }
   else {
     otterLoopBegin();
-    #if defined(SharedOMP)
-    #pragma omp simd collapse(5) aligned(tempFluxX,tempFluxY,tempFluxZ,tempEigenvalueX,tempEigenvalueY,tempEigenvalueZ,tempNonconservativeProductX,tempNonconservativeProductY,tempNonconservativeProductZ:Alignment)
-    #endif
-    for (int patchIndex=0; patchIndex<patchData.numberOfPatches; patchIndex++)
-    for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++)
-    for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
     for (int z = 0; z < numberOfVolumesPerAxisInPatch; z++)
+    for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
+    #if defined(SharedOMP)
+    #pragma omp simd collapse(3)
+    #endif
+    for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++)
+    for (int patchIndex=0; patchIndex<patchData.numberOfPatches; patchIndex++)
     for (int unknown=0; unknown<unknowns+auxiliaryVariables; unknown++) {
       otterLoopIterationBegin();
       internal::copySolution_LoopBody(
@@ -140,15 +140,14 @@ void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_batched(
   }
 
 
-  logDebug( "timeStepWithRusanov_overlap1_sequential(...)", "evaluate directional eigenvalues per volume" );
   if (Dimensions==2) {
     otterLoopBegin();
+    for (int y = -haloSize; y < numberOfVolumesPerAxisInPatch+haloSize; y++)
     #if defined(SharedOMP)
-    #pragma omp simd collapse(3) aligned(tempFluxX,tempFluxY,tempFluxZ,tempEigenvalueX,tempEigenvalueY,tempEigenvalueZ,tempNonconservativeProductX,tempNonconservativeProductY,tempNonconservativeProductZ:Alignment)
+    #pragma omp simd collapse(2)
     #endif
     for (int patchIndex=0; patchIndex<patchData.numberOfPatches; patchIndex++)
-    for (int x = -haloSize; x < numberOfVolumesPerAxisInPatch+haloSize; x++)
-    for (int y = -haloSize; y < numberOfVolumesPerAxisInPatch+haloSize; y++) {
+    for (int x = -haloSize; x < numberOfVolumesPerAxisInPatch+haloSize; x++) {
       otterLoopIterationBegin();
       bool isDiagonalCell = false;
       #if PeanoDebug>0
@@ -176,12 +175,12 @@ void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_batched(
     otterLoopEnd();
 
     otterLoopBegin();
+    for (int y = -haloSize; y < numberOfVolumesPerAxisInPatch+haloSize; y++)
     #if defined(SharedOMP)
-    #pragma omp simd collapse(3) aligned(tempFluxX,tempFluxY,tempFluxZ,tempEigenvalueX,tempEigenvalueY,tempEigenvalueZ,tempNonconservativeProductX,tempNonconservativeProductY,tempNonconservativeProductZ:Alignment)
+    #pragma omp simd collapse(2)
     #endif
     for (int patchIndex=0; patchIndex<patchData.numberOfPatches; patchIndex++)
-    for (int x = -haloSize; x < numberOfVolumesPerAxisInPatch+haloSize; x++)
-    for (int y = -haloSize; y < numberOfVolumesPerAxisInPatch+haloSize; y++) {
+    for (int x = -haloSize; x < numberOfVolumesPerAxisInPatch+haloSize; x++) {
       otterLoopIterationBegin();
       bool isDiagonalCell = false;
       #if PeanoDebug>0
@@ -208,11 +207,13 @@ void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_batched(
     }
     otterLoopEnd();
 
-
     otterLoopBegin();
+    for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
+    #if defined(SharedOMP)
+    #pragma omp simd collapse(3)
+    #endif
     for (int patchIndex=0; patchIndex<patchData.numberOfPatches; patchIndex++)
     for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++)
-    for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
     for (int unknown = 0; unknown < unknowns; unknown++) {
       otterLoopIterationBegin();
       internal::updateSolutionWithEigenvalueDamping_LoopBody(
@@ -237,13 +238,13 @@ void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_batched(
   }
   else {
     otterLoopBegin();
+    for (int z = -haloSize; z < numberOfVolumesPerAxisInPatch+haloSize; z++)
+    for (int y = -haloSize; y < numberOfVolumesPerAxisInPatch+haloSize; y++)
     #if defined(SharedOMP)
-    #pragma omp simd collapse(4) aligned(tempFluxX,tempFluxY,tempFluxZ,tempEigenvalueX,tempEigenvalueY,tempEigenvalueZ,tempNonconservativeProductX,tempNonconservativeProductY,tempNonconservativeProductZ:Alignment)
+    #pragma omp simd collapse(2)
     #endif
     for (int patchIndex=0; patchIndex<patchData.numberOfPatches; patchIndex++)
-    for (int x = -haloSize; x < numberOfVolumesPerAxisInPatch+haloSize; x++)
-    for (int y = -haloSize; y < numberOfVolumesPerAxisInPatch+haloSize; y++)
-    for (int z = -haloSize; z < numberOfVolumesPerAxisInPatch+haloSize; z++) {
+    for (int x = -haloSize; x < numberOfVolumesPerAxisInPatch+haloSize; x++) {
       otterLoopIterationBegin();
       bool isDiagonalCell = false;
       #if PeanoDebug>0
@@ -279,13 +280,13 @@ void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_batched(
     otterLoopEnd();
 
     otterLoopBegin();
+    for (int z = -haloSize; z < numberOfVolumesPerAxisInPatch+haloSize; z++)
+    for (int y = -haloSize; y < numberOfVolumesPerAxisInPatch+haloSize; y++)
     #if defined(SharedOMP)
-    #pragma omp simd collapse(3) aligned(tempFluxX,tempFluxY,tempFluxZ,tempEigenvalueX,tempEigenvalueY,tempEigenvalueZ,tempNonconservativeProductX,tempNonconservativeProductY,tempNonconservativeProductZ:Alignment)
+    #pragma omp simd collapse(2)
     #endif
     for (int patchIndex=0; patchIndex<patchData.numberOfPatches; patchIndex++)
-    for (int x = -haloSize; x < numberOfVolumesPerAxisInPatch+haloSize; x++)
-    for (int y = -haloSize; y < numberOfVolumesPerAxisInPatch+haloSize; y++)
-    for (int z = -haloSize; z < numberOfVolumesPerAxisInPatch+haloSize; z++) {
+    for (int x = -haloSize; x < numberOfVolumesPerAxisInPatch+haloSize; x++) {
       otterLoopIterationBegin();
       bool isDiagonalCell = false;
       #if PeanoDebug>0
@@ -321,13 +322,13 @@ void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_batched(
     otterLoopEnd();
 
     otterLoopBegin();
+    for (int z = -haloSize; z < numberOfVolumesPerAxisInPatch+haloSize; z++)
+    for (int y = -haloSize; y < numberOfVolumesPerAxisInPatch+haloSize; y++)
     #if defined(SharedOMP)
-    #pragma omp simd collapse(3) aligned(tempFluxX,tempFluxY,tempFluxZ,tempEigenvalueX,tempEigenvalueY,tempEigenvalueZ,tempNonconservativeProductX,tempNonconservativeProductY,tempNonconservativeProductZ:Alignment)
+    #pragma omp simd collapse(2)
     #endif
     for (int patchIndex=0; patchIndex<patchData.numberOfPatches; patchIndex++)
-    for (int x = -haloSize; x < numberOfVolumesPerAxisInPatch+haloSize; x++)
-    for (int y = -haloSize; y < numberOfVolumesPerAxisInPatch+haloSize; y++)
-    for (int z = -haloSize; z < numberOfVolumesPerAxisInPatch+haloSize; z++) {
+    for (int x = -haloSize; x < numberOfVolumesPerAxisInPatch+haloSize; x++) {
       otterLoopIterationBegin();
       bool isDiagonalCell = false;
       #if PeanoDebug>0
@@ -364,10 +365,13 @@ void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_batched(
 
 
     otterLoopBegin();
+    for (int z = 0; z < numberOfVolumesPerAxisInPatch; z++)
+    for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
+    #if defined(SharedOMP)
+    #pragma omp simd collapse(3)
+    #endif
     for (int patchIndex=0; patchIndex<patchData.numberOfPatches; patchIndex++)
     for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++)
-    for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
-    for (int z = 0; z < numberOfVolumesPerAxisInPatch; z++)
     for (int unknown = 0; unknown < unknowns; unknown++) {
       otterLoopIterationBegin();
       internal::updateSolutionWithEigenvalueDamping_LoopBody(
@@ -392,14 +396,13 @@ void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_batched(
   }
 
   if (evaluateFlux and Dimensions==2) {
-    logDebug( "timeStepWithRusanov_overlap1_sequential(...)", "evaluate flux in x-direction" );
     otterLoopBegin();
+    for (int y =         0; y < numberOfVolumesPerAxisInPatch;          y++)
     #if defined(SharedOMP)
-    #pragma omp simd collapse(3) aligned(tempFluxX,tempFluxY,tempFluxZ,tempEigenvalueX,tempEigenvalueY,tempEigenvalueZ,tempNonconservativeProductX,tempNonconservativeProductY,tempNonconservativeProductZ:Alignment)
+    #pragma omp simd collapse(2)
     #endif
     for (int patchIndex=0; patchIndex<patchData.numberOfPatches; patchIndex++)
-    for (int x = -haloSize; x < numberOfVolumesPerAxisInPatch+haloSize; x++)
-    for (int y =         0; y < numberOfVolumesPerAxisInPatch;          y++) {
+    for (int x = -haloSize; x < numberOfVolumesPerAxisInPatch+haloSize; x++) {
       otterLoopIterationBegin();
       internal::computeFlux_LoopBody<Solver>(
         patchData.QIn[patchIndex],
@@ -419,12 +422,12 @@ void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_batched(
     otterLoopEnd();
 
     otterLoopBegin();
+    for (int y = -haloSize; y < numberOfVolumesPerAxisInPatch+haloSize;  y++)
     #if defined(SharedOMP)
-    #pragma omp simd collapse(3) aligned(tempFluxX,tempFluxY,tempFluxZ,tempEigenvalueX,tempEigenvalueY,tempEigenvalueZ,tempNonconservativeProductX,tempNonconservativeProductY,tempNonconservativeProductZ:Alignment)
+    #pragma omp simd collapse(2)
     #endif
     for (int patchIndex=0; patchIndex<patchData.numberOfPatches; patchIndex++)
-    for (int x =         0; x < numberOfVolumesPerAxisInPatch;           x++)
-    for (int y = -haloSize; y < numberOfVolumesPerAxisInPatch+haloSize;  y++) {
+    for (int x =         0; x < numberOfVolumesPerAxisInPatch;           x++) {
       otterLoopIterationBegin();
       internal::computeFlux_LoopBody<Solver>(
         patchData.QIn[patchIndex],
@@ -444,9 +447,12 @@ void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_batched(
     otterLoopEnd();
 
     otterLoopBegin();
+    for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
+    #if defined(SharedOMP)
+    #pragma omp simd collapse(3)
+    #endif
     for (int patchIndex=0; patchIndex<patchData.numberOfPatches; patchIndex++)
     for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++)
-    for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
     for (int unknown=0; unknown<unknowns+auxiliaryVariables; unknown++) {
       otterLoopIterationBegin();
       internal::updateSolutionWithFlux_LoopBody(
@@ -466,15 +472,14 @@ void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_batched(
     otterLoopEnd();
   }
   else if (evaluateFlux and Dimensions==3) {
-    logDebug( "timeStepWithRusanov_overlap1_sequential(...)", "evaluate flux in x-direction" );
     otterLoopBegin();
+    for (int z =         0; z < numberOfVolumesPerAxisInPatch;          z++) 
+    for (int y =         0; y < numberOfVolumesPerAxisInPatch;          y++)
     #if defined(SharedOMP)
-    #pragma omp simd collapse(4) aligned(tempFluxX,tempFluxY,tempFluxZ,tempEigenvalueX,tempEigenvalueY,tempEigenvalueZ,tempNonconservativeProductX,tempNonconservativeProductY,tempNonconservativeProductZ:Alignment)
+    #pragma omp simd collapse(2)
     #endif
     for (int patchIndex=0; patchIndex<patchData.numberOfPatches; patchIndex++)
-    for (int x = -haloSize; x < numberOfVolumesPerAxisInPatch+haloSize; x++)
-    for (int y =         0; y < numberOfVolumesPerAxisInPatch;          y++)
-    for (int z =         0; z < numberOfVolumesPerAxisInPatch;          z++) {
+    for (int x = -haloSize; x < numberOfVolumesPerAxisInPatch+haloSize; x++) {
       otterLoopIterationBegin();
       internal::computeFlux_LoopBody<Solver>(
         patchData.QIn[patchIndex],
@@ -494,13 +499,13 @@ void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_batched(
     otterLoopEnd();
 
     otterLoopBegin();
+    for (int z =         0; z < numberOfVolumesPerAxisInPatch;           z++)
+    for (int y = -haloSize; y < numberOfVolumesPerAxisInPatch+haloSize;  y++)
     #if defined(SharedOMP)
-    #pragma omp simd collapse(4) aligned(tempFluxX,tempFluxY,tempFluxZ,tempEigenvalueX,tempEigenvalueY,tempEigenvalueZ,tempNonconservativeProductX,tempNonconservativeProductY,tempNonconservativeProductZ:Alignment)
+    #pragma omp simd collapse(2)
     #endif
     for (int patchIndex=0; patchIndex<patchData.numberOfPatches; patchIndex++)
-    for (int x =         0; x < numberOfVolumesPerAxisInPatch;           x++)
-    for (int y = -haloSize; y < numberOfVolumesPerAxisInPatch+haloSize;  y++)
-    for (int z =         0; z < numberOfVolumesPerAxisInPatch;           z++) {
+    for (int x =         0; x < numberOfVolumesPerAxisInPatch;           x++) {
       otterLoopIterationBegin();
       internal::computeFlux_LoopBody<Solver>(
         patchData.QIn[patchIndex],
@@ -520,13 +525,13 @@ void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_batched(
     otterLoopEnd();
 
     otterLoopBegin();
+    for (int z = -haloSize; z < numberOfVolumesPerAxisInPatch+haloSize;  z++)
+    for (int y =         0; y < numberOfVolumesPerAxisInPatch;           y++)
     #if defined(SharedOMP)
-    #pragma omp simd collapse(4) aligned(tempFluxX,tempFluxY,tempFluxZ,tempEigenvalueX,tempEigenvalueY,tempEigenvalueZ,tempNonconservativeProductX,tempNonconservativeProductY,tempNonconservativeProductZ:Alignment)
+    #pragma omp simd collapse(2)
     #endif
     for (int patchIndex=0; patchIndex<patchData.numberOfPatches; patchIndex++)
-    for (int x =         0; x < numberOfVolumesPerAxisInPatch;           x++)
-    for (int y =         0; y < numberOfVolumesPerAxisInPatch;           y++)
-    for (int z = -haloSize; z < numberOfVolumesPerAxisInPatch+haloSize;  z++) {
+    for (int x =         0; x < numberOfVolumesPerAxisInPatch;           x++) {
       otterLoopIterationBegin();
       internal::computeFlux_LoopBody<Solver>(
         patchData.QIn[patchIndex],
@@ -546,10 +551,13 @@ void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_batched(
     otterLoopEnd();
 
     otterLoopBegin();
+    for (int z = 0; z < numberOfVolumesPerAxisInPatch; z++)
+    for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
+    #if defined(SharedOMP)
+    #pragma omp simd collapse(3)
+    #endif
     for (int patchIndex=0; patchIndex<patchData.numberOfPatches; patchIndex++)
     for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++)
-    for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
-    for (int z = 0; z < numberOfVolumesPerAxisInPatch; z++)
     for (int unknown=0; unknown<unknowns+auxiliaryVariables; unknown++) {
       otterLoopIterationBegin();
       internal::updateSolutionWithFlux_LoopBody(
@@ -572,12 +580,12 @@ void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_batched(
 
   if (evaluateNonconservativeProduct and Dimensions==2) {
     otterLoopBegin();
+    for (int y =         0; y < numberOfVolumesPerAxisInPatch;            y++) 
     #if defined(SharedOMP)
-    #pragma omp simd collapse(3) aligned(tempFluxX,tempFluxY,tempFluxZ,tempEigenvalueX,tempEigenvalueY,tempEigenvalueZ,tempNonconservativeProductX,tempNonconservativeProductY,tempNonconservativeProductZ:Alignment)
+    #pragma omp simd collapse(2)
     #endif
     for (int patchIndex=0; patchIndex<patchData.numberOfPatches; patchIndex++)
-    for (int x = -haloSize; x < numberOfVolumesPerAxisInPatch+haloSize-1; x++)
-    for (int y =         0; y < numberOfVolumesPerAxisInPatch;            y++) {
+    for (int x = -haloSize; x < numberOfVolumesPerAxisInPatch+haloSize-1; x++) {
       otterLoopIterationBegin();
       internal::computeNonconservativeFlux_LoopBody<Solver>(
         patchData.QIn[patchIndex],
@@ -597,12 +605,12 @@ void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_batched(
     otterLoopEnd();
 
     otterLoopBegin();
+    for (int y = -haloSize; y < numberOfVolumesPerAxisInPatch+haloSize-1; y++) 
     #if defined(SharedOMP)
-    #pragma omp simd collapse(3) aligned(tempFluxX,tempFluxY,tempFluxZ,tempEigenvalueX,tempEigenvalueY,tempEigenvalueZ,tempNonconservativeProductX,tempNonconservativeProductY,tempNonconservativeProductZ:Alignment)
+    #pragma omp simd collapse(2)
     #endif
     for (int patchIndex=0; patchIndex<patchData.numberOfPatches; patchIndex++)
-    for (int x =         0; x < numberOfVolumesPerAxisInPatch;            x++)
-    for (int y = -haloSize; y < numberOfVolumesPerAxisInPatch+haloSize-1; y++) {
+    for (int x =         0; x < numberOfVolumesPerAxisInPatch;            x++) {
       otterLoopIterationBegin();
       internal::computeNonconservativeFlux_LoopBody<Solver>(
         patchData.QIn[patchIndex],
@@ -622,12 +630,12 @@ void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_batched(
     otterLoopEnd();
 
     otterLoopBegin();
+    for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
     #if defined(SharedOMP)
-    #pragma omp simd collapse(4) aligned(tempFluxX,tempFluxY,tempFluxZ,tempEigenvalueX,tempEigenvalueY,tempEigenvalueZ,tempNonconservativeProductX,tempNonconservativeProductY,tempNonconservativeProductZ:Alignment)
+    #pragma omp simd collapse(3)
     #endif
     for (int patchIndex=0; patchIndex<patchData.numberOfPatches; patchIndex++)
     for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++)
-    for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
     for (int unknown=0; unknown<unknowns+auxiliaryVariables; unknown++) {
       otterLoopIterationBegin();
       internal::updateSolutionWithNonconservativeFlux_LoopBody(
@@ -647,16 +655,16 @@ void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_batched(
     otterLoopEnd();
   }
   else if (evaluateNonconservativeProduct and Dimensions==3) {
-      otterLoopBegin();
+    otterLoopBegin();
+    for (int z =         0; z < numberOfVolumesPerAxisInPatch;            z++)
+    for (int y =         0; y < numberOfVolumesPerAxisInPatch;            y++)
     #if defined(SharedOMP)
-    #pragma omp simd collapse(4) aligned(tempFluxX,tempFluxY,tempFluxZ,tempEigenvalueX,tempEigenvalueY,tempEigenvalueZ,tempNonconservativeProductX,tempNonconservativeProductY,tempNonconservativeProductZ:Alignment)
+    #pragma omp simd collapse(2)
     #endif
     for (int patchIndex=0; patchIndex<patchData.numberOfPatches; patchIndex++)
-      for (int x = -haloSize; x < numberOfVolumesPerAxisInPatch+haloSize-1; x++)
-      for (int y =         0; y < numberOfVolumesPerAxisInPatch;            y++)
-      for (int z =         0; z < numberOfVolumesPerAxisInPatch;            z++) {
-        otterLoopIterationBegin();
-        internal::computeNonconservativeFlux_LoopBody<Solver>(
+    for (int x = -haloSize; x < numberOfVolumesPerAxisInPatch+haloSize-1; x++) {
+      otterLoopIterationBegin();
+      internal::computeNonconservativeFlux_LoopBody<Solver>(
           patchData.QIn[patchIndex],
           QInEnumerator,
           patchData.patchCentre[patchIndex],
@@ -668,21 +676,21 @@ void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_batched(
           0, // normal
           tempNonconservativeProductX,
           ncpEnumerator
-        );
-        otterLoopIterationEnd();
-      }
-      otterLoopEnd();
+      );
+      otterLoopIterationEnd();
+    }
+    otterLoopEnd();
 
-      otterLoopBegin();
+    otterLoopBegin();
+    for (int z =         0; z < numberOfVolumesPerAxisInPatch;            z++)
+    for (int y = -haloSize; y < numberOfVolumesPerAxisInPatch+haloSize-1; y++)
     #if defined(SharedOMP)
-    #pragma omp simd collapse(4) aligned(tempFluxX,tempFluxY,tempFluxZ,tempEigenvalueX,tempEigenvalueY,tempEigenvalueZ,tempNonconservativeProductX,tempNonconservativeProductY,tempNonconservativeProductZ:Alignment)
+    #pragma omp simd collapse(2)
     #endif
     for (int patchIndex=0; patchIndex<patchData.numberOfPatches; patchIndex++)
-      for (int x =         0; x < numberOfVolumesPerAxisInPatch;            x++)
-      for (int y = -haloSize; y < numberOfVolumesPerAxisInPatch+haloSize-1; y++)
-      for (int z =         0; z < numberOfVolumesPerAxisInPatch;            z++) {
-        otterLoopIterationBegin();
-        internal::computeNonconservativeFlux_LoopBody<Solver>(
+    for (int x =         0; x < numberOfVolumesPerAxisInPatch;            x++) {
+      otterLoopIterationBegin();
+      internal::computeNonconservativeFlux_LoopBody<Solver>(
           patchData.QIn[patchIndex],
           QInEnumerator,
           patchData.patchCentre[patchIndex],
@@ -694,21 +702,21 @@ void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_batched(
           1, // normal
           tempNonconservativeProductY,
           ncpEnumerator
-        );
-        otterLoopIterationEnd();
-      }
-      otterLoopEnd();
+      );
+      otterLoopIterationEnd();
+    }
+    otterLoopEnd();
 
-      otterLoopBegin();
+    otterLoopBegin();
+    for (int z = -haloSize; z < numberOfVolumesPerAxisInPatch+haloSize-1; z++)
+    for (int y =         0; y < numberOfVolumesPerAxisInPatch;            y++)
     #if defined(SharedOMP)
-    #pragma omp simd collapse(4) aligned(tempFluxX,tempFluxY,tempFluxZ,tempEigenvalueX,tempEigenvalueY,tempEigenvalueZ,tempNonconservativeProductX,tempNonconservativeProductY,tempNonconservativeProductZ:Alignment)
+    #pragma omp simd collapse(2)
     #endif
     for (int patchIndex=0; patchIndex<patchData.numberOfPatches; patchIndex++)
-      for (int x =         0; x < numberOfVolumesPerAxisInPatch;            x++)
-      for (int y =         0; y < numberOfVolumesPerAxisInPatch;            y++)
-      for (int z = -haloSize; z < numberOfVolumesPerAxisInPatch+haloSize-1; z++) {
-        otterLoopIterationBegin();
-        internal::computeNonconservativeFlux_LoopBody<Solver>(
+    for (int x =         0; x < numberOfVolumesPerAxisInPatch;            x++) {
+      otterLoopIterationBegin();
+      internal::computeNonconservativeFlux_LoopBody<Solver>(
           patchData.QIn[patchIndex],
           QInEnumerator,
           patchData.patchCentre[patchIndex],
@@ -720,17 +728,20 @@ void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_batched(
           2, // normal
           tempNonconservativeProductY,
           ncpEnumerator
-        );
-        otterLoopIterationEnd();
-      }
-      otterLoopEnd();
+      );
+      otterLoopIterationEnd();
+    }
+    otterLoopEnd();
 
     otterLoopBegin();
+    for (int z = 0; z < numberOfVolumesPerAxisInPatch; z++)
+    for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
+    #if defined(SharedOMP)
+    #pragma omp simd collapse(3)
+    #endif
     for (int patchIndex=0; patchIndex<patchData.numberOfPatches; patchIndex++)
-      for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++)
-      for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
-      for (int z = 0; z < numberOfVolumesPerAxisInPatch; z++)
-      for (int unknown=0; unknown<unknowns+auxiliaryVariables; unknown++) {
+    for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++)
+    for (int unknown=0; unknown<unknowns+auxiliaryVariables; unknown++) {
       otterLoopIterationBegin();
       internal::updateSolutionWithNonconservativeFlux_LoopBody(
         tempNonconservativeProductX, tempNonconservativeProductY, tempNonconservativeProductZ,
@@ -751,16 +762,14 @@ void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_batched(
 
 
   if (evaluateMaximumEigenvalueAfterTimeStep and Dimensions==2) {
-    logDebug( "timeStepWithRusanov_overlap1_sequential(...)", "compute maximum eigenvalue for subsequent time step" );
     for (int patchIndex=0; patchIndex<patchData.numberOfPatches; patchIndex++) {
       double newMaxEigenvalue = 0.0;
-
-      otterLoopBegin();
+      otterLoopBegin(); // @todo how do I clarify that this is a reduction? Do we need this info here?
+      for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
       #if defined(SharedOMP)
-      #pragma omp simd collapse(2) aligned(tempFluxX,tempFluxY,tempFluxZ,tempEigenvalueX,tempEigenvalueY,tempEigenvalueZ,tempNonconservativeProductX,tempNonconservativeProductY,tempNonconservativeProductZ:Alignment)
+      #pragma omp simd reduction(max:newMaxEigenvalue)
       #endif
-      for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++)
-      for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++) {
+      for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++) {
         otterLoopIterationBegin();
         newMaxEigenvalue = std::max(
           newMaxEigenvalue,
@@ -775,17 +784,23 @@ void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_batched(
             patchData.dt[patchIndex]
           )
         );
+        otterLoopIterationEnd();
       }
+      otterLoopEnd();
       patchData.maxEigenvalue[patchIndex] = newMaxEigenvalue;
     }
   }
   else if (evaluateMaximumEigenvalueAfterTimeStep) {
-    logDebug( "timeStepWithRusanov_overlap1_sequential(...)", "compute maximum eigenvalue for subsequent time step" );
     for (int patchIndex=0; patchIndex<patchData.numberOfPatches; patchIndex++) {
       double newMaxEigenvalue = 0.0;
-      for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++)
+      otterLoopBegin(); // @todo how do I clarify that this is a reduction? Do we need this info here?
+      for (int z = 0; z < numberOfVolumesPerAxisInPatch; z++)
       for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
-      for (int z = 0; z < numberOfVolumesPerAxisInPatch; z++) {
+      #if defined(SharedOMP)
+      #pragma omp simd reduction(max:newMaxEigenvalue)
+      #endif
+      for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++) {
+        otterLoopIterationBegin();
         newMaxEigenvalue = std::max(
           newMaxEigenvalue,
           internal::reduceMaxEigenvalue_LoopBody<Solver>(
@@ -799,7 +814,9 @@ void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_batched(
             patchData.dt[patchIndex]
           )
         );
+        otterLoopIterationEnd();
       }
+      otterLoopEnd();
       patchData.maxEigenvalue[patchIndex] = newMaxEigenvalue;
     }
   }

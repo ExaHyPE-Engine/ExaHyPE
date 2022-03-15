@@ -23,6 +23,7 @@ void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_sequential(
   const int volumeDoFs      = exahype2::fv::getTotalNumberOfVolumeDoFs(      patchData.numberOfPatches, numberOfVolumesPerAxisInPatch, haloSize );
   const int innerVolumeDoFs = exahype2::fv::getTotalNumberOfInnerVolumeDoFs( patchData.numberOfPatches, numberOfVolumesPerAxisInPatch, haloSize );
 
+// has to be aligned an in-place. No delete
   double* tempFluxX                  = evaluateFlux                     ? tarch::allocateMemory( volumeDoFs * unknowns,      tarch::MemoryLocation::Heap ) : nullptr;
   double* tempFluxY                  = evaluateFlux                     ? tarch::allocateMemory( volumeDoFs * unknowns,      tarch::MemoryLocation::Heap ) : nullptr;
   double* tempFluxZ                  = (evaluateFlux and Dimensions==3) ? tarch::allocateMemory( volumeDoFs * unknowns,      tarch::MemoryLocation::Heap ) : nullptr;
@@ -482,8 +483,8 @@ void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_sequential(
       otterLoopEnd();
 
       otterLoopBegin();
-      for (int y = -haloSize; y < numberOfVolumesPerAxisInPatch+haloSize;  y++)
       for (int z =         0; z < numberOfVolumesPerAxisInPatch;           z++)
+      for (int y = -haloSize; y < numberOfVolumesPerAxisInPatch+haloSize;  y++)
       #if defined(SharedOMP)
       #pragma omp simd
       #endif
@@ -507,8 +508,8 @@ void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_sequential(
       otterLoopEnd();
 
       otterLoopBegin();
-      for (int y =         0; y < numberOfVolumesPerAxisInPatch;           y++)
       for (int z = -haloSize; z < numberOfVolumesPerAxisInPatch+haloSize;  z++)
+      for (int y =         0; y < numberOfVolumesPerAxisInPatch;           y++)
       #if defined(SharedOMP)
       #pragma omp simd
       #endif
@@ -762,7 +763,6 @@ void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_sequential(
       patchData.maxEigenvalue[patchIndex] = newMaxEigenvalue;
     }
     else if (evaluateMaximumEigenvalueAfterTimeStep) {
-      logDebug( "timeStepWithRusanov_overlap1_sequential(...)", "compute maximum eigenvalue for subsequent time step" );
       double newMaxEigenvalue = 0.0;
       otterLoopBegin(); // @todo how do I clarify that this is a reduction? Do we need this info here?
       for (int z = 0; z < numberOfVolumesPerAxisInPatch; z++)
