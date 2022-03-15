@@ -19,25 +19,23 @@ void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_sequential(
   static tarch::logging::Log _log( "exahype2::fv::rusanov" );
   constexpr int haloSize        = 1;
 
-  const int faceDoFs        = exahype2::fv::getTotalNumberOfFaceDoFs(        patchData.numberOfPatches, numberOfVolumesPerAxisInPatch, haloSize );
-  const int volumeDoFs      = exahype2::fv::getTotalNumberOfVolumeDoFs(      patchData.numberOfPatches, numberOfVolumesPerAxisInPatch, haloSize );
-  const int innerVolumeDoFs = exahype2::fv::getTotalNumberOfInnerVolumeDoFs( patchData.numberOfPatches, numberOfVolumesPerAxisInPatch, haloSize );
-
-  double* tempFluxX                  = evaluateFlux                     ? tarch::allocateMemory( volumeDoFs * unknowns,      tarch::MemoryLocation::Heap ) : nullptr;
-  double* tempFluxY                  = evaluateFlux                     ? tarch::allocateMemory( volumeDoFs * unknowns,      tarch::MemoryLocation::Heap ) : nullptr;
-  double* tempFluxZ                  = (evaluateFlux and Dimensions==3) ? tarch::allocateMemory( volumeDoFs * unknowns,      tarch::MemoryLocation::Heap ) : nullptr;
-  double* tempNonconservativeProductX = evaluateNonconservativeProduct                     ? tarch::allocateMemory( faceDoFs * unknowns,        tarch::MemoryLocation::Heap ) : nullptr;
-  double* tempNonconservativeProductY = evaluateNonconservativeProduct                     ? tarch::allocateMemory( faceDoFs * unknowns,        tarch::MemoryLocation::Heap ) : nullptr;
-  double* tempNonconservativeProductZ = (evaluateNonconservativeProduct and Dimensions==3) ? tarch::allocateMemory( faceDoFs * unknowns,        tarch::MemoryLocation::Heap ) : nullptr;
-  double* tempEigenvalueX            =                                    tarch::allocateMemory( volumeDoFs,      tarch::MemoryLocation::Heap );
-  double* tempEigenvalueY            =                                    tarch::allocateMemory( volumeDoFs,      tarch::MemoryLocation::Heap );
-  double* tempEigenvalueZ            = (Dimensions==3)                  ? tarch::allocateMemory( volumeDoFs,      tarch::MemoryLocation::Heap ) : nullptr;
-
   exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator QInEnumerator       (                        1, numberOfVolumesPerAxisInPatch,haloSize,unknowns,auxiliaryVariables);
   exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator QOutEnumerator      (                        1, numberOfVolumesPerAxisInPatch,       0,unknowns,auxiliaryVariables);
   exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator fluxEnumerator      (patchData.numberOfPatches, numberOfVolumesPerAxisInPatch,haloSize,unknowns,0);
-  exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator ncpEnumerator       (patchData.numberOfPatches, numberOfVolumesPerAxisInPatch,haloSize,unknowns,0);
+  exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator ncpEnumerator       (patchData.numberOfPatches, numberOfVolumesPerAxisInPatch+1,haloSize,unknowns,0);
   exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator eigenvalueEnumerator(patchData.numberOfPatches, numberOfVolumesPerAxisInPatch,haloSize,1,0);
+
+// has to be aligned an in-place. No delete
+
+  double* tempFluxX                  = evaluateFlux                     ? tarch::allocateMemory( fluxEnumerator.size(),      tarch::MemoryLocation::Heap ) : nullptr;
+  double* tempFluxY                  = evaluateFlux                     ? tarch::allocateMemory( fluxEnumerator.size(),      tarch::MemoryLocation::Heap ) : nullptr;
+  double* tempFluxZ                  = (evaluateFlux and Dimensions==3) ? tarch::allocateMemory( fluxEnumerator.size(),      tarch::MemoryLocation::Heap ) : nullptr;
+  double* tempNonconservativeProductX = evaluateNonconservativeProduct                     ? tarch::allocateMemory( ncpEnumerator.size(),        tarch::MemoryLocation::Heap ) : nullptr;
+  double* tempNonconservativeProductY = evaluateNonconservativeProduct                     ? tarch::allocateMemory( ncpEnumerator.size(),        tarch::MemoryLocation::Heap ) : nullptr;
+  double* tempNonconservativeProductZ = (evaluateNonconservativeProduct and Dimensions==3) ? tarch::allocateMemory( ncpEnumerator.size(),        tarch::MemoryLocation::Heap ) : nullptr;
+  double* tempEigenvalueX            =                                    tarch::allocateMemory( eigenvalueEnumerator.size(),      tarch::MemoryLocation::Heap );
+  double* tempEigenvalueY            =                                    tarch::allocateMemory( eigenvalueEnumerator.size(),      tarch::MemoryLocation::Heap );
+  double* tempEigenvalueZ            = (Dimensions==3)                  ? tarch::allocateMemory( eigenvalueEnumerator.size(),      tarch::MemoryLocation::Heap ) : nullptr;
 
   assertion2( ncpEnumerator.size()<=faceDoFs * unknowns, ncpEnumerator.size(), faceDoFs );
 

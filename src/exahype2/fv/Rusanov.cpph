@@ -1,3 +1,4 @@
+/*
 #include "tarch/la/Vector.h"
 
 #include "tarch/compiler/CompilerSpecificSettings.h"
@@ -912,10 +913,10 @@ void exahype2::fv::Fusanov_2D_with_batching(
       const double                   h1 =  pV.h1[pidx];
       double*        reconstructedPatch = basePointerReconstructed + sourcePatchSize*pidx;
 
-/*
+
       const tarch::la::Vector<2 ,double> volumeH = {h0/numVPAIP,h1/numVPAIP};
       tarch::la::Vector<2,double> volumeX = {x0-0.5*h0, x1-0.5*h1};
-*/
+
 
       tarch::la::Vector<2 ,double> volumeH;
       volumeH(0) = h0/numVPAIP;
@@ -1768,3 +1769,4 @@ void exahype2::fv::Fusanov_3D_with_batching(
   } // end of eigenvalue computation term loop including if block guarding it
 }
 
+*/
