@@ -200,8 +200,11 @@ void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_sequential(
 
 
       otterLoopBegin();
-      for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++)
       for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
+      #if defined(SharedOMP)
+      #pragma omp simd collapse(2)
+      #endif
+      for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++)
       for (int unknown = 0; unknown < unknowns; unknown++) {
         otterLoopIterationBegin();
         internal::updateSolutionWithEigenvalueDamping_LoopBody(
@@ -350,9 +353,12 @@ void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_sequential(
 
 
       otterLoopBegin();
-      for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++)
-      for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
       for (int z = 0; z < numberOfVolumesPerAxisInPatch; z++)
+      for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
+      #if defined(SharedOMP)
+      #pragma omp simd collapse(2)
+      #endif
+      for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++)
       for (int unknown = 0; unknown < unknowns; unknown++) {
         otterLoopIterationBegin();
         internal::updateSolutionWithEigenvalueDamping_LoopBody(
@@ -426,8 +432,11 @@ void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_sequential(
       otterLoopEnd();
 
       otterLoopBegin();
-      for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++)
       for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
+      #if defined(SharedOMP)
+      #pragma omp simd collapse(2)
+      #endif
+      for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++)
       for (int unknown=0; unknown<unknowns+auxiliaryVariables; unknown++) {
         otterLoopIterationBegin();
         internal::updateSolutionWithFlux_LoopBody(
@@ -523,9 +532,12 @@ void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_sequential(
       otterLoopEnd();
 
       otterLoopBegin();
-      for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++)
-      for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
       for (int z = 0; z < numberOfVolumesPerAxisInPatch; z++)
+      for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
+      #if defined(SharedOMP)
+      #pragma omp simd collapse(2)
+      #endif
+      for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++)
       for (int unknown=0; unknown<unknowns+auxiliaryVariables; unknown++) {
         otterLoopIterationBegin();
         internal::updateSolutionWithFlux_LoopBody(
@@ -596,8 +608,11 @@ void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_sequential(
       otterLoopEnd();
 
       otterLoopBegin();
-      for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++)
       for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
+      #if defined(SharedOMP)
+      #pragma omp simd collapse(2)
+      #endif
+      for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++)
       for (int unknown=0; unknown<unknowns+auxiliaryVariables; unknown++) {
         otterLoopIterationBegin();
         internal::updateSolutionWithNonconservativeFlux_LoopBody(
@@ -693,9 +708,12 @@ void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_sequential(
         otterLoopEnd();
 
         otterLoopBegin();
-        for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++)
-        for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
         for (int z = 0; z < numberOfVolumesPerAxisInPatch; z++)
+        for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
+        #if defined(SharedOMP)
+        #pragma omp simd collapse(2)
+        #endif
+        for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++)
         for (int unknown=0; unknown<unknowns+auxiliaryVariables; unknown++) {
           otterLoopIterationBegin();
           internal::updateSolutionWithNonconservativeFlux_LoopBody(
@@ -719,11 +737,11 @@ void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_sequential(
       logDebug( "timeStepWithRusanov_overlap1_sequential(...)", "compute maximum eigenvalue for subsequent time step" );
       double newMaxEigenvalue = 0.0;
       otterLoopBegin(); // @todo how do I clarify that this is a reduction? Do we need this info here?
+      for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
       #if defined(SharedOMP)
-      #pragma omp simd collapse(2)
+      #pragma omp simd reduction(max:newMaxEigenvalue)
       #endif
-      for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++)
-      for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++) {
+      for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++) {
         otterLoopIterationBegin();
         newMaxEigenvalue = std::max(
           newMaxEigenvalue,
@@ -747,12 +765,12 @@ void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_sequential(
       logDebug( "timeStepWithRusanov_overlap1_sequential(...)", "compute maximum eigenvalue for subsequent time step" );
       double newMaxEigenvalue = 0.0;
       otterLoopBegin(); // @todo how do I clarify that this is a reduction? Do we need this info here?
-      #if defined(SharedOMP)
-      #pragma omp simd collapse(3)
-      #endif
-      for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++)
+      for (int z = 0; z < numberOfVolumesPerAxisInPatch; z++)
       for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
-      for (int z = 0; z < numberOfVolumesPerAxisInPatch; z++) {
+      #if defined(SharedOMP)
+      #pragma omp simd reduction(max:newMaxEigenvalue)
+      #endif
+      for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++) {
         otterLoopIterationBegin();
         newMaxEigenvalue = std::max(
           newMaxEigenvalue,
