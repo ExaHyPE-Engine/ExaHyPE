@@ -159,6 +159,12 @@ namespace exahype2 {
       ;
 
 
+      /**
+       * ## Vectorisation
+       *
+       * I tried to collapse the inner loop over x and the iteration over the patches.
+       * This did not work. It led to a seg fault on Hamilton's AMD EPYC processors.
+       */
       template <
         typename Solver,
         typename TempDataEnumerator = exahype2::fv::enumerator::AoSoALexicographicVolumeEnumerator
