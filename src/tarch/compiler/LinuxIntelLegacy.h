@@ -50,6 +50,10 @@
  */
 #define LittleEndian
 
+#if !defined(Alignment)
+#define Alignment 64
+#endif
+
 /**
  * Clang requires us to put a static keyword in front of header file implementations,
  * so we avoid duplicate symbols. This is not C++ conformal, and therefore GCC doesn't

@@ -1,5 +1,6 @@
 #include "Rusanov.h"
 #include "otter/otter.h"
+#include "tarch/compiler/CompilerSpecificSettings.h"
 
 
 template <
