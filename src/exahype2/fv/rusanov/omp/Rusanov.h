@@ -20,7 +20,7 @@ namespace exahype2 {
           typename Solver,
           typename TempDataEnumerator = exahype2::fv::enumerator::AoSoALexicographicVolumeEnumerator
         >
-        static void timeStepWithRusanov_overlap1_sequential(
+        static void timeStepWithRusanov_overlap1_patchwise(
           int                     targetDevice,
           ::exahype2::CellData&   patchData,
           int                     numberOfVolumesPerAxisInPatch,
@@ -41,6 +41,6 @@ namespace exahype2 {
 }
 
 
-#include "Rusanov_overlap1_sequential_static_calls.h"
+#include "Rusanov_overlap1_patchwise_static_calls.h"
 
 #endif

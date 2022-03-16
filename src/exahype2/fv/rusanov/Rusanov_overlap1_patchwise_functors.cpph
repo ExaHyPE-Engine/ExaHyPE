@@ -2,7 +2,7 @@
 #include "otter/otter.h"
 
 
-void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_sequential(
+void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_patchwise(
   ::exahype2::CellData&              patchData,
   int                     numberOfVolumesPerAxisInPatch,
   int                     unknowns,
@@ -24,8 +24,6 @@ void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_sequential(
   exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator fluxEnumerator      (patchData.numberOfPatches, numberOfVolumesPerAxisInPatch,haloSize,unknowns,0);
   exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator ncpEnumerator       (patchData.numberOfPatches, numberOfVolumesPerAxisInPatch+1,haloSize,unknowns,0);
   exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator eigenvalueEnumerator(patchData.numberOfPatches, numberOfVolumesPerAxisInPatch,haloSize,1,0);
-
-// has to be aligned an in-place. No delete
 
   double* tempFluxX                  = evaluateFlux                     ? tarch::allocateMemory( fluxEnumerator.size(),      tarch::MemoryLocation::Heap ) : nullptr;
   double* tempFluxY                  = evaluateFlux                     ? tarch::allocateMemory( fluxEnumerator.size(),      tarch::MemoryLocation::Heap ) : nullptr;

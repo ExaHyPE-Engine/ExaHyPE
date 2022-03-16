@@ -7,7 +7,7 @@ template <
   typename Solver,
   typename TempDataEnumerator
 >
-void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_sequential(
+void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_patchwise(
   ::exahype2::CellData&              patchData,
   int      numberOfVolumesPerAxisInPatch,
   int      unknowns,
@@ -17,7 +17,6 @@ void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_sequential(
   bool                    evaluateSource,
   bool                    evaluateMaximumEigenvalueAfterTimeStep
 ) {
-  static tarch::logging::Log _log( "exahype2::fv::rusanov" );
   constexpr int haloSize        = 1;
 
   exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator QInEnumerator       (                        1, numberOfVolumesPerAxisInPatch,haloSize,unknowns,auxiliaryVariables);
@@ -26,7 +25,6 @@ void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_sequential(
   TempDataEnumerator ncpEnumerator       (patchData.numberOfPatches, numberOfVolumesPerAxisInPatch+1,haloSize,unknowns,0);
   TempDataEnumerator eigenvalueEnumerator(patchData.numberOfPatches, numberOfVolumesPerAxisInPatch,haloSize,1,0);
 
-// has to be aligned an in-place. No delete
 
   double tempFluxX[ fluxEnumerator.size() ] __attribute__((aligned (Alignment)));
   double tempFluxY[ fluxEnumerator.size() ] __attribute__((aligned (Alignment)));

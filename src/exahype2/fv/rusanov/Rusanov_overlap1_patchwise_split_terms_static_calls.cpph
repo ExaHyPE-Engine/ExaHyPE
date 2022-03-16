@@ -7,7 +7,7 @@ template <
   typename Solver,
   typename TempDataEnumerator
 >
-void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_sequential_split_terms(
+void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_patchwise_split_terms(
   ::exahype2::CellData&              patchData,
   int      numberOfVolumesPerAxisInPatch,
   int      unknowns,

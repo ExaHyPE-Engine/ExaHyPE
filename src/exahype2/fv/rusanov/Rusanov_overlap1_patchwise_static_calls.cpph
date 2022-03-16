@@ -7,7 +7,7 @@ template <
   typename Solver,
   typename TempDataEnumerator
 >
-void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_sequential(
+void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_patchwise(
   ::exahype2::CellData&              patchData,
   int      numberOfVolumesPerAxisInPatch,
   int      unknowns,
@@ -25,8 +25,6 @@ void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_sequential(
   TempDataEnumerator fluxEnumerator      (patchData.numberOfPatches, numberOfVolumesPerAxisInPatch,haloSize,unknowns,0);
   TempDataEnumerator ncpEnumerator       (patchData.numberOfPatches, numberOfVolumesPerAxisInPatch+1,haloSize,unknowns,0);
   TempDataEnumerator eigenvalueEnumerator(patchData.numberOfPatches, numberOfVolumesPerAxisInPatch,haloSize,1,0);
-
-// has to be aligned an in-place. No delete
 
   double tempFluxX[ fluxEnumerator.size() ] __attribute__((aligned (Alignment)));
   double tempFluxY[ fluxEnumerator.size() ] __attribute__((aligned (Alignment)));
@@ -534,7 +532,7 @@ void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_sequential(
       for (int z = 0; z < numberOfVolumesPerAxisInPatch; z++)
       for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
       #if defined(SharedOMP)
-      #pragma omp simd collapse(2)
+      #pragma omp simd
       #endif
       for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++)
       for (int unknown=0; unknown<unknowns+auxiliaryVariables; unknown++) {
