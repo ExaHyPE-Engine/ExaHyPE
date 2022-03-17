@@ -299,11 +299,12 @@ def create_compute_Riemann_kernel_for_Rusanov(flux_implementation, ncp_implement
   """  
   template = """
   {% if USE_STATELESS_FUNCTION_CALLS==True and USE_GPU==False %}
-  //timeStepWithRusanov_overlap1_patchwise<
-  //  ::exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator    
-  timeStepWithRusanov_overlap1_patchwise<
-    {{SOLVER_NAME}},  ::exahype2::fv::enumerator::AoSoALexicographicVolumeEnumerator    
+  timeStepWithRusanov_overlap1_patchwise_in_situ<
+    {{SOLVER_NAME}}
   >(
+//  timeStepWithRusanov_overlap1_patchwise<
+//    {{SOLVER_NAME}},  ::exahype2::fv::enumerator::AoSoALexicographicVolumeEnumerator    
+//  >(
   {% elif USE_STATELESS_FUNCTION_CALLS==True and USE_GPU==True %}
   timeStepWithRusanov_overlap1_patchwise<
     {{SOLVER_NAME}},  ::exahype2::fv::enumerator::AoSoALexicographicVolumeEnumerator    

@@ -140,6 +140,44 @@ namespace exahype2 {
 
 
       template <
+        typename Solver
+      >
+      static void timeStepWithRusanov_overlap1_patchwise_in_situ(
+        ::exahype2::CellData&              patchData,
+        int                     numberOfVolumesPerAxisInPatch,
+        int                     unknowns,
+        int                     auxiliaryVariables,
+        bool                    evaluateFlux,
+        bool                    evaluateNonconservativeProduct,
+        bool                    evaluateSource,
+        bool                    evaluateMaximumEigenvalueAfterTimeStep
+      )
+      #if defined(UseManualInlining)
+      __attribute__((always_inline))
+      #endif
+      ;
+
+
+      template <
+        typename Solver
+      >
+      static void timeStepWithRusanov_overlap1_batched_in_situ(
+        ::exahype2::CellData&              patchData,
+        int                     numberOfVolumesPerAxisInPatch,
+        int                     unknowns,
+        int                     auxiliaryVariables,
+        bool                    evaluateFlux,
+        bool                    evaluateNonconservativeProduct,
+        bool                    evaluateSource,
+        bool                    evaluateMaximumEigenvalueAfterTimeStep
+      )
+      #if defined(UseManualInlining)
+      __attribute__((always_inline))
+      #endif
+      ;
+
+
+      template <
         typename Solver,
         typename TempDataEnumerator = exahype2::fv::enumerator::AoSoALexicographicVolumeEnumerator
       >
@@ -191,9 +229,11 @@ namespace exahype2 {
 #include "Rusanov_Helper.cpph"
 #include "Rusanov_overlap1_patchwise_functors.cpph"
 #include "Rusanov_overlap1_patchwise_static_calls.cpph"
+#include "Rusanov_overlap1_patchwise_in_situ_static_calls.cpph"
 #include "Rusanov_overlap1_patchwise_split_terms_static_calls.cpph"
 #include "Rusanov_overlap1_batched_functors.cpph"
 #include "Rusanov_overlap1_batched_static_calls.cpph"
+#include "Rusanov_overlap1_batched_in_situ_static_calls.cpph"
 
 
 #if defined(OpenMPGPUOffloading)

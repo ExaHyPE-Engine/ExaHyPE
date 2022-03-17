@@ -1,0 +1,470 @@
+#include "Rusanov.h"
+#include "tarch/compiler/CompilerSpecificSettings.h"
+#include "exahype2/fv/enumerator/SingleVolumeEnumerator.h"
+
+
+template <
+  typename Solver
+>
+void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_batched_in_situ(
+  ::exahype2::CellData&              patchData,
+  int      numberOfVolumesPerAxisInPatch,
+  int      unknowns,
+  int      auxiliaryVariables,
+  bool                    evaluateFlux,
+  bool                    evaluateNonconservativeProduct,
+  bool                    evaluateSource,
+  bool                    evaluateMaximumEigenvalueAfterTimeStep
+) {
+  static tarch::logging::Log _log( "exahype2::fv::rusanov" );
+  constexpr int haloSize        = 1;
+
+  exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator QInEnumerator       (                        1, numberOfVolumesPerAxisInPatch,haloSize,unknowns,auxiliaryVariables);
+  exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator QOutEnumerator      (                        1, numberOfVolumesPerAxisInPatch,       0,unknowns,auxiliaryVariables);
+  exahype2::fv::enumerator::SingleVolumeEnumerator           singleVolumeEnumerator(unknowns,0);
+
+  for (int patchIndex=0; patchIndex<patchData.numberOfPatches; patchIndex++) {
+    if (Dimensions==2 and evaluateSource) {
+      for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
+      #if defined(SharedOMP)
+      #pragma omp simd
+      #endif
+      for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++) {
+        internal::copySolutionAndAddSourceTerm_LoopBody<Solver>(
+          patchData.QIn[patchIndex],
+          QInEnumerator,
+          patchData.patchCentre[patchIndex],
+          patchData.patchSize[patchIndex],
+          patchIndex,
+          volumeIndex2d(x,y),
+          patchData.t[patchIndex],
+          patchData.dt[patchIndex],
+          patchData.QOut[patchIndex],
+          QOutEnumerator
+        );
+      }
+    }
+    else if (Dimensions==3 and evaluateSource) {
+      for (int z = 0; z < numberOfVolumesPerAxisInPatch; z++)
+      for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
+      #if defined(SharedOMP)
+      #pragma omp simd
+      #endif
+      for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++) {
+        internal::copySolutionAndAddSourceTerm_LoopBody<Solver>(
+          patchData.QIn[patchIndex],
+          QInEnumerator,
+          patchData.patchCentre[patchIndex],
+          patchData.patchSize[patchIndex],
+          patchIndex,
+          volumeIndex3d(x,y,z),
+          patchData.t[patchIndex],
+          patchData.dt[patchIndex],
+          patchData.QOut[patchIndex],
+          QOutEnumerator
+        );
+      }
+    }
+    else if (Dimensions==2) {
+      for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
+      #if defined(SharedOMP)
+      #pragma omp simd collapse(2)
+      #endif
+      for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++)
+      for (int unknown=0; unknown<unknowns+auxiliaryVariables; unknown++) {
+        internal::copySolution_LoopBody(
+          patchData.QIn[patchIndex],
+          QInEnumerator,
+          patchIndex,
+          volumeIndex2d(x,y),
+          unknown,
+          patchData.QOut[patchIndex],
+          QOutEnumerator
+        );
+      }
+    }
+    else {
+      for (int z = 0; z < numberOfVolumesPerAxisInPatch; z++)
+      for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
+      #if defined(SharedOMP)
+      #pragma omp simd collapse(2)
+      #endif
+      for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++)
+      for (int unknown=0; unknown<unknowns+auxiliaryVariables; unknown++) {
+        internal::copySolution_LoopBody(
+          patchData.QIn[patchIndex],
+          QInEnumerator,
+          patchIndex,
+          volumeIndex3d(x,y,z),
+          unknown,
+          patchData.QOut[patchIndex],
+          QOutEnumerator
+        );
+      }
+    }
+
+    if (Dimensions==2) {
+      for (int shift=0; shift<2; shift++)
+      for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
+      #if defined(SharedOMP)
+      #pragma omp simd
+      #endif
+      for (int x = -haloSize+shift; x < numberOfVolumesPerAxisInPatch+haloSize-1; x+=2) {
+        double fluxFL[unknowns] __attribute__((aligned (Alignment)));
+        double fluxFR[unknowns] __attribute__((aligned (Alignment)));
+        if (evaluateFlux) {
+          internal::computeFlux_LoopBody<Solver>(
+            patchData.QIn[patchIndex],
+            QInEnumerator,
+            patchData.patchCentre[patchIndex],
+            patchData.patchSize[patchIndex],
+            patchIndex,
+            volumeIndex2d(x,y),
+            patchData.t[patchIndex],
+            patchData.dt[patchIndex],
+            0, // normal
+            fluxFL,
+            singleVolumeEnumerator
+          );
+          internal::computeFlux_LoopBody<Solver>(
+            patchData.QIn[patchIndex],
+            QInEnumerator,
+            patchData.patchCentre[patchIndex],
+            patchData.patchSize[patchIndex],
+            patchIndex,
+            volumeIndex2d(x+1,y),
+            patchData.t[patchIndex],
+            patchData.dt[patchIndex],
+            0, // normal
+            fluxFR,
+            singleVolumeEnumerator
+          );
+        }
+      }
+    }
+
+/*
+        double ncp[unknowns] __attribute__((aligned (Alignment)));
+        if (evaluateNonconservativeProduct) {
+          internal::computeNonconservativeFlux_LoopBody<Solver>(
+            patchData.QIn[patchIndex],
+            QInEnumerator,
+            patchData.patchCentre[patchIndex],
+            patchData.patchSize[patchIndex],
+            patchIndex,
+            volumeIndex2d(x,y),
+            patchData.t[patchIndex],
+            patchData.dt[patchIndex],
+            0, // normal
+            tempNonconservativeProductX,
+            ncpEnumerator
+          );
+        }
+
+        double lambdaMaxL[unknowns] __attribute__((aligned (Alignment)));
+        double lambdaMaxR[unknowns] __attribute__((aligned (Alignment)));
+          internal::computeMaxEigenvalue_LoopBody<Solver>(
+            patchData.QIn[patchIndex],
+            QInEnumerator,
+            patchData.patchCentre[patchIndex],
+            patchData.patchSize[patchIndex],
+            patchIndex,
+            volumeIndex2d(x,y),
+            patchData.t[patchIndex], patchData.dt[patchIndex],
+            0,
+            lambdaMaxL,
+            singleVolumeEnumerator
+          );
+          internal::computeMaxEigenvalue_LoopBody<Solver>(
+            patchData.QIn[patchIndex],
+            QInEnumerator,
+            patchData.patchCentre[patchIndex],
+            patchData.patchSize[patchIndex],
+            patchIndex,
+            volumeIndex2d(x+1,y),
+            patchData.t[patchIndex], patchData.dt[patchIndex],
+            0,
+            lambdaMaxR,
+            singleVolumeEnumerator
+          );
+        }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  }
+  else {
+
+  }
+
+
+
+
+
+      otterLoopBegin();
+      for (int z = 0; z < numberOfVolumesPerAxisInPatch; z++)
+      for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
+      #if defined(SharedOMP)
+      #pragma omp simd collapse(2)
+      #endif
+      for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++)
+      for (int unknown = 0; unknown < unknowns; unknown++) {
+        otterLoopIterationBegin();
+        internal::updateSolutionWithEigenvalueDamping_LoopBody(
+          patchData.QIn[patchIndex],
+          QInEnumerator,
+          tempEigenvalueX,
+          tempEigenvalueY,
+          tempEigenvalueZ,
+          eigenvalueEnumerator,
+          patchData.patchCentre[patchIndex],
+          patchData.patchSize[patchIndex],
+          patchIndex,
+          volumeIndex3d(x,y,z),
+          unknown,
+          patchData.dt[patchIndex],
+          patchData.QOut[patchIndex],
+          QOutEnumerator
+        );
+        otterLoopIterationEnd();
+      }
+      otterLoopEnd();
+    }
+
+
+
+
+    if (evaluateNonconservativeProduct and Dimensions==2) {
+      otterLoopBegin();
+      for (int y =         0; y < numberOfVolumesPerAxisInPatch;            y++)
+      #if defined(SharedOMP)
+      #pragma omp simd
+      #endif
+      for (int x = -haloSize; x < numberOfVolumesPerAxisInPatch+haloSize-1; x++) {
+        otterLoopIterationBegin();
+        otterLoopIterationEnd();
+      }
+      otterLoopEnd();
+
+      otterLoopBegin();
+      for (int y = -haloSize; y < numberOfVolumesPerAxisInPatch+haloSize-1; y++)
+      #if defined(SharedOMP)
+      #pragma omp simd
+      #endif
+      for (int x =         0; x < numberOfVolumesPerAxisInPatch;            x++) {
+        otterLoopIterationBegin();
+        internal::computeNonconservativeFlux_LoopBody<Solver>(
+          patchData.QIn[patchIndex],
+          QInEnumerator,
+          patchData.patchCentre[patchIndex],
+          patchData.patchSize[patchIndex],
+          patchIndex,
+          volumeIndex2d(x,y),
+          patchData.t[patchIndex],
+          patchData.dt[patchIndex],
+          1, // normal
+          tempNonconservativeProductY,
+          ncpEnumerator
+        );
+        otterLoopIterationEnd();
+      }
+      otterLoopEnd();
+
+      otterLoopBegin();
+      for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
+      #if defined(SharedOMP)
+      #pragma omp simd collapse(2)
+      #endif
+      for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++)
+      for (int unknown=0; unknown<unknowns+auxiliaryVariables; unknown++) {
+        otterLoopIterationBegin();
+        internal::updateSolutionWithNonconservativeFlux_LoopBody(
+          tempNonconservativeProductX, tempNonconservativeProductY, tempNonconservativeProductZ,
+          ncpEnumerator,
+          patchData.patchCentre[patchIndex],
+          patchData.patchSize[patchIndex],
+          patchIndex,
+          volumeIndex2d(x,y),
+          unknown,
+          patchData.dt[patchIndex],
+          *(patchData.QOut + patchIndex),
+          QOutEnumerator
+        );
+        otterLoopIterationEnd();
+      }
+      otterLoopEnd();
+    }
+    else if (evaluateNonconservativeProduct and Dimensions==3) {
+        otterLoopBegin();
+        for (int z =         0; z < numberOfVolumesPerAxisInPatch;            z++)
+        for (int y =         0; y < numberOfVolumesPerAxisInPatch;            y++)
+        #if defined(SharedOMP)
+        #pragma omp simd
+        #endif
+        for (int x = -haloSize; x < numberOfVolumesPerAxisInPatch+haloSize-1; x++) {
+          otterLoopIterationBegin();
+          internal::computeNonconservativeFlux_LoopBody<Solver>(
+            patchData.QIn[patchIndex],
+            QInEnumerator,
+            patchData.patchCentre[patchIndex],
+            patchData.patchSize[patchIndex],
+            patchIndex,
+            volumeIndex3d(x,y,z),
+            patchData.t[patchIndex],
+            patchData.dt[patchIndex],
+            0, // normal
+            tempNonconservativeProductX,
+            ncpEnumerator
+          );
+          otterLoopIterationEnd();
+        }
+        otterLoopEnd();
+
+        otterLoopBegin();
+        for (int z =         0; z < numberOfVolumesPerAxisInPatch;            z++)
+        for (int y = -haloSize; y < numberOfVolumesPerAxisInPatch+haloSize-1; y++)
+        #if defined(SharedOMP)
+        #pragma omp simd
+        #endif
+        for (int x =         0; x < numberOfVolumesPerAxisInPatch;            x++) {
+          otterLoopIterationBegin();
+          internal::computeNonconservativeFlux_LoopBody<Solver>(
+            patchData.QIn[patchIndex],
+            QInEnumerator,
+            patchData.patchCentre[patchIndex],
+            patchData.patchSize[patchIndex],
+            patchIndex,
+            volumeIndex3d(x,y,z),
+            patchData.t[patchIndex],
+            patchData.dt[patchIndex],
+            1, // normal
+            tempNonconservativeProductY,
+            ncpEnumerator
+          );
+          otterLoopIterationEnd();
+        }
+        otterLoopEnd();
+
+        otterLoopBegin();
+        for (int z = -haloSize; z < numberOfVolumesPerAxisInPatch+haloSize-1; z++)
+        for (int y =         0; y < numberOfVolumesPerAxisInPatch;            y++)
+        #if defined(SharedOMP)
+        #pragma omp simd
+        #endif
+        for (int x =         0; x < numberOfVolumesPerAxisInPatch;            x++) {
+          otterLoopIterationBegin();
+          internal::computeNonconservativeFlux_LoopBody<Solver>(
+            patchData.QIn[patchIndex],
+            QInEnumerator,
+            patchData.patchCentre[patchIndex],
+            patchData.patchSize[patchIndex],
+            patchIndex,
+            volumeIndex3d(x,y,z),
+            patchData.t[patchIndex],
+            patchData.dt[patchIndex],
+            2, // normal
+            tempNonconservativeProductZ,
+            ncpEnumerator
+          );
+          otterLoopIterationEnd();
+        }
+        otterLoopEnd();
+
+        otterLoopBegin();
+        for (int z = 0; z < numberOfVolumesPerAxisInPatch; z++)
+        for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
+        #if defined(SharedOMP)
+        #pragma omp simd collapse(2)
+        #endif
+        for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++)
+        for (int unknown=0; unknown<unknowns+auxiliaryVariables; unknown++) {
+          otterLoopIterationBegin();
+          internal::updateSolutionWithNonconservativeFlux_LoopBody(
+            tempNonconservativeProductX, tempNonconservativeProductY, tempNonconservativeProductZ,
+            ncpEnumerator,
+            patchData.patchCentre[patchIndex],
+            patchData.patchSize[patchIndex],
+            patchIndex,
+            volumeIndex3d(x,y,z),
+            unknown,
+            patchData.dt[patchIndex],
+            *(patchData.QOut + patchIndex),
+            QOutEnumerator
+          );
+          otterLoopIterationEnd();
+        }
+        otterLoopEnd();
+    }
+*/
+
+    if (evaluateMaximumEigenvalueAfterTimeStep and Dimensions==2) {
+      logDebug( "timeStepWithRusanov_overlap1_sequential(...)", "compute maximum eigenvalue for subsequent time step" );
+      double newMaxEigenvalue = 0.0;
+      otterLoopBegin(); // @todo how do I clarify that this is a reduction? Do we need this info here?
+      for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
+      #if defined(SharedOMP)
+      #pragma omp simd reduction(max:newMaxEigenvalue)
+      #endif
+      for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++) {
+        otterLoopIterationBegin();
+        newMaxEigenvalue = std::max(
+          newMaxEigenvalue,
+          internal::reduceMaxEigenvalue_LoopBody<Solver>(
+            *(patchData.QOut + patchIndex),
+            QOutEnumerator,
+            patchData.patchCentre[patchIndex],
+            patchData.patchSize[patchIndex],
+            patchIndex,
+            volumeIndex2d(x,y),
+            patchData.t[patchIndex],
+            patchData.dt[patchIndex]
+          )
+        );
+        otterLoopIterationEnd();
+      }
+      otterLoopEnd();
+      patchData.maxEigenvalue[patchIndex] = newMaxEigenvalue;
+    }
+    else if (evaluateMaximumEigenvalueAfterTimeStep) {
+      double newMaxEigenvalue = 0.0;
+      otterLoopBegin(); // @todo how do I clarify that this is a reduction? Do we need this info here?
+      for (int z = 0; z < numberOfVolumesPerAxisInPatch; z++)
+      for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
+      #if defined(SharedOMP)
+      #pragma omp simd reduction(max:newMaxEigenvalue)
+      #endif
+      for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++) {
+        otterLoopIterationBegin();
+        newMaxEigenvalue = std::max(
+          newMaxEigenvalue,
+          internal::reduceMaxEigenvalue_LoopBody<Solver>(
+            *(patchData.QOut + patchIndex),
+            QOutEnumerator,
+            patchData.patchCentre[patchIndex],
+            patchData.patchSize[patchIndex],
+            patchIndex,
+            volumeIndex3d(x,y,z),
+            patchData.t[patchIndex],
+            patchData.dt[patchIndex]
+          )
+        );
+        otterLoopIterationEnd();
+      }
+      otterLoopEnd();
+      patchData.maxEigenvalue[patchIndex] = newMaxEigenvalue;
+    }
+  }
+}
+
