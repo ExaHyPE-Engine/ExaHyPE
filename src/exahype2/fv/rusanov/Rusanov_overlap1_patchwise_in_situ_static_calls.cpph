@@ -492,18 +492,19 @@ void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_patchwise_in_situ(
              QOutEnumerator
           );
         }
+      }
 
-        for (int shift=0; shift<2; shift++)
-        #if defined(SharedOMP)
-        #pragma omp simd collapse(3)
-        #endif
-        for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++)
-        for (int y = -haloSize+shift; y < numberOfVolumesPerAxisInPatch+haloSize-1; y+=2)
-        for (int z = 0; z < numberOfVolumesPerAxisInPatch; z++)
-        {
-          double fluxNCP[unknowns] __attribute__((aligned (Alignment)));
+      for (int shift=0; shift<2; shift++)
+      #if defined(SharedOMP)
+      #pragma omp simd collapse(3)
+      #endif
+      for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++)
+      for (int y = -haloSize+shift; y < numberOfVolumesPerAxisInPatch+haloSize-1; y+=2)
+      for (int z = 0; z < numberOfVolumesPerAxisInPatch; z++)
+      {
+        double fluxNCP[unknowns] __attribute__((aligned (Alignment)));
 
-          internal::computeNonconservativeFlux_LoopBody<Solver>(
+        internal::computeNonconservativeFlux_LoopBody<Solver>(
             patchData.QIn[patchIndex],
             QInEnumerator,
             patchData.patchCentre[patchIndex],
@@ -515,8 +516,8 @@ void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_patchwise_in_situ(
             1, // normal
             fluxNCP,
             singleVolumeEnumerator
-          );
-          for (int unknown=0; unknown<unknowns; unknown++) {
+        );
+        for (int unknown=0; unknown<unknowns; unknown++) {
             internal::updateSolutionWithNonconservativeFlux_LoopBody(
               fluxNCP,
               singleVolumeEnumerator,
@@ -530,20 +531,20 @@ void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_patchwise_in_situ(
               *(patchData.QOut + patchIndex),
                QOutEnumerator
             );
-          }
         }
+      }
 
-        for (int shift=0; shift<2; shift++)
-        #if defined(SharedOMP)
-        #pragma omp simd collapse(3)
-        #endif
-        for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++)
-        for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
-        for (int z = -haloSize+shift; z < numberOfVolumesPerAxisInPatch+haloSize-1; z+=2)
-        {
-          double fluxNCP[unknowns] __attribute__((aligned (Alignment)));
+      for (int shift=0; shift<2; shift++)
+      #if defined(SharedOMP)
+      #pragma omp simd collapse(3)
+      #endif
+      for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++)
+      for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
+      for (int z = -haloSize+shift; z < numberOfVolumesPerAxisInPatch+haloSize-1; z+=2)
+      {
+        double fluxNCP[unknowns] __attribute__((aligned (Alignment)));
 
-          internal::computeNonconservativeFlux_LoopBody<Solver>(
+        internal::computeNonconservativeFlux_LoopBody<Solver>(
             patchData.QIn[patchIndex],
             QInEnumerator,
             patchData.patchCentre[patchIndex],
@@ -555,9 +556,9 @@ void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_patchwise_in_situ(
             2, // normal
             fluxNCP,
             singleVolumeEnumerator
-          );
-          for (int unknown=0; unknown<unknowns; unknown++) {
-            internal::updateSolutionWithNonconservativeFlux_LoopBody(
+        );
+        for (int unknown=0; unknown<unknowns; unknown++) {
+          internal::updateSolutionWithNonconservativeFlux_LoopBody(
               fluxNCP,
               singleVolumeEnumerator,
               patchData.patchCentre[patchIndex],
@@ -569,8 +570,7 @@ void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_patchwise_in_situ(
               2, // normal
               *(patchData.QOut + patchIndex),
                QOutEnumerator
-            );
-          }
+          );
         }
       }
     }
@@ -628,16 +628,17 @@ void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_patchwise_in_situ(
             QOutEnumerator
           );
         }
+      }
 
-        for (int shift=0; shift<2; shift++)
-        #if defined(SharedOMP)
-        #pragma omp simd collapse(2)
-        #endif
-        for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++)
-        for (int y = -haloSize+shift; y < numberOfVolumesPerAxisInPatch+haloSize-1; y+=2) {
-          double maxEigenvalueL __attribute__((aligned (Alignment)));
-          double maxEigenvalueR __attribute__((aligned (Alignment)));
-          internal::computeMaxEigenvalue_LoopBody<Solver>(
+      for (int shift=0; shift<2; shift++)
+      #if defined(SharedOMP)
+      #pragma omp simd collapse(2)
+      #endif
+      for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++)
+      for (int y = -haloSize+shift; y < numberOfVolumesPerAxisInPatch+haloSize-1; y+=2) {
+        double maxEigenvalueL __attribute__((aligned (Alignment)));
+        double maxEigenvalueR __attribute__((aligned (Alignment)));
+        internal::computeMaxEigenvalue_LoopBody<Solver>(
             patchData.QIn[patchIndex],
             QInEnumerator,
             patchData.patchCentre[patchIndex],
@@ -649,8 +650,8 @@ void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_patchwise_in_situ(
             1, // normal
             &maxEigenvalueL,
             singleVolumeEnumerator
-          );
-          internal::computeMaxEigenvalue_LoopBody<Solver>(
+        );
+        internal::computeMaxEigenvalue_LoopBody<Solver>(
             patchData.QIn[patchIndex],
             QInEnumerator,
             patchData.patchCentre[patchIndex],
@@ -662,9 +663,9 @@ void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_patchwise_in_situ(
             1, // normal
             &maxEigenvalueR,
             singleVolumeEnumerator
-          );
-          for (int unknown=0; unknown<unknowns; unknown++) {
-            internal::updateSolutionWithEigenvalueDamping_LoopBody(
+        );
+        for (int unknown=0; unknown<unknowns; unknown++) {
+          internal::updateSolutionWithEigenvalueDamping_LoopBody(
               patchData.QIn[patchIndex],
               QInEnumerator,
               maxEigenvalueL,
@@ -678,8 +679,7 @@ void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_patchwise_in_situ(
               1, // normal
               *(patchData.QOut + patchIndex),
               QOutEnumerator
-            );
-          }
+          );
         }
       }
     }

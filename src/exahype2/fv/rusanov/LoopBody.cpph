@@ -780,11 +780,11 @@ void exahype2::fv::rusanov::internal::updateSolutionWithFlux_LoopBody(
 
   double flux = 0.5 * (fluxL[fluxEnumerator(patchIndex,leftVolume,unknown)] + fluxR[fluxEnumerator(patchIndex,rightVolume,unknown)]);
 
-  if (leftVolume(normal)>0) {
+  if (leftVolume(normal)>=0) {
     QOut[ QOutEnumerator(patchIndex, leftVolume, unknown) ] -= dt / patchSize(normal) * QOutEnumerator._numberOfVolumesPerAxisInPatch * flux;
   }
   if (rightVolume(normal)<QOutEnumerator._numberOfVolumesPerAxisInPatch) {
-    QOut[ QOutEnumerator(patchIndex, leftVolume, unknown) ] += dt / patchSize(normal) * QOutEnumerator._numberOfVolumesPerAxisInPatch * flux;
+    QOut[ QOutEnumerator(patchIndex, rightVolume, unknown) ] += dt / patchSize(normal) * QOutEnumerator._numberOfVolumesPerAxisInPatch * flux;
   }
 }
 
@@ -811,7 +811,7 @@ void exahype2::fv::rusanov::internal::updateSolutionWithNonconservativeFlux_Loop
     QOut[ QOutEnumerator(patchIndex, leftVolume, unknown) ] -= dt / patchSize(normal) * QOutEnumerator._numberOfVolumesPerAxisInPatch * fluxNCP[ fluxEnumerator(patchIndex, leftVolume, unknown) ];
   }
   if (rightVolume(normal)<QOutEnumerator._numberOfVolumesPerAxisInPatch) {
-    QOut[ QOutEnumerator(patchIndex, leftVolume, unknown) ] -= dt / patchSize(normal) * QOutEnumerator._numberOfVolumesPerAxisInPatch * fluxNCP[ fluxEnumerator(patchIndex, leftVolume, unknown) ];
+    QOut[ QOutEnumerator(patchIndex, rightVolume, unknown) ] -= dt / patchSize(normal) * QOutEnumerator._numberOfVolumesPerAxisInPatch * fluxNCP[ fluxEnumerator(patchIndex, leftVolume, unknown) ];
   }
 }
 
@@ -896,11 +896,11 @@ void exahype2::fv::rusanov::internal::updateSolutionWithEigenvalueDamping_LoopBo
   double flux = - std::max( maxEigenvalueL, maxEigenvalueR )
               * (QIn[QInEnumerator(patchIndex, rightVolume, unknown)] - QIn[QInEnumerator(patchIndex, leftVolume, unknown)]);
 
-  if (leftVolume(normal)>0) {
-    QOut[ QOutEnumerator(patchIndex, rightVolume,unknown) ] +=  dt / patchSize(normal) * QOutEnumerator._numberOfVolumesPerAxisInPatch * flux;
+  if (leftVolume(normal)>=0) {
+    QOut[ QOutEnumerator(patchIndex, leftVolume,unknown) ]  -=  dt / patchSize(normal) * QOutEnumerator._numberOfVolumesPerAxisInPatch * flux;
   }
   if (rightVolume(normal)<QOutEnumerator._numberOfVolumesPerAxisInPatch) {
-    QOut[ QOutEnumerator(patchIndex, leftVolume,unknown) ]  -=  dt / patchSize(normal) * QOutEnumerator._numberOfVolumesPerAxisInPatch * flux;
+    QOut[ QOutEnumerator(patchIndex, rightVolume,unknown) ] +=  dt / patchSize(normal) * QOutEnumerator._numberOfVolumesPerAxisInPatch * flux;
   }
 }
 
