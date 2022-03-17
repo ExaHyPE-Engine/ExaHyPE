@@ -35,8 +35,6 @@ void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_patchwise(
   double* tempEigenvalueY            =                                    tarch::allocateMemory( eigenvalueEnumerator.size(),      tarch::MemoryLocation::Heap );
   double* tempEigenvalueZ            = (Dimensions==3)                  ? tarch::allocateMemory( eigenvalueEnumerator.size(),      tarch::MemoryLocation::Heap ) : nullptr;
 
-  assertion2( ncpEnumerator.size()<=faceDoFs * unknowns, ncpEnumerator.size(), faceDoFs );
-
   for (int patchIndex=0; patchIndex<patchData.numberOfPatches; patchIndex++) {
     logDebug( "timeStepWithRusanov_overlap1_sequential(...)", "evaluate source terms and/or copy solution over" );
     if (Dimensions==2 and evaluateSource) {
