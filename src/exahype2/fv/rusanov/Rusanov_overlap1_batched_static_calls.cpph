@@ -1,5 +1,6 @@
 #include "Rusanov.h"
 #include "otter/otter.h"
+#include "tarch/compiler/CompilerSpecificSettings.h"
 
 
 template <
@@ -7,10 +8,10 @@ template <
   typename TempDataEnumerator
 >
 void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_batched(
-  ::exahype2::CellData&              patchData,
-  int      numberOfVolumesPerAxisInPatch,
-  int      unknowns,
-  int      auxiliaryVariables,
+  ::exahype2::CellData&   patchData,
+  int                     numberOfVolumesPerAxisInPatch,
+  int                     unknowns,
+  int                     auxiliaryVariables,
   bool                    evaluateFlux,
   bool                    evaluateNonconservativeProduct,
   bool                    evaluateSource,
@@ -39,7 +40,7 @@ void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_batched(
     otterLoopBegin();
     for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
     #if defined(SharedOMP)
-    #pragma omp simd collapse(2)
+    #pragma omp simd
     #endif
     for (int patchIndex=0; patchIndex<patchData.numberOfPatches; patchIndex++)
     for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++) {
@@ -65,7 +66,7 @@ void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_batched(
     for (int z = 0; z < numberOfVolumesPerAxisInPatch; z++)
     for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
     #if defined(SharedOMP)
-    #pragma omp simd collapse(2)
+    #pragma omp simd
     #endif
     for (int patchIndex=0; patchIndex<patchData.numberOfPatches; patchIndex++)
     for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++) {
@@ -90,7 +91,7 @@ void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_batched(
     otterLoopBegin();
     for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
     #if defined(SharedOMP)
-    #pragma omp simd collapse(3)
+    #pragma omp simd
     #endif
     for (int patchIndex=0; patchIndex<patchData.numberOfPatches; patchIndex++)
     for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++)
@@ -114,7 +115,7 @@ void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_batched(
     for (int z = 0; z < numberOfVolumesPerAxisInPatch; z++)
     for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
     #if defined(SharedOMP)
-    #pragma omp simd collapse(3)
+    #pragma omp simd
     #endif
     for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++)
     for (int patchIndex=0; patchIndex<patchData.numberOfPatches; patchIndex++)
@@ -139,7 +140,7 @@ void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_batched(
     otterLoopBegin();
     for (int y = -haloSize; y < numberOfVolumesPerAxisInPatch+haloSize; y++)
     #if defined(SharedOMP)
-    #pragma omp simd collapse(2)
+    #pragma omp simd
     #endif
     for (int patchIndex=0; patchIndex<patchData.numberOfPatches; patchIndex++)
     for (int x = -haloSize; x < numberOfVolumesPerAxisInPatch+haloSize; x++) {
@@ -172,7 +173,7 @@ void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_batched(
     otterLoopBegin();
     for (int y = -haloSize; y < numberOfVolumesPerAxisInPatch+haloSize; y++)
     #if defined(SharedOMP)
-    #pragma omp simd collapse(2)
+    #pragma omp simd
     #endif
     for (int patchIndex=0; patchIndex<patchData.numberOfPatches; patchIndex++)
     for (int x = -haloSize; x < numberOfVolumesPerAxisInPatch+haloSize; x++) {
@@ -205,7 +206,7 @@ void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_batched(
     otterLoopBegin();
     for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
     #if defined(SharedOMP)
-    #pragma omp simd collapse(3)
+    #pragma omp simd
     #endif
     for (int patchIndex=0; patchIndex<patchData.numberOfPatches; patchIndex++)
     for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++)
@@ -236,7 +237,7 @@ void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_batched(
     for (int z = -haloSize; z < numberOfVolumesPerAxisInPatch+haloSize; z++)
     for (int y = -haloSize; y < numberOfVolumesPerAxisInPatch+haloSize; y++)
     #if defined(SharedOMP)
-    #pragma omp simd collapse(2)
+    #pragma omp simd
     #endif
     for (int patchIndex=0; patchIndex<patchData.numberOfPatches; patchIndex++)
     for (int x = -haloSize; x < numberOfVolumesPerAxisInPatch+haloSize; x++) {
@@ -278,7 +279,7 @@ void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_batched(
     for (int z = -haloSize; z < numberOfVolumesPerAxisInPatch+haloSize; z++)
     for (int y = -haloSize; y < numberOfVolumesPerAxisInPatch+haloSize; y++)
     #if defined(SharedOMP)
-    #pragma omp simd collapse(2)
+    #pragma omp simd
     #endif
     for (int patchIndex=0; patchIndex<patchData.numberOfPatches; patchIndex++)
     for (int x = -haloSize; x < numberOfVolumesPerAxisInPatch+haloSize; x++) {
@@ -320,7 +321,7 @@ void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_batched(
     for (int z = -haloSize; z < numberOfVolumesPerAxisInPatch+haloSize; z++)
     for (int y = -haloSize; y < numberOfVolumesPerAxisInPatch+haloSize; y++)
     #if defined(SharedOMP)
-    #pragma omp simd collapse(2)
+    #pragma omp simd
     #endif
     for (int patchIndex=0; patchIndex<patchData.numberOfPatches; patchIndex++)
     for (int x = -haloSize; x < numberOfVolumesPerAxisInPatch+haloSize; x++) {
@@ -363,7 +364,7 @@ void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_batched(
     for (int z = 0; z < numberOfVolumesPerAxisInPatch; z++)
     for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
     #if defined(SharedOMP)
-    #pragma omp simd collapse(3)
+    #pragma omp simd
     #endif
     for (int patchIndex=0; patchIndex<patchData.numberOfPatches; patchIndex++)
     for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++)
@@ -394,7 +395,7 @@ void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_batched(
     otterLoopBegin();
     for (int y =         0; y < numberOfVolumesPerAxisInPatch;          y++)
     #if defined(SharedOMP)
-    #pragma omp simd collapse(2)
+    #pragma omp simd
     #endif
     for (int patchIndex=0; patchIndex<patchData.numberOfPatches; patchIndex++)
     for (int x = -haloSize; x < numberOfVolumesPerAxisInPatch+haloSize; x++) {
@@ -419,7 +420,7 @@ void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_batched(
     otterLoopBegin();
     for (int y = -haloSize; y < numberOfVolumesPerAxisInPatch+haloSize;  y++)
     #if defined(SharedOMP)
-    #pragma omp simd collapse(2)
+    #pragma omp simd
     #endif
     for (int patchIndex=0; patchIndex<patchData.numberOfPatches; patchIndex++)
     for (int x =         0; x < numberOfVolumesPerAxisInPatch;           x++) {
@@ -444,7 +445,7 @@ void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_batched(
     otterLoopBegin();
     for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
     #if defined(SharedOMP)
-    #pragma omp simd collapse(3)
+    #pragma omp simd
     #endif
     for (int patchIndex=0; patchIndex<patchData.numberOfPatches; patchIndex++)
     for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++)
@@ -471,7 +472,7 @@ void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_batched(
     for (int z =         0; z < numberOfVolumesPerAxisInPatch;          z++) 
     for (int y =         0; y < numberOfVolumesPerAxisInPatch;          y++)
     #if defined(SharedOMP)
-    #pragma omp simd collapse(2)
+    #pragma omp simd
     #endif
     for (int patchIndex=0; patchIndex<patchData.numberOfPatches; patchIndex++)
     for (int x = -haloSize; x < numberOfVolumesPerAxisInPatch+haloSize; x++) {
@@ -497,7 +498,7 @@ void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_batched(
     for (int z =         0; z < numberOfVolumesPerAxisInPatch;           z++)
     for (int y = -haloSize; y < numberOfVolumesPerAxisInPatch+haloSize;  y++)
     #if defined(SharedOMP)
-    #pragma omp simd collapse(2)
+    #pragma omp simd
     #endif
     for (int patchIndex=0; patchIndex<patchData.numberOfPatches; patchIndex++)
     for (int x =         0; x < numberOfVolumesPerAxisInPatch;           x++) {
@@ -523,7 +524,7 @@ void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_batched(
     for (int z = -haloSize; z < numberOfVolumesPerAxisInPatch+haloSize;  z++)
     for (int y =         0; y < numberOfVolumesPerAxisInPatch;           y++)
     #if defined(SharedOMP)
-    #pragma omp simd collapse(2)
+    #pragma omp simd
     #endif
     for (int patchIndex=0; patchIndex<patchData.numberOfPatches; patchIndex++)
     for (int x =         0; x < numberOfVolumesPerAxisInPatch;           x++) {
@@ -549,7 +550,7 @@ void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_batched(
     for (int z = 0; z < numberOfVolumesPerAxisInPatch; z++)
     for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
     #if defined(SharedOMP)
-    #pragma omp simd collapse(3)
+    #pragma omp simd
     #endif
     for (int patchIndex=0; patchIndex<patchData.numberOfPatches; patchIndex++)
     for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++)
@@ -577,7 +578,7 @@ void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_batched(
     otterLoopBegin();
     for (int y =         0; y < numberOfVolumesPerAxisInPatch;            y++) 
     #if defined(SharedOMP)
-    #pragma omp simd collapse(2)
+    #pragma omp simd
     #endif
     for (int patchIndex=0; patchIndex<patchData.numberOfPatches; patchIndex++)
     for (int x = -haloSize; x < numberOfVolumesPerAxisInPatch+haloSize-1; x++) {
@@ -602,7 +603,7 @@ void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_batched(
     otterLoopBegin();
     for (int y = -haloSize; y < numberOfVolumesPerAxisInPatch+haloSize-1; y++) 
     #if defined(SharedOMP)
-    #pragma omp simd collapse(2)
+    #pragma omp simd
     #endif
     for (int patchIndex=0; patchIndex<patchData.numberOfPatches; patchIndex++)
     for (int x =         0; x < numberOfVolumesPerAxisInPatch;            x++) {
@@ -627,7 +628,7 @@ void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_batched(
     otterLoopBegin();
     for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
     #if defined(SharedOMP)
-    #pragma omp simd collapse(3)
+    #pragma omp simd
     #endif
     for (int patchIndex=0; patchIndex<patchData.numberOfPatches; patchIndex++)
     for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++)
@@ -654,7 +655,7 @@ void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_batched(
     for (int z =         0; z < numberOfVolumesPerAxisInPatch;            z++)
     for (int y =         0; y < numberOfVolumesPerAxisInPatch;            y++)
     #if defined(SharedOMP)
-    #pragma omp simd collapse(2)
+    #pragma omp simd
     #endif
     for (int patchIndex=0; patchIndex<patchData.numberOfPatches; patchIndex++)
     for (int x = -haloSize; x < numberOfVolumesPerAxisInPatch+haloSize-1; x++) {
@@ -680,7 +681,7 @@ void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_batched(
     for (int z =         0; z < numberOfVolumesPerAxisInPatch;            z++)
     for (int y = -haloSize; y < numberOfVolumesPerAxisInPatch+haloSize-1; y++)
     #if defined(SharedOMP)
-    #pragma omp simd collapse(2)
+    #pragma omp simd
     #endif
     for (int patchIndex=0; patchIndex<patchData.numberOfPatches; patchIndex++)
     for (int x =         0; x < numberOfVolumesPerAxisInPatch;            x++) {
@@ -706,7 +707,7 @@ void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_batched(
     for (int z = -haloSize; z < numberOfVolumesPerAxisInPatch+haloSize-1; z++)
     for (int y =         0; y < numberOfVolumesPerAxisInPatch;            y++)
     #if defined(SharedOMP)
-    #pragma omp simd collapse(2)
+    #pragma omp simd
     #endif
     for (int patchIndex=0; patchIndex<patchData.numberOfPatches; patchIndex++)
     for (int x =         0; x < numberOfVolumesPerAxisInPatch;            x++) {
@@ -732,7 +733,7 @@ void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_batched(
     for (int z = 0; z < numberOfVolumesPerAxisInPatch; z++)
     for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
     #if defined(SharedOMP)
-    #pragma omp simd collapse(3)
+    #pragma omp simd
     #endif
     for (int patchIndex=0; patchIndex<patchData.numberOfPatches; patchIndex++)
     for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++)

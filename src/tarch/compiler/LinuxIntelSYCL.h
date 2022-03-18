@@ -52,5 +52,5 @@
  * so we avoid duplicate symbols. This is not C++ conformal, and therefore GCC doesn't
  * eat stuff. But Clang needs a static.
  */
-#define KeywordToAvoidDuplicateSymbols static
+#define KeywordToAvoidDuplicateSymbolsForInlinedFunctions static inline
 

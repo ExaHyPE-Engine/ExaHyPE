@@ -31,4 +31,4 @@
  * so we avoid duplicate symbols. This is not C++ conformal, and therefore GCC doesn't
  * eat stuff. Therefore we do not define the static keyword here.
  */
-#define KeywordToAvoidDuplicateSymbols
+#define KeywordToAvoidDuplicateSymbolsForInlinedFunctions

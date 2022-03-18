@@ -16,6 +16,25 @@ namespace peano4 {
 }
 
 
+/**
+ * Enumerator over an array of faces
+ *
+ * Whenever you hit a cell, you get an array over faces, and you have to access them and know
+ * about their arrangement. Faces are enumerated along their normal with the one face closer
+ * to the left/bottom/front first. So let there be three coordinate axes x0, x1, x2. The face
+ * with the normal parallel to x0 on the left side of the cell (if you assume the cell to be
+ * the unit cube, it is the face that runs through the origin) is face no 0. The one with a
+ * normal parallel to x1 is face no 1. After all the faces which run through the origin in
+ * our example have been enumerated, we enumerate those guys parallel to them in the same order.
+ *
+ * @image html FaceEnumerator.png
+ *
+ * This enumeration scheme is a natural extension of the lexicographic enumeration of the
+ * VertexEnumerator, where the axes enumeration induces a vertex enumeration. It also is an
+ * easy enumeration to extend to arbitrary dimensions.
+ *
+ *
+ */
 template <class Face>
 class peano4::datamanagement::FaceEnumerator {
   private:
@@ -57,6 +76,9 @@ class peano4::datamanagement::FaceEnumerator {
 	  _faces[i] = value;
 	}
 
+	/**
+	 * Get a certain face.
+	 */
 	Face& operator()(int i) const {
 	  assertion1(i>=0,i);
 	  assertion1(i<TwoTimesD,i);

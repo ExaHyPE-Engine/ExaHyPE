@@ -1,5 +1,6 @@
 #include "multicore.h"
 #include "tarch/mpi/Rank.h"
+#include "tarch/compiler/CompilerSpecificSettings.h"
 
 #ifdef UseSmartMPI
 #include "smartmpi.h"

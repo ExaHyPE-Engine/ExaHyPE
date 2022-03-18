@@ -291,21 +291,27 @@ def create_finish_time_step_implementation_for_adaptive_time_stepping(time_step_
 """  
     
 
-def create_compute_Riemann_kernel_for_Rusanov(flux_implementation, ncp_implementation, source_implementation, compute_max_eigenvalue_of_next_time_step, use_stateless_function_calls):
+def create_compute_Riemann_kernel_for_Rusanov(flux_implementation, ncp_implementation, source_implementation, compute_max_eigenvalue_of_next_time_step, use_stateless_function_calls, use_gpu):
   """
   
   I return only the unqualified function call, i.e. without any namespaces.
   
   """  
   template = """
-  {% if USE_STATELESS_FUNCTION_CALLS==True %}
-  //timeStepWithRusanov_overlap1_sequential_split_terms<
-  //  ::exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator    
-  timeStepWithRusanov_overlap1_sequential<
+  {% if USE_STATELESS_FUNCTION_CALLS==True and USE_GPU==False %}
+  timeStepWithRusanov_overlap1_patchwise_in_situ<
+    {{SOLVER_NAME}}
+  >(
+//  timeStepWithRusanov_overlap1_patchwise<
+//    {{SOLVER_NAME}},  ::exahype2::fv::enumerator::AoSoALexicographicVolumeEnumerator    
+//  >(
+  {% elif USE_STATELESS_FUNCTION_CALLS==True and USE_GPU==True %}
+  timeStepWithRusanov_overlap1_patchwise<
     {{SOLVER_NAME}},  ::exahype2::fv::enumerator::AoSoALexicographicVolumeEnumerator    
   >(
+    targetDevice,
   {% else %}  
-  timeStepWithRusanov_overlap1_sequential(
+  timeStepWithRusanov_overlap1_patchwise(
   {% endif %}    
     patchData,
     {{NUMBER_OF_VOLUMES_PER_AXIS}},
@@ -377,6 +383,7 @@ def create_compute_Riemann_kernel_for_Rusanov(flux_implementation, ncp_implement
   d[ "SOURCE_IMPLEMENTATION" ]       = source_implementation
   d[ "COMPUTE_MAX_EIGENVALUE" ]      = compute_max_eigenvalue_of_next_time_step
   d[ "USE_STATELESS_FUNCTION_CALLS"] = use_stateless_function_calls
+  d[ "USE_GPU"]                      = use_gpu
   return result.render(**d)
 
 

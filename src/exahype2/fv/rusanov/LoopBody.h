@@ -154,7 +154,7 @@ namespace exahype2 {
          * @see copySolution_LoopBody() for vectorisation details.
          */
         template <>
-        KeywordToAvoidDuplicateSymbols
+        KeywordToAvoidDuplicateSymbolsForInlinedFunctions
         void copySolutionAndAddSourceTerm_LoopBody(
           const double* __restrict__                QIn,
           const exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator& QInEnumerator,
@@ -324,7 +324,7 @@ namespace exahype2 {
 
 
         template <>
-        KeywordToAvoidDuplicateSymbols double reduceMaxEigenvalue_LoopBody(
+        KeywordToAvoidDuplicateSymbolsForInlinedFunctions double reduceMaxEigenvalue_LoopBody(
           const double* __restrict__                   QIn,
           exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator QInEnumerator,
           exahype2::fv::rusanov::MaxEigenvalue         maxEigenvalue,
@@ -494,6 +494,14 @@ namespace exahype2 {
         ) InlineMethod;
 
 
+        /**
+         * Update one volume with the flux contribution
+         *
+         * For each dimension: Take the flux left and in the actual volume and the one
+         * to the right and combine them.
+         *
+         * @todo Remove flux in the centre, as it is eliminated
+         */
         #if defined(SharedOMP)
         #pragma omp declare simd
         #endif
@@ -509,6 +517,36 @@ namespace exahype2 {
           const tarch::la::Vector<Dimensions,int>&     volumeIndex,
           int                                          unknown,
           double                                       dt,
+          double* __restrict__                         QOut,
+          const QOutEnumeratorType&                    QOutEnumerator
+        ) InlineMethod;
+
+
+        /**
+         * Constructs the average of the flux and adds it to the left and right
+         * neighbour cell with inverted sign. This is the counterpart of the other
+         * updateSolutionWithFlux_LoopBody() routine which works cell-wisely.
+         *
+         * We always enumerate right looking, i.e. the right face of cell i is
+         * face i. The leftmost cell consequently has no left face (it is cell no
+         * 0 and 0 is its right face). For N cells in a row, there's a face N-1
+         * but no face N anymore.
+         */
+        #if defined(SharedOMP)
+        #pragma omp declare simd
+        #endif
+        template <typename FluxEnumeratorType, typename QOutEnumeratorType>
+        static void updateSolutionWithFlux_LoopBody(
+          const double* __restrict__                   fluxL,
+          const double* __restrict__                   fluxR,
+          const FluxEnumeratorType&                    fluxEnumerator,
+          const tarch::la::Vector<Dimensions,double>&  patchCentre,
+          const tarch::la::Vector<Dimensions,double>&  patchSize,
+          int                                          patchIndex,
+          const tarch::la::Vector<Dimensions,int>&     volumeIndex,
+          int                                          unknown,
+          double                                       dt,
+          int                                          normal,
           double* __restrict__                         QOut,
           const QOutEnumeratorType&                    QOutEnumerator
         ) InlineMethod;
@@ -567,6 +605,31 @@ namespace exahype2 {
 
 
         /**
+         * Face-wise version of routine, i.e. it takes the eigenvalues and
+         * updates the left and right adjacent volume of it.
+         */
+        #if defined(SharedOMP)
+        #pragma omp declare simd
+        #endif
+        template <typename QInEnumeratorType, typename QOutEnumeratorType>
+        static void updateSolutionWithEigenvalueDamping_LoopBody(
+          const double* __restrict__                   QIn,
+          const QInEnumeratorType &                    QInEnumerator,
+          double                                       maxEigenvalueL,
+          double                                       maxEigenvalueR,
+          const tarch::la::Vector<Dimensions,double>&  patchCentre,
+          const tarch::la::Vector<Dimensions,double>&  patchSize,
+          int                                          patchIndex,
+          const tarch::la::Vector<Dimensions,int>&     volumeIndex,
+          int                                          unknown,
+          double                                       dt,
+          int                                          normal,
+          double* __restrict__                         QOut,
+          const QOutEnumeratorType &                   QOutEnumerator
+        ) InlineMethod;
+
+
+        /**
          * We count faces starting with zero, i.e. effectively shift the indices
          * not by 1/2 but one volume to the right: Let the leftmost volume have
          * the index i. i is typically 0 but can also be negative (if we have halos).
@@ -614,10 +677,6 @@ namespace exahype2 {
         ) InlineMethod;
 
 
-        /**
-         * See remarks in updateSolutionWithNonconservativeFlux_LoopBody() for
-         * some rationale.
-         */
         #if defined(SharedOMP)
         #pragma omp declare simd
         #endif
@@ -633,6 +692,28 @@ namespace exahype2 {
           const tarch::la::Vector<Dimensions,int>&     volumeIndex,
           int                                          unknown,
           double                                       dt,
+          double* __restrict__                         QOut,
+          const QOutEnumeratorType&                    QOutEnumerator
+        ) InlineMethod;
+
+
+        /**
+         * Face-oriented flavour of ncp
+         */
+        #if defined(SharedOMP)
+        #pragma omp declare simd
+        #endif
+        template <typename QNCPFaceEnumeratorType, typename QOutEnumeratorType>
+        static void updateSolutionWithNonconservativeFlux_LoopBody(
+          const double* __restrict__                   fluxNCP,
+          const QNCPFaceEnumeratorType&                    fluxEnumerator,
+          const tarch::la::Vector<Dimensions,double>&  patchCentre,
+          const tarch::la::Vector<Dimensions,double>&  patchSize,
+          int                                          patchIndex,
+          const tarch::la::Vector<Dimensions,int>&     volumeIndex,
+          int                                          unknown,
+          double                                       dt,
+          int                                          normal,
           double* __restrict__                         QOut,
           const QOutEnumeratorType&                    QOutEnumerator
         ) InlineMethod;

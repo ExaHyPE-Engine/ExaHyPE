@@ -868,6 +868,19 @@ void toolbox::blockstructured::interpolateHaloLayer_AoS_outflow(
   int                                       numberOfDoFsPerAxisInPatch,
   int                                       overlap,
   int                                       unknowns,
+  double*                                   fineGridFaceValues,
+  double*                                   coarseGridFaceValues,
+  double*                                   coarseGridCellValues
+) {
+  interpolateHaloLayer_AoS_piecewise_constant(marker,numberOfDoFsPerAxisInPatch,overlap,unknowns,fineGridFaceValues,coarseGridFaceValues,coarseGridCellValues);
+}
+
+
+void toolbox::blockstructured::interpolateHaloLayer_AoS_outflow(
+  const peano4::datamanagement::FaceMarker& marker,
+  int                                       numberOfDoFsPerAxisInPatch,
+  int                                       overlap,
+  int                                       unknowns,
   double*                                   fineGridValues,
   double*                                   coarseGridValues
 ) {
