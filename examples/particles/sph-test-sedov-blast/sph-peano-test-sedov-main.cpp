@@ -228,9 +228,18 @@ int main(int argc, char** argv) {
         peano4::parallel::SpacetreeSet::getInstance().traverse(forcespart);
 
         /*
-         * Time integration 
-         *
-         * */
+         * Time integration */
+
+/*
+       // Synchro step (as in N-body -- might not be accurate here) //
+        if(i>0){ // Do not synchronize at the IC
+          examples::particles::observers::Kick synchroObserver;                // Synchronization step (last kick from previous time-step)
+          peano4::parallel::SpacetreeSet::getInstance().traverse(synchroObserver);
+
+          examples::particles::observers::HydroKickExtra kickExtra;              // Synchronise internal energy
+          peano4::parallel::SpacetreeSet::getInstance().traverse(kickExtra);
+        }
+*/
 
         /* First Kick from current time-step*/
         examples::particles::observers::Kick kick1part;
@@ -244,46 +253,70 @@ int main(int argc, char** argv) {
         examples::particles::observers::Drift driftpart;
         peano4::parallel::SpacetreeSet::getInstance().traverse(driftpart);
 
-//          /* Option 1: standard KDK */
-//        /* Second Force loop */
+        /*********************************************/
+        /* Option 1: standard KDK */
+        /* Second Force loop */
 //        peano4::parallel::SpacetreeSet::getInstance().traverse(prepareGradient);
 //        peano4::parallel::SpacetreeSet::getInstance().traverse(ResetGradient);
 //        peano4::parallel::SpacetreeSet::getInstance().traverse(prepareForce);
 //        peano4::parallel::SpacetreeSet::getInstance().traverse(forcespart);
 //
-//        /* Second Kick from current time-step */
-//        examples::particles::observers::Kick2 kick2part;
-//        peano4::parallel::SpacetreeSet::getInstance().traverse(kick2part);
-//        peano4::parallel::SpacetreeSet::getInstance().traverse(kickExtra);
+        for (int iter=0; iter<3; iter++){
 
-        /* Option 2: Predictor-corrector scheme */
-        /* Not needed according to Matthieu */
+          /* Density loop */
+          peano4::parallel::SpacetreeSet::getInstance().traverse(density);
 
-        /* Predictor ("kick anyway") step */
-        peano4::parallel::SpacetreeSet::getInstance().traverse(kick1part);
-        peano4::parallel::SpacetreeSet::getInstance().traverse(kickExtra);
-
-        for(int iter_PC = 0; iter_PC < 5; iter_PC++){
-          /* Second Force loop with predicted velocity */
+          /* "Ghost tasks" */
           peano4::parallel::SpacetreeSet::getInstance().traverse(prepareGradient);
           peano4::parallel::SpacetreeSet::getInstance().traverse(ResetGradient);
+
+          /* Prepare force */
           peano4::parallel::SpacetreeSet::getInstance().traverse(prepareForce);
-          peano4::parallel::SpacetreeSet::getInstance().traverse(forcespart);
-  
-          /* Corrector step (mini-Kick) current time-step */
-          examples::particles::observers::KickCorrector correctpart;
-          peano4::parallel::SpacetreeSet::getInstance().traverse(correctpart);
-        //  TBA: corrector for U
-        //  peano4::parallel::SpacetreeSet::getInstance().traverse(kickExtra);
+
+          /* Gradient loop */
+          peano4::parallel::SpacetreeSet::getInstance().traverse(Gradient);
+
+          /* By default I do this here */
+          /* Newton Raphson iteration */
+          peano4::parallel::SpacetreeSet::getInstance().traverse(newtonRaphson);
 
         }
 
-      }
+        /* Force loop */
+        peano4::parallel::SpacetreeSet::getInstance().traverse(forcespart);
 
+
+        /* Second Kick from current time-step */
+        examples::particles::observers::Kick2 kick2part;
+        peano4::parallel::SpacetreeSet::getInstance().traverse(kick2part);
+        peano4::parallel::SpacetreeSet::getInstance().traverse(kickExtra);
+
+        /*********************************************/
+//        /* Option 2: Predictor-corrector scheme */
+//        /* Not needed according to Matthieu */
+//
+//        /* Predictor ("kick anyway") step */
+//        peano4::parallel::SpacetreeSet::getInstance().traverse(kick1part);
+//        peano4::parallel::SpacetreeSet::getInstance().traverse(kickExtra);
+//
+//        for (int iter_PC = 0; iter_PC < 5; iter_PC++){
+//          /* Second Force loop with predicted velocity */
+//          peano4::parallel::SpacetreeSet::getInstance().traverse(prepareGradient);
+//          peano4::parallel::SpacetreeSet::getInstance().traverse(ResetGradient);
+//          peano4::parallel::SpacetreeSet::getInstance().traverse(prepareForce);
+//          peano4::parallel::SpacetreeSet::getInstance().traverse(forcespart);
+//  
+//          /* Corrector step (mini-Kick) current time-step */
+//          examples::particles::observers::KickCorrector correctpart;
+//          peano4::parallel::SpacetreeSet::getInstance().traverse(correctpart);
+//        //  TBA: corrector for U
+//        //  peano4::parallel::SpacetreeSet::getInstance().traverse(kickExtra);
+//
+      }
       logInfo( "main()", "plot" )
       examples::particles::observers::Plot plotTimeStepObserver;
       peano4::parallel::SpacetreeSet::getInstance().traverse(plotTimeStepObserver);
-    }
+    } /* End i loop */
 
     logInfo( "main()", "terminated successfully" )
 
