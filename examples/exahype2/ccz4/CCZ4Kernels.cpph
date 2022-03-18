@@ -1,9 +1,5 @@
 
 
-
-#if defined(OpenMPGPUOffloading)
-#pragma omp declare target
-#endif
 void examples::exahype2::ccz4::source(double* S, const double* const Q,
       const int CCZ4LapseType,
       const double CCZ4ds,
@@ -388,14 +384,8 @@ void examples::exahype2::ccz4::source(double* S, const double* const Q,
     for (int i = 0; i < 3; i++) S[55+i] = dtP[i];
     S[58] = 0;
 }
-#if defined(OpenMPGPUOffloading)
-#pragma omp end declare target
-#endif
 
 
-#if defined(OpenMPGPUOffloading)
-#pragma omp declare target
-#endif
 void examples::exahype2::ccz4::ncp(double* BgradQ, const double* const Q, const double* const gradQSerialised, const int normal,
       const int CCZ4LapseType,
       const double CCZ4ds,
@@ -857,7 +847,3 @@ void examples::exahype2::ccz4::ncp(double* BgradQ, const double* const Q, const 
     BgradQ[58] = 0;
     //if (dtP[1]!=0) printf("dtP[1] = %g, dtP[2] = %g \n\n",dtP[1],dtP[2]);
 }
-#if defined(OpenMPGPUOffloading)
-#pragma omp end declare target
-#endif
-

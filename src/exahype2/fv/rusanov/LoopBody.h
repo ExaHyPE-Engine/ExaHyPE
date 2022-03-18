@@ -154,7 +154,7 @@ namespace exahype2 {
          * @see copySolution_LoopBody() for vectorisation details.
          */
         template <>
-        KeywordToAvoidDuplicateSymbols
+        KeywordToAvoidDuplicateSymbolsForInlinedFunctions
         void copySolutionAndAddSourceTerm_LoopBody(
           const double* __restrict__                QIn,
           const exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator& QInEnumerator,
@@ -324,7 +324,7 @@ namespace exahype2 {
 
 
         template <>
-        KeywordToAvoidDuplicateSymbols double reduceMaxEigenvalue_LoopBody(
+        KeywordToAvoidDuplicateSymbolsForInlinedFunctions double reduceMaxEigenvalue_LoopBody(
           const double* __restrict__                   QIn,
           exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator QInEnumerator,
           exahype2::fv::rusanov::MaxEigenvalue         maxEigenvalue,
