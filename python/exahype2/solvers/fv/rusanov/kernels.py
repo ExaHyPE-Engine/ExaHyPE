@@ -338,12 +338,12 @@ def create_compute_Riemann_kernel_for_Rusanov(flux_implementation,
   }
   
   EnumeratorTemplateTypes = {
-    RiemannKernelVariant.PatchWiseAoS:              "exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator",
-    RiemannKernelVariant.PatchWiseAoSoA:            "exahype2::fv::enumerator::AoSoALexicographicVolumeEnumerator",
-    RiemannKernelVariant.BatchedAoS:                "exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator",
-    RiemannKernelVariant.BatchedAoSoA:              "exahype2::fv::enumerator::AoSoALexicographicVolumeEnumerator",
-    RiemannKernelVariant.PatchWiseSplitTermsAoS:    "exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator",
-    RiemannKernelVariant.PatchWiseSplitTermsAoSoA:  "exahype2::fv::enumerator::AoSoALexicographicVolumeEnumerator",
+    RiemannKernelVariant.PatchWiseAoS:              "::exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator",
+    RiemannKernelVariant.PatchWiseAoSoA:            "::exahype2::fv::enumerator::AoSoALexicographicVolumeEnumerator",
+    RiemannKernelVariant.BatchedAoS:                "::exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator",
+    RiemannKernelVariant.BatchedAoSoA:              "::exahype2::fv::enumerator::AoSoALexicographicVolumeEnumerator",
+    RiemannKernelVariant.PatchWiseSplitTermsAoS:    "::exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator",
+    RiemannKernelVariant.PatchWiseSplitTermsAoSoA:  "::exahype2::fv::enumerator::AoSoALexicographicVolumeEnumerator",
     RiemannKernelVariant.PatchWiseInSitu:           "",
     RiemannKernelVariant.BatchedInSitu:             ""
   }
