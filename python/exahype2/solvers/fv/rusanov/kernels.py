@@ -353,11 +353,11 @@ def create_compute_Riemann_kernel_for_Rusanov(flux_implementation,
   if solver_variant == SolverVariant.WithVirtualFunctions:
     template += "("
   if solver_variant == SolverVariant.Stateless:
-    template += "<Solver,"
+    template += "<{{SOLVER_NAME}},"
     template += EnumeratorTemplateTypes[riemann_kernel_variant]
     template += ">("
   if solver_variant == SolverVariant.Accelerator:
-    template += "<Solver,"
+    template += "<{{SOLVER_NAME}},"
     template += EnumeratorTemplateTypes[riemann_kernel_variant]
     template += ">(targetDevice,"
         
