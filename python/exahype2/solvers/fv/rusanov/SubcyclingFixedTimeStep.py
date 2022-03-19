@@ -13,6 +13,9 @@ from .kernels import create_solver_declarations
 from .kernels import create_solver_definitions
 from .kernels import create_compute_time_step_size_for_fixed_time_stepping_with_subcycling
 
+from .kernels import SolverVariant
+from .kernels import RiemannKernelVariant
+
 from exahype2.solvers.fv.kernels import create_halo_layer_construction_with_interpolation_for_reconstructed_patch
 from exahype2.solvers.fv.kernels import create_abstract_solver_user_declarations_for_fixed_time_stepping
 from exahype2.solvers.fv.kernels import create_abstract_solver_user_definitions_for_fixed_time_stepping
@@ -90,7 +93,26 @@ const double newTimeStepSize = timeStepSize;
     if eigenvalues          is not None:  self._eigenvalues_implementation                = eigenvalues
     if source_term          is not None:  self._source_term_implementation                = source_term
 
-    self._compute_kernel_call = create_compute_Riemann_kernel_for_Rusanov(self._flux_implementation, self._ncp_implementation, self._source_term_implementation, compute_max_eigenvalue_of_next_time_step=False, use_stateless_function_calls=False)
+    self._compute_kernel_call = create_compute_Riemann_kernel_for_Rusanov(
+      self._flux_implementation, self._ncp_implementation, self._source_term_implementation, 
+      compute_max_eigenvalue_of_next_time_step=False, 
+      solver_variant = SolverVariant.WithVirtualFunctions,
+      riemann_kernel_variant = RiemannKernelVariant.PatchWiseAoS
+    )
+    
+    self._fused_compute_kernel_call_cpu  = create_compute_Riemann_kernel_for_Rusanov(
+      self._flux_implementation, self._ncp_implementation, self._source_term_implementation, 
+      compute_max_eigenvalue_of_next_time_step=False, 
+      solver_variant = SolverVariant.Stateless,
+      riemann_kernel_variant = RiemannKernelVariant.BatchedAoSoA
+    )
+
+    self._fused_compute_kernel_call_gpu  = create_compute_Riemann_kernel_for_Rusanov(
+      self._flux_implementation, self._ncp_implementation, self._source_term_implementation, 
+      compute_max_eigenvalue_of_next_time_step=False, 
+      solver_variant = SolverVariant.Accelerator,
+      riemann_kernel_variant = RiemannKernelVariant.PatchWiseAoS
+    )
 
     self._abstract_solver_user_declarations  = create_abstract_solver_declarations(self._flux_implementation, self._ncp_implementation, self._eigenvalues_implementation, self._source_term_implementation, False)
     self._abstract_solver_user_declarations += create_abstract_solver_user_declarations_for_fixed_time_stepping()

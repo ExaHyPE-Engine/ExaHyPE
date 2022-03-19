@@ -33,7 +33,7 @@ class UpdateCell(ReconstructPatchAndApplyFunctor):
         std::string(__FILE__) + "(" + std::to_string(__LINE__) + "): " + marker.toString()
       ); // previous time step has to be valid
   
-      ::exahype2::fv::PatchData  patchData( reconstructedPatch, marker.x(), marker.h(), timeStamp, timeStepSize, targetPatch );
+      ::exahype2::CellData  patchData( reconstructedPatch, marker.x(), marker.h(), timeStamp, timeStepSize, targetPatch );
       
       ::exahype2::fv::rusanov::{{COMPUTE_KERNEL_CALL}}  
       
@@ -198,7 +198,9 @@ class SingleSweep( FV ):
 
 
   def get_user_action_set_includes(self):
-    return super(SingleSweep, self).get_user_action_set_includes()
+    return """
+#include "exahype2/CellData.h"
+""" +    super(SingleSweep, self).get_user_action_set_includes()
 
 
   def set_implementation(self,

@@ -17,6 +17,9 @@ from .kernels import create_abstract_solver_user_declarations_for_adaptive_time_
 from .kernels import create_abstract_solver_user_definitions_for_adaptive_time_stepping
 from .kernels import create_constructor_implementation_for_adaptive_time_stepping
 
+from .kernels import SolverVariant
+from .kernels import RiemannKernelVariant
+
 
 from exahype2.solvers.fv.kernels import create_start_time_step_implementation_for_adaptive_time_stepping
 
@@ -78,7 +81,12 @@ class GlobalAdaptiveTimeStep( SingleSweep ):
     if eigenvalues          is not None:  self._eigenvalues_implementation                = eigenvalues
     if source_term          is not None:  self._source_term_implementation                = source_term
 
-    self._compute_kernel_call = create_compute_Riemann_kernel_for_Rusanov(self._flux_implementation, self._ncp_implementation, self._source_term_implementation, compute_max_eigenvalue_of_next_time_step=True, use_stateless_function_calls=False)
+    self._compute_kernel_call = create_compute_Riemann_kernel_for_Rusanov(
+      self._flux_implementation, self._ncp_implementation, self._source_term_implementation, 
+      compute_max_eigenvalue_of_next_time_step=True,
+      solver_variant = SolverVariant.WithVirtualFunctions,
+      riemann_kernel_variant = RiemannKernelVariant.PatchWiseAoS
+    )
 
     self._abstract_solver_user_declarations  = create_abstract_solver_declarations(self._flux_implementation, self._ncp_implementation, self._eigenvalues_implementation, self._source_term_implementation, False)
     self._abstract_solver_user_declarations += create_abstract_solver_user_declarations_for_adaptive_time_stepping()
