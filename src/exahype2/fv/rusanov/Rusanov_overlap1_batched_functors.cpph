@@ -128,7 +128,6 @@ void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_batched(
   }
 
 
-  logDebug( "timeStepWithRusanov_overlap1_sequential(...)", "evaluate directional eigenvalues per volume" );
   if (Dimensions==2) {
     otterLoopBegin();
     for (int patchIndex=0; patchIndex<patchData.numberOfPatches; patchIndex++)

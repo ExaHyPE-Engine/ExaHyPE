@@ -138,12 +138,12 @@ void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_batched(
 
   if (Dimensions==2) {
     otterLoopBegin();
-    for (int y = -haloSize; y < numberOfVolumesPerAxisInPatch+haloSize; y++)
+    for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
     #if defined(SharedOMP)
     #pragma omp simd
     #endif
     for (int patchIndex=0; patchIndex<patchData.numberOfPatches; patchIndex++)
-    for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++) {
+    for (int x = -haloSize; x < numberOfVolumesPerAxisInPatch+haloSize; x++) {
       otterLoopIterationBegin();
       internal::computeMaxEigenvalue_LoopBody<Solver>(
           patchData.QIn[patchIndex],
@@ -162,12 +162,12 @@ void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_batched(
     otterLoopEnd();
 
     otterLoopBegin();
-    for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
+    for (int y = -haloSize; y < numberOfVolumesPerAxisInPatch+haloSize; y++)
     #if defined(SharedOMP)
     #pragma omp simd
     #endif
     for (int patchIndex=0; patchIndex<patchData.numberOfPatches; patchIndex++)
-    for (int x = -haloSize; x < numberOfVolumesPerAxisInPatch+haloSize; x++) {
+    for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++) {
       otterLoopIterationBegin();
       internal::computeMaxEigenvalue_LoopBody<Solver>(
           patchData.QIn[patchIndex],
@@ -216,13 +216,13 @@ void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_batched(
   }
   else {
     otterLoopBegin();
-    for (int z = -haloSize; z < numberOfVolumesPerAxisInPatch+haloSize; z++)
-    for (int y = -haloSize; y < numberOfVolumesPerAxisInPatch+haloSize; y++)
+    for (int z = 0; z < numberOfVolumesPerAxisInPatch; z++)
+    for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
     #if defined(SharedOMP)
     #pragma omp simd
     #endif
     for (int patchIndex=0; patchIndex<patchData.numberOfPatches; patchIndex++)
-    for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++) {
+    for (int x = -haloSize; x < numberOfVolumesPerAxisInPatch+haloSize; x++) {
       otterLoopIterationBegin();
       internal::computeMaxEigenvalue_LoopBody<Solver>(
             patchData.QIn[patchIndex],
@@ -241,13 +241,13 @@ void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_batched(
     otterLoopEnd();
 
     otterLoopBegin();
-    for (int z = -haloSize; z < numberOfVolumesPerAxisInPatch+haloSize; z++)
-    for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
+    for (int z = 0; z < numberOfVolumesPerAxisInPatch; z++)
+    for (int y = -haloSize; y < numberOfVolumesPerAxisInPatch+haloSize; y++)
     #if defined(SharedOMP)
     #pragma omp simd
     #endif
     for (int patchIndex=0; patchIndex<patchData.numberOfPatches; patchIndex++)
-    for (int x = -haloSize; x < numberOfVolumesPerAxisInPatch+haloSize; x++) {
+    for (int x = -haloSize; x < numberOfVolumesPerAxisInPatch; x++) {
       otterLoopIterationBegin();
       internal::computeMaxEigenvalue_LoopBody<Solver>(
             patchData.QIn[patchIndex],
@@ -266,13 +266,13 @@ void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_batched(
     otterLoopEnd();
 
     otterLoopBegin();
-    for (int z = 0; z < numberOfVolumesPerAxisInPatch; z++)
-    for (int y = -haloSize; y < numberOfVolumesPerAxisInPatch+haloSize; y++)
+    for (int z = -haloSize; z < numberOfVolumesPerAxisInPatch+haloSize; z++)
+    for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
     #if defined(SharedOMP)
     #pragma omp simd
     #endif
     for (int patchIndex=0; patchIndex<patchData.numberOfPatches; patchIndex++)
-    for (int x = -haloSize; x < numberOfVolumesPerAxisInPatch+haloSize; x++) {
+    for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++) {
       otterLoopIterationBegin();
       internal::computeMaxEigenvalue_LoopBody<Solver>(
             patchData.QIn[patchIndex],
