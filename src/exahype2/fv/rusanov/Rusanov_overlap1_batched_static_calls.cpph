@@ -247,7 +247,7 @@ void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_batched(
     #pragma omp simd
     #endif
     for (int patchIndex=0; patchIndex<patchData.numberOfPatches; patchIndex++)
-    for (int x = -haloSize; x < numberOfVolumesPerAxisInPatch; x++) {
+    for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++) {
       otterLoopIterationBegin();
       internal::computeMaxEigenvalue_LoopBody<Solver>(
             patchData.QIn[patchIndex],
