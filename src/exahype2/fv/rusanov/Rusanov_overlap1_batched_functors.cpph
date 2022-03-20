@@ -169,8 +169,7 @@ void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_batched(
           1,
           tempEigenvalueY,
           eigenvalueEnumerator
-        );
-      }
+      );
       otterLoopIterationEnd();
     }
     otterLoopEnd();
