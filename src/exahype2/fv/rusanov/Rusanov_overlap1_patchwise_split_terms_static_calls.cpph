@@ -139,17 +139,9 @@ void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_patchwise_split_terms(
       #if defined(SharedOMP)
       #pragma omp simd
       #endif
-      for (int x = -haloSize; x < numberOfVolumesPerAxisInPatch+haloSize; x++) {
+      for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++) {
         otterLoopIterationBegin();
-        bool isDiagonalCell = false;
-        #if PeanoDebug>0
-        isDiagonalCell |= (x==-haloSize and y==-haloSize);
-        isDiagonalCell |= (x==-haloSize and y==numberOfVolumesPerAxisInPatch+haloSize-1);
-        isDiagonalCell |= (x==numberOfVolumesPerAxisInPatch+haloSize-1 and y==-haloSize);
-        isDiagonalCell |= (x==numberOfVolumesPerAxisInPatch+haloSize-1 and y==numberOfVolumesPerAxisInPatch+haloSize-1);
-        #endif
-        if ( not isDiagonalCell ) {
-          internal::computeMaxEigenvalue_LoopBody<Solver>(
+        internal::computeMaxEigenvalue_LoopBody<Solver>(
             patchData.QIn[patchIndex],
             QInEnumerator,
             patchData.patchCentre[patchIndex],
@@ -160,25 +152,16 @@ void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_patchwise_split_terms(
             0,
             tempEigenvalueX,
             eigenvalueEnumerator
-          );
-        }
+        );
       }
 
-      for (int y = -haloSize; y < numberOfVolumesPerAxisInPatch+haloSize; y++)
+      for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
       #if defined(SharedOMP)
       #pragma omp simd
       #endif
       for (int x = -haloSize; x < numberOfVolumesPerAxisInPatch+haloSize; x++) {
         otterLoopIterationBegin();
-        bool isDiagonalCell = false;
-        #if PeanoDebug>0
-        isDiagonalCell |= (x==-haloSize and y==-haloSize);
-        isDiagonalCell |= (x==-haloSize and y==numberOfVolumesPerAxisInPatch+haloSize-1);
-        isDiagonalCell |= (x==numberOfVolumesPerAxisInPatch+haloSize-1 and y==-haloSize);
-        isDiagonalCell |= (x==numberOfVolumesPerAxisInPatch+haloSize-1 and y==numberOfVolumesPerAxisInPatch+haloSize-1);
-        #endif
-        if ( not isDiagonalCell ) {
-          internal::computeMaxEigenvalue_LoopBody<Solver>(
+        internal::computeMaxEigenvalue_LoopBody<Solver>(
             patchData.QIn[patchIndex],
             QInEnumerator,
             patchData.patchCentre[patchIndex],
@@ -189,8 +172,7 @@ void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_patchwise_split_terms(
             1,
             tempEigenvalueY,
             eigenvalueEnumerator
-          );
-        }
+        );
         otterLoopIterationEnd();
       }
       otterLoopEnd();
@@ -228,25 +210,9 @@ void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_patchwise_split_terms(
       #if defined(SharedOMP)
       #pragma omp simd
       #endif
-      for (int x = -haloSize; x < numberOfVolumesPerAxisInPatch+haloSize; x++) {
+      for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++) {
         otterLoopIterationBegin();
-        bool isDiagonalCell = false;
-        #if PeanoDebug>0
-        isDiagonalCell |= (x==-haloSize and y==-haloSize);
-        isDiagonalCell |= (x==-haloSize and z==-haloSize);
-        isDiagonalCell |= (y==-haloSize and z==-haloSize);
-        isDiagonalCell |= (x==-haloSize and y==numberOfVolumesPerAxisInPatch+haloSize-1);
-        isDiagonalCell |= (x==-haloSize and z==numberOfVolumesPerAxisInPatch+haloSize-1);
-        isDiagonalCell |= (y==-haloSize and z==numberOfVolumesPerAxisInPatch+haloSize-1);
-        isDiagonalCell |= (x==numberOfVolumesPerAxisInPatch+haloSize-1 and y==-haloSize);
-        isDiagonalCell |= (x==numberOfVolumesPerAxisInPatch+haloSize-1 and z==-haloSize);
-        isDiagonalCell |= (y==numberOfVolumesPerAxisInPatch+haloSize-1 and z==-haloSize);
-        isDiagonalCell |= (x==numberOfVolumesPerAxisInPatch+haloSize-1 and y==numberOfVolumesPerAxisInPatch+haloSize-1);
-        isDiagonalCell |= (x==numberOfVolumesPerAxisInPatch+haloSize-1 and z==numberOfVolumesPerAxisInPatch+haloSize-1);
-        isDiagonalCell |= (y==numberOfVolumesPerAxisInPatch+haloSize-1 and z==numberOfVolumesPerAxisInPatch+haloSize-1);
-        #endif
-        if ( not isDiagonalCell ) {
-            internal::computeMaxEigenvalue_LoopBody<Solver>(
+        internal::computeMaxEigenvalue_LoopBody<Solver>(
               patchData.QIn[patchIndex],
               QInEnumerator,
               patchData.patchCentre[patchIndex],
@@ -257,37 +223,20 @@ void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_patchwise_split_terms(
               0,
               tempEigenvalueX,
               eigenvalueEnumerator
-            );
-        }
+        );
         otterLoopIterationEnd();
       }
       otterLoopEnd();
 
       otterLoopBegin();
       for (int z = -haloSize; z < numberOfVolumesPerAxisInPatch+haloSize; z++)
-      for (int y = -haloSize; y < numberOfVolumesPerAxisInPatch+haloSize; y++)
+      for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
       #if defined(SharedOMP)
       #pragma omp simd
       #endif
       for (int x = -haloSize; x < numberOfVolumesPerAxisInPatch+haloSize; x++) {
         otterLoopIterationBegin();
-        bool isDiagonalCell = false;
-        #if PeanoDebug>0
-        isDiagonalCell |= (x==-haloSize and y==-haloSize);
-        isDiagonalCell |= (x==-haloSize and z==-haloSize);
-        isDiagonalCell |= (y==-haloSize and z==-haloSize);
-        isDiagonalCell |= (x==-haloSize and y==numberOfVolumesPerAxisInPatch+haloSize-1);
-        isDiagonalCell |= (x==-haloSize and z==numberOfVolumesPerAxisInPatch+haloSize-1);
-        isDiagonalCell |= (y==-haloSize and z==numberOfVolumesPerAxisInPatch+haloSize-1);
-        isDiagonalCell |= (x==numberOfVolumesPerAxisInPatch+haloSize-1 and y==-haloSize);
-        isDiagonalCell |= (x==numberOfVolumesPerAxisInPatch+haloSize-1 and z==-haloSize);
-        isDiagonalCell |= (y==numberOfVolumesPerAxisInPatch+haloSize-1 and z==-haloSize);
-        isDiagonalCell |= (x==numberOfVolumesPerAxisInPatch+haloSize-1 and y==numberOfVolumesPerAxisInPatch+haloSize-1);
-        isDiagonalCell |= (x==numberOfVolumesPerAxisInPatch+haloSize-1 and z==numberOfVolumesPerAxisInPatch+haloSize-1);
-        isDiagonalCell |= (y==numberOfVolumesPerAxisInPatch+haloSize-1 and z==numberOfVolumesPerAxisInPatch+haloSize-1);
-        #endif
-        if ( not isDiagonalCell ) {
-            internal::computeMaxEigenvalue_LoopBody<Solver>(
+        internal::computeMaxEigenvalue_LoopBody<Solver>(
               patchData.QIn[patchIndex],
               QInEnumerator,
               patchData.patchCentre[patchIndex],
@@ -298,37 +247,20 @@ void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_patchwise_split_terms(
               1,
               tempEigenvalueY,
               eigenvalueEnumerator
-            );
-        }
+        );
         otterLoopIterationEnd();
       }
       otterLoopEnd();
 
       otterLoopBegin();
-      for (int z = -haloSize; z < numberOfVolumesPerAxisInPatch+haloSize; z++)
+      for (int z = 0; z < numberOfVolumesPerAxisInPatch; z++)
       for (int y = -haloSize; y < numberOfVolumesPerAxisInPatch+haloSize; y++)
       #if defined(SharedOMP)
       #pragma omp simd
       #endif
       for (int x = -haloSize; x < numberOfVolumesPerAxisInPatch+haloSize; x++) {
         otterLoopIterationBegin();
-        bool isDiagonalCell = false;
-        #if PeanoDebug>0
-        isDiagonalCell |= (x==-haloSize and y==-haloSize);
-        isDiagonalCell |= (x==-haloSize and z==-haloSize);
-        isDiagonalCell |= (y==-haloSize and z==-haloSize);
-        isDiagonalCell |= (x==-haloSize and y==numberOfVolumesPerAxisInPatch+haloSize-1);
-        isDiagonalCell |= (x==-haloSize and z==numberOfVolumesPerAxisInPatch+haloSize-1);
-        isDiagonalCell |= (y==-haloSize and z==numberOfVolumesPerAxisInPatch+haloSize-1);
-        isDiagonalCell |= (x==numberOfVolumesPerAxisInPatch+haloSize-1 and y==-haloSize);
-        isDiagonalCell |= (x==numberOfVolumesPerAxisInPatch+haloSize-1 and z==-haloSize);
-        isDiagonalCell |= (y==numberOfVolumesPerAxisInPatch+haloSize-1 and z==-haloSize);
-        isDiagonalCell |= (x==numberOfVolumesPerAxisInPatch+haloSize-1 and y==numberOfVolumesPerAxisInPatch+haloSize-1);
-        isDiagonalCell |= (x==numberOfVolumesPerAxisInPatch+haloSize-1 and z==numberOfVolumesPerAxisInPatch+haloSize-1);
-        isDiagonalCell |= (y==numberOfVolumesPerAxisInPatch+haloSize-1 and z==numberOfVolumesPerAxisInPatch+haloSize-1);
-        #endif
-        if ( not isDiagonalCell ) {
-            internal::computeMaxEigenvalue_LoopBody<Solver>(
+        internal::computeMaxEigenvalue_LoopBody<Solver>(
               patchData.QIn[patchIndex],
               QInEnumerator,
               patchData.patchCentre[patchIndex],
@@ -339,8 +271,7 @@ void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_patchwise_split_terms(
               2,
               tempEigenvalueZ,
               eigenvalueEnumerator
-            );
-        }
+        );
         otterLoopIterationEnd();
       }
       otterLoopEnd();

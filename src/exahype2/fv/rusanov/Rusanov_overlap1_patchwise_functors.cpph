@@ -125,16 +125,10 @@ void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_patchwise(
 
     if (Dimensions==2) {
       otterLoopBegin();
-      for (int x = -haloSize; x < numberOfVolumesPerAxisInPatch+haloSize; x++)
+      for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++)
       for (int y = -haloSize; y < numberOfVolumesPerAxisInPatch+haloSize; y++) {
         otterLoopIterationBegin();
-        bool isDiagonalCell = false;
-        isDiagonalCell |= (x==-haloSize and y==-haloSize);
-        isDiagonalCell |= (x==-haloSize and y==numberOfVolumesPerAxisInPatch+haloSize-1);
-        isDiagonalCell |= (x==numberOfVolumesPerAxisInPatch+haloSize-1 and y==-haloSize);
-        isDiagonalCell |= (x==numberOfVolumesPerAxisInPatch+haloSize-1 and y==numberOfVolumesPerAxisInPatch+haloSize-1);
-        if ( not isDiagonalCell ) {
-          internal::computeMaxEigenvalue_LoopBody(
+        internal::computeMaxEigenvalue_LoopBody(
             patchData.QIn[patchIndex],
             QInEnumerator,
             maxEigenvalue,
@@ -146,9 +140,16 @@ void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_patchwise(
             0,
             tempEigenvalueX,
             eigenvalueEnumerator
-          );
+        );
+        otterLoopIterationEnd();
+      }
+      otterLoopEnd();
 
-          internal::computeMaxEigenvalue_LoopBody(
+      otterLoopBegin();
+      for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
+      for (int x = -haloSize; x < numberOfVolumesPerAxisInPatch+haloSize; x++) {
+        otterLoopIterationBegin();
+        internal::computeMaxEigenvalue_LoopBody(
             patchData.QIn[patchIndex],
             QInEnumerator,
             maxEigenvalue,
@@ -160,8 +161,7 @@ void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_patchwise(
             1,
             tempEigenvalueY,
             eigenvalueEnumerator
-          );
-        }
+        );
         otterLoopIterationEnd();
       }
       otterLoopEnd();
@@ -194,25 +194,11 @@ void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_patchwise(
     }
     else {
       otterLoopBegin();
-      for (int x = -haloSize; x < numberOfVolumesPerAxisInPatch+haloSize; x++)
+      for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++)
       for (int y = -haloSize; y < numberOfVolumesPerAxisInPatch+haloSize; y++)
       for (int z = -haloSize; z < numberOfVolumesPerAxisInPatch+haloSize; z++) {
         otterLoopIterationBegin();
-        bool isDiagonalCell = false;
-        isDiagonalCell |= (x==-haloSize and y==-haloSize);
-        isDiagonalCell |= (x==-haloSize and z==-haloSize);
-        isDiagonalCell |= (y==-haloSize and z==-haloSize);
-        isDiagonalCell |= (x==-haloSize and y==numberOfVolumesPerAxisInPatch+haloSize-1);
-        isDiagonalCell |= (x==-haloSize and z==numberOfVolumesPerAxisInPatch+haloSize-1);
-        isDiagonalCell |= (y==-haloSize and z==numberOfVolumesPerAxisInPatch+haloSize-1);
-        isDiagonalCell |= (x==numberOfVolumesPerAxisInPatch+haloSize-1 and y==-haloSize);
-        isDiagonalCell |= (x==numberOfVolumesPerAxisInPatch+haloSize-1 and z==-haloSize);
-        isDiagonalCell |= (y==numberOfVolumesPerAxisInPatch+haloSize-1 and z==-haloSize);
-        isDiagonalCell |= (x==numberOfVolumesPerAxisInPatch+haloSize-1 and y==numberOfVolumesPerAxisInPatch+haloSize-1);
-        isDiagonalCell |= (x==numberOfVolumesPerAxisInPatch+haloSize-1 and z==numberOfVolumesPerAxisInPatch+haloSize-1);
-        isDiagonalCell |= (y==numberOfVolumesPerAxisInPatch+haloSize-1 and z==numberOfVolumesPerAxisInPatch+haloSize-1);
-        if ( not isDiagonalCell ) {
-            internal::computeMaxEigenvalue_LoopBody(
+        internal::computeMaxEigenvalue_LoopBody(
               patchData.QIn[patchIndex],
               QInEnumerator,
               maxEigenvalue,
@@ -224,9 +210,17 @@ void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_patchwise(
               0,
               tempEigenvalueX,
               eigenvalueEnumerator
-            );
+        );
+        otterLoopIterationEnd();
+      }
+      otterLoopEnd();
 
-            internal::computeMaxEigenvalue_LoopBody(
+      otterLoopBegin();
+      for (int x = -haloSize; x < numberOfVolumesPerAxisInPatch+haloSize; x++)
+      for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
+      for (int z = -haloSize; z < numberOfVolumesPerAxisInPatch+haloSize; z++) {
+        otterLoopIterationBegin();
+        internal::computeMaxEigenvalue_LoopBody(
               patchData.QIn[patchIndex],
               QInEnumerator,
               maxEigenvalue,
@@ -238,9 +232,17 @@ void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_patchwise(
               1,
               tempEigenvalueY,
               eigenvalueEnumerator
-            );
+        );
+        otterLoopIterationEnd();
+      }
+      otterLoopEnd();
 
-            internal::computeMaxEigenvalue_LoopBody(
+      otterLoopBegin();
+      for (int x = -haloSize; x < numberOfVolumesPerAxisInPatch+haloSize; x++)
+      for (int y = -haloSize; y < numberOfVolumesPerAxisInPatch+haloSize; y++)
+      for (int z = 0; z < numberOfVolumesPerAxisInPatch; z++) {
+        otterLoopIterationBegin();
+        internal::computeMaxEigenvalue_LoopBody(
               patchData.QIn[patchIndex],
               QInEnumerator,
               maxEigenvalue,
@@ -252,8 +254,7 @@ void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_patchwise(
               2,
               tempEigenvalueZ,
               eigenvalueEnumerator
-            );
-        }
+        );
         otterLoopIterationEnd();
       }
       otterLoopEnd();
