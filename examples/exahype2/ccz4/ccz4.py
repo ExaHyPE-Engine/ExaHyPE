@@ -597,6 +597,11 @@ if __name__ == "__main__":
 ########################################################################################
 #parameter setting according to scenarios
 ########################################################################################
+    for k, v in intparams.items():
+      intparams.update({k:eval("args.CCZ4{}".format(k))})
+    for k, v in floatparams.items():
+      floatparams.update({k:eval("args.CCZ4{}".format(k))})
+
     if args.scenario=="two-punctures":
       msg = "Periodic BC deactivated because you pick Puncture scenario\nInitialize binary black holes"
       print(msg)
@@ -620,11 +625,6 @@ if __name__ == "__main__":
       print(msg)
       periodic_boundary_conditions = [False,False,False]
       userinfo.append((msg,None))
-
-    for k, v in intparams.items():
-      intparams.update({k:eval("args.CCZ4{}".format(k))})
-    for k, v in floatparams.items():
-      floatparams.update({k:eval("args.CCZ4{}".format(k))})
 
     solverconstants=""
 
@@ -686,8 +686,8 @@ if __name__ == "__main__":
     #path="/cosma5/data/durham/dc-zhan3/bbh-c5-1"
     #path="/cosma6/data/dp004/dc-zhan3/exahype2/sbh-fv3"
     project.set_output_path(path)
-    probe_point = [-3,-3,0.0]
-    project.add_plot_filter( probe_point,[6.0,6.0,0.01],1 )
+    probe_point = [-4,-4,0.0]
+    project.add_plot_filter( probe_point,[8.0,8.0,0.01],1 )
 
     project.set_load_balancing("toolbox::loadbalancing::RecursiveSubdivision","(new ::exahype2::LoadBalancingConfiguration(0.98,0))" )
 
