@@ -14,7 +14,7 @@
 
 
 #include <cstring>
-
+#include "InitialValues.h"
 
 #include "CCZ4Kernels.h"
 
@@ -62,9 +62,10 @@ class examples::exahype2::ccz4::FiniteVolumeCCZ4: public AbstractFiniteVolumeCCZ
       double                                       t
     ) override;
     
+#ifdef IncludeTwoPunctures
+    void prepare(TP::TwoPunctures* tp); 
+#endif
 
-
-    
     void initialCondition(
       double * __restrict__ Q,
       const tarch::la::Vector<Dimensions,double>&  volumeCentre,

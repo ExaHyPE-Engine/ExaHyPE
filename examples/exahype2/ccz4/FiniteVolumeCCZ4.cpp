@@ -2,7 +2,6 @@
 #include "exahype2/RefinementControl.h"
 #include "exahype2/NonCriticalAssertions.h"
 
-#include "InitialValues.h"
 
 #include <algorithm>
 
@@ -18,22 +17,6 @@ TP::TwoPunctures* _tp = new TP::TwoPunctures();
 #endif
 
 tarch::logging::Log   examples::exahype2::ccz4::FiniteVolumeCCZ4::_log( "examples::exahype2::ccz4::FiniteVolumeCCZ4" );
-examples::exahype2::ccz4::FiniteVolumeCCZ4::FiniteVolumeCCZ4() {
-  if ( Scenario==0 || Scenario==1 ) {
-    const char* name = "GaugeWave";//nothing to do here for now
-    int length = strlen(name);
-    //initparameters_(&length, name);
-  }
-  #ifdef IncludeTwoPunctures
-  if ( Scenario==2 ) {
-    prepare(_tp);//we solve the puncture equation here.
-    //exit(0);
-  }
-  #endif
-  else {
-    std::cerr << "initial scenario " << Scenario << " is not supported" << std::endl << std::endl << std::endl;
-  }
-}
 
 #ifdef IncludeTwoPunctures
 //pre-process, solve the puncture equations
@@ -99,6 +82,23 @@ void examples::exahype2::ccz4::FiniteVolumeCCZ4::prepare(TP::TwoPunctures* tp){
 	tp->Run();
 }
 #endif
+
+examples::exahype2::ccz4::FiniteVolumeCCZ4::FiniteVolumeCCZ4() {
+  if ( Scenario==0 || Scenario==1 ) {
+    const char* name = "GaugeWave";//nothing to do here for now
+    int length = strlen(name);
+    //initparameters_(&length, name);
+  }
+  #ifdef IncludeTwoPunctures
+  if ( Scenario==2 ) {
+    prepare(_tp);//we solve the puncture equation here.
+    //exit(0);
+  }
+  #endif
+  else {
+    std::cerr << "initial scenario " << Scenario << " is not supported" << std::endl << std::endl << std::endl;
+  }
+}
 
 void examples::exahype2::ccz4::FiniteVolumeCCZ4::initialCondition(
   double * __restrict__ Q,

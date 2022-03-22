@@ -83,8 +83,8 @@ namespace examples {
 
 
       /**
-       * I have no clue what this function does. @Han, can you write some docu
-       * here?
+       * This function is for the calculation of psi4, a quantity related to gravitional wave. 
+       * Not used yet. 
        */
       void Psi4Calc(double* Psi4, const double* const Q, const double* const gradQSerialised, double* coor);
 
@@ -99,9 +99,7 @@ namespace examples {
   }
 }
 
-
 #include "CCZ4Kernels.cpph"
-
 
 
 #endif
