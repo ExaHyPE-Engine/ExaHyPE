@@ -146,7 +146,7 @@ namespace exahype2 {
 
     if ( maxOfMatchingTimeStamps>0.0 ) {
       double tweakedTimeStepSize = maxOfMatchingTimeStamps - cellLabel.getTimeStamp();
-      assertion( tweakedTimeStepSize>=timeStepSize );
+      assertion2( tarch::la::greaterEquals( tweakedTimeStepSize,timeStepSize ), tweakedTimeStepSize, timeStepSize );
       if (tweakedTimeStepSize>timeStepSize) {
         logDebug( "removeTimeStepAccummulationErrorsFromCell(...)", "adopt local time step from " << timeStepSize << " to " << tweakedTimeStepSize );
       }
@@ -176,6 +176,16 @@ namespace exahype2 {
   /**
    * Discretise (bucket) time step sizes and truncate it
    *
+   * This routine is used by any local time stepping. The idea is that we first
+   * mimick subcycling: Let there be a global max time step size. We assume this
+   * one arises on the coarsest mesh level. So patches either do this time step
+   * or they do a time step that is @f$ 3^{-k} @f$ that size.
+   *
+   * ## Pitfalls
+   *
+   *
+   *
+   *
    * We expect a min time step size that we use globally. We find the biggest
    * @f$ discretisationSteps^k \cdot minGlobalTimeStepSize < cellTimeStepSize @f$
    * value through k which still meets the stability of cellTimeStepSize. We
@@ -198,28 +208,20 @@ namespace exahype2 {
    *
    *
    *
-   * @param discretisationSteps Pass in zero or something negative to switch
-   *   discretisation off.
-   *
-   * @param minGlobalTimeStepSize Minimal global time step size (of previous
-   *   time step). I use this as a starting point to identify appropriate
-   *   multitudes of time step sizes.
+   * @param discretisationSteps Pass in zero to allow a totally anarchic time
+   *   stepping. Use one to construct subcycling without a re-adoption
+   *   of the time step sizes or something negative to switch the bucketing off.
    *
    * @param maxGlobalTimeStepSize Maximum global time step size (of previous
    *   time step). I use this one to truncate too big time step sizes. Overall,
    *   I expect the time step size not to grow by more than 10 percent.
    *
-   * @param discretisationSteps Discretisation step size. This one determines the
-   *   time step buckets' relative sizes. So we have a bucket with
-   *   @f$ (minGlobalTimeStepSize,minGlobalTimeStepSize*discretisationStepsSize) @f$, then
-   *   one with @f$(minGlobalTimeStepSize*discretisationStepsSize,minGlobalTimeStepSize*discretisationStepsSize^2)@f$,
-   *   and so forth. Consequently, this value has to be bigger than one.
+   * @param cellTimeStepSize Time step size the patch would like to pick.
    */
   double discretiseAndTruncateTimeStepSizes(
     double cellTimeStepSize,
-    double minGlobalTimeStepSize,
     double maxGlobalTimeStepSize,
-    double discretisationStepsSize
+    int    discretisationStepsSize
   );
 }
 

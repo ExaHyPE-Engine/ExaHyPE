@@ -33,51 +33,10 @@ class UpdateCell(ReconstructPatchAndApplyFunctor):
         std::string(__FILE__) + "(" + std::to_string(__LINE__) + "): " + marker.toString()
       ); // previous time step has to be valid
   
-      ::exahype2::fv::copyPatch(
-        reconstructedPatch,
-        targetPatch,
-        {{NUMBER_OF_UNKNOWNS}},
-        {{NUMBER_OF_AUXILIARY_VARIABLES}},
-        {{NUMBER_OF_VOLUMES_PER_AXIS}},
-        1 // halo size
-      );
-
-      {{COMPUTE_KERNEL_CALL}}
-      (
-        [&](
-          const double * __restrict__                  QL,
-          const double * __restrict__                  QR,
-          const tarch::la::Vector<Dimensions,double>&  x,
-          double                                       dx,
-          double                                       t,
-          double                                       dt,
-          int                                          normal,
-          double                                       FL[],
-          double                                       FR[]
-        ) -> void {
-          {{RIEMANN_SOLVER_CALL}}
-        },
-        [&](
-          const double * __restrict__                  Q,
-          const tarch::la::Vector<Dimensions,double>&  x,
-          double                                       dx,
-          double                                       t,
-          double                                       dt,
-          double * __restrict__                        S
-        ) -> void {
-          {{SOURCE_TERM_CALL}}
-        },
-        marker.x(),
-        marker.h(),
-        timeStamp,
-        timeStepSize,
-        {{NUMBER_OF_VOLUMES_PER_AXIS}},
-        {{NUMBER_OF_UNKNOWNS}},
-        {{NUMBER_OF_AUXILIARY_VARIABLES}},
-        reconstructedPatch,
-        targetPatch
-      );
-  
+      ::exahype2::CellData  patchData( reconstructedPatch, marker.x(), marker.h(), timeStamp, timeStepSize, targetPatch );
+      
+      ::exahype2::fv::rusanov::{{COMPUTE_KERNEL_CALL}}  
+      
       {{POSTPROCESS_UPDATED_PATCH}}
 
       ::exahype2::fv::validatePatch(
@@ -90,26 +49,7 @@ class UpdateCell(ReconstructPatchAndApplyFunctor):
       ); // outcome has to be valid
       
       {% if COMPUTE_MAX_EIGENVALUE %}
-      const double maxEigenvalue = ::exahype2::fv::maxEigenvalue_AoS(
-        [] (
-          const double * __restrict__                  Q,
-          const tarch::la::Vector<Dimensions,double>&  faceCentre,
-          const tarch::la::Vector<Dimensions,double>&  volumeH,
-          double                                       t,
-          double                                       dt,
-          int                                          normal
-        ) -> double {
-          return repositories::{{SOLVER_INSTANCE}}.maxEigenvalue( Q, faceCentre, volumeH, t, normal);
-        },
-        marker.x(),
-        marker.h(),
-        timeStamp,
-        timeStamp + timeStepSize,
-        {{NUMBER_OF_VOLUMES_PER_AXIS}},
-        {{NUMBER_OF_UNKNOWNS}},
-        {{NUMBER_OF_AUXILIARY_VARIABLES}},
-        targetPatch
-      );
+      const double maxEigenvalue = patchData.maxEigenvalue[0];
       {% endif %}
       
       // Set the variable
@@ -258,10 +198,9 @@ class SingleSweep( FV ):
 
 
   def get_user_action_set_includes(self):
-    return super(SingleSweep, self).get_user_action_set_includes() + """
-#include "exahype2/fv/Generic.h"
-#include "exahype2/fv/Rusanov.h"
-"""
+    return """
+#include "exahype2/CellData.h"
+""" +    super(SingleSweep, self).get_user_action_set_includes()
 
 
   def set_implementation(self,

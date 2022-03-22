@@ -22,6 +22,9 @@ namespace peano4 {
 std::ostream& operator<<( std::ostream& out, const peano4::datamanagement::FaceMarker& marker );
 
 
+/**
+ * @see FaceEnumerator for a discussion of the ordering of the faces.
+ */
 struct peano4::datamanagement::FaceMarker {
   private:
     /**
@@ -64,6 +67,13 @@ struct peano4::datamanagement::FaceMarker {
     FaceMarker& select(int face);
 
     /**
+     * Return the number of the face.
+     *
+     * If you use the modulo Dimensions, then you implicitly know along which
+     * coordinate axis the corresponding face normal points.
+     *
+     * @see FaceEnumerator for a discussion of the face ordering.
+     *
      * @return Number from 0 to 2d-1
      */
     int getSelectedFaceNumber() const;
@@ -84,11 +94,22 @@ struct peano4::datamanagement::FaceMarker {
     tarch::la::Vector<Dimensions,double> x() const;
 
     /**
+     * This operation gives you the normal of a certain face.
+     *
+     * The orientation of the normal depends on the context in which
+     * the face marker is used: Every operation within Peano is
+     * always triggered from a cell point of view. The normal corresponds
+     * to this view. If you run through a mesh twice, and if you twice
+     * hit the same face, the normal thus might be mirrored as a
+     * face marker might be constructed from the other adjacent cell.
+     *
      * We do enumerate the faces as follows: The first face is the one
      * whose normal is parallel to first coordinate axis. The second
      * face is the one whose normal is parallel to the second axis. The
      * d+1th face is the one parallel to the very first face. The very
      * first face however is closer to the origin in the unit cube.
+     *
+     * @image html FaceEnumerator.png
      */
     tarch::la::Vector<Dimensions,double> normal(int i) const;
     tarch::la::Vector<Dimensions,double> normal() const;

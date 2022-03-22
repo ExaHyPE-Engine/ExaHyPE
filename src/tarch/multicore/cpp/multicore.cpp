@@ -7,12 +7,10 @@ double* tarch::allocateMemory(int size, MemoryLocation location) {
   double* result;
   switch (location) {
     case MemoryLocation::Heap:
-      //#pragma omp allocate(result) allocator(allocator) memspace(memspace) memtraits(optimized=latency)
-      //#pragma omp allocate(result) memtraits(optimized=latency)
-      result = new double[size];
+      result = new (std::align_val_t(Alignment)) double[size];
       break;
     case MemoryLocation::ManagedAcceleratorMemory:
-      result = new double[size];
+      result = new (std::align_val_t(Alignment)) double[size];
       break;
   }
   return result;

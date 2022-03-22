@@ -113,7 +113,6 @@ if __name__ == "__main__":
 
         self._my_user_includes = """
 #include "../CCZ4Kernels.h"
-#include "exahype2/PatchUtils.h"
 """
 
         if SuperClass==exahype2.solvers.fv.rusanov.GlobalFixedTimeStep:
@@ -255,7 +254,7 @@ if __name__ == "__main__":
 
         self.set_preprocess_reconstructed_patch_kernel( """
         const int patchSize = """ + str( self._patch.dim[0] ) + """;
-        double volumeH = ::exahype2::getVolumeLength(marker.h(),patchSize);
+        double volumeH = ::exahype2::fv::getVolumeLength(marker.h(),patchSize);
         const int n_a_v="""+str(self._auxiliary_variables)+""";
         dfor(cell,patchSize) {
           //tarch::la::Vector<Dimensions,int> currentPosition=marker.getOffset()+(cell+0.5)*volumeH;
@@ -354,7 +353,7 @@ if __name__ == "__main__":
         const int patchSize = """ + str( self._patch.dim[0] ) + """;
         int aux_var=""" + str( self._auxiliary_variables ) + """;
         int real_var=59;
-        double volumeH = ::exahype2::getVolumeLength(marker.h(),patchSize);
+        double volumeH = ::exahype2::fv::getVolumeLength(marker.h(),patchSize);
         dfor(cell,patchSize) {
           tarch::la::Vector<Dimensions,int> currentCell = cell + tarch::la::Vector<Dimensions,int>(1);
           const int cellSerialised  = peano4::utils::dLinearised(currentCell, patchSize + 2*1);
@@ -397,7 +396,7 @@ if __name__ == "__main__":
 
         self.set_preprocess_reconstructed_patch_kernel( """
         const int patchSize = """ + str( self._patch.dim[0] ) + """;
-        double volumeH = ::exahype2::getVolumeLength(marker.h(),patchSize);
+        double volumeH = ::exahype2::fv::getVolumeLength(marker.h(),patchSize);
 
 		std::fstream fin;
 		std::string att="_"""+args.tra_name+""".txt"; std::string p1="puncture1"; std::string p2="puncture2"; std::string tem="ztem";

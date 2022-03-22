@@ -5,7 +5,6 @@ from exahype2.solvers.fv.PDETerms    import PDETerms
 
 import jinja2
 
-from .kernels import create_source_term_kernel_for_Rusanov
 from .kernels import create_compute_Riemann_kernel_for_Rusanov
 from .kernels import create_abstract_solver_declarations
 from .kernels import create_abstract_solver_definitions
@@ -17,6 +16,9 @@ from .kernels import create_finish_time_step_implementation_for_adaptive_time_st
 from .kernels import create_abstract_solver_user_declarations_for_adaptive_time_stepping
 from .kernels import create_abstract_solver_user_definitions_for_adaptive_time_stepping
 from .kernels import create_constructor_implementation_for_adaptive_time_stepping
+
+from .kernels import SolverVariant
+from .kernels import RiemannKernelVariant
 
 
 from exahype2.solvers.fv.kernels import create_start_time_step_implementation_for_adaptive_time_stepping
@@ -79,8 +81,12 @@ class GlobalAdaptiveTimeStep( SingleSweep ):
     if eigenvalues          is not None:  self._eigenvalues_implementation                = eigenvalues
     if source_term          is not None:  self._source_term_implementation                = source_term
 
-    self._source_term_call    = create_source_term_kernel_for_Rusanov(self._source_term_implementation)
-    self._Riemann_solver_call = create_compute_Riemann_kernel_for_Rusanov(self._flux_implementation, self._ncp_implementation)
+    self._compute_kernel_call = create_compute_Riemann_kernel_for_Rusanov(
+      self._flux_implementation, self._ncp_implementation, self._source_term_implementation, 
+      compute_max_eigenvalue_of_next_time_step=True,
+      solver_variant = SolverVariant.WithVirtualFunctions,
+      riemann_kernel_variant = RiemannKernelVariant.PatchWiseAoS
+    )
 
     self._abstract_solver_user_declarations  = create_abstract_solver_declarations(self._flux_implementation, self._ncp_implementation, self._eigenvalues_implementation, self._source_term_implementation, False)
     self._abstract_solver_user_declarations += create_abstract_solver_user_declarations_for_adaptive_time_stepping()
@@ -94,3 +100,9 @@ class GlobalAdaptiveTimeStep( SingleSweep ):
     self._finish_time_step_implementation         = create_finish_time_step_implementation_for_adaptive_time_stepping(self._time_step_relaxation)
     
     super(GlobalAdaptiveTimeStep,self).set_implementation(boundary_conditions, refinement_criterion, initial_conditions, memory_location, use_split_loop, additional_action_set_includes, additional_user_includes)
+
+
+  def get_user_action_set_includes(self):
+    return super(GlobalAdaptiveTimeStep, self).get_user_action_set_includes() + """
+#include "exahype2/fv/rusanov/Rusanov.h"
+"""

@@ -1,5 +1,6 @@
 #include "multicore.h"
 #include "tarch/mpi/Rank.h"
+#include "tarch/compiler/CompilerSpecificSettings.h"
 
 #ifdef UseSmartMPI
 #include "smartmpi.h"
@@ -9,7 +10,7 @@
 #ifndef SharedMemoryParallelisation
 
 double* tarch::allocateMemory(int size, MemoryLocation location) {
- return new double[size];
+ return new (std::align_val_t(Alignment)) double[size];
 }
 
 

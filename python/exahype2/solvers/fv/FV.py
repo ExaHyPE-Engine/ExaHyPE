@@ -228,16 +228,8 @@ class FV(object):
     self._preprocess_reconstructed_patch                 = ""
     self._postprocess_updated_patch                      = ""
 
-    self._compute_kernel_call       = """
-      #if Dimensions==2
-      ::exahype2::fv::applySplit1DRiemannToPatch_Overlap1AoS2d
-      #else
-      ::exahype2::fv::applySplit1DRiemannToPatch_Overlap1AoS3d
-      #endif
-"""    
-        
-    self._source_term_call          = "#error Not yet defined"
-    self._Riemann_solver_call       = "#error Not yet defined"
+    self._compute_kernel_call       = "#error Not yet defined"
+    
     self._compute_eigenvalue        = False
     self._abstract_solver_user_declarations        = ""
     self._abstract_solver_user_definitions         = ""
@@ -819,8 +811,6 @@ The finest mesh width of """ + str(self.get_finest_volume_size(domain_size)) + "
     d[ "REFINEMENT_CRITERION_IMPLEMENTATION"] = self._refinement_criterion_implementation
     d[ "INITIAL_CONDITIONS_IMPLEMENTATION"]   = self._initial_conditions_implementation
 
-    d[ "SOURCE_TERM_CALL"]                    = jinja2.Template(self._source_term_call, undefined=jinja2.DebugUndefined).render( **d )
-    d[ "RIEMANN_SOLVER_CALL"]                 = jinja2.Template(self._Riemann_solver_call, undefined=jinja2.DebugUndefined).render( **d )
     d[ "COMPUTE_KERNEL_CALL"]                 = jinja2.Template(self._compute_kernel_call, undefined=jinja2.DebugUndefined).render( **d )
 
     d[ "ABSTRACT_SOLVER_USER_DECLARATIONS" ]  = jinja2.Template(self._abstract_solver_user_declarations, undefined=jinja2.DebugUndefined).render( **d )

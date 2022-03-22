@@ -1,10 +1,8 @@
 #include "BoundaryConditions.h"
 
-#include "../PatchUtils.h"
-
-
 #include "peano4/utils/Globals.h"
 #include "peano4/utils/Loop.h"
+#include "PatchUtils.h"
 
 
 void exahype2::fv::applyBoundaryConditions(
@@ -45,7 +43,7 @@ void exahype2::fv::applyBoundaryConditions(
 
   logTraceInWith4Arguments( "applyBoundaryConditions(...)", faceCentre, patchSize, numberOfVolumesPerAxisInPatch, faceNumber);
 
-  tarch::la::Vector<Dimensions,double> volumeH    = exahype2::getVolumeSize(patchSize, numberOfVolumesPerAxisInPatch);
+  tarch::la::Vector<Dimensions,double> volumeH    = exahype2::fv::getVolumeSize(patchSize, numberOfVolumesPerAxisInPatch);
   tarch::la::Vector<Dimensions,double> faceOffset = faceCentre - 0.5 * patchSize;
   faceOffset(faceNumber%Dimensions) += 0.5 * patchSize(faceNumber%Dimensions);
 
