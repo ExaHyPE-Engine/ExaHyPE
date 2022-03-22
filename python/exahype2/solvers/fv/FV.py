@@ -656,6 +656,7 @@ The finest mesh width of """ + str(self.get_finest_volume_size(domain_size)) + "
     step.add_action_set( self._action_set_project_patch_onto_faces )
     #step.add_action_set( self._action_set_AMR_commit_without_further_analysis )
 
+# @todo New time stamp choice update in DG and ADER-DG
     step.add_action_set( peano4.toolbox.blockstructured.PlotPatchesInPeanoBlockFormat( 
       filename=output_path + "solution-" + self._name, 
       patch=self._patch, 
@@ -667,7 +668,7 @@ The finest mesh width of """ + str(self.get_finest_volume_size(domain_size)) + "
 #include "../repositories/SolverRepository.h"
 """,
       precision="PlotterPrecision",
-      time_stamp_evaluation="repositories::getMinTimeStamp()"
+      time_stamp_evaluation="0.5*(repositories::getMinTimeStamp()+repositories::getMaxTimeStamp())"
     ))
 
     if self._plot_grid_properties:    
