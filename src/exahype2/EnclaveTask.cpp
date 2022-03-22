@@ -49,6 +49,7 @@ void exahype2::EnclaveTask::computeTask() {
 
   _outputValues = tarch::allocateMemory( _numberOfResultValues, tarch::MemoryLocation::Heap );
 
+  logDebug( "computeTask()", "lambda=" << _maxEigenvalue );
   _functor();
   tarch::freeMemory(_inputValues,tarch::MemoryLocation::Heap );
 }

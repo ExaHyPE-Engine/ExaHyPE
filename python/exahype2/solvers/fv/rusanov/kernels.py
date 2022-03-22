@@ -3,6 +3,7 @@
 from exahype2.solvers.fv.PDETerms  import PDETerms
 
 import jinja2
+from enum import Enum
 
 
 def create_compute_time_step_size_for_fixed_time_stepping_with_subcycling( time_step_size, solver_name, remove_accumulation_errors=True ):
@@ -141,9 +142,13 @@ def create_compute_new_time_step_size_kernel_for_adaptive_time_stepping():
   return """
     repositories::{{SOLVER_INSTANCE}}.setMaxEigenvalue( maxEigenvalue );  
     
-    // This is a dummy value. We'll ignore it later anyway as we ask for a 
-    // new valid time step size from getAdmissibleTimeStepSize().
-    const double newTimeStepSize = 0.0;
+    // This is a value set for stats reasons. We'll ignore it later as we 
+    // ask for a new valid time step size from getAdmissibleTimeStepSize().
+    //const double newTimeStepSize = 0.0;
+    const double newTimeStepSize =  repositories::{{SOLVER_INSTANCE}}.getMinPatchSize(false)>0.0 ?
+      repositories::{{SOLVER_INSTANCE}}.getAdmissibleTimeStepSize() * marker.h()(0) / repositories::{{SOLVER_INSTANCE}}.getMinPatchSize(false) :
+      0.0;
+
 """
 
 
@@ -289,30 +294,78 @@ def create_finish_time_step_implementation_for_adaptive_time_stepping(time_step_
     }
   }
 """  
+
+
+class SolverVariant(Enum):
+  WithVirtualFunctions = 0,
+  Stateless            = 1,
+  Accelerator          = 2
+
+
+class RiemannKernelVariant(Enum):
+  PatchWiseAoS                = 0
+  PatchWiseAoSoA              = 1
+  BatchedAoS                  = 2
+  BatchedAoSoA                = 3
+  PatchWiseSplitTermsAoS      = 4
+  PatchWiseSplitTermsAoSoA    = 5
+  PatchWiseInSitu             = 6
+  BatchedInSitu               = 7
     
 
-def create_compute_Riemann_kernel_for_Rusanov(flux_implementation, ncp_implementation, source_implementation, compute_max_eigenvalue_of_next_time_step, use_stateless_function_calls, use_gpu):
+def create_compute_Riemann_kernel_for_Rusanov(flux_implementation, 
+                                              ncp_implementation, 
+                                              source_implementation, 
+                                              compute_max_eigenvalue_of_next_time_step, 
+                                              solver_variant,
+                                              riemann_kernel_variant):
   """
   
   I return only the unqualified function call, i.e. without any namespaces.
+  So by setting the right namespace as prefix, you can direct it to particular
+  implementations.
+  
+  solver_variant: SolverVariant
+  
+  riemann_kernel_variant: RiemannKernelVariant
   
   """  
-  template = """
-  {% if USE_STATELESS_FUNCTION_CALLS==True and USE_GPU==False %}
-  timeStepWithRusanov_overlap1_patchwise_in_situ<
-    {{SOLVER_NAME}}
-  >(
-//  timeStepWithRusanov_overlap1_patchwise<
-//    {{SOLVER_NAME}},  ::exahype2::fv::enumerator::AoSoALexicographicVolumeEnumerator    
-//  >(
-  {% elif USE_STATELESS_FUNCTION_CALLS==True and USE_GPU==True %}
-  timeStepWithRusanov_overlap1_patchwise<
-    {{SOLVER_NAME}},  ::exahype2::fv::enumerator::AoSoALexicographicVolumeEnumerator    
-  >(
-    targetDevice,
-  {% else %}  
-  timeStepWithRusanov_overlap1_patchwise(
-  {% endif %}    
+  RiemannKernelCalls = {
+    RiemannKernelVariant.PatchWiseAoS:              "timeStepWithRusanov_overlap1_patchwise",
+    RiemannKernelVariant.PatchWiseAoSoA:            "timeStepWithRusanov_overlap1_patchwise",
+    RiemannKernelVariant.BatchedAoS:                "timeStepWithRusanov_overlap1_batched",
+    RiemannKernelVariant.BatchedAoSoA:              "timeStepWithRusanov_overlap1_batched",
+    RiemannKernelVariant.PatchWiseSplitTermsAoS:    "timeStepWithRusanov_overlap1_patchwise_split_terms",
+    RiemannKernelVariant.PatchWiseSplitTermsAoSoA:  "timeStepWithRusanov_overlap1_patchwise_split_terms",
+    RiemannKernelVariant.PatchWiseInSitu:           "timeStepWithRusanov_overlap1_patchwise_in_situ",
+    RiemannKernelVariant.BatchedInSitu:             "timeStepWithRusanov_overlap1_patchwise_in_situ"
+  }
+  
+  EnumeratorTemplateTypes = {
+    RiemannKernelVariant.PatchWiseAoS:              "::exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator",
+    RiemannKernelVariant.PatchWiseAoSoA:            "::exahype2::fv::enumerator::AoSoALexicographicVolumeEnumerator",
+    RiemannKernelVariant.BatchedAoS:                "::exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator",
+    RiemannKernelVariant.BatchedAoSoA:              "::exahype2::fv::enumerator::AoSoALexicographicVolumeEnumerator",
+    RiemannKernelVariant.PatchWiseSplitTermsAoS:    "::exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator",
+    RiemannKernelVariant.PatchWiseSplitTermsAoSoA:  "::exahype2::fv::enumerator::AoSoALexicographicVolumeEnumerator",
+    RiemannKernelVariant.PatchWiseInSitu:           "",
+    RiemannKernelVariant.BatchedInSitu:             ""
+  }
+
+  template  = RiemannKernelCalls[riemann_kernel_variant]
+  
+  if solver_variant == SolverVariant.WithVirtualFunctions:
+    template += "("
+  if solver_variant == SolverVariant.Stateless:
+    template += "<{{SOLVER_NAME}},"
+    template += EnumeratorTemplateTypes[riemann_kernel_variant]
+    template += ">("
+  if solver_variant == SolverVariant.Accelerator:
+    template += "<{{SOLVER_NAME}},"
+    template += EnumeratorTemplateTypes[riemann_kernel_variant]
+    template += ">(targetDevice,"
+        
+  template += """
     patchData,
     {{NUMBER_OF_VOLUMES_PER_AXIS}},
     {{NUMBER_OF_UNKNOWNS}},
@@ -321,7 +374,10 @@ def create_compute_Riemann_kernel_for_Rusanov(flux_implementation, ncp_implement
     {% if NCP_IMPLEMENTATION=="<none>" %} false {% else %} true {% endif %},
     {% if SOURCE_IMPLEMENTATION=="<none>" %} false {% else %} true {% endif %},
     {% if COMPUTE_MAX_EIGENVALUE==False %} false {% else %} true {% endif %}
-    {% if USE_STATELESS_FUNCTION_CALLS==False %}
+  """
+  
+  if solver_variant == SolverVariant.WithVirtualFunctions:
+    template += """
   ,
   [&](
     const double * __restrict__ Q,
@@ -372,7 +428,9 @@ def create_compute_Riemann_kernel_for_Rusanov(flux_implementation, ncp_implement
   )->double {
     return repositories::{{SOLVER_INSTANCE}}.maxEigenvalue( Q, faceCentre, volumeH, t, dt, normal);
   }
-  {% endif %}
+"""
+
+  template += """
 );
 """
 
@@ -382,8 +440,6 @@ def create_compute_Riemann_kernel_for_Rusanov(flux_implementation, ncp_implement
   d[ "NCP_IMPLEMENTATION" ]          = ncp_implementation
   d[ "SOURCE_IMPLEMENTATION" ]       = source_implementation
   d[ "COMPUTE_MAX_EIGENVALUE" ]      = compute_max_eigenvalue_of_next_time_step
-  d[ "USE_STATELESS_FUNCTION_CALLS"] = use_stateless_function_calls
-  d[ "USE_GPU"]                      = use_gpu
   return result.render(**d)
 
 
