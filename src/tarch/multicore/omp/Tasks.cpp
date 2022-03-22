@@ -138,6 +138,7 @@ namespace {
           and
           spawnedTasks==NumberOfThreads
         ) {
+          tarch::services::ServiceRepository::getInstance().receiveDanglingMessages();
           int numberOfPendingTasks = tarch::multicore::getNumberOfPendingTasks();
 
           bool processedSomeTasks = false;
@@ -147,11 +148,6 @@ namespace {
           else {
             int numberOfTasksToProcess = std::max(1,numberOfPendingTasks/2);
             processedSomeTasks = tarch::multicore::processPendingTasks( numberOfTasksToProcess );
-          }
-
-          if (not processedSomeTasks) {
-            #pragma omp taskyield
-            tarch::services::ServiceRepository::getInstance().receiveDanglingMessages();
           }
         }
     }
