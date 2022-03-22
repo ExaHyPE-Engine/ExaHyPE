@@ -29,23 +29,6 @@ def create_finish_time_step_implementation_for_local_time_stepping():
 """
 
 
-def create_empty_source_term_kernel():
-  return """
-  std::fill_n(S,{{NUMBER_OF_UNKNOWNS}},0.0);
-"""
-
-
-
-def create_user_defined_source_term_kernel():
-  return """
-  repositories::{{SOLVER_INSTANCE}}.sourceTerm(
-    Q,
-    x, dx, t, dt,
-    S
-  );
-"""
-
-
 def create_abstract_solver_user_declarations_for_fixed_time_stepping():
   return """
 private:

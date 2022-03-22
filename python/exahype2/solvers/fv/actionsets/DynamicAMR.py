@@ -80,7 +80,6 @@ class DynamicAMR( peano4.toolbox.blockstructured.DynamicAMR ):
       restrict_guard           = "true",
       additional_includes         = """
 #include "../repositories/SolverRepository.h"
-#include "exahype2/fv/Generic.h"
 """      
 )
     self.__Template_DestroyHangingFace_Core += """
@@ -241,4 +240,5 @@ class DynamicAMR( peano4.toolbox.blockstructured.DynamicAMR ):
   def get_includes(self):
     return super(DynamicAMR,self).get_includes() + """
 #include <cstring>
+#include "exahype2/fv/PatchUtils.h"
 """    

@@ -1,5 +1,4 @@
 #include "Rusanov.h"
-#include "Generic.h"
 
 #include "tarch/Assertions.h"
 #include "tarch/logging/Log.h"

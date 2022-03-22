@@ -60,7 +60,7 @@ class examples::exahype2::SSInfall::SSInfall: public AbstractSSInfall {
      * @param t    Timestamp
      * @param density Typically Q[0]
      */
-    static double getForceDensityNorm(double r_coord, double m_in, double t, double density);
+    static double getForceDensityNorm(double r_coord, double m_in, double t, double density, double a_input);
   public:
     //int sample_number=10;
     //double m_tot[10]={0,0,0,0,0,0,0,0,0,0};

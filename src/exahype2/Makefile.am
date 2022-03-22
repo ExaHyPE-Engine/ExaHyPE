@@ -8,11 +8,11 @@ endif
 
 
 ExaHyPE2Sources = \
+  CellData.cpp \
   EnclaveBookkeeping.cpp \
   EnclaveTask.cpp \
   LoadBalancingConfiguration.cpp \
   NonCriticalAssertions.cpp \
-  PatchUtils.cpp \
   PlotFilter.cpp \
   RefinementControl.cpp \
   TimeStepping.cpp \
@@ -26,8 +26,10 @@ ExaHyPE2Sources = \
   aderdg/RusanovNonlinearAoS.cpp \
   aderdg/tests/ADERDGTest.cpp \
   fv/BoundaryConditions.cpp \
-  fv/Generic.cpp \
-  fv/Rusanov.cpp \
+  fv/PatchUtils.cpp \
+  fv/enumerator/AoSLexicographicVolumeEnumerator.cpp \
+  fv/enumerator/SoALexicographicVolumeEnumerator.cpp \
+  fv/enumerator/AoSoALexicographicVolumeEnumerator.cpp \
   fv/tests/CopyPatchTest.cpp \
   fv/tests/applySplit1DRiemannToPatch_Overlap1AoSTest.cpp
 

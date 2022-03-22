@@ -193,7 +193,8 @@ class EnclaveTasking( FV ):
     """
     self._name = name
     
-    self._fused_Riemann_solver_call       = "#error Not yet defined. Set self._fused_Riemann_solver_call in your Python solver class."
+    self._fused_compute_kernel_call_cpu       = "#error Not yet defined. Set self._fused_Riemann_solver_call in your Python solver class."
+    self._fused_compute_kernel_call_gpu       = "#error Not yet defined. Set self._fused_Riemann_solver_call in your Python solver class."
     self._pde_terms_without_state             = pde_terms_without_state
     
     self._initialisation_sweep_guard = "(" + \
@@ -356,8 +357,6 @@ class EnclaveTasking( FV ):
 
   def get_user_action_set_includes(self):
     return super(EnclaveTasking, self).get_user_action_set_includes() + """
-#include "exahype2/fv/Generic.h"
-#include "exahype2/fv/Rusanov.h"
 #include "exahype2/EnclaveBookkeeping.h"
 #include "exahype2/EnclaveTask.h"
 #include "repositories/SolverRepository.h"
@@ -399,8 +398,9 @@ class EnclaveTasking( FV ):
      d: Dictionary of string to string
         in/out argument
     """
-    d[ "FUSED_RIEMANN_SOLVER_TEMPLATE_ARGUMENTS"] = jinja2.Template(self._fused_Riemann_solver_call, undefined=jinja2.DebugUndefined).render( **d )
-    
+    d[ "FUSED_COMPUTE_KERNEL_CALL_CPU"] = jinja2.Template(self._fused_compute_kernel_call_cpu, undefined=jinja2.DebugUndefined).render( **d )
+    d[ "FUSED_COMPUTE_KERNEL_CALL_GPU"] = jinja2.Template(self._fused_compute_kernel_call_gpu, undefined=jinja2.DebugUndefined).render( **d )
+
     d[ "NUMBER_OF_DOUBLE_VALUES_IN_PATCH_2D" ] = d["NUMBER_OF_VOLUMES_PER_AXIS"] * d["NUMBER_OF_VOLUMES_PER_AXIS"] * (d["NUMBER_OF_UNKNOWNS"] + d["NUMBER_OF_AUXILIARY_VARIABLES"])
     d[ "NUMBER_OF_DOUBLE_VALUES_IN_PATCH_3D" ] = d["NUMBER_OF_VOLUMES_PER_AXIS"] * d["NUMBER_OF_VOLUMES_PER_AXIS"] * d["NUMBER_OF_VOLUMES_PER_AXIS"] * (d["NUMBER_OF_UNKNOWNS"] + d["NUMBER_OF_AUXILIARY_VARIABLES"])
 

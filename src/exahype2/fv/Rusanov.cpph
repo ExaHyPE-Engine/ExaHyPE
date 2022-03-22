@@ -1,3 +1,4 @@
+/*
 #include "tarch/la/Vector.h"
 
 #include "tarch/compiler/CompilerSpecificSettings.h"
@@ -845,7 +846,7 @@ void exahype2::fv::Fusanov_2D_with_batching(
     // volumeH(0) = h0/numVPAIP;
     // volumeH(1) = h1/numVPAIP;
 
-  #pragma omp simd collapse(4)  aligned(basePointerReconstructed:ExaHyPEFusedKernelAlignment) aligned(basePointerResult:ExaHyPEFusedKernelAlignment)
+  #pragma omp simd collapse(4)  aligned(basePointerReconstructed:Alignment) aligned(basePointerResult:Alignment)
   for (int pidx=0;pidx<NPT;pidx++)
   for (int x = 0; x < numVPAIP; x++)
   for (int y = 0; y < numVPAIP; y++)
@@ -865,7 +866,7 @@ void exahype2::fv::Fusanov_2D_with_batching(
   }
 
   if (not skipSourceTerm) {
-    #pragma omp simd collapse(3) aligned(basePointerReconstructed:ExaHyPEFusedKernelAlignment) aligned(basePointerResult:ExaHyPEFusedKernelAlignment)
+    #pragma omp simd collapse(3) aligned(basePointerReconstructed:Alignment) aligned(basePointerResult:Alignment)
     for (int pidx=0;pidx<NPT;pidx++)
     for (int x = 0; x < numVPAIP; x++)
     for (int y = 0; y < numVPAIP; y++) {
@@ -898,7 +899,7 @@ void exahype2::fv::Fusanov_2D_with_batching(
 
   for (int shift = 0; shift < 2; shift++)
   {
-    #pragma omp simd collapse(3) aligned(basePointerReconstructed:ExaHyPEFusedKernelAlignment) aligned(basePointerResult:ExaHyPEFusedKernelAlignment)
+    #pragma omp simd collapse(3) aligned(basePointerReconstructed:Alignment) aligned(basePointerResult:Alignment)
     for (int pidx=0;pidx<NPT;pidx++)
     for (int x = shift; x <= numVPAIP; x += 2)
     for (int y = 0; y < numVPAIP; y++) 
@@ -912,10 +913,10 @@ void exahype2::fv::Fusanov_2D_with_batching(
       const double                   h1 =  pV.h1[pidx];
       double*        reconstructedPatch = basePointerReconstructed + sourcePatchSize*pidx;
 
-/*
+
       const tarch::la::Vector<2 ,double> volumeH = {h0/numVPAIP,h1/numVPAIP};
       tarch::la::Vector<2,double> volumeX = {x0-0.5*h0, x1-0.5*h1};
-*/
+
 
       tarch::la::Vector<2 ,double> volumeH;
       volumeH(0) = h0/numVPAIP;
@@ -981,7 +982,7 @@ void exahype2::fv::Fusanov_2D_with_batching(
       }
     } // close loop over vertical faces
 
-    #pragma omp simd collapse(3) aligned(basePointerReconstructed:ExaHyPEFusedKernelAlignment) aligned(basePointerResult:ExaHyPEFusedKernelAlignment)
+    #pragma omp simd collapse(3) aligned(basePointerReconstructed:Alignment) aligned(basePointerResult:Alignment)
     for (int pidx=0;pidx<NPT;pidx++)
     for (int y = shift; y <= numVPAIP; y += 2)
     for (int x = 0;     x <  numVPAIP; x++   )
@@ -1371,7 +1372,7 @@ void exahype2::fv::Fusanov_3D_with_batching(
   double* basePointerReconstructed = pV.reco;
   double* basePointerResult        = pV.result;
 
-  #pragma omp simd collapse(5) aligned(basePointerReconstructed:ExaHyPEFusedKernelAlignment) aligned(basePointerResult:ExaHyPEFusedKernelAlignment)
+  #pragma omp simd collapse(5) aligned(basePointerReconstructed:Alignment) aligned(basePointerResult:Alignment)
   for (int pidx=0;pidx<NPT;pidx++)
   for (int z = 0; z < numVPAIP; z++)
   for (int y = 0; y < numVPAIP; y++)
@@ -1394,7 +1395,7 @@ void exahype2::fv::Fusanov_3D_with_batching(
   }
 
   if (not skipSourceTerm) {
-    #pragma omp simd collapse(4) aligned(basePointerReconstructed:ExaHyPEFusedKernelAlignment) aligned(basePointerResult:ExaHyPEFusedKernelAlignment)
+    #pragma omp simd collapse(4) aligned(basePointerReconstructed:Alignment) aligned(basePointerResult:Alignment)
     for (int z = 0; z < numVPAIP; z++)
     for (int y = 0; y < numVPAIP; y++)
     for (int x = 0; x < numVPAIP; x++)
@@ -1434,7 +1435,7 @@ void exahype2::fv::Fusanov_3D_with_batching(
   }
 
   for (int shift = 0; shift < 2; shift++) {
-    #pragma omp simd collapse(4) aligned(basePointerReconstructed:ExaHyPEFusedKernelAlignment) aligned(basePointerResult:ExaHyPEFusedKernelAlignment)
+    #pragma omp simd collapse(4) aligned(basePointerReconstructed:Alignment) aligned(basePointerResult:Alignment)
     for (int x = shift; x <= numVPAIP; x += 2)
     for (int y = 0; y < numVPAIP; y++)
     for (int z = 0; z < numVPAIP; z++)
@@ -1533,7 +1534,7 @@ void exahype2::fv::Fusanov_3D_with_batching(
       }
     } // close loop over faces with normal along x-axis
 
-    #pragma omp simd collapse(4) aligned(basePointerReconstructed:ExaHyPEFusedKernelAlignment) aligned(basePointerResult:ExaHyPEFusedKernelAlignment)
+    #pragma omp simd collapse(4) aligned(basePointerReconstructed:Alignment) aligned(basePointerResult:Alignment)
     for (int x = 0; x < numVPAIP; x++)
     for (int y = shift; y <= numVPAIP; y += 2)
     for (int z = 0; z < numVPAIP; z++)
@@ -1631,7 +1632,7 @@ void exahype2::fv::Fusanov_3D_with_batching(
       }
     } // face with normal along y-axis
 
-    #pragma omp simd collapse(4) aligned(basePointerReconstructed:ExaHyPEFusedKernelAlignment) aligned(basePointerResult:ExaHyPEFusedKernelAlignment)
+    #pragma omp simd collapse(4) aligned(basePointerReconstructed:Alignment) aligned(basePointerResult:Alignment)
     for (int x = 0; x < numVPAIP; x++)
     for (int y = 0; y < numVPAIP; y++)
     for (int z = shift; z <= numVPAIP; z += 2)
@@ -1768,3 +1769,4 @@ void exahype2::fv::Fusanov_3D_with_batching(
   } // end of eigenvalue computation term loop including if block guarding it
 }
 
+*/

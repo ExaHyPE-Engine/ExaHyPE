@@ -111,7 +111,6 @@ class HandleBoundary(AbstractFVActionSet):
 
   def get_includes(self):
     return """
-#include "exahype2/PatchUtils.h"
 #include "exahype2/fv/BoundaryConditions.h"
 """ + AbstractFVActionSet.get_includes(self) 
 

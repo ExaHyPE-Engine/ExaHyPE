@@ -180,7 +180,7 @@ bool selectNextAlgorithmicStep() {{
   }}
   else {{
     if (
-      TimeInBetweenPlots>0.0 and repositories::getMinTimeStamp()<TerminalTime
+      TimeInBetweenPlots>0.0 and repositories::getMinTimeStamp()<MinTerminalTime and repositories::getMaxTimeStamp()<MaxTerminalTime
       and
       repositories::getMinTimeStamp()>=nextPlotTimeStamp
       and
@@ -202,7 +202,7 @@ bool selectNextAlgorithmicStep() {{
       haveJustWrittenSnapshot = true;
       continueToSolve         = true;
     }}
-    else if ( repositories::getMinTimeStamp()<TerminalTime) {{
+    else if ( repositories::getMinTimeStamp()<MinTerminalTime and repositories::getMaxTimeStamp()<MaxTerminalTime ) {{
       peano4::parallel::Node::getInstance().setNextProgramStep(
         repositories::StepRepository::toProgramStep( repositories::StepRepository::Steps::TimeStep )
       );

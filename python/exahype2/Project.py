@@ -37,7 +37,8 @@ class Project(object):
     self._domain_offset = [0.0, 0.0, 0.0]
     self._domain_size   = [1.0, 1.0, 1.0]
     self._dimensions    = 2
-    self._terminal_time = 1.0
+    self._min_terminal_time = 1.0
+    self._max_terminal_time = 0.0
     self._first_plot_time_stamp   = 0.0
     self._time_in_between_plots   = 0.1
     self._load_balancer_name      = ""
@@ -163,7 +164,11 @@ class Project(object):
     self._project.constants.add_include( """#include <bitset>""") 
     self._project.constants.export_const_with_type( "DomainOffset", offset_string, "std::initializer_list<double>" )
     self._project.constants.export_const_with_type( "DomainSize", size_string, "std::initializer_list<double>" )
-    self._project.constants.export( "TerminalTime", str(self._terminal_time) )
+    self._project.constants.export( "MinTerminalTime", str(self._min_terminal_time) )
+    if self._max_terminal_time>=self._min_terminal_time:
+      self._project.constants.export( "MaxTerminalTime", str(self._max_terminal_time) )
+    else:
+      self._project.constants.export( "MaxTerminalTime", "std::numeric_limits<double>::max()" )
     self._project.constants.export( "FirstPlotTimeStamp", str(self._first_plot_time_stamp) )
     self._project.constants.export( "TimeInBetweenPlots", str(self._time_in_between_plots) )
     self._project.constants.export( "PlotterPrecision", str(self._plotter_precision) )
@@ -219,19 +224,38 @@ thus appreciate any citation of the original release paper
     self._project.output.makefile.set_executable_name(self._executable_name)
 
 
-  def set_global_simulation_parameters(self,dimensions,offset,size,end_time,first_plot_time_stamp,time_in_between_plots, periodic_BC = [False, False, False], plotter_precision=5):
+  def set_global_simulation_parameters(self,
+                                       dimensions,
+                                       offset,size,
+                                       min_end_time,
+                                       first_plot_time_stamp,
+                                       time_in_between_plots, 
+                                       periodic_BC = [False, False, False], 
+                                       plotter_precision=5,
+                                       max_end_time=0.0,
+                                       ):
     """
     
       offset and size should be lists with dimensions double entries.
       
-      first_plot_time_stamp Is irrelevant if time_in_between_plots equals zero
-      time_in_between_plots Set to zero if you don't want to have any plots
+      first_plot_time_stamp: Float
+        Is irrelevant if time_in_between_plots equals zero
+  
+      time_in_between_plots: Float 
+        Set to zero if you don't want to have any plots
+        
+      max_end_time: Float
+        If you set it zero (or actually any value msmaller than min_end_time), then 
+        the code will run until the cell that lags behind the most hits the min time.
+        If you specify a valid max time however, you can stop the sim as soon as the
+        most advanced cell exceeds this threshold.
       
     """
     self._domain_offset = offset
     self._domain_size   = size
     self._dimensions    = dimensions
-    self._terminal_time = end_time
+    self._max_terminal_time = max_end_time
+    self._min_terminal_time = min_end_time
     self._first_plot_time_stamp = first_plot_time_stamp
     self._time_in_between_plots = time_in_between_plots
     self._periodic_BC = []

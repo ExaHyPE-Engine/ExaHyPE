@@ -17,8 +17,6 @@
 #define UseTestSpecificCompilerSettings
 
 
-#error Not here
-
 #ifndef noCompilerICC
   #define CompilerICC
 #endif
@@ -41,10 +39,9 @@
 
 #if !defined(UseManualInlining) &&  !defined(noUseManualInlining)
 /**
- * I use this flag to switch on statements alike  __attribute__((always_inline))
+ * I use this flag to switch on __attribute__((always_inline))
  * which I otherwise mask out.
  */
-#define UseManualInlining
 #define UseManualInlining
 #endif
 
@@ -52,3 +49,14 @@
  * I basically need these settings only in the plotters
  */
 #define LittleEndian
+
+#if !defined(Alignment)
+#define Alignment 64
+#endif
+
+/**
+ * Clang requires us to put a static keyword in front of header file implementations,
+ * so we avoid duplicate symbols. This is not C++ conformal, and therefore GCC doesn't
+ * eat stuff. icpc is GNU-based and therefore we do not define the static keyword here.
+ */
+#define KeywordToAvoidDuplicateSymbolsForInlinedFunctions

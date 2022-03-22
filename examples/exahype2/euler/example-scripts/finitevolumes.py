@@ -83,10 +83,10 @@ project = exahype2.Project( ["examples", "exahype2", "euler"], "finitevolumes", 
 # Add the Finite Volumes solver
 #
 unknowns       = 5
-time_step_size = 0.001
 max_h          = args.h / args.patch_size
 min_h          = 0.9 * args.h * 3.0**(-args.adaptivity_levels) / args.patch_size
 
+time_step_size = 0.1 * min_h
 
 #
 # Still the same solver, but this time we use named arguments. This is the way
@@ -225,7 +225,8 @@ project.set_global_simulation_parameters(
   dimensions = dimensions,
   offset = [0.0,0.0,0.0],
   size = [1.0,1.0,1.0],
-  end_time = args.end_time,
+  min_end_time = args.end_time,
+  max_end_time = args.end_time,
   first_plot_time_stamp = 0.0,
   time_in_between_plots = args.plot_snapshot_interval,      # snapshots
   periodic_BC = periodic_BC

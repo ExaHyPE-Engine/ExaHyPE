@@ -110,7 +110,6 @@ class RollOverUpdatedFace(AbstractFVActionSet):
 
   def get_includes(self):
     return """
-#include "exahype2/PatchUtils.h"
 #include "peano4/utils/Loop.h"
 #include "toolbox/blockstructured/Enumeration.h"
 """ + AbstractFVActionSet.get_includes(self) 

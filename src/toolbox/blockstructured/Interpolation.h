@@ -331,6 +331,13 @@ namespace toolbox {
       double*                                   coarseGridValues
     );
 
+    /**
+     * This type of signature is used to interpolate halo layers for newly
+     * generated cells. So this does not really make sense for outflow, as
+     * there's no outflow from fine to coarse resolution if we create a new
+     * cell. Thererfore, I do not implement this routine, but simply delegate
+     * to piecewise constant interpolation.
+     */
     void interpolateHaloLayer_AoS_outflow(
       const peano4::datamanagement::FaceMarker& marker,
       int                                       numberOfDoFsPerAxisInPatch,
