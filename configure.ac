@@ -440,7 +440,6 @@ AC_ARG_WITH(toolchain,
 )
 
 if test "$toolchain" == intel; then
-  AC_DEFINE([UseIntel], [1], [UseIntel])
   AC_DEFINE([UseITAC], [1], [UseITAC])
   AC_DEFINE([UseLogService], [ITACLogger], [ITACLogger])
 fi
