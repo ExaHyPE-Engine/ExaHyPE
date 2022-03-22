@@ -314,17 +314,19 @@ void examples::exahype2::ccz4::FiniteVolumeCCZ4::nonconservativeProduct(
     }
   }
   if (CCZ4ReSwi==4){ //gauge wave test
-    if (tarch::la::equals(t,0.0)){  //as we use a quantity calculated in postpocessing, we need to provide criterion at the first timestep 
-      if ((std::abs(volumeCentre(0))<0.1) and (volumeH(0)>0.1)) { result=::exahype2::RefinementCommand::Refine; }
-      else if (std::abs(volumeCentre(0))<0.06) { result=::exahype2::RefinementCommand::Refine; }
-      else {result = ::exahype2::RefinementCommand::Keep;}
-    } 
-  }
-  if (CCZ4ReSwi==5){ //gauge wave test
-    if (tarch::la::equals(t,0.0)){  //as we use a quantity calculated in postpocessing, we need to provide criterion at the first timestep 
-      if ((std::abs(volumeCentre(1))<0.1) and (volumeH(0)>0.1)) { result=::exahype2::RefinementCommand::Refine; }
-      else if (std::abs(volumeCentre(1))<0.06) { result=::exahype2::RefinementCommand::Refine; }
-      else {result = ::exahype2::RefinementCommand::Keep;}
+    if (tarch::la::equals(t,0.0)){  //as we use a quantity calculated in postpocessing, we need to provide criterion at the first timestep
+      const double HThreshold = 0.1/NumberOfFiniteVolumesPerAxisPerPatch; 
+      logDebug( "refinementCriterion(...)", "CCZ4ReSwi=4 with x=" << volumeCentre(0) << ", h=" << volumeH(0) << ", dh=" << HThreshold );
+      
+      if ((std::abs(volumeCentre(0))<0.3) and (volumeH(0)>1.0/3.0/NumberOfFiniteVolumesPerAxisPerPatch)) { 
+        result=::exahype2::RefinementCommand::Refine; 
+      }
+      else if (std::abs(volumeCentre(0))<0.06) { 
+	result=::exahype2::RefinementCommand::Refine; 
+      }
+      else {
+	result = ::exahype2::RefinementCommand::Keep;
+      }
     } 
   }
   return result;
