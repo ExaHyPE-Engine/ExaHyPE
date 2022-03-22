@@ -54,10 +54,7 @@ namespace exahype2 {
    *
    * ## Deadlocks
    *
-   * I've run into cases where the code seemed to deadlock. This was always
-   * due to the fact that I forgot to exclude boundary faces from the
-   * analysis.
-   * 
+   * I've seen multiple cases where
    *
    * @see exahype2.solvers.fv.kernels.create_compute_new_time_step_size_kernel_for_local_time_stepping
    */
