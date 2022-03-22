@@ -52,7 +52,14 @@ namespace exahype2 {
    * nothing happens race forward in time. A description of this behaviour is
    * found in the Python routine referenced below.
    *
-   * @see exahype2.solvers.fv.kernels.create_postprocess_updated_patch_for_local_time_stepping
+   * ## Deadlocks
+   *
+   * I've run into cases where the code seemed to deadlock. This was always
+   * due to the fact that I forgot to exclude boundary faces from the
+   * analysis.
+   * 
+   *
+   * @see exahype2.solvers.fv.kernels.create_compute_new_time_step_size_kernel_for_local_time_stepping
    */
   template <typename CellLabel, typename FaceLabel>
   double getMinTimeStampOfNeighboursAhead(
@@ -65,25 +72,42 @@ namespace exahype2 {
 
     for (int d=0; d<Dimensions; d++) {
       double leftNeighbourTimeStamp = faceLabelEnumerator(d).getNewTimeStamp(0);
-      if ( tarch::la::greater(leftNeighbourTimeStamp,cellLabel.getTimeStamp()) ) {
+      if (
+        not faceLabelEnumerator(d).getBoundary()
+        and
+        tarch::la::greater(leftNeighbourTimeStamp,cellLabel.getTimeStamp())
+      ) {
         result     = std::min(result,leftNeighbourTimeStamp);
         oneIsAhead = true;
       }
-      if ( tarch::la::smaller(leftNeighbourTimeStamp,cellLabel.getTimeStamp()) ) {
-         oneIsBehind = true;
+      if (
+        not faceLabelEnumerator(d).getBoundary()
+        and
+        tarch::la::smaller(leftNeighbourTimeStamp,cellLabel.getTimeStamp())
+      ) {
+        oneIsBehind = true;
       }
 
-      double rightNeighbourTimeStamp = faceLabelEnumerator(d=Dimensions).getNewTimeStamp(1);
-      if ( tarch::la::greater(rightNeighbourTimeStamp,cellLabel.getTimeStamp()) ) {
+      double rightNeighbourTimeStamp = faceLabelEnumerator(d+Dimensions).getNewTimeStamp(1);
+      if (
+        not faceLabelEnumerator(d+Dimensions).getBoundary()
+        and
+        tarch::la::greater(rightNeighbourTimeStamp,cellLabel.getTimeStamp())
+      ) {
         result     = std::min(result,rightNeighbourTimeStamp);
         oneIsAhead = true;
       }
-      if ( tarch::la::smaller(rightNeighbourTimeStamp,cellLabel.getTimeStamp()) ) {
-       oneIsBehind = true;
-       }
+      if (
+        not faceLabelEnumerator(d+Dimensions).getBoundary()
+        and
+        tarch::la::smaller(rightNeighbourTimeStamp,cellLabel.getTimeStamp())
+      ) {
+        oneIsBehind = true;
+      }
     }
 
     if (oneIsAhead and not oneIsBehind) {
+      assertion(result>cellLabel.getTimeStamp());
       return result;
     }
     else {
@@ -167,14 +191,10 @@ namespace exahype2 {
    * the largest (original) eigenvalue within the system and derive the levels'
    * time step sizes from there. Things are different with local time stepping, where
    * each cell can have its own time step size. If a cell has a size of zero, then
-   * we always should derive the admissible dt from the neighbours. Otherwise, we
-   * construct deadlocks:
+   * we always should derive the admissible dt from the neighbours.
    *
-   * Let there be one cell in the domain with a non-zero eigenvalue. This cell
-   * advances in time. Next, it is blocked, as the neighbours have to catch up
-   * first. However, the neighbours won't do such a thing if they have a zero
-   * eigenvalue. So we manually have to push them - which is what this routine does.
-   * If timeStepSize is zero, we return the maximum of the adjacent cells.
+   * @see getMinTimeStampOfNeighboursAhead() for a discussion how to make zero
+   *   eigenvalue patches catch up over time.
    *
    *
    * @param timeStepSize Time step size the code would wish to use
@@ -197,22 +217,14 @@ namespace exahype2 {
       if (
         not faceLabelEnumerator(d).getBoundary()
         and
-        (
-          tarch::la::equals( faceLabelEnumerator(d).getNewTimeStamp(0), currentFutureTimeStamp, relativeTolerance)
-          or
-          tarch::la::equals( timeStepSize, 0.0 )
-        )
+        tarch::la::equals( faceLabelEnumerator(d).getNewTimeStamp(0), currentFutureTimeStamp, relativeTolerance)
       ) {
         maxOfMatchingTimeStamps = std::max(maxOfMatchingTimeStamps,faceLabelEnumerator(d).getNewTimeStamp(0));
       }
       if (
         not faceLabelEnumerator(d).getBoundary()
         and
-        (
-          tarch::la::equals( faceLabelEnumerator(d+Dimensions).getNewTimeStamp(1), currentFutureTimeStamp, relativeTolerance)
-          or
-          tarch::la::equals( timeStepSize, 0.0 )
-        )
+        tarch::la::equals( faceLabelEnumerator(d+Dimensions).getNewTimeStamp(1), currentFutureTimeStamp, relativeTolerance)
       ) {
         maxOfMatchingTimeStamps = std::max(maxOfMatchingTimeStamps,faceLabelEnumerator(d+Dimensions).getNewTimeStamp(1));
       }
