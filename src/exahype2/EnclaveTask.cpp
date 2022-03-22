@@ -37,6 +37,14 @@ exahype2::EnclaveTask::EnclaveTask(
 bool exahype2::EnclaveTask::run() {
   logTraceInWith1Argument( "run()", getTaskId() );
 
+  computeTask();
+
+  EnclaveBookkeeping::getInstance().finishedTask(getTaskId(),_numberOfResultValues,_outputValues,_maxEigenvalue);
+  logTraceOut( "run()" );
+  return false;
+}
+
+void exahype2::EnclaveTask::computeTask() {
   assertion( _outputValues==nullptr );
   assertion( _numberOfResultValues>0 );
   assertion( _inputValues!=nullptr );
@@ -45,11 +53,4 @@ bool exahype2::EnclaveTask::run() {
 
   _functor(_inputValues,_outputValues,_marker,_t,_dt,_maxEigenvalue);
   tarch::freeMemory(_inputValues,tarch::MemoryLocation::Heap );
-
-#ifndef UseSmartMPI // smarTeaMPI must bookmark this differently since getTaskId() does not return the right ID for a moved task. It does so in runLocally()
-  EnclaveBookkeeping::getInstance().finishedTask(getTaskId(),_numberOfResultValues,_outputValues,_maxEigenvalue);
-#endif
-  logTraceOut( "run()" );
-  return false;
 }
-
