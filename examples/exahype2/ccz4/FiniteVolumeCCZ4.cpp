@@ -2,7 +2,6 @@
 #include "exahype2/RefinementControl.h"
 #include "exahype2/NonCriticalAssertions.h"
 
-#include "InitialValues.h"
 
 #include <algorithm>
 
@@ -18,22 +17,6 @@ TP::TwoPunctures* _tp = new TP::TwoPunctures();
 #endif
 
 tarch::logging::Log   examples::exahype2::ccz4::FiniteVolumeCCZ4::_log( "examples::exahype2::ccz4::FiniteVolumeCCZ4" );
-examples::exahype2::ccz4::FiniteVolumeCCZ4::FiniteVolumeCCZ4() {
-  if ( Scenario==0 || Scenario==1 ) {
-    const char* name = "GaugeWave";//nothing to do here for now
-    int length = strlen(name);
-    //initparameters_(&length, name);
-  }
-  #ifdef IncludeTwoPunctures
-  if ( Scenario==2 ) {
-    prepare(_tp);//we solve the puncture equation here.
-    //exit(0);
-  }
-  #endif
-  else {
-    std::cerr << "initial scenario " << Scenario << " is not supported" << std::endl << std::endl << std::endl;
-  }
-}
 
 #ifdef IncludeTwoPunctures
 //pre-process, solve the puncture equations
@@ -99,6 +82,23 @@ void examples::exahype2::ccz4::FiniteVolumeCCZ4::prepare(TP::TwoPunctures* tp){
 	tp->Run();
 }
 #endif
+
+examples::exahype2::ccz4::FiniteVolumeCCZ4::FiniteVolumeCCZ4() {
+  if ( Scenario==0 || Scenario==1 ) {
+    const char* name = "GaugeWave";//nothing to do here for now
+    int length = strlen(name);
+    //initparameters_(&length, name);
+  }
+  #ifdef IncludeTwoPunctures
+  if ( Scenario==2 ) {
+    prepare(_tp);//we solve the puncture equation here.
+    //exit(0);
+  }
+  #endif
+  else {
+    std::cerr << "initial scenario " << Scenario << " is not supported" << std::endl << std::endl << std::endl;
+  }
+}
 
 void examples::exahype2::ccz4::FiniteVolumeCCZ4::initialCondition(
   double * __restrict__ Q,
@@ -199,8 +199,6 @@ double examples::exahype2::ccz4::FiniteVolumeCCZ4::maxEigenvalue(
 }
 
 
-
-
 void examples::exahype2::ccz4::FiniteVolumeCCZ4::nonconservativeProduct(
   const double * __restrict__ Q, // Q[59+0],
   const double * __restrict__             deltaQ, // [59+0]
@@ -272,11 +270,11 @@ void examples::exahype2::ccz4::FiniteVolumeCCZ4::nonconservativeProduct(
   if (CCZ4ReSwi==2){ //single black hole
     if (tarch::la::equals(t,0.0)){  //as we use a quantity calculated in postpocessing, we need to provide criterion at the first timestep 
       constexpr int NumberOfRefinementLayers = 3;
-      //double Radius[NumberOfRefinementLayers] = {7.0, 5.0, 2.5};
-      double Radius[NumberOfRefinementLayers] = {5.0, 2.5, 1.25};
+      double Radius[NumberOfRefinementLayers] = {5.0, 3.0, 2.0};
+      //double Radius[NumberOfRefinementLayers] = {5.0, 2.5, 1.25};
       // nice test case which fits on my laptop:
       //double Radius[NumberOfRefinementLayers] = {3.0, 1.0, 0.5};
-      double MaxH[NumberOfRefinementLayers]   = {1.0, 0.3, 0.0};
+      double MaxH[NumberOfRefinementLayers]   = {0.3, 0.15, 0.0};
       // setup where Han has observed NaNs:
 //      double Radius[NumberOfRefinementLayers] = {5.0, 2.5, 1.25};
 //      double MaxH[NumberOfRefinementLayers]   = {1.0, 0.3, 0.0};
