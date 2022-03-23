@@ -201,7 +201,14 @@ namespace tarch {
         bool run() override;
     };
 
-    int getNumberOfPendingTasks();
+
+    /**
+     * @param threadCount -1 if you are interested in global number of tasks or a
+     *   non-negative integer if you are only interested in one particular thread
+     *   and its specific tasks.
+     */
+    int getNumberOfPendingTasks(int threadCount);
+
 
     /**
      * Process a few tasks from my backlog of tasks
@@ -228,13 +235,6 @@ namespace tarch {
      */
     bool processPendingTasks(int maxTasks = std::numeric_limits<int>::max(), bool fifo=true);
 
-    /**
-     * Process a particular task.
-     *
-     * @param number  Has to be a number acquired before via reserveTaskNumber.
-     * @return Found this one and have done it.
-     */
-    //bool processTask(int number);
 
     /**
      * Spawns a single task in a non-blocking fashion
@@ -319,6 +319,30 @@ namespace tarch {
        * The method locks and unlocks the queue. So don't lock it yourself.
        */
       bool fusePendingTasks(const tarch::multicore::orchestration::Strategy::FuseInstruction&  fuseInstruction);
+
+      /**
+       * Set up the internal queues that our wrapper around the tasking back-end
+       * requires. If we worked with only one task queue, this would not be
+       * necessary, but we found such a solution deterimental. Instead, it is
+       * way better to work with one queue per thread, so we can spawn enclave
+       * tasks without any additional locks.
+       */
+      void configureInternalTaskQueues(int numberOfTasks);
+
+      /**
+       * If we work with thread-local queues, we have to flush them over into the
+       * global queue eventually. To do so, this routine is to be called either
+       * per thread or with a -1 to roll all local queues over into the one global
+       * task queue.
+       *
+       * @param threadNumber -1 if you want to flush all thread buffers
+       */
+      void copyInternalTaskQueuesOverIntoGlobalQueue(int threadNumber);
+
+      /**
+       * @todo no semaphore
+       */
+      bool processThreadLocalTasks(int threadNumber);
     }
   }
 }

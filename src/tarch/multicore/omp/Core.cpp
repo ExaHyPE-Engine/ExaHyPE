@@ -1,4 +1,5 @@
 #include "tarch/multicore/Core.h"
+#include "tarch/multicore/Tasks.h"
 #include "tarch/multicore/multicore.h"
 #include "tarch/compiler/CompilerSpecificSettings.h"
 
@@ -26,6 +27,7 @@ tarch::logging::Log  tarch::multicore::Core::_log( "tarch::multicore::Core" );
 tarch::multicore::Core::Core():
   _numberOfThreads( omp_get_max_threads() ),
   _numberOfDevices( omp_get_num_devices() ) {
+  internal::configureInternalTaskQueues(_numberOfThreads);
 }
 
 
@@ -62,6 +64,8 @@ void tarch::multicore::Core::configure( int numberOfThreads ) {
   if (_numberOfThreads>getNumberOfUnmaskedThreads()) {
     logWarning( "configure(int)", "number of configured threads (" << _numberOfThreads << ") is bigger than available unmasked threads (" << getNumberOfUnmaskedThreads() << ")" );
   }
+
+  internal::configureInternalTaskQueues(_numberOfThreads);
 }
 
 
@@ -84,12 +88,17 @@ int tarch::multicore::Core::getNumberOfGPUs() const {
 }
 
 
+int tarch::multicore::Core::getThreadNumber() const {
+  return omp_get_thread_num();
+}
+
+
 int tarch::multicore::Core::getCoreNumber() const {
   #ifdef CompilerHasSysinfo
   return sched_getcpu();
   #else
   //  https://stackoverflow.com/questions/33745364/sched-getcpu-equivalent-for-os-x
-  return 1;
+  return 0;
   #endif
 }
 

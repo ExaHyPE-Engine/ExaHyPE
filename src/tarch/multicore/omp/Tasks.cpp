@@ -131,11 +131,6 @@ namespace {
         const auto fusion       = strategy->getNumberOfTasksToFuseAndTargetDevice();
         const int  threadNumber = tarch::multicore::Core::getInstance().getThreadNumber();
 
-        if(
-          pendingTasks>0
-        ) {
-          tarch::multicore::internal::copyInternalTaskQueuesOverIntoGlobalQueue(threadNumber);
-        }
 
         while (
           pendingTasks>0
@@ -148,15 +143,18 @@ namespace {
           spawnedTasks==NumberOfThreads
         ) {
           tarch::services::ServiceRepository::getInstance().receiveDanglingMessages();
-          int numberOfPendingTasks = tarch::multicore::getNumberOfPendingTasks();
+          int numberOfPendingTasks = tarch::multicore::getNumberOfPendingTasks(threadNumber);
 
           bool processedSomeTasks = false;
           if (numberOfPendingTasks>=fusion.minTasks) {
             processedSomeTasks = tarch::multicore::internal::fusePendingTasks(fusion);
           }
-          else {
-            int numberOfTasksToProcess = std::max(1,numberOfPendingTasks/2);
-            //std::cout << "steal " << numberOfTasksToProcess << std::endl;
+          else if (numberOfPendingTasks>0) {
+            tarch::multicore::internal::processThreadLocalTasks(threadNumber);
+          }
+          else { // no local tasks left over
+            tarch::multicore::internal::copyInternalTaskQueuesOverIntoGlobalQueue(threadNumber);
+            const int numberOfTasksToProcess = std::max(1,tarch::multicore::getNumberOfPendingTasks(-1)/2);
             ::tarch::logging::Statistics::getInstance().log( BackfillWhileWaitingForBSPTasks, numberOfTasksToProcess );
             processedSomeTasks = tarch::multicore::processPendingTasks( numberOfTasksToProcess );
           }
