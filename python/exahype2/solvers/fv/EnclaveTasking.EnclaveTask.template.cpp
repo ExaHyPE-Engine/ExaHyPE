@@ -143,7 +143,7 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::isSmartMPITask() const {
 
 #ifdef UseSmartMPI
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::runLocally() {
-  run();
+  computeTask();
   if (_remoteTaskId != -1) {
     ::exahype2::EnclaveBookkeeping::getInstance().finishedTask(_remoteTaskId,_numberOfResultValues,_outputValues,_maxEigenvalue);
   } else {

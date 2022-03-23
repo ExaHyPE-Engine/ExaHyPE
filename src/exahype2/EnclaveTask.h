@@ -98,7 +98,19 @@ class exahype2::EnclaveTask: public tarch::multicore::Task {
 
     virtual ~EnclaveTask() = default;
 
+    /**
+     * Computes a task and bookmarks the outcome
+     */
     bool run() override;
+
+    /**
+     * Computes a task without bookmarking the outcome.
+     * It is important for tasks that implement smartmpi::Task
+     * that outcomes can be bookmarked independently of the
+     * running of a task, hence why this function lives
+     * alongside and is used by run()
+     */
+    void computeTask();
 };
 
 

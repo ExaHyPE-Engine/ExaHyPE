@@ -409,11 +409,8 @@ AC_ARG_WITH(toolchain,
 )
 
 if test "$toolchain" == intel; then
-  AC_DEFINE([UseIntel], [1], [UseIntel])
+  AC_DEFINE([UseITAC], [1], [UseITAC])
   AC_DEFINE([UseLogService], [ITACLogger], [ITACLogger])
-  AC_CHECK_HEADERS([VT.h],[],[AC_MSG_ERROR([header <VT.h> not found])])
-  LDFLAGS+=-ipo
-  CXXFLAGS+=" -ip -ipo "
 fi
 
 
