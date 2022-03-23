@@ -128,7 +128,14 @@ namespace {
         #pragma omp atomic seq_cst
         pendingTasks--;
 
-        const auto fusion = strategy->getNumberOfTasksToFuseAndTargetDevice();
+        const auto fusion       = strategy->getNumberOfTasksToFuseAndTargetDevice();
+        const int  threadNumber = tarch::multicore::Core::getInstance().getThreadNumber();
+
+        if(
+          pendingTasks>0
+        ) {
+          tarch::multicore::internal::copyInternalTaskQueuesOverIntoGlobalQueue(threadNumber);
+        }
 
         while (
           pendingTasks>0
