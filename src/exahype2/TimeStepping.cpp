@@ -34,6 +34,14 @@ double exahype2::discretiseAndTruncateTimeStepSizes(
 ) {
   static tarch::logging::Log _log( "exahype2" );
 
+  if (tarch::la::greater(maxGlobalTimeStepSize,0.0) and cellTimeStepSize>maxGlobalTimeStepSize*3.0) {
+    logDebug(
+      "discretiseAndTruncateTimeStepSizes(double,double,int)",
+      "truncate cell time step size from " << cellTimeStepSize << " due to max global dt=" << maxGlobalTimeStepSize
+    );
+    cellTimeStepSize = maxGlobalTimeStepSize*3.0;
+  }
+
   if (discretisationStepsSize<=0) {
     return cellTimeStepSize;
   }

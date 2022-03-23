@@ -142,9 +142,13 @@ def create_compute_new_time_step_size_kernel_for_adaptive_time_stepping():
   return """
     repositories::{{SOLVER_INSTANCE}}.setMaxEigenvalue( maxEigenvalue );  
     
-    // This is a dummy value. We'll ignore it later anyway as we ask for a 
-    // new valid time step size from getAdmissibleTimeStepSize().
-    const double newTimeStepSize = 0.0;
+    // This is a value set for stats reasons. We'll ignore it later as we 
+    // ask for a new valid time step size from getAdmissibleTimeStepSize().
+    //const double newTimeStepSize = 0.0;
+    const double newTimeStepSize =  repositories::{{SOLVER_INSTANCE}}.getMinPatchSize(false)>0.0 ?
+      repositories::{{SOLVER_INSTANCE}}.getAdmissibleTimeStepSize() * marker.h()(0) / repositories::{{SOLVER_INSTANCE}}.getMinPatchSize(false) :
+      0.0;
+
 """
 
 

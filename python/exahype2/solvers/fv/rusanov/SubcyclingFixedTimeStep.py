@@ -139,7 +139,7 @@ const double newTimeStepSize = timeStepSize;
     """
     super(SubcyclingFixedTimeStep, self).create_action_sets()
 
-    self._action_set_update_cell.guard += " and ::exahype2::runTimeStepOnCell( fineGridCell" + self._name + "CellLabel, fineGridFaces" + self._name + "FaceLabel)"
+    self._action_set_update_cell.guard += " and ::exahype2::runTimeStepOnCell( fineGridCell" + self._name + "CellLabel, fineGridFaces" + self._name + "FaceLabel, repositories::getMinTimeStamp())"
     
     if self._interpolate_linearly_in_time:
       self._action_set_update_cell._Template_TouchCellFirstTime_Fill_Halos = create_halo_layer_construction_with_interpolation_for_reconstructed_patch(self._name)

@@ -52,7 +52,14 @@ namespace exahype2 {
    * nothing happens race forward in time. A description of this behaviour is
    * found in the Python routine referenced below.
    *
-   * @see exahype2.solvers.fv.kernels.create_postprocess_updated_patch_for_local_time_stepping
+   * ## Deadlocks
+   *
+   * I've run into cases where the code seemed to deadlock. This was always
+   * due to the fact that I forgot to exclude boundary faces from the
+   * analysis.
+   * 
+   *
+   * @see exahype2.solvers.fv.kernels.create_compute_new_time_step_size_kernel_for_local_time_stepping
    */
   template <typename CellLabel, typename FaceLabel>
   double getMinTimeStampOfNeighboursAhead(
@@ -65,25 +72,42 @@ namespace exahype2 {
 
     for (int d=0; d<Dimensions; d++) {
       double leftNeighbourTimeStamp = faceLabelEnumerator(d).getNewTimeStamp(0);
-      if ( tarch::la::greater(leftNeighbourTimeStamp,cellLabel.getTimeStamp()) ) {
+      if (
+        not faceLabelEnumerator(d).getBoundary()
+        and
+        tarch::la::greater(leftNeighbourTimeStamp,cellLabel.getTimeStamp())
+      ) {
         result     = std::min(result,leftNeighbourTimeStamp);
         oneIsAhead = true;
       }
-      if ( tarch::la::smaller(leftNeighbourTimeStamp,cellLabel.getTimeStamp()) ) {
-         oneIsBehind = true;
+      if (
+        not faceLabelEnumerator(d).getBoundary()
+        and
+        tarch::la::smaller(leftNeighbourTimeStamp,cellLabel.getTimeStamp())
+      ) {
+        oneIsBehind = true;
       }
 
-      double rightNeighbourTimeStamp = faceLabelEnumerator(d=Dimensions).getNewTimeStamp(1);
-      if ( tarch::la::greater(rightNeighbourTimeStamp,cellLabel.getTimeStamp()) ) {
+      double rightNeighbourTimeStamp = faceLabelEnumerator(d+Dimensions).getNewTimeStamp(1);
+      if (
+        not faceLabelEnumerator(d+Dimensions).getBoundary()
+        and
+        tarch::la::greater(rightNeighbourTimeStamp,cellLabel.getTimeStamp())
+      ) {
         result     = std::min(result,rightNeighbourTimeStamp);
         oneIsAhead = true;
       }
-      if ( tarch::la::smaller(rightNeighbourTimeStamp,cellLabel.getTimeStamp()) ) {
-       oneIsBehind = true;
-       }
+      if (
+        not faceLabelEnumerator(d+Dimensions).getBoundary()
+        and
+        tarch::la::smaller(rightNeighbourTimeStamp,cellLabel.getTimeStamp())
+      ) {
+        oneIsBehind = true;
+      }
     }
 
     if (oneIsAhead and not oneIsBehind) {
+      assertion(result>cellLabel.getTimeStamp());
       return result;
     }
     else {
@@ -97,30 +121,81 @@ namespace exahype2 {
    * face labels. We update a cell if all the neighbours are at the same
    * time stamp or ahead.
    *
+   * @see removeTimeStepAccumulationErrorsFromCell() for a discussion of
+   *   precisions we use for the checks above
+   *
+   * For some reason that I haven't understood completely yet, the above
+   * decision pattern can still lead to a deadlock where no cell in the
+   * global domain does advance in time. Which is really weird, as there
+   * always should be a global minimum. My guess is that something along
+   * the AMR boundaries does not work properly.
+   *
    * @param cellLabel
    */
   template <typename CellLabel, typename FaceLabel>
   bool runTimeStepOnCell(
-    const CellLabel& cellLabel,
-    const peano4::datamanagement::FaceEnumerator< FaceLabel >& faceLabelEnumerator
+    const CellLabel&                                            cellLabel,
+    const peano4::datamanagement::FaceEnumerator< FaceLabel >&  faceLabelEnumerator,
+    double                                                      globalMinTimeStamp
   ) {
-    double cellTimeStamp =  cellLabel.getTimeStamp();
+    double cellTimeStamp    = cellLabel.getTimeStamp();
+    double cellTimeStepSize = cellLabel.getTimeStepSize();
 
-    return tarch::la::greaterEquals( ::exahype2::internal::getMinTimeStampOfNeighbours(faceLabelEnumerator), cellTimeStamp );
+    const double Tolerance = 0.01;
+
+    bool result = tarch::la::greaterEquals( ::exahype2::internal::getMinTimeStampOfNeighbours(faceLabelEnumerator), cellTimeStamp, Tolerance*cellTimeStepSize )
+               or tarch::la::equals(cellTimeStamp, globalMinTimeStamp);
+
+    // @todo das ist net das Problem. Das Problem ist, dass ich u.U. keine Eigenwerte habe
+    if (not result) {
+//      std::cout << "skip " << cellLabel.toString() << " as neighbours have t_min=" << ::exahype2::internal::getMinTimeStampOfNeighbours(faceLabelEnumerator) << std::endl;
+    }
+    return result;
   }
 
 
   /**
    * Remove accumulation errors from cell time stamps
    *
-   * Use this routine after you have updated the cell's time stamp. If we add
+   * If we add
    * time step sizes to the time stamp over and over again, it is very likely
    * that the time stamps at resolution boundaries do not match at one point.
    * If we use subcycling, 3xdt/3 usually does not equal the dt of a big cell.
+   * So it makes sense to amend the time step sizes slightly to help us to
+   * synchronise time stamps between cells, i.e. to avoid that they are off by
+   * a tiny bit and hence mess up the time stepping.
    *
-   * So what I do first of all is to identify if the current (update) cell
-   * time stamp does equal a neighbour. Then, I determine the maximum over
-   * those that are equal.
+   * So what I do first of all is to check if the current (update) cell
+   * time stamp does equal a neighbour. If there are multiple of matching
+   * neighbours, I pick the one with the biggest time stamp. This check for
+   * equality is a double precision check which should use relative quantities,
+   * as time stamps can be arbitrarily large. So once I find a matching time
+   * stamp, I return this time stamp rather than the current time step size
+   * and, hence, sync the current time step size with the neighbours. This can
+   * mean that I reduce or increase the time step size slightly, i.e. I assume
+   * that enough slack is built into the chosen time step size such that a tiny
+   * increase does not blow up the result.
+   *
+   * ## Relative accuracy
+   *
+   * If two time stamps are equal depends on the magnutide of the time step
+   * size. It does not matter what the time stamps are, as any "rounding"
+   * decision should be time translation invariant. However, if I have a
+   * large time step size, then I'd be happy to alter it more rigorously than
+   * for a stiff problem with tiny time step sizes. Overall, I accept around one
+   * percent of the time step sizes as acceptable alteration of the outcome.
+   *
+   * ## Usage of routine within local time stepping
+   *
+   * If we have subcycling, then we know that timeStepSize is never zero, as we use
+   * the largest (original) eigenvalue within the system and derive the levels'
+   * time step sizes from there. Things are different with local time stepping, where
+   * each cell can have its own time step size. If a cell has a size of zero, then
+   * we always should derive the admissible dt from the neighbours.
+   *
+   * @see getMinTimeStampOfNeighboursAhead() for a discussion how to make zero
+   *   eigenvalue patches catch up over time.
+   *
    *
    * @param timeStepSize Time step size the code would wish to use
    * @return Time step size the code should use eventually
@@ -133,13 +208,24 @@ namespace exahype2 {
   ) {
     static tarch::logging::Log _log( "exahype2" );
 
+    const double Tolerance = 0.01;
+    double relativeTolerance = tarch::la::equals(timeStepSize,0.0) ? tarch::la::NUMERICAL_ZERO_DIFFERENCE : Tolerance * timeStepSize;
+
     double       maxOfMatchingTimeStamps = -1.0;
     const double currentFutureTimeStamp  = cellLabel.getTimeStamp() + timeStepSize;
     for (int d=0; d<Dimensions; d++) {
-      if (not faceLabelEnumerator(d).getBoundary() and tarch::la::equals( faceLabelEnumerator(d).getNewTimeStamp(0), currentFutureTimeStamp)) {
+      if (
+        not faceLabelEnumerator(d).getBoundary()
+        and
+        tarch::la::equals( faceLabelEnumerator(d).getNewTimeStamp(0), currentFutureTimeStamp, relativeTolerance)
+      ) {
         maxOfMatchingTimeStamps = std::max(maxOfMatchingTimeStamps,faceLabelEnumerator(d).getNewTimeStamp(0));
       }
-      if (not faceLabelEnumerator(d).getBoundary() and tarch::la::equals( faceLabelEnumerator(d+Dimensions).getNewTimeStamp(1), currentFutureTimeStamp)) {
+      if (
+        not faceLabelEnumerator(d).getBoundary()
+        and
+        tarch::la::equals( faceLabelEnumerator(d+Dimensions).getNewTimeStamp(1), currentFutureTimeStamp, relativeTolerance)
+      ) {
         maxOfMatchingTimeStamps = std::max(maxOfMatchingTimeStamps,faceLabelEnumerator(d+Dimensions).getNewTimeStamp(1));
       }
     }
@@ -150,9 +236,11 @@ namespace exahype2 {
       if (tweakedTimeStepSize>timeStepSize) {
         logDebug( "removeTimeStepAccummulationErrorsFromCell(...)", "adopt local time step from " << timeStepSize << " to " << tweakedTimeStepSize );
       }
-      return tweakedTimeStepSize;
+      timeStepSize = tweakedTimeStepSize;
     }
-    else return timeStepSize;
+
+    logDebug( "removeTimeStepAccummulationErrorsFromCell(...)", "dt=" << timeStepSize << ", max-match=" << maxOfMatchingTimeStamps );
+    return timeStepSize;
   }
 
 

@@ -160,7 +160,7 @@ class LocalTimeStepWithEnclaveTasking( EnclaveTasking ):
     """
     super(LocalTimeStepWithEnclaveTasking, self).create_action_sets()
 
-    update_cell_guard  = "::exahype2::runTimeStepOnCell( fineGridCell" + self._name + "CellLabel, fineGridFaces" + self._name + "FaceLabel)"
+    update_cell_guard  = "::exahype2::runTimeStepOnCell( fineGridCell" + self._name + "CellLabel, fineGridFaces" + self._name + "FaceLabel, repositories::getMinTimeStamp())"
     updated_cell_guard = "fineGridCell" + self._name + "CellLabel.getSemaphoreNumber()!=::exahype2::EnclaveBookkeeping::NoEnclaveTaskNumber"
     self._action_set_update_cell.guard                += " and " + update_cell_guard
     self._action_set_merge_enclave_task_outcome.guard  = updated_cell_guard
