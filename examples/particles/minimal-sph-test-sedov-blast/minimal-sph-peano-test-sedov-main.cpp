@@ -32,6 +32,7 @@
 #include "observers/Kick.h"
 #include "observers/Kick2.h"
 #include "observers/KickCorrector.h"
+#include "observers/KickCorrectorExtra.h"
 #include "observers/HydroKickExtra.h"
 #include "observers/Drift.h"
 #include "observers/RearrangeAtStart.h"
@@ -205,7 +206,6 @@ int main(int argc, char** argv) {
           /* Prepare force */
           peano4::parallel::SpacetreeSet::getInstance().traverse(prepareForce);
 
-          /* By default I do this here */
           /* Newton Raphson iteration */
           peano4::parallel::SpacetreeSet::getInstance().traverse(newtonRaphson);
 
@@ -232,11 +232,11 @@ int main(int argc, char** argv) {
         peano4::parallel::SpacetreeSet::getInstance().traverse(driftpart);
 
         /*********************************************/
-        /* Option 1: standard KDK */
+        /* "Option 1: standard KDK" */
         /* Second Force loop */
 //        peano4::parallel::SpacetreeSet::getInstance().traverse(prepareForce);
 //        peano4::parallel::SpacetreeSet::getInstance().traverse(forcespart);
-//
+
         for (int iter=0; iter<3; iter++){
 
           /* Density loop */
@@ -246,7 +246,6 @@ int main(int argc, char** argv) {
           /* Prepare force */
           peano4::parallel::SpacetreeSet::getInstance().traverse(prepareForce);
 
-          /* By default I do this here */
           /* Newton Raphson iteration */
           peano4::parallel::SpacetreeSet::getInstance().traverse(newtonRaphson);
 
@@ -255,35 +254,37 @@ int main(int argc, char** argv) {
         /* Force loop */
         peano4::parallel::SpacetreeSet::getInstance().traverse(forcespart);
 
-
         /* Second Kick from current time-step */
         examples::particles::observers::Kick2 kick2part;
         peano4::parallel::SpacetreeSet::getInstance().traverse(kick2part);
         peano4::parallel::SpacetreeSet::getInstance().traverse(kickExtra);
+        /*********************************************/
+
+//        /****************************************/
+//        /* "Option 2: Predictor-corrector scheme" */
+//        /* Not needed according to Matthieu */
+//
+//        /* Predictor ("kick anyway") step */
+//        peano4::parallel::SpacetreeSet::getInstance().traverse(kick1part);
+//        peano4::parallel::SpacetreeSet::getInstance().traverse(kickExtra);
+//
+//        for(int iter_PC = 0; iter_PC < 5; iter_PC++){
+//          /* Second Force loop with predicted velocity */
+//          peano4::parallel::SpacetreeSet::getInstance().traverse(prepareForce);
+//          peano4::parallel::SpacetreeSet::getInstance().traverse(forcespart);
+//  
+//          /* Corrector step (mini-Kick) current time-step */
+//          examples::particles::observers::KickCorrector corrector;
+//          peano4::parallel::SpacetreeSet::getInstance().traverse(corrector);
+//          examples::particles::observers::KickCorrectorExtra correctorExtra;
+//          peano4::parallel::SpacetreeSet::getInstance().traverse(correctorExtra);
+//        }
+//        /****************************************/
+//
 
 
-        /* Option 2: Predictor-corrector scheme */
-        /* Not needed according to Matthieu */
-
-        /* Predictor ("kick anyway") step */
-        peano4::parallel::SpacetreeSet::getInstance().traverse(kick1part);
-        peano4::parallel::SpacetreeSet::getInstance().traverse(kickExtra);
-
-        for(int iter_PC = 0; iter_PC < 5; iter_PC++){
-          /* Second Force loop with predicted velocity */
-          peano4::parallel::SpacetreeSet::getInstance().traverse(prepareForce);
-          peano4::parallel::SpacetreeSet::getInstance().traverse(forcespart);
-  
-          /* Corrector step (mini-Kick) current time-step */
-          examples::particles::observers::KickCorrector correctpart;
-          peano4::parallel::SpacetreeSet::getInstance().traverse(correctpart);
-        //  TBA: corrector for U
-        //  peano4::parallel::SpacetreeSet::getInstance().traverse(kickExtra);
-
-        }
 
       }
-
       logInfo( "main()", "plot" )
       examples::particles::observers::Plot plotTimeStepObserver;
       peano4::parallel::SpacetreeSet::getInstance().traverse(plotTimeStepObserver);
