@@ -183,11 +183,40 @@ This logger forwards all trace commands to NVIDIA's profiling/tracing library.
 \subsection{ITAC logger}
 
 To select this logger, compile with
-\texttt{-DUseLogService=ITACLogger}.
+\texttt{-DUseLogService=ITACLogger} and configure \texttt{--with-toolchain=intel}
 
 This logger forwards all trace commands to Intel's profiling/tracing library. 
 
+On Hamilton8 you can activate the ITAC logger as follows:
 
+\begin{code}
+export FLAVOUR_NOCONFLICT=1
+module load gcc advisor oneapi intelmpi itac
+
+./configure --with-multithreading=omp --enable-exahype --enable-loadbalancing --enable-blockstructured --with-mpi="I_MPI_CXX=icpx mpiicpc" CC=icx CXX=icpx CXXFLAGS="-std=c++17 -g -fiopenmp -funroll-loops -O3 -I/apps/developers/tools/itac/2021.4/1/default/itac/latest/include -DUseLogService=ITACLogger" LDFLAGS="-L/apps/developers/compilers/intel/2021.4/1/default/compiler/2021.4.0/linux/compiler/lib/intel64_lin -liomp5 -L/apps/developers/tools/itac/2021.4/1/default/itac/2021.4.0/slib -lVTnull" --with-toolchain=intel
+\end{code} 
+
+Remember to ask SLURM for a lot of memory as the trace data soon becomes huge: \texttt{#SBATCH --gres=tmp:400G}. 
+Also be sure to add \texttt{-trace} when you run the python glue code and filter the trace data as desired in \texttt{exahype.log-filter} (described above).
+
+To do a run with the trace analyzer add \texttt{-trace} to your mpirun command:
+
+\begin{code}
+mpirun -trace -np <N> ./Peano
+\end{code}
+
+And visualise the results with -X forwarding with:
+
+\begin{code}
+traceanalyzer peano4.stf
+\end{code}
+
+Vtune output can also be enhanced by the ITAC logger. For vtune the following structure works and creates data that can be viewed using the \texttt{vtune-gui}:
+
+\begin{code}
+module load vtune
+OMP_NUM_THREADS=2 mpirun -trace -np 4 vtune -collect hotspots -r my_result_dir ./peano4 --timeout 2000 --threading-model backfill
+\end{code}
 
 \section{Log filter}
 \label{section:logging:log-filter}

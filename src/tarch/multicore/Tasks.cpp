@@ -380,10 +380,6 @@ bool tarch::multicore::processPendingTasks(int maxTasks, bool fifo) {
 
   ::tarch::logging::Statistics::getInstance().log( PendingTasksStatisticsIdentifier, tarch::multicore::getNumberOfPendingTasks() );
 
-  #ifdef UseSmartMPI
-  smartmpi::tock();
-  #endif
-
   bool  result        = false;
   while (maxTasks>0) {
     if (fifo and processOnePendingTaskFIFO() ) {
@@ -408,8 +404,7 @@ void tarch::multicore::spawnTask(Task*  task) {
   assertion( task!=nullptr );
 
   #ifdef UseSmartMPI
-  if ( task->isSmartMPITask() ) {
-    smartmpi::spawn( dynamic_cast<smartmpi::Task*>(task) );
+  if ( task->isSmartMPITask() and smartmpi::spawn( dynamic_cast<smartmpi::Task*>(task) )) {
     return;
   }
   #endif
