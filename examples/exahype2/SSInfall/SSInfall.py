@@ -81,7 +81,7 @@ if __name__ == "__main__":
 
         print( "\n\n\n\I'm stateless: {}\n\n\n".format(args.gpu) )
         self._my_user_includes = """
-#include "exahype2/PatchUtils.h"
+
 """
         if SuperClass==exahype2.solvers.fv.rusanov.GlobalFixedTimeStep:
           SuperClass.__init__(
@@ -194,7 +194,7 @@ if __name__ == "__main__":
 
         self.set_preprocess_reconstructed_patch_kernel( """
         const int patchSize = """ + str( self._patch.dim[0] ) + """;
-        double volumeH = ::exahype2::getVolumeLength(marker.h(),patchSize);
+        double volumeH = ::exahype2::fv::getVolumeLength(marker.h(),patchSize);
         int aux_var=""" + str( self._auxiliary_variables ) + """;
         double domain_r=""" + str( self._domain_r ) + """;
         int sample=repositories::{{SOLVER_INSTANCE}}.sample_number;
@@ -256,7 +256,7 @@ if __name__ == "__main__":
 
         self.set_preprocess_reconstructed_patch_kernel( """
         const int patchSize = """ + str( self._patch.dim[0] ) + """;
-        double volumeH = ::exahype2::getVolumeLength(marker.h(),patchSize);
+        double volumeH = ::exahype2::fv::getVolumeLength(marker.h(),patchSize);
         int aux_var=0;
         int sample=repositories::{{SOLVER_INSTANCE}}.sample_number;
         if ( marker.isContained((0,0,0)) ){

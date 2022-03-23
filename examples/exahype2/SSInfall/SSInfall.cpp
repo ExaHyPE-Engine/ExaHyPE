@@ -566,6 +566,7 @@ double examples::exahype2::SSInfall::SSInfall::maxEigenvalue(
   const tarch::la::Vector<Dimensions,double>&  faceCentre,
   const tarch::la::Vector<Dimensions,double>&  volumeH,
   double                                       t,
+  double                                       dt,
   int                                          normal
 )  {
   assertion(normal>=0);
@@ -583,7 +584,7 @@ double examples::exahype2::SSInfall::SSInfall::maxEigenvalue(
   assertion4( not std::isinf(Q[3]), faceCentre, volumeH, t, normal );
   assertion4( not std::isinf(Q[4]), faceCentre, volumeH, t, normal );
 
-  double result = maxEigenvalue(Q,faceCentre,volumeH,t,normal,Offloadable::Yes);
+  double result = maxEigenvalue(Q,faceCentre,volumeH,t,dt,normal,Offloadable::Yes);
 
   nonCriticalAssertion10(
     result<10000,
@@ -605,6 +606,7 @@ double examples::exahype2::SSInfall::SSInfall::maxEigenvalue(
   const tarch::la::Vector<Dimensions,double>&  faceCentre,
   const tarch::la::Vector<Dimensions,double>&  volumeH,
   double                                       t,
+  double                                       dt,
   int                                          normal,
   Offloadable
 )  {
@@ -641,6 +643,7 @@ void examples::exahype2::SSInfall::SSInfall::flux(
   const tarch::la::Vector<Dimensions,double>&  faceCentre,
   const tarch::la::Vector<Dimensions,double>&  volumeH,
   double                                       t,
+  double                                       dt,
   int                                          normal,
   double * __restrict__ F // F[5]
 )  {
@@ -658,7 +661,7 @@ void examples::exahype2::SSInfall::SSInfall::flux(
   assertion4( not std::isinf(Q[3]), faceCentre, volumeH, t, normal );
   assertion4( not std::isinf(Q[4]), faceCentre, volumeH, t, normal );
 
-  flux(Q,faceCentre,volumeH,t,normal,F,Offloadable::Yes);
+  flux(Q,faceCentre,volumeH,t,dt,normal,F,Offloadable::Yes);
 
   assertion4( not std::isnan(F[0]), faceCentre, volumeH, t, normal );
   assertion4( not std::isnan(F[1]), faceCentre, volumeH, t, normal );
@@ -683,6 +686,7 @@ void examples::exahype2::SSInfall::SSInfall::flux(
   const tarch::la::Vector<Dimensions,double>&  faceCentre,
   const tarch::la::Vector<Dimensions,double>&  volumeH,
   double                                       t,
+  double                                       dt,
   int                                          normal,
   double * __restrict__                        F, // F[5]
   Offloadable
