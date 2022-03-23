@@ -18,6 +18,8 @@ namespace {
   const int BackgroundConsumerPriority = 1;
 
   const std::string BSPTasksStatisticsIdentifier( "tarch::multicore::bsp-tasks");
+  // @todo nachziehen in anderen implementierungen
+  const std::string BackfillWhileWaitingForBSPTasks( "tarch::multicore::backfill");
 
 
   /**
@@ -146,6 +148,8 @@ namespace {
           }
           else {
             int numberOfTasksToProcess = std::max(1,numberOfPendingTasks/2);
+            //std::cout << "steal " << numberOfTasksToProcess << std::endl;
+            ::tarch::logging::Statistics::getInstance().log( BackfillWhileWaitingForBSPTasks, numberOfTasksToProcess );
             processedSomeTasks = tarch::multicore::processPendingTasks( numberOfTasksToProcess );
           }
 
