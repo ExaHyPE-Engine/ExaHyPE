@@ -348,8 +348,8 @@ def create_compute_Riemann_kernel_for_Rusanov(flux_implementation,
     RiemannKernelVariant.BatchedAoSoA:              "::exahype2::fv::enumerator::AoSoALexicographicVolumeEnumerator",
     RiemannKernelVariant.PatchWiseSplitTermsAoS:    "::exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator",
     RiemannKernelVariant.PatchWiseSplitTermsAoSoA:  "::exahype2::fv::enumerator::AoSoALexicographicVolumeEnumerator",
-    RiemannKernelVariant.PatchWiseInSitu:           "",
-    RiemannKernelVariant.BatchedInSitu:             ""
+    RiemannKernelVariant.PatchWiseInSitu:           None,
+    RiemannKernelVariant.BatchedInSitu:             None
   }
 
   template  = RiemannKernelCalls[riemann_kernel_variant]
@@ -357,8 +357,10 @@ def create_compute_Riemann_kernel_for_Rusanov(flux_implementation,
   if solver_variant == SolverVariant.WithVirtualFunctions:
     template += "("
   if solver_variant == SolverVariant.Stateless:
-    template += "<{{SOLVER_NAME}},"
-    template += EnumeratorTemplateTypes[riemann_kernel_variant]
+    template += "<{{SOLVER_NAME}}"
+    if EnumeratorTemplateTypes[riemann_kernel_variant]!=None:
+      template += ","
+      template += EnumeratorTemplateTypes[riemann_kernel_variant]
     template += ">("
   if solver_variant == SolverVariant.Accelerator:
     template += "<{{SOLVER_NAME}},"
