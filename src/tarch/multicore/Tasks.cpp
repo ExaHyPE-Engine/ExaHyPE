@@ -174,7 +174,7 @@ int tarch::multicore::internal::mapPendingTasksOntoNativeTasks(int maxTasks) {
 }
 
 
-bool tarch::multicore::internal::processThreadLocalTasks(int threadNumber) {
+bool tarch::multicore::internal::processThreadLocalTask(int threadNumber) {
   tarch::multicore::Task* myTask = localNonblockingTasks[threadNumber].front();
   localNonblockingTasks[threadNumber].pop_front();
 
