@@ -109,10 +109,10 @@ void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_batched_in_situ(
 
   if (Dimensions==2 and evaluateFlux) {
     for (int shift=0; shift<2; shift++)
-    #if defined(SharedOMP)
-    #pragma omp simd collapse(3)
-    #endif
     for (int x = -haloSize+shift; x < numberOfVolumesPerAxisInPatch+haloSize-1; x+=2)
+    #if defined(SharedOMP)
+    #pragma omp simd collapse(2)
+    #endif
     for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
     for (int patchIndex=0; patchIndex<patchData.numberOfPatches; patchIndex++)
     {
@@ -164,12 +164,13 @@ void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_batched_in_situ(
     }  // and of loop over faces with normal along x-axis subject to shift loop
 
     for (int shift=0; shift<2; shift++)
+    for (int y = -haloSize+shift; y < numberOfVolumesPerAxisInPatch+haloSize-1; y+=2)
     #if defined(SharedOMP)
-    #pragma omp simd collapse(3)
+    #pragma omp simd collapse(2)
     #endif
     for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++)
     for (int patchIndex=0; patchIndex<patchData.numberOfPatches; patchIndex++)
-    for (int y = -haloSize+shift; y < numberOfVolumesPerAxisInPatch+haloSize-1; y+=2) {
+    {
       double fluxFL[unknowns] __attribute__((aligned (Alignment)));
       double fluxFR[unknowns] __attribute__((aligned (Alignment)));
       internal::computeFlux_LoopBody<Solver>(
@@ -218,10 +219,10 @@ void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_batched_in_situ(
   }
   if (Dimensions==3 and evaluateFlux) {
     for (int shift=0; shift<2; shift++)
-    #if defined(SharedOMP)
-    #pragma omp simd collapse(4)
-    #endif
     for (int x = -haloSize+shift; x < numberOfVolumesPerAxisInPatch+haloSize-1; x+=2)
+    #if defined(SharedOMP)
+    #pragma omp simd collapse(3)
+    #endif
     for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
     for (int z = 0; z < numberOfVolumesPerAxisInPatch; z++)
     for (int patchIndex=0; patchIndex<patchData.numberOfPatches; patchIndex++)
@@ -274,11 +275,11 @@ void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_batched_in_situ(
     }  // and of loop over faces with normal along x-axis subject to shift loop
 
     for (int shift=0; shift<2; shift++)
+    for (int y = -haloSize+shift; y < numberOfVolumesPerAxisInPatch+haloSize-1; y+=2)
     #if defined(SharedOMP)
-    #pragma omp simd collapse(4)
+    #pragma omp simd collapse(3)
     #endif
     for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++)
-    for (int y = -haloSize+shift; y < numberOfVolumesPerAxisInPatch+haloSize-1; y+=2)
     for (int z = 0; z < numberOfVolumesPerAxisInPatch; z++)
     for (int patchIndex=0; patchIndex<patchData.numberOfPatches; patchIndex++)
     {
@@ -329,12 +330,12 @@ void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_batched_in_situ(
     }  // and of loop over faces with normal along y-axis subject to shift loop
 
     for (int shift=0; shift<2; shift++)
+    for (int z = -haloSize+shift; z < numberOfVolumesPerAxisInPatch+haloSize-1; z+=2)
     #if defined(SharedOMP)
-    #pragma omp simd collapse(4)
+    #pragma omp simd collapse(3)
     #endif
     for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++)
     for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
-    for (int z = -haloSize+shift; z < numberOfVolumesPerAxisInPatch+haloSize-1; z+=2)
     for (int patchIndex=0; patchIndex<patchData.numberOfPatches; patchIndex++)
     {
       double fluxFL[unknowns] __attribute__((aligned (Alignment)));
@@ -386,10 +387,10 @@ void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_batched_in_situ(
 
   if (Dimensions==2 and evaluateNonconservativeProduct) {
     for (int shift=0; shift<2; shift++)
-    #if defined(SharedOMP)
-    #pragma omp simd collapse(3)
-    #endif
     for (int x = -haloSize+shift; x < numberOfVolumesPerAxisInPatch+haloSize-1; x+=2)
+    #if defined(SharedOMP)
+    #pragma omp simd collapse(2)
+    #endif
     for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
     for (int patchIndex=0; patchIndex<patchData.numberOfPatches; patchIndex++)
     {
@@ -426,11 +427,11 @@ void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_batched_in_situ(
     }  // and of loop over faces with normal along x-axis subject to shift loop
 
     for (int shift=0; shift<2; shift++)
+    for (int y = -haloSize+shift; y < numberOfVolumesPerAxisInPatch+haloSize-1; y+=2)
     #if defined(SharedOMP)
-    #pragma omp simd collapse(3)
+    #pragma omp simd collapse(2)
     #endif
     for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++)
-    for (int y = -haloSize+shift; y < numberOfVolumesPerAxisInPatch+haloSize-1; y+=2)
     for (int patchIndex=0; patchIndex<patchData.numberOfPatches; patchIndex++)
     {
       double fluxNCP[unknowns] __attribute__((aligned (Alignment)));
@@ -467,10 +468,10 @@ void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_batched_in_situ(
   }
   if (Dimensions==3 and evaluateNonconservativeProduct) {
     for (int shift=0; shift<2; shift++)
-    #if defined(SharedOMP)
-    #pragma omp simd collapse(4)
-    #endif
     for (int x = -haloSize+shift; x < numberOfVolumesPerAxisInPatch+haloSize-1; x+=2)
+    #if defined(SharedOMP)
+    #pragma omp simd collapse(3)
+    #endif
     for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
     for (int z = 0; z < numberOfVolumesPerAxisInPatch; z++)
     for (int patchIndex=0; patchIndex<patchData.numberOfPatches; patchIndex++)
@@ -508,11 +509,11 @@ void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_batched_in_situ(
     }  // and of loop over faces with normal along x-axis subject to shift loop
 
     for (int shift=0; shift<2; shift++)
+    for (int y = -haloSize+shift; y < numberOfVolumesPerAxisInPatch+haloSize-1; y+=2)
     #if defined(SharedOMP)
-    #pragma omp simd collapse(4)
+    #pragma omp simd collapse(3)
     #endif
     for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++)
-    for (int y = -haloSize+shift; y < numberOfVolumesPerAxisInPatch+haloSize-1; y+=2)
     for (int z = 0; z < numberOfVolumesPerAxisInPatch; z++)
     for (int patchIndex=0; patchIndex<patchData.numberOfPatches; patchIndex++)
     {
@@ -549,12 +550,12 @@ void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_batched_in_situ(
     }  // and of loop over faces with normal along y-axis subject to shift loop
 
     for (int shift=0; shift<2; shift++)
+    for (int z = -haloSize+shift; z < numberOfVolumesPerAxisInPatch+haloSize-1; z+=2)
     #if defined(SharedOMP)
-    #pragma omp simd collapse(4)
+    #pragma omp simd collapse(3)
     #endif
     for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++)
     for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
-    for (int z = -haloSize+shift; z < numberOfVolumesPerAxisInPatch+haloSize-1; z+=2)
     for (int patchIndex=0; patchIndex<patchData.numberOfPatches; patchIndex++)
     {
       double fluxNCP[unknowns] __attribute__((aligned (Alignment)));
@@ -592,10 +593,10 @@ void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_batched_in_situ(
 
   if (Dimensions==2) {
     for (int shift=0; shift<2; shift++)
-    #if defined(SharedOMP)
-    #pragma omp simd collapse(3)
-    #endif
     for (int x = -haloSize+shift; x < numberOfVolumesPerAxisInPatch+haloSize-1; x+=2)
+    #if defined(SharedOMP)
+    #pragma omp simd collapse(2)
+    #endif
     for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
     for (int patchIndex=0; patchIndex<patchData.numberOfPatches; patchIndex++)
     {
@@ -647,11 +648,11 @@ void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_batched_in_situ(
     }  // and of loop over faces with normal along x-axis subject to shift loop
 
     for (int shift=0; shift<2; shift++)
+    for (int y = -haloSize+shift; y < numberOfVolumesPerAxisInPatch+haloSize-1; y+=2)
     #if defined(SharedOMP)
-    #pragma omp simd collapse(3)
+    #pragma omp simd collapse(2)
     #endif
     for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++)
-    for (int y = -haloSize+shift; y < numberOfVolumesPerAxisInPatch+haloSize-1; y+=2)
     for (int patchIndex=0; patchIndex<patchData.numberOfPatches; patchIndex++)
     {
       double maxEigenvalueL __attribute__((aligned (Alignment)));
@@ -704,10 +705,10 @@ void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_batched_in_situ(
   }
   if (Dimensions==3) {
     for (int shift=0; shift<2; shift++)
-    #if defined(SharedOMP)
-    #pragma omp simd collapse(4)
-    #endif
     for (int x = -haloSize+shift; x < numberOfVolumesPerAxisInPatch+haloSize-1; x+=2)
+    #if defined(SharedOMP)
+    #pragma omp simd collapse(3)
+    #endif
     for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
     for (int z = 0; z < numberOfVolumesPerAxisInPatch; z++)
     for (int patchIndex=0; patchIndex<patchData.numberOfPatches; patchIndex++)
@@ -760,11 +761,11 @@ void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_batched_in_situ(
     }  // and of loop over faces with normal along x-axis subject to shift loop
 
     for (int shift=0; shift<2; shift++)
+    for (int y = -haloSize+shift; y < numberOfVolumesPerAxisInPatch+haloSize-1; y+=2)
     #if defined(SharedOMP)
-    #pragma omp simd collapse(4)
+    #pragma omp simd collapse(3)
     #endif
     for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++)
-    for (int y = -haloSize+shift; y < numberOfVolumesPerAxisInPatch+haloSize-1; y+=2)
     for (int z = 0; z < numberOfVolumesPerAxisInPatch; z++)
     for (int patchIndex=0; patchIndex<patchData.numberOfPatches; patchIndex++)
     {
@@ -816,12 +817,12 @@ void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_batched_in_situ(
     }  // and of loop over faces with normal along y-axis subject to shift loop
 
     for (int shift=0; shift<2; shift++)
+    for (int z = -haloSize+shift; z < numberOfVolumesPerAxisInPatch+haloSize-1; z+=2)
     #if defined(SharedOMP)
-    #pragma omp simd collapse(4)
+    #pragma omp simd collapse(3)
     #endif
     for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++)
     for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
-    for (int z = -haloSize+shift; z < numberOfVolumesPerAxisInPatch+haloSize-1; z+=2)
     for (int patchIndex=0; patchIndex<patchData.numberOfPatches; patchIndex++)
     {
       double maxEigenvalueL __attribute__((aligned (Alignment)));

@@ -139,6 +139,14 @@ namespace exahype2 {
       ;
 
 
+      /**
+       *
+       *
+       * ## Loop collapsing
+       *
+       * I originally thought I could collapse over the all the loops, as there
+       * are no race conditions, but this seems not to work. I have no clue why.
+       */
       template <
         typename Solver
       >
