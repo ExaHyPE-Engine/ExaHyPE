@@ -105,10 +105,10 @@ void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_patchwise_in_situ(
 
     if (Dimensions==2 and evaluateFlux) {
       for (int shift=0; shift<2; shift++)
-      #if defined(SharedOMP)
-      #pragma omp simd collapse(2)
-      #endif
       for (int x = -haloSize+shift; x < numberOfVolumesPerAxisInPatch+haloSize-1; x+=2)
+      #if defined(SharedOMP)
+      #pragma omp simd
+      #endif
       for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
       {
         double fluxFL[unknowns] __attribute__((aligned (Alignment)));
@@ -159,11 +159,12 @@ void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_patchwise_in_situ(
       } // end of x-flux computation subject to a shift loop
 
       for (int shift=0; shift<2; shift++)
+      for (int y = -haloSize+shift; y < numberOfVolumesPerAxisInPatch+haloSize-1; y+=2)
       #if defined(SharedOMP)
-      #pragma omp simd collapse(2)
+      #pragma omp simd
       #endif
       for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++)
-      for (int y = -haloSize+shift; y < numberOfVolumesPerAxisInPatch+haloSize-1; y+=2) {
+      {
         double fluxFL[unknowns] __attribute__((aligned (Alignment)));
         double fluxFR[unknowns] __attribute__((aligned (Alignment)));
         internal::computeFlux_LoopBody<Solver>(
@@ -212,10 +213,10 @@ void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_patchwise_in_situ(
     }
     if (Dimensions==3 and evaluateFlux) {
       for (int shift=0; shift<2; shift++)
-      #if defined(SharedOMP)
-      #pragma omp simd collapse(3)
-      #endif
       for (int x = -haloSize+shift; x < numberOfVolumesPerAxisInPatch+haloSize-1; x+=2)
+      #if defined(SharedOMP)
+      #pragma omp simd collapse(2)
+      #endif
       for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
       for (int z = 0; z < numberOfVolumesPerAxisInPatch; z++)
       {
@@ -267,11 +268,11 @@ void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_patchwise_in_situ(
       } // end of x-flux calculation subject to a shift loop
 
       for (int shift=0; shift<2; shift++)
+      for (int y = -haloSize+shift; y < numberOfVolumesPerAxisInPatch+haloSize-1; y+=2)
       #if defined(SharedOMP)
-      #pragma omp simd collapse(3)
+      #pragma omp simd collapse(2)
       #endif
       for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++)
-      for (int y = -haloSize+shift; y < numberOfVolumesPerAxisInPatch+haloSize-1; y+=2)
       for (int z = 0; z < numberOfVolumesPerAxisInPatch; z++)
       {
         double fluxFL[unknowns] __attribute__((aligned (Alignment)));
@@ -321,12 +322,12 @@ void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_patchwise_in_situ(
       } // end of y-flux calculation subject to a shift loop
 
       for (int shift=0; shift<2; shift++)
+      for (int z = -haloSize+shift; z < numberOfVolumesPerAxisInPatch+haloSize-1; z+=2)
       #if defined(SharedOMP)
-      #pragma omp simd collapse(3)
+      #pragma omp simd collapse(2)
       #endif
       for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++)
       for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
-      for (int z = -haloSize+shift; z < numberOfVolumesPerAxisInPatch+haloSize-1; z+=2)
       {
         double fluxFL[unknowns] __attribute__((aligned (Alignment)));
         double fluxFR[unknowns] __attribute__((aligned (Alignment)));
@@ -377,10 +378,10 @@ void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_patchwise_in_situ(
 
     if (Dimensions==2 and evaluateNonconservativeProduct) {
       for (int shift=0; shift<2; shift++)
-      #if defined(SharedOMP)
-      #pragma omp simd collapse(2)
-      #endif
       for (int x = -haloSize+shift; x < numberOfVolumesPerAxisInPatch+haloSize-1; x+=2)
+      #if defined(SharedOMP)
+      #pragma omp simd
+      #endif
       for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
       {
         double fluxNCP[unknowns] __attribute__((aligned (Alignment)));
@@ -416,11 +417,12 @@ void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_patchwise_in_situ(
       } // end of x-flux subject to a shift loop
 
       for (int shift=0; shift<2; shift++)
+      for (int y = -haloSize+shift; y < numberOfVolumesPerAxisInPatch+haloSize-1; y+=2)
       #if defined(SharedOMP)
-      #pragma omp simd collapse(2)
+      #pragma omp simd
       #endif
       for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++)
-      for (int y = -haloSize+shift; y < numberOfVolumesPerAxisInPatch+haloSize-1; y+=2) {
+      {
         double fluxNCP[unknowns] __attribute__((aligned (Alignment)));
 
         internal::computeNonconservativeFlux_LoopBody<Solver>(
@@ -455,10 +457,10 @@ void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_patchwise_in_situ(
     }
     if (Dimensions==3 and evaluateNonconservativeProduct) {
       for (int shift=0; shift<2; shift++)
-      #if defined(SharedOMP)
-      #pragma omp simd collapse(3)
-      #endif
       for (int x = -haloSize+shift; x < numberOfVolumesPerAxisInPatch+haloSize-1; x+=2)
+      #if defined(SharedOMP)
+      #pragma omp simd collapse(2)
+      #endif
       for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
       for (int z = 0; z < numberOfVolumesPerAxisInPatch; z++)
       {
@@ -495,11 +497,11 @@ void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_patchwise_in_situ(
       } // end of x-flux subject to a shift loop
 
       for (int shift=0; shift<2; shift++)
+      for (int y = -haloSize+shift; y < numberOfVolumesPerAxisInPatch+haloSize-1; y+=2)
       #if defined(SharedOMP)
-      #pragma omp simd collapse(3)
+      #pragma omp simd collapse(2)
       #endif
       for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++)
-      for (int y = -haloSize+shift; y < numberOfVolumesPerAxisInPatch+haloSize-1; y+=2)
       for (int z = 0; z < numberOfVolumesPerAxisInPatch; z++)
       {
         double fluxNCP[unknowns] __attribute__((aligned (Alignment)));
@@ -535,12 +537,12 @@ void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_patchwise_in_situ(
       } // end of y-flux subject to shift loop
 
       for (int shift=0; shift<2; shift++)
+      for (int z = -haloSize+shift; z < numberOfVolumesPerAxisInPatch+haloSize-1; z+=2)
       #if defined(SharedOMP)
-      #pragma omp simd collapse(3)
+      #pragma omp simd collapse(2)
       #endif
       for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++)
       for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
-      for (int z = -haloSize+shift; z < numberOfVolumesPerAxisInPatch+haloSize-1; z+=2)
       {
         double fluxNCP[unknowns] __attribute__((aligned (Alignment)));
 
@@ -577,10 +579,10 @@ void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_patchwise_in_situ(
 
     if (Dimensions==2) {
       for (int shift=0; shift<2; shift++)
-      #if defined(SharedOMP)
-      #pragma omp simd collapse(2)
-      #endif
       for (int x = -haloSize+shift; x < numberOfVolumesPerAxisInPatch+haloSize-1; x+=2)
+      #if defined(SharedOMP)
+      #pragma omp simd
+      #endif
       for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
       {
         double maxEigenvalueL __attribute__((aligned (Alignment)));
@@ -631,11 +633,12 @@ void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_patchwise_in_situ(
       } // and of loop over faces with normal along x-axis subject to shift loop
 
       for (int shift=0; shift<2; shift++)
+      for (int y = -haloSize+shift; y < numberOfVolumesPerAxisInPatch+haloSize-1; y+=2)
       #if defined(SharedOMP)
-      #pragma omp simd collapse(2)
+      #pragma omp simd
       #endif
       for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++)
-      for (int y = -haloSize+shift; y < numberOfVolumesPerAxisInPatch+haloSize-1; y+=2) {
+      {
         double maxEigenvalueL __attribute__((aligned (Alignment)));
         double maxEigenvalueR __attribute__((aligned (Alignment)));
         internal::computeMaxEigenvalue_LoopBody<Solver>(
@@ -685,10 +688,10 @@ void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_patchwise_in_situ(
     }
     if (Dimensions==3) {
       for (int shift=0; shift<2; shift++)
-      #if defined(SharedOMP)
-      #pragma omp simd collapse(3)
-      #endif
       for (int x = -haloSize+shift; x < numberOfVolumesPerAxisInPatch+haloSize-1; x+=2)
+      #if defined(SharedOMP)
+      #pragma omp simd collapse(2)
+      #endif
       for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
       for (int z = 0; z < numberOfVolumesPerAxisInPatch; z++)
       {
@@ -740,11 +743,11 @@ void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_patchwise_in_situ(
       }  // and of loop over faces with normal along x-axis subject to shift loop
 
       for (int shift=0; shift<2; shift++)
+      for (int y = -haloSize+shift; y < numberOfVolumesPerAxisInPatch+haloSize-1; y+=2)
       #if defined(SharedOMP)
-      #pragma omp simd collapse(3)
+      #pragma omp simd collapse(2)
       #endif
       for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++)
-      for (int y = -haloSize+shift; y < numberOfVolumesPerAxisInPatch+haloSize-1; y+=2)
       for (int z = 0; z < numberOfVolumesPerAxisInPatch; z++)
       {
         double maxEigenvalueL __attribute__((aligned (Alignment)));
@@ -795,12 +798,12 @@ void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_patchwise_in_situ(
       } // and of loop over faces with normal along y-axis subject to shift loop
 
       for (int shift=0; shift<2; shift++)
+      for (int z = -haloSize+shift; z < numberOfVolumesPerAxisInPatch+haloSize-1; z+=2)
       #if defined(SharedOMP)
-      #pragma omp simd collapse(3)
+      #pragma omp simd collapse(2)
       #endif
       for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++)
       for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
-      for (int z = -haloSize+shift; z < numberOfVolumesPerAxisInPatch+haloSize-1; z+=2)
       {
           double maxEigenvalueL __attribute__((aligned (Alignment)));
           double maxEigenvalueR __attribute__((aligned (Alignment)));
