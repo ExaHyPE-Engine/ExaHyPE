@@ -122,7 +122,7 @@ class LocalTimeStepWithEnclaveTasking( EnclaveTasking ):
       self._flux_implementation, self._ncp_implementation, self._source_term_implementation, 
       compute_max_eigenvalue_of_next_time_step=True, 
       solver_variant = SolverVariant.Stateless,
-      riemann_kernel_variant = RiemannKernelVariant.BatchedAoSoA
+      riemann_kernel_variant = RiemannKernelVariant.PatchWiseInSitu
     )
 
     self._fused_compute_kernel_call_gpu  = create_compute_Riemann_kernel_for_Rusanov(
