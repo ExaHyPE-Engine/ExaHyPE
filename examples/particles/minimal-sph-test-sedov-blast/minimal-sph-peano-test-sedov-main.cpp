@@ -36,6 +36,7 @@
 #include "observers/HydroKickExtra.h"
 #include "observers/Drift.h"
 #include "observers/RearrangeAtStart.h"
+#include "observers/EndTimeStep.h"
 
 tarch::logging::Log _log("::");
 
@@ -197,7 +198,7 @@ int main(int argc, char** argv) {
         examples::particles::observers::ForceNonSym forcespart;
         examples::particles::observers::NewtonRaphsonSmoothingLength newtonRaphson;
 
-        for (int iter=0; iter<3; iter++){
+        for (int iter=0; iter<1; iter++){
 
           /* Density loop */
           peano4::parallel::SpacetreeSet::getInstance().traverse(density);
@@ -237,7 +238,7 @@ int main(int argc, char** argv) {
 //        peano4::parallel::SpacetreeSet::getInstance().traverse(prepareForce);
 //        peano4::parallel::SpacetreeSet::getInstance().traverse(forcespart);
 
-        for (int iter=0; iter<3; iter++){
+        for (int iter=0; iter<1; iter++){
 
           /* Density loop */
           peano4::parallel::SpacetreeSet::getInstance().traverse(density);
@@ -280,8 +281,10 @@ int main(int argc, char** argv) {
 //          peano4::parallel::SpacetreeSet::getInstance().traverse(correctorExtra);
 //        }
 //        /****************************************/
-//
 
+        /* "End time-step" */
+        examples::particles::observers::EndTimeStep endTimeStep;
+        peano4::parallel::SpacetreeSet::getInstance().traverse(endTimeStep);
 
 
       }
