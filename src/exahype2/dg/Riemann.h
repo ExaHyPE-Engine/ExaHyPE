@@ -42,7 +42,15 @@ namespace exahype2 {
           double                                      t,
           int                                         normal
           ) >   maxEigenvalue,
+      std::function< void(
+        const double * __restrict__                  Qinside,
+        double * __restrict__                        Qoutside,
+        const tarch::la::Vector<Dimensions,double>&  x,
+        double                                       t,
+        int                                          normal
+      ) >   boundaryConditions,
       double* __restrict__                          QHull[Dimensions*2],
+      bool                                          atBoundary[Dimensions*2],
       const int                                     order,
       const int                                     unknowns,
       const int                                     auxiliaryVariables,

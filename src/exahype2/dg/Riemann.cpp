@@ -7,7 +7,15 @@ void exahype2::dg::getMaxEigenvaluePerFace(
         double                                      t,
         int                                         normal
         ) >   maxEigenvalue,
+    std::function< void(
+      const double * __restrict__                  Qinside,
+      double * __restrict__                        Qoutside,
+      const tarch::la::Vector<Dimensions,double>&  x,
+      double                                       t,
+      int                                          normal
+    ) >   boundaryConditions,
     double* __restrict__                          QHull[Dimensions*2],
+    bool                                          atBoundary[Dimensions*2],
     const int                                     order,
     const int                                     unknowns,
     const int                                     auxiliaryVariables,
@@ -17,34 +25,69 @@ void exahype2::dg::getMaxEigenvaluePerFace(
     ){
 
   const int nodesPerAxis = order+1;
-  const int nodesPerFace = 2*getNodesPerCell(nodesPerAxis)/nodesPerAxis;
+  const int nodesPerFace = getNodesPerCell(nodesPerAxis)/nodesPerAxis;
 
   const int strideQ = unknowns+auxiliaryVariables;
+
+  double*   boundaryValues = nullptr;
+  bool cellIsOnBoundary = false;
+
+  for(int face=0; face<2*Dimensions; face++){
+    cellIsOnBoundary |= atBoundary[face];
+  }
+
+  if(cellIsOnBoundary){
+    boundaryValues = new double[strideQ]{0.0};
+  }
 
   for(int dim=0; dim<Dimensions; dim++){
     for(int lr=0; lr<2; lr++){
 
-      double maxEigenvalueFace = 0.0;
-      for(int node=0; node<nodesPerFace; node++){
+      eigenvalues[2*dim+lr] = std::numeric_limits<double>::min();
 
-        double result = maxEigenvalue(
-//            &QHull[((2*dim+lr)*nodesPerFace+node)*strideQ],
-            &QHull[2*dim+lr][node*strideQ],
+      if(atBoundary[2*dim+lr]){
+        for(int node=0; node<nodesPerFace; node++){
+          double resultInner = maxEigenvalue(
+            &QHull[2*dim+lr][(2*node+(1-lr))*strideQ], //if left face, then inner side is the right one and reversely
             x,
             t,
-            node%2);
+            2*dim+lr);
 
-        maxEigenvalueFace = std::max(eigenvalues[2*dim+lr], std::abs(result));
+          boundaryConditions(
+              &QHull[2*dim+lr][(2*node+(1-lr))*strideQ],
+              boundaryValues,
+              x,
+              t,
+              2*dim+(1-lr));
 
-      } //node
+          double resultOuter = maxEigenvalue(
+              boundaryValues,
+              x,
+              t,
+              2*dim+(1-lr));
 
-      eigenvalues[2*dim+lr] = maxEigenvalueFace;
+          eigenvalues[2*dim+lr] = std::max(eigenvalues[2*dim+lr], std::abs(resultInner));
+          eigenvalues[2*dim+lr] = std::max(eigenvalues[2*dim+lr], std::abs(resultOuter));
+
+        }
+      }
+      else{
+        for(int node=0; node<2*nodesPerFace; node++){
+          double result = maxEigenvalue(
+            &QHull[2*dim+lr][node*strideQ], //if left face, then inner side is the right one and reversely
+            x,
+            t,
+            2*dim+node%2);
+          eigenvalues[2*dim+lr] = std::max(eigenvalues[2*dim+lr], std::abs(result));
+        }
+      }
 
     }
   }
 
-
-
+  if(cellIsOnBoundary){
+    delete [] boundaryValues;
+  }
 
 }
 
@@ -172,7 +215,7 @@ void exahype2::dg::computeRusanovOnHull(
 
             for(int var=0; var<unknowns; var++){
               //Rusanov flux
-              QHullOut[((2*dim+lr)*nodesPerFace+node)*strideQ+var] += 0.5*(fluxValuesLeft[var]-fluxValuesRight[var])
+              QHullOut[((2*dim+lr)*nodesPerFace+node)*strideQ+var] += 0.5*(fluxValuesLeft[var]+fluxValuesRight[var])
                   - coeff*(qr[var]-ql[var]);
             } //var
         } //if useFlux
@@ -230,7 +273,7 @@ void exahype2::dg::applyRiemannToPatch(
     const double* __restrict__  quadratureWeights
     ){
 
-  const int strideQ=order+unknowns;
+  const int strideQ      = unknowns+auxiliaryVariables;
   const int nodesPerAxis = order+1;
   const int nodesPerFace = getNodesPerCell(nodesPerAxis)/nodesPerAxis;
   const int nodesPerCell = getNodesPerCell(nodesPerAxis);
@@ -245,14 +288,23 @@ void exahype2::dg::applyRiemannToPatch(
     // direction in which riemann contributions are being computed
     for(int dim=0; dim<Dimensions; dim++){
 
-      const double coeff1     = coeff0/quadratureWeights[index[dim]];
-      const double coeffLeft   = coeff1*BasisFunctionValuesLeft[index[dim]];
+      const double coeff1 = coeff0/quadratureWeights[index[dim]];
+      /*
+      double coeff1 = coeff0;
+      for(int dim2=0; dim2<Dimensions; dim2++){
+        if(dim2!=dim){
+          coeff1 = coeff1*quadratureWeights[index[dim2]];
+        }
+      }
+      */
+
+      const double coeffLeft  = coeff1*BasisFunctionValuesLeft[index[dim]];
       const double coeffRight = coeff1*BasisFunctionValuesRight[index[dim]];
       const int leftFaceNode  = cellIndexToHullIndex(index, dim, 0, nodesPerAxis);
       const int rightFaceNode = cellIndexToHullIndex(index, dim, 1, nodesPerAxis);
 
       for(int var=0; var<unknowns; var++){
-        Q[node*strideQ+var] += coeffLeft * QHullIn[leftFaceNode+var] - coeffRight * QHullIn[rightFaceNode+var];
+        Q[node*strideQ+var] += coeffLeft * QHullIn[leftFaceNode*strideQ+var] - coeffRight * QHullIn[rightFaceNode*strideQ+var];
       }
 
     } //dim

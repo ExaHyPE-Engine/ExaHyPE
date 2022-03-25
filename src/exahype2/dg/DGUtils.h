@@ -161,6 +161,49 @@ namespace exahype2 {
         const int                        scalarIndex,
         double* __restrict__             gradQ
         );
+
+    /*
+     * Substracts contents of one cell array from another.
+     * This is used in DG because the volume integral computes y_n + f(y_n)
+     * (because this is what is needed for the projection)
+     * but Runge-Kutta approximations require only f(y_n), so we
+     * need to subtract y_n from it
+     */
+    void subtractCell(
+        double* __restrict__        QOut,
+        const double* __restrict__  Qsubstract,
+        const int                   order,
+        const int                   unknowns,
+        const int                   auxiliaryVariables
+        );
+
+
+    /*
+     * Plot patch
+     *
+     * usually used for debugging
+     */
+
+    std::string plotPatch(
+        const double* __restrict__ Q,
+        const int order,
+        const int unknowns,
+        const int auxiliaryVariables
+        );
+
+    /*
+     * Plot Face
+     *
+     * usually used for debugging
+     */
+
+    std::string plotFace(
+        const double* __restrict__ Q,
+        const int order,
+        const int unknowns,
+        const int auxiliaryVariables
+        );
+
   }
 }
 

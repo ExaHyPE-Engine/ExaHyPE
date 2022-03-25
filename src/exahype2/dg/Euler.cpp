@@ -96,19 +96,21 @@ void exahype2::dg::explicitEulerOnCell_FluxNCPSource_EvaluateTermsRedundantly(
               order,
               quadNodes);
 
-          flux(  &cellQin[neighbourNode*strideQ],
+          flux( &cellQin[neighbourNode*strideQ],
                 x,
                 t,
                 dim, //normal
                 fluxValues);
-          double coeff = coeff1 * StiffnessMatrix[i*nodesPerAxis+index[dim]]; //TODO: is this correct? I assume matrix is [receiving node, contributing node] but could be opposite
+
+          double coeff = coeff1 * StiffnessMatrix[i*nodesPerAxis+index[dim]];
           for(int var=0; var<unknowns; var++){
-              cellQout[node*strideQ+var] += coeff * fluxValues[var];
+              cellQout[node*strideQ+var] -= coeff * fluxValues[var];
           } //var
 
         } //i
       } //dim
     }//if useFlux
+
 
     //compute real node position
     tarch::la::Vector<Dimensions,double> position = getQuadraturePoint( x,
@@ -148,7 +150,7 @@ void exahype2::dg::explicitEulerOnCell_FluxNCPSource_EvaluateTermsRedundantly(
           dim,
           ncpValues);
         for(int var=0; var<unknowns; var++){
-          cellQout[node*strideQ+var] += ncpValues[var];
+          cellQout[node*strideQ+var] += dt * ncpValues[var];
         } //var
 
       } //dim

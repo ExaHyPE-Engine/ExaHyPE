@@ -176,6 +176,20 @@ int exahype2::dg::cellIndexToHullIndex(
     const int                                 nodesPerAxis
     ){
 
+  /*
+   * Imagine a 3d cell of order 2, so there are 9 nodes
+   * for a node [i,j,k], we want face element [j,k] if in
+   * direction i, [i,k] in direction j and [i,j] if in
+   * direction k.
+   * Element [a,b] of a face is element a*strides[0]+b
+   * (concept is same in other dimensions but with
+   * additional terms and greater strides)
+   *
+   * However since the Hull is one array, we need to skip
+   * the previous faces, so ignore nodesPerFace*dimensions
+   * indexes (nodesPerFace*dimensions+1) if right.
+  */
+
   int HullIndex = 0;
   int stride = 1;
 
@@ -189,7 +203,7 @@ int exahype2::dg::cellIndexToHullIndex(
   /* if left face need to skip left and right faces for each previous dimension
    * if right face, need to skip those plus the left face
    */
-  return HullIndex + stride*(2*direction+orientation); //stride is nodesPerAxis^(d-⁾
+  return HullIndex + stride*(2*direction+orientation); //stride is nodesPerAxis^(d)
 
 }
 
@@ -224,3 +238,77 @@ void exahype2::dg::computeGradient(
   }//dim
 
 }
+
+
+void exahype2::dg::subtractCell(
+    double* __restrict__        QOut,
+    const double* __restrict__  Qsubstract,
+    const int                   order,
+    const int                   unknowns,
+    const int                   auxiliaryVariables
+    ){
+
+  const int nodesPerAxis = order+1;
+  const int nodesPerCell = getNodesPerCell(nodesPerAxis);
+  const int strideQ = unknowns+auxiliaryVariables;
+
+  for(int node=0; node<nodesPerCell; node++){
+    for(int var=0; var<strideQ; var++){
+      QOut[node*strideQ+var] -= Qsubstract[node*strideQ+var];
+    }
+  }
+
+}
+
+
+std::string exahype2::dg::plotPatch(
+        const double* __restrict__ Q,
+        const int order,
+        const int unknowns,
+        const int auxiliaryVariables
+        ){
+
+  const int nodesPerCell = getNodesPerCell(order+1);
+  const int strideQ = unknowns+auxiliaryVariables;
+
+  std::ostringstream result;
+
+  result << "(" << std::endl;
+  for(int node=0; node<nodesPerCell; node++){
+    result << "node " << std::to_string(node) << "[";
+    for(int var=0; var<strideQ-1; var++){
+        result << std::to_string(Q[node*strideQ+var]) << ", ";
+    }
+    result << std::to_string(Q[node*strideQ+strideQ-1]) << "]" << std::endl;
+  }
+  result << ")" << std::endl;
+
+  return result.str();
+}
+
+std::string exahype2::dg::plotFace(
+        const double* __restrict__ Q,
+        const int order,
+        const int unknowns,
+        const int auxiliaryVariables
+        ){
+
+  const int nodesPerFace = getNodesPerCell(order+1)/(order+1);
+  const int strideQ = unknowns+auxiliaryVariables;
+
+  std::ostringstream result;
+
+  result << "(" << std::endl;
+  for(int node=0; node<nodesPerFace; node++){
+    result << "node " << std::to_string(node) << "[";
+    for(int var=0; var<strideQ-1; var++){
+        result << std::to_string(Q[node*strideQ+var]) << ", ";
+    }
+    result << std::to_string(Q[node*strideQ+strideQ-1]) << "]" << std::endl;
+  }
+  result << ")" << std::endl;
+
+  return result.str();
+}
+
+
