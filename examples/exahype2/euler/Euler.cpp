@@ -55,6 +55,12 @@ Scenario scenario = Scenario::PointExplosion;
 ) {
   ::exahype2::RefinementCommand result = ::exahype2::RefinementCommand::Keep;
 
+  #if Dimensions==3
+  tarch::la::Vector<Dimensions,double> circleCentre = {0.5,0.3,0.5};
+  #else
+  tarch::la::Vector<Dimensions,double> circleCentre = {0.5,0.3};
+  #endif
+
   switch (scenario) {
     case Scenario::PointExplosion:
       {
@@ -62,7 +68,6 @@ Scenario scenario = Scenario::PointExplosion;
         // you only have this thing, then you work with static AMR, as
         // you never invoke erase.
         if ( tarch::la::equals(t,0.0) ) {
-          tarch::la::Vector<Dimensions,double> circleCentre = {0.5,0.3};
           bool isInTheCentre = ( tarch::la::norm2( volumeCentre-circleCentre ) < 0.05 );
           if (isInTheCentre)
             result = ::exahype2::RefinementCommand::Refine;
@@ -73,7 +78,6 @@ Scenario scenario = Scenario::PointExplosion;
       {
         // Same as for static AMR. This is the initial pattern
         if ( tarch::la::equals(t,0.0) ) {
-          tarch::la::Vector<Dimensions,double> circleCentre = {0.5,0.3};
           bool isInTheCentre = ( tarch::la::norm2( volumeCentre-circleCentre ) < 0.05 );
           if (isInTheCentre)
             result = ::exahype2::RefinementCommand::Refine;
