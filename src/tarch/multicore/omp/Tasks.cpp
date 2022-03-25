@@ -18,7 +18,6 @@ namespace {
   const int BackgroundConsumerPriority = 1;
 
   const std::string BSPTasksStatisticsIdentifier( "tarch::multicore::bsp-tasks");
-  // @todo nachziehen in anderen implementierungen
   const std::string BackfillWhileWaitingForBSPTasks( "tarch::multicore::backfill");
 
 

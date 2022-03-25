@@ -1,5 +1,5 @@
-#include "tarch/Assertions.h"
 #include "tarch/multicore/Core.h"
+#include "tarch/multicore/Tasks.h"
 #include "tarch/multicore/multicore.h"
 #include "tarch/compiler/CompilerSpecificSettings.h"
 
@@ -45,6 +45,8 @@ void tarch::multicore::initSYCLQueues() {
 #include "config.h"
 #include <tbb/global_control.h>
 #include <tbb/info.h>
+#include <oneapi/tbb/task_arena.h>
+//#include <tbb/task_arena.h>
 
 
 #include <map>
@@ -61,6 +63,7 @@ tarch::logging::Log tarch::multicore::Core::_log( "tarch::multicore::Core" );
 tarch::multicore::Core::Core():
   _numberOfThreads( ::tbb::info::default_concurrency() ),
   _numberOfDevices( 0 ) {
+  internal::configureInternalTaskQueues(_numberOfThreads);
   #if defined(SYCLGPUOffloading)
   initSYCLQueues();
   #endif
@@ -91,6 +94,8 @@ void tarch::multicore::Core::configure( int numberOfThreads ) {
   if (_numberOfThreads>getNumberOfUnmaskedThreads()) {
     logWarning( "configure(int)", "number of configured threads (" << numberOfThreads << ") is bigger than available unmasked threads (" << getNumberOfUnmaskedThreads() << ")" );
   }
+
+  internal::configureInternalTaskQueues(_numberOfThreads);
 }
 
 
@@ -123,5 +128,11 @@ int tarch::multicore::Core::getCoreNumber() const {
   return 1;
   #endif
 }
+
+
+int tarch::multicore::Core::getThreadNumber() const {
+  return tbb::this_task_arena::current_thread_index();
+}
+
 
 #endif

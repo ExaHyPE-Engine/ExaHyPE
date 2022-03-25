@@ -1,4 +1,5 @@
 #include "tarch/multicore/Core.h"
+#include "tarch/multicore/Tasks.h"
 #include "tarch/multicore/multicore.h"
 #include "tarch/compiler/CompilerSpecificSettings.h"
 
@@ -19,6 +20,7 @@ tarch::logging::Log tarch::multicore::Core::_log( "tarch::multicore::Core" );
 
 tarch::multicore::Core::Core():
   _numberOfThreads(std::thread::hardware_concurrency()) {
+  internal::configureInternalTaskQueues(_numberOfThreads);
 }
 
 
@@ -43,6 +45,9 @@ void tarch::multicore::Core::configure( int numberOfThreads ) {
   if (_numberOfThreads>getNumberOfUnmaskedThreads()) {
     logWarning( "configure(int)", "number of configured threads (" << numberOfThreads << ") is bigger than available unmasked threads (" << getNumberOfUnmaskedThreads() << ")" );
   }
+
+  // we don't change the number of thread queues, as it seems we cannot
+  // control the number of threads in C++
 }
 
 
@@ -61,7 +66,7 @@ int tarch::multicore::Core::getNumberOfThreads() const {
 
 
 int tarch::multicore::Core::getNumberOfGPUs() const {
-  // @todo Holger
+  // @todo Uzmar, we have to ask NVIDIA how this will work
   return 1;
 }
 
@@ -74,5 +79,11 @@ int tarch::multicore::Core::getCoreNumber() const {
   return 1;
   #endif
 }
+
+
+int tarch::multicore::Core::getThreadNumber() const {
+  return getCoreNumber();
+}
+
 
 #endif

@@ -28,8 +28,11 @@ namespace {
   std::atomic<int> nonblockingTasksCounter          = 0;
 
   const std::string BSPTasksStatisticsIdentifier( "tarch::multicore::bsp-tasks");
+  const std::string BackfillWhileWaitingForBSPTasks( "tarch::multicore::backfill");
 
   /**
+   * We seem to need this task group. Has to be investigated.
+   * 
    * @see spawnTask()
    * @see spawnAndWaitAsTaskLoop()
    */
@@ -153,7 +156,8 @@ namespace {
   
           pendingTasks--;
 
-          const auto fusion = strategy->getNumberOfTasksToFuseAndTargetDevice();
+          const auto fusion       = strategy->getNumberOfTasksToFuseAndTargetDevice();
+          const int  threadNumber = tarch::multicore::Core::getInstance().getThreadNumber();
 
           while (
             pendingTasks>0
@@ -165,19 +169,21 @@ namespace {
             and
             spawnedTasks==NumberOfThreads
           ) {
-            int numberOfPendingTasks = tarch::multicore::getNumberOfPendingTasks();
+            tarch::services::ServiceRepository::getInstance().receiveDanglingMessages();
+            int numberOfPendingTasks = tarch::multicore::getNumberOfPendingTasks(threadNumber);
 
             bool processedSomeTasks = false;
             if (numberOfPendingTasks>=fusion.minTasks) {
               processedSomeTasks = tarch::multicore::internal::fusePendingTasks(fusion);
             }
-            else {
-              int numberOfTasksToProcess = std::max(1,numberOfPendingTasks/2);
+            else if (numberOfPendingTasks>0) {
+              tarch::multicore::internal::processThreadLocalTask(threadNumber);
+              }
+            else { // no local tasks left over
+              tarch::multicore::internal::copyInternalTaskQueuesOverIntoGlobalQueue(threadNumber);
+              const int numberOfTasksToProcess = std::max(1,tarch::multicore::getNumberOfPendingTasks(-1)/2);
+              ::tarch::logging::Statistics::getInstance().log( BackfillWhileWaitingForBSPTasks, numberOfTasksToProcess );
               processedSomeTasks = tarch::multicore::processPendingTasks( numberOfTasksToProcess );
-            }
-
-            if (not processedSomeTasks) {
-              tarch::services::ServiceRepository::getInstance().receiveDanglingMessages();
             }
           }
         }
