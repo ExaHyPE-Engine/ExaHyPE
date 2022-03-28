@@ -33,7 +33,7 @@ class GlobalAdaptiveTimeStep( SingleSweep ):
     boundary_conditions=None,refinement_criterion=None,initial_conditions=None,source_term=None,
     plot_grid_properties=False
   ):
-    super(GlobalAdaptiveTimeStep,self).__init__(name, patch_size, unknowns, auxiliary_variables, min_volume_h, max_volume_h, plot_grid_properties) 
+    super(GlobalAdaptiveTimeStep,self).__init__(name, patch_size, 1, unknowns, auxiliary_variables, min_volume_h, max_volume_h, plot_grid_properties) 
     
     self._time_step_relaxation = time_step_relaxation
 

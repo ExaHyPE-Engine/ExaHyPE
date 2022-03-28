@@ -62,7 +62,7 @@ class LocalTimeStepWithEnclaveTasking( EnclaveTasking ):
     """
     self._interpolate_linearly_in_time        = interpolate_linearly_in_time
     
-    super(LocalTimeStepWithEnclaveTasking,self).__init__(name, patch_size, unknowns, auxiliary_variables, min_volume_h, max_volume_h, plot_grid_properties,pde_terms_without_state) 
+    super(LocalTimeStepWithEnclaveTasking,self).__init__(name, patch_size, 1, unknowns, auxiliary_variables, min_volume_h, max_volume_h, plot_grid_properties,pde_terms_without_state) 
     
     self._time_step_relaxation = time_step_relaxation
 

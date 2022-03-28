@@ -34,7 +34,7 @@ class GlobalAdaptiveTimeStepWithEnclaveTasking( EnclaveTasking ):
     plot_grid_properties=False,
     pde_terms_without_state=False
   ):
-    super(GlobalAdaptiveTimeStepWithEnclaveTasking,self).__init__(name, patch_size, unknowns, auxiliary_variables, min_volume_h, max_volume_h, plot_grid_properties, pde_terms_without_state) 
+    super(GlobalAdaptiveTimeStepWithEnclaveTasking,self).__init__(name, patch_size, 1, unknowns, auxiliary_variables, min_volume_h, max_volume_h, plot_grid_properties, pde_terms_without_state) 
     
     self._time_step_relaxation = time_step_relaxation
 
