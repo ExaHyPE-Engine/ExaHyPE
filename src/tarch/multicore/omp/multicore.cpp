@@ -3,7 +3,7 @@
 
 #if defined(SharedOMP)
 
-#if defined(OpenMPGPUOffloading)
+#if defined(GPUOffloadingOMP)
 #pragma omp declare target
 #endif
 double* tarch::allocateMemory(int size, MemoryLocation location) {
@@ -13,7 +13,7 @@ double* tarch::allocateMemory(int size, MemoryLocation location) {
       result = new (std::align_val_t(Alignment)) double[size];
       break;
     case MemoryLocation::ManagedAcceleratorMemory:
-      #if defined(OpenMPGPUOffloading) and defined(UseNVIDIA)
+      #if defined(GPUOffloadingOMP) and defined(UseNVIDIA)
       cudaMallocManaged((void**)&result, size*sizeof(double), cudaMemAttachGlobal);
       #else
       //// #pragma omp allocate ()
@@ -23,12 +23,12 @@ double* tarch::allocateMemory(int size, MemoryLocation location) {
   }
   return result;
 }
-#if defined(OpenMPGPUOffloading)
+#if defined(GPUOffloadingOMP)
 #pragma omp end declare target
 #endif
 
 
-#if defined(OpenMPGPUOffloading)
+#if defined(GPUOffloadingOMP)
 #pragma omp declare target
 #endif
 void tarch::freeMemory(double* data, MemoryLocation location) {
@@ -37,9 +37,9 @@ void tarch::freeMemory(double* data, MemoryLocation location) {
       delete[] data;
       break;
     case MemoryLocation::ManagedAcceleratorMemory:
-      //#if defined(OpenMPGPUOffloading) and defined(UseNVIDIA)
+      //#if defined(GPUOffloadingOMP) and defined(UseNVIDIA)
       //cudaFree(data);
-      //#elif defined(OpenMPGPUOffloading) and defined(UseAMD)
+      //#elif defined(GPUOffloadingOMP) and defined(UseAMD)
       //// See remark on managed memory above
       //// hipFree(data);
       //delete[] data;
@@ -49,7 +49,7 @@ void tarch::freeMemory(double* data, MemoryLocation location) {
       //break;
   }
 }
-#if defined(OpenMPGPUOffloading)
+#if defined(GPUOffloadingOMP)
 #pragma omp end declare target
 #endif
 

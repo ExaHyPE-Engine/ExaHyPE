@@ -41,6 +41,6 @@ namespace exahype2 {
 }
 
 
-#include "Rusanov_overlap1_patchwise_static_calls.h"
+#include "Rusanov_overlap1_patchwise.cpph"
 
 #endif

@@ -458,7 +458,7 @@ def create_abstract_solver_declarations(flux_implementation, ncp_implementation,
      * lacks an inline define. Also, if you don't want to use ipo aggressively,
      * it might be clever to put the implementation into the header.
      */
-    #if defined(OpenMPGPUOffloading)
+    #if defined(GPUOffloadingOMP)
     #pragma omp declare target
     #endif
     static GPUCallableMethod double maxEigenvalue(
@@ -470,7 +470,7 @@ def create_abstract_solver_declarations(flux_implementation, ncp_implementation,
       int                                          normal,
       Offloadable
     );
-    #if defined(OpenMPGPUOffloading)
+    #if defined(GPUOffloadingOMP)
     #pragma omp end declare target
     #endif
     {% endif %}
@@ -498,7 +498,7 @@ def create_abstract_solver_declarations(flux_implementation, ncp_implementation,
      * lacks an inline define. Also, if you don't want to use ipo aggressively,
      * it might be clever to put the implementation into the header.
      */
-    #if defined(OpenMPGPUOffloading)
+    #if defined(GPUOffloadingOMP)
     #pragma omp declare target
     #endif
     static GPUCallableMethod void flux(
@@ -511,7 +511,7 @@ def create_abstract_solver_declarations(flux_implementation, ncp_implementation,
       double * __restrict__                        F, // F[{{NUMBER_OF_UNKNOWNS}}]
       Offloadable
     );
-    #if defined(OpenMPGPUOffloading)
+    #if defined(GPUOffloadingOMP)
     #pragma omp end declare target
     #endif
     {% endif %}
@@ -535,7 +535,7 @@ def create_abstract_solver_declarations(flux_implementation, ncp_implementation,
      * lacks an inline define. Also, if you don't want to use ipo aggressively,
      * it might be clever to put the implementation into the header.
      */
-    #if defined(OpenMPGPUOffloading)
+    #if defined(GPUOffloadingOMP)
     #pragma omp declare target
     #endif
     static GPUCallableMethod void nonconservativeProduct(
@@ -549,7 +549,7 @@ def create_abstract_solver_declarations(flux_implementation, ncp_implementation,
       double * __restrict__                        BgradQ, // BgradQ[{{NUMBER_OF_UNKNOWNS}}]
       Offloadable
     );
-    #if defined(OpenMPGPUOffloading)
+    #if defined(GPUOffloadingOMP)
     #pragma omp end declare target
     #endif
     {% endif %}
@@ -574,7 +574,7 @@ def create_abstract_solver_declarations(flux_implementation, ncp_implementation,
      * lacks an inline define. Also, if you don't want to use ipo aggressively,
      * it might be clever to put the implementation into the header.
      */
-    #if defined(OpenMPGPUOffloading)
+    #if defined(GPUOffloadingOMP)
     #pragma omp declare target
     #endif
     static GPUCallableMethod void sourceTerm(
@@ -586,7 +586,7 @@ def create_abstract_solver_declarations(flux_implementation, ncp_implementation,
       double * __restrict__ S,
       Offloadable
     );
-    #if defined(OpenMPGPUOffloading)
+    #if defined(GPUOffloadingOMP)
     #pragma omp end declare target
     #endif
     {% endif %}
@@ -680,7 +680,7 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::sourceTerm(
 
 
 {% if EIGENVALUES_IMPLEMENTATION!="<user-defined>" and STATELESS_PDE_TERMS %}
-#if defined(OpenMPGPUOffloading)
+#if defined(GPUOffloadingOMP)
 #pragma omp declare target
 #endif
 GPUCallableMethod double {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::maxEigenvalue(
@@ -693,14 +693,14 @@ GPUCallableMethod double {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::maxEigenva
 ) {
   {{EIGENVALUES_IMPLEMENTATION}};
 }
-#if defined(OpenMPGPUOffloading)
+#if defined(GPUOffloadingOMP)
 #pragma omp end declare target
 #endif
 {% endif %}
 
 
 {% if FLUX_IMPLEMENTATION!="<user-defined>" and STATELESS_PDE_TERMS %}
-#if defined(OpenMPGPUOffloading)
+#if defined(GPUOffloadingOMP)
 #pragma omp declare target
 #endif
 GPUCallableMethod void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::flux(
@@ -719,14 +719,14 @@ GPUCallableMethod void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::flux(
   {{FLUX_IMPLEMENTATION}}
   {% endif %}
 }
-#if defined(OpenMPGPUOffloading)
+#if defined(GPUOffloadingOMP)
 #pragma omp end declare target
 #endif
 {% endif %}
 
 
 {% if NCP_IMPLEMENTATION!="<user-defined>" and STATELESS_PDE_TERMS %}
-#if defined(OpenMPGPUOffloading)
+#if defined(GPUOffloadingOMP)
 #pragma omp declare target
 #endif
 GPUCallableMethod void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::nonconservativeProduct(
@@ -746,14 +746,14 @@ GPUCallableMethod void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::nonconservat
   {{NCP_IMPLEMENTATION}}
   {% endif %}
 }
-#if defined(OpenMPGPUOffloading)
+#if defined(GPUOffloadingOMP)
 #pragma omp end declare target
 #endif
 {% endif %}
 
 
 {% if SOURCE_TERM_IMPLEMENTATION!="<user-defined>" and STATELESS_PDE_TERMS %}
-#if defined(OpenMPGPUOffloading)
+#if defined(GPUOffloadingOMP)
 #pragma omp declare target
 #endif
 GPUCallableMethod void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::sourceTerm(
@@ -771,7 +771,7 @@ GPUCallableMethod void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::sourceTerm(
   {{SOURCE_TERM_IMPLEMENTATION}}
   {% endif %}
 }
-#if defined(OpenMPGPUOffloading)
+#if defined(GPUOffloadingOMP)
 #pragma omp end declare target
 #endif
 {% endif %}
@@ -861,7 +861,7 @@ def create_solver_declarations(flux_implementation, ncp_implementation, eigenval
      * TBB trick and overload by adding an additional enum. It has no semantics
      * but helps the compiler to distinguish the different function variants.
      */
-    #if defined(OpenMPGPUOffloading)
+    #if defined(GPUOffloadingOMP)
     #pragma omp declare target
     #endif
     static GPUCallableMethod void sourceTerm(
@@ -873,7 +873,7 @@ def create_solver_declarations(flux_implementation, ncp_implementation, eigenval
        double * __restrict__ S,
        Offloadable
      );
-    #if defined(OpenMPGPUOffloading)
+    #if defined(GPUOffloadingOMP)
     #pragma omp end declare target
     #endif
     {% endif %}
@@ -894,7 +894,7 @@ def create_solver_declarations(flux_implementation, ncp_implementation, eigenval
      * TBB trick and overload by adding an additional enum. It has no semantics
      * but helps the compiler to distinguish the different function variants.
      */
-    #if defined(OpenMPGPUOffloading)
+    #if defined(GPUOffloadingOMP)
     #pragma omp declare target
     #endif
     static GPUCallableMethod double maxEigenvalue(
@@ -905,7 +905,7 @@ def create_solver_declarations(flux_implementation, ncp_implementation, eigenval
       int                                          normal,
       Offloadable
     );
-    #if defined(OpenMPGPUOffloading)
+    #if defined(GPUOffloadingOMP)
     #pragma omp end declare target
     #endif
     {% endif %}
@@ -926,7 +926,7 @@ def create_solver_declarations(flux_implementation, ncp_implementation, eigenval
      * TBB trick and overload by adding an additional enum. It has no semantics
      * but helps the compiler to distinguish the different function variants.
      */
-    #if defined(OpenMPGPUOffloading)
+    #if defined(GPUOffloadingOMP)
     #pragma omp declare target
     #endif
     static GPUCallableMethod void flux(
@@ -939,7 +939,7 @@ def create_solver_declarations(flux_implementation, ncp_implementation, eigenval
       double * __restrict__                        F, // F[{{NUMBER_OF_UNKNOWNS}}]
       Offloadable
     );
-    #if defined(OpenMPGPUOffloading)
+    #if defined(GPUOffloadingOMP)
     #pragma omp end declare target
     #endif
     {% endif %}
@@ -960,7 +960,7 @@ def create_solver_declarations(flux_implementation, ncp_implementation, eigenval
      * TBB trick and overload by adding an additional enum. It has no semantics
      * but helps the compiler to distinguish the different function variants.
      */
-    #if defined(OpenMPGPUOffloading)
+    #if defined(GPUOffloadingOMP)
     #pragma omp declare target
     #endif
     static GPUCallableMethod void nonconservativeProduct(
@@ -974,7 +974,7 @@ def create_solver_declarations(flux_implementation, ncp_implementation, eigenval
       double * __restrict__                        BgradQ,     // BgradQ[5]
       Offloadable
     );
-    #if defined(OpenMPGPUOffloading)
+    #if defined(GPUOffloadingOMP)
     #pragma omp end declare target
     #endif
     {% endif %}    
@@ -1061,7 +1061,7 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::sourceTerm(
 
 
 {% if EIGENVALUES_IMPLEMENTATION=="<user-defined>" and STATELESS_PDE_TERMS %}
-    #if defined(OpenMPGPUOffloading)
+    #if defined(GPUOffloadingOMP)
     #pragma omp declare target
     #endif
 GPUCallableMethod double {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::maxEigenvalue(
@@ -1074,14 +1074,14 @@ GPUCallableMethod double {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::maxEigenva
 )  {
   // @todo implement
 }
-    #if defined(OpenMPGPUOffloading)
+    #if defined(GPUOffloadingOMP)
     #pragma omp end declare target
     #endif
 {% endif %}
 
 
 {% if FLUX_IMPLEMENTATION=="<user-defined>" and STATELESS_PDE_TERMS %}
-    #if defined(OpenMPGPUOffloading)
+    #if defined(GPUOffloadingOMP)
     #pragma omp declare target
     #endif
 GPUCallableMethod void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::flux(
@@ -1096,14 +1096,14 @@ GPUCallableMethod void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::flux(
 )  {
   // @todo implement
 }
-    #if defined(OpenMPGPUOffloading)
+    #if defined(GPUOffloadingOMP)
     #pragma omp end declare target
     #endif
 {% endif %}
 
 
 {% if NCP_IMPLEMENTATION=="<user-defined>" and STATELESS_PDE_TERMS %}
-    #if defined(OpenMPGPUOffloading)
+    #if defined(GPUOffloadingOMP)
     #pragma omp declare target
     #endif
 GPUCallableMethod void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::nonconservativeProduct(
@@ -1119,7 +1119,7 @@ GPUCallableMethod void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::nonconservat
 )  {
   // @todo implement
 }
-    #if defined(OpenMPGPUOffloading)
+    #if defined(GPUOffloadingOMP)
     #pragma omp end declare target
     #endif
 {% endif %}
@@ -1127,7 +1127,7 @@ GPUCallableMethod void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::nonconservat
 
 
 {% if SOURCE_TERM_IMPLEMENTATION=="<user-defined>" and STATELESS_PDE_TERMS %}
-    #if defined(OpenMPGPUOffloading)
+    #if defined(GPUOffloadingOMP)
     #pragma omp declare target
     #endif
 GPUCallableMethod void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::sourceTerm(
@@ -1141,7 +1141,7 @@ GPUCallableMethod void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::sourceTerm(
 ) {
   // @todo implement
 }
-    #if defined(OpenMPGPUOffloading)
+    #if defined(GPUOffloadingOMP)
     #pragma omp end declare target
     #endif
 {% endif %}

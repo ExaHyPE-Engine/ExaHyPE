@@ -25,7 +25,7 @@ namespace exahype2 {
      * @param[in] strideQ
      * @param[in] scalarIndex
      */ 
-    #if defined(OpenMPGPUOffloading)
+    #if defined(GPUOffloadingOMP)
     #pragma omp declare target
     #endif
     GPUCallableMethod double corrector_adjustSolution_computeMaxEigenvalue_body_AoS(
@@ -50,7 +50,7 @@ namespace exahype2 {
         const int                                   strideQ,
         const int                                   callMaxEigenvalue,
         const int                                   scalarIndex);
-    #if defined(OpenMPGPUOffloading)
+    #if defined(GPUOffloadingOMP)
     #pragma omp end declare target
     #endif
 
@@ -77,7 +77,7 @@ namespace exahype2 {
      * @param[in] strideQ
      * @param[in] scalarIndex
      */
-    #if defined(OpenMPGPUOffloading)
+    #if defined(GPUOffloadingOMP)
     #pragma omp declare target
     #endif
     GPUCallableMethod void corrector_addFluxContributions_body_AoS(
@@ -102,7 +102,7 @@ namespace exahype2 {
         const int                                   unknowns,
         const int                                   strideQ,
         const int                                   scalarIndex);
-     #if defined(OpenMPGPUOffloading)
+     #if defined(GPUOffloadingOMP)
      #pragma omp end declare target
      #endif
     
@@ -128,7 +128,7 @@ namespace exahype2 {
      * @param[in] strideQ
      * @param[in] scalarIndex
      */
-    #if defined(OpenMPGPUOffloading)
+    #if defined(GPUOffloadingOMP)
     #pragma omp declare target
     #endif
     GPUCallableMethod void corrector_addSourceContributions_body_AoS(
@@ -151,7 +151,7 @@ namespace exahype2 {
         const int                                   unknowns,
         const int                                   strideQ,
         const int                                   scalarIndex);
-     #if defined(OpenMPGPUOffloading)
+     #if defined(GPUOffloadingOMP)
      #pragma omp end declare target
      #endif
     
@@ -179,7 +179,7 @@ namespace exahype2 {
       * @param[in] strideQ
       * @param[in] scalarIndex
       */
-     #if defined(OpenMPGPUOffloading)
+     #if defined(GPUOffloadingOMP)
      #pragma omp declare target
      #endif
      GPUCallableMethod void corrector_addNcpContributions_body_AoS(
@@ -206,7 +206,7 @@ namespace exahype2 {
        const int                                   unknowns,
        const int                                   strideQ,
        const int                                   scalarIndex);
-    #if defined(OpenMPGPUOffloading)
+    #if defined(GPUOffloadingOMP)
     #pragma omp end declare target
     #endif
     
@@ -225,7 +225,7 @@ namespace exahype2 {
      * @param[in] strideQ
      * @param[in] scalarIndex
      */
-    #if defined(OpenMPGPUOffloading)
+    #if defined(GPUOffloadingOMP)
     #pragma omp declare target
     #endif
     GPUCallableMethod void corrector_addRiemannContributions_body_AoS(
@@ -240,7 +240,7 @@ namespace exahype2 {
        const int                         strideQ,
        const int                         strideF,
        const int                         scalarIndexCell);
-    #if defined(OpenMPGPUOffloading)
+    #if defined(GPUOffloadingOMP)
     #pragma omp end declare target
     #endif
     

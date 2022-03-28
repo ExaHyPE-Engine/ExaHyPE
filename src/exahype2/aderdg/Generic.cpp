@@ -52,7 +52,7 @@ void exahype2::aderdg::validateSpacetimePatch(
   }
 }
     
-//#if defined(OpenMPGPUOffloading)
+//#if defined(GPUOffloadingOMP)
 //#pragma omp declare target
 //#endif
 //void exahype2::aderdg::copyPatch(
@@ -70,6 +70,6 @@ void exahype2::aderdg::validateSpacetimePatch(
 //	  }
 //  }
 //}
-//#if defined(OpenMPGPUOffloading)
+//#if defined(GPUOffloadingOMP)
 //#pragma omp end declare target
 //#endif

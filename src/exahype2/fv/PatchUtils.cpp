@@ -88,7 +88,7 @@ void exahype2::fv::validatePatch (
   double* minValues,
   double* maxValues
 ) {
-  #if PeanoDebug>1 && !defined(OpenMPGPUOffloading)
+  #if PeanoDebug>1 && !defined(GPUOffloadingOMP)
   static tarch::logging::Log _log( "exahype2::fv" );
   logTraceInWith5Arguments( "validatePatch(...)", unknowns, auxiliaryVariables, numberOfVolumesPerAxisInPatch, haloSize, location );
   const int PatchSize = numberOfVolumesPerAxisInPatch+2*haloSize;

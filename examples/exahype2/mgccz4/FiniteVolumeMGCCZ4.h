@@ -32,7 +32,7 @@ class examples::exahype2::mgccz4::FiniteVolumeMGCCZ4: public AbstractFiniteVolum
     FiniteVolumeMGCCZ4();   
 
     
-    //#if defined(OpenMPGPUOffloading)
+    //#if defined(GPUOffloadingOMP)
     //#pragma omp declare target
     //#endif
     void adjustSolution(
@@ -42,12 +42,12 @@ class examples::exahype2::mgccz4::FiniteVolumeMGCCZ4: public AbstractFiniteVolum
       double                                       t,
       double                                       dt
     )  override;
-    //#if defined(OpenMPGPUOffloading)
+    //#if defined(GPUOffloadingOMP)
     //#pragma omp end declare target
     //#endif
     
     
-    //#if defined(OpenMPGPUOffloading)
+    //#if defined(GPUOffloadingOMP)
     //#pragma omp declare target
     //#endif
     void sourceTerm(
@@ -58,7 +58,7 @@ class examples::exahype2::mgccz4::FiniteVolumeMGCCZ4: public AbstractFiniteVolum
       double                                       dt,
       double * __restrict__ S
     );
-    //#if defined(OpenMPGPUOffloading)
+    //#if defined(GPUOffloadingOMP)
     //#pragma omp end declare target
     //#endif
     

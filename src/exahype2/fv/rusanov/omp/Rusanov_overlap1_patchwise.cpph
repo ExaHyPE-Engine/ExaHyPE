@@ -7,11 +7,12 @@ template <
   typename Solver,
   typename TempDataEnumerator
 >
-void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_patchwise(
-  ::exahype2::CellData&              patchData,
-  int      numberOfVolumesPerAxisInPatch,
-  int      unknowns,
-  int      auxiliaryVariables,
+void exahype2::fv::rusanov::omp::timeStepWithRusanov_overlap1_patchwise(
+  int                     targetDevice,
+  ::exahype2::CellData&   patchData,
+  int                     numberOfVolumesPerAxisInPatch,
+  int                     unknowns,
+  int                     auxiliaryVariables,
   bool                    evaluateFlux,
   bool                    evaluateNonconservativeProduct,
   bool                    evaluateSource,

@@ -206,36 +206,48 @@ fi
 #
 # GPU support
 #
-AC_ARG_ENABLE(gpu,
-  AC_HELP_STRING([--enable-gpu], [build with the GPU support. Not all targets are supported for all programming models, but you will need some threading model enabled [default=no,omp,hip,sycl]]),
-  [ AC_MSG_CHECKING(for gpu)
-    case "${enableval}" in
+AC_ARG_WITH(
+  gpu, 
+  AC_HELP_STRING([--with-gpu], [build with the GPU support. Not all targets are supported for all programming models, but you will need some threading model enabled [default=no,omp,hip,sycl]]),
+  [
+    AC_MSG_CHECKING(for gpu)
+    case "${withval}" in
       no)    AC_MSG_RESULT(no);                                    gpu=false ;;
       omp)   AC_MSG_RESULT(build with OpenMP offloading to GPUs);  gpu=omp ;;
       hip)   AC_MSG_RESULT(build with HIP GPU support);            gpu=hip ;;
       sycl)  AC_MSG_RESULT(build with SYCL GPU support);           gpu=sycl ;;
-    esac 
-  ],
-  [ AC_MSG_CHECKING(for gpu); AC_MSG_RESULT(no); gpu=false ]
+      *)     AC_MSG_FAILURE([use omp, cpp or sycl to define target]);            gpu=false ;;
+    esac
+  ], 
+  [ 
+    AC_MSG_CHECKING(for gpu); 
+    AC_MSG_RESULT(no); gpu=false
+  ]
 )
 
 
-AM_CONDITIONAL([OpenMPGPUOffloading], [test "$gpu" == omp])
-AM_CONDITIONAL([SYCLGPUOffloading],   [test "$gpu" == sycl])
-AM_CONDITIONAL([HIPGPUOffloading],    [test "$gpu" == hip])
+AM_CONDITIONAL([GPUOffloadingOMP], [test "$gpu" == omp])
+AM_CONDITIONAL([GPUOffloadingSYCL],   [test "$gpu" == sycl])
+AM_CONDITIONAL([GPUOffloadingHIP],    [test "$gpu" == hip])
 
 
-#if test "$gpu"==omp; then
-#  AC_DEFINE([OpenMPGPUOffloading], [1], [OpenMPGPUOffloading])
-#fi
+if test "$gpu" == omp; then
+  AC_OPENMP()
+  AC_CHECK_HEADERS([omp.h],[],[AC_MSG_WARN([header <omp.h> not found])])
+  AC_DEFINE([GPUOffloadingOMP], [1], [GPUOffloadingOMP])
+fi
 
-#if test "$gpu"==sycl; then
-#  AC_DEFINE([SYCLGPUOffloading], [1], [SYCLGPUOffloading])
-#fi
+if test "$gpu" == sycl; then
+  #AC_OPENMP()
+  #AC_CHECK_HEADERS([omp.h],[],[AC_MSG_WARN([header <omp.h> not found])])
+  AC_DEFINE([GPUOffloadingSYCL], [1], [GPUOffloadingSYCL])
+fi
 
-#if test "$gpu"==hip; then
-#  AC_DEFINE([HIPGPUOffloading], [1], [HIPGPUOffloading])
-#fi
+if test "$gpu" == hip; then
+  #AC_OPENMP()
+  #AC_CHECK_HEADERS([omp.h],[],[AC_MSG_WARN([header <omp.h> not found])])
+  AC_DEFINE([GPUOffloadingHIP], [1], [GPUOffloadingHIP])
+fi
 
 
 

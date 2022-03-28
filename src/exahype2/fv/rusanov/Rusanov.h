@@ -244,7 +244,7 @@ namespace exahype2 {
 #include "Rusanov_overlap1_batched_in_situ_static_calls.cpph"
 
 
-#if defined(OpenMPGPUOffloading)
+#if defined(GPUOffloadingOMP)
 #include "exahype2/fv/rusanov/omp/Rusanov.h"
 #endif
 

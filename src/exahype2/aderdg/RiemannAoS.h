@@ -30,7 +30,7 @@ namespace exahype2 {
      * @param[in] orientation
      * @param[in] scalarIndexFace
      */
-    #if defined(OpenMPGPUOffloading)
+    #if defined(GPUOffloadingOMP)
     #pragma omp declare target
     #endif
     void riemann_setBoundaryState_body_AoS(
@@ -53,7 +53,7 @@ namespace exahype2 {
       const int                                   strideQ,
       const int                                   direction,
       const int                                   scalarIndexFace);
-    #if defined(OpenMPGPUOffloading)
+    #if defined(GPUOffloadingOMP)
     #pragma omp end declare target
     #endif
 
@@ -79,7 +79,7 @@ namespace exahype2 {
      * @param[in] direction
      * @param[in] scalarIndexFace
      */
-    #if defined(OpenMPGPUOffloading)
+    #if defined(GPUOffloadingOMP)
     #pragma omp declare target
     #endif
     GPUCallableMethod double riemann_maxAbsoluteEigenvalue_body_AoS(
@@ -100,7 +100,7 @@ namespace exahype2 {
     const int                                   strideQ,
     const int                                   direction,
     const int                                   scalarIndexFace);
-    #if defined(OpenMPGPUOffloading)
+    #if defined(GPUOffloadingOMP)
     #pragma omp end declare target
     #endif
 

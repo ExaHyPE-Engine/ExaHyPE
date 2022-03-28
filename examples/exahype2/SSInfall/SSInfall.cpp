@@ -9,13 +9,13 @@
 tarch::logging::Log   examples::exahype2::SSInfall::SSInfall::_log( "examples::exahype2::SSInfall::SSInfall" );
 
 
-#if defined(OpenMPGPUOffloading)
+#if defined(GPUOffloadingOMP)
 #pragma omp declare target
 #endif
 double examples::exahype2::SSInfall::SSInfall::_rMax;
 double examples::exahype2::SSInfall::SSInfall::_rhoMax;
 double examples::exahype2::SSInfall::SSInfall::_mTotMax;
-#if defined(OpenMPGPUOffloading)
+#if defined(GPUOffloadingOMP)
 #pragma omp end declare target
 #endif
 
@@ -420,7 +420,7 @@ void examples::exahype2::SSInfall::SSInfall::sourceTerm(
 }
 
 
-#if defined(OpenMPGPUOffloading)
+#if defined(GPUOffloadingOMP)
 #pragma omp declare target
 #endif
 void examples::exahype2::SSInfall::SSInfall::sourceTerm(
@@ -454,7 +454,7 @@ void examples::exahype2::SSInfall::SSInfall::sourceTerm(
   S[3] = -force_density_norm*z;
   S[4] = -force_density_norm*(Q[1]*x+Q[2]*y+Q[3]*z)/Q[0];
 }
-#if defined(OpenMPGPUOffloading)
+#if defined(GPUOffloadingOMP)
 #pragma omp end declare target
 #endif
 
@@ -598,7 +598,7 @@ double examples::exahype2::SSInfall::SSInfall::maxEigenvalue(
 }
 
 
-#if defined(OpenMPGPUOffloading)
+#if defined(GPUOffloadingOMP)
 #pragma omp declare target
 #endif
 double examples::exahype2::SSInfall::SSInfall::maxEigenvalue(
@@ -633,7 +633,7 @@ double examples::exahype2::SSInfall::SSInfall::maxEigenvalue(
 
   return result;
 }
-#if defined(OpenMPGPUOffloading)
+#if defined(GPUOffloadingOMP)
 #pragma omp end declare target
 #endif
 
@@ -678,7 +678,7 @@ void examples::exahype2::SSInfall::SSInfall::flux(
 }
 
 
-#if defined(OpenMPGPUOffloading)
+#if defined(GPUOffloadingOMP)
 #pragma omp declare target
 #endif
 void examples::exahype2::SSInfall::SSInfall::flux(
@@ -708,7 +708,7 @@ void examples::exahype2::SSInfall::SSInfall::flux(
   F[normal+1] += p;
   F[4]        += coeff*p;
 }
-#if defined(OpenMPGPUOffloading)
+#if defined(GPUOffloadingOMP)
 #pragma omp end declare target
 #endif
 

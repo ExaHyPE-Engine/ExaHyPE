@@ -11,7 +11,7 @@
 #include "tarch/logging/Statistics.h"
 
 
-#if defined(SYCLGPUOffloading)
+#if defined(GPUOffloadingSYCL)
 #include <CL/sycl.hpp>
 #endif
 

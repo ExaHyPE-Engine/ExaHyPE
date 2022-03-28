@@ -6,7 +6,7 @@
 #include "config.h"
 
 
-#if SYCLGPUOffloading>0
+#if GPUOffloadingSYCL>0
 #include "tarch/multicore/sycl/Core.h"
 #endif
 
@@ -377,21 +377,21 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse( const std::list<Task*>& ot
   //
   bool foundOffloadingBranch = false;
 
-  #if OpenMPGPUOffloading>0
+  #if defined(GPUOffloadingOMP)
   if (targetDevice>=0) {
     foundOffloadingBranch = true;
     ::exahype2::fv::rusanov::omp::{{FUSED_COMPUTE_KERNEL_CALL_GPU}}
   }
   #endif
 
-  #if HIPGPUOffloading>0
+  #if defined(GPUOffloadingHIP)
   if (targetDevice>=0) {
     foundOffloadingBranch = true;
     ::exahype2::fv::rusanov::hip::{{FUSED_COMPUTE_KERNEL_CALL_GPU}}
   }
   #endif
 
-  #if SYCLGPUOffloading>0
+  #if defined(GPUOffloadingSYCL)
   if (targetDevice>=0 or targetDevice==Host) {
     foundOffloadingBranch = true;
 

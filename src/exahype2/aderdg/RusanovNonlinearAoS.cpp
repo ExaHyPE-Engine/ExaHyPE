@@ -6,7 +6,7 @@
 
 #include "KernelUtils.h"
 
-#if defined(OpenMPGPUOffloading)
+#if defined(GPUOffloadingOMP)
 #pragma omp declare target
 #endif
 GPUCallableMethod void exahype2::aderdg::rusanovNonlinear_body_AoS(
@@ -109,7 +109,7 @@ GPUCallableMethod void exahype2::aderdg::rusanovNonlinear_body_AoS(
     }
   }
 }
-#if defined(OpenMPGPUOffloading)
+#if defined(GPUOffloadingOMP)
 #pragma omp end declare target
 #endif
 

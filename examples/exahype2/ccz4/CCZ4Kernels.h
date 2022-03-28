@@ -14,7 +14,7 @@ namespace examples {
   namespace exahype2 {
     namespace ccz4 {
 /*
-      #if defined(OpenMPGPUOffloading)
+      #if defined(GPUOffloadingOMP)
       #pragma omp declare target
       #endif
 */

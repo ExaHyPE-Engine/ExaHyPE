@@ -26,7 +26,7 @@ class examples::exahype2::SSInfall::SSInfall: public AbstractSSInfall {
     std::string plotGlobalMTot(bool plotCopy) const;
     std::string plotRs() const;
 
-    #if defined(OpenMPGPUOffloading)
+    #if defined(GPUOffloadingOMP)
     #pragma omp declare target
     #endif
     /**
@@ -45,7 +45,7 @@ class examples::exahype2::SSInfall::SSInfall: public AbstractSSInfall {
      * From m_tot_copy[sample_number-1].
      */
     static double _mTotMax;
-    #if defined(OpenMPGPUOffloading)
+    #if defined(GPUOffloadingOMP)
     #pragma omp end declare target
     #endif
 
@@ -112,7 +112,7 @@ class examples::exahype2::SSInfall::SSInfall: public AbstractSSInfall {
     ) override;
 
     
-#if defined(OpenMPGPUOffloading)
+#if defined(GPUOffloadingOMP)
 #pragma omp declare target
 #endif
     /**
@@ -128,7 +128,7 @@ class examples::exahype2::SSInfall::SSInfall: public AbstractSSInfall {
       double * __restrict__                        S,
       Offloadable
     );
-#if defined(OpenMPGPUOffloading)
+#if defined(GPUOffloadingOMP)
 #pragma omp end declare target
 #endif
 
@@ -158,7 +158,7 @@ class examples::exahype2::SSInfall::SSInfall: public AbstractSSInfall {
     ) override;
 
       
-#if defined(OpenMPGPUOffloading)
+#if defined(GPUOffloadingOMP)
 #pragma omp declare target
 #endif
     static double maxEigenvalue(
@@ -170,7 +170,7 @@ class examples::exahype2::SSInfall::SSInfall: public AbstractSSInfall {
       int                                          normal,
       Offloadable
     );
-#if defined(OpenMPGPUOffloading)
+#if defined(GPUOffloadingOMP)
 #pragma omp end declare target
 #endif
 
@@ -193,7 +193,7 @@ class examples::exahype2::SSInfall::SSInfall: public AbstractSSInfall {
     ) override;
 
 
-#if defined(OpenMPGPUOffloading)
+#if defined(GPUOffloadingOMP)
 #pragma omp declare target
 #endif
     static void flux(
@@ -206,7 +206,7 @@ class examples::exahype2::SSInfall::SSInfall: public AbstractSSInfall {
       double * __restrict__ F, // F[5]
       Offloadable
     );
-#if defined(OpenMPGPUOffloading)
+#if defined(GPUOffloadingOMP)
 #pragma omp end declare target
 #endif
 

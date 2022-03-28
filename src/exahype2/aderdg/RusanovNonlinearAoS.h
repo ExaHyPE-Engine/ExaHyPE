@@ -8,7 +8,7 @@
 namespace exahype2 {
   namespace aderdg {
     
-    #if defined(OpenMPGPUOffloading)
+    #if defined(GPUOffloadingOMP)
     #pragma omp declare target
     #endif
     GPUCallableMethod void rusanovNonlinear_body_AoS(
@@ -51,7 +51,7 @@ namespace exahype2 {
         const bool                                  callFlux,
         const bool                                  callNonconservativeProduct,
         const int                                   scalarIndexFace);
-    #if defined(OpenMPGPUOffloading)
+    #if defined(GPUOffloadingOMP)
     #pragma omp end declare target
     #endif
    

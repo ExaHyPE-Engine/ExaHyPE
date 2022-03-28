@@ -9,7 +9,7 @@
 #endif
 
 
-#if defined(SYCLGPUOffloading)
+#if defined(GPUOffloadingSYCL)
 namespace {
   std::map< int, sycl::queue >  syclQueues;
 }
@@ -64,7 +64,7 @@ tarch::multicore::Core::Core():
   _numberOfThreads( ::tbb::info::default_concurrency() ),
   _numberOfDevices( 0 ) {
   internal::configureInternalTaskQueues(_numberOfThreads);
-  #if defined(SYCLGPUOffloading)
+  #if defined(GPUOffloadingSYCL)
   initSYCLQueues();
   #endif
 }

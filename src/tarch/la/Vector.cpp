@@ -1,7 +1,7 @@
 #include "Vector.h"
 
 
-#if !defined(OpenMPGPUOffloading)
+#if !defined(GPUOffloadingOMP)
 
 template
 struct tarch::la::Vector<2,double>;
