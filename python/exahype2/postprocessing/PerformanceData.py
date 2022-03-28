@@ -250,10 +250,13 @@ class PerformanceData(object):
     
     """
     data   = self.get_time_per_time_step()
-    result = 0;
-    for i in data:
-      result += i
-    return result/len(data)
+    if len(data)==0:
+      return 0.0
+    else:
+      result = 0;
+      for i in data:
+        result += i
+      return result/len(data)
 
 
   def get_updates(self):
