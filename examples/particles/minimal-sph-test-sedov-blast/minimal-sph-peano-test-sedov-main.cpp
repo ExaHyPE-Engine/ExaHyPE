@@ -234,9 +234,6 @@ int main(int argc, char** argv) {
 
         /*********************************************/
         /* "Option 1: standard KDK" */
-        /* Second Force loop */
-//        peano4::parallel::SpacetreeSet::getInstance().traverse(prepareForce);
-//        peano4::parallel::SpacetreeSet::getInstance().traverse(forcespart);
 
         for (int iter=0; iter<5; iter++){
 
@@ -269,7 +266,7 @@ int main(int argc, char** argv) {
 //        peano4::parallel::SpacetreeSet::getInstance().traverse(kick1part);
 //        peano4::parallel::SpacetreeSet::getInstance().traverse(kickExtra);
 //
-//        for(int iter_PC = 0; iter_PC < 5; iter_PC++){
+//        for(int iter_PC = 0; iter_PC < 3; iter_PC++){
 //          /* Second Force loop with predicted velocity */
 //          peano4::parallel::SpacetreeSet::getInstance().traverse(prepareForce);
 //          peano4::parallel::SpacetreeSet::getInstance().traverse(forcespart);
