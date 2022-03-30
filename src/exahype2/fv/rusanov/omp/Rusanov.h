@@ -14,13 +14,19 @@ namespace exahype2 {
        * with the next one. Obviously, the patches are all independent of
        * each other. Therefore, we can deploy this sequence of patch
        * updates to a distributed for over the team.
+       *
+       * ## Memory management
+       *
+       * If you run this routine without GPU offloading, we place all temporary data on the heap.
+       * If GPUs are to be used, then we create pointer for the temporary data, but we assign
+       * them all null, as the actual temporary data is to be create on the GPU.
        */
       namespace omp {
         template <
           typename Solver,
           typename TempDataEnumerator = exahype2::fv::enumerator::AoSoALexicographicVolumeEnumerator
         >
-        static void timeStepWithRusanov_overlap1_patchwise(
+        static void timeStepWithRusanov_overlap1_patchwise_heap_static_calls(
           int                     targetDevice,
           ::exahype2::CellData&   patchData,
           int                     numberOfVolumesPerAxisInPatch,
@@ -41,6 +47,6 @@ namespace exahype2 {
 }
 
 
-#include "Rusanov_overlap1_patchwise.cpph"
+#include "Rusanov_overlap1_patchwise_heap_static_calls.cpph"
 
 #endif

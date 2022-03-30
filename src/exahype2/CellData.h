@@ -47,7 +47,7 @@ namespace exahype2 {
       double*    t;
       double*    dt;
       int*       id;
-      const int  numberOfPatches;
+      const int  numberOfCells;
       double**   QOut;
       double*    maxEigenvalue;
 
@@ -64,6 +64,8 @@ namespace exahype2 {
       );
       CellData( int numberOfPatches_ );
       ~CellData();
+
+      std::string toString() const;
     } ;
 }
 

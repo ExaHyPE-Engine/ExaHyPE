@@ -79,7 +79,7 @@ namespace exahype2 {
        *
        * See ::exahype2::CellData() for details
        */
-      static void timeStepWithRusanov_overlap1_patchwise(
+      static void timeStepWithRusanov_overlap1_patchwise_heap_functors(
         ::exahype2::CellData&              patchData,
         int                     numberOfVolumesPerAxisInPatch,
         int                     unknowns,
@@ -99,7 +99,7 @@ namespace exahype2 {
       ;
 
 
-      static void timeStepWithRusanov_overlap1_batched(
+      static void timeStepWithRusanov_overlap1_batched_heap_functors(
         ::exahype2::CellData&              patchData,
         int                     numberOfVolumesPerAxisInPatch,
         int                     unknowns,
@@ -123,7 +123,7 @@ namespace exahype2 {
         typename Solver,
         typename TempDataEnumerator = exahype2::fv::enumerator::AoSoALexicographicVolumeEnumerator
       >
-      static void timeStepWithRusanov_overlap1_patchwise(
+      static void timeStepWithRusanov_overlap1_patchwise_call_stack_static_calls(
         ::exahype2::CellData&              patchData,
         int                     numberOfVolumesPerAxisInPatch,
         int                     unknowns,
@@ -150,7 +150,7 @@ namespace exahype2 {
       template <
         typename Solver
       >
-      static void timeStepWithRusanov_overlap1_patchwise_in_situ(
+      static void timeStepWithRusanov_overlap1_patchwise_in_situ_static_calls(
         ::exahype2::CellData&              patchData,
         int                     numberOfVolumesPerAxisInPatch,
         int                     unknowns,
@@ -169,7 +169,7 @@ namespace exahype2 {
       template <
         typename Solver
       >
-      static void timeStepWithRusanov_overlap1_batched_in_situ(
+      static void timeStepWithRusanov_overlap1_batched_in_situ_static_calls(
         ::exahype2::CellData&              patchData,
         int                     numberOfVolumesPerAxisInPatch,
         int                     unknowns,
@@ -189,7 +189,7 @@ namespace exahype2 {
         typename Solver,
         typename TempDataEnumerator = exahype2::fv::enumerator::AoSoALexicographicVolumeEnumerator
       >
-      static void timeStepWithRusanov_overlap1_patchwise_split_terms(
+      static void timeStepWithRusanov_overlap1_patchwise_split_terms_call_stack_static_calls(
         ::exahype2::CellData&              patchData,
         int                     numberOfVolumesPerAxisInPatch,
         int                     unknowns,
@@ -215,7 +215,7 @@ namespace exahype2 {
         typename Solver,
         typename TempDataEnumerator = exahype2::fv::enumerator::AoSoALexicographicVolumeEnumerator
       >
-      static void timeStepWithRusanov_overlap1_batched(
+      static void timeStepWithRusanov_overlap1_batched_call_stack_static_calls(
         ::exahype2::CellData&              patchData,
         int                     numberOfVolumesPerAxisInPatch,
         int                     unknowns,
@@ -235,12 +235,12 @@ namespace exahype2 {
 
 
 #include "Rusanov_Helper.cpph"
-#include "Rusanov_overlap1_patchwise_functors.cpph"
-#include "Rusanov_overlap1_patchwise_static_calls.cpph"
+#include "Rusanov_overlap1_patchwise_heap_functors.cpph"
+#include "Rusanov_overlap1_patchwise_call_stack_static_calls.cpph"
 #include "Rusanov_overlap1_patchwise_in_situ_static_calls.cpph"
-#include "Rusanov_overlap1_patchwise_split_terms_static_calls.cpph"
-#include "Rusanov_overlap1_batched_functors.cpph"
-#include "Rusanov_overlap1_batched_static_calls.cpph"
+#include "Rusanov_overlap1_patchwise_split_terms_call_stack_static_calls.cpph"
+#include "Rusanov_overlap1_batched_heap_functors.cpph"
+#include "Rusanov_overlap1_batched_call_stack_static_calls.cpph"
 #include "Rusanov_overlap1_batched_in_situ_static_calls.cpph"
 
 

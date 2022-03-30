@@ -426,7 +426,7 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse( const std::list<Task*>& ot
   // Bring back results
   // ==================
   //
-  for (int i=0; i<patchData.numberOfPatches; i++) {
+  for (int i=0; i<patchData.numberOfCells; i++) {
     tarch::freeMemory( patchData.QIn[i], tarch::MemoryLocation::Heap );
     ::exahype2::EnclaveBookkeeping::getInstance().finishedTask(patchData.id[i], _numberOfResultValues, patchData.QOut[i], patchData.maxEigenvalue[i]);
   }

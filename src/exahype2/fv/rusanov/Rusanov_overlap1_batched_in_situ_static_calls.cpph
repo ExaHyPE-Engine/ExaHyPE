@@ -6,7 +6,7 @@
 template <
   typename Solver
 >
-void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_batched_in_situ(
+void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_batched_in_situ_static_calls(
   ::exahype2::CellData&   patchData,
   int                     numberOfVolumesPerAxisInPatch,
   int                     unknowns,
@@ -28,7 +28,7 @@ void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_batched_in_situ(
     #if defined(SharedOMP)
     #pragma omp simd collapse(2)
     #endif
-    for (int patchIndex=0; patchIndex<patchData.numberOfPatches; patchIndex++)
+    for (int patchIndex=0; patchIndex<patchData.numberOfCells; patchIndex++)
     for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++) {
       internal::copySolutionAndAddSourceTerm_LoopBody<Solver>(
           patchData.QIn[patchIndex],
@@ -50,7 +50,7 @@ void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_batched_in_situ(
     #if defined(SharedOMP)
     #pragma omp simd collapse(2)
     #endif
-    for (int patchIndex=0; patchIndex<patchData.numberOfPatches; patchIndex++)
+    for (int patchIndex=0; patchIndex<patchData.numberOfCells; patchIndex++)
     for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++) {
       internal::copySolutionAndAddSourceTerm_LoopBody<Solver>(
           patchData.QIn[patchIndex],
@@ -71,7 +71,7 @@ void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_batched_in_situ(
     #if defined(SharedOMP)
     #pragma omp simd collapse(3)
     #endif
-    for (int patchIndex=0; patchIndex<patchData.numberOfPatches; patchIndex++)
+    for (int patchIndex=0; patchIndex<patchData.numberOfCells; patchIndex++)
     for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++)
     for (int unknown=0; unknown<unknowns+auxiliaryVariables; unknown++) {
       internal::copySolution_LoopBody(
@@ -92,7 +92,7 @@ void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_batched_in_situ(
     #pragma omp simd collapse(3)
     #endif
     for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++)
-    for (int patchIndex=0; patchIndex<patchData.numberOfPatches; patchIndex++)
+    for (int patchIndex=0; patchIndex<patchData.numberOfCells; patchIndex++)
     for (int unknown=0; unknown<unknowns+auxiliaryVariables; unknown++) {
       internal::copySolution_LoopBody(
           patchData.QIn[patchIndex],
@@ -114,7 +114,7 @@ void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_batched_in_situ(
     #pragma omp simd collapse(2)
     #endif
     for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
-    for (int patchIndex=0; patchIndex<patchData.numberOfPatches; patchIndex++)
+    for (int patchIndex=0; patchIndex<patchData.numberOfCells; patchIndex++)
     {
       double fluxFL[unknowns] __attribute__((aligned (Alignment)));
       double fluxFR[unknowns] __attribute__((aligned (Alignment)));
@@ -169,7 +169,7 @@ void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_batched_in_situ(
     #pragma omp simd collapse(2)
     #endif
     for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++)
-    for (int patchIndex=0; patchIndex<patchData.numberOfPatches; patchIndex++)
+    for (int patchIndex=0; patchIndex<patchData.numberOfCells; patchIndex++)
     {
       double fluxFL[unknowns] __attribute__((aligned (Alignment)));
       double fluxFR[unknowns] __attribute__((aligned (Alignment)));
@@ -225,7 +225,7 @@ void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_batched_in_situ(
     #endif
     for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
     for (int z = 0; z < numberOfVolumesPerAxisInPatch; z++)
-    for (int patchIndex=0; patchIndex<patchData.numberOfPatches; patchIndex++)
+    for (int patchIndex=0; patchIndex<patchData.numberOfCells; patchIndex++)
     {
       double fluxFL[unknowns] __attribute__((aligned (Alignment)));
       double fluxFR[unknowns] __attribute__((aligned (Alignment)));
@@ -281,7 +281,7 @@ void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_batched_in_situ(
     #endif
     for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++)
     for (int z = 0; z < numberOfVolumesPerAxisInPatch; z++)
-    for (int patchIndex=0; patchIndex<patchData.numberOfPatches; patchIndex++)
+    for (int patchIndex=0; patchIndex<patchData.numberOfCells; patchIndex++)
     {
       double fluxFL[unknowns] __attribute__((aligned (Alignment)));
       double fluxFR[unknowns] __attribute__((aligned (Alignment)));
@@ -336,7 +336,7 @@ void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_batched_in_situ(
     #endif
     for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++)
     for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
-    for (int patchIndex=0; patchIndex<patchData.numberOfPatches; patchIndex++)
+    for (int patchIndex=0; patchIndex<patchData.numberOfCells; patchIndex++)
     {
       double fluxFL[unknowns] __attribute__((aligned (Alignment)));
       double fluxFR[unknowns] __attribute__((aligned (Alignment)));
@@ -392,7 +392,7 @@ void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_batched_in_situ(
     #pragma omp simd collapse(2)
     #endif
     for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
-    for (int patchIndex=0; patchIndex<patchData.numberOfPatches; patchIndex++)
+    for (int patchIndex=0; patchIndex<patchData.numberOfCells; patchIndex++)
     {
       double fluxNCP[unknowns] __attribute__((aligned (Alignment)));
 
@@ -432,7 +432,7 @@ void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_batched_in_situ(
     #pragma omp simd collapse(2)
     #endif
     for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++)
-    for (int patchIndex=0; patchIndex<patchData.numberOfPatches; patchIndex++)
+    for (int patchIndex=0; patchIndex<patchData.numberOfCells; patchIndex++)
     {
       double fluxNCP[unknowns] __attribute__((aligned (Alignment)));
 
@@ -474,7 +474,7 @@ void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_batched_in_situ(
     #endif
     for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
     for (int z = 0; z < numberOfVolumesPerAxisInPatch; z++)
-    for (int patchIndex=0; patchIndex<patchData.numberOfPatches; patchIndex++)
+    for (int patchIndex=0; patchIndex<patchData.numberOfCells; patchIndex++)
     {
       double fluxNCP[unknowns] __attribute__((aligned (Alignment)));
 
@@ -515,7 +515,7 @@ void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_batched_in_situ(
     #endif
     for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++)
     for (int z = 0; z < numberOfVolumesPerAxisInPatch; z++)
-    for (int patchIndex=0; patchIndex<patchData.numberOfPatches; patchIndex++)
+    for (int patchIndex=0; patchIndex<patchData.numberOfCells; patchIndex++)
     {
       double fluxNCP[unknowns] __attribute__((aligned (Alignment)));
 
@@ -556,7 +556,7 @@ void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_batched_in_situ(
     #endif
     for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++)
     for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
-    for (int patchIndex=0; patchIndex<patchData.numberOfPatches; patchIndex++)
+    for (int patchIndex=0; patchIndex<patchData.numberOfCells; patchIndex++)
     {
       double fluxNCP[unknowns] __attribute__((aligned (Alignment)));
 
@@ -598,7 +598,7 @@ void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_batched_in_situ(
     #pragma omp simd collapse(2)
     #endif
     for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
-    for (int patchIndex=0; patchIndex<patchData.numberOfPatches; patchIndex++)
+    for (int patchIndex=0; patchIndex<patchData.numberOfCells; patchIndex++)
     {
       double maxEigenvalueL __attribute__((aligned (Alignment)));
       double maxEigenvalueR __attribute__((aligned (Alignment)));
@@ -653,7 +653,7 @@ void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_batched_in_situ(
     #pragma omp simd collapse(2)
     #endif
     for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++)
-    for (int patchIndex=0; patchIndex<patchData.numberOfPatches; patchIndex++)
+    for (int patchIndex=0; patchIndex<patchData.numberOfCells; patchIndex++)
     {
       double maxEigenvalueL __attribute__((aligned (Alignment)));
       double maxEigenvalueR __attribute__((aligned (Alignment)));
@@ -711,7 +711,7 @@ void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_batched_in_situ(
     #endif
     for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
     for (int z = 0; z < numberOfVolumesPerAxisInPatch; z++)
-    for (int patchIndex=0; patchIndex<patchData.numberOfPatches; patchIndex++)
+    for (int patchIndex=0; patchIndex<patchData.numberOfCells; patchIndex++)
     {
       double maxEigenvalueL __attribute__((aligned (Alignment)));
       double maxEigenvalueR __attribute__((aligned (Alignment)));
@@ -767,7 +767,7 @@ void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_batched_in_situ(
     #endif
     for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++)
     for (int z = 0; z < numberOfVolumesPerAxisInPatch; z++)
-    for (int patchIndex=0; patchIndex<patchData.numberOfPatches; patchIndex++)
+    for (int patchIndex=0; patchIndex<patchData.numberOfCells; patchIndex++)
     {
       double maxEigenvalueL __attribute__((aligned (Alignment)));
       double maxEigenvalueR __attribute__((aligned (Alignment)));
@@ -823,7 +823,7 @@ void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_batched_in_situ(
     #endif
     for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++)
     for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
-    for (int patchIndex=0; patchIndex<patchData.numberOfPatches; patchIndex++)
+    for (int patchIndex=0; patchIndex<patchData.numberOfCells; patchIndex++)
     {
       double maxEigenvalueL __attribute__((aligned (Alignment)));
       double maxEigenvalueR __attribute__((aligned (Alignment)));
@@ -875,7 +875,7 @@ void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_batched_in_situ(
 
   if (evaluateMaximumEigenvalueAfterTimeStep and Dimensions==2) {
     logDebug( "timeStepWithRusanov_overlap1_sequential(...)", "compute maximum eigenvalue for subsequent time step" );
-    for (int patchIndex=0; patchIndex<patchData.numberOfPatches; patchIndex++) {
+    for (int patchIndex=0; patchIndex<patchData.numberOfCells; patchIndex++) {
       double newMaxEigenvalue = 0.0;
       otterLoopBegin(); // @todo how do I clarify that this is a reduction? Do we need this info here?
       for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
@@ -902,7 +902,7 @@ void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_batched_in_situ(
     }
   }
   else if (evaluateMaximumEigenvalueAfterTimeStep) {
-    for (int patchIndex=0; patchIndex<patchData.numberOfPatches; patchIndex++) {
+    for (int patchIndex=0; patchIndex<patchData.numberOfCells; patchIndex++) {
       double newMaxEigenvalue = 0.0;
       for (int z = 0; z < numberOfVolumesPerAxisInPatch; z++)
       for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
