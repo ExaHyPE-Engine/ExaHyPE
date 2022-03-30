@@ -232,11 +232,31 @@ class PerformanceData(object):
   def get_time_per_time_step(self):
     """
     
+    Returns a whole array of times per time step, so you can plot the evoluation
+    of the cost per step over time.
+    
     """
     result = []
     for i in range(1,len(self._time_step_time_stamp)):
       result.append( self._time_step_time_stamp[i]-self._time_step_time_stamp[i-1] )
     return result
+
+
+  def get_average_time_per_time_step(self):
+    """
+    
+    Returns a whole array of times per time step, so you can plot the evoluation
+    of the cost per step over time.
+    
+    """
+    data   = self.get_time_per_time_step()
+    if len(data)==0:
+      return 0.0
+    else:
+      result = 0;
+      for i in data:
+        result += i
+      return result/len(data)
 
 
   def get_updates(self):
@@ -441,7 +461,6 @@ def load_file_sequence(file_prefix,file_postfix="", solver_name="",verbose=False
   result = []
   filtered_files = glob.glob( file_prefix + "*" + file_postfix )
   for filtered_file in filtered_files:
-    print( "parse " + filtered_file )
     new_dataset = PerformanceData(filtered_file,solver_name,verbose)
     if new_dataset.valid and result!=None:
       result.append( new_dataset )

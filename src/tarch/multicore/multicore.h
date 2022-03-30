@@ -254,7 +254,7 @@ and
     ManagedAcceleratorMemory
   };
 
-  #if defined(HIPGPUOffloading)
+  #if defined(GPUOffloadingHIP)
     #define GPUCallableMethod __global__ __device__
   #elif defined(UseManualInlining)
     #define GPUCallableMethod
@@ -268,12 +268,12 @@ and
     #define InlineMethod
   #endif
 
-  #if defined(OpenMPGPUOffloading)
+  #if defined(GPUOffloadingOMP)
   #pragma omp declare target
   #endif
   double* allocateMemory(int size, MemoryLocation location);
   void freeMemory(double* data, MemoryLocation location);
-  #if defined(OpenMPGPUOffloading)
+  #if defined(GPUOffloadingOMP)
   #pragma omp end declare target
   #endif
 }

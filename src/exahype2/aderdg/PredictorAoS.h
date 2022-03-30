@@ -21,7 +21,7 @@ namespace exahype2 {
      * @param[in] nodesPerAxis nodes/Lagrange basis functions per coordinate axis (order+1)
      * @param[in] unknowns the number of PDE unknowns that we evolve
      */
-    #if defined(OpenMPGPUOffloading)
+    #if defined(GPUOffloadingOMP)
     #pragma omp declare target
     #endif
     GPUCallableMethod void spaceTimePredictor_initialGuess_body_AoS(
@@ -30,7 +30,7 @@ namespace exahype2 {
       const int                  nodesPerAxis,
       const int                  strideQ,
       const int                  scalarIndex);
-    #if defined(OpenMPGPUOffloading)
+    #if defined(GPUOffloadingOMP)
     #pragma omp end declare target
     #endif
     
@@ -48,7 +48,7 @@ namespace exahype2 {
      * @param[in] nodesPerAxis nodes/Lagrange basis functions per coordinate axis (order+1)
      * @param[in] strideQ
      */
-    #if defined(OpenMPGPUOffloading)
+    #if defined(GPUOffloadingOMP)
     #pragma omp declare target
     #endif
     GPUCallableMethod void spaceTimePredictor_PicardLoop_initialiseRhs_AoS(
@@ -59,7 +59,7 @@ namespace exahype2 {
       const int                  strideQ,
       const int                  strideRhs,
       const int                  scalarIndex);
-    #if defined(OpenMPGPUOffloading)
+    #if defined(GPUOffloadingOMP)
     #pragma omp end declare target
     #endif
 
@@ -91,7 +91,7 @@ namespace exahype2 {
      * @param[in] callNonconservativeProduct
      * @param[in] scalarIndex
     */
-    #if defined(OpenMPGPUOffloading)
+    #if defined(GPUOffloadingOMP)
     #pragma omp declare target
     #endif
     GPUCallableMethod void spaceTimePredictor_PicardLoop_addContributions_body_AoS (
@@ -137,7 +137,7 @@ namespace exahype2 {
       const bool                                    callSource,
       const bool                                    callNonconservativeProduct,
       const int                                     scalarIndex);
-    #if defined(OpenMPGPUOffloading)
+    #if defined(GPUOffloadingOMP)
     #pragma omp end declare target
     #endif
     
@@ -163,7 +163,7 @@ namespace exahype2 {
      * @param[in] strideRhs
      * @param[in] scalarIndex
     */
-    #if defined(OpenMPGPUOffloading)
+    #if defined(GPUOffloadingOMP)
     #pragma omp declare target
     #endif
     GPUCallableMethod void spaceTimePredictor_PicardLoop_addFluxContributionsToRhs_body_AoS (
@@ -189,7 +189,7 @@ namespace exahype2 {
         const int                                     strideQ,
         const int                                     strideRhs,
         const int                                     scalarIndex);
-    #if defined(OpenMPGPUOffloading)
+    #if defined(GPUOffloadingOMP)
     #pragma omp end declare target
     #endif
     
@@ -214,7 +214,7 @@ namespace exahype2 {
      * @param[in] strideRhs
      * @param[in] scalarIndex
      */
-    #if defined(OpenMPGPUOffloading)
+    #if defined(GPUOffloadingOMP)
     #pragma omp declare target
     #endif
     GPUCallableMethod void spaceTimePredictor_PicardLoop_addSourceContributionToRhs_body_AoS(
@@ -238,14 +238,14 @@ namespace exahype2 {
         const int                                   strideQ,
         const int                                   strideRhs,
         const int                                   scalarIndex);
-    #if defined(OpenMPGPUOffloading)
+    #if defined(GPUOffloadingOMP)
     #pragma omp end declare target
     #endif
     
     /**
      * 
      */
-    #if defined(OpenMPGPUOffloading)
+    #if defined(GPUOffloadingOMP)
     #pragma omp declare target
     #endif
     GPUCallableMethod void spaceTimePredictor_PicardLoop_addNcpContributionToRhs_body_AoS(
@@ -273,7 +273,7 @@ namespace exahype2 {
       const int                                   strideQ,
       const int                                   strideRhs,
       const int                                   scalarIndex);
-    #if defined(OpenMPGPUOffloading)
+    #if defined(GPUOffloadingOMP)
     #pragma omp end declare target
     #endif
     
@@ -292,7 +292,7 @@ namespace exahype2 {
      * @param[in] unknowns the number of PDE unknowns that we evolve
      * @param[in] strideQ
      */
-    #if defined(OpenMPGPUOffloading)
+    #if defined(GPUOffloadingOMP)
     #pragma omp declare target
     #endif
     GPUCallableMethod void spaceTimePredictor_PicardLoop_invert_body_AoS(
@@ -305,7 +305,7 @@ namespace exahype2 {
       const int                   strideQ,
       const int                   strideRhs,
       const int                   scalarIndex);
-    #if defined(OpenMPGPUOffloading)
+    #if defined(GPUOffloadingOMP)
     #pragma omp end declare target
     #endif
     
@@ -324,7 +324,7 @@ namespace exahype2 {
      * @param[in] strideQ
      * @param[in] scalarIndexHull
      */
-    #if defined(OpenMPGPUOffloading)
+    #if defined(GPUOffloadingOMP)
     #pragma omp declare target
     #endif
     GPUCallableMethod void spaceTimePredictor_extrapolate_body_AoS(
@@ -335,7 +335,7 @@ namespace exahype2 {
       const int                   strideQLR,
       const int                   strideQ,
       const int                   scalarIndexHull);
-    #if defined(OpenMPGPUOffloading)
+    #if defined(GPUOffloadingOMP)
     #pragma omp end declare target
     #endif
     
@@ -353,7 +353,7 @@ namespace exahype2 {
      * @param[in] strideQ
      * @param[in] scalarIndexHull
      */
-    #if defined(OpenMPGPUOffloading)
+    #if defined(GPUOffloadingOMP)
     #pragma omp declare target
     #endif
     GPUCallableMethod void spaceTimePredictor_extrapolate_Lobatto_body_AoS(
@@ -363,7 +363,7 @@ namespace exahype2 {
       const int                         strideQLR,
       const int                         strideQ,
       const int                         scalarIndexHull);
-    #if defined(OpenMPGPUOffloading)
+    #if defined(GPUOffloadingOMP)
     #pragma omp end declare target
     #endif
     
@@ -378,7 +378,7 @@ namespace exahype2 {
      * @param[in] strideQ
      * @param[in] scalarIndexHull
      */
-    #if defined(OpenMPGPUOffloading)
+    #if defined(GPUOffloadingOMP)
     #pragma omp declare target
     #endif
     void spaceTimePredictor_extrapolateInTime_body_AoS(
@@ -388,7 +388,7 @@ namespace exahype2 {
       const double                      nodesPerAxis,
       const int                         strideQ,
       const int                         scalarIndexCell);
-    #if defined(OpenMPGPUOffloading)
+    #if defined(GPUOffloadingOMP)
     #pragma omp end declare target
     #endif
     
@@ -405,7 +405,7 @@ namespace exahype2 {
      * @param[in] strideQ
      * @param[in] scalarIndexHull
      */
-    #if defined(OpenMPGPUOffloading)
+    #if defined(GPUOffloadingOMP)
     #pragma omp declare target
     #endif
     void spaceTimePredictor_extrapolateInTime_Lobatto_body_AoS(
@@ -415,7 +415,7 @@ namespace exahype2 {
       const double                      nodesPerAxis,
       const int                         strideQ,
       const int                         scalarIndexCell);
-    #if defined(OpenMPGPUOffloading)
+    #if defined(GPUOffloadingOMP)
     #pragma omp end declare target
     #endif
 

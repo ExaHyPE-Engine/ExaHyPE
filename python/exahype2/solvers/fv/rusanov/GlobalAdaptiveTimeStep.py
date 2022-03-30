@@ -33,7 +33,7 @@ class GlobalAdaptiveTimeStep( SingleSweep ):
     boundary_conditions=None,refinement_criterion=None,initial_conditions=None,source_term=None,
     plot_grid_properties=False
   ):
-    super(GlobalAdaptiveTimeStep,self).__init__(name, patch_size, unknowns, auxiliary_variables, min_volume_h, max_volume_h, plot_grid_properties) 
+    super(GlobalAdaptiveTimeStep,self).__init__(name, patch_size, 1, unknowns, auxiliary_variables, min_volume_h, max_volume_h, plot_grid_properties) 
     
     self._time_step_relaxation = time_step_relaxation
 
@@ -85,7 +85,7 @@ class GlobalAdaptiveTimeStep( SingleSweep ):
       self._flux_implementation, self._ncp_implementation, self._source_term_implementation, 
       compute_max_eigenvalue_of_next_time_step=True,
       solver_variant = SolverVariant.WithVirtualFunctions,
-      riemann_kernel_variant = RiemannKernelVariant.PatchWiseAoS
+      riemann_kernel_variant = RiemannKernelVariant.PatchWiseAoSHeap
     )
 
     self._abstract_solver_user_declarations  = create_abstract_solver_declarations(self._flux_implementation, self._ncp_implementation, self._eigenvalues_implementation, self._source_term_implementation, False)

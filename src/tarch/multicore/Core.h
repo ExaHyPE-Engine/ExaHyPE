@@ -107,6 +107,11 @@ class tarch::multicore::Core {
      * @return Physical core the process is running on
      */
     int getCoreNumber() const;
+
+    /**
+     * @return Logical thread number
+     */
+    int getThreadNumber() const;
 };
 
 

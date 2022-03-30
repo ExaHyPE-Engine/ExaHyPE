@@ -141,13 +141,13 @@ class SingleSweep( FV ):
   """
 
 
-  def __init__(self, name, patch_size, unknowns, auxiliary_variables, min_volume_h, max_volume_h, plot_grid_properties):
+  def __init__(self, name, patch_size, overlap, unknowns, auxiliary_variables, min_volume_h, max_volume_h, plot_grid_properties):
     """
 
       Instantiate a generic FV scheme with an overlap of 1.
 
     """
-    super(SingleSweep, self).__init__(name, patch_size, 1, unknowns, auxiliary_variables, min_volume_h, max_volume_h, plot_grid_properties)
+    super(SingleSweep, self).__init__(name, patch_size, overlap, unknowns, auxiliary_variables, min_volume_h, max_volume_h, plot_grid_properties)
 
     self._solver_template_file_class_name     = "SingleSweep"
 

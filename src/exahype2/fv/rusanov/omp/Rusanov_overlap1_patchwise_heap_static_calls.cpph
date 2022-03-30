@@ -1,5 +1,4 @@
 #include "Rusanov.h"
-#include "otter/otter.h"
 #include "tarch/compiler/CompilerSpecificSettings.h"
 
 
@@ -7,36 +6,50 @@ template <
   typename Solver,
   typename TempDataEnumerator
 >
-void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_patchwise(
-  ::exahype2::CellData&              patchData,
-  int      numberOfVolumesPerAxisInPatch,
-  int      unknowns,
-  int      auxiliaryVariables,
+void exahype2::fv::rusanov::omp::timeStepWithRusanov_overlap1_patchwise_heap_static_calls(
+  int                     targetDevice,
+  ::exahype2::CellData&   patchData,
+  int                     numberOfVolumesPerAxisInPatch,
+  int                     unknowns,
+  int                     auxiliaryVariables,
   bool                    evaluateFlux,
   bool                    evaluateNonconservativeProduct,
   bool                    evaluateSource,
   bool                    evaluateMaximumEigenvalueAfterTimeStep
 ) {
-  static tarch::logging::Log _log( "exahype2::fv::rusanov" );
   constexpr int haloSize        = 1;
 
   exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator QInEnumerator       (                        1, numberOfVolumesPerAxisInPatch,haloSize,unknowns,auxiliaryVariables);
   exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator QOutEnumerator      (                        1, numberOfVolumesPerAxisInPatch,       0,unknowns,auxiliaryVariables);
-  TempDataEnumerator fluxEnumerator      (patchData.numberOfPatches, numberOfVolumesPerAxisInPatch,haloSize,unknowns,0);
-  TempDataEnumerator ncpEnumerator       (patchData.numberOfPatches, numberOfVolumesPerAxisInPatch+1,haloSize,unknowns,0);
-  TempDataEnumerator eigenvalueEnumerator(patchData.numberOfPatches, numberOfVolumesPerAxisInPatch,haloSize,1,0);
+  TempDataEnumerator fluxEnumerator      (patchData.numberOfCells, numberOfVolumesPerAxisInPatch,haloSize,unknowns,0);
+  TempDataEnumerator ncpEnumerator       (patchData.numberOfCells, numberOfVolumesPerAxisInPatch+1,haloSize,unknowns,0);
+  TempDataEnumerator eigenvalueEnumerator(patchData.numberOfCells, numberOfVolumesPerAxisInPatch,haloSize,1,0);
 
-  double tempFluxX[ fluxEnumerator.size() ] __attribute__((aligned (Alignment)));
-  double tempFluxY[ fluxEnumerator.size() ] __attribute__((aligned (Alignment)));
-  double tempFluxZ[ fluxEnumerator.size() ] __attribute__((aligned (Alignment)));
-  double tempNonconservativeProductX[ ncpEnumerator.size() ] __attribute__((aligned (Alignment)));
-  double tempNonconservativeProductY[ ncpEnumerator.size() ] __attribute__((aligned (Alignment)));
-  double tempNonconservativeProductZ[ ncpEnumerator.size() ] __attribute__((aligned (Alignment)));
-  double tempEigenvalueX[ eigenvalueEnumerator.size() ] __attribute__((aligned (Alignment)));
-  double tempEigenvalueY[ eigenvalueEnumerator.size() ] __attribute__((aligned (Alignment)));
-  double tempEigenvalueZ[ eigenvalueEnumerator.size() ] __attribute__((aligned (Alignment)));
 
-  for (int patchIndex=0; patchIndex<patchData.numberOfPatches; patchIndex++) {
+  #if defined(GPUOffloadingOMP)
+  double* tempFluxX                   = nullptr;
+  double* tempFluxY                   = nullptr;
+  double* tempFluxZ                   = nullptr;
+  double* tempNonconservativeProductX = nullptr;
+  double* tempNonconservativeProductY = nullptr;
+  double* tempNonconservativeProductZ = nullptr;
+  double* tempEigenvalueX             = nullptr;
+  double* tempEigenvalueY             = nullptr;
+  double* tempEigenvalueZ             = nullptr;
+  #else
+  double* tempFluxX                  = evaluateFlux                     ? tarch::allocateMemory( fluxEnumerator.size(),      tarch::MemoryLocation::Heap ) : nullptr;
+  double* tempFluxY                  = evaluateFlux                     ? tarch::allocateMemory( fluxEnumerator.size(),      tarch::MemoryLocation::Heap ) : nullptr;
+  double* tempFluxZ                  = (evaluateFlux and Dimensions==3) ? tarch::allocateMemory( fluxEnumerator.size(),      tarch::MemoryLocation::Heap ) : nullptr;
+  double* tempNonconservativeProductX = evaluateNonconservativeProduct                     ? tarch::allocateMemory( ncpEnumerator.size(),        tarch::MemoryLocation::Heap ) : nullptr;
+  double* tempNonconservativeProductY = evaluateNonconservativeProduct                     ? tarch::allocateMemory( ncpEnumerator.size(),        tarch::MemoryLocation::Heap ) : nullptr;
+  double* tempNonconservativeProductZ = (evaluateNonconservativeProduct and Dimensions==3) ? tarch::allocateMemory( ncpEnumerator.size(),        tarch::MemoryLocation::Heap ) : nullptr;
+  double* tempEigenvalueX            =                                    tarch::allocateMemory( eigenvalueEnumerator.size(),      tarch::MemoryLocation::Heap );
+  double* tempEigenvalueY            =                                    tarch::allocateMemory( eigenvalueEnumerator.size(),      tarch::MemoryLocation::Heap );
+  double* tempEigenvalueZ            = (Dimensions==3)                  ? tarch::allocateMemory( eigenvalueEnumerator.size(),      tarch::MemoryLocation::Heap ) : nullptr;
+  #endif
+
+
+  for (int patchIndex=0; patchIndex<patchData.numberOfCells; patchIndex++) {
     if (Dimensions==2 and evaluateSource) {
       otterLoopBegin();
       for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
@@ -718,5 +731,17 @@ void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_patchwise(
       patchData.maxEigenvalue[patchIndex] = newMaxEigenvalue;
     }
   }
+
+  #if !defined(GPUOffloadingOMP)
+  if (tempFluxX!=nullptr)               tarch::freeMemory(tempFluxX, tarch::MemoryLocation::Heap);
+  if (tempFluxY!=nullptr)               tarch::freeMemory(tempFluxY, tarch::MemoryLocation::Heap);
+  if (tempFluxZ!=nullptr)               tarch::freeMemory(tempFluxZ, tarch::MemoryLocation::Heap);
+  if (tempNonconservativeProductX!=nullptr) tarch::freeMemory(tempNonconservativeProductX, tarch::MemoryLocation::Heap);
+  if (tempNonconservativeProductY!=nullptr) tarch::freeMemory(tempNonconservativeProductY, tarch::MemoryLocation::Heap);
+  if (tempNonconservativeProductZ!=nullptr) tarch::freeMemory(tempNonconservativeProductZ, tarch::MemoryLocation::Heap);
+  if (tempEigenvalueX!=nullptr)         tarch::freeMemory(tempEigenvalueX, tarch::MemoryLocation::Heap);
+  if (tempEigenvalueY!=nullptr)         tarch::freeMemory(tempEigenvalueY, tarch::MemoryLocation::Heap);
+  if (tempEigenvalueZ!=nullptr)         tarch::freeMemory(tempEigenvalueZ, tarch::MemoryLocation::Heap);
+  #endif
 }
 

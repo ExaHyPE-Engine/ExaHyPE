@@ -16,6 +16,46 @@
 
 
 namespace tarch {
+  /**
+   * Our tasking layer wraps around various tasking backends. The most popular backend is
+   * OpenMP, but you can also use Intel's OneTBB or C++ tasking. Per thread in the system,
+   * we have one task queue within Peano. Furthermore, we have a global task queue. The
+   * global system's behaviour is controlled via an orchestration object which tells
+   * Peano's tasking how to handle individual tasks.
+   *
+   * ## Orchestration flavours
+   *
+   * If you set a BSP-type task orchestration, the code will spawn one task per subdomain
+   * on a rank and immediately process any enclave tasks, i.e. individual tasks, when they
+   * drop into the tasking subsystem. In this case, Peano's own task queues will be empty
+   * all the time. They are not used.
+   *
+   * There is a native orchestration type which immediately spawns all tasks into the
+   * underlying tasking system. Again, Peano's internal task queues are not used.
+   *
+   * All other orchestration flavours dump their individual tasks into the thread-local
+   * queue first. This can be done without any semaphore or similar as there's one task
+   * queue per thread. Once a local BSP section has finished completely, the thread-local
+   * task queues are copied over into the global task queue. It again depends on the
+   * orchestration strategy how we proceed with this global task queue from hereon.
+   *
+   * While a BSP section is waiting it can poll its thread-local task queues (again without
+   * any additional lock) and process tasks from there, or it can poll the global task
+   * queue which might have been befilled by someone else.
+   *
+   * Whenever we think we could fuse tasks into one large task assembly, we first commit
+   * the thread-local task queue into the global task queue and then we try to combine
+   * the tasks there.
+   *
+   * The three-layer approach with a thread-local queue, a global queue and the actual
+   * tasking subsystem is necessary. We need Peano's specific queues to be able to merge
+   * tasks on-the-fly. We need the thread-local queues to be fast. With only one global
+   * queue, we found that a lot of codes basically compete for the locks to spanwn tasks
+   * into this queue.
+   *
+   *
+   * @see tarch::multicore::orchestration::StrategyFactory
+   */
   namespace multicore {
     void setOrchestration( tarch::multicore::orchestration::Strategy* realisation );
 
@@ -201,7 +241,14 @@ namespace tarch {
         bool run() override;
     };
 
-    int getNumberOfPendingTasks();
+
+    /**
+     * @param threadCount -1 if you are interested in global number of tasks or a
+     *   non-negative integer if you are only interested in one particular thread
+     *   and its specific tasks.
+     */
+    int getNumberOfPendingTasks(int threadCount);
+
 
     /**
      * Process a few tasks from my backlog of tasks
@@ -228,13 +275,6 @@ namespace tarch {
      */
     bool processPendingTasks(int maxTasks = std::numeric_limits<int>::max(), bool fifo=true);
 
-    /**
-     * Process a particular task.
-     *
-     * @param number  Has to be a number acquired before via reserveTaskNumber.
-     * @return Found this one and have done it.
-     */
-    //bool processTask(int number);
 
     /**
      * Spawns a single task in a non-blocking fashion
@@ -319,6 +359,32 @@ namespace tarch {
        * The method locks and unlocks the queue. So don't lock it yourself.
        */
       bool fusePendingTasks(const tarch::multicore::orchestration::Strategy::FuseInstruction&  fuseInstruction);
+
+      /**
+       * Set up the internal queues that our wrapper around the tasking back-end
+       * requires. If we worked with only one task queue, this would not be
+       * necessary, but we found such a solution deterimental. Instead, it is
+       * way better to work with one queue per thread, so we can spawn enclave
+       * tasks without any additional locks.
+       */
+      void configureInternalTaskQueues(int numberOfTasks);
+
+      /**
+       * If we work with thread-local queues, we have to flush them over into the
+       * global queue eventually. To do so, this routine is to be called either
+       * per thread or with a -1 to roll all local queues over into the one global
+       * task queue.
+       *
+       * @param threadNumber -1 if you want to flush all thread buffers
+       */
+      void copyInternalTaskQueuesOverIntoGlobalQueue(int threadNumber);
+
+      /**
+       * Take one task that is tied to the thread-local queue, i.e. not yet committed
+       * to the global queue, and process it. As we assume that we work thread-local,
+       * there's no need for a global semaphore when we access the queue.
+       */
+      bool processThreadLocalTask(int threadNumber);
     }
   }
 }

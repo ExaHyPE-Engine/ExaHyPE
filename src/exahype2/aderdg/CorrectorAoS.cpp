@@ -8,7 +8,7 @@
 
 #include <iostream>
 
-#if defined(OpenMPGPUOffloading)
+#if defined(GPUOffloadingOMP)
 #pragma omp declare target
 #endif
 GPUCallableMethod double exahype2::aderdg::corrector_adjustSolution_computeMaxEigenvalue_body_AoS(
@@ -50,11 +50,11 @@ GPUCallableMethod double exahype2::aderdg::corrector_adjustSolution_computeMaxEi
     return 0.0;
   }
 }
-#if defined(OpenMPGPUOffloading)
+#if defined(GPUOffloadingOMP)
 #pragma omp end declare target
 #endif
 
-#if defined(OpenMPGPUOffloading)
+#if defined(GPUOffloadingOMP)
 #pragma omp declare target
 #endif
 GPUCallableMethod void exahype2::aderdg::corrector_addFluxContributions_body_AoS(
@@ -105,11 +105,11 @@ GPUCallableMethod void exahype2::aderdg::corrector_addFluxContributions_body_AoS
     }
   }
 }
-#if defined(OpenMPGPUOffloading)
+#if defined(GPUOffloadingOMP)
 #pragma omp end declare target
 #endif
 
-#if defined(OpenMPGPUOffloading)
+#if defined(GPUOffloadingOMP)
 #pragma omp declare target
 #endif
 GPUCallableMethod void exahype2::aderdg::corrector_addSourceContributions_body_AoS(
@@ -148,11 +148,11 @@ GPUCallableMethod void exahype2::aderdg::corrector_addSourceContributions_body_A
     }
   }
 }
-#if defined(OpenMPGPUOffloading)
+#if defined(GPUOffloadingOMP)
 #pragma omp end declare target
 #endif
 
-#if defined(OpenMPGPUOffloading)
+#if defined(GPUOffloadingOMP)
 #pragma omp declare target
 #endif
 GPUCallableMethod void exahype2::aderdg::corrector_addNcpContributions_body_AoS(
@@ -199,11 +199,11 @@ GPUCallableMethod void exahype2::aderdg::corrector_addNcpContributions_body_AoS(
     }
   }
 }
-#if defined(OpenMPGPUOffloading)
+#if defined(GPUOffloadingOMP)
 #pragma omp end declare target
 #endif
 
-#if defined(OpenMPGPUOffloading)
+#if defined(GPUOffloadingOMP)
 #pragma omp declare target
 #endif
 GPUCallableMethod void exahype2::aderdg::corrector_addRiemannContributions_body_AoS(
@@ -241,7 +241,7 @@ GPUCallableMethod void exahype2::aderdg::corrector_addRiemannContributions_body_
     }
   }
 }
-#if defined(OpenMPGPUOffloading)
+#if defined(GPUOffloadingOMP)
 #pragma omp end declare target
 #endif
 

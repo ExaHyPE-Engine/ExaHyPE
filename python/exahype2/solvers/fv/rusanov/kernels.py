@@ -303,14 +303,20 @@ class SolverVariant(Enum):
 
 
 class RiemannKernelVariant(Enum):
-  PatchWiseAoS                = 0
-  PatchWiseAoSoA              = 1
-  BatchedAoS                  = 2
-  BatchedAoSoA                = 3
-  PatchWiseSplitTermsAoS      = 4
-  PatchWiseSplitTermsAoSoA    = 5
-  PatchWiseInSitu             = 6
-  BatchedInSitu               = 7
+  PatchWiseAoSStack                = 0
+  PatchWiseAoSoAStack              = 1
+  BatchedAoSStack                  = 2
+  BatchedAoSoAStack                = 3
+  PatchWiseSplitTermsAoSStack      = 4
+  PatchWiseSplitTermsAoSoAStack    = 5
+  PatchWiseAoSHeap                 = 6
+  PatchWiseAoSoAHeap               = 7
+  BatchedAoSHeap                   = 8
+  BatchedAoSoAHeap                 = 9
+  PatchWiseSplitTermsAoSHeap       = 10
+  PatchWiseSplitTermsAoSoAHeap     = 11
+  PatchWiseInSitu                  = 12
+  BatchedInSitu                    = 13
     
 
 def create_compute_Riemann_kernel_for_Rusanov(flux_implementation, 
@@ -331,37 +337,51 @@ def create_compute_Riemann_kernel_for_Rusanov(flux_implementation,
   
   """  
   RiemannKernelCalls = {
-    RiemannKernelVariant.PatchWiseAoS:              "timeStepWithRusanov_overlap1_patchwise",
-    RiemannKernelVariant.PatchWiseAoSoA:            "timeStepWithRusanov_overlap1_patchwise",
-    RiemannKernelVariant.BatchedAoS:                "timeStepWithRusanov_overlap1_batched",
-    RiemannKernelVariant.BatchedAoSoA:              "timeStepWithRusanov_overlap1_batched",
-    RiemannKernelVariant.PatchWiseSplitTermsAoS:    "timeStepWithRusanov_overlap1_patchwise_split_terms",
-    RiemannKernelVariant.PatchWiseSplitTermsAoSoA:  "timeStepWithRusanov_overlap1_patchwise_split_terms",
-    RiemannKernelVariant.PatchWiseInSitu:           "timeStepWithRusanov_overlap1_patchwise_in_situ",
-    RiemannKernelVariant.BatchedInSitu:             "timeStepWithRusanov_overlap1_patchwise_in_situ"
+    RiemannKernelVariant.PatchWiseAoSStack:              "timeStepWithRusanov_overlap1_patchwise_call_stack",
+    RiemannKernelVariant.PatchWiseAoSoAStack:            "timeStepWithRusanov_overlap1_patchwise_call_stack",
+    RiemannKernelVariant.BatchedAoSStack:                "timeStepWithRusanov_overlap1_batched_call_stack",
+    RiemannKernelVariant.BatchedAoSoAStack:              "timeStepWithRusanov_overlap1_batched_call_stack",
+    RiemannKernelVariant.PatchWiseSplitTermsAoSStack:    "timeStepWithRusanov_overlap1_patchwise_split_terms_call_stack",
+    RiemannKernelVariant.PatchWiseSplitTermsAoSoAStack:  "timeStepWithRusanov_overlap1_patchwise_split_terms_call_stack",
+    RiemannKernelVariant.PatchWiseAoSHeap:               "timeStepWithRusanov_overlap1_patchwise_heap",
+    RiemannKernelVariant.PatchWiseAoSoAHeap:             "timeStepWithRusanov_overlap1_patchwise_heap",
+    RiemannKernelVariant.BatchedAoSHeap:                 "timeStepWithRusanov_overlap1_batched_heap",
+    RiemannKernelVariant.BatchedAoSoAHeap:               "timeStepWithRusanov_overlap1_batched_heap",
+    RiemannKernelVariant.PatchWiseSplitTermsAoSHeap:     "timeStepWithRusanov_overlap1_patchwise_split_terms_heap",
+    RiemannKernelVariant.PatchWiseSplitTermsAoSoAHeap:   "timeStepWithRusanov_overlap1_patchwise_split_terms_heap",
+    RiemannKernelVariant.PatchWiseInSitu:                "timeStepWithRusanov_overlap1_patchwise_in_situ",
+    RiemannKernelVariant.BatchedInSitu:                  "timeStepWithRusanov_overlap1_patchwise_in_situ"
   }
   
   EnumeratorTemplateTypes = {
-    RiemannKernelVariant.PatchWiseAoS:              "::exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator",
-    RiemannKernelVariant.PatchWiseAoSoA:            "::exahype2::fv::enumerator::AoSoALexicographicVolumeEnumerator",
-    RiemannKernelVariant.BatchedAoS:                "::exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator",
-    RiemannKernelVariant.BatchedAoSoA:              "::exahype2::fv::enumerator::AoSoALexicographicVolumeEnumerator",
-    RiemannKernelVariant.PatchWiseSplitTermsAoS:    "::exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator",
-    RiemannKernelVariant.PatchWiseSplitTermsAoSoA:  "::exahype2::fv::enumerator::AoSoALexicographicVolumeEnumerator",
-    RiemannKernelVariant.PatchWiseInSitu:           "",
-    RiemannKernelVariant.BatchedInSitu:             ""
+    RiemannKernelVariant.PatchWiseAoSStack:              "::exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator",
+    RiemannKernelVariant.PatchWiseAoSoAStack:            "::exahype2::fv::enumerator::AoSoALexicographicVolumeEnumerator",
+    RiemannKernelVariant.BatchedAoSStack:                "::exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator",
+    RiemannKernelVariant.BatchedAoSoAStack:              "::exahype2::fv::enumerator::AoSoALexicographicVolumeEnumerator",
+    RiemannKernelVariant.PatchWiseSplitTermsAoSStack:    "::exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator",
+    RiemannKernelVariant.PatchWiseSplitTermsAoSoAStack:  "::exahype2::fv::enumerator::AoSoALexicographicVolumeEnumerator",
+    RiemannKernelVariant.PatchWiseAoSHeap:              "::exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator",
+    RiemannKernelVariant.PatchWiseAoSoAHeap:            "::exahype2::fv::enumerator::AoSoALexicographicVolumeEnumerator",
+    RiemannKernelVariant.BatchedAoSHeap:                "::exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator",
+    RiemannKernelVariant.BatchedAoSoAHeap:              "::exahype2::fv::enumerator::AoSoALexicographicVolumeEnumerator",
+    RiemannKernelVariant.PatchWiseSplitTermsAoSHeap:    "::exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator",
+    RiemannKernelVariant.PatchWiseSplitTermsAoSoAHeap:  "::exahype2::fv::enumerator::AoSoALexicographicVolumeEnumerator",
+    RiemannKernelVariant.PatchWiseInSitu:           None,
+    RiemannKernelVariant.BatchedInSitu:             None
   }
 
   template  = RiemannKernelCalls[riemann_kernel_variant]
   
   if solver_variant == SolverVariant.WithVirtualFunctions:
-    template += "("
+    template += "_functors("
   if solver_variant == SolverVariant.Stateless:
-    template += "<{{SOLVER_NAME}},"
-    template += EnumeratorTemplateTypes[riemann_kernel_variant]
+    template += "_static_calls<{{SOLVER_NAME}}"
+    if EnumeratorTemplateTypes[riemann_kernel_variant]!=None:
+      template += ","
+      template += EnumeratorTemplateTypes[riemann_kernel_variant]
     template += ">("
   if solver_variant == SolverVariant.Accelerator:
-    template += "<{{SOLVER_NAME}},"
+    template += "_static_calls<{{SOLVER_NAME}},"
     template += EnumeratorTemplateTypes[riemann_kernel_variant]
     template += ">(targetDevice,"
         
@@ -456,7 +476,7 @@ def create_abstract_solver_declarations(flux_implementation, ncp_implementation,
      * lacks an inline define. Also, if you don't want to use ipo aggressively,
      * it might be clever to put the implementation into the header.
      */
-    #if defined(OpenMPGPUOffloading)
+    #if defined(GPUOffloadingOMP)
     #pragma omp declare target
     #endif
     static GPUCallableMethod double maxEigenvalue(
@@ -468,7 +488,7 @@ def create_abstract_solver_declarations(flux_implementation, ncp_implementation,
       int                                          normal,
       Offloadable
     );
-    #if defined(OpenMPGPUOffloading)
+    #if defined(GPUOffloadingOMP)
     #pragma omp end declare target
     #endif
     {% endif %}
@@ -496,7 +516,7 @@ def create_abstract_solver_declarations(flux_implementation, ncp_implementation,
      * lacks an inline define. Also, if you don't want to use ipo aggressively,
      * it might be clever to put the implementation into the header.
      */
-    #if defined(OpenMPGPUOffloading)
+    #if defined(GPUOffloadingOMP)
     #pragma omp declare target
     #endif
     static GPUCallableMethod void flux(
@@ -509,7 +529,7 @@ def create_abstract_solver_declarations(flux_implementation, ncp_implementation,
       double * __restrict__                        F, // F[{{NUMBER_OF_UNKNOWNS}}]
       Offloadable
     );
-    #if defined(OpenMPGPUOffloading)
+    #if defined(GPUOffloadingOMP)
     #pragma omp end declare target
     #endif
     {% endif %}
@@ -533,7 +553,7 @@ def create_abstract_solver_declarations(flux_implementation, ncp_implementation,
      * lacks an inline define. Also, if you don't want to use ipo aggressively,
      * it might be clever to put the implementation into the header.
      */
-    #if defined(OpenMPGPUOffloading)
+    #if defined(GPUOffloadingOMP)
     #pragma omp declare target
     #endif
     static GPUCallableMethod void nonconservativeProduct(
@@ -547,7 +567,7 @@ def create_abstract_solver_declarations(flux_implementation, ncp_implementation,
       double * __restrict__                        BgradQ, // BgradQ[{{NUMBER_OF_UNKNOWNS}}]
       Offloadable
     );
-    #if defined(OpenMPGPUOffloading)
+    #if defined(GPUOffloadingOMP)
     #pragma omp end declare target
     #endif
     {% endif %}
@@ -572,7 +592,7 @@ def create_abstract_solver_declarations(flux_implementation, ncp_implementation,
      * lacks an inline define. Also, if you don't want to use ipo aggressively,
      * it might be clever to put the implementation into the header.
      */
-    #if defined(OpenMPGPUOffloading)
+    #if defined(GPUOffloadingOMP)
     #pragma omp declare target
     #endif
     static GPUCallableMethod void sourceTerm(
@@ -584,7 +604,7 @@ def create_abstract_solver_declarations(flux_implementation, ncp_implementation,
       double * __restrict__ S,
       Offloadable
     );
-    #if defined(OpenMPGPUOffloading)
+    #if defined(GPUOffloadingOMP)
     #pragma omp end declare target
     #endif
     {% endif %}
@@ -619,6 +639,7 @@ double {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::maxEigenvalue(
   const tarch::la::Vector<Dimensions,double>&  faceCentre,
   const tarch::la::Vector<Dimensions,double>&  volumeH,
   double                                       t,
+  double                                       dt,
   int                                          normal
 ) {
   {{EIGENVALUES_IMPLEMENTATION}}
@@ -677,7 +698,7 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::sourceTerm(
 
 
 {% if EIGENVALUES_IMPLEMENTATION!="<user-defined>" and STATELESS_PDE_TERMS %}
-#if defined(OpenMPGPUOffloading)
+#if defined(GPUOffloadingOMP)
 #pragma omp declare target
 #endif
 GPUCallableMethod double {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::maxEigenvalue(
@@ -690,14 +711,14 @@ GPUCallableMethod double {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::maxEigenva
 ) {
   {{EIGENVALUES_IMPLEMENTATION}};
 }
-#if defined(OpenMPGPUOffloading)
+#if defined(GPUOffloadingOMP)
 #pragma omp end declare target
 #endif
 {% endif %}
 
 
 {% if FLUX_IMPLEMENTATION!="<user-defined>" and STATELESS_PDE_TERMS %}
-#if defined(OpenMPGPUOffloading)
+#if defined(GPUOffloadingOMP)
 #pragma omp declare target
 #endif
 GPUCallableMethod void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::flux(
@@ -716,14 +737,14 @@ GPUCallableMethod void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::flux(
   {{FLUX_IMPLEMENTATION}}
   {% endif %}
 }
-#if defined(OpenMPGPUOffloading)
+#if defined(GPUOffloadingOMP)
 #pragma omp end declare target
 #endif
 {% endif %}
 
 
 {% if NCP_IMPLEMENTATION!="<user-defined>" and STATELESS_PDE_TERMS %}
-#if defined(OpenMPGPUOffloading)
+#if defined(GPUOffloadingOMP)
 #pragma omp declare target
 #endif
 GPUCallableMethod void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::nonconservativeProduct(
@@ -743,14 +764,14 @@ GPUCallableMethod void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::nonconservat
   {{NCP_IMPLEMENTATION}}
   {% endif %}
 }
-#if defined(OpenMPGPUOffloading)
+#if defined(GPUOffloadingOMP)
 #pragma omp end declare target
 #endif
 {% endif %}
 
 
 {% if SOURCE_TERM_IMPLEMENTATION!="<user-defined>" and STATELESS_PDE_TERMS %}
-#if defined(OpenMPGPUOffloading)
+#if defined(GPUOffloadingOMP)
 #pragma omp declare target
 #endif
 GPUCallableMethod void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::sourceTerm(
@@ -768,7 +789,7 @@ GPUCallableMethod void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::sourceTerm(
   {{SOURCE_TERM_IMPLEMENTATION}}
   {% endif %}
 }
-#if defined(OpenMPGPUOffloading)
+#if defined(GPUOffloadingOMP)
 #pragma omp end declare target
 #endif
 {% endif %}
@@ -858,7 +879,7 @@ def create_solver_declarations(flux_implementation, ncp_implementation, eigenval
      * TBB trick and overload by adding an additional enum. It has no semantics
      * but helps the compiler to distinguish the different function variants.
      */
-    #if defined(OpenMPGPUOffloading)
+    #if defined(GPUOffloadingOMP)
     #pragma omp declare target
     #endif
     static GPUCallableMethod void sourceTerm(
@@ -870,7 +891,7 @@ def create_solver_declarations(flux_implementation, ncp_implementation, eigenval
        double * __restrict__ S,
        Offloadable
      );
-    #if defined(OpenMPGPUOffloading)
+    #if defined(GPUOffloadingOMP)
     #pragma omp end declare target
     #endif
     {% endif %}
@@ -891,7 +912,7 @@ def create_solver_declarations(flux_implementation, ncp_implementation, eigenval
      * TBB trick and overload by adding an additional enum. It has no semantics
      * but helps the compiler to distinguish the different function variants.
      */
-    #if defined(OpenMPGPUOffloading)
+    #if defined(GPUOffloadingOMP)
     #pragma omp declare target
     #endif
     static GPUCallableMethod double maxEigenvalue(
@@ -902,7 +923,7 @@ def create_solver_declarations(flux_implementation, ncp_implementation, eigenval
       int                                          normal,
       Offloadable
     );
-    #if defined(OpenMPGPUOffloading)
+    #if defined(GPUOffloadingOMP)
     #pragma omp end declare target
     #endif
     {% endif %}
@@ -923,7 +944,7 @@ def create_solver_declarations(flux_implementation, ncp_implementation, eigenval
      * TBB trick and overload by adding an additional enum. It has no semantics
      * but helps the compiler to distinguish the different function variants.
      */
-    #if defined(OpenMPGPUOffloading)
+    #if defined(GPUOffloadingOMP)
     #pragma omp declare target
     #endif
     static GPUCallableMethod void flux(
@@ -936,7 +957,7 @@ def create_solver_declarations(flux_implementation, ncp_implementation, eigenval
       double * __restrict__                        F, // F[{{NUMBER_OF_UNKNOWNS}}]
       Offloadable
     );
-    #if defined(OpenMPGPUOffloading)
+    #if defined(GPUOffloadingOMP)
     #pragma omp end declare target
     #endif
     {% endif %}
@@ -957,7 +978,7 @@ def create_solver_declarations(flux_implementation, ncp_implementation, eigenval
      * TBB trick and overload by adding an additional enum. It has no semantics
      * but helps the compiler to distinguish the different function variants.
      */
-    #if defined(OpenMPGPUOffloading)
+    #if defined(GPUOffloadingOMP)
     #pragma omp declare target
     #endif
     static GPUCallableMethod void nonconservativeProduct(
@@ -971,7 +992,7 @@ def create_solver_declarations(flux_implementation, ncp_implementation, eigenval
       double * __restrict__                        BgradQ,     // BgradQ[5]
       Offloadable
     );
-    #if defined(OpenMPGPUOffloading)
+    #if defined(GPUOffloadingOMP)
     #pragma omp end declare target
     #endif
     {% endif %}    
@@ -993,6 +1014,7 @@ double {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::maxEigenvalue(
   const tarch::la::Vector<Dimensions,double>&  faceCentre,
   const tarch::la::Vector<Dimensions,double>&  volumeH,
   double                                       t,
+  double                                       dt,
   int                                          normal
 )  {
   logTraceInWith4Arguments( "maxEigenvalue(...)", faceCentre, volumeH, t, normal );
@@ -1057,7 +1079,7 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::sourceTerm(
 
 
 {% if EIGENVALUES_IMPLEMENTATION=="<user-defined>" and STATELESS_PDE_TERMS %}
-    #if defined(OpenMPGPUOffloading)
+    #if defined(GPUOffloadingOMP)
     #pragma omp declare target
     #endif
 GPUCallableMethod double {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::maxEigenvalue(
@@ -1070,14 +1092,14 @@ GPUCallableMethod double {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::maxEigenva
 )  {
   // @todo implement
 }
-    #if defined(OpenMPGPUOffloading)
+    #if defined(GPUOffloadingOMP)
     #pragma omp end declare target
     #endif
 {% endif %}
 
 
 {% if FLUX_IMPLEMENTATION=="<user-defined>" and STATELESS_PDE_TERMS %}
-    #if defined(OpenMPGPUOffloading)
+    #if defined(GPUOffloadingOMP)
     #pragma omp declare target
     #endif
 GPUCallableMethod void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::flux(
@@ -1092,14 +1114,14 @@ GPUCallableMethod void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::flux(
 )  {
   // @todo implement
 }
-    #if defined(OpenMPGPUOffloading)
+    #if defined(GPUOffloadingOMP)
     #pragma omp end declare target
     #endif
 {% endif %}
 
 
 {% if NCP_IMPLEMENTATION=="<user-defined>" and STATELESS_PDE_TERMS %}
-    #if defined(OpenMPGPUOffloading)
+    #if defined(GPUOffloadingOMP)
     #pragma omp declare target
     #endif
 GPUCallableMethod void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::nonconservativeProduct(
@@ -1115,7 +1137,7 @@ GPUCallableMethod void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::nonconservat
 )  {
   // @todo implement
 }
-    #if defined(OpenMPGPUOffloading)
+    #if defined(GPUOffloadingOMP)
     #pragma omp end declare target
     #endif
 {% endif %}
@@ -1123,7 +1145,7 @@ GPUCallableMethod void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::nonconservat
 
 
 {% if SOURCE_TERM_IMPLEMENTATION=="<user-defined>" and STATELESS_PDE_TERMS %}
-    #if defined(OpenMPGPUOffloading)
+    #if defined(GPUOffloadingOMP)
     #pragma omp declare target
     #endif
 GPUCallableMethod void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::sourceTerm(
@@ -1137,7 +1159,7 @@ GPUCallableMethod void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::sourceTerm(
 ) {
   // @todo implement
 }
-    #if defined(OpenMPGPUOffloading)
+    #if defined(GPUOffloadingOMP)
     #pragma omp end declare target
     #endif
 {% endif %}

@@ -8,7 +8,7 @@
 namespace examples {
   namespace exahype2 {
     namespace mgccz4 {
-      #if defined(OpenMPGPUOffloading)
+      #if defined(GPUOffloadingOMP)
       #pragma omp declare target
       #endif
       void ncp(double* BgradQ, const double* const Q, const double* const gradQSerialised, const int normal,
@@ -21,11 +21,11 @@ namespace examples {
         const double MGCCZ4sk,
         const double MGCCZ4xi,
         const double MGCCZ4mu);
-      #if defined(OpenMPGPUOffloading)
+      #if defined(GPUOffloadingOMP)
       #pragma omp end declare target
       #endif
 
-      #if defined(OpenMPGPUOffloading)
+      #if defined(GPUOffloadingOMP)
       #pragma omp declare target
       #endif
       void source(double* S, const double* const Q,
@@ -42,31 +42,31 @@ namespace examples {
         const double MGCCZ4k1,
         const double MGCCZ4k2,
         const double MGCCZ4k3);
-      #if defined(OpenMPGPUOffloading)
+      #if defined(GPUOffloadingOMP)
       #pragma omp end declare target
       #endif
 
-      #if defined(OpenMPGPUOffloading)
+      #if defined(GPUOffloadingOMP)
       #pragma omp declare target
       #endif
       void admconstraints(double* constraints, const double* const Q, const double* const gradQSerialised);
-      #if defined(OpenMPGPUOffloading)
+      #if defined(GPUOffloadingOMP)
       #pragma omp end declare target
       #endif
 
-      //#if defined(OpenMPGPUOffloading)
+      //#if defined(GPUOffloadingOMP)
       //#pragma omp declare target
       //#endif
       //void eigenvalues(double* lambda, const double* const Q, const int normal);
-      //#if defined(OpenMPGPUOffloading)
+      //#if defined(GPUOffloadingOMP)
       //#pragma omp end declare target
       //#endif
 	
-      #if defined(OpenMPGPUOffloading)
+      #if defined(GPUOffloadingOMP)
       #pragma omp declare target
       #endif
       void enforceMGCCZ4constraints(double * luh);
-      #if defined(OpenMPGPUOffloading)
+      #if defined(GPUOffloadingOMP)
       #pragma omp end declare target
       #endif
     }

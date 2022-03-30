@@ -7,7 +7,7 @@
 #include "tarch/multicore/multicore.h"
 
 
-#if defined(SYCLGPUOffloading)
+#if defined(GPUOffloadingSYCL)
 
 namespace tarch {
   namespace multicore {

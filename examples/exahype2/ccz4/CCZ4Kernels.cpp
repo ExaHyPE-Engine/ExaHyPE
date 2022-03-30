@@ -8,7 +8,7 @@
 
 #include "CCZ4Kernels.h"
 
-#if defined(OpenMPGPUOffloading)
+#if defined(GPUOffloadingOMP)
 #pragma omp declare target
 #endif
 void examples::exahype2::ccz4::enforceCCZ4constraints(double * luh)
@@ -100,14 +100,14 @@ void examples::exahype2::ccz4::enforceCCZ4constraints(double * luh)
     luh[51] = DD[2][1][2];
     luh[52] = DD[2][2][2];
 }
-#if defined(OpenMPGPUOffloading)
+#if defined(GPUOffloadingOMP)
 #pragma omp end declare target
 #endif
 
 
 
 
-#if defined(OpenMPGPUOffloading)
+#if defined(GPUOffloadingOMP)
 #pragma omp declare target
 #endif
 void examples::exahype2::ccz4::admconstraints(double* constraints, const double* const Q, const double* const gradQSerialised)
@@ -292,11 +292,11 @@ void examples::exahype2::ccz4::admconstraints(double* constraints, const double*
     constraints[4]  =   1.0/invdet-1.0;
     constraints[5]  =   traceA;
 }
-#if defined(OpenMPGPUOffloading)
+#if defined(GPUOffloadingOMP)
 #pragma omp end declare target
 #endif
 
-#if defined(OpenMPGPUOffloading)
+#if defined(GPUOffloadingOMP)
 #pragma omp declare target
 #endif
 void examples::exahype2::ccz4::Psi4Calc(double* Psi4, const double* const Q, const double* const gradQSerialised, double* coor)
@@ -527,7 +527,7 @@ void examples::exahype2::ccz4::Psi4Calc(double* Psi4, const double* const Q, con
 	}
 	
 }
-#if defined(OpenMPGPUOffloading)
+#if defined(GPUOffloadingOMP)
 #pragma omp end declare target
 #endif
 

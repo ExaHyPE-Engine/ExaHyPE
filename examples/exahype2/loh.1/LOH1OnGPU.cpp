@@ -51,7 +51,7 @@ void examples::exahype2::loh1::LOH1OnGPU::adjustSolution(
   logTraceOut( "adjustSolution(...)" );
 }
 
-#if defined(OpenMPGPUOffloading)
+#if defined(GPUOffloadingOMP)
 #pragma omp declare target
 #endif
 void examples::exahype2::loh1::LOH1OnGPU::boundaryConditions(
@@ -75,12 +75,12 @@ void examples::exahype2::loh1::LOH1OnGPU::boundaryConditions(
   Qoutside[ cp_  ]   = Qinside[ cp_  ];
   Qoutside[ cs_  ]   = Qinside[ cs_  ];
 }
-#if defined(OpenMPGPUOffloading)
+#if defined(GPUOffloadingOMP)
 #pragma omp end declare target
 #endif
 
 
-#if defined(OpenMPGPUOffloading)
+#if defined(GPUOffloadingOMP)
 #pragma omp declare target
 #endif
 double examples::exahype2::loh1::LOH1OnGPU::maxEigenvalue(
@@ -116,13 +116,13 @@ double examples::exahype2::loh1::LOH1OnGPU::maxEigenvalue(
   result = std::max( result,  cs );
   return result;
 }
-#if defined(OpenMPGPUOffloading)
+#if defined(GPUOffloadingOMP)
 #pragma omp end declare target
 #endif
 
 
 
-#if defined(OpenMPGPUOffloading)
+#if defined(GPUOffloadingOMP)
 #pragma omp declare target
 #endif
 void examples::exahype2::loh1::LOH1OnGPU::nonconservativeProduct(
@@ -215,6 +215,6 @@ void examples::exahype2::loh1::LOH1OnGPU::nonconservativeProduct(
        break; 
    }
 }
-#if defined(OpenMPGPUOffloading)
+#if defined(GPUOffloadingOMP)
 #pragma omp end declare target
 #endif

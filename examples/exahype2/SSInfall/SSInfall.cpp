@@ -9,13 +9,13 @@
 tarch::logging::Log   examples::exahype2::SSInfall::SSInfall::_log( "examples::exahype2::SSInfall::SSInfall" );
 
 
-#if defined(OpenMPGPUOffloading)
+#if defined(GPUOffloadingOMP)
 #pragma omp declare target
 #endif
 double examples::exahype2::SSInfall::SSInfall::_rMax;
 double examples::exahype2::SSInfall::SSInfall::_rhoMax;
 double examples::exahype2::SSInfall::SSInfall::_mTotMax;
-#if defined(OpenMPGPUOffloading)
+#if defined(GPUOffloadingOMP)
 #pragma omp end declare target
 #endif
 
@@ -420,7 +420,7 @@ void examples::exahype2::SSInfall::SSInfall::sourceTerm(
 }
 
 
-#if defined(OpenMPGPUOffloading)
+#if defined(GPUOffloadingOMP)
 #pragma omp declare target
 #endif
 void examples::exahype2::SSInfall::SSInfall::sourceTerm(
@@ -454,7 +454,7 @@ void examples::exahype2::SSInfall::SSInfall::sourceTerm(
   S[3] = -force_density_norm*z;
   S[4] = -force_density_norm*(Q[1]*x+Q[2]*y+Q[3]*z)/Q[0];
 }
-#if defined(OpenMPGPUOffloading)
+#if defined(GPUOffloadingOMP)
 #pragma omp end declare target
 #endif
 
@@ -566,6 +566,7 @@ double examples::exahype2::SSInfall::SSInfall::maxEigenvalue(
   const tarch::la::Vector<Dimensions,double>&  faceCentre,
   const tarch::la::Vector<Dimensions,double>&  volumeH,
   double                                       t,
+  double                                       dt,
   int                                          normal
 )  {
   assertion(normal>=0);
@@ -583,7 +584,7 @@ double examples::exahype2::SSInfall::SSInfall::maxEigenvalue(
   assertion4( not std::isinf(Q[3]), faceCentre, volumeH, t, normal );
   assertion4( not std::isinf(Q[4]), faceCentre, volumeH, t, normal );
 
-  double result = maxEigenvalue(Q,faceCentre,volumeH,t,normal,Offloadable::Yes);
+  double result = maxEigenvalue(Q,faceCentre,volumeH,t,dt,normal,Offloadable::Yes);
 
   nonCriticalAssertion10(
     result<10000,
@@ -597,7 +598,7 @@ double examples::exahype2::SSInfall::SSInfall::maxEigenvalue(
 }
 
 
-#if defined(OpenMPGPUOffloading)
+#if defined(GPUOffloadingOMP)
 #pragma omp declare target
 #endif
 double examples::exahype2::SSInfall::SSInfall::maxEigenvalue(
@@ -605,6 +606,7 @@ double examples::exahype2::SSInfall::SSInfall::maxEigenvalue(
   const tarch::la::Vector<Dimensions,double>&  faceCentre,
   const tarch::la::Vector<Dimensions,double>&  volumeH,
   double                                       t,
+  double                                       dt,
   int                                          normal,
   Offloadable
 )  {
@@ -631,7 +633,7 @@ double examples::exahype2::SSInfall::SSInfall::maxEigenvalue(
 
   return result;
 }
-#if defined(OpenMPGPUOffloading)
+#if defined(GPUOffloadingOMP)
 #pragma omp end declare target
 #endif
 
@@ -641,6 +643,7 @@ void examples::exahype2::SSInfall::SSInfall::flux(
   const tarch::la::Vector<Dimensions,double>&  faceCentre,
   const tarch::la::Vector<Dimensions,double>&  volumeH,
   double                                       t,
+  double                                       dt,
   int                                          normal,
   double * __restrict__ F // F[5]
 )  {
@@ -658,7 +661,7 @@ void examples::exahype2::SSInfall::SSInfall::flux(
   assertion4( not std::isinf(Q[3]), faceCentre, volumeH, t, normal );
   assertion4( not std::isinf(Q[4]), faceCentre, volumeH, t, normal );
 
-  flux(Q,faceCentre,volumeH,t,normal,F,Offloadable::Yes);
+  flux(Q,faceCentre,volumeH,t,dt,normal,F,Offloadable::Yes);
 
   assertion4( not std::isnan(F[0]), faceCentre, volumeH, t, normal );
   assertion4( not std::isnan(F[1]), faceCentre, volumeH, t, normal );
@@ -675,7 +678,7 @@ void examples::exahype2::SSInfall::SSInfall::flux(
 }
 
 
-#if defined(OpenMPGPUOffloading)
+#if defined(GPUOffloadingOMP)
 #pragma omp declare target
 #endif
 void examples::exahype2::SSInfall::SSInfall::flux(
@@ -683,6 +686,7 @@ void examples::exahype2::SSInfall::SSInfall::flux(
   const tarch::la::Vector<Dimensions,double>&  faceCentre,
   const tarch::la::Vector<Dimensions,double>&  volumeH,
   double                                       t,
+  double                                       dt,
   int                                          normal,
   double * __restrict__                        F, // F[5]
   Offloadable
@@ -704,7 +708,7 @@ void examples::exahype2::SSInfall::SSInfall::flux(
   F[normal+1] += p;
   F[4]        += coeff*p;
 }
-#if defined(OpenMPGPUOffloading)
+#if defined(GPUOffloadingOMP)
 #pragma omp end declare target
 #endif
 

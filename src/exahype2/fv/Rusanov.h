@@ -208,7 +208,7 @@ namespace exahype2 {
      // NOTE: we decided to have a dedicated split loop implementation for the
      // Rusanov solver as all attempts to offload the original bit using functors failed.
      // One benefit here is that the helper variables are on the stack.
-    #if defined(OpenMPGPUOffloading)
+    #if defined(GPUOffloadingOMP)
     #pragma omp declare target
     #endif
     template<
@@ -224,12 +224,12 @@ namespace exahype2 {
       const double * __restrict__                  Qin,
       double * __restrict__                        Qout
     );
-    #if defined(OpenMPGPUOffloading)
+    #if defined(GPUOffloadingOMP)
     #pragma omp end declare target
     #endif
 
 
-    #if defined(OpenMPGPUOffloading)
+    #if defined(GPUOffloadingOMP)
     #pragma omp declare target
     #endif
     template<
@@ -245,7 +245,7 @@ namespace exahype2 {
       const double * __restrict__                  Qin,
       double * __restrict__                        Qout
     );
-    #if defined(OpenMPGPUOffloading)
+    #if defined(GPUOffloadingOMP)
     #pragma omp end declare target
     #endif
 
