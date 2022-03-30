@@ -461,7 +461,6 @@ def load_file_sequence(file_prefix,file_postfix="", solver_name="",verbose=False
   result = []
   filtered_files = glob.glob( file_prefix + "*" + file_postfix )
   for filtered_file in filtered_files:
-    print( "parse " + filtered_file )
     new_dataset = PerformanceData(filtered_file,solver_name,verbose)
     if new_dataset.valid and result!=None:
       result.append( new_dataset )
