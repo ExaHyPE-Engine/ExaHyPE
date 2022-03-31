@@ -303,14 +303,20 @@ class SolverVariant(Enum):
 
 
 class RiemannKernelVariant(Enum):
-  PatchWiseAoS                = 0
-  PatchWiseAoSoA              = 1
-  BatchedAoS                  = 2
-  BatchedAoSoA                = 3
-  PatchWiseSplitTermsAoS      = 4
-  PatchWiseSplitTermsAoSoA    = 5
-  PatchWiseInSitu             = 6
-  BatchedInSitu               = 7
+  PatchWiseAoSStack                = 0
+  PatchWiseAoSoAStack              = 1
+  BatchedAoSStack                  = 2
+  BatchedAoSoAStack                = 3
+  PatchWiseSplitTermsAoSStack      = 4
+  PatchWiseSplitTermsAoSoAStack    = 5
+  PatchWiseAoSHeap                 = 6
+  PatchWiseAoSoAHeap               = 7
+  BatchedAoSHeap                   = 8
+  BatchedAoSoAHeap                 = 9
+  PatchWiseSplitTermsAoSHeap       = 10
+  PatchWiseSplitTermsAoSoAHeap     = 11
+  PatchWiseInSitu                  = 12
+  BatchedInSitu                    = 13
     
 
 def create_compute_Riemann_kernel_for_Rusanov(flux_implementation, 
@@ -331,23 +337,35 @@ def create_compute_Riemann_kernel_for_Rusanov(flux_implementation,
   
   """  
   RiemannKernelCalls = {
-    RiemannKernelVariant.PatchWiseAoS:              "timeStepWithRusanov_overlap1_patchwise",
-    RiemannKernelVariant.PatchWiseAoSoA:            "timeStepWithRusanov_overlap1_patchwise",
-    RiemannKernelVariant.BatchedAoS:                "timeStepWithRusanov_overlap1_batched",
-    RiemannKernelVariant.BatchedAoSoA:              "timeStepWithRusanov_overlap1_batched",
-    RiemannKernelVariant.PatchWiseSplitTermsAoS:    "timeStepWithRusanov_overlap1_patchwise_split_terms",
-    RiemannKernelVariant.PatchWiseSplitTermsAoSoA:  "timeStepWithRusanov_overlap1_patchwise_split_terms",
-    RiemannKernelVariant.PatchWiseInSitu:           "timeStepWithRusanov_overlap1_patchwise_in_situ",
-    RiemannKernelVariant.BatchedInSitu:             "timeStepWithRusanov_overlap1_patchwise_in_situ"
+    RiemannKernelVariant.PatchWiseAoSStack:              "timeStepWithRusanov_overlap1_patchwise_call_stack",
+    RiemannKernelVariant.PatchWiseAoSoAStack:            "timeStepWithRusanov_overlap1_patchwise_call_stack",
+    RiemannKernelVariant.BatchedAoSStack:                "timeStepWithRusanov_overlap1_batched_call_stack",
+    RiemannKernelVariant.BatchedAoSoAStack:              "timeStepWithRusanov_overlap1_batched_call_stack",
+    RiemannKernelVariant.PatchWiseSplitTermsAoSStack:    "timeStepWithRusanov_overlap1_patchwise_split_terms_call_stack",
+    RiemannKernelVariant.PatchWiseSplitTermsAoSoAStack:  "timeStepWithRusanov_overlap1_patchwise_split_terms_call_stack",
+    RiemannKernelVariant.PatchWiseAoSHeap:               "timeStepWithRusanov_overlap1_patchwise_heap",
+    RiemannKernelVariant.PatchWiseAoSoAHeap:             "timeStepWithRusanov_overlap1_patchwise_heap",
+    RiemannKernelVariant.BatchedAoSHeap:                 "timeStepWithRusanov_overlap1_batched_heap",
+    RiemannKernelVariant.BatchedAoSoAHeap:               "timeStepWithRusanov_overlap1_batched_heap",
+    RiemannKernelVariant.PatchWiseSplitTermsAoSHeap:     "timeStepWithRusanov_overlap1_patchwise_split_terms_heap",
+    RiemannKernelVariant.PatchWiseSplitTermsAoSoAHeap:   "timeStepWithRusanov_overlap1_patchwise_split_terms_heap",
+    RiemannKernelVariant.PatchWiseInSitu:                "timeStepWithRusanov_overlap1_patchwise_in_situ",
+    RiemannKernelVariant.BatchedInSitu:                  "timeStepWithRusanov_overlap1_patchwise_in_situ"
   }
   
   EnumeratorTemplateTypes = {
-    RiemannKernelVariant.PatchWiseAoS:              "::exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator",
-    RiemannKernelVariant.PatchWiseAoSoA:            "::exahype2::fv::enumerator::AoSoALexicographicVolumeEnumerator",
-    RiemannKernelVariant.BatchedAoS:                "::exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator",
-    RiemannKernelVariant.BatchedAoSoA:              "::exahype2::fv::enumerator::AoSoALexicographicVolumeEnumerator",
-    RiemannKernelVariant.PatchWiseSplitTermsAoS:    "::exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator",
-    RiemannKernelVariant.PatchWiseSplitTermsAoSoA:  "::exahype2::fv::enumerator::AoSoALexicographicVolumeEnumerator",
+    RiemannKernelVariant.PatchWiseAoSStack:              "::exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator",
+    RiemannKernelVariant.PatchWiseAoSoAStack:            "::exahype2::fv::enumerator::AoSoALexicographicVolumeEnumerator",
+    RiemannKernelVariant.BatchedAoSStack:                "::exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator",
+    RiemannKernelVariant.BatchedAoSoAStack:              "::exahype2::fv::enumerator::AoSoALexicographicVolumeEnumerator",
+    RiemannKernelVariant.PatchWiseSplitTermsAoSStack:    "::exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator",
+    RiemannKernelVariant.PatchWiseSplitTermsAoSoAStack:  "::exahype2::fv::enumerator::AoSoALexicographicVolumeEnumerator",
+    RiemannKernelVariant.PatchWiseAoSHeap:              "::exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator",
+    RiemannKernelVariant.PatchWiseAoSoAHeap:            "::exahype2::fv::enumerator::AoSoALexicographicVolumeEnumerator",
+    RiemannKernelVariant.BatchedAoSHeap:                "::exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator",
+    RiemannKernelVariant.BatchedAoSoAHeap:              "::exahype2::fv::enumerator::AoSoALexicographicVolumeEnumerator",
+    RiemannKernelVariant.PatchWiseSplitTermsAoSHeap:    "::exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator",
+    RiemannKernelVariant.PatchWiseSplitTermsAoSoAHeap:  "::exahype2::fv::enumerator::AoSoALexicographicVolumeEnumerator",
     RiemannKernelVariant.PatchWiseInSitu:           None,
     RiemannKernelVariant.BatchedInSitu:             None
   }
@@ -355,15 +373,15 @@ def create_compute_Riemann_kernel_for_Rusanov(flux_implementation,
   template  = RiemannKernelCalls[riemann_kernel_variant]
   
   if solver_variant == SolverVariant.WithVirtualFunctions:
-    template += "("
+    template += "_functors("
   if solver_variant == SolverVariant.Stateless:
-    template += "<{{SOLVER_NAME}}"
+    template += "_static_calls<{{SOLVER_NAME}}"
     if EnumeratorTemplateTypes[riemann_kernel_variant]!=None:
       template += ","
       template += EnumeratorTemplateTypes[riemann_kernel_variant]
     template += ">("
   if solver_variant == SolverVariant.Accelerator:
-    template += "<{{SOLVER_NAME}},"
+    template += "_static_calls<{{SOLVER_NAME}},"
     template += EnumeratorTemplateTypes[riemann_kernel_variant]
     template += ">(targetDevice,"
         

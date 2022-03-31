@@ -21,16 +21,16 @@ exahype2::CellData::CellData(
 }
 
 
-exahype2::CellData::CellData( int numberOfPatches_ ):
-  numberOfPatches(numberOfPatches_) {
-  QIn           = new (std::align_val_t(Alignment)) double*[numberOfPatches];
-  patchCentre   = new (std::align_val_t(Alignment)) tarch::la::Vector<Dimensions,double>[numberOfPatches];
-  patchSize     = new (std::align_val_t(Alignment)) tarch::la::Vector<Dimensions,double>[numberOfPatches];
-  t             = new (std::align_val_t(Alignment)) double[numberOfPatches];
-  dt            = new (std::align_val_t(Alignment)) double[numberOfPatches];
-  id            = new (std::align_val_t(Alignment)) int[numberOfPatches];
-  QOut          = new (std::align_val_t(Alignment)) double*[numberOfPatches];
-  maxEigenvalue = new (std::align_val_t(Alignment)) double[numberOfPatches];
+exahype2::CellData::CellData( int numberOfCells_ ):
+  numberOfCells(numberOfCells_) {
+  QIn           = new (std::align_val_t(Alignment)) double*[numberOfCells];
+  patchCentre   = new (std::align_val_t(Alignment)) tarch::la::Vector<Dimensions,double>[numberOfCells];
+  patchSize     = new (std::align_val_t(Alignment)) tarch::la::Vector<Dimensions,double>[numberOfCells];
+  t             = new (std::align_val_t(Alignment)) double[numberOfCells];
+  dt            = new (std::align_val_t(Alignment)) double[numberOfCells];
+  id            = new (std::align_val_t(Alignment)) int[numberOfCells];
+  QOut          = new (std::align_val_t(Alignment)) double*[numberOfCells];
+  maxEigenvalue = new (std::align_val_t(Alignment)) double[numberOfCells];
 }
 
 
@@ -42,4 +42,21 @@ exahype2::CellData::~CellData() {
   delete dt;
   delete QOut;
   delete maxEigenvalue;
+}
+
+
+std::string exahype2::CellData::toString() const {
+  std::ostringstream msg;
+  msg << "[";
+  for (int i=0; i<numberOfCells; i++) {
+    msg << "(x=" << patchCentre[i]
+        << ",h=" << patchSize[i]
+        << ",t=" << t[i]
+        << ",dt=" << dt[i]
+        << ",id=" << id[i]
+        << ",lambda=" << maxEigenvalue[i]
+        << ")";
+  }
+  msg << "]";
+  return msg.str();
 }

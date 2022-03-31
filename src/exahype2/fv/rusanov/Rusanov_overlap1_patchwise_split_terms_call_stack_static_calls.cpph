@@ -7,7 +7,7 @@ template <
   typename Solver,
   typename TempDataEnumerator
 >
-void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_patchwise_split_terms(
+void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_patchwise_split_terms_call_stack_static_calls(
   ::exahype2::CellData&              patchData,
   int      numberOfVolumesPerAxisInPatch,
   int      unknowns,
@@ -22,9 +22,9 @@ void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_patchwise_split_terms(
 
   exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator QInEnumerator       (                        1, numberOfVolumesPerAxisInPatch,haloSize,unknowns,auxiliaryVariables);
   exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator QOutEnumerator      (                        1, numberOfVolumesPerAxisInPatch,       0,unknowns,auxiliaryVariables);
-  TempDataEnumerator fluxEnumerator      (patchData.numberOfPatches, numberOfVolumesPerAxisInPatch,haloSize,unknowns,0);
-  TempDataEnumerator ncpEnumerator       (patchData.numberOfPatches, numberOfVolumesPerAxisInPatch+1,haloSize,unknowns,0);
-  TempDataEnumerator eigenvalueEnumerator(patchData.numberOfPatches, numberOfVolumesPerAxisInPatch,haloSize,1,0);
+  TempDataEnumerator fluxEnumerator      (patchData.numberOfCells, numberOfVolumesPerAxisInPatch,haloSize,unknowns,0);
+  TempDataEnumerator ncpEnumerator       (patchData.numberOfCells, numberOfVolumesPerAxisInPatch+1,haloSize,unknowns,0);
+  TempDataEnumerator eigenvalueEnumerator(patchData.numberOfCells, numberOfVolumesPerAxisInPatch,haloSize,1,0);
 
   double tempFluxX[ fluxEnumerator.size() ] __attribute__((aligned (Alignment)));
   double tempFluxY[ fluxEnumerator.size() ] __attribute__((aligned (Alignment)));
@@ -36,7 +36,7 @@ void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_patchwise_split_terms(
   double tempEigenvalueY[ eigenvalueEnumerator.size() ] __attribute__((aligned (Alignment)));
   double tempEigenvalueZ[ eigenvalueEnumerator.size() ] __attribute__((aligned (Alignment)));
 
-  for (int patchIndex=0; patchIndex<patchData.numberOfPatches; patchIndex++) {
+  for (int patchIndex=0; patchIndex<patchData.numberOfCells; patchIndex++) {
     if (Dimensions==2 and evaluateSource) {
       otterLoopBegin();
       for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)

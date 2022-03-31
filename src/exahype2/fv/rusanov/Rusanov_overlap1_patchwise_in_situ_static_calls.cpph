@@ -6,7 +6,7 @@
 template <
   typename Solver
 >
-void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_patchwise_in_situ(
+void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_patchwise_in_situ_static_calls(
   ::exahype2::CellData&   patchData,
   int                     numberOfVolumesPerAxisInPatch,
   int                     unknowns,
@@ -23,7 +23,7 @@ void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_patchwise_in_situ(
   exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator QOutEnumerator      (                        1, numberOfVolumesPerAxisInPatch,       0,unknowns,auxiliaryVariables);
   exahype2::fv::enumerator::SingleVolumeEnumerator           singleVolumeEnumerator(unknowns,0);
 
-  for (int patchIndex=0; patchIndex<patchData.numberOfPatches; patchIndex++) {
+  for (int patchIndex=0; patchIndex<patchData.numberOfCells; patchIndex++) {
     if (Dimensions==2 and evaluateSource) {
       for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
       #if defined(SharedOMP)
