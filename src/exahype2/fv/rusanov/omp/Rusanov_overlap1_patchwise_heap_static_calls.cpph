@@ -36,6 +36,23 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanov_overlap1_patchwise_heap_sta
   double* tempEigenvalueX             = nullptr;
   double* tempEigenvalueY             = nullptr;
   double* tempEigenvalueZ             = nullptr;
+
+  #pragma omp target enter data map(alloc:tempFluxX[0:fluxEnumerator.size()] ) device(targetDevice)
+  #pragma omp target enter data map(alloc:tempFluxY[0:fluxEnumerator.size()] ) device(targetDevice)
+  #pragma omp target enter data map(alloc:tempFluxZ[0:fluxEnumerator.size()] ) device(targetDevice)
+  #pragma omp target enter data map(alloc:tempNonconservativeProductX[0:ncpEnumerator.size()] ) device(targetDevice)
+  #pragma omp target enter data map(alloc:tempNonconservativeProductY[0:ncpEnumerator.size()] ) device(targetDevice)
+  #pragma omp target enter data map(alloc:tempNonconservativeProductZ[0:ncpEnumerator.size()] ) device(targetDevice)
+  #pragma omp target enter data map(alloc:tempEigenvalueX[0:eigenvalueEnumerator.size()] ) device(targetDevice)
+  #pragma omp target enter data map(alloc:tempEigenvalueY[0:eigenvalueEnumerator.size()] ) device(targetDevice)
+  #pragma omp target enter data map(alloc:tempEigenvalueZ[0:eigenvalueEnumerator.size()] ) device(targetDevice)
+
+  for (int patchIndex=0; patchIndex<patchData.numberOfCells; patchIndex++) {
+    const double* currentQIn  = patchData.QIn[patchIndex];
+    double*       currentQOut = patchData.QOut[patchIndex];
+    #pragma omp target enter data map(to:currentQIn[0:QInEnumerator.size()] ) device(targetDevice)
+    #pragma omp target enter data map(alloc:currentQOut[0:QOutEnumerator.size()] ) device(targetDevice)
+  }
   #else
   double* tempFluxX                  = evaluateFlux                     ? tarch::allocateMemory( fluxEnumerator.size(),      tarch::MemoryLocation::Heap ) : nullptr;
   double* tempFluxY                  = evaluateFlux                     ? tarch::allocateMemory( fluxEnumerator.size(),      tarch::MemoryLocation::Heap ) : nullptr;
@@ -48,14 +65,16 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanov_overlap1_patchwise_heap_sta
   double* tempEigenvalueZ            = (Dimensions==3)                  ? tarch::allocateMemory( eigenvalueEnumerator.size(),      tarch::MemoryLocation::Heap ) : nullptr;
   #endif
 
-
+  #pragma omp target teams distribute device(targetDevice) \
+    map(to:patchData.patchCentre[0:patchData.numberOfCells*Dimensions]) \
+    map(to:patchData.patchSize[0:patchData.numberOfCells*Dimensions]) \
+    map(to:patchData.t[0:patchData.numberOfCells]) \
+    map(to:patchData.dt[0:patchData.numberOfCells]) \
+    map(from:patchData.maxEigenvalue[0:patchData.numberOfCells])
   for (int patchIndex=0; patchIndex<patchData.numberOfCells; patchIndex++) {
     if (Dimensions==2 and evaluateSource) {
-      otterLoopBegin();
+      #pragma omp parallel for collapse(2)
       for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
-      #if defined(SharedOMP)
-      #pragma omp simd
-      #endif
       for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++) {
         otterLoopIterationBegin();
         internal::copySolutionAndAddSourceTerm_LoopBody<Solver>(
@@ -75,12 +94,9 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanov_overlap1_patchwise_heap_sta
       otterLoopEnd();
     }
     else if (Dimensions==3 and evaluateSource) {
-      otterLoopBegin();
+      #pragma omp parallel for collapse(3)
       for (int z = 0; z < numberOfVolumesPerAxisInPatch; z++)
       for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
-      #if defined(SharedOMP)
-      #pragma omp simd
-      #endif
       for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++) {
         otterLoopIterationBegin();
         internal::copySolutionAndAddSourceTerm_LoopBody<Solver>(
@@ -123,11 +139,9 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanov_overlap1_patchwise_heap_sta
     }
     else {
       otterLoopBegin();
+      #pragma omp parallel for collapse(4)
       for (int z = 0; z < numberOfVolumesPerAxisInPatch; z++)
       for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
-      #if defined(SharedOMP)
-      #pragma omp simd collapse(2)
-      #endif
       for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++)
       for (int unknown=0; unknown<unknowns+auxiliaryVariables; unknown++) {
         otterLoopIterationBegin();
@@ -148,10 +162,8 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanov_overlap1_patchwise_heap_sta
 
     if (Dimensions==2) {
       otterLoopBegin();
+      #pragma omp parallel for collapse(2)
       for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
-      #if defined(SharedOMP)
-      #pragma omp simd
-      #endif
       for (int x = -haloSize; x < numberOfVolumesPerAxisInPatch+haloSize; x++) {
         otterLoopIterationBegin();
         internal::computeMaxEigenvalue_LoopBody<Solver>(
@@ -168,10 +180,8 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanov_overlap1_patchwise_heap_sta
         );
       }
 
+      #pragma omp parallel for collapse(2)
       for (int y = -haloSize; y < numberOfVolumesPerAxisInPatch+haloSize; y++)
-      #if defined(SharedOMP)
-      #pragma omp simd
-      #endif
       for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++) {
         otterLoopIterationBegin();
         internal::computeMaxEigenvalue_LoopBody<Solver>(
@@ -188,17 +198,12 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanov_overlap1_patchwise_heap_sta
         );
         otterLoopIterationEnd();
       }
-      otterLoopEnd();
 
 
-      otterLoopBegin();
+      #pragma omp parallel for collapse(3)
       for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
-      #if defined(SharedOMP)
-      #pragma omp simd collapse(2)
-      #endif
       for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++)
       for (int unknown = 0; unknown < unknowns; unknown++) {
-        otterLoopIterationBegin();
         internal::updateSolutionWithEigenvalueDamping_LoopBody(
           patchData.QIn[patchIndex],
           QInEnumerator,
@@ -215,19 +220,13 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanov_overlap1_patchwise_heap_sta
           patchData.QOut[patchIndex],
           QOutEnumerator
         );
-        otterLoopIterationEnd();
       }
-      otterLoopEnd();
     }
     else {
-      otterLoopBegin();
+      #pragma omp parallel for collapse(3)
       for (int z = 0; z < numberOfVolumesPerAxisInPatch; z++)
       for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
-      #if defined(SharedOMP)
-      #pragma omp simd
-      #endif
       for (int x = -haloSize; x < numberOfVolumesPerAxisInPatch+haloSize; x++) {
-        otterLoopIterationBegin();
         internal::computeMaxEigenvalue_LoopBody<Solver>(
               patchData.QIn[patchIndex],
               QInEnumerator,
@@ -240,18 +239,13 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanov_overlap1_patchwise_heap_sta
               tempEigenvalueX,
               eigenvalueEnumerator
         );
-        otterLoopIterationEnd();
       }
-      otterLoopEnd();
 
-      otterLoopBegin();
+
+      #pragma omp parallel for collapse(3)
       for (int z = 0; z < numberOfVolumesPerAxisInPatch; z++)
       for (int y = -haloSize; y < numberOfVolumesPerAxisInPatch+haloSize; y++)
-      #if defined(SharedOMP)
-      #pragma omp simd
-      #endif
       for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++) {
-        otterLoopIterationBegin();
         internal::computeMaxEigenvalue_LoopBody<Solver>(
               patchData.QIn[patchIndex],
               QInEnumerator,
@@ -264,18 +258,13 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanov_overlap1_patchwise_heap_sta
               tempEigenvalueY,
               eigenvalueEnumerator
         );
-        otterLoopIterationEnd();
       }
-      otterLoopEnd();
 
-      otterLoopBegin();
+
+      #pragma omp parallel for collapse(3)
       for (int z = -haloSize; z < numberOfVolumesPerAxisInPatch+haloSize; z++)
       for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
-      #if defined(SharedOMP)
-      #pragma omp simd
-      #endif
       for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++) {
-        otterLoopIterationBegin();
         internal::computeMaxEigenvalue_LoopBody<Solver>(
               patchData.QIn[patchIndex],
               QInEnumerator,
@@ -288,17 +277,12 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanov_overlap1_patchwise_heap_sta
               tempEigenvalueZ,
               eigenvalueEnumerator
         );
-        otterLoopIterationEnd();
       }
-      otterLoopEnd();
 
 
-      otterLoopBegin();
+      #pragma omp parallel for collapse(4)
       for (int z = 0; z < numberOfVolumesPerAxisInPatch; z++)
       for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
-      #if defined(SharedOMP)
-      #pragma omp simd collapse(2)
-      #endif
       for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++)
       for (int unknown = 0; unknown < unknowns; unknown++) {
         otterLoopIterationBegin();
@@ -318,19 +302,13 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanov_overlap1_patchwise_heap_sta
           patchData.QOut[patchIndex],
           QOutEnumerator
         );
-        otterLoopIterationEnd();
       }
-      otterLoopEnd();
     }
 
     if (evaluateFlux and Dimensions==2) {
-      otterLoopBegin();
+      #pragma omp parallel for collapse(2)
       for (int y =         0; y < numberOfVolumesPerAxisInPatch;          y++)
-      #if defined(SharedOMP)
-      #pragma omp simd
-      #endif
       for (int x = -haloSize; x < numberOfVolumesPerAxisInPatch+haloSize; x++) {
-        otterLoopIterationBegin();
         internal::computeFlux_LoopBody<Solver>(
           patchData.QIn[patchIndex],
           QInEnumerator,
@@ -344,17 +322,12 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanov_overlap1_patchwise_heap_sta
           tempFluxX,
           fluxEnumerator
         );
-        otterLoopIterationEnd();
       }
-      otterLoopEnd();
 
-      otterLoopBegin();
+
+      #pragma omp parallel for collapse(2)
       for (int y = -haloSize; y < numberOfVolumesPerAxisInPatch+haloSize;  y++)
-      #if defined(SharedOMP)
-      #pragma omp simd
-      #endif
       for (int x =         0; x < numberOfVolumesPerAxisInPatch;           x++) {
-        otterLoopIterationBegin();
         internal::computeFlux_LoopBody<Solver>(
           patchData.QIn[patchIndex],
           QInEnumerator,
@@ -368,15 +341,11 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanov_overlap1_patchwise_heap_sta
           tempFluxY,
           fluxEnumerator
         );
-        otterLoopIterationEnd();
       }
-      otterLoopEnd();
 
-      otterLoopBegin();
+
+      #pragma omp parallel for collapse(3)
       for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
-      #if defined(SharedOMP)
-      #pragma omp simd collapse(2)
-      #endif
       for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++)
       for (int unknown=0; unknown<unknowns+auxiliaryVariables; unknown++) {
         otterLoopIterationBegin();
@@ -392,19 +361,13 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanov_overlap1_patchwise_heap_sta
           *(patchData.QOut + patchIndex),
           QOutEnumerator
         );
-        otterLoopIterationEnd();
       }
-      otterLoopEnd();
     }
     else if (evaluateFlux and Dimensions==3) {
-      otterLoopBegin();
+      #pragma omp parallel for collapse(3)
       for (int z =         0; z < numberOfVolumesPerAxisInPatch;          z++)
       for (int y =         0; y < numberOfVolumesPerAxisInPatch;          y++)
-      #if defined(SharedOMP)
-      #pragma omp simd
-      #endif
       for (int x = -haloSize; x < numberOfVolumesPerAxisInPatch+haloSize; x++) {
-        otterLoopIterationBegin();
         internal::computeFlux_LoopBody<Solver>(
           patchData.QIn[patchIndex],
           QInEnumerator,
@@ -418,18 +381,13 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanov_overlap1_patchwise_heap_sta
           tempFluxX,
           fluxEnumerator
         );
-        otterLoopIterationEnd();
       }
-      otterLoopEnd();
 
-      otterLoopBegin();
+
+      #pragma omp parallel for collapse(3)
       for (int z =         0; z < numberOfVolumesPerAxisInPatch;           z++)
       for (int y = -haloSize; y < numberOfVolumesPerAxisInPatch+haloSize;  y++)
-      #if defined(SharedOMP)
-      #pragma omp simd
-      #endif
       for (int x =         0; x < numberOfVolumesPerAxisInPatch;           x++) {
-        otterLoopIterationBegin();
         internal::computeFlux_LoopBody<Solver>(
           patchData.QIn[patchIndex],
           QInEnumerator,
@@ -443,18 +401,13 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanov_overlap1_patchwise_heap_sta
           tempFluxY,
           fluxEnumerator
         );
-        otterLoopIterationEnd();
       }
-      otterLoopEnd();
 
-      otterLoopBegin();
+
+      #pragma omp parallel for collapse(3)
       for (int z = -haloSize; z < numberOfVolumesPerAxisInPatch+haloSize;  z++)
       for (int y =         0; y < numberOfVolumesPerAxisInPatch;           y++)
-      #if defined(SharedOMP)
-      #pragma omp simd
-      #endif
       for (int x =         0; x < numberOfVolumesPerAxisInPatch;           x++) {
-        otterLoopIterationBegin();
         internal::computeFlux_LoopBody<Solver>(
           patchData.QIn[patchIndex],
           QInEnumerator,
@@ -468,16 +421,12 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanov_overlap1_patchwise_heap_sta
           tempFluxZ,
           fluxEnumerator
         );
-        otterLoopIterationEnd();
       }
-      otterLoopEnd();
 
-      otterLoopBegin();
+
+      #pragma omp parallel for collapse(4)
       for (int z = 0; z < numberOfVolumesPerAxisInPatch; z++)
       for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
-      #if defined(SharedOMP)
-      #pragma omp simd
-      #endif
       for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++)
       for (int unknown=0; unknown<unknowns+auxiliaryVariables; unknown++) {
         otterLoopIterationBegin();
@@ -500,13 +449,9 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanov_overlap1_patchwise_heap_sta
 
 
     if (evaluateNonconservativeProduct and Dimensions==2) {
-      otterLoopBegin();
+      #pragma omp parallel for collapse(2)
       for (int y =         0; y < numberOfVolumesPerAxisInPatch;            y++)
-      #if defined(SharedOMP)
-      #pragma omp simd
-      #endif
       for (int x = -haloSize; x < numberOfVolumesPerAxisInPatch+haloSize-1; x++) {
-        otterLoopIterationBegin();
         internal::computeNonconservativeFlux_LoopBody<Solver>(
           patchData.QIn[patchIndex],
           QInEnumerator,
@@ -520,17 +465,12 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanov_overlap1_patchwise_heap_sta
           tempNonconservativeProductX,
           ncpEnumerator
         );
-        otterLoopIterationEnd();
       }
-      otterLoopEnd();
 
-      otterLoopBegin();
+
+      #pragma omp parallel for collapse(2)
       for (int y = -haloSize; y < numberOfVolumesPerAxisInPatch+haloSize-1; y++)
-      #if defined(SharedOMP)
-      #pragma omp simd
-      #endif
       for (int x =         0; x < numberOfVolumesPerAxisInPatch;            x++) {
-        otterLoopIterationBegin();
         internal::computeNonconservativeFlux_LoopBody<Solver>(
           patchData.QIn[patchIndex],
           QInEnumerator,
@@ -544,18 +484,13 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanov_overlap1_patchwise_heap_sta
           tempNonconservativeProductY,
           ncpEnumerator
         );
-        otterLoopIterationEnd();
       }
-      otterLoopEnd();
 
-      otterLoopBegin();
+
+      #pragma omp parallel for collapse(3)
       for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
-      #if defined(SharedOMP)
-      #pragma omp simd collapse(2)
-      #endif
       for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++)
       for (int unknown=0; unknown<unknowns+auxiliaryVariables; unknown++) {
-        otterLoopIterationBegin();
         internal::updateSolutionWithNonconservativeFlux_LoopBody(
           tempNonconservativeProductX, tempNonconservativeProductY, tempNonconservativeProductZ,
           ncpEnumerator,
@@ -568,17 +503,12 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanov_overlap1_patchwise_heap_sta
           *(patchData.QOut + patchIndex),
           QOutEnumerator
         );
-        otterLoopIterationEnd();
       }
-      otterLoopEnd();
     }
     else if (evaluateNonconservativeProduct and Dimensions==3) {
-        otterLoopBegin();
+        #pragma omp parallel for collapse(3)
         for (int z =         0; z < numberOfVolumesPerAxisInPatch;            z++)
         for (int y =         0; y < numberOfVolumesPerAxisInPatch;            y++)
-        #if defined(SharedOMP)
-        #pragma omp simd
-        #endif
         for (int x = -haloSize; x < numberOfVolumesPerAxisInPatch+haloSize-1; x++) {
           otterLoopIterationBegin();
           internal::computeNonconservativeFlux_LoopBody<Solver>(
@@ -594,18 +524,13 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanov_overlap1_patchwise_heap_sta
             tempNonconservativeProductX,
             ncpEnumerator
           );
-          otterLoopIterationEnd();
         }
-        otterLoopEnd();
 
-        otterLoopBegin();
+
+        #pragma omp parallel for collapse(3)
         for (int z =         0; z < numberOfVolumesPerAxisInPatch;            z++)
         for (int y = -haloSize; y < numberOfVolumesPerAxisInPatch+haloSize-1; y++)
-        #if defined(SharedOMP)
-        #pragma omp simd
-        #endif
         for (int x =         0; x < numberOfVolumesPerAxisInPatch;            x++) {
-          otterLoopIterationBegin();
           internal::computeNonconservativeFlux_LoopBody<Solver>(
             patchData.QIn[patchIndex],
             QInEnumerator,
@@ -619,18 +544,13 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanov_overlap1_patchwise_heap_sta
             tempNonconservativeProductY,
             ncpEnumerator
           );
-          otterLoopIterationEnd();
         }
-        otterLoopEnd();
 
-        otterLoopBegin();
+
+        #pragma omp parallel for collapse(3)
         for (int z = -haloSize; z < numberOfVolumesPerAxisInPatch+haloSize-1; z++)
         for (int y =         0; y < numberOfVolumesPerAxisInPatch;            y++)
-        #if defined(SharedOMP)
-        #pragma omp simd
-        #endif
         for (int x =         0; x < numberOfVolumesPerAxisInPatch;            x++) {
-          otterLoopIterationBegin();
           internal::computeNonconservativeFlux_LoopBody<Solver>(
             patchData.QIn[patchIndex],
             QInEnumerator,
@@ -644,16 +564,12 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanov_overlap1_patchwise_heap_sta
             tempNonconservativeProductZ,
             ncpEnumerator
           );
-          otterLoopIterationEnd();
         }
-        otterLoopEnd();
 
-        otterLoopBegin();
+
+        #pragma omp parallel for collapse(4)
         for (int z = 0; z < numberOfVolumesPerAxisInPatch; z++)
         for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
-        #if defined(SharedOMP)
-        #pragma omp simd collapse(2)
-        #endif
         for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++)
         for (int unknown=0; unknown<unknowns+auxiliaryVariables; unknown++) {
           otterLoopIterationBegin();
@@ -669,19 +585,14 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanov_overlap1_patchwise_heap_sta
             *(patchData.QOut + patchIndex),
             QOutEnumerator
           );
-          otterLoopIterationEnd();
         }
-        otterLoopEnd();
     }
 
     if (evaluateMaximumEigenvalueAfterTimeStep and Dimensions==2) {
       logDebug( "timeStepWithRusanov_overlap1_sequential(...)", "compute maximum eigenvalue for subsequent time step" );
       double newMaxEigenvalue = 0.0;
-      otterLoopBegin(); // @todo how do I clarify that this is a reduction? Do we need this info here?
+      #pragma omp parallel for collapse(2) reduction(max:newMaxEigenvalue)
       for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
-      #if defined(SharedOMP)
-      #pragma omp simd reduction(max:newMaxEigenvalue)
-      #endif
       for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++) {
         otterLoopIterationBegin();
         newMaxEigenvalue = std::max(
@@ -704,12 +615,9 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanov_overlap1_patchwise_heap_sta
     }
     else if (evaluateMaximumEigenvalueAfterTimeStep) {
       double newMaxEigenvalue = 0.0;
-      otterLoopBegin(); // @todo how do I clarify that this is a reduction? Do we need this info here?
+      #pragma omp parallel for collapse(3) reduction(max:newMaxEigenvalue)
       for (int z = 0; z < numberOfVolumesPerAxisInPatch; z++)
       for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
-      #if defined(SharedOMP)
-      #pragma omp simd reduction(max:newMaxEigenvalue)
-      #endif
       for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++) {
         otterLoopIterationBegin();
         newMaxEigenvalue = std::max(
@@ -725,14 +633,31 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanov_overlap1_patchwise_heap_sta
             patchData.dt[patchIndex]
           )
         );
-        otterLoopIterationEnd();
       }
-      otterLoopEnd();
       patchData.maxEigenvalue[patchIndex] = newMaxEigenvalue;
     }
   }
 
-  #if !defined(GPUOffloadingOMP)
+  #if defined(GPUOffloadingOMP)
+
+  #pragma omp target exit data map(delete:tempFluxX[0:fluxEnumerator.size()] ) device(targetDevice)
+  #pragma omp target exit data map(delete:tempFluxY[0:fluxEnumerator.size()] ) device(targetDevice)
+  #pragma omp target exit data map(delete:tempFluxZ[0:fluxEnumerator.size()] ) device(targetDevice)
+  #pragma omp target exit data map(delete:tempNonconservativeProductX[0:ncpEnumerator.size()] ) device(targetDevice)
+  #pragma omp target exit data map(delete:tempNonconservativeProductY[0:ncpEnumerator.size()] ) device(targetDevice)
+  #pragma omp target exit data map(delete:tempNonconservativeProductZ[0:ncpEnumerator.size()] ) device(targetDevice)
+  #pragma omp target exit data map(delete:tempEigenvalueX[0:eigenvalueEnumerator.size()] ) device(targetDevice)
+  #pragma omp target exit data map(delete:tempEigenvalueY[0:eigenvalueEnumerator.size()] ) device(targetDevice)
+  #pragma omp target exit data map(delete:tempEigenvalueZ[0:eigenvalueEnumerator.size()] ) device(targetDevice)
+
+  for (int patchIndex=0; patchIndex<patchData.numberOfCells; patchIndex++) {
+    const double* currentQIn  = patchData.QIn[patchIndex];
+    double*       currentQOut = patchData.QOut[patchIndex];
+    #pragma omp target exit data map(delete:currentQIn[0:QInEnumerator.size()] ) device(targetDevice)
+    #pragma omp target exit data map(from:currentQOut[0:QOutEnumerator.size()] ) device(targetDevice)
+  }
+
+  #else
   if (tempFluxX!=nullptr)               tarch::freeMemory(tempFluxX, tarch::MemoryLocation::Heap);
   if (tempFluxY!=nullptr)               tarch::freeMemory(tempFluxY, tarch::MemoryLocation::Heap);
   if (tempFluxZ!=nullptr)               tarch::freeMemory(tempFluxZ, tarch::MemoryLocation::Heap);
