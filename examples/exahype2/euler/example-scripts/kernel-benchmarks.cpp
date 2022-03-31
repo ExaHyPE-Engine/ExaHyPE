@@ -37,8 +37,7 @@
 
 #include "tasks/EulerOnGPUEnclaveTask.h"
 
-
-#include <likwid.h>
+#include "config.h"
 
 
 using namespace examples::exahype2::euler;
@@ -69,7 +68,6 @@ void runBenchmarks(int patches) {
     }
 
     tarch::timing::Watch watch( "::", "main()", false );
-    likwid_markerStartRegion( "virtual" );
     for (int i=0; i<patches; i++) {
       tasks::EulerOnGPUEnclaveTask::applyKernelToCell(
         marker,
@@ -78,7 +76,6 @@ void runBenchmarks(int patches) {
         inputData[i],outputData[i]
       );
     }
-    likwid_markerStopRegion( "virtual" );
     watch.stop();
 
     for (int i=0; i<patches; i++) {
@@ -106,7 +103,6 @@ void runBenchmarks(int patches) {
     }
 
     tarch::timing::Watch watch( "::", "main()", false );
-    likwid_markerStartRegion( markerName.c_str() );
 
     kernel(
       patchData,
@@ -117,7 +113,6 @@ void runBenchmarks(int patches) {
       computeCFL
     );
 
-    likwid_markerStopRegion( markerName.c_str() );
     watch.stop();
 
     for (int i=0; i<patches; i++) {
@@ -127,6 +122,49 @@ void runBenchmarks(int patches) {
 
     logInfo("main()", "completed optimisation measurements " << markerName << ": " << watch.getCalendarTime() << " / " << (watch.getCalendarTime()/patches/EulerOnGPU::NumberOfFiniteVolumesPerAxisPerPatch/EulerOnGPU::NumberOfFiniteVolumesPerAxisPerPatch/EulerOnGPU::NumberOfFiniteVolumesPerAxisPerPatch) );
   };
+
+
+  auto testFusedVariantOnDevice = [&](
+    int device,
+    std::function<void(
+      int                     device,
+      exahype2::CellData&     patchData,
+      int, int, int,
+      bool                    evaluateFlux,
+      bool                    evaluateNonconservativeProduct,
+      bool                    evaluateSource,
+      bool                    evaluateMaximumEigenvalueAfterTimeStep
+    )> kernel, std::string markerName, bool computeCFL ) {
+    ::exahype2::CellData patchData(patches);
+    for (int i=0; i<patches; i++) {
+      patchData.QIn[i]         = new double[ (EulerOnGPU::NumberOfFiniteVolumesPerAxisPerPatch+2)*(EulerOnGPU::NumberOfFiniteVolumesPerAxisPerPatch+2)*(EulerOnGPU::NumberOfFiniteVolumesPerAxisPerPatch+2)*EulerOnGPU::NumberOfUnknowns];
+      patchData.t[i]           = 0.5;
+      patchData.dt[i]          = 1e-5;
+      patchData.QOut[i]        = new double[ (EulerOnGPU::NumberOfFiniteVolumesPerAxisPerPatch)*(EulerOnGPU::NumberOfFiniteVolumesPerAxisPerPatch)*(EulerOnGPU::NumberOfFiniteVolumesPerAxisPerPatch)*EulerOnGPU::NumberOfUnknowns];
+    }
+
+    tarch::timing::Watch watch( "::", "main()", false );
+
+    kernel(
+      device,
+      patchData,
+      EulerOnGPU::NumberOfFiniteVolumesPerAxisPerPatch, 5, 0,
+      true ,
+      false ,
+      false ,
+      computeCFL
+    );
+
+    watch.stop();
+
+    for (int i=0; i<patches; i++) {
+      delete[] patchData.QIn[i];
+      delete[] patchData.QOut[i];
+    }
+
+    logInfo("main()", "completed optimisation measurements " << markerName << ": " << watch.getCalendarTime() << " / " << (watch.getCalendarTime()/patches/EulerOnGPU::NumberOfFiniteVolumesPerAxisPerPatch/EulerOnGPU::NumberOfFiniteVolumesPerAxisPerPatch/EulerOnGPU::NumberOfFiniteVolumesPerAxisPerPatch) );
+  };
+
 
   if (patches<=64) {
     testFusedVariant(
@@ -170,6 +208,30 @@ void runBenchmarks(int patches) {
     ::exahype2::fv::rusanov::timeStepWithRusanov_overlap1_batched_in_situ_static_calls<EulerOnGPU>,
     "no side effects, batched, in-situ", true
   );
+
+  #if defined(GPUOffloadingOMP)
+  if ( tarch::multicore::Core::getInstance().getNumberOfGPUs()==0 ) {
+    logWarning( "main()", "no device found" );
+  }
+  for (int device=0; device<tarch::multicore::Core::getInstance().getNumberOfGPUs(); device++) {
+    logInfo( "main()", "device " << device );
+    testFusedVariantOnDevice(
+      device,
+      ::exahype2::fv::rusanov::omp::timeStepWithRusanov_overlap1_patchwise_heap_static_calls<EulerOnGPU,exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator>,
+      "omp, patch-wise, AoS", true
+    );
+    testFusedVariantOnDevice(
+      device,
+      ::exahype2::fv::rusanov::omp::timeStepWithRusanov_overlap1_patchwise_heap_static_calls<EulerOnGPU,exahype2::fv::enumerator::AoSoALexicographicVolumeEnumerator>,
+      "omp, patch-wise, AoSoA", true
+    );
+    testFusedVariantOnDevice(
+      device,
+      ::exahype2::fv::rusanov::omp::timeStepWithRusanov_overlap1_patchwise_heap_static_calls<EulerOnGPU,exahype2::fv::enumerator::SoALexicographicVolumeEnumerator>,
+      "omp, patch-wise, SoA", true
+    );
+  }
+  #endif
 }
 
 
@@ -210,14 +272,9 @@ int main(int argc, char** argv) {
   const bool isGlobalMaster     =     tarch::mpi::Rank::getInstance().isGlobalMaster();
   const bool isPeanoComputeNode = not tarch::mpi::Rank::getInstance().isGlobalMaster();
 
-  likwid_markerInit();
-
   for (int patches=1; patches<=65536; patches*=2) {
     runBenchmarks(patches);
   }
-
-  likwid_markerClose();
-
 
   repositories::finishSimulation();
 
