@@ -51,95 +51,26 @@ tarch::timing::Measurement   gridConstructionMeasurement;
 tarch::timing::Measurement   timeStepMeasurement;
 tarch::timing::Measurement   plotMeasurement;
   
-  
-int main(int argc, char** argv) {
-  const int ExitCodeSuccess          = 0;
-  const int ExitCodeUnitTestsFailed  = 1;
-  const int ExitCodeInvalidArguments = 2;
-  const int ExitCodeInvalidBuild     = 3;
-  
-  peano4::initParallelEnvironment(&argc,&argv);
-  exahype2::initNonCritialAssertionEnvironment();
-  tarch::multicore::initSmartMPI();
-  peano4::fillLookupTables();
- 
-  
-  peano4::initSingletons(
-    DomainOffset,
-    DomainSize,
-    0
-  );
-  
-  if ( tarch::mpi::Rank::getInstance().getNumberOfRanks()>1 and tarch::multicore::Core::getInstance().getNumberOfThreads()<=1 ) {
-    logError("main()", "MPI runs without multithreading are not supported currently.");
-    return ExitCodeInvalidBuild;
-  }
 
-  if (not exahype2::parseCommandLineArguments(argc,argv) ) {
-    logError("main()", "Invalid command line arguments.");
-    return ExitCodeInvalidArguments;
-  }
-  
-  examples::exahype2::euler::repositories::DataRepository::initDatatypes();
-  
-  #if PeanoDebug>=2
-  tarch::tests::TreeTestCaseCollection* unitTests = new tarch::tests::TreeTestCaseCollection("");
-  unitTests->addTestCase( peano4::getUnitTests() );
-  unitTests->addTestCase( tarch::getUnitTests() );
-  unitTests->addTestCase( toolbox::blockstructured::getUnitTests() );
-  unitTests->addTestCase( exahype2::getUnitTests() );
-  unitTests->run();
-  if (unitTests->getNumberOfErrors() != 0) {
-    logError("main()", "unit tests failed. Quit.");
-    tarch::mpi::Rank::abort( ExitCodeUnitTestsFailed );
-  }
-  delete unitTests;
-  #endif
-
-  repositories::startSimulation();
-
-  tarch::logging::Statistics::getInstance().clear();
-
-  const bool isGlobalMaster     =     tarch::mpi::Rank::getInstance().isGlobalMaster();
-  const bool isPeanoComputeNode = not tarch::mpi::Rank::getInstance().isGlobalMaster();
-	  
-  constexpr int base = 34-EulerOnGPU::NumberOfFiniteVolumesPerAxisPerPatch;
-  constexpr int Patches = base*base*base;
-
+void runBenchmarks(int patches) {
   peano4::grid::GridTraversalEvent event;
   peano4::datamanagement::CellMarker marker(event);
 
-  std::vector<double*> inputData;
-  std::vector<double*> outputData;
-  std::list<tarch::multicore::Task*> tasks;
-  for (int i=0; i<Patches; i++) {
-    inputData.push_back( new double[ (EulerOnGPU::NumberOfFiniteVolumesPerAxisPerPatch+2)*(EulerOnGPU::NumberOfFiniteVolumesPerAxisPerPatch+2)*(EulerOnGPU::NumberOfFiniteVolumesPerAxisPerPatch+2)*EulerOnGPU::NumberOfUnknowns] );
-    outputData.push_back( new double[ (EulerOnGPU::NumberOfFiniteVolumesPerAxisPerPatch+0)*(EulerOnGPU::NumberOfFiniteVolumesPerAxisPerPatch+0)*(EulerOnGPU::NumberOfFiniteVolumesPerAxisPerPatch+0)*EulerOnGPU::NumberOfUnknowns] );
-    tasks.push_back( new tasks::EulerOnGPUEnclaveTask(
-      marker,
-      0.5,          // double t
-      1e-5,         // double dt
-      new double[ (EulerOnGPU::NumberOfFiniteVolumesPerAxisPerPatch+2)*(EulerOnGPU::NumberOfFiniteVolumesPerAxisPerPatch+2)*(EulerOnGPU::NumberOfFiniteVolumesPerAxisPerPatch+2)*EulerOnGPU::NumberOfUnknowns]
-    ));
-  }
-
-  logInfo("main()", "all data structures set up");
-
-  constexpr int FusedPatches=4;
-
-  likwid_markerInit();
+  logInfo( "main()", "========================================" );
+  logInfo( "main()", "  Number of patches fused: " << patches   );
+  logInfo( "main()", "========================================" );
 
   {
     std::vector<double*> inputData;
     std::vector<double*> outputData;
-    for (int i=0; i<Patches; i++) {
+    for (int i=0; i<patches; i++) {
       inputData.push_back( new double[ (EulerOnGPU::NumberOfFiniteVolumesPerAxisPerPatch+2)*(EulerOnGPU::NumberOfFiniteVolumesPerAxisPerPatch+2)*(EulerOnGPU::NumberOfFiniteVolumesPerAxisPerPatch+2)*EulerOnGPU::NumberOfUnknowns] );
       outputData.push_back( new double[ (EulerOnGPU::NumberOfFiniteVolumesPerAxisPerPatch+0)*(EulerOnGPU::NumberOfFiniteVolumesPerAxisPerPatch+0)*(EulerOnGPU::NumberOfFiniteVolumesPerAxisPerPatch+0)*EulerOnGPU::NumberOfUnknowns] );
     }
 
     tarch::timing::Watch watch( "::", "main()", false );
     likwid_markerStartRegion( "virtual" );
-    for (int i=0; i<Patches; i++) {
+    for (int i=0; i<patches; i++) {
       tasks::EulerOnGPUEnclaveTask::applyKernelToCell(
         marker,
         0.5,          // double t
@@ -150,11 +81,11 @@ int main(int argc, char** argv) {
     likwid_markerStopRegion( "virtual" );
     watch.stop();
 
-    for (int i=0; i<Patches; i++) {
+    for (int i=0; i<patches; i++) {
       delete[] outputData[i];
     }
 
-    logInfo("main()", "completed baseline measurements: " << watch.getCalendarTime() << " / " << (watch.getCalendarTime()/Patches/EulerOnGPU::NumberOfFiniteVolumesPerAxisPerPatch/EulerOnGPU::NumberOfFiniteVolumesPerAxisPerPatch/EulerOnGPU::NumberOfFiniteVolumesPerAxisPerPatch) );
+    logInfo("main()", "completed baseline measurements: " << watch.getCalendarTime() << " / " << (watch.getCalendarTime()/patches/EulerOnGPU::NumberOfFiniteVolumesPerAxisPerPatch/EulerOnGPU::NumberOfFiniteVolumesPerAxisPerPatch/EulerOnGPU::NumberOfFiniteVolumesPerAxisPerPatch) );
   }
 
 
@@ -166,8 +97,8 @@ int main(int argc, char** argv) {
     bool                    evaluateSource,
     bool                    evaluateMaximumEigenvalueAfterTimeStep
     )> kernel, std::string markerName, bool computeCFL ) {
-    ::exahype2::CellData patchData(Patches);
-    for (int i=0; i<Patches; i++) {
+    ::exahype2::CellData patchData(patches);
+    for (int i=0; i<patches; i++) {
       patchData.QIn[i]         = new double[ (EulerOnGPU::NumberOfFiniteVolumesPerAxisPerPatch+2)*(EulerOnGPU::NumberOfFiniteVolumesPerAxisPerPatch+2)*(EulerOnGPU::NumberOfFiniteVolumesPerAxisPerPatch+2)*EulerOnGPU::NumberOfUnknowns];
       patchData.t[i]           = 0.5;
       patchData.dt[i]          = 1e-5;
@@ -176,117 +107,117 @@ int main(int argc, char** argv) {
 
     tarch::timing::Watch watch( "::", "main()", false );
     likwid_markerStartRegion( markerName.c_str() );
-    for (int i=0; i<Patches; i++) {
-      ::exahype2::CellData localPatchData(1);
-      localPatchData.QIn[0]         = patchData.QIn[i];
-      localPatchData.t[0]           = 0.5;
-      localPatchData.dt[0]          = 1e-5;
-      localPatchData.QOut[0]        = patchData.QOut[i];
 
-      //tasks[i]->fuse( std::list<tarch::multicore::Task*>() );
-      kernel(
-        localPatchData,
-        EulerOnGPU::NumberOfFiniteVolumesPerAxisPerPatch, 5, 0,
-        true ,
-        false ,
-        false ,
-        computeCFL
-      );
-    }
+    kernel(
+      patchData,
+      EulerOnGPU::NumberOfFiniteVolumesPerAxisPerPatch, 5, 0,
+      true ,
+      false ,
+      false ,
+      computeCFL
+    );
+
     likwid_markerStopRegion( markerName.c_str() );
     watch.stop();
 
-    for (int i=0; i<Patches; i++) {
+    for (int i=0; i<patches; i++) {
       delete[] patchData.QIn[i];
       delete[] patchData.QOut[i];
     }
 
-    logInfo("main()", "completed optimisation measurements " << markerName << ": " << watch.getCalendarTime() << " / " << (watch.getCalendarTime()/Patches/EulerOnGPU::NumberOfFiniteVolumesPerAxisPerPatch/EulerOnGPU::NumberOfFiniteVolumesPerAxisPerPatch/EulerOnGPU::NumberOfFiniteVolumesPerAxisPerPatch) );
+    logInfo("main()", "completed optimisation measurements " << markerName << ": " << watch.getCalendarTime() << " / " << (watch.getCalendarTime()/patches/EulerOnGPU::NumberOfFiniteVolumesPerAxisPerPatch/EulerOnGPU::NumberOfFiniteVolumesPerAxisPerPatch/EulerOnGPU::NumberOfFiniteVolumesPerAxisPerPatch) );
   };
 
-  testFusedVariant(
-    ::exahype2::fv::rusanov::timeStepWithRusanov_overlap1_patchwise<EulerOnGPU,exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator>,
-    "no-side-effects-patchwise-AoS-CFL", true
-  );
-  testFusedVariant(
-    ::exahype2::fv::rusanov::timeStepWithRusanov_overlap1_patchwise<EulerOnGPU,exahype2::fv::enumerator::AoSoALexicographicVolumeEnumerator>,
-    "no-side-effects-patchwise-AoSoA-CFL", true
-  );
-  testFusedVariant(
-    ::exahype2::fv::rusanov::timeStepWithRusanov_overlap1_patchwise_in_situ<EulerOnGPU>,
-    "no-side-effects-patchwise-in-situ-CFL", true
-  );
-
-  testFusedVariant(
-    ::exahype2::fv::rusanov::timeStepWithRusanov_overlap1_batched<EulerOnGPU,exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator>,
-    "no-side-effects-batched-AoS-CFL", true
-  );
-  testFusedVariant(
-    ::exahype2::fv::rusanov::timeStepWithRusanov_overlap1_batched<EulerOnGPU,exahype2::fv::enumerator::AoSoALexicographicVolumeEnumerator>,
-    "no-side-effects-batched-AoSoA-CFL", true
-  );
-  testFusedVariant(
-    ::exahype2::fv::rusanov::timeStepWithRusanov_overlap1_batched_in_situ<EulerOnGPU>,
-    "no-side-effects-batched-in-situ-CFL", true
-  );
-
-/*
-  testFusedVariant(
-    ::exahype2::fv::rusanov::timeStepWithRusanov_overlap1_patchwise_split_terms<EulerOnGPU,exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator>,
-    "no-side-effects-patchwise-split-term-AoS-CFL", true
-  );
-  testFusedVariant(
-    ::exahype2::fv::rusanov::timeStepWithRusanov_overlap1_patchwise_split_terms<EulerOnGPU,exahype2::fv::enumerator::AoSoALexicographicVolumeEnumerator>,
-    "no-side-effects-patchwise-split-terms-AoSoA-CFL", true
-  );
-  testFusedVariant(
-    ::exahype2::fv::rusanov::timeStepWithRusanov_overlap1_patchwise_in_situ<EulerOnGPU>,
-    "no-side-effects-patchwise-in-situ-CFL", true
-  );
-  testFusedVariant(
-    ::exahype2::fv::rusanov::timeStepWithRusanov_overlap1_batched_in_situ<EulerOnGPU>,
-    "no-side-effects-batched-in-situ-CFL", true
-  );
-
-
+  if (patches<=64) {
     testFusedVariant(
-    ::exahype2::fv::rusanov::timeStepWithRusanov_overlap1_patchwise<EulerOnGPU,exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator>,
-    "no-side-effects-patchwise-AoS-no-CFL", false
+      ::exahype2::fv::rusanov::timeStepWithRusanov_overlap1_patchwise_call_stack_static_calls<EulerOnGPU,exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator>,
+      "no side effects, patch-wise, call stack, AoS", true
+    );
+    testFusedVariant(
+      ::exahype2::fv::rusanov::timeStepWithRusanov_overlap1_batched_call_stack_static_calls<EulerOnGPU,exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator>,
+      "no side effects, batched, call stack, AoS", true
+    );
+  }
+  testFusedVariant(
+    ::exahype2::fv::rusanov::timeStepWithRusanov_overlap1_patchwise_heap_static_calls<EulerOnGPU,exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator>,
+    "no side effects, patch-wise, heap, AoS", true
   );
   testFusedVariant(
-    ::exahype2::fv::rusanov::timeStepWithRusanov_overlap1_patchwise<EulerOnGPU,exahype2::fv::enumerator::AoSoALexicographicVolumeEnumerator>,
-    "no-side-effects-patchwise-AoSoA-no-CFL", false
+    ::exahype2::fv::rusanov::timeStepWithRusanov_overlap1_batched_heap_static_calls<EulerOnGPU,exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator>,
+    "no side effects, batched, heap, AoS", true
   );
   testFusedVariant(
-    ::exahype2::fv::rusanov::timeStepWithRusanov_overlap1_batched<EulerOnGPU,exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator>,
-    "no-side-effects-batched-AoS-no-CFL", false
+    ::exahype2::fv::rusanov::timeStepWithRusanov_overlap1_patchwise_heap_static_calls<EulerOnGPU,exahype2::fv::enumerator::AoSoALexicographicVolumeEnumerator>,
+    "no side effects, patch-wise, heap, AoSoA", true
   );
   testFusedVariant(
-    ::exahype2::fv::rusanov::timeStepWithRusanov_overlap1_batched<EulerOnGPU,exahype2::fv::enumerator::AoSoALexicographicVolumeEnumerator>,
-    "no-side-effects-batched-AoSoA-no-CFL", false
+    ::exahype2::fv::rusanov::timeStepWithRusanov_overlap1_batched_heap_static_calls<EulerOnGPU,exahype2::fv::enumerator::AoSoALexicographicVolumeEnumerator>,
+    "no side effects, batched, heap, AoSoA", true
   );
   testFusedVariant(
-    ::exahype2::fv::rusanov::timeStepWithRusanov_overlap1_patchwise_split_terms<EulerOnGPU,exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator>,
-    "no-side-effects-patchwise-split-term-AoS-no-CFL", false
+    ::exahype2::fv::rusanov::timeStepWithRusanov_overlap1_patchwise_heap_static_calls<EulerOnGPU,exahype2::fv::enumerator::SoALexicographicVolumeEnumerator>,
+    "no side effects, patch-wise, heap, SoA", true
   );
   testFusedVariant(
-    ::exahype2::fv::rusanov::timeStepWithRusanov_overlap1_patchwise_split_terms<EulerOnGPU,exahype2::fv::enumerator::AoSoALexicographicVolumeEnumerator>,
-    "no-side-effects-patchwise-split-terms-AoSoA-no-CFL", false
+    ::exahype2::fv::rusanov::timeStepWithRusanov_overlap1_batched_heap_static_calls<EulerOnGPU,exahype2::fv::enumerator::SoALexicographicVolumeEnumerator>,
+    "no side effects, batched, heap, SoA", true
   );
   testFusedVariant(
-    ::exahype2::fv::rusanov::timeStepWithRusanov_overlap1_patchwise_in_situ<EulerOnGPU>,
-    "no-side-effects-patchwise-in-situ-no-CFL", false
+    ::exahype2::fv::rusanov::timeStepWithRusanov_overlap1_patchwise_in_situ_static_calls<EulerOnGPU>,
+    "no side effects, patch-wise, in-situ", true
   );
   testFusedVariant(
-    ::exahype2::fv::rusanov::timeStepWithRusanov_overlap1_batched_in_situ<EulerOnGPU>,
-    "no-side-effects-batched-in-situ-no-CFL", false
+    ::exahype2::fv::rusanov::timeStepWithRusanov_overlap1_batched_in_situ_static_calls<EulerOnGPU>,
+    "no side effects, batched, in-situ", true
   );
-*/
+}
+
+
+int main(int argc, char** argv) {
+  const int ExitCodeSuccess          = 0;
+  const int ExitCodeUnitTestsFailed  = 1;
+  const int ExitCodeInvalidArguments = 2;
+  const int ExitCodeInvalidBuild     = 3;
+
+  peano4::initParallelEnvironment(&argc,&argv);
+  exahype2::initNonCritialAssertionEnvironment();
+  tarch::multicore::initSmartMPI();
+  peano4::fillLookupTables();
+
+
+  peano4::initSingletons(
+    DomainOffset,
+    DomainSize,
+    0
+  );
+
+  if ( tarch::mpi::Rank::getInstance().getNumberOfRanks()>1 and tarch::multicore::Core::getInstance().getNumberOfThreads()<=1 ) {
+    logError("main()", "MPI runs without multithreading are not supported currently.");
+    return ExitCodeInvalidBuild;
+  }
+
+  if (not exahype2::parseCommandLineArguments(argc,argv) ) {
+    logError("main()", "Invalid command line arguments.");
+    return ExitCodeInvalidArguments;
+  }
+
+  examples::exahype2::euler::repositories::DataRepository::initDatatypes();
+
+  repositories::startSimulation();
+
+  tarch::logging::Statistics::getInstance().clear();
+
+  const bool isGlobalMaster     =     tarch::mpi::Rank::getInstance().isGlobalMaster();
+  const bool isPeanoComputeNode = not tarch::mpi::Rank::getInstance().isGlobalMaster();
+
+  likwid_markerInit();
+
+  for (int patches=1; patches<=65536; patches*=2) {
+    runBenchmarks(patches);
+  }
 
   likwid_markerClose();
 
-
-  tarch::logging::Statistics::getInstance().writeToCSV();
 
   repositories::finishSimulation();
 
