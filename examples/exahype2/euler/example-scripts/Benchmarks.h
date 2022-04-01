@@ -1,0 +1,5 @@
+#ifndef _EXAHYPE2_EULER_BENCHMARKS_H_
+#define _EXAHYPE2_EULER_BENCHMARKS_H_
+
+
+#endif
