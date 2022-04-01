@@ -256,6 +256,8 @@ and
 
   #if defined(GPUOffloadingHIP)
     #define GPUCallableMethod __global__ __device__
+  #elif defined(GPUOffloadingSYCL)
+    #define GPUCallableMethod SYCL_EXTERNAL
   #elif defined(UseManualInlining)
     #define GPUCallableMethod
   #else
