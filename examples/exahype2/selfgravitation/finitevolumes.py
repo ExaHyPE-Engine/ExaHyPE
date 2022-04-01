@@ -70,7 +70,6 @@ project = exahype2.Project( ["examples", "exahype2", "selfgravitation"], "finite
 #
 # Add the Finite Volumes solver
 #
-unknowns       = 5
 max_h          = args.h / args.patch_size
 min_h          = 0.9 * args.h * 3.0**(-args.adaptivity_levels) / args.patch_size
 
@@ -90,7 +89,8 @@ if args.type=="global-fixed":
   euler_solver = exahype2.solvers.fv.rusanov.GlobalFixedTimeStep(
     "Euler",
     args.patch_size,
-    unknowns, auxiliary_variables,
+    5, #unknowns, 
+    0, #auxiliary_variables,
     min_h, max_h,
     time_step_size,
     flux = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
@@ -99,11 +99,13 @@ if args.type=="global-fixed":
   poisson_solver = exahype2.solvers.fv.rusanov.GlobalFixedTimeStep(
     "Poisson",
     args.patch_size,
-    unknowns, auxiliary_variables,
+    4, #unknowns, 
+    0, #auxiliary_variables,
     min_h, max_h,
-    time_step_size,
+    time_step_size / 4 / 3.1415**2,
     flux = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
-    eigenvalues = exahype2.solvers.fv.PDETerms.User_Defined_Implementation
+    eigenvalues = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
+    source_term = exahype2.solvers.fv.PDETerms.User_Defined_Implementation
   )
 
 
