@@ -166,7 +166,7 @@ void runBenchmarks(int patches) {
   };
 
 
-  if (patches<=64) {
+  if (patches<=128) {
     testFusedVariant(
       ::exahype2::fv::rusanov::timeStepWithRusanov_overlap1_patchwise_call_stack_static_calls<EulerOnGPU,exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator>,
       "no side effects, patch-wise, call stack, AoS", true
