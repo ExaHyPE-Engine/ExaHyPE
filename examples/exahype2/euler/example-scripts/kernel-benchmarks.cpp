@@ -165,7 +165,7 @@ void runBenchmarks(int patches) {
     logInfo("main()", "completed optimisation measurements " << markerName << ": " << watch.getCalendarTime() << " / " << (watch.getCalendarTime()/patches/EulerOnGPU::NumberOfFiniteVolumesPerAxisPerPatch/EulerOnGPU::NumberOfFiniteVolumesPerAxisPerPatch/EulerOnGPU::NumberOfFiniteVolumesPerAxisPerPatch) );
   };
 
-
+  #if !defined(__NVCOMPILER)
   if (patches<=128) {
     testFusedVariant(
       ::exahype2::fv::rusanov::timeStepWithRusanov_overlap1_patchwise_call_stack_static_calls<EulerOnGPU,exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator>,
@@ -176,6 +176,8 @@ void runBenchmarks(int patches) {
       "no side effects, batched, call stack, AoS", true
     );
   }
+  #endif
+
   testFusedVariant(
     ::exahype2::fv::rusanov::timeStepWithRusanov_overlap1_patchwise_heap_static_calls<EulerOnGPU,exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator>,
     "no side effects, patch-wise, heap, AoS", true
@@ -200,6 +202,8 @@ void runBenchmarks(int patches) {
     ::exahype2::fv::rusanov::timeStepWithRusanov_overlap1_batched_heap_static_calls<EulerOnGPU,exahype2::fv::enumerator::SoALexicographicVolumeEnumerator>,
     "no side effects, batched, heap, SoA", true
   );
+
+  #if !defined(__NVCOMPILER)
   testFusedVariant(
     ::exahype2::fv::rusanov::timeStepWithRusanov_overlap1_patchwise_in_situ_static_calls<EulerOnGPU>,
     "no side effects, patch-wise, in-situ", true
@@ -208,6 +212,7 @@ void runBenchmarks(int patches) {
     ::exahype2::fv::rusanov::timeStepWithRusanov_overlap1_batched_in_situ_static_calls<EulerOnGPU>,
     "no side effects, batched, in-situ", true
   );
+  #endif
 
   #if defined(GPUOffloadingOMP)
   if ( tarch::multicore::Core::getInstance().getNumberOfGPUs()==0 ) {
