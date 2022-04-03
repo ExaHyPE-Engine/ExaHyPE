@@ -270,11 +270,19 @@ and
     #define InlineMethod
   #endif
 
+
+  double* allocateMemory(int size, MemoryLocation location);
+  void freeMemory(double* data, MemoryLocation location);
+
+
   #if defined(GPUOffloadingOMP)
   #pragma omp declare target
   #endif
-  double* allocateMemory(int size, MemoryLocation location);
-  void freeMemory(double* data, MemoryLocation location);
+  /**
+   * Delegates to std::abort() if no GPU offloading is active. Otherwise is degenerates
+   * to nop, as there is no abort on an accelerator.
+   */
+  void gpuAbort();
   #if defined(GPUOffloadingOMP)
   #pragma omp end declare target
   #endif

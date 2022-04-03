@@ -3,9 +3,11 @@
 
 #if defined(SharedOMP)
 
+/*
 #if defined(GPUOffloadingOMP)
 #pragma omp declare target
 #endif
+*/
 double* tarch::allocateMemory(int size, MemoryLocation location) {
   double* result = nullptr;
   switch (location) {
@@ -23,14 +25,18 @@ double* tarch::allocateMemory(int size, MemoryLocation location) {
   }
   return result;
 }
+/*
 #if defined(GPUOffloadingOMP)
 #pragma omp end declare target
 #endif
+*/
 
 
+/*
 #if defined(GPUOffloadingOMP)
 #pragma omp declare target
 #endif
+*/
 void tarch::freeMemory(double* data, MemoryLocation location) {
   switch (location) {
     case MemoryLocation::Heap:
@@ -49,9 +55,11 @@ void tarch::freeMemory(double* data, MemoryLocation location) {
       //break;
   }
 }
+/*
 #if defined(GPUOffloadingOMP)
 #pragma omp end declare target
 #endif
+*/
 
 
 #endif

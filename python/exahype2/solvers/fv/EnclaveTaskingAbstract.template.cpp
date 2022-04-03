@@ -5,6 +5,7 @@
 #include "Constants.h"
 
 
+#include "tarch/multicore/multicore.h"
 #include "tarch/multicore/Lock.h"
 #include "exahype2/NonCriticalAssertions.h"
 
