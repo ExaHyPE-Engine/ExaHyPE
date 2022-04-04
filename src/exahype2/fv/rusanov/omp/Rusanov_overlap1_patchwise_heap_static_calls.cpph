@@ -65,9 +65,14 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanov_overlap1_patchwise_heap_sta
   double* tempEigenvalueZ            = (Dimensions==3)                  ? tarch::allocateMemory( eigenvalueEnumerator.size(),      tarch::MemoryLocation::Heap ) : nullptr;
   #endif
 
+  // @todo docu Trivially copyable
+
+/*
+  map(to:patchData.patchCentre[0:patchData.numberOfCells*Dimensions]) \
+  map(to:patchData.patchSize[0:patchData.numberOfCells*Dimensions]) \
+*/
+
   #pragma omp target teams distribute device(targetDevice) \
-    map(to:patchData.patchCentre[0:patchData.numberOfCells*Dimensions]) \
-    map(to:patchData.patchSize[0:patchData.numberOfCells*Dimensions]) \
     map(to:patchData.t[0:patchData.numberOfCells]) \
     map(to:patchData.dt[0:patchData.numberOfCells]) \
     map(from:patchData.maxEigenvalue[0:patchData.numberOfCells])
