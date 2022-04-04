@@ -94,22 +94,22 @@ srcdir_full_path=`cd $srcdir && pwd`
 
 CXXFLAGS_PEANO_2D_RELEASE=" -DDimensions=2 -DPeanoDebug=0"
 CXXFLAGS_PEANO_2D_STATS="   -DDimensions=2 -DPeanoDebug=0 -DTrackStatistics"
-CXXFLAGS_PEANO_2D_ASSERTS=" -DDimensions=2 -DPeanoDebug=2 -g3 -O0"
-CXXFLAGS_PEANO_2D_TRACE="   -DDimensions=2 -DPeanoDebug=1 -g3"
-CXXFLAGS_PEANO_2D_DEBUG="   -DDimensions=2 -DPeanoDebug=4 -g3 -O0"
+CXXFLAGS_PEANO_2D_ASSERTS=" -DDimensions=2 -DPeanoDebug=2 -g -O0"
+CXXFLAGS_PEANO_2D_TRACE="   -DDimensions=2 -DPeanoDebug=1 -g"
+CXXFLAGS_PEANO_2D_DEBUG="   -DDimensions=2 -DPeanoDebug=4 -g -O0"
 
 CXXFLAGS_PEANO_3D_RELEASE=" -DDimensions=3 -DPeanoDebug=0"
 CXXFLAGS_PEANO_3D_STATS="   -DDimensions=3 -DPeanoDebug=0 -DTrackStatistics"
-CXXFLAGS_PEANO_3D_ASSERTS=" -DDimensions=3 -DPeanoDebug=2 -g3 -O0"
-CXXFLAGS_PEANO_3D_TRACE="   -DDimensions=3 -DPeanoDebug=1 -g3"
-CXXFLAGS_PEANO_3D_DEBUG="   -DDimensions=3 -DPeanoDebug=4 -g3 -O0"
+CXXFLAGS_PEANO_3D_ASSERTS=" -DDimensions=3 -DPeanoDebug=2 -g -O0"
+CXXFLAGS_PEANO_3D_TRACE="   -DDimensions=3 -DPeanoDebug=1 -g"
+CXXFLAGS_PEANO_3D_DEBUG="   -DDimensions=3 -DPeanoDebug=4 -g -O0"
 
 
 LDFLAGS_PEANO_RELEASE=" -L$srcdir_full_path/src "
 LDFLAGS_PEANO_STATS="   -L$srcdir_full_path/src "
-LDFLAGS_PEANO_ASSERTS=" -L$srcdir_full_path/src -g3"
-LDFLAGS_PEANO_TRACE="   -L$srcdir_full_path/src -g3"
-LDFLAGS_PEANO_DEBUG="   -L$srcdir_full_path/src -g3"
+LDFLAGS_PEANO_ASSERTS=" -L$srcdir_full_path/src -g"
+LDFLAGS_PEANO_TRACE="   -L$srcdir_full_path/src -g"
+LDFLAGS_PEANO_DEBUG="   -L$srcdir_full_path/src -g"
 
 
 LDADD_PEANO_2D_RELEASE=" -lPeano4Core2d         -lTarch"

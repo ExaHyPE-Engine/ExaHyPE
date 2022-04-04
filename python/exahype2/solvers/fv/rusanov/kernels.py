@@ -732,7 +732,7 @@ GPUCallableMethod void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::flux(
       Offloadable
 ) {
   {% if FLUX_IMPLEMENTATION=="<none>" %}
-  abort();
+  tarch::gpuAbort();
   {% else %}
   {{FLUX_IMPLEMENTATION}}
   {% endif %}
@@ -759,7 +759,7 @@ GPUCallableMethod void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::nonconservat
       Offloadable
 ) {
   {% if NCP_IMPLEMENTATION=="<none>" %}
-  abort();
+  tarch::gpuAbort();
   {% else %}
   {{NCP_IMPLEMENTATION}}
   {% endif %}
@@ -784,7 +784,7 @@ GPUCallableMethod void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::sourceTerm(
       Offloadable
 ) {
   {% if SOURCE_TERM_IMPLEMENTATION=="<none>" %}
-  abort();
+  tarch::gpuAbort();
   {% else %}
   {{SOURCE_TERM_IMPLEMENTATION}}
   {% endif %}

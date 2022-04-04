@@ -30,9 +30,11 @@ namespace exahype2 {
      * @param[in] orientation
      * @param[in] scalarIndexFace
      */
+/*
     #if defined(GPUOffloadingOMP)
     #pragma omp declare target
     #endif
+*/
     void riemann_setBoundaryState_body_AoS(
       std::function< void(
         double * __restrict__                       QInside,
@@ -53,9 +55,11 @@ namespace exahype2 {
       const int                                   strideQ,
       const int                                   direction,
       const int                                   scalarIndexFace);
+/*
     #if defined(GPUOffloadingOMP)
     #pragma omp end declare target
     #endif
+*/
 
     /** 
      * Determines the maximum absolute value among the eigenvalues computed 
@@ -79,9 +83,11 @@ namespace exahype2 {
      * @param[in] direction
      * @param[in] scalarIndexFace
      */
+/*
     #if defined(GPUOffloadingOMP)
     #pragma omp declare target
     #endif
+*/
     GPUCallableMethod double riemann_maxAbsoluteEigenvalue_body_AoS(
     std::function< double(
       const double * const __restrict__                 Q,
@@ -100,9 +106,11 @@ namespace exahype2 {
     const int                                   strideQ,
     const int                                   direction,
     const int                                   scalarIndexFace);
+/*
     #if defined(GPUOffloadingOMP)
     #pragma omp end declare target
     #endif
+*/
 
      /**
       * Prescribe boundary values (QOut) and overwrite interior values (QInside). 

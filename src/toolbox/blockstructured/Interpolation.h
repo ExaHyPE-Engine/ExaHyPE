@@ -12,6 +12,130 @@
 
 namespace toolbox {
   namespace blockstructured {
+    /**
+     * @page Interpolation Halo layer interpolation
+     *
+     * When we create hanging faces, we have to interpolate from coarse to
+     * fine.
+     *
+     * ## Data storage scheme
+     *
+     * For a setup with p volumes per coordinate axis per patch, a
+     * face always stores 2xp (2d) or 2xpxp (3d) values: It stores a layer of
+     * its left neighbouring cell and a layer of the right one. These layers
+     * are copies. By separating the copies of halo layers from the actual
+     * patch data, we can easier move data around in a parallel computer. A
+     * patch only has to know some of the data from all neighbouring, face-connected
+     * patches. With our scheme, it does not need to know these neighbours at
+     * all. It is sufficient to take the faces of a cell and to use the data
+     * from there to reconstruct the actual patch plus its halo layer:
+     *
+     * @image html Interpolation00.png
+     *
+     * In the image above, we see a schematic illustration of the data layout:
+     * In this example, a 2d cell hosts a 5x5 grid of finite volumes. The four
+     * faces each hold 2x5 volumes. These are copies from the left and right
+     * adjacent cells. So the dark red volumes are actually copies of the volumes
+     * within the patch. In the left image, I use a darker grey to label those
+     * volumes within the patch which also have been copied by the patch onto
+     * the face.
+     *
+     * So the four faces hold replicated data from their adjacent cells. When we
+     * want to run the Rusanov solver, e.g., we need information from the neighbouring
+     * cells. Peano does not directly use the neighbours but instead uses the
+     * replicated data from the faces to supplement the neighbour information.
+     * In this illustration, the dark data are used to re-construct the halo.
+     * Only half of the face data is used for this reconstruction. The other half
+     * is used by the respective other neighbours.
+     *
+     * When we now look at hanging faces, we recognise that we need interpolated
+     * data from the coarser level:
+     *
+     * @image html Interpolation01.png
+     *
+     * Hanging faces do not carry any information, i.e. there is no red data in
+     * the plots on the right. Only the face on the coarser level holds data.
+     * So we have to project the light red volumes down to the fine grid light
+     * red volumes, before we can update the fine grid patches (grey).
+     *
+     * The Interpolation.h header file hosts a set of interpolation routines.
+     *
+     *
+     * ## Finding the grid topology
+     *
+     * To understand the implementation of the routines, we have to reiterate
+     * that we work cell-wisely in Peano. That is, we start from a particular
+     * cell that has a father-cell. It is one out of 3^d child cells, as we
+     * work with three-partitioning. Within this cell (which is encoded
+     * within marker as we will discuss later), we have 2d faces. If one of
+     * them is a hanging face (along an AMR transition), Peano
+     * will call an interpolation routine for it. The faces of any cell in Peano are enumerated
+     * in the same way: Face 0 is the face whose normal points along the first
+     * coordinate axis and which is left in the coordinate system. Face 1 is
+     * the face whose normal points along the second coordinate axis, and so
+     * forth. In 2d, face 0 is the left one, face 1 is the bottom one, face 2
+     * is the right one, and face 3 finally the top face.
+     *
+     * We can ask the marker which face we are talking about via
+     * getSelectedFaceNumber(). We can also ask the marker how this face is
+     * positioned within the grid of siblings, i.e. within a 3x3x3 grid.
+     * The routine for this is getRelativePositionWithinFatherCell(). In the
+     * example above, this routine would return (0,0), (0,1) or (0,2), respectively,
+     * Once we know the local face number and this position within 3x3x3 grid,
+     * we know the exact grid topology of a hanging face.
+     *
+     * I originally thought I could work with interpolating only half of the
+     * halo layer. Indeed, we only have to interpolate half of the halo layer
+     * along a hanging face: the outer part. This outer data will be used to
+     * construct a halo around the adjacent fine grid patch. However, I need
+     * the interpolation of all data whenever I create a new persistent face,
+     * restricting to half of the halo does not make the code any simpler, and
+     * along the domain boundary, e.g., some routines appreciate if they have
+     * all interpolation available.
+     *
+     * So while I could, in most cases, use the information of the normal to
+     * only write half of the halo data (for example only the bright red volumes
+     * on the fine mesh in the sketch above), I usually set all the face data
+     * on the hanging face, even though half of it is not used.
+     *
+     *
+     * ## Face data enumeration
+     *
+     * All face data are always enumerated lexicographically. That is, 0 is always
+     * the left bottom volume within the face data. Then we follow the x-axis, then
+     * the y-axis.
+     *
+     * The image below shows the enumeration:
+     *
+     * @image html Interpolation02.png
+     *
+     *
+     * ## Interpolation as matrix-vector product
+     *
+     * We can always interpret the interpolation as a matrix-vector product. For
+     * a system with N unknowns, it is important to recognise that we basically
+     * do the same interpolation N times. This is a batched operation, i.e. we compute
+     *
+     * @f$  u_h = P u_H @f$
+     *
+     * for $N$ versions of @f$u_h@f$ and @f$u_H@f$. Peano's tarch component has a routine
+     * for batched multiplication, where you pipe in a set of @f$u_H@f$ vectors and you
+     * get a set of @f$u_h@f$ vectors out.
+     *
+     *
+     *
+     */
+
+    /**
+     * Clear halo layer of face
+     *
+     * Hand in a face data structure and its marker. From the marker, we know
+     * which half of the face data is actual the halo: If we are talking about
+     * face 0, i.e. the left face of a cell, then the left half of the volumes
+     * within the face are to be clared. If we are getting face 1, which is the
+     * one at the bottom, it is the lower layer of volumes within the face data
+     * which has to be cleared.
+     */
     void clearHaloLayerAoS(
       const peano4::datamanagement::FaceMarker& marker,
       int                                       numberOfDoFsPerAxisInPatch,
@@ -30,43 +154,10 @@ namespace toolbox {
     /**
      * Take the coarse grid values and interpolate them onto the fine grid
      *
-     * To understand the implementation of this routine, we have to reiterate
-     * that we work cell-wisely in Peano. That is, we start from a particular
-     * cell that has a father-cell. It is one out of 3^d child cells, as we
-     * work with three-partitioning. Within this cell (which is encoded
-     * within marker as we will discuss later), we have 2d faces. If one of
-     * them is a hanging face (along an AMR transition), then this routine
-     * will be called for it. The faces of any cell in Peano are enumerated
-     * in the same way: Face 0 is the face whose normal points along the first
-     * coordinate axis and which is left in the coordinate system. Face 1 is
-     * the face whose normal points along the second coordinate axis, and so
-     * forth. In 2d, face 0 is the left one, face 1 is the bottom one, face 2
-     * is the right one, and face 3 finally the top face.
-     *
-     * We can ask the marker which face we are talking about via
-     * getSelectedFaceNumber(). We can also ask the marker how this face is
-     * positioned within the grid of siblings, i.e. within a 3x3x3 grid.
-     * The routine for this is getRelativePositionWithinFatherCell().
-     *
      * We run over all coarse grid volumes (counter k or coarseGridVolume,
      * respectively). Each coarse grid volume overlaps 1x3x3 or 3x1x3 or ...
      * smaller volumes. For both loops, I use the dfore (exclusive, d-dimensional
      * for).
-     *
-     * The marker has two interesting routines that are relevant for this
-     * routine: getSelectedFaceNumber() tells us the which face we are
-     * talking about from a fine
-     *
-     *
-     * I originally thought I could work with interpolating only half of the
-     * halo layer. Indeed, we only have to interpolate half of the halo layer
-     * along a hanging face: the outer part. This outer data will be used to
-     * construct a halo around the adjacent fine grid patch. However, I need
-     * the interpolation of all data whenever I create a new persistent face,
-     * restricting to half of the halo does not make the code any simpler, and
-     * along the domain boundary, e.g., some routines appreciate if they have
-     * all interpolation available.
-     *
      */
     void interpolateHaloLayer_AoS_piecewise_constant(
       const peano4::datamanagement::FaceMarker& marker,

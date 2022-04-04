@@ -24,7 +24,7 @@
 
 {% for item in SOLVERS -%}
 #include "{{ item[0] }}.h"
-{%- endfor %}
+{% endfor %}
 
 
 {% for item in NAMESPACE -%}

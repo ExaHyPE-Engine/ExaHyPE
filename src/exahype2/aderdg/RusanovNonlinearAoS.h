@@ -7,10 +7,13 @@
 
 namespace exahype2 {
   namespace aderdg {
-    
+
+    // geht net durch NVC++ muessen wir angucken, sobald es geht
+/*
     #if defined(GPUOffloadingOMP)
     #pragma omp declare target
     #endif
+*/
     GPUCallableMethod void rusanovNonlinear_body_AoS(
         std::function< void(
           const double * const __restrict__                 Q,
@@ -51,9 +54,11 @@ namespace exahype2 {
         const bool                                  callFlux,
         const bool                                  callNonconservativeProduct,
         const int                                   scalarIndexFace);
+/*
     #if defined(GPUOffloadingOMP)
     #pragma omp end declare target
     #endif
+*/
    
     // launchers
     /**

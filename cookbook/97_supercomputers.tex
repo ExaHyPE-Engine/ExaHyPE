@@ -2,68 +2,253 @@
 \label{chapter:selected-HPC-platforms}
 
 
-\section{Selected supercomputer platforms}
+\section{Clang toolchain}
 
-% \section{SuperMUC-NG}
+ Both NVC++ and Intel's OneAPI compilers build upon Clang. However, they modify
+ the baseline compiler. Therefore, they have separated sections in this chapter
+ (below).
+ The present section focuses on the baseline Clang compiler suite:
+
+\begin{bash}
+./configure CC=clang CXX=clang++ CXXFLAGS="-O3 -std=c++20 -mtune=native -march=native" \
+ --enable-exahype --enable-loadbalancing --enable-blockstructured
+\end{bash}
+
+
+\paragraph{OpenMP}
+
+\begin{remark}
+ On Ubuntu and many other systems, clang is not shipped automatically with
+ OpenMP. Instead, you have to install the package \texttt{libomp-dev}.
+\end{remark}
+
+\begin{bash}
+./configure CC=clang CXX=clang++ \
+ CXXFLAGS="-O3 -std=c++20 -mtune=native -march=native -fopenmp" \
+ --enable-exahype --enable-loadbalancing --enable-blockstructured \
+ --with-multithreading=omp 
+\end{bash}
+
+Should you require OpenMP offloading, i.e.~GPU, support, you have to add the
+OpenMP target instructions:
+
+\begin{bash}
+./configure CC=clang CXX=clang++ \
+ CXXFLAGS="-O3 -std=c++20 -mtune=native -march=native -fopenmp" -fopenmp-targets=nvptx64 \
+ --enable-exahype --enable-loadbalancing --enable-blockstructured \
+ --with-multithreading=omp 
+\end{bash}
+
+
+% -fopenmp 
+% -fopenmp -fopenmp-targets=nvptx64-nvidia-cuda
 % 
-% All Intel tools are properly preloaded on SuperMUC-NG.
-% Hence, we can directly translate the code with MPI. 
-% However, TBB seems not to be a standard package within the Intel module anymore. 
-% So if you need TBB, you have to load it manually.
-% LRZ's module environment sets all pathes and settings coming along with TBB in
-% environment variables \texttt{TBB\_INC} and \texttt{TBB\_SHLIB}.
-% To pass these variables into Peano, map them onto \texttt{CXXFLAGS} or
-% \texttt{LDFLAGS}.
+% 08:38
+% when compiling llvm openmp,  you need to pass flags for the architecture you want, on ncc I do:
 % 
-% \begin{code}
-%  module load tbb
-%  export CXXFLAGS="$TBB_INC"
-%  export LDFLAGS="$TBB_SHLIB"
-%  ./configure --with-multithreading=tbb --with-mpi=mpiicpc
-%  make clean
-%  make -j
-% \end{code}
+% ... -DLIBOMPTARGET_NVPTX_COMPUTE_CAPABILITIES="61;70;75;80;86" ...
 % 
+% that captures all devices we have available. This will produce the following files:
 % 
-% \noindent
-% Here's the non-MPI variant:
+% libomptarget-nvptx-sm_61.bc
+% libomptarget-nvptx-sm_70.bc
+% libomptarget-nvptx-sm_75.bc
+% libomptarget-nvptx-sm_80.bc
+% libomptarget-nvptx-sm_86.bc
 % 
-% \begin{code}
-%  module load tbb
-%  export CXX=icpc
-%  export CXXFLAGS="$TBB_INC"
-%  export LDFLAGS="$TBB_SHLIB"
-%  ./configure --with-multithreading=tbb
-%  make clean
-%  make -j
-% \end{code}
+% Holger Schulz  08:46
+% If you want to specify the target device at compile time you can do e.g.:
 % 
-% 
-% \noindent
-% If you want to use the legacy DaStGen variant with Java, you have to load
-% Java manually.
-% \ExaHyPE\ for example does not need this legacy version anymore.
-% Python3 in contrast is preloaded by default.
-% 
-% 
-% \begin{remark}
-%  I found it reasonable to always deactivate the energy environment by the LRZ.
-%  In particular if you combine Peano4 with teaMPI or the Intel tools, the energy
-%  tools don't work anymore, as they plug into the same MPI interface (PMPI),
-%  i.e.~they compete for the same hook-in points. So my SLURM scripts always
-%  contain the line
-%  \begin{code}
-% #SBATCH --ear=off
-% module load slurm_setup
-%  \end{code}
-%  Please note that load of the package \texttt{slurm\_setup} which seems to be
-%  required, too.
-%  Furthermore, LRZ recommends that you use \texttt{mpiexec} rather than
-%  \texttt{srun}.
-% \end{remark}
+% -fopenmp -fopenmp-targets=nvptx64 -Xopenmp-target -march=sm_80
+
+% -fopenmp -fopenmp-targets=nvptx64-nvidia-cuda
 % 
 % 
 % 
+
+
+
+
+\section{Intel OneAPI toolchain}
+
+\begin{remark}
+ This is what we currently use on Hamilton 8, i.e.~our AMD EPYC testbeds.
+\end{remark}
+
+
+\noindent
+Before we start, you either load a fitting OneAPI module, or you set the
+environment variables via Intel's script:
+
+\begin{bash}
+source /opt/intel/oneapi/setvars.sh
+\end{bash}
+
+\noindent
+The LLVM-based Intel compiler is straightforward to use:
+
+\begin{bash}
+./configure CC=icx CXX=icpx \
+ CXXFLAGS="-Ofast -std=c++20 -xAVX -mtune=native -march=native" \ 
+ --with-multithreading=omp --enable-exahype --enable-loadbalancing --enable-blockstructured
+\end{bash}
+
+\noindent
+which sets the most aggressive generic optimisation.
+
+
+
+\paragraph{OpenMP}
+
+For OpenMP, we usually use the Intel runtime:
+
+\begin{bash}
+./configure CC=icx CXX=icpx \
+ CXXFLAGS="-Ofast -std=c++20 -fiopenmp -xAVX -mtune=native -march=native" \
+ LDFLAGS="-fiopenmp" \
+ --with-multithreading=omp --enable-exahype --enable-loadbalancing --enable-blockstructured
+\end{bash}
+
+\noindent
+There are many different ways to specify the GPU (backend), but we often use the
+spir64 fat binary approach:
+
+
+\begin{bash}
+./configure CC=icx CXX=icpx \
+ CXXFLAGS="-Ofast -std=c++20 -fiopenmp -xAVX -mtune=native -march=native -fopenmp-targets=spir64" \
+ LDFLAGS="-fiopenmp" \
+ --with-multithreading=omp --enable-exahype --enable-loadbalancing --enable-blockstructured \
+ --with-gpu=omp
+\end{bash}
+
+
+
+\paragraph{Intel MPI}
+%
+Intel's \texttt{mpiicpc} wrapper serves both the legacy Intel compiler and the
+new LLVM version. 
+We recommend to switch to the new build:
+
+\begin{bash}
+export I_MPI_CXX=icpx
+\end{bash}
+
+\noindent
+before you invoke
+
+\begin{bash}
+./configure CC=icx CXX=icpx ... --with-mpi=mpiicpc
+\end{bash}
+
+\noindent
+Obviously, you have to fill in the remaining flags that you need for your build.
+Notably, do not forget to add a multithreading backend, as \Peano\ does not
+particularly like sole MPI builds without multithreading.
+
+
+
+\paragraph{Intel OneAPI toolchain (ITAC)}
+% 
+For Intel's ITAC, we have to load the itac module and reconfigure.
+We found many supercomputers to deploy itac to modules of its own, i.e.~it is
+not loaded by default.
+
+
+\begin{bash}
+./configure CXXFLAGS="-DLogService=ITACLogger \
+ --with-toolchain=intel
+\end{bash}
+
+\noindent
+switches the logging to ITAC and activates the Intel toolchain.
+Please note that it depends on your log filter file (Chapter
+\ref{section:logging}) what data is piped into ITAC and which data isn't.
+
+
+
+
+
+\section{NVIDIA NVC++ toolchain}
+
+The NVIDIA toolchain requires us to make \texttt{CXX}
+and \texttt{CC} point to the C++ compiler, as both are passed the same
+arguments by configure, which are actually only understood by the C++ version.
+
+\begin{bash}
+export NVCPP=/opt/nvidia/hpc_sdk/Linux_x86_64/2022/compilers/bin/nvc++
+./configure CXX=$NVCPP CC=$NVCPP \
+ CXXFLAGS="-O3 --std=c++17" \
+ --enable-exahype --enable-blockstructured --enable-loadbalancing
+\end{bash}
+
+\noindent
+Some compute kernels are not available with the NVIDIA tools, as the compiler is
+pretty picky when it decides which temporary variables it might place on the
+call stack.
+
+
+\paragraph{OpenMP and OpenMP offloading}
+
+NVIDIA's compiler does not support all of OpenMP. Therefore, its OpenMP
+implementation is rather picky when it comes to copy constructors and other C++
+features. \Peano\ has internal workarounds for all of these items, i.e.~the
+build should in principle succeed yet the code might be slightly slower than the
+Intel or native Clang counterpart.
+
+\begin{bash}
+export NVCPP=/opt/nvidia/hpc_sdk/Linux_x86_64/2022/compilers/bin/nvc++
+./configure CXX=$NVCPP CC=$NVCPP \
+ CXXFLAGS="-O4 --std=c++17 -mp" \
+ --with-multithreading=omp \
+ --enable-exahype --enable-blockstructured --enable-loadbalancing
+\end{bash}
+
+\noindent
+The OpenMP offloading requires us to specify both the GPU OpenMP target and a
+corresponding CUDA 
+
+
+\begin{bash}
+export NVCPP=/opt/nvidia/hpc_sdk/Linux_x86_64/2022/compilers/bin/nvc++
+./configure CXX=$NVCPP CC=$NVCPP \
+ CXXFLAGS="-O4 --std=c++17 -mp=gpu -gpu=cc80" \
+ --with-multithreading=omp --with-gpu=omp \
+ --enable-exahype --enable-blockstructured --enable-loadbalancing
+\end{bash}
+
+% export NVCPP=/opt/nvidia/hpc_sdk/Linux_x86_64/2022/compilers/bin/nvc++
+% ./configure CXX=$NVCPP CC=$NVCPP \
+%  CXXFLAGS="-O3 --std=c++17 -mp=gpu -gpu=cuda11.6" \
+%  --with-multithreading=omp --with-gpu=omp \
+%  --enable-exahype --enable-blockstructured --enable-loadbalancing
+
+
+\noindent
+It is important to recognise that \texttt{--with-gpu=omp} activates the
+offloading from \Peano's point of view. 
+However, as long as the NVIDIA compiler is not told which device to use, it will
+give you
+
+\begin{terminalOutput}
+Found 0 devices
+\end{terminalOutput}
+
+\noindent
+if you run the kernel benchmark from page \pageref{page:exahype:kernel-benchmark}.
+% On my local laptop with an NVIDIA GeForce RTX 3060, I had to install the NVIDIA 
+% 
+% 
+% GeForce RTX 2060 Max-Q
+% 
+% 01:00.0 VGA compatible controller: NVIDIA Corporation TU106M [GeForce RTX 2060 Max-Q] (rev a1)
+% 
+% 
+% export PATH=/opt/nvidia/hpc_sdk/Linux_x86_64/2022/cuda/bin:$PATH
+% export LD_LIBRARY_PATH=/opt/nvidia/hpc_sdk/Linux_x86_64/2022/cuda/lib64:$LD_LIBRARY_PATH
+
+
+
 % \section{AMD MI50 test cluster}
 % 
 % 
@@ -122,62 +307,7 @@
 
 
 
-
-
-\subsection{Hamilton}
-
-Most of our runs on Hamilton rely on the Intel toolchain with the classic Intel
-compiler.
-I is strongly recommended to run from \texttt{\$SCRATCH} on the machine:
-
-%  ssh frmh84@hamilton.dur.ac.uk
-%  cd $SCRATCH
-
-\begin{code}
-module load intel/2020.4
-module load intelmpi/intel/2019.6
-module load python/3.6.8
-# for legacy DaStGen (usually not required)
-# module load java/1.8.0
-setenv CXX mpicxx
-./configure --with-multithreading=tbb-layered --with-mpi=mpiicpc
-make clean
-make -j
-\end{code}
-
-
-
-% ./configure --with-multithreading=omp --with-intel
-
-
-\begin{remark}
- We faced issues with the Python module loading its own version of gcc.
- If you run into issues with GCC, you might have to manually unload gcc after
- you have loaded Python. After that, you can reload the GCC version of your
- choice.
-\end{remark}
-
-\noindent
-The Java module is again required if and only if you use the legacy DaStGen
-feature to model data structures.
-If you decide to use the C++ multithreading, you can leave out the TBB-specific
-settings.
-
-
-
-\paragraph{Intel toolchain}
-
-For Intel's ITAC, we have to load the itac module and reconfigure:
-\begin{code}
-module itac/2020.2
-./configure CXXFLAGS "-DLogService=ITACLogger \
- -I/ddn/apps/Cluster-Apps/intel/2019.5/tbb/include \
- -I"$ITAC_HOME"/itac_2020/intel64/include"  ... --with-intel
-\end{code}
-
-% setenv CXXFLAGS "-DLogService=ITACLogger -I/ddn/apps/Cluster-Apps/intel/2019.5/tbb/include"
-% setenv LDFLAGS "-L/ddn/apps/Cluster-Apps/intel/2019.5/tbb/lib/intel64/gcc4.7 -ltbb"
-
+\section{Some particular supercomputer testbeds}
 
 \subsection{DINE (Durham Intelligent NIC Environment)}
 
@@ -367,206 +497,3 @@ module load openmpi
 %   -DnoMPISupportsSingleSidedCommunication"  \
 %   LDFLAGS="-L/opt/software/builder/developers/compilers/cuda/10.1.243/1/default/lib64 \ 
 %   -lnvToolsExt"
-
-
-
-\paragraph{Run code}
-
-To run an example, create a SLURM script and submit it via \texttt{sbatch}.
-There is extensive documentation on the SLURM syntax for Bede on Bede's docu
-page (link shared via command line after login).
-There are few things that stand out and differ compared to other machines:
-
-\begin{itemize}
-  \item It makes sense to add a \texttt{nvidia-smi} to the script right at the
-  start to get some kind of overview over the system.
-  \item The OpenMP environment has to be tailored to PowerPC (with its 1:4 SMT).
-  I usually use something like
-  \begin{code}
-export OMP_NUM_THREADS=32  
-  \end{code}
-  \item Use Bede's \texttt{bede-mpirun} instead of a sole \texttt{mpirun}.
-  \item Use Bede's partitioning arguments to get the pinnning of ranks/threads
-  to the cores right. I typically use \texttt{bede-mpirun --bede-par 1ppn:1tpc}.
-  \item It seems as if \Peano/OpenMP still sees all the cores or only 8 of them
-  when we start. So I usually set the thread count manually by passing a
-  \texttt{--threads 32} to \Peano.
-\end{itemize}
-
-
-
-\subsection{Local workstations}
-
-
-
-If you don't have a proper module file, you might have to configure your environment manually to use TBB:
-\begin{code}
- export CXXFLAGS=-I/opt/intel/tbb/include
- export LDFLAGS="-L/opt/intel/tbb/lib/intel64/gcc4.7 -ltbb -pthread"
- ./configure --with-multithreading=tbb --with-mpi=/opt/mpi/mpicxx
-\end{code}
-
-
-If you want to build against VTK, you have to set the pathes accordingly. 
-On my machine, it looks similar to
-\begin{code}
- export CXXFLAGS=-I/opt/vtk/include/vtk-9.0
- export LDFLAGS=-L/opt/vtk/lib64
- ./configure --with-vtk=-9.0
-\end{code}
-
-
-With the Intel tools, you have to ensure that the environment is set up 
-properly:
-\begin{code}
-source /opt/intel/bin/iccvars.sh intel64
-source /opt/intel/itac/2020.0.015/bin/itacvars.sh
-source /opt/intel/impi/2019.6.166/intel64/bin/mpivars.sh
-\end{code}
-\label{label:supercomputer:Intel-scripts}
-
-
-If I wanna use the Fortran/MHD stuff, I need an additional
-\begin{code}
-source /opt/intel/bin/ifortvars.sh intel64
-\end{code}
-to make the compiler \texttt{ifort} available to \Peano.
-
-
-
-\section{External tools}
-
-
-\subsection{Score-P}
-
-
-\subsection{The Intel tools}
-\label{section:supercomputers:IntelTools}
-
-\paragraph{Intel's Threading Building Blocks (TBB)}
-
-The above descriptions all include the TBB tools in the release version.
-If you want to debug with TBB or to use the Intel tools, then I recommend to
-link against \texttt{tbb\_debug} and to set a few extra command line arguments:
-
-\begin{code}
- export PEANO_CXXFLAGS="-DTBB_USE_ASSERT -DTBB_USE_THREADING_TOOLS "
- export LDFLAGS="see-above   -ltbb_debug"
-\end{code}
-
-\noindent
-Some systems such as SuperMUC-NG provide a dedicated debug environments,
-i.e.~here you can use
-\begin{code}
- export CXXFLAGS="$TBB_INC -DTBB_USE_ASSERT -DTBB_USE_THREADING_TOOLS "
- export LDFLAGS="$TBB_SHLIB_DEBUG"
-\end{code}
-
-
-\paragraph{Intel Trace Analyser and MPI Correctness Checks}
-
-If you want to use the Intel tracing or the correctness checks, you have to
-translate the code with the linker flags \texttt{-trace} or \texttt{check\_mpi},
-respectively.
-To set them, please use the \texttt{PEANO\_LDFLAGS}.
-If you try to overwrite \texttt{LDFLAGS}, configure sometimes complains.
-
-
-\begin{code}
- export PEANO_LDFLAGS=-trace
- export PEANO_LDFLAGS=-check_mpi
- ./configure --with-multithreading=tbb --with-mpi=mpiicpc
- make clean
- make -j
-\end{code}
-
-
-\noindent
-As Peano consists of multiple libraries which are (partially) linked before you
-include them into your executable, you have to rebuild the whole project again.
-If you don't do this, you will get error messages that data is corrupted or MPI
-datatypes are not defined.
-
-
-
-\begin{remark}
- I had crashes in the code as soon as I switched
- \begin{code}
- export VT_CHECK_TRACING=on
- \end{code}
- on. So this seems not to work with Peano.
-\end{remark}
-
-
-
-\begin{remark}
- I had deadlocks in my code with
- \begin{code}
- export LD_PRELOAD=libVTfs.so
- \end{code}
- as soon as I did remove the \texttt{-check\_mpi} flag from \texttt{mpirun}.
-\end{remark}
-
-
-
-\begin{remark}
- I have not yet succeeded in running Intel's \texttt{-check\_mpi} with \ExaHyPE.
- The checker claims that the code deadlocked, even though it does not. There
- seems to be a problem with the tool (2019 version) and the nonblocking barrier
- used in \ExaHyPE\ to synchronise all ranks.
-\end{remark}
-
-
-\subsection{MUST MPI correctness checker}
-\label{section:supercomputers:MUST}
-
-Using MUST is straightfoward with Peano:
-\begin{code}
-  export PATH=/usr/local/must/bin/:$PATH
-\end{code}
-
-
-\noindent
-You have to be careful however not to use the \texttt{-check\_mpi} flag with the
-Intel tools if you want to run MUST.
-With the Intel checker, MUST does not produce any output.
-Once the MUST path is set properly, you replace the \texttt{mpirun} with
-\texttt{mustrun}.
-We've checked all core components of Peano to pass through MUST without any
-problems.
-
-
-% 
-% \paragraph{Intel MPI}
-% 
-% If you you Intel MPI, it seems that you now have to add the \texttt{-parallel}
-% flag to your makefile if you use the Python API. Otherwise, your linker will
-% fail.
-% I haven't yet found out which ``misconfiguration'' in Peano4 causes this
-% dependency.
-% As the flag is not required on other systems, the Python's API output does not
-% by default add this field.
-% So either modify the makefile manually or set it as additional \texttt{LDFLAGS}
-% entry before you compile.
-% The core b.t.w.~seems to be fine without the flag for whatever reason.
-
- 
-% nimm das -openmp raus aus dem Script, dann braucht es das -parallel im Linker net
-% 
-% -mt_mpi
-% 
-% 
-% mpiexec is hte only support thing. no mpirun no srun
-% 
-% https://doku.lrz.de/display/PUBLIC/Job+Processing+with+SLURM+on+SuperMUC-NG
-% 
-% 
-% 
-% 
-% https://software.intel.com/en-us/application-snapshot-user-guide-creating-configuration-file-for-intel-trace-collector
-% 
-% https://doku.lrz.de/display/PUBLIC/Intel+Tracing+Tools%3A+Profiling+and+Correctness+checking+of+MPI+programs#IntelTracingTools:ProfilingandCorrectnesscheckingofMPIprograms-ConfigurationFile
-% 
-% 
-% 
-% 

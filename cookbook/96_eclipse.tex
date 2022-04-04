@@ -8,12 +8,12 @@ You can integrate \Peano\ straightforwardly into Eclipse.
 Clone
 the repository locally and invoke
 
-\begin{code}
+\begin{bash}
 libtoolize; aclocal; 
 autoconf; autoheader; 
 cp src/config.h.in .; 
 automake --add-missing
-\end{code}
+\end{bash}
 
 \noindent
 If you have downloaded a distribution of Peano4,
@@ -40,11 +40,11 @@ Otherwise, open the Eclipse GUI and run the following steps:
 Some Eclipse wizards tend to overwrite Peano's \texttt{configure.ac} file. If
 this is the case, replace the files through
 
-\begin{code}
+\begin{bash}
 git restore  configure.ac
 git restore  Makefile.am
 git restore  src/Makefile.am
-\end{code}
+\end{bash}
 
 \noindent
 and clean the project in Eclipse.

@@ -127,8 +127,11 @@ class PerformanceData(object):
 
     try:
       for line in file:
-        if "tarch::multicore::Core::configure(...)" in line:
-          self._threads = int( line.split( "threads used to" )[1] )
+        if "manually reset number of used cores to" in line:
+          new_thread_count = int( line.split( "manually reset number of used cores to" )[1] )
+          if new_thread_count!=self._threads:
+            print( "WARNING: Number of manually set cores ({}) does not match system settings of {}. Use manual value".format(new_thread_count,self._threads) )
+          self._threads = new_thread_count
         if "build:" in line:
           if "2d" in line:
             self._d = 2

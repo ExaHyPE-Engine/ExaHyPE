@@ -30,7 +30,7 @@ int tarch::multicore::getNumberOfUnmaskedThreads() {
 
 #ifndef SharedMemoryParallelisation
 tarch::multicore::Core::Core() {
-  configureInternalTaskQueues(std::thread::hardware_concurrency());
+  internal::configureInternalTaskQueues(std::thread::hardware_concurrency());
 }
 
 
@@ -45,7 +45,7 @@ tarch::multicore::Core& tarch::multicore::Core::getInstance() {
 
 
 void tarch::multicore::Core::configure( int numberOfThreads ) {
-  configureInternalTaskQueues(numberOfThreads);
+  internal::configureInternalTaskQueues(numberOfThreads);
 }
 
 

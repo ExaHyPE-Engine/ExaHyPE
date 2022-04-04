@@ -8,9 +8,11 @@
 
 #include <iostream>
 
+/*
 #if defined(GPUOffloadingOMP)
 #pragma omp declare target
 #endif
+*/
 GPUCallableMethod double exahype2::aderdg::corrector_adjustSolution_computeMaxEigenvalue_body_AoS(
     std::function< void(
       double * __restrict__                       Q,
@@ -50,6 +52,7 @@ GPUCallableMethod double exahype2::aderdg::corrector_adjustSolution_computeMaxEi
     return 0.0;
   }
 }
+/*
 #if defined(GPUOffloadingOMP)
 #pragma omp end declare target
 #endif
@@ -57,6 +60,7 @@ GPUCallableMethod double exahype2::aderdg::corrector_adjustSolution_computeMaxEi
 #if defined(GPUOffloadingOMP)
 #pragma omp declare target
 #endif
+*/
 GPUCallableMethod void exahype2::aderdg::corrector_addFluxContributions_body_AoS(
     std::function< void(
       const double * const __restrict__           Q,
@@ -105,6 +109,7 @@ GPUCallableMethod void exahype2::aderdg::corrector_addFluxContributions_body_AoS
     }
   }
 }
+/*
 #if defined(GPUOffloadingOMP)
 #pragma omp end declare target
 #endif
@@ -112,6 +117,7 @@ GPUCallableMethod void exahype2::aderdg::corrector_addFluxContributions_body_AoS
 #if defined(GPUOffloadingOMP)
 #pragma omp declare target
 #endif
+*/
 GPUCallableMethod void exahype2::aderdg::corrector_addSourceContributions_body_AoS(
     std::function< void(
       const double * const __restrict__                 Q,
@@ -148,6 +154,7 @@ GPUCallableMethod void exahype2::aderdg::corrector_addSourceContributions_body_A
     }
   }
 }
+/*
 #if defined(GPUOffloadingOMP)
 #pragma omp end declare target
 #endif
@@ -155,6 +162,7 @@ GPUCallableMethod void exahype2::aderdg::corrector_addSourceContributions_body_A
 #if defined(GPUOffloadingOMP)
 #pragma omp declare target
 #endif
+*/
 GPUCallableMethod void exahype2::aderdg::corrector_addNcpContributions_body_AoS(
     std::function< void(
       const double * const __restrict__                 Q,
@@ -199,6 +207,7 @@ GPUCallableMethod void exahype2::aderdg::corrector_addNcpContributions_body_AoS(
     }
   }
 }
+/*
 #if defined(GPUOffloadingOMP)
 #pragma omp end declare target
 #endif
@@ -206,6 +215,7 @@ GPUCallableMethod void exahype2::aderdg::corrector_addNcpContributions_body_AoS(
 #if defined(GPUOffloadingOMP)
 #pragma omp declare target
 #endif
+*/
 GPUCallableMethod void exahype2::aderdg::corrector_addRiemannContributions_body_AoS(
   double * __restrict__             UOut,
   const double * const __restrict__ riemannResultIn,
@@ -241,9 +251,11 @@ GPUCallableMethod void exahype2::aderdg::corrector_addRiemannContributions_body_
     }
   }
 }
+/*
 #if defined(GPUOffloadingOMP)
 #pragma omp end declare target
 #endif
+*/
 
 // CPU launchers
 void exahype2::aderdg::corrector_addCellContributions_loop_AoS(

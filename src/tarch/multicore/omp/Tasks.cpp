@@ -27,6 +27,12 @@ namespace {
    * I found that quite a lot of OpenMP implementations realise the taskwait at the 
    * end as busy wait. This is totally annoying as it might lead to deadlocks whenever
    * a task has a taskyield internally and/or there are more tasks than threads.
+   *
+   * ## NVIDIA
+   *
+   * NVIDIA's nvc++ does not support taskloops. We have contacted their R&D and they
+   * confirmed that they only implement a subset of OpenMP, and the taskloop is not
+   * on the list of features that they want to support.
    */
   void spawnAndWaitAsTaskLoop(
     const std::vector< tarch::multicore::Task* >&  tasks
@@ -34,12 +40,21 @@ namespace {
     // important, otherwise taskwait synchronises
     assertion( not tasks.empty() );
 
+    #if !defined(__NVCOMPILER)
     #pragma omp taskloop nogroup priority(StandardPriority) untied
+    #endif
     for (int i=0; i<static_cast<int>(tasks.size()); i++) {
+      #if defined(__NVCOMPILER)
+      #pragma omp task
+      {
+      #endif
       ::tarch::logging::Statistics::getInstance().inc( BSPTasksStatisticsIdentifier, 1.0, true );
       while (tasks[i]->run()) {}
       delete tasks[i];
       ::tarch::logging::Statistics::getInstance().inc( BSPTasksStatisticsIdentifier, -1.0, true );
+      #if defined(__NVCOMPILER)
+      }
+      #endif
     }
     #pragma omp taskwait // wait for all elements from tasks to complete
                          // do not wait for the children of tasks
@@ -125,6 +140,12 @@ namespace {
    * all of our thread-local tasks to the global queue once this routine has
    * terminated.
    *
+   *
+   * ## NVIDIA
+   *
+   * NVIDIA's nvc++ does not support taskloops. We have contacted their R&D and they
+   * confirmed that they only implement a subset of OpenMP, and the taskloop is not
+   * on the list of features that they want to support.
    */
   void spawnAndWaitAsExplicitTasksWithPolling(
     const std::vector< tarch::multicore::Task* >&  tasks,
@@ -137,8 +158,14 @@ namespace {
     int       pendingTasks  = NumberOfThreads;
     int       spawnedTasks  = 0;
 
+    #if !defined(__NVCOMPILER)
     #pragma omp taskloop nogroup shared(pendingTasks, spawnedTasks) priority(StandardPriority) untied
+    #endif
     for (int i=0; i<NumberOfThreads; i++) {
+      #if defined(__NVCOMPILER)
+      #pragma omp task
+      {
+      #endif
         #pragma omp atomic
         spawnedTasks++;
 
@@ -152,7 +179,11 @@ namespace {
 
         ::tarch::logging::Statistics::getInstance().inc( BSPTasksStatisticsIdentifier, -1.0, true );
   
+        #if defined(__NVCOMPILER)
+        #pragma omp atomic
+        #else
         #pragma omp atomic seq_cst
+        #endif
         pendingTasks--;
 
         const auto fusion       = strategy->getNumberOfTasksToFuseAndTargetDevice();
@@ -186,6 +217,9 @@ namespace {
             processedSomeTasks = tarch::multicore::processPendingTasks( numberOfTasksToProcess );
           }
         }
+      #if defined(__NVCOMPILER)
+      }
+      #endif
     }
     #pragma omp taskwait // wait for all elements from tasks to complete
                          // do not wait for the children of tasks
@@ -248,10 +282,25 @@ int tarch::multicore::native::getNumberOfPendingTasks() {
  * this one into fuse(). The firstprivate annotation is not required, as this is the
  * default. But I leave it in here to highlight that three variables are copied,
  * but tasksOfSameType is not copied and not used within the task.
+ *
+ *
+ * ## NVIDIA
+ *
+ * With NVIDIA/nvc++, I get the error
+ *
+ * <pre>
+NVC++-S-0155-A possibly throwing copy constructor for a task firstprivate variable is not supported  (tarch/multicore/omp/Tasks.cpp: 289)
+NVC++/x86-64 Linux 22.3-0: compilation completed with severe errors
+ * </pre>
+ *
+ * if I try to map fuse onto a task of its own.
+ *
  */
 void tarch::multicore::native::processFusedTask(Task*  myTask, const std::list< tarch::multicore::Task* >& tasksOfSameType, int device) {
   std::list< tarch::multicore::Task* > copyOfTasksOfSameType = tasksOfSameType;
+  #if !defined(__NVCOMPILER)
   #pragma omp task firstprivate(myTask,copyOfTasksOfSameType,device)
+  #endif
   {
     bool stillExecuteLocally = myTask->fuse(copyOfTasksOfSameType,device);
     if (stillExecuteLocally) {
