@@ -23,7 +23,7 @@ class ComputeFinalLinearCombinationAndProjectSolutionOntoFaces(AbstractRungeKutt
 
     #if Dimensions==2
     for (int dof=0; dof<{{NUMBER_OF_DOFS_PER_CELL_2D}}; dof++)
-    for (int unknown=0; unknown<{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}; unknown++) {
+    for (int unknown=0; unknown<{{NUMBER_OF_UNKNOWNS}}; unknown++) {
       const int destIndex = dof*({{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}})+unknown;
       //*(fineGridCell{{UNKNOWN_IDENTIFIER}}.value + destIndex) = 0.0;
       int srcIndex = destIndex;
@@ -34,7 +34,7 @@ class ComputeFinalLinearCombinationAndProjectSolutionOntoFaces(AbstractRungeKutt
     }
     #elif Dimensions==3
     for (int dof=0; dof<{{NUMBER_OF_DOFS_PER_CELL_3D}}; dof++)
-    for (int unknown=0; unknown<{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}; unknown++) {
+    for (int unknown=0; unknown<{{NUMBER_OF_UNKNOWNS}}; unknown++) {
       const int destIndex = dof*({{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}})+unknown;
       //*(fineGridCell{{UNKNOWN_IDENTIFIER}}.value + destIndex) = 0.0;
 
