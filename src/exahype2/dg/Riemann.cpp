@@ -288,9 +288,9 @@ void exahype2::dg::applyRiemannToPatch(
     // direction in which riemann contributions are being computed
     for(int dim=0; dim<Dimensions; dim++){
 
+//      const double coeff1 = coeff0;
       const double coeff1 = coeff0/quadratureWeights[index[dim]];
       /*
-      double coeff1 = coeff0;
       for(int dim2=0; dim2<Dimensions; dim2++){
         if(dim2!=dim){
           coeff1 = coeff1*quadratureWeights[index[dim2]];
@@ -304,7 +304,7 @@ void exahype2::dg::applyRiemannToPatch(
       const int rightFaceNode = cellIndexToHullIndex(index, dim, 1, nodesPerAxis);
 
       for(int var=0; var<unknowns; var++){
-        Q[node*strideQ+var] += coeffLeft * QHullIn[leftFaceNode*strideQ+var] - coeffRight * QHullIn[rightFaceNode*strideQ+var];
+        Q[node*strideQ+var] += -coeffLeft * QHullIn[leftFaceNode*strideQ+var] + coeffRight * QHullIn[rightFaceNode*strideQ+var];
       }
 
     } //dim

@@ -150,7 +150,7 @@ class SolveRiemannProblem(AbstractRungeKuttaDGActionSet):
       repositories::{{SOLVER_INSTANCE}}.QuadratureWeights
     );
 
-        
+    /*
     ::exahype2::dg::subtractCell(
       QOut,
       fineGridCell{{UNKNOWN_IDENTIFIER}}LinearCombination.value,
@@ -158,7 +158,7 @@ class SolveRiemannProblem(AbstractRungeKuttaDGActionSet):
       {{NUMBER_OF_UNKNOWNS}},
       {{NUMBER_OF_AUXILIARY_VARIABLES}}
     );
-      
+    */
   }
   {% endfor %}
 

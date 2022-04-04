@@ -46,7 +46,7 @@ double exahype2::dg::tests::eulerEigenvalue(
 
   // based on the assumption that the fluid is an ideal gas, gamma chosen for dry air
   const double gamma = 1.4;
-  const double p = (gamma-1) * (Q[3] - 0.5*irho*(Q[1]*Q[1]+Q[2]*Q[2]));
+  const double p = (gamma-1) * (Q[4] - 0.5*irho*(Q[1]*Q[1]+Q[2]*Q[2]));
 
   const double c   = std::sqrt(gamma * p * irho);
 
@@ -76,6 +76,20 @@ void exahype2::dg::tests::eulerBoundaryConditions(
   Qoutside[2] = Qinside[2];
   Qoutside[3] = Qinside[3];
   Qoutside[4] = Qinside[4];
+}
+
+
+void exahype2::dg::tests::eulerInitial(
+    double* __restrict__  Q,
+    int                   node
+    ){
+
+  Q[0] = 1.00000000000000;
+  Q[1] = 0.100000000000000;
+  Q[2] = 0.200000000000000;
+  Q[3] = 0.300000000000000;
+  Q[4] = 2.57000000000000+0.01*(node/4);
+
 }
 
 

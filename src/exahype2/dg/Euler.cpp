@@ -48,9 +48,9 @@ void exahype2::dg::explicitEulerOnCell_FluxNCPSource_EvaluateTermsRedundantly(
   const int nodesPerCell = getNodesPerCell(nodesPerAxis);
   tarch::la::Vector<Dimensions,int> strides = getStrides(nodesPerAxis);
 
-  const double coeff0 = dt/dx; //We assume that the cells are cubes, e.g. A/V = 1/dx
-
   const double invDx = 1.0/dx;
+  const double coeff0 = dt*invDx; //We assume that the cells are cubes, e.g. A/V = 1/dx
+
   double* fluxValues      = nullptr;
   double* sourceValues    = nullptr;
   double* gradientValues  = nullptr;
@@ -70,10 +70,23 @@ void exahype2::dg::explicitEulerOnCell_FluxNCPSource_EvaluateTermsRedundantly(
   //which node's value is being computed
   for(int node=0; node<nodesPerCell; node++){
 
-    //initialize to zero
     for(int var=0; var<strideQ; var++){
-        cellQout[node*strideQ+var] = cellQin[node*strideQ+var];
+      cellQout[node*strideQ+var] = 0.0;
     }
+    for(int var=0; var<auxiliaryVariables; var++){
+      cellQout[node*strideQ+unknowns+var] = cellQin[node*strideQ+unknowns+var];
+    }
+
+    /*
+    //initialize to zero
+    for(int var=0; var<unknowns; var++){
+//        cellQout[node*strideQ+var] = cellQin[node*strideQ+var];
+      cellQout[node*strideQ+var] = 0.0;
+    }
+    for(int var=0; var<auxiliaryVariables; var++){
+      cellQout[node*strideQ+unknowns+var] = cellQin[node*strideQ+unknowns+var];
+    }
+    */
 
     tarch::la::Vector<Dimensions,int> index = getIndex(node, strides);
 
@@ -102,7 +115,7 @@ void exahype2::dg::explicitEulerOnCell_FluxNCPSource_EvaluateTermsRedundantly(
                 dim, //normal
                 fluxValues);
 
-          double coeff = coeff1 * StiffnessMatrix[i*nodesPerAxis+index[dim]];
+          double coeff = coeff1 * StiffnessMatrix[i+index[dim]*nodesPerAxis];
           for(int var=0; var<unknowns; var++){
               cellQout[node*strideQ+var] -= coeff * fluxValues[var];
           } //var

@@ -49,8 +49,13 @@ namespace exahype2 {
             int                                          normal
           );
 
+    void eulerInitial(
+      double * __restrict__  Q,
+      int                    node=0
+          );
+
     void elasticInitial(
-            double * __restrict__                        Q
+      double * __restrict__                        Q
           );
 
     void elasticFlux(

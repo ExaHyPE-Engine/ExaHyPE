@@ -36,6 +36,8 @@ class exahype2::dg::tests::DGTest : public tarch::tests::TestCase {
     void runDGEuler();
     void runDGElastic();
 
+    void runTest();
+
   public:
     DGTest();
 
