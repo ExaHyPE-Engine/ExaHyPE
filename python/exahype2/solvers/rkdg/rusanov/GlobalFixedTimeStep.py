@@ -92,5 +92,5 @@ class GlobalFixedTimeStep( SeparateSweeps ):
     self._compute_time_step_size              = create_compute_time_step_size_for_fixed_time_stepping( self._time_step_size )
     self._compute_new_time_step_size          = "const double newTimeStepSize = timeStepSize;"
 
-    self._start_time_step_implementation     = create_start_time_step_implementation_for_fixed_time_stepping()
+    self._start_time_step_implementation     = create_start_time_step_implementation_for_fixed_time_stepping(self._time_step_size)
     self._finish_time_step_implementation    = create_finish_time_step_implementation_for_fixed_time_stepping(self._time_step_size)

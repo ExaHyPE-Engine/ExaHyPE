@@ -810,15 +810,10 @@ def create_finish_time_step_implementation_for_fixed_time_stepping(normalised_ti
   return """
   assertion( _minCellH >= 0.0 );
   assertion( MaxAdmissibleCellH > 0.0 );
-  if (_minCellH <= MaxAdmissibleCellH) {
-    _timeStepSize  = """ + str(normalised_time_step_size) + """ * _minCellH;
-  }
-  else {
-    _timeStepSize = 0.0;
-  }
+  _timeStepSize  = """ + str(normalised_time_step_size) + """;
 """
 
-def create_start_time_step_implementation_for_fixed_time_stepping():
+def create_start_time_step_implementation_for_fixed_time_stepping(normalised_time_step_size):
   """
   
   The outcome is used before we actually roll over the accumulation variables
@@ -839,4 +834,6 @@ def create_start_time_step_implementation_for_fixed_time_stepping():
     logInfo( "step()", "h_{min} = " << _minCellHThisTimeStep );
     logInfo( "step()", "h_{max} = " << _maxCellHThisTimeStep );
   }
+  
+  _timeStepSize  = """ + str(normalised_time_step_size) + """;  
 """

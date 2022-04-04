@@ -490,10 +490,11 @@ We use RK(""" + str(self._rk_order) + """) for the time stepping.
     self._action_set_AMR_commit_without_further_analysis                              = exahype2.solvers.rkdg.actionsets.AdaptivityCriterion(solver=self, guard=self._store_cell_data_default_guard(), build_up_new_refinement_instructions=False, implement_previous_refinement_instructions=True )
     self._action_set_linear_combination_of_estimates                                  = exahype2.solvers.rkdg.actionsets.LinearCombinationOfEstimates(self)
     # @todo TW The following two action sets should run in parallel I guess 
-    self._action_set_project_linear_combination_onto_faces                            = exahype2.solvers.rkdg.actionsets.ProjectLinearCombinationOfEstimatesOntoFaces(solver=self,guard=self._store_cell_data_default_guard())
+    self._action_set_project_linear_combination_onto_faces                            = exahype2.solvers.rkdg.actionsets.ProjectLinearCombinationOfEstimatesOntoFaces(solver=self)
     self._action_set_solve_volume_integral                                            = exahype2.solvers.rkdg.actionsets.SolveVolumeIntegral(self)
     self._action_set_handle_boundary                                                  = exahype2.solvers.rkdg.actionsets.HandleBoundary(self, self._store_face_data_default_guard())
-    self._action_set_solve_Riemann_problem                                            = exahype2.solvers.rkdg.actionsets.SolveRiemannProblem(self, self._store_face_data_default_guard())
+#    self._action_set_solve_Riemann_problem                                            = exahype2.solvers.rkdg.actionsets.SolveRiemannProblem(self, self._store_face_data_default_guard())
+    self._action_set_solve_Riemann_problem                                            = exahype2.solvers.rkdg.actionsets.SolveRiemannProblem(self)
     self._action_set_add_volume_and_face_solution                                     = exahype2.solvers.rkdg.actionsets.AddVolumeAndFaceSolution(self)
     self._action_set_compute_final_linear_combination_and_project_solution_onto_faces = exahype2.solvers.rkdg.actionsets.ComputeFinalLinearCombinationAndProjectSolutionOntoFaces(solver=self,guard=self._store_cell_data_default_guard())
     self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement = exahype2.solvers.rkdg.actionsets.DynamicAMR(solver=self,guard=self._store_cell_data_default_guard())
@@ -545,13 +546,13 @@ We use RK(""" + str(self._rk_order) + """) for the time stepping.
     if verbose:
       print( "Patch data" )
       print( "----------" )
-      print( str(self._patch) )
+#      print( str(self._patch) )
       print( "Patch overlap data" )
       print( "----------" )
-      print( str(self._patch_overlap_old) )
+#      print( str(self._patch_overlap_old) )
       print( "Patch overlap data" )
       print( "----------" )
-      print( str(self._patch_overlap_new) )
+#      print( str(self._patch_overlap_new) )
     datamodel.add_cell(self._cell_label)
     datamodel.add_cell(self._current_time_step)
     datamodel.add_cell(self._estimates)
@@ -835,6 +836,9 @@ We use RK(""" + str(self._rk_order) + """) for the time stepping.
 
     d[ "NUMBER_OF_DOFS_PER_CELL_2D" ] = (self._dg_order+1) * (self._dg_order+1);
     d[ "NUMBER_OF_DOFS_PER_CELL_3D" ] = (self._dg_order+1) * (self._dg_order+1) * (self._dg_order+1);
+    
+    d[ "NUMBER_OF_DOFS_PER_FACE_2D" ] = (self._dg_order+1)
+    d[ "NUMBER_OF_DOFS_PER_FACE_3D" ] = (self._dg_order+1) * (self._dg_order+1)
 
     d["POLYNOMIALS"]                    = str(self._polynomials)
 
