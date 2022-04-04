@@ -43,7 +43,7 @@ class ButcherTableau(object):
      
     """
     if self._order==1:
-      return [0]
+      return [1]
     elif self._order==2:
       return [0,1]
     elif self._order==4:
