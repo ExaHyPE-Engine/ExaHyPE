@@ -26,6 +26,9 @@ ExaHyPE2Sources = \
   aderdg/tests/ADERDGTest.cpp \
   dg/DGUtils.cpp \
   dg/Euler.cpp \
+  dg/Riemann.cpp \
+  dg/tests/DGTest.cpp \
+  dg/tests/testUtils.cpp \
   fv/BoundaryConditions.cpp \
   fv/Generic.cpp \
   fv/PatchUtils.cpp \
