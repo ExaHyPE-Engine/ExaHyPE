@@ -550,10 +550,10 @@ There are three valid return values for this function:
 \begin{lstlisting}[style = C++]
 ::ExaHyPE2::RefinementCommand::Keep
 ::ExaHyPE2::RefinementCommand::Refine
-::ExaHyPE2::RefinementCommand::Coarsen
+::ExaHyPE2::RefinementCommand::Erase
 \end{lstlisting}
 
-which respectively keep, refine or coarsen the mesh refinement for the current cell.\\
+which respectively keep, refine or coarsen the mesh refinement for the current cell. (The "Erase" command can be though of as "erasing" previously defined refinements)\\
 In a next step, we will attempt to use these to implement the shallow water equations.
 
 \newpage

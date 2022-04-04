@@ -18,7 +18,7 @@ tarch::logging::Log   examples::exahype2::swe::swe::_log( "examples::exahype2::s
   if(tarch::la::equals(t, 0.0)){
 	  tarch::la::Vector<Dimensions,double> centre = {0.5, 0.5};
 	  bool nearCentre = tarch::la::norm2(volumeX-centre)>0.19 && tarch::la::norm2(volumeX-centre)<0.21;
-	  result = (nearCentre ? ::exahype2::RefinementCommand::Refine : ::exahype2::RefinementCommand::Coarsen);
+	  result = (nearCentre ? ::exahype2::RefinementCommand::Refine : ::exahype2::RefinementCommand::Erase);
   }
   return result;
 }

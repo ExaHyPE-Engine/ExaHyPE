@@ -30,7 +30,6 @@ thesolver = exahype2.solvers.fv.rusanov.GlobalAdaptiveTimeStep(
   unknowns, auxiliary_variables,
   min_h, max_h,
   flux = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
-  eigenvalues = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
   ncp = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
   time_step_relaxation = 0.01
 )
@@ -49,7 +48,7 @@ project.set_global_simulation_parameters(
   dimensions = 3,
   offset = [0.0, 0.0, 0.0],
   size = [10.0, 10.0, 10.0],
-  end_time = 0.01,
+  end_time = 0.03,
   first_plot_time_stamp = 0.0,
   time_in_between_plots = 0.001,      # snapshots
   periodic_BC = [False, False, False]

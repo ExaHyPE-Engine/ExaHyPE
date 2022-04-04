@@ -33,7 +33,6 @@ thesolver = exahype2.solvers.fv.rusanov.GlobalAdaptiveTimeStep(
   unknowns, auxiliary_variables,
   min_h, max_h,
   flux = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
-  eigenvalues = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
   ncp = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
   time_step_relaxation = 0.01
 )

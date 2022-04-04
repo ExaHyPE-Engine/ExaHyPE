@@ -28,7 +28,7 @@ project = exahype2.Project( ["examples", "exahype2", "euler3D"], "euler3D", ".",
 unknowns       = 5
 time_step_size = 0.001
 max_h          = 0.03
-min_h          = 0.0
+min_h          = 0.03
 
 
 #
@@ -45,13 +45,10 @@ thesolver = exahype2.solvers.fv.rusanov.GlobalFixedTimeStep(
   unknowns, auxiliary_variables,
   min_h, max_h,
   time_step_size,
-  flux = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
-  eigenvalues = exahype2.solvers.fv.PDETerms.User_Defined_Implementation
+  flux = exahype2.solvers.fv.PDETerms.User_Defined_Implementation
 )
 
-
-#thesolver.set_implementation( refinement_criterion=exahype2.solvers.fv.PDETerms.User_Defined_Implementation )
-
+thesolver.set_implementation( refinement_criterion=exahype2.solvers.fv.PDETerms.User_Defined_Implementation )
 
 project.add_solver( thesolver )
 

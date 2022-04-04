@@ -42,10 +42,12 @@ thesolver = exahype2.solvers.fv.rusanov.GlobalFixedTimeStep(
   name="euler2D",
   patch_size=3,
   unknowns=4, auxiliary_variables=0,
-  min_volume_h=0, max_volume_h=0.01,
+  min_volume_h=0.01, max_volume_h=0.01,
   time_step_size=0.001,
   flux = exahype2.solvers.fv.PDETerms.User_Defined_Implementation
 )
+
+thesolver.set_implementation( refinement_criterion=exahype2.solvers.fv.PDETerms.User_Defined_Implementation )
 
 project.add_solver( thesolver )
 
@@ -57,7 +59,7 @@ project.set_global_simulation_parameters(
   dimensions = 2,
   offset = [0.0,0.0],
   size = [1.0,1.0],
-  end_time = 0.1,
+  end_time = 0.01,
   first_plot_time_stamp = 0.0,
   time_in_between_plots = 0.001
 )
