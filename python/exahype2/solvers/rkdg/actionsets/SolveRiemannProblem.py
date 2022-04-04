@@ -3,6 +3,8 @@
 
 from .AbstractRungeKuttaDGActionSet import AbstractRungeKuttaDGActionSet
 
+from exahype2.solvers.rkdg.ButcherTableau import ButcherTableau
+
 import peano4
 import jinja2
 
@@ -17,11 +19,170 @@ class SolveRiemannProblem(AbstractRungeKuttaDGActionSet):
   """
   
   TemplateProject = """
-  if ({{PREDICATE}}) {
+
+  {% for PREDICATE_NO in range(0,PREDICATES|length) %}
+  if ({{PREDICATES[PREDICATE_NO]}}) {
+    const double timeStampOldSolution    = fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStamp();
+    
+    // Set the variable
+    // double timeStepSize
+    {{COMPUTE_TIME_STEP_SIZE}}
+    
+    const double timeStamp = timeStampOldSolution + {{BUTCHER_TABLEAU_RELATIVE_TIME_STEP_SIZES[PREDICATE_NO]}} * timeStepSize;
+    
+    assertion3( tarch::la::greaterEquals( timeStepSize, 0.0 ),  timeStamp, timeStepSize, timeStampOldSolution );
+    assertion3( tarch::la::greaterEquals( timeStamp, 0.0 ),     timeStamp, timeStepSize, timeStampOldSolution );
+    
+    #if Dimensions==2
+    double* QOut = fineGridCell{{UNKNOWN_IDENTIFIER}}Estimates.value + {{PREDICATE_NO}} * {{NUMBER_OF_DOFS_PER_CELL_2D}} * ({{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}});
+
+    #elif Dimensions==3
+    double* QOut = fineGridCell{{UNKNOWN_IDENTIFIER}}Estimates.value + {{PREDICATE_NO}} * {{NUMBER_OF_DOFS_PER_CELL_3D}} * ({{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}});
+    #endif
+    
+    double* QHull[Dimensions*2];
+    bool    atBoundary[Dimensions*2];
+    double maxEigenvaluePerFace[Dimensions*2];
+    
+    #if Dimensions==2
+    const int facePosition = {{PREDICATE_NO}}*{{NUMBER_OF_DOFS_PER_FACE_2D}}*({{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}});
+    #elif Dimensions==3
+    const int facePosition = {{PREDICATE_NO}}*{{NUMBER_OF_DOFS_PER_FACE_3D}}*({{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}});
+    #endif
+    
+    /*
+    In Peano the faces are ordered by direction, then dimension, so in 3D it would be the face in negative direction in dimension 0, then 1, then 2
+      followed by the the face in positive direction of dimensions 0, then 1, then 2. The kernels expect the faces to be ordered by dimension, then
+      direction, so first left face in dimension0, then right face in dimension 0, and so on for the other dimensions.
+      Therefore when the Hull is arranged, the order of these faces are shuffled correspondingly.    
+    2d: 0,1,2,3 -> 0,2,1,3
+    3d: 0,1,2,3,4,5 -> 0,3,1,4,2,5
+    */
+    
+    for(int face=0; face<Dimensions; face++){
+      QHull[2*face]        = fineGridFaces{{UNKNOWN_IDENTIFIER}}Estimates(face).value + facePosition;
+      atBoundary[2*face]   = fineGridFaces{{SOLVER_NAME}}FaceLabel(face).getBoundary() and
+                             not repositories::{{SOLVER_INSTANCE}}.PeriodicBC[face];
+      QHull[2*face+1]      = fineGridFaces{{UNKNOWN_IDENTIFIER}}Estimates(face+Dimensions).value + facePosition;
+      atBoundary[2*face+1] = fineGridFaces{{SOLVER_NAME}}FaceLabel(face+Dimensions).getBoundary() and
+                             not repositories::{{SOLVER_INSTANCE}}.PeriodicBC[face];        
+    }
+    
+    ::exahype2::dg::getMaxEigenvaluePerFace(
+      [&](
+        const double * __restrict__                 Q,
+        const tarch::la::Vector<Dimensions,double>& x,
+        double                                      t,
+        int                                         normal
+        ) -> double {
+          return repositories::{{SOLVER_INSTANCE}}.maxEigenvalue(Q,x,t,normal);
+        },
+      [&](
+        const double * __restrict__                  Qinside,
+        double * __restrict__                        Qoutside,
+        const tarch::la::Vector<Dimensions,double>&  x,
+        double                                       t,
+        int                                          normal
+        ) -> void {
+          repositories::{{SOLVER_INSTANCE}}.boundaryConditions(Qinside, Qoutside, x, t, normal);
+        },
+      QHull,
+      atBoundary,
+      {{ORDER}},                                                   
+      {{NUMBER_OF_UNKNOWNS}},
+      {{NUMBER_OF_AUXILIARY_VARIABLES}},
+      marker.x(),
+      timeStamp,
+      maxEigenvaluePerFace
+    );
+    
+    #if Dimensions==2
+    double QHullForRiemann[2*Dimensions*{{NUMBER_OF_DOFS_PER_FACE_2D}}*({{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}})];
+    #elif Dimensions==3
+    double QHullForRiemann = new double[2*Dimensions*{{NUMBER_OF_DOFS_PER_FACE_3D}}*({{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}})];
+    #endif      
+    
+    ::exahype2::dg::computeRusanovOnHull(
+      [&](
+        const double * __restrict__                  Q,
+        const tarch::la::Vector<Dimensions,double>&  x,
+        double                                       t,
+        int                                          normal,
+        double * __restrict__                        F
+        ) -> void {
+          repositories::{{SOLVER_INSTANCE}}.flux(Q,x,t,normal,F);
+        },
+        nullptr, //ncp
+      [&](
+        const double * __restrict__                  Qinside,
+        double * __restrict__                        Qoutside,
+        const tarch::la::Vector<Dimensions,double>&  x,
+        double                                       t,
+        int                                          normal
+        ) -> void {
+          repositories::{{SOLVER_INSTANCE}}.boundaryConditions(Qinside, Qoutside, x, t, normal);
+        },
+      QHull,
+      QHullForRiemann,
+      {{ORDER}},                                                   
+      {{NUMBER_OF_UNKNOWNS}},
+      {{NUMBER_OF_AUXILIARY_VARIABLES}},
+      marker.x(),
+      marker.h()(0),
+      timeStamp,
+      timeStepSize,
+      maxEigenvaluePerFace,
+      atBoundary,
+      true,
+      false
+    );
+                
+    ::exahype2::dg::applyRiemannToPatch(
+      QOut,
+      QHullForRiemann,
+      {{ORDER}},                                                   
+      {{NUMBER_OF_UNKNOWNS}},
+      {{NUMBER_OF_AUXILIARY_VARIABLES}},
+      marker.h()(0),
+      timeStepSize,
+      repositories::{{SOLVER_INSTANCE}}.BasisFunctionValuesLeft,
+      repositories::{{SOLVER_INSTANCE}}.BasisFunctionValuesRight,
+      repositories::{{SOLVER_INSTANCE}}.QuadratureWeights
+    );
+
+        
+    ::exahype2::dg::subtractCell(
+      QOut,
+      fineGridCell{{UNKNOWN_IDENTIFIER}}LinearCombination.value,
+      {{ORDER}},
+      {{NUMBER_OF_UNKNOWNS}},
+      {{NUMBER_OF_AUXILIARY_VARIABLES}}
+    );
+      
   }
+  {% endfor %}
+
 """
+
+  TemplateRiemannProblemSolve = """
   
-  def __init__(self,solver,guard):
+  double* QHull[Dimensions*2];
+  bool    atBoundary[Dimensions*2];
+  for(int face=0; face<2*Dimensions; face++){
+    #if Dimensions==2
+    QHull[face] = fineGridFaces{{UNKNOWN_IDENTIFIER}}Estimates(face).value + {{PREDICATE_NO}}*{{NUMBER_OF_DOFS_PER_FACE_3D}}
+    #elif Dimensions==3
+    QHull[face] = fineGridFaces{{UNKNOWN_IDENTIFIER}}Estimates(face).value + {{PREDICATE_NO}}*{{NUMBER_OF_DOFS_PER_FACE_3D}}
+    #endif
+    //                    fineGridFaces{{SOLVER_NAME}}QSolutionExtrapolation(face).value;
+    //QHull[face]       = fineGridFaces{{UNKNOWN_IDENTIFIER}}Estimates(face).value + {{PREDICATE_NO}}*{{NUMBER_OF_DOFS_PER_CELL_3D}}
+    atBoundary[face]  = fineGridFaces{{SOLVER_NAME}}FaceLabel(face).getBoundary() and
+                         not repositories::{{SOLVER_INSTANCE}}.PeriodicBC[face%Dimensions];
+  }
+  
+  """
+  
+  def __init__(self,solver):
     """
     
     guard_project: String (C++ code)
@@ -33,7 +194,22 @@ class SolveRiemannProblem(AbstractRungeKuttaDGActionSet):
     
     """
     super(SolveRiemannProblem,self).__init__(solver)
-    self.guard            = guard
+    self.guards            = []
+    self._butcher_tableau     = ButcherTableau(self._solver._rk_order)
+    self._riemann_solve    = self.TemplateRiemannProblemSolve
+
+  @property
+  def guards(self):
+    if self._guards==[]:
+      raise Exception( "Guards are not initialised" )
+    return self._guards
+      
+    
+  @guards.setter
+  def guards(self,new_guards):
+    if new_guards!=[] and len(new_guards)!=self._solver.number_of_Runge_Kutta_steps():
+      raise Exception( "Expect one guard per Runge Kutta step. Have {} steps but got guards {}".format(solver.number_of_Runge_Kutta_steps(),guards) )
+    self._guards = new_guards
     
 
   def get_body_of_operation(self,operation_name):
@@ -42,7 +218,9 @@ class SolveRiemannProblem(AbstractRungeKuttaDGActionSet):
       d = {}
       self._solver._init_dictionary_with_default_parameters(d)
       self._solver.add_entries_to_text_replacement_dictionary(d)
-      d[ "PREDICATE" ]                 = self.guard
+      d[ "PREDICATES" ]            = self.guards
+      d[ "BUTCHER_TABLEAU_RELATIVE_TIME_STEP_SIZES" ] = self._butcher_tableau.time_step_sizes()
+      d[ "RIEMANN_PROBLEM_SOLVE" ] = jinja2.Template( self._riemann_solve, undefined=jinja2.DebugUndefined).render(**d)
       result = jinja2.Template(self.TemplateProject).render(**d)
       pass 
     return result
@@ -50,3 +228,8 @@ class SolveRiemannProblem(AbstractRungeKuttaDGActionSet):
 
   def get_action_set_name(self):
     return __name__.replace(".py", "").replace(".", "_")
+  
+  def get_includes(self):
+    return super(SolveRiemannProblem,self).get_includes() + """
+    #include "exahype2/dg/Riemann.h"
+    """  

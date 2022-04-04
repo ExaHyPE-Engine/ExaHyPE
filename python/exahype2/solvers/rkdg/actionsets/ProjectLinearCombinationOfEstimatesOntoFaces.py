@@ -17,38 +17,50 @@ class ProjectLinearCombinationOfEstimatesOntoFaces(AbstractRungeKuttaDGActionSet
   """
   
   TemplateProject = """
-  if ({{PREDICATE}}) {
+  {% for PREDICATE_NO in range(0,PREDICATES|length) %}
+  if ({{PREDICATES[PREDICATE_NO]}}) {
+
+    double* QIn  = fineGridCell{{UNKNOWN_IDENTIFIER}}LinearCombination.value;
+  
+    #if Dimensions==2
+    const int facePosition = {{PREDICATE_NO}}*{{NUMBER_OF_DOFS_PER_FACE_2D}}*({{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}});
+    #elif Dimensions==3
+    const int facePosition = {{PREDICATE_NO}}*{{NUMBER_OF_DOFS_PER_FACE_3D}}*({{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}});
+    #endif
+
     #if Dimensions==2
     ::exahype2::dg::projectVolumetricDataOntoFaces(
-      fineGridCell{{UNKNOWN_IDENTIFIER}}LinearCombination.value,
+      QIn,
       {{ORDER}},
       {{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}},
       repositories::{{SOLVER_INSTANCE}}.BasisFunctionValuesLeft,
       repositories::{{SOLVER_INSTANCE}}.BasisFunctionValuesRight,
-      fineGridFaces{{UNKNOWN_IDENTIFIER}}(0).value,
-      fineGridFaces{{UNKNOWN_IDENTIFIER}}(1).value,
-      fineGridFaces{{UNKNOWN_IDENTIFIER}}(2).value,
-      fineGridFaces{{UNKNOWN_IDENTIFIER}}(3).value
+      fineGridFaces{{UNKNOWN_IDENTIFIER}}Estimates(0).value + facePosition, //left
+      fineGridFaces{{UNKNOWN_IDENTIFIER}}Estimates(2).value + facePosition, //right
+      fineGridFaces{{UNKNOWN_IDENTIFIER}}Estimates(1).value + facePosition, //down
+      fineGridFaces{{UNKNOWN_IDENTIFIER}}Estimates(3).value + facePosition  //up
     );
     #elif Dimensions==3
     ::exahype2::dg::projectVolumetricDataOntoFaces(
-      fineGridCell{{UNKNOWN_IDENTIFIER}}LinearCombination.value,
+      QIn,
       {{ORDER}},
       {{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}},
       repositories::{{SOLVER_INSTANCE}}.BasisFunctionValuesLeft,
       repositories::{{SOLVER_INSTANCE}}.BasisFunctionValuesRight,
-      fineGridFaces{{UNKNOWN_IDENTIFIER}}(0).value,
-      fineGridFaces{{UNKNOWN_IDENTIFIER}}(1).value,
-      fineGridFaces{{UNKNOWN_IDENTIFIER}}(2).value,
-      fineGridFaces{{UNKNOWN_IDENTIFIER}}(3).value,
-      fineGridFaces{{UNKNOWN_IDENTIFIER}}(4).value,
-      fineGridFaces{{UNKNOWN_IDENTIFIER}}(5).value
+      fineGridFaces{{UNKNOWN_IDENTIFIER}}Estimates(0).value + facePosition, //left
+      fineGridFaces{{UNKNOWN_IDENTIFIER}}Estimates(3).value + facePosition, //right
+      fineGridFaces{{UNKNOWN_IDENTIFIER}}Estimates(1).value + facePosition, //down
+      fineGridFaces{{UNKNOWN_IDENTIFIER}}Estimates(4).value + facePosition, //up
+      fineGridFaces{{UNKNOWN_IDENTIFIER}}Estimates(2).value + facePosition, //front
+      fineGridFaces{{UNKNOWN_IDENTIFIER}}Estimates(5).value + facePosition  //back
     );
     #endif
+
   }
+  {% endfor %}
 """
   
-  def __init__(self,solver,guard):
+  def __init__(self,solver):
     """
     
     guard_project: String (C++ code)
@@ -60,7 +72,20 @@ class ProjectLinearCombinationOfEstimatesOntoFaces(AbstractRungeKuttaDGActionSet
     
     """
     super(ProjectLinearCombinationOfEstimatesOntoFaces,self).__init__(solver)
-    self.guard            = guard
+    self.guards            = []
+
+  @property
+  def guards(self):
+    if self._guards==[]:
+      raise Exception( "Guards are not initialised" )
+    return self._guards
+      
+    
+  @guards.setter
+  def guards(self,new_guards):
+    if new_guards!=[] and len(new_guards)!=self._solver.number_of_Runge_Kutta_steps():
+      raise Exception( "Expect one guard per Runge Kutta step. Have {} steps but got guards {}".format(solver.number_of_Runge_Kutta_steps(),guards) )
+    self._guards = new_guards
     
 
   def get_body_of_operation(self,operation_name):
@@ -69,7 +94,7 @@ class ProjectLinearCombinationOfEstimatesOntoFaces(AbstractRungeKuttaDGActionSet
       d = {}
       self._solver._init_dictionary_with_default_parameters(d)
       self._solver.add_entries_to_text_replacement_dictionary(d)
-      d[ "PREDICATE" ]                 = self.guard
+      d[ "PREDICATES" ]                               = self.guards
       result = jinja2.Template(self.TemplateProject).render(**d)
       pass 
     return result

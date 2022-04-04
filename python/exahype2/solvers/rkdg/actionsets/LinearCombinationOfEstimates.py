@@ -24,9 +24,9 @@ class LinearCombinationOfEstimates(AbstractRungeKuttaDGActionSet):
       *(fineGridCell{{UNKNOWN_IDENTIFIER}}LinearCombination.value + index)  = *(fineGridCell{{UNKNOWN_IDENTIFIER}}.value + index);
       {% for WEIGHT_NO in range(0,BUTCHER_TABLEAU_WEIGHTS[PREDICATE_NO]|length) %}
       {% if BUTCHER_TABLEAU_WEIGHTS[PREDICATE_NO][WEIGHT_NO]==0 %}
-      // *(fineGridCell{{UNKNOWN_IDENTIFIER}}LinearCombination.value + index) += {{BUTCHER_TABLEAU_WEIGHTS[PREDICATE_NO][WEIGHT_NO]}}* *(fineGridCell{{UNKNOWN_IDENTIFIER}}Estimates.value + index + {{WEIGHT_NO}} * {{NUMBER_OF_DOFS_PER_CELL_2D}});
+      // *(fineGridCell{{UNKNOWN_IDENTIFIER}}LinearCombination.value + index) += {{BUTCHER_TABLEAU_WEIGHTS[PREDICATE_NO][WEIGHT_NO]}}* *(fineGridCell{{UNKNOWN_IDENTIFIER}}Estimates.value + index + {{WEIGHT_NO}} * {{NUMBER_OF_DOFS_PER_CELL_2D}} * ({{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}));
       {% else %}
-      *(fineGridCell{{UNKNOWN_IDENTIFIER}}LinearCombination.value + index) += {{BUTCHER_TABLEAU_WEIGHTS[PREDICATE_NO][WEIGHT_NO]}}* *(fineGridCell{{UNKNOWN_IDENTIFIER}}Estimates.value + index + {{WEIGHT_NO}} * {{NUMBER_OF_DOFS_PER_CELL_2D}});
+      *(fineGridCell{{UNKNOWN_IDENTIFIER}}LinearCombination.value + index) += {{BUTCHER_TABLEAU_WEIGHTS[PREDICATE_NO][WEIGHT_NO]}}* *(fineGridCell{{UNKNOWN_IDENTIFIER}}Estimates.value + index + {{WEIGHT_NO}} * {{NUMBER_OF_DOFS_PER_CELL_2D}} * ({{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}));
       {% endif %}
       {% endfor %}
     }
@@ -39,9 +39,9 @@ class LinearCombinationOfEstimates(AbstractRungeKuttaDGActionSet):
       *(fineGridCell{{UNKNOWN_IDENTIFIER}}LinearCombination.value + index)  = *(fineGridCell{{UNKNOWN_IDENTIFIER}}.value + index);
       {% for WEIGHT_NO in range(0,BUTCHER_TABLEAU_WEIGHTS[PREDICATE_NO]|length) %}
       {% if BUTCHER_TABLEAU_WEIGHTS[PREDICATE_NO][WEIGHT_NO]==0 %}
-      // *(fineGridCell{{UNKNOWN_IDENTIFIER}}LinearCombination.value + index) += {{BUTCHER_TABLEAU_WEIGHTS[PREDICATE_NO][WEIGHT_NO]}}* *(fineGridCell{{UNKNOWN_IDENTIFIER}}Estimates.value + index + {{WEIGHT_NO}} * {{NUMBER_OF_DOFS_PER_CELL_3D}});
+      // *(fineGridCell{{UNKNOWN_IDENTIFIER}}LinearCombination.value + index) += {{BUTCHER_TABLEAU_WEIGHTS[PREDICATE_NO][WEIGHT_NO]}}* *(fineGridCell{{UNKNOWN_IDENTIFIER}}Estimates.value + index + {{WEIGHT_NO}} * {{NUMBER_OF_DOFS_PER_CELL_3D}} * ({{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}));
       {% else %}
-      *(fineGridCell{{UNKNOWN_IDENTIFIER}}LinearCombination.value + index) += {{BUTCHER_TABLEAU_WEIGHTS[PREDICATE_NO][WEIGHT_NO]}}* *(fineGridCell{{UNKNOWN_IDENTIFIER}}Estimates.value + index + {{WEIGHT_NO}} * {{NUMBER_OF_DOFS_PER_CELL_3D}});
+      *(fineGridCell{{UNKNOWN_IDENTIFIER}}LinearCombination.value + index) += {{BUTCHER_TABLEAU_WEIGHTS[PREDICATE_NO][WEIGHT_NO]}}* *(fineGridCell{{UNKNOWN_IDENTIFIER}}Estimates.value + index + {{WEIGHT_NO}} * {{NUMBER_OF_DOFS_PER_CELL_3D}} * ({{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}));
       {% endif %}
       {% endfor %}
     }

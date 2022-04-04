@@ -19,7 +19,7 @@ class SolveVolumeIntegral(AbstractRungeKuttaDGActionSet):
   we do an explicit Euler step subject to a relaxed time step size from the Butcher
   tableau. The input is already properly computed (see LinearCombinationOfEstimates()).
   
-  The volumen integral definition is an underdetermined action set, i.e. you still
+  The volume integral definition is an underdetermined action set, i.e. you still
   have to ensure that a number of macros are actually defined when you use it:
   
   - {{COMPUTE_TIME_STEP_SIZE}} has to specify a double timeStepSize. It may be const if 
@@ -50,17 +50,117 @@ class SolveVolumeIntegral(AbstractRungeKuttaDGActionSet):
 
     double* QIn  = fineGridCell{{UNKNOWN_IDENTIFIER}}LinearCombination.value;
     #if Dimensions==2
-    double* QOut = fineGridCell{{UNKNOWN_IDENTIFIER}}Estimates.value + {{PREDICATE_NO}} * {{NUMBER_OF_DOFS_PER_CELL_2D}};
+    double* QOut = fineGridCell{{UNKNOWN_IDENTIFIER}}Estimates.value + {{PREDICATE_NO}} * {{NUMBER_OF_DOFS_PER_CELL_2D}} * ({{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}});
     #elif Dimensions==3
-    double* QOut = fineGridCell{{UNKNOWN_IDENTIFIER}}Estimates.value + {{PREDICATE_NO}} * {{NUMBER_OF_DOFS_PER_CELL_3D}};
+    double* QOut = fineGridCell{{UNKNOWN_IDENTIFIER}}Estimates.value + {{PREDICATE_NO}} * {{NUMBER_OF_DOFS_PER_CELL_3D}} * ({{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}});
+    #endif
+    
+    ::exahype2::dg::explicitEulerOnCell_FluxNCPSource_EvaluateTermsRedundantly(
+      QIn,  
+      QOut,
+      {{ORDER}},                                                   
+      {{NUMBER_OF_UNKNOWNS}},
+      {{NUMBER_OF_AUXILIARY_VARIABLES}},
+      marker.x(),
+      marker.h()(0), //assume square/cubic cells
+      timeStamp,
+      timeStepSize,
+      [&](
+        const double * __restrict__                  Q,
+        const tarch::la::Vector<Dimensions,double>&  x,
+        double                                       t,
+        int                                          normal,
+        double * __restrict__                        F
+      )->void {
+        repositories::{{SOLVER_INSTANCE}}.flux(Q,x,t,normal,F);
+      },
+      nullptr, //ncp TODO
+      nullptr, //source TODO
+      repositories::{{SOLVER_INSTANCE}}.QuadraturePoints,
+      repositories::{{SOLVER_INSTANCE}}.QuadratureWeights,
+      repositories::{{SOLVER_INSTANCE}}.MassMatrix,
+      repositories::{{SOLVER_INSTANCE}}.StiffnessOperator,
+      repositories::{{SOLVER_INSTANCE}}.DerivativeOperator,
+      true, //useFlux
+      false,//useNCP
+      false //useSource
+    );
+
+    /*
+    #if Dimensions==2
+    const int facePosition = {{PREDICATE_NO}}*{{NUMBER_OF_DOFS_PER_FACE_2D}}*({{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}});
+    #elif Dimensions==3
+    const int facePosition = {{PREDICATE_NO}}*{{NUMBER_OF_DOFS_PER_FACE_3D}}*({{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}});
     #endif
 
-    {{EXPLICIT_EULER_CALL}}
-  }
+    #if Dimensions==2
+    ::exahype2::dg::projectVolumetricDataOntoFaces(
+      QIn,
+      {{ORDER}},
+      {{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}},
+      repositories::{{SOLVER_INSTANCE}}.BasisFunctionValuesLeft,
+      repositories::{{SOLVER_INSTANCE}}.BasisFunctionValuesRight,
+      fineGridFaces{{UNKNOWN_IDENTIFIER}}Estimates(0).value + facePosition, //left
+      fineGridFaces{{UNKNOWN_IDENTIFIER}}Estimates(2).value + facePosition, //right
+      fineGridFaces{{UNKNOWN_IDENTIFIER}}Estimates(1).value + facePosition, //down
+      fineGridFaces{{UNKNOWN_IDENTIFIER}}Estimates(3).value + facePosition  //up
+    );
+    #elif Dimensions==3
+    ::exahype2::dg::projectVolumetricDataOntoFaces(
+      QIn,
+      {{ORDER}},
+      {{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}},
+      repositories::{{SOLVER_INSTANCE}}.BasisFunctionValuesLeft,
+      repositories::{{SOLVER_INSTANCE}}.BasisFunctionValuesRight,
+      fineGridFaces{{UNKNOWN_IDENTIFIER}}Estimates(0).value + facePosition, //left
+      fineGridFaces{{UNKNOWN_IDENTIFIER}}Estimates(3).value + facePosition, //right
+      fineGridFaces{{UNKNOWN_IDENTIFIER}}Estimates(1).value + facePosition, //down
+      fineGridFaces{{UNKNOWN_IDENTIFIER}}Estimates(4).value + facePosition, //up
+      fineGridFaces{{UNKNOWN_IDENTIFIER}}Estimates(2).value + facePosition, //front
+      fineGridFaces{{UNKNOWN_IDENTIFIER}}Estimates(5).value + facePosition  //back
+    );
+    #endif
+    */
+    
+  }  
+  
   {% endfor %}
 """
 
   TemplateExplicitEulerCallWithFlux = """
+    /*
+    ::exahype2::dg::explicitEulerOnCell_FluxNCPSource_EvaluateTermsRedundantly(
+      QIn,
+      QOut,
+      {{ORDER}},                                                   
+      {{NUMBER_OF_UNKNOWNS}},
+      {{NUMBER_OF_AUXILIARY_VARIABLES}},
+      marker.x(),
+      marker.h()(0), //assume square/cubic cells
+      timeStamp,
+      timeStepSize,
+      [&](
+        const double * __restrict__                  Q,
+        const tarch::la::Vector<Dimensions,double>&  x,
+        double                                       t,
+        int                                          normal,
+        double * __restrict__                        F
+      )->void {
+        repositories::{{SOLVER_INSTANCE}}.flux(Q,x,t,normal,F);
+      },
+      nullptr, //ncp TODO
+      nullptr, //source TODO
+      repositories::{{SOLVER_INSTANCE}}.QuadraturePoints,
+      repositories::{{SOLVER_INSTANCE}}.QuadratureWeights,
+      repositories::{{SOLVER_INSTANCE}}.MassMatrix,
+      repositories::{{SOLVER_INSTANCE}}.StiffnessOperator,
+      repositories::{{SOLVER_INSTANCE}}.DerivativeOperator,
+      true,
+      false,
+      false);
+    */
+  
+  /*
     ::exahype2::dg::explicitEulerOnCell(
       QIn ,   // const double* __restrict__          cellQin,
       {{ORDER}},                                                   
@@ -81,6 +181,38 @@ class SolveVolumeIntegral(AbstractRungeKuttaDGActionSet):
       repositories::{{SOLVER_INSTANCE}}.InvertedAndLumpedMassMatrix,
       QOut
     );
+  */
+  
+  /*
+    #if Dimensions==2
+    ::exahype2::dg::projectVolumetricDataOntoFaces(
+      QOut,
+      {{ORDER}},
+      {{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}},
+      repositories::{{SOLVER_INSTANCE}}.BasisFunctionValuesLeft,
+      repositories::{{SOLVER_INSTANCE}}.BasisFunctionValuesRight,
+      fineGridFaces{{UNKNOWN_IDENTIFIER}}Estimates(0).value + {{PREDICATE_NO}}*{{NUMBER_OF_DOFS_PER_FACE_2D}},
+      fineGridFaces{{UNKNOWN_IDENTIFIER}}Estimates(1).value + {{PREDICATE_NO}}*{{NUMBER_OF_DOFS_PER_FACE_2D}},
+      fineGridFaces{{UNKNOWN_IDENTIFIER}}Estimates(2).value + {{PREDICATE_NO}}*{{NUMBER_OF_DOFS_PER_FACE_2D}},
+      fineGridFaces{{UNKNOWN_IDENTIFIER}}Estimates(3).value + {{PREDICATE_NO}}*{{NUMBER_OF_DOFS_PER_FACE_2D}}
+    );
+    #elif Dimensions==3
+    ::exahype2::dg::projectVolumetricDataOntoFaces(
+      QOut,
+      {{ORDER}},
+      {{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}},
+      repositories::{{SOLVER_INSTANCE}}.BasisFunctionValuesLeft,
+      repositories::{{SOLVER_INSTANCE}}.BasisFunctionValuesRight,
+      fineGridFaces{{UNKNOWN_IDENTIFIER}}Estimates(0).value + {{PREDICATE_NO}}*{{NUMBER_OF_DOFS_PER_FACE_2D}},
+      fineGridFaces{{UNKNOWN_IDENTIFIER}}Estimates(1).value + {{PREDICATE_NO}}*{{NUMBER_OF_DOFS_PER_FACE_2D}},
+      fineGridFaces{{UNKNOWN_IDENTIFIER}}Estimates(2).value + {{PREDICATE_NO}}*{{NUMBER_OF_DOFS_PER_FACE_2D}},
+      fineGridFaces{{UNKNOWN_IDENTIFIER}}Estimates(3).value + {{PREDICATE_NO}}*{{NUMBER_OF_DOFS_PER_FACE_2D}},
+      fineGridFaces{{UNKNOWN_IDENTIFIER}}Estimates(2).value + {{PREDICATE_NO}}*{{NUMBER_OF_DOFS_PER_FACE_2D}},
+      fineGridFaces{{UNKNOWN_IDENTIFIER}}Estimates(3).value + {{PREDICATE_NO}}*{{NUMBER_OF_DOFS_PER_FACE_2D}}
+    );
+    #endif
+  */
+  
 """
   
   
@@ -132,3 +264,9 @@ class SolveVolumeIntegral(AbstractRungeKuttaDGActionSet):
 
   def get_action_set_name(self):
     return __name__.replace(".py", "").replace(".", "_")
+
+  def get_includes(self):
+    
+    return super(SolveVolumeIntegral,self).get_includes() + """
+    #include "exahype2/dg/Euler.h"
+    """

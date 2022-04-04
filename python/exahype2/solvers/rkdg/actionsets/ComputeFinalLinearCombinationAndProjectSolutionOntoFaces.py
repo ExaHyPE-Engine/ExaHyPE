@@ -20,33 +20,32 @@ class ComputeFinalLinearCombinationAndProjectSolutionOntoFaces(AbstractRungeKutt
   
   TemplateProject = """
   if ({{PREDICATE}}) {
+
     #if Dimensions==2
     for (int dof=0; dof<{{NUMBER_OF_DOFS_PER_CELL_2D}}; dof++)
     for (int unknown=0; unknown<{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}; unknown++) {
       const int destIndex = dof*({{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}})+unknown;
-      *(fineGridCell{{UNKNOWN_IDENTIFIER}}.value + destIndex) = 0.0;
-
+      //*(fineGridCell{{UNKNOWN_IDENTIFIER}}.value + destIndex) = 0.0;
       int srcIndex = destIndex;
       {% for WEIGHT in WEIGHTS %}
-      *(fineGridCell{{UNKNOWN_IDENTIFIER}}.value + destIndex) += {{WEIGHT}} * *(fineGridCell{{UNKNOWN_IDENTIFIER}}LinearCombination.value + srcIndex);
-      srcIndex += {{NUMBER_OF_DOFS_PER_CELL_2D}};
+      *(fineGridCell{{UNKNOWN_IDENTIFIER}}.value + destIndex) += {{WEIGHT}} * *(fineGridCell{{UNKNOWN_IDENTIFIER}}Estimates.value + srcIndex);
+      srcIndex += {{NUMBER_OF_DOFS_PER_CELL_2D}}*({{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}});
       {% endfor %}
     }
     #elif Dimensions==3
     for (int dof=0; dof<{{NUMBER_OF_DOFS_PER_CELL_3D}}; dof++)
     for (int unknown=0; unknown<{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}; unknown++) {
       const int destIndex = dof*({{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}})+unknown;
-      *(fineGridCell{{UNKNOWN_IDENTIFIER}}.value + destIndex) = 0.0;
+      //*(fineGridCell{{UNKNOWN_IDENTIFIER}}.value + destIndex) = 0.0;
 
-      const int srcIndex = destIndex;
+      int srcIndex = destIndex;
       {% for WEIGHT in WEIGHTS %}
-      *(fineGridCell{{UNKNOWN_IDENTIFIER}}.value + destIndex) += {{WEIGHT}} * *(fineGridCell{{UNKNOWN_IDENTIFIER}}LinearCombination.value + srcIndex);
-      srcIndex += {{NUMBER_OF_DOFS_PER_CELL_3D}};
+      *(fineGridCell{{UNKNOWN_IDENTIFIER}}.value + destIndex) += {{WEIGHT}} * *(fineGridCell{{UNKNOWN_IDENTIFIER}}Estimates.value + srcIndex);
+      srcIndex += {{NUMBER_OF_DOFS_PER_CELL_3D}}*({{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}});
       {% endfor %}
     }
     #endif
-
-
+    
     const double timeStamp = fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStamp();
     
     // Set the variable
@@ -56,11 +55,12 @@ class ComputeFinalLinearCombinationAndProjectSolutionOntoFaces(AbstractRungeKutt
     // Set the variable
     // double newTimeStepSize
     {{COMPUTE_NEW_TIME_STEP_SIZE}}
-
+     
     fineGridCell{{SOLVER_NAME}}CellLabel.setTimeStamp(timeStamp+timeStepSize);
     fineGridCell{{SOLVER_NAME}}CellLabel.setTimeStepSize(newTimeStepSize);
     fineGridCell{{SOLVER_NAME}}CellLabel.setHasUpdated(true);
     repositories::{{SOLVER_INSTANCE}}.update(newTimeStepSize, timeStamp+timeStepSize, marker.h()(0) );
+    
   }
 """
   
