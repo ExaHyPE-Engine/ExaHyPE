@@ -49,7 +49,7 @@ parser.add_argument("-gpu", "--gpu",                   dest="gpu",              
 parser.add_argument("-t",   "--type",                  dest="type",                     choices=["global-fixed", "global-adaptive", "global-fixed-enclave", "global-adaptive-enclave", "global-fixed-enclave", "global-adaptive-enclave", "subcycling-fixed-no-interpolation", "subcycling-fixed-linear-interpolation", "subcycling-fixed-linear-interpolation-enclave", "subcycling-adaptive-linear-interpolation-enclave", "local-linear-interpolation-enclave"], default="global-fixed", help="Pick implementation variant" )
 parser.add_argument("-pdt", "--plot-dt",               dest="plot_snapshot_interval", default=0, help="Time interval in-between two snapshots (switched off by default")
 parser.add_argument("-v",   "--verbose",               dest="verbose",          action="store_true", default=False, help="Verbose")
-parser.add_argument("-ps",  "--patch-size",            dest="patch_size",       type=int, default=17, help="Dimensions" )
+parser.add_argument("-ps",  "--patch-size",            dest="patch_size",       type=int, default=4, help="Dimensions" )
 parser.add_argument("-amr", "--adaptive-levels",       dest="adaptivity_levels",        type=int, default=0, help="Number of AMR grid levels on top of hmax (0 by default)" )
 parser.add_argument("-pbc", "--periodic-boundary-conditions",  dest="periodic_boundary_conditions",   action="store_true", help="Use periodic boundary conditions" )
 parser.add_argument("--no-compile",                    dest="compile",          action="store_false", default="True", help="Compile (on by default)" )

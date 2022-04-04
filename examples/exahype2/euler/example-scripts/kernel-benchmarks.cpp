@@ -166,7 +166,7 @@ void runBenchmarks(int patches) {
   };
 
   #if !defined(__NVCOMPILER)
-  if (patches<=128) {
+  if (patches<128) {
     testFusedVariant(
       ::exahype2::fv::rusanov::timeStepWithRusanov_overlap1_patchwise_call_stack_static_calls<EulerOnGPU,exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator>,
       "no side effects, patch-wise, call stack, AoS", true
@@ -234,6 +234,21 @@ void runBenchmarks(int patches) {
       device,
       ::exahype2::fv::rusanov::omp::timeStepWithRusanov_overlap1_patchwise_heap_static_calls<EulerOnGPU,exahype2::fv::enumerator::SoALexicographicVolumeEnumerator>,
       "omp, patch-wise, SoA", true
+    );
+    testFusedVariantOnDevice(
+      device,
+      ::exahype2::fv::rusanov::omp::timeStepWithRusanov_overlap1_batched_heap_static_calls<EulerOnGPU,exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator>,
+      "omp, batched, AoS", true
+    );
+    testFusedVariantOnDevice(
+      device,
+      ::exahype2::fv::rusanov::omp::timeStepWithRusanov_overlap1_batched_heap_static_calls<EulerOnGPU,exahype2::fv::enumerator::AoSoALexicographicVolumeEnumerator>,
+      "omp, batched, AoSoA", true
+    );
+    testFusedVariantOnDevice(
+      device,
+      ::exahype2::fv::rusanov::omp::timeStepWithRusanov_overlap1_batched_heap_static_calls<EulerOnGPU,exahype2::fv::enumerator::SoALexicographicVolumeEnumerator>,
+      "omp, batched, SoA", true
     );
   }
   #endif

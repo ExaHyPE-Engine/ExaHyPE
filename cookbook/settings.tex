@@ -15,10 +15,12 @@
 % 
 \usepackage{xcolor} % Required for specifying colors by name
 \definecolor{black}{rgb}{0.1,0.1,0.1} % Define the orange color used for
-\definecolor{grey}{rgb}{0.7,0.7,0.9} % Define the orange color used for
+\definecolor{grey}{rgb}{0.7,0.7,0.7} % Define the orange color used for
+\definecolor{blue}{rgb}{0.7,0.7,0.9} % Define the orange color used for
 \definecolor{darkgrey}{rgb}{0.1,0.1,0.1} % Define the orange color used for
 \definecolor{ocre}{RGB}{243,102,25} % Define the orange color used for highlighting throughout the book
 \definecolor{green}{RGB}{25,243,102} % Define the orange color used for
+\definecolor{darkgreen}{rgb}{0.5,0.6,0.5} % Define the orange color used for
 % highlighting throughout the book \definecolor{aureolin}{rgb}{0.99, 0.93, 0.0} % Define the yellow color used for
 % 
 % \definecolor{airforceblue}{rgb}{0.36, 0.54, 0.66}% Define the blue color used for
@@ -75,27 +77,52 @@
 \usepackage{listings}
 
 
-\lstdefinelanguage{cCCode}[]{C}{
-   backgroundcolor=\color{grey},
- %  basicstyle=\tiny,
- %  basicstyle=\Small,
-   basicstyle=\footnotesize,
-   stringstyle=\color{red},
-   keywordstyle=\color{blue},
-   commentstyle=\color{darkgrey}\slshape,
-   morekeywords={linestyle,linetype,linewidth,linecolor,pointtype,nohidden3d,hidden3d,palette,lt,lw,lc,pt,ps,fd,fill,fs,ls},
-   framexleftmargin=1mm, framextopmargin=1mm, frame=shadowbox,
-   rulesepcolor=\color{darkgrey}
- }
+% \lstdefinelanguage{langCode}[]{C}{
+%    backgroundcolor=\color{grey},
+%    basicstyle=\footnotesize,
+%    stringstyle=\color{red},
+%    keywordstyle=\color{blue},
+%    commentstyle=\color{darkgrey}\slshape,
+%    morekeywords={linestyle,linetype,linewidth,linecolor,pointtype,nohidden3d,hidden3d,palette,lt,lw,lc,pt,ps,fd,fill,fs,ls},
+%    framexleftmargin=1mm, framextopmargin=1mm, frame=shadowbox,
+%    rulesepcolor=\color{darkgrey}
+%  }
 
- 
- 
-     
 \lstnewenvironment{code}[1][]{
 \lstset{
- language=cCCode,#1,
+ language=C,#1,
  upquote=true,
  columns=fullflexible,
+ basicstyle=\footnotesize,
+ backgroundcolor=\color{grey},
+ framexleftmargin=1mm, framextopmargin=1mm, 
+ frame=shadowbox, rulesepcolor=\color{darkgrey},
+ literate={*}{{\char42}}1
+          {-}{{\char45}}1
+}}{}
+
+\lstnewenvironment{bash}[1][]{
+\lstset{
+ language=bash,#1,
+ upquote=true,
+ columns=fullflexible,
+ basicstyle=\footnotesize,
+ backgroundcolor=\color{blue},
+ framexleftmargin=1mm, framextopmargin=1mm, 
+ frame=shadowbox, rulesepcolor=\color{darkgrey},
+ literate={*}{{\char42}}1
+          {-}{{\char45}}1
+}}{}
+
+\lstnewenvironment{terminalOutput}[1][]{
+\lstset{
+ language=bash,#1,
+ upquote=true,
+ columns=fullflexible,
+ basicstyle=\footnotesize,
+ backgroundcolor=\color{darkgreen},
+ framexleftmargin=1mm, framextopmargin=1mm, 
+ frame=shadowbox, rulesepcolor=\color{darkgrey},
  literate={*}{{\char42}}1
           {-}{{\char45}}1
 }}{}

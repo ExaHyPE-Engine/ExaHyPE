@@ -7,9 +7,9 @@
   \item \textbf{\texttt{import peano4} yields not found error}. You haven't set
   your \texttt{PYTHONPATH} properly. Ensure that it points to \Peano's
   \texttt{python} subdirectory. So use something similar to 
-  \begin{code}
+  \begin{bash}
 export PYTHONPATH=~/git/Peano/python
-  \end{code}
+  \end{bash}
   \item \textbf{/usr/bin/ld: cannot find -lExaHyPE2Core3d\_trace}. Your Python
   script has not been able to locate the \Peano\ libraries. You can either tweak
   your systems parameters, i.e.~set the search pathes, or you can manually add
@@ -18,7 +18,6 @@ export PYTHONPATH=~/git/Peano/python
 peano4_project.output.makefile.add_library(
   project.getLibrary(peano4.output.CompileMode.Debug), 
   "mypath/src/exahype2" 
-)
 \end{code}
 %   \item \textbf{No unit tests seem to run.} Peano4 builds a set of libraries that are linked into 
 %     the actual application. It seems that some linkers consider the unit tests to be dead code,
@@ -88,13 +87,13 @@ the directory.} includes a file such that the
   compiler requires you to add \ldots
   To add these flags, set the \texttt{LDFLAGS} before you run
   \texttt{configure}:
-  \begin{code}
+  \begin{bash}
 # GNU
 export LDFLAGS=-lgfortran
 
 # Intel
 export LDFLAGS=-lifcore
-  \end{code}
+  \end{bash}
   On the Python API side, I considered adding these flags to the template
   makefile or offering an API function to add them manually to the makefile from
   the Python script. I dropped these ideas, as these libraries are specific to
@@ -135,9 +134,9 @@ export LDFLAGS=-lifcore
       \texttt{-DPeanoDebug=4} (or 1 if you are only interested in tracing).
       \item     Ensure you link to libraries which are built with a reasonable debug level. 
     For this, run your code and search for the header
-    \begin{code}
+    \begin{terminalOutput}
 build: 2d, no mpi, C++ threading, debug level=4
-    \end{code}
+    \end{terminalOutput}
     on the terminal. Again, has to be 1 or 4 at least.
     \item Ensure you have a
     whitelist entry for the routine you are interested in. Ensure that it is the
@@ -183,14 +182,14 @@ tarch::logging::LogFilter::getInstance().printFilterListToCout();
 \section{MPI troubleshooting}
 \begin{itemize}
   \item \textbf{My compile fails with a message like the one below}:
-  \begin{code}
+  \begin{terminalOutput}
 [login1:35513] *** An error occurred in MPI_Win_create
 [login1:35513] *** reported by process [629932033,0]
 [login1:35513] *** on communicator MPI_COMM_WORLD
 [login1:35513] *** MPI_ERR_WIN: invalid window
 [login1:35513] *** MPI_ERRORS_ARE_FATAL (processes in this communicator will now abort,
 [login1:35513] ***    and potentially your MPI job)  
-  \end{code}
+  \end{terminalOutput}
   This is a know error with MPI installations that do not support one-sided MPI. 
   \Peano\ uses one-sided MPI to raise/report (non-critical) exceptions accross MPI boundaries.
   Non-critical means that the code continues to finish the current compute step,
@@ -237,10 +236,10 @@ tarch::logging::LogFilter::getInstance().printFilterListToCout();
   \item \textbf{My code hangs}. Check how many threads OpenMP tries to book. You
   find this information at the startup where you typically obtain a message
   similar to 
-  \begin{code}
+  \begin{terminalOutput}
 Peano 4 (C) www.peano-framework.org 
 build: 2d, no mpi, omp (8 threads), debug level=2
-  \end{code}
+  \end{terminalOutput}
   The number of threads should not be bigger than the physical threads and I
   strongly recommend not to count hyperthreads as real threads. If you find that
   you have to reduce the thread count (as your system by default uses SMT), pass
@@ -275,12 +274,12 @@ the legacy DaStGen support to model application-specific data.
   \item \textbf{ The PDT does not pass as the jar file is built with the wrong
   Java version}. Download the whole Peano project (from sourceforge via subversion),
   change into the directory \texttt{pdt/src}, and run
-  \begin{code}
+  \begin{bash}
   make clean
   make createParser
   make compile
   make dist
-  \end{code}
+  \end{bash}
   Use the \texttt{pdt.jar} from the \texttt{pdt} directory now. 
 \end{itemize}
 
