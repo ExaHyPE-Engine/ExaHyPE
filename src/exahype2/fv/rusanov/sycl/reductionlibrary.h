@@ -1,3 +1,5 @@
+#pragma once
+
 #include <CL/sycl.hpp>
 using namespace sycl;
 
