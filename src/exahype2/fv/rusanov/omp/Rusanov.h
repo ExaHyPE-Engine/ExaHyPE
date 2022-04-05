@@ -24,6 +24,22 @@ namespace exahype2 {
        * even though it is semantically broken as the temporary data is not acquired. However, we
        * want to run on the GPU, so we use the pragma omp enter data instruction to allocate the
        * data directly on the device.
+       *
+       * ## Patch data transfer
+       *
+       * All the data within the CellData object is trivially copyable besides the
+       * actual patch sizes and positions. Trivially copyable means that they are
+       * plain double arrays. That is, we can map them onto the device. The actual
+       * input and output data is stored as pointer to pointers. Here, we have to
+       * loop over the entries and copy each individual pointer over separatedly.
+       *
+       * The positions and sizes of the patches are in principle trivially copyable
+       * as well, as they simply host arrays of known sizes. However, it is quite
+       * cumbersome to tell OpenMP that this stuff can just be copied. It also might
+       * become annoying the compiler decided to add padding bytes. So we copy those
+       * guys manually into one large buffer of double values, and then we reconstruct
+       * the objects on the device. In this particular context, the resulting overhead
+       * is acceptable, as this meta data is not extraordinary large.
        */
       namespace omp {
         template <

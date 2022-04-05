@@ -47,12 +47,24 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanov_overlap1_patchwise_heap_sta
   #pragma omp target enter data map(alloc:tempEigenvalueY[0:eigenvalueEnumerator.size()] ) device(targetDevice)
   #pragma omp target enter data map(alloc:tempEigenvalueZ[0:eigenvalueEnumerator.size()] ) device(targetDevice)
 
+  double* serialisedPatchCentres = tarch::allocateMemory( patchData.numberOfCells*Dimensions, tarch::MemoryLocation::ManagedAcceleratorMemory );
+  double* serialisedPatchSizes   = tarch::allocateMemory( patchData.numberOfCells*Dimensions, tarch::MemoryLocation::ManagedAcceleratorMemory );
+
   for (int patchIndex=0; patchIndex<patchData.numberOfCells; patchIndex++) {
     const double* currentQIn  = patchData.QIn[patchIndex];
     double*       currentQOut = patchData.QOut[patchIndex];
+
+    for (int d=0; d<Dimensions; d++) {
+      serialisedPatchCentres[patchIndex*Dimensions+d] = patchData.patchCentre[patchIndex](d);
+      serialisedPatchSizes[patchIndex*Dimensions+d]   = patchData.patchSize[patchIndex](d);
+    }
+
     #pragma omp target enter data map(to:currentQIn[0:QInEnumerator.size()] ) device(targetDevice)
     #pragma omp target enter data map(alloc:currentQOut[0:QOutEnumerator.size()] ) device(targetDevice)
   }
+
+  #pragma omp target enter data map(to:serialisedPatchCentres[0:patchData.numberOfCells*Dimensions] ) device(targetDevice)
+  #pragma omp target enter data map(to:serialisedPatchSizes[0:patchData.numberOfCells*Dimensions] ) device(targetDevice)
   #else
   double* tempFluxX                  = evaluateFlux                     ? tarch::allocateMemory( fluxEnumerator.size(),      tarch::MemoryLocation::Heap ) : nullptr;
   double* tempFluxY                  = evaluateFlux                     ? tarch::allocateMemory( fluxEnumerator.size(),      tarch::MemoryLocation::Heap ) : nullptr;
@@ -65,18 +77,19 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanov_overlap1_patchwise_heap_sta
   double* tempEigenvalueZ            = (Dimensions==3)                  ? tarch::allocateMemory( eigenvalueEnumerator.size(),      tarch::MemoryLocation::Heap ) : nullptr;
   #endif
 
-  // @todo docu Trivially copyable
-
-/*
-  map(to:patchData.patchCentre[0:patchData.numberOfCells*Dimensions]) \
-  map(to:patchData.patchSize[0:patchData.numberOfCells*Dimensions]) \
-*/
-
   #pragma omp target teams distribute device(targetDevice) \
     map(to:patchData.t[0:patchData.numberOfCells]) \
     map(to:patchData.dt[0:patchData.numberOfCells]) \
     map(from:patchData.maxEigenvalue[0:patchData.numberOfCells])
   for (int patchIndex=0; patchIndex<patchData.numberOfCells; patchIndex++) {
+
+    #if defined(GPUOffloadingOMP)
+    for (int d=0; d<Dimensions; d++) {
+      patchData.patchCentre[patchIndex](d) = serialisedPatchCentres[patchIndex*Dimensions+d];
+      patchData.patchSize[patchIndex](d)   = serialisedPatchSizes[patchIndex*Dimensions+d];
+	}
+    #endif
+
     if (Dimensions==2 and evaluateSource) {
       #pragma omp parallel for collapse(2)
       for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
@@ -644,7 +657,6 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanov_overlap1_patchwise_heap_sta
   }
 
   #if defined(GPUOffloadingOMP)
-
   #pragma omp target exit data map(delete:tempFluxX[0:fluxEnumerator.size()] ) device(targetDevice)
   #pragma omp target exit data map(delete:tempFluxY[0:fluxEnumerator.size()] ) device(targetDevice)
   #pragma omp target exit data map(delete:tempFluxZ[0:fluxEnumerator.size()] ) device(targetDevice)
@@ -662,6 +674,11 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanov_overlap1_patchwise_heap_sta
     #pragma omp target exit data map(from:currentQOut[0:QOutEnumerator.size()] ) device(targetDevice)
   }
 
+  #pragma omp target exit data map(delete:serialisedPatchCentres[0:patchData.numberOfCells*Dimensions] ) device(targetDevice)
+  #pragma omp target exit data map(delete:serialisedPatchSizes[0:patchData.numberOfCells*Dimensions] ) device(targetDevice)
+
+  tarch::freeMemory( serialisedPatchCentres, tarch::MemoryLocation::ManagedAcceleratorMemory );
+  tarch::freeMemory( serialisedPatchSizes,   tarch::MemoryLocation::ManagedAcceleratorMemory );
   #else
   if (tempFluxX!=nullptr)               tarch::freeMemory(tempFluxX, tarch::MemoryLocation::Heap);
   if (tempFluxY!=nullptr)               tarch::freeMemory(tempFluxY, tarch::MemoryLocation::Heap);
