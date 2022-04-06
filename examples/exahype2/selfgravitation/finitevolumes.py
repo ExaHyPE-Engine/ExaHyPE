@@ -90,11 +90,12 @@ if args.type=="global-fixed":
     "Euler",
     args.patch_size,
     5, #unknowns, 
-    1, #auxiliary_variables,
+    3, #auxiliary_variables,
     min_h, max_h,
     time_step_size,
     flux = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
-    eigenvalues = exahype2.solvers.fv.PDETerms.User_Defined_Implementation
+    eigenvalues = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
+    source_term = exahype2.solvers.fv.PDETerms.User_Defined_Implementation
   )
   poisson_solver = exahype2.solvers.fv.rusanov.GlobalFixedTimeStep(
     "Poisson",

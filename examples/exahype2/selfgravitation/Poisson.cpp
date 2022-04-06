@@ -101,7 +101,7 @@ void ::examples::exahype2::selfgravitation::Poisson::flux(
 
 
 void ::examples::exahype2::selfgravitation::Poisson::sourceTerm(
-  const double * __restrict__                  Q, // Q[4+0]
+  const double * __restrict__                  Q, // Q[4+1]
   const tarch::la::Vector<Dimensions,double>&  volumeX,
   const tarch::la::Vector<Dimensions,double>&  volumeH,
   double                                       t,
@@ -112,7 +112,7 @@ void ::examples::exahype2::selfgravitation::Poisson::sourceTerm(
 
   const double T_tau = 1.0 / 4.0 / tarch::la::PI/tarch::la::PI;
   const double G     = 6.67e-11;
-  const double rho   = 0.1; // @todo coupling term. This one comes 1:1 from the other solver, whereas I need the gradient (vector) for the source term of the other solver.
+  const double rho   = Q[4]; // This is the input term
 
   S[0] = - tarch::la::PI * G / rho;
   S[1] = -Q[1]/T_tau;

@@ -413,6 +413,136 @@ Equation (\ref{equation:exahype:case-study:elliptic-hyperbolic-constraint}) will
 time stamp reached by the Euler system.
 
 
+\paragraph{Realisation with two individual solvers}
+%
+%
+%
+As we go down the route with separate solvers, we simply create two solvers over the corresponding number of unknowns, i.e.~5 for Euler
+and 4 for the Poisson operator (which we have transformed into a stationary first-order hyperbolic system). 
+In the simplest case, this looks similar to
+
+
+\begin{code}
+euler_solver = exahype2.solvers.fv.rusanov.GlobalFixedTimeStep(
+    "Euler",
+    args.patch_size,
+    5, #unknowns, 
+    3, #auxiliary_variables,
+    min_h, max_h,
+    time_step_size,
+    flux = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
+    eigenvalues = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
+    source_term = exahype2.solvers.fv.PDETerms.User_Defined_Implementation
+)
+poisson_solver = exahype2.solvers.fv.rusanov.GlobalFixedTimeStep(
+    "Poisson",
+    args.patch_size,
+    4, #unknowns, 
+    1, #auxiliary_variables,
+    min_h, max_h,
+    time_step_size / 4 / 3.1415**2,
+    flux = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
+    eigenvalues = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
+    source_term = exahype2.solvers.fv.PDETerms.User_Defined_Implementation
+)
+project.add_solver( euler_solver )
+project.add_solver( poisson_solver )
+\end{code}
+
+
+\noindent
+The interesting thing here is the auxiliary variables: 
+Our Poisson-type equations (\ref{equation:exahype:case-study:elliptic-hyperbolic-constraint}) 
+require the solution's density $\rho$ of the Euler equation 
+(\ref{equation:exahype:case-study:elliptic-hyperbolic-constraint}) as input.
+As we want to develop the two solvers completely separate, we model introduce
+a material parameter for (\ref{equation:exahype:case-study:elliptic-hyperbolic-constraint})
+which ``mirrors'' the density of the other equation.
+For the Poisson implementations, it seems as if the density indeed were some fixed
+value prescribed by the code.
+The other way round, our modified Euler terms in (\ref{equation:exahype:case-study:self-gravitation}) 
+require the gradient from (\ref{equation:exahype:case-study:elliptic-hyperbolic-constraint}).
+There are different ways to realise the coupling in this direction.
+In the present example, we go down the simplest route and explicitly store
+the gradient entries as material parameters.
+
+
+The implementation of the three PDE terms (flux, eigenvalue and source term) is 
+straightforward for both PDEs. 
+Each routine accepts a vector $Q$ which holds both the solution, i.e.~five or four 
+components respectively, and then appended to these the one or three ``material 
+parameters''.
+For the flux and the eigenvalue, we ignore these material parameters, i.e.~the code 
+looks exactly as the plain Euler equations for the first part.
+The source term however now takes the material parameter as input. 
+Here's the kernel for the Poisson-type equation:
+
+\begin{code}
+void ::examples::exahype2::selfgravitation::Poisson::sourceTerm(
+  const double * __restrict__                  Q, // Q[4+1]
+  const tarch::la::Vector<Dimensions,double>&  volumeX,
+  const tarch::la::Vector<Dimensions,double>&  volumeH,
+  double                                       t,
+  double                                       dt,
+  double * __restrict__                        S  // S[4]
+) {
+  logTraceInWith4Arguments( "sourceTerm(...)", volumeX, volumeH, t, dt );
+
+  const double T_tau = 1.0 / 4.0 / tarch::la::PI/tarch::la::PI;
+  const double G     = 6.67e-11;
+  const double rho   = Q[4]; // This is the input term from the other solver
+
+  S[0] = - tarch::la::PI * G / rho;
+  S[1] = -Q[1]/T_tau;
+  S[1] = -Q[2]/T_tau;
+  S[1] = -Q[3]/T_tau;
+
+  logTraceOut( "sourceTerm(...)" );
+}
+\end{code}
+
+
+\paragraph{Coupling the equations}
+%
+%
+%
+The actual coupling in this example is done by mapping some unknowns from one 
+equation onto material parameters in the other equations.
+As we deal with a quasi-stationary second PDE, this coupling is trivial in the 
+sense that we do not have to interpolate in time. 
+
+
+We insert the coupling as a specialised a posteriori solution update within
+the respective solver, i.e.~the data flow from the Euler to the Poisson equation
+is realised as a posteriori update of the Euler equations.
+Every time we do a time step there, we map the outcome onto a material parameter 
+of the Poisson equation.
+
+The other way round, we follow exactly the same principle.
+There is room for optimisation here, as we would only have to couple 
+@todo Nachdenken ob preprocessing schritt
+
+
+\[
+ Q[0] _{\text{Poisson}} = 
+ \phi \mapsto \left(
+  \begin{array}{c}
+\partial _x \phi \\
+\partial _y \phi \\
+\partial _z \phi 
+  \end{array} 
+ \right)
+ = \left(
+  \begin{array}{c}
+Q[5] \\
+Q[6] \\
+Q[7]
+  \end{array} 
+ \right)_{\text{Euler}}
+\]
+
+
+
 \section{Generic \ExaHyPE\ features}
 
 The following features and techniques hold for all \ExaHyPE\ applications and
