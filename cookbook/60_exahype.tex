@@ -320,6 +320,97 @@ no device found
 \end{framed}
 
 
+\section{Case study: A Finite Volumes code coupling two solvers (hyperbolic+elliptic)}
+\label{section:exahype:fv:coupling}
+
+If you want to solve systems of PDEs where some PDEs advance on different time
+scales, you have two options on the table in \ExaHyPE: 
+You can model the two solvers as one big system or you can logically code the
+two solvers as two totally separate things and couple them.
+The first approach is simple: If the two solvers feature $N_1$ and $N_2$ unknowns,
+you simply create one new solver with $N_1+N_2$ unknowns and you provide flux 
+functionsm, ncps, \ldots for all of the components.
+The big disadvantage of this approach is that all solvers have to advance in time
+at the same speed, that you might replicate code if you have already two existing
+solvers, and that you also might run a lot of unneeded calculations if only some
+PDE equations evolve actually in time.
+
+
+In this case study, we go down the second route and show how to realise a PDE 
+consisting of two systems of PDEs via two separate \ExaHyPE\ solvers.
+While this approach allows us to have a clear separation-of-solvers, the coupling
+of the two systems is not that straightforward.
+There's an additional gimnick/opportunity arising from this separated approach:
+We will eventually have one solver which advances in time with extremely small time
+steps every time the other solver does a (large) time step.
+This approach will allow us to realise a hyperbolic+elliptic system along the lines
+of Schlottke-Lakemper et al. 
+
+\paragraph{Problem formulation}
+%
+We solve the problem
+\begin{equation}
+ \partial _t Q + \nabla \cdot F(Q) = \left(
+  \begin{array}{c}
+  0 \\
+  \rho \nabla \phi \\
+  - (v, \nabla \phi) \rho
+  \end{array} 
+ \right)
+ \label{equation:exahype:case-study:self-gravitation}
+\end{equation}
+
+\noindent
+which gives the Euler equation with $Q = (E, v, \rho) \in \mathbb{R}^5$ subject to 
+a modified source term (right-hand side).
+While $F(Q)$ stems from the Euler equations in the previous example, a second PDE
+\[
+- \Delta \phi = -\pi G/\rho
+\]
+adds self-gravitation to this setup. We rephrase the latter elliptic equation into
+\begin{equation}
+ \partial _{\tau} 
+ \left(
+  \begin{array}{c}
+   \phi \\ q_1 \\ q_2 \\ q_3
+  \end{array} 
+ \right)
+ + \nabla \cdot
+ \left(
+  \begin{array}{ccc}
+   -q_1 & -q_2 & -q_3 \\
+   -\phi/T_\tau & 0 & 0 \\
+   0 & -\phi/T_\tau & 0 \\
+   0 & 0 & -\phi/T_\tau 
+  \end{array} 
+ \right)
+ = 
+  \left(
+  \begin{array}{c}
+   -\phi G/\rho \\ 
+   -q_i/T_\tau \\
+   -q_i/T_\tau \\
+   -q_i/T_\tau 
+  \end{array} 
+ \right).
+ \label{equation:exahype:case-study:elliptic-hyperbolic-constraint}
+\end{equation}
+
+\noindent
+We will model (\ref{equation:exahype:case-study:self-gravitation}) and (\ref{equation:exahype:case-study:elliptic-hyperbolic-constraint})
+as completely separate PDEs.
+Equation (\ref{equation:exahype:case-study:elliptic-hyperbolic-constraint}) advances on tiny time scales.
+Therefore, our goal is to make (\ref{equation:exahype:case-study:self-gravitation}) do a large time
+step, then we advance (\ref{equation:exahype:case-study:elliptic-hyperbolic-constraint}) in time with 
+tiny steps until it has reached a stationary solutions.
+The current $\rho $ from  (\ref{equation:exahype:case-study:self-gravitation}) feeds into these tiny time steps
+as fixed (time-independent) parameter.
+Once we have reached a stationary state, we take the arising $\phi$ and make it feed into the next time step
+of  (\ref{equation:exahype:case-study:self-gravitation}).
+Equation (\ref{equation:exahype:case-study:elliptic-hyperbolic-constraint}) therefore will be restarted at the new 
+time stamp reached by the Euler system.
+
+
 \section{Generic \ExaHyPE\ features}
 
 The following features and techniques hold for all \ExaHyPE\ applications and
@@ -1767,5 +1858,18 @@ through the Python API.
 }
   \end{verbatim}}
   If you use the software, it would be great if you could cite this one.
+  \item Every \ExaHyPE\ build yields a file \texttt{Readme...md} which contains a lot of literature that you might want to cite as well.
+  \item The hyperbolic+elliptic coupling as discussed follows
+{\tiny \begin{verbatim}
+@article{SchlottkeLakemper:2021:SelfGravitation,
+title = {A purely hyperbolic discontinuous Galerkin approach for self-gravitating gas dynamics},
+journal = {Journal of Computational Physics},
+volume = {442},
+pages = {110467},
+year = {2021},
+issn = {0021-9991},
+doi = {https://doi.org/10.1016/j.jcp.2021.110467}
+}
+\end{verbatim}}
 \end{itemize}
 
