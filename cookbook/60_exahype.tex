@@ -368,6 +368,7 @@ While $F(Q)$ stems from the Euler equations in the previous example, a second PD
 - \Delta \phi = -\pi G/\rho
 \]
 adds self-gravitation to this setup. We rephrase the latter elliptic equation into
+a hyperbolic variant with $\phi (\tau)$ and three helper functions $(q_1,q_2,q_3)(\tau)$ where
 \begin{equation}
  \partial _{\tau} 
  \left(
@@ -399,15 +400,16 @@ adds self-gravitation to this setup. We rephrase the latter elliptic equation in
 \noindent
 We will model (\ref{equation:exahype:case-study:self-gravitation}) and (\ref{equation:exahype:case-study:elliptic-hyperbolic-constraint})
 as completely separate PDEs.
-Equation (\ref{equation:exahype:case-study:elliptic-hyperbolic-constraint}) advances on tiny time scales.
-Therefore, our goal is to make (\ref{equation:exahype:case-study:self-gravitation}) do a large time
+Equation (\ref{equation:exahype:case-study:elliptic-hyperbolic-constraint}) advances on tiny time scales 
+which we indicate by switching from $Q(t)$ to a $\phi (\tau)$, i.e.~two time arguments $t$ and $\tau$.
+Our strategy is to make (\ref{equation:exahype:case-study:self-gravitation}) do a large time
 step, then we advance (\ref{equation:exahype:case-study:elliptic-hyperbolic-constraint}) in time with 
 tiny steps until it has reached a stationary solutions.
 The current $\rho $ from  (\ref{equation:exahype:case-study:self-gravitation}) feeds into these tiny time steps
 as fixed (time-independent) parameter.
 Once we have reached a stationary state, we take the arising $\phi$ and make it feed into the next time step
 of  (\ref{equation:exahype:case-study:self-gravitation}).
-Equation (\ref{equation:exahype:case-study:elliptic-hyperbolic-constraint}) therefore will be restarted at the new 
+Equation (\ref{equation:exahype:case-study:elliptic-hyperbolic-constraint}) will finally be restarted at the new 
 time stamp reached by the Euler system.
 
 
