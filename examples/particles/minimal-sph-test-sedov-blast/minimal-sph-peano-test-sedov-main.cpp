@@ -38,6 +38,7 @@
 #include "observers/RearrangeAtStart.h"
 #include "observers/ResetHasConverged.h"
 #include "observers/InitTimeStep.h"
+#include "observers/ImposeBC.h"
 #include "observers/EndTimeStep.h"
 
 tarch::logging::Log _log("::");
@@ -186,8 +187,24 @@ int main(int argc, char** argv) {
       for (int j=0; j<10; j++) { /* Numbers of time-steps between two snapshots */
         logInfo( "main()", "run timestep" )
 
-        /* "Initialize time-step" */
+        /* 
+         * Name the steps that will be used 
+         * */
+
         examples::particles::observers::InitTimeStep initTimeStep;
+        examples::particles::observers::DensityNonSym density;
+        examples::particles::observers::HydroPrepareForce prepareForce;
+        examples::particles::observers::ForceNonSym forcespart;
+        examples::particles::observers::NewtonRaphsonSmoothingLength newtonRaphson;
+        examples::particles::observers::ResetHasConverged ResetHasConvergedNR;
+        examples::particles::observers::Kick1 kick1part;
+        examples::particles::observers::Kick2 kick2part;
+        examples::particles::observers::HydroKickExtra kickExtra;
+        examples::particles::observers::Drift driftpart;
+        examples::particles::observers::ImposeBC ImposeBCpart;
+        examples::particles::observers::EndTimeStep endTimeStep;
+
+        /* "Initialize time-step" */
         peano4::parallel::SpacetreeSet::getInstance().traverse(initTimeStep);
 
 /*
@@ -198,13 +215,38 @@ int main(int argc, char** argv) {
         }
 */
 
-        /* Name of the steps that will be used */
-        examples::particles::observers::DensityNonSym density;
-        examples::particles::observers::HydroPrepareForce prepareForce;
-        examples::particles::observers::ForceNonSym forcespart;
-        examples::particles::observers::NewtonRaphsonSmoothingLength newtonRaphson;
+//        if(i==0){ /* For first time-step, we need to compute dotted-quantities here */
+//          for (int iter=0; iter<10; iter++){
+//            /* Density loop */
+//            peano4::parallel::SpacetreeSet::getInstance().traverse(density);
+//
+//            /* Prepare force */
+//            peano4::parallel::SpacetreeSet::getInstance().traverse(prepareForce);
+//
+//            /* Newton Raphson iteration */
+//            peano4::parallel::SpacetreeSet::getInstance().traverse(newtonRaphson);
+//
+//          }
+//          /* Density loop */
+//          peano4::parallel::SpacetreeSet::getInstance().traverse(density);
+//
+//          /* Prepare force */
+//          peano4::parallel::SpacetreeSet::getInstance().traverse(prepareForce);
+//
+//          /* Udot */
+//          peano4::parallel::SpacetreeSet::getInstance().traverse(forcespart);
+//        }
+//
+//        /* First Kick from current time-step*/
+//        peano4::parallel::SpacetreeSet::getInstance().traverse(kick1part);
+//
+//        /* Also Kick other properties, e.g., internal energy */
+//        peano4::parallel::SpacetreeSet::getInstance().traverse(kickExtra);
+//
+//        /* Drift the particles. Also predict v,u,h,rho */
+//        peano4::parallel::SpacetreeSet::getInstance().traverse(driftpart);
 
-        for (int iter=0; iter<1; iter++){
+        for (int iter=0; iter<2; iter++){
           /* Density loop */
           peano4::parallel::SpacetreeSet::getInstance().traverse(density);
 
@@ -216,6 +258,11 @@ int main(int argc, char** argv) {
           peano4::parallel::SpacetreeSet::getInstance().traverse(newtonRaphson);
 
         }
+        /* Density loop */
+        peano4::parallel::SpacetreeSet::getInstance().traverse(density);
+
+        /* Prepare force */
+        peano4::parallel::SpacetreeSet::getInstance().traverse(prepareForce);
 
         /* Force loop */
         peano4::parallel::SpacetreeSet::getInstance().traverse(forcespart);
@@ -226,19 +273,15 @@ int main(int argc, char** argv) {
          * */
 
         /* First Kick from current time-step*/
-        examples::particles::observers::Kick1 kick1part;
         peano4::parallel::SpacetreeSet::getInstance().traverse(kick1part);
 
         /* Also Kick other properties, e.g., internal energy */
-        examples::particles::observers::HydroKickExtra kickExtra;
         peano4::parallel::SpacetreeSet::getInstance().traverse(kickExtra);
 
         /* Drift the particles */
-        examples::particles::observers::Drift driftpart;
         peano4::parallel::SpacetreeSet::getInstance().traverse(driftpart);
 
         /* Reset NR convergence so we can update again */
-        examples::particles::observers::ResetHasConverged ResetHasConvergedNR;
         peano4::parallel::SpacetreeSet::getInstance().traverse(ResetHasConvergedNR);
 
 //        /*********************************************/
@@ -258,14 +301,13 @@ int main(int argc, char** argv) {
 //
 //        }
 //
-        /* Force loop */
-        peano4::parallel::SpacetreeSet::getInstance().traverse(prepareForce);
-        peano4::parallel::SpacetreeSet::getInstance().traverse(forcespart);
+//        /* Force loop */
+//        peano4::parallel::SpacetreeSet::getInstance().traverse(prepareForce);
+//        peano4::parallel::SpacetreeSet::getInstance().traverse(forcespart);
 
-        /* Second Kick from current time-step */
-        examples::particles::observers::Kick2 kick2part;
-        peano4::parallel::SpacetreeSet::getInstance().traverse(kick2part);
+        /* Second Kick from current time-step. kick2part also reset predictions */
         peano4::parallel::SpacetreeSet::getInstance().traverse(kickExtra);
+        peano4::parallel::SpacetreeSet::getInstance().traverse(kick2part);
         /*********************************************/
 
 //        /****************************************/
@@ -293,11 +335,15 @@ int main(int argc, char** argv) {
 //        }
 //        /****************************************/
 
+        /* "Impose BC" */
+        peano4::parallel::SpacetreeSet::getInstance().traverse(ImposeBCpart);
+
         /* "End time-step" */
-        examples::particles::observers::EndTimeStep endTimeStep;
         peano4::parallel::SpacetreeSet::getInstance().traverse(endTimeStep);
 
       }
+
+      /* Dump a snapshot after the number of time-steps done above */
       logInfo( "main()", "plot" )
       examples::particles::observers::Plot plotTimeStepObserver;
       peano4::parallel::SpacetreeSet::getInstance().traverse(plotTimeStepObserver);
