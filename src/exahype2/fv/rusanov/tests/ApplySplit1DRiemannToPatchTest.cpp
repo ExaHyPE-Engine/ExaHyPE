@@ -1,26 +1,26 @@
+#include "ApplySplit1DRiemannToPatchTest.h"
+
 #include "tarch/multicore/multicore.h"
 #include "tarch/la/Vector.h"
-#include "applySplit1DRiemannToPatch_Overlap1AoSTest.h"
-#include "exahype2/fv/Rusanov.h"
 
 
-exahype2::fv::tests::applySplit1DRiemannToPatch_Overlap1AoSTest::applySplit1DRiemannToPatch_Overlap1AoSTest():
-  TestCase ("exahype2::fv::tests::applySplit1DRiemannToPatch_Overlap1AoSTest") {
+exahype2::fv::rusanov::tests::ApplySplit1DRiemannToPatchTest::ApplySplit1DRiemannToPatchTest():
+  TestCase ("exahype2::fv::rusanov::tests::ApplySplit1DRiemannToPatchTest") {
 }
 
 
-void exahype2::fv::tests::applySplit1DRiemannToPatch_Overlap1AoSTest::run() {
+void exahype2::fv::rusanov::tests::ApplySplit1DRiemannToPatchTest::run() {
   testMethod(testMe);
   testMethod(testBreakingDam);
 }
 
 
-void exahype2::fv::tests::applySplit1DRiemannToPatch_Overlap1AoSTest::testBreakingDam() {
+void exahype2::fv::rusanov::tests::ApplySplit1DRiemannToPatchTest::testBreakingDam() {
 
 }
 
 
-void exahype2::fv::tests::applySplit1DRiemannToPatch_Overlap1AoSTest::testMe() {
+void exahype2::fv::rusanov::tests::ApplySplit1DRiemannToPatchTest::testMe() {
 
    // This is really just testing the different ways to iterate throught he x,y grid
    // The input values are ad-hoc

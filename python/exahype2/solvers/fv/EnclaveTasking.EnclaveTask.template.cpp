@@ -10,7 +10,7 @@
 #include "tarch/multicore/sycl/Core.h"
 #endif
 
-#include "exahype2/fv/Rusanov.h"
+#include "exahype2/fv/rusanov/Rusanov.h"
 #include "exahype2/CellData.h"
 #include "exahype2/EnclaveBookkeeping.h"
 #include "exahype2/EnclaveTask.h"

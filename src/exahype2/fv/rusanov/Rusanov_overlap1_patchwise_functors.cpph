@@ -3,7 +3,7 @@
 
 
 void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_patchwise_heap_functors(
-  ::exahype2::CellData&              patchData,
+  ::exahype2::CellData&   patchData,
   int                     numberOfVolumesPerAxisInPatch,
   int                     unknowns,
   int                     auxiliaryVariables,

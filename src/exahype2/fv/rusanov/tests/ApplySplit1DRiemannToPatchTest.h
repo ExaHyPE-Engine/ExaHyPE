@@ -6,22 +6,24 @@
 
 namespace exahype2 {
   namespace fv {
-    namespace tests {
-      class applySplit1DRiemannToPatch_Overlap1AoSTest;
+    namespace rusanov {
+      namespace tests {
+        class ApplySplit1DRiemannToPatchTest;
+      }
     }
   }
 }
 
 
-class exahype2::fv::tests::applySplit1DRiemannToPatch_Overlap1AoSTest : public tarch::tests::TestCase {
+class exahype2::fv::rusanov::tests::ApplySplit1DRiemannToPatchTest : public tarch::tests::TestCase {
   private:
     void testMe();
     void testBreakingDam();
 
   public:
-    applySplit1DRiemannToPatch_Overlap1AoSTest();
+    ApplySplit1DRiemannToPatchTest();
 
-    virtual ~applySplit1DRiemannToPatch_Overlap1AoSTest() = default;
+    virtual ~ApplySplit1DRiemannToPatchTest() = default;
 
     void run() override;
 };

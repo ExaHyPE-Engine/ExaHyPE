@@ -4,13 +4,13 @@
 
 
 template <
-  typename Solver
+  typename Solver,
+  int      numberOfVolumesPerAxisInPatch,
+  int      unknowns,
+  int      auxiliaryVariables
 >
 void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_batched_in_situ_static_calls(
   ::exahype2::CellData&   patchData,
-  int                     numberOfVolumesPerAxisInPatch,
-  int                     unknowns,
-  int                     auxiliaryVariables,
   bool                    evaluateFlux,
   bool                    evaluateNonconservativeProduct,
   bool                    evaluateSource,

@@ -5,13 +5,13 @@
 
 template <
   typename Solver,
-  typename TempDataEnumerator
->
-void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_patchwise_split_terms_call_stack_static_calls(
-  ::exahype2::CellData&              patchData,
   int      numberOfVolumesPerAxisInPatch,
   int      unknowns,
   int      auxiliaryVariables,
+  typename TempDataEnumerator
+>
+void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_patchwise_split_terms_call_stack_static_calls(
+  ::exahype2::CellData&   patchData,
   bool                    evaluateFlux,
   bool                    evaluateNonconservativeProduct,
   bool                    evaluateSource,

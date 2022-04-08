@@ -6,14 +6,16 @@
 
 namespace exahype2 {
   namespace fv {
-    namespace tests {
-      class CopyPatchTest;
+    namespace rusanov {
+      namespace tests {
+        class CopyPatchTest;
+      }
     }
   }
 }
 
 
-class exahype2::fv::tests::CopyPatchTest : public tarch::tests::TestCase
+class exahype2::fv::rusanov::tests::CopyPatchTest : public tarch::tests::TestCase
 {
 private:
 

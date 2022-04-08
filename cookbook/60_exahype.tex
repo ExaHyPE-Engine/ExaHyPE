@@ -320,6 +320,229 @@ no device found
 \end{framed}
 
 
+\section{Case study: A Finite Volumes code coupling two solvers (hyperbolic+elliptic)}
+\label{section:exahype:fv:coupling}
+
+If you want to solve systems of PDEs where some PDEs advance on different time
+scales, you have two options on the table in \ExaHyPE: 
+You can model the two solvers as one big system or you can logically code the
+two solvers as two totally separate things and couple them.
+The first approach is simple: If the two solvers feature $N_1$ and $N_2$ unknowns,
+you simply create one new solver with $N_1+N_2$ unknowns and you provide flux 
+functionsm, ncps, \ldots for all of the components.
+The big disadvantage of this approach is that all solvers have to advance in time
+at the same speed, that you might replicate code if you have already two existing
+solvers, and that you also might run a lot of unneeded calculations if only some
+PDE equations evolve actually in time.
+
+
+In this case study, we go down the second route and show how to realise a PDE 
+consisting of two systems of PDEs via two separate \ExaHyPE\ solvers.
+While this approach allows us to have a clear separation-of-solvers, the coupling
+of the two systems is not that straightforward.
+There's an additional gimnick/opportunity arising from this separated approach:
+We will eventually have one solver which advances in time with extremely small time
+steps every time the other solver does a (large) time step.
+This approach will allow us to realise a hyperbolic+elliptic system along the lines
+of Schlottke-Lakemper et al. 
+
+\paragraph{Problem formulation}
+%
+We solve the problem
+\begin{equation}
+ \partial _t Q + \nabla \cdot F(Q) = \left(
+  \begin{array}{c}
+  0 \\
+  \rho \nabla \phi \\
+  - (v, \nabla \phi) \rho
+  \end{array} 
+ \right)
+ \label{equation:exahype:case-study:self-gravitation}
+\end{equation}
+
+\noindent
+which gives the Euler equation with $Q = (E, v, \rho) \in \mathbb{R}^5$ subject to 
+a modified source term (right-hand side).
+While $F(Q)$ stems from the Euler equations in the previous example, a second PDE
+\[
+- \Delta \phi = -\pi G/\rho
+\]
+adds self-gravitation to this setup. We rephrase the latter elliptic equation into
+a hyperbolic variant with $\phi (\tau)$ and three helper functions $(q_1,q_2,q_3)(\tau)$ where
+\begin{equation}
+ \partial _{\tau} 
+ \left(
+  \begin{array}{c}
+   \phi \\ q_1 \\ q_2 \\ q_3
+  \end{array} 
+ \right)
+ + \nabla \cdot
+ \left(
+  \begin{array}{ccc}
+   -q_1 & -q_2 & -q_3 \\
+   -\phi/T_\tau & 0 & 0 \\
+   0 & -\phi/T_\tau & 0 \\
+   0 & 0 & -\phi/T_\tau 
+  \end{array} 
+ \right)
+ = 
+  \left(
+  \begin{array}{c}
+   -\phi G/\rho \\ 
+   -q_i/T_\tau \\
+   -q_i/T_\tau \\
+   -q_i/T_\tau 
+  \end{array} 
+ \right).
+ \label{equation:exahype:case-study:elliptic-hyperbolic-constraint}
+\end{equation}
+
+\noindent
+We will model (\ref{equation:exahype:case-study:self-gravitation}) and (\ref{equation:exahype:case-study:elliptic-hyperbolic-constraint})
+as completely separate PDEs.
+Equation (\ref{equation:exahype:case-study:elliptic-hyperbolic-constraint}) advances on tiny time scales 
+which we indicate by switching from $Q(t)$ to a $\phi (\tau)$, i.e.~two time arguments $t$ and $\tau$.
+Our strategy is to make (\ref{equation:exahype:case-study:self-gravitation}) do a large time
+step, then we advance (\ref{equation:exahype:case-study:elliptic-hyperbolic-constraint}) in time with 
+tiny steps until it has reached a stationary solutions.
+The current $\rho $ from  (\ref{equation:exahype:case-study:self-gravitation}) feeds into these tiny time steps
+as fixed (time-independent) parameter.
+Once we have reached a stationary state, we take the arising $\phi$ and make it feed into the next time step
+of  (\ref{equation:exahype:case-study:self-gravitation}).
+Equation (\ref{equation:exahype:case-study:elliptic-hyperbolic-constraint}) will finally be restarted at the new 
+time stamp reached by the Euler system.
+
+
+\paragraph{Realisation with two individual solvers}
+%
+%
+%
+As we go down the route with separate solvers, we simply create two solvers over the corresponding number of unknowns, i.e.~5 for Euler
+and 4 for the Poisson operator (which we have transformed into a stationary first-order hyperbolic system). 
+In the simplest case, this looks similar to
+
+
+\begin{code}
+euler_solver = exahype2.solvers.fv.rusanov.GlobalFixedTimeStep(
+    "Euler",
+    args.patch_size,
+    5, #unknowns, 
+    3, #auxiliary_variables,
+    min_h, max_h,
+    time_step_size,
+    flux = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
+    eigenvalues = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
+    source_term = exahype2.solvers.fv.PDETerms.User_Defined_Implementation
+)
+poisson_solver = exahype2.solvers.fv.rusanov.GlobalFixedTimeStep(
+    "Poisson",
+    args.patch_size,
+    4, #unknowns, 
+    1, #auxiliary_variables,
+    min_h, max_h,
+    time_step_size / 4 / 3.1415**2,
+    flux = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
+    eigenvalues = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
+    source_term = exahype2.solvers.fv.PDETerms.User_Defined_Implementation
+)
+project.add_solver( euler_solver )
+project.add_solver( poisson_solver )
+\end{code}
+
+
+\noindent
+The interesting thing here is the auxiliary variables: 
+Our Poisson-type equations (\ref{equation:exahype:case-study:elliptic-hyperbolic-constraint}) 
+require the solution's density $\rho$ of the Euler equation 
+(\ref{equation:exahype:case-study:elliptic-hyperbolic-constraint}) as input.
+As we want to develop the two solvers completely separate, we model introduce
+a material parameter for (\ref{equation:exahype:case-study:elliptic-hyperbolic-constraint})
+which ``mirrors'' the density of the other equation.
+For the Poisson implementations, it seems as if the density indeed were some fixed
+value prescribed by the code.
+The other way round, our modified Euler terms in (\ref{equation:exahype:case-study:self-gravitation}) 
+require the gradient from (\ref{equation:exahype:case-study:elliptic-hyperbolic-constraint}).
+There are different ways to realise the coupling in this direction.
+In the present example, we go down the simplest route and explicitly store
+the gradient entries as material parameters.
+
+
+The implementation of the three PDE terms (flux, eigenvalue and source term) is 
+straightforward for both PDEs. 
+Each routine accepts a vector $Q$ which holds both the solution, i.e.~five or four 
+components respectively, and then appended to these the one or three ``material 
+parameters''.
+For the flux and the eigenvalue, we ignore these material parameters, i.e.~the code 
+looks exactly as the plain Euler equations for the first part.
+The source term however now takes the material parameter as input. 
+Here's the kernel for the Poisson-type equation:
+
+\begin{code}
+void ::examples::exahype2::selfgravitation::Poisson::sourceTerm(
+  const double * __restrict__                  Q, // Q[4+1]
+  const tarch::la::Vector<Dimensions,double>&  volumeX,
+  const tarch::la::Vector<Dimensions,double>&  volumeH,
+  double                                       t,
+  double                                       dt,
+  double * __restrict__                        S  // S[4]
+) {
+  logTraceInWith4Arguments( "sourceTerm(...)", volumeX, volumeH, t, dt );
+
+  const double T_tau = 1.0 / 4.0 / tarch::la::PI/tarch::la::PI;
+  const double G     = 6.67e-11;
+  const double rho   = Q[4]; // This is the input term from the other solver
+
+  S[0] = - tarch::la::PI * G / rho;
+  S[1] = -Q[1]/T_tau;
+  S[1] = -Q[2]/T_tau;
+  S[1] = -Q[3]/T_tau;
+
+  logTraceOut( "sourceTerm(...)" );
+}
+\end{code}
+
+
+\paragraph{Coupling the equations}
+%
+%
+%
+The actual coupling in this example is done by mapping some unknowns from one 
+equation onto material parameters in the other equations.
+As we deal with a quasi-stationary second PDE, this coupling is trivial in the 
+sense that we do not have to interpolate in time. 
+
+
+We insert the coupling as a specialised a posteriori solution update within
+the respective solver, i.e.~the data flow from the Euler to the Poisson equation
+is realised as a posteriori update of the Euler equations.
+Every time we do a time step there, we map the outcome onto a material parameter 
+of the Poisson equation.
+
+The other way round, we follow exactly the same principle.
+There is room for optimisation here, as we would only have to couple 
+@todo Nachdenken ob preprocessing schritt
+
+
+\[
+ Q[0] _{\text{Poisson}} = 
+ \phi \mapsto \left(
+  \begin{array}{c}
+\partial _x \phi \\
+\partial _y \phi \\
+\partial _z \phi 
+  \end{array} 
+ \right)
+ = \left(
+  \begin{array}{c}
+Q[5] \\
+Q[6] \\
+Q[7]
+  \end{array} 
+ \right)_{\text{Euler}}
+\]
+
+
+
 \section{Generic \ExaHyPE\ features}
 
 The following features and techniques hold for all \ExaHyPE\ applications and
@@ -1767,5 +1990,18 @@ through the Python API.
 }
   \end{verbatim}}
   If you use the software, it would be great if you could cite this one.
+  \item Every \ExaHyPE\ build yields a file \texttt{Readme...md} which contains a lot of literature that you might want to cite as well.
+  \item The hyperbolic+elliptic coupling as discussed follows
+{\tiny \begin{verbatim}
+@article{SchlottkeLakemper:2021:SelfGravitation,
+title = {A purely hyperbolic discontinuous Galerkin approach for self-gravitating gas dynamics},
+journal = {Journal of Computational Physics},
+volume = {442},
+pages = {110467},
+year = {2021},
+issn = {0021-9991},
+doi = {https://doi.org/10.1016/j.jcp.2021.110467}
+}
+\end{verbatim}}
 \end{itemize}
 

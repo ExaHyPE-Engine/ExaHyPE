@@ -121,13 +121,13 @@ namespace exahype2 {
 
       template <
         typename Solver,
-        typename TempDataEnumerator = exahype2::fv::enumerator::AoSoALexicographicVolumeEnumerator
-      >
-      static void timeStepWithRusanov_overlap1_patchwise_call_stack_static_calls(
-        ::exahype2::CellData&              patchData,
         int                     numberOfVolumesPerAxisInPatch,
         int                     unknowns,
         int                     auxiliaryVariables,
+        typename TempDataEnumerator
+      >
+      static void timeStepWithRusanov_overlap1_patchwise_call_stack_static_calls(
+        ::exahype2::CellData&              patchData,
         bool                    evaluateFlux,
         bool                    evaluateNonconservativeProduct,
         bool                    evaluateSource,
@@ -141,13 +141,13 @@ namespace exahype2 {
 
       template <
         typename Solver,
-        typename TempDataEnumerator = exahype2::fv::enumerator::AoSoALexicographicVolumeEnumerator
-      >
-      static void timeStepWithRusanov_overlap1_patchwise_heap_static_calls(
-        ::exahype2::CellData&   patchData,
         int                     numberOfVolumesPerAxisInPatch,
         int                     unknowns,
         int                     auxiliaryVariables,
+        typename TempDataEnumerator
+      >
+      static void timeStepWithRusanov_overlap1_patchwise_heap_static_calls(
+        ::exahype2::CellData&   patchData,
         bool                    evaluateFlux,
         bool                    evaluateNonconservativeProduct,
         bool                    evaluateSource,
@@ -161,6 +161,12 @@ namespace exahype2 {
 
       /**
        *
+       * ## Implementation
+       *
+       * @todo Write some descriptions around illustration below
+       *
+       * @image html applyRiemannToPatch.png
+       * @image html applyRiemannToPatch_in_situ.png
        *
        * ## Loop collapsing
        *
@@ -168,32 +174,13 @@ namespace exahype2 {
        * are no race conditions, but this seems not to work. I have no clue why.
        */
       template <
-        typename Solver
+        typename Solver,
+        int                     numberOfVolumesPerAxisInPatch,
+        int                     unknowns,
+        int                     auxiliaryVariables
       >
       static void timeStepWithRusanov_overlap1_patchwise_in_situ_static_calls(
         ::exahype2::CellData&              patchData,
-        int                     numberOfVolumesPerAxisInPatch,
-        int                     unknowns,
-        int                     auxiliaryVariables,
-        bool                    evaluateFlux,
-        bool                    evaluateNonconservativeProduct,
-        bool                    evaluateSource,
-        bool                    evaluateMaximumEigenvalueAfterTimeStep
-      )
-      #if defined(UseManualInlining)
-      __attribute__((always_inline))
-      #endif
-      ;
-
-
-      template <
-        typename Solver
-      >
-      static void timeStepWithRusanov_overlap1_batched_in_situ_static_calls(
-        ::exahype2::CellData&              patchData,
-        int                     numberOfVolumesPerAxisInPatch,
-        int                     unknowns,
-        int                     auxiliaryVariables,
         bool                    evaluateFlux,
         bool                    evaluateNonconservativeProduct,
         bool                    evaluateSource,
@@ -207,13 +194,32 @@ namespace exahype2 {
 
       template <
         typename Solver,
-        typename TempDataEnumerator = exahype2::fv::enumerator::AoSoALexicographicVolumeEnumerator
+        int                     numberOfVolumesPerAxisInPatch,
+        int                     unknowns,
+        int                     auxiliaryVariables
       >
-      static void timeStepWithRusanov_overlap1_patchwise_split_terms_call_stack_static_calls(
+      static void timeStepWithRusanov_overlap1_batched_in_situ_static_calls(
         ::exahype2::CellData&              patchData,
+        bool                    evaluateFlux,
+        bool                    evaluateNonconservativeProduct,
+        bool                    evaluateSource,
+        bool                    evaluateMaximumEigenvalueAfterTimeStep
+      )
+      #if defined(UseManualInlining)
+      __attribute__((always_inline))
+      #endif
+      ;
+
+
+      template <
+        typename Solver,
         int                     numberOfVolumesPerAxisInPatch,
         int                     unknowns,
         int                     auxiliaryVariables,
+        typename TempDataEnumerator
+      >
+      static void timeStepWithRusanov_overlap1_patchwise_split_terms_call_stack_static_calls(
+        ::exahype2::CellData&              patchData,
         bool                    evaluateFlux,
         bool                    evaluateNonconservativeProduct,
         bool                    evaluateSource,
@@ -233,13 +239,13 @@ namespace exahype2 {
        */
       template <
         typename Solver,
-        typename TempDataEnumerator = exahype2::fv::enumerator::AoSoALexicographicVolumeEnumerator
-      >
-      static void timeStepWithRusanov_overlap1_batched_call_stack_static_calls(
-        ::exahype2::CellData&              patchData,
         int                     numberOfVolumesPerAxisInPatch,
         int                     unknowns,
         int                     auxiliaryVariables,
+        typename TempDataEnumerator
+      >
+      static void timeStepWithRusanov_overlap1_batched_call_stack_static_calls(
+        ::exahype2::CellData&              patchData,
         bool                    evaluateFlux,
         bool                    evaluateNonconservativeProduct,
         bool                    evaluateSource,
@@ -253,13 +259,13 @@ namespace exahype2 {
 
       template <
         typename Solver,
+        int                     numberOfVolumesPerAxisInPatch,
+        int                     unknowns,
+        int                     auxiliaryVariables,
         typename TempDataEnumerator = exahype2::fv::enumerator::AoSoALexicographicVolumeEnumerator
       >
       static void timeStepWithRusanov_overlap1_batched_heap_static_calls(
         ::exahype2::CellData&              patchData,
-        int                     numberOfVolumesPerAxisInPatch,
-        int                     unknowns,
-        int                     auxiliaryVariables,
         bool                    evaluateFlux,
         bool                    evaluateNonconservativeProduct,
         bool                    evaluateSource,

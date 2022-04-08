@@ -1,18 +1,19 @@
+#include "CopyPatchTest.h"
+
 #include "peano4/utils/Loop.h"
 #include <vector>
 // This file is part of the Peano project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
-#include "CopyPatchTest.h"
 
-exahype2::fv::tests::CopyPatchTest::CopyPatchTest():
-  TestCase ("exahype2::fv::tests::CopyPatchTest") {
+exahype2::fv::rusanov::tests::CopyPatchTest::CopyPatchTest():
+  TestCase ("exahype2::fv::rusanov::tests::CopyPatchTest") {
 }
 
-void exahype2::fv::tests::CopyPatchTest::run() {
+void exahype2::fv::rusanov::tests::CopyPatchTest::run() {
   testMethod (testMe);
 }
 
-void exahype2::fv::tests::CopyPatchTest::testMe() {
+void exahype2::fv::rusanov::tests::CopyPatchTest::testMe() {
   int    unknowns(5);
   int    auxiliaryVariables(2);
   int    numberOfVolumesPerAxisInPatch(17);
