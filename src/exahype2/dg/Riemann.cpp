@@ -153,6 +153,7 @@ void exahype2::dg::computeRusanovOnHull(
   }
 
   for(int dim=0; dim<Dimensions; dim++){
+
     for(int lr=0; lr<2; lr++){
 
       const double coeff = 0.5*maxEigenvalueAlongFace[2*dim+lr];
@@ -168,6 +169,7 @@ void exahype2::dg::computeRusanovOnHull(
         **Then when looking at node n you still need to skip all elements before it, so
         **a total of 2*n elements by the same logic
         */
+
         if(atBoundary[2*dim+lr]&&lr==0){ //on left boundary
           //qr = &QHullIn[(2*((2*Dimensions+lr)*nodesPerFace+node)+1)*strideQ];
           qr = &QHullIn[2*dim+lr][(2*node+1)*strideQ];
@@ -283,12 +285,13 @@ void exahype2::dg::applyRiemannToPatch(
 
   for(int node=0; node<nodesPerCell; node++){
 
+//    std::cout << "On node " << node << std::endl;
+
     tarch::la::Vector<Dimensions,int> index = getIndex(node, strides);
 
     // direction in which riemann contributions are being computed
     for(int dim=0; dim<Dimensions; dim++){
 
-//      const double coeff1 = coeff0;
       const double coeff1 = coeff0/quadratureWeights[index[dim]];
       /*
       for(int dim2=0; dim2<Dimensions; dim2++){
@@ -302,12 +305,25 @@ void exahype2::dg::applyRiemannToPatch(
       const double coeffRight = coeff1*BasisFunctionValuesRight[index[dim]];
       const int leftFaceNode  = cellIndexToHullIndex(index, dim, 0, nodesPerAxis);
       const int rightFaceNode = cellIndexToHullIndex(index, dim, 1, nodesPerAxis);
-
+      /*
+      std::cout << "For dimension " << dim << ", contributions from nodes (left, right): ["
+          << leftFaceNode << ", " << rightFaceNode << "] with coefficients: "
+          << coeffLeft << ", " << -coeffRight << "]" << std::endl;
+      */
       for(int var=0; var<unknowns; var++){
-        Q[node*strideQ+var] += -coeffLeft * QHullIn[leftFaceNode*strideQ+var] + coeffRight * QHullIn[rightFaceNode*strideQ+var];
+        /*
+        std::cout << "For variable: " << var << " values are: " << QHullIn[leftFaceNode*strideQ+var]
+          << ", " << QHullIn[rightFaceNode*strideQ+var] << "]" << std::endl
+          << "values:[" << coeffLeft * QHullIn[leftFaceNode*strideQ+var] << ", "
+          << - coeffRight * QHullIn[rightFaceNode*strideQ+var]
+          << "]" << std::endl;
+        */
+        Q[node*strideQ+var] += coeffLeft * QHullIn[leftFaceNode*strideQ+var] - coeffRight * QHullIn[rightFaceNode*strideQ+var];
       }
 
     } //dim
+
+    std::cout << std::endl;
 
   } //node
 

@@ -73,16 +73,8 @@ void exahype2::dg::explicitEulerOnCell_FluxNCPSource_EvaluateTermsRedundantly(
     for(int var=0; var<strideQ; var++){
       cellQout[node*strideQ+var] = 0.0;
     }
-    for(int var=0; var<auxiliaryVariables; var++){
-      cellQout[node*strideQ+unknowns+var] = cellQin[node*strideQ+unknowns+var];
-    }
 
     /*
-    //initialize to zero
-    for(int var=0; var<unknowns; var++){
-//        cellQout[node*strideQ+var] = cellQin[node*strideQ+var];
-      cellQout[node*strideQ+var] = 0.0;
-    }
     for(int var=0; var<auxiliaryVariables; var++){
       cellQout[node*strideQ+unknowns+var] = cellQin[node*strideQ+unknowns+var];
     }
@@ -117,7 +109,7 @@ void exahype2::dg::explicitEulerOnCell_FluxNCPSource_EvaluateTermsRedundantly(
 
           double coeff = coeff1 * StiffnessMatrix[i+index[dim]*nodesPerAxis];
           for(int var=0; var<unknowns; var++){
-              cellQout[node*strideQ+var] -= coeff * fluxValues[var];
+              cellQout[node*strideQ+var] += coeff * fluxValues[var];
           } //var
 
         } //i

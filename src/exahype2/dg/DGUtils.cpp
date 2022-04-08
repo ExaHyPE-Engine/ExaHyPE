@@ -52,27 +52,30 @@ void exahype2::dg::projectVolumetricDataOntoFaces(
 
   for(int row=0; row<nodesPerAxis; row++){
     //unrolled from rest of loop to initialize elements of faces
+
     for(int var=0; var<unknowns; var++){
+
       faceQLeft[(2*row+1)*unknowns+var]   = BasisFunctionValuesLeft[0] * cellQ[(row*nodesPerAxis+0)*unknowns + var];
       faceQRight[2*row*unknowns+var]      = BasisFunctionValuesRight[0] * cellQ[(row*nodesPerAxis+0)*unknowns + var];
 
       faceQBottom[(2*row+1)*unknowns+var] = BasisFunctionValuesLeft[0] * cellQ[(0*nodesPerAxis+row)*unknowns + var];
-      faceQUp[2*row*unknowns+var]         = BasisFunctionValuesLeft[0] * cellQ[(0*nodesPerAxis+row)*unknowns + var];
+      faceQUp[2*row*unknowns+var]         = BasisFunctionValuesRight[0] * cellQ[(0*nodesPerAxis+row)*unknowns + var];
       } // var
 
-      for(int node=1; node<nodesPerAxis; node++){
-        for(int var=0; var<unknowns; var++){
-          /*iterate over nodes from left to right; remember that in face elements are in order left1, then right1,
-          then left 2, then right 2 etc, and left face here is the face this cell is to the right of*/
-          faceQLeft[(2*row+1)*unknowns+var]   += BasisFunctionValuesLeft[node] * cellQ[(row*nodesPerAxis+node)*unknowns + var];
-          faceQRight[2*row*unknowns+var]      += BasisFunctionValuesRight[node] * cellQ[(row*nodesPerAxis+node)*unknowns + var];
+    for(int node=1; node<nodesPerAxis; node++){
+      for(int var=0; var<unknowns; var++){
+        /*iterate over nodes from left to right; remember that in face elements are in order left1, then right1,
+        then left 2, then right 2 etc, and left face here is the face this cell is to the right of*/
+        faceQLeft[(2*row+1)*unknowns+var]   += BasisFunctionValuesLeft[node] * cellQ[(row*nodesPerAxis+node)*unknowns + var];
+        faceQRight[2*row*unknowns+var]      += BasisFunctionValuesRight[node] * cellQ[(row*nodesPerAxis+node)*unknowns + var];
 
-          //iterate over nodes from lowest to highest
-          faceQBottom[(2*row+1)*unknowns+var] += BasisFunctionValuesLeft[node] * cellQ[(node*nodesPerAxis+row)*unknowns + var];
-          faceQUp[2*row*unknowns+var]         += BasisFunctionValuesLeft[node] * cellQ[(node*nodesPerAxis+row)*unknowns + var];
-        } // var
+        //iterate over nodes from lowest to highest
+        faceQBottom[(2*row+1)*unknowns+var] += BasisFunctionValuesLeft[node] * cellQ[(node*nodesPerAxis+row)*unknowns + var];
+        faceQUp[2*row*unknowns+var]         += BasisFunctionValuesRight[node] * cellQ[(node*nodesPerAxis+row)*unknowns + var];
+      } // var
 
     } // node
+
   } // row
 
 
@@ -109,7 +112,7 @@ void exahype2::dg::projectVolumetricDataOntoFaces(
         faceQUp[2*(face*nodesPerAxis+row)*unknowns+var]          = BasisFunctionValuesRight[0] * cellQ[(face*nodesPerFace+row+0*nodesPerAxis)*unknowns + var];
 
         faceQFront[(2*(face*nodesPerAxis+row)+1)*unknowns+var]  = BasisFunctionValuesLeft[0] * cellQ[(face*nodesPerAxis+row+0*nodesPerFace)*unknowns + var];
-        faceQBack[2*(face*nodesPerAxis+row)*unknowns+var]         = BasisFunctionValuesLeft[0] * cellQ[(face*nodesPerAxis+row+0*nodesPerFace)*unknowns + var];
+        faceQBack[2*(face*nodesPerAxis+row)*unknowns+var]         = BasisFunctionValuesRight[0] * cellQ[(face*nodesPerAxis+row+0*nodesPerFace)*unknowns + var];
       } // var
 
       for(int node=1; node<nodesPerAxis; node++){
@@ -126,7 +129,7 @@ void exahype2::dg::projectVolumetricDataOntoFaces(
 
           //iterate over nodes from front to back
           faceQFront[(2*(face*nodesPerAxis+row)+1)*unknowns+var]  += BasisFunctionValuesLeft[node] * cellQ[(face*nodesPerAxis+row+node*nodesPerFace)*unknowns + var];
-          faceQBack[2*(face*nodesPerAxis+row)*unknowns+var]         += BasisFunctionValuesLeft[node] * cellQ[(face*nodesPerAxis+row+node*nodesPerFace)*unknowns + var];
+          faceQBack[2*(face*nodesPerAxis+row)*unknowns+var]         += BasisFunctionValuesRight[node] * cellQ[(face*nodesPerAxis+row+node*nodesPerFace)*unknowns + var];
 
         } // var
 

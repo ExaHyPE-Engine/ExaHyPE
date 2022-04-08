@@ -3,6 +3,21 @@
 #ifndef _EXAHYPE2_DG_EULER_H_
 #define _EXAHYPE2_DG_EULER_H_
 
+/*
+ * For a full explanation of the Discontinuous galerkin method, check out appropriate literature, but very briefly:
+ *
+ *  we approximate the solution of an equation on a volume by a polynomial of order n, which we interpolate by lagrange polynomials.
+ *  This lets us simply use the values of the function at the points as coefficients of the lagrange polynomials.
+ *  As support nodes of the lagrange polynomial we use gaussian interpolation points, which lets us approximate an integral in a dimension
+ *  by summing up the values of the values of the function at the quadrature points along this dimension.
+ *
+ *  These two properties let us construct an approximation of the integral of the function, which we divide into two parts: one purely local
+ *  volume part and one riemann part which approximates the flux over the boundary.
+ *
+ *  In this file is the implementation of the approximation using discontinuous galerkin of the volume part, the flux over the boundary is then
+ *  in Riemann.h
+ */
+
 
 #include <vector>
 #include <algorithm>
@@ -18,7 +33,7 @@
 namespace exahype2 {
   namespace dg {
     /*
-     * Computes the explicit Euler on one cell
+     * Computes the update caused by an explicit Euler on one cell
      *
      * We exploit the fact that we can update all the updates within a cell independently:
      * All the unknowns within a patch can (and do) affect every single unknown in the
@@ -105,7 +120,7 @@ namespace exahype2 {
 
 
     /*
-     * Computes the explicit Euler on one cell
+     * Computes the update caused by an explicit Euler on one cell
      *
      * Generic implementation which implements fluxes redundantly.
      * Since the flux contributions are added over all of a node's (order+1)
@@ -114,6 +129,28 @@ namespace exahype2 {
      * each time it is required, which adds to the computational intensity of
      * the function but avoids the need to store these values and therefore
      * reduces the overall memory footprint.
+     *
+     * @param cellQin, out: input and output cells
+     *
+     * @param order: order of underlying dg polynomial, this specifies the number
+     *  of nodes in each dimension, which is order+1 (you need two points to specify
+     *  a linear polynomial for example)
+     *
+     * @param unknowns: number of unknowns whose values must be updated
+     *
+     * @param auxiliaryVariables: variables which still have local values but do not
+     *  change over time.
+     *
+     * @param quadNodes, quadWeights: used both for gaussian interpolation and are assumed
+     *  to be the support points of underlying lagrange polynomials
+     *
+     * @param: MassMatrix: MassMatrix contains the quadrature weights on the diagonal.
+     *
+     * @param: StiffnessMatrix contains the derivatives of the basis functions evaluated
+     *  at the quadrature nodes multiplied by the quadrature weight.
+     *
+     * @param: DerivativeOperator contains the derivative of the basis function evaluated
+     *  at the quadrature node.
      *
      * @todo Rename
      */

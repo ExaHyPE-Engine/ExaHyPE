@@ -33,7 +33,21 @@ namespace exahype2 {
    *  unknowns+auxiliaryVariable elements correspond to first node of the left side,
    *  the second to the first node of the right side and so on.
    *
+   * @param atBoundary specifies whether a given face is at the boundary, in which case the
+   *  outer values are ignored and instead the function boundaryConditions() is evaluated in
+   *  order to compute outerValues which are then used instead.
+   *
    * @param eigenvalues is the array into which the values are inserted in the same order
+   *
+   *  ordering on each face:
+   *
+   *         2 3
+   *         0 1
+   *   2 3 [ o o ] 2 3
+   *   0 1 [ o o ] 0 1
+   *         2 3
+   *         0 1
+   *
    */
   void getMaxEigenvaluePerFace(
       std::function< double(
@@ -60,7 +74,8 @@ namespace exahype2 {
       );
 
   /*
-   * Computes the numerical value of the rusanov flux along each node of each face.
+   * Computes the numerical value of the rusanov flux (or lax-friedrich)
+   *  along each node of each face.
    *
    * @param QHullIn see above
    *
@@ -120,6 +135,13 @@ namespace exahype2 {
    *
    * @param QHullIn see computeRusanov above. This should contain a value for the
    *   numerical flux at each node along each face
+   *
+   * @param: BasisFunctionValuesLeft (respectively Right): as the name implies, this is
+   *  the numerical value of the basis function value evaluated at the left node in
+   *  1 dimension. This has a part in determining how much the value at the boundary
+   *  influences the value at a given node.
+   *
+   * @param quadratureWeights: quadrature weight of the given quadrature node 1 dimension
    */
   void applyRiemannToPatch(
       double* __restrict__        Q,

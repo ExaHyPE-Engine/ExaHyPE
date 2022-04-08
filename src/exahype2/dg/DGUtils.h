@@ -20,6 +20,17 @@ namespace exahype2 {
      * When we iterate over these volumes, we typically have to know the centre
      * of the volume.
      *
+     * Given the centre of a cell as well as the size of this cell, this function
+     * computes the spatial position of a quadrature node specified by its index
+     *
+     * For example if there are 2 points in each dimension, located at [0.25,0.75]
+     * in 1d, then for a 2d cell with center 0.5 and size 1 [i.e. ranging from [0,0]
+     * to [1,1], there would be four nodes specified with indexes 0 to 3 and respective
+     * positions [0.25,0.25], [0.25,0.75], [0.75,0.25] and [0.75,0.75]
+     *
+     * @param polynomialOrder order of the underlying polynomial, this specifies
+     * the number of quadraturePoints in each direction as order+1
+     *
      * @param quadraturePoints 1d quadrature points over unit interval. This array
      *                         has polynomialOrder+1 entries.
      */
@@ -49,7 +60,8 @@ namespace exahype2 {
      * @param unkonwns Integer greater or equal to 1. These number comprises both
      *   real unknowns in the hyperbolic sense and auxiliary variables.
      *
-     * @param order Integer greater or equal to 0.
+     * @param order Integer greater or equal to 0. The number of nodes in each
+     *  dimension will be equal to order+1
      *
      * @param BasisFunctionValuesLeft Array of size order+1 which clarifies (in 1d)
      *   how to project the order+1 quadrature weights onto a value on the left
@@ -61,14 +73,26 @@ namespace exahype2 {
      * @param faceQLeft Left unknowns. This array hosts @f$ 2 \times (order+1)^(d-1) * unknowns@f$
      *   values, as it holds the (projected) values from the left side of the face
      *   and those from the right. The ordering of these values is lexicographic,
-     *   i.e. the first unknowns entries are those ab the bottom of the vertical
+     *   i.e. the first unknowns entries are those at the bottom of the vertical
      *   face from the left adjacent cell. The next unknowns entries are those
-     *   at the bottom of the face from the right adjacent cell.
+     *   at the bottom of the face from the right adjacent cell. The next are then
+     *   again left, then right, then left and so on.
+     *   This function will fill the right values since the current cell is to the
+     *   right of its own left face.
      *
-     * @param faceQBottom Bottom unkonwns. See faceQLeft. Again, we order
+     * @param faceQBottom Bottom unknowns. See faceQLeft. Again, we order
      *   lexicographically. This time, the first half of the entries are those
      *   from the adjacent cell below. The remaining entries are the projections
      *   from above.
+     *
+     *  ordering:
+     *
+     *         2 3
+     *         0 1
+     *   2 3 [ o o ] 2 3
+     *   0 1 [ o o ] 0 1
+     *         2 3
+     *         0 1
      */
     void projectVolumetricDataOntoFaces(
       const double* __restrict__          cellQ,
@@ -113,8 +137,16 @@ namespace exahype2 {
     /* returns a vector with the powers of nodesPerAxis up to the Dimension - 1
     ** e.g. for dims = 2, nodesPerAxis = 2 will return (1, 2)
     **      for dims = 3, nodesPerAxis = 4 will return (1, 4, 16)
+    **
+    ** This is used to iterate over the nodes of a cell in a given dimension,
+    ** since the cells are all in the same array one after another advancing by
+    ** n*strides[i] will move you to the cell which is n steps in direction i
+    ** from the current cell.
+    ** i.e. node+1 would be the "right" neighbour, node+nodesPerAxis would be the
+    ** "upper" neighbour, and so on.
     */
     tarch::la::Vector<Dimensions,int> getStrides(int nodesPerAxis);
+
 
     /*for a given linear node number, returns the index of that node
     **in cartesian coordinate system.
@@ -132,6 +164,19 @@ namespace exahype2 {
      * for a given node index within the cell, returns the index of the neighbouring
      * node on the surface in a given direction with a given orientation.
      *
+     * Ordering on the surface is the same as for the previous functions, but only
+     * considering one "side" on each face
+     *
+     * So with the same notation as the previous function, if given a 2*2 cell
+     * in 2 dimensions, there are a total of 4 faces (left,right,down,up), each
+     * with 2 nodes.
+     * If given index which corresponds to [0,1],
+     *   direction 0, orientation 0 would return node 1 on the left face
+     *   direction 1, orientation 1 would return node 0 on the upper face
+     *       6 7
+     *   1 [ o o ] 3
+     *   0 [ o o ] 2
+     *       4 5
      */
     int cellIndexToHullIndex(
         const tarch::la::Vector<Dimensions,int>&  indexCell,
@@ -150,6 +195,19 @@ namespace exahype2 {
      * at the quadrature nodes, therefore it only needs to be multiplied by
      * their coefficients.
      * u(x) = \sum_i \phi_i(x) * u_i => du(x)/dx = d\phi_i(x_i)/dx * u_i
+     *
+     * @param invDx: the inverse of the size of the cell in any one dimension, this
+     * assumes that the cells are cubic
+     *
+     * @param derivativeOperator: array containing the value of the derivatives of
+     * the n base functions of the dg polynomial evaluated at the n quadrature points
+     * (in 1 dimension)
+     *
+     * @param scalarIndex: index of the node at which the gradient should be evaluated
+     *
+     * @param gradQ: where the gradient values should be placed, has size unknowns*Dimensions
+     * since there is a gradient in each direction and the gradient is only nonzero for the
+     * unknowns
      */
     void computeGradient(
         const double* __restrict__ const QCell,
@@ -164,10 +222,6 @@ namespace exahype2 {
 
     /*
      * Substracts contents of one cell array from another.
-     * This is used in DG because the volume integral computes y_n + f(y_n)
-     * (because this is what is needed for the projection)
-     * but Runge-Kutta approximations require only f(y_n), so we
-     * need to subtract y_n from it
      */
     void subtractCell(
         double* __restrict__        QOut,
