@@ -4,14 +4,14 @@
 
 template <
   typename Solver,
+  int      numberOfVolumesPerAxisInPatch,
+  int      unknowns,
+  int      auxiliaryVariables,
   typename TempDataEnumerator
 >
 void exahype2::fv::rusanov::omp::timeStepWithRusanov_overlap1_patchwise_heap_static_calls(
   int                     targetDevice,
   ::exahype2::CellData&   patchData,
-  int                     numberOfVolumesPerAxisInPatch,
-  int                     unknowns,
-  int                     auxiliaryVariables,
   bool                    evaluateFlux,
   bool                    evaluateNonconservativeProduct,
   bool                    evaluateSource,

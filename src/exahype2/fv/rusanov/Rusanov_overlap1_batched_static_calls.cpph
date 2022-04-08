@@ -6,13 +6,13 @@
 namespace exahype2{ namespace fv{ namespace rusanov{ namespace internal{
   template <
     typename Solver,
+    int      numberOfVolumesPerAxisInPatch,
+    int      unknowns,
+    int      auxiliaryVariables,
     typename TempDataEnumerator
   >
   void timeStepWithRusanov_overlap1_batched_static_calls(
     ::exahype2::CellData&   patchData,
-    int                     numberOfVolumesPerAxisInPatch,
-    int                     unknowns,
-    int                     auxiliaryVariables,
     bool                    evaluateFlux,
     bool                    evaluateNonconservativeProduct,
     bool                    evaluateSource,
@@ -751,13 +751,13 @@ namespace exahype2{ namespace fv{ namespace rusanov{ namespace internal{
 
 template <
   typename Solver,
+  int      numberOfVolumesPerAxisInPatch,
+  int      unknowns,
+  int      auxiliaryVariables,
   typename TempDataEnumerator
 >
 void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_batched_call_stack_static_calls(
   ::exahype2::CellData&   patchData,
-  int                     numberOfVolumesPerAxisInPatch,
-  int                     unknowns,
-  int                     auxiliaryVariables,
   bool                    evaluateFlux,
   bool                    evaluateNonconservativeProduct,
   bool                    evaluateSource,
@@ -782,11 +782,8 @@ void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_batched_call_stack_stat
   double tempEigenvalueY[ eigenvalueEnumerator.size() ] __attribute__((aligned (Alignment)));
   double tempEigenvalueZ[ eigenvalueEnumerator.size() ] __attribute__((aligned (Alignment)));
 
-  internal::timeStepWithRusanov_overlap1_batched_static_calls<Solver,TempDataEnumerator>(
+  internal::timeStepWithRusanov_overlap1_batched_static_calls<Solver, numberOfVolumesPerAxisInPatch, unknowns, auxiliaryVariables, TempDataEnumerator>(
       patchData,
-      numberOfVolumesPerAxisInPatch,
-      unknowns,
-      auxiliaryVariables,
       evaluateFlux,
       evaluateNonconservativeProduct,
       evaluateSource,
@@ -811,13 +808,13 @@ void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_batched_call_stack_stat
 
 template <
   typename Solver,
+  int      numberOfVolumesPerAxisInPatch,
+  int      unknowns,
+  int      auxiliaryVariables,
   typename TempDataEnumerator
 >
 void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_batched_heap_static_calls(
   ::exahype2::CellData&   patchData,
-  int                     numberOfVolumesPerAxisInPatch,
-  int                     unknowns,
-  int                     auxiliaryVariables,
   bool                    evaluateFlux,
   bool                    evaluateNonconservativeProduct,
   bool                    evaluateSource,
@@ -842,11 +839,8 @@ void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_batched_heap_static_cal
   double* tempEigenvalueY            =                                    tarch::allocateMemory( eigenvalueEnumerator.size(),      tarch::MemoryLocation::Heap );
   double* tempEigenvalueZ            = (Dimensions==3)                  ? tarch::allocateMemory( eigenvalueEnumerator.size(),      tarch::MemoryLocation::Heap ) : nullptr;
 
-  internal::timeStepWithRusanov_overlap1_batched_static_calls<Solver,TempDataEnumerator>(
+  internal::timeStepWithRusanov_overlap1_batched_static_calls<Solver, numberOfVolumesPerAxisInPatch, unknowns, auxiliaryVariables, TempDataEnumerator>(
       patchData,
-      numberOfVolumesPerAxisInPatch,
-      unknowns,
-      auxiliaryVariables,
       evaluateFlux,
       evaluateNonconservativeProduct,
       evaluateSource,

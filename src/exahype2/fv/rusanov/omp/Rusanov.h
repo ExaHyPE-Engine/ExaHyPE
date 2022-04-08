@@ -44,14 +44,14 @@ namespace exahype2 {
       namespace omp {
         template <
           typename Solver,
-          typename TempDataEnumerator = exahype2::fv::enumerator::AoSoALexicographicVolumeEnumerator
+          int      numberOfVolumesPerAxisInPatch,
+          int      unknowns,
+          int      auxiliaryVariables,
+          typename TempDataEnumerator
         >
         static void timeStepWithRusanov_overlap1_patchwise_heap_static_calls(
           int                     targetDevice,
           ::exahype2::CellData&   patchData,
-          int                     numberOfVolumesPerAxisInPatch,
-          int                     unknowns,
-          int                     auxiliaryVariables,
           bool                    evaluateFlux,
           bool                    evaluateNonconservativeProduct,
           bool                    evaluateSource,

@@ -30,8 +30,8 @@ ExaHyPE2Sources = \
   fv/enumerator/AoSLexicographicVolumeEnumerator.cpp \
   fv/enumerator/SoALexicographicVolumeEnumerator.cpp \
   fv/enumerator/AoSoALexicographicVolumeEnumerator.cpp \
-  fv/tests/CopyPatchTest.cpp \
-  fv/tests/applySplit1DRiemannToPatch_Overlap1AoSTest.cpp
+  fv/rusanov/tests/CopyPatchTest.cpp \
+  fv/rusanov/tests/ApplySplit1DRiemannToPatchTest.cpp
 
 
 libExaHyPE2Core2d_a_CXXFLAGS          = $(CXXFLAGS_PEANO_2D_RELEASE)

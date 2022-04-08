@@ -212,10 +212,11 @@ corresponding CUDA
 \begin{bash}
 export NVCPP=/opt/nvidia/hpc_sdk/Linux_x86_64/2022/compilers/bin/nvc++
 ./configure CXX=$NVCPP CC=$NVCPP \
- CXXFLAGS="-O4 --std=c++17 -mp=gpu -gpu=cc80" \
+ CXXFLAGS="-O4 --std=c++17 -mp=gpu -gpu=cc75" \
  --with-multithreading=omp --with-gpu=omp \
  --enable-exahype --enable-blockstructured --enable-loadbalancing
 \end{bash}
+
 
 % export NVCPP=/opt/nvidia/hpc_sdk/Linux_x86_64/2022/compilers/bin/nvc++
 % ./configure CXX=$NVCPP CC=$NVCPP \

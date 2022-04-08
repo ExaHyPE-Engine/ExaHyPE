@@ -373,32 +373,15 @@ def create_compute_Riemann_kernel_for_Rusanov(flux_implementation,
   template  = RiemannKernelCalls[riemann_kernel_variant]
   
   if solver_variant == SolverVariant.WithVirtualFunctions:
-    template += "_functors("
-  if solver_variant == SolverVariant.Stateless:
-    template += "_static_calls<{{SOLVER_NAME}}"
-    if EnumeratorTemplateTypes[riemann_kernel_variant]!=None:
-      template += ","
-      template += EnumeratorTemplateTypes[riemann_kernel_variant]
-    template += ">("
-  if solver_variant == SolverVariant.Accelerator:
-    template += "_static_calls<{{SOLVER_NAME}},"
-    template += EnumeratorTemplateTypes[riemann_kernel_variant]
-    template += ">(targetDevice,"
-        
-  template += """
-    patchData,
-    {{NUMBER_OF_VOLUMES_PER_AXIS}},
-    {{NUMBER_OF_UNKNOWNS}},
-    {{NUMBER_OF_AUXILIARY_VARIABLES}},
-    {% if FLUX_IMPLEMENTATION=="<none>" %} false {% else %} true {% endif %},
-    {% if NCP_IMPLEMENTATION=="<none>" %} false {% else %} true {% endif %},
-    {% if SOURCE_IMPLEMENTATION=="<none>" %} false {% else %} true {% endif %},
-    {% if COMPUTE_MAX_EIGENVALUE==False %} false {% else %} true {% endif %}
-  """
-  
-  if solver_variant == SolverVariant.WithVirtualFunctions:
-    template += """
-  ,
+    template += """_functors(
+  patchData,
+  {{NUMBER_OF_VOLUMES_PER_AXIS}},
+  {{NUMBER_OF_UNKNOWNS}},
+  {{NUMBER_OF_AUXILIARY_VARIABLES}},
+  {% if FLUX_IMPLEMENTATION=="<none>" %} false {% else %} true {% endif %},
+  {% if NCP_IMPLEMENTATION=="<none>" %} false {% else %} true {% endif %},
+  {% if SOURCE_IMPLEMENTATION=="<none>" %} false {% else %} true {% endif %},
+  {% if COMPUTE_MAX_EIGENVALUE==False %} false {% else %} true {% endif %},
   [&](
     const double * __restrict__ Q,
     const tarch::la::Vector<Dimensions,double>&  faceCentre,
@@ -448,11 +431,47 @@ def create_compute_Riemann_kernel_for_Rusanov(flux_implementation,
   )->double {
     return repositories::{{SOLVER_INSTANCE}}.maxEigenvalue( Q, faceCentre, volumeH, t, dt, normal);
   }
-"""
-
-  template += """
 );
-"""
+  """
+  if solver_variant == SolverVariant.Stateless and EnumeratorTemplateTypes[riemann_kernel_variant]==None:
+    template += """_static_calls<{{SOLVER_NAME}},{{NUMBER_OF_VOLUMES_PER_AXIS}}, {{NUMBER_OF_UNKNOWNS}}, {{NUMBER_OF_AUXILIARY_VARIABLES}}>(
+      patchData,
+      {% if FLUX_IMPLEMENTATION=="<none>" %} false {% else %} true {% endif %},
+      {% if NCP_IMPLEMENTATION=="<none>" %} false {% else %} true {% endif %},
+      {% if SOURCE_IMPLEMENTATION=="<none>" %} false {% else %} true {% endif %},
+      {% if COMPUTE_MAX_EIGENVALUE==False %} false {% else %} true {% endif %}
+    );
+  """
+  if solver_variant == SolverVariant.Accelerator and EnumeratorTemplateTypes[riemann_kernel_variant]==None:
+    template += """_static_calls<{{SOLVER_NAME}},{{NUMBER_OF_VOLUMES_PER_AXIS}}, {{NUMBER_OF_UNKNOWNS}}, {{NUMBER_OF_AUXILIARY_VARIABLES}}>(
+      targetDevice,
+      patchData,
+      {% if FLUX_IMPLEMENTATION=="<none>" %} false {% else %} true {% endif %},
+      {% if NCP_IMPLEMENTATION=="<none>" %} false {% else %} true {% endif %},
+      {% if SOURCE_IMPLEMENTATION=="<none>" %} false {% else %} true {% endif %},
+      {% if COMPUTE_MAX_EIGENVALUE==False %} false {% else %} true {% endif %}
+    );
+  """
+  if solver_variant == SolverVariant.Stateless and EnumeratorTemplateTypes[riemann_kernel_variant]!=None:
+    template += """_static_calls<{{SOLVER_NAME}},{{NUMBER_OF_VOLUMES_PER_AXIS}}, {{NUMBER_OF_UNKNOWNS}}, {{NUMBER_OF_AUXILIARY_VARIABLES}}, {{TEMP_DATA_ENUMERATOR}}>(
+      patchData,
+      {% if FLUX_IMPLEMENTATION=="<none>" %} false {% else %} true {% endif %},
+      {% if NCP_IMPLEMENTATION=="<none>" %} false {% else %} true {% endif %},
+      {% if SOURCE_IMPLEMENTATION=="<none>" %} false {% else %} true {% endif %},
+      {% if COMPUTE_MAX_EIGENVALUE==False %} false {% else %} true {% endif %}
+    );
+  """
+  if solver_variant == SolverVariant.Accelerator and EnumeratorTemplateTypes[riemann_kernel_variant]!=None:
+    template += """_static_calls<{{SOLVER_NAME}},{{NUMBER_OF_VOLUMES_PER_AXIS}}, {{NUMBER_OF_UNKNOWNS}}, {{NUMBER_OF_AUXILIARY_VARIABLES}}, {{TEMP_DATA_ENUMERATOR}}>(
+      targetDevice,
+      patchData,
+      {% if FLUX_IMPLEMENTATION=="<none>" %} false {% else %} true {% endif %},
+      {% if NCP_IMPLEMENTATION=="<none>" %} false {% else %} true {% endif %},
+      {% if SOURCE_IMPLEMENTATION=="<none>" %} false {% else %} true {% endif %},
+      {% if COMPUTE_MAX_EIGENVALUE==False %} false {% else %} true {% endif %}
+    );
+  """
+        
 
   result = jinja2.Template( template, undefined=jinja2.DebugUndefined)
   d= {}
@@ -460,6 +479,10 @@ def create_compute_Riemann_kernel_for_Rusanov(flux_implementation,
   d[ "NCP_IMPLEMENTATION" ]          = ncp_implementation
   d[ "SOURCE_IMPLEMENTATION" ]       = source_implementation
   d[ "COMPUTE_MAX_EIGENVALUE" ]      = compute_max_eigenvalue_of_next_time_step
+  #if EnumeratorTemplateTypes[riemann_kernel_variant]==None:
+  #  d[ "TEMP_DATA_ENUMERATOR" ]      = "::exahype2::fv::enumerator::AoSoALexicographicVolumeEnumerator"
+  #else:
+  d[ "TEMP_DATA_ENUMERATOR" ]      = EnumeratorTemplateTypes[riemann_kernel_variant]
   return result.render(**d)
 
 
