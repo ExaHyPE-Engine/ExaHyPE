@@ -72,19 +72,41 @@ class SolveVolumeIntegral(AbstractRungeKuttaDGActionSet):
         int                                          normal,
         double * __restrict__                        F
       )->void {
+        {% if FLUX_IMPLEMENTATION!="<none>" %}
         repositories::{{SOLVER_INSTANCE}}.flux(Q,x,t,normal,F);
-      },
-      nullptr, //ncp TODO
-      nullptr, //source TODO
+        {% endif %}
+      }, //flux
+      [&](
+          const double * __restrict__                  Q,
+          const double * __restrict__                  dQdx,
+          const tarch::la::Vector<Dimensions,double>&  x,
+          double                                       t,
+          int                                          normal,
+          double * __restrict__                        F
+        ) -> void {
+          {% if NCP_IMPLEMENTATION!="<none>" %}
+          repositories::{{SOLVER_INSTANCE}}.nonconservativeProduct(Q, dQdx, x, t, normal, F);
+          {% endif %}          
+        }, //ncp
+      [&](
+        const double * __restrict__                  Q,
+        const tarch::la::Vector<Dimensions,double>&  x,
+        double                                       t,
+        double * __restrict__                        S
+      ) -> void {
+        {% if SOURCE_TERM_IMPLEMENTATION!="<none>" %}
+        repositories::{{SOLVER_INSTANCE}}.sourceTerm(Q,x,t,S);
+        {% endif %}
+      }, //source
       repositories::{{SOLVER_INSTANCE}}.QuadraturePoints,
       repositories::{{SOLVER_INSTANCE}}.QuadratureWeights,
       repositories::{{SOLVER_INSTANCE}}.MassMatrix,
       repositories::{{SOLVER_INSTANCE}}.StiffnessOperator,
       repositories::{{SOLVER_INSTANCE}}.DerivativeOperator,
-      true, //useFlux
-      false,//useNCP
-      false //useSource
-    );
+      {{ "true" if FLUX_IMPLEMENTATION!="<none>" else "false" }}, //useFlux
+      {{ "true" if NCP_IMPLEMENTATION!="<none>" else "false" }}, //useNCP
+      {{ "true" if SOURCE_TERM_IMPLEMENTATION!="<none>" else "false" }} //useSource
+    );    
 
     /*
     #if Dimensions==2
@@ -126,94 +148,6 @@ class SolveVolumeIntegral(AbstractRungeKuttaDGActionSet):
   
   {% endfor %}
 """
-
-  TemplateExplicitEulerCallWithFlux = """
-    /*
-    ::exahype2::dg::explicitEulerOnCell_FluxNCPSource_EvaluateTermsRedundantly(
-      QIn,
-      QOut,
-      {{ORDER}},                                                   
-      {{NUMBER_OF_UNKNOWNS}},
-      {{NUMBER_OF_AUXILIARY_VARIABLES}},
-      marker.x(),
-      marker.h()(0), //assume square/cubic cells
-      timeStamp,
-      timeStepSize,
-      [&](
-        const double * __restrict__                  Q,
-        const tarch::la::Vector<Dimensions,double>&  x,
-        double                                       t,
-        int                                          normal,
-        double * __restrict__                        F
-      )->void {
-        repositories::{{SOLVER_INSTANCE}}.flux(Q,x,t,normal,F);
-      },
-      nullptr, //ncp TODO
-      nullptr, //source TODO
-      repositories::{{SOLVER_INSTANCE}}.QuadraturePoints,
-      repositories::{{SOLVER_INSTANCE}}.QuadratureWeights,
-      repositories::{{SOLVER_INSTANCE}}.MassMatrix,
-      repositories::{{SOLVER_INSTANCE}}.StiffnessOperator,
-      repositories::{{SOLVER_INSTANCE}}.DerivativeOperator,
-      true,
-      false,
-      false);
-    */
-  
-  /*
-    ::exahype2::dg::explicitEulerOnCell(
-      QIn ,   // const double* __restrict__          cellQin,
-      {{ORDER}},                                                   
-      {{NUMBER_OF_UNKNOWNS}},
-      {{NUMBER_OF_AUXILIARY_VARIABLES}},
-      [&](
-        const double * __restrict__                  Q,
-        const tarch::la::Vector<Dimensions,double>&  x,
-        double                                       t,
-        int                                          normal,
-        double * __restrict__                        F
-      )->void {
-        repositories::{{SOLVER_INSTANCE}}.flux(Q,x,t,normal,F);
-      },
-      repositories::{{SOLVER_INSTANCE}}.QuadraturePoints,
-      repositories::{{SOLVER_INSTANCE}}.QuadratureWeights,
-      repositories::{{SOLVER_INSTANCE}}.StiffnessMatrix,
-      repositories::{{SOLVER_INSTANCE}}.InvertedAndLumpedMassMatrix,
-      QOut
-    );
-  */
-  
-  /*
-    #if Dimensions==2
-    ::exahype2::dg::projectVolumetricDataOntoFaces(
-      QOut,
-      {{ORDER}},
-      {{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}},
-      repositories::{{SOLVER_INSTANCE}}.BasisFunctionValuesLeft,
-      repositories::{{SOLVER_INSTANCE}}.BasisFunctionValuesRight,
-      fineGridFaces{{UNKNOWN_IDENTIFIER}}Estimates(0).value + {{PREDICATE_NO}}*{{NUMBER_OF_DOFS_PER_FACE_2D}},
-      fineGridFaces{{UNKNOWN_IDENTIFIER}}Estimates(1).value + {{PREDICATE_NO}}*{{NUMBER_OF_DOFS_PER_FACE_2D}},
-      fineGridFaces{{UNKNOWN_IDENTIFIER}}Estimates(2).value + {{PREDICATE_NO}}*{{NUMBER_OF_DOFS_PER_FACE_2D}},
-      fineGridFaces{{UNKNOWN_IDENTIFIER}}Estimates(3).value + {{PREDICATE_NO}}*{{NUMBER_OF_DOFS_PER_FACE_2D}}
-    );
-    #elif Dimensions==3
-    ::exahype2::dg::projectVolumetricDataOntoFaces(
-      QOut,
-      {{ORDER}},
-      {{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}},
-      repositories::{{SOLVER_INSTANCE}}.BasisFunctionValuesLeft,
-      repositories::{{SOLVER_INSTANCE}}.BasisFunctionValuesRight,
-      fineGridFaces{{UNKNOWN_IDENTIFIER}}Estimates(0).value + {{PREDICATE_NO}}*{{NUMBER_OF_DOFS_PER_FACE_2D}},
-      fineGridFaces{{UNKNOWN_IDENTIFIER}}Estimates(1).value + {{PREDICATE_NO}}*{{NUMBER_OF_DOFS_PER_FACE_2D}},
-      fineGridFaces{{UNKNOWN_IDENTIFIER}}Estimates(2).value + {{PREDICATE_NO}}*{{NUMBER_OF_DOFS_PER_FACE_2D}},
-      fineGridFaces{{UNKNOWN_IDENTIFIER}}Estimates(3).value + {{PREDICATE_NO}}*{{NUMBER_OF_DOFS_PER_FACE_2D}},
-      fineGridFaces{{UNKNOWN_IDENTIFIER}}Estimates(2).value + {{PREDICATE_NO}}*{{NUMBER_OF_DOFS_PER_FACE_2D}},
-      fineGridFaces{{UNKNOWN_IDENTIFIER}}Estimates(3).value + {{PREDICATE_NO}}*{{NUMBER_OF_DOFS_PER_FACE_2D}}
-    );
-    #endif
-  */
-  
-"""
   
   
   def __init__(self,solver):
@@ -230,7 +164,6 @@ class SolveVolumeIntegral(AbstractRungeKuttaDGActionSet):
     super(SolveVolumeIntegral,self).__init__(solver)
     self.guards               = []
     self._butcher_tableau     = ButcherTableau(self._solver._rk_order)
-    self._explicit_Euler_call = self.TemplateExplicitEulerCallWithFlux
     
 
   @property
@@ -256,7 +189,6 @@ class SolveVolumeIntegral(AbstractRungeKuttaDGActionSet):
       d[ "PREDICATES" ]                               = self.guards
       d[ "BUTCHER_TABLEAU_WEIGHTS" ]                  = self._butcher_tableau.weight_matrix()
       d[ "BUTCHER_TABLEAU_RELATIVE_TIME_STEP_SIZES" ] = self._butcher_tableau.time_step_sizes()
-      d[ "EXPLICIT_EULER_CALL" ]                      = jinja2.Template( self._explicit_Euler_call, undefined=jinja2.DebugUndefined).render(**d)
       result = jinja2.Template(self.TemplateCellKernel).render(**d)
       pass 
     return result

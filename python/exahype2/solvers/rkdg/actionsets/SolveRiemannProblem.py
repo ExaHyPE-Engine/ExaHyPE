@@ -45,9 +45,10 @@ class SolveRiemannProblem(AbstractRungeKuttaDGActionSet):
     double maxEigenvaluePerFace[Dimensions*2];
     
     #if Dimensions==2
-    const int facePosition = {{PREDICATE_NO}}*{{NUMBER_OF_DOFS_PER_FACE_2D}}*({{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}});
+    const int facePosition = 0;
+//    const int facePosition = 2*{{PREDICATE_NO}}*{{NUMBER_OF_DOFS_PER_FACE_2D}}*({{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}});
     #elif Dimensions==3
-    const int facePosition = {{PREDICATE_NO}}*{{NUMBER_OF_DOFS_PER_FACE_3D}}*({{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}});
+    const int facePosition = 2*{{PREDICATE_NO}}*{{NUMBER_OF_DOFS_PER_FACE_3D}}*({{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}});
     #endif
     
     /*
@@ -109,10 +110,23 @@ class SolveRiemannProblem(AbstractRungeKuttaDGActionSet):
         double                                       t,
         int                                          normal,
         double * __restrict__                        F
+      )->void {
+        {% if FLUX_IMPLEMENTATION!="<none>" %}
+        repositories::{{SOLVER_INSTANCE}}.flux(Q,x,t,normal,F);
+        {% endif %}
+      }, //flux
+      [&](
+          const double * __restrict__                  Q,
+          const double * __restrict__                  dQdx,
+          const tarch::la::Vector<Dimensions,double>&  x,
+          double                                       t,
+          int                                          normal,
+          double * __restrict__                        F
         ) -> void {
-          repositories::{{SOLVER_INSTANCE}}.flux(Q,x,t,normal,F);
-        },
-        nullptr, //ncp
+          {% if NCP_IMPLEMENTATION!="<none>" %}
+          repositories::{{SOLVER_INSTANCE}}.nonconservativeProduct(Q, dQdx, x, t, normal, F);
+          {% endif %}          
+      }, //ncp
       [&](
         const double * __restrict__                  Qinside,
         double * __restrict__                        Qoutside,
@@ -133,8 +147,8 @@ class SolveRiemannProblem(AbstractRungeKuttaDGActionSet):
       timeStepSize,
       maxEigenvaluePerFace,
       atBoundary,
-      true,
-      false
+      {{ "true" if FLUX_IMPLEMENTATION!="<none>" else "false" }}, //useFlux
+      {{ "true" if NCP_IMPLEMENTATION!="<none>" else "false" }} //useNCP
     );
                 
     ::exahype2::dg::applyRiemannToPatch(
@@ -164,24 +178,6 @@ class SolveRiemannProblem(AbstractRungeKuttaDGActionSet):
 
 """
 
-  TemplateRiemannProblemSolve = """
-  
-  double* QHull[Dimensions*2];
-  bool    atBoundary[Dimensions*2];
-  for(int face=0; face<2*Dimensions; face++){
-    #if Dimensions==2
-    QHull[face] = fineGridFaces{{UNKNOWN_IDENTIFIER}}Estimates(face).value + {{PREDICATE_NO}}*{{NUMBER_OF_DOFS_PER_FACE_3D}}
-    #elif Dimensions==3
-    QHull[face] = fineGridFaces{{UNKNOWN_IDENTIFIER}}Estimates(face).value + {{PREDICATE_NO}}*{{NUMBER_OF_DOFS_PER_FACE_3D}}
-    #endif
-    //                    fineGridFaces{{SOLVER_NAME}}QSolutionExtrapolation(face).value;
-    //QHull[face]       = fineGridFaces{{UNKNOWN_IDENTIFIER}}Estimates(face).value + {{PREDICATE_NO}}*{{NUMBER_OF_DOFS_PER_CELL_3D}}
-    atBoundary[face]  = fineGridFaces{{SOLVER_NAME}}FaceLabel(face).getBoundary() and
-                         not repositories::{{SOLVER_INSTANCE}}.PeriodicBC[face%Dimensions];
-  }
-  
-  """
-  
   def __init__(self,solver):
     """
     
@@ -196,7 +192,6 @@ class SolveRiemannProblem(AbstractRungeKuttaDGActionSet):
     super(SolveRiemannProblem,self).__init__(solver)
     self.guards            = []
     self._butcher_tableau     = ButcherTableau(self._solver._rk_order)
-    self._riemann_solve    = self.TemplateRiemannProblemSolve
 
   @property
   def guards(self):
@@ -220,7 +215,6 @@ class SolveRiemannProblem(AbstractRungeKuttaDGActionSet):
       self._solver.add_entries_to_text_replacement_dictionary(d)
       d[ "PREDICATES" ]            = self.guards
       d[ "BUTCHER_TABLEAU_RELATIVE_TIME_STEP_SIZES" ] = self._butcher_tableau.time_step_sizes()
-      d[ "RIEMANN_PROBLEM_SOLVE" ] = jinja2.Template( self._riemann_solve, undefined=jinja2.DebugUndefined).render(**d)
       result = jinja2.Template(self.TemplateProject).render(**d)
       pass 
     return result
