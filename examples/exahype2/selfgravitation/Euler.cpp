@@ -49,6 +49,9 @@ void examples::exahype2::selfgravitation::Euler::initialCondition(
   Q[2] = 0;
   Q[3] = 0;
   Q[4] = isInTheCentre ? 1.0 : 0.0; // inner energy
+  Q[5] = 0.0;  // ensure coupling terms are properly initialised; otherwise, they will pollute the very first time step
+  Q[6] = 0.0;
+  Q[7] = 0.0;
 
   logTraceOut( "initialCondition(...)" );
 }

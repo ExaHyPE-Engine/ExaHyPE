@@ -512,7 +512,75 @@ As we deal with a quasi-stationary second PDE, this coupling is trivial in the
 sense that we do not have to interpolate in time. 
 
 
-We insert the coupling as a specialised a posteriori solution update within
+There are two places where we can add this coupling: 
+It can either be a preprocessing step of the time step or a postprocessing
+step.
+While, in principle, both approaches do work here, there's a delicate
+difference (see documentation):
+In the pre-processing step, we have access to the patch data plus the halo.
+In the post-processing step, we have only access to the patch content.
+
+
+For the density, which feeds from the
+(\ref{equation:exahype:case-study:self-gravitation})  into the material
+parameters of the Poisson-ish equation, we use the post-processing hook-in.
+It is a plain copy from 
+\[
+  Q[4]|_{\text{Euler}} \mapsto   Q[4]|_{\text{Poisson}} 
+\]
+for which \Peano's toolbox provides a generic implementation:
+
+
+\begin{code}
+poisson_solver.add_user_action_set_includes( """
+#include "toolbox/blockstructured/Copy.h"
+""")
+poisson_solver.preprocess_reconstructed_patch_kernel = """
+ ::toolbox::blockstructured::copyUnknown(
+   {},                        // no of unknowns per dimension
+   fineGridCellEulerQ.value,  // source
+   4,                         // index four in source
+   5+3,                       // unknowns in source (incl material parameters)
+   0,                         // no halo in source
+   reconstructedPatch,        // dest
+   4,                         // index four in destination
+   4+1,                       // four unknowns in source (incl material parameters) 
+   1                          // halo of one in reconstructed patch
+   );
+""".format(args.patch_size)
+\end{code}
+
+\noindent
+In this special case, we use a plain copy. 
+If the two different solvers have different patch sizes, i.e.~unknowns per
+dimension, we have to interpolate accordingly.
+The invocation is kind of self-explaining: 
+We include a helper function from the toolbox and call the \texttt{copyUnknown}.
+The ``nasty'' part is the \texttt{fineGridCellPoissonQ} part, for which we have
+to study the naming conventions within \ExaHyPE---a detail usually hidden from
+the user:
+The unknowns per cell (so the plain double array) are called
+\texttt{fineGridCell} followed by the name of the solver \texttt{Euler} and then
+a \texttt{Q}.
+The data is actually a struct for our plain double fields which hosts a pointer
+\texttt{value}.
+The destination is not the data of the Poisson equation. This one will
+eventually been overwritten by the time stepping.
+The target data is the temporary array \texttt{reconstructedPatch} which hosts
+the \texttt{fineGridCellPoissonQ} patch data (as we add the preprocessing to the
+Poisson solver) plus the halo.
+
+
+\begin{remark}
+ Initial values.
+\end{remark}
+
+% The other way round, our modified Euler terms in (\ref{equation:exahype:case-study:self-gravitation}) 
+% require the gradient from (\ref{equation:exahype:case-study:elliptic-hyperbolic-constraint}).
+
+
+
+ We insert the coupling as a specialised a posteriori solution update within
 the respective solver, i.e.~the data flow from the Euler to the Poisson equation
 is realised as a posteriori update of the Euler equations.
 Every time we do a time step there, we map the outcome onto a material parameter 

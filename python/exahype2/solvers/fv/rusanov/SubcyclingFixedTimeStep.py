@@ -124,6 +124,11 @@ const double newTimeStepSize = timeStepSize;
 
     self._start_time_step_implementation     = create_start_time_step_implementation_for_fixed_time_stepping_with_subcycling(False)
     self._finish_time_step_implementation    = create_finish_time_step_implementation_for_fixed_time_stepping(self._time_step_size)
+
+    self._user_action_set_includes += """
+#include "exahype2/TimeStepping.h"
+#include "exahype2/fv/rusanov/Rusanov.h"
+"""
       
     super(SubcyclingFixedTimeStep,self).set_implementation(boundary_conditions, refinement_criterion, initial_conditions, memory_location, use_split_loop, additional_action_set_includes, additional_user_includes)
 
@@ -146,12 +151,6 @@ const double newTimeStepSize = timeStepSize;
     
     self._action_set_AMR.set_event_lifetime( int(self._max_volume_h/self._min_volume_h+1) )
 
-
-  def get_user_action_set_includes(self):
-    return super(SubcyclingFixedTimeStep, self).get_user_action_set_includes() + """
-#include "exahype2/TimeStepping.h"
-#include "exahype2/fv/rusanov/Rusanov.h"
-"""
 
 
   def create_data_structures(self):

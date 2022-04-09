@@ -54,6 +54,10 @@ class GlobalFixedTimeStepWithEnclaveTasking( EnclaveTasking ):
   const double newTimeStepSize = timeStepSize;
 """    
 
+    self.user_action_set_includes += """
+#include "exahype2/fv/rusanov/Rusanov.h"
+"""
+    
     self.set_implementation(flux=flux, 
       ncp=ncp, 
       eigenvalues=eigenvalues, 
@@ -128,8 +132,3 @@ class GlobalFixedTimeStepWithEnclaveTasking( EnclaveTasking ):
     super(GlobalFixedTimeStepWithEnclaveTasking,self).create_data_structures()
     self._optimise_patch_storage_for_global_time_stepping()
 
-
-  def get_user_action_set_includes(self):
-    return super(GlobalFixedTimeStepWithEnclaveTasking, self).get_user_action_set_includes() + """
-#include "exahype2/fv/rusanov/Rusanov.h"
-"""

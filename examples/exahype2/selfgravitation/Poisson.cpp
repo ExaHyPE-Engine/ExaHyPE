@@ -23,6 +23,8 @@ void examples::exahype2::selfgravitation::Poisson::initialCondition(
   Q[1] = 0.0;
   Q[2] = 0.0;
   Q[3] = 0.0;
+  Q[4] = 1.0;  // we need a proper initial density for the very first time step
+               // just before the actual Poisson solve has already started.
 
   logTraceOut( "initialCondition(...)" );
 }

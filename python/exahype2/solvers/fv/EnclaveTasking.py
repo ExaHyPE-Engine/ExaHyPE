@@ -103,7 +103,7 @@ class UpdateCell(ReconstructPatchAndApplyFunctor):
 #include "tarch/multicore/Tasks.h"
 #include "repositories/SolverRepository.h"
 #include "tasks/""" + self._solver._name + """EnclaveTask.h"
-""" + self._solver._get_default_includes() + self._solver.get_user_action_set_includes()
+""" + self._solver._get_default_includes() + self._solver.user_action_set_includes
 
 
 class MergeEnclaveTaskOutcome(AbstractFVActionSet):
@@ -137,6 +137,8 @@ class MergeEnclaveTaskOutcome(AbstractFVActionSet):
     }
     
     if ( fineGridCell{{SOLVER_NAME}}CellLabel.getHasUpdated() ) {
+      {{POSTPROCESS_UPDATED_PATCH}}
+
       repositories::{{SOLVER_INSTANCE}}.update(
         fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStepSize(),
         fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStamp(),
@@ -181,15 +183,7 @@ class EnclaveTasking( FV ):
     
      Not so nice. I have to store this field as I later rely on get_name_of_global_instance()
      which uses this field. 
-     
-     _postprocess_updated_patch_after_computation: C code snippet
-       Will be called directly after we have computed the new solution. Depending 
-       on the task type, it will run within the enclave task
-     
-     _postprocess_updated_patch_before_commit: C code snippet
-       Will be called directly before we actually write the task outcome back into
-       the grid.
-     
+          
     """
     self._name = name
     
@@ -410,59 +404,6 @@ class EnclaveTasking( FV ):
     d[ "SEMAPHORE_LABEL" ]      = exahype2.grid.UpdateCellLabel.get_attribute_name(self._name)
     d[ "STATELESS_PDE_TERMS" ]  = self._pde_terms_without_state
     
-    
-  def set_preprocess_reconstructed_patch_kernel(self,kernel ):
-    """
-  
-    Most subclasses will redefine/overwrite this operation as they have
-    to incorporate the kernel into their generated stuff
-  
-    """
-    self._preprocess_reconstructed_patch  += kernel
-      
-    self.create_data_structures()
-    self.create_action_sets()
-
-
-  def set_postprocess_updated_patch_kernel(self, kernel):
-    """
-
-    Define a postprocessing routine over the data
-
-    The postprocessing kernel often looks similar to the following code:
-
-  {
-    int index = 0;
-    dfor( volume, {{NUMBER_OF_VOLUMES_PER_AXIS}} ) {
-      enforceCCZ4constraints( targetPatch+index );
-      index += {{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}};
-    }
-  }
-
-
-    Within this kernel, you have at least the following variables available:
-
-    - targetPatch This is a pointer to the whole data structure (one large
-        array).
-        The patch is not supplemented by a halo layer.
-    - reconstructedPatch This is a pointer to the data snapshot before the
-        actual update. This data is combined with the halo layer, i.e. if you
-        work with 7x7 patches and a halo of 2, the pointer points to a 11x11
-        patch.
-    - marker
-
-    Furthermore, you can use all the symbols (via Jinja2 syntax) from
-    _init_dictionary_with_default_parameters().
-
-    kernel: String
-      C++ code that holds the postprocessing kernel
-
-    """
-    self._postprocess_updated_patch += kernel
-
-    self.create_data_structures()
-    self.create_action_sets()
-
 
   def add_actions_to_create_grid(self, step, evaluate_refinement_criterion):
     super(EnclaveTasking, self).add_actions_to_create_grid(step,evaluate_refinement_criterion)

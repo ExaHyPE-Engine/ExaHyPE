@@ -164,8 +164,9 @@ class SubcyclingAdaptiveTimeStepWithEnclaveTasking( EnclaveTasking ):
     self._action_set_AMR.set_event_lifetime( 2*int(self._max_volume_h/self._min_volume_h+1) )
     
 
-  def get_user_action_set_includes(self):
-    return super(SubcyclingAdaptiveTimeStepWithEnclaveTasking, self).get_user_action_set_includes() + """
+  @property
+  def user_action_set_includes(self):
+    return super(SubcyclingAdaptiveTimeStepWithEnclaveTasking, self).user_action_set_includes + """
 #include "exahype2/TimeStepping.h"
 #include "exahype2/fv/rusanov/Rusanov.h"
 """

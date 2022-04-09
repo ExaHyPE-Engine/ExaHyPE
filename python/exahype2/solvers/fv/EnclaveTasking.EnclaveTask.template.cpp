@@ -85,8 +85,6 @@ double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::applyKernelToCell(
 
   tarch::freeMemory(reconstructedPatch,tarch::MemoryLocation::Heap );
 
-  {{POSTPROCESS_UPDATED_PATCH}}
-
   {% if COMPUTE_MAX_EIGENVALUE %}
   return patchData.maxEigenvalue[0];
   {% else %}

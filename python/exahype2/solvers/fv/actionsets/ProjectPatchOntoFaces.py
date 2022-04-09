@@ -31,7 +31,7 @@ class ProjectPatchOntoFaces( peano4.toolbox.blockstructured.ProjectPatchOntoFace
       self,
       solver._patch,solver._patch_overlap_update,
       "not marker.hasBeenRefined() and " + guard,
-      solver._get_default_includes() + solver.get_user_action_set_includes(), True)
+      solver._get_default_includes() + solver.user_action_set_includes, True)
 
     self.d[ "FACE_METADATA_ACCESSOR" ] = "fineGridFaces"  + solver._face_label.name
     self.d[ "CELL_METADATA_ACCESSOR" ] = "fineGridCell""" + solver._cell_label.name

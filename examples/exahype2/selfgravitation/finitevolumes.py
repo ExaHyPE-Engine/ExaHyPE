@@ -121,6 +121,27 @@ dimensions = args.dim
 build_mode = modes[args.mode]
 
 
+#
+# Add the coupling terms
+#
+poisson_solver.add_user_action_set_includes( """
+#include "toolbox/blockstructured/Copy.h"
+""")
+poisson_solver.postprocess_updated_patch = """
+ ::toolbox::blockstructured::copyUnknown(
+   {},      // no of unknowns per dimension
+   fineGridCellEulerQ.value, // source
+   4,       // index four in source
+   5+3,     // unknowns in source (incl material parameters)
+   0,       // no overlap/halo here
+   fineGridCellPoissonQ.value, // dest
+   4,       // index four in destination
+   4+1,     // four unknowns in source (incl material parameters)
+   0        // no overlap/halo here
+ );
+""".format(args.patch_size)
+
+
 
 #
 # Lets configure some global parameters
