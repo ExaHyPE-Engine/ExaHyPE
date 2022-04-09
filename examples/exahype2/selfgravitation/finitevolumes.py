@@ -131,13 +131,35 @@ poisson_solver.postprocess_updated_patch = """
  ::toolbox::blockstructured::copyUnknown(
    {},      // no of unknowns per dimension
    fineGridCellEulerQ.value, // source
-   4,       // index four in source
+   0,       // the first index (0) is rho
    5+3,     // unknowns in source (incl material parameters)
    0,       // no overlap/halo here
    fineGridCellPoissonQ.value, // dest
-   4,       // index four in destination
+   4,       // index four in destination, i.e. fifth entry 
    4+1,     // four unknowns in source (incl material parameters)
    0        // no overlap/halo here
+ );
+""".format(args.patch_size)
+
+euler_solver.add_user_action_set_includes( """
+#include "toolbox/blockstructured/Derivative.h"
+""")
+euler_solver.postprocess_updated_patch = """
+ ::toolbox::blockstructured::computeGradient(
+   {},      // no of unknowns per dimension
+   fineGridCellPoissonQ.value, // source
+   0,       // take first entry of solution vector, ignore helper entries
+   4+1,     // unknowns in source (incl material parameters)
+   0,       // no overlap/halo here
+   fineGridCellEulerQ.value, // source
+   #if Dimensions==2
+   {{5,6}},   // indices to which we write the gradient. Depends on dimension
+   #else
+   {{5,6,7}}, // and uses two brackets as escape symbol
+   #endif
+   5+3,     // four unknowns in source (incl material parameters)
+   0,       // no overlap/halo here
+   marker.h()
  );
 """.format(args.patch_size)
 

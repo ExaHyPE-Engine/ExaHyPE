@@ -113,13 +113,14 @@ void ::examples::exahype2::selfgravitation::Poisson::sourceTerm(
   logTraceInWith4Arguments( "sourceTerm(...)", volumeX, volumeH, t, dt );
 
   const double T_tau = 1.0 / 4.0 / tarch::la::PI/tarch::la::PI;
-  const double G     = 6.67e-11;
+//  const double G     = 6.67e-11;
+  const double G     = 6.67e-3; // @todo No clue what normalised constant belong in here. 1e-11 is definitely too small
   const double rho   = Q[4]; // This is the input term
 
   S[0] = - tarch::la::PI * G / rho;
   S[1] = -Q[1]/T_tau;
-  S[1] = -Q[2]/T_tau;
-  S[1] = -Q[3]/T_tau;
+  S[2] = -Q[2]/T_tau;
+  S[3] = -Q[3]/T_tau;
 
   logTraceOut( "sourceTerm(...)" );
 }

@@ -4,6 +4,10 @@
 #define _PEANO4_TOOLBOX_BLOCKSTRUCTURED_DERIVATIVE_H_
 
 
+#include "peano4/utils/Globals.h"
+#include "tarch/la/Vector.h"
+
+
 namespace toolbox {
   namespace blockstructured {
     /**
@@ -23,9 +27,10 @@ namespace toolbox {
       int                                sourceUnknowns,
       int                                sourceHalo,
       double* __restrict__               dest,
-      int                                destIndex[Dimensions],
+      const tarch::la::Vector<Dimensions,int>&   destIndex,
       int                                destUnknowns,
-      int                                destHalo
+      int                                destHalo,
+      const tarch::la::Vector<Dimensions,double>&  volumeH
     );
   }
 }
