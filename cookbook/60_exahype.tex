@@ -557,10 +557,10 @@ for which \Peano's toolbox provides a generic implementation:
 
 
 \begin{code}
-poisson_solver.add_user_action_set_includes( """
+euler_solver.add_user_action_set_includes( """
 #include "toolbox/blockstructured/Copy.h"
 """)
-poisson_solver.postprocess_updated_patch = """
+euler_solver.postprocess_updated_patch = """
  ::toolbox::blockstructured::copyUnknown(
    {},      // no of unknowns per dimension
    fineGridCellEulerQ.value, // source
@@ -631,10 +631,10 @@ Q[7]
 after each and every solver update step:
 
 \begin{code}
-euler_solver.add_user_action_set_includes( """
+poisson_solver.add_user_action_set_includes( """
 #include "toolbox/blockstructured/Derivative.h"
 """)
-euler_solver.postprocess_updated_patch = """
+poisson_solver.postprocess_updated_patch = """
  ::toolbox::blockstructured::computeGradient(
    {},      // no of unknowns per dimension
    fineGridCellPoissonQ.value, // source
@@ -733,9 +733,106 @@ overtakes the Euler solver and triggers an update there, while the code snippet
 above resets the gravity equation's time stamp, i.e.~resyncs it with the Euler.
 
 
-The coupling for our stationary process is realised through two ingredients.
-First, 
+To determine if the solver is (close to) stationary, we evaluate the difference 
+between the gradient of $\phi$ after each Poisson step.
+For this, we tweak the coupling term: 
 
+\begin{code}
+euler_solver.postprocess_updated_patch = """
+ double delta = 
+ ::toolbox::blockstructured::computeGradientAndReturnMaxDifference(
+   {},      // no of unknowns per dimension
+   fineGridCellPoissonQ.value, // source
+   0,       // take first entry of solution vector, ignore helper entries
+   4+1,     // unknowns in source (incl material parameters)
+   0,       // no overlap/halo here
+   fineGridCellEulerQ.value, // source
+   #if Dimensions==2
+   {{5,6}},   // indices to which we write the gradient. Depends on dimension
+   #else
+   {{5,6,7}}, // and uses two brackets as escape symbol
+   #endif
+   5+3,     // four unknowns in source (incl material parameters)
+   0,       // no overlap/halo here
+   marker.h()
+ );
+ repositories::InstanceOf{}.reportGradientDelta( delta );
+""".format(args.patch_size, poisson_solver.name)
+\end{code} 
+
+\noindent
+The new computation preserves the semantics of the old one plus computes a value \texttt{delta} 
+which it then pipes into the Poisson solver object.
+Here, we once again exploit our knowledge about \ExaHyPE's internal working and naming conventions.
+To make the whole thing finally work, we tweak the Poisson solver:
+We introduce a new function \texttt{reportGradientDelta} and we alter the eigenvalue calculation.
+For this, we three ingredients to the header of the class \texttt{Poisson}
+
+\begin{code}
+    static tarch::multicore::BooleanSemaphore _maxGradientDeltaSemaphore;
+
+    double _currentMaxGradientDelta;
+    double _previousMaxGradientDelta;
+  public:
+    Poisson();
+    
+    // overwritten from AbstractSolver once again
+    void startTimeStep(
+      double globalMinTimeStamp,
+      double globalMaxTimeStamp,
+      double globalMinTimeStepSize,
+      double globalMaxTimeStepSize
+    ) override;
+    
+    void reportGradientDelta(double delta);
+\end{code}
+
+\noindent
+and then provide their implementation as follows:
+
+\begin{code}
+
+tarch::multicore::BooleanSemaphore examples::exahype2::selfgravitation::Poisson::_maxGradientDeltaSemaphore;
+
+void examples::exahype2::selfgravitation::Poisson::startTimeStep(
+  double globalMinTimeStamp,
+  double globalMaxTimeStamp,
+  double globalMinTimeStepSize,
+  double globalMaxTimeStepSize
+) {
+  AbstractPoisson::startTimeStep( globalMinTimeStamp, globalMaxTimeStamp, globalMinTimeStepSize, 
+    globalMaxTimeStepSize );
+  _previousMaxGradientDelta = _currentMaxGradientDelta;
+  _currentMaxGradientDelta = 0.0;
+}
+
+
+void examples::exahype2::selfgravitation::Poisson::reportGradientDelta(double delta) {
+  tarch::multicore::Lock lock( _maxGradientDeltaSemaphore );
+  _currentMaxGradientDelta = std::max(_currentMaxGradientDelta,delta);
+}
+\end{code}
+
+\noindent
+We note that our solution seems to lead to inconcistent behaviour, as we have not introduced any
+communication between MPI ranks. 
+However, we note that any solver will terminate if and only if all cells do exceed the maximum time
+stamp.
+So we are fine with just letting the individual solvers run in time as they want.
+
+
+With the above code snippet and a valid value for \texttt{\_maxGradientDelta}, we can finally alter our eigenvalue calcuation as follows:
+
+\begin{code}
+double ::examples::exahype2::selfgravitation::Poisson::maxEigenvalue(...)  {
+  ...  // as before, assuming that the eigenvalue ends up in result
+
+  result = std::min(1.0,_maxGradientDelta) * result;
+
+  logTraceOutWith1Argument( "maxEigenvalue(...)", result );
+  return result;
+}
+\end{code}
 
 
 

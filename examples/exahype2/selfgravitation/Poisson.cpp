@@ -1,11 +1,38 @@
 #include "Poisson.h"
 #include "exahype2/RefinementControl.h"
+#include "tarch/multicore/Lock.h"
 
 
 tarch::logging::Log   examples::exahype2::selfgravitation::Poisson::_log( "examples::exahype2::selfgravitation::Poisson" );
 
+tarch::multicore::BooleanSemaphore examples::exahype2::selfgravitation::Poisson::_maxGradientDeltaSemaphore;
+
+examples::exahype2::selfgravitation::Poisson::Poisson():
+  _currentMaxGradientDelta(1.0),
+  _previousMaxGradientDelta(1.0) {
+}
 
 
+void examples::exahype2::selfgravitation::Poisson::startTimeStep(
+  double globalMinTimeStamp,
+  double globalMaxTimeStamp,
+  double globalMinTimeStepSize,
+  double globalMaxTimeStepSize
+) {
+  AbstractPoisson::startTimeStep( globalMinTimeStamp, globalMaxTimeStamp, globalMinTimeStepSize, globalMaxTimeStepSize );
+  if ( tarch::la::greater(_currentMaxGradientDelta,0.0) ) {
+    _previousMaxGradientDelta = _currentMaxGradientDelta;
+  }
+  _currentMaxGradientDelta = 0.0;
+  logInfo( "startTimeStep()", "reset current max gradient (previous=" << _previousMaxGradientDelta << ")" );
+}
+
+
+void examples::exahype2::selfgravitation::Poisson::reportGradientDelta(double delta) {
+  tarch::multicore::Lock lock( _maxGradientDeltaSemaphore );
+  if (delta>0.0) std::cout << " @@@ " << delta;
+  _currentMaxGradientDelta = std::max(_currentMaxGradientDelta,delta);
+}
 
 
 
@@ -68,7 +95,10 @@ double ::examples::exahype2::selfgravitation::Poisson::maxEigenvalue(
 
   // @todo needs cross-checking
   const double T_tau = 1.0 / 4.0 / tarch::la::PI/tarch::la::PI;
-  const double result = std::sqrt(1/T_tau);
+
+  double result = std::sqrt(1/T_tau);
+
+  result = std::max(1e-8,_previousMaxGradientDelta) * result;
 
   logTraceOutWith1Argument( "maxEigenvalue(...)", result );
   return result;

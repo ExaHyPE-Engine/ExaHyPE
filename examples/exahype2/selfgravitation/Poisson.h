@@ -22,8 +22,22 @@ class examples::exahype2::selfgravitation::Poisson: public AbstractPoisson {
   private:
     static tarch::logging::Log   _log;
 
+    static tarch::multicore::BooleanSemaphore _maxGradientDeltaSemaphore;
+
+    double _currentMaxGradientDelta;
+    double _previousMaxGradientDelta;
   public:
-    
+    Poisson();
+
+    // overwritten from AbstractSolver once again
+    void startTimeStep(
+      double globalMinTimeStamp,
+      double globalMaxTimeStamp,
+      double globalMinTimeStepSize,
+      double globalMaxTimeStepSize
+    ) override;
+
+    void reportGradientDelta(double delta);
 
 
     

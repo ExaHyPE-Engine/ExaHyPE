@@ -34,6 +34,18 @@ namespace toolbox {
       int                                destUnknowns,
       int                                destHalo
     );
+
+    double copyUnknownAndComputeMaxDifference(
+      int                                numberOfDoFsPerAxisInPatch,
+      const double* __restrict__         source,
+      int                                sourceIndex,
+      int                                sourceUnknowns,
+      int                                sourceHalo,
+      double* __restrict__               dest,
+      int                                destIndex,
+      int                                destUnknowns,
+      int                                destHalo
+    );
   }
 }
 

@@ -39,6 +39,20 @@ namespace toolbox {
       int                                destHalo,
       const tarch::la::Vector<Dimensions,double>&  volumeH
     );
+
+
+    double computeGradientAndReturnMaxDifference(
+      int                                numberOfDoFsPerAxisInPatch,
+      const double* __restrict__         source,
+      int                                sourceIndex,
+      int                                sourceUnknowns,
+      int                                sourceHalo,
+      double* __restrict__               dest,
+      const tarch::la::Vector<Dimensions,int>&   destIndex,
+      int                                destUnknowns,
+      int                                destHalo,
+      const tarch::la::Vector<Dimensions,double>&  volumeH
+    );
   }
 }
 

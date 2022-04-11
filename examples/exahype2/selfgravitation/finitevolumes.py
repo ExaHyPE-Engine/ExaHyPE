@@ -147,10 +147,10 @@ build_mode = modes[args.mode]
 #
 # Add the coupling terms
 #
-poisson_solver.add_user_action_set_includes( """
+euler_solver.add_user_action_set_includes( """
 #include "toolbox/blockstructured/Copy.h"
 """)
-poisson_solver.postprocess_updated_patch = """
+euler_solver.postprocess_updated_patch = """
  ::toolbox::blockstructured::copyUnknown(
    {},      // no of unknowns per dimension
    fineGridCellEulerQ.value, // source
@@ -164,11 +164,12 @@ poisson_solver.postprocess_updated_patch = """
  );
 """.format(args.patch_size)
 
-euler_solver.add_user_action_set_includes( """
+poisson_solver.add_user_action_set_includes( """
 #include "toolbox/blockstructured/Derivative.h"
 """)
-euler_solver.postprocess_updated_patch = """
- ::toolbox::blockstructured::computeGradient(
+poisson_solver.postprocess_updated_patch = """
+ double delta = 
+ ::toolbox::blockstructured::computeGradientAndReturnMaxDifference(
    {},      // no of unknowns per dimension
    fineGridCellPoissonQ.value, // source
    0,       // take first entry of solution vector, ignore helper entries
@@ -184,7 +185,8 @@ euler_solver.postprocess_updated_patch = """
    0,       // no overlap/halo here
    marker.h()
  );
-""".format(args.patch_size)
+ repositories::InstanceOf{}.reportGradientDelta( delta );
+""".format(args.patch_size, poisson_solver.name)
 
 #
 # Time step synchronisation. Ensure the Euler solver doesn't run ahead but waits
