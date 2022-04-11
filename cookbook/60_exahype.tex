@@ -389,9 +389,9 @@ a hyperbolic variant with $\phi (\tau)$ and three helper functions $(q_1,q_2,q_3
   \left(
   \begin{array}{c}
    -\phi G/\rho \\ 
-   -q_i/T_\tau \\
-   -q_i/T_\tau \\
-   -q_i/T_\tau 
+   -q_1/T_\tau \\
+   -q_2/T_\tau \\
+   -q_3/T_\tau 
   \end{array} 
  \right).
  \label{equation:exahype:case-study:elliptic-hyperbolic-constraint}
@@ -411,6 +411,30 @@ Once we have reached a stationary state, we take the arising $\phi$ and make it 
 of  (\ref{equation:exahype:case-study:self-gravitation}).
 Equation (\ref{equation:exahype:case-study:elliptic-hyperbolic-constraint}) will finally be restarted at the new 
 time stamp reached by the Euler system.
+
+
+For the Euler equations, all ingredients are well-known from the introductory
+example. The Poisson-ish operator is degenerated and yields (for the flux in
+x-direction)
+
+\[
+F_x = \left( \begin{array}{c} -q_1 \\   -\phi / T_\tau \\ 0 \\ 0 \end{array}
+\right)
+\quad \text{i.e.} \quad
+\nabla F_x = \left( \begin{array}{cccc} 
+  0 & -1 & 0 & 0 \\
+ -1/T_\tau & 0 & 0 & 0 \\
+  0 & 0 & 0 & 0 \\
+  0 & 0 & 0 & 0
+\end{array} \right)
+\]
+
+
+\noindent
+with a trivial maximum eigenvalue/singular value $\sqrt{ 1/T_\tau }$.
+We note that this value does not depend on $\phi $, i.e.~is
+solution-independent.
+
 
 
 \paragraph{Realisation with two individual solvers}
@@ -519,12 +543,13 @@ While, in principle, both approaches do work here, there's a delicate
 difference (see documentation):
 In the pre-processing step, we have access to the patch data plus the halo.
 In the post-processing step, we have only access to the patch content.
+In our example, these things don't make a big difference, so we run for a 
+coupling after each time step.
 
 
 For the density, which feeds from the
 (\ref{equation:exahype:case-study:self-gravitation})  into the material
-parameters of the Poisson-ish equation, we use the post-processing hook-in.
-It is a plain copy from 
+parameters of the Poisson-ish equation, we need a plain copy from 
 \[
   Q[4]|_{\text{Euler}} \mapsto   Q[4]|_{\text{Poisson}} 
 \]
@@ -535,18 +560,18 @@ for which \Peano's toolbox provides a generic implementation:
 poisson_solver.add_user_action_set_includes( """
 #include "toolbox/blockstructured/Copy.h"
 """)
-poisson_solver.preprocess_reconstructed_patch_kernel = """
+poisson_solver.postprocess_updated_patch = """
  ::toolbox::blockstructured::copyUnknown(
-   {},                        // no of unknowns per dimension
-   fineGridCellEulerQ.value,  // source
-   4,                         // index four in source
-   5+3,                       // unknowns in source (incl material parameters)
-   0,                         // no halo in source
-   reconstructedPatch,        // dest
-   4,                         // index four in destination
-   4+1,                       // four unknowns in source (incl material parameters) 
-   1                          // halo of one in reconstructed patch
-   );
+   {},      // no of unknowns per dimension
+   fineGridCellEulerQ.value, // source
+   0,       // the first index (0) is rho
+   5+3,     // unknowns in source (incl material parameters)
+   0,       // no overlap/halo here
+   fineGridCellPoissonQ.value, // dest
+   4,       // index four in destination, i.e. fifth entry 
+   4+1,     // four unknowns in source (incl material parameters)
+   0        // no overlap/halo here
+ );
 """.format(args.patch_size)
 \end{code}
 
@@ -564,32 +589,25 @@ The unknowns per cell (so the plain double array) are called
 a \texttt{Q}.
 The data is actually a struct for our plain double fields which hosts a pointer
 \texttt{value}.
-The destination is not the data of the Poisson equation. This one will
-eventually been overwritten by the time stepping.
-The target data is the temporary array \texttt{reconstructedPatch} which hosts
-the \texttt{fineGridCellPoissonQ} patch data (as we add the preprocessing to the
-Poisson solver) plus the halo.
 
 
 \begin{remark}
- Initial values.
+ If you work in the preprocessing step, i.e.~inject the coupling prior to the
+ time step, you work with a temporary array \texttt{reconstructedPatch} which
+ hosts the patch data plus the information from the halos.
+ That is, you work with some \texttt{fineGridCell...Q} value as pre-image, but
+ you write into \texttt{reconstructedPatch} which now already has a halo. 
+ You can also hook into this step to ``save'' data from
+ \texttt{reconstructedPatch} before it is handed over to the time stepping.
 \end{remark}
 
-% The other way round, our modified Euler terms in (\ref{equation:exahype:case-study:self-gravitation}) 
-% require the gradient from (\ref{equation:exahype:case-study:elliptic-hyperbolic-constraint}).
 
-
-
- We insert the coupling as a specialised a posteriori solution update within
-the respective solver, i.e.~the data flow from the Euler to the Poisson equation
-is realised as a posteriori update of the Euler equations.
-Every time we do a time step there, we map the outcome onto a material parameter 
-of the Poisson equation.
-
-The other way round, we follow exactly the same principle.
-There is room for optimisation here, as we would only have to couple 
-@todo Nachdenken ob preprocessing schritt
-
+\noindent
+For the coupling the other way round, we follow exactly the same principle.
+There is room for optimisation here, as we would only have to couple after the 
+Poisson equation has run into a stationary solution, but I omit such
+optimisations here.
+I simple invoke the mapping
 
 \[
  Q[0] _{\text{Poisson}} = 
@@ -608,6 +626,118 @@ Q[7]
   \end{array} 
  \right)_{\text{Euler}}
 \]
+
+\noindent
+after each and every solver update step:
+
+\begin{code}
+euler_solver.add_user_action_set_includes( """
+#include "toolbox/blockstructured/Derivative.h"
+""")
+euler_solver.postprocess_updated_patch = """
+ ::toolbox::blockstructured::computeGradient(
+   {},      // no of unknowns per dimension
+   fineGridCellPoissonQ.value, // source
+   0,       // take first entry of solution vector, ignore helper entries
+   4+1,     // unknowns in source (incl material parameters)
+   0,       // no overlap/halo here
+   fineGridCellEulerQ.value, // source
+   #if Dimensions==2
+   {{5,6}},   // indices to which we write the gradient. Depends on dimension
+   #else
+   {{5,6,7}}, // and uses two brackets as escape symbol
+   #endif
+   5+3,     // four unknowns in source (incl material parameters)
+   0,       // no overlap/halo here
+   marker.h()
+ );
+""".format(args.patch_size)
+\end{code}
+
+
+\paragraph{Time step synchronisation}
+%
+%
+%
+So far, we couple the two solvers in each and every time step.
+This makes no sense, if the two solvers don't run in-syn, i.e.~with exactly the
+time step size.
+For the coupling in time, we exploit two properties of \ExaHyPE\ cells:
+\begin{enumerate}
+  \item Each \ExaHyPE\ cell has a time stamp. Even if you employ some global
+  time stepping scheme, every single cell still holds its local time stamp
+  (though they are, obviously, then all the same).
+  \item Every time step update is protected by a guard. This is one large
+  sequence of boolean expressions connected via ands. Through the guards,
+  \ExaHyPE's local time stepping ensures, for example, that cells do not run
+  ahead too much.
+\end{enumerate}
+
+
+\noindent
+Our strategy for a coupled solver is to add one more boolean evaluation to the
+time step guard. 
+As we have two solvers per cell (Poisson and Euler), the cell hosts two time
+stamps and the guard can compare these two time stamps.
+
+
+In our example, we know that the Poisson solver always is the slow solver. 
+In a first step, we thus have to throttle down the Euler solver.
+It has to wait for its cousing solver:
+
+\begin{code}
+euler_solver._action_set_update_cell.guard += " and tarch::la::greaterEquals( fineGridCell" + \
+  poisson_solver.name + "CellLabel.getTimeStamp(), fineGridCell" +
+  euler_solver.name + \
+  "CellLabel.getTimeStamp() )"
+\end{code}
+
+
+\begin{remark}
+ Throughout the coupling example, I take two existing \ExaHyPE\ solvers and
+ modify/augment their attributes. In a larger code, it might be reasonable to
+ create two completely new Python classes which inherit from the respective
+ solvers, i.e.~to model them as real new solvers.
+ A lot of the string construction above violates object-oriented information
+ hiding paradigms, so it might be better to accommodate it within classes of
+ their own.
+\end{remark}
+
+
+\noindent
+Finally, we have to make a decision how to handle the paper's original idea that
+the Poisson solver should run into a stationary solution before we actually
+progress in time.
+In a world with a fixed global time step, this can be achieved by making the
+time step of the Poisson solver extremely small. 
+We then get hundreds and thousands of Poisson time steps per Euler step and
+``just'' have to ensure that these Poisson steps are sufficient to obtain an
+almost stationary solution just before Euler hops in time once again.
+This approach quickly becomes computationally infeasible.
+
+
+The time step size choices in \ExaHyPE\ are picked through the eigenvalues.
+If we use large eigenvalues, we get small time steps. 
+If we use small eigenvalues, we get big time steps.
+If the maximum eigenvalue per cell approaches zero (or is set to 0 in \ExaHyPE),  
+the cell in principle could do an infinitely large time step.
+\ExaHyPE\ however will truncate this to ensure that a cell does not exceed the 
+final time stamp.
+Our eigenvalue is subject to an artificial parameter $T_\tau $.
+We conclude that we could pick the eigenvalue corresponding to $T_\tau$ while we
+update the Poisson-ish equation and track the changes in $\phi $.
+As these changes become smaller and smaller, we can gradually decrease the
+chosen eigenvalue.
+This leads to an increase in the time step size, until the solver eventually
+overtakes the Euler solver and triggers an update there, while the code snippet
+above resets the gravity equation's time stamp, i.e.~resyncs it with the Euler.
+
+
+The coupling for our stationary process is realised through two ingredients.
+First, 
+
+
+
 
 
 

@@ -67,13 +67,12 @@ double ::examples::exahype2::selfgravitation::Poisson::maxEigenvalue(
   logTraceInWith4Arguments( "maxEigenvalue(...)", faceCentre, volumeH, t, normal );
 
   // @todo needs cross-checking
-  const double result = 4.0 * tarch::la::PI;
+  const double T_tau = 1.0 / 4.0 / tarch::la::PI/tarch::la::PI;
+  const double result = std::sqrt(1/T_tau);
 
   logTraceOutWith1Argument( "maxEigenvalue(...)", result );
   return result;
 }
-
-
 
 
 void ::examples::exahype2::selfgravitation::Poisson::flux(
@@ -95,11 +94,6 @@ void ::examples::exahype2::selfgravitation::Poisson::flux(
 
   logTraceOut( "flux(...)" );
 }
-
-
-
-
-
 
 
 void ::examples::exahype2::selfgravitation::Poisson::sourceTerm(
@@ -124,19 +118,4 @@ void ::examples::exahype2::selfgravitation::Poisson::sourceTerm(
 
   logTraceOut( "sourceTerm(...)" );
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 

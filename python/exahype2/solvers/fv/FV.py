@@ -923,6 +923,11 @@ The finest mesh width of """ + str(self.get_finest_volume_size(domain_size)) + "
 
 
   @property
+  def name(self):
+    return self._name
+  
+
+  @property
   def postprocess_updated_patch(self):
     return self._postprocess_updated_patch
 

@@ -42,7 +42,7 @@ parser.add_argument("-m",  "--mode",                   dest="mode",             
 parser.add_argument("-et", "--end-time",               dest="end_time",                 type=float, default=1.0, help="Number of timesteps" )
 parser.add_argument("-pd", "--peano-dir",              dest="peanodir",                 default="../../../", help="Peano4 directory" )
 parser.add_argument("-amr", "--adaptive-levels",       dest="adaptivity_levels",        type=int, default=0, help="Number of AMR grid levels on top of hmax (0 by default)" )
-parser.add_argument("-t",   "--type",                  dest="type",                     choices=["global-fixed"], required=True )
+parser.add_argument("-t",   "--type",                  dest="type",                     choices=["global-fixed", "global-adaptive"], required=True )
 parser.add_argument("-pdt", "--plot-dt",               dest="plot_snapshot_interval", default=0, help="Time interval in-between two snapshots (switched off by default")
 parser.add_argument("-v",   "--verbose",               dest="verbose",          action="store_true", default=False, help="Verbose")
 parser.add_argument("-ps",  "--patch-size",            dest="patch_size",       type=int, default=17, help="Dimensions" )
@@ -108,6 +108,29 @@ if args.type=="global-fixed":
     eigenvalues = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
     source_term = exahype2.solvers.fv.PDETerms.User_Defined_Implementation
   )
+if args.type=="global-adaptive":
+  euler_solver = exahype2.solvers.fv.rusanov.GlobalAdaptiveTimeStep(
+    "Euler",
+    args.patch_size,
+    5, #unknowns, 
+    3, #auxiliary_variables,
+    min_h, max_h,
+    time_step_relaxation = 0.01,
+    flux = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
+    eigenvalues = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
+    source_term = exahype2.solvers.fv.PDETerms.User_Defined_Implementation
+  )
+  poisson_solver = exahype2.solvers.fv.rusanov.GlobalAdaptiveTimeStep(
+    "Poisson",
+    args.patch_size,
+    4, #unknowns, 
+    1, #auxiliary_variables,
+    min_h, max_h,
+    time_step_relaxation = 0.001,
+    flux = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
+    eigenvalues = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
+    source_term = exahype2.solvers.fv.PDETerms.User_Defined_Implementation
+  )
 
 
 euler_solver.set_implementation( refinement_criterion=exahype2.solvers.fv.PDETerms.User_Defined_Implementation )
@@ -162,6 +185,23 @@ euler_solver.postprocess_updated_patch = """
    marker.h()
  );
 """.format(args.patch_size)
+
+#
+# Time step synchronisation. Ensure the Euler solver doesn't run ahead but waits
+# for the Poisson updates.
+#
+euler_solver._action_set_update_cell.guard += " and tarch::la::greaterEquals( fineGridCell" + \
+  poisson_solver.name + "CellLabel.getTimeStamp(), fineGridCell" + euler_solver.name + \
+  "CellLabel.getTimeStamp() )"
+
+#
+# Ensure the Poisson solver does never overtake the Euler
+#
+poisson_solver._compute_new_time_step_size += """
+if (fineGridCell""" + poisson_solver.name + "CellLabel.getTimeStamp() > fineGridCell" + euler_solver.name + """CellLabel.getTimeStamp() ) {
+    fineGridCell""" + poisson_solver.name + """CellLabel.setTimeStamp( fineGridCell""" + euler_solver.name + """CellLabel.getTimeStamp() );
+}"""
+
 
 
 
