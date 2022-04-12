@@ -63,7 +63,7 @@ void exahype2::dg::explicitEulerOnCell_FluxNCPSource_EvaluateTermsRedundantly(
     sourceValues    = new double[unknowns]{0.0};
   }
   if(useNCP){
-    gradientValues  = new double[unknowns*Dimensions]{0.0};
+    gradientValues  = new double[strideQ*Dimensions]{0.0};
     ncpValues       = new double[unknowns]{0.0};
   }
 
@@ -109,7 +109,7 @@ void exahype2::dg::explicitEulerOnCell_FluxNCPSource_EvaluateTermsRedundantly(
 
           double coeff = coeff1 * StiffnessMatrix[i+index[dim]*nodesPerAxis];
           for(int var=0; var<unknowns; var++){
-              cellQout[node*strideQ+var] += coeff * fluxValues[var];
+              cellQout[node*strideQ+var] += -coeff * fluxValues[var];
           } //var
 
         } //i
@@ -136,24 +136,27 @@ void exahype2::dg::explicitEulerOnCell_FluxNCPSource_EvaluateTermsRedundantly(
     } //if useSource
 
     if(useNCP){
+
+      computeGradient(
+        cellQin,
+        DerivativeOperator,
+        invDx,
+        nodesPerAxis,
+        strideQ,
+        node,
+        gradientValues
+        );
+
       for(int dim=0; dim<Dimensions; dim++){
-        computeGradient(
-          cellQin,
-          DerivativeOperator,
-          invDx,
-          nodesPerAxis,
-          unknowns,
-          auxiliaryVariables,
-          node,
-          gradientValues
-          );
+
         nonConservativeProduct(
           &cellQin[node*strideQ],
-          gradientValues,
+          &gradientValues[dim*strideQ],
           position,
           t,
           dim,
           ncpValues);
+
         for(int var=0; var<unknowns; var++){
           cellQout[node*strideQ+var] += dt * ncpValues[var];
         } //var

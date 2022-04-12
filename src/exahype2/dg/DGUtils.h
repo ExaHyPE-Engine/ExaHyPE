@@ -208,14 +208,15 @@ namespace exahype2 {
      * @param gradQ: where the gradient values should be placed, has size unknowns*Dimensions
      * since there is a gradient in each direction and the gradient is only nonzero for the
      * unknowns
+     *
+     * @param strideQ: total number of variables over which the gradient should be computed
      */
     void computeGradient(
         const double* __restrict__ const QCell,
         const double* __restrict__ const derivativeOperator,
         const double                     invDx,
         const int                        nodesPerAxis,
-        const int                        unknowns,
-        const int                        auxiliaryVariables,
+        const int                        strideQ,
         const int                        scalarIndex,
         double* __restrict__             gradQ
         );

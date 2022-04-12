@@ -41,6 +41,7 @@ void exahype2::dg::getMaxEigenvaluePerFace(
   }
 
   for(int dim=0; dim<Dimensions; dim++){
+
     for(int lr=0; lr<2; lr++){
 
       eigenvalues[2*dim+lr] = std::numeric_limits<double>::min();
@@ -51,20 +52,20 @@ void exahype2::dg::getMaxEigenvaluePerFace(
             &QHull[2*dim+lr][(2*node+(1-lr))*strideQ], //if left face, then inner side is the right one and reversely
             x,
             t,
-            2*dim+lr);
+            dim);
 
           boundaryConditions(
               &QHull[2*dim+lr][(2*node+(1-lr))*strideQ],
               boundaryValues,
               x,
               t,
-              2*dim+(1-lr));
+              dim);
 
           double resultOuter = maxEigenvalue(
               boundaryValues,
               x,
               t,
-              2*dim+(1-lr));
+              dim);
 
           eigenvalues[2*dim+lr] = std::max(eigenvalues[2*dim+lr], std::abs(resultInner));
           eigenvalues[2*dim+lr] = std::max(eigenvalues[2*dim+lr], std::abs(resultOuter));
@@ -77,7 +78,7 @@ void exahype2::dg::getMaxEigenvaluePerFace(
             &QHull[2*dim+lr][node*strideQ], //if left face, then inner side is the right one and reversely
             x,
             t,
-            2*dim+node%2);
+            dim);
           eigenvalues[2*dim+lr] = std::max(eigenvalues[2*dim+lr], std::abs(result));
         }
       }
@@ -147,9 +148,9 @@ void exahype2::dg::computeRusanovOnHull(
     fluxValuesRight = new double[unknowns]{0.0};
   }
   if(useNCP){
-    ncpValues       = new double[unknowns]{0.0};
+    ncpValues       = new double[strideQ]{0.0};
     QValues         = new double[strideQ]{0.0};
-    gradQValues     = new double[unknowns]{0.0};
+    gradQValues     = new double[strideQ]{0.0};
   }
 
   for(int dim=0; dim<Dimensions; dim++){
@@ -172,6 +173,7 @@ void exahype2::dg::computeRusanovOnHull(
 
         if(atBoundary[2*dim+lr]&&lr==0){ //on left boundary
           //qr = &QHullIn[(2*((2*Dimensions+lr)*nodesPerFace+node)+1)*strideQ];
+
           qr = &QHullIn[2*dim+lr][(2*node+1)*strideQ];
           boundaryConditions(  qr,
                 boundaryValuesLeft,
@@ -220,14 +222,15 @@ void exahype2::dg::computeRusanovOnHull(
               QHullOut[((2*dim+lr)*nodesPerFace+node)*strideQ+var] += 0.5*(fluxValuesLeft[var]+fluxValuesRight[var])
                   - coeff*(qr[var]-ql[var]);
             } //var
+
         } //if useFlux
 
         if(useNCP){
-          for(int var=0; var<unknowns; var++){
+          for(int var=0; var<strideQ; var++){
             gradQValues[var] = qr[var] - ql[var];
           }
           for(int var=0; var<strideQ; var++){
-            QValues[var] = 0.5* (qr[var] - ql[var]);
+            QValues[var] = 0.5* (qr[var] + ql[var]);
           }
 
           nonConservativeProduct(
@@ -238,9 +241,12 @@ void exahype2::dg::computeRusanovOnHull(
               dim,
               ncpValues);
 
+          const double coeff = (-1.0 + 2.0*lr) * 0.5;
+
           for(int var=0; var<unknowns; var++){
-            QHullOut[((2*Dimensions+lr)*nodesPerFace+node)*strideQ] += coeff*ncpValues[var];
+            QHullOut[((2*dim+lr)*nodesPerFace+node)*strideQ+var] += coeff*ncpValues[var];
           }
+
         }
 
       } //node
@@ -285,45 +291,21 @@ void exahype2::dg::applyRiemannToPatch(
 
   for(int node=0; node<nodesPerCell; node++){
 
-//    std::cout << "On node " << node << std::endl;
-
     tarch::la::Vector<Dimensions,int> index = getIndex(node, strides);
 
     // direction in which riemann contributions are being computed
     for(int dim=0; dim<Dimensions; dim++){
 
       const double coeff1 = coeff0/quadratureWeights[index[dim]];
-      /*
-      for(int dim2=0; dim2<Dimensions; dim2++){
-        if(dim2!=dim){
-          coeff1 = coeff1*quadratureWeights[index[dim2]];
-        }
-      }
-      */
-
       const double coeffLeft  = coeff1*BasisFunctionValuesLeft[index[dim]];
       const double coeffRight = coeff1*BasisFunctionValuesRight[index[dim]];
       const int leftFaceNode  = cellIndexToHullIndex(index, dim, 0, nodesPerAxis);
       const int rightFaceNode = cellIndexToHullIndex(index, dim, 1, nodesPerAxis);
-      /*
-      std::cout << "For dimension " << dim << ", contributions from nodes (left, right): ["
-          << leftFaceNode << ", " << rightFaceNode << "] with coefficients: "
-          << coeffLeft << ", " << -coeffRight << "]" << std::endl;
-      */
       for(int var=0; var<unknowns; var++){
-        /*
-        std::cout << "For variable: " << var << " values are: " << QHullIn[leftFaceNode*strideQ+var]
-          << ", " << QHullIn[rightFaceNode*strideQ+var] << "]" << std::endl
-          << "values:[" << coeffLeft * QHullIn[leftFaceNode*strideQ+var] << ", "
-          << - coeffRight * QHullIn[rightFaceNode*strideQ+var]
-          << "]" << std::endl;
-        */
         Q[node*strideQ+var] += coeffLeft * QHullIn[leftFaceNode*strideQ+var] - coeffRight * QHullIn[rightFaceNode*strideQ+var];
       }
 
     } //dim
-
-    std::cout << std::endl;
 
   } //node
 

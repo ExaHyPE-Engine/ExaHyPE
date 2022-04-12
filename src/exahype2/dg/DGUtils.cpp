@@ -216,26 +216,25 @@ void exahype2::dg::computeGradient(
         const double* __restrict__ const derivativeOperator,
         const double                     invDx,
         const int                        nodesPerAxis,
-        const int                        unknowns,
-        const int                        auxiliaryVariables,
+        const int                        strideQ,
         const int                        scalarIndex,
         double* __restrict__             gradQ
         ){
 
-  const int strideQ = unknowns+auxiliaryVariables;
   tarch::la::Vector<Dimensions,int> strides = getStrides(nodesPerAxis);
   tarch::la::Vector<Dimensions,int> index   = getIndex(scalarIndex, strides);
 
   for(int dim=0; dim<Dimensions; dim++){
 
-    for(int var=0; var<unknowns; var++){
-      gradQ[dim*unknowns+var] = 0.0;
+    for(int var=0; var<strideQ; var++){
+      gradQ[dim*strideQ+var] = 0.0;
     }//var
 
     for(int node=0; node<nodesPerAxis; node++){
-      const double coeff = invDx * derivativeOperator[node*nodesPerAxis + index[dim]];
-      for(int var=0; var<unknowns; var++){
-          gradQ[dim*unknowns+var] += coeff*QCell[(scalarIndex + (node-index[dim])*strides[dim])*strideQ + var];
+//      const double coeff = invDx * derivativeOperator[node+nodesPerAxis*index[dim]];
+      const double coeff = invDx * derivativeOperator[node+nodesPerAxis*index[dim]];
+      for(int var=0; var<strideQ; var++){
+          gradQ[dim*strideQ+var] += coeff*QCell[(scalarIndex + (node-index[dim])*strides[dim])*strideQ + var];
       }//var
     }//node
   }//dim
