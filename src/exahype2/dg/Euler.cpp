@@ -109,7 +109,7 @@ void exahype2::dg::explicitEulerOnCell_FluxNCPSource_EvaluateTermsRedundantly(
 
           double coeff = coeff1 * StiffnessMatrix[i+index[dim]*nodesPerAxis];
           for(int var=0; var<unknowns; var++){
-              cellQout[node*strideQ+var] += -coeff * fluxValues[var];
+              cellQout[node*strideQ+var] += coeff * fluxValues[var];
           } //var
 
         } //i
