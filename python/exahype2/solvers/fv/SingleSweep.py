@@ -13,7 +13,7 @@ from peano4.toolbox.blockstructured.ReconstructPatchAndApplyFunctor import Recon
 
 class UpdateCell(ReconstructPatchAndApplyFunctor):
   SolveRiemannProblemsOverPatch = jinja2.Template( """
-      const double timeStamp    = fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStamp();
+      double timeStamp    = fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStamp();
 
       // Set the variable
       // double timeStepSize

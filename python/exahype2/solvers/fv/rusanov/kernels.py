@@ -14,13 +14,13 @@ def create_compute_time_step_size_for_fixed_time_stepping_with_subcycling( time_
   const double originalStepSize = repositories::{{SOLVER_INSTANCE}}.getMinPatchSize(false)>0.0 ?
     repositories::{{SOLVER_INSTANCE}}.getTimeStepSize() * marker.h()(0) / repositories::{{SOLVER_INSTANCE}}.getMinPatchSize(false) :
     0.0;
-  const double timeStepSize = ::exahype2::removeTimeStepAccumulationErrorsFromCell( fineGridCell""" + solver_name + """CellLabel, fineGridFaces""" + solver_name + """FaceLabel, originalStepSize);
+  double timeStepSize = ::exahype2::removeTimeStepAccumulationErrorsFromCell( fineGridCell""" + solver_name + """CellLabel, fineGridFaces""" + solver_name + """FaceLabel, originalStepSize);
 """  
   else:
     return """
   // The fixed solver's _timeStepSize scales with min volume h, i.e. it is 
   // always chosen such that the finest grid does something meaningful.
-  const double timeStepSize = repositories::{{SOLVER_INSTANCE}}.getMinPatchSize(false)>0.0 ?
+  double timeStepSize = repositories::{{SOLVER_INSTANCE}}.getMinPatchSize(false)>0.0 ?
     repositories::{{SOLVER_INSTANCE}}.getTimeStepSize() * marker.h()(0) / repositories::{{SOLVER_INSTANCE}}.getMinPatchSize(false) :
     0.0;
 """  
@@ -34,13 +34,13 @@ def create_compute_time_step_size_kernel_for_adaptive_time_stepping_with_subcycl
   const double originalTimeStepSize = repositories::{{SOLVER_INSTANCE}}.getMinPatchSize(false)>0.0 ?
     repositories::{{SOLVER_INSTANCE}}.getAdmissibleTimeStepSize() * marker.h()(0) / repositories::{{SOLVER_INSTANCE}}.getMinPatchSize(false) :
     0.0;
-  const double timeStepSize = ::exahype2::removeTimeStepAccumulationErrorsFromCell( fineGridCell""" + solver_name + """CellLabel, fineGridFaces""" + solver_name + """FaceLabel, originalTimeStepSize);
+  double timeStepSize = ::exahype2::removeTimeStepAccumulationErrorsFromCell( fineGridCell""" + solver_name + """CellLabel, fineGridFaces""" + solver_name + """FaceLabel, originalTimeStepSize);
 """
   else:
     return """
   // The fixed solver's _timeStepSize scales with min volume h, i.e. it is 
   // always chosen such that the finest grid does something meaningful.
-  const double timeStepSize = repositories::{{SOLVER_INSTANCE}}.getMinPatchSize(false)>0.0 ?
+  double timeStepSize = repositories::{{SOLVER_INSTANCE}}.getMinPatchSize(false)>0.0 ?
     repositories::{{SOLVER_INSTANCE}}.getAdmissibleTimeStepSize() * marker.h()(0) / repositories::{{SOLVER_INSTANCE}}.getMinPatchSize(false) :
     0.0;
 """
@@ -48,7 +48,7 @@ def create_compute_time_step_size_kernel_for_adaptive_time_stepping_with_subcycl
 
 def create_compute_time_step_size_kernel_for_local_time_stepping( solver_name, time_step_relaxation ):
   result = """
-  const double timeStepSize = ::exahype2::removeTimeStepAccumulationErrorsFromCell( fineGridCell""" + solver_name + """CellLabel, fineGridFaces""" + solver_name + """FaceLabel, fineGridCell""" + solver_name + """CellLabel.getTimeStepSize() );
+  double timeStepSize = ::exahype2::removeTimeStepAccumulationErrorsFromCell( fineGridCell""" + solver_name + """CellLabel, fineGridFaces""" + solver_name + """FaceLabel, fineGridCell""" + solver_name + """CellLabel.getTimeStepSize() );
 """
 
   return result
@@ -56,7 +56,7 @@ def create_compute_time_step_size_kernel_for_local_time_stepping( solver_name, t
 
 def create_compute_time_step_size_kernel_for_adaptive_time_stepping():
   return """
-  const double timeStepSize = repositories::{{SOLVER_INSTANCE}}.getAdmissibleTimeStepSize();
+  double timeStepSize = repositories::{{SOLVER_INSTANCE}}.getAdmissibleTimeStepSize();
 """
 
 
@@ -174,7 +174,7 @@ public:
    *         you have to scale it for cells that are not on the finest
    *         mesh resolution. 
    */
-  double getAdmissibleTimeStepSize() const;  
+  virtual double getAdmissibleTimeStepSize() const;  
     """  
     
     

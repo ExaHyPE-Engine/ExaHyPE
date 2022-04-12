@@ -662,8 +662,11 @@ poisson_solver.postprocess_updated_patch = """
 So far, we couple the two solvers in each and every time step.
 This makes no sense, if the two solvers don't run in-syn, i.e.~with exactly the
 time step size.
-For the coupling in time, we exploit two properties of \ExaHyPE\ cells:
+For the coupling in time, we exploit some simple properties of \ExaHyPE:
 \begin{enumerate}
+  \item Once we switch to \texttt{GlobalAdaptiveTimeStep} or literally any
+  solver that does not use fixed time step sizes, we can tweak the time step
+  sizes to meet our needs.
   \item Each \ExaHyPE\ cell has a time stamp. Even if you employ some global
   time stepping scheme, every single cell still holds its local time stamp
   (though they are, obviously, then all the same).
@@ -675,20 +678,19 @@ For the coupling in time, we exploit two properties of \ExaHyPE\ cells:
 
 
 \noindent
+Therefore, we first switch to an adaptive time stepping scheme.
+The Poisson solver usually employs a smaller relaxation of the time step size.
 Our strategy for a coupled solver is to add one more boolean evaluation to the
-time step guard. 
+time step guard of these adaptive solvers. 
 As we have two solvers per cell (Poisson and Euler), the cell hosts two time
 stamps and the guard can compare these two time stamps.
-
-
 In our example, we know that the Poisson solver always is the slow solver. 
 In a first step, we thus have to throttle down the Euler solver.
-It has to wait for its cousing solver:
+It has to wait for its cousin solver:
 
 \begin{code}
 euler_solver._action_set_update_cell.guard += " and tarch::la::greaterEquals( fineGridCell" + \
-  poisson_solver.name + "CellLabel.getTimeStamp(), fineGridCell" +
-  euler_solver.name + \
+  poisson_solver.name + "CellLabel.getTimeStamp(), fineGridCell" + euler_solver.name + \
   "CellLabel.getTimeStamp() )"
 \end{code}
 
@@ -705,7 +707,7 @@ euler_solver._action_set_update_cell.guard += " and tarch::la::greaterEquals( fi
 
 
 \noindent
-Finally, we have to make a decision how to handle the paper's original idea that
+Next, we have to make a decision how to handle the paper's original idea that
 the Poisson solver should run into a stationary solution before we actually
 progress in time.
 In a world with a fixed global time step, this can be achieved by making the
@@ -714,23 +716,7 @@ We then get hundreds and thousands of Poisson time steps per Euler step and
 ``just'' have to ensure that these Poisson steps are sufficient to obtain an
 almost stationary solution just before Euler hops in time once again.
 This approach quickly becomes computationally infeasible.
-
-
-The time step size choices in \ExaHyPE\ are picked through the eigenvalues.
-If we use large eigenvalues, we get small time steps. 
-If we use small eigenvalues, we get big time steps.
-If the maximum eigenvalue per cell approaches zero (or is set to 0 in \ExaHyPE),  
-the cell in principle could do an infinitely large time step.
-\ExaHyPE\ however will truncate this to ensure that a cell does not exceed the 
-final time stamp.
-Our eigenvalue is subject to an artificial parameter $T_\tau $.
-We conclude that we could pick the eigenvalue corresponding to $T_\tau$ while we
-update the Poisson-ish equation and track the changes in $\phi $.
-As these changes become smaller and smaller, we can gradually decrease the
-chosen eigenvalue.
-This leads to an increase in the time step size, until the solver eventually
-overtakes the Euler solver and triggers an update there, while the code snippet
-above resets the gravity equation's time stamp, i.e.~resyncs it with the Euler.
+We need an approach that switches gears once we are stationary.
 
 
 To determine if the solver is (close to) stationary, we evaluate the difference 
@@ -738,7 +724,7 @@ between the gradient of $\phi$ after each Poisson step.
 For this, we tweak the coupling term: 
 
 \begin{code}
-euler_solver.postprocess_updated_patch = """
+poisson_solver.postprocess_updated_patch = """
  double delta = 
  ::toolbox::blockstructured::computeGradientAndReturnMaxDifference(
    {},      // no of unknowns per dimension
@@ -765,74 +751,58 @@ The new computation preserves the semantics of the old one plus computes a value
 which it then pipes into the Poisson solver object.
 Here, we once again exploit our knowledge about \ExaHyPE's internal working and naming conventions.
 To make the whole thing finally work, we tweak the Poisson solver:
-We introduce a new function \texttt{reportGradientDelta} and we alter the eigenvalue calculation.
-For this, we three ingredients to the header of the class \texttt{Poisson}
 
-\begin{code}
+\begin{itemize}
+  \item We let the Poisson solver keep track of the gradient deltas. Actually,
+  we use two deltas. \texttt{\_currentMaxGradientDelta} is used to analyse the
+  current delta which we change throughout the grid traversal, while
+  \texttt{\_previousMaxGradientDelta} holds the result from the previous grid
+  traversal. 
+  \begin{code}
     static tarch::multicore::BooleanSemaphore _maxGradientDeltaSemaphore;
 
     double _currentMaxGradientDelta;
     double _previousMaxGradientDelta;
-  public:
-    Poisson();
-    
-    // overwritten from AbstractSolver once again
-    void startTimeStep(
-      double globalMinTimeStamp,
-      double globalMaxTimeStamp,
-      double globalMinTimeStepSize,
-      double globalMaxTimeStepSize
-    ) override;
-    
-    void reportGradientDelta(double delta);
-\end{code}
-
-\noindent
-and then provide their implementation as follows:
-
-\begin{code}
-
-tarch::multicore::BooleanSemaphore examples::exahype2::selfgravitation::Poisson::_maxGradientDeltaSemaphore;
-
+  \end{code}
+  \item We introduce a new function \texttt{reportGradientDelta} that accepts
+  the \texttt{delta} as we have computed it above.
+  \begin{code}
+void examples::exahype2::selfgravitation::Poisson::reportGradientDelta(double delta) {
+  tarch::multicore::Lock lock( _maxGradientDeltaSemaphore );
+  _currentMaxGradientDelta = std::max(_currentMaxGradientDelta,delta);
+}
+  \end{code}
+  \item We hook into \texttt{startTimeStep} to roll the deltas over.
+  \begin{code}
 void examples::exahype2::selfgravitation::Poisson::startTimeStep(
   double globalMinTimeStamp,
   double globalMaxTimeStamp,
   double globalMinTimeStepSize,
   double globalMaxTimeStepSize
 ) {
-  AbstractPoisson::startTimeStep( globalMinTimeStamp, globalMaxTimeStamp, globalMinTimeStepSize, 
-    globalMaxTimeStepSize );
+  AbstractPoisson::startTimeStep( globalMinTimeStamp, ... );
   _previousMaxGradientDelta = _currentMaxGradientDelta;
   _currentMaxGradientDelta = 0.0;
 }
+  \end{code}
+  \item We overwrite \texttt{getAdmissibleTimeStepSize}. If the two delta values
+  do not differ that much anymore, we assume we have converged and we use the
+  standard time step size the solver would use. If the two delta values differ
+  significantly, we assume that we have not yet convered and thus use a tiny
+  time step size.
+  \begin{code}
+double examples::exahype2::selfgravitation::Poisson::getAdmissibleTimeStepSize() const {
+  double originalAdmissibleTimeStepSize = AbstractPoisson::getAdmissibleTimeStepSize();
 
-
-void examples::exahype2::selfgravitation::Poisson::reportGradientDelta(double delta) {
-  tarch::multicore::Lock lock( _maxGradientDeltaSemaphore );
-  _currentMaxGradientDelta = std::max(_currentMaxGradientDelta,delta);
+  if (_previousMaxGradientDelta>1.0e-8) {
+    return tarch::la::NUMERICAL_ZERO_DIFFERENCE*2.0; // not converged yet
+  }
+  else {
+    return originalAdmissibleTimeStepSize;
+  }
 }
-\end{code}
-
-\noindent
-We note that our solution seems to lead to inconcistent behaviour, as we have not introduced any
-communication between MPI ranks. 
-However, we note that any solver will terminate if and only if all cells do exceed the maximum time
-stamp.
-So we are fine with just letting the individual solvers run in time as they want.
-
-
-With the above code snippet and a valid value for \texttt{\_maxGradientDelta}, we can finally alter our eigenvalue calcuation as follows:
-
-\begin{code}
-double ::examples::exahype2::selfgravitation::Poisson::maxEigenvalue(...)  {
-  ...  // as before, assuming that the eigenvalue ends up in result
-
-  result = std::min(1.0,_maxGradientDelta) * result;
-
-  logTraceOutWith1Argument( "maxEigenvalue(...)", result );
-  return result;
-}
-\end{code}
+  \end{code}
+\end{itemize}
 
 
 

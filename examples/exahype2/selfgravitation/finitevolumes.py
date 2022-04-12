@@ -115,7 +115,7 @@ if args.type=="global-adaptive":
     5, #unknowns, 
     3, #auxiliary_variables,
     min_h, max_h,
-    time_step_relaxation = 0.01,
+    time_step_relaxation = 1e-2,
     flux = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
     eigenvalues = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
     source_term = exahype2.solvers.fv.PDETerms.User_Defined_Implementation
@@ -126,7 +126,7 @@ if args.type=="global-adaptive":
     4, #unknowns, 
     1, #auxiliary_variables,
     min_h, max_h,
-    time_step_relaxation = 0.001,
+    time_step_relaxation =  1e-3,
     flux = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
     eigenvalues = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
     source_term = exahype2.solvers.fv.PDETerms.User_Defined_Implementation
@@ -143,6 +143,14 @@ project.add_solver( poisson_solver )
 dimensions = args.dim
 build_mode = modes[args.mode]
 
+
+#
+# Time step synchronisation. Ensure the Euler solver doesn't run ahead but waits
+# for the Poisson updates.
+#
+euler_solver._action_set_update_cell.guard += " and tarch::la::greaterEquals( fineGridCell" + \
+  poisson_solver.name + "CellLabel.getTimeStamp(), fineGridCell" + euler_solver.name + \
+  "CellLabel.getTimeStamp() )"
 
 #
 # Add the coupling terms
@@ -189,20 +197,17 @@ poisson_solver.postprocess_updated_patch = """
 """.format(args.patch_size, poisson_solver.name)
 
 #
-# Time step synchronisation. Ensure the Euler solver doesn't run ahead but waits
-# for the Poisson updates.
-#
-euler_solver._action_set_update_cell.guard += " and tarch::la::greaterEquals( fineGridCell" + \
-  poisson_solver.name + "CellLabel.getTimeStamp(), fineGridCell" + euler_solver.name + \
-  "CellLabel.getTimeStamp() )"
-
-#
 # Ensure the Poisson solver does never overtake the Euler
 #
 poisson_solver._compute_new_time_step_size += """
 if (fineGridCell""" + poisson_solver.name + "CellLabel.getTimeStamp() > fineGridCell" + euler_solver.name + """CellLabel.getTimeStamp() ) {
-    fineGridCell""" + poisson_solver.name + """CellLabel.setTimeStamp( fineGridCell""" + euler_solver.name + """CellLabel.getTimeStamp() );
-}"""
+  timeStamp = fineGridCell""" + euler_solver.name + """CellLabel.getTimeStamp(); // reset time step size
+  timeStepSize = 0.0;           // invalidate time step size; the one chosen didn't make sense
+  fineGridCell""" + poisson_solver.name + """CellLabel.setTimeStamp( timeStamp );
+}
+else {
+}
+"""
 
 
 

@@ -20,17 +20,32 @@ void examples::exahype2::selfgravitation::Poisson::startTimeStep(
   double globalMaxTimeStepSize
 ) {
   AbstractPoisson::startTimeStep( globalMinTimeStamp, globalMaxTimeStamp, globalMinTimeStepSize, globalMaxTimeStepSize );
-  if ( tarch::la::greater(_currentMaxGradientDelta,0.0) ) {
-    _previousMaxGradientDelta = _currentMaxGradientDelta;
-  }
+  _previousMaxGradientDelta = _currentMaxGradientDelta;
   _currentMaxGradientDelta = 0.0;
-  logInfo( "startTimeStep()", "reset current max gradient (previous=" << _previousMaxGradientDelta << ")" );
+  if (_previousMaxGradientDelta>1e-8) {
+    logInfo( "startTimeStep(...)", "max gradient difference=" << _previousMaxGradientDelta << ". Solver has not converged, i.e. do not use |dt|_max=" << AbstractPoisson::getAdmissibleTimeStepSize() );
+  }
+  else {
+    logInfo( "startTimeStep(...)", "max gradient difference=" << _previousMaxGradientDelta << ". Solver has converged. Use |dt|_max=" << AbstractPoisson::getAdmissibleTimeStepSize() );
+  }
 }
+
+
+double examples::exahype2::selfgravitation::Poisson::getAdmissibleTimeStepSize() const {
+  double originalAdmissibleTimeStepSize = AbstractPoisson::getAdmissibleTimeStepSize();
+
+  if (_previousMaxGradientDelta>1.0e-8) {
+    return tarch::la::NUMERICAL_ZERO_DIFFERENCE*2.0; // not converged yet
+  }
+  else {
+    return originalAdmissibleTimeStepSize;
+  }
+}
+
 
 
 void examples::exahype2::selfgravitation::Poisson::reportGradientDelta(double delta) {
   tarch::multicore::Lock lock( _maxGradientDeltaSemaphore );
-  if (delta>0.0) std::cout << " @@@ " << delta;
   _currentMaxGradientDelta = std::max(_currentMaxGradientDelta,delta);
 }
 
@@ -97,8 +112,6 @@ double ::examples::exahype2::selfgravitation::Poisson::maxEigenvalue(
   const double T_tau = 1.0 / 4.0 / tarch::la::PI/tarch::la::PI;
 
   double result = std::sqrt(1/T_tau);
-
-  result = std::max(1e-8,_previousMaxGradientDelta) * result;
 
   logTraceOutWith1Argument( "maxEigenvalue(...)", result );
   return result;

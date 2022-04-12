@@ -39,6 +39,10 @@ class examples::exahype2::selfgravitation::Poisson: public AbstractPoisson {
 
     void reportGradientDelta(double delta);
 
+    /**
+     * overwritten
+     */
+    double getAdmissibleTimeStepSize() const override;
 
     
     void initialCondition(

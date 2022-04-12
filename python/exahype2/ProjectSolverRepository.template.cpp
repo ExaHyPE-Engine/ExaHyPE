@@ -73,7 +73,7 @@ double getMinTimeStamp(bool ofCurrentlyRunningGridSweep) {
 double getMaxTimeStamp(bool ofCurrentlyRunningGridSweep) {
   double result = 0.0;
   {% for item in SOLVERS -%}
-    result = std::max( result, {{ item[1] }}.getMaxTimeStamp(ofCurrentlyRunningGridSweep) );
+    result = std::min( result, {{ item[1] }}.getMaxTimeStamp(ofCurrentlyRunningGridSweep) );
   {%- endfor %}
   return result;
 }

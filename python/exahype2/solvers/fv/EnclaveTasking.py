@@ -15,7 +15,7 @@ from exahype2.solvers.fv.actionsets.AbstractFVActionSet import AbstractFVActionS
 
 class UpdateCell(ReconstructPatchAndApplyFunctor):
   TemplateUpdateCell = jinja2.Template( """
-  const double timeStamp    = fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStamp();
+  double timeStamp    = fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStamp();
 
   // Set the following two paramters
   // double timeStepSize
