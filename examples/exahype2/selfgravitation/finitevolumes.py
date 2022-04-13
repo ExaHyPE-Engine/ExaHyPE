@@ -42,7 +42,7 @@ parser.add_argument("-m",  "--mode",                   dest="mode",             
 parser.add_argument("-et", "--end-time",               dest="end_time",                 type=float, default=1.0, help="Number of timesteps" )
 parser.add_argument("-pd", "--peano-dir",              dest="peanodir",                 default="../../../", help="Peano4 directory" )
 parser.add_argument("-amr", "--adaptive-levels",       dest="adaptivity_levels",        type=int, default=0, help="Number of AMR grid levels on top of hmax (0 by default)" )
-parser.add_argument("-t",   "--type",                  dest="type",                     choices=["global-fixed"], required=True )
+parser.add_argument("-t",   "--type",                  dest="type",                     choices=["global-fixed", "global-adaptive"], required=True )
 parser.add_argument("-pdt", "--plot-dt",               dest="plot_snapshot_interval", default=0, help="Time interval in-between two snapshots (switched off by default")
 parser.add_argument("-v",   "--verbose",               dest="verbose",          action="store_true", default=False, help="Verbose")
 parser.add_argument("-ps",  "--patch-size",            dest="patch_size",       type=int, default=17, help="Dimensions" )
@@ -108,6 +108,29 @@ if args.type=="global-fixed":
     eigenvalues = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
     source_term = exahype2.solvers.fv.PDETerms.User_Defined_Implementation
   )
+if args.type=="global-adaptive":
+  euler_solver = exahype2.solvers.fv.rusanov.GlobalAdaptiveTimeStep(
+    "Euler",
+    args.patch_size,
+    5, #unknowns, 
+    3, #auxiliary_variables,
+    min_h, max_h,
+    time_step_relaxation = 1e-2,
+    flux = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
+    eigenvalues = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
+    source_term = exahype2.solvers.fv.PDETerms.User_Defined_Implementation
+  )
+  poisson_solver = exahype2.solvers.fv.rusanov.GlobalAdaptiveTimeStep(
+    "Poisson",
+    args.patch_size,
+    4, #unknowns, 
+    1, #auxiliary_variables,
+    min_h, max_h,
+    time_step_relaxation =  1e-3,
+    flux = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
+    eigenvalues = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
+    source_term = exahype2.solvers.fv.PDETerms.User_Defined_Implementation
+  )
 
 
 euler_solver.set_implementation( refinement_criterion=exahype2.solvers.fv.PDETerms.User_Defined_Implementation )
@@ -119,6 +142,73 @@ project.add_solver( poisson_solver )
 
 dimensions = args.dim
 build_mode = modes[args.mode]
+
+
+#
+# Time step synchronisation. Ensure the Euler solver doesn't run ahead but waits
+# for the Poisson updates.
+#
+euler_solver._action_set_update_cell.guard += " and tarch::la::greaterEquals( fineGridCell" + \
+  poisson_solver.name + "CellLabel.getTimeStamp(), fineGridCell" + euler_solver.name + \
+  "CellLabel.getTimeStamp() )"
+
+#
+# Add the coupling terms
+#
+euler_solver.add_user_action_set_includes( """
+#include "toolbox/blockstructured/Copy.h"
+""")
+euler_solver.postprocess_updated_patch = """
+ ::toolbox::blockstructured::copyUnknown(
+   {},      // no of unknowns per dimension
+   fineGridCellEulerQ.value, // source
+   0,       // the first index (0) is rho
+   5+3,     // unknowns in source (incl material parameters)
+   0,       // no overlap/halo here
+   fineGridCellPoissonQ.value, // dest
+   4,       // index four in destination, i.e. fifth entry 
+   4+1,     // four unknowns in source (incl material parameters)
+   0        // no overlap/halo here
+ );
+""".format(args.patch_size)
+
+poisson_solver.add_user_action_set_includes( """
+#include "toolbox/blockstructured/Derivative.h"
+""")
+poisson_solver.postprocess_updated_patch = """
+ double delta = 
+ ::toolbox::blockstructured::computeGradientAndReturnMaxDifference(
+   {},      // no of unknowns per dimension
+   fineGridCellPoissonQ.value, // source
+   0,       // take first entry of solution vector, ignore helper entries
+   4+1,     // unknowns in source (incl material parameters)
+   0,       // no overlap/halo here
+   fineGridCellEulerQ.value, // source
+   #if Dimensions==2
+   {{5,6}},   // indices to which we write the gradient. Depends on dimension
+   #else
+   {{5,6,7}}, // and uses two brackets as escape symbol
+   #endif
+   5+3,     // four unknowns in source (incl material parameters)
+   0,       // no overlap/halo here
+   marker.h()
+ );
+ repositories::InstanceOf{}.reportGradientDelta( delta );
+""".format(args.patch_size, poisson_solver.name)
+
+#
+# Ensure the Poisson solver does never overtake the Euler
+#
+poisson_solver._compute_new_time_step_size += """
+if (fineGridCell""" + poisson_solver.name + "CellLabel.getTimeStamp() > fineGridCell" + euler_solver.name + """CellLabel.getTimeStamp() ) {
+  timeStamp = fineGridCell""" + euler_solver.name + """CellLabel.getTimeStamp(); // reset time step size
+  timeStepSize = 0.0;           // invalidate time step size; the one chosen didn't make sense
+  fineGridCell""" + poisson_solver.name + """CellLabel.setTimeStamp( timeStamp );
+}
+else {
+}
+"""
+
 
 
 

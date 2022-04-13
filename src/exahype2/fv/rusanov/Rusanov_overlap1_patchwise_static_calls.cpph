@@ -362,7 +362,7 @@ namespace exahype2 { namespace fv{ namespace rusanov{ namespace internal{
         #pragma omp simd collapse(2)
         #endif
         for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++)
-        for (int unknown=0; unknown<unknowns+auxiliaryVariables; unknown++) {
+        for (int unknown=0; unknown<unknowns; unknown++) {
           otterLoopIterationBegin();
           internal::updateSolutionWithFlux_LoopBody(
             tempFluxX, tempFluxY, tempFluxZ,
@@ -463,7 +463,7 @@ namespace exahype2 { namespace fv{ namespace rusanov{ namespace internal{
         #pragma omp simd
         #endif
         for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++)
-        for (int unknown=0; unknown<unknowns+auxiliaryVariables; unknown++) {
+        for (int unknown=0; unknown<unknowns; unknown++) {
           otterLoopIterationBegin();
           internal::updateSolutionWithFlux_LoopBody(
             tempFluxX, tempFluxY, tempFluxZ,
@@ -538,7 +538,7 @@ namespace exahype2 { namespace fv{ namespace rusanov{ namespace internal{
         #pragma omp simd collapse(2)
         #endif
         for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++)
-        for (int unknown=0; unknown<unknowns+auxiliaryVariables; unknown++) {
+        for (int unknown=0; unknown<unknowns; unknown++) {
           otterLoopIterationBegin();
           internal::updateSolutionWithNonconservativeFlux_LoopBody(
             tempNonconservativeProductX, tempNonconservativeProductY, tempNonconservativeProductZ,
@@ -639,7 +639,7 @@ namespace exahype2 { namespace fv{ namespace rusanov{ namespace internal{
           #pragma omp simd collapse(2)
           #endif
           for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++)
-          for (int unknown=0; unknown<unknowns+auxiliaryVariables; unknown++) {
+          for (int unknown=0; unknown<unknowns; unknown++) {
             otterLoopIterationBegin();
             internal::updateSolutionWithNonconservativeFlux_LoopBody(
               tempNonconservativeProductX, tempNonconservativeProductY, tempNonconservativeProductZ,

@@ -49,6 +49,9 @@ void examples::exahype2::selfgravitation::Euler::initialCondition(
   Q[2] = 0;
   Q[3] = 0;
   Q[4] = isInTheCentre ? 1.0 : 0.0; // inner energy
+  Q[5] = 0.0;  // ensure coupling terms are properly initialised; otherwise, they will pollute the very first time step
+  Q[6] = 0.0;
+  Q[7] = 0.0;
 
   logTraceOut( "initialCondition(...)" );
 }
@@ -115,8 +118,8 @@ double ::examples::exahype2::selfgravitation::Euler::maxEigenvalue(
   const double p = (gamma-1) * (Q[4] - 0.5*irho*(Q[1]*Q[1]+Q[2]*Q[2]));
   #endif
 
-  nonCriticalAssertion9( p>=0.0, Q[0], Q[1], Q[2], Q[3], Q[4], faceCentre, volumeH, t, normal );
-  const double c   = std::sqrt(gamma * p * irho);
+//  nonCriticalAssertion13( p>=0.0, p, Q[0], Q[1], Q[2], Q[3], Q[4], Q[5], Q[6], Q[7], faceCentre, volumeH, t, normal );
+  const double c   = std::sqrt(gamma * std::abs(p) * irho);
 
   const double u_n = Q[normal + 1] * irho;
   double result = std::max( std::abs(u_n - c), std::abs(u_n + c) );

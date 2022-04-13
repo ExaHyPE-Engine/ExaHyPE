@@ -389,9 +389,9 @@ a hyperbolic variant with $\phi (\tau)$ and three helper functions $(q_1,q_2,q_3
   \left(
   \begin{array}{c}
    -\phi G/\rho \\ 
-   -q_i/T_\tau \\
-   -q_i/T_\tau \\
-   -q_i/T_\tau 
+   -q_1/T_\tau \\
+   -q_2/T_\tau \\
+   -q_3/T_\tau 
   \end{array} 
  \right).
  \label{equation:exahype:case-study:elliptic-hyperbolic-constraint}
@@ -411,6 +411,30 @@ Once we have reached a stationary state, we take the arising $\phi$ and make it 
 of  (\ref{equation:exahype:case-study:self-gravitation}).
 Equation (\ref{equation:exahype:case-study:elliptic-hyperbolic-constraint}) will finally be restarted at the new 
 time stamp reached by the Euler system.
+
+
+For the Euler equations, all ingredients are well-known from the introductory
+example. The Poisson-ish operator is degenerated and yields (for the flux in
+x-direction)
+
+\[
+F_x = \left( \begin{array}{c} -q_1 \\   -\phi / T_\tau \\ 0 \\ 0 \end{array}
+\right)
+\quad \text{i.e.} \quad
+\nabla F_x = \left( \begin{array}{cccc} 
+  0 & -1 & 0 & 0 \\
+ -1/T_\tau & 0 & 0 & 0 \\
+  0 & 0 & 0 & 0 \\
+  0 & 0 & 0 & 0
+\end{array} \right)
+\]
+
+
+\noindent
+with a trivial maximum eigenvalue/singular value $\sqrt{ 1/T_\tau }$.
+We note that this value does not depend on $\phi $, i.e.~is
+solution-independent.
+
 
 
 \paragraph{Realisation with two individual solvers}
@@ -512,16 +536,78 @@ As we deal with a quasi-stationary second PDE, this coupling is trivial in the
 sense that we do not have to interpolate in time. 
 
 
-We insert the coupling as a specialised a posteriori solution update within
-the respective solver, i.e.~the data flow from the Euler to the Poisson equation
-is realised as a posteriori update of the Euler equations.
-Every time we do a time step there, we map the outcome onto a material parameter 
-of the Poisson equation.
+There are two places where we can add this coupling: 
+It can either be a preprocessing step of the time step or a postprocessing
+step.
+While, in principle, both approaches do work here, there's a delicate
+difference (see documentation):
+In the pre-processing step, we have access to the patch data plus the halo.
+In the post-processing step, we have only access to the patch content.
+In our example, these things don't make a big difference, so we run for a 
+coupling after each time step.
 
-The other way round, we follow exactly the same principle.
-There is room for optimisation here, as we would only have to couple 
-@todo Nachdenken ob preprocessing schritt
 
+For the density, which feeds from the
+(\ref{equation:exahype:case-study:self-gravitation})  into the material
+parameters of the Poisson-ish equation, we need a plain copy from 
+\[
+  Q[4]|_{\text{Euler}} \mapsto   Q[4]|_{\text{Poisson}} 
+\]
+for which \Peano's toolbox provides a generic implementation:
+
+
+\begin{code}
+euler_solver.add_user_action_set_includes( """
+#include "toolbox/blockstructured/Copy.h"
+""")
+euler_solver.postprocess_updated_patch = """
+ ::toolbox::blockstructured::copyUnknown(
+   {},      // no of unknowns per dimension
+   fineGridCellEulerQ.value, // source
+   0,       // the first index (0) is rho
+   5+3,     // unknowns in source (incl material parameters)
+   0,       // no overlap/halo here
+   fineGridCellPoissonQ.value, // dest
+   4,       // index four in destination, i.e. fifth entry 
+   4+1,     // four unknowns in source (incl material parameters)
+   0        // no overlap/halo here
+ );
+""".format(args.patch_size)
+\end{code}
+
+\noindent
+In this special case, we use a plain copy. 
+If the two different solvers have different patch sizes, i.e.~unknowns per
+dimension, we have to interpolate accordingly.
+The invocation is kind of self-explaining: 
+We include a helper function from the toolbox and call the \texttt{copyUnknown}.
+The ``nasty'' part is the \texttt{fineGridCellPoissonQ} part, for which we have
+to study the naming conventions within \ExaHyPE---a detail usually hidden from
+the user:
+The unknowns per cell (so the plain double array) are called
+\texttt{fineGridCell} followed by the name of the solver \texttt{Euler} and then
+a \texttt{Q}.
+The data is actually a struct for our plain double fields which hosts a pointer
+\texttt{value}.
+
+
+\begin{remark}
+ If you work in the preprocessing step, i.e.~inject the coupling prior to the
+ time step, you work with a temporary array \texttt{reconstructedPatch} which
+ hosts the patch data plus the information from the halos.
+ That is, you work with some \texttt{fineGridCell...Q} value as pre-image, but
+ you write into \texttt{reconstructedPatch} which now already has a halo. 
+ You can also hook into this step to ``save'' data from
+ \texttt{reconstructedPatch} before it is handed over to the time stepping.
+\end{remark}
+
+
+\noindent
+For the coupling the other way round, we follow exactly the same principle.
+There is room for optimisation here, as we would only have to couple after the 
+Poisson equation has run into a stationary solution, but I omit such
+optimisations here.
+I simple invoke the mapping
 
 \[
  Q[0] _{\text{Poisson}} = 
@@ -540,6 +626,185 @@ Q[7]
   \end{array} 
  \right)_{\text{Euler}}
 \]
+
+\noindent
+after each and every solver update step:
+
+\begin{code}
+poisson_solver.add_user_action_set_includes( """
+#include "toolbox/blockstructured/Derivative.h"
+""")
+poisson_solver.postprocess_updated_patch = """
+ ::toolbox::blockstructured::computeGradient(
+   {},      // no of unknowns per dimension
+   fineGridCellPoissonQ.value, // source
+   0,       // take first entry of solution vector, ignore helper entries
+   4+1,     // unknowns in source (incl material parameters)
+   0,       // no overlap/halo here
+   fineGridCellEulerQ.value, // source
+   #if Dimensions==2
+   {{5,6}},   // indices to which we write the gradient. Depends on dimension
+   #else
+   {{5,6,7}}, // and uses two brackets as escape symbol
+   #endif
+   5+3,     // four unknowns in source (incl material parameters)
+   0,       // no overlap/halo here
+   marker.h()
+ );
+""".format(args.patch_size)
+\end{code}
+
+
+\paragraph{Time step synchronisation}
+%
+%
+%
+So far, we couple the two solvers in each and every time step.
+This makes no sense, if the two solvers don't run in-syn, i.e.~with exactly the
+time step size.
+For the coupling in time, we exploit some simple properties of \ExaHyPE:
+\begin{enumerate}
+  \item Once we switch to \texttt{GlobalAdaptiveTimeStep} or literally any
+  solver that does not use fixed time step sizes, we can tweak the time step
+  sizes to meet our needs.
+  \item Each \ExaHyPE\ cell has a time stamp. Even if you employ some global
+  time stepping scheme, every single cell still holds its local time stamp
+  (though they are, obviously, then all the same).
+  \item Every time step update is protected by a guard. This is one large
+  sequence of boolean expressions connected via ands. Through the guards,
+  \ExaHyPE's local time stepping ensures, for example, that cells do not run
+  ahead too much.
+\end{enumerate}
+
+
+\noindent
+Therefore, we first switch to an adaptive time stepping scheme.
+The Poisson solver usually employs a smaller relaxation of the time step size.
+Our strategy for a coupled solver is to add one more boolean evaluation to the
+time step guard of these adaptive solvers. 
+As we have two solvers per cell (Poisson and Euler), the cell hosts two time
+stamps and the guard can compare these two time stamps.
+In our example, we know that the Poisson solver always is the slow solver. 
+In a first step, we thus have to throttle down the Euler solver.
+It has to wait for its cousin solver:
+
+\begin{code}
+euler_solver._action_set_update_cell.guard += " and tarch::la::greaterEquals( fineGridCell" + \
+  poisson_solver.name + "CellLabel.getTimeStamp(), fineGridCell" + euler_solver.name + \
+  "CellLabel.getTimeStamp() )"
+\end{code}
+
+
+\begin{remark}
+ Throughout the coupling example, I take two existing \ExaHyPE\ solvers and
+ modify/augment their attributes. In a larger code, it might be reasonable to
+ create two completely new Python classes which inherit from the respective
+ solvers, i.e.~to model them as real new solvers.
+ A lot of the string construction above violates object-oriented information
+ hiding paradigms, so it might be better to accommodate it within classes of
+ their own.
+\end{remark}
+
+
+\noindent
+Next, we have to make a decision how to handle the paper's original idea that
+the Poisson solver should run into a stationary solution before we actually
+progress in time.
+In a world with a fixed global time step, this can be achieved by making the
+time step of the Poisson solver extremely small. 
+We then get hundreds and thousands of Poisson time steps per Euler step and
+``just'' have to ensure that these Poisson steps are sufficient to obtain an
+almost stationary solution just before Euler hops in time once again.
+This approach quickly becomes computationally infeasible.
+We need an approach that switches gears once we are stationary.
+
+
+To determine if the solver is (close to) stationary, we evaluate the difference 
+between the gradient of $\phi$ after each Poisson step.
+For this, we tweak the coupling term: 
+
+\begin{code}
+poisson_solver.postprocess_updated_patch = """
+ double delta = 
+ ::toolbox::blockstructured::computeGradientAndReturnMaxDifference(
+   {},      // no of unknowns per dimension
+   fineGridCellPoissonQ.value, // source
+   0,       // take first entry of solution vector, ignore helper entries
+   4+1,     // unknowns in source (incl material parameters)
+   0,       // no overlap/halo here
+   fineGridCellEulerQ.value, // source
+   #if Dimensions==2
+   {{5,6}},   // indices to which we write the gradient. Depends on dimension
+   #else
+   {{5,6,7}}, // and uses two brackets as escape symbol
+   #endif
+   5+3,     // four unknowns in source (incl material parameters)
+   0,       // no overlap/halo here
+   marker.h()
+ );
+ repositories::InstanceOf{}.reportGradientDelta( delta );
+""".format(args.patch_size, poisson_solver.name)
+\end{code} 
+
+\noindent
+The new computation preserves the semantics of the old one plus computes a value \texttt{delta} 
+which it then pipes into the Poisson solver object.
+Here, we once again exploit our knowledge about \ExaHyPE's internal working and naming conventions.
+To make the whole thing finally work, we tweak the Poisson solver:
+
+\begin{itemize}
+  \item We let the Poisson solver keep track of the gradient deltas. Actually,
+  we use two deltas. \texttt{\_currentMaxGradientDelta} is used to analyse the
+  current delta which we change throughout the grid traversal, while
+  \texttt{\_previousMaxGradientDelta} holds the result from the previous grid
+  traversal. 
+  \begin{code}
+    static tarch::multicore::BooleanSemaphore _maxGradientDeltaSemaphore;
+
+    double _currentMaxGradientDelta;
+    double _previousMaxGradientDelta;
+  \end{code}
+  \item We introduce a new function \texttt{reportGradientDelta} that accepts
+  the \texttt{delta} as we have computed it above.
+  \begin{code}
+void examples::exahype2::selfgravitation::Poisson::reportGradientDelta(double delta) {
+  tarch::multicore::Lock lock( _maxGradientDeltaSemaphore );
+  _currentMaxGradientDelta = std::max(_currentMaxGradientDelta,delta);
+}
+  \end{code}
+  \item We hook into \texttt{startTimeStep} to roll the deltas over.
+  \begin{code}
+void examples::exahype2::selfgravitation::Poisson::startTimeStep(
+  double globalMinTimeStamp,
+  double globalMaxTimeStamp,
+  double globalMinTimeStepSize,
+  double globalMaxTimeStepSize
+) {
+  AbstractPoisson::startTimeStep( globalMinTimeStamp, ... );
+  _previousMaxGradientDelta = _currentMaxGradientDelta;
+  _currentMaxGradientDelta = 0.0;
+}
+  \end{code}
+  \item We overwrite \texttt{getAdmissibleTimeStepSize}. If the two delta values
+  do not differ that much anymore, we assume we have converged and we use the
+  standard time step size the solver would use. If the two delta values differ
+  significantly, we assume that we have not yet convered and thus use a tiny
+  time step size.
+  \begin{code}
+double examples::exahype2::selfgravitation::Poisson::getAdmissibleTimeStepSize() const {
+  double originalAdmissibleTimeStepSize = AbstractPoisson::getAdmissibleTimeStepSize();
+
+  if (_previousMaxGradientDelta>1.0e-8) {
+    return tarch::la::NUMERICAL_ZERO_DIFFERENCE*2.0; // not converged yet
+  }
+  else {
+    return originalAdmissibleTimeStepSize;
+  }
+}
+  \end{code}
+\end{itemize}
+
+
 
 
 

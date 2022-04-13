@@ -51,6 +51,10 @@ class GlobalFixedTimeStep( SingleSweep ):
     self._compute_time_step_size              = create_compute_time_step_size_for_fixed_time_stepping( time_step_size )
     self._compute_new_time_step_size          = "const double newTimeStepSize = timeStepSize;"
 
+    self._user_action_set_includes += """
+#include "exahype2/fv/rusanov/Rusanov.h"
+"""
+
     self.set_implementation(flux=flux, 
       ncp=ncp, 
       eigenvalues=eigenvalues, 
@@ -106,8 +110,3 @@ class GlobalFixedTimeStep( SingleSweep ):
       
     super(GlobalFixedTimeStep,self).set_implementation(boundary_conditions, refinement_criterion, initial_conditions, memory_location, use_split_loop, additional_action_set_includes, additional_user_includes)
 
-
-  def get_user_action_set_includes(self):
-    return super(GlobalFixedTimeStep, self).get_user_action_set_includes() + """
-#include "exahype2/fv/rusanov/Rusanov.h"
-"""

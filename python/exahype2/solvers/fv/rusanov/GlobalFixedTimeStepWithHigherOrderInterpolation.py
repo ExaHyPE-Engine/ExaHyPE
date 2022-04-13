@@ -109,7 +109,8 @@ class GlobalFixedTimeStepWithHigherOrderInterpolation( SingleSweep ):
     super(GlobalFixedTimeStepWithHigherOrderInterpolation,self).set_implementation(boundary_conditions, refinement_criterion, initial_conditions, memory_location, use_split_loop, additional_action_set_includes, additional_user_includes)
 
 
-  def get_user_action_set_includes(self):
-    return super(GlobalFixedTimeStepWithHigherOrderInterpolation, self).get_user_action_set_includes() + """
+  @property
+  def user_action_set_includes(self):
+    return super(GlobalFixedTimeStepWithHigherOrderInterpolation, self).user_action_set_includes + """
 #include "exahype2/fv/rusanov/Rusanov.h"
 """

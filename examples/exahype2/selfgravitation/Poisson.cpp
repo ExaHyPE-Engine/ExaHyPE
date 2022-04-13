@@ -1,11 +1,53 @@
 #include "Poisson.h"
 #include "exahype2/RefinementControl.h"
+#include "tarch/multicore/Lock.h"
 
 
 tarch::logging::Log   examples::exahype2::selfgravitation::Poisson::_log( "examples::exahype2::selfgravitation::Poisson" );
 
+tarch::multicore::BooleanSemaphore examples::exahype2::selfgravitation::Poisson::_maxGradientDeltaSemaphore;
+
+examples::exahype2::selfgravitation::Poisson::Poisson():
+  _currentMaxGradientDelta(1.0),
+  _previousMaxGradientDelta(1.0) {
+}
 
 
+void examples::exahype2::selfgravitation::Poisson::startTimeStep(
+  double globalMinTimeStamp,
+  double globalMaxTimeStamp,
+  double globalMinTimeStepSize,
+  double globalMaxTimeStepSize
+) {
+  AbstractPoisson::startTimeStep( globalMinTimeStamp, globalMaxTimeStamp, globalMinTimeStepSize, globalMaxTimeStepSize );
+  _previousMaxGradientDelta = _currentMaxGradientDelta;
+  _currentMaxGradientDelta = 0.0;
+  if (_previousMaxGradientDelta>1e-8) {
+    logInfo( "startTimeStep(...)", "max gradient difference=" << _previousMaxGradientDelta << ". Solver has not converged, i.e. do not use |dt|_max=" << AbstractPoisson::getAdmissibleTimeStepSize() );
+  }
+  else {
+    logInfo( "startTimeStep(...)", "max gradient difference=" << _previousMaxGradientDelta << ". Solver has converged. Use |dt|_max=" << AbstractPoisson::getAdmissibleTimeStepSize() );
+  }
+}
+
+
+double examples::exahype2::selfgravitation::Poisson::getAdmissibleTimeStepSize() const {
+  double originalAdmissibleTimeStepSize = AbstractPoisson::getAdmissibleTimeStepSize();
+
+  if (_previousMaxGradientDelta>1.0e-8) {
+    return tarch::la::NUMERICAL_ZERO_DIFFERENCE*2.0; // not converged yet
+  }
+  else {
+    return originalAdmissibleTimeStepSize;
+  }
+}
+
+
+
+void examples::exahype2::selfgravitation::Poisson::reportGradientDelta(double delta) {
+  tarch::multicore::Lock lock( _maxGradientDeltaSemaphore );
+  _currentMaxGradientDelta = std::max(_currentMaxGradientDelta,delta);
+}
 
 
 
@@ -23,6 +65,8 @@ void examples::exahype2::selfgravitation::Poisson::initialCondition(
   Q[1] = 0.0;
   Q[2] = 0.0;
   Q[3] = 0.0;
+  Q[4] = 1.0;  // we need a proper initial density for the very first time step
+               // just before the actual Poisson solve has already started.
 
   logTraceOut( "initialCondition(...)" );
 }
@@ -65,13 +109,13 @@ double ::examples::exahype2::selfgravitation::Poisson::maxEigenvalue(
   logTraceInWith4Arguments( "maxEigenvalue(...)", faceCentre, volumeH, t, normal );
 
   // @todo needs cross-checking
-  const double result = 4.0 * tarch::la::PI;
+  const double T_tau = 1.0 / 4.0 / tarch::la::PI/tarch::la::PI;
+
+  double result = std::sqrt(1/T_tau);
 
   logTraceOutWith1Argument( "maxEigenvalue(...)", result );
   return result;
 }
-
-
 
 
 void ::examples::exahype2::selfgravitation::Poisson::flux(
@@ -95,11 +139,6 @@ void ::examples::exahype2::selfgravitation::Poisson::flux(
 }
 
 
-
-
-
-
-
 void ::examples::exahype2::selfgravitation::Poisson::sourceTerm(
   const double * __restrict__                  Q, // Q[4+1]
   const tarch::la::Vector<Dimensions,double>&  volumeX,
@@ -111,29 +150,15 @@ void ::examples::exahype2::selfgravitation::Poisson::sourceTerm(
   logTraceInWith4Arguments( "sourceTerm(...)", volumeX, volumeH, t, dt );
 
   const double T_tau = 1.0 / 4.0 / tarch::la::PI/tarch::la::PI;
-  const double G     = 6.67e-11;
+//  const double G     = 6.67e-11;
+  const double G     = 6.67e-3; // @todo No clue what normalised constant belong in here. 1e-11 is definitely too small
   const double rho   = Q[4]; // This is the input term
 
   S[0] = - tarch::la::PI * G / rho;
   S[1] = -Q[1]/T_tau;
-  S[1] = -Q[2]/T_tau;
-  S[1] = -Q[3]/T_tau;
+  S[2] = -Q[2]/T_tau;
+  S[3] = -Q[3]/T_tau;
 
   logTraceOut( "sourceTerm(...)" );
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 

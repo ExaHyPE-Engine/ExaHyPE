@@ -345,7 +345,7 @@ namespace exahype2{ namespace fv{ namespace rusanov{ namespace internal{
       for (int patchIndex=0; patchIndex<patchData.numberOfCells; patchIndex++)
       for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++)
       for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
-      for (int unknown=0; unknown<unknowns+auxiliaryVariables; unknown++) {
+      for (int unknown=0; unknown<unknowns; unknown++) {
         otterLoopIterationBegin();
         internal::updateSolutionWithFlux_LoopBody(
           tempFluxX, tempFluxY, tempFluxZ,
@@ -442,7 +442,7 @@ namespace exahype2{ namespace fv{ namespace rusanov{ namespace internal{
       for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++)
       for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
       for (int z = 0; z < numberOfVolumesPerAxisInPatch; z++)
-      for (int unknown=0; unknown<unknowns+auxiliaryVariables; unknown++) {
+      for (int unknown=0; unknown<unknowns; unknown++) {
         otterLoopIterationBegin();
         internal::updateSolutionWithFlux_LoopBody(
           tempFluxX, tempFluxY, tempFluxZ,
@@ -512,7 +512,7 @@ namespace exahype2{ namespace fv{ namespace rusanov{ namespace internal{
       for (int patchIndex=0; patchIndex<patchData.numberOfCells; patchIndex++)
       for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++)
       for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
-      for (int unknown=0; unknown<unknowns+auxiliaryVariables; unknown++) {
+      for (int unknown=0; unknown<unknowns; unknown++) {
         otterLoopIterationBegin();
         internal::updateSolutionWithNonconservativeFlux_LoopBody(
           tempNonconservativeProductX, tempNonconservativeProductY, tempNonconservativeProductZ,
@@ -608,7 +608,7 @@ namespace exahype2{ namespace fv{ namespace rusanov{ namespace internal{
         for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++)
         for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
         for (int z = 0; z < numberOfVolumesPerAxisInPatch; z++)
-        for (int unknown=0; unknown<unknowns+auxiliaryVariables; unknown++) {
+        for (int unknown=0; unknown<unknowns; unknown++) {
           otterLoopIterationBegin();
           internal::updateSolutionWithNonconservativeFlux_LoopBody(
             tempNonconservativeProductX, tempNonconservativeProductY, tempNonconservativeProductZ,

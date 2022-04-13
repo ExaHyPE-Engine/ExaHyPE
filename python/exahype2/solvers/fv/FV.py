@@ -200,8 +200,8 @@ class FV(object):
     self._auxiliary_variables  = auxiliary_variables
 
     self.solver_constants_         = ""
-    self.user_action_set_includes  = ""
-    self.user_solver_includes      = ""
+    self._user_action_set_includes  = ""
+    self._user_solver_includes      = ""
     
     if min_volume_h>max_volume_h:
        print( "Error: min_volume_h (" + str(min_volume_h) + ") is bigger than max_volume_h (" + str(max_volume_h) + ")" )
@@ -210,7 +210,7 @@ class FV(object):
 
     self._solver_template_file_class_name = None
 
-    self.plot_description = ""
+    self._plot_description = ""
     
     self._action_set_initial_conditions                       = None
     self._action_set_initial_conditions_for_grid_construction = None
@@ -330,12 +330,46 @@ The finest mesh width of """ + str(self.get_finest_volume_size(domain_size)) + "
 """ 
   
 
-  def get_user_action_set_includes(self):
-    return self.user_action_set_includes
+  @property
+  def user_action_set_includes(self):
+    """
+    
+    Add further includes to this property, if your action sets require some additional
+    routines from other header files.
+    
+    """
+    return self._user_action_set_includes
 
   
-  def get_user_solver_includes(self):
-    return self.user_solver_includes
+  @property
+  def user_solver_includes(self):
+    """
+    
+    Add further includes to this property, if your solver requires some additional
+    routines from other header files.
+    
+    """
+    return self._user_solver_includes
+
+  
+  def add_user_action_set_includes(self,value):
+    """
+    
+    Add further includes to this property, if your action sets require some additional
+    routines from other header files.
+    
+    """
+    self._user_action_set_includes += value
+
+  
+  def add_user_solver_includes(self,value):
+    """
+    
+    Add further includes to this property, if your solver requires some additional
+    routines from other header files.
+    
+    """
+    self._user_solver_includes += value
 
   
   @abstractmethod
@@ -613,9 +647,15 @@ The finest mesh width of """ + str(self.get_finest_volume_size(domain_size)) + "
       step.add_action_set( self._action_set_AMR )
     else:
       step.add_action_set( self._action_set_AMR_commit_without_further_analysis )
+
+
+  @property
+  def plot_description(self,):
+    return self._plot_description
           
   
-  def set_plot_description(self,description):
+  @plot_description.setter
+  def plot_description(self,description):
     """
     
      Use this one to set a description within the output patch file that tells
@@ -623,7 +663,7 @@ The finest mesh width of """ + str(self.get_finest_volume_size(domain_size)) + "
      a comma-separated list here. 
     
     """
-    self.plot_description = description
+    self._plot_description = description
     
   
   def add_actions_to_plot_solution(self, step, output_path):
@@ -661,7 +701,7 @@ The finest mesh width of """ + str(self.get_finest_volume_size(domain_size)) + "
       filename=output_path + "solution-" + self._name, 
       patch=self._patch, 
       dataset_name=self._unknown_identifier(), 
-      description=self.plot_description,
+      description=self._plot_description,
       guard="repositories::plotFilter.plotPatch(marker) and " + self._load_cell_data_default_guard(),
       additional_includes="""
 #include "exahype2/PlotFilter.h"
@@ -806,7 +846,7 @@ The finest mesh width of """ + str(self.get_finest_volume_size(domain_size)) + "
 
     d[ "SOLVER_CONSTANTS" ] = self.solver_constants_
 
-    d[ "SOLVER_INCLUDES" ]  = self.get_user_solver_includes()
+    d[ "SOLVER_INCLUDES" ]  = self.user_solver_includes
 
     d[ "BOUNDARY_CONDITIONS_IMPLEMENTATION"]  = self._boundary_conditions_implementation
     d[ "REFINEMENT_CRITERION_IMPLEMENTATION"] = self._refinement_criterion_implementation
@@ -864,4 +904,70 @@ The finest mesh width of """ + str(self.get_finest_volume_size(domain_size)) + "
     self._auxiliary_variables = value
     self.create_data_structures()
     self.create_action_sets()
-    
+
+
+  @property 
+  def preprocess_reconstructed_patch(self):
+    return self._preprocess_reconstructed_patch
+ 
+ 
+  @preprocess_reconstructed_patch.setter
+  def preprocess_reconstructed_patch(self, kernel):
+    """
+  
+
+    """
+    self._preprocess_reconstructed_patch  = kernel
+    self.create_data_structures()
+    self.create_action_sets()
+
+
+  @property
+  def name(self):
+    return self._name
+  
+
+  @property
+  def postprocess_updated_patch(self):
+    return self._postprocess_updated_patch
+
+
+  @postprocess_updated_patch.setter
+  def postprocess_updated_patch(self, kernel):
+    """
+
+    Define a postprocessing routine over the data
+
+    The postprocessing kernel often looks similar to the following code:
+
+  {
+    int index = 0;
+    dfor( volume, {{NUMBER_OF_VOLUMES_PER_AXIS}} ) {
+      enforceCCZ4constraints( targetPatch+index );
+      index += {{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}};
+    }
+  }
+
+
+    Within this kernel, you have at least the following variables available:
+
+    - targetPatch This is a pointer to the whole data structure (one large
+        array).
+        The patch is not supplemented by a halo layer.
+    - reconstructedPatch This is a pointer to the data snapshot before the
+        actual update. This data is combined with the halo layer, i.e. if you
+        work with 7x7 patches and a halo of 2, the pointer points to a 11x11
+        patch.
+    - marker
+
+    Furthermore, you can use all the symbols (via Jinja2 syntax) from
+    _init_dictionary_with_default_parameters().
+
+    kernel: String
+      C++ code that holds the postprocessing kernel
+
+    """
+    self._postprocess_updated_patch = kernel
+    self.create_data_structures()
+    self.create_action_sets()
+

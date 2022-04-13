@@ -13,7 +13,7 @@ from peano4.toolbox.blockstructured.ReconstructPatchAndApplyFunctor import Recon
 
 class UpdateCell(ReconstructPatchAndApplyFunctor):
   SolveRiemannProblemsOverPatch = jinja2.Template( """
-      const double timeStamp    = fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStamp();
+      double timeStamp    = fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStamp();
 
       // Set the variable
       // double timeStepSize
@@ -116,7 +116,7 @@ class UpdateCell(ReconstructPatchAndApplyFunctor):
     return """
 #include "exahype2/fv/BoundaryConditions.h"
 #include "exahype2/NonCriticalAssertions.h"
-""" + self._solver._get_default_includes() + self._solver.get_user_action_set_includes()
+""" + self._solver._get_default_includes() + self._solver.user_action_set_includes
 
 
 
@@ -197,10 +197,11 @@ class SingleSweep( FV ):
     self._action_set_update_cell = UpdateCell(self)
 
 
-  def get_user_action_set_includes(self):
+  @property
+  def user_action_set_includes(self):
     return """
 #include "exahype2/CellData.h"
-""" +    super(SingleSweep, self).get_user_action_set_includes()
+""" + super(SingleSweep, self).user_action_set_includes
 
 
   def set_implementation(self,
@@ -228,8 +229,8 @@ class SingleSweep( FV ):
        self._reconstructed_array_memory_location==peano4.toolbox.blockstructured.ReconstructedArrayMemoryLocation.AcceleratorWithoutDelete:
       raise Exception( "memory mode without appropriate delete chosen, i.e. this will lead to a memory leak" )
 
-    self.user_action_set_includes += additional_action_set_includes
-    self.user_solver_includes     += additional_user_includes
+    self._user_action_set_includes += additional_action_set_includes
+    self._user_solver_includes     += additional_user_includes
 
     self.create_action_sets()
 

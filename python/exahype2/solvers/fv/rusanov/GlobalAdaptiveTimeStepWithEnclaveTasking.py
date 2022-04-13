@@ -126,7 +126,8 @@ if (_solverState==SolverState::Secondary) {
     self._optimise_patch_storage_for_global_time_stepping()
 
 
-  def get_user_action_set_includes(self):
-    return super(GlobalAdaptiveTimeStepWithEnclaveTasking, self).get_user_action_set_includes() + """
+  @property
+  def user_action_set_includes(self):
+    return super(GlobalAdaptiveTimeStepWithEnclaveTasking, self).user_action_set_includes + """
 #include "exahype2/fv/rusanov/Rusanov.h"
 """
