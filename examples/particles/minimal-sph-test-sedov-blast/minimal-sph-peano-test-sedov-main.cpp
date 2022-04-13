@@ -182,7 +182,12 @@ int main(int argc, char** argv) {
     examples::particles::observers::Plot plotObserver;
     peano4::parallel::SpacetreeSet::getInstance().traverse(plotObserver);
     logInfo( "main()", "dumped initial condition" )
+        
+//    /* Initial step (e.g., re-arrange the particles into a particular configuration) */
+//    examples::particles::observers::RearrangeAtStart rearrangeObserver;
+//    peano4::parallel::SpacetreeSet::getInstance().traverse(rearrangeObserver);
 
+    /* Main loop */
     for (int i=0; i<500; i++) {
       for (int j=0; j<10; j++) { /* Numbers of time-steps between two snapshots */
         logInfo( "main()", "run timestep" )
@@ -204,18 +209,8 @@ int main(int argc, char** argv) {
         examples::particles::observers::ImposeBC ImposeBCpart;
         examples::particles::observers::EndTimeStep endTimeStep;
 
-        /* "Initialize time-step" */
-        peano4::parallel::SpacetreeSet::getInstance().traverse(initTimeStep);
-
-/*
-        // Initial step (e.g., re-arrange the particles into a particular configuration)
-        if(i==0){
-          examples::particles::observers::RearrangeAtStart rearrangeObserver;
-          peano4::parallel::SpacetreeSet::getInstance().traverse(rearrangeObserver);
-        }
-*/
-
-//        if(i==0){ /* For first time-step, we need to compute dotted-quantities here */
+//        /* For first time-step, we need to pre-compute some quantities before drifting */
+//        if(i==0 and j==0){ 
 //          for (int iter=0; iter<10; iter++){
 //            /* Density loop */
 //            peano4::parallel::SpacetreeSet::getInstance().traverse(density);
@@ -227,25 +222,11 @@ int main(int argc, char** argv) {
 //            peano4::parallel::SpacetreeSet::getInstance().traverse(newtonRaphson);
 //
 //          }
-//          /* Density loop */
-//          peano4::parallel::SpacetreeSet::getInstance().traverse(density);
-//
-//          /* Prepare force */
-//          peano4::parallel::SpacetreeSet::getInstance().traverse(prepareForce);
-//
-//          /* Udot */
-//          peano4::parallel::SpacetreeSet::getInstance().traverse(forcespart);
-//        }
-//
-//        /* First Kick from current time-step*/
-//        peano4::parallel::SpacetreeSet::getInstance().traverse(kick1part);
-//
-//        /* Also Kick other properties, e.g., internal energy */
-//        peano4::parallel::SpacetreeSet::getInstance().traverse(kickExtra);
-//
-//        /* Drift the particles. Also predict v,u,h,rho */
-//        peano4::parallel::SpacetreeSet::getInstance().traverse(driftpart);
 
+        /* "Drift". Drift also predicts v,u,... */
+        peano4::parallel::SpacetreeSet::getInstance().traverse(driftpart);
+
+        /* "Hydro loop" */
         for (int iter=0; iter<2; iter++){
           /* Density loop */
           peano4::parallel::SpacetreeSet::getInstance().traverse(density);
@@ -258,57 +239,29 @@ int main(int argc, char** argv) {
           peano4::parallel::SpacetreeSet::getInstance().traverse(newtonRaphson);
 
         }
-        /* Density loop */
-        peano4::parallel::SpacetreeSet::getInstance().traverse(density);
+//        /* Post hydro loop */
+//        /* Density loop */
+//        peano4::parallel::SpacetreeSet::getInstance().traverse(density);
+//
+//        /* Prepare force */
+//        peano4::parallel::SpacetreeSet::getInstance().traverse(prepareForce);
+//
+//        /* Force loop */
+//        peano4::parallel::SpacetreeSet::getInstance().traverse(forcespart);
 
-        /* Prepare force */
-        peano4::parallel::SpacetreeSet::getInstance().traverse(prepareForce);
 
-        /* Force loop */
-        peano4::parallel::SpacetreeSet::getInstance().traverse(forcespart);
+        /* "Kick2". kick2part also reset predictions */
+        peano4::parallel::SpacetreeSet::getInstance().traverse(kickExtra);
+        peano4::parallel::SpacetreeSet::getInstance().traverse(kick2part);
 
-        /*
-         * Time integration 
-         *
-         * */
+        /* "Initialize time-step" */
+        peano4::parallel::SpacetreeSet::getInstance().traverse(initTimeStep);
 
-        /* First Kick from current time-step*/
+        /* "Kick1" */
         peano4::parallel::SpacetreeSet::getInstance().traverse(kick1part);
 
         /* Also Kick other properties, e.g., internal energy */
         peano4::parallel::SpacetreeSet::getInstance().traverse(kickExtra);
-
-        /* Drift the particles */
-        peano4::parallel::SpacetreeSet::getInstance().traverse(driftpart);
-
-        /* Reset NR convergence so we can update again */
-        peano4::parallel::SpacetreeSet::getInstance().traverse(ResetHasConvergedNR);
-
-//        /*********************************************/
-//        /* "Option 1: standard KDK" */
-//
-//        for (int iter=0; iter<1; iter++){
-//
-//          /* Density loop */
-//          peano4::parallel::SpacetreeSet::getInstance().traverse(density);
-//
-//          /* "Ghost tasks" */
-//          /* Prepare force */
-//          peano4::parallel::SpacetreeSet::getInstance().traverse(prepareForce);
-//
-//          /* Newton Raphson iteration */
-//          peano4::parallel::SpacetreeSet::getInstance().traverse(newtonRaphson);
-//
-//        }
-//
-//        /* Force loop */
-//        peano4::parallel::SpacetreeSet::getInstance().traverse(prepareForce);
-//        peano4::parallel::SpacetreeSet::getInstance().traverse(forcespart);
-
-        /* Second Kick from current time-step. kick2part also reset predictions */
-        peano4::parallel::SpacetreeSet::getInstance().traverse(kickExtra);
-        peano4::parallel::SpacetreeSet::getInstance().traverse(kick2part);
-        /*********************************************/
 
 //        /****************************************/
 //        /* "Option 2: Predictor-corrector scheme" */
@@ -340,6 +293,9 @@ int main(int argc, char** argv) {
 
         /* "End time-step" */
         peano4::parallel::SpacetreeSet::getInstance().traverse(endTimeStep);
+
+        /* Reset NR convergence so we can update again */
+        peano4::parallel::SpacetreeSet::getInstance().traverse(ResetHasConvergedNR);
 
       }
 
