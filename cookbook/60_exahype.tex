@@ -361,7 +361,7 @@ We solve the problem
 \end{equation}
 
 \noindent
-which gives the Euler equation with $Q = (E, v, \rho) \in \mathbb{R}^5$ subject to 
+which gives the Euler equation with $Q = (\rho, v, E) \in \mathbb{R}^5$ subject to 
 a modified source term (right-hand side).
 While $F(Q)$ stems from the Euler equations in the previous example, a second PDE
 \[
@@ -388,7 +388,7 @@ a hyperbolic variant with $\phi (\tau)$ and three helper functions $(q_1,q_2,q_3
  = 
   \left(
   \begin{array}{c}
-   -\phi G/\rho \\ 
+   -\pi G/\rho \\ 
    -q_1/T_\tau \\
    -q_2/T_\tau \\
    -q_3/T_\tau 
@@ -551,7 +551,7 @@ For the density, which feeds from the
 (\ref{equation:exahype:case-study:self-gravitation})  into the material
 parameters of the Poisson-ish equation, we need a plain copy from 
 \[
-  Q[4]|_{\text{Euler}} \mapsto   Q[4]|_{\text{Poisson}} 
+  Q[0]|_{\text{Euler}} \mapsto   Q[4]|_{\text{Poisson}} 
 \]
 for which \Peano's toolbox provides a generic implementation:
 
