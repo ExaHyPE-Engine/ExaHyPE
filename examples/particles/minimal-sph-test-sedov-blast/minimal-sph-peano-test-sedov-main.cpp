@@ -209,84 +209,61 @@ int main(int argc, char** argv) {
         examples::particles::observers::ImposeBC ImposeBCpart;
         examples::particles::observers::EndTimeStep endTimeStep;
 
-//        /* For first time-step, we need to pre-compute some quantities before drifting */
-//        if(i==0 and j==0){ 
-//          for (int iter=0; iter<10; iter++){
-//            /* Density loop */
-//            peano4::parallel::SpacetreeSet::getInstance().traverse(density);
-//
-//            /* Prepare force */
-//            peano4::parallel::SpacetreeSet::getInstance().traverse(prepareForce);
-//
-//            /* Newton Raphson iteration */
-//            peano4::parallel::SpacetreeSet::getInstance().traverse(newtonRaphson);
-//
-//          }
+        /* "Initialize time-step" */
+        peano4::parallel::SpacetreeSet::getInstance().traverse(initTimeStep);
 
-        /* "Drift". Drift also predicts v,u,... */
+        /* For first time-step, we need to pre-compute some quantities before drifting */
+        if(i==0 and j==0){ 
+          for (int iter=0; iter<2; iter++){
+            /* Density loop */
+            peano4::parallel::SpacetreeSet::getInstance().traverse(density);
+
+            /* Prepare force */
+            peano4::parallel::SpacetreeSet::getInstance().traverse(prepareForce);
+
+            /* Newton Raphson iteration */
+            peano4::parallel::SpacetreeSet::getInstance().traverse(newtonRaphson);
+
+          }
+        /* Force loop */
+        peano4::parallel::SpacetreeSet::getInstance().traverse(forcespart);
+
+        /* "Kick1" */
+        peano4::parallel::SpacetreeSet::getInstance().traverse(kick1part);
+        peano4::parallel::SpacetreeSet::getInstance().traverse(kickExtra);
+        }
+
+        /* "Drift". Drift also predicts v, u, ... */
         peano4::parallel::SpacetreeSet::getInstance().traverse(driftpart);
 
         /* "Hydro loop" */
         for (int iter=0; iter<2; iter++){
           /* Density loop */
           peano4::parallel::SpacetreeSet::getInstance().traverse(density);
-
           /* "Ghost tasks" */
           /* Prepare force */
           peano4::parallel::SpacetreeSet::getInstance().traverse(prepareForce);
-
           /* Newton Raphson iteration */
           peano4::parallel::SpacetreeSet::getInstance().traverse(newtonRaphson);
 
         }
-//        /* Post hydro loop */
-//        /* Density loop */
-//        peano4::parallel::SpacetreeSet::getInstance().traverse(density);
-//
-//        /* Prepare force */
-//        peano4::parallel::SpacetreeSet::getInstance().traverse(prepareForce);
-//
-//        /* Force loop */
-//        peano4::parallel::SpacetreeSet::getInstance().traverse(forcespart);
-
+        /* Post hydro loop */
+        /* Density loop */
+        peano4::parallel::SpacetreeSet::getInstance().traverse(density);
+        /* Prepare force */
+        peano4::parallel::SpacetreeSet::getInstance().traverse(prepareForce);
+        /* Force loop */
+        peano4::parallel::SpacetreeSet::getInstance().traverse(forcespart);
 
         /* "Kick2". kick2part also reset predictions */
         peano4::parallel::SpacetreeSet::getInstance().traverse(kickExtra);
         peano4::parallel::SpacetreeSet::getInstance().traverse(kick2part);
-
-        /* "Initialize time-step" */
-        peano4::parallel::SpacetreeSet::getInstance().traverse(initTimeStep);
 
         /* "Kick1" */
         peano4::parallel::SpacetreeSet::getInstance().traverse(kick1part);
 
         /* Also Kick other properties, e.g., internal energy */
         peano4::parallel::SpacetreeSet::getInstance().traverse(kickExtra);
-
-//        /****************************************/
-//        /* "Option 2: Predictor-corrector scheme" */
-//        /* Not needed according to Matthieu */
-//
-//        /* Predictor step ("kick anyway") */
-//        peano4::parallel::SpacetreeSet::getInstance().traverse(kick1part);
-//        peano4::parallel::SpacetreeSet::getInstance().traverse(kickExtra);
-//
-////        peano4::parallel::SpacetreeSet::getInstance().traverse(ResetHasConvergedNR);
-//        for(int iter_PC = 0; iter_PC < 3; iter_PC++){
-//          /* Second Force loop with predicted velocity */
-//          peano4::parallel::SpacetreeSet::getInstance().traverse(prepareForce);
-//          peano4::parallel::SpacetreeSet::getInstance().traverse(newtonRaphson);
-//          peano4::parallel::SpacetreeSet::getInstance().traverse(density);
-//          peano4::parallel::SpacetreeSet::getInstance().traverse(prepareForce);
-//          peano4::parallel::SpacetreeSet::getInstance().traverse(forcespart);
-//  
-//          /* Corrector step (mini-Kick) current time-step */
-//          examples::particles::observers::KickCorrector corrector;
-//          peano4::parallel::SpacetreeSet::getInstance().traverse(corrector);
-//          examples::particles::observers::KickCorrectorExtra correctorExtra;
-//          peano4::parallel::SpacetreeSet::getInstance().traverse(correctorExtra);
-//        }
-//        /****************************************/
 
         /* "Impose BC" */
         peano4::parallel::SpacetreeSet::getInstance().traverse(ImposeBCpart);
