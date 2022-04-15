@@ -208,13 +208,14 @@ fi
 #
 AC_ARG_WITH(
   gpu, 
-  AC_HELP_STRING([--with-gpu], [build with the GPU support. Not all targets are supported for all programming models, but you will need some threading model enabled [default=no,omp,hip,sycl]]),
+  AC_HELP_STRING([--with-gpu], [build with the GPU support. Not all targets are supported for all programming models, but you will need some threading model enabled [default=no,omp,hip,sycl,cpp]]),
   [
     AC_MSG_CHECKING(for gpu)
     case "${withval}" in
       no)    AC_MSG_RESULT(no);                                    gpu=false ;;
       omp)   AC_MSG_RESULT(build with OpenMP offloading to GPUs);  gpu=omp ;;
       hip)   AC_MSG_RESULT(build with HIP GPU support);            gpu=hip ;;
+      cpp)   AC_MSG_RESULT(build with C++ GPU support);            gpu=cpp ;;
       sycl)  AC_MSG_RESULT(build with SYCL GPU support);           gpu=sycl ;;
       *)     AC_MSG_FAILURE([use omp, cpp or sycl to define target]);            gpu=false ;;
     esac
@@ -226,9 +227,10 @@ AC_ARG_WITH(
 )
 
 
-AM_CONDITIONAL([GPUOffloadingOMP], [test "$gpu" == omp])
+AM_CONDITIONAL([GPUOffloadingOMP],    [test "$gpu" == omp])
 AM_CONDITIONAL([GPUOffloadingSYCL],   [test "$gpu" == sycl])
 AM_CONDITIONAL([GPUOffloadingHIP],    [test "$gpu" == hip])
+AM_CONDITIONAL([GPUOffloadingCPP],    [test "$gpu" == cpp])
 
 
 if test "$gpu" == omp; then
@@ -247,6 +249,12 @@ if test "$gpu" == hip; then
   #AC_OPENMP()
   #AC_CHECK_HEADERS([omp.h],[],[AC_MSG_WARN([header <omp.h> not found])])
   AC_DEFINE([GPUOffloadingHIP], [1], [GPUOffloadingHIP])
+fi
+
+if test "$gpu" == cpp; then
+  #AC_OPENMP()
+  #AC_CHECK_HEADERS([omp.h],[],[AC_MSG_WARN([header <omp.h> not found])])
+  AC_DEFINE([GPUOffloadingCPP], [1], [GPUOffloadingCPP])
 fi
 
 
