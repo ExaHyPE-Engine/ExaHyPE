@@ -55,11 +55,6 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::EnclaveTask
 {
   private:
     static tarch::logging::Log  _log;
-    /**
-     * This is a class attribute holding a unique integer per enclave task type.
-     */
-    static int                  _enclaveTaskTypeId;
-
 
     #ifdef UseSmartMPI
     /*
@@ -82,11 +77,15 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::EnclaveTask
     int          _remoteTaskId = -1;
     #endif
 
-    {% if STATELESS_PDE_TERMS %}
-    static int                                _gpuEnclaveTaskId;
-    {% endif %}
+    /**
+     * This is a unique static id which we use both for task fusion and within
+     * SmartMPI to distinguish different task types.
+     */
+    static int                                _enclaveTaskTypeId;
 
   public:
+    static int getEnclaveTaskTypeId();
+
     /**
      * @return Max eigenvalue over cell
      */
@@ -128,4 +127,6 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::EnclaveTask
 
 #endif
 
+
+{# Empty line here #}
 

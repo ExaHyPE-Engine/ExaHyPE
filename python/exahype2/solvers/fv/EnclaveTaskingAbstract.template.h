@@ -254,6 +254,19 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
       double                                       dt
     ) const;
     {% endif %}
+
+    /**
+     * Feel free to overwrite in user code, but ensure the superclass
+     * implementation is still invoked, too.
+     */
+    void startSimulation() override;
+
+    /**
+     * Feel free to overwrite in user code, but ensure the superclass
+     * implementation is still invoked, too.
+     */
+    void finishSimulation() override;
+
   protected:
     static tarch::logging::Log  _log;
 
@@ -289,3 +302,5 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
 
 
 #endif
+
+{# Empty line here #}

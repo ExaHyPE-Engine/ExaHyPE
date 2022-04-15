@@ -34,33 +34,12 @@
 #include <memory>
 
 tarch::logging::Log                {{NAMESPACE | join("::")}}::{{CLASSNAME}}::_log( "{{NAMESPACE | join("::")}}::{{CLASSNAME}}" );
-{% if STATELESS_PDE_TERMS %}
-int                                {{NAMESPACE | join("::")}}::{{CLASSNAME}}::_gpuEnclaveTaskId( peano4::parallel::getTaskType("{{NAMESPACE | join("::")}}::{{CLASSNAME}}") );
-{% endif %}
+int                                {{NAMESPACE | join("::")}}::{{CLASSNAME}}::_enclaveTaskTypeId( peano4::parallel::getTaskType("{{NAMESPACE | join("::")}}::{{CLASSNAME}}") );
 
-#if defined(UseSmartMPI)
-int                                {{NAMESPACE | join("::")}}::{{CLASSNAME}}::_enclaveTaskTypeId(
-  tarch::multicore::registerSmartMPITask(
-    peano4::parallel::getTaskType("{{NAMESPACE | join("::")}}::{{CLASSNAME}}"),
-    [](smartmpi::ReceiverCallType type, int rank, int tag, MPI_Comm communicator) -> smartmpi::Task* {
-      if (type==smartmpi::ReceiverCallType::ReceiveTask) {
-        return receiveTask( rank, tag, communicator );
-      } else if (type==smartmpi::ReceiverCallType::ReceivedTaskOutcomeForFowarding) {
-        static constexpr bool isForwarding = true;
-        return receiveOutcome( rank, tag, communicator, isForwarding);
-      } else {
-        assert(type==smartmpi::ReceiverCallType::ReceiveOutcome);
-        static constexpr bool isForwarding = false;
-        return receiveOutcome( rank, tag, communicator, isForwarding );
-      }
-    }
-  )
-);
-#else
-int                                {{NAMESPACE | join("::")}}::{{CLASSNAME}}::_enclaveTaskTypeId(
-  peano4::parallel::getTaskType("{{NAMESPACE | join("::")}}::{{CLASSNAME}}")
-);
-#endif
+
+int {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getEnclaveTaskTypeId() {
+  return _enclaveTaskTypeId;
+}
 
 
 double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::applyKernelToCell(
@@ -328,6 +307,7 @@ smartmpi::Task* {{NAMESPACE | join("::")}}::{{CLASSNAME}}::receiveOutcome(int ra
   return nullptr;
 }
 #endif
+
 
 {% if STATELESS_PDE_TERMS %}
 bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::canFuse() const {

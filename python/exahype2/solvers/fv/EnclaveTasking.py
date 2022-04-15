@@ -250,6 +250,16 @@ class EnclaveTasking( FV ):
      
     self._solver_template_file_class_name     = "EnclaveTasking"
       
+    additional_includes= """
+#include "exahype2/EnclaveBookkeeping.h"
+#include "exahype2/EnclaveTask.h"
+"""    
+
+    self.add_user_action_set_includes( additional_includes )
+#    self.add_user_solver_includes(     additional_includes )
+
+
+
 
   def create_data_structures(self):
     """
@@ -347,14 +357,6 @@ class EnclaveTasking( FV ):
       ")"
     self._action_set_roll_over_update_of_faces.guard = self._store_face_data_default_guard() + " and " + self._secondary_sweep_or_grid_initialisation_guard
     self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement.guard = self._store_cell_data_default_guard() + " and " + self._secondary_sweep_or_grid_initialisation_guard
-   
-
-  def get_user_action_set_includes(self):
-    return super(EnclaveTasking, self).get_user_action_set_includes() + """
-#include "exahype2/EnclaveBookkeeping.h"
-#include "exahype2/EnclaveTask.h"
-#include "repositories/SolverRepository.h"
-"""    
 
     
   def set_implementation(self,
@@ -380,9 +382,6 @@ class EnclaveTasking( FV ):
     if memory_location!=peano4.toolbox.blockstructured.ReconstructedArrayMemoryLocation.HeapThroughTarchWithoutDelete and \
        memory_location!=None:
       raise Exception( "only valid memory mode for enclave tasking is heap without a delete, as enclave tasks delete memory themselves through the tarch. Selected mode=" + str(solver._reconstructed_array_memory_location) )
-
-    self.user_action_set_includes += additional_action_set_includes
-    self.user_solver_includes     += additional_user_includes
 
     self.create_action_sets()
     
@@ -451,7 +450,7 @@ class EnclaveTasking( FV ):
     
     # Some includes might logically belong into the action sets, but now they are 
     # 'outsourced' into the enclave task. So we manually add it here.
-    implementationDictionary[ "SOLVER_INCLUDES" ] += self.get_user_action_set_includes()
+    implementationDictionary[ "SOLVER_INCLUDES" ] += self.user_solver_includes
 
     task_name = self._enclave_task_name()
     generated_solver_files = peano4.output.Jinja2TemplatedHeaderImplementationFilePair(

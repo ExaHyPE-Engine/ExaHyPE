@@ -78,6 +78,9 @@ class exahype2::Solver {
      * plot intermediate data.
      */
     virtual bool mayPlot() const = 0;
+
+    virtual void startSimulation() = 0;
+    virtual void finishSimulation() = 0;
 };
 
 
