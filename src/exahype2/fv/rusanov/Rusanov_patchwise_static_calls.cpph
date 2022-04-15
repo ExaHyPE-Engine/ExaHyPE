@@ -6,13 +6,14 @@
 namespace exahype2 { namespace fv{ namespace rusanov{ namespace internal{
   template <
     typename Solver,
-    int                     numberOfVolumesPerAxisInPatch,
-    int                     unknowns,
-    int                     auxiliaryVariables,
+    int      numberOfVolumesPerAxisInPatch,
+    int      haloSize,
+    int      unknowns,
+    int      auxiliaryVariables,
     typename TempDataEnumerator
   >
-  void timeStepWithRusanov_overlap1_patchwise_static_calls(
-    ::exahype2::CellData&              patchData,
+  void timeStepWithRusanov_patchwise_static_calls(
+    ::exahype2::CellData&   patchData,
     bool                    evaluateFlux,
     bool                    evaluateNonconservativeProduct,
     bool                    evaluateSource,
@@ -32,7 +33,12 @@ namespace exahype2 { namespace fv{ namespace rusanov{ namespace internal{
     double* tempEigenvalueY,
     double* tempEigenvalueZ
   ) {
-    constexpr int haloSize        = 1;
+    /**
+     * The halo size passed in by the user might differ from the one that we have to evaluate/
+     * take into account from the solver's perspective.
+     */
+    constexpr int solversHaloSize        = 1;
+
     for (int patchIndex=0; patchIndex<patchData.numberOfCells; patchIndex++) {
       if (Dimensions==2 and evaluateSource) {
         otterLoopBegin();
@@ -659,7 +665,7 @@ namespace exahype2 { namespace fv{ namespace rusanov{ namespace internal{
       }
 
       if (evaluateMaximumEigenvalueAfterTimeStep and Dimensions==2) {
-        logDebug( "timeStepWithRusanov_overlap1_sequential(...)", "compute maximum eigenvalue for subsequent time step" );
+        logDebug( "timeStepWithRusanov_sequential(...)", "compute maximum eigenvalue for subsequent time step" );
         double newMaxEigenvalue = 0.0;
         otterLoopBegin(); // @todo how do I clarify that this is a reduction? Do we need this info here?
         for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
@@ -721,20 +727,24 @@ namespace exahype2 { namespace fv{ namespace rusanov{ namespace internal{
 
 template <
   typename Solver,
-  int                     numberOfVolumesPerAxisInPatch,
-  int                     unknowns,
-  int                     auxiliaryVariables,
+  int      numberOfVolumesPerAxisInPatch,
+  int      haloSize,
+  int      unknowns,
+  int      auxiliaryVariables,
   typename TempDataEnumerator
 >
-void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_patchwise_call_stack_static_calls(
+void exahype2::fv::rusanov::timeStepWithRusanov_patchwise_call_stack_static_calls(
   ::exahype2::CellData&   patchData,
   bool                    evaluateFlux,
   bool                    evaluateNonconservativeProduct,
   bool                    evaluateSource,
   bool                    evaluateMaximumEigenvalueAfterTimeStep
 ) {
-  static tarch::logging::Log _log( "exahype2::fv::rusanov" );
-  constexpr int haloSize        = 1;
+  /**
+   * The halo size passed in by the user might differ from the one that we have to evaluate/
+   * take into account from the solver's perspective.
+   */
+  constexpr int solversHaloSize        = 1;
 
   exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator QInEnumerator       (                        1, numberOfVolumesPerAxisInPatch,haloSize,unknowns,auxiliaryVariables);
   exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator QOutEnumerator      (                        1, numberOfVolumesPerAxisInPatch,       0,unknowns,auxiliaryVariables);
@@ -752,7 +762,7 @@ void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_patchwise_call_stack_st
   double tempEigenvalueY[ eigenvalueEnumerator.size() ] __attribute__((aligned (Alignment)));
   double tempEigenvalueZ[ eigenvalueEnumerator.size() ] __attribute__((aligned (Alignment)));
 
-  internal::timeStepWithRusanov_overlap1_patchwise_static_calls<Solver, numberOfVolumesPerAxisInPatch, unknowns, auxiliaryVariables, TempDataEnumerator>(
+  internal::timeStepWithRusanov_patchwise_static_calls<Solver, numberOfVolumesPerAxisInPatch, haloSize, unknowns, auxiliaryVariables, TempDataEnumerator>(
     patchData,
     evaluateFlux,
     evaluateNonconservativeProduct,
@@ -781,19 +791,23 @@ void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_patchwise_call_stack_st
 template <
   typename Solver,
   int      numberOfVolumesPerAxisInPatch,
+  int      haloSize,
   int      unknowns,
   int      auxiliaryVariables,
   typename TempDataEnumerator
 >
-void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_patchwise_heap_static_calls(
+void exahype2::fv::rusanov::timeStepWithRusanov_patchwise_heap_static_calls(
   ::exahype2::CellData&   patchData,
   bool                    evaluateFlux,
   bool                    evaluateNonconservativeProduct,
   bool                    evaluateSource,
   bool                    evaluateMaximumEigenvalueAfterTimeStep
 ) {
-  static tarch::logging::Log _log( "exahype2::fv::rusanov" );
-  constexpr int haloSize        = 1;
+  /**
+   * The halo size passed in by the user might differ from the one that we have to evaluate/
+   * take into account from the solver's perspective.
+   */
+  constexpr int solversHaloSize        = 1;
 
   exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator QInEnumerator       (                        1, numberOfVolumesPerAxisInPatch,haloSize,unknowns,auxiliaryVariables);
   exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator QOutEnumerator      (                        1, numberOfVolumesPerAxisInPatch,       0,unknowns,auxiliaryVariables);
@@ -811,7 +825,7 @@ void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_patchwise_heap_static_c
   double* tempEigenvalueY            =                                    tarch::allocateMemory( eigenvalueEnumerator.size(),      tarch::MemoryLocation::Heap );
   double* tempEigenvalueZ            = (Dimensions==3)                  ? tarch::allocateMemory( eigenvalueEnumerator.size(),      tarch::MemoryLocation::Heap ) : nullptr;
 
-  internal::timeStepWithRusanov_overlap1_patchwise_static_calls<Solver, numberOfVolumesPerAxisInPatch, unknowns, auxiliaryVariables, TempDataEnumerator>(
+  internal::timeStepWithRusanov_patchwise_static_calls<Solver, numberOfVolumesPerAxisInPatch, haloSize, unknowns, auxiliaryVariables, TempDataEnumerator>(
     patchData,
     evaluateFlux,
     evaluateNonconservativeProduct,

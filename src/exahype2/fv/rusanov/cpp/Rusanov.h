@@ -45,11 +45,12 @@ namespace exahype2 {
         template <
           typename Solver,
           int      numberOfVolumesPerAxisInPatch,
+          int      haloSize,
           int      unknowns,
           int      auxiliaryVariables,
           typename TempDataEnumerator
         >
-        static void timeStepWithRusanov_overlap1_patchwise_heap_static_calls(
+        static void timeStepWithRusanov_patchwise_heap_static_calls(
           int                     targetDevice,
           ::exahype2::CellData&   patchData,
           bool                    evaluateFlux,
@@ -67,6 +68,6 @@ namespace exahype2 {
 }
 
 
-#include "Rusanov_overlap1_patchwise_heap_static_calls.cpph"
+#include "Rusanov_patchwise_heap_static_calls.cpph"
 
 #endif
