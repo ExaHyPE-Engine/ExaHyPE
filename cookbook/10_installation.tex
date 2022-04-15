@@ -125,15 +125,20 @@ summarise some of the most imporant options below:
   on my system, e.g.}.
   This is optional.
    \\
-  \texttt{--with-gpu} & Add GPGPU support. Depending on the target, we currently
-  have specialised versions for NVIDIA (\texttt{--with-gpu=nvidia}) and AMD
-  (\texttt{--with-gpu=amd}). For different vendors, you might be required to
-  select particular multithreading models. The AMD and NVIDIA port for example
-  work only with OpenMP.
+  \texttt{--with-gpu} & Add GPU support. The code base currently is prepared to
+  support GPUs via OpenMP, SYCL, C++ tasking and HIP. Not all versions are
+  equally mature. In principle, you can combine different GPU programming
+  approaches with different multithreading techniques, but our recommendation is
+  that you use C++ threading with C++ GPU offloading, OpenMP threading with
+  OpenMP offloading, and OneTBB threading with SYCL.
    \\
-  \texttt{--enable-exahype} & Includes the \ExaHyPE\ core into your build.
-   Requires the load balancing toolbox and the blockstructured, too. The
-   configure script should inform you about further extensions.
+  \texttt{--enable-XXX} & A lot of frameworks or engines built on top of \Peano\
+  have to be enabled explicitly. \ExaHyPE\ is probably the most popular engine
+  shipped with the code, but there is also a particle/SPH module or some linear
+  algebra stuff. Run with \texttt{--help} for a list of toolboxes. Some
+  toolboxes have further internal and external dependencies, and the translation
+  of the toolboxes can be time consuming. By default, \Peano\ thus disables all
+  of its toolboxes.
  \end{longtable}
 \end{center}
 

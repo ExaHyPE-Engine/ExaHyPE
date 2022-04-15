@@ -31,9 +31,9 @@ class GlobalAdaptiveTimeStep( SingleSweep ):
     ncp=None, 
     eigenvalues=PDETerms.User_Defined_Implementation, 
     boundary_conditions=None,refinement_criterion=None,initial_conditions=None,source_term=None,
-    plot_grid_properties=False
+    plot_grid_properties=False, overlap=1
   ):
-    super(GlobalAdaptiveTimeStep,self).__init__(name, patch_size, 1, unknowns, auxiliary_variables, min_volume_h, max_volume_h, plot_grid_properties) 
+    super(GlobalAdaptiveTimeStep,self).__init__(name, patch_size, overlap, unknowns, auxiliary_variables, min_volume_h, max_volume_h, plot_grid_properties) 
     
     self._time_step_relaxation = time_step_relaxation
 

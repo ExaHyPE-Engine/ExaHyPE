@@ -2,9 +2,10 @@
 #include "otter/otter.h"
 
 
-void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_patchwise_heap_functors(
+void exahype2::fv::rusanov::timeStepWithRusanov_patchwise_heap_functors(
   ::exahype2::CellData&   patchData,
   int                     numberOfVolumesPerAxisInPatch,
+  int                     haloSize,
   int                     unknowns,
   int                     auxiliaryVariables,
   bool                    evaluateFlux,
@@ -17,7 +18,12 @@ void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_patchwise_heap_functors
   MaxEigenvalue           maxEigenvalue
 ) {
   static tarch::logging::Log _log( "exahype2::fv::rusanov" );
-  constexpr int haloSize        = 1;
+
+  /**
+   * The halo size passed in by the user might differ from the one that we have to evaluate/
+   * take into account from the solver's perspective.
+   */
+  constexpr int solversHaloSize        = 1;
 
   exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator QInEnumerator       (                        1, numberOfVolumesPerAxisInPatch,haloSize,unknowns,auxiliaryVariables);
   exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator QOutEnumerator      (                        1, numberOfVolumesPerAxisInPatch,       0,unknowns,auxiliaryVariables);
@@ -36,7 +42,7 @@ void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_patchwise_heap_functors
   double* tempEigenvalueZ            = (Dimensions==3)                  ? tarch::allocateMemory( eigenvalueEnumerator.size(),      tarch::MemoryLocation::Heap ) : nullptr;
 
   for (int patchIndex=0; patchIndex<patchData.numberOfCells; patchIndex++) {
-    logDebug( "timeStepWithRusanov_overlap1_sequential(...)", "evaluate source terms and/or copy solution over" );
+    logDebug( "timeStepWithRusanov_sequential(...)", "evaluate source terms and/or copy solution over" );
     if (Dimensions==2 and evaluateSource) {
       otterLoopBegin();
       for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++)
@@ -607,7 +613,7 @@ void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_patchwise_heap_functors
     }
 
     if (evaluateMaximumEigenvalueAfterTimeStep and Dimensions==2) {
-      logDebug( "timeStepWithRusanov_overlap1_sequential(...)", "compute maximum eigenvalue for subsequent time step" );
+      logDebug( "timeStepWithRusanov_sequential(...)", "compute maximum eigenvalue for subsequent time step" );
       double newMaxEigenvalue = 0.0;
       otterLoopBegin(); // @todo how do I clarify that this is a reduction? Do we need this info here?
       for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++)

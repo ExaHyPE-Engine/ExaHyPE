@@ -362,3 +362,16 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::isLastGridSweepOfTimeStep() cons
 
 
 {{ABSTRACT_SOLVER_USER_DEFINITIONS}}
+
+
+
+void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startSimulation() {
+
+}
+
+
+void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishSimulation() {
+
+}
+
+

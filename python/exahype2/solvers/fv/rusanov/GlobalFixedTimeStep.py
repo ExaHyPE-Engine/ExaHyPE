@@ -28,7 +28,7 @@ class GlobalFixedTimeStep( SingleSweep ):
     ncp=None, 
     eigenvalues=PDETerms.User_Defined_Implementation, 
     boundary_conditions=None,refinement_criterion=None,initial_conditions=None,source_term=None,
-    plot_grid_properties=False
+    plot_grid_properties=False, overlap=1
   ):
     """
   
@@ -39,7 +39,7 @@ class GlobalFixedTimeStep( SingleSweep ):
       to max_volume_h.
   
     """
-    super(GlobalFixedTimeStep,self).__init__(name, patch_size, 1, unknowns, auxiliary_variables, min_volume_h, max_volume_h, plot_grid_properties) 
+    super(GlobalFixedTimeStep,self).__init__(name, patch_size, overlap, unknowns, auxiliary_variables, min_volume_h, max_volume_h, plot_grid_properties) 
     
     self._time_step_size = time_step_size
 

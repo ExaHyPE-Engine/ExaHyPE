@@ -337,20 +337,20 @@ def create_compute_Riemann_kernel_for_Rusanov(flux_implementation,
   
   """  
   RiemannKernelCalls = {
-    RiemannKernelVariant.PatchWiseAoSStack:              "timeStepWithRusanov_overlap1_patchwise_call_stack",
-    RiemannKernelVariant.PatchWiseAoSoAStack:            "timeStepWithRusanov_overlap1_patchwise_call_stack",
-    RiemannKernelVariant.BatchedAoSStack:                "timeStepWithRusanov_overlap1_batched_call_stack",
-    RiemannKernelVariant.BatchedAoSoAStack:              "timeStepWithRusanov_overlap1_batched_call_stack",
-    RiemannKernelVariant.PatchWiseSplitTermsAoSStack:    "timeStepWithRusanov_overlap1_patchwise_split_terms_call_stack",
-    RiemannKernelVariant.PatchWiseSplitTermsAoSoAStack:  "timeStepWithRusanov_overlap1_patchwise_split_terms_call_stack",
-    RiemannKernelVariant.PatchWiseAoSHeap:               "timeStepWithRusanov_overlap1_patchwise_heap",
-    RiemannKernelVariant.PatchWiseAoSoAHeap:             "timeStepWithRusanov_overlap1_patchwise_heap",
-    RiemannKernelVariant.BatchedAoSHeap:                 "timeStepWithRusanov_overlap1_batched_heap",
-    RiemannKernelVariant.BatchedAoSoAHeap:               "timeStepWithRusanov_overlap1_batched_heap",
-    RiemannKernelVariant.PatchWiseSplitTermsAoSHeap:     "timeStepWithRusanov_overlap1_patchwise_split_terms_heap",
-    RiemannKernelVariant.PatchWiseSplitTermsAoSoAHeap:   "timeStepWithRusanov_overlap1_patchwise_split_terms_heap",
-    RiemannKernelVariant.PatchWiseInSitu:                "timeStepWithRusanov_overlap1_patchwise_in_situ",
-    RiemannKernelVariant.BatchedInSitu:                  "timeStepWithRusanov_overlap1_patchwise_in_situ"
+    RiemannKernelVariant.PatchWiseAoSStack:              "timeStepWithRusanov_patchwise_call_stack",
+    RiemannKernelVariant.PatchWiseAoSoAStack:            "timeStepWithRusanov_patchwise_call_stack",
+    RiemannKernelVariant.BatchedAoSStack:                "timeStepWithRusanov_batched_call_stack",
+    RiemannKernelVariant.BatchedAoSoAStack:              "timeStepWithRusanov_batched_call_stack",
+    RiemannKernelVariant.PatchWiseSplitTermsAoSStack:    "timeStepWithRusanov_patchwise_split_terms_call_stack",
+    RiemannKernelVariant.PatchWiseSplitTermsAoSoAStack:  "timeStepWithRusanov_patchwise_split_terms_call_stack",
+    RiemannKernelVariant.PatchWiseAoSHeap:               "timeStepWithRusanov_patchwise_heap",
+    RiemannKernelVariant.PatchWiseAoSoAHeap:             "timeStepWithRusanov_patchwise_heap",
+    RiemannKernelVariant.BatchedAoSHeap:                 "timeStepWithRusanov_batched_heap",
+    RiemannKernelVariant.BatchedAoSoAHeap:               "timeStepWithRusanov_batched_heap",
+    RiemannKernelVariant.PatchWiseSplitTermsAoSHeap:     "timeStepWithRusanov_patchwise_split_terms_heap",
+    RiemannKernelVariant.PatchWiseSplitTermsAoSoAHeap:   "timeStepWithRusanov_patchwise_split_terms_heap",
+    RiemannKernelVariant.PatchWiseInSitu:                "timeStepWithRusanov_patchwise_in_situ",
+    RiemannKernelVariant.BatchedInSitu:                  "timeStepWithRusanov_patchwise_in_situ"
   }
   
   EnumeratorTemplateTypes = {
@@ -376,6 +376,7 @@ def create_compute_Riemann_kernel_for_Rusanov(flux_implementation,
     template += """_functors(
   patchData,
   {{NUMBER_OF_VOLUMES_PER_AXIS}},
+  {{HALO_SIZE}},
   {{NUMBER_OF_UNKNOWNS}},
   {{NUMBER_OF_AUXILIARY_VARIABLES}},
   {% if FLUX_IMPLEMENTATION=="<none>" %} false {% else %} true {% endif %},
@@ -434,7 +435,7 @@ def create_compute_Riemann_kernel_for_Rusanov(flux_implementation,
 );
   """
   if solver_variant == SolverVariant.Stateless and EnumeratorTemplateTypes[riemann_kernel_variant]==None:
-    template += """_static_calls<{{SOLVER_NAME}},{{NUMBER_OF_VOLUMES_PER_AXIS}}, {{NUMBER_OF_UNKNOWNS}}, {{NUMBER_OF_AUXILIARY_VARIABLES}}>(
+    template += """_static_calls<{{SOLVER_NAME}},{{NUMBER_OF_VOLUMES_PER_AXIS}},{{HALO_SIZE}}, {{NUMBER_OF_UNKNOWNS}}, {{NUMBER_OF_AUXILIARY_VARIABLES}}>(
       patchData,
       {% if FLUX_IMPLEMENTATION=="<none>" %} false {% else %} true {% endif %},
       {% if NCP_IMPLEMENTATION=="<none>" %} false {% else %} true {% endif %},
@@ -443,7 +444,7 @@ def create_compute_Riemann_kernel_for_Rusanov(flux_implementation,
     );
   """
   if solver_variant == SolverVariant.Accelerator and EnumeratorTemplateTypes[riemann_kernel_variant]==None:
-    template += """_static_calls<{{SOLVER_NAME}},{{NUMBER_OF_VOLUMES_PER_AXIS}}, {{NUMBER_OF_UNKNOWNS}}, {{NUMBER_OF_AUXILIARY_VARIABLES}}>(
+    template += """_static_calls<{{SOLVER_NAME}},{{NUMBER_OF_VOLUMES_PER_AXIS}},{{HALO_SIZE}}, {{NUMBER_OF_UNKNOWNS}}, {{NUMBER_OF_AUXILIARY_VARIABLES}}>(
       targetDevice,
       patchData,
       {% if FLUX_IMPLEMENTATION=="<none>" %} false {% else %} true {% endif %},
@@ -453,7 +454,7 @@ def create_compute_Riemann_kernel_for_Rusanov(flux_implementation,
     );
   """
   if solver_variant == SolverVariant.Stateless and EnumeratorTemplateTypes[riemann_kernel_variant]!=None:
-    template += """_static_calls<{{SOLVER_NAME}},{{NUMBER_OF_VOLUMES_PER_AXIS}}, {{NUMBER_OF_UNKNOWNS}}, {{NUMBER_OF_AUXILIARY_VARIABLES}}, {{TEMP_DATA_ENUMERATOR}}>(
+    template += """_static_calls<{{SOLVER_NAME}},{{NUMBER_OF_VOLUMES_PER_AXIS}},{{HALO_SIZE}}, {{NUMBER_OF_UNKNOWNS}}, {{NUMBER_OF_AUXILIARY_VARIABLES}}, {{TEMP_DATA_ENUMERATOR}}>(
       patchData,
       {% if FLUX_IMPLEMENTATION=="<none>" %} false {% else %} true {% endif %},
       {% if NCP_IMPLEMENTATION=="<none>" %} false {% else %} true {% endif %},
@@ -462,7 +463,7 @@ def create_compute_Riemann_kernel_for_Rusanov(flux_implementation,
     );
   """
   if solver_variant == SolverVariant.Accelerator and EnumeratorTemplateTypes[riemann_kernel_variant]!=None:
-    template += """_static_calls<{{SOLVER_NAME}},{{NUMBER_OF_VOLUMES_PER_AXIS}}, {{NUMBER_OF_UNKNOWNS}}, {{NUMBER_OF_AUXILIARY_VARIABLES}}, {{TEMP_DATA_ENUMERATOR}}>(
+    template += """_static_calls<{{SOLVER_NAME}},{{NUMBER_OF_VOLUMES_PER_AXIS}},{{HALO_SIZE}}, {{NUMBER_OF_UNKNOWNS}}, {{NUMBER_OF_AUXILIARY_VARIABLES}}, {{TEMP_DATA_ENUMERATOR}}>(
       targetDevice,
       patchData,
       {% if FLUX_IMPLEMENTATION=="<none>" %} false {% else %} true {% endif %},

@@ -6,10 +6,11 @@
 template <
   typename Solver,
   int      numberOfVolumesPerAxisInPatch,
+  int      haloSize,
   int      unknowns,
   int      auxiliaryVariables
 >
-void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_batched_in_situ_static_calls(
+void exahype2::fv::rusanov::timeStepWithRusanov_patchwise_in_situ_static_calls(
   ::exahype2::CellData&   patchData,
   bool                    evaluateFlux,
   bool                    evaluateNonconservativeProduct,
@@ -17,20 +18,24 @@ void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_batched_in_situ_static_
   bool                    evaluateMaximumEigenvalueAfterTimeStep
 ) {
   static tarch::logging::Log _log( "exahype2::fv::rusanov" );
-  constexpr int haloSize        = 1;
+  /**
+   * The halo size passed in by the user might differ from the one that we have to evaluate/
+   * take into account from the solver's perspective.
+   */
+  constexpr int solversHaloSize        = 1;
 
   exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator QInEnumerator       (                        1, numberOfVolumesPerAxisInPatch,haloSize,unknowns,auxiliaryVariables);
   exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator QOutEnumerator      (                        1, numberOfVolumesPerAxisInPatch,       0,unknowns,auxiliaryVariables);
   exahype2::fv::enumerator::SingleVolumeEnumerator           singleVolumeEnumerator(unknowns,0);
 
-  if (Dimensions==2 and evaluateSource) {
-    for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
-    #if defined(SharedOMP)
-    #pragma omp simd collapse(2)
-    #endif
-    for (int patchIndex=0; patchIndex<patchData.numberOfCells; patchIndex++)
-    for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++) {
-      internal::copySolutionAndAddSourceTerm_LoopBody<Solver>(
+  for (int patchIndex=0; patchIndex<patchData.numberOfCells; patchIndex++) {
+    if (Dimensions==2 and evaluateSource) {
+      for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
+      #if defined(SharedOMP)
+      #pragma omp simd
+      #endif
+      for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++) {
+        internal::copySolutionAndAddSourceTerm_LoopBody<Solver>(
           patchData.QIn[patchIndex],
           QInEnumerator,
           patchData.patchCentre[patchIndex],
@@ -41,18 +46,17 @@ void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_batched_in_situ_static_
           patchData.dt[patchIndex],
           patchData.QOut[patchIndex],
           QOutEnumerator
-      );
+        );
+      }
     }
-  }
-  else if (Dimensions==3 and evaluateSource) {
-    for (int z = 0; z < numberOfVolumesPerAxisInPatch; z++)
-    for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
-    #if defined(SharedOMP)
-    #pragma omp simd collapse(2)
-    #endif
-    for (int patchIndex=0; patchIndex<patchData.numberOfCells; patchIndex++)
-    for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++) {
-      internal::copySolutionAndAddSourceTerm_LoopBody<Solver>(
+    else if (Dimensions==3 and evaluateSource) {
+      for (int z = 0; z < numberOfVolumesPerAxisInPatch; z++)
+      for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
+      #if defined(SharedOMP)
+      #pragma omp simd
+      #endif
+      for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++) {
+        internal::copySolutionAndAddSourceTerm_LoopBody<Solver>(
           patchData.QIn[patchIndex],
           QInEnumerator,
           patchData.patchCentre[patchIndex],
@@ -63,18 +67,17 @@ void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_batched_in_situ_static_
           patchData.dt[patchIndex],
           patchData.QOut[patchIndex],
           QOutEnumerator
-      );
+        );
+      }
     }
-  }
-  else if (Dimensions==2) {
-    for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
-    #if defined(SharedOMP)
-    #pragma omp simd collapse(3)
-    #endif
-    for (int patchIndex=0; patchIndex<patchData.numberOfCells; patchIndex++)
-    for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++)
-    for (int unknown=0; unknown<unknowns+auxiliaryVariables; unknown++) {
-      internal::copySolution_LoopBody(
+    else if (Dimensions==2) {
+      for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
+      #if defined(SharedOMP)
+      #pragma omp simd collapse(2)
+      #endif
+      for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++)
+      for (int unknown=0; unknown<unknowns+auxiliaryVariables; unknown++) {
+        internal::copySolution_LoopBody(
           patchData.QIn[patchIndex],
           QInEnumerator,
           patchIndex,
@@ -82,19 +85,18 @@ void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_batched_in_situ_static_
           unknown,
           patchData.QOut[patchIndex],
           QOutEnumerator
-      );
+        );
+      }
     }
-  }
-  else {
-    for (int z = 0; z < numberOfVolumesPerAxisInPatch; z++)
-    for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
-    #if defined(SharedOMP)
-    #pragma omp simd collapse(3)
-    #endif
-    for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++)
-    for (int patchIndex=0; patchIndex<patchData.numberOfCells; patchIndex++)
-    for (int unknown=0; unknown<unknowns+auxiliaryVariables; unknown++) {
-      internal::copySolution_LoopBody(
+    else {
+      for (int z = 0; z < numberOfVolumesPerAxisInPatch; z++)
+      for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
+      #if defined(SharedOMP)
+      #pragma omp simd collapse(2)
+      #endif
+      for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++)
+      for (int unknown=0; unknown<unknowns+auxiliaryVariables; unknown++) {
+        internal::copySolution_LoopBody(
           patchData.QIn[patchIndex],
           QInEnumerator,
           patchIndex,
@@ -102,24 +104,22 @@ void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_batched_in_situ_static_
           unknown,
           patchData.QOut[patchIndex],
           QOutEnumerator
-      );
+        );
+      }
     }
-  }
-  // end of the source term calculation and the copying over
 
-  if (Dimensions==2 and evaluateFlux) {
-    for (int shift=0; shift<2; shift++)
-    for (int x = -haloSize+shift; x < numberOfVolumesPerAxisInPatch+haloSize-1; x+=2)
-    #if defined(SharedOMP)
-    #pragma omp simd collapse(2)
-    #endif
-    for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
-    for (int patchIndex=0; patchIndex<patchData.numberOfCells; patchIndex++)
-    {
-      double fluxFL[unknowns] __attribute__((aligned (Alignment)));
-      double fluxFR[unknowns] __attribute__((aligned (Alignment)));
+    if (Dimensions==2 and evaluateFlux) {
+      for (int shift=0; shift<2; shift++)
+      for (int x = -haloSize+shift; x < numberOfVolumesPerAxisInPatch+haloSize-1; x+=2)
+      #if defined(SharedOMP)
+      #pragma omp simd
+      #endif
+      for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
+      {
+        double fluxFL[unknowns] __attribute__((aligned (Alignment)));
+        double fluxFR[unknowns] __attribute__((aligned (Alignment)));
 
-      internal::computeFlux_LoopBody<Solver>(
+        internal::computeFlux_LoopBody<Solver>(
             patchData.QIn[patchIndex],
             QInEnumerator,
             patchData.patchCentre[patchIndex],
@@ -131,8 +131,8 @@ void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_batched_in_situ_static_
             0, // normal
             fluxFL,
             singleVolumeEnumerator
-      );
-      internal::computeFlux_LoopBody<Solver>(
+        );
+        internal::computeFlux_LoopBody<Solver>(
             patchData.QIn[patchIndex],
             QInEnumerator,
             patchData.patchCentre[patchIndex],
@@ -144,36 +144,35 @@ void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_batched_in_situ_static_
             0, // normal
             fluxFR,
             singleVolumeEnumerator
-      );
-      for (int unknown=0; unknown<unknowns; unknown++) {
-        internal::updateSolutionWithFlux_LoopBody(
-          fluxFL,
-          fluxFR,
-          singleVolumeEnumerator,
-          patchData.patchCentre[patchIndex],
-          patchData.patchSize[patchIndex],
-          patchIndex,
-          volumeIndex2d(x,y),
-          unknown,
-          patchData.dt[patchIndex],
-          0, // normal
-          *(patchData.QOut + patchIndex),
-          QOutEnumerator
         );
-      }
-    }  // and of loop over faces with normal along x-axis subject to shift loop
+        for (int unknown=0; unknown<unknowns; unknown++) {
+          internal::updateSolutionWithFlux_LoopBody(
+              fluxFL,
+              fluxFR,
+              singleVolumeEnumerator,
+              patchData.patchCentre[patchIndex],
+              patchData.patchSize[patchIndex],
+              patchIndex,
+              volumeIndex2d(x,y),
+              unknown,
+              patchData.dt[patchIndex],
+              0, // normal
+              *(patchData.QOut + patchIndex),
+              QOutEnumerator
+          );
+        }
+      } // end of x-flux computation subject to a shift loop
 
-    for (int shift=0; shift<2; shift++)
-    for (int y = -haloSize+shift; y < numberOfVolumesPerAxisInPatch+haloSize-1; y+=2)
-    #if defined(SharedOMP)
-    #pragma omp simd collapse(2)
-    #endif
-    for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++)
-    for (int patchIndex=0; patchIndex<patchData.numberOfCells; patchIndex++)
-    {
-      double fluxFL[unknowns] __attribute__((aligned (Alignment)));
-      double fluxFR[unknowns] __attribute__((aligned (Alignment)));
-      internal::computeFlux_LoopBody<Solver>(
+      for (int shift=0; shift<2; shift++)
+      for (int y = -haloSize+shift; y < numberOfVolumesPerAxisInPatch+haloSize-1; y+=2)
+      #if defined(SharedOMP)
+      #pragma omp simd
+      #endif
+      for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++)
+      {
+        double fluxFL[unknowns] __attribute__((aligned (Alignment)));
+        double fluxFR[unknowns] __attribute__((aligned (Alignment)));
+        internal::computeFlux_LoopBody<Solver>(
               patchData.QIn[patchIndex],
               QInEnumerator,
               patchData.patchCentre[patchIndex],
@@ -185,8 +184,8 @@ void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_batched_in_situ_static_
               1, // normal
               fluxFL,
               singleVolumeEnumerator
-      );
-      internal::computeFlux_LoopBody<Solver>(
+        );
+        internal::computeFlux_LoopBody<Solver>(
               patchData.QIn[patchIndex],
               QInEnumerator,
               patchData.patchCentre[patchIndex],
@@ -198,8 +197,8 @@ void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_batched_in_situ_static_
               1, // normal
               fluxFR,
               singleVolumeEnumerator
-      );
-      for (int unknown=0; unknown<unknowns; unknown++) {
+        );
+        for (int unknown=0; unknown<unknowns; unknown++) {
           internal::updateSolutionWithFlux_LoopBody(
                 fluxFL,
                 fluxFR,
@@ -213,24 +212,23 @@ void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_batched_in_situ_static_
                 1, // normal
                 *(patchData.QOut + patchIndex),
                 QOutEnumerator
-          );
-      }
-    }  // and of loop over faces with normal along y-axis subject to shift loop
-  }
-  if (Dimensions==3 and evaluateFlux) {
-    for (int shift=0; shift<2; shift++)
-    for (int x = -haloSize+shift; x < numberOfVolumesPerAxisInPatch+haloSize-1; x+=2)
-    #if defined(SharedOMP)
-    #pragma omp simd collapse(3)
-    #endif
-    for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
-    for (int z = 0; z < numberOfVolumesPerAxisInPatch; z++)
-    for (int patchIndex=0; patchIndex<patchData.numberOfCells; patchIndex++)
-    {
-      double fluxFL[unknowns] __attribute__((aligned (Alignment)));
-      double fluxFR[unknowns] __attribute__((aligned (Alignment)));
+            );
+        }
+      } // end of y-flux calculation subject to a shift loop
+    }
+    if (Dimensions==3 and evaluateFlux) {
+      for (int shift=0; shift<2; shift++)
+      for (int x = -haloSize+shift; x < numberOfVolumesPerAxisInPatch+haloSize-1; x+=2)
+      #if defined(SharedOMP)
+      #pragma omp simd collapse(2)
+      #endif
+      for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
+      for (int z = 0; z < numberOfVolumesPerAxisInPatch; z++)
+      {
+        double fluxFL[unknowns] __attribute__((aligned (Alignment)));
+        double fluxFR[unknowns] __attribute__((aligned (Alignment)));
 
-      internal::computeFlux_LoopBody<Solver>(
+        internal::computeFlux_LoopBody<Solver>(
             patchData.QIn[patchIndex],
             QInEnumerator,
             patchData.patchCentre[patchIndex],
@@ -242,8 +240,8 @@ void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_batched_in_situ_static_
             0, // normal
             fluxFL,
             singleVolumeEnumerator
-      );
-      internal::computeFlux_LoopBody<Solver>(
+        );
+        internal::computeFlux_LoopBody<Solver>(
             patchData.QIn[patchIndex],
             QInEnumerator,
             patchData.patchCentre[patchIndex],
@@ -255,9 +253,9 @@ void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_batched_in_situ_static_
             0, // normal
             fluxFR,
             singleVolumeEnumerator
-      );
-      for (int unknown=0; unknown<unknowns; unknown++) {
-        internal::updateSolutionWithFlux_LoopBody(
+        );
+        for (int unknown=0; unknown<unknowns; unknown++) {
+          internal::updateSolutionWithFlux_LoopBody(
               fluxFL,
               fluxFR,
               singleVolumeEnumerator,
@@ -270,22 +268,21 @@ void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_batched_in_situ_static_
               0, // normal
               *(patchData.QOut + patchIndex),
               QOutEnumerator
-        );
-      }
-    }  // and of loop over faces with normal along x-axis subject to shift loop
+          );
+        }
+      } // end of x-flux calculation subject to a shift loop
 
-    for (int shift=0; shift<2; shift++)
-    for (int y = -haloSize+shift; y < numberOfVolumesPerAxisInPatch+haloSize-1; y+=2)
-    #if defined(SharedOMP)
-    #pragma omp simd collapse(3)
-    #endif
-    for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++)
-    for (int z = 0; z < numberOfVolumesPerAxisInPatch; z++)
-    for (int patchIndex=0; patchIndex<patchData.numberOfCells; patchIndex++)
-    {
-      double fluxFL[unknowns] __attribute__((aligned (Alignment)));
-      double fluxFR[unknowns] __attribute__((aligned (Alignment)));
-      internal::computeFlux_LoopBody<Solver>(
+      for (int shift=0; shift<2; shift++)
+      for (int y = -haloSize+shift; y < numberOfVolumesPerAxisInPatch+haloSize-1; y+=2)
+      #if defined(SharedOMP)
+      #pragma omp simd collapse(2)
+      #endif
+      for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++)
+      for (int z = 0; z < numberOfVolumesPerAxisInPatch; z++)
+      {
+        double fluxFL[unknowns] __attribute__((aligned (Alignment)));
+        double fluxFR[unknowns] __attribute__((aligned (Alignment)));
+        internal::computeFlux_LoopBody<Solver>(
               patchData.QIn[patchIndex],
               QInEnumerator,
               patchData.patchCentre[patchIndex],
@@ -297,8 +294,8 @@ void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_batched_in_situ_static_
               1, // normal
               fluxFL,
               singleVolumeEnumerator
-      );
-      internal::computeFlux_LoopBody<Solver>(
+        );
+        internal::computeFlux_LoopBody<Solver>(
               patchData.QIn[patchIndex],
               QInEnumerator,
               patchData.patchCentre[patchIndex],
@@ -310,8 +307,8 @@ void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_batched_in_situ_static_
               1, // normal
               fluxFR,
               singleVolumeEnumerator
-      );
-      for (int unknown=0; unknown<unknowns; unknown++) {
+        );
+        for (int unknown=0; unknown<unknowns; unknown++) {
           internal::updateSolutionWithFlux_LoopBody(
                 fluxFL,
                 fluxFR,
@@ -326,21 +323,20 @@ void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_batched_in_situ_static_
                 *(patchData.QOut + patchIndex),
                 QOutEnumerator
           );
-      }
-    }  // and of loop over faces with normal along y-axis subject to shift loop
+        }
+      } // end of y-flux calculation subject to a shift loop
 
-    for (int shift=0; shift<2; shift++)
-    for (int z = -haloSize+shift; z < numberOfVolumesPerAxisInPatch+haloSize-1; z+=2)
-    #if defined(SharedOMP)
-    #pragma omp simd collapse(3)
-    #endif
-    for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++)
-    for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
-    for (int patchIndex=0; patchIndex<patchData.numberOfCells; patchIndex++)
-    {
-      double fluxFL[unknowns] __attribute__((aligned (Alignment)));
-      double fluxFR[unknowns] __attribute__((aligned (Alignment)));
-      internal::computeFlux_LoopBody<Solver>(
+      for (int shift=0; shift<2; shift++)
+      for (int z = -haloSize+shift; z < numberOfVolumesPerAxisInPatch+haloSize-1; z+=2)
+      #if defined(SharedOMP)
+      #pragma omp simd collapse(2)
+      #endif
+      for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++)
+      for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
+      {
+        double fluxFL[unknowns] __attribute__((aligned (Alignment)));
+        double fluxFR[unknowns] __attribute__((aligned (Alignment)));
+        internal::computeFlux_LoopBody<Solver>(
               patchData.QIn[patchIndex],
               QInEnumerator,
               patchData.patchCentre[patchIndex],
@@ -352,8 +348,8 @@ void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_batched_in_situ_static_
               2, // normal
               fluxFL,
               singleVolumeEnumerator
-      );
-      internal::computeFlux_LoopBody<Solver>(
+        );
+        internal::computeFlux_LoopBody<Solver>(
               patchData.QIn[patchIndex],
               QInEnumerator,
               patchData.patchCentre[patchIndex],
@@ -365,9 +361,9 @@ void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_batched_in_situ_static_
               2, // normal
               fluxFR,
               singleVolumeEnumerator
-      );
-      for (int unknown=0; unknown<unknowns; unknown++) {
-        internal::updateSolutionWithFlux_LoopBody(
+        );
+        for (int unknown=0; unknown<unknowns; unknown++) {
+          internal::updateSolutionWithFlux_LoopBody(
                 fluxFL,
                 fluxFR,
                 singleVolumeEnumerator,
@@ -380,23 +376,22 @@ void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_batched_in_situ_static_
                 2, // normal
                 *(patchData.QOut + patchIndex),
                 QOutEnumerator
-        );
-      }
-    }  // and of loop over faces with normal along z-axis subject to shift loop
-  }
+          );
+        }
+      } // end of z-flux evaluation subject to a shift loop
+    }
 
-  if (Dimensions==2 and evaluateNonconservativeProduct) {
-    for (int shift=0; shift<2; shift++)
-    for (int x = -haloSize+shift; x < numberOfVolumesPerAxisInPatch+haloSize-1; x+=2)
-    #if defined(SharedOMP)
-    #pragma omp simd collapse(2)
-    #endif
-    for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
-    for (int patchIndex=0; patchIndex<patchData.numberOfCells; patchIndex++)
-    {
-      double fluxNCP[unknowns] __attribute__((aligned (Alignment)));
+    if (Dimensions==2 and evaluateNonconservativeProduct) {
+      for (int shift=0; shift<2; shift++)
+      for (int x = -haloSize+shift; x < numberOfVolumesPerAxisInPatch+haloSize-1; x+=2)
+      #if defined(SharedOMP)
+      #pragma omp simd
+      #endif
+      for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
+      {
+        double fluxNCP[unknowns] __attribute__((aligned (Alignment)));
 
-      internal::computeNonconservativeFlux_LoopBody<Solver>(
+        internal::computeNonconservativeFlux_LoopBody<Solver>(
             patchData.QIn[patchIndex],
             QInEnumerator,
             patchData.patchCentre[patchIndex],
@@ -408,8 +403,8 @@ void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_batched_in_situ_static_
             0, // normal
             fluxNCP,
             singleVolumeEnumerator
-      );
-      for (int unknown=0; unknown<unknowns; unknown++) {
+        );
+        for (int unknown=0; unknown<unknowns; unknown++) {
           internal::updateSolutionWithNonconservativeFlux_LoopBody(
             fluxNCP,
             singleVolumeEnumerator,
@@ -423,20 +418,19 @@ void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_batched_in_situ_static_
             *(patchData.QOut + patchIndex),
              QOutEnumerator
           );
-      }
-    }  // and of loop over faces with normal along x-axis subject to shift loop
+        }
+      } // end of x-flux subject to a shift loop
 
-    for (int shift=0; shift<2; shift++)
-    for (int y = -haloSize+shift; y < numberOfVolumesPerAxisInPatch+haloSize-1; y+=2)
-    #if defined(SharedOMP)
-    #pragma omp simd collapse(2)
-    #endif
-    for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++)
-    for (int patchIndex=0; patchIndex<patchData.numberOfCells; patchIndex++)
-    {
-      double fluxNCP[unknowns] __attribute__((aligned (Alignment)));
+      for (int shift=0; shift<2; shift++)
+      for (int y = -haloSize+shift; y < numberOfVolumesPerAxisInPatch+haloSize-1; y+=2)
+      #if defined(SharedOMP)
+      #pragma omp simd
+      #endif
+      for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++)
+      {
+        double fluxNCP[unknowns] __attribute__((aligned (Alignment)));
 
-      internal::computeNonconservativeFlux_LoopBody<Solver>(
+        internal::computeNonconservativeFlux_LoopBody<Solver>(
             patchData.QIn[patchIndex],
             QInEnumerator,
             patchData.patchCentre[patchIndex],
@@ -448,8 +442,8 @@ void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_batched_in_situ_static_
             1, // normal
             fluxNCP,
             singleVolumeEnumerator
-      );
-      for (int unknown=0; unknown<unknowns; unknown++) {
+        );
+        for (int unknown=0; unknown<unknowns; unknown++) {
             internal::updateSolutionWithNonconservativeFlux_LoopBody(
               fluxNCP,
               singleVolumeEnumerator,
@@ -463,22 +457,21 @@ void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_batched_in_situ_static_
               *(patchData.QOut + patchIndex),
                QOutEnumerator
             );
-      }
+        }
+      } // end of y-flux subject to a shift loop
     }
-  }
-  if (Dimensions==3 and evaluateNonconservativeProduct) {
-    for (int shift=0; shift<2; shift++)
-    for (int x = -haloSize+shift; x < numberOfVolumesPerAxisInPatch+haloSize-1; x+=2)
-    #if defined(SharedOMP)
-    #pragma omp simd collapse(3)
-    #endif
-    for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
-    for (int z = 0; z < numberOfVolumesPerAxisInPatch; z++)
-    for (int patchIndex=0; patchIndex<patchData.numberOfCells; patchIndex++)
-    {
-      double fluxNCP[unknowns] __attribute__((aligned (Alignment)));
+    if (Dimensions==3 and evaluateNonconservativeProduct) {
+      for (int shift=0; shift<2; shift++)
+      for (int x = -haloSize+shift; x < numberOfVolumesPerAxisInPatch+haloSize-1; x+=2)
+      #if defined(SharedOMP)
+      #pragma omp simd collapse(2)
+      #endif
+      for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
+      for (int z = 0; z < numberOfVolumesPerAxisInPatch; z++)
+      {
+        double fluxNCP[unknowns] __attribute__((aligned (Alignment)));
 
-      internal::computeNonconservativeFlux_LoopBody<Solver>(
+        internal::computeNonconservativeFlux_LoopBody<Solver>(
             patchData.QIn[patchIndex],
             QInEnumerator,
             patchData.patchCentre[patchIndex],
@@ -490,9 +483,9 @@ void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_batched_in_situ_static_
             0, // normal
             fluxNCP,
             singleVolumeEnumerator
-      );
-      for (int unknown=0; unknown<unknowns; unknown++) {
-        internal::updateSolutionWithNonconservativeFlux_LoopBody(
+        );
+        for (int unknown=0; unknown<unknowns; unknown++) {
+          internal::updateSolutionWithNonconservativeFlux_LoopBody(
             fluxNCP,
             singleVolumeEnumerator,
             patchData.patchCentre[patchIndex],
@@ -504,22 +497,21 @@ void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_batched_in_situ_static_
             0, // normal
             *(patchData.QOut + patchIndex),
              QOutEnumerator
-        );
-      }
-    }  // and of loop over faces with normal along x-axis subject to shift loop
+          );
+        }
+      } // end of x-flux subject to a shift loop
 
-    for (int shift=0; shift<2; shift++)
-    for (int y = -haloSize+shift; y < numberOfVolumesPerAxisInPatch+haloSize-1; y+=2)
-    #if defined(SharedOMP)
-    #pragma omp simd collapse(3)
-    #endif
-    for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++)
-    for (int z = 0; z < numberOfVolumesPerAxisInPatch; z++)
-    for (int patchIndex=0; patchIndex<patchData.numberOfCells; patchIndex++)
-    {
-      double fluxNCP[unknowns] __attribute__((aligned (Alignment)));
+      for (int shift=0; shift<2; shift++)
+      for (int y = -haloSize+shift; y < numberOfVolumesPerAxisInPatch+haloSize-1; y+=2)
+      #if defined(SharedOMP)
+      #pragma omp simd collapse(2)
+      #endif
+      for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++)
+      for (int z = 0; z < numberOfVolumesPerAxisInPatch; z++)
+      {
+        double fluxNCP[unknowns] __attribute__((aligned (Alignment)));
 
-      internal::computeNonconservativeFlux_LoopBody<Solver>(
+        internal::computeNonconservativeFlux_LoopBody<Solver>(
             patchData.QIn[patchIndex],
             QInEnumerator,
             patchData.patchCentre[patchIndex],
@@ -531,9 +523,9 @@ void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_batched_in_situ_static_
             1, // normal
             fluxNCP,
             singleVolumeEnumerator
-      );
-      for (int unknown=0; unknown<unknowns; unknown++) {
-        internal::updateSolutionWithNonconservativeFlux_LoopBody(
+        );
+        for (int unknown=0; unknown<unknowns; unknown++) {
+            internal::updateSolutionWithNonconservativeFlux_LoopBody(
               fluxNCP,
               singleVolumeEnumerator,
               patchData.patchCentre[patchIndex],
@@ -545,22 +537,21 @@ void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_batched_in_situ_static_
               1, // normal
               *(patchData.QOut + patchIndex),
                QOutEnumerator
-        );
-      }
-    }  // and of loop over faces with normal along y-axis subject to shift loop
+            );
+        }
+      } // end of y-flux subject to shift loop
 
-    for (int shift=0; shift<2; shift++)
-    for (int z = -haloSize+shift; z < numberOfVolumesPerAxisInPatch+haloSize-1; z+=2)
-    #if defined(SharedOMP)
-    #pragma omp simd collapse(3)
-    #endif
-    for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++)
-    for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
-    for (int patchIndex=0; patchIndex<patchData.numberOfCells; patchIndex++)
-    {
-      double fluxNCP[unknowns] __attribute__((aligned (Alignment)));
+      for (int shift=0; shift<2; shift++)
+      for (int z = -haloSize+shift; z < numberOfVolumesPerAxisInPatch+haloSize-1; z+=2)
+      #if defined(SharedOMP)
+      #pragma omp simd collapse(2)
+      #endif
+      for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++)
+      for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
+      {
+        double fluxNCP[unknowns] __attribute__((aligned (Alignment)));
 
-      internal::computeNonconservativeFlux_LoopBody<Solver>(
+        internal::computeNonconservativeFlux_LoopBody<Solver>(
             patchData.QIn[patchIndex],
             QInEnumerator,
             patchData.patchCentre[patchIndex],
@@ -572,9 +563,9 @@ void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_batched_in_situ_static_
             2, // normal
             fluxNCP,
             singleVolumeEnumerator
-      );
-      for (int unknown=0; unknown<unknowns; unknown++) {
-        internal::updateSolutionWithNonconservativeFlux_LoopBody(
+        );
+        for (int unknown=0; unknown<unknowns; unknown++) {
+          internal::updateSolutionWithNonconservativeFlux_LoopBody(
               fluxNCP,
               singleVolumeEnumerator,
               patchData.patchCentre[patchIndex],
@@ -586,23 +577,22 @@ void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_batched_in_situ_static_
               2, // normal
               *(patchData.QOut + patchIndex),
                QOutEnumerator
-        );
-      }
-    }  // and of loop over faces with normal along z-axis subject to shift loop
-  }
+          );
+        }
+      } // end of z-flux subject to shift loop
+    }
 
-  if (Dimensions==2) {
-    for (int shift=0; shift<2; shift++)
-    for (int x = -haloSize+shift; x < numberOfVolumesPerAxisInPatch+haloSize-1; x+=2)
-    #if defined(SharedOMP)
-    #pragma omp simd collapse(2)
-    #endif
-    for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
-    for (int patchIndex=0; patchIndex<patchData.numberOfCells; patchIndex++)
-    {
-      double maxEigenvalueL __attribute__((aligned (Alignment)));
-      double maxEigenvalueR __attribute__((aligned (Alignment)));
-      internal::computeMaxEigenvalue_LoopBody<Solver>(
+    if (Dimensions==2) {
+      for (int shift=0; shift<2; shift++)
+      for (int x = -haloSize+shift; x < numberOfVolumesPerAxisInPatch+haloSize-1; x+=2)
+      #if defined(SharedOMP)
+      #pragma omp simd
+      #endif
+      for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
+      {
+        double maxEigenvalueL __attribute__((aligned (Alignment)));
+        double maxEigenvalueR __attribute__((aligned (Alignment)));
+        internal::computeMaxEigenvalue_LoopBody<Solver>(
           patchData.QIn[patchIndex],
           QInEnumerator,
           patchData.patchCentre[patchIndex],
@@ -614,8 +604,8 @@ void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_batched_in_situ_static_
           0, // normal
           &maxEigenvalueL,
           singleVolumeEnumerator
-      );
-      internal::computeMaxEigenvalue_LoopBody<Solver>(
+        );
+        internal::computeMaxEigenvalue_LoopBody<Solver>(
           patchData.QIn[patchIndex],
           QInEnumerator,
           patchData.patchCentre[patchIndex],
@@ -627,9 +617,9 @@ void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_batched_in_situ_static_
           0, // normal
           &maxEigenvalueR,
           singleVolumeEnumerator
-      );
-      for (int unknown=0; unknown<unknowns; unknown++) {
-        internal::updateSolutionWithEigenvalueDamping_LoopBody(
+        );
+        for (int unknown=0; unknown<unknowns; unknown++) {
+          internal::updateSolutionWithEigenvalueDamping_LoopBody(
             patchData.QIn[patchIndex],
             QInEnumerator,
             maxEigenvalueL,
@@ -643,22 +633,20 @@ void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_batched_in_situ_static_
             0, // normal
             *(patchData.QOut + patchIndex),
             QOutEnumerator
-        );
-      }
-    }  // and of loop over faces with normal along x-axis subject to shift loop
+          );
+        }
+      } // and of loop over faces with normal along x-axis subject to shift loop
 
-    for (int shift=0; shift<2; shift++)
-    for (int y = -haloSize+shift; y < numberOfVolumesPerAxisInPatch+haloSize-1; y+=2)
-    #if defined(SharedOMP)
-    #pragma omp simd collapse(2)
-    #endif
-    for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++)
-    for (int patchIndex=0; patchIndex<patchData.numberOfCells; patchIndex++)
-    {
-      double maxEigenvalueL __attribute__((aligned (Alignment)));
-      double maxEigenvalueR __attribute__((aligned (Alignment)));
-
-      internal::computeMaxEigenvalue_LoopBody<Solver>(
+      for (int shift=0; shift<2; shift++)
+      for (int y = -haloSize+shift; y < numberOfVolumesPerAxisInPatch+haloSize-1; y+=2)
+      #if defined(SharedOMP)
+      #pragma omp simd
+      #endif
+      for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++)
+      {
+        double maxEigenvalueL __attribute__((aligned (Alignment)));
+        double maxEigenvalueR __attribute__((aligned (Alignment)));
+        internal::computeMaxEigenvalue_LoopBody<Solver>(
             patchData.QIn[patchIndex],
             QInEnumerator,
             patchData.patchCentre[patchIndex],
@@ -670,8 +658,8 @@ void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_batched_in_situ_static_
             1, // normal
             &maxEigenvalueL,
             singleVolumeEnumerator
-      );
-      internal::computeMaxEigenvalue_LoopBody<Solver>(
+        );
+        internal::computeMaxEigenvalue_LoopBody<Solver>(
             patchData.QIn[patchIndex],
             QInEnumerator,
             patchData.patchCentre[patchIndex],
@@ -683,9 +671,9 @@ void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_batched_in_situ_static_
             1, // normal
             &maxEigenvalueR,
             singleVolumeEnumerator
-      );
-      for (int unknown=0; unknown<unknowns; unknown++) {
-        internal::updateSolutionWithEigenvalueDamping_LoopBody(
+        );
+        for (int unknown=0; unknown<unknowns; unknown++) {
+          internal::updateSolutionWithEigenvalueDamping_LoopBody(
               patchData.QIn[patchIndex],
               QInEnumerator,
               maxEigenvalueL,
@@ -699,23 +687,22 @@ void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_batched_in_situ_static_
               1, // normal
               *(patchData.QOut + patchIndex),
               QOutEnumerator
-        );
+          );
+        }
       }
-    }  // and of loop over faces with normal along y-axis subject to shift loop
-  }
-  if (Dimensions==3) {
-    for (int shift=0; shift<2; shift++)
-    for (int x = -haloSize+shift; x < numberOfVolumesPerAxisInPatch+haloSize-1; x+=2)
-    #if defined(SharedOMP)
-    #pragma omp simd collapse(3)
-    #endif
-    for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
-    for (int z = 0; z < numberOfVolumesPerAxisInPatch; z++)
-    for (int patchIndex=0; patchIndex<patchData.numberOfCells; patchIndex++)
-    {
-      double maxEigenvalueL __attribute__((aligned (Alignment)));
-      double maxEigenvalueR __attribute__((aligned (Alignment)));
-      internal::computeMaxEigenvalue_LoopBody<Solver>(
+    }
+    if (Dimensions==3) {
+      for (int shift=0; shift<2; shift++)
+      for (int x = -haloSize+shift; x < numberOfVolumesPerAxisInPatch+haloSize-1; x+=2)
+      #if defined(SharedOMP)
+      #pragma omp simd collapse(2)
+      #endif
+      for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
+      for (int z = 0; z < numberOfVolumesPerAxisInPatch; z++)
+      {
+        double maxEigenvalueL __attribute__((aligned (Alignment)));
+        double maxEigenvalueR __attribute__((aligned (Alignment)));
+        internal::computeMaxEigenvalue_LoopBody<Solver>(
           patchData.QIn[patchIndex],
           QInEnumerator,
           patchData.patchCentre[patchIndex],
@@ -727,8 +714,8 @@ void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_batched_in_situ_static_
           0, // normal
           &maxEigenvalueL,
           singleVolumeEnumerator
-      );
-      internal::computeMaxEigenvalue_LoopBody<Solver>(
+        );
+        internal::computeMaxEigenvalue_LoopBody<Solver>(
           patchData.QIn[patchIndex],
           QInEnumerator,
           patchData.patchCentre[patchIndex],
@@ -740,9 +727,9 @@ void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_batched_in_situ_static_
           0, // normal
           &maxEigenvalueR,
           singleVolumeEnumerator
-      );
-      for (int unknown=0; unknown<unknowns; unknown++) {
-        internal::updateSolutionWithEigenvalueDamping_LoopBody(
+        );
+        for (int unknown=0; unknown<unknowns; unknown++) {
+          internal::updateSolutionWithEigenvalueDamping_LoopBody(
             patchData.QIn[patchIndex],
             QInEnumerator,
             maxEigenvalueL,
@@ -756,22 +743,21 @@ void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_batched_in_situ_static_
             0, // normal
             *(patchData.QOut + patchIndex),
             QOutEnumerator
-        );
-      }
-    }  // and of loop over faces with normal along x-axis subject to shift loop
+          );
+        }
+      }  // and of loop over faces with normal along x-axis subject to shift loop
 
-    for (int shift=0; shift<2; shift++)
-    for (int y = -haloSize+shift; y < numberOfVolumesPerAxisInPatch+haloSize-1; y+=2)
-    #if defined(SharedOMP)
-    #pragma omp simd collapse(3)
-    #endif
-    for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++)
-    for (int z = 0; z < numberOfVolumesPerAxisInPatch; z++)
-    for (int patchIndex=0; patchIndex<patchData.numberOfCells; patchIndex++)
-    {
-      double maxEigenvalueL __attribute__((aligned (Alignment)));
-      double maxEigenvalueR __attribute__((aligned (Alignment)));
-      internal::computeMaxEigenvalue_LoopBody<Solver>(
+      for (int shift=0; shift<2; shift++)
+      for (int y = -haloSize+shift; y < numberOfVolumesPerAxisInPatch+haloSize-1; y+=2)
+      #if defined(SharedOMP)
+      #pragma omp simd collapse(2)
+      #endif
+      for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++)
+      for (int z = 0; z < numberOfVolumesPerAxisInPatch; z++)
+      {
+        double maxEigenvalueL __attribute__((aligned (Alignment)));
+        double maxEigenvalueR __attribute__((aligned (Alignment)));
+        internal::computeMaxEigenvalue_LoopBody<Solver>(
             patchData.QIn[patchIndex],
             QInEnumerator,
             patchData.patchCentre[patchIndex],
@@ -783,8 +769,8 @@ void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_batched_in_situ_static_
             1, // normal
             &maxEigenvalueL,
             singleVolumeEnumerator
-      );
-      internal::computeMaxEigenvalue_LoopBody<Solver>(
+        );
+        internal::computeMaxEigenvalue_LoopBody<Solver>(
             patchData.QIn[patchIndex],
             QInEnumerator,
             patchData.patchCentre[patchIndex],
@@ -796,9 +782,9 @@ void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_batched_in_situ_static_
             1, // normal
             &maxEigenvalueR,
             singleVolumeEnumerator
-      );
-      for (int unknown=0; unknown<unknowns; unknown++) {
-        internal::updateSolutionWithEigenvalueDamping_LoopBody(
+        );
+        for (int unknown=0; unknown<unknowns; unknown++) {
+            internal::updateSolutionWithEigenvalueDamping_LoopBody(
               patchData.QIn[patchIndex],
               QInEnumerator,
               maxEigenvalueL,
@@ -812,22 +798,21 @@ void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_batched_in_situ_static_
               1, // normal
               *(patchData.QOut + patchIndex),
               QOutEnumerator
-        );
-      }
-    }  // and of loop over faces with normal along y-axis subject to shift loop
+            );
+        }
+      } // and of loop over faces with normal along y-axis subject to shift loop
 
-    for (int shift=0; shift<2; shift++)
-    for (int z = -haloSize+shift; z < numberOfVolumesPerAxisInPatch+haloSize-1; z+=2)
-    #if defined(SharedOMP)
-    #pragma omp simd collapse(3)
-    #endif
-    for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++)
-    for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
-    for (int patchIndex=0; patchIndex<patchData.numberOfCells; patchIndex++)
-    {
-      double maxEigenvalueL __attribute__((aligned (Alignment)));
-      double maxEigenvalueR __attribute__((aligned (Alignment)));
-      internal::computeMaxEigenvalue_LoopBody<Solver>(
+      for (int shift=0; shift<2; shift++)
+      for (int z = -haloSize+shift; z < numberOfVolumesPerAxisInPatch+haloSize-1; z+=2)
+      #if defined(SharedOMP)
+      #pragma omp simd collapse(2)
+      #endif
+      for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++)
+      for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
+      {
+          double maxEigenvalueL __attribute__((aligned (Alignment)));
+          double maxEigenvalueR __attribute__((aligned (Alignment)));
+          internal::computeMaxEigenvalue_LoopBody<Solver>(
             patchData.QIn[patchIndex],
             QInEnumerator,
             patchData.patchCentre[patchIndex],
@@ -839,8 +824,8 @@ void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_batched_in_situ_static_
             2, // normal
             &maxEigenvalueL,
             singleVolumeEnumerator
-      );
-      internal::computeMaxEigenvalue_LoopBody<Solver>(
+          );
+          internal::computeMaxEigenvalue_LoopBody<Solver>(
             patchData.QIn[patchIndex],
             QInEnumerator,
             patchData.patchCentre[patchIndex],
@@ -852,9 +837,9 @@ void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_batched_in_situ_static_
             2, // normal
             &maxEigenvalueR,
             singleVolumeEnumerator
-      );
-      for (int unknown=0; unknown<unknowns; unknown++) {
-        internal::updateSolutionWithEigenvalueDamping_LoopBody(
+          );
+          for (int unknown=0; unknown<unknowns; unknown++) {
+            internal::updateSolutionWithEigenvalueDamping_LoopBody(
               patchData.QIn[patchIndex],
               QInEnumerator,
               maxEigenvalueL,
@@ -868,14 +853,14 @@ void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_batched_in_situ_static_
               2, // normal
               *(patchData.QOut + patchIndex),
               QOutEnumerator
-        );
+            );
+          }
       }
-    }  // and of loop over faces with normal along z-axis subject to shift loop
-  }
+    }
 
-  if (evaluateMaximumEigenvalueAfterTimeStep and Dimensions==2) {
-    logDebug( "timeStepWithRusanov_overlap1_sequential(...)", "compute maximum eigenvalue for subsequent time step" );
-    for (int patchIndex=0; patchIndex<patchData.numberOfCells; patchIndex++) {
+
+    if (evaluateMaximumEigenvalueAfterTimeStep and Dimensions==2) {
+      logDebug( "timeStepWithRusanov_sequential(...)", "compute maximum eigenvalue for subsequent time step" );
       double newMaxEigenvalue = 0.0;
       otterLoopBegin(); // @todo how do I clarify that this is a reduction? Do we need this info here?
       for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
@@ -897,19 +882,21 @@ void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_batched_in_situ_static_
             patchData.dt[patchIndex]
           )
         );
+        otterLoopIterationEnd();
       }
+      otterLoopEnd();
       patchData.maxEigenvalue[patchIndex] = newMaxEigenvalue;
     }
-  }
-  else if (evaluateMaximumEigenvalueAfterTimeStep) {
-    for (int patchIndex=0; patchIndex<patchData.numberOfCells; patchIndex++) {
+    else if (evaluateMaximumEigenvalueAfterTimeStep) {
       double newMaxEigenvalue = 0.0;
+      otterLoopBegin(); // @todo how do I clarify that this is a reduction? Do we need this info here?
       for (int z = 0; z < numberOfVolumesPerAxisInPatch; z++)
       for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
       #if defined(SharedOMP)
       #pragma omp simd reduction(max:newMaxEigenvalue)
       #endif
       for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++) {
+        otterLoopIterationBegin();
         newMaxEigenvalue = std::max(
           newMaxEigenvalue,
           internal::reduceMaxEigenvalue_LoopBody<Solver>(
@@ -923,7 +910,9 @@ void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_batched_in_situ_static_
             patchData.dt[patchIndex]
           )
         );
+        otterLoopIterationEnd();
       }
+      otterLoopEnd();
       patchData.maxEigenvalue[patchIndex] = newMaxEigenvalue;
     }
   }
