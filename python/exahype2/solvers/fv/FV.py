@@ -512,7 +512,8 @@ The finest mesh width of """ + str(self.get_finest_volume_size(domain_size)) + "
         
     self._action_set_update_cell                                                      = None
 
-    self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement.switch_interpolation_scheme( "linear_precomputed_operators<" + str(self._patch_size) +">" )
+    self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement.switch_interpolation_scheme( "piecewise_constant" )
+    self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement.switch_restriction_scheme( "averaging" )
 
 
   def _store_cell_data_default_guard(self):
