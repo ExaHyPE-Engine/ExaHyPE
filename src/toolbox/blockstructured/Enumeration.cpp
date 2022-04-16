@@ -15,8 +15,8 @@ int toolbox::blockstructured::serialisePatchIndexInOverlap(
   for (int d=0; d<Dimensions; d++) {
     result += overlapCell(d) * base;
     if (d==normal) {
-      assertion4(overlapCell(d)>=0, overlapCell, numberOfDoFsPerAxisInPatch, overlap, normal);
-      assertion4(overlapCell(d)<2,  overlapCell, numberOfDoFsPerAxisInPatch, overlap, normal);
+      assertion4(overlapCell(d)>=0,         overlapCell, numberOfDoFsPerAxisInPatch, overlap, normal);
+      assertion4(overlapCell(d)<2*overlap,  overlapCell, numberOfDoFsPerAxisInPatch, overlap, normal);
       base *= overlap*2;
     }
     else {
