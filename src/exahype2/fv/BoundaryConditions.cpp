@@ -57,30 +57,48 @@ void exahype2::fv::applyBoundaryConditions(
 
     x(faceNumber%Dimensions) -= 0.5 * volumeH(faceNumber%Dimensions);
 
+    for (int layer=0; layer<(2*overlap-1); layer++){
     if (faceNumber<Dimensions) {
-      insideVolume(faceNumber % Dimensions)  = overlap;
-      outsideVolume(faceNumber % Dimensions) = overlap-1;
+      insideVolume(faceNumber % Dimensions)  = 2*overlap-1-layer;
+      outsideVolume(faceNumber % Dimensions) = 2*overlap-2-layer;
+  
+      int insideVolumeSerialised  = serialisePatchIndex(insideVolume);
+      int outsideVolumeSerialised = serialisePatchIndex(outsideVolume);
+
+      logDebug(
+        "applyBoundaryConditions(...)",
+        insideVolume << "->" << outsideVolume << " (" << insideVolumeSerialised << "->" << outsideVolumeSerialised << "): " <<
+        "(" << *(Q + insideVolumeSerialised * unknowns) << ",...)^T->" <<
+        "(" << *(Q + outsideVolumeSerialised * unknowns) << ",...)^T"
+      );
+
+      boundaryCondition(
+        Q + insideVolumeSerialised * unknowns,
+        Q + outsideVolumeSerialised * unknowns,
+        x, volumeH, t, dt, faceNumber
+      );
     }
     else {
-      insideVolume(faceNumber % Dimensions)  = overlap-1;
-      outsideVolume(faceNumber % Dimensions) = overlap;
+      insideVolume(faceNumber % Dimensions)  = layer;
+      outsideVolume(faceNumber % Dimensions) = layer+1;
+
+      int insideVolumeSerialised  = serialisePatchIndex(insideVolume);
+      int outsideVolumeSerialised = serialisePatchIndex(outsideVolume);
+
+      logDebug(
+        "applyBoundaryConditions(...)",
+        insideVolume << "->" << outsideVolume << " (" << insideVolumeSerialised << "->" << outsideVolumeSerialised << "): " <<
+        "(" << *(Q + insideVolumeSerialised * unknowns) << ",...)^T->" <<
+        "(" << *(Q + outsideVolumeSerialised * unknowns) << ",...)^T"
+      );
+
+      boundaryCondition(
+        Q + insideVolumeSerialised * unknowns,
+        Q + outsideVolumeSerialised * unknowns,
+        x, volumeH, t, dt, faceNumber
+      );
     }
-
-    int insideVolumeSerialised  = serialisePatchIndex(insideVolume);
-    int outsideVolumeSerialised = serialisePatchIndex(outsideVolume);
-
-    logDebug(
-      "applyBoundaryConditions(...)",
-      insideVolume << "->" << outsideVolume << " (" << insideVolumeSerialised << "->" << outsideVolumeSerialised << "): " <<
-      "(" << *(Q + insideVolumeSerialised * unknowns) << ",...)^T->" <<
-      "(" << *(Q + outsideVolumeSerialised * unknowns) << ",...)^T"
-    );
-
-    boundaryCondition(
-      Q + insideVolumeSerialised * unknowns,
-      Q + outsideVolumeSerialised * unknowns,
-      x, volumeH, t, dt, faceNumber
-    );
+    }
   }
 
   logTraceOut( "applyBoundaryConditions(...)" );

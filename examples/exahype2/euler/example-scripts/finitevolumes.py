@@ -7,7 +7,8 @@
  solver simulates the simple Euler equations.
 
 """
-#current I am using python3 example-scripts/finitevolumes.py -maxh 0.1 -t global-adaptive-enclave -i linear -pdt 0.3 -f -d 3 -j 128
+#python3 example-scripts/finitevolumes.py -maxh 0.1 -t global-adaptive-enclave -i linear -pdt 0.3 -f -d 3 -j 128
+#python3 example-scripts/finitevolumes.py -maxh 0.1 -t global-adaptive-enclave -i order-2 -pdt 0.2 -f -d 2 -j 128 -m assert
 
 
 #
@@ -141,7 +142,7 @@ elif args.type=="global-adaptive-enclave":
     min_h, max_h,
     flux = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
     eigenvalues = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
-    time_step_relaxation = 0.01,
+    time_step_relaxation = 0.05,
     pde_terms_without_state = args.gpu
   )
 elif args.type=="subcycling-fixed-linear-interpolation":
