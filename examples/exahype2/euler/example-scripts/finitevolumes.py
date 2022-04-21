@@ -9,6 +9,8 @@
 """
 #python3 example-scripts/finitevolumes.py -maxh 0.1 -t global-adaptive-enclave -i linear -pdt 0.3 -f -d 3 -j 128
 #python3 example-scripts/finitevolumes.py -maxh 0.1 -t global-adaptive-enclave -i order-2 -pdt 0.2 -f -d 2 -j 128 -m assert
+#testing bc function
+#python3 example-scripts/finitevolumes.py -maxh 0.04 -t global-adaptive-enclave -i order-2 -pdt 0.2 -f -d 2 -j 128
 
 
 #

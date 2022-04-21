@@ -59,7 +59,7 @@ if __name__ == "__main__":
     parser.add_argument("-tn", "--tracer-name",       dest="tra_name",    type=str, default="de",  help="name of output tracer file (temporary)" )
     parser.add_argument("-exn", "--exe-name",        dest="exe_name",    type=str, default="",  help="name of output executable file" )
     parser.add_argument("-outdir", "--output-directory",        dest="path",    type=str, default="./",  help="specify the output directory, include the patch file and tracer file" )
-    parser.add_argument("-interp",   "--interpolation", dest="interpolation",     choices=["constant", "linear-slow", "linear-slow+enforce", "linear", "linear+enforce", "outflow" ], default="linear-slow",  help="interpolation scheme for AMR" )
+    parser.add_argument("-interp",   "--interpolation", dest="interpolation",     choices=["constant", "linear-slow", "linear-slow+enforce", "linear", "linear+enforce", "outflow", "order-2" ], default="linear-slow",  help="interpolation scheme for AMR" )
     parser.add_argument("-restrict", "--restriction",   dest="restriction",       choices=["average", "inject", "average+enforce", "inject+enforce"], default="average",  help="restriction scheme for AMR" )
 
 
@@ -209,6 +209,11 @@ if __name__ == "__main__":
         if args.interpolation=="outflow":
           self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement.switch_interpolation_scheme( "outflow" )
           print( "Interpolation rule: outflow (from fine grid into coarse grid)" )
+
+        if args.interpolation=="order-2":
+          self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement.switch_interpolation_scheme( "linear" )
+          # @todo, we have to change this one
+          #self.overlap=2
 
         if args.restriction=="average" or args.restriction=="average+enforce":
           self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement.switch_restriction_scheme( "averaging" )
@@ -582,6 +587,9 @@ if __name__ == "__main__":
     else:
       my_solver = CCZ4Solver(solver_name, args.patch_size, min_h, args.max_h, args.cfl, args.CCZ4domain_r)
       userinfo.append(("CFL ratio set as "+str(args.cfl), None))
+        
+    if args.interpolation=="order-2":
+      my_solver.overlap=2
 
 ########################################################################################
 #Add postpocessing function
