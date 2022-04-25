@@ -198,7 +198,11 @@ std::string tarch::la::DynamicMatrix::vectorToString( double* values, int entrie
 }
 
 
-void tarch::la::DynamicMatrix::batchedMultiplyAoS( double* result, double* x, int batchCount ) {
+void tarch::la::DynamicMatrix::batchedMultiplyAoS(
+  double* __restrict__        result,
+  const double* __restrict__  x,
+  int                         batchCount
+) {
   batchedMultiplyAoS(
     result, x,
 	batchCount,
@@ -208,7 +212,13 @@ void tarch::la::DynamicMatrix::batchedMultiplyAoS( double* result, double* x, in
 }
 
 
-void tarch::la::DynamicMatrix::batchedMultiplyAoS( double* result, double* x, int batchSize, int resultSize, int firstRow  ) {
+void tarch::la::DynamicMatrix::batchedMultiplyAoS(
+  double* __restrict__        result,
+  const double* __restrict__  x,
+  int batchSize,
+  int resultSize,
+  int firstRow
+) {
   assertion3( batchSize>0,  batchSize, resultSize, firstRow );
   assertion3( resultSize>0, batchSize, resultSize, firstRow );
   assertion3( firstRow>=0,  batchSize, resultSize, firstRow );

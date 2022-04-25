@@ -139,12 +139,20 @@ class tarch::la::DynamicMatrix {
      *                 through this offset. The fact that I can use a subset of the
      *                 matrix requires me to pass in resultSize explicitly.
      */
-    void batchedMultiplyAoS( double* result, double* x, int batchCount, int resultSize, int firstRow );
+    void batchedMultiplyAoS(
+      double* __restrict__        result,
+      const double* __restrict__  x,
+      int batchCount, int resultSize, int firstRow
+    );
 
     /**
      * Wrapper around other batch operation. The whole matrix is used.
      */
-    void batchedMultiplyAoS( double* result, double* x, int batchCount );
+    void batchedMultiplyAoS(
+      double* __restrict__        result,
+      const double* __restrict__  x,
+      int batchCount
+    );
 
     /**
      * Split the matrix into blocks of rows of size blockSize. The number of
