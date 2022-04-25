@@ -141,7 +141,7 @@ class DynamicAMR(ActionSet):
       for (int i=0; i<{{OVERLAP}}; i++) {
         tarch::la::Vector<Dimensions,int>    fineVolume = k;
         fineVolume(normal) +=i ;
-        int fineVolumeLinearised = toolbox::blockstructured::serialisePatchIndexInOverlap(
+        int fineVolumeLinearised = toolbox::blockstructured::serialiseVoxelIndexInOverlap(
           fineVolume,
           {{DOFS_PER_AXIS}}, {{OVERLAP}}, normal
         );
@@ -186,7 +186,7 @@ class DynamicAMR(ActionSet):
       for (int i=0; i<{{OVERLAP}}; i++) {
         tarch::la::Vector<Dimensions,int>    fineVolume = k;
         fineVolume(normal) +=i ;
-        int fineVolumeLinearised = toolbox::blockstructured::serialisePatchIndexInOverlap(
+        int fineVolumeLinearised = toolbox::blockstructured::serialiseVoxelIndexInOverlap(
           fineVolume,
           {{DOFS_PER_AXIS}}, {{OVERLAP}}, normal
         );

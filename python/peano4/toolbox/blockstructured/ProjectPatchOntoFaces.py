@@ -89,7 +89,7 @@ class ProjectPatchOntoFaces(ActionSet):
           overlapCell(d) = i+{OVERLAP};
           
           int patchCellSerialised   = peano4::utils::dLinearised(patchCell,{DOFS_PER_AXIS});
-          int overlapCellSerialised = toolbox::blockstructured::serialisePatchIndexInOverlap(overlapCell,{DOFS_PER_AXIS},{OVERLAP},d);
+          int overlapCellSerialised = toolbox::blockstructured::serialiseVoxelIndexInOverlap(overlapCell,{DOFS_PER_AXIS},{OVERLAP},d);
           for (int j=0; j<{UNKNOWNS}; j++) {{
             assertion7( 
               {ASSERTION_PREFIX}
@@ -105,7 +105,7 @@ class ProjectPatchOntoFaces(ActionSet):
           overlapCell(d) = i;
           
           patchCellSerialised   = peano4::utils::dLinearised(patchCell,{DOFS_PER_AXIS});
-          overlapCellSerialised = toolbox::blockstructured::serialisePatchIndexInOverlap(overlapCell,{DOFS_PER_AXIS},{OVERLAP},d);
+          overlapCellSerialised = toolbox::blockstructured::serialiseVoxelIndexInOverlap(overlapCell,{DOFS_PER_AXIS},{OVERLAP},d);
           for (int j=0; j<{UNKNOWNS}; j++) {{
             assertion7( 
               {ASSERTION_PREFIX}

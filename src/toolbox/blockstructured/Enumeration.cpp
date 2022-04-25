@@ -1,7 +1,7 @@
 #include "Enumeration.h"
 
 
-int toolbox::blockstructured::serialisePatchIndexInOverlap(
+int toolbox::blockstructured::serialiseVoxelIndexInOverlap(
   const tarch::la::Vector<Dimensions,int>& overlapCell,
   int                                      numberOfDoFsPerAxisInPatch,
   int                                      overlap,
@@ -23,6 +23,27 @@ int toolbox::blockstructured::serialisePatchIndexInOverlap(
       assertion4(overlapCell(d)>=0,                          overlapCell, numberOfDoFsPerAxisInPatch, overlap, normal);
       assertion4(overlapCell(d)<numberOfDoFsPerAxisInPatch,  overlapCell, numberOfDoFsPerAxisInPatch, overlap, normal);
       base *= numberOfDoFsPerAxisInPatch;
+    }
+  }
+  return result;
+}
+
+
+int toolbox::blockstructured::serialisePatchIndexInOverlap(
+  const tarch::la::Vector<Dimensions,int>& patchIndex,
+  int                                      normal
+) {
+  assertion2(normal>=0,         patchIndex, normal);
+  assertion2(normal<Dimensions, patchIndex, normal);
+
+  int base   = 1;
+  int result = 0;
+  for (int d=0; d<Dimensions; d++) {
+    if (d!=normal) {
+      result += patchIndex(d) * base;
+      assertion2(patchIndex(d)>=0, patchIndex, normal);
+      assertion2(patchIndex(d)<3,  patchIndex, normal);
+      base *= 3;
     }
   }
   return result;

@@ -114,7 +114,7 @@ void toolbox::blockstructured::clearHaloLayerAoS(
     for (int i=0; i<overlap*2; i++) {
       tarch::la::Vector<Dimensions,int> targetCell = k;
       targetCell(normal)  = i;
-      int targetCellSerialised = serialisePatchIndexInOverlap(
+      int targetCellSerialised = serialiseVoxelIndexInOverlap(
         targetCell,
         numberOfDoFsPerAxisInPatch,
         overlap,
@@ -205,11 +205,11 @@ void toolbox::blockstructured::restrictInnerHalfOfHaloLayer_AoS_averaging(
             + volumeHFine * tarch::la::convertScalar<double>(fineVolume)
             + 0.5 * tarch::la::Vector<Dimensions,double>(volumeHFine);
 
-      int coarseVolumeLinearised = serialisePatchIndexInOverlap(
+      int coarseVolumeLinearised = serialiseVoxelIndexInOverlap(
         coarseVolume,
         numberOfDoFsPerAxisInPatch, overlap, normal
       );
-      int fineVolumeLinearised = serialisePatchIndexInOverlap(
+      int fineVolumeLinearised = serialiseVoxelIndexInOverlap(
         fineVolume,
         numberOfDoFsPerAxisInPatch, overlap, normal
       );
@@ -261,11 +261,11 @@ void toolbox::blockstructured::restrictInnerHalfOfHaloLayer_AoS_averaging(
         fineVolume(normal)   = pickLeftHalfOfHaloOnFineGrid ? iFine : iFine + overlap;
         coarseVolume(normal) = pickLeftHalfOfHaloOnFineGrid ? iFine : iFine + overlap;
 
-        int coarseVolumeLinearised = serialisePatchIndexInOverlap(
+        int coarseVolumeLinearised = serialiseVoxelIndexInOverlap(
           coarseVolume,
           numberOfDoFsPerAxisInPatch, overlap, normal
           );
-        int fineVolumeLinearised = serialisePatchIndexInOverlap(
+        int fineVolumeLinearised = serialiseVoxelIndexInOverlap(
           fineVolume,
           numberOfDoFsPerAxisInPatch, overlap, normal
           );
@@ -298,7 +298,7 @@ void toolbox::blockstructured::restrictInnerHalfOfHaloLayer_AoS_averaging(
       for (int i=0; i<overlap; i++) {
         tarch::la::Vector<Dimensions,int> targetCell = k;
         targetCell(normal)  = left ? i : i + overlap;
-        int targetCellSerialised = serialisePatchIndexInOverlap(
+        int targetCellSerialised = serialiseVoxelIndexInOverlap(
           targetCell,
           numberOfDoFsPerAxisInPatch,
           overlap,

@@ -35,6 +35,7 @@ tarch::la::DynamicMatrix*  toolbox::blockstructured::internal::createPiecewiseCo
     }
   enddforx
 
+  logDebug( "createPiecewiseConstantInterpolationMatrix(int)", "created new volumetric matrix for " << numberOfDoFsPerAxisInPatch << ": " << result->toString() );
   return result;
 }
 
@@ -53,35 +54,39 @@ tarch::la::DynamicMatrix*  toolbox::blockstructured::internal::createPiecewiseCo
   dfore(patchIndex,3,normal,0) {
     dfore(volumeIndex,numberOfDoFsPerAxisInPatch,normal,0) {
       for (int i=0; i<overlap; i++) {
+        tarch::la::Vector<Dimensions,int> fineVolume   = volumeIndex;
         tarch::la::Vector<Dimensions,int> coarseVolume = patchIndex * numberOfDoFsPerAxisInPatch + volumeIndex;
-        coarseVolume(normal) = i;
         coarseVolume /= 3;
-        tarch::la::Vector<Dimensions,int> fineVolume = volumeIndex;
-        fineVolume(normal) = i;
 
-        int row = serialisePatchIndexInOverlap(
-          fineVolume,
-          numberOfDoFsPerAxisInPatch,
-          overlap,
-          normal
-        ) +
-        serialisePatchIndexInOverlap(
-          patchIndex,
-          3,
-          1,
-          normal
-        ) * facePatchSize;
-        int col = serialisePatchIndexInOverlap(
-          coarseVolume,
-          numberOfDoFsPerAxisInPatch,
-          overlap,
-          normal
+        fineVolume(normal) = overlap-i-1;
+        coarseVolume(normal) = overlap-i/3-1;
+
+        int row = serialiseVoxelIndexInOverlap( fineVolume, numberOfDoFsPerAxisInPatch, overlap, normal )
+                + serialisePatchIndexInOverlap( patchIndex, normal ) * facePatchSize;
+        int col = serialiseVoxelIndexInOverlap( coarseVolume, numberOfDoFsPerAxisInPatch, overlap, normal );
+
+        (*result)(row,col) = 1.0;
+
+        logDebug(
+          "createPiecewiseConstantInterpolationMatrix(int)",
+          "patch index=" << patchIndex <<
+          ", volume index=" << volumeIndex <<
+          ", i=" << i << ": " << row << "x" << col
         );
+
+        fineVolume(normal) = overlap+i;
+        coarseVolume(normal) = overlap+i/3;
+
+        row = serialiseVoxelIndexInOverlap( fineVolume, numberOfDoFsPerAxisInPatch, overlap, normal )
+            + serialisePatchIndexInOverlap( patchIndex, normal ) * facePatchSize;
+        col = serialiseVoxelIndexInOverlap( coarseVolume, numberOfDoFsPerAxisInPatch, overlap, normal );
+
         (*result)(row,col) = 1.0;
       }
     }
   }
 
+  logDebug( "createPiecewiseConstantInterpolationMatrix(int)", "created new face interpolation matrix for (dofs,normal,overlap)=(" << numberOfDoFsPerAxisInPatch << "," << normal << "," << overlap << "): " << result->toString() );
   return result;
 }
 
@@ -201,11 +206,11 @@ void toolbox::blockstructured::internal::projectInterpolatedFineCellsOnHaloLayer
       fineVolumeRightDest(normal) = iFine + overlap;
       fineVolumeRightSrc(normal)  = iFine;
 
-      int fineVolumeLeftDestLinearised = serialisePatchIndexInOverlap(
+      int fineVolumeLeftDestLinearised = serialiseVoxelIndexInOverlap(
         fineVolumeLeftDest,
         numberOfDoFsPerAxisInPatch, overlap, normal
       );
-      int fineVolumeRightDestLinearised = serialisePatchIndexInOverlap(
+      int fineVolumeRightDestLinearised = serialiseVoxelIndexInOverlap(
         fineVolumeRightDest,
         numberOfDoFsPerAxisInPatch, overlap, normal
       );
@@ -257,6 +262,8 @@ void toolbox::blockstructured::interpolateHaloLayer_AoS_piecewise_constant(
   const int patchSize = numberOfDoFsPerAxisInPatch*numberOfDoFsPerAxisInPatch*2*overlap;
   #endif
 
+  logDebug( "interpolateHaloLayer_AoS_piecewise_constant(...)", marker.toString() << ": " << P->toString() );
+
   P->batchedMultiplyAoS(
     fineGridFaceValues,    // image
     coarseGridFaceValues,  // preimage
@@ -264,8 +271,8 @@ void toolbox::blockstructured::interpolateHaloLayer_AoS_piecewise_constant(
     patchSize,             // result size, i.e. size of image
     serialisePatchIndexInOverlap(
       marker.getRelativePositionWithinFatherCell(),
-      3, 1, normal
-    )
+      normal
+    ) * patchSize
   );
 
   logTraceOut( "interpolateHaloLayer_AoS_piecewise_constant(...)" );
@@ -597,72 +604,4 @@ void toolbox::blockstructured::interpolateHaloLayer_AoS_linear(
 
   logTraceOut( "interpolateHaloLayer_AoS_linear(...)" );*/
 }
-
-
-void toolbox::blockstructured::interpolateHaloLayer_AoS_outflow(
-  const peano4::datamanagement::FaceMarker& marker,
-  int                                       numberOfDoFsPerAxisInPatch,
-  int                                       overlap,
-  int                                       unknowns,
-  double*                                   fineGridFaceValues,
-  double*                                   coarseGridFaceValues,
-  double*                                   coarseGridCellValues
-) {
-  interpolateHaloLayer_AoS_piecewise_constant(marker,numberOfDoFsPerAxisInPatch,overlap,unknowns,fineGridFaceValues,coarseGridFaceValues,coarseGridCellValues);
-}
-
-
-void toolbox::blockstructured::interpolateHaloLayer_AoS_outflow(
-  const peano4::datamanagement::FaceMarker& marker,
-  int                                       numberOfDoFsPerAxisInPatch,
-  int                                       overlap,
-  int                                       unknowns,
-  double*                                   fineGridValues,
-  double*                                   coarseGridValues
-) {
-  assertionEquals(overlap,1);
-
-  interpolateHaloLayer_AoS_linear(
-    marker, numberOfDoFsPerAxisInPatch, overlap, unknowns, fineGridValues, coarseGridValues
-  );
-
-  const int  normal                        = marker.getSelectedFaceNumber() % Dimensions;
-  const bool pickLeftHalfOfHaloOnFineGrid  = (marker.getSelectedFaceNumber() < Dimensions);
-
-  dfore(fineVolumeOutside,numberOfDoFsPerAxisInPatch,normal,pickLeftHalfOfHaloOnFineGrid ? 0 : 1) {
-    tarch::la::Vector<Dimensions,int>    fineVolumeInside = fineVolumeOutside;
-    fineVolumeInside(normal) = pickLeftHalfOfHaloOnFineGrid ? 1 : 0;
-
-    int fineVolumeOutsideLinearised = serialisePatchIndexInOverlap(
-      fineVolumeOutside,
-      numberOfDoFsPerAxisInPatch, overlap, normal
-      );
-    int fineVolumeInsideLinearised = serialisePatchIndexInOverlap(
-      fineVolumeInside,
-      numberOfDoFsPerAxisInPatch, overlap, normal
-      );
-
-    for (int j=0; j<unknowns; j++) {
-      fineGridValues[fineVolumeOutsideLinearised*unknowns+j] = fineGridValues[fineVolumeInsideLinearised*unknowns+j];
-    }
-  }
-}
-
-
-void toolbox::blockstructured::interpolateCell_AoS_outflow(
-  const peano4::datamanagement::CellMarker& marker,
-  int                                       numberOfDoFsPerAxisInPatch,
-  int                                       unknowns,
-  double*                                   fineGridValues,
-  double*                                   coarseGridValues
-) {
-  toolbox::blockstructured::interpolateCell_AoS_piecewise_constant(
-    marker,
-    numberOfDoFsPerAxisInPatch,
-    unknowns,
-    fineGridValues,
-    coarseGridValues
-  );
-}
-
 

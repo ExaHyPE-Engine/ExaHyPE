@@ -267,66 +267,6 @@ namespace toolbox {
       double*                                   coarseGridValues
     );
 
-
-    /**
-     * Outflow AMR condition
-     *
-     * The idea here is that a wave travels from a fine grid resolution into
-     * a coarse one. If the wave has a unique direction of travel, there should
-     * be no reflections and we could use simple outflow conditions, i.e.
-     * homogeneous Neumann.
-     *
-     * This does not work 1:1 in Peano, as hanging faces do not carry
-     * information: Any hanging face/vertex is created throughout the traversal
-     * and it is deleted towards the end. They are not persistent. So we can't
-     * impose Neumann conditions: The fine grid patch projects its data onto the
-     * inner layer of the face, but this projection is lost in the next sweep.
-     *
-     * So I have to create a face: I know that the next coarser face holds
-     * meaningful data. I interpolate d-linearly onto the inner(!) halo layer,
-     * i.e. those cells which should coincide with the patch content and are not
-     * used along a hanging face. This is an approximation, as this layer should
-     * hold copies of the patch interior. Now it holds a restricted plus
-     * interpolated data set. With this approximation, I can now impose Neumann
-     * conditions.
-     */
-    void interpolateHaloLayer_AoS_outflow(
-      const peano4::datamanagement::FaceMarker& marker,
-      int                                       numberOfDoFsPerAxisInPatch,
-      int                                       overlap,
-      int                                       unknowns,
-      double*                                   fineGridValues,
-      double*                                   coarseGridValues
-    );
-
-
-    /**
-     * This type of signature is used to interpolate halo layers for newly
-     * generated cells. So this does not really make sense for outflow, as
-     * there's no outflow from fine to coarse resolution if we create a new
-     * cell. Thererfore, I do not implement this routine, but simply delegate
-     * to piecewise constant interpolation.
-     */
-    void interpolateHaloLayer_AoS_outflow(
-      const peano4::datamanagement::FaceMarker& marker,
-      int                                       numberOfDoFsPerAxisInPatch,
-      int                                       overlap,
-      int                                       unknowns,
-      double*                                   fineGridFaceValues,
-      double*                                   coarseGridFaceValues,
-      double*                                   coarseGridCellValues
-    );
-
-
-    void interpolateCell_AoS_outflow(
-      const peano4::datamanagement::CellMarker& marker,
-      int                                       numberOfDoFsPerAxisInPatch,
-      int                                       unknowns,
-      double*                                   fineGridValues,
-      double*                                   coarseGridValues
-    );
-
-
     namespace internal {
 
       /**
@@ -412,6 +352,35 @@ namespace toolbox {
        */
       tarch::la::DynamicMatrix*  createLinearInterpolationMatrix(int numberOfDoFsPerAxisInPatch);
 
+      /**
+       * Create matrix for face interpolation with piece-wise constant shape functions
+       *
+       * The matrix is very simple as it holds exclusively zeroes and ones. To
+       * construct it, we run over the image and and look for each image voxel
+       * which coarser face voxel is overlaps. In this context, we exploit the
+       * fact that all voxels are enumarted lexicographically:
+       *
+       * @image html Interpolation_createPiecewiseConstantInterpolationMatrix.png
+       *
+       * The resulting matrix for the example above (where the normal equals 0)
+       * is 24x8 matrix which equals
+       *
+       * @f$
+        \begin{array}{cccccccc}
+1 & 0 & 0 & 0 & 0 & 0 & 0 & 0 \\
+0 & 1 & 0 & 0 & 0 & 0 & 0 & 0 \\
+1 & 0 & 0 & 0 & 0 & 0 & 0 & 0 \\
+0 & 1 & 0 & 0 & 0 & 0 & 0 & 0 \\
+1 & 0 & 0 & 0 & 0 & 0 & 0 & 0 \\
+0 & 1 & 0 & 0 & 0 & 0 & 0 & 0 \\
+0 & 0 & 1 & 0 & 0 & 0 & 0 & 0 \\
+0 & 0 & 0 & 1 & 0 & 0 & 0 & 0 \\
+0 & 0 & 1 & 0 & 0 & 0 & 0 & 0 \\
+0 & 0 & 0 & 1 & 0 & 0 & 0 & 0 \\
+\dots
+        \end{array}
+         @f$
+       */
       tarch::la::DynamicMatrix*  createPiecewiseConstantInterpolationMatrix(int numberOfDoFsPerAxisInPatch, int normal, int overlap);
 
       /**
