@@ -166,6 +166,7 @@ class tarch::la::DynamicMatrix {
      * the shifts.
      */
     void replicateRows( int blockSize, int numberOfReplications, int shiftAfterEveryReplication, bool extendColumnsToAccommodateShifts );
+    void replicateCols( int blockSize, int numberOfReplications, int shiftAfterEveryReplication, bool extendColumnsToAccommodateShifts );
 
     /**
      * Insert zero columns

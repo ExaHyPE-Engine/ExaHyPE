@@ -180,11 +180,6 @@ namespace toolbox {
 
     /**
      * Take the coarse grid values and interpolate them onto the fine grid
-     *
-     * We run over all coarse grid volumes (counter k or coarseGridVolume,
-     * respectively). Each coarse grid volume overlaps 1x3x3 or 3x1x3 or ...
-     * smaller volumes. For both loops, I use the dfore (exclusive, d-dimensional
-     * for).
      */
     void interpolateHaloLayer_AoS_piecewise_constant(
       const peano4::datamanagement::FaceMarker& marker,
@@ -238,33 +233,59 @@ namespace toolbox {
     );
 
 
-    void interpolateHaloLayer_AoS_linear(
+    void interpolateHaloLayer_AoS_linear_with_constant_extrapolation(
       const peano4::datamanagement::FaceMarker& marker,
       int                                       numberOfDoFsPerAxisInPatch,
       int                                       overlap,
       int                                       unknowns,
-      double*                                   fineGridFaceValues,
-      double*                                   coarseGridFaceValues
+      const double* __restrict__                coarseGridFaceValues,
+      double* __restrict__                      fineGridFaceValues
     );
 
-
-    void interpolateHaloLayer_AoS_linear(
+    void interpolateHaloLayer_AoS_linear_with_constant_extrapolation(
       const peano4::datamanagement::FaceMarker& marker,
       int                                       numberOfDoFsPerAxisInPatch,
       int                                       overlap,
       int                                       unknowns,
-      double*                                   coarseGridCellValues,
-      double*                                   coarseGridFaceValues,
-      double*                                   fineGridFaceValues
+      const double* __restrict__                coarseGridCellValues,
+      const double* __restrict__                coarseGridFaceValues,
+      double* __restrict__                      fineGridFaceValues
     );
 
-
-    void interpolateCell_AoS_linear(
+    void interpolateCell_AoS_linear_with_constant_extrapolation(
       const peano4::datamanagement::CellMarker& marker,
       int                                       numberOfDoFsPerAxisInPatch,
       int                                       unknowns,
-      double*                                   fineGridValues,
-      double*                                   coarseGridValues
+      const double* __restrict__                coarseGridCellValues,
+      double* __restrict__                      fineGridCellValues
+    );
+
+
+    void interpolateHaloLayer_AoS_linear_with_linear_extrapolation(
+      const peano4::datamanagement::FaceMarker& marker,
+      int                                       numberOfDoFsPerAxisInPatch,
+      int                                       overlap,
+      int                                       unknowns,
+      const double* __restrict__                coarseGridFaceValues,
+      double* __restrict__                      fineGridFaceValues
+    );
+
+    void interpolateHaloLayer_AoS_linear_with_linear_extrapolation(
+      const peano4::datamanagement::FaceMarker& marker,
+      int                                       numberOfDoFsPerAxisInPatch,
+      int                                       overlap,
+      int                                       unknowns,
+      const double* __restrict__                coarseGridCellValues,
+      const double* __restrict__                coarseGridFaceValues,
+      double* __restrict__                      fineGridFaceValues
+    );
+
+    void interpolateCell_AoS_linear_with_linear_extrapolation(
+      const peano4::datamanagement::CellMarker& marker,
+      int                                       numberOfDoFsPerAxisInPatch,
+      int                                       unknowns,
+      const double* __restrict__                coarseGridCellValues,
+      double* __restrict__                      fineGridCellValues
     );
 
     namespace internal {
@@ -318,16 +339,28 @@ namespace toolbox {
        * While extrapolation might sound to be a good choice, I found that it
        * sometimes yields physically invalid results. The Euler equations, for
        * example, will immediately give you negative (tiny) energies or negative
-       * pressure. So I disable any extrapolation by default. If you need it,
-       * the following two lines would do the trick (see also commented out
-       * fragments in source code);
+       * pressure.
        *
-       * <pre>
-    P1d(0,0) =  2.0/3.0 + 1.0/3.0 * 2.0;
-    P1d(0,1) = -1.0/3.0;
-    P1d(numberOfDoFsPerAxisInPatch*3-1,numberOfDoFsPerAxisInPatch-1) =  2.0/3.0 + 1.0/3.0 * 2.0;
-    P1d(numberOfDoFsPerAxisInPatch*3-1,numberOfDoFsPerAxisInPatch-2) = -1.0/3.0;
-       * </pre>
+       * @image html Interpolation_createLinearInterpolationMatrix.png
+       *
+       * The picture above illustrates the problem: We have by default no access to
+       * diagonal voxels in the mesh. This missing piece of information is illustrated
+       * by a voxel which is crossed out. If we now map the bright red voxels onto the
+       * bright green voxels, we don't really know what to do with the outermost
+       * voxels: We can extrapolate constantly or linearly, but we will always be
+       * slightly wrong, as we lack the information from the neighbour.
+       *
+       * Extrapolating constantly seems to be pretty robust, but actually makes our
+       * interpolation scheme deterioriate towards something in-between piece-wise
+       * constant and linear. Extrapolating linearly is better, but might yield
+       * unphysical solutions. For example, assume there is a density shock with a
+       * steep drop between the two outermost voxels. If we extrapolate linearly,
+       * we might end up with an interpolated/extrapolated fine grid voxel with
+       * negative density. This yields a wrong solution. To fix such a case, you
+       * might want to work with linear extrapolation but also use a postprocessing
+       * (clean-up) step. See the guidebook for an explanation.
+       *
+       *
        *
        * <h2> Insertion of empty lines/rows </h2>
        *
@@ -345,12 +378,12 @@ namespace toolbox {
        *
        * @see tarch::la::DynamicMatrix::insertColumns()
        */
-      tarch::la::DynamicMatrix*  createLinearInterpolationMatrix(int numberOfDoFsPerAxisInPatch, int normal);
+      tarch::la::DynamicMatrix*  createLinearInterpolationMatrix(int numberOfDoFsPerAxisInPatch, int normal, bool extrapolateLinearly);
 
       /**
        * This is a volumetric version of the interpolation.
        */
-      tarch::la::DynamicMatrix*  createLinearInterpolationMatrix(int numberOfDoFsPerAxisInPatch);
+      tarch::la::DynamicMatrix*  createLinearInterpolationMatrix(int numberOfDoFsPerAxisInPatch, bool extrapolateLinearly);
 
       /**
        * Create matrix for face interpolation with piece-wise constant shape functions
@@ -380,6 +413,35 @@ namespace toolbox {
 \dots
         \end{array}
          @f$
+       *
+       * ## Construction algorithm
+       *
+       * I have two variants of the actual construction in here. One of them is
+       * commented out. It is the manual flavour which I wanted to keep to allow
+       * people to understand what's going on.
+       *
+       * The one shipped is way more elegant (in my opinion) than the manual
+       * implementation. It starts from the observation that a 1d interpolation
+       * from a mesh onto a subdivided mesh with a subdivision factor by three
+       * is very simplistic matrix
+       *
+       * @f$
+        \begin{array}{cccccccc}
+1 & 0 & 0 & 0 \\
+1 & 0 & 0 & 0 \\
+1 & 0 & 0 & 0 \\
+0 & 1 & 0 & 0 \\
+0 & 1 & 0 & 0 \\
+0 & 1 & 0 & 0 \\
+0 & 0 & 1 & 0 \\
+0 & 0 & 1 & 0 \\
+0 & 0 & 1 & 0 \\
+0 & 0 & 0 & 1 \\
+0 & 0 & 0 & 1 \\
+0 & 0 & 0 & 1
+        \end{array}
+       *
+       * Here, I use four-partitioning.
        */
       tarch::la::DynamicMatrix*  createPiecewiseConstantInterpolationMatrix(int numberOfDoFsPerAxisInPatch, int normal, int overlap);
 
@@ -391,6 +453,21 @@ namespace toolbox {
      * simply copy over results.
        */
       tarch::la::DynamicMatrix*  createPiecewiseConstantInterpolationMatrix(int numberOfDoFsPerAxisInPatch);
+
+      /**
+       * This routine accepts a @f$ 3k \times k @f$ matrix as input. This is the 1d
+       * matrix. It clearly maps a sequence of k finite volumes onto a new sequence
+       * of 3k volumes.
+       *
+       * We now exploit the fact any interpolation routine is basically a rotation or
+       * mirroring of this operator, while we have to take into account that we need
+       * two times k entries as we always store left and right halo overlaps.
+       */
+      tarch::la::DynamicMatrix*  createInterpolationMatrixFrom1dTemplateByInsertingZeroColsAndRows(
+        const tarch::la::DynamicMatrix P1d,
+        int numberOfDoFsPerAxisInPatch,
+        int normal
+      );
 
       /**
        * This routine assumes that you have the whole patch data of hte left and right
@@ -409,7 +486,6 @@ namespace toolbox {
         double*                                   fineGridFaceValues
       );
 
-
       /**
        * @see Other interpolateCell_AoS_piecewise_constant() variant which delegates to
        *   this one which is also used by the face interpolation.
@@ -420,6 +496,15 @@ namespace toolbox {
         int                                       unknowns,
         const double* __restrict__                fineGridValues,
         double*                                   coarseGridValues
+      );
+
+      void interpolateCell_AoS_linear(
+        const tarch::la::Vector<Dimensions,int>&  relativePositionWithinFatherCell,
+        int                                       numberOfDoFsPerAxisInPatch,
+        int                                       unknowns,
+        const double* __restrict__                fineGridValues,
+        double*                                   coarseGridValues,
+        bool                                      extrapolateLinearly
       );
 
       /**

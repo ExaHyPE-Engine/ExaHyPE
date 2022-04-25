@@ -366,6 +366,9 @@ class DynamicAMR(ActionSet):
 
 
   def switch_point_wise_postprocessing_of_interpolation(self,point_wise_postprocessing_of_interpolation):
+    """
+    Add a code snippet which does something with a double pointer targetVolume.
+    """
     self.d[ "POINT_WISE_POSTPROCESSING_INTERPOLATION" ] = point_wise_postprocessing_of_interpolation
 
 

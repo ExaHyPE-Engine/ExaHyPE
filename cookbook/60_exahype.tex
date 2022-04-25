@@ -1752,11 +1752,14 @@ For the interpolation, we offer the following routines:
   {\bf scheme} & description \\
   \hline
   \texttt{piecewise\_constant} & Interpolate piece-wise constant (default) \\
-  \texttt{linear} & Interpolate linear (2d) or bi-linear (3d) along faces \\  
-  \texttt{linear\_precomputed\_operators<X>} & This is an aggressively optimised version of the linear interpolation.
-   It has to know which patch size you are using, i.e.~if you alter the patch size you also have to alter the \texttt{X}.
-   The code pre-computes all face operators and thus often is faster. 
-   However, you have to examine whether this speedup can be observed for your particular application. \\  
+  \texttt{linear_with_constant_extrapolation} & Interpolate linear (2d) or
+  bi-linear (3d) along faces and use constant extrapolation along diagonals and
+  patch boundaries.
+  \\
+  \texttt{linear_with_linear_extrapolation} & Interpolate linear (2d) or
+  bi-linear (3d) along faces and use constant extrapolation along diagonals and
+  patch boundaries.
+  \\
  \end{tabular}
 \end{center}
 
@@ -1767,6 +1770,18 @@ For the interpolation, we offer the following routines:
 %
 Some codes need to postprocess their interpolation data. At the moment, I only support volume-wise postprocessing.
 To enable it, you pass a function call to the DynamicAMR argument: 
+\begin{code}
+my_solver._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement.
+  switch_point_wise_postprocessing_of_interpolation("""
+  targetVolume[0] = 0.1;
+  targetVolume[1] = 0.1;
+  targetVolume[2] = std::max(targetVolume[2],0.0);
+  """ )
+\end{code}
+
+\noindent
+Alternatively, just invoke a function directly:
+
 \begin{code}
 my_solver._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement.
   switch_point_wise_postprocessing_of_interpolation(
