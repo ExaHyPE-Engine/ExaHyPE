@@ -51,7 +51,7 @@ parser.add_argument("-o",  "--output",                 dest="out",              
 parser.add_argument("-f",  "--force",                  dest="force",                    default=False, action="store_true", help="Allow overwriting of output file" )
 parser.add_argument("-gpu", "--gpu",                   dest="gpu",                      default=False, action="store_true", help="GPU support (stateless PDE terms)" )
 parser.add_argument("-t",   "--type",                  dest="type",                     choices=["global-fixed", "global-adaptive", "global-fixed-enclave", "global-adaptive-enclave", "global-fixed-enclave", "global-adaptive-enclave", "subcycling-fixed-no-interpolation", "subcycling-fixed-linear-interpolation", "subcycling-fixed-linear-interpolation-enclave", "subcycling-adaptive-linear-interpolation-enclave", "local-linear-interpolation-enclave"], default="global-fixed", help="Pick implementation variant" )
-parser.add_argument("-i",   "--interpolation",         dest="interpolation_scheme",     choices=["default", "constant", "linear-constant-extrapolation", "linear-linear-extrapolation", "order-2"], default="constant", help="Pick interpolation scheme" )
+parser.add_argument("-i",   "--interpolation",         dest="interpolation_scheme",     choices=["default", "constant", "linear-constant-extrapolation", "linear-linear-extrapolation", "linear-linear-extrapolation-linear-normal-interpolation", "order-2"], default="constant", help="Pick interpolation scheme" )
 parser.add_argument("-pdt", "--plot-dt",               dest="plot_snapshot_interval", default=0, help="Time interval in-between two snapshots (switched off by default")
 parser.add_argument("-v",   "--verbose",               dest="verbose",          action="store_true", default=False, help="Verbose")
 parser.add_argument("-ps",  "--patch-size",            dest="patch_size",       type=int, default=4, help="number of volumes per dimension in a patch" )
@@ -213,17 +213,22 @@ thesolver.set_implementation( refinement_criterion=exahype2.solvers.fv.PDETerms.
 if args.interpolation_scheme=="constant":
   thesolver._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement.switch_interpolation_scheme( "piecewise_constant" )
   thesolver.create_action_sets()
-if args.interpolation_scheme=="linear-constant-extrapolation":
+elif args.interpolation_scheme=="linear-constant-extrapolation":
   thesolver._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement.switch_interpolation_scheme( "linear_with_constant_extrapolation" )
   thesolver.create_action_sets()
-if args.interpolation_scheme=="linear-constant-extrapolation":
+elif args.interpolation_scheme=="linear-linear-extrapolation":
   thesolver._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement.switch_interpolation_scheme( "linear_with_linear_extrapolation" )
   thesolver.create_action_sets()
-if args.interpolation_scheme=="order-2":
+elif args.interpolation_scheme=="linear-linear-extrapolation-linear-normal-interpolation":
+  thesolver._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement.switch_interpolation_scheme( "linear_with_linear_extrapolation_and_linear_normal_interpolation" )
+  thesolver.create_action_sets()
+elif args.interpolation_scheme=="order-2":
   thesolver._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement.switch_interpolation_scheme( "linear" )
   # @todo Han, we have to change this one
   thesolver.overlap=2
   thesolver.create_action_sets()
+else:
+  raise Exception( "Unknown interpolation scheme");
   
 #  additional includes += ”””
 #    , "linear", "2nd-order"], default="constant", help="Pick interpolation scheme" )

@@ -288,6 +288,64 @@ namespace toolbox {
       double* __restrict__                      fineGridCellValues
     );
 
+
+    /**
+     * @see createLinearInterpolationMatrix()
+     */
+    void interpolateHaloLayer_AoS_linear_with_constant_extrapolation_and_linear_normal_interpolation(
+      const peano4::datamanagement::FaceMarker& marker,
+      int                                       numberOfDoFsPerAxisInPatch,
+      int                                       overlap,
+      int                                       unknowns,
+      const double* __restrict__                coarseGridFaceValues,
+      double* __restrict__                      fineGridFaceValues
+    );
+
+    void interpolateHaloLayer_AoS_linear_with_constant_extrapolation_and_linear_normal_interpolation(
+      const peano4::datamanagement::FaceMarker& marker,
+      int                                       numberOfDoFsPerAxisInPatch,
+      int                                       overlap,
+      int                                       unknowns,
+      const double* __restrict__                coarseGridCellValues,
+      const double* __restrict__                coarseGridFaceValues,
+      double* __restrict__                      fineGridFaceValues
+    );
+
+    void interpolateCell_AoS_linear_with_constant_extrapolation_and_linear_normal_interpolation(
+      const peano4::datamanagement::CellMarker& marker,
+      int                                       numberOfDoFsPerAxisInPatch,
+      int                                       unknowns,
+      const double* __restrict__                coarseGridCellValues,
+      double* __restrict__                      fineGridCellValues
+    );
+
+    void interpolateHaloLayer_AoS_linear_with_linear_extrapolation_and_linear_normal_interpolation(
+      const peano4::datamanagement::FaceMarker& marker,
+      int                                       numberOfDoFsPerAxisInPatch,
+      int                                       overlap,
+      int                                       unknowns,
+      const double* __restrict__                coarseGridFaceValues,
+      double* __restrict__                      fineGridFaceValues
+    );
+
+    void interpolateHaloLayer_AoS_linear_with_linear_extrapolation_and_linear_normal_interpolation(
+      const peano4::datamanagement::FaceMarker& marker,
+      int                                       numberOfDoFsPerAxisInPatch,
+      int                                       overlap,
+      int                                       unknowns,
+      const double* __restrict__                coarseGridCellValues,
+      const double* __restrict__                coarseGridFaceValues,
+      double* __restrict__                      fineGridFaceValues
+    );
+
+    void interpolateCell_AoS_linear_with_linear_extrapolation_and_linear_normal_interpolation(
+      const peano4::datamanagement::CellMarker& marker,
+      int                                       numberOfDoFsPerAxisInPatch,
+      int                                       unknowns,
+      const double* __restrict__                coarseGridCellValues,
+      double* __restrict__                      fineGridCellValues
+    );
+
     namespace internal {
 
       /**
@@ -378,7 +436,12 @@ namespace toolbox {
        *
        * @see tarch::la::DynamicMatrix::insertColumns()
        */
-      tarch::la::DynamicMatrix*  createLinearInterpolationMatrix(int numberOfDoFsPerAxisInPatch, int normal, bool extrapolateLinearly);
+      tarch::la::DynamicMatrix*  createLinearInterpolationMatrix(
+        int   numberOfDoFsPerAxisInPatch,
+        int   normal,
+        bool  extrapolateLinearly,
+        bool  interpolateLinearlyAlongNormal
+      );
 
       /**
        * This is a volumetric version of the interpolation.
@@ -464,7 +527,23 @@ namespace toolbox {
        * two times k entries as we always store left and right halo overlaps.
        */
       tarch::la::DynamicMatrix*  createInterpolationMatrixFrom1dTemplateByInsertingZeroColsAndRows(
-        const tarch::la::DynamicMatrix P1d,
+        const tarch::la::DynamicMatrix&  P1d,
+        int numberOfDoFsPerAxisInPatch,
+        int normal
+      );
+
+      /**
+       * This is an extension of createInterpolationMatrixFrom1dTemplateByInsertingZeroColsAndRows().
+       * In the setup as sketched below
+       *
+       * @image html Interpolation_createLinearInterpolationMatrix.png
+       *
+       * we have two options to initialise bright green values: We can either use the bright red
+       * volumes only, or we can interpolate between the bright red ones and the dark red ones.
+       * This operation does the latter.
+       */
+      tarch::la::DynamicMatrix*  createInterpolationMatrixFrom1dTemplateByLinearInterpolationAlongNormal(
+        const tarch::la::DynamicMatrix&  P1d,
         int numberOfDoFsPerAxisInPatch,
         int normal
       );

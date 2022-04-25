@@ -101,12 +101,18 @@ tarch::la::DynamicMatrix*  toolbox::blockstructured::internal::createPiecewiseCo
 
 
 tarch::la::DynamicMatrix*  toolbox::blockstructured::internal::createInterpolationMatrixFrom1dTemplateByInsertingZeroColsAndRows(
-  const tarch::la::DynamicMatrix  P1d,
-  int                             numberOfDoFsPerAxisInPatch,
-  int                             normal
+  const tarch::la::DynamicMatrix&  P1d,
+  int                              numberOfDoFsPerAxisInPatch,
+  int                              normal
 ) {
   assertionEquals1( P1d.cols(),   numberOfDoFsPerAxisInPatch, P1d.toString() );
   assertionEquals1( P1d.rows(), 3*numberOfDoFsPerAxisInPatch, P1d.toString() );
+
+  #if Dimensions==3
+  tarch::la::DynamicMatrix* P = new tarch::la::DynamicMatrix( P1d, P1d, false);
+  #else
+  tarch::la::DynamicMatrix* P = new tarch::la::DynamicMatrix( P1d );
+  #endif
 
   int pattern = 0;
   switch (normal) {
@@ -121,26 +127,57 @@ tarch::la::DynamicMatrix*  toolbox::blockstructured::internal::createInterpolati
       break;
   }
 
-  #if Dimensions==3
-    tarch::la::DynamicMatrix* P = new tarch::la::DynamicMatrix( P1d, P1d, false);
-    P->insertEmptyColumns(pattern,pattern,pattern);
-    P->replicateRows( pattern, 2, pattern, false );
-    return P;
-  #else
-    tarch::la::DynamicMatrix* P = new tarch::la::DynamicMatrix( P1d );
-    P->insertEmptyColumns(pattern,pattern,pattern);
-    logDebug( "createLinearInterpolationMatrix(...)", "matrix with extended columns: " << P->toString() );
-    P->replicateRows( pattern, 2, pattern, false );
-    return P;
-  #endif
+  P->insertEmptyColumns(pattern,pattern,pattern);
+  P->replicateRows( pattern, 2, pattern, false );
+  logDebug( "createInterpolationMatrixFrom1dTemplateByInsertingZeroColsAndRows(...)", "matrix for normal=" << normal << ": " << P->toString() );
+  return P;
 }
 
+
+tarch::la::DynamicMatrix*  toolbox::blockstructured::internal::createInterpolationMatrixFrom1dTemplateByLinearInterpolationAlongNormal(
+  const tarch::la::DynamicMatrix&  P1d,
+  int                              numberOfDoFsPerAxisInPatch,
+  int                              normal
+) {
+  assertionEquals1( P1d.cols(),   numberOfDoFsPerAxisInPatch, P1d.toString() );
+  assertionEquals1( P1d.rows(), 3*numberOfDoFsPerAxisInPatch, P1d.toString() );
+
+  #if Dimensions==3
+  tarch::la::DynamicMatrix* P = new tarch::la::DynamicMatrix( P1d, P1d, false);
+  #else
+  tarch::la::DynamicMatrix* P = new tarch::la::DynamicMatrix( P1d );
+  #endif
+
+  int pattern = 0;
+  switch (normal) {
+    case 0:
+      pattern = 1;
+      break;
+    case 1:
+      pattern = numberOfDoFsPerAxisInPatch;
+      break;
+    case 2:
+      pattern = numberOfDoFsPerAxisInPatch*numberOfDoFsPerAxisInPatch;
+      break;
+  }
+
+  P->scale(0.5);
+
+  // Split matrix into blocks of pattern columns and copy each block once.
+  // Matrix grows by factor of two which reflects the fact that the overlap
+  // is of size 1.
+  P->replicateCols( pattern, 2, 0, false );
+  P->replicateRows( pattern, 2, 0, false );
+  logInfo( "createInterpolationMatrixFrom1dTemplateByLinearInterpolationAlongNormal(...)", "matrix for normal=" << normal << ": " << P->toString() );
+  return P;
+}
 
 
 tarch::la::DynamicMatrix*  toolbox::blockstructured::internal::createLinearInterpolationMatrix(
   int numberOfDoFsPerAxisInPatch,
   int normal,
-  bool extrapolateLinearly
+  bool extrapolateLinearly,
+  bool interpolateLinearlyBetweenRealAndRestrictedVolumes
 ) {
   tarch::la::DynamicMatrix P1d(3,3,{
       {1.0/3.0, 2.0/3.0,     0.0},
@@ -166,9 +203,16 @@ tarch::la::DynamicMatrix*  toolbox::blockstructured::internal::createLinearInter
 
   logDebug( "createLinearInterpolationMatrix(...)", "1d matrix: " << P1d.toString() );
 
-  return createInterpolationMatrixFrom1dTemplateByInsertingZeroColsAndRows(
-    P1d, numberOfDoFsPerAxisInPatch, normal
-  );
+  if (interpolateLinearlyBetweenRealAndRestrictedVolumes) {
+    return createInterpolationMatrixFrom1dTemplateByLinearInterpolationAlongNormal(
+      P1d, numberOfDoFsPerAxisInPatch, normal
+    );
+  }
+  else {
+    return createInterpolationMatrixFrom1dTemplateByInsertingZeroColsAndRows(
+      P1d, numberOfDoFsPerAxisInPatch, normal
+    );
+  }
 }
 
 
@@ -458,7 +502,7 @@ void toolbox::blockstructured::interpolateHaloLayer_AoS_linear_with_constant_ext
 
   tarch::multicore::Lock lock(interpolationMapSemaphore);
   if ( faceInterpolationMap.count(key)==0 ) {
-    faceInterpolationMap[key] = internal::createLinearInterpolationMatrix(numberOfDoFsPerAxisInPatch,normal,false);
+    faceInterpolationMap[key] = internal::createLinearInterpolationMatrix(numberOfDoFsPerAxisInPatch,normal,false,false);
   }
   tarch::la::DynamicMatrix* P = faceInterpolationMap[key];
   lock.free();
@@ -594,7 +638,7 @@ void toolbox::blockstructured::interpolateHaloLayer_AoS_linear_with_linear_extra
 
   tarch::multicore::Lock lock(interpolationMapSemaphore);
   if ( faceInterpolationMap.count(key)==0 ) {
-    faceInterpolationMap[key] = internal::createLinearInterpolationMatrix(numberOfDoFsPerAxisInPatch,normal,true);
+    faceInterpolationMap[key] = internal::createLinearInterpolationMatrix(numberOfDoFsPerAxisInPatch,normal,true,false);
   }
   tarch::la::DynamicMatrix* P = faceInterpolationMap[key];
   lock.free();
@@ -708,6 +752,278 @@ void toolbox::blockstructured::interpolateCell_AoS_linear_with_linear_extrapolat
   );
 
   logTraceOut("interpolateCell_AoS_linear_with_linear_extrapolation(...)");
+}
+
+
+void toolbox::blockstructured::interpolateHaloLayer_AoS_linear_with_constant_extrapolation_and_linear_normal_interpolation(
+  const peano4::datamanagement::FaceMarker& marker,
+  int                                       numberOfDoFsPerAxisInPatch,
+  int                                       overlap,
+  int                                       unknowns,
+  const double* __restrict__                coarseGridFaceValues,
+  double* __restrict__                      fineGridFaceValues
+) {
+  logTraceInWith4Arguments( "interpolateHaloLayer_AoS_linear_with_constant_extrapolation_and_linear_normal_interpolation(...)", marker.toString(), numberOfDoFsPerAxisInPatch, overlap, unknowns );
+
+  const int  normal              = marker.getSelectedFaceNumber() % Dimensions;
+
+  static internal::FaceInterpolationMap  faceInterpolationMap;
+  internal::FaceInterpolationOperatorKey key(numberOfDoFsPerAxisInPatch,overlap,normal);
+
+  assertionEquals(overlap,1);
+
+  tarch::multicore::Lock lock(interpolationMapSemaphore);
+  if ( faceInterpolationMap.count(key)==0 ) {
+    faceInterpolationMap[key] = internal::createLinearInterpolationMatrix(numberOfDoFsPerAxisInPatch,normal,false,true);
+  }
+  tarch::la::DynamicMatrix* P = faceInterpolationMap[key];
+  lock.free();
+
+  #if Dimensions==2
+  const int patchSize = numberOfDoFsPerAxisInPatch*2*overlap;
+  #else
+  const int patchSize = numberOfDoFsPerAxisInPatch*numberOfDoFsPerAxisInPatch*2*overlap;
+  #endif
+
+  logDebug( "interpolateHaloLayer_AoS_linear_with_constant_extrapolation_and_linear_normal_interpolation(...)", marker.toString() << ": " << P->toString() );
+
+  P->batchedMultiplyAoS(
+    fineGridFaceValues,    // image
+    coarseGridFaceValues,  // preimage
+    unknowns,              // batch size, i.e. how often to apply it in one AoS rush
+    patchSize,             // result size, i.e. size of image
+    serialisePatchIndexInOverlap(
+      marker.getRelativePositionWithinFatherCell(),
+      normal
+    ) * patchSize
+  );
+
+  logTraceOut( "interpolateHaloLayer_AoS_linear_with_constant_extrapolation_and_linear_normal_interpolation(...)" );
+}
+
+
+void toolbox::blockstructured::interpolateHaloLayer_AoS_linear_with_constant_extrapolation_and_linear_normal_interpolation(
+  const peano4::datamanagement::FaceMarker& marker,
+  int                                       numberOfDoFsPerAxisInPatch,
+  int                                       overlap,
+  int                                       unknowns,
+  const double* __restrict__                coarseGridCellValues,
+  const double* __restrict__                coarseGridFaceValues,
+  double* __restrict__                      fineGridFaceValues
+) {
+  logTraceInWith4Arguments( "interpolateHaloLayer_AoS_linear_with_constant_extrapolation_and_linear_normal_interpolation(...)", marker.toString(), numberOfDoFsPerAxisInPatch, overlap, unknowns );
+
+  if ( marker.isInteriorFaceWithinPatch() ) {
+    #if Dimensions==2
+    const int patchSize = numberOfDoFsPerAxisInPatch*numberOfDoFsPerAxisInPatch;
+    #else
+    const int patchSize = numberOfDoFsPerAxisInPatch*numberOfDoFsPerAxisInPatch*numberOfDoFsPerAxisInPatch;
+    #endif
+
+    double* leftAdjacentPatchData  = tarch::allocateMemory(patchSize * unknowns, tarch::MemoryLocation::Heap);
+    double* rightAdjacentPatchData = tarch::allocateMemory(patchSize * unknowns, tarch::MemoryLocation::Heap);
+
+    tarch::la::Vector<Dimensions,int> leftAdjacentPatchIndex = marker.getRelativePositionWithinFatherCell();
+    tarch::la::Vector<Dimensions,int> rightAdjacentPatchIndex = marker.getRelativePositionWithinFatherCell();
+    leftAdjacentPatchIndex( marker.getSelectedFaceNumber()%Dimensions )--;
+
+    internal::interpolateCell_AoS_linear(
+      leftAdjacentPatchIndex,
+      numberOfDoFsPerAxisInPatch,
+      unknowns,
+      coarseGridCellValues,
+      leftAdjacentPatchData,
+      false
+    );
+    internal::interpolateCell_AoS_linear(
+      rightAdjacentPatchIndex,
+      numberOfDoFsPerAxisInPatch,
+      unknowns,
+      coarseGridCellValues,
+      rightAdjacentPatchData,
+      false
+    );
+
+    internal::projectInterpolatedFineCellsOnHaloLayer_AoS(
+      marker, numberOfDoFsPerAxisInPatch, overlap, unknowns,
+      leftAdjacentPatchData, rightAdjacentPatchData,
+      fineGridFaceValues
+    );
+
+    tarch::freeMemory(leftAdjacentPatchData,  tarch::MemoryLocation::Heap );
+    tarch::freeMemory(rightAdjacentPatchData, tarch::MemoryLocation::Heap );
+  }
+  else {
+    interpolateHaloLayer_AoS_linear_with_constant_extrapolation_and_linear_normal_interpolation(
+      marker,
+      numberOfDoFsPerAxisInPatch,
+      overlap,
+      unknowns,
+      coarseGridFaceValues,
+      fineGridFaceValues
+    );
+  }
+
+  logTraceOut( "interpolateHaloLayer_AoS_linear_with_constant_extrapolation_and_linear_normal_interpolation(...)" );
+}
+
+
+
+void toolbox::blockstructured::interpolateCell_AoS_linear_with_constant_extrapolation_and_linear_normal_interpolation(
+  const peano4::datamanagement::CellMarker& marker,
+  int                                       numberOfDoFsPerAxisInPatch,
+  int                                       unknowns,
+  const double* __restrict__                coarseGridCellValues,
+  double* __restrict__                      fineGridCellValues
+) {
+  logTraceInWith3Arguments("interpolateCell_AoS_linear_with_constant_extrapolation_and_linear_normal_interpolation(...)", marker.toString(), numberOfDoFsPerAxisInPatch, unknowns );
+
+  internal::interpolateCell_AoS_linear(
+    marker.getRelativePositionWithinFatherCell(),
+    numberOfDoFsPerAxisInPatch,
+    unknowns,
+    coarseGridCellValues,
+    fineGridCellValues,
+    false
+  );
+
+  logTraceOut("interpolateCell_AoS_linear_with_constant_extrapolation_and_linear_normal_interpolation(...)");
+}
+
+
+void toolbox::blockstructured::interpolateHaloLayer_AoS_linear_with_linear_extrapolation_and_linear_normal_interpolation(
+  const peano4::datamanagement::FaceMarker& marker,
+  int                                       numberOfDoFsPerAxisInPatch,
+  int                                       overlap,
+  int                                       unknowns,
+  const double* __restrict__                coarseGridFaceValues,
+  double* __restrict__                      fineGridFaceValues
+) {
+  logTraceInWith4Arguments( "interpolateHaloLayer_AoS_linear_with_linear_extrapolation_and_linear_normal_interpolation(...)", marker.toString(), numberOfDoFsPerAxisInPatch, overlap, unknowns );
+
+  const int  normal              = marker.getSelectedFaceNumber() % Dimensions;
+
+  static internal::FaceInterpolationMap  faceInterpolationMap;
+  internal::FaceInterpolationOperatorKey key(numberOfDoFsPerAxisInPatch,overlap,normal);
+
+  assertionEquals(overlap,1);
+
+  tarch::multicore::Lock lock(interpolationMapSemaphore);
+  if ( faceInterpolationMap.count(key)==0 ) {
+    faceInterpolationMap[key] = internal::createLinearInterpolationMatrix(numberOfDoFsPerAxisInPatch,normal,true,true);
+  }
+  tarch::la::DynamicMatrix* P = faceInterpolationMap[key];
+  lock.free();
+
+  #if Dimensions==2
+  const int patchSize = numberOfDoFsPerAxisInPatch*2*overlap;
+  #else
+  const int patchSize = numberOfDoFsPerAxisInPatch*numberOfDoFsPerAxisInPatch*2*overlap;
+  #endif
+
+  logDebug( "interpolateHaloLayer_AoS_linear_with_constant_extrapolation_and_linear_normal_interpolation(...)", marker.toString() << ": " << P->toString() );
+
+  P->batchedMultiplyAoS(
+    fineGridFaceValues,    // image
+    coarseGridFaceValues,  // preimage
+    unknowns,              // batch size, i.e. how often to apply it in one AoS rush
+    patchSize,             // result size, i.e. size of image
+    serialisePatchIndexInOverlap(
+      marker.getRelativePositionWithinFatherCell(),
+      normal
+    ) * patchSize
+  );
+
+  logTraceOut( "interpolateHaloLayer_AoS_linear_with_linear_extrapolation_and_linear_normal_interpolation(...)" );
+}
+
+
+void toolbox::blockstructured::interpolateHaloLayer_AoS_linear_with_linear_extrapolation_and_linear_normal_interpolation(
+  const peano4::datamanagement::FaceMarker& marker,
+  int                                       numberOfDoFsPerAxisInPatch,
+  int                                       overlap,
+  int                                       unknowns,
+  const double* __restrict__                coarseGridCellValues,
+  const double* __restrict__                coarseGridFaceValues,
+  double* __restrict__                      fineGridFaceValues
+) {
+  logTraceInWith4Arguments( "interpolateHaloLayer_AoS_linear_with_linear_extrapolation_and_linear_normal_interpolation(...)", marker.toString(), numberOfDoFsPerAxisInPatch, overlap, unknowns );
+
+  if ( marker.isInteriorFaceWithinPatch() ) {
+    #if Dimensions==2
+    const int patchSize = numberOfDoFsPerAxisInPatch*numberOfDoFsPerAxisInPatch;
+    #else
+    const int patchSize = numberOfDoFsPerAxisInPatch*numberOfDoFsPerAxisInPatch*numberOfDoFsPerAxisInPatch;
+    #endif
+
+    double* leftAdjacentPatchData  = tarch::allocateMemory(patchSize * unknowns, tarch::MemoryLocation::Heap);
+    double* rightAdjacentPatchData = tarch::allocateMemory(patchSize * unknowns, tarch::MemoryLocation::Heap);
+
+    tarch::la::Vector<Dimensions,int> leftAdjacentPatchIndex = marker.getRelativePositionWithinFatherCell();
+    tarch::la::Vector<Dimensions,int> rightAdjacentPatchIndex = marker.getRelativePositionWithinFatherCell();
+    leftAdjacentPatchIndex( marker.getSelectedFaceNumber()%Dimensions )--;
+
+    internal::interpolateCell_AoS_linear(
+      leftAdjacentPatchIndex,
+      numberOfDoFsPerAxisInPatch,
+      unknowns,
+      coarseGridCellValues,
+      leftAdjacentPatchData,
+      true
+    );
+    internal::interpolateCell_AoS_linear(
+      rightAdjacentPatchIndex,
+      numberOfDoFsPerAxisInPatch,
+      unknowns,
+      coarseGridCellValues,
+      rightAdjacentPatchData,
+      true
+    );
+
+    internal::projectInterpolatedFineCellsOnHaloLayer_AoS(
+      marker, numberOfDoFsPerAxisInPatch, overlap, unknowns,
+      leftAdjacentPatchData, rightAdjacentPatchData,
+      fineGridFaceValues
+    );
+
+    tarch::freeMemory(leftAdjacentPatchData,  tarch::MemoryLocation::Heap );
+    tarch::freeMemory(rightAdjacentPatchData, tarch::MemoryLocation::Heap );
+  }
+  else {
+    interpolateHaloLayer_AoS_linear_with_linear_extrapolation_and_linear_normal_interpolation(
+      marker,
+      numberOfDoFsPerAxisInPatch,
+      overlap,
+      unknowns,
+      coarseGridFaceValues,
+      fineGridFaceValues
+    );
+  }
+
+  logTraceOut( "interpolateHaloLayer_AoS_linear_with_linear_extrapolation_and_linear_normal_interpolation(...)" );
+}
+
+
+
+void toolbox::blockstructured::interpolateCell_AoS_linear_with_linear_extrapolation_and_linear_normal_interpolation(
+  const peano4::datamanagement::CellMarker& marker,
+  int                                       numberOfDoFsPerAxisInPatch,
+  int                                       unknowns,
+  const double* __restrict__                coarseGridCellValues,
+  double* __restrict__                      fineGridCellValues
+) {
+  logTraceInWith3Arguments("interpolateCell_AoS_linear_with_linear_extrapolation_and_linear_normal_interpolation(...)", marker.toString(), numberOfDoFsPerAxisInPatch, unknowns );
+
+  internal::interpolateCell_AoS_linear(
+    marker.getRelativePositionWithinFatherCell(),
+    numberOfDoFsPerAxisInPatch,
+    unknowns,
+    coarseGridCellValues,
+    fineGridCellValues,
+    true
+  );
+
+  logTraceOut("interpolateCell_AoS_linear_with_linear_extrapolation_and_linear_normal_interpolation(...)");
 }
 
 

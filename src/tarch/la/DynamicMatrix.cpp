@@ -143,6 +143,14 @@ tarch::la::DynamicMatrix tarch::la::DynamicMatrix::id( int rows ) {
 }
 
 
+void tarch::la::DynamicMatrix::scale(double value) {
+  for (int col=0; col<_cols; col++)
+  for (int row=0; row<_rows; row++) {
+    _m[ serialise(row,col) ] *= value;
+  }
+}
+
+
 void tarch::la::DynamicMatrix::multiply( double* result, double* x ) {
   std::fill_n(result,_rows,0.0);
 

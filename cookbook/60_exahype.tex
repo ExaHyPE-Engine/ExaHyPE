@@ -1760,6 +1760,14 @@ For the interpolation, we offer the following routines:
   bi-linear (3d) along faces and use constant extrapolation along diagonals and
   patch boundaries.
   \\
+  \texttt{linear_with_constant_extrapolation_and_linear_normal_interpolation} &
+  Variation of \texttt{constant_with_constant_extrapolation} where we interplate
+  linearly between restricted (coarsened) voxel data and the adjacent real
+  coarse grid values. 
+  \\
+  \texttt{linear_with_linear_extrapolation_and_linear_normal_interpolation} &
+  Variation of \texttt{linear_with_constant_extrapolation} 
+  \\
  \end{tabular}
 \end{center}
 
