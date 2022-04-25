@@ -1,6 +1,9 @@
 #include "InterpolationTest.h"
 #include "toolbox/blockstructured/Interpolation.h"
 
+#include "../Interpolation.h"
+#include "../Restriction.h"
+
 
 #ifdef UseTestSpecificCompilerSettings
 #pragma optimize("",off)

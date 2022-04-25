@@ -121,13 +121,13 @@ class DynamicAMR(ActionSet):
 
 
   __Template_CreateHangingFace_Core = """
-    ::toolbox::blockstructured::interpolateOntoOuterHalfOfHaloLayer_AoS_{{INTERPOLATION_SCHEME}}(
+    ::toolbox::blockstructured::interpolateHaloLayer_AoS_{{INTERPOLATION_SCHEME}}(
       marker,
       {{DOFS_PER_AXIS}},
       {{OVERLAP}},
       {{UNKNOWNS}},
-      {{FINE_GRID_FACE_ACCESSOR_INTERPOLATION}}.value,
-      {{COARSE_GRID_FACE_ACCESSOR_INTERPOLATION}}(marker.getSelectedFaceNumber()).value
+      {{COARSE_GRID_FACE_ACCESSOR_INTERPOLATION}}(marker.getSelectedFaceNumber()).value,
+      {{FINE_GRID_FACE_ACCESSOR_INTERPOLATION}}.value
     );
 """
 
@@ -212,9 +212,9 @@ class DynamicAMR(ActionSet):
       {{DOFS_PER_AXIS}},
       {{OVERLAP}},
       {{UNKNOWNS}},
-      {{FINE_GRID_FACE_ACCESSOR_INTERPOLATION}}.value,
+      {{COARSE_GRID_CELL}}.value,
       {{COARSE_GRID_FACE_ACCESSOR_INTERPOLATION}}(marker.getSelectedFaceNumber()).value,
-      {{COARSE_GRID_CELL}}.value
+      {{FINE_GRID_FACE_ACCESSOR_INTERPOLATION}}.value
   );
 """
 
@@ -259,8 +259,8 @@ class DynamicAMR(ActionSet):
       marker,
       {{DOFS_PER_AXIS}},
       {{UNKNOWNS}},
-      {{FINE_GRID_CELL}}.value,
-      {{COARSE_GRID_CELL}}.value
+      {{COARSE_GRID_CELL}}.value,
+      {{FINE_GRID_CELL}}.value
   );
 """
 
@@ -341,6 +341,7 @@ class DynamicAMR(ActionSet):
 #include "peano4/utils/Loop.h"
 #include "toolbox/blockstructured/Enumeration.h"
 #include "toolbox/blockstructured/Interpolation.h"
+#include "toolbox/blockstructured/Restriction.h"
 """ + self.additional_includes
 
 

@@ -28,3 +28,17 @@ int toolbox::blockstructured::serialisePatchIndexInOverlap(
   return result;
 }
 
+
+int toolbox::blockstructured::serialiseMarkerIn3x3PatchAssembly(
+  const tarch::la::Vector<Dimensions,int>& markerIndex,
+  int                                      numberOfDoFsPerAxisInPatch
+) {
+  #if Dimensions==2
+  const int patchSize = numberOfDoFsPerAxisInPatch*numberOfDoFsPerAxisInPatch;
+  return (markerIndex(0) + markerIndex(1)*3) * patchSize;
+  #else
+  const int patchSize = numberOfDoFsPerAxisInPatch*numberOfDoFsPerAxisInPatch*numberOfDoFsPerAxisInPatch;
+  return (markerIndex(0) + markerIndex(1)*3 + markerIndex(2)*3*3) * patchSize;
+  #endif
+}
+

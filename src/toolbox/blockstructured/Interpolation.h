@@ -10,6 +10,9 @@
 #include "tarch/la/DynamicMatrix.h"
 
 
+#include <map>
+
+
 namespace toolbox {
   namespace blockstructured {
     /**
@@ -21,8 +24,8 @@ namespace toolbox {
      * ## Data storage scheme
      *
      * For a setup with p volumes per coordinate axis per patch, a
-     * face always stores 2xp (2d) or 2xpxp (3d) values: It stores a layer of
-     * its left neighbouring cell and a layer of the right one. These layers
+     * face always stores @f$ 2k \cdot p^{d-1} @f$ values: It stores a layer of
+     * depth k of its left neighbouring cell and a layer of the right one. These layers
      * are copies. By separating the copies of halo layers from the actual
      * patch data, we can easier move data around in a parallel computer. A
      * patch only has to know some of the data from all neighbouring, face-connected
@@ -33,7 +36,8 @@ namespace toolbox {
      * @image html Interpolation00.png
      *
      * In the image above, we see a schematic illustration of the data layout:
-     * In this example, a 2d cell hosts a 5x5 grid of finite volumes. The four
+     * In this example, a 2d cell hosts a 5x5 grid of finite volumes and we work
+     * with an overlap of k=1. The four
      * faces each hold 2x5 volumes. These are copies from the left and right
      * adjacent cells. So the dark red volumes are actually copies of the volumes
      * within the patch. In the left image, I use a darker grey to label those
@@ -123,33 +127,56 @@ namespace toolbox {
      * get a set of @f$u_h@f$ vectors out.
      *
      *
+     * ## Interpolation flavours
+     *
+     * Each interpolation type is realised via three different routes. All flavours follow
+     * the same naming convention.
+     *
+     * - Each routine starts with the prefix interpolate.
+     * - There's always one flavour that's then called interpolateCell, the other one is
+     *   called interpolateHaloLayer.
+     * - I add the data storage format that underlies the
+     *   operator realisation. At the moment, I only support array of struct (AoS).
+     * - The storage format identifier is followed by another underscore.
+     * - The next part of the string is the actual interpolation scheme.
+     *
+     * Technically, there are always two types of interpolation routines per face:
+     * There is a version which is given the coarse cell face only. I use this one to interpolate
+     * from a coarse level onto a face at the boundary of a finer @f$ 3 \times 3 @f$
+     * patch. The other variant of the interpolation is used for an interior face within
+     * a @f$ 3 \times 3 @f$  patch and is also given the coarse cell data. The latter
+     * variant is only called to create new faces. It is never used for hanging faces.
+     *
+     * For this one, I have to create the fine grid volumetric data, and then copy the
+     * interpolated data from there onto the face data. This way, we are consistent
+     * with the idea that face data always holds copies from adjacent fine grid data.
+     *
+     *
+     * ## Caching of inter-grid transfer operators
+     *
+     * Constructing the interpolation operators can be time consuming. I therefore cache
+     * the operators.
+     *
+     * For the handling of faces at the boundary of the @f$ 3 \times 3 \times 3 @f$ patches,
+     * I hold one large interpolation matrix per normal. So for 2d, I have four interpolation
+     * matrices, for 3d I have six. The large interpolation matrix per direction can compute
+     * all @f$ 3^{d-1} @f$ faces in one rush, so we usually only need one out of them at a time.
+     * So I have this huge map with these matrices. When we have to interpolate, we first
+     * check whether we've already assembled the matrix. If so, we use this one. If not, we
+     * first compute it and cache it in the map.
+     *
+     * For the volumetric interpolation and the handing of the interior faces, we use another
+     * map. That is, if we want to compute the interior face, we first project onto a temporary
+     * @f$ 3^d @f$ set of volumes, and then we extract the fine face data from there. This
+     * implies that we are consistent with the actual projection of face data, where we take
+     * fine grid volume values and write them onto teh face data as copies.
+     *
      *
      */
 
-    /**
-     * Clear halo layer of face
-     *
-     * Hand in a face data structure and its marker. From the marker, we know
-     * which half of the face data is actual the halo: If we are talking about
-     * face 0, i.e. the left face of a cell, then the left half of the volumes
-     * within the face are to be clared. If we are getting face 1, which is the
-     * one at the bottom, it is the lower layer of volumes within the face data
-     * which has to be cleared.
-     */
-    void clearHaloLayerAoS(
-      const peano4::datamanagement::FaceMarker& marker,
-      int                                       numberOfDoFsPerAxisInPatch,
-      int                                       overlap,
-      int                                       unknowns,
-      double*                                   values
-    );
 
-    void clearCell(
-      const peano4::datamanagement::CellMarker& marker,
-      int                                       numberOfDoFsPerAxisInPatch,
-      int                                       unknowns,
-      double*                                   values
-    );
+
+
 
     /**
      * Take the coarse grid values and interpolate them onto the fine grid
@@ -164,8 +191,8 @@ namespace toolbox {
       int                                       numberOfDoFsPerAxisInPatch,
       int                                       overlap,
       int                                       unknowns,
-      double*                                   fineGridValues,
-      double*                                   coarseGridValues
+      const double* __restrict__                coarseGridFaceValues,
+      double* __restrict__                      fineGridFaceValues
     );
 
     /**
@@ -174,192 +201,40 @@ namespace toolbox {
      * Normal hanging faces are always created along the boundary of a 3x3 or
      * 3x3x3 patch, respectively. Therefore, we always take the coarse grid
      * face data to initialise the face values. These face data hold the overlaps,
-     * so we can interpolate accordingly.
+     * so we can interpolate accordingly. Therefore, if marker.isInteriorFaceWithinPatch()
+     * does not hold, we can use the alternative interpolateHaloLayer() variant.
      *
-     * If we create persistent faces, these persistent faces can either be inside
-     * the 3x3x3 patch or at the boundary. If they are patch boundary faces, we
-     * rely on the standard interpolation scheme that we have introduced.
+     * If we create persistent faces within a 3x3x3 patch arrangement, we first
+     * create the interpolation of the left and right patch of the face of interest.
+     *
      */
     void interpolateHaloLayer_AoS_piecewise_constant(
       const peano4::datamanagement::FaceMarker& marker,
       int                                       numberOfDoFsPerAxisInPatch,
       int                                       overlap,
       int                                       unknowns,
-      double*                                   fineGridFaceValues,
-      double*                                   coarseGridFaceValues,
-      double*                                   coarseGridCellValues
+      const double* __restrict__                coarseGridCellValues,
+      const double* __restrict__                coarseGridFaceValues,
+      double* __restrict__                      fineGridFaceValues
     );
 
 
     /**
      * This routine is called if we create a new cell (dynamic AMR)
      *
-     * It is close to trivial, as we can employ internal::projectCells_AoS()
-     * to identify pairs of coarse-fine volumes that overlap and then we
-     * simply copy over results.
+     * The routine looks up if the interpolation matrix does exist already. If not,
+     * it creates it. Afterwards, it takes the interpolation matrix and multiplies
+     * it with the coarse matrix. Interpolation matrices are band matrices and hold
+     * all entries for all @f$ 3^d @f$ subpatches. We only need one subpatch, so we
+     * pick a subsegment of the matrix. In return, we use the same interpolation
+     * scheme for all unknowns, so we can rely on a batched matrix multiplication.
      */
     void interpolateCell_AoS_piecewise_constant(
       const peano4::datamanagement::CellMarker& marker,
       int                                       numberOfDoFsPerAxisInPatch,
       int                                       unknowns,
-      double*                                   fineGridValues,
-      double*                                   coarseGridValues
-    );
-
-
-    void restrictInnerHalfOfHaloLayer_AoS_averaging(
-      const peano4::datamanagement::FaceMarker& marker,
-      int                                       numberOfDoFsPerAxisInPatch,
-      int                                       overlap,
-      int                                       unknowns,
-      double*                                   fineGridValues,
-      double*                                   coarseGridValues,
-      bool                                      swapInsideOutside=false
-    );
-
-
-    /**
-     * Consult commend on interpolation that clarifies why we need two
-     * different halo layer restrictions, i.e. one for half of the
-     * halo and one for the whole thing.
-     */
-    void restrictHaloLayer_AoS_averaging(
-      const peano4::datamanagement::FaceMarker& marker,
-      int                                       numberOfDoFsPerAxisInPatch,
-      int                                       overlap,
-      int                                       unknowns,
-      double*                                   fineGridValues,
-      double*                                   coarseGridValues
-    );
-
-
-    /**
-     * This routine is used when we delete a cell due to dynamic AMR
-     */
-    void restrictCell_AoS_averaging(
-      const peano4::datamanagement::CellMarker& marker,
-      int                                       numberOfDoFsPerAxisInPatch,
-      int                                       unknowns,
-      double*                                   fineGridValues,
-      double*                                   coarseGridValues
-    );
-
-
-    void restrictInnerHalfOfHaloLayer_AoS_inject(
-      const peano4::datamanagement::FaceMarker& marker,
-      int                                       numberOfDoFsPerAxisInPatch,
-      int                                       overlap,
-      int                                       unknowns,
-      double*                                   fineGridValues,
-      double*                                   coarseGridValues,
-      bool                                      swapInsideOutside=false
-    );
-    void restrictHaloLayer_AoS_inject(
-      const peano4::datamanagement::FaceMarker& marker,
-      int                                       numberOfDoFsPerAxisInPatch,
-      int                                       overlap,
-      int                                       unknowns,
-      double*                                   fineGridValues,
-      double*                                   coarseGridValues
-    );
-    void restrictCell_AoS_inject(
-      const peano4::datamanagement::CellMarker& marker,
-      int                                       numberOfDoFsPerAxisInPatch,
-      int                                       unknowns,
-      double*                                   fineGridValues,
-      double*                                   coarseGridValues
-    );
-
-
-    /**
-     * The realisation relies on the following observations/follows these
-     * steps:
-     *
-     * <h2> A 1d setup </h2>
-     *
-     * We first construct a 1d interpolation. Starting from the hard-coded pattern
-     *
-     * <pre>
-    {1.0/3.0, 2.0/3.0,     0.0},
-    {    0.0, 3.0/3.0,     0.0},
-    {    0.0, 2.0/3.0, 1.0/3.0}
-       </pre>
-     *
-     * we repeat this whole thing numberOfDoFsPerAxisInPatch times and each time
-     * shift by one. For numberOfDoFsPerAxisInPatch=4 this yields for example
-     *
-     * <pre>
-    {0.333333,0.666667,       0,0,0,0},
-    {0,              1,       0,0,0,0},
-    {0,       0.666667,0.333333,0,0,0},
-    {0,       0.333333,0.666667,0,0,0},
-    {0,              0,       1,0,0,0},
-    ...
-       </pre>
-     *
-     * Let this be the matrix P1d. If we had a 1d setup, we could compute
-     *  fine = P1d * coarse
-     * and would get all fine grid values in one rush. Obviously, we do not have a
-     * 1d setup.
-     *
-     * <h2> 2d extensions </h2>
-     *
-     * Once we know P1d, we have to "blow is up". The input does not have
-     * numberOfDoFsPerAxisInPatch entries but has numberOfDoFsPerAxisInPatch*2
-     * entries. Also the image has to be multiplied by two. We fist determine the
-     * normal and look whether we are left or right of this normal for the fine
-     * grid face. Next, we reiterate that we work with a lexicographic enumeration.
-     * If we want to study the left face of a cell,
-     *
-     *
-     * <h2> The issue with the missing diagonal element </h2>
-     *
-     * We do not know the diagonal element which we'd need to interpolate the
-     * outmost cells in our data. Without knowing them, two options are on the
-     * table: We can interpolate constantly at the edges, or we can extrapolate.
-     * While extrapolation might sound to be a good choice, I found that it
-     * sometimes yields physically invalid results. The Euler equations, for
-     * example, will immediately give you negative (tiny) energies or negative
-     * pressure. So I disable any extrapolation by default. If you need it,
-     * the following two lines would do the trick (see also commented out
-     * fragments in source code);
-     *
-     * <pre>
-  P1d(0,0) =  2.0/3.0 + 1.0/3.0 * 2.0;
-  P1d(0,1) = -1.0/3.0;
-  P1d(numberOfDoFsPerAxisInPatch*3-1,numberOfDoFsPerAxisInPatch-1) =  2.0/3.0 + 1.0/3.0 * 2.0;
-  P1d(numberOfDoFsPerAxisInPatch*3-1,numberOfDoFsPerAxisInPatch-2) = -1.0/3.0;
-     * </pre>
-     *
-     */
-    template <int NumberOfDoFsPerAxisInPatch>
-    void interpolateHaloLayer_AoS_linear_precomputed_operators(
-      const peano4::datamanagement::FaceMarker& marker,
-      int                                       numberOfDoFsPerAxisInPatch,
-      int                                       overlap,
-      int                                       unknowns,
-      double*                                   fineGridValues,
-      double*                                   coarseGridValues
-    );
-
-    template <int NumberOfDoFsPerAxisInPatch>
-    void interpolateHaloLayer_AoS_linear_precomputed_operators(
-      const peano4::datamanagement::FaceMarker& marker,
-      int                                       numberOfDoFsPerAxisInPatch,
-      int                                       overlap,
-      int                                       unknowns,
-      double*                                   fineGridFaceValues,
-      double*                                   coarseGridFaceValues,
-      double*                                   coarseGridCellValues
-    );
-
-    template <int NumberOfDoFsPerAxisInPatch>
-    void interpolateCell_AoS_linear_precomputed_operators(
-      const peano4::datamanagement::CellMarker& marker,
-      int                                       numberOfDoFsPerAxisInPatch,
-      int                                       unknowns,
-      double*                                   fineGridValues,
-      double*                                   coarseGridValues
+      const double* __restrict__                coarseGridCellValues,
+      double* __restrict__                      fineGridCellValues
     );
 
 
@@ -368,19 +243,21 @@ namespace toolbox {
       int                                       numberOfDoFsPerAxisInPatch,
       int                                       overlap,
       int                                       unknowns,
-      double*                                   fineGridValues,
-      double*                                   coarseGridValues
+      double*                                   fineGridFaceValues,
+      double*                                   coarseGridFaceValues
     );
+
 
     void interpolateHaloLayer_AoS_linear(
       const peano4::datamanagement::FaceMarker& marker,
       int                                       numberOfDoFsPerAxisInPatch,
       int                                       overlap,
       int                                       unknowns,
-      double*                                   fineGridFaceValues,
+      double*                                   coarseGridCellValues,
       double*                                   coarseGridFaceValues,
-      double*                                   coarseGridCellValues
+      double*                                   fineGridFaceValues
     );
+
 
     void interpolateCell_AoS_linear(
       const peano4::datamanagement::CellMarker& marker,
@@ -422,6 +299,7 @@ namespace toolbox {
       double*                                   coarseGridValues
     );
 
+
     /**
      * This type of signature is used to interpolate halo layers for newly
      * generated cells. So this does not really make sense for outflow, as
@@ -439,6 +317,7 @@ namespace toolbox {
       double*                                   coarseGridCellValues
     );
 
+
     void interpolateCell_AoS_outflow(
       const peano4::datamanagement::CellMarker& marker,
       int                                       numberOfDoFsPerAxisInPatch,
@@ -449,7 +328,67 @@ namespace toolbox {
 
 
     namespace internal {
+
       /**
+       * The realisation relies on the following observations/follows these
+       * steps:
+       *
+       * <h2> A 1d setup </h2>
+       *
+       * We first construct a 1d interpolation. Starting from the hard-coded pattern
+       *
+       * <pre>
+      {1.0/3.0, 2.0/3.0,     0.0},
+      {    0.0, 3.0/3.0,     0.0},
+      {    0.0, 2.0/3.0, 1.0/3.0}
+         </pre>
+       *
+       * we repeat this whole thing numberOfDoFsPerAxisInPatch times and each time
+       * shift by one. For numberOfDoFsPerAxisInPatch=4 this yields for example
+       *
+       * <pre>
+      {0.333333,0.666667,       0,0,0,0},
+      {0,              1,       0,0,0,0},
+      {0,       0.666667,0.333333,0,0,0},
+      {0,       0.333333,0.666667,0,0,0},
+      {0,              0,       1,0,0,0},
+      ...
+         </pre>
+       *
+       * Let this be the matrix P1d. If we had a 1d setup, we could compute
+       *  fine = P1d * coarse
+       * and would get all fine grid values in one rush. Obviously, we do not have a
+       * 1d setup.
+       *
+       * <h2> 2d extensions </h2>
+       *
+       * Once we know P1d, we have to "blow is up". The input does not have
+       * numberOfDoFsPerAxisInPatch entries but has numberOfDoFsPerAxisInPatch*2
+       * entries. Also the image has to be multiplied by two. We fist determine the
+       * normal and look whether we are left or right of this normal for the fine
+       * grid face. Next, we reiterate that we work with a lexicographic enumeration.
+       * If we want to study the left face of a cell,
+       *
+       *
+       * <h2> The issue with the missing diagonal element </h2>
+       *
+       * We do not know the diagonal element which we'd need to interpolate the
+       * outmost cells in our data. Without knowing them, two options are on the
+       * table: We can interpolate constantly at the edges, or we can extrapolate.
+       * While extrapolation might sound to be a good choice, I found that it
+       * sometimes yields physically invalid results. The Euler equations, for
+       * example, will immediately give you negative (tiny) energies or negative
+       * pressure. So I disable any extrapolation by default. If you need it,
+       * the following two lines would do the trick (see also commented out
+       * fragments in source code);
+       *
+       * <pre>
+    P1d(0,0) =  2.0/3.0 + 1.0/3.0 * 2.0;
+    P1d(0,1) = -1.0/3.0;
+    P1d(numberOfDoFsPerAxisInPatch*3-1,numberOfDoFsPerAxisInPatch-1) =  2.0/3.0 + 1.0/3.0 * 2.0;
+    P1d(numberOfDoFsPerAxisInPatch*3-1,numberOfDoFsPerAxisInPatch-2) = -1.0/3.0;
+       * </pre>
+       *
        * <h2> Insertion of empty lines/rows </h2>
        *
        * We assume that the result is "symmetric" - not in a linear equation system
@@ -466,155 +405,110 @@ namespace toolbox {
        *
        * @see tarch::la::DynamicMatrix::insertColumns()
        */
-      tarch::la::DynamicMatrix  createLinearInterpolationMatrix(int numberOfDoFsPerAxisInPatch, int normal);
-
+      tarch::la::DynamicMatrix*  createLinearInterpolationMatrix(int numberOfDoFsPerAxisInPatch, int normal);
 
       /**
        * This is a volumetric version of the interpolation.
        */
-      tarch::la::DynamicMatrix  createLinearInterpolationMatrix(int numberOfDoFsPerAxisInPatch);
+      tarch::la::DynamicMatrix*  createLinearInterpolationMatrix(int numberOfDoFsPerAxisInPatch);
+
+      tarch::la::DynamicMatrix*  createPiecewiseConstantInterpolationMatrix(int numberOfDoFsPerAxisInPatch, int normal, int overlap);
 
       /**
-       * Create a linear interpolation matrix for a new cell.
+       * This is a volumetric version of the interpolation.
+       *
+     * It is close to trivial, as we can employ internal::projectCells_AoS()
+     * to identify pairs of coarse-fine volumes that overlap and then we
+     * simply copy over results.
        */
-      tarch::la::DynamicMatrix  createLinearInterpolationMatrix(
-        const peano4::datamanagement::CellMarker& marker,
-        int                                       numberOfDoFsPerAxisInPatch
-      );
-
+      tarch::la::DynamicMatrix*  createPiecewiseConstantInterpolationMatrix(int numberOfDoFsPerAxisInPatch);
 
       /**
-       * Clear half of a halo layer
+       * This routine assumes that you have the whole patch data of hte left and right
+       * adjacent patch at hands.
        *
-       * Faces in blockstructured codes with patches of size NxNxN typically
-       * carry overlaps of size MxNxN. The M is an even number with M<2N. If
-       * you use overlaps/halos of size 1, then M=2: a face manages one layer
-       * from the left and one layer from the right.
-       *
-       * In blockstructured codes, you often have to erase half of this halo
-       * layer. If you run into an adaptive grid, for examples, you want to
-       * erase hanging layers before you interpolate or restrict into them.
-       * This is what this routine does.
-       *
-       * @param marker    This marker identifies a face. See the class documentation
-       *   in particular for details about the enumeration (selected faces) of the
-       *   faces from a cell's point of view.
-       * @param numberOfDoFsPerAxisInPatch The N in the description above
-       * @param overlap   Equals M/2 in the description above, i.e. if you each
-       *   patch is surrounded by one halo layer, then the total overlap equals
-       *   two and this argument equals 1.
-       * @param unknowns  Number of unknowns that we store per voxel.
-       * @param clearOuterPart If this flag is set, we clear the outer half of
-       *   the overlap (relative to the normal identified by marker).
-       */
-      void clearHalfOfHaloLayerAoS(
-        const peano4::datamanagement::FaceMarker& marker,
-        int                                       numberOfDoFsPerAxisInPatch,
-        int                                       overlap,
-        int                                       unknowns,
-        bool                                      clearInnerPart,
-        double*                                   values
-      );
-
-
-      /**
-       * Helper routine - usually not invoked by user code
-       *
-       * Maps two halo layers onto each other. We only invoke the functor
-       * for those combinations of volumes which overlap.
-       *
-       * @param marker Marker identifying which face it is from the
-       *   corresponding cell's point of view.
-       * @param mapFromInnerHalfOfHalo Take the inner half of the respective
-       *   face's halo and map it up or down. If we pick the right half
-       *   on the fine level, we also have to use the right half on the
-       *   next coarser level.
-       */
-      void projectHaloLayers_AoS(
-        const peano4::datamanagement::FaceMarker& marker,
-        int                                       numberOfDoFsPerAxisInPatch,
-        int                                       overlap,
-        std::function<void(
-          tarch::la::Vector<Dimensions,int> coarseVolume,
-          tarch::la::Vector<Dimensions,int> fineVolume,
-          tarch::la::Vector<Dimensions,double> coarseVolumeCentre,
-          tarch::la::Vector<Dimensions,double> fineVolumeCentre,
-          double coarseVolumeH,
-          double fineVolumeH
-        )> update,
-        bool mapFromInnerHalfOfHalo
-      );
-
-
-      /**
-       * Helper function
-       *
-       * This function runs through all fine grid/coarse grid cell combinations which
-       * are identified via fineGridCellMarker. So we call the functor once per fine
-       * grid cell, but @f$ 3^d @f$ times or not at all for any coarse grid cell. This
-       * routine is used as a helper function for piece-wise constant interpolation.
-       * It is not that useful for d-linear interpolation.
-       */
-      void projectCells_AoS(
-        const peano4::datamanagement::CellMarker& fineGridCellMarker,
-        int                                       numberOfDoFsPerAxisInPatch,
-        std::function<void(
-          tarch::la::Vector<Dimensions,int> coarseVolume,
-          tarch::la::Vector<Dimensions,int> fineVolume,
-          tarch::la::Vector<Dimensions,double> coarseVolumeCentre,
-          tarch::la::Vector<Dimensions,double> fineVolumeCentre,
-          double coarseVolumeH,
-          double fineVolumeH
-        )> update
-      );
-
-      /**
-       * This routine identifies fine grid halo layer volumes and finds out which coarse grid
-       * volumes do overlap. It then triggers the callback for these combinations of fine
-       * volume - coarse volume.
-       */
-      void projectCoarseCellsOnHaloLayer_AoS(
-        const peano4::datamanagement::FaceMarker& marker,
-        int                                       numberOfDoFsPerAxisInPatch,
-        int                                       overlap,
-        std::function<void(
-          tarch::la::Vector<Dimensions,int> coarseVolume,
-          tarch::la::Vector<Dimensions,int> fineVolume,
-/*
-          tarch::la::Vector<Dimensions,double> coarseVolumeCentre,
-          tarch::la::Vector<Dimensions,double> fineVolumeCentre,
-*/
-          double coarseVolumeH,
-          double fineVolumeH
-        )> update
-      );
-
-      /**
-       * This routine assumes that you have a whole array of fine grid volumes available.
-       * With a patch size of N, this array has the size NxN or NxNxN, respectively.
-       * We identify the overlap with the fine halo layer and invoke the callback for all
-       * pairs of fine halo layer volume - large interpolated array.
+       * We identify the overlap with the fine halo layer and copy values over from these
+       * two arrays onto the face data.
        */
       void projectInterpolatedFineCellsOnHaloLayer_AoS(
         const peano4::datamanagement::FaceMarker& marker,
         int                                       numberOfDoFsPerAxisInPatch,
         int                                       overlap,
-        std::function<void(
-          tarch::la::Vector<Dimensions,int> volumeWithinCoarseInterpolatedPatch,
-          tarch::la::Vector<Dimensions,int> fineVolumeWithinHaloLayer,
-/*
-          tarch::la::Vector<Dimensions,double> coarseVolumeCentre,
-          tarch::la::Vector<Dimensions,double> fineVolumeCentre,
-*/
-          double coarseVolumeH,
-          double fineVolumeH
-        )> update
+        int                                       unknowns,
+        const double* __restrict__                fineGridCellValuesLeft,
+        const double* __restrict__                fineGridCellValuesRight,
+        double*                                   fineGridFaceValues
       );
+
+
+      /**
+       * @see Other interpolateCell_AoS_piecewise_constant() variant which delegates to
+       *   this one which is also used by the face interpolation.
+       */
+      void interpolateCell_AoS_piecewise_constant(
+        const tarch::la::Vector<Dimensions,int>&  relativePositionWithinFatherCell,
+        int                                       numberOfDoFsPerAxisInPatch,
+        int                                       unknowns,
+        const double* __restrict__                fineGridValues,
+        double*                                   coarseGridValues
+      );
+
+      /**
+       * @see FaceInterpolationMap
+       */
+      struct FaceInterpolationOperatorKey {
+        int numberOfDoFsPerAxisInPatch;
+        int overlap;
+        int normal;
+
+        FaceInterpolationOperatorKey(
+          int numberOfDoFsPerAxisInPatch_,
+          int overlap_,
+          int normal_
+        ):
+          numberOfDoFsPerAxisInPatch(numberOfDoFsPerAxisInPatch_),
+          overlap(overlap_),
+          normal(normal_) {}
+
+        bool operator<( const FaceInterpolationOperatorKey&  otherKey ) const {
+          return this->numberOfDoFsPerAxisInPatch < otherKey.numberOfDoFsPerAxisInPatch
+              or this->numberOfDoFsPerAxisInPatch == otherKey.numberOfDoFsPerAxisInPatch and this->overlap < otherKey.overlap
+              or this->numberOfDoFsPerAxisInPatch == otherKey.numberOfDoFsPerAxisInPatch and this->overlap == otherKey.overlap and this->normal < otherKey.normal;
+        }
+      };
+
+
+      /**
+       * @see CellInterpolationMap
+       */
+      struct CellInterpolationOperatorKey {
+        int numberOfDoFsPerAxisInPatch;
+
+        CellInterpolationOperatorKey(
+          int numberOfDoFsPerAxisInPatch_
+        ):
+          numberOfDoFsPerAxisInPatch(numberOfDoFsPerAxisInPatch_) {}
+
+        bool operator<( const CellInterpolationOperatorKey&  otherKey ) const {
+          return this->numberOfDoFsPerAxisInPatch < otherKey.numberOfDoFsPerAxisInPatch;
+        }
+      };
+
+
+      typedef std::map< FaceInterpolationOperatorKey, tarch::la::DynamicMatrix* >  FaceInterpolationMap;
+
+      /**
+       * A cell interpolation is a huge matrix. If a patch consists of @f$ p @f$ entries
+       * per coordinate axis, then the matrix has the dimensions @f$ p^d \cdot 3^d \times p^d @f$.
+       * Its input is always the @f$ p^d @f$ vector of the coarse mesh. The output is typically
+       * a @f$ p^d @f$ vector as well, but there are @f$ 3^d @f$ of these guys.
+       *
+       * We store one huge interpolation matrix and then pick the right band out of it.
+       */
+      typedef std::map< CellInterpolationOperatorKey, tarch::la::DynamicMatrix* >  CellInterpolationMap;
     }
   }
 }
 
-
-#include "Interpolation.cpph"
 
 #endif
