@@ -117,10 +117,10 @@ bool tarch::la::DynamicMatrix::operator==(const DynamicMatrix& matrix) const {
 
 
 double& tarch::la::DynamicMatrix::operator()(int row, int col) {
-  assertion(row>=0);
-  assertion(col>=0);
-  assertion(row<_rows);
-  assertion(col<_cols);
+  assertion4(row>=0, row, col, _rows, _cols);
+  assertion4(col>=0, row, col, _rows, _cols);
+  assertion4(row<_rows, row, col, _rows, _cols);
+  assertion4(col<_cols, row, col, _rows, _cols);
   return _m[ serialise(row,col) ];
 }
 
