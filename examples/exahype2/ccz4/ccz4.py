@@ -166,7 +166,7 @@ if __name__ == "__main__":
           refinement_criterion = exahype2.solvers.fv.PDETerms.User_Defined_Implementation
         )
 
-        self.set_postprocess_updated_patch_kernel( """
+        self.postprocess_updated_patch = """
   {
     #if Dimensions==2
     constexpr int itmax = {{NUMBER_OF_VOLUMES_PER_AXIS}} * {{NUMBER_OF_VOLUMES_PER_AXIS}};
@@ -185,7 +185,7 @@ if __name__ == "__main__":
       index += {{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}};
     }
   }
-""" )
+"""
 
    
       def create_action_sets(self):
@@ -195,7 +195,7 @@ if __name__ == "__main__":
 #include "../CCZ4Kernels.h"
             """
         self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement.switch_restriction_scheme( "averaging" )
-        self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement.switch_interpolation_scheme( "linear" )
+        #self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement.switch_interpolation_scheme( "linear" )
 
         if args.interpolation=="constant":
           self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement.switch_interpolation_scheme( "piecewise_constant" )
