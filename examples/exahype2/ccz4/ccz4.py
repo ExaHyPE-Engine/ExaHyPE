@@ -166,7 +166,7 @@ if __name__ == "__main__":
           refinement_criterion = exahype2.solvers.fv.PDETerms.User_Defined_Implementation
         )
 
-        self.postprocess_updated_patch( """
+        self.postprocess_updated_patch = """
   {
     #if Dimensions==2
     constexpr int itmax = {{NUMBER_OF_VOLUMES_PER_AXIS}} * {{NUMBER_OF_VOLUMES_PER_AXIS}};
@@ -185,7 +185,7 @@ if __name__ == "__main__":
       index += {{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}};
     }
   }
-""" )
+"""
 
    
       def create_action_sets(self):
@@ -195,7 +195,7 @@ if __name__ == "__main__":
 #include "../CCZ4Kernels.h"
             """
         self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement.switch_restriction_scheme( "averaging" )
-        self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement.switch_interpolation_scheme( "linear" )
+        #self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement.switch_interpolation_scheme( "linear" )
 
         if args.interpolation=="constant":
           self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement.switch_interpolation_scheme( "piecewise_constant" )
@@ -209,13 +209,13 @@ if __name__ == "__main__":
         #if args.interpolation=="outflow":
         #  self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement.switch_interpolation_scheme( "outflow" )
         #  print( "Interpolation rule: outflow (from fine grid into coarse grid)" )   
-        if args.interpolation_scheme=="linear-constant-extrap":
+        if args.interpolation=="linear-constant-extrap":
           self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement.switch_interpolation_scheme( "linear_with_constant_extrapolation" )
           print( "Interpolation rule: linear constant extrapolation" )
-        if args.interpolation_scheme=="linear-linear-extrap":
+        if args.interpolation=="linear-linear-extrap":
           self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement.switch_interpolation_scheme( "linear_with_linear_extrapolation" )  
           print( "Interpolation rule: linear extrapolation" )
-        if args.interpolation_scheme=="linear-lin-extrap-lin-normal-interp":
+        if args.interpolation=="linear-lin-extrap-lin-normal-interp":
           self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement.switch_interpolation_scheme( "linear_with_linear_extrapolation_and_linear_normal_interpolation" )
           print( "Interpolation rule: linear extrapolation and linear normal interpolation" )
 
