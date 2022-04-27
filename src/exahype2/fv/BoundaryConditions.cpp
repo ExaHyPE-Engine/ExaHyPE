@@ -57,10 +57,10 @@ void exahype2::fv::applyBoundaryConditions(
 
     x(faceNumber%Dimensions) -= 0.5 * volumeH(faceNumber%Dimensions);
 
-    for (int layer=0; layer<(2*overlap-1); layer++){
+    for (int layer=0; layer<overlap; layer++){
     if (faceNumber<Dimensions) {
-      insideVolume(faceNumber % Dimensions)  = 2*overlap-1-layer;
-      outsideVolume(faceNumber % Dimensions) = 2*overlap-2-layer;
+      insideVolume(faceNumber % Dimensions)  = overlap-layer;
+      outsideVolume(faceNumber % Dimensions) = overlap-1-layer;
   
       int insideVolumeSerialised  = serialisePatchIndex(insideVolume);
       int outsideVolumeSerialised = serialisePatchIndex(outsideVolume);
@@ -79,8 +79,8 @@ void exahype2::fv::applyBoundaryConditions(
       );
     }
     else {
-      insideVolume(faceNumber % Dimensions)  = layer;
-      outsideVolume(faceNumber % Dimensions) = layer+1;
+      insideVolume(faceNumber % Dimensions)  = layer+overlap-1;
+      outsideVolume(faceNumber % Dimensions) = layer+overlap;
 
       int insideVolumeSerialised  = serialisePatchIndex(insideVolume);
       int outsideVolumeSerialised = serialisePatchIndex(outsideVolume);
