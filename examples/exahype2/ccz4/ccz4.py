@@ -59,7 +59,7 @@ if __name__ == "__main__":
     parser.add_argument("-tn", "--tracer-name",       dest="tra_name",    type=str, default="de",  help="name of output tracer file (temporary)" )
     parser.add_argument("-exn", "--exe-name",        dest="exe_name",    type=str, default="",  help="name of output executable file" )
     parser.add_argument("-outdir", "--output-directory",        dest="path",    type=str, default="./",  help="specify the output directory, include the patch file and tracer file" )
-    parser.add_argument("-interp",   "--interpolation", dest="interpolation",     choices=["constant", "linear-slow", "linear-slow+enforce", "linear", "linear+enforce", "outflow", "order-2" ], default="linear-slow",  help="interpolation scheme for AMR" )
+    parser.add_argument("-interp",   "--interpolation", dest="interpolation",     choices=["constant","order-2","linear-constant-extrap","linear-linear-extrap","linear-lin-extrap-lin-normal-interp"], default="linear-constant-extrap",  help="interpolation scheme for AMR" )
     parser.add_argument("-restrict", "--restriction",   dest="restriction",       choices=["average", "inject", "average+enforce", "inject+enforce"], default="average",  help="restriction scheme for AMR" )
 
 
@@ -166,7 +166,7 @@ if __name__ == "__main__":
           refinement_criterion = exahype2.solvers.fv.PDETerms.User_Defined_Implementation
         )
 
-        self.set_postprocess_updated_patch_kernel( """
+        self.postprocess_updated_patch = """
   {
     #if Dimensions==2
     constexpr int itmax = {{NUMBER_OF_VOLUMES_PER_AXIS}} * {{NUMBER_OF_VOLUMES_PER_AXIS}};
@@ -185,7 +185,7 @@ if __name__ == "__main__":
       index += {{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}};
     }
   }
-""" )
+"""
 
    
       def create_action_sets(self):
@@ -195,20 +195,30 @@ if __name__ == "__main__":
 #include "../CCZ4Kernels.h"
             """
         self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement.switch_restriction_scheme( "averaging" )
-        self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement.switch_interpolation_scheme( "linear" )
+        #self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement.switch_interpolation_scheme( "linear" )
 
         if args.interpolation=="constant":
           self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement.switch_interpolation_scheme( "piecewise_constant" )
           print( "Interpolation rule: piecewise_constant" )
-        if args.interpolation=="linear-slow" or args.interpolation=="linear-slow+enforce":
-          self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement.switch_interpolation_scheme( "linear" )
-          print( "Interpolation rule: linear interpolation without optimisation" )
-        if args.interpolation=="linear" or args.interpolation=="linear+enforce":
-          self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement.switch_interpolation_scheme( "linear_precomputed_operators<" + str(self._patch_size) +">" )
-          print( "Interpolation rule: optimised linear interpolation with patch size " + str(self._patch_size) )
-        if args.interpolation=="outflow":
-          self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement.switch_interpolation_scheme( "outflow" )
-          print( "Interpolation rule: outflow (from fine grid into coarse grid)" )
+        #if args.interpolation=="linear-slow" or args.interpolation=="linear-slow+enforce":
+        #  self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement.switch_interpolation_scheme( "linear" )
+        #  print( "Interpolation rule: linear interpolation without optimisation" )
+        #if args.interpolation=="linear" or args.interpolation=="linear+enforce":
+        #  self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement.switch_interpolation_scheme( "linear_precomputed_operators<" + str(self._patch_size) +">" )
+        #  print( "Interpolation rule: optimised linear interpolation with patch size " + str(self._patch_size) )
+        #if args.interpolation=="outflow":
+        #  self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement.switch_interpolation_scheme( "outflow" )
+        #  print( "Interpolation rule: outflow (from fine grid into coarse grid)" )   
+        if args.interpolation=="linear-constant-extrap":
+          self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement.switch_interpolation_scheme( "linear_with_constant_extrapolation" )
+          print( "Interpolation rule: linear constant extrapolation" )
+        if args.interpolation=="linear-linear-extrap":
+          self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement.switch_interpolation_scheme( "linear_with_linear_extrapolation" )  
+          print( "Interpolation rule: linear extrapolation" )
+        if args.interpolation=="linear-lin-extrap-lin-normal-interp":
+          self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement.switch_interpolation_scheme( "linear_with_linear_extrapolation_and_linear_normal_interpolation" )
+          print( "Interpolation rule: linear extrapolation and linear normal interpolation" )
+
 
         if args.interpolation=="order-2":
           self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement.switch_interpolation_scheme( "linear" )
