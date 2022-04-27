@@ -119,8 +119,8 @@
  *
  * @f[  u_h = P u_H @f]
  *
- * for $N$ versions of @f$u_h@f$ and @f$u_H@f$. Peano's tarch component has a routine
- * for batched multiplication, where you pipe in a set of @f$u_H@f$ vectors and you
+ * for N versions of @f$ u_h @f$ and @f$ u_H @f$. Peano's tarch component has a routine
+ * for batched multiplication, where you pipe in a set of @f$ u_H @f$ vectors and you
  * get a set of @f$ u_h @f$ vectors out.
  *
  *
@@ -430,9 +430,20 @@ namespace toolbox {
       tarch::la::DynamicMatrix*  createLinearInterpolationMatrix(int numberOfDoFsPerAxisInPatch, bool extrapolateLinearly);
 
       /**
+       * Create piecewise constant interpolation matrix 
+       * 
+       * The matrix is very simple as it holds exclusively zeroes and ones. To
+       * construct it, we run over the image and and look for each image voxel
+       * which coarser face voxel is overlaps. In this context, we exploit the
+       * fact that all voxels are enumarted lexicographically:
        *
-       * @f[
-        \begin{array}{cccccccc}
+       * @image html Interpolation_createPiecewiseConstantInterpolationMatrix.png
+       *
+       * The resulting matrix for the example above (where the normal equals 0)
+       * is 24x8 matrix which equals
+       *
+       * \f$ 
+\begin{array}{cccccccc}
 1 & 0 & 0 & 0 & 0 & 0 & 0 & 0 \\
 0 & 1 & 0 & 0 & 0 & 0 & 0 & 0 \\
 1 & 0 & 0 & 0 & 0 & 0 & 0 & 0 \\
@@ -442,10 +453,9 @@ namespace toolbox {
 0 & 0 & 1 & 0 & 0 & 0 & 0 & 0 \\
 0 & 0 & 0 & 1 & 0 & 0 & 0 & 0 \\
 0 & 0 & 1 & 0 & 0 & 0 & 0 & 0 \\
-0 & 0 & 0 & 1 & 0 & 0 & 0 & 0 \\
-...
-        \end{array}
-         @f]
+0 & 0 & 0 & 1 & 0 & 0 & 0 & 0
+\end{array} 
+        \f$
        *
        * ## Construction algorithm
        *
@@ -456,9 +466,9 @@ namespace toolbox {
        * The one shipped is way more elegant (in my opinion) than the manual
        * implementation. It starts from the observation that a 1d interpolation
        * from a mesh onto a subdivided mesh with a subdivision factor by three
-       * is very simplistic matrix
+       * is very simplistic matrix.
        *
-       * @f[
+       * \f[
         \begin{array}{cccccccc}
 1 & 0 & 0 & 0 \\
 1 & 0 & 0 & 0 \\
@@ -473,7 +483,7 @@ namespace toolbox {
 0 & 0 & 0 & 1 \\
 0 & 0 & 0 & 1
         \end{array}
-       @f]
+       \f]
        *
        * Here, I use four-partitioning.
        */
