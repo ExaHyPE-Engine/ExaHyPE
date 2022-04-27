@@ -429,20 +429,20 @@ namespace toolbox {
        */
       tarch::la::DynamicMatrix*  createLinearInterpolationMatrix(int numberOfDoFsPerAxisInPatch, bool extrapolateLinearly);
 
-      /**
-       * Create piecewise constant interpolation matrix 
-       * 
-       * The matrix is very simple as it holds exclusively zeroes and ones. To
-       * construct it, we run over the image and and look for each image voxel
-       * which coarser face voxel is overlaps. In this context, we exploit the
-       * fact that all voxels are enumarted lexicographically:
-       *
-       * @image html Interpolation_createPiecewiseConstantInterpolationMatrix.png
-       *
-       * The resulting matrix for the example above (where the normal equals 0)
-       * is 24x8 matrix which equals
-       *
-       * \f$ 
+/**
+ * Create piecewise constant interpolation matrix
+ *
+ * The matrix is very simple as it holds exclusively zeroes and ones. To
+ * construct it, we run over the image and and look for each image voxel
+ * which coarser face voxel is overlaps. In this context, we exploit the
+ * fact that all voxels are enumarted lexicographically:
+ *
+ * @image html Interpolation_createPiecewiseConstantInterpolationMatrix.png
+ *
+ * The resulting matrix for the example above (where the normal equals 0)
+ * is 24x8 matrix which equals
+ *
+ * \f$
 \begin{array}{cccccccc}
 1 & 0 & 0 & 0 & 0 & 0 & 0 & 0 \\
 0 & 1 & 0 & 0 & 0 & 0 & 0 & 0 \\
@@ -455,21 +455,21 @@ namespace toolbox {
 0 & 0 & 1 & 0 & 0 & 0 & 0 & 0 \\
 0 & 0 & 0 & 1 & 0 & 0 & 0 & 0
 \end{array} 
-        \f$
-       *
-       * ## Construction algorithm
-       *
-       * I have two variants of the actual construction in here. One of them is
-       * commented out. It is the manual flavour which I wanted to keep to allow
-       * people to understand what's going on.
-       *
-       * The one shipped is way more elegant (in my opinion) than the manual
-       * implementation. It starts from the observation that a 1d interpolation
-       * from a mesh onto a subdivided mesh with a subdivision factor by three
-       * is very simplistic matrix.
-       *
-       * \f[
-        \begin{array}{cccccccc}
+  \f$
+ *
+ * ## Construction algorithm
+ *
+ * I have two variants of the actual construction in here. One of them is
+ * commented out. It is the manual flavour which I wanted to keep to allow
+ * people to understand what's going on.
+ *
+ * The one shipped is way more elegant (in my opinion) than the manual
+ * implementation. It starts from the observation that a 1d interpolation
+ * from a mesh onto a subdivided mesh with a subdivision factor by three
+ * is very simplistic matrix.
+ *
+ * \f[
+  \begin{array}{cccccccc}
 1 & 0 & 0 & 0 \\
 1 & 0 & 0 & 0 \\
 1 & 0 & 0 & 0 \\
@@ -482,11 +482,19 @@ namespace toolbox {
 0 & 0 & 0 & 1 \\
 0 & 0 & 0 & 1 \\
 0 & 0 & 0 & 1
-        \end{array}
-       \f]
-       *
-       * Here, I use four-partitioning.
-       */
+  \end{array}
+ \f]
+ *
+ * Here, I use four-partitioning.
+ *
+ * ## Formatting of documentation (doxygen)
+ *
+ * Doxygen nowadays supports markup syntax. Unfortunately, this documentation
+ * would be indented more than five spaces which makes some of the write-up
+ * preformatted in markup. So the doxygen parser completely messes up things.
+ *
+ * For this reason, the documentation here is not properly indented.
+ */
       tarch::la::DynamicMatrix*  createPiecewiseConstantInterpolationMatrix(int numberOfDoFsPerAxisInPatch, int normal, int overlap);
 
       /**
