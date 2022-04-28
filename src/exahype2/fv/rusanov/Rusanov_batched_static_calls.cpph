@@ -756,7 +756,7 @@ namespace exahype2{ namespace fv{ namespace rusanov{ namespace internal{
 template <
   typename Solver,
   int      numberOfVolumesPerAxisInPatch,
-  int      solversHaloSize,
+  int      haloSize,
   int      unknowns,
   int      auxiliaryVariables,
   typename TempDataEnumerator
@@ -772,13 +772,13 @@ void exahype2::fv::rusanov::timeStepWithRusanov_batched_call_stack_static_calls(
    * The halo size passed in by the user might differ from the one that we have to evaluate/
    * take into account from the solver's perspective.
    */
-  constexpr int solverssolversHaloSize        = 1;
+  constexpr int solversHaloSize        = 1;
 
-  exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator QInEnumerator       (                        1, numberOfVolumesPerAxisInPatch,solversHaloSize,unknowns,auxiliaryVariables);
+  exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator QInEnumerator       (                        1, numberOfVolumesPerAxisInPatch,haloSize,unknowns,auxiliaryVariables);
   exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator QOutEnumerator      (                        1, numberOfVolumesPerAxisInPatch,       0,unknowns,auxiliaryVariables);
-  TempDataEnumerator fluxEnumerator      (patchData.numberOfCells, numberOfVolumesPerAxisInPatch,solversHaloSize,unknowns,0);
+  TempDataEnumerator fluxEnumerator      (patchData.numberOfCells, numberOfVolumesPerAxisInPatch,  solversHaloSize,unknowns,0);
   TempDataEnumerator ncpEnumerator       (patchData.numberOfCells, numberOfVolumesPerAxisInPatch+1,solversHaloSize,unknowns,0);
-  TempDataEnumerator eigenvalueEnumerator(patchData.numberOfCells, numberOfVolumesPerAxisInPatch,solversHaloSize,1,0);
+  TempDataEnumerator eigenvalueEnumerator(patchData.numberOfCells, numberOfVolumesPerAxisInPatch,  solversHaloSize,1,0);
 
   double tempFluxX[ fluxEnumerator.size() ] __attribute__((aligned (Alignment)));
   double tempFluxY[ fluxEnumerator.size() ] __attribute__((aligned (Alignment)));
