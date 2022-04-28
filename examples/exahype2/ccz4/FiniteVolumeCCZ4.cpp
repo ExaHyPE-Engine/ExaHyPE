@@ -270,7 +270,7 @@ void examples::exahype2::ccz4::FiniteVolumeCCZ4::nonconservativeProduct(
   if (CCZ4ReSwi==2){ //single black hole
     if (tarch::la::equals(t,0.0)){  //as we use a quantity calculated in postpocessing, we need to provide criterion at the first timestep 
       constexpr int NumberOfRefinementLayers = 3;
-      double Radius[NumberOfRefinementLayers] = {5.0, 3.0, 2.0};
+      double Radius[NumberOfRefinementLayers] = {5.0, 3.0, 1.5};
       //double Radius[NumberOfRefinementLayers] = {5.0, 2.5, 1.25};
       // nice test case which fits on my laptop:
       //double Radius[NumberOfRefinementLayers] = {3.0, 1.0, 0.5};
