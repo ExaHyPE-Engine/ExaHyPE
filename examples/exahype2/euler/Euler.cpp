@@ -5,26 +5,6 @@
 #include "exahype2/NonCriticalAssertions.h"
 
 
-/*
-
-    double minValues[] =
-        {0.01,-std::numeric_limits<double>::max(),-1e-8,-1e-8,-std::numeric_limits<double>::max()};
-
-    double maxValues[] =
-        {1.0, std::numeric_limits<double>::max(),  1e-8, 1e-8, std::numeric_limits<double>::max()};
-
-    ::exahype2::fv::validatePatch(
-        reconstructedPatch,
-        5,
-        0,
-        4,
-        1, // halo
-        std::string(__FILE__) + "(" + std::to_string(__LINE__) + "): " + marker.toString(),
-        false, minValues, maxValues
-    ); // previous time step has to be valid
-
-*/
-
 
 tarch::logging::Log   examples::exahype2::euler::Euler::_log( "examples::exahype2::euler::Euler" );
 

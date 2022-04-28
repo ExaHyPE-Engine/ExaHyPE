@@ -1267,70 +1267,10 @@ considerations willl have higher priority and \Peano\ might decide to continue w
 \end{remark}
 
 
-
-\paragraph{Interpolation/restriction schemes}
-
-By default, all Finite Volume solvers employ a piece-wise constant interpolation and simple averaging as restriction in 
-\ExaHyPE.
-If you require a better inter-grid transfer scheme or if you want to introduce your own one, you have to do the following steps:
-
-\begin{itemize}
-  \item Create your own new subclass of the solver you want to use. See the CCZ4 example for a blueprint.
-  \item Overwrite the superclass' \texttt{create\_action\_sets()}. You should
-  still call the superclass routine
-  \begin{code}
-def create_action_sets(self):
-  FV.create_action_sets(self)
-  
-  \end{code}
-  but then you have to change the AMR handling afterwards by adding the
-  following line:
-  \item Make your solver (in Python) use another interpolation scheme. I present
-  a variant here where you want to use linear interpolation:
-  \begin{code}
-self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement.additional_includes += """ 
-  #include "../CCZ4Kernels.h"
-"""
-# self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement.switch_restriction_scheme( "averaging" )
-self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement.switch_interpolation_scheme( "linear" )
-  \end{code}
-\end{itemize}
-
 \noindent
-At the moment, we have only implemented \texttt{averaging} for the restriction. 
-For the interpolation, we have the following routines:
-
-\begin{center}
- \begin{tabular}{l|p{8cm}}
-  {\bf scheme} & description \\
-  \hline
-  \texttt{piecewise\_constant} & Interpolate piece-wise constant (default) \\
-  \texttt{linear} & Interpolate linear or bi-linear along faces \\  
-  \texttt{linear\_precomputed\_operators<X>} & This is an aggressively optimised version of the linear interpolation.
-   It has to know which patch size you are using, i.e.~if you alter the patch size you also have to alter the \texttt{X}.
-   The code pre-computes all face operators and thus often is faster. 
-   However, you have to examine whether this speedup can be observed for your particular application. \\  
- \end{tabular}
-\end{center}
-
-\noindent
-Some codes need to postprocess their interpolation data. At the moment, I only support volume-wise postprocessing.
-To enable it, you pass a function call to the DynamicAMR argument: 
-\begin{code}
-        self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement.additional_includes += """ 
-#include "../CCZ4Kernels.h"
-            """
-self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement.switch_point_wise_postprocessing_of_interpolation(
-"examples::exahype2::ccz4::enforceCCZ4constraints(targetVolume)" )
-\end{code}
-
-\noindent
-\texttt{targetVolume} is a double pointer to the volume that has been interpolated.
-There are a few more values available for any function call you wanna make, but
-the pointer to the quantities usually is the most important one.
-You can use the attribute \texttt{additional\_includes} to give the resulting
-source code access to other routines.
-
+Different solvers come along with different interpolation and restriction seems.
+The discussion around Finite Volume solvers for example can be found on page
+\pageref{section:exahype:finite-volumes:interpolation-schemes}.
 
 
 \subsection{GPU support}
@@ -1749,6 +1689,145 @@ accordingly, too.
 
 
 
+
+
+
+
+\subsection{Interpolation and restriction schemes}
+\label{section:exahype:finite-volumes:interpolation-schemes}
+
+If you employ adaptive mesh refinement, you have to project coarser resolutions
+onto finer resolutions (interpolation), and you have to couple back fine grid
+solutions to coarser regions of the mesh (restriction).
+By default, all \ExaHyPE\ Finite Volume solvers employ a piece-wise constant
+interpolation and simple averaging as restriction.
+If you require a better inter-grid transfer scheme or if you want to introduce your own one, you have to do the following steps:
+
+\begin{itemize}
+  \item Make your solver (in Python) use another interpolation scheme. I present
+  a variant here where you want to use linear interpolation:
+  \begin{code}
+my_solver._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement.
+  switch_interpolation_scheme( "linear" )
+  \end{code}
+  \item For a different restriction scheme use the routine
+  \texttt{switch\_interpolation\_scheme()}.
+  \item Call the solver's \texttt{create\_action\_sets()}. If you omit this
+  call, your switch of the scheme is not ``committed'', i.e.~taken into account
+  (though subsequent changes of the solver state might in turn call
+  \texttt{create\_action\_sets()} and thus implicitly make your switch known to
+  the class).
+  \item Depending on your Finite Volume scheme, you might have to change the
+  size of the halo layer. The Rusanov solvers for example all work with a halo
+  layer of 1. They don't need larger overlaps between neighbouring volumes, as
+  the Rusanov Riemann solver only needs the solution left and right of a face.
+  If you want to use a higher-order interpolation however, you need larger
+  overlaps. In this case, you have to extend the halo layer used:
+  \begin{code}
+my_solver.overlap=2
+  \end{code}
+\end{itemize}
+
+
+\paragraph{Realisation and available schemes}
+%
+%
+All the interpolation and restriction schemes that we offer can be found in the
+file \texttt{toolbox/blockstructured/Interpolation.h}.
+The documentation within this file\footnote{We recommend to run
+\texttt{doxygen} on the sources as discussed in Section
+\ref{section:installation:documentation} and then to use a webbrowser to study
+the documentation. The interpolation/restriction details are discussed on a 
+separate page which you find when you click on ``Related Pages'' within the
+generated webpage.} explains how the actual realisations work.
+\ExaHyPE's philosophy is that you implement the inter-grid transfer operators
+within this header, and the Python API then helps you to pick from the routines
+therein.
+
+At the moment, we have only implemented \texttt{averaging} for the restriction. 
+For the interpolation, we offer the following routines:
+
+\begin{center}
+ \begin{tabular}{l|p{8cm}}
+  {\bf scheme} & description \\
+  \hline
+  \texttt{piecewise\_constant} & Interpolate piece-wise constant (default) \\
+  \texttt{linear\_with\_constant\_extrapolation} & Interpolate linear (2d) or
+  bi-linear (3d) along faces and use constant extrapolation along diagonals and
+  patch boundaries.
+  \\
+  \texttt{linear\_with\_linear\_extrapolation} & Interpolate linear (2d) or
+  bi-linear (3d) along faces and use constant extrapolation along diagonals and
+  patch boundaries.
+  \\
+  \texttt{linear_with_constant_extrapolation_and_linear_normal_interpolation} &
+  Variation of \texttt{constant_with_constant_extrapolation} where we interplate
+  linearly between restricted (coarsened) voxel data and the adjacent real
+  coarse grid values. 
+  \\
+  \texttt{linear_with_linear_extrapolation_and_linear_normal_interpolation} &
+  Variation of \texttt{linear_with_constant_extrapolation} 
+  \\
+ \end{tabular}
+\end{center}
+
+
+\paragraph{Postprocessing}
+%
+%
+%
+Some codes need to postprocess their interpolation data. At the moment, I only support volume-wise postprocessing.
+To enable it, you pass a function call to the DynamicAMR argument: 
+\begin{code}
+my_solver._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement.
+  switch_point_wise_postprocessing_of_interpolation("""
+  targetVolume[0] = 0.1;
+  targetVolume[1] = 0.1;
+  targetVolume[2] = std::max(targetVolume[2],0.0);
+  """ )
+\end{code}
+
+\noindent
+Alternatively, just invoke a function directly:
+
+\begin{code}
+my_solver._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement.
+  switch_point_wise_postprocessing_of_interpolation(
+  "examples::exahype2::ccz4::enforceCCZ4constraints(targetVolume)" )
+\end{code}
+
+\noindent
+With this variant, you trigger the interpolation of your choice, and, after
+that, each individual volume is subject to a function
+\texttt{enforceCCZ4constraints} which might change the value.
+As this \texttt{enforceCCZ4constraints} in this example is user-defined,
+\ExaHyPE's core routines cannot know its definition.
+We manually have to add an include:
+
+\begin{code}
+my_solver._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement.
+ additional_includes += """ 
+   #include "../CCZ4Kernels.h"
+ """
+\end{code}
+
+%  \item Make your solver (in Python) use another interpolation scheme. I
+%  % present a variant here where you want to use linear interpolation:
+%  \begin{code}
+%self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement.additional_includes
+% += """ #include "../CCZ4Kernels.h"
+%"""
+%#
+% self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement.switch_restriction_scheme( "averaging" ) self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement.switch_interpolation_scheme( "linear" )
+%  \end{code}
+
+
+\noindent
+\texttt{targetVolume} is a double pointer to the volume that has been interpolated.
+There are a few more values available for any function call you wanna make, but
+the pointer to the quantities usually is the most important one.
+You can use the attribute \texttt{additional\_includes} to give the resulting
+source code access to other routines.
 
 
 

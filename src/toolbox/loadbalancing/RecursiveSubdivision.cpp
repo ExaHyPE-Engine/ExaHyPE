@@ -613,7 +613,7 @@ void toolbox::loadbalancing::RecursiveSubdivision::finishStep() {
   #else
   if ( step!=StrategyStep::Wait ) 
   #endif
-  logInfo( "finishStep()", toString( step ) << " in state " << toString() );
+  //logInfo( "finishStep()", toString( step ) << " in state " << toString() );
 
   switch ( step ) {
     case StrategyStep::Wait:

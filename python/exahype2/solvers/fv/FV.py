@@ -17,6 +17,7 @@ import exahype2
 import exahype2.solvers.fv.actionsets
     
 from .PDETerms import PDETerms
+from Cython.Compiler.MemoryView import overlapping_utility
 
 
 class FV(object):
@@ -196,6 +197,7 @@ class FV(object):
     self._plot_grid_properties = plot_grid_properties
 
     self._patch_size           = patch_size  
+    self._overlap              = overlap
     self._unknowns             = unknowns
     self._auxiliary_variables  = auxiliary_variables
 
@@ -253,6 +255,7 @@ class FV(object):
 Name:                   """ + self._name + """
 Type:                   """ + self.__class__.__name__ + """
 Patch size:             """ + str( self._patch_size ) + """  
+Overlap:                """ + str( self._overlap ) + """  
 Unknowns:               """ + str( self._unknowns ) + """
 Auxiliary variables:    """ + str( self._auxiliary_variables ) + """
 h_volume_min:           """ + str( self._min_volume_h ) + """
@@ -418,13 +421,12 @@ The finest mesh width of """ + str(self.get_finest_volume_size(domain_size)) + "
        
     """
     self._patch                = peano4.datamodel.Patch( (self._patch_size,self._patch_size,self._patch_size), self._unknowns+self._auxiliary_variables, self._unknown_identifier() )
-    self._patch_overlap_old    = peano4.datamodel.Patch( (2,self._patch_size,self._patch_size),                self._unknowns+self._auxiliary_variables, self._unknown_identifier() + "Old" )
-    self._patch_overlap_new    = peano4.datamodel.Patch( (2,self._patch_size,self._patch_size),                self._unknowns+self._auxiliary_variables, self._unknown_identifier() + "New" )
-    self._patch_overlap_update = peano4.datamodel.Patch( (2,self._patch_size,self._patch_size),                self._unknowns+self._auxiliary_variables, self._unknown_identifier() + "Update" )
+    self._patch_overlap_old    = peano4.datamodel.Patch( (2*self._overlap,self._patch_size,self._patch_size),  self._unknowns+self._auxiliary_variables, self._unknown_identifier() + "Old" )
+    self._patch_overlap_new    = peano4.datamodel.Patch( (2*self._overlap,self._patch_size,self._patch_size),  self._unknowns+self._auxiliary_variables, self._unknown_identifier() + "New" )
+    self._patch_overlap_update = peano4.datamodel.Patch( (2*self._overlap,self._patch_size,self._patch_size),  self._unknowns+self._auxiliary_variables, self._unknown_identifier() + "Update" )
     
     self._patch_overlap_old.generator.merge_method_definition = peano4.toolbox.blockstructured.get_face_overlap_merge_implementation(self._patch_overlap_old)
     self._patch_overlap_new.generator.merge_method_definition = peano4.toolbox.blockstructured.get_face_overlap_merge_implementation(self._patch_overlap_new)
-    #self._patch_overlap_update.generator.merge_method_definition = peano4.toolbox.blockstructured.get_face_overlap_merge_implementation(self._patch_overlap_update)
     
     self._patch_overlap_old.generator.includes     += """
 #include "peano4/utils/Loop.h"
@@ -501,7 +503,12 @@ The finest mesh width of """ + str(self.get_finest_volume_size(domain_size)) + "
     self._action_set_project_patch_onto_faces                 = exahype2.solvers.fv.actionsets.ProjectPatchOntoFaces(self, self._store_cell_data_default_guard())
     self._action_set_roll_over_update_of_faces                = exahype2.solvers.fv.actionsets.RollOverUpdatedFace(self, self._store_face_data_default_guard())
     self._action_set_copy_new_faces_onto_old_faces            = peano4.toolbox.blockstructured.BackupPatchOverlap(self._patch_overlap_new, self._patch_overlap_old, False, self._store_face_data_default_guard(), self._get_default_includes())
-    self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement = exahype2.solvers.fv.actionsets.DynamicAMR( solver=self )
+
+    if self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement==None: 
+      self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement = exahype2.solvers.fv.actionsets.DynamicAMR( solver=self )
+      self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement.switch_interpolation_scheme( "piecewise_constant" )
+      self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement.switch_restriction_scheme( "averaging" )
+    
     # This one is different: it is the hook-in point for other solvers, so we create it 
     # only once if it does not exist
     if self._action_set_postprocess_solution == None:
@@ -512,7 +519,6 @@ The finest mesh width of """ + str(self.get_finest_volume_size(domain_size)) + "
         
     self._action_set_update_cell                                                      = None
 
-    self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement.switch_interpolation_scheme( "linear_precomputed_operators<" + str(self._patch_size) +">" )
 
 
   def _store_cell_data_default_guard(self):
@@ -821,6 +827,7 @@ The finest mesh width of """ + str(self.get_finest_volume_size(domain_size)) + "
 
     """
     d["NUMBER_OF_VOLUMES_PER_AXIS"]     = self._patch.dim[0]
+    d["OVERLAP"]                        = self._overlap
     d["HALO_SIZE"]                      = int(self._patch_overlap_old.dim[0]/2)
     d["SOLVER_INSTANCE"]                = self.get_name_of_global_instance()
     d["SOLVER_NAME"]                    = self._name
@@ -828,9 +835,6 @@ The finest mesh width of """ + str(self.get_finest_volume_size(domain_size)) + "
     d["NUMBER_OF_UNKNOWNS"]             = self._unknowns
     d["NUMBER_OF_AUXILIARY_VARIABLES"]  = self._auxiliary_variables
     d["SOLVER_NUMBER"]                  = 22
-
-    if self._patch_overlap_old.dim[0]/2!=1:
-      print( "ERROR: Finite Volume solver currently supports only a halo size of 1")
 
     d[ "ASSERTION_WITH_1_ARGUMENTS" ] = "nonCriticalAssertion1"
     d[ "ASSERTION_WITH_2_ARGUMENTS" ] = "nonCriticalAssertion2"
@@ -970,4 +974,19 @@ The finest mesh width of """ + str(self.get_finest_volume_size(domain_size)) + "
     self._postprocess_updated_patch = kernel
     self.create_data_structures()
     self.create_action_sets()
+
+
+  @property
+  def overlap(self):
+    return self._overlap
+
+
+  @overlap.setter
+  def overlap(self,value):
+    if value<1:
+      raise Exception( "Halo (overlap) size has to be bigger than zero but was {}".format(value) )
+    self._overlap = value
+    self.create_data_structures()
+    self.create_action_sets()
+
 

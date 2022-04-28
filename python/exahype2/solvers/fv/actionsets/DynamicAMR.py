@@ -141,16 +141,16 @@ class DynamicAMR( peano4.toolbox.blockstructured.DynamicAMR ):
       {{DOFS_PER_AXIS}},
       {{OVERLAP}},
       {{UNKNOWNS}},
-      fineGridFace""" + solver._name + """QOld.value,
-      coarseGridFaces""" + solver._name + """QOld(marker.getSelectedFaceNumber()).value
+      coarseGridFaces""" + solver._name + """QOld(marker.getSelectedFaceNumber()).value,
+      fineGridFace""" + solver._name + """QOld.value
     );
     ::toolbox::blockstructured::interpolateHaloLayer_AoS_{{INTERPOLATION_SCHEME}}(
       marker,
       {{DOFS_PER_AXIS}},
       {{OVERLAP}},
       {{UNKNOWNS}},
-      fineGridFace""" + solver._name + """QNew.value,
-      coarseGridFaces""" + solver._name + """QNew(marker.getSelectedFaceNumber()).value
+      coarseGridFaces""" + solver._name + """QNew(marker.getSelectedFaceNumber()).value,
+      fineGridFace""" + solver._name + """QNew.value
     );
     // It is important that we clear the halo layer. If we have two layers of 
     // AMR, the finest one will restrict into QUpdate (so it has to be properly
@@ -174,18 +174,18 @@ class DynamicAMR( peano4.toolbox.blockstructured.DynamicAMR ):
       {{DOFS_PER_AXIS}},
       {{OVERLAP}},
       {{UNKNOWNS}},
-      fineGridFace""" + solver._name + """QOld.value,
+      coarseGridCell""" + solver._name + """Q.value,
       coarseGridFaces""" + solver._name + """QOld(marker.getSelectedFaceNumber()).value,
-      coarseGridCell""" + solver._name + """Q.value
+      fineGridFace""" + solver._name + """QOld.value
     );
     ::toolbox::blockstructured::interpolateHaloLayer_AoS_{{INTERPOLATION_SCHEME}}(
       marker,
       {{DOFS_PER_AXIS}},
       {{OVERLAP}},
       {{UNKNOWNS}},
-      fineGridFace""" + solver._name + """QNew.value,
+      coarseGridCell""" + solver._name + """Q.value,
       coarseGridFaces""" + solver._name + """QNew(marker.getSelectedFaceNumber()).value,
-      coarseGridCell""" + solver._name + """Q.value
+      fineGridFace""" + solver._name + """QNew.value
     );
     // It is important that we clear the halo layer. If we have two layers of 
     // AMR, the finest one will restrict into QUpdate (so it has to be properly

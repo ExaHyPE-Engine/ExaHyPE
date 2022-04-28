@@ -12,6 +12,7 @@ ToolboxBlockstructured_SOURCES = \
   Derivative.cpp \
   Enumeration.cpp \
   Interpolation.cpp \
+  Restriction.cpp \
   UnitTests.cpp \
   tests/InterpolationTest.cpp 
   

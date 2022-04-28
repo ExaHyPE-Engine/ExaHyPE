@@ -46,6 +46,7 @@ class HandleBoundary(AbstractFVActionSet):
         {{FACE_METADATA_ACCESSOR}}.getNewTimeStamp(marker.getSelectedFaceNumber()<Dimensions ? 1 : 0),
         repositories::{{SOLVER_INSTANCE}}.getMinTimeStepSize(),
         {{NUMBER_OF_VOLUMES_PER_AXIS}},
+        {{OVERLAP}},
         {{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}},
         marker.getSelectedFaceNumber(),
         fineGridFace{{UNKNOWN_IDENTIFIER}}New.value
@@ -67,6 +68,7 @@ class HandleBoundary(AbstractFVActionSet):
         {{FACE_METADATA_ACCESSOR}}.getOldTimeStamp(marker.getSelectedFaceNumber()<Dimensions ? 1 : 0),
         repositories::{{SOLVER_INSTANCE}}.getMinTimeStepSize(),
         {{NUMBER_OF_VOLUMES_PER_AXIS}},
+        {{OVERLAP}},
         {{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}},
         marker.getSelectedFaceNumber(),
         fineGridFace{{UNKNOWN_IDENTIFIER}}Old.value

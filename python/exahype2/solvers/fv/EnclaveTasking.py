@@ -137,6 +137,8 @@ class MergeEnclaveTaskOutcome(AbstractFVActionSet):
     }
     
     if ( fineGridCell{{SOLVER_NAME}}CellLabel.getHasUpdated() ) {
+      double*  targetPatch = fineGridCell{{UNKNOWN_IDENTIFIER}}.value;
+      
       {{POSTPROCESS_UPDATED_PATCH}}
 
       repositories::{{SOLVER_INSTANCE}}.update(
