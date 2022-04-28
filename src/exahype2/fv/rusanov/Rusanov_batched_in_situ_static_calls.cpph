@@ -115,7 +115,7 @@ void exahype2::fv::rusanov::timeStepWithRusanov_batched_in_situ_static_calls(
 
   if (Dimensions==2 and evaluateFlux) {
     for (int shift=0; shift<2; shift++)
-    for (int x = -haloSize+shift; x < numberOfVolumesPerAxisInPatch+haloSize-1; x+=2)
+    for (int x = -solversHaloSize+shift; x < numberOfVolumesPerAxisInPatch+solversHaloSize-1; x+=2)
     #if defined(SharedOMP)
     #pragma omp simd collapse(2)
     #endif
@@ -170,7 +170,7 @@ void exahype2::fv::rusanov::timeStepWithRusanov_batched_in_situ_static_calls(
     }  // and of loop over faces with normal along x-axis subject to shift loop
 
     for (int shift=0; shift<2; shift++)
-    for (int y = -haloSize+shift; y < numberOfVolumesPerAxisInPatch+haloSize-1; y+=2)
+    for (int y = -solversHaloSize+shift; y < numberOfVolumesPerAxisInPatch+solversHaloSize-1; y+=2)
     #if defined(SharedOMP)
     #pragma omp simd collapse(2)
     #endif
@@ -225,7 +225,7 @@ void exahype2::fv::rusanov::timeStepWithRusanov_batched_in_situ_static_calls(
   }
   if (Dimensions==3 and evaluateFlux) {
     for (int shift=0; shift<2; shift++)
-    for (int x = -haloSize+shift; x < numberOfVolumesPerAxisInPatch+haloSize-1; x+=2)
+    for (int x = -solversHaloSize+shift; x < numberOfVolumesPerAxisInPatch+solversHaloSize-1; x+=2)
     #if defined(SharedOMP)
     #pragma omp simd collapse(3)
     #endif
@@ -281,7 +281,7 @@ void exahype2::fv::rusanov::timeStepWithRusanov_batched_in_situ_static_calls(
     }  // and of loop over faces with normal along x-axis subject to shift loop
 
     for (int shift=0; shift<2; shift++)
-    for (int y = -haloSize+shift; y < numberOfVolumesPerAxisInPatch+haloSize-1; y+=2)
+    for (int y = -solversHaloSize+shift; y < numberOfVolumesPerAxisInPatch+solversHaloSize-1; y+=2)
     #if defined(SharedOMP)
     #pragma omp simd collapse(3)
     #endif
@@ -336,7 +336,7 @@ void exahype2::fv::rusanov::timeStepWithRusanov_batched_in_situ_static_calls(
     }  // and of loop over faces with normal along y-axis subject to shift loop
 
     for (int shift=0; shift<2; shift++)
-    for (int z = -haloSize+shift; z < numberOfVolumesPerAxisInPatch+haloSize-1; z+=2)
+    for (int z = -solversHaloSize+shift; z < numberOfVolumesPerAxisInPatch+solversHaloSize-1; z+=2)
     #if defined(SharedOMP)
     #pragma omp simd collapse(3)
     #endif
@@ -393,7 +393,7 @@ void exahype2::fv::rusanov::timeStepWithRusanov_batched_in_situ_static_calls(
 
   if (Dimensions==2 and evaluateNonconservativeProduct) {
     for (int shift=0; shift<2; shift++)
-    for (int x = -haloSize+shift; x < numberOfVolumesPerAxisInPatch+haloSize-1; x+=2)
+    for (int x = -solversHaloSize+shift; x < numberOfVolumesPerAxisInPatch+solversHaloSize-1; x+=2)
     #if defined(SharedOMP)
     #pragma omp simd collapse(2)
     #endif
@@ -433,7 +433,7 @@ void exahype2::fv::rusanov::timeStepWithRusanov_batched_in_situ_static_calls(
     }  // and of loop over faces with normal along x-axis subject to shift loop
 
     for (int shift=0; shift<2; shift++)
-    for (int y = -haloSize+shift; y < numberOfVolumesPerAxisInPatch+haloSize-1; y+=2)
+    for (int y = -solversHaloSize+shift; y < numberOfVolumesPerAxisInPatch+solversHaloSize-1; y+=2)
     #if defined(SharedOMP)
     #pragma omp simd collapse(2)
     #endif
@@ -474,7 +474,7 @@ void exahype2::fv::rusanov::timeStepWithRusanov_batched_in_situ_static_calls(
   }
   if (Dimensions==3 and evaluateNonconservativeProduct) {
     for (int shift=0; shift<2; shift++)
-    for (int x = -haloSize+shift; x < numberOfVolumesPerAxisInPatch+haloSize-1; x+=2)
+    for (int x = -solversHaloSize+shift; x < numberOfVolumesPerAxisInPatch+solversHaloSize-1; x+=2)
     #if defined(SharedOMP)
     #pragma omp simd collapse(3)
     #endif
@@ -515,7 +515,7 @@ void exahype2::fv::rusanov::timeStepWithRusanov_batched_in_situ_static_calls(
     }  // and of loop over faces with normal along x-axis subject to shift loop
 
     for (int shift=0; shift<2; shift++)
-    for (int y = -haloSize+shift; y < numberOfVolumesPerAxisInPatch+haloSize-1; y+=2)
+    for (int y = -solversHaloSize+shift; y < numberOfVolumesPerAxisInPatch+solversHaloSize-1; y+=2)
     #if defined(SharedOMP)
     #pragma omp simd collapse(3)
     #endif
@@ -556,7 +556,7 @@ void exahype2::fv::rusanov::timeStepWithRusanov_batched_in_situ_static_calls(
     }  // and of loop over faces with normal along y-axis subject to shift loop
 
     for (int shift=0; shift<2; shift++)
-    for (int z = -haloSize+shift; z < numberOfVolumesPerAxisInPatch+haloSize-1; z+=2)
+    for (int z = -solversHaloSize+shift; z < numberOfVolumesPerAxisInPatch+solversHaloSize-1; z+=2)
     #if defined(SharedOMP)
     #pragma omp simd collapse(3)
     #endif
@@ -599,7 +599,7 @@ void exahype2::fv::rusanov::timeStepWithRusanov_batched_in_situ_static_calls(
 
   if (Dimensions==2) {
     for (int shift=0; shift<2; shift++)
-    for (int x = -haloSize+shift; x < numberOfVolumesPerAxisInPatch+haloSize-1; x+=2)
+    for (int x = -solversHaloSize+shift; x < numberOfVolumesPerAxisInPatch+solversHaloSize-1; x+=2)
     #if defined(SharedOMP)
     #pragma omp simd collapse(2)
     #endif
@@ -654,7 +654,7 @@ void exahype2::fv::rusanov::timeStepWithRusanov_batched_in_situ_static_calls(
     }  // and of loop over faces with normal along x-axis subject to shift loop
 
     for (int shift=0; shift<2; shift++)
-    for (int y = -haloSize+shift; y < numberOfVolumesPerAxisInPatch+haloSize-1; y+=2)
+    for (int y = -solversHaloSize+shift; y < numberOfVolumesPerAxisInPatch+solversHaloSize-1; y+=2)
     #if defined(SharedOMP)
     #pragma omp simd collapse(2)
     #endif
@@ -711,7 +711,7 @@ void exahype2::fv::rusanov::timeStepWithRusanov_batched_in_situ_static_calls(
   }
   if (Dimensions==3) {
     for (int shift=0; shift<2; shift++)
-    for (int x = -haloSize+shift; x < numberOfVolumesPerAxisInPatch+haloSize-1; x+=2)
+    for (int x = -solversHaloSize+shift; x < numberOfVolumesPerAxisInPatch+solversHaloSize-1; x+=2)
     #if defined(SharedOMP)
     #pragma omp simd collapse(3)
     #endif
@@ -767,7 +767,7 @@ void exahype2::fv::rusanov::timeStepWithRusanov_batched_in_situ_static_calls(
     }  // and of loop over faces with normal along x-axis subject to shift loop
 
     for (int shift=0; shift<2; shift++)
-    for (int y = -haloSize+shift; y < numberOfVolumesPerAxisInPatch+haloSize-1; y+=2)
+    for (int y = -solversHaloSize+shift; y < numberOfVolumesPerAxisInPatch+solversHaloSize-1; y+=2)
     #if defined(SharedOMP)
     #pragma omp simd collapse(3)
     #endif
@@ -823,7 +823,7 @@ void exahype2::fv::rusanov::timeStepWithRusanov_batched_in_situ_static_calls(
     }  // and of loop over faces with normal along y-axis subject to shift loop
 
     for (int shift=0; shift<2; shift++)
-    for (int z = -haloSize+shift; z < numberOfVolumesPerAxisInPatch+haloSize-1; z+=2)
+    for (int z = -solversHaloSize+shift; z < numberOfVolumesPerAxisInPatch+solversHaloSize-1; z+=2)
     #if defined(SharedOMP)
     #pragma omp simd collapse(3)
     #endif
