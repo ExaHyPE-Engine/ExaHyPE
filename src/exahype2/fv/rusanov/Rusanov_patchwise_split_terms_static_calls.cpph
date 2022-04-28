@@ -28,9 +28,9 @@ void exahype2::fv::rusanov::timeStepWithRusanov_patchwise_split_terms_call_stack
 
   exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator QInEnumerator       (                        1, numberOfVolumesPerAxisInPatch,haloSize,unknowns,auxiliaryVariables);
   exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator QOutEnumerator      (                        1, numberOfVolumesPerAxisInPatch,       0,unknowns,auxiliaryVariables);
-  TempDataEnumerator fluxEnumerator      (patchData.numberOfCells, numberOfVolumesPerAxisInPatch,haloSize,unknowns,0);
-  TempDataEnumerator ncpEnumerator       (patchData.numberOfCells, numberOfVolumesPerAxisInPatch+1,haloSize,unknowns,0);
-  TempDataEnumerator eigenvalueEnumerator(patchData.numberOfCells, numberOfVolumesPerAxisInPatch,haloSize,1,0);
+  TempDataEnumerator fluxEnumerator      (patchData.numberOfCells, numberOfVolumesPerAxisInPatch,    solversHaloSize,unknowns,0);
+  TempDataEnumerator ncpEnumerator       (patchData.numberOfCells, numberOfVolumesPerAxisInPatch+1,  solversHaloSize,unknowns,0);
+  TempDataEnumerator eigenvalueEnumerator(patchData.numberOfCells, numberOfVolumesPerAxisInPatch,    solversHaloSize,1,0);
 
   double tempFluxX[ fluxEnumerator.size() ] __attribute__((aligned (Alignment)));
   double tempFluxY[ fluxEnumerator.size() ] __attribute__((aligned (Alignment)));
@@ -145,7 +145,7 @@ void exahype2::fv::rusanov::timeStepWithRusanov_patchwise_split_terms_call_stack
       #if defined(SharedOMP)
       #pragma omp simd
       #endif
-      for (int x = -haloSize; x < numberOfVolumesPerAxisInPatch+haloSize; x++) {
+      for (int x = -solversHaloSize; x < numberOfVolumesPerAxisInPatch+solversHaloSize; x++) {
         otterLoopIterationBegin();
         internal::computeMaxEigenvalue_LoopBody<Solver>(
             patchData.QIn[patchIndex],
@@ -161,7 +161,7 @@ void exahype2::fv::rusanov::timeStepWithRusanov_patchwise_split_terms_call_stack
         );
       }
 
-      for (int y = -haloSize; y < numberOfVolumesPerAxisInPatch+haloSize; y++)
+      for (int y = -solversHaloSize; y < numberOfVolumesPerAxisInPatch+solversHaloSize; y++)
       #if defined(SharedOMP)
       #pragma omp simd
       #endif
@@ -216,7 +216,7 @@ void exahype2::fv::rusanov::timeStepWithRusanov_patchwise_split_terms_call_stack
       #if defined(SharedOMP)
       #pragma omp simd
       #endif
-      for (int x = -haloSize; x < numberOfVolumesPerAxisInPatch+haloSize; x++) {
+      for (int x = -solversHaloSize; x < numberOfVolumesPerAxisInPatch+solversHaloSize; x++) {
         otterLoopIterationBegin();
         internal::computeMaxEigenvalue_LoopBody<Solver>(
               patchData.QIn[patchIndex],
@@ -236,7 +236,7 @@ void exahype2::fv::rusanov::timeStepWithRusanov_patchwise_split_terms_call_stack
 
       otterLoopBegin();
       for (int z = 0; z < numberOfVolumesPerAxisInPatch; z++)
-      for (int y = -haloSize; y < numberOfVolumesPerAxisInPatch+haloSize; y++)
+      for (int y = -solversHaloSize; y < numberOfVolumesPerAxisInPatch+solversHaloSize; y++)
       #if defined(SharedOMP)
       #pragma omp simd
       #endif
@@ -259,7 +259,7 @@ void exahype2::fv::rusanov::timeStepWithRusanov_patchwise_split_terms_call_stack
       otterLoopEnd();
 
       otterLoopBegin();
-      for (int z = -haloSize; z < numberOfVolumesPerAxisInPatch+haloSize; z++)
+      for (int z = -solversHaloSize; z < numberOfVolumesPerAxisInPatch+solversHaloSize; z++)
       for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
       #if defined(SharedOMP)
       #pragma omp simd
@@ -318,7 +318,7 @@ void exahype2::fv::rusanov::timeStepWithRusanov_patchwise_split_terms_call_stack
       #if defined(SharedOMP)
       #pragma omp simd
       #endif
-      for (int x = -haloSize; x < numberOfVolumesPerAxisInPatch+haloSize; x++) {
+      for (int x = -solversHaloSize; x < numberOfVolumesPerAxisInPatch+solversHaloSize; x++) {
         otterLoopIterationBegin();
         internal::computeFlux_LoopBody<Solver>(
           patchData.QIn[patchIndex],
@@ -341,7 +341,7 @@ void exahype2::fv::rusanov::timeStepWithRusanov_patchwise_split_terms_call_stack
       otterLoopBegin();
       #pragma clang loop unroll(enable)
       for (int pick = 0; pick < unknowns;                      pick++)
-      for (int y = -haloSize; y < numberOfVolumesPerAxisInPatch+haloSize;  y++)
+      for (int y = -solversHaloSize; y < numberOfVolumesPerAxisInPatch+solversHaloSize;  y++)
       #if defined(SharedOMP)
       #pragma omp simd
       #endif
@@ -395,7 +395,7 @@ void exahype2::fv::rusanov::timeStepWithRusanov_patchwise_split_terms_call_stack
       #if defined(SharedOMP)
       #pragma omp simd
       #endif
-      for (int x = -haloSize; x < numberOfVolumesPerAxisInPatch+haloSize; x++) {
+      for (int x = -solversHaloSize; x < numberOfVolumesPerAxisInPatch+solversHaloSize; x++) {
         otterLoopIterationBegin();
         internal::computeFlux_LoopBody<Solver>(
           patchData.QIn[patchIndex],
@@ -419,7 +419,7 @@ void exahype2::fv::rusanov::timeStepWithRusanov_patchwise_split_terms_call_stack
       #pragma clang loop unroll(enable)
       for (int pick = 0; pick < unknowns;                      pick++)
       for (int z =         0; z < numberOfVolumesPerAxisInPatch;           z++)
-      for (int y = -haloSize; y < numberOfVolumesPerAxisInPatch+haloSize;  y++)
+      for (int y = -solversHaloSize; y < numberOfVolumesPerAxisInPatch+solversHaloSize;  y++)
       #if defined(SharedOMP)
       #pragma omp simd
       #endif
@@ -446,7 +446,7 @@ void exahype2::fv::rusanov::timeStepWithRusanov_patchwise_split_terms_call_stack
       otterLoopBegin();
       #pragma clang loop unroll(enable)
       for (int pick = 0; pick < unknowns;                      pick++)
-      for (int z = -haloSize; z < numberOfVolumesPerAxisInPatch+haloSize;  z++)
+      for (int z = -solversHaloSize; z < numberOfVolumesPerAxisInPatch+solversHaloSize;  z++)
       for (int y =         0; y < numberOfVolumesPerAxisInPatch;           y++)
       #if defined(SharedOMP)
       #pragma omp simd
@@ -503,7 +503,7 @@ void exahype2::fv::rusanov::timeStepWithRusanov_patchwise_split_terms_call_stack
       #if defined(SharedOMP)
       #pragma omp simd
       #endif
-      for (int x = -haloSize; x < numberOfVolumesPerAxisInPatch+haloSize-1; x++) {
+      for (int x = -solversHaloSize; x < numberOfVolumesPerAxisInPatch+solversHaloSize-1; x++) {
         otterLoopIterationBegin();
         internal::computeNonconservativeFlux_LoopBody<Solver>(
           patchData.QIn[patchIndex],
@@ -526,7 +526,7 @@ void exahype2::fv::rusanov::timeStepWithRusanov_patchwise_split_terms_call_stack
       otterLoopBegin();
       #pragma clang loop unroll(enable)
       for (int pick = 0; pick < unknowns;                      pick++)
-      for (int y = -haloSize; y < numberOfVolumesPerAxisInPatch+haloSize-1; y++)
+      for (int y = -solversHaloSize; y < numberOfVolumesPerAxisInPatch+solversHaloSize-1; y++)
       #if defined(SharedOMP)
       #pragma omp simd
       #endif
@@ -580,7 +580,7 @@ void exahype2::fv::rusanov::timeStepWithRusanov_patchwise_split_terms_call_stack
         #if defined(SharedOMP)
         #pragma omp simd
         #endif
-        for (int x = -haloSize; x < numberOfVolumesPerAxisInPatch+haloSize-1; x++) {
+        for (int x = -solversHaloSize; x < numberOfVolumesPerAxisInPatch+solversHaloSize-1; x++) {
           otterLoopIterationBegin();
           internal::computeNonconservativeFlux_LoopBody<Solver>(
             patchData.QIn[patchIndex],
@@ -604,7 +604,7 @@ void exahype2::fv::rusanov::timeStepWithRusanov_patchwise_split_terms_call_stack
         #pragma clang loop unroll(enable)
         for (int pick = 0; pick < unknowns;                      pick++)
         for (int z =         0; z < numberOfVolumesPerAxisInPatch;            z++)
-        for (int y = -haloSize; y < numberOfVolumesPerAxisInPatch+haloSize-1; y++)
+        for (int y = -solversHaloSize; y < numberOfVolumesPerAxisInPatch+solversHaloSize-1; y++)
         #if defined(SharedOMP)
         #pragma omp simd
         #endif
@@ -631,7 +631,7 @@ void exahype2::fv::rusanov::timeStepWithRusanov_patchwise_split_terms_call_stack
         otterLoopBegin();
         #pragma clang loop unroll(enable)
         for (int pick = 0; pick < unknowns;                      pick++)
-        for (int z = -haloSize; z < numberOfVolumesPerAxisInPatch+haloSize-1; z++)
+        for (int z = -solversHaloSize; z < numberOfVolumesPerAxisInPatch+solversHaloSize-1; z++)
         for (int y =         0; y < numberOfVolumesPerAxisInPatch;            y++)
         #if defined(SharedOMP)
         #pragma omp simd
