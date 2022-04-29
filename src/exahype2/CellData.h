@@ -6,6 +6,7 @@
 
 #include "tarch/la/Vector.h"
 #include "peano4/utils/Globals.h"
+#include "../config.h"
 
 
 #include <functional>
@@ -62,7 +63,9 @@ namespace exahype2 {
         double    dt,
         double*   QOut
       );
-      CellData( int numberOfPatches_ );
+
+      CellData( int numberOfCells_ );
+
       ~CellData();
 
       std::string toString() const;
