@@ -2,6 +2,34 @@
 #include "tarch/compiler/CompilerSpecificSettings.h"
 
 
+namespace {
+  #if defined(GPUOffloadingOMP)
+  /**
+   * On the GPU, we don't need any of exahype2::CellData's fancy routines or
+   * dynamic data management. We simply have to be able to create a struct
+   * on the accelerator, which we then befill with the required pointers
+   * which we copy over from the host.
+   *
+   * Therefore, this class is a mere copy of exahype2::CellData without any
+   * of its routines.
+   */
+  #pragma omp declare target
+  struct OpenMPGPUCellData {
+    double**   QIn;
+    tarch::la::Vector<Dimensions,double>*   patchCentre;
+    tarch::la::Vector<Dimensions,double>*   patchSize;
+    double*    t;
+    double*    dt;
+    int*       id;
+    const int  numberOfCells;
+    double**   QOut;
+    double*    maxEigenvalue;
+  };
+  #pragma omp end declare target
+  #endif
+}
+
+
 template <
   typename Solver,
   int      numberOfVolumesPerAxisInPatch,
@@ -12,27 +40,19 @@ template <
 >
 void exahype2::fv::rusanov::omp::timeStepWithRusanov_patchwise_heap_static_calls(
   int                     targetDevice,
-  ::exahype2::CellData&   patchData,
+  ::exahype2::CellData&   hostPatchData,
   bool                    evaluateFlux,
   bool                    evaluateNonconservativeProduct,
   bool                    evaluateSource,
   bool                    evaluateMaximumEigenvalueAfterTimeStep
 ) {
-
+  #if defined(GPUOffloadingOMP)
   /**
    * The halo size passed in by the user might differ from the one that we have to evaluate/
    * take into account from the solver's perspective.
    */
   constexpr int solversHaloSize        = 1;
 
-  exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator QInEnumerator       (                        1, numberOfVolumesPerAxisInPatch,haloSize,unknowns,auxiliaryVariables);
-  exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator QOutEnumerator      (                        1, numberOfVolumesPerAxisInPatch,       0,unknowns,auxiliaryVariables);
-  TempDataEnumerator fluxEnumerator      (patchData.numberOfCells, numberOfVolumesPerAxisInPatch,haloSize,unknowns,0);
-  TempDataEnumerator ncpEnumerator       (patchData.numberOfCells, numberOfVolumesPerAxisInPatch+1,haloSize,unknowns,0);
-  TempDataEnumerator eigenvalueEnumerator(patchData.numberOfCells, numberOfVolumesPerAxisInPatch,haloSize,1,0);
-
-
-  #if defined(GPUOffloadingOMP)
   double* tempFluxX                   = nullptr;
   double* tempFluxY                   = nullptr;
   double* tempFluxZ                   = nullptr;
@@ -43,58 +63,64 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanov_patchwise_heap_static_calls
   double* tempEigenvalueY             = nullptr;
   double* tempEigenvalueZ             = nullptr;
 
-  #pragma omp target enter data map(alloc:tempFluxX[0:fluxEnumerator.size()] ) device(targetDevice)
-  #pragma omp target enter data map(alloc:tempFluxY[0:fluxEnumerator.size()] ) device(targetDevice)
-  #pragma omp target enter data map(alloc:tempFluxZ[0:fluxEnumerator.size()] ) device(targetDevice)
-  #pragma omp target enter data map(alloc:tempNonconservativeProductX[0:ncpEnumerator.size()] ) device(targetDevice)
-  #pragma omp target enter data map(alloc:tempNonconservativeProductY[0:ncpEnumerator.size()] ) device(targetDevice)
-  #pragma omp target enter data map(alloc:tempNonconservativeProductZ[0:ncpEnumerator.size()] ) device(targetDevice)
-  #pragma omp target enter data map(alloc:tempEigenvalueX[0:eigenvalueEnumerator.size()] ) device(targetDevice)
-  #pragma omp target enter data map(alloc:tempEigenvalueY[0:eigenvalueEnumerator.size()] ) device(targetDevice)
-  #pragma omp target enter data map(alloc:tempEigenvalueZ[0:eigenvalueEnumerator.size()] ) device(targetDevice)
+  exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator QInHostEnumerator       (                        1, numberOfVolumesPerAxisInPatch,haloSize,unknowns,auxiliaryVariables);
+  exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator QOutHostEnumerator      (                        1, numberOfVolumesPerAxisInPatch,       0,unknowns,auxiliaryVariables);
+  TempDataEnumerator fluxHostEnumerator      (hostPatchData.numberOfCells, numberOfVolumesPerAxisInPatch,haloSize,unknowns,0);
+  TempDataEnumerator ncpHostEnumerator       (hostPatchData.numberOfCells, numberOfVolumesPerAxisInPatch+1,haloSize,unknowns,0);
+  TempDataEnumerator eigenvalueHostEnumerator(hostPatchData.numberOfCells, numberOfVolumesPerAxisInPatch,haloSize,1,0);
 
+  #pragma omp target enter data map(alloc:tempFluxX[0:fluxHostEnumerator.size()] ) device(targetDevice)
+  #pragma omp target enter data map(alloc:tempFluxY[0:fluxHostEnumerator.size()] ) device(targetDevice)
+  #pragma omp target enter data map(alloc:tempFluxZ[0:fluxHostEnumerator.size()] ) device(targetDevice)
+  #pragma omp target enter data map(alloc:tempNonconservativeProductX[0:ncpHostEnumerator.size()] ) device(targetDevice)
+  #pragma omp target enter data map(alloc:tempNonconservativeProductY[0:ncpHostEnumerator.size()] ) device(targetDevice)
+  #pragma omp target enter data map(alloc:tempNonconservativeProductZ[0:ncpHostEnumerator.size()] ) device(targetDevice)
+  #pragma omp target enter data map(alloc:tempEigenvalueX[0:eigenvalueHostEnumerator.size()] ) device(targetDevice)
+  #pragma omp target enter data map(alloc:tempEigenvalueY[0:eigenvalueHostEnumerator.size()] ) device(targetDevice)
+  #pragma omp target enter data map(alloc:tempEigenvalueZ[0:eigenvalueHostEnumerator.size()] ) device(targetDevice)
+
+/*
   double* serialisedPatchCentres = tarch::allocateMemory( patchData.numberOfCells*Dimensions, tarch::MemoryLocation::ManagedAcceleratorMemory );
   double* serialisedPatchSizes   = tarch::allocateMemory( patchData.numberOfCells*Dimensions, tarch::MemoryLocation::ManagedAcceleratorMemory );
+*/
 
   for (int patchIndex=0; patchIndex<patchData.numberOfCells; patchIndex++) {
-    const double* currentQIn  = patchData.QIn[patchIndex];
-    double*       currentQOut = patchData.QOut[patchIndex];
+    const double* currentQIn  = hostPatchData.QIn[patchIndex];
+    double*       currentQOut = hostPatchData.QOut[patchIndex];
 
+/*
     for (int d=0; d<Dimensions; d++) {
       serialisedPatchCentres[patchIndex*Dimensions+d] = patchData.patchCentre[patchIndex](d);
       serialisedPatchSizes[patchIndex*Dimensions+d]   = patchData.patchSize[patchIndex](d);
     }
+*/
 
-    #pragma omp target enter data map(to:currentQIn[0:QInEnumerator.size()] ) device(targetDevice)
-    #pragma omp target enter data map(alloc:currentQOut[0:QOutEnumerator.size()] ) device(targetDevice)
+    #pragma omp target enter data map(to:currentQIn[0:QInHostEnumerator.size()] ) device(targetDevice)
+    #pragma omp target enter data map(alloc:currentQOut[0:QOutHostEnumerator.size()] ) device(targetDevice)
   }
 
+/*
   #pragma omp target enter data map(to:serialisedPatchCentres[0:patchData.numberOfCells*Dimensions] ) device(targetDevice)
   #pragma omp target enter data map(to:serialisedPatchSizes[0:patchData.numberOfCells*Dimensions] ) device(targetDevice)
-  #else
-  double* tempFluxX                  = evaluateFlux                     ? tarch::allocateMemory( fluxEnumerator.size(),      tarch::MemoryLocation::Heap ) : nullptr;
-  double* tempFluxY                  = evaluateFlux                     ? tarch::allocateMemory( fluxEnumerator.size(),      tarch::MemoryLocation::Heap ) : nullptr;
-  double* tempFluxZ                  = (evaluateFlux and Dimensions==3) ? tarch::allocateMemory( fluxEnumerator.size(),      tarch::MemoryLocation::Heap ) : nullptr;
-  double* tempNonconservativeProductX = evaluateNonconservativeProduct                     ? tarch::allocateMemory( ncpEnumerator.size(),        tarch::MemoryLocation::Heap ) : nullptr;
-  double* tempNonconservativeProductY = evaluateNonconservativeProduct                     ? tarch::allocateMemory( ncpEnumerator.size(),        tarch::MemoryLocation::Heap ) : nullptr;
-  double* tempNonconservativeProductZ = (evaluateNonconservativeProduct and Dimensions==3) ? tarch::allocateMemory( ncpEnumerator.size(),        tarch::MemoryLocation::Heap ) : nullptr;
-  double* tempEigenvalueX            =                                    tarch::allocateMemory( eigenvalueEnumerator.size(),      tarch::MemoryLocation::Heap );
-  double* tempEigenvalueY            =                                    tarch::allocateMemory( eigenvalueEnumerator.size(),      tarch::MemoryLocation::Heap );
-  double* tempEigenvalueZ            = (Dimensions==3)                  ? tarch::allocateMemory( eigenvalueEnumerator.size(),      tarch::MemoryLocation::Heap ) : nullptr;
-  #endif
+*/
 
-  #pragma omp target teams distribute device(targetDevice) \
-    map(to:patchData.t[0:patchData.numberOfCells]) \
-    map(to:patchData.dt[0:patchData.numberOfCells]) \
-    map(from:patchData.maxEigenvalue[0:patchData.numberOfCells])
+  #pragma omp target teams distribute device(targetDevice)
+//  \
+//    map(to:patchData.t[0:patchData.numberOfCells]) \
+//    map(to:patchData.dt[0:patchData.numberOfCells]) \
+//    map(from:patchData.maxEigenvalue[0:patchData.numberOfCells])
   for (int patchIndex=0; patchIndex<patchData.numberOfCells; patchIndex++) {
+      /*
+      exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator QInEnumerator       (                        1, numberOfVolumesPerAxisInPatch,haloSize,unknowns,auxiliaryVariables);
+      exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator QOutEnumerator      (                        1, numberOfVolumesPerAxisInPatch,       0,unknowns,auxiliaryVariables);
+      TempDataEnumerator fluxEnumerator      (patchData.numberOfCells, numberOfVolumesPerAxisInPatch,haloSize,unknowns,0);
+      TempDataEnumerator ncpEnumerator       (patchData.numberOfCells, numberOfVolumesPerAxisInPatch+1,haloSize,unknowns,0);
+      TempDataEnumerator eigenvalueEnumerator(patchData.numberOfCells, numberOfVolumesPerAxisInPatch,haloSize,1,0);
 
-    #if defined(GPUOffloadingOMP)
     for (int d=0; d<Dimensions; d++) {
       patchData.patchCentre[patchIndex](d) = serialisedPatchCentres[patchIndex*Dimensions+d];
       patchData.patchSize[patchIndex](d)   = serialisedPatchSizes[patchIndex*Dimensions+d];
-	}
-    #endif
+    }
 
     if (Dimensions==2 and evaluateSource) {
       #pragma omp parallel for collapse(2)
@@ -660,9 +686,10 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanov_patchwise_heap_static_calls
       }
       patchData.maxEigenvalue[patchIndex] = newMaxEigenvalue;
     }
-  }
+    */
 
-  #if defined(GPUOffloadingOMP)
+  } // This is the end of the target offloading block
+
   #pragma omp target exit data map(delete:tempFluxX[0:fluxEnumerator.size()] ) device(targetDevice)
   #pragma omp target exit data map(delete:tempFluxY[0:fluxEnumerator.size()] ) device(targetDevice)
   #pragma omp target exit data map(delete:tempFluxZ[0:fluxEnumerator.size()] ) device(targetDevice)
@@ -685,16 +712,9 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanov_patchwise_heap_static_calls
 
   tarch::freeMemory( serialisedPatchCentres, tarch::MemoryLocation::ManagedAcceleratorMemory );
   tarch::freeMemory( serialisedPatchSizes,   tarch::MemoryLocation::ManagedAcceleratorMemory );
+
   #else
-  if (tempFluxX!=nullptr)               tarch::freeMemory(tempFluxX, tarch::MemoryLocation::Heap);
-  if (tempFluxY!=nullptr)               tarch::freeMemory(tempFluxY, tarch::MemoryLocation::Heap);
-  if (tempFluxZ!=nullptr)               tarch::freeMemory(tempFluxZ, tarch::MemoryLocation::Heap);
-  if (tempNonconservativeProductX!=nullptr) tarch::freeMemory(tempNonconservativeProductX, tarch::MemoryLocation::Heap);
-  if (tempNonconservativeProductY!=nullptr) tarch::freeMemory(tempNonconservativeProductY, tarch::MemoryLocation::Heap);
-  if (tempNonconservativeProductZ!=nullptr) tarch::freeMemory(tempNonconservativeProductZ, tarch::MemoryLocation::Heap);
-  if (tempEigenvalueX!=nullptr)         tarch::freeMemory(tempEigenvalueX, tarch::MemoryLocation::Heap);
-  if (tempEigenvalueY!=nullptr)         tarch::freeMemory(tempEigenvalueY, tarch::MemoryLocation::Heap);
-  if (tempEigenvalueZ!=nullptr)         tarch::freeMemory(tempEigenvalueZ, tarch::MemoryLocation::Heap);
+  assertionMsg(false, "this routine should only be used in combination with OpenMP offloading, as it has a device parameter" );
   #endif
 }
 
