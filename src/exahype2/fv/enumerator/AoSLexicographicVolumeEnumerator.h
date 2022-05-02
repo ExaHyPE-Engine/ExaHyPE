@@ -27,6 +27,9 @@ namespace exahype2 {
        *   if you construct and enumerator over the input or output data, as
        *   there is one patch per cell.
        */
+      #if defined(GPUOffloadingOMP)
+//     #pragma omp declare target
+      #endif
       struct AoSLexicographicVolumeEnumerator {
         public:
           AoSLexicographicVolumeEnumerator(int numberOfPatches, int numberOfVolumesPerAxisInPatch, int haloSize, int unknowns, int numberOfAuxiliaryVariables):
@@ -64,7 +67,9 @@ namespace exahype2 {
             }
           }
 
+          #if !defined(GPUOffloadingOMP)
           std::string toString() const;
+          #endif
 
           int size() const {
             if (Dimensions==2) {
@@ -88,6 +93,9 @@ namespace exahype2 {
           const int _unknowns;
           const int _numberOfAuxiliaryVariables;
       };
+      #if defined(GPUOffloadingOMP)
+//      #pragma omp end declare target
+      #endif
     }
   }
 }

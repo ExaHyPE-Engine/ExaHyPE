@@ -27,6 +27,9 @@ namespace exahype2 {
        *   if you construct and enumerator over the input or output data, as
        *   there is one patch per cell.
        */
+      #if defined(GPUOffloadingOMP)
+//      #pragma omp declare target
+      #endif
       struct SingleVolumeEnumerator {
         public:
           SingleVolumeEnumerator(int unknowns, int numberOfAuxiliaryVariables):
@@ -49,7 +52,9 @@ namespace exahype2 {
             return unknown;
           }
 
+	  #if !defined(GPUOffloadingOMP)
           std::string toString() const;
+#endif
 
           int size() const {
             return (_unknowns+_numberOfAuxiliaryVariables);
@@ -58,6 +63,9 @@ namespace exahype2 {
           const int _unknowns;
           const int _numberOfAuxiliaryVariables;
       };
+      #if defined(GPUOffloadingOMP)
+//      #pragma omp end declare target
+      #endif
     }
   }
 }
