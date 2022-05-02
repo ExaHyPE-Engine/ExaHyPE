@@ -157,7 +157,11 @@ void runBenchmarks(int patches) {
     logInfo("main()", "completed optimisation measurements " << markerName << ": " << watch.getCalendarTime() << " / " << (watch.getCalendarTime()/patches/EulerOnGPU::NumberOfFiniteVolumesPerAxisPerPatch/EulerOnGPU::NumberOfFiniteVolumesPerAxisPerPatch/EulerOnGPU::NumberOfFiniteVolumesPerAxisPerPatch) );
   };
 
-  if (patches<128) {
+  #if Dimension==2
+  if (patches<=64) {
+  #else
+  if (patches<=4) {
+  #endif
     testFusedVariant(
       ::exahype2::fv::rusanov::timeStepWithRusanov_patchwise_call_stack_static_calls<EulerOnGPU,EulerOnGPU::NumberOfFiniteVolumesPerAxisPerPatch, 1, 5, 0,exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator>,
       "no side effects, patch-wise, call stack, AoS", true
@@ -281,7 +285,11 @@ int main(int argc, char** argv) {
   const bool isGlobalMaster     =     tarch::mpi::Rank::getInstance().isGlobalMaster();
   const bool isPeanoComputeNode = not tarch::mpi::Rank::getInstance().isGlobalMaster();
 
+  #if Dimensions==2
   for (int patches=1; patches<=65536; patches*=2) {
+  #else
+  for (int patches=1; patches<=2048; patches*=2) {
+  #endif
     runBenchmarks(patches);
   }
 
