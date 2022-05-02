@@ -107,6 +107,9 @@ namespace exahype2 {
         #if defined(SharedOMP)
         #pragma omp declare simd
         #endif
+        #if defined(GPUOffloadingOMP)
+        #pragma omp declare target
+        #endif
         template <class QInEnumeratorType, class QOutEnumeratorType>
         static void copySolution_LoopBody(
           const double* __restrict__                QIn,
@@ -117,6 +120,9 @@ namespace exahype2 {
           double* __restrict__                      QOut,
           const QOutEnumeratorType&                 QOutEnumerator
         ) InlineMethod;
+        #if defined(GPUOffloadingOMP)
+        #pragma omp end declare target
+        #endif
 
 
         /**
@@ -158,7 +164,7 @@ namespace exahype2 {
         void copySolutionAndAddSourceTerm_LoopBody(
           const double* __restrict__                QIn,
           const exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator& QInEnumerator,
-          exahype2::fv::rusanov::Source             source,
+          exahype2::fv::rusanov::Source                source,
           const tarch::la::Vector<Dimensions,double>&  patchCentre,
           const tarch::la::Vector<Dimensions,double>&  patchSize,
           int                                       patchIndex,
@@ -173,6 +179,9 @@ namespace exahype2 {
         #if defined(SharedOMP)
         #pragma omp declare simd
         #endif
+        #if defined(GPUOffloadingOMP)
+        #pragma omp declare target
+        #endif
         template <typename Solver, class QInEnumeratorType, class QOutEnumeratorType>
         static void copySolutionAndAddSourceTerm_LoopBody(
           const double* __restrict__                   QIn,
@@ -186,10 +195,16 @@ namespace exahype2 {
           double* __restrict__                         QOut,
           const QOutEnumeratorType&                    QOutEnumerator
         ) InlineMethod;
+        #if defined(GPUOffloadingOMP)
+        #pragma omp end declare target
+        #endif
 
 
         #if defined(SharedOMP)
         #pragma omp declare simd
+        #endif
+        #if defined(GPUOffloadingOMP)
+        #pragma omp declare target
         #endif
         template <typename Solver>
         static void copySolutionAndAddSourceTerm_LoopBody(
@@ -204,6 +219,9 @@ namespace exahype2 {
           double* __restrict__                      QOut,
           const exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator&  QOutEnumerator
         )  InlineMethod;
+        #if defined(GPUOffloadingOMP)
+        #pragma omp end declare target
+        #endif
 
 
         /**
@@ -267,6 +285,9 @@ namespace exahype2 {
         #if defined(SharedOMP)
         #pragma omp declare simd
         #endif
+        #if defined(GPUOffloadingOMP)
+        #pragma omp declare target
+        #endif
         template <typename Solver, class QInEnumeratorType, class QMaxEigenvalueEnumeratorType>
         static void computeMaxEigenvalue_LoopBody(
           const double* __restrict__                   QIn,
@@ -281,6 +302,9 @@ namespace exahype2 {
           double* __restrict__                         QMaxEigenvalue,
           const QMaxEigenvalueEnumeratorType&          QMaxEigenvalueEnumerator
         )  InlineMethod;
+        #if defined(GPUOffloadingOMP)
+        #pragma omp end declare target
+        #endif
 
 
         /**
@@ -288,6 +312,9 @@ namespace exahype2 {
          */
         #if defined(SharedOMP)
         #pragma omp declare simd
+        #endif
+        #if defined(GPUOffloadingOMP)
+        #pragma omp declare target
         #endif
         template <typename Solver, class QMaxEigenvalueEnumeratorType>
         static void computeMaxEigenvalue_LoopBody(
@@ -303,6 +330,9 @@ namespace exahype2 {
           double* __restrict__                         QMaxEigenvalue,
           const QMaxEigenvalueEnumeratorType&          QMaxEigenvalueEnumerator
         ) InlineMethod;
+        #if defined(GPUOffloadingOMP)
+        #pragma omp end declare target
+        #endif
 
 
         /**
@@ -340,6 +370,9 @@ namespace exahype2 {
         #if defined(SharedOMP)
         #pragma omp declare simd
         #endif
+        #if defined(GPUOffloadingOMP)
+        #pragma omp declare target
+        #endif
         template <typename Solver, class QInEnumeratorType>
         static double reduceMaxEigenvalue_LoopBody(
           const double* __restrict__                   QIn,
@@ -351,10 +384,16 @@ namespace exahype2 {
           double                                       t,
           double                                       dt
         ) InlineMethod;
+        #if defined(GPUOffloadingOMP)
+        #pragma omp end declare target
+        #endif
 
 
         #if defined(SharedOMP)
         #pragma omp declare simd
+        #endif
+        #if defined(GPUOffloadingOMP)
+        #pragma omp declare target
         #endif
         template <typename Solver>
         static double reduceMaxEigenvalue_LoopBody(
@@ -367,6 +406,9 @@ namespace exahype2 {
           double                                       t,
           double                                       dt
         ) InlineMethod;
+        #if defined(GPUOffloadingOMP)
+        #pragma omp end declare target
+        #endif
 
 
         /**
@@ -396,25 +438,6 @@ namespace exahype2 {
         ) InlineMethod;
 
 
-/*
-        template <class QInEnumeratorType>
-        static void computeFlux_LoopBody(
-          const double* __restrict__                QIn,
-          exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator                   QInEnumerator,
-          exahype2::fv::rusanov::Flux         flux,
-          const tarch::la::Vector<Dimensions,double>&  patchCentre,
-          const tarch::la::Vector<Dimensions,double>&  patchSize,
-          int                                          patchIndex,
-          const tarch::la::Vector<Dimensions,int>&     volumeIndex,
-          double                                       t,
-          double                              dt,
-          int                                 normal,
-          double* __restrict__                QFlux,
-          QFluxEnumeratorType                 QFluxEnumerator
-        ) InlineMethod;
-*/
-
-
         /**
          * This one does not have to be declared as simd. For whatever
          * reason ...
@@ -438,6 +461,9 @@ namespace exahype2 {
         #if defined(SharedOMP)
         #pragma omp declare simd
         #endif
+        #if defined(GPUOffloadingOMP)
+        #pragma omp declare target
+        #endif
         template <typename Solver, class QInEnumeratorType, class QFluxEnumeratorType>
         static void computeFlux_LoopBody(
           const double* __restrict__                   QIn,
@@ -453,10 +479,16 @@ namespace exahype2 {
           const QFluxEnumeratorType &                  QFluxEnumerator,
           int                                          pick = PickAllEntriesFromOutputVector
         ) InlineMethod;
+        #if defined(GPUOffloadingOMP)
+        #pragma omp end declare target
+        #endif
 
 
         #if defined(SharedOMP)
         #pragma omp declare simd
+        #endif
+        #if defined(GPUOffloadingOMP)
+        #pragma omp declare target
         #endif
         template <typename Solver, class QFluxEnumeratorType>
         static void computeFlux_LoopBody(
@@ -473,10 +505,16 @@ namespace exahype2 {
           const QFluxEnumeratorType &                                 QFluxEnumerator,
           int                                                         pick = PickAllEntriesFromOutputVector
         ) InlineMethod;
+        #if defined(GPUOffloadingOMP)
+        #pragma omp end declare target
+        #endif
 
 
         #if defined(SharedOMP)
         #pragma omp declare simd
+        #endif
+        #if defined(GPUOffloadingOMP)
+        #pragma omp declare target
         #endif
         template <typename Solver>
         static void computeFlux_LoopBody(
@@ -492,6 +530,9 @@ namespace exahype2 {
           double* __restrict__                                        QFlux,
           const exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator&  QFluxEnumerator
         ) InlineMethod;
+        #if defined(GPUOffloadingOMP)
+        #pragma omp end declare target
+        #endif
 
 
         /**
@@ -504,6 +545,9 @@ namespace exahype2 {
          */
         #if defined(SharedOMP)
         #pragma omp declare simd
+        #endif
+        #if defined(GPUOffloadingOMP)
+        #pragma omp declare target
         #endif
         template <typename QFluxEnumeratorType, typename QOutEnumeratorType>
         static void updateSolutionWithFlux_LoopBody(
@@ -520,6 +564,9 @@ namespace exahype2 {
           double* __restrict__                         QOut,
           const QOutEnumeratorType&                    QOutEnumerator
         ) InlineMethod;
+        #if defined(GPUOffloadingOMP)
+        #pragma omp end declare target
+        #endif
 
 
         /**
@@ -534,6 +581,9 @@ namespace exahype2 {
          */
         #if defined(SharedOMP)
         #pragma omp declare simd
+        #endif
+        #if defined(GPUOffloadingOMP)
+        #pragma omp declare target
         #endif
         template <typename FluxEnumeratorType, typename QOutEnumeratorType>
         static void updateSolutionWithFlux_LoopBody(
@@ -550,6 +600,9 @@ namespace exahype2 {
           double* __restrict__                         QOut,
           const QOutEnumeratorType&                    QOutEnumerator
         ) InlineMethod;
+        #if defined(GPUOffloadingOMP)
+        #pragma omp end declare target
+        #endif
 
 
         /**
@@ -581,9 +634,26 @@ namespace exahype2 {
          * Along the same lines, all of these arguments motivate why we do not specialise
          * the template further. We need to do this scattering/gathering anyway, so
          * what's the point of specialising for particular data formats?
+	 *
+	 * ## OpenMP offloading flaws
+	 *
+	 * With NVC++, there are at least two flaws that you might run into. Both did 
+	 * not yield a compiler error on my system but resulted in a GPU crash, which 
+	 * is kind of frustrating:
+	 *
+	 * - The std::max() call cannot be resolved. Weirdly, my NVC++ does not 
+	 *   complain about this. In other places, it does complain. 
+	 * - The NVC++ seems to struggle with the auto reference if you capture 
+	 *   pointers via &. Actually, we 
+	 *   see that the tempMaxEigenvalue pointer is messed up. If we capture 
+	 *   via copy, everything is fine.
+	 *
          */
         #if defined(SharedOMP)
         #pragma omp declare simd
+        #endif
+        #if defined(GPUOffloadingOMP)
+        #pragma omp declare target
         #endif
         template <typename QInEnumeratorType, typename QMaxEigenvalueEnumeratorType, typename QOutEnumeratorType>
         static void updateSolutionWithEigenvalueDamping_LoopBody(
@@ -602,6 +672,9 @@ namespace exahype2 {
           double* __restrict__                         QOut,
           const QOutEnumeratorType &                   QOutEnumerator
         ) InlineMethod;
+        #if defined(GPUOffloadingOMP)
+        #pragma omp end declare target
+        #endif
 
 
         /**
@@ -610,6 +683,9 @@ namespace exahype2 {
          */
         #if defined(SharedOMP)
         #pragma omp declare simd
+        #endif
+        #if defined(GPUOffloadingOMP)
+        #pragma omp declare target
         #endif
         template <typename QInEnumeratorType, typename QOutEnumeratorType>
         static void updateSolutionWithEigenvalueDamping_LoopBody(
@@ -627,6 +703,9 @@ namespace exahype2 {
           double* __restrict__                         QOut,
           const QOutEnumeratorType &                   QOutEnumerator
         ) InlineMethod;
+        #if defined(GPUOffloadingOMP)
+        #pragma omp end declare target
+        #endif
 
 
         /**
@@ -660,6 +739,9 @@ namespace exahype2 {
         #if defined(SharedOMP)
         #pragma omp declare simd
         #endif
+        #if defined(GPUOffloadingOMP)
+        #pragma omp declare target
+        #endif
         template <typename Solver, class QInEnumeratorType, class QNCPFaceEnumeratorType>
         static void computeNonconservativeFlux_LoopBody(
           const double* __restrict__                     QIn,
@@ -675,10 +757,16 @@ namespace exahype2 {
           const QNCPFaceEnumeratorType&                  QNcpEnumerator,
           int                                            pick = PickAllEntriesFromOutputVector
         ) InlineMethod;
+        #if defined(GPUOffloadingOMP)
+        #pragma omp end declare target
+        #endif
 
 
         #if defined(SharedOMP)
         #pragma omp declare simd
+        #endif
+        #if defined(GPUOffloadingOMP)
+        #pragma omp declare target
         #endif
         template <typename QNCPFaceEnumeratorType, typename QOutEnumeratorType>
         static void updateSolutionWithNonconservativeFlux_LoopBody(
@@ -695,6 +783,9 @@ namespace exahype2 {
           double* __restrict__                         QOut,
           const QOutEnumeratorType&                    QOutEnumerator
         ) InlineMethod;
+        #if defined(GPUOffloadingOMP)
+        #pragma omp end declare target
+        #endif
 
 
         /**
@@ -702,6 +793,9 @@ namespace exahype2 {
          */
         #if defined(SharedOMP)
         #pragma omp declare simd
+        #endif
+        #if defined(GPUOffloadingOMP)
+        #pragma omp declare target
         #endif
         template <typename QNCPFaceEnumeratorType, typename QOutEnumeratorType>
         static void updateSolutionWithNonconservativeFlux_LoopBody(
@@ -717,6 +811,9 @@ namespace exahype2 {
           double* __restrict__                         QOut,
           const QOutEnumeratorType&                    QOutEnumerator
         ) InlineMethod;
+        #if defined(GPUOffloadingOMP)
+        #pragma omp end declare target
+        #endif
       }
     }
   }
