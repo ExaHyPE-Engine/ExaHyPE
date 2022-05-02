@@ -4,7 +4,6 @@
 #include "tarch/logging/Log.h"
 #include "tarch/logging/Statistics.h"
 #include "tarch/logging/LogFilter.h"
-#include "tarch/UnitTests.h"
 #include "tarch/multicore/multicore.h"
 #include "tarch/multicore/Core.h"
 #include "tarch/timing/Watch.h"
@@ -14,7 +13,6 @@
 #include "peano4/peano.h"
 #include "peano4/grid/Spacetree.h"
 #include "peano4/parallel/SpacetreeSet.h"
-#include "peano4/UnitTests.h"
 
 #include "repositories/DataRepository.h"
 #include "repositories/StepRepository.h"
@@ -29,11 +27,9 @@
 
 #include "toolbox/loadbalancing/loadbalancing.h"
 
-#include "toolbox/blockstructured/UnitTests.h"
 
 #include "exahype2/NonCriticalAssertions.h"
 #include "exahype2/UserInterface.h"
-#include "exahype2/UnitTests.h"
 
 #include "tasks/EulerOnGPUEnclaveTask.h"
 
@@ -251,7 +247,6 @@ void runBenchmarks(int patches) {
 
 int main(int argc, char** argv) {
   const int ExitCodeSuccess          = 0;
-  const int ExitCodeUnitTestsFailed  = 1;
   const int ExitCodeInvalidArguments = 2;
   const int ExitCodeInvalidBuild     = 3;
 
