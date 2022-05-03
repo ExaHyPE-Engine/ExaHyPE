@@ -7,7 +7,6 @@ namespace exahype2{ namespace fv{ namespace rusanov{ namespace internal{
   template <
     typename Solver,
     int      numberOfVolumesPerAxisInPatch,
-    int      haloSize,
     int      unknowns,
     int      auxiliaryVariables,
     typename TempDataEnumerator
@@ -146,7 +145,7 @@ namespace exahype2{ namespace fv{ namespace rusanov{ namespace internal{
       #pragma omp simd
       #endif
       for (int patchIndex=0; patchIndex<patchData.numberOfCells; patchIndex++)
-      for (int x = -haloSize; x < numberOfVolumesPerAxisInPatch+haloSize; x++) {
+      for (int x = -solversHaloSize; x < numberOfVolumesPerAxisInPatch+solversHaloSize; x++) {
         otterLoopIterationBegin();
         internal::computeMaxEigenvalue_LoopBody<Solver>(
             patchData.QIn[patchIndex],
@@ -165,7 +164,7 @@ namespace exahype2{ namespace fv{ namespace rusanov{ namespace internal{
       otterLoopEnd();
 
       otterLoopBegin();
-      for (int y = -haloSize; y < numberOfVolumesPerAxisInPatch+haloSize; y++)
+      for (int y = -solversHaloSize; y < numberOfVolumesPerAxisInPatch+solversHaloSize; y++)
       #if defined(SharedOMP)
       #pragma omp simd
       #endif
@@ -225,7 +224,7 @@ namespace exahype2{ namespace fv{ namespace rusanov{ namespace internal{
       #pragma omp simd
       #endif
       for (int patchIndex=0; patchIndex<patchData.numberOfCells; patchIndex++)
-      for (int x = -haloSize; x < numberOfVolumesPerAxisInPatch+haloSize; x++) {
+      for (int x = -solversHaloSize; x < numberOfVolumesPerAxisInPatch+solversHaloSize; x++) {
         otterLoopIterationBegin();
         internal::computeMaxEigenvalue_LoopBody<Solver>(
               patchData.QIn[patchIndex],
@@ -245,7 +244,7 @@ namespace exahype2{ namespace fv{ namespace rusanov{ namespace internal{
 
       otterLoopBegin();
       for (int z = 0; z < numberOfVolumesPerAxisInPatch; z++)
-      for (int y = -haloSize; y < numberOfVolumesPerAxisInPatch+haloSize; y++)
+      for (int y = -solversHaloSize; y < numberOfVolumesPerAxisInPatch+solversHaloSize; y++)
       #if defined(SharedOMP)
       #pragma omp simd
       #endif
@@ -269,7 +268,7 @@ namespace exahype2{ namespace fv{ namespace rusanov{ namespace internal{
       otterLoopEnd();
 
       otterLoopBegin();
-      for (int z = -haloSize; z < numberOfVolumesPerAxisInPatch+haloSize; z++)
+      for (int z = -solversHaloSize; z < numberOfVolumesPerAxisInPatch+solversHaloSize; z++)
       for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
       #if defined(SharedOMP)
       #pragma omp simd
@@ -332,7 +331,7 @@ namespace exahype2{ namespace fv{ namespace rusanov{ namespace internal{
       #pragma omp simd
       #endif
       for (int patchIndex=0; patchIndex<patchData.numberOfCells; patchIndex++)
-      for (int x = -haloSize; x < numberOfVolumesPerAxisInPatch+haloSize; x++) {
+      for (int x = -solversHaloSize; x < numberOfVolumesPerAxisInPatch+solversHaloSize; x++) {
         otterLoopIterationBegin();
         internal::computeFlux_LoopBody<Solver>(
           patchData.QIn[patchIndex],
@@ -352,7 +351,7 @@ namespace exahype2{ namespace fv{ namespace rusanov{ namespace internal{
       otterLoopEnd();
 
       otterLoopBegin();
-      for (int y = -haloSize; y < numberOfVolumesPerAxisInPatch+haloSize;  y++)
+      for (int y = -solversHaloSize; y < numberOfVolumesPerAxisInPatch+solversHaloSize;  y++)
       #if defined(SharedOMP)
       #pragma omp simd
       #endif
@@ -409,7 +408,7 @@ namespace exahype2{ namespace fv{ namespace rusanov{ namespace internal{
       #pragma omp simd
       #endif
       for (int patchIndex=0; patchIndex<patchData.numberOfCells; patchIndex++)
-      for (int x = -haloSize; x < numberOfVolumesPerAxisInPatch+haloSize; x++) {
+      for (int x = -solversHaloSize; x < numberOfVolumesPerAxisInPatch+solversHaloSize; x++) {
         otterLoopIterationBegin();
         internal::computeFlux_LoopBody<Solver>(
           patchData.QIn[patchIndex],
@@ -430,7 +429,7 @@ namespace exahype2{ namespace fv{ namespace rusanov{ namespace internal{
 
       otterLoopBegin();
       for (int z =         0; z < numberOfVolumesPerAxisInPatch;           z++)
-      for (int y = -haloSize; y < numberOfVolumesPerAxisInPatch+haloSize;  y++)
+      for (int y = -solversHaloSize; y < numberOfVolumesPerAxisInPatch+solversHaloSize;  y++)
       #if defined(SharedOMP)
       #pragma omp simd
       #endif
@@ -455,7 +454,7 @@ namespace exahype2{ namespace fv{ namespace rusanov{ namespace internal{
       otterLoopEnd();
 
       otterLoopBegin();
-      for (int z = -haloSize; z < numberOfVolumesPerAxisInPatch+haloSize;  z++)
+      for (int z = -solversHaloSize; z < numberOfVolumesPerAxisInPatch+solversHaloSize;  z++)
       for (int y =         0; y < numberOfVolumesPerAxisInPatch;           y++)
       #if defined(SharedOMP)
       #pragma omp simd
@@ -515,7 +514,7 @@ namespace exahype2{ namespace fv{ namespace rusanov{ namespace internal{
       #pragma omp simd
       #endif
       for (int patchIndex=0; patchIndex<patchData.numberOfCells; patchIndex++)
-      for (int x = -haloSize; x < numberOfVolumesPerAxisInPatch+haloSize-1; x++) {
+      for (int x = -solversHaloSize; x < numberOfVolumesPerAxisInPatch+solversHaloSize-1; x++) {
         otterLoopIterationBegin();
         internal::computeNonconservativeFlux_LoopBody<Solver>(
           patchData.QIn[patchIndex],
@@ -535,7 +534,7 @@ namespace exahype2{ namespace fv{ namespace rusanov{ namespace internal{
       otterLoopEnd();
 
       otterLoopBegin();
-      for (int y = -haloSize; y < numberOfVolumesPerAxisInPatch+haloSize-1; y++)
+      for (int y = -solversHaloSize; y < numberOfVolumesPerAxisInPatch+solversHaloSize-1; y++)
       #if defined(SharedOMP)
       #pragma omp simd
       #endif
@@ -592,7 +591,7 @@ namespace exahype2{ namespace fv{ namespace rusanov{ namespace internal{
       #pragma omp simd
       #endif
       for (int patchIndex=0; patchIndex<patchData.numberOfCells; patchIndex++)
-      for (int x = -haloSize; x < numberOfVolumesPerAxisInPatch+haloSize-1; x++) {
+      for (int x = -solversHaloSize; x < numberOfVolumesPerAxisInPatch+solversHaloSize-1; x++) {
         otterLoopIterationBegin();
         internal::computeNonconservativeFlux_LoopBody<Solver>(
             patchData.QIn[patchIndex],
@@ -613,7 +612,7 @@ namespace exahype2{ namespace fv{ namespace rusanov{ namespace internal{
 
       otterLoopBegin();
       for (int z =         0; z < numberOfVolumesPerAxisInPatch;            z++)
-      for (int y = -haloSize; y < numberOfVolumesPerAxisInPatch+haloSize-1; y++)
+      for (int y = -solversHaloSize; y < numberOfVolumesPerAxisInPatch+solversHaloSize-1; y++)
       #if defined(SharedOMP)
       #pragma omp simd
       #endif
@@ -638,7 +637,7 @@ namespace exahype2{ namespace fv{ namespace rusanov{ namespace internal{
       otterLoopEnd();
 
       otterLoopBegin();
-      for (int z = -haloSize; z < numberOfVolumesPerAxisInPatch+haloSize-1; z++)
+      for (int z = -solversHaloSize; z < numberOfVolumesPerAxisInPatch+solversHaloSize-1; z++)
       for (int y =         0; y < numberOfVolumesPerAxisInPatch;            y++)
       #if defined(SharedOMP)
       #pragma omp simd
@@ -777,9 +776,9 @@ void exahype2::fv::rusanov::timeStepWithRusanov_batched_call_stack_static_calls(
 
   exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator QInEnumerator       (                        1, numberOfVolumesPerAxisInPatch,haloSize,unknowns,auxiliaryVariables);
   exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator QOutEnumerator      (                        1, numberOfVolumesPerAxisInPatch,       0,unknowns,auxiliaryVariables);
-  TempDataEnumerator fluxEnumerator      (patchData.numberOfCells, numberOfVolumesPerAxisInPatch,haloSize,unknowns,0);
-  TempDataEnumerator ncpEnumerator       (patchData.numberOfCells, numberOfVolumesPerAxisInPatch+1,haloSize,unknowns,0);
-  TempDataEnumerator eigenvalueEnumerator(patchData.numberOfCells, numberOfVolumesPerAxisInPatch,haloSize,1,0);
+  TempDataEnumerator fluxEnumerator      (patchData.numberOfCells, numberOfVolumesPerAxisInPatch,  solversHaloSize,unknowns,0);
+  TempDataEnumerator ncpEnumerator       (patchData.numberOfCells, numberOfVolumesPerAxisInPatch+1,solversHaloSize,unknowns,0);
+  TempDataEnumerator eigenvalueEnumerator(patchData.numberOfCells, numberOfVolumesPerAxisInPatch,  solversHaloSize,1,0);
 
   double tempFluxX[ fluxEnumerator.size() ] __attribute__((aligned (Alignment)));
   double tempFluxY[ fluxEnumerator.size() ] __attribute__((aligned (Alignment)));
@@ -791,7 +790,7 @@ void exahype2::fv::rusanov::timeStepWithRusanov_batched_call_stack_static_calls(
   double tempEigenvalueY[ eigenvalueEnumerator.size() ] __attribute__((aligned (Alignment)));
   double tempEigenvalueZ[ eigenvalueEnumerator.size() ] __attribute__((aligned (Alignment)));
 
-  internal::timeStepWithRusanov_batched_static_calls<Solver, numberOfVolumesPerAxisInPatch, haloSize, unknowns, auxiliaryVariables, TempDataEnumerator>(
+  internal::timeStepWithRusanov_batched_static_calls<Solver, numberOfVolumesPerAxisInPatch, unknowns, auxiliaryVariables, TempDataEnumerator>(
       patchData,
       evaluateFlux,
       evaluateNonconservativeProduct,
@@ -838,9 +837,9 @@ void exahype2::fv::rusanov::timeStepWithRusanov_batched_heap_static_calls(
 
   exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator QInEnumerator       (                        1, numberOfVolumesPerAxisInPatch,haloSize,unknowns,auxiliaryVariables);
   exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator QOutEnumerator      (                        1, numberOfVolumesPerAxisInPatch,       0,unknowns,auxiliaryVariables);
-  TempDataEnumerator fluxEnumerator      (patchData.numberOfCells, numberOfVolumesPerAxisInPatch,haloSize,unknowns,0);
-  TempDataEnumerator ncpEnumerator       (patchData.numberOfCells, numberOfVolumesPerAxisInPatch+1,haloSize,unknowns,0);
-  TempDataEnumerator eigenvalueEnumerator(patchData.numberOfCells, numberOfVolumesPerAxisInPatch,haloSize,1,0);
+  TempDataEnumerator fluxEnumerator      (patchData.numberOfCells, numberOfVolumesPerAxisInPatch,solversHaloSize,unknowns,0);
+  TempDataEnumerator ncpEnumerator       (patchData.numberOfCells, numberOfVolumesPerAxisInPatch+1,solversHaloSize,unknowns,0);
+  TempDataEnumerator eigenvalueEnumerator(patchData.numberOfCells, numberOfVolumesPerAxisInPatch,solversHaloSize,1,0);
 
   double* tempFluxX                  = evaluateFlux                     ? tarch::allocateMemory( fluxEnumerator.size(),      tarch::MemoryLocation::Heap ) : nullptr;
   double* tempFluxY                  = evaluateFlux                     ? tarch::allocateMemory( fluxEnumerator.size(),      tarch::MemoryLocation::Heap ) : nullptr;
@@ -852,7 +851,7 @@ void exahype2::fv::rusanov::timeStepWithRusanov_batched_heap_static_calls(
   double* tempEigenvalueY            =                                    tarch::allocateMemory( eigenvalueEnumerator.size(),      tarch::MemoryLocation::Heap );
   double* tempEigenvalueZ            = (Dimensions==3)                  ? tarch::allocateMemory( eigenvalueEnumerator.size(),      tarch::MemoryLocation::Heap ) : nullptr;
 
-  internal::timeStepWithRusanov_batched_static_calls<Solver, numberOfVolumesPerAxisInPatch, haloSize, unknowns, auxiliaryVariables, TempDataEnumerator>(
+  internal::timeStepWithRusanov_batched_static_calls<Solver, numberOfVolumesPerAxisInPatch, unknowns, auxiliaryVariables, TempDataEnumerator>(
       patchData,
       evaluateFlux,
       evaluateNonconservativeProduct,

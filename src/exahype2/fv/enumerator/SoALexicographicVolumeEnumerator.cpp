@@ -1,6 +1,7 @@
 #include "SoALexicographicVolumeEnumerator.h"
 
 
+#if !defined(GPUOffloadingOMP)
 std::string exahype2::fv::enumerator::SoALexicographicVolumeEnumerator::toString() const {
   std::ostringstream msg;
   msg << "(SoA-lex"
@@ -32,4 +33,5 @@ std::string exahype2::fv::enumerator::SoALexicographicVolumeEnumerator::toString
 
   return msg.str();
 }
+#endif
 

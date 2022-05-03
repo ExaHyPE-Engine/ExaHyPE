@@ -1,7 +1,6 @@
 #include "CellData.h"
 
 
-
 exahype2::CellData::CellData(
   double*   QIn_,
   const tarch::la::Vector<Dimensions,double>&   patchCentre_,
@@ -60,3 +59,4 @@ std::string exahype2::CellData::toString() const {
   msg << "]";
   return msg.str();
 }
+

@@ -1637,7 +1637,7 @@ mySolver = MySolver( "Myname", my_patch_size, number_of_unknowns,
   \item Compute the derivatives per volume after each time step in a Finite
   Differences sense. We can add such a code snippet in Python:
   \begin{code}
-my_solver.set_preprocess_reconstructed_patch_kernel( """
+my_solver.preprocess_reconstructed_patch_kernel = """
   dfor(cell,patchSize) {
     //tarch::la::Vector<Dimensions,int> currentPosition=marker.getOffset()+(cell+0.5)*volumeH;
     tarch::la::Vector<Dimensions,int> currentCell = cell + tarch::la::Vector<Dimensions,int>(1);

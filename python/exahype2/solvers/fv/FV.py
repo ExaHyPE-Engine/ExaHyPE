@@ -17,7 +17,6 @@ import exahype2
 import exahype2.solvers.fv.actionsets
     
 from .PDETerms import PDETerms
-from Cython.Compiler.MemoryView import overlapping_utility
 
 
 class FV(object):
