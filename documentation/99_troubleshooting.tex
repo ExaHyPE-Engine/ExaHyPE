@@ -1,6 +1,13 @@
 \chapter{Troubleshooting}
 \label{chapter:troubleshooting}
 
+\begin{remark}
+Most developers exchange stuff via the \Peano\ slack. 
+Contact Tobias Weinzierl to get an invitation to the slack and post your
+questions there.
+\end{remark}
+
+
 \section{Python API}
 
 \begin{itemize}
@@ -35,12 +42,26 @@ peano4_project.output.makefile.add_library(
 
 
 \begin{itemize}
-  \item \textbf{My compiler yields errors like `warning \#3191: scoped
-  enumeration types are a C++11 feature`}. Your compiler seems not to have
+  \item \textbf{My compiler reports something like} 
+\begin{terminalOutput}
+tarch/multicore/multicore.cpp:13:19: error: `align_val_t` is not a member of `std` 
+  13 |  return new (std::align_val_t(Alignment)) double[size];
+\end{terminalOutput}
+  We have seen this error with GCC if the supported C++ generation is too old.
+  Try to return configure with 
+  \texttt{CXXFLAGS=-std=c++0x}.
+  \item \textbf{My compiler yields errors like}
+\begin{terminalOutput}
+`warning \#3191: scoped enumeration types are a C++11 feature` 
+\end{terminalOutput}
+  Your compiler seems not to have
   C++11 (or, newer) enabled by default. Rerun configure with the flag
   \texttt{CXXFLAGS=-std=c++0x}.
-  \item \textbf{ My compiler terminates with `error: unknown
-   attribute 'optimize' ignored*`}. We have seen this issue notably on macOS
+  \item \textbf{ My compiler terminates with}
+\begin{terminalOutput}
+`error: unknown attribute 'optimize' ignored*`
+\end{terminalOutput}
+   We have seen this issue notably on macOS
    with CLANG replacing GCC. Unfortunately, CLANG seems to pretend to be GNU on
    some systems and then the wrong header is included. Ensure that
    \texttt{CompilerSpecificSettings.h}\footnote{Peano relies on a header \texttt{tarch/compiler/CompilerSpecificSettings.h}.

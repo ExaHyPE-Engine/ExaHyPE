@@ -13,3 +13,7 @@ src/unittests/UnitTests3d
 
 !.gitlab-ci.yml
 
+documentation/.texlipse
+documentation/.project
+
+/documentation/
