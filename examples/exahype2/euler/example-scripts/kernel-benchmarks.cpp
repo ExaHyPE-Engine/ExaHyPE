@@ -229,17 +229,17 @@ void runBenchmarks(int patches) {
     );
     testFusedVariantOnDevice(
       device,
-      ::exahype2::fv::rusanov::omp::timeStepWithRusanov_batched_heap_static_calls<EulerOnGPU,exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator>,
+      ::exahype2::fv::rusanov::omp::timeStepWithRusanov_batched_heap_static_calls<EulerOnGPU,EulerOnGPU::NumberOfFiniteVolumesPerAxisPerPatch, 1, 5, 0,exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator>,
       "omp, batched, AoS", true
     );
     testFusedVariantOnDevice(
       device,
-      ::exahype2::fv::rusanov::omp::timeStepWithRusanov_batched_heap_static_calls<EulerOnGPU,exahype2::fv::enumerator::AoSoALexicographicVolumeEnumerator>,
+      ::exahype2::fv::rusanov::omp::timeStepWithRusanov_batched_heap_static_calls<EulerOnGPU,EulerOnGPU::NumberOfFiniteVolumesPerAxisPerPatch, 1, 5, 0,exahype2::fv::enumerator::AoSoALexicographicVolumeEnumerator>,
       "omp, batched, AoSoA", true
     );
     testFusedVariantOnDevice(
       device,
-      ::exahype2::fv::rusanov::omp::timeStepWithRusanov_batched_heap_static_calls<EulerOnGPU,exahype2::fv::enumerator::SoALexicographicVolumeEnumerator>,
+      ::exahype2::fv::rusanov::omp::timeStepWithRusanov_batched_heap_static_calls<EulerOnGPU,EulerOnGPU::NumberOfFiniteVolumesPerAxisPerPatch, 1, 5, 0,exahype2::fv::enumerator::SoALexicographicVolumeEnumerator>,
       "omp, batched, SoA", true
     );
   }
