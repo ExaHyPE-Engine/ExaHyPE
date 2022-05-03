@@ -50,6 +50,8 @@ tarch/multicore/multicore.cpp:13:19: error: `align_val_t` is not a member of `st
   We have seen this error with GCC if the supported C++ generation is too old.
   Try to return configure with 
   \texttt{CXXFLAGS=-std=c++0x}.
+  Depending on your compiler, the flag might also be 
+  \texttt{CXXFLAGS=--std=c++0x} (two hyphens).
   \item \textbf{My compiler yields errors like}
 \begin{terminalOutput}
 `warning \#3191: scoped enumeration types are a C++11 feature` 
