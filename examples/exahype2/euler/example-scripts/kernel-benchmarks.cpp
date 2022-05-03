@@ -227,7 +227,6 @@ void runBenchmarks(int patches) {
       ::exahype2::fv::rusanov::omp::timeStepWithRusanov_patchwise_heap_static_calls<EulerOnGPU,EulerOnGPU::NumberOfFiniteVolumesPerAxisPerPatch, 1, 5, 0,exahype2::fv::enumerator::SoALexicographicVolumeEnumerator>,
       "omp, patch-wise, SoA", true
     );
-/*
     testFusedVariantOnDevice(
       device,
       ::exahype2::fv::rusanov::omp::timeStepWithRusanov_batched_heap_static_calls<EulerOnGPU,exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator>,
@@ -243,7 +242,6 @@ void runBenchmarks(int patches) {
       ::exahype2::fv::rusanov::omp::timeStepWithRusanov_batched_heap_static_calls<EulerOnGPU,exahype2::fv::enumerator::SoALexicographicVolumeEnumerator>,
       "omp, batched, SoA", true
     );
-*/
   }
   #endif
 }
