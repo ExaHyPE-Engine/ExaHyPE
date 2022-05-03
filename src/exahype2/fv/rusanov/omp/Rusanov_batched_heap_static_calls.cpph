@@ -78,44 +78,65 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanov_batched_heap_static_calls(
   #pragma omp target enter data map(to:dt[0:hostPatchData.numberOfCells]) device(targetDevice)
   #pragma omp target enter data map(alloc:maxEigenvalue[0:hostPatchData.numberOfCells]) device(targetDevice)
 
-    
-    
-    if (Dimensions==2 and evaluateSource) {
-      otterLoopBegin();
-      for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
-      #if defined(SharedOMP)
-      #pragma omp simd
-      #endif
-      for (int patchIndex=0; patchIndex<patchData.numberOfCells; patchIndex++)
-      for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++) {
-        otterLoopIterationBegin();
-        internal::copySolutionAndAddSourceTerm_LoopBody<Solver>(
-          patchData.QIn[patchIndex],
-          QInEnumerator,
-          patchData.patchCentre[patchIndex],
-          patchData.patchSize[patchIndex],
-          patchIndex,
-          volumeIndex2d(x,y),
-          patchData.t[patchIndex],
-          patchData.dt[patchIndex],
-          patchData.QOut[patchIndex],
-          QOutEnumerator
-        );
-        otterLoopIterationEnd();
-      }
-      otterLoopEnd();
+
+  if (Dimensions==2 and evaluateSource) {
+    #pragma omp target teams distribute parallel for collapse(3) device(targetDevice)
+    for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
+    for (int patchIndex=0; patchIndex<patchData.numberOfCells; patchIndex++)
+    for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++) {
+  	  // @todo docu manual assembly of patch data meta object on GPU
+  	  OpenMPGPUCellData patchData;
+   	  patchData.numberOfCells = numberOfCells;
+   	  patchData.patchCentre   = (tarch::la::Vector<Dimensions,double>*)(rawPointerToPatchCentres);
+   	  patchData.patchSize     = (tarch::la::Vector<Dimensions,double>*)(rawPointerToPatchSizes);
+   	  patchData.QIn           = mappedPointersToQIn;
+   	  patchData.QOut          = mappedPointersToQOut;
+   	  patchData.t             = t;
+   	  patchData.dt            = dt;
+   	  patchData.maxEigenvalue = maxEigenvalue;
+
+   	  exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator QInEnumerator       (                        1, numberOfVolumesPerAxisInPatch,haloSize,unknowns,auxiliaryVariables);
+   	  exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator QOutEnumerator      (                        1, numberOfVolumesPerAxisInPatch,       0,unknowns,auxiliaryVariables);
+   	  TempDataEnumerator fluxEnumerator      (patchData.numberOfCells, numberOfVolumesPerAxisInPatch,haloSize,unknowns,0);
+   	  TempDataEnumerator ncpEnumerator       (patchData.numberOfCells, numberOfVolumesPerAxisInPatch+1,haloSize,unknowns,0);
+   	  TempDataEnumerator eigenvalueEnumerator(patchData.numberOfCells, numberOfVolumesPerAxisInPatch,haloSize,1,0);
+
+      internal::copySolutionAndAddSourceTerm_LoopBody<Solver>(
+        patchData.QIn[patchIndex],
+        QInEnumerator,
+        patchData.patchCentre[patchIndex],
+        patchData.patchSize[patchIndex],
+        patchIndex,
+        volumeIndex2d(x,y),
+        patchData.t[patchIndex],
+        patchData.dt[patchIndex],
+        patchData.QOut[patchIndex],
+        QOutEnumerator
+      );
     }
-    else if (Dimensions==3 and evaluateSource) {
-      otterLoopBegin();
-      for (int z = 0; z < numberOfVolumesPerAxisInPatch; z++)
-      for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
-      #if defined(SharedOMP)
-      #pragma omp simd
-      #endif
-      for (int patchIndex=0; patchIndex<patchData.numberOfCells; patchIndex++)
-      for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++) {
-        otterLoopIterationBegin();
-        internal::copySolutionAndAddSourceTerm_LoopBody<Solver>(
+  }
+  else if (Dimensions==3 and evaluateSource) {
+    #pragma omp target teams distribute parallel for collapse(4) device(targetDevice)
+    for (int z = 0; z < numberOfVolumesPerAxisInPatch; z++)
+    for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
+    for (int patchIndex=0; patchIndex<patchData.numberOfCells; patchIndex++)
+    for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++) {
+    	  OpenMPGPUCellData patchData;
+     	  patchData.numberOfCells = numberOfCells;
+     	  patchData.patchCentre   = (tarch::la::Vector<Dimensions,double>*)(rawPointerToPatchCentres);
+     	  patchData.patchSize     = (tarch::la::Vector<Dimensions,double>*)(rawPointerToPatchSizes);
+     	  patchData.QIn           = mappedPointersToQIn;
+     	  patchData.QOut          = mappedPointersToQOut;
+     	  patchData.t             = t;
+     	  patchData.dt            = dt;
+     	  patchData.maxEigenvalue = maxEigenvalue;
+
+     	  exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator QInEnumerator       (                        1, numberOfVolumesPerAxisInPatch,haloSize,unknowns,auxiliaryVariables);
+     	  exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator QOutEnumerator      (                        1, numberOfVolumesPerAxisInPatch,       0,unknowns,auxiliaryVariables);
+     	  TempDataEnumerator fluxEnumerator      (patchData.numberOfCells, numberOfVolumesPerAxisInPatch,haloSize,unknowns,0);
+     	  TempDataEnumerator ncpEnumerator       (patchData.numberOfCells, numberOfVolumesPerAxisInPatch+1,haloSize,unknowns,0);
+     	  TempDataEnumerator eigenvalueEnumerator(patchData.numberOfCells, numberOfVolumesPerAxisInPatch,haloSize,1,0);
+      internal::copySolutionAndAddSourceTerm_LoopBody<Solver>(
           patchData.QIn[patchIndex],
           QInEnumerator,
           patchData.patchCentre[patchIndex],
@@ -127,21 +148,31 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanov_batched_heap_static_calls(
           patchData.QOut[patchIndex],
           QOutEnumerator
         );
-        otterLoopIterationEnd();
-      }
-      otterLoopEnd();
     }
-    else if (Dimensions==2) {
-      otterLoopBegin();
-      for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
-      #if defined(SharedOMP)
-      #pragma omp simd
-      #endif
-      for (int patchIndex=0; patchIndex<patchData.numberOfCells; patchIndex++)
-      for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++)
-      for (int unknown=0; unknown<unknowns+auxiliaryVariables; unknown++) {
-        otterLoopIterationBegin();
-        internal::copySolution_LoopBody(
+  }
+  else if (Dimensions==2) {
+    #pragma omp target teams distribute parallel for collapse(4) device(targetDevice)
+    for (int patchIndex=0; patchIndex<patchData.numberOfCells; patchIndex++)
+    for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
+    for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++)
+    for (int unknown=0; unknown<unknowns+auxiliaryVariables; unknown++) {
+      OpenMPGPUCellData patchData;
+      patchData.numberOfCells = numberOfCells;
+      patchData.patchCentre   = (tarch::la::Vector<Dimensions,double>*)(rawPointerToPatchCentres);
+      patchData.patchSize     = (tarch::la::Vector<Dimensions,double>*)(rawPointerToPatchSizes);
+      patchData.QIn           = mappedPointersToQIn;
+      patchData.QOut          = mappedPointersToQOut;
+      patchData.t             = t;
+      patchData.dt            = dt;
+      patchData.maxEigenvalue = maxEigenvalue;
+
+      exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator QInEnumerator       (                        1, numberOfVolumesPerAxisInPatch,haloSize,unknowns,auxiliaryVariables);
+      exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator QOutEnumerator      (                        1, numberOfVolumesPerAxisInPatch,       0,unknowns,auxiliaryVariables);
+      TempDataEnumerator fluxEnumerator      (patchData.numberOfCells, numberOfVolumesPerAxisInPatch,haloSize,unknowns,0);
+      TempDataEnumerator ncpEnumerator       (patchData.numberOfCells, numberOfVolumesPerAxisInPatch+1,haloSize,unknowns,0);
+      TempDataEnumerator eigenvalueEnumerator(patchData.numberOfCells, numberOfVolumesPerAxisInPatch,haloSize,1,0);
+
+      internal::copySolution_LoopBody(
           patchData.QIn[patchIndex],
           QInEnumerator,
           patchIndex,
@@ -149,23 +180,33 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanov_batched_heap_static_calls(
           unknown,
           patchData.QOut[patchIndex],
           QOutEnumerator
-        );
-        otterLoopIterationEnd();
-      }
-      otterLoopEnd();
+      );
     }
-    else {
-      otterLoopBegin();
-      for (int z = 0; z < numberOfVolumesPerAxisInPatch; z++)
-      for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
-      #if defined(SharedOMP)
-      #pragma omp simd
-      #endif
-      for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++)
-      for (int patchIndex=0; patchIndex<patchData.numberOfCells; patchIndex++)
-      for (int unknown=0; unknown<unknowns+auxiliaryVariables; unknown++) {
-        otterLoopIterationBegin();
-        internal::copySolution_LoopBody(
+  }
+  else {
+    #pragma omp target teams distribute parallel for collapse(5) device(targetDevice)
+    for (int patchIndex=0; patchIndex<patchData.numberOfCells; patchIndex++)
+    for (int z = 0; z < numberOfVolumesPerAxisInPatch; z++)
+    for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
+    for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++)
+    for (int unknown=0; unknown<unknowns+auxiliaryVariables; unknown++) {
+        OpenMPGPUCellData patchData;
+        patchData.numberOfCells = numberOfCells;
+        patchData.patchCentre   = (tarch::la::Vector<Dimensions,double>*)(rawPointerToPatchCentres);
+        patchData.patchSize     = (tarch::la::Vector<Dimensions,double>*)(rawPointerToPatchSizes);
+        patchData.QIn           = mappedPointersToQIn;
+        patchData.QOut          = mappedPointersToQOut;
+        patchData.t             = t;
+        patchData.dt            = dt;
+        patchData.maxEigenvalue = maxEigenvalue;
+
+        exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator QInEnumerator       (                        1, numberOfVolumesPerAxisInPatch,haloSize,unknowns,auxiliaryVariables);
+        exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator QOutEnumerator      (                        1, numberOfVolumesPerAxisInPatch,       0,unknowns,auxiliaryVariables);
+        TempDataEnumerator fluxEnumerator      (patchData.numberOfCells, numberOfVolumesPerAxisInPatch,haloSize,unknowns,0);
+        TempDataEnumerator ncpEnumerator       (patchData.numberOfCells, numberOfVolumesPerAxisInPatch+1,haloSize,unknowns,0);
+        TempDataEnumerator eigenvalueEnumerator(patchData.numberOfCells, numberOfVolumesPerAxisInPatch,haloSize,1,0);
+
+      internal::copySolution_LoopBody(
           patchData.QIn[patchIndex],
           QInEnumerator,
           patchIndex,
@@ -173,13 +214,11 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanov_batched_heap_static_calls(
           unknown,
           patchData.QOut[patchIndex],
           QOutEnumerator
-        );
-        otterLoopIterationEnd();
-      }
-      otterLoopEnd();
+      );
     }
+  }
 
-
+/*
     if (Dimensions==2) {
       otterLoopBegin();
       for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
@@ -792,6 +831,8 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanov_batched_heap_static_calls(
       }
     }
   }
+
+*/
 
   #pragma omp target enter data map(delete:rawPointerToPatchCentres[0:hostPatchData.numberOfCells*Dimensions]) device(targetDevice)
   #pragma omp target enter data map(delete:rawPointerToPatchSizes[0:hostPatchData.numberOfCells*Dimensions]) device(targetDevice)
