@@ -457,6 +457,12 @@ namespace toolbox {
 \end{array} 
   \f$
  *
+ * Below is another example for a face on y-direction in a 2D setup, assuming three-partitioning for every patch.
+ * when we refine a face, we get @f$ 3^{d-1} @f$ subfaces.
+ * we enumerate the volumes within a surface first, and then move to the next surface lexicographically.
+ *
+ * @image html Interpolation_ydirection_example.png
+ *
  * ## Construction algorithm
  *
  * I have two variants of the actual construction in here. One of them is
