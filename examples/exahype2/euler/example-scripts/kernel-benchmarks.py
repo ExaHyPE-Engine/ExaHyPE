@@ -31,118 +31,14 @@ parser.add_argument("-pd",  "--peano-dir",         dest="peanodir",             
 parser.add_argument("-v",   "--verbose",           dest="verbose",        action="store_true", default=False, help="Verbose")
 parser.add_argument(        "--debug",             dest="debug"  ,        action="store_true", default=False, help="Verbose")
 parser.add_argument("-ps",  "--patch-size",        dest="patch_size",     type=int, default=17, help="Dimensions" )
-<<<<<<< HEAD
-parser.add_argument("-f",   "--file",              dest="file",           default="", help="Pass in output file to visualise. Without this argument, the script will visualise any outcome" )
-=======
 parser.add_argument("-f",   "--file",              dest="file",           default="", help="Specify to convert an output file into a bar plot. If you omit this flag, the script will actually build the benchmark" )
->>>>>>> refs/remotes/origin/p4
 args = parser.parse_args()
 
-if args.file!="":
-  import matplotlib.pyplot as plt
-  
-  plt.style.use('ggplot')
-  
-  for metric in [ "patch-wise, AoS" ]:
-    x_labels = []
-    y_values = []
-  
-    input = open( args.file, "r" )
-    for line in input:
-      if "Number of patches fused:" in line:
-        x_labels.append( line.split(":")[-1] )
-      if metric in line:
-        y_values.append( float(line.split("/")[-1]) )
-  
-    plt.bar(   [i for i, _ in enumerate(y_values)], y_values, color='green')
-    #plt.xticks([i for i, _ in enumerate(y_values)], x_labels )
-    plt.xticks([i for i, _ in enumerate(x_labels)], x_labels )
-  plt.xlabel("Number of patches")
-  plt.ylabel("Time per FV update [t]=s")
-  plt.title("Time to update set of $ {}^d $ patches".format(args.patch_size) )
-
-  plt.savefig( args.file.replace( ".", "_" ) + ".pdf" )
-else:    
-  import peano4
-  import exahype2
-
-  if args.dim not in [2,3]:
+if args.dim not in [2,3]:
     print("Error, dimension must be 2 or 3, you supplied {}".format(args.dim))
     import sys
     sys.exit(1)
 
-<<<<<<< HEAD
-  #
-  # Create a project and configure it to end up in a subnamespace (and thus
-  # subdirectory). 
-  #
-  project = exahype2.Project( ["examples", "exahype2", "euler"], "finitevolumes", ".", executable="kernel-benchmark" )
-
-
-  #
-  # Add the Finite Volumes solver
-  #
-  solver_name = "EulerOnGPU"
-  unknowns       = 5
-  max_h          = 0.01
-  min_h          = 0.01
-  auxiliary_variables = 0
-
-  thesolver = exahype2.solvers.fv.rusanov.GlobalAdaptiveTimeStepWithEnclaveTasking(
-    solver_name,
-    args.patch_size,
-    unknowns, auxiliary_variables,
-    min_volume_h = 0.01, 
-    max_volume_h = 0.01,
-    time_step_relaxation = 0.01,
-    flux = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
-    eigenvalues = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
-    pde_terms_without_state = True
-  )
-
-  thesolver.set_implementation( refinement_criterion=exahype2.solvers.fv.PDETerms.User_Defined_Implementation )
-
-  project.add_solver( thesolver )
-
-
-  #
-  # Configure build
-  #
-  dimensions = args.dim
-  if args.debug:
-    build_mode = peano4.output.CompileMode.Debug
-  else:
-    build_mode = peano4.output.CompileMode.Release
-  project.set_global_simulation_parameters(
-    dimensions = dimensions,
-    offset = [0.0,0.0,0.0],
-    size = [1.0,1.0,1.0],
-    min_end_time = 1.0,
-    max_end_time = 1.0,
-    first_plot_time_stamp = 0.0,
-    time_in_between_plots = 0.0,
-    periodic_BC           = [False, False, False]
-  )
-  project.set_load_balancing( "toolbox::loadbalancing::RecursiveSubdivision", "new ::exahype2::LoadBalancingConfiguration()" )
-  project.set_Peano4_installation( args.peanodir, build_mode )
-
-
-  #
-  # Generate code and then copy cpp file over main
-  #
-  peano4_project = project.generate_Peano4_project(args.verbose)
-  peano4_project.generate()
-  benchmark_main_file = os.path.dirname(os.path.realpath(__file__)) + "/kernel-benchmarks.cpp"
-  print( "replace generated main with benchmark main file {}".format(benchmark_main_file) )
-  os.system( "cp {} finitevolumes-main.cpp".format(benchmark_main_file) )
-  os.system( "make clean" )
-  if args.j>0:
-    os.system( "make -j{}".format(args.j) )
-  else:
-    os.system( "make -j" )
-
-
-=======
 if args.file=="":
     import peano4
     import exahype2
@@ -261,5 +157,4 @@ else:
       plt.title( "Throughput for $ {}^{} $ Cartesian patches".format( args.patch_size, args.dim) )
       plt.savefig( args.file.replace(".","_")+"_"+prefix.replace(" ","").replace(",","")+".pdf" ) 
   
->>>>>>> refs/remotes/origin/p4
 print("Done")
