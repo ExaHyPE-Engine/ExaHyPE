@@ -1,6 +1,6 @@
 #include "Rusanov.h"
-#include "GPUHelper.cpph"
 #include "tarch/compiler/CompilerSpecificSettings.h"
+#include "exahype2/fv/rusanov/LoopBody.h"
 
 
 template <
@@ -135,7 +135,7 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanov_patchwise_heap_static_calls
   for (int patchIndex=0; patchIndex<numberOfCells; patchIndex++) {
 
     // @todo docu manual assembly of patch data meta object on GPU
-    OpenMPGPUCellData patchData;
+    helper::OpenMPGPUCellData patchData;
     patchData.numberOfCells = numberOfCells;
     patchData.patchCentre   = (tarch::la::Vector<Dimensions,double>*)(rawPointerToPatchCentres);
     patchData.patchSize     = (tarch::la::Vector<Dimensions,double>*)(rawPointerToPatchSizes);

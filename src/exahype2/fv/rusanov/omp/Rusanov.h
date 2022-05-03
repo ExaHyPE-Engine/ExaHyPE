@@ -85,7 +85,7 @@ namespace exahype2 {
         #endif
         ;
 
-        namespace internal {
+        namespace helper {
           #if defined(GPUOffloadingOMP)
           /**
            * On the GPU, we don't need any of exahype2::CellData's fancy routines or

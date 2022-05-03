@@ -1,6 +1,6 @@
 #include "Rusanov.h"
-#include "GPUHelper.cpph"
 #include "tarch/compiler/CompilerSpecificSettings.h"
+#include "exahype2/fv/rusanov/LoopBody.h"
 
 
 template <
@@ -13,7 +13,7 @@ template <
 >
 void exahype2::fv::rusanov::omp::timeStepWithRusanov_batched_heap_static_calls(
   int                     targetDevice,
-  ::exahype2::CellData&   patchData,
+  ::exahype2::CellData&   hostPatchData,
   bool                    evaluateFlux,
   bool                    evaluateNonconservativeProduct,
   bool                    evaluateSource,
@@ -78,15 +78,15 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanov_batched_heap_static_calls(
   #pragma omp target enter data map(to:dt[0:hostPatchData.numberOfCells]) device(targetDevice)
   #pragma omp target enter data map(alloc:maxEigenvalue[0:hostPatchData.numberOfCells]) device(targetDevice)
 
-
+/*
   if (Dimensions==2 and evaluateSource) {
     #pragma omp target teams distribute parallel for collapse(3) device(targetDevice)
     for (int patchIndex=0; patchIndex<numberOfCells; patchIndex++)
     for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
     for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++) {
-  	  // @todo docu manual assembly of patch data meta object on GPU
-  	  OpenMPGPUCellData patchData;
-   	  patchData.numberOfCells = numberOfCells;
+  // @todo docu manual assembly of patch data meta object on GPU
+  internal::OpenMPGPUCellData patchData;
+	  patchData.numberOfCells = numberOfCells;
    	  patchData.patchCentre   = (tarch::la::Vector<Dimensions,double>*)(rawPointerToPatchCentres);
    	  patchData.patchSize     = (tarch::la::Vector<Dimensions,double>*)(rawPointerToPatchSizes);
    	  patchData.QIn           = mappedPointersToQIn;
@@ -217,6 +217,8 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanov_batched_heap_static_calls(
       );
     }
   }
+*/
+
 
 /*
     if (Dimensions==2) {
@@ -834,13 +836,13 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanov_batched_heap_static_calls(
 
 */
 
-  #pragma omp target enter data map(delete:rawPointerToPatchCentres[0:hostPatchData.numberOfCells*Dimensions]) device(targetDevice)
-  #pragma omp target enter data map(delete:rawPointerToPatchSizes[0:hostPatchData.numberOfCells*Dimensions]) device(targetDevice)
-  #pragma omp target enter data map(delete:mappedPointersToQIn[0:hostPatchData.numberOfCells]) device(targetDevice)
-  #pragma omp target enter data map(delete:mappedPointersToQOut[0:hostPatchData.numberOfCells]) device(targetDevice)
-  #pragma omp target enter data map(delete:t[0:hostPatchData.numberOfCells]) device(targetDevice)
-  #pragma omp target enter data map(delete:dt[0:hostPatchData.numberOfCells]) device(targetDevice)
-  #pragma omp target enter data map(from:maxEigenvalue[0:hostPatchData.numberOfCells]) device(targetDevice)
+  #pragma omp target exit data map(delete:rawPointerToPatchCentres[0:hostPatchData.numberOfCells*Dimensions]) device(targetDevice)
+  #pragma omp target exit data map(delete:rawPointerToPatchSizes[0:hostPatchData.numberOfCells*Dimensions]) device(targetDevice)
+  #pragma omp target exit data map(delete:mappedPointersToQIn[0:hostPatchData.numberOfCells]) device(targetDevice)
+  #pragma omp target exit data map(delete:mappedPointersToQOut[0:hostPatchData.numberOfCells]) device(targetDevice)
+  #pragma omp target exit data map(delete:t[0:hostPatchData.numberOfCells]) device(targetDevice)
+  #pragma omp target exit data map(delete:dt[0:hostPatchData.numberOfCells]) device(targetDevice)
+  #pragma omp target exit data map(from:maxEigenvalue[0:hostPatchData.numberOfCells]) device(targetDevice)
 
   #pragma omp target exit data map(delete:tempFluxX[0:fluxHostEnumerator.size()] ) device(targetDevice)
   #pragma omp target exit data map(delete:tempFluxY[0:fluxHostEnumerator.size()] ) device(targetDevice)
