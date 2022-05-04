@@ -4,6 +4,8 @@
 #include "Constants.h"
 #include "exahype2/NonCriticalAssertions.h"
 
+#include "exahype2/fv/enumerator/PatchAccess.h"
+
 
 
 tarch::logging::Log   examples::exahype2::euler::Euler::_log( "examples::exahype2::euler::Euler" );
@@ -191,6 +193,43 @@ double examples::exahype2::euler::Euler::maxEigenvalue(
   nonCriticalAssertion14( result>=0.0, result, p, u_n, irho, c, Q[0], Q[1], Q[2], Q[3], Q[4], faceCentre, volumeH, t, normal );
   return result;
 }
+
+
+void examples::exahype2::euler::Euler::sourceTerm(
+  const double * __restrict__ Q,
+  const tarch::la::Vector<Dimensions,double>&  volumeCentre,
+  const tarch::la::Vector<Dimensions,double>&  volumeH,
+  double                                       t,
+  double                                       dt,
+  double * __restrict__ S
+) {
+  ::exahype2::fv::enumerator::PatchAccess access(
+    Q,                         // make it initially point to input
+    NumberOfFiniteVolumesPerAxisPerPatch, // defined in superclass
+    1,                         // halo size, which you know as user
+    NumberOfUnknowns,          // defined in superclass
+    NumberOfAuxiliaryVariables // defined in superclass
+  );
+
+  for (int unknown = 0; unknown<1; unknown++) {
+    double laplacian = 0.0;
+    if (Dimensions==2) {
+      laplacian = 4.0 * access.centre(unknown)
+        - 1.0 * access.left(0,unknown)
+        - 1.0 * access.right(0,unknown)
+        - 1.0 * access.left(1,unknown)
+        - 1.0 * access.right(1,unknown);
+      laplacian /= volumeH(0);
+      laplacian /= volumeH(0);
+    }
+    else {
+
+    }
+
+    S[unknown] = 0.0001 * laplacian;
+  }
+}
+
 
 
 void examples::exahype2::euler::Euler::flux(
