@@ -4,6 +4,10 @@
 #include "{{CLASSNAME}}.h"
 #include "Constants.h"
 
+#if defined(UseSmartMPI)
+#include "tasks/EulerEnclaveTask.h"
+#include "tarch/multicore/smartScheduling.h"
+#endif
 
 #include "tarch/multicore/multicore.h"
 #include "tarch/multicore/Lock.h"
