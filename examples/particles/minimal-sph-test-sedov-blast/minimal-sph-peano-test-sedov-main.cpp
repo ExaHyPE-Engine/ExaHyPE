@@ -228,6 +228,9 @@ int main(int argc, char** argv) {
         /* Force loop */
         peano4::parallel::SpacetreeSet::getInstance().traverse(forcespart);
 
+        /* Reset NR convergence so we can update again */
+        peano4::parallel::SpacetreeSet::getInstance().traverse(ResetHasConvergedNR);
+
         /* "Kick1" */
         peano4::parallel::SpacetreeSet::getInstance().traverse(kick1part);
         peano4::parallel::SpacetreeSet::getInstance().traverse(kickExtra);
@@ -270,9 +273,6 @@ int main(int argc, char** argv) {
 
         /* "End time-step" */
         peano4::parallel::SpacetreeSet::getInstance().traverse(endTimeStep);
-
-        /* Reset NR convergence so we can update again */
-        peano4::parallel::SpacetreeSet::getInstance().traverse(ResetHasConvergedNR);
 
       }
 
