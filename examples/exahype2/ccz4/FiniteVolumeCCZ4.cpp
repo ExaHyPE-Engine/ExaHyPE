@@ -1,7 +1,7 @@
 #include "FiniteVolumeCCZ4.h"
 #include "exahype2/RefinementControl.h"
 #include "exahype2/NonCriticalAssertions.h"
-
+#include "exahype2/fv/enumerator/PatchAccess.h"
 
 #include <algorithm>
 
@@ -169,14 +169,14 @@ void examples::exahype2::ccz4::FiniteVolumeCCZ4::sourceTerm(
       NumberOfAuxiliaryVariables // defined in superclass
     );
     double laplacian=0.0;
-    for (int i=unknown; i<NumberOfUnknowns; i++) {
+    for (int unknown=0; unknown<NumberOfUnknowns; unknown++) {
       laplacian = -6.0 * access.centre(unknown)
         + 1.0 * access.left(0,unknown)+ 1.0 * access.right(0,unknown)
         + 1.0 * access.left(1,unknown)+ 1.0 * access.right(1,unknown)
         + 1.0 * access.left(2,unknown)+ 1.0 * access.right(2,unknown);
       laplacian /= volumeH(0);
       laplacian /= volumeH(0);
-      S[i]+=0.001*laplacian;
+      S[unknown]+=0.001*laplacian;
     }
   }
 
