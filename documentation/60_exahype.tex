@@ -1840,9 +1840,9 @@ you need, for a simple 5-point stencil, $Q$ at the point of interest and the lef
 as you want to evaluate a stencil
 \[
  \left[ \begin{array}{ccc}
-  0 & -1 & 0 \\
-  -1 & 4 & -1 \\
-  0 & -1 & -1
+  0 & 1 & 0 \\
+  1 & -4 & 1 \\
+  0 & 1 & 0
  \end{array}\right].
 \] 
 
@@ -1872,11 +1872,11 @@ void examples::exahype2::euler::Euler::sourceTerm(
   double laplacian = 0.0;
   const int unknown = 0;
   if (Dimensions==2) {
-    laplacian = 4.0 * access.centre(unknown)
-      - 1.0 * access.left(0,unknown)
-      - 1.0 * access.right(0,unknown)
-      - 1.0 * access.left(1,unknown)
-      - 1.0 * access.right(1,unknown);
+    laplacian = -4.0 * access.centre(unknown)
+      + 1.0 * access.left(0,unknown)
+      + 1.0 * access.right(0,unknown)
+      + 1.0 * access.left(1,unknown)
+      + 1.0 * access.right(1,unknown);
     laplacian /= volumeH(0);
     laplacian /= volumeH(0);
   }

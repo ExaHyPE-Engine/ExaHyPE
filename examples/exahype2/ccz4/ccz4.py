@@ -49,7 +49,7 @@ if __name__ == "__main__":
     parser.add_argument("-m",    "--mode",            dest="mode",            default="release",  help="|".join(modes.keys()) )
     parser.add_argument( "--gpu",            dest="GPU",            default=False, action="store_true",  help="Run with accelerator support" )
     parser.add_argument("-ext",  "--extension",       dest="extension",       choices=["none", "gradient", "AMRadm", "Full"],   default="none",  help="Pick extension, i.e. what should be plotted on top. Default is none" )
-    parser.add_argument("-impl", "--implementation",  dest="implementation",  choices=["fv-global-fixed", "fv-global-adaptive", "fv-global-fixed-enclave", "fv-global-adaptive-enclave"], required="True",  help="Pick solver type" )
+    parser.add_argument("-impl", "--implementation",  dest="implementation",  choices=["fv-global-fixed", "fv-global-adaptive", "fv-global-fixed-enclave", "fv-global-adaptive-enclave","fv-subcyling-adaptive-enclave","fv-local-enclave"], required="True",  help="Pick solver type" )
     parser.add_argument("-no-pbc",  "--no-periodic-boundary-conditions",      dest="periodic_bc", action="store_false", default="True",  help="switch on or off the periodic BC" )
     parser.add_argument("-et",   "--end-time",        dest="end_time",        type=float, default=1.0, help="End (terminal) time" )
     parser.add_argument("-pst",   "--plot-start-time",        dest="plot_start_time",        type=float, default=0.0, help="start time for plot" )
@@ -81,7 +81,7 @@ if __name__ == "__main__":
        SuperClass = exahype2.solvers.fv.rusanov.GlobalFixedTimeStepWithEnclaveTasking
     if args.implementation=="fv-global-adaptive-enclave":
        SuperClass = exahype2.solvers.fv.rusanov.GlobalAdaptiveTimeStepWithEnclaveTasking
-    if args.implementation=="fv-subcyling-adaptive-enclave":
+    if args.implementation=="fv-subcyling-adaptive-enclave": 
        SuperClass = exahype2.solvers.fv.rusanov.SubcyclingAdaptiveTimeStepWithEnclaveTasking
     if args.implementation=="fv-local-enclave":
        SuperClass = exahype2.solvers.fv.rusanov.LocalTimeStepWithEnclaveTasking
@@ -142,6 +142,16 @@ if __name__ == "__main__":
             auxiliary_variables=0,
             min_volume_h=min_volume_h, max_volume_h=max_volume_h,
             time_step_relaxation=cfl
+          )
+        elif SuperClass==exahype2.solvers.fv.rusanov.SubcyclingAdaptiveTimeStepWithEnclaveTasking:
+          SuperClass.__init__(#change to linear interpolation in time by hand here
+            self,
+            name=name, patch_size=patch_size,
+            unknowns=number_of_unknowns,
+            auxiliary_variables=0,
+            min_volume_h=min_volume_h, max_volume_h=max_volume_h,
+            time_step_relaxation=cfl,
+            interpolate_linearly_in_time=True
           )
         else:
           SuperClass.__init__(

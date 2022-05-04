@@ -214,11 +214,11 @@ void examples::exahype2::euler::Euler::sourceTerm(
   for (int unknown = 0; unknown<1; unknown++) {
     double laplacian = 0.0;
     if (Dimensions==2) {
-      laplacian = 4.0 * access.centre(unknown)
-        - 1.0 * access.left(0,unknown)
-        - 1.0 * access.right(0,unknown)
-        - 1.0 * access.left(1,unknown)
-        - 1.0 * access.right(1,unknown);
+      laplacian = -4.0 * access.centre(unknown)
+        + 1.0 * access.left(0,unknown)
+        + 1.0 * access.right(0,unknown)
+        + 1.0 * access.left(1,unknown)
+        + 1.0 * access.right(1,unknown);
       laplacian /= volumeH(0);
       laplacian /= volumeH(0);
     }
