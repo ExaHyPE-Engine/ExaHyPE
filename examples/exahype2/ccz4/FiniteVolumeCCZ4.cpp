@@ -160,6 +160,26 @@ void examples::exahype2::ccz4::FiniteVolumeCCZ4::sourceTerm(
 
   examples::exahype2::ccz4::FiniteVolumeCCZ4::sourceTerm(Q, volumeX, volumeH, t, dt, S, Offloadable::Yes);
 
+  if (CCZ4smoothing==1){// then we apply simple laplacian smoothing
+    ::exahype2::fv::enumerator::PatchAccess access(
+      Q,                         // make it initially point to input
+      NumberOfFiniteVolumesPerAxisPerPatch, // defined in superclass
+      1,                         // halo size, which you know as user
+      NumberOfUnknowns,          // defined in superclass
+      NumberOfAuxiliaryVariables // defined in superclass
+    );
+    double laplacian=0.0;
+    for (int i=unknown; i<NumberOfUnknowns; i++) {
+      laplacian = -6.0 * access.centre(unknown)
+        + 1.0 * access.left(0,unknown)+ 1.0 * access.right(0,unknown)
+        + 1.0 * access.left(1,unknown)+ 1.0 * access.right(1,unknown)
+        + 1.0 * access.left(2,unknown)+ 1.0 * access.right(2,unknown);
+      laplacian /= volumeH(0);
+      laplacian /= volumeH(0);
+      S[i]+=0.001*laplacian;
+    }
+  }
+
 #if !defined(GPUOffloadingOMP)
   for(int i=0; i<NumberOfUnknowns; i++){
     nonCriticalAssertion3( std::isfinite(S[i]), i, volumeX, t );

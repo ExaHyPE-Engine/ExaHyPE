@@ -38,7 +38,7 @@ floatparams = {
 	#"tp_epsilon":1e-6
 }
 
-intparams = {"LapseType":1, "tp_grid_setup":0, "swi":99, "ReSwi":0, "source":0}
+intparams = {"LapseType":1, "tp_grid_setup":0, "swi":99, "ReSwi":0, "source":0, "smoothing":0}
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='ExaHyPE 2 - CCZ4 script')
