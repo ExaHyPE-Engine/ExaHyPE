@@ -409,17 +409,17 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::patchCanUseStatelessPDETerms(
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startSimulation() {
   #if defined(UseSmartMPI)
   tarch::multicore::registerSmartMPITask(
-    tasks::{{CLASSNAME}}EnclaveTask.getEnclaveTaskTypeId(),
+    tasks::EulerEnclaveTask::getEnclaveTaskTypeId(),
     [](smartmpi::ReceiverCallType type, int rank, int tag, MPI_Comm communicator) -> smartmpi::Task* {
       if (type==smartmpi::ReceiverCallType::ReceiveTask) {
-        return receiveTask( rank, tag, communicator );
+        return tasks::EulerEnclaveTask::receiveTask( rank, tag, communicator );
       } else if (type==smartmpi::ReceiverCallType::ReceivedTaskOutcomeForFowarding) {
         static constexpr bool isForwarding = true;
-        return receiveOutcome( rank, tag, communicator, isForwarding);
+        return tasks::EulerEnclaveTask::receiveOutcome( rank, tag, communicator, isForwarding);
       } else {
         assert(type==smartmpi::ReceiverCallType::ReceiveOutcome);
         static constexpr bool isForwarding = false;
-        return receiveOutcome( rank, tag, communicator, isForwarding );
+        return tasks::EulerEnclaveTask::receiveOutcome( rank, tag, communicator, isForwarding );
       }
     }
   );
