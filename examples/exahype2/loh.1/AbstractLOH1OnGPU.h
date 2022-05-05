@@ -55,7 +55,7 @@ class examples::exahype2::loh1::AbstractLOH1OnGPU: public ::exahype2::Solver {
 
     
     
-    #if defined(OpenMPGPUOffloading)
+    #if defined(GPUOffloadingOMP)
     #pragma omp declare target
     #endif
     static void sourceTerm(
@@ -66,7 +66,7 @@ class examples::exahype2::loh1::AbstractLOH1OnGPU: public ::exahype2::Solver {
       double                                       dt,
       double * __restrict__ S
     );
-    #if defined(OpenMPGPUOffloading)
+    #if defined(GPUOffloadingOMP)
     #pragma omp end declare target
     #endif
     

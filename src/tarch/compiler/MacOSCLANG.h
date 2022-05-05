@@ -33,6 +33,14 @@
 
 #define LittleEndian
 
-#if !defined(ExaHyPEFusedKernelAlignment)
-#define ExaHyPEFusedKernelAlignment 16
+#if !defined(Alignment)
+#define Alignment 16
 #endif
+
+
+/**
+ * Clang requires us to put a static keyword in front of header file implementations,
+ * so we avoid duplicate symbols. This is not C++ conformal, and therefore GCC doesn't
+ * eat stuff. But Clang needs a static.
+ */
+#define KeywordToAvoidDuplicateSymbolsForInlinedFunctions static

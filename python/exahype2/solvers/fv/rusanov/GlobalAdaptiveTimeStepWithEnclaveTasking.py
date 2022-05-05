@@ -5,7 +5,7 @@ from exahype2.solvers.fv.PDETerms       import PDETerms
 
 import jinja2
 
-from .kernels import create_source_term_kernel_for_Rusanov
+
 from .kernels import create_compute_Riemann_kernel_for_Rusanov
 from .kernels import create_abstract_solver_declarations
 from .kernels import create_abstract_solver_definitions
@@ -17,7 +17,9 @@ from .kernels import create_finish_time_step_implementation_for_adaptive_time_st
 from .kernels import create_abstract_solver_user_declarations_for_adaptive_time_stepping
 from .kernels import create_abstract_solver_user_definitions_for_adaptive_time_stepping
 from .kernels import create_constructor_implementation_for_adaptive_time_stepping
-from .kernels import create_optimised_Riemann_kernel_template_arguments
+
+from .kernels import SolverVariant
+from .kernels import RiemannKernelVariant
 
 from exahype2.solvers.fv.kernels import create_start_time_step_implementation_for_adaptive_time_stepping
 
@@ -30,9 +32,9 @@ class GlobalAdaptiveTimeStepWithEnclaveTasking( EnclaveTasking ):
     eigenvalues=PDETerms.User_Defined_Implementation, 
     boundary_conditions=None,refinement_criterion=None,initial_conditions=None,source_term=None,
     plot_grid_properties=False,
-    pde_terms_without_state=False
+    pde_terms_without_state=False, overlap=1
   ):
-    super(GlobalAdaptiveTimeStepWithEnclaveTasking,self).__init__(name, patch_size, unknowns, auxiliary_variables, min_volume_h, max_volume_h, plot_grid_properties, pde_terms_without_state) 
+    super(GlobalAdaptiveTimeStepWithEnclaveTasking,self).__init__(name, patch_size, overlap, unknowns, auxiliary_variables, min_volume_h, max_volume_h, plot_grid_properties, pde_terms_without_state) 
     
     self._time_step_relaxation = time_step_relaxation
 
@@ -80,9 +82,26 @@ class GlobalAdaptiveTimeStepWithEnclaveTasking( EnclaveTasking ):
     if eigenvalues          is not None:  self._eigenvalues_implementation                = eigenvalues
     if source_term          is not None:  self._source_term_implementation                = source_term
 
-    self._source_term_call    = create_source_term_kernel_for_Rusanov(self._source_term_implementation)
-    self._Riemann_solver_call = create_compute_Riemann_kernel_for_Rusanov(self._flux_implementation, self._ncp_implementation)
-    self._fused_Riemann_solver_call          = create_optimised_Riemann_kernel_template_arguments(self._flux_implementation, self._ncp_implementation, self._source_term_implementation, True)
+    self._compute_kernel_call            = create_compute_Riemann_kernel_for_Rusanov(
+      self._flux_implementation, self._ncp_implementation, self._source_term_implementation, 
+      compute_max_eigenvalue_of_next_time_step=True, 
+      solver_variant = SolverVariant.WithVirtualFunctions,
+      riemann_kernel_variant = RiemannKernelVariant.PatchWiseAoSHeap
+    )
+    
+    self._fused_compute_kernel_call_cpu  = create_compute_Riemann_kernel_for_Rusanov(
+      self._flux_implementation, self._ncp_implementation, self._source_term_implementation, 
+      compute_max_eigenvalue_of_next_time_step=True, 
+      solver_variant = SolverVariant.Stateless,
+      riemann_kernel_variant = RiemannKernelVariant.PatchWiseInSitu
+    )
+
+    self._fused_compute_kernel_call_gpu  = create_compute_Riemann_kernel_for_Rusanov(
+      self._flux_implementation, self._ncp_implementation, self._source_term_implementation, 
+      compute_max_eigenvalue_of_next_time_step=True, 
+      solver_variant = SolverVariant.Accelerator,
+      riemann_kernel_variant = RiemannKernelVariant.PatchWiseAoSHeap
+    )
 
     self._abstract_solver_user_declarations  = create_abstract_solver_declarations(self._flux_implementation, self._ncp_implementation, self._eigenvalues_implementation, self._source_term_implementation, self._pde_terms_without_state)
     self._abstract_solver_user_definitions   = create_abstract_solver_definitions(self._flux_implementation, self._ncp_implementation, self._eigenvalues_implementation, self._source_term_implementation, self._pde_terms_without_state)
@@ -105,3 +124,10 @@ if (_solverState==SolverState::Secondary) {
   def create_data_structures(self):
     super(GlobalAdaptiveTimeStepWithEnclaveTasking,self).create_data_structures()
     self._optimise_patch_storage_for_global_time_stepping()
+
+
+  @property
+  def user_action_set_includes(self):
+    return super(GlobalAdaptiveTimeStepWithEnclaveTasking, self).user_action_set_includes + """
+#include "exahype2/fv/rusanov/Rusanov.h"
+"""

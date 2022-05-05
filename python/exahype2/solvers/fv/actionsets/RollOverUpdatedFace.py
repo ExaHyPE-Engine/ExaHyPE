@@ -32,7 +32,7 @@ class RollOverUpdatedFace(AbstractFVActionSet):
           for (int i=0; i<{{OVERLAP}}; i++) {
             tarch::la::Vector<Dimensions,int> overlapCell = k;
             overlapCell(normal) = i;
-            const int index = toolbox::blockstructured::serialisePatchIndexInOverlap(overlapCell,{{DOFS_PER_AXIS}},{{OVERLAP}},normal);
+            const int index = toolbox::blockstructured::serialiseVoxelIndexInOverlap(overlapCell,{{DOFS_PER_AXIS}},{{OVERLAP}},normal);
             logDebug( "touchFaceLastTime(...)", "normal=" << normal << ",{{NEW_ACCESSOR}}[" << index << "]->{{OLD_ACCESSOR}}[" << index << "]" );
             logDebug( "touchFaceLastTime(...)", "normal=" << normal << ",{{UPDATE_ACCESSOR}}[" << index << "]->{{NEW_ACCESSOR}}[" << index << "]" );
             for (int j=0; j<{{UNKNOWNS}}; j++) {
@@ -59,7 +59,7 @@ class RollOverUpdatedFace(AbstractFVActionSet):
           for (int i={{OVERLAP}}; i<2*{{OVERLAP}}; i++) {
             tarch::la::Vector<Dimensions,int> overlapCell = k;
             overlapCell(normal) = i;
-            const int index = toolbox::blockstructured::serialisePatchIndexInOverlap(overlapCell,{{DOFS_PER_AXIS}},{{OVERLAP}},normal);
+            const int index = toolbox::blockstructured::serialiseVoxelIndexInOverlap(overlapCell,{{DOFS_PER_AXIS}},{{OVERLAP}},normal);
             logDebug( "touchFaceLastTime(...)", "normal=" << normal << ",{{NEW_ACCESSOR}}[" << index << "]->{{OLD_ACCESSOR}}[" << index << "]" );
             logDebug( "touchFaceLastTime(...)", "normal=" << normal << ",{{UPDATE_ACCESSOR}}[" << index << "]->{{NEW_ACCESSOR}}[" << index << "]" );
             for (int j=0; j<{{UNKNOWNS}}; j++) {
@@ -110,7 +110,6 @@ class RollOverUpdatedFace(AbstractFVActionSet):
 
   def get_includes(self):
     return """
-#include "exahype2/PatchUtils.h"
 #include "peano4/utils/Loop.h"
 #include "toolbox/blockstructured/Enumeration.h"
 """ + AbstractFVActionSet.get_includes(self) 

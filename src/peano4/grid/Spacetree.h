@@ -884,6 +884,11 @@ class peano4::grid::Spacetree {
     ~Spacetree();
 
     /**
+     * @see GridTraversalEvent for a discussion of the arising actions. The traversal
+     *   actually does not issue these actions. It invokes only an observer and hands
+     *   in the GridTraversalEvent. It is then up to the observer to read out the
+     *   event and to issue the actions.
+     *
      * @param calledFromSpacetreeSet If you use traverse directly, please do
      *     not alter this value
      */

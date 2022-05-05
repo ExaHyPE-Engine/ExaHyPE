@@ -8,8 +8,11 @@ endif
 
 
 ToolboxBlockstructured_SOURCES = \
+  Copy.cpp \
+  Derivative.cpp \
   Enumeration.cpp \
   Interpolation.cpp \
+  Restriction.cpp \
   UnitTests.cpp \
   tests/InterpolationTest.cpp 
   

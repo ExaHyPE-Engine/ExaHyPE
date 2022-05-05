@@ -9,13 +9,13 @@
 tarch::logging::Log   examples::exahype2::SSInfall::SSInfall::_log( "examples::exahype2::SSInfall::SSInfall" );
 
 
-#if defined(OpenMPGPUOffloading)
+#if defined(GPUOffloadingOMP)
 #pragma omp declare target
 #endif
 double examples::exahype2::SSInfall::SSInfall::_rMax;
 double examples::exahype2::SSInfall::SSInfall::_rhoMax;
 double examples::exahype2::SSInfall::SSInfall::_mTotMax;
-#if defined(OpenMPGPUOffloading)
+#if defined(GPUOffloadingOMP)
 #pragma omp end declare target
 #endif
 
@@ -36,20 +36,24 @@ void examples::exahype2::SSInfall::SSInfall::startTimeStep(
       m_tot[i]           = 0;
       cell_tot[i]        = 0;
     }
-    double inter_time=globalMinTimeStamp+globalMinTimeStepSize/2;
+    double inter_time=_minTimeStamp+getAdmissibleTimeStepSize()/2.0;
     #ifdef useTable
     int time_position=0;
-    //logInfo( "startTImeStep()", "current min time=" << globalMinTimeStamp<<" inter time=" << inter_time);
-    for(int i=0; i<table_point_number;i++){
-      if (tarch::la::smallerEquals(inter_time,code_time_points[i]) ){time_position=i; break;}
-      time_position=i;
-    }
-    //logInfo( "startTImeStep()", "it is between time point " << code_time_points[time_position-1] << " and " << code_time_points[time_position]);
-    interpolated_a=scale_factor_points[time_position-1]*(code_time_points[time_position]-inter_time)/(code_time_points[time_position]-code_time_points[time_position-1])+scale_factor_points[time_position]*(inter_time-code_time_points[time_position-1])/(code_time_points[time_position]-code_time_points[time_position-1]);
-    //logInfo( "startTImeStep()", "interpolated to " << interpolated_a << " from " << scale_factor_points[time_position-1] << " and " << scale_factor_points[time_position]);
-    if (tarch::la::equals(globalMinTimeStamp,0.0) ){
+    //logInfo( "startTImeStep()", "current min time=" << globalMinTimeStamp<<" current min timestep=" << globalMinTimeStepSize<<" inter time=" << inter_time);
+    //logInfo( "startTImeStep()", "current max time=" << globalMaxTimeStamp<<" current max timestep=" << globalMaxTimeStepSize);
+    //logInfo( "startTImeStep()", "current time=" << _minTimeStamp<<" current timestep=" << getAdmissibleTimeStepSize());
+
+    if (tarch::la::equals(inter_time,0.0) ){
       interpolated_a=scale_factor_points[0];
       //logInfo( "startTImeStep()", "reset scale a to " << interpolated_a << " because t=0.0");
+    }else{
+      for(int i=0; i<table_point_number;i++){
+        if (tarch::la::smallerEquals(inter_time,code_time_points[i]) ){time_position=i; break;}
+        time_position=i;
+      }
+      //logInfo( "startTImeStep()", inter_time << " is between time point " << code_time_points[time_position-1] << " and " << code_time_points[time_position]);
+      interpolated_a=scale_factor_points[time_position-1]*(code_time_points[time_position]-inter_time)/(code_time_points[time_position]-code_time_points[time_position-1])+scale_factor_points[time_position]*(inter_time-code_time_points[time_position-1])/(code_time_points[time_position]-code_time_points[time_position-1]);
+      //logInfo( "startTImeStep()", "interpolated to " << interpolated_a << " from " << scale_factor_points[time_position-1] << " and " << scale_factor_points[time_position]);
     }
     #endif
 
@@ -301,7 +305,7 @@ void examples::exahype2::SSInfall::SSInfall::initialCondition(
 
 double examples::exahype2::SSInfall::SSInfall::getInitialMIn( double r_coor ) const {
   const double rho_ini=tilde_rho_ini;
-  if (iseed==0) {
+  if (iseed==0) {//not using
     if (r_coor<r_ini) {
       return rho_ini*delta_rho*pow(r_coor,3)/3;
     }
@@ -309,7 +313,7 @@ double examples::exahype2::SSInfall::SSInfall::getInitialMIn( double r_coor ) co
       return rho_ini*delta_rho*pow(r_ini,3)/3;
     }
   }
-  if (iseed==1) {
+  if (iseed==1) {//tophat
     if (r_coor<r_point){
       return delta_m*pow(r_coor/r_point,3)/4/tarch::la::PI;
     }
@@ -321,19 +325,20 @@ double examples::exahype2::SSInfall::SSInfall::getInitialMIn( double r_coor ) co
 }
 
 
-double examples::exahype2::SSInfall::SSInfall::getForceDensityNorm(double r_coor,double m_in, double t, double density) {
+double examples::exahype2::SSInfall::SSInfall::getForceDensityNorm(double r_coor,double m_in, double t, double density, double a_input) {
   double a=0.0287*pow((-t/11.8+0.1694*pow(a_i,-0.5)),-2);//when code time ~ 2*(a_i^(-0.5)-1), a~1
   #ifdef useTable
-  a=interpolated_a; //if we use a table to interpolate a (for LCDM), we replace it here.
+  a=a_input; //if we use a table to interpolate a (for LCDM), we replace it here.
   #endif
   double force_density_norm=density*G*m_in/pow(r_coor,3)*Omega_m*a*1.5;
   #ifdef DGP
-  double y3_over_Delta=(4.0/3.0)*pi*pow(r_coor,3)/delta_m;
+  //double y3_over_Delta=(4.0/3.0)*tarch::la::PI*pow(r_coor,3)/delta_m;
+  double l3_over_tildeM=(4.0/3.0)*tarch::la::PI*pow(r_coor,3)/m_in;
   double modifier=0.0;
   if (tarch::la::equals(DGP_zeta,0.0)){modifier=1.0/3.0/DGP_beta;}
-  else{modifier=(27*DGP_beta/16/DGP_zeta/DGP_zeta)*y3_over_Delta*(pow(1+(32*DGP_zeta*DGP_zeta/81/DGP_beta/DGP_beta/y3_over_Delta),0.5)-1);}
+  else{modifier=(27*DGP_beta/16/DGP_zeta/DGP_zeta)*l3_over_tildeM*(pow(1+(32*DGP_zeta*DGP_zeta/81/DGP_beta/DGP_beta/l3_over_tildeM),0.5)-1);}
   //logInfo( "source()", "modifier" << modifier );
-  force_density_norm=force_density_norm*(1+modifier);
+  force_density_norm=force_density_norm*(1.0+modifier);
   #endif
   return force_density_norm;
 }
@@ -402,7 +407,7 @@ void examples::exahype2::SSInfall::SSInfall::sourceTerm(
   double force_density_norm = getForceDensityNorm(
     r_coor,
     m_in,
-    t, Q[0]
+    t, Q[0],interpolated_a
   );
 
   S[0] = 0;  // rho
@@ -415,7 +420,7 @@ void examples::exahype2::SSInfall::SSInfall::sourceTerm(
 }
 
 
-#if defined(OpenMPGPUOffloading)
+#if defined(GPUOffloadingOMP)
 #pragma omp declare target
 #endif
 void examples::exahype2::SSInfall::SSInfall::sourceTerm(
@@ -436,7 +441,7 @@ void examples::exahype2::SSInfall::SSInfall::sourceTerm(
   double force_density_norm = getForceDensityNorm(
     r_coor,
     m_in,
-    t, Q[0]
+    t, Q[0],1.0
   );
 
   double x = volumeX(0)-center(0);
@@ -449,7 +454,7 @@ void examples::exahype2::SSInfall::SSInfall::sourceTerm(
   S[3] = -force_density_norm*z;
   S[4] = -force_density_norm*(Q[1]*x+Q[2]*y+Q[3]*z)/Q[0];
 }
-#if defined(OpenMPGPUOffloading)
+#if defined(GPUOffloadingOMP)
 #pragma omp end declare target
 #endif
 
@@ -561,6 +566,7 @@ double examples::exahype2::SSInfall::SSInfall::maxEigenvalue(
   const tarch::la::Vector<Dimensions,double>&  faceCentre,
   const tarch::la::Vector<Dimensions,double>&  volumeH,
   double                                       t,
+  double                                       dt,
   int                                          normal
 )  {
   assertion(normal>=0);
@@ -578,7 +584,7 @@ double examples::exahype2::SSInfall::SSInfall::maxEigenvalue(
   assertion4( not std::isinf(Q[3]), faceCentre, volumeH, t, normal );
   assertion4( not std::isinf(Q[4]), faceCentre, volumeH, t, normal );
 
-  double result = maxEigenvalue(Q,faceCentre,volumeH,t,normal,Offloadable::Yes);
+  double result = maxEigenvalue(Q,faceCentre,volumeH,t,dt,normal,Offloadable::Yes);
 
   nonCriticalAssertion10(
     result<10000,
@@ -592,7 +598,7 @@ double examples::exahype2::SSInfall::SSInfall::maxEigenvalue(
 }
 
 
-#if defined(OpenMPGPUOffloading)
+#if defined(GPUOffloadingOMP)
 #pragma omp declare target
 #endif
 double examples::exahype2::SSInfall::SSInfall::maxEigenvalue(
@@ -600,6 +606,7 @@ double examples::exahype2::SSInfall::SSInfall::maxEigenvalue(
   const tarch::la::Vector<Dimensions,double>&  faceCentre,
   const tarch::la::Vector<Dimensions,double>&  volumeH,
   double                                       t,
+  double                                       dt,
   int                                          normal,
   Offloadable
 )  {
@@ -626,7 +633,7 @@ double examples::exahype2::SSInfall::SSInfall::maxEigenvalue(
 
   return result;
 }
-#if defined(OpenMPGPUOffloading)
+#if defined(GPUOffloadingOMP)
 #pragma omp end declare target
 #endif
 
@@ -636,6 +643,7 @@ void examples::exahype2::SSInfall::SSInfall::flux(
   const tarch::la::Vector<Dimensions,double>&  faceCentre,
   const tarch::la::Vector<Dimensions,double>&  volumeH,
   double                                       t,
+  double                                       dt,
   int                                          normal,
   double * __restrict__ F // F[5]
 )  {
@@ -653,7 +661,7 @@ void examples::exahype2::SSInfall::SSInfall::flux(
   assertion4( not std::isinf(Q[3]), faceCentre, volumeH, t, normal );
   assertion4( not std::isinf(Q[4]), faceCentre, volumeH, t, normal );
 
-  flux(Q,faceCentre,volumeH,t,normal,F,Offloadable::Yes);
+  flux(Q,faceCentre,volumeH,t,dt,normal,F,Offloadable::Yes);
 
   assertion4( not std::isnan(F[0]), faceCentre, volumeH, t, normal );
   assertion4( not std::isnan(F[1]), faceCentre, volumeH, t, normal );
@@ -670,7 +678,7 @@ void examples::exahype2::SSInfall::SSInfall::flux(
 }
 
 
-#if defined(OpenMPGPUOffloading)
+#if defined(GPUOffloadingOMP)
 #pragma omp declare target
 #endif
 void examples::exahype2::SSInfall::SSInfall::flux(
@@ -678,6 +686,7 @@ void examples::exahype2::SSInfall::SSInfall::flux(
   const tarch::la::Vector<Dimensions,double>&  faceCentre,
   const tarch::la::Vector<Dimensions,double>&  volumeH,
   double                                       t,
+  double                                       dt,
   int                                          normal,
   double * __restrict__                        F, // F[5]
   Offloadable
@@ -699,7 +708,7 @@ void examples::exahype2::SSInfall::SSInfall::flux(
   F[normal+1] += p;
   F[4]        += coeff*p;
 }
-#if defined(OpenMPGPUOffloading)
+#if defined(GPUOffloadingOMP)
 #pragma omp end declare target
 #endif
 

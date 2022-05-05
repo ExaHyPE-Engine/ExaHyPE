@@ -130,7 +130,7 @@ struct peano4::datamanagement::CellMarker {
 
     #if PeanoDebug>0
     /**
-     * Used for debuggin
+     * Used for debugging
      */
     void setRelativePositionWithinFatherCell( int axis, int value );
     #endif

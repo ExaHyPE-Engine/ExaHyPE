@@ -196,12 +196,13 @@ class FV(object):
     self._plot_grid_properties = plot_grid_properties
 
     self._patch_size           = patch_size  
+    self._overlap              = overlap
     self._unknowns             = unknowns
     self._auxiliary_variables  = auxiliary_variables
 
     self.solver_constants_         = ""
-    self.user_action_set_includes  = ""
-    self.user_solver_includes      = ""
+    self._user_action_set_includes  = ""
+    self._user_solver_includes      = ""
     
     if min_volume_h>max_volume_h:
        print( "Error: min_volume_h (" + str(min_volume_h) + ") is bigger than max_volume_h (" + str(max_volume_h) + ")" )
@@ -210,7 +211,7 @@ class FV(object):
 
     self._solver_template_file_class_name = None
 
-    self.plot_description = ""
+    self._plot_description = ""
     
     self._action_set_initial_conditions                       = None
     self._action_set_initial_conditions_for_grid_construction = None
@@ -228,16 +229,8 @@ class FV(object):
     self._preprocess_reconstructed_patch                 = ""
     self._postprocess_updated_patch                      = ""
 
-    self._compute_kernel_call       = """
-      #if Dimensions==2
-      ::exahype2::fv::applySplit1DRiemannToPatch_Overlap1AoS2d
-      #else
-      ::exahype2::fv::applySplit1DRiemannToPatch_Overlap1AoS3d
-      #endif
-"""    
-        
-    self._source_term_call          = "#error Not yet defined"
-    self._Riemann_solver_call       = "#error Not yet defined"
+    self._compute_kernel_call       = "#error Not yet defined"
+    
     self._compute_eigenvalue        = False
     self._abstract_solver_user_declarations        = ""
     self._abstract_solver_user_definitions         = ""
@@ -261,6 +254,7 @@ class FV(object):
 Name:                   """ + self._name + """
 Type:                   """ + self.__class__.__name__ + """
 Patch size:             """ + str( self._patch_size ) + """  
+Overlap:                """ + str( self._overlap ) + """  
 Unknowns:               """ + str( self._unknowns ) + """
 Auxiliary variables:    """ + str( self._auxiliary_variables ) + """
 h_volume_min:           """ + str( self._min_volume_h ) + """
@@ -338,12 +332,46 @@ The finest mesh width of """ + str(self.get_finest_volume_size(domain_size)) + "
 """ 
   
 
-  def get_user_action_set_includes(self):
-    return self.user_action_set_includes
+  @property
+  def user_action_set_includes(self):
+    """
+    
+    Add further includes to this property, if your action sets require some additional
+    routines from other header files.
+    
+    """
+    return self._user_action_set_includes
 
   
-  def get_user_solver_includes(self):
-    return self.user_solver_includes
+  @property
+  def user_solver_includes(self):
+    """
+    
+    Add further includes to this property, if your solver requires some additional
+    routines from other header files.
+    
+    """
+    return self._user_solver_includes
+
+  
+  def add_user_action_set_includes(self,value):
+    """
+    
+    Add further includes to this property, if your action sets require some additional
+    routines from other header files.
+    
+    """
+    self._user_action_set_includes += value
+
+  
+  def add_user_solver_includes(self,value):
+    """
+    
+    Add further includes to this property, if your solver requires some additional
+    routines from other header files.
+    
+    """
+    self._user_solver_includes += value
 
   
   @abstractmethod
@@ -392,13 +420,12 @@ The finest mesh width of """ + str(self.get_finest_volume_size(domain_size)) + "
        
     """
     self._patch                = peano4.datamodel.Patch( (self._patch_size,self._patch_size,self._patch_size), self._unknowns+self._auxiliary_variables, self._unknown_identifier() )
-    self._patch_overlap_old    = peano4.datamodel.Patch( (2,self._patch_size,self._patch_size),                self._unknowns+self._auxiliary_variables, self._unknown_identifier() + "Old" )
-    self._patch_overlap_new    = peano4.datamodel.Patch( (2,self._patch_size,self._patch_size),                self._unknowns+self._auxiliary_variables, self._unknown_identifier() + "New" )
-    self._patch_overlap_update = peano4.datamodel.Patch( (2,self._patch_size,self._patch_size),                self._unknowns+self._auxiliary_variables, self._unknown_identifier() + "Update" )
+    self._patch_overlap_old    = peano4.datamodel.Patch( (2*self._overlap,self._patch_size,self._patch_size),  self._unknowns+self._auxiliary_variables, self._unknown_identifier() + "Old" )
+    self._patch_overlap_new    = peano4.datamodel.Patch( (2*self._overlap,self._patch_size,self._patch_size),  self._unknowns+self._auxiliary_variables, self._unknown_identifier() + "New" )
+    self._patch_overlap_update = peano4.datamodel.Patch( (2*self._overlap,self._patch_size,self._patch_size),  self._unknowns+self._auxiliary_variables, self._unknown_identifier() + "Update" )
     
     self._patch_overlap_old.generator.merge_method_definition = peano4.toolbox.blockstructured.get_face_overlap_merge_implementation(self._patch_overlap_old)
     self._patch_overlap_new.generator.merge_method_definition = peano4.toolbox.blockstructured.get_face_overlap_merge_implementation(self._patch_overlap_new)
-    #self._patch_overlap_update.generator.merge_method_definition = peano4.toolbox.blockstructured.get_face_overlap_merge_implementation(self._patch_overlap_update)
     
     self._patch_overlap_old.generator.includes     += """
 #include "peano4/utils/Loop.h"
@@ -475,7 +502,12 @@ The finest mesh width of """ + str(self.get_finest_volume_size(domain_size)) + "
     self._action_set_project_patch_onto_faces                 = exahype2.solvers.fv.actionsets.ProjectPatchOntoFaces(self, self._store_cell_data_default_guard())
     self._action_set_roll_over_update_of_faces                = exahype2.solvers.fv.actionsets.RollOverUpdatedFace(self, self._store_face_data_default_guard())
     self._action_set_copy_new_faces_onto_old_faces            = peano4.toolbox.blockstructured.BackupPatchOverlap(self._patch_overlap_new, self._patch_overlap_old, False, self._store_face_data_default_guard(), self._get_default_includes())
-    self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement = exahype2.solvers.fv.actionsets.DynamicAMR( solver=self )
+
+    if self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement==None: 
+      self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement = exahype2.solvers.fv.actionsets.DynamicAMR( solver=self )
+      self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement.switch_interpolation_scheme( "piecewise_constant" )
+      self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement.switch_restriction_scheme( "averaging" )
+    
     # This one is different: it is the hook-in point for other solvers, so we create it 
     # only once if it does not exist
     if self._action_set_postprocess_solution == None:
@@ -486,7 +518,6 @@ The finest mesh width of """ + str(self.get_finest_volume_size(domain_size)) + "
         
     self._action_set_update_cell                                                      = None
 
-    self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement.switch_interpolation_scheme( "linear_precomputed_operators<" + str(self._patch_size) +">" )
 
 
   def _store_cell_data_default_guard(self):
@@ -621,9 +652,15 @@ The finest mesh width of """ + str(self.get_finest_volume_size(domain_size)) + "
       step.add_action_set( self._action_set_AMR )
     else:
       step.add_action_set( self._action_set_AMR_commit_without_further_analysis )
+
+
+  @property
+  def plot_description(self,):
+    return self._plot_description
           
   
-  def set_plot_description(self,description):
+  @plot_description.setter
+  def plot_description(self,description):
     """
     
      Use this one to set a description within the output patch file that tells
@@ -631,7 +668,7 @@ The finest mesh width of """ + str(self.get_finest_volume_size(domain_size)) + "
      a comma-separated list here. 
     
     """
-    self.plot_description = description
+    self._plot_description = description
     
   
   def add_actions_to_plot_solution(self, step, output_path):
@@ -664,18 +701,19 @@ The finest mesh width of """ + str(self.get_finest_volume_size(domain_size)) + "
     step.add_action_set( self._action_set_project_patch_onto_faces )
     #step.add_action_set( self._action_set_AMR_commit_without_further_analysis )
 
+# @todo New time stamp choice update in DG and ADER-DG
     step.add_action_set( peano4.toolbox.blockstructured.PlotPatchesInPeanoBlockFormat( 
       filename=output_path + "solution-" + self._name, 
       patch=self._patch, 
       dataset_name=self._unknown_identifier(), 
-      description=self.plot_description,
+      description=self._plot_description,
       guard="repositories::plotFilter.plotPatch(marker) and " + self._load_cell_data_default_guard(),
       additional_includes="""
 #include "exahype2/PlotFilter.h"
 #include "../repositories/SolverRepository.h"
 """,
       precision="PlotterPrecision",
-      time_stamp_evaluation="repositories::getMinTimeStamp()"
+      time_stamp_evaluation="0.5*(repositories::getMinTimeStamp()+repositories::getMaxTimeStamp())"
     ))
 
     if self._plot_grid_properties:    
@@ -788,6 +826,7 @@ The finest mesh width of """ + str(self.get_finest_volume_size(domain_size)) + "
 
     """
     d["NUMBER_OF_VOLUMES_PER_AXIS"]     = self._patch.dim[0]
+    d["OVERLAP"]                        = self._overlap
     d["HALO_SIZE"]                      = int(self._patch_overlap_old.dim[0]/2)
     d["SOLVER_INSTANCE"]                = self.get_name_of_global_instance()
     d["SOLVER_NAME"]                    = self._name
@@ -795,9 +834,6 @@ The finest mesh width of """ + str(self.get_finest_volume_size(domain_size)) + "
     d["NUMBER_OF_UNKNOWNS"]             = self._unknowns
     d["NUMBER_OF_AUXILIARY_VARIABLES"]  = self._auxiliary_variables
     d["SOLVER_NUMBER"]                  = 22
-
-    if self._patch_overlap_old.dim[0]/2!=1:
-      print( "ERROR: Finite Volume solver currently supports only a halo size of 1")
 
     d[ "ASSERTION_WITH_1_ARGUMENTS" ] = "nonCriticalAssertion1"
     d[ "ASSERTION_WITH_2_ARGUMENTS" ] = "nonCriticalAssertion2"
@@ -813,14 +849,12 @@ The finest mesh width of """ + str(self.get_finest_volume_size(domain_size)) + "
 
     d[ "SOLVER_CONSTANTS" ] = self.solver_constants_
 
-    d[ "SOLVER_INCLUDES" ]  = self.get_user_solver_includes()
+    d[ "SOLVER_INCLUDES" ]  = self.user_solver_includes
 
     d[ "BOUNDARY_CONDITIONS_IMPLEMENTATION"]  = self._boundary_conditions_implementation
     d[ "REFINEMENT_CRITERION_IMPLEMENTATION"] = self._refinement_criterion_implementation
     d[ "INITIAL_CONDITIONS_IMPLEMENTATION"]   = self._initial_conditions_implementation
 
-    d[ "SOURCE_TERM_CALL"]                    = jinja2.Template(self._source_term_call, undefined=jinja2.DebugUndefined).render( **d )
-    d[ "RIEMANN_SOLVER_CALL"]                 = jinja2.Template(self._Riemann_solver_call, undefined=jinja2.DebugUndefined).render( **d )
     d[ "COMPUTE_KERNEL_CALL"]                 = jinja2.Template(self._compute_kernel_call, undefined=jinja2.DebugUndefined).render( **d )
 
     d[ "ABSTRACT_SOLVER_USER_DECLARATIONS" ]  = jinja2.Template(self._abstract_solver_user_declarations, undefined=jinja2.DebugUndefined).render( **d )
@@ -873,4 +907,85 @@ The finest mesh width of """ + str(self.get_finest_volume_size(domain_size)) + "
     self._auxiliary_variables = value
     self.create_data_structures()
     self.create_action_sets()
-    
+
+
+  @property 
+  def preprocess_reconstructed_patch(self):
+    return self._preprocess_reconstructed_patch
+ 
+ 
+  @preprocess_reconstructed_patch.setter
+  def preprocess_reconstructed_patch(self, kernel):
+    """
+  
+
+    """
+    self._preprocess_reconstructed_patch  = kernel
+    self.create_data_structures()
+    self.create_action_sets()
+
+
+  @property
+  def name(self):
+    return self._name
+  
+
+  @property
+  def postprocess_updated_patch(self):
+    return self._postprocess_updated_patch
+
+
+  @postprocess_updated_patch.setter
+  def postprocess_updated_patch(self, kernel):
+    """
+
+    Define a postprocessing routine over the data
+
+    The postprocessing kernel often looks similar to the following code:
+
+  {
+    int index = 0;
+    dfor( volume, {{NUMBER_OF_VOLUMES_PER_AXIS}} ) {
+      enforceCCZ4constraints( targetPatch+index );
+      index += {{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}};
+    }
+  }
+
+
+    Within this kernel, you have at least the following variables available:
+
+    - targetPatch This is a pointer to the whole data structure (one large
+        array).
+        The patch is not supplemented by a halo layer.
+    - reconstructedPatch This is a pointer to the data snapshot before the
+        actual update. This data is combined with the halo layer, i.e. if you
+        work with 7x7 patches and a halo of 2, the pointer points to a 11x11
+        patch.
+    - marker
+
+    Furthermore, you can use all the symbols (via Jinja2 syntax) from
+    _init_dictionary_with_default_parameters().
+
+    kernel: String
+      C++ code that holds the postprocessing kernel
+
+    """
+    self._postprocess_updated_patch = kernel
+    self.create_data_structures()
+    self.create_action_sets()
+
+
+  @property
+  def overlap(self):
+    return self._overlap
+
+
+  @overlap.setter
+  def overlap(self,value):
+    if value<1:
+      raise Exception( "Halo (overlap) size has to be bigger than zero but was {}".format(value) )
+    self._overlap = value
+    self.create_data_structures()
+    self.create_action_sets()
+
+

@@ -33,6 +33,52 @@ namespace peano4 {
  *
  * The majority of these routines is all about identifying ownership. So we might also
  * call the class something around ownership analysis.
+ *
+ * ## Event order
+ *
+ * The generated events trigger the following things per grid sweep on the user side:
+ *
+ * - beginTraversal: Called once per rank prior to the actual grid traversal.
+ * - endTraversal: Called once per rank at the end of the traversal.
+ * - createPersistentVertex: First thing that is called for a new vertex.
+ * - destroyPersistentVertex: Very last thing that is called if a vertex is deleted
+ *   becomes a hanging vertex.
+ * - createHangingVertex: Can be called arbitrarily often per grid traversal for a
+ *   hanging vertex. You don't know how often hanging vertices are created/destroyed,
+ *   but you can be sure that this action is triggered before anything else gets
+ *   access to a hanging vertex.
+ * - destroyHangingVertex: Every createHangingVertex() pairs up with one of these
+ *   guys. As hanging vertices are non-persistent, it is at least called once per
+ *   traversal per hanging vertex. However, Peano might decide to create hanging
+ *   vertices multiple times. It hence might also destroy them multiple times.
+ * - createPersistentFace: The very first thing called for a new persistent face.
+ *   Precedes any touchFirst operation.
+ * - destroyPersistentFace: Last thing done for a face that is destroyed or becomes
+ *   hanging.
+ * - createHangingFace: Counterpart of vertex operation.
+ * - destroyHangingFace: Pairs up with creational event.
+ * - createCell: Called if we create a new cell before anything else is done for this
+ *   cell. By the time this operation is called, you can be sure however that all of
+ *   its @f$ 2^d @f$ vertices and $2d$ faces are there - either hanging or real ones.
+ * - destroyCell: This routine precedes any destruction of adjacent faces or vertices.
+ *   So we have the creational sequence vertices-faces-cells and we destroy the other
+ *   way round: cells-faces-vertices.
+ * - touchVertexFirstTime: Called exactly once per rank per grid traversal per vertex,
+ *   before any action for any adjacent face or cell is triggered.
+ * - touchVertexLastTime: Last thing before the vertex is safely stored away for the
+ *   next grid sweep or destroyed.
+ * - touchFaceFirstTime: Called exactly once per rank per grid traversal per face. By
+ *   the time a face is touched first, its @f$ 2^{d-1} @f$ adjacent vertices have been
+ *   touched already.
+ * - touchFaceLastTime: Counterpart of touchFaceFirstTime.
+ * - touchCellFirstTime: Called once per rank per cell. When you bump into a cell, you
+ *   can be sure that all adjacent faces and vertices have been loaded (aka touched)
+ *   already. If this is a fine grid cell, the code will immediately afterwards issue
+ *   the touchCellLastTime action. If the cell is refined, the code will first descend
+ *   within the tree.
+ * - touchCellLastTime: Called just before the tree depth-first traversal leaves a
+ *   cell. This is the backtracking within the tree.
+ *
  */
 class peano4::grid::GridTraversalEventGenerator {
   private:

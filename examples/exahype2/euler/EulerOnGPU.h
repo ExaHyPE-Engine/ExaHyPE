@@ -93,6 +93,7 @@ class examples::exahype2::euler::EulerOnGPU: public AbstractEulerOnGPU {
       const tarch::la::Vector<Dimensions,double>&  faceCentre,
       const tarch::la::Vector<Dimensions,double>&  volumeH,
       double                                       t,
+      double                                       dt,
       int                                          normal
     ) override;
     
@@ -104,6 +105,7 @@ class examples::exahype2::euler::EulerOnGPU: public AbstractEulerOnGPU {
       const tarch::la::Vector<Dimensions,double>&  faceCentre,
       const tarch::la::Vector<Dimensions,double>&  volumeH,
       double                                       t,
+      double                                       dt,
       int                                          normal,
       double * __restrict__ F // F[5]
     ) override;
@@ -124,7 +126,7 @@ class examples::exahype2::euler::EulerOnGPU: public AbstractEulerOnGPU {
      * @return Max eigenvalue. Result has to be positive, so we are actually speaking
      *   about the maximum absolute eigenvalue.
      */
-    #if defined(OpenMPGPUOffloading)
+    #if defined(GPUOffloadingOMP)
     #pragma omp declare target
     #endif
     static inline double maxEigenvalue(
@@ -132,6 +134,7 @@ class examples::exahype2::euler::EulerOnGPU: public AbstractEulerOnGPU {
       const tarch::la::Vector<Dimensions,double>&  faceCentre,
       const tarch::la::Vector<Dimensions,double>&  volumeH,
       double                                       t,
+      double                                       dt,
       int                                          normal,
       Offloadable
     )
@@ -150,17 +153,24 @@ class examples::exahype2::euler::EulerOnGPU: public AbstractEulerOnGPU {
       const double u_n = Q[normal + 1] * irho;
       const double c   = std::sqrt(gamma * p * irho);
 
-      double result = std::max( std::abs(u_n - c), std::abs(u_n + c) );
-      return result;
+      #if defined(GPUOffloadingOMP)
+      double plus  = u_n + c;
+      double minus = u_n - c;
+      plus   = plus>0  ? plus  : -plus;
+      minus  = minus>0 ? minus : -minus;
+      return plus>minus ? plus : minus;
+      #else
+      return std::max( std::abs(u_n - c), std::abs(u_n + c) );
+      #endif 
     }
-    #if defined(OpenMPGPUOffloading)
+    #if defined(GPUOffloadingOMP)
     #pragma omp end declare target
     #endif
     
 
 
     
-    #if defined(OpenMPGPUOffloading)
+    #if defined(GPUOffloadingOMP)
     #pragma omp declare target
     #endif
     static inline void flux(
@@ -168,6 +178,7 @@ class examples::exahype2::euler::EulerOnGPU: public AbstractEulerOnGPU {
       const tarch::la::Vector<Dimensions,double>&  faceCentre,
       const tarch::la::Vector<Dimensions,double>&  volumeH,
       double                                       t,
+      double                                       dt,
       int                                          normal,
       double * __restrict__                        F, // F[5]
       Offloadable
@@ -193,7 +204,7 @@ class examples::exahype2::euler::EulerOnGPU: public AbstractEulerOnGPU {
       F[normal+1] += p;
       F[4]        += coeff*p;
     }
-    #if defined(OpenMPGPUOffloading)
+    #if defined(GPUOffloadingOMP)
     #pragma omp end declare target
     #endif
     

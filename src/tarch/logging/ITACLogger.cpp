@@ -148,18 +148,18 @@ void tarch::logging::ITACLogger::traceIn(long int timestampNanoseconds, int rank
 
   if (_itacHandles.count(trace)==0) {
     int newHandle;
-    VT_funcdef( trace , VT_NOCLASS, &newHandle );
-	  _itaceHandles.insert( std::pair<std::string, int>(trace,newHandle) );
+    VT_funcdef( trace.c_str() , VT_NOCLASS, &newHandle );
+    _itacHandles.insert( std::pair<std::string, int>(trace,newHandle) );
   }
 
-  VT_begin(_itaceHandles[trace].c_str());
+  VT_begin(_itacHandles[trace.c_str()]);
   #endif
 }
 
 
 void tarch::logging::ITACLogger::traceOut(long int timestampNanoseconds, int rank, int threadId, const std::string& trace, const std::string& message) {
   #ifdef UseITAC
-  VT_end(_itaceHandles[trace].c_str());
+  VT_end(_itacHandles[trace.c_str()]);
   #endif
 }
 

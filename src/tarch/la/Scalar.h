@@ -9,7 +9,7 @@
 
 namespace tarch {
   namespace la {
-    #if defined(OpenMPGPUOffloading)
+    #if defined(GPUOffloadingOMP)
     #pragma omp declare target
     #endif
     constexpr double PI = 3.1415926535897932384626433832795028841972;
@@ -19,7 +19,7 @@ namespace tarch {
     #else
     constexpr double NUMERICAL_ZERO_DIFFERENCE = 1.0e-8;
     #endif
-    #if defined(OpenMPGPUOffloading)
+    #if defined(GPUOffloadingOMP)
     #pragma omp end declare target
     #endif
 

@@ -5,26 +5,6 @@
 #include "exahype2/NonCriticalAssertions.h"
 
 
-/*
-
-    double minValues[] =
-        {0.01,-std::numeric_limits<double>::max(),-1e-8,-1e-8,-std::numeric_limits<double>::max()};
-
-    double maxValues[] =
-        {1.0, std::numeric_limits<double>::max(),  1e-8, 1e-8, std::numeric_limits<double>::max()};
-
-    ::exahype2::fv::validatePatch(
-        reconstructedPatch,
-        5,
-        0,
-        4,
-        1, // halo
-        std::string(__FILE__) + "(" + std::to_string(__LINE__) + "): " + marker.toString(),
-        false, minValues, maxValues
-    ); // previous time step has to be valid
-
-*/
-
 
 tarch::logging::Log   examples::exahype2::euler::Euler::_log( "examples::exahype2::euler::Euler" );
 
@@ -39,7 +19,8 @@ enum class Scenario {
 };
 
 
-Scenario scenario = Scenario::BreakingDamResolutionStudies;
+Scenario scenario = Scenario::PointExplosion;
+//Scenario scenario = Scenario::BreakingDamResolutionStudies;
 //Scenario scenario = Scenario::BreakingDamWithDynamicAMR;
 
 //Scenario scenario = Scenario::BreakingDam;
@@ -54,6 +35,12 @@ Scenario scenario = Scenario::BreakingDamResolutionStudies;
 ) {
   ::exahype2::RefinementCommand result = ::exahype2::RefinementCommand::Keep;
 
+  #if Dimensions==3
+  tarch::la::Vector<Dimensions,double> circleCentre = {0.5,0.3,0.5};
+  #else
+  tarch::la::Vector<Dimensions,double> circleCentre = {0.5,0.3};
+  #endif
+
   switch (scenario) {
     case Scenario::PointExplosion:
       {
@@ -61,7 +48,6 @@ Scenario scenario = Scenario::BreakingDamResolutionStudies;
         // you only have this thing, then you work with static AMR, as
         // you never invoke erase.
         if ( tarch::la::equals(t,0.0) ) {
-          tarch::la::Vector<Dimensions,double> circleCentre = {0.5,0.3};
           bool isInTheCentre = ( tarch::la::norm2( volumeCentre-circleCentre ) < 0.05 );
           if (isInTheCentre)
             result = ::exahype2::RefinementCommand::Refine;
@@ -72,7 +58,6 @@ Scenario scenario = Scenario::BreakingDamResolutionStudies;
       {
         // Same as for static AMR. This is the initial pattern
         if ( tarch::la::equals(t,0.0) ) {
-          tarch::la::Vector<Dimensions,double> circleCentre = {0.5,0.3};
           bool isInTheCentre = ( tarch::la::norm2( volumeCentre-circleCentre ) < 0.05 );
           if (isInTheCentre)
             result = ::exahype2::RefinementCommand::Refine;
@@ -178,6 +163,7 @@ double examples::exahype2::euler::Euler::maxEigenvalue(
   const tarch::la::Vector<Dimensions,double>&  faceCentre,
   const tarch::la::Vector<Dimensions,double>&  volumeH,
   double                                       t,
+  double                                       dt,
   int                                          normal
 ) {
   assertion(normal>=0);
@@ -212,6 +198,7 @@ void examples::exahype2::euler::Euler::flux(
  const tarch::la::Vector<Dimensions,double>&  faceCentre,
  const tarch::la::Vector<Dimensions,double>&  volumeH,
  double                                       t,
+ double                                       dt,
  int                                          normal,
  double * __restrict__ F // F[5]
 )
@@ -245,12 +232,6 @@ void examples::exahype2::euler::Euler::flux(
   const double p = (gamma-1) * (Q[4] - 0.5*irho*(Q[1]*Q[1]+Q[2]*Q[2]));
   #endif
 
-  nonCriticalAssertion( F[0]==F[0] );
-  nonCriticalAssertion( F[1]==F[1] );
-  nonCriticalAssertion( F[2]==F[2] );
-  nonCriticalAssertion( F[3]==F[3] );
-  nonCriticalAssertion( F[4]==F[4] );
-
   const double coeff = irho*Q[normal+1];
   F[0] = coeff*Q[0];
   F[1] = coeff*Q[1];
@@ -259,6 +240,12 @@ void examples::exahype2::euler::Euler::flux(
   F[4] = coeff*Q[4];
   F[normal+1] += p;
   F[4]        += coeff*p;
+
+  nonCriticalAssertion8( F[0]==F[0], faceCentre, volumeH, normal, Q[0], Q[1], Q[2], Q[3], Q[4] );
+  nonCriticalAssertion8( F[1]==F[1], faceCentre, volumeH, normal, Q[0], Q[1], Q[2], Q[3], Q[4] );
+  nonCriticalAssertion8( F[2]==F[2], faceCentre, volumeH, normal, Q[0], Q[1], Q[2], Q[3], Q[4] );
+  nonCriticalAssertion8( F[3]==F[3], faceCentre, volumeH, normal, Q[0], Q[1], Q[2], Q[3], Q[4] );
+  nonCriticalAssertion8( F[4]==F[4], faceCentre, volumeH, normal, Q[0], Q[1], Q[2], Q[3], Q[4] );
 
   logTraceOutWith4Arguments( "flux(...)", faceCentre, volumeH, t, normal );
 }

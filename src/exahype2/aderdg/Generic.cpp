@@ -1,9 +1,8 @@
 #include "Generic.h"
 
+#include "../fv/PatchUtils.h"
 #include "tarch/logging/Log.h"
 #include "tarch/multicore/multicore.h"
-
-#include "../PatchUtils.h"
 
 #include "peano4/utils/Loop.h"
 
@@ -53,7 +52,7 @@ void exahype2::aderdg::validateSpacetimePatch(
   }
 }
     
-//#if defined(OpenMPGPUOffloading)
+//#if defined(GPUOffloadingOMP)
 //#pragma omp declare target
 //#endif
 //void exahype2::aderdg::copyPatch(
@@ -71,6 +70,6 @@ void exahype2::aderdg::validateSpacetimePatch(
 //	  }
 //  }
 //}
-//#if defined(OpenMPGPUOffloading)
+//#if defined(GPUOffloadingOMP)
 //#pragma omp end declare target
 //#endif

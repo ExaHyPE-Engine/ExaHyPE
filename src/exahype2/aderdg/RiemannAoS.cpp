@@ -4,9 +4,11 @@
 
 #include "KernelUtils.h"
 
-#if defined(OpenMPGPUOffloading)
+/*
+#if defined(GPUOffloadingOMP)
 #pragma omp declare target
 #endif
+*/
 GPUCallableMethod void exahype2::aderdg::riemann_setBoundaryState_body_AoS(
   std::function< void(
     double * __restrict__                       QInside,
@@ -36,13 +38,15 @@ GPUCallableMethod void exahype2::aderdg::riemann_setBoundaryState_body_AoS(
 
   boundaryState( &QIn[ scalarIndexFace*strideQ ], &QOut[ scalarIndexFace*strideQ ], x, time, direction );
 }
-#if defined(OpenMPGPUOffloading)
+/*
+#if defined(GPUOffloadingOMP)
 #pragma omp end declare target
 #endif
 
-#if defined(OpenMPGPUOffloading)
+#if defined(GPUOffloadingOMP)
 #pragma omp declare target
 #endif
+*/
 GPUCallableMethod double exahype2::aderdg::riemann_maxAbsoluteEigenvalue_body_AoS(
   std::function< double(
     const double * const __restrict__           Q,
@@ -72,9 +76,11 @@ GPUCallableMethod double exahype2::aderdg::riemann_maxAbsoluteEigenvalue_body_Ao
   return maxAbsoluteEigenvalue( &QLR[ scalarIndexFace*strideQ ], x, time, direction );
   // @todo: check this value is > 0.
 }
-#if defined(OpenMPGPUOffloading)
+/*
+#if defined(GPUOffloadingOMP)
 #pragma omp end declare target
 #endif
+*/
 
 // launchers
 

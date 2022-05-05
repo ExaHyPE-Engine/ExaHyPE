@@ -1,5 +1,6 @@
 #include "multicore.h"
 #include "tarch/mpi/Rank.h"
+#include "tarch/compiler/CompilerSpecificSettings.h"
 
 #ifdef UseSmartMPI
 #include "smartmpi.h"
@@ -9,7 +10,7 @@
 #ifndef SharedMemoryParallelisation
 
 double* tarch::allocateMemory(int size, MemoryLocation location) {
- return new double[size];
+ return new (std::align_val_t(Alignment)) double[size];
 }
 
 
@@ -28,7 +29,7 @@ void tarch::multicore::initSmartMPI() {
   );
   smartmpi::init( smartMPITopology );
 
-  smartmpi::appendToSchedulerChain( "LocalScheduler,MigrationScheduler" );
+  smartmpi::appendToSchedulerChain( "MigrationScheduler" );
 
   tarch::mpi::Rank::getInstance().setCommunicator( smartMPITopology->computeNodeOrSmartServerCommunicator );
   #endif
@@ -40,3 +41,17 @@ void tarch::multicore::shutdownSmartMPI() {
   smartmpi::shutdown();
   #endif
 }
+
+
+#if defined(GPUOffloadingOMP)
+#pragma omp declare target
+#endif
+void tarch::gpuAbort() {
+  #if !defined(GPUOffloadingOMP)
+  std::abort();
+  #endif
+}
+#if defined(GPUOffloadingOMP)
+#pragma omp end declare target
+#endif
+

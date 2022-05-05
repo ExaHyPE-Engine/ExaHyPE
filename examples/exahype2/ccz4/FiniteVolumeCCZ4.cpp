@@ -2,8 +2,6 @@
 #include "exahype2/RefinementControl.h"
 #include "exahype2/NonCriticalAssertions.h"
 
-#include "InitialValues.h"
-#include "CCZ4Kernels.h"
 
 #include <algorithm>
 
@@ -19,22 +17,6 @@ TP::TwoPunctures* _tp = new TP::TwoPunctures();
 #endif
 
 tarch::logging::Log   examples::exahype2::ccz4::FiniteVolumeCCZ4::_log( "examples::exahype2::ccz4::FiniteVolumeCCZ4" );
-examples::exahype2::ccz4::FiniteVolumeCCZ4::FiniteVolumeCCZ4() {
-  if ( Scenario==0 || Scenario==1 ) {
-    const char* name = "GaugeWave";
-    int length = strlen(name);
-    //initparameters_(&length, name);
-  }
-  #ifdef IncludeTwoPunctures
-  if ( Scenario==2 ) {
-    prepare(_tp);//we solve the puncture equation here.
-    //exit(0);
-  }
-  #endif
-  else {
-    std::cerr << "initial scenario " << Scenario << " is not supported" << std::endl << std::endl << std::endl;
-  }
-}
 
 #ifdef IncludeTwoPunctures
 //pre-process, solve the puncture equations
@@ -101,6 +83,23 @@ void examples::exahype2::ccz4::FiniteVolumeCCZ4::prepare(TP::TwoPunctures* tp){
 }
 #endif
 
+examples::exahype2::ccz4::FiniteVolumeCCZ4::FiniteVolumeCCZ4() {
+  if ( Scenario==0 || Scenario==1 ) {
+    const char* name = "GaugeWave";//nothing to do here for now
+    int length = strlen(name);
+    //initparameters_(&length, name);
+  }
+  #ifdef IncludeTwoPunctures
+  if ( Scenario==2 ) {
+    prepare(_tp);//we solve the puncture equation here.
+    //exit(0);
+  }
+  #endif
+  else {
+    std::cerr << "initial scenario " << Scenario << " is not supported" << std::endl << std::endl << std::endl;
+  }
+}
+
 void examples::exahype2::ccz4::FiniteVolumeCCZ4::initialCondition(
   double * __restrict__ Q,
   const tarch::la::Vector<Dimensions,double>&  volumeX,
@@ -152,7 +151,7 @@ void examples::exahype2::ccz4::FiniteVolumeCCZ4::sourceTerm(
   double                                       dt,
   double * __restrict__                        S  // S[59
 ) {
-#if !defined(OpenMPGPUOffloading)
+#if !defined(GPUOffloadingOMP)
   logTraceInWith4Arguments( "sourceTerm(...)", volumeX, volumeH, t, dt );
   for(int i=0; i<NumberOfUnknowns; i++){
     assertion3( std::isfinite(Q[i]), i, volumeX, t );
@@ -161,7 +160,7 @@ void examples::exahype2::ccz4::FiniteVolumeCCZ4::sourceTerm(
 
   examples::exahype2::ccz4::FiniteVolumeCCZ4::sourceTerm(Q, volumeX, volumeH, t, dt, S, Offloadable::Yes);
 
-#if !defined(OpenMPGPUOffloading)
+#if !defined(GPUOffloadingOMP)
   for(int i=0; i<NumberOfUnknowns; i++){
     nonCriticalAssertion3( std::isfinite(S[i]), i, volumeX, t );
   }
@@ -169,26 +168,6 @@ void examples::exahype2::ccz4::FiniteVolumeCCZ4::sourceTerm(
 #endif
 }
 
-
-#if defined(OpenMPGPUOffloading)
-#pragma omp declare target
-#endif
-void examples::exahype2::ccz4::FiniteVolumeCCZ4::sourceTerm(
-  const double * __restrict__                  Q, // Q[59+0]
-  const tarch::la::Vector<Dimensions,double>&  volumeX,
-  const tarch::la::Vector<Dimensions,double>&  volumeH,
-  double                                       t,
-  double                                       dt,
-  double * __restrict__                        S,  // S[59
-  Offloadable)
-{
-  memset(S, 0, NumberOfUnknowns*sizeof(double));
-  source(S,Q, CCZ4LapseType, CCZ4ds, CCZ4c, CCZ4e, CCZ4f, CCZ4bs, CCZ4sk, CCZ4xi, CCZ4itau, CCZ4eta, CCZ4k1, CCZ4k2, CCZ4k3);
-  //for (int i=0;i<59;i++){S[i]=S[i]*tarch::la::volume(volumeH);}
-}
-#if defined(OpenMPGPUOffloading)
-#pragma omp end declare target
-#endif
 
 void examples::exahype2::ccz4::FiniteVolumeCCZ4::boundaryConditions(
   const double * __restrict__                  Qinside, // Qinside[59+0]
@@ -212,48 +191,13 @@ double examples::exahype2::ccz4::FiniteVolumeCCZ4::maxEigenvalue(
   const tarch::la::Vector<Dimensions,double>&  faceCentre,
   const tarch::la::Vector<Dimensions,double>&  volumeH,
   double                                       t,
+  double                                       dt,
   int                                          normal
 )
 {
-   return maxEigenvalue(Q, faceCentre, volumeH, t, normal, Offloadable::Yes);
+   return maxEigenvalue(Q, faceCentre, volumeH, t, dt, normal, Offloadable::Yes);
 }
 
-#if defined(OpenMPGPUOffloading)
-#pragma omp declare target
-#endif
-double examples::exahype2::ccz4::FiniteVolumeCCZ4::maxEigenvalue(
-  const double * __restrict__ Q, // Q[59+0],
-  const tarch::la::Vector<Dimensions,double>&  faceCentre,
-  const tarch::la::Vector<Dimensions,double>&  volumeH,
-  double                                       t,
-  int                                          normal,
-  Offloadable
-)
-{
-
-#if defined(CCZ4EINSTEIN)
-  const double qmin = std::min({Q[0],Q[3],Q[5]});
-  const double alpha = std::max({1.0, std::exp(Q[16])}) * std::max({1.0, std::exp(Q[54])}) / std::sqrt(qmin);
-#else
-  const double alpha = 1.0;
-#endif
-
-  constexpr double sqrtwo = 1.4142135623730951;
-  // NOTE parameters are stored in Constants.h
-  const double tempA = alpha * std::max({sqrtwo, CCZ4e, CCZ4ds, CCZ4GLMc/alpha, CCZ4GLMd/alpha});
-  const double tempB = Q[17+normal];//DOT_PRODUCT(Q(18:20),nv(:))
-  double tem = std::max({1.0, std::abs(-tempA-tempB), std::abs(tempA-tempB)});
-  bool flag = false;
-  //for(int i=0; i<(NumberOfUnknowns-1); i++){
-  //  if ( std::abs(Q[i]) > 2.0) { flag = true; break; }
-  //}
-  //return flag? 2*tem: tem;
-  return tem;
-   //return examples::exahype2::ccz4::FiniteVolumeCCZ4::maxEigenvalue(Q, faceCentre, volumeH, t , normal);
-}
-#if defined(OpenMPGPUOffloading)
-#pragma omp end declare target
-#endif
 
 void examples::exahype2::ccz4::FiniteVolumeCCZ4::nonconservativeProduct(
   const double * __restrict__ Q, // Q[59+0],
@@ -261,18 +205,19 @@ void examples::exahype2::ccz4::FiniteVolumeCCZ4::nonconservativeProduct(
   const tarch::la::Vector<Dimensions,double>&  faceCentre,
   const tarch::la::Vector<Dimensions,double>&  volumeH,
   double                                       t,
+  double                                       dt,
   int                                          normal,
   double * __restrict__ BgradQ // BgradQ[59]
 )  {
-#if !defined(OpenMPGPUOffloading)
+#if !defined(GPUOffloadingOMP)
   logTraceInWith4Arguments( "nonconservativeProduct(...)", faceCentre, volumeH, t, normal );
   assertion( normal>=0 );
   assertion( normal<Dimensions );
 #endif
   
-  nonconservativeProduct(Q, deltaQ, faceCentre, volumeH, t, normal, BgradQ, Offloadable::Yes);
+  nonconservativeProduct(Q, deltaQ, faceCentre, volumeH, t, dt, normal, BgradQ, Offloadable::Yes);
 
-#if !defined(OpenMPGPUOffloading)
+#if !defined(GPUOffloadingOMP)
   for (int i=0; i<NumberOfUnknowns; i++) {
     nonCriticalAssertion4( std::isfinite(BgradQ[i]), i, faceCentre, t, normal );
   }
@@ -280,7 +225,7 @@ void examples::exahype2::ccz4::FiniteVolumeCCZ4::nonconservativeProduct(
 #endif
 }
 
-#if defined(OpenMPGPUOffloading)
+#if defined(GPUOffloadingOMP)
 #pragma omp declare target
 #endif
 void examples::exahype2::ccz4::FiniteVolumeCCZ4::nonconservativeProduct(
@@ -289,6 +234,7 @@ void examples::exahype2::ccz4::FiniteVolumeCCZ4::nonconservativeProduct(
   const tarch::la::Vector<Dimensions,double>&  faceCentre,
   const tarch::la::Vector<Dimensions,double>&  volumeH,
   double                                       t,
+  double                                       dt,
   int                                          normal,
   double * __restrict__ BgradQ, // BgradQ[59]
   Offloadable
@@ -305,7 +251,7 @@ void examples::exahype2::ccz4::FiniteVolumeCCZ4::nonconservativeProduct(
   ncp(BgradQ, Q, gradQSerialised, normal, CCZ4LapseType, CCZ4ds, CCZ4c, CCZ4e, CCZ4f, CCZ4bs, CCZ4sk, CCZ4xi, CCZ4mu);
    //examples::exahype2::ccz4::FiniteVolumeCCZ4::nonconservativeProduct(Q, deltaQ, faceCentre, volumeH, t, normal, BgradQ);
 }
-#if defined(OpenMPGPUOffloading)
+#if defined(GPUOffloadingOMP)
 #pragma omp end declare target
 #endif
 
@@ -324,11 +270,11 @@ void examples::exahype2::ccz4::FiniteVolumeCCZ4::nonconservativeProduct(
   if (CCZ4ReSwi==2){ //single black hole
     if (tarch::la::equals(t,0.0)){  //as we use a quantity calculated in postpocessing, we need to provide criterion at the first timestep 
       constexpr int NumberOfRefinementLayers = 3;
-      //double Radius[NumberOfRefinementLayers] = {7.0, 5.0, 2.5};
-      double Radius[NumberOfRefinementLayers] = {5.0, 2.5, 1.25};
+      double Radius[NumberOfRefinementLayers] = {5.0, 3.0, 1.5};
+      //double Radius[NumberOfRefinementLayers] = {5.0, 2.5, 1.25};
       // nice test case which fits on my laptop:
       //double Radius[NumberOfRefinementLayers] = {3.0, 1.0, 0.5};
-      double MaxH[NumberOfRefinementLayers]   = {1.0, 0.3, 0.0};
+      double MaxH[NumberOfRefinementLayers]   = {0.3, 0.15, 0.0};
       // setup where Han has observed NaNs:
 //      double Radius[NumberOfRefinementLayers] = {5.0, 2.5, 1.25};
 //      double MaxH[NumberOfRefinementLayers]   = {1.0, 0.3, 0.0};
@@ -366,17 +312,19 @@ void examples::exahype2::ccz4::FiniteVolumeCCZ4::nonconservativeProduct(
     }
   }
   if (CCZ4ReSwi==4){ //gauge wave test
-    if (tarch::la::equals(t,0.0)){  //as we use a quantity calculated in postpocessing, we need to provide criterion at the first timestep 
-      if ((std::abs(volumeCentre(0))<0.1) and (volumeH(0)>0.1)) { result=::exahype2::RefinementCommand::Refine; }
-      else if (std::abs(volumeCentre(0))<0.06) { result=::exahype2::RefinementCommand::Refine; }
-      else {result = ::exahype2::RefinementCommand::Keep;}
-    } 
-  }
-  if (CCZ4ReSwi==5){ //gauge wave test
-    if (tarch::la::equals(t,0.0)){  //as we use a quantity calculated in postpocessing, we need to provide criterion at the first timestep 
-      if ((std::abs(volumeCentre(1))<0.1) and (volumeH(0)>0.1)) { result=::exahype2::RefinementCommand::Refine; }
-      else if (std::abs(volumeCentre(1))<0.06) { result=::exahype2::RefinementCommand::Refine; }
-      else {result = ::exahype2::RefinementCommand::Keep;}
+    if (tarch::la::equals(t,0.0)){  //as we use a quantity calculated in postpocessing, we need to provide criterion at the first timestep
+      const double HThreshold = 0.1/NumberOfFiniteVolumesPerAxisPerPatch; 
+      logDebug( "refinementCriterion(...)", "CCZ4ReSwi=4 with x=" << volumeCentre(0) << ", h=" << volumeH(0) << ", dh=" << HThreshold );
+      
+      if ((std::abs(volumeCentre(0))<0.3) and (volumeH(0)>1.0/3.0/NumberOfFiniteVolumesPerAxisPerPatch)) { 
+        result=::exahype2::RefinementCommand::Refine; 
+      }
+      else if (std::abs(volumeCentre(0))<0.06) { 
+	result=::exahype2::RefinementCommand::Refine; 
+      }
+      else {
+	result = ::exahype2::RefinementCommand::Keep;
+      }
     } 
   }
   return result;

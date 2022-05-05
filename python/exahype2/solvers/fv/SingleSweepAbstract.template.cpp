@@ -104,7 +104,9 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::update(double timeStepSize, doub
   assertion1(timeStamp>=0.0,timeStamp);
   _maxTimeStampThisTimeStep = std::max(timeStamp,_maxTimeStampThisTimeStep);
   _minTimeStampThisTimeStep = std::min(timeStamp,_minTimeStampThisTimeStep);
-  assertion6( tarch::la::smallerEquals(_minTimeStamp,_maxTimeStampThisTimeStep), _minTimeStamp, _minTimeStampThisTimeStep, _maxTimeStampThisTimeStep, timeStepSize, timeStamp, patchSize );
+  // This assertion makes sense, but if we reset the time stamp size (in couple systems) then
+  // it is valid.
+  // assertion6( tarch::la::smallerEquals(_minTimeStamp,_maxTimeStampThisTimeStep), _minTimeStamp, _minTimeStampThisTimeStep, _maxTimeStampThisTimeStep, timeStepSize, timeStamp, patchSize );
 
   assertion1(patchSize<std::numeric_limits<double>::max()/NumberOfFiniteVolumesPerAxisPerPatch,patchSize);
   assertion1(patchSize>0.0,patchSize);
@@ -360,3 +362,16 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::isLastGridSweepOfTimeStep() cons
 
 
 {{ABSTRACT_SOLVER_USER_DEFINITIONS}}
+
+
+
+void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startSimulation() {
+
+}
+
+
+void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishSimulation() {
+
+}
+
+

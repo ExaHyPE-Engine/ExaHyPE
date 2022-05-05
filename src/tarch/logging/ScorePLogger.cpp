@@ -143,7 +143,7 @@ void tarch::logging::ScorePLogger::error(long int timestampNanoseconds, int rank
 
 
 void tarch::logging::ScorePLogger::traceIn(long int timestampNanoseconds, int rank, int threadId, const std::string& trace, const std::string& message) {
-  #ifdef UseITAC
+  #ifdef UseScoreP
   tarch::multicore::Lock lock(_semaphore);
 
   if (_scorePHandles.count(trace)==0) {
@@ -156,7 +156,7 @@ void tarch::logging::ScorePLogger::traceIn(long int timestampNanoseconds, int ra
 
 
 void tarch::logging::ScorePLogger::traceOut(long int timestampNanoseconds, int rank, int threadId, const std::string& trace, const std::string& message) {
-  #ifdef UseITAC
+  #ifdef UseScoreP
   SCOREP_USER_REGION_LEAVE(_scorePHandles[trace]);
   #endif
 }

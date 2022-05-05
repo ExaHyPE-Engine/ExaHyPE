@@ -24,7 +24,7 @@
 
 {% for item in SOLVERS -%}
 #include "{{ item[0] }}.h"
-{%- endfor %}
+{% endfor %}
 
 
 {% for item in NAMESPACE -%}
@@ -59,6 +59,15 @@
    * hand, there's also a (time-)local time stamp.
    */
   double getMinTimeStamp(bool ofCurrentlyRunningGridSweep = false);
+
+  /**
+   * Return max time stamp of all solvers.
+   *
+   * This routine returns the minimum over the maximum time stamp of all
+   * solvers. It is important that we use the minimum here: We usually want
+   * to know how far in the future all the solvers are, but we still want to
+   * know what a valid time stamp is. So we have to take the minimum here.
+   */
   double getMaxTimeStamp(bool ofCurrentlyRunningGridSweep = false);
   double getMinTimeStepSize();
   double getMaxTimeStepSize();

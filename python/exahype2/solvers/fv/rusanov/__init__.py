@@ -11,3 +11,5 @@ from .SubcyclingFixedTimeStepWithEnclaveTasking     import SubcyclingFixedTimeSt
 from .SubcyclingAdaptiveTimeStepWithEnclaveTasking  import SubcyclingAdaptiveTimeStepWithEnclaveTasking
 from .LocalTimeStepWithEnclaveTasking               import LocalTimeStepWithEnclaveTasking
 
+from .kernels import SolverVariant
+from .kernels import RiemannKernelVariant

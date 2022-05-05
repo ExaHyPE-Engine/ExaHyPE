@@ -80,7 +80,8 @@ bool selectNextAlgorithmicStep() {{
   static bool   gridConstructed                             = false;
   static bool   gridInitialised                             = false;
   static bool   gridBalanced                                = false;
-  static double nextPlotTimeStamp                           = FirstPlotTimeStamp;
+  static double nextMaxPlotTimeStamp                        = FirstPlotTimeStamp;
+  static double nextMinPlotTimeStamp                        = FirstPlotTimeStamp;
   static bool   haveJustWrittenSnapshot                     = false;
   static bool   haveReceivedNoncriticialAssertion           = false;
   static bool   addGridSweepWithoutGridRefinementNext       = false;
@@ -180,29 +181,45 @@ bool selectNextAlgorithmicStep() {{
   }}
   else {{
     if (
-      TimeInBetweenPlots>0.0 and repositories::getMinTimeStamp()<TerminalTime
+      TimeInBetweenPlots>0.0 and repositories::getMinTimeStamp()<MinTerminalTime and repositories::getMaxTimeStamp()<MaxTerminalTime
       and
-      repositories::getMinTimeStamp()>=nextPlotTimeStamp
+      (repositories::getMinTimeStamp()>=nextMinPlotTimeStamp or repositories::getMaxTimeStamp()>=nextMaxPlotTimeStamp)
       and
       repositories::mayPlot()
     ) {{
-      if ( nextPlotTimeStamp+TimeInBetweenPlots < repositories::getMinTimeStamp() ) {{
+      if (repositories::getMinTimeStamp()>=nextMinPlotTimeStamp) {{
+        nextMinPlotTimeStamp += TimeInBetweenPlots;
+      }}
+      if (repositories::getMaxTimeStamp()>=nextMaxPlotTimeStamp) {{
+        nextMaxPlotTimeStamp += TimeInBetweenPlots;
+      }}
+
+      if ( nextMinPlotTimeStamp < repositories::getMinTimeStamp() ) {{
         logWarning(
           "selectNextAlgorithmicStep()",
-          "plot as t=" << repositories::getMinTimeStamp() << " and next plot has been due at t=" << nextPlotTimeStamp << ". " <<
-          "Code is asked to plot every dt=" << TimeInBetweenPlots << ", but this seems to be less than the minimal time step size of the solvers. " <<
+          "code is asked to plot every dt=" << TimeInBetweenPlots << ", but this seems to be less than the time step size of the solvers. " <<
           "So postpone next plot to t=" << (repositories::getMinTimeStamp() + TimeInBetweenPlots)
         );
-        nextPlotTimeStamp = repositories::getMinTimeStamp();
+        nextMinPlotTimeStamp = repositories::getMinTimeStamp() + TimeInBetweenPlots;
       }}
-      nextPlotTimeStamp += TimeInBetweenPlots;
+      else if ( nextMaxPlotTimeStamp < repositories::getMaxTimeStamp() ) {{
+        logWarning(
+          "selectNextAlgorithmicStep()",
+          "code is asked to plot every dt=" << TimeInBetweenPlots << ", but this seems to be less than the time step size of the solvers. " <<
+          "So postpone next plot to t=" << (repositories::getMaxTimeStamp() + TimeInBetweenPlots)
+        );
+        nextMaxPlotTimeStamp = repositories::getMaxTimeStamp() + TimeInBetweenPlots;
+      }}
+
+      nextMaxPlotTimeStamp = std::max(nextMaxPlotTimeStamp,nextMinPlotTimeStamp);
+
       peano4::parallel::Node::getInstance().setNextProgramStep(
         repositories::StepRepository::toProgramStep( repositories::StepRepository::Steps::PlotSolution )
       );
       haveJustWrittenSnapshot = true;
       continueToSolve         = true;
     }}
-    else if ( repositories::getMinTimeStamp()<TerminalTime) {{
+    else if ( repositories::getMinTimeStamp()<MinTerminalTime and repositories::getMaxTimeStamp()<MaxTerminalTime ) {{
       peano4::parallel::Node::getInstance().setNextProgramStep(
         repositories::StepRepository::toProgramStep( repositories::StepRepository::Steps::TimeStep )
       );
@@ -216,7 +233,8 @@ bool selectNextAlgorithmicStep() {{
         );
         continueToSolve         = true; // don't want to terminate immediately
         haveJustWrittenSnapshot = true;
-        nextPlotTimeStamp       = std::numeric_limits<double>::max();
+        nextMinPlotTimeStamp    = std::numeric_limits<double>::max();
+        nextMaxPlotTimeStamp    = std::numeric_limits<double>::max();
       }}
       else if (not haveJustWrittenSnapshot and TimeInBetweenPlots>0.0 and not repositories::mayPlot()) {{
         continueToSolve = true; // don't want to terminate immediately but to wait for incomplete time steps to complete

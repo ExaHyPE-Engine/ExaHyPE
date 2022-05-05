@@ -94,22 +94,22 @@ srcdir_full_path=`cd $srcdir && pwd`
 
 CXXFLAGS_PEANO_2D_RELEASE=" -DDimensions=2 -DPeanoDebug=0"
 CXXFLAGS_PEANO_2D_STATS="   -DDimensions=2 -DPeanoDebug=0 -DTrackStatistics"
-CXXFLAGS_PEANO_2D_ASSERTS=" -DDimensions=2 -DPeanoDebug=2 -g3 -O0"
-CXXFLAGS_PEANO_2D_TRACE="   -DDimensions=2 -DPeanoDebug=1 -g3"
-CXXFLAGS_PEANO_2D_DEBUG="   -DDimensions=2 -DPeanoDebug=4 -g3 -O0"
+CXXFLAGS_PEANO_2D_ASSERTS=" -DDimensions=2 -DPeanoDebug=2 -g -O0"
+CXXFLAGS_PEANO_2D_TRACE="   -DDimensions=2 -DPeanoDebug=1 -g"
+CXXFLAGS_PEANO_2D_DEBUG="   -DDimensions=2 -DPeanoDebug=4 -g -O0"
 
 CXXFLAGS_PEANO_3D_RELEASE=" -DDimensions=3 -DPeanoDebug=0"
 CXXFLAGS_PEANO_3D_STATS="   -DDimensions=3 -DPeanoDebug=0 -DTrackStatistics"
-CXXFLAGS_PEANO_3D_ASSERTS=" -DDimensions=3 -DPeanoDebug=2 -g3 -O0"
-CXXFLAGS_PEANO_3D_TRACE="   -DDimensions=3 -DPeanoDebug=1 -g3"
-CXXFLAGS_PEANO_3D_DEBUG="   -DDimensions=3 -DPeanoDebug=4 -g3 -O0"
+CXXFLAGS_PEANO_3D_ASSERTS=" -DDimensions=3 -DPeanoDebug=2 -g -O0"
+CXXFLAGS_PEANO_3D_TRACE="   -DDimensions=3 -DPeanoDebug=1 -g"
+CXXFLAGS_PEANO_3D_DEBUG="   -DDimensions=3 -DPeanoDebug=4 -g -O0"
 
 
 LDFLAGS_PEANO_RELEASE=" -L$srcdir_full_path/src "
 LDFLAGS_PEANO_STATS="   -L$srcdir_full_path/src "
-LDFLAGS_PEANO_ASSERTS=" -L$srcdir_full_path/src -g3"
-LDFLAGS_PEANO_TRACE="   -L$srcdir_full_path/src -g3"
-LDFLAGS_PEANO_DEBUG="   -L$srcdir_full_path/src -g3"
+LDFLAGS_PEANO_ASSERTS=" -L$srcdir_full_path/src -g"
+LDFLAGS_PEANO_TRACE="   -L$srcdir_full_path/src -g"
+LDFLAGS_PEANO_DEBUG="   -L$srcdir_full_path/src -g"
 
 
 LDADD_PEANO_2D_RELEASE=" -lPeano4Core2d         -lTarch"
@@ -139,13 +139,13 @@ LDADD_PEANO_3D_DEBUG="   -lPeano4Core3d_debug   -lTarch_debug"
 #
 AC_ARG_WITH(
   multithreading, 
-  AC_HELP_STRING([--with-multithreading], [switch on multithreading [default=no,cpp,omp,sycl]]),
+  AC_HELP_STRING([--with-multithreading], [switch on multithreading [default=no,cpp,omp,tbb]]),
   [
     AC_MSG_CHECKING(for multithreading)
     case "${withval}" in
       no)     AC_MSG_RESULT([no multithreading]);                    multithreading=false ;;
-      cpp)    AC_MSG_RESULT([build with C++11 threading support]);                          multithreading=cpp ;;
-      sycl)   AC_MSG_RESULT([build with SYCL]);                                              multithreading=sycl ;;
+      cpp)    AC_MSG_RESULT([build with C++11 threading support]);   multithreading=cpp ;;
+      tbb)    AC_MSG_RESULT([build with TBB]);                       multithreading=tbb ;;
       omp)    AC_MSG_RESULT([build with OpenMP - please ensure you pass -fopenmp/-qopenmp/-openmp or similar to your CXX flags]); multithreading=omp ;;
       *)      AC_MSG_FAILURE([default=no (no multithreading). Use omp, cpp or sycl to define target]);            multithreading=false ;;
     esac
@@ -162,9 +162,8 @@ if test "$multithreading" == cpp; then
   AC_SEARCH_LIBS(pthread_create,pthread)
 fi
 
-if test "$multithreading" == sycl; then
-  #AC_CHECK_HEADERS([cycl/CL/hpsycl.hpp],[],[AC_MSG_ERROR([header <cycl/CL/sycl.hpp> not found])])
-  AC_DEFINE([SharedSYCL], [1], [SharedSYCL])
+if test "$multithreading" == tbb; then
+  AC_DEFINE([SharedTBB], [1], [SharedTBB])
 fi
 
 if test "$multithreading" == omp; then
@@ -207,67 +206,57 @@ fi
 #
 # GPU support
 #
-AC_ARG_ENABLE(gpu,
-  AC_HELP_STRING([--enable-gpu], [build with the GPU support. Not all targets are supported for all programming models, but you will need some threading model enabled [default=no,amd,nvidia]]),
-  [ AC_MSG_CHECKING(for gpu)
-    case "${enableval}" in
-      no)        AC_MSG_RESULT(no);                               gpu=false ;;
-      generic)   AC_MSG_RESULT(build with NVIDIA GPU support);    gpu=generic ;;
-      nvidia)    AC_MSG_RESULT(build with NVIDIA GPU support);    gpu=nvidia ;;
-      intel)     AC_MSG_RESULT(build with intel GPU support);     gpu=intel ;;
-      amd)       AC_MSG_RESULT(build with AMD GPU support);       gpu=amd ;;
-      *)         AC_MSG_RESULT(build with generic GPU defaults);  gpu=generic ;;
-    esac 
-  ],
-  [ AC_MSG_CHECKING(for gpu); AC_MSG_RESULT(no); gpu=false ]
+AC_ARG_WITH(
+  gpu, 
+  AC_HELP_STRING([--with-gpu], [build with the GPU support. Not all targets are supported for all programming models, but you will need some threading model enabled [default=no,omp,hip,sycl,cpp]]),
+  [
+    AC_MSG_CHECKING(for gpu)
+    case "${withval}" in
+      no)    AC_MSG_RESULT(no);                                    gpu=false ;;
+      omp)   AC_MSG_RESULT(build with OpenMP offloading to GPUs);  gpu=omp ;;
+      hip)   AC_MSG_RESULT(build with HIP GPU support);            gpu=hip ;;
+      cpp)   AC_MSG_RESULT(build with C++ GPU support);            gpu=cpp ;;
+      sycl)  AC_MSG_RESULT(build with SYCL GPU support);           gpu=sycl ;;
+      *)     AC_MSG_FAILURE([use omp, cpp or sycl to define target]);            gpu=false ;;
+    esac
+  ], 
+  [ 
+    AC_MSG_CHECKING(for gpu); 
+    AC_MSG_RESULT(no); gpu=false
+  ]
 )
 
 
-AM_CONDITIONAL([OpenMPGPUOffloading], [test "$gpu" != false])
-AM_CONDITIONAL([SYCLGPUOffloading],   [test "$gpu" != false])
+AM_CONDITIONAL([GPUOffloadingOMP],    [test "$gpu" == omp])
+AM_CONDITIONAL([GPUOffloadingSYCL],   [test "$gpu" == sycl])
+AM_CONDITIONAL([GPUOffloadingHIP],    [test "$gpu" == hip])
+AM_CONDITIONAL([GPUOffloadingCPP],    [test "$gpu" == cpp])
 
 
-if test "$gpu" == generic; then
-  if test "$multithreading" == omp; then
-    AC_DEFINE([OpenMPGPUOffloading],  [1], [OpenMPGPUOffloading])
-    AC_DEFINE([SYCLGPUOffloading],  [0], [SYCLGPUOffloading])
-  elif test "$multithreading" == sycl; then
-    AC_DEFINE([OpenMPGPUOffloading],  [0], [OpenMPGPUOffloading])
-    AC_DEFINE([SYCLGPUOffloading],  [1], [SYCLGPUOffloading])
-  else
-    AC_MSG_FAILURE([generic GPU support requires OpenMP or SYCL; reconfigure with appropriate multithreading]);
-  fi
+if test "$gpu" == omp; then
+  AC_OPENMP()
+  AC_CHECK_HEADERS([omp.h],[],[AC_MSG_WARN([header <omp.h> not found])])
+  AC_DEFINE([GPUOffloadingOMP], [1], [GPUOffloadingOMP])
 fi
 
-
-if test "$gpu" == amd; then
-  #AC_DEFINE([UseAMD], [1], [UseAMD])
-  #AC_CHECK_HEADERS([hip/hip_runtime.h],[],[AC_MSG_ERROR([header <hip/hip_runtime.h> not found])])
-  if test "$multithreading" == omp; then
-    AC_DEFINE([OpenMPGPUOffloading],  [1], [OpenMPGPUOffloading])
-    AC_DEFINE([SYCLGPUOffloading],  [0], [SYCLGPUOffloading])
-  else
-    AC_MSG_FAILURE([AMD GPU support requires OpenMP; reconfigure with omp multithreading]);
-  fi
+if test "$gpu" == sycl; then
+  #AC_OPENMP()
+  #AC_CHECK_HEADERS([omp.h],[],[AC_MSG_WARN([header <omp.h> not found])])
+  AC_DEFINE([GPUOffloadingSYCL], [1], [GPUOffloadingSYCL])
 fi
 
-if test "$gpu" == nvidia; then
-  if test "$multithreading" == omp; then
-    AC_DEFINE([OpenMPGPUOffloading],  [1], [OpenMPGPUOffloading])
-    AC_DEFINE([SYCLGPUOffloading],  [0], [SYCLGPUOffloading])
-  else
-    AC_MSG_FAILURE([NVIDIA GPU support requires OpenMP; reconfigure with omp multithreading]);
-  fi
+if test "$gpu" == hip; then
+  #AC_OPENMP()
+  #AC_CHECK_HEADERS([omp.h],[],[AC_MSG_WARN([header <omp.h> not found])])
+  AC_DEFINE([GPUOffloadingHIP], [1], [GPUOffloadingHIP])
 fi
 
-if test "$gpu" == intel; then
-  if test "$multithreading" == omp; then
-    AC_DEFINE([OpenMPGPUOffloading],  [1], [OpenMPGPUOffloading])
-    AC_DEFINE([SYCLGPUOffloading],  [0], [SYCLGPUOffloading])
-  else
-    AC_MSG_FAILURE([INTEL GPU support requires OpenMP; reconfigure with omp multithreading]);
-  fi
+if test "$gpu" == cpp; then
+  #AC_OPENMP()
+  #AC_CHECK_HEADERS([omp.h],[],[AC_MSG_WARN([header <omp.h> not found])])
+  AC_DEFINE([GPUOffloadingCPP], [1], [GPUOffloadingCPP])
 fi
+
 
 
 #
@@ -440,11 +429,8 @@ AC_ARG_WITH(toolchain,
 )
 
 if test "$toolchain" == intel; then
-  AC_DEFINE([UseIntel], [1], [UseIntel])
+  AC_DEFINE([UseITAC], [1], [UseITAC])
   AC_DEFINE([UseLogService], [ITACLogger], [ITACLogger])
-  AC_CHECK_HEADERS([VT.h],[],[AC_MSG_ERROR([header <VT.h> not found])])
-  LDFLAGS+=-ipo
-  CXXFLAGS+=" -ip -ipo "
 fi
 
 

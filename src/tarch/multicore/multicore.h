@@ -3,12 +3,13 @@
 
 
 #include "config.h"
+#include "tarch/compiler/CompilerSpecificSettings.h"
 
 
 #include <string>
 
 
-#if defined(SharedOMP) || defined(SharedSYCL) || defined(SharedCPP)
+#if defined(SharedOMP) || defined(SharedTBB) || defined(SharedCPP)
   #define SharedMemoryParallelisation
 #endif
 
@@ -229,19 +230,6 @@ and
 
  */
   namespace multicore {
-     #if defined(GPUOffloading) and defined(UseAMD)
-       #define  GPUCallableMethod __global__ __device__
-       #undef   OpenMPGPUOffloading
-     #elif defined(GPUOffloading) and defined(SharedOMP)
-       #define  GPUCallableMethod
-       #define  OpenMPGPUOffloading
-     #elif defined(GPUOffloading)
-       #error GPU Offloading without HIP and OpenMP requested. Not supported
-     #else
-      #define  GPUCallableMethod 
-      #undef   OpenMPGPUOffloading
-     #endif
-
      /**
       * Switch on SmartMPI
       *
@@ -266,12 +254,36 @@ and
     ManagedAcceleratorMemory
   };
 
-  #if defined(OpenMPGPUOffloading)
-  #pragma omp declare target
+  #if defined(GPUOffloadingHIP)
+    #define GPUCallableMethod __global__ __device__
+  #elif defined(GPUOffloadingSYCL)
+    #define GPUCallableMethod SYCL_EXTERNAL
+  #elif defined(UseManualInlining)
+    #define GPUCallableMethod
+  #else
+    #define GPUCallableMethod
   #endif
+
+  #if defined(UseManualInlining)
+    #define InlineMethod __attribute__((always_inline))
+  #else
+    #define InlineMethod
+  #endif
+
+
   double* allocateMemory(int size, MemoryLocation location);
   void freeMemory(double* data, MemoryLocation location);
-  #if defined(OpenMPGPUOffloading)
+
+
+  #if defined(GPUOffloadingOMP)
+  #pragma omp declare target
+  #endif
+  /**
+   * Delegates to std::abort() if no GPU offloading is active. Otherwise is degenerates
+   * to nop, as there is no abort on an accelerator.
+   */
+  void gpuAbort();
+  #if defined(GPUOffloadingOMP)
   #pragma omp end declare target
   #endif
 }

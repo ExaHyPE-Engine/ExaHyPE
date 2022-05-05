@@ -26,7 +26,7 @@ class examples::exahype2::SSInfall::SSInfall: public AbstractSSInfall {
     std::string plotGlobalMTot(bool plotCopy) const;
     std::string plotRs() const;
 
-    #if defined(OpenMPGPUOffloading)
+    #if defined(GPUOffloadingOMP)
     #pragma omp declare target
     #endif
     /**
@@ -45,7 +45,7 @@ class examples::exahype2::SSInfall::SSInfall: public AbstractSSInfall {
      * From m_tot_copy[sample_number-1].
      */
     static double _mTotMax;
-    #if defined(OpenMPGPUOffloading)
+    #if defined(GPUOffloadingOMP)
     #pragma omp end declare target
     #endif
 
@@ -60,7 +60,7 @@ class examples::exahype2::SSInfall::SSInfall: public AbstractSSInfall {
      * @param t    Timestamp
      * @param density Typically Q[0]
      */
-    static double getForceDensityNorm(double r_coord, double m_in, double t, double density);
+    static double getForceDensityNorm(double r_coord, double m_in, double t, double density, double a_input);
   public:
     //int sample_number=10;
     //double m_tot[10]={0,0,0,0,0,0,0,0,0,0};
@@ -112,7 +112,7 @@ class examples::exahype2::SSInfall::SSInfall: public AbstractSSInfall {
     ) override;
 
     
-#if defined(OpenMPGPUOffloading)
+#if defined(GPUOffloadingOMP)
 #pragma omp declare target
 #endif
     /**
@@ -128,7 +128,7 @@ class examples::exahype2::SSInfall::SSInfall: public AbstractSSInfall {
       double * __restrict__                        S,
       Offloadable
     );
-#if defined(OpenMPGPUOffloading)
+#if defined(GPUOffloadingOMP)
 #pragma omp end declare target
 #endif
 
@@ -148,16 +148,17 @@ class examples::exahype2::SSInfall::SSInfall: public AbstractSSInfall {
     /**
      * See flux() for a description why there are two maxEigenvalue() versions.
      */
-    double maxEigenvalue(
+    virtual double maxEigenvalue(
       const double * __restrict__ Q, // Q[5+0],
       const tarch::la::Vector<Dimensions,double>&  faceCentre,
       const tarch::la::Vector<Dimensions,double>&  volumeH,
       double                                       t,
+      double                                       dt,
       int                                          normal
     ) override;
 
       
-#if defined(OpenMPGPUOffloading)
+#if defined(GPUOffloadingOMP)
 #pragma omp declare target
 #endif
     static double maxEigenvalue(
@@ -165,10 +166,11 @@ class examples::exahype2::SSInfall::SSInfall: public AbstractSSInfall {
       const tarch::la::Vector<Dimensions,double>&  faceCentre,
       const tarch::la::Vector<Dimensions,double>&  volumeH,
       double                                       t,
+      double                                       dt,
       int                                          normal,
       Offloadable
     );
-#if defined(OpenMPGPUOffloading)
+#if defined(GPUOffloadingOMP)
 #pragma omp end declare target
 #endif
 
@@ -180,17 +182,18 @@ class examples::exahype2::SSInfall::SSInfall: public AbstractSSInfall {
      *
      * The static version fits to the GPU (see guidebook).
      */
-    void flux(
+    virtual void flux(
       const double * __restrict__ Q, // Q[5+0],
       const tarch::la::Vector<Dimensions,double>&  faceCentre,
       const tarch::la::Vector<Dimensions,double>&  volumeH,
       double                                       t,
+      double                                       dt,
       int                                          normal,
       double * __restrict__ F // F[5]
     ) override;
 
 
-#if defined(OpenMPGPUOffloading)
+#if defined(GPUOffloadingOMP)
 #pragma omp declare target
 #endif
     static void flux(
@@ -198,11 +201,12 @@ class examples::exahype2::SSInfall::SSInfall: public AbstractSSInfall {
       const tarch::la::Vector<Dimensions,double>&  faceCentre,
       const tarch::la::Vector<Dimensions,double>&  volumeH,
       double                                       t,
+      double                                       dt,
       int                                          normal,
       double * __restrict__ F, // F[5]
       Offloadable
     );
-#if defined(OpenMPGPUOffloading)
+#if defined(GPUOffloadingOMP)
 #pragma omp end declare target
 #endif
 

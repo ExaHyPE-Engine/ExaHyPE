@@ -139,7 +139,8 @@ class PlotPatchesInPeanoBlockFormat(ActionSet):
   if ( {GUARD_PREDICATE} ) {{
   int vertexIndices[TwoPowerD];
   
-  const double PatchScaling = 0.95;
+  //const double PatchScaling = 0.95;
+  const double PatchScaling = 1.0;
 
   assertion( _writer!=nullptr );
   assertion( _dataWriter!=nullptr );

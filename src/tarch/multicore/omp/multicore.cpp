@@ -3,49 +3,49 @@
 
 #if defined(SharedOMP)
 
-#if defined(OpenMPGPUOffloading)
+/*
+#if defined(GPUOffloadingOMP)
 #pragma omp declare target
 #endif
+*/
 double* tarch::allocateMemory(int size, MemoryLocation location) {
   double* result = nullptr;
   switch (location) {
     case MemoryLocation::Heap:
-      //#pragma omp allocate(result) allocator(allocator) memspace(memspace) memtraits(optimized=latency)
-      //#pragma omp allocate(result) memtraits(optimized=latency)
-      result = new double[size];
+      result = new (std::align_val_t(Alignment)) double[size];
       break;
     case MemoryLocation::ManagedAcceleratorMemory:
-      //#if defined(OpenMPGPUOffloading) and defined(UseNVIDIA)
-      //cudaMallocManaged((void**)&result, size*sizeof(double), cudaMemAttachGlobal);
-      //#elif defined(OpenMPGPUOffloading) and defined(UseAMD)
-      //result = new double[size];
-      //// AMD does not (yet) support managed memory
-      //// hipMallocManaged(&result, size*sizeof(double));
-      //#else
+      #if defined(GPUOffloadingOMP) and defined(UseNVIDIA)
+      cudaMallocManaged((void**)&result, size*sizeof(double), cudaMemAttachGlobal);
+      #else
       //// #pragma omp allocate ()
-      result = new double[size];
-      //#endif
+      result = new (std::align_val_t(Alignment)) double[size];
+      #endif
       break;
   }
   return result;
 }
-#if defined(OpenMPGPUOffloading)
+/*
+#if defined(GPUOffloadingOMP)
 #pragma omp end declare target
 #endif
+*/
 
 
-#if defined(OpenMPGPUOffloading)
+/*
+#if defined(GPUOffloadingOMP)
 #pragma omp declare target
 #endif
+*/
 void tarch::freeMemory(double* data, MemoryLocation location) {
   switch (location) {
     case MemoryLocation::Heap:
       delete[] data;
       break;
     case MemoryLocation::ManagedAcceleratorMemory:
-      //#if defined(OpenMPGPUOffloading) and defined(UseNVIDIA)
+      //#if defined(GPUOffloadingOMP) and defined(UseNVIDIA)
       //cudaFree(data);
-      //#elif defined(OpenMPGPUOffloading) and defined(UseAMD)
+      //#elif defined(GPUOffloadingOMP) and defined(UseAMD)
       //// See remark on managed memory above
       //// hipFree(data);
       //delete[] data;
@@ -55,9 +55,11 @@ void tarch::freeMemory(double* data, MemoryLocation location) {
       //break;
   }
 }
-#if defined(OpenMPGPUOffloading)
+/*
+#if defined(GPUOffloadingOMP)
 #pragma omp end declare target
 #endif
+*/
 
 
 #endif

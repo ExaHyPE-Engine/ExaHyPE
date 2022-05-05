@@ -3,11 +3,9 @@
 from exahype2.solvers.fv.PDETerms  import PDETerms
 
 import jinja2
+from enum import Enum
 
-from exahype2.solvers.fv.kernels import create_empty_source_term_kernel
-from exahype2.solvers.fv.kernels import create_user_defined_source_term_kernel
-    
-    
+
 def create_compute_time_step_size_for_fixed_time_stepping_with_subcycling( time_step_size, solver_name, remove_accumulation_errors=True ):
   if remove_accumulation_errors:
     return """
@@ -16,13 +14,13 @@ def create_compute_time_step_size_for_fixed_time_stepping_with_subcycling( time_
   const double originalStepSize = repositories::{{SOLVER_INSTANCE}}.getMinPatchSize(false)>0.0 ?
     repositories::{{SOLVER_INSTANCE}}.getTimeStepSize() * marker.h()(0) / repositories::{{SOLVER_INSTANCE}}.getMinPatchSize(false) :
     0.0;
-  const double timeStepSize = ::exahype2::removeTimeStepAccumulationErrorsFromCell( fineGridCell""" + solver_name + """CellLabel, fineGridFaces""" + solver_name + """FaceLabel, originalStepSize);
+  double timeStepSize = ::exahype2::removeTimeStepAccumulationErrorsFromCell( fineGridCell""" + solver_name + """CellLabel, fineGridFaces""" + solver_name + """FaceLabel, originalStepSize);
 """  
   else:
     return """
   // The fixed solver's _timeStepSize scales with min volume h, i.e. it is 
   // always chosen such that the finest grid does something meaningful.
-  const double timeStepSize = repositories::{{SOLVER_INSTANCE}}.getMinPatchSize(false)>0.0 ?
+  double timeStepSize = repositories::{{SOLVER_INSTANCE}}.getMinPatchSize(false)>0.0 ?
     repositories::{{SOLVER_INSTANCE}}.getTimeStepSize() * marker.h()(0) / repositories::{{SOLVER_INSTANCE}}.getMinPatchSize(false) :
     0.0;
 """  
@@ -36,13 +34,13 @@ def create_compute_time_step_size_kernel_for_adaptive_time_stepping_with_subcycl
   const double originalTimeStepSize = repositories::{{SOLVER_INSTANCE}}.getMinPatchSize(false)>0.0 ?
     repositories::{{SOLVER_INSTANCE}}.getAdmissibleTimeStepSize() * marker.h()(0) / repositories::{{SOLVER_INSTANCE}}.getMinPatchSize(false) :
     0.0;
-  const double timeStepSize = ::exahype2::removeTimeStepAccumulationErrorsFromCell( fineGridCell""" + solver_name + """CellLabel, fineGridFaces""" + solver_name + """FaceLabel, originalTimeStepSize);
+  double timeStepSize = ::exahype2::removeTimeStepAccumulationErrorsFromCell( fineGridCell""" + solver_name + """CellLabel, fineGridFaces""" + solver_name + """FaceLabel, originalTimeStepSize);
 """
   else:
     return """
   // The fixed solver's _timeStepSize scales with min volume h, i.e. it is 
   // always chosen such that the finest grid does something meaningful.
-  const double timeStepSize = repositories::{{SOLVER_INSTANCE}}.getMinPatchSize(false)>0.0 ?
+  double timeStepSize = repositories::{{SOLVER_INSTANCE}}.getMinPatchSize(false)>0.0 ?
     repositories::{{SOLVER_INSTANCE}}.getAdmissibleTimeStepSize() * marker.h()(0) / repositories::{{SOLVER_INSTANCE}}.getMinPatchSize(false) :
     0.0;
 """
@@ -50,10 +48,7 @@ def create_compute_time_step_size_kernel_for_adaptive_time_stepping_with_subcycl
 
 def create_compute_time_step_size_kernel_for_local_time_stepping( solver_name, time_step_relaxation ):
   result = """
-  const double timeStepSize = fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStepSize();  
-  const double timeStamp    = fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStamp();  
-
-  const double timeStepSize = ::exahype2::removeTimeStepAccumulationErrorsFromCell( fineGridCell""" + solver_name + """CellLabel, fineGridFaces""" + solver_name + """FaceLabel, timeStepSize);
+  double timeStepSize = ::exahype2::removeTimeStepAccumulationErrorsFromCell( fineGridCell""" + solver_name + """CellLabel, fineGridFaces""" + solver_name + """FaceLabel, fineGridCell""" + solver_name + """CellLabel.getTimeStepSize() );
 """
 
   return result
@@ -61,11 +56,11 @@ def create_compute_time_step_size_kernel_for_local_time_stepping( solver_name, t
 
 def create_compute_time_step_size_kernel_for_adaptive_time_stepping():
   return """
-  const double timeStepSize = repositories::{{SOLVER_INSTANCE}}.getAdmissibleTimeStepSize();
+  double timeStepSize = repositories::{{SOLVER_INSTANCE}}.getAdmissibleTimeStepSize();
 """
 
 
-def create_postprocess_updated_patch_for_local_time_stepping(time_step_relaxation, avoid_staircase_effect, discretisation_steps):
+def create_compute_new_time_step_size_kernel_for_local_time_stepping(time_step_relaxation, avoid_staircase_effect, discretisation_steps):
   """
   
   :: Zero eigenvalues
@@ -83,10 +78,11 @@ def create_postprocess_updated_patch_for_local_time_stepping(time_step_relaxatio
   
   avoid_staircase_effect: Boolean
   
+  discretisation_steps: Integer  
+    See exahype2::discretiseAndTruncateTimeStepSizes() for a description of admissible
+    values and the semantics of the values.
+  
   """
-  if discretisation_steps<=1.0:
-    raise Exception( "invalid discretisation step size for local time step (val=" + str(discretisation_steps) + ")" )
-
   determine_eigenvalue = """
     repositories::{{SOLVER_INSTANCE}}.setMaxEigenvalue( maxEigenvalue );  
 """
@@ -94,13 +90,11 @@ def create_postprocess_updated_patch_for_local_time_stepping(time_step_relaxatio
   if avoid_staircase_effect:
     compute_time_step_sizes = """    
     double newTimeStepSize = 0.0;
-    //const double minGlobalTimeStepSize = repositories::{{SOLVER_INSTANCE}}.getMaxEigenvalue()>0.0 ? """ + str(time_step_relaxation) + """ * repositories::{{SOLVER_INSTANCE}}.getMinVolumeSize(false) / repositories::{{SOLVER_INSTANCE}}.getMaxEigenvalue() : 0.0;
     const double minGlobalTimeStepSize = repositories::{{SOLVER_INSTANCE}}.getMinTimeStepSize()<std::numeric_limits<double>::max() ? repositories::{{SOLVER_INSTANCE}}.getMinTimeStepSize() : 0.0;
     const double maxGlobalTimeStepSize = repositories::{{SOLVER_INSTANCE}}.getMaxEigenvalue()>0.0 ? """ + str(time_step_relaxation) + """ * repositories::{{SOLVER_INSTANCE}}.getMaxVolumeSize(false) / repositories::{{SOLVER_INSTANCE}}.getMaxEigenvalue() : 0.0;
     if ( tarch::la::greater( maxEigenvalue,0.0) ) {
       newTimeStepSize = ::exahype2::discretiseAndTruncateTimeStepSizes(
         """ + str(time_step_relaxation) + """ * marker.h()(0) / {{NUMBER_OF_VOLUMES_PER_AXIS}} / maxEigenvalue,
-        minGlobalTimeStepSize,
         maxGlobalTimeStepSize,
         """ + str(discretisation_steps) + """
       );
@@ -120,7 +114,6 @@ def create_postprocess_updated_patch_for_local_time_stepping(time_step_relaxatio
     if ( tarch::la::greater( maxEigenvalue,0.0) ) {
       newTimeStepSize = ::exahype2::discretiseAndTruncateTimeStepSizes(
         """ + str(time_step_relaxation) + """ * marker.h()(0) / {{NUMBER_OF_VOLUMES_PER_AXIS}} / maxEigenvalue,
-        minGlobalTimeStepSize,
         maxGlobalTimeStepSize,
         """ + str(discretisation_steps) + """
       );
@@ -131,26 +124,31 @@ def create_postprocess_updated_patch_for_local_time_stepping(time_step_relaxatio
 """    
    
     
-  set_time_step_size = """    
-    if ( tarch::la::equals(newTimeStepSize,0.0) ) {
-      logDebug( "touchCellFirstTime(...)", "can't do a time step on cell " << marker.toString() << " as global max eigenvalue=" << repositories::{{SOLVER_INSTANCE}}.getMaxEigenvalue() );
-      fineGridCell{{SOLVER_NAME}}CellLabel.setTimeStepSize(0.0);    
-    }
-    else {
-      fineGridCell{{SOLVER_NAME}}CellLabel.setTimeStepSize(newTimeStepSize);    
-    }
-"""
+#  set_time_step_size = """    
+#    if ( tarch::la::equals(newTimeStepSize,0.0) ) {
+#      logDebug( "touchCellFirstTime(...)", "can't do a time step on cell " << marker.toString() << " as global max eigenvalue=" << repositories::{{SOLVER_INSTANCE}}.getMaxEigenvalue() );
+#      fineGridCell{{SOLVER_NAME}}CellLabel.setTimeStepSize(0.0);    
+#    }
+#    else {
+#      fineGridCell{{SOLVER_NAME}}CellLabel.setTimeStepSize(newTimeStepSize);    
+#    }
+#"""
 
-  return determine_eigenvalue + compute_time_step_sizes + set_time_step_size
+  return determine_eigenvalue + compute_time_step_sizes
+  #+ set_time_step_size
     
     
 def create_compute_new_time_step_size_kernel_for_adaptive_time_stepping():
   return """
     repositories::{{SOLVER_INSTANCE}}.setMaxEigenvalue( maxEigenvalue );  
     
-    // This is a dummy value. We'll ignore it later anyway as we ask for a 
-    // new valid time step size from getAdmissibleTimeStepSize().
-    const double newTimeStepSize = 0.0;
+    // This is a value set for stats reasons. We'll ignore it later as we 
+    // ask for a new valid time step size from getAdmissibleTimeStepSize().
+    //const double newTimeStepSize = 0.0;
+    const double newTimeStepSize =  repositories::{{SOLVER_INSTANCE}}.getMinPatchSize(false)>0.0 ?
+      repositories::{{SOLVER_INSTANCE}}.getAdmissibleTimeStepSize() * marker.h()(0) / repositories::{{SOLVER_INSTANCE}}.getMinPatchSize(false) :
+      0.0;
+
 """
 
 
@@ -176,7 +174,7 @@ public:
    *         you have to scale it for cells that are not on the finest
    *         mesh resolution. 
    */
-  double getAdmissibleTimeStepSize() const;  
+  virtual double getAdmissibleTimeStepSize() const;  
     """  
     
     
@@ -295,109 +293,198 @@ def create_finish_time_step_implementation_for_adaptive_time_stepping(time_step_
       logWarning( "finishTimeStep(...)", "degenerated time step size of " << std::to_string(_admissibleTimeStepSize) << ". Problem might be extremely stiff (and can't be solved) or there could be a bug (h_volume=" << minVolumeSize << ")" );
     }
   }
-"""
+"""  
 
 
-def create_source_term_kernel_for_Rusanov(source_term_implementation):
-  if source_term_implementation==PDETerms.None_Implementation:
-    return create_empty_source_term_kernel()
-  else:
-    return create_user_defined_source_term_kernel()
-  
+class SolverVariant(Enum):
+  WithVirtualFunctions = 0,
+  Stateless            = 1,
+  Accelerator          = 2
+
+
+class RiemannKernelVariant(Enum):
+  PatchWiseAoSStack                = 0
+  PatchWiseAoSoAStack              = 1
+  BatchedAoSStack                  = 2
+  BatchedAoSoAStack                = 3
+  PatchWiseSplitTermsAoSStack      = 4
+  PatchWiseSplitTermsAoSoAStack    = 5
+  PatchWiseAoSHeap                 = 6
+  PatchWiseAoSoAHeap               = 7
+  BatchedAoSHeap                   = 8
+  BatchedAoSoAHeap                 = 9
+  PatchWiseSplitTermsAoSHeap       = 10
+  PatchWiseSplitTermsAoSoAHeap     = 11
+  PatchWiseInSitu                  = 12
+  BatchedInSitu                    = 13
     
-def create_optimised_Riemann_kernel_template_arguments(flux_implementation, 
-                                                       ncp_implementation, 
-                                                       source_term_implementation, 
-                                                       compute_new_time_step_size):
-  Template = jinja2.Template( """
-  <{{NUMBER_OF_VOLUMES_PER_AXIS}},{{NUMBER_OF_UNKNOWNS}},{{NUMBER_OF_AUXILIARY_VARIABLES}},{{SOLVER_NAME}},{{SKIP_FLUX}},{{SKIP_NCP}},{{SKIP_SOURCE_TERM}},{{SKIP_COMPUTATION_OF_NEW_TIME_STEP_SIZE}}>
-""", undefined=jinja2.DebugUndefined)
-  
-  d= {}
-  if flux_implementation==PDETerms.None_Implementation or flux_implementation==PDETerms.Empty_Implementation:
-    d[ "SKIP_FLUX"] = "true"
-  else:
-    d[ "SKIP_FLUX"] = "false"
-  if ncp_implementation==PDETerms.None_Implementation or ncp_implementation==PDETerms.Empty_Implementation:
-    d[ "SKIP_NCP"]  = "true"
-  else:
-    d[ "SKIP_NCP"] = "false"
-  if source_term_implementation==PDETerms.None_Implementation or source_term_implementation==PDETerms.Empty_Implementation:
-    d[ "SKIP_SOURCE_TERM"]  = "true"
-  else:
-    d[ "SKIP_SOURCE_TERM"] = "false"
-  if compute_new_time_step_size:
-    d[ "SKIP_COMPUTATION_OF_NEW_TIME_STEP_SIZE"] = "false"
-  else:
-    d[ "SKIP_COMPUTATION_OF_NEW_TIME_STEP_SIZE"] = "true"
-  return Template.render(**d)
 
-
-def create_compute_Riemann_kernel_for_Rusanov(flux_implementation, ncp_implementation):
-  Template = jinja2.Template( """
-        ::exahype2::fv::splitRusanov1d(
-          [] (
-            const double * __restrict__                  Q,
-            const tarch::la::Vector<Dimensions,double>&  faceCentre,
-            const tarch::la::Vector<Dimensions,double>&  volumeH,
-            double                                       t,
-            double                                       dt,
-            int                                          normal,
-            double                                       F[]
-          ) -> void {
-            {% if FLUX_IMPLEMENTATION=="<none>" %}
-            std::fill_n(F,{{NUMBER_OF_UNKNOWNS}},0.0);
-            {% else %}
-            repositories::{{SOLVER_INSTANCE}}.flux( Q, faceCentre, volumeH, t, normal, F );
-            {% endif %}
-          },
-          [] (
-            const double * __restrict__                  Q,
-            const double * __restrict__                  deltaQ,
-            const tarch::la::Vector<Dimensions,double>&  faceCentre,
-            const tarch::la::Vector<Dimensions,double>&  volumeH,
-            double                                       t,
-            double                                       dt,
-            int                                          normal,
-            double                                       BgradQ[]
-          ) -> void {
-            {% if NCP_IMPLEMENTATION!="<none>" %}
-            repositories::{{SOLVER_INSTANCE}}.nonconservativeProduct( Q, deltaQ, faceCentre, volumeH, t, normal, BgradQ );
-            {% else %}
-            std::fill_n(BgradQ,{{NUMBER_OF_UNKNOWNS}},0.0);
-            {% endif %}
-          },
-          [] (
-            const double * __restrict__                  Q,
-            const tarch::la::Vector<Dimensions,double>&  faceCentre,
-            const tarch::la::Vector<Dimensions,double>&  volumeH,
-            double                                       t,
-            double                                       dt,
-            int                                          normal
-          ) -> double {
-            return repositories::{{SOLVER_INSTANCE}}.maxEigenvalue( Q, faceCentre, volumeH, t, normal);
-          },
-          QL, QR, x, dx, t, dt, normal,
-          {{NUMBER_OF_UNKNOWNS}},
-          {{NUMBER_OF_AUXILIARY_VARIABLES}},
-          FL,FR,
-          {% if FLUX_IMPLEMENTATION=="<none>" %}
-          true,
-          {% else %}
-          false,
-          {% endif %}
-          {% if NCP_IMPLEMENTATION=="<none>" %}
-          true
-          {% else %}
-          false
-          {% endif %}
-        );
-""", undefined=jinja2.DebugUndefined)
+def create_compute_Riemann_kernel_for_Rusanov(flux_implementation, 
+                                              ncp_implementation, 
+                                              source_implementation, 
+                                              compute_max_eigenvalue_of_next_time_step, 
+                                              solver_variant,
+                                              riemann_kernel_variant):
+  """
   
+  I return only the unqualified function call, i.e. without any namespaces.
+  So by setting the right namespace as prefix, you can direct it to particular
+  implementations.
+  
+  solver_variant: SolverVariant
+  
+  riemann_kernel_variant: RiemannKernelVariant
+  
+  """  
+  RiemannKernelCalls = {
+    RiemannKernelVariant.PatchWiseAoSStack:              "timeStepWithRusanov_patchwise_call_stack",
+    RiemannKernelVariant.PatchWiseAoSoAStack:            "timeStepWithRusanov_patchwise_call_stack",
+    RiemannKernelVariant.BatchedAoSStack:                "timeStepWithRusanov_batched_call_stack",
+    RiemannKernelVariant.BatchedAoSoAStack:              "timeStepWithRusanov_batched_call_stack",
+    RiemannKernelVariant.PatchWiseSplitTermsAoSStack:    "timeStepWithRusanov_patchwise_split_terms_call_stack",
+    RiemannKernelVariant.PatchWiseSplitTermsAoSoAStack:  "timeStepWithRusanov_patchwise_split_terms_call_stack",
+    RiemannKernelVariant.PatchWiseAoSHeap:               "timeStepWithRusanov_patchwise_heap",
+    RiemannKernelVariant.PatchWiseAoSoAHeap:             "timeStepWithRusanov_patchwise_heap",
+    RiemannKernelVariant.BatchedAoSHeap:                 "timeStepWithRusanov_batched_heap",
+    RiemannKernelVariant.BatchedAoSoAHeap:               "timeStepWithRusanov_batched_heap",
+    RiemannKernelVariant.PatchWiseSplitTermsAoSHeap:     "timeStepWithRusanov_patchwise_split_terms_heap",
+    RiemannKernelVariant.PatchWiseSplitTermsAoSoAHeap:   "timeStepWithRusanov_patchwise_split_terms_heap",
+    RiemannKernelVariant.PatchWiseInSitu:                "timeStepWithRusanov_patchwise_in_situ",
+    RiemannKernelVariant.BatchedInSitu:                  "timeStepWithRusanov_patchwise_in_situ"
+  }
+  
+  EnumeratorTemplateTypes = {
+    RiemannKernelVariant.PatchWiseAoSStack:              "::exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator",
+    RiemannKernelVariant.PatchWiseAoSoAStack:            "::exahype2::fv::enumerator::AoSoALexicographicVolumeEnumerator",
+    RiemannKernelVariant.BatchedAoSStack:                "::exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator",
+    RiemannKernelVariant.BatchedAoSoAStack:              "::exahype2::fv::enumerator::AoSoALexicographicVolumeEnumerator",
+    RiemannKernelVariant.PatchWiseSplitTermsAoSStack:    "::exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator",
+    RiemannKernelVariant.PatchWiseSplitTermsAoSoAStack:  "::exahype2::fv::enumerator::AoSoALexicographicVolumeEnumerator",
+    RiemannKernelVariant.PatchWiseAoSHeap:              "::exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator",
+    RiemannKernelVariant.PatchWiseAoSoAHeap:            "::exahype2::fv::enumerator::AoSoALexicographicVolumeEnumerator",
+    RiemannKernelVariant.BatchedAoSHeap:                "::exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator",
+    RiemannKernelVariant.BatchedAoSoAHeap:              "::exahype2::fv::enumerator::AoSoALexicographicVolumeEnumerator",
+    RiemannKernelVariant.PatchWiseSplitTermsAoSHeap:    "::exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator",
+    RiemannKernelVariant.PatchWiseSplitTermsAoSoAHeap:  "::exahype2::fv::enumerator::AoSoALexicographicVolumeEnumerator",
+    RiemannKernelVariant.PatchWiseInSitu:           None,
+    RiemannKernelVariant.BatchedInSitu:             None
+  }
+
+  template  = RiemannKernelCalls[riemann_kernel_variant]
+  
+  if solver_variant == SolverVariant.WithVirtualFunctions:
+    template += """_functors(
+  patchData,
+  {{NUMBER_OF_VOLUMES_PER_AXIS}},
+  {{HALO_SIZE}},
+  {{NUMBER_OF_UNKNOWNS}},
+  {{NUMBER_OF_AUXILIARY_VARIABLES}},
+  {% if FLUX_IMPLEMENTATION=="<none>" %} false {% else %} true {% endif %},
+  {% if NCP_IMPLEMENTATION=="<none>" %} false {% else %} true {% endif %},
+  {% if SOURCE_IMPLEMENTATION=="<none>" %} false {% else %} true {% endif %},
+  {% if COMPUTE_MAX_EIGENVALUE==False %} false {% else %} true {% endif %},
+  [&](
+    const double * __restrict__ Q,
+    const tarch::la::Vector<Dimensions,double>&  faceCentre,
+    const tarch::la::Vector<Dimensions,double>&  volumeH,
+    double                                       t,
+    double                                       dt,
+    int                                          normal,
+    double * __restrict__ F
+  )->void {
+    {% if FLUX_IMPLEMENTATION!="<none>" %}
+    repositories::{{SOLVER_INSTANCE}}.flux( Q, faceCentre, volumeH, t, dt, normal, F );
+    {% endif %}
+  },
+  [&](
+    const double * __restrict__                  Q,
+    const double * __restrict__     deltaQ,
+    const tarch::la::Vector<Dimensions,double>&  faceCentre,
+    const tarch::la::Vector<Dimensions,double>&  volumeH,
+    double                                       t,
+    double                                       dt,
+    int                                          normal,
+    double * __restrict__ BgradQ
+  )->void {
+    {% if NCP_IMPLEMENTATION!="<none>" %}
+    repositories::{{SOLVER_INSTANCE}}.nonconservativeProduct( Q, deltaQ, faceCentre, volumeH, t, dt, normal, BgradQ );
+    {% endif %}
+  },
+  [&](
+    const double * __restrict__ Q,
+    const tarch::la::Vector<Dimensions,double>&  volumeX,
+    const tarch::la::Vector<Dimensions,double>&  volumeH,
+    double                                       t,
+    double                                       dt,
+    double * __restrict__ S
+  )->void {
+    {% if SOURCE_IMPLEMENTATION!="<none>" %}
+    repositories::{{SOLVER_INSTANCE}}.sourceTerm( Q, volumeX, volumeH, t, dt, S );
+    {% endif %}
+  },
+  [&](
+    const double * __restrict__ Q,
+    const tarch::la::Vector<Dimensions,double>&  faceCentre,
+    const tarch::la::Vector<Dimensions,double>&  volumeH,
+    double                                       t,
+    double                                       dt,
+    int                                          normal
+  )->double {
+    return repositories::{{SOLVER_INSTANCE}}.maxEigenvalue( Q, faceCentre, volumeH, t, dt, normal);
+  }
+);
+  """
+  if solver_variant == SolverVariant.Stateless and EnumeratorTemplateTypes[riemann_kernel_variant]==None:
+    template += """_static_calls<{{SOLVER_NAME}},{{NUMBER_OF_VOLUMES_PER_AXIS}},{{HALO_SIZE}}, {{NUMBER_OF_UNKNOWNS}}, {{NUMBER_OF_AUXILIARY_VARIABLES}}>(
+      patchData,
+      {% if FLUX_IMPLEMENTATION=="<none>" %} false {% else %} true {% endif %},
+      {% if NCP_IMPLEMENTATION=="<none>" %} false {% else %} true {% endif %},
+      {% if SOURCE_IMPLEMENTATION=="<none>" %} false {% else %} true {% endif %},
+      {% if COMPUTE_MAX_EIGENVALUE==False %} false {% else %} true {% endif %}
+    );
+  """
+  if solver_variant == SolverVariant.Accelerator and EnumeratorTemplateTypes[riemann_kernel_variant]==None:
+    template += """_static_calls<{{SOLVER_NAME}},{{NUMBER_OF_VOLUMES_PER_AXIS}},{{HALO_SIZE}}, {{NUMBER_OF_UNKNOWNS}}, {{NUMBER_OF_AUXILIARY_VARIABLES}}>(
+      targetDevice,
+      patchData,
+      {% if FLUX_IMPLEMENTATION=="<none>" %} false {% else %} true {% endif %},
+      {% if NCP_IMPLEMENTATION=="<none>" %} false {% else %} true {% endif %},
+      {% if SOURCE_IMPLEMENTATION=="<none>" %} false {% else %} true {% endif %},
+      {% if COMPUTE_MAX_EIGENVALUE==False %} false {% else %} true {% endif %}
+    );
+  """
+  if solver_variant == SolverVariant.Stateless and EnumeratorTemplateTypes[riemann_kernel_variant]!=None:
+    template += """_static_calls<{{SOLVER_NAME}},{{NUMBER_OF_VOLUMES_PER_AXIS}},{{HALO_SIZE}}, {{NUMBER_OF_UNKNOWNS}}, {{NUMBER_OF_AUXILIARY_VARIABLES}}, {{TEMP_DATA_ENUMERATOR}}>(
+      patchData,
+      {% if FLUX_IMPLEMENTATION=="<none>" %} false {% else %} true {% endif %},
+      {% if NCP_IMPLEMENTATION=="<none>" %} false {% else %} true {% endif %},
+      {% if SOURCE_IMPLEMENTATION=="<none>" %} false {% else %} true {% endif %},
+      {% if COMPUTE_MAX_EIGENVALUE==False %} false {% else %} true {% endif %}
+    );
+  """
+  if solver_variant == SolverVariant.Accelerator and EnumeratorTemplateTypes[riemann_kernel_variant]!=None:
+    template += """_static_calls<{{SOLVER_NAME}},{{NUMBER_OF_VOLUMES_PER_AXIS}},{{HALO_SIZE}}, {{NUMBER_OF_UNKNOWNS}}, {{NUMBER_OF_AUXILIARY_VARIABLES}}, {{TEMP_DATA_ENUMERATOR}}>(
+      targetDevice,
+      patchData,
+      {% if FLUX_IMPLEMENTATION=="<none>" %} false {% else %} true {% endif %},
+      {% if NCP_IMPLEMENTATION=="<none>" %} false {% else %} true {% endif %},
+      {% if SOURCE_IMPLEMENTATION=="<none>" %} false {% else %} true {% endif %},
+      {% if COMPUTE_MAX_EIGENVALUE==False %} false {% else %} true {% endif %}
+    );
+  """
+        
+
+  result = jinja2.Template( template, undefined=jinja2.DebugUndefined)
   d= {}
-  d[ "FLUX_IMPLEMENTATION"]                 = flux_implementation
-  d[ "NCP_IMPLEMENTATION"]                  = ncp_implementation
-  return Template.render(**d)
+  d[ "FLUX_IMPLEMENTATION" ]         = flux_implementation
+  d[ "NCP_IMPLEMENTATION" ]          = ncp_implementation
+  d[ "SOURCE_IMPLEMENTATION" ]       = source_implementation
+  d[ "COMPUTE_MAX_EIGENVALUE" ]      = compute_max_eigenvalue_of_next_time_step
+  #if EnumeratorTemplateTypes[riemann_kernel_variant]==None:
+  #  d[ "TEMP_DATA_ENUMERATOR" ]      = "::exahype2::fv::enumerator::AoSoALexicographicVolumeEnumerator"
+  #else:
+  d[ "TEMP_DATA_ENUMERATOR" ]      = EnumeratorTemplateTypes[riemann_kernel_variant]
+  return result.render(**d)
 
 
 def create_abstract_solver_declarations(flux_implementation, ncp_implementation, eigenvalues_implementation, source_term_implementation, pde_terms_without_state):
@@ -413,18 +500,19 @@ def create_abstract_solver_declarations(flux_implementation, ncp_implementation,
      * lacks an inline define. Also, if you don't want to use ipo aggressively,
      * it might be clever to put the implementation into the header.
      */
-    #if defined(OpenMPGPUOffloading)
+    #if defined(GPUOffloadingOMP)
     #pragma omp declare target
     #endif
-    static double maxEigenvalue(
+    static GPUCallableMethod double maxEigenvalue(
       const double * __restrict__ Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
       const tarch::la::Vector<Dimensions,double>&  faceCentre,
       const tarch::la::Vector<Dimensions,double>&  volumeH,
       double                                       t,
+      double                                       dt,
       int                                          normal,
       Offloadable
     );
-    #if defined(OpenMPGPUOffloading)
+    #if defined(GPUOffloadingOMP)
     #pragma omp end declare target
     #endif
     {% endif %}
@@ -441,6 +529,7 @@ def create_abstract_solver_declarations(flux_implementation, ncp_implementation,
       const tarch::la::Vector<Dimensions,double>&  faceCentre,
       const tarch::la::Vector<Dimensions,double>&  volumeH,
       double                                       t,
+      double                                       dt,
       int                                          normal
     ) {% if EIGENVALUES_IMPLEMENTATION=="<user-defined>" %}= 0{% else %} final{% endif %};
 
@@ -451,19 +540,20 @@ def create_abstract_solver_declarations(flux_implementation, ncp_implementation,
      * lacks an inline define. Also, if you don't want to use ipo aggressively,
      * it might be clever to put the implementation into the header.
      */
-    #if defined(OpenMPGPUOffloading)
+    #if defined(GPUOffloadingOMP)
     #pragma omp declare target
     #endif
-    static void flux(
+    static GPUCallableMethod void flux(
       const double * __restrict__ Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
       const tarch::la::Vector<Dimensions,double>&  faceCentre,
       const tarch::la::Vector<Dimensions,double>&  volumeH,
       double                                       t,
+      double                                       dt,
       int                                          normal,
       double * __restrict__                        F, // F[{{NUMBER_OF_UNKNOWNS}}]
       Offloadable
     );
-    #if defined(OpenMPGPUOffloading)
+    #if defined(GPUOffloadingOMP)
     #pragma omp end declare target
     #endif
     {% endif %}
@@ -474,6 +564,7 @@ def create_abstract_solver_declarations(flux_implementation, ncp_implementation,
       const tarch::la::Vector<Dimensions,double>&  faceCentre,
       const tarch::la::Vector<Dimensions,double>&  volumeH,
       double                                       t,
+      double                                       dt,
       int                                          normal,
       double * __restrict__ F // F[{{NUMBER_OF_UNKNOWNS}}]
     ) {% if FLUX_IMPLEMENTATION=="<user-defined>" %}=0{% else %} final {% endif %};
@@ -486,20 +577,21 @@ def create_abstract_solver_declarations(flux_implementation, ncp_implementation,
      * lacks an inline define. Also, if you don't want to use ipo aggressively,
      * it might be clever to put the implementation into the header.
      */
-    #if defined(OpenMPGPUOffloading)
+    #if defined(GPUOffloadingOMP)
     #pragma omp declare target
     #endif
-    static void nonconservativeProduct(
+    static GPUCallableMethod void nonconservativeProduct(
       const double * __restrict__ Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
       const double * __restrict__             deltaQ, // [{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
       const tarch::la::Vector<Dimensions,double>&  faceCentre,
       const tarch::la::Vector<Dimensions,double>&  volumeH,
       double                                       t,
+      double                                       dt,
       int                                          normal,
       double * __restrict__                        BgradQ, // BgradQ[{{NUMBER_OF_UNKNOWNS}}]
       Offloadable
     );
-    #if defined(OpenMPGPUOffloading)
+    #if defined(GPUOffloadingOMP)
     #pragma omp end declare target
     #endif
     {% endif %}
@@ -511,6 +603,7 @@ def create_abstract_solver_declarations(flux_implementation, ncp_implementation,
       const tarch::la::Vector<Dimensions,double>&  faceCentre,
       const tarch::la::Vector<Dimensions,double>&  volumeH,
       double                                       t,
+      double                                       dt,
       int                                          normal,
       double * __restrict__ BgradQ // BgradQ[{{NUMBER_OF_UNKNOWNS}}]
     ) {% if NCP_IMPLEMENTATION=="<user-defined>" %}=0{% endif %};
@@ -523,10 +616,10 @@ def create_abstract_solver_declarations(flux_implementation, ncp_implementation,
      * lacks an inline define. Also, if you don't want to use ipo aggressively,
      * it might be clever to put the implementation into the header.
      */
-    #if defined(OpenMPGPUOffloading)
+    #if defined(GPUOffloadingOMP)
     #pragma omp declare target
     #endif
-    static void sourceTerm(
+    static GPUCallableMethod void sourceTerm(
       const double * __restrict__ Q,
       const tarch::la::Vector<Dimensions,double>&  volumeCentre,
       const tarch::la::Vector<Dimensions,double>&  volumeH,
@@ -535,7 +628,7 @@ def create_abstract_solver_declarations(flux_implementation, ncp_implementation,
       double * __restrict__ S,
       Offloadable
     );
-    #if defined(OpenMPGPUOffloading)
+    #if defined(GPUOffloadingOMP)
     #pragma omp end declare target
     #endif
     {% endif %}
@@ -570,6 +663,7 @@ double {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::maxEigenvalue(
   const tarch::la::Vector<Dimensions,double>&  faceCentre,
   const tarch::la::Vector<Dimensions,double>&  volumeH,
   double                                       t,
+  double                                       dt,
   int                                          normal
 ) {
   {{EIGENVALUES_IMPLEMENTATION}}
@@ -583,6 +677,7 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::flux(
  const tarch::la::Vector<Dimensions,double>&  faceCentre,
  const tarch::la::Vector<Dimensions,double>&  volumeH,
  double                                       t,
+ double                                       dt,
  int                                          normal,
  double * __restrict__ F // F[{{NUMBER_OF_UNKNOWNS}}]
 ) {
@@ -598,6 +693,7 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::nonconservativeProduct(
   const tarch::la::Vector<Dimensions,double>&  faceCentre,
   const tarch::la::Vector<Dimensions,double>&  volumeH,
   double                                       t,
+  double                                       dt,
   int                                          normal,
   double * __restrict__ BgradQ // BgradQ[{{NUMBER_OF_UNKNOWNS}}]
 ) {
@@ -626,10 +722,10 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::sourceTerm(
 
 
 {% if EIGENVALUES_IMPLEMENTATION!="<user-defined>" and STATELESS_PDE_TERMS %}
-#if defined(OpenMPGPUOffloading)
+#if defined(GPUOffloadingOMP)
 #pragma omp declare target
 #endif
-double {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::maxEigenvalue(
+GPUCallableMethod double {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::maxEigenvalue(
       const double * __restrict__ Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
       const tarch::la::Vector<Dimensions,double>&  faceCentre,
       const tarch::la::Vector<Dimensions,double>&  volumeH,
@@ -639,68 +735,70 @@ double {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::maxEigenvalue(
 ) {
   {{EIGENVALUES_IMPLEMENTATION}};
 }
-#if defined(OpenMPGPUOffloading)
+#if defined(GPUOffloadingOMP)
 #pragma omp end declare target
 #endif
 {% endif %}
 
 
 {% if FLUX_IMPLEMENTATION!="<user-defined>" and STATELESS_PDE_TERMS %}
-#if defined(OpenMPGPUOffloading)
+#if defined(GPUOffloadingOMP)
 #pragma omp declare target
 #endif
-void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::flux(
+GPUCallableMethod void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::flux(
       const double * __restrict__ Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
       const tarch::la::Vector<Dimensions,double>&  faceCentre,
       const tarch::la::Vector<Dimensions,double>&  volumeH,
       double                                       t,
+      double                                       dt,
       int                                          normal,
       double * __restrict__                        F, // F[{{NUMBER_OF_UNKNOWNS}}]
       Offloadable
 ) {
   {% if FLUX_IMPLEMENTATION=="<none>" %}
-  abort();
+  tarch::gpuAbort();
   {% else %}
   {{FLUX_IMPLEMENTATION}}
   {% endif %}
 }
-#if defined(OpenMPGPUOffloading)
+#if defined(GPUOffloadingOMP)
 #pragma omp end declare target
 #endif
 {% endif %}
 
 
 {% if NCP_IMPLEMENTATION!="<user-defined>" and STATELESS_PDE_TERMS %}
-#if defined(OpenMPGPUOffloading)
+#if defined(GPUOffloadingOMP)
 #pragma omp declare target
 #endif
-void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::nonconservativeProduct(
+GPUCallableMethod void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::nonconservativeProduct(
       const double * __restrict__ Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
       const double * __restrict__             deltaQ, // [{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
       const tarch::la::Vector<Dimensions,double>&  faceCentre,
       const tarch::la::Vector<Dimensions,double>&  volumeH,
       double                                       t,
+      double                                       dt,
       int                                          normal,
       double * __restrict__                        BgradQ, // BgradQ[{{NUMBER_OF_UNKNOWNS}}]
       Offloadable
 ) {
   {% if NCP_IMPLEMENTATION=="<none>" %}
-  abort();
+  tarch::gpuAbort();
   {% else %}
   {{NCP_IMPLEMENTATION}}
   {% endif %}
 }
-#if defined(OpenMPGPUOffloading)
+#if defined(GPUOffloadingOMP)
 #pragma omp end declare target
 #endif
 {% endif %}
 
 
 {% if SOURCE_TERM_IMPLEMENTATION!="<user-defined>" and STATELESS_PDE_TERMS %}
-#if defined(OpenMPGPUOffloading)
+#if defined(GPUOffloadingOMP)
 #pragma omp declare target
 #endif
-void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::sourceTerm(
+GPUCallableMethod void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::sourceTerm(
       const double * __restrict__ Q,
       const tarch::la::Vector<Dimensions,double>&  volumeCentre,
       const tarch::la::Vector<Dimensions,double>&  volumeH,
@@ -710,12 +808,12 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::sourceTerm(
       Offloadable
 ) {
   {% if SOURCE_TERM_IMPLEMENTATION=="<none>" %}
-  abort();
+  tarch::gpuAbort();
   {% else %}
   {{SOURCE_TERM_IMPLEMENTATION}}
   {% endif %}
 }
-#if defined(OpenMPGPUOffloading)
+#if defined(GPUOffloadingOMP)
 #pragma omp end declare target
 #endif
 {% endif %}
@@ -757,6 +855,7 @@ def create_solver_declarations(flux_implementation, ncp_implementation, eigenval
       const tarch::la::Vector<Dimensions,double>&  faceCentre,
       const tarch::la::Vector<Dimensions,double>&  volumeH,
       double                                       t,
+      double                                       dt,
       int                                          normal
     ) override;
     {% endif %}
@@ -768,6 +867,7 @@ def create_solver_declarations(flux_implementation, ncp_implementation, eigenval
       const tarch::la::Vector<Dimensions,double>&  faceCentre,
       const tarch::la::Vector<Dimensions,double>&  volumeH,
       double                                       t,
+      double                                       dt,
       int                                          normal,
       double * __restrict__ F // F[{{NUMBER_OF_UNKNOWNS}}]
     ) override;
@@ -781,6 +881,7 @@ def create_solver_declarations(flux_implementation, ncp_implementation, eigenval
       const tarch::la::Vector<Dimensions,double>&  faceCentre,
       const tarch::la::Vector<Dimensions,double>&  volumeH,
       double                                       t,
+      double                                       dt,
       int                                          normal,
       double * __restrict__ BgradQ // BgradQ[{{NUMBER_OF_UNKNOWNS}}]
     ) override;
@@ -802,10 +903,10 @@ def create_solver_declarations(flux_implementation, ncp_implementation, eigenval
      * TBB trick and overload by adding an additional enum. It has no semantics
      * but helps the compiler to distinguish the different function variants.
      */
-    #if defined(OpenMPGPUOffloading)
+    #if defined(GPUOffloadingOMP)
     #pragma omp declare target
     #endif
-     static void sourceTerm(
+    static GPUCallableMethod void sourceTerm(
        const double * __restrict__ Q,
        const tarch::la::Vector<Dimensions,double>&  volumeCentre,
        const tarch::la::Vector<Dimensions,double>&  volumeH,
@@ -814,7 +915,7 @@ def create_solver_declarations(flux_implementation, ncp_implementation, eigenval
        double * __restrict__ S,
        Offloadable
      );
-    #if defined(OpenMPGPUOffloading)
+    #if defined(GPUOffloadingOMP)
     #pragma omp end declare target
     #endif
     {% endif %}
@@ -835,10 +936,10 @@ def create_solver_declarations(flux_implementation, ncp_implementation, eigenval
      * TBB trick and overload by adding an additional enum. It has no semantics
      * but helps the compiler to distinguish the different function variants.
      */
-    #if defined(OpenMPGPUOffloading)
+    #if defined(GPUOffloadingOMP)
     #pragma omp declare target
     #endif
-    static double maxEigenvalue(
+    static GPUCallableMethod double maxEigenvalue(
       const double * __restrict__ Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
       const tarch::la::Vector<Dimensions,double>&  faceCentre,
       const tarch::la::Vector<Dimensions,double>&  volumeH,
@@ -846,7 +947,7 @@ def create_solver_declarations(flux_implementation, ncp_implementation, eigenval
       int                                          normal,
       Offloadable
     );
-    #if defined(OpenMPGPUOffloading)
+    #if defined(GPUOffloadingOMP)
     #pragma omp end declare target
     #endif
     {% endif %}
@@ -867,19 +968,20 @@ def create_solver_declarations(flux_implementation, ncp_implementation, eigenval
      * TBB trick and overload by adding an additional enum. It has no semantics
      * but helps the compiler to distinguish the different function variants.
      */
-    #if defined(OpenMPGPUOffloading)
+    #if defined(GPUOffloadingOMP)
     #pragma omp declare target
     #endif
-    static void flux(
+    static GPUCallableMethod void flux(
       const double * __restrict__ Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
       const tarch::la::Vector<Dimensions,double>&  faceCentre,
       const tarch::la::Vector<Dimensions,double>&  volumeH,
       double                                       t,
+      double                                       dt,
       int                                          normal,
       double * __restrict__                        F, // F[{{NUMBER_OF_UNKNOWNS}}]
       Offloadable
     );
-    #if defined(OpenMPGPUOffloading)
+    #if defined(GPUOffloadingOMP)
     #pragma omp end declare target
     #endif
     {% endif %}
@@ -900,20 +1002,21 @@ def create_solver_declarations(flux_implementation, ncp_implementation, eigenval
      * TBB trick and overload by adding an additional enum. It has no semantics
      * but helps the compiler to distinguish the different function variants.
      */
-    #if defined(OpenMPGPUOffloading)
+    #if defined(GPUOffloadingOMP)
     #pragma omp declare target
     #endif
-    static void nonconservativeProduct(
+    static GPUCallableMethod void nonconservativeProduct(
       const double * __restrict__                  Q,         // Q[5+0],
       const double * __restrict__                  deltaQ,    // [5+0]
       const tarch::la::Vector<Dimensions,double>&  faceCentre,
       const tarch::la::Vector<Dimensions,double>&  volumeH,
       double                                       t,
+      double                                       dt,
       int                                          normal,
       double * __restrict__                        BgradQ,     // BgradQ[5]
       Offloadable
     );
-    #if defined(OpenMPGPUOffloading)
+    #if defined(GPUOffloadingOMP)
     #pragma omp end declare target
     #endif
     {% endif %}    
@@ -935,6 +1038,7 @@ double {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::maxEigenvalue(
   const tarch::la::Vector<Dimensions,double>&  faceCentre,
   const tarch::la::Vector<Dimensions,double>&  volumeH,
   double                                       t,
+  double                                       dt,
   int                                          normal
 )  {
   logTraceInWith4Arguments( "maxEigenvalue(...)", faceCentre, volumeH, t, normal );
@@ -950,6 +1054,7 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::flux(
   const tarch::la::Vector<Dimensions,double>&  faceCentre,
   const tarch::la::Vector<Dimensions,double>&  volumeH,
   double                                       t,
+  double                                       dt,
   int                                          normal,
   double * __restrict__ F // F[{{NUMBER_OF_UNKNOWNS}}]
 )  {
@@ -967,6 +1072,7 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::nonconservativeProduct(
   const tarch::la::Vector<Dimensions,double>&  faceCentre,
   const tarch::la::Vector<Dimensions,double>&  volumeH,
   double                                       t,
+  double                                       dt,
   int                                          normal,
   double * __restrict__ BgradQ // BgradQ[{{NUMBER_OF_UNKNOWNS}}]
 )  {
@@ -997,10 +1103,10 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::sourceTerm(
 
 
 {% if EIGENVALUES_IMPLEMENTATION=="<user-defined>" and STATELESS_PDE_TERMS %}
-    #if defined(OpenMPGPUOffloading)
+    #if defined(GPUOffloadingOMP)
     #pragma omp declare target
     #endif
-double {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::maxEigenvalue(
+GPUCallableMethod double {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::maxEigenvalue(
   const double * __restrict__ Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
   const tarch::la::Vector<Dimensions,double>&  faceCentre,
   const tarch::la::Vector<Dimensions,double>&  volumeH,
@@ -1010,50 +1116,52 @@ double {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::maxEigenvalue(
 )  {
   // @todo implement
 }
-    #if defined(OpenMPGPUOffloading)
+    #if defined(GPUOffloadingOMP)
     #pragma omp end declare target
     #endif
 {% endif %}
 
 
 {% if FLUX_IMPLEMENTATION=="<user-defined>" and STATELESS_PDE_TERMS %}
-    #if defined(OpenMPGPUOffloading)
+    #if defined(GPUOffloadingOMP)
     #pragma omp declare target
     #endif
-void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::flux(
+GPUCallableMethod void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::flux(
   const double * __restrict__ Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
   const tarch::la::Vector<Dimensions,double>&  faceCentre,
   const tarch::la::Vector<Dimensions,double>&  volumeH,
   double                                       t,
+  double                                       dt,
   int                                          normal,
   double * __restrict__ F,
   Offloadable
 )  {
   // @todo implement
 }
-    #if defined(OpenMPGPUOffloading)
+    #if defined(GPUOffloadingOMP)
     #pragma omp end declare target
     #endif
 {% endif %}
 
 
 {% if NCP_IMPLEMENTATION=="<user-defined>" and STATELESS_PDE_TERMS %}
-    #if defined(OpenMPGPUOffloading)
+    #if defined(GPUOffloadingOMP)
     #pragma omp declare target
     #endif
-void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::nonconservativeProduct(
+GPUCallableMethod void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::nonconservativeProduct(
   const double * __restrict__ Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
   const double * __restrict__             deltaQ, // [{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
   const tarch::la::Vector<Dimensions,double>&  faceCentre,
   const tarch::la::Vector<Dimensions,double>&  volumeH,
   double                                       t,
+  double                                       dt,
   int                                          normal,
   double * __restrict__ BgradQ,
   Offloadable
 )  {
   // @todo implement
 }
-    #if defined(OpenMPGPUOffloading)
+    #if defined(GPUOffloadingOMP)
     #pragma omp end declare target
     #endif
 {% endif %}
@@ -1061,10 +1169,10 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::nonconservativeProduct(
 
 
 {% if SOURCE_TERM_IMPLEMENTATION=="<user-defined>" and STATELESS_PDE_TERMS %}
-    #if defined(OpenMPGPUOffloading)
+    #if defined(GPUOffloadingOMP)
     #pragma omp declare target
     #endif
-void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::sourceTerm(
+GPUCallableMethod void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::sourceTerm(
   const double * __restrict__ Q,
   const tarch::la::Vector<Dimensions,double>&  volumeCentre,
   const tarch::la::Vector<Dimensions,double>&  volumeH,
@@ -1075,7 +1183,7 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::sourceTerm(
 ) {
   // @todo implement
 }
-    #if defined(OpenMPGPUOffloading)
+    #if defined(GPUOffloadingOMP)
     #pragma omp end declare target
     #endif
 {% endif %}

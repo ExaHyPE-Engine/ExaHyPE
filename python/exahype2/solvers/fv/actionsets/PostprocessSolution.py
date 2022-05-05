@@ -71,8 +71,8 @@ class VolumeWisePostprocessSolution(AbstractFVActionSet):
     int index = 0;
     dfor( volume, {{NUMBER_OF_VOLUMES_PER_AXIS}} ) {
       double* value   = fineGridCell{{UNKNOWN_IDENTIFIER}}.value + index;
-      auto    volumeX = ::exahype2::getVolumeCentre( marker.x(), marker.h(), {{NUMBER_OF_VOLUMES_PER_AXIS}}, volume);
-      auto    volumeH = ::exahype2::getVolumeSize( marker.h(), {{NUMBER_OF_VOLUMES_PER_AXIS}});
+      auto    volumeX = ::exahype2::fv::getVolumeCentre( marker.x(), marker.h(), {{NUMBER_OF_VOLUMES_PER_AXIS}}, volume);
+      auto    volumeH = ::exahype2::fv::getVolumeSize( marker.h(), {{NUMBER_OF_VOLUMES_PER_AXIS}});
       
       """ + operation_per_point + """
       
