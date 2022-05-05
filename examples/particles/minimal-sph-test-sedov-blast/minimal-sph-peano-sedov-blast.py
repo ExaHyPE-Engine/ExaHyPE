@@ -43,8 +43,10 @@ import subprocess
 
 # If we want to start a project from scratch, we may want to remove some of the generated code
 bashCommand = 'make clean; rm -r actions/ vertexdata/ repositories/ globaldata/ celldata/ observers/'
-subprocess.check_output(['bash','-c', bashCommand])
-
+try:
+  subprocess.check_output(['bash','-c', bashCommand])
+except Exception as e:
+  print( "ERROR: did not succeed: {}".format(e) )
 project = peano4.Project( ["examples", "particles"], "minimal-sph-peano-test-sedov", "." )
 
 
@@ -55,8 +57,8 @@ project = peano4.Project( ["examples", "particles"], "minimal-sph-peano-test-sed
 # In[ ]:
 
 
-build_mode = peano4.output.CompileMode.Asserts
-#build_mode = peano4.output.CompileMode.Release
+#build_mode = peano4.output.CompileMode.Asserts
+build_mode = peano4.output.CompileMode.Release
 project.output.makefile.parse_configure_script_outcome( "../../.." )
 project.output.makefile.set_mode( build_mode )
 

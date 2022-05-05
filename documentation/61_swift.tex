@@ -1,4 +1,7 @@
-\chapter{Particles in dual trees (pidt)}
+\newcommand{\Swift}{SWIFT-pidt}
+
+
+\chapter{\Peano's particle support and \Swift}
 \label{section:pidt}
 
 
@@ -9,19 +12,26 @@
 
 
 \noindent
-\Peano's particle handling is a follow-up to the 2015 paper ``Two
-Particle-in-Grid Realisations on Spacetrees''
-(\url{https://arxiv.org/abs/1508.02435}).
- Its full integration into \Peano\ has been made possible by the EPSRC grant 
- EP/V001523/1 (Massively Parallel Particle Hydrodynamics for Engineering and
- Astrophysics).
+\Swift\ is a SWIFT (SPH With Inter-dependent Fine-grained
+Tasking) clone which combines the SWIFT SPH kernels
+(tasks) with Peano's particle-in-dual-tree concept.
+The original SWIFT codes is available from \url{https://swift.dur.ac.uk}.
+\Peano's particle handling is a follow-up to the 2015 paper ``Two Particle-in-Grid Realisations on Spacetrees'' (\url{https://arxiv.org/abs/1508.02435}).
+The integration of the SWIFT kernels and \Peano\ has been made possible by the
+EPSRC ExCALIBUR grants Massively Parallel Particle Hydrodynamics
+for Engineering and Astrophysics (EP/V001523/1) and PAX-SPH.
+\Swift\ is realised as Python layer on top of \Peano\ and brings \Peano's core, 
+its particle toolsbox and SWIFT together.
+You can still use solely \Peano\ and its particles without SWIFT if you prefer
+to work more low-level or without SPH\footnote{\ExaHyPE's tracer realisation
+goes internally down this route.}.
 
 
 
 
 
 \begin{framed}
-\paragraph*{A first \ExaHyPE\ pidt run}
+\paragraph*{A first \Peano\ pidt run (native usage of particle interface)}
 \begin{itemize}
   \item Configure \Peano\ with the flags \texttt{--enable-particles}:
   \begin{code}
@@ -50,6 +60,10 @@ jupyter-notebook peano-sph.ipynb
 \end{framed}
 
 
+\section{\Swift}
+
+Almost all via Python.
+
 \subsection*{Preparing \Peano\ to run a particle code}
 
 \Peano's particle code is lightweight and realised totally within the Python
@@ -64,6 +78,112 @@ To get something up and started, I recommend that you run the Jupyter notebook
 at \texttt{examples/particles}.
 It implements a very simple gravity $N$-body problem.
 
+
+\subsection{IO control}
+
+\Peano\ dumps a lot of information to the terminal by default. Consult
+Section~\ref{section:logging:log-filter} for some remarks on how to filter the
+output properly.
+
+
+\subsection{todo}
+Python API muss
+\begin{itemize}
+  \item swift2.filter-file erzeugen und lesen
+  \item Load balancing offerieren
+\end{itemize}
+
+
+\subsection{High-performance computing}
+\label{section:particles:swift:hpc}
+
+To use \Peano's high-performance computing features, you have to configure your
+baseline code properly.
+That is, you need to invoke \texttt{./configure} with an appropriate
+\texttt{--with-multithreading=...} call to enable multithreading, 
+you need to invoke it with \texttt{--with-mpi=...} for MPI support, and you need
+to specify \texttt{--enable-gpus=...} if you want to use accelerators.
+Furthermore, you will have to enable \Peano's load balancing toolbox
+(\texttt{--enable-loadbalancing}), unless you want to implement load balancing all on
+your own.
+
+
+
+\section{Native \Peano\ with particles}
+
+\Peano's particle code is lightweight.
+There are some C++ building blocks, but the majority of its features are
+available through the Python API as
+\texttt{toolbox.particles}.
+You will needs
+
+
+\begin{code}
+import peano4.toolbox.particles
+\end{code}
+
+No particular configuration of the compute kernel is required.
+To get something up and started, I recommend that you run the Jupyter notebook
+at \texttt{examples/particles}.
+It implements a very simple gravity $N$-body problem.
+
+
+
+
+\subsection{Parallelisation and GPU support}
+
+Follow the configuration recommendation of Section
+\ref{section:particles:swift:hpc} before you continue.
+
+\subsubsection{Domain decomposition}
+
+All domain decomposition is realised via your main routine, and you don't have
+to modify anything besides your main loop if you work shared memory only.
+Once you enable MPI, too, you will have to make some minor modifications.
+\marginpar{Not sure bout this one.}
+
+
+\Peano\ allows you to control the domain decomposition via explicit splits (and
+mergers) of subdomains.
+However, we rely on the load balancing toolbox here.
+The toolbox collects some global information and then triggers splits and merges
+accordingly.
+You have to perform the following steps:
+\begin{itemize}
+  \item Include 
+\begin{code}
+#include "toolbox/loadbalancing/RecursiveSubdivision.h"
+\end{code}
+  \item Create an instance of the load balancer on each MPI rank. It is
+  convenient to insert
+\begin{code}
+toolbox::loadbalancing::RecursiveSubdivision  loadBalancer;
+\end{code}
+  just before the initial
+  \texttt{tarch::mpi::Rank::getInstance().isGlobalMaster()} check. The object
+  accepts a lot of configuration parameters which you can look up in the source
+  code documentation.
+  \item You have to inform your load balancer when an individual step has
+  terminated. This tells the balancer to collect some global statistics and
+  (eventually) to trigger some rebalancing.
+\begin{code}
+loadBalancer.finishStep();
+\end{code}
+  I typically use the load balancer only within the grid construction. Totally
+  dynamic load balancing is something this simple pre-manufactured balancer
+  doesn't properly support anyway.
+\begin{code}
+int gridConstructionSteps = 0;
+while (peano4::parallel::SpacetreeSet::getInstance().getGridStatistics().getStationarySweeps()<5) {
+  examples::particles::observers::CreateGrid createObserver;
+  peano4::parallel::SpacetreeSet::getInstance().traverse(createObserver);
+  gridConstructionSteps++;
+  loadBalancer.finishStep();
+}
+\end{code}
+\end{itemize}
+
+\section{Mesh and particle algorithms}
 
 \section{Data model}
 
