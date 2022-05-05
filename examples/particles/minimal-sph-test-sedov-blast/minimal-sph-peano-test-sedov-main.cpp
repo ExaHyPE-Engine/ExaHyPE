@@ -228,7 +228,7 @@ int main(int argc, char** argv) {
       }
 
       /* Dump a snapshot after the number of time-steps done above */
-      logInfo( "main()", "plot" )
+      logInfo( "main()", "plot" );
       examples::particles::observers::Plot plotTimeStepObserver;
       peano4::parallel::SpacetreeSet::getInstance().traverse(plotTimeStepObserver);
     }
