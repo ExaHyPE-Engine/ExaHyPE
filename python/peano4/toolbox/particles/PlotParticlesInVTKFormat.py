@@ -7,8 +7,21 @@ import jinja2
 
 
 class PlotParticlesInVTKFormat(ActionSet):
+  """
+  
+   For constructor's time_stamp_evaluation argument.
+   
+  """
   NoMetaFile = "no-meta-file"
+  
+  
+  """
+  
+   For constructor's time_stamp_evaluation argument.
+   
+  """
   CountTimeSteps = "count-time-steps"
+
 
   """
 
@@ -38,8 +51,7 @@ class PlotParticlesInVTKFormat(ActionSet):
          container which I can traverse.
          
       time_stamp_evaluation: String yielding a C++ double
-         Pass in something negative if want to disable the met file feature
-         where multiple particle snapshots are organised as one video/collection.
+         Pass in prefined constants to use default behaviour.
 
     """
     self.d = {}
@@ -154,12 +166,10 @@ class PlotParticlesInVTKFormat(ActionSet):
     0.0
   );
   {% elif TIMESTAMP==\"""" + CountTimeSteps + """\" %}
-  static int timeStep = -1;
-  timeStep++;
   _writer = new tarch::plotter::pointdata::vtk::VTKWriter(
     false, snapshotFileName.str(), "{{FILENAME}}",
     tarch::plotter::PVDTimeSeriesWriter::IndexFileMode::AppendNewData,
-    timeStep
+    counter / peano4::parallel::SpacetreeSet::getInstance().getLocalSpacetrees().size()
   );
   {% else %}
   _writer = new tarch::plotter::pointdata::vtk::VTKWriter(
