@@ -26,8 +26,10 @@ namespace toolbox {
      * The further attribute that are set are
      *
      * - the move state which is set to New.
-     * - the state is set to halo. That means, by default the particle is set to remote. But
-     *   it will/should be set to local in the first sweep.
+     * - the state is set to local. That means, by default I assume that a
+     *   particle is a local one if you insert it. Should you insert out of the
+     *   local domain, then the first sweep by UpdateParticleGridAssociation
+     *   will flip this flag.
      *
      */
     template <class T>

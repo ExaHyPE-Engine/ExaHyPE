@@ -37,16 +37,35 @@ import dastgen2
 # To execute shell commands via python
 import subprocess
 
+import argparse
 
-# In[ ]:
+
+
+modes = {
+  "release": peano4.output.CompileMode.Release,
+  "trace":   peano4.output.CompileMode.Trace,
+  "assert":  peano4.output.CompileMode.Asserts,
+  "stats":   peano4.output.CompileMode.Stats,
+  "debug":   peano4.output.CompileMode.Debug,
+}
+
+parser = argparse.ArgumentParser(description='ExaHyPE 2 - Euler benchmarking script')
+parser.add_argument("-m",  "--mode",   dest="mode",   default="release", help="|".join(modes.keys()) )
+parser.add_argument(       "--clean",  dest="clean_temporary_directories",  action="store_true", default="False", help="Remove temporary directories before script starts" )
+args = parser.parse_args()
 
 
 # If we want to start a project from scratch, we may want to remove some of the generated code
-bashCommand = 'make clean; rm -r actions/ vertexdata/ repositories/ globaldata/ celldata/ observers/'
-try:
+if args.clean_temporary_directories:
+  bashCommand = 'make clean; rm -r actions/ vertexdata/ repositories/ globaldata/ celldata/ observers/'
   subprocess.check_output(['bash','-c', bashCommand])
-except Exception as e:
-  print( "ERROR: did not succeed: {}".format(e) )
+
+if args.mode not in modes:
+    print("Error, mode must be {} or {}, you supplied {}".format(", ",join(modes.keys()[:-1]),modes.keys()[-1],args.mode))
+    import sys
+    sys.exit(1)
+
+  
 project = peano4.Project( ["examples", "particles"], "minimal-sph-peano-test-sedov", "." )
 
 
@@ -57,8 +76,7 @@ project = peano4.Project( ["examples", "particles"], "minimal-sph-peano-test-sed
 # In[ ]:
 
 
-#build_mode = peano4.output.CompileMode.Asserts
-build_mode = peano4.output.CompileMode.Release
+build_mode = modes[args.mode]
 project.output.makefile.parse_configure_script_outcome( "../../.." )
 project.output.makefile.set_mode( build_mode )
 
