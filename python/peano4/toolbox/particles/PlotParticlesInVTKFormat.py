@@ -135,6 +135,8 @@ class PlotParticlesInVTKFormat(ActionSet):
   for (auto& p: fineGridVertex{{PARTICLES_CONTAINER}}) {
     if (
       p->getParallelState()==globaldata::{{PARTICLE}}::ParallelState::Local
+      or
+      p->getParallelState()==globaldata::{{PARTICLE}}::ParallelState::LocalInPreviousGridSweep
     ) {
       int particleNumber = _writer->plotPoint(p->getX());
       _positionWriter->plot(particleNumber,p->getX());

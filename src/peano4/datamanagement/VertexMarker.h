@@ -96,6 +96,35 @@ struct peano4::datamanagement::VertexMarker {
      */
     tarch::la::Vector<Dimensions,int>  getRelativePositionWithinFatherCell() const;
     tarch::la::Vector<Dimensions,int>  getRelativePositionWithinFatherCell(int i) const;
+
+
+    /**
+     * Will return true if x is contained within the adjacent cells. You can use
+     * shrink those cells via the additional parameter if you want.
+     */
+    bool isContainedInAdjacentCells( const tarch::la::Vector<Dimensions,double>& x, double scaleAdjacentCells = 1.0 ) const;
+
+    /**
+     * Each vertex is surrounded by @f$ 2^d @f$ cells. In reality,
+     * it might be fewer of them, as we might have to deal with a hanging vertex,
+     * but logically we can always assume that there were @f$ 2^d @f$.
+     * Let's assume that they are grouped lexicographically around the vertex,
+     * i.e. we have
+     * <pre>
+
+2 | 3
+--+--
+0 | 1
+
+       </pre>
+     *
+     * cells centred around a central vertex denoted by the plus in this fancy
+     * ASCII art. If x falls into the cell 1, this routine would return (1,0).
+     * If it falls into cell 3, it would return (1,1).
+     *
+     */
+    tarch::la::Vector<Dimensions,int> getRelativeAdjacentCell( const tarch::la::Vector<Dimensions,double>& x ) const;
+
 };
 
 

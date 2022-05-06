@@ -548,8 +548,8 @@ touch_particle_last_time_compute_kernel = """
 
   /* Finalize the calculations from the density loop */
 
-  if(localParticle->getParallelState()==globaldata::Particle::ParallelState::Local
-//  and localParticle->getHasConverged()==false 
+  if(
+    localParticle->getParallelState()==globaldata::Particle::ParallelState::Local
   ) {  
 
     /* Retrieve some properties */
@@ -586,8 +586,10 @@ touch_particle_last_time_compute_kernel = """
 
 touch_particle_first_time_compute_kernel = """
 
-  if(localParticle->getParallelState()==globaldata::Particle::ParallelState::Local
-//  and localParticle->getHasConverged()==false 
+  if(
+    localParticle->getParallelState()==globaldata::Particle::ParallelState::Local
+    or 
+    localParticle->getParallelState()==globaldata::Particle::ParallelState::LocalInPreviousGridSweep
   ) {  
 
     // we'll accumulate the data throughout mesh/particle traversal
@@ -639,8 +641,11 @@ particle_particle_compute_kernel = """
 
 touch_particle_last_time_compute_kernel = """
 
-   if(localParticle->getParallelState()==globaldata::Particle::ParallelState::Local
-   and localParticle->getHasConverged()==false ) {  
+   if(
+     localParticle->getParallelState()==globaldata::Particle::ParallelState::Local
+     and 
+     localParticle->getHasConverged()==false 
+   ) {  
 
     /* Do a Newton-Raphson iteration.
      * The HasConverged attribute is always initialize to false so we always do at least one update.
@@ -761,8 +766,10 @@ hydro_prepare_force.add_action_set( peano4.toolbox.particles.ParticleParticleInt
 
   touch_vertex_first_time_compute_particle_update_kernel="""
  
-  if(localParticle->getParallelState()==globaldata::Particle::ParallelState::Local
-//  and localParticle->getHasConverged()==false 
+  if(
+    localParticle->getParallelState()==globaldata::Particle::ParallelState::Local
+    or
+    localParticle->getParallelState()==globaldata::Particle::ParallelState::LocalInPreviousGridSweep
   ) {  
 
     /* Retrieve basic properties of local and active particles */
@@ -974,7 +981,11 @@ force_non_sym_particles.add_action_set( peano4.toolbox.particles.ParticleParticl
 
   /* Done by hydro_reset_acceleration in Swift */
   
-  if(localParticle->getParallelState()==globaldata::Particle::ParallelState::Local){
+  if (
+    localParticle->getParallelState()==globaldata::Particle::ParallelState::Local
+    or 
+    localParticle->getParallelState()==globaldata::Particle::ParallelState::LocalInPreviousGridSweep
+  ) {
 
     localParticle->setA   (0.0);   
     localParticle->setUDot(0.0);   
@@ -986,7 +997,9 @@ force_non_sym_particles.add_action_set( peano4.toolbox.particles.ParticleParticl
 
    /* Here we do what "hydro_end_force" does in SWIFT */
 
-   if(localParticle->getParallelState()==globaldata::Particle::ParallelState::Local){
+   if (
+    localParticle->getParallelState()==globaldata::Particle::ParallelState::Local
+   ) {
 
      localParticle->setHDot( 
        localParticle->getHDot() * localParticle->getSmoothingLength() / Dimensions);
@@ -1037,7 +1050,11 @@ kick1_particles.add_action_set( peano4.toolbox.particles.ParticleParticleInterac
 """,
   touch_vertex_first_time_compute_particle_update_kernel="""
   
-    if(localParticle->getParallelState()==globaldata::Particle::ParallelState::Local){
+    if(
+      localParticle->getParallelState()==globaldata::Particle::ParallelState::Local
+      or 
+      localParticle->getParallelState()==globaldata::Particle::ParallelState::LocalInPreviousGridSweep
+    ){
     
       /* Prepare the particle for kick */
       localParticle->setHasBeenKicked(false);
@@ -1051,11 +1068,10 @@ kick1_particles.add_action_set( peano4.toolbox.particles.ParticleParticleInterac
   const double dt_kick_hydro = 0.5 * GLOBAL_TIME_STEP_SIZE;
   
   if (
-      not localParticle->getHasBeenKicked()
-      and
-      localParticle->getParallelState()==globaldata::Particle::ParallelState::Local
-    ){
-  
+    not localParticle->getHasBeenKicked()
+    and
+    localParticle->getParallelState()==globaldata::Particle::ParallelState::Local
+  ) {
     /* Kick the particle */
     localParticle->setV_full( localParticle->getV_full() + dt_kick_hydro * localParticle->getA() );
     
@@ -1100,7 +1116,11 @@ kick2_particles.add_action_set( peano4.toolbox.particles.ParticleParticleInterac
 """,
   touch_vertex_first_time_compute_particle_update_kernel="""
   
-    if(localParticle->getParallelState()==globaldata::Particle::ParallelState::Local){
+    if (
+      localParticle->getParallelState()==globaldata::Particle::ParallelState::Local
+      or 
+      localParticle->getParallelState()==globaldata::Particle::ParallelState::LocalInPreviousGridSweep
+    ) {
     
       /* Prepare the particle for kick */
       localParticle->setHasBeenKicked(false);
@@ -1111,9 +1131,11 @@ kick2_particles.add_action_set( peano4.toolbox.particles.ParticleParticleInterac
   
   const double dt_kick_hydro = 0.5 * GLOBAL_TIME_STEP_SIZE;
 
-  if (not localParticle->getHasBeenKicked()
-      and
-      localParticle->getParallelState()==globaldata::Particle::ParallelState::Local){
+  if (
+    not localParticle->getHasBeenKicked()
+    and
+    localParticle->getParallelState()==globaldata::Particle::ParallelState::Local
+  ) {
   
     /* Kick the particle */
     localParticle->setV_full( localParticle->getV_full() + dt_kick_hydro * localParticle->getA() );
@@ -1190,8 +1212,12 @@ drift_particles.add_action_set( peano4.toolbox.particles.ParticleParticleInterac
   if (
     localParticle->getMoveState()!=globaldata::Particle::MoveState::Moved
     and
-    localParticle->getParallelState()==globaldata::Particle::ParallelState::Local
-    ){
+    (
+      localParticle->getParallelState()==globaldata::Particle::ParallelState::Local
+      or 
+      localParticle->getParallelState()==globaldata::Particle::ParallelState::LocalInPreviousGridSweep
+    )
+  ){
   
     /* Drift the particle (update position for a full time-step) */
     localParticle->setX( localParticle->getX() + timeStepSize * localParticle->getV_full() );
@@ -1209,7 +1235,9 @@ drift_particles.add_action_set( peano4.toolbox.particles.ParticleParticleInterac
   const double dt_drift = GLOBAL_TIME_STEP_SIZE;
   const double dt_therm = dt_kick_hydro;
   
-    if (localParticle->getParallelState()==globaldata::Particle::ParallelState::Local){
+  if (
+    localParticle->getParallelState()==globaldata::Particle::ParallelState::Local
+  ) {
   
       /* Predict velocities for hydro terms */
       localParticle->setV( localParticle->getV() + localParticle->getA() * dt_kick_hydro );
@@ -1325,9 +1353,11 @@ hydro_kick_extra.add_action_set( peano4.toolbox.particles.ParticleParticleIntera
 
   const double dt_therm = 0.5 * GLOBAL_TIME_STEP_SIZE;
   
-  if (not localParticle->getHasBeenKicked()
-  and
-  localParticle->getParallelState()==globaldata::Particle::ParallelState::Local){
+  if (
+    not localParticle->getHasBeenKicked()
+    and
+    localParticle->getParallelState()==globaldata::Particle::ParallelState::Local 
+  ){
       
     /* Integrate the internal energy forward in time */
     const double delta_u = localParticle->getUDot() * dt_therm;
@@ -1374,7 +1404,11 @@ kick_particles_corrector.add_action_set( peano4.toolbox.particles.ParticlePartic
 """,
   touch_vertex_first_time_compute_particle_update_kernel="""
   
-    if(localParticle->getParallelState()==globaldata::Particle::ParallelState::Local){
+    if (
+      localParticle->getParallelState()==globaldata::Particle::ParallelState::Local
+      or 
+      localParticle->getParallelState()==globaldata::Particle::ParallelState::LocalInPreviousGridSweep
+    ) {
       localParticle->setHasBeenKicked(false);
     }
     
@@ -1428,7 +1462,11 @@ kick_corrector_extra.add_action_set( peano4.toolbox.particles.ParticleParticleIn
 """,
   touch_vertex_first_time_compute_particle_update_kernel="""
   
-    if(localParticle->getParallelState()==globaldata::Particle::ParallelState::Local){
+    if (
+      localParticle->getParallelState()==globaldata::Particle::ParallelState::Local
+      or 
+      localParticle->getParallelState()==globaldata::Particle::ParallelState::LocalInPreviousGridSweep
+    ) {
       localParticle->setHasBeenKicked(false);
     }
     
@@ -1575,7 +1613,11 @@ impose_BC_particles.add_action_set( peano4.toolbox.particles.ParticleParticleInt
 """,
   touch_vertex_first_time_compute_particle_update_kernel="""
   
-   if(localParticle->getParallelState()==globaldata::Particle::ParallelState::Local){
+   if(
+      localParticle->getParallelState()==globaldata::Particle::ParallelState::Local
+      or 
+      localParticle->getParallelState()==globaldata::Particle::ParallelState::LocalInPreviousGridSweep
+    ){
      localParticle->setMoveState( globaldata::Particle::MoveState::NotMovedYet );
    }
 
@@ -1644,7 +1686,11 @@ end_time_step.add_action_set( peano4.toolbox.particles.ParticleParticleInteracti
   
     /* Mark particle needs to be updated */
 
-    if(localParticle->getParallelState()==globaldata::Particle::ParallelState::Local){
+    if(
+      localParticle->getParallelState()==globaldata::Particle::ParallelState::Local
+      or 
+      localParticle->getParallelState()==globaldata::Particle::ParallelState::LocalInPreviousGridSweep
+    ){
       localParticle->setHasBeenKicked(false);
     }
     

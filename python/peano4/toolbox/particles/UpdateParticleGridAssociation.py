@@ -27,8 +27,6 @@ class UpdateParticleGridAssociation(ActionSet):
      last update. If a particle travels fast, lift it to the next level.
    - Drop particles down within the tree hierarchy such that they reside on 
      an as fine level as possible.
-   - Update the particles' parallel state. This applies to parallel runs and
-     is discussed below.
      
    
    ## Statistics 
@@ -39,10 +37,16 @@ class UpdateParticleGridAssociation(ActionSet):
    
    ## State transitions
    
-   Immer erst mal valide (annahme)
+   We have three states per particle: local, virtual and local-to-virtual. That 
+   is, we always assume that particles are either local or virtual throughout 
+   the mesh traversal, but that they might change their position and 
+   consequently enter the regime local-to-virtual. As we solely update local 
+   particles, it can never happen that you have virtual-to-local. Such a 
+   transition would happen on another tree (where it is a local-to-virtual
+   transition from this tree's point of view) and then would be sent back 
+   as update.
    
-   We assume that each particle has a new and an old state. Both are either
-   local or virtual aka remote. At the begin of a traversal, i.e. when we 
+   At the begin of a traversal, i.e. when we 
    touch a particle for the first time, we set the new state to local. 
    This happens via the template __Template_ClearParallelStatus. 
    
@@ -50,13 +54,14 @@ class UpdateParticleGridAssociation(ActionSet):
    we run over all particles associated to its @f$ 2^d @f$ 
    vertices and look if a particle's position x falls into a cell. If so,
    we set the particle's state to local.  
-
-
-   I summarise: You can always assume that the current status (_ParallelState) is valid,
-   while the field _NewParallelState is still under computation and might 
-   change. 
    
    
+   
+   Local -> if this one is set at begin of iteration, it should switch 
+     to LocalInPreviousGridSweep:
+   LocalInPreviousGridSweep -> has to be confirmed and might switch to 
+     Local in touchCellLastTime().
+  
    
    eliminate_spatial_duplicates: String
      A C++ boolen expression. Whenever it holds, the code runs over the 
@@ -100,6 +105,14 @@ class UpdateParticleGridAssociation(ActionSet):
 """ )
 
 
+  """
+  
+  Focus solely on reassociation within the grid, i.e. no parallelisation
+  is taken into account here.
+  
+  @todo not true anymore
+  
+  """
   __Template_TouchCellLastTime = jinja2.Template("""
 if ( {{GUARD}} ) {  
   vertexdata::{{PARTICLES_CONTAINER}} particlesThatMoveOnSameLevel[TwoPowerD];
@@ -114,27 +127,34 @@ if ( {{GUARD}} ) {
     while ( p!=fineGridVertices{{PARTICLES_CONTAINER}}(i).end() ) {
       _numberOfParticleAccesses++;
       
-      std::bitset<Dimensions>  currentAssociation = i;
-      bool                     remainsOnSameLevel = true;
-      for (int d=0; d<Dimensions; d++) {
-        destAssociation[d]  = tarch::la::greaterEquals( (*p)->getX(d), marker.x()(d) );
-        remainsOnSameLevel &= tarch::la::smallerEquals( std::abs((*p)->getX(d) - marker.x()(d)), marker.h()(d));
-      }
+      if ( marker.isContained((*p)->getX()) ) {
+        (*p)->setParallelState( globaldata::{{PARTICLE}}::ParallelState::Local );
       
-      if (remainsOnSameLevel and currentAssociation==destAssociation) {
-        p++;
-      }
-      else if (remainsOnSameLevel) {
-        logDebug( "touchCellLastTime(...)", "reassign particle " << (*p)->toString() << " in tree " << _treeNumber << " within cell " << marker.toString() << " which had been associated with vertex " << i << " but belongs to " << destAssociation );
-        particlesThatMoveOnSameLevel[ destAssociation.to_ulong() ].push_back(*p);
-        p = fineGridVertices{{PARTICLES_CONTAINER}}(i).erase(p);
-        _numberOfParticleReassignmentsOnCurrentLevel++;
+        std::bitset<Dimensions>  currentAssociation = i;
+        bool                     remainsOnSameLevel = true;
+        for (int d=0; d<Dimensions; d++) {
+          destAssociation[d]  = tarch::la::greaterEquals( (*p)->getX(d), marker.x()(d) );
+          remainsOnSameLevel &= tarch::la::smallerEquals( std::abs((*p)->getX(d) - marker.x()(d)), marker.h()(d));
+        }
+      
+        if (remainsOnSameLevel and currentAssociation==destAssociation) {
+          p++;
+        }
+        else if (remainsOnSameLevel) {
+          logDebug( "touchCellLastTime(...)", "reassign particle " << (*p)->toString() << " in tree " << _treeNumber << " within cell " << marker.toString() << " which had been associated with vertex " << i << " but belongs to " << destAssociation );
+          particlesThatMoveOnSameLevel[ destAssociation.to_ulong() ].push_back(*p);
+          p = fineGridVertices{{PARTICLES_CONTAINER}}(i).erase(p);
+          _numberOfParticleReassignmentsOnCurrentLevel++;
+        }
+        else {
+          logDebug( "touchCellLastTime(...)", "lift particle " << (*p)->toString() << " in tree " << _treeNumber << " from cell " << marker.toString() << " as difference is " << ((*p)->getX() - marker.x()) );
+          liftParticles[ destAssociation.to_ulong() ].push_back(*p);
+          p = fineGridVertices{{PARTICLES_CONTAINER}}(i).erase(p);
+          _numberOfLifts++;
+        }
       }
       else {
-        logDebug( "touchCellLastTime(...)", "lift particle " << (*p)->toString() << " in tree " << _treeNumber << " from cell " << marker.toString() << " as difference is " << ((*p)->getX() - marker.x()) );
-        liftParticles[ destAssociation.to_ulong() ].push_back(*p);
-        p = fineGridVertices{{PARTICLES_CONTAINER}}(i).erase(p);
-        _numberOfLifts++;
+        p++;
       }
     }
   }
@@ -147,15 +167,29 @@ if ( {{GUARD}} ) {
 """)
 
 
-
-  __Template_DetermineParallelStatus = jinja2.Template("""
+  
+  __Template_InitialiseParallelStatus = jinja2.Template("""
   for (auto& p: fineGridVertex{{PARTICLES_CONTAINER}} ) {
-    //p->setPreviousParallelState( p->getCurrentParallelState() );
+    assertion2(
+      p->getParallelState()==globaldata::{{PARTICLE}}::ParallelState::Local
+      or
+      p->getParallelState()==globaldata::{{PARTICLE}}::ParallelState::Virtual,
+      p->toString(),
+      marker.toString()
+    );
+    if (p->getParallelState()==globaldata::{{PARTICLE}}::ParallelState::Local) {
+      p->setParallelState( globaldata::{{PARTICLE}}::ParallelState::LocalInPreviousGridSweep );
+    }
   }
 """)
 
 
-  __Template_CommmitParallelStatus = jinja2.Template("""
+  """
+  
+  This postamble of the grid traversal plugs into touchVertexLastTime().
+   
+  """
+  __Template_DetermineNewParallelStatus = jinja2.Template("""
   if ( {{ELIMINATE_SPATIAL_DUPLICATES}} and {{GUARD}} ) {
     auto p = fineGridVertex{{PARTICLES_CONTAINER}}.begin();
     while (p!=fineGridVertex{{PARTICLES_CONTAINER}}.end()) {
@@ -181,44 +215,39 @@ if ( {{GUARD}} ) {
     }
   }
   
-  for (auto& p: fineGridVertex{{PARTICLES_CONTAINER}} ) {
-    if (
-      p->getNewParallelState()==globaldata::{{PARTICLE}}::NewParallelState::Virtual
-      and 
-      p->getParallelState()==globaldata::{{PARTICLE}}::ParallelState::Virtual
-    ) {
-      p->setParallelState( globaldata::{{PARTICLE}}::ParallelState::Virtual );
-      _numberOfVirtualParticles++;
-    }
-    else if (
-      p->getNewParallelState()==globaldata::{{PARTICLE}}::NewParallelState::Virtual
-      and 
-      p->getParallelState()==globaldata::{{PARTICLE}}::ParallelState::Local
-    ) {
-      p->setParallelState( globaldata::{{PARTICLE}}::ParallelState::Virtual );
-      _numberOfVirtualParticles++;
-      _numberOfLeavingParticles++;
-    }
-    else if (
-      p->getNewParallelState()==globaldata::{{PARTICLE}}::NewParallelState::Local
-      and 
-      p->getParallelState()==globaldata::{{PARTICLE}}::ParallelState::Virtual
-    ) {
-      p->setParallelState( globaldata::{{PARTICLE}}::ParallelState::Local );
-      _numberOfLocalParticles++;
-    }
-    else if (
-      p->getNewParallelState()==globaldata::{{PARTICLE}}::NewParallelState::Local
-      and 
-      p->getParallelState()==globaldata::{{PARTICLE}}::ParallelState::Local
-    ) {
-      p->setParallelState( globaldata::{{PARTICLE}}::ParallelState::Local );
-      _numberOfLocalParticles++;
+  if ( {{GUARD}} ) {
+    for (auto& p: fineGridVertex{{PARTICLES_CONTAINER}} ) {
+      switch ( p->getParallelState() ) {
+        case globaldata::{{PARTICLE}}::ParallelState::LocalInPreviousGridSweep:
+          logDebug( "touchVertexLastTime()", "local status from previous sweep not confirmed. Particle has left domain" );
+          _numberOfVirtualParticles++;
+          _numberOfLeavingParticles++;
+          p->setParallelState( globaldata::{{PARTICLE}}::ParallelState::LocalToVirtual );
+          break;
+        case globaldata::{{PARTICLE}}::ParallelState::Local:
+          logDebug( "touchVertexLastTime()", "local status confirmed, i.e. particle has been switched from LocalInPreviousGridSweep to Local" );
+          _numberOfLocalParticles++;
+          break;
+        case globaldata::{{PARTICLE}}::ParallelState::Virtual:
+          logDebug( "touchVertexLastTime()", "virtual particle" );
+          _numberOfVirtualParticles++;
+          break;
+        case globaldata::{{PARTICLE}}::ParallelState::LocalToVirtual:
+          assertion3( false, "local to virtual is a switch realised within touchVertexLastTime. Should not happen here", p->toString(), marker.toString() );
+          break;
+      }
     }
   }
 """)
 
 
+  """
+  
+   Happens when we touch a vertex for the first time. The only thing this routine
+   does is to drop particles within the tree, i.e. move them to finer levels. 
+   No parallelisation is taken into account. 
+   
+  """
   __Template_Drop = jinja2.Template("""
   const double CellToCutOffRadiusRatio = 0.5 * 0.9;
   for (int i=0; i<TwoPowerD; i++) {
@@ -241,6 +270,15 @@ if ( {{GUARD}} ) {
 """)
 
 
+  """
+  
+  Explicit lift of particles to a coarser level. Usually, lifts are
+  realised within touchCellLastTime aka the template 
+  __Template_TouchCellLastTime. If a vertex is however destroyed or
+  is hanging, i.e. not persistent in-between two mesh traversals, 
+  then we have to lift the particles explicitly.
+  
+  """
   __Template_Lift = jinja2.Template("""
   std::bitset<Dimensions> target;
   for (int d=0; d<Dimensions; d++) {
@@ -262,8 +300,10 @@ if ( {{GUARD}} ) {
       result = self.__Template_BeginTraversal.render(**self.d) 
     if operation_name==ActionSet.OPERATION_CREATE_HANGING_VERTEX:
       result = self.__Template_Drop.render(**self.d) 
+    if operation_name==ActionSet.OPERATION_TOUCH_VERTEX_FIRST_TIME:
+      result = self.__Template_InitialiseParallelStatus.render(**self.d) + self.__Template_Drop.render(**self.d) 
     if operation_name==ActionSet.OPERATION_TOUCH_VERTEX_LAST_TIME:
-      result = self.__Template_DetermineParallelStatus.render(**self.d) + self.__Template_Drop.render(**self.d) 
+      result = self.__Template_DetermineNewParallelStatus.render(**self.d) + self.__Template_Drop.render(**self.d) 
     if operation_name==ActionSet.OPERATION_TOUCH_CELL_LAST_TIME:
       result = self.__Template_TouchCellLastTime.render(**self.d) 
     if operation_name==ActionSet.OPERATION_DESTROY_HANGING_VERTEX:
