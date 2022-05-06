@@ -641,6 +641,7 @@ touch_particle_last_time_compute_kernel = """
 
    if(localParticle->getParallelState()==globaldata::Particle::ParallelState::Local
    and localParticle->getHasConverged()==false ) {  
+     ) {  
 
     /* Do a Newton-Raphson iteration.
      * The HasConverged attribute is always initialize to false so we always do at least one update.
@@ -687,17 +688,20 @@ touch_particle_last_time_compute_kernel = """
     h_new = std::min(h_new, 2.0 * h_old);
     h_new = std::max(h_new, 0.5 * h_old);
     
-    // Fall back to h_old if it has become too small or Nan
-    if(localParticle->getSmoothingLength()<= 1e-5 || std::isnan(localParticle->getSmoothingLength()) ) {
-      localParticle->setSmoothingLength(h_old);
-    }
-    
     /* Check if particle has grown larger than half the grid size */
     tarch::la::Vector<Dimensions,double> GridSize = marker.h();
     const double GridSizeHalf = 0.5 * GridSize(0); 
     const double CutoffParticle = KERNEL_SUPPORT_RAD * localParticle->getSmoothingLength();
     
     assertion4( tarch::la::smallerEquals( CutoffParticle,GridSizeHalf ), localParticle->toString(), GridSizeHalf, marker.h(), CutoffParticle );
+
+    // Fall back to h_old if it has become too small or Nan
+    /* Also if particle has hit Maximum allowed value */
+    if(localParticle->getSmoothingLength()<= 1e-5 || 
+      std::isnan( localParticle->getSmoothingLength() ) ||
+      tarch::la::smallerEquals( CutoffParticle,GridSizeHalf ) ) {
+      h_new = h_old;
+    }
     
     /* Update value of h */
     localParticle->setSmoothingLength( h_new );

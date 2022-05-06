@@ -170,16 +170,7 @@ if ( {{GUARD}} ) {
   
   __Template_InitialiseParallelStatus = jinja2.Template("""
   for (auto& p: fineGridVertex{{PARTICLES_CONTAINER}} ) {
-    assertion2(
-      p->getParallelState()==globaldata::{{PARTICLE}}::ParallelState::Local
-      or
-      p->getParallelState()==globaldata::{{PARTICLE}}::ParallelState::Virtual,
-      p->toString(),
-      marker.toString()
-    );
-    if (p->getParallelState()==globaldata::{{PARTICLE}}::ParallelState::Local) {
-      p->setParallelState( globaldata::{{PARTICLE}}::ParallelState::LocalInPreviousGridSweep );
-    }
+    p->setNewParallelState( globaldata::{{PARTICLE}}::NewParallelState::Virtual );
   }
 """)
 
@@ -217,24 +208,37 @@ if ( {{GUARD}} ) {
   
   if ( {{GUARD}} ) {
     for (auto& p: fineGridVertex{{PARTICLES_CONTAINER}} ) {
-      switch ( p->getParallelState() ) {
-        case globaldata::{{PARTICLE}}::ParallelState::LocalInPreviousGridSweep:
-          logDebug( "touchVertexLastTime()", "local status from previous sweep not confirmed. Particle has left domain" );
-          _numberOfVirtualParticles++;
-          _numberOfLeavingParticles++;
-          p->setParallelState( globaldata::{{PARTICLE}}::ParallelState::LocalToVirtual );
-          break;
-        case globaldata::{{PARTICLE}}::ParallelState::Local:
-          logDebug( "touchVertexLastTime()", "local status confirmed, i.e. particle has been switched from LocalInPreviousGridSweep to Local" );
-          _numberOfLocalParticles++;
-          break;
-        case globaldata::{{PARTICLE}}::ParallelState::Virtual:
-          logDebug( "touchVertexLastTime()", "virtual particle" );
-          _numberOfVirtualParticles++;
-          break;
-        case globaldata::{{PARTICLE}}::ParallelState::LocalToVirtual:
-          assertion3( false, "local to virtual is a switch realised within touchVertexLastTime. Should not happen here", p->toString(), marker.toString() );
-          break;
+      if ( 
+        p->getParallelState()==globaldata::{{PARTICLE}}::ParallelState::Local
+        and 
+        p->getNewParallelState()==globaldata::{{PARTICLE}}::NewParallelState::Virtual
+      ) {
+        logDebug( "touchVertexLastTime()", "local status from previous sweep not confirmed. Particle has left domain" );
+        p->setParallelState( globaldata::{{PARTICLE}}::ParallelState::Virtual );
+        _numberOfVirtualParticles++;
+        _numberOfLeavingParticles++;
+      }
+      else
+      if ( 
+        p->getParallelState()==globaldata::{{PARTICLE}}::ParallelState::Local
+        and 
+        p->getNewParallelState()==globaldata::{{PARTICLE}}::NewParallelState::Local
+      ) {
+        logDebug( "touchVertexLastTime()", "local status confirmed, i.e. particle remains local" );
+        _numberOfLocalParticles++;
+      }
+      else
+      if ( 
+        p->getParallelState()==globaldata::{{PARTICLE}}::ParallelState::Virtual
+        and 
+        p->getNewParallelState()==globaldata::{{PARTICLE}}::NewParallelState::Virtual
+      ) {
+        logDebug( "touchVertexLastTime()", "virtual particle" );
+        _numberOfVirtualParticles++;
+      }
+      else {
+        assertion3( false, "local to virtual is a switch realised within touchVertexLastTime. Should not happen here", p->toString(), marker.toString() );
+        break;
       }
     }
   }
