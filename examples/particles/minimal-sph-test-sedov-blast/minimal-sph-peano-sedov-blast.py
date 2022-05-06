@@ -641,7 +641,6 @@ touch_particle_last_time_compute_kernel = """
 
    if(localParticle->getParallelState()==globaldata::Particle::ParallelState::Local
    and localParticle->getHasConverged()==false ) {  
-     ) {  
 
     /* Do a Newton-Raphson iteration.
      * The HasConverged attribute is always initialize to false so we always do at least one update.
