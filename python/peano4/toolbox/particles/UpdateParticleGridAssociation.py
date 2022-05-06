@@ -128,7 +128,7 @@ if ( {{GUARD}} ) {
       _numberOfParticleAccesses++;
       
       if ( marker.isContained((*p)->getX()) ) {
-        (*p)->setParallelState( globaldata::{{PARTICLE}}::ParallelState::Local );
+        (*p)->setNewParallelState( globaldata::{{PARTICLE}}::NewParallelState::Local );
       
         std::bitset<Dimensions>  currentAssociation = i;
         bool                     remainsOnSameLevel = true;
