@@ -10,6 +10,7 @@
 
 #include <vector>
 
+#include "tarch/logging/Log.h"
 #include "tarch/la/Vector.h"
 #include "tarch/mpi/mpi.h"
 
@@ -42,6 +43,8 @@
 
 
   class {{CLASSNAME}}: public std::vector< {% for item in NAMESPACE -%}{% if not loop.last %}{{ item }}::{% endif %}{%- endfor %}globaldata::{{PARTICLE_TYPE}}* > {
+    private:
+      static tarch::logging::Log _log;
     #if PeanoDebug>=1
     private:
      tarch::la::Vector<Dimensions,double> _debugX;
@@ -55,12 +58,44 @@
     #endif
     public:
       typedef {% for item in NAMESPACE -%}{% if not loop.last %}{{ item }}::{% endif %}{%- endfor %}globaldata::{{PARTICLE_TYPE}}  DoFType;
+      typedef std::vector< {% for item in NAMESPACE -%}{% if not loop.last %}{{ item }}::{% endif %}{%- endfor %}globaldata::{{PARTICLE_TYPE}}* >  Base;
 
+      /**
+       * Merge two particle sets
+       *
+       * This merges an incoming particle set from neighbour into the local
+       * set. We run through neighbour and assess what to do with the particles
+       * therein. Basically, we look at its state and then decide whether to
+       * enqueue the particle here, too. Furthermore, we do some state switches.
+       * If a particle is local on another rank for example, it has to be
+       * virtual here.
+       *
+       * The merge works with shallow copies. We assume that all necessary real
+       * copying has been done before.
+       *
+       * @see STDVectorOverVectorOfPointersStack::startReceive()
+       * @see clone()
+       */
       void merge(const {{CLASSNAME}}& neighbour, const peano4::datamanagement::VertexMarker& marker);
       static bool send(const peano4::datamanagement::VertexMarker& marker);
       static bool receiveAndMerge(const peano4::datamanagement::VertexMarker& marker);
       static bool storePersistently(const peano4::datamanagement::VertexMarker& marker);
       static bool loadPersistently(const peano4::datamanagement::VertexMarker& marker);
+
+      /**
+       * This is a deep clone. We get data from somewhere else and create our
+       * own version with which we can work from hereon. Besides the particles,
+       * we also copy (aka clone) the debug x and h values.
+       *
+       * The clone itself is mechanical. When you transfer particles between
+       * two ranks you also have to amend the particle states. Only one particle
+       * on one rank is a real local one, all the others have virtual copies.
+       * This state analysis or flipping is realised within merge().
+       *
+       * @see STDVectorOverVectorOfPointersStack() for a description.
+       */
+      void clone( const {{CLASSNAME}}& otherSet );
+
 
       #ifdef Parallel
       static void initDatatype();

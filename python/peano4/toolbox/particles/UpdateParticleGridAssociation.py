@@ -207,37 +207,52 @@ if ( {{GUARD}} ) {
   }
   
   if ( {{GUARD}} ) {
-    for (auto& p: fineGridVertex{{PARTICLES_CONTAINER}} ) {
+    auto p = fineGridVertex{{PARTICLES_CONTAINER}}.begin();
+    while (p!=fineGridVertex{{PARTICLES_CONTAINER}}.end()) {
       if ( 
-        p->getParallelState()==globaldata::{{PARTICLE}}::ParallelState::Local
+        (*p)->getParallelState()==globaldata::{{PARTICLE}}::ParallelState::Local
         and 
-        p->getNewParallelState()==globaldata::{{PARTICLE}}::NewParallelState::Virtual
+        (*p)->getNewParallelState()==globaldata::{{PARTICLE}}::NewParallelState::Virtual
       ) {
-        logDebug( "touchVertexLastTime()", "local status from previous sweep not confirmed. Particle has left domain" );
-        p->setParallelState( globaldata::{{PARTICLE}}::ParallelState::Virtual );
+        logInfo( "touchVertexLastTime()", "local status from previous sweep not confirmed on tree " << _treeNumber << ". Particle " << (*p)->toString() << " has left domain" );
+        (*p)->setParallelState( globaldata::{{PARTICLE}}::ParallelState::Virtual );
         _numberOfVirtualParticles++;
         _numberOfLeavingParticles++;
+        p++;
       }
-      else
-      if ( 
-        p->getParallelState()==globaldata::{{PARTICLE}}::ParallelState::Local
+      else if ( 
+        (*p)->getParallelState()==globaldata::{{PARTICLE}}::ParallelState::Local
         and 
-        p->getNewParallelState()==globaldata::{{PARTICLE}}::NewParallelState::Local
+        (*p)->getNewParallelState()==globaldata::{{PARTICLE}}::NewParallelState::Local
       ) {
-        logDebug( "touchVertexLastTime()", "local status confirmed, i.e. particle remains local" );
+        logInfo( "touchVertexLastTime()", "local status confirmed on tree " << _treeNumber << ", i.e. particle " << (*p)->toString() << " remains local" );
         _numberOfLocalParticles++;
+        p++;
       }
-      else
-      if ( 
-        p->getParallelState()==globaldata::{{PARTICLE}}::ParallelState::Virtual
+      else if ( 
+        (*p)->getParallelState()==globaldata::{{PARTICLE}}::ParallelState::Virtual
         and 
-        p->getNewParallelState()==globaldata::{{PARTICLE}}::NewParallelState::Virtual
+        (*p)->getNewParallelState()==globaldata::{{PARTICLE}}::NewParallelState::Virtual
       ) {
-        logDebug( "touchVertexLastTime()", "virtual particle" );
+        logInfo( "touchVertexLastTime()", "virtual particle, i.e. from other tree. Delete local copy " << (*p)->toString() << " on tree " << _treeNumber );
         _numberOfVirtualParticles++;
+        delete *p;
+        p = fineGridVertex{{PARTICLES_CONTAINER}}.erase(p);
       }
       else {
-        assertion3( false, "local to virtual is a switch realised within touchVertexLastTime. Should not happen here", p->toString(), marker.toString() );
+        // particle should never move from a remote place into local domain, as we should
+        // never move around virtual particles. The move should happen on another rank and
+        // we then should receive the new particle. It can however happen that a particle 
+        // is considered to be local and then switches to virtual when the particle is new,
+        // as we might have inserted it into the wrong place.
+        assertion3(
+          (*p)->getMoveState()==globaldata::{{PARTICLE}}::MoveState::New,
+          (*p)->toString(),
+          marker.toString(),
+          _treeNumber
+        );          
+        delete *p;
+        p = fineGridVertex{{PARTICLES_CONTAINER}}.erase(p);
         break;
       }
     }
