@@ -764,9 +764,11 @@ hydro_prepare_force.add_action_set( peano4.toolbox.particles.ParticleParticleInt
 
   touch_vertex_first_time_compute_particle_update_kernel="""
  
-  if(localParticle->getParallelState()==globaldata::Particle::ParallelState::Local
-//  and localParticle->getHasConverged()==false 
-  ) {  
+  if( toolbox::particles::particleWillStayWithinComputationalDomain(
+    *localParticle,
+    {0.0,0.0},         // domainOffset
+    {1.0,1.0}          // domainWidth
+  )) {  
 
     /* Retrieve basic properties of local and active particles */
     const double rho_a = localParticle->getDensity();

@@ -1,0 +1,13 @@
+#include "tarch/la/VectorVectorOperations.h"
+
+
+template <typename Particle>
+bool toolbox::particles::particleWillStayWithinComputationalDomain(
+  const Particle&                              particle,
+  const tarch::la::Vector<Dimensions,double>&  domainOffset,
+  const tarch::la::Vector<Dimensions,double>&  domainWidth
+) {
+  return particle.getParallelState()==Particle::ParallelState::Local
+     and tarch::la::allGreaterEquals( particle.getX(), domainOffset )
+     and tarch::la::allSmallerEquals( particle.getX(), domainOffset + domainWidth );
+}

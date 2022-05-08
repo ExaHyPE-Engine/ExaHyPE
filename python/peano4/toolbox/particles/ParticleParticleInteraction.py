@@ -206,6 +206,7 @@ class ParticleParticleInteraction(ActionSet):
   def get_includes(self):
     result = jinja2.Template( """
 #include "tarch/multicore/Lock.h"
+#include "toolbox/particles/particles.h"
 #include "vertexdata/{{LOCAL_PARTICLES_CONTAINER}}.h"
 #include "globaldata/{{LOCAL_PARTICLE}}.h"
 #include "vertexdata/{{ACTIVE_PARTICLES_CONTAINER}}.h"
