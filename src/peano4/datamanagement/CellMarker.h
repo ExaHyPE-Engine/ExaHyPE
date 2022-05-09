@@ -78,9 +78,26 @@ struct peano4::datamanagement::CellMarker {
     tarch::la::Vector<Dimensions,double>  x() const;
 
     /**
-     * Check whether the point x is contained within the marker.
+     * Check whether the point x is contained within the marker. This is an
+     * operation which works with smaller equals and greater equals and
+     * numerical tolerances. Therefore, the routine includes any x that is
+     * exactly on a cell boundary. The other way round: a particle for
+     * example that resides exactly on the cell boundary, subject to the
+     * chosen floating point precision in the tarch::la library, will be
+     * considered to belong both to its left and its right neighbour.
      */
     bool isContained( const tarch::la::Vector<Dimensions,double>& x ) const;
+
+    /**
+     * See the discussion of isContained(). This is a biased variant of the
+     * code which assumes the left face along each coordinate axis to belong
+     * to a cell, while the right one does not. As we are biased anyway, we
+     * don't work with numerical comparisons but rely on bit-wise operations.
+     *
+     * @todo
+     */
+    bool isContainedWithBias( const tarch::la::Vector<Dimensions,double>& x ) const;
+
     bool overlaps( const tarch::la::Vector<Dimensions,double>& offset, const tarch::la::Vector<Dimensions,double>& size ) const;
 
     /**
