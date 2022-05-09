@@ -50,7 +50,7 @@ class InsertRandomParticlesIntoUnrefinedCells(ActionSet):
 
   __Template_TouchCellFirstTime = jinja2.Template("""
   if ( not marker.hasBeenRefined() and not marker.willBeRefined() ) {
-    auto newParticles = toolbox::particles::createEquallySpacedParticles<globaldata::{{PARTICLE}}>(
+    std::vector< globaldata::{{PARTICLE}}* > newParticles = toolbox::particles::createEquallySpacedParticles<globaldata::{{PARTICLE}}>(
       {{H}},
       marker.x(),
       marker.h(),
@@ -60,8 +60,11 @@ class InsertRandomParticlesIntoUnrefinedCells(ActionSet):
     for (auto& particle: newParticles) {
       {{INITIALISATION_CALL}}
     }
-    // just insert them; will be re-assigned then anyway
-    fineGridVertices{{PARTICLES_CONTAINER}}(0).insert( fineGridVertices{{PARTICLES_CONTAINER}}(0).end(), newParticles.begin(), newParticles.end() );
+    toolbox::particles::insertParticlesIntoCell(
+      marker,
+      newParticles,
+      fineGridVertices{{PARTICLES_CONTAINER}}
+    );
   }
 """)
 
@@ -86,6 +89,7 @@ class InsertRandomParticlesIntoUnrefinedCells(ActionSet):
 
   def get_includes(self):
     result = jinja2.Template( """
+#include "toolbox/particles/particles.h"
 #include "vertexdata/{{PARTICLES_CONTAINER}}.h"
 #include "globaldata/{{PARTICLE}}.h"
 #include "toolbox/particles/ParticleFactory.h"

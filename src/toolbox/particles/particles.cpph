@@ -11,3 +11,16 @@ bool toolbox::particles::particleWillStayWithinComputationalDomain(
      and tarch::la::allGreaterEquals( particle.getX(), domainOffset )
      and tarch::la::allSmallerEquals( particle.getX(), domainOffset + domainWidth );
 }
+
+
+template <typename Particle, typename ParticleSet >
+void toolbox::particles::insertParticlesIntoCell(
+  const peano4::datamanagement::CellMarker&                 marker,
+  const std::vector< Particle* >&                           newParticles,
+  peano4::datamanagement::VertexEnumerator< ParticleSet >&  fineGridVertices
+) {
+  fineGridVertices(0).insert( fineGridVertices(0).end(), newParticles.begin(), newParticles.end() );
+}
+
+
+// just insert them; will be re-assigned then anyway

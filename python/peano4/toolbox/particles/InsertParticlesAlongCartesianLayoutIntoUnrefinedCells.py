@@ -50,7 +50,7 @@ class InsertParticlesAlongCartesianLayoutIntoUnrefinedCells(ActionSet):
     #else
     tarch::la::Vector<3,double> domainOffset = { {{DOMAIN_OFFSET[0]}}, {{DOMAIN_OFFSET[1]}}, {{DOMAIN_OFFSET[2]}} };
     #endif
-    auto newParticles = toolbox::particles::createParticlesAlignedWithGlobalCartesianMesh<globaldata::{{PARTICLE}}>(
+    std::vector< globaldata::{{PARTICLE}}* > newParticles = toolbox::particles::createParticlesAlignedWithGlobalCartesianMesh<globaldata::{{PARTICLE}}>(
       {{H}},
       marker.x(),
       marker.h(),
@@ -60,8 +60,11 @@ class InsertParticlesAlongCartesianLayoutIntoUnrefinedCells(ActionSet):
     for (auto& particle: newParticles) {
       {{INITIALISATION_CALL}}
     }
-    // just insert them; will be re-assigned then anyway
-    fineGridVertices{{PARTICLES_CONTAINER}}(0).insert( fineGridVertices{{PARTICLES_CONTAINER}}(0).end(), newParticles.begin(), newParticles.end() );
+    toolbox::particles::insertParticlesIntoCell(
+      marker,
+      newParticles,
+      fineGridVertices{{PARTICLES_CONTAINER}}
+    );
   }
 """)
 
@@ -88,6 +91,7 @@ class InsertParticlesAlongCartesianLayoutIntoUnrefinedCells(ActionSet):
     result = jinja2.Template( """
 #include "vertexdata/{{PARTICLES_CONTAINER}}.h"
 #include "globaldata/{{PARTICLE}}.h"
+#include "toolbox/particles/particles.h"
 #include "toolbox/particles/ParticleFactory.h"
 """ )
     return result.render(**self.d) + self.additional_includes
