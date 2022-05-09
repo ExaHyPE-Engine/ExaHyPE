@@ -260,12 +260,16 @@ make
   \item Set the \texttt{PYTHONPATH} and run the benchmark script within the
   Euler example directory:
   \begin{bash}
-  cd exahype2/examples/euler
+  cd examples/exahype2/euler
   export PYTHONPATH=../../../python
   python3 example-scripts/kernel-benchmarks.py
   \end{bash}
   This default builds the benchmarks for 2d with $4 \times 4$ patches. You can
   type in \texttt{--help} for additional information.
+  \item Compile the Makefile generated within the same directory
+  \begin{bash}
+make
+  \end{bash}
   \item Run the actual benchmark
   \begin{bash}
 ./kernel-benchmark
