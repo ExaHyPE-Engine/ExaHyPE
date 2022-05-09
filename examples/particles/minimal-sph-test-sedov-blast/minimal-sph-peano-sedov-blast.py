@@ -50,20 +50,26 @@ modes = {
 }
 
 parser = argparse.ArgumentParser(description='ExaHyPE 2 - Euler benchmarking script')
-parser.add_argument("-m",  "--mode",   dest="mode",   default="release", help="|".join(modes.keys()) )
-parser.add_argument(       "--clean",  dest="clean_temporary_directories",  action="store_true", default="False", help="Remove temporary directories before script starts" )
+parser.add_argument("-m",  "--mode",    dest="mode",                         default="release", help="|".join(modes.keys()) )
+parser.add_argument("-c",  "--clean",   dest="clean_temporary_directories",  action="store_true", help="Remove temporary directories before script starts" )
+parser.add_argument("-r",  "--random",  dest="random_particle_layout",       action="store_true", help="Use a randomised initial particle layout" )
 args = parser.parse_args()
+
+
+
+if args.mode not in modes:
+    print("Error, mode must be {} or {}, you supplied {}".format(", ",join(modes.keys()[:-1]),modes.keys()[-1],args.mode))
+    import sys
+    sys.exit(1)
+
+print( "add noise to initial Cartesian particle layout: {}".format(args.random_particle_layout) )
+print( "clean directories: {}".format(args.clean_temporary_directories) )
 
 
 # If we want to start a project from scratch, we may want to remove some of the generated code
 if args.clean_temporary_directories:
   bashCommand = 'make clean; rm -r actions/ vertexdata/ repositories/ globaldata/ celldata/ observers/'
   subprocess.check_output(['bash','-c', bashCommand])
-
-if args.mode not in modes:
-    print("Error, mode must be {} or {}, you supplied {}".format(", ",join(modes.keys()[:-1]),modes.keys()[-1],args.mode))
-    import sys
-    sys.exit(1)
 
   
 project = peano4.Project( ["examples", "particles"], "minimal-sph-peano-test-sedov", "." )
@@ -424,7 +430,7 @@ init_setup.add_action_set( peano4.toolbox.particles.InsertParticlesAlongCartesia
   particle_set=particles,
   distance_between_particles=1/64,
   initialisation_call=initialisation_snippet,
-  noise=False,
+  noise=args.random_particle_layout,
   additional_includes=""" 
     #include "Constants.h" 
     #include "kernel_hydro.h"
@@ -1189,7 +1195,6 @@ drift_particles.add_action_set( peano4.toolbox.particles.ParticleParticleInterac
   
 """,
   touch_vertex_first_time_compute_particle_update_kernel="""
-  
   const double timeStepSize = GLOBAL_TIME_STEP_SIZE;
   
   if (
@@ -1198,15 +1203,30 @@ drift_particles.add_action_set( peano4.toolbox.particles.ParticleParticleInterac
     localParticle->getParallelState()==globaldata::Particle::ParallelState::Local
     ){
   
-    /* Drift the particle (update position for a full time-step) */
+    // Drift the particle (update position for a full time-step) 
     localParticle->setX( localParticle->getX() + timeStepSize * localParticle->getV_full() );
     
     localParticle->setMoveState( globaldata::Particle::MoveState::Moved );
       
     }
-
 """,
   touch_vertex_last_time_compute_particle_update_kernel="""
+  
+  const double timeStepSize = GLOBAL_TIME_STEP_SIZE;
+
+/*  
+  if (
+    localParticle->getMoveState()!=globaldata::Particle::MoveState::Moved
+    and
+    localParticle->getParallelState()==globaldata::Particle::ParallelState::Local
+    ){
+  
+    // Drift the particle (update position for a full time-step)
+    localParticle->setX( localParticle->getX() + timeStepSize * localParticle->getV_full() );
+    
+    localParticle->setMoveState( globaldata::Particle::MoveState::Moved );
+  }
+  */
   
   /* Predict terms (SWIFT) */
   
@@ -1214,7 +1234,7 @@ drift_particles.add_action_set( peano4.toolbox.particles.ParticleParticleInterac
   const double dt_drift = GLOBAL_TIME_STEP_SIZE;
   const double dt_therm = dt_kick_hydro;
   
-    if (localParticle->getParallelState()==globaldata::Particle::ParallelState::Local){
+  if (localParticle->getParallelState()==globaldata::Particle::ParallelState::Local ) {
   
       /* Predict velocities for hydro terms */
       localParticle->setV( localParticle->getV() + localParticle->getA() * dt_kick_hydro );

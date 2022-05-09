@@ -91,16 +91,16 @@ class UpdateParticleGridAssociation(ActionSet):
 
   __Template_EndTraversal = jinja2.Template("""
   logInfo( 
-    "endTraversal()", 
-    "#reassignments/lifts/drops/accesses/local/halo/leaving/eliminated-duplicates=" << 
-    _numberOfParticleReassignmentsOnCurrentLevel << "/" <<
-    _numberOfLifts << "/" <<
-    _numberOfDrops << "/" <<
-    _numberOfParticleAccesses << "/" <<
-    _numberOfLocalParticles << "/" <<
-    _numberOfVirtualParticles << "/" <<
-    _numberOfLeavingParticles << "/" <<
-    _numberOfEliminations << " on tree " <<  _treeNumber
+    "endTraversal()",
+    "tree " <<  _treeNumber <<
+    ": reassignments=" << _numberOfParticleReassignmentsOnCurrentLevel << 
+    ", lift=" << _numberOfLifts << 
+    ", drops=" << _numberOfDrops << 
+    ", accesses=" << _numberOfParticleAccesses << 
+    ", local particles=" << _numberOfLocalParticles << 
+    ", virtual particles=" << _numberOfVirtualParticles << 
+    ", leaving particles=" << _numberOfLeavingParticles << 
+    ", eliminated (duplicate) particles=" << _numberOfEliminations 
   );
 """ )
 
@@ -114,10 +114,15 @@ class UpdateParticleGridAssociation(ActionSet):
   
   """
   __Template_TouchCellLastTime = jinja2.Template("""
-if ( {{GUARD}} ) {  
+if ( {{GUARD}} ) {
+  // move means particles that are actually to be associated with a new nearest vertex  
   vertexdata::{{PARTICLES_CONTAINER}} particlesThatMoveOnSameLevel[TwoPowerD];
+  // particles that 'jumped' aka moved by more than half a mesh width
   vertexdata::{{PARTICLES_CONTAINER}} liftParticles[TwoPowerD];
 
+  // run over all adjacent vertices, and find the bad guys, i.e. those 
+  // particles that are not associated to the correct nearest vertex
+  // anymore
   for (int i=0; i<TwoPowerD; i++) {
     std::bitset<Dimensions> currentAssociation;
     std::bitset<Dimensions> destAssociation;
@@ -127,11 +132,13 @@ if ( {{GUARD}} ) {
     while ( p!=fineGridVertices{{PARTICLES_CONTAINER}}(i).end() ) {
       _numberOfParticleAccesses++;
       
+      // study only particles which are contained within the current cell
       if ( marker.isContained((*p)->getX()) ) {
         (*p)->setNewParallelState( globaldata::{{PARTICLE}}::NewParallelState::Local );
       
         std::bitset<Dimensions>  currentAssociation = i;
         bool                     remainsOnSameLevel = true;
+        // marker.x() gives me the centre of the cell
         for (int d=0; d<Dimensions; d++) {
           destAssociation[d]  = tarch::la::greaterEquals( (*p)->getX(d), marker.x()(d) );
           remainsOnSameLevel &= tarch::la::smallerEquals( std::abs((*p)->getX(d) - marker.x()(d)), marker.h()(d));
@@ -159,6 +166,10 @@ if ( {{GUARD}} ) {
     }
   }
   
+  // we have now extracted all particles which are not associated with their 
+  // nearest vertex anymore and we have put them into the two local lists.
+  // Finally, we thus have to run through the two local lists particlesThatMoveOnSameLevel
+  // and liftParticles and have to append those into the respective vertices.
   for (int i=0; i<TwoPowerD; i++) {
     fineGridVertices{{PARTICLES_CONTAINER}}(i).insert(   fineGridVertices{{PARTICLES_CONTAINER}}(i).end(),   particlesThatMoveOnSameLevel[ i ].begin(), particlesThatMoveOnSameLevel[ i ].end() ); 
     coarseGridVertices{{PARTICLES_CONTAINER}}(i).insert( coarseGridVertices{{PARTICLES_CONTAINER}}(i).end(), liftParticles[ i ].begin(),                liftParticles[ i ].end() ); 
@@ -214,7 +225,7 @@ if ( {{GUARD}} ) {
         and 
         (*p)->getNewParallelState()==globaldata::{{PARTICLE}}::NewParallelState::Virtual
       ) {
-        logInfo( "touchVertexLastTime()", "local status from previous sweep not confirmed on tree " << _treeNumber << ". Particle " << (*p)->toString() << " has left domain" );
+        logDebug( "touchVertexLastTime()", "local status from previous sweep not confirmed on tree " << _treeNumber << ". Particle " << (*p)->toString() << " has left domain" );
         (*p)->setParallelState( globaldata::{{PARTICLE}}::ParallelState::Virtual );
         _numberOfVirtualParticles++;
         _numberOfLeavingParticles++;
@@ -225,7 +236,7 @@ if ( {{GUARD}} ) {
         and 
         (*p)->getNewParallelState()==globaldata::{{PARTICLE}}::NewParallelState::Local
       ) {
-        logInfo( "touchVertexLastTime()", "local status confirmed on tree " << _treeNumber << ", i.e. particle " << (*p)->toString() << " remains local" );
+        logDebug( "touchVertexLastTime()", "local status confirmed on tree " << _treeNumber << ", i.e. particle " << (*p)->toString() << " remains local" );
         _numberOfLocalParticles++;
         p++;
       }
@@ -234,7 +245,7 @@ if ( {{GUARD}} ) {
         and 
         (*p)->getNewParallelState()==globaldata::{{PARTICLE}}::NewParallelState::Virtual
       ) {
-        logInfo( "touchVertexLastTime()", "virtual particle, i.e. from other tree. Delete local copy " << (*p)->toString() << " on tree " << _treeNumber );
+        logDebug( "touchVertexLastTime()", "virtual particle, i.e. from other tree. Delete local copy " << (*p)->toString() << " on tree " << _treeNumber );
         _numberOfVirtualParticles++;
         delete *p;
         p = fineGridVertex{{PARTICLES_CONTAINER}}.erase(p);
