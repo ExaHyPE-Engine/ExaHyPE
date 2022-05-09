@@ -1,6 +1,7 @@
 #include "AoSoALexicographicVolumeEnumerator.h"
 
 
+#if !defined(GPUOffloadingOMP)
 std::string exahype2::fv::enumerator::AoSoALexicographicVolumeEnumerator::toString() const {
   std::ostringstream msg;
   msg << "(AoSoA-lex"
@@ -32,4 +33,5 @@ std::string exahype2::fv::enumerator::AoSoALexicographicVolumeEnumerator::toStri
 
   return msg.str();
 }
+#endif
 

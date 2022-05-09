@@ -1,9 +1,10 @@
 #include "SingleVolumeEnumerator.h"
 
 
-std::string exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator::toString() const {
+#if !defined(GPUOffloadingOMP)
+std::string exahype2::fv::enumerator::SingleVolumeEnumerator::toString() const {
   std::ostringstream msg;
-  msg << "(AoS-lex"
+  msg << "(single-volume"
       << ",#unknowns=" << _unknowns
       << ",#aux=" << _numberOfAuxiliaryVariables
       << ")";
@@ -29,4 +30,5 @@ std::string exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator::toString
 
   return msg.str();
 }
+#endif
 

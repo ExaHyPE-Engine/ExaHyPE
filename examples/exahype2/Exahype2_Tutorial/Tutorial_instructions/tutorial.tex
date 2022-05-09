@@ -91,7 +91,7 @@ ExaHyPE solves partial differential equations of the following form:
 \\
 
 This document assumes a succesful installation and configuration of Peano4. \\
-Information about how to install and configure Peano4 can be found at \hyperlink{http://www.peano-framework.org/peano/p4/cookbook.pdf}{http://www.peano-framework.org/peano/p4/cookbook.pdf}. Note that the configuration flags "\textit{--enable-ExaHyPE --enable-blockstructured --enable-loadbalancing}" must be set in order to use ExaHyPE 2. \\ 
+Information about how to install and configure Peano4 can be found at \hyperlink{http://www.peano-framework.org/peano/p4/\LaTeX~documentation.pdf}{http://www.peano-framework.org/peano/p4/\LaTeX~documentation.pdf}. Note that the configuration flags "\textit{--enable-ExaHyPE --enable-blockstructured --enable-loadbalancing}" must be set in order to use ExaHyPE 2. \\ 
 This document also assumes basic knowledge of Python and C++, as ExaHyPE 2 configuration files are in a python format and the implementation of the functions specific to the PDE are done C++.  \\
 
 \vspace{\fill}
@@ -127,7 +127,7 @@ If at this point you receive the following error message:
 export PYTHONPATH=../../../Peano/python
 \end{lstlisting}
 
-If this still does not work, you may have improperly configured your installation of Peano 4, refer to the \hyperlink{http://www.peano-framework.org/peano/p4/cookbook.pdf}{Peano cookbook} for instructions on how to re-configure and re-build Peano 4, and don't forget to add at least the configuration flags: "\textit{--enable-ExaHyPE --enable-blockstructured --enable-loadbalancing}". Then, repeat the steps above.\\
+If this still does not work, you may have improperly configured your installation of Peano 4, refer to the \hyperlink{http://www.peano-framework.org/peano/p4/\LaTeX~documentation.pdf}{Peano \LaTeX~documentation} for instructions on how to re-configure and re-build Peano 4, and don't forget to add at least the configuration flags: "\textit{--enable-ExaHyPE --enable-blockstructured --enable-loadbalancing}". Then, repeat the steps above.\\
 
 Hopefully you should at this point have succesfully compiled your application. If you have you should see a number of files have appeared in your working directory. We will ignore most of these for now, but know that these contain the implementation of the ExaHyPE 2 simulation.\\
 One file in particular is of interest to us now: the file simply named Euler2D is the executable for our implementation. We will therefore run this executable file by using the following command:
@@ -399,7 +399,7 @@ We will do so in the next (very short) section.
 
 Peano 4 and therefore ExaHyPE per default write the results in a native format. These are defined by two files, a more general one called \textbf{solution-\textit{project\_name}.peano-patch-file} and individual ones for each logged time step called \textbf{solution-\textit{p}-\textit{file\_number}-rank-\textit{rank\_number}.peano-patch-file}.\\
 The first of these two just contains information linking each file of the second type to a specific timestamp, it allows an interpreter to find the other files and assign them to the proper location and time. The second type contains the values computed in each patch as an array which contains one after another the values of each variable for each cell in the patch. The patches are specified by their position and size.\\
-This relatively simple, machine readable format allows one to easily create applications for processing and visualising these results oneself. A few of these are provided with Peano 4 as is (see the \hyperlink{http://www.peano-framework.org/peano/p4/cookbook.pdf}{cookbook, appendix B}).
+This relatively simple, machine readable format allows one to easily create applications for processing and visualising these results oneself. A few of these are provided with Peano 4 as is (see the \hyperlink{http://www.peano-framework.org/peano/p4/\LaTeX~documentation.pdf}{\LaTeX~documentation, appendix B}).
 
 In our case, we will just mention how to convert these to VTU format, which would allow one to read them with paraview for example, the most commonly used application for scientific visualization.
 To do so, simply use the command:

@@ -22,8 +22,10 @@ namespace exahype2 {
      * then all Q[0] from patch three, and so forth. After that, it continues with
      * Q[1]. This means: The enumerator interleaves the individual patches.
      */
-    struct SoALexicographicVolumeEnumerator {
-      public:
+      #if defined(GPUOffloadingOMP)
+//      #pragma omp declare target
+      #endif
+      struct SoALexicographicVolumeEnumerator {
         SoALexicographicVolumeEnumerator(int numberOfPatches, int numberOfVolumesPerAxisInPatch, int haloSize, int unknowns, int numberOfAuxiliaryVariables):
           _numberOfPatches(numberOfPatches),
           _numberOfVolumesPerAxisInPatch(numberOfVolumesPerAxisInPatch),
@@ -59,7 +61,10 @@ namespace exahype2 {
           }
         }
 
+	#if !defined(GPUOffloadingOMP)
         std::string toString() const;
+#endif
+
 
         /**
          * Returns the total size.
@@ -87,6 +92,9 @@ namespace exahype2 {
         const int _unknowns;
         const int _numberOfAuxiliaryVariables;
       };
+      #if defined(GPUOffloadingOMP)
+//      #pragma omp end declare target
+      #endif
     }
   }
 }

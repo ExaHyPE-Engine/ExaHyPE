@@ -4,7 +4,6 @@
 #include "tarch/logging/Log.h"
 #include "tarch/logging/Statistics.h"
 #include "tarch/logging/LogFilter.h"
-#include "tarch/UnitTests.h"
 #include "tarch/multicore/multicore.h"
 #include "tarch/multicore/Core.h"
 #include "tarch/timing/Watch.h"
@@ -14,7 +13,6 @@
 #include "peano4/peano.h"
 #include "peano4/grid/Spacetree.h"
 #include "peano4/parallel/SpacetreeSet.h"
-#include "peano4/UnitTests.h"
 
 #include "repositories/DataRepository.h"
 #include "repositories/StepRepository.h"
@@ -29,11 +27,9 @@
 
 #include "toolbox/loadbalancing/loadbalancing.h"
 
-#include "toolbox/blockstructured/UnitTests.h"
 
 #include "exahype2/NonCriticalAssertions.h"
 #include "exahype2/UserInterface.h"
-#include "exahype2/UnitTests.h"
 
 #include "tasks/EulerOnGPUEnclaveTask.h"
 
@@ -82,7 +78,9 @@ void runBenchmarks(int patches) {
       delete[] outputData[i];
     }
 
-    logInfo("main()", "completed baseline measurements: " << watch.getCalendarTime() << " / " << (watch.getCalendarTime()/patches/EulerOnGPU::NumberOfFiniteVolumesPerAxisPerPatch/EulerOnGPU::NumberOfFiniteVolumesPerAxisPerPatch/EulerOnGPU::NumberOfFiniteVolumesPerAxisPerPatch) );
+    logInfo("main()", "completed measurements for heap, baseline:"       << watch.getCalendarTime() << " / " << (watch.getCalendarTime()/patches/EulerOnGPU::NumberOfFiniteVolumesPerAxisPerPatch/EulerOnGPU::NumberOfFiniteVolumesPerAxisPerPatch/EulerOnGPU::NumberOfFiniteVolumesPerAxisPerPatch) );
+    logInfo("main()", "completed measurements for call stack, baseline:" << watch.getCalendarTime() << " / " << (watch.getCalendarTime()/patches/EulerOnGPU::NumberOfFiniteVolumesPerAxisPerPatch/EulerOnGPU::NumberOfFiniteVolumesPerAxisPerPatch/EulerOnGPU::NumberOfFiniteVolumesPerAxisPerPatch) );
+    logInfo("main()", "completed measurements for omp, baseline:"        << watch.getCalendarTime() << " / " << (watch.getCalendarTime()/patches/EulerOnGPU::NumberOfFiniteVolumesPerAxisPerPatch/EulerOnGPU::NumberOfFiniteVolumesPerAxisPerPatch/EulerOnGPU::NumberOfFiniteVolumesPerAxisPerPatch) );
   }
 
 
@@ -118,7 +116,7 @@ void runBenchmarks(int patches) {
       delete[] patchData.QOut[i];
     }
 
-    logInfo("main()", "completed optimisation measurements " << markerName << ": " << watch.getCalendarTime() << " / " << (watch.getCalendarTime()/patches/EulerOnGPU::NumberOfFiniteVolumesPerAxisPerPatch/EulerOnGPU::NumberOfFiniteVolumesPerAxisPerPatch/EulerOnGPU::NumberOfFiniteVolumesPerAxisPerPatch) );
+    logInfo("main()", "completed measurements for " << markerName << ": " << watch.getCalendarTime() << " / " << (watch.getCalendarTime()/patches/EulerOnGPU::NumberOfFiniteVolumesPerAxisPerPatch/EulerOnGPU::NumberOfFiniteVolumesPerAxisPerPatch/EulerOnGPU::NumberOfFiniteVolumesPerAxisPerPatch) );
   };
 
 
@@ -158,52 +156,56 @@ void runBenchmarks(int patches) {
       delete[] patchData.QOut[i];
     }
 
-    logInfo("main()", "completed optimisation measurements " << markerName << ": " << watch.getCalendarTime() << " / " << (watch.getCalendarTime()/patches/EulerOnGPU::NumberOfFiniteVolumesPerAxisPerPatch/EulerOnGPU::NumberOfFiniteVolumesPerAxisPerPatch/EulerOnGPU::NumberOfFiniteVolumesPerAxisPerPatch) );
+    logInfo("main()", "completed measurements for " << markerName << ": " << watch.getCalendarTime() << " / " << (watch.getCalendarTime()/patches/EulerOnGPU::NumberOfFiniteVolumesPerAxisPerPatch/EulerOnGPU::NumberOfFiniteVolumesPerAxisPerPatch/EulerOnGPU::NumberOfFiniteVolumesPerAxisPerPatch) );
   };
 
-  if (patches<128) {
+  #if Dimension==2
+  if (patches<=64) {
+  #else
+  if (patches<=4) {
+  #endif
     testFusedVariant(
       ::exahype2::fv::rusanov::timeStepWithRusanov_patchwise_call_stack_static_calls<EulerOnGPU,EulerOnGPU::NumberOfFiniteVolumesPerAxisPerPatch, 1, 5, 0,exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator>,
-      "no side effects, patch-wise, call stack, AoS", true
+      "call stack, patch-wise, AoS", true
     );
     testFusedVariant(
       ::exahype2::fv::rusanov::timeStepWithRusanov_batched_call_stack_static_calls<EulerOnGPU,EulerOnGPU::NumberOfFiniteVolumesPerAxisPerPatch, 1, 5, 0,exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator>,
-      "no side effects, batched, call stack, AoS", true
+      "call stack, batched, AoS", true
     );
   }
 
   testFusedVariant(
     ::exahype2::fv::rusanov::timeStepWithRusanov_patchwise_heap_static_calls<EulerOnGPU,EulerOnGPU::NumberOfFiniteVolumesPerAxisPerPatch, 1, 5, 0,exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator>,
-    "no side effects, patch-wise, heap, AoS", true
+    "heap, patch-wise, AoS", true
   );
   testFusedVariant(
     ::exahype2::fv::rusanov::timeStepWithRusanov_batched_heap_static_calls<EulerOnGPU,EulerOnGPU::NumberOfFiniteVolumesPerAxisPerPatch, 1, 5, 0,exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator>,
-    "no side effects, batched, heap, AoS", true
+    "heap, batched, AoS", true
   );
   testFusedVariant(
     ::exahype2::fv::rusanov::timeStepWithRusanov_patchwise_heap_static_calls<EulerOnGPU,EulerOnGPU::NumberOfFiniteVolumesPerAxisPerPatch, 1, 5, 0,exahype2::fv::enumerator::AoSoALexicographicVolumeEnumerator>,
-    "no side effects, patch-wise, heap, AoSoA", true
+    "heap, patch-wise, AoSoA", true
   );
   testFusedVariant(
     ::exahype2::fv::rusanov::timeStepWithRusanov_batched_heap_static_calls<EulerOnGPU,EulerOnGPU::NumberOfFiniteVolumesPerAxisPerPatch, 1, 5, 0,exahype2::fv::enumerator::AoSoALexicographicVolumeEnumerator>,
-    "no side effects, batched, heap, AoSoA", true
+    "heap, batched, AoSoA", true
   );
   testFusedVariant(
     ::exahype2::fv::rusanov::timeStepWithRusanov_patchwise_heap_static_calls<EulerOnGPU,EulerOnGPU::NumberOfFiniteVolumesPerAxisPerPatch, 1, 5, 0,exahype2::fv::enumerator::SoALexicographicVolumeEnumerator>,
-    "no side effects, patch-wise, heap, SoA", true
+    "heap, patch-wise, SoA", true
   );
   testFusedVariant(
     ::exahype2::fv::rusanov::timeStepWithRusanov_batched_heap_static_calls<EulerOnGPU,EulerOnGPU::NumberOfFiniteVolumesPerAxisPerPatch, 1, 5, 0,exahype2::fv::enumerator::SoALexicographicVolumeEnumerator>,
-    "no side effects, batched, heap, SoA", true
+    "heap, batched, SoA", true
   );
 
   testFusedVariant(
     ::exahype2::fv::rusanov::timeStepWithRusanov_patchwise_in_situ_static_calls<EulerOnGPU,EulerOnGPU::NumberOfFiniteVolumesPerAxisPerPatch, 1, 5, 0>,
-    "no side effects, patch-wise, in-situ", true
+    "heap, patch-wise, in-situ", true
   );
   testFusedVariant(
     ::exahype2::fv::rusanov::timeStepWithRusanov_batched_in_situ_static_calls<EulerOnGPU,EulerOnGPU::NumberOfFiniteVolumesPerAxisPerPatch, 1, 5, 0>,
-    "no side effects, batched, in-situ", true
+    "heap, batched, in-situ", true
   );
 
   #if defined(GPUOffloadingOMP)
@@ -227,23 +229,21 @@ void runBenchmarks(int patches) {
       ::exahype2::fv::rusanov::omp::timeStepWithRusanov_patchwise_heap_static_calls<EulerOnGPU,EulerOnGPU::NumberOfFiniteVolumesPerAxisPerPatch, 1, 5, 0,exahype2::fv::enumerator::SoALexicographicVolumeEnumerator>,
       "omp, patch-wise, SoA", true
     );
-/*
     testFusedVariantOnDevice(
       device,
-      ::exahype2::fv::rusanov::omp::timeStepWithRusanov_batched_heap_static_calls<EulerOnGPU,exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator>,
+      ::exahype2::fv::rusanov::omp::timeStepWithRusanov_batched_heap_static_calls<EulerOnGPU,EulerOnGPU::NumberOfFiniteVolumesPerAxisPerPatch, 1, 5, 0,exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator>,
       "omp, batched, AoS", true
     );
     testFusedVariantOnDevice(
       device,
-      ::exahype2::fv::rusanov::omp::timeStepWithRusanov_batched_heap_static_calls<EulerOnGPU,exahype2::fv::enumerator::AoSoALexicographicVolumeEnumerator>,
+      ::exahype2::fv::rusanov::omp::timeStepWithRusanov_batched_heap_static_calls<EulerOnGPU,EulerOnGPU::NumberOfFiniteVolumesPerAxisPerPatch, 1, 5, 0,exahype2::fv::enumerator::AoSoALexicographicVolumeEnumerator>,
       "omp, batched, AoSoA", true
     );
     testFusedVariantOnDevice(
       device,
-      ::exahype2::fv::rusanov::omp::timeStepWithRusanov_batched_heap_static_calls<EulerOnGPU,exahype2::fv::enumerator::SoALexicographicVolumeEnumerator>,
+      ::exahype2::fv::rusanov::omp::timeStepWithRusanov_batched_heap_static_calls<EulerOnGPU,EulerOnGPU::NumberOfFiniteVolumesPerAxisPerPatch, 1, 5, 0,exahype2::fv::enumerator::SoALexicographicVolumeEnumerator>,
       "omp, batched, SoA", true
     );
-*/
   }
   #endif
 }
@@ -251,7 +251,6 @@ void runBenchmarks(int patches) {
 
 int main(int argc, char** argv) {
   const int ExitCodeSuccess          = 0;
-  const int ExitCodeUnitTestsFailed  = 1;
   const int ExitCodeInvalidArguments = 2;
   const int ExitCodeInvalidBuild     = 3;
 
@@ -286,7 +285,11 @@ int main(int argc, char** argv) {
   const bool isGlobalMaster     =     tarch::mpi::Rank::getInstance().isGlobalMaster();
   const bool isPeanoComputeNode = not tarch::mpi::Rank::getInstance().isGlobalMaster();
 
+  #if Dimensions==2
   for (int patches=1; patches<=65536; patches*=2) {
+  #else
+  for (int patches=1; patches<=2048; patches*=2) {
+  #endif
     runBenchmarks(patches);
   }
 

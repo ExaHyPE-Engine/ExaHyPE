@@ -153,8 +153,15 @@ class examples::exahype2::euler::EulerOnGPU: public AbstractEulerOnGPU {
       const double u_n = Q[normal + 1] * irho;
       const double c   = std::sqrt(gamma * p * irho);
 
-      double result = std::max( std::abs(u_n - c), std::abs(u_n + c) );
-      return result;
+      #if defined(GPUOffloadingOMP)
+      double plus  = u_n + c;
+      double minus = u_n - c;
+      plus   = plus>0  ? plus  : -plus;
+      minus  = minus>0 ? minus : -minus;
+      return plus>minus ? plus : minus;
+      #else
+      return std::max( std::abs(u_n - c), std::abs(u_n + c) );
+      #endif 
     }
     #if defined(GPUOffloadingOMP)
     #pragma omp end declare target

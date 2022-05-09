@@ -1,5 +1,0 @@
-#!/usr/bin/env python3
-# Build the cookbook by running 'scons'
-# Clean all generated files via 'scons -c'
-env=Environment()
-env.PDF('cookbook.tex')

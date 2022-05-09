@@ -664,7 +664,6 @@ namespace exahype2 { namespace fv{ namespace rusanov{ namespace internal{
       }
 
       if (evaluateMaximumEigenvalueAfterTimeStep and Dimensions==2) {
-        logDebug( "timeStepWithRusanov_sequential(...)", "compute maximum eigenvalue for subsequent time step" );
         double newMaxEigenvalue = 0.0;
         otterLoopBegin(); // @todo how do I clarify that this is a reduction? Do we need this info here?
         for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)

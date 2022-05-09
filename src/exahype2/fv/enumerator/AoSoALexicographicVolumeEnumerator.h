@@ -19,6 +19,9 @@ namespace exahype2 {
        * This enumerator enumerates the patches one after the other (AoS). Within each
        * patch, it then however switches to an SoA data layout.
        */
+      #if defined(GPUOffloadingOMP)
+//      #pragma omp declare target
+      #endif
       struct AoSoALexicographicVolumeEnumerator {
         public:
           AoSoALexicographicVolumeEnumerator(int numberOfPatches, int numberOfVolumesPerAxisInPatch, int haloSize, int unknowns, int numberOfAuxiliaryVariables):
@@ -55,7 +58,9 @@ namespace exahype2 {
             }
           }
 
+#if !defined(GPUOffloadingOMP)
           std::string toString() const;
+#endif
 
           /**
            * Returns the total size.
@@ -83,6 +88,9 @@ namespace exahype2 {
           const int _unknowns;
           const int _numberOfAuxiliaryVariables;
       };
+      #if defined(GPUOffloadingOMP)
+//      #pragma omp end declare target
+      #endif
     }
   }
 }
