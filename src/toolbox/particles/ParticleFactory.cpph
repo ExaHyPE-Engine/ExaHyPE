@@ -72,7 +72,7 @@ std::vector<T*> toolbox::particles::createEquallySpacedParticles(double spacing,
 template <class T>
 std::vector<T*> toolbox::particles::createParticlesAlignedWithGlobalCartesianMesh(double spacing, const tarch::la::Vector<Dimensions,double>& voxelX, const tarch::la::Vector<Dimensions,double>& voxelH, const tarch::la::Vector<Dimensions,double>& domainOffset, bool addNoise) {
   static tarch::logging::Log _log( "toolbox::particles" );
-  logInfo( "createParticlesAlignedWithGlobalCartesianMesh(...)", "spacing=" << spacing << ", voxelX=" << voxelX << ", domain-offset=" << domainOffset << ", noise=" << addNoise );
+  logTraceInWith4Arguments( "createParticlesAlignedWithGlobalCartesianMesh(...)", spacing, voxelX, domainOffset, addNoise );
   std::vector<T*> result;
 
   const double RelativeAccuracyForGeometricChecks = 0.01 * voxelH(0);
@@ -104,5 +104,6 @@ std::vector<T*> toolbox::particles::createParticlesAlignedWithGlobalCartesianMes
     }
   }
 
+  logTraceOutWith1Argument( "createParticlesAlignedWithGlobalCartesianMesh(...)", result.size() );
   return result;
 }
