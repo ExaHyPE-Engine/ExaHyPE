@@ -73,8 +73,8 @@ class UpdateParticleGridAssociation(ActionSet):
     self.d = {}
     self.d[ "PARTICLE" ]                      = particle_set.particle_model.name
     self.d[ "PARTICLES_CONTAINER" ]           = particle_set.name
-    self.d[ "ELIMINATE_SPATIAL_DUPLICATES" ]  = eliminate_spatial_duplicates
     self.d[ "GUARD" ]                         = guard
+    self._eliminate_spatial_duplicates        = eliminate_spatial_duplicates
 
 
   __Template_BeginTraversal = jinja2.Template("""
@@ -186,13 +186,20 @@ if ( {{GUARD}} ) {
 """)
 
 
-  """
-  
-  This postamble of the grid traversal plugs into touchVertexLastTime().
-   
-  """
-  __Template_DetermineNewParallelStatus = jinja2.Template("""
-  if ( {{ELIMINATE_SPATIAL_DUPLICATES}} and {{GUARD}} ) {
+  __Template_ValidateParticleLevelAssociation = jinja2.Template("""
+  for (auto p: fineGridVertex{{PARTICLES_CONTAINER}} ) {
+    assertion3(
+      marker.isContainedInAdjacentCells( p->getX(), 0.5 ),
+      marker.x(),
+      marker.toString(),
+      p->toString()
+    );
+  }
+""")
+
+
+  __Template_EliminateDuplicateParticles = jinja2.Template("""
+  if ( {{GUARD}} ) {
     auto p = fineGridVertex{{PARTICLES_CONTAINER}}.begin();
     while (p!=fineGridVertex{{PARTICLES_CONTAINER}}.end()) {
       auto pp = p;
@@ -216,7 +223,15 @@ if ( {{GUARD}} ) {
       }
     }
   }
+""")
+    
+
+  """
   
+  This postamble of the grid traversal plugs into touchVertexLastTime().
+   
+  """
+  __Template_DetermineNewParallelStatus = jinja2.Template("""
   if ( {{GUARD}} ) {
     auto p = fineGridVertex{{PARTICLES_CONTAINER}}.begin();
     while (p!=fineGridVertex{{PARTICLES_CONTAINER}}.end()) {
@@ -331,9 +346,13 @@ if ( {{GUARD}} ) {
     if operation_name==ActionSet.OPERATION_CREATE_HANGING_VERTEX:
       result = self.__Template_Drop.render(**self.d) 
     if operation_name==ActionSet.OPERATION_TOUCH_VERTEX_FIRST_TIME:
-      result = self.__Template_InitialiseParallelStatus.render(**self.d) + self.__Template_Drop.render(**self.d) 
+      result = self.__Template_InitialiseParallelStatus.render(**self.d) + \
+               self.__Template_Drop.render(**self.d) 
     if operation_name==ActionSet.OPERATION_TOUCH_VERTEX_LAST_TIME:
-      result = self.__Template_DetermineNewParallelStatus.render(**self.d) + self.__Template_Drop.render(**self.d) 
+      result = self.__Template_ValidateParticleLevelAssociation.render(**self.d)
+      if self._eliminate_spatial_duplicates:
+        result += self.__Template_EliminateDuplicateParticles.render(**self.d)
+      result += self.__Template_DetermineNewParallelStatus.render(**self.d)
     if operation_name==ActionSet.OPERATION_TOUCH_CELL_LAST_TIME:
       result = self.__Template_TouchCellLastTime.render(**self.d) 
     if operation_name==ActionSet.OPERATION_DESTROY_HANGING_VERTEX:
