@@ -19,7 +19,13 @@ void toolbox::particles::insertParticlesIntoCell(
   const std::vector< Particle* >&                           newParticles,
   peano4::datamanagement::VertexEnumerator< ParticleSet >&  fineGridVertices
 ) {
-  fineGridVertices(0).insert( fineGridVertices(0).end(), newParticles.begin(), newParticles.end() );
+  for (auto& p: newParticles) {
+    std::bitset<Dimensions> targetVertex;
+    for (int d=0; d<Dimensions; d++) {
+      targetVertex[d] = p->getX()(d)>marker.x()(d);
+    }
+    fineGridVertices( targetVertex.to_ulong() ).push_back( p );
+  }
 }
 
 
