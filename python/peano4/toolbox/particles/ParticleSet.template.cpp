@@ -136,7 +136,9 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::clone( const {{CLASSNAME}}& othe
     DoFType* newParticle =  new DoFType(*p);
     this->push_back( newParticle );
   }
+  #if PeanoDebug>=1
   _debugX = otherSet._debugX;
   _debugH = otherSet._debugH;
+  #endif
 }
 
