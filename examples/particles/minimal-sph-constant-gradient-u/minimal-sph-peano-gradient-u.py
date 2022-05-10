@@ -50,9 +50,20 @@ modes = {
 }
 
 parser = argparse.ArgumentParser(description='ExaHyPE 2 - Euler benchmarking script')
-parser.add_argument("-m",  "--mode",   dest="mode",   default="release", help="|".join(modes.keys()) )
-parser.add_argument(       "--clean",  dest="clean_temporary_directories",  action="store_true", default="False", help="Remove temporary directories before script starts" )
+parser.add_argument("-m",  "--mode",    dest="mode",                         default="release", help="|".join(modes.keys()) )
+parser.add_argument("-c",  "--clean",   dest="clean_temporary_directories",  action="store_true", help="Remove temporary directories before script starts" )
+parser.add_argument("-r",  "--random",  dest="random_particle_layout",       action="store_true", help="Use a randomised initial particle layout" )
 args = parser.parse_args()
+
+
+
+if args.mode not in modes:
+    print("Error, mode must be {} or {}, you supplied {}".format(", ",join(modes.keys()[:-1]),modes.keys()[-1],args.mode))
+    import sys
+    sys.exit(1)
+
+print( "add noise to initial Cartesian particle layout: {}".format(args.random_particle_layout) )
+print( "clean directories: {}".format(args.clean_temporary_directories) )
 
 
 # If we want to start a project from scratch, we may want to remove some of the generated code
@@ -60,13 +71,8 @@ if args.clean_temporary_directories:
   bashCommand = 'make clean; rm -r actions/ vertexdata/ repositories/ globaldata/ celldata/ observers/'
   subprocess.check_output(['bash','-c', bashCommand])
 
-if args.mode not in modes:
-    print("Error, mode must be {} or {}, you supplied {}".format(", ",join(modes.keys()[:-1]),modes.keys()[-1],args.mode))
-    import sys
-    sys.exit(1)
-
   
-project = peano4.Project( ["examples", "particles"], "minimal-sph-peano-test-sedov", "." )
+project = peano4.Project( ["examples", "particles"], "minimal-sph-peano-gradient-u", "." )
 
 
 # ## Prepare code
@@ -248,7 +254,7 @@ GAMMA = str(5./3.)
 KERNEL_SUPPORT_RAD = "2"  # "gamma" parameter. =2 for Cubic Spline. Different in other kernels.
 
 # Artificial viscosity parameters
-ALPHA_AV= "1.0"
+ALPHA_AV= "0.8"
 BETA_AV = "3"       # =3 in SWIFT/SPHENIX
 
 # Smoothing-length free parameter (resolution "eta_neighbours"). 
@@ -275,7 +281,7 @@ print("Kernel Root value (sigma): " + CUBIC_SPLINE_SIGMA)
 BLAST_CENTER = "0.5" 
 #BLAST_ENERGY = "0.02"
 BLAST_ENERGY = "1.0"
-SPIKE_RADIUS = "0.02"
+SPIKE_RADIUS = "0.03"
 
 project.constants.export_const_with_type("GLOBAL_TIME_STEP_SIZE", GLOBAL_TIME_STEP_SIZE, "double")
 project.constants.export_const_with_type("HYDRO_DEFAULT_MAX_ITERATIONS", HYDRO_DEFAULT_MAX_ITERATIONS, "int")
@@ -318,64 +324,26 @@ project.solversteps.add_step(create_grid)
 
 
 initialisation_snippet = """
- 
-  /*
-   * Initial Conditions for the particular SPH test
-   * 
-   * 1. Sedov Blast: particles are initialised at rest in regular grid configuration and periodic BC. 
-   * Energy is injected to a (or group of) central particle and the blast should propagate
-   * isotropically, up to boundary effects.
-   * See, e.g., Springel and Hernquist, Mon. Not. R. Astron. Soc. 333, 649–664 (2002).
-   *
+  /* Internal cutoff radious used by Peano. 
+   * Should always be larger than actual SPH cutoff radius (2h).
+   * Max value = GridSize / 2
    */
    
-  // Internal cutoff radious used by Peano. Should always be larger than actual SPH cutoff radious (2h).
-  particle->setCutOffRadius(0.16);
+  particle->setCutOffRadius(0.166);
   
+  /* Set constant density */
   particle->setDensity ( 1.0 );        
+//  particle->setMass    ( particle->getDensity()/400/2.56069/1.56122/2.56/std::pow(63.0/64.0,2) );   // 1/63 
   particle->setMass    ( particle->getDensity()/400/2.56069/1.56122/2.56 );   // 1/64 
-  particle->setPressure( 1e-6);
+  
+  /* Set a constant gradient in U */
+  particle->setU       ( 1e-6 + 100.0 * particle->getX()(0) ); 
+  particle->setPressure( gas_pressure_from_internal_energy( particle->getDensity(), particle->getU() ) );
+  particle->setSoundSpeed( gas_soundspeed_from_internal_energy( particle->getU() ) );
   
   particle->setSmoothingLength( SMOOTH_L_FAC * std::pow(particle->getMass()/particle->getDensity(), 1.0/Dimensions) );
   particle->setSmoothingLengthPrevious( 0.99 * particle->getSmoothingLength() );
  
-  // Initialise the blast
-  tarch::la::Vector<Dimensions,double> blast_cent(BLAST_CENTER);
-  const double dist_blast = tarch::la::norm2( particle->getX() - blast_cent );
-  
- // /* Old method */
- // /* Inject energy evenly into central particles */
- // if ( tarch::la::smaller( dist_blast, SPIKE_RADIUS ) ) {
- //   particle->setU( BLAST_ENERGY );
- 
-   /* New method */
-   /* Smooth the explosion with kernel */
-   const double h = particle->getSmoothingLength();
-   const double R_smooth = 4.0 * h;
-   
-   // Evaluate kernel
-   const double q = dist_blast / h;
-   double w, dw_dq;
-   kernel_deval(q, w, dw_dq);
- 
-   // Normalization factors 
-   const double W = w / std::pow( h, Dimensions );
- 
-  if ( tarch::la::smallerEquals( dist_blast, R_smooth ) ) {
-    particle->setU( BLAST_ENERGY * W ) ;
-  } else {
-    particle->setU( 0.0 ); 
-  }
-  
-  /* Set non-zero (background) value in order to get non-zero sound speed across the whole domain */
-  if( tarch::la::equals(particle->getU(),0) ){
-    particle->setU( particle->getPressure()/( (GAMMA-1) * particle->getDensity() ) ); 
-  }
-  
-  // Evaluate (global) time-step size using u from exploding particle (h_ini is homogeneous)
-  const double soundspeed = std::sqrt( GAMMA * particle->getPressure()/particle->getDensity() );
-  particle->setSoundSpeed(soundspeed);
-  
   /* Initialize remaining fields  */
   
   // Vectors
@@ -384,7 +352,7 @@ initialisation_snippet = """
      particle->setA          (d,0);
      particle->setA_prev_step(d,0);
   }
- 
+  
   /* For 2D sims, we only get one component */
   particle->setRot_v(0);
   
@@ -396,7 +364,7 @@ initialisation_snippet = """
   particle->setUDot_prev_step(0.0);        
   particle->setHDot  (0.0);        
   particle->setWcount(0.0);        
-  particle->setNcount(0  );        
+  particle->setNcount(0  );     // for debugging
   particle->setOmega (0.0);        
   particle->setRho_dh(0.0);           
   particle->setWcount_dh(0.0);  
@@ -406,13 +374,11 @@ initialisation_snippet = """
   particle->setHasBeenKicked(false);
   particle->setResidual(0.0);
   particle->setIterCount(0);
-
+  
   // Artificial viscosity scheme
   particle->setDiv_v   (0.0);
-//  particle->setV_sig_AV(0.0);
-  particle->setV_sig_AV(2 * particle->getSoundSpeed());
+  particle->setV_sig_AV(2.0 * particle->getSoundSpeed());
   particle->setBalsara (0.0);
- 
  
 """
 
@@ -422,12 +388,14 @@ init_setup.use_cell(particle_tree_analysis.cell_marker)
 init_setup.add_action_set( peano4.toolbox.particles.UpdateParticleGridAssociation(particles) )
 init_setup.add_action_set( peano4.toolbox.particles.InsertParticlesAlongCartesianLayoutIntoUnrefinedCells(
   particle_set=particles,
+#  distance_between_particles=1/63,
   distance_between_particles=1/64,
   initialisation_call=initialisation_snippet,
-  noise=False,
+  noise=args.random_particle_layout,
   additional_includes=""" 
     #include "Constants.h" 
     #include "kernel_hydro.h"
+    #include "equation_of_state.h"
     """,
   computational_domain_offset=[0.0, 0.0])
   )
@@ -448,7 +416,7 @@ project.solversteps.add_step(init_setup)
 calc_densities_var_h = peano4.solversteps.Step( "DensityNonSym" )
 calc_densities_var_h.use_vertex(particles)
 calc_densities_var_h.use_cell(particle_tree_analysis.cell_marker)
-calc_densities_var_h.add_action_set( peano4.toolbox.particles.UpdateParticleGridAssociation(particles) )
+#calc_densities_var_h.add_action_set( peano4.toolbox.particles.UpdateParticleGridAssociation(particles) )
 
 particle_particle_compute_kernel = """
 
@@ -506,7 +474,7 @@ particle_particle_compute_kernel = """
       dW_a_dh = - ( Dimensions*w_a + q_a*dw_a_dq ) / std::pow( h_a, Dimensions +1 );
 
       // Increment density of Local particle
-      localParticle->setDensity( localParticle-> getDensity() + m_b * W_a ); 
+//      localParticle->setDensity( localParticle-> getDensity() + m_b * W_a ); 
 
       // Increment number density as well
       localParticle->setWcount ( localParticle-> getWcount () +       W_a );
@@ -518,7 +486,7 @@ particle_particle_compute_kernel = """
       localParticle->setRho_dh   ( localParticle->getRho_dh()    + m_b*dW_a_dh ); 
 
       // Increment Omega of Local particle
-      localParticle->setOmega    ( localParticle->getOmega()     + m_b*dW_a_dh );
+//      localParticle->setOmega    ( localParticle->getOmega()     + m_b*dW_a_dh );
 
       // Increment dWcount/dh
       localParticle->setWcount_dh( localParticle->getWcount_dh() +     dW_a_dh ); 
@@ -564,9 +532,9 @@ touch_particle_last_time_compute_kernel = """
       
     /* Add the contributions due to the particle itself (i.e. at q=0) */
 
-    localParticle->setDensity  ( localParticle->getDensity()   + m_a * W_a * h_inv_dim );                      
+//    localParticle->setDensity  ( localParticle->getDensity()   + m_a * W_a * h_inv_dim );                      
     localParticle->setWcount   ( localParticle->getWcount()    +       W_a * h_inv_dim );                      
-    localParticle->setOmega    ( localParticle->getOmega()     + m_a * (-Dimensions * W_a * h_inv_dim_plus_one) );   
+//    localParticle->setOmega    ( localParticle->getOmega()     + m_a * (-Dimensions * W_a * h_inv_dim_plus_one) );   
     localParticle->setRho_dh   ( localParticle->getRho_dh()    + m_a * (-Dimensions * W_a * h_inv_dim_plus_one) );   
     localParticle->setWcount_dh( localParticle->getWcount_dh() +       (-Dimensions * W_a * h_inv_dim_plus_one) );
     localParticle->setNcount   ( localParticle->getNcount()    + 1 );
@@ -591,9 +559,9 @@ touch_particle_first_time_compute_kernel = """
   ) {  
 
     // we'll accumulate the data throughout mesh/particle traversal
-    localParticle->setDensity (0.0);                      
+//    localParticle->setDensity (0.0);                      
     localParticle->setWcount  (0.0);                      
-    localParticle->setOmega   (0.0);   
+//    localParticle->setOmega   (0.0);   
     localParticle->setRho_dh  (0.0);   
     localParticle->setWcount_dh(0.0);   
     localParticle->setPressure(0.0);  
@@ -629,7 +597,7 @@ project.solversteps.add_step(calc_densities_var_h)
 calc_newton_raphson_h = peano4.solversteps.Step( "NewtonRaphsonSmoothingLength" )
 calc_newton_raphson_h.use_vertex(particles)
 calc_newton_raphson_h.use_cell(particle_tree_analysis.cell_marker)
-calc_newton_raphson_h.add_action_set( peano4.toolbox.particles.UpdateParticleGridAssociation(particles) )
+#calc_newton_raphson_h.add_action_set( peano4.toolbox.particles.UpdateParticleGridAssociation(particles) )
 
 particle_particle_compute_kernel = """
 
@@ -640,7 +608,8 @@ particle_particle_compute_kernel = """
 touch_particle_last_time_compute_kernel = """
 
    if(localParticle->getParallelState()==globaldata::Particle::ParallelState::Local
-   and localParticle->getHasConverged()==false ) {  
+   and localParticle->getHasConverged()==false 
+   ) {  
 
     /* Do a Newton-Raphson iteration.
      * The HasConverged attribute is always initialize to false so we always do at least one update.
@@ -753,7 +722,7 @@ project.solversteps.add_step(calc_newton_raphson_h)
 hydro_prepare_force = peano4.solversteps.Step( "HydroPrepareForce" )
 hydro_prepare_force.use_vertex(particles)
 hydro_prepare_force.use_cell(particle_tree_analysis.cell_marker)
-hydro_prepare_force.add_action_set( peano4.toolbox.particles.UpdateParticleGridAssociation(particles) )
+#hydro_prepare_force.add_action_set( peano4.toolbox.particles.UpdateParticleGridAssociation(particles) )
 hydro_prepare_force.add_action_set( peano4.toolbox.particles.ParticleParticleInteraction(
   particle_set=particles,
   particle_particle_interaction_kernel="""
@@ -764,9 +733,11 @@ hydro_prepare_force.add_action_set( peano4.toolbox.particles.ParticleParticleInt
 
   touch_vertex_first_time_compute_particle_update_kernel="""
  
-  if(localParticle->getParallelState()==globaldata::Particle::ParallelState::Local
-//  and localParticle->getHasConverged()==false 
-  ) {  
+  if( toolbox::particles::particleWillStayWithinComputationalDomain(
+    *localParticle,
+    {0.0,0.0},         // domainOffset
+    {1.0,1.0}          // domainWidth
+  )) {  
 
     /* Retrieve basic properties of local and active particles */
     const double rho_a = localParticle->getDensity();
@@ -819,7 +790,7 @@ hydro_prepare_force.add_action_set( peano4.toolbox.particles.ParticleParticleInt
     
     /* Grad-h-term (Omega) */
     /* SWIFT */
-    localParticle->setOmega( grad_h_term );  
+//    localParticle->setOmega( grad_h_term );  
     localParticle->setPressure(P_a);
     localParticle->setSoundSpeed(soundspeed);
     localParticle->setBalsara(balsara);
@@ -852,7 +823,7 @@ project.solversteps.add_step(hydro_prepare_force)
 force_non_sym_particles = peano4.solversteps.Step( "ForceNonSym" )
 force_non_sym_particles.use_vertex(particles)
 force_non_sym_particles.use_cell(particle_tree_analysis.cell_marker)
-force_non_sym_particles.add_action_set( peano4.toolbox.particles.UpdateParticleGridAssociation(particles) )
+#force_non_sym_particles.add_action_set( peano4.toolbox.particles.UpdateParticleGridAssociation(particles) )
 force_non_sym_particles.add_action_set( peano4.toolbox.particles.ParticleParticleInteraction(
   particle_set=particles,
   particle_particle_interaction_kernel="""
@@ -1030,7 +1001,7 @@ project.solversteps.add_step(force_non_sym_particles)
 kick1_particles = peano4.solversteps.Step( "Kick1" )
 kick1_particles.use_vertex(particles)
 kick1_particles.use_cell(particle_tree_analysis.cell_marker)
-kick1_particles.add_action_set( peano4.toolbox.particles.UpdateParticleGridAssociation(particles) )
+#kick1_particles.add_action_set( peano4.toolbox.particles.UpdateParticleGridAssociation(particles) )
 kick1_particles.add_action_set( peano4.toolbox.particles.ParticleParticleInteraction(
   particle_set=particles,
   particle_particle_interaction_kernel="""
@@ -1093,7 +1064,7 @@ project.solversteps.add_step(kick1_particles)
 kick2_particles = peano4.solversteps.Step( "Kick2" )
 kick2_particles.use_vertex(particles)
 kick2_particles.use_cell(particle_tree_analysis.cell_marker)
-kick2_particles.add_action_set( peano4.toolbox.particles.UpdateParticleGridAssociation(particles) )
+#kick2_particles.add_action_set( peano4.toolbox.particles.UpdateParticleGridAssociation(particles) )
 kick2_particles.add_action_set( peano4.toolbox.particles.ParticleParticleInteraction(
   particle_set=particles,
   particle_particle_interaction_kernel="""
@@ -1187,7 +1158,6 @@ drift_particles.add_action_set( peano4.toolbox.particles.ParticleParticleInterac
   
 """,
   touch_vertex_first_time_compute_particle_update_kernel="""
-  
   const double timeStepSize = GLOBAL_TIME_STEP_SIZE;
   
   if (
@@ -1196,15 +1166,30 @@ drift_particles.add_action_set( peano4.toolbox.particles.ParticleParticleInterac
     localParticle->getParallelState()==globaldata::Particle::ParallelState::Local
     ){
   
-    /* Drift the particle (update position for a full time-step) */
+    // Drift the particle (update position for a full time-step) 
     localParticle->setX( localParticle->getX() + timeStepSize * localParticle->getV_full() );
     
     localParticle->setMoveState( globaldata::Particle::MoveState::Moved );
       
     }
-
 """,
   touch_vertex_last_time_compute_particle_update_kernel="""
+  
+  const double timeStepSize = GLOBAL_TIME_STEP_SIZE;
+
+/*  
+  if (
+    localParticle->getMoveState()!=globaldata::Particle::MoveState::Moved
+    and
+    localParticle->getParallelState()==globaldata::Particle::ParallelState::Local
+    ){
+  
+    // Drift the particle (update position for a full time-step)
+    localParticle->setX( localParticle->getX() + timeStepSize * localParticle->getV_full() );
+    
+    localParticle->setMoveState( globaldata::Particle::MoveState::Moved );
+  }
+  */
   
   /* Predict terms (SWIFT) */
   
@@ -1212,7 +1197,7 @@ drift_particles.add_action_set( peano4.toolbox.particles.ParticleParticleInterac
   const double dt_drift = GLOBAL_TIME_STEP_SIZE;
   const double dt_therm = dt_kick_hydro;
   
-    if (localParticle->getParallelState()==globaldata::Particle::ParallelState::Local){
+  if (localParticle->getParallelState()==globaldata::Particle::ParallelState::Local ) {
   
       /* Predict velocities for hydro terms */
       localParticle->setV( localParticle->getV() + localParticle->getA() * dt_kick_hydro );
@@ -1241,7 +1226,7 @@ drift_particles.add_action_set( peano4.toolbox.particles.ParticleParticleInterac
 
       /* Predict density */
       const double w2 = - Dimensions * w1;
-      localParticle->setDensity( localParticle->getDensity() * std::exp(w2) );
+//      localParticle->setDensity( localParticle->getDensity() * std::exp(w2) );
 
 //
 //    if (fabsf(w2) < 0.2f) {
@@ -1299,7 +1284,7 @@ project.solversteps.add_step(drift_particles)
 hydro_kick_extra = peano4.solversteps.Step( "HydroKickExtra" )
 hydro_kick_extra.use_vertex(particles)
 hydro_kick_extra.use_cell(particle_tree_analysis.cell_marker)
-hydro_kick_extra.add_action_set( peano4.toolbox.particles.UpdateParticleGridAssociation(particles) )
+#hydro_kick_extra.add_action_set( peano4.toolbox.particles.UpdateParticleGridAssociation(particles) )
 hydro_kick_extra.add_action_set( peano4.toolbox.particles.ParticleParticleInteraction(
   particle_set=particles,
   particle_particle_interaction_kernel="""
@@ -1367,7 +1352,7 @@ project.solversteps.add_step(hydro_kick_extra)
 kick_particles_corrector = peano4.solversteps.Step( "KickCorrector" )
 kick_particles_corrector.use_vertex(particles)
 kick_particles_corrector.use_cell(particle_tree_analysis.cell_marker)
-kick_particles_corrector.add_action_set( peano4.toolbox.particles.UpdateParticleGridAssociation(particles) )
+#kick_particles_corrector.add_action_set( peano4.toolbox.particles.UpdateParticleGridAssociation(particles) )
 kick_particles_corrector.add_action_set( peano4.toolbox.particles.ParticleParticleInteraction(
   particle_set=particles,
   particle_particle_interaction_kernel="""
@@ -1421,7 +1406,7 @@ project.solversteps.add_step(kick_particles_corrector)
 kick_corrector_extra = peano4.solversteps.Step( "KickCorrectorExtra" )
 kick_corrector_extra.use_vertex(particles)
 kick_corrector_extra.use_cell(particle_tree_analysis.cell_marker)
-kick_corrector_extra.add_action_set( peano4.toolbox.particles.UpdateParticleGridAssociation(particles) )
+#kick_corrector_extra.add_action_set( peano4.toolbox.particles.UpdateParticleGridAssociation(particles) )
 kick_corrector_extra.add_action_set( peano4.toolbox.particles.ParticleParticleInteraction(
   particle_set=particles,
   particle_particle_interaction_kernel="""
@@ -1475,7 +1460,7 @@ project.solversteps.add_step(kick_corrector_extra)
 reset_HasConverged_step = peano4.solversteps.Step( "ResetHasConverged" )
 reset_HasConverged_step.use_vertex(particles)
 reset_HasConverged_step.use_cell(particle_tree_analysis.cell_marker)
-reset_HasConverged_step.add_action_set( peano4.toolbox.particles.UpdateParticleGridAssociation(particles) )
+#reset_HasConverged_step.add_action_set( peano4.toolbox.particles.UpdateParticleGridAssociation(particles) )
 reset_HasConverged_step.add_action_set( peano4.toolbox.particles.ParticleParticleInteraction(
   particle_set=particles,
   particle_particle_interaction_kernel="""
@@ -1568,7 +1553,7 @@ project.solversteps.add_step(init_time_step)
 impose_BC_particles = peano4.solversteps.Step( "ImposeBC" )
 impose_BC_particles.use_vertex(particles)
 impose_BC_particles.use_cell(particle_tree_analysis.cell_marker)
-impose_BC_particles.add_action_set( peano4.toolbox.particles.UpdateParticleGridAssociation(particles) )
+#impose_BC_particles.add_action_set( peano4.toolbox.particles.UpdateParticleGridAssociation(particles) )
 impose_BC_particles.add_action_set( peano4.toolbox.particles.ParticleParticleInteraction(
   particle_set=particles,
   particle_particle_interaction_kernel="""
