@@ -11,7 +11,15 @@ import dastgen2.attributes.Integer
 
 
 class ParticleParticleInteraction(ActionSet):
-  def __init__(self, particle_set, particle_particle_interaction_kernel, touch_vertex_first_time_compute_particle_update_kernel=None, touch_vertex_last_time_compute_particle_update_kernel=None, additional_includes="", guard="true", active_particle_set=None ):
+  def __init__(self, 
+               particle_set, 
+               particle_particle_interaction_kernel, 
+               touch_vertex_first_time_compute_particle_update_kernel=None, 
+               touch_vertex_last_time_compute_particle_update_kernel=None, 
+               additional_includes="", 
+               guard="true", 
+               active_particle_set=None,
+               use_biased_locality_check=True ):
     """
 
     This code snippet creates a tree walker, i.e. an action set that runs
@@ -100,6 +108,14 @@ class ParticleParticleInteraction(ActionSet):
    
       i.e. you will have a variable localParticle available in this kernel
       and it is a pointer.
+      
+    use_biased_locality_check: Boolean
+      When we hit a cell, we have to decide what defines the active set within 
+      this cell. For this, we can either use peano4::datamanagement::CellMarker::isContained()
+      or peano4::datamanagement::CellMarker::isContainedWithBias(). The the 
+      documentation of these routines for further details.
+    
+      
 
     """
     self._particle_set = particle_set
@@ -117,6 +133,7 @@ class ParticleParticleInteraction(ActionSet):
     self.d[ "TOUCH_VERTEX_LAST_COMPUTE_KERNEL" ]  = touch_vertex_last_time_compute_particle_update_kernel
     self.d[ "ADDITIONAL_INCLUDES" ]               = additional_includes
     self.d[ "GUARD" ]                             = guard
+    self.d[ "BIASED_LOCALITY_CHECK"]              = use_biased_locality_check
     
 
   __Template_TouchVertexFirstTime = jinja2.Template("""
@@ -145,7 +162,11 @@ class ParticleParticleInteraction(ActionSet):
         _numberOfActiveParticlesAdded.back()++;
       }
       for (auto& p: fineGridVertices{{LOCAL_PARTICLES_CONTAINER}}(i) ) {
+        {% if BIASED_LOCALITY_CHECK %}
+        bool append = marker.isContainedWithBias( p->getX() );
+        {% else %}
         bool append = marker.isContained( p->getX() );
+        {% endif %}
         if (append) {
           localParticles.push_front( p );
         }
