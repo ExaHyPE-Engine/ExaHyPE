@@ -8,13 +8,17 @@ import peano4.datamodel
 import peano4.output
 import exahype2.grid
 import exahype2.solvers.new_ader.actionsets
-from exahype2.solvers.rkdg.LagrangeBasis import GaussLegendreBasis, GaussLobattoBasis
+from exahype2.solvers.new_ader.LagrangeBasis import GaussLegendreBasis, GaussLobattoBasis
+from .PDETerms import PDETerms
+from .kernels import get_face_overlap_merge_implementation
 
 import os
 from abc import abstractmethod
 
 from enum import IntEnum
-
+import jinja2
+from exahype2.solvers.new_ader.actionsets.Prediction import Prediction
+from exahype2.solvers.new_ader.actionsets.Correction import Correction
 
 
 class Polynomials(IntEnum):
@@ -40,6 +44,14 @@ class ADERDG( object ):
       raise Exception( "Error: min_cell_h (" + str(min_cell_h) + ") is bigger than max_cell_h (" + str(max_cell_h) + ")" )
 
     self._plot_grid_properties = plot_grid_properties    
+
+    self.solver_constants_         = ""
+    self.user_action_set_includes  = ""
+    self.user_solver_includes      = ""
+    self.plot_description = ""    
+    
+    self._compute_time_step_size              = None
+    self._compute_new_time_step_size          = None
     
     if polynomials is Polynomials.Gauss_Legendre:
       self._basis = GaussLegendreBasis(order+1)
@@ -48,6 +60,34 @@ class ADERDG( object ):
     else:
       raise Exception( "No proper basis chosen: {}".format(polynomials) )
 
+    self._flux_implementation                 = None
+    self._ncp_implementation                  = None
+    self._eigenvalues_implementation          = None
+    self._source_term_implementation          = None
+    self._point_source_implementation         = None
+    self._boundary_conditions_implementation  = None
+    self._refinement_criterion_implementation = None
+    self._initial_conditions_implementation   = None
+
+    self._compute_time_step_size              = "#error Not yet defined"
+    
+    self._abstract_solver_user_declarations        = ""
+    self._abstract_solver_user_definitions         = ""
+    self._solver_user_declarations                 = ""
+    self._solver_user_definitions                  = ""
+
+    self._start_time_step_implementation           = ""
+    self._finish_time_step_implementation          = ""
+    
+    self._constructor_implementation = ""
+
+    self._action_set_postprocess_solution = None
+
+    self.create_data_structures()
+    self.create_action_sets()
+    
+    #TODO: check if safe to remove
+    """
     self._preprocess_reconstructed_patch = ""
     self._postprocess_updated_patch      = ""
 
@@ -60,20 +100,20 @@ class ADERDG( object ):
     
     #TODO: find out about this
     self._number_of_face_projections = 1;
-    
-    self.create_data_structures()
-    self.create_action_sets()
+    """
+
     
             
   @abstractmethod
   def create_data_structures(self):
+    
+    self._number_of_face_projections = 1;
     #TODO: expand
-    self._current_time_step                 = peano4.datamodel.Patch( (self._order+1,self._order+1,self._order+1),                      self._unknowns+self._auxiliary_variables, self._unknown_identifier() )
-    self._estimates                         = peano4.datamodel.Patch( (self._order*(self._order+1),self._order+1,self._order+1),     self._unknowns+self._auxiliary_variables, self._unknown_identifier() + "Estimates" )
-    #self._linear_combination_of_estimates   = peano4.datamodel.Patch( (self._dg_order+1,self._dg_order+1,self._dg_order+1),                      self._unknowns+self._auxiliary_variables, self._unknown_identifier() + "LinearCombination")
-    self._current_time_step_projection      = peano4.datamodel.Patch( (2,self._number_of_face_projections*(self._order+1),self._order+1),  self._unknowns+self._auxiliary_variables, self._unknown_identifier() )
-    self._estimates_projection              = peano4.datamodel.Patch( (2,self._number_of_face_projections*(self._order+1),self._order+1),  self._unknowns+self._auxiliary_variables, self._unknown_identifier() + "Estimates" )
-
+    self._current_time_step             = peano4.datamodel.Patch( (self._order+1,self._order+1,self._order+1), self._unknowns+self._auxiliary_variables, self._unknown_identifier() )
+    self._estimates                     = peano4.datamodel.Patch( (self._order+1,self._order+1,self._order+1), self._unknowns+self._auxiliary_variables, self._unknown_identifier() + "Estimates" )
+    self._current_time_step_projection  = peano4.datamodel.Patch( (2,self._number_of_face_projections*(self._order+1),self._order+1),  self._unknowns+self._auxiliary_variables, self._unknown_identifier() )
+    self._estimates_projection          = peano4.datamodel.Patch( (2,self._order+1,self._order+1),  self._unknowns+self._auxiliary_variables, self._unknown_identifier() + "Estimates" )
+    self._flux_estimates_projection     = peano4.datamodel.Patch( (2,self._order+1,self._order+1),  self._unknowns, self._unknown_identifier() + "FluxEstimates" )    
     
     self._current_time_step_projection.generator.merge_method_definition = peano4.toolbox.blockstructured.get_face_overlap_merge_implementation(self._current_time_step_projection)
     self._current_time_step_projection.generator.includes     += """
@@ -81,8 +121,16 @@ class ADERDG( object ):
 #include "repositories/SolverRepository.h" 
 """
    
-    self._estimates_projection.generator.merge_method_definition = peano4.toolbox.blockstructured.get_face_overlap_merge_implementation(self._estimates_projection)
+#    self._estimates_projection.generator.merge_method_definition = peano4.toolbox.blockstructured.get_face_overlap_merge_implementation(self._current_time_step_projection)
+
+    self._estimates_projection.generator.merge_method_definition = get_face_overlap_merge_implementation(self._estimates_projection)
     self._estimates_projection.generator.includes     += """
+#include "peano4/utils/Loop.h"
+#include "repositories/SolverRepository.h" 
+"""
+
+    self._flux_estimates_projection.generator.merge_method_definition = get_face_overlap_merge_implementation(self._flux_estimates_projection)
+    self._flux_estimates_projection.generator.includes     += """
 #include "peano4/utils/Loop.h"
 #include "repositories/SolverRepository.h" 
 """
@@ -92,9 +140,6 @@ class ADERDG( object ):
     
     self._estimates.generator.store_persistent_condition = self._store_cell_data_default_guard()
     self._estimates.generator.load_persistent_condition  = self._load_cell_data_default_guard()
-
-#    self._linear_combination_of_estimates.store_persistent_condition = "false"
-#    self._linear_combination_of_estimates.load_persistent_condition = "false"
 
     self._current_time_step_projection.generator.store_persistent_condition = self._store_face_data_default_guard()
     self._current_time_step_projection.generator.load_persistent_condition  = self._load_face_data_default_guard()
@@ -108,18 +153,29 @@ class ADERDG( object ):
     self._estimates_projection.generator.send_condition               = "false"
     self._estimates_projection.generator.receive_and_merge_condition  = "false"
 
+    self._flux_estimates_projection.generator.store_persistent_condition = self._store_face_data_default_guard()
+    self._flux_estimates_projection.generator.load_persistent_condition  = self._load_face_data_default_guard()
+
+    self._flux_estimates_projection.generator.send_condition               = "false"
+    self._flux_estimates_projection.generator.receive_and_merge_condition  = "false"
+    
     self._current_time_step.generator.includes  += """
 #include "../repositories/SolverRepository.h"
 """    
     self._estimates.generator.includes  += """
 #include "../repositories/SolverRepository.h"
 """    
+
     self._current_time_step_projection.generator.includes  += """
 #include "../repositories/SolverRepository.h"
 """    
     self._estimates_projection.generator.includes  += """
 #include "../repositories/SolverRepository.h"
 """    
+
+    self._flux_estimates_projection.generator.includes  += """
+#include "../repositories/SolverRepository.h"
+"""
 
     self._cell_label = exahype2.grid.create_cell_label( self._name )
     self._face_label = exahype2.grid.create_face_label( self._name )      
@@ -145,12 +201,18 @@ class ADERDG( object ):
     self._action_set_project_solution_onto_faces                                      = exahype2.solvers.new_ader.actionsets.ProjectSolutionOntoFaces(solver=self,guard=self._store_cell_data_default_guard())
     self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement = exahype2.solvers.new_ader.actionsets.DynamicAMR(solver=self,guard=self._store_cell_data_default_guard())
     if self._action_set_postprocess_solution==None:
-          self._action_set_postprocess_solution                                             = exahype2.solvers.new_ader.actionsets.EmptyPostprocessSolution(solver=self)
+          self._action_set_postprocess_solution                                       = exahype2.solvers.new_ader.actionsets.EmptyPostprocessSolution(solver=self)
 
 
     
     self._action_set_update_face_label = exahype2.grid.UpdateFaceLabel( self._name )  
     self._action_set_update_cell_label = exahype2.grid.UpdateCellLabel( self._name ) 
+
+    self._action_set_prediction = Prediction(self, self._store_cell_data_default_guard())
+    self._action_set_correction = Correction(self, self._store_cell_data_default_guard())
+
+    #TODO: probably remove
+    #self._action_set_update_cell = UpdateCell(self, self._store_cell_data_default_guard() )
         
 
 
@@ -221,22 +283,18 @@ class ADERDG( object ):
     """  
     datamodel.add_cell(self._cell_label)
     datamodel.add_cell(self._current_time_step)
-    datamodel.add_cell(self._estimates)
     datamodel.add_face(self._face_label)
-    datamodel.add_face(self._current_time_step_projection)
     datamodel.add_face(self._estimates_projection)
-
+    datamodel.add_face(self._flux_estimates_projection)
   
   def add_use_data_statements_to_Peano4_solver_step(self, step):
     step.use_cell(self._cell_label)
     step.use_cell(self._current_time_step)
-    step.use_cell(self._estimates)
     step.use_face(self._face_label)
-    step.use_face(self._current_time_step_projection)
     step.use_face(self._estimates_projection)
-  
-  def add_actions_to_init_grid(self, step):  
-    #TODO
+    step.use_face(self._flux_estimates_projection)
+
+  def add_actions_to_init_grid(self, step):
     step.add_action_set( self._action_set_initial_conditions )
     step.add_action_set( self._action_set_update_face_label )
     step.add_action_set( self._action_set_update_cell_label )
@@ -303,15 +361,18 @@ class ADERDG( object ):
     step.add_action_set( self._action_set_update_face_label )
     step.add_action_set( self._action_set_update_cell_label )
     step.add_action_set( self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement )
-    step.add_action_set( self._action_set_solve_volume_integral )
+    #step.add_action_set( self._action_set_solve_volume_integral )
     step.add_action_set( self._action_set_handle_boundary )
-    step.add_action_set( self._action_set_solve_Riemann_problem )
-    step.add_action_set( self._action_set_add_volume_and_face_solution )
-    step.add_action_set( self._action_set_project_solution_onto_faces )
+    #step.add_action_set( self._action_set_solve_Riemann_problem )
+    #step.add_action_set( self._action_set_add_volume_and_face_solution )
+    #step.add_action_set( self._action_set_project_solution_onto_faces )
+        
+    step.add_action_set(self._action_set_prediction)
+    step.add_action_set(self._action_set_correction)
+    #step.add_action_set(self._action_set_update_cell)
+
     step.add_action_set( self._action_set_AMR )
     step.add_action_set( self._action_set_postprocess_solution )
-    
-    step.add_action_set(self._action_set_update_cell)
 
   
     
@@ -443,8 +504,63 @@ class ADERDG( object ):
     d[ "SOLVER_CONSTANTS" ] = self.solver_constants_
     d[ "SOLVER_INCLUDES" ]  = self.get_user_solver_includes()
     
+    #d[ "SOURCE_TERM_CALL"]                    = jinja2.Template(self._source_term_call, undefined=jinja2.DebugUndefined).render( **d )
+    #d[ "RIEMANN_SOLVER_CALL"]                 = jinja2.Template(self._Riemann_solver_call, undefined=jinja2.DebugUndefined).render( **d )
+    #d[ "PREPROCESS_RECONSTRUCTED_PATCH" ]     = jinja2.Template(self._preprocess_reconstructed_patch, undefined=jinja2.DebugUndefined).render( **d )
+    #d[ "POSTPROCESS_UPDATED_PATCH" ]          = jinja2.Template(self._postprocess_updated_patch, undefined=jinja2.DebugUndefined).render( **d )
+    d[ "BOUNDARY_CONDITIONS_IMPLEMENTATION"]  = self._boundary_conditions_implementation
+    d[ "REFINEMENT_CRITERION_IMPLEMENTATION"] = self._refinement_criterion_implementation
+    d[ "INITIAL_CONDITIONS_IMPLEMENTATION"]   = self._initial_conditions_implementation
+    d[ "ABSTRACT_SOLVER_USER_DECLARATIONS" ]  = jinja2.Template(self._abstract_solver_user_declarations, undefined=jinja2.DebugUndefined).render( **d )
+    d[ "ABSTRACT_SOLVER_USER_DEFINITIONS" ]   = jinja2.Template(self._abstract_solver_user_definitions, undefined=jinja2.DebugUndefined).render( **d )
+    d[ "SOLVER_USER_DECLARATIONS" ]           = jinja2.Template(self._solver_user_declarations, undefined=jinja2.DebugUndefined).render( **d )
+    d[ "SOLVER_USER_DEFINITIONS" ]            = jinja2.Template(self._solver_user_definitions, undefined=jinja2.DebugUndefined).render( **d )
+    d[ "START_TIME_STEP_IMPLEMENTATION" ]     = jinja2.Template(self._start_time_step_implementation, undefined=jinja2.DebugUndefined).render( **d )
+    d[ "FINISH_TIME_STEP_IMPLEMENTATION" ]    = jinja2.Template(self._finish_time_step_implementation, undefined=jinja2.DebugUndefined).render( **d )
+    d[ "CONSTRUCTOR_IMPLEMENTATION"]          = jinja2.Template(self._constructor_implementation, undefined=jinja2.DebugUndefined).render( **d )
+    d[ "COMPUTE_TIME_STEP_SIZE" ]             = jinja2.Template(self._compute_time_step_size, undefined=jinja2.DebugUndefined).render( **d )    
+    d[ "COMPUTE_NEW_TIME_STEP_SIZE" ]         = jinja2.Template(self._compute_new_time_step_size, undefined=jinja2.DebugUndefined).render( **d )
+    
+    d["USE_FLUX"] = self._flux_implementation
+    d["USE_NCP"]  = self._ncp_implementation
+    d["USE_SOURCE"] = self._source_term_implementation
+        
     self._basis.init_dictionary_with_default_parameters(d)
     
+  def set_implementation(self,
+    flux=None,
+    ncp=None,
+    eigenvalues=None,
+    boundary_conditions=None,
+    refinement_criterion=None,
+    initial_conditions=None,
+    source_term=None,
+    point_source=None,
+    additional_action_set_includes = "",
+    additional_user_includes       = ""
+  ):
+    """
+      If you pass in User_Defined, then the generator will create C++ stubs
+      that you have to befill manually. If you pass in None_Implementation, it
+      will create nop, i.e. no implementation or defaults. Any other string
+      is copied 1:1 into the implementation. If you pass in None, then the
+      set value so far won't be overwritten.
+    """
+    if boundary_conditions  is not None:  self._boundary_conditions_implementation        = boundary_conditions
+    if refinement_criterion is not None:  self._refinement_criterion_implementation       = refinement_criterion
+    if initial_conditions   is not None:  self._initial_conditions_implementation         = initial_conditions
+
+    if flux                 is not None:  self._flux_implementation                       = flux
+    if ncp                  is not None:  self._ncp_implementation                        = ncp
+    if eigenvalues          is not None:  self._eigenvalues_implementation                = eigenvalues
+    if source_term          is not None:  self._source_term_implementation                = source_term
+    if point_source         is not None:  self._point_source_implementation               = source_term
+    
+    self.user_action_set_includes += additional_action_set_includes
+    self.user_solver_includes     += additional_user_includes
+
+    self.create_data_structures()
+    self.create_action_sets()
     
     
     

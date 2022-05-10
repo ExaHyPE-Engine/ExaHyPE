@@ -22,6 +22,8 @@
 
 #include "Constants.h"
 
+#include "exahype2/aderdg_kernels/Kernels.h"
+
 
 {% for item in NAMESPACE -%}
   namespace {{ item }} {
@@ -69,6 +71,29 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
     static std::string toString(SolverState);
 
     static constexpr int  Order = {{ORDER}};
+    static constexpr int NumberOfVariables = {{NUMBER_OF_UNKNOWNS}};
+    static constexpr int NumberOfParameters = {{NUMBER_OF_AUXILIARY_VARIABLES}};
+    static constexpr int MaxPicardIterations = {{ORDER}}+1;
+    static constexpr bool UseMaxPicardIterations = true;
+
+    // quadrature weights and operators
+    static constexpr bool UseLobattoBasis = false;
+    // [order][node i]
+    static double** weights;
+    static double** nodes;
+    // [order][node i][node j]
+    static double*** Kxi;
+    static double*** dudx;
+    static double*** iK1;
+    static double*** equidistantGridProjector;
+    // [order][ 0("left") or 1("right") ][node i]
+    static double*** FCoeff;
+    // [order][ subinterval ][fine grid node i][coarse grid node j]
+    static double**** fineGridProjector;
+    // [order][node i]
+    static kernels::UnivariateFunction** basisFunction;
+    static kernels::UnivariateFunction** basisFunctionFirstDerivative;
+    static kernels::UnivariateFunction** basisFunctionSecondDerivative;
 
     /**
      * Maximum mesh size that this solver wants/is allowed to support. Peano 4
@@ -151,17 +176,60 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
      * outside values though most BCs only modify the outside ones. Please
      * note that the boundary conditions you set here are after that subject
      * to the Riemann solver, i.e. flux and eigenvalues.
+     *
+     * \param[in]    x         the physical coordinate on the face.
+     * \param[in]    t         the start of the time interval.
+     * \param[in]    dt        the width of the time interval.
+     * \param[in]    faceIndex indexing of the face (0 -- {x[0]=xmin}, 1 -- {x[1]=xmax}, 2 -- {x[1]=ymin}, 3 -- {x[2]=ymax}, and so on,
+     *                         where xmin,xmax,ymin,ymax are the bounds of the cell containing point x.
+     * \param[in]    d         the coordinate direction the face normal is pointing to.
+     * \param[in]    QIn       the conserved variables at point x from inside of the domain
+     *                         and time-averaged (over [t,t+dt]) as C array (already allocated).
+     * \param[in]    FIn       the normal fluxes at point x from inside of the domain
+     *                         and time-averaged (over [t,t+dt]) as C array (already allocated).
+     * \param[inout] QOut      the conserved variables at point x from outside of the domain
+     *                         and time-averaged (over [t,t+dt]) as C array (already allocated).
+     * \param[inout] FOut      the normal fluxes at point x from outside of the domain
+     *                         and time-averaged (over [t,t+dt]) as C array (already allocated).
      */
-    virtual void boundaryConditions(
-      const double * __restrict__                  Qinside, // Qinside[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
-      double * __restrict__                        Qoutside, // Qoutside[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
-      const tarch::la::Vector<Dimensions,double>&  x,
-      double                                       t,
-      int                                          normal
-    ) {% if BOUNDARY_CONDITIONS_IMPLEMENTATION=="<user-defined>" %}= 0{% else %} final{% endif %};
+    virtual void boundaryValues(
+        const double* const x,
+        const double t,
+        const double dt,
+        const int faceIndex,
+        const int direction,
+        const double * const fluxIn,
+        const double* const stateIn,
+        const double* const gradStateIn,
+        double *fluxOut,
+        double* stateOut
+        ){% if BOUNDARY_CONDITIONS_IMPLEMENTATION=="<user-defined>" %}= 0{% else %} final{% endif %};
 
 
+    /**
+     * Compute the flux with diffusive component.
+     * These are not currently available for use, but are defined nonetheless because the kernels,
+     * which are written generically, need them to compile
+     *
+     * \param[in]  Q the conserved variabels (and parameters) associated with a
+     *               quadrature point as C array.
+     *             gradQ the gradient of the conserved variabels (and parameters) associated
+     *                   with a quadrature point as C array.
+     * \param[inout] F a C array with shape [nDim][nVars]. That is, this is an C list
+     *               holding pointers to actual lists. Thus, the storage may be noncontinous.
+     *               In any case, the storage has already been allocated.
+     */
+    virtual void viscousFlux(const double* const Q, const double* const gradQ, double** const F);
+    virtual void viscousEigenvalues(const double* const Q,const int direction,double* const lambda);
 
+    /*
+     * Still needed: flux, nonCon, AlgebraicSource, pointSource, boundaryValues, eigenvalues
+     */
+    virtual void flux(const double* const Q,double** const F);
+    virtual void nonConservativeProduct(const double* const Q,const double* const gradQ,double* const BgradQ);
+    virtual void algebraicSource(const tarch::la::Vector<Dimensions, double>& x, double t, const double *const Q, double *S);
+    virtual void pointSource(const double* const Q,const double* const x,const double t,const double dt, double* const forceVector,int n);
+    //virtual void eigenvalues(const double* const Q,const int direction,double* const lambda) = 0;
 
     /**
      * If you hook into this routine, ensure the abstract base class
@@ -267,6 +335,67 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
      */
     bool isFirstGridSweepOfTimeStep() const;
     bool isLastGridSweepOfTimeStep() const;
+
+    /*
+     * The following are all thin wrappers around functions defined in the aderdg kernels, they provide these with some small additional
+     * information and a link to the class from which they get some parameters as well as certain static vectors and matrices such as the
+     * quadrature nodes, weights, mass matrix and so on.
+     */
+    void solutionUpdate(
+        double* luh,
+        const double* const luhOld,
+        const double* const lduh,
+        const double dt
+        );
+
+    int spaceTimePredictorNonlinear(
+        double*  lQhbnd,
+        double* lFhbnd,
+        double* lQi,double* rhs,
+        double* lFi,double* gradQ,
+        double* lQhi,double* lFhi,
+        const double* const luh,
+        const tarch::la::Vector<Dimensions, double>& cellCentre,
+        const tarch::la::Vector<Dimensions, double>& cellSize,
+        const double t,
+        const double dt
+        );
+
+    void volumeIntegralNonlinear(
+      double* lduh,
+      const double* const lFhi,
+      const tarch::la::Vector<Dimensions, double>& cellSize);
+
+    void boundaryConditions(
+      double* fluxOut,
+      double* stateOut,
+      const double* const fluxIn,
+      const double* const stateIn,
+      const double* const gradStateIn,
+      const tarch::la::Vector<Dimensions, double>& cellCentre,
+      const tarch::la::Vector<Dimensions,double>& cellSize,
+      const double t,const double dt,
+      const int faceIndex,
+      const int direction);
+
+    void riemannSolverNonlinear(
+      double* FL, double* FR,
+      const double* const QL,
+      const double* const QR,
+      const double t,
+      const double dt,
+      const tarch::la::Vector<Dimensions, double>& cellSize,
+      const int direction
+      );
+
+    void faceIntegralNonlinear(
+      double *lduh,
+      const double *const lFhbnd,
+      const int direction,
+      const int orientation,
+      const tarch::la::Vector<Dimensions, double> &cellSize
+      );
+
 
   protected:
     static tarch::logging::Log  _log;

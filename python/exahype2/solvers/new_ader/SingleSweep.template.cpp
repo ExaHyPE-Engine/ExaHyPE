@@ -43,14 +43,19 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::initialCondition(
 
 
 {% if BOUNDARY_CONDITIONS_IMPLEMENTATION=="<user-defined>" %}
-void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::boundaryConditions(
-  const double * __restrict__                  Qinside, // Qinside[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
-  double * __restrict__                        Qoutside, // Qoutside[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
-  const tarch::la::Vector<Dimensions,double>&  x,
-  double                                       t,
-  int                                          normal
+void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::boundaryValues(
+    const double* const x,
+    const double        t,
+    const double        dt,
+    const int           faceIndex,
+    const int           direction,
+    const double* const fluxIn,
+    const double* const stateIn,
+    const double* const gradStateIn,
+    double* const       fluxOut,
+    double* const       stateOut
 ) {
-  logTraceInWith3Arguments( "boundaryConditions(...)", x, t, normal );
+  logTraceInWith3Arguments( "boundaryConditions(...)", x, t, direction );
   // @todo implement
   logTraceOut( "boundaryConditions(...)" );
 }

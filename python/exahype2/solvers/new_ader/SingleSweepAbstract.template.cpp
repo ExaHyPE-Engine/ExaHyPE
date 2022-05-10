@@ -13,9 +13,21 @@ tarch::logging::Log   {{NAMESPACE | join("::")}}::{{CLASSNAME}}::{{CLASSNAME}}::
 
 std::bitset<Dimensions> {{NAMESPACE | join("::")}}::{{CLASSNAME}}::{{CLASSNAME}}::PeriodicBC = {{NAMESPACE | join("::")}}::PeriodicBC;
 
+double**   {{NAMESPACE | join("::")}}::{{CLASSNAME}}::weights                                 = kernels::legendre::weights;
+double**   {{NAMESPACE | join("::")}}::{{CLASSNAME}}::nodes                                   = kernels::legendre::nodes;
+double***  {{NAMESPACE | join("::")}}::{{CLASSNAME}}::Kxi                                     = kernels::legendre::Kxi;
+double***  {{NAMESPACE | join("::")}}::{{CLASSNAME}}::dudx                                    = kernels::legendre::dudx;
+double***  {{NAMESPACE | join("::")}}::{{CLASSNAME}}::iK1                                     = kernels::legendre::iK1;
+double***  {{NAMESPACE | join("::")}}::{{CLASSNAME}}::equidistantGridProjector                = kernels::legendre::equidistantGridProjector;
+double***  {{NAMESPACE | join("::")}}::{{CLASSNAME}}::FCoeff                                  = kernels::legendre::FCoeff;
+double**** {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fineGridProjector                       = kernels::legendre::fineGridProjector;
+kernels::UnivariateFunction** {{NAMESPACE | join("::")}}::{{CLASSNAME}}::basisFunction                 = kernels::legendre::basisFunction;
+kernels::UnivariateFunction** {{NAMESPACE | join("::")}}::{{CLASSNAME}}::basisFunctionFirstDerivative  = kernels::legendre::basisFunctionFirstDerivative;
+kernels::UnivariateFunction** {{NAMESPACE | join("::")}}::{{CLASSNAME}}::basisFunctionSecondDerivative = kernels::legendre::basisFunctionSecondDerivative;
+
 
 {{NAMESPACE | join("::")}}::{{CLASSNAME}}::{{CLASSNAME}}():
-	{{BASIS_INITIALIZERS | indent(2,True) }}
+{{BASIS_INITIALIZERS | indent(2,True) }}
   _solverState(SolverState::GridConstruction),
   _minTimeStamp(0.0),
   _maxTimeStamp(0.0),
@@ -25,9 +37,9 @@ std::bitset<Dimensions> {{NAMESPACE | join("::")}}::{{CLASSNAME}}::{{CLASSNAME}}
   _maxCellH(0.0),
   _minCellHThisTimeStep(0.0),
   _maxCellHThisTimeStep(0.0),
-  _minTimeStepSize(0.0),
+  _minTimeStepSize(std::numeric_limits<double>::max()),
   _maxTimeStepSize(0.0),
-  _minTimeStepSizeThisTimeStep(0.0),
+  _minTimeStepSizeThisTimeStep(std::numeric_limits<double>::max()),
   _maxTimeStepSizeThisTimeStep(0.0),
   _cellUpdates(0) {
   {{CONSTRUCTOR_IMPLEMENTATION}}
@@ -96,13 +108,12 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::update(double timeStepSize, doub
   _minTimeStampThisTimeStep = std::min(timeStamp,_minTimeStampThisTimeStep);
   assertion6( tarch::la::smallerEquals(_minTimeStamp,_maxTimeStampThisTimeStep), _minTimeStamp, _minTimeStampThisTimeStep, _maxTimeStampThisTimeStep, timeStepSize, timeStamp, cellSize );
 
-
-  assertion1(_maxCellHThisTimeStep<std::numeric_limits<double>::max()/10.0,_maxCellHThisTimeStep);
-    assertion1(_maxCellHThisTimeStep>0.0,_maxCellHThisTimeStep);
-    assertion1(_minCellHThisTimeStep<std::numeric_limits<double>::max()/10.0,_minCellHThisTimeStep);
-    assertion1(_minCellHThisTimeStep>0.0,_minCellHThisTimeStep);
+  assertion1(cellSize<std::numeric_limits<double>::max()/10.0,cellSize);
+  assertion1(cellSize>0.0,cellSize);
   _maxCellHThisTimeStep = std::max(_maxCellHThisTimeStep,cellSize);
   _minCellHThisTimeStep = std::min(_minCellHThisTimeStep,cellSize);
+
+  logDebug( "update(double,double,double)", "updated with dt=" << timeStepSize << ", t=" << timeStamp << ", h=" << cellSize << ": t(new)=" << _minTimeStampThisTimeStep );
 }
 
 
@@ -198,32 +209,39 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startTimeStep(
 
   {{START_TIME_STEP_IMPLEMENTATION}}
 
-  _minTimeStamp = _minTimeStampThisTimeStep;
-  _maxTimeStamp = _maxTimeStampThisTimeStep;
+  if (_solverState==SolverState::Prediction) {
+    _minTimeStamp = _minTimeStampThisTimeStep;
+    _maxTimeStamp = _maxTimeStampThisTimeStep;
 
-  _minTimeStampThisTimeStep = std::numeric_limits<double>::max();
-  _maxTimeStampThisTimeStep = std::numeric_limits<double>::min();
+    _minTimeStampThisTimeStep = std::numeric_limits<double>::max();
+    _maxTimeStampThisTimeStep = std::numeric_limits<double>::min();
 
-  _minTimeStepSize = _minTimeStepSizeThisTimeStep;
-  _maxTimeStepSize = _maxTimeStepSizeThisTimeStep;
+    _minTimeStepSize = _minTimeStepSizeThisTimeStep;
+    _maxTimeStepSize = _maxTimeStepSizeThisTimeStep;
 
-  _minTimeStepSizeThisTimeStep = std::numeric_limits<double>::max();
-  _maxTimeStepSizeThisTimeStep = std::numeric_limits<double>::min();
+    _minTimeStepSizeThisTimeStep = std::numeric_limits<double>::max();
+    _maxTimeStepSizeThisTimeStep = std::numeric_limits<double>::min();
 
-  _minCellH = _minCellHThisTimeStep;
-  _maxCellH = _maxCellHThisTimeStep;
+    _minCellH = _minCellHThisTimeStep;
+    _maxCellH = _maxCellHThisTimeStep;
 
-  _maxCellHThisTimeStep      = 0.0;
-  _minCellHThisTimeStep      = std::numeric_limits<double>::max();
+    _maxCellHThisTimeStep      = 0.0;
+    _minCellHThisTimeStep      = std::numeric_limits<double>::max();
 
-  _localMinTimeStampThisTimeStep = std::numeric_limits<double>::max();
-  _localMaxTimeStampThisTimeStep = std::numeric_limits<double>::min();
+    _localMinTimeStampThisTimeStep = std::numeric_limits<double>::max();
+    _localMaxTimeStampThisTimeStep = std::numeric_limits<double>::min();
 
-  _cellUpdates    = 0;
+    _cellUpdates    = 0;
+  }
+
+  logInfo( "startTimeStep(...)", "phase " + toString(_solverState) );
+
 }
 
 
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishTimeStep() {
+	if ( _solverState==SolverState::Correction ) {
+
   #ifdef Parallel
   double newMinTimeStamp    = _minTimeStampThisTimeStep;
   double newMaxTimeStamp    = _maxTimeStampThisTimeStep;
@@ -307,12 +325,13 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishTimeStep() {
       );
   #endif
 
-  if ( _minTimeStampThisTimeStep>=std::numeric_limits<double>::max()/10.0) {
-    _minTimeStampThisTimeStep = 0.0;
-  }
-  if ( _maxTimeStampThisTimeStep>=std::numeric_limits<double>::max()/10.0 ) {
-    _maxTimeStampThisTimeStep = 0.0;
-  }
+		if ( _minTimeStampThisTimeStep>=std::numeric_limits<double>::max()/10.0) {
+			_minTimeStampThisTimeStep = 0.0;
+		}
+		if ( _maxTimeStampThisTimeStep>=std::numeric_limits<double>::max()/10.0 ) {
+			_maxTimeStampThisTimeStep = 0.0;
+		}
+	}
 
   {{FINISH_TIME_STEP_IMPLEMENTATION}}
 }
@@ -365,6 +384,144 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::isFirstGridSweepOfTimeStep() con
 
 bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::isLastGridSweepOfTimeStep() const {
   return _solverState==SolverState::Correction;
+}
+
+
+void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::solutionUpdate(double* luh, const double* const luhOld, const double* const lduh, const double dt){
+  kernels::aderdg::generic::c::solutionUpdate<{{NAMESPACE | join("::")}}::{{CLASSNAME}}>(
+      *this,
+      luh,
+      luhOld,
+      lduh,
+      dt
+      );
+}
+
+
+
+int {{NAMESPACE | join("::")}}::{{CLASSNAME}}::spaceTimePredictorNonlinear(double*  lQhbnd, double* lFhbnd, double* lQi, double* rhs, double* lFi, double* gradQ, double* lQhi, double* lFhi, const double* const luh, const tarch::la::Vector<Dimensions, double>& cellCentre, const tarch::la::Vector<Dimensions, double>& cellSize, const double t, const double dt){
+  //template <bool useSource, bool useFlux, bool useViscousFlux, bool useNCP, typename SolverType>
+  return kernels::aderdg::generic::c::spaceTimePredictorNonlinear<
+    {{ "true" if USE_SOURCE!="<none>" else "false" }}, //source
+    {{ "true" if USE_FLUX!="<none>" else "false" }}, //useFlux
+    false, //viscousFlux
+    {{ "true" if USE_NCP!="<none>" else "false" }}, //useNCP
+    false, //noTimeAveraging
+    {{NAMESPACE | join("::")}}::{{CLASSNAME}}>(
+
+      *this,
+      lQhbnd,
+      nullptr,
+      lFhbnd,
+      lQi,
+      rhs,
+      lFi,
+      gradQ,
+      lQhi,
+      lFhi,
+      luh,
+      cellCentre,
+      tarch::la::invertEntries(cellSize),
+      t,
+      dt
+      );
+}
+
+
+
+void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::volumeIntegralNonlinear(double* lduh, const double* const lFhi, const tarch::la::Vector<Dimensions, double>& cellSize){
+  //template <typename SolverType, bool useSourceOrNCP, bool useFlux, bool noTimeAveraging, const int numberOfVariables, int basisSize>
+  kernels::aderdg::generic::c::volumeIntegralNonlinear<
+    {{NAMESPACE | join("::")}}::{{CLASSNAME}},
+    {{ "true" if USE_NCP!="<none>" or USE_SOURCE!="<none>" else "false" }}, //useSourceOrNCP
+    {{ "true" if USE_FLUX!="<none>" else "false" }}, //useFlux
+    false, //noTimeAveraging
+    {{NUMBER_OF_UNKNOWNS}},
+    {{ORDER}}+1>(
+      lduh,
+      lFhi,
+      cellSize
+      );
+}
+
+
+
+void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::boundaryConditions(double* fluxOut, double* stateOut, const double* const fluxIn, const double* const stateIn, const double* const gradStateIn, const tarch::la::Vector<Dimensions, double>& cellCentre, const tarch::la::Vector<Dimensions,double>& cellSize, const double t,const double dt, const int faceIndex, const int direction){
+  //template <bool useGradientFlux, typename SolverType>
+  kernels::aderdg::generic::c::boundaryConditions<
+    false, //useGradientFlux, essentially useViscousFlux
+    {{NAMESPACE | join("::")}}::{{CLASSNAME}}>(
+      *this,
+      fluxOut,
+      stateOut,
+      fluxIn,
+      stateIn,
+      gradStateIn,
+      cellCentre,
+      cellSize,
+      t,
+      dt,
+      faceIndex,
+      direction
+      );
+}
+
+
+void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::riemannSolverNonlinear(double* FL, double* FR, const double* const QL, const double* const QR, const double t, const double dt, const tarch::la::Vector<Dimensions, double>& cellSize, const int direction){
+  //template <bool useNCP, bool useViscousFlux, typename SolverType>
+  kernels::aderdg::generic::c::riemannSolverNonlinear<
+    {{ "true" if USE_NCP!="<none>" else "false" }}, //useNCP
+    false, //useViscousFlux
+    {{NAMESPACE | join("::")}}::{{CLASSNAME}}>(
+      *this,
+      FL,
+      FR,
+      QL,
+      QR,
+      t,
+      dt,
+      cellSize,
+      direction
+      );
+}
+
+
+void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::faceIntegralNonlinear(double *lduh, const double *const lFhbnd, const int direction, const int orientation, const tarch::la::Vector<Dimensions, double> &cellSize){
+  kernels::aderdg::generic::c::faceIntegralNonlinear<
+    {{NAMESPACE | join("::")}}::{{CLASSNAME}},
+    {{NUMBER_OF_UNKNOWNS}},
+    {{ORDER}}+1>(
+      lduh,
+      lFhbnd,
+      direction,
+      orientation,
+      cellSize
+      );
+}
+
+
+void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::viscousFlux(const double* const Q,const double* const gradQ, double** const F) {
+  // should not be called
+}
+
+void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::viscousEigenvalues(const double* const Q,const int direction,double* const lambda) {
+  //should not be called
+}
+
+void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::flux(const double* const Q,double** const F) {
+  // should not be called
+}
+
+void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::nonConservativeProduct(const double* const Q,const double* const gradQ,double* const BgradQ) {
+  // should not be called
+}
+
+void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::algebraicSource(const tarch::la::Vector<Dimensions, double>& x, double t, const double *const Q, double *S) {
+  // should not be called
+}
+
+void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::pointSource(const double* const Q,const double* const x,const double t,const double dt, double* const forceVector,int n) {
+  // should not be called
 }
 
 

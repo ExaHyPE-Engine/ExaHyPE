@@ -36,6 +36,5 @@ class AbstractAderDGActionSet( ActionSet ):
   def get_includes(self):
     return """
 #include <functional>
-#include "exahype2/dg/DGUtils.h"
-#include "../repositories/SolverRepository.h"
+#include "exahype2/new_ader/AderUtils.h"
 """ + self._solver._get_default_includes() + self._solver.get_user_action_set_includes() 

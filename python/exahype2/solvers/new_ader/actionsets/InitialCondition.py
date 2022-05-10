@@ -5,7 +5,6 @@ from .AbstractAderDGActionSet import AbstractAderDGActionSet
 
 import peano4.solversteps
 import jinja2
-#TODO: duplicate the getQuadraturePoint function into aderdg folder?
 class InitialCondition(AbstractAderDGActionSet):
   TemplateInitialCondition = """
   if ({{PREDICATE}}) { 
@@ -15,7 +14,7 @@ class InitialCondition(AbstractAderDGActionSet):
     dfor( index, {{ORDER}}+1 ) {
       repositories::{{SOLVER_INSTANCE}}.initialCondition(
         fineGridCell{{UNKNOWN_IDENTIFIER}}.value + linearisedIndex,
-        ::exahype2::dg::getQuadraturePoint(
+        ::exahype2::aderdg::getQuadraturePoint(
           marker.x(), marker.h(), index, repositories::{{SOLVER_INSTANCE}}.Order+1, repositories::{{SOLVER_INSTANCE}}.QuadraturePoints
         ),
         marker.h(),
