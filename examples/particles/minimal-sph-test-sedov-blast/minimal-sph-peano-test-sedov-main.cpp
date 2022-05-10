@@ -165,7 +165,7 @@ int main(int argc, char** argv) {
 
         /* For first time-step, we need to pre-compute some quantities before drifting */
         if(i==0 and j==0){ 
-          for (int iter=0; iter<2; iter++){
+          for (int iter=0; iter<4; iter++){
             /* Density loop */
             peano4::parallel::SpacetreeSet::getInstance().traverse(density);
 
@@ -191,7 +191,7 @@ int main(int argc, char** argv) {
         peano4::parallel::SpacetreeSet::getInstance().traverse(driftpart);
 
         /* "Hydro loop" */
-        for (int iter=0; iter<2; iter++){
+        for (int iter=0; iter<4; iter++){
           /* Density loop */
           peano4::parallel::SpacetreeSet::getInstance().traverse(density);
           /* "Ghost tasks" */
