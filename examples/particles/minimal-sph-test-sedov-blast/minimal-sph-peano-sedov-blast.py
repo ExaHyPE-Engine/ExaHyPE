@@ -239,6 +239,9 @@ from numpy import pi
 
 GLOBAL_TIME_STEP_SIZE = "1e-4"
 
+# Particle number along 1 dimension
+HYDRO_PART_NUMBER = str(round(1.0 / args.particle_distance));
+
 # Maximum allowed number of Newton-Raphson iterations
 HYDRO_DEFAULT_MAX_ITERATIONS = "1"
 
@@ -285,6 +288,7 @@ BLAST_ENERGY = "1.0"
 SPIKE_RADIUS = "0.03"
 
 project.constants.export_const_with_type("GLOBAL_TIME_STEP_SIZE", GLOBAL_TIME_STEP_SIZE, "double")
+project.constants.export_const_with_type("HYDRO_PART_NUMBER", HYDRO_PART_NUMBER, "double")
 project.constants.export_const_with_type("HYDRO_DEFAULT_MAX_ITERATIONS", HYDRO_DEFAULT_MAX_ITERATIONS, "int")
 project.constants.export_const_with_type("H_TOLERANCE", H_TOLERANCE, "double")
 project.constants.export_const_with_type("KERNEL_SUPPORT_RAD"   , KERNEL_SUPPORT_RAD, "double")
@@ -340,8 +344,11 @@ initialisation_snippet = """
   particle->setCutOffRadius(0.16);
   
   particle->setDensity ( 1.0 );        
-//  particle->setMass    ( particle->getDensity()/400/2.56069/1.56122/2.56 );   // 1/64 
-  particle->setMass    ( particle->getDensity()/400/2.56069/1.56122/2.56/0.969103 );   // 1/63 
+  particle->setMass( particle->getDensity()/400/2.56069/1.56122/2.56 );   // 1/64 
+  /* Normalisation for actual number of particles in the simulation*/
+  particle->setMass( particle->getMass() * HYDRO_PART_NUMBER / 64.0 );
+
+//  particle->setMass    ( particle->getDensity()/400/2.56069/1.56122/2.56/0.969103 );   // 1/63 
   particle->setPressure( 1e-6);
   
   particle->setSmoothingLength( SMOOTH_L_FAC * std::pow(particle->getMass()/particle->getDensity(), 1.0/Dimensions) );
