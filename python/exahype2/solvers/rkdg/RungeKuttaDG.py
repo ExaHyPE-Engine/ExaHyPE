@@ -13,6 +13,7 @@ from peano4.solversteps.ActionSet import ActionSet
 
 from .ButcherTableau              import RungeKutta_steps
 from .PDETerms                    import PDETerms
+from .kernels                     import get_face_overlap_merge_implementation
 
 import jinja2
 import math
@@ -410,14 +411,16 @@ We use RK(""" + str(self._rk_order) + """) for the time stepping.
     self._linear_combination_of_estimates   = peano4.datamodel.Patch( (self._dg_order+1,self._dg_order+1,self._dg_order+1),                      self._unknowns+self._auxiliary_variables, self._unknown_identifier() + "LinearCombination")
     self._current_time_step_projection      = peano4.datamodel.Patch( (2,self._number_of_face_projections*(self._dg_order+1),self._dg_order+1),  self._unknowns+self._auxiliary_variables, self._unknown_identifier() )
     self._estimates_projection              = peano4.datamodel.Patch( (2,self._number_of_face_projections*(self._dg_order+1),self._dg_order+1),  self._unknowns+self._auxiliary_variables, self._unknown_identifier() + "Estimates" )
-    
-    self._current_time_step_projection.generator.merge_method_definition = peano4.toolbox.blockstructured.get_face_overlap_merge_implementation(self._current_time_step_projection)
+        
+    self._current_time_step_projection.generator.merge_method_definition = get_face_overlap_merge_implementation(self._current_time_step_projection)
+#peano4.toolbox.blockstructured.get_face_overlap_merge_implementation(self._current_time_step_projection)
     self._current_time_step_projection.generator.includes     += """
 #include "peano4/utils/Loop.h"
 #include "repositories/SolverRepository.h" 
 """
    
-    self._estimates_projection.generator.merge_method_definition = peano4.toolbox.blockstructured.get_face_overlap_merge_implementation(self._estimates_projection)
+    self._estimates_projection.generator.merge_method_definition = get_face_overlap_merge_implementation(self._estimates_projection)
+#peano4.toolbox.blockstructured.get_face_overlap_merge_implementation(self._estimates_projection)
     self._estimates_projection.generator.includes     += """
 #include "peano4/utils/Loop.h"
 #include "repositories/SolverRepository.h" 
@@ -435,8 +438,8 @@ We use RK(""" + str(self._rk_order) + """) for the time stepping.
     self._current_time_step_projection.generator.store_persistent_condition = self._store_face_data_default_guard()
     self._current_time_step_projection.generator.load_persistent_condition  = self._load_face_data_default_guard()
 
-    self._current_time_step_projection.generator.send_condition               = "false"
-    self._current_time_step_projection.generator.receive_and_merge_condition  = "false"
+#    self._current_time_step_projection.generator.send_condition               = "false"
+#    self._current_time_step_projection.generator.receive_and_merge_condition  = "false"
 
     self._estimates_projection.generator.store_persistent_condition = self._store_face_data_default_guard()
     self._estimates_projection.generator.load_persistent_condition  = self._load_face_data_default_guard()
@@ -560,7 +563,6 @@ We use RK(""" + str(self._rk_order) + """) for the time stepping.
     datamodel.add_face(self._face_label)
     datamodel.add_face(self._current_time_step_projection)
     datamodel.add_face(self._estimates_projection)
-
  
   def add_use_data_statements_to_Peano4_solver_step(self, step):
     """
@@ -578,7 +580,6 @@ We use RK(""" + str(self._rk_order) + """) for the time stepping.
     step.use_face(self._face_label)
     step.use_face(self._current_time_step_projection)
     step.use_face(self._estimates_projection)
-
   
   def _get_default_includes(self):
     return """

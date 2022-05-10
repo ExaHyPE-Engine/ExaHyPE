@@ -837,3 +837,34 @@ def create_start_time_step_implementation_for_fixed_time_stepping(normalised_tim
   
   _timeStepSize  = """ + str(normalised_time_step_size) + """;  
 """
+
+
+def get_face_overlap_merge_implementation(patch_overlap):
+  d = {
+    "OVERLAP": patch_overlap.dim[0]/2, #assumed to always be two, but present here anyway
+    "DOFS_PER_AXIS": patch_overlap.dim[1],
+    "UNKNOWNS": patch_overlap.no_of_unknowns
+    }
+  template = """
+  
+  #if Dimensions==2
+  constexpr int nodesPerFace = {DOFS_PER_AXIS};
+  #else
+  constexpr int nodesPerFace = {DOFS_PER_AXIS}*{DOFS_PER_AXIS};
+  #endif
+  
+  constexpr int strideQ = {UNKNOWNS};
+    
+  const int faceDimension = marker.getSelectedFaceNumber()%Dimensions;
+  //if the outer normal is positive, the normal points to the right so the face is on the right
+  const int faceLR = (marker.outerNormal()[faceDimension]>0.0 ? 1 : 0);
+
+  for(int i=0; i<nodesPerFace; i++){{
+    for(int j=0; j<strideQ ; j++){{
+      value[(2*i+faceLR)*strideQ+j] = neighbour.value[(2*i+faceLR)*strideQ+j];
+    }}
+  }}
+
+"""
+
+  return template.format(**d)

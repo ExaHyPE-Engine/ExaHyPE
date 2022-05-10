@@ -73,9 +73,11 @@ class SeparateSweeps( RungeKuttaDG ):
       self._second_grid_sweep_within_RK_step += ")"
     self._second_grid_sweep_within_RK_step += ")" 
 
+    self._current_time_step_projection.send_condition                 = "true"
+    self._current_time_step_projection.receive_and_merge_condition    = "true"
+
     self._estimates_projection.generator.send_condition               = "true"
     self._estimates_projection.generator.receive_and_merge_condition  = "true"
-
 
     #self._patch_overlap_new.generator.send_condition               = "true"
     #self._patch_overlap_new.generator.receive_and_merge_condition  = "true"
