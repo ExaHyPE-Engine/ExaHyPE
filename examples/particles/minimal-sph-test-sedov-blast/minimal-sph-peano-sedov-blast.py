@@ -283,8 +283,8 @@ print("Kernel Root value (sigma): " + CUBIC_SPLINE_SIGMA)
 
 # parameters specific to a given problem (e.g., Sedov blast, Sod wave, ...)
 BLAST_CENTER = "0.5" 
-#BLAST_ENERGY = "0.02"
-BLAST_ENERGY = "1.0"
+BLAST_ENERGY = "0.2"
+#BLAST_ENERGY = "1.0"
 SPIKE_RADIUS = "0.03"
 
 project.constants.export_const_with_type("GLOBAL_TIME_STEP_SIZE", GLOBAL_TIME_STEP_SIZE, "double")
@@ -346,7 +346,7 @@ initialisation_snippet = """
   particle->setDensity ( 1.0 );        
   particle->setMass( particle->getDensity()/400/2.56069/1.56122/2.56 );   // 1/64 
   /* Normalisation for actual number of particles in the simulation*/
-  particle->setMass( particle->getMass() * HYDRO_PART_NUMBER / 64.0 );
+  particle->setMass( particle->getMass() * std::pow(HYDRO_PART_NUMBER / 64.0, 2) );
 
 //  particle->setMass    ( particle->getDensity()/400/2.56069/1.56122/2.56/0.969103 );   // 1/63 
   particle->setPressure( 1e-6);
@@ -358,32 +358,32 @@ initialisation_snippet = """
   tarch::la::Vector<Dimensions,double> blast_cent(BLAST_CENTER);
   const double dist_blast = tarch::la::norm2( particle->getX() - blast_cent );
   
-   /* Old method */
-   /* Inject energy evenly into central particles */
-   if ( tarch::la::smaller( dist_blast, SPIKE_RADIUS ) ) {
-     particle->setU( BLAST_ENERGY / 12.0 / particle->getMass() );
-   } else {
-     particle->setU( 0.0 ); 
-   }
+//   /* Old method */
+//   /* Inject energy evenly into central particles */
+//   if ( tarch::la::smaller( dist_blast, SPIKE_RADIUS ) ) {
+//     particle->setU( BLAST_ENERGY / 12.0 / particle->getMass() );
+//   } else {
+//     particle->setU( 0.0 ); 
+//   }
  
-//   /* New method */
-//   /* Smooth the explosion with kernel */
-//   const double h = particle->getSmoothingLength();
-//   const double R_smooth = 4.0 * h;
-//   
-//   // Evaluate kernel
-//   const double q = dist_blast / h;
-//   double w, dw_dq;
-//   kernel_deval(q, w, dw_dq);
-// 
-//   // Normalization factors 
-//   const double W = w / std::pow( h, Dimensions );
-// 
-//  if ( tarch::la::smallerEquals( dist_blast, R_smooth ) ) {
-//    particle->setU( BLAST_ENERGY * W ) ;
-//  } else {
-//    particle->setU( 0.0 ); 
-//  }
+   /* New method */
+   /* Smooth the explosion with kernel */
+   const double h = particle->getSmoothingLength();
+   const double R_smooth = 4.0 * h;
+   
+   // Evaluate kernel
+   const double q = dist_blast / h;
+   double w, dw_dq;
+   kernel_deval(q, w, dw_dq);
+ 
+   // Normalization factors 
+   const double W = w / std::pow( h, Dimensions );
+ 
+  if ( tarch::la::smallerEquals( dist_blast, R_smooth ) ) {
+    particle->setU( BLAST_ENERGY * W ) ;
+  } else {
+    particle->setU( 0.0 ); 
+  }
   
   /* Set non-zero (background) value in order to get non-zero sound speed across the whole domain */
   if( tarch::la::equals(particle->getU(),0) ){
