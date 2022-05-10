@@ -50,9 +50,10 @@ modes = {
 }
 
 parser = argparse.ArgumentParser(description='ExaHyPE 2 - Euler benchmarking script')
-parser.add_argument("-m",  "--mode",    dest="mode",                         default="release", help="|".join(modes.keys()) )
-parser.add_argument("-c",  "--clean",   dest="clean_temporary_directories",  action="store_true", help="Remove temporary directories before script starts" )
-parser.add_argument("-r",  "--random",  dest="random_particle_layout",       action="store_true", help="Use a randomised initial particle layout" )
+parser.add_argument("-m",     "--mode",               dest="mode",                         default="release",           help="|".join(modes.keys()) )
+parser.add_argument("-c",     "--clean",              dest="clean_temporary_directories",  action="store_true",         help="Remove temporary directories before script starts" )
+parser.add_argument("-r",     "--random",             dest="random_particle_layout",       action="store_true",         help="Use a randomised initial particle layout" )
+parser.add_argument("-dist",  "--particle-distance",  dest="particle_distance",            required=True,  type=float,  help="Particle distance (start with 1/64 by default)" )
 args = parser.parse_args()
 
 
@@ -432,7 +433,7 @@ init_setup.use_cell(particle_tree_analysis.cell_marker)
 init_setup.add_action_set( peano4.toolbox.particles.UpdateParticleGridAssociation(particles) )
 init_setup.add_action_set( peano4.toolbox.particles.InsertParticlesAlongCartesianLayoutIntoUnrefinedCells(
   particle_set=particles,
-  distance_between_particles=1/63,
+  distance_between_particles=args.particle_distance,
   initialisation_call=initialisation_snippet,
   noise=args.random_particle_layout,
   additional_includes=""" 
