@@ -13,17 +13,17 @@ tarch::logging::Log   {{NAMESPACE | join("::")}}::{{CLASSNAME}}::{{CLASSNAME}}::
 
 std::bitset<Dimensions> {{NAMESPACE | join("::")}}::{{CLASSNAME}}::{{CLASSNAME}}::PeriodicBC = {{NAMESPACE | join("::")}}::PeriodicBC;
 
-double**   {{NAMESPACE | join("::")}}::{{CLASSNAME}}::weights                                 = kernels::legendre::weights;
-double**   {{NAMESPACE | join("::")}}::{{CLASSNAME}}::nodes                                   = kernels::legendre::nodes;
-double***  {{NAMESPACE | join("::")}}::{{CLASSNAME}}::Kxi                                     = kernels::legendre::Kxi;
-double***  {{NAMESPACE | join("::")}}::{{CLASSNAME}}::dudx                                    = kernels::legendre::dudx;
-double***  {{NAMESPACE | join("::")}}::{{CLASSNAME}}::iK1                                     = kernels::legendre::iK1;
-double***  {{NAMESPACE | join("::")}}::{{CLASSNAME}}::equidistantGridProjector                = kernels::legendre::equidistantGridProjector;
-double***  {{NAMESPACE | join("::")}}::{{CLASSNAME}}::FCoeff                                  = kernels::legendre::FCoeff;
-double**** {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fineGridProjector                       = kernels::legendre::fineGridProjector;
-kernels::UnivariateFunction** {{NAMESPACE | join("::")}}::{{CLASSNAME}}::basisFunction                 = kernels::legendre::basisFunction;
-kernels::UnivariateFunction** {{NAMESPACE | join("::")}}::{{CLASSNAME}}::basisFunctionFirstDerivative  = kernels::legendre::basisFunctionFirstDerivative;
-kernels::UnivariateFunction** {{NAMESPACE | join("::")}}::{{CLASSNAME}}::basisFunctionSecondDerivative = kernels::legendre::basisFunctionSecondDerivative;
+double**   {{NAMESPACE | join("::")}}::{{CLASSNAME}}::weights                                 = kernels::{{POLYNOMIAL_TYPE}}::weights;
+double**   {{NAMESPACE | join("::")}}::{{CLASSNAME}}::nodes                                   = kernels::{{POLYNOMIAL_TYPE}}::nodes;
+double***  {{NAMESPACE | join("::")}}::{{CLASSNAME}}::Kxi                                     = kernels::{{POLYNOMIAL_TYPE}}::Kxi;
+double***  {{NAMESPACE | join("::")}}::{{CLASSNAME}}::dudx                                    = kernels::{{POLYNOMIAL_TYPE}}::dudx;
+double***  {{NAMESPACE | join("::")}}::{{CLASSNAME}}::iK1                                     = kernels::{{POLYNOMIAL_TYPE}}::iK1;
+double***  {{NAMESPACE | join("::")}}::{{CLASSNAME}}::equidistantGridProjector                = kernels::{{POLYNOMIAL_TYPE}}::equidistantGridProjector;
+double***  {{NAMESPACE | join("::")}}::{{CLASSNAME}}::FCoeff                                  = kernels::{{POLYNOMIAL_TYPE}}::FCoeff;
+double**** {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fineGridProjector                       = kernels::{{POLYNOMIAL_TYPE}}::fineGridProjector;
+kernels::UnivariateFunction** {{NAMESPACE | join("::")}}::{{CLASSNAME}}::basisFunction                 = kernels::{{POLYNOMIAL_TYPE}}::basisFunction;
+kernels::UnivariateFunction** {{NAMESPACE | join("::")}}::{{CLASSNAME}}::basisFunctionFirstDerivative  = kernels::{{POLYNOMIAL_TYPE}}::basisFunctionFirstDerivative;
+kernels::UnivariateFunction** {{NAMESPACE | join("::")}}::{{CLASSNAME}}::basisFunctionSecondDerivative = kernels::{{POLYNOMIAL_TYPE}}::basisFunctionSecondDerivative;
 
 
 {{NAMESPACE | join("::")}}::{{CLASSNAME}}::{{CLASSNAME}}():

@@ -437,8 +437,8 @@ class ADERDG( object ):
     d[ "NUMBER_OF_DOFS_PER_CELL_2D" ] = (self._order+1) * (self._order+1);
     d[ "NUMBER_OF_DOFS_PER_CELL_3D" ] = (self._order+1) * (self._order+1) * (self._order+1);
 
-
-    d["POLYNOMIALS"]                    = str(self._polynomials)
+    d["USE_GAUSS_LOBATTO"] = ("true" if self._polynomials is Polynomials.Gauss_Lobatto else "false")
+    d["POLYNOMIAL_TYPE"] = ("lobatto" if self._polynomials is Polynomials.Gauss_Lobatto else "legendre")
 
     d[ "ASSERTION_WITH_1_ARGUMENTS" ] = "nonCriticalAssertion1"
     d[ "ASSERTION_WITH_2_ARGUMENTS" ] = "nonCriticalAssertion2"

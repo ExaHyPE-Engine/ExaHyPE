@@ -77,7 +77,7 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
     static constexpr bool UseMaxPicardIterations = true;
 
     // quadrature weights and operators
-    static constexpr bool UseLobattoBasis = false;
+    static constexpr bool UseLobattoBasis = {{USE_GAUSS_LOBATTO}};
     // [order][node i]
     static double** weights;
     static double** nodes;
