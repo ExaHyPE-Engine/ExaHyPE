@@ -101,6 +101,13 @@
        */
       void clone( const {{CLASSNAME}}& otherSet );
 
+      /**
+       * @todo Docu rein, dass wir keine spatial Duplicates innerhalb einer SPecies supporten
+       *
+       * @return Number of eliminated particles
+       */
+      int eliminateSpatialDuplicates(bool examineOnlyVirtualParticles);
+
 
       #ifdef Parallel
       static void initDatatype();

@@ -41,7 +41,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::merge(const {{CLASSNAME}}& neigh
       and
       p->getNewParallelState()==DoFType::NewParallelState::Local
     ) {
-      logInfo( "merge(...)", "assume incoming particle " << p->toString() << " is local on other rank and will be virtual here" );
+      logDebug( "merge(...)", "assume incoming particle " << p->toString() << " is local on other rank and will be virtual here" );
       p->setParallelState( DoFType::ParallelState::Virtual );
       p->setNewParallelState( DoFType::NewParallelState::Virtual );
       this->push_back(p);
@@ -52,7 +52,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::merge(const {{CLASSNAME}}& neigh
       p->getNewParallelState()==DoFType::NewParallelState::Local
     ) {
       assertion1( p->getMoveState()==DoFType::MoveState::New, p->toString() );
-      logInfo( "merge(...)", "incoming particle " << p->toString() << " has been virtual but neighbour decided it is local there just brefore sending us a copy. This can happen throughout initialisation. Will be virtual here" );
+      logDebug( "merge(...)", "incoming particle " << p->toString() << " has been virtual but neighbour decided it is local there just brefore sending us a copy. This can happen throughout initialisation. Will be virtual here" );
       p->setParallelState( DoFType::ParallelState::Virtual );
       p->setNewParallelState( DoFType::NewParallelState::Virtual );
       this->push_back(p);
@@ -62,7 +62,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::merge(const {{CLASSNAME}}& neigh
       and
       p->getNewParallelState()==DoFType::NewParallelState::Virtual
     ) {
-      logInfo( "merge(...)", "incoming particle " << p->toString() << " is now marked as virtual on remote tree, i.e. has left its domain. Assume it is local here, though we might revise this decision (as particle has actually gone somewhere else)" );
+      logDebug( "merge(...)", "incoming particle " << p->toString() << " is now marked as virtual on remote tree, i.e. has left its domain. Assume it is local here, though we might revise this decision (as particle has actually gone somewhere else)" );
       p->setParallelState( DoFType::ParallelState::Local );
       p->setNewParallelState( DoFType::NewParallelState::Virtual );
       this->push_back(p);
@@ -72,7 +72,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::merge(const {{CLASSNAME}}& neigh
       and
       p->getNewParallelState()==DoFType::NewParallelState::Virtual
     ) {
-      logInfo( "merge(...)", "incoming particle " << p->toString() << " had been virtual on other rank and still is virtual. This is likely a local particle which we had sent over as virtual particle and a copy is now sent back. Do not merge into local set and delete" );
+      logDebug( "merge(...)", "incoming particle " << p->toString() << " had been virtual on other rank and still is virtual. This is likely a local particle which we had sent over as virtual particle and a copy is now sent back. Do not merge into local set and delete" );
       delete p;
     }
     else {
@@ -80,11 +80,65 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::merge(const {{CLASSNAME}}& neigh
     }
   }
 
-  logInfo( "merge(...)", "merged incoming set of " << neighbour.size() << " particle(s) into local set of vertex " << marker.x() << " which now hosts " << this->size() << " particle(s):" );
+  // @todo Docu. We might get virtual copies from other places (really?) or all kind of
+  //   strange things, so better clean up.
+  eliminateSpatialDuplicates( true );
+
+  logDebug( "merge(...)", "merged incoming set of " << neighbour.size() << " particle(s) into local set of vertex " << marker.x() << " which now hosts " << this->size() << " particle(s):" );
   for (auto& p: *this) {
-    logInfo( "merge(...)", " - " << p->toString() );
+    logDebug( "merge(...)", " - " << p->toString() );
   }
 }
+
+
+int {{NAMESPACE | join("::")}}::{{CLASSNAME}}::eliminateSpatialDuplicates(bool examineOnlyVirtualParticles) {
+  int numberOfEliminations = 0;
+  auto p = this->begin();
+  while (p!=this->end()) {
+    auto pp = p;
+    pp++;
+    bool foundDuplicate = false;
+    while (
+      pp!=this->end()
+      and
+      not foundDuplicate
+    ) {
+      if (
+        examineOnlyVirtualParticles
+        and
+        (*p)->getParallelState()==DoFType::ParallelState::Virtual
+        and
+        tarch::la::equals( (*p)->getX(), (*pp)->getX() )
+      ) {
+        foundDuplicate = true;
+        pp = this->end();
+      }
+      else if (
+        not examineOnlyVirtualParticles
+        and
+        tarch::la::equals( (*p)->getX(), (*pp)->getX() )
+      ) {
+        foundDuplicate = true;
+        pp = this->end();
+      }
+      else {
+        pp++;
+      }
+    }
+
+    if (foundDuplicate) {
+      logDebug( "eliminateSpatialDuplicates()", "eliminate particle pp=" << (*p)->toString() << " as it is a duplicate" );
+      delete *p;
+      p = erase(p);
+      numberOfEliminations++;
+    }
+    else {
+      p++;
+    }
+  }
+  return numberOfEliminations;
+}
+
 
 
 bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::send(const peano4::datamanagement::VertexMarker& marker) {

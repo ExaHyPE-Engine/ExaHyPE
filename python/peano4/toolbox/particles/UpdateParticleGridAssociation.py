@@ -199,35 +199,7 @@ if ( {{GUARD}} ) {
 
   __Template_EliminateDuplicateParticles = jinja2.Template("""
   if ( {{GUARD}} ) {
-    auto p = fineGridVertex{{PARTICLES_CONTAINER}}.begin();
-    while (p!=fineGridVertex{{PARTICLES_CONTAINER}}.end()) {
-      auto pp = p;
-      pp++;
-      bool foundDuplicate = false;
-      while (
-        pp!=fineGridVertex{{PARTICLES_CONTAINER}}.end()
-        and 
-        not foundDuplicate
-      ) {
-        #if PeanoDebug>0
-        // @todo wo ist die Docu, dass wir keine Spatial Duplicates supporten innerhalb einer Species?
-        if ( tarch::la::equals( (*p)->getX(), (*pp)->getX() ) ) {
-          logInfo( "touchVertexLastTime()", "eliminate particle pp=" << (*pp)->toString() << " which is the same as " << (*p)->toString() );
-        }
-        #endif
-        foundDuplicate |= tarch::la::equals( (*p)->getX(), (*pp)->getX() );
-        pp++;
-      }
-      
-      if (foundDuplicate) {
-        delete *p;
-        p = fineGridVertex{{PARTICLES_CONTAINER}}.erase(p);
-        _numberOfEliminations++;
-      }
-      else {
-        p++;
-      }
-    }
+    _numberOfEliminations += fineGridVertex{{PARTICLES_CONTAINER}}.eliminateSpatialDuplicates(false);
   }
 """)
     
@@ -246,7 +218,7 @@ if ( {{GUARD}} ) {
         and 
         (*p)->getNewParallelState()==globaldata::{{PARTICLE}}::NewParallelState::Virtual
       ) {
-        logInfo( "touchVertexLastTime()", "local status from previous sweep not confirmed on tree " << _treeNumber << ". Particle " << (*p)->toString() << " has left domain" );
+        logDebug( "touchVertexLastTime()", "local status from previous sweep not confirmed on tree " << _treeNumber << ". Particle " << (*p)->toString() << " has left domain" );
         (*p)->setParallelState( globaldata::{{PARTICLE}}::ParallelState::Virtual );
         _numberOfVirtualParticles++;
         _numberOfLeavingParticles++;
@@ -257,7 +229,7 @@ if ( {{GUARD}} ) {
         and 
         (*p)->getNewParallelState()==globaldata::{{PARTICLE}}::NewParallelState::Local
       ) {
-        logInfo( "touchVertexLastTime()", "local status confirmed on tree " << _treeNumber << ", i.e. particle " << (*p)->toString() << " remains local" );
+        logDebug( "touchVertexLastTime()", "local status confirmed on tree " << _treeNumber << ", i.e. particle " << (*p)->toString() << " remains local" );
         _numberOfLocalParticles++;
         p++;
       }
@@ -266,7 +238,7 @@ if ( {{GUARD}} ) {
         and 
         (*p)->getNewParallelState()==globaldata::{{PARTICLE}}::NewParallelState::Virtual
       ) {
-        logInfo( "touchVertexLastTime()", "virtual particle, i.e. from other tree. Delete local copy " << (*p)->toString() << " on tree " << _treeNumber );
+        logDebug( "touchVertexLastTime()", "virtual particle, i.e. from other tree. Delete local copy " << (*p)->toString() << " on tree " << _treeNumber );
         _numberOfVirtualParticles++;
         delete *p;
         p = fineGridVertex{{PARTICLES_CONTAINER}}.erase(p);
