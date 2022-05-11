@@ -31,6 +31,7 @@ ExaHyPE2Sources = \
   dg/tests/testUtils.cpp \
   aderdg_kernels/Basis/GaussLegendreBasis.cpp \
   aderdg_kernels/Basis/GaussLobattoBasis.cpp \
+  aderdg_kernels/AderUtils.cpp \
   fv/BoundaryConditions.cpp \
   fv/Generic.cpp \
   fv/PatchUtils.cpp \
