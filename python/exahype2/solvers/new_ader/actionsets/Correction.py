@@ -220,6 +220,4 @@ class Correction(AbstractAderDGActionSet):
 
   def get_includes(self):
     return super(Correction,self).get_includes() + """
-#include "exahype2/new_ader/Riemann.h"
-#include "exahype2/new_ader/Corrector.h"
       """
