@@ -73,6 +73,11 @@
        * The merge works with shallow copies. We assume that all necessary real
        * copying has been done before.
        *
+       * It is important to study this routine in combination with
+       * UpdateParticleGridAssociation which is the routine that actually
+       * manages both the association of particles to their nearest vertex plus
+       * the parallel lifecycle.
+       *
        * @see STDVectorOverVectorOfPointersStack::startReceive()
        * @see clone()
        */
