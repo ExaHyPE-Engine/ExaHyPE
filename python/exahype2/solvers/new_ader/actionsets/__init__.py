@@ -2,13 +2,9 @@
 # use, please see the copyright notice at www.peano-framework.org
 
 from .AdaptivityCriterion            import AdaptivityCriterion
-from .InitialCondition      import InitialCondition
-from .ProjectSolutionOntoFaces                     import ProjectSolutionOntoFaces
-from .SolveVolumeIntegral import SolveVolumeIntegral
-from .HandleBoundary import HandleBoundary
-from .SolveRiemannProblem import SolveRiemannProblem
-from .AddVolumeAndFaceSolution import AddVolumeAndFaceSolution
-from .DynamicAMR import DynamicAMR
-from .PostprocessSolution import EmptyPostprocessSolution
-from .UpdateCell            import UpdateCell
+from .InitialCondition               import InitialCondition
+from .DynamicAMR                     import DynamicAMR
+from .PostprocessSolution            import EmptyPostprocessSolution
+from .Prediction                     import Prediction
+from .Correction                     import Correction
 

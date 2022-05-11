@@ -86,43 +86,19 @@ class ADERDG( object ):
     self.create_data_structures()
     self.create_action_sets()
     
-    #TODO: check if safe to remove
-    """
-    self._preprocess_reconstructed_patch = ""
-    self._postprocess_updated_patch      = ""
-
-    self.solver_constants_         = ""
-    self.user_action_set_includes  = ""
-    self.user_solver_includes      = ""
-    self.plot_description = ""    
-    
-    self._action_set_postprocess_solution = None
-    
-    #TODO: find out about this
-    self._number_of_face_projections = 1;
-    """
-
     
             
   @abstractmethod
   def create_data_structures(self):
     
     self._number_of_face_projections = 1;
-    #TODO: expand
+
+    #current time step contains the solution, projections are respectively the projection of the solution and of the fluxes as predicted by the space-time predictor
     self._current_time_step             = peano4.datamodel.Patch( (self._order+1,self._order+1,self._order+1), self._unknowns+self._auxiliary_variables, self._unknown_identifier() )
-    self._estimates                     = peano4.datamodel.Patch( (self._order+1,self._order+1,self._order+1), self._unknowns+self._auxiliary_variables, self._unknown_identifier() + "Estimates" )
-    self._current_time_step_projection  = peano4.datamodel.Patch( (2,self._number_of_face_projections*(self._order+1),self._order+1),  self._unknowns+self._auxiliary_variables, self._unknown_identifier() )
     self._estimates_projection          = peano4.datamodel.Patch( (2,self._order+1,self._order+1),  self._unknowns+self._auxiliary_variables, self._unknown_identifier() + "Estimates" )
     self._flux_estimates_projection     = peano4.datamodel.Patch( (2,self._order+1,self._order+1),  self._unknowns, self._unknown_identifier() + "FluxEstimates" )    
-    
-    self._current_time_step_projection.generator.merge_method_definition = peano4.toolbox.blockstructured.get_face_overlap_merge_implementation(self._current_time_step_projection)
-    self._current_time_step_projection.generator.includes     += """
-#include "peano4/utils/Loop.h"
-#include "repositories/SolverRepository.h" 
-"""
-   
-#    self._estimates_projection.generator.merge_method_definition = peano4.toolbox.blockstructured.get_face_overlap_merge_implementation(self._current_time_step_projection)
-
+        
+    #custom merge implementation takes into account that the faces project such that the left cell projects to the left half of the face and the right cell projects to the right half
     self._estimates_projection.generator.merge_method_definition = get_face_overlap_merge_implementation(self._estimates_projection)
     self._estimates_projection.generator.includes     += """
 #include "peano4/utils/Loop.h"
@@ -138,18 +114,10 @@ class ADERDG( object ):
     self._current_time_step.generator.store_persistent_condition = self._store_cell_data_default_guard()
     self._current_time_step.generator.load_persistent_condition  = self._load_cell_data_default_guard()
     
-    self._estimates.generator.store_persistent_condition = self._store_cell_data_default_guard()
-    self._estimates.generator.load_persistent_condition  = self._load_cell_data_default_guard()
-
-    self._current_time_step_projection.generator.store_persistent_condition = self._store_face_data_default_guard()
-    self._current_time_step_projection.generator.load_persistent_condition  = self._load_face_data_default_guard()
-
-    self._current_time_step_projection.generator.send_condition               = "false"
-    self._current_time_step_projection.generator.receive_and_merge_condition  = "false"
-
     self._estimates_projection.generator.store_persistent_condition = self._store_face_data_default_guard()
     self._estimates_projection.generator.load_persistent_condition  = self._load_face_data_default_guard()
 
+    #get overwritten in subclasses to take into account when to send or receive faces
     self._estimates_projection.generator.send_condition               = "false"
     self._estimates_projection.generator.receive_and_merge_condition  = "false"
 
@@ -161,14 +129,8 @@ class ADERDG( object ):
     
     self._current_time_step.generator.includes  += """
 #include "../repositories/SolverRepository.h"
-"""    
-    self._estimates.generator.includes  += """
-#include "../repositories/SolverRepository.h"
-"""    
+"""
 
-    self._current_time_step_projection.generator.includes  += """
-#include "../repositories/SolverRepository.h"
-"""    
     self._estimates_projection.generator.includes  += """
 #include "../repositories/SolverRepository.h"
 """    
@@ -184,42 +146,39 @@ class ADERDG( object ):
 
   @abstractmethod
   def create_action_sets(self):
-    #TODO: expand
+
+    #sets initial conditions for the solution
     self._action_set_initial_conditions = exahype2.solvers.new_ader.actionsets.InitialCondition(self, self._store_cell_data_default_guard(), "true" )
     self._action_set_initial_conditions_for_grid_construction  = exahype2.solvers.new_ader.actionsets.InitialCondition(self, self._store_cell_data_default_guard(), "false")
     
+    #handles adaptive mesh refinement
     self._action_set_AMR = exahype2.solvers.new_ader.actionsets.AdaptivityCriterion(solver=self, 
          guard=self._store_cell_data_default_guard() + " and (repositories::" + self.get_name_of_global_instance() + ".isLastGridSweepOfTimeStep() or repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::GridInitialisation)", 
          build_up_new_refinement_instructions=True,  implement_previous_refinement_instructions=True )
     self._action_set_AMR_commit_without_further_analysis  = exahype2.solvers.new_ader.actionsets.AdaptivityCriterion(solver=self, guard=self._store_cell_data_default_guard(), build_up_new_refinement_instructions=False, implement_previous_refinement_instructions=True )
-    
-    #TODO
-    self._action_set_solve_volume_integral                                            = exahype2.solvers.new_ader.actionsets.SolveVolumeIntegral(self, self._store_face_data_default_guard())
-    self._action_set_handle_boundary                                                  = exahype2.solvers.new_ader.actionsets.HandleBoundary(self, self._store_face_data_default_guard())
-    self._action_set_solve_Riemann_problem                                            = exahype2.solvers.new_ader.actionsets.SolveRiemannProblem(self, self._store_face_data_default_guard())
-    self._action_set_add_volume_and_face_solution                                     = exahype2.solvers.new_ader.actionsets.AddVolumeAndFaceSolution(self, self._store_face_data_default_guard())
-    self._action_set_project_solution_onto_faces                                      = exahype2.solvers.new_ader.actionsets.ProjectSolutionOntoFaces(solver=self,guard=self._store_cell_data_default_guard())
+        
     self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement = exahype2.solvers.new_ader.actionsets.DynamicAMR(solver=self,guard=self._store_cell_data_default_guard())
     if self._action_set_postprocess_solution==None:
           self._action_set_postprocess_solution                                       = exahype2.solvers.new_ader.actionsets.EmptyPostprocessSolution(solver=self)
 
-
     
+    #updates faces and cells (whether at boundary, refined etc.)
     self._action_set_update_face_label = exahype2.grid.UpdateFaceLabel( self._name )  
     self._action_set_update_cell_label = exahype2.grid.UpdateCellLabel( self._name ) 
 
+    #all the actual computation of the solution happens in these
+    # predictor extrapolates the solution from time t onto time-nodes, then projects this 
+    #   extrapolated solution to the faces.
+    # correction uses the extrapolated face solutions from the predictor and the neighboring
+    #   cells to compute a solution at the next timestep
     self._action_set_prediction = Prediction(self, self._store_cell_data_default_guard())
     self._action_set_correction = Correction(self, self._store_cell_data_default_guard())
 
-    #TODO: probably remove
-    #self._action_set_update_cell = UpdateCell(self, self._store_cell_data_default_guard() )
-        
 
 
   def create_readme_descriptor(self, domain_offset, domain_size):
     return """ ExaHyPE 2 Ader-DG solver of order: """ + str(self._order) + """
     with a domain size of: """ + str(domain_size) + """ and a domain offset of: """ + str(domain_offset)
-
 
 
   def get_user_action_set_includes(self):
@@ -299,7 +258,6 @@ class ADERDG( object ):
     step.add_action_set( self._action_set_update_face_label )
     step.add_action_set( self._action_set_update_cell_label )
     step.add_action_set( self._action_set_AMR )
-    step.add_action_set( self._action_set_project_solution_onto_faces )
     step.add_action_set( self._action_set_postprocess_solution )
 
   
@@ -314,7 +272,6 @@ class ADERDG( object ):
 
   
   def add_actions_to_plot_solution(self, step, output_path):
-    #TODO
     d = {}
     self._init_dictionary_with_default_parameters(d)
     self.add_entries_to_text_replacement_dictionary(d)
@@ -361,15 +318,9 @@ class ADERDG( object ):
     step.add_action_set( self._action_set_update_face_label )
     step.add_action_set( self._action_set_update_cell_label )
     step.add_action_set( self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement )
-    #step.add_action_set( self._action_set_solve_volume_integral )
-    step.add_action_set( self._action_set_handle_boundary )
-    #step.add_action_set( self._action_set_solve_Riemann_problem )
-    #step.add_action_set( self._action_set_add_volume_and_face_solution )
-    #step.add_action_set( self._action_set_project_solution_onto_faces )
         
     step.add_action_set(self._action_set_prediction)
     step.add_action_set(self._action_set_correction)
-    #step.add_action_set(self._action_set_update_cell)
 
     step.add_action_set( self._action_set_AMR )
     step.add_action_set( self._action_set_postprocess_solution )
@@ -504,10 +455,6 @@ class ADERDG( object ):
     d[ "SOLVER_CONSTANTS" ] = self.solver_constants_
     d[ "SOLVER_INCLUDES" ]  = self.get_user_solver_includes()
     
-    #d[ "SOURCE_TERM_CALL"]                    = jinja2.Template(self._source_term_call, undefined=jinja2.DebugUndefined).render( **d )
-    #d[ "RIEMANN_SOLVER_CALL"]                 = jinja2.Template(self._Riemann_solver_call, undefined=jinja2.DebugUndefined).render( **d )
-    #d[ "PREPROCESS_RECONSTRUCTED_PATCH" ]     = jinja2.Template(self._preprocess_reconstructed_patch, undefined=jinja2.DebugUndefined).render( **d )
-    #d[ "POSTPROCESS_UPDATED_PATCH" ]          = jinja2.Template(self._postprocess_updated_patch, undefined=jinja2.DebugUndefined).render( **d )
     d[ "BOUNDARY_CONDITIONS_IMPLEMENTATION"]  = self._boundary_conditions_implementation
     d[ "REFINEMENT_CRITERION_IMPLEMENTATION"] = self._refinement_criterion_implementation
     d[ "INITIAL_CONDITIONS_IMPLEMENTATION"]   = self._initial_conditions_implementation

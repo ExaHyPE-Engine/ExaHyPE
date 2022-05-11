@@ -5,7 +5,6 @@ from .ADERDG  import ADERDG
 from .PDETerms import PDETerms
  
 import jinja2
-from .actionsets  import UpdateCell
 
 class SingleSweep( ADERDG ):
   def __init__(self, name, order, polynomials, unknowns, auxiliary_variables, min_cell_h, max_cell_h, plot_grid_properties=False):
@@ -28,7 +27,7 @@ class SingleSweep( ADERDG ):
   
   
   def create_data_structures(self):
-    #TODO: erweitern
+
     super(SingleSweep, self).create_data_structures()
     
     self.initialisation_sweep_guard = "(" + \
@@ -39,6 +38,7 @@ class SingleSweep( ADERDG ):
       "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::PlottingAfterGridInitialisation" + \
     ")"
     
+    # face estimates from the space-time predictor should be sent in predictor step and received and used in the correction step 
     self._estimates_projection.generator.send_condition               = "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::Prediction"
     self._estimates_projection.generator.receive_and_merge_condition  = "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::Correction"
     
@@ -47,18 +47,14 @@ class SingleSweep( ADERDG ):
     
               
   def create_action_sets(self):
-    #TODO: ask Tobias about the project_linear_combination and solve volume integral, which I think is not needed in ader-dg
+
     super(SingleSweep, self).create_action_sets()
-    #self._action_set_project_linear_combination_onto_faces.guard = self._store_cell_data_default_guard()
-    self._action_set_project_solution_onto_faces.guard = self._store_cell_data_default_guard() + " and repositories::{}.getSolverState()=={}::SolverState::Correction".format(self.get_name_of_global_instance(),self._name)
     
     self._action_set_prediction.guard = self._store_cell_data_default_guard() + " and repositories::{}.getSolverState()=={}::SolverState::Prediction".format(self.get_name_of_global_instance(),self._name)
     self._action_set_correction.guard = self._store_cell_data_default_guard() + " and repositories::{}.getSolverState()=={}::SolverState::Correction".format(self.get_name_of_global_instance(),self._name)
 
   def get_user_action_set_includes(self):
     return super(SingleSweep, self).get_user_action_set_includes() + """
-#include "exahype2/fv/Generic.h"
-#include "exahype2/fv/Rusanov.h"
 """
 
 
