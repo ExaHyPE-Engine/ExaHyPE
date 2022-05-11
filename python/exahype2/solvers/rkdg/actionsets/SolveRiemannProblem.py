@@ -66,7 +66,7 @@ class SolveRiemannProblem(AbstractRungeKuttaDGActionSet):
                              not repositories::{{SOLVER_INSTANCE}}.PeriodicBC[face];
       QHull[2*face+1]      = fineGridFaces{{UNKNOWN_IDENTIFIER}}Estimates(face+Dimensions).value + facePosition;
       atBoundary[2*face+1] = fineGridFaces{{SOLVER_NAME}}FaceLabel(face+Dimensions).getBoundary() and
-                             not repositories::{{SOLVER_INSTANCE}}.PeriodicBC[face];        
+                             not repositories::{{SOLVER_INSTANCE}}.PeriodicBC[face+Dimensions];        
     }
     
     ::exahype2::dg::getMaxEigenvaluePerFace(
