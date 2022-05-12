@@ -139,8 +139,8 @@ int main(int argc, char** argv) {
 //    peano4::parallel::SpacetreeSet::getInstance().traverse(rearrangeObserver);
 
     /* Main loop */
-    for (int i=0; i<500; i++) {
-      for (int j=0; j<10; j++) { /* Numbers of time-steps between two snapshots */
+    for (int i=0; i<1000; i++) {
+      for (int j=0; j<10; j++) { /* Numbers of time-steps between two output snapshots */
         logInfo( "main()", "run timestep" )
 
         /* 
@@ -164,18 +164,24 @@ int main(int argc, char** argv) {
         peano4::parallel::SpacetreeSet::getInstance().traverse(initTimeStep);
 
         /* For first time-step, we need to pre-compute some quantities before drifting */
+        /* This is because we must start the simulation with a "K1" step */
         if(i==0 and j==0){ 
-          for (int iter=0; iter<4; iter++){
+        /* "Hydro loop" */
+          for (int iter=0; iter<3; iter++){
             /* Density loop */
             peano4::parallel::SpacetreeSet::getInstance().traverse(density);
-
+            /* "Ghost tasks" */
             /* Prepare force */
             peano4::parallel::SpacetreeSet::getInstance().traverse(prepareForce);
-
             /* Newton Raphson iteration */
             peano4::parallel::SpacetreeSet::getInstance().traverse(newtonRaphson);
 
           }
+        /* Post hydro loop */
+        /* Density loop */
+        peano4::parallel::SpacetreeSet::getInstance().traverse(density);
+        /* Prepare force */
+        peano4::parallel::SpacetreeSet::getInstance().traverse(prepareForce);
         /* Force loop */
         peano4::parallel::SpacetreeSet::getInstance().traverse(forcespart);
 
@@ -185,13 +191,14 @@ int main(int argc, char** argv) {
         /* "Kick1" */
         peano4::parallel::SpacetreeSet::getInstance().traverse(kick1part);
         peano4::parallel::SpacetreeSet::getInstance().traverse(kickExtra);
-        }
+        } /* Finish the "0th" time-step */
 
+        /* Now the time-step in the actual "D-K2-K1" form begins */
         /* "Drift". Drift also predicts v, u, ... */
         peano4::parallel::SpacetreeSet::getInstance().traverse(driftpart);
 
         /* "Hydro loop" */
-        for (int iter=0; iter<4; iter++){
+        for (int iter=0; iter<3; iter++){
           /* Density loop */
           peano4::parallel::SpacetreeSet::getInstance().traverse(density);
           /* "Ghost tasks" */
@@ -209,13 +216,12 @@ int main(int argc, char** argv) {
         /* Force loop */
         peano4::parallel::SpacetreeSet::getInstance().traverse(forcespart);
 
-        /* "Kick2". kick2part also reset predictions */
-        peano4::parallel::SpacetreeSet::getInstance().traverse(kickExtra);
+        /* "Kick2". kick2part also reset predictions for next Drift */
         peano4::parallel::SpacetreeSet::getInstance().traverse(kick2part);
+        peano4::parallel::SpacetreeSet::getInstance().traverse(kickExtra);
 
         /* "Kick1" */
         peano4::parallel::SpacetreeSet::getInstance().traverse(kick1part);
-
         /* Also Kick other properties, e.g., internal energy */
         peano4::parallel::SpacetreeSet::getInstance().traverse(kickExtra);
 

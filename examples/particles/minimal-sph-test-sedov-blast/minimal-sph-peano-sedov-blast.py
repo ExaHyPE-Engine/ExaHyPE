@@ -344,12 +344,12 @@ initialisation_snippet = """
   particle->setCutOffRadius(0.16);
   
   particle->setDensity ( 1.0 );        
-  particle->setMass( particle->getDensity()/400/2.56069/1.56122/2.56 );   // 1/64 
+  particle->setMass( particle->getDensity()/400.0/2.56069/1.56122/2.56/0.939281 );   // 1/64 
   /* Normalisation for actual number of particles in the simulation*/
   particle->setMass( particle->getMass() * std::pow(HYDRO_PART_NUMBER / 64.0, 2) );
 
 //  particle->setMass    ( particle->getDensity()/400/2.56069/1.56122/2.56/0.969103 );   // 1/63 
-  particle->setPressure( 1e-6);
+//  particle->setPressure( 1e-6);
   
   particle->setSmoothingLength( SMOOTH_L_FAC * std::pow(particle->getMass()/particle->getDensity(), 1.0/Dimensions) );
   particle->setSmoothingLengthPrevious( 0.99 * particle->getSmoothingLength() );
@@ -358,37 +358,43 @@ initialisation_snippet = """
   tarch::la::Vector<Dimensions,double> blast_cent(BLAST_CENTER);
   const double dist_blast = tarch::la::norm2( particle->getX() - blast_cent );
   
-//   /* Old method */
-//   /* Inject energy evenly into central particles */
-//   if ( tarch::la::smaller( dist_blast, SPIKE_RADIUS ) ) {
-//     particle->setU( BLAST_ENERGY / 12.0 / particle->getMass() );
-//   } else {
-//     particle->setU( 0.0 ); 
-//   }
+   /* Old method */
+   /* Inject energy evenly into central particles */
+   if ( tarch::la::smaller( dist_blast, SPIKE_RADIUS ) ) {
+     particle->setU( BLAST_ENERGY / 12.0 / particle->getMass() );
+   } else {
+     particle->setU( 0.0 ); 
+   }
  
-   /* New method */
-   /* Smooth the explosion with kernel */
-   const double h = particle->getSmoothingLength();
-   const double R_smooth = 4.0 * h;
-   
-   // Evaluate kernel
-   const double q = dist_blast / h;
-   double w, dw_dq;
-   kernel_deval(q, w, dw_dq);
- 
-   // Normalization factors 
-   const double W = w / std::pow( h, Dimensions );
- 
-  if ( tarch::la::smallerEquals( dist_blast, R_smooth ) ) {
-    particle->setU( BLAST_ENERGY * W ) ;
-  } else {
-    particle->setU( 0.0 ); 
-  }
+//   /* New method */
+//   /* Smooth the explosion with kernel */
+//   const double h = particle->getSmoothingLength();
+//   const double R_smooth = 4.0 * h;
+//   
+//   // Evaluate kernel
+//   const double q = dist_blast / h;
+//   double w, dw_dq;
+//   kernel_deval(q, w, dw_dq);
+// 
+//   // Normalization factors 
+//   const double W = w / std::pow( h, Dimensions );
+// 
+//  if ( tarch::la::smallerEquals( dist_blast, R_smooth ) ) {
+//    particle->setU( BLAST_ENERGY * W ) ;
+//  } else {
+//    particle->setU( 0.0 ); 
+//  }
   
   /* Set non-zero (background) value in order to get non-zero sound speed across the whole domain */
   if( tarch::la::equals(particle->getU(),0) ){
-    particle->setU( particle->getPressure()/( (GAMMA-1) * particle->getDensity() ) ); 
+//    particle->setU( particle->getPressure()/( (GAMMA-1) * particle->getDensity() ) ); 
+    particle->setU( 1e-6 ); 
   }
+
+  /* Compute the pressure from the EoS */
+  const double pressure = gas_pressure_from_internal_energy( particle->getDensity(), particle->getU() );
+  
+  particle->setPressure( pressure );
   
   // Evaluate (global) time-step size using u from exploding particle (h_ini is homogeneous)
   const double soundspeed = std::sqrt( GAMMA * particle->getPressure()/particle->getDensity() );
@@ -427,8 +433,7 @@ initialisation_snippet = """
 
   // Artificial viscosity scheme
   particle->setDiv_v   (0.0);
-//  particle->setV_sig_AV(0.0);
-  particle->setV_sig_AV(2 * particle->getSoundSpeed());
+  particle->setV_sig_AV(2.0 * particle->getSoundSpeed());
   particle->setBalsara (0.0);
  
  
@@ -446,6 +451,7 @@ init_setup.add_action_set( peano4.toolbox.particles.InsertParticlesAlongCartesia
   additional_includes=""" 
     #include "Constants.h" 
     #include "kernel_hydro.h"
+    #include "equation_of_state.h"
     """,
   computational_domain_offset=[0.0, 0.0])
   )
@@ -614,7 +620,6 @@ touch_particle_first_time_compute_kernel = """
     localParticle->setOmega   (0.0);   
     localParticle->setRho_dh  (0.0);   
     localParticle->setWcount_dh(0.0);   
-    localParticle->setPressure(0.0);  
     localParticle->setDiv_v   (0.0);   
     localParticle->setRot_v   (0.0);   
     localParticle->setNcount  (0);
@@ -996,19 +1001,24 @@ force_non_sym_particles.add_action_set( peano4.toolbox.particles.ParticleParticl
 
   touch_vertex_first_time_compute_particle_update_kernel="""
 
-  /* Done by hydro_reset_acceleration in Swift */
+  /* Done by "hydro_reset_acceleration" in SWIFT */
   
   if(localParticle->getParallelState()==globaldata::Particle::ParallelState::Local){
 
+    /* Reset the acceleration*/
     localParticle->setA   (0.0);   
+    
+    /* Reset the time derivatives */
     localParticle->setUDot(0.0);   
-  
+    localParticle->setHDot(0.0);   
+    localParticle->setV_sig_AV(2.0 * localParticle->getSoundSpeed());
+
   }
 
 """,
   touch_vertex_last_time_compute_particle_update_kernel="""
 
-   /* Here we do what "hydro_end_force" does in SWIFT */
+   /* Done by "hydro_end_force" does in SWIFT */
 
    if(localParticle->getParallelState()==globaldata::Particle::ParallelState::Local){
 
@@ -1149,6 +1159,7 @@ kick2_particles.add_action_set( peano4.toolbox.particles.ParticleParticleInterac
  
     /*
      * Reset predicted values for next Drift step 
+     * Done by "hydro_reset_predicted_values" in SWIFT
      */
     
     /* Re-set the predicted velocities */
@@ -1246,6 +1257,7 @@ drift_particles.add_action_set( peano4.toolbox.particles.ParticleParticleInterac
   const double dt_kick_hydro = 0.5 * GLOBAL_TIME_STEP_SIZE;
   const double dt_drift = GLOBAL_TIME_STEP_SIZE;
   const double dt_therm = dt_kick_hydro;
+//  const double dt_therm = dt_drift;
   
   if (localParticle->getParallelState()==globaldata::Particle::ParallelState::Local ) {
   
@@ -1257,15 +1269,14 @@ drift_particles.add_action_set( peano4.toolbox.particles.ParticleParticleInterac
        */
       
       /* Predict the internal energy */
-//      localParticle->setU( localParticle->getU() + localParticle->getUDot() * dt_therm );
-      const double w0 = localParticle->getUDot() * dt_therm;
-      localParticle->setU( localParticle->getU() * std::exp(w0) );
+      localParticle->setU( localParticle->getU() + localParticle->getUDot() * dt_therm );
 
       /* Predict smoothing length */
       const double h_inv = 1.0 / localParticle->getSmoothingLength();
       const double w1 = localParticle->getHDot() * h_inv * dt_drift;
       localParticle->setSmoothingLength( localParticle->getSmoothingLength() * std::exp(w1) );
       
+      /* SWIFT custom exponential functions -- @TODO implement */
 //      
 //    if (fabsf(w1) < 0.2f) {
 //      p->h *= approx_expf(w1); /* 4th order expansion of exp(w) */
