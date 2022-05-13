@@ -46,7 +46,7 @@ namespace peano4 {
  * need are
  *
  * - clone()
- * - clear() @todo Still valid?
+ * - clear()
  * - merge()
  * - void setDebugX( const tarch::la::Vector<Dimensions,double>& data );
  * - void setDebugH( const tarch::la::Vector<Dimensions,double>& data );
