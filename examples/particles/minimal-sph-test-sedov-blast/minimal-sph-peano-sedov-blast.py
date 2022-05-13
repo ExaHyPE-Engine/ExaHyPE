@@ -443,6 +443,7 @@ init_setup = peano4.solversteps.Step( name="Init", add_user_defined_actions=Fals
 init_setup.use_vertex(particles)
 init_setup.use_cell(particle_tree_analysis.cell_marker)
 init_setup.add_action_set( peano4.toolbox.particles.UpdateParticleGridAssociation(particles) )
+init_setup.add_action_set( peano4.toolbox.particles.UpdateParallelState(particles) )
 init_setup.add_action_set( peano4.toolbox.particles.InsertParticlesAlongCartesianLayoutIntoUnrefinedCells(
   particle_set=particles,
   distance_between_particles=args.particle_distance,
@@ -472,7 +473,6 @@ project.solversteps.add_step(init_setup)
 calc_densities_var_h = peano4.solversteps.Step( "DensityNonSym" )
 calc_densities_var_h.use_vertex(particles)
 calc_densities_var_h.use_cell(particle_tree_analysis.cell_marker)
-#calc_densities_var_h.add_action_set( peano4.toolbox.particles.UpdateParticleGridAssociation(particles) )
 
 particle_particle_compute_kernel = """
 
@@ -641,6 +641,8 @@ calc_densities_var_h.add_action_set( peano4.toolbox.particles.ParticleParticleIn
 ))
 #calc_densities_var_h.add_action_set( peano4.toolbox.particles.ParticleAMR(particles,particle_tree_analysis,min_particles_per_cell=10) )
 calc_densities_var_h.add_action_set( particle_tree_analysis )
+calc_densities_var_h.add_action_set( peano4.toolbox.particles.UpdateParticleGridAssociation(particles) )
+calc_densities_var_h.add_action_set( peano4.toolbox.particles.UpdateParallelState(particles) )
 project.solversteps.add_step(calc_densities_var_h)
 
 
@@ -652,7 +654,6 @@ project.solversteps.add_step(calc_densities_var_h)
 calc_newton_raphson_h = peano4.solversteps.Step( "NewtonRaphsonSmoothingLength" )
 calc_newton_raphson_h.use_vertex(particles)
 calc_newton_raphson_h.use_cell(particle_tree_analysis.cell_marker)
-#calc_newton_raphson_h.add_action_set( peano4.toolbox.particles.UpdateParticleGridAssociation(particles) )
 
 particle_particle_compute_kernel = """
 
@@ -764,6 +765,8 @@ calc_newton_raphson_h.add_action_set( peano4.toolbox.particles.ParticleParticleI
 ))
 #calc_newton_raphson_h.add_action_set( peano4.toolbox.particles.ParticleAMR(particles,particle_tree_analysis,min_particles_per_cell=10) )
 calc_newton_raphson_h.add_action_set( particle_tree_analysis )
+calc_newton_raphson_h.add_action_set( peano4.toolbox.particles.UpdateParticleGridAssociation(particles) )
+calc_newton_raphson_h.add_action_set( peano4.toolbox.particles.UpdateParallelState(particles) )
 project.solversteps.add_step(calc_newton_raphson_h)
 
 
@@ -777,7 +780,6 @@ project.solversteps.add_step(calc_newton_raphson_h)
 hydro_prepare_force = peano4.solversteps.Step( "HydroPrepareForce" )
 hydro_prepare_force.use_vertex(particles)
 hydro_prepare_force.use_cell(particle_tree_analysis.cell_marker)
-#hydro_prepare_force.add_action_set( peano4.toolbox.particles.UpdateParticleGridAssociation(particles) )
 hydro_prepare_force.add_action_set( peano4.toolbox.particles.ParticleParticleInteraction(
   particle_set=particles,
   particle_particle_interaction_kernel="""
@@ -867,6 +869,8 @@ hydro_prepare_force.add_action_set( peano4.toolbox.particles.ParticleParticleInt
   ))
 #hydro_prepare_force.add_action_set( peano4.toolbox.particles.ParticleAMR(particles,particle_tree_analysis,min_particles_per_cell=10) )
 hydro_prepare_force.add_action_set( particle_tree_analysis )
+hydro_prepare_force.add_action_set( peano4.toolbox.particles.UpdateParticleGridAssociation(particles) )
+hydro_prepare_force.add_action_set( peano4.toolbox.particles.UpdateParallelState(particles) )
 project.solversteps.add_step(hydro_prepare_force)
 
 
@@ -878,7 +882,6 @@ project.solversteps.add_step(hydro_prepare_force)
 force_non_sym_particles = peano4.solversteps.Step( "ForceNonSym" )
 force_non_sym_particles.use_vertex(particles)
 force_non_sym_particles.use_cell(particle_tree_analysis.cell_marker)
-#force_non_sym_particles.add_action_set( peano4.toolbox.particles.UpdateParticleGridAssociation(particles) )
 force_non_sym_particles.add_action_set( peano4.toolbox.particles.ParticleParticleInteraction(
   particle_set=particles,
   particle_particle_interaction_kernel="""
@@ -1037,6 +1040,8 @@ force_non_sym_particles.add_action_set( peano4.toolbox.particles.ParticleParticl
   ))
 #force_non_sym_particles.add_action_set( peano4.toolbox.particles.ParticleAMR(particles,particle_tree_analysis,min_particles_per_cell=10) )
 force_non_sym_particles.add_action_set( particle_tree_analysis )
+force_non_sym_particles.add_action_set( peano4.toolbox.particles.UpdateParticleGridAssociation(particles) )
+force_non_sym_particles.add_action_set( peano4.toolbox.particles.UpdateParallelState(particles) )
 project.solversteps.add_step(force_non_sym_particles)
 
 
@@ -1061,7 +1066,6 @@ project.solversteps.add_step(force_non_sym_particles)
 kick1_particles = peano4.solversteps.Step( "Kick1" )
 kick1_particles.use_vertex(particles)
 kick1_particles.use_cell(particle_tree_analysis.cell_marker)
-#kick1_particles.add_action_set( peano4.toolbox.particles.UpdateParticleGridAssociation(particles) )
 kick1_particles.add_action_set( peano4.toolbox.particles.ParticleParticleInteraction(
   particle_set=particles,
   particle_particle_interaction_kernel="""
@@ -1109,8 +1113,9 @@ kick1_particles.add_action_set( peano4.toolbox.particles.ParticleParticleInterac
 #include <cmath>
 """
   ))
-#kick_particles.add_action_set( peano4.toolbox.particles.ParticleAMR(particles,particle_tree_analysis,min_particles_per_cell=10) )
 kick1_particles.add_action_set( particle_tree_analysis )
+kick1_particles.add_action_set( peano4.toolbox.particles.UpdateParticleGridAssociation(particles) )
+kick1_particles.add_action_set( peano4.toolbox.particles.UpdateParallelState(particles) )
 project.solversteps.add_step(kick1_particles)
 
 
@@ -1124,7 +1129,6 @@ project.solversteps.add_step(kick1_particles)
 kick2_particles = peano4.solversteps.Step( "Kick2" )
 kick2_particles.use_vertex(particles)
 kick2_particles.use_cell(particle_tree_analysis.cell_marker)
-#kick2_particles.add_action_set( peano4.toolbox.particles.UpdateParticleGridAssociation(particles) )
 kick2_particles.add_action_set( peano4.toolbox.particles.ParticleParticleInteraction(
   particle_set=particles,
   particle_particle_interaction_kernel="""
@@ -1191,6 +1195,8 @@ kick2_particles.add_action_set( peano4.toolbox.particles.ParticleParticleInterac
   ))
 #kick2_particles.add_action_set( peano4.toolbox.particles.ParticleAMR(particles,particle_tree_analysis,min_particles_per_cell=10) )
 kick2_particles.add_action_set( particle_tree_analysis )
+kick2_particles.add_action_set( peano4.toolbox.particles.UpdateParticleGridAssociation(particles) )
+kick2_particles.add_action_set( peano4.toolbox.particles.UpdateParallelState(particles) )
 project.solversteps.add_step(kick2_particles)
 
 
@@ -1210,7 +1216,6 @@ project.solversteps.add_step(kick2_particles)
 drift_particles = peano4.solversteps.Step( "Drift" )
 drift_particles.use_vertex(particles)
 drift_particles.use_cell(particle_tree_analysis.cell_marker)
-drift_particles.add_action_set( peano4.toolbox.particles.UpdateParticleGridAssociation(particles) )
 drift_particles.add_action_set( peano4.toolbox.particles.ParticleParticleInteraction(
   particle_set=particles,
   particle_particle_interaction_kernel="""
@@ -1334,6 +1339,8 @@ drift_particles.add_action_set( peano4.toolbox.particles.ParticleParticleInterac
   ))
 #drift_particles.add_action_set( peano4.toolbox.particles.ParticleAMR(particles,particle_tree_analysis,min_particles_per_cell=10) )
 drift_particles.add_action_set( particle_tree_analysis )
+drift_particles.add_action_set( peano4.toolbox.particles.UpdateParticleGridAssociation(particles) )
+drift_particles.add_action_set( peano4.toolbox.particles.UpdateParallelState(particles) )
 project.solversteps.add_step(drift_particles)
 
 
@@ -1345,7 +1352,6 @@ project.solversteps.add_step(drift_particles)
 hydro_kick_extra = peano4.solversteps.Step( "HydroKickExtra" )
 hydro_kick_extra.use_vertex(particles)
 hydro_kick_extra.use_cell(particle_tree_analysis.cell_marker)
-#hydro_kick_extra.add_action_set( peano4.toolbox.particles.UpdateParticleGridAssociation(particles) )
 hydro_kick_extra.add_action_set( peano4.toolbox.particles.ParticleParticleInteraction(
   particle_set=particles,
   particle_particle_interaction_kernel="""
@@ -1402,6 +1408,8 @@ hydro_kick_extra.add_action_set( peano4.toolbox.particles.ParticleParticleIntera
   ))
 #hydro_kick_extra.add_action_set( peano4.toolbox.particles.ParticleAMR(particles,particle_tree_analysis,min_particles_per_cell=10) )
 hydro_kick_extra.add_action_set( particle_tree_analysis )
+hydro_kick_extra.add_action_set( peano4.toolbox.particles.UpdateParticleGridAssociation(particles) )
+hydro_kick_extra.add_action_set( peano4.toolbox.particles.UpdateParallelState(particles) )
 project.solversteps.add_step(hydro_kick_extra)
 
 
@@ -1413,7 +1421,6 @@ project.solversteps.add_step(hydro_kick_extra)
 kick_particles_corrector = peano4.solversteps.Step( "KickCorrector" )
 kick_particles_corrector.use_vertex(particles)
 kick_particles_corrector.use_cell(particle_tree_analysis.cell_marker)
-#kick_particles_corrector.add_action_set( peano4.toolbox.particles.UpdateParticleGridAssociation(particles) )
 kick_particles_corrector.add_action_set( peano4.toolbox.particles.ParticleParticleInteraction(
   particle_set=particles,
   particle_particle_interaction_kernel="""
@@ -1456,6 +1463,8 @@ kick_particles_corrector.add_action_set( peano4.toolbox.particles.ParticlePartic
   ))
 #kick_particles_corrector.add_action_set( peano4.toolbox.particles.ParticleAMR(particles,particle_tree_analysis,min_particles_per_cell=10) )
 kick_particles_corrector.add_action_set( particle_tree_analysis )
+kick_particles_corrector.add_action_set( peano4.toolbox.particles.UpdateParticleGridAssociation(particles) )
+kick_particles_corrector.add_action_set( peano4.toolbox.particles.UpdateParallelState(particles) )
 project.solversteps.add_step(kick_particles_corrector)
 
 
@@ -1467,7 +1476,6 @@ project.solversteps.add_step(kick_particles_corrector)
 kick_corrector_extra = peano4.solversteps.Step( "KickCorrectorExtra" )
 kick_corrector_extra.use_vertex(particles)
 kick_corrector_extra.use_cell(particle_tree_analysis.cell_marker)
-#kick_corrector_extra.add_action_set( peano4.toolbox.particles.UpdateParticleGridAssociation(particles) )
 kick_corrector_extra.add_action_set( peano4.toolbox.particles.ParticleParticleInteraction(
   particle_set=particles,
   particle_particle_interaction_kernel="""
@@ -1510,6 +1518,8 @@ kick_corrector_extra.add_action_set( peano4.toolbox.particles.ParticleParticleIn
   ))
 #kick_corrector_extra.add_action_set( peano4.toolbox.particles.ParticleAMR(particles,particle_tree_analysis,min_particles_per_cell=10) )
 kick_corrector_extra.add_action_set( particle_tree_analysis )
+kick_corrector_extra.add_action_set( peano4.toolbox.particles.UpdateParticleGridAssociation(particles) )
+kick_corrector_extra.add_action_set( peano4.toolbox.particles.UpdateParallelState(particles) )
 project.solversteps.add_step(kick_corrector_extra)
 
 
@@ -1521,7 +1531,6 @@ project.solversteps.add_step(kick_corrector_extra)
 reset_HasConverged_step = peano4.solversteps.Step( "ResetHasConverged" )
 reset_HasConverged_step.use_vertex(particles)
 reset_HasConverged_step.use_cell(particle_tree_analysis.cell_marker)
-#reset_HasConverged_step.add_action_set( peano4.toolbox.particles.UpdateParticleGridAssociation(particles) )
 reset_HasConverged_step.add_action_set( peano4.toolbox.particles.ParticleParticleInteraction(
   particle_set=particles,
   particle_particle_interaction_kernel="""
@@ -1553,6 +1562,8 @@ reset_HasConverged_step.add_action_set( peano4.toolbox.particles.ParticleParticl
   ))
 #reset_HasConverged_step.add_action_set( peano4.toolbox.particles.ParticleAMR(particles,particle_tree_analysis,min_particles_per_cell=10) )
 reset_HasConverged_step.add_action_set( particle_tree_analysis )
+reset_HasConverged_step.add_action_set( peano4.toolbox.particles.UpdateParticleGridAssociation(particles) )
+reset_HasConverged_step.add_action_set( peano4.toolbox.particles.UpdateParallelState(particles) )
 project.solversteps.add_step(reset_HasConverged_step)
 
 
@@ -1564,7 +1575,6 @@ project.solversteps.add_step(reset_HasConverged_step)
 init_time_step = peano4.solversteps.Step( "InitTimeStep" )
 init_time_step.use_vertex(particles)
 init_time_step.use_cell(particle_tree_analysis.cell_marker)
-init_time_step.add_action_set( peano4.toolbox.particles.UpdateParticleGridAssociation(particles) )
 init_time_step.add_action_set( peano4.toolbox.particles.ParticleParticleInteraction(
   particle_set=particles,
   particle_particle_interaction_kernel="""
@@ -1602,6 +1612,8 @@ init_time_step.add_action_set( peano4.toolbox.particles.ParticleParticleInteract
   ))
 #init_time_step.add_action_set( peano4.toolbox.particles.ParticleAMR(particles,particle_tree_analysis,min_particles_per_cell=10) )
 init_time_step.add_action_set( particle_tree_analysis )
+init_time_step.add_action_set( peano4.toolbox.particles.UpdateParticleGridAssociation(particles) )
+init_time_step.add_action_set( peano4.toolbox.particles.UpdateParallelState(particles) )
 project.solversteps.add_step(init_time_step)
 
 
@@ -1614,7 +1626,6 @@ project.solversteps.add_step(init_time_step)
 impose_BC_particles = peano4.solversteps.Step( "ImposeBC" )
 impose_BC_particles.use_vertex(particles)
 impose_BC_particles.use_cell(particle_tree_analysis.cell_marker)
-#impose_BC_particles.add_action_set( peano4.toolbox.particles.UpdateParticleGridAssociation(particles) )
 impose_BC_particles.add_action_set( peano4.toolbox.particles.ParticleParticleInteraction(
   particle_set=particles,
   particle_particle_interaction_kernel="""
@@ -1669,6 +1680,8 @@ impose_BC_particles.add_action_set( peano4.toolbox.particles.ParticleParticleInt
   ))
 impose_BC_particles.add_action_set( peano4.toolbox.particles.ParticleAMR(particles,particle_tree_analysis,min_particles_per_cell=10) )
 impose_BC_particles.add_action_set( particle_tree_analysis )
+impose_BC_particles.add_action_set( peano4.toolbox.particles.UpdateParticleGridAssociation(particles) )
+impose_BC_particles.add_action_set( peano4.toolbox.particles.UpdateParallelState(particles) )
 project.solversteps.add_step(impose_BC_particles)
 
 
@@ -1681,7 +1694,6 @@ project.solversteps.add_step(impose_BC_particles)
 end_time_step = peano4.solversteps.Step( "EndTimeStep" )
 end_time_step.use_vertex(particles)
 end_time_step.use_cell(particle_tree_analysis.cell_marker)
-end_time_step.add_action_set( peano4.toolbox.particles.UpdateParticleGridAssociation(particles) )
 end_time_step.add_action_set( peano4.toolbox.particles.ParticleParticleInteraction(
   particle_set=particles,
   particle_particle_interaction_kernel="""
@@ -1728,6 +1740,8 @@ end_time_step.add_action_set( peano4.toolbox.particles.ParticleParticleInteracti
   ))
 #end_time_step.add_action_set( peano4.toolbox.particles.ParticleAMR(particles,particle_tree_analysis,min_particles_per_cell=10) )
 end_time_step.add_action_set( particle_tree_analysis )
+end_time_step.add_action_set( peano4.toolbox.particles.UpdateParticleGridAssociation(particles) )
+end_time_step.add_action_set( peano4.toolbox.particles.UpdateParallelState(particles) )
 project.solversteps.add_step(end_time_step)
 
 
@@ -1741,7 +1755,6 @@ project.solversteps.add_step(end_time_step)
 rearrange_particles = peano4.solversteps.Step( "RearrangeAtStart" )
 rearrange_particles.use_vertex(particles)
 rearrange_particles.use_cell(particle_tree_analysis.cell_marker)
-rearrange_particles.add_action_set( peano4.toolbox.particles.UpdateParticleGridAssociation(particles) )
 rearrange_particles.add_action_set( peano4.toolbox.particles.ParticleParticleInteraction(
   particle_set=particles,
   particle_particle_interaction_kernel="""
@@ -1785,6 +1798,8 @@ rearrange_particles.add_action_set( peano4.toolbox.particles.ParticleParticleInt
   ))
 #rearrange_particles.add_action_set( peano4.toolbox.particles.ParticleAMR(particles,particle_tree_analysis,min_particles_per_cell=10) )
 rearrange_particles.add_action_set( particle_tree_analysis )
+rearrange_particles.add_action_set( peano4.toolbox.particles.UpdateParticleGridAssociation(particles) )
+rearrange_particles.add_action_set( peano4.toolbox.particles.UpdateParallelState(particles) )
 project.solversteps.add_step(rearrange_particles)
 
 
@@ -1828,6 +1843,8 @@ print_solution = peano4.solversteps.Step( "Plot", add_user_defined_actions=False
 print_solution.use_vertex(particles)
 print_solution.use_cell(particle_tree_analysis.cell_marker)
 print_solution.add_action_set( particle_tree_analysis )
+print_solution.add_action_set( peano4.toolbox.particles.UpdateParticleGridAssociation(particles) )
+print_solution.add_action_set( peano4.toolbox.particles.UpdateParallelState(particles) )
 print_solution.add_action_set( peano4.toolbox.PlotGridInPeanoBlockFormat( filename="grid", time_stamp_evaluation=peano4.toolbox.PlotGridInPeanoBlockFormat.CountTimeSteps ) )
 print_solution.add_action_set( particle_plotter )
 

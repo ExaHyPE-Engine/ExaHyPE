@@ -28,60 +28,28 @@ tarch::la::Vector<Dimensions,double> {{NAMESPACE | join("::")}}::{{CLASSNAME}}::
 
 
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::merge(const {{CLASSNAME}}& neighbour, const peano4::datamanagement::VertexMarker& marker) {
-  //
-  // @todo Hier muss man noch nachdenken:
-  // - hier ist alles shallow, weil wir eben doch denken, dass die echten Kopien schon gemacht worden sind
-
-  // @todo Muessen wir evtl. Redundanzen bereinigen? Ich vermute schon, weil wenn ein Partikel
-  //. eine Domaene verlaesst, dann nehme n erst mal alle anderen an, dass es ihnen gehoert fuer
-  //  eine Iterationen und setzen dementsprechend das Flag net um
   for (auto p: neighbour) {
     if (
       p->getParallelState()==DoFType::ParallelState::Local
-      and
-      p->getNewParallelState()==DoFType::NewParallelState::Local
     ) {
       logDebug( "merge(...)", "assume incoming particle " << p->toString() << " is local on other rank and will be virtual here" );
       p->setParallelState( DoFType::ParallelState::Virtual );
-      p->setNewParallelState( DoFType::NewParallelState::Virtual );
       this->push_back(p);
     }
     else if (
       p->getParallelState()==DoFType::ParallelState::Virtual
-      and
-      p->getNewParallelState()==DoFType::NewParallelState::Local
     ) {
-      assertion1( p->getMoveState()==DoFType::MoveState::New, p->toString() );
-      logDebug( "merge(...)", "incoming particle " << p->toString() << " has been virtual but neighbour decided it is local there just brefore sending us a copy. This can happen throughout initialisation. Will be virtual here" );
+      logDebug( "merge(...)", "incoming particle " << p->toString() << " is virtual on neighbour, but it was not deleted there. Assume it has just switched from local to virtual as it has moved and thus is now local here" );
+// @todo
+      //p->setParallelState( DoFType::ParallelState::Local );
       p->setParallelState( DoFType::ParallelState::Virtual );
-      p->setNewParallelState( DoFType::NewParallelState::Virtual );
       this->push_back(p);
-    }
-    else if (
-      p->getParallelState()==DoFType::ParallelState::Local
-      and
-      p->getNewParallelState()==DoFType::NewParallelState::Virtual
-    ) {
-      logDebug( "merge(...)", "incoming particle " << p->toString() << " is now marked as virtual on remote tree, i.e. has left its domain. Assume it is local here, though we might revise this decision (as particle has actually gone somewhere else)" );
-      p->setParallelState( DoFType::ParallelState::Local );
-      p->setNewParallelState( DoFType::NewParallelState::Virtual );
-      this->push_back(p);
-    }
-    else if (
-      p->getParallelState()==DoFType::ParallelState::Virtual
-      and
-      p->getNewParallelState()==DoFType::NewParallelState::Virtual
-    ) {
-      logDebug( "merge(...)", "incoming particle " << p->toString() << " had been virtual on other rank and still is virtual. This is likely a local particle which we had sent over as virtual particle and a copy is now sent back. Do not merge into local set and delete" );
-      delete p;
     }
     else {
       assertion1(false,p->toString());
     }
   }
 
-  // @todo Docu. We might get virtual copies from other places (really?) or all kind of
-  //   strange things, so better clean up.
   eliminateSpatialDuplicates( true );
 
   logDebug( "merge(...)", "merged incoming set of " << neighbour.size() << " particle(s) into local set of vertex " << marker.x() << " which now hosts " << this->size() << " particle(s):" );
@@ -108,6 +76,8 @@ int {{NAMESPACE | join("::")}}::{{CLASSNAME}}::eliminateSpatialDuplicates(bool e
         and
         (*p)->getParallelState()==DoFType::ParallelState::Virtual
         and
+        (*pp)->getParallelState()==DoFType::ParallelState::Virtual
+        and
         tarch::la::equals( (*p)->getX(), (*pp)->getX() )
       ) {
         foundDuplicate = true;
@@ -125,6 +95,8 @@ int {{NAMESPACE | join("::")}}::{{CLASSNAME}}::eliminateSpatialDuplicates(bool e
         pp++;
       }
     }
+
+    // @todo Hier muss Securty Check rein
 
     if (foundDuplicate) {
       logDebug( "eliminateSpatialDuplicates()", "eliminate particle pp=" << (*p)->toString() << " as it is a duplicate" );

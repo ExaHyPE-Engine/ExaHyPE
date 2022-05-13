@@ -33,47 +33,26 @@ class UpdateParticleGridAssociation(ActionSet):
      
    The mapping keeps some statistics on any state update. These statistics
    however are not shared via MPI. 
-    
    
-   ## State transitions
+   ## Where and how to use
    
-   We have three states per particle: local, virtual and local-to-virtual. That 
-   is, we always assume that particles are either local or virtual throughout 
-   the mesh traversal, but that they might change their position and 
-   consequently enter the regime local-to-virtual. As we solely update local 
-   particles, it can never happen that you have virtual-to-local. Such a 
-   transition would happen on another tree (where it is a local-to-virtual
-   transition from this tree's point of view) and then would be sent back 
-   as update.
+   Idempotent. Plugs into touchLast, d.h. Partikel muessen in Zelle sich bewegen
    
-   At the begin of a traversal, i.e. when we 
-   touch a particle for the first time, we set the new state to local. 
-   This happens via the template __Template_ClearParallelStatus. 
-   
-   When we leave a cell, i.e. after all cell-local operations have finished,
-   we run over all particles associated to its @f$ 2^d @f$ 
-   vertices and look if a particle's position x falls into a cell. If so,
-   we set the particle's state to local.  
-   
-   
-   
-   Local -> if this one is set at begin of iteration, it should switch 
-     to LocalInPreviousGridSweep:
-   LocalInPreviousGridSweep -> has to be confirmed and might switch to 
-     Local in touchCellLastTime().
-  
+       
+   ## Parameters
    
    eliminate_spatial_duplicates: String
      A C++ boolen expression. Whenever it holds, the code runs over the 
      particles at the end of the sweep and simply kicks out duplicates.
    
   """
-  def __init__(self,particle_set, guard="true"):
+  def __init__(self,particle_set, guard="true", eliminate_spatial_duplicates="false"):
     self._particle_set = particle_set
     self.d = {}
     self.d[ "PARTICLE" ]                      = particle_set.particle_model.name
     self.d[ "PARTICLES_CONTAINER" ]           = particle_set.name
     self.d[ "GUARD" ]                         = guard
+    self.d[ "ELIMINATE_DUPLICATES_GUARD" ]    = eliminate_spatial_duplicates
 
 
   __Template_BeginTraversal = jinja2.Template("""
@@ -81,10 +60,7 @@ class UpdateParticleGridAssociation(ActionSet):
   _numberOfLifts = 0;
   _numberOfDrops = 0;
   _numberOfParticleAccesses = 0;
-  _numberOfLocalParticles = 0;
-  _numberOfVirtualParticles = 0;
   _numberOfEliminations = 0;
-  _numberOfLeavingParticles = 0;
 """ )
 
 
@@ -95,21 +71,19 @@ class UpdateParticleGridAssociation(ActionSet):
     ": reassignments=" << _numberOfParticleReassignmentsOnCurrentLevel << 
     ", lift=" << _numberOfLifts << 
     ", drops=" << _numberOfDrops << 
-    ", accesses=" << _numberOfParticleAccesses << 
-    ", local particles=" << _numberOfLocalParticles << 
-    ", virtual particles=" << _numberOfVirtualParticles << 
-    ", leaving particles=" << _numberOfLeavingParticles << 
-    ", eliminated (duplicate) particles=" << _numberOfEliminations 
+    {% if ELIMINATE_DUPLICATES_GUARD %}
+    ", eliminated (duplicate) particles=" << _numberOfEliminations <<
+    {% endif %}
+    ", accesses=" << _numberOfParticleAccesses 
   );
 """ )
 
 
   """
   
-  Focus solely on reassociation within the grid, i.e. no parallelisation
-  is taken into account here.
-  
-  @todo not true anymore
+  This is where we actually run over the particles and check if they are 
+  still associated to the right vertex. As we want to accommodate 
+  position changes, we do this as last step in the routine.
   
   """
   __Template_TouchCellLastTime = jinja2.Template("""
@@ -133,8 +107,6 @@ if ( {{GUARD}} ) {
       
       // study only particles which are contained within the current cell
       if ( marker.isContained((*p)->getX()) ) {
-        (*p)->setNewParallelState( globaldata::{{PARTICLE}}::NewParallelState::Local );
-      
         std::bitset<Dimensions>  currentAssociation = i;
         bool                     remainsOnSameLevel = true;
         // marker.x() gives me the centre of the cell
@@ -177,14 +149,6 @@ if ( {{GUARD}} ) {
 """)
 
 
-  
-  __Template_InitialiseParallelStatus = jinja2.Template("""
-  for (auto& p: fineGridVertex{{PARTICLES_CONTAINER}} ) {
-    p->setNewParallelState( globaldata::{{PARTICLE}}::NewParallelState::Virtual );
-  }
-""")
-
-
   __Template_ValidateParticleLevelAssociation = jinja2.Template("""
   for (auto p: fineGridVertex{{PARTICLES_CONTAINER}} ) {
     assertion3(
@@ -198,71 +162,11 @@ if ( {{GUARD}} ) {
 
 
   __Template_EliminateDuplicateParticles = jinja2.Template("""
-  if ( {{GUARD}} ) {
+  if ( ({{GUARD}}) and ({{ELIMINATE_DUPLICATES_GUARD}}) ) {
     _numberOfEliminations += fineGridVertex{{PARTICLES_CONTAINER}}.eliminateSpatialDuplicates(false);
   }
 """)
     
-
-  """
-  
-  This postamble of the grid traversal plugs into touchVertexLastTime().
-   
-  """
-  __Template_DetermineNewParallelStatus = jinja2.Template("""
-  if ( {{GUARD}} ) {
-    auto p = fineGridVertex{{PARTICLES_CONTAINER}}.begin();
-    while (p!=fineGridVertex{{PARTICLES_CONTAINER}}.end()) {
-      if ( 
-        (*p)->getParallelState()==globaldata::{{PARTICLE}}::ParallelState::Local
-        and 
-        (*p)->getNewParallelState()==globaldata::{{PARTICLE}}::NewParallelState::Virtual
-      ) {
-        logDebug( "touchVertexLastTime()", "local status from previous sweep not confirmed on tree " << _treeNumber << ". Particle " << (*p)->toString() << " has left domain" );
-        (*p)->setParallelState( globaldata::{{PARTICLE}}::ParallelState::Virtual );
-        _numberOfVirtualParticles++;
-        _numberOfLeavingParticles++;
-        p++;
-      }
-      else if ( 
-        (*p)->getParallelState()==globaldata::{{PARTICLE}}::ParallelState::Local
-        and 
-        (*p)->getNewParallelState()==globaldata::{{PARTICLE}}::NewParallelState::Local
-      ) {
-        logDebug( "touchVertexLastTime()", "local status confirmed on tree " << _treeNumber << ", i.e. particle " << (*p)->toString() << " remains local" );
-        _numberOfLocalParticles++;
-        p++;
-      }
-      else if ( 
-        (*p)->getParallelState()==globaldata::{{PARTICLE}}::ParallelState::Virtual
-        and 
-        (*p)->getNewParallelState()==globaldata::{{PARTICLE}}::NewParallelState::Virtual
-      ) {
-        logDebug( "touchVertexLastTime()", "virtual particle, i.e. from other tree. Delete local copy " << (*p)->toString() << " on tree " << _treeNumber );
-        _numberOfVirtualParticles++;
-        delete *p;
-        p = fineGridVertex{{PARTICLES_CONTAINER}}.erase(p);
-      }
-      else {
-        // particle should never move from a remote place into local domain, as we should
-        // never move around virtual particles. The move should happen on another rank and
-        // we then should receive the new particle. It can however happen that a particle 
-        // is considered to be local and then switches to virtual when the particle is new,
-        // as we might have inserted it into the wrong place.
-        assertion3(
-          (*p)->getMoveState()==globaldata::{{PARTICLE}}::MoveState::New,
-          (*p)->toString(),
-          marker.toString(),
-          _treeNumber
-        );          
-        delete *p;
-        p = fineGridVertex{{PARTICLES_CONTAINER}}.erase(p);
-        break;
-      }
-    }
-  }
-""")
-
 
   """
   
@@ -324,12 +228,10 @@ if ( {{GUARD}} ) {
     if operation_name==ActionSet.OPERATION_CREATE_HANGING_VERTEX:
       result = self.__Template_Drop.render(**self.d) 
     if operation_name==ActionSet.OPERATION_TOUCH_VERTEX_FIRST_TIME:
-      result = self.__Template_InitialiseParallelStatus.render(**self.d) + \
-               self.__Template_Drop.render(**self.d) 
+      result = self.__Template_Drop.render(**self.d) 
     if operation_name==ActionSet.OPERATION_TOUCH_VERTEX_LAST_TIME:
       result  = self.__Template_ValidateParticleLevelAssociation.render(**self.d)
       result += self.__Template_EliminateDuplicateParticles.render(**self.d)
-      result += self.__Template_DetermineNewParallelStatus.render(**self.d)
     if operation_name==ActionSet.OPERATION_TOUCH_CELL_LAST_TIME:
       result = self.__Template_TouchCellLastTime.render(**self.d) 
     if operation_name==ActionSet.OPERATION_DESTROY_HANGING_VERTEX:
@@ -370,9 +272,6 @@ if ( {{GUARD}} ) {
   int  _numberOfDrops;
   int  _numberOfParticleAccesses;
   int  _numberOfEliminations;
-  int  _numberOfLocalParticles;
-  int  _numberOfVirtualParticles;
-  int  _numberOfLeavingParticles;
 """
 
 

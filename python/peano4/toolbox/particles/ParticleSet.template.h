@@ -70,13 +70,63 @@
        * If a particle is local on another rank for example, it has to be
        * virtual here.
        *
+       * It is important to study this routine in combination with the (Python)
+       * action set UpdateParallelState which is the routine that actually
+       * manages the parallel lifecycle.
+       *
+       * ## Data ownership
+       *
        * The merge works with shallow copies. We assume that all necessary real
        * copying has been done before.
        *
-       * It is important to study this routine in combination with
-       * UpdateParticleGridAssociation which is the routine that actually
-       * manages both the association of particles to their nearest vertex plus
-       * the parallel lifecycle.
+       * ## Particle states
+       *
+       * We receive particle sets from other trees. These are sent out after
+       * particles have been touched for the last time there. Therefore,
+       * their parallel state has already changed. It makes no sense to study
+       * the new and the current state. It is the current state only which
+       * determines what type of particle we have here.
+       *
+       * We furthermore can assume that the sending rank has already eliminated
+       * all of its virtual local copies. These stem from other ranks, i.e.
+       * they are always thrown away before we store a vertex. Consequently,
+       * we also do not sent those guys out.
+       *
+       * If we receive a particle with a local marker, then we can be sure that
+       * the sender has decided that this particle is really local within its
+       * tree. Consequently, we add it, but we have to add it as virtual.
+       *
+       * If we receive a particle with a virtual marker, this particle used to
+       * be local on the sending tree but now has left its domain. We really
+       * do not know if the particle will end up in our domain, but for the
+       * time being, we assume it is the case.
+       *
+       * It makes no sense to set the new state of the particle here, as the
+       * merge always precedes the actual first touch of a particle where the
+       * new state is reset anyway.
+       *
+       * ## Clean-up
+       *
+       * If a particle moves from one domain into the other, Peano will distribute
+       * the particle copy among all the other guys.
+       *
+  // @todo Muessen wir evtl. Redundanzen bereinigen? Ich vermute schon, weil wenn ein Partikel
+  //. eine Domaene verlaesst, dann nehme n erst mal alle anderen an, dass es ihnen gehoert fuer
+  //  eine Iterationen und setzen dementsprechend das Flag net um
+   *  // @todo Docu. We might get virtual copies from other places (really?) or all kind of
+  //   strange things, so better clean up.
+
+
+  // wenn jetzt zwei Zellen draussen am Rand sind und es dann ein Partikel am Interface
+  // gibt, das ausserhalb der Domaene liegt, dann haben beide eine virtuelle Kopie und
+  // tauschen die im ersten Schritt aus (bevor sie jeweils lokal eliminiert wird). Ergo
+  // taucht dieses Geisterpartikel dann sogar zweimal auf.
+  //
+  // @todo Das insert darf die gar net erst einsetzen! Kann halt eben auch so passieren
+  // im Inneren und dann kommt das virtual von drueben rein under der eine lokale Rank
+  // setzt dann ploetzlich munter beide auf local
+   *
+       *
        *
        * @see STDVectorOverVectorOfPointersStack::startReceive()
        * @see clone()
