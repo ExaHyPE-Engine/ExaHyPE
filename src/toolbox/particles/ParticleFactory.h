@@ -17,20 +17,51 @@ namespace toolbox {
     /**
      * Init particle
      *
-     * This is the most generic, minimalist initialisation of a particle that one can think of.
-     * The minimal data we need per particle is
+     * This is the most generic, minimalist initialisation of a particle that
+     * one can think of. The minimal data we need per particle is
      *
      * - a position x which defines where the particle is located,
-     * - a cut-off radius which defines on which resolution level to hold the particle.
+     * - a cut-off radius which defines on which resolution level to hold the
+     *   particle.
      *
      * The further attribute that are set are
      *
      * - the move state which is set to New.
-     * - the state is set to local. That means, by default I assume that a
-     *   particle is a local one if you insert it. Should you insert out of the
-     *   local domain, then the first sweep by UpdateParticleGridAssociation
-     *   will flip this flag.
+     * - the parallel state is set to Virtual.
      *
+     *
+     * ## Parallel lifecycle
+     *
+     * The parallel lifecycle is handled via the Python action set
+     * UpdateParallelState. This mapping is relatively simple: It initially
+     * sets the (new) parallel state of every single particle to virtual, and
+     * then marks the particle as local if it resides within a local cell. At
+     * the end of the traversal, we look at this new parallel state: If it had
+     * been virtual before and it is still virtual, then we throw it away. This
+     * particle clearly does not fall into the local domain.
+     *
+     * If I initialise my grid improperly, i.e. insert particles into a cell
+     * which are actually not within the cell (you can always do this by
+     * associating a particle with a cell's vertex and then adding some noise,
+     * e.g.), then I end up with situations where I shouldn't have inserted
+     * this particle at all. By setting every new particle to virtual, the new
+     * parallel state of such an "invalid" particle will be virtual, too, and
+     * the mapping consequently erases the particle immediately.
+     *
+     * This "by default virtual"-policy therefore implements a confirmation
+     * mechanism: We insert a new particle which is atm virtual and usually
+     * won't be updated. We wait for the first grid sweep for the code to
+     * confirm that it is actually inside and we should work with it. If it
+     * does not confirm, we throw it away immediately towards the end of the
+     * first sweep after the insertion.
+     *
+     * We finally conclude this discussion with the observation that we only
+     * have to set the particle's current state. The new state is used by the
+     * action set UpdateParallelState and will be overwritten later anyway.
+     * However, just to be on the safe side, we set it to virtual. This way,
+     * we ensure that the lifecycle is all correct even if we insert particles
+     * on the fly. UpdateParallelState should always be the last thing we do
+     * when we leave a cell.
      */
     template <class T>
     void init(
