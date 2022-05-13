@@ -160,7 +160,10 @@ void examples::exahype2::ccz4::FiniteVolumeCCZ4::sourceTerm(
 
   examples::exahype2::ccz4::FiniteVolumeCCZ4::sourceTerm(Q, volumeX, volumeH, t, dt, S, Offloadable::Yes);
 
-  if (CCZ4smoothing==1){// then we apply simple laplacian smoothing
+  if (CCZ4smoothing>0){// then we apply simple laplacian smoothing
+    constexpr int NumberOfRefinementLayers = 3;
+    double Radius[NumberOfRefinementLayers] = {5.0*1.8, 3.0*1.8, 1.5*1.8};
+    double radius=volumeX(0)*volumeX(0)+volumeX(1)*volumeX(1)+volumeX(2)*volumeX(2); radius=pow(radius,0.5);
     ::exahype2::fv::enumerator::PatchAccess access(
       Q,                         // make it initially point to input
       NumberOfFiniteVolumesPerAxisPerPatch, // defined in superclass
@@ -176,7 +179,9 @@ void examples::exahype2::ccz4::FiniteVolumeCCZ4::sourceTerm(
         + 1.0 * access.left(2,unknown)+ 1.0 * access.right(2,unknown);
       laplacian /= volumeH(0);
       laplacian /= volumeH(0);
-      S[unknown]+=0.001*laplacian;
+      double coef=CCZ4smoothing*(std::exp(-5.0*std::abs(radius-Radius[0])) + std::exp(-5.0*std::abs(radius-Radius[1])) + std::exp(-5.0*std::abs(radius-Radius[2])) )/3.0;
+      coef=CCZ4smoothing;
+      S[unknown]+=coef*laplacian;
     }
   }
 
@@ -305,18 +310,7 @@ void examples::exahype2::ccz4::FiniteVolumeCCZ4::nonconservativeProduct(
           result=::exahype2::RefinementCommand::Refine;
         }
       }
-    } /*
-    if (tarch::la::equals(t,0.0)){  //as we use a quantity calculated in postpocessing, we need to provide criterion at the first timestep 
-      if ((radius<5) and (volumeH(0)>1.0)) { result=::exahype2::RefinementCommand::Refine; }
-      else if ((radius<2.5) and (volumeH(0)>0.3)) { result=::exahype2::RefinementCommand::Refine; }
-      else if (radius<1.25) { result=::exahype2::RefinementCommand::Refine; }
-      else {result = ::exahype2::RefinementCommand::Keep;}
-    }*/
-    /*else {
-      if ((Q[65]>0.1) and (volumeH(0)>1.0)) { result=::exahype2::RefinementCommand::Refine; }
-      else if (Q[65]>0.2) { result=::exahype2::RefinementCommand::Refine; }
-      else {result = ::exahype2::RefinementCommand::Keep;}
-    }*/
+    }
   }
   if (CCZ4ReSwi==3){ //binary black holes
   double radius1=(volumeCentre(0)-4.251)*(volumeCentre(0)-4.251)+volumeCentre(1)*volumeCentre(1)+volumeCentre(2)*volumeCentre(2); radius=pow(radius,0.5);
@@ -346,6 +340,19 @@ void examples::exahype2::ccz4::FiniteVolumeCCZ4::nonconservativeProduct(
 	result = ::exahype2::RefinementCommand::Keep;
       }
     } 
+  }
+  if (CCZ4ReSwi==5){ //single black hole, cubic refinement??
+    if (tarch::la::equals(t,0.0)){  //as we use a quantity calculated in postpocessing, we need to provide criterion at the first timestep 
+      constexpr int NumberOfRefinementLayers = 3;
+      double Radius[NumberOfRefinementLayers] = {5.0, 3.0, 1.5};
+      double MaxH[NumberOfRefinementLayers]   = {0.3, 0.15, 0.0};
+      result = ::exahype2::RefinementCommand::Keep;
+      for (int i=0; i<NumberOfRefinementLayers; i++) {
+        if ( std::abs(volumeCentre(0))<Radius[i] and std::abs(volumeCentre(1))<Radius[i] and std::abs(volumeCentre(2))<Radius[i] and tarch::la::max(volumeH)>MaxH[i]) {
+          result=::exahype2::RefinementCommand::Refine;
+        }
+      }
+    }
   }
   return result;
 }
