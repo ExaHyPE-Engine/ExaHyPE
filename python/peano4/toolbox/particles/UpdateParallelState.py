@@ -22,9 +22,9 @@ class UpdateParallelState(ActionSet):
    
    ## State transitions
    
-   We have two states per particle: local, virtual and local-to-virtual. That 
-   is, we always assume that particles are either local or virtual throughout 
-   the mesh traversal, but that they might change their position and 
+   We have two states per particle: local and virtual. In our data model, 
+   particles are either local or virtual throughout 
+   the mesh traversal, but they might change their position and 
    consequently enter the regime local-to-virtual. As we solely update local 
    particles, it can never happen that you have virtual-to-local. Such a 
    transition would happen on another tree (where it is a local-to-virtual
@@ -32,21 +32,40 @@ class UpdateParallelState(ActionSet):
    as update.
    
    At the begin of a traversal, i.e. when we 
-   touch a particle for the first time, we set the new state to local. 
-   This happens via the template __Template_ClearParallelStatus. 
+   touch a particle for the first time, we set the new state to virtual. 
+   This happens via the template __Template_InitialiseParallelStatus. 
    
    When we leave a cell, i.e. after all cell-local operations have finished,
    we run over all particles associated to its @f$ 2^d @f$ 
    vertices and look if a particle's position x falls into a cell. If so,
-   we set the particle's state to local.  
+   we set the particle's state to local.
    
+   If we touch a vertex for the last time, we run over its particles. If 
+   a particle has been local and still is local, all is fine. If a particle
+   is virtual and has been local, we know it has left the domain. We keep
+   it (as we have to tell the others that this particle might have moved 
+   over), but we flag it as virtual from hereon. If a particle has been
+   virtual and still is virtual, we delete it. These are particles that 
+   we have received from other trees to run our calculations, so they are 
+   remote copies. We should not keep such data and notably not distribute
+   it further.   
    
+   ## Usage
    
-   Local -> if this one is set at begin of iteration, it should switch 
-     to LocalInPreviousGridSweep:
-   LocalInPreviousGridSweep -> has to be confirmed and might switch to 
-     Local in touchCellLastTime().
-  
+   This action set is not idempotent, i.e. you have to merge it at most once
+   into your algorithmic step.
+   
+   Please add this action set as soon as possible to your code. This ensures
+   that the touchCellLastTime() is called as late as possible and likely 
+   takes any particle movement into account.
+   
+   If a particle changes its position in touchVertexLastTime() and leaves
+   the current domain, we will not be able to spot this. We will need one
+   more grid sweep to get all the states consistent again. If you work 
+   with a parallel computer, I therefore recommend that you never check 
+   the particle state re its local or virtual flag. I recommend that you 
+   simply assume that the fact that a particle is within the local set is 
+   totally sufficient to update it.
    
   """
   def __init__(self,particle_set, guard="true"):

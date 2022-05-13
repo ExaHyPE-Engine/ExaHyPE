@@ -16,18 +16,55 @@ class UpdateParticleGridAssociation(ActionSet):
    Sort particles into the respective levels and cells. This mapping should 
    be used every time you move particles around. Notably, you should invoke
    it prior to the first algorithms on the particles. 
+
+   ## Algorithm 
+      
+   The re-association has different ingredients. We have two implementations
+   currently available. 
    
-   The re-association has different ingredients. A lot of them are discussed
-   in the LaTeX documentation:
+   In the fist version, we try to minimise the particle re-associations. This
+   algorithm realises the key checks within the cells:
    
    - Look at all the particles within a cell and check whether they are 
      still assigned to the closest of the @f$ 2^d @f$ vertices of this 
      cell. If not, reassign them.
    - Identify particles that have moved by more than one mesh width since the 
-     last update. If a particle travels fast, lift it to the next level.
+     last update. If a particle travels fast, lift it to the next level. This
+     check happens recursively whenever we touch a cell for the last time.
    - Drop particles down within the tree hierarchy such that they reside on 
-     an as fine level as possible.
+     an as fine level as possible. This happens in touchVertexFirstTime(), i.e.
+     in-between two grid traversals, particles are distributed over all 
+     resolutions, but we move them down in the hierarchy as kind of a preamble
+     of the subsequent grid sweep.
      
+   I also offer a second version which does not do anything within the cell
+   events:
+   
+   - If I touch a vertex for the last time, I check if its particles are 
+     within h/2 Manhattan distance. If not, I lift them to the next coarser
+     level.
+   - Drop particles down within the tree hierarchy such that they reside on 
+     an as fine level as possible. This happens in touchVertexFirstTime(), i.e.
+     in-between two grid traversals, particles are distributed over all 
+     resolutions, but we move them down in the hierarchy as kind of a preamble
+     of the subsequent grid sweep.
+   
+   This second variant is algorithmically simpler, but it moves particles 
+   around more often: If a particle moves closer to another vertex than the 
+   one it is currently associated, we do not directly reassign it to a new
+   vertex. Instead, we move it one level up within the tree. Just before the 
+   subsequent grid sweep, I sieve the particles all down again. So the move
+   from one vertex to the next is realised via a move through the next coarser
+   level. The first variant does not move particles up and down that often, but
+   it checks particles more often, as each particle is checked from up to 2^d 
+   adjacent cells. So it is not clear which variant is superior. 
+   
+   There is one functional difference however: If you use the cell-based 
+   variant, the variant assumes that particles do not move after 
+   touchVertexFirstTime(). So you can alter them in touchVertexFirstTime() 
+   and then the code will sort them properly in this sweep, but if you change
+   their position again in touchCellLastTime() or touchVertexLastTime(), then
+   you will have an unsorted state by the end of the traversal. 
    
    ## Statistics 
      
@@ -36,30 +73,61 @@ class UpdateParticleGridAssociation(ActionSet):
    
    ## Where and how to use
    
-   Idempotent. Plugs into touchLast, d.h. Partikel muessen in Zelle sich bewegen
+   The action set is idempotent, i.e. you can merge it into your 
+   algorithmic step multiple times. Only the first one merged in however will
+   alter the particle positions, so it is not clever -from a performance point
+   of view - to host multiple instances of this action set.
    
-       
+   Within your algorithm step, this update action set should always be the 
+   first or one of the first action sets before you add any other action set.
+   If you add it first, it ensures that the drop of particles is one of the 
+   first things that happen, before any user code is triggered. As Peano 
+   automatically inverts the action set order throughout the backtracking,
+   adding UpdateParticleGridAssociation as first action set ensures that the
+   lifts are basically the last thing you do. This is particular imporant if
+   your user code alters particle positions in touchVertexLastTime().
+   
+   ## MPI
+   
+   @todo Not sure if I need special treatment here
+   
+   ## Tunneling and horizontal data movements between trees
+   
+   @todo Think about this
+   
    ## Parameters
    
-   eliminate_spatial_duplicates: String
-     A C++ boolen expression. Whenever it holds, the code runs over the 
-     particles at the end of the sweep and simply kicks out duplicates.
+   eliminate_spatial_duplicates: Boolean
+     If it holds, the code runs over the 
+     particles at the end of the sweep and simply kicks out duplicates. This
+     happens on a per-vertex basis.
+     
+   lift_always: Boolean
+     See discussion of the two algorithms that I realise here. By default, 
+     I do not sort within cells but move up and down within the grid 
+     hierarchy.
    
   """
-  def __init__(self,particle_set, guard="true", eliminate_spatial_duplicates="false"):
+  def __init__(self,
+               particle_set, 
+               guard="true", 
+               eliminate_spatial_duplicates=False,
+               lift_always=True):
     self._particle_set = particle_set
     self.d = {}
     self.d[ "PARTICLE" ]                      = particle_set.particle_model.name
     self.d[ "PARTICLES_CONTAINER" ]           = particle_set.name
     self.d[ "GUARD" ]                         = guard
     self.d[ "ELIMINATE_DUPLICATES_GUARD" ]    = eliminate_spatial_duplicates
+    self._eliminate_spatial_duplicates        = eliminate_spatial_duplicates
+    self.d[ "LIFT_ALWAYS" ]                   = lift_always
+    self._lift_always                         = lift_always
 
 
   __Template_BeginTraversal = jinja2.Template("""
   _numberOfParticleReassignmentsOnCurrentLevel = 0;
   _numberOfLifts = 0;
   _numberOfDrops = 0;
-  _numberOfParticleAccesses = 0;
   _numberOfEliminations = 0;
 """ )
 
@@ -68,13 +136,14 @@ class UpdateParticleGridAssociation(ActionSet):
   logInfo( 
     "endTraversal()",
     "tree " <<  _treeNumber <<
+    {% if not LIFT_ALWAYS %}
     ": reassignments=" << _numberOfParticleReassignmentsOnCurrentLevel << 
-    ", lift=" << _numberOfLifts << 
-    ", drops=" << _numberOfDrops << 
+    {% endif %}
     {% if ELIMINATE_DUPLICATES_GUARD %}
     ", eliminated (duplicate) particles=" << _numberOfEliminations <<
     {% endif %}
-    ", accesses=" << _numberOfParticleAccesses 
+    ", lifts=" << _numberOfLifts << 
+    ", drops=" << _numberOfDrops
   );
 """ )
 
@@ -86,8 +155,7 @@ class UpdateParticleGridAssociation(ActionSet):
   position changes, we do this as last step in the routine.
   
   """
-  __Template_TouchCellLastTime = jinja2.Template("""
-if ( {{GUARD}} ) {
+  __Template_ReassignAndLiftWithinCell = jinja2.Template("""
   // move means particles that are actually to be associated with a new nearest vertex  
   vertexdata::{{PARTICLES_CONTAINER}} particlesThatMoveOnSameLevel[TwoPowerD];
   // particles that 'jumped' aka moved by more than half a mesh width
@@ -103,8 +171,6 @@ if ( {{GUARD}} ) {
     
     vertexdata::{{PARTICLES_CONTAINER}}::iterator p = fineGridVertices{{PARTICLES_CONTAINER}}(i).begin(); 
     while ( p!=fineGridVertices{{PARTICLES_CONTAINER}}(i).end() ) {
-      _numberOfParticleAccesses++;
-      
       // study only particles which are contained within the current cell
       if ( marker.isContained((*p)->getX()) ) {
         std::bitset<Dimensions>  currentAssociation = i;
@@ -145,7 +211,6 @@ if ( {{GUARD}} ) {
     fineGridVertices{{PARTICLES_CONTAINER}}(i).insert(   fineGridVertices{{PARTICLES_CONTAINER}}(i).end(),   particlesThatMoveOnSameLevel[ i ].begin(), particlesThatMoveOnSameLevel[ i ].end() ); 
     coarseGridVertices{{PARTICLES_CONTAINER}}(i).insert( coarseGridVertices{{PARTICLES_CONTAINER}}(i).end(), liftParticles[ i ].begin(),                liftParticles[ i ].end() ); 
   }
-}
 """)
 
 
@@ -161,10 +226,13 @@ if ( {{GUARD}} ) {
 """)
 
 
+  """
+  
+  Plugs into touchVertexLastTime() for example.
+  
+  """
   __Template_EliminateDuplicateParticles = jinja2.Template("""
-  if ( ({{GUARD}}) and ({{ELIMINATE_DUPLICATES_GUARD}}) ) {
-    _numberOfEliminations += fineGridVertex{{PARTICLES_CONTAINER}}.eliminateSpatialDuplicates(false);
-  }
+  _numberOfEliminations += fineGridVertex{{PARTICLES_CONTAINER}}.eliminateSpatialDuplicates(false);
 """)
     
 
@@ -201,7 +269,7 @@ if ( {{GUARD}} ) {
   
   Explicit lift of particles to a coarser level. Usually, lifts are
   realised within touchCellLastTime aka the template 
-  __Template_TouchCellLastTime. If a vertex is however destroyed or
+  __Template_ReassignAndLiftWithinCell. If a vertex is however destroyed or
   is hanging, i.e. not persistent in-between two mesh traversals, 
   then we have to lift the particles explicitly.
   
@@ -211,6 +279,33 @@ if ( {{GUARD}} ) {
   for (int d=0; d<Dimensions; d++) {
     target[d] = marker.getRelativePositionWithinFatherCell()(d)>=2;
   }
+  coarseGridVertices{{PARTICLES_CONTAINER}}( target.to_ulong() ).insert( coarseGridVertices{{PARTICLES_CONTAINER}}( target.to_ulong() ).begin(), fineGridVertex{{PARTICLES_CONTAINER}}.begin(), fineGridVertex{{PARTICLES_CONTAINER}}.end() );
+""")  
+
+
+  """
+  
+  Takes those particles which are not within h/2 reach of a vertex
+  and lift those.
+  
+  """
+  __Template_LiftParticlesFurtherAway = jinja2.Template("""
+  std::bitset<Dimensions> target;
+  for (int d=0; d<Dimensions; d++) {
+    target[d] = marker.getRelativePositionWithinFatherCell()(d)>=2;
+  }
+  
+  auto p = fineGridVertex{{PARTICLES_CONTAINER}}.begin();
+  while (p!=fineGridVertex{{PARTICLES_CONTAINER}}.end()) {
+    if ( not marker.isContainedInAdjacentCells((*p)->getX(),0.5) ) {
+      coarseGridVertices{{PARTICLES_CONTAINER}}( target.to_ulong() ).push_back( *p );
+      p = fineGridVertex{{PARTICLES_CONTAINER}}.erase(p);
+    }
+    else {
+      p++;
+    }
+  }
+  
   coarseGridVertices{{PARTICLES_CONTAINER}}( target.to_ulong() ).insert( coarseGridVertices{{PARTICLES_CONTAINER}}( target.to_ulong() ).begin(), fineGridVertex{{PARTICLES_CONTAINER}}.begin(), fineGridVertex{{PARTICLES_CONTAINER}}.end() );
 """)  
 
@@ -230,10 +325,15 @@ if ( {{GUARD}} ) {
     if operation_name==ActionSet.OPERATION_TOUCH_VERTEX_FIRST_TIME:
       result = self.__Template_Drop.render(**self.d) 
     if operation_name==ActionSet.OPERATION_TOUCH_VERTEX_LAST_TIME:
-      result  = self.__Template_ValidateParticleLevelAssociation.render(**self.d)
-      result += self.__Template_EliminateDuplicateParticles.render(**self.d)
+      if self._lift_always:
+        result  = self.__Template_LiftParticlesFurtherAway.render(**self.d)
+      else:    
+        result  = self.__Template_ValidateParticleLevelAssociation.render(**self.d)
+      if self._eliminate_spatial_duplicates:        
+        result += self.__Template_EliminateDuplicateParticles.render(**self.d)
     if operation_name==ActionSet.OPERATION_TOUCH_CELL_LAST_TIME:
-      result = self.__Template_TouchCellLastTime.render(**self.d) 
+      if not self._lift_always:
+        result = self.__Template_ReassignAndLiftWithinCell.render(**self.d) 
     if operation_name==ActionSet.OPERATION_DESTROY_HANGING_VERTEX:
       result = self.__Template_Lift.render(**self.d) 
     if operation_name==ActionSet.OPERATION_DESTROY_PERSISTENT_VERTEX:
@@ -270,7 +370,6 @@ if ( {{GUARD}} ) {
   int  _numberOfParticleReassignmentsOnCurrentLevel;
   int  _numberOfLifts;
   int  _numberOfDrops;
-  int  _numberOfParticleAccesses;
   int  _numberOfEliminations;
 """
 

@@ -60,6 +60,7 @@ class ParticleParticleInteraction(ActionSet):
     far away - even on the coarser mesh where we again work with a "halo"
     around the coarse cell of h_{coarse}/2.
 
+
     ## Further plug-in points
     
     Besides the cell kernel which is there to realise particle-to-particle
@@ -73,19 +74,10 @@ class ParticleParticleInteraction(ActionSet):
     neighbouring cells.
 
     Please consult the guidebook for further information.
-    
-    ## Parallel runs
-    
-    Each particle has two attributes: the current state and its new state.
-    Both are either local or virtual. Virtual means that a particle actually
-    resides on another rank. The active set is solely constructed over local
-    particles by definition: We only insert particles which reside within the
-    cell and thus will never add virtual particles. There's no additional 
-    check required here to ensure that we only insert a subset of the
-    objects, and we can ignore these particle-specific flags - even though 
-    you might want to use them in your kernels.
 
 
+    ## Arguments
+    
     particle_set: ParticleSet
 
     particle_particle_interaction_kernel: String holding C++ code
