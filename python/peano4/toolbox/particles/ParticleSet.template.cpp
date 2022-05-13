@@ -40,9 +40,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::merge(const {{CLASSNAME}}& neigh
       p->getParallelState()==DoFType::ParallelState::Virtual
     ) {
       logDebug( "merge(...)", "incoming particle " << p->toString() << " is virtual on neighbour, but it was not deleted there. Assume it has just switched from local to virtual as it has moved and thus is now local here" );
-// @todo
-      //p->setParallelState( DoFType::ParallelState::Local );
-      p->setParallelState( DoFType::ParallelState::Virtual );
+      p->setParallelState( DoFType::ParallelState::Local );
       this->push_back(p);
     }
     else {
@@ -63,40 +61,53 @@ int {{NAMESPACE | join("::")}}::{{CLASSNAME}}::eliminateSpatialDuplicates(bool e
   int numberOfEliminations = 0;
   auto p = this->begin();
   while (p!=this->end()) {
-    auto pp = p;
-    pp++;
     bool foundDuplicate = false;
-    while (
-      pp!=this->end()
+
+    if (
+      examineOnlyVirtualParticles
       and
-      not foundDuplicate
+      (*p)->getParallelState()==DoFType::ParallelState::Virtual
     ) {
-      if (
-        examineOnlyVirtualParticles
+      auto pp = this->begin();
+      while (
+        pp!=this->end()
         and
-        (*p)->getParallelState()==DoFType::ParallelState::Virtual
-        and
-        (*pp)->getParallelState()==DoFType::ParallelState::Virtual
-        and
-        tarch::la::equals( (*p)->getX(), (*pp)->getX() )
+        not foundDuplicate
       ) {
-        foundDuplicate = true;
-        pp = this->end();
-      }
-      else if (
-        not examineOnlyVirtualParticles
-        and
-        tarch::la::equals( (*p)->getX(), (*pp)->getX() )
-      ) {
-        foundDuplicate = true;
-        pp = this->end();
-      }
-      else {
-        pp++;
+        if (
+          pp!=p
+          and
+          tarch::la::equals( (*p)->getX(), (*pp)->getX() )
+        ) {
+          foundDuplicate = true;
+          pp = this->end();
+        }
+        else {
+          pp++;
+        }
       }
     }
-
-    // @todo Hier muss Securty Check rein
+    else if ( not examineOnlyVirtualParticles ) {
+      auto pp = p;
+      pp++;
+      while (
+        pp!=this->end()
+        and
+        not foundDuplicate
+      ) {
+        if (
+          not examineOnlyVirtualParticles
+          and
+          tarch::la::equals( (*p)->getX(), (*pp)->getX() )
+        ) {
+          foundDuplicate = true;
+          pp = this->end();
+        }
+        else {
+          pp++;
+        }
+      }
+    }
 
     if (foundDuplicate) {
       logDebug( "eliminateSpatialDuplicates()", "eliminate particle pp=" << (*p)->toString() << " as it is a duplicate" );

@@ -107,25 +107,23 @@
        *
        * ## Clean-up
        *
-       * If a particle moves from one domain into the other, Peano will distribute
-       * the particle copy among all the other guys.
+       * If a particle moves from one domain into the other, Peano will
+       * distribute the particle copy among all the other guys and all other
+       * trees will first assume that the particle is local. If it is not, they
+       * will set it to virtual and consequently remove it. In-between they
+       * exchange their local (assumed) particles, so we end up with a particle
+       * accumulation on one rank: Multiple copies of the virtual particle drop
+       * in. One per tree which assumes it were its own local copy. So I have
+       * to remove duplicates.
        *
-  // @todo Muessen wir evtl. Redundanzen bereinigen? Ich vermute schon, weil wenn ein Partikel
-  //. eine Domaene verlaesst, dann nehme n erst mal alle anderen an, dass es ihnen gehoert fuer
-  //  eine Iterationen und setzen dementsprechend das Flag net um
-   *  // @todo Docu. We might get virtual copies from other places (really?) or all kind of
-  //   strange things, so better clean up.
-
-
-  // wenn jetzt zwei Zellen draussen am Rand sind und es dann ein Partikel am Interface
-  // gibt, das ausserhalb der Domaene liegt, dann haben beide eine virtuelle Kopie und
-  // tauschen die im ersten Schritt aus (bevor sie jeweils lokal eliminiert wird). Ergo
-  // taucht dieses Geisterpartikel dann sogar zweimal auf.
-  //
-  // @todo Das insert darf die gar net erst einsetzen! Kann halt eben auch so passieren
-  // im Inneren und dann kommt das virtual von drueben rein under der eine lokale Rank
-  // setzt dann ploetzlich munter beide auf local
-   *
+       * The other redundancy results from two adjacent cells on different
+       * trees and a vertex in-between which hosts a particle which is actually
+       * completely outside of the domain. We need two grid sweeps to eliminate
+       * such guys. See the action set UpdateParallelState. In-between, both
+       * adjacent trees send their virtual copy to the counterpart, so we
+       * accumulate local particles and get more and more. We have to eliminate
+       * replicas asap.
+       *
        *
        *
        * @see STDVectorOverVectorOfPointersStack::startReceive()
@@ -152,7 +150,20 @@
       void clone( const {{CLASSNAME}}& otherSet );
 
       /**
-       * @todo Docu rein, dass wir keine spatial Duplicates innerhalb einer SPecies supporten
+       * Run over set and remove particles that reside at same location
+       *
+       * Such an eliminate of duplicates can be motivated through physics, but
+       * it is also used by the merger, where it can happen that multiple ranks
+       * tell us about a particle (some of them have virtual copies, some have
+       * local ones). In this case, we however only check the virtual particles.
+       * Those are the bad guys.
+       *
+       * If I check all particles, then I can simply run through the list and
+       * check all the particles that are still to come if they are at the
+       * same position. If I only check virtual particles, then I have to invest
+       * slightly more work. Then I have to run over all particles, as I only
+       * want to eliminate virtual particles and not their non-virtual
+       * counterparts.
        *
        * @return Number of eliminated particles
        */
