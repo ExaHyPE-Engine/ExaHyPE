@@ -62,21 +62,44 @@ jupyter-notebook peano-sph.ipynb
 
 \section{\Swift}
 
-Almost all via Python.
+Our interface for \Swift\ is almost complete realised in Python.
+Only specialised potentials have to be injected via C++.
 
-\subsection*{Preparing \Peano\ to run a particle code}
 
-\Peano's particle code is lightweight and realised totally within the Python
-API as \texttt{toolbox.particles}.
+\subsection{Set up the simulator}
+
+
+\subsection{Introduce a new particle}
+
+The generation of a particle is straightforward. We employ a tool called
+DaStGen2 which really just is a set of Python classes which represent the 
+attributes of a C++ class. We build up a set of Python objects and \Swift\
+eventually dumps them into C++ code from which it is embedded into the 
+actual simulator.   
 
 \begin{code}
-import peano4.toolbox.particles
+import dastgen2
+
+particle = peano4.toolbox.particles.Particle("Particle")
+
+v_attr = peano4.dastgen2.Peano4DoubleArray("v","Dimensions")
+mass_attr = dastgen2.attributes.Double("mass")
+
+particle.data.add_attribute(v_attr)
+particle.data.add_attribute(mass_attr)
+
+
+@todo something fancy in here that adds a new species
 \end{code}
 
-No particular configuration of the compute kernel is required.
-To get something up and started, I recommend that you run the Jupyter notebook
-at \texttt{examples/particles}.
-It implements a very simple gravity $N$-body problem.
+\begin{remark}
+ Though conceptionally a plain C++ pretty printer, the DaStGen2 Python API
+ can create some fancy C++ annotations. You can, for example, specify ranges
+ in which integers live, or you can prescribe the precision you wanna have 
+ for floating point values. If you have a specialised LLVM compiler, these
+ annotations will be used to generate aggressively optimised code.
+\end{remark}
+
 
 
 \subsection{IO control}
@@ -115,8 +138,7 @@ your own.
 There are some C++ building blocks, but the majority of its features are
 available through the Python API as
 \texttt{toolbox.particles}.
-You will needs
-
+You will need
 
 \begin{code}
 import peano4.toolbox.particles
@@ -127,6 +149,53 @@ To get something up and started, I recommend that you run the Jupyter notebook
 at \texttt{examples/particles}.
 It implements a very simple gravity $N$-body problem.
 
+
+\subsection{Introduce a new particle}
+
+With the Python API, the generation of a particle is straightforward:
+
+\begin{code}
+import dastgen2
+
+
+particle = peano4.toolbox.particles.Particle("Particle")
+
+v_attr = peano4.dastgen2.Peano4DoubleArray("v","Dimensions")
+mass_attr = dastgen2.attributes.Double("mass")
+
+particle.data.add_attribute(v_attr)
+particle.data.add_attribute(mass_attr)
+
+particles = peano4.toolbox.particles.ParticleSet(particle)
+\end{code}
+
+\begin{remark}
+ Though conceptionally a plain C++ pretty printer, the DaStGen2 Python API
+ can create some fancy C++ annotations. You can, for example, specify ranges
+ in which integers live, or you can prescribe the precision you wanna have 
+ for floating point values. If you have a specialised LLVM compiler, these
+ annotations will be used to generate aggressively optimised code.
+\end{remark}
+
+
+\noindent
+We next add the particles to the project and we notify the vertices that there 
+are particles which have to be administered. 
+I discuss why to use vertices below in the section about the dual tree.
+
+\begin{code}
+project.datamodel.add_global_object(particle)
+project.datamodel.add_vertex(particles)
+\end{code}
+
+\noindent
+Once you have added the particle and the particle container \texttt{particles}
+to your \Peano\ datamodel, you have to inform all solver steps that they have to
+administer the particles.
+
+\begin{code}
+create_grid.use_vertex(particles)
+\end{code}
 
 
 
@@ -183,7 +252,8 @@ while (peano4::parallel::SpacetreeSet::getInstance().getGridStatistics().getStat
 \end{code}
 \end{itemize}
 
-\section{Mesh and particle algorithms}
+
+
 
 \section{Data model}
 
@@ -223,60 +293,6 @@ For speed reasons, the latter variant is the better one.
 
 
 
-\subsection{Python API}
-
-With the Python API, the generation of a particle is straightforward:
-
-\begin{code}
-import dastgen2
-
-
-particle = peano4.toolbox.particles.Particle("Particle")
-
-v_attr = peano4.dastgen2.Peano4DoubleArray("v","Dimensions")
-mass_attr = dastgen2.attributes.Double("mass")
-
-particle.data.add_attribute(v_attr)
-particle.data.add_attribute(mass_attr)
-
-particles = peano4.toolbox.particles.ParticleSet(particle)
-\end{code}
-
-
-
-\subsection{Adding the data model to \Peano}
-
-We next add the particles to the project and we notify the vertices that there 
-are particles which have to be administered. 
-I discuss why to use vertices below in the section about the dual tree.
-
-\begin{code}
-project.datamodel.add_global_object(particle)
-project.datamodel.add_vertex(particles)
-\end{code}
-
-\noindent
-Once you have added the particle and the particle container \texttt{particles}
-to your \Peano\ datamodel, you have to inform all solver steps that they have to
-administer the particles.
-
-\begin{code}
-create_grid.use_vertex(particles)
-\end{code}
-
-
-\noindent
-Particles are held on the heap, i.e.~you create them via \texttt{new} and then
-you hand them over to \Peano\ to administer them.
-Both properties can be changed dynamically by the user, i.e.~in each and every
-time step.
-Particles are to be modelled with \DaStGen.
-You can think of them as plain C++ structs with a few routines to set their
-properties and to send them around via MPI.
-
-
-
-\subsection{DaStGen 2}
 
 
 
