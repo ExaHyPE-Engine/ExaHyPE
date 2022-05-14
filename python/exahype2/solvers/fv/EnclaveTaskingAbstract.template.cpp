@@ -4,6 +4,10 @@
 #include "{{CLASSNAME}}.h"
 #include "Constants.h"
 
+#if defined(UseSmartMPI)
+#include "tasks/{{SOLVER_NAME}}EnclaveTask.h"
+#include "tarch/multicore/smartScheduling.h"
+#endif
 
 #include "tarch/multicore/multicore.h"
 #include "tarch/multicore/Lock.h"
@@ -409,17 +413,17 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::patchCanUseStatelessPDETerms(
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startSimulation() {
   #if defined(UseSmartMPI)
   tarch::multicore::registerSmartMPITask(
-    tasks::{{CLASSNAME}}EnclaveTask.getEnclaveTaskTypeId(),
+    tasks::{{SOLVER_NAME}}EnclaveTask::getEnclaveTaskTypeId(),
     [](smartmpi::ReceiverCallType type, int rank, int tag, MPI_Comm communicator) -> smartmpi::Task* {
       if (type==smartmpi::ReceiverCallType::ReceiveTask) {
-        return receiveTask( rank, tag, communicator );
+        return tasks::{{SOLVER_NAME}}EnclaveTask::receiveTask( rank, tag, communicator );
       } else if (type==smartmpi::ReceiverCallType::ReceivedTaskOutcomeForFowarding) {
         static constexpr bool isForwarding = true;
-        return receiveOutcome( rank, tag, communicator, isForwarding);
+        return tasks::{{SOLVER_NAME}}EnclaveTask::receiveOutcome( rank, tag, communicator, isForwarding);
       } else {
         assert(type==smartmpi::ReceiverCallType::ReceiveOutcome);
         static constexpr bool isForwarding = false;
-        return receiveOutcome( rank, tag, communicator, isForwarding );
+        return tasks::{{SOLVER_NAME}}EnclaveTask::receiveOutcome( rank, tag, communicator, isForwarding );
       }
     }
   );
