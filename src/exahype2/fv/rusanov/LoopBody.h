@@ -136,11 +136,11 @@ namespace exahype2 {
          *
          * We reiterate that Q holds two types of entries: The actual data
          * subject to the PDE (and fluxes and source terms) and arbitrary
-         * material parameters that the user has specified. Material parameters
-         * are coupling terms, diffusivity parameters in porous rocks, helper
-         * variables that you use to compute some metrics, ...
-         *
-         * The source term affects only the PDE variables. So we copy these
+         * auxiliary variables per volume that the user has specified. Auxiliary
+         * parameters are coupling terms, material parameters, helper
+         * variables that you use to compute some metrics, ... They are not
+         * evolved as part of the PDE. As the source term affects only the PDE
+         * variables, we copy these
          * entries in Q over and add the source term contribution, while the
          * material parameters remain plain copies.
          *
