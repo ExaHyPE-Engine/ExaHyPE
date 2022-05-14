@@ -10,6 +10,7 @@
 
 #include <vector>
 
+#include "tarch/logging/Log.h"
 #include "tarch/la/Vector.h"
 #include "tarch/mpi/mpi.h"
 
@@ -42,6 +43,8 @@
 
 
   class {{CLASSNAME}}: public std::vector< {% for item in NAMESPACE -%}{% if not loop.last %}{{ item }}::{% endif %}{%- endfor %}globaldata::{{PARTICLE_TYPE}}* > {
+    private:
+      static tarch::logging::Log _log;
     #if PeanoDebug>=1
     private:
      tarch::la::Vector<Dimensions,double> _debugX;
@@ -55,12 +58,117 @@
     #endif
     public:
       typedef {% for item in NAMESPACE -%}{% if not loop.last %}{{ item }}::{% endif %}{%- endfor %}globaldata::{{PARTICLE_TYPE}}  DoFType;
+      typedef std::vector< {% for item in NAMESPACE -%}{% if not loop.last %}{{ item }}::{% endif %}{%- endfor %}globaldata::{{PARTICLE_TYPE}}* >  Base;
 
+      /**
+       * Merge two particle sets
+       *
+       * This merges an incoming particle set from neighbour into the local
+       * set. We run through neighbour and assess what to do with the particles
+       * therein. Basically, we look at its state and then decide whether to
+       * enqueue the particle here, too. Furthermore, we do some state switches.
+       * If a particle is local on another rank for example, it has to be
+       * virtual here.
+       *
+       * It is important to study this routine in combination with the (Python)
+       * action set UpdateParallelState which is the routine that actually
+       * manages the parallel lifecycle.
+       *
+       * ## Data ownership
+       *
+       * The merge works with shallow copies. We assume that all necessary real
+       * copying has been done before.
+       *
+       * ## Particle states
+       *
+       * We receive particle sets from other trees. These are sent out after
+       * particles have been touched for the last time there. Therefore,
+       * their parallel state has already changed. It makes no sense to study
+       * the new and the current state. It is the current state only which
+       * determines what type of particle we have here.
+       *
+       * We furthermore can assume that the sending rank has already eliminated
+       * all of its virtual local copies. These stem from other ranks, i.e.
+       * they are always thrown away before we store a vertex. Consequently,
+       * we also do not sent those guys out.
+       *
+       * If we receive a particle with a local marker, then we can be sure that
+       * the sender has decided that this particle is really local within its
+       * tree. Consequently, we add it, but we have to add it as virtual.
+       *
+       * If we receive a particle with a virtual marker, this particle used to
+       * be local on the sending tree but now has left its domain. We really
+       * do not know if the particle will end up in our domain, but for the
+       * time being, we assume it is the case.
+       *
+       * It makes no sense to set the new state of the particle here, as the
+       * merge always precedes the actual first touch of a particle where the
+       * new state is reset anyway.
+       *
+       * ## Clean-up
+       *
+       * If a particle moves from one domain into the other, Peano will
+       * distribute the particle copy among all the other guys and all other
+       * trees will first assume that the particle is local. If it is not, they
+       * will set it to virtual and consequently remove it. In-between they
+       * exchange their local (assumed) particles, so we end up with a particle
+       * accumulation on one rank: Multiple copies of the virtual particle drop
+       * in. One per tree which assumes it were its own local copy. So I have
+       * to remove duplicates.
+       *
+       * The other redundancy results from two adjacent cells on different
+       * trees and a vertex in-between which hosts a particle which is actually
+       * completely outside of the domain. We need two grid sweeps to eliminate
+       * such guys. See the action set UpdateParallelState. In-between, both
+       * adjacent trees send their virtual copy to the counterpart, so we
+       * accumulate local particles and get more and more. We have to eliminate
+       * replicas asap.
+       *
+       *
+       *
+       * @see STDVectorOverVectorOfPointersStack::startReceive()
+       * @see clone()
+       */
       void merge(const {{CLASSNAME}}& neighbour, const peano4::datamanagement::VertexMarker& marker);
       static bool send(const peano4::datamanagement::VertexMarker& marker);
       static bool receiveAndMerge(const peano4::datamanagement::VertexMarker& marker);
       static bool storePersistently(const peano4::datamanagement::VertexMarker& marker);
       static bool loadPersistently(const peano4::datamanagement::VertexMarker& marker);
+
+      /**
+       * This is a deep clone. We get data from somewhere else and create our
+       * own version with which we can work from hereon. Besides the particles,
+       * we also copy (aka clone) the debug x and h values.
+       *
+       * The clone itself is mechanical. When you transfer particles between
+       * two ranks you also have to amend the particle states. Only one particle
+       * on one rank is a real local one, all the others have virtual copies.
+       * This state analysis or flipping is realised within merge().
+       *
+       * @see STDVectorOverVectorOfPointersStack() for a description.
+       */
+      void clone( const {{CLASSNAME}}& otherSet );
+
+      /**
+       * Run over set and remove particles that reside at same location
+       *
+       * Such an eliminate of duplicates can be motivated through physics, but
+       * it is also used by the merger, where it can happen that multiple ranks
+       * tell us about a particle (some of them have virtual copies, some have
+       * local ones). In this case, we however only check the virtual particles.
+       * Those are the bad guys.
+       *
+       * If I check all particles, then I can simply run through the list and
+       * check all the particles that are still to come if they are at the
+       * same position. If I only check virtual particles, then I have to invest
+       * slightly more work. Then I have to run over all particles, as I only
+       * want to eliminate virtual particles and not their non-virtual
+       * counterparts.
+       *
+       * @return Number of eliminated particles
+       */
+      int eliminateSpatialDuplicates(bool examineOnlyVirtualParticles);
+
 
       #ifdef Parallel
       static void initDatatype();

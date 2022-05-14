@@ -8,6 +8,7 @@ from .ParticleAMR                   import ParticleAMR
 from .ParticleParticleInteraction   import ParticleParticleInteraction
 from .ParticleTreeAnalysis          import ParticleTreeAnalysis
 from .UpdateParticleGridAssociation import UpdateParticleGridAssociation
+from .UpdateParallelState           import UpdateParallelState
 from .InsertRandomParticlesIntoUnrefinedCells import InsertRandomParticlesIntoUnrefinedCells
-
+from .InsertParticlesAlongCartesianLayoutIntoUnrefinedCells import InsertParticlesAlongCartesianLayoutIntoUnrefinedCells
 

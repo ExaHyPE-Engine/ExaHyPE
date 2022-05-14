@@ -1,30 +1,68 @@
-
-\noindent
-\Peano's core is a plain C++ application using MPI plus a shared memory
-library.
-It can add support for HDF5, vtk, and so forth;
-depends how your code is configured.
-These underlying libraries/APIs are hidden away from user code by the core.
-At the same time, we provide a Python API which hides away most of the core.
-At one point, you will however be required to program \Peano\ directly with C++. 
+\chapter{Introduction}
+\label{section:python-api-examples:introduction}
 
 
-In the following sections, I run through some of the C++ techniques and features
-of \Peano.
-Many users will never see the majority of them, as they are hidden away---in
-particular if you work with high-level wrappers around \Peano\ such as \ExaHyPE.
-However, some low-level stuff is interesting for everybody: How to use the
-logging and tracing, what support of unit tests does exist, or how to program
-dimension-generic loops.
-Other stuff is more techi, and serves more as a documentation guideline for core
-developers.
-Yet, they also provide rationale why certain things in \Peano\ behave the way
-they do, once you have a large application up and running.
+\begin{itemize}
+  \item What is a action set
+  \item How to set up a project
+  \item \ldots
+\end{itemize}
 
 
 
-% While I document some of the C++ rationale and ideas as well as features, most
-% users can first safely discuss all the C++ chapters and directly jump to the
-% application examples which are modelled through the Python interface.
- 
- 
+
+\subsection{Parallelisation and GPU support}
+
+Follow the configuration recommendation of Section
+\ref{section:particles:swift:hpc} before you continue.
+
+\subsubsection{Domain decomposition}
+
+All domain decomposition is realised via your main routine, and you don't have
+to modify anything besides your main loop if you work shared memory only.
+Once you enable MPI, too, you will have to make some minor modifications.
+\marginpar{Not sure bout this one.}
+
+
+\Peano\ allows you to control the domain decomposition via explicit splits (and
+mergers) of subdomains.
+However, we rely on the load balancing toolbox here.
+The toolbox collects some global information and then triggers splits and merges
+accordingly.
+You have to perform the following steps:
+\begin{itemize}
+  \item Include 
+\begin{code}
+#include "toolbox/loadbalancing/RecursiveSubdivision.h"
+\end{code}
+  \item Create an instance of the load balancer on each MPI rank. It is
+  convenient to insert
+\begin{code}
+toolbox::loadbalancing::RecursiveSubdivision  loadBalancer;
+\end{code}
+  just before the initial
+  \texttt{tarch::mpi::Rank::getInstance().isGlobalMaster()} check. The object
+  accepts a lot of configuration parameters which you can look up in the source
+  code documentation.
+  \item You have to inform your load balancer when an individual step has
+  terminated. This tells the balancer to collect some global statistics and
+  (eventually) to trigger some rebalancing.
+\begin{code}
+loadBalancer.finishStep();
+\end{code}
+  I typically use the load balancer only within the grid construction. Totally
+  dynamic load balancing is something this simple pre-manufactured balancer
+  doesn't properly support anyway.
+\begin{code}
+int gridConstructionSteps = 0;
+while (peano4::parallel::SpacetreeSet::getInstance().getGridStatistics().getStationarySweeps()<5) {
+  examples::particles::observers::CreateGrid createObserver;
+  peano4::parallel::SpacetreeSet::getInstance().traverse(createObserver);
+  gridConstructionSteps++;
+  loadBalancer.finishStep();
+}
+\end{code}
+\end{itemize}
+
+
+
