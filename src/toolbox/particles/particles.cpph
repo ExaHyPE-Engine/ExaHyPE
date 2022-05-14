@@ -37,7 +37,7 @@ void toolbox::particles::insertParticleIntoCell(
 ) {
   std::bitset<Dimensions> targetVertex;
   for (int d=0; d<Dimensions; d++) {
-    targetVertex[d] = p->getX()(d)>marker.x()(d);
+    targetVertex[d] = newParticle->getX()(d)>marker.x()(d);
   }
   fineGridVertices( targetVertex.to_ulong() ).push_back( newParticle );
 }
