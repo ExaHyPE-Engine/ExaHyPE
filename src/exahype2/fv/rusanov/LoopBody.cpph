@@ -814,22 +814,22 @@ void exahype2::fv::rusanov::internal::updateSolutionWithNonconservativeFlux_Loop
   const tarch::la::Vector<Dimensions,double>&  patchCentre,
   const tarch::la::Vector<Dimensions,double>&  patchSize,
   int                                          patchIndex,
-  const tarch::la::Vector<Dimensions,int>&     volumeIndex,
+  const tarch::la::Vector<Dimensions,int>&     faceIndex,
   int                                          unknown,
   double                                       dt,
   int                                          normal,
   double* __restrict__                         QOut,
   const QOutEnumeratorType&                    QOutEnumerator
 ) {
-  tarch::la::Vector<Dimensions,int> leftVolume   = volumeIndex;
-  tarch::la::Vector<Dimensions,int> rightVolume  = volumeIndex;
+  tarch::la::Vector<Dimensions,int> leftVolume   = faceIndex;
+  tarch::la::Vector<Dimensions,int> rightVolume  = faceIndex;
   rightVolume(normal)++;
 
   if (leftVolume(normal)>=0) {
-    QOut[ QOutEnumerator(patchIndex, leftVolume, unknown) ] -= dt / patchSize(normal) * QOutEnumerator._numberOfVolumesPerAxisInPatch * fluxNCP[ fluxEnumerator(patchIndex, leftVolume, unknown) ];
+    QOut[ QOutEnumerator(patchIndex, leftVolume, unknown) ] -= dt / patchSize(normal) * QOutEnumerator._numberOfVolumesPerAxisInPatch * fluxNCP[ fluxEnumerator(patchIndex, faceIndex, unknown) ];
   }
   if (rightVolume(normal)<QOutEnumerator._numberOfVolumesPerAxisInPatch) {
-    QOut[ QOutEnumerator(patchIndex, rightVolume, unknown) ] -= dt / patchSize(normal) * QOutEnumerator._numberOfVolumesPerAxisInPatch * fluxNCP[ fluxEnumerator(patchIndex, leftVolume, unknown) ];
+    QOut[ QOutEnumerator(patchIndex, rightVolume, unknown) ] -= dt / patchSize(normal) * QOutEnumerator._numberOfVolumesPerAxisInPatch * fluxNCP[ fluxEnumerator(patchIndex, faceIndex, unknown) ];
   }
 }
 
