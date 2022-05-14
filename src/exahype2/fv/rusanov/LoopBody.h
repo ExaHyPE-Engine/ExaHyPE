@@ -126,6 +126,25 @@ namespace exahype2 {
 
 
         /**
+         * Copy previous solution over into new time step and add source term
+         *
+         * This is the first step of the Rusanov scheme, where we basically copy
+         * @f$ Q^{(old)} @f$ into @f$ Q^{(new)} @f$. In the same sweep, we also
+         * add the source term subject to the time step size:
+         *
+         * @f$ Q^{(new)} = Q^{(old)} + \Delta t \cdot S(Q^{(old)}) @f$
+         *
+         * We reiterate that Q holds two types of entries: The actual data
+         * subject to the PDE (and fluxes and source terms) and arbitrary
+         * material parameters that the user has specified. Material parameters
+         * are coupling terms, diffusivity parameters in porous rocks, helper
+         * variables that you use to compute some metrics, ...
+         *
+         * The source term affects only the PDE variables. So we copy these
+         * entries in Q over and add the source term contribution, while the
+         * material parameters remain plain copies.
+         *
+         *
          * No SIMD declaration here, as we can't SIMDise over functors
          * anyway.
          *
