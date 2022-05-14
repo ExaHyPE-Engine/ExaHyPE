@@ -10,7 +10,9 @@ class Attribute(object):
    
   """
   def __init__(self, name):
-    self._name = name
+    self._name          = name
+    self.use_data_store = False
+
 
   def get_public_fields(self):
     """
@@ -37,14 +39,21 @@ class Attribute(object):
   def get_plain_C_attributes(self):
     """
     
-      Return list of tuples. The first tuple entry always is the name, 
-      the second one the type. Type has to be plain C.
+      Return list of triples. The first triple entry always is the name, 
+      the second one the type. The third one can be C++ attributes.
+      Type has to be plain C.
       
     """
     return
 
 
   def get_first_plain_C_attribute(self):
+    """
+    
+     For MPI for example, I need to know the first attribute. If you map
+     your attribute onto multiple data types, it is one type that represents the whole thing.
+     
+    """
     return self.get_plain_C_attributes()
 
 

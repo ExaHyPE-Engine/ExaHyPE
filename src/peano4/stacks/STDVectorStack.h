@@ -33,6 +33,11 @@ namespace peano4 {
 
 /**
  * 
+ *
+ * ## Visibility
+ *
+ * The fields are protected, as there are subclasses. They usually differ "only"
+ * in the way they organise the data exchange between parallel entities.
  */
 template <class T>
 class peano4::stacks::STDVectorStack {
@@ -54,7 +59,6 @@ class peano4::stacks::STDVectorStack {
      */
     int                _currentElement;
 
-  protected:
     IOMode              _ioMode;
     int                 _ioRank;
     int                 _ioTag;
@@ -125,7 +129,6 @@ class peano4::stacks::STDVectorStack {
       assertionEquals1( _currentElement, 0, toString() );
       _data.clear();
       _currentElement = data._currentElement;
-      //_data           = data._data;
       _data.resize(_currentElement);
       for (int n = 0; n<_currentElement; n++) {
         _data[n] = data._data[n];

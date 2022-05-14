@@ -31,6 +31,8 @@ java -jar ~/git/DaStGen/DaStGen.jar --plugin PeanoSnippetGenerator --naming Pean
      * types.
      */
     int getTaskType(const std::string&  className);
+
+    //bool isCell
   }
 }
 

@@ -75,8 +75,18 @@ void peano4::datamanagement::CellMarker::setRelativePositionWithinFatherCell( in
 bool peano4::datamanagement::CellMarker::isContained( const tarch::la::Vector<Dimensions,double>& x ) const {
   bool result = true;
   for (int d=0; d<Dimensions; d++) {
+    result &= tarch::la::greaterEquals( x(d), _centre(d)-_h(d)/2.0 );
+    result &= tarch::la::smallerEquals( x(d), _centre(d)+_h(d)/2.0 );
+  }
+  return result;
+}
+
+
+bool peano4::datamanagement::CellMarker::isContainedWithBias( const tarch::la::Vector<Dimensions,double>& x ) const {
+  bool result = true;
+  for (int d=0; d<Dimensions; d++) {
     result &= x(d)>=_centre(d)-_h(d)/2.0;
-    result &= x(d)<=_centre(d)+_h(d)/2.0;
+    result &= x(d)< _centre(d)+_h(d)/2.0;
   }
   return result;
 }

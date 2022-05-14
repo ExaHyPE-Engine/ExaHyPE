@@ -104,8 +104,8 @@ void tarch::plotter::griddata::unstructured::vtk::VTUTextFileWriter::VertexDataW
 
 
 void tarch::plotter::griddata::unstructured::vtk::VTUTextFileWriter::VertexDataWriter::plotVertex( int index, const tarch::la::Vector<2,double>& value ) {
-  assertion(_lastWriteCommandVertexNumber>=-1);
-  assertion(2<=_recordsPerVertex);
+  assertion4(_lastWriteCommandVertexNumber>=-1, _lastWriteCommandVertexNumber, _recordsPerVertex, index, value );
+  assertion4(2<=_recordsPerVertex, _lastWriteCommandVertexNumber, _recordsPerVertex, index, value);
 
   assertion1( value(0) != std::numeric_limits<double>::infinity(), value(0) );
   assertion1( value(0) == value(0), value(0) );  // test for not a number

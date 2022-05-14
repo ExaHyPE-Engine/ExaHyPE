@@ -25,13 +25,17 @@ class Enumeration(Attribute):
   """
   def __init__(self, name, variants):
     Attribute.__init__(self, name)
-    self._variants = variants
+    self._variants    = variants
+    self.compress     = False
+    
     
   def _enum_name(self):
     return self._name[:1].title() + self._name[1:]
 
+
   def get_public_fields(self):
-    result = "    enum class " + self._enum_name() + """: int {
+    result = """
+    enum class """ + self._enum_name() + """: int {
       """
     
     for i in self._variants:
@@ -44,6 +48,7 @@ class Enumeration(Attribute):
     result += """    
     };"""
     return result
+
     
   def get_methods(self,_full_qualified_name):
     accessor_name = self._name[:1].title() + self._name[1:]
@@ -52,21 +57,32 @@ class Enumeration(Attribute):
       ("set" + accessor_name + "(" + accessor_name + " value)", "void")
     ]
 
+
   def get_plain_C_attributes(self):
-    return [ ("_" + self._name, self._enum_name() ) ]
+    if self.compress:
+      return [ ("_" + self._name, self._enum_name(), "[[clang::compress]]" ) ]
+    else:
+      return [ ("_" + self._name, self._enum_name(), "" ) ]
+
 
   def get_method_body(self,signature):
-    if signature.startswith( "get" ):
+    if signature.startswith( "get" ) and self.use_data_store:
+      return "  return _dataStore._" + self._name + ";\n"
+    elif signature.startswith( "set" ) and self.use_data_store:
+      return "  _dataStore._" + self._name + " = value;\n"
+    elif signature.startswith( "get" ) and not self.use_data_store:
       return "  return _" + self._name + ";\n"
-    elif signature.startswith( "set" ):
+    elif signature.startswith( "set" ) and not self.use_data_store:
       return "  _" + self._name + " = value;\n"
     else:
       assert(False)
     return ""
+
   
   def get_native_MPI_type(self):
     return [ ("MPI_INT", 1) ]
   
+
   def get_to_string(self):
     """
     
@@ -77,7 +93,10 @@ class Enumeration(Attribute):
     for i in self._variants:
       if self._variants.index(i) != 0:
         result += " << "
-      result += "(_" + self._name + "=="
+      if self.use_data_store:
+        result += "(_dataStore._" + self._name + "=="
+      else:
+        result += "(_" + self._name + "=="
       result += self._enum_name()
       result += "::"
       result += i

@@ -1,0 +1,43 @@
+#include "tarch/la/VectorVectorOperations.h"
+
+
+template <typename Particle>
+bool toolbox::particles::particleWillStayWithinComputationalDomain(
+  const Particle&                              particle,
+  const tarch::la::Vector<Dimensions,double>&  domainOffset,
+  const tarch::la::Vector<Dimensions,double>&  domainWidth
+) {
+  return particle.getParallelState()==Particle::ParallelState::Local
+     and tarch::la::allGreaterEquals( particle.getX(), domainOffset )
+     and tarch::la::allSmallerEquals( particle.getX(), domainOffset + domainWidth );
+}
+
+
+template <typename Particle, typename ParticleSet >
+void toolbox::particles::insertParticlesIntoCell(
+  const peano4::datamanagement::CellMarker&                 marker,
+  const std::vector< Particle* >&                           newParticles,
+  peano4::datamanagement::VertexEnumerator< ParticleSet >&  fineGridVertices
+) {
+  for (auto& p: newParticles) {
+    std::bitset<Dimensions> targetVertex;
+    for (int d=0; d<Dimensions; d++) {
+      targetVertex[d] = p->getX()(d)>marker.x()(d);
+    }
+    fineGridVertices( targetVertex.to_ulong() ).push_back( p );
+  }
+}
+
+
+template <typename Particle, typename ParticleSet >
+void toolbox::particles::insertParticleIntoCell(
+  const peano4::datamanagement::CellMarker&                 marker,
+  Particle*                                                 newParticle,
+  peano4::datamanagement::VertexEnumerator< ParticleSet >&  fineGridVertices
+) {
+  std::bitset<Dimensions> targetVertex;
+  for (int d=0; d<Dimensions; d++) {
+    targetVertex[d] = p->getX()(d)>marker.x()(d);
+  }
+  fineGridVertices( targetVertex.to_ulong() ).push_back( newParticle );
+}
