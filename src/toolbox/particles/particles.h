@@ -36,6 +36,13 @@ namespace toolbox {
       const std::vector< Particle* >&                           newParticles,
       peano4::datamanagement::VertexEnumerator< ParticleSet >&  fineGridVertices
     );
+
+    template <typename Particle, typename ParticleSet >
+    void insertParticleIntoCell(
+      const peano4::datamanagement::CellMarker&                 marker,
+      Particle*                                                 newParticles,
+      peano4::datamanagement::VertexEnumerator< ParticleSet >&  fineGridVertices
+    );
   }
 }
 

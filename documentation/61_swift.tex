@@ -109,12 +109,12 @@ Section~\ref{section:logging:log-filter} for some remarks on how to filter the
 output properly.
 
 
-\subsection{todo}
-Python API muss
-\begin{itemize}
-  \item swift2.filter-file erzeugen und lesen
-  \item Load balancing offerieren
-\end{itemize}
+% \subsection{todo}
+% Python API muss
+% \begin{itemize}
+%   \item swift2.filter-file erzeugen und lesen
+%   \item Load balancing offerieren
+% \end{itemize}
 
 
 \subsection{High-performance computing}
@@ -144,11 +144,9 @@ You will need
 import peano4.toolbox.particles
 \end{code}
 
-No particular configuration of the compute kernel is required.
-To get something up and started, I recommend that you run the Jupyter notebook
-at \texttt{examples/particles}.
-It implements a very simple gravity $N$-body problem.
-
+\noindent
+I assume that you are familiar from hereon with \Peano's basics, i.e.~you know 
+how to create a project, 
 
 \subsection{Introduce a new particle}
 
@@ -179,9 +177,20 @@ particles = peano4.toolbox.particles.ParticleSet(particle)
 
 
 \noindent
+The \Peano\ particle has some additional attributes as they are discussed in 
+Section \ref{section:swift:backbone:data-model} and thereafter. 
+For the user, it is usually sufficient to recognise that each particle by 
+default has a position \texttt{x} and and a cut-off radius
+\texttt{cutOffRadius}.
+You can query and modify both values through \texttt{setX}, \texttt{getX},
+\texttt{getCutOffRadius} and \texttt{setCutOffRadius}, respectively.
+
+
 We next add the particles to the project and we notify the vertices that there 
 are particles which have to be administered. 
-I discuss why to use vertices below in the section about the dual tree.
+I discuss why and how pidt uses vertices in Section
+\ref{section:swift:backbone:dual-trees} though users might (initially) skip such
+background info. 
 
 \begin{code}
 project.datamodel.add_global_object(particle)
@@ -197,180 +206,81 @@ administer the particles.
 create_grid.use_vertex(particles)
 \end{code}
 
-
-
-\subsection{Parallelisation and GPU support}
-
-Follow the configuration recommendation of Section
-\ref{section:particles:swift:hpc} before you continue.
-
-\subsubsection{Domain decomposition}
-
-All domain decomposition is realised via your main routine, and you don't have
-to modify anything besides your main loop if you work shared memory only.
-Once you enable MPI, too, you will have to make some minor modifications.
-\marginpar{Not sure bout this one.}
-
-
-\Peano\ allows you to control the domain decomposition via explicit splits (and
-mergers) of subdomains.
-However, we rely on the load balancing toolbox here.
-The toolbox collects some global information and then triggers splits and merges
-accordingly.
-You have to perform the following steps:
-\begin{itemize}
-  \item Include 
-\begin{code}
-#include "toolbox/loadbalancing/RecursiveSubdivision.h"
-\end{code}
-  \item Create an instance of the load balancer on each MPI rank. It is
-  convenient to insert
-\begin{code}
-toolbox::loadbalancing::RecursiveSubdivision  loadBalancer;
-\end{code}
-  just before the initial
-  \texttt{tarch::mpi::Rank::getInstance().isGlobalMaster()} check. The object
-  accepts a lot of configuration parameters which you can look up in the source
-  code documentation.
-  \item You have to inform your load balancer when an individual step has
-  terminated. This tells the balancer to collect some global statistics and
-  (eventually) to trigger some rebalancing.
-\begin{code}
-loadBalancer.finishStep();
-\end{code}
-  I typically use the load balancer only within the grid construction. Totally
-  dynamic load balancing is something this simple pre-manufactured balancer
-  doesn't properly support anyway.
-\begin{code}
-int gridConstructionSteps = 0;
-while (peano4::parallel::SpacetreeSet::getInstance().getGridStatistics().getStationarySweeps()<5) {
-  examples::particles::observers::CreateGrid createObserver;
-  peano4::parallel::SpacetreeSet::getInstance().traverse(createObserver);
-  gridConstructionSteps++;
-  loadBalancer.finishStep();
-}
-\end{code}
-\end{itemize}
-
-
-
-
-\section{Data model}
-
-Any particle in \Peano\ has a few basic properties:
-
-\begin{itemize}
-  \item The position of the vertex it belongs to plus the size of this vertex's
-  surrounding mesh elements. This is debug information that you won't keep and
-  maintain in release mode.
-  \item A position in space;
-  \item A move state. This can be \texttt{new}, \texttt{NotMovedYet} or
-  \texttt{Moved}. I call it move state but it really is a marker that indicates
-  if a particle is new or, otherwise, if it as been updated already. If
-  particles run through the domain and if I run through this domain cell by
-  cell, then I quickly loose overview which particles have been updated already
-  and which haven't. The flag makes my live easier.
-  \item A parallelisation state. Particles can be \texttt{Local}, they can be
-  \texttt{Halo}, i.e.~belong to a different core/rank and thus are just mirrored
-  locally, or they can be \texttt{Virtual}. Particles can reside on
-  a coarser mesh level (see discussion below) and the virtual particle in this
-  case is just a link to the real particle on the coarser mesh.
-  \item As particles move through the domain (and change their cut-off
-  radius---see below), they can also move between ranks or up and down in the
-  mesh hierarchy. Therefore, there are two parallelisation states: The current
-  one (old) from the previous grid sweep and a new one which is used to derive
-  the state for the next sweep.
-  \item A cut-off radius, i.e.~an environment of particles witch which it
-  interacts.
-\end{itemize}
-
-
 \noindent
-There are two ways to create the C++ code for particles: 
-We can go through Peano's Python-DaStGen interface, or we can model data
-directly via DaStGen 2.
-For speed reasons, the latter variant is the better one.
+Let's assume that our project is spanning the namespace
+\texttt{examples::someparticles}.
+ In the example above where our particle is
+called \texttt{Particle}, we will end up with two classes:
+\linebreak
+\texttt{examples::someparticles::globaldata::Particle} is the actual particle
+class. 
+When you open the generated C++ code, you'll recognise that it is a 1:1 mapping
+of the Python attributes onto a C++ class with some additional routines used by
+\Peano\ internally.
+There is a further class
+\texttt{examples::someparticles::vertexdata::ParticleSet}.
+As the name says, this is the actual data associated with each vertex.
+It is a specialisation of \texttt{std::vector} over pointers to
+\texttt{examples::someparticles::globaldata::Particle}.
+
+We summarise that each vertex holds a vector to pointers over particles.
+The actual particles reside on the heap.
 
 
 
+\subsection{Create particles}
+
+To create a particle, you in principle just allocate it on the heap, and then
+you add it to its nearest vertex.
+Furthermore, there are some mandatory attributes that aways have to be set. 
+Therefore, I recommend that you use the toolbox' initialisation routine to set
+up particles correctly.
 
 
+In principle, it does not matter where you create the particle.
+You can do so in \texttt{touchCellFirstTime()} or in a cell event. 
+I usually use a cell event:
 
 
-\section{Dual trees}
+\begin{code}
+#include "toolbox/particles/ParticleFactory.h"
 
-Particles are stored within the spacetree.
-They are not necessarily stored on the finest mesh of the tree.
+examples::someparticles::globaldata::Particle* myNewParticle = 
+  new examples::someparticles::globaldata::Particle();
+  
+// assume x and cutOffRadius are set to something meaningful
+toolbox::particles::init( *myNewParticle, x, cutOffRadius );
 
-\begin{itemize}
-  \item A particle resides on a mesh level within the tree such that the
-  cut off radius $r \leq h$ if $h$ is the resolution of this level.
-  \item A particle is associated to the vertex of this level that's closest to
-  its centre $x$.
-\end{itemize}
+toolbox::particles::init( *myNewParticle, x, cutOffRadius );
 
-\noindent
-These two conventions effectively span a dual grid over the spacetree if you
-think of particles to be stored within cells.
-\Peano\ automatically maintains these relations if you add the action set 
-\texttt{peano4.toolbox.particles.UpdateParticleGridAssociation} to your
-algorithmic steps.
-As the convention relies on a smaller-equals sign, adaptive meshes are
-automatically supported.
-If particles travel through your domain and the mesh is not very fine, they
-end up in the tree leaves.
-If particles have a large cut-off radius, they are stored in rather coarse
-levels of the tree.
+\end{code}
 
 
-If you change the cut-off radius or the position of a particle, the particle
-will stay within its current cell/vertex within the tree.
-In the next grid sweep, it will however we held by the ``correct'' vertex,
-i.e.~its grid-vertex association will be updated.
-
-
-If you add the action set
-\texttt{peano4.toolbox.particles.PlotParticlesInVTKFormat} to your algorithm
-step, the resulting file will contain all associativity information.
-You can plot to which vertex a particle belongs to.
-
-
-\paragraph{Example:}
-
-\begin{center}
- \includegraphics[width=0.25\textwidth]{61_pidt/dual-tree.pdf}
-\end{center}
-
-\noindent
-A tree with three levels.
-Particles with a large cut-off radius (red) are held on rather coarse levels.
-Particles with very small cut-off are sorted (dropped) into the fine grid
-levels.
-Each particle is always associated to its closest vertex (dotted line).
-It is the mesh which holds (owns) the vertices.
-The toolset's predefined action set can automatically maintain/update these
-associations after each grid sweep.
-It also moves particles up and down the grid hierarchy if the particles' cut-off
-radius changes or the grid changes.
-
-
+\subsection{Move particles}
 
 \begin{definition}
-  Our storage is vertex-oriented whereas most particle literature stores
-  particles within cells.
-  If we think of a dual multiscale mesh, i.e.~a mesh that is shifed by $h/2$
-  alon each coordinate axis, then \Peano's approach also works with cells.
-  Such shifted meshes are often called \emph{dual} meshes and I therefore speak
-  of a \emph{dual tree}.
+ In \Swift's \emph{dual tree} storage scheme, particles are always stored to
+ their nearest neighbour.
 \end{definition}
 
 
+To create a particle, you in principle just allocate it on the heap, and then
+you add it to its nearest vertex.
 
-\section{Particle-particle interaction}
+
+\begin{definition}
+ In \Swift's \emph{dual tree} storage scheme, we always hold the
+ complete spacetree with all tree (grid) levels. Particles are always stored on
+ the finest mesh (tree) level where the mesh size is bigger than the particle's
+ cut-off radius. 
+ Different particles with different cut-off radii might thus be stored on
+ different tree levels.
+\end{definition}
 
 
-\Peano\ always runs through the mesh top-down, i.e.~it traverses the spacetree
-in a depth-first fashion.
+\subsection{Particle-particle interaction}
+
+
 
 
 Per cell, the code assembles a \texttt{local set}. 
@@ -460,6 +370,177 @@ Lagrangian code:
   are held per cell at least, e.g., while the cut-off radius feeds naturally
   into the AMR.
 \end{enumerate}
+
+
+
+\subsection{Parallelisation and GPU support}
+
+Follow the configuration recommendation of Section
+\ref{section:particles:swift:hpc} before you continue.
+
+\subsubsection{Domain decomposition}
+
+All domain decomposition is realised via your main routine, and you don't have
+to modify anything besides your main loop if you work shared memory only.
+Once you enable MPI, too, you will have to make some minor modifications.
+\marginpar{Not sure bout this one.}
+
+
+\Peano\ allows you to control the domain decomposition via explicit splits (and
+mergers) of subdomains.
+However, we rely on the load balancing toolbox here.
+The toolbox collects some global information and then triggers splits and merges
+accordingly.
+You have to perform the following steps:
+\begin{itemize}
+  \item Include 
+\begin{code}
+#include "toolbox/loadbalancing/RecursiveSubdivision.h"
+\end{code}
+  \item Create an instance of the load balancer on each MPI rank. It is
+  convenient to insert
+\begin{code}
+toolbox::loadbalancing::RecursiveSubdivision  loadBalancer;
+\end{code}
+  just before the initial
+  \texttt{tarch::mpi::Rank::getInstance().isGlobalMaster()} check. The object
+  accepts a lot of configuration parameters which you can look up in the source
+  code documentation.
+  \item You have to inform your load balancer when an individual step has
+  terminated. This tells the balancer to collect some global statistics and
+  (eventually) to trigger some rebalancing.
+\begin{code}
+loadBalancer.finishStep();
+\end{code}
+  I typically use the load balancer only within the grid construction. Totally
+  dynamic load balancing is something this simple pre-manufactured balancer
+  doesn't properly support anyway.
+\begin{code}
+int gridConstructionSteps = 0;
+while (peano4::parallel::SpacetreeSet::getInstance().getGridStatistics().getStationarySweeps()<5) {
+  examples::particles::observers::CreateGrid createObserver;
+  peano4::parallel::SpacetreeSet::getInstance().traverse(createObserver);
+  gridConstructionSteps++;
+  loadBalancer.finishStep();
+}
+\end{code}
+\end{itemize}
+
+
+
+
+
+\section{Algorithmic and data backbone}
+
+\subsection{Data model}
+\label{section:swift:backbone:data-model}
+
+
+Any particle in \Peano\ has a few basic properties:
+
+\begin{itemize}
+  \item The position of the vertex it belongs to plus the size of this vertex's
+  surrounding mesh elements. This is debug information that you won't keep and
+  maintain in release mode.
+  \item A position in space;
+  \item A move state. This can be \texttt{new}, \texttt{NotMovedYet} or
+  \texttt{Moved}. I call it move state but it really is a marker that indicates
+  if a particle is new or, otherwise, if it as been updated already. If
+  particles run through the domain and if I run through this domain cell by
+  cell, then I quickly loose overview which particles have been updated already
+  and which haven't. The flag makes my live easier.
+  \item A parallelisation state. Particles can be \texttt{Local}, or they can
+  be \texttt{Virtual}, i.e.~mirrored from another tree.
+  \item A cut-off radius, i.e.~an environment of particles witch which it
+  interacts.
+\end{itemize}
+
+
+\noindent
+There are two ways to create the C++ code for particles: 
+We can go through Peano's Python-DaStGen interface, or we can model data
+directly via DaStGen 2.
+For speed reasons, the latter variant is the better one.
+
+
+
+
+
+
+
+\subsection{Dual trees}
+\label{section:swift:backbone:dual-trees}
+
+Particles are stored within the spacetree.
+They are not necessarily stored on the finest mesh of the tree.
+
+\begin{itemize}
+  \item A particle resides on a mesh level within the tree such that the
+  cut off radius $r \leq h$ if $h$ is the resolution of this level.
+  \item A particle is associated to the vertex of this level that's closest to
+  its centre $x$.
+\end{itemize}
+
+\noindent
+These two conventions effectively span a dual grid over the spacetree if you
+think of particles to be stored within cells.
+\Peano\ automatically maintains these relations if you add the action set 
+\texttt{peano4.toolbox.particles.UpdateParticleGridAssociation} to your
+algorithmic steps.
+As the convention relies on a smaller-equals sign, adaptive meshes are
+automatically supported.
+If particles travel through your domain and the mesh is not very fine, they
+end up in the tree leaves.
+If particles have a large cut-off radius, they are stored in rather coarse
+levels of the tree.
+
+
+If you change the cut-off radius or the position of a particle, the particle
+will stay within its current cell/vertex within the tree.
+In the next grid sweep, it will however we held by the ``correct'' vertex,
+i.e.~its grid-vertex association will be updated.
+
+
+If you add the action set
+\texttt{peano4.toolbox.particles.PlotParticlesInVTKFormat} to your algorithm
+step, the resulting file will contain all associativity information.
+You can plot to which vertex a particle belongs to.
+
+
+\paragraph{Example:}
+
+\begin{center}
+ \includegraphics[width=0.25\textwidth]{61_pidt/dual-tree.pdf}
+\end{center}
+
+\noindent
+A tree with three levels.
+Particles with a large cut-off radius (red) are held on rather coarse levels.
+Particles with very small cut-off are sorted (dropped) into the fine grid
+levels.
+Each particle is always associated to its closest vertex (dotted line).
+It is the mesh which holds (owns) the vertices.
+The toolset's predefined action set can automatically maintain/update these
+associations after each grid sweep.
+It also moves particles up and down the grid hierarchy if the particles' cut-off
+radius changes or the grid changes.
+
+
+
+\begin{definition}
+  Our storage is vertex-oriented whereas most particle literature stores
+  particles within cells.
+  If we think of a dual multiscale mesh, i.e.~a mesh that is shifed by $h/2$
+  alon each coordinate axis, then \Peano's approach also works with cells.
+  Such shifted meshes are often called \emph{dual} meshes and I therefore speak
+  of a \emph{dual tree}.
+\end{definition}
+
+
+\subsection{Dual tree traversal}
+
+\Peano\ always runs through the mesh top-down, i.e.~it traverses the spacetree
+in a depth-first fashion.
 
 
 \section*{Links and further reading}

@@ -29,4 +29,15 @@ void toolbox::particles::insertParticlesIntoCell(
 }
 
 
-// just insert them; will be re-assigned then anyway
+template <typename Particle, typename ParticleSet >
+void toolbox::particles::insertParticleIntoCell(
+  const peano4::datamanagement::CellMarker&                 marker,
+  Particle*                                                 newParticle,
+  peano4::datamanagement::VertexEnumerator< ParticleSet >&  fineGridVertices
+) {
+  std::bitset<Dimensions> targetVertex;
+  for (int d=0; d<Dimensions; d++) {
+    targetVertex[d] = p->getX()(d)>marker.x()(d);
+  }
+  fineGridVertices( targetVertex.to_ulong() ).push_back( newParticle );
+}
