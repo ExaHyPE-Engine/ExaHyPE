@@ -71,12 +71,13 @@ void cartesian_product(Collection1&& collection1, Collection2&& collection2, aut
                 collection2.begin(),
                 collection2.end(),
                 [&i,&func](auto j){
-                    func(i,j,k);
+                    func(i,j);
                 }
             );
         }
     );
 }
+
 
 template <
   typename Solver,
@@ -137,11 +138,11 @@ void exahype2::fv::rusanov::cpp::timeStepWithRusanov_patchwise_heap_static_calls
 
 
   for (int patchIndex=0; patchIndex<hostPatchData.numberOfCells; patchIndex++) {
-    const double* currentQIn  = hostPatchData.QIn[patchIndex];
-    double*       currentQOut = hostPatchData.QOut[patchIndex];
+    double* currentQIn  = hostPatchData.QIn[patchIndex];
+    double* currentQOut = hostPatchData.QOut[patchIndex];
 
-    mappedPointersToQIn[patchIndex]  = (double*) omp_get_mapped_ptr( currentQIn,  targetDevice );
-    mappedPointersToQOut[patchIndex] = (double*) omp_get_mapped_ptr( currentQOut, targetDevice );
+    mappedPointersToQIn[patchIndex]  = currentQIn;
+    mappedPointersToQOut[patchIndex] = currentQOut;
   }
 
   const int numberOfCells            = hostPatchData.numberOfCells;
@@ -154,8 +155,7 @@ void exahype2::fv::rusanov::cpp::timeStepWithRusanov_patchwise_heap_static_calls
   for (int patchIndex=0; patchIndex<numberOfCells; patchIndex++) {
 
     // @todo docu manual assembly of patch data meta object on GPU
-    helper::OpenMPGPUCellData patchData;
-    patchData.numberOfCells = numberOfCells;
+    ::exahype2::CellData patchData(numberOfCells);
     patchData.patchCentre   = (tarch::la::Vector<Dimensions,double>*)(rawPointerToPatchCentres);
     patchData.patchSize     = (tarch::la::Vector<Dimensions,double>*)(rawPointerToPatchSizes);
     patchData.QIn           = mappedPointersToQIn;
@@ -247,7 +247,7 @@ void exahype2::fv::rusanov::cpp::timeStepWithRusanov_patchwise_heap_static_calls
             tempEigenvalueX,
             eigenvalueEnumerator
         );
-      }
+      });
 
       cartesian_product(aux_range2, dim_range, [&](int y, int x) {
         internal::computeMaxEigenvalue_LoopBody<Solver>(
@@ -262,7 +262,7 @@ void exahype2::fv::rusanov::cpp::timeStepWithRusanov_patchwise_heap_static_calls
             tempEigenvalueY,
             eigenvalueEnumerator
         );
-      }
+      });
 
       cartesian_product(dim_range, dim_range, unknown_range, [&](int y, int x, int unknown) {
         internal::updateSolutionWithEigenvalueDamping_LoopBody(
@@ -281,7 +281,7 @@ void exahype2::fv::rusanov::cpp::timeStepWithRusanov_patchwise_heap_static_calls
           patchData.QOut[patchIndex],
           QOutEnumerator
         );
-      } 
+      });
     }
     else {
       cartesian_product(dim_range, dim_range, aux_range2, [&](int z, int y, int x) {
@@ -297,7 +297,7 @@ void exahype2::fv::rusanov::cpp::timeStepWithRusanov_patchwise_heap_static_calls
           tempEigenvalueX,
           eigenvalueEnumerator
         );
-      }
+      });
 
       cartesian_product(dim_range, aux_range2, dim_range, [&](int z, int y, int x) {
         internal::computeMaxEigenvalue_LoopBody<Solver>(
@@ -312,7 +312,7 @@ void exahype2::fv::rusanov::cpp::timeStepWithRusanov_patchwise_heap_static_calls
               tempEigenvalueY,
               eigenvalueEnumerator
         );
-      }
+      });
 
       cartesian_product(aux_range2, dim_range, dim_range, [&](int z, int y, int x) {
         internal::computeMaxEigenvalue_LoopBody<Solver>(
@@ -327,7 +327,7 @@ void exahype2::fv::rusanov::cpp::timeStepWithRusanov_patchwise_heap_static_calls
               tempEigenvalueZ,
               eigenvalueEnumerator
         );
-      }
+      });
 
       cartesian_product(dim_range, dim_range, dim_range, unknown_range, [&](int z, int y, int x, int unknown) {
         internal::updateSolutionWithEigenvalueDamping_LoopBody(
@@ -346,7 +346,7 @@ void exahype2::fv::rusanov::cpp::timeStepWithRusanov_patchwise_heap_static_calls
           patchData.QOut[patchIndex],
           QOutEnumerator
         );
-      }
+      });
     }
 
 
@@ -365,7 +365,7 @@ void exahype2::fv::rusanov::cpp::timeStepWithRusanov_patchwise_heap_static_calls
           tempFluxX,
           fluxEnumerator
         );
-      }
+      });
 
       cartesian_product(aux_range2, dim_range, [&](int y, int x) {
         internal::computeFlux_LoopBody<Solver>(
@@ -381,7 +381,7 @@ void exahype2::fv::rusanov::cpp::timeStepWithRusanov_patchwise_heap_static_calls
           tempFluxY,
           fluxEnumerator
         );
-      }
+      });
 
       cartesian_product(dim_range, dim_range, unknown_range, [&](int y, int x, int unknown) {
         internal::updateSolutionWithFlux_LoopBody(
@@ -396,7 +396,7 @@ void exahype2::fv::rusanov::cpp::timeStepWithRusanov_patchwise_heap_static_calls
           *(patchData.QOut + patchIndex),
           QOutEnumerator
         );
-      }
+      });
     }
 
     else if (evaluateFlux and Dimensions==3) {
@@ -414,7 +414,7 @@ void exahype2::fv::rusanov::cpp::timeStepWithRusanov_patchwise_heap_static_calls
           tempFluxX,
           fluxEnumerator
         );
-      }
+      });
 
       cartesian_product(dim_range, aux_range2, dim_range, [&](int z, int y, int x) {
         internal::computeFlux_LoopBody<Solver>(
@@ -430,7 +430,7 @@ void exahype2::fv::rusanov::cpp::timeStepWithRusanov_patchwise_heap_static_calls
           tempFluxY,
           fluxEnumerator
         );
-      }
+      });
 
       cartesian_product(aux_range2, dim_range, dim_range, [&](int z, int y, int x) {
         internal::computeFlux_LoopBody<Solver>(
@@ -446,7 +446,7 @@ void exahype2::fv::rusanov::cpp::timeStepWithRusanov_patchwise_heap_static_calls
           tempFluxZ,
           fluxEnumerator
         );
-      }
+      });
 
       cartesian_product(dim_range, dim_range, dim_range, unknown_range, [&](int z, int y, int x, int unknown) {
         internal::updateSolutionWithFlux_LoopBody(
@@ -461,7 +461,7 @@ void exahype2::fv::rusanov::cpp::timeStepWithRusanov_patchwise_heap_static_calls
           *(patchData.QOut + patchIndex),
           QOutEnumerator
         );
-      }
+      });
     }
 
 
@@ -480,7 +480,7 @@ void exahype2::fv::rusanov::cpp::timeStepWithRusanov_patchwise_heap_static_calls
           tempNonconservativeProductX,
           ncpEnumerator
         );
-      }
+      });
 
       cartesian_product(aux_range3, dim_range, [&](int y, int x) {
         internal::computeNonconservativeFlux_LoopBody<Solver>(
@@ -496,7 +496,7 @@ void exahype2::fv::rusanov::cpp::timeStepWithRusanov_patchwise_heap_static_calls
           tempNonconservativeProductY,
           ncpEnumerator
         );
-      }
+      });
 
       cartesian_product(dim_range, dim_range, unknown_range, [&](int y, int x, int unknown) {
         internal::updateSolutionWithNonconservativeFlux_LoopBody(
@@ -511,7 +511,7 @@ void exahype2::fv::rusanov::cpp::timeStepWithRusanov_patchwise_heap_static_calls
           *(patchData.QOut + patchIndex),
           QOutEnumerator
         );
-      }
+      });
     }
     else if (evaluateNonconservativeProduct and Dimensions==3) {
         cartesian_product(dim_range, dim_range, aux_range3, [&](int z, int y, int x) {
@@ -528,7 +528,7 @@ void exahype2::fv::rusanov::cpp::timeStepWithRusanov_patchwise_heap_static_calls
             tempNonconservativeProductX,
             ncpEnumerator
           );
-        }
+        });
 
         cartesian_product(dim_range, aux_range3, dim_range, [&](int z, int y, int x) {
           internal::computeNonconservativeFlux_LoopBody<Solver>(
@@ -544,7 +544,7 @@ void exahype2::fv::rusanov::cpp::timeStepWithRusanov_patchwise_heap_static_calls
             tempNonconservativeProductY,
             ncpEnumerator
           );
-        }
+        });
 
         cartesian_product(aux_range3, dim_range, dim_range, [&](int z, int y, int x) {
           internal::computeNonconservativeFlux_LoopBody<Solver>(
@@ -560,7 +560,7 @@ void exahype2::fv::rusanov::cpp::timeStepWithRusanov_patchwise_heap_static_calls
             tempNonconservativeProductZ,
             ncpEnumerator
           );
-        }
+        });
 
         cartesian_product(dim_range, dim_range, dim_range, unknown_range, [&](int z, int y, int x, int unknown) {
           internal::updateSolutionWithNonconservativeFlux_LoopBody(
@@ -575,7 +575,7 @@ void exahype2::fv::rusanov::cpp::timeStepWithRusanov_patchwise_heap_static_calls
             *(patchData.QOut + patchIndex),
             QOutEnumerator
           );
-        }
+        });
     }
     if (evaluateMaximumEigenvalueAfterTimeStep and Dimensions==2) {
       logDebug( "timeStepWithRusanov_overlap1_sequential(...)", "compute maximum eigenvalue for subsequent time step" );
@@ -594,7 +594,7 @@ void exahype2::fv::rusanov::cpp::timeStepWithRusanov_patchwise_heap_static_calls
             patchData.dt[patchIndex]
           )
         );
-      }
+      });
       patchData.maxEigenvalue[patchIndex] = newMaxEigenvalue;
     }
     else if (evaluateMaximumEigenvalueAfterTimeStep) {
@@ -613,7 +613,7 @@ void exahype2::fv::rusanov::cpp::timeStepWithRusanov_patchwise_heap_static_calls
             patchData.dt[patchIndex]
           )
         );
-      }
+      });
     }
   } // This is the end of the target offloading block
 
