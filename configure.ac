@@ -580,11 +580,16 @@ AC_ARG_WITH(otter,
   AC_HELP_STRING([--with-otter], [enable Otter [default=false]]),
   [ AC_MSG_CHECKING(for otter)
     case "${withval}" in
-      no)    AC_MSG_RESULT(no);    toolbox_otter=false ;;
-      *)     AC_MSG_RESULT(yes);   toolbox_otter=true  ;;
+      no)    AC_MSG_RESULT(no);    use_otter=false ;;
+      *)     AC_MSG_RESULT(yes);   use_otter=true  ;;
     esac ],
-  [ AC_MSG_CHECKING(for otter); AC_MSG_RESULT(no); toolbox_otter=false ])
-AM_CONDITIONAL([UseOtter],[test "x$toolbox_otter" = xtrue])
+  [ AC_MSG_CHECKING(for otter); AC_MSG_RESULT(no); use_otter=false ])
+AM_CONDITIONAL([UseOtter],[test "x$use_otter" = xtrue])
+
+# internal toolboxes don't need ifdefs, but here we need them
+if test "$use_otter" == true; then
+  AC_DEFINE([UseOtter], [UseOtter], [UseOtter])
+fi
 
 
 
