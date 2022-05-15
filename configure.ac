@@ -574,7 +574,7 @@ AM_CONDITIONAL([UseDelta],[test "$toolbox_delta" != false])
 
 
 #
-# FEM 
+# Otter
 #
 AC_ARG_WITH(otter,
   AC_HELP_STRING([--with-otter], [enable Otter [default=false]]),
@@ -770,60 +770,6 @@ if test "$smartmpi" == Merged; then
 fi
 if test "$smartmpi" == Alternating; then
   AC_DEFINE([UseSmartMPI], [Alternating], [UseSmartMPI])
-fi
-if test "$smartmpi" != false; then
-  if test "$mpi" == false; then
-    AC_MSG_ERROR([SmartMPI requires an MPI build of Peano])
-  fi
-  LDADD_PEANO_2D_RELEASE+=" -lsmartmpi "
-  LDADD_PEANO_2D_STATS+="   -lsmartmpi "
-  LDADD_PEANO_2D_ASSERTS+=" -lsmartmpi_debug " 
-  LDADD_PEANO_2D_TRACE+="   -lsmartmpi "
-  LDADD_PEANO_2D_DEBUG+="   -lsmartmpi_debug "
-
-  LDADD_PEANO_3D_RELEASE+=" -lsmartmpi "
-  LDADD_PEANO_3D_STATS+="   -lsmartmpi "
-  LDADD_PEANO_3D_ASSERTS+=" -lsmartmpi_debug " 
-  LDADD_PEANO_3D_TRACE+="   -lsmartmpi "
-  LDADD_PEANO_3D_DEBUG+="   -lsmartmpi_debug "
-fi
-
-
-#
-# Delta
-#
-if test "$toolbox_delta" != false; then
-  AC_DEFINE([UseDelta], [1], [UseDelta])
-  LDADD_PEANO_2D_RELEASE+=" -ldelta2d "
-  LDADD_PEANO_2D_STATS+="   -ldelta2d "
-  LDADD_PEANO_2D_ASSERTS+=" -ldelta2d " 
-  LDADD_PEANO_2D_TRACE+="   -ldelta2d "
-  LDADD_PEANO_2D_DEBUG+="   -ldelta2d "
-
-  LDADD_PEANO_3D_RELEASE+=" -ldelta3d "
-  LDADD_PEANO_3D_STATS+="   -ldelta3d "
-  LDADD_PEANO_3D_ASSERTS+=" -ldelta3d " 
-  LDADD_PEANO_3D_TRACE+="   -ldelta3d "
-  LDADD_PEANO_3D_DEBUG+="   -ldelta3d "
-fi
-
-
-#
-# Otter
-#
-if test "$toolbox_otter" != false; then
-  AC_DEFINE([UseOtter], [1], [UseOtter])
-  LDADD_PEANO_2D_RELEASE+=" -lotter "
-  LDADD_PEANO_2D_STATS+="   -lotter "
-  LDADD_PEANO_2D_ASSERTS+=" -lotter " 
-  LDADD_PEANO_2D_TRACE+="   -lotter "
-  LDADD_PEANO_2D_DEBUG+="   -lotter "
-
-  LDADD_PEANO_3D_RELEASE+=" -lotter "
-  LDADD_PEANO_3D_STATS+="   -lotter "
-  LDADD_PEANO_3D_ASSERTS+=" -lotter " 
-  LDADD_PEANO_3D_TRACE+="   -lotter "
-  LDADD_PEANO_3D_DEBUG+="   -lotter "
 fi
 
 
