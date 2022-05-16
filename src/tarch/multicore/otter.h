@@ -40,8 +40,6 @@ void otterParallelBegin() {}
 void otterParallelEnd(void) {}
 void otterTaskBegin() {}
 void otterTaskEnd(void) {}
-void otterTasksBegin() {}
-void otterTasksEnd(void) {}
 void otterLoopBegin() {}
 void otterLoopEnd(void) {}
 void otterLoopIterationBegin() {}
