@@ -29,7 +29,7 @@ void tarch::multicore::initSmartMPI() {
   );
   smartmpi::init( smartMPITopology );
 
-  smartmpi::appendToSchedulerChain( "MigrationScheduler" );
+  smartmpi::appendToSchedulerChain( "HardcodedMigrationScheduler" );
 
   tarch::mpi::Rank::getInstance().setCommunicator( smartMPITopology->computeNodeOrSmartServerCommunicator );
   #endif

@@ -8,6 +8,8 @@ import peano4.toolbox.particles
 import dastgen2
 
 from Bindding import tracer_seeds_generate, read_scale_factor_table
+
+from peano4.toolbox.blockstructured.DynamicAMR                 import DynamicAMR
 import numpy as np
 
 modes = { 
@@ -119,7 +121,7 @@ if __name__ == "__main__":
             auxiliary_variables=0,
             min_volume_h=min_volume_h, max_volume_h=max_volume_h,
             time_step_relaxation=cfl,
-            pde_terms_without_state=args.gpu
+            #pde_terms_without_state=args.gpu
           )
 
         #self._solver_template_file_class_name = SuperClass.__name__
@@ -146,12 +148,9 @@ if __name__ == "__main__":
         if args.interpolation=="constant":
           self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement.switch_interpolation_scheme( "piecewise_constant" )
           print( "Interpolation rule: piecewise_constant" )
-        if args.interpolation=="linear-slow":
-          self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement.switch_interpolation_scheme( "linear" )
-          print( "Interpolation rule: linear interpolation without optimisation" )
         if args.interpolation=="linear-optimised":
-          self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement.switch_interpolation_scheme( "linear_precomputed_operators<" + str(self._patch_size) +">" )
-          print( "Interpolation rule: optimised linear interpolation with patch size " + str(self._patch_size) )
+          self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement.switch_interpolation_scheme( "linear_with_linear_extrapolation_and_linear_normal_interpolation" )
+          print( "Interpolation rule: linear extrapolation and linear normal interpolation" )
         if args.interpolation=="outflow":
           self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement.switch_interpolation_scheme( "outflow" )
           print( "Interpolation rule: outflow (from fine grid into coarse grid)" )

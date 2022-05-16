@@ -50,7 +50,7 @@ parser.add_argument("-cd", "--configure-dir",          dest="configuredir",     
 parser.add_argument("-o",  "--output",                 dest="out",                      default="peano4", help="Executable name" )
 parser.add_argument("-f",  "--force",                  dest="force",                    default=False, action="store_true", help="Allow overwriting of output file" )
 parser.add_argument("-gpu", "--gpu",                   dest="gpu",                      default=False, action="store_true", help="GPU support (stateless PDE terms)" )
-parser.add_argument("-t",   "--type",                  dest="type",                     choices=["global-fixed", "global-adaptive", "global-fixed-enclave", "global-adaptive-enclave", "global-fixed-enclave", "global-adaptive-enclave", "subcycling-fixed-no-interpolation", "subcycling-fixed-linear-interpolation", "subcycling-fixed-linear-interpolation-enclave", "subcycling-adaptive-linear-interpolation-enclave", "local-linear-interpolation-enclave"], default="global-fixed", help="Pick implementation variant" )
+parser.add_argument("-t",   "--type",                  dest="type",                     choices=["global-fixed", "global-adaptive", "global-fixed-enclave", "global-adaptive-enclave", "global-adaptive-enclave", "subcycling-fixed-no-interpolation", "subcycling-fixed-linear-interpolation", "subcycling-fixed-linear-interpolation-enclave", "subcycling-adaptive-linear-interpolation-enclave", "local-linear-interpolation-enclave"], default="global-fixed", help="Pick implementation variant" )
 parser.add_argument("-i",   "--interpolation",         dest="interpolation_scheme",     choices=["default", "constant", "linear-constant-extrapolation", "linear-linear-extrapolation", "linear-linear-extrapolation-linear-normal-interpolation", "order-2"], default="constant", help="Pick interpolation scheme" )
 parser.add_argument("-pdt", "--plot-dt",               dest="plot_snapshot_interval", default=0, help="Time interval in-between two snapshots (switched off by default")
 parser.add_argument("-v",   "--verbose",               dest="verbose",          action="store_true", default=False, help="Verbose")
@@ -144,6 +144,7 @@ elif args.type=="global-adaptive-enclave":
     min_h, max_h,
     flux = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
     eigenvalues = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
+    source_term = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
     time_step_relaxation = 0.05,
     pde_terms_without_state = args.gpu
   )

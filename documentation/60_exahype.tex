@@ -1751,29 +1751,21 @@ therein.
 At the moment, we have only implemented \texttt{averaging} for the restriction. 
 For the interpolation, we offer the following routines:
 
-\begin{center}
- \begin{tabular}{l|p{8cm}}
-  {\bf scheme} & description \\
-  \hline
-  \texttt{piecewise\_constant} & Interpolate piece-wise constant (default) \\
-  \texttt{linear\_with\_constant\_extrapolation} & Interpolate linear (2d) or
+\begin{itemize}
+  \item \texttt{piecewise\_constant}. Interpolate piece-wise constant (default) 
+  \item \texttt{linear\_with\_constant\_extrapolation}. Interpolate linear (2d) or
   bi-linear (3d) along faces and use constant extrapolation along diagonals and
   patch boundaries.
-  \\
-  \texttt{linear\_with\_linear\_extrapolation} & Interpolate linear (2d) or
+  \item \texttt{linear\_with\_linear\_extrapolation}. Interpolate linear (2d) or
   bi-linear (3d) along faces and use constant extrapolation along diagonals and
   patch boundaries.
-  \\
-  \texttt{linear\_with\_constant\_extrapolation\_and\_linear\_normal\_interpolation}
-  & Variation of \texttt{constant\_with\_constant\_extrapolation} where we
+  \item \texttt{linear\_with\_constant\_extrapolation\_and\_linear\_normal\_interpolation}.
+  Variation of \texttt{constant\_with\_constant\_extrapolation} where we
   interplate linearly between restricted (coarsened) voxel data and the adjacent real
   coarse grid values. 
-  \\
-  \texttt{linear\_with\_linear\_extrapolation\_and\_linear\_normal\_interpolation}
-  & Variation of \texttt{linear\_with\_constant\_extrapolation} 
-  \\
- \end{tabular}
-\end{center}
+  \item{linear\_with\_linear\_extrapolation\_and\_linear\_normal\_interpolation}. \linebreak
+  Variation of \texttt{linear\_with\_constant\_extrapolation}. 
+\end{itemize}
 
 
 \paragraph{Postprocessing}
@@ -1833,6 +1825,88 @@ the pointer to the quantities usually is the most important one.
 You can use the attribute \texttt{additional\_includes} to give the resulting
 source code access to other routines.
 
+
+\subsection{Neighbour accesses within a patch}
+
+The baseline version of \ExaHyPE\ supports volume-wise access. 
+Some codes however need to evaluate functions over neighbourhoods.
+A simple example is the source term in the genuine \ExaHyPE\ version:
+The source term offers access to one Finite Volume's data and therefore allows you to evaluate a function 
+\[
+ S(Q): \mathbb{R}^{N+M} \mapsto \mathbb{R}^{N},
+\] 
+where $N$ is the number of unknowns and $M$ is the number of material parameters.
+If you want to realise a source term 
+\[
+ S(Q,\Delta Q): \ldots \mapsto \mathbb{R}^{N},
+\]
+you need, for a simple 5-point stencil, $Q$ at the point of interest and the left and right neighbour of this Finite Volume along each coordinate axis,
+as you want to evaluate a stencil
+\[
+ \left[ \begin{array}{ccc}
+  0 & 1 & 0 \\
+  1 & -4 & 1 \\
+  0 & 1 & 0
+ \end{array}\right].
+\] 
+
+\noindent
+\ExaHyPE\ supports such operations via an explicit \texttt{PatchAccess} object:
+
+\begin{code}
+#include "exahype2/fv/enumerator/PatchAccess.h"
+
+
+void examples::exahype2::euler::Euler::sourceTerm(
+  const double * __restrict__ Q,
+  const tarch::la::Vector<Dimensions,double>&  volumeCentre,
+  const tarch::la::Vector<Dimensions,double>&  volumeH,
+  double                                       t,
+  double                                       dt,
+  double * __restrict__ S
+) {
+  ::exahype2::fv::enumerator::PatchAccess access(
+    Q,                         // make it initially point to input
+    NumberOfFiniteVolumesPerAxisPerPatch, // defined in superclass
+    1,                         // halo size, which you know as user
+    NumberOfUnknowns,          // defined in superclass
+    NumberOfAuxiliaryVariables // defined in superclass
+  );
+
+  double laplacian = 0.0;
+  const int unknown = 0;
+  if (Dimensions==2) {
+    laplacian = -4.0 * access.centre(unknown)
+      + 1.0 * access.left(0,unknown)
+      + 1.0 * access.right(0,unknown)
+      + 1.0 * access.left(1,unknown)
+      + 1.0 * access.right(1,unknown);
+    laplacian /= volumeH(0);
+    laplacian /= volumeH(0);
+  }
+  else {
+  }
+
+  S[0] = 0.01 * laplacian;
+  S[1] = 0.0; // ensure each and every source component are set to
+  S[2] = 0.0; // some proper value, i.e. zero to do nothing
+  S[3] = 0.0;
+  S[4] = 0.0;
+}
+\end{code}
+
+\noindent
+The idea here is that you construct an instance of \texttt{PatchAccess} over your input vector \texttt{Q}.
+This accessor then allows you to move left, right, up and down (up and down are just left right along the axis 1 instead of the x-axis 0) and to grab data from there.
+In this example, we apply a Laplacian type operator to the first component of a PDE with five unknowns.
+Please study the class documentation of \texttt{PatchAccess} for a detailed documentation and more features
+such as navigating along diagonals or by more than one volume.
+
+
+\begin{remark}
+ This neighbour access works only for $Q$ within a patch, i.e.~for the standard PDE terms.
+ You are not allowed to use it for boundary conditions, e.g. 
+\end{remark}
 
 
 \section{Modelling the fluxes and Riemann solvers with SymPy}

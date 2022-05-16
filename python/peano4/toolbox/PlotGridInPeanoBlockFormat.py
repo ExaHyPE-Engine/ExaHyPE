@@ -100,7 +100,8 @@ class PlotGridInPeanoBlockFormat(ActionSet):
     marker.hasBeenRefined() ? 1.0 : 0.0,
     marker.willBeRefined() ? 1.0 : 0.0,
     marker.isLocal() ? 1.0 : 0.0,
-    marker.isEnclaveCell() ? 1.0 : 0.0
+    marker.hasBeenEnclaveCell() ? 1.0 : 0.0,
+    marker.willBeEnclaveCell() ? 1.0 : 0.0
   };
  _dataWriter->plotCell(indices,markerData);
  }
@@ -142,7 +143,7 @@ class PlotGridInPeanoBlockFormat(ActionSet):
   );    
   {% endif %}
       
-  _dataWriter = _writer->createCellDataWriter( "cell-marker", 1, 4, "is-refined,has-been-refined,local,enclave" );
+  _dataWriter = _writer->createCellDataWriter( "cell-marker", 1, 5, "is-refined,has-been-refined,local,enclave" );
 """)
 
 

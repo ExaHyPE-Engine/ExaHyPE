@@ -26,8 +26,8 @@ void toolbox::particles::init(
   particle.setCutOffRadius( cutOffRadius );
   particle.setMoveState( T::MoveState::New );
 
-  particle.setParallelState(T::ParallelState::Halo);
-  particle.setNewParallelState(T::NewParallelState::Halo);
+  particle.setParallelState(T::ParallelState::Virtual);
+  particle.setNewParallelState(T::NewParallelState::Virtual);
 }
 
 
@@ -65,5 +65,45 @@ std::vector<T*> toolbox::particles::createEquallySpacedParticles(double spacing,
     }
   }
 
+  return result;
+}
+
+
+template <class T>
+std::vector<T*> toolbox::particles::createParticlesAlignedWithGlobalCartesianMesh(double spacing, const tarch::la::Vector<Dimensions,double>& voxelX, const tarch::la::Vector<Dimensions,double>& voxelH, const tarch::la::Vector<Dimensions,double>& domainOffset, bool addNoise) {
+  static tarch::logging::Log _log( "toolbox::particles" );
+  logTraceInWith4Arguments( "createParticlesAlignedWithGlobalCartesianMesh(...)", spacing, voxelX, domainOffset, addNoise );
+  std::vector<T*> result;
+
+  const double RelativeAccuracyForGeometricChecks = 0.01 * voxelH(0);
+
+  double continuousParticlesPerAxis = voxelH(0) / spacing;
+
+  tarch::la::Vector<Dimensions,double> firstParticleX = domainOffset;
+  for (int d=0; d<Dimensions; d++) {
+    while ( tarch::la::smaller( firstParticleX(d), voxelX(d) - 0.5*voxelH(d), RelativeAccuracyForGeometricChecks ) ) {
+      firstParticleX(d) += spacing;
+    }
+  }
+
+  int    particlesPerAxis           = static_cast<int>( std::floor(continuousParticlesPerAxis) )+1;
+  dfor(k,particlesPerAxis) {
+    tarch::la::Vector<Dimensions,double> x = firstParticleX + spacing * tarch::la::convertScalar<double>(k);
+
+    if ( tarch::la::allSmaller(x,voxelX+0.5*voxelH, RelativeAccuracyForGeometricChecks) ) {
+      T* newParticle = new T();
+
+      if (addNoise) {
+        for (int d=0; d<Dimensions; d++) {
+          x(d) += (randomDist(e2) - 0.5) * spacing;
+        }
+      }
+
+      init(*newParticle,x,0.9*tarch::la::min(voxelH));
+      result.push_back(newParticle);
+    }
+  }
+
+  logTraceOutWith1Argument( "createParticlesAlignedWithGlobalCartesianMesh(...)", result.size() );
   return result;
 }

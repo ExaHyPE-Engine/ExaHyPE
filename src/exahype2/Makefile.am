@@ -30,6 +30,7 @@ ExaHyPE2Sources = \
   fv/enumerator/AoSLexicographicVolumeEnumerator.cpp \
   fv/enumerator/SoALexicographicVolumeEnumerator.cpp \
   fv/enumerator/AoSoALexicographicVolumeEnumerator.cpp \
+  fv/enumerator/PatchAccess.cpp \
   fv/rusanov/tests/CopyPatchTest.cpp \
   fv/rusanov/tests/ApplySplit1DRiemannToPatchTest.cpp
 
