@@ -5,6 +5,7 @@
 #include "tarch/multicore/Lock.h"
 #include "tarch/multicore/Core.h"
 #include "tarch/multicore/Tasks.h"
+#include "tarch/multicore/otter.h"
 
 #include "tarch/logging/Statistics.h"
 
@@ -76,6 +77,8 @@ exahype2::EnclaveBookkeeping::Entry exahype2::EnclaveBookkeeping::waitForTaskToT
   finishedTasksLock.free();
 
   tarch::multicore::releaseTaskNumber(number);
+
+  otterSynchroniseDescendantTasks();
 
   return storedData;
 }

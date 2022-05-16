@@ -574,17 +574,22 @@ AM_CONDITIONAL([UseDelta],[test "$toolbox_delta" != false])
 
 
 #
-# FEM 
+# Otter
 #
 AC_ARG_WITH(otter,
   AC_HELP_STRING([--with-otter], [enable Otter [default=false]]),
   [ AC_MSG_CHECKING(for otter)
     case "${withval}" in
-      no)    AC_MSG_RESULT(no);    toolbox_otter=false ;;
-      *)     AC_MSG_RESULT(yes);   toolbox_otter=true  ;;
+      no)    AC_MSG_RESULT(no);    use_otter=false ;;
+      *)     AC_MSG_RESULT(yes);   use_otter=true  ;;
     esac ],
-  [ AC_MSG_CHECKING(for otter); AC_MSG_RESULT(no); toolbox_otter=false ])
-AM_CONDITIONAL([UseOtter],[test "x$toolbox_otter" = xtrue])
+  [ AC_MSG_CHECKING(for otter); AC_MSG_RESULT(no); use_otter=false ])
+AM_CONDITIONAL([UseOtter],[test "x$use_otter" = xtrue])
+
+# internal toolboxes don't need ifdefs, but here we need them
+if test "$use_otter" == true; then
+  AC_DEFINE([UseOtter], [UseOtter], [UseOtter])
+fi
 
 
 
@@ -770,60 +775,6 @@ if test "$smartmpi" == Merged; then
 fi
 if test "$smartmpi" == Alternating; then
   AC_DEFINE([UseSmartMPI], [Alternating], [UseSmartMPI])
-fi
-if test "$smartmpi" != false; then
-  if test "$mpi" == false; then
-    AC_MSG_ERROR([SmartMPI requires an MPI build of Peano])
-  fi
-  LDADD_PEANO_2D_RELEASE+=" -lsmartmpi "
-  LDADD_PEANO_2D_STATS+="   -lsmartmpi "
-  LDADD_PEANO_2D_ASSERTS+=" -lsmartmpi_debug " 
-  LDADD_PEANO_2D_TRACE+="   -lsmartmpi "
-  LDADD_PEANO_2D_DEBUG+="   -lsmartmpi_debug "
-
-  LDADD_PEANO_3D_RELEASE+=" -lsmartmpi "
-  LDADD_PEANO_3D_STATS+="   -lsmartmpi "
-  LDADD_PEANO_3D_ASSERTS+=" -lsmartmpi_debug " 
-  LDADD_PEANO_3D_TRACE+="   -lsmartmpi "
-  LDADD_PEANO_3D_DEBUG+="   -lsmartmpi_debug "
-fi
-
-
-#
-# Delta
-#
-if test "$toolbox_delta" != false; then
-  AC_DEFINE([UseDelta], [1], [UseDelta])
-  LDADD_PEANO_2D_RELEASE+=" -ldelta2d "
-  LDADD_PEANO_2D_STATS+="   -ldelta2d "
-  LDADD_PEANO_2D_ASSERTS+=" -ldelta2d " 
-  LDADD_PEANO_2D_TRACE+="   -ldelta2d "
-  LDADD_PEANO_2D_DEBUG+="   -ldelta2d "
-
-  LDADD_PEANO_3D_RELEASE+=" -ldelta3d "
-  LDADD_PEANO_3D_STATS+="   -ldelta3d "
-  LDADD_PEANO_3D_ASSERTS+=" -ldelta3d " 
-  LDADD_PEANO_3D_TRACE+="   -ldelta3d "
-  LDADD_PEANO_3D_DEBUG+="   -ldelta3d "
-fi
-
-
-#
-# Otter
-#
-if test "$toolbox_otter" != false; then
-  AC_DEFINE([UseOtter], [1], [UseOtter])
-  LDADD_PEANO_2D_RELEASE+=" -lotter "
-  LDADD_PEANO_2D_STATS+="   -lotter "
-  LDADD_PEANO_2D_ASSERTS+=" -lotter " 
-  LDADD_PEANO_2D_TRACE+="   -lotter "
-  LDADD_PEANO_2D_DEBUG+="   -lotter "
-
-  LDADD_PEANO_3D_RELEASE+=" -lotter "
-  LDADD_PEANO_3D_STATS+="   -lotter "
-  LDADD_PEANO_3D_ASSERTS+=" -lotter " 
-  LDADD_PEANO_3D_TRACE+="   -lotter "
-  LDADD_PEANO_3D_DEBUG+="   -lotter "
 fi
 
 

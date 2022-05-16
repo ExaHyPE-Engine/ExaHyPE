@@ -104,7 +104,7 @@ namespace exahype2 {
          * @param volumeIndex: Which volume is to be updated within the target
          *   patch. This index refers to the target index.
          */
-        #if defined(SharedOMP)
+        #if defined(SharedOMP) and (!defined(__INTEL_LLVM_COMPILER) or !defined(GPUOffloadingOMP))
         #pragma omp declare simd
         #endif
         #if defined(GPUOffloadingOMP)
@@ -126,6 +126,25 @@ namespace exahype2 {
 
 
         /**
+         * Copy previous solution over into new time step and add source term
+         *
+         * This is the first step of the Rusanov scheme, where we basically copy
+         * @f$ Q^{(old)} @f$ into @f$ Q^{(new)} @f$. In the same sweep, we also
+         * add the source term subject to the time step size:
+         *
+         * @f$ Q^{(new)} = Q^{(old)} + \Delta t \cdot S(Q^{(old)}) @f$
+         *
+         * We reiterate that Q holds two types of entries: The actual data
+         * subject to the PDE (and fluxes and source terms) and arbitrary
+         * auxiliary variables per volume that the user has specified. Auxiliary
+         * parameters are coupling terms, material parameters, helper
+         * variables that you use to compute some metrics, ... They are not
+         * evolved as part of the PDE. As the source term affects only the PDE
+         * variables, we copy these
+         * entries in Q over and add the source term contribution, while the
+         * material parameters remain plain copies.
+         *
+         *
          * No SIMD declaration here, as we can't SIMDise over functors
          * anyway.
          *
@@ -176,7 +195,7 @@ namespace exahype2 {
         )  InlineMethod;
 
 
-        #if defined(SharedOMP)
+        #if defined(SharedOMP) and (!defined(__INTEL_LLVM_COMPILER) or !defined(GPUOffloadingOMP))
         #pragma omp declare simd
         #endif
         #if defined(GPUOffloadingOMP)
@@ -200,7 +219,7 @@ namespace exahype2 {
         #endif
 
 
-        #if defined(SharedOMP)
+        #if defined(SharedOMP) and (!defined(__INTEL_LLVM_COMPILER) or !defined(GPUOffloadingOMP))
         #pragma omp declare simd
         #endif
         #if defined(GPUOffloadingOMP)
@@ -282,7 +301,7 @@ namespace exahype2 {
         /**
          * Specialisation invoking the static eigenvalue variant (for GPUs).
          */
-        #if defined(SharedOMP)
+        #if defined(SharedOMP) and (!defined(__INTEL_LLVM_COMPILER) or !defined(GPUOffloadingOMP))
         #pragma omp declare simd
         #endif
         #if defined(GPUOffloadingOMP)
@@ -310,7 +329,7 @@ namespace exahype2 {
         /**
          * Specialisation for static eigenvalue call plus AoS input data.
          */
-        #if defined(SharedOMP)
+        #if defined(SharedOMP) and (!defined(__INTEL_LLVM_COMPILER) or !defined(GPUOffloadingOMP))
         #pragma omp declare simd
         #endif
         #if defined(GPUOffloadingOMP)
@@ -367,7 +386,7 @@ namespace exahype2 {
         ) InlineMethod;
 
 
-        #if defined(SharedOMP)
+        #if defined(SharedOMP) and (!defined(__INTEL_LLVM_COMPILER) or !defined(GPUOffloadingOMP))
         #pragma omp declare simd
         #endif
         #if defined(GPUOffloadingOMP)
@@ -389,7 +408,7 @@ namespace exahype2 {
         #endif
 
 
-        #if defined(SharedOMP)
+        #if defined(SharedOMP) and (!defined(__INTEL_LLVM_COMPILER) or !defined(GPUOffloadingOMP))
         #pragma omp declare simd
         #endif
         #if defined(GPUOffloadingOMP)
@@ -418,7 +437,7 @@ namespace exahype2 {
          * user signatures require an AoS data format whereas the loop body
          * itself is generic.
          */
-        #if defined(SharedOMP)
+        #if defined(SharedOMP) and (!defined(__INTEL_LLVM_COMPILER) or !defined(GPUOffloadingOMP))
         #pragma omp declare simd
         #endif
         template <class QInEnumeratorType, class QFluxEnumeratorType>
@@ -458,7 +477,7 @@ namespace exahype2 {
         ) InlineMethod;
 
 
-        #if defined(SharedOMP)
+        #if defined(SharedOMP) and (!defined(__INTEL_LLVM_COMPILER) or !defined(GPUOffloadingOMP))
         #pragma omp declare simd
         #endif
         #if defined(GPUOffloadingOMP)
@@ -484,7 +503,7 @@ namespace exahype2 {
         #endif
 
 
-        #if defined(SharedOMP)
+        #if defined(SharedOMP) and (!defined(__INTEL_LLVM_COMPILER) or !defined(GPUOffloadingOMP))
         #pragma omp declare simd
         #endif
         #if defined(GPUOffloadingOMP)
@@ -510,7 +529,7 @@ namespace exahype2 {
         #endif
 
 
-        #if defined(SharedOMP)
+        #if defined(SharedOMP) and (!defined(__INTEL_LLVM_COMPILER) or !defined(GPUOffloadingOMP))
         #pragma omp declare simd
         #endif
         #if defined(GPUOffloadingOMP)
@@ -543,7 +562,7 @@ namespace exahype2 {
          *
          * @todo Remove flux in the centre, as it is eliminated
          */
-        #if defined(SharedOMP)
+        #if defined(SharedOMP) and (!defined(__INTEL_LLVM_COMPILER) or !defined(GPUOffloadingOMP))
         #pragma omp declare simd
         #endif
         #if defined(GPUOffloadingOMP)
@@ -579,7 +598,7 @@ namespace exahype2 {
          * 0 and 0 is its right face). For N cells in a row, there's a face N-1
          * but no face N anymore.
          */
-        #if defined(SharedOMP)
+        #if defined(SharedOMP) and (!defined(__INTEL_LLVM_COMPILER) or !defined(GPUOffloadingOMP))
         #pragma omp declare simd
         #endif
         #if defined(GPUOffloadingOMP)
@@ -649,7 +668,7 @@ namespace exahype2 {
 	 *   via copy, everything is fine.
 	 *
          */
-        #if defined(SharedOMP)
+        #if defined(SharedOMP) and (!defined(__INTEL_LLVM_COMPILER) or !defined(GPUOffloadingOMP))
         #pragma omp declare simd
         #endif
         #if defined(GPUOffloadingOMP)
@@ -681,7 +700,7 @@ namespace exahype2 {
          * Face-wise version of routine, i.e. it takes the eigenvalues and
          * updates the left and right adjacent volume of it.
          */
-        #if defined(SharedOMP)
+        #if defined(SharedOMP) and (!defined(__INTEL_LLVM_COMPILER) or !defined(GPUOffloadingOMP))
         #pragma omp declare simd
         #endif
         #if defined(GPUOffloadingOMP)
@@ -728,15 +747,15 @@ namespace exahype2 {
           int                                            patchIndex,
           const tarch::la::Vector<Dimensions,int>&       volumeIndex,
           double                                         t,
-          double                              dt,
-          int                                 normal,
-          double* __restrict__                QNcp,
-          QNCPFaceEnumeratorType              QNcpEnumerator,
-          int                                                         pick = PickAllEntriesFromOutputVector
+          double                                         dt,
+          int                                            normal,
+          double* __restrict__                           QNcp,
+          QNCPFaceEnumeratorType                         QNcpEnumerator,
+          int                                            pick = PickAllEntriesFromOutputVector
         ) InlineMethod;
 
 
-        #if defined(SharedOMP)
+        #if defined(SharedOMP) and (!defined(__INTEL_LLVM_COMPILER) or !defined(GPUOffloadingOMP))
         #pragma omp declare simd
         #endif
         #if defined(GPUOffloadingOMP)
@@ -751,9 +770,9 @@ namespace exahype2 {
           int                                            patchIndex,
           const tarch::la::Vector<Dimensions,int>&       volumeIndex,
           double                                         t,
-          double                              dt,
-          int                                 normal,
-          double* __restrict__                QNcp,
+          double                                         dt,
+          int                                            normal,
+          double* __restrict__                           QNcp,
           const QNCPFaceEnumeratorType&                  QNcpEnumerator,
           int                                            pick = PickAllEntriesFromOutputVector
         ) InlineMethod;
@@ -762,7 +781,24 @@ namespace exahype2 {
         #endif
 
 
-        #if defined(SharedOMP)
+        /**
+         * Add the non-conservative flux contributions to one volume.
+         *
+         * The NCP is defined over faces, i.e. we know that QNcpX, QNcpY, QNcpZ
+         * hold one (vector) entry per face and ncpEnumerator is aware that we
+         * work with faces. So we compute the left and the right face and we get
+         * the corresponing non-conservative flux from there. This flux is now
+         * scaled with the time step size, as we do an explicit Euler step, i.e.
+         * the right-hand side of the PDE
+         *
+         * @f$ \partial _t Q = ncp(Q) @f$
+         *
+         * is discretised as @f$ \partial _t Q \approx \frac{Q^{(new)}-Q^{(old)}}{dt}@f$
+         * which gives us a scaling of dt for the update. We also have a volume
+         * integral on the left-hand side and a face integral on the right-hand
+         * side, and therefore a further scaling by one over the volume size.
+         */
+        #if defined(SharedOMP) and (!defined(__INTEL_LLVM_COMPILER) or !defined(GPUOffloadingOMP))
         #pragma omp declare simd
         #endif
         #if defined(GPUOffloadingOMP)
@@ -790,8 +826,10 @@ namespace exahype2 {
 
         /**
          * Face-oriented flavour of ncp
+         *
+         * The non-conservative flux is always computed per face. So we know that
          */
-        #if defined(SharedOMP)
+        #if defined(SharedOMP) and (!defined(__INTEL_LLVM_COMPILER) or !defined(GPUOffloadingOMP))
         #pragma omp declare simd
         #endif
         #if defined(GPUOffloadingOMP)
@@ -800,11 +838,11 @@ namespace exahype2 {
         template <typename QNCPFaceEnumeratorType, typename QOutEnumeratorType>
         static void updateSolutionWithNonconservativeFlux_LoopBody(
           const double* __restrict__                   fluxNCP,
-          const QNCPFaceEnumeratorType&                    fluxEnumerator,
+          const QNCPFaceEnumeratorType&                fluxEnumerator,
           const tarch::la::Vector<Dimensions,double>&  patchCentre,
           const tarch::la::Vector<Dimensions,double>&  patchSize,
           int                                          patchIndex,
-          const tarch::la::Vector<Dimensions,int>&     volumeIndex,
+          const tarch::la::Vector<Dimensions,int>&     faceIndex,
           int                                          unknown,
           double                                       dt,
           int                                          normal,

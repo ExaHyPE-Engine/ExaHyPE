@@ -166,7 +166,7 @@
  * map. That is, if we want to compute the interior face, we first project onto a temporary
  * @f$ 3^d @f$ set of volumes, and then we extract the fine face data from there. This
  * implies that we are consistent with the actual projection of face data, where we take
- * fine grid volume values and write them onto teh face data as copies.
+ * fine grid volume values and write them onto the face data as copies.
  *
  *
  */

@@ -219,7 +219,7 @@ void examples::exahype2::ccz4::source(double* S, const double* const Q,
     //! Main variables of the CCZ4 system
     double dtK[3][3];
     for (int i = 0; i < 3; i++)
-    for (int j = 0; j < 3; j++) dtK[i][j] = phi2*SecondOrderTermsSrc[i][j] + alpha*Aex[i][j]*(traceK-2.*Theta) - 2.*alpha*Atemp[i][j] - CCZ4itau*g_cov[i][j]*traceA;
+    for (int j = 0; j < 3; j++) dtK[i][j] = phi2*SecondOrderTermsSrc[i][j] + alpha*Aex[i][j]*(traceK-2.*Theta*CCZ4c) - 2.*alpha*Atemp[i][j] - CCZ4itau*g_cov[i][j]*traceA;
 
     for (int j = 0; j < 3; j++)
     for (int i = 0; i < 3; i++)
@@ -239,7 +239,7 @@ void examples::exahype2::ccz4::source(double* S, const double* const Q,
 
     double sumzupaa = 0.0;
     for (int i = 0; i < 3; i++) sumzupaa += Zup[i]*AA[i];
-    const double dtTheta = 0.5*alpha*CCZ4e*CCZ4e*(RPlusTwoNablaZSrc - Aupdown + 2./3.*traceK*traceK) - alpha*(CCZ4c*Theta*traceK + sumzupaa + CCZ4k1*(2.+CCZ4k2)*Theta);  // Baojiu
+    double dtTheta = 0.5*alpha*CCZ4e*CCZ4e*(RPlusTwoNablaZSrc - Aupdown + 2./3.*traceK*traceK) - alpha*(CCZ4c*Theta*traceK + sumzupaa + CCZ4k1*(2.+CCZ4k2)*Theta);  // Baojiu
 
 
     double dtGhat[3] = {0,0,0};
@@ -435,10 +435,10 @@ void examples::exahype2::ccz4::ncp(double* BgradQ, const double* const Q, const 
     double traceA = 0;
     for (int i=0;i<3;i++)
     for (int j=0;j<3;j++) traceA+=g_contr[i][j]*Aex[i][j];
-    traceA *= 1./3;
+    //traceA *= 1./3;
 
     for (int i=0;i<3;i++)
-    for (int j=0;j<3;j++) Aex[i][j] -= traceA * g_cov[i][j];
+    for (int j=0;j<3;j++) Aex[i][j] -= 1./3. * traceA * g_cov[i][j];
 
     // Matrix multiplications Amix = matmul(g_contr, Aex) Aup  = matmul(g_contr, mytranspose(Amix))
     double Amix[3][3]={0,0,0,0,0,0,0,0,0};
@@ -661,14 +661,14 @@ void examples::exahype2::ccz4::ncp(double* BgradQ, const double* const Q, const 
     for (int j = 0; j < 3; j++) Aupdown += Aex[i][j]*Aup[i][j];
 
     const double dTheta[3] = {gradQin[12][0],gradQin[12][1],gradQin[12][2]};
-    const double dtTheta = 0.5*alpha*CCZ4e*CCZ4e*( RPlusTwoNablaZNCP ) + beta[0]*dTheta[0] + beta[1]*dTheta[1] + beta[2]*dTheta[2]; // *** original cleaning ***
+    double dtTheta = 0.5*alpha*CCZ4e*CCZ4e*( RPlusTwoNablaZNCP ) + beta[0]*dTheta[0] + beta[1]*dTheta[1] + beta[2]*dTheta[2]; // *** original cleaning ***
 
-    double divAupNCP[3] = {0,0,0};
+    //double divAupNCP[3] = {0,0,0};
 
-    for (int i = 0; i < 3; i++)
-    for (int j = 0; j < 3; j++)
-    for (int l = 0; l < 3; l++)
-    for (int k = 0; k < 3; k++) divAupNCP[i] += g_contr[i][l]*g_contr[j][k]*dAex[j][l][k];
+    //for (int i = 0; i < 3; i++)
+    //for (int j = 0; j < 3; j++)
+    //for (int l = 0; l < 3; l++)
+    //for (int k = 0; k < 3; k++) divAupNCP[i] += g_contr[i][l]*g_contr[j][k]*dAex[j][l][k];
 
 
     const double dBB[3][3][3] = {
