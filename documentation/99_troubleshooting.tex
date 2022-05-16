@@ -282,6 +282,23 @@ build: 2d, no mpi, omp (8 threads), debug level=2
     you have built your code with \texttt{-DTBB\_USE\_ASSERT
     -DTBB\_USE\_THREADING\_TOOLS}. Please consult the supercomputer/tool remarks
     on page \pageref{section:supercomputers:IntelTools}.
+  \item \textbf{I struggle to configure \Peano\ with Otter}. First, ensure you
+    add \texttt{--with-otter} to your configure call. If the configure fails,
+    run through the following checks one by one:
+    \begin{itemize}
+      \item Ensure that you have added
+       \texttt{CXXFLAGS="... -Iyour-path/otter/include"} to your
+       \texttt{CXXFLAGS}.
+      \item Ensure that you have added
+       \texttt{LIBS="... -lotter-serial -lotf2"} to your libraries. Depending on
+       your system, you might need the explicit linking to \texttt{otf2} or not.
+      \item Ensure that you have added
+      \texttt{LDFLAGS="... --Lyour-path/otter/build/lib -L/opt/otf2/lib"}
+       Once again, you might need the explicit OTF2 link or not.
+      \item Add the libraries to your library path
+      (\texttt{LD_LIBRARY_PATH=$LD_LIBRARY_PATH:your-path/otter/build/lib:/opt/otf2/lib})
+      as the checks otherwise will fail.
+    \end{itemize}
   \item To be continued \dots
 \end{itemize}
 
