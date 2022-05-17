@@ -234,7 +234,7 @@ void spaceTimePredictorLinear(SolverType& solver,
               gradQ[idx_gradQ(j, l, 0, m)] += lQi[idx_lQi(i, j, n, m)] * SolverType::dudx[order][l][n] * invDx[0];
             }
           }
-        }  
+        }
       }
 
       // y direction (independent from the x and z derivatives)
@@ -248,8 +248,8 @@ void spaceTimePredictorLinear(SolverType& solver,
           }
         }
       }
-
-    
+      
+      /*
       for (int j = 0; j < basisSize; j++) {
         for (int l = 0; l < basisSize; l++) {
           std::fill_n(&ncpResult_vec[0],Dimensions*numberOfVariables, 0.); // zero out ncpResult
@@ -265,10 +265,21 @@ void spaceTimePredictorLinear(SolverType& solver,
           
         }
       }
+      */
+      
+      for (int j = 0; j < basisSize; j++) {
+        for (int l = 0; l < basisSize; l++) {
+          std::fill_n(&ncpResult_vec[0],Dimensions*numberOfVariables, 0.); // zero out ncpResult
+          solver.nonConservativeProduct(&lQi[idx_lQi(i, j, l, 0)], gradQ + idx_gradQ(j, l, 0, 0), ncpResult[0]);
+          for (int n = 0; n < numberOfVariables; n++) {
+            lFi[idx_lFi(i, j, l, Dimensions, n)] += ncpResult[0][n];
+          }          
+        }
+      }
       
     } //useNCP
 
-    
+    /*
     if(useMM){
       for (int j = 0; j < basisSize; j++) {
         for (int k = 0; k < basisSize; k++) {
@@ -279,6 +290,7 @@ void spaceTimePredictorLinear(SolverType& solver,
         }
       }
     } //useMM
+    */
 
     if(useSource){
       for (int j = 0; j < basisSize; j++) {
