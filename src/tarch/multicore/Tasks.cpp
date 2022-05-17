@@ -539,11 +539,6 @@ void tarch::multicore::spawnAndWait(
   static tarch::logging::Log _log( "tarch::multicore" );
 
   if (not tasks.empty()) {
-<<<<<<< HEAD
-    //otterTasksBegin( tasks.size() );
-
-=======
->>>>>>> refs/remotes/origin/p4
     orchestrationStrategy->startBSPSection();
     native::spawnAndWait(tasks,orchestrationStrategy);
     orchestrationStrategy->endBSPSection();
