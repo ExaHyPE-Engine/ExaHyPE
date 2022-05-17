@@ -34,25 +34,23 @@ namespace otter {
 #if defined(UseOtter)
 #include <otter/otter-serial.h>
 #else
-void otterTraceInitialise() {}
-void otterTraceFinalise(void) {}
-void otterParallelBegin() {}
-void otterParallelEnd(void) {}
-void otterTaskBegin() {}
-void otterTaskEnd(void) {}
-void otterTasksBegin() {}
-void otterTasksEnd(void) {}
-void otterLoopBegin() {}
-void otterLoopEnd(void) {}
-void otterLoopIterationBegin() {}
-void otterLoopIterationEnd(void) {}
-void otterSynchroniseChildTasks() {}
-void otterSynchroniseDescendantTasks(void) {}
-void otterTraceStart(void) {}
-void otterTraceStop(void) {}
-void otterPhaseBegin( const char* name ) {}
-void otterPhaseEnd() {}
-void otterPhaseSwitch( const char* name ) {}
+#define otterTraceInitialise()
+#define otterTraceFinalise(void)
+#define otterParallelBegin()
+#define otterParallelEnd(void)
+#define otterTaskBegin()
+#define otterTaskEnd(void)
+#define otterLoopBegin()
+#define otterLoopEnd(void)
+#define otterLoopIterationBegin()
+#define otterLoopIterationEnd(void)
+#define otterSynchroniseChildTasks()
+#define otterSynchroniseDescendantTasks(void)
+#define otterTraceStart(void)
+#define otterTraceStop(void)
+#define otterPhaseBegin(name)
+#define otterPhaseEnd()
+#define otterPhaseSwitch(name)
 #endif
 
 

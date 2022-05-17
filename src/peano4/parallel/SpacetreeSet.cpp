@@ -11,6 +11,7 @@
 
 #include "tarch/multicore/multicore.h"
 #include "tarch/multicore/Lock.h"
+#include "tarch/multicore/otter.h"
 
 #include "tarch/mpi/Rank.h"
 #include "tarch/mpi/IntegerMessage.h"
@@ -265,11 +266,13 @@ peano4::parallel::SpacetreeSet::TraverseTask::TraverseTask(
 
 
 bool peano4::parallel::SpacetreeSet::TraverseTask::run() {
+  otterTaskBegin();
   _spacetreeSet.createObserverCloneIfRequired(_observer,_spacetree._id);
   if (_invertTreeTraversalDirectionBeforeWeStart) {
     _spacetree._root.setInverted( not _spacetree._root.getInverted() );
   }
   _spacetree.traverse( *_spacetreeSet._clonedObserver[_spacetree._id], true );
+  otterTaskEnd();
   return false;
 }
 
