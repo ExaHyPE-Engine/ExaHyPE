@@ -280,6 +280,8 @@ int main(int argc, char** argv) {
 
   repositories::startSimulation();
 
+  otterTraceInitialise();
+
   tarch::logging::Statistics::getInstance().clear();
 
   const bool isGlobalMaster     =     tarch::mpi::Rank::getInstance().isGlobalMaster();
@@ -290,8 +292,14 @@ int main(int argc, char** argv) {
   #else
   for (int patches=1; patches<=2048; patches*=2) {
   #endif
+    std::stringstream msg;
+    msg << "benchmark-" << patches;
+    otterPhaseSwitch( msg.str().c_str() );
+
     runBenchmarks(patches);
   }
+
+  otterTraceFinalise();
 
   repositories::finishSimulation();
 

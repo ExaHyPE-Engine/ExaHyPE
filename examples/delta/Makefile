@@ -240,7 +240,7 @@ CTAGS = ctags
 CXX = icpx
 CXXCPP = icpx -E
 CXXDEPMODE = depmode=gcc3
-CXXFLAGS = -Ofast -march=native -mtune=native --std=c++17 -fiopenmp -fopenmp-targets=spir64
+CXXFLAGS = -Ofast -march=native -mtune=native --std=c++17 -fiopenmp -fopenmp-targets=spir64 -I/home/tobias/git/otter/include -I/opt/otf2/include/
 CXXFLAGS_PEANO_2D_ASSERTS =  -DDimensions=2 -DPeanoDebug=2 -g -O0
 CXXFLAGS_PEANO_2D_DEBUG =    -DDimensions=2 -DPeanoDebug=4 -g -O0
 CXXFLAGS_PEANO_2D_RELEASE =  -DDimensions=2 -DPeanoDebug=0
@@ -283,14 +283,14 @@ LDADD_PEANO_3D_DEBUG =    -lExaHyPE2Core3d_debug      -lToolboxBlockstructured3d
 LDADD_PEANO_3D_RELEASE =  -lExaHyPE2Core3d          -lToolboxBlockstructured3d          -lToolboxLoadBalancing3d          -lPeano4Core3d         -lTarch   -lToolboxParticles3d          -lToolboxBlockstructured3d          -lToolboxLoadBalancing3d          -lPeano4Core3d         -lTarch    
 LDADD_PEANO_3D_STATS =    -lExaHyPE2Core3d_stats      -lToolboxBlockstructured3d_stats      -lToolboxLoadBalancing3d_stats      -lPeano4Core3d_stats   -lTarch_stats     -lToolboxParticles3d_stats      -lToolboxBlockstructured3d_stats      -lToolboxLoadBalancing3d_stats      -lPeano4Core3d_stats   -lTarch_stats    
 LDADD_PEANO_3D_TRACE =    -lExaHyPE2Core3d_trace      -lToolboxBlockstructured3d_trace      -lToolboxLoadBalancing3d_trace      -lPeano4Core3d_trace   -lTarch_trace     -lToolboxParticles3d_trace      -lToolboxBlockstructured3d_trace      -lToolboxLoadBalancing3d_trace      -lPeano4Core3d_trace   -lTarch_trace    
-LDFLAGS = -g -fiopenmp -fopenmp-targets=spir64
+LDFLAGS = -g -fiopenmp -fopenmp-targets=spir64 -L/home/tobias/git/otter/build/lib -L/opt/otf2/lib
 LDFLAGS_PEANO_ASSERTS =  -L/home/tobias/git/Peano/src -g -L/home/tobias/git/Peano/src/toolbox/loadbalancing  -L/home/tobias/git/Peano/src/toolbox/blockstructured  -L/home/tobias/git/Peano/src/toolbox/particles  -L/home/tobias/git/Peano/src/exahype2 
 LDFLAGS_PEANO_DEBUG =    -L/home/tobias/git/Peano/src -g   -L/home/tobias/git/Peano/src/toolbox/loadbalancing    -L/home/tobias/git/Peano/src/toolbox/blockstructured    -L/home/tobias/git/Peano/src/toolbox/particles    -L/home/tobias/git/Peano/src/exahype2 
 LDFLAGS_PEANO_RELEASE =  -L/home/tobias/git/Peano/src  -L/home/tobias/git/Peano/src/toolbox/loadbalancing  -L/home/tobias/git/Peano/src/toolbox/blockstructured  -L/home/tobias/git/Peano/src/toolbox/particles  -L/home/tobias/git/Peano/src/exahype2 
 LDFLAGS_PEANO_STATS =    -L/home/tobias/git/Peano/src    -L/home/tobias/git/Peano/src/toolbox/loadbalancing    -L/home/tobias/git/Peano/src/toolbox/blockstructured    -L/home/tobias/git/Peano/src/toolbox/particles    -L/home/tobias/git/Peano/src/exahype2 
 LDFLAGS_PEANO_TRACE =    -L/home/tobias/git/Peano/src -g   -L/home/tobias/git/Peano/src/toolbox/loadbalancing    -L/home/tobias/git/Peano/src/toolbox/blockstructured    -L/home/tobias/git/Peano/src/toolbox/particles    -L/home/tobias/git/Peano/src/exahype2 
 LIBOBJS = 
-LIBS = -ltbb
+LIBS = -ltbb -lotter-serial -lotf2
 LIBTOOL = $(SHELL) $(top_builddir)/libtool
 LIPO = 
 LN_S = ln -s
