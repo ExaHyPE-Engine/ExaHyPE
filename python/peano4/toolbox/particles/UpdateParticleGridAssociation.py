@@ -305,8 +305,6 @@ class UpdateParticleGridAssociation(ActionSet):
       p++;
     }
   }
-  
-  coarseGridVertices{{PARTICLES_CONTAINER}}( target.to_ulong() ).insert( coarseGridVertices{{PARTICLES_CONTAINER}}( target.to_ulong() ).begin(), fineGridVertex{{PARTICLES_CONTAINER}}.begin(), fineGridVertex{{PARTICLES_CONTAINER}}.end() );
 """)  
 
 
