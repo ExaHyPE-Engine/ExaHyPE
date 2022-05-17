@@ -70,7 +70,6 @@ AC_PROG_FC
 # postprocessing scripts, e.g.
 #
 AC_LANG(C++)
-AC_OPENMP()
 
 
 #
