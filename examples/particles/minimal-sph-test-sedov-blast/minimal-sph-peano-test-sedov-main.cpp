@@ -34,12 +34,13 @@
 #include "observers/HydroPrepareForce.h"
 #include "observers/ForceNonSym.h"
 #include "observers/NewtonRaphsonSmoothingLength.h"
+#include "observers/Drift.h"
 #include "observers/Kick1.h"
 #include "observers/Kick2.h"
+#include "observers/PredictHydro.h"
 #include "observers/KickCorrector.h"
 #include "observers/KickCorrectorExtra.h"
 #include "observers/HydroKickExtra.h"
-#include "observers/Drift.h"
 #include "observers/RearrangeAtStart.h"
 #include "observers/ResetHasConverged.h"
 #include "observers/InitTimeStep.h"
@@ -153,10 +154,11 @@ int main(int argc, char** argv) {
         examples::particles::observers::ForceNonSym forcespart;
         examples::particles::observers::NewtonRaphsonSmoothingLength newtonRaphson;
         examples::particles::observers::ResetHasConverged ResetHasConvergedNR;
+        examples::particles::observers::Drift driftpart;
         examples::particles::observers::Kick1 kick1part;
         examples::particles::observers::Kick2 kick2part;
         examples::particles::observers::HydroKickExtra kickExtra;
-        examples::particles::observers::Drift driftpart;
+        examples::particles::observers::PredictHydro predictHydroPart;
         examples::particles::observers::ImposeBC ImposeBCpart;
         examples::particles::observers::EndTimeStep endTimeStep;
 
@@ -194,8 +196,10 @@ int main(int argc, char** argv) {
         } /* Finish the "0th" time-step */
 
         /* Now the time-step in the actual "D-K2-K1" form begins */
-        /* "Drift". Drift also predicts v, u, ... */
+        /* "Drift" */
         peano4::parallel::SpacetreeSet::getInstance().traverse(driftpart);
+        /* Also predicts v, u, h, ... */
+        peano4::parallel::SpacetreeSet::getInstance().traverse(predictHydroPart);
 
         /* "Hydro loop" */
         for (int iter=0; iter<3; iter++){

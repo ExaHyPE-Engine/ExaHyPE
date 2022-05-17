@@ -1224,111 +1224,30 @@ drift_particles.add_action_set( peano4.toolbox.particles.ParticleParticleInterac
   
 """,
   touch_vertex_first_time_compute_particle_update_kernel="""
-  const double timeStepSize = GLOBAL_TIME_STEP_SIZE;
-  
-  if (
-    localParticle->getMoveState()!=globaldata::Particle::MoveState::Moved
-    and
-    localParticle->getParallelState()==globaldata::Particle::ParallelState::Local
-    ){
-  
-    // Drift the particle (update position for a full time-step) 
-    localParticle->setX( localParticle->getX() + timeStepSize * localParticle->getV_full() );
-    
-    localParticle->setMoveState( globaldata::Particle::MoveState::Moved );
-      
-    }
+
+  /* We do not excecute any specific action here */
+
 """,
   touch_vertex_last_time_compute_particle_update_kernel="""
   
+  /* We update the position in this stage to avoid updating multiple times 
+   * when a particle moves into a different cell. */
+  
   const double timeStepSize = GLOBAL_TIME_STEP_SIZE;
-
-/*  
+  
   if (
     localParticle->getMoveState()!=globaldata::Particle::MoveState::Moved
     and
     localParticle->getParallelState()==globaldata::Particle::ParallelState::Local
     ){
   
-    // Drift the particle (update position for a full time-step)
+    /* Drift the particle (update position for a full time-step) */
     localParticle->setX( localParticle->getX() + timeStepSize * localParticle->getV_full() );
     
+    /* Flag this particle as Moved */
     localParticle->setMoveState( globaldata::Particle::MoveState::Moved );
   }
-  */
   
-  /* Predict terms (SWIFT) */
-  
-  const double dt_kick_hydro = 0.5 * GLOBAL_TIME_STEP_SIZE;
-  const double dt_drift = GLOBAL_TIME_STEP_SIZE;
-  const double dt_therm = dt_kick_hydro;
-//  const double dt_therm = dt_drift;
-  
-  if (localParticle->getParallelState()==globaldata::Particle::ParallelState::Local ) {
-  
-      /* Predict velocities for hydro terms */
-      localParticle->setV( localParticle->getV() + localParticle->getA() * dt_kick_hydro );
-
-      /* 
-       * Predict additional particle fields forward in time when drifting 
-       */
-      
-      /* Predict the internal energy */
-      localParticle->setU( localParticle->getU() + localParticle->getUDot() * dt_therm );
-
-      /* Predict smoothing length */
-      const double h_inv = 1.0 / localParticle->getSmoothingLength();
-      const double w1 = localParticle->getHDot() * h_inv * dt_drift;
-      localParticle->setSmoothingLength( localParticle->getSmoothingLength() * std::exp(w1) );
-      
-      /* SWIFT custom exponential functions -- @TODO implement */
-//      
-//    if (fabsf(w1) < 0.2f) {
-//      p->h *= approx_expf(w1); /* 4th order expansion of exp(w) */
-//    } else {
-//      p->h *= expf(w1);
-//    }
-//
-
-      /* Predict density */
-      const double w2 = - Dimensions * w1;
-      localParticle->setDensity( localParticle->getDensity() * std::exp(w2) );
-
-//
-//    if (fabsf(w2) < 0.2f) {
-//      p->rho *= approx_expf(w2); /* 4th order expansion of exp(w) */
-//    } else {
-//      p->rho *= expf(w2);
-//    }
-//
-
-      /* Check against entropy floor */
-//      const float floor_A = entropy_floor(p, cosmo, floor_props);
-//      const float floor_u = gas_internal_energy_from_entropy(p->rho, floor_A);
-
-      /* Check against absolute minimum */
-//      const float min_u =
-//          hydro_props->minimal_internal_energy / cosmo->a_factor_internal_energy;
-
-//      p->u = max(p->u, floor_u);
-//      p->u = max(p->u, min_u);
-
-      localParticle->setU( std::max( localParticle->getU(), 0.0) );
-
-      /* Compute the new pressure */
-      const double pressure = 
-        gas_pressure_from_internal_energy( localParticle->getDensity(), localParticle->getU() );
-
-      /* Compute the new sound speed */
-//      const float soundspeed = gas_soundspeed_from_pressure(p->rho, pressure);
-
-      const double soundspeed = gas_soundspeed_from_internal_energy( localParticle->getU() );
-
-      localParticle->setPressure(pressure);
-      localParticle->setSoundSpeed(soundspeed);
-      localParticle->setV_sig_AV( std::max(localParticle->getV_sig_AV(), 2.0 * soundspeed) );
-    
-    }
     
 """,
   additional_includes="""
@@ -1412,6 +1331,114 @@ hydro_kick_extra.add_action_set( peano4.toolbox.particles.UpdateParticleGridAsso
 hydro_kick_extra.add_action_set( peano4.toolbox.particles.UpdateParallelState(particles) )
 project.solversteps.add_step(hydro_kick_extra)
 
+##  Prediction step (relevant when using local time-stepping)
+
+predict_hydro_particles = peano4.solversteps.Step( "PredictHydro" )
+predict_hydro_particles.use_vertex(particles)
+predict_hydro_particles.use_cell(particle_tree_analysis.cell_marker)
+predict_hydro_particles.add_action_set( peano4.toolbox.particles.ParticleParticleInteraction(
+  particle_set=particles,
+  particle_particle_interaction_kernel="""
+    
+  /* We do not excecute any specific action here */
+  
+""",
+  touch_vertex_first_time_compute_particle_update_kernel="""
+
+  /* We do not excecute any specific action here */
+
+""",
+  touch_vertex_last_time_compute_particle_update_kernel="""
+
+  /* Predict hydro terms (SWIFT) 
+   * Relevant for inactive particles when using local-timestepping */
+  
+  const double timeStepSize = GLOBAL_TIME_STEP_SIZE;
+  
+  const double dt_kick_hydro = 0.5 * GLOBAL_TIME_STEP_SIZE;
+  const double dt_drift = GLOBAL_TIME_STEP_SIZE;
+  const double dt_therm = dt_kick_hydro;
+//  const double dt_therm = dt_drift;
+  
+  if (localParticle->getParallelState()==globaldata::Particle::ParallelState::Local ) {
+  
+      /* Predict velocities for hydro terms */
+      localParticle->setV( localParticle->getV() + localParticle->getA() * dt_kick_hydro );
+
+      /* 
+       * Predict additional particle fields forward in time after the Drift step
+       */
+      
+      /* Predict the internal energy */
+      localParticle->setU( localParticle->getU() + localParticle->getUDot() * dt_therm );
+
+      /* Predict smoothing length */
+      const double h_inv = 1.0 / localParticle->getSmoothingLength();
+      const double w1 = localParticle->getHDot() * h_inv * dt_drift;
+      localParticle->setSmoothingLength( localParticle->getSmoothingLength() * std::exp(w1) );
+      
+      /* SWIFT custom exponential functions -- @TODO implement */
+//      
+//    if (fabsf(w1) < 0.2f) {
+//      p->h *= approx_expf(w1); /* 4th order expansion of exp(w) */
+//    } else {
+//      p->h *= expf(w1);
+//    }
+//
+
+      /* Predict density */
+      const double w2 = - Dimensions * w1;
+      localParticle->setDensity( localParticle->getDensity() * std::exp(w2) );
+
+//
+//    if (fabsf(w2) < 0.2f) {
+//      p->rho *= approx_expf(w2); /* 4th order expansion of exp(w) */
+//    } else {
+//      p->rho *= expf(w2);
+//    }
+//
+
+      /* Check against entropy floor */
+//      const float floor_A = entropy_floor(p, cosmo, floor_props);
+//      const float floor_u = gas_internal_energy_from_entropy(p->rho, floor_A);
+
+      /* Check against absolute minimum */
+//      const float min_u =
+//          hydro_props->minimal_internal_energy / cosmo->a_factor_internal_energy;
+
+//      p->u = max(p->u, floor_u);
+//      p->u = max(p->u, min_u);
+
+      localParticle->setU( std::max( localParticle->getU(), 0.0) );
+
+      /* Compute the new pressure */
+      const double pressure = 
+        gas_pressure_from_internal_energy( localParticle->getDensity(), localParticle->getU() );
+
+      /* Compute the new sound speed */
+//      const float soundspeed = gas_soundspeed_from_pressure(p->rho, pressure);
+
+      const double soundspeed = gas_soundspeed_from_internal_energy( localParticle->getU() );
+
+      localParticle->setPressure(pressure);
+      localParticle->setSoundSpeed(soundspeed);
+      localParticle->setV_sig_AV( std::max(localParticle->getV_sig_AV(), 2.0 * soundspeed) );
+    
+    }
+    
+""",
+  additional_includes="""
+#include "Constants.h"
+#include "equation_of_state.h"
+#include <cmath>
+"""
+  ))
+predict_hydro_particles.add_action_set( particle_tree_analysis )
+predict_hydro_particles.add_action_set( peano4.toolbox.particles.UpdateParticleGridAssociation(particles) )
+predict_hydro_particles.add_action_set( peano4.toolbox.particles.UpdateParallelState(particles) )
+project.solversteps.add_step(predict_hydro_particles)
+
+
 
 # ## Corrector step (mini-kick) (Phantom code implementation)
 
@@ -1437,7 +1464,7 @@ kick_particles_corrector.add_action_set( peano4.toolbox.particles.ParticlePartic
 """,
   touch_vertex_last_time_compute_particle_update_kernel="""
   
-  const double timeStepSize_half = 0.5*GLOBAL_TIME_STEP_SIZE;
+  const double timeStepSize_half = 0.5 * GLOBAL_TIME_STEP_SIZE;
   
   if( not localParticle->getHasBeenKicked()
       and
