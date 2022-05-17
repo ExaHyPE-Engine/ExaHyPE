@@ -10,10 +10,9 @@ import jinja2
 class Prediction(AbstractAderDGActionSet):
   """
   
-  The linear combination of the Runge Kutta trials has to be projected onto
+  The extrapolated solution from the space-time predictor has to be projected onto
   the faces, so we can then solve the Riemann problems. So the projection 
   happens in one grid sweep, the corresponding Riemann solve in the next one.
-  
   
   """
   
@@ -66,7 +65,7 @@ class Prediction(AbstractAderDGActionSet):
     double lFhbnd[2*Dimensions*spaceFaceSize*NumberOfVariables]{0.0};
     //double lGradQhbnd[2*Dimensions*Dimensions*spaceFaceSize*(NumberOfVariables+NumberOfParameters)]{0.0};
 
-    int numberOfIterations = repositories::{{SOLVER_INSTANCE}}.spaceTimePredictorNonlinear(
+    int numberOfIterations = repositories::{{SOLVER_INSTANCE}}.spaceTimePredictor(
       lQhbnd,
       lFhbnd,
       lQi,
@@ -82,7 +81,7 @@ class Prediction(AbstractAderDGActionSet):
       timeStepSize
     );
     
-    repositories::{{SOLVER_INSTANCE}}.volumeIntegralNonlinear(
+    repositories::{{SOLVER_INSTANCE}}.volumeIntegral(
       lduh,
       lFhi,
       marker.h()    

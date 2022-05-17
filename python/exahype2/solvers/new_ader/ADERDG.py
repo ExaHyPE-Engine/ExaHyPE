@@ -29,7 +29,7 @@ class Polynomials(IntEnum):
     
 
 class ADERDG( object ):
-  def __init__(self, name, order, polynomials, unknowns, auxiliary_variables, min_cell_h, max_cell_h, plot_grid_properties=False):
+  def __init__(self, name, order, polynomials, unknowns, auxiliary_variables, min_cell_h, max_cell_h, is_linear, plot_grid_properties=False):
 
     self._name = name
     
@@ -42,6 +42,10 @@ class ADERDG( object ):
     self._max_cell_h         = max_cell_h 
     if min_cell_h>max_cell_h:
       raise Exception( "Error: min_cell_h (" + str(min_cell_h) + ") is bigger than max_cell_h (" + str(max_cell_h) + ")" )
+    
+    self._is_linear = is_linear
+#    if is_linear==True: self._is_linear="true"
+#    else: self._is_linear=="false"
 
     self._plot_grid_properties = plot_grid_properties    
 
@@ -446,6 +450,8 @@ class ADERDG( object ):
     d[ "ASSERTION_WITH_4_ARGUMENTS" ] = "nonCriticalAssertion4"
     d[ "ASSERTION_WITH_5_ARGUMENTS" ] = "nonCriticalAssertion5"
     d[ "ASSERTION_WITH_6_ARGUMENTS" ] = "nonCriticalAssertion6"
+    
+    d["IS_LINEAR"] = self._is_linear
 
     if (self._min_cell_h > self._max_cell_h ):
       raise Exception( "min/max h are inconsistent" )

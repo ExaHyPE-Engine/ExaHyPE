@@ -348,7 +348,7 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
         const double dt
         );
 
-    int spaceTimePredictorNonlinear(
+    int spaceTimePredictor(
         double*  lQhbnd,
         double* lFhbnd,
         double* lQi,double* rhs,
@@ -361,7 +361,7 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
         const double dt
         );
 
-    void volumeIntegralNonlinear(
+    void volumeIntegral(
       double* lduh,
       const double* const lFhi,
       const tarch::la::Vector<Dimensions, double>& cellSize);
@@ -378,7 +378,7 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
       const int faceIndex,
       const int direction);
 
-    void riemannSolverNonlinear(
+    void riemannSolver(
       double* FL, double* FR,
       const double* const QL,
       const double* const QR,
@@ -388,7 +388,7 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
       const int direction
       );
 
-    void faceIntegralNonlinear(
+    void faceIntegral(
       double *lduh,
       const double *const lFhbnd,
       const int direction,

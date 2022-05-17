@@ -399,7 +399,38 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::solutionUpdate(double* luh, cons
 
 
 
-int {{NAMESPACE | join("::")}}::{{CLASSNAME}}::spaceTimePredictorNonlinear(double*  lQhbnd, double* lFhbnd, double* lQi, double* rhs, double* lFi, double* gradQ, double* lQhi, double* lFhi, const double* const luh, const tarch::la::Vector<Dimensions, double>& cellCentre, const tarch::la::Vector<Dimensions, double>& cellSize, const double t, const double dt){
+int {{NAMESPACE | join("::")}}::{{CLASSNAME}}::spaceTimePredictor(double*  lQhbnd, double* lFhbnd, double* lQi, double* rhs, double* lFi, double* gradQ, double* lQhi, double* lFhi, const double* const luh, const tarch::la::Vector<Dimensions, double>& cellCentre, const tarch::la::Vector<Dimensions, double>& cellSize, const double t, const double dt){
+
+  {% if IS_LINEAR is sameas True %}
+  //template <bool usePointSource, bool useSource, bool useFlux, bool useNCP, bool useMM,typename SolverType>
+
+  kernels::aderdg::generic::c::spaceTimePredictorLinear<
+    false, //usePointSource
+    {{ "true" if USE_SOURCE!="<none>" else "false" }}, //source
+    {{ "true" if USE_FLUX!="<none>" else "false" }}, //useFlux
+    {{ "true" if USE_NCP!="<none>" else "false" }}, //useNCP
+    false, //useMM
+    {{NAMESPACE | join("::")}}::{{CLASSNAME}}>(
+
+      *this,
+      lQhbnd,
+      lFhbnd,
+      lQi,
+      lFi,
+      gradQ,
+      nullptr, //PSi
+      nullptr, //PSderivatives
+      nullptr, //tmp_PSderivatives
+      lQhi,
+      lFhi,
+      luh,
+      cellCentre,
+      tarch::la::invertEntries(cellSize),
+      t,
+      dt
+      );
+    return 1;
+  {% else %}
   //template <bool useSource, bool useFlux, bool useViscousFlux, bool useNCP, typename SolverType>
   return kernels::aderdg::generic::c::spaceTimePredictorNonlinear<
     {{ "true" if USE_SOURCE!="<none>" else "false" }}, //source
@@ -425,11 +456,27 @@ int {{NAMESPACE | join("::")}}::{{CLASSNAME}}::spaceTimePredictorNonlinear(doubl
       t,
       dt
       );
+  {% endif %}
+
 }
 
 
 
-void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::volumeIntegralNonlinear(double* lduh, const double* const lFhi, const tarch::la::Vector<Dimensions, double>& cellSize){
+void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::volumeIntegral(double* lduh, const double* const lFhi, const tarch::la::Vector<Dimensions, double>& cellSize){
+
+  {% if IS_LINEAR is sameas True %}
+  //template <typename SolverType,bool useSource, bool useFlux, int numberOfVariables, int basisSize>
+  kernels::aderdg::generic::c::volumeIntegralLinear<
+    {{NAMESPACE | join("::")}}::{{CLASSNAME}},
+    {{ "true" if USE_SOURCE!="<none>" else "false" }}, //useSource
+    {{ "true" if USE_FLUX!="<none>" else "false" }}, //useFlux
+    {{NUMBER_OF_UNKNOWNS}},
+    {{ORDER}}+1>(
+      lduh,
+      lFhi,
+      cellSize
+      );
+  {% else %}
   //template <typename SolverType, bool useSourceOrNCP, bool useFlux, bool noTimeAveraging, const int numberOfVariables, int basisSize>
   kernels::aderdg::generic::c::volumeIntegralNonlinear<
     {{NAMESPACE | join("::")}}::{{CLASSNAME}},
@@ -442,6 +489,8 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::volumeIntegralNonlinear(double* 
       lFhi,
       cellSize
       );
+  {% endif %}
+
 }
 
 
@@ -467,7 +516,25 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::boundaryConditions(double* fluxO
 }
 
 
-void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::riemannSolverNonlinear(double* FL, double* FR, const double* const QL, const double* const QR, const double t, const double dt, const tarch::la::Vector<Dimensions, double>& cellSize, const int direction){
+void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::riemannSolver(double* FL, double* FR, const double* const QL, const double* const QR, const double t, const double dt, const tarch::la::Vector<Dimensions, double>& cellSize, const int direction){
+
+  {% if IS_LINEAR is sameas True %}
+  //template <bool useFlux, bool useNCP, bool useMM, typename SolverType>
+  kernels::aderdg::generic::c::riemannSolverLinear<
+    {{ "true" if USE_FLUX!="<none>" else "false" }}, //useFlux
+    {{ "true" if USE_NCP!="<none>" else "false" }}, //useNCP
+    false, //useMM
+    {{NAMESPACE | join("::")}}::{{CLASSNAME}}>(
+      *this,
+      FL,
+      FR,
+      QL,
+      QR,
+      t,
+      dt,
+      direction
+      );
+  {% else %}
   //template <bool useNCP, bool useViscousFlux, typename SolverType>
   kernels::aderdg::generic::c::riemannSolverNonlinear<
     {{ "true" if USE_NCP!="<none>" else "false" }}, //useNCP
@@ -483,10 +550,25 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::riemannSolverNonlinear(double* F
       cellSize,
       direction
       );
+  {% endif %}
+
 }
 
 
-void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::faceIntegralNonlinear(double *lduh, const double *const lFhbnd, const int direction, const int orientation, const tarch::la::Vector<Dimensions, double> &cellSize){
+void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::faceIntegral(double *lduh, const double *const lFhbnd, const int direction, const int orientation, const tarch::la::Vector<Dimensions, double> &cellSize){
+
+  {% if IS_LINEAR is sameas True %}
+  kernels::aderdg::generic::c::faceIntegralLinear<
+    {{NAMESPACE | join("::")}}::{{CLASSNAME}},
+    {{NUMBER_OF_UNKNOWNS}},
+    {{ORDER}}+1>(
+      lduh,
+      lFhbnd,
+      direction,
+      orientation,
+      cellSize
+      );
+  {% else %}
   kernels::aderdg::generic::c::faceIntegralNonlinear<
     {{NAMESPACE | join("::")}}::{{CLASSNAME}},
     {{NUMBER_OF_UNKNOWNS}},
@@ -497,6 +579,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::faceIntegralNonlinear(double *ld
       orientation,
       cellSize
       );
+  {% endif %}
 }
 
 

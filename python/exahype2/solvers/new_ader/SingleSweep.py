@@ -7,7 +7,7 @@ from .PDETerms import PDETerms
 import jinja2
 
 class SingleSweep( ADERDG ):
-  def __init__(self, name, order, polynomials, unknowns, auxiliary_variables, min_cell_h, max_cell_h, plot_grid_properties=False):
+  def __init__(self, name, order, polynomials, unknowns, auxiliary_variables, min_cell_h, max_cell_h, is_linear, plot_grid_properties=False):
 
     super(SingleSweep, self).__init__(
       name,
@@ -17,6 +17,7 @@ class SingleSweep( ADERDG ):
       auxiliary_variables,
       min_cell_h,
       max_cell_h,
+      is_linear,
       plot_grid_properties)
         
     self._solver_template_file_class_name     = "SingleSweep"

@@ -95,7 +95,7 @@ class Correction(AbstractAderDGActionSet):
         );        
       }
 
-      repositories::{{SOLVER_INSTANCE}}.riemannSolverNonlinear(
+      repositories::{{SOLVER_INSTANCE}}.riemannSolver(
         FL,
         FR,
         QL,
@@ -106,9 +106,9 @@ class Correction(AbstractAderDGActionSet):
         d //direction
       );
       
-      repositories::{{SOLVER_INSTANCE}}.faceIntegralNonlinear(
+      repositories::{{SOLVER_INSTANCE}}.faceIntegral(
         lduh,
-        FL,
+        FR,
         d, //direction
         0, //orientation of the face within the cell
         marker.h()
@@ -148,7 +148,7 @@ class Correction(AbstractAderDGActionSet):
         );        
       }
 
-      repositories::{{SOLVER_INSTANCE}}.riemannSolverNonlinear(
+      repositories::{{SOLVER_INSTANCE}}.riemannSolver(
         FL,
         FR,
         QL,
@@ -159,7 +159,7 @@ class Correction(AbstractAderDGActionSet):
         d //direction
       );
 
-      repositories::{{SOLVER_INSTANCE}}.faceIntegralNonlinear(
+      repositories::{{SOLVER_INSTANCE}}.faceIntegral(
         lduh,
         FL,
         d, //direction

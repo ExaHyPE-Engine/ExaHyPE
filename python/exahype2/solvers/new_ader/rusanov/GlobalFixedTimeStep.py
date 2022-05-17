@@ -1,4 +1,4 @@
-# This file is part of the ExaHyPE2 project. For conditions of distribution and 
+  # This file is part of the ExaHyPE2 project. For conditions of distribution and 
 # use, please see the copyright notice at www.peano-framework.org
 from exahype2.solvers.new_ader.SingleSweep    import SingleSweep
 from exahype2.solvers.new_ader.PDETerms       import PDETerms
@@ -23,7 +23,8 @@ class GlobalFixedTimeStep( SingleSweep ):
     name, 
     order,
     polynomials,
-    unknowns, auxiliary_variables, min_cell_h, max_cell_h, time_step_size,
+    unknowns, auxiliary_variables, min_cell_h, max_cell_h, 
+    time_step_size,
     flux=PDETerms.User_Defined_Implementation, 
     ncp=PDETerms.None_Implementation, 
     point_source=PDETerms.None_Implementation,
@@ -31,9 +32,10 @@ class GlobalFixedTimeStep( SingleSweep ):
     refinement_criterion=PDETerms.None_Implementation,
     initial_conditions=PDETerms.User_Defined_Implementation,
     source_term=PDETerms.None_Implementation,
+    is_linear=False,
     plot_grid_properties=False
   ):
-    super(GlobalFixedTimeStep,self).__init__(name, order, polynomials, unknowns, auxiliary_variables, min_cell_h, max_cell_h, plot_grid_properties) 
+    super(GlobalFixedTimeStep,self).__init__(name, order, polynomials, unknowns, auxiliary_variables, min_cell_h, max_cell_h, is_linear, plot_grid_properties) 
    
     self._time_step_size = time_step_size
 
