@@ -19,7 +19,7 @@
 #   find . -name Makefile.in -delete
 #
 #
-AC_INIT(Peano, 4.0)
+AC_INIT([Peano],[4.0])
 AC_CONFIG_MACRO_DIR([m4])
 
 AM_INIT_AUTOMAKE(foreign -Wall -Werror)
@@ -138,7 +138,7 @@ LDADD_PEANO_3D_DEBUG="   -lPeano4Core3d_debug   -lTarch_debug"
 #
 AC_ARG_WITH(
   multithreading, 
-  AC_HELP_STRING([--with-multithreading], [switch on multithreading [default=no,cpp,omp,tbb]]),
+  AS_HELP_STRING([--with-multithreading],[switch on multithreading [default=no,cpp,omp,tbb]]),
   [
     AC_MSG_CHECKING(for multithreading)
     case "${withval}" in
@@ -179,7 +179,7 @@ fi
 #        overwrite CXX to be the user supplied value
 #
 AC_ARG_WITH(mpi,
-  AC_HELP_STRING([--with-mpi], [switch on distributed memory parallelisation [default=no, mpiCC command]]),
+  AS_HELP_STRING([--with-mpi],[switch on distributed memory parallelisation [default=no, mpiCC command]]),
   [ AC_MSG_CHECKING(for mpi)
     case "${withval}" in
       no)    AC_MSG_RESULT(no);                              mpi=false ;;
@@ -206,7 +206,7 @@ fi
 #
 AC_ARG_WITH(
   gpu, 
-  AC_HELP_STRING([--with-gpu], [build with the GPU support. Not all targets are supported for all programming models, but you will need some threading model enabled [default=no,omp,hip,sycl,cpp]]),
+  AS_HELP_STRING([--with-gpu],[build with the GPU support. Not all targets are supported for all programming models, but you will need some threading model enabled [default=no,omp,hip,sycl,cpp]]),
   [
     AC_MSG_CHECKING(for gpu)
     case "${withval}" in
@@ -263,7 +263,7 @@ fi
 # VTK
 #
 AC_ARG_WITH(vtk,
-  AC_HELP_STRING([--with-vtk], [enable VTK and thus build Peano's conversion tools [default=no, prefix]. prefix is where VTK include files are to be found, such as /usr/local/include/vtk-8.90]),
+  AS_HELP_STRING([--with-vtk],[enable VTK and thus build Peano's conversion tools [default=no, prefix]. prefix is where VTK include files are to be found, such as /usr/local/include/vtk-8.90]),
   [ AC_MSG_CHECKING(for vtk)
     case "${withval}" in
       no)    AC_MSG_RESULT(no);     vtk_include=false ;;
@@ -288,7 +288,7 @@ if test "$vtk_include" != false; then
   # If you specify a version, then I use this one. Otherwise, I search $vtk_include  
   #
   AC_ARG_WITH(vtk_version,
-    AC_HELP_STRING([--with-vtk-version], [specify vtk version (major) [default=autodetect]]),
+    AS_HELP_STRING([--with-vtk-version],[specify vtk version (major) [default=autodetect]]),
     [ AC_MSG_CHECKING(for vtk-version)
       case "${withval}" in
       *)     AC_MSG_RESULT(build against VTK version ${withval});    vtk_version=${withval}  ;;
@@ -308,7 +308,7 @@ if test "$vtk_include" != false; then
 
 
   AC_ARG_WITH(vtk-suffix,
-    AC_HELP_STRING([--with-vtk-suffix], [specify which suffix the vtk libraries carry [default=autodetect, use for no prefix]]),
+    AS_HELP_STRING([--with-vtk-suffix],[specify which suffix the vtk libraries carry [default=autodetect, use for no prefix]]),
     [ AC_MSG_CHECKING(for vtk-suffix)
       case "${withval}" in
         yes)   AC_MSG_RESULT(assume VTK libraries have no suffix);    vtk_suffix=""  ;;
@@ -353,7 +353,7 @@ AM_CONDITIONAL([VTK_LIBRARY_VERSION_9],[test "$vtk_version" = "9"])
 # HDF5
 #
 #AC_ARG_WITH(hdf5,
-#  AC_HELP_STRING([--with-hdf5], [enable HDF5 support [default=no]]),
+#  AS_HELP_STRING([--with-hdf5],[enable HDF5 support [default=no]]),
 #  [ AC_MSG_CHECKING(for hdf5)
 #    case "${withval}" in
 #      no)    AC_MSG_RESULT(no);                       hdf5=false ;;
@@ -381,7 +381,7 @@ AM_CONDITIONAL([VTK_LIBRARY_VERSION_9],[test "$vtk_version" = "9"])
 #
 
 AC_ARG_ENABLE(feexcept,
-  AC_HELP_STRING([--disable-feexcept], [do not use floating-point exception handling]),
+  AS_HELP_STRING([--disable-feexcept],[do not use floating-point exception handling]),
   [feexcept=${enableval}], [feexcept=yes])
 AC_MSG_CHECKING(for feexcept); AC_MSG_RESULT($feexcept)
 
@@ -404,7 +404,7 @@ fi
 # Vendor-specific toolchain (logging devices, memory allocation libraries, ...)
 #
 AC_ARG_WITH(toolchain,
-  AC_HELP_STRING([--with-toolchain], [build with vendor-specific toolchain [default=no,intel,nvidia,scorep,chrome,gnu]]),
+  AS_HELP_STRING([--with-toolchain],[build with vendor-specific toolchain [default=no,intel,nvidia,scorep,chrome,gnu]]),
   [ AC_MSG_CHECKING(for toolchain)
     case "${withval}" in
       no)        AC_MSG_RESULT(no);                                           toolchain=false ;;
@@ -468,7 +468,7 @@ fi
 # FEM 
 #
 AC_ARG_ENABLE(fem,
-  AC_HELP_STRING([--enable-fem], [enable FEM  [default=false]]),
+  AS_HELP_STRING([--enable-fem],[enable FEM  [default=false]]),
   [ AC_MSG_CHECKING(for fem)
     case "${withval}" in
       no)    AC_MSG_RESULT(no);    toolbox_fem=false ;;
@@ -482,7 +482,7 @@ AM_CONDITIONAL([UseToolboxFiniteElements],[test "x$toolbox_fem" = xtrue])
 # Multiprecision 
 #
 AC_ARG_ENABLE(multiprecision,
-  AC_HELP_STRING([--enable-multiprecision], [enable multiprecision  [default=false]]),
+  AS_HELP_STRING([--enable-multiprecision],[enable multiprecision  [default=false]]),
   [ AC_MSG_CHECKING(for multiprecision)
     case "${withval}" in
       no)    AC_MSG_RESULT(no);    toolbox_multiprecision=false ;;
@@ -496,7 +496,7 @@ AM_CONDITIONAL([UseToolboxMultiprecision],[test "x$toolbox_multiprecision" = xtr
 # Load balancing 
 #
 AC_ARG_ENABLE(loadbalancing,
-  AC_HELP_STRING([--enable-loadbalancing], [enable loadbalancing  [default=false]]),
+  AS_HELP_STRING([--enable-loadbalancing],[enable loadbalancing  [default=false]]),
   [ AC_MSG_CHECKING(for loadbalancing)
     case "${withval}" in
       no)    AC_MSG_RESULT(no);    toolbox_loadbalancing=false ;;
@@ -510,7 +510,7 @@ AM_CONDITIONAL([UseToolboxLoadBalancing],[test "x$toolbox_loadbalancing" = xtrue
 # Particles 
 #
 AC_ARG_ENABLE(particles,
-  AC_HELP_STRING([--enable-particles], [enable particles  [default=false]]),
+  AS_HELP_STRING([--enable-particles],[enable particles  [default=false]]),
   [ AC_MSG_CHECKING(for particles)
     case "${withval}" in
       no)    AC_MSG_RESULT(no);    toolbox_particles=false ;;
@@ -524,7 +524,7 @@ AM_CONDITIONAL([UseToolboxParticles],[test "x$toolbox_particles" = xtrue])
 # ExaHyPE2
 #
 AC_ARG_ENABLE(exahype,
-  AC_HELP_STRING([--enable-exahype], [enable ExaHyPE2 [default=false]]),
+  AS_HELP_STRING([--enable-exahype],[enable ExaHyPE2 [default=false]]),
   [ AC_MSG_CHECKING(for exahype)
     case "${withval}" in
       no)    AC_MSG_RESULT(no);    toolbox_exahype=false ;;
@@ -538,7 +538,7 @@ AM_CONDITIONAL([UseExaHyPE],[test "x$toolbox_exahype" = xtrue])
 # Blockstructured
 #
 AC_ARG_ENABLE(blockstructured,
-  AC_HELP_STRING([--enable-blockstructured], [enable blockstructured (SAMR) support [default=false]]),
+  AS_HELP_STRING([--enable-blockstructured],[enable blockstructured (SAMR) support [default=false]]),
   [ AC_MSG_CHECKING(for blockstructured)
     case "${withval}" in
       no)    AC_MSG_RESULT(no);    toolbox_blockstructured=false ;;
@@ -552,7 +552,7 @@ AM_CONDITIONAL([UseToolboxBlockstructured],[test "x$toolbox_blockstructured" = x
 # Delta
 #
 AC_ARG_WITH(delta,
-  AC_HELP_STRING([--with-delta], [enable Delta [default=no]]),
+  AS_HELP_STRING([--with-delta],[enable Delta [default=no]]),
   [ AC_MSG_CHECKING(for delta)
     case "${withval}" in
       no)    AC_MSG_RESULT(no);   toolbox_delta=false ;;
@@ -571,7 +571,7 @@ AM_CONDITIONAL([UseDelta],[test "$toolbox_delta" != false])
 # Otter
 #
 AC_ARG_WITH(otter,
-  AC_HELP_STRING([--with-otter], [enable Otter [default=false]]),
+  AS_HELP_STRING([--with-otter],[enable Otter [default=false]]),
   [ AC_MSG_CHECKING(for otter)
     case "${withval}" in
       no)    AC_MSG_RESULT(no);    use_otter=false ;;
@@ -754,7 +754,7 @@ fi
 # SmartMPI
 #
 AC_ARG_WITH(smartmpi,
-  AC_HELP_STRING([--with-smartmpi], [build with SmartMPI [default=no,Merged,Alternating]]),
+  AS_HELP_STRING([--with-smartmpi],[build with SmartMPI [default=no,Merged,Alternating]]),
   [ AC_MSG_CHECKING(for smartmpi)
     case "${withval}" in
       no)               AC_MSG_RESULT(no);    smartmpi=false ;;
@@ -812,13 +812,13 @@ AC_SUBST(LDADD_PEANO_3D_DEBUG)
 # Kick out makefiles. I'm not sure but it seems that you have to add the directories to 
 # Makefile.am in the src subdirectories, too
 #
-AC_OUTPUT(
-  Makefile 
+AC_CONFIG_FILES([Makefile 
   src/Makefile 
   src/toolbox/blockstructured/Makefile src/toolbox/multiprecision/Makefile src/toolbox/finiteelements/Makefile src/toolbox/loadbalancing/Makefile src/toolbox/particles/Makefile
   examples/grid/Makefile examples/integerdiffusionthroughfaces/Makefile examples/delta/Makefile examples/regulargridupscaling/Makefile 
   src/convert/Makefile
   src/exahype2/Makefile
   src/unittests/Makefile
-)
+])
+AC_OUTPUT
 
