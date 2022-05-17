@@ -166,7 +166,6 @@ if test "$multithreading" == tbb; then
 fi
 
 if test "$multithreading" == omp; then
-  AC_OPENMP()
   AC_CHECK_HEADERS([omp.h],[],[AC_MSG_WARN([header <omp.h> not found])])
   AC_DEFINE([SharedOMP], [1], [SharedOMP])
 fi
@@ -233,25 +232,21 @@ AM_CONDITIONAL([GPUOffloadingCPP],    [test "$gpu" == cpp])
 
 
 if test "$gpu" == omp; then
-  AC_OPENMP()
   AC_CHECK_HEADERS([omp.h],[],[AC_MSG_WARN([header <omp.h> not found])])
   AC_DEFINE([GPUOffloadingOMP], [1], [GPUOffloadingOMP])
 fi
 
 if test "$gpu" == sycl; then
-  #AC_OPENMP()
   #AC_CHECK_HEADERS([omp.h],[],[AC_MSG_WARN([header <omp.h> not found])])
   AC_DEFINE([GPUOffloadingSYCL], [1], [GPUOffloadingSYCL])
 fi
 
 if test "$gpu" == hip; then
-  #AC_OPENMP()
   #AC_CHECK_HEADERS([omp.h],[],[AC_MSG_WARN([header <omp.h> not found])])
   AC_DEFINE([GPUOffloadingHIP], [1], [GPUOffloadingHIP])
 fi
 
 if test "$gpu" == cpp; then
-  #AC_OPENMP()
   #AC_CHECK_HEADERS([omp.h],[],[AC_MSG_WARN([header <omp.h> not found])])
   AC_DEFINE([GPUOffloadingCPP], [1], [GPUOffloadingCPP])
 fi
