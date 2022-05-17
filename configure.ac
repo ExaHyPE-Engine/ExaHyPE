@@ -815,7 +815,7 @@ AC_SUBST(LDADD_PEANO_3D_DEBUG)
 AC_CONFIG_FILES([Makefile 
   src/Makefile 
   src/toolbox/blockstructured/Makefile src/toolbox/multiprecision/Makefile src/toolbox/finiteelements/Makefile src/toolbox/loadbalancing/Makefile src/toolbox/particles/Makefile
-  examples/grid/Makefile examples/integerdiffusionthroughfaces/Makefile examples/delta/Makefile examples/regulargridupscaling/Makefile 
+  examples/grid/Makefile examples/delta/Makefile examples/regulargridupscaling/Makefile 
   src/convert/Makefile
   src/exahype2/Makefile
   src/unittests/Makefile
