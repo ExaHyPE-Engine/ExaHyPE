@@ -71,12 +71,18 @@ a_attr = peano4.dastgen2.Peano4DoubleArray("a","Dimensions")
 v_full_attr = peano4.dastgen2.Peano4DoubleArray("v_full","Dimensions")
 
 has_been_kicked_attr = dastgen2.attributes.Boolean("hasBeenKicked")
+energy_kin_attr = dastgen2.attributes.Double("energyKin")
+energy_pot_attr = dastgen2.attributes.Double("energyPot")
+energy_tot_attr = dastgen2.attributes.Double("energyTot")
 
 # Add particle properties
 particle.data.add_attribute(v_attr)
 particle.data.add_attribute(a_attr)
 particle.data.add_attribute(v_full_attr)
 particle.data.add_attribute(has_been_kicked_attr)
+particle.data.add_attribute(energy_kin_attr)
+particle.data.add_attribute(energy_pot_attr)
+particle.data.add_attribute(energy_tot_attr)
 
 particles = peano4.toolbox.particles.ParticleSet(particle)
 
@@ -192,6 +198,23 @@ initialisation_snippet = """
   particle->setA(0,0);
   particle->setA(1,0);
 
+  particle->setHasBeenKicked(false);
+  
+  /* Set initial energy */
+  /* G_NEWTON in internal units */
+  double const L3 = LENGTH_UNIT * LENGTH_UNIT * LENGTH_UNIT;
+  double const T2 = PERIOD * PERIOD;
+  double const GN = G_NEWTON * M_SUN * T2 / L3;
+
+  /* Sun-Earth initial distance */
+  const double r_ini = particle->getX()(0) - SUN_X_COORD;
+  const double r_inv = r_ini ? 1.0 / r_ini : 0.0;     
+  particle->setEnergyKin( 0.5 * tarch::la::norm2(particle->getV()) );
+  particle->setEnergyPot( - GN * r_inv );
+  
+  /* Overall minus sign for plotting */
+  particle->setEnergyTot( -( particle->getEnergyKin() + particle->getEnergyPot() ) );
+
   /* Initialise the "extended" arrays */
   particle->setV_full(particle->getV());
 
@@ -201,6 +224,7 @@ init_setup = peano4.solversteps.Step( name="Init", add_user_defined_actions=Fals
 init_setup.use_vertex(particles)
 init_setup.use_cell(particle_tree_analysis.cell_marker)
 init_setup.add_action_set( peano4.toolbox.particles.UpdateParticleGridAssociation(particles) )
+init_setup.add_action_set( peano4.toolbox.particles.UpdateParallelState(particles) )
 init_setup.add_action_set( peano4.toolbox.particles.InsertParticlesAlongCartesianLayoutIntoUnrefinedCells(
   particle_set=particles,
 #  distance_between_particles=0.4,               # this will initialize just one particle in the domain at (0,0)
@@ -221,7 +245,6 @@ project.solversteps.add_step(init_setup)
 force_gravity_particles = peano4.solversteps.Step( "ForceGravity" )
 force_gravity_particles.use_vertex(particles)
 force_gravity_particles.use_cell(particle_tree_analysis.cell_marker)
-force_gravity_particles.add_action_set( peano4.toolbox.particles.UpdateParticleGridAssociation(particles) )
 force_gravity_particles.add_action_set( peano4.toolbox.particles.ParticleParticleInteraction(
   particle_set=particles,
   particle_particle_interaction_kernel="""
@@ -287,13 +310,18 @@ force_gravity_particles.add_action_set( peano4.toolbox.particles.ParticleParticl
     /* Sun-Earth distance */
     tarch::la::Vector<Dimensions,double> dx = localParticle->getX() - pos_sun;
     const double r = tarch::la::norm2(dx);
+    const double r_inv = r ? 1.0 / r : 0.0;     
 
     if( tarch::la::greaterEquals( r, 0.5 * R_MIN / LENGTH_UNIT ) ) {
 
       /* Gravitational acceleration */
-      localParticle->setA( - GN * dx / (r * r * r) );
+      localParticle->setA( - GN * dx * (r_inv * r_inv * r_inv) );
 
     }
+
+    /* Update potential Energy */
+    const double E_pot = - GN * r_inv;
+    localParticle->setEnergyPot( E_pot );
 
     assertion1(  std::isfinite(localParticle->getA(0)), localParticle->toString() );
     assertion1(  std::isfinite(localParticle->getA(1)), localParticle->toString() );
@@ -308,6 +336,8 @@ force_gravity_particles.add_action_set( peano4.toolbox.particles.ParticleParticl
   ))
 #force_gravity_particles.add_action_set( peano4.toolbox.particles.ParticleAMR(particles,particle_tree_analysis,min_particles_per_cell=10) )
 force_gravity_particles.add_action_set( particle_tree_analysis )
+force_gravity_particles.add_action_set( peano4.toolbox.particles.UpdateParticleGridAssociation(particles) )
+force_gravity_particles.add_action_set( peano4.toolbox.particles.UpdateParallelState(particles) )
 project.solversteps.add_step(force_gravity_particles)
 
 
@@ -329,7 +359,6 @@ project.solversteps.add_step(force_gravity_particles)
 kick1_particles = peano4.solversteps.Step( "Kick1" )
 kick1_particles.use_vertex(particles)
 kick1_particles.use_cell(particle_tree_analysis.cell_marker)
-#kick1_particles.add_action_set( peano4.toolbox.particles.UpdateParticleGridAssociation(particles) )
 kick1_particles.add_action_set( peano4.toolbox.particles.ParticleParticleInteraction(
   particle_set=particles,
   particle_particle_interaction_kernel="""
@@ -375,6 +404,8 @@ kick1_particles.add_action_set( peano4.toolbox.particles.ParticleParticleInterac
   ))
 #kick_particles.add_action_set( peano4.toolbox.particles.ParticleAMR(particles,particle_tree_analysis,min_particles_per_cell=10) )
 kick1_particles.add_action_set( particle_tree_analysis )
+kick1_particles.add_action_set( peano4.toolbox.particles.UpdateParticleGridAssociation(particles) )
+kick1_particles.add_action_set( peano4.toolbox.particles.UpdateParallelState(particles) )
 project.solversteps.add_step(kick1_particles)
 
 
@@ -385,7 +416,6 @@ project.solversteps.add_step(kick1_particles)
 kick2_particles = peano4.solversteps.Step( "Kick2" )
 kick2_particles.use_vertex(particles)
 kick2_particles.use_cell(particle_tree_analysis.cell_marker)
-#kick2_particles.add_action_set( peano4.toolbox.particles.UpdateParticleGridAssociation(particles) )
 kick2_particles.add_action_set( peano4.toolbox.particles.ParticleParticleInteraction(
   particle_set=particles,
   particle_particle_interaction_kernel="""
@@ -426,6 +456,13 @@ kick2_particles.add_action_set( peano4.toolbox.particles.ParticleParticleInterac
     /* Re-set the predicted velocities */
     localParticle->setV( localParticle->getV_full() );
 
+    /* Update potential Energy */
+    const double E_kin = 0.5 * tarch::la::norm2( localParticle->getV() );
+    localParticle->setEnergyKin( E_kin);
+
+    /* Update total energy (overall minus sign) */
+    localParticle->setEnergyTot( - ( E_kin + localParticle->getEnergyPot() ) );
+
   }
 
 """,
@@ -436,6 +473,8 @@ kick2_particles.add_action_set( peano4.toolbox.particles.ParticleParticleInterac
   ))
 #kick2_particles.add_action_set( peano4.toolbox.particles.ParticleAMR(particles,particle_tree_analysis,min_particles_per_cell=10) )
 kick2_particles.add_action_set( particle_tree_analysis )
+kick2_particles.add_action_set( peano4.toolbox.particles.UpdateParticleGridAssociation(particles) )
+kick2_particles.add_action_set( peano4.toolbox.particles.UpdateParallelState(particles) )
 project.solversteps.add_step(kick2_particles)
 
 
@@ -452,7 +491,6 @@ project.solversteps.add_step(kick2_particles)
 drift_particles = peano4.solversteps.Step( "Drift" )
 drift_particles.use_vertex(particles)
 drift_particles.use_cell(particle_tree_analysis.cell_marker)
-drift_particles.add_action_set( peano4.toolbox.particles.UpdateParticleGridAssociation(particles) )
 drift_particles.add_action_set( peano4.toolbox.particles.ParticleParticleInteraction(
   particle_set=particles,
   particle_particle_interaction_kernel="""
@@ -489,6 +527,8 @@ drift_particles.add_action_set( peano4.toolbox.particles.ParticleParticleInterac
   ))
 #drift_particles.add_action_set( peano4.toolbox.particles.ParticleAMR(particles,particle_tree_analysis,min_particles_per_cell=10) )
 drift_particles.add_action_set( particle_tree_analysis )
+drift_particles.add_action_set( peano4.toolbox.particles.UpdateParticleGridAssociation(particles) )
+drift_particles.add_action_set( peano4.toolbox.particles.UpdateParallelState(particles) )
 project.solversteps.add_step(drift_particles)
 
 
@@ -497,7 +537,6 @@ project.solversteps.add_step(drift_particles)
 init_time_step = peano4.solversteps.Step( "InitTimeStep" )
 init_time_step.use_vertex(particles)
 init_time_step.use_cell(particle_tree_analysis.cell_marker)
-init_time_step.add_action_set( peano4.toolbox.particles.UpdateParticleGridAssociation(particles) )
 init_time_step.add_action_set( peano4.toolbox.particles.ParticleParticleInteraction(
   particle_set=particles,
   particle_particle_interaction_kernel="""
@@ -527,6 +566,8 @@ init_time_step.add_action_set( peano4.toolbox.particles.ParticleParticleInteract
   ))
 #init_time_step.add_action_set( peano4.toolbox.particles.ParticleAMR(particles,particle_tree_analysis,min_particles_per_cell=10) )
 init_time_step.add_action_set( particle_tree_analysis )
+init_time_step.add_action_set( peano4.toolbox.particles.UpdateParticleGridAssociation(particles) )
+init_time_step.add_action_set( peano4.toolbox.particles.UpdateParallelState(particles) )
 project.solversteps.add_step(init_time_step)
 
 
@@ -536,7 +577,6 @@ project.solversteps.add_step(init_time_step)
 impose_BC_particles = peano4.solversteps.Step( "ImposeBC" )
 impose_BC_particles.use_vertex(particles)
 impose_BC_particles.use_cell(particle_tree_analysis.cell_marker)
-#impose_BC_particles.add_action_set( peano4.toolbox.particles.UpdateParticleGridAssociation(particles) )
 impose_BC_particles.add_action_set( peano4.toolbox.particles.ParticleParticleInteraction(
   particle_set=particles,
   particle_particle_interaction_kernel="""
@@ -591,6 +631,8 @@ impose_BC_particles.add_action_set( peano4.toolbox.particles.ParticleParticleInt
   ))
 impose_BC_particles.add_action_set( peano4.toolbox.particles.ParticleAMR(particles,particle_tree_analysis,min_particles_per_cell=10) )
 impose_BC_particles.add_action_set( particle_tree_analysis )
+impose_BC_particles.add_action_set( peano4.toolbox.particles.UpdateParticleGridAssociation(particles) )
+impose_BC_particles.add_action_set( peano4.toolbox.particles.UpdateParallelState(particles) )
 project.solversteps.add_step(impose_BC_particles)
 
 # ## For Debugging: collapse problem into 1D
@@ -643,6 +685,9 @@ project.solversteps.add_step(rearrange_particles)
 particle_plotter = peano4.toolbox.particles.PlotParticlesInVTKFormat( "particles", particles, time_stamp_evaluation=peano4.toolbox.particles.PlotParticlesInVTKFormat.CountTimeSteps )
 particle_plotter.add_attribute_to_plot(v_attr       , Dimensions)
 particle_plotter.add_attribute_to_plot(a_attr       , Dimensions)
+particle_plotter.add_attribute_to_plot(energy_kin_attr  , 1)
+particle_plotter.add_attribute_to_plot(energy_pot_attr  , 1)
+particle_plotter.add_attribute_to_plot(energy_tot_attr  , 1)
 
 # Solution plotter
 print_solution = peano4.solversteps.Step( "Plot", add_user_defined_actions=False )

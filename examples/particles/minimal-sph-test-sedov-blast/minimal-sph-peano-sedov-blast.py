@@ -258,7 +258,7 @@ GAMMA = str(5./3.)
 KERNEL_SUPPORT_RAD = "2"  # "gamma" parameter. =2 for Cubic Spline. Different in other kernels.
 
 # Artificial viscosity parameters
-ALPHA_AV= "0.8"
+ALPHA_AV= "0.8"     # =0.8 in SWIFT
 BETA_AV = "3"       # =3 in SWIFT/SPHENIX
 
 # Smoothing-length free parameter (resolution "eta_neighbours"). 
@@ -365,7 +365,7 @@ initialisation_snippet = """
    } else {
      particle->setU( 0.0 ); 
    }
- 
+
 //   /* New method */
 //   /* Smooth the explosion with kernel */
 //   const double h = particle->getSmoothingLength();
@@ -384,7 +384,7 @@ initialisation_snippet = """
 //  } else {
 //    particle->setU( 0.0 ); 
 //  }
-  
+
   /* Set non-zero (background) value in order to get non-zero sound speed across the whole domain */
   if( tarch::la::equals(particle->getU(),0) ){
 //    particle->setU( particle->getPressure()/( (GAMMA-1) * particle->getDensity() ) ); 

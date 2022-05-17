@@ -23,9 +23,9 @@ namespace particles{
   const double LENGTH_UNIT = 608390804000.0;
   const double M_SUN = 1.9885e+30;
   const double SUN_X_COORD = 0.5;
-  const double SUN_Y_COORD = 0.5;
+  const double SUN_Y_COORD = 0.55;
   const double EARTH_X_INI = 0.75;
-  const double EARTH_Y_INI = 0.5;
+  const double EARTH_Y_INI = 0.55;
   const double EARTH_V_INI_X = 0.0;
   const double EARTH_V_INI_Y = 1.5710511721310971;
   const double ECCENTRICITY = 0.016710219253597416;
