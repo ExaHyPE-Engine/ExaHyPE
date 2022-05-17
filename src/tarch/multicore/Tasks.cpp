@@ -14,6 +14,7 @@
 #include "multicore.h"
 
 #include "tarch/multicore/orchestration/StrategyFactory.h"
+#include "tarch/multicore/otter.h"
 
 
 #ifdef UseSmartMPI
@@ -542,6 +543,8 @@ void tarch::multicore::spawnAndWait(
     native::spawnAndWait(tasks,orchestrationStrategy);
     orchestrationStrategy->endBSPSection();
 
+    otterSynchroniseChildTasks();
+
     internal::copyInternalTaskQueuesOverIntoGlobalQueue(-1);
 
     const auto fusionInstruction = orchestrationStrategy->getNumberOfTasksToFuseAndTargetDevice();
@@ -554,6 +557,7 @@ void tarch::multicore::spawnAndWait(
       int numberOfTasksToProcessNow = std::max(0,static_cast<int>(globalNonblockingTasks.size())-orchestrationStrategy->getNumberOfTasksToHoldBack());
       internal::mapPendingTasksOntoNativeTasks(numberOfTasksToProcessNow);
     }
+
   }
 }
 

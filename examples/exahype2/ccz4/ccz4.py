@@ -26,7 +26,7 @@ floatparams = {
 	"itau":1.0, "k1":0.1, "k2":0.0, "k3":0.5, "eta":1.0,
         "f":0.75, "g":0.0, "xi":1.0, "e":1.0, "c":1.0, "mu":0.2, "ds":1.0,
         "sk":1.0, "bs":1.0,
-        "domain_r":0.5 #, \
+        "domain_r":0.5, "smoothing":0.0 #, \
 	#"itau":1.0, "k1":0.1, "k2":0.0, "k3":0.5, "eta":1.0,
         #"f":1.0, "g":0.0, "xi":1.0, "e":1.0, "c":1.0, "mu":0.2, "ds":1.0,
         #"sk":1.0, "bs":1.0#, \
@@ -49,7 +49,7 @@ if __name__ == "__main__":
     parser.add_argument("-m",    "--mode",            dest="mode",            default="release",  help="|".join(modes.keys()) )
     parser.add_argument( "--gpu",            dest="GPU",            default=False, action="store_true",  help="Run with accelerator support" )
     parser.add_argument("-ext",  "--extension",       dest="extension",       choices=["none", "gradient", "AMRadm", "Full"],   default="none",  help="Pick extension, i.e. what should be plotted on top. Default is none" )
-    parser.add_argument("-impl", "--implementation",  dest="implementation",  choices=["fv-global-fixed", "fv-global-adaptive", "fv-global-fixed-enclave", "fv-global-adaptive-enclave"], required="True",  help="Pick solver type" )
+    parser.add_argument("-impl", "--implementation",  dest="implementation",  choices=["fv-global-fixed", "fv-global-adaptive", "fv-global-fixed-enclave", "fv-global-adaptive-enclave","fv-subcyling-adaptive-enclave","fv-local-enclave"], required="True",  help="Pick solver type" )
     parser.add_argument("-no-pbc",  "--no-periodic-boundary-conditions",      dest="periodic_bc", action="store_false", default="True",  help="switch on or off the periodic BC" )
     parser.add_argument("-et",   "--end-time",        dest="end_time",        type=float, default=1.0, help="End (terminal) time" )
     parser.add_argument("-pst",   "--plot-start-time",        dest="plot_start_time",        type=float, default=0.0, help="start time for plot" )
@@ -59,7 +59,7 @@ if __name__ == "__main__":
     parser.add_argument("-tn", "--tracer-name",       dest="tra_name",    type=str, default="de",  help="name of output tracer file (temporary)" )
     parser.add_argument("-exn", "--exe-name",        dest="exe_name",    type=str, default="",  help="name of output executable file" )
     parser.add_argument("-outdir", "--output-directory",        dest="path",    type=str, default="./",  help="specify the output directory, include the patch file and tracer file" )
-    parser.add_argument("-interp",   "--interpolation", dest="interpolation",     choices=["constant","order-2","linear-constant-extrap","linear-linear-extrap","linear-lin-extrap-lin-normal-interp"], default="linear-constant-extrap",  help="interpolation scheme for AMR" )
+    parser.add_argument("-interp",   "--interpolation", dest="interpolation",     choices=["constant","order-2","linear-constant-extrap","linear-linear-extrap","linear-con-extrap-lin-normal-interp","linear-lin-extrap-lin-normal-interp"], default="linear-constant-extrap",  help="interpolation scheme for AMR" )
     parser.add_argument("-restrict", "--restriction",   dest="restriction",       choices=["average", "inject", "average+enforce", "inject+enforce"], default="average",  help="restriction scheme for AMR" )
 
 
@@ -81,7 +81,7 @@ if __name__ == "__main__":
        SuperClass = exahype2.solvers.fv.rusanov.GlobalFixedTimeStepWithEnclaveTasking
     if args.implementation=="fv-global-adaptive-enclave":
        SuperClass = exahype2.solvers.fv.rusanov.GlobalAdaptiveTimeStepWithEnclaveTasking
-    if args.implementation=="fv-subcyling-adaptive-enclave":
+    if args.implementation=="fv-subcyling-adaptive-enclave": 
        SuperClass = exahype2.solvers.fv.rusanov.SubcyclingAdaptiveTimeStepWithEnclaveTasking
     if args.implementation=="fv-local-enclave":
        SuperClass = exahype2.solvers.fv.rusanov.LocalTimeStepWithEnclaveTasking
@@ -142,6 +142,16 @@ if __name__ == "__main__":
             auxiliary_variables=0,
             min_volume_h=min_volume_h, max_volume_h=max_volume_h,
             time_step_relaxation=cfl
+          )
+        elif SuperClass==exahype2.solvers.fv.rusanov.SubcyclingAdaptiveTimeStepWithEnclaveTasking:
+          SuperClass.__init__(#change to linear interpolation in time by hand here
+            self,
+            name=name, patch_size=patch_size,
+            unknowns=number_of_unknowns,
+            auxiliary_variables=0,
+            min_volume_h=min_volume_h, max_volume_h=max_volume_h,
+            time_step_relaxation=cfl,
+            interpolate_linearly_in_time=True
           )
         else:
           SuperClass.__init__(
@@ -215,10 +225,12 @@ if __name__ == "__main__":
         if args.interpolation=="linear-linear-extrap":
           self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement.switch_interpolation_scheme( "linear_with_linear_extrapolation" )  
           print( "Interpolation rule: linear extrapolation" )
+        if args.interpolation=="linear-con-extrap-lin-normal-interp":
+          self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement.switch_interpolation_scheme( "linear_with_constant_extrapolation_and_linear_normal_interpolation" )
+          print( "Interpolation rule: linear+constant extrapolation and linear normal interpolation" )
         if args.interpolation=="linear-lin-extrap-lin-normal-interp":
           self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement.switch_interpolation_scheme( "linear_with_linear_extrapolation_and_linear_normal_interpolation" )
-          print( "Interpolation rule: linear extrapolation and linear normal interpolation" )
-
+          print( "Interpolation rule: linear+linear extrapolation and linear normal interpolation" )
 
         if args.interpolation=="order-2":
           self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement.switch_interpolation_scheme( "linear" )
@@ -267,7 +279,7 @@ if __name__ == "__main__":
 	#include "../AbstractFiniteVolumeCCZ4.h"
     """
 
-        self.set_preprocess_reconstructed_patch_kernel( """
+        self._preprocess_reconstructed_patch = """
         const int patchSize = """ + str( self._patch.dim[0] ) + """;
         double volumeH = ::exahype2::fv::getVolumeLength(marker.h(),patchSize);
         const int n_a_v="""+str(self._auxiliary_variables)+""";
@@ -341,7 +353,7 @@ if __name__ == "__main__":
 		      */
 		      //std::cout<< Psi4[0] << std::endl;
         }
-    """)
+    """
 
         self.create_data_structures()
         self.create_action_sets()
@@ -364,7 +376,7 @@ if __name__ == "__main__":
         """
         self._auxiliary_variables = 59*3
 
-        self.set_preprocess_reconstructed_patch_kernel( """
+        self._preprocess_reconstructed_patch = """
         const int patchSize = """ + str( self._patch.dim[0] ) + """;
         int aux_var=""" + str( self._auxiliary_variables ) + """;
         int real_var=59;
@@ -391,7 +403,7 @@ if __name__ == "__main__":
 
           }
         }
-    """)
+    """
 
         self.create_data_structures()
         self.create_action_sets()
@@ -409,7 +421,7 @@ if __name__ == "__main__":
 	#include <iomanip>
     """
 
-        self.set_preprocess_reconstructed_patch_kernel( """
+        self._preprocess_reconstructed_patch = """
         const int patchSize = """ + str( self._patch.dim[0] ) + """;
         double volumeH = ::exahype2::fv::getVolumeLength(marker.h(),patchSize);
 
@@ -530,7 +542,7 @@ if __name__ == "__main__":
       reconstructedPatch[cellSerialised*(59+n_a_v)+59+7]=Psi4[0];//re part of psi4
 		  reconstructedPatch[cellSerialised*(59+n_a_v)+59+8]=Psi4[1];//im part of psi4
 		}		
-    """)
+    """
 
         self.create_data_structures()
         self.create_action_sets()

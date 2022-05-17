@@ -246,6 +246,30 @@ void runBenchmarks(int patches) {
     );
   }
   #endif
+
+  #if defined(GPUOffloadingCPP)
+  if ( tarch::multicore::Core::getInstance().getNumberOfGPUs()==0 ) {
+    logWarning( "main()", "no device found" );
+  }
+  for (int device=0; device<tarch::multicore::Core::getInstance().getNumberOfGPUs(); device++) {
+    logInfo( "main()", "device " << device );
+    testFusedVariantOnDevice(
+      device,
+      ::exahype2::fv::rusanov::cpp::timeStepWithRusanov_patchwise_heap_static_calls<EulerOnGPU,EulerOnGPU::NumberOfFiniteVolumesPerAxisPerPatch, 1, 5, 0,exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator>,
+      "cpp, patch-wise, AoS", true
+    );
+    testFusedVariantOnDevice(
+      device,
+      ::exahype2::fv::rusanov::cpp::timeStepWithRusanov_patchwise_heap_static_calls<EulerOnGPU,EulerOnGPU::NumberOfFiniteVolumesPerAxisPerPatch, 1, 5, 0,exahype2::fv::enumerator::AoSoALexicographicVolumeEnumerator>,
+      "cpp, patch-wise, AoSoA", true
+    );
+    testFusedVariantOnDevice(
+      device,
+      ::exahype2::fv::rusanov::cpp::timeStepWithRusanov_patchwise_heap_static_calls<EulerOnGPU,EulerOnGPU::NumberOfFiniteVolumesPerAxisPerPatch, 1, 5, 0,exahype2::fv::enumerator::SoALexicographicVolumeEnumerator>,
+      "cpp, patch-wise, SoA", true
+    );
+  }
+  #endif
 }
 
 
@@ -280,6 +304,8 @@ int main(int argc, char** argv) {
 
   repositories::startSimulation();
 
+  otterTraceInitialise();
+
   tarch::logging::Statistics::getInstance().clear();
 
   const bool isGlobalMaster     =     tarch::mpi::Rank::getInstance().isGlobalMaster();
@@ -290,8 +316,14 @@ int main(int argc, char** argv) {
   #else
   for (int patches=1; patches<=2048; patches*=2) {
   #endif
+    std::stringstream msg;
+    msg << "benchmark-" << patches;
+    otterPhaseSwitch( msg.str().c_str() );
+
     runBenchmarks(patches);
   }
+
+  otterTraceFinalise();
 
   repositories::finishSimulation();
 

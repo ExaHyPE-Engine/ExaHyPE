@@ -2,6 +2,7 @@
 #include "EnclaveBookkeeping.h"
 
 #include "tarch/multicore/Core.h"
+#include "tarch/multicore/otter.h"
 
 
 tarch::logging::Log  exahype2::EnclaveTask::_log( "exahype2::EnclaveTask" );
@@ -35,9 +36,11 @@ exahype2::EnclaveTask::EnclaveTask(
 bool exahype2::EnclaveTask::run() {
   logTraceInWith1Argument( "run()", getTaskId() );
 
+  otterTaskBegin();
   computeTask();
 
   EnclaveBookkeeping::getInstance().finishedTask(getTaskId(),_numberOfResultValues,_outputValues,_maxEigenvalue);
+  otterTaskEnd();
   logTraceOut( "run()" );
   return false;
 }

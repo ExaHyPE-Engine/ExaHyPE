@@ -362,10 +362,7 @@ void step() {{
 
         repositories::finishGridInitialisationStep();
 
-        #if defined(UseOtter)
-        otterTraceBegin();
-        otterParallelBegin();
-        #endif
+        otterTraceStart();
       }}
       break;
     case repositories::StepRepository::Steps::PlotSolution:
@@ -376,6 +373,7 @@ void step() {{
         const double minTimeStepSize = repositories::getMinTimeStepSize();
         const double maxTimeStepSize = repositories::getMaxTimeStepSize();
 
+        otterPhaseSwitch( "plotting" );
         repositories::startPlottingStep( minTimeStamp, maxTimeStamp, minTimeStepSize, maxTimeStepSize );
 
         observers::PlotSolution  observer;
@@ -401,6 +399,7 @@ void step() {{
         const double minMeshSize     = repositories::getMinMeshSize();
         const double maxMeshSize     = repositories::getMaxMeshSize();
 
+        otterPhaseSwitch( "time-step" );
         repositories::startTimeStep( minTimeStamp, maxTimeStamp, minTimeStepSize, maxTimeStepSize );
         
         observers::TimeStep  observer;
@@ -470,7 +469,11 @@ int main(int argc, char** argv) {{
 
   tarch::logging::Statistics::getInstance().clear();
 
+  otterTraceInitialise();
+  otterTraceStop();
+
   #if defined(SharedOMP)
+  otterParallelBegin();
   #pragma omp parallel
   {{
   #pragma omp master 
@@ -513,14 +516,12 @@ int main(int argc, char** argv) {{
   #if defined(SharedOMP)
   }}
   }}
+  otterParallelEnd();
   #endif
 
   tarch::logging::Statistics::getInstance().writeToCSV();
 
-  #if defined(UseOtter)
-  otterParallelEnd();
-  otterTraceEnd();
-  #endif
+  otterTraceFinalise();
 
   repositories::finishSimulation();
 

@@ -8,6 +8,8 @@ import peano4.toolbox.particles
 import dastgen2
 
 from Bindding import tracer_seeds_generate, read_scale_factor_table
+
+from peano4.toolbox.blockstructured.DynamicAMR                 import DynamicAMR
 import numpy as np
 
 modes = { 
@@ -42,7 +44,7 @@ if __name__ == "__main__":
     parser.add_argument("-eigen",    "--eigenvalue-control",  dest="eigen",           choices=["none", "exp"],  default="none",  help="Modified the formula of eigenvalue to suppress initial time-stepping size" )
     parser.add_argument("-cfl",      "--CFL-ratio",           dest="cfl",             type=float, default=0.1, help="Set CFL ratio" )
     parser.add_argument("-um",       "--universe-model",      dest="model",           choices=["Ein-de", "LCDM","DGP","LCDMDGP" ], default="Ein-de",  help="specify the background universe model" )
-    parser.add_argument("-interp",   "--interpolation",       dest="interpolation",   choices=["constant", "linear-slow", "linear-optimised", "outflow" ], default="linear-slow",  help="interpolation scheme for AMR" )
+    parser.add_argument("-interp",   "--interpolation",       dest="interpolation",   choices=["constant", "linear-optimised", "outflow" ], default="linear-optimised",  help="interpolation scheme for AMR" )
     parser.add_argument("-restrict", "--restriction",         dest="restriction",     choices=["average", "inject"], default="average",  help="restriction scheme for AMR" )
     parser.add_argument("-gpu",      "--with-gpu",            dest="gpu",             action="store_true", default=False,  help="support offloading to GPU" )
 
@@ -119,7 +121,7 @@ if __name__ == "__main__":
             auxiliary_variables=0,
             min_volume_h=min_volume_h, max_volume_h=max_volume_h,
             time_step_relaxation=cfl,
-            pde_terms_without_state=args.gpu
+            #pde_terms_without_state=args.gpu
           )
 
         #self._solver_template_file_class_name = SuperClass.__name__
@@ -146,12 +148,9 @@ if __name__ == "__main__":
         if args.interpolation=="constant":
           self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement.switch_interpolation_scheme( "piecewise_constant" )
           print( "Interpolation rule: piecewise_constant" )
-        if args.interpolation=="linear-slow":
-          self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement.switch_interpolation_scheme( "linear" )
-          print( "Interpolation rule: linear interpolation without optimisation" )
         if args.interpolation=="linear-optimised":
-          self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement.switch_interpolation_scheme( "linear_precomputed_operators<" + str(self._patch_size) +">" )
-          print( "Interpolation rule: optimised linear interpolation with patch size " + str(self._patch_size) )
+          self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement.switch_interpolation_scheme( "linear_with_linear_extrapolation_and_linear_normal_interpolation" )
+          print( "Interpolation rule: linear extrapolation and linear normal interpolation" )
         if args.interpolation=="outflow":
           self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement.switch_interpolation_scheme( "outflow" )
           print( "Interpolation rule: outflow (from fine grid into coarse grid)" )
@@ -192,7 +191,7 @@ if __name__ == "__main__":
       repositories::{{SOLVER_INSTANCE}}.add_mass(r_coor,value[0],volumeH(0));  
 """     )
 
-        self.set_preprocess_reconstructed_patch_kernel( """
+        self._preprocess_reconstructed_patch= """
         const int patchSize = """ + str( self._patch.dim[0] ) + """;
         double volumeH = ::exahype2::fv::getVolumeLength(marker.h(),patchSize);
         int aux_var=""" + str( self._auxiliary_variables ) + """;
@@ -240,7 +239,7 @@ if __name__ == "__main__":
             for (int d=0; d<15; d++) {reconstructedPatch[cellSerialised*(5+aux_var)+5+d]=0;}
           }
         }        
-    """)
+    """
         self.create_data_structures()
         self.create_action_sets()
 
@@ -254,7 +253,7 @@ if __name__ == "__main__":
     """
         self._auxiliary_variables = 0
 
-        self.set_preprocess_reconstructed_patch_kernel( """
+        self._preprocess_reconstructed_patch_kernel= """
         const int patchSize = """ + str( self._patch.dim[0] ) + """;
         double volumeH = ::exahype2::fv::getVolumeLength(marker.h(),patchSize);
         int aux_var=0;
@@ -285,7 +284,7 @@ if __name__ == "__main__":
             }
           }                   
         }
-    """)
+    """
 
         self.create_data_structures()
         self.create_action_sets()

@@ -32,12 +32,25 @@ namespace otter {
 
 
 #if defined(UseOtter)
-#include <otter-trace/trace.h>
+#include <otter/otter-serial.h>
 #else
+#define otterTraceInitialise()
+#define otterTraceFinalise(void)
+#define otterParallelBegin()
+#define otterParallelEnd(void)
+#define otterTaskBegin()
+#define otterTaskEnd(void)
 #define otterLoopBegin()
-#define otterLoopEnd()
+#define otterLoopEnd(void)
 #define otterLoopIterationBegin()
-#define otterLoopIterationEnd()
+#define otterLoopIterationEnd(void)
+#define otterSynchroniseChildTasks()
+#define otterSynchroniseDescendantTasks(void)
+#define otterTraceStart(void)
+#define otterTraceStop(void)
+#define otterPhaseBegin(name)
+#define otterPhaseEnd()
+#define otterPhaseSwitch(name)
 #endif
 
 
