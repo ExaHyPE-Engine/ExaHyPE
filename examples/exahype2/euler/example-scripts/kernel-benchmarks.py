@@ -131,6 +131,8 @@ else:
     ]
     
     for prefix in Prefix:
+      plt.clf()
+      print( "handle prefix {}".format(prefix) )
       plotted_ticks = False
       for metric in Metrics:
         input_file = open( args.file, "r" )
@@ -144,7 +146,10 @@ else:
         if len(y_values)>0: # and len(x_values)==len(y_values)
           bar_width = 1.0/(len(Metrics)+1)
           x_values = [i+(Metrics.index(metric)-len(Metrics)/2.0)*bar_width for i in range(0,len(y_values))]
-          if len(x_labels)!=len(y_values):
+          if len(x_labels)>len(y_values):
+            print( "shorten x range for metric {} x {}".format(prefix,metric) )
+            x_values = x_values[0:len(y_values)]
+          if len(x_labels)<len(y_values):
             raise Exception( "parser error for {}x{} for metric {}".format(x_labels,y_values,metric) )
           plt.bar( x_values, y_values, width=bar_width, label=metric.replace(":","") ) 
         if len(y_values)>0 and not plotted_ticks:
