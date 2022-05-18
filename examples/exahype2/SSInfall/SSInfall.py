@@ -347,6 +347,8 @@ if __name__ == "__main__":
     elif args.extension=="rhointer":
       my_solver.add_mass_cal_rhointer()
       userinfo.append(("mass calculation schme: rho interpolation",None))
+
+    #my_solver._auxiliary_variables = 23
     
     #my_solver.add_derivative_calculation()     
 ########################################################################################
