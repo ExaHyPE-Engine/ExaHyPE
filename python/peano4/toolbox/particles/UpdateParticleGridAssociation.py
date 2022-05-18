@@ -261,7 +261,14 @@ class UpdateParticleGridAssociation(ActionSet):
       }
       else p++;
     }
-  }
+
+    if ( not coarseGridVertices{{PARTICLES_CONTAINER}}(i).empty() ) {
+      for (auto& p: coarseGridVertices{{PARTICLES_CONTAINER}}(i)) {
+      // @todo Debug
+        logInfo( "touchVertexFirstTime(...)", "have not been able to drop particle " << p->toString() << " into vertex " << marker.toString() );
+      }
+    }
+  }  
 """)
 
 
