@@ -216,8 +216,9 @@ class UpdateParticleGridAssociation(ActionSet):
 
   __Template_ValidateParticleLevelAssociation = jinja2.Template("""
   for (auto p: fineGridVertex{{PARTICLES_CONTAINER}} ) {
+    constexpr double SortingTolerance = 1.01;
     assertion3(
-      marker.isContainedInAdjacentCells( p->getX(), 0.5 ),
+      marker.isContainedInAdjacentCells( p->getX(), 0.5*SortingTolerance ),
       marker.x(),
       marker.toString(),
       p->toString()
@@ -244,17 +245,16 @@ class UpdateParticleGridAssociation(ActionSet):
    
   """
   __Template_Drop = jinja2.Template("""
+  constexpr double SortingTolerance = 1.01;
   const double CellToCutOffRadiusRatio = 0.5 * 0.9;
   for (int i=0; i<TwoPowerD; i++) {
     vertexdata::{{PARTICLES_CONTAINER}}::iterator p = coarseGridVertices{{PARTICLES_CONTAINER}}(i).begin(); 
     while ( p!=coarseGridVertices{{PARTICLES_CONTAINER}}(i).end() ) {
-      bool dropIntoThisVertex = tarch::la::min( marker.h() ) > CellToCutOffRadiusRatio * (*p)->getCutOffRadius();
-      for (int d=0; d<Dimensions; d++) {
-        dropIntoThisVertex &= (*p)->getX()(d) > marker.x()(d) - marker.h()(d)/2.0;
-        dropIntoThisVertex &= (*p)->getX()(d) < marker.x()(d) + marker.h()(d)/2.0;
-      }
-      
-      if (dropIntoThisVertex) {
+      if ( 
+        tarch::la::min( marker.h() ) > CellToCutOffRadiusRatio * (*p)->getCutOffRadius()
+        and
+        marker.isContainedInAdjacentCells( (*p)->getX(), 0.5*SortingTolerance )
+      ) {
         fineGridVertex{{PARTICLES_CONTAINER}}.push_back( *p );
         p = coarseGridVertices{{PARTICLES_CONTAINER}}(i).erase(p);
         _numberOfDrops++;
@@ -279,6 +279,7 @@ class UpdateParticleGridAssociation(ActionSet):
   for (int d=0; d<Dimensions; d++) {
     target[d] = marker.getRelativePositionWithinFatherCell()(d)>=2;
   }
+  _numberOfLifts+=fineGridVertex{{PARTICLES_CONTAINER}}.size();
   coarseGridVertices{{PARTICLES_CONTAINER}}( target.to_ulong() ).insert( coarseGridVertices{{PARTICLES_CONTAINER}}( target.to_ulong() ).begin(), fineGridVertex{{PARTICLES_CONTAINER}}.begin(), fineGridVertex{{PARTICLES_CONTAINER}}.end() );
 """)  
 
@@ -300,6 +301,7 @@ class UpdateParticleGridAssociation(ActionSet):
     if ( not marker.isContainedInAdjacentCells((*p)->getX(),0.5) ) {
       coarseGridVertices{{PARTICLES_CONTAINER}}( target.to_ulong() ).push_back( *p );
       p = fineGridVertex{{PARTICLES_CONTAINER}}.erase(p);
+      _numberOfLifts++;
     }
     else {
       p++;
