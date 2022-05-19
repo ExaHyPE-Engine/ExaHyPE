@@ -545,6 +545,8 @@ if __name__ == "__main__":
       peano4_project.output.makefile.add_CXX_flag( "-DuseTable" )
       peano4_project.output.makefile.add_CXX_flag( "-DDGP" )
 
+    #peano4_project.output.makefile.add_CXX_flag( "-DPeanoDebug=2" )
+
     peano4_project.generate( throw_away_data_after_generation=False )
     peano4_project.build( make_clean_first = True )
 

@@ -1,200 +1,200 @@
-\babel@toc {english}{}\relax 
-\contentsline {chapter}{\numberline {1}Preamble}{i}{chapter.1}%
-\contentsline {chapter}{\numberline {2}Installation}{1}{chapter.2}%
-\contentsline {section}{\numberline {2.1}Prepare the configure environment}{1}{section.2.1}%
-\contentsline {section}{\numberline {2.2}Configure}{2}{section.2.2}%
-\contentsline {section}{\numberline {2.3}Build}{3}{section.2.3}%
-\contentsline {section}{\numberline {2.4}Installation test}{4}{section.2.4}%
-\contentsline {section}{\numberline {2.5}Python configuration}{4}{section.2.5}%
-\contentsline {subsection}{\numberline {2.5.1}Python paths}{4}{subsection.2.5.1}%
-\contentsline {subsection}{\numberline {2.5.2}Python packages}{5}{subsection.2.5.2}%
-\contentsline {section}{\numberline {2.6}Fortran}{5}{section.2.6}%
-\contentsline {section}{\numberline {2.7}Peano~4\ components and build variants}{5}{section.2.7}%
-\contentsline {section}{\numberline {2.8}Documentation}{6}{section.2.8}%
-\contentsline {section}{\numberline {2.9}Compile/link options for applications built with Peano~4}{7}{section.2.9}%
-\contentsline {chapter}{\numberline {3}Peano~4's architecture}{9}{chapter.3}%
-\contentsline {part}{I\hspace {1em}Large-scale Peano~4\ applications}{11}{part.1}%
-\contentsline {chapter}{\numberline {4}ExaHyPE~2}{13}{chapter.4}%
-\contentsline {section}{\numberline {4.1}Historical remarks}{14}{section.4.1}%
-\contentsline {section}{\numberline {4.2}Case study: minimalist Finite Volumes for the Euler equations}{15}{section.4.2}%
-\contentsline {paragraph}{Created code.}{15}{section*.7}%
-\contentsline {paragraph}{Changing simulation properties.}{16}{section*.8}%
-\contentsline {section}{\numberline {4.3}Case study: A Finite Volumes code coupling two solvers (hyperbolic+elliptic)}{18}{section.4.3}%
-\contentsline {paragraph}{Problem formulation}{18}{section*.10}%
-\contentsline {paragraph}{Realisation with two individual solvers}{19}{section*.11}%
-\contentsline {paragraph}{Coupling the equations}{20}{section*.12}%
-\contentsline {paragraph}{Time step synchronisation}{21}{section*.13}%
-\contentsline {section}{\numberline {4.4}Generic ExaHyPE~2\ features}{23}{section.4.4}%
-\contentsline {subsection}{\numberline {4.4.1}IO, logging and initialisation}{23}{subsection.4.4.1}%
-\contentsline {paragraph}{Patch file output}{23}{section*.14}%
-\contentsline {paragraph}{Logging output}{24}{section*.15}%
-\contentsline {paragraph}{Solver initialisation}{24}{section*.16}%
-\contentsline {subsection}{\numberline {4.4.2}Running on a parallel computer}{25}{subsection.4.4.2}%
-\contentsline {paragraph}{Domain decomposition}{25}{section*.17}%
-\contentsline {paragraph}{Task parallelism}{26}{section*.18}%
-\contentsline {paragraph}{Load balancing settings}{26}{section*.19}%
-\contentsline {paragraph}{Writing your own parallel extensions}{27}{section*.20}%
-\contentsline {subsection}{\numberline {4.4.3}Adding adaptive mesh refinement (AMR)}{27}{subsection.4.4.3}%
-\contentsline {paragraph}{Supplementing the refinement criterion}{28}{section*.21}%
-\contentsline {subsection}{\numberline {4.4.4}GPU support}{29}{subsection.4.4.4}%
-\contentsline {paragraph}{First, your environment has to be compiled with GPU support.}{29}{section*.22}%
-\contentsline {paragraph}{Second, use an ExaHyPE~2\ solver which has support for GPUs and instruct it that you plan to have patch updates without access to the solver's internal state.}{29}{section*.23}%
-\contentsline {paragraph}{Third, provide the additional PDE terms without state.}{29}{section*.24}%
-\contentsline {paragraph}{Finally, pick a threading backend which supports GPU offloading.}{30}{section*.25}%
-\contentsline {section}{\numberline {4.5}Finite Volume extensions}{31}{section.4.5}%
-\contentsline {subsection}{\numberline {4.5.1}Boundary conditions}{31}{subsection.4.5.1}%
-\contentsline {paragraph}{Dirichlet boundary conditions}{31}{section*.26}%
-\contentsline {paragraph}{Neumann boundary conditions (Finite Volumes)}{32}{section*.27}%
-\contentsline {paragraph}{Inflow/outflow boundary conditions}{32}{section*.28}%
-\contentsline {paragraph}{Extrapolating boundary data (Finite Volumes)}{32}{section*.29}%
-\contentsline {paragraph}{Boundary-aligned geometries}{33}{section*.30}%
-\contentsline {subsection}{\numberline {4.5.2}Interpolation and restriction schemes}{33}{subsection.4.5.2}%
-\contentsline {paragraph}{Realisation and available schemes}{34}{section*.31}%
-\contentsline {paragraph}{Postprocessing}{34}{section*.32}%
-\contentsline {section}{\numberline {4.6}Modelling the fluxes and Riemann solvers with SymPy}{35}{section.4.6}%
-\contentsline {section}{\numberline {4.7}Adding tracers}{36}{section.4.7}%
-\contentsline {subsection}{\numberline {4.7.1}Dump tracer data into CSV database}{37}{subsection.4.7.1}%
-\contentsline {subsection}{\numberline {4.7.2}Write your own particle seed}{37}{subsection.4.7.2}%
-\contentsline {subsection}{\numberline {4.7.3}Encourage particles to spread out evenly}{38}{subsection.4.7.3}%
-\contentsline {subsection}{\numberline {4.7.4}Changing the grid-to-particle interpolation and/or time stepping}{38}{subsection.4.7.4}%
-\contentsline {chapter}{\numberline {5}SWIFT.pidt}{41}{chapter.5}%
-\contentsline {section}{\numberline {5.1}Set up the simulator}{41}{section.5.1}%
-\contentsline {section}{\numberline {5.2}Introduce a new particle}{42}{section.5.2}%
-\contentsline {section}{\numberline {5.3}IO control}{42}{section.5.3}%
-\contentsline {section}{\numberline {5.4}High-performance computing}{42}{section.5.4}%
-\contentsline {part}{II\hspace {1em}Examples: Using the high-level Python API}{45}{part.2}%
-\contentsline {chapter}{\numberline {6}Introduction}{47}{chapter.6}%
-\contentsline {subsection}{\numberline {6.0.1}Parallelisation and GPU support}{47}{subsection.6.0.1}%
-\contentsline {subsubsection}{Domain decomposition}{47}{section*.36}%
-\contentsline {chapter}{\numberline {7}A block-structured AMR code for Finite Volumes}{49}{chapter.7}%
-\contentsline {section}{\numberline {7.1}Setting up the data structures}{49}{section.7.1}%
-\contentsline {section}{\numberline {7.2}Administration of the data structures}{50}{section.7.2}%
-\contentsline {section}{\numberline {7.3}A manually implemented FV scheme}{51}{section.7.3}%
-\contentsline {section}{\numberline {7.4}Plot results}{53}{section.7.4}%
-\contentsline {chapter}{\numberline {8}Peano~4's particle support}{55}{chapter.8}%
-\contentsline {section}{\numberline {8.1}Introduce a new particle}{55}{section.8.1}%
-\contentsline {section}{\numberline {8.2}Insert particles into domain}{56}{section.8.2}%
-\contentsline {section}{\numberline {8.3}Dual trees}{57}{section.8.3}%
-\contentsline {section}{\numberline {8.4}Move particles}{58}{section.8.4}%
-\contentsline {section}{\numberline {8.5}Dual tree traversal and particle-particle interaction}{59}{section.8.5}%
-\contentsline {section}{\numberline {8.6}Further action sets}{60}{section.8.6}%
-\contentsline {chapter}{\numberline {9}A geometric-algebraic multigrid solver}{61}{chapter.9}%
-\contentsline {section}{\numberline {9.1}A matrix-free Jacobi smoother with rediscretisation}{61}{section.9.1}%
-\contentsline {section}{\numberline {9.2}A parallel version of the code}{61}{section.9.2}%
-\contentsline {section}{\numberline {9.3}A parallel AMR Jacobi solver}{62}{section.9.3}%
-\contentsline {part}{III\hspace {1em}Low level (C/C++) programming}{63}{part.3}%
-\contentsline {chapter}{\numberline {10}Guiding principles, high-level concepts and design decisions}{67}{chapter.10}%
-\contentsline {section}{\numberline {10.1}Generic structure of a Peano~4\ application}{67}{section.10.1}%
-\contentsline {section}{\numberline {10.2}MPI and shared memory programming}{68}{section.10.2}%
-\contentsline {subsection}{\numberline {10.2.1}Realising a domain decomposition}{69}{subsection.10.2.1}%
-\contentsline {subsection}{\numberline {10.2.2}Global communication}{70}{subsection.10.2.2}%
-\contentsline {chapter}{\numberline {11}Logging, tracing and assertions}{71}{chapter.11}%
-\contentsline {section}{\numberline {11.1}Logging, tracing and assertion architecture}{71}{section.11.1}%
-\contentsline {section}{\numberline {11.2}Using the logging and tracing interface}{71}{section.11.2}%
-\contentsline {section}{\numberline {11.3}Logging devices (formats)}{72}{section.11.3}%
-\contentsline {subsection}{\numberline {11.3.1}CommandLineLogger}{72}{subsection.11.3.1}%
-\contentsline {subsection}{\numberline {11.3.2}ChromeTraceFileLogger}{73}{subsection.11.3.2}%
-\contentsline {subsection}{\numberline {11.3.3}NVTX logger (NVIDIA SDK)}{73}{subsection.11.3.3}%
-\contentsline {subsection}{\numberline {11.3.4}ITAC logger}{73}{subsection.11.3.4}%
-\contentsline {section}{\numberline {11.4}Log filter}{74}{section.11.4}%
-\contentsline {section}{\numberline {11.5}Assertions}{75}{section.11.5}%
-\contentsline {chapter}{\numberline {12}Unit tests}{77}{chapter.12}%
-\contentsline {section}{\numberline {12.1}Test architecture}{77}{section.12.1}%
-\contentsline {section}{\numberline {12.2}Running the tests}{78}{section.12.2}%
-\contentsline {section}{\numberline {12.3}Test routines}{78}{section.12.3}%
-\contentsline {chapter}{\numberline {13}Parallel programming}{81}{chapter.13}%
-\contentsline {section}{\numberline {13.1}Shared memory}{81}{section.13.1}%
-\contentsline {subsection}{\numberline {13.1.1}Protecting shared memory access}{81}{subsection.13.1.1}%
-\contentsline {section}{\numberline {13.2}Distributed memory}{81}{section.13.2}%
-\contentsline {subsection}{\numberline {13.2.1}Synchronisation}{82}{subsection.13.2.1}%
-\contentsline {subsection}{\numberline {13.2.2}Exchange global data between ranks (reduction)}{82}{subsection.13.2.2}%
-\contentsline {chapter}{\numberline {14}Tools}{83}{chapter.14}%
-\contentsline {section}{\numberline {14.1}Loop macros}{83}{section.14.1}%
-\contentsline {subsection}{\numberline {14.1.1}d-dimensional loops}{83}{subsection.14.1.1}%
-\contentsline {subsection}{\numberline {14.1.2}d-dimensional exclusive loops}{83}{subsection.14.1.2}%
-\contentsline {part}{IV\hspace {1em}Extending the Python API}{85}{part.4}%
-\contentsline {chapter}{\numberline {15}Introducing a new pre-defined action set}{87}{chapter.15}%
-\contentsline {section}{\numberline {15.1}Prepare classes}{87}{section.15.1}%
-\contentsline {section}{\numberline {15.2}Implement new action set}{87}{section.15.2}%
-\contentsline {section}{\numberline {15.3}Use your new action set}{88}{section.15.3}%
-\contentsline {section}{\numberline {15.4}Conventions}{88}{section.15.4}%
-\contentsline {part}{V\hspace {1em}Design decisions}{89}{part.5}%
-\contentsline {chapter}{\numberline {16}Domain decomposition and data flow}{91}{chapter.16}%
-\contentsline {section}{\numberline {16.1}Multigrid topology}{91}{section.16.1}%
-\contentsline {section}{\numberline {16.2}Data flow on stationary domains}{92}{section.16.2}%
-\contentsline {subsection}{\numberline {16.2.1}Horizontal data flow}{92}{subsection.16.2.1}%
-\contentsline {subsection}{\numberline {16.2.2}Vertical data flow}{93}{subsection.16.2.2}%
-\contentsline {subsection}{\numberline {16.2.3}Synchronous vertical data flow}{93}{subsection.16.2.3}%
-\contentsline {section}{\numberline {16.3}Splits}{93}{section.16.3}%
-\contentsline {subsection}{\numberline {16.3.1}Temporal ordering of tree traversals}{93}{subsection.16.3.1}%
-\contentsline {subsection}{\numberline {16.3.2}User data}{94}{subsection.16.3.2}%
-\contentsline {subsection}{\numberline {16.3.3}Data ownership}{94}{subsection.16.3.3}%
-\contentsline {section}{\numberline {16.4}Joins}{94}{section.16.4}%
-\contentsline {subsection}{\numberline {16.4.1}Temporal ordering}{95}{subsection.16.4.1}%
-\contentsline {subsection}{\numberline {16.4.2}Data ownership}{95}{subsection.16.4.2}%
-\contentsline {subsection}{\numberline {16.4.3}Grid data streaming}{96}{subsection.16.4.3}%
-\contentsline {subsection}{\numberline {16.4.4}User data streaming}{96}{subsection.16.4.4}%
-\contentsline {part}{VI\hspace {1em}Standard benchmarks}{97}{part.6}%
-\contentsline {chapter}{\numberline {17}Benchmark: Task priorities}{99}{chapter.17}%
-\contentsline {section}{\numberline {17.1}Preparation}{99}{section.17.1}%
-\contentsline {section}{\numberline {17.2}Set up the experiment}{99}{section.17.2}%
-\contentsline {section}{\numberline {17.3}Run the code}{101}{section.17.3}%
-\contentsline {section}{\numberline {17.4}Visualise the outcome}{101}{section.17.4}%
-\contentsline {subsection}{\numberline {17.4.1}What we should see}{102}{subsection.17.4.1}%
-\contentsline {subsection}{\numberline {17.4.2}Data flow spec}{102}{subsection.17.4.2}%
-\contentsline {subsection}{\numberline {17.4.3}Code regions causing the behaviour}{103}{subsection.17.4.3}%
-\contentsline {section}{\numberline {17.5}Flaws identified}{103}{section.17.5}%
-\contentsline {subsection}{\numberline {17.5.1}OpenMP: task group}{103}{subsection.17.5.1}%
-\contentsline {subsection}{\numberline {17.5.2}OpenMP: task group}{103}{subsection.17.5.2}%
-\contentsline {part}{VII\hspace {1em}Appendix}{105}{part.7}%
-\contentsline {chapter}{\numberline {A}Postprocessing: The visualisation toolkit, IO and Peano~4\ scripts}{107}{appendix.A}%
-\contentsline {section}{\numberline {A.1}Displaying Peano~4\ files directly within Paraview}{107}{section.A.1}%
-\contentsline {paragraph}{Prepare system.}{107}{section*.39}%
-\contentsline {paragraph}{Start Paraview's Python environment.}{108}{section*.40}%
-\contentsline {paragraph}{Work with a whole dataset.}{108}{section*.41}%
-\contentsline {paragraph}{Display a single file.}{109}{section*.42}%
-\contentsline {paragraph}{Filters.}{109}{section*.43}%
-\contentsline {section}{\numberline {A.2}Offline/command line conversion with Python/Paraview}{109}{section.A.2}%
-\contentsline {section}{\numberline {A.3}Offline/command-line conversion (executable)}{110}{section.A.3}%
-\contentsline {section}{\numberline {A.4}Writing Legacy VTK files}{111}{section.A.4}%
-\contentsline {section}{\numberline {A.5}Probing data}{112}{section.A.5}%
-\contentsline {section}{\numberline {A.6}Tweaking your pictures}{112}{section.A.6}%
-\contentsline {section}{\numberline {A.7}Useful scripts}{113}{section.A.7}%
-\contentsline {paragraph}{Load balancing toolbox.}{113}{section*.44}%
-\contentsline {paragraph}{ExaHyPE~2\ postprocessing.}{114}{section*.45}%
-\contentsline {chapter}{\numberline {B}Peano's block-structured output format}{115}{appendix.B}%
-\contentsline {section}{\numberline {B.1}A minimal ASCII example file}{115}{section.B.1}%
-\contentsline {section}{\numberline {B.2}More sophiciated dumps}{116}{section.B.2}%
-\contentsline {chapter}{\numberline {C}Selected HPC platforms and toolchains}{117}{appendix.C}%
-\contentsline {section}{\numberline {C.1}Clang toolchain}{117}{section.C.1}%
-\contentsline {paragraph}{OpenMP}{117}{section*.46}%
-\contentsline {section}{\numberline {C.2}Intel OneAPI toolchain}{117}{section.C.2}%
-\contentsline {paragraph}{OpenMP}{118}{section*.47}%
-\contentsline {paragraph}{Intel MPI}{118}{section*.48}%
-\contentsline {paragraph}{Intel OneAPI toolchain (ITAC)}{118}{section*.49}%
-\contentsline {section}{\numberline {C.3}NVIDIA NVC++ toolchain}{119}{section.C.3}%
-\contentsline {paragraph}{OpenMP and OpenMP offloading}{119}{section*.50}%
-\contentsline {section}{\numberline {C.4}Some particular supercomputer testbeds}{119}{section.C.4}%
-\contentsline {subsection}{\numberline {C.4.1}Hamilton 8}{119}{subsection.C.4.1}%
-\contentsline {subsection}{\numberline {C.4.2}DINE (Durham Intelligent NIC Environment)}{120}{subsection.C.4.2}%
-\contentsline {subsection}{\numberline {C.4.3}Cosma}{120}{subsection.C.4.3}%
-\contentsline {subsection}{\numberline {C.4.4}Bede}{121}{subsection.C.4.4}%
-\contentsline {paragraph}{Prepare the Python and bash environment}{121}{section*.51}%
-\contentsline {paragraph}{Build with LLVM and MVAPICH}{121}{section*.52}%
-\contentsline {paragraph}{Build with LLVM and OpenMPI}{121}{section*.53}%
-\contentsline {chapter}{\numberline {D}Configuring Peano~4\ in Eclipse}{123}{appendix.D}%
-\contentsline {section}{\numberline {D.1}Clone directly from git}{123}{section.D.1}%
-\contentsline {section}{\numberline {D.2}Integrating the C++ core as project}{123}{section.D.2}%
-\contentsline {part}{VIII\hspace {1em}Quick help}{125}{part.8}%
-\contentsline {chapter}{\numberline {E}FAQs (programmers' point of view)}{127}{appendix.E}%
-\contentsline {section}{\numberline {E.1}C++ core}{127}{section.E.1}%
-\contentsline {section}{\numberline {E.2}Parallelisation}{127}{section.E.2}%
-\contentsline {chapter}{\numberline {F}Troubleshooting}{129}{appendix.F}%
-\contentsline {section}{\numberline {F.1}Python API}{129}{section.F.1}%
-\contentsline {section}{\numberline {F.2}Compilation}{129}{section.F.2}%
-\contentsline {section}{\numberline {F.3}Linking}{130}{section.F.3}%
-\contentsline {section}{\numberline {F.4}Debugging}{131}{section.F.4}%
-\contentsline {section}{\numberline {F.5}MPI troubleshooting}{132}{section.F.5}%
-\contentsline {section}{\numberline {F.6}OpenMP troubleshooting}{132}{section.F.6}%
-\contentsline {section}{\numberline {F.7}External tools}{133}{section.F.7}%
-\contentsline {section}{\numberline {F.8}PDT (legacy)}{133}{section.F.8}%
+\select@language {english}
+\contentsline {chapter}{\numberline {1}Preamble}{i}{chapter.1}
+\contentsline {chapter}{\numberline {2}Installation}{1}{chapter.2}
+\contentsline {section}{\numberline {2.1}Prepare the configure environment}{1}{section.2.1}
+\contentsline {section}{\numberline {2.2}Configure}{2}{section.2.2}
+\contentsline {section}{\numberline {2.3}Build}{3}{section.2.3}
+\contentsline {section}{\numberline {2.4}Installation test}{4}{section.2.4}
+\contentsline {section}{\numberline {2.5}Python configuration}{4}{section.2.5}
+\contentsline {subsection}{\numberline {2.5.1}Python paths}{4}{subsection.2.5.1}
+\contentsline {subsection}{\numberline {2.5.2}Python packages}{5}{subsection.2.5.2}
+\contentsline {section}{\numberline {2.6}Fortran}{5}{section.2.6}
+\contentsline {section}{\numberline {2.7}Peano~4\ components and build variants}{5}{section.2.7}
+\contentsline {section}{\numberline {2.8}Documentation}{6}{section.2.8}
+\contentsline {section}{\numberline {2.9}Compile/link options for applications built with Peano~4}{7}{section.2.9}
+\contentsline {chapter}{\numberline {3}Peano~4's architecture}{9}{chapter.3}
+\contentsline {part}{I\hspace {1em}Large-scale Peano~4\ applications}{11}{part.1}
+\contentsline {chapter}{\numberline {4}ExaHyPE~2}{13}{chapter.4}
+\contentsline {section}{\numberline {4.1}Historical remarks}{14}{section.4.1}
+\contentsline {section}{\numberline {4.2}Case study: minimalist Finite Volumes for the Euler equations}{14}{section.4.2}
+\contentsline {paragraph}{Created code.}{15}{section*.7}
+\contentsline {paragraph}{Changing simulation properties.}{15}{section*.8}
+\contentsline {section}{\numberline {4.3}Case study: A Finite Volumes code coupling two solvers (hyperbolic+elliptic)}{17}{section.4.3}
+\contentsline {paragraph}{Problem formulation}{18}{section*.10}
+\contentsline {paragraph}{Realisation with two individual solvers}{18}{section*.11}
+\contentsline {paragraph}{Coupling the equations}{19}{section*.12}
+\contentsline {paragraph}{Time step synchronisation}{21}{section*.13}
+\contentsline {section}{\numberline {4.4}Generic ExaHyPE~2\ features}{23}{section.4.4}
+\contentsline {subsection}{\numberline {4.4.1}IO, logging and initialisation}{23}{subsection.4.4.1}
+\contentsline {paragraph}{Patch file output}{23}{section*.14}
+\contentsline {paragraph}{Logging output}{23}{section*.15}
+\contentsline {paragraph}{Solver initialisation}{24}{section*.16}
+\contentsline {subsection}{\numberline {4.4.2}Running on a parallel computer}{24}{subsection.4.4.2}
+\contentsline {paragraph}{Domain decomposition}{25}{section*.17}
+\contentsline {paragraph}{Task parallelism}{25}{section*.18}
+\contentsline {paragraph}{Load balancing settings}{25}{section*.19}
+\contentsline {paragraph}{Writing your own parallel extensions}{27}{section*.20}
+\contentsline {subsection}{\numberline {4.4.3}Adding adaptive mesh refinement (AMR)}{27}{subsection.4.4.3}
+\contentsline {paragraph}{Supplementing the refinement criterion}{28}{section*.21}
+\contentsline {subsection}{\numberline {4.4.4}GPU support}{28}{subsection.4.4.4}
+\contentsline {paragraph}{First, your environment has to be compiled with GPU support.}{29}{section*.22}
+\contentsline {paragraph}{Second, use an ExaHyPE~2\ solver which has support for GPUs and instruct it that you plan to have patch updates without access to the solver's internal state.}{29}{section*.23}
+\contentsline {paragraph}{Third, provide the additional PDE terms without state.}{29}{section*.24}
+\contentsline {paragraph}{Finally, pick a threading backend which supports GPU offloading.}{30}{section*.25}
+\contentsline {section}{\numberline {4.5}Finite Volume extensions}{31}{section.4.5}
+\contentsline {subsection}{\numberline {4.5.1}Boundary conditions}{31}{subsection.4.5.1}
+\contentsline {paragraph}{Dirichlet boundary conditions}{31}{section*.26}
+\contentsline {paragraph}{Neumann boundary conditions (Finite Volumes)}{32}{section*.27}
+\contentsline {paragraph}{Inflow/outflow boundary conditions}{32}{section*.28}
+\contentsline {paragraph}{Extrapolating boundary data (Finite Volumes)}{32}{section*.29}
+\contentsline {paragraph}{Boundary-aligned geometries}{33}{section*.30}
+\contentsline {subsection}{\numberline {4.5.2}Interpolation and restriction schemes}{33}{subsection.4.5.2}
+\contentsline {paragraph}{Realisation and available schemes}{34}{section*.31}
+\contentsline {paragraph}{Postprocessing}{34}{section*.32}
+\contentsline {section}{\numberline {4.6}Modelling the fluxes and Riemann solvers with SymPy}{35}{section.4.6}
+\contentsline {section}{\numberline {4.7}Adding tracers}{36}{section.4.7}
+\contentsline {subsection}{\numberline {4.7.1}Dump tracer data into CSV database}{37}{subsection.4.7.1}
+\contentsline {subsection}{\numberline {4.7.2}Write your own particle seed}{37}{subsection.4.7.2}
+\contentsline {subsection}{\numberline {4.7.3}Encourage particles to spread out evenly}{38}{subsection.4.7.3}
+\contentsline {subsection}{\numberline {4.7.4}Changing the grid-to-particle interpolation and/or time stepping}{38}{subsection.4.7.4}
+\contentsline {chapter}{\numberline {5}SWIFT.pidt}{41}{chapter.5}
+\contentsline {section}{\numberline {5.1}Set up the simulator}{41}{section.5.1}
+\contentsline {section}{\numberline {5.2}Introduce a new particle}{42}{section.5.2}
+\contentsline {section}{\numberline {5.3}IO control}{42}{section.5.3}
+\contentsline {section}{\numberline {5.4}High-performance computing}{42}{section.5.4}
+\contentsline {part}{II\hspace {1em}Examples: Using the high-level Python API}{45}{part.2}
+\contentsline {chapter}{\numberline {6}Introduction}{47}{chapter.6}
+\contentsline {subsection}{\numberline {6.0.1}Parallelisation and GPU support}{47}{subsection.6.0.1}
+\contentsline {subsubsection}{Domain decomposition}{47}{section*.36}
+\contentsline {chapter}{\numberline {7}A block-structured AMR code for Finite Volumes}{49}{chapter.7}
+\contentsline {section}{\numberline {7.1}Setting up the data structures}{49}{section.7.1}
+\contentsline {section}{\numberline {7.2}Administration of the data structures}{50}{section.7.2}
+\contentsline {section}{\numberline {7.3}A manually implemented FV scheme}{51}{section.7.3}
+\contentsline {section}{\numberline {7.4}Plot results}{53}{section.7.4}
+\contentsline {chapter}{\numberline {8}Peano~4's particle support}{55}{chapter.8}
+\contentsline {section}{\numberline {8.1}Introduce a new particle}{55}{section.8.1}
+\contentsline {section}{\numberline {8.2}Insert particles into domain}{56}{section.8.2}
+\contentsline {section}{\numberline {8.3}Dual trees}{57}{section.8.3}
+\contentsline {section}{\numberline {8.4}Move particles}{58}{section.8.4}
+\contentsline {section}{\numberline {8.5}Dual tree traversal and particle-particle interaction}{59}{section.8.5}
+\contentsline {section}{\numberline {8.6}Further action sets}{60}{section.8.6}
+\contentsline {chapter}{\numberline {9}A geometric-algebraic multigrid solver}{61}{chapter.9}
+\contentsline {section}{\numberline {9.1}A matrix-free Jacobi smoother with rediscretisation}{61}{section.9.1}
+\contentsline {section}{\numberline {9.2}A parallel version of the code}{61}{section.9.2}
+\contentsline {section}{\numberline {9.3}A parallel AMR Jacobi solver}{62}{section.9.3}
+\contentsline {part}{III\hspace {1em}Low level (C/C++) programming}{63}{part.3}
+\contentsline {chapter}{\numberline {10}Guiding principles, high-level concepts and design decisions}{67}{chapter.10}
+\contentsline {section}{\numberline {10.1}Generic structure of a Peano~4\ application}{67}{section.10.1}
+\contentsline {section}{\numberline {10.2}MPI and shared memory programming}{68}{section.10.2}
+\contentsline {subsection}{\numberline {10.2.1}Realising a domain decomposition}{69}{subsection.10.2.1}
+\contentsline {subsection}{\numberline {10.2.2}Global communication}{70}{subsection.10.2.2}
+\contentsline {chapter}{\numberline {11}Logging, tracing and assertions}{71}{chapter.11}
+\contentsline {section}{\numberline {11.1}Logging, tracing and assertion architecture}{71}{section.11.1}
+\contentsline {section}{\numberline {11.2}Using the logging and tracing interface}{71}{section.11.2}
+\contentsline {section}{\numberline {11.3}Logging devices (formats)}{72}{section.11.3}
+\contentsline {subsection}{\numberline {11.3.1}CommandLineLogger}{72}{subsection.11.3.1}
+\contentsline {subsection}{\numberline {11.3.2}ChromeTraceFileLogger}{73}{subsection.11.3.2}
+\contentsline {subsection}{\numberline {11.3.3}NVTX logger (NVIDIA SDK)}{73}{subsection.11.3.3}
+\contentsline {subsection}{\numberline {11.3.4}ITAC logger}{73}{subsection.11.3.4}
+\contentsline {section}{\numberline {11.4}Log filter}{74}{section.11.4}
+\contentsline {section}{\numberline {11.5}Assertions}{75}{section.11.5}
+\contentsline {chapter}{\numberline {12}Unit tests}{77}{chapter.12}
+\contentsline {section}{\numberline {12.1}Test architecture}{77}{section.12.1}
+\contentsline {section}{\numberline {12.2}Running the tests}{78}{section.12.2}
+\contentsline {section}{\numberline {12.3}Test routines}{78}{section.12.3}
+\contentsline {chapter}{\numberline {13}Parallel programming}{81}{chapter.13}
+\contentsline {section}{\numberline {13.1}Shared memory}{81}{section.13.1}
+\contentsline {subsection}{\numberline {13.1.1}Protecting shared memory access}{81}{subsection.13.1.1}
+\contentsline {section}{\numberline {13.2}Distributed memory}{81}{section.13.2}
+\contentsline {subsection}{\numberline {13.2.1}Synchronisation}{82}{subsection.13.2.1}
+\contentsline {subsection}{\numberline {13.2.2}Exchange global data between ranks (reduction)}{82}{subsection.13.2.2}
+\contentsline {chapter}{\numberline {14}Tools}{83}{chapter.14}
+\contentsline {section}{\numberline {14.1}Loop macros}{83}{section.14.1}
+\contentsline {subsection}{\numberline {14.1.1}d-dimensional loops}{83}{subsection.14.1.1}
+\contentsline {subsection}{\numberline {14.1.2}d-dimensional exclusive loops}{83}{subsection.14.1.2}
+\contentsline {part}{IV\hspace {1em}Extending the Python API}{85}{part.4}
+\contentsline {chapter}{\numberline {15}Introducing a new pre-defined action set}{87}{chapter.15}
+\contentsline {section}{\numberline {15.1}Prepare classes}{87}{section.15.1}
+\contentsline {section}{\numberline {15.2}Implement new action set}{87}{section.15.2}
+\contentsline {section}{\numberline {15.3}Use your new action set}{88}{section.15.3}
+\contentsline {section}{\numberline {15.4}Conventions}{88}{section.15.4}
+\contentsline {part}{V\hspace {1em}Design decisions}{89}{part.5}
+\contentsline {chapter}{\numberline {16}Domain decomposition and data flow}{91}{chapter.16}
+\contentsline {section}{\numberline {16.1}Multigrid topology}{91}{section.16.1}
+\contentsline {section}{\numberline {16.2}Data flow on stationary domains}{92}{section.16.2}
+\contentsline {subsection}{\numberline {16.2.1}Horizontal data flow}{92}{subsection.16.2.1}
+\contentsline {subsection}{\numberline {16.2.2}Vertical data flow}{93}{subsection.16.2.2}
+\contentsline {subsection}{\numberline {16.2.3}Synchronous vertical data flow}{93}{subsection.16.2.3}
+\contentsline {section}{\numberline {16.3}Splits}{93}{section.16.3}
+\contentsline {subsection}{\numberline {16.3.1}Temporal ordering of tree traversals}{93}{subsection.16.3.1}
+\contentsline {subsection}{\numberline {16.3.2}User data}{94}{subsection.16.3.2}
+\contentsline {subsection}{\numberline {16.3.3}Data ownership}{94}{subsection.16.3.3}
+\contentsline {section}{\numberline {16.4}Joins}{94}{section.16.4}
+\contentsline {subsection}{\numberline {16.4.1}Temporal ordering}{95}{subsection.16.4.1}
+\contentsline {subsection}{\numberline {16.4.2}Data ownership}{95}{subsection.16.4.2}
+\contentsline {subsection}{\numberline {16.4.3}Grid data streaming}{96}{subsection.16.4.3}
+\contentsline {subsection}{\numberline {16.4.4}User data streaming}{96}{subsection.16.4.4}
+\contentsline {part}{VI\hspace {1em}Standard benchmarks}{97}{part.6}
+\contentsline {chapter}{\numberline {17}Benchmark: Task priorities}{99}{chapter.17}
+\contentsline {section}{\numberline {17.1}Preparation}{99}{section.17.1}
+\contentsline {section}{\numberline {17.2}Set up the experiment}{99}{section.17.2}
+\contentsline {section}{\numberline {17.3}Run the code}{101}{section.17.3}
+\contentsline {section}{\numberline {17.4}Visualise the outcome}{101}{section.17.4}
+\contentsline {subsection}{\numberline {17.4.1}What we should see}{102}{subsection.17.4.1}
+\contentsline {subsection}{\numberline {17.4.2}Data flow spec}{102}{subsection.17.4.2}
+\contentsline {subsection}{\numberline {17.4.3}Code regions causing the behaviour}{103}{subsection.17.4.3}
+\contentsline {section}{\numberline {17.5}Flaws identified}{103}{section.17.5}
+\contentsline {subsection}{\numberline {17.5.1}OpenMP: task group}{103}{subsection.17.5.1}
+\contentsline {subsection}{\numberline {17.5.2}OpenMP: task group}{103}{subsection.17.5.2}
+\contentsline {part}{VII\hspace {1em}Appendix}{105}{part.7}
+\contentsline {chapter}{\numberline {A}Postprocessing: The visualisation toolkit, IO and Peano~4\ scripts}{107}{appendix.A}
+\contentsline {section}{\numberline {A.1}Displaying Peano~4\ files directly within Paraview}{107}{section.A.1}
+\contentsline {paragraph}{Prepare system.}{107}{section*.39}
+\contentsline {paragraph}{Start Paraview's Python environment.}{108}{section*.40}
+\contentsline {paragraph}{Work with a whole dataset.}{108}{section*.41}
+\contentsline {paragraph}{Display a single file.}{109}{section*.42}
+\contentsline {paragraph}{Filters.}{109}{section*.43}
+\contentsline {section}{\numberline {A.2}Offline/command line conversion with Python/Paraview}{109}{section.A.2}
+\contentsline {section}{\numberline {A.3}Offline/command-line conversion (executable)}{110}{section.A.3}
+\contentsline {section}{\numberline {A.4}Writing Legacy VTK files}{111}{section.A.4}
+\contentsline {section}{\numberline {A.5}Probing data}{112}{section.A.5}
+\contentsline {section}{\numberline {A.6}Tweaking your pictures}{112}{section.A.6}
+\contentsline {section}{\numberline {A.7}Useful scripts}{113}{section.A.7}
+\contentsline {paragraph}{Load balancing toolbox.}{113}{section*.44}
+\contentsline {paragraph}{ExaHyPE~2\ postprocessing.}{114}{section*.45}
+\contentsline {chapter}{\numberline {B}Peano's block-structured output format}{115}{appendix.B}
+\contentsline {section}{\numberline {B.1}A minimal ASCII example file}{115}{section.B.1}
+\contentsline {section}{\numberline {B.2}More sophiciated dumps}{116}{section.B.2}
+\contentsline {chapter}{\numberline {C}Selected HPC platforms and toolchains}{117}{appendix.C}
+\contentsline {section}{\numberline {C.1}Clang toolchain}{117}{section.C.1}
+\contentsline {paragraph}{OpenMP}{117}{section*.46}
+\contentsline {section}{\numberline {C.2}Intel OneAPI toolchain}{117}{section.C.2}
+\contentsline {paragraph}{OpenMP}{118}{section*.47}
+\contentsline {paragraph}{Intel MPI}{118}{section*.48}
+\contentsline {paragraph}{Intel OneAPI toolchain (ITAC)}{118}{section*.49}
+\contentsline {section}{\numberline {C.3}NVIDIA NVC++ toolchain}{119}{section.C.3}
+\contentsline {paragraph}{OpenMP and OpenMP offloading}{119}{section*.50}
+\contentsline {section}{\numberline {C.4}Some particular supercomputer testbeds}{119}{section.C.4}
+\contentsline {subsection}{\numberline {C.4.1}Hamilton 8}{119}{subsection.C.4.1}
+\contentsline {subsection}{\numberline {C.4.2}DINE (Durham Intelligent NIC Environment)}{120}{subsection.C.4.2}
+\contentsline {subsection}{\numberline {C.4.3}Cosma}{120}{subsection.C.4.3}
+\contentsline {subsection}{\numberline {C.4.4}Bede}{121}{subsection.C.4.4}
+\contentsline {paragraph}{Prepare the Python and bash environment}{121}{section*.51}
+\contentsline {paragraph}{Build with LLVM and MVAPICH}{121}{section*.52}
+\contentsline {paragraph}{Build with LLVM and OpenMPI}{121}{section*.53}
+\contentsline {chapter}{\numberline {D}Configuring Peano~4\ in Eclipse}{123}{appendix.D}
+\contentsline {section}{\numberline {D.1}Clone directly from git}{123}{section.D.1}
+\contentsline {section}{\numberline {D.2}Integrating the C++ core as project}{123}{section.D.2}
+\contentsline {part}{VIII\hspace {1em}Quick help}{125}{part.8}
+\contentsline {chapter}{\numberline {E}FAQs (programmers' point of view)}{127}{appendix.E}
+\contentsline {section}{\numberline {E.1}C++ core}{127}{section.E.1}
+\contentsline {section}{\numberline {E.2}Parallelisation}{127}{section.E.2}
+\contentsline {chapter}{\numberline {F}Troubleshooting}{129}{appendix.F}
+\contentsline {section}{\numberline {F.1}Python API}{129}{section.F.1}
+\contentsline {section}{\numberline {F.2}Compilation}{129}{section.F.2}
+\contentsline {section}{\numberline {F.3}Linking}{130}{section.F.3}
+\contentsline {section}{\numberline {F.4}Debugging}{131}{section.F.4}
+\contentsline {section}{\numberline {F.5}MPI troubleshooting}{132}{section.F.5}
+\contentsline {section}{\numberline {F.6}OpenMP troubleshooting}{132}{section.F.6}
+\contentsline {section}{\numberline {F.7}External tools}{133}{section.F.7}
+\contentsline {section}{\numberline {F.8}PDT (legacy)}{133}{section.F.8}

@@ -616,14 +616,14 @@ if __name__ == "__main__":
 ########################################################################################
 #Add postpocessing function
 ########################################################################################
-      if args.extension=="gradient":
-        my_solver.add_derivative_calculation()
-      if args.extension=="AMRadm":
-        my_solver.add_constraint_RefinementFlag_verification()
-      if args.extension=="Full":
-        my_solver.add_PT_ConsW_Psi4W_AMRFlag()
+    if args.extension=="gradient":
+      my_solver.add_derivative_calculation()
+    if args.extension=="AMRadm":
+      my_solver.add_constraint_RefinementFlag_verification()
+    if args.extension=="Full":
+      my_solver.add_PT_ConsW_Psi4W_AMRFlag()
 
-      my_solver._auxiliary_variables = 59*3
+      #my_solver._auxiliary_variables = 59*3
 
 ########################################################################################
 #parameter setting according to scenarios
