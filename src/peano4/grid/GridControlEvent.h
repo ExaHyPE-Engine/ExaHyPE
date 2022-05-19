@@ -36,6 +36,7 @@ namespace grid{
 
 struct peano4::grid::GridControlEvent {
   public:
+
     enum class RefinementControl: int {
       Refine=0, Erase=1    
     };
@@ -104,10 +105,10 @@ struct peano4::grid::GridControlEvent {
     std::string toString() const;
   
   private:
-    RefinementControl   _refinementControl;
-    tarch::la::Vector<Dimensions,double>   _offset;
-    tarch::la::Vector<Dimensions,double>   _width;
-    tarch::la::Vector<Dimensions,double>   _h;
+      RefinementControl   _refinementControl;
+      tarch::la::Vector<Dimensions,double>   _offset;
+      tarch::la::Vector<Dimensions,double>   _width;
+      tarch::la::Vector<Dimensions,double>   _h;
 
 
 
@@ -120,7 +121,7 @@ struct peano4::grid::GridControlEvent {
     #endif
 
 
-    
+
 };
 
 #endif

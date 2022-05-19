@@ -92,8 +92,8 @@ struct peano4::parallel::TreeEntry {
     std::string toString() const;
   
   private:
-    int   _id;
-    int   _master;
+      int   _id;
+      int   _master;
 
 
 
@@ -106,7 +106,7 @@ struct peano4::parallel::TreeEntry {
     #endif
 
 
-    
+
 };
 
 #endif
