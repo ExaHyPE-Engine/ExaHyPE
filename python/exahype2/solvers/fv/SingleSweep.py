@@ -243,19 +243,19 @@ class SingleSweep( FV ):
     pass
 
 
-  def set_preprocess_reconstructed_patch_kernel(self,kernel):
+  #def set_preprocess_reconstructed_patch_kernel(self,kernel):
     """
   
     Most subclasses will redefine/overwrite this operation as they have
     to incorporate the kernel into their generated stuff
   
     """
-    self._preprocess_reconstructed_patch += kernel
-    self.create_data_structures()
-    self.create_action_sets()
+  #  self._preprocess_reconstructed_patch += kernel
+  #  self.create_data_structures()
+  #  self.create_action_sets()
 
 
-  def set_postprocess_updated_patch_kernel(self, kernel):
+  #def set_postprocess_updated_patch_kernel(self, kernel):
     """
 
     Define a postprocessing routine over the data
@@ -289,6 +289,6 @@ class SingleSweep( FV ):
       C++ code that holds the postprocessing kernel
 
     """
-    self._postprocess_updated_patch += kernel
-    self.create_data_structures()
-    self.create_action_sets()
+    #self._postprocess_updated_patch += kernel
+    #self.create_data_structures()
+    #self.create_action_sets()

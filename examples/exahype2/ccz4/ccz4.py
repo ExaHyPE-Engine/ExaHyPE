@@ -279,7 +279,7 @@ if __name__ == "__main__":
 	#include "../AbstractFiniteVolumeCCZ4.h"
     """
 
-        self.set_preprocess_reconstructed_patch_kernel( """
+        self._preprocess_reconstructed_patch = """
         const int patchSize = """ + str( self._patch.dim[0] ) + """;
         double volumeH = ::exahype2::fv::getVolumeLength(marker.h(),patchSize);
         const int n_a_v="""+str(self._auxiliary_variables)+""";
@@ -353,7 +353,7 @@ if __name__ == "__main__":
 		      */
 		      //std::cout<< Psi4[0] << std::endl;
         }
-    """)
+    """
 
         self.create_data_structures()
         self.create_action_sets()
@@ -376,7 +376,7 @@ if __name__ == "__main__":
         """
         self._auxiliary_variables = 59*3
 
-        self.set_preprocess_reconstructed_patch_kernel( """
+        self._preprocess_reconstructed_patch = """
         const int patchSize = """ + str( self._patch.dim[0] ) + """;
         int aux_var=""" + str( self._auxiliary_variables ) + """;
         int real_var=59;
@@ -403,7 +403,7 @@ if __name__ == "__main__":
 
           }
         }
-    """)
+    """
 
         self.create_data_structures()
         self.create_action_sets()
@@ -421,7 +421,7 @@ if __name__ == "__main__":
 	#include <iomanip>
     """
 
-        self.set_preprocess_reconstructed_patch_kernel( """
+        self._preprocess_reconstructed_patch = """
         const int patchSize = """ + str( self._patch.dim[0] ) + """;
         double volumeH = ::exahype2::fv::getVolumeLength(marker.h(),patchSize);
 
@@ -542,7 +542,7 @@ if __name__ == "__main__":
       reconstructedPatch[cellSerialised*(59+n_a_v)+59+7]=Psi4[0];//re part of psi4
 		  reconstructedPatch[cellSerialised*(59+n_a_v)+59+8]=Psi4[1];//im part of psi4
 		}		
-    """)
+    """
 
         self.create_data_structures()
         self.create_action_sets()
