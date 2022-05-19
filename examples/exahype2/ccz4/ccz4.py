@@ -623,6 +623,8 @@ if __name__ == "__main__":
       if args.extension=="Full":
         my_solver.add_PT_ConsW_Psi4W_AMRFlag()
 
+      my_solver._auxiliary_variables = 59*3
+
 ########################################################################################
 #parameter setting according to scenarios
 ########################################################################################
