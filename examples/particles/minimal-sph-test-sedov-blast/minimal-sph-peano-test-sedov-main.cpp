@@ -198,8 +198,8 @@ int main(int argc, char** argv) {
         /* Now the time-step in the actual "D-K2-K1" form begins */
         /* "Drift" */
         peano4::parallel::SpacetreeSet::getInstance().traverse(driftpart);
-        /* Also predicts v, u, h, ... */
-        peano4::parallel::SpacetreeSet::getInstance().traverse(predictHydroPart);
+//        /* Also predicts v, u, h, ... */
+//        peano4::parallel::SpacetreeSet::getInstance().traverse(predictHydroPart);
 
         /* "Hydro loop" */
         for (int iter=0; iter<3; iter++){

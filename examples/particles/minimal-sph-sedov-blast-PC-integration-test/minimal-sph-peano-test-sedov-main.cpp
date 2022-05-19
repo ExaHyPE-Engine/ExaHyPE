@@ -178,6 +178,8 @@ int main(int argc, char** argv) {
             peano4::parallel::SpacetreeSet::getInstance().traverse(newtonRaphson);
 
           }
+        /* Reset NR convergence so we can update again */
+        peano4::parallel::SpacetreeSet::getInstance().traverse(ResetHasConvergedNR);
         /* Post hydro loop */
         /* Density loop */
         peano4::parallel::SpacetreeSet::getInstance().traverse(density);
@@ -185,8 +187,6 @@ int main(int argc, char** argv) {
         peano4::parallel::SpacetreeSet::getInstance().traverse(prepareForce);
         /* Force loop */
         peano4::parallel::SpacetreeSet::getInstance().traverse(forcespart);
-        /* Reset NR convergence so we can update again */
-        peano4::parallel::SpacetreeSet::getInstance().traverse(ResetHasConvergedNR);
 
         /* "Kick1" */
         peano4::parallel::SpacetreeSet::getInstance().traverse(kick1part);
@@ -214,6 +214,8 @@ int main(int argc, char** argv) {
             /* Newton Raphson iteration */
             peano4::parallel::SpacetreeSet::getInstance().traverse(newtonRaphson);
           }
+        /* Reset NR convergence so we can update again */
+        peano4::parallel::SpacetreeSet::getInstance().traverse(ResetHasConvergedNR);
         /* Post hydro loop */
         /* Density loop */
         peano4::parallel::SpacetreeSet::getInstance().traverse(density);

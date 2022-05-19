@@ -352,7 +352,7 @@ initialisation_snippet = """
 //  particle->setPressure( 1e-6);
   
   particle->setSmoothingLength( SMOOTH_L_FAC * std::pow(particle->getMass()/particle->getDensity(), 1.0/Dimensions) );
-  particle->setSmoothingLengthPrevious( 0.99 * particle->getSmoothingLength() );
+  particle->setSmoothingLengthPrevious( 0.80 * particle->getSmoothingLength() );
  
   // Initialise the blast
   tarch::la::Vector<Dimensions,double> blast_cent(BLAST_CENTER);
@@ -664,8 +664,7 @@ particle_particle_compute_kernel = """
 touch_particle_last_time_compute_kernel = """
 
    if(localParticle->getParallelState()==globaldata::Particle::ParallelState::Local
-   and localParticle->getHasConverged()==false 
-   ) {  
+   and localParticle->getHasConverged()==false) {  
 
     /* Do a Newton-Raphson iteration.
      * The HasConverged attribute is always initialize to false so we always do at least one update.
@@ -675,16 +674,17 @@ touch_particle_last_time_compute_kernel = """
     /* Retrieve basic properties of the local particle */
     const double rho_a = localParticle->getDensity();
     const double m_a = localParticle->getMass();  
-    const double h_old = localParticle->getSmoothingLength();
     
     const double hydro_eta_dim = std::pow(SMOOTH_L_FAC, Dimensions);
+    const double h_old = localParticle->getSmoothingLength();
     const double h_old_dim = std::pow(h_old, Dimensions);
     const double h_old_dim_minus_one = std::pow(h_old, Dimensions - 1);
       
     const double dh_drho_a = - h_old/rho_a/Dimensions;
     const double Omega_a = localParticle->getOmega();
    
-    /* Value at the start of iteration procedure (last update on previous time-step) */
+    /* Value at the start of iteration procedure 
+     * Here we use that from the previous time-step */
     const double h_0 = localParticle->getSmoothingLengthPrevious();
 
     const double htolerance = H_TOLERANCE; 
@@ -704,27 +704,32 @@ touch_particle_last_time_compute_kernel = """
                               Dimensions * localParticle->getWcount() * h_old_dim_minus_one;
 
     /* Get new value of smoothing length via N-R iteration */
-    double h_new = localParticle->getSmoothingLength() - f/f_prime;
+    double h_new = h_old - f/f_prime;
 
     /*******************************************************************************/    
 
     /* Safety check: truncate to the range [ h_old/2 , 2h_old ]. */
-    h_new = std::min(h_new, 2.0 * h_old);
-    h_new = std::max(h_new, 0.5 * h_old);
+//    h_new = std::min(h_new, 2.0 * h_old);
+//    h_new = std::max(h_new, 0.5 * h_old);
     
     /* Check if particle has grown larger than half the grid size */
     tarch::la::Vector<Dimensions,double> GridSize = marker.h();
     const double GridSizeHalf = 0.5 * GridSize(0); 
-    const double CutoffParticle = KERNEL_SUPPORT_RAD * localParticle->getSmoothingLength();
+    const double CutoffParticleH = KERNEL_SUPPORT_RAD * h_new;
     
     assertion4( tarch::la::smallerEquals( CutoffParticle,GridSizeHalf ), localParticle->toString(), GridSizeHalf, marker.h(), CutoffParticle );
 
-    // Fall back to h_old if it has become too small or Nan
+    /* Fall back to h_old if it has become too small or Nan */
+    assertion3(h_new > 1e-5, localParticle->toString(), h_new, h_old);
+    assertion3(not std::isnan(h_new), localParticle->toString(), h_new, h_old);
+    if( h_new <= 1e-5 || std::isnan(h_new) ){
+//      h_new = h_old;
+    }
+
     /* Also if particle has hit Maximum allowed value */
-    if(localParticle->getSmoothingLength()<= 1e-5 || 
-      std::isnan( localParticle->getSmoothingLength() ) ||
-      tarch::la::smallerEquals( CutoffParticle,GridSizeHalf ) ) {
-      h_new = h_old;
+    assertion3(tarch::la::greaterEquals( CutoffParticleH,GridSizeHalf ), localParticle->toString(), h_new, h_old);
+    if(tarch::la::smallerEquals( CutoffParticleH,GridSizeHalf ) ) {
+//      h_new = h_old;
     }
     
     /* Update value of h */

@@ -19,7 +19,7 @@ namespace examples{
 namespace particles{
 
   const double GLOBAL_TIME_STEP_SIZE = 1e-4;
-  const double HYDRO_PART_NUMBER = 127;
+  const double HYDRO_PART_NUMBER = 63;
   const int HYDRO_DEFAULT_MAX_ITERATIONS = 1;
   const double H_TOLERANCE = 1e-4;
   const double KERNEL_SUPPORT_RAD = 2;
