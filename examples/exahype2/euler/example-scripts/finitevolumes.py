@@ -238,6 +238,13 @@ else:
 project.add_solver( thesolver )
 
 
+#
+# Please comment out later again
+#
+amr_label = exahype2.solvers.elliptic.AMRMarker( name="AMRMarker" )
+project.add_solver( amr_label )
+
+
 dimensions = args.dim
 build_mode = modes[args.mode]
 

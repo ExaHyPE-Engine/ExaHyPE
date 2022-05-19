@@ -12,13 +12,27 @@ class PlotScalarNodalFieldInPeanoBlockFormat(ActionSet):
     """
       Plot only the grid structure
       
-      filename         Name of the output file
-      vertex_unknown   The object you have associated with a vertex and that you want to print
-      getter           Getter acting on the vertex. Could be something alike getU() for example.
-                       If there's no getter but you want to directly access the data, remove 
-                       any brackets from the passed string.
-      time_stamp_evaluation String
-                       C++ expression returning a double                       
+      filename: String
+        Name of the output file
+        
+      vertex_unknown: (DaStGen) object tied to a vertex 
+        The object you have associated with a vertex and that you want to print.
+        The code will access its name via 
+        
+             fineGridVertices{VERTEX_UNKNOWN_NAME}
+             
+        in the generated source code 
+        
+      getter: String (C++ code)
+        Getter acting on the vertex. Could be something alike getU() for example.
+        If there's no getter but you want to directly access the data, remove 
+        any brackets from the passed string.
+        
+      time_stamp_evaluation: String
+        C++ expression returning a double. This is used to write the time series
+        file for a series of snapshots. Pass in "0" if you solve a stationary 
+        problem, e.g. 
+                              
     """
     self.d = {}
     self.d[ "FILENAME" ]            = filename

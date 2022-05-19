@@ -1,9 +1,77 @@
 \chapter{A geometric-algebraic multigrid solver}
 \label{section:python-api-examples:multigrid}
 
-All the examples from this chapter can be found in Peano's
-\texttt{python/examples} directory.
+% All the examples from this chapter can be found in Peano's
+% \texttt{python/examples} directory.
 
+\begin{remark}
+ Even though \Peano\ originally had been written for convection-diffusion equations with multigrid,
+ most of our applications today don't use this feature. 
+ The discussion here is thus a little bit dated and does not really showcase what the code is capable to do.
+\end{remark}
+
+
+\section{A simple, vertex-centred Finite Differences solver with hard-coded operators}
+
+We start our experiments with a simple Finite Differences solver for the Poisson equation
+
+\[
+ - \Delta u = f.
+\]
+
+
+
+\subsection{Data model}
+
+We model our data through the \DaStGen\ Python interface. 
+We could alternatively write the data model in C++ ourselves, but this is more delicate (though it migth provide more freedom).
+In the simplest version of the code, where we assume that there are no material coefficients and that we know the right-hand side, we need two quantities per vertex:
+There has to be a scalar which carries the actual solution $u$, and we need an additional scalar to accumulate the residual.  
+Within our Python script, we thus create a vertex data model that only hosts these two scalars:
+
+
+\begin{code}
+import dastgen2
+import peano4.datamodel.DaStGen2
+
+vertex_data = peano4.datamodel.DaStGen2( "Data" )
+vertex_data.data.add_attribute( dastgen2.attributes.Double("u") )
+vertex_data.data.add_attribute( dastgen2.attributes.Double("residual") )
+\end{code}
+
+\noindent
+We add this new data model to our project:
+
+\begin{code}
+project.datamodel.add_vertex(vertex_data)
+\end{code}
+
+
+
+\subsection{Plot the result}
+
+If you want to plot the result, there is a very simple plotter available from 
+the \texttt{toolbox}:
+
+\begin{code}
+step.add_action_set( peano4.toolbox.PlotScalarNodalFieldInPeanoBlockFormat( 
+  filename="amr-marker", 
+  vertex_unknown=vertex_data,
+  getter="getU()", 
+  description="marker-value",
+  time_stamp_evaluation="0.0"
+))
+\end{code}
+
+\noindent
+The plotter gives you a (series of) grid outputs.
+These outputs are patch files in a block-structured AMR sense, but each block is degenerated, i.e.~is a $1\times 1 $ voxel.
+
+
+\marginpar{parallel?}  
+
+
+%    step.use_cell(self._patch)
 
 \section{A matrix-free Jacobi smoother with rediscretisation}
 
