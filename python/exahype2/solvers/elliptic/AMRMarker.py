@@ -28,9 +28,10 @@ class AMRMarker(object):
     differences diffusion implementation which eventually will become 
     stationary if your mesh does not change anymore. The code solves
     
-    @f$ \partial _t u - \kappa \Delta u = f @f$
+    @f$ - \Delta u = f @f$
     
-    for a tiny rhs f. Furthermore, the solution is subject to the constraints 
+    for a tiny rhs f with a Jacobi solver. The solution is subject to the 
+    constraints 
 
     @f$ 0 \leq u \leq 1 @f$
 
@@ -38,6 +39,9 @@ class AMRMarker(object):
     values of 1 for every hanging vertex. So we have 1 at AMR transitions (and
     the boundary if that's wanted) and we see the solution u fade away once we
     move away from the boundary, until is eventually becomes 0.
+    
+    
+    ## Use cases
     
     ExaHyPE codes usually use this for some damping or smearing close to the
     AMR boundaries where instabilities due to reflecting waves can arise. There
@@ -55,7 +59,7 @@ class AMRMarker(object):
   """
   
       
-  def __init__(self, name, diffusion_coefficient = 0.001, flag_domain_boundary = True, plot = False):
+  def __init__(self, name, relaxation_coefficient = 0.01, right_hand_side = -0.1, flag_domain_boundary = True, plot = False):
     """
     
   name: string
@@ -67,63 +71,29 @@ class AMRMarker(object):
      (such as enclave status flags), too.
  
     """
-    self._name                  = name
-    self._diffusion_coefficient = diffusion_coefficient
-    self._flag_domain_boundary  = flag_domain_boundary
-    self._plot                  = plot
+    self._name                   = name
+    self._relaxation_coefficient = relaxation_coefficient
+    self._flag_domain_boundary   = flag_domain_boundary
+    self._right_hand_side        = right_hand_side
+    self._plot                   = plot
     
     self.create_data_structures()
     self.create_action_sets()
 
 
   def __str__(self):
-    result = """
-Name:                   """ + self._name + """
-Type:                   """ + self.__class__.__name__ + """
-Diffusion coefficient:  """ + str( self._diffusion_coefficient ) + """  
-"""
-    return result
+    return """
+Name:                   {}
+Type:                   {}
+Relaxation coefficient: {}
+""".format( 
+  self._name,
+  self.__class__.__name__,
+  self._relaxation_coefficient
+)
 
 
   __repr__ = __str__
-
-
-  #def get_min_number_of_spacetree_levels(self,domain_size):
-  #  coarsest_tree_level = 0
-  #  while (domain_size*3**(-coarsest_tree_level)/self._patch_size>self._max_volume_h):
-  #    coarsest_tree_level+=1 
-  #  return coarsest_tree_level
-
-
-  #def get_max_number_of_spacetree_levels(self,domain_size):
-  #  finest_tree_level = 0
-  #  while (domain_size*3**(-finest_tree_level)/self._patch_size>self._min_volume_h):
-  #    finest_tree_level+=1 
-  #  return finest_tree_level
-
-
-  #def get_coarsest_number_of_patches(self,domain_size):
-  #  return 3**self.get_min_number_of_spacetree_levels(domain_size)
-
-
-  #def get_finest_number_of_patches(self,domain_size):
-  #  return 3**self.get_max_number_of_spacetree_levels(domain_size)
-
-
-  #def get_coarsest_number_of_finite_volumes(self,domain_size):
-  #  return self.get_coarsest_number_of_patches(domain_size)*self._patch_size
-
-
-  #def get_finest_number_of_finite_volumes(self,domain_size):
-  #  return self.get_finest_number_of_patches(domain_size)*self._patch_size
-
-    
-  #def get_coarsest_volume_size(self,domain_size):
-  #  return domain_size/self.get_coarsest_number_of_finite_volumes(domain_size)
-
-
-  #def get_finest_volume_size(self,domain_size):
-  #  return domain_size/self.get_finest_number_of_finite_volumes(domain_size)
 
   
   def create_readme_descriptor(self, domain_offset, domain_size):
@@ -131,24 +101,6 @@ Diffusion coefficient:  """ + str( self._diffusion_coefficient ) + """
 ### ExaHyPE 2 solver
 
 """ + str(self)   
-
-
-  @property
-  def user_action_set_includes(self):
-    """
-    """
-    return ""
-
-  
-  @property
-  def user_solver_includes(self):
-    """
-    
-    Add further includes to this property, if your solver requires some additional
-    routines from other header files.
-    
-    """
-    return ""
 
  
   def create_data_structures(self):
@@ -182,6 +134,7 @@ Diffusion coefficient:  """ + str( self._diffusion_coefficient ) + """
      within the inheritance tree.
      
     """
+    #self._action_set_smoother = 
     #self._action_set_initial_conditions                       = exahype2.solvers.fv.actionsets.InitialCondition(self, self._store_cell_data_default_guard(), "true" )
 
 
@@ -331,31 +284,15 @@ Diffusion coefficient:  """ + str( self._diffusion_coefficient ) + """
      output: peano4.output.Output
      
     """
-    return 
+    templatefile_prefix = os.path.dirname( os.path.realpath(__file__) ) + "/AMRMarker"
 
-    templatefile_prefix = os.path.dirname( os.path.realpath(__file__) ) + "/"
-
-    if self._solver_template_file_class_name is None:
-      templatefile_prefix += self.__class__.__name__
-    else:
-      templatefile_prefix += self._solver_template_file_class_name
-
-    abstractHeaderDictionary = {}
+    headerDictionary = {}
     implementationDictionary = {}
-    self._init_dictionary_with_default_parameters(abstractHeaderDictionary)
+    self._init_dictionary_with_default_parameters(headerDictionary)
     self._init_dictionary_with_default_parameters(implementationDictionary)
-    self.add_entries_to_text_replacement_dictionary(abstractHeaderDictionary)
+    self.add_entries_to_text_replacement_dictionary(headerDictionary)
     self.add_entries_to_text_replacement_dictionary(implementationDictionary)
 
-    generated_abstract_header_file = peano4.output.Jinja2TemplatedHeaderImplementationFilePair(
-      templatefile_prefix + "Abstract.template.h",
-      templatefile_prefix + "Abstract.template.cpp",
-      "Abstract" + self._name, 
-      namespace,
-      ".", 
-      abstractHeaderDictionary,
-      True,
-      True)
     generated_solver_files = peano4.output.Jinja2TemplatedHeaderImplementationFilePair(
       templatefile_prefix + ".template.h",
       templatefile_prefix + ".template.cpp",
@@ -363,17 +300,11 @@ Diffusion coefficient:  """ + str( self._diffusion_coefficient ) + """
       namespace,
       ".", 
       implementationDictionary,
-      False,
+      True,
       True)
 
-    output.add( generated_abstract_header_file )
     output.add( generated_solver_files )
-    output.makefile.add_cpp_file( "Abstract" + self._name + ".cpp" )
     output.makefile.add_cpp_file( self._name + ".cpp" )
-
-  def set_solver_constants(self, datastring): self.solver_constants_ = datastring
-
-  def add_solver_constants(self, datastring): self.solver_constants_ += datastring
 
 
   def _init_dictionary_with_default_parameters(self,d):
@@ -388,26 +319,16 @@ Diffusion coefficient:  """ + str( self._diffusion_coefficient ) + """
 
 
     """
+    d["RIGHT_HAND_SIDE"]        = self._right_hand_side
+    d["RELAXATION_COEFFICIENT"] = self._relaxation_coefficient
+    if self._flag_domain_boundary:
+      d["BOUNDARY_VALUE"]       = 1.0
+    else:
+      d["BOUNDARY_VALUE"]       = 0.0
+
+    
     d["SOLVER_INSTANCE"]                = self.get_name_of_global_instance()
     d["SOLVER_NAME"]                    = self._name
-    d["UNKNOWN_IDENTIFIER"]             = self._unknown_identifier()
-
-    #d[ "COMPUTE_KERNEL_CALL"]                 = jinja2.Template(self._compute_kernel_call, undefined=jinja2.DebugUndefined).render( **d )
-
-    #d[ "ABSTRACT_SOLVER_USER_DECLARATIONS" ]  = jinja2.Template(self._abstract_solver_user_declarations, undefined=jinja2.DebugUndefined).render( **d )
-    #d[ "ABSTRACT_SOLVER_USER_DEFINITIONS" ]   = jinja2.Template(self._abstract_solver_user_definitions, undefined=jinja2.DebugUndefined).render( **d )
-    #d[ "SOLVER_USER_DECLARATIONS" ]           = jinja2.Template(self._solver_user_declarations, undefined=jinja2.DebugUndefined).render( **d )
-    #d[ "SOLVER_USER_DEFINITIONS" ]            = jinja2.Template(self._solver_user_definitions, undefined=jinja2.DebugUndefined).render( **d )
-    #d[ "START_TIME_STEP_IMPLEMENTATION" ]     = jinja2.Template(self._start_time_step_implementation, undefined=jinja2.DebugUndefined).render( **d )
-    #d[ "FINISH_TIME_STEP_IMPLEMENTATION" ]    = jinja2.Template(self._finish_time_step_implementation, undefined=jinja2.DebugUndefined).render( **d )
-    #d[ "CONSTRUCTOR_IMPLEMENTATION"]          = jinja2.Template(self._constructor_implementation, undefined=jinja2.DebugUndefined).render( **d )
-    
-    #d[ "PREPROCESS_RECONSTRUCTED_PATCH" ]     = jinja2.Template(self._preprocess_reconstructed_patch, undefined=jinja2.DebugUndefined).render( **d )
-    #d[ "POSTPROCESS_UPDATED_PATCH" ]          = jinja2.Template(self._postprocess_updated_patch, undefined=jinja2.DebugUndefined).render( **d )
-
-    #d[ "COMPUTE_TIME_STEP_SIZE" ]             = jinja2.Template(self._compute_time_step_size, undefined=jinja2.DebugUndefined).render( **d )
-    #d[ "COMPUTE_NEW_TIME_STEP_SIZE" ]         = jinja2.Template(self._compute_new_time_step_size, undefined=jinja2.DebugUndefined).render( **d )
-    #d[ "COMPUTE_MAX_EIGENVALUE" ]             = self._compute_eigenvalue
 
 
   @property
