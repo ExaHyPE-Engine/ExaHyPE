@@ -140,7 +140,7 @@ int main(int argc, char** argv) {
 //    peano4::parallel::SpacetreeSet::getInstance().traverse(rearrangeObserver);
 
     /* Main loop */
-    for (int i=0; i<1000; i++) {
+    for (int i=0; i<200; i++) {
       for (int j=0; j<10; j++) { /* Numbers of time-steps between two output snapshots */
         logInfo( "main()", "run timestep" )
 
@@ -168,8 +168,8 @@ int main(int argc, char** argv) {
         /* For first time-step, we need to pre-compute some quantities before drifting */
         /* This is because we must start the simulation with a "K1" step */
         if(i==0 and j==0){ 
-        /* "Hydro loop" */
-          for (int iter=0; iter<3; iter++){
+          for (int iter=0; iter<5; iter++){
+            /* "Hydro loop" */
             /* Density loop */
             peano4::parallel::SpacetreeSet::getInstance().traverse(density);
             /* "Ghost tasks" */
@@ -177,13 +177,13 @@ int main(int argc, char** argv) {
             peano4::parallel::SpacetreeSet::getInstance().traverse(prepareForce);
             /* Newton Raphson iteration */
             peano4::parallel::SpacetreeSet::getInstance().traverse(newtonRaphson);
-
           }
-        /* Post hydro loop */
-        /* Density loop */
-        peano4::parallel::SpacetreeSet::getInstance().traverse(density);
-        /* Prepare force */
-        peano4::parallel::SpacetreeSet::getInstance().traverse(prepareForce);
+
+//        /* Post hydro loop */
+//        /* Density loop */
+//        peano4::parallel::SpacetreeSet::getInstance().traverse(density);
+//        /* Prepare force */
+//        peano4::parallel::SpacetreeSet::getInstance().traverse(prepareForce);
         /* Force loop */
         peano4::parallel::SpacetreeSet::getInstance().traverse(forcespart);
 
@@ -201,8 +201,8 @@ int main(int argc, char** argv) {
 //        /* Also predicts v, u, h, ... */
 //        peano4::parallel::SpacetreeSet::getInstance().traverse(predictHydroPart);
 
-        /* "Hydro loop" */
-        for (int iter=0; iter<3; iter++){
+        for (int iter=0; iter<5; iter++){
+          /* "Hydro loop" */
           /* Density loop */
           peano4::parallel::SpacetreeSet::getInstance().traverse(density);
           /* "Ghost tasks" */
@@ -210,13 +210,13 @@ int main(int argc, char** argv) {
           peano4::parallel::SpacetreeSet::getInstance().traverse(prepareForce);
           /* Newton Raphson iteration */
           peano4::parallel::SpacetreeSet::getInstance().traverse(newtonRaphson);
-
         }
-        /* Post hydro loop */
-        /* Density loop */
-        peano4::parallel::SpacetreeSet::getInstance().traverse(density);
-        /* Prepare force */
-        peano4::parallel::SpacetreeSet::getInstance().traverse(prepareForce);
+
+//        /* Post hydro loop */
+//        /* Density loop */
+//        peano4::parallel::SpacetreeSet::getInstance().traverse(density);
+//        /* Prepare force */
+//        peano4::parallel::SpacetreeSet::getInstance().traverse(prepareForce);
         /* Force loop */
         peano4::parallel::SpacetreeSet::getInstance().traverse(forcespart);
 
