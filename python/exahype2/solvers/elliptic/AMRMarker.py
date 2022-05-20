@@ -9,6 +9,8 @@ import peano4.output.TemplatedHeaderImplementationFilePair
 import peano4.output.Jinja2TemplatedHeaderFile
 import peano4.output.Jinja2TemplatedHeaderImplementationFilePair
 
+import peano4.toolbox.multigrid.MatrixFreeJacobi
+
 import jinja2
 
 from abc import abstractmethod
@@ -108,7 +110,7 @@ Relaxation coefficient: {}
     
        
     """
-    self._data_model = peano4.datamodel.DaStGen2( "Data" )
+    self._data_model = peano4.datamodel.DaStGen2( self._unknown_identifier() )
     self._data_model.data.add_attribute( dastgen2.attributes.Double("u") )
     self._data_model.data.add_attribute( dastgen2.attributes.Double("residual") )
     
@@ -134,7 +136,7 @@ Relaxation coefficient: {}
      within the inheritance tree.
      
     """
-    #self._action_set_smoother = 
+    self._action_set_smoother = peano4.toolbox.multigrid.MatrixFreeJacobi( self._data_model, self._relaxation_coefficient, "1.0", "{}".format(self._right_hand_side) )
     #self._action_set_initial_conditions                       = exahype2.solvers.fv.actionsets.InitialCondition(self, self._store_cell_data_default_guard(), "true" )
 
 
