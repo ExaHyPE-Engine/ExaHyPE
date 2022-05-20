@@ -17,6 +17,7 @@ class UpdateParticleGridAssociation(ActionSet):
    be used every time you move particles around. Notably, you should invoke
    it prior to the first algorithms on the particles. 
 
+
    ## Algorithm 
       
    The re-association has different ingredients. We have two implementations
@@ -66,10 +67,38 @@ class UpdateParticleGridAssociation(ActionSet):
    their position again in touchCellLastTime() or touchVertexLastTime(), then
    you will have an unsorted state by the end of the traversal. 
    
+   
+   ## Tunneling and horizontal data movements between trees
+   
+   All cores run through their trees. On the finest mesh level, we have a 
+   non-overlapping domain decomposition. Each cell has a unique owner tree.
+   On the coarser resolutions, the association is not unique anymore. We 
+   make it unique, i.e. each cell on any level has a unique owner. The owners
+   (aka threads or ranks) run through their trees concurrently and exchange
+   their boundary data after the traversal. If particles are to be lifted, this
+   causes issues, as we cannot exchange them between two levels after the 
+   traversal. We could, but then we can't lift them any further within the 
+   first traversal, and we also cannot drop them into another rank at the 
+   same time.
+   
+   Therefore, I employ a mixture of the pidt technique from the paper and the
+   sieve approach also discussed there. Usually, I do all lifts and drops 
+   right throughout the mesh traversal. If I'd lift into a cell/level which 
+   is owned by another tree, I don't lift but instead dump the particle into
+   a rank-global list. These lists are then exchanged after each traversal 
+   sweep. Drops now can either happen from the next coarser level or this
+   global list. I call the latter a sieve.
+   
+   Due to this global list approach, I can support tunneling, i.e. particles
+   racing through multiple cells in one time step, and all of this works with
+   MPI, too.
+   
+   
    ## Statistics 
      
    The mapping keeps some statistics on any state update. These statistics
-   however are not shared via MPI. 
+   however are not shared via MPI or synchronised between different threads. 
+   
    
    ## Where and how to use
    
@@ -87,14 +116,7 @@ class UpdateParticleGridAssociation(ActionSet):
    lifts are basically the last thing you do. This is particular imporant if
    your user code alters particle positions in touchVertexLastTime().
    
-   ## MPI
-   
-   @todo Not sure if I need special treatment here
-   
-   ## Tunneling and horizontal data movements between trees
-   
-   @todo Think about this
-   
+      
    ## Parameters
    
    eliminate_spatial_duplicates: Boolean
@@ -125,6 +147,11 @@ class UpdateParticleGridAssociation(ActionSet):
 
 
   __Template_BeginTraversal = jinja2.Template("""
+  _globalSieveParticleList.clear();
+  _globalSieveParticleList.insert( _globalSieveParticleList.end(), _globalMovingParticleList.begin(), _globalMovingParticleList.end() );
+  _globalSieveParticleListIsEmpty = _globalMovingParticleList.empty();
+  _globalMovingParticleList.clear();
+
   _numberOfParticleReassignmentsOnCurrentLevel = 0;
   _numberOfLifts = 0;
   _numberOfDrops = 0;
@@ -148,6 +175,9 @@ class UpdateParticleGridAssociation(ActionSet):
     ", assignments-to-global-sieve=" << _numberOfAssignmentsToGlobalSieve
   );
 """ )
+
+
+
 
 
   """
@@ -228,7 +258,6 @@ class UpdateParticleGridAssociation(ActionSet):
 
   __Template_ValidateParticleLevelAssociation = jinja2.Template("""
   for (auto p: fineGridVertex{{PARTICLES_CONTAINER}} ) {
-    constexpr double SortingTolerance = 1.01;
     assertion3(
       marker.isContainedInAdjacentCells( p->getX(), 0.5*SortingTolerance ),
       marker.x(),
@@ -260,7 +289,62 @@ class UpdateParticleGridAssociation(ActionSet):
   // I can always drop. Even if some of the coarse vertices are outside,
   // they will be properly initialised and thus host an empty particle 
   // list.
-  constexpr double SortingTolerance = 1.01;
+  for (int i=0; i<TwoPowerD; i++) {
+    // Define inside for loop, as sieve will define it as well
+    const double CellToCutOffRadiusRatio = 0.5 * (1.0-SortingTolerance);
+    vertexdata::{{PARTICLES_CONTAINER}}::iterator p = coarseGridVertices{{PARTICLES_CONTAINER}}(i).begin(); 
+    while ( p!=coarseGridVertices{{PARTICLES_CONTAINER}}(i).end() ) {
+      if ( 
+        tarch::la::min( marker.h() ) > CellToCutOffRadiusRatio * (*p)->getCutOffRadius()
+        and
+        marker.isContainedInAdjacentCells( (*p)->getX(), 0.5*SortingTolerance )
+      ) {
+        logDebug( "touchVertexLastTime(...)", "drop particle " << (*p)->toString() << " into vertex " << marker.toString() );
+        fineGridVertex{{PARTICLES_CONTAINER}}.push_back( *p );
+        p = coarseGridVertices{{PARTICLES_CONTAINER}}(i).erase(p);
+        _numberOfDrops++;
+      }
+      else p++;
+    }
+
+    for (auto& p: coarseGridVertices{{PARTICLES_CONTAINER}}(i)) {
+      bool cutOffRadiusSmallEnough = tarch::la::min( marker.h() ) > CellToCutOffRadiusRatio * p->getCutOffRadius();
+      logDebug( "touchVertexFirstTime(...)", "have not been able to drop particle " << p->toString() << " from coarse vertex " << coarseGridVertices{{PARTICLES_CONTAINER}}(i).toString() << " into vertex " << fineGridVertex{{PARTICLES_CONTAINER}}.toString() << ". cut-off small enough=" << cutOffRadiusSmallEnough );
+    }
+  }  
+""")
+
+
+  __Template_Sieve = jinja2.Template("""  
+  if (not _globalSieveParticleListIsEmpty) {
+    const double CellToCutOffRadiusRatio = 0.5 * (1.0-SortingTolerance);
+    tarch::multicore::Lock lock( _globalMovingParticleSemaphore );
+    vertexdata::{{PARTICLES_CONTAINER}}::iterator p = _globalSieveParticleList.begin(); 
+    while (p!=_globalSieveParticleList.end()) {
+      if ( 
+        tarch::la::min( marker.h() ) > CellToCutOffRadiusRatio * (*p)->getCutOffRadius()
+        and
+        marker.isContainedInAdjacentCells( (*p)->getX(), 0.5*SortingTolerance )
+      ) {
+        logDebug( "touchVertexLastTime(...)", "drop particle " << (*p)->toString() << " from global sieve list into vertex " << marker.toString() );
+        fineGridVertex{{PARTICLES_CONTAINER}}.push_back( *p );
+        p = _globalSieveParticleList.erase(p);
+        _numberOfDrops++;
+      }
+      else {
+        p++;
+      }
+    }
+    _globalSieveParticleListIsEmpty  = _globalSieveParticleList.empty();
+  }
+  
+  
+  
+  
+  
+  // I can always drop. Even if some of the coarse vertices are outside,
+  // they will be properly initialised and thus host an empty particle 
+  // list.
   const double CellToCutOffRadiusRatio = 0.5 * 0.9;
   for (int i=0; i<TwoPowerD; i++) {
     vertexdata::{{PARTICLES_CONTAINER}}::iterator p = coarseGridVertices{{PARTICLES_CONTAINER}}(i).begin(); 
@@ -270,8 +354,7 @@ class UpdateParticleGridAssociation(ActionSet):
         and
         marker.isContainedInAdjacentCells( (*p)->getX(), 0.5*SortingTolerance )
       ) {
-        // @todo Debug
-        logInfo( "touchVertexLastTime(...)", "drop particle " << (*p)->toString() << " into vertex " << marker.toString() );
+        logDebug( "touchVertexLastTime(...)", "drop particle " << (*p)->toString() << " into vertex " << marker.toString() );
         fineGridVertex{{PARTICLES_CONTAINER}}.push_back( *p );
         p = coarseGridVertices{{PARTICLES_CONTAINER}}(i).erase(p);
         _numberOfDrops++;
@@ -280,9 +363,8 @@ class UpdateParticleGridAssociation(ActionSet):
     }
 
     for (auto& p: coarseGridVertices{{PARTICLES_CONTAINER}}(i)) {
-      // @todo Debug
       bool cutOffRadiusSmallEnough = tarch::la::min( marker.h() ) > CellToCutOffRadiusRatio * p->getCutOffRadius();
-      logInfo( "touchVertexFirstTime(...)", "have not been able to drop particle " << p->toString() << " from coarse vertex " << coarseGridVertices{{PARTICLES_CONTAINER}}(i).toString() << " into vertex " << fineGridVertex{{PARTICLES_CONTAINER}}.toString() << ". cut-off small enough=" << cutOffRadiusSmallEnough );
+      logDebug( "touchVertexFirstTime(...)", "have not been able to drop particle " << p->toString() << " from coarse vertex " << coarseGridVertices{{PARTICLES_CONTAINER}}(i).toString() << " into vertex " << fineGridVertex{{PARTICLES_CONTAINER}}.toString() << ". cut-off small enough=" << cutOffRadiusSmallEnough );
     }
   }  
 """)
@@ -326,8 +408,7 @@ class UpdateParticleGridAssociation(ActionSet):
   auto p = fineGridVertex{{PARTICLES_CONTAINER}}.begin();
   while (p!=fineGridVertex{{PARTICLES_CONTAINER}}.end()) {
   if ( not marker.isContainedInAdjacentCells((*p)->getX(),0.5) ) {
-    // @todo Debug
-    logInfo( "touchVertexLastTime(...)", "lift particle " << (*p)->toString() );
+    logDebug( "touchVertexLastTime(...)", "lift particle " << (*p)->toString() );
       liftParticles.push_back(*p);
       p = fineGridVertex{{PARTICLES_CONTAINER}}.erase(p);
     }
@@ -342,13 +423,13 @@ class UpdateParticleGridAssociation(ActionSet):
   // to assume that we just did hit a vertical tree cut. In this case, 
   // we are on the safe side if we just add the particles to the global
   // particle list.
-  if ( marker.isParentCellLocal() ) {
+  if ( not liftParticles.empty() and marker.isParentCellLocal() ) {
     std::bitset<Dimensions> target;
     for (int d=0; d<Dimensions; d++) {
       target[d] = marker.getRelativePositionWithinFatherCell()(d)>=2;
     }
     if (not liftParticles.empty()) {
-      logInfo( "touchVertexLastTime(...)", "add " << liftParticles.size() << " to the parent vertex " << coarseGridVertices{{PARTICLES_CONTAINER}}( target.to_ulong() ).toString() << " at " << target );
+      logDebug( "touchVertexLastTime(...)", "add " << liftParticles.size() << " to the parent vertex " << coarseGridVertices{{PARTICLES_CONTAINER}}( target.to_ulong() ).toString() << " at " << target );
     }
     coarseGridVertices{{PARTICLES_CONTAINER}}( target.to_ulong() ).insert( 
       coarseGridVertices{{PARTICLES_CONTAINER}}( target.to_ulong() ).end(),
@@ -357,9 +438,9 @@ class UpdateParticleGridAssociation(ActionSet):
     );
     _numberOfLifts += liftParticles.size();
   } 
-  else {
+  else if (not liftParticles.empty()) {
     tarch::multicore::Lock lock( _globalMovingParticleSemaphore );
-    logInfo( "touchVertexLastTime(...)", "add " << liftParticles.size() << " to the global sorting list" );
+    logDebug( "touchVertexLastTime(...)", "add " << liftParticles.size() << " to the global sorting list" );
     _globalMovingParticleList.insert( _globalMovingParticleList.end(), liftParticles.begin(), liftParticles.end() );
     _numberOfAssignmentsToGlobalSieve += liftParticles.size();
   }
@@ -377,9 +458,11 @@ class UpdateParticleGridAssociation(ActionSet):
     if operation_name==ActionSet.OPERATION_BEGIN_TRAVERSAL:
       result = self.__Template_BeginTraversal.render(**self.d) 
     if operation_name==ActionSet.OPERATION_CREATE_HANGING_VERTEX:
-      result = self.__Template_Drop.render(**self.d) 
+      result  = self.__Template_Drop.render(**self.d) 
+      result += self.__Template_Sieve.render(**self.d)
     if operation_name==ActionSet.OPERATION_TOUCH_VERTEX_FIRST_TIME:
-      result = self.__Template_Drop.render(**self.d) 
+      result  = self.__Template_Drop.render(**self.d) 
+      result += self.__Template_Sieve.render(**self.d)
     if operation_name==ActionSet.OPERATION_TOUCH_VERTEX_LAST_TIME:
       if self._lift_always:
         result  = self.__Template_LiftParticlesFurtherAway.render(**self.d)
@@ -441,6 +524,12 @@ class UpdateParticleGridAssociation(ActionSet):
    * within one tree.
    */
   static GlobalMovingParticlesList  _globalMovingParticleList;
+  static GlobalMovingParticlesList  _globalSieveParticleList;
+  
+  /**
+   * Set if global sieve list is empty at begin of traversal.
+   */
+  static bool                       _globalSieveParticleListIsEmpty;
 
 """).render(**self.d)
 
@@ -448,4 +537,10 @@ class UpdateParticleGridAssociation(ActionSet):
   def get_static_initialisations(self,full_qualified_classname):
     return jinja2.Template( 
 full_qualified_classname + """::GlobalMovingParticlesList  """ + full_qualified_classname + """::_globalMovingParticleList;
+""" + full_qualified_classname + """::GlobalMovingParticlesList  """ + full_qualified_classname + """::_globalSieveParticleList;
+bool  """ + full_qualified_classname + """::_globalSieveParticleListIsEmpty;
+
+namespace {
+  constexpr double SortingTolerance = 1.01;
+}
 """).render(**self.d)    
