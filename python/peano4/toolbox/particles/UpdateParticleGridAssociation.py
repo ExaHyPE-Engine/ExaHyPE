@@ -129,6 +129,7 @@ class UpdateParticleGridAssociation(ActionSet):
   _numberOfLifts = 0;
   _numberOfDrops = 0;
   _numberOfEliminations = 0;
+  _numberOfAssignmentsToGlobalSieve = 0;
 """ )
 
 
@@ -143,7 +144,8 @@ class UpdateParticleGridAssociation(ActionSet):
     ", eliminated (duplicate) particles=" << _numberOfEliminations <<
     {% endif %}
     ", lifts=" << _numberOfLifts << 
-    ", drops=" << _numberOfDrops
+    ", drops=" << _numberOfDrops <<
+    ", assignments-to-global-sieve=" << _numberOfAssignmentsToGlobalSieve
   );
 """ )
 
@@ -194,7 +196,6 @@ class UpdateParticleGridAssociation(ActionSet):
           logDebug( "touchCellLastTime(...)", "lift particle " << (*p)->toString() << " in tree " << _treeNumber << " from cell " << marker.toString() << " as difference is " << ((*p)->getX() - marker.x()) );
           liftParticles[ destAssociation.to_ulong() ].push_back(*p);
           p = fineGridVertices{{PARTICLES_CONTAINER}}(i).erase(p);
-          _numberOfLifts++;
         }
       }
       else {
@@ -209,7 +210,18 @@ class UpdateParticleGridAssociation(ActionSet):
   // and liftParticles and have to append those into the respective vertices.
   for (int i=0; i<TwoPowerD; i++) {
     fineGridVertices{{PARTICLES_CONTAINER}}(i).insert(   fineGridVertices{{PARTICLES_CONTAINER}}(i).end(),   particlesThatMoveOnSameLevel[ i ].begin(), particlesThatMoveOnSameLevel[ i ].end() ); 
-    coarseGridVertices{{PARTICLES_CONTAINER}}(i).insert( coarseGridVertices{{PARTICLES_CONTAINER}}(i).end(), liftParticles[ i ].begin(),                liftParticles[ i ].end() ); 
+  }
+
+  if (marker.isCellLocal()) {
+    for (int i=0; i<TwoPowerD; i++) {
+      coarseGridVertices{{PARTICLES_CONTAINER}}(i).insert( coarseGridVertices{{PARTICLES_CONTAINER}}(i).end(), liftParticles[ i ].begin(), liftParticles[ i ].end() ); 
+      _numberOfLifts += liftParticles[ i ].size();
+    }
+  }
+  else {
+    tarch::multicore::Lock lock( _globalMovingParticleSemaphore );
+    _globalMovingParticleList.insert( coarseGridVertices{{PARTICLES_CONTAINER}}(i).end(), liftParticles[ i ].begin(), liftParticles[ i ].end() );
+    _numberOfAssignmentsToGlobalSieve += liftParticles[ i ].size();
   }
 """)
 
@@ -245,6 +257,9 @@ class UpdateParticleGridAssociation(ActionSet):
    
   """
   __Template_Drop = jinja2.Template("""
+  // I can always drop. Even if some of the coarse vertices are outside,
+  // they will be properly initialised and thus host an empty particle 
+  // list.
   constexpr double SortingTolerance = 1.01;
   const double CellToCutOffRadiusRatio = 0.5 * 0.9;
   for (int i=0; i<TwoPowerD; i++) {
@@ -255,6 +270,8 @@ class UpdateParticleGridAssociation(ActionSet):
         and
         marker.isContainedInAdjacentCells( (*p)->getX(), 0.5*SortingTolerance )
       ) {
+        // @todo Debug
+        logInfo( "touchVertexLastTime(...)", "drop particle " << (*p)->toString() << " into vertex " << marker.toString() );
         fineGridVertex{{PARTICLES_CONTAINER}}.push_back( *p );
         p = coarseGridVertices{{PARTICLES_CONTAINER}}(i).erase(p);
         _numberOfDrops++;
@@ -262,11 +279,10 @@ class UpdateParticleGridAssociation(ActionSet):
       else p++;
     }
 
-    if ( not coarseGridVertices{{PARTICLES_CONTAINER}}(i).empty() ) {
-      for (auto& p: coarseGridVertices{{PARTICLES_CONTAINER}}(i)) {
+    for (auto& p: coarseGridVertices{{PARTICLES_CONTAINER}}(i)) {
       // @todo Debug
-        logInfo( "touchVertexFirstTime(...)", "have not been able to drop particle " << p->toString() << " into vertex " << marker.toString() );
-      }
+      bool cutOffRadiusSmallEnough = tarch::la::min( marker.h() ) > CellToCutOffRadiusRatio * p->getCutOffRadius();
+      logInfo( "touchVertexFirstTime(...)", "have not been able to drop particle " << p->toString() << " from coarse vertex " << coarseGridVertices{{PARTICLES_CONTAINER}}(i).toString() << " into vertex " << fineGridVertex{{PARTICLES_CONTAINER}}.toString() << ". cut-off small enough=" << cutOffRadiusSmallEnough );
     }
   }  
 """)
@@ -282,12 +298,19 @@ class UpdateParticleGridAssociation(ActionSet):
   
   """
   __Template_Lift = jinja2.Template("""
-  std::bitset<Dimensions> target;
-  for (int d=0; d<Dimensions; d++) {
-    target[d] = marker.getRelativePositionWithinFatherCell()(d)>=2;
+  if ( marker.isParentCellLocal() ) {
+    std::bitset<Dimensions> target;
+    for (int d=0; d<Dimensions; d++) {
+      target[d] = marker.getRelativePositionWithinFatherCell()(d)>=2;
+    }
+    _numberOfLifts+=fineGridVertex{{PARTICLES_CONTAINER}}.size();
+    coarseGridVertices{{PARTICLES_CONTAINER}}( target.to_ulong() ).insert( coarseGridVertices{{PARTICLES_CONTAINER}}( target.to_ulong() ).end(), fineGridVertex{{PARTICLES_CONTAINER}}.begin(), fineGridVertex{{PARTICLES_CONTAINER}}.end() );
   }
-  _numberOfLifts+=fineGridVertex{{PARTICLES_CONTAINER}}.size();
-  coarseGridVertices{{PARTICLES_CONTAINER}}( target.to_ulong() ).insert( coarseGridVertices{{PARTICLES_CONTAINER}}( target.to_ulong() ).begin(), fineGridVertex{{PARTICLES_CONTAINER}}.begin(), fineGridVertex{{PARTICLES_CONTAINER}}.end() );
+  else {
+    tarch::multicore::Lock lock( _globalMovingParticleSemaphore );
+    _globalMovingParticleList.insert( _globalMovingParticleList.end(), fineGridVertex{{PARTICLES_CONTAINER}}.begin(), fineGridVertex{{PARTICLES_CONTAINER}}.end() );
+    _numberOfAssignmentsToGlobalSieve += fineGridVertex{{PARTICLES_CONTAINER}}.size();
+  }
 """)  
 
 
@@ -298,21 +321,47 @@ class UpdateParticleGridAssociation(ActionSet):
   
   """
   __Template_LiftParticlesFurtherAway = jinja2.Template("""
-  std::bitset<Dimensions> target;
-  for (int d=0; d<Dimensions; d++) {
-    target[d] = marker.getRelativePositionWithinFatherCell()(d)>=2;
-  }
+  vertexdata::{{PARTICLES_CONTAINER}} liftParticles;
   
   auto p = fineGridVertex{{PARTICLES_CONTAINER}}.begin();
   while (p!=fineGridVertex{{PARTICLES_CONTAINER}}.end()) {
-    if ( not marker.isContainedInAdjacentCells((*p)->getX(),0.5) ) {
-      coarseGridVertices{{PARTICLES_CONTAINER}}( target.to_ulong() ).push_back( *p );
+  if ( not marker.isContainedInAdjacentCells((*p)->getX(),0.5) ) {
+    // @todo Debug
+    logInfo( "touchVertexLastTime(...)", "lift particle " << (*p)->toString() );
+      liftParticles.push_back(*p);
       p = fineGridVertex{{PARTICLES_CONTAINER}}.erase(p);
-      _numberOfLifts++;
     }
     else {
       p++;
     }
+  }
+  
+  // If the parent cell is local, then we can safely move the particles
+  // up the tree, as we know that all 2^d coarse grid vertices are 
+  // adjacent to the local domain. If the parent is not local, we have
+  // to assume that we just did hit a vertical tree cut. In this case, 
+  // we are on the safe side if we just add the particles to the global
+  // particle list.
+  if ( marker.isParentCellLocal() ) {
+    std::bitset<Dimensions> target;
+    for (int d=0; d<Dimensions; d++) {
+      target[d] = marker.getRelativePositionWithinFatherCell()(d)>=2;
+    }
+    if (not liftParticles.empty()) {
+      logInfo( "touchVertexLastTime(...)", "add " << liftParticles.size() << " to the parent vertex " << coarseGridVertices{{PARTICLES_CONTAINER}}( target.to_ulong() ).toString() << " at " << target );
+    }
+    coarseGridVertices{{PARTICLES_CONTAINER}}( target.to_ulong() ).insert( 
+      coarseGridVertices{{PARTICLES_CONTAINER}}( target.to_ulong() ).end(),
+      liftParticles.begin(),
+      liftParticles.end()
+    );
+    _numberOfLifts += liftParticles.size();
+  } 
+  else {
+    tarch::multicore::Lock lock( _globalMovingParticleSemaphore );
+    logInfo( "touchVertexLastTime(...)", "add " << liftParticles.size() << " to the global sorting list" );
+    _globalMovingParticleList.insert( _globalMovingParticleList.end(), liftParticles.begin(), liftParticles.end() );
+    _numberOfAssignmentsToGlobalSieve += liftParticles.size();
   }
 """)  
 
@@ -372,12 +421,31 @@ class UpdateParticleGridAssociation(ActionSet):
 
 
   def get_attributes(self):
-    return """
+    return jinja2.Template( """
   int  _treeNumber;
   int  _numberOfParticleReassignmentsOnCurrentLevel;
   int  _numberOfLifts;
+  int  _numberOfAssignmentsToGlobalSieve;
   int  _numberOfDrops;
   int  _numberOfEliminations;
-"""
+
+  /**
+   * Protect access of _globalMovingParticleList on the node.
+   */
+  tarch::multicore::BooleanSemaphore   _globalMovingParticleSemaphore;
+  
+  typedef vertexdata::{{PARTICLES_CONTAINER}} GlobalMovingParticlesList;
+  
+  /**
+   * For vertical particle movements (between resolutions) which we cannot realise
+   * within one tree.
+   */
+  static GlobalMovingParticlesList  _globalMovingParticleList;
+
+""").render(**self.d)
 
 
+  def get_static_initialisations(self,full_qualified_classname):
+    return jinja2.Template( 
+full_qualified_classname + """::GlobalMovingParticlesList  """ + full_qualified_classname + """::_globalMovingParticleList;
+""").render(**self.d)    

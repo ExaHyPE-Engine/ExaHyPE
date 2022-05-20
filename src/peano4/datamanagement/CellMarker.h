@@ -131,7 +131,9 @@ struct peano4::datamanagement::CellMarker {
 
     /**
      * A cell can be local and its parent still might not be local. This happens
-     * if we have a horizontal tree cut.
+     * if we have a horizontal tree cut. It also happens on the very top of the
+     * spacetree: Level 0 is by definition not persistent and thus is not
+     * considered to be local.
      *
      * @see isLocal()
      */
