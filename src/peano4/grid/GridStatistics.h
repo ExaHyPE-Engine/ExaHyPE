@@ -106,14 +106,14 @@ struct peano4::grid::GridStatistics {
     std::string toString() const;
   
   private:
-    int   _numberOfLocalUnrefinedCells;
-    int   _numberOfRemoteUnrefinedCells;
-    int   _numberOfLocalRefinedCells;
-    int   _numberOfRemoteRefinedCells;
-    int   _stationarySweeps;
-    bool   _coarseningHasBeenVetoed;
-    bool   _removedEmptySubtree;
-    tarch::la::Vector<Dimensions,double>   _minH;
+      int   _numberOfLocalUnrefinedCells;
+      int   _numberOfRemoteUnrefinedCells;
+      int   _numberOfLocalRefinedCells;
+      int   _numberOfRemoteRefinedCells;
+      int   _stationarySweeps;
+      bool   _coarseningHasBeenVetoed;
+      bool   _removedEmptySubtree;
+      tarch::la::Vector<Dimensions,double>   _minH;
 
 
 
@@ -126,7 +126,7 @@ struct peano4::grid::GridStatistics {
     #endif
 
 
-    
+
 };
 
 #endif

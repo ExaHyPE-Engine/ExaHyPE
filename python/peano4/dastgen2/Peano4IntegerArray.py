@@ -4,11 +4,9 @@ import dastgen2.attributes.IntegerArray
 
 
 class Peano4IntegerArray(dastgen2.attributes.IntegerArray):
-  def __init__(self, name, cardinality):
-    dastgen2.attributes.IntegerArray.__init__(self, name, cardinality, min_value=None, max_value=None)
+  def __init__(self, name, cardinality, min_value=None, max_value=None):
+    dastgen2.attributes.IntegerArray.__init__(self, name, cardinality, min_value, max_value)
     self._cardinality = cardinality
-    self._min_value   = min_value
-    self._max_value   = max_value
 
     
   def get_methods(self,_full_qualified_class_name):

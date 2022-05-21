@@ -90,7 +90,7 @@ struct tarch::mpi::DoubleMessage {
     std::string toString() const;
   
   private:
-    double   _value;
+      double   _value;
 
 
 
@@ -103,7 +103,7 @@ struct tarch::mpi::DoubleMessage {
     #endif
 
 
-    
+
 };
 
 #endif

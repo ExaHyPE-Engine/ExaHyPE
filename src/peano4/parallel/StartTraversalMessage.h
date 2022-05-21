@@ -90,7 +90,7 @@ struct peano4::parallel::StartTraversalMessage {
     std::string toString() const;
   
   private:
-    int   _stepIdentifier;
+      int   _stepIdentifier;
 
 
 
@@ -103,7 +103,7 @@ struct peano4::parallel::StartTraversalMessage {
     #endif
 
 
-    
+
 };
 
 #endif

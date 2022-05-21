@@ -115,4 +115,43 @@ tarch::mpi::Rank::getInstance().allReduce(
   [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); }
 );
 \end{code}
-      
+
+
+\section{Design patterns for global variables between action sets}
+
+Realising global variables shared between action sets is in principle
+impossible: 
+Action sets are not persistent. 
+They are created per traversal per tree.
+Furthermore, you have absolutely no knowledge how many trees any rank hosts.
+The only thing you know is that all trees will kind of start their traversal
+around the same time.
+
+
+However, there is a design pattern that you can use.
+It relies on the observations that (i) all the \texttt{beginTraversal()} events
+are triggered \emph{after} all the global trees have synchronised.
+(ii) Tree 0 exists always.
+
+
+\begin{itemize}
+  \item There are two \emph{static} datasets per rank. This is the only valid
+  data in-between any two grid traversals. One is the current data, one is the
+  data from the previous sweep.
+  \item Every action sets builds up its local current data and commits this 
+  data to the static global dataset in \texttt{endTraversal()}. This local
+  reduction has to be protected by a (rank-local) semaphore.
+  \item In the main routine, each rank calls a routine which reduces the
+  static current data set to rank 0. Rank 0 then broadcasts the reduced data and
+  each rank rolls over the reduced data into the static old data set. The
+  current data is cleared.
+  \item Every action set copies the old data set into its local copy.
+\end{itemize}
+
+
+\begin{remark}
+  These MPI/thread-global barriers can be very expensive and have the potential
+  to lead to deadlocks/timeouts. Use them with care and localise their
+  behaviour.
+\end{remark}
+

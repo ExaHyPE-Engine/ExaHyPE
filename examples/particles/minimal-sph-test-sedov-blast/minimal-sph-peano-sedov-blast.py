@@ -130,6 +130,7 @@ project.output.makefile.set_mode( build_mode )
 
 particle = peano4.toolbox.particles.Particle("Particle")
 
+
 # Define properties
 v_attr = peano4.dastgen2.Peano4DoubleArray("v","Dimensions")
 a_attr = peano4.dastgen2.Peano4DoubleArray("a","Dimensions")
@@ -152,6 +153,8 @@ Ncount_attr   = dastgen2.attributes.Integer("Ncount")
 Omega_attr = dastgen2.attributes.Double("Omega")
 rho_dh_attr= dastgen2.attributes.Double("rho_dh")
 hDot_attr  = dastgen2.attributes.Double("hDot")
+hleft_attr = dastgen2.attributes.Double("hLeft")
+hright_attr= dastgen2.attributes.Double("hRight")
 
 # Artificial viscosity scheme
 #rot_v_attr = peano4.dastgen2.Peano4DoubleArray("rot_v","Dimensions")
@@ -163,13 +166,17 @@ balsara_attr  = dastgen2.attributes.Double("balsara")
 # Needed?
 has_been_kicked_attr = dastgen2.attributes.Boolean("hasBeenKicked")
 has_converged_attr= dastgen2.attributes.Boolean("hasConverged")
+has_no_neighbours_attr= dastgen2.attributes.Boolean("hasNoNeighbours")
 smoothL_prev_attr = dastgen2.attributes.Double("smoothingLengthPrevious")
+is_boundary_part_attr = dastgen2.attributes.Boolean("isBoundaryParticle")
 
 # Debug
 time_attr     = dastgen2.attributes.Double("time")
 timeStepSize_attr = dastgen2.attributes.Double("timeStepSize")
 residual_attr = dastgen2.attributes.Double("residual")
 iteration_count_attr = dastgen2.attributes.Integer("iterCount")
+
+particle.data.add_attribute( dastgen2.attributes.Enumeration("MoveState",["New","NotMovedYet","Moved"]) )
 
 # Add particle properties
 particle.data.add_attribute(v_attr)
@@ -193,6 +200,8 @@ particle.data.add_attribute(soundSpeed_attr)
 particle.data.add_attribute(Omega_attr)
 particle.data.add_attribute(rho_dh_attr)
 particle.data.add_attribute(hDot_attr)
+particle.data.add_attribute(hleft_attr)
+particle.data.add_attribute(hright_attr)
 
 # Artificial viscosity
 particle.data.add_attribute(rot_v_attr)
@@ -203,6 +212,8 @@ particle.data.add_attribute(balsara_attr)
 particle.data.add_attribute(timeStepSize_attr)
 particle.data.add_attribute(residual_attr)
 particle.data.add_attribute(iteration_count_attr)
+particle.data.add_attribute(has_no_neighbours_attr)
+particle.data.add_attribute(is_boundary_part_attr)
 
 # Needed?
 particle.data.add_attribute(has_been_kicked_attr)
@@ -243,7 +254,7 @@ GLOBAL_TIME_STEP_SIZE = "1e-4"
 HYDRO_PART_NUMBER = str(round(1.0 / args.particle_distance));
 
 # Maximum allowed number of Newton-Raphson iterations
-HYDRO_DEFAULT_MAX_ITERATIONS = "1"
+HYDRO_DEFAULT_MAX_ITERATIONS = "10"
 
 # Tolerance for Newton-Raphson convergence
 H_TOLERANCE = "1e-4"
@@ -257,8 +268,11 @@ GAMMA = str(5./3.)
 # SPH kernel parameters
 KERNEL_SUPPORT_RAD = "2"  # "gamma" parameter. =2 for Cubic Spline. Different in other kernels.
 
+HYDRO_h_MAX = str( 0.166 / 2.0 / 2.0) 
+HYDRO_h_MIN = "1e-6"
+
 # Artificial viscosity parameters
-ALPHA_AV= "0.8"
+ALPHA_AV= "0.8"     # =0.8 in SWIFT
 BETA_AV = "3"       # =3 in SWIFT/SPHENIX
 
 # Smoothing-length free parameter (resolution "eta_neighbours"). 
@@ -292,6 +306,8 @@ project.constants.export_const_with_type("HYDRO_PART_NUMBER", HYDRO_PART_NUMBER,
 project.constants.export_const_with_type("HYDRO_DEFAULT_MAX_ITERATIONS", HYDRO_DEFAULT_MAX_ITERATIONS, "int")
 project.constants.export_const_with_type("H_TOLERANCE", H_TOLERANCE, "double")
 project.constants.export_const_with_type("KERNEL_SUPPORT_RAD"   , KERNEL_SUPPORT_RAD, "double")
+project.constants.export_const_with_type("HYDRO_h_MAX", HYDRO_h_MAX, "double")
+project.constants.export_const_with_type("HYDRO_h_MIN", HYDRO_h_MIN, "double")
 project.constants.export_const_with_type("SMOOTH_L_FAC"         , SMOOTH_L_FAC      , "double")
 project.constants.export_const_with_type("CUBIC_SPLINE_SIGMA"   , CUBIC_SPLINE_SIGMA, "double")
 project.constants.export_const_with_type("BLAST_CENTER", BLAST_CENTER, "double")
@@ -352,7 +368,7 @@ initialisation_snippet = """
 //  particle->setPressure( 1e-6);
   
   particle->setSmoothingLength( SMOOTH_L_FAC * std::pow(particle->getMass()/particle->getDensity(), 1.0/Dimensions) );
-  particle->setSmoothingLengthPrevious( 0.99 * particle->getSmoothingLength() );
+  particle->setSmoothingLengthPrevious( 0.80 * particle->getSmoothingLength() );
  
   // Initialise the blast
   tarch::la::Vector<Dimensions,double> blast_cent(BLAST_CENTER);
@@ -365,7 +381,7 @@ initialisation_snippet = """
    } else {
      particle->setU( 0.0 ); 
    }
- 
+
 //   /* New method */
 //   /* Smooth the explosion with kernel */
 //   const double h = particle->getSmoothingLength();
@@ -384,7 +400,7 @@ initialisation_snippet = """
 //  } else {
 //    particle->setU( 0.0 ); 
 //  }
-  
+
   /* Set non-zero (background) value in order to get non-zero sound speed across the whole domain */
   if( tarch::la::equals(particle->getU(),0) ){
 //    particle->setU( particle->getPressure()/( (GAMMA-1) * particle->getDensity() ) ); 
@@ -424,12 +440,17 @@ initialisation_snippet = """
   particle->setOmega (0.0);        
   particle->setRho_dh(0.0);           
   particle->setWcount_dh(0.0);  
+
+  particle->setHLeft (HYDRO_h_MIN);        
+  particle->setHRight(HYDRO_h_MAX);        
   
   particle->setTimeStepSize(GLOBAL_TIME_STEP_SIZE);
   particle->setHasConverged(false);
+  particle->setHasNoNeighbours(false);
   particle->setHasBeenKicked(false);
   particle->setResidual(0.0);
   particle->setIterCount(0);
+  particle->setIsBoundaryParticle(false);
 
   // Artificial viscosity scheme
   particle->setDiv_v   (0.0);
@@ -454,8 +475,9 @@ init_setup.add_action_set( peano4.toolbox.particles.InsertParticlesAlongCartesia
     #include "kernel_hydro.h"
     #include "equation_of_state.h"
     """,
-  computational_domain_offset=[0.0, 0.0])
-  )
+  computational_domain_offset=[0.0, 0.0]
+  , guard="std::abs( 0.5-particle->getX(1) ) < 0.02"
+  ))
 
 init_setup.add_action_set( particle_tree_analysis )
 project.solversteps.add_step(init_setup)
@@ -518,6 +540,7 @@ particle_particle_compute_kernel = """
   if (tarch::la::smaller( r, cutoffR ) 
   and tarch::la::greater( r, 0.0     )            /* Self-contribution is calculated elsewhere */  
 //  and localParticle->getHasConverged()==false
+  and not localParticle->getIsBoundaryParticle()
   ) {  
      
       // Evaluate kernel and its derivative
@@ -570,59 +593,88 @@ particle_particle_compute_kernel = """
 
 touch_particle_last_time_compute_kernel = """
 
-  /* Finalize the calculations from the density loop */
+  /* This is equivalent to the hydro_end_density function in SWIFT */
+
+  /* @brief Finishes the calculations from the density loop
+   *
+   * Multiplies the denstiy and number of neighbours by the appropiate constants
+   * and add the self-contribution term.
+   * Additional quantities such as the velocity gradients will also get the final
+   * terms added to them here.
+   *
+   * Also adds/multiplies the cosmological terms if need be.
+   *
+   */
 
   if(localParticle->getParallelState()==globaldata::Particle::ParallelState::Local
-//  and localParticle->getHasConverged()==false 
-  ) {  
+//  and localParticle->getHasConverged()==false
+  and not localParticle->getIsBoundaryParticle()
+  ) {
 
     /* Retrieve some properties */
     const double m_a = localParticle->getMass();
     const double h_a = localParticle->getSmoothingLength();
-    
-    const double h_inv_dim = 1.0/std::pow( h_a, Dimensions );
-    const double h_inv_dim_plus_one = h_inv_dim/h_a;
 
-    // Default SPH kernel (cubic spline)
-    double W_a = CUBIC_SPLINE_SIGMA ; // kernel form taken at q=0
-      
-    /* Add the contributions due to the particle itself (i.e. at q=0) */
+    /* Some smoothing length multiples */
+    const double h_inv = 1.0 / h_a;
+    const double h_inv_dim = std::pow( h_inv, Dimensions );
+    const double h_inv_dim_plus_one = h_inv_dim * h_inv;
 
-    localParticle->setDensity  ( localParticle->getDensity()   + m_a * W_a * h_inv_dim );                      
-    localParticle->setWcount   ( localParticle->getWcount()    +       W_a * h_inv_dim );                      
-    localParticle->setOmega    ( localParticle->getOmega()     + m_a * (-Dimensions * W_a * h_inv_dim_plus_one) );   
-    localParticle->setRho_dh   ( localParticle->getRho_dh()    + m_a * (-Dimensions * W_a * h_inv_dim_plus_one) );   
+    /* Default SPH kernel (cubic spline) */
+    double W_a = CUBIC_SPLINE_SIGMA ; // kernel form at q=0
+
+    /* Final operation. Add the self-contributions (i.e. at q=0) */
+    localParticle->setDensity  ( localParticle->getDensity()   + m_a * W_a * h_inv_dim );
+    localParticle->setWcount   ( localParticle->getWcount()    +       W_a * h_inv_dim );
+    localParticle->setRho_dh   ( localParticle->getRho_dh()    + m_a * (-Dimensions * W_a * h_inv_dim_plus_one) );
     localParticle->setWcount_dh( localParticle->getWcount_dh() +       (-Dimensions * W_a * h_inv_dim_plus_one) );
+
+    /* Not needed in SWIFT */
     localParticle->setNcount   ( localParticle->getNcount()    + 1 );
+    localParticle->setOmega    ( localParticle->getOmega()     + m_a * (-Dimensions * W_a * h_inv_dim_plus_one) );
 
     const double rho_inv = 1.0 / localParticle->getDensity();
+    // @TODO: implement cosmological factors
+    const double a_inv2 = 1.0;
 
     /* Finish calculation of the velocity curl components */
-    localParticle->setRot_v( localParticle->getRot_v() * h_inv_dim_plus_one * rho_inv);
+    localParticle->setRot_v( localParticle->getRot_v() * h_inv_dim_plus_one * a_inv2 * rho_inv);
 
     /* Finish calculation of the velocity divergence */
-    localParticle->setDiv_v( localParticle->getDiv_v() * h_inv_dim_plus_one * rho_inv);
-  
+    localParticle->setDiv_v( localParticle->getDiv_v() * h_inv_dim_plus_one * a_inv2 * rho_inv);
+
   }
-  
-  
+
+
 """
 
 touch_particle_first_time_compute_kernel = """
 
+  /* This is equivalent to the hydro_init_part function in SWIFT */
+
+  /* @brief Prepares a particle for the density calculation  
+   *
+   * Zeroes all the relevant arrays in perparation for the sums taking place
+   * in the loop over neighbours (local-active set)
+   *
+   */
+
   if(localParticle->getParallelState()==globaldata::Particle::ParallelState::Local
 //  and localParticle->getHasConverged()==false 
+  and not localParticle->getIsBoundaryParticle()
   ) {  
 
     // we'll accumulate the data throughout mesh/particle traversal
     localParticle->setDensity (0.0);                      
     localParticle->setWcount  (0.0);                      
-    localParticle->setOmega   (0.0);   
     localParticle->setRho_dh  (0.0);   
     localParticle->setWcount_dh(0.0);   
     localParticle->setDiv_v   (0.0);   
     localParticle->setRot_v   (0.0);   
+
+    /* Not needed in SWIFT */
     localParticle->setNcount  (0);
+    localParticle->setOmega   (0.0);   
 
   } 
     
@@ -663,94 +715,161 @@ particle_particle_compute_kernel = """
 
 touch_particle_last_time_compute_kernel = """
 
+   /* Newton-Raphson iteration based on Swift method.
+    * This is based on number density, and does not read Omega.
+    * The HasConverged attribute is always initialize to false so we always do at least one update.
+    * Notice that after each iteration we need to update the density, i.e. to re-run the full density loop.
+    */
+
    if(localParticle->getParallelState()==globaldata::Particle::ParallelState::Local
-   and localParticle->getHasConverged()==false 
-   ) {  
+//   and not localParticle->getHasConverged() 
+     and not localParticle->getIsBoundaryParticle()
+   ){
 
-    /* Do a Newton-Raphson iteration.
-     * The HasConverged attribute is always initialize to false so we always do at least one update.
-     * Notice that after each iteration we need to update the density, i.e. to re-run the full density loop.
-     */
-     
-    /* Retrieve basic properties of the local particle */
-    const double rho_a = localParticle->getDensity();
-    const double m_a = localParticle->getMass();  
-    const double h_old = localParticle->getSmoothingLength();
-    
-    const double hydro_eta_dim = std::pow(SMOOTH_L_FAC, Dimensions);
-    const double h_old_dim = std::pow(h_old, Dimensions);
-    const double h_old_dim_minus_one = std::pow(h_old, Dimensions - 1);
+     const double hydro_eta_dim = std::pow(SMOOTH_L_FAC, Dimensions);
+     const double eps = H_TOLERANCE; 
+
+     /* h value at the start of iteration procedure 
+      * Here we use the last update on previous time-step */
+     const double h_0 = localParticle->getSmoothingLengthPrevious();
+
+     /* Get some useful values */
+     const double h_init = h_0;
+     const double h_old = localParticle->getSmoothingLength();
+     const double h_old_dim = std::pow(h_old, Dimensions);
+     const double h_old_dim_minus_one = std::pow(h_old, Dimensions - 1);
       
-    const double dh_drho_a = - h_old/rho_a/Dimensions;
-    const double Omega_a = localParticle->getOmega();
-   
-    /* Value at the start of iteration procedure (last update on previous time-step) */
-    const double h_0 = localParticle->getSmoothingLengthPrevious();
+     double h_new;
+     int has_no_neighbours = 0;
+    
+     if( localParticle->getWcount() < 1e-5 ) { /* No neighbours case */
 
-    const double htolerance = H_TOLERANCE; 
-       
-    // Safety checks before doing NR
-    assertion4( not rho_a==0, localParticle->toString(), localParticle->getDensity(), localParticle->getOmega(),rho_a );  
-    
-    /*******************************************************************************/    
-    /* Swift method */
-    /* This is based on number density, and does not read Omega.
-     */
-    
-    const double n_sum = localParticle->getWcount() * h_old_dim;
-    const double n_target = hydro_eta_dim;
-    const double f = n_sum - n_target;
-    const double f_prime = localParticle->getWcount_dh() * h_old_dim +
-                              Dimensions * localParticle->getWcount() * h_old_dim_minus_one;
+       /* Flag that there were no neighbours */
+       has_no_neighbours = 1;
+       localParticle->setHasNoNeighbours(true);
 
-    /* Get new value of smoothing length via N-R iteration */
-    double h_new = localParticle->getSmoothingLength() - f/f_prime;
+       /* Double h and try again */
+       h_new = 2.0 * h_old;
 
-    /*******************************************************************************/    
+     } else {
 
-    /* Safety check: truncate to the range [ h_old/2 , 2h_old ]. */
-    h_new = std::min(h_new, 2.0 * h_old);
-    h_new = std::max(h_new, 0.5 * h_old);
-    
-    /* Check if particle has grown larger than half the grid size */
-    tarch::la::Vector<Dimensions,double> GridSize = marker.h();
-    const double GridSizeHalf = 0.5 * GridSize(0); 
-    const double CutoffParticle = KERNEL_SUPPORT_RAD * localParticle->getSmoothingLength();
-    
-    assertion4( tarch::la::smallerEquals( CutoffParticle,GridSizeHalf ), localParticle->toString(), GridSizeHalf, marker.h(), CutoffParticle );
+       /* Finish the density calculation */
+       /* Skip this as this is already done in touch last step of Density loop */
+//       hydro_end_density(p, cosmo);
 
-    // Fall back to h_old if it has become too small or Nan
-    /* Also if particle has hit Maximum allowed value */
-    if(localParticle->getSmoothingLength()<= 1e-5 || 
-      std::isnan( localParticle->getSmoothingLength() ) ||
-      tarch::la::smallerEquals( CutoffParticle,GridSizeHalf ) ) {
-      h_new = h_old;
-    }
-    
-    /* Update value of h */
-    localParticle->setSmoothingLength( h_new );
+       /* Compute one step of the Newton-Raphson scheme */
+       const double n_sum = localParticle->getWcount() * h_old_dim;
+       const double n_target = hydro_eta_dim;
+       const double f = n_sum - n_target;
+       const double f_prime = localParticle->getWcount_dh() * h_old_dim +
+                                 Dimensions * localParticle->getWcount() * h_old_dim_minus_one;
 
-    /* Check if convergence has been achieved */
-    const double residual = std::abs(h_new - h_old)/h_0 ;
+       /* Improve the bisection bounds */
+       if (n_sum < n_target) {
+         localParticle->setHLeft ( std::max(localParticle->getHLeft (), h_old) );
+       } else if (n_sum > n_target) {
+         localParticle->setHRight( std::min(localParticle->getHRight(), h_old) );
+       }
+ 
+       /* Skip if h is already h_max and we don't have enough neighbours */
+       /* Same if we are below h_min */
+       /* Same if we have hit the Peano cutoff radius 
+        */
+       tarch::la::Vector<Dimensions,double> GridSize = marker.h();
+       const double GridSizeHalf = 0.5 * GridSize(0); 
+       const double CutoffParticleH = KERNEL_SUPPORT_RAD * localParticle->getSmoothingLength();
+ 
+       if ( ((localParticle->getSmoothingLength() >= HYDRO_h_MAX) && (f < 0.0)) ||
+            ((localParticle->getSmoothingLength() <= HYDRO_h_MIN) && (f > 0.0)) ||
+              tarch::la::greaterEquals(CutoffParticleH, GridSizeHalf) ){
+
+         /* We have a particle whose smoothing length is already set (wants
+          * to be larger but has already hit the maximum OR wants to be
+          * smaller but has already reached the minimum). So, just tidy up
+          * as if the smoothing length had converged correctly  */
+
+         // Debug
+//         assertion9( localParticle->getSmoothingLength()<1e-5,                                                                                                                                                                                                              
+//               localParticle->toString(), h_new, h_old, f, CutoffParticleH, GridSizeHalf, HYDRO_h_MIN, HYDRO_h_MAX, GridSize(0) );       
+
+         /* Here SWIFT would prepare the gradient and force calculations 
+          * Skipped. 
+          */
+
+         /* Ok, we are done with this particle */
+//         continue;
+       }
+
+       /* Normal case: Use Newton-Raphson to get a better value of h */
+
+       /* Avoid floating point exception from f_prime = 0 */
+//      h_new = h_old - f / (f_prime + FLT_MIN);
+       h_new = h_old - f / (f_prime );
+         
+       /* Be verbose about the particles that struggle to converge */
+       /* @TODO */
+
+       // Debug
+//       assertion6( f!=0,                                                                                                                                                                                                              
+//             localParticle->toString(), h_new, h_old, CutoffParticleH, HYDRO_h_MIN, HYDRO_h_MAX );       
+
+//       assertion3( ((f > 0.0 && h_new > h_old) || (f < 0.0 && h_new < h_old)) &&
+//              (h_old < 0.999 * HYDRO_h_MAX), localParticle->toString(), h_new, h_old );
+
+       /* Safety check: truncate to the range [ h_old/2 , 2h_old ]. */
+       h_new = std::min(h_new, 2.0 * h_old);
+       h_new = std::max(h_new, 0.5 * h_old);
+
+       /* Verify that we are actually progressing towards the answer */
+       h_new = std::max( h_new, localParticle->getHLeft ());
+       h_new = std::min( h_new, localParticle->getHRight());
+     }  
+
+     /* By now we have got h_new for either of the yes/no neighbour cases */
+
+     /* Check whether the particle has an inappropriate smoothing length
+      */
+     if (std::abs(h_new - h_old) > eps * h_old) {
+  
+       /* Ok, correct then */
+  
+       /* Case where we have been oscillating around the solution */
+       if( (h_new == localParticle->getHLeft() && h_old == localParticle->getHRight()) ||
+           (h_old == localParticle->getHLeft() && h_new == localParticle->getHRight()) ){
+  
+         /* Bissect the remaining interval */
+         localParticle->setSmoothingLength( 1.0 / std::pow (
+           0.5 * (std::pow( localParticle->getHLeft(),Dimensions ) + std::pow( localParticle->getHRight(),Dimensions) ), Dimensions ) );
+  
+       } else { 
+         
+         /* Normal case */
+         localParticle->setSmoothingLength( h_new );
+       } 
+
+     }
+
+     /* By now the smoothing length has been updated */
+
+     /* Increase the iteration counter */
+     localParticle->setIterCount( localParticle->getIterCount() + 1 );
+
+     /* Compute residual */
+     const double residual = std::abs(h_new - h_old)/h_old;
+     localParticle->setResidual ( residual );
     
-    if(residual <= htolerance){
-      localParticle->setHasConverged(true);  
-    }
-    
-    localParticle->setResidual ( residual );
-    localParticle->setIterCount( localParticle->getIterCount() + 1 );
-    
-    // DEBUG checks
-    assertion6( localParticle->getSmoothingLength()>1E-5, localParticle->toString(), localParticle->getSmoothingLength(), f, f_prime, localParticle->getOmega(),residual );
-      
-  }
+     /* Flag if particle has converged */
+     if(residual < eps){
+       localParticle->setHasConverged(true);
+     }
+
+   } /* End local, non-converged particle */
 
 """
 
 touch_particle_first_time_compute_kernel = """
 
     /* We do not excecute any specific action here */
-
 
 """
 
@@ -1224,111 +1343,30 @@ drift_particles.add_action_set( peano4.toolbox.particles.ParticleParticleInterac
   
 """,
   touch_vertex_first_time_compute_particle_update_kernel="""
-  const double timeStepSize = GLOBAL_TIME_STEP_SIZE;
-  
-  if (
-    localParticle->getMoveState()!=globaldata::Particle::MoveState::Moved
-    and
-    localParticle->getParallelState()==globaldata::Particle::ParallelState::Local
-    ){
-  
-    // Drift the particle (update position for a full time-step) 
-    localParticle->setX( localParticle->getX() + timeStepSize * localParticle->getV_full() );
-    
-    localParticle->setMoveState( globaldata::Particle::MoveState::Moved );
-      
-    }
+
+  /* We do not excecute any specific action here */
+
 """,
   touch_vertex_last_time_compute_particle_update_kernel="""
   
+  /* We update the position in this stage to avoid updating multiple times 
+   * when a particle moves into a different cell. */
+  
   const double timeStepSize = GLOBAL_TIME_STEP_SIZE;
-
-/*  
+  
   if (
     localParticle->getMoveState()!=globaldata::Particle::MoveState::Moved
     and
     localParticle->getParallelState()==globaldata::Particle::ParallelState::Local
     ){
   
-    // Drift the particle (update position for a full time-step)
+    /* Drift the particle (update position for a full time-step) */
     localParticle->setX( localParticle->getX() + timeStepSize * localParticle->getV_full() );
     
+    /* Flag this particle as Moved */
     localParticle->setMoveState( globaldata::Particle::MoveState::Moved );
   }
-  */
   
-  /* Predict terms (SWIFT) */
-  
-  const double dt_kick_hydro = 0.5 * GLOBAL_TIME_STEP_SIZE;
-  const double dt_drift = GLOBAL_TIME_STEP_SIZE;
-  const double dt_therm = dt_kick_hydro;
-//  const double dt_therm = dt_drift;
-  
-  if (localParticle->getParallelState()==globaldata::Particle::ParallelState::Local ) {
-  
-      /* Predict velocities for hydro terms */
-      localParticle->setV( localParticle->getV() + localParticle->getA() * dt_kick_hydro );
-
-      /* 
-       * Predict additional particle fields forward in time when drifting 
-       */
-      
-      /* Predict the internal energy */
-      localParticle->setU( localParticle->getU() + localParticle->getUDot() * dt_therm );
-
-      /* Predict smoothing length */
-      const double h_inv = 1.0 / localParticle->getSmoothingLength();
-      const double w1 = localParticle->getHDot() * h_inv * dt_drift;
-      localParticle->setSmoothingLength( localParticle->getSmoothingLength() * std::exp(w1) );
-      
-      /* SWIFT custom exponential functions -- @TODO implement */
-//      
-//    if (fabsf(w1) < 0.2f) {
-//      p->h *= approx_expf(w1); /* 4th order expansion of exp(w) */
-//    } else {
-//      p->h *= expf(w1);
-//    }
-//
-
-      /* Predict density */
-      const double w2 = - Dimensions * w1;
-      localParticle->setDensity( localParticle->getDensity() * std::exp(w2) );
-
-//
-//    if (fabsf(w2) < 0.2f) {
-//      p->rho *= approx_expf(w2); /* 4th order expansion of exp(w) */
-//    } else {
-//      p->rho *= expf(w2);
-//    }
-//
-
-      /* Check against entropy floor */
-//      const float floor_A = entropy_floor(p, cosmo, floor_props);
-//      const float floor_u = gas_internal_energy_from_entropy(p->rho, floor_A);
-
-      /* Check against absolute minimum */
-//      const float min_u =
-//          hydro_props->minimal_internal_energy / cosmo->a_factor_internal_energy;
-
-//      p->u = max(p->u, floor_u);
-//      p->u = max(p->u, min_u);
-
-      localParticle->setU( std::max( localParticle->getU(), 0.0) );
-
-      /* Compute the new pressure */
-      const double pressure = 
-        gas_pressure_from_internal_energy( localParticle->getDensity(), localParticle->getU() );
-
-      /* Compute the new sound speed */
-//      const float soundspeed = gas_soundspeed_from_pressure(p->rho, pressure);
-
-      const double soundspeed = gas_soundspeed_from_internal_energy( localParticle->getU() );
-
-      localParticle->setPressure(pressure);
-      localParticle->setSoundSpeed(soundspeed);
-      localParticle->setV_sig_AV( std::max(localParticle->getV_sig_AV(), 2.0 * soundspeed) );
-    
-    }
     
 """,
   additional_includes="""
@@ -1412,6 +1450,114 @@ hydro_kick_extra.add_action_set( peano4.toolbox.particles.UpdateParticleGridAsso
 hydro_kick_extra.add_action_set( peano4.toolbox.particles.UpdateParallelState(particles) )
 project.solversteps.add_step(hydro_kick_extra)
 
+##  Prediction step (relevant when using local time-stepping)
+
+predict_hydro_particles = peano4.solversteps.Step( "PredictHydro" )
+predict_hydro_particles.use_vertex(particles)
+predict_hydro_particles.use_cell(particle_tree_analysis.cell_marker)
+predict_hydro_particles.add_action_set( peano4.toolbox.particles.ParticleParticleInteraction(
+  particle_set=particles,
+  particle_particle_interaction_kernel="""
+    
+  /* We do not excecute any specific action here */
+  
+""",
+  touch_vertex_first_time_compute_particle_update_kernel="""
+
+  /* We do not excecute any specific action here */
+
+""",
+  touch_vertex_last_time_compute_particle_update_kernel="""
+
+  /* Predict hydro terms (SWIFT) 
+   * Relevant for inactive particles when using local-timestepping */
+  
+  const double timeStepSize = GLOBAL_TIME_STEP_SIZE;
+  
+  const double dt_kick_hydro = 0.5 * GLOBAL_TIME_STEP_SIZE;
+  const double dt_drift = GLOBAL_TIME_STEP_SIZE;
+  const double dt_therm = dt_kick_hydro;
+//  const double dt_therm = dt_drift;
+  
+  if (localParticle->getParallelState()==globaldata::Particle::ParallelState::Local ) {
+  
+      /* Predict velocities for hydro terms */
+      localParticle->setV( localParticle->getV() + localParticle->getA() * dt_kick_hydro );
+
+      /* 
+       * Predict additional particle fields forward in time after the Drift step
+       */
+      
+      /* Predict the internal energy */
+      localParticle->setU( localParticle->getU() + localParticle->getUDot() * dt_therm );
+
+      /* Predict smoothing length */
+      const double h_inv = 1.0 / localParticle->getSmoothingLength();
+      const double w1 = localParticle->getHDot() * h_inv * dt_drift;
+      localParticle->setSmoothingLength( localParticle->getSmoothingLength() * std::exp(w1) );
+      
+      /* SWIFT custom exponential functions -- @TODO implement */
+//      
+//    if (fabsf(w1) < 0.2f) {
+//      p->h *= approx_expf(w1); /* 4th order expansion of exp(w) */
+//    } else {
+//      p->h *= expf(w1);
+//    }
+//
+
+      /* Predict density */
+      const double w2 = - Dimensions * w1;
+      localParticle->setDensity( localParticle->getDensity() * std::exp(w2) );
+
+//
+//    if (fabsf(w2) < 0.2f) {
+//      p->rho *= approx_expf(w2); /* 4th order expansion of exp(w) */
+//    } else {
+//      p->rho *= expf(w2);
+//    }
+//
+
+      /* Check against entropy floor */
+//      const float floor_A = entropy_floor(p, cosmo, floor_props);
+//      const float floor_u = gas_internal_energy_from_entropy(p->rho, floor_A);
+
+      /* Check against absolute minimum */
+//      const float min_u =
+//          hydro_props->minimal_internal_energy / cosmo->a_factor_internal_energy;
+
+//      p->u = max(p->u, floor_u);
+//      p->u = max(p->u, min_u);
+
+      localParticle->setU( std::max( localParticle->getU(), 0.0) );
+
+      /* Compute the new pressure */
+      const double pressure = 
+        gas_pressure_from_internal_energy( localParticle->getDensity(), localParticle->getU() );
+
+      /* Compute the new sound speed */
+//      const float soundspeed = gas_soundspeed_from_pressure(p->rho, pressure);
+
+      const double soundspeed = gas_soundspeed_from_internal_energy( localParticle->getU() );
+
+      localParticle->setPressure(pressure);
+      localParticle->setSoundSpeed(soundspeed);
+      localParticle->setV_sig_AV( std::max(localParticle->getV_sig_AV(), 2.0 * soundspeed) );
+    
+    }
+    
+""",
+  additional_includes="""
+#include "Constants.h"
+#include "equation_of_state.h"
+#include <cmath>
+"""
+  ))
+predict_hydro_particles.add_action_set( particle_tree_analysis )
+predict_hydro_particles.add_action_set( peano4.toolbox.particles.UpdateParticleGridAssociation(particles) )
+predict_hydro_particles.add_action_set( peano4.toolbox.particles.UpdateParallelState(particles) )
+project.solversteps.add_step(predict_hydro_particles)
+
+
 
 # ## Corrector step (mini-kick) (Phantom code implementation)
 
@@ -1437,7 +1583,7 @@ kick_particles_corrector.add_action_set( peano4.toolbox.particles.ParticlePartic
 """,
   touch_vertex_last_time_compute_particle_update_kernel="""
   
-  const double timeStepSize_half = 0.5*GLOBAL_TIME_STEP_SIZE;
+  const double timeStepSize_half = 0.5 * GLOBAL_TIME_STEP_SIZE;
   
   if( not localParticle->getHasBeenKicked()
       and
@@ -1598,6 +1744,23 @@ init_time_step.add_action_set( peano4.toolbox.particles.ParticleParticleInteract
     /* Reset for N-R of this time-step */
     localParticle->setHasConverged(false);
     localParticle->setIterCount(0);
+
+    /* Reset the bisection bounds */
+    localParticle->setHLeft (HYDRO_h_MIN);        
+    localParticle->setHRight(HYDRO_h_MAX);        
+    
+    /* Flag if particle is at boundary of the simulation box */
+    localParticle->setIsBoundaryParticle(false);
+    const double max_dist_boundary = 0.05;
+    for (int d=0; d<Dimensions; d++) {
+      if ( localParticle->getX()(d) < max_dist_boundary || 
+           localParticle->getX()(d) > (1.0 - max_dist_boundary) ) {
+
+        localParticle->setIsBoundaryParticle(true);
+
+      }
+    }
+
     
     /* Also prepare particle for Drift step */
     localParticle->setMoveState( globaldata::Particle::MoveState::NotMovedYet );    
@@ -1815,22 +1978,26 @@ particle_plotter = peano4.toolbox.particles.PlotParticlesInVTKFormat( "particles
 particle_plotter.add_attribute_to_plot(v_attr       , Dimensions)
 particle_plotter.add_attribute_to_plot(a_attr       , Dimensions)
 particle_plotter.add_attribute_to_plot(a_prev_step_attr, Dimensions)
-particle_plotter.add_attribute_to_plot(density_attr , 1)
-particle_plotter.add_attribute_to_plot(pressure_attr, 1)
 particle_plotter.add_attribute_to_plot(u_attr       , 1)
 particle_plotter.add_attribute_to_plot(mass_attr    , 1)
-particle_plotter.add_attribute_to_plot(smoothL_attr , 1)
-particle_plotter.add_attribute_to_plot(smoothL_prev_attr , 1)
+particle_plotter.add_attribute_to_plot(density_attr , 1)
+particle_plotter.add_attribute_to_plot(pressure_attr, 1)
 particle_plotter.add_attribute_to_plot(Omega_attr ,  1)
 particle_plotter.add_attribute_to_plot(rho_dh_attr,  1)
 particle_plotter.add_attribute_to_plot(Ncount_attr,  1)
 particle_plotter.add_attribute_to_plot(wcount_attr,  1)
 particle_plotter.add_attribute_to_plot(wcount_dh_attr,  1)
 particle_plotter.add_attribute_to_plot(soundSpeed_attr, 1)
-particle_plotter.add_attribute_to_plot(has_converged_attr, 1)
 particle_plotter.add_attribute_to_plot(timeStepSize_attr, 1)
+particle_plotter.add_attribute_to_plot(smoothL_attr , 1)
+particle_plotter.add_attribute_to_plot(smoothL_prev_attr , 1)
 particle_plotter.add_attribute_to_plot(residual_attr, 1)
+particle_plotter.add_attribute_to_plot(has_converged_attr, 1)
 particle_plotter.add_attribute_to_plot(iteration_count_attr, 1)
+particle_plotter.add_attribute_to_plot(hleft_attr, 1)
+particle_plotter.add_attribute_to_plot(hright_attr, 1)
+particle_plotter.add_attribute_to_plot(is_boundary_part_attr, 1)
+particle_plotter.add_attribute_to_plot(has_no_neighbours_attr, 1)
 
 # Artificial viscosity
 particle_plotter.add_attribute_to_plot(rot_v_attr   , 1)

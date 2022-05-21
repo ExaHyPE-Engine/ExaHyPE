@@ -17,6 +17,7 @@ peano4::datamanagement::VertexMarker::VertexMarker(
   _hasBeenRefined                         = event.getHasBeenRefined();
   _willBeRefined                          = event.getWillBeRefined();
   _isLocal                                = event.getIsVertexLocal();
+  _isParentCellLocal                      = event.getIsParentCellLocal();
   //_isAdjacentToParallelDomainBoundary     = event.getIsRefined();
   _relativePositionOfCellWithinFatherCell = event.getRelativePositionToFather();
 }
@@ -100,6 +101,11 @@ bool peano4::datamanagement::VertexMarker::willBeRefined(int i) const {
 
 bool peano4::datamanagement::VertexMarker::isLocal() const {
   return isLocal(_select);
+}
+
+
+bool peano4::datamanagement::VertexMarker::isParentCellLocal() const {
+  return _isParentCellLocal;
 }
 
 
