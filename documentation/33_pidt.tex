@@ -310,10 +310,9 @@ Here is the general invariant however:
 
 
 \begin{remark}
-  The action set \texttt{UpdateParticleGridAssociation} relies on a singleton
-  \texttt{toolbox::particles::ParallelParticleRepository}. This singleton has a
-  \texttt{finishTraversal()} which has to be called by your main routine on each
-  and every rank after all rank-local traversals have termined.
+  The action set \texttt{UpdateParticleGridAssociation} relies on some global
+  data. Therefore, you have to call \texttt{finishTraversal()} on the used
+  particle set in your main routine on each rank after all rank-local traversals have termined.
 \end{remark}
 
 \section{Dual tree traversal and particle-particle interaction}
