@@ -309,6 +309,13 @@ Here is the general invariant however:
 \end{itemize}
 
 
+\begin{remark}
+  The action set \texttt{UpdateParticleGridAssociation} relies on a singleton
+  \texttt{toolbox::particles::ParallelParticleRepository}. This singleton has a
+  \texttt{finishTraversal()} which has to be called by your main routine on each
+  and every rank after all rank-local traversals have termined.
+\end{remark}
+
 \section{Dual tree traversal and particle-particle interaction}
 \label{section:pidt:particle-particle-interaction}
 
