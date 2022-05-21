@@ -33,7 +33,7 @@ class tarch::plotter::PVDTimeSeriesWriter {
      * @return int    Counter of partitions in last snapshot
      * @return lines  Set of lines
      */
-    static std::tuple< double, int, std::vector<std::string> > parseFile( const std::string& filename );
+    static std::tuple< double, int, std::vector<std::string> > parseFile( const std::string& filename, bool createBackup = true );
 
     /**
      * @param lines content without the tail of the format, i.e. the closing brackets

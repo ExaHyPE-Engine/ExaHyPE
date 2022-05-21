@@ -43,6 +43,7 @@ class tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter: publi
     void writeMetaData(const std::string& metaData);
     void writeMapping(int totalEntries, double* values);
 
+    void createBackupOfMetaFile();
     void createEmptyIndexFile();
     void addNewDatasetToIndexFile(double timestamp);
     void addNewFileToCurrentDataSetInIndexFile( const std::string&  filename );
