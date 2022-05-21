@@ -469,8 +469,9 @@ init_setup.add_action_set( peano4.toolbox.particles.InsertParticlesAlongCartesia
     #include "kernel_hydro.h"
     #include "equation_of_state.h"
     """,
-  computational_domain_offset=[0.0, 0.0])
-  )
+  computational_domain_offset=[0.0, 0.0],
+  guard="std::abs( 0.5-particle->getX(1) ) < 0.02"
+  ))
 
 init_setup.add_action_set( particle_tree_analysis )
 project.solversteps.add_step(init_setup)
