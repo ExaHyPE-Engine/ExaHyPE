@@ -144,7 +144,7 @@ elif args.type=="global-adaptive-enclave":
     min_h, max_h,
     flux = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
     eigenvalues = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
-    source_term = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
+#    source_term = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
     time_step_relaxation = 0.05,
     pde_terms_without_state = args.gpu
   )
