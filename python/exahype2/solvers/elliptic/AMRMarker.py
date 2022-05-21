@@ -52,11 +52,25 @@ class AMRMarker(object):
     
     ## Usage
     
+    Before you start, you have to reconfigure and add 
+    
+        --enable-fem
+        
+    to your configuration call. Run make afterwards to build the FEM toolbox of
+    Peano.
+    
+    
     To use the marker within your project, add a new solver to your project:
     
          amr_label = exahype2.solvers.elliptic.AMRMarker( name="AMRMarker" )
          project.add_solver( amr_label )
 
+    Take your ExaHyPE solver of choice and add one more auxiliary variable. This
+    variable will, from now on, hold a copy of the actual iterate value of the 
+    elliptic solver. 
+    
+    Call the couple_with_FV_solver() operation on the AMRMarker so ensure that
+    the AMR marker pipes its data into the auxiliary variable.
 
   """
   
@@ -78,6 +92,8 @@ class AMRMarker(object):
     self._flag_domain_boundary   = flag_domain_boundary
     self._right_hand_side        = right_hand_side
     self._plot                   = plot
+    
+    self._volumetric_coupling_term = ""
     
     self.create_data_structures()
     self.create_action_sets()
@@ -136,31 +152,45 @@ Relaxation coefficient: {}
      within the inheritance tree.
      
     """
-    self._action_set_smoother = peano4.toolbox.multigrid.MatrixFreeJacobi( self._data_model, self._relaxation_coefficient, "1.0", "{}".format(self._right_hand_side) )
-    #self._action_set_initial_conditions                       = exahype2.solvers.fv.actionsets.InitialCondition(self, self._store_cell_data_default_guard(), "true" )
+    self._action_set_smoother = peano4.toolbox.multigrid.MatrixFreeJacobi( self._data_model, self._relaxation_coefficient, "{}".format(self._right_hand_side) )
+    self._action_set_smoother.Template_CreateHangingVertex = """
+  fineGridVertex{{UNKNOWN}}.{{RESIDUAL_SETTER}}(1.0);
+"""    
+    self._action_set_smoother.Template_TouchVertexLastTime += """
+  if ( fineGridVertex{{UNKNOWN}}.{{UNKNOWN_GETTER}}()<0.0 ) {
+    fineGridVertex{{UNKNOWN}}.{{UNKNOWN_SETTER}}(0.0);
+  }
+"""    
+    self._action_set_smoother.Template_TouchCellFirstTime += self._volumetric_coupling_term
 
 
+  def couple_with_FV_solver(self,FV_solver,auxiliary_variable):
+    """
+    
+      FV_solver: exahype2.solver.fv.Solver
+        Instance of the solver you want to couple this marker to
+        
+      auxiliary_variable: Integer
+        index of the auxiliary variable that you want this class to dump its output
+        to.
+         
+    """
+    self._volumetric_coupling_term = """
+  double cellAverage = 0.0;
+  for(int k=0; k<TwoPowerD; k++) {{
+    cellAverage += fineGridVertices{}(k).getU();
+  }}
+  cellAverage /= TwoPowerD;
+  int index = {};
+  dfor(k,{}) {{
+    fineGridCell{}Q.value[index] = cellAverage;
+    index += {};
+  }}
+""".format(self._unknown_identifier(),FV_solver._unknowns+auxiliary_variable,FV_solver.patch_size,FV_solver.name,FV_solver._unknowns+FV_solver._auxiliary_variables)    
 
-  #def _store_cell_data_default_guard(self):
-  #  return "not marker.willBeRefined() " + \
-  #         "and repositories::" + self.get_name_of_global_instance() + ".getSolverState()!=" + self._name + "::SolverState::GridConstruction"
-  
-  
-  #def _load_cell_data_default_guard(self):
-  #  return "not marker.hasBeenRefined() " + \
-  #         "and repositories::" + self.get_name_of_global_instance() + ".getSolverState()!=" + self._name + "::SolverState::GridConstruction " + \
-  #         "and repositories::" + self.get_name_of_global_instance() + ".getSolverState()!=" + self._name + "::SolverState::GridInitialisation"
-
-
-  #def _store_face_data_default_guard(self):
-  #  return "not marker.willBeRefined() " + \
-  #         "and repositories::" + self.get_name_of_global_instance() + ".getSolverState()!=" + self._name + "::SolverState::GridConstruction"
-  
-  
-  #def _load_face_data_default_guard(self):
-  #  return "not marker.hasBeenRefined() " + \
-  #         "and repositories::" + self.get_name_of_global_instance() + ".getSolverState()!=" + self._name + "::SolverState::GridConstruction " + \
-  #         "and repositories::" + self.get_name_of_global_instance() + ".getSolverState()!=" + self._name + "::SolverState::GridInitialisation"
+    # @todo There's a bug somewhere. I can't access unkonwns as property (it always returns patch size, while _unknowns works
+    
+    self.create_action_sets()
   
   
   def _unknown_identifier(self):
@@ -213,7 +243,6 @@ Relaxation coefficient: {}
     
     
     """
-    #step.add_action_set( self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement )
     pass
 
     
@@ -224,13 +253,6 @@ Relaxation coefficient: {}
      we ues the face label and initialise it properly.
      
     """
-    #step.add_action_set( self._action_set_initial_conditions_for_grid_construction )
-    #step.add_action_set( self._action_set_update_face_label )
-    #step.add_action_set( self._action_set_update_cell_label )
-    #if evaluate_refinement_criterion:
-    #  step.add_action_set( self._action_set_AMR )
-    #else:
-    #  step.add_action_set( self._action_set_AMR_commit_without_further_analysis )
     pass
 
   
@@ -263,9 +285,11 @@ Relaxation coefficient: {}
     apply the boundary conditions.
     
     """
-    d = {}
-    self._init_dictionary_with_default_parameters(d)
-    self.add_entries_to_text_replacement_dictionary(d)
+    step.add_action_set( self._action_set_smoother )
+
+    #d = {}
+    #self._init_dictionary_with_default_parameters(d)
+    #self.add_entries_to_text_replacement_dictionary(d)
 
     #step.add_action_set( self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement )
 
@@ -327,7 +351,6 @@ Relaxation coefficient: {}
       d["BOUNDARY_VALUE"]       = 1.0
     else:
       d["BOUNDARY_VALUE"]       = 0.0
-
     
     d["SOLVER_INSTANCE"]                = self.get_name_of_global_instance()
     d["SOLVER_NAME"]                    = self._name

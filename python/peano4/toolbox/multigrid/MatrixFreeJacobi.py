@@ -10,7 +10,15 @@ class MatrixFreeJacobi(ActionSet):
 
   
   
-  def __init__(self, vertex_data, relaxation_coefficient, kappa_expr, rhs_expr):
+  def __init__(self, 
+               vertex_data, 
+               relaxation_coefficient, 
+               rhs_expr, 
+               unknown_setter="setU", 
+               unknown_getter="getU",
+               residual_setter="setResidual",
+               residual_getter="getResidual",
+               ):
     """
       
       :Attibutes:
@@ -26,6 +34,12 @@ class MatrixFreeJacobi(ActionSet):
     """
     self.d = {}
     self.d[ "UNKNOWN" ] = vertex_data.name
+    self.d[ "UNKNOWN_SETTER" ]  = unknown_setter
+    self.d[ "UNKNOWN_GETTER" ]  = unknown_getter
+    self.d[ "RESIDUAL_SETTER" ] = residual_setter
+    self.d[ "RESIDUAL_GETTER" ] = residual_getter
+    self.d[ "OMEGA" ]           = relaxation_coefficient
+    self.d[ "RHS" ]             = rhs_expr
     
 
   def get_body_of_getGridControlEvents(self):
@@ -45,13 +59,12 @@ class MatrixFreeJacobi(ActionSet):
 """)
   
   
-  def get_constructor_body(self):
-    return self.__Template_Constructor.format(**self.d)
+  #def get_constructor_body(self):
+  #  return self.__Template_Constructor.format(**self.d)
 
 
-  __Template_TouchVertexFirstTime = """ 
-  fineGridVertex{{UNKNOWN}}.setResidual(0.0);
-//     tarch::la::Vector<ThreePowerD,double>     
+  Template_TouchVertexFirstTime = """ 
+  fineGridVertex{{UNKNOWN}}.{{RESIDUAL_SETTER}}(0.0);
 """
 
   
@@ -63,14 +76,47 @@ class MatrixFreeJacobi(ActionSet):
   
   """
   Template_CreateHangingVertex = """
+  fineGridVertex{{UNKNOWN}}.{{RESIDUAL_SETTER}}(0.0);
 """  
 
   
   Template_TouchCellFirstTime = """
+  const tarch::la::Vector<ThreePowerD,double> stencil = toolbox::finiteelements::getLaplacian(
+    marker.h(), 1.0
+  );
+  const toolbox::finiteelements::ElementWiseAssemblyMatrix A = toolbox::finiteelements::getElementWiseAssemblyMatrix(
+    stencil
+  );
+
+  tarch::la::Vector<TwoPowerD,double> u;
+  for (int i=0; i<TwoPowerD; i++) {
+    u(i) = fineGridVertices{{UNKNOWN}}(i).{{UNKNOWN_GETTER}}();
+  }
+
+  tarch::la::Vector<TwoPowerD,double> r = A * u;
+  
+  for (int i=0; i<TwoPowerD; i++) {
+    fineGridVertices{{UNKNOWN}}(i).{{RESIDUAL_SETTER}}(
+      fineGridVertices{{UNKNOWN}}(i).{{RESIDUAL_GETTER}}() + r(i)
+    );
+  }
 """  
 
 
   Template_TouchVertexLastTime = """
+  const double residual = {{RHS}} * tarch::la::volume(marker.h()/2.0) - fineGridVertex{{UNKNOWN}}.{{RESIDUAL_GETTER}}();
+  fineGridVertex{{UNKNOWN}}.{{UNKNOWN_SETTER}}(
+    fineGridVertex{{UNKNOWN}}.{{UNKNOWN_GETTER}}()
+    + 
+    {{OMEGA}} * residual
+  );  
+  
+  if ( marker.coincidesWithCoarseGridVertex() ) {
+    tarch::la::Vector<Dimensions,int> parent = marker.getRelativePositionWithinFatherCell() / 3;
+    coarseGridVertices{{UNKNOWN}}( peano4::utils::dLinearised(parent,2) ).{{UNKNOWN_SETTER}}(
+      fineGridVertex{{UNKNOWN}}.{{UNKNOWN_GETTER}}()
+    );
+  }
 """
   
 
@@ -81,9 +127,9 @@ class MatrixFreeJacobi(ActionSet):
     if operation_name==ActionSet.OPERATION_CREATE_HANGING_VERTEX:
       result = jinja2.Template(self.Template_CreateHangingVertex).render(**self.d) 
     if operation_name==ActionSet.OPERATION_TOUCH_CELL_FIRST_TIME:
-      result = jinja2.Template(self.__Template_TouchCellFirstTime).render(**self.d) 
+      result = jinja2.Template(self.Template_TouchCellFirstTime).render(**self.d) 
     if operation_name==ActionSet.OPERATION_TOUCH_VERTEX_LAST_TIME:
-      result = jinja2.Template(self.__Template_TouchVertexLastTime).render(**self.d) 
+      result = jinja2.Template(self.Template_TouchVertexLastTime).render(**self.d) 
     return result
 
 
@@ -97,4 +143,6 @@ class MatrixFreeJacobi(ActionSet):
     return """
 #include "toolbox/finiteelements/ElementMatrix.h"
 #include "toolbox/finiteelements/StencilFactory.h"
+
+#include "peano4/utils/Loop.h"
 """

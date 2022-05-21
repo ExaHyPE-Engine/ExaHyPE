@@ -99,7 +99,7 @@ time_step_size = 0.1 * min_h
 #
 #
 
-auxiliary_variables = 0
+auxiliary_variables = 1
 
 thesolver = None
 solver_name = "Euler"
@@ -242,6 +242,7 @@ project.add_solver( thesolver )
 # Please comment out later again
 #
 amr_label = exahype2.solvers.elliptic.AMRMarker( name="AMRMarker" )
+amr_label.couple_with_FV_solver( thesolver, 0 )
 project.add_solver( amr_label )
 
 
