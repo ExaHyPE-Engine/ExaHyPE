@@ -147,11 +147,6 @@ class UpdateParticleGridAssociation(ActionSet):
 
 
   __Template_BeginTraversal = jinja2.Template("""
-  _globalSieveParticleList.clear();
-  _globalSieveParticleList.insert( _globalSieveParticleList.end(), _globalMovingParticleList.begin(), _globalMovingParticleList.end() );
-  _globalSieveParticleListIsEmpty = _globalMovingParticleList.empty();
-  _globalMovingParticleList.clear();
-
   _numberOfParticleReassignmentsOnCurrentLevel = 0;
   _numberOfLifts = 0;
   _numberOfDrops = 0;
@@ -175,9 +170,6 @@ class UpdateParticleGridAssociation(ActionSet):
     ", assignments-to-global-sieve=" << _numberOfAssignmentsToGlobalSieve
   );
 """ )
-
-
-
 
 
   """
@@ -249,8 +241,7 @@ class UpdateParticleGridAssociation(ActionSet):
     }
   }
   else {
-    tarch::multicore::Lock lock( _globalMovingParticleSemaphore );
-    _globalMovingParticleList.insert( coarseGridVertices{{PARTICLES_CONTAINER}}(i).end(), liftParticles[ i ].begin(), liftParticles[ i ].end() );
+    liftParticles[ i ].particlesCanNotBeLiftedLocally();
     _numberOfAssignmentsToGlobalSieve += liftParticles[ i ].size();
   }
 """)
@@ -316,59 +307,24 @@ class UpdateParticleGridAssociation(ActionSet):
 
 
   __Template_Sieve = jinja2.Template("""  
-  if (not _globalSieveParticleListIsEmpty) {
-    const double CellToCutOffRadiusRatio = 0.5 * (1.0-SortingTolerance);
-    tarch::multicore::Lock lock( _globalMovingParticleSemaphore );
-    vertexdata::{{PARTICLES_CONTAINER}}::iterator p = _globalSieveParticleList.begin(); 
-    while (p!=_globalSieveParticleList.end()) {
-      if ( 
-        tarch::la::min( marker.h() ) > CellToCutOffRadiusRatio * (*p)->getCutOffRadius()
-        and
-        marker.isContainedInAdjacentCells( (*p)->getX(), 0.5*SortingTolerance )
-      ) {
-        logDebug( "touchVertexLastTime(...)", "drop particle " << (*p)->toString() << " from global sieve list into vertex " << marker.toString() );
-        fineGridVertex{{PARTICLES_CONTAINER}}.push_back( *p );
-        p = _globalSieveParticleList.erase(p);
-        _numberOfDrops++;
-      }
-      else {
-        p++;
-      }
-    }
-    _globalSieveParticleListIsEmpty  = _globalSieveParticleList.empty();
+  if ( vertexdata::{{PARTICLES_CONTAINER}}::thereAreParticlesToBeSieved() ) {
+    vertexdata::{{PARTICLES_CONTAINER}} sievedParticles = vertexdata::{{PARTICLES_CONTAINER}}::getParticlesToBeSievedIntoVertex(
+        marker,
+        SortingTolerance
+      );
+      
+    _numberOfDrops += sievedParticles.size();
+
+    fineGridVertex{{PARTICLES_CONTAINER}}.insert(
+      fineGridVertex{{PARTICLES_CONTAINER}}.end(),
+      sievedParticles.begin(),
+      sievedParticles.end()
+    );
   }
+""")  
   
   
   
-  
-  
-  // I can always drop. Even if some of the coarse vertices are outside,
-  // they will be properly initialised and thus host an empty particle 
-  // list.
-  const double CellToCutOffRadiusRatio = 0.5 * 0.9;
-  for (int i=0; i<TwoPowerD; i++) {
-    vertexdata::{{PARTICLES_CONTAINER}}::iterator p = coarseGridVertices{{PARTICLES_CONTAINER}}(i).begin(); 
-    while ( p!=coarseGridVertices{{PARTICLES_CONTAINER}}(i).end() ) {
-      if ( 
-        tarch::la::min( marker.h() ) > CellToCutOffRadiusRatio * (*p)->getCutOffRadius()
-        and
-        marker.isContainedInAdjacentCells( (*p)->getX(), 0.5*SortingTolerance )
-      ) {
-        logDebug( "touchVertexLastTime(...)", "drop particle " << (*p)->toString() << " into vertex " << marker.toString() );
-        fineGridVertex{{PARTICLES_CONTAINER}}.push_back( *p );
-        p = coarseGridVertices{{PARTICLES_CONTAINER}}(i).erase(p);
-        _numberOfDrops++;
-      }
-      else p++;
-    }
-
-    for (auto& p: coarseGridVertices{{PARTICLES_CONTAINER}}(i)) {
-      bool cutOffRadiusSmallEnough = tarch::la::min( marker.h() ) > CellToCutOffRadiusRatio * p->getCutOffRadius();
-      logDebug( "touchVertexFirstTime(...)", "have not been able to drop particle " << p->toString() << " from coarse vertex " << coarseGridVertices{{PARTICLES_CONTAINER}}(i).toString() << " into vertex " << fineGridVertex{{PARTICLES_CONTAINER}}.toString() << ". cut-off small enough=" << cutOffRadiusSmallEnough );
-    }
-  }  
-""")
-
 
   """
   
@@ -389,8 +345,7 @@ class UpdateParticleGridAssociation(ActionSet):
     coarseGridVertices{{PARTICLES_CONTAINER}}( target.to_ulong() ).insert( coarseGridVertices{{PARTICLES_CONTAINER}}( target.to_ulong() ).end(), fineGridVertex{{PARTICLES_CONTAINER}}.begin(), fineGridVertex{{PARTICLES_CONTAINER}}.end() );
   }
   else {
-    tarch::multicore::Lock lock( _globalMovingParticleSemaphore );
-    _globalMovingParticleList.insert( _globalMovingParticleList.end(), fineGridVertex{{PARTICLES_CONTAINER}}.begin(), fineGridVertex{{PARTICLES_CONTAINER}}.end() );
+    fineGridVertex{{PARTICLES_CONTAINER}}.particlesCanNotBeLiftedLocally();
     _numberOfAssignmentsToGlobalSieve += fineGridVertex{{PARTICLES_CONTAINER}}.size();
   }
 """)  
@@ -439,9 +394,7 @@ class UpdateParticleGridAssociation(ActionSet):
     _numberOfLifts += liftParticles.size();
   } 
   else if (not liftParticles.empty()) {
-    tarch::multicore::Lock lock( _globalMovingParticleSemaphore );
-    logDebug( "touchVertexLastTime(...)", "add " << liftParticles.size() << " to the global sorting list" );
-    _globalMovingParticleList.insert( _globalMovingParticleList.end(), liftParticles.begin(), liftParticles.end() );
+    liftParticles.particlesCanNotBeLiftedLocally();
     _numberOfAssignmentsToGlobalSieve += liftParticles.size();
   }
 """)  
@@ -511,35 +464,11 @@ class UpdateParticleGridAssociation(ActionSet):
   int  _numberOfAssignmentsToGlobalSieve;
   int  _numberOfDrops;
   int  _numberOfEliminations;
-
-  /**
-   * Protect access of _globalMovingParticleList on the node.
-   */
-  tarch::multicore::BooleanSemaphore   _globalMovingParticleSemaphore;
-  
-  typedef vertexdata::{{PARTICLES_CONTAINER}} GlobalMovingParticlesList;
-  
-  /**
-   * For vertical particle movements (between resolutions) which we cannot realise
-   * within one tree.
-   */
-  static GlobalMovingParticlesList  _globalMovingParticleList;
-  static GlobalMovingParticlesList  _globalSieveParticleList;
-  
-  /**
-   * Set if global sieve list is empty at begin of traversal.
-   */
-  static bool                       _globalSieveParticleListIsEmpty;
-
 """).render(**self.d)
 
 
   def get_static_initialisations(self,full_qualified_classname):
-    return jinja2.Template( 
-full_qualified_classname + """::GlobalMovingParticlesList  """ + full_qualified_classname + """::_globalMovingParticleList;
-""" + full_qualified_classname + """::GlobalMovingParticlesList  """ + full_qualified_classname + """::_globalSieveParticleList;
-bool  """ + full_qualified_classname + """::_globalSieveParticleListIsEmpty;
-
+    return jinja2.Template("""
 namespace {
   constexpr double SortingTolerance = 1.01;
 }

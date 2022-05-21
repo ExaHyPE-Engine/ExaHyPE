@@ -130,6 +130,7 @@ project.output.makefile.set_mode( build_mode )
 
 particle = peano4.toolbox.particles.Particle("Particle")
 
+
 # Define properties
 v_attr = peano4.dastgen2.Peano4DoubleArray("v","Dimensions")
 a_attr = peano4.dastgen2.Peano4DoubleArray("a","Dimensions")
@@ -174,6 +175,8 @@ time_attr     = dastgen2.attributes.Double("time")
 timeStepSize_attr = dastgen2.attributes.Double("timeStepSize")
 residual_attr = dastgen2.attributes.Double("residual")
 iteration_count_attr = dastgen2.attributes.Integer("iterCount")
+
+particle.data.add_attribute( dastgen2.attributes.Enumeration("MoveState",["New","NotMovedYet","Moved"]) )
 
 # Add particle properties
 particle.data.add_attribute(v_attr)
@@ -472,8 +475,8 @@ init_setup.add_action_set( peano4.toolbox.particles.InsertParticlesAlongCartesia
     #include "kernel_hydro.h"
     #include "equation_of_state.h"
     """,
-  computational_domain_offset=[0.0, 0.0],
-  guard="std::abs( 0.5-particle->getX(1) ) < 0.02"
+  computational_domain_offset=[0.0, 0.0]
+  , guard="std::abs( 0.5-particle->getX(1) ) < 0.02"
   ))
 
 init_setup.add_action_set( particle_tree_analysis )
