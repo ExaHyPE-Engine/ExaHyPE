@@ -86,7 +86,7 @@ class UpdateParallelState(ActionSet):
   __Template_EndTraversal = jinja2.Template("""
   logInfo( 
     "endTraversal()",
-    "tree " <<  _treeNumber <<
+    "tree=" <<  _treeNumber <<
     ", local particles=" << _numberOfLocalParticles << 
     ", virtual particles=" << _numberOfVirtualParticles << 
     ", leaving particles=" << _numberOfLeavingParticles

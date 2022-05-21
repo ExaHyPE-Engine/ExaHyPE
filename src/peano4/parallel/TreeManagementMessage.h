@@ -36,6 +36,7 @@ namespace parallel{
 
 struct peano4::parallel::TreeManagementMessage {
   public:
+
     enum class Action: int {
       RequestNewRemoteTree=0, CreateNewRemoteTree=1, RemoveChildTreeFromBooksAsChildBecameEmpty=2, JoinWithWorker=3, Acknowledgement=4    
     };
@@ -96,9 +97,9 @@ struct peano4::parallel::TreeManagementMessage {
     std::string toString() const;
   
   private:
-    int   _masterSpacetreeId;
-    int   _workerSpacetreeId;
-    Action   _action;
+      int   _masterSpacetreeId;
+      int   _workerSpacetreeId;
+      Action   _action;
 
 
 
@@ -111,7 +112,7 @@ struct peano4::parallel::TreeManagementMessage {
     #endif
 
 
-    
+
 };
 
 #endif

@@ -171,10 +171,11 @@ grid_traversal_event = dastgen2.DataModel( "peano4::grid::GridTraversalEvent" )
 grid_traversal_event.add_attribute( peano4.dastgen2.Peano4DoubleArray( "x", "Dimensions" ))
 grid_traversal_event.add_attribute( peano4.dastgen2.Peano4DoubleArray( "h", "Dimensions" ))
 grid_traversal_event.add_attribute( dastgen2.attributes.BooleanArray( "hasBeenRefined", "TwoPowerD" ) )
-grid_traversal_event.add_attribute( dastgen2.attributes.BooleanArray( "willBeRefined", "TwoPowerD" ) )
-grid_traversal_event.add_attribute( dastgen2.attributes.BooleanArray( "isVertexLocal", "TwoPowerD" ) )
-grid_traversal_event.add_attribute( dastgen2.attributes.BooleanArray( "isFaceLocal",   "TwoTimesD" ) )
-grid_traversal_event.add_attribute( dastgen2.attributes.Boolean(      "isCellLocal"                ) )
+grid_traversal_event.add_attribute( dastgen2.attributes.BooleanArray( "willBeRefined", "TwoPowerD"  ) )
+grid_traversal_event.add_attribute( dastgen2.attributes.BooleanArray( "isVertexLocal", "TwoPowerD"  ) )
+grid_traversal_event.add_attribute( dastgen2.attributes.BooleanArray( "isFaceLocal",   "TwoTimesD"  ) )
+grid_traversal_event.add_attribute( dastgen2.attributes.Boolean(      "isCellLocal"                 ) )
+grid_traversal_event.add_attribute( dastgen2.attributes.Boolean(      "isParentCellLocal"           ) )
 
 #
 # Also holds if a vertex is adjacent to a periodic boundary.

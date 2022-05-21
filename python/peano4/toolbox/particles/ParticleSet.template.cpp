@@ -1,8 +1,16 @@
 #include "{{CLASSNAME}}.h"
 #include "globaldata/{{PARTICLE_TYPE}}.h"
+#include "tarch/multicore/Lock.h"
 
 
 tarch::logging::Log {{NAMESPACE | join("::")}}::{{CLASSNAME}}::_log( "{{NAMESPACE | join("::")}}::{{CLASSNAME}}" );
+
+
+tarch::multicore::BooleanSemaphore   {{NAMESPACE | join("::")}}::{{CLASSNAME}}::_semaphore;
+
+{{NAMESPACE | join("::")}}::{{CLASSNAME}}     {{NAMESPACE | join("::")}}::{{CLASSNAME}}::_particlesThatCanNotBeLiftedWithinTheirTree;
+{{NAMESPACE | join("::")}}::{{CLASSNAME}}     {{NAMESPACE | join("::")}}::{{CLASSNAME}}::_particlesThatHaveToBeSieved;
+bool              {{NAMESPACE | join("::")}}::{{CLASSNAME}}::_thereAreParticlesToBeSieved;
 
 
 #if PeanoDebug>=1
@@ -187,5 +195,65 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::clone( const {{CLASSNAME}}& othe
   _debugX = otherSet._debugX;
   _debugH = otherSet._debugH;
   #endif
+}
+
+
+void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishedTraversal() {
+  for (auto& p: _particlesThatHaveToBeSieved) {
+    delete p;
+  }
+  _particlesThatHaveToBeSieved.clear();
+  _particlesThatHaveToBeSieved.insert(
+    _particlesThatHaveToBeSieved.end(),
+    _particlesThatCanNotBeLiftedWithinTheirTree.begin(),
+    _particlesThatCanNotBeLiftedWithinTheirTree.end()
+  );
+  _thereAreParticlesToBeSieved = not _particlesThatHaveToBeSieved.empty();
+  _particlesThatCanNotBeLiftedWithinTheirTree.clear();
+  if (not _particlesThatHaveToBeSieved.empty()) {
+    logInfo( "finishedTraversal()", "\#particles to be sieved=" << _particlesThatHaveToBeSieved.size() );
+  }
+}
+
+
+bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::thereAreParticlesToBeSieved() {
+  return _thereAreParticlesToBeSieved;
+}
+
+
+void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::particlesCanNotBeLiftedLocally() {
+  for (auto& p: *this) {
+    assertion2( p->getParallelState()==globaldata::{{PARTICLE_TYPE}}::ParallelState::Local, p->toString(), toString() );
+    p->setNewParallelState( globaldata::{{PARTICLE_TYPE}}::NewParallelState::Virtual );
+  }
+
+  tarch::multicore::Lock lock( _semaphore );
+  for (auto& p: *this) {
+    globaldata::{{PARTICLE_TYPE}}* copyOfParticle = new globaldata::{{PARTICLE_TYPE}}(*p);
+    _particlesThatCanNotBeLiftedWithinTheirTree.push_back(copyOfParticle);
+  }
+}
+
+
+{{NAMESPACE | join("::")}}::{{CLASSNAME}}  {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getParticlesToBeSievedIntoVertex(
+  const peano4::datamanagement::VertexMarker& marker,
+  double sortingTolerance
+) {
+  assertion( thereAreParticlesToBeSieved() );
+
+  {{NAMESPACE | join("::")}}::{{CLASSNAME}} result;
+  for (auto& p: _particlesThatHaveToBeSieved) {
+    if (
+      tarch::la::min( marker.h() ) >= p->getCutOffRadius()
+      and
+      marker.isContainedInAdjacentCells( p->getX(), 0.5 * sortingTolerance)
+    ) {
+      // @todo Debug
+      logInfo( "touchVertexLastTime(...)", "drop particle " << p->toString() << " from global sieve list into vertex " << marker.toString() );
+      globaldata::{{PARTICLE_TYPE}}* copyOfParticle = new globaldata::{{PARTICLE_TYPE}}(*p);
+      p->setParallelState( globaldata::{{PARTICLE_TYPE}}::ParallelState::Virtual );
+      result.push_back( copyOfParticle );
+    }
+  }
 }
 

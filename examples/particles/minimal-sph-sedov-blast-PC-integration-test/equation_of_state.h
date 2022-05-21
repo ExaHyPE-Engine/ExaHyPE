@@ -12,7 +12,7 @@
 __attribute__((always_inline)) inline static double gas_pressure_from_internal_energy(
   double density, double u){
 
-  return density * u * ( examples::particles::GAMMA - 1 );
+  return density * u * ( examples::particles::GAMMA - 1.0 );
 
 }
 
@@ -28,7 +28,7 @@ __attribute__((always_inline)) inline static double gas_pressure_from_internal_e
 __attribute__((always_inline)) inline static double gas_soundspeed_from_internal_energy(
   double u){
 
-  return std::sqrt( u * examples::particles::GAMMA*(examples::particles::GAMMA - 1) );
+  return std::sqrt( u * examples::particles::GAMMA*(examples::particles::GAMMA - 1.0) );
 
 }
 

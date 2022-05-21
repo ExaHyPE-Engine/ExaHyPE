@@ -309,6 +309,12 @@ Here is the general invariant however:
 \end{itemize}
 
 
+\begin{remark}
+  The action set \texttt{UpdateParticleGridAssociation} relies on some global
+  data. Therefore, you have to call \texttt{finishTraversal()} on the used
+  particle set in your main routine on each rank after all rank-local traversals have termined.
+\end{remark}
+
 \section{Dual tree traversal and particle-particle interaction}
 \label{section:pidt:particle-particle-interaction}
 

@@ -151,8 +151,8 @@ void {FULL_QUALIFIED_CLASSNAME}::beginTraversal( const tarch::la::Vector<Dimensi
 {MAPPING_BEGIN_TRAVERSAL_CALLS}
 
   //
-  // Fill call stacks with dummies which represent level -1 such that we can
-  // call standard action routines on level 0 with parents. Without these
+  // Fill call stacks with dummies which represent level 0 such that we can
+  // call standard action routines on level 1 with parents. Without these
   // statements, a top(1) call would raise an assertion.
   //
 {INITIAL_PUSH_TO_OUTPUT_STREAMS}

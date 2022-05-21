@@ -36,6 +36,8 @@ struct peano4::datamanagement::VertexMarker {
     std::bitset<TwoPowerD>  _hasBeenRefined;
     std::bitset<TwoPowerD>  _willBeRefined;
     std::bitset<TwoPowerD>  _isLocal;
+
+    bool                    _isParentCellLocal;
     //std::bitset<TwoPowerD>  _isAdjacentToParallelDomainBoundary;
 
     /**
@@ -85,6 +87,19 @@ struct peano4::datamanagement::VertexMarker {
      * Is a vertex local, i.e. not adjacent to any boundary or remote
      */
     bool isLocal(int i) const;
+
+    /**
+     * Whenever we touch a vertex the first or the last time, we touch
+     * it from a cell: If we touch a vertex the first time, the traversal
+     * is just about to enter a cell and sees that one of its vertices is
+     * not loaded yet. When we issue a touchVertexLastTime() event, the
+     * traversal is just about to leave a cell.
+     *
+     * So there's a cell state associated with any vertex event, and,
+     * therefore, we know if the corresponding cell is local and whether
+     * its parent cell is local.
+     */
+    bool isParentCellLocal() const;
 
     //bool isAdjacentToParallelDomainBoundary() const;
     //bool isAdjacentToParallelDomainBoundary(int i) const;

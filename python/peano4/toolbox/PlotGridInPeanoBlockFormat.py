@@ -117,7 +117,7 @@ class PlotGridInPeanoBlockFormat(ActionSet):
   std::ostringstream snapshotFileName;
   snapshotFileName << "{{FILENAME}}-" << counter;
 
-  if (tarch::mpi::Rank::getInstance().getNumberOfRanks()>0 ) {
+  if (tarch::mpi::Rank::getInstance().getNumberOfRanks()>1 ) {
     snapshotFileName << "-rank-" << tarch::mpi::Rank::getInstance().getRank();
   }
 

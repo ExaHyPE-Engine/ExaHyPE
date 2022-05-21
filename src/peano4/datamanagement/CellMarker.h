@@ -38,6 +38,7 @@ struct peano4::datamanagement::CellMarker {
     bool _hasBeenRefined;
     bool _willBeRefined;
     bool _isLocal;
+    bool _isParentLocal;
     bool _areAllVerticesRefined;
     bool _isOneVertexHanging;
     bool _isOneVertexCreatedOrDestroyed;
@@ -122,7 +123,21 @@ struct peano4::datamanagement::CellMarker {
 
     std::string toString() const;
 
+    /**
+     * Usually if you have an event of a cell, then the cell is alo local.
+     * Otherwise, an event not be called.
+     */
     bool isLocal() const;
+
+    /**
+     * A cell can be local and its parent still might not be local. This happens
+     * if we have a horizontal tree cut. It also happens on the very top of the
+     * spacetree: Level 0 is by definition not persistent and thus is not
+     * considered to be local.
+     *
+     * @see isLocal()
+     */
+    bool isParentLocal() const;
 
     /**
      * A enclave cell in the definition of Charrier, Hazelwood, Weinzierl is a
