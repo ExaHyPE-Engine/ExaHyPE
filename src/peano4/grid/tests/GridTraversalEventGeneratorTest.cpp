@@ -324,26 +324,69 @@ void peano4::grid::tests::GridTraversalEventGeneratorTest::testCreateGenericCell
   #if Dimensions==2
   GridTraversalEventGenerator generator(1);
 
-  GridTraversalEvent event;
-  GridVertex vertices[TwoPowerD];
+  GridVertex coarseGridVertices[TwoPowerD];
+  GridVertex fineGridVertices[TwoPowerD];
 
-  vertices[0].setState( GridVertex::State::Unrefined );
-  vertices[0].setAdjacentRanks( { InvalidRank, 1, InvalidRank, 0 } );
-  vertices[0].setBackupOfAdjacentRanks( { InvalidRank, 1, InvalidRank, 0 } );
-  vertices[1].setState( GridVertex::State::Unrefined );
-  vertices[1].setAdjacentRanks( { 1, 1, 0, 1 } );
-  vertices[1].setBackupOfAdjacentRanks( { 1, 1, 0, 1 } );
-  vertices[2].setState( GridVertex::State::Unrefined );
-  vertices[2].setAdjacentRanks( { InvalidRank, 0, InvalidRank, 0 } );
-  vertices[2].setBackupOfAdjacentRanks( { InvalidRank, 0, InvalidRank, 0 } );
-  vertices[3].setState( GridVertex::State::Unrefined );
-  vertices[3].setAdjacentRanks( { 0, 1, 0, 0 } );
-  vertices[3].setBackupOfAdjacentRanks( { 0, 1, 0, 0 } );
+  fineGridVertices[0].setState( GridVertex::State::HangingVertex );
+  fineGridVertices[0].setAdjacentRanks( { 0,0,0,0 } );
+  fineGridVertices[0].setBackupOfAdjacentRanks( { 0,0,0,0 } );
 
-  state.toString():(level=4,x=[0.37037,0.358025],h=[0.0123457,0.0123457],inverted=1,evenFlags=10,accessNumber=[-1,2,1,3]),
-  relativePositionToFather:[0,2],
-  fineGridVertices[0].toString():(state=HangingVertex,adjacentRanks=[0,0,0,0],backupOfAdjacentRanks=[0,0,0,0],hasBeenAntecessorOfRefinedVertexInPreviousTreeSweep=0,isAntecessorOfRefinedVertexInCurrentTreeSweep=0,numberOfAdjacentRefinedLocalCells=0,x=[0.37037,0.358025],level=4),fineGridVertices[1].toString():(state=Unrefined,adjacentRanks=[0,0,0,0],backupOfAdjacentRanks=[0,0,0,0],hasBeenAntecessorOfRefinedVertexInPreviousTreeSweep=0,isAntecessorOfRefinedVertexInCurrentTreeSweep=0,numberOfAdjacentRefinedLocalCells=0,x=[0.382716,0.358025],level=4),fineGridVertices[2].toString():(state=HangingVertex,adjacentRanks=[0,0,0,0],backupOfAdjacentRanks=[0,0,0,0],hasBeenAntecessorOfRefinedVertexInPreviousTreeSweep=0,isAntecessorOfRefinedVertexInCurrentTreeSweep=0,numberOfAdjacentRefinedLocalCells=0,x=[0.37037,0.37037],level=4),fineGridVertices[3].toString():(state=Unrefined,adjacentRanks=[0,0,0,0],backupOfAdjacentRanks=[0,0,0,0],hasBeenAntecessorOfRefinedVertexInPreviousTreeSweep=0,isAntecessorOfRefinedVertexInCurrentTreeSweep=0,numberOfAdjacentRefinedLocalCells=0,x=[0.382716,0.37037],level=4),_id:0 (file:peano4/grid/GridTraversalEventGenerator.cpp,line:229)
+  fineGridVertices[1].setState( GridVertex::State::Unrefined );
+  fineGridVertices[1].setAdjacentRanks( { 0,0,0,0 } );
+  fineGridVertices[1].setBackupOfAdjacentRanks( { 0,0,0,0 } );
 
+  fineGridVertices[2].setState( GridVertex::State::HangingVertex );
+  fineGridVertices[2].setAdjacentRanks( { 0,0,0,0 } );
+  fineGridVertices[2].setBackupOfAdjacentRanks( { 0,0,0,0 } );
+
+  fineGridVertices[3].setState( GridVertex::State::Unrefined );
+  fineGridVertices[3].setAdjacentRanks( { 0,0,0,0 } );
+  fineGridVertices[3].setBackupOfAdjacentRanks( { 0,0,0,0 } );
+
+  coarseGridVertices[0].setState( GridVertex::State::Unrefined );
+  coarseGridVertices[0].setAdjacentRanks( { 0,0,0,0 } );
+  coarseGridVertices[0].setBackupOfAdjacentRanks( { 0,0,0,0 } );
+
+  coarseGridVertices[1].setState( GridVertex::State::Refined );
+  coarseGridVertices[1].setAdjacentRanks( { 0,0,0,0 } );
+  coarseGridVertices[1].setBackupOfAdjacentRanks( { 0,0,0,0 } );
+
+  coarseGridVertices[2].setState( GridVertex::State::Unrefined );
+  coarseGridVertices[2].setAdjacentRanks( { 0,0,0,0 } );
+  coarseGridVertices[2].setBackupOfAdjacentRanks( { 0,0,0,0 } );
+
+  coarseGridVertices[3].setState( GridVertex::State::Refined );
+  coarseGridVertices[3].setAdjacentRanks( { 0,0,0,0 } );
+  coarseGridVertices[3].setBackupOfAdjacentRanks( { 0,0,0,0 } );
+
+  AutomatonState state(
+    4,                            // level,
+    {0.37037,0.358025},           // x
+    {0.0123457,0.0123457},          // h
+    true,                         // inverted
+    std::bitset<Dimensions>(2),   // even flags = 10
+    {-1,2,1,3}
+  );
+  tarch::la::Vector<Dimensions,int> relativePositionToFather = {0,2};
+
+  GridTraversalEvent event = generator.createGenericCellTraversalEvent(
+    coarseGridVertices,
+    fineGridVertices,
+    state,
+    SplitSpecification(),
+    std::set<int>(), std::set<int>(), std::set<int>(),
+    relativePositionToFather, true
+  );
+
+  validateEqualsWithParams1( event.getIsVertexLocal(0), true, event.toString() );
+  validateEqualsWithParams1( event.getIsVertexLocal(1), true, event.toString() );
+  validateEqualsWithParams1( event.getIsVertexLocal(2), true, event.toString() );
+  validateEqualsWithParams1( event.getIsVertexLocal(3), true, event.toString() );
+
+  validateEqualsWithParams1( event.getIsFaceLocal(0), true, event.toString() );
+  validateEqualsWithParams1( event.getIsFaceLocal(1), true, event.toString() );
+  validateEqualsWithParams1( event.getIsFaceLocal(2), true, event.toString() );
+  validateEqualsWithParams1( event.getIsFaceLocal(3), true, event.toString() );
   #endif
 }
 

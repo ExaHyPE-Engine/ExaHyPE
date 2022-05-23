@@ -123,9 +123,13 @@ ataTo=[30097328,0,30097744,0],cellData=30098160,relativePositionToFather=[0,2],i
      *
      * Here is the input in a nicer formatted way:
      *
-     * state.toString():(level=4,x=[0.37037,0.358025],h=[0.0123457,0.0123457],inverted=1,evenFlags=10,accessNumber=[-1,2,1,3]),
-  relativePositionToFather:[0,2],
-  fineGridVertices[0].toString():(state=HangingVertex,adjacentRanks=[0,0,0,0],backupOfAdjacentRanks=[0,0,0,0],hasBeenAntecessorOfRefinedVertexInPreviousTreeSweep=0,isAntecessorOfRefinedVertexInCurrentTreeSweep=0,numberOfAdjacentRefinedLocalCells=0,x=[0.37037,0.358025],level=4),fineGridVertices[1].toString():(state=Unrefined,adjacentRanks=[0,0,0,0],backupOfAdjacentRanks=[0,0,0,0],hasBeenAntecessorOfRefinedVertexInPreviousTreeSweep=0,isAntecessorOfRefinedVertexInCurrentTreeSweep=0,numberOfAdjacentRefinedLocalCells=0,x=[0.382716,0.358025],level=4),fineGridVertices[2].toString():(state=HangingVertex,adjacentRanks=[0,0,0,0],backupOfAdjacentRanks=[0,0,0,0],hasBeenAntecessorOfRefinedVertexInPreviousTreeSweep=0,isAntecessorOfRefinedVertexInCurrentTreeSweep=0,numberOfAdjacentRefinedLocalCells=0,x=[0.37037,0.37037],level=4),fineGridVertices[3].toString():(state=Unrefined,adjacentRanks=[0,0,0,0],backupOfAdjacentRanks=[0,0,0,0],hasBeenAntecessorOfRefinedVertexInPreviousTreeSweep=0,isAntecessorOfRefinedVertexInCurrentTreeSweep=0,numberOfAdjacentRefinedLocalCells=0,x=[0.382716,0.37037],level=4),_id:0 (file:peano4/grid/GridTraversalEventGenerator.cpp,line:229)
+     * state.toString():(level=4,x=[0.37037,0.358025],h=[0.0123457,0.0123457],inverted=1,evenFlags=10,accessNumber=[-1,2,1,3])
+     * relativePositionToFather:[0,2]
+     * fineGridVertices[0].toString():(state=HangingVertex,adjacentRanks=[0,0,0,0],backupOfAdjacentRanks=[0,0,0,0],hasBeenAntecessorOfRefinedVertexInPreviousTreeSweep=0,isAntecessorOfRefinedVertexInCurrentTreeSweep=0,numberOfAdjacentRefinedLocalCells=0,x=[0.37037,0.358025],level=4),
+     * fineGridVertices[1].toString():(state=Unrefined,adjacentRanks=[0,0,0,0],backupOfAdjacentRanks=[0,0,0,0],hasBeenAntecessorOfRefinedVertexInPreviousTreeSweep=0,isAntecessorOfRefinedVertexInCurrentTreeSweep=0,numberOfAdjacentRefinedLocalCells=0,x=[0.382716,0.358025],level=4),
+     * fineGridVertices[2].toString():(state=HangingVertex,adjacentRanks=[0,0,0,0],backupOfAdjacentRanks=[0,0,0,0],hasBeenAntecessorOfRefinedVertexInPreviousTreeSweep=0,isAntecessorOfRefinedVertexInCurrentTreeSweep=0,numberOfAdjacentRefinedLocalCells=0,x=[0.37037,0.37037],level=4),
+     * fineGridVertices[3].toString():(state=Unrefined,adjacentRanks=[0,0,0,0],backupOfAdjacentRanks=[0,0,0,0],hasBeenAntecessorOfRefinedVertexInPreviousTreeSweep=0,isAntecessorOfRefinedVertexInCurrentTreeSweep=0,numberOfAdjacentRefinedLocalCells=0,x=[0.382716,0.37037],level=4),
+     * _id:0 (file:peano4/grid/GridTraversalEventGenerator.cpp,line:229)
      *
      */
     void testCreateGenericCellTraversalEvent1();
