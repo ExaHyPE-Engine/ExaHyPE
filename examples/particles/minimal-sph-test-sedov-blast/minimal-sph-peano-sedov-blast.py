@@ -360,15 +360,12 @@ initialisation_snippet = """
   particle->setCutOffRadius(0.16);
   
   particle->setDensity ( 1.0 );        
-  particle->setMass( particle->getDensity()/400.0/2.56069/1.56122/2.56/0.939281 );   // 1/64 
-  /* Normalisation for actual number of particles in the simulation*/
-  particle->setMass( particle->getMass() * std::pow(HYDRO_PART_NUMBER / 64.0, 2) );
+  particle->setMass( particle->getDensity() / std::pow(HYDRO_PART_NUMBER, 2) );
 
-//  particle->setMass    ( particle->getDensity()/400/2.56069/1.56122/2.56/0.969103 );   // 1/63 
 //  particle->setPressure( 1e-6);
   
   particle->setSmoothingLength( SMOOTH_L_FAC * std::pow(particle->getMass()/particle->getDensity(), 1.0/Dimensions) );
-  particle->setSmoothingLengthPrevious( 0.80 * particle->getSmoothingLength() );
+  particle->setSmoothingLengthPrevious( particle->getSmoothingLength() );
  
   // Initialise the blast
   tarch::la::Vector<Dimensions,double> blast_cent(BLAST_CENTER);
@@ -654,7 +651,7 @@ touch_particle_last_time_compute_kernel = """
 //  and localParticle->getHasConverged()==false
     and 
     not localParticle->getIsBoundaryParticle()
-  ) {
+  ){
     /* Retrieve some properties */
     const double m_a = localParticle->getMass();
     const double h_a = localParticle->getSmoothingLength();
@@ -699,57 +696,64 @@ touch_particle_last_time_compute_kernel = """
       const double m_a = localParticle->getMass();  
       const double h_a = localParticle->getSmoothingLength();
  
-        const double h_inv = 1.0/h_a;
-      
-        /* Compute the norm of the curl */
-        /* 2D sims */
-        const double curl_v = std::sqrt( localParticle->getRot_v() * localParticle->getRot_v() );
-      
-        /* Compute the norm of div v */
-        const double abs_div_v = tarch::la::abs( localParticle->getDiv_v() );
-        
-        /* Compute the sound speed */
-        const double soundspeed = gas_soundspeed_from_internal_energy( localParticle->getU() );
+      const double h_inv = 1.0 / h_a;
     
-        // Construct final expression of Omega
-        /* Swift Expression for equivalent to Omega term ("f", see also Springel and Hernquist) */
-       
-        const double dh_drho_a = - h_a / rho_a / Dimensions;
-        const double common_factor = h_a / Dimensions / localParticle->getWcount();
-        
-        double grad_h_term;
-        const double grad_W_term = common_factor * localParticle->getWcount_dh();
-        
-        // Avoid problematic particles
-        if(grad_W_term < -0.9999){
-             /* if we get here, we either had very small neighbour contributions
-               (which should be treated as a no neighbour case in the ghost) or
-               a very weird particle distribution (e.g. particles sitting on
-               top of each other). Either way, we cannot use the normal
-               expression, since that would lead to overflow or excessive round
-               off and cause excessively high accelerations in the force loop */
-          grad_h_term = 0;
-        } else {
-          grad_h_term = common_factor * localParticle->getRho_dh()/(1.0 + grad_W_term);
-        }
+      /* Compute the norm of the curl */
+      /* 2D sims */
+      const double curl_v = std::sqrt( localParticle->getRot_v() * localParticle->getRot_v() );
     
-        /* Compute the Balsara Switch */
-        const double balsara = ALPHA_AV * abs_div_v /
-                               (abs_div_v + curl_v + 0.0001 * soundspeed * h_inv);
-                                   
-        assertion6( std::isfinite(balsara), localParticle->toString(), balsara, abs_div_v, 
-                                            curl_v, soundspeed, ALPHA_AV );
+      /* Compute the norm of div v */
+      const double abs_div_v = tarch::la::abs( localParticle->getDiv_v() );
       
-        /* Update variables */
-        const double P_a = gas_pressure_from_internal_energy( rho_a, localParticle->getU() );
-        
-        /* Grad-h-term (Omega) */
-        /* SWIFT */
-        localParticle->setOmega( grad_h_term );  
-        localParticle->setPressure(P_a);
-        localParticle->setSoundSpeed(soundspeed);
-        localParticle->setBalsara(balsara);
-    }  
+      /* Compute the sound speed */
+      const double soundspeed = gas_soundspeed_from_internal_energy( localParticle->getU() );
+    
+      // Construct final expression of Omega
+      /* Swift Expression for equivalent to Omega term ("f", see also Springel and Hernquist) */
+     
+      const double dh_drho_a = - h_a / rho_a / Dimensions;
+      const double common_factor = h_a / Dimensions / localParticle->getWcount();
+      
+      double grad_h_term;
+      const double grad_W_term = common_factor * localParticle->getWcount_dh();
+      
+      // Avoid problematic particles
+      if(grad_W_term < -0.9999){
+           /* if we get here, we either had very small neighbour contributions
+             (which should be treated as a no neighbour case in the ghost) or
+             a very weird particle distribution (e.g. particles sitting on
+             top of each other). Either way, we cannot use the normal
+             expression, since that would lead to overflow or excessive round
+             off and cause excessively high accelerations in the force loop */
+        grad_h_term = 0;
+
+        /* Verbose */
+        logInfo( "touchVertexLastTime()", "Setting grad_h_term=0 for part:  " << localParticle->toString() );
+
+      } else {
+
+        grad_h_term = common_factor * localParticle->getRho_dh()/(1.0 + grad_W_term);
+
+      }
+    
+      /* Compute the Balsara Switch */
+      const double balsara = ALPHA_AV * abs_div_v /
+                             (abs_div_v + curl_v + 0.0001 * soundspeed * h_inv);
+                                 
+      assertion6( std::isfinite(balsara), localParticle->toString(), balsara, abs_div_v, 
+                                          curl_v, soundspeed, ALPHA_AV );
+    
+      /* Update variables */
+      const double P_a = gas_pressure_from_internal_energy( rho_a, localParticle->getU() );
+      
+      /* Grad-h-term (Omega) */
+      /* SWIFT */
+      localParticle->setOmega( grad_h_term );  
+      localParticle->setPressure(P_a);
+      localParticle->setSoundSpeed(soundspeed);
+      localParticle->setBalsara(balsara);
+
+    } /* End hydro_prepare_force */
     
     
     //
@@ -758,6 +762,7 @@ touch_particle_last_time_compute_kernel = """
     // =============================
     //
     {
+      const double timeStepSize = GLOBAL_TIME_STEP_SIZE;
       const double hydro_eta_dim = std::pow(SMOOTH_L_FAC, Dimensions);
       const double eps = H_TOLERANCE; 
 
@@ -765,139 +770,131 @@ touch_particle_last_time_compute_kernel = """
        * Here we use the last update on previous time-step */
       const double h_0 = localParticle->getSmoothingLengthPrevious();
 
+      /* Set initial guess for NR */
+//      const double h_init = h_0;
+      const double h_init = h_0 + localParticle->getHDot() * timeStepSize;
+
       /* Get some useful values */
-      const double h_init = h_0;
-      const double h_old = localParticle->getSmoothingLength();
+      double h_old = localParticle->getSmoothingLength();
+
+      if( localParticle->getIterCount() == 0 ){ /* use initial guess h_init */
+        h_old = h_init;
+      }
+
       const double h_old_dim = std::pow(h_old, Dimensions);
       const double h_old_dim_minus_one = std::pow(h_old, Dimensions - 1);
       
       double h_new;
-      int has_no_neighbours = 0;
+
+      /* Check that smoothing length from previous iteration is non-zero */
+      assertion3( h_old > tarch::la::NUMERICAL_ZERO_DIFFERENCE, localParticle->toString(), h_init, h_0 );
     
       if( localParticle->getWcount() < 1e-5 ) { /* No neighbours case */
+
+        /* Flag that there were no neighbours */
+        localParticle->setHasNoNeighbours(true);
+
+        /* Verbose */
         logInfo( "touchVertexLastTime()", "no neighbour case for particle " << localParticle->toString() );
 
-       /* Flag that there were no neighbours */
-       has_no_neighbours = 1;
-       localParticle->setHasNoNeighbours(true);
+        /* Double h and try again */
+        h_new = 2.0 * h_old;
 
-       /* Double h and try again */
-       h_new = 2.0 * h_old;
+      } else {
 
-     } else {
+        /* Compute one step of the Newton-Raphson scheme */
+        const double n_sum = localParticle->getWcount() * h_old_dim;
+        const double n_target = hydro_eta_dim;
+        const double f = n_sum - n_target;
+        const double f_prime = localParticle->getWcount_dh() * h_old_dim +
+                                  Dimensions * localParticle->getWcount() * h_old_dim_minus_one;
 
-       /* Finish the density calculation */
-       /* Skip this as this is already done in touch last step of Density loop */
-       //       hydro_end_density(p, cosmo);
+        // Debug
+//        assertion6( f!=0, localParticle->toString(), h_new, h_old, CutoffParticleH, HYDRO_h_MIN, HYDRO_h_MAX );       
 
-       /* Compute one step of the Newton-Raphson scheme */
-       const double n_sum = localParticle->getWcount() * h_old_dim;
-       const double n_target = hydro_eta_dim;
-       const double f = n_sum - n_target;
-       const double f_prime = localParticle->getWcount_dh() * h_old_dim +
-                                 Dimensions * localParticle->getWcount() * h_old_dim_minus_one;
-
-       /* Improve the bisection bounds */
-       if (n_sum < n_target) {
-         localParticle->setHLeft ( std::max(localParticle->getHLeft (), h_old) );
-       } else if (n_sum > n_target) {
-         localParticle->setHRight( std::min(localParticle->getHRight(), h_old) );
-       }
+        /* Improve the bisection bounds */
+        if (n_sum < n_target) {
+          localParticle->setHLeft ( std::max(localParticle->getHLeft (), h_old) );
+        } else if (n_sum > n_target) {
+          localParticle->setHRight( std::min(localParticle->getHRight(), h_old) );
+        }
  
-       /* Skip if h is already h_max and we don't have enough neighbours */
-       /* Same if we are below h_min */
-       /* Same if we have hit the Peano cutoff radius 
-        */
-       tarch::la::Vector<Dimensions,double> GridSize = marker.h();
-       const double GridSizeHalf = 0.5 * GridSize(0); 
-       const double CutoffParticleH = KERNEL_SUPPORT_RAD * localParticle->getSmoothingLength();
+        /* Skip if h is already h_max and we don't have enough neighbours */
+        /* Same if we are below h_min */
+        /* Same if we have hit the Peano cutoff radius 
+         */
+
+        tarch::la::Vector<Dimensions,double> GridSize = marker.h();
+        const double GridSizeHalf = 0.5 * GridSize(0); 
+        const double CutoffParticleH = KERNEL_SUPPORT_RAD * localParticle->getSmoothingLength();
  
-       if ( ((localParticle->getSmoothingLength() >= HYDRO_h_MAX) && (f < 0.0)) ||
-            ((localParticle->getSmoothingLength() <= HYDRO_h_MIN) && (f > 0.0)) ||
-              tarch::la::greaterEquals(CutoffParticleH, GridSizeHalf) ){
+        if ( ((localParticle->getSmoothingLength() >= HYDRO_h_MAX) && (f < 0.0)) ||
+             ((localParticle->getSmoothingLength() <= HYDRO_h_MIN) && (f > 0.0)) ||
+               tarch::la::greaterEquals(CutoffParticleH, GridSizeHalf) ){
 
-         /* We have a particle whose smoothing length is already set (wants
-          * to be larger but has already hit the maximum OR wants to be
-          * smaller but has already reached the minimum). So, just tidy up
-          * as if the smoothing length had converged correctly  */
+          /* We have a particle whose smoothing length is already set (wants
+           * to be larger but has already hit the maximum OR wants to be
+           * smaller but has already reached the minimum). So, just tidy up
+           * as if the smoothing length had converged correctly  */
 
-         // Debug
-//         assertion9( localParticle->getSmoothingLength()<1e-5,                                                                                                                                                                                                              
-//               localParticle->toString(), h_new, h_old, f, CutoffParticleH, GridSizeHalf, HYDRO_h_MIN, HYDRO_h_MAX, GridSize(0) );       
+          /* Verbose about this particle */
+          logInfo( "touchVertexLastTime()", " This particle is unable to shrink/grow anymore:  " << localParticle->toString() );
 
-         /* Here SWIFT would prepare the gradient and force calculations 
-          * Skipped. 
-          */
+//        continue;
+        }
 
-         /* Ok, we are done with this particle */
-//         continue;
-       }
+        /* Normal case: 
+         * We are able to use Newton-Raphson to get a better value of h */
 
-       /* Normal case: Use Newton-Raphson to get a better value of h */
+        /* Avoid floating point exception from f_prime = 0 */
+        h_new = h_old - f / ( f_prime + tarch::la::NUMERICAL_ZERO_DIFFERENCE );
+          
+        /* Safety check: truncate to the range [ h_old/2 , 2h_old ]. */
+        h_new = std::min( h_new, 2.0 * h_old );
+        h_new = std::max( h_new, 0.5 * h_old );
 
-       /* Avoid floating point exception from f_prime = 0 */
-//      h_new = h_old - f / (f_prime + FLT_MIN);
-       h_new = h_old - f / (f_prime );
-         
-       /* Be verbose about the particles that struggle to converge */
-       /* @TODO */
+//        /* Verify that we are actually progressing towards the answer */
+//        h_new = std::max( h_new, localParticle->getHLeft () );
+//        h_new = std::min( h_new, localParticle->getHRight() );
 
-       // Debug
-//       assertion6( f!=0,                                                                                                                                                                                                              
-//             localParticle->toString(), h_new, h_old, CutoffParticleH, HYDRO_h_MIN, HYDRO_h_MAX );       
+      }   /* end of if( localParticle->getWcount() < 1e-5 ) else block */
 
-//       assertion3( ((f > 0.0 && h_new > h_old) || (f < 0.0 && h_new < h_old)) &&
-//              (h_old < 0.999 * HYDRO_h_MAX), localParticle->toString(), h_new, h_old );
+      /* By now we have got h_new for either of the yes/no neighbour cases */
 
-       /* Safety check: truncate to the range [ h_old/2 , 2h_old ]. */
-       h_new = std::min(h_new, 2.0 * h_old);
-       h_new = std::max(h_new, 0.5 * h_old);
+      /* Check convergence */
+      const double residual = std::abs(h_new - h_old) / h_0;
+      localParticle->setResidual ( residual );
 
-       /* Verify that we are actually progressing towards the answer */
-       h_new = std::max( h_new, localParticle->getHLeft ());
-       h_new = std::min( h_new, localParticle->getHRight());
-     }   // end of if( localParticle->getWcount() < 1e-5 ) else block
-
-     /* By now we have got h_new for either of the yes/no neighbour cases */
-
-     /* Check whether the particle has an inappropriate smoothing length
-      */
-     if (std::abs(h_new - h_old) > eps * h_old) {
+      if(residual > eps){ /* this particle has not converged */
   
-       /* Ok, correct then */
+        /* Ok, correct then */
+
+//        /* Truncate using lower bound: */
+//        if (h_new > 0.01960){
+        localParticle->setSmoothingLength( h_new );
+//        }
+
+        /* Increase the iteration counter */
+        localParticle->setIterCount( localParticle->getIterCount() + 1 );
   
-       /* Case where we have been oscillating around the solution */
-       if( (h_new == localParticle->getHLeft() && h_old == localParticle->getHRight()) ||
-           (h_old == localParticle->getHLeft() && h_new == localParticle->getHRight()) ){
-  
-         /* Bissect the remaining interval */
-         localParticle->setSmoothingLength( 1.0 / std::pow (
-           0.5 * (std::pow( localParticle->getHLeft(),Dimensions ) + std::pow( localParticle->getHRight(),Dimensions) ), Dimensions ) );
-  
-       } else { 
-         
-         /* Normal case */
-         localParticle->setSmoothingLength( h_new );
-       } 
+      } else {
+        
+        /* No need to update */
 
-     }
+        /* However, if this is iter 0, we still update */
+        if (localParticle->getIterCount() == 0) {
+          localParticle->setSmoothingLength( h_new );
+        }
 
-     /* By now the smoothing length has been updated */
+        /* Flag that particle has already converged */
+        localParticle->setHasConverged( true );
 
-     /* Increase the iteration counter */
-     localParticle->setIterCount( localParticle->getIterCount() + 1 );
+      }
 
-     /* Compute residual */
-     assertion1( h_old>tarch::la::NUMERICAL_ZERO_DIFFERENCE, localParticle->toString() );
-     const double residual = std::abs(h_new - h_old)/h_old;
-     localParticle->setResidual ( residual );
-    
-     /* Flag if particle has converged */
-     if(residual < eps){
-       localParticle->setHasConverged(true);
-     }
-    }
-  }
+    } /* End of Newton-Raphson */
+
+  } /* End of localParticle->getParallelState()==globaldata::Particle::ParallelState::Local ... */
+
 """
 
 
@@ -1920,6 +1917,7 @@ particle_plotter.add_attribute_to_plot(soundSpeed_attr, 1)
 particle_plotter.add_attribute_to_plot(timeStepSize_attr, 1)
 particle_plotter.add_attribute_to_plot(smoothL_attr , 1)
 particle_plotter.add_attribute_to_plot(smoothL_prev_attr , 1)
+particle_plotter.add_attribute_to_plot(hDot_attr , 1)
 particle_plotter.add_attribute_to_plot(residual_attr, 1)
 particle_plotter.add_attribute_to_plot(has_converged_attr, 1)
 particle_plotter.add_attribute_to_plot(iteration_count_attr, 1)

@@ -179,7 +179,6 @@ int main(int argc, char** argv) {
             peano4::parallel::SpacetreeSet::getInstance().traverse(computeDensityAndUpdateSmoothingLength);
             examples::particles::vertexdata::ParticleSet::finishedTraversal();
 
-
             /* "Hydro loop" */
             /* Density loop */
 //            peano4::parallel::SpacetreeSet::getInstance().traverse(density);
@@ -213,11 +212,13 @@ int main(int argc, char** argv) {
         peano4::parallel::SpacetreeSet::getInstance().traverse(driftpart);
         examples::particles::vertexdata::ParticleSet::finishedTraversal();
 //        /* Also predicts v, u, h, ... */
+//        /* Only relevant for local time-stepping */
 //        peano4::parallel::SpacetreeSet::getInstance().traverse(predictHydroPart);
 
-        for (int iter=0; iter<5; iter++){
+        for (int iter=0; iter<3; iter++){
           peano4::parallel::SpacetreeSet::getInstance().traverse(computeDensityAndUpdateSmoothingLength);
           examples::particles::vertexdata::ParticleSet::finishedTraversal();
+
           /* "Hydro loop" */
           /* Density loop */
 //          peano4::parallel::SpacetreeSet::getInstance().traverse(density);
