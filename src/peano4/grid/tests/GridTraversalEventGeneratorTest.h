@@ -104,34 +104,29 @@ Aborted (core dumped)
      */
     void testCreateEnterCellTraversalEvent1();
 
-    void testCreateEnterCellTraversalEvent2();
 
     /**
+     * A bug report where I observed that local is not valid.
      *
-That's the input
-
- 57612126802  00:00:57     rank:0       core:1       trace        peano4::grid::GridTraversalEventGenerator::createEnterCellTraversalEvent(...)               in:state.toString():(level=4,x=[0.37037,0.358025],h=[0.0123457,0.0123457],inverted=1,evenFlags=10,accessNumber=[
--1,2,1,3]),_id:0,relativePositionToFather:[0,2],coarseGridVertices[0].toString():(state=Unrefined,adjacentRanks=[0,0,0,0],backupOfAdjacentRanks=[0,0,0,0],hasBeenAntecessorOfRefinedVertexInPreviousTreeSweep=0,isAntecessorOfRefinedVertexInCurrentTreeSweep=0,numberOfAdjace
-ntRefinedLocalCells=1,x=[0.37037,0.333333],level=3),coarseGridVertices[1].toString():(state=Refined,adjacentRanks=[0,0,0,0],backupOfAdjacentRanks=[0,0,0,0],hasBeenAntecessorOfRefinedVertexInPreviousTreeSweep=0,isAntecessorOfRefinedVertexInCurrentTreeSweep=0,numberOfAdja
-centRefinedLocalCells=1,x=[0.407407,0.333333],level=3),coarseGridVertices[2].toString():(state=Unrefined,adjacentRanks=[0,0,0,0],backupOfAdjacentRanks=[0,0,0,0],hasBeenAntecessorOfRefinedVertexInPreviousTreeSweep=0,isAntecessorOfRefinedVertexInCurrentTreeSweep=0,numberO
-fAdjacentRefinedLocalCells=1,x=[0.37037,0.37037],level=3),coarseGridVertices[3].toString():(state=Refined,adjacentRanks=[0,0,0,0],backupOfAdjacentRanks=[0,0,0,0],hasBeenAntecessorOfRefinedVertexInPreviousTreeSweep=0,isAntecessorOfRefinedVertexInCurrentTreeSweep=0,number
-OfAdjacentRefinedLocalCells=1,x=[0.407407,0.37037],level=3) (file:peano4/grid/GridTraversalEventGenerator.cpp,line:466)
- 57612233468  00:00:57     rank:0       core:1       trace        peano4::grid::GridTraversalEventGenerator::createGenericCellTraversalEvent(...)                 in:state.toString():(level=4,x=[0.37037,0.358025],h=[0.0123457,0.0123457],inverted=1,evenFlags=10,accessNumb
-er=[-1,2,1,3]),relativePositionToFather:[0,2],fineGridVertices[0].toString():(state=HangingVertex,adjacentRanks=[0,0,0,0],backupOfAdjacentRanks=[0,0,0,0],hasBeenAntecessorOfRefinedVertexInPreviousTreeSweep=0,isAntecessorOfRefinedVertexInCurrentTreeSweep=0,numberOfAdjace
-ntRefinedLocalCells=0,x=[0.37037,0.358025],level=4),fineGridVertices[1].toString():(state=Unrefined,adjacentRanks=[0,0,0,0],backupOfAdjacentRanks=[0,0,0,0],hasBeenAntecessorOfRefinedVertexInPreviousTreeSweep=0,isAntecessorOfRefinedVertexInCurrentTreeSweep=0,numberOfAdja
-centRefinedLocalCells=0,x=[0.382716,0.358025],level=4),fineGridVertices[2].toString():(state=HangingVertex,adjacentRanks=[0,0,0,0],backupOfAdjacentRanks=[0,0,0,0],hasBeenAntecessorOfRefinedVertexInPreviousTreeSweep=0,isAntecessorOfRefinedVertexInCurrentTreeSweep=0,numbe
-rOfAdjacentRefinedLocalCells=0,x=[0.37037,0.37037],level=4),fineGridVertices[3].toString():(state=Unrefined,adjacentRanks=[0,0,0,0],backupOfAdjacentRanks=[0,0,0,0],hasBeenAntecessorOfRefinedVertexInPreviousTreeSweep=0,isAntecessorOfRefinedVertexInCurrentTreeSweep=0,numb
-erOfAdjacentRefinedLocalCells=0,x=[0.382716,0.37037],level=4),_id:0 (file:peano4/grid/GridTraversalEventGenerator.cpp,line:229)
-
-
-That's the erroneous output:
-
-
- 57614825274  00:00:57     rank:0       core:1       trace        peano4::grid::GridTraversalEventGenerator::createEnterCellTraversalEvent(...)               out:state.toString():(level=4,x=[0.37037,0.358025],h=[0.0123457,0.0123457],inverted=1,evenFlags=10,accessNumber=[-1,2,1,3]),event.toString():(x=[0.376543,0.364198],h=[0.0123457,0.0123457],hasBeenRefined=0000,willBeRefined=0000,isVertexLocal=1010,isFaceLocal=1111,isCellLocal=1,isParentCellLocal=1,isVertexAdjacentToParallelDomainBoundary=0000,isFaceAdjacentToParallelDomainBoundary=0000,vertexDataFrom=[-3,2,-3,2],vertexDataTo=[2,3,0,1],faceDataFrom=[2,-3,2,2],faceDataTo=[3,0,1,2],cellData=2,relativePositionToFather=[0,2],invokingSpacetree=0,invokingSpacetreeIsNotInvolvedInAnyDynamicLoadBalancing=1),_id:0 (file:peano4/grid/GridTraversalEventGenerator.cpp,line:618)
-
-
-local flags are not valid.
-
+     * That's the input:
+<pre>
+ 57612233468  00:00:57     rank:0       core:1       trace        peano4::grid::GridTraversalEventGenerator::createGenericCellTraversalEvent(...)                 in:state.toString():(level=4,x=[0.37037,0.358025],h=[0.0123457,0.0123457],inverted=1,evenFlags=10,accessNumber=[-1,2,1,3]),relativePositionToFather:[0,2],fineGridVertices[0].toString():(state=HangingVertex,adjacentRanks=[0,0,0,0],backupOfAdjacentRanks=[0,0,0,0],hasBeenAntecessorOfRefinedVertexInPreviousTreeSweep=0,isAntecessorOfRefinedVertexInCurrentTreeSweep=0,numberOfAdjacentRefinedLocalCells=0,x=[0.37037,0.358025],level=4),fineGridVertices[1].toString():(state=Unrefined,adjacentRanks=[0,0,0,0],backupOfAdjacentRanks=[0,0,0,0],hasBeenAntecessorOfRefinedVertexInPreviousTreeSweep=0,isAntecessorOfRefinedVertexInCurrentTreeSweep=0,numberOfAdjacentRefinedLocalCells=0,x=[0.382716,0.358025],level=4),fineGridVertices[2].toString():(state=HangingVertex,adjacentRanks=[0,0,0,0],backupOfAdjacentRanks=[0,0,0,0],hasBeenAntecessorOfRefinedVertexInPreviousTreeSweep=0,isAntecessorOfRefinedVertexInCurrentTreeSweep=0,numberOfAdjacentRefinedLocalCells=0,x=[0.37037,0.37037],level=4),fineGridVertices[3].toString():(state=Unrefined,adjacentRanks=[0,0,0,0],backupOfAdjacentRanks=[0,0,0,0],hasBeenAntecessorOfRefinedVertexInPreviousTreeSweep=0,isAntecessorOfRefinedVertexInCurrentTreeSweep=0,numberOfAdjacentRefinedLocalCells=0,x=[0.382716,0.37037],level=4),_id:0 (file:peano4/grid/GridTraversalEventGenerator.cpp,line:229)
+</pre>
+     *
+     * which in the code gave us
+     *
+<pre>
+ 57612539282  00:00:57     rank:0       core:1       trace        peano4::grid::GridTraversalEventGenerator::createGenericCellTraversalEvent(...)                 out:event.toString():(x=[0.376543,0.364198],h=[0.0123457,0.0123457],hasBeenRefined=0000,willBeRefined=0000,i
+sVertexLocal=1010,isFaceLocal=1111,isCellLocal=1,isParentCellLocal=1,isVertexAdjacentToParallelDomainBoundary=0000,isFaceAdjacentToParallelDomainBoundary=0000,vertexDataFrom=[30144400,0,30144496,0],vertexDataTo=[30144592,0,30144688,0],faceDataFrom=[0,0,30096912,0],faceD
+ataTo=[30097328,0,30097744,0],cellData=30098160,relativePositionToFather=[0,2],invokingSpacetree=0,invokingSpacetreeIsNotInvolvedInAnyDynamicLoadBalancing=1),_id:0 (file:peano4/grid/GridTraversalEventGenerator.cpp,line:255)
+</pre>
+     *
+     * Here is the input in a nicer formatted way:
+     *
+     * state.toString():(level=4,x=[0.37037,0.358025],h=[0.0123457,0.0123457],inverted=1,evenFlags=10,accessNumber=[-1,2,1,3]),
+  relativePositionToFather:[0,2],
+  fineGridVertices[0].toString():(state=HangingVertex,adjacentRanks=[0,0,0,0],backupOfAdjacentRanks=[0,0,0,0],hasBeenAntecessorOfRefinedVertexInPreviousTreeSweep=0,isAntecessorOfRefinedVertexInCurrentTreeSweep=0,numberOfAdjacentRefinedLocalCells=0,x=[0.37037,0.358025],level=4),fineGridVertices[1].toString():(state=Unrefined,adjacentRanks=[0,0,0,0],backupOfAdjacentRanks=[0,0,0,0],hasBeenAntecessorOfRefinedVertexInPreviousTreeSweep=0,isAntecessorOfRefinedVertexInCurrentTreeSweep=0,numberOfAdjacentRefinedLocalCells=0,x=[0.382716,0.358025],level=4),fineGridVertices[2].toString():(state=HangingVertex,adjacentRanks=[0,0,0,0],backupOfAdjacentRanks=[0,0,0,0],hasBeenAntecessorOfRefinedVertexInPreviousTreeSweep=0,isAntecessorOfRefinedVertexInCurrentTreeSweep=0,numberOfAdjacentRefinedLocalCells=0,x=[0.37037,0.37037],level=4),fineGridVertices[3].toString():(state=Unrefined,adjacentRanks=[0,0,0,0],backupOfAdjacentRanks=[0,0,0,0],hasBeenAntecessorOfRefinedVertexInPreviousTreeSweep=0,isAntecessorOfRefinedVertexInCurrentTreeSweep=0,numberOfAdjacentRefinedLocalCells=0,x=[0.382716,0.37037],level=4),_id:0 (file:peano4/grid/GridTraversalEventGenerator.cpp,line:229)
+     *
      */
     void testCreateGenericCellTraversalEvent1();
   public:
