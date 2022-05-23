@@ -306,7 +306,9 @@ class UpdateParticleGridAssociation(ActionSet):
 """)
 
 
-  __Template_Sieve = jinja2.Template("""  
+  __Template_Sieve = jinja2.Template("""
+  // @todo Tobias fix. This is buggy
+  /*  
   if ( vertexdata::{{PARTICLES_CONTAINER}}::thereAreParticlesToBeSieved() ) {
     vertexdata::{{PARTICLES_CONTAINER}} sievedParticles = vertexdata::{{PARTICLES_CONTAINER}}::getParticlesToBeSievedIntoVertex(
         marker,
@@ -321,6 +323,7 @@ class UpdateParticleGridAssociation(ActionSet):
       sievedParticles.end()
     );
   }
+  */
 """)  
   
   
