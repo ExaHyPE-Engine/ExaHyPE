@@ -1,10 +1,49 @@
 #include "Rusanov.h"
 #include "tarch/compiler/CompilerSpecificSettings.h"
 #include "exahype2/fv/rusanov/LoopBody.h"
+
+// ***************************************************************************************
+// @todo Include this in a separate file
 #include <vector>
 #include <iterator>
 #include <execution>
 #include <algorithm>
+
+template<typename Collection1, typename Collection2, typename Collection3, typename Collection4, typename Collection5>
+void cartesian_product(Collection1&& collection1, Collection2&& collection2, Collection3&& collection3, Collection4&& collection4, Collection5&& collection5, auto func)
+{
+    std::for_each(
+        collection1.begin(), 
+        collection1.end(), 
+        [&collection2,&collection3,&collection4,&collection5,&func](auto i){
+            std::for_each(
+                collection2.begin(),
+                collection2.end(),
+                [&collection3,&collection4,&collection5,&i,&func](auto j){
+                    std::for_each(
+                        collection3.begin(),
+                        collection3.end(),
+                        [&collection4,&collection5,&i,&j,&func](auto k){
+                            std::for_each(
+                                collection4.begin(),
+                                collection4.end(),
+                                [&collection5,&i,&j,&k,&func](auto m){
+                                    std::for_each(
+                                        collection5.begin(),
+                                        collection5.end(),
+                                        [&i,&j,&k,&m,&func](auto n){
+                                            func(i,j,k,m,n);
+                                        }
+                                    );
+                                }
+                            );
+                        }
+                    );
+                }
+            );
+        }
+    );
+}
 
 template<typename Collection1, typename Collection2, typename Collection3, typename Collection4>
 void cartesian_product(Collection1&& collection1, Collection2&& collection2, Collection3&& collection3, Collection4&& collection4, auto func)
@@ -77,6 +116,8 @@ void cartesian_product(Collection1&& collection1, Collection2&& collection2, aut
         }
     );
 }
+
+// ***************************************************************************************
 
 
 template <

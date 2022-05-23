@@ -62,6 +62,29 @@ namespace exahype2 {
         __attribute__((always_inline))
         #endif
         ;
+
+
+        template <
+          typename Solver,
+          int      numberOfVolumesPerAxisInPatch,
+          int      haloSize,
+          int      unknowns,
+          int      auxiliaryVariables,
+          typename TempDataEnumerator
+        >
+        static void timeStepWithRusanov_batched_heap_static_calls(
+          int                     targetDevice,
+          ::exahype2::CellData&   patchData,
+          bool                    evaluateFlux,
+          bool                    evaluateNonconservativeProduct,
+          bool                    evaluateSource,
+          bool                    evaluateMaximumEigenvalueAfterTimeStep
+        )
+        #if defined(UseManualInlining)
+        __attribute__((always_inline))
+        #endif
+        ;
+
         namespace helper {
           #if defined(GPUOffloadingCPP)
           /**
@@ -93,5 +116,6 @@ namespace exahype2 {
 
 
 #include "Rusanov_patchwise_heap_static_calls.cpph"
+#include "Rusanov_batched_heap_static_calls.cpph"
 
 #endif
