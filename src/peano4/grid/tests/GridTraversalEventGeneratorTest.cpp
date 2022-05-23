@@ -320,18 +320,83 @@ void peano4::grid::tests::GridTraversalEventGeneratorTest::testCreateEnterCellTr
 }
 
 
-void peano4::grid::tests::GridTraversalEventGeneratorTest::testCreateEnterCellTraversalEvent2() {
+void peano4::grid::tests::GridTraversalEventGeneratorTest::testCreateGenericCellTraversalEvent1() {
   #if Dimensions==2
+  GridTraversalEventGenerator generator(1);
+
+  GridVertex coarseGridVertices[TwoPowerD];
+  GridVertex fineGridVertices[TwoPowerD];
+
+  fineGridVertices[0].setState( GridVertex::State::HangingVertex );
+  fineGridVertices[0].setAdjacentRanks( { 0,0,0,0 } );
+  fineGridVertices[0].setBackupOfAdjacentRanks( { 0,0,0,0 } );
+
+  fineGridVertices[1].setState( GridVertex::State::Unrefined );
+  fineGridVertices[1].setAdjacentRanks( { 0,0,0,0 } );
+  fineGridVertices[1].setBackupOfAdjacentRanks( { 0,0,0,0 } );
+
+  fineGridVertices[2].setState( GridVertex::State::HangingVertex );
+  fineGridVertices[2].setAdjacentRanks( { 0,0,0,0 } );
+  fineGridVertices[2].setBackupOfAdjacentRanks( { 0,0,0,0 } );
+
+  fineGridVertices[3].setState( GridVertex::State::Unrefined );
+  fineGridVertices[3].setAdjacentRanks( { 0,0,0,0 } );
+  fineGridVertices[3].setBackupOfAdjacentRanks( { 0,0,0,0 } );
+
+  coarseGridVertices[0].setState( GridVertex::State::Unrefined );
+  coarseGridVertices[0].setAdjacentRanks( { 0,0,0,0 } );
+  coarseGridVertices[0].setBackupOfAdjacentRanks( { 0,0,0,0 } );
+
+  coarseGridVertices[1].setState( GridVertex::State::Refined );
+  coarseGridVertices[1].setAdjacentRanks( { 0,0,0,0 } );
+  coarseGridVertices[1].setBackupOfAdjacentRanks( { 0,0,0,0 } );
+
+  coarseGridVertices[2].setState( GridVertex::State::Unrefined );
+  coarseGridVertices[2].setAdjacentRanks( { 0,0,0,0 } );
+  coarseGridVertices[2].setBackupOfAdjacentRanks( { 0,0,0,0 } );
+
+  coarseGridVertices[3].setState( GridVertex::State::Refined );
+  coarseGridVertices[3].setAdjacentRanks( { 0,0,0,0 } );
+  coarseGridVertices[3].setBackupOfAdjacentRanks( { 0,0,0,0 } );
+
+  AutomatonState state(
+    4,                            // level,
+    {0.37037,0.358025},           // x
+    {0.0123457,0.0123457},          // h
+    true,                         // inverted
+    std::bitset<Dimensions>(2),   // even flags = 10
+    {-1,2,1,3}
+  );
+  tarch::la::Vector<Dimensions,int> relativePositionToFather = {0,2};
+
+  GridTraversalEvent event = generator.createGenericCellTraversalEvent(
+    coarseGridVertices,
+    fineGridVertices,
+    state,
+    SplitSpecification(),
+    std::set<int>(), std::set<int>(), std::set<int>(),
+    relativePositionToFather, true
+  );
+
+  validateEqualsWithParams1( event.getIsVertexLocal(0), true, event.toString() );
+  validateEqualsWithParams1( event.getIsVertexLocal(1), true, event.toString() );
+  validateEqualsWithParams1( event.getIsVertexLocal(2), true, event.toString() );
+  validateEqualsWithParams1( event.getIsVertexLocal(3), true, event.toString() );
+
+  validateEqualsWithParams1( event.getIsFaceLocal(0), true, event.toString() );
+  validateEqualsWithParams1( event.getIsFaceLocal(1), true, event.toString() );
+  validateEqualsWithParams1( event.getIsFaceLocal(2), true, event.toString() );
+  validateEqualsWithParams1( event.getIsFaceLocal(3), true, event.toString() );
   #endif
 }
 
 
 void peano4::grid::tests::GridTraversalEventGeneratorTest::run() {
+  testMethod( testCreateGenericCellTraversalEvent1 );
   testMethod( testAreFacesLocal1 );
   testMethod( testAreFacesLocal2 );
   testMethod( testGetFaceType );
   testMethod( testCreateEnterCellTraversalEvent1 );
-  testMethod( testCreateEnterCellTraversalEvent2 );
   testMethod( testCreateLeaveCellTraversalEvent1 );
 }
 
