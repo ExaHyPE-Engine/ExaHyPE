@@ -355,7 +355,7 @@ void {FULL_QUALIFIED_CLASSNAME}::enterCell( const peano4::grid::GridTraversalEve
 
 
   TemplateEnterCell_VertexMappingCall = """
-  // Handle vertex {name}
+  // Handle vertex
   {{
     peano4::datamanagement::VertexMarker  marker(event);
 
@@ -365,6 +365,8 @@ void {FULL_QUALIFIED_CLASSNAME}::enterCell( const peano4::grid::GridTraversalEve
 
       marker.select(pick);
 
+      logDebug( "enterCell(...)", inVertexStack << "->" << pick << " (is-local=" << marker.isLocal() << ")" );
+      
       if (
         inVertexStack==peano4::grid::TraversalObserver::CreateOrDestroyPersistentGridEntity
         and

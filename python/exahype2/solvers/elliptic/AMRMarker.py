@@ -75,7 +75,7 @@ class AMRMarker(object):
   """
   
       
-  def __init__(self, name, relaxation_coefficient = 0.01, right_hand_side = -0.1, flag_domain_boundary = True, plot = False):
+  def __init__(self, name, relaxation_coefficient = 0.1, right_hand_side = -10.0, flag_domain_boundary = True, plot = False):
     """
     
   name: string
@@ -152,17 +152,46 @@ Relaxation coefficient: {}
      within the inheritance tree.
      
     """
-    self._action_set_smoother = peano4.toolbox.multigrid.MatrixFreeJacobi( self._data_model, self._relaxation_coefficient, "{}".format(self._right_hand_side) )
+    self._action_set_smoother = peano4.toolbox.multigrid.MatrixFreeJacobi( 
+      self._data_model, 
+      self._relaxation_coefficient, 
+      "{}".format(self._right_hand_side) 
+      )
     self._action_set_smoother.Template_CreateHangingVertex = """
-  fineGridVertex{{UNKNOWN}}.{{RESIDUAL_SETTER}}(1.0);
+  fineGridVertex{{UNKNOWN}}.{{UNKNOWN_SETTER}}(1.0);
+  fineGridVertex{{UNKNOWN}}.{{RESIDUAL_SETTER}}(0.0);
 """    
+    if self._flag_domain_boundary:
+      self._action_set_smoother.Template_TouchVertexLastTime += """
+const double boundaryValue = 1.0;
+"""
+    else:
+      self._action_set_smoother.Template_TouchVertexLastTime += """
+const double boundaryValue = 0.0;
+"""
+
     self._action_set_smoother.Template_TouchVertexLastTime += """
+  bool isBoundary = false;
+  tarch::la::Vector<Dimensions,double>  domainOffset(DomainOffset);
+  tarch::la::Vector<Dimensions,double>  domainSize(DomainSize);
+  for (int d=0; d<Dimensions; d++) {
+    isBoundary |= tarch::la::equals( marker.x()(d), domainOffset(d) );
+    isBoundary |= tarch::la::equals( marker.x()(d), domainOffset(d)+domainSize(d) );
+  }
+  if (isBoundary) {
+    fineGridVertex{{UNKNOWN}}.{{UNKNOWN_SETTER}}(boundaryValue);
+  }
   if ( fineGridVertex{{UNKNOWN}}.{{UNKNOWN_GETTER}}()<0.0 ) {
     fineGridVertex{{UNKNOWN}}.{{UNKNOWN_SETTER}}(0.0);
   }
 """    
     self._action_set_smoother.Template_TouchCellFirstTime += self._volumetric_coupling_term
-
+    self._action_set_smoother.Template_CreatePersistentVertex = """
+  fineGridVertex{{UNKNOWN}}.{{UNKNOWN_SETTER}}(1.0);
+"""    
+    self._action_set_smoother.additional_includes = """
+#include "Constants.h"
+"""    
 
   def couple_with_FV_solver(self,FV_solver,auxiliary_variable):
     """
@@ -227,15 +256,17 @@ Relaxation coefficient: {}
     step.use_vertex(self._data_model)
 
   
-  def _get_default_includes(self):
-    return """
-#include "tarch/la/Vector.h" 
-
-#include "peano4/utils/Globals.h"
-#include "peano4/utils/Loop.h"
-
-#include "repositories/SolverRepository.h"
-"""
+#  def _get_default_includes(self):
+#    return """
+##include "tarch/la/Vector.h" 
+#
+##include "peano4/utils/Globals.h"
+##include "peano4/utils/Loop.h"
+#
+##include "repositories/SolverRepository.h"
+#
+##include "Constants.h"
+#"""
 
 
   def add_actions_to_init_grid(self, step):
@@ -243,17 +274,18 @@ Relaxation coefficient: {}
     
     
     """
+    step.add_action_set( self._action_set_smoother )
     pass
 
     
   def add_actions_to_create_grid(self, step, evaluate_refinement_criterion):
     """
     
-     The boundary information is set only once. It is therefore important that
-     we ues the face label and initialise it properly.
+     It is important to plug into the creation, as this is the place where
+     we get the creational events.
      
     """
-    pass
+    step.add_action_set( self._action_set_smoother )
 
   
   def add_actions_to_plot_solution(self, step, output_path):
@@ -263,16 +295,22 @@ Relaxation coefficient: {}
      
     """
     if self._plot:
-      d = {}
-      self._init_dictionary_with_default_parameters(d)
-      self.add_entries_to_text_replacement_dictionary(d)
+#      d = {}
+#      self._init_dictionary_with_default_parameters(d)
+#      self.add_entries_to_text_replacement_dictionary(d)
 
+      ## Add it. I can't harm to do one more iteration, and we at least
+      ## get the hanging nodes right this way
+      step.add_action_set( self._action_set_smoother )
       step.add_action_set( peano4.toolbox.PlotScalarNodalFieldInPeanoBlockFormat( 
         filename=output_path + "amr-marker-" + self._name, 
         vertex_unknown=self._data_model,
         getter="getU()", 
         description="marker-value",
-        time_stamp_evaluation="0.5*(repositories::getMinTimeStamp()+repositories::getMaxTimeStamp())"
+        time_stamp_evaluation="0.5*(repositories::getMinTimeStamp()+repositories::getMaxTimeStamp())",
+        additional_includes="""
+#include "repositories/SolverRepository.h"       
+"""        
       ))
    
  
@@ -286,12 +324,6 @@ Relaxation coefficient: {}
     
     """
     step.add_action_set( self._action_set_smoother )
-
-    #d = {}
-    #self._init_dictionary_with_default_parameters(d)
-    #self.add_entries_to_text_replacement_dictionary(d)
-
-    #step.add_action_set( self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement )
 
 
   @abstractmethod
@@ -314,8 +346,8 @@ Relaxation coefficient: {}
 
     headerDictionary = {}
     implementationDictionary = {}
-    self._init_dictionary_with_default_parameters(headerDictionary)
-    self._init_dictionary_with_default_parameters(implementationDictionary)
+#    self._init_dictionary_with_default_parameters(headerDictionary)
+#    self._init_dictionary_with_default_parameters(implementationDictionary)
     self.add_entries_to_text_replacement_dictionary(headerDictionary)
     self.add_entries_to_text_replacement_dictionary(implementationDictionary)
 
@@ -333,27 +365,27 @@ Relaxation coefficient: {}
     output.makefile.add_cpp_file( self._name + ".cpp" )
 
 
-  def _init_dictionary_with_default_parameters(self,d):
-    """
-
-      This one is called by all algorithmic steps before I invoke
-      add_entries_to_text_replacement_dictionary().
-
-      See the remarks on set_postprocess_updated_patch_kernel to understand why
-      we have to apply the (partially befilled) dictionary to create a new entry
-      for this very dictionary.
-
-
-    """
-    d["RIGHT_HAND_SIDE"]        = self._right_hand_side
-    d["RELAXATION_COEFFICIENT"] = self._relaxation_coefficient
-    if self._flag_domain_boundary:
-      d["BOUNDARY_VALUE"]       = 1.0
-    else:
-      d["BOUNDARY_VALUE"]       = 0.0
-    
-    d["SOLVER_INSTANCE"]                = self.get_name_of_global_instance()
-    d["SOLVER_NAME"]                    = self._name
+#  def _init_dictionary_with_default_parameters(self,d):
+#    """
+#
+#      This one is called by all algorithmic steps before I invoke
+#      add_entries_to_text_replacement_dictionary().
+#
+#      See the remarks on set_postprocess_updated_patch_kernel to understand why
+#      we have to apply the (partially befilled) dictionary to create a new entry
+#      for this very dictionary.##
+##
+#
+#    """
+#    d["RIGHT_HAND_SIDE"]        = self._right_hand_side
+#    d["RELAXATION_COEFFICIENT"] = self._relaxation_coefficient
+#    if self._flag_domain_boundary:
+#      d["BOUNDARY_VALUE"]       = 1.0
+#    else:
+#      d["BOUNDARY_VALUE"]       = 0.0
+#    
+#    d["SOLVER_INSTANCE"]                = self.get_name_of_global_instance()
+#    d["SOLVER_NAME"]                    = self._name
 
 
   @property

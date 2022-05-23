@@ -2,13 +2,14 @@
 # use, please see the copyright notice at www.peano-framework.org
 from peano4.solversteps.ActionSet import ActionSet
 
+import jinja2
 
 
 class PlotScalarNodalFieldInPeanoBlockFormat(ActionSet):
   NoMetaFile     = "no-meta-file"
   CountTimeSteps = "count-time-steps"
 
-  def __init__(self,filename,vertex_unknown,getter,description,time_stamp_evaluation):
+  def __init__(self,filename,vertex_unknown,getter,description,time_stamp_evaluation, guard_predicate="true", additional_includes=""):
     """
       Plot only the grid structure
       
@@ -40,6 +41,8 @@ class PlotScalarNodalFieldInPeanoBlockFormat(ActionSet):
     self.d[ "GETTER" ]              = getter
     self.d[ "DESCRIPTION" ]         = description
     self.d[ "TIMESTAMP" ]           = time_stamp_evaluation
+    self.d[ "GUARD_PREDICATE" ]    = guard_predicate
+    self.additional_includes       = additional_includes
         
 
   __Template_Constructor = """
@@ -89,6 +92,7 @@ class PlotScalarNodalFieldInPeanoBlockFormat(ActionSet):
 
 
   __Template_TouchCellFirstTime = """ 
+if ( {{GUARD_PREDICATE}} ) {
   int vertexIndices[TwoPowerD];
 
   int patchIndex = _writer->plotPatch(
@@ -99,10 +103,11 @@ class PlotScalarNodalFieldInPeanoBlockFormat(ActionSet):
   assertion( _dataWriter!=nullptr );
   int vertexIndex  = _dataWriter->getFirstVertexWithinPatch(patchIndex);
   dfor2(k)
-    auto data = fineGridVertices{VERTEX_UNKNOWN_NAME}(kScalar).{GETTER};
+    auto data = fineGridVertices{{VERTEX_UNKNOWN_NAME}}(kScalar).{{GETTER}};
     _dataWriter->plotVertex( vertexIndex, data );
     vertexIndex++;
   enddforx
+}
 """
 
 
@@ -113,11 +118,11 @@ class PlotScalarNodalFieldInPeanoBlockFormat(ActionSet):
   counter++;
 
   std::ostringstream snapshotFileName;
-  snapshotFileName << "{FILENAME}-" << counter;
+  snapshotFileName << "{{FILENAME}}-" << counter;
 
-  if (tarch::mpi::Rank::getInstance().getNumberOfRanks()>1 ) {{
+  if (tarch::mpi::Rank::getInstance().getNumberOfRanks()>1 ) {
     snapshotFileName << "-rank-" << tarch::mpi::Rank::getInstance().getRank();
-  }}
+  }
 
   {% if TIMESTAMP==\"""" + NoMetaFile + """\" %}
   _writer = new tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter(
@@ -141,18 +146,18 @@ class PlotScalarNodalFieldInPeanoBlockFormat(ActionSet):
   );    
   {% endif %}
     
-  _dataWriter = _writer->createVertexDataWriter( "{VERTEX_UNKNOWN_NAME}", 2, 1, "{DESCRIPTION}" );
+  _dataWriter = _writer->createVertexDataWriter( "{{VERTEX_UNKNOWN_NAME}}", 2, 1, "{{DESCRIPTION}}" );
 """
 
 
   def get_body_of_operation(self,operation_name):
     result = "\n"
     if operation_name==ActionSet.OPERATION_TOUCH_CELL_FIRST_TIME:
-      result = self.__Template_TouchCellFirstTime.format(**self.d) 
+      result = jinja2.Template( self.__Template_TouchCellFirstTime).render(**self.d) 
     if operation_name==ActionSet.OPERATION_BEGIN_TRAVERSAL:
-      result = self.__Template_BeginTraversal.format(**self.d)             
+      result = jinja2.Template( self.__Template_BeginTraversal).render(**self.d)             
     if operation_name==ActionSet.OPERATION_END_TRAVERSAL:
-      result = self.__Template_EndTraversal.format(**self.d)             
+      result = jinja2.Template( self.__Template_EndTraversal).render(**self.d)             
     return result
 
 
@@ -176,7 +181,7 @@ class PlotScalarNodalFieldInPeanoBlockFormat(ActionSet):
 #include "tarch/multicore/BooleanSemaphore.h"
 #include "peano4/utils/Loop.h"
 #include "peano4/parallel/SpacetreeSet.h"
-"""
+""" + self.additional_includes
 
 
   def get_static_initialisations(self,full_qualified_classname):

@@ -40,6 +40,7 @@ class MatrixFreeJacobi(ActionSet):
     self.d[ "RESIDUAL_GETTER" ] = residual_getter
     self.d[ "OMEGA" ]           = relaxation_coefficient
     self.d[ "RHS" ]             = rhs_expr
+    self.additional_includes    = ""
     
 
   def get_body_of_getGridControlEvents(self):
@@ -104,11 +105,15 @@ class MatrixFreeJacobi(ActionSet):
 
 
   Template_TouchVertexLastTime = """
-  const double residual = {{RHS}} * tarch::la::volume(marker.h()/2.0) - fineGridVertex{{UNKNOWN}}.{{RESIDUAL_GETTER}}();
+  const tarch::la::Vector<ThreePowerD,double> stencil = toolbox::finiteelements::getLaplacian(
+    marker.h(), 1.0
+  );
+  const double diag     = stencil(ThreePowerD/2);
+  const double residual = {{RHS}} * tarch::la::volume(marker.h()) - fineGridVertex{{UNKNOWN}}.{{RESIDUAL_GETTER}}();
   fineGridVertex{{UNKNOWN}}.{{UNKNOWN_SETTER}}(
     fineGridVertex{{UNKNOWN}}.{{UNKNOWN_GETTER}}()
     + 
-    {{OMEGA}} * residual
+    {{OMEGA}} * residual / diag
   );  
   
   if ( marker.coincidesWithCoarseGridVertex() ) {
@@ -120,16 +125,51 @@ class MatrixFreeJacobi(ActionSet):
 """
   
 
+  Template_CreatePersistentVertex = """
+"""  
+  
   def get_body_of_operation(self,operation_name):
     result = "\n"
     if operation_name==ActionSet.OPERATION_TOUCH_VERTEX_FIRST_TIME:
-      result = jinja2.Template(self.Template_TouchVertexFirstTime).render(**self.d) 
+      result = """
+logTraceIn( "touchVertexFirstTime()" );
+"""
+      result += jinja2.Template(self.Template_TouchVertexFirstTime).render(**self.d) 
+      result += """
+logTraceOut( "touchVertexFirstTime()" );
+"""
     if operation_name==ActionSet.OPERATION_CREATE_HANGING_VERTEX:
-      result = jinja2.Template(self.Template_CreateHangingVertex).render(**self.d) 
+      result = """
+logTraceIn( "createHangingVertex()" );
+"""
+      result += jinja2.Template(self.Template_CreateHangingVertex).render(**self.d) 
+      result += """
+logTraceOut( "createHangingVertex()" );
+"""
+    if operation_name==ActionSet.OPERATION_CREATE_PERSISTENT_VERTEX:
+      result = """
+logTraceIn( "createPersistentVertex()" );
+"""
+      result += jinja2.Template(self.Template_CreatePersistentVertex).render(**self.d) 
+      result += """
+logTraceOut( "createPersistentVertex()" );
+"""
     if operation_name==ActionSet.OPERATION_TOUCH_CELL_FIRST_TIME:
-      result = jinja2.Template(self.Template_TouchCellFirstTime).render(**self.d) 
+      result = """
+logTraceIn( "touchCellFirstTime()" );
+"""
+      result += jinja2.Template(self.Template_TouchCellFirstTime).render(**self.d) 
+      result += """
+logTraceOut( "touchCellFirstTime()" );
+"""
     if operation_name==ActionSet.OPERATION_TOUCH_VERTEX_LAST_TIME:
-      result = jinja2.Template(self.Template_TouchVertexLastTime).render(**self.d) 
+      result = """
+logTraceIn( "touchVertexLastTime()" );
+"""
+      result += jinja2.Template(self.Template_TouchVertexLastTime).render(**self.d) 
+      result += """
+logTraceOut( "touchVertexLastTime()" );
+"""
     return result
 
 
@@ -145,4 +185,4 @@ class MatrixFreeJacobi(ActionSet):
 #include "toolbox/finiteelements/StencilFactory.h"
 
 #include "peano4/utils/Loop.h"
-"""
+""" + self.additional_includes

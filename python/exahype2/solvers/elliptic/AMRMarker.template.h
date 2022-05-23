@@ -35,10 +35,6 @@
 
 class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
   public:
-    static constexpr double RightHandSide         = {{RIGHT_HAND_SIDE}};
-    static constexpr double RelaxationCoefficient = {{RELAXATION_COEFFICIENT}};
-    static constexpr double BoundaryValue         = {{BOUNDARY_VALUE}};
-
     /**
      * We do not impose any constraints on the patch/cell size.
      */
