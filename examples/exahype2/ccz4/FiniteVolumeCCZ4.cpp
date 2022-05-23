@@ -323,21 +323,20 @@ void examples::exahype2::ccz4::FiniteVolumeCCZ4::nonconservativeProduct(
       else {result = ::exahype2::RefinementCommand::Keep;}
     }
   }
-  if (CCZ4ReSwi==4){ //gauge wave test
-    if (tarch::la::equals(t,0.0)){  //as we use a quantity calculated in postpocessing, we need to provide criterion at the first timestep
-      const double HThreshold = 0.1/NumberOfFiniteVolumesPerAxisPerPatch; 
-      logDebug( "refinementCriterion(...)", "CCZ4ReSwi=4 with x=" << volumeCentre(0) << ", h=" << volumeH(0) << ", dh=" << HThreshold );
-      
-      if ((std::abs(volumeCentre(0))<0.3) and (volumeH(0)>1.0/3.0/NumberOfFiniteVolumesPerAxisPerPatch)) { 
-        result=::exahype2::RefinementCommand::Refine; 
+  if (CCZ4ReSwi==4){ //single black hole, higher level of amr
+    if (tarch::la::equals(t,0.0)){  //as we use a quantity calculated in postpocessing, we need to provide criterion at the first timestep 
+      constexpr int NumberOfRefinementLayers = 4;
+ //   with some alter
+      double Radius[NumberOfRefinementLayers] = {5.0, 3.0, 1.5, 0.5};
+      double MaxH[NumberOfRefinementLayers]   = {0.3, 0.15, 0.04, 0.01};
+
+      result = ::exahype2::RefinementCommand::Keep;
+      for (int i=0; i<NumberOfRefinementLayers; i++) {
+        if (radius<Radius[i] and tarch::la::max(volumeH)>MaxH[i]) {
+          result=::exahype2::RefinementCommand::Refine;
+        }
       }
-      else if (std::abs(volumeCentre(0))<0.06) { 
-	result=::exahype2::RefinementCommand::Refine; 
-      }
-      else {
-	result = ::exahype2::RefinementCommand::Keep;
-      }
-    } 
+    }
   }
   if (CCZ4ReSwi==5){ //single black hole, cubic refinement??
     if (tarch::la::equals(t,0.0)){  //as we use a quantity calculated in postpocessing, we need to provide criterion at the first timestep 
