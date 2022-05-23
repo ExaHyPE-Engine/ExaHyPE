@@ -21,11 +21,12 @@ enum class Scenario {
 };
 
 
-Scenario scenario = Scenario::PointExplosion;
+//Scenario scenario = Scenario::PointExplosion;
+Scenario scenario = Scenario::PointExplosionWithDynamicAMR;
+//Scenario scenario = Scenario::BreakingDam;
 //Scenario scenario = Scenario::BreakingDamResolutionStudies;
 //Scenario scenario = Scenario::BreakingDamWithDynamicAMR;
 
-//Scenario scenario = Scenario::BreakingDam;
 
 
 
@@ -195,6 +196,7 @@ double examples::exahype2::euler::Euler::maxEigenvalue(
 }
 
 
+/*
 void examples::exahype2::euler::Euler::sourceTerm(
   const double * __restrict__ Q,
   const tarch::la::Vector<Dimensions,double>&  volumeCentre,
@@ -226,9 +228,12 @@ void examples::exahype2::euler::Euler::sourceTerm(
 
     }
 
+assertion(false);
+
     S[unknown] = 0.0001 * laplacian;
   }
 }
+*/
 
 
 

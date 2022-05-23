@@ -25,6 +25,8 @@ void exahype2::fv::rusanov::timeStepWithRusanov_patchwise_heap_functors(
    */
   constexpr int solversHaloSize        = 1;
 
+  assertionEquals(haloSize,1);
+
   exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator QInEnumerator       (                        1, numberOfVolumesPerAxisInPatch,haloSize,unknowns,auxiliaryVariables);
   exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator QOutEnumerator      (                        1, numberOfVolumesPerAxisInPatch,       0,unknowns,auxiliaryVariables);
   exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator fluxEnumerator      (patchData.numberOfCells, numberOfVolumesPerAxisInPatch,   solversHaloSize,unknowns,0);

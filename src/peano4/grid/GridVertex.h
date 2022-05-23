@@ -36,6 +36,7 @@ namespace grid{
 
 struct peano4::grid::GridVertex {
   public:
+
     enum class State: int {
       HangingVertex=0, New=1, Unrefined=2, Refined=3, RefinementTriggered=4, Refining=5, EraseTriggered=6, Erasing=7, Delete=8    
     };
@@ -112,14 +113,14 @@ struct peano4::grid::GridVertex {
     std::string toString() const;
   
   private:
-    State   _state;
-    tarch::la::Vector<TwoPowerD,int>   _adjacentRanks;
-    tarch::la::Vector<TwoPowerD,int>   _backupOfAdjacentRanks;
-    bool   _hasBeenAntecessorOfRefinedVertexInPreviousTreeSweep;
-    bool   _isAntecessorOfRefinedVertexInCurrentTreeSweep;
-    int   _numberOfAdjacentRefinedLocalCells;
-    tarch::la::Vector<Dimensions,double>   _x;
-    int   _level;
+      State   _state;
+      tarch::la::Vector<TwoPowerD,int>   _adjacentRanks;
+      tarch::la::Vector<TwoPowerD,int>   _backupOfAdjacentRanks;
+      bool   _hasBeenAntecessorOfRefinedVertexInPreviousTreeSweep;
+      bool   _isAntecessorOfRefinedVertexInCurrentTreeSweep;
+      int   _numberOfAdjacentRefinedLocalCells;
+      tarch::la::Vector<Dimensions,double>   _x;
+      int   _level;
 
 
 
@@ -132,7 +133,7 @@ struct peano4::grid::GridVertex {
     #endif
 
 
-    
+
 };
 
 #endif

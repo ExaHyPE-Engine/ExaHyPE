@@ -9,6 +9,8 @@ import peano4.output.TemplatedHeaderImplementationFilePair
 import peano4.output.Jinja2TemplatedHeaderFile
 import peano4.output.Jinja2TemplatedHeaderImplementationFilePair
 
+import peano4.toolbox.multigrid.MatrixFreeJacobi
+
 import jinja2
 
 from abc import abstractmethod
@@ -28,9 +30,10 @@ class AMRMarker(object):
     differences diffusion implementation which eventually will become 
     stationary if your mesh does not change anymore. The code solves
     
-    @f$ \partial _t u - \kappa \Delta u = f @f$
+    @f$ - \Delta u = f @f$
     
-    for a tiny rhs f. Furthermore, the solution is subject to the constraints 
+    for a tiny rhs f with a Jacobi solver. The solution is subject to the 
+    constraints 
 
     @f$ 0 \leq u \leq 1 @f$
 
@@ -39,6 +42,9 @@ class AMRMarker(object):
     the boundary if that's wanted) and we see the solution u fade away once we
     move away from the boundary, until is eventually becomes 0.
     
+    
+    ## Use cases
+    
     ExaHyPE codes usually use this for some damping or smearing close to the
     AMR boundaries where instabilities due to reflecting waves can arise. There
     might be other use cases.
@@ -46,16 +52,30 @@ class AMRMarker(object):
     
     ## Usage
     
+    Before you start, you have to reconfigure and add 
+    
+        --enable-fem
+        
+    to your configuration call. Run make afterwards to build the FEM toolbox of
+    Peano.
+    
+    
     To use the marker within your project, add a new solver to your project:
     
          amr_label = exahype2.solvers.elliptic.AMRMarker( name="AMRMarker" )
          project.add_solver( amr_label )
 
+    Take your ExaHyPE solver of choice and add one more auxiliary variable. This
+    variable will, from now on, hold a copy of the actual iterate value of the 
+    elliptic solver. 
+    
+    Call the couple_with_FV_solver() operation on the AMRMarker so ensure that
+    the AMR marker pipes its data into the auxiliary variable.
 
   """
   
       
-  def __init__(self, name, diffusion_coefficient = 0.001, flag_domain_boundary = True, plot = False):
+  def __init__(self, name, relaxation_coefficient = 0.1, right_hand_side = -10.0, flag_domain_boundary = True, plot = False):
     """
     
   name: string
@@ -67,63 +87,31 @@ class AMRMarker(object):
      (such as enclave status flags), too.
  
     """
-    self._name                  = name
-    self._diffusion_coefficient = diffusion_coefficient
-    self._flag_domain_boundary  = flag_domain_boundary
-    self._plot                  = plot
+    self._name                   = name
+    self._relaxation_coefficient = relaxation_coefficient
+    self._flag_domain_boundary   = flag_domain_boundary
+    self._right_hand_side        = right_hand_side
+    self._plot                   = plot
+    
+    self._volumetric_coupling_term = ""
     
     self.create_data_structures()
     self.create_action_sets()
 
 
   def __str__(self):
-    result = """
-Name:                   """ + self._name + """
-Type:                   """ + self.__class__.__name__ + """
-Diffusion coefficient:  """ + str( self._diffusion_coefficient ) + """  
-"""
-    return result
+    return """
+Name:                   {}
+Type:                   {}
+Relaxation coefficient: {}
+""".format( 
+  self._name,
+  self.__class__.__name__,
+  self._relaxation_coefficient
+)
 
 
   __repr__ = __str__
-
-
-  #def get_min_number_of_spacetree_levels(self,domain_size):
-  #  coarsest_tree_level = 0
-  #  while (domain_size*3**(-coarsest_tree_level)/self._patch_size>self._max_volume_h):
-  #    coarsest_tree_level+=1 
-  #  return coarsest_tree_level
-
-
-  #def get_max_number_of_spacetree_levels(self,domain_size):
-  #  finest_tree_level = 0
-  #  while (domain_size*3**(-finest_tree_level)/self._patch_size>self._min_volume_h):
-  #    finest_tree_level+=1 
-  #  return finest_tree_level
-
-
-  #def get_coarsest_number_of_patches(self,domain_size):
-  #  return 3**self.get_min_number_of_spacetree_levels(domain_size)
-
-
-  #def get_finest_number_of_patches(self,domain_size):
-  #  return 3**self.get_max_number_of_spacetree_levels(domain_size)
-
-
-  #def get_coarsest_number_of_finite_volumes(self,domain_size):
-  #  return self.get_coarsest_number_of_patches(domain_size)*self._patch_size
-
-
-  #def get_finest_number_of_finite_volumes(self,domain_size):
-  #  return self.get_finest_number_of_patches(domain_size)*self._patch_size
-
-    
-  #def get_coarsest_volume_size(self,domain_size):
-  #  return domain_size/self.get_coarsest_number_of_finite_volumes(domain_size)
-
-
-  #def get_finest_volume_size(self,domain_size):
-  #  return domain_size/self.get_finest_number_of_finite_volumes(domain_size)
 
   
   def create_readme_descriptor(self, domain_offset, domain_size):
@@ -132,31 +120,13 @@ Diffusion coefficient:  """ + str( self._diffusion_coefficient ) + """
 
 """ + str(self)   
 
-
-  @property
-  def user_action_set_includes(self):
-    """
-    """
-    return ""
-
-  
-  @property
-  def user_solver_includes(self):
-    """
-    
-    Add further includes to this property, if your solver requires some additional
-    routines from other header files.
-    
-    """
-    return ""
-
  
   def create_data_structures(self):
     """
     
        
     """
-    self._data_model = peano4.datamodel.DaStGen2( "Data" )
+    self._data_model = peano4.datamodel.DaStGen2( self._unknown_identifier() )
     self._data_model.data.add_attribute( dastgen2.attributes.Double("u") )
     self._data_model.data.add_attribute( dastgen2.attributes.Double("residual") )
     
@@ -182,30 +152,74 @@ Diffusion coefficient:  """ + str( self._diffusion_coefficient ) + """
      within the inheritance tree.
      
     """
-    #self._action_set_initial_conditions                       = exahype2.solvers.fv.actionsets.InitialCondition(self, self._store_cell_data_default_guard(), "true" )
+    self._action_set_smoother = peano4.toolbox.multigrid.MatrixFreeJacobi( 
+      self._data_model, 
+      self._relaxation_coefficient, 
+      "{}".format(self._right_hand_side) 
+      )
+    self._action_set_smoother.Template_CreateHangingVertex = """
+  fineGridVertex{{UNKNOWN}}.{{UNKNOWN_SETTER}}(1.0);
+  fineGridVertex{{UNKNOWN}}.{{RESIDUAL_SETTER}}(0.0);
+"""    
+    if self._flag_domain_boundary:
+      self._action_set_smoother.Template_TouchVertexLastTime += """
+const double boundaryValue = 1.0;
+"""
+    else:
+      self._action_set_smoother.Template_TouchVertexLastTime += """
+const double boundaryValue = 0.0;
+"""
 
+    self._action_set_smoother.Template_TouchVertexLastTime += """
+  bool isBoundary = false;
+  tarch::la::Vector<Dimensions,double>  domainOffset(DomainOffset);
+  tarch::la::Vector<Dimensions,double>  domainSize(DomainSize);
+  for (int d=0; d<Dimensions; d++) {
+    isBoundary |= tarch::la::equals( marker.x()(d), domainOffset(d) );
+    isBoundary |= tarch::la::equals( marker.x()(d), domainOffset(d)+domainSize(d) );
+  }
+  if (isBoundary) {
+    fineGridVertex{{UNKNOWN}}.{{UNKNOWN_SETTER}}(boundaryValue);
+  }
+  if ( fineGridVertex{{UNKNOWN}}.{{UNKNOWN_GETTER}}()<0.0 ) {
+    fineGridVertex{{UNKNOWN}}.{{UNKNOWN_SETTER}}(0.0);
+  }
+"""    
+    self._action_set_smoother.Template_TouchCellFirstTime += self._volumetric_coupling_term
+    self._action_set_smoother.Template_CreatePersistentVertex = """
+  fineGridVertex{{UNKNOWN}}.{{UNKNOWN_SETTER}}(1.0);
+"""    
+    self._action_set_smoother.additional_includes = """
+#include "Constants.h"
+"""    
 
+  def couple_with_FV_solver(self,FV_solver,auxiliary_variable):
+    """
+    
+      FV_solver: exahype2.solver.fv.Solver
+        Instance of the solver you want to couple this marker to
+        
+      auxiliary_variable: Integer
+        index of the auxiliary variable that you want this class to dump its output
+        to.
+         
+    """
+    self._volumetric_coupling_term = """
+  double cellAverage = 0.0;
+  for(int k=0; k<TwoPowerD; k++) {{
+    cellAverage += fineGridVertices{}(k).getU();
+  }}
+  cellAverage /= TwoPowerD;
+  int index = {};
+  dfor(k,{}) {{
+    fineGridCell{}Q.value[index] = cellAverage;
+    index += {};
+  }}
+""".format(self._unknown_identifier(),FV_solver._unknowns+auxiliary_variable,FV_solver.patch_size,FV_solver.name,FV_solver._unknowns+FV_solver._auxiliary_variables)    
 
-  #def _store_cell_data_default_guard(self):
-  #  return "not marker.willBeRefined() " + \
-  #         "and repositories::" + self.get_name_of_global_instance() + ".getSolverState()!=" + self._name + "::SolverState::GridConstruction"
-  
-  
-  #def _load_cell_data_default_guard(self):
-  #  return "not marker.hasBeenRefined() " + \
-  #         "and repositories::" + self.get_name_of_global_instance() + ".getSolverState()!=" + self._name + "::SolverState::GridConstruction " + \
-  #         "and repositories::" + self.get_name_of_global_instance() + ".getSolverState()!=" + self._name + "::SolverState::GridInitialisation"
-
-
-  #def _store_face_data_default_guard(self):
-  #  return "not marker.willBeRefined() " + \
-  #         "and repositories::" + self.get_name_of_global_instance() + ".getSolverState()!=" + self._name + "::SolverState::GridConstruction"
-  
-  
-  #def _load_face_data_default_guard(self):
-  #  return "not marker.hasBeenRefined() " + \
-  #         "and repositories::" + self.get_name_of_global_instance() + ".getSolverState()!=" + self._name + "::SolverState::GridConstruction " + \
-  #         "and repositories::" + self.get_name_of_global_instance() + ".getSolverState()!=" + self._name + "::SolverState::GridInitialisation"
+    # @todo There's a bug somewhere. I can't access unkonwns as property (it always returns patch size, while _unknowns works
+    
+    self.create_action_sets()
   
   
   def _unknown_identifier(self):
@@ -242,15 +256,17 @@ Diffusion coefficient:  """ + str( self._diffusion_coefficient ) + """
     step.use_vertex(self._data_model)
 
   
-  def _get_default_includes(self):
-    return """
-#include "tarch/la/Vector.h" 
-
-#include "peano4/utils/Globals.h"
-#include "peano4/utils/Loop.h"
-
-#include "repositories/SolverRepository.h"
-"""
+#  def _get_default_includes(self):
+#    return """
+##include "tarch/la/Vector.h" 
+#
+##include "peano4/utils/Globals.h"
+##include "peano4/utils/Loop.h"
+#
+##include "repositories/SolverRepository.h"
+#
+##include "Constants.h"
+#"""
 
 
   def add_actions_to_init_grid(self, step):
@@ -258,25 +274,18 @@ Diffusion coefficient:  """ + str( self._diffusion_coefficient ) + """
     
     
     """
-    #step.add_action_set( self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement )
+    step.add_action_set( self._action_set_smoother )
     pass
 
     
   def add_actions_to_create_grid(self, step, evaluate_refinement_criterion):
     """
     
-     The boundary information is set only once. It is therefore important that
-     we ues the face label and initialise it properly.
+     It is important to plug into the creation, as this is the place where
+     we get the creational events.
      
     """
-    #step.add_action_set( self._action_set_initial_conditions_for_grid_construction )
-    #step.add_action_set( self._action_set_update_face_label )
-    #step.add_action_set( self._action_set_update_cell_label )
-    #if evaluate_refinement_criterion:
-    #  step.add_action_set( self._action_set_AMR )
-    #else:
-    #  step.add_action_set( self._action_set_AMR_commit_without_further_analysis )
-    pass
+    step.add_action_set( self._action_set_smoother )
 
   
   def add_actions_to_plot_solution(self, step, output_path):
@@ -286,16 +295,22 @@ Diffusion coefficient:  """ + str( self._diffusion_coefficient ) + """
      
     """
     if self._plot:
-      d = {}
-      self._init_dictionary_with_default_parameters(d)
-      self.add_entries_to_text_replacement_dictionary(d)
+#      d = {}
+#      self._init_dictionary_with_default_parameters(d)
+#      self.add_entries_to_text_replacement_dictionary(d)
 
+      ## Add it. I can't harm to do one more iteration, and we at least
+      ## get the hanging nodes right this way
+      step.add_action_set( self._action_set_smoother )
       step.add_action_set( peano4.toolbox.PlotScalarNodalFieldInPeanoBlockFormat( 
         filename=output_path + "amr-marker-" + self._name, 
         vertex_unknown=self._data_model,
         getter="getU()", 
         description="marker-value",
-        time_stamp_evaluation="0.5*(repositories::getMinTimeStamp()+repositories::getMaxTimeStamp())"
+        time_stamp_evaluation="0.5*(repositories::getMinTimeStamp()+repositories::getMaxTimeStamp())",
+        additional_includes="""
+#include "repositories/SolverRepository.h"       
+"""        
       ))
    
  
@@ -308,11 +323,7 @@ Diffusion coefficient:  """ + str( self._diffusion_coefficient ) + """
     apply the boundary conditions.
     
     """
-    d = {}
-    self._init_dictionary_with_default_parameters(d)
-    self.add_entries_to_text_replacement_dictionary(d)
-
-    #step.add_action_set( self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement )
+    step.add_action_set( self._action_set_smoother )
 
 
   @abstractmethod
@@ -331,31 +342,15 @@ Diffusion coefficient:  """ + str( self._diffusion_coefficient ) + """
      output: peano4.output.Output
      
     """
-    return 
+    templatefile_prefix = os.path.dirname( os.path.realpath(__file__) ) + "/AMRMarker"
 
-    templatefile_prefix = os.path.dirname( os.path.realpath(__file__) ) + "/"
-
-    if self._solver_template_file_class_name is None:
-      templatefile_prefix += self.__class__.__name__
-    else:
-      templatefile_prefix += self._solver_template_file_class_name
-
-    abstractHeaderDictionary = {}
+    headerDictionary = {}
     implementationDictionary = {}
-    self._init_dictionary_with_default_parameters(abstractHeaderDictionary)
-    self._init_dictionary_with_default_parameters(implementationDictionary)
-    self.add_entries_to_text_replacement_dictionary(abstractHeaderDictionary)
+#    self._init_dictionary_with_default_parameters(headerDictionary)
+#    self._init_dictionary_with_default_parameters(implementationDictionary)
+    self.add_entries_to_text_replacement_dictionary(headerDictionary)
     self.add_entries_to_text_replacement_dictionary(implementationDictionary)
 
-    generated_abstract_header_file = peano4.output.Jinja2TemplatedHeaderImplementationFilePair(
-      templatefile_prefix + "Abstract.template.h",
-      templatefile_prefix + "Abstract.template.cpp",
-      "Abstract" + self._name, 
-      namespace,
-      ".", 
-      abstractHeaderDictionary,
-      True,
-      True)
     generated_solver_files = peano4.output.Jinja2TemplatedHeaderImplementationFilePair(
       templatefile_prefix + ".template.h",
       templatefile_prefix + ".template.cpp",
@@ -363,51 +358,34 @@ Diffusion coefficient:  """ + str( self._diffusion_coefficient ) + """
       namespace,
       ".", 
       implementationDictionary,
-      False,
+      True,
       True)
 
-    output.add( generated_abstract_header_file )
     output.add( generated_solver_files )
-    output.makefile.add_cpp_file( "Abstract" + self._name + ".cpp" )
     output.makefile.add_cpp_file( self._name + ".cpp" )
 
-  def set_solver_constants(self, datastring): self.solver_constants_ = datastring
 
-  def add_solver_constants(self, datastring): self.solver_constants_ += datastring
-
-
-  def _init_dictionary_with_default_parameters(self,d):
-    """
-
-      This one is called by all algorithmic steps before I invoke
-      add_entries_to_text_replacement_dictionary().
-
-      See the remarks on set_postprocess_updated_patch_kernel to understand why
-      we have to apply the (partially befilled) dictionary to create a new entry
-      for this very dictionary.
-
-
-    """
-    d["SOLVER_INSTANCE"]                = self.get_name_of_global_instance()
-    d["SOLVER_NAME"]                    = self._name
-    d["UNKNOWN_IDENTIFIER"]             = self._unknown_identifier()
-
-    #d[ "COMPUTE_KERNEL_CALL"]                 = jinja2.Template(self._compute_kernel_call, undefined=jinja2.DebugUndefined).render( **d )
-
-    #d[ "ABSTRACT_SOLVER_USER_DECLARATIONS" ]  = jinja2.Template(self._abstract_solver_user_declarations, undefined=jinja2.DebugUndefined).render( **d )
-    #d[ "ABSTRACT_SOLVER_USER_DEFINITIONS" ]   = jinja2.Template(self._abstract_solver_user_definitions, undefined=jinja2.DebugUndefined).render( **d )
-    #d[ "SOLVER_USER_DECLARATIONS" ]           = jinja2.Template(self._solver_user_declarations, undefined=jinja2.DebugUndefined).render( **d )
-    #d[ "SOLVER_USER_DEFINITIONS" ]            = jinja2.Template(self._solver_user_definitions, undefined=jinja2.DebugUndefined).render( **d )
-    #d[ "START_TIME_STEP_IMPLEMENTATION" ]     = jinja2.Template(self._start_time_step_implementation, undefined=jinja2.DebugUndefined).render( **d )
-    #d[ "FINISH_TIME_STEP_IMPLEMENTATION" ]    = jinja2.Template(self._finish_time_step_implementation, undefined=jinja2.DebugUndefined).render( **d )
-    #d[ "CONSTRUCTOR_IMPLEMENTATION"]          = jinja2.Template(self._constructor_implementation, undefined=jinja2.DebugUndefined).render( **d )
-    
-    #d[ "PREPROCESS_RECONSTRUCTED_PATCH" ]     = jinja2.Template(self._preprocess_reconstructed_patch, undefined=jinja2.DebugUndefined).render( **d )
-    #d[ "POSTPROCESS_UPDATED_PATCH" ]          = jinja2.Template(self._postprocess_updated_patch, undefined=jinja2.DebugUndefined).render( **d )
-
-    #d[ "COMPUTE_TIME_STEP_SIZE" ]             = jinja2.Template(self._compute_time_step_size, undefined=jinja2.DebugUndefined).render( **d )
-    #d[ "COMPUTE_NEW_TIME_STEP_SIZE" ]         = jinja2.Template(self._compute_new_time_step_size, undefined=jinja2.DebugUndefined).render( **d )
-    #d[ "COMPUTE_MAX_EIGENVALUE" ]             = self._compute_eigenvalue
+#  def _init_dictionary_with_default_parameters(self,d):
+#    """
+#
+#      This one is called by all algorithmic steps before I invoke
+#      add_entries_to_text_replacement_dictionary().
+#
+#      See the remarks on set_postprocess_updated_patch_kernel to understand why
+#      we have to apply the (partially befilled) dictionary to create a new entry
+#      for this very dictionary.##
+##
+#
+#    """
+#    d["RIGHT_HAND_SIDE"]        = self._right_hand_side
+#    d["RELAXATION_COEFFICIENT"] = self._relaxation_coefficient
+#    if self._flag_domain_boundary:
+#      d["BOUNDARY_VALUE"]       = 1.0
+#    else:
+#      d["BOUNDARY_VALUE"]       = 0.0
+#    
+#    d["SOLVER_INSTANCE"]                = self.get_name_of_global_instance()
+#    d["SOLVER_NAME"]                    = self._name
 
 
   @property

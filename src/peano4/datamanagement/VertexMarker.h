@@ -36,6 +36,8 @@ struct peano4::datamanagement::VertexMarker {
     std::bitset<TwoPowerD>  _hasBeenRefined;
     std::bitset<TwoPowerD>  _willBeRefined;
     std::bitset<TwoPowerD>  _isLocal;
+
+    bool                    _isParentCellLocal;
     //std::bitset<TwoPowerD>  _isAdjacentToParallelDomainBoundary;
 
     /**
@@ -86,6 +88,19 @@ struct peano4::datamanagement::VertexMarker {
      */
     bool isLocal(int i) const;
 
+    /**
+     * Whenever we touch a vertex the first or the last time, we touch
+     * it from a cell: If we touch a vertex the first time, the traversal
+     * is just about to enter a cell and sees that one of its vertices is
+     * not loaded yet. When we issue a touchVertexLastTime() event, the
+     * traversal is just about to leave a cell.
+     *
+     * So there's a cell state associated with any vertex event, and,
+     * therefore, we know if the corresponding cell is local and whether
+     * its parent cell is local.
+     */
+    bool isParentCellLocal() const;
+
     //bool isAdjacentToParallelDomainBoundary() const;
     //bool isAdjacentToParallelDomainBoundary(int i) const;
 
@@ -93,9 +108,33 @@ struct peano4::datamanagement::VertexMarker {
      * Return relative position within father cell. The result is from
      * (0,1,2,3)^d and denotes the vertex position within a 3x3 or 3x3x3
      * respectively mesh.
+     *
+     * @see coincidesWithCoarseGridVertex()
      */
     tarch::la::Vector<Dimensions,int>  getRelativePositionWithinFatherCell() const;
     tarch::la::Vector<Dimensions,int>  getRelativePositionWithinFatherCell(int i) const;
+
+    /**
+     * The vertex (0,0,0) coincides with a coarse grid vertex, the (3,0,0) does
+     * so too, and so forth.
+     *
+     * ## Frequent use case
+     *
+     * If you want to program some simply injection, it helps to identify vertices
+     * which coincide spatially with vertices on the next coarser level. A classic
+     * are codes like
+     *
+     *       if ( marker.coincidesWithCoarseGridVertex() ) {
+     *         tarch::la::Vector<Dimensions,int> parent = marker.getRelativePositionWithinFatherCell() / 3;
+     *         coarseGridVerticesX( peano4::utils::dLinearised(parent,2) ).set...
+     *       }
+     *
+     * within touchVertexLastTime. This snippet looks if two vertices coincide
+     * spatially. If so, it computes the parent's relative position within the
+     * parent cell which is simply a division by 3. We then linearise this vector
+     * index and thus have access to teh parent.
+     */
+    bool coincidesWithCoarseGridVertex() const;
 
 
     /**

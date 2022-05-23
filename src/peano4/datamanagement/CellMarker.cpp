@@ -19,6 +19,7 @@ peano4::datamanagement::CellMarker::CellMarker(
   _hasBeenRefined(event.getHasBeenRefined()!=0),
   _willBeRefined(event.getWillBeRefined()!=0),
   _isLocal(event.getIsCellLocal()),
+  _isParentLocal(event.getIsParentCellLocal()),
   _isOneVertexHanging( false ),
   _isOneVertexCreatedOrDestroyed( false ),
   _areAllVerticesInsideDomain( event.getIsVertexAdjacentToParallelDomainBoundary().none() ),
@@ -116,6 +117,11 @@ bool peano4::datamanagement::CellMarker::hasBeenRefined() const {
 
 bool peano4::datamanagement::CellMarker::isLocal() const {
   return _isLocal;
+}
+
+
+bool peano4::datamanagement::CellMarker::isParentLocal() const {
+  return _isParentLocal;
 }
 
 

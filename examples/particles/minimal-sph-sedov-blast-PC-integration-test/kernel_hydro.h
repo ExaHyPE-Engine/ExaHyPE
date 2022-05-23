@@ -36,17 +36,17 @@ __attribute__((always_inline)) inline static void kernel_deval(
   } else if (q >= 1.0) {
     w = (0.25 * (2.0 - q)*(2.0 - q)*(2.0 - q));
   } else {
-    w = (1.0 - 1.5*q*q*(1.0 - q/2.0));
+    w = (1.0 - 1.5 * q * q * (1.0 - q / 2.0));
   }
 
   // Kernel derivative
 
-  if (q >= 2) {
+  if (q >= 2.0) {
     dw_dq = 0.0;
-  } else if (q >= 1) {
-    dw_dq = -0.75 * ( (2 - q)*(2 - q) );
+  } else if (q >= 1.0) {
+    dw_dq = -0.75 * ( (2.0 - q)*(2.0 - q) );
   } else {
-    dw_dq = 0.75*q * (3*q - 4);
+    dw_dq = 0.75 * q * (3.0 * q - 4.0);
   }
   
   // Final expression (up to overall factors)

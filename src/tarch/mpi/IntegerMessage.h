@@ -90,7 +90,7 @@ struct tarch::mpi::IntegerMessage {
     std::string toString() const;
   
   private:
-    int   _value;
+      int   _value;
 
 
 
@@ -103,7 +103,7 @@ struct tarch::mpi::IntegerMessage {
     #endif
 
 
-    
+
 };
 
 #endif

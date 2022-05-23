@@ -54,7 +54,7 @@ void   peano4::grid::GridVertex::setState(State value) {
 
 
 tarch::la::Vector<TwoPowerD,int>   peano4::grid::GridVertex::getAdjacentRanks() const {
-  return _adjacentRanks;
+  return    _adjacentRanks;
 }
 
 
@@ -64,7 +64,7 @@ void   peano4::grid::GridVertex::setAdjacentRanks(const tarch::la::Vector<TwoPow
 
 
 int   peano4::grid::GridVertex::getAdjacentRanks(int index) const {
-  return _adjacentRanks(index);
+  return   _adjacentRanks(index);
 }
 
 
@@ -74,7 +74,7 @@ void   peano4::grid::GridVertex::setAdjacentRanks(int index, int value) {
 
 
 tarch::la::Vector<TwoPowerD,int>   peano4::grid::GridVertex::getBackupOfAdjacentRanks() const {
-  return _backupOfAdjacentRanks;
+  return    _backupOfAdjacentRanks;
 }
 
 
@@ -84,7 +84,7 @@ void   peano4::grid::GridVertex::setBackupOfAdjacentRanks(const tarch::la::Vecto
 
 
 int   peano4::grid::GridVertex::getBackupOfAdjacentRanks(int index) const {
-  return _backupOfAdjacentRanks(index);
+  return   _backupOfAdjacentRanks(index);
 }
 
 
@@ -124,7 +124,7 @@ void   peano4::grid::GridVertex::setNumberOfAdjacentRefinedLocalCells(int value)
 
 
 tarch::la::Vector<Dimensions,double>   peano4::grid::GridVertex::getX() const {
-  return _x;
+  return   _x;
 }
 
 
@@ -134,7 +134,7 @@ void   peano4::grid::GridVertex::setX(const tarch::la::Vector<Dimensions,double>
 
 
 double   peano4::grid::GridVertex::getX(int index) const {
-  return _x(index);
+  return   _x(index);
 }
 
 

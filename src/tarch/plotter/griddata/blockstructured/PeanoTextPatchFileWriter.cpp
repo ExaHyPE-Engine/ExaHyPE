@@ -28,6 +28,15 @@ namespace {
 }
 
 
+void tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter::createBackupOfMetaFile() {
+  std::ifstream inFile (_indexFile);
+  std::ofstream outFile(_indexFile + ".bak");
+  for (std::string line; std::getline(inFile, line); /**/ ) {
+    outFile << line << std::endl;
+  }
+}
+
+
 double tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter::getLatestTimeStepInIndexFile() const {
   double result = -1.0;
 
@@ -167,6 +176,7 @@ tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter::PeanoTextPa
         createEmptyIndexFile();
       }
 
+      createBackupOfMetaFile();
       if ( tarch::la::smaller(getLatestTimeStepInIndexFile(),timeStamp, DefaultTimeStampPrecision) ) {
         logDebug( "PeanoTextPatchFileWriter(...)", "create new dataset for time stamp " << timeStamp << " as last time stamp had been " << getLatestTimeStepInIndexFile() );
         addNewDatasetToIndexFile(timeStamp);
