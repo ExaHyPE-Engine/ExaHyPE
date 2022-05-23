@@ -88,10 +88,12 @@ bool peano4::grid::GridTraversalEventGenerator::isVertexAdjacentToLocalSpacetree
   bool        splittingIsConsideredLocal,
   bool        joiningIsConsideredLocal
 ) const {
+/*
   if (vertex.getState()==GridVertex::State::HangingVertex) {
     return false;
   }
   else {
+*/
     logTraceInWith3Arguments( "isVertexAdjacentToLocalSpacetree(...)", vertex.toString(), splittingIsConsideredLocal, joiningIsConsideredLocal );
     bool result = false;
     for(int i=0; i<TwoPowerD; i++) {
@@ -107,7 +109,7 @@ bool peano4::grid::GridTraversalEventGenerator::isVertexAdjacentToLocalSpacetree
     }
     logTraceOutWith1Argument( "isVertexAdjacentToLocalSpacetree(...)", result );
     return result;
-  }
+//  }
 }
 
 

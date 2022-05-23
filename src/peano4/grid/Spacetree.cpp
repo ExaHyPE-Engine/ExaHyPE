@@ -98,7 +98,8 @@ bool peano4::grid::Spacetree::isVertexAdjacentToLocalSpacetree(
   bool        splittingIsConsideredLocal,
   bool        joiningIsConsideredLocal
 ) const {
-  return _gridTraversalEventGenerator.isVertexAdjacentToLocalSpacetree( vertex, _splitTriggered, _splitting, _joinTriggered, _joining, splittingIsConsideredLocal, joiningIsConsideredLocal );
+  return vertex.getState()!=GridVertex::State::HangingVertex
+     and _gridTraversalEventGenerator.isVertexAdjacentToLocalSpacetree( vertex, _splitTriggered, _splitting, _joinTriggered, _joining, splittingIsConsideredLocal, joiningIsConsideredLocal );
 }
 
 

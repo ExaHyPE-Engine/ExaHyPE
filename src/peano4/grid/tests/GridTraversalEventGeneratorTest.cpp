@@ -322,7 +322,7 @@ void peano4::grid::tests::GridTraversalEventGeneratorTest::testCreateEnterCellTr
 
 void peano4::grid::tests::GridTraversalEventGeneratorTest::testCreateGenericCellTraversalEvent1() {
   #if Dimensions==2
-  GridTraversalEventGenerator generator(1);
+  GridTraversalEventGenerator generator(0);
 
   GridVertex coarseGridVertices[TwoPowerD];
   GridVertex fineGridVertices[TwoPowerD];
