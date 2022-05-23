@@ -18,6 +18,7 @@ class MatrixFreeJacobi(ActionSet):
                unknown_getter="getU",
                residual_setter="setResidual",
                residual_getter="getResidual",
+               store_residual_persistently_and_update_in_touch_first = True
                ):
     """
       
@@ -41,6 +42,7 @@ class MatrixFreeJacobi(ActionSet):
     self.d[ "OMEGA" ]           = relaxation_coefficient
     self.d[ "RHS" ]             = rhs_expr
     self.additional_includes    = ""
+    self._store_residual_persistently_and_update_in_touch_first = store_residual_persistently_and_update_in_touch_first
     
 
   def get_body_of_getGridControlEvents(self):
@@ -64,7 +66,7 @@ class MatrixFreeJacobi(ActionSet):
   #  return self.__Template_Constructor.format(**self.d)
 
 
-  Template_TouchVertexFirstTime = """ 
+  Template_ResetResidual = """ 
   fineGridVertex{{UNKNOWN}}.{{RESIDUAL_SETTER}}(0.0);
 """
 
@@ -104,7 +106,7 @@ class MatrixFreeJacobi(ActionSet):
 """  
 
 
-  Template_TouchVertexLastTime = """
+  Template_UpdateValue = """
   const tarch::la::Vector<ThreePowerD,double> stencil = toolbox::finiteelements::getLaplacian(
     marker.h(), 1.0
   );
@@ -134,7 +136,9 @@ class MatrixFreeJacobi(ActionSet):
       result = """
 logTraceIn( "touchVertexFirstTime()" );
 """
-      result += jinja2.Template(self.Template_TouchVertexFirstTime).render(**self.d) 
+      if self._store_residual_persistently_and_update_in_touch_first:  
+        result += jinja2.Template(self.Template_UpdateValue).render(**self.d) 
+      result += jinja2.Template(self.Template_ResetResidual).render(**self.d) 
       result += """
 logTraceOut( "touchVertexFirstTime()" );
 """
@@ -166,7 +170,8 @@ logTraceOut( "touchCellFirstTime()" );
       result = """
 logTraceIn( "touchVertexLastTime()" );
 """
-      result += jinja2.Template(self.Template_TouchVertexLastTime).render(**self.d) 
+      if not self._store_residual_persistently_and_update_in_touch_first:  
+        result += jinja2.Template(self.Template_UpdateValue).render(**self.d) 
       result += """
 logTraceOut( "touchVertexLastTime()" );
 """

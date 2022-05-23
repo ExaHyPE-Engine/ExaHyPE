@@ -49,13 +49,6 @@ class AMRMarker(object):
     Regions with a value close to 1 are close to an AMR boundary.
     
     
-    ## Use cases
-    
-    ExaHyPE codes usually use this for some damping or smearing close to the
-    AMR boundaries where instabilities due to reflecting waves can arise. There
-    might be other use cases.
-    
-    
     ## Usage
     
     Before you start, you have to reconfigure and add 
@@ -86,6 +79,18 @@ class AMRMarker(object):
     then makes the elliptic solver write the patch average of its marker into
     the first (aka index 0) auxiliary quantity per volume. 
     
+    
+    ## Use cases
+    
+    ExaHyPE codes usually use this for some damping or smearing close to the
+    AMR boundaries where instabilities due to reflecting waves can arise. There
+    might be other use cases.
+    
+    In ExaHyPE, you add the AMRMarker and you project (couple) it onto an 
+    auxiliary variable. When you evaluate the Poisson operator effectively 
+    delivering a damping, you can now multiply the impact of this operator
+    with the auxiliary variable. This way, it is active near AMR boundaries, 
+    but it disappears far away from there.
 
   """
   
@@ -145,14 +150,15 @@ Relaxation coefficient: {}
     self._data_model.data.add_attribute( dastgen2.attributes.Double("u") )
     self._data_model.data.add_attribute( dastgen2.attributes.Double("residual") )
     
-    #self._data_model.data.add_attribute( dastgen2.attributes.Double("residual") )
-    #self._patch_overlap_update.generator.send_condition               = "false"
-    #self._patch_overlap_update.generator.receive_and_merge_condition  = "false"
+    self._data_model.generator.store_persistent_condition   = "true"
+    self._data_model.generator.load_persistent_condition    = "true"
 
-    #self._patch_overlap_old.generator.store_persistent_condition   = self._store_face_data_default_guard()
-    #self._patch_overlap_old.generator.load_persistent_condition    = self._load_face_data_default_guard()
-    #self._patch_overlap_old.generator.merge_method_definition = peano4.toolbox.blockstructured.get_face_overlap_merge_implementation(self._patch_overlap_old)
-    
+    self._data_model.generator.send_condition               = "true"
+    self._data_model.generator.receive_and_merge_condition  = "true"
+
+    self._data_model._peano4_aspect.merge_implementation = """
+  setResidual( getResidual() + neighbour.getResidual() );
+"""    
     
 
   @abstractmethod
@@ -184,16 +190,8 @@ Relaxation coefficient: {}
   fineGridVertex{{UNKNOWN}}.{{UNKNOWN_SETTER}}(1.0);
   fineGridVertex{{UNKNOWN}}.{{RESIDUAL_SETTER}}(0.0);
 """    
-    if self._flag_domain_boundary:
-      self._action_set_smoother.Template_TouchVertexLastTime += """
-const double boundaryValue = 1.0;
-"""
-    else:
-      self._action_set_smoother.Template_TouchVertexLastTime += """
-const double boundaryValue = 0.0;
-"""
 
-    self._action_set_smoother.Template_TouchVertexLastTime += """
+    updated_value_postprocessing = """
   bool isBoundary = false;
   tarch::la::Vector<Dimensions,double>  domainOffset(DomainOffset);
   tarch::la::Vector<Dimensions,double>  domainSize(DomainSize);
@@ -207,7 +205,16 @@ const double boundaryValue = 0.0;
   if ( fineGridVertex{{UNKNOWN}}.{{UNKNOWN_GETTER}}()<0.0 ) {
     fineGridVertex{{UNKNOWN}}.{{UNKNOWN_SETTER}}(0.0);
   }
-"""    
+""" 
+    if self._flag_domain_boundary:
+      self._action_set_smoother.Template_UpdateValue += """
+const double boundaryValue = 1.0;
+""" + updated_value_postprocessing
+    else:
+      self._action_set_smoother.Template_UpdateValue += """
+const double boundaryValue = 0.0;
+""" + updated_value_postprocessing
+   
     self._action_set_smoother.Template_TouchCellFirstTime += self._volumetric_coupling_term
     self._action_set_smoother.Template_CreatePersistentVertex = """
   fineGridVertex{{UNKNOWN}}.{{UNKNOWN_SETTER}}(1.0);
