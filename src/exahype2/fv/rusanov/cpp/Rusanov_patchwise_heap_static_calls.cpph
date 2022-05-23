@@ -155,7 +155,8 @@ void exahype2::fv::rusanov::cpp::timeStepWithRusanov_patchwise_heap_static_calls
   for (int patchIndex=0; patchIndex<numberOfCells; patchIndex++) {
 
     // @todo docu manual assembly of patch data meta object on GPU
-    ::exahype2::CellData patchData(numberOfCells);
+    helper::CPPGPUCellData patchData;
+    patchData.numberOfCells = numberOfCells;
     patchData.patchCentre   = (tarch::la::Vector<Dimensions,double>*)(rawPointerToPatchCentres);
     patchData.patchSize     = (tarch::la::Vector<Dimensions,double>*)(rawPointerToPatchSizes);
     patchData.QIn           = mappedPointersToQIn;
@@ -622,9 +623,6 @@ void exahype2::fv::rusanov::cpp::timeStepWithRusanov_patchwise_heap_static_calls
     double*       currentQOut = hostPatchData.QOut[patchIndex];
   }
 
-  delete[] mappedPointersToQIn;
-  delete[] mappedPointersToQOut;
-
   delete[] tempFluxX;
   delete[] tempFluxY;
   delete[] tempFluxZ;
@@ -634,6 +632,9 @@ void exahype2::fv::rusanov::cpp::timeStepWithRusanov_patchwise_heap_static_calls
   delete[] tempEigenvalueX;
   delete[] tempEigenvalueY;
   delete[] tempEigenvalueZ;
+  delete[] mappedPointersToQIn;
+  delete[] mappedPointersToQOut;
+
 
   #else
   assertionMsg(false, "this routine should only be used in combination with OpenMP offloading, as it has a device parameter" );
