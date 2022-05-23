@@ -1093,12 +1093,16 @@ void exahype2::fv::rusanov::internal::updateSolutionWithNonconservativeFlux_Loop
     tarch::la::Vector<Dimensions,int> leftFace   = volumeIndex;
     tarch::la::Vector<Dimensions,int> rightFace  = volumeIndex;
     leftFace(normal)--;
-
-    double fluxLeft  = - QNcp[ncpEnumerator(patchIndex, leftFace, unknown)];
+    
+    //the QNcp is calculating (Q^+ - Q^-)B_i for the considered face, and B here is defined on the LEFT of the equation.
+    //for fluxleft, it is the flux^+ of the left face, so it have a plus sign
+    //for fluxright, it is the flux^- of the right face, so it have a minus sign.
+    double fluxLeft  = + QNcp[ncpEnumerator(patchIndex, leftFace, unknown)];
     double fluxRight = - QNcp[ncpEnumerator(patchIndex, rightFace, unknown)];
 
+    //left flux have another minus sign as the normal vector direction for the left face goes against the flux
     QOut[ QOutEnumerator(patchIndex, volumeIndex,unknown) ] += dt / patchSize(normal) * QOutEnumerator._numberOfVolumesPerAxisInPatch *
-       (fluxLeft + fluxRight);
+       (-fluxLeft + fluxRight)*(0.5);// for now it correpond to 1/2 in our past discussion.
 
     #if !defined(GPUOffloadingOMP)
     assertion8(
