@@ -133,7 +133,7 @@ That's the erroneous output:
 local flags are not valid.
 
      */
-    void testCreateGeneric
+    void testCreateGenericCellTraversalEvent1();
   public:
     GridTraversalEventGeneratorTest();
     void run() override;
