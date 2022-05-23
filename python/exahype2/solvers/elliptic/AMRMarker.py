@@ -32,8 +32,8 @@ class AMRMarker(object):
     
     @f$ - \Delta u = f @f$
     
-    for a tiny rhs f with a Jacobi solver. The solution is subject to the 
-    constraints 
+    for a fixed right-hand side f with a Jacobi solver. The solution is 
+    subject to the constraints 
 
     @f$ 0 \leq u \leq 1 @f$
 
@@ -41,6 +41,12 @@ class AMRMarker(object):
     values of 1 for every hanging vertex. So we have 1 at AMR transitions (and
     the boundary if that's wanted) and we see the solution u fade away once we
     move away from the boundary, until is eventually becomes 0.
+    
+    As we use a Jacobi iterative solver, using this marker within ExaHyPE is 
+    equivalent to a heat equation solver which becomes stationary eventually if
+    the grid does not change. Regions with a small solution value (remember that
+    all solution values are between 0 and 1) are far away from any AMR boundary.
+    Regions with a value close to 1 are close to an AMR boundary.
     
     
     ## Use cases
@@ -69,13 +75,22 @@ class AMRMarker(object):
     variable will, from now on, hold a copy of the actual iterate value of the 
     elliptic solver. 
     
+    
     Call the couple_with_FV_solver() operation on the AMRMarker so ensure that
-    the AMR marker pipes its data into the auxiliary variable.
+    the AMR marker pipes its data into the auxiliary variable. So if you solve
+    Euler with 5 unknowns, you add one auxiliary variable. The additional 
+    statement
+    
+         amr_label.couple_with_FV_solver( thesolver, 0 )
+
+    then makes the elliptic solver write the patch average of its marker into
+    the first (aka index 0) auxiliary quantity per volume. 
+    
 
   """
   
       
-  def __init__(self, name, relaxation_coefficient = 0.1, right_hand_side = -10.0, flag_domain_boundary = True, plot = False):
+  def __init__(self, name, relaxation_coefficient = 0.6, right_hand_side = -10.0, flag_domain_boundary = True, plot = False):
     """
     
   name: string
@@ -129,6 +144,14 @@ Relaxation coefficient: {}
     self._data_model = peano4.datamodel.DaStGen2( self._unknown_identifier() )
     self._data_model.data.add_attribute( dastgen2.attributes.Double("u") )
     self._data_model.data.add_attribute( dastgen2.attributes.Double("residual") )
+    
+    #self._data_model.data.add_attribute( dastgen2.attributes.Double("residual") )
+    #self._patch_overlap_update.generator.send_condition               = "false"
+    #self._patch_overlap_update.generator.receive_and_merge_condition  = "false"
+
+    #self._patch_overlap_old.generator.store_persistent_condition   = self._store_face_data_default_guard()
+    #self._patch_overlap_old.generator.load_persistent_condition    = self._load_face_data_default_guard()
+    #self._patch_overlap_old.generator.merge_method_definition = peano4.toolbox.blockstructured.get_face_overlap_merge_implementation(self._patch_overlap_old)
     
     
 
