@@ -13,22 +13,27 @@ template<typename Collection1, typename Collection2, typename Collection3, typen
 void cartesian_product(Collection1&& collection1, Collection2&& collection2, Collection3&& collection3, Collection4&& collection4, Collection5&& collection5, auto func)
 {
     std::for_each(
+        std::execution::par_unseq,
         collection1.begin(), 
         collection1.end(), 
         [&collection2,&collection3,&collection4,&collection5,&func](auto i){
             std::for_each(
+                std::execution::par_unseq,
                 collection2.begin(),
                 collection2.end(),
                 [&collection3,&collection4,&collection5,&i,&func](auto j){
                     std::for_each(
+                        std::execution::par_unseq,
                         collection3.begin(),
                         collection3.end(),
                         [&collection4,&collection5,&i,&j,&func](auto k){
                             std::for_each(
+                                std::execution::par_unseq,
                                 collection4.begin(),
                                 collection4.end(),
                                 [&collection5,&i,&j,&k,&func](auto m){
                                     std::for_each(
+                                        std::execution::par_unseq,
                                         collection5.begin(),
                                         collection5.end(),
                                         [&i,&j,&k,&m,&func](auto n){
@@ -49,18 +54,22 @@ template<typename Collection1, typename Collection2, typename Collection3, typen
 void cartesian_product(Collection1&& collection1, Collection2&& collection2, Collection3&& collection3, Collection4&& collection4, auto func)
 {
     std::for_each(
+        std::execution::par_unseq,
         collection1.begin(), 
         collection1.end(), 
         [&collection2,&collection3,&collection4,&func](auto i){
             std::for_each(
+                std::execution::par_unseq,
                 collection2.begin(),
                 collection2.end(),
                 [&collection3,&collection4,&i,&func](auto j){
                     std::for_each(
+                        std::execution::par_unseq,
                         collection3.begin(),
                         collection3.end(),
                         [&collection4,&i,&j,&func](auto k){
                             std::for_each(
+                                std::execution::par_unseq,
                                 collection4.begin(),
                                 collection4.end(),
                                 [&i,&j,&k,&func](auto m){
@@ -79,14 +88,17 @@ template<typename Collection1, typename Collection2, typename Collection3>
 void cartesian_product(Collection1&& collection1, Collection2&& collection2, Collection3&& collection3, auto func)
 {
     std::for_each(
+        std::execution::par_unseq,
         collection1.begin(), 
         collection1.end(), 
         [&collection2,&collection3,&func](auto i){
             std::for_each(
+                std::execution::par_unseq,
                 collection2.begin(),
                 collection2.end(),
                 [&collection3,&i,&func](auto j){
-                     std::for_each(
+                      std::for_each(
+                        std::execution::par_unseq,
                         collection3.begin(),
                         collection3.end(),
                         [&i,&j,&func](auto k){
@@ -103,10 +115,12 @@ template<typename Collection1, typename Collection2>
 void cartesian_product(Collection1&& collection1, Collection2&& collection2, auto func)
 {
     std::for_each(
+        std::execution::par_unseq,
         collection1.begin(), 
         collection1.end(), 
         [&collection2,&func](auto i){
             std::for_each(
+                std::execution::par_unseq,
                 collection2.begin(),
                 collection2.end(),
                 [&i,&func](auto j){
