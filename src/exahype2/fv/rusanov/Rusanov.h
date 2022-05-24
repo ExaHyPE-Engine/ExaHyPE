@@ -112,7 +112,7 @@
  \oint _{\partial v} ([[F_i(Q)+B_i Q]],n) dS(x) 
  & = &\sum_{\partial v} h^{d-1} (n, \Big[ \frac{1}{2} \left( F_i(Q^+) + F_i(Q^-) \right)  \\
   && + \frac{1}{2}(Q^+ + Q^-) B_i( \frac{1}{2}(Q^+ + Q^-) )    \\
-  &&  - C max(\lambda _{max}(Q^-),\lambda _{max}(Q^+)) (Q^+ - Q^-) \Big])
+  &&  - \frac{1}{2} max(\lambda _{max}(Q^-),\lambda _{max}(Q^+)) (Q^+ - Q^-) \Big])
    \f}
  *
  * where we average @f$ [[Q]] \approx \frac{1}{2}(Q^+ + Q^-) @f$ and assume a linear F. the @f$ Q^+ @f$
@@ -122,7 +122,7 @@
  * The update of a volume hence depends on the source term contribution within the volume,
  * an averaged conservative flux over the faces (which now is the sum of @f$ 2d @f$ flat faces),
  * a damping term using the maximum of the eigenvalues
- * in the left and right volume, a non-conservative flux over the average on the faces and
+ * in the left and right volume (see, local Lax-Friederich scheme), a non-conservative flux over the average on the faces and
  * a non-conservative flux within the volume.
  *
  * The last missing piece of the puzzle is the treatment of the remaining volumetric
@@ -141,16 +141,16 @@ Q\sum_{\partial v}h^{d-1}(B_i(\frac{1}{2}(Q^+ + Q^-)),n)
  * \f{eqnarray*}{
 {\rm flux}^d_{\rm left} &=& \left[-\frac{\Delta t}{h^d} \cdot \oint _{\partial v} ([[F_i(Q)+B_i Q]],n) dS(x)
     + \frac{\Delta t}{h^d} \int _{v} Q div B_i dx \right]_{\rm for \ a \ single \ left \ face \ in \ d \ direction}\\
-&=& \frac{\Delta t}{h}\left[\frac{1}{2} \left( F_d(Q^+) + F_d(Q^-) \right) 
-  -\frac{1}{2}(Q^+ - Q^-) B_d( \frac{1}{2}(Q^+ + Q^-) )
-  -C max(\lambda _{max}(Q^-),\lambda _{max}(Q^+)) (Q^+ - Q^-) \right]
+&=& \frac{\Delta t}{2h}\left[ \left( F_d(Q^+) + F_d(Q^-) \right) 
+  -(Q^+ - Q^-) B_d( \frac{1}{2}(Q^+ + Q^-) )
+  - max(\lambda _{max}(Q^-),\lambda _{max}(Q^+)) (Q^+ - Q^-) \right]
    \f}
  * \f{eqnarray*}{
 {\rm flux}^d_{\rm right} &=& \left[-\frac{\Delta t}{h^d} \cdot \oint _{\partial v} ([[F_i(Q)+B_i Q]],n) dS(x)
     + \frac{\Delta t}{h^d} \int _{v} Q div B_i dx \right]_{\rm for \ a \ single \ right \ face \ in \ d \ direction}\\
-&=& \frac{\Delta t}{h}\left[-\frac{1}{2} \left( F_d(Q^+) + F_d(Q^-) \right) 
-  -\frac{1}{2}(Q^+ - Q^-) B_d( \frac{1}{2}(Q^+ + Q^-) )
-  +C max(\lambda _{max}(Q^-),\lambda _{max}(Q^+)) (Q^+ - Q^-) \right]
+&=& \frac{\Delta t}{2h}\left[- \left( F_d(Q^+) + F_d(Q^-) \right) 
+  -(Q^+ - Q^-) B_d( \frac{1}{2}(Q^+ + Q^-) )
+  + max(\lambda _{max}(Q^-),\lambda _{max}(Q^+)) (Q^+ - Q^-) \right]
    \f}
  * Here @f$ F_d, \ B_d @f$ are the component of @f$ F_i, \ B_i @f$ in d direction. And @f$ Q^+ @f$ and @f$ Q^- @f$
  * are referring to the value on the left and the right of the considered face.
@@ -175,7 +175,7 @@ Q\sum_{\partial v}h^{d-1}(B_i(\frac{1}{2}(Q^+ + Q^-)),n)
  *   @f$ \lambda _{max} Q(t) @f$ of the two adjacent volumes and multiply it
  *   with the delta @f$ Q^+(t)-Q^-(t) @f$ between the adjacent volumes' values.
  * - (2.3) Per volume: Take the outcome of (2.2) and update the volume. For this,
- *   we have to multiple this term with @f$ C / h @f$. The C is a problem-specific
+ *   we have to multiple this term with @f$ \Delta t / h @f$. The C is a problem-specific
  *   constant and the h is the mesh size. It stems from the fact that the original
  *   weak (integral) formulation of the Finite Volume scheme has a volume integral
  *   over time derivative and a surface integral over the @f$ F @f$ terms to which
