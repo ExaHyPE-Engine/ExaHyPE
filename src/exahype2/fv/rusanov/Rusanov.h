@@ -89,7 +89,9 @@
   \forall v: \qquad
   h^d \cdot Q(t+\Delta t)
   & = & \Delta t \cdot \oint _v (F(Q),n) dS(x) \\
-    && - \Delta t \cdot \sum _d \int _v div \left( B_d\ Q \right) dx \\
+    && - \Delta t \cdot \sum _d \int _v div \left( B_d\ Q \right) dx
+     + \Delta t \cdot \sum _d \int _v \nabla B_d \cdot Q dx
+    \\
     && + \Delta t \cdot h^d S(Q) \\
   Q(t+\Delta t)
   & = & \frac{\Delta t}{h^d} \cdot \oint _v [[F(Q)]] dS(x)
@@ -98,20 +100,38 @@
    \f}
  *
  * which exploits the chain rule to separate the non-conservative term into a
- * conservative part and the remainder: @f$ div \left( B_d\ Q \right) = \nabla B_d \cdot Q + B_d \nabla Q @f$.
- * We exploit the piece-wise constant-ness, i.e. @f$ B_d \nabla Q = div \left( B_d\ Q \right) - \nabla B_d \cdot Q = div \left( B_d\ Q \right) @f$.
+ * conservative part and the remainder: @f$ div \left( B_d\ Q \right) = \nabla B_d \cdot Q + B_d \nabla Q @f$
+ * i.e. @f$ B_d \nabla Q = div \left( B_d\ Q \right) - \nabla B_d \cdot Q @f$.
  *
  *
  * As we cannot provide expressions for the terms on the faces, we provide
  * numerical approximations
  *
  * \f{eqnarray*}{
- \oint _v [[...]] dS(x) & = & h^{d-1} \left[ \frac{1}{2} \left( F(Q^+) + F(Q^-) \right)
-  + \sum _d B_d( \frac{1}{2}(Q^+ + Q^-) ) \cdot ( \frac{1}{2}(Q^+ + Q^-) )
-  - C \lambda _{max} (Q^- - Q^+) \right]
+ \oint _v [[...]] dS(x) & = & h^{d-1} \left[ \frac{1}{2} \left( F(Q^+) + F(Q^-) \right) \right. \\
+  && + \sum _d B_d( \frac{1}{2}(Q^+ + Q^-) ) \cdot ( \frac{1}{2}(Q^+ + Q^-) ) \\
+  && \left. - C max(\lambda _{max}(Q^-),\lambda _{max}(Q^+)) (Q^- - Q^+) \right]
    \f}
  *
  * where we average @f$ [[Q]] \approx \frac{1}{2}(Q^+ + Q^-) @f$ and assume a linear F.
+ *
+ * The update of a volume hence depends on the source term contribution within the volume,
+ * an averaged conservative flux over the faces, a damping term using the maximum of the eigenvalues
+ * in the left and right volume, a non-conservative flux over the average on the faces and
+ * a non-conservative flux within the volume.
+ *
+ * The last missing piece of the puzzle is the treatment of the remaining volumetric
+ * contribution over the non-conservative term.
+ * We notice that we can move the unknown @f$ Q @f$ out of the integral, as it is constant.
+ * The remaining volume integral over @f$ \nabla B_d @f$ gives us again a surface contribution of @f$ B @f$
+ * multiplied with the normal.
+ * Besides the source term, we are left with face contributions to a volume's evolution only:
+ *
+ * \f{eqnarray*}{
+ \oint _v [[...]] dS(x) & = & h^{d-1} \left[ \frac{1}{2} \left( F(Q^+) + F(Q^-) \right) \right. \\
+  && + \sum _d B_d( \frac{1}{2}(Q^+ + Q^-) ) \cdot ( \frac{1}{2}(Q^+ - Q^-) ) \\
+  && \left. - C max(\lambda _{max}(Q^-),\lambda _{max}(Q^+)) (Q^- - Q^+) \right]
+   \f}
  *
  *
  *
@@ -140,7 +160,8 @@
  * - (3.2) Per face: Compute the average of the fluxes of two adjacent volumes' fluxes
  * - (3.3) Per volume: Update the volume with the fluxes from their @f$ 2d @f$
  *   adjacent faces subject to a scaling with @f$ \Delta t/h @f$.
- * - (4.1) Per face: Compute @f$ B_d \cdot \Delta Q @f$
+ * - (4.1) Per face: Compute @f$ \frac{1}{2}\ B_d \cdot \Delta Q = \frac{1}{2}\ B_d \cdot (Q^+ - Q^-)@f$.
+ *   This is the Finite Volume's non-conservative product.
  * - (4.2) Per volume: Add the ncp face contributions subject ot a scaling of
  *   @f$ \Delta t/h @f$.
  * - (5) Per volume: Add @f$ \Delta t \cdot S(Q(t)) @f$ to @f$ Q(t+\Delta t) @f$.
@@ -199,6 +220,12 @@
  *   their order, but we can also realise them through plain C loops or SYCL
  *   range iterators, or loops annotated with OpenMP.
  *
+ * The last observation implies that we can port codes to GPUs. In this context, a
+ * GPU developer only focuses on the for loops around the compute steps, while the
+ * same compute steps are used both on the devide and the host. This idea has been
+ * proposed by Dominic E. Charrier within ExaHyPE 2, while the ExaHyPE (1) compute
+ * kernels did resemble the in-situ code variant.
+ *
  *
  * ## In-situ updates
  *
@@ -239,6 +266,9 @@
  * the red. This ordering is encoded within the enumerator over the double array.
  * The actual double array (scratchpad) has always the same size.
  *
+ * @author Baojiu Li
+ * @author Han Zhang
+ * @author Tobias Weinzierl
  */
 
 namespace exahype2 {
