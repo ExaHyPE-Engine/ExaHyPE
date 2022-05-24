@@ -55,7 +55,7 @@
  * avoid weird index re-calculations. But they do not hold valid data. We work
  * with a halo layer of one in this illustration.
  *
- * All in all, we get @f$ (p+k)^d \cdot (N+M) @f$ entries as input and return
+ * All in all, we get @f$ (p+2k)^d \cdot (N+M) @f$ entries as input and return
  * @f$ p^d \cdot (N+M) @f$ entries for the next time step. While we typically
  * advance the N unknowns, the M usually are plain copies from the previous
  * time step.
@@ -66,7 +66,7 @@
  * For the Rusanov solver, we rely on a simple weak formulation of the
  * underlying first-order hyperbolic PDE:
  *
- * @f$ \partial _t Q + div F(Q) + \sum _d B_d \nabla Q = S(Q) @f$
+ * @f$ \partial _t Q + div F_i(Q) + \sum _i B_i \nabla_i Q = S(Q) @f$
  *
  * We assume this ordering in the compute kernels, i.e. all terms but the
  * source term S are found on the left-hand side in the PDE formulation.
@@ -74,7 +74,7 @@
  * Volume carries, per PDE unknown, a constant function both in space (over
  * this volume) and time yields
  *
- * @f$ \int _\Omega Q(t+\Delta t) - Q(t) dx + \Delta t \cdot \int _\Omega div F(Q) dx + \Delta t \cdot \sum _d \int _\Omega B_d \nabla Q dx = \Delta t \cdot \int _\Omega S dx @f$
+ * @f$ \int _\Omega Q(t+\Delta t) - Q(t) dx + \Delta t \cdot \int _\Omega div F_i(Q) dx + \Delta t \cdot \sum _i \int _\Omega B_i \nabla_i Q dx = \Delta t \cdot \int _\Omega S dx @f$
  *
  * where we have already evaluated the time integral. Next, we read this as
  * a weak formulation with a test function, where the characteristic function
@@ -82,57 +82,83 @@
  *
  * \f{eqnarray*}{
  \int _\Omega (Q(t+\Delta t) - Q(t))\chi _v dx
-  & = & - \Delta t \cdot \int _\Omega div \ F(Q) \chi _v dx
-        - \Delta t \cdot \sum _d \int _\Omega B_d \nabla Q \chi _v dx
+  & = & - \Delta t \cdot \int _\Omega div \ F_i(Q) \chi _v dx
+        - \Delta t \cdot \sum _i \int _\Omega B_i \nabla_i Q \chi _v dx
         + \Delta t \cdot \int _\Omega S(Q) \chi _v dx
         \\
   \forall v: \qquad
-  h^d \cdot Q(t+\Delta t)
-  & = & \Delta t \cdot \oint _v (F(Q),n) dS(x) \\
-    && - \Delta t \cdot \sum _d \int _v div \left( B_d\ Q \right) dx
-     + \Delta t \cdot \sum _d \int _v \nabla B_d \cdot Q dx
+  h^d \cdot (Q(t+\Delta t)-Q(t))
+  & = & -\Delta t \cdot \oint _{\partial v} (F_i(Q),n) dS(x) \\
+    && - \Delta t \cdot \int _v div \left( B_i \ Q \right) dx
+     + \Delta t \cdot \int _v Q div B_i  dx
     \\
     && + \Delta t \cdot h^d S(Q) \\
   Q(t+\Delta t)
-  & = & \frac{\Delta t}{h^d} \cdot \oint _v [[F(Q)]] dS(x)
-    + \sum _d \frac{\Delta t}{h^d} \oint _v [[B_d\ Q]] dS(x)
+  & = & Q(t)-\frac{\Delta t}{h^d} \cdot \oint _{\partial v} ([[F_i(Q)+B_i Q]],n) dS(x)
+    + \frac{\Delta t}{h^d} \int _{v} Q div B_i dx
     + \Delta t S(Q)
    \f}
  *
  * which exploits the chain rule to separate the non-conservative term into a
- * conservative part and the remainder: @f$ div \left( B_d\ Q \right) = \nabla B_d \cdot Q + B_d \nabla Q @f$
- * i.e. @f$ B_d \nabla Q = div \left( B_d\ Q \right) - \nabla B_d \cdot Q @f$.
+ * conservative part and the remainder: @f$ div \left( B_i\ Q \right) = Q div B_i + \sum_i B_i \nabla_i Q @f$
+ * i.e. @f$ \sum_i B_i \nabla_i Q = div \left( B_i\ Q \right) - Q div B_i @f$. double brackets @f$ [[]] @f$ means
+ * the quantites needs to be evaluated on the face position.
  *
  *
  * As we cannot provide expressions for the terms on the faces, we provide
  * numerical approximations
  *
  * \f{eqnarray*}{
- \oint _v [[...]] dS(x) & = & h^{d-1} \left[ \frac{1}{2} \left( F(Q^+) + F(Q^-) \right) \right. \\
-  && + \sum _d B_d( \frac{1}{2}(Q^+ + Q^-) ) \cdot ( \frac{1}{2}(Q^+ + Q^-) ) \\
-  && \left. - C max(\lambda _{max}(Q^-),\lambda _{max}(Q^+)) (Q^- - Q^+) \right]
+ \oint _{\partial v} ([[F_i(Q)+B_i Q]],n) dS(x) 
+ & = &\sum_{\partial v} h^{d-1} (n, \Big[ \frac{1}{2} \left( F_i(Q^+) + F_i(Q^-) \right)  \\
+  && + \frac{1}{2}(Q^+ + Q^-) B_i( \frac{1}{2}(Q^+ + Q^-) )    \\
+  &&  - C max(\lambda _{max}(Q^-),\lambda _{max}(Q^+)) (Q^+ - Q^-) \Big])
    \f}
  *
- * where we average @f$ [[Q]] \approx \frac{1}{2}(Q^+ + Q^-) @f$ and assume a linear F.
+ * where we average @f$ [[Q]] \approx \frac{1}{2}(Q^+ + Q^-) @f$ and assume a linear F. the @f$ Q^+ @f$
+ * and @f$ Q^- @f$ represent the unknowns values on the right and on the left of the considered face respectively. Notice the inner 
+ * product with the face normal vector provides a minus sign for the left faces in the following calculation.
  *
  * The update of a volume hence depends on the source term contribution within the volume,
- * an averaged conservative flux over the faces, a damping term using the maximum of the eigenvalues
+ * an averaged conservative flux over the faces (which now is the sum of @f$ 2d @f$ flat faces),
+ * a damping term using the maximum of the eigenvalues
  * in the left and right volume, a non-conservative flux over the average on the faces and
  * a non-conservative flux within the volume.
  *
  * The last missing piece of the puzzle is the treatment of the remaining volumetric
  * contribution over the non-conservative term.
  * We notice that we can move the unknown @f$ Q @f$ out of the integral, as it is constant.
- * The remaining volume integral over @f$ \nabla B_d @f$ gives us again a surface contribution of @f$ B @f$
- * multiplied with the normal.
- * Besides the source term, we are left with face contributions to a volume's evolution only:
- *
+ * The remaining volume integral over @f$ div B_i @f$ gives us again a surface contribution of @f$ B_i @f$.
+ * multiplied with the normal. These 
+ * contributions depend on the relative position of the face and volume:
  * \f{eqnarray*}{
- \oint _v [[...]] dS(x) & = & h^{d-1} \left[ \frac{1}{2} \left( F(Q^+) + F(Q^-) \right) \right. \\
-  && + \sum _d B_d( \frac{1}{2}(Q^+ + Q^-) ) \cdot ( \frac{1}{2}(Q^+ - Q^-) ) \\
-  && \left. - C max(\lambda _{max}(Q^-),\lambda _{max}(Q^+)) (Q^- - Q^+) \right]
+\int _{v} Q div B_i dx =Q \int_v div B_i dx =Q \oint_{\partial v} ([[B_i]],n) dS(x)=
+Q\sum_{\partial v}h^{d-1}(B_i(\frac{1}{2}(Q^+ + Q^-)),n)
    \f}
- *
+ * Now we can combine these contributions with other flux terms, but we need to be careful:
+ * if the face is on the right of the volume, we should use @f$ Q^- @f$ while for left face we use
+ * @f$ Q^+ @f$. So to be clear we write the total flux contribution separately for left and right face:
+ * \f{eqnarray*}{
+{\rm flux}^d_{\rm left} &=& \left[-\frac{\Delta t}{h^d} \cdot \oint _{\partial v} ([[F_i(Q)+B_i Q]],n) dS(x)
+    + \frac{\Delta t}{h^d} \int _{v} Q div B_i dx \right]_{\rm for \ a \ single \ left \ face \ in \ d \ direction}\\
+&=& \frac{\Delta t}{h}\left[\frac{1}{2} \left( F_d(Q^+) + F_d(Q^-) \right) 
+  -\frac{1}{2}(Q^+ - Q^-) B_d( \frac{1}{2}(Q^+ + Q^-) )
+  -C max(\lambda _{max}(Q^-),\lambda _{max}(Q^+)) (Q^+ - Q^-) \right]
+   \f}
+ * \f{eqnarray*}{
+{\rm flux}^d_{\rm right} &=& \left[-\frac{\Delta t}{h^d} \cdot \oint _{\partial v} ([[F_i(Q)+B_i Q]],n) dS(x)
+    + \frac{\Delta t}{h^d} \int _{v} Q div B_i dx \right]_{\rm for \ a \ single \ right \ face \ in \ d \ direction}\\
+&=& \frac{\Delta t}{h}\left[-\frac{1}{2} \left( F_d(Q^+) + F_d(Q^-) \right) 
+  -\frac{1}{2}(Q^+ - Q^-) B_d( \frac{1}{2}(Q^+ + Q^-) )
+  +C max(\lambda _{max}(Q^-),\lambda _{max}(Q^+)) (Q^+ - Q^-) \right]
+   \f}
+ * Here @f$ F_d, \ B_d @f$ are the component of @f$ F_i, \ B_i @f$ in d direction. And @f$ Q^+ @f$ and @f$ Q^- @f$
+ * are referring to the value on the left and the right of the considered face.
+ * we now can write down the final volume updating scheme in our FV solver
+ * \f{eqnarray*}{
+  \forall v: \qquad Q(t+\Delta t)
+   =  Q(t)+\sum_d ({\rm flux}^d_{\rm left}+{\rm flux}^d_{\rm right}) + \Delta t S(Q)
+   \f}
  *
  *
  * ## The linearity assumption in the F term
