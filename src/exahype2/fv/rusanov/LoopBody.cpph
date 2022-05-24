@@ -826,10 +826,10 @@ void exahype2::fv::rusanov::internal::updateSolutionWithNonconservativeFlux_Loop
   rightVolume(normal)++;
 
   if (leftVolume(normal)>=0) {
-    QOut[ QOutEnumerator(patchIndex, leftVolume, unknown) ] -= dt / patchSize(normal) * QOutEnumerator._numberOfVolumesPerAxisInPatch * fluxNCP[ fluxEnumerator(patchIndex, faceIndex, unknown) ];
+    QOut[ QOutEnumerator(patchIndex, leftVolume, unknown) ] -= dt / patchSize(normal) * QOutEnumerator._numberOfVolumesPerAxisInPatch * fluxNCP[ fluxEnumerator(patchIndex, faceIndex, unknown) ]*0.5;
   }
   if (rightVolume(normal)<QOutEnumerator._numberOfVolumesPerAxisInPatch) {
-    QOut[ QOutEnumerator(patchIndex, rightVolume, unknown) ] -= dt / patchSize(normal) * QOutEnumerator._numberOfVolumesPerAxisInPatch * fluxNCP[ fluxEnumerator(patchIndex, faceIndex, unknown) ];
+    QOut[ QOutEnumerator(patchIndex, rightVolume, unknown) ] -= dt / patchSize(normal) * QOutEnumerator._numberOfVolumesPerAxisInPatch * fluxNCP[ fluxEnumerator(patchIndex, faceIndex, unknown) ]*0.5;
   }
 }
 
@@ -953,10 +953,10 @@ void exahype2::fv::rusanov::internal::updateSolutionWithEigenvalueDamping_LoopBo
   #endif
 
   if (leftVolume(normal)>=0) {
-    QOut[ QOutEnumerator(patchIndex, leftVolume,unknown) ]  -=  dt / patchSize(normal) * QOutEnumerator._numberOfVolumesPerAxisInPatch * flux;
+    QOut[ QOutEnumerator(patchIndex, leftVolume,unknown) ]  -=  dt / patchSize(normal) * QOutEnumerator._numberOfVolumesPerAxisInPatch * flux*0.5;
   }
   if (rightVolume(normal)<QOutEnumerator._numberOfVolumesPerAxisInPatch) {
-    QOut[ QOutEnumerator(patchIndex, rightVolume,unknown) ] +=  dt / patchSize(normal) * QOutEnumerator._numberOfVolumesPerAxisInPatch * flux;
+    QOut[ QOutEnumerator(patchIndex, rightVolume,unknown) ] +=  dt / patchSize(normal) * QOutEnumerator._numberOfVolumesPerAxisInPatch * flux*0.5;
   }
 }
 #if defined(GPUOffloadingOMP)
