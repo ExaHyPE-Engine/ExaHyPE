@@ -150,6 +150,7 @@ wcount_dh_attr= dastgen2.attributes.Double("wcount_dh")
 Ncount_attr   = dastgen2.attributes.Integer("Ncount")
 
 # Variable smoothing length scheme
+f_attr     = dastgen2.attributes.Double("f")      # SWIFT's equivalent of Omega
 Omega_attr = dastgen2.attributes.Double("Omega")
 rho_dh_attr= dastgen2.attributes.Double("rho_dh")
 hDot_attr  = dastgen2.attributes.Double("hDot")
@@ -197,6 +198,7 @@ particle.data.add_attribute(wcount_dh_attr)
 particle.data.add_attribute(soundSpeed_attr)
 
 # For variable smoothing length
+particle.data.add_attribute(f_attr)
 particle.data.add_attribute(Omega_attr)
 particle.data.add_attribute(rho_dh_attr)
 particle.data.add_attribute(hDot_attr)
@@ -278,8 +280,6 @@ BETA_AV = "3"       # =3 in SWIFT/SPHENIX
 # Smoothing-length free parameter (resolution "eta_neighbours"). 
 # Can be set by specifying a desired number of neighbours.
 if(Dimensions==2):
-#    N_ngbs_mean = 10.0  
-#    SMOOTH_L_FAC = str( (1.   /pi*N_ngbs_mean)**(1./2.)/float(KERNEL_SUPPORT_RAD) ) 
 # SWIFT value. Should be equivalent to N_ngbs_mean = 15.14.   
     SMOOTH_L_FAC = str( 1.235 ) 
 elif(Dimensions==3):
@@ -434,7 +434,8 @@ initialisation_snippet = """
   particle->setHDot  (0.0);        
   particle->setWcount(0.0);        
   particle->setNcount(0  );        
-  particle->setOmega (0.0);        
+  particle->setOmega (1.0);  // set to 1 to avoid problem with boundary particles.
+  particle->setF     (0.0);        
   particle->setRho_dh(0.0);           
   particle->setWcount_dh(0.0);  
 
@@ -520,7 +521,6 @@ touch_particle_first_time_compute_kernel = """
     /* Not needed in SWIFT */
     localParticle->setNcount  (0);
     localParticle->setOmega   (0.0);   
-
   } 
     
 
@@ -595,28 +595,26 @@ particle_particle_compute_kernel = """
       W_a = w_a / std::pow( h_a, Dimensions );
       dW_a_dh = - ( Dimensions*w_a + q_a*dw_a_dq ) / std::pow( h_a, Dimensions +1 );
 
-      // Increment density of Local particle
+      /* Increment density */
       localParticle->setDensity( localParticle-> getDensity() + m_b * W_a ); 
 
-      // Increment number density as well
+      /* Increment fractional number density */
       localParticle->setWcount ( localParticle-> getWcount () +       W_a );
       
-      // Increment exact number of neighbours (for debugging)
+      /* Debug: Increment number of detected neighbours */
       localParticle->setNcount ( localParticle-> getNcount () + 1 ); 
 
-      // Increment drho/dh
+      /* Increment drho/dh */
       localParticle->setRho_dh   ( localParticle->getRho_dh()    + m_b*dW_a_dh ); 
 
-      // Increment Omega of Local particle
+      /* Increment Omega */
+      /* Notice that this is the same as drho_dh in SWIFT */
       localParticle->setOmega    ( localParticle->getOmega()     + m_b*dW_a_dh );
 
-      // Increment dWcount/dh
+      /* Increment dWcount/dh */
       localParticle->setWcount_dh( localParticle->getWcount_dh() +     dW_a_dh ); 
 
-      assertion3( not std::isnan( localParticle->getOmega() ), localParticle->toString(), localParticle->getOmega(), dW_a_dh );
-      
       /* Now we need to compute the div terms */
-          
       const double r_inv = r ? 1.0 / r : 0.0;     
       const double fac_a = m_a * dw_a_dq * r_inv;
 
@@ -629,6 +627,8 @@ particle_particle_compute_kernel = """
       /* 2D Term only has 1 component (z) */
       const double curlvr2D = dv_ab[0]*dx[1] - dv_ab[1]*dx[0];
       localParticle->setRot_v( localParticle->getRot_v() + fac_a * curlvr2D );
+
+      assertion3( not std::isnan( localParticle->getOmega() ), localParticle->toString(), localParticle->getOmega(), dW_a_dh );
     } 
 """
 
@@ -708,8 +708,9 @@ touch_particle_last_time_compute_kernel = """
       /* Compute the sound speed */
       const double soundspeed = gas_soundspeed_from_internal_energy( localParticle->getU() );
     
-      // Construct final expression of Omega
-      /* Swift Expression for equivalent to Omega term ("f", see also Springel and Hernquist) */
+      /* Construct the final expression of the grad-h-term.
+       * Swift use "f" (see also Springel and Hernquist). 
+       * PHANTOM use Omega, which is proportional to ~ 1/f. (Price et al 2018) */
      
       const double dh_drho_a = - h_a / rho_a / Dimensions;
       const double common_factor = h_a / Dimensions / localParticle->getWcount();
@@ -746,9 +747,16 @@ touch_particle_last_time_compute_kernel = """
       /* Update variables */
       const double P_a = gas_pressure_from_internal_energy( rho_a, localParticle->getU() );
       
-      /* Grad-h-term (Omega) */
-      /* SWIFT */
-      localParticle->setOmega( grad_h_term );  
+      /* SWIFT */ 
+      localParticle->setF( grad_h_term );      
+      
+      /* Price: finish calculation of Omega */
+      localParticle->setOmega( 1.0 - dh_drho_a * localParticle->getOmega() ); 
+      /* Re-set if gone ill */
+      if( tarch::la::smallerEquals( localParticle->getOmega(), 0.0) ){
+        localParticle->setOmega(1.0);
+      }
+
       localParticle->setPressure(P_a);
       localParticle->setSoundSpeed(soundspeed);
       localParticle->setBalsara(balsara);
@@ -803,22 +811,27 @@ touch_particle_last_time_compute_kernel = """
       } else {
 
         /* Compute one step of the Newton-Raphson scheme */
+        
+        /* SWIFT's calcualtion based on Wcount */
+/*
         const double n_sum = localParticle->getWcount() * h_old_dim;
         const double n_target = hydro_eta_dim;
         const double f = n_sum - n_target;
         const double f_prime = localParticle->getWcount_dh() * h_old_dim +
                                   Dimensions * localParticle->getWcount() * h_old_dim_minus_one;
+*/
+        
+        /* Price's calculation based on Omega */
+
+        const double one_over_dh_drho_a = - Dimensions * localParticle->getDensity() / h_old;
+        const double rho_sum = localParticle->getDensity();
+        const double rho_target = m_a * std::pow( SMOOTH_L_FAC / h_old, Dimensions);
+        const double f = rho_sum - rho_target; // Price et al 2018 sign
+        const double f_prime = - one_over_dh_drho_a * localParticle->getOmega(); // Opposite sign of Price et al 2018
 
         // Debug
-//        assertion6( f!=0, localParticle->toString(), h_new, h_old, CutoffParticleH, HYDRO_h_MIN, HYDRO_h_MAX );       
+        assertion6( f_prime !=0, localParticle->toString(), f_prime, h_new, h_old, HYDRO_h_MIN, HYDRO_h_MAX );       
 
-        /* Improve the bisection bounds */
-        if (n_sum < n_target) {
-          localParticle->setHLeft ( std::max(localParticle->getHLeft (), h_old) );
-        } else if (n_sum > n_target) {
-          localParticle->setHRight( std::min(localParticle->getHRight(), h_old) );
-        }
- 
         /* Skip if h is already h_max and we don't have enough neighbours */
         /* Same if we are below h_min */
         /* Same if we have hit the Peano cutoff radius 
@@ -840,7 +853,8 @@ touch_particle_last_time_compute_kernel = """
           /* Verbose about this particle */
           logInfo( "touchVertexLastTime()", " This particle is unable to shrink/grow anymore:  " << localParticle->toString() );
 
-//        continue;
+          /* Re-set the value from previous time-step */
+          h_new = h_0;
         }
 
         /* Normal case: 
@@ -852,10 +866,6 @@ touch_particle_last_time_compute_kernel = """
         /* Safety check: truncate to the range [ h_old/2 , 2h_old ]. */
         h_new = std::min( h_new, 2.0 * h_old );
         h_new = std::max( h_new, 0.5 * h_old );
-
-//        /* Verify that we are actually progressing towards the answer */
-//        h_new = std::max( h_new, localParticle->getHLeft () );
-//        h_new = std::min( h_new, localParticle->getHRight() );
 
       }   /* end of if( localParticle->getWcount() < 1e-5 ) else block */
 
@@ -869,10 +879,7 @@ touch_particle_last_time_compute_kernel = """
   
         /* Ok, correct then */
 
-//        /* Truncate using lower bound: */
-//        if (h_new > 0.01960){
         localParticle->setSmoothingLength( h_new );
-//        }
 
         /* Increase the iteration counter */
         localParticle->setIterCount( localParticle->getIterCount() + 1 );
@@ -986,8 +993,14 @@ force_non_sym_particles.add_action_set( peano4.toolbox.particles.ParticleParticl
       double wb_dr = dw_b_dq / std::pow( h_b, Dimensions + 1 );
 
       /* Variable smoothing length term */
-      const double f_ab = 1.0 - localParticle ->getOmega()/m_b;
-      const double f_ba = 1.0 - activeParticle->getOmega()/m_a;
+      
+      /* SWIFT "f" */
+//      const double f_ab = 1.0 - localParticle ->getF()/m_b;
+//      const double f_ba = 1.0 - activeParticle->getF()/m_a;
+
+      /* Price "Omega" */
+      const double f_ab = 1.0 / localParticle->getOmega() ;
+      const double f_ba = 1.0 / activeParticle->getOmega() ;
 
       /* Compute gradient terms */
       const double P_over_rho2_a = P_a / (rho_a * rho_a) * f_ab;
@@ -1022,8 +1035,9 @@ force_non_sym_particles.add_action_set( peano4.toolbox.particles.ParticleParticl
       const double acc = sph_acc_term + visc_acc_term;
             
       /* Use the force Luke ! */
-      assertion1( not tarch::la::isEntryNan( localParticle->getA() ), localParticle->toString() );
       localParticle->setA( localParticle->getA() - m_b * acc * dx );
+      assertion8( not tarch::la::isEntryNan( localParticle->getA() ), localParticle->toString(), sph_acc_term, visc_acc_term, f_ab, f_ba,
+                  activeParticle->getOmega(), activeParticle->getF(), activeParticle->getIsBoundaryParticle() );
               
       /* Get the time derivative for u. */
       const double sph_du_term_a = P_over_rho2_a * dvdr * r_inv * wa_dr;
@@ -1039,6 +1053,7 @@ force_non_sym_particles.add_action_set( peano4.toolbox.particles.ParticleParticl
 
       /* Get the time derivative for h. */
       localParticle->setHDot(localParticle->getHDot() - m_b * dvdr * r_inv/rho_b * wa_dr * f_ab);
+      assertion6( not std::isnan( localParticle->getHDot() ), localParticle->toString(), dvdr, r_inv, wa_dr, f_ab, f_ba );
 
       /* Update the signal velocity */
       localParticle->setV_sig_AV( std::max(localParticle->getV_sig_AV(), v_sig) );
@@ -1908,6 +1923,7 @@ particle_plotter.add_attribute_to_plot(u_attr       , 1)
 particle_plotter.add_attribute_to_plot(mass_attr    , 1)
 particle_plotter.add_attribute_to_plot(density_attr , 1)
 particle_plotter.add_attribute_to_plot(pressure_attr, 1)
+particle_plotter.add_attribute_to_plot(f_attr ,  1)
 particle_plotter.add_attribute_to_plot(Omega_attr ,  1)
 particle_plotter.add_attribute_to_plot(rho_dh_attr,  1)
 particle_plotter.add_attribute_to_plot(Ncount_attr,  1)
