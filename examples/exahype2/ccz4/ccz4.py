@@ -59,7 +59,7 @@ if __name__ == "__main__":
     parser.add_argument("-tn", "--tracer-name",       dest="tra_name",    type=str, default="de",  help="name of output tracer file (temporary)" )
     parser.add_argument("-exn", "--exe-name",        dest="exe_name",    type=str, default="",  help="name of output executable file" )
     parser.add_argument("-outdir", "--output-directory",        dest="path",    type=str, default="./",  help="specify the output directory, include the patch file and tracer file" )
-    parser.add_argument("-interp",   "--interpolation", dest="interpolation",     choices=["constant","order-2","linear-constant-extrap","linear-linear-extrap","linear-con-extrap-lin-normal-interp","linear-lin-extrap-lin-normal-interp"], default="linear-constant-extrap",  help="interpolation scheme for AMR" )
+    parser.add_argument("-interp",   "--interpolation", dest="interpolation",     choices=["constant","order-2","linear-constant-extrap","linear-linear-extrap","linear-con-extrap-lin-normal-interp","linear-lin-extrap-lin-normal-interp"], default="linear-lin-extrap-lin-normal-interp",  help="interpolation scheme for AMR" )
     parser.add_argument("-restrict", "--restriction",   dest="restriction",       choices=["average", "inject", "average+enforce", "inject+enforce"], default="average",  help="restriction scheme for AMR" )
 
 
@@ -707,6 +707,14 @@ if __name__ == "__main__":
     userinfo.append(("Terminal time: "+str(args.end_time),None))
 
     project.set_Peano4_installation("../../..", build_mode)
+
+########################################################################################
+#AMR boundary tracing
+########################################################################################
+    amr_label = exahype2.solvers.elliptic.AMRMarker( name="AMRMarker" )
+    project.add_solver( amr_label )
+    my_solver._auxiliary_variables+=1
+    amr_label.couple_with_FV_solver( my_solver, my_solver._auxiliary_variables-1 )
 
 ########################################################################################
 #output dir and proble
