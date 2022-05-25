@@ -88,7 +88,7 @@ namespace exahype2 {
     #pragma omp declare target
     #endif
 */
-    GPUCallableMethod double riemann_maxAbsoluteEigenvalue_body_AoS(
+    double riemann_maxAbsoluteEigenvalue_body_AoS(
     std::function< double(
       const double * const __restrict__                 Q,
       const tarch::la::Vector<Dimensions,double>& x,
