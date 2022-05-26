@@ -137,7 +137,7 @@ change \texttt{CXX}
 \begin{bash}
 ./configure CC=dpcpp CXX=dpcpp \
  CXXFLAGS="-Ofast -mtune=native -march=native" \
- LDFLAGS="" \
+ LDFLAGS="-ltbb" \
  --with-multithreading=tbb --enable-exahype --enable-loadbalancing --enable-blockstructured \ 
  --with-gpu=sycl
 \end{bash}
@@ -148,6 +148,8 @@ compiler.
 While the SYCL GPU port should, in theory, work with any tasking front-end and,
 notably, with C++ tasking, I usually use the Threading Building Blocks (TBB) in
 \Peano.
+Please note that you will have to link against \texttt{libtbb.so} via
+\texttt{-ltbb} manually.
 
 
 
