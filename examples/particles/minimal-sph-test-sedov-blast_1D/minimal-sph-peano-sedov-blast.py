@@ -605,18 +605,15 @@ particle_particle_compute_kernel = """
       // Normalization factors 
       double W_a, dW_a_dh;
       W_a = w_a / std::pow( h_a, HYDRO_DIMENSIONS );
-      dW_a_dh = - ( Dimensions*w_a + q_a*dw_a_dq ) / std::pow( h_a, HYDRO_DIMENSIONS +1 );
+      dW_a_dh = - ( HYDRO_DIMENSIONS * w_a + q_a*dw_a_dq ) / std::pow( h_a, HYDRO_DIMENSIONS +1 );
 
       /*************************************************************/
 
-
       // SWIFT M4 KERNEL TEST
-      double w;
-      double dw_dh;
-      kernel_deval_SWIFT(q_a, w, dw_dh);
+      double w, dw_dx;
+      kernel_deval_SWIFT(q_a, w, dw_dx);
       W_a = w / std::pow( h_a, HYDRO_DIMENSIONS );
-      dW_a_dh = - ( HYDRO_DIMENSIONS * w + q_a * dw_dh ) / std::pow( h_a, HYDRO_DIMENSIONS +1 );
-
+      dW_a_dh = - ( HYDRO_DIMENSIONS * w + q_a * dw_dx ) / std::pow( h_a, HYDRO_DIMENSIONS +1 );
 
       /*************************************************************/
 
@@ -641,7 +638,7 @@ particle_particle_compute_kernel = """
 
       /* Now we need to compute the div terms */
       const double r_inv = r ? 1.0 / r : 0.0;     
-      const double fac_a = m_a * dw_a_dq * r_inv;
+      const double fac_a = m_b * dw_dx * r_inv;
 
       /* Compute dv dot r */
       dv_ab = localParticle->getV() - activeParticle->getV();
@@ -649,8 +646,8 @@ particle_particle_compute_kernel = """
       localParticle->setDiv_v( localParticle->getDiv_v() - fac_a * dvdr );
       
       /* Compute dv cross r */
-      /* 2D Term only has 1 component (z) */
-      const double curlvr2D = dv_ab[0]*dx[1] - dv_ab[1]*dx[0];
+      /* 1D does not have curl */
+      const double curlvr2D = 0;
       localParticle->setRot_v( localParticle->getRot_v() + fac_a * curlvr2D );
 
       assertion3( not std::isnan( localParticle->getOmega() ), localParticle->toString(), localParticle->getOmega(), dW_a_dh );
@@ -849,22 +846,21 @@ touch_particle_last_time_compute_kernel = """
         
         /* SWIFT's calcualtion based on Wcount */
 
+/*
         const double n_sum = localParticle->getWcount() * h_old_dim;
         const double n_target = hydro_eta_dim;
         const double f = n_sum - n_target;
         const double f_prime = localParticle->getWcount_dh() * h_old_dim +
                                   HYDRO_DIMENSIONS * localParticle->getWcount() * h_old_dim_minus_one;
-
+*/
         
         /* Price's calculation based on Omega */
 
-/*
         const double one_over_dh_drho_a = - HYDRO_DIMENSIONS * localParticle->getDensity() / h_old;
         const double rho_sum = localParticle->getDensity();
         const double rho_target = m_a * std::pow( SMOOTH_L_FAC / h_old, HYDRO_DIMENSIONS);
         const double f = rho_sum - rho_target; // Price et al 2018 sign
         const double f_prime = - one_over_dh_drho_a * localParticle->getOmega(); // Opposite sign of Price et al 2018
-*/
 
         // Debug
 //        assertion6( f_prime !=0, localParticle->toString(), f_prime, h_new, h_old, HYDRO_h_MIN, HYDRO_h_MAX );       
@@ -1045,12 +1041,12 @@ force_non_sym_particles.add_action_set( peano4.toolbox.particles.ParticleParticl
       /* Variable smoothing length term */
       
       /* SWIFT "f" */
-      const double f_ab = 1.0 - localParticle ->getF()/m_b;
-      const double f_ba = 1.0 - activeParticle->getF()/m_a;
+//      const double f_ab = 1.0 - localParticle ->getF()/m_b;
+//      const double f_ba = 1.0 - activeParticle->getF()/m_a;
 
       /* Price "Omega" */
-//      const double f_ab = 1.0 / localParticle->getOmega() ;
-//      const double f_ba = 1.0 / activeParticle->getOmega() ;
+      const double f_ab = 1.0 / localParticle->getOmega() ;
+      const double f_ba = 1.0 / activeParticle->getOmega() ;
 
       /* Compute gradient terms */
       const double P_over_rho2_a = P_a / (rho_a * rho_a) * f_ab;
