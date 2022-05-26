@@ -1327,6 +1327,11 @@ void {FULL_QUALIFIED_CLASSNAME}::receiveAndMergeFace(int position, int fromStack
       and
       (context==::peano4::grid::TraversalObserver::SendReceiveContext::Rebalancing or {full_qualified_type}::receiveAndMerge(marker))
      ) {{
+      assertion5(
+        not repositories::DataRepository::_{logical_type_name}Stack.getForPop(_spacetreeId, fromStack)->empty(),
+        _spacetreeId, fromStack, event.toString(), position, marker.toString()
+      );
+      
       auto   incomingData = repositories::DataRepository::_{logical_type_name}Stack.getForPop(
         _spacetreeId, fromStack
       )->pop();
