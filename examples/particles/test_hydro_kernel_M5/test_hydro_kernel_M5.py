@@ -87,7 +87,6 @@ hleft_attr = dastgen2.attributes.Double("hLeft")
 hright_attr= dastgen2.attributes.Double("hRight")
 
 # Artificial viscosity scheme
-#rot_v_attr = peano4.dastgen2.Peano4DoubleArray("rot_v","Dimensions")
 rot_v_attr    = dastgen2.attributes.Double("rot_v")    # For 2D sims it only has 1 component (z)
 div_v_attr    = dastgen2.attributes.Double("div_v")
 v_sig_AV_attr = dastgen2.attributes.Double("v_sig_AV")
@@ -177,10 +176,8 @@ CFL_CONSTANT = "0.2"
 GAMMA = str(5./3.)
 
 # SPH kernel parameters
-#KERNEL_SUPPORT_RAD = "2"  # "gamma" parameter. =2 for Cubic Spline. Different in other kernels.
-
-# SWIFT
-KERNEL_SUPPORT_RAD = "1.936492"
+#KERNEL_SUPPORT_RAD = "2"           # "gamma" parameter. =2 for Cubic Spline. Different in other kernels.
+KERNEL_SUPPORT_RAD = "1.936492"     # SWIFT
 
 HYDRO_h_MAX = str( 1.0 / 3.0 / float(KERNEL_SUPPORT_RAD))  # for grid_size = 1/3
 HYDRO_h_MIN = "1e-6"
@@ -532,7 +529,6 @@ touch_particle_last_time_compute_kernel = """
 
       /*************************************************************/
 
-      /*************************************************************/
 
     /* Final operation. Add the self-contributions (i.e. at q=0) */
     localParticle->setDensity  ( localParticle->getDensity()   + m_a * W_a * h_inv_dim );

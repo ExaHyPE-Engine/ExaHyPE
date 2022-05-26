@@ -87,7 +87,6 @@ hleft_attr = dastgen2.attributes.Double("hLeft")
 hright_attr= dastgen2.attributes.Double("hRight")
 
 # Artificial viscosity scheme
-#rot_v_attr = peano4.dastgen2.Peano4DoubleArray("rot_v","Dimensions")
 rot_v_attr    = dastgen2.attributes.Double("rot_v")    # For 2D sims it only has 1 component (z)
 div_v_attr    = dastgen2.attributes.Double("div_v")
 v_sig_AV_attr = dastgen2.attributes.Double("v_sig_AV")
@@ -177,8 +176,8 @@ CFL_CONSTANT = "0.2"
 GAMMA = str(5./3.)
 
 # SPH kernel parameters
-KERNEL_SUPPORT_RAD = "2"  # "gamma" parameter. =2 for Cubic Spline. Different in other kernels.
-#KERNEL_SUPPORT_RAD = "1.732051"  # "gamma" parameter. =2 for Cubic Spline. Different in other kernels.
+#KERNEL_SUPPORT_RAD = "2"        # "gamma" parameter. =2 for Cubic Spline. Different in other kernels.
+KERNEL_SUPPORT_RAD = "1.732051"  # 1D SWIFT
 
 HYDRO_h_MAX = str( 1.0 / 3.0 / float(KERNEL_SUPPORT_RAD))  # for grid_size = 1/3
 HYDRO_h_MIN = "1e-6"
@@ -189,24 +188,21 @@ ALPHA_AV= "0.8"     # =0.8 in SWIFT
 BETA_AV = "3"       # =3 in SWIFT/SPHENIX
 
 # Smoothing-length free parameter (resolution "eta_neighbours"). 
-SMOOTH_L_FAC = str( 0.75 )  # 3 nbs in 1D
-#SMOOTH_L_FAC = str( 1.1 )  # Josh's thesis. 4.4 nbs in 1D
+#SMOOTH_L_FAC = str( 0.75 )  # 3 nbs in 1D
+SMOOTH_L_FAC = str( 1.1 )  # Josh's thesis. 4.4 nbs in 1D
 #SMOOTH_L_FAC = str( 1.235 ) 
 
 if(HYDRO_DIMENSIONS==1):
     N_MEAN_TARGET = str( 2.0 *           (float(KERNEL_SUPPORT_RAD) * float(SMOOTH_L_FAC) )    )
 elif(HYDRO_DIMENSIONS==2):
     N_MEAN_TARGET = str(         np.pi * (float(KERNEL_SUPPORT_RAD) * float(SMOOTH_L_FAC) )**2 )
-elif(HYDRO_DIMENSIONS==3):
-    N_MEAN_TARGET = str( 4./3. * np.pi * (float(KERNEL_SUPPORT_RAD) * float(SMOOTH_L_FAC) )**2 )
 
 # Kernel root value 
 if(HYDRO_DIMENSIONS==1):
-    CUBIC_SPLINE_SIGMA = str(2./3.)
+#    CUBIC_SPLINE_SIGMA = str(2./3.)
+    CUBIC_SPLINE_SIGMA = str(8./3.)     # 1D SWIFT
 elif(HYDRO_DIMENSIONS==2):
     CUBIC_SPLINE_SIGMA = str(10/(7*pi))
-elif(HYDRO_DIMENSIONS==3):
-    CUBIC_SPLINE_SIGMA = str(1/pi)
 
 print("Smoothing length free factor: " + SMOOTH_L_FAC)
 print("Target number of mean neighbours: " + N_MEAN_TARGET)
@@ -273,7 +269,6 @@ initialisation_snippet = """
   /* Compute initial smoothing length */
   particle->setSmoothingLength( SMOOTH_L_FAC * std::pow(particle->getMass()/particle->getDensity(), 1.0 / HYDRO_DIMENSIONS) );
   particle->setSmoothingLengthPrevious( particle->getSmoothingLength() );
-  
   
   /* Initialize remaining fields  */
   
@@ -445,12 +440,12 @@ particle_particle_compute_kernel = """
       dW_a_dh = - ( HYDRO_DIMENSIONS*w_a + q_a*dw_a_dq ) / std::pow( h_a, HYDRO_DIMENSIONS +1 );
 
       /*************************************************************/
-/*
+
       // SWIFT M4 KERNEL TEST
       double W;
       kernel_eval(q_a, W);
       W_a = W / std::pow( h_a, HYDRO_DIMENSIONS );
-*/
+
       /*************************************************************/
 
       /* Increment density */
@@ -523,12 +518,12 @@ touch_particle_last_time_compute_kernel = """
     double W_a = CUBIC_SPLINE_SIGMA ; // kernel form at q=0
 
       /*************************************************************/
-/*
+
       // SWIFT M4 KERNEL TEST
       double W;
       kernel_eval(0, W);
       W_a = W;
-*/
+
       /*************************************************************/
 
     /* Final operation. Add the self-contributions (i.e. at q=0) */
@@ -798,57 +793,6 @@ calc_densities.add_action_set( particle_tree_analysis )
 calc_densities.add_action_set( peano4.toolbox.particles.UpdateParticleGridAssociation(particles) )
 calc_densities.add_action_set( peano4.toolbox.particles.UpdateParallelState(particles) )
 project.solversteps.add_step(calc_densities)
-
-################################################################################
-
-
-
-
-###############################################################################
-# DEPRECATED BY GUARD OPTION
-# ## For Debugging: collapse problem into 1D
-# This is an optional, initial step to move particles into a straight line when the simulation starts.
-###############################################################################
-
-rearrange_particles = peano4.solversteps.Step( "RearrangeAtStart" )
-rearrange_particles.use_vertex(particles)
-rearrange_particles.use_cell(particle_tree_analysis.cell_marker)
-rearrange_particles.add_action_set( peano4.toolbox.particles.UpdateParticleGridAssociation(particles) )
-rearrange_particles.add_action_set( peano4.toolbox.particles.ParticleParticleInteraction(
-  particle_set=particles,
-  particle_particle_interaction_kernel="""
-
-  /* We do not excecute any specific action here */
-
-""",
-  touch_vertex_first_time_compute_particle_update_kernel="""
-
-  /* We do not excecute any specific action here */
-
-""",
-  touch_vertex_last_time_compute_particle_update_kernel="""
-
-  /* Select the initialized particle (Earth)
-   * and put this close to the box center.
-   */
-
-/*
-  if( localParticle->getX(0) < 1e-2 and localParticle->getX(1) < 1e-2){
-    localParticle->setX(0, EARTH_X_INI );
-    localParticle->setX(1, EARTH_Y_INI );
-  }
-*/
-
-
-""",
-  additional_includes="""
-#include "Constants.h"
-#include <cmath>
-"""
-  ))
-#rearrange_particles.add_action_set( peano4.toolbox.particles.ParticleAMR(particles,particle_tree_analysis,min_particles_per_cell=10) )
-rearrange_particles.add_action_set( particle_tree_analysis )
-project.solversteps.add_step(rearrange_particles)
 
 ###############################################################################
 # ### Plots setup
