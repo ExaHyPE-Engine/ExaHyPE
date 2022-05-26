@@ -111,6 +111,9 @@ void examples::exahype2::ccz4::FiniteVolumeCCZ4::initialCondition(
   if ( Scenario==0 ) {
     examples::exahype2::ccz4::gaugeWave(Q, volumeX, 0);
   }
+  else if ( Scenario==3 ) {
+    examples::exahype2::ccz4::diagonal_gaugeWave(Q, volumeX, 0);
+  }
   else if ( Scenario==1 ) {
     examples::exahype2::ccz4::linearWave(Q, volumeX, 0);
   }
