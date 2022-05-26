@@ -244,10 +244,6 @@ project.datamodel.add_vertex       (particles)
 Dimensions = 2
 project.output.makefile.set_dimension(Dimensions)
 
-
-# In[ ]:
-
-
 from numpy import pi
 
 GLOBAL_TIME_STEP_SIZE = "1e-4"
@@ -268,9 +264,11 @@ CFL_CONSTANT = "0.2"
 GAMMA = str(5./3.)
 
 # SPH kernel parameters
-KERNEL_SUPPORT_RAD = "2"  # "gamma" parameter. =2 for Cubic Spline. Different in other kernels.
+#KERNEL_SUPPORT_RAD = "2"  # "gamma" parameter for Price et al 2018 M4 kernel
+#KERNEL_SUPPORT_RAD = "1.732051"  #  1D SWIFT M4 Kernel
+KERNEL_SUPPORT_RAD = "1.778002"  #  2D SWIFT M4 Kernel
 
-HYDRO_h_MAX = str( 0.166 / 2.0 / 2.0) 
+HYDRO_h_MAX = str( 1.0 / 3.0 / float(KERNEL_SUPPORT_RAD) ) 
 HYDRO_h_MIN = "1e-6"
 
 # Artificial viscosity parameters
@@ -288,7 +286,8 @@ elif(Dimensions==3):
 
 # Kernel root value 
 if(Dimensions==2):
-    CUBIC_SPLINE_SIGMA = str(10/(7*pi))
+    CUBIC_SPLINE_SIGMA = str(80/(7*pi))    # 2D SWIFT Kernel
+#    CUBIC_SPLINE_SIGMA = str(10/(7*pi))     # 2D Price et al 2018 kernel
 elif(Dimensions==3):
     CUBIC_SPLINE_SIGMA = str(1/pi)
 
@@ -356,8 +355,9 @@ initialisation_snippet = """
    *
    */
    
-  // Internal cutoff radious used by Peano. Should always be larger than actual SPH cutoff radious (2h).
-  particle->setCutOffRadius(0.16);
+  // Internal cutoff radious used by Peano and with max value R = grid_size/2
+  /* For grid_size = 1/3 */
+  particle->setCutOffRadius(1.0 / 3.0 / 2.0);
   
   particle->setDensity ( 1.0 );        
   particle->setMass( particle->getDensity() / std::pow(HYDRO_PART_NUMBER, 2) );
@@ -595,6 +595,19 @@ particle_particle_compute_kernel = """
       W_a = w_a / std::pow( h_a, Dimensions );
       dW_a_dh = - ( Dimensions*w_a + q_a*dw_a_dq ) / std::pow( h_a, Dimensions +1 );
 
+      /*************************************************************/
+
+
+      // SWIFT M4 KERNEL TEST
+      double w;
+      double dw_dh;
+      kernel_deval_SWIFT(q_a, w, dw_dh);
+      W_a = w / std::pow( h_a, Dimensions );
+      dW_a_dh = - ( Dimensions * w + q_a * dw_dh ) / std::pow( h_a, Dimensions +1 );
+
+
+      /*************************************************************/
+
       /* Increment density */
       localParticle->setDensity( localParticle-> getDensity() + m_b * W_a ); 
 
@@ -663,6 +676,16 @@ touch_particle_last_time_compute_kernel = """
 
     /* Default SPH kernel (cubic spline) */
     double W_a = CUBIC_SPLINE_SIGMA ; // kernel form at q=0
+
+      /*************************************************************/
+
+      // SWIFT M4 KERNEL TEST
+      double w;
+      double dw_dh;
+      kernel_deval_SWIFT(0, w, dw_dh);
+      W_a = w;
+
+      /*************************************************************/
 
     /* Final operation. Add the self-contributions (i.e. at q=0) */
     localParticle->setDensity  ( localParticle->getDensity()   + m_a * W_a * h_inv_dim );
@@ -813,21 +836,23 @@ touch_particle_last_time_compute_kernel = """
         /* Compute one step of the Newton-Raphson scheme */
         
         /* SWIFT's calcualtion based on Wcount */
-/*
+/**/
         const double n_sum = localParticle->getWcount() * h_old_dim;
         const double n_target = hydro_eta_dim;
         const double f = n_sum - n_target;
         const double f_prime = localParticle->getWcount_dh() * h_old_dim +
                                   Dimensions * localParticle->getWcount() * h_old_dim_minus_one;
-*/
+/**/
         
         /* Price's calculation based on Omega */
 
+/*
         const double one_over_dh_drho_a = - Dimensions * localParticle->getDensity() / h_old;
         const double rho_sum = localParticle->getDensity();
         const double rho_target = m_a * std::pow( SMOOTH_L_FAC / h_old, Dimensions);
         const double f = rho_sum - rho_target; // Price et al 2018 sign
         const double f_prime = - one_over_dh_drho_a * localParticle->getOmega(); // Opposite sign of Price et al 2018
+*/
 
         // Debug
         assertion6( f_prime !=0, localParticle->toString(), f_prime, h_new, h_old, HYDRO_h_MIN, HYDRO_h_MAX );       
@@ -992,15 +1017,28 @@ force_non_sym_particles.add_action_set( peano4.toolbox.particles.ParticleParticl
       double wa_dr = dw_a_dq / std::pow( h_a, Dimensions + 1 );
       double wb_dr = dw_b_dq / std::pow( h_b, Dimensions + 1 );
 
+      /*************************************************************/
+
+      // SWIFT M4 KERNEL TEST
+      double wa, wb;
+      double dw_dqa, dw_dqb;
+
+      kernel_deval_SWIFT(q_a, wa, dw_dqa);
+      kernel_deval_SWIFT(q_b, wb, dw_dqb);
+      wa_dr = dw_dqa / std::pow( h_a, Dimensions + 1 );
+      wb_dr = dw_dqb / std::pow( h_b, Dimensions + 1 );
+
+      /*************************************************************/
+
       /* Variable smoothing length term */
       
       /* SWIFT "f" */
-//      const double f_ab = 1.0 - localParticle ->getF()/m_b;
-//      const double f_ba = 1.0 - activeParticle->getF()/m_a;
+      const double f_ab = 1.0 - localParticle ->getF()/m_b;
+      const double f_ba = 1.0 - activeParticle->getF()/m_a;
 
       /* Price "Omega" */
-      const double f_ab = 1.0 / localParticle->getOmega() ;
-      const double f_ba = 1.0 / activeParticle->getOmega() ;
+//      const double f_ab = 1.0 / localParticle->getOmega() ;
+//      const double f_ba = 1.0 / activeParticle->getOmega() ;
 
       /* Compute gradient terms */
       const double P_over_rho2_a = P_a / (rho_a * rho_a) * f_ab;

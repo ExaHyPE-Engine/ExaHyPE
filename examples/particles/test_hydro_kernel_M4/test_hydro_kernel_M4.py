@@ -199,16 +199,12 @@ if(HYDRO_DIMENSIONS==1):
     N_MEAN_TARGET = str( 2.0 *           (float(KERNEL_SUPPORT_RAD) * float(SMOOTH_L_FAC) )    )
 elif(HYDRO_DIMENSIONS==2):
     N_MEAN_TARGET = str(         np.pi * (float(KERNEL_SUPPORT_RAD) * float(SMOOTH_L_FAC) )**2 )
-elif(HYDRO_DIMENSIONS==3):
-    N_MEAN_TARGET = str( 4./3. * np.pi * (float(KERNEL_SUPPORT_RAD) * float(SMOOTH_L_FAC) )**2 )
 
 # Kernel root value 
 if(HYDRO_DIMENSIONS==1):
     CUBIC_SPLINE_SIGMA = str(2./3.)
 elif(HYDRO_DIMENSIONS==2):
     CUBIC_SPLINE_SIGMA = str(10/(7*pi))
-elif(HYDRO_DIMENSIONS==3):
-    CUBIC_SPLINE_SIGMA = str(1/pi)
 
 print("Smoothing length free factor: " + SMOOTH_L_FAC)
 print("Target number of mean neighbours: " + N_MEAN_TARGET)
@@ -275,7 +271,6 @@ initialisation_snippet = """
   /* Compute initial smoothing length */
   particle->setSmoothingLength( SMOOTH_L_FAC * std::pow(particle->getMass()/particle->getDensity(), 1.0 / HYDRO_DIMENSIONS) );
   particle->setSmoothingLengthPrevious( particle->getSmoothingLength() );
-  
   
   /* Initialize remaining fields  */
   
@@ -710,6 +705,8 @@ touch_particle_last_time_compute_kernel = """
         /* Verbose about rho_sum and rho_target values */
 
         if( tarch::la::equals(localParticle->getX(0),0.5) ){
+          logInfo( "touchVertexLastTime()", " kernel_root= " << kernel_root );
+          logInfo( "touchVertexLastTime()", " W(0)= " << W_a );
           logInfo( "touchVertexLastTime()", " rho_sum= " << rho_sum );
           logInfo( "touchVertexLastTime()", " rho_target= " << rho_target );
           logInfo( "touchVertexLastTime()", " particle string: " << localParticle->toString() );
@@ -806,57 +803,6 @@ calc_densities.add_action_set( particle_tree_analysis )
 calc_densities.add_action_set( peano4.toolbox.particles.UpdateParticleGridAssociation(particles) )
 calc_densities.add_action_set( peano4.toolbox.particles.UpdateParallelState(particles) )
 project.solversteps.add_step(calc_densities)
-
-################################################################################
-
-
-
-
-###############################################################################
-# DEPRECATED BY GUARD OPTION
-# ## For Debugging: collapse problem into 1D
-# This is an optional, initial step to move particles into a straight line when the simulation starts.
-###############################################################################
-
-rearrange_particles = peano4.solversteps.Step( "RearrangeAtStart" )
-rearrange_particles.use_vertex(particles)
-rearrange_particles.use_cell(particle_tree_analysis.cell_marker)
-rearrange_particles.add_action_set( peano4.toolbox.particles.UpdateParticleGridAssociation(particles) )
-rearrange_particles.add_action_set( peano4.toolbox.particles.ParticleParticleInteraction(
-  particle_set=particles,
-  particle_particle_interaction_kernel="""
-
-  /* We do not excecute any specific action here */
-
-""",
-  touch_vertex_first_time_compute_particle_update_kernel="""
-
-  /* We do not excecute any specific action here */
-
-""",
-  touch_vertex_last_time_compute_particle_update_kernel="""
-
-  /* Select the initialized particle (Earth)
-   * and put this close to the box center.
-   */
-
-/*
-  if( localParticle->getX(0) < 1e-2 and localParticle->getX(1) < 1e-2){
-    localParticle->setX(0, EARTH_X_INI );
-    localParticle->setX(1, EARTH_Y_INI );
-  }
-*/
-
-
-""",
-  additional_includes="""
-#include "Constants.h"
-#include <cmath>
-"""
-  ))
-#rearrange_particles.add_action_set( peano4.toolbox.particles.ParticleAMR(particles,particle_tree_analysis,min_particles_per_cell=10) )
-rearrange_particles.add_action_set( particle_tree_analysis )
-project.solversteps.add_step(rearrange_particles)
 
 ###############################################################################
 # ### Plots setup

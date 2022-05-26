@@ -83,6 +83,11 @@ __attribute__((always_inline)) inline static void kernel_deval(
 /* The number of branches (floating point conversion) */
 #define kernel_ivals_f ((float)(kernel_ivals))
 
+/* Kernel self contribution (i.e. W(0,h)) */
+#define kernel_root                                          \
+  ((float)(kernel_coeffs[kernel_degree]) * kernel_constant * \
+   kernel_gamma_inv_dim)
+
 static const double kernel_coeffs[(kernel_degree + 1) * (kernel_ivals + 1)]
     __attribute__((aligned(16))) = {3.f,  -3.f, 0.f,  0.5f, /* 0 < u < 0.5 */
                                     -1.f, 3.f,  -3.f, 1.f,  /* 0.5 < u < 1 */

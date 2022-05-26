@@ -30,7 +30,6 @@
 #include "observers/Init.h"
 #include "observers/Plot.h"
 #include "observers/ComputeDensityAndUpdateSmoothingLength.h"
-#include "observers/RearrangeAtStart.h"
 
 tarch::logging::Log _log("::");
 
@@ -120,10 +119,6 @@ int main(int argc, char** argv) {
     peano4::parallel::SpacetreeSet::getInstance().traverse(plotObserver);
     logInfo( "main()", "dumped initial condition" )
         
-//    /* Initial step (e.g., re-arrange the particles into a particular configuration) */
-//    examples::particles::observers::RearrangeAtStart rearrangeObserver;
-//    peano4::parallel::SpacetreeSet::getInstance().traverse(rearrangeObserver);
-
     /* Main function */
     /* Just call the iterative density-smoothing length calculation */
     logInfo( "main()", "run timestep" )
@@ -142,7 +137,7 @@ int main(int argc, char** argv) {
     examples::particles::vertexdata::ParticleSet::finishedTraversal();
     }
 
-    logInfo( "main()", "terminated successfully" )
+    logInfo( "main()", "test terminated successfully" )
 
     //
     // =================
