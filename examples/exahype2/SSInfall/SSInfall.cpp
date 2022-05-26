@@ -270,8 +270,8 @@ void examples::exahype2::SSInfall::SSInfall::initialCondition(
     }
   Q[4] = 0.5*(Q[1]*Q[1]+Q[2]*Q[2]+Q[3]*Q[3])/Q[0]+tilde_P_ini/(gamma-1); // inner energy
 
-  for (int i=5; i<20; i++){
-    	Q[i]=0.0;
+  for (int i=NumberOfUnknowns; i<NumberOfUnknowns+NumberOfAuxiliaryVariables; i++) {
+    Q[i] = 0.0;
   }
 
   const double irho = 1./Q[0];
@@ -512,7 +512,7 @@ void examples::exahype2::SSInfall::SSInfall::boundaryConditions(
     Qoutside[2] = Qinside[2];
     Qoutside[3] = Qinside[3];
     Qoutside[4] = Qinside[4];
-    for (int i=5; i<20; i++){
+    for (int i=NumberOfUnknowns; i<NumberOfUnknowns+NumberOfAuxiliaryVariables; i++) {
     	Qoutside[i]=0;
     }
   }
@@ -528,7 +528,7 @@ void examples::exahype2::SSInfall::SSInfall::boundaryConditions(
         Qoutside[i]=Qinside[i]+Qinside[5+i*3+normal-3]*(volumeH(normal-3));
       } 
     }
-    for (int i=5; i<20; i++){
+    for (int i=NumberOfUnknowns; i<NumberOfUnknowns+NumberOfAuxiliaryVariables; i++) {
     	Qoutside[i]=0;
     }
   }    
@@ -538,7 +538,7 @@ void examples::exahype2::SSInfall::SSInfall::boundaryConditions(
       not std::isnan(Qinside[0]),
       normal, faceCentre, Qinside[0], Qinside[1], Qinside[2], Qinside[3], Qinside[4]
     );
-    for (int i=5; i<20; i++){
+    for (int i=NumberOfUnknowns; i<NumberOfUnknowns+NumberOfAuxiliaryVariables; i++) {
     	Qoutside[i]=0;
     }  
     for (int i=0; i<5; i++){
