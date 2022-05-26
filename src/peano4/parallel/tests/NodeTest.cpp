@@ -35,6 +35,26 @@ void peano4::parallel::tests::NodeTest::testTagCalculation() {
 }
 
 
+void peano4::parallel::tests::NodeTest::testGetOutputStacksForPeriodicBoundaryExchange() {
+  #if Dimensions==2
+  tarch::la::Vector<TwoPowerD,int>  flags(peano4::grid::Spacetree::RankOfPeriodicBoundaryCondition);
+  flags(0) = 0;
+
+  std::set< peano4::parallel::Node::PeriodicBoundaryStackIdentifier > result = peano4::parallel::Node::getOutputStacksForPeriodicBoundaryExchange(flags);
+  validateEqualsWithParams1( result.size(), 3, flags );
+
+
+  #endif
+  #if Dimensions==3
+  tarch::la::Vector<TwoPowerD,int>  flags(peano4::grid::Spacetree::RankOfPeriodicBoundaryCondition);
+  flags(0) = 0;
+
+  std::set< peano4::parallel::Node::PeriodicBoundaryStackIdentifier > result = peano4::parallel::Node::getOutputStacksForPeriodicBoundaryExchange(flags);
+  validateEqualsWithParams1( result.size(), 7, flags );
+  #endif
+}
+
+
 void peano4::parallel::tests::NodeTest::testGetPeriodicBoundaryNumber() {
   #if Dimensions==2
   tarch::la::Vector<TwoPowerD,int>  flags(1);
@@ -51,6 +71,7 @@ void peano4::parallel::tests::NodeTest::run() {
   logTraceIn( "run()" );
   testMethod( testGetPeriodicBoundaryNumber );
   testMethod( testTagCalculation );
+  testMethod( testGetOutputStacksForPeriodicBoundaryExchange )
   logTraceOut( "run()" );
 }
 

@@ -27,6 +27,15 @@ class peano4::parallel::tests::NodeTest: public tarch::tests::TestCase {
     static tarch::logging::Log _log;
 
     void testGetPeriodicBoundaryNumber();
+
+    /**
+     * Pass in the vertex at the top right corner of a unit cube/square
+     * and set its adjacency information such as if we had periodic BCs
+     * in all directions. So we should exchange along all coordinate
+     * axes and along the diagonals, too.
+     */
+    void testGetOutputStacksForPeriodicBoundaryExchange();
+
     void testTagCalculation();
   public:
     NodeTest();
