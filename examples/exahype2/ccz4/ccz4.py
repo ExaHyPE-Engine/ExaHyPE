@@ -53,7 +53,7 @@ if __name__ == "__main__":
     parser.add_argument("-no-pbc",  "--no-periodic-boundary-conditions",      dest="periodic_bc", action="store_false", default="True",  help="switch on or off the periodic BC" )
     parser.add_argument("-et",   "--end-time",        dest="end_time",        type=float, default=1.0, help="End (terminal) time" )
     parser.add_argument("-pst",   "--plot-start-time",        dest="plot_start_time",        type=float, default=0.0, help="start time for plot" )
-    parser.add_argument("-s",    "--scenario",        dest="scenario",        choices=["gauge", "linear", "single-puncture","two-punctures"], required="True", help="Scenario" )
+    parser.add_argument("-s",    "--scenario",        dest="scenario",        choices=["gauge", "dia_gauge", "linear", "single-puncture","two-punctures"], required="True", help="Scenario" )
     parser.add_argument("-cfl",      "--CFL-ratio",           dest="cfl",             type=float, default=0.1, help="Set CFL ratio" )
     parser.add_argument("-tracer", "--add-tracer",    dest="add_tracer", type=int, default=0,  help="Add tracers and specify the seeds. 0-switch off, 1-x axis, 2-xy plane, 3-over domain (evenly), 4-over domain(with noise option), 5-inserted by coordinate, 6-spherical surface(Gauss_Legendre_quadrature), 7-spherical surface(t-design)" )
     parser.add_argument("-tn", "--tracer-name",       dest="tra_name",    type=str, default="de",  help="name of output tracer file (temporary)" )
@@ -550,6 +550,9 @@ if __name__ == "__main__":
       def pick_Gauge_wave_scenario(self):
         self.add_solver_constants( """static constexpr int Scenario=0; /* Gauge wave */  """ )
 
+      def pick_Diagonal_Gauge_wave_scenario(self):
+        self.add_solver_constants( """static constexpr int Scenario=3; /* Diagonal Gauge wave */  """ )
+
       def pick_Linear_wave_scenario(self):
         self.add_solver_constants( """static constexpr int Scenario=1; /* Linear wave */  """ )
 
@@ -664,6 +667,11 @@ if __name__ == "__main__":
       userinfo.append(("picking gauge wave scenario",None))
       floatparams.update({"sk":0.0}); floatparams.update({"bs":0.0})
       intparams.update({"LapseType":0})
+    elif args.scenario=="dia_gauge":
+      solverconstants+= "static constexpr int Scenario=3; /* Diagonal Gauge wave */  "
+      userinfo.append(("picking diagonal gauge wave scenario",None))
+      floatparams.update({"sk":0.0}); floatparams.update({"bs":0.0})
+      intparams.update({"LapseType":0})
     elif args.scenario=="linear":
       solverconstants+= "static constexpr int Scenario=1; /* Linear wave */  "
       userinfo.append(("picking linear wave scenario",None))
@@ -711,10 +719,10 @@ if __name__ == "__main__":
 ########################################################################################
 #AMR boundary tracing
 ########################################################################################
-    amr_label = exahype2.solvers.elliptic.AMRMarker( name="AMRMarker" )
-    project.add_solver( amr_label )
-    my_solver._auxiliary_variables+=1
-    amr_label.couple_with_FV_solver( my_solver, my_solver._auxiliary_variables-1 )
+    #amr_label = exahype2.solvers.elliptic.AMRMarker( name="AMRMarker" )
+    #project.add_solver( amr_label )
+    #my_solver._auxiliary_variables+=1
+    #amr_label.couple_with_FV_solver( my_solver, my_solver._auxiliary_variables-1 )
 
 ########################################################################################
 #output dir and proble
@@ -780,9 +788,7 @@ if __name__ == "__main__":
 ########################################################################################
     peano4_project = project.generate_Peano4_project(verbose=True)
 
-    if args.scenario=="gauge":
-      pass
-    elif args.scenario=="linear":
+    if args.scenario=="gauge" or args.scenario=="linear" or args.scenario=="dia_gauge":
       pass
     elif args.scenario=="two-punctures" or args.scenario=="single-puncture":
       #
