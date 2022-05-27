@@ -59,6 +59,14 @@ namespace std {
 
 namespace tarch {
   namespace multicore {
+    /**
+     * Get a SYCL queue
+     *
+     * The Core singleton instantiates all SYCL queues. You can query the
+     * singleton for the total number of (logical) devices. Per device,
+     * we hold one SYCL queue persistently. You can gain access to this
+     * one queue via this getter.
+     */
     sycl::queue& getSYCLQueue( int number );
   }
 }
