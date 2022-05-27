@@ -91,6 +91,13 @@ class AMRMarker(object):
     delivering a damping, you can now multiply the impact of this operator
     with the auxiliary variable. This way, it is active near AMR boundaries, 
     but it disappears far away from there.
+    
+    
+    ## Pitfall
+    
+    Ensure that you initialise all additional auxiliary variables properly in 
+    ExaHyPE. If you don't initialise them, they will contain garbage will will
+    likely mess up follow-up calculations.
 
   """
   

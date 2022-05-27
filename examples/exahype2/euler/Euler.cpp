@@ -123,6 +123,10 @@ void examples::exahype2::euler::Euler::initialCondition(
   const tarch::la::Vector<Dimensions,double>&  volumeH,
   bool                                         gridIsConstructed
 ) {
+  for (int i=0; i<NumberOfUnknowns+NumberOfAuxiliaryVariables; i++) {
+    Q[i] = 0.0;
+  }
+
   switch (scenario) {
     case Scenario::PointExplosion:
     case Scenario::PointExplosionWithDynamicAMR:
