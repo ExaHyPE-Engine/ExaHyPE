@@ -33,7 +33,12 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::initialCondition(
 ) {
   logTraceInWith3Arguments( "initialCondition(...)", volumeCentre, volumeH, gridIsConstructred );
 
-  // @todo Implement your stuff here
+  // @todo Implement your stuff here, but ensure all entries are
+  //   initialised incl all auxiliary variables. The snippet below
+  //   sets everything to zero
+  for (int i=0; i<NumberOfUnknowns+NumberOfAuxiliaryVariables; i++) {
+    Q[i] = 0.0;
+  }
 
   logTraceOut( "initialCondition(...)" );
 }
