@@ -116,6 +116,10 @@ for (int i=0; i<NumberOfUnknowns+NumberOfAuxiliaryVariables; i++) {
 }
   \end{code}
   as a first step within \texttt{initialCondition()}. So I ensure first that
-  there is no garbage in the data.
+  there is no garbage in the data. Further to that, ensure that you also set
+  proper boundary data for any auxiliary value. You might not need these data, 
+  as you do not use the auxiliary variables to exchange information between
+  patches, but you have to set proper values nevertheless. Otherwise, all of
+  \Peano's assertions will fail as it detects data corruption.
   \item To be continued \dots
 \end{itemize}
