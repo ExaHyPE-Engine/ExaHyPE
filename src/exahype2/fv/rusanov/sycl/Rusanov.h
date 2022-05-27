@@ -17,29 +17,44 @@ namespace exahype2 {
        *
        * ## Memory management
        *
-       * If you run this routine without GPU offloading, we place all temporary data on the heap.
-       * If GPUs are to be used, then we create pointer for the temporary data, but we assign
-       * them all null, as the actual temporary data is to be create on the GPU. This
-       * 'create a pointer which is a nullptr' ensures that the code still compiles on the host
-       * even though it is semantically broken as the temporary data is not acquired. However, we
-       * want to run on the GPU, so we use the pragma omp enter data instruction to allocate the
-       * data directly on the device.
+       * If you run this routine without GPU offloading, i.e. if you use it
+       * non-GPU cousin, we place all temporary data on the heap. If you use
+       * the SYCL variant, we explicitly alloc the temp memory on the device.
+       * To create the temporary data, we need an enumerator, while we need
+       * the enumerator also on the GPU. As it is cheap to construct an
+       * enumerator, I do not bother of copying it over to the device. I
+       * simply create an enumerator on the host and one on the device.
        *
-       * ## Patch data transfer
+       * Once the kernel has finished, we have to free all temporary data. We
+       * use sycl::free() to delete our scratchpads.
        *
-       * All the data within the CellData object is trivially copyable besides the
-       * actual patch sizes and positions. Trivially copyable means that they are
-       * plain double arrays. That is, we can map them onto the device. The actual
-       * input and output data is stored as pointer to pointers. Here, we have to
-       * loop over the entries and copy each individual pointer over separatedly.
+       * As we work with explicit memory allocations and as we know which
+       * PDE terms are in the game, can only allocate (and free) those
+       * scratchpads that we actually need.
        *
-       * The positions and sizes of the patches are in principle trivially copyable
-       * as well, as they simply host arrays of known sizes. However, it is quite
-       * cumbersome to tell OpenMP that this stuff can just be copied. It also might
-       * become annoying the compiler decided to add padding bytes. So we copy those
-       * guys manually into one large buffer of double values, and then we reconstruct
-       * the objects on the device. In this particular context, the resulting overhead
-       * is acceptable, as this meta data is not extraordinary large.
+       *
+       * ## SYCL details
+       *
+       * SYCL required std::size_t for all of its ranges. We store the ranges
+       * implicitly in the patch description as integer. When you try to pass
+       * in the integers into the SYCL routines, C++ likely will complain with
+       *
+       *      error: non-constant-expression cannot be narrowed from type 'int' to 'size_t' (aka 'unsigned long') in initializer list [-Wc++11-narrowing]
+       *
+       * If I explicitly convert the variable into a size_t before, then
+       * everything is fine. We can do this here, as we know what we are doing.
+       *
+       *
+       * ## Syntax
+       *
+       * As we work in a subnamespace sycl of the Rusanov solvers, any
+       * reference to a namespace sycl will make C++ search for something
+       * within our rusanov::sycl namespace. Therefore, we have to qualify
+       * the namespace absolutely with ::sycl if we want to use something
+       * from the standard.
+       *
+       *
+       *
        */
       namespace sycl {
         template <

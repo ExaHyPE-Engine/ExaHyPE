@@ -593,4 +593,8 @@ namespace exahype2 {
 #include "exahype2/fv/rusanov/cpp/Rusanov.h"
 #endif
 
+#if defined(GPUOffloadingSYCL)
+#include "exahype2/fv/rusanov/sycl/Rusanov.h"
+#endif
+
 #endif
