@@ -98,6 +98,10 @@ class AMRMarker(object):
     Ensure that you initialise all additional auxiliary variables properly in 
     ExaHyPE. If you don't initialise them, they will contain garbage will will
     likely mess up follow-up calculations.
+    
+    The same holds for the boundary data. Even though we don't exchange 
+    auxiliary data between patches, you have to set boundary data for them 
+    to satisfy ExaHyPE's data correctness checks.
 
   """
   

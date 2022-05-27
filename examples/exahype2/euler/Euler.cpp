@@ -317,11 +317,9 @@ void examples::exahype2::euler::Euler::boundaryConditions(
   nonCriticalAssertion5( Qinside[0]>1e-12, faceCentre, volumeH, t, normal, Qinside[0] );
   assertion5( Qinside[0]>1e-12, faceCentre, volumeH, t, normal, Qinside[0] );
 
-  Qoutside[0] = Qinside[0];
-  Qoutside[1] = Qinside[1];
-  Qoutside[2] = Qinside[2];
-  Qoutside[3] = Qinside[3];
-  Qoutside[4] = Qinside[4];
+  for (int i=0; i<NumberOfUnknowns+NumberOfAuxiliaryVariables; i++) {
+    Qoutside[i] = Qinside[i];
+  }
 
   logTraceOut( "boundaryConditions(...)" );
 }
