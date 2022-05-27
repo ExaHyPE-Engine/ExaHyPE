@@ -99,3 +99,23 @@ questions there.
   before our logging landscape is up and configured properly.
   \item To be continued \dots
 \end{itemize}
+
+
+
+
+\section{\ExaHyPE}
+
+\begin{itemize}
+  \item \textbf{I have previously introduced auxiliary (material) parameters
+  and now the code crashes every now and then.}
+  Ensure that you initialise all data in your code. That includes any potential
+  auxiliary variables. I usually use
+  \begin{code}
+for (int i=0; i<NumberOfUnknowns+NumberOfAuxiliaryVariables; i++) {
+  Q[i] = 0.0;
+}
+  \end{code}
+  as a first step within \texttt{initialCondition()}. So I ensure first that
+  there is no garbage in the data.
+  \item To be continued \dots
+\end{itemize}
