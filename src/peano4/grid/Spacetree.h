@@ -62,8 +62,8 @@ class peano4::grid::Spacetree {
      * @see receiveAndMergeUserData()
      * @see sendUserData()
      */
-    static const int RankOfPeriodicBoundaryCondition;
-    static const int NumberOfStationarySweepsToWaitAtLeastTillJoin;
+    static constexpr int RankOfPeriodicBoundaryCondition = -2;
+    static constexpr int NumberOfStationarySweepsToWaitAtLeastTillJoin = 2;
 
   private:
     static tarch::logging::Log  _log;
