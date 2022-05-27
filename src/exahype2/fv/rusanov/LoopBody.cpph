@@ -982,7 +982,7 @@ void exahype2::fv::rusanov::internal::computeNonconservativeFlux_LoopBody(
   int                                 pick
 ) {
   double QAverage[QInEnumerator._unknowns+QInEnumerator._numberOfAuxiliaryVariables];
-  double QJump[QInEnumerator._unknowns+QInEnumerator._numberOfAuxiliaryVariables];
+  double DeltaQ[QInEnumerator._unknowns+QInEnumerator._numberOfAuxiliaryVariables];
   double QFluxGathered[QInEnumerator._unknowns];
 
   tarch::la::Vector<Dimensions,int> leftAdjacentVolume  = volumeIndex;
@@ -993,12 +993,12 @@ void exahype2::fv::rusanov::internal::computeNonconservativeFlux_LoopBody(
   for (int unknown=0; unknown<QInEnumerator._unknowns+QInEnumerator._numberOfAuxiliaryVariables; unknown++) {
     QAverage[unknown] = 0.5 * QIn[ QInEnumerator(patchIndex,leftAdjacentVolume,unknown) ]
                       + 0.5 * QIn[ QInEnumerator(patchIndex,rightAdjacentVolume,unknown) ];
-    QJump[unknown]    = QIn[ QInEnumerator(patchIndex,rightAdjacentVolume,unknown) ]
+    DeltaQ[unknown]    = QIn[ QInEnumerator(patchIndex,rightAdjacentVolume,unknown) ]
                       - QIn[ QInEnumerator(patchIndex,leftAdjacentVolume,unknown) ];
   }
 
   ncp(
-    QAverage, QJump,
+    QAverage, DeltaQ,
     ::exahype2::fv::getVolumeCentre( patchCentre, patchSize, QInEnumerator._numberOfVolumesPerAxisInPatch, volumeIndex ),
     ::exahype2::fv::getVolumeSize( patchSize, QInEnumerator._numberOfVolumesPerAxisInPatch ),
     t,
@@ -1036,7 +1036,7 @@ void exahype2::fv::rusanov::internal::computeNonconservativeFlux_LoopBody(
   int                                            pick
 ) {
   double QAverage[QInEnumerator._unknowns+QInEnumerator._numberOfAuxiliaryVariables];
-  double QJump[QInEnumerator._unknowns+QInEnumerator._numberOfAuxiliaryVariables];
+  double DeltaQ[QInEnumerator._unknowns+QInEnumerator._numberOfAuxiliaryVariables];
   double QFluxGathered[QInEnumerator._unknowns];
 
   tarch::la::Vector<Dimensions,int> leftAdjacentVolume  = volumeIndex;
@@ -1047,12 +1047,12 @@ void exahype2::fv::rusanov::internal::computeNonconservativeFlux_LoopBody(
   for (int unknown=0; unknown<QInEnumerator._unknowns+QInEnumerator._numberOfAuxiliaryVariables; unknown++) {
     QAverage[unknown] = 0.5 * QIn[ QInEnumerator(patchIndex,leftAdjacentVolume,unknown) ]
                       + 0.5 * QIn[ QInEnumerator(patchIndex,rightAdjacentVolume,unknown) ];
-    QJump[unknown]    = QIn[ QInEnumerator(patchIndex,rightAdjacentVolume,unknown) ]
+    DeltaQ[unknown]   = QIn[ QInEnumerator(patchIndex,rightAdjacentVolume,unknown) ]
                       - QIn[ QInEnumerator(patchIndex,leftAdjacentVolume,unknown) ];
   }
 
   Solver::nonconservativeProduct(
-    QAverage, QJump,
+    QAverage, DeltaQ,
     ::exahype2::fv::getVolumeCentre( patchCentre, patchSize, QInEnumerator._numberOfVolumesPerAxisInPatch, volumeIndex ),
     ::exahype2::fv::getVolumeSize( patchSize, QInEnumerator._numberOfVolumesPerAxisInPatch ),
     t,
