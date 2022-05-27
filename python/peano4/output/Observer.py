@@ -1343,8 +1343,10 @@ void {FULL_QUALIFIED_CLASSNAME}::receiveAndMergeFace(int position, int fromStack
       logDebug( "receiveAndMergeVertex(...)", "merge " << incomingData.toString() << " into " << data.toString() );
 
       if (context==::peano4::grid::TraversalObserver::SendReceiveContext::PeriodicBoundaryDataSwap) {{
+        // @todo Different to faces. As we can have diagonal exchange, too,
+        //       we only know that it has to be unequal
         assertion8(
-          tarch::la::countEqualEntries(data.getDebugX(), incomingData.getDebugX())==Dimensions-1,
+          data.getDebugX()!=incomingData.getDebugX(),
           data.getDebugX(), incomingData.getDebugX(),
           data.getDebugH(), incomingData.getDebugH(), 
           fromStack, event.toString(), marker.toString(), _spacetreeId );
