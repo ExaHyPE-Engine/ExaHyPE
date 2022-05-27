@@ -1088,16 +1088,16 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanov_batched_heap_static_calls(
   delete[] mappedPointersToQIn;
   delete[] mappedPointersToQOut;
 
-// @todo Raus damit
-  delete[] tempFluxX;
-  delete[] tempFluxY;
-  delete[] tempFluxZ;
-  delete[] tempNonconservativeProductX;
-  delete[] tempNonconservativeProductY;
-  delete[] tempNonconservativeProductZ;
-  delete[] tempEigenvalueX;
-  delete[] tempEigenvalueY;
-  delete[] tempEigenvalueZ;
+  // @todo See comment. Should not be necessary, but it is necessary atm. See documentation.
+  if (tempFluxX!=nullptr) delete[] tempFluxX;
+  if (tempFluxY!=nullptr) delete[] tempFluxY;
+  if (tempFluxZ!=nullptr) delete[] tempFluxZ;
+  if (tempNonconservativeProductX!=nullptr) delete[] tempNonconservativeProductX;
+  if (tempNonconservativeProductY!=nullptr) delete[] tempNonconservativeProductY;
+  if (tempNonconservativeProductZ!=nullptr) delete[] tempNonconservativeProductZ;
+  if (tempEigenvalueX!=nullptr) delete[] tempEigenvalueX;
+  if (tempEigenvalueY!=nullptr) delete[] tempEigenvalueY;
+  if (tempEigenvalueZ!=nullptr) delete[] tempEigenvalueZ;
 
   #else
   assertionMsg(false, "this routine should only be used in combination with OpenMP offloading, as it has a device parameter" );

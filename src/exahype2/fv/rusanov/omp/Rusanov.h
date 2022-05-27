@@ -15,7 +15,7 @@ namespace exahype2 {
        * each other. Therefore, we can deploy this sequence of patch
        * updates to a distributed for over the team.
        *
-       * ## Memory management
+       * ## Memory management (goal)
        *
        * If you run this routine without GPU offloading, we place all temporary data on the heap.
        * If GPUs are to be used, then we create pointer for the temporary data, but we assign
@@ -24,6 +24,12 @@ namespace exahype2 {
        * even though it is semantically broken as the temporary data is not acquired. However, we
        * want to run on the GPU, so we use the pragma omp enter data instruction to allocate the
        * data directly on the device.
+       *
+       * ## Memory management (as it is)
+       *
+       * At the moment, we have to create the right buffer size on the host,
+       * as the NVIDIA tools otherwise complain. On the long term, this should
+       * not be necessary.
        *
        * ## Patch data transfer
        *
@@ -40,6 +46,14 @@ namespace exahype2 {
        * guys manually into one large buffer of double values, and then we reconstruct
        * the objects on the device. In this particular context, the resulting overhead
        * is acceptable, as this meta data is not extraordinary large.
+       *
+       * If you copy the pointers to pointers from the host to the GPU, you have to
+       * be careful. It makes no sense to copy the pointers within the pointer array
+       * to the GPU, as these are host pointers. So first deploy the actual data to
+       * the GPU per patch. Then we grab the GPU pointer address to which the memory
+       * region has been mapped to. We store this data in mappedPointersToQIn. We
+       * transfer mappedPointersToQIn to the GPU and then reconstruct there the
+       * pointer-to-pointer map that we need within the kernels.
        */
       namespace omp {
         template <
