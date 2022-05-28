@@ -355,7 +355,7 @@ void {FULL_QUALIFIED_CLASSNAME}::enterCell( const peano4::grid::GridTraversalEve
 
 
   TemplateEnterCell_VertexMappingCall = """
-  // Handle vertex {name}
+  // Handle vertex
   {{
     peano4::datamanagement::VertexMarker  marker(event);
 
@@ -365,6 +365,8 @@ void {FULL_QUALIFIED_CLASSNAME}::enterCell( const peano4::grid::GridTraversalEve
 
       marker.select(pick);
 
+      logDebug( "enterCell(...)", inVertexStack << "->" << pick << " (is-local=" << marker.isLocal() << ")" );
+      
       if (
         inVertexStack==peano4::grid::TraversalObserver::CreateOrDestroyPersistentGridEntity
         and
@@ -1325,6 +1327,11 @@ void {FULL_QUALIFIED_CLASSNAME}::receiveAndMergeFace(int position, int fromStack
       and
       (context==::peano4::grid::TraversalObserver::SendReceiveContext::Rebalancing or {full_qualified_type}::receiveAndMerge(marker))
      ) {{
+      assertion5(
+        not repositories::DataRepository::_{logical_type_name}Stack.getForPop(_spacetreeId, fromStack)->empty(),
+        _spacetreeId, fromStack, event.toString(), position, marker.toString()
+      );
+      
       auto   incomingData = repositories::DataRepository::_{logical_type_name}Stack.getForPop(
         _spacetreeId, fromStack
       )->pop();
@@ -1336,8 +1343,10 @@ void {FULL_QUALIFIED_CLASSNAME}::receiveAndMergeFace(int position, int fromStack
       logDebug( "receiveAndMergeVertex(...)", "merge " << incomingData.toString() << " into " << data.toString() );
 
       if (context==::peano4::grid::TraversalObserver::SendReceiveContext::PeriodicBoundaryDataSwap) {{
+        // @todo Different to faces. As we can have diagonal exchange, too,
+        //       we only know that it has to be unequal
         assertion8(
-          tarch::la::countEqualEntries(data.getDebugX(), incomingData.getDebugX())==Dimensions-1,
+          data.getDebugX()!=incomingData.getDebugX(),
           data.getDebugX(), incomingData.getDebugX(),
           data.getDebugH(), incomingData.getDebugH(), 
           fromStack, event.toString(), marker.toString(), _spacetreeId );

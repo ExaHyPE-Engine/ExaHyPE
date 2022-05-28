@@ -18,8 +18,8 @@
 #define UseManualInlining
 #endif
 
-#if !defined(Alignment)
-#define Alignment 64
+#if !defined(AlignmentOnHeap)
+#define AlignmentOnHeap 64
 #endif
 
 #define LittleEndian

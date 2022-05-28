@@ -12,14 +12,14 @@ double* tarch::allocateMemory(int size, MemoryLocation location) {
   double* result = nullptr;
   switch (location) {
     case MemoryLocation::Heap:
-      result = new (std::align_val_t(Alignment)) double[size];
+      result = new (std::align_val_t(AlignmentOnHeap)) double[size];
       break;
     case MemoryLocation::ManagedAcceleratorMemory:
       #if defined(GPUOffloadingOMP) and defined(UseNVIDIA)
       cudaMallocManaged((void**)&result, size*sizeof(double), cudaMemAttachGlobal);
       #else
       //// #pragma omp allocate ()
-      result = new (std::align_val_t(Alignment)) double[size];
+      result = new (std::align_val_t(AlignmentOnHeap)) double[size];
       #endif
       break;
   }

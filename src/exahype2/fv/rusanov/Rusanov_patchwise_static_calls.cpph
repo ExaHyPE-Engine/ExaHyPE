@@ -750,15 +750,15 @@ void exahype2::fv::rusanov::timeStepWithRusanov_patchwise_call_stack_static_call
   TempDataEnumerator ncpEnumerator       (patchData.numberOfCells, numberOfVolumesPerAxisInPatch+1,solversHaloSize,unknowns,0);
   TempDataEnumerator eigenvalueEnumerator(patchData.numberOfCells, numberOfVolumesPerAxisInPatch,solversHaloSize,1,0);
 
-  double tempFluxX[ fluxEnumerator.size() ] __attribute__((aligned (Alignment)));
-  double tempFluxY[ fluxEnumerator.size() ] __attribute__((aligned (Alignment)));
-  double tempFluxZ[ fluxEnumerator.size() ] __attribute__((aligned (Alignment)));
-  double tempNonconservativeProductX[ ncpEnumerator.size() ] __attribute__((aligned (Alignment)));
-  double tempNonconservativeProductY[ ncpEnumerator.size() ] __attribute__((aligned (Alignment)));
-  double tempNonconservativeProductZ[ ncpEnumerator.size() ] __attribute__((aligned (Alignment)));
-  double tempEigenvalueX[ eigenvalueEnumerator.size() ] __attribute__((aligned (Alignment)));
-  double tempEigenvalueY[ eigenvalueEnumerator.size() ] __attribute__((aligned (Alignment)));
-  double tempEigenvalueZ[ eigenvalueEnumerator.size() ] __attribute__((aligned (Alignment)));
+  double tempFluxX[ fluxEnumerator.size() ] __attribute__((aligned (AlignmentOnHeap)));
+  double tempFluxY[ fluxEnumerator.size() ] __attribute__((aligned (AlignmentOnHeap)));
+  double tempFluxZ[ fluxEnumerator.size() ] __attribute__((aligned (AlignmentOnHeap)));
+  double tempNonconservativeProductX[ ncpEnumerator.size() ] __attribute__((aligned (AlignmentOnHeap)));
+  double tempNonconservativeProductY[ ncpEnumerator.size() ] __attribute__((aligned (AlignmentOnHeap)));
+  double tempNonconservativeProductZ[ ncpEnumerator.size() ] __attribute__((aligned (AlignmentOnHeap)));
+  double tempEigenvalueX[ eigenvalueEnumerator.size() ] __attribute__((aligned (AlignmentOnHeap)));
+  double tempEigenvalueY[ eigenvalueEnumerator.size() ] __attribute__((aligned (AlignmentOnHeap)));
+  double tempEigenvalueZ[ eigenvalueEnumerator.size() ] __attribute__((aligned (AlignmentOnHeap)));
 
   internal::timeStepWithRusanov_patchwise_static_calls<Solver, numberOfVolumesPerAxisInPatch, unknowns, auxiliaryVariables, TempDataEnumerator>(
     patchData,

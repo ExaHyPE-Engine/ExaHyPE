@@ -62,8 +62,8 @@ class peano4::grid::Spacetree {
      * @see receiveAndMergeUserData()
      * @see sendUserData()
      */
-    static const int RankOfPeriodicBoundaryCondition;
-    static const int NumberOfStationarySweepsToWaitAtLeastTillJoin;
+    static constexpr int RankOfPeriodicBoundaryCondition = -2;
+    static constexpr int NumberOfStationarySweepsToWaitAtLeastTillJoin = 2;
 
   private:
     static tarch::logging::Log  _log;
@@ -192,8 +192,16 @@ class peano4::grid::Spacetree {
       GridVertex            coarseGridVertices[TwoPowerD]
     ) const;
 
+
     /**
-     * Wrapper around GridTraversalEventGenerator::isVertexAdjacentToLocalSpacetree()
+     * Returns if a vertex is local to adjacent tree.
+     *
+     * In the definition here, hanging vertices are never adjacent to the local
+     * tree. This is different to the definition in the event generator, where
+     * hanging nodes are taken into account.
+     *
+     * @see GridTraversalEventGenerator::isVertexAdjacentToLocalSpacetree() for a
+     *   slightly different notion of locality.
      */
     bool isVertexAdjacentToLocalSpacetree(
       GridVertex  vertex,

@@ -826,10 +826,10 @@ void exahype2::fv::rusanov::internal::updateSolutionWithNonconservativeFlux_Loop
   rightVolume(normal)++;
 
   if (leftVolume(normal)>=0) {
-    QOut[ QOutEnumerator(patchIndex, leftVolume, unknown) ] -= dt / patchSize(normal) * QOutEnumerator._numberOfVolumesPerAxisInPatch * fluxNCP[ fluxEnumerator(patchIndex, faceIndex, unknown) ];
+    QOut[ QOutEnumerator(patchIndex, leftVolume, unknown) ] -= dt / patchSize(normal) * QOutEnumerator._numberOfVolumesPerAxisInPatch * fluxNCP[ fluxEnumerator(patchIndex, faceIndex, unknown) ]*0.5;
   }
   if (rightVolume(normal)<QOutEnumerator._numberOfVolumesPerAxisInPatch) {
-    QOut[ QOutEnumerator(patchIndex, rightVolume, unknown) ] -= dt / patchSize(normal) * QOutEnumerator._numberOfVolumesPerAxisInPatch * fluxNCP[ fluxEnumerator(patchIndex, faceIndex, unknown) ];
+    QOut[ QOutEnumerator(patchIndex, rightVolume, unknown) ] -= dt / patchSize(normal) * QOutEnumerator._numberOfVolumesPerAxisInPatch * fluxNCP[ fluxEnumerator(patchIndex, faceIndex, unknown) ]*0.5;
   }
 }
 
@@ -873,7 +873,7 @@ void exahype2::fv::rusanov::internal::updateSolutionWithEigenvalueDamping_LoopBo
     double fluxLeft  = - lambdaLeft * (QIn[QInEnumerator(patchIndex, volumeIndex,unknown)] - QIn[QInEnumerator(patchIndex, leftVolume,unknown)]);
     double fluxRight = - lambdaRight * (QIn[QInEnumerator(patchIndex, rightVolume,unknown)] - QIn[QInEnumerator(patchIndex, volumeIndex,unknown)]);
 
-    QOut[ QOutEnumerator(patchIndex, volumeIndex,unknown) ] +=  dt / patchSize(normal) * QOutEnumerator._numberOfVolumesPerAxisInPatch * (fluxLeft - fluxRight);
+    QOut[ QOutEnumerator(patchIndex, volumeIndex,unknown) ] +=  dt / patchSize(normal) * QOutEnumerator._numberOfVolumesPerAxisInPatch * (fluxLeft - fluxRight)*0.5;
 
     #if !defined(GPUOffloadingOMP)
     assertion7(
@@ -953,10 +953,10 @@ void exahype2::fv::rusanov::internal::updateSolutionWithEigenvalueDamping_LoopBo
   #endif
 
   if (leftVolume(normal)>=0) {
-    QOut[ QOutEnumerator(patchIndex, leftVolume,unknown) ]  -=  dt / patchSize(normal) * QOutEnumerator._numberOfVolumesPerAxisInPatch * flux;
+    QOut[ QOutEnumerator(patchIndex, leftVolume,unknown) ]  -=  dt / patchSize(normal) * QOutEnumerator._numberOfVolumesPerAxisInPatch * flux*0.5;
   }
   if (rightVolume(normal)<QOutEnumerator._numberOfVolumesPerAxisInPatch) {
-    QOut[ QOutEnumerator(patchIndex, rightVolume,unknown) ] +=  dt / patchSize(normal) * QOutEnumerator._numberOfVolumesPerAxisInPatch * flux;
+    QOut[ QOutEnumerator(patchIndex, rightVolume,unknown) ] +=  dt / patchSize(normal) * QOutEnumerator._numberOfVolumesPerAxisInPatch * flux*0.5;
   }
 }
 #if defined(GPUOffloadingOMP)
@@ -982,7 +982,7 @@ void exahype2::fv::rusanov::internal::computeNonconservativeFlux_LoopBody(
   int                                 pick
 ) {
   double QAverage[QInEnumerator._unknowns+QInEnumerator._numberOfAuxiliaryVariables];
-  double QJump[QInEnumerator._unknowns+QInEnumerator._numberOfAuxiliaryVariables];
+  double DeltaQ[QInEnumerator._unknowns+QInEnumerator._numberOfAuxiliaryVariables];
   double QFluxGathered[QInEnumerator._unknowns];
 
   tarch::la::Vector<Dimensions,int> leftAdjacentVolume  = volumeIndex;
@@ -993,12 +993,12 @@ void exahype2::fv::rusanov::internal::computeNonconservativeFlux_LoopBody(
   for (int unknown=0; unknown<QInEnumerator._unknowns+QInEnumerator._numberOfAuxiliaryVariables; unknown++) {
     QAverage[unknown] = 0.5 * QIn[ QInEnumerator(patchIndex,leftAdjacentVolume,unknown) ]
                       + 0.5 * QIn[ QInEnumerator(patchIndex,rightAdjacentVolume,unknown) ];
-    QJump[unknown]    = QIn[ QInEnumerator(patchIndex,rightAdjacentVolume,unknown) ]
+    DeltaQ[unknown]    = QIn[ QInEnumerator(patchIndex,rightAdjacentVolume,unknown) ]
                       - QIn[ QInEnumerator(patchIndex,leftAdjacentVolume,unknown) ];
   }
 
   ncp(
-    QAverage, QJump,
+    QAverage, DeltaQ,
     ::exahype2::fv::getVolumeCentre( patchCentre, patchSize, QInEnumerator._numberOfVolumesPerAxisInPatch, volumeIndex ),
     ::exahype2::fv::getVolumeSize( patchSize, QInEnumerator._numberOfVolumesPerAxisInPatch ),
     t,
@@ -1036,7 +1036,7 @@ void exahype2::fv::rusanov::internal::computeNonconservativeFlux_LoopBody(
   int                                            pick
 ) {
   double QAverage[QInEnumerator._unknowns+QInEnumerator._numberOfAuxiliaryVariables];
-  double QJump[QInEnumerator._unknowns+QInEnumerator._numberOfAuxiliaryVariables];
+  double DeltaQ[QInEnumerator._unknowns+QInEnumerator._numberOfAuxiliaryVariables];
   double QFluxGathered[QInEnumerator._unknowns];
 
   tarch::la::Vector<Dimensions,int> leftAdjacentVolume  = volumeIndex;
@@ -1047,12 +1047,12 @@ void exahype2::fv::rusanov::internal::computeNonconservativeFlux_LoopBody(
   for (int unknown=0; unknown<QInEnumerator._unknowns+QInEnumerator._numberOfAuxiliaryVariables; unknown++) {
     QAverage[unknown] = 0.5 * QIn[ QInEnumerator(patchIndex,leftAdjacentVolume,unknown) ]
                       + 0.5 * QIn[ QInEnumerator(patchIndex,rightAdjacentVolume,unknown) ];
-    QJump[unknown]    = QIn[ QInEnumerator(patchIndex,rightAdjacentVolume,unknown) ]
+    DeltaQ[unknown]   = QIn[ QInEnumerator(patchIndex,rightAdjacentVolume,unknown) ]
                       - QIn[ QInEnumerator(patchIndex,leftAdjacentVolume,unknown) ];
   }
 
   Solver::nonconservativeProduct(
-    QAverage, QJump,
+    QAverage, DeltaQ,
     ::exahype2::fv::getVolumeCentre( patchCentre, patchSize, QInEnumerator._numberOfVolumesPerAxisInPatch, volumeIndex ),
     ::exahype2::fv::getVolumeSize( patchSize, QInEnumerator._numberOfVolumesPerAxisInPatch ),
     t,
@@ -1093,12 +1093,16 @@ void exahype2::fv::rusanov::internal::updateSolutionWithNonconservativeFlux_Loop
     tarch::la::Vector<Dimensions,int> leftFace   = volumeIndex;
     tarch::la::Vector<Dimensions,int> rightFace  = volumeIndex;
     leftFace(normal)--;
-
-    double fluxLeft  = - QNcp[ncpEnumerator(patchIndex, leftFace, unknown)];
+    
+    //the QNcp is calculating (Q^+ - Q^-)B_i for the considered face, and B here is defined on the LEFT of the equation.
+    //for fluxleft, it is the flux^+ of the left face, so it have a plus sign
+    //for fluxright, it is the flux^- of the right face, so it have a minus sign.
+    double fluxLeft  = + QNcp[ncpEnumerator(patchIndex, leftFace, unknown)];
     double fluxRight = - QNcp[ncpEnumerator(patchIndex, rightFace, unknown)];
 
+    //left flux have another minus sign as the normal vector direction for the left face goes against the flux
     QOut[ QOutEnumerator(patchIndex, volumeIndex,unknown) ] += dt / patchSize(normal) * QOutEnumerator._numberOfVolumesPerAxisInPatch *
-       (fluxLeft + fluxRight);
+       (-fluxLeft + fluxRight)*(0.5);// for now it correpond to 1/2 in our past discussion.
 
     #if !defined(GPUOffloadingOMP)
     assertion8(

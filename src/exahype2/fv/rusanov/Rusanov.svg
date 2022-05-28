@@ -1,0 +1,2045 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Created with Inkscape (http://www.inkscape.org/) -->
+
+<svg
+   width="210mm"
+   height="297mm"
+   viewBox="0 0 210 297"
+   version="1.1"
+   id="svg5"
+   inkscape:version="1.1.2 (0a00cf5339, 2022-02-04)"
+   sodipodi:docname="Rusanov.svg"
+   inkscape:export-filename="/home/tobias/git/Peano/src/exahype2/fv/rusanov/Rusanov00.png"
+   inkscape:export-xdpi="90"
+   inkscape:export-ydpi="90"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <sodipodi:namedview
+     id="namedview7"
+     pagecolor="#ffffff"
+     bordercolor="#666666"
+     borderopacity="1.0"
+     inkscape:pageshadow="2"
+     inkscape:pageopacity="0.0"
+     inkscape:pagecheckerboard="0"
+     inkscape:document-units="mm"
+     showgrid="true"
+     inkscape:zoom="1.1224747"
+     inkscape:cx="397.33635"
+     inkscape:cy="611.14963"
+     inkscape:window-width="1920"
+     inkscape:window-height="1005"
+     inkscape:window-x="0"
+     inkscape:window-y="0"
+     inkscape:window-maximized="1"
+     inkscape:current-layer="layer1">
+    <inkscape:grid
+       type="xygrid"
+       id="grid848" />
+  </sodipodi:namedview>
+  <defs
+     id="defs2" />
+  <g
+     inkscape:label="Layer 1"
+     inkscape:groupmode="layer"
+     id="layer1">
+    <g
+       id="g1478"
+       transform="translate(18.520834)"
+       inkscape:export-filename="/home/tobias/git/Peano/src/exahype2/fv/rusanov/Rusanov00.png"
+       inkscape:export-xdpi="90"
+       inkscape:export-ydpi="90">
+      <rect
+         style="fill:#ff0000;stroke-width:1;stroke-linecap:round;stroke-linejoin:bevel;paint-order:fill markers stroke"
+         id="rect850"
+         width="5.2916665"
+         height="5.2916665"
+         x="15.875"
+         y="74.083336" />
+      <rect
+         style="fill:#ff0000;stroke-width:1;stroke-linecap:round;stroke-linejoin:bevel;paint-order:fill markers stroke"
+         id="rect850-3"
+         width="5.2916665"
+         height="5.2916665"
+         x="15.875"
+         y="82.020836" />
+      <rect
+         style="fill:#ff0000;stroke-width:1;stroke-linecap:round;stroke-linejoin:bevel;paint-order:fill markers stroke"
+         id="rect850-6"
+         width="5.2916665"
+         height="5.2916665"
+         x="15.875"
+         y="89.958336" />
+      <rect
+         style="fill:#ff0000;stroke-width:1;stroke-linecap:round;stroke-linejoin:bevel;paint-order:fill markers stroke"
+         id="rect850-7"
+         width="5.2916665"
+         height="5.2916665"
+         x="15.875"
+         y="97.895836" />
+      <rect
+         style="fill:#ff0000;stroke-width:1;stroke-linecap:round;stroke-linejoin:bevel;paint-order:fill markers stroke"
+         id="rect850-5"
+         width="5.2916665"
+         height="5.2916665"
+         x="15.875"
+         y="105.83334" />
+    </g>
+    <g
+       id="g1324"
+       transform="translate(-13.229167,-1.5258789e-5)"
+       inkscape:export-filename="/home/tobias/git/Peano/src/exahype2/fv/rusanov/Rusanov00.png"
+       inkscape:export-xdpi="90"
+       inkscape:export-ydpi="90">
+      <rect
+         style="fill:#00ff00;stroke-width:1;stroke-linecap:round;stroke-linejoin:bevel;paint-order:fill markers stroke"
+         id="rect850-73"
+         width="5.2916665"
+         height="5.2916665"
+         x="95.25"
+         y="74.083351" />
+      <rect
+         style="fill:#00ff00;stroke-width:1;stroke-linecap:round;stroke-linejoin:bevel;paint-order:fill markers stroke"
+         id="rect850-3-61"
+         width="5.2916665"
+         height="5.2916665"
+         x="95.25"
+         y="82.020851" />
+      <rect
+         style="fill:#00ff00;stroke-width:1;stroke-linecap:round;stroke-linejoin:bevel;paint-order:fill markers stroke"
+         id="rect850-6-29"
+         width="5.2916665"
+         height="5.2916665"
+         x="95.25"
+         y="89.958351" />
+      <rect
+         style="fill:#00ff00;stroke-width:1;stroke-linecap:round;stroke-linejoin:bevel;paint-order:fill markers stroke"
+         id="rect850-7-3"
+         width="5.2916665"
+         height="5.2916665"
+         x="95.25"
+         y="97.895851" />
+      <rect
+         style="fill:#00ff00;stroke-width:1;stroke-linecap:round;stroke-linejoin:bevel;paint-order:fill markers stroke"
+         id="rect850-5-19"
+         width="5.2916665"
+         height="5.2916665"
+         x="95.25"
+         y="105.83335" />
+    </g>
+    <rect
+       style="fill:#0000ff;stroke-width:1;stroke-linecap:round;stroke-linejoin:bevel;paint-order:fill markers stroke"
+       id="rect850-36"
+       width="5.2916665"
+       height="5.2916665"
+       x="-119.0625"
+       y="74.083336"
+       transform="rotate(-90)"
+       inkscape:export-filename="/home/tobias/git/Peano/src/exahype2/fv/rusanov/Rusanov00.png"
+       inkscape:export-xdpi="90"
+       inkscape:export-ydpi="90" />
+    <rect
+       style="fill:#0000ff;stroke-width:1;stroke-linecap:round;stroke-linejoin:bevel;paint-order:fill markers stroke"
+       id="rect850-3-1"
+       width="5.2916665"
+       height="5.2916665"
+       x="-119.0625"
+       y="66.145836"
+       transform="rotate(-90)"
+       inkscape:export-filename="/home/tobias/git/Peano/src/exahype2/fv/rusanov/Rusanov00.png"
+       inkscape:export-xdpi="90"
+       inkscape:export-ydpi="90" />
+    <rect
+       style="fill:#0000ff;stroke-width:1;stroke-linecap:round;stroke-linejoin:bevel;paint-order:fill markers stroke"
+       id="rect850-6-0"
+       width="5.2916665"
+       height="5.2916665"
+       x="-119.0625"
+       y="58.208336"
+       transform="rotate(-90)"
+       inkscape:export-filename="/home/tobias/git/Peano/src/exahype2/fv/rusanov/Rusanov00.png"
+       inkscape:export-xdpi="90"
+       inkscape:export-ydpi="90" />
+    <rect
+       style="fill:#0000ff;stroke-width:1;stroke-linecap:round;stroke-linejoin:bevel;paint-order:fill markers stroke"
+       id="rect850-7-6"
+       width="5.2916665"
+       height="5.2916665"
+       x="-119.0625"
+       y="50.270836"
+       transform="rotate(-90)"
+       inkscape:export-filename="/home/tobias/git/Peano/src/exahype2/fv/rusanov/Rusanov00.png"
+       inkscape:export-xdpi="90"
+       inkscape:export-ydpi="90" />
+    <rect
+       style="fill:#0000ff;stroke-width:1;stroke-linecap:round;stroke-linejoin:bevel;paint-order:fill markers stroke"
+       id="rect850-5-3"
+       width="5.2916665"
+       height="5.2916665"
+       x="-119.0625"
+       y="42.333336"
+       transform="rotate(-90)"
+       inkscape:export-filename="/home/tobias/git/Peano/src/exahype2/fv/rusanov/Rusanov00.png"
+       inkscape:export-xdpi="90"
+       inkscape:export-ydpi="90" />
+    <g
+       id="g1331"
+       transform="translate(0,18.520836)"
+       inkscape:export-filename="/home/tobias/git/Peano/src/exahype2/fv/rusanov/Rusanov00.png"
+       inkscape:export-xdpi="90"
+       inkscape:export-ydpi="90">
+      <rect
+         style="fill:#d4aa00;stroke-width:1;stroke-linecap:round;stroke-linejoin:bevel;paint-order:fill markers stroke"
+         id="rect850-36-7"
+         width="5.2916665"
+         height="5.2916665"
+         x="-52.916664"
+         y="74.083328"
+         transform="rotate(-90)" />
+      <rect
+         style="fill:#d4aa00;stroke-width:1;stroke-linecap:round;stroke-linejoin:bevel;paint-order:fill markers stroke"
+         id="rect850-3-1-6"
+         width="5.2916665"
+         height="5.2916665"
+         x="-52.916664"
+         y="66.145828"
+         transform="rotate(-90)" />
+      <rect
+         style="fill:#d4aa00;stroke-width:1;stroke-linecap:round;stroke-linejoin:bevel;paint-order:fill markers stroke"
+         id="rect850-6-0-5"
+         width="5.2916665"
+         height="5.2916665"
+         x="-52.916664"
+         y="58.208332"
+         transform="rotate(-90)" />
+      <rect
+         style="fill:#d4aa00;stroke-width:1;stroke-linecap:round;stroke-linejoin:bevel;paint-order:fill markers stroke"
+         id="rect850-7-6-6"
+         width="5.2916665"
+         height="5.2916665"
+         x="-52.916664"
+         y="50.270832"
+         transform="rotate(-90)" />
+      <rect
+         style="fill:#d4aa00;stroke-width:1;stroke-linecap:round;stroke-linejoin:bevel;paint-order:fill markers stroke"
+         id="rect850-5-3-9"
+         width="5.2916665"
+         height="5.2916665"
+         x="-52.916664"
+         y="42.333332"
+         transform="rotate(-90)" />
+    </g>
+    <g
+       id="g1317"
+       inkscape:export-filename="/home/tobias/git/Peano/src/exahype2/fv/rusanov/Rusanov00.png"
+       inkscape:export-xdpi="90"
+       inkscape:export-ydpi="90">
+      <rect
+         style="fill:#b3b3b3;stroke-width:1;stroke-linecap:round;stroke-linejoin:bevel;paint-order:fill markers stroke"
+         id="rect850-35-2"
+         width="5.2916665"
+         height="5.2916665"
+         x="42.333332"
+         y="74.083336" />
+      <rect
+         style="fill:#b3b3b3;stroke-width:1;stroke-linecap:round;stroke-linejoin:bevel;paint-order:fill markers stroke"
+         id="rect850-3-6-7"
+         width="5.2916665"
+         height="5.2916665"
+         x="42.333332"
+         y="82.020836" />
+      <rect
+         style="fill:#b3b3b3;stroke-width:1;stroke-linecap:round;stroke-linejoin:bevel;paint-order:fill markers stroke"
+         id="rect850-6-2-0"
+         width="5.2916665"
+         height="5.2916665"
+         x="42.333332"
+         y="89.958336" />
+      <rect
+         style="fill:#b3b3b3;stroke-width:1;stroke-linecap:round;stroke-linejoin:bevel;paint-order:fill markers stroke"
+         id="rect850-7-9-9"
+         width="5.2916665"
+         height="5.2916665"
+         x="42.333332"
+         y="97.895836" />
+      <rect
+         style="fill:#b3b3b3;stroke-width:1;stroke-linecap:round;stroke-linejoin:bevel;paint-order:fill markers stroke"
+         id="rect850-5-1-3"
+         width="5.2916665"
+         height="5.2916665"
+         x="42.333332"
+         y="105.83335" />
+      <rect
+         style="fill:#b3b3b3;stroke-width:1;stroke-linecap:round;stroke-linejoin:bevel;paint-order:fill markers stroke"
+         id="rect850-35-2-6"
+         width="5.2916665"
+         height="5.2916665"
+         x="50.270832"
+         y="74.083336" />
+      <rect
+         style="fill:#b3b3b3;stroke-width:1;stroke-linecap:round;stroke-linejoin:bevel;paint-order:fill markers stroke"
+         id="rect850-3-6-7-0"
+         width="5.2916665"
+         height="5.2916665"
+         x="50.270832"
+         y="82.020836" />
+      <rect
+         style="fill:#b3b3b3;stroke-width:1;stroke-linecap:round;stroke-linejoin:bevel;paint-order:fill markers stroke"
+         id="rect850-6-2-0-6"
+         width="5.2916665"
+         height="5.2916665"
+         x="50.270832"
+         y="89.958336" />
+      <rect
+         style="fill:#b3b3b3;stroke-width:1;stroke-linecap:round;stroke-linejoin:bevel;paint-order:fill markers stroke"
+         id="rect850-7-9-9-2"
+         width="5.2916665"
+         height="5.2916665"
+         x="50.270832"
+         y="97.895836" />
+      <rect
+         style="fill:#b3b3b3;stroke-width:1;stroke-linecap:round;stroke-linejoin:bevel;paint-order:fill markers stroke"
+         id="rect850-5-1-3-6"
+         width="5.2916665"
+         height="5.2916665"
+         x="50.270832"
+         y="105.83335" />
+      <rect
+         style="fill:#b3b3b3;stroke-width:1;stroke-linecap:round;stroke-linejoin:bevel;paint-order:fill markers stroke"
+         id="rect850-35-2-6-1"
+         width="5.2916665"
+         height="5.2916665"
+         x="58.208332"
+         y="74.083336" />
+      <rect
+         style="fill:#b3b3b3;stroke-width:1;stroke-linecap:round;stroke-linejoin:bevel;paint-order:fill markers stroke"
+         id="rect850-3-6-7-0-8"
+         width="5.2916665"
+         height="5.2916665"
+         x="58.208332"
+         y="82.020836" />
+      <rect
+         style="fill:#b3b3b3;stroke-width:1;stroke-linecap:round;stroke-linejoin:bevel;paint-order:fill markers stroke"
+         id="rect850-6-2-0-6-7"
+         width="5.2916665"
+         height="5.2916665"
+         x="58.208332"
+         y="89.958336" />
+      <rect
+         style="fill:#b3b3b3;stroke-width:1;stroke-linecap:round;stroke-linejoin:bevel;paint-order:fill markers stroke"
+         id="rect850-7-9-9-2-9"
+         width="5.2916665"
+         height="5.2916665"
+         x="58.208332"
+         y="97.895836" />
+      <rect
+         style="fill:#b3b3b3;stroke-width:1;stroke-linecap:round;stroke-linejoin:bevel;paint-order:fill markers stroke"
+         id="rect850-5-1-3-6-2"
+         width="5.2916665"
+         height="5.2916665"
+         x="58.208332"
+         y="105.83335" />
+      <rect
+         style="fill:#b3b3b3;stroke-width:1;stroke-linecap:round;stroke-linejoin:bevel;paint-order:fill markers stroke"
+         id="rect850-35-2-6-1-0"
+         width="5.2916665"
+         height="5.2916665"
+         x="66.145828"
+         y="74.083328" />
+      <rect
+         style="fill:#b3b3b3;stroke-width:1;stroke-linecap:round;stroke-linejoin:bevel;paint-order:fill markers stroke"
+         id="rect850-3-6-7-0-8-2"
+         width="5.2916665"
+         height="5.2916665"
+         x="66.145828"
+         y="82.020836" />
+      <rect
+         style="fill:#b3b3b3;stroke-width:1;stroke-linecap:round;stroke-linejoin:bevel;paint-order:fill markers stroke"
+         id="rect850-6-2-0-6-7-3"
+         width="5.2916665"
+         height="5.2916665"
+         x="66.145828"
+         y="89.958336" />
+      <rect
+         style="fill:#b3b3b3;stroke-width:1;stroke-linecap:round;stroke-linejoin:bevel;paint-order:fill markers stroke"
+         id="rect850-7-9-9-2-9-7"
+         width="5.2916665"
+         height="5.2916665"
+         x="66.145828"
+         y="97.895836" />
+      <rect
+         style="fill:#b3b3b3;stroke-width:1;stroke-linecap:round;stroke-linejoin:bevel;paint-order:fill markers stroke"
+         id="rect850-5-1-3-6-2-5"
+         width="5.2916665"
+         height="5.2916665"
+         x="66.145828"
+         y="105.83335" />
+      <rect
+         style="fill:#b3b3b3;stroke-width:1;stroke-linecap:round;stroke-linejoin:bevel;paint-order:fill markers stroke"
+         id="rect850-35-2-6-1-0-9"
+         width="5.2916665"
+         height="5.2916665"
+         x="74.083336"
+         y="74.083336" />
+      <rect
+         style="fill:#b3b3b3;stroke-width:1;stroke-linecap:round;stroke-linejoin:bevel;paint-order:fill markers stroke"
+         id="rect850-3-6-7-0-8-2-2"
+         width="5.2916665"
+         height="5.2916665"
+         x="74.083336"
+         y="82.020844" />
+      <rect
+         style="fill:#b3b3b3;stroke-width:1;stroke-linecap:round;stroke-linejoin:bevel;paint-order:fill markers stroke"
+         id="rect850-6-2-0-6-7-3-2"
+         width="5.2916665"
+         height="5.2916665"
+         x="74.083336"
+         y="89.958344" />
+      <rect
+         style="fill:#b3b3b3;stroke-width:1;stroke-linecap:round;stroke-linejoin:bevel;paint-order:fill markers stroke"
+         id="rect850-7-9-9-2-9-7-8"
+         width="5.2916665"
+         height="5.2916665"
+         x="74.083336"
+         y="97.895844" />
+      <rect
+         style="fill:#b3b3b3;stroke-width:1;stroke-linecap:round;stroke-linejoin:bevel;paint-order:fill markers stroke"
+         id="rect850-5-1-3-6-2-5-9"
+         width="5.2916665"
+         height="5.2916665"
+         x="74.083336"
+         y="105.83336" />
+    </g>
+    <g
+       id="g1317-2"
+       transform="translate(76.729164)"
+       style="fill:#666666"
+       inkscape:export-filename="/home/tobias/git/Peano/src/exahype2/fv/rusanov/Rusanov00.png"
+       inkscape:export-xdpi="90"
+       inkscape:export-ydpi="90">
+      <rect
+         style="fill:#666666;stroke-width:1;stroke-linecap:round;stroke-linejoin:bevel;paint-order:fill markers stroke"
+         id="rect850-35-2-9"
+         width="5.2916665"
+         height="5.2916665"
+         x="42.333332"
+         y="74.083336" />
+      <rect
+         style="fill:#666666;stroke-width:1;stroke-linecap:round;stroke-linejoin:bevel;paint-order:fill markers stroke"
+         id="rect850-3-6-7-1"
+         width="5.2916665"
+         height="5.2916665"
+         x="42.333332"
+         y="82.020836" />
+      <rect
+         style="fill:#666666;stroke-width:1;stroke-linecap:round;stroke-linejoin:bevel;paint-order:fill markers stroke"
+         id="rect850-6-2-0-2"
+         width="5.2916665"
+         height="5.2916665"
+         x="42.333332"
+         y="89.958336" />
+      <rect
+         style="fill:#666666;stroke-width:1;stroke-linecap:round;stroke-linejoin:bevel;paint-order:fill markers stroke"
+         id="rect850-7-9-9-7"
+         width="5.2916665"
+         height="5.2916665"
+         x="42.333332"
+         y="97.895836" />
+      <rect
+         style="fill:#666666;stroke-width:1;stroke-linecap:round;stroke-linejoin:bevel;paint-order:fill markers stroke"
+         id="rect850-5-1-3-0"
+         width="5.2916665"
+         height="5.2916665"
+         x="42.333332"
+         y="105.83335" />
+      <rect
+         style="fill:#666666;stroke-width:1;stroke-linecap:round;stroke-linejoin:bevel;paint-order:fill markers stroke"
+         id="rect850-35-2-6-9"
+         width="5.2916665"
+         height="5.2916665"
+         x="50.270832"
+         y="74.083336" />
+      <rect
+         style="fill:#666666;stroke-width:1;stroke-linecap:round;stroke-linejoin:bevel;paint-order:fill markers stroke"
+         id="rect850-3-6-7-0-3"
+         width="5.2916665"
+         height="5.2916665"
+         x="50.270832"
+         y="82.020836" />
+      <rect
+         style="fill:#666666;stroke-width:1;stroke-linecap:round;stroke-linejoin:bevel;paint-order:fill markers stroke"
+         id="rect850-6-2-0-6-6"
+         width="5.2916665"
+         height="5.2916665"
+         x="50.270832"
+         y="89.958336" />
+      <rect
+         style="fill:#666666;stroke-width:1;stroke-linecap:round;stroke-linejoin:bevel;paint-order:fill markers stroke"
+         id="rect850-7-9-9-2-0"
+         width="5.2916665"
+         height="5.2916665"
+         x="50.270832"
+         y="97.895836" />
+      <rect
+         style="fill:#666666;stroke-width:1;stroke-linecap:round;stroke-linejoin:bevel;paint-order:fill markers stroke"
+         id="rect850-5-1-3-6-6"
+         width="5.2916665"
+         height="5.2916665"
+         x="50.270832"
+         y="105.83335" />
+      <rect
+         style="fill:#666666;stroke-width:1;stroke-linecap:round;stroke-linejoin:bevel;paint-order:fill markers stroke"
+         id="rect850-35-2-6-1-2"
+         width="5.2916665"
+         height="5.2916665"
+         x="58.208332"
+         y="74.083336" />
+      <rect
+         style="fill:#666666;stroke-width:1;stroke-linecap:round;stroke-linejoin:bevel;paint-order:fill markers stroke"
+         id="rect850-3-6-7-0-8-6"
+         width="5.2916665"
+         height="5.2916665"
+         x="58.208332"
+         y="82.020836" />
+      <rect
+         style="fill:#666666;stroke-width:1;stroke-linecap:round;stroke-linejoin:bevel;paint-order:fill markers stroke"
+         id="rect850-6-2-0-6-7-1"
+         width="5.2916665"
+         height="5.2916665"
+         x="58.208332"
+         y="89.958336" />
+      <rect
+         style="fill:#666666;stroke-width:1;stroke-linecap:round;stroke-linejoin:bevel;paint-order:fill markers stroke"
+         id="rect850-7-9-9-2-9-8"
+         width="5.2916665"
+         height="5.2916665"
+         x="58.208332"
+         y="97.895836" />
+      <rect
+         style="fill:#666666;stroke-width:1;stroke-linecap:round;stroke-linejoin:bevel;paint-order:fill markers stroke"
+         id="rect850-5-1-3-6-2-7"
+         width="5.2916665"
+         height="5.2916665"
+         x="58.208332"
+         y="105.83335" />
+      <rect
+         style="fill:#666666;stroke-width:1;stroke-linecap:round;stroke-linejoin:bevel;paint-order:fill markers stroke"
+         id="rect850-35-2-6-1-0-92"
+         width="5.2916665"
+         height="5.2916665"
+         x="66.145828"
+         y="74.083328" />
+      <rect
+         style="fill:#666666;stroke-width:1;stroke-linecap:round;stroke-linejoin:bevel;paint-order:fill markers stroke"
+         id="rect850-3-6-7-0-8-2-0"
+         width="5.2916665"
+         height="5.2916665"
+         x="66.145828"
+         y="82.020836" />
+      <rect
+         style="fill:#666666;stroke-width:1;stroke-linecap:round;stroke-linejoin:bevel;paint-order:fill markers stroke"
+         id="rect850-6-2-0-6-7-3-23"
+         width="5.2916665"
+         height="5.2916665"
+         x="66.145828"
+         y="89.958336" />
+      <rect
+         style="fill:#666666;stroke-width:1;stroke-linecap:round;stroke-linejoin:bevel;paint-order:fill markers stroke"
+         id="rect850-7-9-9-2-9-7-7"
+         width="5.2916665"
+         height="5.2916665"
+         x="66.145828"
+         y="97.895836" />
+      <rect
+         style="fill:#666666;stroke-width:1;stroke-linecap:round;stroke-linejoin:bevel;paint-order:fill markers stroke"
+         id="rect850-5-1-3-6-2-5-5"
+         width="5.2916665"
+         height="5.2916665"
+         x="66.145828"
+         y="105.83335" />
+      <rect
+         style="fill:#666666;stroke-width:1;stroke-linecap:round;stroke-linejoin:bevel;paint-order:fill markers stroke"
+         id="rect850-35-2-6-1-0-9-9"
+         width="5.2916665"
+         height="5.2916665"
+         x="74.083336"
+         y="74.083336" />
+      <rect
+         style="fill:#666666;stroke-width:1;stroke-linecap:round;stroke-linejoin:bevel;paint-order:fill markers stroke"
+         id="rect850-3-6-7-0-8-2-2-2"
+         width="5.2916665"
+         height="5.2916665"
+         x="74.083336"
+         y="82.020844" />
+      <rect
+         style="fill:#666666;stroke-width:1;stroke-linecap:round;stroke-linejoin:bevel;paint-order:fill markers stroke"
+         id="rect850-6-2-0-6-7-3-2-2"
+         width="5.2916665"
+         height="5.2916665"
+         x="74.083336"
+         y="89.958344" />
+      <rect
+         style="fill:#666666;stroke-width:1;stroke-linecap:round;stroke-linejoin:bevel;paint-order:fill markers stroke"
+         id="rect850-7-9-9-2-9-7-8-8"
+         width="5.2916665"
+         height="5.2916665"
+         x="74.083336"
+         y="97.895844" />
+      <rect
+         style="fill:#666666;stroke-width:1;stroke-linecap:round;stroke-linejoin:bevel;paint-order:fill markers stroke"
+         id="rect850-5-1-3-6-2-5-9-9"
+         width="5.2916665"
+         height="5.2916665"
+         x="74.083336"
+         y="105.83336" />
+    </g>
+    <rect
+       style="fill:none;stroke:#000000;stroke-width:1.1;stroke-linecap:round;stroke-linejoin:bevel;paint-order:fill markers stroke"
+       id="rect1910"
+       width="5.2916665"
+       height="5.2916665"
+       x="34.395832"
+       y="66.145836"
+       inkscape:export-filename="/home/tobias/git/Peano/src/exahype2/fv/rusanov/Rusanov00.png"
+       inkscape:export-xdpi="90"
+       inkscape:export-ydpi="90" />
+    <rect
+       style="fill:none;stroke:#000000;stroke-width:1.1;stroke-linecap:round;stroke-linejoin:bevel;paint-order:fill markers stroke"
+       id="rect1910-7"
+       width="5.2916665"
+       height="5.2916665"
+       x="34.395832"
+       y="113.77084"
+       inkscape:export-filename="/home/tobias/git/Peano/src/exahype2/fv/rusanov/Rusanov00.png"
+       inkscape:export-xdpi="90"
+       inkscape:export-ydpi="90" />
+    <rect
+       style="fill:none;stroke:#000000;stroke-width:1.1;stroke-linecap:round;stroke-linejoin:bevel;paint-order:fill markers stroke"
+       id="rect1910-7-3"
+       width="5.2916665"
+       height="5.2916665"
+       x="82.020836"
+       y="66.145828"
+       inkscape:export-filename="/home/tobias/git/Peano/src/exahype2/fv/rusanov/Rusanov00.png"
+       inkscape:export-xdpi="90"
+       inkscape:export-ydpi="90" />
+    <rect
+       style="fill:none;stroke:#000000;stroke-width:1.1;stroke-linecap:round;stroke-linejoin:bevel;paint-order:fill markers stroke"
+       id="rect1910-7-6"
+       width="5.2916665"
+       height="5.2916665"
+       x="82.020828"
+       y="113.77084"
+       inkscape:export-filename="/home/tobias/git/Peano/src/exahype2/fv/rusanov/Rusanov00.png"
+       inkscape:export-xdpi="90"
+       inkscape:export-ydpi="90" />
+    <g
+       id="g1444"
+       style="fill:#ff0000"
+       transform="matrix(0.91143794,0.2567869,-0.41143759,0.56884768,104.31496,98.28199)"
+       inkscape:export-filename="/home/tobias/git/Peano/src/exahype2/fv/rusanov/Rusanov01.png"
+       inkscape:export-xdpi="90"
+       inkscape:export-ydpi="90">
+      <g
+         id="g1478-3"
+         transform="translate(-18.520834,58.208334)"
+         inkscape:export-filename="/home/tobias/git/Peano/src/exahype2/fv/rusanov/Rusanov00.png"
+         inkscape:export-xdpi="90"
+         inkscape:export-ydpi="90"
+         style="fill:#ff0000">
+        <rect
+           style="fill:#ff0000;stroke-width:1;stroke-linecap:round;stroke-linejoin:bevel;paint-order:fill markers stroke"
+           id="rect850-67"
+           width="5.2916665"
+           height="5.2916665"
+           x="15.875"
+           y="74.083336" />
+        <rect
+           style="fill:#ff0000;stroke-width:1;stroke-linecap:round;stroke-linejoin:bevel;paint-order:fill markers stroke"
+           id="rect850-3-5"
+           width="5.2916665"
+           height="5.2916665"
+           x="15.875"
+           y="82.020836" />
+        <rect
+           style="fill:#ff0000;stroke-width:1;stroke-linecap:round;stroke-linejoin:bevel;paint-order:fill markers stroke"
+           id="rect850-6-3"
+           width="5.2916665"
+           height="5.2916665"
+           x="15.875"
+           y="89.958336" />
+        <rect
+           style="fill:#ff0000;stroke-width:1;stroke-linecap:round;stroke-linejoin:bevel;paint-order:fill markers stroke"
+           id="rect850-7-5"
+           width="5.2916665"
+           height="5.2916665"
+           x="15.875"
+           y="97.895836" />
+        <rect
+           style="fill:#ff0000;stroke-width:1;stroke-linecap:round;stroke-linejoin:bevel;paint-order:fill markers stroke"
+           id="rect850-5-6"
+           width="5.2916665"
+           height="5.2916665"
+           x="15.875"
+           y="105.83334" />
+      </g>
+      <g
+         id="g1324-2"
+         transform="translate(-50.270835,58.208319)"
+         inkscape:export-filename="/home/tobias/git/Peano/src/exahype2/fv/rusanov/Rusanov00.png"
+         inkscape:export-xdpi="90"
+         inkscape:export-ydpi="90"
+         style="fill:#ff0000">
+        <rect
+           style="fill:#ff0000;stroke-width:1;stroke-linecap:round;stroke-linejoin:bevel;paint-order:fill markers stroke"
+           id="rect850-73-9"
+           width="5.2916665"
+           height="5.2916665"
+           x="95.25"
+           y="74.083351" />
+        <rect
+           style="fill:#ff0000;stroke-width:1;stroke-linecap:round;stroke-linejoin:bevel;paint-order:fill markers stroke"
+           id="rect850-3-61-1"
+           width="5.2916665"
+           height="5.2916665"
+           x="95.25"
+           y="82.020851" />
+        <rect
+           style="fill:#ff0000;stroke-width:1;stroke-linecap:round;stroke-linejoin:bevel;paint-order:fill markers stroke"
+           id="rect850-6-29-2"
+           width="5.2916665"
+           height="5.2916665"
+           x="95.25"
+           y="89.958351" />
+        <rect
+           style="fill:#ff0000;stroke-width:1;stroke-linecap:round;stroke-linejoin:bevel;paint-order:fill markers stroke"
+           id="rect850-7-3-7"
+           width="5.2916665"
+           height="5.2916665"
+           x="95.25"
+           y="97.895851" />
+        <rect
+           style="fill:#ff0000;stroke-width:1;stroke-linecap:round;stroke-linejoin:bevel;paint-order:fill markers stroke"
+           id="rect850-5-19-0"
+           width="5.2916665"
+           height="5.2916665"
+           x="95.25"
+           y="105.83335" />
+      </g>
+      <rect
+         style="fill:#ff0000;stroke-width:1;stroke-linecap:round;stroke-linejoin:bevel;paint-order:fill markers stroke"
+         id="rect850-36-9"
+         width="5.2916665"
+         height="5.2916665"
+         x="-177.27083"
+         y="37.041668"
+         transform="rotate(-90)"
+         inkscape:export-filename="/home/tobias/git/Peano/src/exahype2/fv/rusanov/Rusanov00.png"
+         inkscape:export-xdpi="90"
+         inkscape:export-ydpi="90" />
+      <rect
+         style="fill:#ff0000;stroke-width:1;stroke-linecap:round;stroke-linejoin:bevel;paint-order:fill markers stroke"
+         id="rect850-3-1-3"
+         width="5.2916665"
+         height="5.2916665"
+         x="-177.27083"
+         y="29.104168"
+         transform="rotate(-90)"
+         inkscape:export-filename="/home/tobias/git/Peano/src/exahype2/fv/rusanov/Rusanov00.png"
+         inkscape:export-xdpi="90"
+         inkscape:export-ydpi="90" />
+      <rect
+         style="fill:#ff0000;stroke-width:1;stroke-linecap:round;stroke-linejoin:bevel;paint-order:fill markers stroke"
+         id="rect850-6-0-6"
+         width="5.2916665"
+         height="5.2916665"
+         x="-177.27083"
+         y="21.166668"
+         transform="rotate(-90)"
+         inkscape:export-filename="/home/tobias/git/Peano/src/exahype2/fv/rusanov/Rusanov00.png"
+         inkscape:export-xdpi="90"
+         inkscape:export-ydpi="90" />
+      <rect
+         style="fill:#ff0000;stroke-width:1;stroke-linecap:round;stroke-linejoin:bevel;paint-order:fill markers stroke"
+         id="rect850-7-6-0"
+         width="5.2916665"
+         height="5.2916665"
+         x="-177.27083"
+         y="13.229168"
+         transform="rotate(-90)"
+         inkscape:export-filename="/home/tobias/git/Peano/src/exahype2/fv/rusanov/Rusanov00.png"
+         inkscape:export-xdpi="90"
+         inkscape:export-ydpi="90" />
+      <rect
+         style="fill:#ff0000;stroke-width:1;stroke-linecap:round;stroke-linejoin:bevel;paint-order:fill markers stroke"
+         id="rect850-5-3-6"
+         width="5.2916665"
+         height="5.2916665"
+         x="-177.27083"
+         y="5.2916679"
+         transform="rotate(-90)"
+         inkscape:export-filename="/home/tobias/git/Peano/src/exahype2/fv/rusanov/Rusanov00.png"
+         inkscape:export-xdpi="90"
+         inkscape:export-ydpi="90" />
+      <g
+         id="g1331-2"
+         transform="translate(-37.041668,76.72917)"
+         inkscape:export-filename="/home/tobias/git/Peano/src/exahype2/fv/rusanov/Rusanov00.png"
+         inkscape:export-xdpi="90"
+         inkscape:export-ydpi="90"
+         style="fill:#ff0000">
+        <rect
+           style="fill:#ff0000;stroke-width:1;stroke-linecap:round;stroke-linejoin:bevel;paint-order:fill markers stroke"
+           id="rect850-36-7-6"
+           width="5.2916665"
+           height="5.2916665"
+           x="-52.916664"
+           y="74.083328"
+           transform="rotate(-90)" />
+        <rect
+           style="fill:#ff0000;stroke-width:1;stroke-linecap:round;stroke-linejoin:bevel;paint-order:fill markers stroke"
+           id="rect850-3-1-6-1"
+           width="5.2916665"
+           height="5.2916665"
+           x="-52.916664"
+           y="66.145828"
+           transform="rotate(-90)" />
+        <rect
+           style="fill:#ff0000;stroke-width:1;stroke-linecap:round;stroke-linejoin:bevel;paint-order:fill markers stroke"
+           id="rect850-6-0-5-8"
+           width="5.2916665"
+           height="5.2916665"
+           x="-52.916664"
+           y="58.208332"
+           transform="rotate(-90)" />
+        <rect
+           style="fill:#ff0000;stroke-width:1;stroke-linecap:round;stroke-linejoin:bevel;paint-order:fill markers stroke"
+           id="rect850-7-6-6-7"
+           width="5.2916665"
+           height="5.2916665"
+           x="-52.916664"
+           y="50.270832"
+           transform="rotate(-90)" />
+        <rect
+           style="fill:#ff0000;stroke-width:1;stroke-linecap:round;stroke-linejoin:bevel;paint-order:fill markers stroke"
+           id="rect850-5-3-9-9"
+           width="5.2916665"
+           height="5.2916665"
+           x="-52.916664"
+           y="42.333332"
+           transform="rotate(-90)" />
+      </g>
+      <g
+         id="g1317-20"
+         inkscape:export-filename="/home/tobias/git/Peano/src/exahype2/fv/rusanov/Rusanov00.png"
+         inkscape:export-xdpi="90"
+         inkscape:export-ydpi="90"
+         transform="translate(-37.041668,58.208334)"
+         style="fill:#ff0000">
+        <rect
+           style="fill:#ff0000;stroke-width:1;stroke-linecap:round;stroke-linejoin:bevel;paint-order:fill markers stroke"
+           id="rect850-35-2-2"
+           width="5.2916665"
+           height="5.2916665"
+           x="42.333332"
+           y="74.083336" />
+        <rect
+           style="fill:#ff0000;stroke-width:1;stroke-linecap:round;stroke-linejoin:bevel;paint-order:fill markers stroke"
+           id="rect850-3-6-7-3"
+           width="5.2916665"
+           height="5.2916665"
+           x="42.333332"
+           y="82.020836" />
+        <rect
+           style="fill:#ff0000;stroke-width:1;stroke-linecap:round;stroke-linejoin:bevel;paint-order:fill markers stroke"
+           id="rect850-6-2-0-7"
+           width="5.2916665"
+           height="5.2916665"
+           x="42.333332"
+           y="89.958336" />
+        <rect
+           style="fill:#ff0000;stroke-width:1;stroke-linecap:round;stroke-linejoin:bevel;paint-order:fill markers stroke"
+           id="rect850-7-9-9-5"
+           width="5.2916665"
+           height="5.2916665"
+           x="42.333332"
+           y="97.895836" />
+        <rect
+           style="fill:#ff0000;stroke-width:1;stroke-linecap:round;stroke-linejoin:bevel;paint-order:fill markers stroke"
+           id="rect850-5-1-3-9"
+           width="5.2916665"
+           height="5.2916665"
+           x="42.333332"
+           y="105.83335" />
+        <rect
+           style="fill:#ff0000;stroke-width:1;stroke-linecap:round;stroke-linejoin:bevel;paint-order:fill markers stroke"
+           id="rect850-35-2-6-2"
+           width="5.2916665"
+           height="5.2916665"
+           x="50.270832"
+           y="74.083336" />
+        <rect
+           style="fill:#ff0000;stroke-width:1;stroke-linecap:round;stroke-linejoin:bevel;paint-order:fill markers stroke"
+           id="rect850-3-6-7-0-2"
+           width="5.2916665"
+           height="5.2916665"
+           x="50.270832"
+           y="82.020836" />
+        <rect
+           style="fill:#ff0000;stroke-width:1;stroke-linecap:round;stroke-linejoin:bevel;paint-order:fill markers stroke"
+           id="rect850-6-2-0-6-8"
+           width="5.2916665"
+           height="5.2916665"
+           x="50.270832"
+           y="89.958336" />
+        <rect
+           style="fill:#ff0000;stroke-width:1;stroke-linecap:round;stroke-linejoin:bevel;paint-order:fill markers stroke"
+           id="rect850-7-9-9-2-97"
+           width="5.2916665"
+           height="5.2916665"
+           x="50.270832"
+           y="97.895836" />
+        <rect
+           style="fill:#ff0000;stroke-width:1;stroke-linecap:round;stroke-linejoin:bevel;paint-order:fill markers stroke"
+           id="rect850-5-1-3-6-3"
+           width="5.2916665"
+           height="5.2916665"
+           x="50.270832"
+           y="105.83335" />
+        <rect
+           style="fill:#ff0000;stroke-width:1;stroke-linecap:round;stroke-linejoin:bevel;paint-order:fill markers stroke"
+           id="rect850-35-2-6-1-6"
+           width="5.2916665"
+           height="5.2916665"
+           x="58.208332"
+           y="74.083336" />
+        <rect
+           style="fill:#ff0000;stroke-width:1;stroke-linecap:round;stroke-linejoin:bevel;paint-order:fill markers stroke"
+           id="rect850-3-6-7-0-8-1"
+           width="5.2916665"
+           height="5.2916665"
+           x="58.208332"
+           y="82.020836" />
+        <rect
+           style="fill:#ff0000;stroke-width:1;stroke-linecap:round;stroke-linejoin:bevel;paint-order:fill markers stroke"
+           id="rect850-6-2-0-6-7-2"
+           width="5.2916665"
+           height="5.2916665"
+           x="58.208332"
+           y="89.958336" />
+        <rect
+           style="fill:#ff0000;stroke-width:1;stroke-linecap:round;stroke-linejoin:bevel;paint-order:fill markers stroke"
+           id="rect850-7-9-9-2-9-9"
+           width="5.2916665"
+           height="5.2916665"
+           x="58.208332"
+           y="97.895836" />
+        <rect
+           style="fill:#ff0000;stroke-width:1;stroke-linecap:round;stroke-linejoin:bevel;paint-order:fill markers stroke"
+           id="rect850-5-1-3-6-2-3"
+           width="5.2916665"
+           height="5.2916665"
+           x="58.208332"
+           y="105.83335" />
+        <rect
+           style="fill:#ff0000;stroke-width:1;stroke-linecap:round;stroke-linejoin:bevel;paint-order:fill markers stroke"
+           id="rect850-35-2-6-1-0-1"
+           width="5.2916665"
+           height="5.2916665"
+           x="66.145828"
+           y="74.083328" />
+        <rect
+           style="fill:#ff0000;stroke-width:1;stroke-linecap:round;stroke-linejoin:bevel;paint-order:fill markers stroke"
+           id="rect850-3-6-7-0-8-2-9"
+           width="5.2916665"
+           height="5.2916665"
+           x="66.145828"
+           y="82.020836" />
+        <rect
+           style="fill:#ff0000;stroke-width:1;stroke-linecap:round;stroke-linejoin:bevel;paint-order:fill markers stroke"
+           id="rect850-6-2-0-6-7-3-4"
+           width="5.2916665"
+           height="5.2916665"
+           x="66.145828"
+           y="89.958336" />
+        <rect
+           style="fill:#ff0000;stroke-width:1;stroke-linecap:round;stroke-linejoin:bevel;paint-order:fill markers stroke"
+           id="rect850-7-9-9-2-9-7-78"
+           width="5.2916665"
+           height="5.2916665"
+           x="66.145828"
+           y="97.895836" />
+        <rect
+           style="fill:#ff0000;stroke-width:1;stroke-linecap:round;stroke-linejoin:bevel;paint-order:fill markers stroke"
+           id="rect850-5-1-3-6-2-5-4"
+           width="5.2916665"
+           height="5.2916665"
+           x="66.145828"
+           y="105.83335" />
+        <rect
+           style="fill:#ff0000;stroke-width:1;stroke-linecap:round;stroke-linejoin:bevel;paint-order:fill markers stroke"
+           id="rect850-35-2-6-1-0-9-5"
+           width="5.2916665"
+           height="5.2916665"
+           x="74.083336"
+           y="74.083336" />
+        <rect
+           style="fill:#ff0000;stroke-width:1;stroke-linecap:round;stroke-linejoin:bevel;paint-order:fill markers stroke"
+           id="rect850-3-6-7-0-8-2-2-0"
+           width="5.2916665"
+           height="5.2916665"
+           x="74.083336"
+           y="82.020844" />
+        <rect
+           style="fill:#ff0000;stroke-width:1;stroke-linecap:round;stroke-linejoin:bevel;paint-order:fill markers stroke"
+           id="rect850-6-2-0-6-7-3-2-3"
+           width="5.2916665"
+           height="5.2916665"
+           x="74.083336"
+           y="89.958344" />
+        <rect
+           style="fill:#ff0000;stroke-width:1;stroke-linecap:round;stroke-linejoin:bevel;paint-order:fill markers stroke"
+           id="rect850-7-9-9-2-9-7-8-6"
+           width="5.2916665"
+           height="5.2916665"
+           x="74.083336"
+           y="97.895844" />
+        <rect
+           style="fill:#ff0000;stroke-width:1;stroke-linecap:round;stroke-linejoin:bevel;paint-order:fill markers stroke"
+           id="rect850-5-1-3-6-2-5-9-1"
+           width="5.2916665"
+           height="5.2916665"
+           x="74.083336"
+           y="105.83336" />
+      </g>
+      <rect
+         style="fill:#ff0000;stroke:#000000;stroke-width:1.1;stroke-linecap:round;stroke-linejoin:bevel;paint-order:fill markers stroke"
+         id="rect1910-0"
+         width="5.2916665"
+         height="5.2916665"
+         x="-2.6458359"
+         y="124.35417"
+         inkscape:export-filename="/home/tobias/git/Peano/src/exahype2/fv/rusanov/Rusanov00.png"
+         inkscape:export-xdpi="90"
+         inkscape:export-ydpi="90" />
+      <rect
+         style="fill:#ff0000;stroke:#000000;stroke-width:1.1;stroke-linecap:round;stroke-linejoin:bevel;paint-order:fill markers stroke"
+         id="rect1910-7-63"
+         width="5.2916665"
+         height="5.2916665"
+         x="-2.6458359"
+         y="171.97917"
+         inkscape:export-filename="/home/tobias/git/Peano/src/exahype2/fv/rusanov/Rusanov00.png"
+         inkscape:export-xdpi="90"
+         inkscape:export-ydpi="90" />
+      <rect
+         style="fill:#ff0000;stroke:#000000;stroke-width:1.1;stroke-linecap:round;stroke-linejoin:bevel;paint-order:fill markers stroke"
+         id="rect1910-7-3-2"
+         width="5.2916665"
+         height="5.2916665"
+         x="44.979168"
+         y="124.35416"
+         inkscape:export-filename="/home/tobias/git/Peano/src/exahype2/fv/rusanov/Rusanov00.png"
+         inkscape:export-xdpi="90"
+         inkscape:export-ydpi="90" />
+      <rect
+         style="fill:#ff0000;stroke:#000000;stroke-width:1.1;stroke-linecap:round;stroke-linejoin:bevel;paint-order:fill markers stroke"
+         id="rect1910-7-6-0"
+         width="5.2916665"
+         height="5.2916665"
+         x="44.97916"
+         y="171.97917"
+         inkscape:export-filename="/home/tobias/git/Peano/src/exahype2/fv/rusanov/Rusanov00.png"
+         inkscape:export-xdpi="90"
+         inkscape:export-ydpi="90" />
+    </g>
+    <g
+       id="g1444-6"
+       style="fill:#00ff00"
+       transform="matrix(0.91143794,0.2567869,-0.41143759,0.56884768,103.99764,89.347383)"
+       inkscape:export-filename="/home/tobias/git/Peano/src/exahype2/fv/rusanov/Rusanov01.png"
+       inkscape:export-xdpi="90"
+       inkscape:export-ydpi="90">
+      <g
+         id="g1478-3-1"
+         transform="translate(-18.520834,58.208334)"
+         inkscape:export-filename="/home/tobias/git/Peano/src/exahype2/fv/rusanov/Rusanov00.png"
+         inkscape:export-xdpi="90"
+         inkscape:export-ydpi="90"
+         style="fill:#00ff00">
+        <rect
+           style="fill:#00ff00;stroke-width:1;stroke-linecap:round;stroke-linejoin:bevel;paint-order:fill markers stroke"
+           id="rect850-67-5"
+           width="5.2916665"
+           height="5.2916665"
+           x="15.875"
+           y="74.083336" />
+        <rect
+           style="fill:#00ff00;stroke-width:1;stroke-linecap:round;stroke-linejoin:bevel;paint-order:fill markers stroke"
+           id="rect850-3-5-5"
+           width="5.2916665"
+           height="5.2916665"
+           x="15.875"
+           y="82.020836" />
+        <rect
+           style="fill:#00ff00;stroke-width:1;stroke-linecap:round;stroke-linejoin:bevel;paint-order:fill markers stroke"
+           id="rect850-6-3-4"
+           width="5.2916665"
+           height="5.2916665"
+           x="15.875"
+           y="89.958336" />
+        <rect
+           style="fill:#00ff00;stroke-width:1;stroke-linecap:round;stroke-linejoin:bevel;paint-order:fill markers stroke"
+           id="rect850-7-5-7"
+           width="5.2916665"
+           height="5.2916665"
+           x="15.875"
+           y="97.895836" />
+        <rect
+           style="fill:#00ff00;stroke-width:1;stroke-linecap:round;stroke-linejoin:bevel;paint-order:fill markers stroke"
+           id="rect850-5-6-6"
+           width="5.2916665"
+           height="5.2916665"
+           x="15.875"
+           y="105.83334" />
+      </g>
+      <g
+         id="g1324-2-5"
+         transform="translate(-50.270835,58.208319)"
+         inkscape:export-filename="/home/tobias/git/Peano/src/exahype2/fv/rusanov/Rusanov00.png"
+         inkscape:export-xdpi="90"
+         inkscape:export-ydpi="90"
+         style="fill:#00ff00">
+        <rect
+           style="fill:#00ff00;stroke-width:1;stroke-linecap:round;stroke-linejoin:bevel;paint-order:fill markers stroke"
+           id="rect850-73-9-6"
+           width="5.2916665"
+           height="5.2916665"
+           x="95.25"
+           y="74.083351" />
+        <rect
+           style="fill:#00ff00;stroke-width:1;stroke-linecap:round;stroke-linejoin:bevel;paint-order:fill markers stroke"
+           id="rect850-3-61-1-9"
+           width="5.2916665"
+           height="5.2916665"
+           x="95.25"
+           y="82.020851" />
+        <rect
+           style="fill:#00ff00;stroke-width:1;stroke-linecap:round;stroke-linejoin:bevel;paint-order:fill markers stroke"
+           id="rect850-6-29-2-3"
+           width="5.2916665"
+           height="5.2916665"
+           x="95.25"
+           y="89.958351" />
+        <rect
+           style="fill:#00ff00;stroke-width:1;stroke-linecap:round;stroke-linejoin:bevel;paint-order:fill markers stroke"
+           id="rect850-7-3-7-7"
+           width="5.2916665"
+           height="5.2916665"
+           x="95.25"
+           y="97.895851" />
+        <rect
+           style="fill:#00ff00;stroke-width:1;stroke-linecap:round;stroke-linejoin:bevel;paint-order:fill markers stroke"
+           id="rect850-5-19-0-4"
+           width="5.2916665"
+           height="5.2916665"
+           x="95.25"
+           y="105.83335" />
+      </g>
+      <rect
+         style="fill:#00ff00;stroke-width:1;stroke-linecap:round;stroke-linejoin:bevel;paint-order:fill markers stroke"
+         id="rect850-36-9-5"
+         width="5.2916665"
+         height="5.2916665"
+         x="-177.27083"
+         y="37.041668"
+         transform="rotate(-90)"
+         inkscape:export-filename="/home/tobias/git/Peano/src/exahype2/fv/rusanov/Rusanov00.png"
+         inkscape:export-xdpi="90"
+         inkscape:export-ydpi="90" />
+      <rect
+         style="fill:#00ff00;stroke-width:1;stroke-linecap:round;stroke-linejoin:bevel;paint-order:fill markers stroke"
+         id="rect850-3-1-3-2"
+         width="5.2916665"
+         height="5.2916665"
+         x="-177.27083"
+         y="29.104168"
+         transform="rotate(-90)"
+         inkscape:export-filename="/home/tobias/git/Peano/src/exahype2/fv/rusanov/Rusanov00.png"
+         inkscape:export-xdpi="90"
+         inkscape:export-ydpi="90" />
+      <rect
+         style="fill:#00ff00;stroke-width:1;stroke-linecap:round;stroke-linejoin:bevel;paint-order:fill markers stroke"
+         id="rect850-6-0-6-5"
+         width="5.2916665"
+         height="5.2916665"
+         x="-177.27083"
+         y="21.166668"
+         transform="rotate(-90)"
+         inkscape:export-filename="/home/tobias/git/Peano/src/exahype2/fv/rusanov/Rusanov00.png"
+         inkscape:export-xdpi="90"
+         inkscape:export-ydpi="90" />
+      <rect
+         style="fill:#00ff00;stroke-width:1;stroke-linecap:round;stroke-linejoin:bevel;paint-order:fill markers stroke"
+         id="rect850-7-6-0-4"
+         width="5.2916665"
+         height="5.2916665"
+         x="-177.27083"
+         y="13.229168"
+         transform="rotate(-90)"
+         inkscape:export-filename="/home/tobias/git/Peano/src/exahype2/fv/rusanov/Rusanov00.png"
+         inkscape:export-xdpi="90"
+         inkscape:export-ydpi="90" />
+      <rect
+         style="fill:#00ff00;stroke-width:1;stroke-linecap:round;stroke-linejoin:bevel;paint-order:fill markers stroke"
+         id="rect850-5-3-6-7"
+         width="5.2916665"
+         height="5.2916665"
+         x="-177.27083"
+         y="5.2916679"
+         transform="rotate(-90)"
+         inkscape:export-filename="/home/tobias/git/Peano/src/exahype2/fv/rusanov/Rusanov00.png"
+         inkscape:export-xdpi="90"
+         inkscape:export-ydpi="90" />
+      <g
+         id="g1331-2-4"
+         transform="translate(-37.041668,76.72917)"
+         inkscape:export-filename="/home/tobias/git/Peano/src/exahype2/fv/rusanov/Rusanov00.png"
+         inkscape:export-xdpi="90"
+         inkscape:export-ydpi="90"
+         style="fill:#00ff00">
+        <rect
+           style="fill:#00ff00;stroke-width:1;stroke-linecap:round;stroke-linejoin:bevel;paint-order:fill markers stroke"
+           id="rect850-36-7-6-4"
+           width="5.2916665"
+           height="5.2916665"
+           x="-52.916664"
+           y="74.083328"
+           transform="rotate(-90)" />
+        <rect
+           style="fill:#00ff00;stroke-width:1;stroke-linecap:round;stroke-linejoin:bevel;paint-order:fill markers stroke"
+           id="rect850-3-1-6-1-3"
+           width="5.2916665"
+           height="5.2916665"
+           x="-52.916664"
+           y="66.145828"
+           transform="rotate(-90)" />
+        <rect
+           style="fill:#00ff00;stroke-width:1;stroke-linecap:round;stroke-linejoin:bevel;paint-order:fill markers stroke"
+           id="rect850-6-0-5-8-0"
+           width="5.2916665"
+           height="5.2916665"
+           x="-52.916664"
+           y="58.208332"
+           transform="rotate(-90)" />
+        <rect
+           style="fill:#00ff00;stroke-width:1;stroke-linecap:round;stroke-linejoin:bevel;paint-order:fill markers stroke"
+           id="rect850-7-6-6-7-7"
+           width="5.2916665"
+           height="5.2916665"
+           x="-52.916664"
+           y="50.270832"
+           transform="rotate(-90)" />
+        <rect
+           style="fill:#00ff00;stroke-width:1;stroke-linecap:round;stroke-linejoin:bevel;paint-order:fill markers stroke"
+           id="rect850-5-3-9-9-8"
+           width="5.2916665"
+           height="5.2916665"
+           x="-52.916664"
+           y="42.333332"
+           transform="rotate(-90)" />
+      </g>
+      <g
+         id="g1317-20-6"
+         inkscape:export-filename="/home/tobias/git/Peano/src/exahype2/fv/rusanov/Rusanov00.png"
+         inkscape:export-xdpi="90"
+         inkscape:export-ydpi="90"
+         transform="translate(-37.041668,58.208334)"
+         style="fill:#00ff00">
+        <rect
+           style="fill:#00ff00;stroke-width:1;stroke-linecap:round;stroke-linejoin:bevel;paint-order:fill markers stroke"
+           id="rect850-35-2-2-8"
+           width="5.2916665"
+           height="5.2916665"
+           x="42.333332"
+           y="74.083336" />
+        <rect
+           style="fill:#00ff00;stroke-width:1;stroke-linecap:round;stroke-linejoin:bevel;paint-order:fill markers stroke"
+           id="rect850-3-6-7-3-8"
+           width="5.2916665"
+           height="5.2916665"
+           x="42.333332"
+           y="82.020836" />
+        <rect
+           style="fill:#00ff00;stroke-width:1;stroke-linecap:round;stroke-linejoin:bevel;paint-order:fill markers stroke"
+           id="rect850-6-2-0-7-4"
+           width="5.2916665"
+           height="5.2916665"
+           x="42.333332"
+           y="89.958336" />
+        <rect
+           style="fill:#00ff00;stroke-width:1;stroke-linecap:round;stroke-linejoin:bevel;paint-order:fill markers stroke"
+           id="rect850-7-9-9-5-3"
+           width="5.2916665"
+           height="5.2916665"
+           x="42.333332"
+           y="97.895836" />
+        <rect
+           style="fill:#00ff00;stroke-width:1;stroke-linecap:round;stroke-linejoin:bevel;paint-order:fill markers stroke"
+           id="rect850-5-1-3-9-1"
+           width="5.2916665"
+           height="5.2916665"
+           x="42.333332"
+           y="105.83335" />
+        <rect
+           style="fill:#00ff00;stroke-width:1;stroke-linecap:round;stroke-linejoin:bevel;paint-order:fill markers stroke"
+           id="rect850-35-2-6-2-4"
+           width="5.2916665"
+           height="5.2916665"
+           x="50.270832"
+           y="74.083336" />
+        <rect
+           style="fill:#00ff00;stroke-width:1;stroke-linecap:round;stroke-linejoin:bevel;paint-order:fill markers stroke"
+           id="rect850-3-6-7-0-2-9"
+           width="5.2916665"
+           height="5.2916665"
+           x="50.270832"
+           y="82.020836" />
+        <rect
+           style="fill:#00ff00;stroke-width:1;stroke-linecap:round;stroke-linejoin:bevel;paint-order:fill markers stroke"
+           id="rect850-6-2-0-6-8-2"
+           width="5.2916665"
+           height="5.2916665"
+           x="50.270832"
+           y="89.958336" />
+        <rect
+           style="fill:#00ff00;stroke-width:1;stroke-linecap:round;stroke-linejoin:bevel;paint-order:fill markers stroke"
+           id="rect850-7-9-9-2-97-0"
+           width="5.2916665"
+           height="5.2916665"
+           x="50.270832"
+           y="97.895836" />
+        <rect
+           style="fill:#00ff00;stroke-width:1;stroke-linecap:round;stroke-linejoin:bevel;paint-order:fill markers stroke"
+           id="rect850-5-1-3-6-3-6"
+           width="5.2916665"
+           height="5.2916665"
+           x="50.270832"
+           y="105.83335" />
+        <rect
+           style="fill:#00ff00;stroke-width:1;stroke-linecap:round;stroke-linejoin:bevel;paint-order:fill markers stroke"
+           id="rect850-35-2-6-1-6-8"
+           width="5.2916665"
+           height="5.2916665"
+           x="58.208332"
+           y="74.083336" />
+        <rect
+           style="fill:#00ff00;stroke-width:1;stroke-linecap:round;stroke-linejoin:bevel;paint-order:fill markers stroke"
+           id="rect850-3-6-7-0-8-1-9"
+           width="5.2916665"
+           height="5.2916665"
+           x="58.208332"
+           y="82.020836" />
+        <rect
+           style="fill:#00ff00;stroke-width:1;stroke-linecap:round;stroke-linejoin:bevel;paint-order:fill markers stroke"
+           id="rect850-6-2-0-6-7-2-2"
+           width="5.2916665"
+           height="5.2916665"
+           x="58.208332"
+           y="89.958336" />
+        <rect
+           style="fill:#00ff00;stroke-width:1;stroke-linecap:round;stroke-linejoin:bevel;paint-order:fill markers stroke"
+           id="rect850-7-9-9-2-9-9-6"
+           width="5.2916665"
+           height="5.2916665"
+           x="58.208332"
+           y="97.895836" />
+        <rect
+           style="fill:#00ff00;stroke-width:1;stroke-linecap:round;stroke-linejoin:bevel;paint-order:fill markers stroke"
+           id="rect850-5-1-3-6-2-3-6"
+           width="5.2916665"
+           height="5.2916665"
+           x="58.208332"
+           y="105.83335" />
+        <rect
+           style="fill:#00ff00;stroke-width:1;stroke-linecap:round;stroke-linejoin:bevel;paint-order:fill markers stroke"
+           id="rect850-35-2-6-1-0-1-4"
+           width="5.2916665"
+           height="5.2916665"
+           x="66.145828"
+           y="74.083328" />
+        <rect
+           style="fill:#00ff00;stroke-width:1;stroke-linecap:round;stroke-linejoin:bevel;paint-order:fill markers stroke"
+           id="rect850-3-6-7-0-8-2-9-9"
+           width="5.2916665"
+           height="5.2916665"
+           x="66.145828"
+           y="82.020836" />
+        <rect
+           style="fill:#00ff00;stroke-width:1;stroke-linecap:round;stroke-linejoin:bevel;paint-order:fill markers stroke"
+           id="rect850-6-2-0-6-7-3-4-5"
+           width="5.2916665"
+           height="5.2916665"
+           x="66.145828"
+           y="89.958336" />
+        <rect
+           style="fill:#00ff00;stroke-width:1;stroke-linecap:round;stroke-linejoin:bevel;paint-order:fill markers stroke"
+           id="rect850-7-9-9-2-9-7-78-0"
+           width="5.2916665"
+           height="5.2916665"
+           x="66.145828"
+           y="97.895836" />
+        <rect
+           style="fill:#00ff00;stroke-width:1;stroke-linecap:round;stroke-linejoin:bevel;paint-order:fill markers stroke"
+           id="rect850-5-1-3-6-2-5-4-4"
+           width="5.2916665"
+           height="5.2916665"
+           x="66.145828"
+           y="105.83335" />
+        <rect
+           style="fill:#00ff00;stroke-width:1;stroke-linecap:round;stroke-linejoin:bevel;paint-order:fill markers stroke"
+           id="rect850-35-2-6-1-0-9-5-8"
+           width="5.2916665"
+           height="5.2916665"
+           x="74.083336"
+           y="74.083336" />
+        <rect
+           style="fill:#00ff00;stroke-width:1;stroke-linecap:round;stroke-linejoin:bevel;paint-order:fill markers stroke"
+           id="rect850-3-6-7-0-8-2-2-0-7"
+           width="5.2916665"
+           height="5.2916665"
+           x="74.083336"
+           y="82.020844" />
+        <rect
+           style="fill:#00ff00;stroke-width:1;stroke-linecap:round;stroke-linejoin:bevel;paint-order:fill markers stroke"
+           id="rect850-6-2-0-6-7-3-2-3-1"
+           width="5.2916665"
+           height="5.2916665"
+           x="74.083336"
+           y="89.958344" />
+        <rect
+           style="fill:#00ff00;stroke-width:1;stroke-linecap:round;stroke-linejoin:bevel;paint-order:fill markers stroke"
+           id="rect850-7-9-9-2-9-7-8-6-7"
+           width="5.2916665"
+           height="5.2916665"
+           x="74.083336"
+           y="97.895844" />
+        <rect
+           style="fill:#00ff00;stroke-width:1;stroke-linecap:round;stroke-linejoin:bevel;paint-order:fill markers stroke"
+           id="rect850-5-1-3-6-2-5-9-1-2"
+           width="5.2916665"
+           height="5.2916665"
+           x="74.083336"
+           y="105.83336" />
+      </g>
+      <rect
+         style="fill:#00ff00;stroke:#000000;stroke-width:1.1;stroke-linecap:round;stroke-linejoin:bevel;paint-order:fill markers stroke"
+         id="rect1910-0-7"
+         width="5.2916665"
+         height="5.2916665"
+         x="-2.6458359"
+         y="124.35417"
+         inkscape:export-filename="/home/tobias/git/Peano/src/exahype2/fv/rusanov/Rusanov00.png"
+         inkscape:export-xdpi="90"
+         inkscape:export-ydpi="90" />
+      <rect
+         style="fill:#00ff00;stroke:#000000;stroke-width:1.1;stroke-linecap:round;stroke-linejoin:bevel;paint-order:fill markers stroke"
+         id="rect1910-7-63-2"
+         width="5.2916665"
+         height="5.2916665"
+         x="-2.6458359"
+         y="171.97917"
+         inkscape:export-filename="/home/tobias/git/Peano/src/exahype2/fv/rusanov/Rusanov00.png"
+         inkscape:export-xdpi="90"
+         inkscape:export-ydpi="90" />
+      <rect
+         style="fill:#00ff00;stroke:#000000;stroke-width:1.1;stroke-linecap:round;stroke-linejoin:bevel;paint-order:fill markers stroke"
+         id="rect1910-7-3-2-2"
+         width="5.2916665"
+         height="5.2916665"
+         x="44.979168"
+         y="124.35416"
+         inkscape:export-filename="/home/tobias/git/Peano/src/exahype2/fv/rusanov/Rusanov00.png"
+         inkscape:export-xdpi="90"
+         inkscape:export-ydpi="90" />
+      <rect
+         style="fill:#00ff00;stroke:#000000;stroke-width:1.1;stroke-linecap:round;stroke-linejoin:bevel;paint-order:fill markers stroke"
+         id="rect1910-7-6-0-6"
+         width="5.2916665"
+         height="5.2916665"
+         x="44.97916"
+         y="171.97917"
+         inkscape:export-filename="/home/tobias/git/Peano/src/exahype2/fv/rusanov/Rusanov00.png"
+         inkscape:export-xdpi="90"
+         inkscape:export-ydpi="90" />
+    </g>
+    <g
+       id="g1444-6-1"
+       style="fill:#0000ff"
+       transform="matrix(0.91143794,0.2567869,-0.41143759,0.56884768,105.56957,76.873479)"
+       inkscape:export-filename="/home/tobias/git/Peano/src/exahype2/fv/rusanov/Rusanov01.png"
+       inkscape:export-xdpi="90"
+       inkscape:export-ydpi="90">
+      <g
+         id="g1478-3-1-0"
+         transform="translate(-18.520834,58.208334)"
+         inkscape:export-filename="/home/tobias/git/Peano/src/exahype2/fv/rusanov/Rusanov00.png"
+         inkscape:export-xdpi="90"
+         inkscape:export-ydpi="90"
+         style="fill:#0000ff">
+        <rect
+           style="fill:#0000ff;stroke-width:1;stroke-linecap:round;stroke-linejoin:bevel;paint-order:fill markers stroke"
+           id="rect850-67-5-6"
+           width="5.2916665"
+           height="5.2916665"
+           x="15.875"
+           y="74.083336" />
+        <rect
+           style="fill:#0000ff;stroke-width:1;stroke-linecap:round;stroke-linejoin:bevel;paint-order:fill markers stroke"
+           id="rect850-3-5-5-1"
+           width="5.2916665"
+           height="5.2916665"
+           x="15.875"
+           y="82.020836" />
+        <rect
+           style="fill:#0000ff;stroke-width:1;stroke-linecap:round;stroke-linejoin:bevel;paint-order:fill markers stroke"
+           id="rect850-6-3-4-5"
+           width="5.2916665"
+           height="5.2916665"
+           x="15.875"
+           y="89.958336" />
+        <rect
+           style="fill:#0000ff;stroke-width:1;stroke-linecap:round;stroke-linejoin:bevel;paint-order:fill markers stroke"
+           id="rect850-7-5-7-9"
+           width="5.2916665"
+           height="5.2916665"
+           x="15.875"
+           y="97.895836" />
+        <rect
+           style="fill:#0000ff;stroke-width:1;stroke-linecap:round;stroke-linejoin:bevel;paint-order:fill markers stroke"
+           id="rect850-5-6-6-4"
+           width="5.2916665"
+           height="5.2916665"
+           x="15.875"
+           y="105.83334" />
+      </g>
+      <g
+         id="g1324-2-5-9"
+         transform="translate(-50.270835,58.208319)"
+         inkscape:export-filename="/home/tobias/git/Peano/src/exahype2/fv/rusanov/Rusanov00.png"
+         inkscape:export-xdpi="90"
+         inkscape:export-ydpi="90"
+         style="fill:#0000ff">
+        <rect
+           style="fill:#0000ff;stroke-width:1;stroke-linecap:round;stroke-linejoin:bevel;paint-order:fill markers stroke"
+           id="rect850-73-9-6-0"
+           width="5.2916665"
+           height="5.2916665"
+           x="95.25"
+           y="74.083351" />
+        <rect
+           style="fill:#0000ff;stroke-width:1;stroke-linecap:round;stroke-linejoin:bevel;paint-order:fill markers stroke"
+           id="rect850-3-61-1-9-9"
+           width="5.2916665"
+           height="5.2916665"
+           x="95.25"
+           y="82.020851" />
+        <rect
+           style="fill:#0000ff;stroke-width:1;stroke-linecap:round;stroke-linejoin:bevel;paint-order:fill markers stroke"
+           id="rect850-6-29-2-3-1"
+           width="5.2916665"
+           height="5.2916665"
+           x="95.25"
+           y="89.958351" />
+        <rect
+           style="fill:#0000ff;stroke-width:1;stroke-linecap:round;stroke-linejoin:bevel;paint-order:fill markers stroke"
+           id="rect850-7-3-7-7-7"
+           width="5.2916665"
+           height="5.2916665"
+           x="95.25"
+           y="97.895851" />
+        <rect
+           style="fill:#0000ff;stroke-width:1;stroke-linecap:round;stroke-linejoin:bevel;paint-order:fill markers stroke"
+           id="rect850-5-19-0-4-7"
+           width="5.2916665"
+           height="5.2916665"
+           x="95.25"
+           y="105.83335" />
+      </g>
+      <rect
+         style="fill:#0000ff;stroke-width:1;stroke-linecap:round;stroke-linejoin:bevel;paint-order:fill markers stroke"
+         id="rect850-36-9-5-1"
+         width="5.2916665"
+         height="5.2916665"
+         x="-177.27083"
+         y="37.041668"
+         transform="rotate(-90)"
+         inkscape:export-filename="/home/tobias/git/Peano/src/exahype2/fv/rusanov/Rusanov00.png"
+         inkscape:export-xdpi="90"
+         inkscape:export-ydpi="90" />
+      <rect
+         style="fill:#0000ff;stroke-width:1;stroke-linecap:round;stroke-linejoin:bevel;paint-order:fill markers stroke"
+         id="rect850-3-1-3-2-1"
+         width="5.2916665"
+         height="5.2916665"
+         x="-177.27083"
+         y="29.104168"
+         transform="rotate(-90)"
+         inkscape:export-filename="/home/tobias/git/Peano/src/exahype2/fv/rusanov/Rusanov00.png"
+         inkscape:export-xdpi="90"
+         inkscape:export-ydpi="90" />
+      <rect
+         style="fill:#0000ff;stroke-width:1;stroke-linecap:round;stroke-linejoin:bevel;paint-order:fill markers stroke"
+         id="rect850-6-0-6-5-5"
+         width="5.2916665"
+         height="5.2916665"
+         x="-177.27083"
+         y="21.166668"
+         transform="rotate(-90)"
+         inkscape:export-filename="/home/tobias/git/Peano/src/exahype2/fv/rusanov/Rusanov00.png"
+         inkscape:export-xdpi="90"
+         inkscape:export-ydpi="90" />
+      <rect
+         style="fill:#0000ff;stroke-width:1;stroke-linecap:round;stroke-linejoin:bevel;paint-order:fill markers stroke"
+         id="rect850-7-6-0-4-9"
+         width="5.2916665"
+         height="5.2916665"
+         x="-177.27083"
+         y="13.229168"
+         transform="rotate(-90)"
+         inkscape:export-filename="/home/tobias/git/Peano/src/exahype2/fv/rusanov/Rusanov00.png"
+         inkscape:export-xdpi="90"
+         inkscape:export-ydpi="90" />
+      <rect
+         style="fill:#0000ff;stroke-width:1;stroke-linecap:round;stroke-linejoin:bevel;paint-order:fill markers stroke"
+         id="rect850-5-3-6-7-7"
+         width="5.2916665"
+         height="5.2916665"
+         x="-177.27083"
+         y="5.2916679"
+         transform="rotate(-90)"
+         inkscape:export-filename="/home/tobias/git/Peano/src/exahype2/fv/rusanov/Rusanov00.png"
+         inkscape:export-xdpi="90"
+         inkscape:export-ydpi="90" />
+      <g
+         id="g1331-2-4-7"
+         transform="translate(-37.041668,76.72917)"
+         inkscape:export-filename="/home/tobias/git/Peano/src/exahype2/fv/rusanov/Rusanov00.png"
+         inkscape:export-xdpi="90"
+         inkscape:export-ydpi="90"
+         style="fill:#0000ff">
+        <rect
+           style="fill:#0000ff;stroke-width:1;stroke-linecap:round;stroke-linejoin:bevel;paint-order:fill markers stroke"
+           id="rect850-36-7-6-4-6"
+           width="5.2916665"
+           height="5.2916665"
+           x="-52.916664"
+           y="74.083328"
+           transform="rotate(-90)" />
+        <rect
+           style="fill:#0000ff;stroke-width:1;stroke-linecap:round;stroke-linejoin:bevel;paint-order:fill markers stroke"
+           id="rect850-3-1-6-1-3-7"
+           width="5.2916665"
+           height="5.2916665"
+           x="-52.916664"
+           y="66.145828"
+           transform="rotate(-90)" />
+        <rect
+           style="fill:#0000ff;stroke-width:1;stroke-linecap:round;stroke-linejoin:bevel;paint-order:fill markers stroke"
+           id="rect850-6-0-5-8-0-3"
+           width="5.2916665"
+           height="5.2916665"
+           x="-52.916664"
+           y="58.208332"
+           transform="rotate(-90)" />
+        <rect
+           style="fill:#0000ff;stroke-width:1;stroke-linecap:round;stroke-linejoin:bevel;paint-order:fill markers stroke"
+           id="rect850-7-6-6-7-7-6"
+           width="5.2916665"
+           height="5.2916665"
+           x="-52.916664"
+           y="50.270832"
+           transform="rotate(-90)" />
+        <rect
+           style="fill:#0000ff;stroke-width:1;stroke-linecap:round;stroke-linejoin:bevel;paint-order:fill markers stroke"
+           id="rect850-5-3-9-9-8-5"
+           width="5.2916665"
+           height="5.2916665"
+           x="-52.916664"
+           y="42.333332"
+           transform="rotate(-90)" />
+      </g>
+      <g
+         id="g1317-20-6-6"
+         inkscape:export-filename="/home/tobias/git/Peano/src/exahype2/fv/rusanov/Rusanov00.png"
+         inkscape:export-xdpi="90"
+         inkscape:export-ydpi="90"
+         transform="translate(-37.041668,58.208334)"
+         style="fill:#0000ff">
+        <rect
+           style="fill:#0000ff;stroke-width:1;stroke-linecap:round;stroke-linejoin:bevel;paint-order:fill markers stroke"
+           id="rect850-35-2-2-8-3"
+           width="5.2916665"
+           height="5.2916665"
+           x="42.333332"
+           y="74.083336" />
+        <rect
+           style="fill:#0000ff;stroke-width:1;stroke-linecap:round;stroke-linejoin:bevel;paint-order:fill markers stroke"
+           id="rect850-3-6-7-3-8-9"
+           width="5.2916665"
+           height="5.2916665"
+           x="42.333332"
+           y="82.020836" />
+        <rect
+           style="fill:#0000ff;stroke-width:1;stroke-linecap:round;stroke-linejoin:bevel;paint-order:fill markers stroke"
+           id="rect850-6-2-0-7-4-4"
+           width="5.2916665"
+           height="5.2916665"
+           x="42.333332"
+           y="89.958336" />
+        <rect
+           style="fill:#0000ff;stroke-width:1;stroke-linecap:round;stroke-linejoin:bevel;paint-order:fill markers stroke"
+           id="rect850-7-9-9-5-3-8"
+           width="5.2916665"
+           height="5.2916665"
+           x="42.333332"
+           y="97.895836" />
+        <rect
+           style="fill:#0000ff;stroke-width:1;stroke-linecap:round;stroke-linejoin:bevel;paint-order:fill markers stroke"
+           id="rect850-5-1-3-9-1-1"
+           width="5.2916665"
+           height="5.2916665"
+           x="42.333332"
+           y="105.83335" />
+        <rect
+           style="fill:#0000ff;stroke-width:1;stroke-linecap:round;stroke-linejoin:bevel;paint-order:fill markers stroke"
+           id="rect850-35-2-6-2-4-2"
+           width="5.2916665"
+           height="5.2916665"
+           x="50.270832"
+           y="74.083336" />
+        <rect
+           style="fill:#0000ff;stroke-width:1;stroke-linecap:round;stroke-linejoin:bevel;paint-order:fill markers stroke"
+           id="rect850-3-6-7-0-2-9-9"
+           width="5.2916665"
+           height="5.2916665"
+           x="50.270832"
+           y="82.020836" />
+        <rect
+           style="fill:#0000ff;stroke-width:1;stroke-linecap:round;stroke-linejoin:bevel;paint-order:fill markers stroke"
+           id="rect850-6-2-0-6-8-2-3"
+           width="5.2916665"
+           height="5.2916665"
+           x="50.270832"
+           y="89.958336" />
+        <rect
+           style="fill:#0000ff;stroke-width:1;stroke-linecap:round;stroke-linejoin:bevel;paint-order:fill markers stroke"
+           id="rect850-7-9-9-2-97-0-9"
+           width="5.2916665"
+           height="5.2916665"
+           x="50.270832"
+           y="97.895836" />
+        <rect
+           style="fill:#0000ff;stroke-width:1;stroke-linecap:round;stroke-linejoin:bevel;paint-order:fill markers stroke"
+           id="rect850-5-1-3-6-3-6-0"
+           width="5.2916665"
+           height="5.2916665"
+           x="50.270832"
+           y="105.83335" />
+        <rect
+           style="fill:#0000ff;stroke-width:1;stroke-linecap:round;stroke-linejoin:bevel;paint-order:fill markers stroke"
+           id="rect850-35-2-6-1-6-8-8"
+           width="5.2916665"
+           height="5.2916665"
+           x="58.208332"
+           y="74.083336" />
+        <rect
+           style="fill:#0000ff;stroke-width:1;stroke-linecap:round;stroke-linejoin:bevel;paint-order:fill markers stroke"
+           id="rect850-3-6-7-0-8-1-9-8"
+           width="5.2916665"
+           height="5.2916665"
+           x="58.208332"
+           y="82.020836" />
+        <rect
+           style="fill:#0000ff;stroke-width:1;stroke-linecap:round;stroke-linejoin:bevel;paint-order:fill markers stroke"
+           id="rect850-6-2-0-6-7-2-2-5"
+           width="5.2916665"
+           height="5.2916665"
+           x="58.208332"
+           y="89.958336" />
+        <rect
+           style="fill:#0000ff;stroke-width:1;stroke-linecap:round;stroke-linejoin:bevel;paint-order:fill markers stroke"
+           id="rect850-7-9-9-2-9-9-6-0"
+           width="5.2916665"
+           height="5.2916665"
+           x="58.208332"
+           y="97.895836" />
+        <rect
+           style="fill:#0000ff;stroke-width:1;stroke-linecap:round;stroke-linejoin:bevel;paint-order:fill markers stroke"
+           id="rect850-5-1-3-6-2-3-6-9"
+           width="5.2916665"
+           height="5.2916665"
+           x="58.208332"
+           y="105.83335" />
+        <rect
+           style="fill:#0000ff;stroke-width:1;stroke-linecap:round;stroke-linejoin:bevel;paint-order:fill markers stroke"
+           id="rect850-35-2-6-1-0-1-4-6"
+           width="5.2916665"
+           height="5.2916665"
+           x="66.145828"
+           y="74.083328" />
+        <rect
+           style="fill:#0000ff;stroke-width:1;stroke-linecap:round;stroke-linejoin:bevel;paint-order:fill markers stroke"
+           id="rect850-3-6-7-0-8-2-9-9-3"
+           width="5.2916665"
+           height="5.2916665"
+           x="66.145828"
+           y="82.020836" />
+        <rect
+           style="fill:#0000ff;stroke-width:1;stroke-linecap:round;stroke-linejoin:bevel;paint-order:fill markers stroke"
+           id="rect850-6-2-0-6-7-3-4-5-8"
+           width="5.2916665"
+           height="5.2916665"
+           x="66.145828"
+           y="89.958336" />
+        <rect
+           style="fill:#0000ff;stroke-width:1;stroke-linecap:round;stroke-linejoin:bevel;paint-order:fill markers stroke"
+           id="rect850-7-9-9-2-9-7-78-0-5"
+           width="5.2916665"
+           height="5.2916665"
+           x="66.145828"
+           y="97.895836" />
+        <rect
+           style="fill:#0000ff;stroke-width:1;stroke-linecap:round;stroke-linejoin:bevel;paint-order:fill markers stroke"
+           id="rect850-5-1-3-6-2-5-4-4-6"
+           width="5.2916665"
+           height="5.2916665"
+           x="66.145828"
+           y="105.83335" />
+        <rect
+           style="fill:#0000ff;stroke-width:1;stroke-linecap:round;stroke-linejoin:bevel;paint-order:fill markers stroke"
+           id="rect850-35-2-6-1-0-9-5-8-1"
+           width="5.2916665"
+           height="5.2916665"
+           x="74.083336"
+           y="74.083336" />
+        <rect
+           style="fill:#0000ff;stroke-width:1;stroke-linecap:round;stroke-linejoin:bevel;paint-order:fill markers stroke"
+           id="rect850-3-6-7-0-8-2-2-0-7-1"
+           width="5.2916665"
+           height="5.2916665"
+           x="74.083336"
+           y="82.020844" />
+        <rect
+           style="fill:#0000ff;stroke-width:1;stroke-linecap:round;stroke-linejoin:bevel;paint-order:fill markers stroke"
+           id="rect850-6-2-0-6-7-3-2-3-1-5"
+           width="5.2916665"
+           height="5.2916665"
+           x="74.083336"
+           y="89.958344" />
+        <rect
+           style="fill:#0000ff;stroke-width:1;stroke-linecap:round;stroke-linejoin:bevel;paint-order:fill markers stroke"
+           id="rect850-7-9-9-2-9-7-8-6-7-9"
+           width="5.2916665"
+           height="5.2916665"
+           x="74.083336"
+           y="97.895844" />
+        <rect
+           style="fill:#0000ff;stroke-width:1;stroke-linecap:round;stroke-linejoin:bevel;paint-order:fill markers stroke"
+           id="rect850-5-1-3-6-2-5-9-1-2-8"
+           width="5.2916665"
+           height="5.2916665"
+           x="74.083336"
+           y="105.83336" />
+      </g>
+      <rect
+         style="fill:#0000ff;stroke:#000000;stroke-width:1.1;stroke-linecap:round;stroke-linejoin:bevel;paint-order:fill markers stroke"
+         id="rect1910-0-7-4"
+         width="5.2916665"
+         height="5.2916665"
+         x="-2.6458359"
+         y="124.35417"
+         inkscape:export-filename="/home/tobias/git/Peano/src/exahype2/fv/rusanov/Rusanov00.png"
+         inkscape:export-xdpi="90"
+         inkscape:export-ydpi="90" />
+      <rect
+         style="fill:#0000ff;stroke:#000000;stroke-width:1.1;stroke-linecap:round;stroke-linejoin:bevel;paint-order:fill markers stroke"
+         id="rect1910-7-63-2-8"
+         width="5.2916665"
+         height="5.2916665"
+         x="-2.6458359"
+         y="171.97917"
+         inkscape:export-filename="/home/tobias/git/Peano/src/exahype2/fv/rusanov/Rusanov00.png"
+         inkscape:export-xdpi="90"
+         inkscape:export-ydpi="90" />
+      <rect
+         style="fill:#0000ff;stroke:#000000;stroke-width:1.1;stroke-linecap:round;stroke-linejoin:bevel;paint-order:fill markers stroke"
+         id="rect1910-7-3-2-2-1"
+         width="5.2916665"
+         height="5.2916665"
+         x="44.979168"
+         y="124.35416"
+         inkscape:export-filename="/home/tobias/git/Peano/src/exahype2/fv/rusanov/Rusanov00.png"
+         inkscape:export-xdpi="90"
+         inkscape:export-ydpi="90" />
+      <rect
+         style="fill:#0000ff;stroke:#000000;stroke-width:1.1;stroke-linecap:round;stroke-linejoin:bevel;paint-order:fill markers stroke"
+         id="rect1910-7-6-0-6-0"
+         width="5.2916665"
+         height="5.2916665"
+         x="44.97916"
+         y="171.97917"
+         inkscape:export-filename="/home/tobias/git/Peano/src/exahype2/fv/rusanov/Rusanov00.png"
+         inkscape:export-xdpi="90"
+         inkscape:export-ydpi="90" />
+    </g>
+    <rect
+       style="fill:#0000ff;stroke-width:1;stroke-linecap:round;stroke-linejoin:bevel;paint-order:fill markers stroke"
+       id="rect850-36-3"
+       width="5.2916665"
+       height="5.2916665"
+       x="-158.75"
+       y="121.70834"
+       transform="rotate(-90)"
+       inkscape:export-filename="/home/tobias/git/Peano/src/exahype2/fv/rusanov/Rusanov01.png"
+       inkscape:export-xdpi="90"
+       inkscape:export-ydpi="90" />
+    <rect
+       style="fill:#00ff00;stroke-width:1;stroke-linecap:round;stroke-linejoin:bevel;paint-order:fill markers stroke"
+       id="rect850-36-0"
+       width="5.2916665"
+       height="5.2916665"
+       x="-164.04167"
+       y="121.70833"
+       transform="rotate(-90)"
+       inkscape:export-filename="/home/tobias/git/Peano/src/exahype2/fv/rusanov/Rusanov01.png"
+       inkscape:export-xdpi="90"
+       inkscape:export-ydpi="90" />
+    <rect
+       style="fill:#ff0000;stroke-width:1;stroke-linecap:round;stroke-linejoin:bevel;paint-order:fill markers stroke"
+       id="rect850-36-4"
+       width="5.2916665"
+       height="5.2916665"
+       x="-169.33334"
+       y="121.70833"
+       transform="rotate(-90)"
+       inkscape:export-filename="/home/tobias/git/Peano/src/exahype2/fv/rusanov/Rusanov01.png"
+       inkscape:export-xdpi="90"
+       inkscape:export-ydpi="90" />
+    <rect
+       style="fill:#0000ff;stroke-width:1;stroke-linecap:round;stroke-linejoin:bevel;paint-order:fill markers stroke"
+       id="rect850-36-3-4"
+       width="5.2916665"
+       height="5.2916665"
+       x="-174.625"
+       y="121.70834"
+       transform="rotate(-90)"
+       inkscape:export-filename="/home/tobias/git/Peano/src/exahype2/fv/rusanov/Rusanov01.png"
+       inkscape:export-xdpi="90"
+       inkscape:export-ydpi="90" />
+    <rect
+       style="fill:#00ff00;stroke-width:1;stroke-linecap:round;stroke-linejoin:bevel;paint-order:fill markers stroke"
+       id="rect850-36-0-4"
+       width="5.2916665"
+       height="5.2916665"
+       x="-179.91667"
+       y="121.70832"
+       transform="rotate(-90)"
+       inkscape:export-filename="/home/tobias/git/Peano/src/exahype2/fv/rusanov/Rusanov01.png"
+       inkscape:export-xdpi="90"
+       inkscape:export-ydpi="90" />
+    <rect
+       style="fill:#ff0000;stroke-width:1;stroke-linecap:round;stroke-linejoin:bevel;paint-order:fill markers stroke"
+       id="rect850-36-4-4"
+       width="5.2916665"
+       height="5.2916665"
+       x="-185.20834"
+       y="121.70832"
+       transform="rotate(-90)"
+       inkscape:export-filename="/home/tobias/git/Peano/src/exahype2/fv/rusanov/Rusanov01.png"
+       inkscape:export-xdpi="90"
+       inkscape:export-ydpi="90" />
+    <rect
+       style="fill:#0000ff;stroke-width:1;stroke-linecap:round;stroke-linejoin:bevel;paint-order:fill markers stroke"
+       id="rect850-36-3-7"
+       width="5.2916665"
+       height="5.2916665"
+       x="-190.5"
+       y="121.70834"
+       transform="rotate(-90)"
+       inkscape:export-filename="/home/tobias/git/Peano/src/exahype2/fv/rusanov/Rusanov01.png"
+       inkscape:export-xdpi="90"
+       inkscape:export-ydpi="90" />
+    <rect
+       style="fill:#00ff00;stroke-width:1;stroke-linecap:round;stroke-linejoin:bevel;paint-order:fill markers stroke"
+       id="rect850-36-0-6"
+       width="5.2916665"
+       height="5.2916665"
+       x="-195.79167"
+       y="121.70832"
+       transform="rotate(-90)"
+       inkscape:export-filename="/home/tobias/git/Peano/src/exahype2/fv/rusanov/Rusanov01.png"
+       inkscape:export-xdpi="90"
+       inkscape:export-ydpi="90" />
+    <rect
+       style="fill:#ff0000;stroke-width:1;stroke-linecap:round;stroke-linejoin:bevel;paint-order:fill markers stroke"
+       id="rect850-36-4-3"
+       width="5.2916665"
+       height="5.2916665"
+       x="-201.08334"
+       y="121.70832"
+       transform="rotate(-90)"
+       inkscape:export-filename="/home/tobias/git/Peano/src/exahype2/fv/rusanov/Rusanov01.png"
+       inkscape:export-xdpi="90"
+       inkscape:export-ydpi="90" />
+    <rect
+       style="fill:#0000ff;stroke-width:1;stroke-linecap:round;stroke-linejoin:bevel;paint-order:fill markers stroke"
+       id="rect850-36-3-7-1"
+       width="5.2916665"
+       height="5.2916665"
+       x="-206.375"
+       y="121.70837"
+       transform="rotate(-90)"
+       inkscape:export-filename="/home/tobias/git/Peano/src/exahype2/fv/rusanov/Rusanov01.png"
+       inkscape:export-xdpi="90"
+       inkscape:export-ydpi="90" />
+    <rect
+       style="fill:#00ff00;stroke-width:1;stroke-linecap:round;stroke-linejoin:bevel;paint-order:fill markers stroke"
+       id="rect850-36-0-6-7"
+       width="5.2916665"
+       height="5.2916665"
+       x="-211.66667"
+       y="121.70834"
+       transform="rotate(-90)"
+       inkscape:export-filename="/home/tobias/git/Peano/src/exahype2/fv/rusanov/Rusanov01.png"
+       inkscape:export-xdpi="90"
+       inkscape:export-ydpi="90" />
+    <rect
+       style="fill:#ff0000;stroke-width:1;stroke-linecap:round;stroke-linejoin:bevel;paint-order:fill markers stroke"
+       id="rect850-36-4-3-5"
+       width="5.2916665"
+       height="5.2916665"
+       x="-216.95834"
+       y="121.70834"
+       transform="rotate(-90)"
+       inkscape:export-filename="/home/tobias/git/Peano/src/exahype2/fv/rusanov/Rusanov01.png"
+       inkscape:export-xdpi="90"
+       inkscape:export-ydpi="90" />
+    <text
+       xml:space="preserve"
+       style="font-size:12.5955px;line-height:1.25;font-family:sans-serif;stroke-width:1.25955"
+       x="119.95042"
+       y="221.13338"
+       id="text3233"
+       inkscape:export-filename="/home/tobias/git/Peano/src/exahype2/fv/rusanov/Rusanov01.png"
+       inkscape:export-xdpi="90"
+       inkscape:export-ydpi="90"><tspan
+         sodipodi:role="line"
+         id="tspan3231"
+         style="stroke-width:1.25955"
+         x="119.95042"
+         y="221.13338">...</tspan></text>
+  </g>
+</svg>

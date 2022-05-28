@@ -436,7 +436,7 @@ int main(int argc, char** argv) {{
   peano4::initSingletons(
     DomainOffset,
     DomainSize,
-    {PERIODIC_BC}
+    PeriodicBC
   );
   
   if ( tarch::mpi::Rank::getInstance().getNumberOfRanks()>1 and tarch::multicore::Core::getInstance().getNumberOfThreads()<=1 ) {{

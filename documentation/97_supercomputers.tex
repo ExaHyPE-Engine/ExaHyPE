@@ -129,6 +129,31 @@ spir64 fat binary approach:
 
 
 
+\paragraph{Intel's DPC++}
+%
+To use the data-parallel compiler (and hence to gain SYCL support), you have to
+change \texttt{CXX}
+
+\begin{bash}
+./configure CC=dpcpp CXX=dpcpp \
+ CXXFLAGS="-Ofast -mtune=native -march=native" \
+ LDFLAGS="-ltbb" \
+ --with-multithreading=tbb --enable-exahype --enable-loadbalancing --enable-blockstructured \ 
+ --with-gpu=sycl
+\end{bash}
+
+\noindent
+In line with previous discussions, we use \texttt{dpcpp} both as C and as C++
+compiler. 
+While the SYCL GPU port should, in theory, work with any tasking front-end and,
+notably, with C++ tasking, I usually use the Threading Building Blocks (TBB) in
+\Peano.
+Please note that you will have to link against \texttt{libtbb.so} via
+\texttt{-ltbb} manually.
+
+
+
+
 \paragraph{Intel MPI}
 %
 Intel's \texttt{mpiicpc} wrapper serves both the legacy Intel compiler and the

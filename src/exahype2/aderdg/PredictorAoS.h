@@ -27,7 +27,7 @@ namespace exahype2 {
     #pragma omp declare target
     #endif
 */
-    GPUCallableMethod void spaceTimePredictor_initialGuess_body_AoS(
+    void spaceTimePredictor_initialGuess_body_AoS(
       double*       __restrict__ Qout,
       const double* __restrict__ UIn,
       const int                  nodesPerAxis,
@@ -59,7 +59,7 @@ namespace exahype2 {
     #pragma omp declare target
     #endif
 */
-    GPUCallableMethod void spaceTimePredictor_PicardLoop_initialiseRhs_AoS(
+    void spaceTimePredictor_PicardLoop_initialiseRhs_AoS(
       double * __restrict__       rhsOut,
       const double * const __restrict__ UIn,
       const double * const __restrict__ FLCoeff,
@@ -107,7 +107,7 @@ namespace exahype2 {
     #pragma omp declare target
     #endif
 */
-    GPUCallableMethod void spaceTimePredictor_PicardLoop_addContributions_body_AoS (
+    void spaceTimePredictor_PicardLoop_addContributions_body_AoS (
       std::function< void(
         const double * const __restrict__           Q,
         const tarch::la::Vector<Dimensions,double>& x,
@@ -183,7 +183,7 @@ namespace exahype2 {
     #pragma omp declare target
     #endif
 */
-    GPUCallableMethod void spaceTimePredictor_PicardLoop_addFluxContributionsToRhs_body_AoS (
+    void spaceTimePredictor_PicardLoop_addFluxContributionsToRhs_body_AoS (
         std::function< void(
           const double * const __restrict__                 Q,
           const tarch::la::Vector<Dimensions,double>& x,
@@ -238,7 +238,7 @@ namespace exahype2 {
     #pragma omp declare target
     #endif
 */
-    GPUCallableMethod void spaceTimePredictor_PicardLoop_addSourceContributionToRhs_body_AoS(
+    void spaceTimePredictor_PicardLoop_addSourceContributionToRhs_body_AoS(
         std::function< void(
           const double * const __restrict__                 Q,
           const tarch::la::Vector<Dimensions,double>& x,
@@ -273,7 +273,7 @@ namespace exahype2 {
     #pragma omp declare target
     #endif
 */
-    GPUCallableMethod void spaceTimePredictor_PicardLoop_addNcpContributionToRhs_body_AoS(
+    void spaceTimePredictor_PicardLoop_addNcpContributionToRhs_body_AoS(
       std::function< void(
         const double * const __restrict__                 Q,
         double * __restrict__                       dQ_or_deltaQ,
@@ -324,7 +324,7 @@ namespace exahype2 {
     #pragma omp declare target
     #endif
 */
-    GPUCallableMethod void spaceTimePredictor_PicardLoop_invert_body_AoS(
+    void spaceTimePredictor_PicardLoop_invert_body_AoS(
       double * __restrict__       QOut,
       double&                     squaredResiduumOut,
       const double * const __restrict__ rhsIn,
@@ -360,7 +360,7 @@ namespace exahype2 {
     #pragma omp declare target
     #endif
 */
-    GPUCallableMethod void spaceTimePredictor_extrapolate_body_AoS(
+    void spaceTimePredictor_extrapolate_body_AoS(
       double * __restrict__       QHullOut[Dimensions*2],
       const double * const __restrict__ QIn,
       const double * const __restrict__ FLRCoeff[2],
@@ -393,7 +393,7 @@ namespace exahype2 {
     #pragma omp declare target
     #endif
 */
-    GPUCallableMethod void spaceTimePredictor_extrapolate_Lobatto_body_AoS(
+    void spaceTimePredictor_extrapolate_Lobatto_body_AoS(
       double * __restrict__             QHullOut[Dimensions*2],
       const double * const __restrict__ QIn,
       const int                         nodesPerAxis,
