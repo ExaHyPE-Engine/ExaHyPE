@@ -38,51 +38,53 @@ class peano4::grid::PeanoCurve {
      * boundary conditions. The faces along the x axis can wrap over, those along
      * the y axis can wrap over, those along the z axis, too. For each direction,
      * we need two stacks. The first one is for data flow along the coordinate
-     * axis, the other one for the flow in the opposite direction. We order the
-     * set of stacks this way: first all the ones along, then those in the other
-     * direction. The whole thing becomes more complicated once we allow periodic
-     * boundary conditions along multiple axis. In this case, we have those stacks
-     * realising face-to-face wraps, but we also have to support combinations for
-     * the few vertices which go diagonal within the cube. So we have 2d face
-     * stacks but then any additional 2 out of 2d and and 3 out of 2d combination
-     * which is to be supported, too.
+     * axis, the other one for the flow in the opposite direction.
+     *
+     * Overall, we can have up to @f$ 3^d-1 @f$ different data flow directions.
+     * Obviously, faces use only up to @f$ 2d @f$ of these, as faces cannot be
+     * exchanged along diagonals.
      *
      * The whole set of stacks is replicated: We need a set of these stacks to
      * read from (those are the lower ones). They are followed by stacks to write
-     * to. The two stacks are swapped over after each iteration. Within each set,
-     * we first have all the stacks for data flow along the axis and then those
-     * the other way round. For these, read access has to be permuted, too. This
-     * is realised within getPeriodicBoundaryExchangeInputStackNumberForOutputStack().
-     *
-     * So for any vertex, we have a bitset with 2*Dimensions entries which tells
-     * us exactly which data flows are tied to this vertex. Not all populations
-     * of this bitset are admissible - you can't have the flag 'along x axis'
-     * combined with 'against x axis' - but the highest d bits could be set.
-     *
-     * If you work with face data, then way fewer stacks will be used, as there
-     * is no way to combine different periodic BCs. For cells, there are no
-     * periodic BCs at all.
+     * to. The two stacks are swapped over after each iteration.
      */
-    #if Dimensions==2
-    static constexpr int NumberOfPeriodicBoundaryConditionOutputStacks = 8+4+1;
-    #elif Dimensions==3
-    static constexpr int NumberOfPeriodicBoundaryConditionOutputStacks = 32 + 16 + 8 + 1;
-    #else
-    #error Not coded yet
-    #endif
-    static constexpr int NumberOfPeriodicBoundaryConditionStacks = 2*NumberOfPeriodicBoundaryConditionOutputStacks;
+    static constexpr int NumberOfPeriodicBoundaryConditionStacks = 2*(ThreePowerD-1);
 
     /**
      * Standard (serial) number of stacks required per spacetree
      *
-     * We need an input and an output stack. Then we need the 2d temporary
-     * stacks. Finally, we need another stack to represent the call stack.
-     * Inside the spacetree, this one is not required - we use the real
-     * call stack of the recursive formulation - but if we manage the call
-     * stack explicitly, i.e. through grid traversal events, then we have
-     * also to manage the stack explicitly.
+     * The stacks are ordered as follows:
+     *
+     * - One stack represents the call stack. In our tree world, it represents
+     *   data on coarser tree levels which we will revisit throughout the
+     *   backtracking.
+     * - We need an input and an output stack.
+     * - Then we need the 2d temporary stacks for the face or vertex exchange
+     *   with neighbouring cells.
+     * - We have a number of stacks that we use for all periodic boundary data
+     *   exchange. These are only used on tree 0. We first hold all the output
+     *   stacks and then all the input stacks.
+     *
+     * From hereon, all further stacks are used for parallel data exchange.
+     *
+     * ## Example 2d
+     *
+     * | stack number | semantics             | usage
+     * | ------------ | --------------------- | -----
+     * | 0            | call stack            | every tree
+     * | 1,2          | input/output stack    | every tree
+     * | 3-6          | temporary stacks to   | every tree
+     * |              | exchange data with    |
+     * |              | adjacent cells        |
+     * | 7-14         | output stacks for     | tree 0
+     * |              | periodic BC data      |
+     * | 15-22        | input stack for       | tree 0
+     * |              | periodic BC data      |
+     * | >=23         | parallel data xchange | all trees
+     * |              | stacks                |
+     *
      */
-    static constexpr int MaxNumberOfStacksPerSpacetreeInstance = NumberOfBaseStacks + Dimensions*2 + NumberOfPeriodicBoundaryConditionStacks;
+    static constexpr int MaxNumberOfCoreStacksPerSpacetreeInstance = NumberOfBaseStacks + Dimensions*2 + NumberOfPeriodicBoundaryConditionStacks;
 
     static bool isTraversePositiveAlongAxis(
       const AutomatonState&  state,

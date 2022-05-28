@@ -137,7 +137,7 @@ struct tarch::la::Vector {
      *   loops containing vector element accesses.
      */
     inline const Scalar & operator[] (int index) const InlineMethod {
-        #if !defined(GPUOffloadingOMP)
+        #if !defined(GPUOffloadingOMP) and !defined(GPUOffloadingSYCL)
         assertion3 ( index >= 0, index, Size, ::toString(*this) );
         assertion4 ( index < Size, index, Size, ::toString(*this), "you may not take the indexth entry from a vector with only Size components" );
         #endif
@@ -151,7 +151,7 @@ struct tarch::la::Vector {
      * @see operator[] for remarks on SSE
      */
     inline Scalar & operator[] (int index) InlineMethod {
-        #if !defined(GPUOffloadingOMP)
+        #if !defined(GPUOffloadingOMP) and !defined(GPUOffloadingSYCL)
         assertion3 ( index >= 0, index, Size, toString(*this) );
         assertion3 ( index < Size, index, Size, toString(*this) );
         #endif
@@ -164,7 +164,7 @@ struct tarch::la::Vector {
      * @see operator[] for remarks on SSE
      */
     inline const Scalar & operator() (int index) const InlineMethod {
-        #if !defined(GPUOffloadingOMP)
+        #if !defined(GPUOffloadingOMP) and !defined(GPUOffloadingSYCL)
         assertion3 ( index >= 0, index, Size, toString(*this) );
         assertion3 ( index < Size, index, Size, toString(*this) );
         #endif
@@ -177,7 +177,7 @@ struct tarch::la::Vector {
      * @see operator[] for remarks on SSE
      */
     inline Scalar & operator() (int index) InlineMethod {
-       #if !defined(GPUOffloadingOMP)
+       #if !defined(GPUOffloadingOMP) and !defined(GPUOffloadingSYCL)
        assertion3 ( index >= 0, index, Size, toString(*this) );
        assertion3 ( index < Size, index, Size, toString(*this) );
        #endif
@@ -251,7 +251,7 @@ tarch::la::Vector<Size,NewScalarType> tarch::la::convertScalar(const tarch::la::
  * we decided to remove this again.
  */
 /*
-#if !defined(GPUOffloadingOMP)
+#if !defined(GPUOffloadingOMP) and !defined(GPUOffloadingSYCL)
 namespace tarch {
   namespace la {
     extern template

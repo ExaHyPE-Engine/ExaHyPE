@@ -13,7 +13,7 @@
 #pragma omp declare target
 #endif
 */
-GPUCallableMethod double exahype2::aderdg::corrector_adjustSolution_computeMaxEigenvalue_body_AoS(
+double exahype2::aderdg::corrector_adjustSolution_computeMaxEigenvalue_body_AoS(
     std::function< void(
       double * __restrict__                       Q,
       const tarch::la::Vector<Dimensions,double>& x,
@@ -61,7 +61,7 @@ GPUCallableMethod double exahype2::aderdg::corrector_adjustSolution_computeMaxEi
 #pragma omp declare target
 #endif
 */
-GPUCallableMethod void exahype2::aderdg::corrector_addFluxContributions_body_AoS(
+void exahype2::aderdg::corrector_addFluxContributions_body_AoS(
     std::function< void(
       const double * const __restrict__           Q,
       const tarch::la::Vector<Dimensions,double>& x,
@@ -118,7 +118,7 @@ GPUCallableMethod void exahype2::aderdg::corrector_addFluxContributions_body_AoS
 #pragma omp declare target
 #endif
 */
-GPUCallableMethod void exahype2::aderdg::corrector_addSourceContributions_body_AoS(
+void exahype2::aderdg::corrector_addSourceContributions_body_AoS(
     std::function< void(
       const double * const __restrict__                 Q,
       const tarch::la::Vector<Dimensions,double>& x,
@@ -163,7 +163,7 @@ GPUCallableMethod void exahype2::aderdg::corrector_addSourceContributions_body_A
 #pragma omp declare target
 #endif
 */
-GPUCallableMethod void exahype2::aderdg::corrector_addNcpContributions_body_AoS(
+void exahype2::aderdg::corrector_addNcpContributions_body_AoS(
     std::function< void(
       const double * const __restrict__                 Q,
       double * __restrict__                       dQ_or_deltaQ,

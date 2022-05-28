@@ -99,7 +99,7 @@ time_step_size = 0.1 * min_h
 #
 #
 
-auxiliary_variables = 0
+auxiliary_variables = 1
 
 thesolver = None
 solver_name = "Euler"
@@ -144,7 +144,7 @@ elif args.type=="global-adaptive-enclave":
     min_h, max_h,
     flux = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
     eigenvalues = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
-    source_term = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
+#    source_term = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
     time_step_relaxation = 0.05,
     pde_terms_without_state = args.gpu
   )
@@ -236,6 +236,14 @@ else:
 
 
 project.add_solver( thesolver )
+
+
+#
+# Please comment out later again
+#
+amr_label = exahype2.solvers.elliptic.AMRMarker( name="AMRMarker" )
+amr_label.couple_with_FV_solver( thesolver, 0 )
+project.add_solver( amr_label )
 
 
 dimensions = args.dim

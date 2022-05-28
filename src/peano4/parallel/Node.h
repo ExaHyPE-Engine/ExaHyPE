@@ -106,10 +106,15 @@ class peano4::parallel::Node {
     void registerId(int id, int masterId);
 
     /**
+     * Analyse to which of the 2d faces it is adjacent
+     *
      * We enumerate again in the way we always enumerate, i.e. first the face
-     * with the x axis as normal, then the one with the y axis, ... Always
-     * those guys running through the left bottom vertex. And after these d
-     * faces, we enumerate all the opposite faces on the cube.
+     * with the x axis as normal, then the one with the y axis, ... And after
+     * these d faces, we enumerate all the opposite faces on the cube.
+     *
+     * The routine is non-trivial: We store the @f$ 2^d @f$ adjacency flags
+     * per vertex, and now have to work backwards which periodic faces they
+     * do represent.
      */
     static std::bitset<2*Dimensions> getPeriodicBoundaryNumber(const tarch::la::Vector<TwoPowerD,int>& flags);
   public:
@@ -211,26 +216,90 @@ class peano4::parallel::Node {
      * seem not to define the comparison operator properly. So I use an int
      * here and wrap it into a bitset whenever necessary.
      */
-    typedef std::pair<int,int> PeriodicBoundaryStackIdentifier;
-
-    /**
-     * Analyses whether/which periodic boundary data exchange is involved. The
-     * routine however does not know/take into account that indeed only tree 0
-     * should do periodic boundary data exchange. It is up to the calling
-     * routine to ensure that stuff is only done on tree 0.
-     */
-    static std::set< PeriodicBoundaryStackIdentifier >  getInputStacksForPeriodicBoundaryExchange(const tarch::la::Vector<TwoPowerD,int>& flags);
+    typedef std::pair<int, int > PeriodicBoundaryStackIdentifier;
 
     /**
      * You hand in a the flags of a vertex and you get the boundary stack identifiers
-     * including their normals.
+     * including their directions.
+     *
+     * ## Algorithm
+     *
+     * We first analyse which faces with a periodic boundary flag are adjacent to the
+     * vertex. For this, we employ getPeriodicBoundaryNumber(). After that, we build
+     * the power set over the result: If a face is adjacent to the upper face and the
+     * left face, it also has to communicate along the diagonal, i.e. the logical
+     * combination of the two.
+     *
+     * We now have to translate these powerset entries into stack indices. For this,
+     * we run over the @f$ 3^d @f$ neighbour cells or a cell, construct the index for
+     * this direction, and then look whether this index is contained within the power
+     * set.
+     *
+     * ## Implementation
+     *
+     * For the powerset, I'd like to use
+     *
+     *      std::set< std::bitset<2*Dimensions> > powerSet;
+     *
+     * but C++ defines no comparison operator on bitsets and therefore you can't use
+     * it in a set.
      */
     static std::set< PeriodicBoundaryStackIdentifier >  getOutputStacksForPeriodicBoundaryExchange(const tarch::la::Vector<TwoPowerD,int>& flags);
 
     /**
+     * Identify output stack for periodic boundary data written by face
+     *
+     * To make the mapping of face and vertex stacks consistent, we take the
+     * face number and determine what the adjacent, i.e. face-connected
+     * neighbour volume out of the @f$ 3^d @f$ adjacent, i.e. vertex-connected
+     * volumes is.
+     *
+     * Take care that the result is not a mere linearisation of the index. You
+     * have to explicitly exclude the centre volume.
+     *
+     *
+     * @see getPeriodicBoundaryExchangeInputStackNumberForOutputStack() for a
+     *   description how to compute an input stack index from the output
+     *   index.
+     *
+     * @see mapPeriodicBoundaryExchangeOutputStackOntoInputStack() for a mapping
+     *   of periodic output stacks onto input stacks
+     *
      * @return The output stack for a periodic boundary data exchange for one face
+     *
      */
     static int  getOutputStackForPeriodicBoundaryExchange(int faceNumber);
+
+    /**
+     * Hand in an output stack number of a face and you get back the input
+     * stack number.
+     *
+     * If you want to use it for merging data, you have to be careful: Think about
+     * the right face of your domain. It is assigned a BC output stack. This
+     * routine tells you onto which input stack this output stack is mapped. In
+     * return, if you read in the periodic BC data for the right face, you will
+     * merge a data with its own! You however have to merge it with the input BC
+     * stack from the left face.
+     *
+     * This routine is not made to orchestrate the stack exchange! It is meant
+     * that you hand in number to which a vertex or face would write to. And then
+     * you get the number back which it should read from. This is not how the
+     * stacks are permuted after each step! If you want to achieve this, you have
+     * to call mapPeriodicBoundaryExchangeOutputStackOntoInputStack().
+     *
+     * @see peano4::parallel::SpacetreeSet::exchangeAllPeriodicBoundaryDataStacks() for
+     *   a routine which uses this one in return.
+     *
+     * @see peano4::grid::PeanoCurve:MaxNumberOfCoreStacksPerSpacetreeInstance for a
+     *   discussion of the ordering of the stacks.
+     */
+    static int  getPeriodicBoundaryExchangeInputStackNumberForOutputStack(int outputStackNumber);
+    static PeriodicBoundaryStackIdentifier  getPeriodicBoundaryExchangeInputStackNumberForOutputStack(PeriodicBoundaryStackIdentifier outputStackIdentifier);
+
+    /**
+     * @see tests::NodeTest::testGetOutputStacksForPeriodicBoundaryExchange()
+     */
+    static int mapPeriodicBoundaryExchangeOutputStackOntoInputStack(int outputStack);
 
     /**
      * See getOutputStackNumberOfBoundaryExchange().
@@ -242,24 +311,6 @@ class peano4::parallel::Node {
     static bool isVerticalDataExchangeInputStackNumber(int number);
 
     static bool isPeriodicBoundaryExchangeOutputStackNumber(int number);
-
-    /**
-     * Hand in an output stack number of a face/vertex and you get back the input
-     * stack number. This routine is used by the stack exchange in
-     * exchangeAllPeriodicBoundaryDataStacks() to map an output stack onto an
-     * input stack.
-     *
-     * If you want to use it for merging data, you have to be careful: Think about
-     * the right face of your domain. It is assigned a BC output stack. This
-     * routine tells you onto which input stack this output stack is mapped. In
-     * return, if you read in the periodic BC data for the right face, you will
-     * merge a data with its own! You however have to merge it with the input BC
-     * stack from the left face.
-     *
-     * @see peano4::parallel::SpacetreeSet::exchangeAllPeriodicBoundaryDataStacks()
-     */
-    static int  getPeriodicBoundaryExchangeInputStackNumberForOutputStack(int outputStackNumber);
-
 
     /**
      * There are communication stacks and storage stacks. This is

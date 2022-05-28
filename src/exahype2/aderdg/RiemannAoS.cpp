@@ -9,7 +9,7 @@
 #pragma omp declare target
 #endif
 */
-GPUCallableMethod void exahype2::aderdg::riemann_setBoundaryState_body_AoS(
+void exahype2::aderdg::riemann_setBoundaryState_body_AoS(
   std::function< void(
     double * __restrict__                       QInside,
     double * __restrict__                       OOutside,
@@ -47,7 +47,7 @@ GPUCallableMethod void exahype2::aderdg::riemann_setBoundaryState_body_AoS(
 #pragma omp declare target
 #endif
 */
-GPUCallableMethod double exahype2::aderdg::riemann_maxAbsoluteEigenvalue_body_AoS(
+double exahype2::aderdg::riemann_maxAbsoluteEigenvalue_body_AoS(
   std::function< double(
     const double * const __restrict__           Q,
     const tarch::la::Vector<Dimensions,double>& x,

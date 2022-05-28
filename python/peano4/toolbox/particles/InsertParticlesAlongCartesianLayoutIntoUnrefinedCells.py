@@ -8,7 +8,7 @@ import jinja2
 
 class InsertParticlesAlongCartesianLayoutIntoUnrefinedCells(ActionSet):
 
-  def __init__(self,particle_set,distance_between_particles,initialisation_call,computational_domain_offset,round_down = False, noise=True,additional_includes=""):
+  def __init__(self,particle_set,distance_between_particles,initialisation_call,computational_domain_offset,round_down = False, noise=True,additional_includes="",guard="true"):
     """
       Insert particles
       
@@ -28,6 +28,9 @@ class InsertParticlesAlongCartesianLayoutIntoUnrefinedCells(ActionSet):
       computational_domain_offset: [Float]
          Has to be an array with Dimensions entries that specifies the global domain
          offset.
+         
+      guard: String (C code)
+         A simple boolean expression. You can decide if a particle is inserted or not.
 
     """
     self.d = {}
@@ -36,6 +39,7 @@ class InsertParticlesAlongCartesianLayoutIntoUnrefinedCells(ActionSet):
     self.d[ "INITIALISATION_CALL" ]                = initialisation_call
     self.d[ "DOMAIN_OFFSET" ]                      = computational_domain_offset
     self.d[ "H" ]                                  = distance_between_particles
+    self.d[ "GUARD" ]                              = guard
     if noise:
       self.d[ "NOISE" ]                  = "true"
     else:
@@ -59,12 +63,17 @@ class InsertParticlesAlongCartesianLayoutIntoUnrefinedCells(ActionSet):
     );
     for (auto& particle: newParticles) {
       {{INITIALISATION_CALL}}
+      if ( {{GUARD}} ) {
+        toolbox::particles::insertParticleIntoCell(
+          marker,
+          particle,
+          fineGridVertices{{PARTICLES_CONTAINER}}
+        );
+      }
+      else {
+        delete particle;
+      }
     }
-    toolbox::particles::insertParticlesIntoCell(
-      marker,
-      newParticles,
-      fineGridVertices{{PARTICLES_CONTAINER}}
-    );
   }
 """)
 

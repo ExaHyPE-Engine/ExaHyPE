@@ -10,7 +10,7 @@
 #ifndef SharedMemoryParallelisation
 
 double* tarch::allocateMemory(int size, MemoryLocation location) {
- return new (std::align_val_t(Alignment)) double[size];
+ return new (std::align_val_t(AlignmentOnHeap)) double[size];
 }
 
 

@@ -21,11 +21,12 @@ enum class Scenario {
 };
 
 
-Scenario scenario = Scenario::PointExplosion;
+//Scenario scenario = Scenario::PointExplosion;
+Scenario scenario = Scenario::PointExplosionWithDynamicAMR;
+//Scenario scenario = Scenario::BreakingDam;
 //Scenario scenario = Scenario::BreakingDamResolutionStudies;
 //Scenario scenario = Scenario::BreakingDamWithDynamicAMR;
 
-//Scenario scenario = Scenario::BreakingDam;
 
 
 
@@ -122,6 +123,10 @@ void examples::exahype2::euler::Euler::initialCondition(
   const tarch::la::Vector<Dimensions,double>&  volumeH,
   bool                                         gridIsConstructed
 ) {
+  for (int i=0; i<NumberOfUnknowns+NumberOfAuxiliaryVariables; i++) {
+    Q[i] = 0.0;
+  }
+
   switch (scenario) {
     case Scenario::PointExplosion:
     case Scenario::PointExplosionWithDynamicAMR:
@@ -195,6 +200,7 @@ double examples::exahype2::euler::Euler::maxEigenvalue(
 }
 
 
+/*
 void examples::exahype2::euler::Euler::sourceTerm(
   const double * __restrict__ Q,
   const tarch::la::Vector<Dimensions,double>&  volumeCentre,
@@ -226,9 +232,12 @@ void examples::exahype2::euler::Euler::sourceTerm(
 
     }
 
+assertion(false);
+
     S[unknown] = 0.0001 * laplacian;
   }
 }
+*/
 
 
 
@@ -308,11 +317,9 @@ void examples::exahype2::euler::Euler::boundaryConditions(
   nonCriticalAssertion5( Qinside[0]>1e-12, faceCentre, volumeH, t, normal, Qinside[0] );
   assertion5( Qinside[0]>1e-12, faceCentre, volumeH, t, normal, Qinside[0] );
 
-  Qoutside[0] = Qinside[0];
-  Qoutside[1] = Qinside[1];
-  Qoutside[2] = Qinside[2];
-  Qoutside[3] = Qinside[3];
-  Qoutside[4] = Qinside[4];
+  for (int i=0; i<NumberOfUnknowns+NumberOfAuxiliaryVariables; i++) {
+    Qoutside[i] = Qinside[i];
+  }
 
   logTraceOut( "boundaryConditions(...)" );
 }

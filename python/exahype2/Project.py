@@ -435,7 +435,7 @@ thus appreciate any citation of the original release paper
 
     self.__generate_solver_repository();
     
-    self._project.main = exahype2.ExaHyPEMain(self._project,self._periodic_BC,self._dimensions)
+    self._project.main = exahype2.ExaHyPEMain(self._project)
 
     # maybe use ..
     self.__configure_makefile()

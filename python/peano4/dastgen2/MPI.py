@@ -42,8 +42,12 @@ class MPI(object):
   
   """
   def __init__(self, dof_association_):
-    self.dof_association = dof_association_
+    self.dof_association      = dof_association_
     self.merge_implementation = ""
+    self.receive_predicate    = "true"
+    self.send_predicate       = "true"
+    self.store_predicate      = "true"
+    self.load_predicate       = "true"
     pass
 
 
@@ -198,22 +202,22 @@ void """ + full_qualified_name + "::merge(const """ + full_qualified_name + """&
 
 
 bool """ + full_qualified_name + """::receiveAndMerge(const peano4::datamanagement::VertexMarker& marker) {
-  return true;
+  return """ + self.receive_predicate + """;
 }
 
 
 bool """ + full_qualified_name + """::send(const peano4::datamanagement::VertexMarker& marker) {
-  return true;
+  return """ + self.send_predicate + """;
 }
 
 
 bool """ + full_qualified_name + """::storePersistently(const peano4::datamanagement::VertexMarker& marker) {
-  return true;
+  return """ + self.store_predicate + """;
 }
 
 
 bool """ + full_qualified_name + """::loadPersistently(const peano4::datamanagement::VertexMarker& marker) {
-  return true;
+  return """ + self.load_predicate + """;
 }
 
 

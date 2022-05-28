@@ -24,8 +24,8 @@
 
 #define LittleEndian
 
-#if !defined(Alignment)
-#define Alignment 16
+#if !defined(AlignmentOnHeap)
+#define AlignmentOnHeap 16
 #endif
 
 /**

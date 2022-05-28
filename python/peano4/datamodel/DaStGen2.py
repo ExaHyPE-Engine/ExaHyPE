@@ -47,10 +47,9 @@ class DaStGen2(DoF):
   
     A DaStGen2 data type generator. To add fields to this object, just
     use the DaStGen2 instance data of this field, i.e. data.add_attribute().
+
     
-    ==========
-    Attributes
-    ==========
+    ## Attributes
     
     data: dastgen2.DataModel
       Add elements to this guy to enrich your data model.
@@ -60,10 +59,14 @@ class DaStGen2(DoF):
       i.e. routines used for boundary and re-balancing exchange. Modify 
       this one if you want to control certain data exchange or merge
       patterns.
+
+   
+    ## MPI
     
-    =========
-    Arguments
-    =========
+    If you want to add your own MPI merge implementation, you have to 
+    alter the attribute _peano4_aspect.
+    
+    ## Arguments
     
     name: String
       Name (unqualified)

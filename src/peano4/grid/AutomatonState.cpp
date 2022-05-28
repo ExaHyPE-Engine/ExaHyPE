@@ -48,7 +48,7 @@ void   peano4::grid::AutomatonState::setLevel(int value) {
 
 
 tarch::la::Vector<Dimensions,double>   peano4::grid::AutomatonState::getX() const {
-  return _x;
+  return   _x;
 }
 
 
@@ -58,7 +58,7 @@ void   peano4::grid::AutomatonState::setX(const tarch::la::Vector<Dimensions,dou
 
 
 double   peano4::grid::AutomatonState::getX(int index) const {
-  return _x(index);
+  return   _x(index);
 }
 
 
@@ -68,7 +68,7 @@ void   peano4::grid::AutomatonState::setX(int index, double value) {
 
 
 tarch::la::Vector<Dimensions,double>   peano4::grid::AutomatonState::getH() const {
-  return _h;
+  return   _h;
 }
 
 
@@ -78,7 +78,7 @@ void   peano4::grid::AutomatonState::setH(const tarch::la::Vector<Dimensions,dou
 
 
 double   peano4::grid::AutomatonState::getH(int index) const {
-  return _h(index);
+  return   _h(index);
 }
 
 
@@ -98,7 +98,7 @@ void   peano4::grid::AutomatonState::setInverted(bool value) {
 
 
 std::bitset<Dimensions>   peano4::grid::AutomatonState::getEvenFlags() const {
-  return _evenFlags;
+  return   _evenFlags;
 }
 
 
@@ -108,7 +108,7 @@ void   peano4::grid::AutomatonState::setEvenFlags(const std::bitset<Dimensions>&
 
 
 bool   peano4::grid::AutomatonState::getEvenFlags(int index) const {
-  return _evenFlags[index];
+  return   _evenFlags[index];
 }
 
 
@@ -123,7 +123,7 @@ void   peano4::grid::AutomatonState::flipEvenFlags(int index) {
 
 
 tarch::la::Vector<DimensionsTimesTwo,int>   peano4::grid::AutomatonState::getAccessNumber() const {
-  return _accessNumber;
+  return    _accessNumber;
 }
 
 
@@ -133,7 +133,7 @@ void   peano4::grid::AutomatonState::setAccessNumber(const tarch::la::Vector<Dim
 
 
 int   peano4::grid::AutomatonState::getAccessNumber(int index) const {
-  return _accessNumber(index);
+  return   _accessNumber(index);
 }
 
 

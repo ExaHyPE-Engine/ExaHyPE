@@ -60,7 +60,7 @@ void tarch::plotter::PVDTimeSeriesWriter::removeFileTail( std::vector<std::strin
 }
 
 
-std::tuple< double, int, std::vector<std::string> > tarch::plotter::PVDTimeSeriesWriter::parseFile( const std::string& filename) {
+std::tuple< double, int, std::vector<std::string> > tarch::plotter::PVDTimeSeriesWriter::parseFile( const std::string& filename, bool createBackup ) {
   std::ifstream in( filename );
 
   std::vector< std::string >  fileLines;
@@ -89,6 +89,13 @@ std::tuple< double, int, std::vector<std::string> > tarch::plotter::PVDTimeSerie
       else if (tarch::la::equals(timestamp,currentTimeStep,TimeStampPrecision)) {
         part = std::max(part, currentPart);
       }
+    }
+  }
+
+  if (createBackup) {
+    std::ofstream out( filename + ".bak");
+    for (auto& p: fileLines) {
+      out << p << std::endl;
     }
   }
 

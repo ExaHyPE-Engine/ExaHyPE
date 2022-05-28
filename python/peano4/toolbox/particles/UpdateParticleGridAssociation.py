@@ -17,6 +17,7 @@ class UpdateParticleGridAssociation(ActionSet):
    be used every time you move particles around. Notably, you should invoke
    it prior to the first algorithms on the particles. 
 
+
    ## Algorithm 
       
    The re-association has different ingredients. We have two implementations
@@ -66,10 +67,38 @@ class UpdateParticleGridAssociation(ActionSet):
    their position again in touchCellLastTime() or touchVertexLastTime(), then
    you will have an unsorted state by the end of the traversal. 
    
+   
+   ## Tunneling and horizontal data movements between trees
+   
+   All cores run through their trees. On the finest mesh level, we have a 
+   non-overlapping domain decomposition. Each cell has a unique owner tree.
+   On the coarser resolutions, the association is not unique anymore. We 
+   make it unique, i.e. each cell on any level has a unique owner. The owners
+   (aka threads or ranks) run through their trees concurrently and exchange
+   their boundary data after the traversal. If particles are to be lifted, this
+   causes issues, as we cannot exchange them between two levels after the 
+   traversal. We could, but then we can't lift them any further within the 
+   first traversal, and we also cannot drop them into another rank at the 
+   same time.
+   
+   Therefore, I employ a mixture of the pidt technique from the paper and the
+   sieve approach also discussed there. Usually, I do all lifts and drops 
+   right throughout the mesh traversal. If I'd lift into a cell/level which 
+   is owned by another tree, I don't lift but instead dump the particle into
+   a rank-global list. These lists are then exchanged after each traversal 
+   sweep. Drops now can either happen from the next coarser level or this
+   global list. I call the latter a sieve.
+   
+   Due to this global list approach, I can support tunneling, i.e. particles
+   racing through multiple cells in one time step, and all of this works with
+   MPI, too.
+   
+   
    ## Statistics 
      
    The mapping keeps some statistics on any state update. These statistics
-   however are not shared via MPI. 
+   however are not shared via MPI or synchronised between different threads. 
+   
    
    ## Where and how to use
    
@@ -87,14 +116,7 @@ class UpdateParticleGridAssociation(ActionSet):
    lifts are basically the last thing you do. This is particular imporant if
    your user code alters particle positions in touchVertexLastTime().
    
-   ## MPI
-   
-   @todo Not sure if I need special treatment here
-   
-   ## Tunneling and horizontal data movements between trees
-   
-   @todo Think about this
-   
+      
    ## Parameters
    
    eliminate_spatial_duplicates: Boolean
@@ -129,6 +151,7 @@ class UpdateParticleGridAssociation(ActionSet):
   _numberOfLifts = 0;
   _numberOfDrops = 0;
   _numberOfEliminations = 0;
+  _numberOfAssignmentsToGlobalSieve = 0;
 """ )
 
 
@@ -143,7 +166,8 @@ class UpdateParticleGridAssociation(ActionSet):
     ", eliminated (duplicate) particles=" << _numberOfEliminations <<
     {% endif %}
     ", lifts=" << _numberOfLifts << 
-    ", drops=" << _numberOfDrops
+    ", drops=" << _numberOfDrops <<
+    ", assignments-to-global-sieve=" << _numberOfAssignmentsToGlobalSieve
   );
 """ )
 
@@ -194,7 +218,6 @@ class UpdateParticleGridAssociation(ActionSet):
           logDebug( "touchCellLastTime(...)", "lift particle " << (*p)->toString() << " in tree " << _treeNumber << " from cell " << marker.toString() << " as difference is " << ((*p)->getX() - marker.x()) );
           liftParticles[ destAssociation.to_ulong() ].push_back(*p);
           p = fineGridVertices{{PARTICLES_CONTAINER}}(i).erase(p);
-          _numberOfLifts++;
         }
       }
       else {
@@ -209,7 +232,17 @@ class UpdateParticleGridAssociation(ActionSet):
   // and liftParticles and have to append those into the respective vertices.
   for (int i=0; i<TwoPowerD; i++) {
     fineGridVertices{{PARTICLES_CONTAINER}}(i).insert(   fineGridVertices{{PARTICLES_CONTAINER}}(i).end(),   particlesThatMoveOnSameLevel[ i ].begin(), particlesThatMoveOnSameLevel[ i ].end() ); 
-    coarseGridVertices{{PARTICLES_CONTAINER}}(i).insert( coarseGridVertices{{PARTICLES_CONTAINER}}(i).end(), liftParticles[ i ].begin(),                liftParticles[ i ].end() ); 
+  }
+
+  if (marker.isCellLocal()) {
+    for (int i=0; i<TwoPowerD; i++) {
+      coarseGridVertices{{PARTICLES_CONTAINER}}(i).insert( coarseGridVertices{{PARTICLES_CONTAINER}}(i).end(), liftParticles[ i ].begin(), liftParticles[ i ].end() ); 
+      _numberOfLifts += liftParticles[ i ].size();
+    }
+  }
+  else {
+    liftParticles[ i ].particlesCanNotBeLiftedLocally();
+    _numberOfAssignmentsToGlobalSieve += liftParticles[ i ].size();
   }
 """)
 
@@ -217,7 +250,7 @@ class UpdateParticleGridAssociation(ActionSet):
   __Template_ValidateParticleLevelAssociation = jinja2.Template("""
   for (auto p: fineGridVertex{{PARTICLES_CONTAINER}} ) {
     assertion3(
-      marker.isContainedInAdjacentCells( p->getX(), 0.5 ),
+      marker.isContainedInAdjacentCells( p->getX(), 0.5*SortingTolerance ),
       marker.x(),
       marker.toString(),
       p->toString()
@@ -244,26 +277,54 @@ class UpdateParticleGridAssociation(ActionSet):
    
   """
   __Template_Drop = jinja2.Template("""
-  const double CellToCutOffRadiusRatio = 0.5 * 0.9;
+  // I can always drop. Even if some of the coarse vertices are outside,
+  // they will be properly initialised and thus host an empty particle 
+  // list.
   for (int i=0; i<TwoPowerD; i++) {
+    // Define inside for loop, as sieve will define it as well
+    const double CellToCutOffRadiusRatio = 0.5 * (1.0-SortingTolerance);
     vertexdata::{{PARTICLES_CONTAINER}}::iterator p = coarseGridVertices{{PARTICLES_CONTAINER}}(i).begin(); 
     while ( p!=coarseGridVertices{{PARTICLES_CONTAINER}}(i).end() ) {
-      bool dropIntoThisVertex = tarch::la::min( marker.h() ) > CellToCutOffRadiusRatio * (*p)->getCutOffRadius();
-      for (int d=0; d<Dimensions; d++) {
-        dropIntoThisVertex &= (*p)->getX()(d) > marker.x()(d) - marker.h()(d)/2.0;
-        dropIntoThisVertex &= (*p)->getX()(d) < marker.x()(d) + marker.h()(d)/2.0;
-      }
-      
-      if (dropIntoThisVertex) {
+      if ( 
+        tarch::la::min( marker.h() ) > CellToCutOffRadiusRatio * (*p)->getCutOffRadius()
+        and
+        marker.isContainedInAdjacentCells( (*p)->getX(), 0.5*SortingTolerance )
+      ) {
+        logDebug( "touchVertexLastTime(...)", "drop particle " << (*p)->toString() << " into vertex " << marker.toString() );
         fineGridVertex{{PARTICLES_CONTAINER}}.push_back( *p );
         p = coarseGridVertices{{PARTICLES_CONTAINER}}(i).erase(p);
         _numberOfDrops++;
       }
       else p++;
     }
-  }
+
+    for (auto& p: coarseGridVertices{{PARTICLES_CONTAINER}}(i)) {
+      bool cutOffRadiusSmallEnough = tarch::la::min( marker.h() ) > CellToCutOffRadiusRatio * p->getCutOffRadius();
+      logDebug( "touchVertexFirstTime(...)", "have not been able to drop particle " << p->toString() << " from coarse vertex " << coarseGridVertices{{PARTICLES_CONTAINER}}(i).toString() << " into vertex " << fineGridVertex{{PARTICLES_CONTAINER}}.toString() << ". cut-off small enough=" << cutOffRadiusSmallEnough );
+    }
+  }  
 """)
 
+
+  __Template_Sieve = jinja2.Template("""  
+  if ( vertexdata::{{PARTICLES_CONTAINER}}::thereAreParticlesToBeSieved() ) {
+    vertexdata::{{PARTICLES_CONTAINER}} sievedParticles = vertexdata::{{PARTICLES_CONTAINER}}::getParticlesToBeSievedIntoVertex(
+        marker,
+        SortingTolerance
+      );
+      
+    _numberOfDrops += sievedParticles.size();
+
+    fineGridVertex{{PARTICLES_CONTAINER}}.insert(
+      fineGridVertex{{PARTICLES_CONTAINER}}.end(),
+      sievedParticles.begin(),
+      sievedParticles.end()
+    );
+  }
+""")  
+  
+  
+  
 
   """
   
@@ -275,11 +336,18 @@ class UpdateParticleGridAssociation(ActionSet):
   
   """
   __Template_Lift = jinja2.Template("""
-  std::bitset<Dimensions> target;
-  for (int d=0; d<Dimensions; d++) {
-    target[d] = marker.getRelativePositionWithinFatherCell()(d)>=2;
+  if ( marker.isParentCellLocal() ) {
+    std::bitset<Dimensions> target;
+    for (int d=0; d<Dimensions; d++) {
+      target[d] = marker.getRelativePositionWithinFatherCell()(d)>=2;
+    }
+    _numberOfLifts+=fineGridVertex{{PARTICLES_CONTAINER}}.size();
+    coarseGridVertices{{PARTICLES_CONTAINER}}( target.to_ulong() ).insert( coarseGridVertices{{PARTICLES_CONTAINER}}( target.to_ulong() ).end(), fineGridVertex{{PARTICLES_CONTAINER}}.begin(), fineGridVertex{{PARTICLES_CONTAINER}}.end() );
   }
-  coarseGridVertices{{PARTICLES_CONTAINER}}( target.to_ulong() ).insert( coarseGridVertices{{PARTICLES_CONTAINER}}( target.to_ulong() ).begin(), fineGridVertex{{PARTICLES_CONTAINER}}.begin(), fineGridVertex{{PARTICLES_CONTAINER}}.end() );
+  else {
+    fineGridVertex{{PARTICLES_CONTAINER}}.particlesCanNotBeLiftedLocally();
+    _numberOfAssignmentsToGlobalSieve += fineGridVertex{{PARTICLES_CONTAINER}}.size();
+  }
 """)  
 
 
@@ -290,15 +358,13 @@ class UpdateParticleGridAssociation(ActionSet):
   
   """
   __Template_LiftParticlesFurtherAway = jinja2.Template("""
-  std::bitset<Dimensions> target;
-  for (int d=0; d<Dimensions; d++) {
-    target[d] = marker.getRelativePositionWithinFatherCell()(d)>=2;
-  }
+  vertexdata::{{PARTICLES_CONTAINER}} liftParticles;
   
   auto p = fineGridVertex{{PARTICLES_CONTAINER}}.begin();
   while (p!=fineGridVertex{{PARTICLES_CONTAINER}}.end()) {
-    if ( not marker.isContainedInAdjacentCells((*p)->getX(),0.5) ) {
-      coarseGridVertices{{PARTICLES_CONTAINER}}( target.to_ulong() ).push_back( *p );
+  if ( not marker.isContainedInAdjacentCells((*p)->getX(),0.5) ) {
+    logDebug( "touchVertexLastTime(...)", "lift particle " << (*p)->toString() );
+      liftParticles.push_back(*p);
       p = fineGridVertex{{PARTICLES_CONTAINER}}.erase(p);
     }
     else {
@@ -306,7 +372,31 @@ class UpdateParticleGridAssociation(ActionSet):
     }
   }
   
-  coarseGridVertices{{PARTICLES_CONTAINER}}( target.to_ulong() ).insert( coarseGridVertices{{PARTICLES_CONTAINER}}( target.to_ulong() ).begin(), fineGridVertex{{PARTICLES_CONTAINER}}.begin(), fineGridVertex{{PARTICLES_CONTAINER}}.end() );
+  // If the parent cell is local, then we can safely move the particles
+  // up the tree, as we know that all 2^d coarse grid vertices are 
+  // adjacent to the local domain. If the parent is not local, we have
+  // to assume that we just did hit a vertical tree cut. In this case, 
+  // we are on the safe side if we just add the particles to the global
+  // particle list.
+  if ( not liftParticles.empty() and marker.isParentCellLocal() ) {
+    std::bitset<Dimensions> target;
+    for (int d=0; d<Dimensions; d++) {
+      target[d] = marker.getRelativePositionWithinFatherCell()(d)>=2;
+    }
+    if (not liftParticles.empty()) {
+      logDebug( "touchVertexLastTime(...)", "add " << liftParticles.size() << " to the parent vertex " << coarseGridVertices{{PARTICLES_CONTAINER}}( target.to_ulong() ).toString() << " at " << target );
+    }
+    coarseGridVertices{{PARTICLES_CONTAINER}}( target.to_ulong() ).insert( 
+      coarseGridVertices{{PARTICLES_CONTAINER}}( target.to_ulong() ).end(),
+      liftParticles.begin(),
+      liftParticles.end()
+    );
+    _numberOfLifts += liftParticles.size();
+  } 
+  else if (not liftParticles.empty()) {
+    liftParticles.particlesCanNotBeLiftedLocally();
+    _numberOfAssignmentsToGlobalSieve += liftParticles.size();
+  }
 """)  
 
 
@@ -321,9 +411,11 @@ class UpdateParticleGridAssociation(ActionSet):
     if operation_name==ActionSet.OPERATION_BEGIN_TRAVERSAL:
       result = self.__Template_BeginTraversal.render(**self.d) 
     if operation_name==ActionSet.OPERATION_CREATE_HANGING_VERTEX:
-      result = self.__Template_Drop.render(**self.d) 
+      result  = self.__Template_Drop.render(**self.d) 
+      result += self.__Template_Sieve.render(**self.d)
     if operation_name==ActionSet.OPERATION_TOUCH_VERTEX_FIRST_TIME:
-      result = self.__Template_Drop.render(**self.d) 
+      result  = self.__Template_Drop.render(**self.d) 
+      result += self.__Template_Sieve.render(**self.d)
     if operation_name==ActionSet.OPERATION_TOUCH_VERTEX_LAST_TIME:
       if self._lift_always:
         result  = self.__Template_LiftParticlesFurtherAway.render(**self.d)
@@ -365,12 +457,19 @@ class UpdateParticleGridAssociation(ActionSet):
 
 
   def get_attributes(self):
-    return """
+    return jinja2.Template( """
   int  _treeNumber;
   int  _numberOfParticleReassignmentsOnCurrentLevel;
   int  _numberOfLifts;
+  int  _numberOfAssignmentsToGlobalSieve;
   int  _numberOfDrops;
   int  _numberOfEliminations;
-"""
+""").render(**self.d)
 
 
+  def get_static_initialisations(self,full_qualified_classname):
+    return jinja2.Template("""
+namespace {
+  constexpr double SortingTolerance = 1.01;
+}
+""").render(**self.d)    

@@ -19,7 +19,6 @@
 #include "peano4/datamanagement/VertexMarker.h"
 
 
-
 {% for item in NAMESPACE -%}
   {% if not loop.last %}
   namespace {{ item }} {
@@ -45,17 +44,24 @@
   class {{CLASSNAME}}: public std::vector< {% for item in NAMESPACE -%}{% if not loop.last %}{{ item }}::{% endif %}{%- endfor %}globaldata::{{PARTICLE_TYPE}}* > {
     private:
       static tarch::logging::Log _log;
-    #if PeanoDebug>=1
-    private:
-     tarch::la::Vector<Dimensions,double> _debugX;
-     tarch::la::Vector<Dimensions,double> _debugH;
 
-    public:
-      void setDebugX( const tarch::la::Vector<Dimensions,double>& data );
-      void setDebugH( const tarch::la::Vector<Dimensions,double>& data );
-      tarch::la::Vector<Dimensions,double> getDebugX() const;
-      tarch::la::Vector<Dimensions,double> getDebugH() const;
-    #endif
+      static tarch::multicore::BooleanSemaphore   _semaphore;
+
+      static {{CLASSNAME}}     _particlesThatCanNotBeLiftedWithinTheirTree;
+      static {{CLASSNAME}}     _particlesThatHaveToBeSieved;
+      static bool              _thereAreParticlesToBeSieved;
+
+      #if PeanoDebug>=1
+      private:
+       tarch::la::Vector<Dimensions,double> _debugX;
+       tarch::la::Vector<Dimensions,double> _debugH;
+
+      public:
+        void setDebugX( const tarch::la::Vector<Dimensions,double>& data );
+        void setDebugH( const tarch::la::Vector<Dimensions,double>& data );
+        tarch::la::Vector<Dimensions,double> getDebugX() const;
+        tarch::la::Vector<Dimensions,double> getDebugH() const;
+      #endif
     public:
       typedef {% for item in NAMESPACE -%}{% if not loop.last %}{{ item }}::{% endif %}{%- endfor %}globaldata::{{PARTICLE_TYPE}}  DoFType;
       typedef std::vector< {% for item in NAMESPACE -%}{% if not loop.last %}{{ item }}::{% endif %}{%- endfor %}globaldata::{{PARTICLE_TYPE}}* >  Base;
@@ -179,6 +185,39 @@
       std::string toString() const;
 
       double getMinCutOffRadius() const;
+
+      /**
+       * Has to be called after the traversal has finished on each rank by the
+       * main, i.e. do not call it within the action sets. You may not call this
+       * routine more than once per rank per traversal.
+       */
+      static void finishedTraversal();
+
+      /**
+       * Just an early check if there's something to be sieved at all.
+       */
+      static bool thereAreParticlesToBeSieved();
+
+      /**
+       * Mark whole particle set as set of particles which can't be lifted
+       *
+       * Contained particles always have to be local ones. Otherwise something
+       * went horribly wrong - after all, we only move local particles. As the
+       * particles are marked as ones that have to be lifted, we can safely
+       * mark them as virtual here.
+       *
+       * As we mark particles as virtual, we only insert copies of the local
+       * ones into the global list. After all, the node might decide to delete
+       * the local particle later on. So better to work with copies. The copies
+       * will eventually be deleted by finishTraversal() after they have been
+       * rolled over into the sieve list.
+       */
+      void particlesCanNotBeLiftedLocally();
+
+      static {{NAMESPACE | join("::")}}::{{CLASSNAME}}  getParticlesToBeSievedIntoVertex(
+        const peano4::datamanagement::VertexMarker& marker,
+        double sortingTolerance
+      );
   };
 
 {% for item in NAMESPACE -%}

@@ -347,6 +347,8 @@ if __name__ == "__main__":
     elif args.extension=="rhointer":
       my_solver.add_mass_cal_rhointer()
       userinfo.append(("mass calculation schme: rho interpolation",None))
+
+    #my_solver._auxiliary_variables = 23
     
     #my_solver.add_derivative_calculation()     
 ########################################################################################
@@ -542,6 +544,8 @@ if __name__ == "__main__":
     if args.model=="LCDMDGP":
       peano4_project.output.makefile.add_CXX_flag( "-DuseTable" )
       peano4_project.output.makefile.add_CXX_flag( "-DDGP" )
+
+    #peano4_project.output.makefile.add_CXX_flag( "-DPeanoDebug=2" )
 
     peano4_project.generate( throw_away_data_after_generation=False )
     peano4_project.build( make_clean_first = True )

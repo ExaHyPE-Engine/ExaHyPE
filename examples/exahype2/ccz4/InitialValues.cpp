@@ -50,6 +50,45 @@ void examples::exahype2::ccz4::gaugeWave(
   Q[55] = dxphi/phi;					//P_x
 }
 
+void examples::exahype2::ccz4::diagonal_gaugeWave(
+  double * __restrict__ Q, // Q[64+0],
+  const tarch::la::Vector<Dimensions,double>&  x,
+  double t
+) {
+  constexpr int nVars = 59;
+  constexpr double pi = M_PI;
+  constexpr double peak_number = 2.0;
+  constexpr double ICA = 0.1; ///< Amplitude of the wave, B in the note 
+  double phase  = peak_number*pi*( x[0] - x[1] - t);
+  double H=1+2.0*ICA*sin(phase);
+  memset(Q, .0, nVars*sizeof(double));
+  Q[0]  = pow(H,(-1.0/3.0))*(1+ICA*sin(phase));				//\tilde(\gamma)_xx
+  Q[1]  = -pow(H,(-1.0/3.0))*(ICA*sin(phase));				//\tilde(\gamma)_xy
+  Q[3]  = pow(H,(-1.0/3.0))*(1+ICA*sin(phase));				//\tilde(\gamma)_yy
+  Q[5]  = pow(H,(-1.0/3.0));						//\tilde(\gamma)_zz
+  Q[6]  = pow(H,(-5.0/6.0))*(peak_number*pi*ICA/2.0)*cos(phase)*(1.0 - 2.0 * (1+ICA*sin(phase)) / (3.0*H) );	//\tilde(A)_xx
+  Q[7]  = pow(H,(-5.0/6.0))*(peak_number*pi*ICA/2.0)*cos(phase)*(2.0 * ICA*sin(phase) / (3.0*H) - 1.0 ); 	//\tilde(A)_xy
+  Q[9]  = pow(H,(-5.0/6.0))*(peak_number*pi*ICA/2.0)*cos(phase)*(1.0 - 2.0 * (1+ICA*sin(phase)) / (3.0*H) );	//\tilde(A)_yy
+  Q[11] = pow(H,(-11.0/6.0))*(peak_number*pi*ICA/3.0)*cos(phase);						//\tilde(A)_zz
+  Q[13] = pow(H,(-5.0/3.0))*(4.0*peak_number*pi*ICA/3.0)*cos(phase);	//\hat(\Gamma)^x
+  Q[14] = -pow(H,(-5.0/3.0))*(4.0*peak_number*pi*ICA/3.0)*cos(phase);	//\hat(\Gamma)^y
+  Q[16] = 0.5*log(H);							//ln(\alpha)
+  Q[23] = pow(H,-1.0)*(peak_number*pi*ICA)*cos(phase);			//A_x					
+  Q[24] = -pow(H,-1.0)*(peak_number*pi*ICA)*cos(phase);			//A_y	
+  Q[35] = pow(H,(-4.0/3.0))*(peak_number*pi*ICA/6.0)*cos(phase)*(1.0 + 4.0 * ICA*sin(phase) );		//D_xxx
+  Q[36] = -pow(H,(-4.0/3.0))*(peak_number*pi*ICA/6.0)*cos(phase)*(3.0 + 4.0 * ICA*sin(phase) );		//D_xxy
+  Q[38] = pow(H,(-4.0/3.0))*(peak_number*pi*ICA/6.0)*cos(phase)*(1.0 + 4.0 * ICA*sin(phase) );		//D_xyy
+  Q[40] = -pow(H,(-4.0/3.0))*(peak_number*pi*ICA/3.0)*cos(phase);					//D_xzz
+  Q[41] = -pow(H,(-4.0/3.0))*(peak_number*pi*ICA/6.0)*cos(phase)*(1.0 + 4.0 * ICA*sin(phase) );		//D_yxx
+  Q[42] = pow(H,(-4.0/3.0))*(peak_number*pi*ICA/6.0)*cos(phase)*(3.0 + 4.0 * ICA*sin(phase) );		//D_yxy
+  Q[41] = -pow(H,(-4.0/3.0))*(peak_number*pi*ICA/6.0)*cos(phase)*(1.0 + 4.0 * ICA*sin(phase) );		//D_yyy
+  Q[46] = pow(H,(-4.0/3.0))*(peak_number*pi*ICA/3.0)*cos(phase);					//D_yzz
+  Q[53] = pow(H,(-3.0/2.0))*(peak_number*pi*ICA)*cos(phase);		//K
+  Q[54] = -(1.0/6.0)*log(H);						//ln(\phi)
+  Q[55] = -pow(H,-1.0)*(peak_number*pi*ICA/3.0)*cos(phase);		//P_x
+  Q[56] = pow(H,-1.0)*(peak_number*pi*ICA/3.0)*cos(phase);		//P_x
+}
+
 void examples::exahype2::ccz4::linearWave(
   double * __restrict__ Q, // Q[64+0],
   const tarch::la::Vector<Dimensions,double>&  X,

@@ -9,6 +9,7 @@
 #include <execution>
 #include <algorithm>
 
+<<<<<<< HEAD
 template<typename Collection1, typename Collection2, typename Collection3, typename Collection4, typename Collection5>
 void cartesian_product(Collection1&& collection1, Collection2&& collection2, Collection3&& collection3, Collection4&& collection4, Collection5&& collection5, auto func)
 {
@@ -50,6 +51,9 @@ void cartesian_product(Collection1&& collection1, Collection2&& collection2, Col
     );
 }
 
+=======
+/*
+>>>>>>> origin/p4
 template<typename Collection1, typename Collection2, typename Collection3, typename Collection4>
 void cartesian_product(Collection1&& collection1, Collection2&& collection2, Collection3&& collection3, Collection4&& collection4, auto func)
 {
@@ -83,7 +87,9 @@ void cartesian_product(Collection1&& collection1, Collection2&& collection2, Col
         }
     );
 }
+*/
 
+/*
 template<typename Collection1, typename Collection2, typename Collection3>
 void cartesian_product(Collection1&& collection1, Collection2&& collection2, Collection3&& collection3, auto func)
 {
@@ -130,6 +136,7 @@ void cartesian_product(Collection1&& collection1, Collection2&& collection2, aut
         }
     );
 }
+*/
 
 // ***************************************************************************************
 

@@ -1,6 +1,12 @@
 \chapter{FAQs (programmers' point of view)}
 
 
+\begin{remark}
+Most developers exchange stuff via the \Peano\ slack. 
+Contact Tobias Weinzierl to get an invitation to the slack and post your
+questions there.
+\end{remark}
+
 
 % \section{General}
 % 
@@ -27,7 +33,6 @@
 % \begin{itemize}
 %   \item To be continued \dots
 % \end{itemize}
-
 
 
 \section{C++ core}
@@ -92,5 +97,29 @@
   information is not dumped. Please note that the info goes straight to cout,
   i.e.~you can't filter it. That's because the tag allocation usually happens
   before our logging landscape is up and configured properly.
+  \item To be continued \dots
+\end{itemize}
+
+
+
+
+\section{\ExaHyPE}
+
+\begin{itemize}
+  \item \textbf{I have previously introduced auxiliary (material) parameters
+  and now the code crashes every now and then.}
+  Ensure that you initialise all data in your code. That includes any potential
+  auxiliary variables. I usually use
+  \begin{code}
+for (int i=0; i<NumberOfUnknowns+NumberOfAuxiliaryVariables; i++) {
+  Q[i] = 0.0;
+}
+  \end{code}
+  as a first step within \texttt{initialCondition()}. So I ensure first that
+  there is no garbage in the data. Further to that, ensure that you also set
+  proper boundary data for any auxiliary value. You might not need these data, 
+  as you do not use the auxiliary variables to exchange information between
+  patches, but you have to set proper values nevertheless. Otherwise, all of
+  \Peano's assertions will fail as it detects data corruption.
   \item To be continued \dots
 \end{itemize}

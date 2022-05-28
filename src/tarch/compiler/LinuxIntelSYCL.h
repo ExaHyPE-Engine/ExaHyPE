@@ -18,8 +18,8 @@
 #define UseManualInlining
 #endif
 
-#if !defined(Alignment)
-#define Alignment 64
+#if !defined(AlignmentOnHeap)
+#define AlignmentOnHeap 64
 #endif
 
 #if !defined(UseManualInlining) &&  !defined(noUseManualInlining)
@@ -32,19 +32,6 @@
 
 
 #define LittleEndian
-
-
-/**
- * Ugly hacks, but SYCL uses Dimensions as template argument. So I quickly
- * memorise them, undef them, and then redefine them once SYCL is loadd.
- */
-#pragma push_macro("Dimensions")
-#pragma push_macro("assertion")
-#undef Dimensions
-#undef assertion
-#include <CL/sycl.hpp>
-#pragma pop_macro("Dimensions")
-#pragma pop_macro("assertion")
 
 
 /**

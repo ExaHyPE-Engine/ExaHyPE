@@ -8,11 +8,11 @@ double* tarch::allocateMemory(int size, MemoryLocation location) {
   double* result;
   switch (location) {
     case MemoryLocation::Heap:
-      result = new (std::align_val_t(Alignment)) double[size];
+      result = new (std::align_val_t(AlignmentOnHeap)) double[size];
       break;
     case MemoryLocation::ManagedAcceleratorMemory:
       assertionMsg(false, "not implemented yet" );
-      result = new (std::align_val_t(Alignment)) double[size];
+      result = new (std::align_val_t(AlignmentOnHeap)) double[size];
       break;
   }
   return result;

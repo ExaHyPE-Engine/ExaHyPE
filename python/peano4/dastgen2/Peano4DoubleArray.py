@@ -21,9 +21,8 @@ class Peano4DoubleArray(dastgen2.attributes.DoubleArray):
         a string which is defined via a pragma or constexpr later.
         
     """
-    dastgen2.attributes.DoubleArray.__init__(self, name, cardinality)
+    dastgen2.attributes.DoubleArray.__init__(self, name, cardinality,relative_accuracy_in_bits)
     self._cardinality               = cardinality
-    self._relative_accuracy_in_bits = relative_accuracy_in_bits
     
     
   def get_methods(self,_full_qualified_class_name):

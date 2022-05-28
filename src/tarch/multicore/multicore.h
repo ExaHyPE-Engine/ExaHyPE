@@ -18,6 +18,13 @@
 #ifndef _TARCH_MULTICORE_MULTICORE_H_
 #define _TARCH_MULTICORE_MULTICORE_H_
 
+
+/**
+ * Have to include this header, as I need access to the SYCL_EXTERNAL keyword.
+ */
+#include "tarch/multicore/tbb/SYCL.h"
+
+
 namespace tarch {
 
 

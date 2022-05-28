@@ -280,6 +280,11 @@ h_volume_max:           """ + str( self._max_volume_h ) + """
     return finest_tree_level
 
 
+#    self._overlap              = overlap
+#    self._unknowns             = unknowns
+#    self._auxiliary_variables  = auxiliary_variables
+
+
   def get_coarsest_number_of_patches(self,domain_size):
     return 3**self.get_min_number_of_spacetree_levels(domain_size)
 
@@ -874,13 +879,13 @@ The finest mesh width of """ + str(self.get_finest_volume_size(domain_size)) + "
 
     
   @property
-  def patch_size(self):
-    return self._patch_size
-
-
-  @property
   def unknowns(self):
     return self._unknowns
+
+  
+  @property
+  def patch_size(self):
+    return self._patch_size
 
 
   @property
