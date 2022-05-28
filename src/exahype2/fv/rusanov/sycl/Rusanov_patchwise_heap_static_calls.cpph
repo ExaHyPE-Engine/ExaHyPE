@@ -28,10 +28,10 @@
 
 template <
   typename Solver,
-  int      numberOfVolumesPerAxisInPatch,
-  int      haloSize,
-  int      unknowns,
-  int      auxiliaryVariables,
+  std::size_t  numberOfVolumesPerAxisInPatch,
+  std::size_t  haloSize,
+  std::size_t  unknowns,
+  std::size_t  auxiliaryVariables,
   typename TempDataEnumerator
 >
 void exahype2::fv::rusanov::sycl::timeStepWithRusanov_patchwise_heap_static_calls(
@@ -68,21 +68,96 @@ void exahype2::fv::rusanov::sycl::timeStepWithRusanov_patchwise_heap_static_call
   const int grainSizeVolumesZ = 1;
   const int grainSizeUnknowns = 1;
 
+  //const std::size_t iterationRange = hostPatchData.numberOfCells;
+
   queue.submit(
-    [&](::sycl::handler &cgh) {
+    [&](::sycl::handler &handle) {
       exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator QInEnumerator       (                        1, numberOfVolumesPerAxisInPatch, haloSize, unknowns, auxiliaryVariables);
       exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator QOutEnumerator      (                        1, numberOfVolumesPerAxisInPatch,        0, unknowns, auxiliaryVariables);
       TempDataEnumerator fluxEnumerator      (hostPatchData.numberOfCells, numberOfVolumesPerAxisInPatch,   solversHaloSize, unknowns, 0);
       TempDataEnumerator ncpEnumerator       (hostPatchData.numberOfCells, numberOfVolumesPerAxisInPatch+1, solversHaloSize, unknowns, 0);
       TempDataEnumerator eigenvalueEnumerator(hostPatchData.numberOfCells, numberOfVolumesPerAxisInPatch,   solversHaloSize,        1, 0);
 
-      const std::size_t iterationRange = hostPatchData.numberOfCells;
-      cgh.parallel_for(
-        ::sycl::nd_range<3>{
-          {iterationRange, iterationRange, iterationRange},
-          {grainSizeVolumesX, grainSizeVolumesY, grainSizeVolumesZ}
-        },
-        [=](::sycl::nd_item<3> workItem) {
+      const std::size_t numberOfPatches = hostPatchData.numberOfCells;
+      handle.parallel_for<class LoopOverPatches>(
+        ::sycl::range<1>{numberOfPatches},
+        [=](::sycl::id<1> patchIndex) {
+          if (Dimensions==2 and evaluateSource) {
+            for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
+            for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++) {
+/*
+              internal::copySolutionAndAddSourceTerm_LoopBody<Solver>(
+                patchData.QIn[patchIndex],
+                QInEnumerator,
+                patchData.patchCentre[patchIndex],
+                patchData.patchSize[patchIndex],
+                patchIndex,
+                volumeIndex2d(x,y),
+                patchData.t[patchIndex],
+                patchData.dt[patchIndex],
+                patchData.QOut[patchIndex],
+                QOutEnumerator
+              );
+*/
+            }
+          }
+          else if (Dimensions==3 and evaluateSource) {
+            for (int z = 0; z < numberOfVolumesPerAxisInPatch; z++)
+            for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
+            for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++) {
+/*
+              internal::copySolutionAndAddSourceTerm_LoopBody<Solver>(
+                patchData.QIn[patchIndex],
+                QInEnumerator,
+                patchData.patchCentre[patchIndex],
+                patchData.patchSize[patchIndex],
+                patchIndex,
+                volumeIndex3d(x,y,z),
+                patchData.t[patchIndex],
+                patchData.dt[patchIndex],
+                patchData.QOut[patchIndex],
+                QOutEnumerator
+              );
+*/
+            }
+          }
+          else if (Dimensions==2) {
+            for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
+            for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++)
+            for (int unknown=0; unknown<unknowns+auxiliaryVariables; unknown++) {
+/*
+              internal::copySolution_LoopBody(
+                patchData.QIn[patchIndex],
+                QInEnumerator,
+                patchIndex,
+                volumeIndex2d(x,y),
+                unknown,
+                patchData.QOut[patchIndex],
+                QOutEnumerator
+              );
+*/
+            }
+          }
+          else {
+            for (int z = 0; z < numberOfVolumesPerAxisInPatch; z++)
+            for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
+            for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++)
+            for (int unknown=0; unknown<unknowns+auxiliaryVariables; unknown++) {
+/*
+              internal::copySolution_LoopBody(
+                patchData.QIn[patchIndex],
+                QInEnumerator,
+                patchIndex,
+                volumeIndex3d(x,y,z),
+                unknown,
+                patchData.QOut[patchIndex],
+                QOutEnumerator
+              );
+*/
+            }
+          }
+
+
 //          auto [z,y] = glob2loc(item.get_global_id(2), numVPAIP);
  //         auto [x,i] = glob2loc(item.get_global_id(1), unknowns+aux);
 

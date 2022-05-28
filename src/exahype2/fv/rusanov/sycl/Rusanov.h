@@ -43,7 +43,13 @@ namespace exahype2 {
        *
        * If I explicitly convert the variable into a size_t before, then
        * everything is fine. We can do this here, as we know what we are doing.
+       * This is also the reason why I have remodelled the template signature
+       * which now uses std::size_t rather than int (if you compare the
+       * template arguments to the non-GPU version).
        *
+       * I try to stick with ranges where possible and to avoid nd_range.
+       * Whenever I do not need things like grain sizes or a substructuring
+       * of iteration spaces, I avoid it. I keep stuff as simple as possible.
        *
        * ## Syntax
        *
@@ -59,10 +65,10 @@ namespace exahype2 {
       namespace sycl {
         template <
           typename Solver,
-          int      numberOfVolumesPerAxisInPatch,
-          int      haloSize,
-          int      unknowns,
-          int      auxiliaryVariables,
+          std::size_t  numberOfVolumesPerAxisInPatch,
+          std::size_t  haloSize,
+          std::size_t  unknowns,
+          std::size_t  auxiliaryVariables,
           typename TempDataEnumerator
         >
         static void timeStepWithRusanov_patchwise_heap_static_calls(
@@ -81,10 +87,10 @@ namespace exahype2 {
 
         template <
           typename Solver,
-          int      numberOfVolumesPerAxisInPatch,
-          int      haloSize,
-          int      unknowns,
-          int      auxiliaryVariables,
+          std::size_t  numberOfVolumesPerAxisInPatch,
+          std::size_t  haloSize,
+          std::size_t  unknowns,
+          std::size_t  auxiliaryVariables,
           typename TempDataEnumerator
         >
         static void timeStepWithRusanov_batched_heap_static_calls(
