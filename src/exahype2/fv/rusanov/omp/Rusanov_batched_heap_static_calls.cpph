@@ -84,7 +84,7 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanov_batched_heap_static_calls(
     for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
     for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++) {
       // @todo docu manual assembly of patch data meta object on GPU
-      helper::OpenMPGPUCellData patchData;
+      GPUCellData patchData;
       patchData.numberOfCells = numberOfCells;
       patchData.patchCentre   = (tarch::la::Vector<Dimensions,double>*)(rawPointerToPatchCentres);
       patchData.patchSize     = (tarch::la::Vector<Dimensions,double>*)(rawPointerToPatchSizes);
@@ -120,7 +120,7 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanov_batched_heap_static_calls(
     for (int z = 0; z < numberOfVolumesPerAxisInPatch; z++)
     for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
     for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++) {
-      helper::OpenMPGPUCellData patchData;
+      GPUCellData patchData;
       patchData.numberOfCells = numberOfCells;
       patchData.patchCentre   = (tarch::la::Vector<Dimensions,double>*)(rawPointerToPatchCentres);
       patchData.patchSize     = (tarch::la::Vector<Dimensions,double>*)(rawPointerToPatchSizes);
@@ -156,7 +156,7 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanov_batched_heap_static_calls(
     for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
     for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++)
     for (int unknown=0; unknown<unknowns+auxiliaryVariables; unknown++) {
-      helper::OpenMPGPUCellData patchData;
+      GPUCellData patchData;
       patchData.numberOfCells = numberOfCells;
       patchData.patchCentre   = (tarch::la::Vector<Dimensions,double>*)(rawPointerToPatchCentres);
       patchData.patchSize     = (tarch::la::Vector<Dimensions,double>*)(rawPointerToPatchSizes);
@@ -190,7 +190,7 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanov_batched_heap_static_calls(
     for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
     for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++)
     for (int unknown=0; unknown<unknowns+auxiliaryVariables; unknown++) {
-      helper::OpenMPGPUCellData patchData;
+      GPUCellData patchData;
       patchData.numberOfCells = numberOfCells;
       patchData.patchCentre   = (tarch::la::Vector<Dimensions,double>*)(rawPointerToPatchCentres);
       patchData.patchSize     = (tarch::la::Vector<Dimensions,double>*)(rawPointerToPatchSizes);
@@ -223,7 +223,7 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanov_batched_heap_static_calls(
     for (int patchIndex=0; patchIndex<numberOfCells; patchIndex++)
     for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
     for (int x = -solversHaloSize; x < numberOfVolumesPerAxisInPatch+solversHaloSize; x++) {
-      helper::OpenMPGPUCellData patchData;
+      GPUCellData patchData;
       patchData.numberOfCells = numberOfCells;
       patchData.patchCentre   = (tarch::la::Vector<Dimensions,double>*)(rawPointerToPatchCentres);
       patchData.patchSize     = (tarch::la::Vector<Dimensions,double>*)(rawPointerToPatchSizes);
@@ -257,7 +257,7 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanov_batched_heap_static_calls(
     for (int patchIndex=0; patchIndex<numberOfCells; patchIndex++)
     for (int y = -solversHaloSize; y < numberOfVolumesPerAxisInPatch+solversHaloSize; y++)
     for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++) {
-      helper::OpenMPGPUCellData patchData;
+      GPUCellData patchData;
       patchData.numberOfCells = numberOfCells;
       patchData.patchCentre   = (tarch::la::Vector<Dimensions,double>*)(rawPointerToPatchCentres);
       patchData.patchSize     = (tarch::la::Vector<Dimensions,double>*)(rawPointerToPatchSizes);
@@ -292,7 +292,7 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanov_batched_heap_static_calls(
     for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
     for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++)
     for (int unknown = 0; unknown < unknowns; unknown++) {
-      helper::OpenMPGPUCellData patchData;
+      GPUCellData patchData;
       patchData.numberOfCells = numberOfCells;
       patchData.patchCentre   = (tarch::la::Vector<Dimensions,double>*)(rawPointerToPatchCentres);
       patchData.patchSize     = (tarch::la::Vector<Dimensions,double>*)(rawPointerToPatchSizes);
@@ -332,7 +332,7 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanov_batched_heap_static_calls(
     for (int z = 0; z < numberOfVolumesPerAxisInPatch; z++)
     for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
     for (int x = -solversHaloSize; x < numberOfVolumesPerAxisInPatch+solversHaloSize; x++) {
-      helper::OpenMPGPUCellData patchData;
+      GPUCellData patchData;
       patchData.numberOfCells = numberOfCells;
       patchData.patchCentre   = (tarch::la::Vector<Dimensions,double>*)(rawPointerToPatchCentres);
       patchData.patchSize     = (tarch::la::Vector<Dimensions,double>*)(rawPointerToPatchSizes);
@@ -367,7 +367,7 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanov_batched_heap_static_calls(
     for (int z = 0; z < numberOfVolumesPerAxisInPatch; z++)
     for (int y = -solversHaloSize; y < numberOfVolumesPerAxisInPatch+solversHaloSize; y++)
     for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++) {
-      helper::OpenMPGPUCellData patchData;
+      GPUCellData patchData;
       patchData.numberOfCells = numberOfCells;
       patchData.patchCentre   = (tarch::la::Vector<Dimensions,double>*)(rawPointerToPatchCentres);
       patchData.patchSize     = (tarch::la::Vector<Dimensions,double>*)(rawPointerToPatchSizes);
@@ -402,7 +402,7 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanov_batched_heap_static_calls(
     for (int z = -solversHaloSize; z < numberOfVolumesPerAxisInPatch+solversHaloSize; z++)
     for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
     for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++) {
-      helper::OpenMPGPUCellData patchData;
+      GPUCellData patchData;
       patchData.numberOfCells = numberOfCells;
       patchData.patchCentre   = (tarch::la::Vector<Dimensions,double>*)(rawPointerToPatchCentres);
       patchData.patchSize     = (tarch::la::Vector<Dimensions,double>*)(rawPointerToPatchSizes);
@@ -438,7 +438,7 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanov_batched_heap_static_calls(
     for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
     for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++)
     for (int unknown = 0; unknown < unknowns; unknown++) {
-      helper::OpenMPGPUCellData patchData;
+      GPUCellData patchData;
       patchData.numberOfCells = numberOfCells;
       patchData.patchCentre   = (tarch::la::Vector<Dimensions,double>*)(rawPointerToPatchCentres);
       patchData.patchSize     = (tarch::la::Vector<Dimensions,double>*)(rawPointerToPatchSizes);
@@ -478,7 +478,7 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanov_batched_heap_static_calls(
     for (int patchIndex=0; patchIndex<numberOfCells; patchIndex++)
     for (int y =         0; y < numberOfVolumesPerAxisInPatch;          y++)
     for (int x = -solversHaloSize; x < numberOfVolumesPerAxisInPatch+solversHaloSize; x++) {
-      helper::OpenMPGPUCellData patchData;
+      GPUCellData patchData;
       patchData.numberOfCells = numberOfCells;
       patchData.patchCentre   = (tarch::la::Vector<Dimensions,double>*)(rawPointerToPatchCentres);
       patchData.patchSize     = (tarch::la::Vector<Dimensions,double>*)(rawPointerToPatchSizes);
@@ -513,7 +513,7 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanov_batched_heap_static_calls(
     for (int patchIndex=0; patchIndex<numberOfCells; patchIndex++)
     for (int y = -solversHaloSize; y < numberOfVolumesPerAxisInPatch+solversHaloSize;  y++)
     for (int x =         0; x < numberOfVolumesPerAxisInPatch;           x++) {
-      helper::OpenMPGPUCellData patchData;
+      GPUCellData patchData;
       patchData.numberOfCells = numberOfCells;
       patchData.patchCentre   = (tarch::la::Vector<Dimensions,double>*)(rawPointerToPatchCentres);
       patchData.patchSize     = (tarch::la::Vector<Dimensions,double>*)(rawPointerToPatchSizes);
@@ -549,7 +549,7 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanov_batched_heap_static_calls(
     for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
     for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++)
     for (int unknown=0; unknown<unknowns; unknown++) {
-      helper::OpenMPGPUCellData patchData;
+      GPUCellData patchData;
       patchData.numberOfCells = numberOfCells;
       patchData.patchCentre   = (tarch::la::Vector<Dimensions,double>*)(rawPointerToPatchCentres);
       patchData.patchSize     = (tarch::la::Vector<Dimensions,double>*)(rawPointerToPatchSizes);
@@ -585,7 +585,7 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanov_batched_heap_static_calls(
     for (int z =         0; z < numberOfVolumesPerAxisInPatch;          z++)
     for (int y =         0; y < numberOfVolumesPerAxisInPatch;          y++)
     for (int x = -solversHaloSize; x < numberOfVolumesPerAxisInPatch+solversHaloSize; x++) {
-      helper::OpenMPGPUCellData patchData;
+      GPUCellData patchData;
       patchData.numberOfCells = numberOfCells;
       patchData.patchCentre   = (tarch::la::Vector<Dimensions,double>*)(rawPointerToPatchCentres);
       patchData.patchSize     = (tarch::la::Vector<Dimensions,double>*)(rawPointerToPatchSizes);
@@ -621,7 +621,7 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanov_batched_heap_static_calls(
     for (int z =         0; z < numberOfVolumesPerAxisInPatch;           z++)
     for (int y = -solversHaloSize; y < numberOfVolumesPerAxisInPatch+solversHaloSize;  y++)
     for (int x =         0; x < numberOfVolumesPerAxisInPatch;           x++) {
-      helper::OpenMPGPUCellData patchData;
+      GPUCellData patchData;
       patchData.numberOfCells = numberOfCells;
       patchData.patchCentre   = (tarch::la::Vector<Dimensions,double>*)(rawPointerToPatchCentres);
       patchData.patchSize     = (tarch::la::Vector<Dimensions,double>*)(rawPointerToPatchSizes);
@@ -657,7 +657,7 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanov_batched_heap_static_calls(
     for (int z = -solversHaloSize; z < numberOfVolumesPerAxisInPatch+solversHaloSize;  z++)
     for (int y =         0; y < numberOfVolumesPerAxisInPatch;           y++)
     for (int x =         0; x < numberOfVolumesPerAxisInPatch;           x++) {
-      helper::OpenMPGPUCellData patchData;
+      GPUCellData patchData;
       patchData.numberOfCells = numberOfCells;
       patchData.patchCentre   = (tarch::la::Vector<Dimensions,double>*)(rawPointerToPatchCentres);
       patchData.patchSize     = (tarch::la::Vector<Dimensions,double>*)(rawPointerToPatchSizes);
@@ -694,7 +694,7 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanov_batched_heap_static_calls(
     for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
     for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++)
     for (int unknown=0; unknown<unknowns; unknown++) {
-      helper::OpenMPGPUCellData patchData;
+      GPUCellData patchData;
       patchData.numberOfCells = numberOfCells;
       patchData.patchCentre   = (tarch::la::Vector<Dimensions,double>*)(rawPointerToPatchCentres);
       patchData.patchSize     = (tarch::la::Vector<Dimensions,double>*)(rawPointerToPatchSizes);
@@ -731,7 +731,7 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanov_batched_heap_static_calls(
     for (int patchIndex=0; patchIndex<numberOfCells; patchIndex++)
     for (int y =         0; y < numberOfVolumesPerAxisInPatch;            y++)
     for (int x = -solversHaloSize; x < numberOfVolumesPerAxisInPatch+solversHaloSize-1; x++) {
-      helper::OpenMPGPUCellData patchData;
+      GPUCellData patchData;
       patchData.numberOfCells = numberOfCells;
       patchData.patchCentre   = (tarch::la::Vector<Dimensions,double>*)(rawPointerToPatchCentres);
       patchData.patchSize     = (tarch::la::Vector<Dimensions,double>*)(rawPointerToPatchSizes);
@@ -766,7 +766,7 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanov_batched_heap_static_calls(
     for (int patchIndex=0; patchIndex<numberOfCells; patchIndex++)
     for (int y = -solversHaloSize; y < numberOfVolumesPerAxisInPatch+solversHaloSize-1; y++)
     for (int x =         0; x < numberOfVolumesPerAxisInPatch;            x++) {
-      helper::OpenMPGPUCellData patchData;
+      GPUCellData patchData;
       patchData.numberOfCells = numberOfCells;
       patchData.patchCentre   = (tarch::la::Vector<Dimensions,double>*)(rawPointerToPatchCentres);
       patchData.patchSize     = (tarch::la::Vector<Dimensions,double>*)(rawPointerToPatchSizes);
@@ -802,7 +802,7 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanov_batched_heap_static_calls(
     for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
     for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++)
     for (int unknown=0; unknown<unknowns; unknown++) {
-      helper::OpenMPGPUCellData patchData;
+      GPUCellData patchData;
       patchData.numberOfCells = numberOfCells;
       patchData.patchCentre   = (tarch::la::Vector<Dimensions,double>*)(rawPointerToPatchCentres);
       patchData.patchSize     = (tarch::la::Vector<Dimensions,double>*)(rawPointerToPatchSizes);
@@ -838,7 +838,7 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanov_batched_heap_static_calls(
     for (int z =         0; z < numberOfVolumesPerAxisInPatch;            z++)
     for (int y =         0; y < numberOfVolumesPerAxisInPatch;            y++)
     for (int x = -solversHaloSize; x < numberOfVolumesPerAxisInPatch+solversHaloSize-1; x++) {
-      helper::OpenMPGPUCellData patchData;
+      GPUCellData patchData;
       patchData.numberOfCells = numberOfCells;
       patchData.patchCentre   = (tarch::la::Vector<Dimensions,double>*)(rawPointerToPatchCentres);
       patchData.patchSize     = (tarch::la::Vector<Dimensions,double>*)(rawPointerToPatchSizes);
@@ -874,7 +874,7 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanov_batched_heap_static_calls(
     for (int z =         0; z < numberOfVolumesPerAxisInPatch;            z++)
     for (int y = -solversHaloSize; y < numberOfVolumesPerAxisInPatch+solversHaloSize-1; y++)
     for (int x =         0; x < numberOfVolumesPerAxisInPatch;            x++) {
-      helper::OpenMPGPUCellData patchData;
+      GPUCellData patchData;
       patchData.numberOfCells = numberOfCells;
       patchData.patchCentre   = (tarch::la::Vector<Dimensions,double>*)(rawPointerToPatchCentres);
       patchData.patchSize     = (tarch::la::Vector<Dimensions,double>*)(rawPointerToPatchSizes);
@@ -910,7 +910,7 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanov_batched_heap_static_calls(
     for (int z = -solversHaloSize; z < numberOfVolumesPerAxisInPatch+solversHaloSize-1; z++)
     for (int y =         0; y < numberOfVolumesPerAxisInPatch;            y++)
     for (int x =         0; x < numberOfVolumesPerAxisInPatch;            x++) {
-      helper::OpenMPGPUCellData patchData;
+      GPUCellData patchData;
       patchData.numberOfCells = numberOfCells;
       patchData.patchCentre   = (tarch::la::Vector<Dimensions,double>*)(rawPointerToPatchCentres);
       patchData.patchSize     = (tarch::la::Vector<Dimensions,double>*)(rawPointerToPatchSizes);
@@ -947,7 +947,7 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanov_batched_heap_static_calls(
     for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
     for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++)
     for (int unknown=0; unknown<unknowns; unknown++) {
-      helper::OpenMPGPUCellData patchData;
+      GPUCellData patchData;
       patchData.numberOfCells = numberOfCells;
       patchData.patchCentre   = (tarch::la::Vector<Dimensions,double>*)(rawPointerToPatchCentres);
       patchData.patchSize     = (tarch::la::Vector<Dimensions,double>*)(rawPointerToPatchSizes);
@@ -982,7 +982,7 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanov_batched_heap_static_calls(
   if (evaluateMaximumEigenvalueAfterTimeStep and Dimensions==2) {
     #pragma omp target teams distribute device(targetDevice)
     for (int patchIndex=0; patchIndex<numberOfCells; patchIndex++) {
-      helper::OpenMPGPUCellData patchData;
+      GPUCellData patchData;
       patchData.numberOfCells = numberOfCells;
       patchData.patchCentre   = (tarch::la::Vector<Dimensions,double>*)(rawPointerToPatchCentres);
       patchData.patchSize     = (tarch::la::Vector<Dimensions,double>*)(rawPointerToPatchSizes);
@@ -1022,7 +1022,7 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanov_batched_heap_static_calls(
   else if (evaluateMaximumEigenvalueAfterTimeStep) {
     #pragma omp target teams distribute device(targetDevice)
     for (int patchIndex=0; patchIndex<numberOfCells; patchIndex++) {
-      helper::OpenMPGPUCellData patchData;
+      GPUCellData patchData;
       patchData.numberOfCells = numberOfCells;
       patchData.patchCentre   = (tarch::la::Vector<Dimensions,double>*)(rawPointerToPatchCentres);
       patchData.patchSize     = (tarch::la::Vector<Dimensions,double>*)(rawPointerToPatchSizes);

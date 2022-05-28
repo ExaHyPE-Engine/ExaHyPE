@@ -1,0 +1,169 @@
+#include "Rusanov.h"
+#include "GPUCellData.h"
+#include "tarch/compiler/CompilerSpecificSettings.h"
+#include "exahype2/fv/rusanov/LoopBody.h"
+
+
+#include "tarch/multicore/tbb/SYCL.h"
+
+
+      // @todo eher collapse of one dimension oder
+      // 2D helper function to get local indices a,b from linear sycl range index.
+      // This is essentially the inverse of collapse(2)
+/*
+      std::tuple<int, int> glob2loc(const int g, const int J)
+      {
+          return std::make_tuple(g/J,g%J);
+      }
+
+      // 3D helper function to get local indices a,b,c from linear sycl range index.
+      // This is essentially the inverse of collapse(3)
+      std::tuple<int, int, int> glob2loc(const int g, const int J, const int K)
+      {
+          int i = g/J/K;
+          return std::make_tuple(i, (g-i*J*K)/J, g%K);
+      }
+*/
+
+
+
+template <
+  typename Solver,
+  std::size_t  numberOfVolumesPerAxisInPatch,
+  std::size_t  haloSize,
+  std::size_t  unknowns,
+  std::size_t  auxiliaryVariables,
+  typename TempDataEnumerator
+>
+void exahype2::fv::rusanov::sycl::timeStepWithRusanov_batched_heap_static_calls(
+  int                     targetDevice,
+  ::exahype2::CellData&   hostPatchData,
+  bool                    evaluateFlux,
+  bool                    evaluateNonconservativeProduct,
+  bool                    evaluateSource,
+  bool                    evaluateMaximumEigenvalueAfterTimeStep
+) {
+  #if defined(GPUOffloadingSYCL)
+  ::sycl::queue& queue = tarch::multicore::getSYCLQueue(targetDevice);
+
+  constexpr int solversHaloSize        = 1;
+
+  exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator QInEnumerator       (                        1, numberOfVolumesPerAxisInPatch, haloSize, unknowns, auxiliaryVariables);
+  exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator QOutEnumerator      (                        1, numberOfVolumesPerAxisInPatch,        0, unknowns, auxiliaryVariables);
+  TempDataEnumerator fluxEnumerator      (hostPatchData.numberOfCells, numberOfVolumesPerAxisInPatch,   solversHaloSize, unknowns, 0);
+  TempDataEnumerator ncpEnumerator       (hostPatchData.numberOfCells, numberOfVolumesPerAxisInPatch+1, solversHaloSize, unknowns, 0);
+  TempDataEnumerator eigenvalueEnumerator(hostPatchData.numberOfCells, numberOfVolumesPerAxisInPatch,   solversHaloSize,        1, 0);
+
+  double* tempFluxX                   = evaluateFlux ?                                     ::sycl::malloc_device<double>(fluxEnumerator.size(), queue) : nullptr;
+  double* tempFluxY                   = evaluateFlux ?                                     ::sycl::malloc_device<double>(fluxEnumerator.size(), queue) : nullptr;
+  double* tempFluxZ                   = evaluateFlux and Dimensions==3 ?                   ::sycl::malloc_device<double>(fluxEnumerator.size(), queue) : nullptr;
+  double* tempNonconservativeProductX = evaluateNonconservativeProduct ?                   ::sycl::malloc_device<double>(ncpEnumerator.size(), queue) : nullptr;
+  double* tempNonconservativeProductY = evaluateNonconservativeProduct ?                   ::sycl::malloc_device<double>(ncpEnumerator.size(), queue) : nullptr;
+  double* tempNonconservativeProductZ = evaluateNonconservativeProduct and Dimensions==3 ? ::sycl::malloc_device<double>(ncpEnumerator.size(), queue) : nullptr;
+  double* tempEigenvalueX             = ::sycl::malloc_device<double>(eigenvalueEnumerator.size(), queue);
+  double* tempEigenvalueY             = ::sycl::malloc_device<double>(eigenvalueEnumerator.size(), queue);
+  double* tempEigenvalueZ             = ::sycl::malloc_device<double>(eigenvalueEnumerator.size(), queue);
+
+  const std::size_t numberOfPatches = hostPatchData.numberOfCells;
+  GPUCellData  patchData( hostPatchData, QInEnumerator, QOutEnumerator, queue );
+
+  queue.submit(
+    [&](::sycl::handler &handle) {
+      if (Dimensions==2 and evaluateSource) {
+/*
+      #pragma omp parallel for simd collapse(2)
+      for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
+      for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++) {
+        internal::copySolutionAndAddSourceTerm_LoopBody<Solver>(
+          patchData.QIn[patchIndex],
+          QInEnumerator,
+          patchData.patchCentre[patchIndex],
+          patchData.patchSize[patchIndex],
+          patchIndex,
+          volumeIndex2d(x,y),
+          patchData.t[patchIndex],
+          patchData.dt[patchIndex],
+          patchData.QOut[patchIndex],
+          QOutEnumerator
+        );
+      }
+*/
+      }
+      else if (Dimensions==3 and evaluateSource) {
+/*
+      for (int z = 0; z < numberOfVolumesPerAxisInPatch; z++)
+      for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
+      for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++) {
+        internal::copySolutionAndAddSourceTerm_LoopBody<Solver>(
+          patchData.QIn[patchIndex],
+          QInEnumerator,
+          patchData.patchCentre[patchIndex],
+          patchData.patchSize[patchIndex],
+          patchIndex,
+          volumeIndex3d(x,y,z),
+          patchData.t[patchIndex],
+          patchData.dt[patchIndex],
+          patchData.QOut[patchIndex],
+          QOutEnumerator
+        );
+      }
+*/
+      }
+      else if (Dimensions==2) {
+        handle.parallel_for<class CopySolution2d>(
+          ::sycl::range<3>{numberOfPatches,numberOfVolumesPerAxisInPatch,numberOfVolumesPerAxisInPatch},
+          [=] (::sycl::item<3> i) {
+            int patchIndex = i[0];
+            int x          = i[1];
+            int y          = i[2];
+            for (int unknown=0; unknown<unknowns+auxiliaryVariables; unknown++) {
+              internal::copySolution_LoopBody(
+                patchData.QIn[patchIndex],
+                QInEnumerator,
+                patchIndex,
+                volumeIndex2d(x,y),
+                unknown,
+                patchData.QOut[patchIndex],
+                QOutEnumerator
+              );
+            }
+          }
+        );
+      }
+      else {
+/*
+      for (int z = 0; z < numberOfVolumesPerAxisInPatch; z++)
+      for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
+      for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++)
+      for (int unknown=0; unknown<unknowns+auxiliaryVariables; unknown++) {
+        internal::copySolution_LoopBody(
+          patchData.QIn[patchIndex],
+          QInEnumerator,
+          patchIndex,
+          volumeIndex3d(x,y,z),
+          unknown,
+          patchData.QOut[patchIndex],
+          QOutEnumerator
+        );
+      }
+*/
+      }
+    }
+  ).wait();
+
+  patchData.destroy(  hostPatchData, QOutEnumerator, evaluateMaximumEigenvalueAfterTimeStep, queue  );
+
+  if (tempFluxX!=nullptr)                   ::sycl::free( tempFluxX, queue);
+  if (tempFluxY!=nullptr)                   ::sycl::free( tempFluxY, queue);
+  if (tempFluxZ!=nullptr)                   ::sycl::free( tempFluxZ, queue);
+  if (tempNonconservativeProductX!=nullptr) ::sycl::free( tempNonconservativeProductX, queue);
+  if (tempNonconservativeProductY!=nullptr) ::sycl::free( tempNonconservativeProductY, queue);
+  if (tempNonconservativeProductZ!=nullptr) ::sycl::free( tempNonconservativeProductZ, queue);
+  if (tempEigenvalueX!=nullptr)             ::sycl::free( tempEigenvalueX, queue);
+  if (tempEigenvalueY!=nullptr)             ::sycl::free( tempEigenvalueY, queue);
+  if (tempEigenvalueZ!=nullptr)             ::sycl::free( tempEigenvalueZ, queue);
+  #else
+  assertionMsg(false, "this routine should only be used in combination with OpenMP offloading, as it has a device parameter" );
+  #endif
+}
+

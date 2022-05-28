@@ -285,6 +285,21 @@ void runBenchmarks(int patches) {
     );
   }
   #endif
+
+  #if defined(GPUOffloadingSYCL)
+  if ( tarch::multicore::Core::getInstance().getNumberOfGPUs()==0 ) {
+    logWarning( "main()", "no device found" );
+  }
+  for (int device=0; device<tarch::multicore::Core::getInstance().getNumberOfGPUs(); device++) {
+    logInfo( "main()", "device " << device );
+    testFusedVariantOnDevice(
+      device,
+      ::exahype2::fv::rusanov::sycl::timeStepWithRusanov_batched_heap_static_calls<EulerOnGPU,EulerOnGPU::NumberOfFiniteVolumesPerAxisPerPatch, 1, 5, 0,exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator>,
+      "sycl, patch-wise, AoS", true
+    );
+    // @todo multithreaded noch checken
+  }
+  #endif
 }
 
 

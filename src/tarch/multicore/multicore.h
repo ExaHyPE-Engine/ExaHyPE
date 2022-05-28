@@ -289,7 +289,7 @@ and
    * Delegates to std::abort() if no GPU offloading is active. Otherwise is degenerates
    * to nop, as there is no abort on an accelerator.
    */
-  void gpuAbort();
+  GPUCallableMethod void gpuAbort();
   #if defined(GPUOffloadingOMP)
   #pragma omp end declare target
   #endif

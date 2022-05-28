@@ -132,9 +132,8 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanov_patchwise_heap_static_calls
     map(to:dt[0:hostPatchData.numberOfCells]) \
     map(from:maxEigenvalue[0:hostPatchData.numberOfCells])
   for (int patchIndex=0; patchIndex<numberOfCells; patchIndex++) {
-
     // @todo docu manual assembly of patch data meta object on GPU
-    helper::OpenMPGPUCellData patchData;
+    GPUCellData patchData;
     patchData.numberOfCells = numberOfCells;
     patchData.patchCentre   = (tarch::la::Vector<Dimensions,double>*)(rawPointerToPatchCentres);
     patchData.patchSize     = (tarch::la::Vector<Dimensions,double>*)(rawPointerToPatchSizes);
