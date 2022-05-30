@@ -733,11 +733,11 @@ namespace exahype2 {
          * the index i. i is typically 0 but can also be negative (if we have halos).
          * The leftmost volume's left face does not exist. Its right face has index
          * 0.
-         *
-         * There is no specialisation for this class, as we have to gather data
-         * always (we have to reconstruct the average and the jump term).
          */
-        template <class QInEnumeratorType, class QNCPFaceEnumeratorType>
+        template <
+          class QInEnumeratorType,
+          class QNCPFaceEnumeratorType
+        >
         static void computeNonconservativeFlux_LoopBody(
           const double* __restrict__                     QIn,
           QInEnumeratorType                              QInEnumerator,
@@ -755,13 +755,27 @@ namespace exahype2 {
         ) InlineMethod;
 
 
+        /**
+         *
+         * ## Template parameters
+         *
+         * numberOfUnknowns and numberOfAuxiliaryVariables have to be template
+         * parameters, as we create data and we want to keep these data on the
+         * call stack.
+         */
         #if defined(SharedOMP) and (!defined(__INTEL_LLVM_COMPILER) or !defined(GPUOffloadingOMP))
         #pragma omp declare simd
         #endif
         #if defined(GPUOffloadingOMP)
         #pragma omp declare target
         #endif
-        template <typename Solver, class QInEnumeratorType, class QNCPFaceEnumeratorType>
+        template <
+          typename Solver,
+          int   numberOfUnknowns,
+          int   numberOfAuxiliaryVariables,
+          class QInEnumeratorType,
+          class QNCPFaceEnumeratorType
+        >
         static void computeNonconservativeFlux_LoopBody(
           const double* __restrict__                     QIn,
           const QInEnumeratorType&                       QInEnumerator,

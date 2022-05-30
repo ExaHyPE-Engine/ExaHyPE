@@ -173,10 +173,9 @@ void exahype2::fv::rusanov::sycl::timeStepWithRusanov_batched_heap_static_calls(
     ).wait();
   }
 
-/*
-  queue.submit(
-    [&](::sycl::handler &handle) {
-      if (Dimensions==2) {
+  if (Dimensions==2) {
+    queue.submit(
+      [&](::sycl::handler &handle) {
         handle.parallel_for<class ComputeMaxEigenvalue2d_xDirection>(
           ::sycl::range<3>{numberOfPatches,numberOfVolumesPerAxisInPatch,numberOfVolumesPerAxisInPatch+2*solversHaloSize},
           [=] (::sycl::item<3> i) {
@@ -198,7 +197,11 @@ void exahype2::fv::rusanov::sycl::timeStepWithRusanov_batched_heap_static_calls(
             );
           }
         );
+      }
+    ).wait();
 
+    queue.submit(
+      [&](::sycl::handler &handle) {
         handle.parallel_for<class ComputeMaxEigenvalue2d_yDirection>(
           ::sycl::range<3>{numberOfPatches,numberOfVolumesPerAxisInPatch+2*solversHaloSize,numberOfVolumesPerAxisInPatch},
           [=] (::sycl::item<3> i) {
@@ -220,7 +223,11 @@ void exahype2::fv::rusanov::sycl::timeStepWithRusanov_batched_heap_static_calls(
             );
           }
         );
+      }
+    ).wait();
 
+    queue.submit(
+      [&](::sycl::handler &handle) {
         handle.parallel_for<class ComputeMaxEigenvalue2d_UpdateSolution>(
           ::sycl::range<3>{numberOfPatches,numberOfVolumesPerAxisInPatch,numberOfVolumesPerAxisInPatch},
           [=] (::sycl::item<3> i) {
@@ -249,7 +256,11 @@ void exahype2::fv::rusanov::sycl::timeStepWithRusanov_batched_heap_static_calls(
           }
         );
       }
-      else {
+    ).wait();
+  }
+  else {  // 3d of eigenvalue damping
+    queue.submit(
+      [&](::sycl::handler &handle) {
         handle.parallel_for<class ComputeMaxEigenvalue3d_xDirection>(
           ::sycl::range<3>{numberOfPatches,numberOfVolumesPerAxisInPatch,numberOfVolumesPerAxisInPatch},
           [=] (::sycl::item<3> i) {
@@ -274,9 +285,577 @@ void exahype2::fv::rusanov::sycl::timeStepWithRusanov_batched_heap_static_calls(
           }
         );
       }
-    }
-  ).wait();
-*/
+    ).wait();
+
+    queue.submit(
+      [&](::sycl::handler &handle) {
+        handle.parallel_for<class ComputeMaxEigenvalue3d_yDirection>(
+          ::sycl::range<3>{numberOfPatches,numberOfVolumesPerAxisInPatch,numberOfVolumesPerAxisInPatch},
+          [=] (::sycl::item<3> i) {
+            int patchIndex = i[0];
+            int x          = i[1];
+            int z          = i[2];
+
+            for (int y = -solversHaloSize; y < numberOfVolumesPerAxisInPatch+solversHaloSize; y++) {
+              internal::computeMaxEigenvalue_LoopBody<Solver>(
+                patchData.QIn[patchIndex],
+                QInEnumerator,
+                patchData.patchCentre[patchIndex],
+                patchData.patchSize[patchIndex],
+                patchIndex,
+                volumeIndex3d(x,y,z),
+                patchData.t[patchIndex], patchData.dt[patchIndex],
+                1,
+                tempEigenvalueY,
+                eigenvalueEnumerator
+              );
+            }
+          }
+        );
+      }
+    ).wait();
+
+    queue.submit(
+      [&](::sycl::handler &handle) {
+        handle.parallel_for<class ComputeMaxEigenvalue3d_zDirection>(
+          ::sycl::range<3>{numberOfPatches,numberOfVolumesPerAxisInPatch,numberOfVolumesPerAxisInPatch},
+          [=] (::sycl::item<3> i) {
+            int patchIndex = i[0];
+            int x          = i[1];
+            int y          = i[2];
+
+            for (int z = -solversHaloSize; z < numberOfVolumesPerAxisInPatch+solversHaloSize; z++) {
+              internal::computeMaxEigenvalue_LoopBody<Solver>(
+                patchData.QIn[patchIndex],
+                QInEnumerator,
+                patchData.patchCentre[patchIndex],
+                patchData.patchSize[patchIndex],
+                patchIndex,
+                volumeIndex3d(x,y,z),
+                patchData.t[patchIndex], patchData.dt[patchIndex],
+                2,
+                tempEigenvalueZ,
+                eigenvalueEnumerator
+              );
+            }
+          }
+        );
+      }
+    ).wait();
+
+
+    queue.submit(
+      [&](::sycl::handler &handle) {
+        handle.parallel_for<class ComputeMaxEigenvalue3d_UpdateSolution>(
+          ::sycl::range<3>{numberOfPatches,numberOfVolumesPerAxisInPatch,numberOfVolumesPerAxisInPatch},
+          [=] (::sycl::item<3> i) {
+            int patchIndex = i[0];
+            int x          = i[1];
+            int y          = i[2];
+
+            for (int z = 0; z < numberOfVolumesPerAxisInPatch; z++)
+            for (int unknown = 0; unknown < unknowns; unknown++) {
+              internal::updateSolutionWithEigenvalueDamping_LoopBody(
+                patchData.QIn[patchIndex],
+                QInEnumerator,
+                tempEigenvalueX,
+                tempEigenvalueY,
+                tempEigenvalueZ,
+                eigenvalueEnumerator,
+                patchData.patchCentre[patchIndex],
+                patchData.patchSize[patchIndex],
+                patchIndex,
+                volumeIndex3d(x,y,z),
+                unknown,
+                patchData.dt[patchIndex],
+                patchData.QOut[patchIndex],
+                QOutEnumerator
+              );
+            }
+          }
+        );
+      }
+    ).wait();
+  }
+
+
+  if (evaluateFlux and Dimensions==2) {
+    queue.submit(
+      [&](::sycl::handler &handle) {
+        handle.parallel_for<class ComputeFlux2d_xDirection>(
+          ::sycl::range<2>{numberOfPatches,numberOfVolumesPerAxisInPatch},
+          [=] (::sycl::item<2> i) {
+            int patchIndex = i[0];
+            int y          = i[1];
+            for (int x = -solversHaloSize; x < numberOfVolumesPerAxisInPatch+solversHaloSize; x++) {
+              internal::computeFlux_LoopBody<Solver>(
+                patchData.QIn[patchIndex],
+                QInEnumerator,
+                patchData.patchCentre[patchIndex],
+                patchData.patchSize[patchIndex],
+                patchIndex,
+                volumeIndex2d(x,y),
+                patchData.t[patchIndex],
+                patchData.dt[patchIndex],
+                0, // normal
+                tempFluxX,
+                fluxEnumerator
+              );
+            }
+          }
+        );
+      }
+    ).wait();
+
+    queue.submit(
+      [&](::sycl::handler &handle) {
+        handle.parallel_for<class ComputeFlux2d_yDirection>(
+          ::sycl::range<2>{numberOfPatches,numberOfVolumesPerAxisInPatch},
+          [=] (::sycl::item<2> i) {
+            int patchIndex = i[0];
+            int x          = i[1];
+
+            for (int y = -solversHaloSize; y < numberOfVolumesPerAxisInPatch+solversHaloSize;  y++) {
+              internal::computeFlux_LoopBody<Solver>(
+                patchData.QIn[patchIndex],
+                QInEnumerator,
+                patchData.patchCentre[patchIndex],
+                patchData.patchSize[patchIndex],
+                patchIndex,
+                volumeIndex2d(x,y),
+                patchData.t[patchIndex],
+                patchData.dt[patchIndex],
+                1, // normal
+                tempFluxY,
+                fluxEnumerator
+              );
+            }
+          }
+        );
+      }
+    ).wait();
+
+    queue.submit(
+      [&](::sycl::handler &handle) {
+        handle.parallel_for<class ComputeFlux2d_Update>(
+          ::sycl::range<3>{numberOfPatches,numberOfVolumesPerAxisInPatch,numberOfVolumesPerAxisInPatch},
+          [=] (::sycl::item<3> i) {
+            int patchIndex = i[0];
+            int x          = i[1];
+            int y          = i[2];
+            for (int unknown=0; unknown<unknowns; unknown++) {
+              internal::updateSolutionWithFlux_LoopBody(
+                tempFluxX, tempFluxY, tempFluxZ,
+                fluxEnumerator,
+                patchData.patchCentre[patchIndex],
+                patchData.patchSize[patchIndex],
+                patchIndex,
+                volumeIndex2d(x,y),
+                unknown,
+                patchData.dt[patchIndex],
+                *(patchData.QOut + patchIndex),
+                QOutEnumerator
+              );
+            }
+          }
+        );
+      }
+    ).wait();
+  }
+  else if (evaluateFlux and Dimensions==3) {
+    queue.submit(
+      [&](::sycl::handler &handle) {
+        handle.parallel_for<class ComputeFlux3d_xDirection>(
+          ::sycl::range<3>{numberOfPatches,numberOfVolumesPerAxisInPatch,numberOfVolumesPerAxisInPatch},
+          [=] (::sycl::item<3> i) {
+            int patchIndex = i[0];
+            int z          = i[1];
+            int y          = i[2];
+
+            for (int x = -solversHaloSize; x < numberOfVolumesPerAxisInPatch+solversHaloSize; x++) {
+              internal::computeFlux_LoopBody<Solver>(
+                patchData.QIn[patchIndex],
+                QInEnumerator,
+                patchData.patchCentre[patchIndex],
+                patchData.patchSize[patchIndex],
+                patchIndex,
+                volumeIndex3d(x,y,z),
+                patchData.t[patchIndex],
+                patchData.dt[patchIndex],
+                0, // normal
+                tempFluxX,
+                fluxEnumerator
+              );
+            }
+          }
+        );
+      }
+    ).wait();
+
+
+    queue.submit(
+      [&](::sycl::handler &handle) {
+        handle.parallel_for<class ComputeFlux3d_yDirection>(
+          ::sycl::range<3>{numberOfPatches,numberOfVolumesPerAxisInPatch,numberOfVolumesPerAxisInPatch},
+          [=] (::sycl::item<3> i) {
+            int patchIndex = i[0];
+            int x          = i[1];
+            int z          = i[2];
+
+            for (int y = -solversHaloSize; y < numberOfVolumesPerAxisInPatch+solversHaloSize;  y++) {
+              internal::computeFlux_LoopBody<Solver>(
+                patchData.QIn[patchIndex],
+                QInEnumerator,
+                patchData.patchCentre[patchIndex],
+                patchData.patchSize[patchIndex],
+                patchIndex,
+                volumeIndex3d(x,y,z),
+                patchData.t[patchIndex],
+                patchData.dt[patchIndex],
+                1, // normal
+                tempFluxY,
+                fluxEnumerator
+              );
+            }
+          }
+        );
+      }
+    ).wait();
+
+
+    queue.submit(
+      [&](::sycl::handler &handle) {
+        handle.parallel_for<class ComputeFlux3d_zDirection>(
+          ::sycl::range<3>{numberOfPatches,numberOfVolumesPerAxisInPatch,numberOfVolumesPerAxisInPatch},
+          [=] (::sycl::item<3> i) {
+            int patchIndex = i[0];
+            int x          = i[1];
+            int y          = i[2];
+
+            for (int z = -solversHaloSize; z < numberOfVolumesPerAxisInPatch+solversHaloSize;  z++) {
+              internal::computeFlux_LoopBody<Solver>(
+                patchData.QIn[patchIndex],
+                QInEnumerator,
+                patchData.patchCentre[patchIndex],
+                patchData.patchSize[patchIndex],
+                patchIndex,
+                volumeIndex3d(x,y,z),
+                patchData.t[patchIndex],
+                patchData.dt[patchIndex],
+                2, // normal
+                tempFluxZ,
+                fluxEnumerator
+              );
+            }
+          }
+        );
+      }
+    ).wait();
+
+
+    queue.submit(
+      [&](::sycl::handler &handle) {
+        handle.parallel_for<class ComputeFlux3d_Update>(
+          ::sycl::range<3>{numberOfPatches,numberOfVolumesPerAxisInPatch,numberOfVolumesPerAxisInPatch},
+          [=] (::sycl::item<3> i) {
+            int patchIndex = i[0];
+            int z          = i[1];
+            int y          = i[2];
+
+            for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++)
+            for (int unknown=0; unknown<unknowns; unknown++) {
+              internal::updateSolutionWithFlux_LoopBody(
+                tempFluxX, tempFluxY, tempFluxZ,
+                fluxEnumerator,
+                patchData.patchCentre[patchIndex],
+                patchData.patchSize[patchIndex],
+                patchIndex,
+                volumeIndex3d(x,y,z),
+                unknown,
+                patchData.dt[patchIndex],
+                *(patchData.QOut + patchIndex),
+                QOutEnumerator
+              );
+            }
+          }
+        );
+      }
+    ).wait();
+  } // flux 3d
+
+
+  if (evaluateNonconservativeProduct and Dimensions==2) {
+    queue.submit(
+      [&](::sycl::handler &handle) {
+        handle.parallel_for<class ComputeNCP2d_xDirection>(
+          ::sycl::range<2>{numberOfPatches,numberOfVolumesPerAxisInPatch},
+          [=] (::sycl::item<2> i) {
+            int patchIndex = i[0];
+            int y          = i[1];
+
+            for (int x = -solversHaloSize; x < numberOfVolumesPerAxisInPatch+solversHaloSize-1; x++) {
+              internal::computeNonconservativeFlux_LoopBody<Solver,unknowns,auxiliaryVariables>(
+                patchData.QIn[patchIndex],
+                QInEnumerator,
+                patchData.patchCentre[patchIndex],
+                patchData.patchSize[patchIndex],
+                patchIndex,
+                volumeIndex2d(x,y),
+                patchData.t[patchIndex],
+                patchData.dt[patchIndex],
+                0, // normal
+                tempNonconservativeProductX,
+                ncpEnumerator
+              );
+            }
+          }
+        );
+      }
+    ).wait();
+
+    queue.submit(
+      [&](::sycl::handler &handle) {
+        handle.parallel_for<class ComputeNCP2d_yDirection>(
+          ::sycl::range<2>{numberOfPatches,numberOfVolumesPerAxisInPatch},
+          [=] (::sycl::item<2> i) {
+            int patchIndex = i[0];
+            int x          = i[1];
+
+            for (int y = -solversHaloSize; y < numberOfVolumesPerAxisInPatch+solversHaloSize-1; y++) {
+              internal::computeNonconservativeFlux_LoopBody<Solver,unknowns,auxiliaryVariables>(
+                patchData.QIn[patchIndex],
+                QInEnumerator,
+                patchData.patchCentre[patchIndex],
+                patchData.patchSize[patchIndex],
+                patchIndex,
+                volumeIndex2d(x,y),
+                patchData.t[patchIndex],
+                patchData.dt[patchIndex],
+                1, // normal
+                tempNonconservativeProductY,
+                ncpEnumerator
+              );
+            }
+          }
+        );
+      }
+    ).wait();
+
+
+    queue.submit(
+      [&](::sycl::handler &handle) {
+        handle.parallel_for<class ComputeNCP2d_Update>(
+          ::sycl::range<3>{numberOfPatches,numberOfVolumesPerAxisInPatch,numberOfVolumesPerAxisInPatch},
+          [=] (::sycl::item<3> i) {
+            int patchIndex = i[0];
+            int x          = i[1];
+            int y          = i[2];
+
+            for (int unknown=0; unknown<unknowns; unknown++) {
+              internal::updateSolutionWithNonconservativeFlux_LoopBody(
+                tempNonconservativeProductX, tempNonconservativeProductY, tempNonconservativeProductZ,
+                ncpEnumerator,
+                patchData.patchCentre[patchIndex],
+                patchData.patchSize[patchIndex],
+                patchIndex,
+                volumeIndex2d(x,y),
+                unknown,
+                patchData.dt[patchIndex],
+                *(patchData.QOut + patchIndex),
+                QOutEnumerator
+              );
+            }
+          }
+        );
+      }
+    ).wait();
+  }
+  else if (evaluateNonconservativeProduct and Dimensions==3) {
+    queue.submit(
+      [&](::sycl::handler &handle) {
+        handle.parallel_for<class ComputeNCP3d_xDirection>(
+          ::sycl::range<3>{numberOfPatches,numberOfVolumesPerAxisInPatch,numberOfVolumesPerAxisInPatch},
+          [=] (::sycl::item<3> i) {
+            int patchIndex = i[0];
+            int z          = i[1];
+            int y          = i[2];
+
+            for (int x = -solversHaloSize; x < numberOfVolumesPerAxisInPatch+solversHaloSize-1; x++) {
+              internal::computeNonconservativeFlux_LoopBody<Solver,unknowns,auxiliaryVariables>(
+                patchData.QIn[patchIndex],
+                QInEnumerator,
+                patchData.patchCentre[patchIndex],
+                patchData.patchSize[patchIndex],
+                patchIndex,
+                volumeIndex3d(x,y,z),
+                patchData.t[patchIndex],
+                patchData.dt[patchIndex],
+                0, // normal
+                tempNonconservativeProductX,
+                ncpEnumerator
+              );
+            }
+          }
+        );
+      }
+    ).wait();
+
+
+    queue.submit(
+      [&](::sycl::handler &handle) {
+        handle.parallel_for<class ComputeNCP3d_yDirection>(
+          ::sycl::range<3>{numberOfPatches,numberOfVolumesPerAxisInPatch,numberOfVolumesPerAxisInPatch},
+          [=] (::sycl::item<3> i) {
+            int patchIndex = i[0];
+            int x          = i[1];
+            int z          = i[2];
+
+            for (int y = -solversHaloSize; y < numberOfVolumesPerAxisInPatch+solversHaloSize-1; y++) {
+              internal::computeNonconservativeFlux_LoopBody<Solver,unknowns,auxiliaryVariables>(
+                patchData.QIn[patchIndex],
+                QInEnumerator,
+                patchData.patchCentre[patchIndex],
+                patchData.patchSize[patchIndex],
+                patchIndex,
+                volumeIndex3d(x,y,z),
+                patchData.t[patchIndex],
+                patchData.dt[patchIndex],
+                1, // normal
+                tempNonconservativeProductY,
+                ncpEnumerator
+              );
+            }
+          }
+        );
+      }
+    ).wait();
+
+
+    queue.submit(
+      [&](::sycl::handler &handle) {
+        handle.parallel_for<class ComputeNCP3d_zDirection>(
+          ::sycl::range<3>{numberOfPatches,numberOfVolumesPerAxisInPatch,numberOfVolumesPerAxisInPatch},
+          [=] (::sycl::item<3> i) {
+            int patchIndex = i[0];
+            int x          = i[1];
+            int y          = i[2];
+
+            for (int z = -solversHaloSize; z < numberOfVolumesPerAxisInPatch+solversHaloSize-1; z++) {
+              internal::computeNonconservativeFlux_LoopBody<Solver,unknowns,auxiliaryVariables>(
+                patchData.QIn[patchIndex],
+                QInEnumerator,
+                patchData.patchCentre[patchIndex],
+                patchData.patchSize[patchIndex],
+                patchIndex,
+                volumeIndex3d(x,y,z),
+                patchData.t[patchIndex],
+                patchData.dt[patchIndex],
+                2, // normal
+                tempNonconservativeProductY,
+                ncpEnumerator
+              );
+            }
+          }
+        );
+      }
+    ).wait();
+
+
+    queue.submit(
+      [&](::sycl::handler &handle) {
+        handle.parallel_for<class ComputeNCP3d_Update>(
+          ::sycl::range<3>{numberOfPatches,numberOfVolumesPerAxisInPatch,numberOfVolumesPerAxisInPatch},
+          [=] (::sycl::item<3> i) {
+            int patchIndex = i[0];
+            int x          = i[1];
+            int y          = i[2];
+
+            for (int z = 0; z < numberOfVolumesPerAxisInPatch; z++)
+            for (int unknown=0; unknown<unknowns; unknown++) {
+              internal::updateSolutionWithNonconservativeFlux_LoopBody(
+                tempNonconservativeProductX, tempNonconservativeProductY, tempNonconservativeProductZ,
+                ncpEnumerator,
+                patchData.patchCentre[patchIndex],
+                patchData.patchSize[patchIndex],
+                patchIndex,
+                volumeIndex3d(x,y,z),
+                unknown,
+                patchData.dt[patchIndex],
+                *(patchData.QOut + patchIndex),
+                QOutEnumerator
+              );
+            }
+          }
+        );
+      }
+    ).wait();
+  }
+
+
+  if (evaluateMaximumEigenvalueAfterTimeStep and Dimensions==2) {
+    queue.submit(
+      [&](::sycl::handler &handle) {
+        handle.parallel_for<class ComputeMaxEigenvalue2d>(
+          ::sycl::range<1>{numberOfPatches},
+          [=] (::sycl::item<1> i) {
+            int patchIndex = i[0];
+
+            double newMaxEigenvalue = 0.0;
+            for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
+            for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++) {
+              newMaxEigenvalue = std::max(
+                newMaxEigenvalue,
+                internal::reduceMaxEigenvalue_LoopBody<Solver>(
+                  *(patchData.QOut + patchIndex),
+                  QOutEnumerator,
+                  patchData.patchCentre[patchIndex],
+                  patchData.patchSize[patchIndex],
+                  patchIndex,
+                  volumeIndex2d(x,y),
+                  patchData.t[patchIndex],
+                  patchData.dt[patchIndex]
+                )
+              );
+            }
+
+            patchData.maxEigenvalue[patchIndex] = newMaxEigenvalue;
+          }
+        );
+      }
+    ).wait();
+  }
+  else if (evaluateMaximumEigenvalueAfterTimeStep) {
+    queue.submit(
+      [&](::sycl::handler &handle) {
+        handle.parallel_for<class ComputeMaxEigenvalue3d>(
+          ::sycl::range<1>{numberOfPatches},
+          [=] (::sycl::item<1> i) {
+            int patchIndex = i[0];
+
+            double newMaxEigenvalue = 0.0;
+            for (int z = 0; z < numberOfVolumesPerAxisInPatch; z++)
+            for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
+            for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++) {
+              newMaxEigenvalue = std::max(
+                newMaxEigenvalue,
+                internal::reduceMaxEigenvalue_LoopBody<Solver>(
+                  *(patchData.QOut + patchIndex),
+                  QOutEnumerator,
+                  patchData.patchCentre[patchIndex],
+                  patchData.patchSize[patchIndex],
+                  patchIndex,
+                  volumeIndex3d(x,y,z),
+                  patchData.t[patchIndex],
+                  patchData.dt[patchIndex]
+                )
+              );
+            }
+            patchData.maxEigenvalue[patchIndex] = newMaxEigenvalue;
+          }
+        );
+      }
+    ).wait();
+  }
 
   patchData.destroy(  hostPatchData, QOutEnumerator, evaluateMaximumEigenvalueAfterTimeStep, queue  );
 

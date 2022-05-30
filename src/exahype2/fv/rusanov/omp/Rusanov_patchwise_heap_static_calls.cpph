@@ -504,7 +504,7 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanov_patchwise_heap_static_calls
       #pragma omp parallel for collapse(2)
       for (int y =                0; y < numberOfVolumesPerAxisInPatch;                   y++)
       for (int x = -solversHaloSize; x < numberOfVolumesPerAxisInPatch+solversHaloSize-1; x++) {
-        internal::computeNonconservativeFlux_LoopBody<Solver>(
+        internal::computeNonconservativeFlux_LoopBody<Solver,unknowns,auxiliaryVariables>(
           patchData.QIn[patchIndex],
           QInEnumerator,
           patchData.patchCentre[patchIndex],
@@ -523,7 +523,7 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanov_patchwise_heap_static_calls
       #pragma omp parallel for collapse(2)
       for (int y = -solversHaloSize; y < numberOfVolumesPerAxisInPatch+solversHaloSize-1; y++)
       for (int x =                0; x < numberOfVolumesPerAxisInPatch;                   x++) {
-        internal::computeNonconservativeFlux_LoopBody<Solver>(
+        internal::computeNonconservativeFlux_LoopBody<Solver,unknowns,auxiliaryVariables>(
           patchData.QIn[patchIndex],
           QInEnumerator,
           patchData.patchCentre[patchIndex],
@@ -562,7 +562,7 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanov_patchwise_heap_static_calls
         for (int z =         0; z < numberOfVolumesPerAxisInPatch;            z++)
         for (int y =         0; y < numberOfVolumesPerAxisInPatch;            y++)
         for (int x = -solversHaloSize; x < numberOfVolumesPerAxisInPatch+solversHaloSize-1; x++) {
-          internal::computeNonconservativeFlux_LoopBody<Solver>(
+          internal::computeNonconservativeFlux_LoopBody<Solver,unknowns,auxiliaryVariables>(
             patchData.QIn[patchIndex],
             QInEnumerator,
             patchData.patchCentre[patchIndex],
@@ -582,7 +582,7 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanov_patchwise_heap_static_calls
         for (int z =         0; z < numberOfVolumesPerAxisInPatch;            z++)
         for (int y = -solversHaloSize; y < numberOfVolumesPerAxisInPatch+solversHaloSize-1; y++)
         for (int x =         0; x < numberOfVolumesPerAxisInPatch;            x++) {
-          internal::computeNonconservativeFlux_LoopBody<Solver>(
+          internal::computeNonconservativeFlux_LoopBody<Solver,unknowns,auxiliaryVariables>(
             patchData.QIn[patchIndex],
             QInEnumerator,
             patchData.patchCentre[patchIndex],
@@ -602,7 +602,7 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanov_patchwise_heap_static_calls
         for (int z = -solversHaloSize; z < numberOfVolumesPerAxisInPatch+solversHaloSize-1; z++)
         for (int y =         0; y < numberOfVolumesPerAxisInPatch;            y++)
         for (int x =         0; x < numberOfVolumesPerAxisInPatch;            x++) {
-          internal::computeNonconservativeFlux_LoopBody<Solver>(
+          internal::computeNonconservativeFlux_LoopBody<Solver,unknowns,auxiliaryVariables>(
             patchData.QIn[patchIndex],
             QInEnumerator,
             patchData.patchCentre[patchIndex],

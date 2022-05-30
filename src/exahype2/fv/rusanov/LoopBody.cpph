@@ -1020,7 +1020,13 @@ void exahype2::fv::rusanov::internal::computeNonconservativeFlux_LoopBody(
 }
 
 
-template <typename Solver, class QInEnumeratorType, class QNCPFaceEnumeratorType>
+template <
+  typename Solver,
+  int   numberOfUnknowns,
+  int   numberOfAuxiliaryVariables,
+  class QInEnumeratorType,
+  class QNCPFaceEnumeratorType
+>
 void exahype2::fv::rusanov::internal::computeNonconservativeFlux_LoopBody(
   const double* __restrict__                     QIn,
   const QInEnumeratorType&                       QInEnumerator,
@@ -1029,15 +1035,15 @@ void exahype2::fv::rusanov::internal::computeNonconservativeFlux_LoopBody(
   int                                            patchIndex,
   const tarch::la::Vector<Dimensions,int>&       volumeIndex,
   double                                         t,
-  double                              dt,
-  int                                 normal,
-  double* __restrict__                QNcp,
+  double                                         dt,
+  int                                            normal,
+  double* __restrict__                           QNcp,
   const QNCPFaceEnumeratorType&                  QNcpEnumerator,
   int                                            pick
 ) {
-  double QAverage[QInEnumerator._unknowns+QInEnumerator._numberOfAuxiliaryVariables];
-  double DeltaQ[QInEnumerator._unknowns+QInEnumerator._numberOfAuxiliaryVariables];
-  double QFluxGathered[QInEnumerator._unknowns];
+  double QAverage[numberOfUnknowns+numberOfAuxiliaryVariables];
+  double DeltaQ[numberOfUnknowns+numberOfAuxiliaryVariables];
+  double QFluxGathered[numberOfUnknowns];
 
   tarch::la::Vector<Dimensions,int> leftAdjacentVolume  = volumeIndex;
   tarch::la::Vector<Dimensions,int> rightAdjacentVolume = volumeIndex;

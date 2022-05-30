@@ -530,7 +530,7 @@ void exahype2::fv::rusanov::cpp::timeStepWithRusanov_patchwise_heap_static_calls
 
     if (evaluateNonconservativeProduct and Dimensions==2) {
       cartesian_product(dim_range, aux_range3, [&](int y, int x) {
-        internal::computeNonconservativeFlux_LoopBody<Solver>(
+        internal::computeNonconservativeFlux_LoopBody<Solver,unknowns,auxiliaryVariables>(
           patchData.QIn[patchIndex],
           QInEnumerator,
           patchData.patchCentre[patchIndex],
@@ -546,7 +546,7 @@ void exahype2::fv::rusanov::cpp::timeStepWithRusanov_patchwise_heap_static_calls
       });
 
       cartesian_product(aux_range3, dim_range, [&](int y, int x) {
-        internal::computeNonconservativeFlux_LoopBody<Solver>(
+        internal::computeNonconservativeFlux_LoopBody<Solver,unknowns,auxiliaryVariables>(
           patchData.QIn[patchIndex],
           QInEnumerator,
           patchData.patchCentre[patchIndex],
@@ -578,7 +578,7 @@ void exahype2::fv::rusanov::cpp::timeStepWithRusanov_patchwise_heap_static_calls
     }
     else if (evaluateNonconservativeProduct and Dimensions==3) {
         cartesian_product(dim_range, dim_range, aux_range3, [&](int z, int y, int x) {
-          internal::computeNonconservativeFlux_LoopBody<Solver>(
+          internal::computeNonconservativeFlux_LoopBody<Solver,unknowns,auxiliaryVariables>(
             patchData.QIn[patchIndex],
             QInEnumerator,
             patchData.patchCentre[patchIndex],
@@ -594,7 +594,7 @@ void exahype2::fv::rusanov::cpp::timeStepWithRusanov_patchwise_heap_static_calls
         });
 
         cartesian_product(dim_range, aux_range3, dim_range, [&](int z, int y, int x) {
-          internal::computeNonconservativeFlux_LoopBody<Solver>(
+          internal::computeNonconservativeFlux_LoopBody<Solver,unknowns,auxiliaryVariables>(
             patchData.QIn[patchIndex],
             QInEnumerator,
             patchData.patchCentre[patchIndex],
@@ -610,7 +610,7 @@ void exahype2::fv::rusanov::cpp::timeStepWithRusanov_patchwise_heap_static_calls
         });
 
         cartesian_product(aux_range3, dim_range, dim_range, [&](int z, int y, int x) {
-          internal::computeNonconservativeFlux_LoopBody<Solver>(
+          internal::computeNonconservativeFlux_LoopBody<Solver,unknowns,auxiliaryVariables>(
             patchData.QIn[patchIndex],
             QInEnumerator,
             patchData.patchCentre[patchIndex],
