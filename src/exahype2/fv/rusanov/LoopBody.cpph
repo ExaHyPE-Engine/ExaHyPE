@@ -662,7 +662,12 @@ void exahype2::fv::rusanov::internal::computeFlux_LoopBody(
 }
 
 
-template <typename Solver, class QFluxEnumeratorType>
+template <
+  typename Solver,
+  int   numberOfUnknowns,
+  int   numberOfAuxiliaryVariables,
+  class QFluxEnumeratorType
+>
 void exahype2::fv::rusanov::internal::computeFlux_LoopBody(
   const double* __restrict__                QIn,
   const exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator & QInEnumerator,
@@ -677,7 +682,7 @@ void exahype2::fv::rusanov::internal::computeFlux_LoopBody(
   const QFluxEnumeratorType &                QFluxEnumerator,
   int                                 pick
 ) {
-  double QFluxGathered[QInEnumerator._unknowns];
+  double QFluxGathered[numberOfUnknowns];
 
   Solver::flux(
     QIn + QInEnumerator(patchIndex,volumeIndex,0),
