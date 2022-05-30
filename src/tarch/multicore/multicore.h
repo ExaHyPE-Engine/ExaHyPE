@@ -264,9 +264,9 @@ and
   #if defined(GPUOffloadingHIP)
     #define GPUCallableMethod __global__ __device__
   #elif defined(GPUOffloadingSYCL)
-    #define GPUCallableMethod SYCL_EXTERNAL
+    #define GPUCallableMethod inline __attribute__((always_inline)) SYCL_EXTERNAL
   #elif defined(UseManualInlining)
-    #define GPUCallableMethod
+    #define GPUCallableMethod inline __attribute__((always_inline))
   #else
     #define GPUCallableMethod
   #endif
@@ -282,16 +282,18 @@ and
   void freeMemory(double* data, MemoryLocation location);
 
 
-  #if defined(GPUOffloadingOMP)
-  #pragma omp declare target
-  #endif
   /**
    * Delegates to std::abort() if no GPU offloading is active. Otherwise is degenerates
    * to nop, as there is no abort on an accelerator.
    */
-  GPUCallableMethod void gpuAbort();
   #if defined(GPUOffloadingOMP)
+  #pragma omp declare target
+  GPUCallableMethod void gpuAbort() {};
   #pragma omp end declare target
+  #elif defined(GPUOffloadingSYCL)
+  GPUCallableMethod void gpuAbort() {};
+  #else
+  void gpuAbort();
   #endif
 }
 

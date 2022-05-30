@@ -43,15 +43,9 @@ void tarch::multicore::shutdownSmartMPI() {
 }
 
 
-#if defined(GPUOffloadingOMP)
-#pragma omp declare target
-#endif
+#if !defined(GPUOffloadingOMP) and !defined(GPUOffloadingSYCL)
 void tarch::gpuAbort() {
-  #if !defined(GPUOffloadingOMP)
   std::abort();
-  #endif
 }
-#if defined(GPUOffloadingOMP)
-#pragma omp end declare target
 #endif
 
