@@ -70,7 +70,7 @@ void exahype2::fv::rusanov::sycl::timeStepWithRusanov_batched_heap_static_calls(
   if (Dimensions==2 and evaluateSource) {
     queue.submit(
       [&](::sycl::handler &handle) {
-        handle.parallel_for<class CopySolutionAndAddSourceTerm2d>(
+        handle.parallel_for(
           ::sycl::range<3>{numberOfPatches,numberOfVolumesPerAxisInPatch,numberOfVolumesPerAxisInPatch},
           [=] (::sycl::item<3> i) {
             int patchIndex = i[0];
@@ -96,7 +96,7 @@ void exahype2::fv::rusanov::sycl::timeStepWithRusanov_batched_heap_static_calls(
   else if (Dimensions==3 and evaluateSource) {
     queue.submit(
       [&](::sycl::handler &handle) {
-        handle.parallel_for<class CopySolutionAndAddSourceTerm3d>(
+        handle.parallel_for(
           ::sycl::range<3>{numberOfPatches,numberOfVolumesPerAxisInPatch,numberOfVolumesPerAxisInPatch},
           [=] (::sycl::item<3> i) {
             int patchIndex = i[0];
@@ -124,7 +124,7 @@ void exahype2::fv::rusanov::sycl::timeStepWithRusanov_batched_heap_static_calls(
   else if (Dimensions==2) {
     queue.submit(
       [&](::sycl::handler &handle) {
-        handle.parallel_for<class CopySolution2d>(
+        handle.parallel_for(
           ::sycl::range<3>{numberOfPatches,numberOfVolumesPerAxisInPatch,numberOfVolumesPerAxisInPatch},
           [=] (::sycl::item<3> i) {
             int patchIndex = i[0];
@@ -149,7 +149,7 @@ void exahype2::fv::rusanov::sycl::timeStepWithRusanov_batched_heap_static_calls(
   else {
     queue.submit(
       [&](::sycl::handler &handle) {
-        handle.parallel_for<class CopySolution3d>(
+        handle.parallel_for(
           ::sycl::range<3>{numberOfPatches,numberOfVolumesPerAxisInPatch,numberOfVolumesPerAxisInPatch},
           [=] (::sycl::item<3> i) {
             int patchIndex = i[0];
@@ -176,7 +176,7 @@ void exahype2::fv::rusanov::sycl::timeStepWithRusanov_batched_heap_static_calls(
   if (Dimensions==2) {
     queue.submit(
       [&](::sycl::handler &handle) {
-        handle.parallel_for<class ComputeMaxEigenvalue2d_xDirection>(
+        handle.parallel_for(
           ::sycl::range<3>{numberOfPatches,numberOfVolumesPerAxisInPatch,numberOfVolumesPerAxisInPatch+2*solversHaloSize},
           [=] (::sycl::item<3> i) {
             int patchIndex = i[0];
@@ -202,7 +202,7 @@ void exahype2::fv::rusanov::sycl::timeStepWithRusanov_batched_heap_static_calls(
 
     queue.submit(
       [&](::sycl::handler &handle) {
-        handle.parallel_for<class ComputeMaxEigenvalue2d_yDirection>(
+        handle.parallel_for(
           ::sycl::range<3>{numberOfPatches,numberOfVolumesPerAxisInPatch+2*solversHaloSize,numberOfVolumesPerAxisInPatch},
           [=] (::sycl::item<3> i) {
             int patchIndex = i[0];
@@ -228,7 +228,7 @@ void exahype2::fv::rusanov::sycl::timeStepWithRusanov_batched_heap_static_calls(
 
     queue.submit(
       [&](::sycl::handler &handle) {
-        handle.parallel_for<class ComputeMaxEigenvalue2d_UpdateSolution>(
+        handle.parallel_for(
           ::sycl::range<3>{numberOfPatches,numberOfVolumesPerAxisInPatch,numberOfVolumesPerAxisInPatch},
           [=] (::sycl::item<3> i) {
             int patchIndex = i[0];
@@ -261,7 +261,7 @@ void exahype2::fv::rusanov::sycl::timeStepWithRusanov_batched_heap_static_calls(
   else {  // 3d of eigenvalue damping
     queue.submit(
       [&](::sycl::handler &handle) {
-        handle.parallel_for<class ComputeMaxEigenvalue3d_xDirection>(
+        handle.parallel_for(
           ::sycl::range<3>{numberOfPatches,numberOfVolumesPerAxisInPatch,numberOfVolumesPerAxisInPatch},
           [=] (::sycl::item<3> i) {
             int patchIndex = i[0];
@@ -289,7 +289,7 @@ void exahype2::fv::rusanov::sycl::timeStepWithRusanov_batched_heap_static_calls(
 
     queue.submit(
       [&](::sycl::handler &handle) {
-        handle.parallel_for<class ComputeMaxEigenvalue3d_yDirection>(
+        handle.parallel_for(
           ::sycl::range<3>{numberOfPatches,numberOfVolumesPerAxisInPatch,numberOfVolumesPerAxisInPatch},
           [=] (::sycl::item<3> i) {
             int patchIndex = i[0];
@@ -317,7 +317,7 @@ void exahype2::fv::rusanov::sycl::timeStepWithRusanov_batched_heap_static_calls(
 
     queue.submit(
       [&](::sycl::handler &handle) {
-        handle.parallel_for<class ComputeMaxEigenvalue3d_zDirection>(
+        handle.parallel_for(
           ::sycl::range<3>{numberOfPatches,numberOfVolumesPerAxisInPatch,numberOfVolumesPerAxisInPatch},
           [=] (::sycl::item<3> i) {
             int patchIndex = i[0];
@@ -346,7 +346,7 @@ void exahype2::fv::rusanov::sycl::timeStepWithRusanov_batched_heap_static_calls(
 
     queue.submit(
       [&](::sycl::handler &handle) {
-        handle.parallel_for<class ComputeMaxEigenvalue3d_UpdateSolution>(
+        handle.parallel_for(
           ::sycl::range<3>{numberOfPatches,numberOfVolumesPerAxisInPatch,numberOfVolumesPerAxisInPatch},
           [=] (::sycl::item<3> i) {
             int patchIndex = i[0];
@@ -382,7 +382,7 @@ void exahype2::fv::rusanov::sycl::timeStepWithRusanov_batched_heap_static_calls(
   if (evaluateFlux and Dimensions==2) {
     queue.submit(
       [&](::sycl::handler &handle) {
-        handle.parallel_for<class ComputeFlux2d_xDirection>(
+        handle.parallel_for(
           ::sycl::range<2>{numberOfPatches,numberOfVolumesPerAxisInPatch},
           [=] (::sycl::item<2> i) {
             int patchIndex = i[0];
@@ -409,7 +409,7 @@ void exahype2::fv::rusanov::sycl::timeStepWithRusanov_batched_heap_static_calls(
 
     queue.submit(
       [&](::sycl::handler &handle) {
-        handle.parallel_for<class ComputeFlux2d_yDirection>(
+        handle.parallel_for(
           ::sycl::range<2>{numberOfPatches,numberOfVolumesPerAxisInPatch},
           [=] (::sycl::item<2> i) {
             int patchIndex = i[0];
@@ -437,7 +437,7 @@ void exahype2::fv::rusanov::sycl::timeStepWithRusanov_batched_heap_static_calls(
 
     queue.submit(
       [&](::sycl::handler &handle) {
-        handle.parallel_for<class ComputeFlux2d_Update>(
+        handle.parallel_for(
           ::sycl::range<3>{numberOfPatches,numberOfVolumesPerAxisInPatch,numberOfVolumesPerAxisInPatch},
           [=] (::sycl::item<3> i) {
             int patchIndex = i[0];
@@ -465,7 +465,7 @@ void exahype2::fv::rusanov::sycl::timeStepWithRusanov_batched_heap_static_calls(
   else if (evaluateFlux and Dimensions==3) {
     queue.submit(
       [&](::sycl::handler &handle) {
-        handle.parallel_for<class ComputeFlux3d_xDirection>(
+        handle.parallel_for(
           ::sycl::range<3>{numberOfPatches,numberOfVolumesPerAxisInPatch,numberOfVolumesPerAxisInPatch},
           [=] (::sycl::item<3> i) {
             int patchIndex = i[0];
@@ -495,7 +495,7 @@ void exahype2::fv::rusanov::sycl::timeStepWithRusanov_batched_heap_static_calls(
 
     queue.submit(
       [&](::sycl::handler &handle) {
-        handle.parallel_for<class ComputeFlux3d_yDirection>(
+        handle.parallel_for(
           ::sycl::range<3>{numberOfPatches,numberOfVolumesPerAxisInPatch,numberOfVolumesPerAxisInPatch},
           [=] (::sycl::item<3> i) {
             int patchIndex = i[0];
@@ -525,7 +525,7 @@ void exahype2::fv::rusanov::sycl::timeStepWithRusanov_batched_heap_static_calls(
 
     queue.submit(
       [&](::sycl::handler &handle) {
-        handle.parallel_for<class ComputeFlux3d_zDirection>(
+        handle.parallel_for(
           ::sycl::range<3>{numberOfPatches,numberOfVolumesPerAxisInPatch,numberOfVolumesPerAxisInPatch},
           [=] (::sycl::item<3> i) {
             int patchIndex = i[0];
@@ -555,7 +555,7 @@ void exahype2::fv::rusanov::sycl::timeStepWithRusanov_batched_heap_static_calls(
 
     queue.submit(
       [&](::sycl::handler &handle) {
-        handle.parallel_for<class ComputeFlux3d_Update>(
+        handle.parallel_for(
           ::sycl::range<3>{numberOfPatches,numberOfVolumesPerAxisInPatch,numberOfVolumesPerAxisInPatch},
           [=] (::sycl::item<3> i) {
             int patchIndex = i[0];
@@ -587,7 +587,7 @@ void exahype2::fv::rusanov::sycl::timeStepWithRusanov_batched_heap_static_calls(
   if (evaluateNonconservativeProduct and Dimensions==2) {
     queue.submit(
       [&](::sycl::handler &handle) {
-        handle.parallel_for<class ComputeNCP2d_xDirection>(
+        handle.parallel_for(
           ::sycl::range<2>{numberOfPatches,numberOfVolumesPerAxisInPatch},
           [=] (::sycl::item<2> i) {
             int patchIndex = i[0];
@@ -615,7 +615,7 @@ void exahype2::fv::rusanov::sycl::timeStepWithRusanov_batched_heap_static_calls(
 
     queue.submit(
       [&](::sycl::handler &handle) {
-        handle.parallel_for<class ComputeNCP2d_yDirection>(
+        handle.parallel_for(
           ::sycl::range<2>{numberOfPatches,numberOfVolumesPerAxisInPatch},
           [=] (::sycl::item<2> i) {
             int patchIndex = i[0];
@@ -644,7 +644,7 @@ void exahype2::fv::rusanov::sycl::timeStepWithRusanov_batched_heap_static_calls(
 
     queue.submit(
       [&](::sycl::handler &handle) {
-        handle.parallel_for<class ComputeNCP2d_Update>(
+        handle.parallel_for(
           ::sycl::range<3>{numberOfPatches,numberOfVolumesPerAxisInPatch,numberOfVolumesPerAxisInPatch},
           [=] (::sycl::item<3> i) {
             int patchIndex = i[0];
@@ -673,7 +673,7 @@ void exahype2::fv::rusanov::sycl::timeStepWithRusanov_batched_heap_static_calls(
   else if (evaluateNonconservativeProduct and Dimensions==3) {
     queue.submit(
       [&](::sycl::handler &handle) {
-        handle.parallel_for<class ComputeNCP3d_xDirection>(
+        handle.parallel_for(
           ::sycl::range<3>{numberOfPatches,numberOfVolumesPerAxisInPatch,numberOfVolumesPerAxisInPatch},
           [=] (::sycl::item<3> i) {
             int patchIndex = i[0];
@@ -703,7 +703,7 @@ void exahype2::fv::rusanov::sycl::timeStepWithRusanov_batched_heap_static_calls(
 
     queue.submit(
       [&](::sycl::handler &handle) {
-        handle.parallel_for<class ComputeNCP3d_yDirection>(
+        handle.parallel_for(
           ::sycl::range<3>{numberOfPatches,numberOfVolumesPerAxisInPatch,numberOfVolumesPerAxisInPatch},
           [=] (::sycl::item<3> i) {
             int patchIndex = i[0];
@@ -733,7 +733,7 @@ void exahype2::fv::rusanov::sycl::timeStepWithRusanov_batched_heap_static_calls(
 
     queue.submit(
       [&](::sycl::handler &handle) {
-        handle.parallel_for<class ComputeNCP3d_zDirection>(
+        handle.parallel_for(
           ::sycl::range<3>{numberOfPatches,numberOfVolumesPerAxisInPatch,numberOfVolumesPerAxisInPatch},
           [=] (::sycl::item<3> i) {
             int patchIndex = i[0];
@@ -763,7 +763,7 @@ void exahype2::fv::rusanov::sycl::timeStepWithRusanov_batched_heap_static_calls(
 
     queue.submit(
       [&](::sycl::handler &handle) {
-        handle.parallel_for<class ComputeNCP3d_Update>(
+        handle.parallel_for(
           ::sycl::range<3>{numberOfPatches,numberOfVolumesPerAxisInPatch,numberOfVolumesPerAxisInPatch},
           [=] (::sycl::item<3> i) {
             int patchIndex = i[0];
@@ -795,7 +795,7 @@ void exahype2::fv::rusanov::sycl::timeStepWithRusanov_batched_heap_static_calls(
   if (evaluateMaximumEigenvalueAfterTimeStep and Dimensions==2) {
     queue.submit(
       [&](::sycl::handler &handle) {
-        handle.parallel_for<class ComputeMaxEigenvalue2d>(
+        handle.parallel_for(
           ::sycl::range<1>{numberOfPatches},
           [=] (::sycl::item<1> i) {
             int patchIndex = i[0];
@@ -827,7 +827,7 @@ void exahype2::fv::rusanov::sycl::timeStepWithRusanov_batched_heap_static_calls(
   else if (evaluateMaximumEigenvalueAfterTimeStep) {
     queue.submit(
       [&](::sycl::handler &handle) {
-        handle.parallel_for<class ComputeMaxEigenvalue3d>(
+        handle.parallel_for(
           ::sycl::range<1>{numberOfPatches},
           [=] (::sycl::item<1> i) {
             int patchIndex = i[0];
