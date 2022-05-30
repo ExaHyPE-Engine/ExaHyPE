@@ -174,7 +174,7 @@ std::string examples::exahype2::SSInfall::SSInfall::plotGlobalMTot(bool plotCopy
     }
   }
   if (ReSwi==3){ //radius based, for test
-    if (radius<0.2) {result=::exahype2::RefinementCommand::Refine;}
+    if (radius<0.1) {result=::exahype2::RefinementCommand::Refine;}
   }
   if (ReSwi==4){ //dynamic one
     double t_i=pow(a_i,1.5)*2.057*1e17;

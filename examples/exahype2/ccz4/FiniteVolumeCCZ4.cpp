@@ -341,6 +341,21 @@ void examples::exahype2::ccz4::FiniteVolumeCCZ4::nonconservativeProduct(
       }
     }
   }
+  if (CCZ4ReSwi==6){ //single black hole, higher level of amr
+    if (tarch::la::equals(t,0.0)){  //as we use a quantity calculated in postpocessing, we need to provide criterion at the first timestep 
+      constexpr int NumberOfRefinementLayers = 5;
+ //   with some alter
+      double Radius[NumberOfRefinementLayers] = {5.0, 3.0, 1.5, 0.5, 0.2};
+      double MaxH[NumberOfRefinementLayers]   = {0.3, 0.15, 0.04, 0.01, 0.004};
+
+      result = ::exahype2::RefinementCommand::Keep;
+      for (int i=0; i<NumberOfRefinementLayers; i++) {
+        if (radius<Radius[i] and tarch::la::max(volumeH)>MaxH[i]) {
+          result=::exahype2::RefinementCommand::Refine;
+        }
+      }
+    }
+  }
   if (CCZ4ReSwi==5){ //single black hole, cubic refinement??
     if (tarch::la::equals(t,0.0)){  //as we use a quantity calculated in postpocessing, we need to provide criterion at the first timestep 
       constexpr int NumberOfRefinementLayers = 3;

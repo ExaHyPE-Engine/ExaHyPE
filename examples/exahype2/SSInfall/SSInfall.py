@@ -221,7 +221,7 @@ if __name__ == "__main__":
           }
           
           //int test=0;
-          if (abs(coor(0))>0.8*domain_r or abs(coor(1))>0.8*domain_r or abs(coor(2))>0.8*domain_r){ 
+          if (abs(coor(0))>0.6*domain_r or abs(coor(1))>0.6*domain_r or abs(coor(2))>0.6*domain_r){ 
           for (int d=0; d<3; d++) {
             tarch::la::Vector<Dimensions,int> leftCell  = currentCell;
             tarch::la::Vector<Dimensions,int> rightCell = currentCell;
