@@ -14,7 +14,6 @@
 #include <atomic>
 #include <execution>
 #include <future>
-#include <ranges>
 
 namespace {
   std::atomic<int> nonblockingTasksCounter          = 0;

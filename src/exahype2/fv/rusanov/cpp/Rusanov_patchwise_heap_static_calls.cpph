@@ -1,28 +1,79 @@
 #include "Rusanov.h"
 #include "tarch/compiler/CompilerSpecificSettings.h"
 #include "exahype2/fv/rusanov/LoopBody.h"
+
+// ***************************************************************************************
+// @todo Include this in a separate file
 #include <vector>
 #include <iterator>
 #include <execution>
 #include <algorithm>
 
+<<<<<<< HEAD
+template<typename Collection1, typename Collection2, typename Collection3, typename Collection4, typename Collection5>
+void cartesian_product(Collection1&& collection1, Collection2&& collection2, Collection3&& collection3, Collection4&& collection4, Collection5&& collection5, auto func)
+{
+    std::for_each(
+        std::execution::par_unseq,
+        collection1.begin(), 
+        collection1.end(), 
+        [&collection2,&collection3,&collection4,&collection5,&func](auto i){
+            std::for_each(
+                std::execution::par_unseq,
+                collection2.begin(),
+                collection2.end(),
+                [&collection3,&collection4,&collection5,&i,&func](auto j){
+                    std::for_each(
+                        std::execution::par_unseq,
+                        collection3.begin(),
+                        collection3.end(),
+                        [&collection4,&collection5,&i,&j,&func](auto k){
+                            std::for_each(
+                                std::execution::par_unseq,
+                                collection4.begin(),
+                                collection4.end(),
+                                [&collection5,&i,&j,&k,&func](auto m){
+                                    std::for_each(
+                                        std::execution::par_unseq,
+                                        collection5.begin(),
+                                        collection5.end(),
+                                        [&i,&j,&k,&m,&func](auto n){
+                                            func(i,j,k,m,n);
+                                        }
+                                    );
+                                }
+                            );
+                        }
+                    );
+                }
+            );
+        }
+    );
+}
+
+=======
 /*
+>>>>>>> origin/p4
 template<typename Collection1, typename Collection2, typename Collection3, typename Collection4>
 void cartesian_product(Collection1&& collection1, Collection2&& collection2, Collection3&& collection3, Collection4&& collection4, auto func)
 {
     std::for_each(
+        std::execution::par_unseq,
         collection1.begin(), 
         collection1.end(), 
         [&collection2,&collection3,&collection4,&func](auto i){
             std::for_each(
+                std::execution::par_unseq,
                 collection2.begin(),
                 collection2.end(),
                 [&collection3,&collection4,&i,&func](auto j){
                     std::for_each(
+                        std::execution::par_unseq,
                         collection3.begin(),
                         collection3.end(),
                         [&collection4,&i,&j,&func](auto k){
                             std::for_each(
+                                std::execution::par_unseq,
                                 collection4.begin(),
                                 collection4.end(),
                                 [&i,&j,&k,&func](auto m){
@@ -43,14 +94,17 @@ template<typename Collection1, typename Collection2, typename Collection3>
 void cartesian_product(Collection1&& collection1, Collection2&& collection2, Collection3&& collection3, auto func)
 {
     std::for_each(
+        std::execution::par_unseq,
         collection1.begin(), 
         collection1.end(), 
         [&collection2,&collection3,&func](auto i){
             std::for_each(
+                std::execution::par_unseq,
                 collection2.begin(),
                 collection2.end(),
                 [&collection3,&i,&func](auto j){
-                     std::for_each(
+                      std::for_each(
+                        std::execution::par_unseq,
                         collection3.begin(),
                         collection3.end(),
                         [&i,&j,&func](auto k){
@@ -67,10 +121,12 @@ template<typename Collection1, typename Collection2>
 void cartesian_product(Collection1&& collection1, Collection2&& collection2, auto func)
 {
     std::for_each(
+        std::execution::par_unseq,
         collection1.begin(), 
         collection1.end(), 
         [&collection2,&func](auto i){
             std::for_each(
+                std::execution::par_unseq,
                 collection2.begin(),
                 collection2.end(),
                 [&i,&func](auto j){
@@ -81,6 +137,8 @@ void cartesian_product(Collection1&& collection1, Collection2&& collection2, aut
     );
 }
 */
+
+// ***************************************************************************************
 
 
 template <
@@ -159,7 +217,8 @@ void exahype2::fv::rusanov::cpp::timeStepWithRusanov_patchwise_heap_static_calls
   for (int patchIndex=0; patchIndex<numberOfCells; patchIndex++) {
 
     // @todo docu manual assembly of patch data meta object on GPU
-    ::exahype2::CellData patchData(numberOfCells);
+    helper::CPPGPUCellData patchData;
+    patchData.numberOfCells = numberOfCells;
     patchData.patchCentre   = (tarch::la::Vector<Dimensions,double>*)(rawPointerToPatchCentres);
     patchData.patchSize     = (tarch::la::Vector<Dimensions,double>*)(rawPointerToPatchSizes);
     patchData.QIn           = mappedPointersToQIn;
@@ -471,7 +530,7 @@ void exahype2::fv::rusanov::cpp::timeStepWithRusanov_patchwise_heap_static_calls
 
     if (evaluateNonconservativeProduct and Dimensions==2) {
       cartesian_product(dim_range, aux_range3, [&](int y, int x) {
-        internal::computeNonconservativeFlux_LoopBody<Solver>(
+        internal::computeNonconservativeFlux_LoopBody<Solver,unknowns,auxiliaryVariables>(
           patchData.QIn[patchIndex],
           QInEnumerator,
           patchData.patchCentre[patchIndex],
@@ -487,7 +546,7 @@ void exahype2::fv::rusanov::cpp::timeStepWithRusanov_patchwise_heap_static_calls
       });
 
       cartesian_product(aux_range3, dim_range, [&](int y, int x) {
-        internal::computeNonconservativeFlux_LoopBody<Solver>(
+        internal::computeNonconservativeFlux_LoopBody<Solver,unknowns,auxiliaryVariables>(
           patchData.QIn[patchIndex],
           QInEnumerator,
           patchData.patchCentre[patchIndex],
@@ -519,7 +578,7 @@ void exahype2::fv::rusanov::cpp::timeStepWithRusanov_patchwise_heap_static_calls
     }
     else if (evaluateNonconservativeProduct and Dimensions==3) {
         cartesian_product(dim_range, dim_range, aux_range3, [&](int z, int y, int x) {
-          internal::computeNonconservativeFlux_LoopBody<Solver>(
+          internal::computeNonconservativeFlux_LoopBody<Solver,unknowns,auxiliaryVariables>(
             patchData.QIn[patchIndex],
             QInEnumerator,
             patchData.patchCentre[patchIndex],
@@ -535,7 +594,7 @@ void exahype2::fv::rusanov::cpp::timeStepWithRusanov_patchwise_heap_static_calls
         });
 
         cartesian_product(dim_range, aux_range3, dim_range, [&](int z, int y, int x) {
-          internal::computeNonconservativeFlux_LoopBody<Solver>(
+          internal::computeNonconservativeFlux_LoopBody<Solver,unknowns,auxiliaryVariables>(
             patchData.QIn[patchIndex],
             QInEnumerator,
             patchData.patchCentre[patchIndex],
@@ -551,7 +610,7 @@ void exahype2::fv::rusanov::cpp::timeStepWithRusanov_patchwise_heap_static_calls
         });
 
         cartesian_product(aux_range3, dim_range, dim_range, [&](int z, int y, int x) {
-          internal::computeNonconservativeFlux_LoopBody<Solver>(
+          internal::computeNonconservativeFlux_LoopBody<Solver,unknowns,auxiliaryVariables>(
             patchData.QIn[patchIndex],
             QInEnumerator,
             patchData.patchCentre[patchIndex],
@@ -626,9 +685,6 @@ void exahype2::fv::rusanov::cpp::timeStepWithRusanov_patchwise_heap_static_calls
     double*       currentQOut = hostPatchData.QOut[patchIndex];
   }
 
-  delete[] mappedPointersToQIn;
-  delete[] mappedPointersToQOut;
-
   delete[] tempFluxX;
   delete[] tempFluxY;
   delete[] tempFluxZ;
@@ -638,6 +694,9 @@ void exahype2::fv::rusanov::cpp::timeStepWithRusanov_patchwise_heap_static_calls
   delete[] tempEigenvalueX;
   delete[] tempEigenvalueY;
   delete[] tempEigenvalueZ;
+  delete[] mappedPointersToQIn;
+  delete[] mappedPointersToQOut;
+
 
   #else
   assertionMsg(false, "this routine should only be used in combination with OpenMP offloading, as it has a device parameter" );
