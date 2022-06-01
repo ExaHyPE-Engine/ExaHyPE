@@ -82,8 +82,7 @@ void exahype2::dg::tests::DGTest::UtilsTest(){
       DerivativeOperator,
       10, //invDx
       nodesPerAxis,
-      1, //unknowns
-      1, //auxiliaryVariables
+      2, //strideQ
       node,
       gradientValues
       );
@@ -559,8 +558,7 @@ void exahype2::dg::tests::DGTest::runDGElastic(){
     DerivativeOperator,
     invDx,
     nodesPerAxis,
-    unknowns,
-    auxiliaryVariables,
+    strideQ,
     0,
     QOut
     );
