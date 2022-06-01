@@ -74,13 +74,16 @@ namespace examples {
 
 
       /**
-       * This is a postprocessing routine which ensures a posteriori that the
-       * adm constraints are fulfilled. That is, we can read this as a local
-       * limiter or post-smoother. It is mainly invoked through the Python
-       * scripts, i.e. injected into the post-smoothing phase.
+       * This is a postprocessing routine to monitor if the physical constraints
+       * are fulfilled. Used in python script.
        */
       void admconstraints(double* constraints, const double* const Q, const double* const gradQSerialised);
 
+      /**
+       * A temporary test function, to output Hamilton constraint related term in theta, 3 terms: RPlusTwoNablaZNCP, RPlusTwoNablaZSrc, pure Src
+       */
+      void ThetaOutputNCP(double* NCPterm, const double* const Q, const double* const gradQSerialised, int normal);
+      void ThetaOutputSrc(double* Srcterms, const double* const Q, const double* const gradQSerialised);
 
       /**
        * This function is for the calculation of psi4, a quantity related to gravitional wave. 

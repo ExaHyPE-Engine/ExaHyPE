@@ -272,7 +272,7 @@ if __name__ == "__main__":
          side.
 
         """
-        self._auxiliary_variables = 6
+        self._auxiliary_variables = 6+3
 
         self._my_user_includes += """
 	#include "../CCZ4Kernels.h"
@@ -296,6 +296,8 @@ if __name__ == "__main__":
 
           // See the docu in PDE.h
           double gradQ[3*59]={ 0 };
+          double faceQ[6*59]={ 0 };
+          double faceDeltaQ[6*59]={ 0 };
 
           // Lets look left vs right and compute the gradient. Then, lets
           // loop up and down. So we look three times for the respective
@@ -307,8 +309,13 @@ if __name__ == "__main__":
             rightCell(d) += 1;
             const int leftCellSerialised  = peano4::utils::dLinearised(leftCell, patchSize + 2*1);
             const int rightCellSerialised = peano4::utils::dLinearised(rightCell,patchSize + 2*1);
+            const int currentCellSerialised = peano4::utils::dLinearised(currentCell,patchSize + 2*1);
             for(int i=0; i<59; i++) {
               gradQ[d*59+i] = ( reconstructedPatch[rightCellSerialised*(59+n_a_v)+i] - reconstructedPatch[leftCellSerialised*(59+n_a_v)+i] ) / 2.0 / volumeH;
+              faceQ[2*d*59+i]= (reconstructedPatch[currentCellSerialised*(59+n_a_v)+i] + reconstructedPatch[leftCellSerialised*(59+n_a_v)+i]) / 2.0;
+              faceDeltaQ[2*d*59+i]= (reconstructedPatch[currentCellSerialised*(59+n_a_v)+i] - reconstructedPatch[leftCellSerialised*(59+n_a_v)+i]);
+              faceQ[2*d*59+59+i]= (reconstructedPatch[currentCellSerialised*(59+n_a_v)+i] + reconstructedPatch[rightCellSerialised*(59+n_a_v)+i]) / 2.0;
+              faceDeltaQ[2*d*59+59+i]= (-reconstructedPatch[currentCellSerialised*(59+n_a_v)+i] + reconstructedPatch[rightCellSerialised*(59+n_a_v)+i]);         
             }
           }
 
@@ -320,22 +327,32 @@ if __name__ == "__main__":
 
           admconstraints(constraints,reconstructedPatch+cellSerialised*(59+n_a_v),gradQ);
           
+          for(int i=0;i<6;i++){
+            reconstructedPatch[cellSerialised*(59+n_a_v)+59+i] = constraints[i];
+          }
+          
+          double ncpsum=0, ncp[1]={0};
+          double src[2]={ 0 };
+          for (int d=0; d<3; d++)
+          {
+            ThetaOutputNCP(ncp,faceQ+2*d*59,faceDeltaQ+2*d*59,d);
+            ncpsum+=ncp[0];
+            //if (ncp[0]>0.0 or ncp[0]<0.0) std::cout<< ncp[0] << std::endl; 
+            ThetaOutputNCP(ncp,faceQ+2*d*59+59,faceDeltaQ+2*d*59+59,d);
+            ncpsum+=ncp[0];
+            //if (ncp[0]>0.0 or ncp[0]<0.0) std::cout<< ncp[0] << std::endl; 
+          }
+          ThetaOutputSrc(src,reconstructedPatch+cellSerialised*(59+n_a_v),gradQ);
+          reconstructedPatch[cellSerialised*(59+n_a_v)+59+6] = ncpsum / 2.0 / volumeH;
+          reconstructedPatch[cellSerialised*(59+n_a_v)+59+7] = src[0];
+          reconstructedPatch[cellSerialised*(59+n_a_v)+59+8] = src[1];
+          
           //NaN detector here/////////////////////////////////
           /*for(int i=0;i<59;i++){
             if ( std::isnan(reconstructedPatch[cellSerialised*(59+n_a_v)+i]) ) {
               ::exahype2::triggerNonCriticalAssertion( __FILE__, __LINE__, "[Quantity should no be NaN]", "NaN detected at t=" + std::to_string(t) + " for quantity "+std::to_string(i)+" at position ["+std::to_string(currentPosition[0])+", "+std::to_string(currentPosition[1])+", "+std::to_string(currentPosition[2])+"]");}
           }*/
           ///////////////////////////////////////////////////
-
-          for(int i=0;i<6;i++){
-            reconstructedPatch[cellSerialised*(59+n_a_v)+59+i] = constraints[i];
-          }
-          
-          /*double sour[59]={ 0 };
-          examples::exahype2::ccz4::source(sour,reconstructedPatch+cellSerialised*(59+n_a_v),0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0.1, 0, 0.5);
-          for(int i=0;i<59;i++){
-            reconstructedPatch[cellSerialised*(59+n_a_v)+59+6+i] = sour[i];
-          }*/
 
           /*
           //here we calculate the norm of conformal factor phi as the refinement condition

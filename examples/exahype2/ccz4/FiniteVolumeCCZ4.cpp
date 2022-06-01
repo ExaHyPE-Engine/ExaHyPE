@@ -160,7 +160,9 @@ void examples::exahype2::ccz4::FiniteVolumeCCZ4::sourceTerm(
     assertion3( std::isfinite(Q[i]), i, volumeX, t );
   }
 #endif
-
+ // for (int i=NumberOfUnknowns; i<NumberOfUnknowns+NumberOfAuxiliaryVariables; i++) {
+  //  S[i] = 0.0;
+  //}
   examples::exahype2::ccz4::FiniteVolumeCCZ4::sourceTerm(Q, volumeX, volumeH, t, dt, S, Offloadable::Yes);
 
   if (CCZ4smoothing>0){// then we apply simple laplacian smoothing
@@ -242,7 +244,6 @@ void examples::exahype2::ccz4::FiniteVolumeCCZ4::nonconservativeProduct(
   assertion( normal>=0 );
   assertion( normal<Dimensions );
 #endif
-  
   nonconservativeProduct(Q, deltaQ, faceCentre, volumeH, t, dt, normal, BgradQ, Offloadable::Yes);
 
 #if !defined(GPUOffloadingOMP)
@@ -275,6 +276,9 @@ void examples::exahype2::ccz4::FiniteVolumeCCZ4::nonconservativeProduct(
     gradQSerialised[i+2*NumberOfUnknowns] = 0.0;
 
     gradQSerialised[i+normal*NumberOfUnknowns] = deltaQ[i];
+  }
+  for (int i=NumberOfUnknowns; i<NumberOfUnknowns+NumberOfAuxiliaryVariables; i++) {
+    BgradQ[i] = 0.0;
   }
   ncp(BgradQ, Q, gradQSerialised, normal, CCZ4LapseType, CCZ4ds, CCZ4c, CCZ4e, CCZ4f, CCZ4bs, CCZ4sk, CCZ4xi, CCZ4mu);
    //examples::exahype2::ccz4::FiniteVolumeCCZ4::nonconservativeProduct(Q, deltaQ, faceCentre, volumeH, t, normal, BgradQ);
