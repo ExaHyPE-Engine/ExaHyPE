@@ -82,7 +82,7 @@ namespace TP_bindding {
   		
   		//B[i][j]=B_i^j=\partial_i \beta^j //the component order of this variable is different between fortran and C++!
   		for (int i=0;i<3;i++)
-  		for (int j=0;j<3;j++) Q[26+i*3+j]=gradQ[i][13+j];
+  		for (int j=0;j<3;j++) Q[26+i*3+j]=gradQ[i][17+j];
   		
   		//D[k][i][j]=D_ijk= 0.5 * \partial_k \tilde{\gamma}_ij
   		for (int i=0;i<3;i++)
