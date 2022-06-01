@@ -237,6 +237,7 @@ void examples::exahype2::SSInfall::SSInfall::initialCondition(
   bool                                         gridIsConstructred
 ) {
   logDebug( "initialCondition(...)", "init volume at " << volumeCentre << "x" << volumeH << " (grid constructed=" << gridIsConstructred << ")" );
+
   constexpr double pi = M_PI;
   double x=volumeCentre(0)-center(0);
   double y=volumeCentre(1)-center(1);
@@ -304,6 +305,10 @@ void examples::exahype2::SSInfall::SSInfall::initialCondition(
 */
   if ( Q[0]<1e-12 ){
     ::exahype2::triggerNonCriticalAssertion( __FILE__, __LINE__, "Q[0]>0", "density become 0 at volume: ["+std::to_string(volumeCentre(0))+", "+std::to_string(volumeCentre(1))+", "+std::to_string(volumeCentre(2))+"] Q[] array: "+std::to_string(Q[0])+" "+std::to_string(Q[1])+" "+std::to_string(Q[2])+" "+std::to_string(Q[3])+" "+std::to_string(Q[4])+".");
+  }
+
+  for (int i=5; i<NumberOfUnknowns+NumberOfAuxiliaryVariables; i++) {
+    Q[i] = 0.0;
   }
 }
 
@@ -421,6 +426,10 @@ void examples::exahype2::SSInfall::SSInfall::sourceTerm(
   S[3] = -force_density_norm*z;
   S[4] = -force_density_norm*(Q[1]*x+Q[2]*y+Q[3]*z)/Q[0];
 
+  for (int i=5; i<NumberOfUnknowns+NumberOfAuxiliaryVariables; i++) {
+    S[i] = 0.0;
+  }
+
   logTraceOut( "sourceTerm(...)" );
 }
 
@@ -458,6 +467,10 @@ void examples::exahype2::SSInfall::SSInfall::sourceTerm(
   S[2] = -force_density_norm*y;
   S[3] = -force_density_norm*z;
   S[4] = -force_density_norm*(Q[1]*x+Q[2]*y+Q[3]*z)/Q[0];
+
+  for (int i=5; i<NumberOfUnknowns+NumberOfAuxiliaryVariables; i++) {
+    S[i] = 0.0;
+  }
 }
 #if defined(GPUOffloadingOMP)
 #pragma omp end declare target
@@ -501,10 +514,12 @@ void examples::exahype2::SSInfall::SSInfall::boundaryConditions(
   nonCriticalAssertion4( Qinside[4]==Qinside[4], faceCentre, volumeH, t, normal );
 
   nonCriticalAssertion5( Qinside[0]>1e-12, faceCentre, volumeH, t, normal, Qinside[0] );
+/*
   assertion5( Qinside[0]>1e-12, faceCentre, volumeH, t, normal, Qinside[0] );
   if ( Qinside[0]<1e-12 ){
     ::exahype2::triggerNonCriticalAssertion( __FILE__, __LINE__, "Qinside[0]>0", "density become 0 at face: ["+std::to_string(faceCentre(0))+", "+std::to_string(faceCentre(1))+", "+std::to_string(faceCentre(2))+"] Q[] array: "+std::to_string(Qinside[0])+" "+std::to_string(Qinside[1])+" "+std::to_string(Qinside[2])+" "+std::to_string(Qinside[3])+" "+std::to_string(Qinside[4])+".");
   }
+*/
 
   if (extrapolate_bc==0){
     Qoutside[0] = Qinside[0];
@@ -512,9 +527,6 @@ void examples::exahype2::SSInfall::SSInfall::boundaryConditions(
     Qoutside[2] = Qinside[2];
     Qoutside[3] = Qinside[3];
     Qoutside[4] = Qinside[4];
-    for (int i=NumberOfUnknowns; i<NumberOfUnknowns+NumberOfAuxiliaryVariables; i++) {
-    	Qoutside[i]=0;
-    }
   }
   else if (extrapolate_bc==1)
   {
@@ -565,6 +577,10 @@ void examples::exahype2::SSInfall::SSInfall::boundaryConditions(
     not std::isnan(Qinside[0]),
     normal, faceCentre, Qinside[0], Qinside[1], Qinside[2], Qinside[3], Qinside[4]
   );
+
+  for (int i=5; i<NumberOfUnknowns+NumberOfAuxiliaryVariables; i++) {
+    Qoutside[i]=0;
+  }
 
   logTraceOut( "boundaryConditions(...)" );
 }

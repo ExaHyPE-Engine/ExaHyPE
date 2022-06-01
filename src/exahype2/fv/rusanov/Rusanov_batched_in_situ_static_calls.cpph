@@ -402,7 +402,7 @@ void exahype2::fv::rusanov::timeStepWithRusanov_batched_in_situ_static_calls(
     {
       double fluxNCP[unknowns] __attribute__((aligned (AlignmentOnHeap)));
 
-      internal::computeNonconservativeFlux_LoopBody<Solver>(
+      internal::computeNonconservativeFlux_LoopBody<Solver,unknowns,auxiliaryVariables>(
             patchData.QIn[patchIndex],
             QInEnumerator,
             patchData.patchCentre[patchIndex],
@@ -442,7 +442,7 @@ void exahype2::fv::rusanov::timeStepWithRusanov_batched_in_situ_static_calls(
     {
       double fluxNCP[unknowns] __attribute__((aligned (AlignmentOnHeap)));
 
-      internal::computeNonconservativeFlux_LoopBody<Solver>(
+      internal::computeNonconservativeFlux_LoopBody<Solver,unknowns,auxiliaryVariables>(
             patchData.QIn[patchIndex],
             QInEnumerator,
             patchData.patchCentre[patchIndex],
@@ -484,7 +484,7 @@ void exahype2::fv::rusanov::timeStepWithRusanov_batched_in_situ_static_calls(
     {
       double fluxNCP[unknowns] __attribute__((aligned (AlignmentOnHeap)));
 
-      internal::computeNonconservativeFlux_LoopBody<Solver>(
+      internal::computeNonconservativeFlux_LoopBody<Solver,unknowns,auxiliaryVariables>(
             patchData.QIn[patchIndex],
             QInEnumerator,
             patchData.patchCentre[patchIndex],
@@ -525,7 +525,7 @@ void exahype2::fv::rusanov::timeStepWithRusanov_batched_in_situ_static_calls(
     {
       double fluxNCP[unknowns] __attribute__((aligned (AlignmentOnHeap)));
 
-      internal::computeNonconservativeFlux_LoopBody<Solver>(
+      internal::computeNonconservativeFlux_LoopBody<Solver,unknowns,auxiliaryVariables>(
             patchData.QIn[patchIndex],
             QInEnumerator,
             patchData.patchCentre[patchIndex],
@@ -566,7 +566,7 @@ void exahype2::fv::rusanov::timeStepWithRusanov_batched_in_situ_static_calls(
     {
       double fluxNCP[unknowns] __attribute__((aligned (AlignmentOnHeap)));
 
-      internal::computeNonconservativeFlux_LoopBody<Solver>(
+      internal::computeNonconservativeFlux_LoopBody<Solver,unknowns,auxiliaryVariables>(
             patchData.QIn[patchIndex],
             QInEnumerator,
             patchData.patchCentre[patchIndex],

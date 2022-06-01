@@ -1,7 +1,7 @@
 // This file is part of the ExaHyPE2 project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
-#ifndef _EXAHYPE2_FV_RUSANOV_OMP_RUSANOV_H_
-#define _EXAHYPE2_FV_RUSANOV_OMP_RUSANOV_H_
+#ifndef _EXAHYPE2_FV_RUSANOV_SYCL_RUSANOV_H_
+#define _EXAHYPE2_FV_RUSANOV_SYCL_RUSANOV_H_
 
 
 namespace exahype2 {
@@ -20,17 +20,16 @@ namespace exahype2 {
        * If you run this routine without GPU offloading, i.e. if you use it
        * non-GPU cousin, we place all temporary data on the heap. If you use
        * the SYCL variant, we explicitly alloc the temp memory on the device.
-       * To create the temporary data, we need an enumerator, while we need
-       * the enumerator also on the GPU. As it is cheap to construct an
-       * enumerator, I do not bother of copying it over to the device. I
-       * simply create an enumerator on the host and one on the device.
        *
        * Once the kernel has finished, we have to free all temporary data. We
        * use sycl::free() to delete our scratchpads.
        *
-       * As we work with explicit memory allocations and as we know which
-       * PDE terms are in the game, can only allocate (and free) those
-       * scratchpads that we actually need.
+       * With SYCL, we can copy the enumerators directly to the GPU, as they
+       * provide standard constructors.
+       *
+       * The copying of the actual patch data is more complicated, as we
+       * have pointers over pointers here. We use the GPUCellData wrapper
+       * in the sycl namespace to realise these deep copies.
        *
        *
        * ## SYCL details
@@ -46,6 +45,10 @@ namespace exahype2 {
        * This is also the reason why I have remodelled the template signature
        * which now uses std::size_t rather than int (if you compare the
        * template arguments to the non-GPU version).
+       *
+       * By default, SYCL queues execute kernel functions in an out-of-order
+       * fashion based on dependency information. Therefore, we have to
+       * wait once the kernels have terminated.
        *
        * I try to stick with ranges where possible and to avoid nd_range.
        * Whenever I do not need things like grain sizes or a substructuring

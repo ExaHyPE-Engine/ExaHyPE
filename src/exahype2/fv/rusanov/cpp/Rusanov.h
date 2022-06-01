@@ -62,6 +62,53 @@ namespace exahype2 {
         __attribute__((always_inline))
         #endif
         ;
+
+
+        template <
+          typename Solver,
+          int      numberOfVolumesPerAxisInPatch,
+          int      haloSize,
+          int      unknowns,
+          int      auxiliaryVariables,
+          typename TempDataEnumerator
+        >
+        static void timeStepWithRusanov_batched_heap_static_calls(
+          int                     targetDevice,
+          ::exahype2::CellData&   patchData,
+          bool                    evaluateFlux,
+          bool                    evaluateNonconservativeProduct,
+          bool                    evaluateSource,
+          bool                    evaluateMaximumEigenvalueAfterTimeStep
+        )
+        #if defined(UseManualInlining)
+        __attribute__((always_inline))
+        #endif
+        ;
+
+        namespace helper {
+          #if defined(GPUOffloadingCPP)
+          /**
+           * On the GPU, we don't need any of exahype2::CellData's fancy routines or
+           * dynamic data management. We simply have to be able to create a struct
+           * on the accelerator, which we then befill with the required pointers
+           * which we copy over from the host.
+           *
+           * Therefore, this class is a mere copy of exahype2::CellData without any
+           * of its routines. The only different to the host variant (from a data
+           * field point of view) is that numberOfCells is not const.
+           */
+          struct CPPGPUCellData {
+            double**   QIn;
+            tarch::la::Vector<Dimensions,double>*   patchCentre;
+            tarch::la::Vector<Dimensions,double>*   patchSize;
+            double*    t;
+            double*    dt;
+            int        numberOfCells;
+            double**   QOut;
+            double*    maxEigenvalue;
+          };
+          #endif
+        }
       }
     }
   }
@@ -69,5 +116,6 @@ namespace exahype2 {
 
 
 #include "Rusanov_patchwise_heap_static_calls.cpph"
+#include "Rusanov_batched_heap_static_calls.cpph"
 
 #endif

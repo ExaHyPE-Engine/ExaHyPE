@@ -1,0 +1,64 @@
+#include "GPUCellData.h"
+#if defined(GPUOffloadingSYCL)
+
+#include "exahype2/CellData.h"
+#include "exahype2/fv/enumerator/AoSLexicographicVolumeEnumerator.h"
+#include <cstring>
+
+
+exahype2::fv::rusanov::sycl::GPUCellData::GPUCellData(
+  const ::exahype2::CellData& hostObject,
+  const exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator& inEnumerator,
+  const exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator& outEnumerator,
+  ::sycl::queue& queue
+) {
+  numberOfCells = hostObject.numberOfCells;
+  patchCentre   = ::sycl::malloc_shared< tarch::la::Vector<Dimensions,double> >(numberOfCells, queue);
+  patchSize     = ::sycl::malloc_shared< tarch::la::Vector<Dimensions,double> >(numberOfCells, queue);
+  QIn           = ::sycl::malloc_shared< double* >(numberOfCells, queue);
+  QOut          = ::sycl::malloc_shared< double* >(numberOfCells, queue);
+  t             = ::sycl::malloc_shared< double >(numberOfCells, queue);
+  dt            = ::sycl::malloc_shared< double >(numberOfCells, queue);
+  maxEigenvalue = ::sycl::malloc_shared< double >(numberOfCells, queue);
+
+  for (int i=0; i<numberOfCells; i++) {
+    patchCentre[i] = hostObject.patchCentre[i];
+    patchSize[i]   = hostObject.patchSize[i];
+    t[i]           = hostObject.t[i];
+    dt[i]          = hostObject.dt[i];
+
+    QIn[i]         = ::sycl::malloc_shared< double >(inEnumerator.size(), queue);
+    QOut[i]        = ::sycl::malloc_shared< double >(outEnumerator.size(), queue);
+
+    std::memcpy( QIn[i], hostObject.QIn[i], inEnumerator.size()*sizeof(double) );
+  }
+}
+
+
+void exahype2::fv::rusanov::sycl::GPUCellData::destroy(
+  ::exahype2::CellData& hostObject,
+  const exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator& outEnumerator,
+  bool copyEigenvaluesBack,
+  ::sycl::queue& queue
+) {
+  for (int i=0; i<numberOfCells; i++) {
+    std::memcpy( hostObject.QOut[i], QIn[i], outEnumerator.size()*sizeof(double) );
+
+    ::sycl::free( QIn[i], queue);
+    ::sycl::free( QOut[i], queue);
+  }
+
+  if (copyEigenvaluesBack) {
+    std::memcpy( hostObject.maxEigenvalue, maxEigenvalue, numberOfCells );
+  }
+
+  ::sycl::free( patchCentre, queue);
+  ::sycl::free( patchSize, queue);
+  ::sycl::free( QIn, queue);
+  ::sycl::free( QOut, queue);
+  ::sycl::free( t, queue);
+  ::sycl::free( dt, queue);
+  ::sycl::free( maxEigenvalue, queue);
+}
+
+#endif

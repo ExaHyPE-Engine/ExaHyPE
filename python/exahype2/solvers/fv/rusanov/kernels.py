@@ -499,6 +499,12 @@ def create_abstract_solver_declarations(flux_implementation, ncp_implementation,
      * Depending on the implementation, this variant might be slow as it 
      * lacks an inline define. Also, if you don't want to use ipo aggressively,
      * it might be clever to put the implementation into the header.
+     *
+     * ## SYCL
+     *
+     * At the moment, SYCL seems to struggle with ipo, even if a function is 
+     * never called. So I embed the (empty) implementation directly into the
+     * header.
      */
     #if defined(GPUOffloadingOMP)
     #pragma omp declare target
@@ -511,7 +517,12 @@ def create_abstract_solver_declarations(flux_implementation, ncp_implementation,
       double                                       dt,
       int                                          normal,
       Offloadable
-    );
+    )
+    #if defined(GPUOffloadingSYCL)
+    {}
+    #else
+    ;
+    #endif
     #if defined(GPUOffloadingOMP)
     #pragma omp end declare target
     #endif
@@ -539,6 +550,12 @@ def create_abstract_solver_declarations(flux_implementation, ncp_implementation,
      * Depending on the implementation, this variant might be slow as it 
      * lacks an inline define. Also, if you don't want to use ipo aggressively,
      * it might be clever to put the implementation into the header.
+     *
+     * ## SYCL
+     *
+     * At the moment, SYCL seems to struggle with ipo, even if a function is 
+     * never called. So I embed the (empty) implementation directly into the
+     * header.
      */
     #if defined(GPUOffloadingOMP)
     #pragma omp declare target
@@ -552,7 +569,12 @@ def create_abstract_solver_declarations(flux_implementation, ncp_implementation,
       int                                          normal,
       double * __restrict__                        F, // F[{{NUMBER_OF_UNKNOWNS}}]
       Offloadable
-    );
+    )
+    #if defined(GPUOffloadingSYCL)
+    {}
+    #else
+    ;
+    #endif
     #if defined(GPUOffloadingOMP)
     #pragma omp end declare target
     #endif
@@ -576,6 +598,12 @@ def create_abstract_solver_declarations(flux_implementation, ncp_implementation,
      * Depending on the implementation, this variant might be slow as it 
      * lacks an inline define. Also, if you don't want to use ipo aggressively,
      * it might be clever to put the implementation into the header.
+     *
+     * ## SYCL
+     *
+     * At the moment, SYCL seems to struggle with ipo, even if a function is 
+     * never called. So I embed the (empty) implementation directly into the
+     * header.
      */
     #if defined(GPUOffloadingOMP)
     #pragma omp declare target
@@ -590,7 +618,12 @@ def create_abstract_solver_declarations(flux_implementation, ncp_implementation,
       int                                          normal,
       double * __restrict__                        BTimesDeltaQ, // BTimesDeltaQ[{{NUMBER_OF_UNKNOWNS}}]
       Offloadable
-    );
+    )
+    #if defined(GPUOffloadingSYCL)
+    {}
+    #else
+    ;
+    #endif
     #if defined(GPUOffloadingOMP)
     #pragma omp end declare target
     #endif
@@ -615,6 +648,12 @@ def create_abstract_solver_declarations(flux_implementation, ncp_implementation,
      * Depending on the implementation, this variant might be slow as it 
      * lacks an inline define. Also, if you don't want to use ipo aggressively,
      * it might be clever to put the implementation into the header.
+     *
+     * ## SYCL
+     *
+     * At the moment, SYCL seems to struggle with ipo, even if a function is 
+     * never called. So I embed the (empty) implementation directly into the
+     * header.
      */
     #if defined(GPUOffloadingOMP)
     #pragma omp declare target
@@ -627,7 +666,12 @@ def create_abstract_solver_declarations(flux_implementation, ncp_implementation,
       double                                       dt,
       double * __restrict__ S,
       Offloadable
-    );
+    )
+    #if defined(GPUOffloadingSYCL)
+    {}
+    #else
+    ;
+    #endif
     #if defined(GPUOffloadingOMP)
     #pragma omp end declare target
     #endif
@@ -703,6 +747,7 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::nonconservativeProduct(
 
 
 {% if SOURCE_TERM_IMPLEMENTATION!="<user-defined>" and SOURCE_TERM_IMPLEMENTATION!="<none>" %}
+#if !defined(GPUOffloadingSYCL)
 void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::sourceTerm(
   const double * __restrict__                  Q,
   const tarch::la::Vector<Dimensions,double>&  volumeCentre,
@@ -717,6 +762,7 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::sourceTerm(
   std::fill_n(S,{{NUMBER_OF_UNKNOWNS}},0.0);
   {% endif %}
 }
+#endif
 {% endif %}
 
 
@@ -725,6 +771,7 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::sourceTerm(
 #if defined(GPUOffloadingOMP)
 #pragma omp declare target
 #endif
+#if !defined(GPUOffloadingSYCL)
 GPUCallableMethod double {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::maxEigenvalue(
       const double * __restrict__ Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
       const tarch::la::Vector<Dimensions,double>&  faceCentre,
@@ -735,6 +782,7 @@ GPUCallableMethod double {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::maxEigenva
 ) {
   {{EIGENVALUES_IMPLEMENTATION}};
 }
+#endif
 #if defined(GPUOffloadingOMP)
 #pragma omp end declare target
 #endif
@@ -745,6 +793,7 @@ GPUCallableMethod double {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::maxEigenva
 #if defined(GPUOffloadingOMP)
 #pragma omp declare target
 #endif
+#if !defined(GPUOffloadingSYCL)
 GPUCallableMethod void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::flux(
       const double * __restrict__ Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
       const tarch::la::Vector<Dimensions,double>&  faceCentre,
@@ -761,6 +810,7 @@ GPUCallableMethod void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::flux(
   {{FLUX_IMPLEMENTATION}}
   {% endif %}
 }
+#endif
 #if defined(GPUOffloadingOMP)
 #pragma omp end declare target
 #endif
@@ -771,6 +821,7 @@ GPUCallableMethod void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::flux(
 #if defined(GPUOffloadingOMP)
 #pragma omp declare target
 #endif
+#if !defined(GPUOffloadingSYCL)
 GPUCallableMethod void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::nonconservativeProduct(
       const double * __restrict__                  Q,        // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
       const double * __restrict__                  deltaQ,   // deltaQ[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
@@ -788,6 +839,7 @@ GPUCallableMethod void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::nonconservat
   {{NCP_IMPLEMENTATION}}
   {% endif %}
 }
+#endif
 #if defined(GPUOffloadingOMP)
 #pragma omp end declare target
 #endif
@@ -798,6 +850,7 @@ GPUCallableMethod void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::nonconservat
 #if defined(GPUOffloadingOMP)
 #pragma omp declare target
 #endif
+#if !defined(GPUOffloadingSYCL)
 GPUCallableMethod void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::sourceTerm(
       const double * __restrict__ Q,
       const tarch::la::Vector<Dimensions,double>&  volumeCentre,
@@ -813,6 +866,7 @@ GPUCallableMethod void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::sourceTerm(
   {{SOURCE_TERM_IMPLEMENTATION}}
   {% endif %}
 }
+#endif
 #if defined(GPUOffloadingOMP)
 #pragma omp end declare target
 #endif

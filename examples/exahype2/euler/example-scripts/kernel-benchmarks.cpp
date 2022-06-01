@@ -268,6 +268,47 @@ void runBenchmarks(int patches) {
       ::exahype2::fv::rusanov::cpp::timeStepWithRusanov_patchwise_heap_static_calls<EulerOnGPU,EulerOnGPU::NumberOfFiniteVolumesPerAxisPerPatch, 1, 5, 0,exahype2::fv::enumerator::SoALexicographicVolumeEnumerator>,
       "cpp, patch-wise, SoA", true
     );
+    testFusedVariantOnDevice(
+      device,
+      ::exahype2::fv::rusanov::cpp::timeStepWithRusanov_batched_heap_static_calls<EulerOnGPU,EulerOnGPU::NumberOfFiniteVolumesPerAxisPerPatch, 1, 5, 0,exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator>,
+      "cpp, batched, AoS", true
+    );
+    testFusedVariantOnDevice(
+      device,
+      ::exahype2::fv::rusanov::cpp::timeStepWithRusanov_batched_heap_static_calls<EulerOnGPU,EulerOnGPU::NumberOfFiniteVolumesPerAxisPerPatch, 1, 5, 0,exahype2::fv::enumerator::AoSoALexicographicVolumeEnumerator>,
+      "cpp, batched, AoSoA", true
+    );
+    testFusedVariantOnDevice(
+      device,
+      ::exahype2::fv::rusanov::cpp::timeStepWithRusanov_batched_heap_static_calls<EulerOnGPU,EulerOnGPU::NumberOfFiniteVolumesPerAxisPerPatch, 1, 5, 0,exahype2::fv::enumerator::SoALexicographicVolumeEnumerator>,
+      "cpp, batched, SoA", true
+    );
+  }
+  #endif
+
+  #if defined(GPUOffloadingSYCL)
+  if ( tarch::multicore::Core::getInstance().getNumberOfGPUs()==0 ) {
+    logWarning( "main()", "no device found" );
+  }
+  for (int device=0; device<tarch::multicore::Core::getInstance().getNumberOfGPUs(); device++) {
+    logInfo( "main()", "device " << device );
+    testFusedVariantOnDevice(
+      device,
+      ::exahype2::fv::rusanov::sycl::timeStepWithRusanov_batched_heap_static_calls<EulerOnGPU,EulerOnGPU::NumberOfFiniteVolumesPerAxisPerPatch, 1, 5, 0,exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator>,
+      "sycl, patch-wise, AoS", true
+    );
+    testFusedVariantOnDevice(
+      device,
+      ::exahype2::fv::rusanov::sycl::timeStepWithRusanov_batched_heap_static_calls<EulerOnGPU,EulerOnGPU::NumberOfFiniteVolumesPerAxisPerPatch, 1, 5, 0,exahype2::fv::enumerator::SoALexicographicVolumeEnumerator>,
+      "sycl, patch-wise, SoA", true
+    );
+    testFusedVariantOnDevice(
+      device,
+      ::exahype2::fv::rusanov::sycl::timeStepWithRusanov_batched_heap_static_calls<EulerOnGPU,EulerOnGPU::NumberOfFiniteVolumesPerAxisPerPatch, 1, 5, 0,exahype2::fv::enumerator::AoSoALexicographicVolumeEnumerator>,
+      "sycl, patch-wise, AoSoA", true
+    );
+    // @todo multithreaded noch checken
+    // @todo Korrektheit checken
   }
   #endif
 }
