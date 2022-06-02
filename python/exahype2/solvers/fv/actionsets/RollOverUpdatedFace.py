@@ -36,8 +36,13 @@ class RollOverUpdatedFace(AbstractFVActionSet):
             logDebug( "touchFaceLastTime(...)", "normal=" << normal << ",{{NEW_ACCESSOR}}[" << index << "]->{{OLD_ACCESSOR}}[" << index << "]" );
             logDebug( "touchFaceLastTime(...)", "normal=" << normal << ",{{UPDATE_ACCESSOR}}[" << index << "]->{{NEW_ACCESSOR}}[" << index << "]" );
             for (int j=0; j<{{UNKNOWNS}}; j++) {
+              {% if OVERWRITE_OLD_AND_NEW_SOLUTION %}
+              {{NEW_ACCESSOR}}.value[index*{{UNKNOWNS}}+j] = {{UPDATE_ACCESSOR}}.value[index*{{UNKNOWNS}}+j]; 
+              {{OLD_ACCESSOR}}.value[index*{{UNKNOWNS}}+j] = {{UPDATE_ACCESSOR}}.value[index*{{UNKNOWNS}}+j]; 
+              {% else %}
               {{OLD_ACCESSOR}}.value[index*{{UNKNOWNS}}+j] = {{NEW_ACCESSOR}}.value[index*{{UNKNOWNS}}+j]; 
               {{NEW_ACCESSOR}}.value[index*{{UNKNOWNS}}+j] = {{UPDATE_ACCESSOR}}.value[index*{{UNKNOWNS}}+j]; 
+              {% endif %}
             }
           }
         }
@@ -48,8 +53,8 @@ class RollOverUpdatedFace(AbstractFVActionSet):
         logTraceOut( "touchFaceLastTime(...)"  );
       }
       else {
-        logTraceIn( "touchFaceLastTime(...)---RollOverUpdatedFace (skip left part of face)"  );
-        logTraceOut( "touchFaceLastTime(...)---RollOverUpdatedFace (skip left part of face)"  );
+        logTraceIn( "touchFaceLastTime(...) (skip left part of face)"  );
+        logTraceOut( "touchFaceLastTime(...) (skip left part of face)"  );
       }
       
       // Right half
@@ -63,8 +68,13 @@ class RollOverUpdatedFace(AbstractFVActionSet):
             logDebug( "touchFaceLastTime(...)", "normal=" << normal << ",{{NEW_ACCESSOR}}[" << index << "]->{{OLD_ACCESSOR}}[" << index << "]" );
             logDebug( "touchFaceLastTime(...)", "normal=" << normal << ",{{UPDATE_ACCESSOR}}[" << index << "]->{{NEW_ACCESSOR}}[" << index << "]" );
             for (int j=0; j<{{UNKNOWNS}}; j++) {
+              {% if OVERWRITE_OLD_AND_NEW_SOLUTION %}
+              {{NEW_ACCESSOR}}.value[index*{{UNKNOWNS}}+j] = {{UPDATE_ACCESSOR}}.value[index*{{UNKNOWNS}}+j]; 
+              {{OLD_ACCESSOR}}.value[index*{{UNKNOWNS}}+j] = {{UPDATE_ACCESSOR}}.value[index*{{UNKNOWNS}}+j]; 
+              {% else %}
               {{OLD_ACCESSOR}}.value[index*{{UNKNOWNS}}+j] = {{NEW_ACCESSOR}}.value[index*{{UNKNOWNS}}+j]; 
               {{NEW_ACCESSOR}}.value[index*{{UNKNOWNS}}+j] = {{UPDATE_ACCESSOR}}.value[index*{{UNKNOWNS}}+j]; 
+              {% endif %}
             }
           }
         }
@@ -75,8 +85,8 @@ class RollOverUpdatedFace(AbstractFVActionSet):
         logTraceOut( "touchFaceLastTime(...)" );
       }
       else {
-        logTraceIn( "touchFaceLastTime(...)---RollOverUpdatedFace (skip right part of face)"  );
-        logTraceOut( "touchFaceLastTime(...)---RollOverUpdatedFace (skip right part of face)"  );
+        logTraceIn( "touchFaceLastTime(...) (skip right part of face)"  );
+        logTraceOut( "touchFaceLastTime(...) (skip right part of face)"  );
       }
       
       int index = 0;
@@ -85,7 +95,19 @@ class RollOverUpdatedFace(AbstractFVActionSet):
 """ )
   
   
-  def __init__(self,solver,guard):
+  def __init__(self,solver,guard,overwrite_old_and_new_solution_with_update):
+    """
+    
+    ## Attributes
+    
+    overwrite_old_and_new_solution_with_update: Boolean
+      This flag should be set if you use the action set throughout the 
+      initialisation, where you determine an update on the face and 
+      this update should then be used for old and new face data (as 
+      they are the same). If it is set to false, then the new solution
+      is backuped in old, and the update overwrites the new data field.
+    
+    """
     AbstractFVActionSet.__init__(self,solver)
     self.d = {}
     self.d[ "GUARD" ]           = guard
@@ -96,6 +118,7 @@ class RollOverUpdatedFace(AbstractFVActionSet):
     self.d[ "OLD_ACCESSOR" ]    = "fineGridFace" + solver._patch_overlap_old.name
     self.d[ "NEW_ACCESSOR" ]    = "fineGridFace" + solver._patch_overlap_new.name
     self.d[ "FACE_METADATA_ACCESSOR" ] = "fineGridFace"  + solver._face_label.name
+    self.d[ "OVERWRITE_OLD_AND_NEW_SOLUTION" ] = overwrite_old_and_new_solution_with_update
 
 
   def get_body_of_operation(self,operation_name):
