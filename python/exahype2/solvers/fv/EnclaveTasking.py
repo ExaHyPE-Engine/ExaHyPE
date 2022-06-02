@@ -357,8 +357,7 @@ class EnclaveTasking( FV ):
       "or (repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::Secondary                       and marker.willBeEnclaveCell() ) " + \
       "or (repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::GridInitialisation )" + \
       ")"
-    self._action_set_roll_over_update_of_faces_in_initialisation.guard = self._store_face_data_default_guard() + " and " + self._secondary_sweep_or_grid_initialisation_guard
-    self._action_set_roll_over_update_of_faces_for_time_step.guard     = self._store_face_data_default_guard() + " and " + self._secondary_sweep_or_grid_initialisation_guard
+    self._action_set_roll_over_update_of_faces.guard = self._store_face_data_default_guard() + " and " + self._secondary_sweep_or_grid_initialisation_guard
     self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement.guard = self._store_cell_data_default_guard() + " and " + self._secondary_sweep_or_grid_initialisation_guard
 
     

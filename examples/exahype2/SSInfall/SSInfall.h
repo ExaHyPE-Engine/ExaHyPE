@@ -45,6 +45,9 @@ class examples::exahype2::SSInfall::SSInfall: public AbstractSSInfall {
      * From m_tot_copy[sample_number-1].
      */
     static double _mTotMax;
+
+    static const tarch::la::Vector<Dimensions,double>  _overDensityCentre;
+
     #if defined(GPUOffloadingOMP)
     #pragma omp end declare target
     #endif

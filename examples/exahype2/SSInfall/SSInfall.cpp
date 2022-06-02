@@ -9,6 +9,9 @@
 tarch::logging::Log   examples::exahype2::SSInfall::SSInfall::_log( "examples::exahype2::SSInfall::SSInfall" );
 
 
+const tarch::la::Vector<Dimensions,double>  examples::exahype2::SSInfall::SSInfall::_overDensityCentre = {0.0, 0.0, 0.0};
+
+
 #if defined(GPUOffloadingOMP)
 #pragma omp declare target
 #endif
@@ -406,7 +409,7 @@ void examples::exahype2::SSInfall::SSInfall::sourceTerm(
         nonCriticalAssertion4( m_in<1e100, volumeX, volumeH, t, dt );
       }
       else {
-        assertion( isOutsideOfLargestRadius(volumeX, volumeH) );
+        assertion3( isOutsideOfLargestRadius(volumeX, volumeH), volumeX, volumeH, _rMax );
         m_in=(mass_interpolate(r_coor, MassCal)+delta_m)/4.0/tarch::la::PI;
         nonCriticalAssertion4( not std::isnan(m_in), volumeX, volumeH, t, dt );
         nonCriticalAssertion4( m_in<1e100, volumeX, volumeH, t, dt );
@@ -481,7 +484,7 @@ bool examples::exahype2::SSInfall::SSInfall::isOutsideOfLargestRadius(
   const tarch::la::Vector<Dimensions,double>&  patchCentre,
   const tarch::la::Vector<Dimensions,double>&  patchH
 ) const {
-  double r_coor         = tarch::la::norm2(patchCentre - center);
+  double r_coor         = tarch::la::norm2(patchCentre - _overDensityCentre);
   double safetyDistance = std::sqrt(3) * tarch::la::max(patchH) / 2.0;
   return  r_coor + safetyDistance > _rMax;
 }

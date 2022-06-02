@@ -22,9 +22,10 @@ class RollOverUpdatedFace(AbstractFVActionSet):
   """
   TemplateHandleFace = jinja2.Template( """
     if ( {{GUARD}} ) {
-      logTraceInWith2Arguments( "touchFaceLastTime(...)---RollOverUpdatedFace", fineGridFace{{SOLVER_NAME}}FaceLabel.toString(), marker.toString() );
-      
       const int normal = marker.getSelectedFaceNumber() % Dimensions;
+      
+      logTraceInWith3Arguments( "touchFaceLastTime(...)", fineGridFace{{SOLVER_NAME}}FaceLabel.toString(), marker.toString(), normal );
+      
       // Left half
       if ({{FACE_METADATA_ACCESSOR}}.getUpdated(0)) {
         logTraceInWith1Argument( "touchFaceLastTime(...)", "left half of face"  );
@@ -36,13 +37,10 @@ class RollOverUpdatedFace(AbstractFVActionSet):
             logDebug( "touchFaceLastTime(...)", "normal=" << normal << ",{{NEW_ACCESSOR}}[" << index << "]->{{OLD_ACCESSOR}}[" << index << "]" );
             logDebug( "touchFaceLastTime(...)", "normal=" << normal << ",{{UPDATE_ACCESSOR}}[" << index << "]->{{NEW_ACCESSOR}}[" << index << "]" );
             for (int j=0; j<{{UNKNOWNS}}; j++) {
-              {% if OVERWRITE_OLD_AND_NEW_SOLUTION %}
-              {{NEW_ACCESSOR}}.value[index*{{UNKNOWNS}}+j] = {{UPDATE_ACCESSOR}}.value[index*{{UNKNOWNS}}+j]; 
-              {{OLD_ACCESSOR}}.value[index*{{UNKNOWNS}}+j] = {{UPDATE_ACCESSOR}}.value[index*{{UNKNOWNS}}+j]; 
-              {% else %}
+              // The initialisation mapping has an epilogue which then copies this
+              // updated new solution over into the old one
               {{OLD_ACCESSOR}}.value[index*{{UNKNOWNS}}+j] = {{NEW_ACCESSOR}}.value[index*{{UNKNOWNS}}+j]; 
               {{NEW_ACCESSOR}}.value[index*{{UNKNOWNS}}+j] = {{UPDATE_ACCESSOR}}.value[index*{{UNKNOWNS}}+j]; 
-              {% endif %}
             }
           }
         }
@@ -68,13 +66,10 @@ class RollOverUpdatedFace(AbstractFVActionSet):
             logDebug( "touchFaceLastTime(...)", "normal=" << normal << ",{{NEW_ACCESSOR}}[" << index << "]->{{OLD_ACCESSOR}}[" << index << "]" );
             logDebug( "touchFaceLastTime(...)", "normal=" << normal << ",{{UPDATE_ACCESSOR}}[" << index << "]->{{NEW_ACCESSOR}}[" << index << "]" );
             for (int j=0; j<{{UNKNOWNS}}; j++) {
-              {% if OVERWRITE_OLD_AND_NEW_SOLUTION %}
-              {{NEW_ACCESSOR}}.value[index*{{UNKNOWNS}}+j] = {{UPDATE_ACCESSOR}}.value[index*{{UNKNOWNS}}+j]; 
-              {{OLD_ACCESSOR}}.value[index*{{UNKNOWNS}}+j] = {{UPDATE_ACCESSOR}}.value[index*{{UNKNOWNS}}+j]; 
-              {% else %}
+              // The initialisation mapping has an epilogue which then copies this
+              // updated new solution over into the old one
               {{OLD_ACCESSOR}}.value[index*{{UNKNOWNS}}+j] = {{NEW_ACCESSOR}}.value[index*{{UNKNOWNS}}+j]; 
               {{NEW_ACCESSOR}}.value[index*{{UNKNOWNS}}+j] = {{UPDATE_ACCESSOR}}.value[index*{{UNKNOWNS}}+j]; 
-              {% endif %}
             }
           }
         }
@@ -90,12 +85,12 @@ class RollOverUpdatedFace(AbstractFVActionSet):
       }
       
       int index = 0;
-      logTraceOut( "touchFaceLastTime(...)---RollOverUpdatedFace" );
+      logTraceOut( "touchFaceLastTime(...)" );
     }
 """ )
   
   
-  def __init__(self,solver,guard,overwrite_old_and_new_solution_with_update):
+  def __init__(self,solver,guard):
     """
     
     ## Attributes
@@ -118,7 +113,6 @@ class RollOverUpdatedFace(AbstractFVActionSet):
     self.d[ "OLD_ACCESSOR" ]    = "fineGridFace" + solver._patch_overlap_old.name
     self.d[ "NEW_ACCESSOR" ]    = "fineGridFace" + solver._patch_overlap_new.name
     self.d[ "FACE_METADATA_ACCESSOR" ] = "fineGridFace"  + solver._face_label.name
-    self.d[ "OVERWRITE_OLD_AND_NEW_SOLUTION" ] = overwrite_old_and_new_solution_with_update
 
 
   def get_body_of_operation(self,operation_name):
