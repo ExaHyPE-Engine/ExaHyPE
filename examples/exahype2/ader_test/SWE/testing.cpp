@@ -36,11 +36,6 @@ void examples::exahype2::testing::testing::initialCondition(
 
   // @todo Implement your stuff here
 
-  Q[0] = 0.0;
-  Q[1] = 0.0;
-  Q[2] = 0.0;
-
-  /*
   double x_0 = x[0]-0.5;
   x_0 = x_0*x_0;
   double y_0 = x[1]-0.5;
@@ -52,7 +47,6 @@ void examples::exahype2::testing::testing::initialCondition(
 //  Q[0] = (x[0]<0.5 ? 1.0 : 1.01);
   Q[1] = 0.0;
   Q[2] = 0.0;
-  */
 
   logTraceOut( "initialCondition(...)" );
 }
