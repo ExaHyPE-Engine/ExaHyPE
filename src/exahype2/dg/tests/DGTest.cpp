@@ -112,8 +112,8 @@ void exahype2::dg::tests::DGTest::UtilsTest(){
           nodesPerAxis
           );
 
-      validateNumericalEquals(firstCellIndex%nodesPerAxis, 0);
-      validateNumericalEquals(lastCellIndex%nodesPerAxis, nodesPerAxis-1);
+      validateNumericalEquals((float)(firstCellIndex%nodesPerAxis), 0.0);
+      validateNumericalEquals((float)(lastCellIndex%nodesPerAxis), (float)nodesPerAxis-1.0);
     }
   }
 
@@ -939,6 +939,18 @@ void exahype2::dg::tests::DGTest::runTest(){
 
   double QIn[strideQ*nodesPerCell];
   double QOut[strideQ*nodesPerCell];
+  
+  double* QLeft  = new double[2*nodesPerFace*strideQ]{0.0};
+  double* QRight = new double[2*nodesPerFace*strideQ]{0.0};
+  double* QLower = new double[2*nodesPerFace*strideQ]{0.0};
+  double* QUpper = new double[2*nodesPerFace*strideQ]{0.0};
+#if Dimensions==3
+  double* QFront = new double[2*nodesPerFace*strideQ]{0.0};
+  double* QBack  = new double[2*nodesPerFace*strideQ]{0.0};
+#endif
+  
+  double* QHullForRiemann   = new double[2*Dimensions*nodesPerFace*strideQ];
+  double* QOutAfterRiemann  = new double[nodesPerCell*strideQ]{0.0};
 
   for(int node=0; node<nodesPerCell; node++){
     QIn[node*strideQ+0] = 0.1;
@@ -1001,15 +1013,6 @@ void exahype2::dg::tests::DGTest::runTest(){
           unknowns,
           auxiliaryVariables
       );
-
-    double QLeft[2*nodesPerFace*strideQ]{0};
-    double QRight[2*nodesPerFace*strideQ]{0};
-    double QLower[2*nodesPerFace*strideQ]{0};
-    double QUpper[2*nodesPerFace*strideQ]{0};
-  #if Dimensions==3
-    double QFront[2*nodesPerFace*strideQ]{0};
-    double QBack[2*nodesPerFace*strideQ]{0};
-  #endif
 
     projectVolumetricDataOntoFaces(
       QIn,
@@ -1095,8 +1098,6 @@ void exahype2::dg::tests::DGTest::runTest(){
       maxEigenvaluePerFace
     );
 
-    double QHullForRiemann[2*Dimensions*nodesPerFace*strideQ];
-    double QOutAfterRiemann[nodesPerCell*strideQ] = {0.0};
 
     computeRusanovOnHull(
         [&](
@@ -1175,6 +1176,18 @@ void exahype2::dg::tests::DGTest::runTest(){
     }
 
   }
+  
+  delete[] QLeft;
+  delete[] QRight;
+  delete[] QLower;
+  delete[] QUpper;
+#if Dimensions==3
+  delete[] QFront;
+  delete[] QBack;
+#endif
+  
+  delete[] QHullForRiemann;
+  delete[] QOutAfterRiemann;
 
 }
 
