@@ -54,6 +54,7 @@ parser.add_argument("-m",     "--mode",               dest="mode",              
 parser.add_argument("-c",     "--clean",              dest="clean_temporary_directories",  action="store_true",         help="Remove temporary directories before script starts" )
 parser.add_argument("-r",     "--random",             dest="random_particle_layout",       action="store_true",         help="Use a randomised initial particle layout" )
 parser.add_argument("-dist",  "--particle-distance",  dest="particle_distance",            required=True,  type=float,  help="Particle distance (start with 1/64 by default)" )
+parser.add_argument("-j",   "--parallel-builds",      dest="parallel_builds",              default=-1,       type=int,  help="Number of parallel builds" )
 args = parser.parse_args()
 
 
@@ -474,7 +475,7 @@ init_setup.add_action_set( peano4.toolbox.particles.InsertParticlesAlongCartesia
     #include "equation_of_state.h"
     """,
   computational_domain_offset=[0.0, 0.0]
-  #, guard="std::abs( 0.5-particle->getX(1) ) < 0.02"
+#  , guard="std::abs( 0.5-particle->getX(1) ) < 0.02"
   ))
 
 init_setup.add_action_set( particle_tree_analysis )
@@ -2037,7 +2038,7 @@ project.generate()
 
 
 # We can do this here or in the terminal.
-project.build()
+project.build( number_of_parallel_builds = args.parallel_builds )
 
 
 # ## Run code
