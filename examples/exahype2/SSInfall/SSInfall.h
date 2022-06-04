@@ -46,7 +46,8 @@ class examples::exahype2::SSInfall::SSInfall: public AbstractSSInfall {
      */
     static double _mTotMax;
 
-    static const tarch::la::Vector<Dimensions,double>  _overDensityCentre;
+    // @todo I've just removed this field. Couldn't find out where it is used.
+//    double t_record=0.0;
 
     #if defined(GPUOffloadingOMP)
     #pragma omp end declare target
@@ -65,16 +66,7 @@ class examples::exahype2::SSInfall::SSInfall: public AbstractSSInfall {
      */
     static double getForceDensityNorm(double r_coord, double m_in, double t, double density, double a_input);
   public:
-    //int sample_number=10;
-    //double m_tot[10]={0,0,0,0,0,0,0,0,0,0};
-    //double r_s[10]={0.05*1.732,0.1*1.732,0.15*1.732,0.20*1.732,0.25*1.732,0.3*1.732,0.35*1.732,0.4*1.732,0.45*1.732,0.5*1.732};
-    double t_record=0.0;
-    const tarch::la::Vector<Dimensions,double> center={0,0,0};
-    //double G=1;
-    //double t_ini=0.5;
-    //double r_ini=0.2;
-    //double delta_rho=0.01;
-    //double initial_internal_energy=0.1;
+    static const tarch::la::Vector<Dimensions,double>  OverDensityCentre;
 
     void startTimeStep(
       double globalMinTimeStamp,

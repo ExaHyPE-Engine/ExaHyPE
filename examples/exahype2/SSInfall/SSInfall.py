@@ -138,31 +138,6 @@ if __name__ == "__main__":
         self._domain_r = domain_r  
 
 
-
-      def create_action_sets(self):
-        SuperClass.create_action_sets(self)
-
-        self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement.switch_restriction_scheme( "averaging" )
-        self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement.switch_interpolation_scheme( "linear" )
-
-        if args.interpolation=="constant":
-          self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement.switch_interpolation_scheme( "piecewise_constant" )
-          print( "Interpolation rule: piecewise_constant" )
-        if args.interpolation=="linear-optimised":
-          self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement.switch_interpolation_scheme( "linear_with_linear_extrapolation_and_linear_normal_interpolation" )
-          print( "Interpolation rule: linear extrapolation and linear normal interpolation" )
-        if args.interpolation=="outflow":
-          self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement.switch_interpolation_scheme( "outflow" )
-          print( "Interpolation rule: outflow (from fine grid into coarse grid)" )
-
-        if args.restriction=="average":
-          self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement.switch_restriction_scheme( "averaging" )
-          print( "Restiction rule: averaging" )
-        if args.restriction=="inject":
-          self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement.switch_restriction_scheme( "inject" )
-          print( "Restiction rule: injection" )
-
-
       def get_user_action_set_includes(self):
         """
          We take this routine to add a few additional include statements.
@@ -183,9 +158,9 @@ if __name__ == "__main__":
         # @todo To be discussed with Han
         self._action_set_postprocess_solution.guard = "repositories::{{SOLVER_INSTANCE}}.isLastGridSweepOfTimeStep() and repositories::{{SOLVER_INSTANCE}}.isOutsideOfLargestRadius(marker.x(),marker.h())"
         self._action_set_postprocess_solution.add_postprocessing_kernel( """
-      double r_coor = (volumeX(0)-repositories::{{SOLVER_INSTANCE}}.center(0))*(volumeX(0)-repositories::{{SOLVER_INSTANCE}}.center(0))
-                    + (volumeX(1)-repositories::{{SOLVER_INSTANCE}}.center(1))*(volumeX(1)-repositories::{{SOLVER_INSTANCE}}.center(1))
-                    + (volumeX(2)-repositories::{{SOLVER_INSTANCE}}.center(2))*(volumeX(2)-repositories::{{SOLVER_INSTANCE}}.center(2));
+      double r_coor = (volumeX(0)-repositories::{{SOLVER_INSTANCE}}.OverDensityCentre(0))*(volumeX(0)-repositories::{{SOLVER_INSTANCE}}.OverDensityCentre(0))
+                    + (volumeX(1)-repositories::{{SOLVER_INSTANCE}}.OverDensityCentre(1))*(volumeX(1)-repositories::{{SOLVER_INSTANCE}}.OverDensityCentre(1))
+                    + (volumeX(2)-repositories::{{SOLVER_INSTANCE}}.OverDensityCentre(2))*(volumeX(2)-repositories::{{SOLVER_INSTANCE}}.OverDensityCentre(2));
 
       r_coor=pow(r_coor,0.5);
       repositories::{{SOLVER_INSTANCE}}.add_mass(r_coor,value[0],volumeH(0));  
@@ -197,7 +172,6 @@ if __name__ == "__main__":
         int aux_var=""" + str( self._auxiliary_variables ) + """;
         double domain_r=""" + str( self._domain_r ) + """;
         int sample=repositories::{{SOLVER_INSTANCE}}.sample_number;
-        tarch::la::Vector<Dimensions,double> center=repositories::{{SOLVER_INSTANCE}}.center;
         dfor(cell,patchSize) {
           tarch::la::Vector<Dimensions,double> coor;
           for (int i=0;i<Dimensions;i++) coor(i) = marker.getOffset()(i)+ (cell(i)+0.5)*volumeH;
@@ -205,10 +179,6 @@ if __name__ == "__main__":
           tarch::la::Vector<Dimensions,int> currentCell = cell + tarch::la::Vector<Dimensions,int>(1);
           const int cellSerialised  = peano4::utils::dLinearised(currentCell, patchSize + 2*1);
           
-          //double r_coor=(coor(0)-center(0))*(coor(0)-center(0))+(coor(1)-center(1))*(coor(1)-center(1))+(coor(2)-center(2))*(coor(2)-center(2));
-          //r_coor=pow(r_coor,0.5);
-          //repositories::{{SOLVER_INSTANCE}}.add_mass(r_coor,reconstructedPatch[cellSerialised*(5+aux_var)+0],volumeH); 
-
           double rho =  reconstructedPatch[cellSerialised*(5+aux_var)+0];      
           double m1  =  reconstructedPatch[cellSerialised*(5+aux_var)+1];
           double m2  =  reconstructedPatch[cellSerialised*(5+aux_var)+2];
@@ -347,6 +317,26 @@ if __name__ == "__main__":
     elif args.extension=="rhointer":
       my_solver.add_mass_cal_rhointer()
       userinfo.append(("mass calculation schme: rho interpolation",None))
+
+#/        self.restriction_scheme( "averaging" )
+#        self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement.switch_interpolation_scheme( "linear" )
+
+    if args.interpolation=="constant":
+      my_solver.interpolation = "piecewise_constant"
+      print( "Interpolation rule: piecewise_constant" )
+    if args.interpolation=="linear-optimised":
+      my_solver.interpolation = "linear_with_linear_extrapolation_and_linear_normal_interpolation"
+      print( "Interpolation rule: linear extrapolation and linear normal interpolation" )
+    if args.interpolation=="outflow":
+      my_solver.interpolation = "outflow" 
+      print( "Interpolation rule: outflow (from fine grid into coarse grid)" )
+
+    if args.restriction=="average":
+      my_solver.restriction = "averaging"
+      print( "Restiction rule: averaging" )
+    if args.restriction=="inject":
+      my_solver.restriction = "inject" 
+      print( "Restiction rule: injection" )
 
     #my_solver._auxiliary_variables = 23
     
