@@ -91,7 +91,7 @@ void exahype2::fv::rusanov::sycl::timeStepWithRusanov_batched_heap_static_calls(
           }
         );
       }
-    ).wait();
+    ).wait(); // @todo Sind Kernels wirklich out of order, d.h. braucht man wait() hier?
   }
   else if (Dimensions==3 and evaluateSource) {
     queue.submit(

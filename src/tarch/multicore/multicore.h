@@ -262,7 +262,8 @@ and
   };
 
   #if defined(GPUOffloadingHIP)
-    #define GPUCallableMethod __global__ __device__
+    #define GPUCallableMethod __host__ __device__
+    //#define GPUCallableMethod __global__ __device__
   #elif defined(GPUOffloadingSYCL)
     #define GPUCallableMethod inline SYCL_EXTERNAL
   #else
