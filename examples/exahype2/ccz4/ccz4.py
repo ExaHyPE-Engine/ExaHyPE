@@ -60,7 +60,7 @@ if __name__ == "__main__":
     parser.add_argument("-exn", "--exe-name",        dest="exe_name",    type=str, default="",  help="name of output executable file" )
     parser.add_argument("-outdir", "--output-directory",        dest="path",    type=str, default="./",  help="specify the output directory, include the patch file and tracer file" )
     parser.add_argument("-interp",   "--interpolation", dest="interpolation",     choices=["constant","order-2","linear-constant-extrap","linear-linear-extrap","linear-con-extrap-lin-normal-interp","linear-lin-extrap-lin-normal-interp"], default="linear-lin-extrap-lin-normal-interp",  help="interpolation scheme for AMR" )
-    parser.add_argument("-restrict", "--restriction",   dest="restriction",       choices=["average", "inject", "average+enforce", "inject+enforce"], default="average",  help="restriction scheme for AMR" )
+    parser.add_argument("-restrict", "--restriction",   dest="restriction",       choices=["average", "inject" ], default="average",  help="restriction scheme for AMR" )
 
 
     for k, v in floatparams.items(): parser.add_argument("--{}".format(k), dest="CCZ4{}".format(k), type=float, default=v, help="default: %(default)s")
@@ -204,50 +204,40 @@ if __name__ == "__main__":
         self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement.additional_includes += """ 
 #include "../CCZ4Kernels.h"
             """
-        self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement.switch_restriction_scheme( "averaging" )
-        #self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement.switch_interpolation_scheme( "linear" )
+        self.restriction = "averaging" # "linear"
 
         if args.interpolation=="constant":
-          self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement.switch_interpolation_scheme( "piecewise_constant" )
+          self.interpolation = "piecewise_constant"
           print( "Interpolation rule: piecewise_constant" )
-        #if args.interpolation=="linear-slow" or args.interpolation=="linear-slow+enforce":
-        #  self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement.switch_interpolation_scheme( "linear" )
-        #  print( "Interpolation rule: linear interpolation without optimisation" )
-        #if args.interpolation=="linear" or args.interpolation=="linear+enforce":
-        #  self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement.switch_interpolation_scheme( "linear_precomputed_operators<" + str(self._patch_size) +">" )
-        #  print( "Interpolation rule: optimised linear interpolation with patch size " + str(self._patch_size) )
-        #if args.interpolation=="outflow":
-        #  self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement.switch_interpolation_scheme( "outflow" )
-        #  print( "Interpolation rule: outflow (from fine grid into coarse grid)" )   
         if args.interpolation=="linear-constant-extrap":
-          self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement.switch_interpolation_scheme( "linear_with_constant_extrapolation" )
+          self.interpolation = "linear_with_constant_extrapolation" 
           print( "Interpolation rule: linear constant extrapolation" )
         if args.interpolation=="linear-linear-extrap":
-          self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement.switch_interpolation_scheme( "linear_with_linear_extrapolation" )  
+          self.interpolation = "linear_with_linear_extrapolation"
           print( "Interpolation rule: linear extrapolation" )
         if args.interpolation=="linear-con-extrap-lin-normal-interp":
-          self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement.switch_interpolation_scheme( "linear_with_constant_extrapolation_and_linear_normal_interpolation" )
+          self.interpolation = "linear_with_constant_extrapolation_and_linear_normal_interpolation"
           print( "Interpolation rule: linear+constant extrapolation and linear normal interpolation" )
         if args.interpolation=="linear-lin-extrap-lin-normal-interp":
-          self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement.switch_interpolation_scheme( "linear_with_linear_extrapolation_and_linear_normal_interpolation" )
+          self.interpolation = "linear_with_linear_extrapolation_and_linear_normal_interpolation" 
           print( "Interpolation rule: linear+linear extrapolation and linear normal interpolation" )
 
         if args.interpolation=="order-2":
-          self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement.switch_interpolation_scheme( "linear" )
+          self.interpolation = "linear" 
           # @todo, we have to change this one
           #self.overlap=2
 
-        if args.restriction=="average" or args.restriction=="average+enforce":
-          self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement.switch_restriction_scheme( "averaging" )
+        if args.restriction=="average":
+          self.restriction =  "averaging"
           print( "Restiction rule: averaging" )
-        if args.restriction=="inject" or args.restriction=="inject+enforce":
-          self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement.switch_restriction_scheme( "inject" )
+        if args.restriction=="inject":
+          self.restriction_scheme = "inject" 
           print( "Restiction rule: injection" )
           
-        if args.interpolation=="linear+enforce" or args.interpolation=="linear-slow+enforce":
-          self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement.switch_point_wise_postprocessing_of_interpolation( "examples::exahype2::ccz4::enforceCCZ4constraints(targetVolume)" )
-        if args.restriction=="average+enforce" or args.restriction=="inject+enforce":
-          self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement.switch_point_wise_postprocessing_of_restriction( "examples::exahype2::ccz4::enforceCCZ4constraints(targetVolume)" )
+        #if args.interpolation=="linear+enforce" or args.interpolation=="linear-slow+enforce":
+        #  self.point_wise_postprocessing_of_interpolation = "examples::exahype2::ccz4::enforceCCZ4constraints(targetVolume)" )
+        #if args.restriction=="average+enforce" or args.restriction=="inject+enforce":
+        #  self.point_wise_postprocessing_of_restriction = "examples::exahype2::ccz4::enforceCCZ4constraints(targetVolume)"
 
 
       def get_user_action_set_includes(self):
@@ -337,10 +327,8 @@ if __name__ == "__main__":
           {
             ThetaOutputNCP(ncp,faceQ+2*d*59,faceDeltaQ+2*d*59,d);
             ncpsum+=ncp[0];
-            //if (ncp[0]>0.0 or ncp[0]<0.0) std::cout<< ncp[0] << std::endl; 
             ThetaOutputNCP(ncp,faceQ+2*d*59+59,faceDeltaQ+2*d*59+59,d);
             ncpsum+=ncp[0];
-            //if (ncp[0]>0.0 or ncp[0]<0.0) std::cout<< ncp[0] << std::endl; 
           }
           ThetaOutputSrc(src,reconstructedPatch+cellSerialised*(59+n_a_v),gradQ);
           reconstructedPatch[cellSerialised*(59+n_a_v)+59+6] = ncpsum / 2.0 / volumeH;
@@ -368,7 +356,6 @@ if __name__ == "__main__":
           reconstructedPatch[cellSerialised*(59+n_a_v)+59+7]=Psi4[0];//re part of psi4
 		      reconstructedPatch[cellSerialised*(59+n_a_v)+59+8]=Psi4[1];//im part of psi4
 		      */
-		      //std::cout<< Psi4[0] << std::endl;
         }
     """
 

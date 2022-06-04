@@ -212,22 +212,17 @@ thesolver.set_implementation( refinement_criterion=exahype2.solvers.fv.PDETerms.
 
 
 if args.interpolation_scheme=="constant":
-  thesolver._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement.switch_interpolation_scheme( "piecewise_constant" )
-  thesolver.create_action_sets()
+  thesolver.interpolation = "piecewise_constant"
 elif args.interpolation_scheme=="linear-constant-extrapolation":
-  thesolver._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement.switch_interpolation_scheme( "linear_with_constant_extrapolation" )
-  thesolver.create_action_sets()
+  thesolver.interpolation = "linear_with_constant_extrapolation"
 elif args.interpolation_scheme=="linear-linear-extrapolation":
-  thesolver._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement.switch_interpolation_scheme( "linear_with_linear_extrapolation" )
-  thesolver.create_action_sets()
+  thesolver.interpolation = "linear_with_linear_extrapolation"
 elif args.interpolation_scheme=="linear-linear-extrapolation-linear-normal-interpolation":
-  thesolver._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement.switch_interpolation_scheme( "linear_with_linear_extrapolation_and_linear_normal_interpolation" )
-  thesolver.create_action_sets()
+  thesolver.interpolation = "linear_with_linear_extrapolation_and_linear_normal_interpolation"
 elif args.interpolation_scheme=="order-2":
-  thesolver._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement.switch_interpolation_scheme( "linear" )
+  thesolver.interpolation = "linear"
   # @todo Han, we have to change this one
   thesolver.overlap=2
-  thesolver.create_action_sets()
 else:
   raise Exception( "Unknown interpolation scheme");
   
