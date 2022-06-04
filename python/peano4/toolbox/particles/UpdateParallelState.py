@@ -162,20 +162,11 @@ if ( {{GUARD}} ) {
         p = fineGridVertex{{PARTICLES_CONTAINER}}.erase(p);
       }
       else {
-        // particle should never move from a remote place into local domain, as we should
-        // never move around virtual particles. The move should happen on another rank and
-        // we then should receive the new particle. It can however happen that a particle 
-        // is considered to be local and then switches to virtual when the particle is new,
-        // as we might have inserted it into the wrong place.
-        assertion3(
-          (*p)->getMoveState()==globaldata::{{PARTICLE}}::MoveState::New,
-          (*p)->toString(),
-          marker.toString(),
-          _treeNumber
-        );          
-        logDebug( "touchVertexLastTime()", "new particle " << (*p)->toString() << " had been originally labelled as virtual but now is confirmed as local on tree " << _treeNumber );
-        //delete *p;
-        //p = fineGridVertex{{PARTICLES_CONTAINER}}.erase(p);
+        logDebug( 
+          "touchVertexLastTime()", 
+          "new particle " << (*p)->toString() << " had been originally labelled as virtual but now is confirmed as local on tree " << _treeNumber <<
+          ". This can happen throughout particle insertion or due to lifts and sieves"
+        );
         (*p)->setParallelState( globaldata::{{PARTICLE}}::ParallelState::Local );
         _numberOfLocalParticles++;
         p++;
