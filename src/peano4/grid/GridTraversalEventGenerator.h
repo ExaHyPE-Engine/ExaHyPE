@@ -195,15 +195,34 @@ class peano4::grid::GridTraversalEventGenerator {
     /**
      * Identifies for the @f$ 2 \cdot d @f$ faces whether they are local or not.
      *
-     * <h2> Implementation </h2>
+     * ## Implementation
      *
      * - I loop over the 2d faces.
      * - Per face, I loop over all @f$ 2^d @f$ vertices but alter the entry
-     *   along the normal manually. So I'm inefficient, but I don't care.
+     *   along the normal manually. So I collapse the vertex index along the
+     *   normal. This is inefficient, as I'm effectively checking each vertex
+     *   twice, but I don't care.
      * - Per relevant vertex, I have to check two entries in the adjacency
      *   list.
      * - Splitting and split-triggered ranks are still considered to be
      *   local.
+     *
+     * ## Hanging vertices
+     *
+     * I assume that all adjacency information/locality information on vertices
+     * is correctly set, i.e. is interpolated from the next coarser level. So
+     * I have valid neighbours on the vertex per se. Actually, however, the
+     * neighbour might be wrong, as an adjacent cell might have been given away
+     * to another rank.
+     *
+     * We however have to be aware that a hanging vertex entry might be wrong if
+     * the corresponding adjacency value is not the one pointing towards our cell
+     * and the vertex is also hanging. So these constellations have to be ignored.
+     *
+     * @see peano4::grid::Spacetree::getAdjacentRanksForNewVertex() for a
+     *   discussion how adjacency lists are computed.
+     * @see peano4::grid::Spacetree::loadVertices() for the location where these
+     *   lists are set for hanging and new vertices.
      */
     std::bitset<TwoTimesD> areFacesLocal(
       GridVertex  vertices[TwoPowerD],
@@ -228,7 +247,24 @@ class peano4::grid::GridTraversalEventGenerator {
      * vertex, but it still has to do the send/receive stuff, i.e. it still
      * has to handle the vertices.
      *
-     * Hanging vertices are never local to the current spacetree.
+     * We assume that the adjacency information of hanging vertices is
+     * properly set. So I have valid neighbours. Actually, the neighbour might
+     * be wrong, but if it is the local neighbour, then it is correct.
+     * Therefore, we can distinguish hanging remote and hanging local vertices.
+     *
+     * @see peano4::grid::Spacetree::getAdjacentRanksForNewVertex() for a
+     *   discussion how adjacency lists are computed.
+     * @see peano4::grid::Spacetree::loadVertices() for the location where these
+     *   lists are set for hanging and new vertices.
+     *
+     * The treatment of hanging nodes in the action sets digesting the
+     * events thus differs from how we handle hanging nodes within the core
+     * spacetree. For the lattern, hanging vertices are never local to the
+     * current spacetree.
+     *
+     * @see Spacetree::isVertexAdjacentToLocalSpacetree() for further remarks
+     *   on the difference between hanging vertices within the meshes and
+     *   for events.
      */
     bool isVertexAdjacentToLocalSpacetree(
       GridVertex  vertex,

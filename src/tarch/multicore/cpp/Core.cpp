@@ -3,6 +3,8 @@
 #include "tarch/multicore/multicore.h"
 #include "tarch/compiler/CompilerSpecificSettings.h"
 
+#include "tarch/multicore/tbb/SYCL.h"
+
 
 #ifdef CompilerHasSysinfo
 #include <sched.h>
@@ -19,8 +21,14 @@ tarch::logging::Log tarch::multicore::Core::_log( "tarch::multicore::Core" );
 
 
 tarch::multicore::Core::Core():
-  _numberOfThreads(std::thread::hardware_concurrency()) {
+  _numberOfThreads(std::thread::hardware_concurrency()),
+  _numberOfDevices(0) {
   internal::configureInternalTaskQueues(_numberOfThreads);
+
+  #if defined(GPUOffloadingSYCL)
+  initSYCLQueues();
+  _numberOfDevices = getNumberOfSYCLQueues();
+  #endif
 }
 
 

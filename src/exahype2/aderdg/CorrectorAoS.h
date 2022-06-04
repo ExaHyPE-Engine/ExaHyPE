@@ -1,9 +1,16 @@
 #ifndef _EXAHYPE2_ADERDG_CORRECTOR_AOS_H_
 #define _EXAHYPE2_ADERDG_CORRECTOR_AOS_H_
 
+#include "../config.h"
+
 #include "tarch/la/Vector.h"
 
+#if GPUOffloadingSYCL>0
+#include "tarch/multicore/tbb/SYCL.h"
+#endif
+
 #include <functional>
+
 
 namespace exahype2 {
   namespace aderdg {
@@ -31,7 +38,7 @@ namespace exahype2 {
     #pragma omp declare target
     #endif
 */
-    GPUCallableMethod double corrector_adjustSolution_computeMaxEigenvalue_body_AoS(
+    double corrector_adjustSolution_computeMaxEigenvalue_body_AoS(
         std::function< void(
           double * __restrict__                       Q,
           const tarch::la::Vector<Dimensions,double>& x,
@@ -87,7 +94,7 @@ namespace exahype2 {
     #pragma omp declare target
     #endif
 */
-    GPUCallableMethod void corrector_addFluxContributions_body_AoS(
+    void corrector_addFluxContributions_body_AoS(
         std::function< void(
           const double * const __restrict__                 Q,
           const tarch::la::Vector<Dimensions,double>& x,
@@ -142,7 +149,7 @@ namespace exahype2 {
     #pragma omp declare target
     #endif
 */
-    GPUCallableMethod void corrector_addSourceContributions_body_AoS(
+    void corrector_addSourceContributions_body_AoS(
         std::function< void(
           const double * const __restrict__                 Q,
           const tarch::la::Vector<Dimensions,double>& x,
@@ -197,7 +204,7 @@ namespace exahype2 {
      #pragma omp declare target
      #endif
 */
-     GPUCallableMethod void corrector_addNcpContributions_body_AoS(
+     void corrector_addNcpContributions_body_AoS(
        std::function< void(
          const double * const __restrict__                 Q,
          double * __restrict__                       dQ_or_deltaQ,

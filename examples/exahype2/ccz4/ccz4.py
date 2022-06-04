@@ -53,14 +53,14 @@ if __name__ == "__main__":
     parser.add_argument("-no-pbc",  "--no-periodic-boundary-conditions",      dest="periodic_bc", action="store_false", default="True",  help="switch on or off the periodic BC" )
     parser.add_argument("-et",   "--end-time",        dest="end_time",        type=float, default=1.0, help="End (terminal) time" )
     parser.add_argument("-pst",   "--plot-start-time",        dest="plot_start_time",        type=float, default=0.0, help="start time for plot" )
-    parser.add_argument("-s",    "--scenario",        dest="scenario",        choices=["gauge", "linear", "single-puncture","two-punctures"], required="True", help="Scenario" )
+    parser.add_argument("-s",    "--scenario",        dest="scenario",        choices=["gauge", "dia_gauge", "linear", "single-puncture","two-punctures"], required="True", help="Scenario" )
     parser.add_argument("-cfl",      "--CFL-ratio",           dest="cfl",             type=float, default=0.1, help="Set CFL ratio" )
     parser.add_argument("-tracer", "--add-tracer",    dest="add_tracer", type=int, default=0,  help="Add tracers and specify the seeds. 0-switch off, 1-x axis, 2-xy plane, 3-over domain (evenly), 4-over domain(with noise option), 5-inserted by coordinate, 6-spherical surface(Gauss_Legendre_quadrature), 7-spherical surface(t-design)" )
     parser.add_argument("-tn", "--tracer-name",       dest="tra_name",    type=str, default="de",  help="name of output tracer file (temporary)" )
     parser.add_argument("-exn", "--exe-name",        dest="exe_name",    type=str, default="",  help="name of output executable file" )
     parser.add_argument("-outdir", "--output-directory",        dest="path",    type=str, default="./",  help="specify the output directory, include the patch file and tracer file" )
-    parser.add_argument("-interp",   "--interpolation", dest="interpolation",     choices=["constant","order-2","linear-constant-extrap","linear-linear-extrap","linear-con-extrap-lin-normal-interp","linear-lin-extrap-lin-normal-interp"], default="linear-constant-extrap",  help="interpolation scheme for AMR" )
-    parser.add_argument("-restrict", "--restriction",   dest="restriction",       choices=["average", "inject", "average+enforce", "inject+enforce"], default="average",  help="restriction scheme for AMR" )
+    parser.add_argument("-interp",   "--interpolation", dest="interpolation",     choices=["constant","order-2","linear-constant-extrap","linear-linear-extrap","linear-con-extrap-lin-normal-interp","linear-lin-extrap-lin-normal-interp"], default="linear-lin-extrap-lin-normal-interp",  help="interpolation scheme for AMR" )
+    parser.add_argument("-restrict", "--restriction",   dest="restriction",       choices=["average", "inject" ], default="average",  help="restriction scheme for AMR" )
 
 
     for k, v in floatparams.items(): parser.add_argument("--{}".format(k), dest="CCZ4{}".format(k), type=float, default=v, help="default: %(default)s")
@@ -204,50 +204,40 @@ if __name__ == "__main__":
         self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement.additional_includes += """ 
 #include "../CCZ4Kernels.h"
             """
-        self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement.switch_restriction_scheme( "averaging" )
-        #self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement.switch_interpolation_scheme( "linear" )
+        self.restriction = "averaging" # "linear"
 
         if args.interpolation=="constant":
-          self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement.switch_interpolation_scheme( "piecewise_constant" )
+          self.interpolation = "piecewise_constant"
           print( "Interpolation rule: piecewise_constant" )
-        #if args.interpolation=="linear-slow" or args.interpolation=="linear-slow+enforce":
-        #  self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement.switch_interpolation_scheme( "linear" )
-        #  print( "Interpolation rule: linear interpolation without optimisation" )
-        #if args.interpolation=="linear" or args.interpolation=="linear+enforce":
-        #  self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement.switch_interpolation_scheme( "linear_precomputed_operators<" + str(self._patch_size) +">" )
-        #  print( "Interpolation rule: optimised linear interpolation with patch size " + str(self._patch_size) )
-        #if args.interpolation=="outflow":
-        #  self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement.switch_interpolation_scheme( "outflow" )
-        #  print( "Interpolation rule: outflow (from fine grid into coarse grid)" )   
         if args.interpolation=="linear-constant-extrap":
-          self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement.switch_interpolation_scheme( "linear_with_constant_extrapolation" )
+          self.interpolation = "linear_with_constant_extrapolation" 
           print( "Interpolation rule: linear constant extrapolation" )
         if args.interpolation=="linear-linear-extrap":
-          self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement.switch_interpolation_scheme( "linear_with_linear_extrapolation" )  
+          self.interpolation = "linear_with_linear_extrapolation"
           print( "Interpolation rule: linear extrapolation" )
         if args.interpolation=="linear-con-extrap-lin-normal-interp":
-          self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement.switch_interpolation_scheme( "linear_with_constant_extrapolation_and_linear_normal_interpolation" )
+          self.interpolation = "linear_with_constant_extrapolation_and_linear_normal_interpolation"
           print( "Interpolation rule: linear+constant extrapolation and linear normal interpolation" )
         if args.interpolation=="linear-lin-extrap-lin-normal-interp":
-          self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement.switch_interpolation_scheme( "linear_with_linear_extrapolation_and_linear_normal_interpolation" )
+          self.interpolation = "linear_with_linear_extrapolation_and_linear_normal_interpolation" 
           print( "Interpolation rule: linear+linear extrapolation and linear normal interpolation" )
 
         if args.interpolation=="order-2":
-          self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement.switch_interpolation_scheme( "linear" )
+          self.interpolation = "linear" 
           # @todo, we have to change this one
           #self.overlap=2
 
-        if args.restriction=="average" or args.restriction=="average+enforce":
-          self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement.switch_restriction_scheme( "averaging" )
+        if args.restriction=="average":
+          self.restriction =  "averaging"
           print( "Restiction rule: averaging" )
-        if args.restriction=="inject" or args.restriction=="inject+enforce":
-          self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement.switch_restriction_scheme( "inject" )
+        if args.restriction=="inject":
+          self.restriction_scheme = "inject" 
           print( "Restiction rule: injection" )
           
-        if args.interpolation=="linear+enforce" or args.interpolation=="linear-slow+enforce":
-          self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement.switch_point_wise_postprocessing_of_interpolation( "examples::exahype2::ccz4::enforceCCZ4constraints(targetVolume)" )
-        if args.restriction=="average+enforce" or args.restriction=="inject+enforce":
-          self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement.switch_point_wise_postprocessing_of_restriction( "examples::exahype2::ccz4::enforceCCZ4constraints(targetVolume)" )
+        #if args.interpolation=="linear+enforce" or args.interpolation=="linear-slow+enforce":
+        #  self.point_wise_postprocessing_of_interpolation = "examples::exahype2::ccz4::enforceCCZ4constraints(targetVolume)" )
+        #if args.restriction=="average+enforce" or args.restriction=="inject+enforce":
+        #  self.point_wise_postprocessing_of_restriction = "examples::exahype2::ccz4::enforceCCZ4constraints(targetVolume)"
 
 
       def get_user_action_set_includes(self):
@@ -272,7 +262,7 @@ if __name__ == "__main__":
          side.
 
         """
-        self._auxiliary_variables = 6
+        self._auxiliary_variables = 6+3
 
         self._my_user_includes += """
 	#include "../CCZ4Kernels.h"
@@ -296,6 +286,8 @@ if __name__ == "__main__":
 
           // See the docu in PDE.h
           double gradQ[3*59]={ 0 };
+          double faceQ[6*59]={ 0 };
+          double faceDeltaQ[6*59]={ 0 };
 
           // Lets look left vs right and compute the gradient. Then, lets
           // loop up and down. So we look three times for the respective
@@ -307,8 +299,13 @@ if __name__ == "__main__":
             rightCell(d) += 1;
             const int leftCellSerialised  = peano4::utils::dLinearised(leftCell, patchSize + 2*1);
             const int rightCellSerialised = peano4::utils::dLinearised(rightCell,patchSize + 2*1);
+            const int currentCellSerialised = peano4::utils::dLinearised(currentCell,patchSize + 2*1);
             for(int i=0; i<59; i++) {
               gradQ[d*59+i] = ( reconstructedPatch[rightCellSerialised*(59+n_a_v)+i] - reconstructedPatch[leftCellSerialised*(59+n_a_v)+i] ) / 2.0 / volumeH;
+              faceQ[2*d*59+i]= (reconstructedPatch[currentCellSerialised*(59+n_a_v)+i] + reconstructedPatch[leftCellSerialised*(59+n_a_v)+i]) / 2.0;
+              faceDeltaQ[2*d*59+i]= (reconstructedPatch[currentCellSerialised*(59+n_a_v)+i] - reconstructedPatch[leftCellSerialised*(59+n_a_v)+i]);
+              faceQ[2*d*59+59+i]= (reconstructedPatch[currentCellSerialised*(59+n_a_v)+i] + reconstructedPatch[rightCellSerialised*(59+n_a_v)+i]) / 2.0;
+              faceDeltaQ[2*d*59+59+i]= (-reconstructedPatch[currentCellSerialised*(59+n_a_v)+i] + reconstructedPatch[rightCellSerialised*(59+n_a_v)+i]);         
             }
           }
 
@@ -320,22 +317,30 @@ if __name__ == "__main__":
 
           admconstraints(constraints,reconstructedPatch+cellSerialised*(59+n_a_v),gradQ);
           
+          for(int i=0;i<6;i++){
+            reconstructedPatch[cellSerialised*(59+n_a_v)+59+i] = constraints[i];
+          }
+          
+          double ncpsum=0, ncp[1]={0};
+          double src[2]={ 0 };
+          for (int d=0; d<3; d++)
+          {
+            ThetaOutputNCP(ncp,faceQ+2*d*59,faceDeltaQ+2*d*59,d);
+            ncpsum+=ncp[0];
+            ThetaOutputNCP(ncp,faceQ+2*d*59+59,faceDeltaQ+2*d*59+59,d);
+            ncpsum+=ncp[0];
+          }
+          ThetaOutputSrc(src,reconstructedPatch+cellSerialised*(59+n_a_v),gradQ);
+          reconstructedPatch[cellSerialised*(59+n_a_v)+59+6] = ncpsum / 2.0 / volumeH;
+          reconstructedPatch[cellSerialised*(59+n_a_v)+59+7] = src[0];
+          reconstructedPatch[cellSerialised*(59+n_a_v)+59+8] = src[1];
+          
           //NaN detector here/////////////////////////////////
           /*for(int i=0;i<59;i++){
             if ( std::isnan(reconstructedPatch[cellSerialised*(59+n_a_v)+i]) ) {
               ::exahype2::triggerNonCriticalAssertion( __FILE__, __LINE__, "[Quantity should no be NaN]", "NaN detected at t=" + std::to_string(t) + " for quantity "+std::to_string(i)+" at position ["+std::to_string(currentPosition[0])+", "+std::to_string(currentPosition[1])+", "+std::to_string(currentPosition[2])+"]");}
           }*/
           ///////////////////////////////////////////////////
-
-          for(int i=0;i<6;i++){
-            reconstructedPatch[cellSerialised*(59+n_a_v)+59+i] = constraints[i];
-          }
-          
-          /*double sour[59]={ 0 };
-          examples::exahype2::ccz4::source(sour,reconstructedPatch+cellSerialised*(59+n_a_v),0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0.1, 0, 0.5);
-          for(int i=0;i<59;i++){
-            reconstructedPatch[cellSerialised*(59+n_a_v)+59+6+i] = sour[i];
-          }*/
 
           /*
           //here we calculate the norm of conformal factor phi as the refinement condition
@@ -351,7 +356,6 @@ if __name__ == "__main__":
           reconstructedPatch[cellSerialised*(59+n_a_v)+59+7]=Psi4[0];//re part of psi4
 		      reconstructedPatch[cellSerialised*(59+n_a_v)+59+8]=Psi4[1];//im part of psi4
 		      */
-		      //std::cout<< Psi4[0] << std::endl;
         }
     """
 
@@ -550,6 +554,9 @@ if __name__ == "__main__":
       def pick_Gauge_wave_scenario(self):
         self.add_solver_constants( """static constexpr int Scenario=0; /* Gauge wave */  """ )
 
+      def pick_Diagonal_Gauge_wave_scenario(self):
+        self.add_solver_constants( """static constexpr int Scenario=3; /* Diagonal Gauge wave */  """ )
+
       def pick_Linear_wave_scenario(self):
         self.add_solver_constants( """static constexpr int Scenario=1; /* Linear wave */  """ )
 
@@ -616,12 +623,14 @@ if __name__ == "__main__":
 ########################################################################################
 #Add postpocessing function
 ########################################################################################
-      if args.extension=="gradient":
-        my_solver.add_derivative_calculation()
-      if args.extension=="AMRadm":
-        my_solver.add_constraint_RefinementFlag_verification()
-      if args.extension=="Full":
-        my_solver.add_PT_ConsW_Psi4W_AMRFlag()
+    if args.extension=="gradient":
+      my_solver.add_derivative_calculation()
+    if args.extension=="AMRadm":
+      my_solver.add_constraint_RefinementFlag_verification()
+    if args.extension=="Full":
+      my_solver.add_PT_ConsW_Psi4W_AMRFlag()
+
+      #my_solver._auxiliary_variables = 59*3
 
 ########################################################################################
 #parameter setting according to scenarios
@@ -660,6 +669,11 @@ if __name__ == "__main__":
     if args.scenario=="gauge":
       solverconstants+= "static constexpr int Scenario=0; /* Gauge wave */  "
       userinfo.append(("picking gauge wave scenario",None))
+      floatparams.update({"sk":0.0}); floatparams.update({"bs":0.0})
+      intparams.update({"LapseType":0})
+    elif args.scenario=="dia_gauge":
+      solverconstants+= "static constexpr int Scenario=3; /* Diagonal Gauge wave */  "
+      userinfo.append(("picking diagonal gauge wave scenario",None))
       floatparams.update({"sk":0.0}); floatparams.update({"bs":0.0})
       intparams.update({"LapseType":0})
     elif args.scenario=="linear":
@@ -705,6 +719,14 @@ if __name__ == "__main__":
     userinfo.append(("Terminal time: "+str(args.end_time),None))
 
     project.set_Peano4_installation("../../..", build_mode)
+
+########################################################################################
+#AMR boundary tracing
+########################################################################################
+    #amr_label = exahype2.solvers.elliptic.AMRMarker( name="AMRMarker" )
+    #project.add_solver( amr_label )
+    #my_solver._auxiliary_variables+=1
+    #amr_label.couple_with_FV_solver( my_solver, my_solver._auxiliary_variables-1 )
 
 ########################################################################################
 #output dir and proble
@@ -770,9 +792,7 @@ if __name__ == "__main__":
 ########################################################################################
     peano4_project = project.generate_Peano4_project(verbose=True)
 
-    if args.scenario=="gauge":
-      pass
-    elif args.scenario=="linear":
+    if args.scenario=="gauge" or args.scenario=="linear" or args.scenario=="dia_gauge":
       pass
     elif args.scenario=="two-punctures" or args.scenario=="single-puncture":
       #

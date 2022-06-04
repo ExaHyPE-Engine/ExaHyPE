@@ -18,6 +18,13 @@
 #ifndef _TARCH_MULTICORE_MULTICORE_H_
 #define _TARCH_MULTICORE_MULTICORE_H_
 
+
+/**
+ * Have to include this header, as I need access to the SYCL_EXTERNAL keyword.
+ */
+#include "tarch/multicore/tbb/SYCL.h"
+
+
 namespace tarch {
 
 
@@ -255,12 +262,15 @@ and
   };
 
   #if defined(GPUOffloadingHIP)
-    #define GPUCallableMethod __global__ __device__
+    #define GPUCallableMethod __host__ __device__
+    //#define GPUCallableMethod __global__ __device__
   #elif defined(GPUOffloadingSYCL)
-    #define GPUCallableMethod SYCL_EXTERNAL
-  #elif defined(UseManualInlining)
-    #define GPUCallableMethod
+    #define GPUCallableMethod inline SYCL_EXTERNAL
   #else
+    /**
+     * For LLVM/OMP it is absolutely essential that you don't specify
+     * a inline or similar funny stuff here.
+     */
     #define GPUCallableMethod
   #endif
 
@@ -275,16 +285,18 @@ and
   void freeMemory(double* data, MemoryLocation location);
 
 
-  #if defined(GPUOffloadingOMP)
-  #pragma omp declare target
-  #endif
   /**
    * Delegates to std::abort() if no GPU offloading is active. Otherwise is degenerates
    * to nop, as there is no abort on an accelerator.
    */
-  void gpuAbort();
   #if defined(GPUOffloadingOMP)
+  #pragma omp declare target
+  GPUCallableMethod void gpuAbort();
   #pragma omp end declare target
+  #elif defined(GPUOffloadingSYCL)
+  GPUCallableMethod void gpuAbort() {};
+  #else
+  void gpuAbort();
   #endif
 }
 

@@ -118,6 +118,7 @@ Tarch_SOURCES= tarch/tarch.cpp \
  tarch/multicore/tbb/BooleanSemaphore.cpp \
  tarch/multicore/tbb/Core.cpp \
  tarch/multicore/tbb/RecursiveSemaphore.cpp \
+ tarch/multicore/tbb/SYCL.cpp \
  tarch/multicore/tbb/Tasks.cpp \
  tarch/multicore/orchestration/AllOnGPU.cpp \
  tarch/multicore/orchestration/GeneticOptimisation.cpp \

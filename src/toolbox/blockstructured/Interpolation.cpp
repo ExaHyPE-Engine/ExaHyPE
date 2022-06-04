@@ -168,7 +168,7 @@ tarch::la::DynamicMatrix*  toolbox::blockstructured::internal::createInterpolati
   // is of size 1.
   P->replicateCols( pattern, 2, 0, false );
   P->replicateRows( pattern, 2, 0, false );
-  logInfo( "createInterpolationMatrixFrom1dTemplateByLinearInterpolationAlongNormal(...)", "matrix for normal=" << normal << ": " << P->toString() );
+  logDebug( "createInterpolationMatrixFrom1dTemplateByLinearInterpolationAlongNormal(...)", "matrix for normal=" << normal << ": " << P->toString() );
   return P;
 }
 

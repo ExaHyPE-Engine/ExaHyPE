@@ -116,8 +116,8 @@ void exahype2::fv::rusanov::timeStepWithRusanov_patchwise_in_situ_static_calls(
       #endif
       for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
       {
-        double fluxFL[unknowns] __attribute__((aligned (Alignment)));
-        double fluxFR[unknowns] __attribute__((aligned (Alignment)));
+        double fluxFL[unknowns] __attribute__((aligned (AlignmentOnHeap)));
+        double fluxFR[unknowns] __attribute__((aligned (AlignmentOnHeap)));
 
         internal::computeFlux_LoopBody<Solver>(
             patchData.QIn[patchIndex],
@@ -170,8 +170,8 @@ void exahype2::fv::rusanov::timeStepWithRusanov_patchwise_in_situ_static_calls(
       #endif
       for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++)
       {
-        double fluxFL[unknowns] __attribute__((aligned (Alignment)));
-        double fluxFR[unknowns] __attribute__((aligned (Alignment)));
+        double fluxFL[unknowns] __attribute__((aligned (AlignmentOnHeap)));
+        double fluxFR[unknowns] __attribute__((aligned (AlignmentOnHeap)));
         internal::computeFlux_LoopBody<Solver>(
               patchData.QIn[patchIndex],
               QInEnumerator,
@@ -225,8 +225,8 @@ void exahype2::fv::rusanov::timeStepWithRusanov_patchwise_in_situ_static_calls(
       for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
       for (int z = 0; z < numberOfVolumesPerAxisInPatch; z++)
       {
-        double fluxFL[unknowns] __attribute__((aligned (Alignment)));
-        double fluxFR[unknowns] __attribute__((aligned (Alignment)));
+        double fluxFL[unknowns] __attribute__((aligned (AlignmentOnHeap)));
+        double fluxFR[unknowns] __attribute__((aligned (AlignmentOnHeap)));
 
         internal::computeFlux_LoopBody<Solver>(
             patchData.QIn[patchIndex],
@@ -280,8 +280,8 @@ void exahype2::fv::rusanov::timeStepWithRusanov_patchwise_in_situ_static_calls(
       for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++)
       for (int z = 0; z < numberOfVolumesPerAxisInPatch; z++)
       {
-        double fluxFL[unknowns] __attribute__((aligned (Alignment)));
-        double fluxFR[unknowns] __attribute__((aligned (Alignment)));
+        double fluxFL[unknowns] __attribute__((aligned (AlignmentOnHeap)));
+        double fluxFR[unknowns] __attribute__((aligned (AlignmentOnHeap)));
         internal::computeFlux_LoopBody<Solver>(
               patchData.QIn[patchIndex],
               QInEnumerator,
@@ -334,8 +334,8 @@ void exahype2::fv::rusanov::timeStepWithRusanov_patchwise_in_situ_static_calls(
       for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++)
       for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
       {
-        double fluxFL[unknowns] __attribute__((aligned (Alignment)));
-        double fluxFR[unknowns] __attribute__((aligned (Alignment)));
+        double fluxFL[unknowns] __attribute__((aligned (AlignmentOnHeap)));
+        double fluxFR[unknowns] __attribute__((aligned (AlignmentOnHeap)));
         internal::computeFlux_LoopBody<Solver>(
               patchData.QIn[patchIndex],
               QInEnumerator,
@@ -389,9 +389,9 @@ void exahype2::fv::rusanov::timeStepWithRusanov_patchwise_in_situ_static_calls(
       #endif
       for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
       {
-        double fluxNCP[unknowns] __attribute__((aligned (Alignment)));
+        double fluxNCP[unknowns] __attribute__((aligned (AlignmentOnHeap)));
 
-        internal::computeNonconservativeFlux_LoopBody<Solver>(
+        internal::computeNonconservativeFlux_LoopBody<Solver,unknowns,auxiliaryVariables>(
             patchData.QIn[patchIndex],
             QInEnumerator,
             patchData.patchCentre[patchIndex],
@@ -428,9 +428,9 @@ void exahype2::fv::rusanov::timeStepWithRusanov_patchwise_in_situ_static_calls(
       #endif
       for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++)
       {
-        double fluxNCP[unknowns] __attribute__((aligned (Alignment)));
+        double fluxNCP[unknowns] __attribute__((aligned (AlignmentOnHeap)));
 
-        internal::computeNonconservativeFlux_LoopBody<Solver>(
+        internal::computeNonconservativeFlux_LoopBody<Solver,unknowns,auxiliaryVariables>(
             patchData.QIn[patchIndex],
             QInEnumerator,
             patchData.patchCentre[patchIndex],
@@ -469,9 +469,9 @@ void exahype2::fv::rusanov::timeStepWithRusanov_patchwise_in_situ_static_calls(
       for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
       for (int z = 0; z < numberOfVolumesPerAxisInPatch; z++)
       {
-        double fluxNCP[unknowns] __attribute__((aligned (Alignment)));
+        double fluxNCP[unknowns] __attribute__((aligned (AlignmentOnHeap)));
 
-        internal::computeNonconservativeFlux_LoopBody<Solver>(
+        internal::computeNonconservativeFlux_LoopBody<Solver,unknowns,auxiliaryVariables>(
             patchData.QIn[patchIndex],
             QInEnumerator,
             patchData.patchCentre[patchIndex],
@@ -509,9 +509,9 @@ void exahype2::fv::rusanov::timeStepWithRusanov_patchwise_in_situ_static_calls(
       for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++)
       for (int z = 0; z < numberOfVolumesPerAxisInPatch; z++)
       {
-        double fluxNCP[unknowns] __attribute__((aligned (Alignment)));
+        double fluxNCP[unknowns] __attribute__((aligned (AlignmentOnHeap)));
 
-        internal::computeNonconservativeFlux_LoopBody<Solver>(
+        internal::computeNonconservativeFlux_LoopBody<Solver,unknowns,auxiliaryVariables>(
             patchData.QIn[patchIndex],
             QInEnumerator,
             patchData.patchCentre[patchIndex],
@@ -549,9 +549,9 @@ void exahype2::fv::rusanov::timeStepWithRusanov_patchwise_in_situ_static_calls(
       for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++)
       for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
       {
-        double fluxNCP[unknowns] __attribute__((aligned (Alignment)));
+        double fluxNCP[unknowns] __attribute__((aligned (AlignmentOnHeap)));
 
-        internal::computeNonconservativeFlux_LoopBody<Solver>(
+        internal::computeNonconservativeFlux_LoopBody<Solver,unknowns,auxiliaryVariables>(
             patchData.QIn[patchIndex],
             QInEnumerator,
             patchData.patchCentre[patchIndex],
@@ -590,8 +590,8 @@ void exahype2::fv::rusanov::timeStepWithRusanov_patchwise_in_situ_static_calls(
       #endif
       for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
       {
-        double maxEigenvalueL __attribute__((aligned (Alignment)));
-        double maxEigenvalueR __attribute__((aligned (Alignment)));
+        double maxEigenvalueL __attribute__((aligned (AlignmentOnHeap)));
+        double maxEigenvalueR __attribute__((aligned (AlignmentOnHeap)));
         internal::computeMaxEigenvalue_LoopBody<Solver>(
           patchData.QIn[patchIndex],
           QInEnumerator,
@@ -644,8 +644,8 @@ void exahype2::fv::rusanov::timeStepWithRusanov_patchwise_in_situ_static_calls(
       #endif
       for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++)
       {
-        double maxEigenvalueL __attribute__((aligned (Alignment)));
-        double maxEigenvalueR __attribute__((aligned (Alignment)));
+        double maxEigenvalueL __attribute__((aligned (AlignmentOnHeap)));
+        double maxEigenvalueR __attribute__((aligned (AlignmentOnHeap)));
         internal::computeMaxEigenvalue_LoopBody<Solver>(
             patchData.QIn[patchIndex],
             QInEnumerator,
@@ -700,8 +700,8 @@ void exahype2::fv::rusanov::timeStepWithRusanov_patchwise_in_situ_static_calls(
       for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
       for (int z = 0; z < numberOfVolumesPerAxisInPatch; z++)
       {
-        double maxEigenvalueL __attribute__((aligned (Alignment)));
-        double maxEigenvalueR __attribute__((aligned (Alignment)));
+        double maxEigenvalueL __attribute__((aligned (AlignmentOnHeap)));
+        double maxEigenvalueR __attribute__((aligned (AlignmentOnHeap)));
         internal::computeMaxEigenvalue_LoopBody<Solver>(
           patchData.QIn[patchIndex],
           QInEnumerator,
@@ -755,8 +755,8 @@ void exahype2::fv::rusanov::timeStepWithRusanov_patchwise_in_situ_static_calls(
       for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++)
       for (int z = 0; z < numberOfVolumesPerAxisInPatch; z++)
       {
-        double maxEigenvalueL __attribute__((aligned (Alignment)));
-        double maxEigenvalueR __attribute__((aligned (Alignment)));
+        double maxEigenvalueL __attribute__((aligned (AlignmentOnHeap)));
+        double maxEigenvalueR __attribute__((aligned (AlignmentOnHeap)));
         internal::computeMaxEigenvalue_LoopBody<Solver>(
             patchData.QIn[patchIndex],
             QInEnumerator,
@@ -810,8 +810,8 @@ void exahype2::fv::rusanov::timeStepWithRusanov_patchwise_in_situ_static_calls(
       for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++)
       for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
       {
-          double maxEigenvalueL __attribute__((aligned (Alignment)));
-          double maxEigenvalueR __attribute__((aligned (Alignment)));
+          double maxEigenvalueL __attribute__((aligned (AlignmentOnHeap)));
+          double maxEigenvalueR __attribute__((aligned (AlignmentOnHeap)));
           internal::computeMaxEigenvalue_LoopBody<Solver>(
             patchData.QIn[patchIndex],
             QInEnumerator,

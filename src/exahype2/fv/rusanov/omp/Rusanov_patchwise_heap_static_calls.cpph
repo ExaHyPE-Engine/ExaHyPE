@@ -112,7 +112,6 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanov_patchwise_heap_static_calls
     #pragma omp target enter data map(to:currentQIn[0:QInHostEnumerator.size()] ) device(targetDevice)
     #pragma omp target enter data map(alloc:currentQOut[0:QOutHostEnumerator.size()] ) device(targetDevice)
     
-// @todo Docu pointer mappping
     mappedPointersToQIn[patchIndex]  = (double*) omp_get_mapped_ptr( currentQIn,  targetDevice );
     mappedPointersToQOut[patchIndex] = (double*) omp_get_mapped_ptr( currentQOut, targetDevice );
   }
@@ -133,9 +132,8 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanov_patchwise_heap_static_calls
     map(to:dt[0:hostPatchData.numberOfCells]) \
     map(from:maxEigenvalue[0:hostPatchData.numberOfCells])
   for (int patchIndex=0; patchIndex<numberOfCells; patchIndex++) {
-
     // @todo docu manual assembly of patch data meta object on GPU
-    helper::OpenMPGPUCellData patchData;
+    GPUCellData patchData;
     patchData.numberOfCells = numberOfCells;
     patchData.patchCentre   = (tarch::la::Vector<Dimensions,double>*)(rawPointerToPatchCentres);
     patchData.patchSize     = (tarch::la::Vector<Dimensions,double>*)(rawPointerToPatchSizes);
@@ -506,7 +504,7 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanov_patchwise_heap_static_calls
       #pragma omp parallel for collapse(2)
       for (int y =                0; y < numberOfVolumesPerAxisInPatch;                   y++)
       for (int x = -solversHaloSize; x < numberOfVolumesPerAxisInPatch+solversHaloSize-1; x++) {
-        internal::computeNonconservativeFlux_LoopBody<Solver>(
+        internal::computeNonconservativeFlux_LoopBody<Solver,unknowns,auxiliaryVariables>(
           patchData.QIn[patchIndex],
           QInEnumerator,
           patchData.patchCentre[patchIndex],
@@ -525,7 +523,7 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanov_patchwise_heap_static_calls
       #pragma omp parallel for collapse(2)
       for (int y = -solversHaloSize; y < numberOfVolumesPerAxisInPatch+solversHaloSize-1; y++)
       for (int x =                0; x < numberOfVolumesPerAxisInPatch;                   x++) {
-        internal::computeNonconservativeFlux_LoopBody<Solver>(
+        internal::computeNonconservativeFlux_LoopBody<Solver,unknowns,auxiliaryVariables>(
           patchData.QIn[patchIndex],
           QInEnumerator,
           patchData.patchCentre[patchIndex],
@@ -564,7 +562,7 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanov_patchwise_heap_static_calls
         for (int z =         0; z < numberOfVolumesPerAxisInPatch;            z++)
         for (int y =         0; y < numberOfVolumesPerAxisInPatch;            y++)
         for (int x = -solversHaloSize; x < numberOfVolumesPerAxisInPatch+solversHaloSize-1; x++) {
-          internal::computeNonconservativeFlux_LoopBody<Solver>(
+          internal::computeNonconservativeFlux_LoopBody<Solver,unknowns,auxiliaryVariables>(
             patchData.QIn[patchIndex],
             QInEnumerator,
             patchData.patchCentre[patchIndex],
@@ -584,7 +582,7 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanov_patchwise_heap_static_calls
         for (int z =         0; z < numberOfVolumesPerAxisInPatch;            z++)
         for (int y = -solversHaloSize; y < numberOfVolumesPerAxisInPatch+solversHaloSize-1; y++)
         for (int x =         0; x < numberOfVolumesPerAxisInPatch;            x++) {
-          internal::computeNonconservativeFlux_LoopBody<Solver>(
+          internal::computeNonconservativeFlux_LoopBody<Solver,unknowns,auxiliaryVariables>(
             patchData.QIn[patchIndex],
             QInEnumerator,
             patchData.patchCentre[patchIndex],
@@ -604,7 +602,7 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanov_patchwise_heap_static_calls
         for (int z = -solversHaloSize; z < numberOfVolumesPerAxisInPatch+solversHaloSize-1; z++)
         for (int y =         0; y < numberOfVolumesPerAxisInPatch;            y++)
         for (int x =         0; x < numberOfVolumesPerAxisInPatch;            x++) {
-          internal::computeNonconservativeFlux_LoopBody<Solver>(
+          internal::computeNonconservativeFlux_LoopBody<Solver,unknowns,auxiliaryVariables>(
             patchData.QIn[patchIndex],
             QInEnumerator,
             patchData.patchCentre[patchIndex],
@@ -704,16 +702,16 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanov_patchwise_heap_static_calls
   delete[] mappedPointersToQIn;
   delete[] mappedPointersToQOut;
 
-// @todo Raus damit
-  delete[] tempFluxX;
-  delete[] tempFluxY;
-  delete[] tempFluxZ;
-  delete[] tempNonconservativeProductX;
-  delete[] tempNonconservativeProductY;
-  delete[] tempNonconservativeProductZ;
-  delete[] tempEigenvalueX;
-  delete[] tempEigenvalueY;
-  delete[] tempEigenvalueZ;
+  // @todo See comment. Should not be necessary, but it is necessary atm. See documentation.
+  if (tempFluxX!=nullptr) delete[] tempFluxX;
+  if (tempFluxY!=nullptr) delete[] tempFluxY;
+  if (tempFluxZ!=nullptr) delete[] tempFluxZ;
+  if (tempNonconservativeProductX!=nullptr) delete[] tempNonconservativeProductX;
+  if (tempNonconservativeProductY!=nullptr) delete[] tempNonconservativeProductY;
+  if (tempNonconservativeProductZ!=nullptr) delete[] tempNonconservativeProductZ;
+  if (tempEigenvalueX!=nullptr) delete[] tempEigenvalueX;
+  if (tempEigenvalueY!=nullptr) delete[] tempEigenvalueY;
+  if (tempEigenvalueZ!=nullptr) delete[] tempEigenvalueZ;
 
   #else
   assertionMsg(false, "this routine should only be used in combination with OpenMP offloading, as it has a device parameter" );

@@ -22,14 +22,14 @@ exahype2::CellData::CellData(
 
 exahype2::CellData::CellData( int numberOfCells_ ):
   numberOfCells(numberOfCells_) {
-  QIn           = new (std::align_val_t(Alignment)) double*[numberOfCells];
-  patchCentre   = new (std::align_val_t(Alignment)) tarch::la::Vector<Dimensions,double>[numberOfCells];
-  patchSize     = new (std::align_val_t(Alignment)) tarch::la::Vector<Dimensions,double>[numberOfCells];
-  t             = new (std::align_val_t(Alignment)) double[numberOfCells];
-  dt            = new (std::align_val_t(Alignment)) double[numberOfCells];
-  id            = new (std::align_val_t(Alignment)) int[numberOfCells];
-  QOut          = new (std::align_val_t(Alignment)) double*[numberOfCells];
-  maxEigenvalue = new (std::align_val_t(Alignment)) double[numberOfCells];
+  QIn           = new (std::align_val_t(AlignmentOnHeap)) double*[numberOfCells];
+  patchCentre   = new (std::align_val_t(AlignmentOnHeap)) tarch::la::Vector<Dimensions,double>[numberOfCells];
+  patchSize     = new (std::align_val_t(AlignmentOnHeap)) tarch::la::Vector<Dimensions,double>[numberOfCells];
+  t             = new (std::align_val_t(AlignmentOnHeap)) double[numberOfCells];
+  dt            = new (std::align_val_t(AlignmentOnHeap)) double[numberOfCells];
+  id            = new (std::align_val_t(AlignmentOnHeap)) int[numberOfCells];
+  QOut          = new (std::align_val_t(AlignmentOnHeap)) double*[numberOfCells];
+  maxEigenvalue = new (std::align_val_t(AlignmentOnHeap)) double[numberOfCells];
 }
 
 

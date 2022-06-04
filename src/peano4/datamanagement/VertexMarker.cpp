@@ -38,6 +38,15 @@ tarch::la::Vector<Dimensions,int>  peano4::datamanagement::VertexMarker::getRela
 }
 
 
+bool peano4::datamanagement::VertexMarker::coincidesWithCoarseGridVertex() const {
+  bool result = true;
+  for (int d=0; d<Dimensions; d++) {
+    result &= getRelativePositionWithinFatherCell()(d) != 1;
+    result &= getRelativePositionWithinFatherCell()(d) != 2;
+  }
+  return result;
+}
+
 tarch::la::Vector<Dimensions,double> peano4::datamanagement::VertexMarker::x(int i) const {
   tarch::la::Vector<Dimensions,double> result( _cellCentre );
   std::bitset<Dimensions> myset(i);

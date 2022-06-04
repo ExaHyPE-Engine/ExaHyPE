@@ -32,15 +32,15 @@ void exahype2::fv::rusanov::timeStepWithRusanov_patchwise_split_terms_call_stack
   TempDataEnumerator ncpEnumerator       (patchData.numberOfCells, numberOfVolumesPerAxisInPatch+1,  solversHaloSize,unknowns,0);
   TempDataEnumerator eigenvalueEnumerator(patchData.numberOfCells, numberOfVolumesPerAxisInPatch,    solversHaloSize,1,0);
 
-  double tempFluxX[ fluxEnumerator.size() ] __attribute__((aligned (Alignment)));
-  double tempFluxY[ fluxEnumerator.size() ] __attribute__((aligned (Alignment)));
-  double tempFluxZ[ fluxEnumerator.size() ] __attribute__((aligned (Alignment)));
-  double tempNonconservativeProductX[ ncpEnumerator.size() ] __attribute__((aligned (Alignment)));
-  double tempNonconservativeProductY[ ncpEnumerator.size() ] __attribute__((aligned (Alignment)));
-  double tempNonconservativeProductZ[ ncpEnumerator.size() ] __attribute__((aligned (Alignment)));
-  double tempEigenvalueX[ eigenvalueEnumerator.size() ] __attribute__((aligned (Alignment)));
-  double tempEigenvalueY[ eigenvalueEnumerator.size() ] __attribute__((aligned (Alignment)));
-  double tempEigenvalueZ[ eigenvalueEnumerator.size() ] __attribute__((aligned (Alignment)));
+  double tempFluxX[ fluxEnumerator.size() ] __attribute__((aligned (AlignmentOnHeap)));
+  double tempFluxY[ fluxEnumerator.size() ] __attribute__((aligned (AlignmentOnHeap)));
+  double tempFluxZ[ fluxEnumerator.size() ] __attribute__((aligned (AlignmentOnHeap)));
+  double tempNonconservativeProductX[ ncpEnumerator.size() ] __attribute__((aligned (AlignmentOnHeap)));
+  double tempNonconservativeProductY[ ncpEnumerator.size() ] __attribute__((aligned (AlignmentOnHeap)));
+  double tempNonconservativeProductZ[ ncpEnumerator.size() ] __attribute__((aligned (AlignmentOnHeap)));
+  double tempEigenvalueX[ eigenvalueEnumerator.size() ] __attribute__((aligned (AlignmentOnHeap)));
+  double tempEigenvalueY[ eigenvalueEnumerator.size() ] __attribute__((aligned (AlignmentOnHeap)));
+  double tempEigenvalueZ[ eigenvalueEnumerator.size() ] __attribute__((aligned (AlignmentOnHeap)));
 
   for (int patchIndex=0; patchIndex<patchData.numberOfCells; patchIndex++) {
     if (Dimensions==2 and evaluateSource) {
@@ -505,7 +505,7 @@ void exahype2::fv::rusanov::timeStepWithRusanov_patchwise_split_terms_call_stack
       #endif
       for (int x = -solversHaloSize; x < numberOfVolumesPerAxisInPatch+solversHaloSize-1; x++) {
         otterLoopIterationBegin();
-        internal::computeNonconservativeFlux_LoopBody<Solver>(
+        internal::computeNonconservativeFlux_LoopBody<Solver,unknowns,auxiliaryVariables>(
           patchData.QIn[patchIndex],
           QInEnumerator,
           patchData.patchCentre[patchIndex],
@@ -532,7 +532,7 @@ void exahype2::fv::rusanov::timeStepWithRusanov_patchwise_split_terms_call_stack
       #endif
       for (int x =         0; x < numberOfVolumesPerAxisInPatch;            x++) {
         otterLoopIterationBegin();
-        internal::computeNonconservativeFlux_LoopBody<Solver>(
+        internal::computeNonconservativeFlux_LoopBody<Solver,unknowns,auxiliaryVariables>(
           patchData.QIn[patchIndex],
           QInEnumerator,
           patchData.patchCentre[patchIndex],
@@ -582,7 +582,7 @@ void exahype2::fv::rusanov::timeStepWithRusanov_patchwise_split_terms_call_stack
         #endif
         for (int x = -solversHaloSize; x < numberOfVolumesPerAxisInPatch+solversHaloSize-1; x++) {
           otterLoopIterationBegin();
-          internal::computeNonconservativeFlux_LoopBody<Solver>(
+          internal::computeNonconservativeFlux_LoopBody<Solver,unknowns,auxiliaryVariables>(
             patchData.QIn[patchIndex],
             QInEnumerator,
             patchData.patchCentre[patchIndex],
@@ -610,7 +610,7 @@ void exahype2::fv::rusanov::timeStepWithRusanov_patchwise_split_terms_call_stack
         #endif
         for (int x =         0; x < numberOfVolumesPerAxisInPatch;            x++) {
           otterLoopIterationBegin();
-          internal::computeNonconservativeFlux_LoopBody<Solver>(
+          internal::computeNonconservativeFlux_LoopBody<Solver,unknowns,auxiliaryVariables>(
             patchData.QIn[patchIndex],
             QInEnumerator,
             patchData.patchCentre[patchIndex],
@@ -638,7 +638,7 @@ void exahype2::fv::rusanov::timeStepWithRusanov_patchwise_split_terms_call_stack
         #endif
         for (int x =         0; x < numberOfVolumesPerAxisInPatch;            x++) {
           otterLoopIterationBegin();
-          internal::computeNonconservativeFlux_LoopBody<Solver>(
+          internal::computeNonconservativeFlux_LoopBody<Solver,unknowns,auxiliaryVariables>(
             patchData.QIn[patchIndex],
             QInEnumerator,
             patchData.patchCentre[patchIndex],

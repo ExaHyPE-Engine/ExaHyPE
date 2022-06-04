@@ -1,12 +1,6 @@
 \chapter{Troubleshooting}
 \label{chapter:troubleshooting}
 
-\begin{remark}
-Most developers exchange stuff via the \Peano\ slack. 
-Contact Tobias Weinzierl to get an invitation to the slack and post your
-questions there.
-\end{remark}
-
 
 \section{Python API}
 
@@ -42,6 +36,14 @@ peano4_project.output.makefile.add_library(
 
 
 \begin{itemize}
+  \item \textbf{My compiler yields warnings of the type}
+  \begin{terminalOutput} 
+./peano4/grid/GridTraversalEvent.h:161:7: warning: unknown attribute 'compress' ignored [-Wunknown-attributes]
+ [[clang::compress]]  std::bitset<TwoPowerD>   _hasBeenRefined;
+  \end{terminalOutput}     
+  \textbf{How can I disable them?}
+  Please consult your compiler options. Usually re-configuring with the flag
+  \texttt{CXXFLAGS="... -Wno-unknown-attributes "} eliminates the warnings.
   \item \textbf{My compiler reports something like} 
 \begin{terminalOutput}
 tarch/multicore/multicore.cpp:13:19: error: `align_val_t` is not a member of `std` 
@@ -296,7 +298,7 @@ build: 2d, no mpi, omp (8 threads), debug level=2
       \texttt{LDFLAGS="... --Lyour-path/otter/build/lib -L/opt/otf2/lib"}
        Once again, you might need the explicit OTF2 link or not.
       \item Add the libraries to your library path
-      (\texttt{LD_LIBRARY_PATH=$LD_LIBRARY_PATH:your-path/otter/build/lib:/opt/otf2/lib})
+      (\texttt{LD\_LIBRARY\_PATH=\$LD\_LIBRARY\_PATH:your-path/otter/build/lib:/opt/otf2/lib})
       as the checks otherwise will fail.
     \end{itemize}
   \item To be continued \dots

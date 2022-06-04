@@ -309,6 +309,7 @@ void peano4::parallel::SpacetreeSet::finishAllOutstandingSendsAndReceives( Conta
 template <class Container>
 void peano4::parallel::SpacetreeSet::exchangeAllPeriodicBoundaryDataStacks( Container& stackContainer, int spacetreeId ) {
   std::set< peano4::maps::StackKey > keys = stackContainer.getKeys();
+  logTraceInWith2Arguments( "exchangeAllPeriodicBoundaryDataStacks(...)",keys.size(),spacetreeId);
   for (auto& sourceStackKey: keys) {
     if (
       sourceStackKey.first==spacetreeId
@@ -317,15 +318,11 @@ void peano4::parallel::SpacetreeSet::exchangeAllPeriodicBoundaryDataStacks( Cont
       and
       not stackContainer.getForPush(sourceStackKey)->empty()
     ) {
-      const int targetStack = Node::getInstance().getPeriodicBoundaryExchangeInputStackNumberForOutputStack(sourceStackKey.second);
+      const int targetStack = Node::mapPeriodicBoundaryExchangeOutputStackOntoInputStack(sourceStackKey.second);
       logDebug(
-         "exchangeStacksAsynchronously(...)",
+         "exchangeAllPeriodicBoundaryDataStacks(...)",
          "map output stream " << sourceStackKey.second << " onto input stream " << targetStack <<
          " to realise periodic boundary conditions. Copy/clone " << stackContainer.getForPush(sourceStackKey)->size() << " entries"
-      );
-      logDebug(
-         "exchangeStacksAsynchronously(...)",
-         stackContainer.getForPush(sourceStackKey)->toString()
       );
 
       assertion4( stackContainer.getForPush(sourceStackKey.first,targetStack)->empty(), sourceStackKey.first, sourceStackKey.second, targetStack, stackContainer.getForPush(sourceStackKey.first,targetStack)->size() );
@@ -333,5 +330,6 @@ void peano4::parallel::SpacetreeSet::exchangeAllPeriodicBoundaryDataStacks( Cont
       stackContainer.getForPush(sourceStackKey)->clear();
     }
   }
+  logTraceOut( "exchangeAllPeriodicBoundaryDataStacks(...)");
 }
 

@@ -15,7 +15,7 @@ namespace exahype2 {
        * each other. Therefore, we can deploy this sequence of patch
        * updates to a distributed for over the team.
        *
-       * ## Memory management
+       * ## Memory management (goal)
        *
        * If you run this routine without GPU offloading, we place all temporary data on the heap.
        * If GPUs are to be used, then we create pointer for the temporary data, but we assign
@@ -24,6 +24,12 @@ namespace exahype2 {
        * even though it is semantically broken as the temporary data is not acquired. However, we
        * want to run on the GPU, so we use the pragma omp enter data instruction to allocate the
        * data directly on the device.
+       *
+       * ## Memory management (as it is)
+       *
+       * At the moment, we have to create the right buffer size on the host,
+       * as the NVIDIA tools otherwise complain. On the long term, this should
+       * not be necessary.
        *
        * ## Patch data transfer
        *
@@ -40,6 +46,14 @@ namespace exahype2 {
        * guys manually into one large buffer of double values, and then we reconstruct
        * the objects on the device. In this particular context, the resulting overhead
        * is acceptable, as this meta data is not extraordinary large.
+       *
+       * If you copy the pointers to pointers from the host to the GPU, you have to
+       * be careful. It makes no sense to copy the pointers within the pointer array
+       * to the GPU, as these are host pointers. So first deploy the actual data to
+       * the GPU per patch. Then we grab the GPU pointer address to which the memory
+       * region has been mapped to. We store this data in mappedPointersToQIn. We
+       * transfer mappedPointersToQIn to the GPU and then reconstruct there the
+       * pointer-to-pointer map that we need within the kernels.
        */
       namespace omp {
         template <
@@ -85,32 +99,30 @@ namespace exahype2 {
         #endif
         ;
 
-        namespace helper {
-          #if defined(GPUOffloadingOMP)
-          /**
-           * On the GPU, we don't need any of exahype2::CellData's fancy routines or
-           * dynamic data management. We simply have to be able to create a struct
-           * on the accelerator, which we then befill with the required pointers
-           * which we copy over from the host.
-           *
-           * Therefore, this class is a mere copy of exahype2::CellData without any
-           * of its routines. The only different to the host variant (from a data
-           * field point of view) is that numberOfCells is not const.
-           */
-          #pragma omp declare target
-          struct OpenMPGPUCellData {
-            double**   QIn;
-            tarch::la::Vector<Dimensions,double>*   patchCentre;
-            tarch::la::Vector<Dimensions,double>*   patchSize;
-            double*    t;
-            double*    dt;
-            int        numberOfCells;
-            double**   QOut;
-            double*    maxEigenvalue;
-          };
-          #pragma omp end declare target
-          #endif
-        }
+        #if defined(GPUOffloadingOMP)
+        /**
+         * On the GPU, we don't need any of exahype2::CellData's fancy routines or
+         * dynamic data management. We simply have to be able to create a struct
+         * on the accelerator, which we then befill with the required pointers
+         * which we copy over from the host.
+         *
+         * Therefore, this class is a mere copy of exahype2::CellData without any
+         * of its routines. The only different to the host variant (from a data
+         * field point of view) is that numberOfCells is not const.
+         */
+        #pragma omp declare target
+        struct GPUCellData {
+          double**   QIn;
+          tarch::la::Vector<Dimensions,double>*   patchCentre;
+          tarch::la::Vector<Dimensions,double>*   patchSize;
+          double*    t;
+          double*    dt;
+          int        numberOfCells;
+          double**   QOut;
+          double*    maxEigenvalue;
+        };
+        #pragma omp end declare target
+        #endif
       }
     }
   }

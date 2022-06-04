@@ -12,7 +12,7 @@
 
 
 #if defined(GPUOffloadingSYCL)
-#include <CL/sycl.hpp>
+#include "SYCL.h"
 #endif
 
 #if defined(SharedTBB)

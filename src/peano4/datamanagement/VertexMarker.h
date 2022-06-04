@@ -108,9 +108,33 @@ struct peano4::datamanagement::VertexMarker {
      * Return relative position within father cell. The result is from
      * (0,1,2,3)^d and denotes the vertex position within a 3x3 or 3x3x3
      * respectively mesh.
+     *
+     * @see coincidesWithCoarseGridVertex()
      */
     tarch::la::Vector<Dimensions,int>  getRelativePositionWithinFatherCell() const;
     tarch::la::Vector<Dimensions,int>  getRelativePositionWithinFatherCell(int i) const;
+
+    /**
+     * The vertex (0,0,0) coincides with a coarse grid vertex, the (3,0,0) does
+     * so too, and so forth.
+     *
+     * ## Frequent use case
+     *
+     * If you want to program some simply injection, it helps to identify vertices
+     * which coincide spatially with vertices on the next coarser level. A classic
+     * are codes like
+     *
+     *       if ( marker.coincidesWithCoarseGridVertex() ) {
+     *         tarch::la::Vector<Dimensions,int> parent = marker.getRelativePositionWithinFatherCell() / 3;
+     *         coarseGridVerticesX( peano4::utils::dLinearised(parent,2) ).set...
+     *       }
+     *
+     * within touchVertexLastTime. This snippet looks if two vertices coincide
+     * spatially. If so, it computes the parent's relative position within the
+     * parent cell which is simply a division by 3. We then linearise this vector
+     * index and thus have access to teh parent.
+     */
+    bool coincidesWithCoarseGridVertex() const;
 
 
     /**

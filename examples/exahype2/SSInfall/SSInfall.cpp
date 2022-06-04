@@ -9,6 +9,9 @@
 tarch::logging::Log   examples::exahype2::SSInfall::SSInfall::_log( "examples::exahype2::SSInfall::SSInfall" );
 
 
+const tarch::la::Vector<Dimensions,double>  examples::exahype2::SSInfall::SSInfall::OverDensityCentre = {0.0, 0.0, 0.0};
+
+
 #if defined(GPUOffloadingOMP)
 #pragma omp declare target
 #endif
@@ -174,7 +177,7 @@ std::string examples::exahype2::SSInfall::SSInfall::plotGlobalMTot(bool plotCopy
     }
   }
   if (ReSwi==3){ //radius based, for test
-    if (radius<0.2) {result=::exahype2::RefinementCommand::Refine;}
+    if (radius<0.1) {result=::exahype2::RefinementCommand::Refine;}
   }
   if (ReSwi==4){ //dynamic one
     double t_i=pow(a_i,1.5)*2.057*1e17;
@@ -237,10 +240,11 @@ void examples::exahype2::SSInfall::SSInfall::initialCondition(
   bool                                         gridIsConstructred
 ) {
   logDebug( "initialCondition(...)", "init volume at " << volumeCentre << "x" << volumeH << " (grid constructed=" << gridIsConstructred << ")" );
+
   constexpr double pi = M_PI;
-  double x=volumeCentre(0)-center(0);
-  double y=volumeCentre(1)-center(1);
-  double z=volumeCentre(2)-center(2);
+  double x=volumeCentre(0)-OverDensityCentre(0);
+  double y=volumeCentre(1)-OverDensityCentre(1);
+  double z=volumeCentre(2)-OverDensityCentre(2);
 
   bool isInTheSphere = ( (x*x+y*y+z*z) < r_ini*r_ini );//overdensity region
   double r_coor=x*x+y*y+z*z;
@@ -270,8 +274,8 @@ void examples::exahype2::SSInfall::SSInfall::initialCondition(
     }
   Q[4] = 0.5*(Q[1]*Q[1]+Q[2]*Q[2]+Q[3]*Q[3])/Q[0]+tilde_P_ini/(gamma-1); // inner energy
 
-  for (int i=5; i<20; i++){
-    	Q[i]=0.0;
+  for (int i=NumberOfUnknowns; i<NumberOfUnknowns+NumberOfAuxiliaryVariables; i++) {
+    Q[i] = 0.0;
   }
 
   const double irho = 1./Q[0];
@@ -281,7 +285,9 @@ void examples::exahype2::SSInfall::SSInfall::initialCondition(
   const double p = (gamma-1) * (Q[4] - 0.5*irho*(Q[1]*Q[1]+Q[2]*Q[2]));
   #endif
 
+  Q[0] = rho_ini;
   nonCriticalAssertion6( p>=0.0, Q[0], Q[1], Q[2], Q[3], Q[4], volumeH );
+  assertion5( Q[0]>1e-12, Q[1], Q[2], Q[3], Q[4], volumeH );
   // initial conditions
 /*
   Q[0] = isInTheSphere ? rho_ini*(1+delta_rho) : rho_ini;  // rho
@@ -300,6 +306,13 @@ void examples::exahype2::SSInfall::SSInfall::initialCondition(
   Q[3] = 0;
   Q[4] = isInTheCentre ? 1.0 : 0.0; // inner energy
 */
+  if ( Q[0]<1e-12 ){
+    ::exahype2::triggerNonCriticalAssertion( __FILE__, __LINE__, "Q[0]>0", "density become 0 at volume: ["+std::to_string(volumeCentre(0))+", "+std::to_string(volumeCentre(1))+", "+std::to_string(volumeCentre(2))+"] Q[] array: "+std::to_string(Q[0])+" "+std::to_string(Q[1])+" "+std::to_string(Q[2])+" "+std::to_string(Q[3])+" "+std::to_string(Q[4])+".");
+  }
+
+  for (int i=5; i<NumberOfUnknowns+NumberOfAuxiliaryVariables; i++) {
+    Q[i] = 0.0;
+  }
 }
 
 
@@ -372,9 +385,9 @@ void examples::exahype2::SSInfall::SSInfall::sourceTerm(
     volumeX, volumeH, t, dt
   );
 
-  double x=volumeX(0)-center(0);
-  double y=volumeX(1)-center(1);
-  double z=volumeX(2)-center(2);
+  double x=volumeX(0)-OverDensityCentre(0);
+  double y=volumeX(1)-OverDensityCentre(1);
+  double z=volumeX(2)-OverDensityCentre(2);
 
   double r_coor=x*x+y*y+z*z;
   r_coor=pow(r_coor,0.5);
@@ -396,7 +409,7 @@ void examples::exahype2::SSInfall::SSInfall::sourceTerm(
         nonCriticalAssertion4( m_in<1e100, volumeX, volumeH, t, dt );
       }
       else {
-        assertion( isOutsideOfLargestRadius(volumeX, volumeH) );
+        assertion3( isOutsideOfLargestRadius(volumeX, volumeH), volumeX, volumeH, _rMax );
         m_in=(mass_interpolate(r_coor, MassCal)+delta_m)/4.0/tarch::la::PI;
         nonCriticalAssertion4( not std::isnan(m_in), volumeX, volumeH, t, dt );
         nonCriticalAssertion4( m_in<1e100, volumeX, volumeH, t, dt );
@@ -416,6 +429,10 @@ void examples::exahype2::SSInfall::SSInfall::sourceTerm(
   S[3] = -force_density_norm*z;
   S[4] = -force_density_norm*(Q[1]*x+Q[2]*y+Q[3]*z)/Q[0];
 
+  for (int i=5; i<NumberOfUnknowns+NumberOfAuxiliaryVariables; i++) {
+    S[i] = 0.0;
+  }
+
   logTraceOut( "sourceTerm(...)" );
 }
 
@@ -432,10 +449,8 @@ void examples::exahype2::SSInfall::SSInfall::sourceTerm(
   double * __restrict__                        S, // S[5
   Offloadable
 ) {
-  const tarch::la::Vector<Dimensions,double> center(0.0);
-  double r_coor         = tarch::la::norm2(volumeX - center);
+  double r_coor         = tarch::la::norm2(volumeX - OverDensityCentre);
 
-  // @todo Han, this requires work
   double m_in = (4.0/3.0)*tarch::la::PI*(pow(r_coor,3)-pow(_rMax,3))*(_rMax-1.0) + _mTotMax;
 
   double force_density_norm = getForceDensityNorm(
@@ -444,15 +459,19 @@ void examples::exahype2::SSInfall::SSInfall::sourceTerm(
     t, Q[0],1.0
   );
 
-  double x = volumeX(0)-center(0);
-  double y = volumeX(1)-center(1);
-  double z = volumeX(2)-center(2);
+  double x = volumeX(0)-OverDensityCentre(0);
+  double y = volumeX(1)-OverDensityCentre(1);
+  double z = volumeX(2)-OverDensityCentre(2);
 
   S[0] = 0.0;  // rho
   S[1] = -force_density_norm*x;    // velocities
   S[2] = -force_density_norm*y;
   S[3] = -force_density_norm*z;
   S[4] = -force_density_norm*(Q[1]*x+Q[2]*y+Q[3]*z)/Q[0];
+
+  for (int i=5; i<NumberOfUnknowns+NumberOfAuxiliaryVariables; i++) {
+    S[i] = 0.0;
+  }
 }
 #if defined(GPUOffloadingOMP)
 #pragma omp end declare target
@@ -463,7 +482,7 @@ bool examples::exahype2::SSInfall::SSInfall::isOutsideOfLargestRadius(
   const tarch::la::Vector<Dimensions,double>&  patchCentre,
   const tarch::la::Vector<Dimensions,double>&  patchH
 ) const {
-  double r_coor         = tarch::la::norm2(patchCentre - center);
+  double r_coor         = tarch::la::norm2(patchCentre - OverDensityCentre);
   double safetyDistance = std::sqrt(3) * tarch::la::max(patchH) / 2.0;
   return  r_coor + safetyDistance > _rMax;
 }
@@ -496,6 +515,12 @@ void examples::exahype2::SSInfall::SSInfall::boundaryConditions(
   nonCriticalAssertion4( Qinside[4]==Qinside[4], faceCentre, volumeH, t, normal );
 
   nonCriticalAssertion5( Qinside[0]>1e-12, faceCentre, volumeH, t, normal, Qinside[0] );
+/*
+  assertion5( Qinside[0]>1e-12, faceCentre, volumeH, t, normal, Qinside[0] );
+  if ( Qinside[0]<1e-12 ){
+    ::exahype2::triggerNonCriticalAssertion( __FILE__, __LINE__, "Qinside[0]>0", "density become 0 at face: ["+std::to_string(faceCentre(0))+", "+std::to_string(faceCentre(1))+", "+std::to_string(faceCentre(2))+"] Q[] array: "+std::to_string(Qinside[0])+" "+std::to_string(Qinside[1])+" "+std::to_string(Qinside[2])+" "+std::to_string(Qinside[3])+" "+std::to_string(Qinside[4])+".");
+  }
+*/
 
   if (extrapolate_bc==0){
     Qoutside[0] = Qinside[0];
@@ -503,9 +528,6 @@ void examples::exahype2::SSInfall::SSInfall::boundaryConditions(
     Qoutside[2] = Qinside[2];
     Qoutside[3] = Qinside[3];
     Qoutside[4] = Qinside[4];
-    for (int i=5; i<20; i++){
-    	Qoutside[i]=0;
-    }
   }
   else if (extrapolate_bc==1)
   {
@@ -519,7 +541,7 @@ void examples::exahype2::SSInfall::SSInfall::boundaryConditions(
         Qoutside[i]=Qinside[i]+Qinside[5+i*3+normal-3]*(volumeH(normal-3));
       } 
     }
-    for (int i=5; i<20; i++){
+    for (int i=NumberOfUnknowns; i<NumberOfUnknowns+NumberOfAuxiliaryVariables; i++) {
     	Qoutside[i]=0;
     }
   }    
@@ -529,7 +551,7 @@ void examples::exahype2::SSInfall::SSInfall::boundaryConditions(
       not std::isnan(Qinside[0]),
       normal, faceCentre, Qinside[0], Qinside[1], Qinside[2], Qinside[3], Qinside[4]
     );
-    for (int i=5; i<20; i++){
+    for (int i=NumberOfUnknowns; i<NumberOfUnknowns+NumberOfAuxiliaryVariables; i++) {
     	Qoutside[i]=0;
     }  
     for (int i=0; i<5; i++){
@@ -556,6 +578,10 @@ void examples::exahype2::SSInfall::SSInfall::boundaryConditions(
     not std::isnan(Qinside[0]),
     normal, faceCentre, Qinside[0], Qinside[1], Qinside[2], Qinside[3], Qinside[4]
   );
+
+  for (int i=5; i<NumberOfUnknowns+NumberOfAuxiliaryVariables; i++) {
+    Qoutside[i]=0;
+  }
 
   logTraceOut( "boundaryConditions(...)" );
 }

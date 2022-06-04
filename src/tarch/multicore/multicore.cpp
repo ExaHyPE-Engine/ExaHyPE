@@ -10,7 +10,7 @@
 #ifndef SharedMemoryParallelisation
 
 double* tarch::allocateMemory(int size, MemoryLocation location) {
- return new (std::align_val_t(Alignment)) double[size];
+ return new (std::align_val_t(AlignmentOnHeap)) double[size];
 }
 
 
@@ -45,13 +45,13 @@ void tarch::multicore::shutdownSmartMPI() {
 
 #if defined(GPUOffloadingOMP)
 #pragma omp declare target
-#endif
 void tarch::gpuAbort() {
-  #if !defined(GPUOffloadingOMP)
   std::abort();
-  #endif
 }
-#if defined(GPUOffloadingOMP)
 #pragma omp end declare target
+#elif !defined(GPUOffloadingOMP) and !defined(GPUOffloadingSYCL)
+void tarch::gpuAbort() {
+  std::abort();
+}
 #endif
 

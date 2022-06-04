@@ -99,7 +99,7 @@ time_step_size = 0.1 * min_h
 #
 #
 
-auxiliary_variables = 0
+auxiliary_variables = 1
 
 thesolver = None
 solver_name = "Euler"
@@ -144,7 +144,7 @@ elif args.type=="global-adaptive-enclave":
     min_h, max_h,
     flux = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
     eigenvalues = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
-    source_term = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
+#    source_term = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
     time_step_relaxation = 0.05,
     pde_terms_without_state = args.gpu
   )
@@ -212,22 +212,17 @@ thesolver.set_implementation( refinement_criterion=exahype2.solvers.fv.PDETerms.
 
 
 if args.interpolation_scheme=="constant":
-  thesolver._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement.switch_interpolation_scheme( "piecewise_constant" )
-  thesolver.create_action_sets()
+  thesolver.interpolation = "piecewise_constant"
 elif args.interpolation_scheme=="linear-constant-extrapolation":
-  thesolver._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement.switch_interpolation_scheme( "linear_with_constant_extrapolation" )
-  thesolver.create_action_sets()
+  thesolver.interpolation = "linear_with_constant_extrapolation"
 elif args.interpolation_scheme=="linear-linear-extrapolation":
-  thesolver._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement.switch_interpolation_scheme( "linear_with_linear_extrapolation" )
-  thesolver.create_action_sets()
+  thesolver.interpolation = "linear_with_linear_extrapolation"
 elif args.interpolation_scheme=="linear-linear-extrapolation-linear-normal-interpolation":
-  thesolver._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement.switch_interpolation_scheme( "linear_with_linear_extrapolation_and_linear_normal_interpolation" )
-  thesolver.create_action_sets()
+  thesolver.interpolation = "linear_with_linear_extrapolation_and_linear_normal_interpolation"
 elif args.interpolation_scheme=="order-2":
-  thesolver._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement.switch_interpolation_scheme( "linear" )
+  thesolver.interpolation = "linear"
   # @todo Han, we have to change this one
   thesolver.overlap=2
-  thesolver.create_action_sets()
 else:
   raise Exception( "Unknown interpolation scheme");
   
@@ -236,6 +231,14 @@ else:
 
 
 project.add_solver( thesolver )
+
+
+#
+# Please comment out later again
+#
+amr_label = exahype2.solvers.elliptic.AMRMarker( name="AMRMarker" )
+amr_label.couple_with_FV_solver( thesolver, 0 )
+project.add_solver( amr_label )
 
 
 dimensions = args.dim
