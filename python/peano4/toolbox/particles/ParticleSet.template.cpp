@@ -229,6 +229,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::particlesCanNotBeLiftedLocally()
 
   tarch::multicore::Lock lock( _semaphore );
   for (auto& p: *this) {
+    logDebug( "particlesCanNotBeLiftedLocally()", "add particle " << p->toString() << " from " << toString() << " to global sieve list for next iteration" );
     globaldata::{{PARTICLE_TYPE}}* copyOfParticle = new globaldata::{{PARTICLE_TYPE}}(*p);
     _particlesThatCanNotBeLiftedWithinTheirTree.push_back(copyOfParticle);
   }
@@ -242,18 +243,38 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::particlesCanNotBeLiftedLocally()
   assertion( thereAreParticlesToBeSieved() );
 
   {{NAMESPACE | join("::")}}::{{CLASSNAME}} result;
-  for (auto& p: _particlesThatHaveToBeSieved) {
+  {{CLASSNAME}}::iterator p = _particlesThatHaveToBeSieved.begin();
+  while ( p!=_particlesThatHaveToBeSieved.end() ) {
     if (
-      tarch::la::min( marker.h() ) >= p->getCutOffRadius()
+      marker.isContainedInAdjacentCells( (*p)->getX(), 0.5 * sortingTolerance)
       and
-      marker.isContainedInAdjacentCells( p->getX(), 0.5 * sortingTolerance)
+      tarch::la::min( marker.h() ) >= (*p)->getCutOffRadius()
+      and
+      (
+        tarch::la::min( marker.h() ) / 3.0 < (*p)->getCutOffRadius()
+        or
+        not marker.hasBeenRefined()
+      )
     ) {
-      // @todo Debug
-      logInfo( "touchVertexLastTime(...)", "drop particle " << p->toString() << " from global sieve list into vertex " << marker.toString() );
-      globaldata::{{PARTICLE_TYPE}}* copyOfParticle = new globaldata::{{PARTICLE_TYPE}}(*p);
-      p->setParallelState( globaldata::{{PARTICLE_TYPE}}::ParallelState::Virtual );
-      result.push_back( copyOfParticle );
+      logDebug( "getParticlesToBeSievedIntoVertex(...)", "drop particle " << (*p)->toString() << " from global sieve list into vertex " << marker.toString() );
+
+      if ( marker.isLocal() ) {
+        logInfo( "getParticlesToBeSievedIntoVertex(...)", "remove particle from sieve list, as vertex is local. This improves the efficiency and it ensures that particles right in-between two vertices are not added twice per tree" );
+        (*p)->setParallelState( globaldata::{{PARTICLE_TYPE}}::ParallelState::Virtual );
+        result.push_back( *p );
+        p = _particlesThatHaveToBeSieved.erase(p);
+      }
+      else {
+        globaldata::{{PARTICLE_TYPE}}* copyOfParticle = new globaldata::{{PARTICLE_TYPE}}(**p);
+        copyOfParticle->setParallelState( globaldata::{{PARTICLE_TYPE}}::ParallelState::Virtual );
+        result.push_back( copyOfParticle );
+        p++;
+      }
+    }
+    else {
+      p++;
     }
   }
+  return result;
 }
 

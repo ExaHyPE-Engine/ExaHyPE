@@ -306,7 +306,7 @@ class UpdateParticleGridAssociation(ActionSet):
 """)
 
 
-  __Template_Sieve = jinja2.Template("""  
+  __Template_Sieve = jinja2.Template("""
   if ( vertexdata::{{PARTICLES_CONTAINER}}::thereAreParticlesToBeSieved() ) {
     vertexdata::{{PARTICLES_CONTAINER}} sievedParticles = vertexdata::{{PARTICLES_CONTAINER}}::getParticlesToBeSievedIntoVertex(
         marker,
@@ -464,6 +464,7 @@ class UpdateParticleGridAssociation(ActionSet):
   int  _numberOfAssignmentsToGlobalSieve;
   int  _numberOfDrops;
   int  _numberOfEliminations;
+  
 """).render(**self.d)
 
 
