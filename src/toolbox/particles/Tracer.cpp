@@ -101,9 +101,7 @@ tarch::la::Vector<Dimensions,double> toolbox::particles::LinearInterp(
 
   tarch::la::Vector<Dimensions,double> result = particleX;
   for (int d=0; d<Dimensions; d++) {
-    //std::cout << velocity(d) << std::endl;
     result(d) += timeStepSize * velocity(d);
-    //result(d) += timeStepSize * 0.02;
   }
 
   return result;
