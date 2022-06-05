@@ -48,7 +48,8 @@ project.set_global_simulation_parameters(
   dimensions = 2,
   offset = [0.0,0.0],
   size = [10.0,10.0],
-  end_time = 0.04,
+  min_end_time = 0.04,
+  max_end_time = 0.04,
   first_plot_time_stamp = 0.0,
   time_in_between_plots = 0.001,      # snapshots
   periodic_BC = [False, False, False]
