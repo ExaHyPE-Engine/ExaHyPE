@@ -139,7 +139,8 @@ class PlotPatchesInPeanoBlockFormat(ActionSet):
   if ( {GUARD_PREDICATE} ) {{
   int vertexIndices[TwoPowerD];
   
-  const double PatchScaling = 0.95;
+  //const double PatchScaling = 0.95;
+  const double PatchScaling = 1.0;
 
   assertion( _writer!=nullptr );
   assertion( _dataWriter!=nullptr );
@@ -196,7 +197,7 @@ class PlotPatchesInPeanoBlockFormat(ActionSet):
   std::ostringstream snapshotFileName;
   snapshotFileName << "{FILENAME}-" << counter;
 
-  if (tarch::mpi::Rank::getInstance().getNumberOfRanks()>0 ) {{
+  if (tarch::mpi::Rank::getInstance().getNumberOfRanks()>1 ) {{
     snapshotFileName << "-rank-" << tarch::mpi::Rank::getInstance().getRank();
   }}
 

@@ -139,16 +139,24 @@ class tarch::la::DynamicMatrix {
      *                 through this offset. The fact that I can use a subset of the
      *                 matrix requires me to pass in resultSize explicitly.
      */
-    void batchedMultiplyAoS( double* result, double* x, int batchCount, int resultSize, int firstRow );
+    void batchedMultiplyAoS(
+      double* __restrict__        result,
+      const double* __restrict__  x,
+      int batchCount, int resultSize, int firstRow
+    );
 
     /**
      * Wrapper around other batch operation. The whole matrix is used.
      */
-    void batchedMultiplyAoS( double* result, double* x, int batchCount );
+    void batchedMultiplyAoS(
+      double* __restrict__        result,
+      const double* __restrict__  x,
+      int batchCount
+    );
 
     /**
      * Split the matrix into blocks of rows of size blockSize. The number of
-     * rows now is creased by a factor of numberOfReplications. Each block is
+     * rows now is increased by a factor of numberOfReplications. Each block is
      * replicated numberOfReplications in the final output. For the replicated
      * blocks, we shift each column by shiftAfterEveryReplication. So this
      * entry can be zero if you want no shifts. Due to the shifts, it might
@@ -158,6 +166,7 @@ class tarch::la::DynamicMatrix {
      * the shifts.
      */
     void replicateRows( int blockSize, int numberOfReplications, int shiftAfterEveryReplication, bool extendColumnsToAccommodateShifts );
+    void replicateCols( int blockSize, int numberOfReplications, int shiftAfterEveryReplication, bool extendColumnsToAccommodateShifts );
 
     /**
      * Insert zero columns
@@ -180,6 +189,11 @@ class tarch::la::DynamicMatrix {
     void shiftColumnsRight(int shift, bool wrap=false);
 
     void removeColumn( int number );
+
+    /**
+     * Scale all entries
+     */
+    void scale(double value);
 
     /**
      * Create (square) identify matrix with rows rows and column.

@@ -3,12 +3,13 @@
 
 
 #include "config.h"
+#include "tarch/compiler/CompilerSpecificSettings.h"
 
 
 #include <string>
 
 
-#if defined(SharedOMP) || defined(SharedSYCL) || defined(SharedCPP)
+#if defined(SharedOMP) || defined(SharedTBB) || defined(SharedCPP)
   #define SharedMemoryParallelisation
 #endif
 
@@ -16,6 +17,13 @@
 
 #ifndef _TARCH_MULTICORE_MULTICORE_H_
 #define _TARCH_MULTICORE_MULTICORE_H_
+
+
+/**
+ * Have to include this header, as I need access to the SYCL_EXTERNAL keyword.
+ */
+#include "tarch/multicore/tbb/SYCL.h"
+
 
 namespace tarch {
 
@@ -229,19 +237,6 @@ and
 
  */
   namespace multicore {
-     #if defined(GPUOffloading) and defined(UseAMD)
-       #define  GPUCallableMethod __global__ __device__
-       #undef   OpenMPGPUOffloading
-     #elif defined(GPUOffloading) and defined(SharedOMP)
-       #define  GPUCallableMethod
-       #define  OpenMPGPUOffloading
-     #elif defined(GPUOffloading)
-       #error GPU Offloading without HIP and OpenMP requested. Not supported
-     #else
-      #define  GPUCallableMethod 
-      #undef   OpenMPGPUOffloading
-     #endif
-
      /**
       * Switch on SmartMPI
       *
@@ -266,13 +261,42 @@ and
     ManagedAcceleratorMemory
   };
 
-  #if defined(OpenMPGPUOffloading)
-  #pragma omp declare target
+  #if defined(GPUOffloadingHIP)
+    #define GPUCallableMethod __host__ __device__
+    //#define GPUCallableMethod __global__ __device__
+  #elif defined(GPUOffloadingSYCL)
+    #define GPUCallableMethod inline SYCL_EXTERNAL
+  #else
+    /**
+     * For LLVM/OMP it is absolutely essential that you don't specify
+     * a inline or similar funny stuff here.
+     */
+    #define GPUCallableMethod
   #endif
+
+  #if defined(UseManualInlining)
+    #define InlineMethod __attribute__((always_inline))
+  #else
+    #define InlineMethod
+  #endif
+
+
   double* allocateMemory(int size, MemoryLocation location);
   void freeMemory(double* data, MemoryLocation location);
-  #if defined(OpenMPGPUOffloading)
+
+
+  /**
+   * Delegates to std::abort() if no GPU offloading is active. Otherwise is degenerates
+   * to nop, as there is no abort on an accelerator.
+   */
+  #if defined(GPUOffloadingOMP)
+  #pragma omp declare target
+  GPUCallableMethod void gpuAbort();
   #pragma omp end declare target
+  #elif defined(GPUOffloadingSYCL)
+  GPUCallableMethod void gpuAbort() {};
+  #else
+  void gpuAbort();
   #endif
 }
 

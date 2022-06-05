@@ -5,13 +5,12 @@
 #include "tarch/multicore/Lock.h"
 #include "tarch/multicore/Core.h"
 #include "tarch/multicore/Tasks.h"
+#include "tarch/multicore/otter.h"
 
 #include "tarch/logging/Statistics.h"
 
 #include <algorithm>
 
-
-#include "exahype2/fv/Generic.h"
 
 
 tarch::logging::Log
@@ -79,6 +78,8 @@ exahype2::EnclaveBookkeeping::Entry exahype2::EnclaveBookkeeping::waitForTaskToT
 
   tarch::multicore::releaseTaskNumber(number);
 
+  otterSynchroniseDescendantTasks();
+
   return storedData;
 }
 
@@ -100,7 +101,7 @@ void exahype2::EnclaveBookkeeping::finishedTask(int taskNumber, int numberOfResu
   logDebug( "finishedTask()", "task " << taskNumber << " has terminated. Bookkeep results" );
 
   tarch::multicore::Lock lockFinishedTasks( _finishedTasksSemaphore );
-  assertionEquals( _finishedTasks.count(taskNumber),0 );
+  assertionEquals1( _finishedTasks.count(taskNumber),0,taskNumber );
   if (_tasksThatHaveToBeCancelled.count(taskNumber)) {
     _tasksThatHaveToBeCancelled.erase(taskNumber);
     delete[] data;

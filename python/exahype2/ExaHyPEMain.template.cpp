@@ -7,6 +7,7 @@
 #include "tarch/UnitTests.h"
 #include "tarch/multicore/multicore.h"
 #include "tarch/multicore/Core.h"
+#include "tarch/multicore/otter.h"
 #include "tarch/timing/Watch.h"
 #include "tarch/timing/Measurement.h"
 #include "tarch/tests/TreeTestCaseCollection.h"
@@ -80,7 +81,8 @@ bool selectNextAlgorithmicStep() {{
   static bool   gridConstructed                             = false;
   static bool   gridInitialised                             = false;
   static bool   gridBalanced                                = false;
-  static double nextPlotTimeStamp                           = FirstPlotTimeStamp;
+  static double nextMaxPlotTimeStamp                        = FirstPlotTimeStamp;
+  static double nextMinPlotTimeStamp                        = FirstPlotTimeStamp;
   static bool   haveJustWrittenSnapshot                     = false;
   static bool   haveReceivedNoncriticialAssertion           = false;
   static bool   addGridSweepWithoutGridRefinementNext       = false;
@@ -180,29 +182,45 @@ bool selectNextAlgorithmicStep() {{
   }}
   else {{
     if (
-      TimeInBetweenPlots>0.0 and repositories::getMinTimeStamp()<TerminalTime
+      TimeInBetweenPlots>0.0 and repositories::getMinTimeStamp()<MinTerminalTime and repositories::getMaxTimeStamp()<MaxTerminalTime
       and
-      repositories::getMinTimeStamp()>=nextPlotTimeStamp
+      (repositories::getMinTimeStamp()>=nextMinPlotTimeStamp or repositories::getMaxTimeStamp()>=nextMaxPlotTimeStamp)
       and
       repositories::mayPlot()
     ) {{
-      if ( nextPlotTimeStamp+TimeInBetweenPlots < repositories::getMinTimeStamp() ) {{
+      if (repositories::getMinTimeStamp()>=nextMinPlotTimeStamp) {{
+        nextMinPlotTimeStamp += TimeInBetweenPlots;
+      }}
+      if (repositories::getMaxTimeStamp()>=nextMaxPlotTimeStamp) {{
+        nextMaxPlotTimeStamp += TimeInBetweenPlots;
+      }}
+
+      if ( nextMinPlotTimeStamp < repositories::getMinTimeStamp() ) {{
         logWarning(
           "selectNextAlgorithmicStep()",
-          "plot as t=" << repositories::getMinTimeStamp() << " and next plot has been due at t=" << nextPlotTimeStamp << ". " <<
-          "Code is asked to plot every dt=" << TimeInBetweenPlots << ", but this seems to be less than the minimal time step size of the solvers. " <<
+          "code is asked to plot every dt=" << TimeInBetweenPlots << ", but this seems to be less than the time step size of the solvers. " <<
           "So postpone next plot to t=" << (repositories::getMinTimeStamp() + TimeInBetweenPlots)
         );
-        nextPlotTimeStamp = repositories::getMinTimeStamp();
+        nextMinPlotTimeStamp = repositories::getMinTimeStamp() + TimeInBetweenPlots;
       }}
-      nextPlotTimeStamp += TimeInBetweenPlots;
+      else if ( nextMaxPlotTimeStamp < repositories::getMaxTimeStamp() ) {{
+        logWarning(
+          "selectNextAlgorithmicStep()",
+          "code is asked to plot every dt=" << TimeInBetweenPlots << ", but this seems to be less than the time step size of the solvers. " <<
+          "So postpone next plot to t=" << (repositories::getMaxTimeStamp() + TimeInBetweenPlots)
+        );
+        nextMaxPlotTimeStamp = repositories::getMaxTimeStamp() + TimeInBetweenPlots;
+      }}
+
+      nextMaxPlotTimeStamp = std::max(nextMaxPlotTimeStamp,nextMinPlotTimeStamp);
+
       peano4::parallel::Node::getInstance().setNextProgramStep(
         repositories::StepRepository::toProgramStep( repositories::StepRepository::Steps::PlotSolution )
       );
       haveJustWrittenSnapshot = true;
       continueToSolve         = true;
     }}
-    else if ( repositories::getMinTimeStamp()<TerminalTime) {{
+    else if ( repositories::getMinTimeStamp()<MinTerminalTime and repositories::getMaxTimeStamp()<MaxTerminalTime ) {{
       peano4::parallel::Node::getInstance().setNextProgramStep(
         repositories::StepRepository::toProgramStep( repositories::StepRepository::Steps::TimeStep )
       );
@@ -216,7 +234,8 @@ bool selectNextAlgorithmicStep() {{
         );
         continueToSolve         = true; // don't want to terminate immediately
         haveJustWrittenSnapshot = true;
-        nextPlotTimeStamp       = std::numeric_limits<double>::max();
+        nextMinPlotTimeStamp    = std::numeric_limits<double>::max();
+        nextMaxPlotTimeStamp    = std::numeric_limits<double>::max();
       }}
       else if (not haveJustWrittenSnapshot and TimeInBetweenPlots>0.0 and not repositories::mayPlot()) {{
         continueToSolve = true; // don't want to terminate immediately but to wait for incomplete time steps to complete
@@ -344,10 +363,7 @@ void step() {{
 
         repositories::finishGridInitialisationStep();
 
-        #if defined(UseOtter)
-        otterTraceBegin();
-        otterParallelBegin();
-        #endif
+        otterTraceStart();
       }}
       break;
     case repositories::StepRepository::Steps::PlotSolution:
@@ -358,6 +374,7 @@ void step() {{
         const double minTimeStepSize = repositories::getMinTimeStepSize();
         const double maxTimeStepSize = repositories::getMaxTimeStepSize();
 
+        otterPhaseSwitch( "plotting" );
         repositories::startPlottingStep( minTimeStamp, maxTimeStamp, minTimeStepSize, maxTimeStepSize );
 
         observers::PlotSolution  observer;
@@ -383,6 +400,7 @@ void step() {{
         const double minMeshSize     = repositories::getMinMeshSize();
         const double maxMeshSize     = repositories::getMaxMeshSize();
 
+        otterPhaseSwitch( "time-step" );
         repositories::startTimeStep( minTimeStamp, maxTimeStamp, minTimeStepSize, maxTimeStepSize );
         
         observers::TimeStep  observer;
@@ -419,7 +437,7 @@ int main(int argc, char** argv) {{
   peano4::initSingletons(
     DomainOffset,
     DomainSize,
-    {PERIODIC_BC}
+    PeriodicBC
   );
   
   if ( tarch::mpi::Rank::getInstance().getNumberOfRanks()>1 and tarch::multicore::Core::getInstance().getNumberOfThreads()<=1 ) {{
@@ -452,7 +470,11 @@ int main(int argc, char** argv) {{
 
   tarch::logging::Statistics::getInstance().clear();
 
+  otterTraceInitialise();
+  otterTraceStop();
+
   #if defined(SharedOMP)
+  otterParallelBegin();
   #pragma omp parallel
   {{
   #pragma omp master 
@@ -495,14 +517,12 @@ int main(int argc, char** argv) {{
   #if defined(SharedOMP)
   }}
   }}
+  otterParallelEnd();
   #endif
 
   tarch::logging::Statistics::getInstance().writeToCSV();
 
-  #if defined(UseOtter)
-  otterParallelEnd();
-  otterTraceEnd();
-  #endif
+  otterTraceFinalise();
 
   repositories::finishSimulation();
 

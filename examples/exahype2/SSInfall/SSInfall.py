@@ -8,6 +8,8 @@ import peano4.toolbox.particles
 import dastgen2
 
 from Bindding import tracer_seeds_generate, read_scale_factor_table
+
+from peano4.toolbox.blockstructured.DynamicAMR                 import DynamicAMR
 import numpy as np
 
 modes = { 
@@ -19,7 +21,7 @@ modes = {
 }
 
 floatparams = {
-         "G":1, "tilde_rho_ini":1, "r_ini":0.2, "delta_rho":0.05, "tilde_P_ini":1e-6, "gamma":5.0/3.0, "Omega_m":1, "delta_m":0.15, "r_point":0.05, "a_i":0.001, "v_scale":1.0, "domain_r":0.5, "DGP_beta":100, "DGP_zeta":1e5}
+         "G":1, "tilde_rho_ini":1, "r_ini":0.2, "delta_rho":0.05, "tilde_P_ini":1e-6, "gamma":5.0/3.0, "Omega_m":1, "delta_m":0.15, "r_point":0.05, "a_i":0.001, "v_scale":1.0, "domain_r":0.5, "DGP_beta":100, "DGP_zeta":100}
 
 intparams = {"swi":0, "ReSwi":0, "sample_number":10, "iseed":0, "ReSwi":0, "MassCal":0, "extrapolate_bc":0}
 
@@ -41,8 +43,8 @@ if __name__ == "__main__":
     parser.add_argument("-iseed",    "--initial-seed",        dest="seed",            type=str, default="tophat",  help="specify the overdensity seeds. tophat/point" )
     parser.add_argument("-eigen",    "--eigenvalue-control",  dest="eigen",           choices=["none", "exp"],  default="none",  help="Modified the formula of eigenvalue to suppress initial time-stepping size" )
     parser.add_argument("-cfl",      "--CFL-ratio",           dest="cfl",             type=float, default=0.1, help="Set CFL ratio" )
-    parser.add_argument("-um",       "--universe-model",      dest="model",           choices=["Ein-de", "LCDM","DGP" ], default="Ein-de",  help="specify the background universe model" )
-    parser.add_argument("-interp",   "--interpolation",       dest="interpolation",   choices=["constant", "linear-slow", "linear-optimised", "outflow" ], default="linear-slow",  help="interpolation scheme for AMR" )
+    parser.add_argument("-um",       "--universe-model",      dest="model",           choices=["Ein-de", "LCDM","DGP","LCDMDGP" ], default="Ein-de",  help="specify the background universe model" )
+    parser.add_argument("-interp",   "--interpolation",       dest="interpolation",   choices=["constant", "linear-optimised", "outflow" ], default="linear-optimised",  help="interpolation scheme for AMR" )
     parser.add_argument("-restrict", "--restriction",         dest="restriction",     choices=["average", "inject"], default="average",  help="restriction scheme for AMR" )
     parser.add_argument("-gpu",      "--with-gpu",            dest="gpu",             action="store_true", default=False,  help="support offloading to GPU" )
 
@@ -81,7 +83,7 @@ if __name__ == "__main__":
 
         print( "\n\n\n\I'm stateless: {}\n\n\n".format(args.gpu) )
         self._my_user_includes = """
-#include "exahype2/PatchUtils.h"
+
 """
         if SuperClass==exahype2.solvers.fv.rusanov.GlobalFixedTimeStep:
           SuperClass.__init__(
@@ -119,7 +121,7 @@ if __name__ == "__main__":
             auxiliary_variables=0,
             min_volume_h=min_volume_h, max_volume_h=max_volume_h,
             time_step_relaxation=cfl,
-            pde_terms_without_state=args.gpu
+            #pde_terms_without_state=args.gpu
           )
 
         #self._solver_template_file_class_name = SuperClass.__name__
@@ -134,34 +136,6 @@ if __name__ == "__main__":
 
         self._patch_size = patch_size
         self._domain_r = domain_r  
-
-
-
-      def create_action_sets(self):
-        SuperClass.create_action_sets(self)
-
-        self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement.switch_restriction_scheme( "averaging" )
-        self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement.switch_interpolation_scheme( "linear" )
-
-        if args.interpolation=="constant":
-          self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement.switch_interpolation_scheme( "piecewise_constant" )
-          print( "Interpolation rule: piecewise_constant" )
-        if args.interpolation=="linear-slow":
-          self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement.switch_interpolation_scheme( "linear" )
-          print( "Interpolation rule: linear interpolation without optimisation" )
-        if args.interpolation=="linear-optimised":
-          self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement.switch_interpolation_scheme( "linear_precomputed_operators<" + str(self._patch_size) +">" )
-          print( "Interpolation rule: optimised linear interpolation with patch size " + str(self._patch_size) )
-        if args.interpolation=="outflow":
-          self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement.switch_interpolation_scheme( "outflow" )
-          print( "Interpolation rule: outflow (from fine grid into coarse grid)" )
-
-        if args.restriction=="average":
-          self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement.switch_restriction_scheme( "averaging" )
-          print( "Restiction rule: averaging" )
-        if args.restriction=="inject":
-          self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement.switch_restriction_scheme( "inject" )
-          print( "Restiction rule: injection" )
 
 
       def get_user_action_set_includes(self):
@@ -184,21 +158,20 @@ if __name__ == "__main__":
         # @todo To be discussed with Han
         self._action_set_postprocess_solution.guard = "repositories::{{SOLVER_INSTANCE}}.isLastGridSweepOfTimeStep() and repositories::{{SOLVER_INSTANCE}}.isOutsideOfLargestRadius(marker.x(),marker.h())"
         self._action_set_postprocess_solution.add_postprocessing_kernel( """
-      double r_coor = (volumeX(0)-repositories::{{SOLVER_INSTANCE}}.center(0))*(volumeX(0)-repositories::{{SOLVER_INSTANCE}}.center(0))
-                    + (volumeX(1)-repositories::{{SOLVER_INSTANCE}}.center(1))*(volumeX(1)-repositories::{{SOLVER_INSTANCE}}.center(1))
-                    + (volumeX(2)-repositories::{{SOLVER_INSTANCE}}.center(2))*(volumeX(2)-repositories::{{SOLVER_INSTANCE}}.center(2));
+      double r_coor = (volumeX(0)-repositories::{{SOLVER_INSTANCE}}.OverDensityCentre(0))*(volumeX(0)-repositories::{{SOLVER_INSTANCE}}.OverDensityCentre(0))
+                    + (volumeX(1)-repositories::{{SOLVER_INSTANCE}}.OverDensityCentre(1))*(volumeX(1)-repositories::{{SOLVER_INSTANCE}}.OverDensityCentre(1))
+                    + (volumeX(2)-repositories::{{SOLVER_INSTANCE}}.OverDensityCentre(2))*(volumeX(2)-repositories::{{SOLVER_INSTANCE}}.OverDensityCentre(2));
 
       r_coor=pow(r_coor,0.5);
       repositories::{{SOLVER_INSTANCE}}.add_mass(r_coor,value[0],volumeH(0));  
 """     )
 
-        self.set_preprocess_reconstructed_patch_kernel( """
+        self._preprocess_reconstructed_patch= """
         const int patchSize = """ + str( self._patch.dim[0] ) + """;
-        double volumeH = ::exahype2::getVolumeLength(marker.h(),patchSize);
+        double volumeH = ::exahype2::fv::getVolumeLength(marker.h(),patchSize);
         int aux_var=""" + str( self._auxiliary_variables ) + """;
         double domain_r=""" + str( self._domain_r ) + """;
         int sample=repositories::{{SOLVER_INSTANCE}}.sample_number;
-        tarch::la::Vector<Dimensions,double> center=repositories::{{SOLVER_INSTANCE}}.center;
         dfor(cell,patchSize) {
           tarch::la::Vector<Dimensions,double> coor;
           for (int i=0;i<Dimensions;i++) coor(i) = marker.getOffset()(i)+ (cell(i)+0.5)*volumeH;
@@ -206,10 +179,6 @@ if __name__ == "__main__":
           tarch::la::Vector<Dimensions,int> currentCell = cell + tarch::la::Vector<Dimensions,int>(1);
           const int cellSerialised  = peano4::utils::dLinearised(currentCell, patchSize + 2*1);
           
-          //double r_coor=(coor(0)-center(0))*(coor(0)-center(0))+(coor(1)-center(1))*(coor(1)-center(1))+(coor(2)-center(2))*(coor(2)-center(2));
-          //r_coor=pow(r_coor,0.5);
-          //repositories::{{SOLVER_INSTANCE}}.add_mass(r_coor,reconstructedPatch[cellSerialised*(5+aux_var)+0],volumeH); 
-
           double rho =  reconstructedPatch[cellSerialised*(5+aux_var)+0];      
           double m1  =  reconstructedPatch[cellSerialised*(5+aux_var)+1];
           double m2  =  reconstructedPatch[cellSerialised*(5+aux_var)+2];
@@ -222,7 +191,7 @@ if __name__ == "__main__":
           }
           
           //int test=0;
-          if (abs(coor(0))>0.8*domain_r or abs(coor(1))>0.8*domain_r or abs(coor(2))>0.8*domain_r){ 
+          if (abs(coor(0))>0.6*domain_r or abs(coor(1))>0.6*domain_r or abs(coor(2))>0.6*domain_r){ 
           for (int d=0; d<3; d++) {
             tarch::la::Vector<Dimensions,int> leftCell  = currentCell;
             tarch::la::Vector<Dimensions,int> rightCell = currentCell;
@@ -240,7 +209,7 @@ if __name__ == "__main__":
             for (int d=0; d<15; d++) {reconstructedPatch[cellSerialised*(5+aux_var)+5+d]=0;}
           }
         }        
-    """)
+    """
         self.create_data_structures()
         self.create_action_sets()
 
@@ -254,9 +223,9 @@ if __name__ == "__main__":
     """
         self._auxiliary_variables = 0
 
-        self.set_preprocess_reconstructed_patch_kernel( """
+        self._preprocess_reconstructed_patch_kernel= """
         const int patchSize = """ + str( self._patch.dim[0] ) + """;
-        double volumeH = ::exahype2::getVolumeLength(marker.h(),patchSize);
+        double volumeH = ::exahype2::fv::getVolumeLength(marker.h(),patchSize);
         int aux_var=0;
         int sample=repositories::{{SOLVER_INSTANCE}}.sample_number;
         if ( marker.isContained((0,0,0)) ){
@@ -285,7 +254,7 @@ if __name__ == "__main__":
             }
           }                   
         }
-    """)
+    """
 
         self.create_data_structures()
         self.create_action_sets()
@@ -348,6 +317,28 @@ if __name__ == "__main__":
     elif args.extension=="rhointer":
       my_solver.add_mass_cal_rhointer()
       userinfo.append(("mass calculation schme: rho interpolation",None))
+
+#/        self.restriction_scheme( "averaging" )
+#        self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement.switch_interpolation_scheme( "linear" )
+
+    if args.interpolation=="constant":
+      my_solver.interpolation = "piecewise_constant"
+      print( "Interpolation rule: piecewise_constant" )
+    if args.interpolation=="linear-optimised":
+      my_solver.interpolation = "linear_with_linear_extrapolation_and_linear_normal_interpolation"
+      print( "Interpolation rule: linear extrapolation and linear normal interpolation" )
+    if args.interpolation=="outflow":
+      my_solver.interpolation = "outflow" 
+      print( "Interpolation rule: outflow (from fine grid into coarse grid)" )
+
+    if args.restriction=="average":
+      my_solver.restriction = "averaging"
+      print( "Restiction rule: averaging" )
+    if args.restriction=="inject":
+      my_solver.restriction = "inject" 
+      print( "Restiction rule: injection" )
+
+    #my_solver._auxiliary_variables = 23
     
     #my_solver.add_derivative_calculation()     
 ########################################################################################
@@ -435,12 +426,14 @@ if __name__ == "__main__":
       solverconstants+= str(r)+", "
     solverconstants=solverconstants[:-2]; solverconstants+= "};\n"
 
+    solverconstants+= "double interpolated_a=1.0;\n"
+
     if args.model=="Ein-de":
       userinfo.append(("Use Einstein-de Sitter univese background", None))
-    elif args.model=="LCDM":
+    elif args.model=="LCDM" or args.model=="LCDMDGP":
       scale_factor_table=read_scale_factor_table("a_LCDM_a_i=1e-3.dat")
       point_number=len(scale_factor_table[0])
-      userinfo.append(("Use LCDM univese background, scale factor table with "+str(point_number)+" entries accepted", None))
+      userinfo.append(("Use "+args.model+" univese, scale factor table with "+str(point_number)+" entries accepted", None))
       solverconstants+= "double code_time_points[{}]={}".format(point_number,"{")
       for time_point in scale_factor_table[0]:
         solverconstants+= str(time_point)+", "
@@ -450,7 +443,6 @@ if __name__ == "__main__":
         solverconstants+= str(scale_factor)+", "
       solverconstants=solverconstants[:-2]; solverconstants+= "};\n"
       solverconstants+= "double table_point_number="+str(point_number)+";\n"
-      solverconstants+= "double interpolated_a=0.0;\n"
       floatparams.update({"Omega_m":0.3})
     elif args.model=="DGP":
       userinfo.append(("Use DGP modified Model+Einstein-de Sitter univese background", None))
@@ -519,13 +511,13 @@ if __name__ == "__main__":
         particle_set=tracer_particles,
         solver=my_solver,
         filename=path1+"zz"+args.tra_name,
-        number_of_entries_between_two_db_flushes=1000,
+        number_of_entries_between_two_db_flushes=2000,
         output_precision=10,
         position_delta_between_two_snapsots=1e16,
         data_delta_between_two_snapsots=1e16,
-        time_delta_between_two_snapsots=0.05,
+        time_delta_between_two_snapsots=0.02,
         use_relative_deltas=False,
-        initial_record_time=args.end_time*2.0/3.0
+        initial_record_time=55#args.end_time*2.0/3.0
         #last_record_time=1e3
       ))
       #data_delta_between_two_snapsots,position_delta_between_two_snapsots,filename,          
@@ -539,6 +531,12 @@ if __name__ == "__main__":
       peano4_project.output.makefile.add_CXX_flag( "-DuseTable" )
     if args.model=="DGP":
       peano4_project.output.makefile.add_CXX_flag( "-DDGP" )
+    if args.model=="LCDMDGP":
+      peano4_project.output.makefile.add_CXX_flag( "-DuseTable" )
+      peano4_project.output.makefile.add_CXX_flag( "-DDGP" )
+
+    #peano4_project.output.makefile.add_CXX_flag( "-DPeanoDebug=2" )
+
     peano4_project.generate( throw_away_data_after_generation=False )
     peano4_project.build( make_clean_first = True )
 

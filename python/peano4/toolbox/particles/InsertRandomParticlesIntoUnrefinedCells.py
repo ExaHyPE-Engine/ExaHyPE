@@ -11,6 +11,13 @@ class InsertRandomParticlesIntoUnrefinedCells(ActionSet):
   def __init__(self,particle_set,average_distance_between_particles,initialisation_call,round_down = False, noise=True,additional_includes=""):
     """
       Insert particles
+      
+      The particles are topologically Cartesian, i.e. they are not totally random. So
+      we embed a Cartesian "grid" of particles into each unrefined cell, and then add
+      some noise to them. As the individual cells are not coupled with each other, and
+      as we do not evaluate any global coordinates, the overall result will not be 
+      random, even if you switch off noise completely, as the spacing between two
+      regular particle layouts between two neighbouring cells is not "synchronised".
 
       :Attibutes:
 
@@ -43,7 +50,7 @@ class InsertRandomParticlesIntoUnrefinedCells(ActionSet):
 
   __Template_TouchCellFirstTime = jinja2.Template("""
   if ( not marker.hasBeenRefined() and not marker.willBeRefined() ) {
-    auto newParticles = toolbox::particles::createEquallySpacedParticles<globaldata::{{PARTICLE}}>(
+    std::vector< globaldata::{{PARTICLE}}* > newParticles = toolbox::particles::createEquallySpacedParticles<globaldata::{{PARTICLE}}>(
       {{H}},
       marker.x(),
       marker.h(),
@@ -53,8 +60,11 @@ class InsertRandomParticlesIntoUnrefinedCells(ActionSet):
     for (auto& particle: newParticles) {
       {{INITIALISATION_CALL}}
     }
-    // just insert them; will be re-assigned then anyway
-    fineGridVertices{{PARTICLES_CONTAINER}}(0).insert( fineGridVertices{{PARTICLES_CONTAINER}}(0).end(), newParticles.begin(), newParticles.end() );
+    toolbox::particles::insertParticlesIntoCell(
+      marker,
+      newParticles,
+      fineGridVertices{{PARTICLES_CONTAINER}}
+    );
   }
 """)
 
@@ -79,6 +89,7 @@ class InsertRandomParticlesIntoUnrefinedCells(ActionSet):
 
   def get_includes(self):
     result = jinja2.Template( """
+#include "toolbox/particles/particles.h"
 #include "vertexdata/{{PARTICLES_CONTAINER}}.h"
 #include "globaldata/{{PARTICLE}}.h"
 #include "toolbox/particles/ParticleFactory.h"

@@ -9,6 +9,7 @@
 
 
 #include <string>
+#include <limits>
 
 
 {INCLUDES}

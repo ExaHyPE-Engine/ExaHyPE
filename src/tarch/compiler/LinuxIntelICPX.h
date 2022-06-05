@@ -18,9 +18,24 @@
 #define UseManualInlining
 #endif
 
-#if !defined(ExaHyPEFusedKernelAlignment)
-#define ExaHyPEFusedKernelAlignment 64
+#if !defined(AlignmentOnHeap)
+#define AlignmentOnHeap 64
 #endif
 
 #define LittleEndian
 
+#if !defined(UseManualInlining) &&  !defined(noUseManualInlining)
+/**
+ * I use this flag to switch on __attribute__((always_inline))
+ * which I otherwise mask out.
+ */
+#define UseManualInlining
+#endif
+
+
+/**
+ * Clang requires us to put a static keyword in front of header file implementations,
+ * so we avoid duplicate symbols. This is not C++ conformal, and therefore GCC doesn't
+ * eat stuff. But Clang needs a static.
+ */
+#define KeywordToAvoidDuplicateSymbolsForInlinedFunctions static

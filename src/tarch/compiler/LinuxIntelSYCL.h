@@ -18,23 +18,26 @@
 #define UseManualInlining
 #endif
 
-#if !defined(ExaHyPEFusedKernelAlignment)
-#define ExaHyPEFusedKernelAlignment 64
+#if !defined(AlignmentOnHeap)
+#define AlignmentOnHeap 64
 #endif
+
+#if !defined(UseManualInlining) &&  !defined(noUseManualInlining)
+/**
+ * I use this flag to switch on __attribute__((always_inline))
+ * which I otherwise mask out.
+ */
+#define UseManualInlining
+#endif
+
 
 #define LittleEndian
 
 
 /**
- * Ugly hacks, but SYCL uses Dimensions as template argument. So I quickly
- * memorise them, undef them, and then redefine them once SYCL is loadd.
+ * Clang requires us to put a static keyword in front of header file implementations,
+ * so we avoid duplicate symbols. This is not C++ conformal, and therefore GCC doesn't
+ * eat stuff. But Clang needs a static.
  */
-#pragma push_macro("Dimensions")
-#pragma push_macro("assertion")
-#undef Dimensions
-#undef assertion
-#include <CL/sycl.hpp>
-#pragma pop_macro("Dimensions")
-#pragma pop_macro("assertion")
-
+#define KeywordToAvoidDuplicateSymbolsForInlinedFunctions static inline
 

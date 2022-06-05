@@ -26,7 +26,7 @@ class examples::exahype2::SSInfall::SSInfall: public AbstractSSInfall {
     std::string plotGlobalMTot(bool plotCopy) const;
     std::string plotRs() const;
 
-    #if defined(OpenMPGPUOffloading)
+    #if defined(GPUOffloadingOMP)
     #pragma omp declare target
     #endif
     /**
@@ -45,7 +45,11 @@ class examples::exahype2::SSInfall::SSInfall: public AbstractSSInfall {
      * From m_tot_copy[sample_number-1].
      */
     static double _mTotMax;
-    #if defined(OpenMPGPUOffloading)
+
+    // @todo I've just removed this field. Couldn't find out where it is used.
+//    double t_record=0.0;
+
+    #if defined(GPUOffloadingOMP)
     #pragma omp end declare target
     #endif
 
@@ -60,18 +64,9 @@ class examples::exahype2::SSInfall::SSInfall: public AbstractSSInfall {
      * @param t    Timestamp
      * @param density Typically Q[0]
      */
-    static double getForceDensityNorm(double r_coord, double m_in, double t, double density);
+    static double getForceDensityNorm(double r_coord, double m_in, double t, double density, double a_input);
   public:
-    //int sample_number=10;
-    //double m_tot[10]={0,0,0,0,0,0,0,0,0,0};
-    //double r_s[10]={0.05*1.732,0.1*1.732,0.15*1.732,0.20*1.732,0.25*1.732,0.3*1.732,0.35*1.732,0.4*1.732,0.45*1.732,0.5*1.732};
-    double t_record=0.0;
-    const tarch::la::Vector<Dimensions,double> center={0,0,0};
-    //double G=1;
-    //double t_ini=0.5;
-    //double r_ini=0.2;
-    //double delta_rho=0.01;
-    //double initial_internal_energy=0.1;
+    static const tarch::la::Vector<Dimensions,double>  OverDensityCentre;
 
     void startTimeStep(
       double globalMinTimeStamp,
@@ -112,7 +107,7 @@ class examples::exahype2::SSInfall::SSInfall: public AbstractSSInfall {
     ) override;
 
     
-#if defined(OpenMPGPUOffloading)
+#if defined(GPUOffloadingOMP)
 #pragma omp declare target
 #endif
     /**
@@ -128,7 +123,7 @@ class examples::exahype2::SSInfall::SSInfall: public AbstractSSInfall {
       double * __restrict__                        S,
       Offloadable
     );
-#if defined(OpenMPGPUOffloading)
+#if defined(GPUOffloadingOMP)
 #pragma omp end declare target
 #endif
 
@@ -148,16 +143,17 @@ class examples::exahype2::SSInfall::SSInfall: public AbstractSSInfall {
     /**
      * See flux() for a description why there are two maxEigenvalue() versions.
      */
-    double maxEigenvalue(
+    virtual double maxEigenvalue(
       const double * __restrict__ Q, // Q[5+0],
       const tarch::la::Vector<Dimensions,double>&  faceCentre,
       const tarch::la::Vector<Dimensions,double>&  volumeH,
       double                                       t,
+      double                                       dt,
       int                                          normal
     ) override;
 
       
-#if defined(OpenMPGPUOffloading)
+#if defined(GPUOffloadingOMP)
 #pragma omp declare target
 #endif
     static double maxEigenvalue(
@@ -165,10 +161,11 @@ class examples::exahype2::SSInfall::SSInfall: public AbstractSSInfall {
       const tarch::la::Vector<Dimensions,double>&  faceCentre,
       const tarch::la::Vector<Dimensions,double>&  volumeH,
       double                                       t,
+      double                                       dt,
       int                                          normal,
       Offloadable
     );
-#if defined(OpenMPGPUOffloading)
+#if defined(GPUOffloadingOMP)
 #pragma omp end declare target
 #endif
 
@@ -180,17 +177,18 @@ class examples::exahype2::SSInfall::SSInfall: public AbstractSSInfall {
      *
      * The static version fits to the GPU (see guidebook).
      */
-    void flux(
+    virtual void flux(
       const double * __restrict__ Q, // Q[5+0],
       const tarch::la::Vector<Dimensions,double>&  faceCentre,
       const tarch::la::Vector<Dimensions,double>&  volumeH,
       double                                       t,
+      double                                       dt,
       int                                          normal,
       double * __restrict__ F // F[5]
     ) override;
 
 
-#if defined(OpenMPGPUOffloading)
+#if defined(GPUOffloadingOMP)
 #pragma omp declare target
 #endif
     static void flux(
@@ -198,11 +196,12 @@ class examples::exahype2::SSInfall::SSInfall: public AbstractSSInfall {
       const tarch::la::Vector<Dimensions,double>&  faceCentre,
       const tarch::la::Vector<Dimensions,double>&  volumeH,
       double                                       t,
+      double                                       dt,
       int                                          normal,
       double * __restrict__ F, // F[5]
       Offloadable
     );
-#if defined(OpenMPGPUOffloading)
+#if defined(GPUOffloadingOMP)
 #pragma omp end declare target
 #endif
 

@@ -18,6 +18,7 @@ namespace {
   const int BackgroundConsumerPriority = 1;
 
   const std::string BSPTasksStatisticsIdentifier( "tarch::multicore::bsp-tasks");
+  const std::string BackfillWhileWaitingForBSPTasks( "tarch::multicore::backfill");
 
 
   /**
@@ -26,6 +27,12 @@ namespace {
    * I found that quite a lot of OpenMP implementations realise the taskwait at the 
    * end as busy wait. This is totally annoying as it might lead to deadlocks whenever
    * a task has a taskyield internally and/or there are more tasks than threads.
+   *
+   * ## NVIDIA
+   *
+   * NVIDIA's nvc++ does not support taskloops. We have contacted their R&D and they
+   * confirmed that they only implement a subset of OpenMP, and the taskloop is not
+   * on the list of features that they want to support.
    */
   void spawnAndWaitAsTaskLoop(
     const std::vector< tarch::multicore::Task* >&  tasks
@@ -33,12 +40,21 @@ namespace {
     // important, otherwise taskwait synchronises
     assertion( not tasks.empty() );
 
+    #if !defined(__NVCOMPILER)
     #pragma omp taskloop nogroup priority(StandardPriority) untied
+    #endif
     for (int i=0; i<static_cast<int>(tasks.size()); i++) {
+      #if defined(__NVCOMPILER)
+      #pragma omp task
+      {
+      #endif
       ::tarch::logging::Statistics::getInstance().inc( BSPTasksStatisticsIdentifier, 1.0, true );
       while (tasks[i]->run()) {}
       delete tasks[i];
       ::tarch::logging::Statistics::getInstance().inc( BSPTasksStatisticsIdentifier, -1.0, true );
+      #if defined(__NVCOMPILER)
+      }
+      #endif
     }
     #pragma omp taskwait // wait for all elements from tasks to complete
                          // do not wait for the children of tasks
@@ -57,7 +73,7 @@ namespace {
    * https://www.osti.gov/pages/servlets/purl/1465188. Note in particular the
    * example in Figure 3.
    *
-   * # Realisation
+   * ## Realisation
    *
    * The idea is that we spawn one task per bsp segment (stored within tasks).
    * If a task terminates, we do not terminate immediately but first check if
@@ -91,11 +107,45 @@ namespace {
    *   all BSP stuff is now in work. In this case, we can also enable the
    *   polling. But not before.
    *
-   * # System-specific details
+   *
+   * ## System-specific details
    *
    * NVIDIA's nvcc does not support the taskloop. It would be easy to replace
    * the taskloop with a for loop and tasks within the loop body. But I decided
    * to strive for a clean code.
+   *
+   *
+   * ## Performance
+   *
+   * In my original paper, I worked with one global task queue to backfill idling
+   * BSP cores. On our AMD EPYC nodes with 128 cores, this led to severe slowdowns,
+   * as the spawning threads all competed for locks on the one huge core. So I
+   * introduced this concept of a thread-local queue. Next, it was an apparent
+   * decision to make the BSP section first poll and process its thread-local
+   * queue.
+   *
+   * To still have full support for fusion, we implement a multifaceted scheme:
+   *
+   * - Find out how many thread-local tasks we have.
+   * - If there are more thread-local tasks than the ones we wanted to fuse
+   *   -- commit the thread-local tasks to the global queue
+   *   -- and trigger the fuse there. We want to be able to fuse as aggressively
+   *      as possible, so it is clever first to commit the local tasks.
+   * - If there are thread-local tasks otherwise, handle one of them and check
+   *   again.
+   * - If there are no more thread-local tasks, start to poll the global queue.
+   *
+   * In the latter case, we also want to poll MPI, as there might be pending MPI
+   * messages. Last but not least, we rely on the calling function to roll over
+   * all of our thread-local tasks to the global queue once this routine has
+   * terminated.
+   *
+   *
+   * ## NVIDIA
+   *
+   * NVIDIA's nvc++ does not support taskloops. We have contacted their R&D and they
+   * confirmed that they only implement a subset of OpenMP, and the taskloop is not
+   * on the list of features that they want to support.
    */
   void spawnAndWaitAsExplicitTasksWithPolling(
     const std::vector< tarch::multicore::Task* >&  tasks,
@@ -108,8 +158,14 @@ namespace {
     int       pendingTasks  = NumberOfThreads;
     int       spawnedTasks  = 0;
 
+    #if !defined(__NVCOMPILER)
     #pragma omp taskloop nogroup shared(pendingTasks, spawnedTasks) priority(StandardPriority) untied
+    #endif
     for (int i=0; i<NumberOfThreads; i++) {
+      #if defined(__NVCOMPILER)
+      #pragma omp task
+      {
+      #endif
         #pragma omp atomic
         spawnedTasks++;
 
@@ -123,10 +179,16 @@ namespace {
 
         ::tarch::logging::Statistics::getInstance().inc( BSPTasksStatisticsIdentifier, -1.0, true );
   
+        #if defined(__NVCOMPILER)
+        #pragma omp atomic
+        #else
         #pragma omp atomic seq_cst
+        #endif
         pendingTasks--;
 
-        const auto fusion = strategy->getNumberOfTasksToFuseAndTargetDevice();
+        const auto fusion       = strategy->getNumberOfTasksToFuseAndTargetDevice();
+        const int  threadNumber = tarch::multicore::Core::getInstance().getThreadNumber();
+
 
         while (
           pendingTasks>0
@@ -138,22 +200,26 @@ namespace {
           and
           spawnedTasks==NumberOfThreads
         ) {
-          int numberOfPendingTasks = tarch::multicore::getNumberOfPendingTasks();
+          tarch::services::ServiceRepository::getInstance().receiveDanglingMessages();
+          int numberOfPendingTasks = tarch::multicore::getNumberOfPendingTasks(threadNumber);
 
           bool processedSomeTasks = false;
           if (numberOfPendingTasks>=fusion.minTasks) {
             processedSomeTasks = tarch::multicore::internal::fusePendingTasks(fusion);
           }
-          else {
-            int numberOfTasksToProcess = std::max(1,numberOfPendingTasks/2);
+          else if (numberOfPendingTasks>0) {
+            tarch::multicore::internal::processThreadLocalTask(threadNumber);
+          }
+          else { // no local tasks left over
+            tarch::multicore::internal::copyInternalTaskQueuesOverIntoGlobalQueue(threadNumber);
+            const int numberOfTasksToProcess = std::max(1,tarch::multicore::getNumberOfPendingTasks(-1)/2);
+            ::tarch::logging::Statistics::getInstance().log( BackfillWhileWaitingForBSPTasks, numberOfTasksToProcess );
             processedSomeTasks = tarch::multicore::processPendingTasks( numberOfTasksToProcess );
           }
-
-          if (not processedSomeTasks) {
-            #pragma omp taskyield
-            tarch::services::ServiceRepository::getInstance().receiveDanglingMessages();
-          }
         }
+      #if defined(__NVCOMPILER)
+      }
+      #endif
     }
     #pragma omp taskwait // wait for all elements from tasks to complete
                          // do not wait for the children of tasks
@@ -216,10 +282,25 @@ int tarch::multicore::native::getNumberOfPendingTasks() {
  * this one into fuse(). The firstprivate annotation is not required, as this is the
  * default. But I leave it in here to highlight that three variables are copied,
  * but tasksOfSameType is not copied and not used within the task.
+ *
+ *
+ * ## NVIDIA
+ *
+ * With NVIDIA/nvc++, I get the error
+ *
+ * <pre>
+NVC++-S-0155-A possibly throwing copy constructor for a task firstprivate variable is not supported  (tarch/multicore/omp/Tasks.cpp: 289)
+NVC++/x86-64 Linux 22.3-0: compilation completed with severe errors
+ * </pre>
+ *
+ * if I try to map fuse onto a task of its own.
+ *
  */
 void tarch::multicore::native::processFusedTask(Task*  myTask, const std::list< tarch::multicore::Task* >& tasksOfSameType, int device) {
   std::list< tarch::multicore::Task* > copyOfTasksOfSameType = tasksOfSameType;
+  #if !defined(__NVCOMPILER)
   #pragma omp task firstprivate(myTask,copyOfTasksOfSameType,device)
+  #endif
   {
     bool stillExecuteLocally = myTask->fuse(copyOfTasksOfSameType,device);
     if (stillExecuteLocally) {

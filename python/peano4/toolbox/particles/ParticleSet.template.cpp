@@ -1,5 +1,16 @@
 #include "{{CLASSNAME}}.h"
 #include "globaldata/{{PARTICLE_TYPE}}.h"
+#include "tarch/multicore/Lock.h"
+
+
+tarch::logging::Log {{NAMESPACE | join("::")}}::{{CLASSNAME}}::_log( "{{NAMESPACE | join("::")}}::{{CLASSNAME}}" );
+
+
+tarch::multicore::BooleanSemaphore   {{NAMESPACE | join("::")}}::{{CLASSNAME}}::_semaphore;
+
+{{NAMESPACE | join("::")}}::{{CLASSNAME}}     {{NAMESPACE | join("::")}}::{{CLASSNAME}}::_particlesThatCanNotBeLiftedWithinTheirTree;
+{{NAMESPACE | join("::")}}::{{CLASSNAME}}     {{NAMESPACE | join("::")}}::{{CLASSNAME}}::_particlesThatHaveToBeSieved;
+bool              {{NAMESPACE | join("::")}}::{{CLASSNAME}}::_thereAreParticlesToBeSieved;
 
 
 #if PeanoDebug>=1
@@ -25,16 +36,109 @@ tarch::la::Vector<Dimensions,double> {{NAMESPACE | join("::")}}::{{CLASSNAME}}::
 
 
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::merge(const {{CLASSNAME}}& neighbour, const peano4::datamanagement::VertexMarker& marker) {
+  for (auto p: neighbour) {
+    if (
+      p->getParallelState()==DoFType::ParallelState::Local
+    ) {
+      logDebug( "merge(...)", "assume incoming particle " << p->toString() << " is local on other rank and will be virtual here" );
+      p->setParallelState( DoFType::ParallelState::Virtual );
+      this->push_back(p);
+    }
+    else if (
+      p->getParallelState()==DoFType::ParallelState::Virtual
+    ) {
+      logDebug( "merge(...)", "incoming particle " << p->toString() << " is virtual on neighbour, but it was not deleted there. Assume it has just switched from local to virtual as it has moved and thus is now local here" );
+      p->setParallelState( DoFType::ParallelState::Local );
+      this->push_back(p);
+    }
+    else {
+      assertion1(false,p->toString());
+    }
+  }
+
+  eliminateSpatialDuplicates( true );
+
+  logDebug( "merge(...)", "merged incoming set of " << neighbour.size() << " particle(s) into local set of vertex " << marker.x() << " which now hosts " << this->size() << " particle(s):" );
+  for (auto& p: *this) {
+    logDebug( "merge(...)", " - " << p->toString() );
+  }
 }
 
 
+int {{NAMESPACE | join("::")}}::{{CLASSNAME}}::eliminateSpatialDuplicates(bool examineOnlyVirtualParticles) {
+  int numberOfEliminations = 0;
+  auto p = this->begin();
+  while (p!=this->end()) {
+    bool foundDuplicate = false;
+
+    if (
+      examineOnlyVirtualParticles
+      and
+      (*p)->getParallelState()==DoFType::ParallelState::Virtual
+    ) {
+      auto pp = this->begin();
+      while (
+        pp!=this->end()
+        and
+        not foundDuplicate
+      ) {
+        if (
+          pp!=p
+          and
+          tarch::la::equals( (*p)->getX(), (*pp)->getX() )
+        ) {
+          foundDuplicate = true;
+          pp = this->end();
+        }
+        else {
+          pp++;
+        }
+      }
+    }
+    else if ( not examineOnlyVirtualParticles ) {
+      auto pp = p;
+      pp++;
+      while (
+        pp!=this->end()
+        and
+        not foundDuplicate
+      ) {
+        if (
+          not examineOnlyVirtualParticles
+          and
+          tarch::la::equals( (*p)->getX(), (*pp)->getX() )
+        ) {
+          foundDuplicate = true;
+          pp = this->end();
+        }
+        else {
+          pp++;
+        }
+      }
+    }
+
+    if (foundDuplicate) {
+      logDebug( "eliminateSpatialDuplicates()", "eliminate particle pp=" << (*p)->toString() << " as it is a duplicate" );
+      delete *p;
+      p = erase(p);
+      numberOfEliminations++;
+    }
+    else {
+      p++;
+    }
+  }
+  return numberOfEliminations;
+}
+
+
+
 bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::send(const peano4::datamanagement::VertexMarker& marker) {
-  return false;
+  return true;
 }
 
 
 bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::receiveAndMerge(const peano4::datamanagement::VertexMarker& marker) {
-  return false;
+  return true;
 }
 
 
@@ -79,3 +183,98 @@ double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMinCutOffRadius() const {
   }
   return result;
 }
+
+
+void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::clone( const {{CLASSNAME}}& otherSet ) {
+  assertion1( empty(), toString() );
+  for (auto p: otherSet) {
+    DoFType* newParticle =  new DoFType(*p);
+    this->push_back( newParticle );
+  }
+  #if PeanoDebug>=1
+  _debugX = otherSet._debugX;
+  _debugH = otherSet._debugH;
+  #endif
+}
+
+
+void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishedTraversal() {
+  for (auto& p: _particlesThatHaveToBeSieved) {
+    delete p;
+  }
+  _particlesThatHaveToBeSieved.clear();
+  _particlesThatHaveToBeSieved.insert(
+    _particlesThatHaveToBeSieved.end(),
+    _particlesThatCanNotBeLiftedWithinTheirTree.begin(),
+    _particlesThatCanNotBeLiftedWithinTheirTree.end()
+  );
+  _thereAreParticlesToBeSieved = not _particlesThatHaveToBeSieved.empty();
+  _particlesThatCanNotBeLiftedWithinTheirTree.clear();
+  if (not _particlesThatHaveToBeSieved.empty()) {
+    logInfo( "finishedTraversal()", "\#particles to be sieved=" << _particlesThatHaveToBeSieved.size() );
+  }
+}
+
+
+bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::thereAreParticlesToBeSieved() {
+  return _thereAreParticlesToBeSieved;
+}
+
+
+void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::particlesCanNotBeLiftedLocally() {
+  for (auto& p: *this) {
+    assertion2( p->getParallelState()==globaldata::{{PARTICLE_TYPE}}::ParallelState::Local, p->toString(), toString() );
+    p->setNewParallelState( globaldata::{{PARTICLE_TYPE}}::NewParallelState::Virtual );
+  }
+
+  tarch::multicore::Lock lock( _semaphore );
+  for (auto& p: *this) {
+    logDebug( "particlesCanNotBeLiftedLocally()", "add particle " << p->toString() << " from " << toString() << " to global sieve list for next iteration" );
+    globaldata::{{PARTICLE_TYPE}}* copyOfParticle = new globaldata::{{PARTICLE_TYPE}}(*p);
+    _particlesThatCanNotBeLiftedWithinTheirTree.push_back(copyOfParticle);
+  }
+}
+
+
+{{NAMESPACE | join("::")}}::{{CLASSNAME}}  {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getParticlesToBeSievedIntoVertex(
+  const peano4::datamanagement::VertexMarker& marker,
+  double sortingTolerance
+) {
+  assertion( thereAreParticlesToBeSieved() );
+
+  {{NAMESPACE | join("::")}}::{{CLASSNAME}} result;
+  {{CLASSNAME}}::iterator p = _particlesThatHaveToBeSieved.begin();
+  while ( p!=_particlesThatHaveToBeSieved.end() ) {
+    if (
+      marker.isContainedInAdjacentCells( (*p)->getX(), 0.5 * sortingTolerance)
+      and
+      tarch::la::min( marker.h() ) >= (*p)->getCutOffRadius()
+      and
+      (
+        tarch::la::min( marker.h() ) / 3.0 < (*p)->getCutOffRadius()
+        or
+        not marker.hasBeenRefined()
+      )
+    ) {
+      logDebug( "getParticlesToBeSievedIntoVertex(...)", "drop particle " << (*p)->toString() << " from global sieve list into vertex " << marker.toString() );
+
+      if ( marker.isLocal() ) {
+        logInfo( "getParticlesToBeSievedIntoVertex(...)", "remove particle from sieve list, as vertex is local. This improves the efficiency and it ensures that particles right in-between two vertices are not added twice per tree" );
+        (*p)->setParallelState( globaldata::{{PARTICLE_TYPE}}::ParallelState::Virtual );
+        result.push_back( *p );
+        p = _particlesThatHaveToBeSieved.erase(p);
+      }
+      else {
+        globaldata::{{PARTICLE_TYPE}}* copyOfParticle = new globaldata::{{PARTICLE_TYPE}}(**p);
+        copyOfParticle->setParallelState( globaldata::{{PARTICLE_TYPE}}::ParallelState::Virtual );
+        result.push_back( copyOfParticle );
+        p++;
+      }
+    }
+    else {
+      p++;
+    }
+  }
+  return result;
+}
+

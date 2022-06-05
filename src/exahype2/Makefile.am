@@ -8,6 +8,7 @@ endif
 
 
 ExaHyPE2Sources = \
+  CellData.cpp \
   EnclaveBookkeeping.cpp \
   EnclaveTask.cpp \
   LoadBalancingConfiguration.cpp \
@@ -33,11 +34,14 @@ ExaHyPE2Sources = \
   aderdg_kernels/Basis/GaussLobattoBasis.cpp \
   aderdg_kernels/AderUtils.cpp \
   fv/BoundaryConditions.cpp \
-  fv/Generic.cpp \
   fv/PatchUtils.cpp \
-  fv/Rusanov.cpp \
-  fv/tests/CopyPatchTest.cpp \
-  fv/tests/applySplit1DRiemannToPatch_Overlap1AoSTest.cpp
+  fv/enumerator/AoSLexicographicVolumeEnumerator.cpp \
+  fv/enumerator/SoALexicographicVolumeEnumerator.cpp \
+  fv/enumerator/AoSoALexicographicVolumeEnumerator.cpp \
+  fv/enumerator/PatchAccess.cpp \
+  fv/rusanov/sycl/GPUCellData.cpp \
+  fv/rusanov/tests/CopyPatchTest.cpp \
+  fv/rusanov/tests/ApplySplit1DRiemannToPatchTest.cpp
 
 
 libExaHyPE2Core2d_a_CXXFLAGS          = $(CXXFLAGS_PEANO_2D_RELEASE)

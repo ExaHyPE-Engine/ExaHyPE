@@ -15,7 +15,7 @@ from exahype2.solvers.fv.actionsets.AbstractFVActionSet import AbstractFVActionS
 
 class UpdateCell(ReconstructPatchAndApplyFunctor):
   TemplateUpdateCell = jinja2.Template( """
-  const double timeStamp    = fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStamp();
+  double timeStamp    = fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStamp();
 
   // Set the following two paramters
   // double timeStepSize
@@ -103,7 +103,7 @@ class UpdateCell(ReconstructPatchAndApplyFunctor):
 #include "tarch/multicore/Tasks.h"
 #include "repositories/SolverRepository.h"
 #include "tasks/""" + self._solver._name + """EnclaveTask.h"
-""" + self._solver._get_default_includes() + self._solver.get_user_action_set_includes()
+""" + self._solver._get_default_includes() + self._solver.user_action_set_includes
 
 
 class MergeEnclaveTaskOutcome(AbstractFVActionSet):
@@ -137,6 +137,10 @@ class MergeEnclaveTaskOutcome(AbstractFVActionSet):
     }
     
     if ( fineGridCell{{SOLVER_NAME}}CellLabel.getHasUpdated() ) {
+      double*  targetPatch = fineGridCell{{UNKNOWN_IDENTIFIER}}.value;
+      
+      {{POSTPROCESS_UPDATED_PATCH}}
+
       repositories::{{SOLVER_INSTANCE}}.update(
         fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStepSize(),
         fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStamp(),
@@ -176,24 +180,17 @@ class MergeEnclaveTaskOutcome(AbstractFVActionSet):
 
 
 class EnclaveTasking( FV ):
-  def __init__(self, name, patch_size, unknowns, auxiliary_variables, min_volume_h, max_volume_h, plot_grid_properties, pde_terms_without_state: bool):
+  def __init__(self, name, patch_size, overlap, unknowns, auxiliary_variables, min_volume_h, max_volume_h, plot_grid_properties, pde_terms_without_state: bool):
     """
     
      Not so nice. I have to store this field as I later rely on get_name_of_global_instance()
      which uses this field. 
-     
-     _postprocess_updated_patch_after_computation: C code snippet
-       Will be called directly after we have computed the new solution. Depending 
-       on the task type, it will run within the enclave task
-     
-     _postprocess_updated_patch_before_commit: C code snippet
-       Will be called directly before we actually write the task outcome back into
-       the grid.
-     
+          
     """
     self._name = name
     
-    self._fused_Riemann_solver_call       = "#error Not yet defined. Set self._fused_Riemann_solver_call in your Python solver class."
+    self._fused_compute_kernel_call_cpu       = "#error Not yet defined. Set self._fused_Riemann_solver_call in your Python solver class."
+    self._fused_compute_kernel_call_gpu       = "#error Not yet defined. Set self._fused_Riemann_solver_call in your Python solver class."
     self._pde_terms_without_state             = pde_terms_without_state
     
     self._initialisation_sweep_guard = "(" + \
@@ -251,10 +248,20 @@ class EnclaveTasking( FV ):
       "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::Plotting " + \
       ")"
  
-    super(EnclaveTasking, self).__init__(name, patch_size, 1, unknowns, auxiliary_variables, min_volume_h, max_volume_h, plot_grid_properties)
+    super(EnclaveTasking, self).__init__(name, patch_size, overlap, unknowns, auxiliary_variables, min_volume_h, max_volume_h, plot_grid_properties)
      
     self._solver_template_file_class_name     = "EnclaveTasking"
       
+    additional_includes= """
+#include "exahype2/EnclaveBookkeeping.h"
+#include "exahype2/EnclaveTask.h"
+"""    
+
+    self.add_user_action_set_includes( additional_includes )
+#    self.add_user_solver_includes(     additional_includes )
+
+
+
 
   def create_data_structures(self):
     """
@@ -352,16 +359,33 @@ class EnclaveTasking( FV ):
       ")"
     self._action_set_roll_over_update_of_faces.guard = self._store_face_data_default_guard() + " and " + self._secondary_sweep_or_grid_initialisation_guard
     self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement.guard = self._store_cell_data_default_guard() + " and " + self._secondary_sweep_or_grid_initialisation_guard
-   
 
-  def get_user_action_set_includes(self):
-    return super(EnclaveTasking, self).get_user_action_set_includes() + """
-#include "exahype2/fv/Generic.h"
-#include "exahype2/fv/Rusanov.h"
-#include "exahype2/EnclaveBookkeeping.h"
-#include "exahype2/EnclaveTask.h"
-#include "repositories/SolverRepository.h"
-"""    
+    
+  def set_implementation(self,
+    boundary_conditions, refinement_criterion, initial_conditions,
+    memory_location,
+    use_split_loop,
+    additional_action_set_includes,
+    additional_user_includes
+  ):
+    """
+      If you pass in User_Defined, then the generator will create C++ stubs 
+      that you have to befill manually. If you pass in None_Implementation, it 
+      will create nop, i.e. no implementation or defaults. Any other string
+      is copied 1:1 into the implementation. If you pass in None, then the 
+      set value so far won't be overwritten.
+    """
+    if boundary_conditions  is not None:  self._boundary_conditions_implementation        = boundary_conditions
+    if refinement_criterion is not None:  self._refinement_criterion_implementation       = refinement_criterion
+    if initial_conditions   is not None:  self._initial_conditions_implementation         = initial_conditions
+    if memory_location      is not None:  self._reconstructed_array_memory_location       = memory_location
+    if use_split_loop                  :  self._use_split_loop                            = use_split_loop
+
+    if memory_location!=peano4.toolbox.blockstructured.ReconstructedArrayMemoryLocation.HeapThroughTarchWithoutDelete and \
+       memory_location!=None:
+      raise Exception( "only valid memory mode for enclave tasking is heap without a delete, as enclave tasks delete memory themselves through the tarch. Selected mode=" + str(solver._reconstructed_array_memory_location) )
+
+    self.create_action_sets()
     
 
   def add_entries_to_text_replacement_dictionary(self,d):
@@ -369,8 +393,9 @@ class EnclaveTasking( FV ):
      d: Dictionary of string to string
         in/out argument
     """
-    d[ "FUSED_RIEMANN_SOLVER_TEMPLATE_ARGUMENTS"] = jinja2.Template(self._fused_Riemann_solver_call, undefined=jinja2.DebugUndefined).render( **d )
-    
+    d[ "FUSED_COMPUTE_KERNEL_CALL_CPU"] = jinja2.Template(self._fused_compute_kernel_call_cpu, undefined=jinja2.DebugUndefined).render( **d )
+    d[ "FUSED_COMPUTE_KERNEL_CALL_GPU"] = jinja2.Template(self._fused_compute_kernel_call_gpu, undefined=jinja2.DebugUndefined).render( **d )
+
     d[ "NUMBER_OF_DOUBLE_VALUES_IN_PATCH_2D" ] = d["NUMBER_OF_VOLUMES_PER_AXIS"] * d["NUMBER_OF_VOLUMES_PER_AXIS"] * (d["NUMBER_OF_UNKNOWNS"] + d["NUMBER_OF_AUXILIARY_VARIABLES"])
     d[ "NUMBER_OF_DOUBLE_VALUES_IN_PATCH_3D" ] = d["NUMBER_OF_VOLUMES_PER_AXIS"] * d["NUMBER_OF_VOLUMES_PER_AXIS"] * d["NUMBER_OF_VOLUMES_PER_AXIS"] * (d["NUMBER_OF_UNKNOWNS"] + d["NUMBER_OF_AUXILIARY_VARIABLES"])
 
@@ -380,59 +405,6 @@ class EnclaveTasking( FV ):
     d[ "SEMAPHORE_LABEL" ]      = exahype2.grid.UpdateCellLabel.get_attribute_name(self._name)
     d[ "STATELESS_PDE_TERMS" ]  = self._pde_terms_without_state
     
-    
-  def set_preprocess_reconstructed_patch_kernel(self,kernel ):
-    """
-  
-    Most subclasses will redefine/overwrite this operation as they have
-    to incorporate the kernel into their generated stuff
-  
-    """
-    self._preprocess_reconstructed_patch  += kernel
-      
-    self.create_data_structures()
-    self.create_action_sets()
-
-
-  def set_postprocess_updated_patch_kernel(self, kernel):
-    """
-
-    Define a postprocessing routine over the data
-
-    The postprocessing kernel often looks similar to the following code:
-
-  {
-    int index = 0;
-    dfor( volume, {{NUMBER_OF_VOLUMES_PER_AXIS}} ) {
-      enforceCCZ4constraints( targetPatch+index );
-      index += {{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}};
-    }
-  }
-
-
-    Within this kernel, you have at least the following variables available:
-
-    - targetPatch This is a pointer to the whole data structure (one large
-        array).
-        The patch is not supplemented by a halo layer.
-    - reconstructedPatch This is a pointer to the data snapshot before the
-        actual update. This data is combined with the halo layer, i.e. if you
-        work with 7x7 patches and a halo of 2, the pointer points to a 11x11
-        patch.
-    - marker
-
-    Furthermore, you can use all the symbols (via Jinja2 syntax) from
-    _init_dictionary_with_default_parameters().
-
-    kernel: String
-      C++ code that holds the postprocessing kernel
-
-    """
-    self._postprocess_updated_patch += kernel
-
-    self.create_data_structures()
-    self.create_action_sets()
-
 
   def add_actions_to_create_grid(self, step, evaluate_refinement_criterion):
     super(EnclaveTasking, self).add_actions_to_create_grid(step,evaluate_refinement_criterion)
@@ -480,7 +452,7 @@ class EnclaveTasking( FV ):
     
     # Some includes might logically belong into the action sets, but now they are 
     # 'outsourced' into the enclave task. So we manually add it here.
-    implementationDictionary[ "SOLVER_INCLUDES" ] += self.get_user_action_set_includes()
+    implementationDictionary[ "SOLVER_INCLUDES" ] += self.user_solver_includes
 
     task_name = self._enclave_task_name()
     generated_solver_files = peano4.output.Jinja2TemplatedHeaderImplementationFilePair(

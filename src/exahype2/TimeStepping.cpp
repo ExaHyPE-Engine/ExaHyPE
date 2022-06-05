@@ -29,25 +29,46 @@ std::pair<double,double> exahype2::getInterpolationWeights( double oldTimeStampO
 
 double exahype2::discretiseAndTruncateTimeStepSizes(
   double cellTimeStepSize,
-  double minGlobalTimeStepSize,
   double maxGlobalTimeStepSize,
-  double discretisation
+  int    discretisationStepsSize
 ) {
-  assertion4( discretisation>1.0, cellTimeStepSize, minGlobalTimeStepSize, maxGlobalTimeStepSize, discretisation);
+  static tarch::logging::Log _log( "exahype2" );
 
-  cellTimeStepSize = std::min(cellTimeStepSize,maxGlobalTimeStepSize*1.1);
-  if ( tarch::la::smallerEquals(discretisation,1.0) or tarch::la::smallerEquals(minGlobalTimeStepSize,0.0) ) {
+  if (tarch::la::greater(maxGlobalTimeStepSize,0.0) and cellTimeStepSize>maxGlobalTimeStepSize*3.0) {
+    logDebug(
+      "discretiseAndTruncateTimeStepSizes(double,double,int)",
+      "truncate cell time step size from " << cellTimeStepSize << " due to max global dt=" << maxGlobalTimeStepSize
+    );
+    cellTimeStepSize = maxGlobalTimeStepSize*3.0;
+  }
+
+  if (discretisationStepsSize<=0) {
     return cellTimeStepSize;
   }
-  else if ( tarch::la::smallerEquals(cellTimeStepSize, minGlobalTimeStepSize) ) {
-    return cellTimeStepSize;
+
+  static double maxCurrentTimeStepSize = -1.0;
+
+  if (maxCurrentTimeStepSize<=0.0) {
+    maxCurrentTimeStepSize = cellTimeStepSize;
   }
-  else {
-    double result = minGlobalTimeStepSize;
-    while ( tarch::la::smallerEquals(result,cellTimeStepSize) ) {
-      result *= discretisation;
-    }
-    result /= discretisation;
-    return result;
+  else if (maxGlobalTimeStepSize>maxCurrentTimeStepSize) {
+    maxCurrentTimeStepSize *= 3.0;
   }
+
+  double result = maxCurrentTimeStepSize;
+  while (result > cellTimeStepSize) {
+    result /= 3.0;
+  }
+
+  if (discretisationStepsSize>1) {
+    const double incrementOnThisLevel = result / discretisationStepsSize;
+
+    do {
+      result += incrementOnThisLevel;
+    } while (result<cellTimeStepSize);
+    result -= incrementOnThisLevel;
+  }
+
+  logDebug( "discretiseAndTruncateTimeStepSizes(double,double,int)", "reduce dt=" << cellTimeStepSize << " to " << result );
+  return result;
 }

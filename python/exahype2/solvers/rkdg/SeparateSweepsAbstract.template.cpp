@@ -383,4 +383,14 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::isLastGridSweepOfTimeStep() cons
 }
 
 
+void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startSimulation() {
+
+}
+
+
+void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishSimulation() {
+
+}
+
+
 {{ABSTRACT_SOLVER_USER_DEFINITIONS}}

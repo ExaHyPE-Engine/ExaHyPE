@@ -39,7 +39,7 @@ struct peano4::grid::GridTraversalEvent {
 
 
     GridTraversalEvent() {}
-    GridTraversalEvent(tarch::la::Vector<Dimensions,double>  __x, tarch::la::Vector<Dimensions,double>  __h, std::bitset<TwoPowerD>  __hasBeenRefined, std::bitset<TwoPowerD>  __willBeRefined, std::bitset<TwoPowerD>  __isVertexLocal, std::bitset<TwoTimesD>  __isFaceLocal, bool  __isCellLocal, std::bitset<TwoPowerD>  __isVertexAdjacentToParallelDomainBoundary, std::bitset<TwoTimesD>  __isFaceAdjacentToParallelDomainBoundary, tarch::la::Vector<TwoPowerD,int>  __vertexDataFrom, tarch::la::Vector<TwoPowerD,int>  __vertexDataTo, tarch::la::Vector<TwoTimesD,int>  __faceDataFrom, tarch::la::Vector<TwoTimesD,int>  __faceDataTo, int  __cellData, tarch::la::Vector<Dimensions,int>  __relativePositionToFather, int  __invokingSpacetree, int  __invokingSpacetreeIsNotInvolvedInAnyDynamicLoadBalancing);
+    GridTraversalEvent(tarch::la::Vector<Dimensions,double>  __x, tarch::la::Vector<Dimensions,double>  __h, std::bitset<TwoPowerD>  __hasBeenRefined, std::bitset<TwoPowerD>  __willBeRefined, std::bitset<TwoPowerD>  __isVertexLocal, std::bitset<TwoTimesD>  __isFaceLocal, bool  __isCellLocal, bool  __isParentCellLocal, std::bitset<TwoPowerD>  __isVertexAdjacentToParallelDomainBoundary, std::bitset<TwoTimesD>  __isFaceAdjacentToParallelDomainBoundary, tarch::la::Vector<TwoPowerD,int>  __vertexDataFrom, tarch::la::Vector<TwoPowerD,int>  __vertexDataTo, tarch::la::Vector<TwoTimesD,int>  __faceDataFrom, tarch::la::Vector<TwoTimesD,int>  __faceDataTo, int  __cellData, tarch::la::Vector<Dimensions,int>  __relativePositionToFather, int  __invokingSpacetree, int  __invokingSpacetreeIsNotInvolvedInAnyDynamicLoadBalancing);
 
     tarch::la::Vector<Dimensions,double>   getX() const;
     void   setX(const tarch::la::Vector<Dimensions,double>& value);
@@ -71,6 +71,8 @@ struct peano4::grid::GridTraversalEvent {
     void   flipIsFaceLocal(int index);
     bool   getIsCellLocal() const;
     void   setIsCellLocal(bool value);
+    bool   getIsParentCellLocal() const;
+    void   setIsParentCellLocal(bool value);
     std::bitset<TwoPowerD>   getIsVertexAdjacentToParallelDomainBoundary() const;
     void   setIsVertexAdjacentToParallelDomainBoundary(const std::bitset<TwoPowerD>&  value);
     bool   getIsVertexAdjacentToParallelDomainBoundary(int index) const;
@@ -154,23 +156,24 @@ struct peano4::grid::GridTraversalEvent {
     std::string toString() const;
   
   private:
-    tarch::la::Vector<Dimensions,double>   _x;
-    tarch::la::Vector<Dimensions,double>   _h;
-    std::bitset<TwoPowerD>   _hasBeenRefined;
-    std::bitset<TwoPowerD>   _willBeRefined;
-    std::bitset<TwoPowerD>   _isVertexLocal;
-    std::bitset<TwoTimesD>   _isFaceLocal;
-    bool   _isCellLocal;
-    std::bitset<TwoPowerD>   _isVertexAdjacentToParallelDomainBoundary;
-    std::bitset<TwoTimesD>   _isFaceAdjacentToParallelDomainBoundary;
-    tarch::la::Vector<TwoPowerD,int>   _vertexDataFrom;
-    tarch::la::Vector<TwoPowerD,int>   _vertexDataTo;
-    tarch::la::Vector<TwoTimesD,int>   _faceDataFrom;
-    tarch::la::Vector<TwoTimesD,int>   _faceDataTo;
-    int   _cellData;
-    tarch::la::Vector<Dimensions,int>   _relativePositionToFather;
-    int   _invokingSpacetree;
-    int   _invokingSpacetreeIsNotInvolvedInAnyDynamicLoadBalancing;
+      tarch::la::Vector<Dimensions,double>   _x;
+      tarch::la::Vector<Dimensions,double>   _h;
+    [[clang::compress]]  std::bitset<TwoPowerD>   _hasBeenRefined;
+    [[clang::compress]]  std::bitset<TwoPowerD>   _willBeRefined;
+    [[clang::compress]]  std::bitset<TwoPowerD>   _isVertexLocal;
+    [[clang::compress]]  std::bitset<TwoTimesD>   _isFaceLocal;
+      bool   _isCellLocal;
+      bool   _isParentCellLocal;
+    [[clang::compress]]  std::bitset<TwoPowerD>   _isVertexAdjacentToParallelDomainBoundary;
+    [[clang::compress]]  std::bitset<TwoTimesD>   _isFaceAdjacentToParallelDomainBoundary;
+      tarch::la::Vector<TwoPowerD,int>   _vertexDataFrom;
+      tarch::la::Vector<TwoPowerD,int>   _vertexDataTo;
+      tarch::la::Vector<TwoTimesD,int>   _faceDataFrom;
+      tarch::la::Vector<TwoTimesD,int>   _faceDataTo;
+      int   _cellData;
+      tarch::la::Vector<Dimensions,int>   _relativePositionToFather;
+      int   _invokingSpacetree;
+      int   _invokingSpacetreeIsNotInvolvedInAnyDynamicLoadBalancing;
 
 
 
@@ -183,7 +186,7 @@ struct peano4::grid::GridTraversalEvent {
     #endif
 
 
-    
+
 };
 
 #endif

@@ -205,7 +205,8 @@ the SISC paper
     """
     if library_path!="":
       self.d["LIBS"] = "-L" + library_path + " " + self.d["LIBS"]
-    self.d["LIBS"] += " -l" + library_name + " "
+#    self.d["LIBS"] += " -l" + library_name + " "
+    self.d["LIBS"] += library_name + " "
 
 
   def set_mode( self, mode ):

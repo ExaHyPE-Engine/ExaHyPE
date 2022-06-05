@@ -6,10 +6,13 @@
 
 #include "KernelUtils.h"
 
-#if defined(OpenMPGPUOffloading)
+    // geht net durch NVC++ muessen wir angucken, sobald es geht
+/*
+#if defined(GPUOffloadingOMP)
 #pragma omp declare target
 #endif
-GPUCallableMethod void exahype2::aderdg::rusanovNonlinear_body_AoS(
+*/
+void exahype2::aderdg::rusanovNonlinear_body_AoS(
     std::function< void(
       const double * const __restrict__                 Q,
       const tarch::la::Vector<Dimensions,double>& x,
@@ -109,9 +112,11 @@ GPUCallableMethod void exahype2::aderdg::rusanovNonlinear_body_AoS(
     }
   }
 }
-#if defined(OpenMPGPUOffloading)
+/*
+#if defined(GPUOffloadingOMP)
 #pragma omp end declare target
 #endif
+*/
 
 // launchers
 void exahype2::aderdg::rusanovNonlinear_loop_AoS(

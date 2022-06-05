@@ -1,0 +1,294 @@
+\chapter{A block-structured AMR code for Finite Volumes}
+\label{section:python-api-examples:finite-volumes}
+
+
+
+
+We create a simple Finite Volumes solver here.
+The examples starts with a simple regular grid, parallelises this grid, and
+finally adds adaptive mesh refinment (AMR).
+It employs a block-structured formalism and relies heavily on premanufactured
+actions and solver ingredients from the ExaHyPE2/ExaClaw project.
+
+
+\begin{remark}
+Writing all the Finite Volume (FV) core routines manually is a tedious and
+time-consuming process despite the fact that I do offer a toolbox for 
+block-structured code.
+For most applications, I therefore recommend to realise FV codes through ExaHyPE instead.
+\end{remark}
+
+\section{Setting up the data structures}
+
+We model our grid as an AMR grid consisting of $N \times N$ blocks.
+We call these blocks \emph{patches}.
+In the example below, we have chosen $N=7$.
+In general, odd choices of $N$ are advantageous once you enable AMR as we will
+discuss later.
+
+\begin{center}
+  \includegraphics[width=0.5\textwidth]{42_finite-volumes/block-structured.pdf}
+\end{center}
+
+\begin{code}
+project = peano4.Project( ["examples", "finitevolumes"], "." )
+patch_size = 7
+unknowns   = 5
+patch = peano4.datamodel.Patch( (patch_size,patch_size,patch_size), unknowns, "Q" )
+project.datamodel.add_cell(patch)
+\end{code}
+
+\noindent
+In the above example, every volume within the $N \times N$ patches holds five
+unknowns.
+In general, I prefer the term volume here, as cell again is ambigous given that
+we construct the \Peano\ host mesh from cells.
+
+
+With one patch per cell, we could traverse the mesh and do something per cell.
+This however is of limited value.
+We have to couple the phenomena what is going on in neighbouring cells.
+\Peano\  realises a strict element-wise traversal, i.e.~there's no way to access
+the neighbour cell of a cell directly.
+However, we can hijack the faces.
+
+
+The idea here is that we embed a $2 \times N$ ($d=2$) or $2 \times N \times N$
+($d=3$), respectively, patch into each face. 
+Let this auxiliary patch overlap the adjacent cells.
+Then, we effectively have a halo of one cell available within each cell:
+We know the cell data. 
+We also have access to the $2d$ faces where each hosts a degenerated patch.
+One later of this patch is a copy of our own data, i.e.~does not give us
+additional information.
+The other layer of the auxiliary patch however holds data from the neighbour.
+It gives us information from the neighbour patch.
+
+
+In theory, we could only replicate those quantities that we really need. 
+But it makes our live easier to just hold all five quantities in the auxiliary
+face data structures, too:
+
+\begin{code}
+patch_overlap = peano4.datamodel.Patch( (2,patch_size,patch_size), unknowns, "Q" )
+project.datamodel.add_face(patch_overlap)
+\end{code}
+
+
+Before we generate the code, we export some of the Python constants that we use
+into C/C++, so we have it available there, too:
+
+\begin{code}
+project.constants.export( "PatchSize", patch_size )
+project.constants.export( "NumberOfUnknownsPerCell", unknowns )
+\end{code}
+
+
+\section{Administration of the data structures}
+
+Projecting the patches onto the face data structures and back is a mechnical
+task.
+Therefore, \Peano\  offers a toolbox to relieve you from the pain to 
+recode it over and over again.
+Using this toolbox, you add the projections to your algorithmic steps, and the
+API then automatically injects these features (aspects) into your code:
+
+\begin{code}
+perform_time_step      = peano4.solversteps.Step( "TimeStep" )
+perform_time_step.use_cell(patch)
+perform_time_step.use_face(patch_overlap)
+...
+perform_time_step.add_action_set( 
+  peano4.toolbox.blockstructured.ReconstructPatchAndApplyFunctor(patch,patch_overlap,...)
+) 
+perform_time_step.add_action_set( 
+  peano4.toolbox.blockstructured.ProjectPatchOntoFaces(patch,patch_overlap) 
+)
+\end{code}
+
+
+
+\begin{center}
+  \includegraphics[width=0.25\textwidth]{42_finite-volumes/ProjectPatchOntoFaces.pdf}
+\end{center}
+
+
+\noindent
+The image above illustrates what \texttt{ProjectPatchOntoFaces} does:
+It knows the dimensions of both the patches and the face auxiliary data
+structures and thus can ensure that the right data is copied from the cell into
+the $2^d$ faces when we leave a cell throughout the grid traversal.
+
+
+
+The action set \texttt{ReconstructPatchAndApplyFunctor} works slighlty different
+yet can be read, from a patch projection point of view, as transpose of
+\texttt{ProjectPatchOntoFaces}:
+It creates a auxiliary variable \texttt{reconstructedX} with X being the name
+you gave the Unknowns of the patch.
+This auxiliary variable has the dimensions 
+$N+2 \times N+2 \times N+2$\footnote{All tools work with overlaps greater than
+2. But to keep the text simple, I stick to 2.}.
+It then copies over the patch data into this auxiliary patch and uses the faces
+to supplement it with halo data around it.
+So that it, you get the original patch data plus the cells around it in one big
+patch.
+
+
+\section{A manually implemented FV scheme}
+
+As the name suggests, the reconstruction step is typically combined with the
+invocation of some computation on the patch.
+We give a simple example of a Finite Volume solver for the Euler equations here.
+
+
+Once a patch is reconstructed, we have a huge double array (AoS) of the
+reconstructed patch, i.e.~the patch plus its surrounding halo, available.
+It holds a copy of the actual patch data.
+This patch data is still available as well, so we can use the reconstructed
+array as a preimage and write any outcome into the patch data structure.
+
+
+We begin with defining a two simple functions that implement the PDE---we
+need the flux function and the eigenvalues---and then write a simple 1d Rusanov flux.
+I use some lambda notation here when I write the Rusanov flux, as I want to
+make it generic, i.e.~it accepts a generic flux and eigenvalue realisation
+realised somewhere else in my code. 
+
+\attachfile[icon=Paperclip,description=Download code snippet,author=Peano 4]
+{42_finite-volumes/Euler-flux-and-eigenvalues.cpp}
+
+
+
+\begin{code}
+// All in besides lambda which is out
+void eigenvalues(
+  double                                       Q[5],
+  const tarch::la::Vector<Dimensions,double>&  faceCentre,
+  const tarch::la::Vector<Dimensions,double>&  volumeH,
+  double                                       t,
+  int                                          normal,
+  double                                       lambda[5]
+) {
+  ...
+}
+
+
+// All in besides F which is out
+void flux(
+  double                                       Q[5],
+  const tarch::la::Vector<Dimensions,double>&  faceCentre,
+  const tarch::la::Vector<Dimensions,double>&  volumeH,
+  double                                       t,
+  int                                          normal,
+  double                                       F[5]
+) {
+  ...
+};
+\end{code}
+
+
+\begin{code}
+auto splitRiemann1d = [&flux, &eigenvalues](
+  double QL[5], double QR[5], const tarch::la::Vector<Dimensions,double>& x,
+  double dx, double dt, int normal, double F[5]
+) -> void { 
+  assertion(normal>=0);
+  assertion(normal<Dimensions);
+
+  double FL[unknowns];
+  double FR[unknowns];
+  flux(QL,x,dx,t,dt,normal,FL);
+  flux(QR,x,dx,t,dt,normal,FR);
+
+  double lambdas[unknowns];
+  double lambdaMax = 0.0;
+
+  eigenvalues(QL,x,dx,t,dt,normal,lambdas);
+  for (int unknown=0; unknown<unknowns; unknown++) {
+    assertion(lambdas[unknown]==lambdas[unknown]);
+    lambdaMax = std::max(lambdaMax,lambdas[unknown]);
+  }
+  eigenvalues(QR,x,dx,t,dt,normal % Dimensions,lambdas);
+  for (int unknown=0; unknown<unknowns; unknown++) {
+    assertion(lambdas[unknown]==lambdas[unknown]);
+    lambdaMax = std::max(lambdaMax,lambdas[unknown]);
+  }
+
+  for (int unknown=0; unknown<unknowns; unknown++) {
+    F[unknown] = 0.5 * FL[unknown] 
+               + 0.5 * FR[unknown] 
+               - 0.5 * lambdaMax * (QR[unknown] - QL[unknown]); }
+};  
+\end{code}
+
+\begin{remark}
+ An implementation of these routines can either be done manually (download/copy
+ the code snippets), or you can use \ExaHyPE. \ExaHyPE\ does provide generic
+ implementations of these guys in its directories.
+\end{remark}
+
+\noindent
+Let the three functions be one string assigned to a variable
+\texttt{functor} in our Python API. 
+We now have to run over the reconstructed patch with $N+2 \times N+2$ cells and
+write it back into the actual user data with cardinality $N \times N$.
+
+
+There are lots of options how to do this. 
+We can use Peano's dimension-generic volumes, or we can write it down for our
+particular dimension.
+We can loop over the faces (similar to ClawPack) or loop over the cells and
+compute the Riemann problems twice per face.
+Many more options do arise.
+I don't want to show some codes how to do it here, but I link to the directory
+\texttt{src/exahype2/fv} where I've realised a couple of them.
+
+
+Whatever implementation variant I use, it is convenient now to rely on
+\linebreak \texttt{ReconstructPatchAndApplyFunctor}. 
+I create, in Python, a string that calls my Rusanov solver: 
+
+\begin{code}
+  myApplyRusanovToPatch( ..., reconstructedPatch, originalPatch );
+\end{code}
+
+\noindent
+This string can hand over all of the cell attributes that I've introduced to my
+\linebreak \texttt{myApplyRusanovToPatch} implementation.
+The important thing is, it also forwards two double pointer
+(\texttt{reconstructedPatch} and \texttt{originalPatch}) to my routine.
+These are the plain user records. 
+
+The string holding this routine is passed into the instantiation of the type
+\linebreak \texttt{ApplyFunctorOnPatch} and thus is injected into the generated code.
+ 
+ 
+\section{Plot results}
+
+For the plotting of patch-based AMR, \Peano\ provides predefined action sets,
+too.
+They dump the output into Peano's patch format.
+Chapter \ref{capter:blockstructured-output-format} describes this format. 
+If you build your code with VTK support, \Peano\ offers a conversion script into
+VTK.
+
+
+
+To use the predefined file dump feature, add an instance of \linebreak
+\texttt{PlotPatchesInPeanoBlockFormat} to the step of your choice. 
+It then looks similar to
+\begin{code}
+print_solution = peano4.solversteps.Step( "PlotSolution" )
+print_solution.use_cell(patch)
+print_solution.use_face(patch_overlap)
+print_solution.remove_all_actions()
+plotter = peano4.toolbox.blockstructured.PlotPatchesInPeanoBlockFormat("solution",patch,"Q")
+print_solution.add_action_set( plotter )
+project.solversteps.add_step(print_solution)
+\end{code}
+
+
+
+
+

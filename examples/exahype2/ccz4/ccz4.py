@@ -10,6 +10,7 @@ import dastgen2
 from Probe_file_gene import tracer_seeds_generate
 
 from peano4.toolbox.blockstructured.DynamicAMR                 import DynamicAMR
+import numpy as np
 
 
 modes = { 
@@ -24,7 +25,8 @@ floatparams = {
         "GLMepsD":1.0, 
 	"itau":1.0, "k1":0.1, "k2":0.0, "k3":0.5, "eta":1.0,
         "f":0.75, "g":0.0, "xi":1.0, "e":1.0, "c":1.0, "mu":0.2, "ds":1.0,
-        "sk":1.0, "bs":1.0#, \
+        "sk":1.0, "bs":1.0,
+        "domain_r":0.5, "smoothing":0.0 #, \
 	#"itau":1.0, "k1":0.1, "k2":0.0, "k3":0.5, "eta":1.0,
         #"f":1.0, "g":0.0, "xi":1.0, "e":1.0, "c":1.0, "mu":0.2, "ds":1.0,
         #"sk":1.0, "bs":1.0#, \
@@ -47,16 +49,18 @@ if __name__ == "__main__":
     parser.add_argument("-m",    "--mode",            dest="mode",            default="release",  help="|".join(modes.keys()) )
     parser.add_argument( "--gpu",            dest="GPU",            default=False, action="store_true",  help="Run with accelerator support" )
     parser.add_argument("-ext",  "--extension",       dest="extension",       choices=["none", "gradient", "AMRadm", "Full"],   default="none",  help="Pick extension, i.e. what should be plotted on top. Default is none" )
-    parser.add_argument("-impl", "--implementation",  dest="implementation",  choices=["fv-global-fixed", "fv-global-adaptive", "fv-global-fixed-enclave", "fv-global-adaptive-enclave"], required="True",  help="Pick solver type" )
+    parser.add_argument("-impl", "--implementation",  dest="implementation",  choices=["fv-global-fixed", "fv-global-adaptive", "fv-global-fixed-enclave", "fv-global-adaptive-enclave","fv-subcyling-adaptive-enclave","fv-local-enclave"], required="True",  help="Pick solver type" )
     parser.add_argument("-no-pbc",  "--no-periodic-boundary-conditions",      dest="periodic_bc", action="store_false", default="True",  help="switch on or off the periodic BC" )
     parser.add_argument("-et",   "--end-time",        dest="end_time",        type=float, default=1.0, help="End (terminal) time" )
-    parser.add_argument("-s",    "--scenario",        dest="scenario",        choices=["gauge", "linear", "single-puncture","two-punctures"], required="True", help="Scenario" )
+    parser.add_argument("-pst",   "--plot-start-time",        dest="plot_start_time",        type=float, default=0.0, help="start time for plot" )
+    parser.add_argument("-s",    "--scenario",        dest="scenario",        choices=["gauge", "dia_gauge", "linear", "single-puncture","two-punctures"], required="True", help="Scenario" )
+    parser.add_argument("-cfl",      "--CFL-ratio",           dest="cfl",             type=float, default=0.1, help="Set CFL ratio" )
     parser.add_argument("-tracer", "--add-tracer",    dest="add_tracer", type=int, default=0,  help="Add tracers and specify the seeds. 0-switch off, 1-x axis, 2-xy plane, 3-over domain (evenly), 4-over domain(with noise option), 5-inserted by coordinate, 6-spherical surface(Gauss_Legendre_quadrature), 7-spherical surface(t-design)" )
     parser.add_argument("-tn", "--tracer-name",       dest="tra_name",    type=str, default="de",  help="name of output tracer file (temporary)" )
     parser.add_argument("-exn", "--exe-name",        dest="exe_name",    type=str, default="",  help="name of output executable file" )
     parser.add_argument("-outdir", "--output-directory",        dest="path",    type=str, default="./",  help="specify the output directory, include the patch file and tracer file" )
-    parser.add_argument("-interp",   "--interpolation", dest="interpolation",     choices=["constant", "linear-slow", "linear-slow+enforce", "linear", "linear+enforce", "outflow" ], default="linear-slow",  help="interpolation scheme for AMR" )
-    parser.add_argument("-restrict", "--restriction",   dest="restriction",       choices=["average", "inject", "average+enforce", "inject+enforce"], default="average",  help="restriction scheme for AMR" )
+    parser.add_argument("-interp",   "--interpolation", dest="interpolation",     choices=["constant","order-2","linear-constant-extrap","linear-linear-extrap","linear-con-extrap-lin-normal-interp","linear-lin-extrap-lin-normal-interp"], default="linear-lin-extrap-lin-normal-interp",  help="interpolation scheme for AMR" )
+    parser.add_argument("-restrict", "--restriction",   dest="restriction",       choices=["average", "inject" ], default="average",  help="restriction scheme for AMR" )
 
 
     for k, v in floatparams.items(): parser.add_argument("--{}".format(k), dest="CCZ4{}".format(k), type=float, default=v, help="default: %(default)s")
@@ -77,19 +81,13 @@ if __name__ == "__main__":
        SuperClass = exahype2.solvers.fv.rusanov.GlobalFixedTimeStepWithEnclaveTasking
     if args.implementation=="fv-global-adaptive-enclave":
        SuperClass = exahype2.solvers.fv.rusanov.GlobalAdaptiveTimeStepWithEnclaveTasking
-
-
-#    if args.implementation=="fv-fixed-enclave" or args.implementation=="fv-fixed-gpu":
-#       SuperClass = exahype2.solvers.fv.GenericRusanovFixedTimeStepSizeWithEnclaves
-#    if args.implementation=="fv-adaptive-enclave" or args.implementation=="fv-adaptive-gpu":
-#       SuperClass = exahype2.solvers.fv.GenericRusanovAdaptiveTimeStepSizeWithEnclaves
-#    if args.implementation=="fv-optimistic-enclave":
-#       SuperClass = exahype2.solvers.fv.GenericRusanovOptimisticTimeStepSizeWithEnclaves
-#    if args.implementation=="ader-fixed":
-#       SuperClass = exahype2.solvers.aderdg.NonFusedGenericRusanovFixedTimeStepSize
+    if args.implementation=="fv-subcyling-adaptive-enclave": 
+       SuperClass = exahype2.solvers.fv.rusanov.SubcyclingAdaptiveTimeStepWithEnclaveTasking
+    if args.implementation=="fv-local-enclave":
+       SuperClass = exahype2.solvers.fv.rusanov.LocalTimeStepWithEnclaveTasking
 
     class CCZ4Solver( SuperClass ):
-      def __init__(self, name, patch_size, min_volume_h, max_volume_h ):
+      def __init__(self, name, patch_size, min_volume_h, max_volume_h, cfl, domain_r):
         unknowns = {
           "G":6,
           "K":6,
@@ -115,7 +113,6 @@ if __name__ == "__main__":
 
         self._my_user_includes = """
 #include "../CCZ4Kernels.h"
-#include "exahype2/PatchUtils.h"
 """
 
         if SuperClass==exahype2.solvers.fv.rusanov.GlobalFixedTimeStep:
@@ -137,6 +134,25 @@ if __name__ == "__main__":
             time_step_size=1e-2,
             use_gpu =args.GPU #=="fv-fixed-gpu" else False
           )
+        elif SuperClass==exahype2.solvers.fv.rusanov.GlobalAdaptiveTimeStep:
+          SuperClass.__init__(
+            self,
+            name=name, patch_size=patch_size,
+            unknowns=number_of_unknowns,
+            auxiliary_variables=0,
+            min_volume_h=min_volume_h, max_volume_h=max_volume_h,
+            time_step_relaxation=cfl
+          )
+        elif SuperClass==exahype2.solvers.fv.rusanov.SubcyclingAdaptiveTimeStepWithEnclaveTasking:
+          SuperClass.__init__(#change to linear interpolation in time by hand here
+            self,
+            name=name, patch_size=patch_size,
+            unknowns=number_of_unknowns,
+            auxiliary_variables=0,
+            min_volume_h=min_volume_h, max_volume_h=max_volume_h,
+            time_step_relaxation=cfl,
+            interpolate_linearly_in_time=True
+          )
         else:
           SuperClass.__init__(
             self,
@@ -144,22 +160,23 @@ if __name__ == "__main__":
             unknowns=number_of_unknowns,
             auxiliary_variables=0,
             min_volume_h=min_volume_h, max_volume_h=max_volume_h,
-            time_step_relaxation=0.5,
+            time_step_relaxation=cfl,
             #use_gpu =args.GPU #=="fv-fixed-gpu" else False
 #                        use_gpu = True if args.implementation=="fv-adaptive-gpu" else False
           )
 
         self._patch_size = patch_size
+        self._domain_r = domain_r
 
         self.set_implementation(
           boundary_conditions=exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
-          flux=exahype2.solvers.fv.PDETerms.None_Implementation,
           ncp=exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
+          flux=exahype2.solvers.fv.PDETerms.None_Implementation,
           source_term=exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
-          refinement_criterion=exahype2.solvers.fv.PDETerms.User_Defined_Implementation
+          refinement_criterion = exahype2.solvers.fv.PDETerms.User_Defined_Implementation
         )
 
-        self.set_postprocess_updated_patch_kernel( """
+        self.postprocess_updated_patch = """
   {
     #if Dimensions==2
     constexpr int itmax = {{NUMBER_OF_VOLUMES_PER_AXIS}} * {{NUMBER_OF_VOLUMES_PER_AXIS}};
@@ -178,7 +195,7 @@ if __name__ == "__main__":
       index += {{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}};
     }
   }
-""" )
+"""
 
    
       def create_action_sets(self):
@@ -187,33 +204,40 @@ if __name__ == "__main__":
         self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement.additional_includes += """ 
 #include "../CCZ4Kernels.h"
             """
-        self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement.switch_restriction_scheme( "averaging" )
-        self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement.switch_interpolation_scheme( "linear" )
+        self.restriction = "averaging" # "linear"
 
         if args.interpolation=="constant":
-          self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement.switch_interpolation_scheme( "piecewise_constant" )
+          self.interpolation = "piecewise_constant"
           print( "Interpolation rule: piecewise_constant" )
-        if args.interpolation=="linear-slow" or args.interpolation=="linear-slow+enforce":
-          self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement.switch_interpolation_scheme( "linear" )
-          print( "Interpolation rule: linear interpolation without optimisation" )
-        if args.interpolation=="linear" or args.interpolation=="linear+enforce":
-          self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement.switch_interpolation_scheme( "linear_precomputed_operators<" + str(self._patch_size) +">" )
-          print( "Interpolation rule: optimised linear interpolation with patch size " + str(self._patch_size) )
-        if args.interpolation=="outflow":
-          self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement.switch_interpolation_scheme( "outflow" )
-          print( "Interpolation rule: outflow (from fine grid into coarse grid)" )
+        if args.interpolation=="linear-constant-extrap":
+          self.interpolation = "linear_with_constant_extrapolation" 
+          print( "Interpolation rule: linear constant extrapolation" )
+        if args.interpolation=="linear-linear-extrap":
+          self.interpolation = "linear_with_linear_extrapolation"
+          print( "Interpolation rule: linear extrapolation" )
+        if args.interpolation=="linear-con-extrap-lin-normal-interp":
+          self.interpolation = "linear_with_constant_extrapolation_and_linear_normal_interpolation"
+          print( "Interpolation rule: linear+constant extrapolation and linear normal interpolation" )
+        if args.interpolation=="linear-lin-extrap-lin-normal-interp":
+          self.interpolation = "linear_with_linear_extrapolation_and_linear_normal_interpolation" 
+          print( "Interpolation rule: linear+linear extrapolation and linear normal interpolation" )
 
-        if args.restriction=="average" or args.restriction=="average+enforce":
-          self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement.switch_restriction_scheme( "averaging" )
+        if args.interpolation=="order-2":
+          self.interpolation = "linear" 
+          # @todo, we have to change this one
+          #self.overlap=2
+
+        if args.restriction=="average":
+          self.restriction =  "averaging"
           print( "Restiction rule: averaging" )
-        if args.restriction=="inject" or args.restriction=="inject+enforce":
-          self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement.switch_restriction_scheme( "inject" )
+        if args.restriction=="inject":
+          self.restriction_scheme = "inject" 
           print( "Restiction rule: injection" )
           
-        if args.interpolation=="linear+enforce" or args.interpolation=="linear-slow+enforce":
-          self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement.switch_point_wise_postprocessing_of_interpolation( "examples::exahype2::ccz4::enforceCCZ4constraints(targetVolume)" )
-        if args.restriction=="average+enforce" or args.restriction=="inject+enforce":
-          self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement.switch_point_wise_postprocessing_of_restriction( "examples::exahype2::ccz4::enforceCCZ4constraints(targetVolume)" )
+        #if args.interpolation=="linear+enforce" or args.interpolation=="linear-slow+enforce":
+        #  self.point_wise_postprocessing_of_interpolation = "examples::exahype2::ccz4::enforceCCZ4constraints(targetVolume)" )
+        #if args.restriction=="average+enforce" or args.restriction=="inject+enforce":
+        #  self.point_wise_postprocessing_of_restriction = "examples::exahype2::ccz4::enforceCCZ4constraints(targetVolume)"
 
 
       def get_user_action_set_includes(self):
@@ -238,16 +262,16 @@ if __name__ == "__main__":
          side.
 
         """
-        self._auxiliary_variables = 6
+        self._auxiliary_variables = 6+3
 
         self._my_user_includes += """
 	#include "../CCZ4Kernels.h"
 	#include "../AbstractFiniteVolumeCCZ4.h"
     """
 
-        self.set_preprocess_reconstructed_patch_kernel( """
+        self._preprocess_reconstructed_patch = """
         const int patchSize = """ + str( self._patch.dim[0] ) + """;
-        double volumeH = ::exahype2::getVolumeLength(marker.h(),patchSize);
+        double volumeH = ::exahype2::fv::getVolumeLength(marker.h(),patchSize);
         const int n_a_v="""+str(self._auxiliary_variables)+""";
         dfor(cell,patchSize) {
           //tarch::la::Vector<Dimensions,int> currentPosition=marker.getOffset()+(cell+0.5)*volumeH;
@@ -262,6 +286,8 @@ if __name__ == "__main__":
 
           // See the docu in PDE.h
           double gradQ[3*59]={ 0 };
+          double faceQ[6*59]={ 0 };
+          double faceDeltaQ[6*59]={ 0 };
 
           // Lets look left vs right and compute the gradient. Then, lets
           // loop up and down. So we look three times for the respective
@@ -273,8 +299,13 @@ if __name__ == "__main__":
             rightCell(d) += 1;
             const int leftCellSerialised  = peano4::utils::dLinearised(leftCell, patchSize + 2*1);
             const int rightCellSerialised = peano4::utils::dLinearised(rightCell,patchSize + 2*1);
+            const int currentCellSerialised = peano4::utils::dLinearised(currentCell,patchSize + 2*1);
             for(int i=0; i<59; i++) {
               gradQ[d*59+i] = ( reconstructedPatch[rightCellSerialised*(59+n_a_v)+i] - reconstructedPatch[leftCellSerialised*(59+n_a_v)+i] ) / 2.0 / volumeH;
+              faceQ[2*d*59+i]= (reconstructedPatch[currentCellSerialised*(59+n_a_v)+i] + reconstructedPatch[leftCellSerialised*(59+n_a_v)+i]) / 2.0;
+              faceDeltaQ[2*d*59+i]= (reconstructedPatch[currentCellSerialised*(59+n_a_v)+i] - reconstructedPatch[leftCellSerialised*(59+n_a_v)+i]);
+              faceQ[2*d*59+59+i]= (reconstructedPatch[currentCellSerialised*(59+n_a_v)+i] + reconstructedPatch[rightCellSerialised*(59+n_a_v)+i]) / 2.0;
+              faceDeltaQ[2*d*59+59+i]= (-reconstructedPatch[currentCellSerialised*(59+n_a_v)+i] + reconstructedPatch[rightCellSerialised*(59+n_a_v)+i]);         
             }
           }
 
@@ -286,22 +317,30 @@ if __name__ == "__main__":
 
           admconstraints(constraints,reconstructedPatch+cellSerialised*(59+n_a_v),gradQ);
           
+          for(int i=0;i<6;i++){
+            reconstructedPatch[cellSerialised*(59+n_a_v)+59+i] = constraints[i];
+          }
+          
+          double ncpsum=0, ncp[1]={0};
+          double src[2]={ 0 };
+          for (int d=0; d<3; d++)
+          {
+            ThetaOutputNCP(ncp,faceQ+2*d*59,faceDeltaQ+2*d*59,d);
+            ncpsum+=ncp[0];
+            ThetaOutputNCP(ncp,faceQ+2*d*59+59,faceDeltaQ+2*d*59+59,d);
+            ncpsum+=ncp[0];
+          }
+          ThetaOutputSrc(src,reconstructedPatch+cellSerialised*(59+n_a_v),gradQ);
+          reconstructedPatch[cellSerialised*(59+n_a_v)+59+6] = ncpsum / 2.0 / volumeH;
+          reconstructedPatch[cellSerialised*(59+n_a_v)+59+7] = src[0];
+          reconstructedPatch[cellSerialised*(59+n_a_v)+59+8] = src[1];
+          
           //NaN detector here/////////////////////////////////
           /*for(int i=0;i<59;i++){
             if ( std::isnan(reconstructedPatch[cellSerialised*(59+n_a_v)+i]) ) {
               ::exahype2::triggerNonCriticalAssertion( __FILE__, __LINE__, "[Quantity should no be NaN]", "NaN detected at t=" + std::to_string(t) + " for quantity "+std::to_string(i)+" at position ["+std::to_string(currentPosition[0])+", "+std::to_string(currentPosition[1])+", "+std::to_string(currentPosition[2])+"]");}
           }*/
           ///////////////////////////////////////////////////
-
-          for(int i=0;i<6;i++){
-            reconstructedPatch[cellSerialised*(59+n_a_v)+59+i] = constraints[i];
-          }
-          
-          /*double sour[59]={ 0 };
-          examples::exahype2::ccz4::source(sour,reconstructedPatch+cellSerialised*(59+n_a_v),0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0.1, 0, 0.5);
-          for(int i=0;i<59;i++){
-            reconstructedPatch[cellSerialised*(59+n_a_v)+59+6+i] = sour[i];
-          }*/
 
           /*
           //here we calculate the norm of conformal factor phi as the refinement condition
@@ -317,9 +356,8 @@ if __name__ == "__main__":
           reconstructedPatch[cellSerialised*(59+n_a_v)+59+7]=Psi4[0];//re part of psi4
 		      reconstructedPatch[cellSerialised*(59+n_a_v)+59+8]=Psi4[1];//im part of psi4
 		      */
-		      //std::cout<< Psi4[0] << std::endl;
         }
-    """)
+    """
 
         self.create_data_structures()
         self.create_action_sets()
@@ -342,11 +380,11 @@ if __name__ == "__main__":
         """
         self._auxiliary_variables = 59*3
 
-        self.set_preprocess_reconstructed_patch_kernel( """
+        self._preprocess_reconstructed_patch = """
         const int patchSize = """ + str( self._patch.dim[0] ) + """;
         int aux_var=""" + str( self._auxiliary_variables ) + """;
         int real_var=59;
-        double volumeH = ::exahype2::getVolumeLength(marker.h(),patchSize);
+        double volumeH = ::exahype2::fv::getVolumeLength(marker.h(),patchSize);
         dfor(cell,patchSize) {
           tarch::la::Vector<Dimensions,int> currentCell = cell + tarch::la::Vector<Dimensions,int>(1);
           const int cellSerialised  = peano4::utils::dLinearised(currentCell, patchSize + 2*1);
@@ -369,14 +407,14 @@ if __name__ == "__main__":
 
           }
         }
-    """)
+    """
 
         self.create_data_structures()
         self.create_action_sets()
 
       def add_PT_ConsW_Psi4W_AMRFlag(self):
         """
-				add puncutrestracker, constraints writer, psi4 writer, AMRflag(currently using gradient of phi)
+	add puncutrestracker, constraints writer, psi4 writer, AMRflag(currently using gradient of phi)
         """
         self._auxiliary_variables = 9
 
@@ -387,9 +425,9 @@ if __name__ == "__main__":
 	#include <iomanip>
     """
 
-        self.set_preprocess_reconstructed_patch_kernel( """
+        self._preprocess_reconstructed_patch = """
         const int patchSize = """ + str( self._patch.dim[0] ) + """;
-        double volumeH = ::exahype2::getVolumeLength(marker.h(),patchSize);
+        double volumeH = ::exahype2::fv::getVolumeLength(marker.h(),patchSize);
 
 		std::fstream fin;
 		std::string att="_"""+args.tra_name+""".txt"; std::string p1="puncture1"; std::string p2="puncture2"; std::string tem="ztem";
@@ -508,15 +546,16 @@ if __name__ == "__main__":
       reconstructedPatch[cellSerialised*(59+n_a_v)+59+7]=Psi4[0];//re part of psi4
 		  reconstructedPatch[cellSerialised*(59+n_a_v)+59+8]=Psi4[1];//im part of psi4
 		}		
-    """)
+    """
 
         self.create_data_structures()
         self.create_action_sets()
-       
-
 
       def pick_Gauge_wave_scenario(self):
         self.add_solver_constants( """static constexpr int Scenario=0; /* Gauge wave */  """ )
+
+      def pick_Diagonal_Gauge_wave_scenario(self):
+        self.add_solver_constants( """static constexpr int Scenario=3; /* Diagonal Gauge wave */  """ )
 
       def pick_Linear_wave_scenario(self):
         self.add_solver_constants( """static constexpr int Scenario=1; /* Linear wave */  """ )
@@ -549,9 +588,10 @@ if __name__ == "__main__":
         unknowns = 59
         time_step_size = 0.001
     except Exception as e:
-        msg = "Warning: ADER-DG no supported on this machine"
-        print(msg)
-        userinfo.append((msg,e))
+        pass
+        #msg = "Warning: ADER-DG no supported on this machine"
+        #print(msg)
+        #userinfo.append((msg,e))
 
     if is_aderdg:
       solver_name    = "ADERDG" + solver_name
@@ -574,21 +614,32 @@ if __name__ == "__main__":
           sources = exahype2.solvers.aderdg.PDETerms.User_Defined_Implementation
       )
     else:
-      my_solver = CCZ4Solver(solver_name, args.patch_size, min_h, args.max_h)
+      my_solver = CCZ4Solver(solver_name, args.patch_size, min_h, args.max_h, args.cfl, args.CCZ4domain_r)
+      userinfo.append(("CFL ratio set as "+str(args.cfl), None))
+        
+    if args.interpolation=="order-2":
+      my_solver.overlap=2
 
 ########################################################################################
 #Add postpocessing function
 ########################################################################################
-      if args.extension=="gradient":
-        my_solver.add_derivative_calculation()
-      if args.extension=="AMRadm":
-        my_solver.add_constraint_RefinementFlag_verification()
-      if args.extension=="Full":
-        my_solver.add_PT_ConsW_Psi4W_AMRFlag()
+    if args.extension=="gradient":
+      my_solver.add_derivative_calculation()
+    if args.extension=="AMRadm":
+      my_solver.add_constraint_RefinementFlag_verification()
+    if args.extension=="Full":
+      my_solver.add_PT_ConsW_Psi4W_AMRFlag()
+
+      #my_solver._auxiliary_variables = 59*3
 
 ########################################################################################
 #parameter setting according to scenarios
 ########################################################################################
+    for k, v in intparams.items():
+      intparams.update({k:eval("args.CCZ4{}".format(k))})
+    for k, v in floatparams.items():
+      floatparams.update({k:eval("args.CCZ4{}".format(k))})
+
     if args.scenario=="two-punctures":
       msg = "Periodic BC deactivated because you pick Puncture scenario\nInitialize binary black holes"
       print(msg)
@@ -613,21 +664,32 @@ if __name__ == "__main__":
       periodic_boundary_conditions = [False,False,False]
       userinfo.append((msg,None))
 
-    intparams.update({"ReSwi":args.CCZ4ReSwi})
-
     solverconstants=""
+
+    if args.scenario=="gauge":
+      solverconstants+= "static constexpr int Scenario=0; /* Gauge wave */  "
+      userinfo.append(("picking gauge wave scenario",None))
+      floatparams.update({"sk":0.0}); floatparams.update({"bs":0.0})
+      intparams.update({"LapseType":0})
+    elif args.scenario=="dia_gauge":
+      solverconstants+= "static constexpr int Scenario=3; /* Diagonal Gauge wave */  "
+      userinfo.append(("picking diagonal gauge wave scenario",None))
+      floatparams.update({"sk":0.0}); floatparams.update({"bs":0.0})
+      intparams.update({"LapseType":0})
+    elif args.scenario=="linear":
+      solverconstants+= "static constexpr int Scenario=1; /* Linear wave */  "
+      userinfo.append(("picking linear wave scenario",None))
+      floatparams.update({"sk":0.0}); floatparams.update({"bs":0.0})
+      intparams.update({"LapseType":0})
+    elif  (args.scenario=="two-punctures") or (args.scenario=="single-puncture"):
+      solverconstants+= "static constexpr int Scenario=2; /* Two-puncture */ "
+      userinfo.append(("picking black hole scenario",None))
+    else:
+      raise Exception( "Scenario " + args.scenario + " is now unknown")  
+
     for k, v in floatparams.items(): solverconstants+= "static constexpr double {} = {};\n".format("CCZ4{}".format(k), v)
     for k, v in intparams.items():   solverconstants+= "static constexpr int {} = {};\n".format("CCZ4{}".format(k), v)
     my_solver.set_solver_constants(solverconstants)
-
-    if args.scenario=="gauge":
-      my_solver.pick_Gauge_wave_scenario()
-    elif args.scenario=="linear":
-      my_solver.pick_Linear_wave_scenario()
-    elif  (args.scenario=="two-punctures") or (args.scenario=="single-puncture"):
-      my_solver.pick_two_puncture_scenario()
-    else:
-      raise Exception( "Scenario " + args.scenario + " is now unknown")  
 
     project.add_solver(my_solver)
 
@@ -638,30 +700,33 @@ if __name__ == "__main__":
 ########################################################################################
 #Domain settings
 ########################################################################################
-    if args.scenario=="gauge" or args.scenario=="linear":
-      offset=[-0.5, -0.5, -0.5]; domain_size=[1.0, 1.0, 1.0]
-      #offset=[-1.5, -1.5, -1.5]; domain_size=[3.0, 3.0, 3.0]
-      msg = "Gauge wave, domain set as "+str(offset)+" and "+str(domain_size)
-      print(msg)
-      userinfo.append((msg,None))
-    if args.scenario=="two-punctures" or args.scenario=="single-puncture":
-      offset=[-20, -20, -20]; domain_size=[40.0, 40.0, 40.0]
-      #offset=[-30, -30, -30]; domain_size=[60.0, 60.0, 60.0]
-      #offset=[-40, -40, -40]; domain_size=[80.0, 80.0, 80.0]
-      msg = "Two/single punctures, domain set as "+str(offset)+" and "+str(domain_size)
-      print(msg)
-      userinfo.append((msg,None))
+    floatparams.update({"domain_r":args.CCZ4domain_r})
+    dr=floatparams["domain_r"]
+    offset=[-dr, -dr, -dr]; domain_size=[2*dr, 2*dr, 2*dr]
+    msg = "domain set as "+str(offset)+" and "+str(domain_size)
+    print(msg)
+    userinfo.append((msg,None))
 
     project.set_global_simulation_parameters(
       dimensions,               # dimensions
       offset,  domain_size,
       args.end_time,                 # end time
-      0.0, args.plot_step_size,   # snapshots
+      args.plot_start_time, args.plot_step_size,   # snapshots
       periodic_boundary_conditions,
       8  # plotter precision
     )
+    userinfo.append(("plot start time: "+str(args.plot_start_time)+", plot step size: "+str(args.plot_step_size),None))
+    userinfo.append(("Terminal time: "+str(args.end_time),None))
 
     project.set_Peano4_installation("../../..", build_mode)
+
+########################################################################################
+#AMR boundary tracing
+########################################################################################
+    #amr_label = exahype2.solvers.elliptic.AMRMarker( name="AMRMarker" )
+    #project.add_solver( amr_label )
+    #my_solver._auxiliary_variables+=1
+    #amr_label.couple_with_FV_solver( my_solver, my_solver._auxiliary_variables-1 )
 
 ########################################################################################
 #output dir and proble
@@ -672,10 +737,10 @@ if __name__ == "__main__":
     #path="/cosma5/data/durham/dc-zhan3/bbh-c5-1"
     #path="/cosma6/data/dp004/dc-zhan3/exahype2/sbh-fv3"
     project.set_output_path(path)
-    probe_point = [-1,-1,0.0]
-    project.add_plot_filter( probe_point,[40.0,40.0,0.01],1 )
+    probe_point = [-4,-4,0.0]
+    project.add_plot_filter( probe_point,[8.0,8.0,0.01],1 )
 
-    project.set_load_balancing("toolbox::loadbalancing::RecursiveSubdivision","(new ::exahype2::LoadBalancingConfiguration(0.98,0,16))" )
+    project.set_load_balancing("toolbox::loadbalancing::RecursiveSubdivision","(new ::exahype2::LoadBalancingConfiguration(0.98,0))" )
 
 ########################################################################################
 #Tracer setting 
@@ -704,24 +769,30 @@ if __name__ == "__main__":
         project.add_action_set_to_initialisation( exahype2.tracer.InsertParticlesFromFile( particle_set=tracer_particles, filename=tracer_name[args.add_tracer]+".dat", scale_factor=abs(offset[0])*0.8)) #"Gauss_Legendre_quadrature.dat" #"t-design.dat" 
       
       if path=="./": path1="."
-      else: path1="/cosma5/data/durham/dc-zhan3/sbh-tracer"
+      else: path1=path
       project.add_action_set_to_timestepping(exahype2.tracer.DumpTrajectoryIntoDatabase(
         particle_set=tracer_particles,
         solver=my_solver,
-        filename=path1+"/zz"+args.tra_name,
-        number_of_entries_between_two_db_flushes=30000
+        filename=path1+"zz"+args.tra_name,
+        number_of_entries_between_two_db_flushes=2000,
+        output_precision=10,
+        position_delta_between_two_snapsots=1e16,
+        data_delta_between_two_snapsots=1e16,
+        time_delta_between_two_snapsots=0.02,
+        use_relative_deltas=False,
+        initial_record_time=55#args.end_time*2.0/3.0
+        #last_record_time=1e3
       ))
       #data_delta_between_two_snapsots,position_delta_between_two_snapsots,filename,          
       #,,-1,"zz",1000))
+
 
 ########################################################################################
 #linking stuff
 ########################################################################################
     peano4_project = project.generate_Peano4_project(verbose=True)
 
-    if args.scenario=="gauge":
-      pass
-    elif args.scenario=="linear":
+    if args.scenario=="gauge" or args.scenario=="linear" or args.scenario=="dia_gauge":
       pass
     elif args.scenario=="two-punctures" or args.scenario=="single-puncture":
       #
@@ -787,9 +858,9 @@ if __name__ == "__main__":
     userinfo.append(("output directory: "+path, None))
     print("=========================================================")
     if not args.add_tracer==0:
-        userinfo.append(("tracer output file: "+path1+"/zz"+args.tra_name, None))
+        userinfo.append(("tracer output file: "+path1+"zz"+args.tra_name, None))
     if len(userinfo) >0:
-        print("Please note that these warning occured before the build:")
+        print("The building information:")
         for msg, exception in userinfo:
             if exception is None:
                 print(msg)

@@ -387,6 +387,16 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::isLastGridSweepOfTimeStep() cons
 }
 
 
+void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startSimulation() {
+
+}
+
+
+void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishSimulation() {
+
+}
+
+
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::solutionUpdate(double* luh, const double* const luhOld, const double* const lduh, const double dt){
   kernels::aderdg::generic::c::solutionUpdate<{{NAMESPACE | join("::")}}::{{CLASSNAME}}>(
       *this,

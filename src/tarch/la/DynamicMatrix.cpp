@@ -117,10 +117,10 @@ bool tarch::la::DynamicMatrix::operator==(const DynamicMatrix& matrix) const {
 
 
 double& tarch::la::DynamicMatrix::operator()(int row, int col) {
-  assertion(row>=0);
-  assertion(col>=0);
-  assertion(row<_rows);
-  assertion(col<_cols);
+  assertion4(row>=0, row, col, _rows, _cols);
+  assertion4(col>=0, row, col, _rows, _cols);
+  assertion4(row<_rows, row, col, _rows, _cols);
+  assertion4(col<_cols, row, col, _rows, _cols);
   return _m[ serialise(row,col) ];
 }
 
@@ -140,6 +140,14 @@ tarch::la::DynamicMatrix tarch::la::DynamicMatrix::id( int rows ) {
     result(i,i) = 1.0;
   }
   return result;
+}
+
+
+void tarch::la::DynamicMatrix::scale(double value) {
+  for (int col=0; col<_cols; col++)
+  for (int row=0; row<_rows; row++) {
+    _m[ serialise(row,col) ] *= value;
+  }
 }
 
 
@@ -198,7 +206,11 @@ std::string tarch::la::DynamicMatrix::vectorToString( double* values, int entrie
 }
 
 
-void tarch::la::DynamicMatrix::batchedMultiplyAoS( double* result, double* x, int batchCount ) {
+void tarch::la::DynamicMatrix::batchedMultiplyAoS(
+  double* __restrict__        result,
+  const double* __restrict__  x,
+  int                         batchCount
+) {
   batchedMultiplyAoS(
     result, x,
 	batchCount,
@@ -208,7 +220,13 @@ void tarch::la::DynamicMatrix::batchedMultiplyAoS( double* result, double* x, in
 }
 
 
-void tarch::la::DynamicMatrix::batchedMultiplyAoS( double* result, double* x, int batchSize, int resultSize, int firstRow  ) {
+void tarch::la::DynamicMatrix::batchedMultiplyAoS(
+  double* __restrict__        result,
+  const double* __restrict__  x,
+  int batchSize,
+  int resultSize,
+  int firstRow
+) {
   assertion3( batchSize>0,  batchSize, resultSize, firstRow );
   assertion3( resultSize>0, batchSize, resultSize, firstRow );
   assertion3( firstRow>=0,  batchSize, resultSize, firstRow );
@@ -394,6 +412,47 @@ void tarch::la::DynamicMatrix::replicateRows( int blockSize, int numberOfReplica
           const int destCol = col+replication*shiftAfterEveryReplication;
           if (destCol<_cols) {
             _m[ serialise( destRow,destCol) ] = oldData[ serialise(srcRow,col,oldRows,oldCols) ];
+          }
+        }
+      }
+    }
+  }
+
+  tarch::freeMemory(oldData,tarch::MemoryLocation::Heap);
+}
+
+
+void tarch::la::DynamicMatrix::replicateCols( int blockSize, int numberOfReplications, int shiftAfterEveryReplication, bool extendColumnsToAccommodateShifts ) {
+  assertion3( blockSize>=1, blockSize, numberOfReplications, shiftAfterEveryReplication );
+  assertion3( _rows%blockSize==0, blockSize, numberOfReplications, shiftAfterEveryReplication );
+  assertion3( numberOfReplications>=2, blockSize, numberOfReplications, shiftAfterEveryReplication );
+
+  double* oldData = _m;
+  int     oldRows = _rows;
+  int     oldCols = _cols;
+
+  assertion2(numberOfReplications>=1,numberOfReplications,shiftAfterEveryReplication);
+  assertion2(shiftAfterEveryReplication>=0,numberOfReplications,shiftAfterEveryReplication);
+
+  const int numberOfBlocks = _cols / blockSize;
+  _cols = _cols*numberOfReplications;
+  if (extendColumnsToAccommodateShifts) {
+    _rows = _rows+shiftAfterEveryReplication*(numberOfReplications-1);
+  }
+
+  _m = tarch::allocateMemory(_rows*_cols,tarch::MemoryLocation::Heap);
+
+  std::fill_n(_m,_rows*_cols,0.0);
+
+  for (int block=0; block<numberOfBlocks; block++) {
+    for (int replication=0; replication<numberOfReplications; replication++) {
+      for (int blockCol=0; blockCol<blockSize; blockCol++) {
+        const int destCol = (block*numberOfReplications+replication)*blockSize+blockCol;
+        const int srcCol = block*blockSize+blockCol;
+        for (int row=0; row<oldRows; row++) {
+          const int destRow = row+replication*shiftAfterEveryReplication;
+          if (destRow<_rows) {
+            _m[ serialise( destRow,destCol) ] = oldData[ serialise(row,srcCol,oldRows,oldCols) ];
           }
         }
       }

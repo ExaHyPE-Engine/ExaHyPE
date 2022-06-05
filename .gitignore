@@ -13,4 +13,7 @@ src/unittests/UnitTests3d
 
 !.gitlab-ci.yml
 
-/cookbook/
+documentation/.texlipse
+documentation/.project
+
+/m4/

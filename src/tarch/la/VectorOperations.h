@@ -167,6 +167,11 @@ namespace tarch {
       const Vector<Size,Scalar >&  vector,
       const Scalar&                value
     );
+
+    template<int Size, typename Scalar>
+    int isEntryNan(
+      const Vector<Size,Scalar >&  vector
+    );
   }
 }
 

@@ -13,7 +13,7 @@ from peano4.toolbox.blockstructured.ReconstructPatchAndApplyFunctor import Recon
 
 class UpdateCell(ReconstructPatchAndApplyFunctor):
   SolveRiemannProblemsOverPatch = jinja2.Template( """
-      const double timeStamp    = fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStamp();
+      double timeStamp    = fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStamp();
 
       // Set the variable
       // double timeStepSize
@@ -33,51 +33,10 @@ class UpdateCell(ReconstructPatchAndApplyFunctor):
         std::string(__FILE__) + "(" + std::to_string(__LINE__) + "): " + marker.toString()
       ); // previous time step has to be valid
   
-      ::exahype2::fv::copyPatch(
-        reconstructedPatch,
-        targetPatch,
-        {{NUMBER_OF_UNKNOWNS}},
-        {{NUMBER_OF_AUXILIARY_VARIABLES}},
-        {{NUMBER_OF_VOLUMES_PER_AXIS}},
-        1 // halo size
-      );
-
-      {{COMPUTE_KERNEL_CALL}}
-      (
-        [&](
-          const double * __restrict__                  QL,
-          const double * __restrict__                  QR,
-          const tarch::la::Vector<Dimensions,double>&  x,
-          double                                       dx,
-          double                                       t,
-          double                                       dt,
-          int                                          normal,
-          double                                       FL[],
-          double                                       FR[]
-        ) -> void {
-          {{RIEMANN_SOLVER_CALL}}
-        },
-        [&](
-          const double * __restrict__                  Q,
-          const tarch::la::Vector<Dimensions,double>&  x,
-          double                                       dx,
-          double                                       t,
-          double                                       dt,
-          double * __restrict__                        S
-        ) -> void {
-          {{SOURCE_TERM_CALL}}
-        },
-        marker.x(),
-        marker.h(),
-        timeStamp,
-        timeStepSize,
-        {{NUMBER_OF_VOLUMES_PER_AXIS}},
-        {{NUMBER_OF_UNKNOWNS}},
-        {{NUMBER_OF_AUXILIARY_VARIABLES}},
-        reconstructedPatch,
-        targetPatch
-      );
-  
+      ::exahype2::CellData  patchData( reconstructedPatch, marker.x(), marker.h(), timeStamp, timeStepSize, targetPatch );
+      
+      ::exahype2::fv::rusanov::{{COMPUTE_KERNEL_CALL}}  
+      
       {{POSTPROCESS_UPDATED_PATCH}}
 
       ::exahype2::fv::validatePatch(
@@ -90,26 +49,7 @@ class UpdateCell(ReconstructPatchAndApplyFunctor):
       ); // outcome has to be valid
       
       {% if COMPUTE_MAX_EIGENVALUE %}
-      const double maxEigenvalue = ::exahype2::fv::maxEigenvalue_AoS(
-        [] (
-          const double * __restrict__                  Q,
-          const tarch::la::Vector<Dimensions,double>&  faceCentre,
-          const tarch::la::Vector<Dimensions,double>&  volumeH,
-          double                                       t,
-          double                                       dt,
-          int                                          normal
-        ) -> double {
-          return repositories::{{SOLVER_INSTANCE}}.maxEigenvalue( Q, faceCentre, volumeH, t, normal);
-        },
-        marker.x(),
-        marker.h(),
-        timeStamp,
-        timeStamp + timeStepSize,
-        {{NUMBER_OF_VOLUMES_PER_AXIS}},
-        {{NUMBER_OF_UNKNOWNS}},
-        {{NUMBER_OF_AUXILIARY_VARIABLES}},
-        targetPatch
-      );
+      const double maxEigenvalue = patchData.maxEigenvalue[0];
       {% endif %}
       
       // Set the variable
@@ -176,7 +116,7 @@ class UpdateCell(ReconstructPatchAndApplyFunctor):
     return """
 #include "exahype2/fv/BoundaryConditions.h"
 #include "exahype2/NonCriticalAssertions.h"
-""" + self._solver._get_default_includes() + self._solver.get_user_action_set_includes()
+""" + self._solver._get_default_includes() + self._solver.user_action_set_includes
 
 
 
@@ -201,13 +141,13 @@ class SingleSweep( FV ):
   """
 
 
-  def __init__(self, name, patch_size, unknowns, auxiliary_variables, min_volume_h, max_volume_h, plot_grid_properties):
+  def __init__(self, name, patch_size, overlap, unknowns, auxiliary_variables, min_volume_h, max_volume_h, plot_grid_properties):
     """
 
       Instantiate a generic FV scheme with an overlap of 1.
 
     """
-    super(SingleSweep, self).__init__(name, patch_size, 1, unknowns, auxiliary_variables, min_volume_h, max_volume_h, plot_grid_properties)
+    super(SingleSweep, self).__init__(name, patch_size, overlap, unknowns, auxiliary_variables, min_volume_h, max_volume_h, plot_grid_properties)
 
     self._solver_template_file_class_name     = "SingleSweep"
 
@@ -257,11 +197,42 @@ class SingleSweep( FV ):
     self._action_set_update_cell = UpdateCell(self)
 
 
-  def get_user_action_set_includes(self):
-    return super(SingleSweep, self).get_user_action_set_includes() + """
-#include "exahype2/fv/Generic.h"
-#include "exahype2/fv/Rusanov.h"
-"""
+  @property
+  def user_action_set_includes(self):
+    return """
+#include "exahype2/CellData.h"
+""" + super(SingleSweep, self).user_action_set_includes
+
+
+  def set_implementation(self,
+    boundary_conditions, refinement_criterion, initial_conditions,
+    memory_location,
+    use_split_loop,
+    additional_action_set_includes,
+    additional_user_includes
+  ):
+    """
+      If you pass in User_Defined, then the generator will create C++ stubs
+      that you have to befill manually. If you pass in None_Implementation, it
+      will create nop, i.e. no implementation or defaults. Any other string
+      is copied 1:1 into the implementation. If you pass in None, then the
+      set value so far won't be overwritten.
+    """
+    if boundary_conditions  is not None:  self._boundary_conditions_implementation        = boundary_conditions
+    if refinement_criterion is not None:  self._refinement_criterion_implementation       = refinement_criterion
+    if initial_conditions   is not None:  self._initial_conditions_implementation         = initial_conditions
+    if memory_location      is not None:  self._reconstructed_array_memory_location       = memory_location
+    if use_split_loop                  :  self._use_split_loop                            = use_split_loop
+
+    if self._reconstructed_array_memory_location==peano4.toolbox.blockstructured.ReconstructedArrayMemoryLocation.HeapThroughTarchWithoutDelete or \
+       self._reconstructed_array_memory_location==peano4.toolbox.blockstructured.ReconstructedArrayMemoryLocation.HeapWithoutDelete or \
+       self._reconstructed_array_memory_location==peano4.toolbox.blockstructured.ReconstructedArrayMemoryLocation.AcceleratorWithoutDelete:
+      raise Exception( "memory mode without appropriate delete chosen, i.e. this will lead to a memory leak" )
+
+    self._user_action_set_includes += additional_action_set_includes
+    self._user_solver_includes     += additional_user_includes
+
+    self.create_action_sets()
 
 
   def add_entries_to_text_replacement_dictionary(self,d):
@@ -272,19 +243,19 @@ class SingleSweep( FV ):
     pass
 
 
-  def set_preprocess_reconstructed_patch_kernel(self,kernel):
+  #def set_preprocess_reconstructed_patch_kernel(self,kernel):
     """
   
     Most subclasses will redefine/overwrite this operation as they have
     to incorporate the kernel into their generated stuff
   
     """
-    self._preprocess_reconstructed_patch += kernel
-    self.create_data_structures()
-    self.create_action_sets()
+  #  self._preprocess_reconstructed_patch += kernel
+  #  self.create_data_structures()
+  #  self.create_action_sets()
 
 
-  def set_postprocess_updated_patch_kernel(self, kernel):
+  #def set_postprocess_updated_patch_kernel(self, kernel):
     """
 
     Define a postprocessing routine over the data
@@ -318,6 +289,6 @@ class SingleSweep( FV ):
       C++ code that holds the postprocessing kernel
 
     """
-    self._postprocess_updated_patch += kernel
-    self.create_data_structures()
-    self.create_action_sets()
+    #self._postprocess_updated_patch += kernel
+    #self.create_data_structures()
+    #self.create_action_sets()

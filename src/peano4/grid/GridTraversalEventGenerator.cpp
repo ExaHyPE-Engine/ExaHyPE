@@ -88,10 +88,12 @@ bool peano4::grid::GridTraversalEventGenerator::isVertexAdjacentToLocalSpacetree
   bool        splittingIsConsideredLocal,
   bool        joiningIsConsideredLocal
 ) const {
+/*
   if (vertex.getState()==GridVertex::State::HangingVertex) {
     return false;
   }
   else {
+*/
     logTraceInWith3Arguments( "isVertexAdjacentToLocalSpacetree(...)", vertex.toString(), splittingIsConsideredLocal, joiningIsConsideredLocal );
     bool result = false;
     for(int i=0; i<TwoPowerD; i++) {
@@ -107,7 +109,7 @@ bool peano4::grid::GridTraversalEventGenerator::isVertexAdjacentToLocalSpacetree
     }
     logTraceOutWith1Argument( "isVertexAdjacentToLocalSpacetree(...)", result );
     return result;
-  }
+//  }
 }
 
 
@@ -238,9 +240,10 @@ peano4::grid::GridTraversalEvent peano4::grid::GridTraversalEventGenerator::crea
   event.setWillBeRefined( willVerticesBeRefined(fineGridVertices) );
   event.setRelativePositionToFather( relativePositionToFather );
 
-  event.setIsCellLocal(   isSpacetreeNodeLocal( fineGridVertices, splitTriggered, splitting, joinTriggered, joining, true, true) );
-  event.setIsFaceLocal(   areFacesLocal(        fineGridVertices, splitTriggered, splitting, joinTriggered, joining) );
-  event.setIsVertexLocal( areVerticesLocal(     fineGridVertices, splitTriggered, splitting, joinTriggered, joining) );
+  event.setIsCellLocal( isSpacetreeNodeLocal( fineGridVertices,   splitTriggered, splitting, joinTriggered, joining, true, true) );
+  event.setIsParentCellLocal( state.getLevel()>1 and isSpacetreeNodeLocal( coarseGridVertices, splitTriggered, splitting, joinTriggered, joining, true, true) );
+  event.setIsFaceLocal( areFacesLocal( fineGridVertices, splitTriggered, splitting, joinTriggered, joining) );
+  event.setIsVertexLocal( areVerticesLocal( fineGridVertices, splitTriggered, splitting, joinTriggered, joining) );
 
   event.setInvokingSpacetree( _id );
   event.setInvokingSpacetreeIsNotInvolvedInAnyDynamicLoadBalancing(
@@ -400,6 +403,7 @@ peano4::grid::GridTraversalEvent peano4::grid::GridTraversalEventGenerator::crea
     spacetreeState==SpacetreeState::Joining
   ) {
     result.setIsCellLocal(false);
+    result.setIsParentCellLocal(false);
     result.setIsFaceLocal(0);
     result.setIsVertexLocal(0);
   }
@@ -428,6 +432,7 @@ peano4::grid::GridTraversalEvent peano4::grid::GridTraversalEventGenerator::crea
     spacetreeState==SpacetreeState::Joining
   ) {
     result.setIsCellLocal(false);
+    result.setIsParentCellLocal(false);
     result.setIsFaceLocal(0);
     result.setIsVertexLocal(0);
   }

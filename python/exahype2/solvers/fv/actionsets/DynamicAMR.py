@@ -26,24 +26,28 @@ class DynamicAMR( peano4.toolbox.blockstructured.DynamicAMR ):
   """
     
     
-  def __init__(self,solver):
+  def __init__(self,solver,interpolation,restriction):
     """
+     Construct object
     
-     # Interpolation
+    
+     :: Interpolation
      
      Don't interpolate in initialisation. If you have a parallel run with AMR, then some 
      boundary data has not been received yet and your face data thus is not initialised 
-     at all.
+     at all. Other than that, the interpolation is always on.
 
-     # Restriction
+
+     :: Restriction
      
      In contrast to the interpolation, it is absolutely key that we restrict alreaday in
      the initialisation. If we have a cell that is adjacent to a refined cell, then this
      cell requires proper face data for the subsequent first time step. So we have to 
      restrict in the initialisation even if there's no update yet - just to get the 
      coarse representation of fine hanging faces initialised.
+    
           
-     # Restriction of destructed faces
+     :: Restriction of destructed faces
      
      A destructed face has to restrict its data: We've already restricted the cells,
      but now we also have to restrict the faces, as faces span time spans. The cell
@@ -68,7 +72,7 @@ class DynamicAMR( peano4.toolbox.blockstructured.DynamicAMR ):
      first and then a face restriction. I neglect this fact here.
           
     """
-    peano4.toolbox.blockstructured.DynamicAMR.__init__(self,      
+    super( DynamicAMR, self ).__init__(    
       patch = solver._patch,
       patch_overlap_interpolation = solver._patch_overlap_old,
       patch_overlap_restriction   = solver._patch_overlap_update,
@@ -80,7 +84,6 @@ class DynamicAMR( peano4.toolbox.blockstructured.DynamicAMR ):
       restrict_guard           = "true",
       additional_includes         = """
 #include "../repositories/SolverRepository.h"
-#include "exahype2/fv/Generic.h"
 """      
 )
     self.__Template_DestroyHangingFace_Core += """
@@ -142,16 +145,16 @@ class DynamicAMR( peano4.toolbox.blockstructured.DynamicAMR ):
       {{DOFS_PER_AXIS}},
       {{OVERLAP}},
       {{UNKNOWNS}},
-      fineGridFace""" + solver._name + """QOld.value,
-      coarseGridFaces""" + solver._name + """QOld(marker.getSelectedFaceNumber()).value
+      coarseGridFaces""" + solver._name + """QOld(marker.getSelectedFaceNumber()).value,
+      fineGridFace""" + solver._name + """QOld.value
     );
     ::toolbox::blockstructured::interpolateHaloLayer_AoS_{{INTERPOLATION_SCHEME}}(
       marker,
       {{DOFS_PER_AXIS}},
       {{OVERLAP}},
       {{UNKNOWNS}},
-      fineGridFace""" + solver._name + """QNew.value,
-      coarseGridFaces""" + solver._name + """QNew(marker.getSelectedFaceNumber()).value
+      coarseGridFaces""" + solver._name + """QNew(marker.getSelectedFaceNumber()).value,
+      fineGridFace""" + solver._name + """QNew.value
     );
     // It is important that we clear the halo layer. If we have two layers of 
     // AMR, the finest one will restrict into QUpdate (so it has to be properly
@@ -168,25 +171,24 @@ class DynamicAMR( peano4.toolbox.blockstructured.DynamicAMR ):
     fineGridFace""" + solver._face_label.name + """.setOldTimeStamp(leftRightEntry,coarseGridFaces""" + solver._face_label.name + """(marker.getSelectedFaceNumber()).getOldTimeStamp(leftRightEntry));
 """
 
-
     self.__Template_CreatePersistentFace_Core = """
     ::toolbox::blockstructured::interpolateHaloLayer_AoS_{{INTERPOLATION_SCHEME}}(
       marker,
       {{DOFS_PER_AXIS}},
       {{OVERLAP}},
       {{UNKNOWNS}},
-      fineGridFace""" + solver._name + """QOld.value,
+      coarseGridCell""" + solver._name + """Q.value,
       coarseGridFaces""" + solver._name + """QOld(marker.getSelectedFaceNumber()).value,
-      coarseGridCell""" + solver._name + """Q.value
+      fineGridFace""" + solver._name + """QOld.value
     );
     ::toolbox::blockstructured::interpolateHaloLayer_AoS_{{INTERPOLATION_SCHEME}}(
       marker,
       {{DOFS_PER_AXIS}},
       {{OVERLAP}},
       {{UNKNOWNS}},
-      fineGridFace""" + solver._name + """QNew.value,
+      coarseGridCell""" + solver._name + """Q.value,
       coarseGridFaces""" + solver._name + """QNew(marker.getSelectedFaceNumber()).value,
-      coarseGridCell""" + solver._name + """Q.value
+      fineGridFace""" + solver._name + """QNew.value
     );
     // It is important that we clear the halo layer. If we have two layers of 
     // AMR, the finest one will restrict into QUpdate (so it has to be properly
@@ -231,7 +233,8 @@ class DynamicAMR( peano4.toolbox.blockstructured.DynamicAMR ):
   coarseGridCell""" + solver._cell_label.name + """.setTimeStepSize( fineGridCell""" + solver._cell_label.name + """.getTimeStepSize() );
 """
 
-
+    super( DynamicAMR, self ).switch_interpolation_scheme(interpolation)
+    super( DynamicAMR, self ).switch_restriction_scheme(restriction)
 
     
   def get_action_set_name(self):
@@ -241,4 +244,5 @@ class DynamicAMR( peano4.toolbox.blockstructured.DynamicAMR ):
   def get_includes(self):
     return super(DynamicAMR,self).get_includes() + """
 #include <cstring>
+#include "exahype2/fv/PatchUtils.h"
 """    

@@ -76,7 +76,7 @@ bool tarch::services::ServiceRepository::hasService( Service* service ) const {
 
 void tarch::services::ServiceRepository::receiveDanglingMessages() {
   #ifdef UseSmartMPI
-  smartmpi::tock();
+  smartmpi::chime();
   #endif
 
   tarch::multicore::processPendingTasks(1);

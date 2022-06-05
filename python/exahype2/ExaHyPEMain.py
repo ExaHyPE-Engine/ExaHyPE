@@ -5,24 +5,14 @@ import os
 
 
 class ExaHyPEMain(peano4.runner.DefaultSequence):
-  def __init__(self,project,periodic_BC,dimensions):
+  def __init__(self,project):
     """
     
      project: peano4.Project
      
-     dimensions: int
-       Number of dimensions. Equals 2 or 3.
-     
     """
     super(ExaHyPEMain,self).__init__(project)
     self.overwrite     = False
-
-    periodicBCString = "0"
-    for i in range(0,dimensions):
-      if periodic_BC[i]:
-        periodicBCString += "+" + str(2**i)
-
-    self.d[ "PERIODIC_BC" ] = periodicBCString
 
 
   def _get_header_file_template(self):

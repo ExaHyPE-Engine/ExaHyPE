@@ -52,5 +52,5 @@ std::string tarch::multicore::orchestration::getListOfRealisations() {
 
 
 tarch::multicore::orchestration::Strategy* tarch::multicore::orchestration::createDefaultStrategy() {
-  return Hardcoded::createNative();
+  return Hardcoded::createFuseAll(1, true, tarch::multicore::Task::Host);
 }

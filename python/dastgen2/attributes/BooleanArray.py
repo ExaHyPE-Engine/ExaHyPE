@@ -7,6 +7,8 @@ class BooleanArray(Boolean):
   def __init__(self, name, cardinality):
     Boolean.__init__(self, name)
     self._cardinality = cardinality
+    self.compress     = True
+   
     
   def get_methods(self,_full_qualified_class_name):
     accessor_name = self._name[:1].title() + self._name[1:]
@@ -19,22 +21,31 @@ class BooleanArray(Boolean):
     ]
 
   def get_plain_C_attributes(self):
-    return [ ("_" + self._name, "std::bitset<" + self._cardinality + ">" ) ]
+    if self.compress:
+      return [ ("_" + self._name, "std::bitset<" + self._cardinality + ">", "[[clang::compress]]" ) ]
+    else:
+      return [ ("_" + self._name, "std::bitset<" + self._cardinality + ">", "" ) ]
+
 
   def get_first_plain_C_attribute(self):
     return [ ("_" + self._name , "double" ) ]
 
+
   def get_method_body(self,signature):
+    if self.use_data_store:
+      name = "  _dataStore._" + self._name
+    else:
+      name = "  _" + self._name
     if signature.startswith( "flip" ) and  "index" in signature:
-      return "  _" + self._name + ".flip(index);\n"
+      return name + ".flip(index);\n"
     elif signature.startswith( "get" ) and  "index" in signature:
-      return "  return _" + self._name + "[index];\n"
+      return "  return " + name + "[index];\n"
     elif signature.startswith( "set" ) and  "index" in signature:
-      return "  _" + self._name + "[index] = value;\n"
+      return name + "[index] = value;\n"
     elif signature.startswith( "get" ):
-      return "  return _" + self._name + ";\n"
+      return "  return " + name + ";\n"
     elif signature.startswith( "set" ):
-      return "  _" + self._name + " = value;\n"
+      return name + " = value;\n"
     else:
       assert(False)
     return ""
@@ -49,5 +60,8 @@ class BooleanArray(Boolean):
       Return string representation of attribute.
 
     """
-    return "_" + self._name
+    if self.use_data_store:
+      return "_dataStore._" + self._name
+    else:
+      return "_" + self._name
 

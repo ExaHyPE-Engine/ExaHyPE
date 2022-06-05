@@ -22,9 +22,10 @@ class RollOverUpdatedFace(AbstractFVActionSet):
   """
   TemplateHandleFace = jinja2.Template( """
     if ( {{GUARD}} ) {
-      logTraceInWith2Arguments( "touchFaceLastTime(...)---RollOverUpdatedFace", fineGridFace{{SOLVER_NAME}}FaceLabel.toString(), marker.toString() );
-      
       const int normal = marker.getSelectedFaceNumber() % Dimensions;
+      
+      logTraceInWith3Arguments( "touchFaceLastTime(...)", fineGridFace{{SOLVER_NAME}}FaceLabel.toString(), marker.toString(), normal );
+      
       // Left half
       if ({{FACE_METADATA_ACCESSOR}}.getUpdated(0)) {
         logTraceInWith1Argument( "touchFaceLastTime(...)", "left half of face"  );
@@ -32,10 +33,12 @@ class RollOverUpdatedFace(AbstractFVActionSet):
           for (int i=0; i<{{OVERLAP}}; i++) {
             tarch::la::Vector<Dimensions,int> overlapCell = k;
             overlapCell(normal) = i;
-            const int index = toolbox::blockstructured::serialisePatchIndexInOverlap(overlapCell,{{DOFS_PER_AXIS}},{{OVERLAP}},normal);
+            const int index = toolbox::blockstructured::serialiseVoxelIndexInOverlap(overlapCell,{{DOFS_PER_AXIS}},{{OVERLAP}},normal);
             logDebug( "touchFaceLastTime(...)", "normal=" << normal << ",{{NEW_ACCESSOR}}[" << index << "]->{{OLD_ACCESSOR}}[" << index << "]" );
             logDebug( "touchFaceLastTime(...)", "normal=" << normal << ",{{UPDATE_ACCESSOR}}[" << index << "]->{{NEW_ACCESSOR}}[" << index << "]" );
             for (int j=0; j<{{UNKNOWNS}}; j++) {
+              // The initialisation mapping has an epilogue which then copies this
+              // updated new solution over into the old one
               {{OLD_ACCESSOR}}.value[index*{{UNKNOWNS}}+j] = {{NEW_ACCESSOR}}.value[index*{{UNKNOWNS}}+j]; 
               {{NEW_ACCESSOR}}.value[index*{{UNKNOWNS}}+j] = {{UPDATE_ACCESSOR}}.value[index*{{UNKNOWNS}}+j]; 
             }
@@ -48,8 +51,8 @@ class RollOverUpdatedFace(AbstractFVActionSet):
         logTraceOut( "touchFaceLastTime(...)"  );
       }
       else {
-        logTraceIn( "touchFaceLastTime(...)---RollOverUpdatedFace (skip left part of face)"  );
-        logTraceOut( "touchFaceLastTime(...)---RollOverUpdatedFace (skip left part of face)"  );
+        logTraceIn( "touchFaceLastTime(...) (skip left part of face)"  );
+        logTraceOut( "touchFaceLastTime(...) (skip left part of face)"  );
       }
       
       // Right half
@@ -59,10 +62,12 @@ class RollOverUpdatedFace(AbstractFVActionSet):
           for (int i={{OVERLAP}}; i<2*{{OVERLAP}}; i++) {
             tarch::la::Vector<Dimensions,int> overlapCell = k;
             overlapCell(normal) = i;
-            const int index = toolbox::blockstructured::serialisePatchIndexInOverlap(overlapCell,{{DOFS_PER_AXIS}},{{OVERLAP}},normal);
+            const int index = toolbox::blockstructured::serialiseVoxelIndexInOverlap(overlapCell,{{DOFS_PER_AXIS}},{{OVERLAP}},normal);
             logDebug( "touchFaceLastTime(...)", "normal=" << normal << ",{{NEW_ACCESSOR}}[" << index << "]->{{OLD_ACCESSOR}}[" << index << "]" );
             logDebug( "touchFaceLastTime(...)", "normal=" << normal << ",{{UPDATE_ACCESSOR}}[" << index << "]->{{NEW_ACCESSOR}}[" << index << "]" );
             for (int j=0; j<{{UNKNOWNS}}; j++) {
+              // The initialisation mapping has an epilogue which then copies this
+              // updated new solution over into the old one
               {{OLD_ACCESSOR}}.value[index*{{UNKNOWNS}}+j] = {{NEW_ACCESSOR}}.value[index*{{UNKNOWNS}}+j]; 
               {{NEW_ACCESSOR}}.value[index*{{UNKNOWNS}}+j] = {{UPDATE_ACCESSOR}}.value[index*{{UNKNOWNS}}+j]; 
             }
@@ -75,17 +80,29 @@ class RollOverUpdatedFace(AbstractFVActionSet):
         logTraceOut( "touchFaceLastTime(...)" );
       }
       else {
-        logTraceIn( "touchFaceLastTime(...)---RollOverUpdatedFace (skip right part of face)"  );
-        logTraceOut( "touchFaceLastTime(...)---RollOverUpdatedFace (skip right part of face)"  );
+        logTraceIn( "touchFaceLastTime(...) (skip right part of face)"  );
+        logTraceOut( "touchFaceLastTime(...) (skip right part of face)"  );
       }
       
       int index = 0;
-      logTraceOut( "touchFaceLastTime(...)---RollOverUpdatedFace" );
+      logTraceOut( "touchFaceLastTime(...)" );
     }
 """ )
   
   
   def __init__(self,solver,guard):
+    """
+    
+    ## Attributes
+    
+    overwrite_old_and_new_solution_with_update: Boolean
+      This flag should be set if you use the action set throughout the 
+      initialisation, where you determine an update on the face and 
+      this update should then be used for old and new face data (as 
+      they are the same). If it is set to false, then the new solution
+      is backuped in old, and the update overwrites the new data field.
+    
+    """
     AbstractFVActionSet.__init__(self,solver)
     self.d = {}
     self.d[ "GUARD" ]           = guard
@@ -110,7 +127,6 @@ class RollOverUpdatedFace(AbstractFVActionSet):
 
   def get_includes(self):
     return """
-#include "exahype2/fv/PatchUtils.h"
 #include "peano4/utils/Loop.h"
 #include "toolbox/blockstructured/Enumeration.h"
 """ + AbstractFVActionSet.get_includes(self) 

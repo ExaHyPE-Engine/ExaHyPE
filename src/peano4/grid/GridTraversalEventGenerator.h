@@ -33,6 +33,52 @@ namespace peano4 {
  *
  * The majority of these routines is all about identifying ownership. So we might also
  * call the class something around ownership analysis.
+ *
+ * ## Event order
+ *
+ * The generated events trigger the following things per grid sweep on the user side:
+ *
+ * - beginTraversal: Called once per rank prior to the actual grid traversal.
+ * - endTraversal: Called once per rank at the end of the traversal.
+ * - createPersistentVertex: First thing that is called for a new vertex.
+ * - destroyPersistentVertex: Very last thing that is called if a vertex is deleted
+ *   becomes a hanging vertex.
+ * - createHangingVertex: Can be called arbitrarily often per grid traversal for a
+ *   hanging vertex. You don't know how often hanging vertices are created/destroyed,
+ *   but you can be sure that this action is triggered before anything else gets
+ *   access to a hanging vertex.
+ * - destroyHangingVertex: Every createHangingVertex() pairs up with one of these
+ *   guys. As hanging vertices are non-persistent, it is at least called once per
+ *   traversal per hanging vertex. However, Peano might decide to create hanging
+ *   vertices multiple times. It hence might also destroy them multiple times.
+ * - createPersistentFace: The very first thing called for a new persistent face.
+ *   Precedes any touchFirst operation.
+ * - destroyPersistentFace: Last thing done for a face that is destroyed or becomes
+ *   hanging.
+ * - createHangingFace: Counterpart of vertex operation.
+ * - destroyHangingFace: Pairs up with creational event.
+ * - createCell: Called if we create a new cell before anything else is done for this
+ *   cell. By the time this operation is called, you can be sure however that all of
+ *   its @f$ 2^d @f$ vertices and $2d$ faces are there - either hanging or real ones.
+ * - destroyCell: This routine precedes any destruction of adjacent faces or vertices.
+ *   So we have the creational sequence vertices-faces-cells and we destroy the other
+ *   way round: cells-faces-vertices.
+ * - touchVertexFirstTime: Called exactly once per rank per grid traversal per vertex,
+ *   before any action for any adjacent face or cell is triggered.
+ * - touchVertexLastTime: Last thing before the vertex is safely stored away for the
+ *   next grid sweep or destroyed.
+ * - touchFaceFirstTime: Called exactly once per rank per grid traversal per face. By
+ *   the time a face is touched first, its @f$ 2^{d-1} @f$ adjacent vertices have been
+ *   touched already.
+ * - touchFaceLastTime: Counterpart of touchFaceFirstTime.
+ * - touchCellFirstTime: Called once per rank per cell. When you bump into a cell, you
+ *   can be sure that all adjacent faces and vertices have been loaded (aka touched)
+ *   already. If this is a fine grid cell, the code will immediately afterwards issue
+ *   the touchCellLastTime action. If the cell is refined, the code will first descend
+ *   within the tree.
+ * - touchCellLastTime: Called just before the tree depth-first traversal leaves a
+ *   cell. This is the backtracking within the tree.
+ *
  */
 class peano4::grid::GridTraversalEventGenerator {
   private:
@@ -149,15 +195,34 @@ class peano4::grid::GridTraversalEventGenerator {
     /**
      * Identifies for the @f$ 2 \cdot d @f$ faces whether they are local or not.
      *
-     * <h2> Implementation </h2>
+     * ## Implementation
      *
      * - I loop over the 2d faces.
      * - Per face, I loop over all @f$ 2^d @f$ vertices but alter the entry
-     *   along the normal manually. So I'm inefficient, but I don't care.
+     *   along the normal manually. So I collapse the vertex index along the
+     *   normal. This is inefficient, as I'm effectively checking each vertex
+     *   twice, but I don't care.
      * - Per relevant vertex, I have to check two entries in the adjacency
      *   list.
      * - Splitting and split-triggered ranks are still considered to be
      *   local.
+     *
+     * ## Hanging vertices
+     *
+     * I assume that all adjacency information/locality information on vertices
+     * is correctly set, i.e. is interpolated from the next coarser level. So
+     * I have valid neighbours on the vertex per se. Actually, however, the
+     * neighbour might be wrong, as an adjacent cell might have been given away
+     * to another rank.
+     *
+     * We however have to be aware that a hanging vertex entry might be wrong if
+     * the corresponding adjacency value is not the one pointing towards our cell
+     * and the vertex is also hanging. So these constellations have to be ignored.
+     *
+     * @see peano4::grid::Spacetree::getAdjacentRanksForNewVertex() for a
+     *   discussion how adjacency lists are computed.
+     * @see peano4::grid::Spacetree::loadVertices() for the location where these
+     *   lists are set for hanging and new vertices.
      */
     std::bitset<TwoTimesD> areFacesLocal(
       GridVertex  vertices[TwoPowerD],
@@ -182,7 +247,24 @@ class peano4::grid::GridTraversalEventGenerator {
      * vertex, but it still has to do the send/receive stuff, i.e. it still
      * has to handle the vertices.
      *
-     * Hanging vertices are never local to the current spacetree.
+     * We assume that the adjacency information of hanging vertices is
+     * properly set. So I have valid neighbours. Actually, the neighbour might
+     * be wrong, but if it is the local neighbour, then it is correct.
+     * Therefore, we can distinguish hanging remote and hanging local vertices.
+     *
+     * @see peano4::grid::Spacetree::getAdjacentRanksForNewVertex() for a
+     *   discussion how adjacency lists are computed.
+     * @see peano4::grid::Spacetree::loadVertices() for the location where these
+     *   lists are set for hanging and new vertices.
+     *
+     * The treatment of hanging nodes in the action sets digesting the
+     * events thus differs from how we handle hanging nodes within the core
+     * spacetree. For the lattern, hanging vertices are never local to the
+     * current spacetree.
+     *
+     * @see Spacetree::isVertexAdjacentToLocalSpacetree() for further remarks
+     *   on the difference between hanging vertices within the meshes and
+     *   for events.
      */
     bool isVertexAdjacentToLocalSpacetree(
       GridVertex  vertex,

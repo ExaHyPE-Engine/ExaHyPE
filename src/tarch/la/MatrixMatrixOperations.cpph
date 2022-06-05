@@ -120,7 +120,6 @@ std::pair<int,int> tarch::la::equalsReturnIndex (
   const Matrix<Rows,Cols,Scalar>& rhs,
   const Scalar&                   tolerance
   ){
-  std::pair<int,int> result;
   for (int i=0; i < Rows; i++) {
     for (int j=0; j < Cols; j++) {
       if(  std::abs(lhs(i,j) - rhs(i,j))>tolerance) return std::pair<int,int>(i,j);

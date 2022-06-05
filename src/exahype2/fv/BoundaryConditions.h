@@ -37,6 +37,7 @@ namespace exahype2 {
       double                                       t,
       double                                       dt,
       int                                          numberOfVolumesPerAxisInPatch,
+      int                                          overlap,
       int                                          unknowns,
       int                                          faceNumber,
       double* __restrict__                         Q

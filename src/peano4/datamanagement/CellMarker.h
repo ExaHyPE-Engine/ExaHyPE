@@ -38,6 +38,7 @@ struct peano4::datamanagement::CellMarker {
     bool _hasBeenRefined;
     bool _willBeRefined;
     bool _isLocal;
+    bool _isParentLocal;
     bool _areAllVerticesRefined;
     bool _isOneVertexHanging;
     bool _isOneVertexCreatedOrDestroyed;
@@ -78,9 +79,36 @@ struct peano4::datamanagement::CellMarker {
     tarch::la::Vector<Dimensions,double>  x() const;
 
     /**
-     * Check whether the point x is contained within the marker.
+     * Check whether the point x is contained within the marker. This is an
+     * operation which works with smaller equals and greater equals and
+     * numerical tolerances. Therefore, the routine includes any x that is
+     * exactly on a cell boundary. The other way round: a particle for
+     * example that resides exactly on the cell boundary, subject to the
+     * chosen floating point precision in the tarch::la library, will be
+     * considered to belong both to its left and its right neighbour.
      */
     bool isContained( const tarch::la::Vector<Dimensions,double>& x ) const;
+
+    /**
+     * See the discussion of isContained(). This is a biased variant of the
+     * code which assumes the left face along each coordinate axis to belong
+     * to a cell, while the right one does not. As we are biased anyway, we
+     * don't work with numerical comparisons but rely on bit-wise operations.
+     *
+     * ## Problems
+     *
+     * I cannot guarantee 100% that the biased contained routine clearly
+     * distinguishes all particles: If you have two cells, a left one and a
+     * right one, then x-h/2 for the right one might be slightly different to
+     * x+h/2 for the left one. As a consequence, there could, in theory, be
+     * particles which are not contained (in a biased way) in the left one and
+     * neither in the right one. They could also be contained in both.
+     *
+     * I've never spotted this scenario, but that does not mean it could not
+     * happen.
+     */
+    bool isContainedWithBias( const tarch::la::Vector<Dimensions,double>& x ) const;
+
     bool overlaps( const tarch::la::Vector<Dimensions,double>& offset, const tarch::la::Vector<Dimensions,double>& size ) const;
 
     /**
@@ -95,7 +123,21 @@ struct peano4::datamanagement::CellMarker {
 
     std::string toString() const;
 
+    /**
+     * Usually if you have an event of a cell, then the cell is alo local.
+     * Otherwise, an event not be called.
+     */
     bool isLocal() const;
+
+    /**
+     * A cell can be local and its parent still might not be local. This happens
+     * if we have a horizontal tree cut. It also happens on the very top of the
+     * spacetree: Level 0 is by definition not persistent and thus is not
+     * considered to be local.
+     *
+     * @see isLocal()
+     */
+    bool isParentLocal() const;
 
     /**
      * A enclave cell in the definition of Charrier, Hazelwood, Weinzierl is a
@@ -130,7 +172,7 @@ struct peano4::datamanagement::CellMarker {
 
     #if PeanoDebug>0
     /**
-     * Used for debuggin
+     * Used for debugging
      */
     void setRelativePositionWithinFatherCell( int axis, int value );
     #endif

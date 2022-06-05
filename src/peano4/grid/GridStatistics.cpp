@@ -114,7 +114,7 @@ void   peano4::grid::GridStatistics::setRemovedEmptySubtree(bool value) {
 
 
 tarch::la::Vector<Dimensions,double>   peano4::grid::GridStatistics::getMinH() const {
-  return _minH;
+  return   _minH;
 }
 
 
@@ -124,7 +124,7 @@ void   peano4::grid::GridStatistics::setMinH(const tarch::la::Vector<Dimensions,
 
 
 double   peano4::grid::GridStatistics::getMinH(int index) const {
-  return _minH(index);
+  return   _minH(index);
 }
 
 

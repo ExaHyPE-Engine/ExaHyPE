@@ -42,7 +42,7 @@ void   peano4::grid::GridControlEvent::setRefinementControl(RefinementControl va
 
 
 tarch::la::Vector<Dimensions,double>   peano4::grid::GridControlEvent::getOffset() const {
-  return _offset;
+  return   _offset;
 }
 
 
@@ -52,7 +52,7 @@ void   peano4::grid::GridControlEvent::setOffset(const tarch::la::Vector<Dimensi
 
 
 double   peano4::grid::GridControlEvent::getOffset(int index) const {
-  return _offset(index);
+  return   _offset(index);
 }
 
 
@@ -62,7 +62,7 @@ void   peano4::grid::GridControlEvent::setOffset(int index, double value) {
 
 
 tarch::la::Vector<Dimensions,double>   peano4::grid::GridControlEvent::getWidth() const {
-  return _width;
+  return   _width;
 }
 
 
@@ -72,7 +72,7 @@ void   peano4::grid::GridControlEvent::setWidth(const tarch::la::Vector<Dimensio
 
 
 double   peano4::grid::GridControlEvent::getWidth(int index) const {
-  return _width(index);
+  return   _width(index);
 }
 
 
@@ -82,7 +82,7 @@ void   peano4::grid::GridControlEvent::setWidth(int index, double value) {
 
 
 tarch::la::Vector<Dimensions,double>   peano4::grid::GridControlEvent::getH() const {
-  return _h;
+  return   _h;
 }
 
 
@@ -92,7 +92,7 @@ void   peano4::grid::GridControlEvent::setH(const tarch::la::Vector<Dimensions,d
 
 
 double   peano4::grid::GridControlEvent::getH(int index) const {
-  return _h(index);
+  return   _h(index);
 }
 
 

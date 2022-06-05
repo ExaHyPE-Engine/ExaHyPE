@@ -190,7 +190,7 @@ class tarch::mpi::Rank {
      * Wrapper around allreduce
      *
      * Peano relies heavily on unexpected, asynchronous message exchange to admin
-     * the workload. Ranks tell other ranks on th fly, for example, if they
+     * the workload. Ranks tell other ranks on the fly, for example, if they
      * delete trees or create new ones. They also use MPI messages to realise
      * global semaphores.
      *
@@ -202,7 +202,7 @@ class tarch::mpi::Rank {
      * allreduce. While the reduce is pending, we should be able to do something
      * else such as answering to further request messages.
      *
-     * This alreduce allows us to do so. The default waitor is a receive of
+     * This allreduce allows us to do so. The default waitor is a receive of
      * pending messages. So most codes use the allReduce as follows:
      *
      * <pre>
@@ -214,9 +214,18 @@ class tarch::mpi::Rank {
   );
        </pre>
      *
+     *
+     * ## Rationale behind ifdefs
+     *
      * I wanted to make this routine a normal one that degenerates to nop if you
      * don't translate with MPI support. However, that doesn't work as the signature
      * requires MPI-specific datatypes.
+     *
+     *
+     * ## Multithreading
+     *
+     * This reduction is completely agnostic of any multithreading. Therefore, I do
+     * recommend not to use this routine within any action set.
      */
     void allReduce(
       const void *sendbuf, void *recvbuf, int count,

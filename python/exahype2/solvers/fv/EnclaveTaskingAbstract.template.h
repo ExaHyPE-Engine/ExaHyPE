@@ -38,27 +38,6 @@
 
 class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
   public:
-    /**
-     * This is a "fake" enum, i.e. we do not use it to distinguish different
-     * variants. Instead, we use it as a fix that allows us to "overload"
-     * operations:
-     *
-     * In C++ you cannot overload w.r.t. static. We however need functions which
-     * exist twice in ExaHyPE: Once as standard (virtual) member functions and
-     * once at static version which an be offloaded to a GPU as it does not
-     * have a state. Both function variants, in theory, have the same signature
-     * but if they had, a compiler could not distinguish them. So I use this
-     * enum for the GPU version.
-     *
-     * If you create a solver without GPU support, this enum will not be used.
-     * It is however always created. Once you write a GPU version and then compile
-     * without GPU support, you will thus still be able to have all your GPU
-     * function variants, and you don't have to work with ifdefs.
-     */
-    enum class Offloadable {
-      Yes
-    };
-
     enum class SolverState {
       GridConstruction,
       GridInitialisation,
@@ -236,13 +215,13 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
 
     SolverState  getSolverState() const;
 
-    //#if defined(OpenMPGPUOffloading) // HS: note there is a compiler bug in llvm until that is resolved 
+    //#if defined(GPUOffloadingOMP) // HS: note there is a compiler bug in llvm until that is resolved 
     //#pragma omp declare target       // we need to keep these declarations outside the declare target construct and instead
     //#endif                           // map them explicitly in Rusanov.h
     static constexpr int    NumberOfUnknowns           = {{NUMBER_OF_UNKNOWNS}};
     static constexpr int    NumberOfAuxiliaryVariables = {{NUMBER_OF_AUXILIARY_VARIABLES}};
     {{SOLVER_CONSTANTS}}
-    //#if defined(OpenMPGPUOffloading)
+    //#if defined(GPUOffloadingOMP)
     //#pragma omp end declare target
     //#endif
 
@@ -277,6 +256,19 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
       double                                       dt
     ) const;
     {% endif %}
+
+    /**
+     * Feel free to overwrite in user code, but ensure the superclass
+     * implementation is still invoked, too.
+     */
+    void startSimulation() override;
+
+    /**
+     * Feel free to overwrite in user code, but ensure the superclass
+     * implementation is still invoked, too.
+     */
+    void finishSimulation() override;
+
   protected:
     static tarch::logging::Log  _log;
 
@@ -312,3 +304,5 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
 
 
 #endif
+
+{# Empty line here #}

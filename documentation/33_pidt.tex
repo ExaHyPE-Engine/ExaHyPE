@@ -1,0 +1,464 @@
+\chapter{\Peano's particle support}
+\label{section:pidt}
+
+\noindent
+\Peano's particle handling is a follow-up to the 2015 paper ``Two Particle-in-Grid Realisations on Spacetrees'' (\url{https://arxiv.org/abs/1508.02435}).
+
+
+
+
+\begin{framed}
+\paragraph*{A first \Peano\ pidt run (native usage of particle interface)}
+\begin{itemize}
+  \item Configure \Peano\ with the flags \texttt{--enable-particles}:
+  \begin{code}
+libtoolize; aclocal; autoconf; autoheader; cp src/config.h.in .; automake --add-missing
+./configure --enable-particles
+  \end{code}
+   These are the two mandatory extensions. You might want to add further options.
+  \item Recompile your \Peano\ code. This should give you a couple of
+  \texttt{ToolboxParticles} libraries in the \texttt{src/toolbox/particles}
+  subdirectory.
+  \item Ensure that \texttt{python} subdirectory is in your Python search path
+  and
+  \item run the Jupyter notebook in \texttt{examples/particles/sph}: 
+  \begin{code}
+export PYTHONPATH=../../../python/
+jupyter-notebook peano-sph.ipynb
+  \end{code}
+%   \noindent
+%   or---if you don't like Jupyter notebooks---type in
+%   \begin{code}
+% export PYTHONPATH=../../../python/
+% ipython3 example-scripts/finitevolumes-with-ExaHyPE2-benchmark.py --h 0.1
+% ./peano4
+%   \end{code}
+\end{itemize}
+\end{framed}
+
+
+\noindent
+\Peano's particle code is lightweight.
+There are some C++ building blocks, but the majority of its features are
+available through the Python API as
+\texttt{toolbox.particles}.
+You will need
+
+\begin{code}
+import peano4.toolbox.particles
+\end{code}
+
+\noindent
+I assume that you are familiar from hereon with \Peano's basics, i.e.~you know 
+how to create a project, 
+
+
+\section{Introduce a new particle}
+
+With the Python API, the generation of a particle is straightforward:
+
+\begin{code}
+import dastgen2
+
+
+particle = peano4.toolbox.particles.Particle("Particle")
+
+v_attr = peano4.dastgen2.Peano4DoubleArray("v","Dimensions")
+mass_attr = dastgen2.attributes.Double("mass")
+
+particle.data.add_attribute(v_attr)
+particle.data.add_attribute(mass_attr)
+
+particles = peano4.toolbox.particles.ParticleSet(particle)
+\end{code}
+
+\begin{remark}
+ Though conceptionally a plain C++ pretty printer, the DaStGen2 Python API
+ can create some fancy C++ annotations. You can, for example, specify ranges
+ in which integers live, or you can prescribe the precision you wanna have 
+ for floating point values. If you have a specialised LLVM compiler, these
+ annotations will be used to generate aggressively optimised code.
+\end{remark}
+
+
+\noindent
+The \Peano\ particle has some additional attributes as they are discussed in 
+Section \ref{section:swift:backbone:data-model} and thereafter. 
+For the user, it is usually sufficient to recognise that each particle by 
+default has a position \texttt{x} and and a cut-off radius
+\texttt{cutOffRadius}.
+You can query and modify both values through \texttt{setX}, \texttt{getX},
+\texttt{getCutOffRadius} and \texttt{setCutOffRadius}, respectively.
+
+
+We next add the particles to the project and we notify the vertices that there 
+are particles which have to be administered. 
+I discuss why and how pidt uses vertices in Section
+\ref{section:pidt:backbone:dual-trees} though users might (initially) skip such
+background info. 
+
+\begin{code}
+project.datamodel.add_global_object(particle)
+project.datamodel.add_vertex(particles)
+\end{code}
+
+\noindent
+Once you have added the particle and the particle container \texttt{particles}
+to your \Peano\ datamodel, you have to inform all solver steps that they have to
+administer the particles.
+
+\begin{code}
+create_grid.use_vertex(particles)
+\end{code}
+
+\noindent
+Let's assume that our project is spanning the namespace
+\texttt{examples::someparticles}.
+ In the example above where our particle is
+called \texttt{Particle}, we will end up with two classes:
+\linebreak
+\texttt{examples::someparticles::globaldata::Particle} is the actual particle
+class. 
+When you open the generated C++ code, you'll recognise that it is a 1:1 mapping
+of the Python attributes onto a C++ class with some additional routines used by
+\Peano\ internally.
+There is a further class
+\texttt{examples::someparticles::vertexdata::ParticleSet}.
+As the name says, this is the actual data associated with each vertex.
+It is a specialisation of \texttt{std::vector} over pointers to
+\texttt{examples::someparticles::globaldata::Particle}.
+
+We summarise that each vertex holds a vector to pointers over particles.
+The actual particles reside on the heap.
+From hereon, you introduce, as with any \Peano\ project additional data fields,
+action sets, and so forth, and you write you main to actually control the
+program flow.
+We assume from hereon that the reader is familiar with the concept of an
+program phase (algorithmic step) mapped onto an action set.
+
+
+
+\section{Insert particles into domain}
+
+To create a particle, you in principle just allocate it on the heap, and then
+you add it to its nearest vertex.
+Furthermore, there are some mandatory attributes that aways have to be set. 
+Therefore, I recommend that you use the toolbox' initialisation routine to set
+up particles correctly.
+
+
+In principle, it does not matter where you create the particle.
+You can do so in \texttt{touchCellFirstTime()} or in a cell event. 
+I usually use a cell event and I rely on the helper function
+\texttt{insertParticleIntoCell} to take care of the vertex association:
+
+
+\begin{code}
+#include "toolbox/particles/ParticleFactory.h"
+
+
+
+...::touchCellFirstTime(
+  const peano4::datamanagement::CellMarker& marker,
+  peano4::datamanagement::VertexEnumerator<...::vertexdata::ParticleSet> fineGridVerticesParticleSet, 
+  ...
+  peano4::datamanagement::VertexEnumerator<...::vertexdata::ParticleSet> coarseGridVerticesParticleSet,
+  ...
+) {
+examples::someparticles::globaldata::Particle* myNewParticle = 
+  new examples::someparticles::globaldata::Particle();
+  
+// assume x and cutOffRadius are set to something meaningful
+toolbox::particles::init( *myNewParticle, x, cutOffRadius );
+
+// here's your user code's initialisation
+myNewParticle->setXXX(...);
+
+toolbox::particles::insertParticleIntoCell(
+  marker,
+  myNewParticle,
+  fineGridVerticesParticleSet
+);
+}
+\end{code}
+
+
+\noindent
+There is no need to write such initialisation code yourself. 
+\Peano's particle toolbox provides a couple of pre-defined particle generators
+that you can adopt to your needs.
+Probably the most popular particle seeds are
+\begin{itemize}
+  \item \texttt{InsertParticlesAlongCartesianLayoutIntoUnrefinedCells}
+  \item \texttt{InsertRandomParticlesIntoUnrefinedCells}
+\end{itemize}
+
+
+
+\section{Dual trees}
+\label{section:pidt:dual-trees}
+
+\begin{definition}
+  Particles in our \emph{dual tree storage scheme} are stored within the
+  spacetree and associated to vertices:
+\begin{itemize}
+  \item A particle resides on a mesh level within the tree such that the
+  cut off radius $r \leq h$ if $h$ is the resolution of this level.
+  \item A particle is associated to the vertex of this level that's closest to
+  its centre $x$.
+\end{itemize}
+\end{definition}
+
+\noindent
+These two conventions effectively span a dual grid over the spacetree if you
+think of particles to be stored within cells:
+Just impose a grid on top of your actual grid which is shifted by half a mesh
+lenght.
+Particles are contained within these shifted grid's cells.
+Alternatively, you can think of the vertices of the tree spanning a Voronoi
+diagram, and particles are then held by the cells of this Voronoi diagram.
+
+\begin{remark}
+  Our storage is vertex-oriented whereas most particle literature stores
+  particles within cells.
+  If we think of a dual multiscale mesh, i.e.~a mesh that is shifed by $h/2$
+  alon each coordinate axis, then \Peano's approach also works with cells.
+  Such shifted meshes are often called \emph{dual} meshes and I therefore speak
+  of a \emph{dual tree}.
+\end{remark}
+
+
+\noindent
+If you add the action set
+\texttt{peano4.toolbox.particles.PlotParticlesInVTKFormat} to your algorithm
+step, the resulting file will contain all associativity information.
+You can plot to which vertex a particle belongs to.
+
+
+Here's a hand-written cartoon to explain the particle storage:
+
+
+\begin{center}
+ \includegraphics[width=0.25\textwidth]{61_pidt/dual-tree.pdf}
+\end{center}
+
+\noindent
+A tree with three levels.
+Particles with a large cut-off radius (red) are held on rather coarse levels.
+Particles with very small cut-off are sorted (dropped) into the fine grid
+levels.
+Each particle is always associated to its closest vertex (dotted line).
+It is the mesh which holds (owns) the vertices.
+The toolset's predefined action set can automatically maintain/update these
+associations after each grid sweep.
+It also moves particles up and down the grid hierarchy if the particles' cut-off
+radius changes or the grid changes.
+
+
+
+\section{Move particles}
+\label{section:pidt:move-particles}
+
+
+\noindent
+To move a particle, all you have to do is to alter its position:
+
+\begin{code}
+ myParticle->setX( {17.3, 8.2} );
+\end{code}
+
+\noindent
+Obviously, any change of a particle position could mean that the particle is no
+longer associated to its nearest vertex.
+We have to sort them.
+
+
+\Peano\ automatically maintains these relations if you add the action set 
+\texttt{peano4.toolbox.particles.UpdateParticleGridAssociation} to your
+algorithmic steps.
+As the convention relies on a smaller-equals sign, adaptive meshes are
+automatically supported.
+If particles travel through your domain and the mesh is not very fine, they
+end up in the tree leaves.
+If particles have a large cut-off radius, they are stored in rather coarse
+levels of the tree.
+
+
+If you change the cut-off radius or the position of a particle, the particle
+will stay within its current cell/vertex within the tree.
+In the next grid sweep, it will however we held by the ``correct'' vertex,
+i.e.~its grid-vertex association will be updated:
+The action set \texttt{UpdateParticleGridAssociation} updates the
+particle-tree association, i.e.~sorts the particles, on-the-fly between two mesh
+traversals.
+
+
+While you do not have to worry about how this sorting is realised, it is
+important to study the action set's documentation (just open the Python code)
+and read when data is consistent. 
+Here is the general invariant however:
+
+\begin{itemize}
+  \item The very moment you alter a particle's position, you cannot be sure that
+  it is still associated with the nearest vertex. Consequently, neighbourhood
+  searchers (cmp.~Section \ref{section:pidt:particle-particle-interaction})
+  might yield invalid results.
+  \item In the grid sweep after the position change, the particle will be
+  associated with the correct vertex (unless you change its position once again
+  obviously).
+\end{itemize}
+
+
+\begin{remark}
+  The action set \texttt{UpdateParticleGridAssociation} relies on some global
+  data. Therefore, you have to call \texttt{finishTraversal()} on the used
+  particle set in your main routine on each rank after all rank-local traversals have termined.
+\end{remark}
+
+\section{Dual tree traversal and particle-particle interaction}
+\label{section:pidt:particle-particle-interaction}
+
+
+\begin{definition}
+ In \Peano's \emph{dual tree} storage scheme, we always hold the
+ complete spacetree with all tree (grid) levels. Particles are always stored on
+ the finest mesh (tree) level where the mesh size is bigger than the particle's
+ cut-off radius. 
+ Different particles with different cut-off radii might thus be stored on
+ different tree levels.
+\end{definition}
+
+
+
+\noindent
+\Peano\ always runs through the mesh top-down, i.e.~it traverses the spacetree
+in a depth-first fashion.
+With the definition above, we can realise particle-particle interactions as
+follows:
+
+Per cell, the code assembles a \texttt{local set}. 
+This is a list of pointers to those particles that are associated to a cell's
+$2^d$ vertices.
+With the local set, you can make particles held on one resolution level
+interact with each other.
+You get an cubic area of $2h$ side-lenght per cell:
+As a particle is always associated to its closest vertex, the local set holds all particles whose cut-off radius overlap with the cell. 
+
+
+Adaptivity and particles with different cut-off are not yet captured through the
+local set notion.
+There's thus a second set that I call active set. 
+The active set is the local set plus all local sets that have been active on
+coarser levels within the tree.
+
+\begin{definition}
+ The active set is built up top-down while we run through the
+ tree.
+ So it is a data structure that grows and shrinks while you run through the
+ meshes.
+ The local set \texttt{localParticles} is created on-the-fly every time you hit
+ a cell or a vertex.
+ Do not alter the active set: You can modify the values of the particles within
+ an active set, but you should not add or remove entries from it.
+ The local set can be modified.
+\end{definition}
+
+
+\noindent
+If you use the \texttt{toolbox.particles.ParticleParticleInteraction} action
+set, you pass it some C source code that works with the particles.
+This C code has access to three variables: the active set, the local set and the
+cell marker (of type \linebreak \texttt{peano4::datatraversal::CellMarker}).
+Let's assume that each particle carries some velocity and that we could cut-off
+gravity---which we clearly should not.
+
+
+The straightforward particle-particle interaction then looks conceptionally as
+follows:
+
+\begin{code}
+// Run over local set
+for (auto& p: localParticles) {
+  // Pick only those particles that reside within the current cell, otherwise
+  // we would update each particle up to 2^d times. I do not exploit the
+  // symmetry of forces here
+  if ( marker.isContained( p->getX() ) ) {
+    for (auto& pp: activeParticles) {
+      // No interaction with particle itself
+      if (p!=pp) {
+        tarch::la::Vector<Dimensions,double> dist = pp->getX() - p->getX();
+        [...]
+      }
+    }
+  }
+}
+\end{code}
+
+
+\noindent
+Typical \Peano\ codes introduce some variables per particle into which they
+accumulate data.
+In \texttt{touchVertexFirstTime} we use a vertex for the very first time.
+Consequently, we also read the particles associated to this vertex for the first
+time and thus set the accumulation variable to the neutral element 0.
+Within \texttt{touchCellFirstTime}, we now evaluate particle-particle
+interactions and write data to the accumulated values.
+In \texttt{touchVertexLastTime}, we finally have all data accumulated and hence
+can update the particle state.
+
+
+\begin{remark}
+ Study the sort algorithms that we use if you
+ update the vertex (cmp.~Section \ref{section:pidt:move-particles}). Once you
+ alter a particle position, particles might not be tied to their closest vertex
+ anymore. 
+ Neighbourhood searches thus might yield invalid results.
+\end{remark}
+
+
+
+\section{Further action sets}
+
+There are a few further action sets in the toolbox that help you to write your
+Lagrangian code:
+
+
+\begin{enumerate}
+  \item The action set \texttt{toolbox.particles.PlotParticlesInVTKFormat}
+  provides a basic particle plotter which dumps particles, their cut-off radius
+  plus their particle-vertex associativity. If you have to dump further
+  properties, you have to write your own plotter. The generated plotter however
+  can serve as a blueprint.
+  \item The action set \texttt{toolbox.particles.ParticleTreeAnalysis} provides
+  some fundamental tree analysis such as a multiscale counting how many
+  particles reside within each cell. You'll need some additional data structures
+  (per cell) to use this action set.
+  \item The action set \texttt{toolbox.particles.ParticleAMR} uses the tree
+  analysis to guide dynamic grid adaptivity. You can specify how many particles
+  are held per cell at least, e.g., while the cut-off radius feeds naturally
+  into the AMR.
+\end{enumerate}
+
+
+
+\section*{Links and further reading}
+
+\begin{itemize}
+  \item The ``official'' pidt paper is
+{\tiny \begin{verbatim}
+@article{WEINZIERL201642,
+title = "Two particle-in-grid realisations on spacetrees",
+journal = "Parallel Computing",
+volume = "52",
+pages = "42 - 64",
+year = "2016",
+issn = "0167-8191",
+doi = "https://doi.org/10.1016/j.parco.2015.12.007",
+url = "http://www.sciencedirect.com/science/article/pii/S0167819115001635",
+author = "T. Weinzierl and B. Verleye and P. Henri and D. Roose",
+keywords = "Particle-in-cell, Spacetree, Particle sorting, AMR, Lagrangian–Eulerian methods, Communication-avoiding"
+}  \end{verbatim}}
+  If you use the software, it would be great if you could cite this one.
+\end{itemize}
+
+

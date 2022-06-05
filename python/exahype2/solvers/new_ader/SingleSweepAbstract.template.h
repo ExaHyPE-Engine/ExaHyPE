@@ -336,6 +336,18 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
     bool isFirstGridSweepOfTimeStep() const;
     bool isLastGridSweepOfTimeStep() const;
 
+    /**
+     * Feel free to overwrite in user code, but ensure the superclass
+     * implementation is still invoked, too.
+     */
+    void startSimulation() override;
+
+    /**
+     * Feel free to overwrite in user code, but ensure the superclass
+     * implementation is still invoked, too.
+     */
+    void finishSimulation() override;
+
     /*
      * The following are all thin wrappers around functions defined in the aderdg kernels, they provide these with some small additional
      * information and a link to the class from which they get some parameters as well as certain static vectors and matrices such as the

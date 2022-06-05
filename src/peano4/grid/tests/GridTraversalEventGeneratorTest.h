@@ -104,7 +104,35 @@ Aborted (core dumped)
      */
     void testCreateEnterCellTraversalEvent1();
 
-    void testCreateEnterCellTraversalEvent2();
+
+    /**
+     * A bug report where I observed that local is not valid.
+     *
+     * That's the input:
+<pre>
+ 57612233468  00:00:57     rank:0       core:1       trace        peano4::grid::GridTraversalEventGenerator::createGenericCellTraversalEvent(...)                 in:state.toString():(level=4,x=[0.37037,0.358025],h=[0.0123457,0.0123457],inverted=1,evenFlags=10,accessNumber=[-1,2,1,3]),relativePositionToFather:[0,2],fineGridVertices[0].toString():(state=HangingVertex,adjacentRanks=[0,0,0,0],backupOfAdjacentRanks=[0,0,0,0],hasBeenAntecessorOfRefinedVertexInPreviousTreeSweep=0,isAntecessorOfRefinedVertexInCurrentTreeSweep=0,numberOfAdjacentRefinedLocalCells=0,x=[0.37037,0.358025],level=4),fineGridVertices[1].toString():(state=Unrefined,adjacentRanks=[0,0,0,0],backupOfAdjacentRanks=[0,0,0,0],hasBeenAntecessorOfRefinedVertexInPreviousTreeSweep=0,isAntecessorOfRefinedVertexInCurrentTreeSweep=0,numberOfAdjacentRefinedLocalCells=0,x=[0.382716,0.358025],level=4),fineGridVertices[2].toString():(state=HangingVertex,adjacentRanks=[0,0,0,0],backupOfAdjacentRanks=[0,0,0,0],hasBeenAntecessorOfRefinedVertexInPreviousTreeSweep=0,isAntecessorOfRefinedVertexInCurrentTreeSweep=0,numberOfAdjacentRefinedLocalCells=0,x=[0.37037,0.37037],level=4),fineGridVertices[3].toString():(state=Unrefined,adjacentRanks=[0,0,0,0],backupOfAdjacentRanks=[0,0,0,0],hasBeenAntecessorOfRefinedVertexInPreviousTreeSweep=0,isAntecessorOfRefinedVertexInCurrentTreeSweep=0,numberOfAdjacentRefinedLocalCells=0,x=[0.382716,0.37037],level=4),_id:0 (file:peano4/grid/GridTraversalEventGenerator.cpp,line:229)
+</pre>
+     *
+     * which in the code gave us
+     *
+<pre>
+ 57612539282  00:00:57     rank:0       core:1       trace        peano4::grid::GridTraversalEventGenerator::createGenericCellTraversalEvent(...)                 out:event.toString():(x=[0.376543,0.364198],h=[0.0123457,0.0123457],hasBeenRefined=0000,willBeRefined=0000,i
+sVertexLocal=1010,isFaceLocal=1111,isCellLocal=1,isParentCellLocal=1,isVertexAdjacentToParallelDomainBoundary=0000,isFaceAdjacentToParallelDomainBoundary=0000,vertexDataFrom=[30144400,0,30144496,0],vertexDataTo=[30144592,0,30144688,0],faceDataFrom=[0,0,30096912,0],faceD
+ataTo=[30097328,0,30097744,0],cellData=30098160,relativePositionToFather=[0,2],invokingSpacetree=0,invokingSpacetreeIsNotInvolvedInAnyDynamicLoadBalancing=1),_id:0 (file:peano4/grid/GridTraversalEventGenerator.cpp,line:255)
+</pre>
+     *
+     * Here is the input in a nicer formatted way:
+     *
+     * state.toString():(level=4,x=[0.37037,0.358025],h=[0.0123457,0.0123457],inverted=1,evenFlags=10,accessNumber=[-1,2,1,3])
+     * relativePositionToFather:[0,2]
+     * fineGridVertices[0].toString():(state=HangingVertex,adjacentRanks=[0,0,0,0],backupOfAdjacentRanks=[0,0,0,0],hasBeenAntecessorOfRefinedVertexInPreviousTreeSweep=0,isAntecessorOfRefinedVertexInCurrentTreeSweep=0,numberOfAdjacentRefinedLocalCells=0,x=[0.37037,0.358025],level=4),
+     * fineGridVertices[1].toString():(state=Unrefined,adjacentRanks=[0,0,0,0],backupOfAdjacentRanks=[0,0,0,0],hasBeenAntecessorOfRefinedVertexInPreviousTreeSweep=0,isAntecessorOfRefinedVertexInCurrentTreeSweep=0,numberOfAdjacentRefinedLocalCells=0,x=[0.382716,0.358025],level=4),
+     * fineGridVertices[2].toString():(state=HangingVertex,adjacentRanks=[0,0,0,0],backupOfAdjacentRanks=[0,0,0,0],hasBeenAntecessorOfRefinedVertexInPreviousTreeSweep=0,isAntecessorOfRefinedVertexInCurrentTreeSweep=0,numberOfAdjacentRefinedLocalCells=0,x=[0.37037,0.37037],level=4),
+     * fineGridVertices[3].toString():(state=Unrefined,adjacentRanks=[0,0,0,0],backupOfAdjacentRanks=[0,0,0,0],hasBeenAntecessorOfRefinedVertexInPreviousTreeSweep=0,isAntecessorOfRefinedVertexInCurrentTreeSweep=0,numberOfAdjacentRefinedLocalCells=0,x=[0.382716,0.37037],level=4),
+     * _id:0 (file:peano4/grid/GridTraversalEventGenerator.cpp,line:229)
+     *
+     */
+    void testCreateGenericCellTraversalEvent1();
   public:
     GridTraversalEventGeneratorTest();
     void run() override;

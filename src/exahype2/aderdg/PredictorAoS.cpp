@@ -8,10 +8,12 @@
 
 #include "tarch/logging/Log.h"
 
-#if defined(OpenMPGPUOffloading)
+/*
+#if defined(GPUOffloadingOMP)
 #pragma omp declare target
 #endif
-GPUCallableMethod void exahype2::aderdg::spaceTimePredictor_initialGuess_body_AoS(
+*/
+void exahype2::aderdg::spaceTimePredictor_initialGuess_body_AoS(
   double * __restrict__             QOut,
   const double * const __restrict__ UIn,
   const int                         nodesPerAxis,
@@ -22,14 +24,16 @@ GPUCallableMethod void exahype2::aderdg::spaceTimePredictor_initialGuess_body_Ao
   }
 }
 
-#if defined(OpenMPGPUOffloading)
+/*
+#if defined(GPUOffloadingOMP)
 #pragma omp end declare target
 #endif
 
-#if defined(OpenMPGPUOffloading)
+#if defined(GPUOffloadingOMP)
 #pragma omp declare target
 #endif
-GPUCallableMethod void exahype2::aderdg::spaceTimePredictor_PicardLoop_initialiseRhs_AoS(
+*/
+void exahype2::aderdg::spaceTimePredictor_PicardLoop_initialiseRhs_AoS(
   double * __restrict__             rhsOut,
   const double * const __restrict__ UIn,
   const double * const __restrict__ FLCoeff,
@@ -44,14 +48,16 @@ GPUCallableMethod void exahype2::aderdg::spaceTimePredictor_PicardLoop_initialis
     rhsOut[ scalarIndex*strideRhs + var ] = coeff * UIn[ ( scalarIndex / nodesPerAxis ) * strideQ + var ];
   }
 }
-#if defined(OpenMPGPUOffloading)
+/*
+#if defined(GPUOffloadingOMP)
 #pragma omp end declare target
 #endif
 
-#if defined(OpenMPGPUOffloading)
+#if defined(GPUOffloadingOMP)
 #pragma omp declare target
 #endif
-GPUCallableMethod void exahype2::aderdg::spaceTimePredictor_PicardLoop_addContributions_body_AoS (
+*/
+void exahype2::aderdg::spaceTimePredictor_PicardLoop_addContributions_body_AoS (
     std::function< void(
       const double * const __restrict__           Q,
       const tarch::la::Vector<Dimensions,double>& x,
@@ -140,14 +146,16 @@ GPUCallableMethod void exahype2::aderdg::spaceTimePredictor_PicardLoop_addContri
     }
   }
 }
-#if defined(OpenMPGPUOffloading)
+/*
+#if defined(GPUOffloadingOMP)
 #pragma omp end declare target
 #endif
 
-#if defined(OpenMPGPUOffloading)
+#if defined(GPUOffloadingOMP)
 #pragma omp declare target
 #endif
-GPUCallableMethod void exahype2::aderdg::spaceTimePredictor_PicardLoop_addFluxContributionsToRhs_body_AoS (
+*/
+void exahype2::aderdg::spaceTimePredictor_PicardLoop_addFluxContributionsToRhs_body_AoS (
     std::function< void(
       const double * const __restrict__           Q,
       const tarch::la::Vector<Dimensions,double>& x,
@@ -191,14 +199,16 @@ GPUCallableMethod void exahype2::aderdg::spaceTimePredictor_PicardLoop_addFluxCo
     }
   }
 }
-#if defined(OpenMPGPUOffloading)
+/*
+#if defined(GPUOffloadingOMP)
 #pragma omp end declare target
 #endif
 
-#if defined(OpenMPGPUOffloading)
+#if defined(GPUOffloadingOMP)
 #pragma omp declare target
 #endif
-GPUCallableMethod void exahype2::aderdg::spaceTimePredictor_PicardLoop_addSourceContributionToRhs_body_AoS(
+*/
+void exahype2::aderdg::spaceTimePredictor_PicardLoop_addSourceContributionToRhs_body_AoS(
     std::function< void(
       const double * const __restrict__                 Q,
       const tarch::la::Vector<Dimensions,double>& x,
@@ -233,14 +243,16 @@ GPUCallableMethod void exahype2::aderdg::spaceTimePredictor_PicardLoop_addSource
     rhsOut[ scalarIndex*strideRhs + var ] += coeff * SAux[var];
   }
 }
-#if defined(OpenMPGPUOffloading)
+/*
+#if defined(GPUOffloadingOMP)
 #pragma omp end declare target
 #endif
 
-#if defined(OpenMPGPUOffloading)
+#if defined(GPUOffloadingOMP)
 #pragma omp declare target
 #endif
-GPUCallableMethod void exahype2::aderdg::spaceTimePredictor_PicardLoop_addNcpContributionToRhs_body_AoS(
+*/
+void exahype2::aderdg::spaceTimePredictor_PicardLoop_addNcpContributionToRhs_body_AoS(
   std::function< void(
     const double * const __restrict__           Q,
     double * __restrict__                       dQ_or_deltaQ,
@@ -285,14 +297,16 @@ GPUCallableMethod void exahype2::aderdg::spaceTimePredictor_PicardLoop_addNcpCon
     }
   }
 }
-#if defined(OpenMPGPUOffloading)
+/*
+#if defined(GPUOffloadingOMP)
 #pragma omp end declare target
 #endif
 
-#if defined(OpenMPGPUOffloading)
+#if defined(GPUOffloadingOMP)
 #pragma omp declare target
 #endif
-GPUCallableMethod void exahype2::aderdg::spaceTimePredictor_PicardLoop_invert_body_AoS(
+*/
+void exahype2::aderdg::spaceTimePredictor_PicardLoop_invert_body_AoS(
   double * __restrict__             QOut,
   double&                           squaredResiduumOut,
   const double * const __restrict__ rhsIn,
@@ -351,14 +365,16 @@ GPUCallableMethod void exahype2::aderdg::spaceTimePredictor_PicardLoop_invert_bo
   */
 }
 
-#if defined(OpenMPGPUOffloading)
+/*
+#if defined(GPUOffloadingOMP)
 #pragma omp end declare target
 #endif
 
-#if defined(OpenMPGPUOffloading)
+#if defined(GPUOffloadingOMP)
 #pragma omp declare target
 #endif
-GPUCallableMethod void exahype2::aderdg::spaceTimePredictor_extrapolate_body_AoS(
+*/
+void exahype2::aderdg::spaceTimePredictor_extrapolate_body_AoS(
     double * __restrict__             QHullOut[Dimensions*2],
     const double * const __restrict__ QIn,
     const double * const __restrict__ FLRCoeff[2],
@@ -392,7 +408,7 @@ GPUCallableMethod void exahype2::aderdg::spaceTimePredictor_extrapolate_body_AoS
   }
 }
 
-GPUCallableMethod void exahype2::aderdg::spaceTimePredictor_extrapolate_Lobatto_body_AoS(
+void exahype2::aderdg::spaceTimePredictor_extrapolate_Lobatto_body_AoS(
     double * __restrict__             QHullOut[Dimensions*2],
     const double * const __restrict__ QIn,
     const int                         nodesPerAxis,
@@ -416,14 +432,16 @@ GPUCallableMethod void exahype2::aderdg::spaceTimePredictor_extrapolate_Lobatto_
     QHullOut[ faceIndex ][ (strideQLR*(1-lr) + scalarIndexFace)*strideQ + var ] = QIn[ scalarIndexCell*strideQ + var ]; 
   }
 }
-#if defined(OpenMPGPUOffloading)
+/*
+#if defined(GPUOffloadingOMP)
 #pragma omp end declare target
 #endif
 
-#if defined(OpenMPGPUOffloading)
+#if defined(GPUOffloadingOMP)
 #pragma omp declare target
 #endif
-GPUCallableMethod void exahype2::aderdg::spaceTimePredictor_extrapolateInTime_body_AoS(
+*/
+void exahype2::aderdg::spaceTimePredictor_extrapolateInTime_body_AoS(
   double * __restrict__             UOut,
   const double * const __restrict__ QIn,
   const double * const __restrict__ FRCoeff,
@@ -443,14 +461,16 @@ GPUCallableMethod void exahype2::aderdg::spaceTimePredictor_extrapolateInTime_bo
     }
   }
 }
-#if defined(OpenMPGPUOffloading)
+/*
+#if defined(GPUOffloadingOMP)
 #pragma omp end declare target
 #endif
 
-#if defined(OpenMPGPUOffloading)
+#if defined(GPUOffloadingOMP)
 #pragma omp declare target
 #endif
-GPUCallableMethod void exahype2::aderdg::spaceTimePredictor_extrapolateInTime_Lobatto_body_AoS(
+*/
+void exahype2::aderdg::spaceTimePredictor_extrapolateInTime_Lobatto_body_AoS(
   double * __restrict__             UOut,
   const double * const __restrict__ QIn,
   const double * const __restrict__ FRCoeff,
@@ -463,9 +483,11 @@ GPUCallableMethod void exahype2::aderdg::spaceTimePredictor_extrapolateInTime_Lo
    UOut[ scalarIndexCell*strideQ + var ] = QIn[ indexQ + var ];
  }
 }
-#if defined(OpenMPGPUOffloading)
+/*
+#if defined(GPUOffloadingOMP)
 #pragma omp end declare target
 #endif
+*/
 
 #if defined(__HIPCC__) or defined(__NVCC__)
 #error HIP / CUDA kernels are currently not maintained

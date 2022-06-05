@@ -15,11 +15,11 @@
 #include <execution>
 #include <future>
 
-
 namespace {
   std::atomic<int> nonblockingTasksCounter          = 0;
 
   const std::string BSPTasksStatisticsIdentifier( "tarch::multicore::bsp-tasks");
+  const std::string BackfillWhileWaitingForBSPTasks( "tarch::multicore::backfill");
 
 
   /**
@@ -55,51 +55,7 @@ namespace {
    * Aggressive BSP-type variant to run through tasks which ensures high
    * throughput
    *
-   * This implementation variant follows the patterns described in the 2021
-   * IWOMP paper by H. Schulz et al, but it is way more advanced. An important
-   * paper to read in the context of the present solution is also
-   * https://www.osti.gov/pages/servlets/purl/1465188. Note in particular the
-   * example in Figure 3.
-   *
-   * # Realisation
-   *
-   * The idea is that we spawn one task per bsp segment (stored within tasks).
-   * If a task terminates, we do not terminate immediately but first check if
-   * all the other tasks have already finished, too. If they haven't, we
-   * process a few pending tasks from the queue and then check again. We
-   * prioritise throughput over an immediate termination of the BSP section.
-   *
-   * As we might have fewer tasks or more tasks than cores, we take the maximum
-   * of both of them. If the a task is spawned that does not correspond to an
-   * entry in tasks, i.e. if tasks has fewer entries than threads, this task
-   * will not process a BSP task but immediately start to run through the
-   * pending tasks.
-   *
-   * The devil is in the details when it comes to the actual while loop that
-   * processes pending tasks:
-   *
-   * - The while loop should terminate once all tasks of the BSP section have
-   *   done their core work. We introduce a shared atomic variable pendingTasks
-   *   which counts down. Whenever a BSP task has finished its core work, it
-   *   decrements it. The while loop continues if pendingTasks reduces to zero.
-   * - If we have more tasks than threads, we should not allow a BSP task to
-   *   process pending tasks. It might become so busy with processing these guys
-   *   that it actually starves other BSP-type tasks.
-   * - We really do not know in OpenMP when a ready task is processed. The task
-   *   loop might trigger all tasks, do them, and then wait. This is the kind
-   *   pattern that we want to have. However, it could also be that two tasks
-   *   start, the machine then does busy waiting in the waitall and the other
-   *   tasks do not start. Therefore, it is important that we introduce a second
-   *   atomic counter which counts how many tasks have actually kicked off. If
-   *   and only if all tasks that are ready had a chance to run, we know that
-   *   all BSP stuff is now in work. In this case, we can also enable the
-   *   polling. But not before.
-   *
-   * # System-specific details
-   *
-   * NVIDIA's nvcc does not support the taskloop. It would be easy to replace
-   * the taskloop with a for loop and tasks within the loop body. But I decided
-   * to strive for a clean code.
+   * Please see the OpenMP discussion for details.
    */
   void spawnAndWaitAsExplicitTasksWithPolling(
     const std::vector< tarch::multicore::Task* >&  tasks,
@@ -112,56 +68,59 @@ namespace {
     std::atomic<int>       pendingTasks  = NumberOfThreads;
     std::atomic<int>       spawnedTasks  = 0;
 
+    //&spawnedTasks, &pendingTasks//
+    auto bspLoopBody = [&](int iterationCounter) -> void {
+      spawnedTasks++;
+
+      ::tarch::logging::Statistics::getInstance().inc( BSPTasksStatisticsIdentifier, 1.0, true );
+      if (iterationCounter<tasks.size()) {
+        while (tasks[iterationCounter]->run()) {
+          std::this_thread::yield();
+        }
+        delete tasks[iterationCounter];
+      }
+
+      ::tarch::logging::Statistics::getInstance().inc( BSPTasksStatisticsIdentifier, -1.0, true );
+  
+      pendingTasks--;
+
+      const auto fusion       = strategy->getNumberOfTasksToFuseAndTargetDevice();
+      const int  threadNumber = tarch::multicore::Core::getInstance().getThreadNumber();
+
+      while (
+        pendingTasks>0
+        and
+        // Without this yield, the code will deadlock if you have more trees
+        // than cores. As the first p trees on p cores will finish and then
+        // poll. The other >p trees/tasks will starve
+        pendingTasks<tarch::multicore::Core::getInstance().getNumberOfThreads()
+        and
+        spawnedTasks==NumberOfThreads
+      ) {
+        tarch::services::ServiceRepository::getInstance().receiveDanglingMessages();
+        int numberOfPendingTasks = tarch::multicore::getNumberOfPendingTasks(threadNumber);
+
+        bool processedSomeTasks = false;
+        if (numberOfPendingTasks>=fusion.minTasks) {
+          processedSomeTasks = tarch::multicore::internal::fusePendingTasks(fusion);
+        }
+        else if (numberOfPendingTasks>0) {
+          tarch::multicore::internal::processThreadLocalTask(threadNumber);
+        }
+        else { // no local tasks left over
+          tarch::multicore::internal::copyInternalTaskQueuesOverIntoGlobalQueue(threadNumber);
+          const int numberOfTasksToProcess = std::max(1,tarch::multicore::getNumberOfPendingTasks(-1)/2);
+          ::tarch::logging::Statistics::getInstance().log( BackfillWhileWaitingForBSPTasks, numberOfTasksToProcess );
+          processedSomeTasks = tarch::multicore::processPendingTasks( numberOfTasksToProcess );
+        }
+      }
+    };
+
+
     std::vector< std::thread* > threads;
 
     for (int i=0; i<NumberOfThreads; i++) {
-      std::thread* newThread = new std::thread(
-        [&spawnedTasks,&pendingTasks,&tasks,i,NumberOfThreads,&strategy] () -> void {
-          spawnedTasks++;
-
-          ::tarch::logging::Statistics::getInstance().inc( BSPTasksStatisticsIdentifier, 1.0, true );
-          if (i<tasks.size()) {
-            while (tasks[i]->run()) {
-              std::this_thread::yield();
-            }
-            delete tasks[i];
-          }
-
-          ::tarch::logging::Statistics::getInstance().inc( BSPTasksStatisticsIdentifier, -1.0, true );
-  
-          pendingTasks--;
-
-          const auto fusion = strategy->getNumberOfTasksToFuseAndTargetDevice();
-
-          while (
-            pendingTasks>0
-            and
-            // Without this yield, the code will deadlock if you have more trees
-            // than cores. As the first p trees on p cores will finish and then
-            // poll. The other >p trees/tasks will starve
-            pendingTasks<tarch::multicore::Core::getInstance().getNumberOfThreads()
-            and
-            spawnedTasks==NumberOfThreads
-          ) {
-            int numberOfPendingTasks = tarch::multicore::getNumberOfPendingTasks();
-
-            bool processedSomeTasks = false;
-            if (numberOfPendingTasks>=fusion.minTasks) {
-              processedSomeTasks = tarch::multicore::internal::fusePendingTasks(fusion);
-            }
-            else {
-              int numberOfTasksToProcess = std::max(1,numberOfPendingTasks/2);
-              processedSomeTasks = tarch::multicore::processPendingTasks( numberOfTasksToProcess );
-            }
-
-            if (not processedSomeTasks) {
-              std::this_thread::yield();
-              tarch::services::ServiceRepository::getInstance().receiveDanglingMessages();
-            }
-          }
-        }
-      );
-      newThread->detach();
+      std::thread* newThread = new std::thread(bspLoopBody,i);
       threads.push_back( newThread );
     }
 

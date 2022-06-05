@@ -30,6 +30,7 @@ int tarch::multicore::getNumberOfUnmaskedThreads() {
 
 #ifndef SharedMemoryParallelisation
 tarch::multicore::Core::Core() {
+  internal::configureInternalTaskQueues(std::thread::hardware_concurrency());
 }
 
 
@@ -42,7 +43,9 @@ tarch::multicore::Core& tarch::multicore::Core::getInstance() {
   return instance;
 }
 
+
 void tarch::multicore::Core::configure( int numberOfThreads ) {
+  internal::configureInternalTaskQueues(numberOfThreads);
 }
 
 
@@ -72,6 +75,11 @@ int tarch::multicore::Core::getCoreNumber() const {
   //  https://stackoverflow.com/questions/33745364/sched-getcpu-equivalent-for-os-x
   return 0;
   #endif
+}
+
+
+int tarch::multicore::Core::getThreadNumber() const {
+  return 0;
 }
 
 #endif

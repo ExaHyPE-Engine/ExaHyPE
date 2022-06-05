@@ -27,7 +27,7 @@ class examples::exahype2::loh1::LOH1OnGPU: public examples::exahype2::loh1::Abst
 
 
   public:
-    #if defined(OpenMPGPUOffloading)
+    #if defined(GPUOffloadingOMP)
     #pragma omp declare target
     #endif
     virtual void adjustSolution(
@@ -37,11 +37,11 @@ class examples::exahype2::loh1::LOH1OnGPU: public examples::exahype2::loh1::Abst
       double                                       t,
       double                                       dt
     )  override;
-    #if defined(OpenMPGPUOffloading)
+    #if defined(GPUOffloadingOMP)
     #pragma omp end declare target
     #endif
 
-    #if defined(OpenMPGPUOffloading)
+    #if defined(GPUOffloadingOMP)
     #pragma omp declare target
     #endif
     static double maxEigenvalue(
@@ -51,11 +51,11 @@ class examples::exahype2::loh1::LOH1OnGPU: public examples::exahype2::loh1::Abst
       double                                       t,
       int                                          normal
     );
-    #if defined(OpenMPGPUOffloading)
+    #if defined(GPUOffloadingOMP)
     #pragma omp end declare target
     #endif
 
-    #if defined(OpenMPGPUOffloading)
+    #if defined(GPUOffloadingOMP)
     #pragma omp declare target
     #endif
     virtual void boundaryConditions(
@@ -66,11 +66,11 @@ class examples::exahype2::loh1::LOH1OnGPU: public examples::exahype2::loh1::Abst
       double                                       t,
       int                                          normal
     ) override;
-    #if defined(OpenMPGPUOffloading)
+    #if defined(GPUOffloadingOMP)
     #pragma omp end declare target
     #endif
 
-    #if defined(OpenMPGPUOffloading)
+    #if defined(GPUOffloadingOMP)
     #pragma omp declare target
     #endif
     static void nonconservativeProduct(
@@ -82,12 +82,12 @@ class examples::exahype2::loh1::LOH1OnGPU: public examples::exahype2::loh1::Abst
       int                                          normal,
       double * __restrict__ BgradQ // BgradQ[13]
      );
-    #if defined(OpenMPGPUOffloading)
+    #if defined(GPUOffloadingOMP)
     #pragma omp end declare target
     #endif
     
     // Dummy function
-    #if defined(OpenMPGPUOffloading)
+    #if defined(GPUOffloadingOMP)
     #pragma omp declare target
     #endif
     static void flux(
@@ -98,7 +98,7 @@ class examples::exahype2::loh1::LOH1OnGPU: public examples::exahype2::loh1::Abst
       int                                          normal,
       double * __restrict__ F // BgradQ[13]
      ) {};
-    #if defined(OpenMPGPUOffloading)
+    #if defined(GPUOffloadingOMP)
     #pragma omp end declare target
     #endif
 

@@ -257,10 +257,17 @@ void startSimulation() {
     {{item}}
   );
   {% endfor %}
+  {% for item in SOLVERS -%}
+  {{ item[1] }}.startSimulation();
+  {%- endfor %}
+
 }
 
 
 void finishSimulation() {
+  {% for item in SOLVERS -%}
+  {{ item[1] }}.finishSimulation();
+  {%- endfor %}
   loadBalancer.finishStep();
   refinementControl.finishStep();
 }

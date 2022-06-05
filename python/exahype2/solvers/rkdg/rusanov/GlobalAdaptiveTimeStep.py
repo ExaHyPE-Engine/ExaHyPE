@@ -6,10 +6,10 @@ from exahype2.solvers.rkdg.PDETerms       import PDETerms
 
 #from exahype2.solvers.fv.kernels import create_source_term_kernel
 #from exahype2.solvers.fv.kernels import create_compute_Riemann_kernel_for_Rusanov
-from exahype2.solvers.fv.kernels import create_abstract_solver_declarations
-from exahype2.solvers.fv.kernels import create_abstract_solver_definitions
-from exahype2.solvers.fv.kernels import create_solver_declarations
-from exahype2.solvers.fv.kernels import create_solver_definitions
+from exahype2.solvers.rkdg.kernels import create_abstract_solver_declarations
+from exahype2.solvers.rkdg.kernels import create_abstract_solver_definitions
+from exahype2.solvers.rkdg.kernels import create_solver_declarations
+from exahype2.solvers.rkdg.kernels import create_solver_definitions
 
 
 class GlobalAdaptiveTimeStep( SeparateSweeps ):

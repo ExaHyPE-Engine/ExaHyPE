@@ -7,8 +7,21 @@ import jinja2
 
 
 class PlotParticlesInVTKFormat(ActionSet):
+  """
+  
+   For constructor's time_stamp_evaluation argument.
+   
+  """
   NoMetaFile = "no-meta-file"
+  
+  
+  """
+  
+   For constructor's time_stamp_evaluation argument.
+   
+  """
   CountTimeSteps = "count-time-steps"
+
 
   """
 
@@ -38,8 +51,7 @@ class PlotParticlesInVTKFormat(ActionSet):
          container which I can traverse.
          
       time_stamp_evaluation: String yielding a C++ double
-         Pass in something negative if want to disable the met file feature
-         where multiple particle snapshots are organised as one video/collection.
+         Pass in prefined constants to use default behaviour.
 
     """
     self.d = {}
@@ -74,16 +86,26 @@ class PlotParticlesInVTKFormat(ActionSet):
 
 
   def add_attribute_to_plot(self, attribute, cardinality=1):
+      """
+      
+      attribute: Attribute
+        The actual attribute that we have to plot.
+        
+      cardinality: Integer
+        The cardinality of the attribute. This is 1 for a scalar value, 2 for a 2d vector,
+        and so forth. We support arbitrary cardinalities, but the cardinality hsa to match
+        attribute. 
+      
+      """
       self._attributes_to_plot.append(attribute)
-      writer_name = f"{attribute.get_to_string()}Writer"
+      writer_name = f"_{attribute._name}Writer"
       delim = "\n  "
-      name_no_underscore = attribute.get_to_string()[1:]
-      accessor_name = name_no_underscore[0].title() + name_no_underscore[1:]
+      accessor_name = attribute._name[0].title() + attribute._name[1:]
 
       self.d[ "ATTRIBUTE_WRITER_NULL_INITIALISERS" ] += f"{delim}{writer_name} = nullptr;"
       self.d[ "ATTRIBUTE_WRITER_CLOSES" ]            += f"{delim}{writer_name}->close();"
       self.d[ "ATTRIBUTE_WRITER_DELETES" ]           += f"{delim}delete {writer_name};"
-      self.d[ "ATTRIBUTE_WRITER_INITIALISERS" ]      += f"{delim}{writer_name} = _writer->createPointDataWriter( \"{name_no_underscore}\", {cardinality} );"
+      self.d[ "ATTRIBUTE_WRITER_INITIALISERS" ]      += f"{delim}{writer_name} = _writer->createPointDataWriter( \"{attribute._name}\", {cardinality} );"
       if writer_name=="_dataWriter":
         self.d[ "ATTRIBUTE_WRITER_PLOT_CALLS" ]        += f"{delim}  _dataWriter->plot(particleNumber,p->getData().data(),{cardinality});" 
       else:
@@ -133,7 +155,7 @@ class PlotParticlesInVTKFormat(ActionSet):
   std::ostringstream snapshotFileName;
   snapshotFileName << "{{FILENAME}}-" << counter;
 
-  if (tarch::mpi::Rank::getInstance().getNumberOfRanks()>0 ) {
+  if (tarch::mpi::Rank::getInstance().getNumberOfRanks()>1 ) {
     snapshotFileName << "-rank-" << tarch::mpi::Rank::getInstance().getRank();
   }
   
@@ -144,12 +166,10 @@ class PlotParticlesInVTKFormat(ActionSet):
     0.0
   );
   {% elif TIMESTAMP==\"""" + CountTimeSteps + """\" %}
-  static int timeStep = -1;
-  timeStep++;
   _writer = new tarch::plotter::pointdata::vtk::VTKWriter(
     false, snapshotFileName.str(), "{{FILENAME}}",
     tarch::plotter::PVDTimeSeriesWriter::IndexFileMode::AppendNewData,
-    timeStep
+    counter / peano4::parallel::SpacetreeSet::getInstance().getLocalSpacetrees().size()
   );
   {% else %}
   _writer = new tarch::plotter::pointdata::vtk::VTKWriter(
@@ -201,10 +221,9 @@ class PlotParticlesInVTKFormat(ActionSet):
 
 
   def _get_attribute_writer_declarations(self):
-      delim = "\n    "
-      datatype = "tarch::plotter::pointdata::PointWriter::PointDataWriter*"
-      return delim.join(f"{datatype}  {attr.get_to_string()}Writer;"
-                          for attr in self._attributes_to_plot)
+    delim = "\n    "
+    datatype = "tarch::plotter::pointdata::PointWriter::PointDataWriter*"
+    return delim.join(f"{datatype}  _{attr._name}Writer;" for attr in self._attributes_to_plot)
 
 
   def get_attributes(self):
