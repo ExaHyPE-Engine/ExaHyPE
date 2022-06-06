@@ -121,11 +121,6 @@ class UpdateParticleGridAssociation(ActionSet):
       
    ## Parameters
    
-   eliminate_spatial_duplicates: Boolean
-     If it holds, the code runs over the 
-     particles at the end of the sweep and simply kicks out duplicates. This
-     happens on a per-vertex basis.
-     
    lift_always: Boolean
      See discussion of the two algorithms that I realise here. By default, 
      I do not sort within cells but move up and down within the grid 
@@ -135,15 +130,12 @@ class UpdateParticleGridAssociation(ActionSet):
   def __init__(self,
                particle_set, 
                guard="true", 
-               eliminate_spatial_duplicates=False,
                lift_always=True):
     self._particle_set = particle_set
     self.d = {}
     self.d[ "PARTICLE" ]                      = particle_set.particle_model.name
     self.d[ "PARTICLES_CONTAINER" ]           = particle_set.name
     self.d[ "GUARD" ]                         = guard
-    self.d[ "ELIMINATE_DUPLICATES_GUARD" ]    = eliminate_spatial_duplicates
-    self._eliminate_spatial_duplicates        = eliminate_spatial_duplicates
     self.d[ "LIFT_ALWAYS" ]                   = lift_always
     self._lift_always                         = lift_always
 
@@ -169,9 +161,6 @@ class UpdateParticleGridAssociation(ActionSet):
     "tree " <<  _treeNumber <<
     {% if not LIFT_ALWAYS %}
     ": reassignments=" << _numberOfParticleReassignmentsOnCurrentLevel << 
-    {% endif %}
-    {% if ELIMINATE_DUPLICATES_GUARD %}
-    ", eliminated (duplicate) particles=" << _numberOfEliminations <<
     {% endif %}
     ", lifts=" << _numberOfLifts << 
     ", drops=" << _numberOfDrops
@@ -265,16 +254,6 @@ class UpdateParticleGridAssociation(ActionSet):
     );
   }
 """)
-
-
-  """
-  
-  Plugs into touchVertexLastTime() for example.
-  
-  """
-  __Template_EliminateDuplicateParticles = jinja2.Template("""
-  _numberOfEliminations += fineGridVertex{{PARTICLES_CONTAINER}}.eliminateSpatialDuplicates(false);
-""")
     
 
   """
@@ -328,6 +307,8 @@ class UpdateParticleGridAssociation(ActionSet):
       sievedParticles.begin(),
       sievedParticles.end()
     );
+    
+    fineGridVertex{{PARTICLES_CONTAINER}}.eliminateSpatialDuplicates(false, SortingTolerance);
   }
 """)  
   
@@ -427,8 +408,6 @@ class UpdateParticleGridAssociation(ActionSet):
         result = self.__Template_LiftParticlesFurtherAway.render(**self.d)
       else:    
         result = self.__Template_ValidateParticleLevelAssociation.render(**self.d)
-      if self._eliminate_spatial_duplicates:        
-        result += self.__Template_EliminateDuplicateParticles.render(**self.d)
     if operation_name==ActionSet.OPERATION_TOUCH_CELL_LAST_TIME:
       if not self._lift_always:
         result = self.__Template_ReassignAndLiftWithinCell.render(**self.d) 

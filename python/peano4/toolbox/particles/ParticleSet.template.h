@@ -56,6 +56,7 @@
       static int _numberOfAssignmentsToGlobalSieve;
       static int _totalLocalParticleCount;
       static int _totalVirtualParticleCount;
+      static int _totalEliminatedSpatialDuplicates;
 
       #if PeanoDebug>=1
       private:
@@ -178,8 +179,11 @@
        * counterparts.
        *
        * @return Number of eliminated particles
+       *
+       * @param sortingTolerance I call it sorting tolerance, as I recommend to
+       *   use the same as for the lifts and drops
        */
-      int eliminateSpatialDuplicates(bool examineOnlyVirtualParticles);
+      void eliminateSpatialDuplicates(bool examineOnlyVirtualParticles, double sortingTolerance);
 
 
       #ifdef Parallel
