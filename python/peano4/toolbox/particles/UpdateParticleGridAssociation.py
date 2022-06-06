@@ -153,6 +153,8 @@ class UpdateParticleGridAssociation(ActionSet):
   _numberOfLifts = 0;
   _numberOfDrops = 0;
   _numberOfEliminations = 0;
+  
+  _sieveParticles = vertexdata::{{PARTICLES_CONTAINER}}::getSievedParticlesForNextGridTraversal();
 """ )
 
 
@@ -174,6 +176,8 @@ class UpdateParticleGridAssociation(ActionSet):
     ", lifts=" << _numberOfLifts << 
     ", drops=" << _numberOfDrops
   );
+  
+  _sieveParticles.deleteParticles();
 """ )
 
 
@@ -311,8 +315,8 @@ class UpdateParticleGridAssociation(ActionSet):
 
 
   __Template_Sieve = jinja2.Template("""
-  if ( vertexdata::{{PARTICLES_CONTAINER}}::thereAreParticlesToBeSieved() ) {
-    vertexdata::{{PARTICLES_CONTAINER}} sievedParticles = vertexdata::{{PARTICLES_CONTAINER}}::getParticlesToBeSievedIntoVertex(
+  if ( not _sieveParticles.empty() ) {
+    vertexdata::{{PARTICLES_CONTAINER}} sievedParticles = _sieveParticles.getParticlesToBeSievedIntoVertex(
         marker,
         SortingTolerance
       );
@@ -465,12 +469,14 @@ class UpdateParticleGridAssociation(ActionSet):
   int  _numberOfLifts;
   int  _numberOfDrops;
   int  _numberOfEliminations;
+  
+  vertexdata::{{PARTICLES_CONTAINER}}  _sieveParticles;
 """).render(**self.d)
 
 
   def get_static_initialisations(self,full_qualified_classname):
     return jinja2.Template("""
 namespace {
-  constexpr double SortingTolerance = 1.01;
+  constexpr double SortingTolerance = 1.0 + 1e-8;
 }
 """).render(**self.d)    

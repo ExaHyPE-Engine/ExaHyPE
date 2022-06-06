@@ -265,21 +265,14 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishedTraversal() {
     );
   }
 
-  assertion( globalLocalNumberOfParticles==300 or globalLocalNumberOfParticles==0);
-
   _numberOfLifts = 0;
   _numberOfDrops = 0;
   _numberOfAssignmentsToGlobalSieve = 0;
   _totalLocalParticleCount = 0;
   _totalVirtualParticleCount = 0;
 
-  for (auto& p: _particlesThatHaveToBeSieved) {
-    delete p;
-  }
-  for (auto& p: _particlesThatHaveToBeSieved) {
-    delete p;
-  }
-  _particlesThatHaveToBeSieved.clear();
+  _particlesThatHaveToBeSieved.deleteParticles();
+
   _particlesThatHaveToBeSieved.insert(
     _particlesThatHaveToBeSieved.end(),
     _particlesThatCanNotBeLiftedWithinTheirTree.begin(),
@@ -290,8 +283,22 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishedTraversal() {
 }
 
 
-bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::thereAreParticlesToBeSieved() {
-  return _thereAreParticlesToBeSieved;
+{{NAMESPACE | join("::")}}::{{CLASSNAME}} {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getSievedParticlesForNextGridTraversal() {
+  {{NAMESPACE | join("::")}}::{{CLASSNAME}} result;
+  for (auto& p: _particlesThatHaveToBeSieved) {
+    globaldata::{{PARTICLE_TYPE}}* copyOfParticle = new globaldata::{{PARTICLE_TYPE}}(*p);
+    copyOfParticle->setParallelState( globaldata::{{PARTICLE_TYPE}}::ParallelState::Virtual );
+    result.push_back( copyOfParticle );
+  }
+  return result;
+}
+
+
+void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::deleteParticles() {
+  for (auto& p: _particlesThatHaveToBeSieved) {
+    delete p;
+  }
+  clear();
 }
 
 
@@ -316,10 +323,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::particlesCanNotBeLiftedLocally()
   const peano4::datamanagement::VertexMarker& marker,
   double sortingTolerance
 ) {
-  assertion( thereAreParticlesToBeSieved() );
-
-  {{NAMESPACE | join("::")}}::{{CLASSNAME}} result;
-  {{CLASSNAME}}::iterator p = _particlesThatHaveToBeSieved.begin();
+  assertion( not empty() );
 
   auto sieveParticle = [&](globaldata::{{PARTICLE_TYPE}}* p) {
     return
@@ -334,29 +338,16 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::particlesCanNotBeLiftedLocally()
         );
   };
 
-  tarch::multicore::Lock lock( _semaphore );
-  if ( marker.isLocal() ) {
-    while ( p!=_particlesThatHaveToBeSieved.end() ) {
-      if ( sieveParticle(*p) ) {
-        logDebug( "getParticlesToBeSievedIntoVertex(...)", "drop particle " << (*p)->toString() << " from global sieve list into vertex " << marker.toString() );
-        logDebug( "getParticlesToBeSievedIntoVertex(...)", "remove particle from sieve list, as vertex is local. This improves the efficiency and it ensures that particles right in-between two vertices are not added twice per tree" );
-        (*p)->setParallelState( globaldata::{{PARTICLE_TYPE}}::ParallelState::Virtual );
-        result.push_back( *p );
-        p = _particlesThatHaveToBeSieved.erase(p);
-      }
-      else {
-        p++;
-      }
+  {{NAMESPACE | join("::")}}::{{CLASSNAME}} result;
+  {{CLASSNAME}}::iterator p = _particlesThatHaveToBeSieved.begin();
+  while ( p!=_particlesThatHaveToBeSieved.end() ) {
+    if ( sieveParticle(*p) ) {
+      logDebug( "getParticlesToBeSievedIntoVertex(...)", "drop particle " << (*p)->toString() << " from global sieve list into vertex " << marker.toString() );
+      (*p)->setParallelState( globaldata::{{PARTICLE_TYPE}}::ParallelState::Virtual );
+      result.push_back( *p );
+      p = _particlesThatHaveToBeSieved.erase(p);
     }
-  }
-  else { // marker is not local, i.e. adjacent to domain boundary
-    while ( p!=_particlesThatHaveToBeSieved.end() ) {
-      if ( sieveParticle(*p) ) {
-        logDebug( "getParticlesToBeSievedIntoVertex(...)", "drop particle " << (*p)->toString() << " from global sieve list into vertex " << marker.toString() );
-        globaldata::{{PARTICLE_TYPE}}* copyOfParticle = new globaldata::{{PARTICLE_TYPE}}(**p);
-        copyOfParticle->setParallelState( globaldata::{{PARTICLE_TYPE}}::ParallelState::Virtual );
-        result.push_back( copyOfParticle );
-      }
+    else {
       p++;
     }
   }

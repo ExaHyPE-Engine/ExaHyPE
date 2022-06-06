@@ -213,11 +213,6 @@
       static void finishedTraversal();
 
       /**
-       * Just an early check if there's something to be sieved at all.
-       */
-      static bool thereAreParticlesToBeSieved();
-
-      /**
        * Mark whole particle set as set of particles which can't be lifted
        *
        * Contained particles always have to be local ones. Otherwise something
@@ -233,7 +228,11 @@
        */
       void particlesCanNotBeLiftedLocally();
 
-      static {{NAMESPACE | join("::")}}::{{CLASSNAME}}  getParticlesToBeSievedIntoVertex(
+      /**
+       * Takes the current particle set and finds those particles which can be
+       * sieved into current vertex.
+       */
+      {{NAMESPACE | join("::")}}::{{CLASSNAME}}  getParticlesToBeSievedIntoVertex(
         const peano4::datamanagement::VertexMarker& marker,
         double sortingTolerance
       );
@@ -247,7 +246,25 @@
         int totalLocalParticleCountInThisTree,
         int totalVirtualParticleCountInThisTree
       );
-  };
+
+      /**
+       * This routine returns a deep copy of all the particles that are to be
+       * sieved. Use this before you start to traverse your local domain. As
+       * it is a deep copy, you have to invoke deleteParticles().
+       */
+      static {{NAMESPACE | join("::")}}::{{CLASSNAME}} getSievedParticlesForNextGridTraversal();
+
+      /**
+       * This is a deep delete
+       *
+       * The normal clear() operation only eliminates the list to the pointers,
+       * but not the pointers themselves. In a way, it is a shallow free. This
+       * routine runs over each individual particle and erases them. Other
+       * pointers or pointer sets that also point to these particles thus become
+       * invalid.
+       */
+      void deleteParticles();
+};
 
 {% for item in NAMESPACE -%}
 }
