@@ -486,7 +486,7 @@ init_setup.add_action_set( peano4.toolbox.particles.InsertParticlesAlongCartesia
     #include "equation_of_state.h"
     """,
   computational_domain_offset=[0.0, 0.0]
-  , guard="( std::abs( 0.5 - particle->getX(1) ) < 0.01 ) and (particle->getX(1) - 0.5 > 0 )"
+  , guard="( std::abs( 0.5 - particle->getX(1) ) < 1e-3 ) and (particle->getX(1) - 0.5 > 0 )"
   ))
 
 init_setup.add_action_set( particle_tree_analysis )
@@ -846,21 +846,21 @@ touch_particle_last_time_compute_kernel = """
         
         /* SWIFT's calcualtion based on Wcount */
 
-/*
         const double n_sum = localParticle->getWcount() * h_old_dim;
         const double n_target = hydro_eta_dim;
         const double f = n_sum - n_target;
         const double f_prime = localParticle->getWcount_dh() * h_old_dim +
                                   HYDRO_DIMENSIONS * localParticle->getWcount() * h_old_dim_minus_one;
-*/
         
         /* Price's calculation based on Omega */
+/*
 
         const double one_over_dh_drho_a = - HYDRO_DIMENSIONS * localParticle->getDensity() / h_old;
         const double rho_sum = localParticle->getDensity();
         const double rho_target = m_a * std::pow( SMOOTH_L_FAC / h_old, HYDRO_DIMENSIONS);
         const double f = rho_sum - rho_target; // Price et al 2018 sign
         const double f_prime = - one_over_dh_drho_a * localParticle->getOmega(); // Opposite sign of Price et al 2018
+*/
 
         // Debug
 //        assertion6( f_prime !=0, localParticle->toString(), f_prime, h_new, h_old, HYDRO_h_MIN, HYDRO_h_MAX );       
@@ -1041,12 +1041,15 @@ force_non_sym_particles.add_action_set( peano4.toolbox.particles.ParticleParticl
       /* Variable smoothing length term */
       
       /* SWIFT "f" */
-//      const double f_ab = 1.0 - localParticle ->getF()/m_b;
-//      const double f_ba = 1.0 - activeParticle->getF()/m_a;
+      const double f_ab = 1.0 - localParticle ->getF()/m_b;
+      const double f_ba = 1.0 - activeParticle->getF()/m_a;
 
       /* Price "Omega" */
-      const double f_ab = 1.0 / localParticle->getOmega() ;
-      const double f_ba = 1.0 / activeParticle->getOmega() ;
+//      const double f_ab = 1.0 / localParticle->getOmega() ;
+//      const double f_ba = 1.0 / activeParticle->getOmega() ;
+
+//      const double f_ab = 1.0;
+//      const double f_ba = 1.0;
 
       /* Compute gradient terms */
       const double P_over_rho2_a = P_a / (rho_a * rho_a) * f_ab;
