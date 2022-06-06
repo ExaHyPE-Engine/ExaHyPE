@@ -84,6 +84,8 @@ particle.data.add_attribute(energy_kin_attr)
 particle.data.add_attribute(energy_pot_attr)
 particle.data.add_attribute(energy_tot_attr)
 
+particle.data.add_attribute( dastgen2.attributes.Enumeration("MoveState",["New","NotMovedYet","Moved"]) )
+
 particles = peano4.toolbox.particles.ParticleSet(particle)
 
 # This particle has to be added to the project. This way the project knows that we are working with this guy. We associate the particle with the vertices, as we work with the pidt (particle in dual tree) algorithm. 
