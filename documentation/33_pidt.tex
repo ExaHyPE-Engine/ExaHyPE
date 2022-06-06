@@ -273,9 +273,9 @@ longer associated to its nearest vertex.
 We have to sort them.
 
 
-\Peano\ automatically maintains these relations if you add the action set 
-\texttt{peano4.toolbox.particles.UpdateParticleGridAssociation} to your
-algorithmic steps.
+\Peano\ automatically maintains these relations if you add the action set
+\linebreak \texttt{peano4.toolbox.particles.UpdateParticleGridAssociation} to
+your algorithmic steps.
 As the convention relies on a smaller-equals sign, adaptive meshes are
 automatically supported.
 If particles travel through your domain and the mesh is not very fine, they
@@ -314,6 +314,37 @@ Here is the general invariant however:
   data. Therefore, you have to call \texttt{finishTraversal()} on the used
   particle set in your main routine on each rank after all rank-local traversals have termined.
 \end{remark}
+
+
+\noindent
+Most codes move a particle in \texttt{touchVertexLastTime}.
+This is convenient as we know that any particle associated with the respective
+vertex also has been touched for the last time.
+We can safely update it.
+However, if we change a particle's position and merge
+\texttt{UpdateParticleGridAssociation} into the respective algorithmic step,
+then the particle might immediately be associated to another vertex after it has
+been updated and this vertex might later on become subject of \linebreak
+\texttt{touchVertexLastTime}.
+
+
+Consequently, it can happen that a particle is updated multiple times.
+To avoid this, I recommend that you add a boolean to each vertex:
+
+\begin{code}
+particle.data.add_attribute( dastgen2.attributes.Enumeration("MoveState",["New","NotMovedYet","Moved"]) )
+\end{code}
+
+\noindent
+You can then set the value of \texttt{MoveState} to \texttt{NotMovedYet} in 
+\texttt{touchVertexFirstTime}, set it to \texttt{Moved} once we update the
+position, but only update its position as long as it has not been moved yet.
+Peano's built-in re-assignment of positions does only move particles around 
+when vertices are touched for the last time, so there's no risk here that you 
+update a particle in \texttt{touchVertexLastTime}, assign it to a particle which
+has not been used yet and then reset it wrongly to not moved again.
+
+
 
 \section{Dual tree traversal and particle-particle interaction}
 \label{section:pidt:particle-particle-interaction}
