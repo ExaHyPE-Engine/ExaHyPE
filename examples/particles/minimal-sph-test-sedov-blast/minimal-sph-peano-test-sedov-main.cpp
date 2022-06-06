@@ -171,6 +171,7 @@ int main(int argc, char** argv) {
 
         /* "Initialize time-step" */
         peano4::parallel::SpacetreeSet::getInstance().traverse(initTimeStep);
+        examples::particles::vertexdata::ParticleSet::finishedTraversal();
 
         /* For first time-step, we need to pre-compute some quantities before drifting */
         /* This is because we must start the simulation with a "K1" step */
