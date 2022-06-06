@@ -305,8 +305,8 @@ print("Kernel Root value (sigma): " + CUBIC_SPLINE_SIGMA)
 
 # parameters specific to a given problem (e.g., Sedov blast, Sod wave, ...)
 BLAST_CENTER = "0.5" 
-BLAST_ENERGY = "0.2"
-#BLAST_ENERGY = "1.0"
+#BLAST_ENERGY = "0.2"
+BLAST_ENERGY = "1.0"
 SPIKE_RADIUS = "0.03"
 
 project.constants.export_const_with_type("HYDRO_DIMENSIONS"  , str(HYDRO_DIMENSIONS), "double")
@@ -486,7 +486,7 @@ init_setup.add_action_set( peano4.toolbox.particles.InsertParticlesAlongCartesia
     #include "equation_of_state.h"
     """,
   computational_domain_offset=[0.0, 0.0]
-  , guard="( std::abs( 0.5 - particle->getX(1) ) < 1e-3 ) and (particle->getX(1) - 0.5 > 0 )"
+  , guard="( std::abs( 0.5 - particle->getX(1) ) < 4e-3 ) and (particle->getX(1) - 0.5 > 0 )"
   ))
 
 init_setup.add_action_set( particle_tree_analysis )
