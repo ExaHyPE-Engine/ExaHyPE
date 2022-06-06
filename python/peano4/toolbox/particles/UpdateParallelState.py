@@ -84,6 +84,11 @@ class UpdateParallelState(ActionSet):
 
 
   __Template_EndTraversal = jinja2.Template("""
+  vertexdata::{{PARTICLES_CONTAINER}}::updateParticleCountStatistics(
+    _numberOfLocalParticles,
+    _numberOfVirtualParticles
+  );
+  
   logInfo( 
     "endTraversal()",
     "tree=" <<  _treeNumber <<

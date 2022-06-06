@@ -126,16 +126,20 @@ int main(int argc, char** argv) {
       loadBalancer.finishStep();
     }
 
+    examples::particles::vertexdata::ParticleSet::finishedTraversal();
     logInfo( "main()", "finished grid construction after " << gridConstructionSteps << " steps, start to add particles" )
 
     examples::particles::observers::Init initObserver;
     peano4::parallel::SpacetreeSet::getInstance().traverse(initObserver);
+    examples::particles::vertexdata::ParticleSet::finishedTraversal();
     logInfo( "main()", "added particles" )
 
     examples::particles::observers::Plot plotObserver;
     peano4::parallel::SpacetreeSet::getInstance().traverse(plotObserver);
+    examples::particles::vertexdata::ParticleSet::finishedTraversal();
     logInfo( "main()", "dumped initial condition" )
-        
+
+
 //    /* Initial step (e.g., re-arrange the particles into a particular configuration) */
 //    examples::particles::observers::RearrangeAtStart rearrangeObserver;
 //    peano4::parallel::SpacetreeSet::getInstance().traverse(rearrangeObserver);

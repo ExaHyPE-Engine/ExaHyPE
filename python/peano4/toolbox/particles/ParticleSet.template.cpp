@@ -12,6 +12,12 @@ tarch::multicore::BooleanSemaphore   {{NAMESPACE | join("::")}}::{{CLASSNAME}}::
 {{NAMESPACE | join("::")}}::{{CLASSNAME}}     {{NAMESPACE | join("::")}}::{{CLASSNAME}}::_particlesThatHaveToBeSieved;
 bool              {{NAMESPACE | join("::")}}::{{CLASSNAME}}::_thereAreParticlesToBeSieved;
 
+int {{NAMESPACE | join("::")}}::{{CLASSNAME}}::_numberOfLifts = 0;
+int {{NAMESPACE | join("::")}}::{{CLASSNAME}}::_numberOfDrops = 0;
+int {{NAMESPACE | join("::")}}::{{CLASSNAME}}::_numberOfAssignmentsToGlobalSieve = 0;
+int {{NAMESPACE | join("::")}}::{{CLASSNAME}}::_totalLocalParticleCount = 0;
+int {{NAMESPACE | join("::")}}::{{CLASSNAME}}::_totalVirtualParticleCount = 0;
+
 
 #if PeanoDebug>=1
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::setDebugX( const tarch::la::Vector<Dimensions,double>& data ) {
@@ -199,6 +205,77 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::clone( const {{CLASSNAME}}& othe
 
 
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishedTraversal() {
+  int globalNumberOfLifts            = 0;
+  int globalNumberOfDrops            = 0;
+  int globalNumberOfSieveAssignments = 0;
+  int globalLocalNumberOfParticles   = 0;
+  int globalVirtualNumberOfParticles = 0;
+  #if Parallel
+  tarch::mpi::Rank::getInstance().reduce(
+    &globalNumberOfLifts,
+    &_numberOfLifts,
+    1, MPI_DOUBLE,
+    MPI_SUM,
+    [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); }
+  );
+  tarch::mpi::Rank::getInstance().reduce(
+    &globalNumberOfDrops,
+    &_numberOfDrops,
+    1, MPI_DOUBLE,
+    MPI_SUM,
+    [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); }
+  );
+  tarch::mpi::Rank::getInstance().reduce(
+    &globalNumberOfSieveAssignments,
+    &_numberOfAssignmentsToGlobalSieve,
+    1, MPI_DOUBLE,
+    MPI_SUM,
+    [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); }
+  );
+  tarch::mpi::Rank::getInstance().reduce(
+    &globalLocalNumberOfParticles,
+    &_totalLocalParticleCount,
+    1, MPI_DOUBLE,
+    MPI_SUM,
+    [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); }
+  );
+  tarch::mpi::Rank::getInstance().reduce(
+    &globalVirtualNumberOfParticles,
+    &_totalVirtualParticleCount,
+    1, MPI_DOUBLE,
+    MPI_SUM,
+    [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); }
+  );
+  #else
+  globalNumberOfLifts            = _numberOfLifts;
+  globalNumberOfDrops            = _numberOfDrops;
+  globalNumberOfSieveAssignments = _numberOfAssignmentsToGlobalSieve;
+  globalLocalNumberOfParticles   = _totalLocalParticleCount;
+  globalVirtualNumberOfParticles = _totalVirtualParticleCount;
+  #endif
+
+  if ( tarch::mpi::Rank::getInstance().isGlobalMaster() ) {
+    logInfo(
+      "finishedTraversal()",
+      "#lifts=" << globalNumberOfLifts <<
+      ", #drops=" << globalNumberOfDrops <<
+      ", #sieves=" << globalNumberOfSieveAssignments <<
+      ", #local (real) particles=" << globalLocalNumberOfParticles <<
+      ", #virtual particles=" << globalVirtualNumberOfParticles
+    );
+  }
+
+  assertion( globalLocalNumberOfParticles==300 or globalLocalNumberOfParticles==0);
+
+  _numberOfLifts = 0;
+  _numberOfDrops = 0;
+  _numberOfAssignmentsToGlobalSieve = 0;
+  _totalLocalParticleCount = 0;
+  _totalVirtualParticleCount = 0;
+
+  for (auto& p: _particlesThatHaveToBeSieved) {
+    delete p;
+  }
   for (auto& p: _particlesThatHaveToBeSieved) {
     delete p;
   }
@@ -210,9 +287,6 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishedTraversal() {
   );
   _thereAreParticlesToBeSieved = not _particlesThatHaveToBeSieved.empty();
   _particlesThatCanNotBeLiftedWithinTheirTree.clear();
-  if (not _particlesThatHaveToBeSieved.empty()) {
-    logInfo( "finishedTraversal()", "\#particles to be sieved=" << _particlesThatHaveToBeSieved.size() );
-  }
 }
 
 
@@ -233,6 +307,8 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::particlesCanNotBeLiftedLocally()
     globaldata::{{PARTICLE_TYPE}}* copyOfParticle = new globaldata::{{PARTICLE_TYPE}}(*p);
     _particlesThatCanNotBeLiftedWithinTheirTree.push_back(copyOfParticle);
   }
+
+  _numberOfAssignmentsToGlobalSieve += size();
 }
 
 
@@ -244,37 +320,68 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::particlesCanNotBeLiftedLocally()
 
   {{NAMESPACE | join("::")}}::{{CLASSNAME}} result;
   {{CLASSNAME}}::iterator p = _particlesThatHaveToBeSieved.begin();
-  while ( p!=_particlesThatHaveToBeSieved.end() ) {
-    if (
-      marker.isContainedInAdjacentCells( (*p)->getX(), 0.5 * sortingTolerance)
-      and
-      tarch::la::min( marker.h() ) >= (*p)->getCutOffRadius()
-      and
-      (
-        tarch::la::min( marker.h() ) / 3.0 < (*p)->getCutOffRadius()
-        or
-        not marker.hasBeenRefined()
-      )
-    ) {
-      logDebug( "getParticlesToBeSievedIntoVertex(...)", "drop particle " << (*p)->toString() << " from global sieve list into vertex " << marker.toString() );
 
-      if ( marker.isLocal() ) {
-        logInfo( "getParticlesToBeSievedIntoVertex(...)", "remove particle from sieve list, as vertex is local. This improves the efficiency and it ensures that particles right in-between two vertices are not added twice per tree" );
+  auto sieveParticle = [&](globaldata::{{PARTICLE_TYPE}}* p) {
+    return
+        marker.isContainedInAdjacentCells( p->getX(), 0.5 * sortingTolerance)
+        and
+        tarch::la::min( marker.h() ) >= p->getCutOffRadius()
+        and
+        (
+          tarch::la::min( marker.h() ) / 3.0 < p->getCutOffRadius()
+          or
+          not marker.hasBeenRefined()
+        );
+  };
+
+  tarch::multicore::Lock lock( _semaphore );
+  if ( marker.isLocal() ) {
+    while ( p!=_particlesThatHaveToBeSieved.end() ) {
+      if ( sieveParticle(*p) ) {
+        logDebug( "getParticlesToBeSievedIntoVertex(...)", "drop particle " << (*p)->toString() << " from global sieve list into vertex " << marker.toString() );
+        logDebug( "getParticlesToBeSievedIntoVertex(...)", "remove particle from sieve list, as vertex is local. This improves the efficiency and it ensures that particles right in-between two vertices are not added twice per tree" );
         (*p)->setParallelState( globaldata::{{PARTICLE_TYPE}}::ParallelState::Virtual );
         result.push_back( *p );
         p = _particlesThatHaveToBeSieved.erase(p);
       }
       else {
-        globaldata::{{PARTICLE_TYPE}}* copyOfParticle = new globaldata::{{PARTICLE_TYPE}}(**p);
-        copyOfParticle->setParallelState( globaldata::{{PARTICLE_TYPE}}::ParallelState::Virtual );
-        result.push_back( copyOfParticle );
         p++;
       }
     }
-    else {
+  }
+  else { // marker is not local, i.e. adjacent to domain boundary
+    while ( p!=_particlesThatHaveToBeSieved.end() ) {
+      if ( sieveParticle(*p) ) {
+        logDebug( "getParticlesToBeSievedIntoVertex(...)", "drop particle " << (*p)->toString() << " from global sieve list into vertex " << marker.toString() );
+        globaldata::{{PARTICLE_TYPE}}* copyOfParticle = new globaldata::{{PARTICLE_TYPE}}(**p);
+        copyOfParticle->setParallelState( globaldata::{{PARTICLE_TYPE}}::ParallelState::Virtual );
+        result.push_back( copyOfParticle );
+      }
       p++;
     }
   }
   return result;
 }
 
+
+void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::updateLiftDropStatistics(
+  int numberOfLiftsInThisTree,
+  int numberOfDropsInThisTree
+) {
+  tarch::multicore::Lock lock( _semaphore );
+  if (numberOfLiftsInThisTree) {
+    logWarning( "update(...)", "got one" );
+  }
+  _numberOfLifts      += numberOfLiftsInThisTree;
+  _numberOfDrops      += numberOfDropsInThisTree;
+}
+
+
+void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::updateParticleCountStatistics(
+  int totalLocalParticleCountInThisTree,
+  int totalVirtualParticleCountInThisTree
+) {
+  tarch::multicore::Lock lock( _semaphore );
+  _totalLocalParticleCount += totalLocalParticleCountInThisTree;
+  _totalVirtualParticleCount += totalVirtualParticleCountInThisTree;
+}

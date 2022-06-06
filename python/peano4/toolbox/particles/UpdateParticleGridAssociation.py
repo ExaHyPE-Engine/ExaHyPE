@@ -98,6 +98,8 @@ class UpdateParticleGridAssociation(ActionSet):
      
    The mapping keeps some statistics on any state update. These statistics
    however are not shared via MPI or synchronised between different threads. 
+   It is the job of the ParticleSet to ensure that we have a proper global
+   bookkeeping.
    
    
    ## Where and how to use
@@ -151,11 +153,15 @@ class UpdateParticleGridAssociation(ActionSet):
   _numberOfLifts = 0;
   _numberOfDrops = 0;
   _numberOfEliminations = 0;
-  _numberOfAssignmentsToGlobalSieve = 0;
 """ )
 
 
   __Template_EndTraversal = jinja2.Template("""
+  vertexdata::{{PARTICLES_CONTAINER}}::updateLiftDropStatistics(
+    _numberOfLifts,
+    _numberOfDrops
+  );
+
   logInfo( 
     "endTraversal()",
     "tree " <<  _treeNumber <<
@@ -166,8 +172,7 @@ class UpdateParticleGridAssociation(ActionSet):
     ", eliminated (duplicate) particles=" << _numberOfEliminations <<
     {% endif %}
     ", lifts=" << _numberOfLifts << 
-    ", drops=" << _numberOfDrops <<
-    ", assignments-to-global-sieve=" << _numberOfAssignmentsToGlobalSieve
+    ", drops=" << _numberOfDrops
   );
 """ )
 
@@ -242,7 +247,6 @@ class UpdateParticleGridAssociation(ActionSet):
   }
   else {
     liftParticles[ i ].particlesCanNotBeLiftedLocally();
-    _numberOfAssignmentsToGlobalSieve += liftParticles[ i ].size();
   }
 """)
 
@@ -346,7 +350,6 @@ class UpdateParticleGridAssociation(ActionSet):
   }
   else {
     fineGridVertex{{PARTICLES_CONTAINER}}.particlesCanNotBeLiftedLocally();
-    _numberOfAssignmentsToGlobalSieve += fineGridVertex{{PARTICLES_CONTAINER}}.size();
   }
 """)  
 
@@ -395,7 +398,6 @@ class UpdateParticleGridAssociation(ActionSet):
   } 
   else if (not liftParticles.empty()) {
     liftParticles.particlesCanNotBeLiftedLocally();
-    _numberOfAssignmentsToGlobalSieve += liftParticles.size();
   }
 """)  
 
@@ -418,9 +420,9 @@ class UpdateParticleGridAssociation(ActionSet):
       result += self.__Template_Sieve.render(**self.d)
     if operation_name==ActionSet.OPERATION_TOUCH_VERTEX_LAST_TIME:
       if self._lift_always:
-        result  = self.__Template_LiftParticlesFurtherAway.render(**self.d)
+        result = self.__Template_LiftParticlesFurtherAway.render(**self.d)
       else:    
-        result  = self.__Template_ValidateParticleLevelAssociation.render(**self.d)
+        result = self.__Template_ValidateParticleLevelAssociation.render(**self.d)
       if self._eliminate_spatial_duplicates:        
         result += self.__Template_EliminateDuplicateParticles.render(**self.d)
     if operation_name==ActionSet.OPERATION_TOUCH_CELL_LAST_TIME:
@@ -461,10 +463,8 @@ class UpdateParticleGridAssociation(ActionSet):
   int  _treeNumber;
   int  _numberOfParticleReassignmentsOnCurrentLevel;
   int  _numberOfLifts;
-  int  _numberOfAssignmentsToGlobalSieve;
   int  _numberOfDrops;
   int  _numberOfEliminations;
-  
 """).render(**self.d)
 
 

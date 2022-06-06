@@ -51,6 +51,12 @@
       static {{CLASSNAME}}     _particlesThatHaveToBeSieved;
       static bool              _thereAreParticlesToBeSieved;
 
+      static int _numberOfLifts;
+      static int _numberOfDrops;
+      static int _numberOfAssignmentsToGlobalSieve;
+      static int _totalLocalParticleCount;
+      static int _totalVirtualParticleCount;
+
       #if PeanoDebug>=1
       private:
        tarch::la::Vector<Dimensions,double> _debugX;
@@ -190,6 +196,19 @@
        * Has to be called after the traversal has finished on each rank by the
        * main, i.e. do not call it within the action sets. You may not call this
        * routine more than once per rank per traversal.
+       *
+       *
+       * ## Algorithmic steps
+       *
+       * - First, we exchange all the global stats and plot them. Once we have
+       *   plotted them (only on rank 0), we can reset all stats to zero.
+       * - Delete all the sieve particles which have not been sieved. We note
+       *   that only particles within the domain are taken from the sieve set
+       *   and inserted into hte mesh. For particles close to domain boundaries,
+       *   we create copies and insert these copies. The preimage consequently
+       *   has to be deleted at one point, i.e. here in this routine.
+       * - We roll over the globally lifted particles into the sieve set for the
+       *   next mesh traversal.
        */
       static void finishedTraversal();
 
@@ -217,6 +236,16 @@
       static {{NAMESPACE | join("::")}}::{{CLASSNAME}}  getParticlesToBeSievedIntoVertex(
         const peano4::datamanagement::VertexMarker& marker,
         double sortingTolerance
+      );
+
+      static void updateLiftDropStatistics(
+        int numberOfLiftsInThisTree,
+        int numberOfDropsInThisTree
+      );
+
+      static void updateParticleCountStatistics(
+        int totalLocalParticleCountInThisTree,
+        int totalVirtualParticleCountInThisTree
       );
   };
 
