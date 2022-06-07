@@ -78,27 +78,31 @@ class ParticleTreeAnalysis(ActionSet):
 
   __Template_TouchCellFirstTime = jinja2.Template( """
   fineGridCell{{CELL_DATA_NAME}}.setNumberOfParticles(0);
-  fineGridCell{{CELL_DATA_NAME}}.setParentOfRefinedCell(false);
+  fineGridCell{{CELL_DATA_NAME}}.setParentOfRefinedCell( false );
 """)
 
              
   __Template_TouchCellLastTime = jinja2.Template("""
-  if (marker.hasBeenRefined()) {
-    coarseGridCell{{CELL_DATA_NAME}}.setParentOfRefinedCell(true);
+  int count = 0;
+  for (int i=0; i<TwoPowerD; i++) {
+    count += fineGridVertices{{PARTICLE_SET_NAME}}(i).size();
   }
-  else {
-    int count = 0;
-    for (int i=0; i<TwoPowerD; i++) {
-      count += fineGridVertices{{PARTICLE_SET_NAME}}(i).size();
-    }
-    fineGridCell{{CELL_DATA_NAME}}.setNumberOfParticles(count);
-  }
+  
+  fineGridCell{{CELL_DATA_NAME}}.setNumberOfParticles(
+    fineGridCell{{CELL_DATA_NAME}}.getNumberOfParticles()
+    +
+    count
+  );
   
   coarseGridCell{{CELL_DATA_NAME}}.setNumberOfParticles(
     coarseGridCell{{CELL_DATA_NAME}}.getNumberOfParticles() 
     +
     fineGridCell{{CELL_DATA_NAME}}.getNumberOfParticles()
   );
+
+  if ( marker.willBeRefined() ) {
+    coarseGridCell{{CELL_DATA_NAME}}.setParentOfRefinedCell( true );
+  }
 """)
 
 
