@@ -345,6 +345,18 @@ update a particle in \texttt{touchVertexLastTime}, assign it to a particle which
 has not been used yet and then reset it wrongly to not moved again.
 
 
+\begin{remark}
+ It is absolutely key that you never alter the particle positions throughout the
+ traversal. The only time you can set a new position is within
+ \texttt{touchVertexLastTime}. This \Peano's particle toolbox the time to
+ re-sort the particles in-between two traversals. 
+ If you use \texttt{UpdateParticleGridAssocation}, you typically combine it with
+ \linebreak \texttt{peano4.toolbox.particles.UpdateParallelState}.  
+ \texttt{UpdateParticleGridAssocation} should be the very first action set of a
+ traversal, and \texttt{UpdateParallelState} should follow immediatly after.
+\end{remark}
+
+
 
 \section{Dual tree traversal and particle-particle interaction}
 \label{section:pidt:particle-particle-interaction}
