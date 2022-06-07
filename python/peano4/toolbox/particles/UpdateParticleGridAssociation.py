@@ -247,7 +247,7 @@ class UpdateParticleGridAssociation(ActionSet):
   __Template_ValidateParticleLevelAssociation = jinja2.Template("""
   for (auto p: fineGridVertex{{PARTICLES_CONTAINER}} ) {
     assertion3(
-      marker.isContainedInAdjacentCells( p->getX(), 0.5*SortingTolerance ),
+      marker.isContainedInAdjacentCells( p->getX(), 0.5*(1.0+SortingTolerance) ),
       marker.x(),
       marker.toString(),
       p->toString()
@@ -269,25 +269,22 @@ class UpdateParticleGridAssociation(ActionSet):
   // list.
   for (int i=0; i<TwoPowerD; i++) {
     // Define inside for loop, as sieve will define it as well
-    const double CellToCutOffRadiusRatio = 0.5 * (1.0-SortingTolerance);
     vertexdata::{{PARTICLES_CONTAINER}}::iterator p = coarseGridVertices{{PARTICLES_CONTAINER}}(i).begin(); 
     while ( p!=coarseGridVertices{{PARTICLES_CONTAINER}}(i).end() ) {
       if ( 
-        tarch::la::min( marker.h() ) > CellToCutOffRadiusRatio * (*p)->getCutOffRadius()
+        tarch::la::min( marker.h() ) > (*p)->getCutOffRadius()
         and
-        marker.isContainedInAdjacentCells( (*p)->getX(), 0.5*SortingTolerance )
+        // You may never ever use some tolerance here: If you only drop a 
+        // particle into the slightly wrong vertex, its status likely won't
+        // get updated to local. The particle will hence be labelled as purely
+        // virtual and eventually disappear.
+        marker.isContainedInAdjacentCells( (*p)->getX(), 0.5 * (1.0-SortingTolerance) )
       ) {
-        logDebug( "touchVertexLastTime(...)", "drop particle " << (*p)->toString() << " into vertex " << marker.toString() );
         fineGridVertex{{PARTICLES_CONTAINER}}.push_back( *p );
         p = coarseGridVertices{{PARTICLES_CONTAINER}}(i).erase(p);
         _numberOfDrops++;
       }
       else p++;
-    }
-
-    for (auto& p: coarseGridVertices{{PARTICLES_CONTAINER}}(i)) {
-      bool cutOffRadiusSmallEnough = tarch::la::min( marker.h() ) > CellToCutOffRadiusRatio * p->getCutOffRadius();
-      logDebug( "touchVertexFirstTime(...)", "have not been able to drop particle " << p->toString() << " from coarse vertex " << coarseGridVertices{{PARTICLES_CONTAINER}}(i).toString() << " into vertex " << fineGridVertex{{PARTICLES_CONTAINER}}.toString() << ". cut-off small enough=" << cutOffRadiusSmallEnough );
     }
   }  
 """)
@@ -297,7 +294,7 @@ class UpdateParticleGridAssociation(ActionSet):
   if ( not _sieveParticles.empty() ) {
     vertexdata::{{PARTICLES_CONTAINER}} sievedParticles = _sieveParticles.getParticlesToBeSievedIntoVertex(
         marker,
-        SortingTolerance
+        1.0+SortingTolerance
       );
       
     _numberOfDrops += sievedParticles.size();
@@ -308,7 +305,7 @@ class UpdateParticleGridAssociation(ActionSet):
       sievedParticles.end()
     );
     
-    fineGridVertex{{PARTICLES_CONTAINER}}.eliminateSpatialDuplicates(false, SortingTolerance);
+    fineGridVertex{{PARTICLES_CONTAINER}}.eliminateSpatialDuplicates(false, 1.0+SortingTolerance);
   }
 """)  
   
@@ -456,6 +453,6 @@ class UpdateParticleGridAssociation(ActionSet):
   def get_static_initialisations(self,full_qualified_classname):
     return jinja2.Template("""
 namespace {
-  constexpr double SortingTolerance = 1.0 + 1e-8;
+  constexpr double SortingTolerance = 1e-8;
 }
 """).render(**self.d)    
