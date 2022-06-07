@@ -105,8 +105,8 @@ class ParticleAMR(ActionSet):
   if (
     not refine
     and
-    not marker.willBeRefined()
-    and
+//    not marker.willBeRefined()
+//    and
     fineGridCell{{CELL_DATA_NAME}}.getNumberOfParticles() > {{MIN_PARTICLES_PER_CELL}}
   ) {
     double h = std::numeric_limits<double>::max();
@@ -123,10 +123,15 @@ class ParticleAMR(ActionSet):
   if (
     not refine
     and
-    not fineGridCell{{CELL_DATA_NAME}}.getParentOfRefinedCell()
+    not marker.willBeRefined()
     and
-    fineGridCell{{CELL_DATA_NAME}}.getNumberOfParticles() <= {{MIN_PARTICLES_PER_CELL}}
+    not marker.hasBeenRefined()
+    and
+    not coarseGridCell{{CELL_DATA_NAME}}.getParentOfRefinedCell()
+    and
+    coarseGridCell{{CELL_DATA_NAME}}.getNumberOfParticles() <= {{MIN_PARTICLES_PER_CELL}}
   ) {
+    assertion( fineGridCell{{CELL_DATA_NAME}}.getNumberOfParticles() <= {{MIN_PARTICLES_PER_CELL}} );
     erase = true;
   }
 
@@ -136,8 +141,8 @@ class ParticleAMR(ActionSet):
     newEntry.setOffset( marker.getOffset() );
     newEntry.setWidth( marker.h() );
     newEntry.setH( marker.h()/3.0 );
-    logDebug( "touchCellLastTime(...)", "add " << newEntry.toString() );
     _localGridControlEvents.push_back(newEntry);
+    logDebug( "touchCellLastTime(...)", "add " << newEntry.toString() );
   }
   else if (erase) {
     peano4::grid::GridControlEvent newEntry;
@@ -146,6 +151,7 @@ class ParticleAMR(ActionSet):
     newEntry.setWidth( marker.h() );
     newEntry.setH( marker.h() );
     _localGridControlEvents.push_back(newEntry);
+    logDebug( "touchCellLastTime(...)", "add " << newEntry.toString() );
   }
 """)
 
