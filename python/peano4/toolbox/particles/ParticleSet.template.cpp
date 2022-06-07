@@ -15,7 +15,7 @@ bool              {{NAMESPACE | join("::")}}::{{CLASSNAME}}::_thereAreParticlesT
 int {{NAMESPACE | join("::")}}::{{CLASSNAME}}::_numberOfLifts = 0;
 int {{NAMESPACE | join("::")}}::{{CLASSNAME}}::_numberOfDrops = 0;
 int {{NAMESPACE | join("::")}}::{{CLASSNAME}}::_numberOfAssignmentsToGlobalSieve = 0;
-int {{NAMESPACE | join("::")}}::{{CLASSNAME}}::_totalLocalParticleCount = 0;
+int {{NAMESPACE | join("::")}}::{{CLASSNAME}}::_totalRealParticleCount = 0;
 int {{NAMESPACE | join("::")}}::{{CLASSNAME}}::_totalVirtualParticleCount = 0;
 int {{NAMESPACE | join("::")}}::{{CLASSNAME}}::_totalEliminatedSpatialDuplicates = 0;
 
@@ -211,7 +211,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishedTraversal() {
   int globalNumberOfLifts            = 0;
   int globalNumberOfDrops            = 0;
   int globalNumberOfSieveAssignments = 0;
-  int globalLocalNumberOfParticles   = 0;
+  int globalRealNumberOfParticles   = 0;
   int globalVirtualNumberOfParticles = 0;
   int globalEliminatedSpatialDuplicates = 0;
   #if Parallel
@@ -237,8 +237,8 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishedTraversal() {
     [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); }
   );
   tarch::mpi::Rank::getInstance().reduce(
-    &globalLocalNumberOfParticles,
-    &_totalLocalParticleCount,
+    &globalRealNumberOfParticles,
+    &_totalRealParticleCount,
     1, MPI_INT,
     MPI_SUM,
     [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); }
@@ -261,7 +261,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishedTraversal() {
   globalNumberOfLifts               = _numberOfLifts;
   globalNumberOfDrops               = _numberOfDrops;
   globalNumberOfSieveAssignments    = _numberOfAssignmentsToGlobalSieve;
-  globalLocalNumberOfParticles      = _totalLocalParticleCount;
+  globalRealNumberOfParticles      = _totalRealParticleCount;
   globalVirtualNumberOfParticles    = _totalVirtualParticleCount;
   globalEliminatedSpatialDuplicates = _totalEliminatedSpatialDuplicates;
   #endif
@@ -272,16 +272,18 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishedTraversal() {
       "#lifts=" << globalNumberOfLifts <<
       ", #drops=" << globalNumberOfDrops <<
       ", #sieves=" << globalNumberOfSieveAssignments <<
-      ", #local (real) particles=" << globalLocalNumberOfParticles <<
+      ", #particles=" << globalRealNumberOfParticles <<
       ", #virtual particles=" << globalVirtualNumberOfParticles <<
       ", #eliminated particle duplicates=" << globalEliminatedSpatialDuplicates
     );
   }
 
+  if (globalRealNumberOfParticles==1) exit(-1);
+
   _numberOfLifts = 0;
   _numberOfDrops = 0;
   _numberOfAssignmentsToGlobalSieve = 0;
-  _totalLocalParticleCount = 0;
+  _totalRealParticleCount = 0;
   _totalVirtualParticleCount = 0;
   _totalEliminatedSpatialDuplicates = 0;
 
@@ -292,7 +294,8 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishedTraversal() {
     _particlesThatCanNotBeLiftedWithinTheirTree.begin(),
     _particlesThatCanNotBeLiftedWithinTheirTree.end()
   );
-  _particlesThatHaveToBeSieved.eliminateSpatialDuplicates( true, 1.0 + 1e-6 );
+  // this is important, but I don't know why
+  _particlesThatHaveToBeSieved.eliminateSpatialDuplicates( false, 1.0 + 1e-6 );
   _thereAreParticlesToBeSieved = not _particlesThatHaveToBeSieved.empty();
   _particlesThatCanNotBeLiftedWithinTheirTree.clear();
 }
@@ -375,9 +378,6 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::updateLiftDropStatistics(
   int numberOfDropsInThisTree
 ) {
   tarch::multicore::Lock lock( _semaphore );
-  if (numberOfLiftsInThisTree) {
-    logWarning( "update(...)", "got one" );
-  }
   _numberOfLifts      += numberOfLiftsInThisTree;
   _numberOfDrops      += numberOfDropsInThisTree;
 }
@@ -388,6 +388,6 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::updateParticleCountStatistics(
   int totalVirtualParticleCountInThisTree
 ) {
   tarch::multicore::Lock lock( _semaphore );
-  _totalLocalParticleCount += totalLocalParticleCountInThisTree;
+  _totalRealParticleCount += totalLocalParticleCountInThisTree;
   _totalVirtualParticleCount += totalVirtualParticleCountInThisTree;
 }

@@ -54,7 +54,7 @@
       static int _numberOfLifts;
       static int _numberOfDrops;
       static int _numberOfAssignmentsToGlobalSieve;
-      static int _totalLocalParticleCount;
+      static int _totalRealParticleCount;
       static int _totalVirtualParticleCount;
       static int _totalEliminatedSpatialDuplicates;
 
@@ -247,7 +247,7 @@
       );
 
       static void updateParticleCountStatistics(
-        int totalLocalParticleCountInThisTree,
+        int totalRealParticleCountInThisTree,
         int totalVirtualParticleCountInThisTree
       );
 
