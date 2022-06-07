@@ -17,7 +17,8 @@ class UpdateParallelState(ActionSet):
    ## Statistics 
      
    The mapping keeps some statistics on any state update. These statistics
-   however are not shared via MPI. 
+   however are not shared via MPI. Instead, we hand them over to the 
+   particle set which then can consolidate the data among ranks and cores.
     
    
    ## State transitions
@@ -57,7 +58,9 @@ class UpdateParallelState(ActionSet):
    
    Please add this action set as soon as possible to your code. This ensures
    that the touchCellLastTime() is called as late as possible and likely 
-   takes any particle movement into account.
+   takes any particle movement into account. In most codes, this action set
+   will be the second one used, while UpdateParticleGridAssociation is the 
+   first one.
    
    If a particle changes its position in touchVertexLastTime() and leaves
    the current domain, we will not be able to spot this. We will need one
@@ -68,12 +71,11 @@ class UpdateParallelState(ActionSet):
    totally sufficient to update it.
    
   """
-  def __init__(self,particle_set, guard="true"):
+  def __init__(self,particle_set):
     self._particle_set = particle_set
     self.d = {}
     self.d[ "PARTICLE" ]                      = particle_set.particle_model.name
     self.d[ "PARTICLES_CONTAINER" ]           = particle_set.name
-    self.d[ "GUARD" ]                         = guard
 
 
   __Template_BeginTraversal = jinja2.Template("""
@@ -101,17 +103,16 @@ class UpdateParallelState(ActionSet):
 
   """
   
-  Flag those particles which are definitely inside
+  Flag those particles which are definitely inside. As we are really
+  aggressive in throwing particles away, there's no guard here.
   
   """
   __Template_TouchCellLastTime = jinja2.Template("""
-if ( {{GUARD}} ) {
-  // run over all adjacent vertices
-  for (int i=0; i<TwoPowerD; i++) {
-    for (auto& p: fineGridVertices{{PARTICLES_CONTAINER}}(i) ) {
-      if ( marker.isContained(p->getX()) ) {
-        p->setNewParallelState( globaldata::{{PARTICLE}}::NewParallelState::Local );
-      }
+// run over all adjacent vertices
+for (int i=0; i<TwoPowerD; i++) {
+  for (auto& p: fineGridVertices{{PARTICLES_CONTAINER}}(i) ) {
+    if ( marker.isContained(p->getX()) ) {
+      p->setNewParallelState( globaldata::{{PARTICLE}}::NewParallelState::Local );
     }
   }
 }
@@ -132,8 +133,6 @@ if ( {{GUARD}} ) {
    
   """
   __Template_DetermineNewParallelStatus = jinja2.Template("""
-  if ( {{GUARD}} ) {
-  // @docu klarmachen, dass nicht idempotent, d.h. das status-Update darf wirklich nur 1x pro Sweep dabei sein
     auto p = fineGridVertex{{PARTICLES_CONTAINER}}.begin();
     while (p!=fineGridVertex{{PARTICLES_CONTAINER}}.end()) {
       if ( 
@@ -143,7 +142,6 @@ if ( {{GUARD}} ) {
       ) {
         logDebug( "touchVertexLastTime()", "local status from previous sweep not confirmed on tree " << _treeNumber << ". Particle " << (*p)->toString() << " has left domain. Keep for the time being as a virtual particle" );
         (*p)->setParallelState( globaldata::{{PARTICLE}}::ParallelState::Virtual );
-        _numberOfVirtualParticles++;
         _numberOfLeavingParticles++;
         p++;
       }
@@ -185,7 +183,6 @@ if ( {{GUARD}} ) {
         _treeNumber
       );
     }
-  }
 """)
 
 
