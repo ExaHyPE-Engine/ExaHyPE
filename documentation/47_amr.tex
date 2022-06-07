@@ -1,0 +1,57 @@
+\chapter{Adaptive mesh refinement}
+\label{section:amr}
+
+\Peano\ realises a multi-step refinement and erasing\footnote{I try to speak of
+refine and erase and not of refine and coarsen, as the latter is a term used in
+a multigrid context and usually means that you still keep the fine data
+somewhere. In contrast, \Peano's erase means that the grid is really thrown
+away.} strategy.
+
+\begin{enumerate}
+  \item Each subpartition asks the action set (clone) for the refinement and
+  coarsening decisions at the startup of the mesh traversal. For this, they
+  query \texttt{getGridControlEvents()}.
+  \item The mesh traversal uses this information to trigger erases or
+  refinements.
+  \item In the subsequent mesh traversal, the mesh is actually altered.
+\end{enumerate}
+
+
+\section{or-based refinement and vertex lifecycle}
+
+\begin{remark}
+ This is something I still have to write.
+\end{remark}
+
+
+\section{Multi-action set usage pattern}
+
+In many \Peano\ applications, the refinement pattern is not known a priori.
+Instead, the action sets build up the knowledge where to refine or coarsen:
+They start with an empty \texttt{std::vector< peano4::grid::GridControlEvent >},
+and push back events throughout the grid run-through.
+As action sets are not persistent in-between mesh traversal sweeps, as codes
+might switch between different action sets, and as \Peano\ clones one action set
+per subdomain (again, the number of subdomains per rank can change over time),
+we have to be careful with the data management. 
+
+
+A clear pattern is to have a static \texttt{std::vector<
+peano4::grid::GridControlEvent >}. In this case, an action set can build up a 
+local set of control events, and commit them to the static set.
+The static set is then returned by \texttt{getGridControlEvents()} which
+consequently erases it to accept new events.
+To make this work, we actually have to work with two static sets: the currently
+active one and a new one, as each subspacetree will query
+\texttt{getGridControlEvents()} independently.
+It is not clear where to realise the roll-over best.
+It can't be triggered by \texttt{endTraversal()}, as this one, again, is called
+per rank-local subdomain.
+Most codes thus realise the roll-over in the main routine.
+
+
+If you work with multiple action sets and an algorithm which switches between
+the different ones, you will have to centralise the static control events.
+One action set might feed into the event, while the next one delivers from this
+centralised repository.
+
