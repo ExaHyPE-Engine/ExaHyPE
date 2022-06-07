@@ -133,8 +133,8 @@ int main(int argc, char** argv) {
     logInfo( "main()", "dumped initial condition" )
         
     /* Main loop */
-    for (int i=0; i<2000; i++) {
-      for (int j=0; j<30; j++) { /* Numbers of time-steps between two output snapshots */
+    for (int i=0; i<100; i++) {
+      for (int j=0; j<20; j++) { /* Numbers of time-steps between two output snapshots */
         logInfo( "main()", "run timestep" )
 
         /* 
