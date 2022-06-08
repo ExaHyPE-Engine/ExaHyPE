@@ -145,13 +145,18 @@ class ParticleAMR(ActionSet):
     logDebug( "touchCellLastTime(...)", "add " << newEntry.toString() );
   }
   else if (erase) {
+    // we can erase here pretty aggressively, as we ensure via the grammar and
+    // the check of the coarse cell that we don't coarsen stuff away which will
+    // immediately be re-added again
+    // @todo genau (1.0+RefinementTolerance). 
     peano4::grid::GridControlEvent newEntry;
     newEntry.setRefinementControl( peano4::grid::GridControlEvent::RefinementControl::Erase );
-    newEntry.setOffset( marker.getOffset() - marker.h()*RefinementTolerance );
-    newEntry.setWidth( marker.h() * (2.0 + 2.0*RefinementTolerance) );
-    newEntry.setH( marker.h() * (1.0+RefinementTolerance) );
+    newEntry.setOffset( marker.getOffset() - marker.h()*(1.0+RefinementTolerance) );
+    newEntry.setWidth( marker.h() * (3.0 + 2.0*RefinementTolerance) );
+    newEntry.setH( marker.h() );
     _localGridControlEvents.push_back(newEntry);
-    logDebug( "touchCellLastTime(...)", "add " << newEntry.toString() );
+    if ( tarch::la::min( marker.h() ) < 0.1 ) 
+    logInfo( "touchCellLastTime(...)", "add " << newEntry.toString() );
   }
 """)
 
