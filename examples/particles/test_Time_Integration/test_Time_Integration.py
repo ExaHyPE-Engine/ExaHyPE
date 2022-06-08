@@ -639,7 +639,6 @@ project.solversteps.add_step(impose_BC_particles)
 rearrange_particles = peano4.solversteps.Step( "RearrangeAtStart", add_user_defined_actions=False )
 rearrange_particles.use_vertex(particles)
 rearrange_particles.use_cell(particle_tree_analysis.cell_marker)
-rearrange_particles.add_action_set( peano4.toolbox.particles.UpdateParticleGridAssociation(particles) )
 rearrange_particles.add_action_set( peano4.toolbox.particles.ParticleParticleInteraction(
   particle_set=particles,
   particle_particle_interaction_kernel="""
@@ -670,6 +669,8 @@ rearrange_particles.add_action_set( peano4.toolbox.particles.ParticleParticleInt
 #include <cmath>
 """
   ))
+rearrange_particles.add_action_set( peano4.toolbox.particles.UpdateParticleGridAssociation(particles) )
+rearrange_particles.add_action_set( peano4.toolbox.particles.UpdateParallelState(particles) )
 #rearrange_particles.add_action_set( peano4.toolbox.particles.ParticleAMR(particles,particle_tree_analysis,min_particles_per_cell=10) )
 rearrange_particles.add_action_set( particle_tree_analysis )
 project.solversteps.add_step(rearrange_particles)
@@ -691,6 +692,8 @@ print_solution = peano4.solversteps.Step( "Plot", add_user_defined_actions=False
 print_solution.use_vertex(particles)
 print_solution.use_cell(particle_tree_analysis.cell_marker)
 print_solution.add_action_set( particle_tree_analysis )
+print_solution.add_action_set( peano4.toolbox.particles.UpdateParticleGridAssociation(particles) )
+print_solution.add_action_set( peano4.toolbox.particles.UpdateParallelState(particles) )
 print_solution.add_action_set( peano4.toolbox.PlotGridInPeanoBlockFormat( filename="grid", time_stamp_evaluation=peano4.toolbox.PlotGridInPeanoBlockFormat.CountTimeSteps ) )
 print_solution.add_action_set( particle_plotter )
 

@@ -357,6 +357,26 @@ has not been used yet and then reset it wrongly to not moved again.
 \end{remark}
 
 
+\noindent
+If you move around particles, it is important that you merge the two update
+action sets into the action set where you change the particle position (in the
+last access of a vertex) plus into the subsequent grid sweep: 
+Once the particle position has changed, \Peano\ tries to associate the particle
+again to the right vertex.
+If the associativity however has changed, it might (temporarily) move particles
+to a coarser level. 
+It is the subsequent grid sweep that then sorts the particles again into the
+right resolution of the mesh plus associates it with the right vertex.
+So it needs access to \texttt{UpdateParticleGridAssocation}.
+
+
+A similar argument holds if you parallelise:
+If a particle leaves a domain, the owning tree sends it out by the end of the
+mesh sweep.
+The particle is now in transition.
+It is the subsequent grid sweep which works it into the target tree and updates
+its parallel state.
+
 
 \section{Dual tree traversal and particle-particle interaction}
 \label{section:pidt:particle-particle-interaction}
