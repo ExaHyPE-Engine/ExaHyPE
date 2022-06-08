@@ -3,7 +3,7 @@
 
 #include "Writer.h"
 
-#include "../config.h"
+#include "config.h"
 #include "../data/PatchData.h"
 
 #include "tarch/logging/Log.h"

@@ -4,7 +4,7 @@
 #include <string>
 #include <limits>
 
-#include "../config.h"
+#include "config.h"
 
 
 #include "output/VTUWriter.h"

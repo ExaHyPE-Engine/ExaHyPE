@@ -8,7 +8,7 @@
 #include "peano4/peano.h"
 #include "peano4/parallel/Node.h"
 
-#include "../config.h"
+#include "config.h"
 
 
 
