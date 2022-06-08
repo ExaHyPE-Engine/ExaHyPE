@@ -132,7 +132,7 @@ void runBenchmarks(int patches) {
     )> kernel, std::string markerName, bool computeCFL ) {
 
     constexpr int MaxHostTasks = 5;
-    ::exahype2::CellData patchData[MaxHostTasks] = { patches, patches, patches, patches };
+    ::exahype2::CellData patchData[MaxHostTasks] = { patches, patches, patches, patches, patches };
 
     for (int hostTask=0; hostTask<MaxHostTasks; hostTask++)
     for (int i=0; i<patches; i++) {
@@ -142,7 +142,7 @@ void runBenchmarks(int patches) {
       patchData[hostTask].QOut[i]        = new double[ (EulerOnGPU::NumberOfFiniteVolumesPerAxisPerPatch)*(EulerOnGPU::NumberOfFiniteVolumesPerAxisPerPatch)*(EulerOnGPU::NumberOfFiniteVolumesPerAxisPerPatch)*EulerOnGPU::NumberOfUnknowns];
     }
 
-    tarch::timing::Watch watch( "::", "main()", false );
+    tarch::timing::Watch singleKernelWatch( "::", "main()", false );
     kernel(
       device,
       patchData[0],
@@ -151,10 +151,10 @@ void runBenchmarks(int patches) {
       false ,
       computeCFL
     );
-    watch.stop();
-    logInfo("main()", "completed measurements for single thread to device " << device << ", " << markerName << ": " << watch.getCalendarTime() << " / " << (watch.getCalendarTime()/patches/EulerOnGPU::NumberOfFiniteVolumesPerAxisPerPatch/EulerOnGPU::NumberOfFiniteVolumesPerAxisPerPatch/EulerOnGPU::NumberOfFiniteVolumesPerAxisPerPatch) );
+    singleKernelWatch.stop();
+    logInfo("main()", "completed measurements for single thread to device " << device << ", " << markerName << ": " << singleKernelWatch.getCalendarTime() << " / " << (singleKernelWatch.getCalendarTime()/patches/EulerOnGPU::NumberOfFiniteVolumesPerAxisPerPatch/EulerOnGPU::NumberOfFiniteVolumesPerAxisPerPatch/EulerOnGPU::NumberOfFiniteVolumesPerAxisPerPatch) );
 
-    tarch::timing::Watch watch( "::", "main()", false );
+    tarch::timing::Watch parallelKernelWatch( "::", "main()", false );
     #if defined(GPUOffloadingOMP)
     #pragma omp parallel for
     for (int hostTask=1; hostTask<MaxHostTasks; hostTask++) {
@@ -187,10 +187,8 @@ void runBenchmarks(int patches) {
     }
     taskGroup.wait();
     #endif
-
-
-    watch.stop();
-    logInfo("main()", "completed measurements for many threads to device " << device << ", " << markerName << ": " << watch.getCalendarTime() << " / " << (watch.getCalendarTime()/patches/EulerOnGPU::NumberOfFiniteVolumesPerAxisPerPatch/EulerOnGPU::NumberOfFiniteVolumesPerAxisPerPatch/EulerOnGPU::NumberOfFiniteVolumesPerAxisPerPatch) );
+    parallelKernelWatch.stop();
+    logInfo("main()", "completed measurements for " << (MaxHostTasks-1) << " threads to device " << device << ", " << markerName << ": " << parallelKernelWatch.getCalendarTime() << " / " << (parallelKernelWatch.getCalendarTime()/patches/EulerOnGPU::NumberOfFiniteVolumesPerAxisPerPatch/EulerOnGPU::NumberOfFiniteVolumesPerAxisPerPatch/EulerOnGPU::NumberOfFiniteVolumesPerAxisPerPatch/(MaxHostTasks-1)) );
 
     for (int hostTask=0; hostTask<MaxHostTasks; hostTask++)
     for (int i=0; i<patches; i++) {
