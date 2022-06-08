@@ -17,7 +17,52 @@ away.} strategy.
 \end{enumerate}
 
 
-\section{or-based refinement and vertex lifecycle}
+\section{or-based refinement and refinement arguments}
+
+\begin{definition}
+  In \Peano, a cell is refined, if one of its vertices carries a refinement
+  flag.
+  That is, we flag vertices (not cells), and the cells are refined if the or
+  combination over all vertices yields true.
+\end{definition}
+
+\noindent
+Further to the definition above, we realise some simple policies which can be
+summarised as conservative refinement:
+
+\begin{enumerate}
+  \item All refinement and erase instructions are ``at least'' instructions.
+  \Peano\ will match them, but it might always decide to make the mesh slighlty
+  finer. Notably, it might ignore erase instructions.
+  \item \Peano\ adds or removes at most one grid level per mesh traversal.
+\end{enumerate}
+
+\noindent
+\Peano's dynamic AMR is realiesd via \texttt{GridControlEvent}s.
+They mark a certain area within the domain and clarify which resolution you
+would like to have within this area.
+Each event is also marked with a refine or erase marker, i.e.~you can specify
+whether you'd expect \Peano\ to refine towards this resolution or erase mesh
+parts up to a certain level of mesh detail.
+
+
+\Peano\ will label a vertex as refine, if any of its adjacent cells overlaps
+with a refinement event.
+\Peano\ will label vertices as ``to be erased'' (i.e.~remove their refined
+flag), if all of its adjacent cells fit into an erase area.
+The code will glue various events together, i.e.~if you have a patchwork of
+refine events, it will create one large refine event.
+
+\begin{remark}
+  If you want to refine a region, create a refinement event which coincides with
+  the cell size which you want to refine.
+  If you want to erase a grid region, create a similar event, but then blow it
+  up by a factor of three.
+  Otherwise, \Peano\ might simply ignore it.
+\end{remark}
+
+
+\section{Vertex lifecycle}
 
 \begin{remark}
  This is something I still have to write.
