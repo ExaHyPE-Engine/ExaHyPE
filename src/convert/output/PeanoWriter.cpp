@@ -3,7 +3,7 @@
 #include <vector>
 #include <list>
 
-#include "../config.h"
+#include "config.h"
 #include "convert/input/PeanoTextPatchFileReader.h"
 
 #include "tarch/Assertions.h"

@@ -5,7 +5,7 @@
 
 
 #include <string>
-#include "../config.h"
+#include "config.h"
 
 
 #ifdef Parallel

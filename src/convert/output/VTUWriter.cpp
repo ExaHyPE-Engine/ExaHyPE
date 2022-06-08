@@ -2,7 +2,7 @@
 #include <unordered_map>
 #include <vector>
 
-#include "../config.h"
+#include "config.h"
 #include "convert/input/PeanoTextPatchFileReader.h"
 
 #include "VTUWriter.h"

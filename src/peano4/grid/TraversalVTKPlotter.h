@@ -15,7 +15,7 @@
 #include "tarch/plotter/griddata/unstructured/vtk/VTUTextFileWriter.h"
 
 
-#include "../config.h"
+#include "config.h"
 
 
 namespace peano4 {
