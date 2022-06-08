@@ -392,9 +392,9 @@ int main(int argc, char** argv) {
   const bool isPeanoComputeNode = not tarch::mpi::Rank::getInstance().isGlobalMaster();
 
   #if Dimensions==2
-  for (int patches=1; patches<=65536; patches*=2) {
+  for (int patches=1; patches<=1024*2*2*2*2; patches*=2) {
   #else
-  for (int patches=1; patches<=2048; patches*=2) {
+  for (int patches=1; patches<=1024*2; patches*=2) {
   #endif
     std::stringstream msg;
     msg << "benchmark-" << patches;
