@@ -92,6 +92,8 @@ class ParticleAMR(ActionSet):
 
 
   __Template_TouchCellLastTime = jinja2.Template("""
+  constexpr double RefinementTolerance = 0.1;
+  
   bool refine  = false;
   bool erase   = false;
   if (
@@ -105,8 +107,8 @@ class ParticleAMR(ActionSet):
   if (
     not refine
     and
-//    not marker.willBeRefined()
-//    and
+    not marker.willBeRefined()
+    and
     fineGridCell{{CELL_DATA_NAME}}.getNumberOfParticles() > {{MIN_PARTICLES_PER_CELL}}
   ) {
     double h = std::numeric_limits<double>::max();
@@ -115,21 +117,19 @@ class ParticleAMR(ActionSet):
       h = std::min( h, fineGridVertices{{PARTICLE_SET}}(i).getMinCutOffRadius() );
     }
 
-    if (h < tarch::la::min(marker.h())/3.0 ) {
+    if (h < tarch::la::min(marker.h())/3.0/(1.0+RefinementTolerance) ) {
       refine = true;
     }
   }
 
   if (
-    not refine
+    // I only study the finest refine cells within the tree and
+    // then I try to find those which shouldn't be refined
+    marker.hasBeenRefined() and marker.willBeRefined()
     and
-    not marker.willBeRefined()
-    and
-    not marker.hasBeenRefined()
-    and
-    not coarseGridCell{{CELL_DATA_NAME}}.getParentOfRefinedCell()
-    and
-    coarseGridCell{{CELL_DATA_NAME}}.getNumberOfParticles() <= {{MIN_PARTICLES_PER_CELL}}
+    not fineGridCell{{CELL_DATA_NAME}}.getParentOfRefinedCell()
+    and    
+    fineGridCell{{CELL_DATA_NAME}}.getNumberOfParticles() <= {{MIN_PARTICLES_PER_CELL}}
   ) {
     assertion( fineGridCell{{CELL_DATA_NAME}}.getNumberOfParticles() <= {{MIN_PARTICLES_PER_CELL}} );
     erase = true;
@@ -147,9 +147,9 @@ class ParticleAMR(ActionSet):
   else if (erase) {
     peano4::grid::GridControlEvent newEntry;
     newEntry.setRefinementControl( peano4::grid::GridControlEvent::RefinementControl::Erase );
-    newEntry.setOffset( marker.getOffset() );
-    newEntry.setWidth( marker.h() );
-    newEntry.setH( marker.h() );
+    newEntry.setOffset( marker.getOffset() - marker.h()*RefinementTolerance );
+    newEntry.setWidth( marker.h() * (2.0 + 2.0*RefinementTolerance) );
+    newEntry.setH( marker.h() * (1.0+RefinementTolerance) );
     _localGridControlEvents.push_back(newEntry);
     logDebug( "touchCellLastTime(...)", "add " << newEntry.toString() );
   }
@@ -160,7 +160,10 @@ class ParticleAMR(ActionSet):
   static tarch::multicore::BooleanSemaphore semaphore;
   tarch::multicore::Lock lock(semaphore);
 
+  // insert and then merge immediately to reduce the 
+  // event count
   _gridControlEvents.insert( _gridControlEvents.end(), _localGridControlEvents.begin(), _localGridControlEvents.end() );
+  _gridControlEvents = peano4::grid::merge( _gridControlEvents );
 """)
 
 
@@ -211,5 +214,6 @@ bool """ + full_qualified_classname + """::_haveHandedOutGridControlEvents = fal
 #include "tarch/multicore/Lock.h"
 #include "vertexdata/{{PARTICLE_SET}}.h"
 #include "globaldata/{{PARTICLE}}.h"
+#include "peano4/grid/grid.h"
 """ )
     return result.render(**self.d)
