@@ -378,6 +378,22 @@ It is the subsequent grid sweep which works it into the target tree and updates
 its parallel state.
 
 
+\begin{definition}
+ \emph{Tunneling} means that a particle moves more than one mesh size per time
+ step.
+ In the context of \Peano's multiscale tree structure, this is equivalent to
+ particles which travel more than their cut-off radius per step.
+\end{definition}
+
+
+\noindent
+Tunneling arises if cut-off radii change suddenly, and if meshes are extremely
+refined where they should likely not refine.
+\Peano\ does support tunneling in principle, but you can tell the update script
+if you want to get a warning if particles tunnel---in some applications, this is
+unphysical.
+
+
 \section{Dual tree traversal and particle-particle interaction}
 \label{section:pidt:particle-particle-interaction}
 

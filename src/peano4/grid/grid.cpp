@@ -60,7 +60,6 @@ peano4::grid::GridVertex peano4::grid::createVertex(
 
 std::vector< peano4::grid::GridControlEvent > peano4::grid::merge( std::vector< GridControlEvent >   events, const double Tolerance ) {
   logTraceInWith1Argument( "merge(...)", events.size() );
-  // @todo Docu
 
   std::list< peano4::grid::GridControlEvent > refineEvents;
   std::list< peano4::grid::GridControlEvent > eraseEvents;
@@ -72,7 +71,7 @@ std::vector< peano4::grid::GridControlEvent > peano4::grid::merge( std::vector< 
       refineEvents.push_back(p);
     }
   }
-  logInfo( "merge(...)", "have a total of " << events.size() << " event(s) consisting of " << refineEvents.size() << " refine and " << eraseEvents.size() << " erase events" );
+  logDebug( "merge(...)", "have a total of " << events.size() << " event(s) consisting of " << refineEvents.size() << " refine and " << eraseEvents.size() << " erase events" );
 
   internal::removeEraseEventsThatAreCancelledByRefineEvents( refineEvents, eraseEvents );
   logDebug( "merge(...)", "reduced to " << eraseEvents.size() << " erase event(s) by eliminating erase events that overlap with refinement");
