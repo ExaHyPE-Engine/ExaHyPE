@@ -347,10 +347,10 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::particlesCanNotBeLiftedLocally()
     return
         marker.isContainedInAdjacentCells( p->getX(), 0.5 * sortingTolerance)
         and
-        tarch::la::min( marker.h() ) >= p->getCutOffRadius()
+        tarch::la::min( marker.h() ) >= 2.0 * p->getCutOffRadius()
         and
         (
-          tarch::la::min( marker.h() ) / 3.0 < p->getCutOffRadius()
+          tarch::la::min( marker.h() ) / 3.0 < 2.0 * p->getCutOffRadius()
           or
           not marker.hasBeenRefined()
         );
