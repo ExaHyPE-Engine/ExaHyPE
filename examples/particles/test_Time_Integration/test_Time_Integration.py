@@ -27,6 +27,7 @@ modes = {
 parser = argparse.ArgumentParser(description='ExaHyPE 2 - Euler benchmarking script')
 parser.add_argument("-m",     "--mode",               dest="mode",                         default="release",           help="|".join(modes.keys()) )
 parser.add_argument("-c",     "--clean",              dest="clean_temporary_directories",  action="store_true",         help="Remove temporary directories before script starts" )
+parser.add_argument("-p",     "--plot",               dest="plot",                         action="store_true",        help="Plot result" )
 parser.add_argument("-r",     "--cut-off",            dest="cut_off_radius",               default=0.1,                 help="Radius guiding AMR around particle" )
 args = parser.parse_args()
 
@@ -129,7 +130,7 @@ T = np.sqrt( 4.0 * np.pi * np.pi * a * a * a /
                   (G_NEWTON * (M_SUN + M_EARTH)) ); # Period [s] */
 
 # Time-step size 
-dt = 1e-3 * T; # [s]
+dt = float(args.cut_off_radius)/10.0 * T; # [s]
 dt/= T;
 N = N_orbits / dt;
 GLOBAL_TIME_STEP_SIZE = str(dt)
@@ -152,6 +153,10 @@ project.constants.export_const_with_type("ECCENTRICITY", str(e), "double")
 project.constants.export_const_with_type("PERIOD", str(T), "double")
 project.constants.export_const_with_type("R_MIN", str(R_MIN), "double")
 project.constants.export_const_with_type("R_MAX", str(R_MAX), "double")
+if args.plot:
+  project.constants.export_const_with_type("PLOT", "true", "bool")
+else:
+  project.constants.export_const_with_type("PLOT", "false", "bool")
 
 ################################################################################################
 ###############################  Model the setup phases  #######################################
