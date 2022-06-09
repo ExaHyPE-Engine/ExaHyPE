@@ -80,10 +80,15 @@ namespace examples {
       void admconstraints(double* constraints, const double* const Q, const double* const gradQSerialised);
 
       /**
-       * A temporary test function, to output Hamilton constraint related term in theta, 3 terms: RPlusTwoNablaZNCP, RPlusTwoNablaZSrc, pure Src
+       * A temporary test function, to output Hamilton constraint related term in theta, 1 terms: RPlusTwoNablaZNCP
        */
       void ThetaOutputNCP(double* NCPterm, const double* const Q, const double* const gradQSerialised, int normal);
-      void ThetaOutputSrc(double* Srcterms, const double* const Q, const double* const gradQSerialised);
+      /**
+       * A temporary test function, to output some testing values 
+       * 0,1 entries: Hamilton constraint related term in theta, 2 terms: RPlusTwoNablaZSrc, pure Src
+       * 2-10 entry: no-symmetry version of R_ij
+       */
+      void TestingOutput(double* terms, const double* const Q, const double* const gradQSerialised);
 
       /**
        * This function is for the calculation of psi4, a quantity related to gravitional wave. 

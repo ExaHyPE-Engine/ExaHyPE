@@ -531,7 +531,7 @@ void examples::exahype2::ccz4::Psi4Calc(double* Psi4, const double* const Q, con
 #if defined(GPUOffloadingOMP)
 #pragma omp declare target
 #endif
-void examples::exahype2::ccz4::ThetaOutputSrc(double* Srcterms, const double* const Q, const double* const gradQSerialised)
+void examples::exahype2::ccz4::TestingOutput(double* terms, const double* const Q, const double* const gradQSerialised)
 {
     const double alpha = std::exp(std::fmax(-20., std::fmin(20.,Q[16])));
     //printf("alpha %f\n",alpha);
@@ -595,6 +595,12 @@ void examples::exahype2::ccz4::ThetaOutputSrc(double* Srcterms, const double* co
     for (int j = 0; j < 3; j++) dgup[k][m][l] -= g_contr[m][n]*g_contr[j][l]*2*DD[k][n][j];
 
     const double PP[3] = {Q[55], Q[56], Q[57]};
+    const double dPP[3][3] = {
+        {gradQin[55][0],gradQin[56][0],gradQin[57][0]},
+        {gradQin[55][1],gradQin[56][1],gradQin[57][1]},
+        {gradQin[55][2],gradQin[56][2],gradQin[57][2]}
+    };
+    const double delta[3][3]={{1,0,0},{0,1,0},{0,0,1}};
 
     double Christoffel[3][3][3]       = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
     double Christoffel_tilde[3][3][3] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
@@ -737,9 +743,19 @@ void examples::exahype2::ccz4::ThetaOutputSrc(double* Srcterms, const double* co
     for (int i = 0; i < 3; i++)
     for (int j = 0; j < 3; j++) Aupdown += Aex[i][j]*Aup[i][j];
 
-    memset(Srcterms, 0, 2*sizeof(double));
-    Srcterms[0]  =   RPlusTwoNablaZSrc;
-    Srcterms[1]  =   - Aupdown + (2.0/3.0)*traceK*traceK;
+    double RicciNoSym[3][3]={0,0,0,0,0,0,0,0,0};
+    for (int i = 0; i < 3; i++)
+    for (int j = 0; j < 3; j++)
+    {
+      RicciNoSym[i][j] = dPP[i][j]+PP[i]*PP[j];
+      for (int k = 0; k < 3; k++) RicciNoSym[i][j] += delta[i][j]*(dPP[k][k]-P[k]*P[k]);
+    }
+
+    memset(terms, 0, 2*sizeof(double));
+    terms[0]  =   RPlusTwoNablaZSrc;
+    terms[1]  =   - Aupdown + (2.0/3.0)*traceK*traceK;
+    for (int i = 0; i < 3; i++)
+    for (int j = 0; j < 3; j++) terms[2+i*3+j]=RicciNoSym[i][j];
 }
 #if defined(GPUOffloadingOMP)
 #pragma omp end declare target

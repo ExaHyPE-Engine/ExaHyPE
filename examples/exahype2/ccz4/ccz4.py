@@ -262,7 +262,7 @@ if __name__ == "__main__":
          side.
 
         """
-        self._auxiliary_variables = 6+3
+        self._auxiliary_variables = 6+3+9
 
         self._my_user_includes += """
 	#include "../CCZ4Kernels.h"
@@ -322,7 +322,7 @@ if __name__ == "__main__":
           }
           
           double ncpsum=0, ncp[1]={0};
-          double src[2]={ 0 };
+          double output[2+9]={ 0 };
           for (int d=0; d<3; d++)
           {
             ThetaOutputNCP(ncp,faceQ+2*d*59,faceDeltaQ+2*d*59,d);
@@ -330,10 +330,13 @@ if __name__ == "__main__":
             ThetaOutputNCP(ncp,faceQ+2*d*59+59,faceDeltaQ+2*d*59+59,d);
             ncpsum+=ncp[0];
           }
-          ThetaOutputSrc(src,reconstructedPatch+cellSerialised*(59+n_a_v),gradQ);
+          TestingOutput(output,reconstructedPatch+cellSerialised*(59+n_a_v),gradQ);
           reconstructedPatch[cellSerialised*(59+n_a_v)+59+6] = ncpsum / 2.0 / volumeH;
-          reconstructedPatch[cellSerialised*(59+n_a_v)+59+7] = src[0];
-          reconstructedPatch[cellSerialised*(59+n_a_v)+59+8] = src[1];
+          reconstructedPatch[cellSerialised*(59+n_a_v)+59+7] = output[0]; //RPlusTwoNablaZSrc
+          reconstructedPatch[cellSerialised*(59+n_a_v)+59+8] = output[1]; //pure src
+          for(int i=0;i<9;i++){
+            reconstructedPatch[cellSerialised*(59+n_a_v)+59+9+i] = output[2+i];
+          }
           
           //NaN detector here/////////////////////////////////
           /*for(int i=0;i<59;i++){
@@ -402,7 +405,6 @@ if __name__ == "__main__":
             for (int i=0; i<real_var; i++) {
               reconstructedPatch[cellSerialised*(real_var+aux_var)+real_var+i*3+d] =
                 ( reconstructedPatch[rightCellSerialised*(real_var+aux_var)+i] - reconstructedPatch[leftCellSerialised*(real_var+aux_var)+i] ) / 2.0 / volumeH;
-              if (isnan(reconstructedPatch[cellSerialised*(real_var+aux_var)+real_var+i*3+d])) {std::cout <<reconstructedPatch[rightCellSerialised*(real_var+aux_var)+i]<<" "<< reconstructedPatch[leftCellSerialised*(real_var+aux_var)+i] << std::endl;}
             }
 
           }
