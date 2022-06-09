@@ -92,8 +92,6 @@ class ParticleAMR(ActionSet):
 
 
   __Template_TouchCellLastTime = jinja2.Template("""
-  constexpr double RefinementTolerance = 0.1;
-  
   bool refine  = false;
   bool erase   = false;
   if (
@@ -107,7 +105,12 @@ class ParticleAMR(ActionSet):
   if (
     not refine
     and
-    not marker.willBeRefined()
+    (
+      not marker.willBeRefined()
+//      or
+ // oscillation protection
+//      not fineGridCell{{CELL_DATA_NAME}}.getParentOfRefinedCell()
+    )
     and
     fineGridCell{{CELL_DATA_NAME}}.getNumberOfParticles() > {{MIN_PARTICLES_PER_CELL}}
   ) {
@@ -117,7 +120,7 @@ class ParticleAMR(ActionSet):
       minDiameter = std::min( minDiameter, 2.0 * fineGridVertices{{PARTICLE_SET}}(i).getMinCutOffRadius() );
     }
 
-    if (minDiameter < tarch::la::min(marker.h())/3.0/(1.0+RefinementTolerance) ) {
+    if (minDiameter < tarch::la::min(marker.h())/3.0 ) {
       refine = true;
     }
   }
@@ -130,7 +133,24 @@ class ParticleAMR(ActionSet):
     not fineGridCell{{CELL_DATA_NAME}}.getParentOfRefinedCell()
     and    
     fineGridCell{{CELL_DATA_NAME}}.getNumberOfParticles() <= {{MIN_PARTICLES_PER_CELL}}
+//    coarseGridCell{{CELL_DATA_NAME}}.getNumberOfParticles() <= {{MIN_PARTICLES_PER_CELL}}
   ) {
+  
+  // we mark fine cells. If enough of these guys cluster, the code will erase
+  // das kann nicht funktionieren, weil jetzt die Superzelle dann nicht mehr
+  // rein passt, wenn sie mim Faktor 3 hochskaliert ist. 
+  // => doku davon
+/*
+  if (
+    not marker.hasBeenRefined() 
+    and 
+    not marker.willBeRefined()
+    and
+    not coarseGridCell{{CELL_DATA_NAME}}.getParentOfRefinedCell()
+    and    
+    fineGridCell{{CELL_DATA_NAME}}.getNumberOfParticles() <= {{MIN_PARTICLES_PER_CELL}}
+  ) { 
+*/
     assertion( fineGridCell{{CELL_DATA_NAME}}.getNumberOfParticles() <= {{MIN_PARTICLES_PER_CELL}} );
     erase = true;
   }
@@ -150,8 +170,10 @@ class ParticleAMR(ActionSet):
     // immediately be re-added again
     peano4::grid::GridControlEvent newEntry;
     newEntry.setRefinementControl( peano4::grid::GridControlEvent::RefinementControl::Erase );
-    newEntry.setOffset( marker.getOffset() - marker.h()*(1.0+RefinementTolerance) );
-    newEntry.setWidth( marker.h() * (3.0 + 2.0*RefinementTolerance) );
+    //constexpr double extendArea = 2.0;
+    constexpr double extendArea = 1.2;
+    newEntry.setOffset( marker.getOffset() - marker.h() * (extendArea-1.0) / 2.0);
+    newEntry.setWidth( marker.h() * extendArea );
     newEntry.setH( marker.h() );
     _localGridControlEvents.push_back(newEntry);
     logDebug( "touchCellLastTime(...)", "add " << newEntry.toString() );

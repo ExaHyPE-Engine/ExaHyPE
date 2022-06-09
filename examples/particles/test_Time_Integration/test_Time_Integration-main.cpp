@@ -133,6 +133,9 @@ int main(int argc, char** argv) {
     logInfo( "main()", "dumped initial condition" )
         
     /* Main loop */
+
+  //  const int TimeStepsInBetweenTwoSnapshots = 1.0/DT
+
     for (int i=0; i<50; i++) {
       for (int j=0; j<20; j++) { /* Numbers of time-steps between two output snapshots */
         logInfo( "main()", "run timestep: " << peano4::parallel::SpacetreeSet::getInstance().getGridStatistics().toString() );
