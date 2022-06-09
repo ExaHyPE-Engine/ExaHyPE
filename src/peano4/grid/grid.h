@@ -102,6 +102,8 @@ namespace peano4 {
      * into 2+2, we would also cover the boundary of the L shape. Therefore,
      * it is important that we construct the power set before we merge events.
      *
+     * The power set construction very quickly explodes, i.e. leads to a vast
+     * number of events. I thus manually truncate the creation of new events.
      */
     std::vector< GridControlEvent > merge( std::vector< GridControlEvent>  events, const double Tolerance = 0.1 );
 

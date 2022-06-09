@@ -337,7 +337,7 @@ void peano4::grid::reduceGridControlEvents( std::vector<GridControlEvent>& event
   int                           localSize   = events.size();
   int*                          sizes       = new int[ tarch::mpi::Rank::getInstance().getNumberOfRanks() ];
 
-  logInfo( "reduceGridControlEvents(...)", "feed local data of size " << localEvents.size() << " into allgather" );
+  logDebug( "reduceGridControlEvents(...)", "feed local data of size " << localEvents.size() << " into allgather" );
 
   MPI_Allgather(
     &localSize, 1, MPI_INT,
@@ -380,29 +380,42 @@ void peano4::grid::internal::generateEraseEventPowerset( std::list< peano4::grid
 
   std::list< peano4::grid::GridControlEvent > newCombinations;
 
+  constexpr int MaxEraseListSize = 256;
+
   do {
     newCombinations.clear();
 
     for (auto p: inputEvents)
     for (auto pp: inputEvents) {
-      if ( twoEventsAreAdjacent(p,pp) ) {
+      if (
+        (inputEvents.size()+newCombinations.size())<=MaxEraseListSize
+        and
+        twoEventsAreAdjacent(p,pp)
+      ) {
         GridControlEvent newEvent = createBoundingBoxEvent(p,pp);
 
         bool isAlreadyInSet = false;
         for (auto ppp: inputEvents) {
           isAlreadyInSet |= internal::equals( ppp, newEvent );
         }
+        for (auto ppp: newCombinations) {
+          isAlreadyInSet |= internal::equals( ppp, newEvent );
+        }
 
         if (not isAlreadyInSet) {
-          logDebug( "mergeAdjacentRefinementEvents(...)", "add new merged event " << newEvent.toString() << " created from " << p.toString() << "x" << pp.toString() );
+          logDebug( "mergeAdjacentRefinementEvents(...)", "create new merged event " << newEvent.toString() << " created from " << p.toString() << "x" << pp.toString() );
           newCombinations.push_back(newEvent);
+        }
+        else {
+          logDebug( "mergeAdjacentRefinementEvents(...)", "event " << newEvent.toString() << " is already in power set" );
         }
       }
     }
 
+    mergeAdjacentRefinementEvents( newCombinations );
+
+    logDebug( "mergeAdjacentRefinementEvents(...)", "add " << newCombinations.size() << " new events to power set" );
     inputEvents.insert( inputEvents.end(), newCombinations.begin(), newCombinations.end() );
   } while (not newCombinations.empty());
-
-
 }
 
