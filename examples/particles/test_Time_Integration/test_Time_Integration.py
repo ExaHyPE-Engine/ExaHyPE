@@ -130,8 +130,7 @@ T = np.sqrt( 4.0 * np.pi * np.pi * a * a * a /
                   (G_NEWTON * (M_SUN + M_EARTH)) ); # Period [s] */
 
 # Time-step size 
-dt = float(args.cut_off_radius)/10.0 * T; # [s]
-dt/= T;
+dt = float(args.cut_off_radius)/8.0; # [s]
 N = N_orbits / dt;
 GLOBAL_TIME_STEP_SIZE = str(dt)
 
