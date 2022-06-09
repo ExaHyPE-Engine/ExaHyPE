@@ -185,7 +185,7 @@ int main(int argc, char** argv) {
         examples::particles::vertexdata::ParticleSet::finishedTraversal();
       }
 
-      if (PLOT) {
+      if (examples::particles::PLOT) {
         /* Dump a snapshot after the number of time-steps done above */
         logInfo( "main()", "plot" );
         examples::particles::observers::Plot plotTimeStepObserver;
