@@ -93,6 +93,9 @@ namespace tarch {
     template<int Size, typename Scalar>
     Scalar volume(const Vector<Size,Scalar>& vector);
 
+    template<int Size, typename Scalar>
+    bool allEntriesAreTheSame(const Vector<Size,Scalar>& vector);
+
     /**
      * Computes the volume of the tetrahedron spanned by the Cartesian unit vectors
      * scaled by the corresponding components of the given vector.

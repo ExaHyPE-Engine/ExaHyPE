@@ -16,6 +16,17 @@ int tarch::la::count(
 }
 
 
+
+template<int Size, typename Scalar>
+bool tarch::la::allEntriesAreTheSame(const Vector<Size,Scalar>& vector) {
+  bool   result     = true;
+  for (int d=0; d<Size; d++) {
+    result &= tarch::la::equals( vector(d), vector(0) );
+  }
+  return result;
+}
+
+
 template<int Size, typename Scalar>
 int tarch::la::isEntryNan(
   const Vector<Size,Scalar >&  vector
