@@ -86,6 +86,14 @@ class ParticleTreeAnalysis(ActionSet):
 """)
 
              
+  __Template_CreateCell = jinja2.Template("""
+  fineGridCell{{CELL_DATA_NAME}}.setNumberOfParticles( std::numeric_limits<int>::max() );
+  fineGridCell{{CELL_DATA_NAME}}.setNewNumberOfParticles( 0 );
+  fineGridCell{{CELL_DATA_NAME}}.setParentOfRefinedCell( true );
+  fineGridCell{{CELL_DATA_NAME}}.setNewParentOfRefinedCell( true );
+""")
+  
+  
   __Template_TouchCellLastTime = jinja2.Template("""
   int count = 0;
   for (int i=0; i<TwoPowerD; i++) {
@@ -150,5 +158,7 @@ class ParticleTreeAnalysis(ActionSet):
       result = self.__Template_TouchCellFirstTime.render(**self.d)             
     if operation_name==ActionSet.OPERATION_TOUCH_CELL_LAST_TIME:
       result = self.__Template_TouchCellLastTime.render(**self.d)             
+    if operation_name==ActionSet.OPERATION_CREATE_CELL:
+      result = self.__Template_CreateCell.render(**self.d)             
     return result
 
