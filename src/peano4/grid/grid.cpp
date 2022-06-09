@@ -71,17 +71,17 @@ std::vector< peano4::grid::GridControlEvent > peano4::grid::merge( std::vector< 
       refineEvents.push_back(p);
     }
   }
-  logDebug( "merge(...)", "have a total of " << events.size() << " event(s) consisting of " << refineEvents.size() << " refine and " << eraseEvents.size() << " erase events" );
+  logInfo( "merge(...)", "have a total of " << events.size() << " event(s) consisting of " << refineEvents.size() << " refine and " << eraseEvents.size() << " erase events" );
 
   internal::removeEraseEventsThatAreCancelledByRefineEvents( refineEvents, eraseEvents );
-  logDebug( "merge(...)", "reduced to " << eraseEvents.size() << " erase event(s) by eliminating erase events that overlap with refinement");
+  logInfo( "merge(...)", "reduced to " << eraseEvents.size() << " erase event(s) by eliminating erase events that overlap with refinement");
 
-  internal::generateEraseEventPowerset( eraseEvents );
-  logDebug( "merge(...)", "power set of erase events hosts " << eraseEvents.size() << " event(s)");
+  //internal::generateEraseEventPowersetOfSquareEvents( eraseEvents );
+  //logInfo( "merge(...)", "power set of erase events hosts " << eraseEvents.size() << " event(s)");
 
   internal::mergeAdjacentRefinementEvents( refineEvents );
   internal::mergeAdjacentRefinementEvents( eraseEvents );
-  logDebug( "merge(...)", "merged refine events into " << refineEvents.size() << " event(s)");
+  logInfo( "merge(...)", "merged refine events into " << refineEvents.size() << " event(s)");
 
   std::vector< peano4::grid::GridControlEvent > result;
   result.insert( result.begin(), refineEvents.begin(), refineEvents.end() );
@@ -371,51 +371,3 @@ void peano4::grid::reduceGridControlEvents( std::vector<GridControlEvent>& event
   delete[] sizes;
   #endif
 }
-
-
-void peano4::grid::internal::generateEraseEventPowerset( std::list< peano4::grid::GridControlEvent >&  inputEvents ) {
-  const int initialInputSetSize = inputEvents.size();
-
-  bool haveAddedNewElementToPowerSet = true;
-
-  std::list< peano4::grid::GridControlEvent > newCombinations;
-
-  constexpr int MaxEraseListSize = 256;
-
-  do {
-    newCombinations.clear();
-
-    for (auto p: inputEvents)
-    for (auto pp: inputEvents) {
-      if (
-        (inputEvents.size()+newCombinations.size())<=MaxEraseListSize
-        and
-        twoEventsAreAdjacent(p,pp)
-      ) {
-        GridControlEvent newEvent = createBoundingBoxEvent(p,pp);
-
-        bool isAlreadyInSet = false;
-        for (auto ppp: inputEvents) {
-          isAlreadyInSet |= internal::equals( ppp, newEvent );
-        }
-        for (auto ppp: newCombinations) {
-          isAlreadyInSet |= internal::equals( ppp, newEvent );
-        }
-
-        if (not isAlreadyInSet) {
-          logDebug( "mergeAdjacentRefinementEvents(...)", "create new merged event " << newEvent.toString() << " created from " << p.toString() << "x" << pp.toString() );
-          newCombinations.push_back(newEvent);
-        }
-        else {
-          logDebug( "mergeAdjacentRefinementEvents(...)", "event " << newEvent.toString() << " is already in power set" );
-        }
-      }
-    }
-
-    mergeAdjacentRefinementEvents( newCombinations );
-
-    logDebug( "mergeAdjacentRefinementEvents(...)", "add " << newCombinations.size() << " new events to power set" );
-    inputEvents.insert( inputEvents.end(), newCombinations.begin(), newCombinations.end() );
-  } while (not newCombinations.empty());
-}
-

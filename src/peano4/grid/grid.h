@@ -104,6 +104,9 @@ namespace peano4 {
      *
      * The power set construction very quickly explodes, i.e. leads to a vast
      * number of events. I thus manually truncate the creation of new events.
+     *
+     * Remark: I had to remove this power set step, as it turned out to be too
+     * time consuming.
      */
     std::vector< GridControlEvent > merge( std::vector< GridControlEvent>  events, const double Tolerance = 0.1 );
 
@@ -327,25 +330,6 @@ namespace peano4 {
        * adjacent events of the same size.
        */
       bool twoEventsAreAdjacent( const peano4::grid::GridControlEvent& lhs, const peano4::grid::GridControlEvent& rhs );
-
-      /**
-       * I need the power set over erase events to ensure that I realise
-       * enough erases. See class documentation.
-       *
-       * ## Algorithm
-       *
-       * Run over all combinations of events. Construct the merged event
-       * if possible. This includes a merged event of p==pp, i.e. if I
-       * compare an event to itself. Check if the event is already in the
-       * power set. If not, store it in a temporary container. After you've
-       * run over all combinations, add the content of the temporary
-       * container to the input set and run again. If this temporary container
-       * still is empty after we have compared all potential event combinations,
-       * we know that we have already all possible combinations in the power
-       * set. So terminate.
-       */
-      void generateEraseEventPowerset( std::list< peano4::grid::GridControlEvent >&  inputEvents );
-
 
       peano4::grid::GridControlEvent createBoundingBoxEvent( const peano4::grid::GridControlEvent& lhs, const peano4::grid::GridControlEvent& rhs );
     }
