@@ -111,13 +111,13 @@ class ParticleAMR(ActionSet):
     and
     fineGridCell{{CELL_DATA_NAME}}.getNumberOfParticles() > {{MIN_PARTICLES_PER_CELL}}
   ) {
-    double h = std::numeric_limits<double>::max();
+    double minDiameter = std::numeric_limits<double>::max();
 
     for (int i=0; i<TwoPowerD; i++) {
-      h = std::min( h, fineGridVertices{{PARTICLE_SET}}(i).getMinCutOffRadius() );
+      minDiameter = std::min( minDiameter, 2.0 * fineGridVertices{{PARTICLE_SET}}(i).getMinCutOffRadius() );
     }
 
-    if (h < tarch::la::min(marker.h())/3.0/(1.0+RefinementTolerance) ) {
+    if (minDiameter < tarch::la::min(marker.h())/3.0/(1.0+RefinementTolerance) ) {
       refine = true;
     }
   }
@@ -148,15 +148,13 @@ class ParticleAMR(ActionSet):
     // we can erase here pretty aggressively, as we ensure via the grammar and
     // the check of the coarse cell that we don't coarsen stuff away which will
     // immediately be re-added again
-    // @todo genau (1.0+RefinementTolerance). 
     peano4::grid::GridControlEvent newEntry;
     newEntry.setRefinementControl( peano4::grid::GridControlEvent::RefinementControl::Erase );
     newEntry.setOffset( marker.getOffset() - marker.h()*(1.0+RefinementTolerance) );
     newEntry.setWidth( marker.h() * (3.0 + 2.0*RefinementTolerance) );
     newEntry.setH( marker.h() );
     _localGridControlEvents.push_back(newEntry);
-    if ( tarch::la::min( marker.h() ) < 0.1 ) 
-    logInfo( "touchCellLastTime(...)", "add " << newEntry.toString() );
+    logDebug( "touchCellLastTime(...)", "add " << newEntry.toString() );
   }
 """)
 
