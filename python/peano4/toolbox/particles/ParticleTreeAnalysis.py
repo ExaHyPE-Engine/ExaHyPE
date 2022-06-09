@@ -65,7 +65,9 @@ class ParticleTreeAnalysis(ActionSet):
     self._cell_data_name = particle_set.name + "CellStatistics"
     self.cell_marker     = peano4.datamodel.DaStGen2( self._cell_data_name )
     
+    self.cell_marker.data.add_attribute( dastgen2.attributes.Integer("NewNumberOfParticles") )
     self.cell_marker.data.add_attribute( dastgen2.attributes.Integer("NumberOfParticles") )
+    self.cell_marker.data.add_attribute( dastgen2.attributes.Boolean("NewParentOfRefinedCell") )
     self.cell_marker.data.add_attribute( dastgen2.attributes.Boolean("ParentOfRefinedCell") )
     
     self.d = {
@@ -77,8 +79,10 @@ class ParticleTreeAnalysis(ActionSet):
 
 
   __Template_TouchCellFirstTime = jinja2.Template( """
-  fineGridCell{{CELL_DATA_NAME}}.setNumberOfParticles(0);
-  fineGridCell{{CELL_DATA_NAME}}.setParentOfRefinedCell( false );
+  fineGridCell{{CELL_DATA_NAME}}.setNumberOfParticles(   fineGridCell{{CELL_DATA_NAME}}.getNewNumberOfParticles() );
+  fineGridCell{{CELL_DATA_NAME}}.setParentOfRefinedCell( fineGridCell{{CELL_DATA_NAME}}.getNewParentOfRefinedCell() );
+  fineGridCell{{CELL_DATA_NAME}}.setNewNumberOfParticles(0);
+  fineGridCell{{CELL_DATA_NAME}}.setNewParentOfRefinedCell( false );
 """)
 
              
@@ -88,20 +92,20 @@ class ParticleTreeAnalysis(ActionSet):
     count += fineGridVertices{{PARTICLE_SET_NAME}}(i).size();
   }
   
-  fineGridCell{{CELL_DATA_NAME}}.setNumberOfParticles(
-    fineGridCell{{CELL_DATA_NAME}}.getNumberOfParticles()
+  fineGridCell{{CELL_DATA_NAME}}.setNewNumberOfParticles(
+    fineGridCell{{CELL_DATA_NAME}}.getNewNumberOfParticles()
     +
     count
   );
   
-  coarseGridCell{{CELL_DATA_NAME}}.setNumberOfParticles(
-    coarseGridCell{{CELL_DATA_NAME}}.getNumberOfParticles() 
+  coarseGridCell{{CELL_DATA_NAME}}.setNewNumberOfParticles(
+    coarseGridCell{{CELL_DATA_NAME}}.getNewNumberOfParticles() 
     +
-    fineGridCell{{CELL_DATA_NAME}}.getNumberOfParticles()
+    fineGridCell{{CELL_DATA_NAME}}.getNewNumberOfParticles()
   );
 
   if ( marker.willBeRefined() ) {
-    coarseGridCell{{CELL_DATA_NAME}}.setParentOfRefinedCell( true );
+    coarseGridCell{{CELL_DATA_NAME}}.setNewParentOfRefinedCell( true );
   }
 """)
 
