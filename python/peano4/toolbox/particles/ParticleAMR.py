@@ -92,8 +92,35 @@ class ParticleAMR(ActionSet):
 
 
   __Template_TouchCellLastTime = jinja2.Template("""
-  bool refine  = false;
-  bool erase   = false;
+  /*
+    
+   Erase
+   =====
+   
+   If we want to erase a cell, we actually make the region that is to be 
+   erased slightly bigger. While we can pick this blow-up factor arbitrarily
+   (up to a factor of three might make sense in some cases), but if we make 
+   is 2.0, then an erased cell covers half of its neighbour. If we have a 
+   cell which hosts a particle, this cell will then maybe not coarsen, but 
+   all of its neighbours do, so the cell is eliminated. This triggers a 
+   mesh oscillation. So the factor should either be smaller than 2.0, or we
+   have to veto that an area with particles is overwritten. Indeed we go 
+   down the latter route and mark cells that we may not erase with a refine
+   event which describes the mesh status quo.
+         
+   
+   This is a tricky part. Our idea is that we mark only examine refined cells
+   one level above the finest mesh. These are cells which will be refined and
+   have been refined, and also carry only few particles such that we could
+   safely erase their children. While we only examine refined cells, we do not
+   examine refined cells which have refined children. To find this out, we
+   look at the flag getParentOfRefinedCell().
+   
+  */
+  bool enforceKeep  = false;
+  bool refine       = false;
+  bool erase        = false;
+  
   if (
     not marker.willBeRefined()
     and
@@ -105,12 +132,7 @@ class ParticleAMR(ActionSet):
   if (
     not refine
     and
-    (
-      not marker.willBeRefined()
-//      or
- // oscillation protection
-//      not fineGridCell{{CELL_DATA_NAME}}.getParentOfRefinedCell()
-    )
+    not marker.willBeRefined()
     and
     fineGridCell{{CELL_DATA_NAME}}.getNumberOfParticles() > {{MIN_PARTICLES_PER_CELL}}
   ) {
@@ -123,58 +145,54 @@ class ParticleAMR(ActionSet):
     if (minDiameter < tarch::la::min(marker.h())/3.0 ) {
       refine = true;
     }
+    else {
+      enforceKeep = true;
+    }
   }
 
+
   if (
-    // I only study the finest refine cells within the tree and
-    // then I try to find those which shouldn't be refined
+    not enforceKeep
+    and
+    not refine
+    and 
     marker.hasBeenRefined() and marker.willBeRefined()
     and
     not fineGridCell{{CELL_DATA_NAME}}.getParentOfRefinedCell()
     and    
     fineGridCell{{CELL_DATA_NAME}}.getNumberOfParticles() <= {{MIN_PARTICLES_PER_CELL}}
-//    coarseGridCell{{CELL_DATA_NAME}}.getNumberOfParticles() <= {{MIN_PARTICLES_PER_CELL}}
   ) {
-  
-  // we mark fine cells. If enough of these guys cluster, the code will erase
-  // das kann nicht funktionieren, weil jetzt die Superzelle dann nicht mehr
-  // rein passt, wenn sie mim Faktor 3 hochskaliert ist. 
-  // => doku davon
-/*
-  if (
-    not marker.hasBeenRefined() 
-    and 
-    not marker.willBeRefined()
-    and
-    not coarseGridCell{{CELL_DATA_NAME}}.getParentOfRefinedCell()
-    and    
-    fineGridCell{{CELL_DATA_NAME}}.getNumberOfParticles() <= {{MIN_PARTICLES_PER_CELL}}
-  ) { 
-*/
     assertion( fineGridCell{{CELL_DATA_NAME}}.getNumberOfParticles() <= {{MIN_PARTICLES_PER_CELL}} );
     erase = true;
   }
 
+  constexpr double RefinementThreshold = 1.1;
   if (refine) {
     peano4::grid::GridControlEvent newEntry;
     newEntry.setRefinementControl( peano4::grid::GridControlEvent::RefinementControl::Refine );
     newEntry.setOffset( marker.getOffset() );
     newEntry.setWidth( marker.h() );
-    newEntry.setH( marker.h()/3.0 );
+    newEntry.setH( marker.h()/3.0 * RefinementThreshold );
+    _localGridControlEvents.push_back(newEntry);
+    logDebug( "touchCellLastTime(...)", "add " << newEntry.toString() );
+  }
+  else if (enforceKeep) {
+    peano4::grid::GridControlEvent newEntry;
+    newEntry.setRefinementControl( peano4::grid::GridControlEvent::RefinementControl::Refine );
+    newEntry.setOffset( marker.getOffset() );
+    newEntry.setWidth( marker.h() );
+    newEntry.setH( marker.h() * RefinementThreshold );
     _localGridControlEvents.push_back(newEntry);
     logDebug( "touchCellLastTime(...)", "add " << newEntry.toString() );
   }
   else if (erase) {
-    // we can erase here pretty aggressively, as we ensure via the grammar and
-    // the check of the coarse cell that we don't coarsen stuff away which will
-    // immediately be re-added again
     peano4::grid::GridControlEvent newEntry;
     newEntry.setRefinementControl( peano4::grid::GridControlEvent::RefinementControl::Erase );
-    //constexpr double extendArea = 2.0;
-    constexpr double extendArea = 1.2;
-    newEntry.setOffset( marker.getOffset() - marker.h() * (extendArea-1.0) / 2.0);
-    newEntry.setWidth( marker.h() * extendArea );
-    newEntry.setH( marker.h() );
+    //constexpr double scaleArea = 1.2;
+    constexpr double scaleArea = 2.0;
+    newEntry.setOffset( marker.getOffset() - marker.h() * (scaleArea-1.0) / 2.0);
+    newEntry.setWidth( marker.h() * scaleArea );
+    newEntry.setH( marker.h() * RefinementThreshold );
     _localGridControlEvents.push_back(newEntry);
     logDebug( "touchCellLastTime(...)", "add " << newEntry.toString() );
   }
