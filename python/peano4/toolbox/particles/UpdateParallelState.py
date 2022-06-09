@@ -107,7 +107,7 @@ class UpdateParallelState(ActionSet):
   aggressive in throwing particles away, there's no guard here.
   
   """
-  __Template_TouchCellLastTime = jinja2.Template("""
+  __Template_TouchCell = jinja2.Template("""
 // run over all adjacent vertices
 for (int i=0; i<TwoPowerD; i++) {
   for (auto& p: fineGridVertices{{PARTICLES_CONTAINER}}(i) ) {
@@ -140,7 +140,7 @@ for (int i=0; i<TwoPowerD; i++) {
         and 
         (*p)->getNewParallelState()==globaldata::{{PARTICLE}}::NewParallelState::Virtual
       ) {
-        logDebug( "touchVertexLastTime()", "local status from previous sweep not confirmed on tree " << _treeNumber << ". Particle " << (*p)->toString() << " has left domain. Keep for the time being as a virtual particle" );
+        logInfo( "touchVertexLastTime()", "local status from previous sweep not confirmed on tree " << _treeNumber << ". Particle " << (*p)->toString() << " has left domain. Keep for the time being as a virtual particle" );
         (*p)->setParallelState( globaldata::{{PARTICLE}}::ParallelState::Virtual );
         _numberOfLeavingParticles++;
         p++;
@@ -200,8 +200,10 @@ for (int i=0; i<TwoPowerD; i++) {
       result = self.__Template_InitialiseParallelStatus.render(**self.d)
     if operation_name==ActionSet.OPERATION_TOUCH_VERTEX_LAST_TIME:
       result = self.__Template_DetermineNewParallelStatus.render(**self.d)
+    if operation_name==ActionSet.OPERATION_TOUCH_CELL_FIRST_TIME:
+      result = self.__Template_TouchCell.render(**self.d) 
     if operation_name==ActionSet.OPERATION_TOUCH_CELL_LAST_TIME:
-      result = self.__Template_TouchCellLastTime.render(**self.d) 
+      result = self.__Template_TouchCell.render(**self.d) 
     if operation_name==ActionSet.OPERATION_END_TRAVERSAL:
       result = self.__Template_EndTraversal.render(**self.d) 
     return result
