@@ -125,18 +125,22 @@ class UpdateParticleGridAssociation(ActionSet):
      See discussion of the two algorithms that I realise here. By default, 
      I do not sort within cells but move up and down within the grid 
      hierarchy.
+     
+   warn_if_particles_tunnel: Boolean
    
   """
   def __init__(self,
                particle_set, 
                guard="true", 
-               lift_always=True):
+               lift_always=True,
+               warn_if_particles_tunnel=True):
     self._particle_set = particle_set
     self.d = {}
     self.d[ "PARTICLE" ]                      = particle_set.particle_model.name
     self.d[ "PARTICLES_CONTAINER" ]           = particle_set.name
     self.d[ "GUARD" ]                         = guard
     self.d[ "LIFT_ALWAYS" ]                   = lift_always
+    self.d[ "WARN_IF_PARTICLES_TUNNEL" ]      = warn_if_particles_tunnel
     self._lift_always                         = lift_always
 
 
@@ -272,7 +276,7 @@ class UpdateParticleGridAssociation(ActionSet):
     vertexdata::{{PARTICLES_CONTAINER}}::iterator p = coarseGridVertices{{PARTICLES_CONTAINER}}(i).begin(); 
     while ( p!=coarseGridVertices{{PARTICLES_CONTAINER}}(i).end() ) {
       if ( 
-        tarch::la::min( marker.h() ) > (*p)->getCutOffRadius()
+        tarch::la::min( marker.h() ) > 2.0 * (*p)->getCutOffRadius()
         and
         // You may never ever use some tolerance here: If you only drop a 
         // particle into the slightly wrong vertex, its status likely won't
@@ -347,8 +351,22 @@ class UpdateParticleGridAssociation(ActionSet):
   
   auto p = fineGridVertex{{PARTICLES_CONTAINER}}.begin();
   while (p!=fineGridVertex{{PARTICLES_CONTAINER}}.end()) {
-  if ( not marker.isContainedInAdjacentCells((*p)->getX(),0.5) ) {
-    logDebug( "touchVertexLastTime(...)", "lift particle " << (*p)->toString() );
+    if ( not marker.isContainedInAdjacentCells((*p)->getX(),0.5) ) {
+      double maxDistance = tarch::la::max( tarch::la::abs( (*p)->getX()-marker.x() ) );
+
+      if (maxDistance>=tarch::la::min( marker.h() )) {
+        //
+        // If particles tunnel, it could happen that they are still virtual,
+        // as noone has reset their virtual flag, and we might have lifted
+        // them into a cell that we had already visited before. So I reset
+        // the flag to local manually. 
+        //
+        {% if WARN_IF_PARTICLES_TUNNEL %}
+        logWarning( "touchVertexLastTime(...)" ,"particle " << (*p)->toString() << " from " << marker.toString() << " has tunnelled" );
+        {% endif %}
+        (*p)->setNewParallelState( globaldata::{{PARTICLE}}::NewParallelState::Local );
+      }
+
       liftParticles.push_back(*p);
       p = fineGridVertex{{PARTICLES_CONTAINER}}.erase(p);
     }
@@ -380,7 +398,7 @@ class UpdateParticleGridAssociation(ActionSet):
   } 
   else if (not liftParticles.empty()) {
     liftParticles.particlesCanNotBeLiftedLocally();
-  }
+  } 
 """)  
 
 
@@ -397,6 +415,7 @@ class UpdateParticleGridAssociation(ActionSet):
     if operation_name==ActionSet.OPERATION_CREATE_HANGING_VERTEX:
       result  = self.__Template_Drop.render(**self.d) 
       result += self.__Template_Sieve.render(**self.d)
+      pass
     if operation_name==ActionSet.OPERATION_TOUCH_VERTEX_FIRST_TIME:
       result  = self.__Template_Drop.render(**self.d) 
       result += self.__Template_Sieve.render(**self.d)
