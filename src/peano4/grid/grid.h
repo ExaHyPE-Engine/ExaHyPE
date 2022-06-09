@@ -78,6 +78,7 @@ namespace peano4 {
      * - We remove those erase events which are overwritten by refinement
      *   events. As we work conservatively, refinement events are always
      *   more important than coarsening ones.
+     * - Create the erase power set.
      * - The code is asked to fuse multiple adjacent refinement events into
      *   fewer large ones, and to fuse multiple coarsening events as well.
      *   This reduces the event count, and gives the coarsening more
@@ -87,12 +88,19 @@ namespace peano4 {
      *
      * ##  Erasing the mesh (again)
      *
-     * I had experimented with the idea to produce the power sets over all
-     * erase events. This would give the mesh the opportunity to see faster
-     * where erases are possible, as it also could handle non-rectangular
-     * regions (at the moment, we merge exclusively rectangular regions).
-     * Very likely, such a powerset construction has to be combined with an
-     * a posteriori merge/clean-up again.
+     * We have to create the power sets over all
+     * erase events. This gives the mesh the opportunity to see faster
+     * where erases are possible, as it also handle non-rectangular
+     * regions: Assume there's a large L-shape of erase instructions consisting
+     * of three erase commands. Our algorithm will create a rectangle
+     * plus a square when it fuses the erases.
+     *
+     * Consequently, any cell overlapping with the boundary between the square
+     * and the rectangle will not be erased.
+     *
+     * If we had not merged the three cubic erases forming the L into 2+1 but
+     * into 2+2, we would also cover the boundary of the L shape. Therefore,
+     * it is important that we construct the power set before we merge events.
      *
      */
     std::vector< GridControlEvent > merge( std::vector< GridControlEvent>  events, const double Tolerance = 0.1 );
@@ -277,15 +285,6 @@ namespace peano4 {
       );
 
       /**
-       * Once I've computed the "power set" of erase events, I can throw those
-       * away that are redundant, i.e. totally covered by other events. To make
-       * this work correctly, it is important that
-       * removeEraseEventsThatAreCancelledByRefineEvents() has been called before.
-       * This is therefore the very last thing I do.
-       */
-      void removeEraseEventsCoverredByOtherEraseEvents( std::list< peano4::grid::GridControlEvent >&  inputEvents );
-
-      /**
        * This routine merges adjacent events, i.e. events of the same time which
        * share a common face and can be combined into one larger, rectangular
        * event. The routine does not distinguish refine from coarsen events, i.e.
@@ -326,6 +325,25 @@ namespace peano4 {
        * adjacent events of the same size.
        */
       bool twoEventsAreAdjacent( const peano4::grid::GridControlEvent& lhs, const peano4::grid::GridControlEvent& rhs );
+
+      /**
+       * I need the power set over erase events to ensure that I realise
+       * enough erases. See class documentation.
+       *
+       * ## Algorithm
+       *
+       * Run over all combinations of events. Construct the merged event
+       * if possible. This includes a merged event of p==pp, i.e. if I
+       * compare an event to itself. Check if the event is already in the
+       * power set. If not, store it in a temporary container. After you've
+       * run over all combinations, add the content of the temporary
+       * container to the input set and run again. If this temporary container
+       * still is empty after we have compared all potential event combinations,
+       * we know that we have already all possible combinations in the power
+       * set. So terminate.
+       */
+      void generateEraseEventPowerset( std::list< peano4::grid::GridControlEvent >&  inputEvents );
+
 
       peano4::grid::GridControlEvent createBoundingBoxEvent( const peano4::grid::GridControlEvent& lhs, const peano4::grid::GridControlEvent& rhs );
     }

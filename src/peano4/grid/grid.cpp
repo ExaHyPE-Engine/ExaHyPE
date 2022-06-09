@@ -76,10 +76,12 @@ std::vector< peano4::grid::GridControlEvent > peano4::grid::merge( std::vector< 
   internal::removeEraseEventsThatAreCancelledByRefineEvents( refineEvents, eraseEvents );
   logDebug( "merge(...)", "reduced to " << eraseEvents.size() << " erase event(s) by eliminating erase events that overlap with refinement");
 
+  internal::generateEraseEventPowerset( eraseEvents );
+  logDebug( "merge(...)", "power set of erase events hosts " << eraseEvents.size() << " event(s)");
+
   internal::mergeAdjacentRefinementEvents( refineEvents );
   internal::mergeAdjacentRefinementEvents( eraseEvents );
   logDebug( "merge(...)", "merged refine events into " << refineEvents.size() << " event(s)");
-  logDebug( "merge(...)", "merged erase events into " << eraseEvents.size() << " event(s)");
 
   std::vector< peano4::grid::GridControlEvent > result;
   result.insert( result.begin(), refineEvents.begin(), refineEvents.end() );
@@ -369,3 +371,38 @@ void peano4::grid::reduceGridControlEvents( std::vector<GridControlEvent>& event
   delete[] sizes;
   #endif
 }
+
+
+void peano4::grid::internal::generateEraseEventPowerset( std::list< peano4::grid::GridControlEvent >&  inputEvents ) {
+  const int initialInputSetSize = inputEvents.size();
+
+  bool haveAddedNewElementToPowerSet = true;
+
+  std::list< peano4::grid::GridControlEvent > newCombinations;
+
+  do {
+    newCombinations.clear();
+
+    for (auto p: inputEvents)
+    for (auto pp: inputEvents) {
+      if ( twoEventsAreAdjacent(p,pp) ) {
+        GridControlEvent newEvent = createBoundingBoxEvent(p,pp);
+
+        bool isAlreadyInSet = false;
+        for (auto ppp: inputEvents) {
+          isAlreadyInSet |= internal::equals( ppp, newEvent );
+        }
+
+        if (not isAlreadyInSet) {
+          logDebug( "mergeAdjacentRefinementEvents(...)", "add new merged event " << newEvent.toString() << " created from " << p.toString() << "x" << pp.toString() );
+          newCombinations.push_back(newEvent);
+        }
+      }
+    }
+
+    inputEvents.insert( inputEvents.end(), newCombinations.begin(), newCombinations.end() );
+  } while (not newCombinations.empty());
+
+
+}
+
