@@ -1,6 +1,6 @@
 // This file is part of the ExaHyPE2 project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
-#include "../config.h"
+#include "config.h"
 
 #if !defined(_EXAHYPE2_FV_RUSANOV_SYCL_GPUCELLDATA_H_) and defined(GPUOffloadingSYCL)
 #define _EXAHYPE2_FV_RUSANOV_SYCL_GPUCELLDATA_H_

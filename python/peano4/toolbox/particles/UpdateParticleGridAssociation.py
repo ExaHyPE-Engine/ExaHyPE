@@ -98,6 +98,8 @@ class UpdateParticleGridAssociation(ActionSet):
      
    The mapping keeps some statistics on any state update. These statistics
    however are not shared via MPI or synchronised between different threads. 
+   It is the job of the ParticleSet to ensure that we have a proper global
+   bookkeeping.
    
    
    ## Where and how to use
@@ -119,30 +121,26 @@ class UpdateParticleGridAssociation(ActionSet):
       
    ## Parameters
    
-   eliminate_spatial_duplicates: Boolean
-     If it holds, the code runs over the 
-     particles at the end of the sweep and simply kicks out duplicates. This
-     happens on a per-vertex basis.
-     
    lift_always: Boolean
      See discussion of the two algorithms that I realise here. By default, 
      I do not sort within cells but move up and down within the grid 
      hierarchy.
+     
+   warn_if_particles_tunnel: Boolean
    
   """
   def __init__(self,
                particle_set, 
                guard="true", 
-               eliminate_spatial_duplicates=False,
-               lift_always=True):
+               lift_always=True,
+               warn_if_particles_tunnel=True):
     self._particle_set = particle_set
     self.d = {}
     self.d[ "PARTICLE" ]                      = particle_set.particle_model.name
     self.d[ "PARTICLES_CONTAINER" ]           = particle_set.name
     self.d[ "GUARD" ]                         = guard
-    self.d[ "ELIMINATE_DUPLICATES_GUARD" ]    = eliminate_spatial_duplicates
-    self._eliminate_spatial_duplicates        = eliminate_spatial_duplicates
     self.d[ "LIFT_ALWAYS" ]                   = lift_always
+    self.d[ "WARN_IF_PARTICLES_TUNNEL" ]      = warn_if_particles_tunnel
     self._lift_always                         = lift_always
 
 
@@ -151,24 +149,28 @@ class UpdateParticleGridAssociation(ActionSet):
   _numberOfLifts = 0;
   _numberOfDrops = 0;
   _numberOfEliminations = 0;
-  _numberOfAssignmentsToGlobalSieve = 0;
+  
+  _sieveParticles = vertexdata::{{PARTICLES_CONTAINER}}::getSievedParticlesForNextGridTraversal();
 """ )
 
 
   __Template_EndTraversal = jinja2.Template("""
+  vertexdata::{{PARTICLES_CONTAINER}}::updateLiftDropStatistics(
+    _numberOfLifts,
+    _numberOfDrops
+  );
+
   logInfo( 
     "endTraversal()",
     "tree " <<  _treeNumber <<
     {% if not LIFT_ALWAYS %}
     ": reassignments=" << _numberOfParticleReassignmentsOnCurrentLevel << 
     {% endif %}
-    {% if ELIMINATE_DUPLICATES_GUARD %}
-    ", eliminated (duplicate) particles=" << _numberOfEliminations <<
-    {% endif %}
     ", lifts=" << _numberOfLifts << 
-    ", drops=" << _numberOfDrops <<
-    ", assignments-to-global-sieve=" << _numberOfAssignmentsToGlobalSieve
+    ", drops=" << _numberOfDrops
   );
+  
+  _sieveParticles.deleteParticles();
 """ )
 
 
@@ -242,7 +244,6 @@ class UpdateParticleGridAssociation(ActionSet):
   }
   else {
     liftParticles[ i ].particlesCanNotBeLiftedLocally();
-    _numberOfAssignmentsToGlobalSieve += liftParticles[ i ].size();
   }
 """)
 
@@ -250,22 +251,12 @@ class UpdateParticleGridAssociation(ActionSet):
   __Template_ValidateParticleLevelAssociation = jinja2.Template("""
   for (auto p: fineGridVertex{{PARTICLES_CONTAINER}} ) {
     assertion3(
-      marker.isContainedInAdjacentCells( p->getX(), 0.5*SortingTolerance ),
+      marker.isContainedInAdjacentCells( p->getX(), 0.5*(1.0+SortingTolerance) ),
       marker.x(),
       marker.toString(),
       p->toString()
     );
   }
-""")
-
-
-  """
-  
-  Plugs into touchVertexLastTime() for example.
-  
-  """
-  __Template_EliminateDuplicateParticles = jinja2.Template("""
-  _numberOfEliminations += fineGridVertex{{PARTICLES_CONTAINER}}.eliminateSpatialDuplicates(false);
 """)
     
 
@@ -282,35 +273,32 @@ class UpdateParticleGridAssociation(ActionSet):
   // list.
   for (int i=0; i<TwoPowerD; i++) {
     // Define inside for loop, as sieve will define it as well
-    const double CellToCutOffRadiusRatio = 0.5 * (1.0-SortingTolerance);
     vertexdata::{{PARTICLES_CONTAINER}}::iterator p = coarseGridVertices{{PARTICLES_CONTAINER}}(i).begin(); 
     while ( p!=coarseGridVertices{{PARTICLES_CONTAINER}}(i).end() ) {
       if ( 
-        tarch::la::min( marker.h() ) > CellToCutOffRadiusRatio * (*p)->getCutOffRadius()
+        tarch::la::min( marker.h() ) > 2.0 * (*p)->getCutOffRadius()
         and
-        marker.isContainedInAdjacentCells( (*p)->getX(), 0.5*SortingTolerance )
+        // You may never ever use some tolerance here: If you only drop a 
+        // particle into the slightly wrong vertex, its status likely won't
+        // get updated to local. The particle will hence be labelled as purely
+        // virtual and eventually disappear.
+        marker.isContainedInAdjacentCells( (*p)->getX(), 0.5 * (1.0-SortingTolerance) )
       ) {
-        logDebug( "touchVertexLastTime(...)", "drop particle " << (*p)->toString() << " into vertex " << marker.toString() );
         fineGridVertex{{PARTICLES_CONTAINER}}.push_back( *p );
         p = coarseGridVertices{{PARTICLES_CONTAINER}}(i).erase(p);
         _numberOfDrops++;
       }
       else p++;
     }
-
-    for (auto& p: coarseGridVertices{{PARTICLES_CONTAINER}}(i)) {
-      bool cutOffRadiusSmallEnough = tarch::la::min( marker.h() ) > CellToCutOffRadiusRatio * p->getCutOffRadius();
-      logDebug( "touchVertexFirstTime(...)", "have not been able to drop particle " << p->toString() << " from coarse vertex " << coarseGridVertices{{PARTICLES_CONTAINER}}(i).toString() << " into vertex " << fineGridVertex{{PARTICLES_CONTAINER}}.toString() << ". cut-off small enough=" << cutOffRadiusSmallEnough );
-    }
   }  
 """)
 
 
   __Template_Sieve = jinja2.Template("""
-  if ( vertexdata::{{PARTICLES_CONTAINER}}::thereAreParticlesToBeSieved() ) {
-    vertexdata::{{PARTICLES_CONTAINER}} sievedParticles = vertexdata::{{PARTICLES_CONTAINER}}::getParticlesToBeSievedIntoVertex(
+  if ( not _sieveParticles.empty() ) {
+    vertexdata::{{PARTICLES_CONTAINER}} sievedParticles = _sieveParticles.getParticlesToBeSievedIntoVertex(
         marker,
-        SortingTolerance
+        1.0+SortingTolerance
       );
       
     _numberOfDrops += sievedParticles.size();
@@ -320,6 +308,8 @@ class UpdateParticleGridAssociation(ActionSet):
       sievedParticles.begin(),
       sievedParticles.end()
     );
+    
+    fineGridVertex{{PARTICLES_CONTAINER}}.eliminateSpatialDuplicates(false, 1.0+SortingTolerance);
   }
 """)  
   
@@ -346,7 +336,6 @@ class UpdateParticleGridAssociation(ActionSet):
   }
   else {
     fineGridVertex{{PARTICLES_CONTAINER}}.particlesCanNotBeLiftedLocally();
-    _numberOfAssignmentsToGlobalSieve += fineGridVertex{{PARTICLES_CONTAINER}}.size();
   }
 """)  
 
@@ -362,8 +351,22 @@ class UpdateParticleGridAssociation(ActionSet):
   
   auto p = fineGridVertex{{PARTICLES_CONTAINER}}.begin();
   while (p!=fineGridVertex{{PARTICLES_CONTAINER}}.end()) {
-  if ( not marker.isContainedInAdjacentCells((*p)->getX(),0.5) ) {
-    logDebug( "touchVertexLastTime(...)", "lift particle " << (*p)->toString() );
+    if ( not marker.isContainedInAdjacentCells((*p)->getX(),0.5) ) {
+      double maxDistance = tarch::la::max( tarch::la::abs( (*p)->getX()-marker.x() ) );
+
+      if (maxDistance>=tarch::la::min( marker.h() )) {
+        //
+        // If particles tunnel, it could happen that they are still virtual,
+        // as noone has reset their virtual flag, and we might have lifted
+        // them into a cell that we had already visited before. So I reset
+        // the flag to local manually. 
+        //
+        {% if WARN_IF_PARTICLES_TUNNEL %}
+        logWarning( "touchVertexLastTime(...)" ,"particle " << (*p)->toString() << " from " << marker.toString() << " has tunnelled" );
+        {% endif %}
+        (*p)->setNewParallelState( globaldata::{{PARTICLE}}::NewParallelState::Local );
+      }
+
       liftParticles.push_back(*p);
       p = fineGridVertex{{PARTICLES_CONTAINER}}.erase(p);
     }
@@ -395,8 +398,7 @@ class UpdateParticleGridAssociation(ActionSet):
   } 
   else if (not liftParticles.empty()) {
     liftParticles.particlesCanNotBeLiftedLocally();
-    _numberOfAssignmentsToGlobalSieve += liftParticles.size();
-  }
+  } 
 """)  
 
 
@@ -413,16 +415,15 @@ class UpdateParticleGridAssociation(ActionSet):
     if operation_name==ActionSet.OPERATION_CREATE_HANGING_VERTEX:
       result  = self.__Template_Drop.render(**self.d) 
       result += self.__Template_Sieve.render(**self.d)
+      pass
     if operation_name==ActionSet.OPERATION_TOUCH_VERTEX_FIRST_TIME:
       result  = self.__Template_Drop.render(**self.d) 
       result += self.__Template_Sieve.render(**self.d)
     if operation_name==ActionSet.OPERATION_TOUCH_VERTEX_LAST_TIME:
       if self._lift_always:
-        result  = self.__Template_LiftParticlesFurtherAway.render(**self.d)
+        result = self.__Template_LiftParticlesFurtherAway.render(**self.d)
       else:    
-        result  = self.__Template_ValidateParticleLevelAssociation.render(**self.d)
-      if self._eliminate_spatial_duplicates:        
-        result += self.__Template_EliminateDuplicateParticles.render(**self.d)
+        result = self.__Template_ValidateParticleLevelAssociation.render(**self.d)
     if operation_name==ActionSet.OPERATION_TOUCH_CELL_LAST_TIME:
       if not self._lift_always:
         result = self.__Template_ReassignAndLiftWithinCell.render(**self.d) 
@@ -461,16 +462,16 @@ class UpdateParticleGridAssociation(ActionSet):
   int  _treeNumber;
   int  _numberOfParticleReassignmentsOnCurrentLevel;
   int  _numberOfLifts;
-  int  _numberOfAssignmentsToGlobalSieve;
   int  _numberOfDrops;
   int  _numberOfEliminations;
   
+  vertexdata::{{PARTICLES_CONTAINER}}  _sieveParticles;
 """).render(**self.d)
 
 
   def get_static_initialisations(self,full_qualified_classname):
     return jinja2.Template("""
 namespace {
-  constexpr double SortingTolerance = 1.01;
+  constexpr double SortingTolerance = 1e-8;
 }
 """).render(**self.d)    

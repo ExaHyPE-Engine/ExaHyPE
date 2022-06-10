@@ -6,7 +6,7 @@
 
 #include "tarch/la/Vector.h"
 #include "peano4/utils/Globals.h"
-#include "../config.h"
+#include "config.h"
 
 
 #include <functional>

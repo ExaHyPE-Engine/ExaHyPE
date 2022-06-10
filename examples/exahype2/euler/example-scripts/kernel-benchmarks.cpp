@@ -130,33 +130,72 @@ void runBenchmarks(int patches) {
       bool                    evaluateSource,
       bool                    evaluateMaximumEigenvalueAfterTimeStep
     )> kernel, std::string markerName, bool computeCFL ) {
-    ::exahype2::CellData patchData(patches);
+
+    constexpr int MaxHostTasks = 5;
+    ::exahype2::CellData patchData[MaxHostTasks] = { patches, patches, patches, patches, patches };
+
+    for (int hostTask=0; hostTask<MaxHostTasks; hostTask++)
     for (int i=0; i<patches; i++) {
-      patchData.QIn[i]         = new double[ (EulerOnGPU::NumberOfFiniteVolumesPerAxisPerPatch+2)*(EulerOnGPU::NumberOfFiniteVolumesPerAxisPerPatch+2)*(EulerOnGPU::NumberOfFiniteVolumesPerAxisPerPatch+2)*EulerOnGPU::NumberOfUnknowns];
-      patchData.t[i]           = 0.5;
-      patchData.dt[i]          = 1e-5;
-      patchData.QOut[i]        = new double[ (EulerOnGPU::NumberOfFiniteVolumesPerAxisPerPatch)*(EulerOnGPU::NumberOfFiniteVolumesPerAxisPerPatch)*(EulerOnGPU::NumberOfFiniteVolumesPerAxisPerPatch)*EulerOnGPU::NumberOfUnknowns];
+      patchData[hostTask].QIn[i]         = new double[ (EulerOnGPU::NumberOfFiniteVolumesPerAxisPerPatch+2)*(EulerOnGPU::NumberOfFiniteVolumesPerAxisPerPatch+2)*(EulerOnGPU::NumberOfFiniteVolumesPerAxisPerPatch+2)*EulerOnGPU::NumberOfUnknowns];
+      patchData[hostTask].t[i]           = 0.5;
+      patchData[hostTask].dt[i]          = 1e-5;
+      patchData[hostTask].QOut[i]        = new double[ (EulerOnGPU::NumberOfFiniteVolumesPerAxisPerPatch)*(EulerOnGPU::NumberOfFiniteVolumesPerAxisPerPatch)*(EulerOnGPU::NumberOfFiniteVolumesPerAxisPerPatch)*EulerOnGPU::NumberOfUnknowns];
     }
 
-    tarch::timing::Watch watch( "::", "main()", false );
-
+    tarch::timing::Watch singleKernelWatch( "::", "main()", false );
     kernel(
       device,
-      patchData,
+      patchData[0],
       true ,
       false ,
       false ,
       computeCFL
     );
+    singleKernelWatch.stop();
+    logInfo("main()", "completed measurements for single thread to device " << device << ", " << markerName << ": " << singleKernelWatch.getCalendarTime() << " / " << (singleKernelWatch.getCalendarTime()/patches/EulerOnGPU::NumberOfFiniteVolumesPerAxisPerPatch/EulerOnGPU::NumberOfFiniteVolumesPerAxisPerPatch/EulerOnGPU::NumberOfFiniteVolumesPerAxisPerPatch) );
 
-    watch.stop();
+    tarch::timing::Watch parallelKernelWatch( "::", "main()", false );
+    #if defined(GPUOffloadingOMP)
+    #pragma omp parallel for
+    for (int hostTask=1; hostTask<MaxHostTasks; hostTask++) {
+      kernel(
+        device,
+        patchData[hostTask],
+        true ,
+        false ,
+        false ,
+        computeCFL
+      );
+    }
+    #endif
 
+    #if defined(GPUOffloadingSYCL) and defined(SharedTBB)
+    ::tbb::task_group taskGroup;
+    for (int hostTask=1; hostTask<MaxHostTasks; hostTask++) {
+      taskGroup.run(
+        [&]() -> void {
+          kernel(
+            device,
+            patchData[hostTask],
+            true ,
+            false ,
+            false ,
+            computeCFL
+          );
+        }
+      );
+    }
+    taskGroup.wait();
+    #endif
+    parallelKernelWatch.stop();
+    logInfo("main()", "completed measurements for " << (MaxHostTasks-1) << " threads to device " << device << ", " << markerName << ": " << parallelKernelWatch.getCalendarTime() << " / " << (parallelKernelWatch.getCalendarTime()/patches/EulerOnGPU::NumberOfFiniteVolumesPerAxisPerPatch/EulerOnGPU::NumberOfFiniteVolumesPerAxisPerPatch/EulerOnGPU::NumberOfFiniteVolumesPerAxisPerPatch/(MaxHostTasks-1)) );
+
+    for (int hostTask=0; hostTask<MaxHostTasks; hostTask++)
     for (int i=0; i<patches; i++) {
-      delete[] patchData.QIn[i];
-      delete[] patchData.QOut[i];
+      delete[] patchData[hostTask].QIn[i];
+      delete[] patchData[hostTask].QOut[i];
     }
 
-    logInfo("main()", "completed measurements for " << markerName << ": " << watch.getCalendarTime() << " / " << (watch.getCalendarTime()/patches/EulerOnGPU::NumberOfFiniteVolumesPerAxisPerPatch/EulerOnGPU::NumberOfFiniteVolumesPerAxisPerPatch/EulerOnGPU::NumberOfFiniteVolumesPerAxisPerPatch) );
   };
 
   #if Dimension==2
@@ -353,9 +392,9 @@ int main(int argc, char** argv) {
   const bool isPeanoComputeNode = not tarch::mpi::Rank::getInstance().isGlobalMaster();
 
   #if Dimensions==2
-  for (int patches=1; patches<=65536; patches*=2) {
+  for (int patches=1; patches<=1024*2*2*2*2; patches*=2) {
   #else
-  for (int patches=1; patches<=2048; patches*=2) {
+  for (int patches=1; patches<=1024*2; patches*=2) {
   #endif
     std::stringstream msg;
     msg << "benchmark-" << patches;
