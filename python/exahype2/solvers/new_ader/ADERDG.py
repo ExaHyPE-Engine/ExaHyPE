@@ -84,12 +84,28 @@ class ADERDG( object ):
     self._finish_time_step_implementation          = ""
     
     self._constructor_implementation = ""
+    
+    # ADER-DG CFL factors        
+    # Up to order 4, computed via von Neumann analysis [1]; above, determined empirically by M. Dumbser)
+    # [1] M. Dumbser, D. S. Balsara, E. F. Toro, and C.-D. Munz, 
+    # ‘A unified framework for the construction of one-step finite volume and discontinuous Galerkin schemes on unstructured meshes’, Journal of Computational Physics, vol. 227, no. 18, pp. 8209–8253, Sep. 2008.
+    self._cflAder = [
+      1.0, 0.33, 0.17,
+      0.1, 0.069, 0.045,
+      0.038, 0.03, 0.02,
+      0.015, 0.008821428571428572, 0.005235326086956522,
+      0.0031307249999999996, 0.0018842326388888888, 0.001140285614224138, 
+      0.0006933672202620968]
+    
+    # safety factor for CFL (Courant-Friedrichs-Lewy) condition
+    self._cflSafetyFactor = 0.0
+    
+    
 
     self._action_set_postprocess_solution = None
 
     self.create_data_structures()
     self.create_action_sets()
-    
     
             
   @abstractmethod
@@ -431,12 +447,15 @@ class ADERDG( object ):
     pass  
 
   def _init_dictionary_with_default_parameters(self,d):
-    d["ORDER"]                       = self._order
+    d["ORDER"]                          = self._order
     d["SOLVER_INSTANCE"]                = self.get_name_of_global_instance()
     d["SOLVER_NAME"]                    = self._name
     d["UNKNOWN_IDENTIFIER"]             = self._unknown_identifier()
     d["NUMBER_OF_UNKNOWNS"]             = self._unknowns
     d["NUMBER_OF_AUXILIARY_VARIABLES"]  = self._auxiliary_variables
+    
+    d["CFL_SAFETY_FACTOR"]  = self._cflSafetyFactor
+    d["CFL_ADER"]           = self._cflAder[self._order]
     
     d[ "NUMBER_OF_DOFS_PER_CELL_2D" ] = (self._order+1) * (self._order+1);
     d[ "NUMBER_OF_DOFS_PER_CELL_3D" ] = (self._order+1) * (self._order+1) * (self._order+1);

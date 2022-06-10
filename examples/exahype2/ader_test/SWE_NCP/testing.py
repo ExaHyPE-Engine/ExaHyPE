@@ -6,6 +6,7 @@ import argparse
 
 import exahype2.solvers.new_ader
 from exahype2.solvers.new_ader.rusanov.GlobalFixedTimeStep import GlobalFixedTimeStep
+from exahype2.solvers.new_ader.rusanov.GlobalAdaptiveTimeStep import GlobalAdaptiveTimeStep
 from exahype2.solvers.new_ader.ADERDG import ADERDG
 from exahype2.solvers.new_ader.SingleSweep import SingleSweep
 from exahype2.solvers.new_ader.ADERDG import Polynomials
@@ -28,6 +29,7 @@ parser.add_argument("-pdt", "--plot-dt",               dest="plot_snapshot_inter
 parser.add_argument("-et", "--end-time",               dest="end_time",                 type=float, default=0.05, help="Number of timesteps" )
 parser.add_argument("-order",   "--order",       dest="order",          type=int, default=3, help="DG Order" )
 parser.add_argument("-p",   "--p",       dest="polynomials",          type=int, default=0, help="Polynomial type, 0 is gauss-legendre, 1 is gauss-lobatto" )
+parser.add_argument("-t",   "--type",  dest="type", choices=["global-fixed", "global-adaptive"], default="global-fixed", help="Pick implementation variant" )
 args = parser.parse_args()
 
 
@@ -49,11 +51,18 @@ elif args.polynomials == 1:
 else:
   raise AttributeError("not acceptable choice of polynomials")  
 
-theSolver=GlobalFixedTimeStep(
-  name="testing",  order=order, polynomials=polynomials,
-  unknowns=unknowns, auxiliary_variables=auxiliary_variables,
-  min_cell_h=min_h, max_cell_h=max_h, time_step_size=0.0001,
-  ncp=exahype2.solvers.new_ader.PDETerms.User_Defined_Implementation)
+if args.type=="global-fixed":
+  theSolver=GlobalFixedTimeStep(
+    name="testing",  order=order, polynomials=polynomials,
+    unknowns=unknowns, auxiliary_variables=auxiliary_variables,
+    min_cell_h=min_h, max_cell_h=max_h, time_step_size=0.0001,
+    ncp=exahype2.solvers.new_ader.PDETerms.User_Defined_Implementation)
+elif args.type=="global-adaptive":
+  theSolver=GlobalAdaptiveTimeStep(
+    name="testing",  order=order, polynomials=polynomials,
+    unknowns=unknowns, auxiliary_variables=auxiliary_variables,
+    min_cell_h=min_h, max_cell_h=max_h, time_step_relaxation=0.9,
+    ncp=exahype2.solvers.new_ader.PDETerms.User_Defined_Implementation)
 
 theSolver.set_implementation( refinement_criterion=exahype2.solvers.new_ader.PDETerms.User_Defined_Implementation)
 

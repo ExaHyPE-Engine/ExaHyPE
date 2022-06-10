@@ -208,7 +208,7 @@ void boundaryConditions(
     const int direction);
 
 template <typename SolverType,bool useViscousFlux>
-double stableTimeStepSize(SolverType& solver, const double* const luh,
+double maxScaledEigenvalue(SolverType& solver, const double* const luh,
                           const tarch::la::Vector<Dimensions, double>& dx);
 
 /**
@@ -296,7 +296,7 @@ void deltaDistribution(
 #include "Aderdg/2d/solutionUpdate.cpph"
 #include "Aderdg/2d/spaceTimePredictorLinear.cpph"
 #include "Aderdg/2d/spaceTimePredictorNonlinear.cpph"
-#include "Aderdg/2d/stableTimeStepSize.cpph"
+#include "Aderdg/2d/maxScaledEigenvalue.cpph"
 #include "Aderdg/2d/deltaDistribution.cpph"
 #include "Aderdg/2d/faceIntegralLinear.cpph"
 #include "Aderdg/2d/faceIntegralNonlinear.cpph"
@@ -313,7 +313,7 @@ void deltaDistribution(
 #include "Aderdg/3d/solutionUpdate.cpph"
 #include "Aderdg/3d/spaceTimePredictorLinear.cpph"
 #include "Aderdg/3d/spaceTimePredictorNonlinear.cpph"
-#include "Aderdg/3d/stableTimeStepSize.cpph"
+#include "Aderdg/3d/maxScaledEigenvalue.cpph"
 #include "Aderdg/3d/deltaDistribution.cpph"
 #include "Aderdg/3d/faceIntegralLinear.cpph"
 #include "Aderdg/3d/faceIntegralNonlinear.cpph"

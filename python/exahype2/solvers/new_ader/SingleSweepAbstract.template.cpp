@@ -593,6 +593,20 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::faceIntegral(double *lduh, const
 }
 
 
+double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::maxScaledEigenvalue(const double* const luh, const tarch::la::Vector<Dimensions, double>& dx){
+
+  //template <typename SolverType, bool useViscousFlux>
+  double myStableTimeStepSize = kernels::aderdg::generic::c::maxScaledEigenvalue<
+    {{NAMESPACE | join("::")}}::{{CLASSNAME}},
+    false //useViscousFlux
+    >(
+    *this,
+    luh,
+    dx);
+  return myStableTimeStepSize;
+}
+
+
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::viscousFlux(const double* const Q,const double* const gradQ, double** const F) {
   // should not be called
 }

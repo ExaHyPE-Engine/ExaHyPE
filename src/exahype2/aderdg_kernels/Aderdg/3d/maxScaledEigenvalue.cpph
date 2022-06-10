@@ -11,8 +11,14 @@
  * For the full license text, see LICENSE.txt
  **/
 
+/*
+ * This function used to return the stable time step size directly but now returns the sum of the maximal eigenvalues scaled with the cell sizes
+ * I've chosen to do this because the eigenvalue can be required by some applications calling this and it saves some redundant computations
+ * since the actual time step size may be only required once for the entire application (MML)
+ */
+
 template <typename SolverType, bool useViscousFlux>
-double kernels::aderdg::generic::c::stableTimeStepSize(
+double kernels::aderdg::generic::c::maxScaledEigenvalue(
     SolverType& solver,
     const double* const luh,
     const tarch::la::Vector<Dimensions, double>& dx) {
@@ -28,7 +34,8 @@ double kernels::aderdg::generic::c::stableTimeStepSize(
 
   idx4 idx_luh(basisSize, basisSize, basisSize, numberOfData);
 
-  double dt = std::numeric_limits<double>::max();
+  double maxScEv = 0.0;
+//  double dt = std::numeric_limits<double>::max();
   double lambda[numberOfVariables] = {0.0};
   for (int i = 0; i < basisSize; i++) {
       for (int j = 0; j < basisSize; j++) {
@@ -41,6 +48,8 @@ double kernels::aderdg::generic::c::stableTimeStepSize(
                   for (int ivar = 0; ivar < numberOfVariables; ivar++) {
                       maxEigenvalue = std::max(fabs(lambda[ivar]), maxEigenvalue);
                   }
+                  
+                  /*
                   if(useViscousFlux){
                       solver.viscousEigenvalues(luh + idx_luh(i,j,k,0), d, lambda);
 
@@ -50,13 +59,17 @@ double kernels::aderdg::generic::c::stableTimeStepSize(
                       }
                       maxEigenvalue += maxEigenvalueV * (2.0/PNPM) * invDx[d];
                   }
+                  */
+                  
                   denominator += maxEigenvalue * invDx[d];
               }
 
-              dt = std::min(dt, cflFactor * PNPM / denominator);
+              maxScEv = std::max(maxScEv, denominator);
+//              dt = std::min(dt, cflFactor * PNPM / denominator);
           }
       }
   }
 
-  return dt;
+//  return dt;
+  return maxScEv;
 }

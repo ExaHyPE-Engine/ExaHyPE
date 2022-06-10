@@ -75,6 +75,8 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
     static constexpr int NumberOfParameters = {{NUMBER_OF_AUXILIARY_VARIABLES}};
     static constexpr int MaxPicardIterations = {{ORDER}}+1;
     static constexpr bool UseMaxPicardIterations = true;
+    static constexpr double CFL                    = {{CFL_SAFETY_FACTOR}};
+    static constexpr double PNPM                   = {{CFL_ADER}};
 
     // quadrature weights and operators
     static constexpr bool UseLobattoBasis = {{USE_GAUSS_LOBATTO}};
@@ -406,6 +408,11 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
       const int direction,
       const int orientation,
       const tarch::la::Vector<Dimensions, double> &cellSize
+      );
+
+    double maxScaledEigenvalue(
+      const double* const luh,
+      const tarch::la::Vector<Dimensions, double>& dx
       );
 
 
