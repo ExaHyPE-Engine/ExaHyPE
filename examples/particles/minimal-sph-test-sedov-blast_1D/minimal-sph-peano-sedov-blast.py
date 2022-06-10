@@ -275,7 +275,7 @@ HYDRO_h_MAX = str( 1.0 / 3.0 / float(KERNEL_SUPPORT_RAD) )
 HYDRO_h_MIN = "1e-6"
 
 # Artificial viscosity parameters
-ALPHA_AV= "0.8"     # =0.8 in SWIFT
+ALPHA_AV= "0.8"     # =0.8 default in SWIFT
 BETA_AV = "3"       # =3 in SWIFT/SPHENIX
 
 # Smoothing-length free parameter (resolution "eta_neighbours"). 
@@ -1075,7 +1075,8 @@ force_non_sym_particles.add_action_set( peano4.toolbox.particles.ParticleParticl
       const double visc = -0.25 * v_sig * mu_ab * (balsara_a + balsara_b) / rho_ab;
 
       /* Convolve with the kernel */
-      const double visc_acc_term = 0.5 * visc * (wa_dr * f_ab + wb_dr * f_ba) * r_inv;
+//      const double visc_acc_term = 0.5 * visc * (wa_dr * f_ab + wb_dr * f_ba) * r_inv; // original SWIFT line
+      const double visc_acc_term = 0.5 * visc * (wa_dr + wb_dr) * r_inv;
 
       /* SPH acceleration term */
       const double sph_acc_term = (P_over_rho2_a * wa_dr + P_over_rho2_b * wb_dr) * r_inv;
@@ -1831,11 +1832,73 @@ impose_BC_particles.add_action_set( peano4.toolbox.particles.ParticleParticleInt
 #include <cmath>
 """
   ))
-impose_BC_particles.add_action_set( peano4.toolbox.particles.ParticleAMR(particles,particle_tree_analysis,min_particles_per_cell=10) )
+#impose_BC_particles.add_action_set( peano4.toolbox.particles.ParticleAMR(particles,particle_tree_analysis,min_particles_per_cell=10) )
 impose_BC_particles.add_action_set( particle_tree_analysis )
 impose_BC_particles.add_action_set( peano4.toolbox.particles.UpdateParticleGridAssociation(particles) )
 impose_BC_particles.add_action_set( peano4.toolbox.particles.UpdateParallelState(particles) )
 project.solversteps.add_step(impose_BC_particles)
+
+
+## Timestep
+### Calculate the new dt_hydro for each particle
+### This is called after Kick2, which marks the formal end of a time-step (just as in SWIFT)
+
+timestep = peano4.solversteps.Step( "TimeStep" )
+timestep.use_vertex(particles)
+timestep.use_cell(particle_tree_analysis.cell_marker)
+timestep.add_action_set( peano4.toolbox.particles.ParticleParticleInteraction(
+  particle_set=particles,
+  particle_particle_interaction_kernel="""
+    
+  /* We do not excecute any specific action here */
+  
+""",
+  touch_vertex_first_time_compute_particle_update_kernel="""
+  
+    /* Mark particle needs to be updated */
+
+    if(localParticle->getParallelState()==globaldata::Particle::ParallelState::Local){
+      localParticle->setHasBeenKicked(false);
+    }
+    
+""",
+  touch_vertex_last_time_compute_particle_update_kernel="""
+
+  /* Calculate max time-step size value allowed by the CFL condition */
+  
+  const double timeStepSizeGlobal = GLOBAL_TIME_STEP_SIZE;
+  
+  if( not localParticle->getHasBeenKicked()
+      and
+      localParticle->getParallelState()==globaldata::Particle::ParallelState::Local
+    ){
+      
+
+    /* This is the equations used by SWIFT Minimal SPH */
+    // @TODO: add cosmological factors
+
+    const double v_sig = localParticle->getV_sig_AV();
+    const double dt_cfl = 2.0 * CFL_CONSTANT * localParticle->getSmoothingLength() * KERNEL_SUPPORT_RAD / v_sig;
+    localParticle->setTimeStepSize(dt_cfl);
+    
+    assertion1( tarch::la::greaterEquals( dt_cfl, timeStepSizeGlobal ), 
+                 localParticle->toString() );
+
+    /* Mark particle is done */
+    localParticle->setHasBeenKicked(true);
+    
+  }
+    
+""",
+  additional_includes="""
+#include "Constants.h"
+#include <cmath>
+"""
+  ))
+timestep.add_action_set( particle_tree_analysis )
+timestep.add_action_set( peano4.toolbox.particles.UpdateParticleGridAssociation(particles) )
+timestep.add_action_set( peano4.toolbox.particles.UpdateParallelState(particles) )
+project.solversteps.add_step(timestep)
 
 
 # ## End time-step
