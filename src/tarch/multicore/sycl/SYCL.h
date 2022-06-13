@@ -3,8 +3,9 @@
 #ifndef _TARCH_MULTICORE_SYCL_SYCL_H_
 #define _TARCH_MULTICORE_SYCL_SYCL_H_
 
+
 #include <string>
-#include "tarch/multicore/multicore.h"
+#include "config.h"
 
 
 /**
@@ -31,6 +32,13 @@
  * push_macro and pop_macro to temporarily undefine them while I include the
  * SYCL headers, and to bring them back into the game afterwards.
  *
+ * ## Dependencies
+ *
+ * Don't include any other Peano header in this file, as all Peano headers might
+ * indirectly include this one via multicore.h, as they need the macro
+ * SYCL_EXTERNAL.
+ *
+ * The only header you need from Peano is the actual config.h.
  *
  */
 
