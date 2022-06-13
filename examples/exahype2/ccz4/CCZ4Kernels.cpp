@@ -749,7 +749,7 @@ void examples::exahype2::ccz4::TestingOutput(double* terms, const double* const 
     {
       RicciNoSym[i][j] = dPP[i][j]+PP[i]*PP[j]; //22.06.09 this line may need to be changed.
       for (int m = 0; m < 3; m++)
-      for (int k = 0; k < 3; k++) RicciNoSym[i][j] += delta[i][j]*g_contr[m][k]*(dPP[m][k]-P[m]*P[k]);
+      for (int k = 0; k < 3; k++) RicciNoSym[i][j] += delta[i][j]*g_contr[m][k]*(dPP[m][k]-PP[m]*PP[k]);
     }
 
     memset(terms, 0, 2*sizeof(double));

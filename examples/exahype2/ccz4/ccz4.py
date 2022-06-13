@@ -51,6 +51,7 @@ if __name__ == "__main__":
     parser.add_argument("-ext",  "--extension",       dest="extension",       choices=["none", "gradient", "AMRadm", "Full"],   default="none",  help="Pick extension, i.e. what should be plotted on top. Default is none" )
     parser.add_argument("-impl", "--implementation",  dest="implementation",  choices=["fv-global-fixed", "fv-global-adaptive", "fv-global-fixed-enclave", "fv-global-adaptive-enclave","fv-subcyling-adaptive-enclave","fv-local-enclave"], required="True",  help="Pick solver type" )
     parser.add_argument("-no-pbc",  "--no-periodic-boundary-conditions",      dest="periodic_bc", action="store_false", default="True",  help="switch on or off the periodic BC" )
+    parser.add_argument("-AMRMarker",  "--AMR-marker",      dest="marker", choices=["none", "poisson"],   default="none",  help="switch on or off the AMR boundary marker" )
     parser.add_argument("-et",   "--end-time",        dest="end_time",        type=float, default=1.0, help="End (terminal) time" )
     parser.add_argument("-pst",   "--plot-start-time",        dest="plot_start_time",        type=float, default=0.0, help="start time for plot" )
     parser.add_argument("-s",    "--scenario",        dest="scenario",        choices=["gauge", "dia_gauge", "linear", "single-puncture","two-punctures"], required="True", help="Scenario" )
@@ -204,41 +205,6 @@ if __name__ == "__main__":
         self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement.additional_includes += """ 
 #include "../CCZ4Kernels.h"
             """
-        self.restriction = "averaging" # "linear"
-
-        if args.interpolation=="constant":
-          self.interpolation = "piecewise_constant"
-          print( "Interpolation rule: piecewise_constant" )
-        if args.interpolation=="linear-constant-extrap":
-          self.interpolation = "linear_with_constant_extrapolation" 
-          print( "Interpolation rule: linear constant extrapolation" )
-        if args.interpolation=="linear-linear-extrap":
-          self.interpolation = "linear_with_linear_extrapolation"
-          print( "Interpolation rule: linear extrapolation" )
-        if args.interpolation=="linear-con-extrap-lin-normal-interp":
-          self.interpolation = "linear_with_constant_extrapolation_and_linear_normal_interpolation"
-          print( "Interpolation rule: linear+constant extrapolation and linear normal interpolation" )
-        if args.interpolation=="linear-lin-extrap-lin-normal-interp":
-          self.interpolation = "linear_with_linear_extrapolation_and_linear_normal_interpolation" 
-          print( "Interpolation rule: linear+linear extrapolation and linear normal interpolation" )
-
-        if args.interpolation=="order-2":
-          self.interpolation = "linear" 
-          # @todo, we have to change this one
-          #self.overlap=2
-
-        if args.restriction=="average":
-          self.restriction =  "averaging"
-          print( "Restiction rule: averaging" )
-        if args.restriction=="inject":
-          self.restriction_scheme = "inject" 
-          print( "Restiction rule: injection" )
-          
-        #if args.interpolation=="linear+enforce" or args.interpolation=="linear-slow+enforce":
-        #  self.point_wise_postprocessing_of_interpolation = "examples::exahype2::ccz4::enforceCCZ4constraints(targetVolume)" )
-        #if args.restriction=="average+enforce" or args.restriction=="inject+enforce":
-        #  self.point_wise_postprocessing_of_restriction = "examples::exahype2::ccz4::enforceCCZ4constraints(targetVolume)"
-
 
       def get_user_action_set_includes(self):
         """
@@ -618,9 +584,59 @@ if __name__ == "__main__":
     else:
       my_solver = CCZ4Solver(solver_name, args.patch_size, min_h, args.max_h, args.cfl, args.CCZ4domain_r)
       userinfo.append(("CFL ratio set as "+str(args.cfl), None))
+
+########################################################################################
+#AMR boundary tracing
+########################################################################################
+    print(args.marker)
+    if args.marker=="poisson":
+      print("asdasdsadas")
+      amr_label = exahype2.solvers.elliptic.AMRMarker( name="AMRMarker" )
+      project.add_solver( amr_label )
+      my_solver._auxiliary_variables+=1
+      amr_label.couple_with_FV_solver( my_solver, my_solver._auxiliary_variables-1 )
+
+########################################################################################
+#Pick interpolation scheme
+########################################################################################
         
     if args.interpolation=="order-2":
       my_solver.overlap=2
+
+    my_solver.restriction = "averaging" # "linear"
+
+    if args.interpolation=="constant":
+      my_solver.interpolation = "piecewise_constant"
+      print( "Interpolation rule: piecewise_constant" )
+    if args.interpolation=="linear-constant-extrap":
+      my_solver.interpolation = "linear_with_constant_extrapolation" 
+      print( "Interpolation rule: linear constant extrapolation" )
+    if args.interpolation=="linear-linear-extrap":
+      my_solver.interpolation = "linear_with_linear_extrapolation"
+      print( "Interpolation rule: linear extrapolation" )
+    if args.interpolation=="linear-con-extrap-lin-normal-interp":
+      my_solver.interpolation = "linear_with_constant_extrapolation_and_linear_normal_interpolation"
+      print( "Interpolation rule: linear+constant extrapolation and linear normal interpolation" )
+    if args.interpolation=="linear-lin-extrap-lin-normal-interp":
+      my_solver.interpolation = "linear_with_linear_extrapolation_and_linear_normal_interpolation" 
+      print( "Interpolation rule: linear+linear extrapolation and linear normal interpolation" )
+
+    if args.interpolation=="order-2":
+      my_solver.interpolation = "linear" 
+
+    if args.restriction=="average":
+      my_solver.restriction =  "averaging"
+      print( "Restiction rule: averaging" )
+    if args.restriction=="inject":
+      my_solver.restriction_scheme = "inject" 
+      print( "Restiction rule: injection" )
+          
+    #if args.interpolation=="linear+enforce" or args.interpolation=="linear-slow+enforce":
+    #  self.point_wise_postprocessing_of_interpolation = "examples::exahype2::ccz4::enforceCCZ4constraints(targetVolume)" )
+    #if args.restriction=="average+enforce" or args.restriction=="inject+enforce":
+    #  self.point_wise_postprocessing_of_restriction = "examples::exahype2::ccz4::enforceCCZ4constraints(targetVolume)"
+
+
 
 ########################################################################################
 #Add postpocessing function
@@ -721,14 +737,6 @@ if __name__ == "__main__":
     userinfo.append(("Terminal time: "+str(args.end_time),None))
 
     project.set_Peano4_installation("../../..", build_mode)
-
-########################################################################################
-#AMR boundary tracing
-########################################################################################
-    #amr_label = exahype2.solvers.elliptic.AMRMarker( name="AMRMarker" )
-    #project.add_solver( amr_label )
-    #my_solver._auxiliary_variables+=1
-    #amr_label.couple_with_FV_solver( my_solver, my_solver._auxiliary_variables-1 )
 
 ########################################################################################
 #output dir and proble
