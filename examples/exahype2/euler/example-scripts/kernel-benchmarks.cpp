@@ -48,8 +48,65 @@ tarch::logging::Log _log("::");
 tarch::timing::Measurement   gridConstructionMeasurement;
 tarch::timing::Measurement   timeStepMeasurement;
 tarch::timing::Measurement   plotMeasurement;
-  
 
+double* validOutcome = nullptr;
+
+
+
+/**
+ * Set input data
+ */
+void initInputData( double* Q ) {
+  int index = 0;
+  for (int x=0; x<EulerOnGPU::NumberOfFiniteVolumesPerAxisPerPatch+2; x++)
+  for (int y=0; y<EulerOnGPU::NumberOfFiniteVolumesPerAxisPerPatch+2; y++)
+  for (int z=0; z<EulerOnGPU::NumberOfFiniteVolumesPerAxisPerPatch+2; z++)
+  for (int unknown=0; unknown<EulerOnGPU::NumberOfUnknowns; unknown++) {
+    Q[index] = std::sin( x * tarch::la::PI ) * std::sin( 2.0 * y * tarch::la::PI ) * std::sin( 3.0 * z * tarch::la::PI );
+    index++;
+  }
+}
+
+
+/**
+ * Make a persistent snapshot of a solution and assume, from hereon, that
+ * this snapshot is the valid data. You can call this routine as often as
+ * you want. Only the very first call will trigger a snapshot.
+ */
+void storeOutcome( const double* Q ) {
+  if (validOutcome==nullptr) {
+    const int size = (EulerOnGPU::NumberOfFiniteVolumesPerAxisPerPatch+0)*(EulerOnGPU::NumberOfFiniteVolumesPerAxisPerPatch+0)*(EulerOnGPU::NumberOfFiniteVolumesPerAxisPerPatch+0)*EulerOnGPU::NumberOfUnknowns;
+    validOutcome = new double[ size ];
+    std:memcpy(validOutcome,Q,sizeof(double)*size);
+  }
+}
+
+
+/**
+ * Works if and only if storeOutcome has been performed
+ * before.
+ */
+void validateOutcome( const double* Q, int patchIndex ) {
+  int index = 0;
+  int errors = 0;
+  for (int x=0; x<EulerOnGPU::NumberOfFiniteVolumesPerAxisPerPatch; x++)
+  for (int y=0; y<EulerOnGPU::NumberOfFiniteVolumesPerAxisPerPatch; y++)
+  for (int z=0; z<EulerOnGPU::NumberOfFiniteVolumesPerAxisPerPatch; z++)
+  for (int unknown=0; unknown<EulerOnGPU::NumberOfUnknowns; unknown++) {
+    if (not tarch::la::equals( Q[index], validOutcome[index]) ) {
+      errors++;
+    }
+    index++;
+  }
+  if (errors>0) {
+    std::cerr << "ERROR: outcomes in patch " << patchIndex << " differ in " << errors << " entrie(s)" << std::endl;
+  }
+}
+
+
+/**
+ * Run the benchmark for one particular number of patches per fused kernel call.
+ */
 void runBenchmarks(int patches) {
   peano4::grid::GridTraversalEvent event;
   peano4::datamanagement::CellMarker marker(event);
@@ -64,6 +121,7 @@ void runBenchmarks(int patches) {
     for (int i=0; i<patches; i++) {
       inputData.push_back( new double[ (EulerOnGPU::NumberOfFiniteVolumesPerAxisPerPatch+2)*(EulerOnGPU::NumberOfFiniteVolumesPerAxisPerPatch+2)*(EulerOnGPU::NumberOfFiniteVolumesPerAxisPerPatch+2)*EulerOnGPU::NumberOfUnknowns] );
       outputData.push_back( new double[ (EulerOnGPU::NumberOfFiniteVolumesPerAxisPerPatch+0)*(EulerOnGPU::NumberOfFiniteVolumesPerAxisPerPatch+0)*(EulerOnGPU::NumberOfFiniteVolumesPerAxisPerPatch+0)*EulerOnGPU::NumberOfUnknowns] );
+      initInputData( inputData[i] );
     }
 
     tarch::timing::Watch watch( "::", "main()", false );
@@ -78,6 +136,8 @@ void runBenchmarks(int patches) {
     watch.stop();
 
     for (int i=0; i<patches; i++) {
+      storeOutcome( outputData[i] );
+      validateOutcome( outputData[i],i );
       delete[] outputData[i];
     }
 
@@ -115,6 +175,7 @@ void runBenchmarks(int patches) {
     watch.stop();
 
     for (int i=0; i<patches; i++) {
+      validateOutcome( patchData.QOut[i],i );
       delete[] patchData.QIn[i];
       delete[] patchData.QOut[i];
     }
@@ -174,9 +235,13 @@ void runBenchmarks(int patches) {
 
     #if defined(GPUOffloadingSYCL) and defined(SharedTBB)
     ::tbb::task_group taskGroup;
+    // @todo remove semaphore
+    tarch::multicore::BooleanSemaphore semaphore;
     for (int hostTask=1; hostTask<MaxHostTasks; hostTask++) {
       taskGroup.run(
         [&]() -> void {
+          tarch::multicore::Lock lock(semaphore);
+          logInfo( "main()", "lock kernel" );
           kernel(
             device,
             patchData[hostTask],
@@ -185,6 +250,7 @@ void runBenchmarks(int patches) {
             false ,
             computeCFL
           );
+          logInfo( "main()", "unlock kernel" );
         }
       );
     }
@@ -195,6 +261,7 @@ void runBenchmarks(int patches) {
 
     for (int hostTask=0; hostTask<MaxHostTasks; hostTask++)
     for (int i=0; i<patches; i++) {
+      validateOutcome( patchData[hostTask].QOut[i],i );
       delete[] patchData[hostTask].QIn[i];
       delete[] patchData[hostTask].QOut[i];
     }
