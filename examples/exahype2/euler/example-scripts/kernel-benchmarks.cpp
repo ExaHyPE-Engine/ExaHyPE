@@ -241,8 +241,6 @@ void runBenchmarks(int patches) {
       taskGroup.run(
         [&]() -> void {
           tarch::multicore::Lock lock(semaphore);
-          logInfo( "main()", "lock kernel" );
-/*
           kernel(
             device,
             patchData[hostTask],
@@ -251,8 +249,6 @@ void runBenchmarks(int patches) {
             false ,
             computeCFL
           );
-*/
-          logInfo( "main()", "unlock kernel" );
         }
       );
     }
