@@ -37,8 +37,8 @@ void tarch::multicore::initSYCLQueues() {
       numberOfDevices++;
     }
   }
-  syclQueues.insert( std::pair< int, sycl::queue >( -1, sycl::device(sycl::cpu_selector()) ) );
-  std::cout << "default device (queue -1) maps onto CPU:" << syclQueues[-1].get_device().get_info<sycl::info::device::name>() << std::endl;
+  syclQueues.insert( std::pair< int, sycl::queue >( HostDefaultQueue, sycl::device(sycl::cpu_selector()) ) );
+  std::cout << "default device (queue " << HostDefaultQueue << ") maps onto CPU:" << syclQueues[HostDefaultQueue].get_device().get_info<sycl::info::device::name>() << std::endl;
 }
 
 #endif

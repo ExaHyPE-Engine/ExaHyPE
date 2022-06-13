@@ -61,6 +61,8 @@ namespace tarch {
     int getNumberOfSYCLQueues();
 
     void initSYCLQueues();
+
+    constexpr int HostDefaultQueue = -1;
   }
 }
 
