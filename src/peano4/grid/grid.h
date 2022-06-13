@@ -60,7 +60,6 @@ namespace peano4 {
     /**
      * Merge set of refinement/coarsening commands
      *
-     *
      * This routine has two roles:
      * - It shall reduce the number of refine events, so the actual AMR
      *   checks are faster when we next trigger the traversal
@@ -71,54 +70,43 @@ namespace peano4 {
      *   of them hosts a cell, while the merger of the two of them does
      *   host one.
      *
-     * The algorithm works in multiple sweeps:
+     * ## Algorithm
      *
-     * First, we extract all coarsen events from the input list. It is
-     * better to use a list in this algorithm, as we insert and erase
-     * frequently. Now we have two lists: the original input list minus
-     * all erase events, and a list of erase commands.
-     *
-     * Second, we construct a "power set" of all erase events. That is, we
-     * look for each erase event against each other erase event if it is
-     * adjacent to any other event. If so, we create a new merged event and
-     * add this one to the input set. This way, we ensure that the sets
-     * are recursively built up.
-     *
-     * Take a set of grid control events and try to consolidate them, i.e.
-     * remove overlaps and fuse individual requests. The consolidation
-     * algorithm is pretty primitive:
-     *
-     * - We create a new (empty) result list.
-     * - We iterate over the input list. 
-     * - Per entry, we check it against all elements that have already been
-     *   added ot the result set. 
-     *   -- If the current one is adjacent to an element from the output set,
-     *      and if both trigger the same kind of refinement, we enlarge the 
-     *      element that is already in the result set and memorise that we 
-     *      have "inserted" something into the output. We can immediately 
-     *      terminate our run-through through the output.
-     *   -- If a refinement entry in the input sequence overlaps with an 
-     *      erase entry in the output (or the other way round), we keep the 
-     *      refinement only. We can immediately terminate our run-through 
-     *      through the output.
-     *   -- If an entry from the input set has not triggered any modification
-     *      of an entry in the output set, we append it to the output set.
-     * - If changes have been made, i.e. if the output set is smaller than 
-     *   the input set, then we rerun the algorithm recursively again. Due to
-     *   mergers, four adjacent blocks might now form two bigger blocks which 
-     *   in turn can be merged once again.
-     *
-     * <h2> Two boxes can be merged into one </h2>
+     * The algorithm works in multiple steps:
      * 
-     * The "next to each other" implementation is again simplistic: We
-     * construct the bounding box around two events and compare its volume
-     * to the sum of the volumes of the two elements. If the bounding box
-     * volume is only around a few percent bigger than the sum, then we use
-     * the boundary box to replace the original two elements.
+     * - We separate erase from refine events.
+     * - We remove those erase events which are overwritten by refinement
+     *   events. As we work conservatively, refinement events are always
+     *   more important than coarsening ones.
+     * - Create the erase power set.
+     * - The code is asked to fuse multiple adjacent refinement events into
+     *   fewer large ones, and to fuse multiple coarsening events as well.
+     *   This reduces the event count, and gives the coarsening more
+     *   flexibility (see discussion above).
+     * - We join the remaining erase and refinement lists.
      *
-     * What I don't do in this algorithm is to take overlaps into account.
-     * Indeed, the slack (percentage) accommodates slight overlaps. But the
-     * code still might not recognise two elements if they massively overlap.
+     *
+     * ##  Erasing the mesh (again)
+     *
+     * We have to create the power sets over all
+     * erase events. This gives the mesh the opportunity to see faster
+     * where erases are possible, as it also handle non-rectangular
+     * regions: Assume there's a large L-shape of erase instructions consisting
+     * of three erase commands. Our algorithm will create a rectangle
+     * plus a square when it fuses the erases.
+     *
+     * Consequently, any cell overlapping with the boundary between the square
+     * and the rectangle will not be erased.
+     *
+     * If we had not merged the three cubic erases forming the L into 2+1 but
+     * into 2+2, we would also cover the boundary of the L shape. Therefore,
+     * it is important that we construct the power set before we merge events.
+     *
+     * The power set construction very quickly explodes, i.e. leads to a vast
+     * number of events. I thus manually truncate the creation of new events.
+     *
+     * Remark: I had to remove this power set step, as it turned out to be too
+     * time consuming.
      */
     std::vector< GridControlEvent > merge( std::vector< GridControlEvent>  events, const double Tolerance = 0.1 );
 
@@ -300,15 +288,6 @@ namespace peano4 {
         const std::list< peano4::grid::GridControlEvent >&  refineEvents,
         std::list< peano4::grid::GridControlEvent >&        eraseEvents
       );
-
-      /**
-       * Once I've computed the "power set" of erase events, I can throw those
-       * away that are redundant, i.e. totally covered by other events. To make
-       * this work correctly, it is important that
-       * removeEraseEventsThatAreCancelledByRefineEvents() has been called before.
-       * This is therefore the very last thing I do.
-       */
-      void removeEraseEventsCoverredByOtherEraseEvents( std::list< peano4::grid::GridControlEvent >&  inputEvents );
 
       /**
        * This routine merges adjacent events, i.e. events of the same time which

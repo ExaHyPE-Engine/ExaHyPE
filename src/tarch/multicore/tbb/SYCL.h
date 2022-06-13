@@ -68,6 +68,10 @@ namespace tarch {
      * one queue via this getter.
      */
     sycl::queue& getSYCLQueue( int number );
+
+    int getNumberOfSYCLQueues();
+
+    void initSYCLQueues();
   }
 }
 

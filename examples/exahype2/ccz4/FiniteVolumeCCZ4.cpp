@@ -160,7 +160,9 @@ void examples::exahype2::ccz4::FiniteVolumeCCZ4::sourceTerm(
     assertion3( std::isfinite(Q[i]), i, volumeX, t );
   }
 #endif
-
+ // for (int i=NumberOfUnknowns; i<NumberOfUnknowns+NumberOfAuxiliaryVariables; i++) {
+  //  S[i] = 0.0;
+  //}
   examples::exahype2::ccz4::FiniteVolumeCCZ4::sourceTerm(Q, volumeX, volumeH, t, dt, S, Offloadable::Yes);
 
   if (CCZ4smoothing>0){// then we apply simple laplacian smoothing
@@ -242,7 +244,6 @@ void examples::exahype2::ccz4::FiniteVolumeCCZ4::nonconservativeProduct(
   assertion( normal>=0 );
   assertion( normal<Dimensions );
 #endif
-  
   nonconservativeProduct(Q, deltaQ, faceCentre, volumeH, t, dt, normal, BgradQ, Offloadable::Yes);
 
 #if !defined(GPUOffloadingOMP)
@@ -276,6 +277,9 @@ void examples::exahype2::ccz4::FiniteVolumeCCZ4::nonconservativeProduct(
 
     gradQSerialised[i+normal*NumberOfUnknowns] = deltaQ[i];
   }
+  //for (int i=NumberOfUnknowns; i<NumberOfUnknowns+NumberOfAuxiliaryVariables; i++) {
+  //  BgradQ[i] = 0.0;
+  //}
   ncp(BgradQ, Q, gradQSerialised, normal, CCZ4LapseType, CCZ4ds, CCZ4c, CCZ4e, CCZ4f, CCZ4bs, CCZ4sk, CCZ4xi, CCZ4mu);
    //examples::exahype2::ccz4::FiniteVolumeCCZ4::nonconservativeProduct(Q, deltaQ, faceCentre, volumeH, t, normal, BgradQ);
 }
@@ -332,6 +336,21 @@ void examples::exahype2::ccz4::FiniteVolumeCCZ4::nonconservativeProduct(
  //   with some alter
       double Radius[NumberOfRefinementLayers] = {5.0, 3.0, 1.5, 0.5};
       double MaxH[NumberOfRefinementLayers]   = {0.3, 0.15, 0.04, 0.01};
+
+      result = ::exahype2::RefinementCommand::Keep;
+      for (int i=0; i<NumberOfRefinementLayers; i++) {
+        if (radius<Radius[i] and tarch::la::max(volumeH)>MaxH[i]) {
+          result=::exahype2::RefinementCommand::Refine;
+        }
+      }
+    }
+  }
+  if (CCZ4ReSwi==6){ //single black hole, higher level of amr
+    if (tarch::la::equals(t,0.0)){  //as we use a quantity calculated in postpocessing, we need to provide criterion at the first timestep 
+      constexpr int NumberOfRefinementLayers = 5;
+ //   with some alter
+      double Radius[NumberOfRefinementLayers] = {5.0, 3.0, 1.5, 0.5, 0.2};
+      double MaxH[NumberOfRefinementLayers]   = {0.3, 0.15, 0.04, 0.01, 0.004};
 
       result = ::exahype2::RefinementCommand::Keep;
       for (int i=0; i<NumberOfRefinementLayers; i++) {

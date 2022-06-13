@@ -9,6 +9,9 @@
 tarch::logging::Log   examples::exahype2::SSInfall::SSInfall::_log( "examples::exahype2::SSInfall::SSInfall" );
 
 
+const tarch::la::Vector<Dimensions,double>  examples::exahype2::SSInfall::SSInfall::OverDensityCentre = {0.0, 0.0, 0.0};
+
+
 #if defined(GPUOffloadingOMP)
 #pragma omp declare target
 #endif
@@ -174,7 +177,7 @@ std::string examples::exahype2::SSInfall::SSInfall::plotGlobalMTot(bool plotCopy
     }
   }
   if (ReSwi==3){ //radius based, for test
-    if (radius<0.2) {result=::exahype2::RefinementCommand::Refine;}
+    if (radius<0.1) {result=::exahype2::RefinementCommand::Refine;}
   }
   if (ReSwi==4){ //dynamic one
     double t_i=pow(a_i,1.5)*2.057*1e17;
@@ -239,9 +242,9 @@ void examples::exahype2::SSInfall::SSInfall::initialCondition(
   logDebug( "initialCondition(...)", "init volume at " << volumeCentre << "x" << volumeH << " (grid constructed=" << gridIsConstructred << ")" );
 
   constexpr double pi = M_PI;
-  double x=volumeCentre(0)-center(0);
-  double y=volumeCentre(1)-center(1);
-  double z=volumeCentre(2)-center(2);
+  double x=volumeCentre(0)-OverDensityCentre(0);
+  double y=volumeCentre(1)-OverDensityCentre(1);
+  double z=volumeCentre(2)-OverDensityCentre(2);
 
   bool isInTheSphere = ( (x*x+y*y+z*z) < r_ini*r_ini );//overdensity region
   double r_coor=x*x+y*y+z*z;
@@ -382,9 +385,9 @@ void examples::exahype2::SSInfall::SSInfall::sourceTerm(
     volumeX, volumeH, t, dt
   );
 
-  double x=volumeX(0)-center(0);
-  double y=volumeX(1)-center(1);
-  double z=volumeX(2)-center(2);
+  double x=volumeX(0)-OverDensityCentre(0);
+  double y=volumeX(1)-OverDensityCentre(1);
+  double z=volumeX(2)-OverDensityCentre(2);
 
   double r_coor=x*x+y*y+z*z;
   r_coor=pow(r_coor,0.5);
@@ -406,7 +409,7 @@ void examples::exahype2::SSInfall::SSInfall::sourceTerm(
         nonCriticalAssertion4( m_in<1e100, volumeX, volumeH, t, dt );
       }
       else {
-        assertion( isOutsideOfLargestRadius(volumeX, volumeH) );
+        assertion3( isOutsideOfLargestRadius(volumeX, volumeH), volumeX, volumeH, _rMax );
         m_in=(mass_interpolate(r_coor, MassCal)+delta_m)/4.0/tarch::la::PI;
         nonCriticalAssertion4( not std::isnan(m_in), volumeX, volumeH, t, dt );
         nonCriticalAssertion4( m_in<1e100, volumeX, volumeH, t, dt );
@@ -446,10 +449,8 @@ void examples::exahype2::SSInfall::SSInfall::sourceTerm(
   double * __restrict__                        S, // S[5
   Offloadable
 ) {
-  const tarch::la::Vector<Dimensions,double> center(0.0);
-  double r_coor         = tarch::la::norm2(volumeX - center);
+  double r_coor         = tarch::la::norm2(volumeX - OverDensityCentre);
 
-  // @todo Han, this requires work
   double m_in = (4.0/3.0)*tarch::la::PI*(pow(r_coor,3)-pow(_rMax,3))*(_rMax-1.0) + _mTotMax;
 
   double force_density_norm = getForceDensityNorm(
@@ -458,9 +459,9 @@ void examples::exahype2::SSInfall::SSInfall::sourceTerm(
     t, Q[0],1.0
   );
 
-  double x = volumeX(0)-center(0);
-  double y = volumeX(1)-center(1);
-  double z = volumeX(2)-center(2);
+  double x = volumeX(0)-OverDensityCentre(0);
+  double y = volumeX(1)-OverDensityCentre(1);
+  double z = volumeX(2)-OverDensityCentre(2);
 
   S[0] = 0.0;  // rho
   S[1] = -force_density_norm*x;    // velocities
@@ -481,7 +482,7 @@ bool examples::exahype2::SSInfall::SSInfall::isOutsideOfLargestRadius(
   const tarch::la::Vector<Dimensions,double>&  patchCentre,
   const tarch::la::Vector<Dimensions,double>&  patchH
 ) const {
-  double r_coor         = tarch::la::norm2(patchCentre - center);
+  double r_coor         = tarch::la::norm2(patchCentre - OverDensityCentre);
   double safetyDistance = std::sqrt(3) * tarch::la::max(patchH) / 2.0;
   return  r_coor + safetyDistance > _rMax;
 }

@@ -137,9 +137,11 @@ class FV(object):
     
     If you wanna alter the inter-resolution transfer operators, please use
     
-    self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement.switch_interpolation_scheme.
+    self.interpolation = "myCoolScheme"
     
-    Consult the documentation of this routine for the available options.
+    Consult the documentation of Peano's blockstructured toolbox for variations that we 
+    ship out of the box. You can obviously add your own ones.
+
     
     :: Data postprocessing or coupling to other codes
     
@@ -245,6 +247,9 @@ class FV(object):
     self._refinement_criterion_implementation = PDETerms.Empty_Implementation
     self._initial_conditions_implementation   = PDETerms.User_Defined_Implementation
 
+    self._interpolation = "piecewise_constant"
+    self._restriction   = "averaging"
+    
     self.create_data_structures()
     self.create_action_sets()
 
@@ -498,21 +503,36 @@ The finest mesh width of """ + str(self.get_finest_volume_size(domain_size)) + "
      specialised) run through all create_data_structure() variants 
      within the inheritance tree.
      
+     :: Recreation vs backup (state discussion)
+     
+     We faced some issues with action sets that should not be 
+     overwritten. For example, the postprocessing should not be overwritten
+     as users might want to set it and then later on reset the number of 
+     unknowns, e.g. In this case, you would loose your postprocessing if 
+     create_action_sets() recreated them. So I decided to make an exception
+     here: the postprocessing step is never overwritten by the standard
+     classes.
+     
+     There are further action sets which have a state, which users might 
+     want to alter. The most prominent one is the AMR routines, where users
+     often alter the interpolation and restriction scheme. Here, things are
+     tricky: If we keep the default one, the action set would not pick up 
+     if you changed the number of unknowns, e.g. However, if we recreated 
+     the action set, we'd miss out on any changed interpolation/restriction
+     scheme. Therefore, I have to hold the interpolation and restriction
+     scheme seperatae.
+     
     """
-    self._action_set_initial_conditions                       = exahype2.solvers.fv.actionsets.InitialCondition(self, self._store_cell_data_default_guard(), "true" )
-    self._action_set_initial_conditions_for_grid_construction = exahype2.solvers.fv.actionsets.InitialCondition(self, self._store_cell_data_default_guard(), "false")
-    self._action_set_AMR                                      = exahype2.solvers.fv.actionsets.AdaptivityCriterion(solver=self, guard=self._store_cell_data_default_guard(), build_up_new_refinement_instructions=True,  implement_previous_refinement_instructions=True )
-    self._action_set_AMR_commit_without_further_analysis      = exahype2.solvers.fv.actionsets.AdaptivityCriterion(solver=self, guard=self._store_cell_data_default_guard(), build_up_new_refinement_instructions=False, implement_previous_refinement_instructions=True )
-    self._action_set_handle_boundary                          = exahype2.solvers.fv.actionsets.HandleBoundary(self, self._store_face_data_default_guard())
-    self._action_set_project_patch_onto_faces                 = exahype2.solvers.fv.actionsets.ProjectPatchOntoFaces(self, self._store_cell_data_default_guard())
-    self._action_set_roll_over_update_of_faces                = exahype2.solvers.fv.actionsets.RollOverUpdatedFace(self, self._store_face_data_default_guard())
-    self._action_set_copy_new_faces_onto_old_faces            = peano4.toolbox.blockstructured.BackupPatchOverlap(self._patch_overlap_new, self._patch_overlap_old, False, self._store_face_data_default_guard(), self._get_default_includes())
+    self._action_set_initial_conditions                          = exahype2.solvers.fv.actionsets.InitialCondition(self, self._store_cell_data_default_guard(), "true" )
+    self._action_set_initial_conditions_for_grid_construction    = exahype2.solvers.fv.actionsets.InitialCondition(self, self._store_cell_data_default_guard(), "false")
+    self._action_set_AMR                                         = exahype2.solvers.fv.actionsets.AdaptivityCriterion(solver=self, guard=self._store_cell_data_default_guard(), build_up_new_refinement_instructions=True,  implement_previous_refinement_instructions=True )
+    self._action_set_AMR_commit_without_further_analysis         = exahype2.solvers.fv.actionsets.AdaptivityCriterion(solver=self, guard=self._store_cell_data_default_guard(), build_up_new_refinement_instructions=False, implement_previous_refinement_instructions=True )
+    self._action_set_handle_boundary                             = exahype2.solvers.fv.actionsets.HandleBoundary(self, self._store_face_data_default_guard())
+    self._action_set_project_patch_onto_faces                    = exahype2.solvers.fv.actionsets.ProjectPatchOntoFaces(self, self._store_cell_data_default_guard())
+    self._action_set_roll_over_update_of_faces                   = exahype2.solvers.fv.actionsets.RollOverUpdatedFace(self, self._store_face_data_default_guard() )
+    self._action_set_copy_new_faces_onto_old_faces               = peano4.toolbox.blockstructured.BackupPatchOverlap(self._patch_overlap_new, self._patch_overlap_old, False, self._store_face_data_default_guard(), self._get_default_includes())
+    self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement = exahype2.solvers.fv.actionsets.DynamicAMR( solver=self, interpolation=self._interpolation, restriction=self._restriction )
 
-    if self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement==None: 
-      self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement = exahype2.solvers.fv.actionsets.DynamicAMR( solver=self )
-      self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement.switch_interpolation_scheme( "piecewise_constant" )
-      self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement.switch_restriction_scheme( "averaging" )
-    
     # This one is different: it is the hook-in point for other solvers, so we create it 
     # only once if it does not exist
     if self._action_set_postprocess_solution == None:
@@ -521,7 +541,7 @@ The finest mesh width of """ + str(self.get_finest_volume_size(domain_size)) + "
     self._action_set_update_face_label = exahype2.grid.UpdateFaceLabel( self._name )  
     self._action_set_update_cell_label = exahype2.grid.UpdateCellLabel( self._name ) 
         
-    self._action_set_update_cell                                                      = None
+    self._action_set_update_cell = None
 
 
 
@@ -994,3 +1014,25 @@ The finest mesh width of """ + str(self.get_finest_volume_size(domain_size)) + "
     self.create_action_sets()
 
 
+  @property
+  def interpolation(self):
+    return self._interpolation
+
+
+  @interpolation.setter
+  def interpolation(self,value):
+    self._interpolation = value
+    self.create_data_structures()
+    self.create_action_sets()
+
+
+  @property
+  def restriction(self):
+    return self._restriction
+
+
+  @restriction.setter
+  def restriction(self,value):
+    self._restriction = value
+    self.create_data_structures()
+    self.create_action_sets()

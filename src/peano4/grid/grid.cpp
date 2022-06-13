@@ -60,7 +60,6 @@ peano4::grid::GridVertex peano4::grid::createVertex(
 
 std::vector< peano4::grid::GridControlEvent > peano4::grid::merge( std::vector< GridControlEvent >   events, const double Tolerance ) {
   logTraceInWith1Argument( "merge(...)", events.size() );
-  // @todo Docu
 
   std::list< peano4::grid::GridControlEvent > refineEvents;
   std::list< peano4::grid::GridControlEvent > eraseEvents;
@@ -75,12 +74,14 @@ std::vector< peano4::grid::GridControlEvent > peano4::grid::merge( std::vector< 
   logInfo( "merge(...)", "have a total of " << events.size() << " event(s) consisting of " << refineEvents.size() << " refine and " << eraseEvents.size() << " erase events" );
 
   internal::removeEraseEventsThatAreCancelledByRefineEvents( refineEvents, eraseEvents );
-  logDebug( "merge(...)", "reduced to " << eraseEvents.size() << " erase event(s) by eliminating erase events that overlap with refinement");
+  logInfo( "merge(...)", "reduced to " << eraseEvents.size() << " erase event(s) by eliminating erase events that overlap with refinement");
+
+  //internal::generateEraseEventPowersetOfSquareEvents( eraseEvents );
+  //logInfo( "merge(...)", "power set of erase events hosts " << eraseEvents.size() << " event(s)");
 
   internal::mergeAdjacentRefinementEvents( refineEvents );
   internal::mergeAdjacentRefinementEvents( eraseEvents );
-  logDebug( "merge(...)", "merged refine events into " << refineEvents.size() << " event(s)");
-  logDebug( "merge(...)", "merged erase events into " << eraseEvents.size() << " event(s)");
+  logInfo( "merge(...)", "merged refine events into " << refineEvents.size() << " event(s)");
 
   std::vector< peano4::grid::GridControlEvent > result;
   result.insert( result.begin(), refineEvents.begin(), refineEvents.end() );
@@ -336,7 +337,7 @@ void peano4::grid::reduceGridControlEvents( std::vector<GridControlEvent>& event
   int                           localSize   = events.size();
   int*                          sizes       = new int[ tarch::mpi::Rank::getInstance().getNumberOfRanks() ];
 
-  logInfo( "reduceGridControlEvents(...)", "feed local data of size " << localEvents.size() << " into allgather" );
+  logDebug( "reduceGridControlEvents(...)", "feed local data of size " << localEvents.size() << " into allgather" );
 
   MPI_Allgather(
     &localSize, 1, MPI_INT,
