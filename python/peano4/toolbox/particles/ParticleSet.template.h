@@ -51,6 +51,13 @@
       static {{CLASSNAME}}     _particlesThatHaveToBeSieved;
       static bool              _thereAreParticlesToBeSieved;
 
+      static int _numberOfLifts;
+      static int _numberOfDrops;
+      static int _numberOfAssignmentsToGlobalSieve;
+      static int _totalRealParticleCount;
+      static int _totalVirtualParticleCount;
+      static int _totalEliminatedSpatialDuplicates;
+
       #if PeanoDebug>=1
       private:
        tarch::la::Vector<Dimensions,double> _debugX;
@@ -172,8 +179,11 @@
        * counterparts.
        *
        * @return Number of eliminated particles
+       *
+       * @param sortingTolerance I call it sorting tolerance, as I recommend to
+       *   use the same as for the lifts and drops
        */
-      int eliminateSpatialDuplicates(bool examineOnlyVirtualParticles);
+      void eliminateSpatialDuplicates(bool examineOnlyVirtualParticles, double sortingTolerance);
 
 
       #ifdef Parallel
@@ -190,13 +200,21 @@
        * Has to be called after the traversal has finished on each rank by the
        * main, i.e. do not call it within the action sets. You may not call this
        * routine more than once per rank per traversal.
+       *
+       *
+       * ## Algorithmic steps
+       *
+       * - First, we exchange all the global stats and plot them. Once we have
+       *   plotted them (only on rank 0), we can reset all stats to zero.
+       * - Delete all the sieve particles which have not been sieved. We note
+       *   that only particles within the domain are taken from the sieve set
+       *   and inserted into hte mesh. For particles close to domain boundaries,
+       *   we create copies and insert these copies. The preimage consequently
+       *   has to be deleted at one point, i.e. here in this routine.
+       * - We roll over the globally lifted particles into the sieve set for the
+       *   next mesh traversal.
        */
       static void finishedTraversal();
-
-      /**
-       * Just an early check if there's something to be sieved at all.
-       */
-      static bool thereAreParticlesToBeSieved();
 
       /**
        * Mark whole particle set as set of particles which can't be lifted
@@ -214,11 +232,43 @@
        */
       void particlesCanNotBeLiftedLocally();
 
-      static {{NAMESPACE | join("::")}}::{{CLASSNAME}}  getParticlesToBeSievedIntoVertex(
+      /**
+       * Takes the current particle set and finds those particles which can be
+       * sieved into current vertex.
+       */
+      {{NAMESPACE | join("::")}}::{{CLASSNAME}}  getParticlesToBeSievedIntoVertex(
         const peano4::datamanagement::VertexMarker& marker,
         double sortingTolerance
       );
-  };
+
+      static void updateLiftDropStatistics(
+        int numberOfLiftsInThisTree,
+        int numberOfDropsInThisTree
+      );
+
+      static void updateParticleCountStatistics(
+        int totalRealParticleCountInThisTree,
+        int totalVirtualParticleCountInThisTree
+      );
+
+      /**
+       * This routine returns a deep copy of all the particles that are to be
+       * sieved. Use this before you start to traverse your local domain. As
+       * it is a deep copy, you have to invoke deleteParticles().
+       */
+      static {{NAMESPACE | join("::")}}::{{CLASSNAME}} getSievedParticlesForNextGridTraversal();
+
+      /**
+       * This is a deep delete
+       *
+       * The normal clear() operation only eliminates the list to the pointers,
+       * but not the pointers themselves. In a way, it is a shallow free. This
+       * routine runs over each individual particle and erases them. Other
+       * pointers or pointer sets that also point to these particles thus become
+       * invalid.
+       */
+      void deleteParticles();
+};
 
 {% for item in NAMESPACE -%}
 }

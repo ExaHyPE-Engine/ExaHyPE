@@ -1,6 +1,7 @@
 #include "Rusanov.h"
 #include "tarch/compiler/CompilerSpecificSettings.h"
 #include "exahype2/fv/rusanov/LoopBody.h"
+#include "extra/cartesian_product.h"
 
 // ***************************************************************************************
 // @todo Include this in a separate file
@@ -9,136 +10,97 @@
 #include <execution>
 #include <algorithm>
 
-<<<<<<< HEAD
+#if defined(GPUOffloadingCPP)
 template<typename Collection1, typename Collection2, typename Collection3, typename Collection4, typename Collection5>
-void cartesian_product(Collection1&& collection1, Collection2&& collection2, Collection3&& collection3, Collection4&& collection4, Collection5&& collection5, auto func)
+void cartesian_product_function(Collection1&& collection1, Collection2&& collection2, Collection3&& collection3, Collection4&& collection4, Collection5&& collection5, auto func)
 {
-    std::for_each(
-        std::execution::par_unseq,
-        collection1.begin(), 
-        collection1.end(), 
-        [&collection2,&collection3,&collection4,&collection5,&func](auto i){
-            std::for_each(
-                std::execution::par_unseq,
-                collection2.begin(),
-                collection2.end(),
-                [&collection3,&collection4,&collection5,&i,&func](auto j){
-                    std::for_each(
-                        std::execution::par_unseq,
-                        collection3.begin(),
-                        collection3.end(),
-                        [&collection4,&collection5,&i,&j,&func](auto k){
-                            std::for_each(
-                                std::execution::par_unseq,
-                                collection4.begin(),
-                                collection4.end(),
-                                [&collection5,&i,&j,&k,&func](auto m){
-                                    std::for_each(
-                                        std::execution::par_unseq,
-                                        collection5.begin(),
-                                        collection5.end(),
-                                        [&i,&j,&k,&m,&func](auto n){
-                                            func(i,j,k,m,n);
-                                        }
-                                    );
-                                }
-                            );
-                        }
-                    );
-                }
-            );
-        }
-    );
+
+   auto r = tl::views::cartesian_product(
+      collection1,
+      collection2,
+      collection3,
+      collection4,
+      collection5
+   );
+
+   std::for_each(
+      std::execution::par_unseq,
+      r.begin(),
+      r.end(),
+      [&func](auto ids){
+         auto [i,j,k,m,n] = ids;
+         func(i,j,k,m,n);
+      }
+   );
+   
 }
 
-=======
-/*
->>>>>>> origin/p4
 template<typename Collection1, typename Collection2, typename Collection3, typename Collection4>
-void cartesian_product(Collection1&& collection1, Collection2&& collection2, Collection3&& collection3, Collection4&& collection4, auto func)
+void cartesian_product_function(Collection1&& collection1, Collection2&& collection2, Collection3&& collection3, Collection4&& collection4, auto func)
 {
-    std::for_each(
-        std::execution::par_unseq,
-        collection1.begin(), 
-        collection1.end(), 
-        [&collection2,&collection3,&collection4,&func](auto i){
-            std::for_each(
-                std::execution::par_unseq,
-                collection2.begin(),
-                collection2.end(),
-                [&collection3,&collection4,&i,&func](auto j){
-                    std::for_each(
-                        std::execution::par_unseq,
-                        collection3.begin(),
-                        collection3.end(),
-                        [&collection4,&i,&j,&func](auto k){
-                            std::for_each(
-                                std::execution::par_unseq,
-                                collection4.begin(),
-                                collection4.end(),
-                                [&i,&j,&k,&func](auto m){
-                                    func(i,j,k,m);
-                                }
-                            );
-                        }
-                    );
-                }
-            );
-        }
-    );
-}
-*/
 
-/*
+   auto r = tl::views::cartesian_product(
+      collection1,
+      collection2,
+      collection3,
+      collection4
+   );
+
+   std::for_each(
+      std::execution::par_unseq,
+      r.begin(),
+      r.end(),
+      [&func](auto ids){
+         auto [i,j,k,m] = ids;
+         func(i,j,k,m);
+      }
+   );
+   
+}
+
 template<typename Collection1, typename Collection2, typename Collection3>
-void cartesian_product(Collection1&& collection1, Collection2&& collection2, Collection3&& collection3, auto func)
+void cartesian_product_function(Collection1&& collection1, Collection2&& collection2, Collection3&& collection3, auto func)
 {
-    std::for_each(
-        std::execution::par_unseq,
-        collection1.begin(), 
-        collection1.end(), 
-        [&collection2,&collection3,&func](auto i){
-            std::for_each(
-                std::execution::par_unseq,
-                collection2.begin(),
-                collection2.end(),
-                [&collection3,&i,&func](auto j){
-                      std::for_each(
-                        std::execution::par_unseq,
-                        collection3.begin(),
-                        collection3.end(),
-                        [&i,&j,&func](auto k){
-                            func(i,j,k);
-                        }
-                    );
-                }
-            );
-        }
-    );
+
+   auto r = tl::views::cartesian_product(
+      collection1,
+      collection2,
+      collection3
+   );
+
+   std::for_each(
+      std::execution::par_unseq,
+      r.begin(),
+      r.end(),
+      [&func](auto ids){
+         auto [i,j,k] = ids;
+         func(i,j,k);
+      }
+   );
+   
 }
 
 template<typename Collection1, typename Collection2>
-void cartesian_product(Collection1&& collection1, Collection2&& collection2, auto func)
+void cartesian_product_function(Collection1&& collection1, Collection2&& collection2, auto func)
 {
-    std::for_each(
-        std::execution::par_unseq,
-        collection1.begin(), 
-        collection1.end(), 
-        [&collection2,&func](auto i){
-            std::for_each(
-                std::execution::par_unseq,
-                collection2.begin(),
-                collection2.end(),
-                [&i,&func](auto j){
-                    func(i,j);
-                }
-            );
-        }
-    );
-}
-*/
 
-// ***************************************************************************************
+   auto r = tl::views::cartesian_product(
+      collection1,
+      collection2
+   );
+
+   std::for_each(
+      std::execution::par_unseq,
+      r.begin(),
+      r.end(),
+      [&func](auto ids){
+         auto [i,j] = ids;
+         func(i,j);
+      }
+   );
+
+}
+#endif
 
 
 template <
@@ -234,7 +196,7 @@ void exahype2::fv::rusanov::cpp::timeStepWithRusanov_patchwise_heap_static_calls
     TempDataEnumerator eigenvalueEnumerator(patchData.numberOfCells, numberOfVolumesPerAxisInPatch,haloSize,1,0);
 
     if (Dimensions==2 and evaluateSource) {
-      cartesian_product(dim_range, dim_range, [&](int x, int y) {
+      cartesian_product_function(dim_range, dim_range, [&](int x, int y) {
         internal::copySolutionAndAddSourceTerm_LoopBody<Solver>(
           patchData.QIn[patchIndex],
           QInEnumerator,
@@ -251,7 +213,7 @@ void exahype2::fv::rusanov::cpp::timeStepWithRusanov_patchwise_heap_static_calls
     }
     
     else if (Dimensions==3 and evaluateSource) {
-      cartesian_product(dim_range, dim_range, dim_range, [&](int x, int y, int z) {
+      cartesian_product_function(dim_range, dim_range, dim_range, [&](int x, int y, int z) {
         internal::copySolutionAndAddSourceTerm_LoopBody<Solver>(
           patchData.QIn[patchIndex],
           QInEnumerator,
@@ -268,7 +230,7 @@ void exahype2::fv::rusanov::cpp::timeStepWithRusanov_patchwise_heap_static_calls
     }
 
     else if (Dimensions==2) {
-      cartesian_product(dim_range, dim_range, aux_range1, [&](int x, int y, int unknown) {
+      cartesian_product_function(dim_range, dim_range, aux_range1, [&](int x, int y, int unknown) {
         internal::copySolution_LoopBody(
           patchData.QIn[patchIndex],
           QInEnumerator,
@@ -282,7 +244,7 @@ void exahype2::fv::rusanov::cpp::timeStepWithRusanov_patchwise_heap_static_calls
     }
 
     else {
-      cartesian_product(dim_range, dim_range, dim_range, aux_range1, [&](int x, int y, int z, int unknown) {
+      cartesian_product_function(dim_range, dim_range, dim_range, aux_range1, [&](int x, int y, int z, int unknown) {
         internal::copySolution_LoopBody(
           patchData.QIn[patchIndex],
           QInEnumerator,
@@ -297,7 +259,7 @@ void exahype2::fv::rusanov::cpp::timeStepWithRusanov_patchwise_heap_static_calls
 
     if (Dimensions==2) {
 
-      cartesian_product(dim_range, aux_range2, [&](int y, int x) {
+      cartesian_product_function(dim_range, aux_range2, [&](int y, int x) {
         internal::computeMaxEigenvalue_LoopBody<Solver>(
             patchData.QIn[patchIndex],
             QInEnumerator,
@@ -312,7 +274,7 @@ void exahype2::fv::rusanov::cpp::timeStepWithRusanov_patchwise_heap_static_calls
         );
       });
 
-      cartesian_product(aux_range2, dim_range, [&](int y, int x) {
+      cartesian_product_function(aux_range2, dim_range, [&](int y, int x) {
         internal::computeMaxEigenvalue_LoopBody<Solver>(
             patchData.QIn[patchIndex],
             QInEnumerator,
@@ -327,7 +289,7 @@ void exahype2::fv::rusanov::cpp::timeStepWithRusanov_patchwise_heap_static_calls
         );
       });
 
-      cartesian_product(dim_range, dim_range, unknown_range, [&](int y, int x, int unknown) {
+      cartesian_product_function(dim_range, dim_range, unknown_range, [&](int y, int x, int unknown) {
         internal::updateSolutionWithEigenvalueDamping_LoopBody(
           patchData.QIn[patchIndex],
           QInEnumerator,
@@ -347,7 +309,7 @@ void exahype2::fv::rusanov::cpp::timeStepWithRusanov_patchwise_heap_static_calls
       });
     }
     else {
-      cartesian_product(dim_range, dim_range, aux_range2, [&](int z, int y, int x) {
+      cartesian_product_function(dim_range, dim_range, aux_range2, [&](int z, int y, int x) {
         internal::computeMaxEigenvalue_LoopBody<Solver>(
           patchData.QIn[patchIndex],
           QInEnumerator,
@@ -362,7 +324,7 @@ void exahype2::fv::rusanov::cpp::timeStepWithRusanov_patchwise_heap_static_calls
         );
       });
 
-      cartesian_product(dim_range, aux_range2, dim_range, [&](int z, int y, int x) {
+      cartesian_product_function(dim_range, aux_range2, dim_range, [&](int z, int y, int x) {
         internal::computeMaxEigenvalue_LoopBody<Solver>(
               patchData.QIn[patchIndex],
               QInEnumerator,
@@ -377,7 +339,7 @@ void exahype2::fv::rusanov::cpp::timeStepWithRusanov_patchwise_heap_static_calls
         );
       });
 
-      cartesian_product(aux_range2, dim_range, dim_range, [&](int z, int y, int x) {
+      cartesian_product_function(aux_range2, dim_range, dim_range, [&](int z, int y, int x) {
         internal::computeMaxEigenvalue_LoopBody<Solver>(
               patchData.QIn[patchIndex],
               QInEnumerator,
@@ -392,7 +354,7 @@ void exahype2::fv::rusanov::cpp::timeStepWithRusanov_patchwise_heap_static_calls
         );
       });
 
-      cartesian_product(dim_range, dim_range, dim_range, unknown_range, [&](int z, int y, int x, int unknown) {
+      cartesian_product_function(dim_range, dim_range, dim_range, unknown_range, [&](int z, int y, int x, int unknown) {
         internal::updateSolutionWithEigenvalueDamping_LoopBody(
           patchData.QIn[patchIndex],
           QInEnumerator,
@@ -414,7 +376,7 @@ void exahype2::fv::rusanov::cpp::timeStepWithRusanov_patchwise_heap_static_calls
 
 
     if (evaluateFlux and Dimensions==2) {
-      cartesian_product(dim_range, aux_range2, [&](int y, int x) {
+      cartesian_product_function(dim_range, aux_range2, [&](int y, int x) {
         internal::computeFlux_LoopBody<Solver>(
           patchData.QIn[patchIndex],
           QInEnumerator,
@@ -430,7 +392,7 @@ void exahype2::fv::rusanov::cpp::timeStepWithRusanov_patchwise_heap_static_calls
         );
       });
 
-      cartesian_product(aux_range2, dim_range, [&](int y, int x) {
+      cartesian_product_function(aux_range2, dim_range, [&](int y, int x) {
         internal::computeFlux_LoopBody<Solver>(
           patchData.QIn[patchIndex],
           QInEnumerator,
@@ -446,7 +408,7 @@ void exahype2::fv::rusanov::cpp::timeStepWithRusanov_patchwise_heap_static_calls
         );
       });
 
-      cartesian_product(dim_range, dim_range, unknown_range, [&](int y, int x, int unknown) {
+      cartesian_product_function(dim_range, dim_range, unknown_range, [&](int y, int x, int unknown) {
         internal::updateSolutionWithFlux_LoopBody(
           tempFluxX, tempFluxY, tempFluxZ,
           fluxEnumerator,
@@ -463,7 +425,7 @@ void exahype2::fv::rusanov::cpp::timeStepWithRusanov_patchwise_heap_static_calls
     }
 
     else if (evaluateFlux and Dimensions==3) {
-      cartesian_product(dim_range, dim_range, aux_range2, [&](int z, int y, int x) {
+      cartesian_product_function(dim_range, dim_range, aux_range2, [&](int z, int y, int x) {
         internal::computeFlux_LoopBody<Solver>(
           patchData.QIn[patchIndex],
           QInEnumerator,
@@ -479,7 +441,7 @@ void exahype2::fv::rusanov::cpp::timeStepWithRusanov_patchwise_heap_static_calls
         );
       });
 
-      cartesian_product(dim_range, aux_range2, dim_range, [&](int z, int y, int x) {
+      cartesian_product_function(dim_range, aux_range2, dim_range, [&](int z, int y, int x) {
         internal::computeFlux_LoopBody<Solver>(
           patchData.QIn[patchIndex],
           QInEnumerator,
@@ -495,7 +457,7 @@ void exahype2::fv::rusanov::cpp::timeStepWithRusanov_patchwise_heap_static_calls
         );
       });
 
-      cartesian_product(aux_range2, dim_range, dim_range, [&](int z, int y, int x) {
+      cartesian_product_function(aux_range2, dim_range, dim_range, [&](int z, int y, int x) {
         internal::computeFlux_LoopBody<Solver>(
           patchData.QIn[patchIndex],
           QInEnumerator,
@@ -511,7 +473,7 @@ void exahype2::fv::rusanov::cpp::timeStepWithRusanov_patchwise_heap_static_calls
         );
       });
 
-      cartesian_product(dim_range, dim_range, dim_range, unknown_range, [&](int z, int y, int x, int unknown) {
+      cartesian_product_function(dim_range, dim_range, dim_range, unknown_range, [&](int z, int y, int x, int unknown) {
         internal::updateSolutionWithFlux_LoopBody(
           tempFluxX, tempFluxY, tempFluxZ,
           fluxEnumerator,
@@ -529,7 +491,7 @@ void exahype2::fv::rusanov::cpp::timeStepWithRusanov_patchwise_heap_static_calls
 
 
     if (evaluateNonconservativeProduct and Dimensions==2) {
-      cartesian_product(dim_range, aux_range3, [&](int y, int x) {
+      cartesian_product_function(dim_range, aux_range3, [&](int y, int x) {
         internal::computeNonconservativeFlux_LoopBody<Solver,unknowns,auxiliaryVariables>(
           patchData.QIn[patchIndex],
           QInEnumerator,
@@ -545,7 +507,7 @@ void exahype2::fv::rusanov::cpp::timeStepWithRusanov_patchwise_heap_static_calls
         );
       });
 
-      cartesian_product(aux_range3, dim_range, [&](int y, int x) {
+      cartesian_product_function(aux_range3, dim_range, [&](int y, int x) {
         internal::computeNonconservativeFlux_LoopBody<Solver,unknowns,auxiliaryVariables>(
           patchData.QIn[patchIndex],
           QInEnumerator,
@@ -561,7 +523,7 @@ void exahype2::fv::rusanov::cpp::timeStepWithRusanov_patchwise_heap_static_calls
         );
       });
 
-      cartesian_product(dim_range, dim_range, unknown_range, [&](int y, int x, int unknown) {
+      cartesian_product_function(dim_range, dim_range, unknown_range, [&](int y, int x, int unknown) {
         internal::updateSolutionWithNonconservativeFlux_LoopBody(
           tempNonconservativeProductX, tempNonconservativeProductY, tempNonconservativeProductZ,
           ncpEnumerator,
@@ -577,7 +539,7 @@ void exahype2::fv::rusanov::cpp::timeStepWithRusanov_patchwise_heap_static_calls
       });
     }
     else if (evaluateNonconservativeProduct and Dimensions==3) {
-        cartesian_product(dim_range, dim_range, aux_range3, [&](int z, int y, int x) {
+        cartesian_product_function(dim_range, dim_range, aux_range3, [&](int z, int y, int x) {
           internal::computeNonconservativeFlux_LoopBody<Solver,unknowns,auxiliaryVariables>(
             patchData.QIn[patchIndex],
             QInEnumerator,
@@ -593,7 +555,7 @@ void exahype2::fv::rusanov::cpp::timeStepWithRusanov_patchwise_heap_static_calls
           );
         });
 
-        cartesian_product(dim_range, aux_range3, dim_range, [&](int z, int y, int x) {
+        cartesian_product_function(dim_range, aux_range3, dim_range, [&](int z, int y, int x) {
           internal::computeNonconservativeFlux_LoopBody<Solver,unknowns,auxiliaryVariables>(
             patchData.QIn[patchIndex],
             QInEnumerator,
@@ -609,7 +571,7 @@ void exahype2::fv::rusanov::cpp::timeStepWithRusanov_patchwise_heap_static_calls
           );
         });
 
-        cartesian_product(aux_range3, dim_range, dim_range, [&](int z, int y, int x) {
+        cartesian_product_function(aux_range3, dim_range, dim_range, [&](int z, int y, int x) {
           internal::computeNonconservativeFlux_LoopBody<Solver,unknowns,auxiliaryVariables>(
             patchData.QIn[patchIndex],
             QInEnumerator,
@@ -625,7 +587,7 @@ void exahype2::fv::rusanov::cpp::timeStepWithRusanov_patchwise_heap_static_calls
           );
         });
 
-        cartesian_product(dim_range, dim_range, dim_range, unknown_range, [&](int z, int y, int x, int unknown) {
+        cartesian_product_function(dim_range, dim_range, dim_range, unknown_range, [&](int z, int y, int x, int unknown) {
           internal::updateSolutionWithNonconservativeFlux_LoopBody(
             tempNonconservativeProductX, tempNonconservativeProductY, tempNonconservativeProductZ,
             ncpEnumerator,
@@ -643,7 +605,7 @@ void exahype2::fv::rusanov::cpp::timeStepWithRusanov_patchwise_heap_static_calls
     if (evaluateMaximumEigenvalueAfterTimeStep and Dimensions==2) {
       logDebug( "timeStepWithRusanov_overlap1_sequential(...)", "compute maximum eigenvalue for subsequent time step" );
       double newMaxEigenvalue = 0.0;
-      cartesian_product(dim_range, dim_range, [&](int y, int x) {
+      cartesian_product_function(dim_range, dim_range, [&](int y, int x) {
         newMaxEigenvalue = std::max(
           newMaxEigenvalue,
           internal::reduceMaxEigenvalue_LoopBody<Solver>(
@@ -662,7 +624,7 @@ void exahype2::fv::rusanov::cpp::timeStepWithRusanov_patchwise_heap_static_calls
     }
     else if (evaluateMaximumEigenvalueAfterTimeStep) {
       double newMaxEigenvalue = 0.0;
-      cartesian_product(dim_range, dim_range, dim_range, [&](int z, int y, int x) {
+      cartesian_product_function(dim_range, dim_range, dim_range, [&](int z, int y, int x) {
         newMaxEigenvalue = std::max(
           newMaxEigenvalue,
           internal::reduceMaxEigenvalue_LoopBody<Solver>(

@@ -4,7 +4,7 @@
 #define _EXAHYPE2_ENCLAVE_TASK_H_
 
 
-#include "../config.h"
+#include "config.h"
 
 #include "peano4/datamanagement/CellMarker.h"
 #include "tarch/multicore/Tasks.h"

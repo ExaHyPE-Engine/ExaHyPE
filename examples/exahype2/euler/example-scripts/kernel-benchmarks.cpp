@@ -35,6 +35,9 @@
 
 #include "config.h"
 
+#if defined(SharedTBB)
+#include <tbb/task_group.h>
+#endif
 
 using namespace examples::exahype2::euler;
 
@@ -45,8 +48,65 @@ tarch::logging::Log _log("::");
 tarch::timing::Measurement   gridConstructionMeasurement;
 tarch::timing::Measurement   timeStepMeasurement;
 tarch::timing::Measurement   plotMeasurement;
-  
 
+double* validOutcome = nullptr;
+
+
+
+/**
+ * Set input data
+ */
+void initInputData( double* Q ) {
+  int index = 0;
+  for (int x=0; x<EulerOnGPU::NumberOfFiniteVolumesPerAxisPerPatch+2; x++)
+  for (int y=0; y<EulerOnGPU::NumberOfFiniteVolumesPerAxisPerPatch+2; y++)
+  for (int z=0; z<EulerOnGPU::NumberOfFiniteVolumesPerAxisPerPatch+2; z++)
+  for (int unknown=0; unknown<EulerOnGPU::NumberOfUnknowns; unknown++) {
+    Q[index] = std::sin( x * tarch::la::PI ) * std::sin( 2.0 * y * tarch::la::PI ) * std::sin( 3.0 * z * tarch::la::PI );
+    index++;
+  }
+}
+
+
+/**
+ * Make a persistent snapshot of a solution and assume, from hereon, that
+ * this snapshot is the valid data. You can call this routine as often as
+ * you want. Only the very first call will trigger a snapshot.
+ */
+void storeOutcome( const double* Q ) {
+  if (validOutcome==nullptr) {
+    const int size = (EulerOnGPU::NumberOfFiniteVolumesPerAxisPerPatch+0)*(EulerOnGPU::NumberOfFiniteVolumesPerAxisPerPatch+0)*(EulerOnGPU::NumberOfFiniteVolumesPerAxisPerPatch+0)*EulerOnGPU::NumberOfUnknowns;
+    validOutcome = new double[ size ];
+    std:memcpy(validOutcome,Q,sizeof(double)*size);
+  }
+}
+
+
+/**
+ * Works if and only if storeOutcome has been performed
+ * before.
+ */
+void validateOutcome( const double* Q, int patchIndex ) {
+  int index = 0;
+  int errors = 0;
+  for (int x=0; x<EulerOnGPU::NumberOfFiniteVolumesPerAxisPerPatch; x++)
+  for (int y=0; y<EulerOnGPU::NumberOfFiniteVolumesPerAxisPerPatch; y++)
+  for (int z=0; z<EulerOnGPU::NumberOfFiniteVolumesPerAxisPerPatch; z++)
+  for (int unknown=0; unknown<EulerOnGPU::NumberOfUnknowns; unknown++) {
+    if (not tarch::la::equals( Q[index], validOutcome[index]) ) {
+      errors++;
+    }
+    index++;
+  }
+  if (errors>0) {
+    std::cerr << "ERROR: outcomes in patch " << patchIndex << " differ in " << errors << " entrie(s)" << std::endl;
+  }
+}
+
+
+/**
+ * Run the benchmark for one particular number of patches per fused kernel call.
+ */
 void runBenchmarks(int patches) {
   peano4::grid::GridTraversalEvent event;
   peano4::datamanagement::CellMarker marker(event);
@@ -61,6 +121,7 @@ void runBenchmarks(int patches) {
     for (int i=0; i<patches; i++) {
       inputData.push_back( new double[ (EulerOnGPU::NumberOfFiniteVolumesPerAxisPerPatch+2)*(EulerOnGPU::NumberOfFiniteVolumesPerAxisPerPatch+2)*(EulerOnGPU::NumberOfFiniteVolumesPerAxisPerPatch+2)*EulerOnGPU::NumberOfUnknowns] );
       outputData.push_back( new double[ (EulerOnGPU::NumberOfFiniteVolumesPerAxisPerPatch+0)*(EulerOnGPU::NumberOfFiniteVolumesPerAxisPerPatch+0)*(EulerOnGPU::NumberOfFiniteVolumesPerAxisPerPatch+0)*EulerOnGPU::NumberOfUnknowns] );
+      initInputData( inputData[i] );
     }
 
     tarch::timing::Watch watch( "::", "main()", false );
@@ -75,6 +136,8 @@ void runBenchmarks(int patches) {
     watch.stop();
 
     for (int i=0; i<patches; i++) {
+      storeOutcome( outputData[i] );
+      validateOutcome( outputData[i],i );
       delete[] outputData[i];
     }
 
@@ -112,6 +175,7 @@ void runBenchmarks(int patches) {
     watch.stop();
 
     for (int i=0; i<patches; i++) {
+      validateOutcome( patchData.QOut[i],i );
       delete[] patchData.QIn[i];
       delete[] patchData.QOut[i];
     }
@@ -130,33 +194,78 @@ void runBenchmarks(int patches) {
       bool                    evaluateSource,
       bool                    evaluateMaximumEigenvalueAfterTimeStep
     )> kernel, std::string markerName, bool computeCFL ) {
-    ::exahype2::CellData patchData(patches);
+
+    constexpr int MaxHostTasks = 5;
+    ::exahype2::CellData patchData[MaxHostTasks] = { patches, patches, patches, patches, patches };
+
+    for (int hostTask=0; hostTask<MaxHostTasks; hostTask++)
     for (int i=0; i<patches; i++) {
-      patchData.QIn[i]         = new double[ (EulerOnGPU::NumberOfFiniteVolumesPerAxisPerPatch+2)*(EulerOnGPU::NumberOfFiniteVolumesPerAxisPerPatch+2)*(EulerOnGPU::NumberOfFiniteVolumesPerAxisPerPatch+2)*EulerOnGPU::NumberOfUnknowns];
-      patchData.t[i]           = 0.5;
-      patchData.dt[i]          = 1e-5;
-      patchData.QOut[i]        = new double[ (EulerOnGPU::NumberOfFiniteVolumesPerAxisPerPatch)*(EulerOnGPU::NumberOfFiniteVolumesPerAxisPerPatch)*(EulerOnGPU::NumberOfFiniteVolumesPerAxisPerPatch)*EulerOnGPU::NumberOfUnknowns];
+      patchData[hostTask].QIn[i]         = new double[ (EulerOnGPU::NumberOfFiniteVolumesPerAxisPerPatch+2)*(EulerOnGPU::NumberOfFiniteVolumesPerAxisPerPatch+2)*(EulerOnGPU::NumberOfFiniteVolumesPerAxisPerPatch+2)*EulerOnGPU::NumberOfUnknowns];
+      patchData[hostTask].t[i]           = 0.5;
+      patchData[hostTask].dt[i]          = 1e-5;
+      patchData[hostTask].QOut[i]        = new double[ (EulerOnGPU::NumberOfFiniteVolumesPerAxisPerPatch)*(EulerOnGPU::NumberOfFiniteVolumesPerAxisPerPatch)*(EulerOnGPU::NumberOfFiniteVolumesPerAxisPerPatch)*EulerOnGPU::NumberOfUnknowns];
     }
 
-    tarch::timing::Watch watch( "::", "main()", false );
-
+    tarch::timing::Watch singleKernelWatch( "::", "main()", false );
     kernel(
       device,
-      patchData,
+      patchData[0],
       true ,
       false ,
       false ,
       computeCFL
     );
+    singleKernelWatch.stop();
+    logInfo("main()", "completed measurements for single thread to device " << device << ", " << markerName << ": " << singleKernelWatch.getCalendarTime() << " / " << (singleKernelWatch.getCalendarTime()/patches/EulerOnGPU::NumberOfFiniteVolumesPerAxisPerPatch/EulerOnGPU::NumberOfFiniteVolumesPerAxisPerPatch/EulerOnGPU::NumberOfFiniteVolumesPerAxisPerPatch) );
 
-    watch.stop();
+    tarch::timing::Watch parallelKernelWatch( "::", "main()", false );
+    #if defined(GPUOffloadingOMP)
+    #pragma omp parallel for
+    for (int hostTask=1; hostTask<MaxHostTasks; hostTask++) {
+      kernel(
+        device,
+        patchData[hostTask],
+        true ,
+        false ,
+        false ,
+        computeCFL
+      );
+    }
+    #endif
 
+    #if defined(GPUOffloadingSYCL) and defined(SharedTBB)
+    ::tbb::task_group taskGroup;
+    // @todo remove semaphore
+//    tarch::multicore::BooleanSemaphore semaphore;
+    for (int hostTask=1; hostTask<MaxHostTasks; hostTask++) {
+      taskGroup.run(
+        [&]() -> void {
+//          tarch::multicore::Lock lock(semaphore);
+//          logInfo( "main()", "lock kernel" );
+          kernel(
+            device,
+            patchData[hostTask],
+            true ,
+            false ,
+            false ,
+            computeCFL
+          );
+//          logInfo( "main()", "unlock kernel" );
+        }
+      );
+    }
+    taskGroup.wait();
+    #endif
+    parallelKernelWatch.stop();
+    logInfo("main()", "completed measurements for " << (MaxHostTasks-1) << " threads to device " << device << ", " << markerName << ": " << parallelKernelWatch.getCalendarTime() << " / " << (parallelKernelWatch.getCalendarTime()/patches/EulerOnGPU::NumberOfFiniteVolumesPerAxisPerPatch/EulerOnGPU::NumberOfFiniteVolumesPerAxisPerPatch/EulerOnGPU::NumberOfFiniteVolumesPerAxisPerPatch/(MaxHostTasks-1)) );
+
+    for (int hostTask=0; hostTask<MaxHostTasks; hostTask++)
     for (int i=0; i<patches; i++) {
-      delete[] patchData.QIn[i];
-      delete[] patchData.QOut[i];
+      validateOutcome( patchData[hostTask].QOut[i],i );
+      delete[] patchData[hostTask].QIn[i];
+      delete[] patchData[hostTask].QOut[i];
     }
 
-    logInfo("main()", "completed measurements for " << markerName << ": " << watch.getCalendarTime() << " / " << (watch.getCalendarTime()/patches/EulerOnGPU::NumberOfFiniteVolumesPerAxisPerPatch/EulerOnGPU::NumberOfFiniteVolumesPerAxisPerPatch/EulerOnGPU::NumberOfFiniteVolumesPerAxisPerPatch) );
   };
 
   #if Dimension==2
@@ -307,8 +416,6 @@ void runBenchmarks(int patches) {
       ::exahype2::fv::rusanov::sycl::timeStepWithRusanov_batched_heap_static_calls<EulerOnGPU,EulerOnGPU::NumberOfFiniteVolumesPerAxisPerPatch, 1, 5, 0,exahype2::fv::enumerator::AoSoALexicographicVolumeEnumerator>,
       "sycl, patch-wise, AoSoA", true
     );
-    // @todo multithreaded noch checken
-    // @todo Korrektheit checken
   }
   #endif
 }
@@ -352,10 +459,17 @@ int main(int argc, char** argv) {
   const bool isGlobalMaster     =     tarch::mpi::Rank::getInstance().isGlobalMaster();
   const bool isPeanoComputeNode = not tarch::mpi::Rank::getInstance().isGlobalMaster();
 
+
+  #if defined(GPUOffloadingSYCL)
+  if ( tarch::multicore::Core::getInstance().getNumberOfGPUs()>0 ) {
+    logWarning( "main()", "you might have to set ZE_SERIALIZE=1|2|3 before you start the benchmark" );
+  }
+  #endif
+
   #if Dimensions==2
-  for (int patches=1; patches<=65536; patches*=2) {
+  for (int patches=1; patches<=1024*2*2*2*2; patches*=2) {
   #else
-  for (int patches=1; patches<=2048; patches*=2) {
+  for (int patches=1; patches<=1024*2; patches*=2) {
   #endif
     std::stringstream msg;
     msg << "benchmark-" << patches;

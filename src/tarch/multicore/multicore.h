@@ -9,7 +9,7 @@
 #include <string>
 
 
-#if defined(SharedOMP) || defined(SharedTBB) || defined(SharedCPP)
+#if defined(SharedOMP) || defined(SharedTBB) || defined(SharedCPP) || defined(SharedSYCL)
   #define SharedMemoryParallelisation
 #endif
 
@@ -22,7 +22,7 @@
 /**
  * Have to include this header, as I need access to the SYCL_EXTERNAL keyword.
  */
-#include "tarch/multicore/tbb/SYCL.h"
+#include "tarch/multicore/sycl/SYCL.h"
 
 
 namespace tarch {
@@ -291,10 +291,10 @@ and
    */
   #if defined(GPUOffloadingOMP)
   #pragma omp declare target
-  GPUCallableMethod void gpuAbort();
+  void gpuAbort();
   #pragma omp end declare target
   #elif defined(GPUOffloadingSYCL)
-  GPUCallableMethod void gpuAbort() {};
+  inline void gpuAbort() {};
   #else
   void gpuAbort();
   #endif

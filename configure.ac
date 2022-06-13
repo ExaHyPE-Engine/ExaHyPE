@@ -138,7 +138,7 @@ LDADD_PEANO_3D_DEBUG="   -lPeano4Core3d_debug   -lTarch_debug"
 #
 AC_ARG_WITH(
   multithreading, 
-  AS_HELP_STRING([--with-multithreading],[switch on multithreading [default=no,cpp,omp,tbb]]),
+  AS_HELP_STRING([--with-multithreading],[switch on multithreading [default=no,cpp,omp,tbb,scyl]]),
   [
     AC_MSG_CHECKING(for multithreading)
     case "${withval}" in
@@ -146,6 +146,7 @@ AC_ARG_WITH(
       cpp)    AC_MSG_RESULT([build with C++11 threading support]);   multithreading=cpp ;;
       tbb)    AC_MSG_RESULT([build with TBB]);                       multithreading=tbb ;;
       omp)    AC_MSG_RESULT([build with OpenMP - please ensure you pass -fopenmp/-qopenmp/-openmp or similar to your CXX flags]); multithreading=omp ;;
+      sycl)   AC_MSG_RESULT([build with SYCL tasking on host]);      multithreading=sycl ;;
       *)      AC_MSG_FAILURE([default=no (no multithreading). Use omp, cpp or sycl to define target]);            multithreading=false ;;
     esac
   ], 
@@ -168,6 +169,11 @@ fi
 if test "$multithreading" == omp; then
   AC_CHECK_HEADERS([omp.h],[],[AC_MSG_WARN([header <omp.h> not found])])
   AC_DEFINE([SharedOMP], [1], [SharedOMP])
+fi
+
+if test "$multithreading" == sycl; then
+  AC_CHECK_HEADERS([CL/sycl.hpp],[],[AC_MSG_WARN([header <CL/sycl.hpp> not found])])
+  AC_DEFINE([SharedSYCL], [1], [SharedSYCL])
 fi
 
 

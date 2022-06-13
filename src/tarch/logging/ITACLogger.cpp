@@ -13,7 +13,7 @@
 
 #include "../mpi/Rank.h"
 
-#include "../config.h"
+#include "config.h"
 
 #ifdef UseITAC
 #include <VT.h>
