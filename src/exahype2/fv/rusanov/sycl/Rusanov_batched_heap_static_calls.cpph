@@ -4,7 +4,7 @@
 #include "exahype2/fv/rusanov/LoopBody.h"
 
 
-#include "tarch/multicore/tbb/SYCL.h"
+#include "tarch/multicore/sycl/SYCL.h"
 
 
       // @todo eher collapse of one dimension oder

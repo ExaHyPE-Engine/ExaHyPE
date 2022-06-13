@@ -1,10 +1,12 @@
 #include "SYCL.h"
 
 
-#if defined(GPUOffloadingSYCL)
+#if defined(GPUOffloadingSYCL) or defined(SharedSYCL)
 
-#include "SYCL.h"
+#include <map>
 
+
+#include "tarch/Assertions.h"
 
 
 namespace {
@@ -24,13 +26,15 @@ int tarch::multicore::getNumberOfSYCLQueues() {
 
 
 void tarch::multicore::initSYCLQueues() {
-  auto platforms     = sycl::platform::get_platforms();
+  auto platforms       = sycl::platform::get_platforms();
+  int  numberOfDevices = 0;
   for (auto &platform : platforms) {
     auto devices = platform.get_devices();
 
     for (auto &device : devices ) {
-      std::cout << "device #" << _numberOfDevices << ": " << device.get_info<sycl::info::device::name>() << std::endl;
-      syclQueues.insert( std::pair< int, sycl::queue >( _numberOfDevices, sycl::queue(device) ) );
+      std::cout << "device #" << numberOfDevices << ": " << device.get_info<sycl::info::device::name>() << std::endl;
+      syclQueues.insert( std::pair< int, sycl::queue >( numberOfDevices, sycl::queue(device) ) );
+      numberOfDevices++;
     }
   }
   syclQueues.insert( std::pair< int, sycl::queue >( -1, sycl::device(sycl::cpu_selector()) ) );

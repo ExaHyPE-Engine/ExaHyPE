@@ -6,7 +6,7 @@
 #include "tarch/la/Vector.h"
 
 #if GPUOffloadingSYCL>0
-#include "tarch/multicore/tbb/SYCL.h"
+#include "tarch/multicore/sycl/SYCL.h"
 #endif
 
 #include <functional>

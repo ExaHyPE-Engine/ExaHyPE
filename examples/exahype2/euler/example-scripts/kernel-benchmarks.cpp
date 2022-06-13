@@ -35,6 +35,9 @@
 
 #include "config.h"
 
+#if defined(SharedTBB)
+#include <tbb/task_group.h>
+#endif
 
 using namespace examples::exahype2::euler;
 

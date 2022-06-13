@@ -1,7 +1,7 @@
 // This file is part of the Peano project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
-#ifndef _TARCH_MULTICORE_TBB_SYCL_H_
-#define _TARCH_MULTICORE_TBB_SYCL_H_
+#ifndef _TARCH_MULTICORE_SYCL_SYCL_H_
+#define _TARCH_MULTICORE_SYCL_SYCL_H_
 
 #include <string>
 #include "tarch/multicore/multicore.h"
@@ -34,18 +34,7 @@
  *
  */
 
-#if GPUOffloadingSYCL>0
-
-//#define _FUNCTEXCEPT_H 1
-
-/*
-namespace std {
-  #pragma omp declare target
-  //void __throw_bad_function_call() {};
-  [[noreturn]] void __throw_bad_function_call() { __builtin_trap(); };
-  #pragma omp  end declare target
-}
-*/
+#if defined(GPUOffloadingSYCL) or defined(SharedSYCL)
 
 
 #pragma push_macro("Dimensions")

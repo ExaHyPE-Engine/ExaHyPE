@@ -11,9 +11,6 @@
 #include "tarch/logging/Statistics.h"
 
 
-#if defined(GPUOffloadingSYCL)
-#include "SYCL.h"
-#endif
 
 #if defined(SharedTBB)
 #include <tbb/task_group.h>

@@ -3,7 +3,7 @@
 #include "tarch/multicore/multicore.h"
 #include "tarch/compiler/CompilerSpecificSettings.h"
 
-#include "tarch/multicore/tbb/SYCL.h"
+#include "tarch/multicore/sycl/SYCL.h"
 
 
 #ifdef CompilerHasSysinfo
