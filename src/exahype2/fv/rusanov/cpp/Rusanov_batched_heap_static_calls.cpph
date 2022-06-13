@@ -73,7 +73,7 @@ void exahype2::fv::rusanov::cpp::timeStepWithRusanov_batched_heap_static_calls(
 
 
   if (Dimensions==2 and evaluateSource) {
-    cartesian_product(cell_range, dim_range, dim_range, [&](int patchIndex, int y, int x) {
+    cartesian_product_function(cell_range, dim_range, dim_range, [&](int patchIndex, int y, int x) {
       helper::CPPGPUCellData patchData;
       patchData.numberOfCells = numberOfCells;
       patchData.patchCentre   = (tarch::la::Vector<Dimensions,double>*)(rawPointerToPatchCentres);
@@ -105,7 +105,7 @@ void exahype2::fv::rusanov::cpp::timeStepWithRusanov_batched_heap_static_calls(
     });
   }
   else if (Dimensions==3 and evaluateSource) {
-    cartesian_product(cell_range, dim_range, dim_range, dim_range, [&](int patchIndex, int z, int y, int x) {
+    cartesian_product_function(cell_range, dim_range, dim_range, dim_range, [&](int patchIndex, int z, int y, int x) {
       helper::CPPGPUCellData patchData;
       patchData.numberOfCells = numberOfCells;
       patchData.patchCentre   = (tarch::la::Vector<Dimensions,double>*)(rawPointerToPatchCentres);
@@ -137,7 +137,7 @@ void exahype2::fv::rusanov::cpp::timeStepWithRusanov_batched_heap_static_calls(
     });
   }
   else if (Dimensions==2) {
-    cartesian_product(cell_range, dim_range, dim_range, aux_range1, [&](int patchIndex, int y, int x, int unknown) {
+    cartesian_product_function(cell_range, dim_range, dim_range, aux_range1, [&](int patchIndex, int y, int x, int unknown) {
       helper::CPPGPUCellData patchData;
       patchData.numberOfCells = numberOfCells;
       patchData.patchCentre   = (tarch::la::Vector<Dimensions,double>*)(rawPointerToPatchCentres);
@@ -166,7 +166,7 @@ void exahype2::fv::rusanov::cpp::timeStepWithRusanov_batched_heap_static_calls(
     });
   }
   else {
-    cartesian_product(cell_range, dim_range, dim_range, dim_range, aux_range1, [&](int patchIndex, int z, int y, int x, int unknown) {
+    cartesian_product_function(cell_range, dim_range, dim_range, dim_range, aux_range1, [&](int patchIndex, int z, int y, int x, int unknown) {
       helper::CPPGPUCellData patchData;
       patchData.numberOfCells = numberOfCells;
       patchData.patchCentre   = (tarch::la::Vector<Dimensions,double>*)(rawPointerToPatchCentres);
@@ -196,7 +196,7 @@ void exahype2::fv::rusanov::cpp::timeStepWithRusanov_batched_heap_static_calls(
   }
 
   if (Dimensions==2) {
-    cartesian_product(cell_range, dim_range, aux_range2, [&](int patchIndex, int y, int x) {
+    cartesian_product_function(cell_range, dim_range, aux_range2, [&](int patchIndex, int y, int x) {
       helper::CPPGPUCellData patchData;
       patchData.numberOfCells = numberOfCells;
       patchData.patchCentre   = (tarch::la::Vector<Dimensions,double>*)(rawPointerToPatchCentres);
@@ -227,7 +227,7 @@ void exahype2::fv::rusanov::cpp::timeStepWithRusanov_batched_heap_static_calls(
       );
     });
 
-    cartesian_product(cell_range, aux_range2, dim_range, [&](int patchIndex, int y, int x) {
+    cartesian_product_function(cell_range, aux_range2, dim_range, [&](int patchIndex, int y, int x) {
       helper::CPPGPUCellData patchData;
       patchData.numberOfCells = numberOfCells;
       patchData.patchCentre   = (tarch::la::Vector<Dimensions,double>*)(rawPointerToPatchCentres);
@@ -258,7 +258,7 @@ void exahype2::fv::rusanov::cpp::timeStepWithRusanov_batched_heap_static_calls(
       );
     });
 
-    cartesian_product(cell_range, dim_range, dim_range, unknown_range, [&](int patchIndex, int y, int x, int unknown) {
+    cartesian_product_function(cell_range, dim_range, dim_range, unknown_range, [&](int patchIndex, int y, int x, int unknown) {
       helper::CPPGPUCellData patchData;
       patchData.numberOfCells = numberOfCells;
       patchData.patchCentre   = (tarch::la::Vector<Dimensions,double>*)(rawPointerToPatchCentres);
@@ -294,7 +294,7 @@ void exahype2::fv::rusanov::cpp::timeStepWithRusanov_batched_heap_static_calls(
     });
   }
   else {
-    cartesian_product(cell_range, dim_range, dim_range, aux_range2, [&](int patchIndex, int z, int y, int x) {
+    cartesian_product_function(cell_range, dim_range, dim_range, aux_range2, [&](int patchIndex, int z, int y, int x) {
       helper::CPPGPUCellData patchData;
       patchData.numberOfCells = numberOfCells;
       patchData.patchCentre   = (tarch::la::Vector<Dimensions,double>*)(rawPointerToPatchCentres);
@@ -325,7 +325,7 @@ void exahype2::fv::rusanov::cpp::timeStepWithRusanov_batched_heap_static_calls(
       );
     });
 
-    cartesian_product(cell_range, dim_range, aux_range2, dim_range, [&](int patchIndex, int z, int y, int x) {
+    cartesian_product_function(cell_range, dim_range, aux_range2, dim_range, [&](int patchIndex, int z, int y, int x) {
       helper::CPPGPUCellData patchData;
       patchData.numberOfCells = numberOfCells;
       patchData.patchCentre   = (tarch::la::Vector<Dimensions,double>*)(rawPointerToPatchCentres);
@@ -356,7 +356,7 @@ void exahype2::fv::rusanov::cpp::timeStepWithRusanov_batched_heap_static_calls(
       );
     });
 
-    cartesian_product(cell_range, aux_range2, dim_range, dim_range, [&](int patchIndex, int z, int y, int x) {
+    cartesian_product_function(cell_range, aux_range2, dim_range, dim_range, [&](int patchIndex, int z, int y, int x) {
       helper::CPPGPUCellData patchData;
       patchData.numberOfCells = numberOfCells;
       patchData.patchCentre   = (tarch::la::Vector<Dimensions,double>*)(rawPointerToPatchCentres);
@@ -387,7 +387,7 @@ void exahype2::fv::rusanov::cpp::timeStepWithRusanov_batched_heap_static_calls(
       );
     });
 
-    cartesian_product(cell_range, dim_range, dim_range, dim_range, unknown_range, [&](int patchIndex, int z, int y, int x, int unknown) {
+    cartesian_product_function(cell_range, dim_range, dim_range, dim_range, unknown_range, [&](int patchIndex, int z, int y, int x, int unknown) {
       helper::CPPGPUCellData patchData;
       patchData.numberOfCells = numberOfCells;
       patchData.patchCentre   = (tarch::la::Vector<Dimensions,double>*)(rawPointerToPatchCentres);
@@ -424,7 +424,7 @@ void exahype2::fv::rusanov::cpp::timeStepWithRusanov_batched_heap_static_calls(
   }
 
   if (evaluateFlux and Dimensions==2) {
-    cartesian_product(cell_range, dim_range, aux_range2, [&](int patchIndex, int y, int x) {
+    cartesian_product_function(cell_range, dim_range, aux_range2, [&](int patchIndex, int y, int x) {
       helper::CPPGPUCellData patchData;
       patchData.numberOfCells = numberOfCells;
       patchData.patchCentre   = (tarch::la::Vector<Dimensions,double>*)(rawPointerToPatchCentres);
@@ -456,7 +456,7 @@ void exahype2::fv::rusanov::cpp::timeStepWithRusanov_batched_heap_static_calls(
       );
     });
 
-    cartesian_product(cell_range, aux_range2, dim_range, [&](int patchIndex, int y, int x) {
+    cartesian_product_function(cell_range, aux_range2, dim_range, [&](int patchIndex, int y, int x) {
       helper::CPPGPUCellData patchData;
       patchData.numberOfCells = numberOfCells;
       patchData.patchCentre   = (tarch::la::Vector<Dimensions,double>*)(rawPointerToPatchCentres);
@@ -488,7 +488,7 @@ void exahype2::fv::rusanov::cpp::timeStepWithRusanov_batched_heap_static_calls(
       );
     });
 
-    cartesian_product(cell_range, dim_range, dim_range, unknown_range, [&](int patchIndex, int y, int x, int unknown) {
+    cartesian_product_function(cell_range, dim_range, dim_range, unknown_range, [&](int patchIndex, int y, int x, int unknown) {
       helper::CPPGPUCellData patchData;
       patchData.numberOfCells = numberOfCells;
       patchData.patchCentre   = (tarch::la::Vector<Dimensions,double>*)(rawPointerToPatchCentres);
@@ -520,7 +520,7 @@ void exahype2::fv::rusanov::cpp::timeStepWithRusanov_batched_heap_static_calls(
     });
   }
   else if (evaluateFlux and Dimensions==3) {
-    cartesian_product(cell_range, dim_range, dim_range, aux_range2, [&](int patchIndex, int z, int y, int x) {
+    cartesian_product_function(cell_range, dim_range, dim_range, aux_range2, [&](int patchIndex, int z, int y, int x) {
       helper::CPPGPUCellData patchData;
       patchData.numberOfCells = numberOfCells;
       patchData.patchCentre   = (tarch::la::Vector<Dimensions,double>*)(rawPointerToPatchCentres);
@@ -552,7 +552,7 @@ void exahype2::fv::rusanov::cpp::timeStepWithRusanov_batched_heap_static_calls(
       );
     });
 
-    cartesian_product(cell_range, dim_range, aux_range2, dim_range, [&](int patchIndex, int z, int y, int x) {
+    cartesian_product_function(cell_range, dim_range, aux_range2, dim_range, [&](int patchIndex, int z, int y, int x) {
       helper::CPPGPUCellData patchData;
       patchData.numberOfCells = numberOfCells;
       patchData.patchCentre   = (tarch::la::Vector<Dimensions,double>*)(rawPointerToPatchCentres);
@@ -584,7 +584,7 @@ void exahype2::fv::rusanov::cpp::timeStepWithRusanov_batched_heap_static_calls(
       );
     });
 
-    cartesian_product(cell_range, aux_range2, dim_range, dim_range, [&](int patchIndex, int z, int y, int x) {
+    cartesian_product_function(cell_range, aux_range2, dim_range, dim_range, [&](int patchIndex, int z, int y, int x) {
       helper::CPPGPUCellData patchData;
       patchData.numberOfCells = numberOfCells;
       patchData.patchCentre   = (tarch::la::Vector<Dimensions,double>*)(rawPointerToPatchCentres);
@@ -616,7 +616,7 @@ void exahype2::fv::rusanov::cpp::timeStepWithRusanov_batched_heap_static_calls(
       );
     });
 
-    cartesian_product(cell_range, dim_range, dim_range, dim_range, unknown_range, [&](int patchIndex, int z, int y, int x, int unknown) {
+    cartesian_product_function(cell_range, dim_range, dim_range, dim_range, unknown_range, [&](int patchIndex, int z, int y, int x, int unknown) {
       helper::CPPGPUCellData patchData;
       patchData.numberOfCells = numberOfCells;
       patchData.patchCentre   = (tarch::la::Vector<Dimensions,double>*)(rawPointerToPatchCentres);
@@ -650,7 +650,7 @@ void exahype2::fv::rusanov::cpp::timeStepWithRusanov_batched_heap_static_calls(
 
 
   if (evaluateNonconservativeProduct and Dimensions==2) {
-    cartesian_product(cell_range, dim_range, aux_range3, [&](int patchIndex, int y, int x) {
+    cartesian_product_function(cell_range, dim_range, aux_range3, [&](int patchIndex, int y, int x) {
       helper::CPPGPUCellData patchData;
       patchData.numberOfCells = numberOfCells;
       patchData.patchCentre   = (tarch::la::Vector<Dimensions,double>*)(rawPointerToPatchCentres);
@@ -682,7 +682,7 @@ void exahype2::fv::rusanov::cpp::timeStepWithRusanov_batched_heap_static_calls(
       );
     });
 
-    cartesian_product(cell_range, aux_range3, dim_range, [&](int patchIndex, int y, int x) {
+    cartesian_product_function(cell_range, aux_range3, dim_range, [&](int patchIndex, int y, int x) {
       helper::CPPGPUCellData patchData;
       patchData.numberOfCells = numberOfCells;
       patchData.patchCentre   = (tarch::la::Vector<Dimensions,double>*)(rawPointerToPatchCentres);
@@ -714,7 +714,7 @@ void exahype2::fv::rusanov::cpp::timeStepWithRusanov_batched_heap_static_calls(
       );
     });
 
-    cartesian_product(cell_range, dim_range, dim_range, unknown_range, [&](int patchIndex, int y, int x, int unknown) {
+    cartesian_product_function(cell_range, dim_range, dim_range, unknown_range, [&](int patchIndex, int y, int x, int unknown) {
       helper::CPPGPUCellData patchData;
       patchData.numberOfCells = numberOfCells;
       patchData.patchCentre   = (tarch::la::Vector<Dimensions,double>*)(rawPointerToPatchCentres);
@@ -746,7 +746,7 @@ void exahype2::fv::rusanov::cpp::timeStepWithRusanov_batched_heap_static_calls(
     });
   }
   else if (evaluateNonconservativeProduct and Dimensions==3) {
-    cartesian_product(cell_range, dim_range, dim_range, aux_range3, [&](int patchIndex, int z, int y, int x) {
+    cartesian_product_function(cell_range, dim_range, dim_range, aux_range3, [&](int patchIndex, int z, int y, int x) {
       helper::CPPGPUCellData patchData;
       patchData.numberOfCells = numberOfCells;
       patchData.patchCentre   = (tarch::la::Vector<Dimensions,double>*)(rawPointerToPatchCentres);
@@ -778,7 +778,7 @@ void exahype2::fv::rusanov::cpp::timeStepWithRusanov_batched_heap_static_calls(
       );
     });
 
-    cartesian_product(cell_range, dim_range, aux_range3, dim_range, [&](int patchIndex, int z, int y, int x) {
+    cartesian_product_function(cell_range, dim_range, aux_range3, dim_range, [&](int patchIndex, int z, int y, int x) {
       helper::CPPGPUCellData patchData;
       patchData.numberOfCells = numberOfCells;
       patchData.patchCentre   = (tarch::la::Vector<Dimensions,double>*)(rawPointerToPatchCentres);
@@ -810,7 +810,7 @@ void exahype2::fv::rusanov::cpp::timeStepWithRusanov_batched_heap_static_calls(
       );
     });
 
-    cartesian_product(cell_range, aux_range3, dim_range, dim_range, [&](int patchIndex, int z, int y, int x) {
+    cartesian_product_function(cell_range, aux_range3, dim_range, dim_range, [&](int patchIndex, int z, int y, int x) {
       helper::CPPGPUCellData patchData;
       patchData.numberOfCells = numberOfCells;
       patchData.patchCentre   = (tarch::la::Vector<Dimensions,double>*)(rawPointerToPatchCentres);
@@ -842,7 +842,7 @@ void exahype2::fv::rusanov::cpp::timeStepWithRusanov_batched_heap_static_calls(
         );
     });
 
-    cartesian_product(cell_range, dim_range, dim_range, dim_range, unknown_range, [&](int patchIndex, int z, int y, int x, int unknown) {
+    cartesian_product_function(cell_range, dim_range, dim_range, dim_range, unknown_range, [&](int patchIndex, int z, int y, int x, int unknown) {
       helper::CPPGPUCellData patchData;
       patchData.numberOfCells = numberOfCells;
       patchData.patchCentre   = (tarch::la::Vector<Dimensions,double>*)(rawPointerToPatchCentres);
@@ -895,7 +895,7 @@ void exahype2::fv::rusanov::cpp::timeStepWithRusanov_batched_heap_static_calls(
 
 
       double newMaxEigenvalue = 0.0;
-      cartesian_product(dim_range, dim_range, [&]( int y, int x) {
+      cartesian_product_function(dim_range, dim_range, [&]( int y, int x) {
         newMaxEigenvalue = std::max(
             newMaxEigenvalue,
             internal::reduceMaxEigenvalue_LoopBody<Solver>(
@@ -932,7 +932,7 @@ void exahype2::fv::rusanov::cpp::timeStepWithRusanov_batched_heap_static_calls(
       TempDataEnumerator eigenvalueEnumerator(patchData.numberOfCells, numberOfVolumesPerAxisInPatch,haloSize,1,0);
 
       double newMaxEigenvalue = 0.0;
-      cartesian_product(dim_range, dim_range, dim_range, [&](int z, int y, int x) {
+      cartesian_product_function(dim_range, dim_range, dim_range, [&](int z, int y, int x) {
         newMaxEigenvalue = std::max(
             newMaxEigenvalue,
             internal::reduceMaxEigenvalue_LoopBody<Solver>(
