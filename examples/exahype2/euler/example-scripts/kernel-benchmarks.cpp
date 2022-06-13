@@ -236,12 +236,13 @@ void runBenchmarks(int patches) {
     #if defined(GPUOffloadingSYCL) and defined(SharedTBB)
     ::tbb::task_group taskGroup;
     // @todo remove semaphore
-//    tarch::multicore::BooleanSemaphore semaphore;
+    tarch::multicore::BooleanSemaphore semaphore;
     for (int hostTask=1; hostTask<MaxHostTasks; hostTask++) {
       taskGroup.run(
         [&]() -> void {
-//          tarch::multicore::Lock lock(semaphore);
-//          logInfo( "main()", "lock kernel" );
+          tarch::multicore::Lock lock(semaphore);
+          logInfo( "main()", "lock kernel" );
+/*
           kernel(
             device,
             patchData[hostTask],
@@ -250,7 +251,8 @@ void runBenchmarks(int patches) {
             false ,
             computeCFL
           );
-//          logInfo( "main()", "unlock kernel" );
+*/
+          logInfo( "main()", "unlock kernel" );
         }
       );
     }

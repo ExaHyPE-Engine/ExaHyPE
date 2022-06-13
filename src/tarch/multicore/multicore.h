@@ -300,7 +300,7 @@ and
   void gpuAbort();
   #pragma omp end declare target
   #elif defined(GPUOffloadingSYCL)
-  GPUCallableMethod void gpuAbort() {};
+  GPUCallableMethod void gpuAbort();
   #else
   void gpuAbort();
   #endif
