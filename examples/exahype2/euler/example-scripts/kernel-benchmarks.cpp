@@ -461,7 +461,7 @@ int main(int argc, char** argv) {
 
 
   #if defined(GPUOffloadingSYCL)
-  if ( tarch::multicore::Core::getInstance().getNumberOfGPUs()==0 ) {
+  if ( tarch::multicore::Core::getInstance().getNumberOfGPUs()>0 ) {
     logWarning( "main()", "you might have to set ZE_SERIALIZE=1|2|3 before you start the benchmark" );
   }
   #endif
