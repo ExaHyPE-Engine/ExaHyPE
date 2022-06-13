@@ -376,6 +376,38 @@ export I_MPI_CXX=icpx
 \end{bash}
 
 
+\subsection{NCC}
+
+I recommend atm to use \texttt{gpu10}, \texttt{gpu11} or \texttt{gpu12}, i.e.~the A100 machines.
+By default, I usually work with NVC++ on this cluster, but the OneAPI software stack should work, too.
+
+\paragraph{OpenMP with NVC++}
+
+I use the setup 
+
+\begin{bash}
+module load nvidia-hpc
+
+./configure CXX=nvc++ CC=nvc++ \ 
+ CXXFLAGS="-O4 --std=c++17 -mp=gpu -gpu=cc80 LDFLAGS=-mp=gpu -gpu=cc80" \ 
+ --with-multithreading=omp --with-gpu=omp --enable-exahype --enable-blockstructured --enable-loadbalancing \ 
+ CPP=cpp FC=/apps/nvidia-hpc-sdk/Linux_x86_64/22.3/compilers/bin/nvfortran 
+\end{bash}
+
+\noindent
+on the A100 nodes.
+
+
+Note that there is a bug in the NVIDIA software stack at the moment. 
+Many runs will crash with a complaint about a lack of visible devices. 
+Ensure hence that you set the following environment before you start your experiments:
+
+\begin{bash}
+export CUDA_VISIBLE_DEVICES=0
+\end{bash}
+
+
+
 \subsection{DINE (Durham Intelligent NIC Environment)}
 
 

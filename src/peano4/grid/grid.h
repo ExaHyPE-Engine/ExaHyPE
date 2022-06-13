@@ -292,8 +292,14 @@ namespace peano4 {
       /**
        * This is the first thing I do. Before I even start to think about the
        * erase events, lets get rid of those that are definitely cancelled.
+       *
+       * Uses the routine internal::refinementEventOverrulesCoarsening() to
+       * flag those events within eraseEvents which have to go.
        */
-      void removeEraseEventsThatAreCancelledByRefineEvents( std::list< peano4::grid::GridControlEvent >&  inputEvents );
+      void removeEraseEventsThatAreCancelledByRefineEvents(
+        const std::list< peano4::grid::GridControlEvent >&  refineEvents,
+        std::list< peano4::grid::GridControlEvent >&        eraseEvents
+      );
 
       /**
        * Once I've computed the "power set" of erase events, I can throw those
@@ -305,17 +311,45 @@ namespace peano4 {
       void removeEraseEventsCoverredByOtherEraseEvents( std::list< peano4::grid::GridControlEvent >&  inputEvents );
 
       /**
-       * This is the second step in the algorithm. I could also trigger it prior
-       * to removeEraseEventsThatAreCancelledByRefineEvents, but if I have already
-       * removed all the erase events from the set, then this routine runs way
-       * faster.
+       * This routine merges adjacent events, i.e. events of the same time which
+       * share a common face and can be combined into one larger, rectangular
+       * event. The routine does not distinguish refine from coarsen events, i.e.
+       * you should only pass in events of the same type.
+       *
+       * ## Algorithm
+       *
+       * It is basically a huge while loop. As long as we can merge any two events,
+       * we have to continue to try to merge further. Any merge might produce a new,
+       * larger area which then in turn might be a fit to another refinement area.
+       *
+       *
+       * @see createBoundingBoxEvent()
+       * @see twoEventsAreAdjacent()
        */
       void mergeAdjacentRefinementEvents( std::list< peano4::grid::GridControlEvent >&  inputEvents );
 
+      /**
+       * Helper function which helps us throughout the merge.
+       */
       bool twoEventsOverlap( const peano4::grid::GridControlEvent& lhs, const peano4::grid::GridControlEvent& rhs );
+
       bool equals( const peano4::grid::GridControlEvent& lhs, const peano4::grid::GridControlEvent& rhs );
-      bool eraseEventCoveredByOtherEraseEvent( const peano4::grid::GridControlEvent& smaller, const peano4::grid::GridControlEvent& bigger );
+
+      /**
+       * A refinement event overrules the coarsening if
+       *
+       * - The two events overlap
+       * - The refine event defines a way coarser mesh then the coarse event.
+       */
       bool refinementEventOverrulesCoarsening( const peano4::grid::GridControlEvent& refineEvent, const peano4::grid::GridControlEvent& eraseEvent );
+
+      /**
+       * Two events are adjacent if they have the same h, and if the sum of
+       * their bounding box volumes is roughly the same as the bounding box
+       * volume of the merger. We notice that the name is slightly wrong:
+       * We are not only flagging adjacent events, we are even searching for
+       * adjacent events of the same size.
+       */
       bool twoEventsAreAdjacent( const peano4::grid::GridControlEvent& lhs, const peano4::grid::GridControlEvent& rhs );
 
       peano4::grid::GridControlEvent createBoundingBoxEvent( const peano4::grid::GridControlEvent& lhs, const peano4::grid::GridControlEvent& rhs );

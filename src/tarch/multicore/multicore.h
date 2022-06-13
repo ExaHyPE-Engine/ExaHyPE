@@ -264,10 +264,12 @@ and
   #if defined(GPUOffloadingHIP)
     #define GPUCallableMethod __global__ __device__
   #elif defined(GPUOffloadingSYCL)
-    #define GPUCallableMethod inline __attribute__((always_inline)) SYCL_EXTERNAL
-  #elif defined(UseManualInlining)
-    #define GPUCallableMethod inline __attribute__((always_inline))
+    #define GPUCallableMethod inline SYCL_EXTERNAL
   #else
+    /**
+     * For LLVM/OMP it is absolutely essential that you don't specify
+     * a inline or similar funny stuff here.
+     */
     #define GPUCallableMethod
   #endif
 
@@ -288,7 +290,7 @@ and
    */
   #if defined(GPUOffloadingOMP)
   #pragma omp declare target
-  GPUCallableMethod void gpuAbort() {};
+  GPUCallableMethod void gpuAbort();
   #pragma omp end declare target
   #elif defined(GPUOffloadingSYCL)
   GPUCallableMethod void gpuAbort() {};

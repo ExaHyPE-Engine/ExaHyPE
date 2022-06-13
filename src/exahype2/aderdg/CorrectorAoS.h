@@ -1,7 +1,7 @@
 #ifndef _EXAHYPE2_ADERDG_CORRECTOR_AOS_H_
 #define _EXAHYPE2_ADERDG_CORRECTOR_AOS_H_
 
-#include "../config.h"
+#include "config.h"
 
 #include "tarch/la/Vector.h"
 
