@@ -236,12 +236,12 @@ void runBenchmarks(int patches) {
     #if defined(GPUOffloadingSYCL) and defined(SharedTBB)
     ::tbb::task_group taskGroup;
     // @todo remove semaphore
-    tarch::multicore::BooleanSemaphore semaphore;
+//    tarch::multicore::BooleanSemaphore semaphore;
     for (int hostTask=1; hostTask<MaxHostTasks; hostTask++) {
       taskGroup.run(
         [&]() -> void {
-          tarch::multicore::Lock lock(semaphore);
-          logInfo( "main()", "lock kernel" );
+//          tarch::multicore::Lock lock(semaphore);
+//          logInfo( "main()", "lock kernel" );
           kernel(
             device,
             patchData[hostTask],
@@ -250,7 +250,7 @@ void runBenchmarks(int patches) {
             false ,
             computeCFL
           );
-          logInfo( "main()", "unlock kernel" );
+//          logInfo( "main()", "unlock kernel" );
         }
       );
     }
@@ -416,8 +416,6 @@ void runBenchmarks(int patches) {
       ::exahype2::fv::rusanov::sycl::timeStepWithRusanov_batched_heap_static_calls<EulerOnGPU,EulerOnGPU::NumberOfFiniteVolumesPerAxisPerPatch, 1, 5, 0,exahype2::fv::enumerator::AoSoALexicographicVolumeEnumerator>,
       "sycl, patch-wise, AoSoA", true
     );
-    // @todo multithreaded noch checken
-    // @todo Korrektheit checken
   }
   #endif
 }
