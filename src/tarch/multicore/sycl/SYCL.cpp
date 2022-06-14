@@ -21,7 +21,7 @@ sycl::queue& tarch::multicore::getSYCLQueue( int number ) {
 
 
 int tarch::multicore::getNumberOfSYCLQueues() {
-  return syclQueues.size();
+  return syclQueues.size()-1;
 }
 
 

@@ -66,6 +66,12 @@ namespace tarch {
      */
     sycl::queue& getSYCLQueue( int number );
 
+    /**
+     * Return number of SYCL queues
+     *
+     * The default host queue is not counted here, so you won't get the queue
+     * labelled by HostDefaultQueue.
+     */
     int getNumberOfSYCLQueues();
 
     void initSYCLQueues();

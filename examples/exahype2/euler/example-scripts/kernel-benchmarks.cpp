@@ -50,18 +50,29 @@ tarch::timing::Measurement   plotMeasurement;
 double* validOutcome = nullptr;
 
 
+#if Dimensions==2
+constexpr int NumberOfInputEntries  = (EulerOnGPU::NumberOfFiniteVolumesPerAxisPerPatch+2)*(EulerOnGPU::NumberOfFiniteVolumesPerAxisPerPatch+2) * EulerOnGPU::NumberOfUnknowns;
+constexpr int NumberOfOutputEntries = (EulerOnGPU::NumberOfFiniteVolumesPerAxisPerPatch+0)*(EulerOnGPU::NumberOfFiniteVolumesPerAxisPerPatch+0) * EulerOnGPU::NumberOfUnknowns;
+#else
+constexpr int NumberOfInputEntries  = (EulerOnGPU::NumberOfFiniteVolumesPerAxisPerPatch+2)*(EulerOnGPU::NumberOfFiniteVolumesPerAxisPerPatch+2)*(EulerOnGPU::NumberOfFiniteVolumesPerAxisPerPatch+2) * EulerOnGPU::NumberOfUnknowns;
+constexpr int NumberOfOutputEntries = (EulerOnGPU::NumberOfFiniteVolumesPerAxisPerPatch+0)*(EulerOnGPU::NumberOfFiniteVolumesPerAxisPerPatch+0)*(EulerOnGPU::NumberOfFiniteVolumesPerAxisPerPatch+0) * EulerOnGPU::NumberOfUnknowns;
+#endif
+
 
 /**
  * Set input data
+ *
+ * I really don't care if this makes any sense. Just make the data reasonably
+ * smooth and ensure that all is positive, as there's for example density among
+ * the values.
  */
 void initInputData( double* Q ) {
-  int index = 0;
-  for (int x=0; x<EulerOnGPU::NumberOfFiniteVolumesPerAxisPerPatch+2; x++)
-  for (int y=0; y<EulerOnGPU::NumberOfFiniteVolumesPerAxisPerPatch+2; y++)
-  for (int z=0; z<EulerOnGPU::NumberOfFiniteVolumesPerAxisPerPatch+2; z++)
-  for (int unknown=0; unknown<EulerOnGPU::NumberOfUnknowns; unknown++) {
-    Q[index] = std::sin( x * tarch::la::PI ) * std::sin( 2.0 * y * tarch::la::PI ) * std::sin( 3.0 * z * tarch::la::PI );
-    index++;
+  for (int i=0; i<NumberOfInputEntries/5; i++) {
+    Q[i*5+0] = 1.0;
+    Q[i*5+1] = std::sin( 1.0 * i / (NumberOfInputEntries) * tarch::la::PI );
+    Q[i*5+2] = std::sin( 2.0 * i / (NumberOfInputEntries) * tarch::la::PI );
+    Q[i*5+3] = std::sin( 3.0 * i / (NumberOfInputEntries) * tarch::la::PI );
+    Q[i*5+4] = 1.1 + std::sin( i / (NumberOfInputEntries) * tarch::la::PI );
   }
 }
 
@@ -73,9 +84,9 @@ void initInputData( double* Q ) {
  */
 void storeOutcome( const double* Q ) {
   if (validOutcome==nullptr) {
-    const int size = (EulerOnGPU::NumberOfFiniteVolumesPerAxisPerPatch+0)*(EulerOnGPU::NumberOfFiniteVolumesPerAxisPerPatch+0)*(EulerOnGPU::NumberOfFiniteVolumesPerAxisPerPatch+0)*EulerOnGPU::NumberOfUnknowns;
-    validOutcome = new double[ size ];
-    std:memcpy(validOutcome,Q,sizeof(double)*size);
+    validOutcome = new double[ NumberOfOutputEntries ];
+    std:memcpy(validOutcome,Q,sizeof(double)*NumberOfOutputEntries);
+    logInfo( "storeOutcome(double*)", "bookmarked reference solution" );
   }
 }
 
@@ -88,18 +99,18 @@ void validateOutcome( const double* Q, int patchIndex ) {
   int index = 0;
   int errors = 0;
   double maxDifference = 0.0;
-  for (int x=0; x<EulerOnGPU::NumberOfFiniteVolumesPerAxisPerPatch; x++)
-  for (int y=0; y<EulerOnGPU::NumberOfFiniteVolumesPerAxisPerPatch; y++)
-  for (int z=0; z<EulerOnGPU::NumberOfFiniteVolumesPerAxisPerPatch; z++)
-  for (int unknown=0; unknown<EulerOnGPU::NumberOfUnknowns; unknown++) {
-    if (not tarch::la::equals( Q[index], validOutcome[index]) ) {
+  for (int i=0; i<NumberOfOutputEntries; i++) {
+    if (not tarch::la::equals( Q[i], validOutcome[i]) ) {
       errors++;
+//      logError( "validateOutcome(...)", "expected value=" << validOutcome[index] << ", received value=" << Q[index] );
     }
-    maxDifference = std::max(maxDifference, std::abs(Q[index]-validOutcome[index]) );
+    maxDifference = std::max(maxDifference, std::abs(Q[i]-validOutcome[i]) );
     index++;
   }
   if (errors>0) {
-    std::cerr << "ERROR: outcomes in patch " << patchIndex << " differ in " << errors << " entries with max difference of " << maxDifference << std::endl;
+    logError( "validateOutcome(...)", "outcomes in patch " << patchIndex << " differ in " << errors << " entries with max difference of " << maxDifference );
+    logError( "validateOutcome(...)", "terminate immediately" );
+    exit(-1);
   }
 }
 
@@ -127,8 +138,8 @@ void runBenchmarks(int patches) {
     std::vector<double*> inputData;
     std::vector<double*> outputData;
     for (int i=0; i<patches; i++) {
-      inputData.push_back( new double[ (EulerOnGPU::NumberOfFiniteVolumesPerAxisPerPatch+2)*(EulerOnGPU::NumberOfFiniteVolumesPerAxisPerPatch+2)*(EulerOnGPU::NumberOfFiniteVolumesPerAxisPerPatch+2)*EulerOnGPU::NumberOfUnknowns] );
-      outputData.push_back( new double[ (EulerOnGPU::NumberOfFiniteVolumesPerAxisPerPatch+0)*(EulerOnGPU::NumberOfFiniteVolumesPerAxisPerPatch+0)*(EulerOnGPU::NumberOfFiniteVolumesPerAxisPerPatch+0)*EulerOnGPU::NumberOfUnknowns] );
+      inputData.push_back( new double[ NumberOfInputEntries ] );
+      outputData.push_back( new double[ NumberOfOutputEntries ] );
       initInputData( inputData[i] );
     }
 
@@ -162,10 +173,10 @@ void runBenchmarks(int patches) {
     )> kernel, std::string markerName, bool computeCFL ) {
     ::exahype2::CellData patchData(patches);
     for (int i=0; i<patches; i++) {
-      patchData.QIn[i]           = new double[ (EulerOnGPU::NumberOfFiniteVolumesPerAxisPerPatch+2)*(EulerOnGPU::NumberOfFiniteVolumesPerAxisPerPatch+2)*(EulerOnGPU::NumberOfFiniteVolumesPerAxisPerPatch+2)*EulerOnGPU::NumberOfUnknowns];
+      patchData.QIn[i]           = new double[ NumberOfInputEntries ];
       patchData.t[i]             = TimeStamp;
       patchData.dt[i]            = TimeStepSize;
-      patchData.QOut[i]          = new double[ (EulerOnGPU::NumberOfFiniteVolumesPerAxisPerPatch)*(EulerOnGPU::NumberOfFiniteVolumesPerAxisPerPatch)*(EulerOnGPU::NumberOfFiniteVolumesPerAxisPerPatch)*EulerOnGPU::NumberOfUnknowns];
+      patchData.QOut[i]          = new double[ NumberOfOutputEntries ];
       patchData.patchCentre[i]   = tarch::la::Vector<Dimensions,double>(CellOffset+0.5*CellSize);
       patchData.patchSize[i]     = tarch::la::Vector<Dimensions,double>(CellSize);
       initInputData( patchData.QIn[i] );
@@ -209,10 +220,10 @@ void runBenchmarks(int patches) {
 
     for (int hostTask=0; hostTask<MaxHostTasks; hostTask++)
     for (int i=0; i<patches; i++) {
-      patchData[hostTask].QIn[i]   = new double[ (EulerOnGPU::NumberOfFiniteVolumesPerAxisPerPatch+2)*(EulerOnGPU::NumberOfFiniteVolumesPerAxisPerPatch+2)*(EulerOnGPU::NumberOfFiniteVolumesPerAxisPerPatch+2)*EulerOnGPU::NumberOfUnknowns];
+      patchData[hostTask].QIn[i]   = new double[ NumberOfInputEntries ];
       patchData[hostTask].t[i]     = TimeStamp;
       patchData[hostTask].dt[i]    = TimeStepSize;
-      patchData[hostTask].QOut[i]  = new double[ (EulerOnGPU::NumberOfFiniteVolumesPerAxisPerPatch)*(EulerOnGPU::NumberOfFiniteVolumesPerAxisPerPatch)*(EulerOnGPU::NumberOfFiniteVolumesPerAxisPerPatch)*EulerOnGPU::NumberOfUnknowns];
+      patchData[hostTask].QOut[i]  = new double[ NumberOfOutputEntries ];
       patchData[hostTask].patchCentre[i]     = tarch::la::Vector<Dimensions,double>(CellOffset+0.5*CellSize);
       patchData[hostTask].patchSize[i]       = tarch::la::Vector<Dimensions,double>(CellSize);
     }
@@ -485,14 +496,11 @@ int main(int argc, char** argv) {
   }
   #endif
 
-  for (int patches=1; patches<=4; patches*=2) {
-/*
   #if Dimensions==2
   for (int patches=1; patches<=1024*2*2*2*2; patches*=2) {
   #else
   for (int patches=1; patches<=1024*2; patches*=2) {
   #endif
-*/
     std::stringstream msg;
     msg << "benchmark-" << patches;
     otterPhaseSwitch( msg.str().c_str() );
@@ -502,7 +510,7 @@ int main(int argc, char** argv) {
 
   otterTraceFinalise();
 
-  repositories::finishSimulation();
+//  repositories::finishSimulation();
 
   examples::exahype2::euler::repositories::DataRepository::shutdownDatatypes();
   tarch::multicore::shutdownSmartMPI();
