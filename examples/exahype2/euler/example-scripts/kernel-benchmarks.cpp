@@ -100,15 +100,14 @@ void validateOutcome( const double* Q, int patchIndex ) {
   int errors = 0;
   double maxDifference = 0.0;
   for (int i=0; i<NumberOfOutputEntries; i++) {
-    if (not tarch::la::equals( Q[i], validOutcome[i]) ) {
+    if (not tarch::la::equals( Q[i], validOutcome[i], examples::exahype2::euler::Accuracy) ) {
       errors++;
-//      logError( "validateOutcome(...)", "expected value=" << validOutcome[index] << ", received value=" << Q[index] );
     }
     maxDifference = std::max(maxDifference, std::abs(Q[i]-validOutcome[i]) );
     index++;
   }
   if (errors>0) {
-    logError( "validateOutcome(...)", "outcomes in patch " << patchIndex << " differ in " << errors << " entries with max difference of " << maxDifference );
+    logError( "validateOutcome(...)", "outcomes in patch " << patchIndex << " differ in " << errors << " entries with max difference of " << maxDifference << " (admissible accuracy=" << examples::exahype2::euler::Accuracy << ")"  );
     logError( "validateOutcome(...)", "terminate immediately" );
     exit(-1);
   }
