@@ -131,6 +131,10 @@ else:
       "patch-wise, in-situ:",
       "batched, in-situ:"
     ]
+    Machine = [
+      "on host",
+      "on device 0"
+    ]
     
     for prefix in Prefix:
       plt.clf()
