@@ -7,7 +7,7 @@
 
 
 #if GPUOffloadingSYCL>0
-#include "tarch/multicore/tbb/SYCL.h"
+#include "tarch/multicore/sycl/SYCL.h"
 #endif
 
 #include "exahype2/fv/rusanov/Rusanov.h"

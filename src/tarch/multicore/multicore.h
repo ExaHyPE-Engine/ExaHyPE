@@ -9,7 +9,7 @@
 #include <string>
 
 
-#if defined(SharedOMP) || defined(SharedTBB) || defined(SharedCPP)
+#if defined(SharedOMP) || defined(SharedTBB) || defined(SharedCPP) || defined(SharedSYCL)
   #define SharedMemoryParallelisation
 #endif
 
@@ -22,7 +22,7 @@
 /**
  * Have to include this header, as I need access to the SYCL_EXTERNAL keyword.
  */
-#include "tarch/multicore/tbb/SYCL.h"
+#include "tarch/multicore/sycl/SYCL.h"
 
 
 namespace tarch {
@@ -261,19 +261,25 @@ and
     ManagedAcceleratorMemory
   };
 
+
+  /**
+   * We need an annotation GPUCallableMethod for some targets like HIP. This
+   * marker is to be used before the return type is written down. This is different
+   * to the InlineMethod marker which is to be used after the argument list.
+   */
   #if defined(GPUOffloadingHIP)
     #define GPUCallableMethod __host__ __device__
-    //#define GPUCallableMethod __global__ __device__
   #elif defined(GPUOffloadingSYCL)
-    #define GPUCallableMethod inline SYCL_EXTERNAL
+    #define GPUCallableMethod SYCL_EXTERNAL
   #else
-    /**
-     * For LLVM/OMP it is absolutely essential that you don't specify
-     * a inline or similar funny stuff here.
-     */
     #define GPUCallableMethod
   #endif
 
+
+  /**
+   * This is the marker that is to be used after the argument list of a
+   * function declaration.
+   */
   #if defined(UseManualInlining)
     #define InlineMethod __attribute__((always_inline))
   #else
@@ -291,10 +297,10 @@ and
    */
   #if defined(GPUOffloadingOMP)
   #pragma omp declare target
-  GPUCallableMethod void gpuAbort();
+  void gpuAbort();
   #pragma omp end declare target
   #elif defined(GPUOffloadingSYCL)
-  GPUCallableMethod void gpuAbort() {};
+  GPUCallableMethod void gpuAbort();
   #else
   void gpuAbort();
   #endif

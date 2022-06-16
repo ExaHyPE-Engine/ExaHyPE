@@ -2,7 +2,7 @@
 #define _EXAHYPE2_ADERDG_KERNEL_UTILS_H_
 
 #include "tarch/la/Vector.h"
-#include "tarch/multicore/tbb/SYCL.h"
+#include "tarch/multicore/sycl/SYCL.h"
 
 #define FLCoeff(i) FLCoeff[i]
 #define FRCoeff(i) FLCoeff[nodesPerAxis-1-i]

@@ -8,7 +8,7 @@
 
 #include "tarch/la/Vector.h"
 #include "peano4/utils/Globals.h"
-#include "tarch/multicore/tbb/SYCL.h"
+#include "tarch/multicore/sycl/SYCL.h"
 
 
 namespace exahype2 {

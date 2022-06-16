@@ -34,12 +34,6 @@ namespace exahype2 {
      * reconstructed data, i.e. the patch data including the halos, by the user.
      * This happens for example in applyKernelToCell() where we create a
      * PatchData object over both allocated input and output data.
-     *
-     *
-     * @todo Doesn't belong into fv. The whole Generic header belongs into the
-     * directory above.
-     *
-     * @todo The enclave task should use this one instead of its local fields
      */
     struct CellData {
       double**   QIn;

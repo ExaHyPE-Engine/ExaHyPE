@@ -116,6 +116,16 @@ class AMRMarker(object):
   plot: Boolean
      Clarifies whether a dump of the data should be enriched with grid info
      (such as enclave status flags), too.
+     
+  relaxation_coefficient: Double (0< value <1)
+     How quickly should the solution be relaxed against real solution. This
+     is the damping parameter in the Jacobi update scheme and thus has to be
+     bigger than 0 and smaller than 1. If the coefficient approaches 1, you 
+     might see oscillations.
+     
+  right_hand_side: Double (negative)
+     Basically describes how fast the solution is pulled down to 0 once we
+     go away from the AMR transition area.
  
     """
     self._name                   = name
