@@ -48,7 +48,8 @@ class SolveRiemannProblem(AbstractRungeKuttaDGActionSet):
     const int facePosition = 0;
 //    const int facePosition = 2*{{PREDICATE_NO}}*{{NUMBER_OF_DOFS_PER_FACE_2D}}*({{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}});
     #elif Dimensions==3
-    const int facePosition = 2*{{PREDICATE_NO}}*{{NUMBER_OF_DOFS_PER_FACE_3D}}*({{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}});
+    const int facePosition = 0;
+//    const int facePosition = 2*{{PREDICATE_NO}}*{{NUMBER_OF_DOFS_PER_FACE_3D}}*({{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}});
     #endif
     
     /*
@@ -100,7 +101,7 @@ class SolveRiemannProblem(AbstractRungeKuttaDGActionSet):
     #if Dimensions==2
     double QHullForRiemann[2*Dimensions*{{NUMBER_OF_DOFS_PER_FACE_2D}}*({{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}})];
     #elif Dimensions==3
-    double QHullForRiemann = new double[2*Dimensions*{{NUMBER_OF_DOFS_PER_FACE_3D}}*({{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}})];
+    double QHullForRiemann[2*Dimensions*{{NUMBER_OF_DOFS_PER_FACE_3D}}*({{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}})];
     #endif      
     
     ::exahype2::dg::computeRusanovOnHull(
