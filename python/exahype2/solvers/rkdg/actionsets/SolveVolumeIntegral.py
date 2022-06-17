@@ -3,7 +3,7 @@
 
 from .AbstractRungeKuttaDGActionSet import AbstractRungeKuttaDGActionSet
 
-from exahype2.solvers.rkdg.ButcherTableau                import ButcherTableau
+from exahype2.solvers.ButcherTableau                import ButcherTableau
 
 import peano4
 import jinja2

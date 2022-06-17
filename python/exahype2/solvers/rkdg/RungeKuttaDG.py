@@ -11,7 +11,8 @@ import peano4.output.Jinja2TemplatedHeaderImplementationFilePair
 
 from peano4.solversteps.ActionSet import ActionSet
 
-from .ButcherTableau              import RungeKutta_steps
+from exahype2.solvers.ButcherTableau              import RungeKutta_steps
+
 from .PDETerms                    import PDETerms
 from .kernels                     import get_face_overlap_merge_implementation
 
