@@ -241,7 +241,8 @@ void exahype2::dg::computeRusanovOnHull(
               dim,
               ncpValues);
 
-          const double coeff = (-1.0 + 2.0*lr) * 0.5;
+          // this is 0.5 for the left face and -0.5 for the right face, this is just the term that takes into account the direction multiplied with 0.5
+          const double coeff = (-0.5 + 1.0*lr);
 
           for(int var=0; var<unknowns; var++){
             QHullOut[((2*dim+lr)*nodesPerFace+node)*strideQ+var] += coeff*ncpValues[var];
