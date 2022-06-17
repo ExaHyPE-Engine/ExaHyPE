@@ -187,34 +187,17 @@ and
  \image html multicore_task_flow.png
 
  Our Peano 4 task are a logical concept. They have nothing to do with threads or
- tasks in an OpenMP or TBB sense. Indeed, we typically take these tasks once
- spawned and add them to a priority queue. Peano 4's priorities are not strict
- but rather a recommendation, so if we have a native backend priority queue, it
- is reasonable to use this one. Otherwise, we only have to get the order roughly
- right.
+ tasks in an OpenMP or TBB sense. Indeed, the individual tasking backends offer
+ different mappings of the logical tasks onto parallelism:
 
- Besides the logical (Peano) tasks, there are also consumer tasks. These guys
- are real real tasks in a TBB or C++ sense. Whenever the user spawns a (logical)
- task, I check whether at least one of these consumer tasks (a technical task)
- is already alive. If not, I spawn one. Then I return once the logical task is
- in the queue. The consumer task is a low priority thing which looks at the
- priority queue, takes one (logical) task, runs it, maybe requeues it, and then
- continues with the next task in the queue. If the queue grows rapidely, it makes
- sense for a consumer task to fork yet another consumer task. If the queue of
- logical tasks is empty, it makes sense for the consumers to terminate - as long
- as at least one consumer in total survives.
+ - We can either not use any tasking at all;
+ - or map all logical tasks directly onto real tasks;
+ - or store logical tasks in a local queue and decide case by case whether we
+   map them onto proper tasks or do something else with them, i.e. process
+   them immediately.
 
- This way, we balance dynamically between the Peano 4 core plus the user code
- and all these background tasks. If there's a lot of the latter, we spawn many
- consumer tasks. If they all run, they take away physical cores/threads from the
- main application. This in turn might mean that the core code, which acts as a
- task producer, struggles to continue to befill the queues. The queues will
- drain. The consumer tasks now go down one by one, free cores, and thus allow
- the Peano 4 core to grab more of the physical threads again.
+ Consult the orchestration documentation for details.
 
- The additional runtime layer is activated through the compiler switch -DLayeredMultitaskingRuntime.
- You find the implementations in the respective directories. The files are called
- Tasks_layered.cpp.
 
   <h2> OpenMP backend </h2>
 
