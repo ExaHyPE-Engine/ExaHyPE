@@ -71,17 +71,17 @@ std::vector< peano4::grid::GridControlEvent > peano4::grid::merge( std::vector< 
       refineEvents.push_back(p);
     }
   }
-  logInfo( "merge(...)", "have a total of " << events.size() << " event(s) consisting of " << refineEvents.size() << " refine and " << eraseEvents.size() << " erase events" );
+  logDebug( "merge(...)", "have a total of " << events.size() << " event(s) consisting of " << refineEvents.size() << " refine and " << eraseEvents.size() << " erase events" );
 
   internal::removeEraseEventsThatAreCancelledByRefineEvents( refineEvents, eraseEvents );
-  logInfo( "merge(...)", "reduced to " << eraseEvents.size() << " erase event(s) by eliminating erase events that overlap with refinement");
+  logDebug( "merge(...)", "reduced to " << eraseEvents.size() << " erase event(s) by eliminating erase events that overlap with refinement");
 
   //internal::generateEraseEventPowersetOfSquareEvents( eraseEvents );
   //logInfo( "merge(...)", "power set of erase events hosts " << eraseEvents.size() << " event(s)");
 
   internal::mergeAdjacentRefinementEvents( refineEvents );
   internal::mergeAdjacentRefinementEvents( eraseEvents );
-  logInfo( "merge(...)", "merged refine events into " << refineEvents.size() << " event(s)");
+  logDebug( "merge(...)", "merged refine events into " << refineEvents.size() << " event(s)");
 
   std::vector< peano4::grid::GridControlEvent > result;
   result.insert( result.begin(), refineEvents.begin(), refineEvents.end() );
