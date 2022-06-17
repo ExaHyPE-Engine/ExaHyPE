@@ -40,14 +40,15 @@ double exahype2::dg::tests::eulerEigenvalue(
       const tarch::la::Vector<Dimensions,double>& x,
       double                                      t,
       int                                          normal
-      ){
-
+) {
+  assertion8( Q[0]>0.0, Q[0], Q[1], Q[2], Q[3], Q[4], x, t, normal );
   const double irho = 1.0/Q[0];
 
   // based on the assumption that the fluid is an ideal gas, gamma chosen for dry air
   const double gamma = 1.4;
   const double p = (gamma-1) * (Q[4] - 0.5*irho*(Q[1]*Q[1]+Q[2]*Q[2]));
 
+  assertion8( p>0.0, Q[0], Q[1], Q[2], Q[3], Q[4], x, t, normal );
   const double c   = std::sqrt(gamma * p * irho);
 
   double result = 1.0;
