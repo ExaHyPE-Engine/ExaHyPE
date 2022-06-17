@@ -9,7 +9,7 @@ void exahype2::dg::tests::eulerFlux(
       ){
   constexpr double gamma = 1.4;
   const double irho = 1./Q[0];
-  const double p = (gamma-1) * (Q[4] - 0.5*irho*(Q[1]*Q[1]+Q[2]*Q[2]));
+  const double p = (gamma-1) * (Q[4] - 0.5*irho*(Q[1]*Q[1]+Q[2]*Q[2]+Q[3]*Q[3]));
 
   const double velocity = irho*Q[normal+1];
   F[0] = velocity*Q[0];
@@ -46,9 +46,9 @@ double exahype2::dg::tests::eulerEigenvalue(
 
   // based on the assumption that the fluid is an ideal gas, gamma chosen for dry air
   const double gamma = 1.4;
-  const double p = (gamma-1) * (Q[4] - 0.5*irho*(Q[1]*Q[1]+Q[2]*Q[2]));
+  const double p = (gamma-1) * (Q[4] - 0.5*irho*(Q[1]*Q[1]+Q[2]*Q[2]+Q[3]*Q[3]));
 
-  assertion8( p>0.0, Q[0], Q[1], Q[2], Q[3], Q[4], x, t, normal );
+  assertion8( p>=0.0, Q[0], Q[1], Q[2], Q[3], Q[4], x, t, normal );
   const double c   = std::sqrt(gamma * p * irho);
 
   double result = 1.0;
@@ -59,6 +59,8 @@ double exahype2::dg::tests::eulerEigenvalue(
   case 1: //y
     result = std::max( std::abs(Q[2] * irho - c), std::abs(Q[2] * irho + c) );
     break;
+  case 2: //z
+    result = std::max( std::abs(Q[3] * irho - c), std::abs(Q[3] * irho + c) );
   }
   return result;
 
@@ -89,7 +91,7 @@ void exahype2::dg::tests::eulerInitial(
   Q[1] = 0.100000000000000;
   Q[2] = 0.200000000000000;
   Q[3] = 0.300000000000000;
-  Q[4] = 2.57000000000000+0.01*(node/4);
+  Q[4] = 2.57000000000000;
 
 }
 

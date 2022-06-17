@@ -40,7 +40,7 @@ BasisFunctionValuesRight {
 void exahype2::dg::tests::DGTest::run(){
   testMethod(UtilsTest);
   testMethod(runDGEuler);
-  testMethod(runDGElastic);
+//  testMethod(runDGElastic);
 //  testMethod(runTest);
 }
 
@@ -64,7 +64,6 @@ void exahype2::dg::tests::DGTest::UtilsTest(){
     validateEquals(lastIndex[i], nodesPerAxis-1);
   }
 
-
   /*
    * testing gradient by running it on a cell with constant values.
    * since the values are constant, the gradient should be zero everywhere
@@ -72,8 +71,8 @@ void exahype2::dg::tests::DGTest::UtilsTest(){
   // 1 unknown, 1 auxiliary variable
   double cellQin[2*nodesPerCell];
   double gradientValues[Dimensions];
-  for(int i=0; i<nodesPerCell; i++){
-    cellQin[2*i] = 0.0;
+  for(int i=0; i<2*nodesPerCell; i++){
+    cellQin[i] = 1.0;
   }
 
   for(int node=0; node<nodesPerCell; node++){
@@ -117,7 +116,6 @@ void exahype2::dg::tests::DGTest::UtilsTest(){
     }
   }
 
-
 }
 
 void exahype2::dg::tests::DGTest::runDGEuler(){
@@ -152,38 +150,38 @@ void exahype2::dg::tests::DGTest::runDGEuler(){
   const int nodesPerFace  = nodesPerCell/nodesPerAxis;
   const int strideQ       = unknowns+auxiliaryVariables;
 
-  double*  QIn     = new double[nodesPerCell*(unknowns+auxiliaryVariables)]{1.0};
-  double*  QOut    = new double[2*nodesPerCell*(unknowns+auxiliaryVariables)]{0.0};
-  double* QLeft    = new double[2*nodesPerFace*(unknowns+auxiliaryVariables)]{0.0};
-  double* QRight   = new double[2*nodesPerFace*(unknowns+auxiliaryVariables)]{0.0};
-  double* QLower   = new double[2*nodesPerFace*(unknowns+auxiliaryVariables)]{0.0};
-  double* QUpper   = new double[2*nodesPerFace*(unknowns+auxiliaryVariables)]{0.0};
-  #if Dimensions==3
-  double* QFront   = new double[2*nodesPerFace*(unknowns+auxiliaryVariables)]{0.0};
-  double* QBack    = new double[2*nodesPerFace*(unknowns+auxiliaryVariables)]{0.0};
-  #endif
+  //values in the cell at the beginning and end
+  double* QIn = new double[nodesPerCell*strideQ];
+  double* QOut = new double[nodesPerCell*strideQ];
+  //values on the faces
+  double* QLeft = new double[2*nodesPerFace*strideQ];
+  double* QRight = new double[2*nodesPerFace*strideQ];
+  double* QDown = new double[2*nodesPerFace*strideQ];
+  double* QUp = new double[2*nodesPerFace*strideQ];
+#if Dimensions==3
+  double* QFront = new double[2*nodesPerFace*strideQ];
+  double* QBack = new double[2*nodesPerFace*strideQ];
+#endif
 
-  //initialisation of the initial value
-  for(int i=0; i<nodesPerCell*(unknowns+auxiliaryVariables); i++){
-    QIn[i] = 1.0;
-  }
+  //values of the rusanov fluxes on the faces
+  double* QHullForRiemann = new double[2*Dimensions*nodesPerFace*strideQ];
 
-  //logging the results (and in the next steps, verify their correctness)
-  file_stream << "Starting values are: \n";
+  //setting initial conditions
+
+  file_stream << "Initial conditions: \n";
   for(int i=0; i<nodesPerCell; i++){
-    file_stream << "node " << i << ": [";
-        for(int var=0; var<strideQ;var++){
-          file_stream << QIn[i*strideQ+var] << ", ";
-        }
+    eulerInitial(&QIn[i*strideQ]);
+    file_stream << "node " << i << " [";
+    for(int var=0; var<strideQ; var++){
+      file_stream << QIn[i*strideQ+var] << ", ";
+    }
     file_stream << "]\n";
   }
 
-  /*
-   * Step 1) of the dg solver, this computes the purely local volume integral
-   *  Euler here refers to one explicit euler step, not to the local equations.
-   *  Essentially if we assume the cell is completely isolated and given the solution
-   *  at time t, we compute the solution at time t + Δt.
-   */
+  //for later comparisons
+  double QInit[strideQ];
+  eulerInitial(QInit);
+
   explicitEulerOnCell_FluxNCPSource_EvaluateTermsRedundantly(
       QIn,
       QOut,
@@ -204,13 +202,7 @@ void exahype2::dg::tests::DGTest::runDGEuler(){
           eulerFlux(Q,x,t,normal,F);
         },
       nullptr, //ncp
-      [&](
-          const double * __restrict__                  Q,
-          const tarch::la::Vector<Dimensions,double>&  x,
-          double                                       t,
-          double * __restrict__                        S
-        ) -> void { eulerSource(Q,x,t,S);
-        },
+      nullptr, //source
       QuadraturePoints,
       QuadratureWeights,
       MassMatrix,
@@ -223,12 +215,13 @@ void exahype2::dg::tests::DGTest::runDGEuler(){
   file_stream << "\nComputed volume integral values are: \n";
   for(int i=0; i<nodesPerCell; i++){
     file_stream << "node " << i << ": [";
-        for(int var=0; var<strideQ;var++){
-          file_stream << QOut[i*strideQ  +var] << ", ";
-          //validateNumericalEquals(QOut[i*strideQ  +var], QIn[i*strideQ  +var]);
-        }
+    for(int var=0; var<unknowns;var++){
+      file_stream << QOut[i*strideQ+var] << ", ";
+//      validateNumericalEquals(QOut[i*strideQ+var], QIn[i*strideQ+var]+dt);
+    }
     file_stream << "]\n";
   }
+
 
   /*
    * Step 2), the values computed in step 1) are extrapolated to the surface boundary
@@ -241,87 +234,41 @@ void exahype2::dg::tests::DGTest::runDGEuler(){
     BasisFunctionValuesRight,
     QLeft,
     QRight,
-    QLower,
-    QUpper
+    QDown,
+    QUp
 #if Dimensions==3
     ,QFront,
     QBack
 #endif
   );
 
-  file_stream << "\nProjected Face values are: \n Left Face:\n";
-  for(int i=0; i<2*nodesPerFace; i++){
-    file_stream << "node " << i << ": [";
-    for(int var=0; var<strideQ; var++){
-      file_stream << QLeft[i*strideQ  + var] << ", ";
-      if(i%2==1){
-        validateNumericalEquals(QLeft[i*strideQ  +var], 1.0);
-      }
-    }
-    file_stream << "]\n";
-  }
+  double* F[2*Dimensions];
 
-  file_stream << "Right Face:\n";
-  for(int i=0; i<2*nodesPerFace; i++){
-    file_stream << "node " << i << ": [";
-    for(int var=0; var<strideQ;var++){
-      file_stream << QRight[i*strideQ + var] << ", ";
-      if(i%2==0){
-        validateNumericalEquals(QRight[i*strideQ  +var], 1.0);
-      }
-    }
-    file_stream << "]\n";
-  }
-
-  file_stream << "Lower Face:\n";
-  for(int i=0; i<2*nodesPerFace; i++){
-    file_stream << "node " << i << ": [";
-    for(int var=0; var<strideQ;var++){
-      file_stream << QLower[i*strideQ + var] << ", ";
-      if(i%2==1){
-        validateNumericalEquals(QLower[i*strideQ  +var], 1.0);
-      }
-    }
-    file_stream << "]\n";
-  }
-
-  file_stream << "Upper Face:\n";
-  for(int i=0; i<2*nodesPerFace; i++){
-    file_stream << "node " << i << ": [";
-    for(int var=0; var<strideQ;var++){
-      file_stream << QUpper[i*strideQ  + var] << ", ";
-      if(i%2==0){
-        validateNumericalEquals(QUpper[i*strideQ  +var], 1.0);
-      }
-    }
-    file_stream << "]\n";
-  }
-
-#if Dimension==3
-  file_stream << "Front Face:\n";
-  for(int i=0; i<2*nodesPerFace; i++){
-    file_stream << "node " << i << ": [";
-    for(int var=0; var<strideQ;var++){
-      file_stream << QFront[i*strideQ + var] << ", ";
-      if(i%2==1){
-        validateNumericalEquals(QFront[i*strideQ  +var], 1.0);
-      }
-    }
-    file_stream << "]\n";
-  }
-
-  file_stream << "Back Face:\n";
-  for(int i=0; i<2*nodesPerFace; i++){
-    file_stream << "node " << i << ": [";
-    for(int var=0; var<strideQ;var++){
-      file_stream << QBack[i*strideQ  + var] << ", ";
-      if(i%2==0){
-        validateNumericalEquals(QBack[i*strideQ  +var], 1.0);
-      }
-    }
-    file_stream << "]\n";
-  }
+  F[0] = QLeft;
+  F[1] = QRight;
+  F[2] = QDown;
+  F[3] = QUp;
+#if Dimensions==3
+  F[4] = QFront;
+  F[5] = QBack;
 #endif
+
+  for(int f=0; f<2*Dimensions; f++){
+
+    int lr = 1-f%2; //marks whether the face is left or right
+    double* currentFace = F[f];
+    file_stream << "\nFace: " << f << "[ \n";
+
+    for(int node=0; node<nodesPerFace; node++){
+      file_stream << "node: " << node << "[";
+      for(int var=0; var<strideQ; var++){
+        file_stream << currentFace[(2*node+lr)*strideQ+var] << ", ";
+      }
+      file_stream << "]\n";
+    }
+
+  }
+
 
   /*
    *  project data onto opposite face as well to trade with "identical" cell,
@@ -336,8 +283,8 @@ void exahype2::dg::tests::DGTest::runDGEuler(){
     BasisFunctionValuesRight,
     QRight,
     QLeft,
-    QUpper,
-    QLower
+    QUp,
+    QDown
 #if Dimensions==3
     ,QBack,
     QFront
@@ -353,8 +300,8 @@ void exahype2::dg::tests::DGTest::runDGEuler(){
   double* QHull[Dimensions*2];
   QHull[0] = QLeft;
   QHull[1] = QRight;
-  QHull[2] = QLower;
-  QHull[3] = QUpper;
+  QHull[2] = QDown;
+  QHull[3] = QUp;
   bool atBoundary[Dimensions*2];
   atBoundary[0] = false;
   atBoundary[1] = true;
@@ -368,7 +315,8 @@ void exahype2::dg::tests::DGTest::runDGEuler(){
   atBoundary[5] = true;
 #endif
 
-  double maxEigenvaluePerFace[Dimensions*2];
+  double maxEigenvaluePerFace[2*Dimensions];
+
 
   /*
    * this computes the maximal eigenvalue of the solution on each surface
@@ -379,19 +327,19 @@ void exahype2::dg::tests::DGTest::runDGEuler(){
       const double * __restrict__                 Q,
       const tarch::la::Vector<Dimensions,double>& x,
       double                                      t,
-      int                                          normal
+      int                                         normal
       ) -> double {
         return eulerEigenvalue(Q,x,t,normal);
       },
     [&](
-      const double * __restrict__                  Qinside,
-      double * __restrict__                         Qoutside,
-      const tarch::la::Vector<Dimensions,double>&  x,
-      double                                       t,
-      int                                          normal
-    ) -> void {
-      eulerBoundaryConditions(Qinside, Qoutside, x, t, normal);
-    },
+        const double * __restrict__                  Qinside,
+        double * __restrict__                        Qoutside,
+        const tarch::la::Vector<Dimensions,double>&  x,
+        double                                       t,
+        int                                          normal
+      ) -> void {
+        eulerBoundaryConditions(Qinside, Qoutside, x, t, normal);
+      },
     QHull,
     atBoundary,
     order,
@@ -405,10 +353,9 @@ void exahype2::dg::tests::DGTest::runDGEuler(){
   file_stream << "\nMax Eigenvalues per Face:\n";
   for(int i=0; i<Dimensions*2; i++){
     file_stream << "Max Eigenvalues at face " << i << ": " << maxEigenvaluePerFace[i] << std::endl;
-    validateNumericalEquals(maxEigenvaluePerFace[i], 1.0);
+//    validateNumericalEquals(maxEigenvaluePerFace[i], 2.6);
   }
 
-  double* QHullForRiemann = new double[2*Dimensions*nodesPerFace*strideQ]{0.0};
 
   /*
    * This step computes the rusanov flux for each surface at each node
@@ -423,8 +370,8 @@ void exahype2::dg::tests::DGTest::runDGEuler(){
           ) -> void {
           eulerFlux(Q,x,t,normal,F);
         },
-        nullptr,
-        [&](
+      nullptr, //flux
+      [&](
           const double * __restrict__                  Qinside,
           double * __restrict__                         Qoutside,
           const tarch::la::Vector<Dimensions,double>&  x,
@@ -444,8 +391,8 @@ void exahype2::dg::tests::DGTest::runDGEuler(){
         dt,
         maxEigenvaluePerFace,
         atBoundary,
-        true,
-        false
+        true, //useFlux
+        false //useNCP
         );
 
   file_stream << "\nRusanov Fluxes per Face:\n";
@@ -455,11 +402,12 @@ void exahype2::dg::tests::DGTest::runDGEuler(){
       file_stream << "at node " << i << ": [";
       for(int var=0; var<strideQ; var++){
         file_stream << QHullForRiemann[(f*nodesPerFace+i)*strideQ+var] << ", ";
-        //validateNumericalEquals(QHullForRiemann[(f*nodesPerFace+i)*strideQ+var], 1.0);
+        //validateNumericalEquals(QHullForRiemann[(f*nodesPerFace+i)*strideQ+var], 0.0);
       }
       file_stream << "]\n";
     }
   }
+
 
   /*
    * The contributions from the computed rusanov flux are then added to the nodes
@@ -478,32 +426,36 @@ void exahype2::dg::tests::DGTest::runDGEuler(){
       QuadratureWeights
       );
 
+  //Finally we check that after all these steps have been taken QOut, which should be the sum of the volume and face contributions, is zero
+
   file_stream << "\nFinal values are: \n";
   for(int i=0; i<nodesPerCell; i++){
     file_stream << "node " << i << ": [";
-        for(int var=0; var<strideQ;var++){
-          file_stream << QOut[i*strideQ+var] << ", ";
-          validateNumericalEquals(QOut[i*strideQ+var], 0.0);
-        }
+    for(int var=0; var<unknowns;var++){
+      file_stream << QOut[i*strideQ+var] << ", ";
+      validateNumericalEquals(QOut[i*strideQ+var], 0.0);
+    }
     file_stream << "]\n";
   }
 
 
   file_stream << "\n\n";
 
-  delete [] QIn;
-  delete [] QOut;
-  delete [] QLeft;
-  delete [] QRight;
-  delete [] QLower;
-  delete [] QUpper;
-#if Dimensions==3
-  delete [] QFront;
-  delete [] QBack;
-#endif
-  delete [] QHullForRiemann;
 
-}
+  delete[] QIn;
+  delete[] QOut;
+  delete[] QLeft;
+  delete[] QRight;
+  delete[] QDown;
+  delete[] QUp;
+#if Dimensions==3
+  delete[] QFront;
+  delete[] QBack;
+#endif
+  delete[] QHullForRiemann;
+
+
+}//runDGEuler
 
 void exahype2::dg::tests::DGTest::runDGElastic(){
 
@@ -609,12 +561,18 @@ void exahype2::dg::tests::DGTest::runDGElastic(){
       true,
       true);
 
+  for(int i=0; i<nodesPerCell; i++){
+    for(int var=0; var<auxiliaryVariables;var++){
+      QOut[i*strideQ+unknowns+var] += QIn[i*strideQ+unknowns+var];
+    }
+  }
+
   file_stream << "\nComputed volume integral values are: \n";
   for(int i=0; i<nodesPerCell; i++){
     file_stream << "node " << i << ": [";
     for(int var=0; var<unknowns;var++){
       file_stream << QOut[i*strideQ+var] << ", ";
-      //validateNumericalEquals(QOut[i*strideQ+var], QIn[i*strideQ+var]+dt);
+      validateNumericalEquals(QOut[i*strideQ+var], QIn[i*strideQ+var]+dt);
     }
     for(int var=0; var<auxiliaryVariables;var++){
       file_stream << QOut[i*strideQ+unknowns+var] << ", ";
@@ -805,7 +763,7 @@ void exahype2::dg::tests::DGTest::runDGElastic(){
     validateNumericalEquals(maxEigenvaluePerFace[i], 2.6);
   }
 
-  double* QHullForRiemann = new double[2*Dimensions*nodesPerFace*strideQ]{0.0};
+  double* QHullForRiemann = new double[2*Dimensions*nodesPerFace*strideQ];
 
   /*
    * This step computes the rusanov flux for each surface at each node
@@ -913,282 +871,7 @@ void exahype2::dg::tests::DGTest::runDGElastic(){
 #endif
   delete [] QHullForRiemann;
 
-}
+} //runDGElastic
 
-
-/*
- * #######################################################################################
- */
-
-void exahype2::dg::tests::DGTest::runTest(){
-
-  const int unknowns = 5;
-  const int auxiliaryVariables = 0;
-  const int strideQ = 5;
-  const int order=3;
-
-  const int nodesPerAxis = order+1;
-  const int nodesPerCell = getNodesPerCell(nodesPerAxis);
-  const int nodesPerFace = nodesPerCell/nodesPerAxis;
-
-  // geometry
-  const tarch::la::Vector<Dimensions, double> x({0.0, 0.0});
-  const double dx = 0.01;
-  const double t  = 0.0;
-  const double dt = 0.01;
-
-  double QIn[strideQ*nodesPerCell];
-  double QOut[strideQ*nodesPerCell];
-  
-  double* QLeft  = new double[2*nodesPerFace*strideQ]{0.0};
-  double* QRight = new double[2*nodesPerFace*strideQ]{0.0};
-  double* QLower = new double[2*nodesPerFace*strideQ]{0.0};
-  double* QUpper = new double[2*nodesPerFace*strideQ]{0.0};
-#if Dimensions==3
-  double* QFront = new double[2*nodesPerFace*strideQ]{0.0};
-  double* QBack  = new double[2*nodesPerFace*strideQ]{0.0};
-#endif
-  
-  double* QHullForRiemann   = new double[2*Dimensions*nodesPerFace*strideQ];
-  double* QOutAfterRiemann  = new double[nodesPerCell*strideQ]{0.0};
-
-  for(int node=0; node<nodesPerCell; node++){
-    QIn[node*strideQ+0] = 0.1;
-    QIn[node*strideQ+1] = 0.0;
-    QIn[node*strideQ+2] = 0.0;
-    QIn[node*strideQ+3] = 0.0;
-    QIn[node*strideQ+4] = 0.99 + 0.01*(node/nodesPerAxis);
-  }
-
-  file_stream << "Initial values:" << std::endl;
-  file_stream << plotPatch(
-        QIn,
-        order,
-        unknowns,
-        auxiliaryVariables
-    );
-
-  for(int iteration = 0; iteration<1; iteration++){
-    explicitEulerOnCell_FluxNCPSource_EvaluateTermsRedundantly(
-          QIn,
-          QOut,
-          order,
-          unknowns,
-          auxiliaryVariables,
-          x,
-          dx,
-          t,
-          dt,
-          [&](
-              const double * __restrict__                  Q,
-              const tarch::la::Vector<Dimensions,double>&  x,
-              double                                       t,
-              int                                          normal,
-              double * __restrict__                        F
-            ) -> void {
-              eulerFlux(Q,x,t,normal,F);
-            },
-          nullptr, //ncp
-          [&](
-              const double * __restrict__                  Q,
-              const tarch::la::Vector<Dimensions,double>&  x,
-              double                                       t,
-              double * __restrict__                        S
-            ) -> void {
-              eulerSource(Q,x,t,S);
-            },
-          QuadraturePoints,
-          QuadratureWeights,
-          MassMatrix,
-          StiffnessOperator,
-          DerivativeOperator,
-          true,
-          false,
-          false);
-
-    file_stream << "Computed values after volume integral: " << std::endl;
-    file_stream << plotPatch(
-          QOut,
-          order,
-          unknowns,
-          auxiliaryVariables
-      );
-
-    projectVolumetricDataOntoFaces(
-      QIn,
-      order,
-      unknowns+auxiliaryVariables,
-      BasisFunctionValuesLeft,
-      BasisFunctionValuesRight,
-      QLeft,
-      QRight,
-      QLower,
-      QUpper
-  #if Dimensions==3
-      ,QFront,
-      QBack
-  #endif
-    );
-
-    double* QHull[Dimensions*2];
-    QHull[0] = QLeft;
-    QHull[1] = QRight;
-    QHull[2] = QLower;
-    QHull[3] = QUpper;
-    bool atBoundary[Dimensions*2];
-    atBoundary[0] = true;
-    atBoundary[1] = true;
-    atBoundary[2] = true;
-    atBoundary[3] = true;
-
-  #if Dimensions==3
-    QHull[4] = QBack;
-    QHull[5] = QFront;
-    atBoundary[4] = true;
-    atBoundary[5] = true;
-  #endif
-
-    file_stream << "Left Face: " << std::endl;
-    for(int i=0; i<2*nodesPerFace; i++){
-      file_stream << "Node " << i << "[";
-      for(int j=0; j<strideQ-1; j++){
-        file_stream << QLeft[i*strideQ+j] << ", ";
-      }
-      file_stream << QLeft[i*strideQ+strideQ-1] << "]" << std::endl;
-    }
-    file_stream << std::endl;
-
-    file_stream << "Right Face: " << std::endl;
-    for(int i=0; i<2*nodesPerFace; i++){
-      file_stream << "Node " << i << "[";
-      for(int j=0; j<strideQ-1; j++){
-        file_stream << QRight[i*strideQ+j] << ", ";
-      }
-      file_stream << QRight[i*strideQ+strideQ-1] << "]" << std::endl;
-    }
-    file_stream << std::endl;
-
-    double maxEigenvaluePerFace[Dimensions*2];
-
-    getMaxEigenvaluePerFace(
-      [&](
-        const double * __restrict__                 Q,
-        const tarch::la::Vector<Dimensions,double>& x,
-        double                                      t,
-        int                                          normal
-        ) -> double {
-          return eulerEigenvalue(Q,x,t,normal);
-        },
-      [&](
-        const double * __restrict__                  Qinside,
-        double * __restrict__                         Qoutside,
-        const tarch::la::Vector<Dimensions,double>&  x,
-        double                                       t,
-        int                                          normal
-      ) -> void {
-        eulerBoundaryConditions(Qinside, Qoutside, x, t, normal);
-      },
-      QHull,
-      atBoundary,
-      order,
-      unknowns,
-      auxiliaryVariables,
-      x,
-      t,
-      maxEigenvaluePerFace
-    );
-
-
-    computeRusanovOnHull(
-        [&](
-            const double * __restrict__                  Q,
-            const tarch::la::Vector<Dimensions,double>&  x,
-            double                                       t,
-            int                                          normal,
-            double * __restrict__                        F
-            ) -> void {
-            eulerFlux(Q,x,t,normal,F);
-          },
-          nullptr,
-          [&](
-            const double * __restrict__                  Qinside,
-            double * __restrict__                         Qoutside,
-            const tarch::la::Vector<Dimensions,double>&  x,
-            double                                       t,
-            int                                          normal
-          ) -> void {
-            eulerBoundaryConditions(Qinside, Qoutside, x, t, normal);
-          },
-          QHull,
-          QHullForRiemann,
-          order,
-          unknowns,
-          auxiliaryVariables,
-          x,
-          dx,
-          t,
-          dt,
-          maxEigenvaluePerFace,
-          atBoundary,
-          true,
-          false
-          );
-
-    file_stream << "Hull before Riemann contribution: " << std::endl;
-    file_stream << plotPatch(QHullForRiemann,
-        order, unknowns, auxiliaryVariables);
-
-    applyRiemannToPatch(
-        QOutAfterRiemann,
-        QHullForRiemann,
-        order,
-        unknowns,
-        auxiliaryVariables,
-        dx,
-        dt,
-        BasisFunctionValuesLeft,
-        BasisFunctionValuesRight,
-        QuadratureWeights
-        );
-
-    file_stream << "Computed Riemann contributions: " << std::endl;
-    file_stream << plotPatch(
-          QOutAfterRiemann,
-          order,
-          unknowns,
-          auxiliaryVariables
-      );
-
-    for(int i=0; i<nodesPerCell*strideQ; i++){
-      QOut[i] += QOutAfterRiemann[i];
-    }
-
-    file_stream << "Computed total values after Riemann contribution: " << std::endl;
-    file_stream << plotPatch(
-          QOut,
-          order,
-          unknowns,
-          auxiliaryVariables
-      );
-
-    for(int i=0; i<nodesPerCell*strideQ; i++){
-      QIn[i] += QOut[i];
-    }
-
-  }
-  
-  delete[] QLeft;
-  delete[] QRight;
-  delete[] QLower;
-  delete[] QUpper;
-#if Dimensions==3
-  delete[] QFront;
-  delete[] QBack;
-#endif
-  
-  delete[] QHullForRiemann;
-  delete[] QOutAfterRiemann;
-
-}
 
 
