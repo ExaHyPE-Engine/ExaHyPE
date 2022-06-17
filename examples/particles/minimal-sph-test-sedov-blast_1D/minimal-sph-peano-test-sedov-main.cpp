@@ -46,6 +46,7 @@
 #include "observers/ResetHasConverged.h"
 #include "observers/InitTimeStep.h"
 #include "observers/ImposeBC.h"
+#include "observers/TimeStep.h"
 #include "observers/EndTimeStep.h"
 
 tarch::logging::Log _log("::");
@@ -167,7 +168,8 @@ int main(int argc, char** argv) {
         examples::particles::observers::HydroKickExtra kickExtra;
         examples::particles::observers::PredictHydro predictHydroPart;
         examples::particles::observers::ImposeBC ImposeBCpart;
-        examples::particles::observers::EndTimeStep endTimeStep;
+        examples::particles::observers::TimeStep timeStep;
+//        examples::particles::observers::EndTimeStep endTimeStep;
 
         /* "Initialize time-step" */
         peano4::parallel::SpacetreeSet::getInstance().traverse(initTimeStep);
@@ -178,32 +180,20 @@ int main(int argc, char** argv) {
           for (int iter=0; iter<5; iter++){
             peano4::parallel::SpacetreeSet::getInstance().traverse(computeDensityAndUpdateSmoothingLength);
             examples::particles::vertexdata::ParticleSet::finishedTraversal();
-
-            /* "Hydro loop" */
-            /* Density loop */
-//            peano4::parallel::SpacetreeSet::getInstance().traverse(density);
-//            examples::particles::vertexdata::ParticleSet::finishedTraversal();
-            /* "Ghost tasks" */
-            /* Prepare force */
-//            peano4::parallel::SpacetreeSet::getInstance().traverse(prepareForce);
-//            examples::particles::vertexdata::ParticleSet::finishedTraversal();
-            /* Newton Raphson iteration */
-//            peano4::parallel::SpacetreeSet::getInstance().traverse(newtonRaphson);
-//            examples::particles::vertexdata::ParticleSet::finishedTraversal();
           }
-
-        /* Force loop */
-        peano4::parallel::SpacetreeSet::getInstance().traverse(forcespart);
-        examples::particles::vertexdata::ParticleSet::finishedTraversal();
 
         /* Reset NR convergence so we can update again */
         peano4::parallel::SpacetreeSet::getInstance().traverse(ResetHasConvergedNR);
         examples::particles::vertexdata::ParticleSet::finishedTraversal();
 
-        /* "Kick1" */
-        peano4::parallel::SpacetreeSet::getInstance().traverse(kick1part);
+        /* Force loop */
+        peano4::parallel::SpacetreeSet::getInstance().traverse(forcespart);
         examples::particles::vertexdata::ParticleSet::finishedTraversal();
+
+        /* "Kick1" */
         peano4::parallel::SpacetreeSet::getInstance().traverse(kickExtra);
+        examples::particles::vertexdata::ParticleSet::finishedTraversal();
+        peano4::parallel::SpacetreeSet::getInstance().traverse(kick2part); // Use kick2 to pass values to V,U arrays
         examples::particles::vertexdata::ParticleSet::finishedTraversal();
         } /* Finish the "0th" time-step */
 
@@ -212,24 +202,13 @@ int main(int argc, char** argv) {
         peano4::parallel::SpacetreeSet::getInstance().traverse(driftpart);
         examples::particles::vertexdata::ParticleSet::finishedTraversal();
 //        /* Also predicts v, u, h, ... */
-//        /* Only relevant for local time-stepping */
-//        peano4::parallel::SpacetreeSet::getInstance().traverse(predictHydroPart);
+        /* Only relevant for local time-stepping */
+        peano4::parallel::SpacetreeSet::getInstance().traverse(predictHydroPart);
+        examples::particles::vertexdata::ParticleSet::finishedTraversal();
 
         for (int iter=0; iter<3; iter++){
           peano4::parallel::SpacetreeSet::getInstance().traverse(computeDensityAndUpdateSmoothingLength);
           examples::particles::vertexdata::ParticleSet::finishedTraversal();
-
-          /* "Hydro loop" */
-          /* Density loop */
-//          peano4::parallel::SpacetreeSet::getInstance().traverse(density);
-//          examples::particles::vertexdata::ParticleSet::finishedTraversal();
-          /* "Ghost tasks" */
-          /* Prepare force */
-//          peano4::parallel::SpacetreeSet::getInstance().traverse(prepareForce);
-//          examples::particles::vertexdata::ParticleSet::finishedTraversal();
-          /* Newton Raphson iteration */
-//          peano4::parallel::SpacetreeSet::getInstance().traverse(newtonRaphson);
-//          examples::particles::vertexdata::ParticleSet::finishedTraversal();
         }
 
         /* Force loop */
@@ -237,9 +216,13 @@ int main(int argc, char** argv) {
         examples::particles::vertexdata::ParticleSet::finishedTraversal();
 
         /* "Kick2". kick2part also reset predictions for next Drift */
+        peano4::parallel::SpacetreeSet::getInstance().traverse(kickExtra);
+        examples::particles::vertexdata::ParticleSet::finishedTraversal();
         peano4::parallel::SpacetreeSet::getInstance().traverse(kick2part);
         examples::particles::vertexdata::ParticleSet::finishedTraversal();
-        peano4::parallel::SpacetreeSet::getInstance().traverse(kickExtra);
+
+        /* "Timestep" */
+        peano4::parallel::SpacetreeSet::getInstance().traverse(timeStep);
         examples::particles::vertexdata::ParticleSet::finishedTraversal();
 
         /* "Kick1" */
@@ -253,9 +236,9 @@ int main(int argc, char** argv) {
         peano4::parallel::SpacetreeSet::getInstance().traverse(ImposeBCpart);
         examples::particles::vertexdata::ParticleSet::finishedTraversal();
 
-        /* "End time-step" */
-        peano4::parallel::SpacetreeSet::getInstance().traverse(endTimeStep);
-        examples::particles::vertexdata::ParticleSet::finishedTraversal();
+//        /* "End time-step" */
+//        peano4::parallel::SpacetreeSet::getInstance().traverse(endTimeStep);
+//        examples::particles::vertexdata::ParticleSet::finishedTraversal();
 
       }
 

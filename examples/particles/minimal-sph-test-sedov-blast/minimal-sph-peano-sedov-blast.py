@@ -53,8 +53,9 @@ parser = argparse.ArgumentParser(description='ExaHyPE 2 - Euler benchmarking scr
 parser.add_argument("-m",     "--mode",               dest="mode",                         default="release",           help="|".join(modes.keys()) )
 parser.add_argument("-c",     "--clean",              dest="clean_temporary_directories",  action="store_true",         help="Remove temporary directories before script starts" )
 parser.add_argument("-r",     "--random",             dest="random_particle_layout",       action="store_true",         help="Use a randomised initial particle layout" )
+parser.add_argument("-1d",    "--1d",                 dest="one_dimensions_setup",         action="store_true",         help="Switch to a 1d setup" )
 parser.add_argument("-dist",  "--particle-distance",  dest="particle_distance",            required=True,  type=float,  help="Particle distance (start with 1/64 by default)" )
-parser.add_argument("-j",   "--parallel-builds",      dest="parallel_builds",              default=-1,       type=int,  help="Number of parallel builds" )
+parser.add_argument("-j",     "--parallel-builds",    dest="parallel_builds",              default=-1,       type=int,  help="Number of parallel builds" )
 args = parser.parse_args()
 
 
@@ -464,18 +465,33 @@ init_setup.use_vertex(particles)
 init_setup.use_cell(particle_tree_analysis.cell_marker)
 init_setup.add_action_set( peano4.toolbox.particles.UpdateParticleGridAssociation(particles) )
 init_setup.add_action_set( peano4.toolbox.particles.UpdateParallelState(particles) )
-init_setup.add_action_set( peano4.toolbox.particles.InsertParticlesAlongCartesianLayoutIntoUnrefinedCells(
-  particle_set=particles,
-  distance_between_particles=args.particle_distance,
-  initialisation_call=initialisation_snippet,
-  noise=args.random_particle_layout,
-  additional_includes=""" 
+
+if args.one_dimensions_setup:
+  init_setup.add_action_set( peano4.toolbox.particles.InsertParticlesAlongCartesianLayoutIntoUnrefinedCells(
+    particle_set=particles,
+    distance_between_particles=args.particle_distance,
+    initialisation_call=initialisation_snippet,
+    noise=args.random_particle_layout,
+    additional_includes=""" 
     #include "Constants.h" 
     #include "kernel_hydro.h"
     #include "equation_of_state.h"
     """,
-  computational_domain_offset=[0.0, 0.0]
-#  , guard="std::abs( 0.5-particle->getX(1) ) < 0.02"
+    computational_domain_offset=[0.0, 0.0], 
+    guard="std::abs( 0.5-particle->getX(1) ) < 0.015"
+  ))
+else:
+  init_setup.add_action_set( peano4.toolbox.particles.InsertParticlesAlongCartesianLayoutIntoUnrefinedCells(
+    particle_set=particles,
+    distance_between_particles=args.particle_distance,
+    initialisation_call=initialisation_snippet,
+    noise=args.random_particle_layout,
+    additional_includes=""" 
+    #include "Constants.h" 
+    #include "kernel_hydro.h"
+    #include "equation_of_state.h"
+    """,
+    computational_domain_offset=[0.0, 0.0]
   ))
 
 init_setup.add_action_set( particle_tree_analysis )

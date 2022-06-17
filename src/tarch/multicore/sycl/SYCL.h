@@ -1,10 +1,11 @@
 // This file is part of the Peano project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
-#ifndef _TARCH_MULTICORE_TBB_SYCL_H_
-#define _TARCH_MULTICORE_TBB_SYCL_H_
+#ifndef _TARCH_MULTICORE_SYCL_SYCL_H_
+#define _TARCH_MULTICORE_SYCL_SYCL_H_
+
 
 #include <string>
-#include "tarch/multicore/multicore.h"
+#include "config.h"
 
 
 /**
@@ -31,21 +32,17 @@
  * push_macro and pop_macro to temporarily undefine them while I include the
  * SYCL headers, and to bring them back into the game afterwards.
  *
+ * ## Dependencies
+ *
+ * Don't include any other Peano header in this file, as all Peano headers might
+ * indirectly include this one via multicore.h, as they need the macro
+ * SYCL_EXTERNAL.
+ *
+ * The only header you need from Peano is the actual config.h.
  *
  */
 
-#if GPUOffloadingSYCL>0
-
-//#define _FUNCTEXCEPT_H 1
-
-/*
-namespace std {
-  #pragma omp declare target
-  //void __throw_bad_function_call() {};
-  [[noreturn]] void __throw_bad_function_call() { __builtin_trap(); };
-  #pragma omp  end declare target
-}
-*/
+#if defined(GPUOffloadingSYCL) or defined(SharedSYCL)
 
 
 #pragma push_macro("Dimensions")
@@ -69,9 +66,17 @@ namespace tarch {
      */
     sycl::queue& getSYCLQueue( int number );
 
+    /**
+     * Return number of SYCL queues
+     *
+     * The default host queue is not counted here, so you won't get the queue
+     * labelled by HostDefaultQueue.
+     */
     int getNumberOfSYCLQueues();
 
     void initSYCLQueues();
+
+    constexpr int HostDefaultQueue = -1;
   }
 }
 

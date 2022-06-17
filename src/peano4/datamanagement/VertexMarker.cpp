@@ -1,4 +1,5 @@
 #include "VertexMarker.h"
+#include "peano4/grid/TraversalObserver.h"
 
 
 std::ostream& operator<<( std::ostream& out, const peano4::datamanagement::VertexMarker& marker ) {
@@ -18,8 +19,25 @@ peano4::datamanagement::VertexMarker::VertexMarker(
   _willBeRefined                          = event.getWillBeRefined();
   _isLocal                                = event.getIsVertexLocal();
   _isParentCellLocal                      = event.getIsParentCellLocal();
-  //_isAdjacentToParallelDomainBoundary     = event.getIsRefined();
   _relativePositionOfCellWithinFatherCell = event.getRelativePositionToFather();
+
+  _isHanging = 0;
+  for (int i=0; i<TwoPowerD; i++) {
+    if (
+      event.getVertexDataTo(i)==peano4::grid::TraversalObserver::CreateOrDestroyHangingGridEntity
+    ) {
+      int position = event.getVertexDataFrom(i);
+      assertion( not _isHanging[position] );
+      _isHanging[position] = true;
+    }
+    if (
+      event.getVertexDataFrom(i)==peano4::grid::TraversalObserver::CreateOrDestroyHangingGridEntity
+    ) {
+      int position = event.getVertexDataTo(i);
+      assertion( not _isHanging[position] );
+      _isHanging[position] = true;
+    }
+  }
 }
 
 
@@ -65,7 +83,7 @@ tarch::la::Vector<Dimensions,double> peano4::datamanagement::VertexMarker::x() c
 
 std::string peano4::datamanagement::VertexMarker::toString() const {
   std::ostringstream msg;
-  msg << "(" << _cellCentre << "," << _h << ",select=" << _select << ")";
+  msg << "(" << _cellCentre << "," << _h << ",hanging=" << _isHanging << ",select=" << _select << ")";
   return msg.str();
 }
 
@@ -150,5 +168,15 @@ tarch::la::Vector<Dimensions,int> peano4::datamanagement::VertexMarker::getRelat
     result(d) = x(d) <= (this->x())(d) ? 0 : 1;
   }
   return result;
+}
+
+
+bool peano4::datamanagement::VertexMarker::isHanging() const {
+  return isHanging( _select );
+}
+
+
+bool peano4::datamanagement::VertexMarker::isHanging(int i) const {
+  return _isHanging[i];
 }
 

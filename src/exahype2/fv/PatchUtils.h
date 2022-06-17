@@ -31,7 +31,9 @@ namespace exahype2 {
       tarch::la::Vector<2,double> volumeSize;
 
       for (int d=0; d<2; d++) {
+        #if !defined(GPUOffloadingSYCL) and !defined(GPUOffloadingOMP)
         assertion2( numberOfVolumesPerAxisInPatch>=1, h, numberOfVolumesPerAxisInPatch );
+        #endif
         volumeSize(d) = h(d)/numberOfVolumesPerAxisInPatch;
       }
 
