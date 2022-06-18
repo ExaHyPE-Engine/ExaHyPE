@@ -1,4 +1,4 @@
-#include "CellIntegral.h"
+#include "../dg/CellIntegral.h"
 
 #include "peano4/utils/Loop.h"
 
