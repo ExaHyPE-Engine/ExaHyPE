@@ -4,7 +4,7 @@
 #define _EXAHYPE2_RKDG_CELL_INTEGRAL_H_
 
 /*
- * @page RKDG Runge-Kutta Discontinous Galerkin methods
+ * @page DG Discontinous Galerkin methods in ExaHyPE
  *
  *
  * For a comprehensive explanation of the Discontinuous galerkin method, check out
@@ -26,14 +26,27 @@
  *  in Riemann.h
  *
  *
+ * ## Runge-Kutta vs DG
+ *
+ * I have thought quite a lot whether I call the C++ namespace rkdg or dg. Eventually,
+ * I decided to stick to DG. After all, RK is basically a sequence of Euler
+ * steps with different starting points and time step sizes, where the all
+ * intermediate and the final solution are constructed through a linear combination
+ * of all previous Euler outcomes. These Euler steps then employ Discontinous Galerkin
+ * operators, so it seemed to be safer to stick to DG which is then used by RK.
+ *
+ * This is in line with the Finite Volume naming convention. Here, FV is the overarching
+ * namespace, and the Python script then discriminates MUSCL vs Rusanov, e.g.
+ *
+ *
+ *
+ *
+ *
  *  ## Cell integral
  *
  *  This header file contains only routines computing the cell integrals resulting
  *  from an explicit (Euler) time step. An Euler step is the fundamental building
- *  block behind any Runge-Kutta scheme, as RK is basically a sequence of Euler
- *  steps with different starting points and time step sizes, where the all
- *  intermediate and the final solution are constructed through a linear combination
- *  of all previous Euler outcomes.
+ *  block behind any Runge-Kutta scheme, as
  *
  *
  *
@@ -81,7 +94,7 @@
 
 
 namespace exahype2 {
-  namespace rkdg {
+  namespace dg {
     /*
      *
      *

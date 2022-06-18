@@ -1,4 +1,4 @@
-#include "../dg/Riemann.h"
+#include "Riemann.h"
 
 void exahype2::dg::getMaxEigenvaluePerFace(
     std::function< double(

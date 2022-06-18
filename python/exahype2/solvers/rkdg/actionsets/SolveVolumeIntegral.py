@@ -55,7 +55,7 @@ class SolveVolumeIntegral(AbstractRungeKuttaDGActionSet):
     double* QOut = fineGridCell{{UNKNOWN_IDENTIFIER}}Estimates.value + {{PREDICATE_NO}} * {{NUMBER_OF_DOFS_PER_CELL_3D}} * ({{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}});
     #endif
     
-    ::exahype2::rkdg::explicitEulerOnCell_FluxNCPSource_EvaluateTermsRedundantly(
+    ::exahype2::dg::explicitEulerOnCell_FluxNCPSource_EvaluateTermsRedundantly(
       QIn,  
       QOut,
       {{ORDER}},                                                   
@@ -197,10 +197,3 @@ class SolveVolumeIntegral(AbstractRungeKuttaDGActionSet):
   def get_action_set_name(self):
     return __name__.replace(".py", "").replace(".", "_")
 
-
-  #def get_includes(self):
-  #  
-  #  return super(SolveVolumeIntegral,self).get_includes() + """
-  #  #include "exahype2/rkdg/Euler.h"
-  #  """
-  

@@ -6,7 +6,7 @@
 
 #include <vector>
 
-#include "../rkdg/DGUtils.h"
+#include "DGUtils.h"
 #include "tarch/la/Vector.h"
 #include "tarch/multicore/multicore.h"
 

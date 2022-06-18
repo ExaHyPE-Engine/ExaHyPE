@@ -10,14 +10,17 @@ tarch::logging::Log   examples::exahype2::euler::EulerRKDG::_log( "examples::exa
 enum class Scenario {
   PointExplosion,
   PointExplosionWithDynamicAMR,
+  GaussianExplosion,
+  GaussianExplosionWithDynamicAMR,
   BreakingDam,
   BreakingDamWithDynamicAMR,
   BreakingDamResolutionStudies
 };
 
 
+Scenario scenario = Scenario::GaussianExplosion;
 //Scenario scenario = Scenario::PointExplosion;
-Scenario scenario = Scenario::PointExplosionWithDynamicAMR;
+//Scenario scenario = Scenario::PointExplosionWithDynamicAMR;
 //Scenario scenario = Scenario::BreakingDam;
 //Scenario scenario = Scenario::BreakingDamResolutionStudies;
 //Scenario scenario = Scenario::BreakingDamWithDynamicAMR;
@@ -40,6 +43,7 @@ Scenario scenario = Scenario::PointExplosionWithDynamicAMR;
 
   switch (scenario) {
     case Scenario::PointExplosion:
+    case Scenario::GaussianExplosion:
       {
         // This is an example how to implement a priori refinement. If
         // you only have this thing, then you work with static AMR, as
@@ -52,6 +56,7 @@ Scenario scenario = Scenario::PointExplosionWithDynamicAMR;
       }
       break;
     case Scenario::PointExplosionWithDynamicAMR:
+    case Scenario::GaussianExplosionWithDynamicAMR:
       {
         // Same as for static AMR. This is the initial pattern
         if ( tarch::la::equals(t,0.0) ) {
@@ -127,6 +132,29 @@ void examples::exahype2::euler::EulerRKDG::initialCondition(
   }
 
   switch (scenario) {
+    case Scenario::GaussianExplosion:
+    case Scenario::GaussianExplosionWithDynamicAMR:
+      {
+        logDebug( "initialCondition(...)", "set point explosion initial condition" );
+        // Manual offset to make the wave originate slightly to the left of the center --- helps
+        // to detect if wave is moving to the left or right
+        #if Dimensions==2
+        tarch::la::Vector<Dimensions,double> circleCentre = {0.5,0.3};
+        #else
+        tarch::la::Vector<Dimensions,double> circleCentre = {0.18,0.3,0.6};
+        #endif
+
+        const double peakDeviation = 0.05;
+        double distance = tarch::la::norm2( x-circleCentre );
+        double exponent = - (distance * distance) / 2.0 / peakDeviation / peakDeviation;
+
+        Q[0] = 0.1;  // rho
+        Q[1] = 0;    // velocities
+        Q[2] = 0;
+        Q[3] = 0;
+        Q[4] = std::exp( exponent );
+      }
+      break;
     case Scenario::PointExplosion:
     case Scenario::PointExplosionWithDynamicAMR:
       {

@@ -10,7 +10,7 @@
 #include "../../dg/CellIntegral.h"
 #include "../../dg/Riemann.h"
 #include "../../dg/tests/testUtils.h"
-#include "../../rkdg/DGUtils.h"
+#include "../../dg/DGUtils.h"
 
 namespace exahype2 {
   namespace dg {

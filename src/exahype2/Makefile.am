@@ -25,11 +25,11 @@ ExaHyPE2Sources = \
   aderdg/RiemannAoS.cpp \
   aderdg/RusanovNonlinearAoS.cpp \
   aderdg/tests/ADERDGTest.cpp \
-  rkdg/DGUtils.cpp \
-  rkdg/CellIntegral.cpp \
-  rkdg/Riemann.cpp \
-  rkdg/tests/DGTest.cpp \
-  rkdg/tests/testUtils.cpp \
+  dg/DGUtils.cpp \
+  dg/CellIntegral.cpp \
+  dg/Riemann.cpp \
+  dg/tests/DGTest.cpp \
+  dg/tests/testUtils.cpp \
   aderdg_kernels/Basis/GaussLegendreBasis.cpp \
   aderdg_kernels/Basis/GaussLobattoBasis.cpp \
   aderdg_kernels/AderUtils.cpp \
