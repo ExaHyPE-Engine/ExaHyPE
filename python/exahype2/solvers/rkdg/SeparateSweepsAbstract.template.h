@@ -79,6 +79,9 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
      */
     static constexpr double MaxAdmissibleCellH  = {{MAX_CELL_H}};
 
+    static constexpr int    NumberOfUnknowns           = {{NUMBER_OF_UNKNOWNS}};
+    static constexpr int    NumberOfAuxiliaryVariables = {{NUMBER_OF_AUXILIARY_VARIABLES}};
+
     /**
      * Minimum mesh size that this solver wants to support. Peano 4 tries
      * to ensure that none of its ExaHyPE 2 solvers has to work on a mesh

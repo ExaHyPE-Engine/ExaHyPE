@@ -1,9 +1,9 @@
-#include "../rkdg/CellIntegral.h"
+#include "CellIntegral.h"
 
 #include "peano4/utils/Loop.h"
 
 
-void exahype2::dg::explicitEulerOnCell_FluxNCPSource_EvaluateTermsRedundantly(
+void exahype2::rkdg::explicitEulerOnCell_FluxNCPSource_EvaluateTermsRedundantly(
     const double* __restrict__                    cellQin,
     double* __restrict__                          cellQout,
     const int                                     order,

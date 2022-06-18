@@ -11,7 +11,10 @@
  * appropriate literature, but very briefly:
  *
  * We approximate the solution of an equation on a volume by a polynomial of order p,
- * which we interpolate by Lagrangian polynomials.
+ * which we interpolate by Lagrangian polynomials. As we solely support Lagrangian
+ * polynomials, we have the simple property that the shape functions are 1 in the
+ * associated sample point, but 0 in all other points.
+ *
  *  This lets us simply use the values of the function at the points as coefficients of the lagrange polynomials.
  *  As support nodes of the lagrange polynomial we use gaussian interpolation points, which lets us approximate an integral in a dimension
  *  by summing up the values of the values of the function at the quadrature points along this dimension.
@@ -25,20 +28,21 @@
  *
  *  ## Cell integral
  *
- *  This header file contains only routines computing the cell integrals.
+ *  This header file contains only routines computing the cell integrals resulting
+ *  from an explicit (Euler) time step. An Euler step is the fundamental building
+ *  block behind any Runge-Kutta scheme, as RK is basically a sequence of Euler
+ *  steps with different starting points and time step sizes, where the all
+ *  intermediate and the final solution are constructed through a linear combination
+ *  of all previous Euler outcomes.
  *
  *
-     * Computes the update caused by an explicit Euler on one cell. An Euler step
-     * is the fundamental building block behind any Runge-Kutta scheme, as RK is
-     * basically a sequence of Euler steps with different starting points and time
-     * step sizes, where the all intermediate and the final solution are constructed
-     * through a linear combination of all previous Euler outcomes.
-     *
-     * We exploit the fact that we can update all the updates within a cell independently:
-     * All the unknowns within a patch can (and do) affect every single unknown in the
-     * output, but the output variables do not interact. After all, it is an explicit scheme.
-     * Consequently, we can loop over all the unknowns in parallel (if we want).
-     *
+ *
+ *
+ * We exploit the fact that we can update all the updates within a cell independently:
+ * All the unknowns within a patch can (and do) affect every single unknown in the
+ * output, but the output variables do not interact. After all, it is an explicit scheme.
+  * Consequently, we can loop over all the unknowns in parallel (if we want).
+  *
      * This function computes the change of the solution in the cell if it were an isolated
      * system. That is to say it ignores any contribution over the surface of the cell.
      * Given this, the solution at the next timestep is the solution at the current timestep
@@ -77,7 +81,7 @@
 #include "../rkdg/DGUtils.h"
 
 namespace exahype2 {
-  namespace dg {
+  namespace rkdg {
     /*
      *
      *

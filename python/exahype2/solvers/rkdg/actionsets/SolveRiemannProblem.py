@@ -226,5 +226,5 @@ class SolveRiemannProblem(AbstractRungeKuttaDGActionSet):
   
   def get_includes(self):
     return super(SolveRiemannProblem,self).get_includes() + """
-#include "exahype2/dg/Riemann.h"
+#include "exahype2/rkdg/Riemann.h"
     """  
