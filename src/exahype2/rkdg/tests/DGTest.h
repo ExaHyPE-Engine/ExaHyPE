@@ -1,16 +1,16 @@
 // This file is part of the Peano project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
-#include "../DGUtils.h"
-#include "../Euler.h"
-#include "../Riemann.h"
 #include "tarch/tests/TestCase.h"
-
-#include "testUtils.h"
 
 #include <cmath>
 #include <iostream>
 #include <fstream>
+
+#include "../../rkdg/CellIntegral.h"
+#include "../../rkdg/DGUtils.h"
+#include "../../rkdg/Riemann.h"
+#include "../../rkdg/tests/testUtils.h"
 
 namespace exahype2 {
   namespace dg {

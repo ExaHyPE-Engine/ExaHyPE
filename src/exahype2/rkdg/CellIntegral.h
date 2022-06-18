@@ -1,7 +1,7 @@
 // This file is part of the ExaHyPE2 project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
-#ifndef _EXAHYPE2_DG_EULER_H_
-#define _EXAHYPE2_DG_EULER_H_
+#ifndef _EXAHYPE2_RKDG_CELL_INTEGRAL_H_
+#define _EXAHYPE2_RKDG_CELL_INTEGRAL_H_
 
 /*
  * @page RKDG Runge-Kutta Discontinous Galerkin methods
@@ -74,7 +74,7 @@
 #include "peano4/grid/GridControlEvent.h"
 #include "peano4/utils/Globals.h"
 
-#include "DGUtils.h"
+#include "../rkdg/DGUtils.h"
 
 namespace exahype2 {
   namespace dg {

@@ -6,13 +6,13 @@
 
 #include <vector>
 
+#include "../rkdg/DGUtils.h"
 #include "tarch/la/Vector.h"
 #include "tarch/multicore/multicore.h"
 
 #include "peano4/grid/GridControlEvent.h"
 #include "peano4/utils/Globals.h"
 
-#include "DGUtils.h"
 
 namespace exahype2 {
   namespace dg {

@@ -1,4 +1,5 @@
-#include "DGUtils.h"
+#include "../rkdg/DGUtils.h"
+
 #include "tarch/Assertions.h"
 #include "tarch/la/la.h"
 

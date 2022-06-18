@@ -1,4 +1,4 @@
-#include "DGTest.h"
+#include "../../rkdg/tests/DGTest.h"
 
 /*
  * We use precomputed values for lagrange polynomials as basis function

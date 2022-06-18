@@ -2,11 +2,10 @@
 
 #include "tarch/tests/TreeTestCaseCollection.h"
 
-#include "exahype2/dg/tests/DGTest.h"
-
 #include "exahype2/aderdg/tests/ADERDGTest.h"
 #include "fv/rusanov/tests/ApplySplit1DRiemannToPatchTest.h"
 #include "fv/rusanov/tests/CopyPatchTest.h"
+#include "rkdg/tests/DGTest.h"
 
 
 tarch::tests::TestCase* exahype2::getUnitTests() {
