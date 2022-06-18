@@ -816,8 +816,8 @@ def create_finish_time_step_implementation_for_fixed_time_stepping(normalised_ti
 def create_start_time_step_implementation_for_fixed_time_stepping(normalised_time_step_size):
   """
   
-  The outcome is used before we actually roll over the accumulation variables
-  and other stuff.
+  We roll over all reduced data after the last time step, and we 
+  plot status info in the first step.
   
   """
   return """
@@ -826,7 +826,7 @@ def create_start_time_step_implementation_for_fixed_time_stepping(normalised_tim
     and
     _maxCellH>0.0
     and
-    isLastGridSweepOfTimeStep()
+    isFirstGridSweepOfTimeStep()
   ) {
     logInfo( "step()", "Solver {{SOLVER_NAME}}:" );
     logInfo( "step()", "t       = " << _minTimeStampThisTimeStep );

@@ -305,8 +305,6 @@ namespace exahype2 {
        *
        * Here's the explanation of the implementation details marked via _subscript:
        *
-       * : This solver assumes that the input data has a halo layer of one.
-       *
        * _sequential: This solver runs through the individual patches one by one.
        *   We neither exploit any parallelism, not do we merge the patch traversals.
        *   All the operations on patch 0 are completed, then we trigger all steps on
@@ -364,6 +362,19 @@ namespace exahype2 {
        * ## Memory management
        *
        * See ::exahype2::CellData() for details
+       *
+       *
+       * ## Headers vs implementation files
+       *
+       * This should be a proper routine (and thus not static). But I decided
+       * to make it consistent with the templates for the static evaluation and
+       * to move the routine into the header, too. The advantage is that the
+       * compiler now cans inline routines straightforwardly without any ipo.
+       *
+       * Next, all the integers and booleans are known. So, once inlined, the
+       * compiler can trivialise the compute kernel and perform vectorisation et
+       * al even though we have functors which can not trivially be inlined and
+       * optimised.
        */
       static void timeStepWithRusanov_patchwise_heap_functors(
         ::exahype2::CellData&   patchData,
@@ -386,6 +397,9 @@ namespace exahype2 {
       ;
 
 
+      /**
+       * @see timeStepWithRusanov_patchwise_heap_functors()
+       */
       static void timeStepWithRusanov_batched_heap_functors(
         ::exahype2::CellData&   patchData,
         int                     numberOfVolumesPerAxisInPatch,

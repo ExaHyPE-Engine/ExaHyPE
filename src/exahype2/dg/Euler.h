@@ -4,9 +4,14 @@
 #define _EXAHYPE2_DG_EULER_H_
 
 /*
- * For a full explanation of the Discontinuous galerkin method, check out appropriate literature, but very briefly:
+ * @page RKDG Runge-Kutta Discontinous Galerkin methods
  *
- *  we approximate the solution of an equation on a volume by a polynomial of order n, which we interpolate by lagrange polynomials.
+ *
+ * For a comprehensive explanation of the Discontinuous galerkin method, check out
+ * appropriate literature, but very briefly:
+ *
+ * We approximate the solution of an equation on a volume by a polynomial of order p,
+ * which we interpolate by Lagrangian polynomials.
  *  This lets us simply use the values of the function at the points as coefficients of the lagrange polynomials.
  *  As support nodes of the lagrange polynomial we use gaussian interpolation points, which lets us approximate an integral in a dimension
  *  by summing up the values of the values of the function at the quadrature points along this dimension.
@@ -16,24 +21,18 @@
  *
  *  In this file is the implementation of the approximation using discontinuous galerkin of the volume part, the flux over the boundary is then
  *  in Riemann.h
- */
-
-
-#include <vector>
-#include <algorithm>
-
-#include "tarch/la/Vector.h"
-#include "tarch/multicore/multicore.h"
-
-#include "peano4/grid/GridControlEvent.h"
-#include "peano4/utils/Globals.h"
-
-#include "DGUtils.h"
-
-namespace exahype2 {
-  namespace dg {
-    /*
-     * Computes the update caused by an explicit Euler on one cell
+ *
+ *
+ *  ## Cell integral
+ *
+ *  This header file contains only routines computing the cell integrals.
+ *
+ *
+     * Computes the update caused by an explicit Euler on one cell. An Euler step
+     * is the fundamental building block behind any Runge-Kutta scheme, as RK is
+     * basically a sequence of Euler steps with different starting points and time
+     * step sizes, where the all intermediate and the final solution are constructed
+     * through a linear combination of all previous Euler outcomes.
      *
      * We exploit the fact that we can update all the updates within a cell independently:
      * All the unknowns within a patch can (and do) affect every single unknown in the
@@ -61,8 +60,35 @@ namespace exahype2 {
      *    This is local but unlike the source has a direction (there will be a contribution of
      *    the friction on your overall energy for both your velocity in x and y direction for
      *    example) and in general requires the gradient of the solution in each of these directions.
+ *
+ *
+ */
+
+
+#include <vector>
+#include <algorithm>
+
+#include "tarch/la/Vector.h"
+#include "tarch/multicore/multicore.h"
+
+#include "peano4/grid/GridControlEvent.h"
+#include "peano4/utils/Globals.h"
+
+#include "DGUtils.h"
+
+namespace exahype2 {
+  namespace dg {
+    /*
      *
-     * Algorithm:
+     *
+     * ## Visibility/realisation
+     *
+     * The Euler variant is static and all in the header. As I discuss in Rusanov.h, this is
+     * not nice. For DG, we have way heavier routines, to it is reasonable to model the kernels
+     * as proper functions with implementation files.
+     *
+     *
+     * ## Algorithmic steps
      *
      * - Copy over in into out. We run an explicit Euler, so the value is updated
      *   according to a formula @f$ Q(t+\Delta t) = Q(t) + \Delta t \cdot (F + NCP) + S @f$
@@ -90,45 +116,6 @@ namespace exahype2 {
      *
      *  @param cellQout: is where the computed solution of the function at next timestep
      *    are put
-     */
-    void explicitEulerOnCell_Flux_EvaluateTermsOnce(
-      const double* __restrict__                    cellQin,
-      double* __restrict__                          cellQout,
-      const int                                     order,
-      const int                                     unknowns,
-      const int                                     auxiliaryVariables,
-      const tarch::la::Vector<Dimensions,double>&   x,
-      const double                                  dx,
-      const double                                  t,
-      const double                                  dt,
-      std::function< void(
-        const double * __restrict__                  Q,
-        const tarch::la::Vector<Dimensions,double>&  x,
-        double                                       t,
-        int                                          normal,
-        double * __restrict__                        F
-      ) >   flux,
-      const double* __restrict__                     quadNodes,
-      const double* __restrict__                     quadWeights,
-      const double* __restrict__                     MassMatrix,
-      const double* __restrict__                     StiffnessMatrix,
-      const double* __restrict__                     DerivativeOperator,
-      const bool                                     useFlux,
-      const bool                                     useNCP,
-      const bool                                     useSource
-    );
-
-
-    /*
-     * Computes the update caused by an explicit Euler on one cell
-     *
-     * Generic implementation which implements fluxes redundantly.
-     * Since the flux contributions are added over all of a node's (order+1)
-     * neighbours along each dimension, one node's flux contribution is
-     * required a total of (order+1)*d times. Here it is naively re-computed
-     * each time it is required, which adds to the computational intensity of
-     * the function but avoids the need to store these values and therefore
-     * reduces the overall memory footprint.
      *
      * @param cellQin, out: input and output cells
      *
@@ -151,9 +138,17 @@ namespace exahype2 {
      *
      * @param: DerivativeOperator contains the derivative of the basis function evaluated
      *  at the quadrature node.
-     *
-     * @todo Rename
      */
+/*
+    void timeStepEuler_patchwise_functors(
+        ::exahype2::CellData&   patchData,
+        int                     numberOfVolumesPerAxisInPatch,
+        int                     haloSize,
+        int                     unknowns,
+
+        CellDescription hier rein
+
+*/
     void explicitEulerOnCell_FluxNCPSource_EvaluateTermsRedundantly(
         const double* __restrict__                     cellQin,
         double* __restrict__                           cellQout,
@@ -190,9 +185,9 @@ namespace exahype2 {
         const double* __restrict__                     MassMatrix,
         const double* __restrict__                     StiffnessMatrix,
         const double* __restrict__                     DerivativeOperator,
-        bool                                           useFlux,
-        bool                                           useNCP,
-        bool                                           useSource
+        bool                                           evaluateFlux,
+        bool                                           evaluateNonconservativeProduct,
+        bool                                           evaluateSource
     );
 
 
