@@ -4,6 +4,7 @@ void exahype2::dg::tests::eulerFlux(
         const double * __restrict__                  Q,
         const tarch::la::Vector<Dimensions,double>&  x,
         double                                       t,
+        double                                       dt,
         int                                          normal,
         double * __restrict__                        F
       ){
@@ -25,6 +26,7 @@ void exahype2::dg::tests::eulerSource(
       const double * __restrict__                  Q,
       const tarch::la::Vector<Dimensions,double>&  x,
       double                                       t,
+      double                                       dt,
       double * __restrict__                        S
     ){
   S[0] = 0.0;
@@ -39,6 +41,7 @@ double exahype2::dg::tests::eulerEigenvalue(
       const double * __restrict__                 Q,
       const tarch::la::Vector<Dimensions,double>& x,
       double                                      t,
+      double                                       dt,
       int                                          normal
 ) {
   assertion8( Q[0]>0.0, Q[0], Q[1], Q[2], Q[3], Q[4], x, t, normal );
@@ -72,6 +75,7 @@ void exahype2::dg::tests::eulerBoundaryConditions(
         double * __restrict__                         Qoutside,
         const tarch::la::Vector<Dimensions,double>&  x,
         double                                       t,
+        double                                       dt,
         int                                          normal
       ){
   Qoutside[0] = Qinside[0];
@@ -111,6 +115,7 @@ void exahype2::dg::tests::elasticFlux(
         const double * __restrict__                  Q,
         const tarch::la::Vector<Dimensions,double>&  x,
         double                                       t,
+        double                                       dt,
         int                                          normal,
         double * __restrict__                        F
       ){
@@ -145,6 +150,7 @@ void exahype2::dg::tests::elasticSource(
       const double * __restrict__                  Q,
       const tarch::la::Vector<Dimensions,double>&  x,
       double                                       t,
+      double                                       dt,
       double * __restrict__                        S
     ){
 
@@ -165,6 +171,7 @@ double exahype2::dg::tests::elasticEigenvalue(
     const double * __restrict__                 Q,
     const tarch::la::Vector<Dimensions,double>& x,
     double                                      t,
+    double                                       dt,
     int                                          normal
     ){
 
@@ -179,6 +186,7 @@ void exahype2::dg::tests::elasticBoundaryConditions(
         double * __restrict__                        Qoutside,
         const tarch::la::Vector<Dimensions,double>&  x,
         double                                       t,
+        double                                       dt,
         int                                          normal
       ){
 
@@ -203,6 +211,7 @@ void exahype2::dg::tests::elasticNonConservativeProduct(
     const double * __restrict__                  deltaQ,
     const tarch::la::Vector<Dimensions,double>&  faceCentre,
     double                                       t,
+    double                                       dt,
     int                                          normal,
     double * __restrict__                        BgradQ // BgradQ[9]
   ){

@@ -68,7 +68,7 @@ class ADERDG( object ):
     self._ncp_implementation                  = None
     self._eigenvalues_implementation          = None
     self._source_term_implementation          = None
-    self._point_source_implementation         = None
+    self._point_sources_implementation         = None
     self._boundary_conditions_implementation  = None
     self._refinement_criterion_implementation = None
     self._initial_conditions_implementation   = None
@@ -526,7 +526,7 @@ class ADERDG( object ):
     if ncp                  is not None:  self._ncp_implementation                        = ncp
     if eigenvalues          is not None:  self._eigenvalues_implementation                = eigenvalues
     if source_term          is not None:  self._source_term_implementation                = source_term
-    if point_source         is not None:  self._point_source_implementation               = source_term
+    if point_source         is not None:  self._point_sources_implementation               = source_term
     
     self.user_action_set_includes += additional_action_set_includes
     self.user_solver_includes     += additional_user_includes

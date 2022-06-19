@@ -3,7 +3,7 @@
 #include "peano4/utils/Loop.h"
 
 
-void exahype2::dg::explicitEulerOnCell_FluxNCPSource_EvaluateTermsRedundantly(
+void exahype2::dg::cellIntegral_patchwise_computeAndUpdate_functors(
     const double* __restrict__                    cellQin,
     double* __restrict__                          cellQout,
     const int                                     order,
@@ -13,27 +13,10 @@ void exahype2::dg::explicitEulerOnCell_FluxNCPSource_EvaluateTermsRedundantly(
     const double                                   dx,
     const double                                   t,
     const double                                   dt,
-    std::function< void(
-      const double * __restrict__                  Q,
-      const tarch::la::Vector<Dimensions,double>&  x,
-      double                                       t,
-      int                                          normal,
-      double * __restrict__                        F
-    ) >   flux,
-    std::function< void(
-      const double * __restrict__                  Q,
-      const double * __restrict__                  dQdx,
-      const tarch::la::Vector<Dimensions,double>&  x,
-      double                                       t,
-      int                                          normal,
-      double * __restrict__                        F
-    ) >   nonConservativeProduct,
-    std::function< void(
-      const double * __restrict__                  Q,
-      const tarch::la::Vector<Dimensions,double>&  x,
-      double                                       t,
-      double * __restrict__                        S
-    ) >   source,
+    Flux                                           flux,
+    NonConservativeProduct                         nonConservativeProduct,
+    Source                                         source,
+    PointSources                                   pointSources,
     const double* __restrict__	                   quadNodes,
     const double* __restrict__                     quadWeights,
     const double* __restrict__                     MassMatrix,
@@ -41,7 +24,8 @@ void exahype2::dg::explicitEulerOnCell_FluxNCPSource_EvaluateTermsRedundantly(
     const double* __restrict__                     DerivativeOperator,
     const bool                                     useFlux,
     const bool                                     useNCP,
-    const bool                                     useSource
+    const bool                                     useSource,
+    const bool                                     usePointSources
 ) {
 
   const int nodesPerAxis = order+1;
@@ -105,6 +89,7 @@ void exahype2::dg::explicitEulerOnCell_FluxNCPSource_EvaluateTermsRedundantly(
           flux( &cellQin[neighbourNode*strideQ],
                 x,
                 t,
+                dt,
                 dim, //normal
                 fluxValues);
 
@@ -130,6 +115,7 @@ void exahype2::dg::explicitEulerOnCell_FluxNCPSource_EvaluateTermsRedundantly(
       source( &cellQin[node*strideQ],
               position,
               t,
+              dt,
               sourceValues);
       for(int var=0; var<unknowns; var++){
         cellQout[node*strideQ+var] += dt * sourceValues[var];
@@ -155,6 +141,7 @@ void exahype2::dg::explicitEulerOnCell_FluxNCPSource_EvaluateTermsRedundantly(
           &gradientValues[dim*strideQ],
           position,
           t,
+          dt,
           dim,
           ncpValues);
 

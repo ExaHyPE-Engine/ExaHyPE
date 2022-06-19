@@ -7,6 +7,8 @@
 #include <vector>
 
 #include "DGUtils.h"
+#include "Functors.h"
+
 #include "tarch/la/Vector.h"
 #include "tarch/multicore/multicore.h"
 
@@ -50,26 +52,14 @@ namespace exahype2 {
    *
    */
   void getMaxEigenvaluePerFace(
-      std::function< double(
-          const double * __restrict__                 Q,
-          const tarch::la::Vector<Dimensions,double>& x,
-          double                                      t,
-          int                                         normal
-          ) >   maxEigenvalue,
-      std::function< void(
-        const double * __restrict__                  Qinside,
-        double * __restrict__                        Qoutside,
-        const tarch::la::Vector<Dimensions,double>&  x,
-        double                                       t,
-        int                                          normal
-      ) >   boundaryConditions,
+      MaxEigenvalue                                 maxEigenvalue,
       double* __restrict__                          QHull[Dimensions*2],
-      bool                                          atBoundary[Dimensions*2],
       const int                                     order,
       const int                                     unknowns,
       const int                                     auxiliaryVariables,
       const tarch::la::Vector<Dimensions,double>&   x,
       const double                                  t,
+      const double                                  dt,
       double                                        eigenvalues[Dimensions*2]
       );
 
@@ -87,30 +77,13 @@ namespace exahype2 {
    *  not. If a face is at the boundary the outside values (e.g. left of the face if the
    *  face is at the left of the cell) will be ignored and the flux is instead computed
    *  with the values given by the boundaryConditions() function
+   *
+   * @todo das getMaxEigenvalue sollte nicht separat sein (oder in internal) und direkt
+   * hier verwendet werden, so dass die Signatur einfacher wird.
    */
   void computeRusanovOnHull(
-      std::function< void(
-        const double * __restrict__                  Q,
-        const tarch::la::Vector<Dimensions,double>&  x,
-        double                                       t,
-        int                                          normal,
-        double * __restrict__                        F
-      ) >   flux,
-      std::function< void(
-        const double * __restrict__                  Q,
-        const double * __restrict__                  dQdx,
-        const tarch::la::Vector<Dimensions,double>&  x,
-        double                                       t,
-        int                                          normal,
-        double * __restrict__                        F
-      ) >   nonConservativeProduct,
-      std::function< void(
-        const double * __restrict__                  Qinside,
-        double * __restrict__                        Qoutside,
-        const tarch::la::Vector<Dimensions,double>&  x,
-        double                                       t,
-        int                                          normal
-      ) >   boundaryConditions,
+      Flux                                          flux,
+      NonConservativeProduct                        nonConservativeProduct,
       double*                                       QHullIn[Dimensions*2],
       double* __restrict__                          QHullOut,
       const int                                     order,
@@ -121,7 +94,6 @@ namespace exahype2 {
       const double                                  t,
       const double                                  dt,
       const double                                  maxEigenvalueAlongFace[Dimensions*2],
-      const bool                                    atBoundary[Dimensions*2],
       const bool                                    useFlux,
       const bool                                    useNCP
       );
@@ -142,6 +114,8 @@ namespace exahype2 {
    *  influences the value at a given node.
    *
    * @param quadratureWeights: quadrature weight of the given quadrature node 1 dimension
+   *
+   * @todo Name ist nicht gut. Sollte wohl eher add sein.
    */
   void applyRiemannToPatch(
       double* __restrict__        Q,

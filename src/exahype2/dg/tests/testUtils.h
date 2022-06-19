@@ -23,6 +23,7 @@ namespace exahype2 {
             const double * __restrict__                  Q,
             const tarch::la::Vector<Dimensions,double>&  x,
             double                                       t,
+            double                                       dt,
             int                                          normal,
             double * __restrict__                        F
           );
@@ -31,6 +32,7 @@ namespace exahype2 {
           const double * __restrict__                  Q,
           const tarch::la::Vector<Dimensions,double>&  x,
           double                                       t,
+          double                                       dt,
           double * __restrict__                        S
         );
 
@@ -38,6 +40,7 @@ namespace exahype2 {
         const double * __restrict__                 Q,
         const tarch::la::Vector<Dimensions,double>& x,
         double                                      t,
+        double                                       dt,
         int                                         normal
         );
 
@@ -46,6 +49,7 @@ namespace exahype2 {
             double * __restrict__                         Qoutside,
             const tarch::la::Vector<Dimensions,double>&  x,
             double                                       t,
+            double                                       dt,
             int                                          normal
           );
 
@@ -62,6 +66,7 @@ namespace exahype2 {
             const double * __restrict__                  Q,
             const tarch::la::Vector<Dimensions,double>&  x,
             double                                       t,
+            double                                       dt,
             int                                          normal,
             double * __restrict__                        F
           );
@@ -70,6 +75,7 @@ namespace exahype2 {
           const double * __restrict__                  Q,
           const tarch::la::Vector<Dimensions,double>&  x,
           double                                       t,
+          double                                       dt,
           double * __restrict__                        S
         );
 
@@ -77,6 +83,7 @@ namespace exahype2 {
         const double * __restrict__                 Q,
         const tarch::la::Vector<Dimensions,double>& x,
         double                                      t,
+        double                                       dt,
         int                                         normal
         );
 
@@ -85,6 +92,7 @@ namespace exahype2 {
             double * __restrict__                        Qoutside,
             const tarch::la::Vector<Dimensions,double>&  x,
             double                                       t,
+            double                                       dt,
             int                                          normal
           );
 
@@ -92,6 +100,7 @@ namespace exahype2 {
         const double * __restrict__                                   deltaQ,
         const tarch::la::Vector<Dimensions,double>&                   faceCentre,
         double                                                        t,
+        double                                                        dt,
         int                                                           normal,
         double * __restrict__                                         BgradQ
       );

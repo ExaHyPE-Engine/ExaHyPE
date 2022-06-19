@@ -1,7 +1,7 @@
 // This file is part of the ExaHyPE2 project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
-#ifndef _EXAHYPE2_RKDG_CELL_INTEGRAL_H_
-#define _EXAHYPE2_RKDG_CELL_INTEGRAL_H_
+#ifndef _EXAHYPE2_DG_CELL_INTEGRAL_H_
+#define _EXAHYPE2_DG_CELL_INTEGRAL_H_
 
 /*
  * @page DG Discontinous Galerkin methods in ExaHyPE
@@ -85,7 +85,9 @@
 #include <vector>
 #include <algorithm>
 
-#include "../dg/DGUtils.h"
+#include "DGUtils.h"
+#include "Functors.h"
+
 #include "tarch/la/Vector.h"
 #include "tarch/multicore/multicore.h"
 
@@ -166,7 +168,8 @@ namespace exahype2 {
         CellDescription hier rein
 
 */
-    void explicitEulerOnCell_FluxNCPSource_EvaluateTermsRedundantly(
+    // @todo Massenmatrix ist 1d? Oder lumped oder was?
+    void cellIntegral_patchwise_computeAndUpdate_functors(
         const double* __restrict__                     cellQin,
         double* __restrict__                           cellQout,
         const int                                      order,
@@ -176,27 +179,10 @@ namespace exahype2 {
         const double                                   dx,
         const double                                   t,
         const double                                   dt,
-        std::function< void(
-          const double * __restrict__                  Q,
-          const tarch::la::Vector<Dimensions,double>&  x,
-          double                                       t,
-          int                                          normal,
-          double * __restrict__                        F
-        ) >   flux,
-        std::function< void(
-          const double * __restrict__                  Q,
-          const double * __restrict__                  dQdx,
-          const tarch::la::Vector<Dimensions,double>&  x,
-          double                                       t,
-          int                                          normal,
-          double * __restrict__                        F
-        ) >   nonConservativeProduct,
-        std::function< void(
-          const double * __restrict__                  Q,
-          const tarch::la::Vector<Dimensions,double>&  x,
-          double                                       t,
-          double * __restrict__                        S
-        ) >   source,
+        Flux                                           flux,
+        NonConservativeProduct                         nonConservativeProduct,
+        Source                                         source,
+        PointSources                                   pointSources,
         const double* __restrict__                     quadNodes,
         const double* __restrict__                     quadWeights,
         const double* __restrict__                     MassMatrix,
@@ -204,7 +190,8 @@ namespace exahype2 {
         const double* __restrict__                     DerivativeOperator,
         bool                                           evaluateFlux,
         bool                                           evaluateNonconservativeProduct,
-        bool                                           evaluateSource
+        bool                                           evaluateSource,
+        bool                                           evaluatePointSources
     );
 
 

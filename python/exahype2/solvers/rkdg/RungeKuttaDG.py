@@ -258,7 +258,7 @@ class RungeKuttaDG(object):
     self._ncp_implementation                  = None
     self._eigenvalues_implementation          = None
     self._source_term_implementation          = None
-    self._point_source_implementation         = None
+    self._point_sources_implementation        = None
     self._boundary_conditions_implementation  = None
     self._refinement_criterion_implementation = None
     self._initial_conditions_implementation   = None
@@ -880,6 +880,7 @@ We use RK(""" + str(self._rk_order) + """) for the time stepping.
     d[ "FLUX_IMPLEMENTATION"]                 = self._flux_implementation
     d[ "NCP_IMPLEMENTATION"]                  = self._ncp_implementation
     d[ "SOURCE_TERM_IMPLEMENTATION"]          = self._source_term_implementation
+    d[ "POINT_SOURCES_IMPLEMENTATION"]        = self._point_sources_implementation
     self._basis.init_dictionary_with_default_parameters(d)        
 
   
@@ -950,7 +951,7 @@ We use RK(""" + str(self._rk_order) + """) for the time stepping.
     if ncp                  is not None:  self._ncp_implementation                        = ncp
     if eigenvalues          is not None:  self._eigenvalues_implementation                = eigenvalues
     if source_term          is not None:  self._source_term_implementation                = source_term
-    if point_source         is not None:  self._point_source_implementation               = source_term
+    if point_source         is not None:  self._point_sources_implementation               = source_term
     
     self.user_action_set_includes += additional_action_set_includes
     self.user_solver_includes     += additional_user_includes

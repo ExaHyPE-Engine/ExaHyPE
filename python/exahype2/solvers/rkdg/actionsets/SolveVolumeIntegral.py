@@ -55,7 +55,7 @@ class SolveVolumeIntegral(AbstractRungeKuttaDGActionSet):
     double* QOut = fineGridCell{{UNKNOWN_IDENTIFIER}}Estimates.value + {{PREDICATE_NO}} * {{NUMBER_OF_DOFS_PER_CELL_3D}} * ({{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}});
     #endif
     
-    ::exahype2::dg::explicitEulerOnCell_FluxNCPSource_EvaluateTermsRedundantly(
+    ::exahype2::dg::cellIntegral_patchwise_computeAndUpdate_functors(
       QIn,  
       QOut,
       {{ORDER}},                                                   
@@ -69,11 +69,12 @@ class SolveVolumeIntegral(AbstractRungeKuttaDGActionSet):
         const double * __restrict__                  Q,
         const tarch::la::Vector<Dimensions,double>&  x,
         double                                       t,
+        double                                       dt,
         int                                          normal,
         double * __restrict__                        F
       )->void {
         {% if FLUX_IMPLEMENTATION!="<none>" %}
-        repositories::{{SOLVER_INSTANCE}}.flux(Q,x,t,normal,F);
+        repositories::{{SOLVER_INSTANCE}}.flux(Q,x,t,dt,normal,F);
         {% endif %}
       }, //flux
       [&](
@@ -81,21 +82,36 @@ class SolveVolumeIntegral(AbstractRungeKuttaDGActionSet):
           const double * __restrict__                  dQdx,
           const tarch::la::Vector<Dimensions,double>&  x,
           double                                       t,
+          double                                       dt,
           int                                          normal,
           double * __restrict__                        F
         ) -> void {
           {% if NCP_IMPLEMENTATION!="<none>" %}
-          repositories::{{SOLVER_INSTANCE}}.nonconservativeProduct(Q, dQdx, x, t, normal, F);
+          repositories::{{SOLVER_INSTANCE}}.nonconservativeProduct(Q, dQdx, x, t, dt, normal, F);
           {% endif %}          
         }, //ncp
       [&](
         const double * __restrict__                  Q,
         const tarch::la::Vector<Dimensions,double>&  x,
         double                                       t,
+        double                                       dt,
         double * __restrict__                        S
       ) -> void {
         {% if SOURCE_TERM_IMPLEMENTATION!="<none>" %}
-        repositories::{{SOLVER_INSTANCE}}.sourceTerm(Q,x,t,S);
+        repositories::{{SOLVER_INSTANCE}}.sourceTerm(Q,x,t,dt,S);
+        {% endif %}
+      }, //source
+      [&](
+        const double * __restrict__                  Q,
+        const tarch::la::Vector<Dimensions,double>&  cellCentre,
+        const tarch::la::Vector<Dimensions,double>&  cellH,
+        double                                       t,
+        double                                       dt
+      ) -> std::vector<::exahype2::dg::PointSource> {
+        {% if POINT_SOURCES_IMPLEMENTATION!="<none>" %}
+        return repositories::{{SOLVER_INSTANCE}}.pointSources(Q,cellCentre,cellH,t,dt);
+        {% else %}
+        return std::vector<::exahype2::dg::PointSource>();
         {% endif %}
       }, //source
       repositories::{{SOLVER_INSTANCE}}.QuadraturePoints,
@@ -105,7 +121,8 @@ class SolveVolumeIntegral(AbstractRungeKuttaDGActionSet):
       repositories::{{SOLVER_INSTANCE}}.DerivativeOperator,
       {{ "true" if FLUX_IMPLEMENTATION!="<none>" else "false" }}, //useFlux
       {{ "true" if NCP_IMPLEMENTATION!="<none>" else "false" }}, //useNCP
-      {{ "true" if SOURCE_TERM_IMPLEMENTATION!="<none>" else "false" }} //useSource
+      {{ "true" if SOURCE_TERM_IMPLEMENTATION!="<none>" else "false" }}, //useSource
+      {{ "true" if POINT_SOURCES_IMPLEMENTATION!="<none>" else "false" }} //useSource
     );    
 
     /*

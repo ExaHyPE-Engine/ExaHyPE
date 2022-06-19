@@ -41,7 +41,7 @@ class SolveRiemannProblem(AbstractRungeKuttaDGActionSet):
     #endif
     
     double* QHull[Dimensions*2];
-    bool    atBoundary[Dimensions*2];
+    //bool    atBoundary[Dimensions*2];
     double maxEigenvaluePerFace[Dimensions*2];
     
     #if Dimensions==2
@@ -63,11 +63,11 @@ class SolveRiemannProblem(AbstractRungeKuttaDGActionSet):
     
     for(int face=0; face<Dimensions; face++){
       QHull[2*face]        = fineGridFaces{{UNKNOWN_IDENTIFIER}}Estimates(face).value + facePosition;
-      atBoundary[2*face]   = fineGridFaces{{SOLVER_NAME}}FaceLabel(face).getBoundary() and
-                             not repositories::{{SOLVER_INSTANCE}}.PeriodicBC[face];
+      //atBoundary[2*face]   = fineGridFaces{{SOLVER_NAME}}FaceLabel(face).getBoundary() and
+      //                       not repositories::{{SOLVER_INSTANCE}}.PeriodicBC[face];
       QHull[2*face+1]      = fineGridFaces{{UNKNOWN_IDENTIFIER}}Estimates(face+Dimensions).value + facePosition;
-      atBoundary[2*face+1] = fineGridFaces{{SOLVER_NAME}}FaceLabel(face+Dimensions).getBoundary() and
-                             not repositories::{{SOLVER_INSTANCE}}.PeriodicBC[face+Dimensions];        
+      //atBoundary[2*face+1] = fineGridFaces{{SOLVER_NAME}}FaceLabel(face+Dimensions).getBoundary() and
+      //                       not repositories::{{SOLVER_INSTANCE}}.PeriodicBC[face+Dimensions];        
     }
     
     ::exahype2::dg::getMaxEigenvaluePerFace(
@@ -75,26 +75,18 @@ class SolveRiemannProblem(AbstractRungeKuttaDGActionSet):
         const double * __restrict__                 Q,
         const tarch::la::Vector<Dimensions,double>& x,
         double                                      t,
+        double                                      dt,
         int                                         normal
         ) -> double {
-          return repositories::{{SOLVER_INSTANCE}}.maxEigenvalue(Q,x,t,normal);
-        },
-      [&](
-        const double * __restrict__                  Qinside,
-        double * __restrict__                        Qoutside,
-        const tarch::la::Vector<Dimensions,double>&  x,
-        double                                       t,
-        int                                          normal
-        ) -> void {
-          repositories::{{SOLVER_INSTANCE}}.boundaryConditions(Qinside, Qoutside, x, t, normal);
+          return repositories::{{SOLVER_INSTANCE}}.maxEigenvalue(Q,x,t,dt,normal);
         },
       QHull,
-      atBoundary,
       {{ORDER}},                                                   
       {{NUMBER_OF_UNKNOWNS}},
       {{NUMBER_OF_AUXILIARY_VARIABLES}},
       marker.x(),
       timeStamp,
+      timeStepSize,
       maxEigenvaluePerFace
     );
     
@@ -109,11 +101,12 @@ class SolveRiemannProblem(AbstractRungeKuttaDGActionSet):
         const double * __restrict__                  Q,
         const tarch::la::Vector<Dimensions,double>&  x,
         double                                       t,
+        double                                       dt,
         int                                          normal,
         double * __restrict__                        F
       )->void {
         {% if FLUX_IMPLEMENTATION!="<none>" %}
-        repositories::{{SOLVER_INSTANCE}}.flux(Q,x,t,normal,F);
+        repositories::{{SOLVER_INSTANCE}}.flux(Q,x,t,dt,normal,F);
         {% endif %}
       }, //flux
       [&](
@@ -121,22 +114,14 @@ class SolveRiemannProblem(AbstractRungeKuttaDGActionSet):
           const double * __restrict__                  dQdx,
           const tarch::la::Vector<Dimensions,double>&  x,
           double                                       t,
+          double                                       dt,
           int                                          normal,
           double * __restrict__                        F
         ) -> void {
           {% if NCP_IMPLEMENTATION!="<none>" %}
-          repositories::{{SOLVER_INSTANCE}}.nonconservativeProduct(Q, dQdx, x, t, normal, F);
+          repositories::{{SOLVER_INSTANCE}}.nonconservativeProduct(Q, dQdx, x, t, dt, normal, F);
           {% endif %}          
       }, //ncp
-      [&](
-        const double * __restrict__                  Qinside,
-        double * __restrict__                        Qoutside,
-        const tarch::la::Vector<Dimensions,double>&  x,
-        double                                       t,
-        int                                          normal
-        ) -> void {
-          repositories::{{SOLVER_INSTANCE}}.boundaryConditions(Qinside, Qoutside, x, t, normal);
-        },
       QHull,
       QHullForRiemann,
       {{ORDER}},                                                   
@@ -147,7 +132,6 @@ class SolveRiemannProblem(AbstractRungeKuttaDGActionSet):
       timeStamp,
       timeStepSize,
       maxEigenvaluePerFace,
-      atBoundary,
       {{ "true" if FLUX_IMPLEMENTATION!="<none>" else "false" }}, //useFlux
       {{ "true" if NCP_IMPLEMENTATION!="<none>" else "false" }} //useNCP
     );

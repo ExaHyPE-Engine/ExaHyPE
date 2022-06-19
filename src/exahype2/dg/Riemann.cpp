@@ -1,26 +1,14 @@
 #include "Riemann.h"
 
 void exahype2::dg::getMaxEigenvaluePerFace(
-    std::function< double(
-        const double * __restrict__                 Q,
-        const tarch::la::Vector<Dimensions,double>& x,
-        double                                      t,
-        int                                         normal
-        ) >   maxEigenvalue,
-    std::function< void(
-      const double * __restrict__                  Qinside,
-      double * __restrict__                        Qoutside,
-      const tarch::la::Vector<Dimensions,double>&  x,
-      double                                       t,
-      int                                          normal
-    ) >   boundaryConditions,
+    MaxEigenvalue                                 maxEigenvalue,
     double* __restrict__                          QHull[Dimensions*2],
-    bool                                          atBoundary[Dimensions*2],
     const int                                     order,
     const int                                     unknowns,
     const int                                     auxiliaryVariables,
     const tarch::la::Vector<Dimensions,double>&   x,
     const double                                  t,
+    const double                                  dt,
     double                                        eigenvalues[Dimensions*2]
     ){
 
@@ -29,16 +17,16 @@ void exahype2::dg::getMaxEigenvaluePerFace(
 
   const int strideQ = unknowns+auxiliaryVariables;
 
-  double*   boundaryValues = nullptr;
-  bool cellIsOnBoundary = false;
+//  double*   boundaryValues = nullptr;
+//  bool cellIsOnBoundary = false;
 
-  for(int face=0; face<2*Dimensions; face++){
-    cellIsOnBoundary |= atBoundary[face];
-  }
+//  for(int face=0; face<2*Dimensions; face++){
+//    cellIsOnBoundary |= atBoundary[face];
+//  }
 
-  if(cellIsOnBoundary){
-    boundaryValues = new double[strideQ]{0.0};
-  }
+//  if(cellIsOnBoundary){
+//    boundaryValues = new double[strideQ]{0.0};
+//  }
 
   for(int dim=0; dim<Dimensions; dim++){
 
@@ -46,7 +34,7 @@ void exahype2::dg::getMaxEigenvaluePerFace(
 
       eigenvalues[2*dim+lr] = std::numeric_limits<double>::min();
 
-      if(atBoundary[2*dim+lr]){
+/*      if(atBoundary[2*dim+lr]){
         for(int node=0; node<nodesPerFace; node++){
           double resultInner = maxEigenvalue(
             &QHull[2*dim+lr][(2*node+(1-lr))*strideQ], //if left face, then inner side is the right one and reversely
@@ -72,49 +60,33 @@ void exahype2::dg::getMaxEigenvaluePerFace(
 
         }
       }
-      else{
+      else{*/
         for(int node=0; node<2*nodesPerFace; node++){
           double result = maxEigenvalue(
             &QHull[2*dim+lr][node*strideQ], //if left face, then inner side is the right one and reversely
             x,
             t,
-            dim);
+            dt,
+            dim
+          );
           eigenvalues[2*dim+lr] = std::max(eigenvalues[2*dim+lr], std::abs(result));
         }
-      }
+//      }
 
     }
   }
 
+/*
   if(cellIsOnBoundary){
     delete [] boundaryValues;
   }
+*/
 
 }
 
 void exahype2::dg::computeRusanovOnHull(
-    std::function< void(
-      const double * __restrict__                  Q,
-      const tarch::la::Vector<Dimensions,double>&  x,
-      double                                       t,
-      int                                          normal,
-      double * __restrict__                        F
-    ) >   flux,
-    std::function< void(
-      const double * __restrict__                  Q,
-      const double * __restrict__                  dQdx,
-      const tarch::la::Vector<Dimensions,double>&  x,
-      double                                       t,
-      int                                          normal,
-      double * __restrict__                        F
-    ) >   nonConservativeProduct,
-    std::function< void(
-      const double * __restrict__                  Qinside,
-      double * __restrict__                        Qoutside,
-      const tarch::la::Vector<Dimensions,double>&  x,
-      double                                       t,
-      int                                          normal
-    ) >   boundaryConditions,
+    Flux                                          flux,
+    NonConservativeProduct                        nonConservativeProduct,
     double*                                       QHullIn[Dimensions*2],
     double* __restrict__                          QHullOut,
     const int                                     order,
@@ -125,7 +97,6 @@ void exahype2::dg::computeRusanovOnHull(
     const double                                  t,
     const double                                  dt,
     const double                                  maxEigenvalueAlongFace[Dimensions*2],
-    const bool                                    atBoundary[Dimensions*2],
     const bool                                    useFlux,
     const bool                                    useNCP
     ){
@@ -135,8 +106,8 @@ void exahype2::dg::computeRusanovOnHull(
 
   const int strideQ = unknowns+auxiliaryVariables;
 
-  double* boundaryValuesLeft  = new double[strideQ]{0.0};
-  double* boundaryValuesRight = new double[strideQ]{0.0};
+//  double* boundaryValuesLeft  = new double[strideQ]{0.0};
+//  double* boundaryValuesRight = new double[strideQ]{0.0};
   double* fluxValuesLeft      = nullptr;
   double* fluxValuesRight     = nullptr;
   double* ncpValues           = nullptr;
@@ -171,6 +142,7 @@ void exahype2::dg::computeRusanovOnHull(
         **a total of 2*n elements by the same logic
         */
 
+/*
         if(atBoundary[2*dim+lr]&&lr==0){ //on left boundary
           //qr = &QHullIn[(2*((2*Dimensions+lr)*nodesPerFace+node)+1)*strideQ];
 
@@ -195,11 +167,12 @@ void exahype2::dg::computeRusanovOnHull(
           qr = boundaryValuesRight;
         }
         else{
+*/
           //ql = &QHullIn[2*((2*Dimensions+lr)*nodesPerFace+node)*strideQ];
           //qr = &QHullIn[(2*((2*Dimensions+lr)*nodesPerFace+node)+1)*strideQ];
           ql = &QHullIn[2*dim+lr][2*node*strideQ];
           qr = &QHullIn[2*dim+lr][(2*node+1)*strideQ];
-        }
+//        }
 
         for(int var=0; var<unknowns; var++){
           QHullOut[((2*dim+lr)*nodesPerFace+node)*strideQ+var] = 0.0;
@@ -209,11 +182,13 @@ void exahype2::dg::computeRusanovOnHull(
             flux( ql,
                   x, //TODO: add positioning
                   t,
+                  dt,
                   dim, //normal
                   fluxValuesLeft);
             flux( qr,
                   x, //TODO: add positioning
                   t,
+                  dt,
                   dim, //normal
                   fluxValuesRight);
 
@@ -238,6 +213,7 @@ void exahype2::dg::computeRusanovOnHull(
               gradQValues,
               x, //TODO: add positioning
               t,
+              dt,
               dim,
               ncpValues);
 
@@ -254,8 +230,8 @@ void exahype2::dg::computeRusanovOnHull(
     } //lr
   } //dim
 
-  delete [] boundaryValuesLeft;
-  delete [] boundaryValuesRight;
+//  delete [] boundaryValuesLeft;
+//  delete [] boundaryValuesRight;
   if(useFlux){
     delete [] fluxValuesLeft;
     delete [] fluxValuesRight;

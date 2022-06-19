@@ -182,7 +182,7 @@ void exahype2::dg::tests::DGTest::runDGEuler(){
   double QInit[strideQ];
   eulerInitial(QInit);
 
-  explicitEulerOnCell_FluxNCPSource_EvaluateTermsRedundantly(
+  cellIntegral_patchwise_computeAndUpdate_functors(
       QIn,
       QOut,
       order,
@@ -196,19 +196,22 @@ void exahype2::dg::tests::DGTest::runDGEuler(){
           const double * __restrict__                  Q,
           const tarch::la::Vector<Dimensions,double>&  x,
           double                                       t,
+          double                                       dt,
           int                                          normal,
           double * __restrict__                        F
           ) -> void {
-          eulerFlux(Q,x,t,normal,F);
+          eulerFlux(Q,x,t,dt,normal,F);
         },
       nullptr, //ncp
       nullptr, //source
+      nullptr,
       QuadraturePoints,
       QuadratureWeights,
       MassMatrix,
       StiffnessOperator,
       DerivativeOperator,
       true,
+      false,
       false,
       false);
 
@@ -302,17 +305,19 @@ void exahype2::dg::tests::DGTest::runDGEuler(){
   QHull[1] = QRight;
   QHull[2] = QDown;
   QHull[3] = QUp;
+/*
   bool atBoundary[Dimensions*2];
   atBoundary[0] = false;
   atBoundary[1] = true;
   atBoundary[2] = false;
   atBoundary[3] = true;
+*/
 
 #if Dimensions==3
   QHull[4] = QBack;
   QHull[5] = QFront;
-  atBoundary[4] = false;
-  atBoundary[5] = true;
+//  atBoundary[4] = false;
+//  atBoundary[5] = true;
 #endif
 
   double maxEigenvaluePerFace[2*Dimensions];
@@ -327,26 +332,18 @@ void exahype2::dg::tests::DGTest::runDGEuler(){
       const double * __restrict__                 Q,
       const tarch::la::Vector<Dimensions,double>& x,
       double                                      t,
+      double                                      dt,
       int                                         normal
       ) -> double {
-        return eulerEigenvalue(Q,x,t,normal);
-      },
-    [&](
-        const double * __restrict__                  Qinside,
-        double * __restrict__                        Qoutside,
-        const tarch::la::Vector<Dimensions,double>&  x,
-        double                                       t,
-        int                                          normal
-      ) -> void {
-        eulerBoundaryConditions(Qinside, Qoutside, x, t, normal);
+        return eulerEigenvalue(Q,x,t,dt,normal);
       },
     QHull,
-    atBoundary,
     order,
     unknowns,
     auxiliaryVariables,
     x,
     t,
+    dt,
     maxEigenvaluePerFace
   );
 
@@ -365,21 +362,13 @@ void exahype2::dg::tests::DGTest::runDGEuler(){
           const double * __restrict__                  Q,
           const tarch::la::Vector<Dimensions,double>&  x,
           double                                       t,
+          double                                       dt,
           int                                          normal,
           double * __restrict__                        F
           ) -> void {
-          eulerFlux(Q,x,t,normal,F);
+          eulerFlux(Q,x,t,dt,normal,F);
         },
       nullptr, //flux
-      [&](
-          const double * __restrict__                  Qinside,
-          double * __restrict__                         Qoutside,
-          const tarch::la::Vector<Dimensions,double>&  x,
-          double                                       t,
-          int                                          normal
-        ) -> void {
-          eulerBoundaryConditions(Qinside, Qoutside, x, t, normal);
-        },
         QHull,
         QHullForRiemann,
         order,
@@ -390,7 +379,6 @@ void exahype2::dg::tests::DGTest::runDGEuler(){
         t,
         dt,
         maxEigenvaluePerFace,
-        atBoundary,
         true, //useFlux
         false //useNCP
         );
@@ -515,7 +503,7 @@ void exahype2::dg::tests::DGTest::runDGElastic(){
     QOut
     );
 
-  explicitEulerOnCell_FluxNCPSource_EvaluateTermsRedundantly(
+  cellIntegral_patchwise_computeAndUpdate_functors(
       QIn,
       QOut,
       order,
@@ -529,29 +517,33 @@ void exahype2::dg::tests::DGTest::runDGElastic(){
           const double * __restrict__                  Q,
           const tarch::la::Vector<Dimensions,double>&  x,
           double                                       t,
+          double                                       dt,
           int                                          normal,
           double * __restrict__                        F
           ) -> void {
-          elasticFlux(Q,x,t,normal,F);
+          elasticFlux(Q,x,t,dt,normal,F);
         },
       [&](
           const double * __restrict__                  Q,
           const double * __restrict__                  dQdx,
           const tarch::la::Vector<Dimensions,double>&  x,
           double                                       t,
+          double                                       dt,
           int                                          normal,
           double * __restrict__                        F
         ) -> void {
-          elasticNonConservativeProduct(Q, dQdx, x, t, normal, F);
+          elasticNonConservativeProduct(Q, dQdx, x, t,dt, normal, F);
         },
       [&](
           const double * __restrict__                  Q,
           const tarch::la::Vector<Dimensions,double>&  x,
           double                                       t,
+          double                                       dt,
           double * __restrict__                        S
         ) -> void {
-          elasticSource(Q,x,t,S);
+          elasticSource(Q,x,t,dt,S);
         },
+      nullptr,
       QuadraturePoints,
       QuadratureWeights,
       MassMatrix,
@@ -559,7 +551,8 @@ void exahype2::dg::tests::DGTest::runDGElastic(){
       DerivativeOperator,
       true,
       true,
-      true);
+      true,
+      false);
 
   for(int i=0; i<nodesPerCell; i++){
     for(int var=0; var<auxiliaryVariables;var++){
@@ -734,26 +727,18 @@ void exahype2::dg::tests::DGTest::runDGElastic(){
       const double * __restrict__                 Q,
       const tarch::la::Vector<Dimensions,double>& x,
       double                                      t,
+      double                                      dt,
       int                                         normal
       ) -> double {
-        return elasticEigenvalue(Q,x,t,normal);
-      },
-    [&](
-        const double * __restrict__                  Qinside,
-        double * __restrict__                        Qoutside,
-        const tarch::la::Vector<Dimensions,double>&  x,
-        double                                       t,
-        int                                          normal
-      ) -> void {
-        elasticBoundaryConditions(Qinside, Qoutside, x, t, normal);
+        return elasticEigenvalue(Q,x,t,dt,normal);
       },
     QHull,
-    atBoundary,
     order,
     unknowns,
     auxiliaryVariables,
     x,
     t,
+    dt,
     maxEigenvaluePerFace
   );
 
@@ -773,29 +758,22 @@ void exahype2::dg::tests::DGTest::runDGElastic(){
           const double * __restrict__                  Q,
           const tarch::la::Vector<Dimensions,double>&  x,
           double                                       t,
+          double                                       dt,
           int                                          normal,
           double * __restrict__                        F
           ) -> void {
-          elasticFlux(Q,x,t,normal,F);
+          elasticFlux(Q,x,t,dt,normal,F);
         },
       [&](
           const double * __restrict__                  Q,
           const double * __restrict__                  dQdx,
           const tarch::la::Vector<Dimensions,double>&  x,
           double                                       t,
+          double                                       dt,
           int                                          normal,
           double * __restrict__                        F
         ) -> void {
-          elasticNonConservativeProduct(Q, dQdx, x, t, normal, F);
-        },
-      [&](
-          const double * __restrict__                  Qinside,
-          double * __restrict__                         Qoutside,
-          const tarch::la::Vector<Dimensions,double>&  x,
-          double                                       t,
-          int                                          normal
-        ) -> void {
-          elasticBoundaryConditions(Qinside, Qoutside, x, t, normal);
+          elasticNonConservativeProduct(Q, dQdx, x, t, dt,normal, F);
         },
         QHull,
         QHullForRiemann,
@@ -807,7 +785,7 @@ void exahype2::dg::tests::DGTest::runDGElastic(){
         t,
         dt,
         maxEigenvaluePerFace,
-        atBoundary,
+//        atBoundary,
         true,
         true
         );

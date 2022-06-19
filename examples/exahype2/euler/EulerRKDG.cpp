@@ -219,6 +219,8 @@ void examples::exahype2::euler::EulerRKDG::boundaryConditions(
     Qoutside[i] = Qinside[i];
   }
 
+  logWarning( "boundaryConditions(...)", "was here" );
+
   logTraceOut( "boundaryConditions(...)" );
 }
 
@@ -230,6 +232,7 @@ double ::examples::exahype2::euler::EulerRKDG::maxEigenvalue(
   const double * __restrict__ Q, // Q[5+0],
   const tarch::la::Vector<Dimensions,double>&  x,
   double                                       t,
+  double                                       dt,
   int                                          normal
 )  {
   assertion(normal>=0);
@@ -265,6 +268,7 @@ void ::examples::exahype2::euler::EulerRKDG::flux(
   const double * __restrict__ Q, // Q[5+0],
   const tarch::la::Vector<Dimensions,double>&  x,
   double                                       t,
+  double                                       dt,
   int                                          normal,
   double * __restrict__ F // F[5]
 )  {

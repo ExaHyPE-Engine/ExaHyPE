@@ -25,6 +25,7 @@ def create_abstract_solver_declarations(flux_implementation, ncp_implementation,
       const double * __restrict__ Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
       const tarch::la::Vector<Dimensions,double>&  x,
       double                                       t,
+      double                                       dt,
       int                                          normal,
       Offloadable
     );
@@ -44,6 +45,7 @@ def create_abstract_solver_declarations(flux_implementation, ncp_implementation,
       const double * __restrict__ Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
       const tarch::la::Vector<Dimensions,double>&  x,
       double                                       t,
+      double                                       dt,
       int                                          normal
     ) {% if EIGENVALUES_IMPLEMENTATION=="<user-defined>" %}= 0{% else %} final{% endif %};
 
@@ -61,6 +63,7 @@ def create_abstract_solver_declarations(flux_implementation, ncp_implementation,
       const double * __restrict__ Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
       const tarch::la::Vector<Dimensions,double>&  x,
       double                                       t,
+      double                                       dt,
       int                                          normal,
       double * __restrict__                        F, // F[{{NUMBER_OF_UNKNOWNS}}]
       Offloadable
@@ -75,6 +78,7 @@ def create_abstract_solver_declarations(flux_implementation, ncp_implementation,
       const double * __restrict__ Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
       const tarch::la::Vector<Dimensions,double>&  x,
       double                                       t,
+      double                                       dt,
       int                                          normal,
       double * __restrict__ F // F[{{NUMBER_OF_UNKNOWNS}}]
     ) {% if FLUX_IMPLEMENTATION=="<user-defined>" %}=0{% else %} final {% endif %};
@@ -95,6 +99,7 @@ def create_abstract_solver_declarations(flux_implementation, ncp_implementation,
       const double * __restrict__                  dQdx, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
       const tarch::la::Vector<Dimensions,double>&  x,
       double                                       t,
+      double                                       dt,
       int                                          normal,
       double * __restrict__                        BgradQ, // BgradQ[{{NUMBER_OF_UNKNOWNS}}]
       Offloadable
@@ -110,6 +115,7 @@ def create_abstract_solver_declarations(flux_implementation, ncp_implementation,
       const double * __restrict__                  dQdx, // [{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
       const tarch::la::Vector<Dimensions,double>&  x,
       double                                       t,
+      double                                       dt,
       int                                          normal,
       double * __restrict__ BgradQ // BgradQ[{{NUMBER_OF_UNKNOWNS}}]
     ) {% if NCP_IMPLEMENTATION=="<user-defined>" %}=0{% endif %};
@@ -129,6 +135,7 @@ def create_abstract_solver_declarations(flux_implementation, ncp_implementation,
       const double * __restrict__ Q,
       const tarch::la::Vector<Dimensions,double>&  x,
       double                                       t,
+      double                                       dt,
       double * __restrict__ S,
       Offloadable
     );
@@ -142,6 +149,7 @@ def create_abstract_solver_declarations(flux_implementation, ncp_implementation,
       const double * __restrict__ Q,
       const tarch::la::Vector<Dimensions,double>&  x,
       double                                       t,
+      double                                       dt,
       double * __restrict__ S
     ) {% if SOURCE_TERM_IMPLEMENTATION=="<user-defined>" %}= 0{% else %} final {% endif %};
     {% endif %}
@@ -207,11 +215,12 @@ double {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::maxEigenvalue(
 
 {% if FLUX_IMPLEMENTATION!="<none>" and FLUX_IMPLEMENTATION!="<user-defined>" %}
 void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::flux(
- const double * __restrict__ Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
- const tarch::la::Vector<Dimensions,double>&  x,
- double                                       t,
- int                                          normal,
- double * __restrict__ F // F[{{NUMBER_OF_UNKNOWNS}}]
+  const double * __restrict__ Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
+  const tarch::la::Vector<Dimensions,double>&  x,
+  double                                       t,
+  double                                       dt,
+  int                                          normal,
+  double * __restrict__ F // F[{{NUMBER_OF_UNKNOWNS}}]
 ) {
   {{FLUX_IMPLEMENTATION}}
 }
@@ -224,6 +233,7 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::nonconservativeProduct(
   const double * __restrict__             deltaQ, // [{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
   const tarch::la::Vector<Dimensions,double>&  x,
   double                                       t,
+  double                                       dt,
   int                                          normal,
   double * __restrict__ BgradQ // BgradQ[{{NUMBER_OF_UNKNOWNS}}]
 ) {
@@ -273,10 +283,11 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::sourceTerm(
 #endif
 double {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::maxEigenvalue(
       const double * __restrict__ Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
-      const tarch::la::Vector<Dimensions,double>&  x,
-      double                                       t,
-      int                                          normal,
-      Offloadable
+  const tarch::la::Vector<Dimensions,double>&  x,
+  double                                       t,
+  double                                       dt,
+  int                                          normal,
+  Offloadable
 ) {
   {{EIGENVALUES_IMPLEMENTATION}};
 }
@@ -294,9 +305,10 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::flux(
       const double * __restrict__ Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
       const tarch::la::Vector<Dimensions,double>&  x,
       double                                       t,
-      int                                          normal,
-      double * __restrict__                        F, // F[{{NUMBER_OF_UNKNOWNS}}]
-      Offloadable
+  double                                       dt,
+  int                                          normal,
+  double * __restrict__                        F, // F[{{NUMBER_OF_UNKNOWNS}}]
+  Offloadable
 ) {
   {% if FLUX_IMPLEMENTATION=="<none>" %}
   abort();
@@ -319,9 +331,10 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::nonconservativeProduct(
       const double * __restrict__                  deltaQ, // [{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
       const tarch::la::Vector<Dimensions,double>&  x,
       double                                       t,
-      int                                          normal,
-      double * __restrict__                        BgradQ, // BgradQ[{{NUMBER_OF_UNKNOWNS}}]
-      Offloadable
+  double                                       dt,
+  int                                          normal,
+  double * __restrict__                        BgradQ, // BgradQ[{{NUMBER_OF_UNKNOWNS}}]
+  Offloadable
 ) {
   {% if NCP_IMPLEMENTATION=="<none>" %}
   abort();
@@ -430,6 +443,7 @@ def create_solver_declarations(flux_implementation, ncp_implementation, eigenval
       const double * __restrict__ Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
       const tarch::la::Vector<Dimensions,double>&  x,
       double                                       t,
+      double                                       dt,
       int                                          normal
     ) override;
     {% endif %}
@@ -440,6 +454,7 @@ def create_solver_declarations(flux_implementation, ncp_implementation, eigenval
       const double * __restrict__ Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
       const tarch::la::Vector<Dimensions,double>&  x,
       double                                       t,
+      double                                       dt,
       int                                          normal,
       double * __restrict__ F // F[{{NUMBER_OF_UNKNOWNS}}]
     ) override;
@@ -452,6 +467,7 @@ def create_solver_declarations(flux_implementation, ncp_implementation, eigenval
       const double * __restrict__             deltaQ, // [{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
       const tarch::la::Vector<Dimensions,double>&  x,
       double                                       t,
+      double                                       dt,
       int                                          normal,
       double * __restrict__ BgradQ // BgradQ[{{NUMBER_OF_UNKNOWNS}}]
     ) override;
@@ -546,6 +562,7 @@ def create_solver_declarations(flux_implementation, ncp_implementation, eigenval
       const double * __restrict__ Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
       const tarch::la::Vector<Dimensions,double>&  x,
       double                                       t,
+      double                                       dt,
       int                                          normal,
       Offloadable
     );
@@ -577,6 +594,7 @@ def create_solver_declarations(flux_implementation, ncp_implementation, eigenval
       const double * __restrict__ Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
       const tarch::la::Vector<Dimensions,double>&  x,
       double                                       t,
+      double                                       dt,
       int                                          normal,
       double * __restrict__                        F, // F[{{NUMBER_OF_UNKNOWNS}}]
       Offloadable
@@ -610,6 +628,7 @@ def create_solver_declarations(flux_implementation, ncp_implementation, eigenval
       const double * __restrict__                  deltaQ,    // [5+0]
       const tarch::la::Vector<Dimensions,double>&  x,
       double                                       t,
+      double                                       dt,
       int                                          normal,
       double * __restrict__                        BgradQ,     // BgradQ[5]
       Offloadable
@@ -636,9 +655,10 @@ double {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::maxEigenvalue(
   const double * __restrict__ Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
   const tarch::la::Vector<Dimensions,double>&  x,
   double                                       t,
+  double                                       dt,
   int                                          normal
 )  {
-  logTraceInWith3Arguments( "maxEigenvalue(...)", x, t, normal );
+  logTraceInWith4Arguments( "maxEigenvalue(...)", x, t, dt, normal );
   // @todo implement
   logTraceOut( "maxEigenvalue(...)" );
 }
@@ -650,10 +670,11 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::flux(
   const double * __restrict__ Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
   const tarch::la::Vector<Dimensions,double>&  x,
   double                                       t,
+  double                                       dt,
   int                                          normal,
   double * __restrict__ F // F[{{NUMBER_OF_UNKNOWNS}}]
 )  {
-  logTraceInWith3Arguments( "flux(...)", x, t, normal );
+  logTraceInWith4Arguments( "flux(...)", x, t, dt, normal );
   // @todo implement
   logTraceOut( "flux(...)" );
 }
@@ -666,10 +687,11 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::nonconservativeProduct(
   const double * __restrict__             deltaQ, // [{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
   const tarch::la::Vector<Dimensions,double>&  x,
   double                                       t,
+  double                                       dt,
   int                                          normal,
   double * __restrict__ BgradQ // BgradQ[{{NUMBER_OF_UNKNOWNS}}]
 )  {
-  logTraceInWith3Arguments( "nonconservativeProduct(...)", x, t, normal );
+  logTraceInWith4Arguments( "nonconservativeProduct(...)", x, t, dt, normal );
   // @todo implement
   logTraceOut( "nonconservativeProduct(...)" );
 }
@@ -702,6 +724,7 @@ double {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::maxEigenvalue(
   const double * __restrict__ Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
   const tarch::la::Vector<Dimensions,double>&  x,
   double                                       t,
+  double                                       dt,
   int                                          normal,
   Offloadable
 )  {
@@ -721,6 +744,7 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::flux(
   const double * __restrict__ Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
   const tarch::la::Vector<Dimensions,double>&  x,
   double                                       t,
+  double                                       dt,
   int                                          normal,
   double * __restrict__ F,
   Offloadable
@@ -742,6 +766,7 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::nonconservativeProduct(
   const double * __restrict__             deltaQ, // [{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
   const tarch::la::Vector<Dimensions,double>&  x,
   double                                       t,
+  double                                       dt,
   int                                          normal,
   double * __restrict__ BgradQ,
   Offloadable
