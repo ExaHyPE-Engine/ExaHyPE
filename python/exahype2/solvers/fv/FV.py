@@ -155,7 +155,7 @@ class FV(object):
   """
   
       
-  def __init__(self, name, patch_size, overlap, unknowns, auxiliary_variables, min_volume_h, max_volume_h, plot_grid_properties):
+  def __init__(self, name, patch_size, overlap, unknowns, auxiliary_variables, min_volume_h, max_volume_h, plot_grid_properties, kernel_namespace="rusanov"):
     """
   name: string
      A unique name for the solver. This one will be used for all generated 
@@ -250,6 +250,8 @@ class FV(object):
     self._interpolation = "piecewise_constant"
     self._restriction   = "averaging"
     
+    self._kernel_namespace = kernel_namespace
+
     self.create_data_structures()
     self.create_action_sets()
 
@@ -896,6 +898,8 @@ The finest mesh width of """ + str(self.get_finest_volume_size(domain_size)) + "
     d[ "COMPUTE_TIME_STEP_SIZE" ]             = jinja2.Template(self._compute_time_step_size, undefined=jinja2.DebugUndefined).render( **d )
     d[ "COMPUTE_NEW_TIME_STEP_SIZE" ]         = jinja2.Template(self._compute_new_time_step_size, undefined=jinja2.DebugUndefined).render( **d )
     d[ "COMPUTE_MAX_EIGENVALUE" ]             = self._compute_eigenvalue
+
+    d[ "KERNEL_NAMESPACE"]                    = self._kernel_namespace
 
     
   @property
