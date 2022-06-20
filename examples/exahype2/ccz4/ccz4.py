@@ -591,10 +591,10 @@ if __name__ == "__main__":
 ########################################################################################
     print(args.marker)
     if args.marker=="poisson":
-      print("asdasdsadas")
       amr_label = exahype2.solvers.elliptic.AMRMarker( name="AMRMarker" )
       project.add_solver( amr_label )
       my_solver._auxiliary_variables+=1
+      print( "Add Poisson AMR marker for variable {}".format(my_solver._auxiliary_variables-1) )
       amr_label.couple_with_FV_solver( my_solver, my_solver._auxiliary_variables-1 )
 
 ########################################################################################

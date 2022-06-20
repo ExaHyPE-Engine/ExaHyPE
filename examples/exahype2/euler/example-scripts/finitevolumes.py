@@ -236,9 +236,9 @@ project.add_solver( thesolver )
 #
 # Please comment out later again
 #
-amr_label = exahype2.solvers.elliptic.AMRMarker( name="AMRMarker" )
-amr_label.couple_with_FV_solver( thesolver, 0 )
-project.add_solver( amr_label )
+# amr_label = exahype2.solvers.elliptic.AMRMarker( name="AMRMarker" )
+# amr_label.couple_with_FV_solver( thesolver, 0 )
+# project.add_solver( amr_label )
 
 
 dimensions = args.dim

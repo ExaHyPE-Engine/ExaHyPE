@@ -305,18 +305,25 @@ class SolverVariant(Enum):
 class RiemannKernelVariant(Enum):
   PatchWiseAoSStack                = 0
   PatchWiseAoSoAStack              = 1
-  BatchedAoSStack                  = 2
-  BatchedAoSoAStack                = 3
-  PatchWiseSplitTermsAoSStack      = 4
-  PatchWiseSplitTermsAoSoAStack    = 5
-  PatchWiseAoSHeap                 = 6
-  PatchWiseAoSoAHeap               = 7
-  BatchedAoSHeap                   = 8
-  BatchedAoSoAHeap                 = 9
-  PatchWiseSplitTermsAoSHeap       = 10
-  PatchWiseSplitTermsAoSoAHeap     = 11
-  PatchWiseInSitu                  = 12
-  BatchedInSitu                    = 13
+  PatchWiseSoAStack                = 2
+  BatchedAoSStack                  = 10
+  BatchedAoSoAStack                = 11
+  BatchedSoAStack                  = 12
+  PatchWiseSplitTermsAoSStack      = 20
+  PatchWiseSplitTermsAoSoAStack    = 21
+  PatchWiseAoSHeap                 = 30
+  PatchWiseAoSoAHeap               = 31
+  PatchWiseSoAHeap                 = 32
+  BatchedAoSHeap                   = 40
+  BatchedAoSoAHeap                 = 41
+  BatchedSoAHeap                   = 42
+  PatchWiseSplitTermsAoSHeap       = 50
+  PatchWiseSplitTermsAoSoAHeap     = 51
+  TaskGraphAoSHeap                 = 60
+  TaskGraphAoSoAHeap               = 61
+  TaskGraphSoAHeap                 = 62
+  PatchWiseInSitu                  = 90
+  BatchedInSitu                    = 91
     
 
 def create_compute_Riemann_kernel_for_Rusanov(flux_implementation, 
@@ -339,14 +346,21 @@ def create_compute_Riemann_kernel_for_Rusanov(flux_implementation,
   RiemannKernelCalls = {
     RiemannKernelVariant.PatchWiseAoSStack:              "timeStepWithRusanov_patchwise_call_stack",
     RiemannKernelVariant.PatchWiseAoSoAStack:            "timeStepWithRusanov_patchwise_call_stack",
+    RiemannKernelVariant.PatchWiseSoAStack:              "timeStepWithRusanov_patchwise_call_stack",
     RiemannKernelVariant.BatchedAoSStack:                "timeStepWithRusanov_batched_call_stack",
     RiemannKernelVariant.BatchedAoSoAStack:              "timeStepWithRusanov_batched_call_stack",
+    RiemannKernelVariant.BatchedSoAStack:                "timeStepWithRusanov_batched_call_stack",
     RiemannKernelVariant.PatchWiseSplitTermsAoSStack:    "timeStepWithRusanov_patchwise_split_terms_call_stack",
     RiemannKernelVariant.PatchWiseSplitTermsAoSoAStack:  "timeStepWithRusanov_patchwise_split_terms_call_stack",
     RiemannKernelVariant.PatchWiseAoSHeap:               "timeStepWithRusanov_patchwise_heap",
     RiemannKernelVariant.PatchWiseAoSoAHeap:             "timeStepWithRusanov_patchwise_heap",
+    RiemannKernelVariant.PatchWiseSoAHeap:               "timeStepWithRusanov_patchwise_heap",
     RiemannKernelVariant.BatchedAoSHeap:                 "timeStepWithRusanov_batched_heap",
     RiemannKernelVariant.BatchedAoSoAHeap:               "timeStepWithRusanov_batched_heap",
+    RiemannKernelVariant.BatchedSoAHeap:                 "timeStepWithRusanov_batched_heap",
+    RiemannKernelVariant.TaskGraphAoSHeap:               "timeStepWithRusanov_batched_heap",
+    RiemannKernelVariant.TaskGraphAoSoAHeap:             "timeStepWithRusanov_batched_heap",
+    RiemannKernelVariant.TaskGraphSoAHeap:               "timeStepWithRusanov_batched_heap",
     RiemannKernelVariant.PatchWiseSplitTermsAoSHeap:     "timeStepWithRusanov_patchwise_split_terms_heap",
     RiemannKernelVariant.PatchWiseSplitTermsAoSoAHeap:   "timeStepWithRusanov_patchwise_split_terms_heap",
     RiemannKernelVariant.PatchWiseInSitu:                "timeStepWithRusanov_patchwise_in_situ",
@@ -356,16 +370,23 @@ def create_compute_Riemann_kernel_for_Rusanov(flux_implementation,
   EnumeratorTemplateTypes = {
     RiemannKernelVariant.PatchWiseAoSStack:              "::exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator",
     RiemannKernelVariant.PatchWiseAoSoAStack:            "::exahype2::fv::enumerator::AoSoALexicographicVolumeEnumerator",
+    RiemannKernelVariant.PatchWiseSoAStack:              "::exahype2::fv::enumerator::SoALexicographicVolumeEnumerator",
     RiemannKernelVariant.BatchedAoSStack:                "::exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator",
     RiemannKernelVariant.BatchedAoSoAStack:              "::exahype2::fv::enumerator::AoSoALexicographicVolumeEnumerator",
+    RiemannKernelVariant.BatchedSoAStack:                "::exahype2::fv::enumerator::SoALexicographicVolumeEnumerator",
     RiemannKernelVariant.PatchWiseSplitTermsAoSStack:    "::exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator",
     RiemannKernelVariant.PatchWiseSplitTermsAoSoAStack:  "::exahype2::fv::enumerator::AoSoALexicographicVolumeEnumerator",
-    RiemannKernelVariant.PatchWiseAoSHeap:              "::exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator",
-    RiemannKernelVariant.PatchWiseAoSoAHeap:            "::exahype2::fv::enumerator::AoSoALexicographicVolumeEnumerator",
-    RiemannKernelVariant.BatchedAoSHeap:                "::exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator",
-    RiemannKernelVariant.BatchedAoSoAHeap:              "::exahype2::fv::enumerator::AoSoALexicographicVolumeEnumerator",
-    RiemannKernelVariant.PatchWiseSplitTermsAoSHeap:    "::exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator",
-    RiemannKernelVariant.PatchWiseSplitTermsAoSoAHeap:  "::exahype2::fv::enumerator::AoSoALexicographicVolumeEnumerator",
+    RiemannKernelVariant.PatchWiseAoSHeap:               "::exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator",
+    RiemannKernelVariant.PatchWiseAoSoAHeap:             "::exahype2::fv::enumerator::AoSoALexicographicVolumeEnumerator",
+    RiemannKernelVariant.PatchWiseSoAHeap:               "::exahype2::fv::enumerator::SoALexicographicVolumeEnumerator",
+    RiemannKernelVariant.BatchedAoSHeap:                 "::exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator",
+    RiemannKernelVariant.BatchedAoSoAHeap:               "::exahype2::fv::enumerator::AoSoALexicographicVolumeEnumerator",
+    RiemannKernelVariant.BatchedSoAHeap:                 "::exahype2::fv::enumerator::SoALexicographicVolumeEnumerator",
+    RiemannKernelVariant.TaskGraphAoSHeap:               "::exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator",
+    RiemannKernelVariant.TaskGraphAoSoAHeap:             "::exahype2::fv::enumerator::AoSoALexicographicVolumeEnumerator",
+    RiemannKernelVariant.TaskGraphSoAHeap:               "::exahype2::fv::enumerator::SoALexicographicVolumeEnumerator",
+    RiemannKernelVariant.PatchWiseSplitTermsAoSHeap:     "::exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator",
+    RiemannKernelVariant.PatchWiseSplitTermsAoSoAHeap:   "::exahype2::fv::enumerator::AoSoALexicographicVolumeEnumerator",
     RiemannKernelVariant.PatchWiseInSitu:           None,
     RiemannKernelVariant.BatchedInSitu:             None
   }

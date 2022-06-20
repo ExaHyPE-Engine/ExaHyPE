@@ -36,6 +36,7 @@ struct peano4::datamanagement::VertexMarker {
     std::bitset<TwoPowerD>  _hasBeenRefined;
     std::bitset<TwoPowerD>  _willBeRefined;
     std::bitset<TwoPowerD>  _isLocal;
+    std::bitset<TwoPowerD>  _isHanging;
 
     bool                    _isParentCellLocal;
     //std::bitset<TwoPowerD>  _isAdjacentToParallelDomainBoundary;
@@ -87,6 +88,10 @@ struct peano4::datamanagement::VertexMarker {
      * Is a vertex local, i.e. not adjacent to any boundary or remote
      */
     bool isLocal(int i) const;
+
+    bool isHanging() const;
+
+    bool isHanging(int i) const;
 
     /**
      * Whenever we touch a vertex the first or the last time, we touch

@@ -65,7 +65,9 @@ class ParticleTreeAnalysis(ActionSet):
     self._cell_data_name = particle_set.name + "CellStatistics"
     self.cell_marker     = peano4.datamodel.DaStGen2( self._cell_data_name )
     
+    self.cell_marker.data.add_attribute( dastgen2.attributes.Integer("NewNumberOfParticles") )
     self.cell_marker.data.add_attribute( dastgen2.attributes.Integer("NumberOfParticles") )
+    self.cell_marker.data.add_attribute( dastgen2.attributes.Boolean("NewParentOfRefinedCell") )
     self.cell_marker.data.add_attribute( dastgen2.attributes.Boolean("ParentOfRefinedCell") )
     
     self.d = {
@@ -77,28 +79,42 @@ class ParticleTreeAnalysis(ActionSet):
 
 
   __Template_TouchCellFirstTime = jinja2.Template( """
-  fineGridCell{{CELL_DATA_NAME}}.setNumberOfParticles(0);
-  fineGridCell{{CELL_DATA_NAME}}.setParentOfRefinedCell(false);
+  fineGridCell{{CELL_DATA_NAME}}.setNumberOfParticles(   fineGridCell{{CELL_DATA_NAME}}.getNewNumberOfParticles() );
+  fineGridCell{{CELL_DATA_NAME}}.setParentOfRefinedCell( fineGridCell{{CELL_DATA_NAME}}.getNewParentOfRefinedCell() );
+  fineGridCell{{CELL_DATA_NAME}}.setNewNumberOfParticles(0);
+  fineGridCell{{CELL_DATA_NAME}}.setNewParentOfRefinedCell( false );
 """)
 
              
+  __Template_CreateCell = jinja2.Template("""
+  fineGridCell{{CELL_DATA_NAME}}.setNumberOfParticles( std::numeric_limits<int>::max() );
+  fineGridCell{{CELL_DATA_NAME}}.setNewNumberOfParticles( 0 );
+  fineGridCell{{CELL_DATA_NAME}}.setParentOfRefinedCell( true );
+  fineGridCell{{CELL_DATA_NAME}}.setNewParentOfRefinedCell( true );
+""")
+  
+  
   __Template_TouchCellLastTime = jinja2.Template("""
-  if (marker.hasBeenRefined()) {
-    coarseGridCell{{CELL_DATA_NAME}}.setParentOfRefinedCell(true);
-  }
-  else {
-    int count = 0;
-    for (int i=0; i<TwoPowerD; i++) {
-      count += fineGridVertices{{PARTICLE_SET_NAME}}(i).size();
-    }
-    fineGridCell{{CELL_DATA_NAME}}.setNumberOfParticles(count);
+  int count = 0;
+  for (int i=0; i<TwoPowerD; i++) {
+    count += fineGridVertices{{PARTICLE_SET_NAME}}(i).size();
   }
   
-  coarseGridCell{{CELL_DATA_NAME}}.setNumberOfParticles(
-    coarseGridCell{{CELL_DATA_NAME}}.getNumberOfParticles() 
+  fineGridCell{{CELL_DATA_NAME}}.setNewNumberOfParticles(
+    fineGridCell{{CELL_DATA_NAME}}.getNewNumberOfParticles()
     +
-    fineGridCell{{CELL_DATA_NAME}}.getNumberOfParticles()
+    count
   );
+  
+  coarseGridCell{{CELL_DATA_NAME}}.setNewNumberOfParticles(
+    coarseGridCell{{CELL_DATA_NAME}}.getNewNumberOfParticles() 
+    +
+    fineGridCell{{CELL_DATA_NAME}}.getNewNumberOfParticles()
+  );
+
+  if ( marker.willBeRefined() ) {
+    coarseGridCell{{CELL_DATA_NAME}}.setNewParentOfRefinedCell( true );
+  }
 """)
 
 
@@ -142,5 +158,7 @@ class ParticleTreeAnalysis(ActionSet):
       result = self.__Template_TouchCellFirstTime.render(**self.d)             
     if operation_name==ActionSet.OPERATION_TOUCH_CELL_LAST_TIME:
       result = self.__Template_TouchCellLastTime.render(**self.d)             
+    if operation_name==ActionSet.OPERATION_CREATE_CELL:
+      result = self.__Template_CreateCell.render(**self.d)             
     return result
 

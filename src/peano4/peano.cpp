@@ -45,25 +45,40 @@ void peano4::writeCopyrightMessage() {
     buildInfo += ", no mpi";
     #endif
 
-    #if defined(SharedOMP) and defined(LayeredMultitaskingRuntime)
-    buildInfo += ", omp(layered) (";
-    buildInfo += std::to_string( tarch::multicore::Core::getInstance().getNumberOfThreads() );
-    buildInfo += " threads)";
-    #elif defined(SharedOMP) and !defined(LayeredMultitaskingRuntime)
-    buildInfo += ", omp (";
-    buildInfo += std::to_string( tarch::multicore::Core::getInstance().getNumberOfThreads() );
-    buildInfo += " threads)";
+    #if defined(SharedOMP)
+    buildInfo += ", omp";
     #elif defined(SharedTBB)
-    buildInfo += ", sycl (";
-    buildInfo += std::to_string( tarch::multicore::Core::getInstance().getNumberOfThreads() );
-    buildInfo += " threads)";
+    buildInfo += ", tbb";
+    #elif defined(SharedSYCL)
+    buildInfo += ", sycl threading";
     #elif defined(SharedCPP)
-    buildInfo += ", C++ threading (";
-    buildInfo += std::to_string( tarch::multicore::Core::getInstance().getNumberOfThreads() );
-    buildInfo += " threads)";
+    buildInfo += ", C++ threading
     #else
     buildInfo += ", no threading";
     #endif
+
+    if (tarch::multicore::Core::getInstance().getNumberOfThreads()>1) {
+      buildInfo += " (";
+      buildInfo += std::to_string( tarch::multicore::Core::getInstance().getNumberOfThreads() );
+      buildInfo += " threads)";
+    }
+
+    #if defined(GPUOffloadingOMP)
+    buildInfo += ", omp offloading";
+    #elif defined(GPUOffloadingSYCL)
+    buildInfo += ", sycl";
+    #elif defined(SharedCPP)
+    buildInfo += ", C++ offloading
+    #else
+    buildInfo += ", no gpu support";
+    #endif
+
+    if (tarch::multicore::Core::getInstance().getNumberOfGPUs()>0) {
+      buildInfo += " (";
+      buildInfo += std::to_string( tarch::multicore::Core::getInstance().getNumberOfGPUs() );
+      buildInfo += " gpus)";
+    }
+
 
     #if PeanoDebug>0
     buildInfo += ", debug level=" + std::to_string(PeanoDebug);

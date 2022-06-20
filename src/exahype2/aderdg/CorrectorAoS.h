@@ -1,12 +1,12 @@
 #ifndef _EXAHYPE2_ADERDG_CORRECTOR_AOS_H_
 #define _EXAHYPE2_ADERDG_CORRECTOR_AOS_H_
 
-#include "../config.h"
+#include "config.h"
 
 #include "tarch/la/Vector.h"
 
 #if GPUOffloadingSYCL>0
-#include "tarch/multicore/tbb/SYCL.h"
+#include "tarch/multicore/sycl/SYCL.h"
 #endif
 
 #include <functional>

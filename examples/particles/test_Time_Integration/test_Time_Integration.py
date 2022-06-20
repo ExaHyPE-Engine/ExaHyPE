@@ -27,6 +27,8 @@ modes = {
 parser = argparse.ArgumentParser(description='ExaHyPE 2 - Euler benchmarking script')
 parser.add_argument("-m",     "--mode",               dest="mode",                         default="release",           help="|".join(modes.keys()) )
 parser.add_argument("-c",     "--clean",              dest="clean_temporary_directories",  action="store_true",         help="Remove temporary directories before script starts" )
+parser.add_argument("-p",     "--plot",               dest="plot",                         action="store_true",        help="Plot result" )
+parser.add_argument("-r",     "--cut-off",            dest="cut_off_radius",               default=0.1,                 help="Radius guiding AMR around particle" )
 args = parser.parse_args()
 
 if args.mode not in modes:
@@ -84,6 +86,8 @@ particle.data.add_attribute(energy_kin_attr)
 particle.data.add_attribute(energy_pot_attr)
 particle.data.add_attribute(energy_tot_attr)
 
+particle.data.add_attribute( dastgen2.attributes.Enumeration("MoveState",["New","NotMovedYet","Moved"]) )
+
 particles = peano4.toolbox.particles.ParticleSet(particle)
 
 # This particle has to be added to the project. This way the project knows that we are working with this guy. We associate the particle with the vertices, as we work with the pidt (particle in dual tree) algorithm. 
@@ -126,8 +130,7 @@ T = np.sqrt( 4.0 * np.pi * np.pi * a * a * a /
                   (G_NEWTON * (M_SUN + M_EARTH)) ); # Period [s] */
 
 # Time-step size 
-dt = 1e-3 * T; # [s]
-dt/= T;
+dt = float(args.cut_off_radius)/8.0; # [s]
 N = N_orbits / dt;
 GLOBAL_TIME_STEP_SIZE = str(dt)
 
@@ -149,6 +152,10 @@ project.constants.export_const_with_type("ECCENTRICITY", str(e), "double")
 project.constants.export_const_with_type("PERIOD", str(T), "double")
 project.constants.export_const_with_type("R_MIN", str(R_MIN), "double")
 project.constants.export_const_with_type("R_MAX", str(R_MAX), "double")
+if args.plot:
+  project.constants.export_const_with_type("PLOT", "true", "bool")
+else:
+  project.constants.export_const_with_type("PLOT", "false", "bool")
 
 ################################################################################################
 ###############################  Model the setup phases  #######################################
@@ -178,7 +185,7 @@ initialisation_snippet = """
   /* Internal cutoff radious used by Peano. 
    * Should always be larger than actual SPH cutoff radious (2h). 
    * But no really used here. */
-  particle->setCutOffRadius(0.166);
+  particle->setCutOffRadius(""" + str(args.cut_off_radius) + """);
 
   /* Select the initialized particle (Earth)
    * and set its initial conditions */
@@ -242,7 +249,7 @@ project.solversteps.add_step(init_setup)
 
 # Force calculation
 
-force_gravity_particles = peano4.solversteps.Step( "ForceGravity" )
+force_gravity_particles = peano4.solversteps.Step( "ForceGravity", add_user_defined_actions=False )
 force_gravity_particles.use_vertex(particles)
 force_gravity_particles.use_cell(particle_tree_analysis.cell_marker)
 force_gravity_particles.add_action_set( peano4.toolbox.particles.ParticleParticleInteraction(
@@ -356,7 +363,7 @@ project.solversteps.add_step(force_gravity_particles)
 
 # ## Kick 1
 
-kick1_particles = peano4.solversteps.Step( "Kick1" )
+kick1_particles = peano4.solversteps.Step( "Kick1", add_user_defined_actions=False )
 kick1_particles.use_vertex(particles)
 kick1_particles.use_cell(particle_tree_analysis.cell_marker)
 kick1_particles.add_action_set( peano4.toolbox.particles.ParticleParticleInteraction(
@@ -413,7 +420,7 @@ project.solversteps.add_step(kick1_particles)
 # 
 # Same as kick 1 but does not update the accelation array of previous time step
 
-kick2_particles = peano4.solversteps.Step( "Kick2" )
+kick2_particles = peano4.solversteps.Step( "Kick2", add_user_defined_actions=False )
 kick2_particles.use_vertex(particles)
 kick2_particles.use_cell(particle_tree_analysis.cell_marker)
 kick2_particles.add_action_set( peano4.toolbox.particles.ParticleParticleInteraction(
@@ -488,7 +495,7 @@ project.solversteps.add_step(kick2_particles)
 # 
 # We also need to get predicted values of some quantities.
 
-drift_particles = peano4.solversteps.Step( "Drift" )
+drift_particles = peano4.solversteps.Step( "Drift", add_user_defined_actions=False )
 drift_particles.use_vertex(particles)
 drift_particles.use_cell(particle_tree_analysis.cell_marker)
 drift_particles.add_action_set( peano4.toolbox.particles.ParticleParticleInteraction(
@@ -498,7 +505,7 @@ drift_particles.add_action_set( peano4.toolbox.particles.ParticleParticleInterac
   /* We do not excecute any specific action here */
   
 """,
-  touch_vertex_first_time_compute_particle_update_kernel="""
+  touch_vertex_last_time_compute_particle_update_kernel = """
   const double timeStepSize = GLOBAL_TIME_STEP_SIZE;
   
   if (
@@ -514,12 +521,6 @@ drift_particles.add_action_set( peano4.toolbox.particles.ParticleParticleInterac
 
     }
 """,
-  touch_vertex_last_time_compute_particle_update_kernel="""
- 
-  /* We do not excecute any specific action here */
-
-
-""",
   additional_includes="""
 #include "Constants.h"
 #include <cmath>
@@ -534,7 +535,7 @@ project.solversteps.add_step(drift_particles)
 
 # ## Initialize some variables for the current time-step
 
-init_time_step = peano4.solversteps.Step( "InitTimeStep" )
+init_time_step = peano4.solversteps.Step( "InitTimeStep", add_user_defined_actions=False )
 init_time_step.use_vertex(particles)
 init_time_step.use_cell(particle_tree_analysis.cell_marker)
 init_time_step.add_action_set( peano4.toolbox.particles.ParticleParticleInteraction(
@@ -574,7 +575,7 @@ project.solversteps.add_step(init_time_step)
 # ## Impose Boundary Conditions
 # After the final velocity has been calculated (and the particle already been drifted), we need to impose the boundary conditions. In this case we use reflecting ones.
 
-impose_BC_particles = peano4.solversteps.Step( "ImposeBC" )
+impose_BC_particles = peano4.solversteps.Step( "ImposeBC", add_user_defined_actions=False )
 impose_BC_particles.use_vertex(particles)
 impose_BC_particles.use_cell(particle_tree_analysis.cell_marker)
 impose_BC_particles.add_action_set( peano4.toolbox.particles.ParticleParticleInteraction(
@@ -629,7 +630,7 @@ impose_BC_particles.add_action_set( peano4.toolbox.particles.ParticleParticleInt
 #include <cmath>
 """
   ))
-impose_BC_particles.add_action_set( peano4.toolbox.particles.ParticleAMR(particles,particle_tree_analysis,min_particles_per_cell=10) )
+impose_BC_particles.add_action_set( peano4.toolbox.particles.ParticleAMR(particles,particle_tree_analysis,min_particles_per_cell=0,max_particles_per_cell=1) )
 impose_BC_particles.add_action_set( particle_tree_analysis )
 impose_BC_particles.add_action_set( peano4.toolbox.particles.UpdateParticleGridAssociation(particles) )
 impose_BC_particles.add_action_set( peano4.toolbox.particles.UpdateParallelState(particles) )
@@ -639,10 +640,9 @@ project.solversteps.add_step(impose_BC_particles)
 # 
 # This is an initial, extra step to move particles into a straight line when the simulation starts.
 
-rearrange_particles = peano4.solversteps.Step( "RearrangeAtStart" )
+rearrange_particles = peano4.solversteps.Step( "RearrangeAtStart", add_user_defined_actions=False )
 rearrange_particles.use_vertex(particles)
 rearrange_particles.use_cell(particle_tree_analysis.cell_marker)
-rearrange_particles.add_action_set( peano4.toolbox.particles.UpdateParticleGridAssociation(particles) )
 rearrange_particles.add_action_set( peano4.toolbox.particles.ParticleParticleInteraction(
   particle_set=particles,
   particle_particle_interaction_kernel="""
@@ -673,6 +673,8 @@ rearrange_particles.add_action_set( peano4.toolbox.particles.ParticleParticleInt
 #include <cmath>
 """
   ))
+rearrange_particles.add_action_set( peano4.toolbox.particles.UpdateParticleGridAssociation(particles) )
+rearrange_particles.add_action_set( peano4.toolbox.particles.UpdateParallelState(particles) )
 #rearrange_particles.add_action_set( peano4.toolbox.particles.ParticleAMR(particles,particle_tree_analysis,min_particles_per_cell=10) )
 rearrange_particles.add_action_set( particle_tree_analysis )
 project.solversteps.add_step(rearrange_particles)
@@ -694,6 +696,8 @@ print_solution = peano4.solversteps.Step( "Plot", add_user_defined_actions=False
 print_solution.use_vertex(particles)
 print_solution.use_cell(particle_tree_analysis.cell_marker)
 print_solution.add_action_set( particle_tree_analysis )
+print_solution.add_action_set( peano4.toolbox.particles.UpdateParticleGridAssociation(particles) )
+print_solution.add_action_set( peano4.toolbox.particles.UpdateParallelState(particles) )
 print_solution.add_action_set( peano4.toolbox.PlotGridInPeanoBlockFormat( filename="grid", time_stamp_evaluation=peano4.toolbox.PlotGridInPeanoBlockFormat.CountTimeSteps ) )
 print_solution.add_action_set( particle_plotter )
 
