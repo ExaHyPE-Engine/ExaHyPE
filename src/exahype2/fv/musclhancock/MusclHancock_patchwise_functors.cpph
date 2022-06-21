@@ -132,7 +132,7 @@ void exahype2::fv::musclhancock::timeStepWithMusclHancock_patchwise_heap_functor
         QInterEnumerator
        );
     }
-
+/*
     //step3: calculate max eigenvalue and update the solution with eigenvalue damping
     if (Dimensions==3) {
       otterLoopBegin();
@@ -201,16 +201,15 @@ void exahype2::fv::musclhancock::timeStepWithMusclHancock_patchwise_heap_functor
       }
       otterLoopEnd();
 
+
 ////////////////////////////////////////////////
 //todo everyting below ask for q on the face rather than q at volume center!
 ////////////////////////////////////////////////
 
-      otterLoopBegin();
       for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++)
       for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
       for (int z = 0; z < numberOfVolumesPerAxisInPatch; z++)
       for (int unknown = 0; unknown < unknowns; unknown++) {
-        otterLoopIterationBegin();
         internal::updateSolutionWithEigenvalueDamping_LoopBody(
           patchData.QIn[patchIndex],
           QInEnumerator,
@@ -231,17 +230,14 @@ void exahype2::fv::musclhancock::timeStepWithMusclHancock_patchwise_heap_functor
           QfaceZneg, QfaceZpos,
           QInterEnumerator
         );
-        otterLoopIterationEnd();
       }
-      otterLoopEnd();
     }
+*/
 
 //now we have both space and time derivative
 
     //step4: compute and update flux part
-    //@todo update this compute function!
-    //for now, we just comment this part out
-    
+    //std::cout<<"flux check: "<<std::to_string(1)<<" fluxRight: "<<std::to_string(2)<<std::endl;
     if (evaluateFlux and Dimensions==3) {
       otterLoopBegin();
       for (int x = -solversHaloSize; x < numberOfVolumesPerAxisInPatch+solversHaloSize; x++)
@@ -309,7 +305,7 @@ void exahype2::fv::musclhancock::timeStepWithMusclHancock_patchwise_heap_functor
       }
       otterLoopEnd();
 
-      otterLoopBegin();
+     /* otterLoopBegin();
       for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++)
       for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
       for (int z = 0; z < numberOfVolumesPerAxisInPatch; z++)
@@ -330,9 +326,9 @@ void exahype2::fv::musclhancock::timeStepWithMusclHancock_patchwise_heap_functor
         );
         otterLoopIterationEnd();
       }
-      otterLoopEnd();
+      otterLoopEnd();*/
     }
-    
+   
 
     //step5: compute and update D part
     //tricky thing: it is actually identical what we use for ncp now
@@ -447,7 +443,9 @@ void exahype2::fv::musclhancock::timeStepWithMusclHancock_patchwise_heap_functor
         patchData.dt[patchIndex],
         timeDerivative,
         patchData.QOut[patchIndex],
-        QOutEnumerator
+        QOutEnumerator,
+        evaluateNonconservativeProduct,
+        evaluateSource
        );
       otterLoopIterationEnd();
     }

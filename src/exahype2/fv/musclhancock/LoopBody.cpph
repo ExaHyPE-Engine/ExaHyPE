@@ -64,7 +64,7 @@ void exahype2::fv::musclhancock::internal::computeTimeDerivative_LoopBody(
     timederivative[QInterEnumerator(patchIndex,volumeIndex,unknown)] = temp[ unknown ];
   }
   
-  //second, add the -B(Q)*\nabla Q, it ask user to define B on the left of the PDE.
+  //second, add the -B(Q)*\nabla Q, it ask users to define B on the left of the PDE.
   for (int unknown=0; unknown<QInEnumerator._unknowns; unknown++) {
     gradientQ[QInEnumerator._unknowns*0+unknown]=QInGathered[ QInEnumerator._unknowns*1+unknown ];
     gradientQ[QInEnumerator._unknowns*1+unknown]=QInGathered[ QInEnumerator._unknowns*2+unknown ];
@@ -138,8 +138,8 @@ void exahype2::fv::musclhancock::internal::computeQonFace_LoopBody(
     QInterEnumeratorType                         QInterEnumerator
 ) {
     double QInGathered[QInEnumerator._unknowns+QInEnumerator._numberOfAuxiliaryVariables];
-    double gradientQ[QInEnumerator._unknowns*3];
-    double deriTGathered[QInEnumerator._unknowns];
+    //double gradientQ[QInEnumerator._unknowns*3];
+    //double deriTGathered[QInEnumerator._unknowns];
     const tarch::la::Vector<Dimensions,double>  VolumeSize=::exahype2::fv::getVolumeSize( patchSize, QInEnumerator._numberOfVolumesPerAxisInPatch );
     
     //VolumeSize=::exahype2::fv::getVolumeSize( patchSize, QInEnumerator._numberOfVolumesPerAxisInPatch );
@@ -289,7 +289,7 @@ void exahype2::fv::musclhancock::internal::computeFlux_LoopBody(
   double QLeft[QInEnumerator._unknowns], QRight[QInEnumerator._unknowns];
   double tempFlux[QInEnumerator._unknowns];
 
-  for (int unknown=0; unknown<QInEnumerator._unknowns+QInEnumerator._numberOfAuxiliaryVariables; unknown++) {
+  for (int unknown=0; unknown<QInEnumerator._unknowns; unknown++) {
     QLeft[unknown]  = QfaceNLeft[ QInterEnumerator(patchIndex,volumeIndex,unknown) ];
     QRight[unknown] = QfaceNRight[ QInterEnumerator(patchIndex,volumeIndex,unknown) ];
   }
@@ -349,11 +349,12 @@ void exahype2::fv::musclhancock::internal::updateSolutionWithFlux_LoopBody(
                      + 0.5 * tempFluxNL[fluxEnumerator(patchIndex, volumeIndex,unknown)];
     double fluxRight = 0.5 * tempFluxNR[fluxEnumerator(patchIndex, volumeIndex,unknown)]
                      + 0.5 * tempFluxNL[fluxEnumerator(patchIndex, rightVolume,unknown)];
+    
+    //std::cout<<"fluxLeft: "<<std::to_string(fluxLeft)<<" fluxRight: "<<std::to_string(fluxRight)<<std::endl;
 
     QOut[ QOutEnumerator(patchIndex, volumeIndex,unknown) ] += dt / patchSize(normal) * QOutEnumerator._numberOfVolumesPerAxisInPatch
                                                                *(fluxLeft - fluxRight);
   };
-
                      updateAlongOneDirection(tempFluxXL, tempFluxXR, 0);
                      updateAlongOneDirection(tempFluxYL, tempFluxYR, 1);
   if (Dimensions==3) updateAlongOneDirection(tempFluxZL, tempFluxZR, 2);
@@ -457,7 +458,9 @@ void exahype2::fv::musclhancock::internal::updateSolutionwithNCPandSource_LoopBo
   double                                       dt,
   double*                                      timeDerivative,
   double* __restrict__                         QOut,
-  const QOutEnumeratorType&                    QOutEnumerator
+  const QOutEnumeratorType&                    QOutEnumerator,
+  bool                                         evalNCP,
+  bool                                         evalSRC
 ) {
   double QInGathered[QInEnumerator._unknowns+QInEnumerator._numberOfAuxiliaryVariables];
   double QSourceGathered[QInEnumerator._unknowns];
@@ -478,6 +481,7 @@ void exahype2::fv::musclhancock::internal::updateSolutionwithNCPandSource_LoopBo
   }
   //
 
+  if (evalSRC){
   //add source contribution
   source(
       QInGathered,
@@ -490,7 +494,9 @@ void exahype2::fv::musclhancock::internal::updateSolutionwithNCPandSource_LoopBo
   for (int unknown=0; unknown<QInEnumerator._unknowns; unknown++) {
     QOut[ QOutEnumerator(patchIndex,volumeIndex,unknown) ] += dt * QSourceGathered[unknown];
   }
+  }
 
+  if (evalNCP){
   //add ncp contribution
   for (int normal=0; normal<3; normal++){
     ncp(
@@ -505,6 +511,7 @@ void exahype2::fv::musclhancock::internal::updateSolutionwithNCPandSource_LoopBo
     for (int unknown=0; unknown<QInEnumerator._unknowns; unknown++) {
       QOut[ QOutEnumerator(patchIndex,volumeIndex,unknown) ] -= dt * QNCPGathered[unknown];
     }
+  }
   }
 }
 

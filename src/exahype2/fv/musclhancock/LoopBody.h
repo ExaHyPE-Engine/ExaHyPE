@@ -236,7 +236,9 @@ namespace exahype2 {
           double                                       dt,
           double*                                      timeDerivative,
           double* __restrict__                         QOut,
-          const QOutEnumeratorType&                    QOutEnumerator
+          const QOutEnumeratorType&                    QOutEnumerator,
+          bool                                         evalNCP,
+          bool                                         evalSRC
         ) InlineMethod;
 
         template <class QInEnumeratorType>

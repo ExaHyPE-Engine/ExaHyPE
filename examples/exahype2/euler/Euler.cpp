@@ -266,7 +266,11 @@ void examples::exahype2::euler::Euler::flux(
         << ".faceCentre=" << faceCentre
         << ",volumeH=" << volumeH
         << ",normal=" << normal
-        << ",Q[0]=" << Q[0];
+        << ",Q[0]=" << Q[0]
+        << ",Q[1]=" << Q[1]
+        << ",Q[2]=" << Q[2]
+        << ",Q[3]=" << Q[3]
+        << ",Q[4]=" << Q[4];
     ::exahype2::triggerNonCriticalAssertion( __FILE__, __LINE__, "Q[0]>0", msg.str() );
     assertion(false);
     exit(-1);
