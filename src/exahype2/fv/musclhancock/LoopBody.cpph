@@ -1,7 +1,7 @@
 #include "tarch/compiler/CompilerSpecificSettings.h"
 #include "exahype2/Solver.h"
 #include "exahype2/fv/PatchUtils.h"
-
+#include <cmath>
 
 #if defined(GPUOffloadingOMP)
 #pragma omp declare target
@@ -349,9 +349,10 @@ void exahype2::fv::musclhancock::internal::updateSolutionWithFlux_LoopBody(
                      + 0.5 * tempFluxNL[fluxEnumerator(patchIndex, volumeIndex,unknown)];
     double fluxRight = 0.5 * tempFluxNR[fluxEnumerator(patchIndex, volumeIndex,unknown)]
                      + 0.5 * tempFluxNL[fluxEnumerator(patchIndex, rightVolume,unknown)];
-    
-    //std::cout<<"fluxLeft: "<<std::to_string(fluxLeft)<<" fluxRight: "<<std::to_string(fluxRight)<<std::endl;
+    if ( std::isnan(fluxLeft - fluxRight) )
+    {std::cout<<"fluxLeft: "<<std::to_string(fluxLeft)<<" fluxRight: "<<std::to_string(fluxRight)<<" flux result: "<<dt / patchSize(normal) * QOutEnumerator._numberOfVolumesPerAxisInPatch*(fluxLeft - fluxRight)<<std::endl;}
 
+    //QOut[ QOutEnumerator(patchIndex, volumeIndex,unknown) ] += 1e-12*(fluxLeft-fluxRight);
     QOut[ QOutEnumerator(patchIndex, volumeIndex,unknown) ] += dt / patchSize(normal) * QOutEnumerator._numberOfVolumesPerAxisInPatch
                                                                *(fluxLeft - fluxRight);
   };

@@ -132,7 +132,7 @@ void exahype2::fv::musclhancock::timeStepWithMusclHancock_patchwise_heap_functor
         QInterEnumerator
        );
     }
-/*
+
     //step3: calculate max eigenvalue and update the solution with eigenvalue damping
     if (Dimensions==3) {
       otterLoopBegin();
@@ -232,7 +232,7 @@ void exahype2::fv::musclhancock::timeStepWithMusclHancock_patchwise_heap_functor
         );
       }
     }
-*/
+
 
 //now we have both space and time derivative
 
@@ -305,12 +305,11 @@ void exahype2::fv::musclhancock::timeStepWithMusclHancock_patchwise_heap_functor
       }
       otterLoopEnd();
 
-     /* otterLoopBegin();
+      //problematic
       for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++)
       for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
       for (int z = 0; z < numberOfVolumesPerAxisInPatch; z++)
       for (int unknown=0; unknown<unknowns; unknown++) {
-        otterLoopIterationBegin();
         internal::updateSolutionWithFlux_LoopBody(
           tempFluxXL, tempFluxYL, tempFluxZL,
           tempFluxXR, tempFluxYR, tempFluxZR,
@@ -324,9 +323,7 @@ void exahype2::fv::musclhancock::timeStepWithMusclHancock_patchwise_heap_functor
           *(patchData.QOut + patchIndex),
           QOutEnumerator
         );
-        otterLoopIterationEnd();
       }
-      otterLoopEnd();*/
     }
    
 

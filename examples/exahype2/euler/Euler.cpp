@@ -17,16 +17,17 @@ enum class Scenario {
   PointExplosionWithDynamicAMR,
   BreakingDam,
   BreakingDamWithDynamicAMR,
-  BreakingDamResolutionStudies
+  BreakingDamResolutionStudies,
+  ConstantSolution,
 };
 
 
 //Scenario scenario = Scenario::PointExplosion;
-Scenario scenario = Scenario::PointExplosionWithDynamicAMR;
+//Scenario scenario = Scenario::PointExplosionWithDynamicAMR;
 //Scenario scenario = Scenario::BreakingDam;
 //Scenario scenario = Scenario::BreakingDamResolutionStudies;
 //Scenario scenario = Scenario::BreakingDamWithDynamicAMR;
-
+Scenario scenario = Scenario::ConstantSolution;
 
 
 
@@ -161,6 +162,17 @@ void examples::exahype2::euler::Euler::initialCondition(
         Q[4] = volumeCentre(0)<0.5 ? 1.0 : 0.0; // inner energy
       }
       break;
+    case Scenario::ConstantSolution:
+      {
+        tarch::la::Vector<Dimensions,double> circleCentre = {0.5,0.5,0.5};
+        bool isInTheCentre = ( tarch::la::norm2( volumeCentre-circleCentre ) < 0.08 );
+        Q[0] = 0.1;  // rho
+        Q[1] = 0;    // velocities
+        Q[2] = 0;
+        Q[3] = 0;
+        Q[4] = isInTheCentre ? 1.0 : 0.2; // inner energy
+      }
+      break;
   }
 }
 
@@ -190,6 +202,21 @@ double examples::exahype2::euler::Euler::maxEigenvalue(
   const double p = (gamma-1) * (Q[4] - 0.5*irho*(Q[1]*Q[1]+Q[2]*Q[2]));
   #endif
 
+  if (p<0) {
+    std::ostringstream msg;
+    msg << "pressure is negative"
+        << ".faceCentre=" << faceCentre
+        << ",volumeH=" << volumeH
+        << ",normal=" << normal
+        << ",Q[0]=" << Q[0]
+        << ",Q[1]=" << Q[1]
+        << ",Q[2]=" << Q[2]
+        << ",Q[3]=" << Q[3]
+        << ",Q[4]=" << Q[4];
+    ::exahype2::triggerNonCriticalAssertion( __FILE__, __LINE__, "p>=0", msg.str() );
+    assertion(false);
+    exit(-1);
+  }
   nonCriticalAssertion9( p>=0.0, Q[0], Q[1], Q[2], Q[3], Q[4], faceCentre, volumeH, t, normal );
   const double c   = std::sqrt(gamma * p * irho);
 
