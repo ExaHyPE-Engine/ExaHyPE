@@ -219,7 +219,8 @@ void examples::exahype2::euler::EulerRKDG::boundaryConditions(
     Qoutside[i] = Qinside[i];
   }
 
-  logWarning( "boundaryConditions(...)", "was here" );
+  // @todo raus
+  logWarning( "boundaryConditions(...)", "was here: " << x << " x " << normal );
 
   logTraceOut( "boundaryConditions(...)" );
 }

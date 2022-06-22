@@ -25,6 +25,7 @@ ExaHyPE2Sources = \
   aderdg/RiemannAoS.cpp \
   aderdg/RusanovNonlinearAoS.cpp \
   aderdg/tests/ADERDGTest.cpp \
+  dg/BoundaryConditions.cpp \
   dg/DGUtils.cpp \
   dg/CellIntegral.cpp \
   dg/Riemann.cpp \

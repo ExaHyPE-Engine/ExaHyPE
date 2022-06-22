@@ -39,6 +39,7 @@ class AbstractRungeKuttaDGActionSet( ActionSet ):
 #include "exahype2/dg/DGUtils.h"
 #include "exahype2/dg/CellIntegral.h"
 #include "exahype2/dg/Riemann.h"
+#include "exahype2/dg/BoundaryConditions.h"
 """ + self._solver._get_default_includes() + self._solver.get_user_action_set_includes() 
 
 
