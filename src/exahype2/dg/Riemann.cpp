@@ -17,70 +17,25 @@ void exahype2::dg::getMaxEigenvaluePerFace(
 
   const int strideQ = unknowns+auxiliaryVariables;
 
-//  double*   boundaryValues = nullptr;
-//  bool cellIsOnBoundary = false;
-
-//  for(int face=0; face<2*Dimensions; face++){
-//    cellIsOnBoundary |= atBoundary[face];
-//  }
-
-//  if(cellIsOnBoundary){
-//    boundaryValues = new double[strideQ]{0.0};
-//  }
-
   for(int dim=0; dim<Dimensions; dim++){
 
     for(int lr=0; lr<2; lr++){
 
       eigenvalues[2*dim+lr] = std::numeric_limits<double>::min();
 
-/*      if(atBoundary[2*dim+lr]){
-        for(int node=0; node<nodesPerFace; node++){
-          double resultInner = maxEigenvalue(
-            &QHull[2*dim+lr][(2*node+(1-lr))*strideQ], //if left face, then inner side is the right one and reversely
-            x,
-            t,
-            dim);
-
-          boundaryConditions(
-              &QHull[2*dim+lr][(2*node+(1-lr))*strideQ],
-              boundaryValues,
-              x,
-              t,
-              dim);
-
-          double resultOuter = maxEigenvalue(
-              boundaryValues,
-              x,
-              t,
-              dim);
-
-          eigenvalues[2*dim+lr] = std::max(eigenvalues[2*dim+lr], std::abs(resultInner));
-          eigenvalues[2*dim+lr] = std::max(eigenvalues[2*dim+lr], std::abs(resultOuter));
-
-        }
+      for(int node=0; node<2*nodesPerFace; node++){
+        double result = maxEigenvalue(
+          &QHull[2*dim+lr][node*strideQ], //if left face, then inner side is the right one and reversely
+          x,
+          t,
+          dt,
+          dim
+        );
+        eigenvalues[2*dim+lr] = std::max(eigenvalues[2*dim+lr], std::abs(result));
       }
-      else{*/
-        for(int node=0; node<2*nodesPerFace; node++){
-          double result = maxEigenvalue(
-            &QHull[2*dim+lr][node*strideQ], //if left face, then inner side is the right one and reversely
-            x,
-            t,
-            dt,
-            dim
-          );
-          eigenvalues[2*dim+lr] = std::max(eigenvalues[2*dim+lr], std::abs(result));
-        }
-//      }
 
     }
   }
-
-/*
-  if(cellIsOnBoundary){
-    delete [] boundaryValues;
-  }
-*/
 
 }
 
@@ -106,8 +61,6 @@ void exahype2::dg::computeRusanovOnHull(
 
   const int strideQ = unknowns+auxiliaryVariables;
 
-//  double* boundaryValuesLeft  = new double[strideQ]{0.0};
-//  double* boundaryValuesRight = new double[strideQ]{0.0};
   double* fluxValuesLeft      = nullptr;
   double* fluxValuesRight     = nullptr;
   double* ncpValues           = nullptr;
@@ -142,37 +95,8 @@ void exahype2::dg::computeRusanovOnHull(
         **a total of 2*n elements by the same logic
         */
 
-/*
-        if(atBoundary[2*dim+lr]&&lr==0){ //on left boundary
-          //qr = &QHullIn[(2*((2*Dimensions+lr)*nodesPerFace+node)+1)*strideQ];
-
-          qr = &QHullIn[2*dim+lr][(2*node+1)*strideQ];
-          boundaryConditions(  qr,
-                boundaryValuesLeft,
-                x, //TODO: add positioning
-                t,
-                dim //normal
-                );
-          ql = boundaryValuesLeft;
-        }
-        else if(atBoundary[2*dim+lr]&&lr==1){ //on right boundary
-          //ql = &QHullIn[2*((2*Dimensions+lr)*nodesPerFace+node)*strideQ];
-          ql = &QHullIn[2*dim+lr][2*node*strideQ];
-          boundaryConditions(  ql,
-                boundaryValuesRight,
-                x, //TODO: add positioning
-                t,
-                dim //normal
-                );
-          qr = boundaryValuesRight;
-        }
-        else{
-*/
-          //ql = &QHullIn[2*((2*Dimensions+lr)*nodesPerFace+node)*strideQ];
-          //qr = &QHullIn[(2*((2*Dimensions+lr)*nodesPerFace+node)+1)*strideQ];
-          ql = &QHullIn[2*dim+lr][2*node*strideQ];
-          qr = &QHullIn[2*dim+lr][(2*node+1)*strideQ];
-//        }
+        ql = &QHullIn[2*dim+lr][2*node*strideQ];
+        qr = &QHullIn[2*dim+lr][(2*node+1)*strideQ];
 
         for(int var=0; var<unknowns; var++){
           QHullOut[((2*dim+lr)*nodesPerFace+node)*strideQ+var] = 0.0;
@@ -230,8 +154,6 @@ void exahype2::dg::computeRusanovOnHull(
     } //lr
   } //dim
 
-//  delete [] boundaryValuesLeft;
-//  delete [] boundaryValuesRight;
   if(useFlux){
     delete [] fluxValuesLeft;
     delete [] fluxValuesRight;

@@ -35,9 +35,6 @@ namespace exahype2 {
    *  unknowns+auxiliaryVariable elements correspond to first node of the left side,
    *  the second to the first node of the right side and so on.
    *
-   * @param atBoundary specifies whether a given face is at the boundary, in which case the
-   *  outer values are ignored and instead the function boundaryConditions() is evaluated in
-   *  order to compute outerValues which are then used instead.
    *
    * @param eigenvalues is the array into which the values are inserted in the same order
    *
@@ -72,11 +69,6 @@ namespace exahype2 {
    * @param QHullOut is where the computed values are put, this has a similar structure
    *  to QHullIn but since we only require one value for the flux instead of a value on
    *  the left and right sides of the face this is only half as large
-   *
-   * @param atBoundary boolean array which specifies whether a face is at the boundary or
-   *  not. If a face is at the boundary the outside values (e.g. left of the face if the
-   *  face is at the left of the cell) will be ignored and the flux is instead computed
-   *  with the values given by the boundaryConditions() function
    *
    * @todo das getMaxEigenvalue sollte nicht separat sein (oder in internal) und direkt
    * hier verwendet werden, so dass die Signatur einfacher wird.
