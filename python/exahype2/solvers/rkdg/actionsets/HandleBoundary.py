@@ -48,8 +48,6 @@ class HandleBoundary(AbstractRungeKuttaDGActionSet):
       if(fineGridFaces{{SOLVER_NAME}}FaceLabel(dim).getBoundary() and
         not repositories::{{SOLVER_INSTANCE}}.PeriodicBC[dim]){
         
-        std::cout << "Left face is on the boundary" << std::endl;
-      
         ::exahype2::dg::applyBoundaryConditions(
           [&](
             const double * __restrict__                  Qinside,
@@ -75,8 +73,6 @@ class HandleBoundary(AbstractRungeKuttaDGActionSet):
       if(fineGridFaces{{SOLVER_NAME}}FaceLabel(dim+Dimensions).getBoundary() and
         not repositories::{{SOLVER_INSTANCE}}.PeriodicBC[dim+Dimensions]){
         
-        std::cout << "Right face is on the boundary" << std::endl;
-      
         ::exahype2::dg::applyBoundaryConditions(
           [&](
             const double * __restrict__                  Qinside,
