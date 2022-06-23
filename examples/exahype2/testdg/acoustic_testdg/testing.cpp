@@ -82,6 +82,7 @@ double ::examples::exahype2::testing::testing::maxEigenvalue(
   const double * __restrict__ Q, // Q[3+2],
   const tarch::la::Vector<Dimensions,double>&  x,
   double                                       t,
+  double                                       dt,
   int                                          normal
 )  {
   logTraceInWith3Arguments( "maxEigenvalue(...)", x, t, normal );
@@ -98,6 +99,7 @@ void ::examples::exahype2::testing::testing::flux(
   const double * __restrict__ Q, // Q[3+2],
   const tarch::la::Vector<Dimensions,double>&  x,
   double                                       t,
+  double                                       dt,
   int                                          normal,
   double * __restrict__ F // F[3]
 )  {

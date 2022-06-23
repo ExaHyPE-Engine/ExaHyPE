@@ -12,6 +12,8 @@
 #include "peano4/grid/GridControlEvent.h"
 #include "peano4/utils/Globals.h"
 
+#include "Functors.h"
+
 
 namespace exahype2 {
   namespace dg {
@@ -230,6 +232,29 @@ namespace exahype2 {
         const int                   order,
         const int                   unknowns,
         const int                   auxiliaryVariables
+        );
+
+
+    /*
+     * Applies boundary conditions to a given face on the boundary, this
+     * fills in the values on the "outside" of the face with values computed from the
+     * boundaryConditions() function.
+     *
+     * @param strideQ: number of elements per node, typically this is the number of
+     *  unknowns + the number of auxiliary variables
+     *
+     * @param lr: int which denotes whether the face is on the left of the cell or on the
+     * right of the self (values respectively 0 and 1)
+     */
+    void applyBoundaryConditions(
+        BoundaryConditions                          boundaryConditions,
+        double*                                     QFace,
+        const int                                   order,
+        const int                                   strideQ,
+        const tarch::la::Vector<Dimensions,double>& x,
+        const double                                t,
+        const int                                   faceNormal,
+        const int                                   lr
         );
 
 
