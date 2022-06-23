@@ -18,7 +18,7 @@ enum class Scenario {
   BreakingDam,
   BreakingDamWithDynamicAMR,
   BreakingDamResolutionStudies,
-  ConstantSolution
+  GaussianProfile
 };
 
 
@@ -27,7 +27,7 @@ enum class Scenario {
 //Scenario scenario = Scenario::BreakingDam;
 //Scenario scenario = Scenario::BreakingDamResolutionStudies;
 //Scenario scenario = Scenario::BreakingDamWithDynamicAMR;
-Scenario scenario = Scenario::ConstantSolution;
+Scenario scenario = Scenario::GaussianProfile;
 
 
 
@@ -162,15 +162,16 @@ void examples::exahype2::euler::Euler::initialCondition(
         Q[4] = volumeCentre(0)<0.5 ? 1.0 : 0.0; // inner energy
       }
       break;
-    case Scenario::ConstantSolution:
+    case Scenario::GaussianProfile:
       {
         tarch::la::Vector<Dimensions,double> circleCentre = {0.5,0.5,0.5};
-        bool isInTheCentre = ( tarch::la::norm2( volumeCentre-circleCentre ) < 0.08 );
+        double radius = tarch::la::norm2( volumeCentre-circleCentre );
+
         Q[0] = 0.1;  // rho
         Q[1] = 0;    // velocities
         Q[2] = 0;
         Q[3] = 0;
-        Q[4] = isInTheCentre ? 1.0 : 0.1; // inner energy
+        Q[4] = std::exp(-10.0*radius*radius);
       }
       break;
   }

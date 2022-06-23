@@ -305,7 +305,6 @@ void exahype2::fv::musclhancock::timeStepWithMusclHancock_patchwise_heap_functor
       }
       otterLoopEnd();
 
-      //problematic
       for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++)
       for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
       for (int z = 0; z < numberOfVolumesPerAxisInPatch; z++)
@@ -420,6 +419,7 @@ void exahype2::fv::musclhancock::timeStepWithMusclHancock_patchwise_heap_functor
     }
 
     //step6: update the source term and ncp term
+    //this function now cause crash in foccz4
     otterLoopBegin();
     for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++)
     for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
