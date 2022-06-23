@@ -22,6 +22,7 @@ class SolveRiemannProblem(AbstractRungeKuttaDGActionSet):
 
   {% for PREDICATE_NO in range(0,PREDICATES|length) %}
   if ({{PREDICATES[PREDICATE_NO]}}) {
+  
     const double timeStampOldSolution    = fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStamp();
     
     // Set the variable
@@ -44,14 +45,6 @@ class SolveRiemannProblem(AbstractRungeKuttaDGActionSet):
     //bool    atBoundary[Dimensions*2];
     double maxEigenvaluePerFace[Dimensions*2];
     
-    #if Dimensions==2
-    const int facePosition = 0;
-//    const int facePosition = 2*{{PREDICATE_NO}}*{{NUMBER_OF_DOFS_PER_FACE_2D}}*({{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}});
-    #elif Dimensions==3
-    const int facePosition = 0;
-//    const int facePosition = 2*{{PREDICATE_NO}}*{{NUMBER_OF_DOFS_PER_FACE_3D}}*({{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}});
-    #endif
-    
     /*
     In Peano the faces are ordered by direction, then dimension, so in 3D it would be the face in negative direction in dimension 0, then 1, then 2
       followed by the the face in positive direction of dimensions 0, then 1, then 2. The kernels expect the faces to be ordered by dimension, then
@@ -62,10 +55,10 @@ class SolveRiemannProblem(AbstractRungeKuttaDGActionSet):
     */
     
     for(int face=0; face<Dimensions; face++){
-      QHull[2*face]        = fineGridFaces{{UNKNOWN_IDENTIFIER}}Estimates(face).value + facePosition;
+      QHull[2*face]        = fineGridFaces{{UNKNOWN_IDENTIFIER}}Estimates(face).value;
       //atBoundary[2*face]   = fineGridFaces{{SOLVER_NAME}}FaceLabel(face).getBoundary() and
       //                       not repositories::{{SOLVER_INSTANCE}}.PeriodicBC[face];
-      QHull[2*face+1]      = fineGridFaces{{UNKNOWN_IDENTIFIER}}Estimates(face+Dimensions).value + facePosition;
+      QHull[2*face+1]      = fineGridFaces{{UNKNOWN_IDENTIFIER}}Estimates(face+Dimensions).value;
       //atBoundary[2*face+1] = fineGridFaces{{SOLVER_NAME}}FaceLabel(face+Dimensions).getBoundary() and
       //                       not repositories::{{SOLVER_INSTANCE}}.PeriodicBC[face+Dimensions];        
     }

@@ -129,6 +129,10 @@ class SeparateSweeps( RungeKuttaDG ):
     self._action_set_solve_Riemann_problem.guards = [
       "{} and repositories::{}.getSolverState()=={}::SolverState::SolveRiemannProblemAndAddToVolumeIntegralOfStep{}".format(self._store_cell_data_default_guard(),self.get_name_of_global_instance(),self._name,step) for step in range(0,self.number_of_Runge_Kutta_steps())
     ]
+    
+    self._action_set_handle_boundary.guards = [
+      "{} and repositories::{}.getSolverState()=={}::SolverState::SolveRiemannProblemAndAddToVolumeIntegralOfStep{}".format(self._store_cell_data_default_guard(),self.get_name_of_global_instance(),self._name,step) for step in range(0,self.number_of_Runge_Kutta_steps())
+    ]
 
 
   def get_user_action_set_includes(self):
