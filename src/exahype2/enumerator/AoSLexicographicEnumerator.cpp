@@ -1,8 +1,8 @@
-#include "AoSLexicographicVolumeEnumerator.h"
+#include "AoSLexicographicEnumerator.h"
 
 
 #if !defined(GPUOffloadingOMP)
-std::string exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator::toString() const {
+std::string exahype2::enumerator::AoSLexicographicEnumerator::toString() const {
   std::ostringstream msg;
   msg << "(AoS-lex"
       << ",#patches=" << _numberOfPatches

@@ -1,8 +1,8 @@
-#include "SoALexicographicVolumeEnumerator.h"
+#include "SoALexicographicEnumerator.h"
 
 
 #if !defined(GPUOffloadingOMP)
-std::string exahype2::fv::enumerator::SoALexicographicVolumeEnumerator::toString() const {
+std::string exahype2::enumerator::SoALexicographicEnumerator::toString() const {
   std::ostringstream msg;
   msg << "(SoA-lex"
       << ",#patches=" << _numberOfPatches

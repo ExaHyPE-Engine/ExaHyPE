@@ -18,6 +18,7 @@ namespace exahype2 {
       typedef std::function< void(
         const double * __restrict__                  Q,
         const tarch::la::Vector<Dimensions,double>&  x,
+        const tarch::la::Vector<Dimensions,double>&  h,
         double                                       t,
         double                                       dt,
         double * __restrict__                        S
@@ -26,6 +27,7 @@ namespace exahype2 {
       typedef std::function< void(
         const double * __restrict__                  Q,
         const tarch::la::Vector<Dimensions,double>&  x,
+        const tarch::la::Vector<Dimensions,double>&  h,
         double                                       t,
         double                                       dt,
         int                                          normal,
@@ -36,6 +38,7 @@ namespace exahype2 {
         const double * __restrict__                  Q,
         const double * __restrict__                  deltaQ,
         const tarch::la::Vector<Dimensions,double>&  x,
+        const tarch::la::Vector<Dimensions,double>&  h,
         double                                       t,
         double                                       dt,
         int                                          normal,
@@ -45,6 +48,7 @@ namespace exahype2 {
       typedef std::function< double(
         const double * __restrict__                  Q,
         const tarch::la::Vector<Dimensions,double>&  x,
+        const tarch::la::Vector<Dimensions,double>&  h,
         double                                       t,
         double                                       dt,
         int                                          normal

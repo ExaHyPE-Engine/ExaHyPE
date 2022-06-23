@@ -1,10 +1,13 @@
-#include "SingleVolumeEnumerator.h"
+#include "AoSoALexicographicEnumerator.h"
 
 
 #if !defined(GPUOffloadingOMP)
-std::string exahype2::fv::enumerator::SingleVolumeEnumerator::toString() const {
+std::string exahype2::enumerator::AoSoALexicographicEnumerator::toString() const {
   std::ostringstream msg;
-  msg << "(single-volume"
+  msg << "(AoSoA-lex"
+      << ",#patches=" << _numberOfPatches
+      << ",#vols=" << _numberOfVolumesPerAxisInPatch
+      << ",#halo=" << _haloSize
       << ",#unknowns=" << _unknowns
       << ",#aux=" << _numberOfAuxiliaryVariables
       << ")";
@@ -23,7 +26,7 @@ std::string exahype2::fv::enumerator::SingleVolumeEnumerator::toString() const {
       << "," << (*this)(0,{0,0},1)
       << "," << (*this)(0,{0,0},2)
       << ",..."
-      << "," << this->size()
+       << "," << this->size()
       << "]"
       ;
   #endif

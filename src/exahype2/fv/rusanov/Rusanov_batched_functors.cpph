@@ -16,11 +16,11 @@ namespace exahype2{ namespace fv{ namespace rusanov{ namespace internal{
     NonconservativeProduct  nonconservativeProduct,
     Source                  source,
     MaxEigenvalue           maxEigenvalue,
-    const exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator& QInEnumerator,
-    const exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator& QOutEnumerator,
-    const exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator& fluxEnumerator,
-    const exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator& ncpEnumerator,
-    const exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator& eigenvalueEnumerator,
+    const exahype2::enumerator::AoSLexicographicEnumerator& QInEnumerator,
+    const exahype2::enumerator::AoSLexicographicEnumerator& QOutEnumerator,
+    const exahype2::enumerator::AoSLexicographicEnumerator& fluxEnumerator,
+    const exahype2::enumerator::AoSLexicographicEnumerator& ncpEnumerator,
+    const exahype2::enumerator::AoSLexicographicEnumerator& eigenvalueEnumerator,
     double* tempFluxX,
     double* tempFluxY,
     double* tempFluxZ,
@@ -710,11 +710,11 @@ void exahype2::fv::rusanov::timeStepWithRusanov_batched_heap_functors(
    */
   constexpr int solversHaloSize        = 1;
 
-  exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator QInEnumerator       (                        1, numberOfVolumesPerAxisInPatch,haloSize,unknowns,auxiliaryVariables);
-  exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator QOutEnumerator      (                        1, numberOfVolumesPerAxisInPatch,       0,unknowns,auxiliaryVariables);
-  exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator fluxEnumerator      (patchData.numberOfCells, numberOfVolumesPerAxisInPatch,   solversHaloSize,unknowns,0);
-  exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator ncpEnumerator       (patchData.numberOfCells, numberOfVolumesPerAxisInPatch+1, solversHaloSize,unknowns,0);
-  exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator eigenvalueEnumerator(patchData.numberOfCells, numberOfVolumesPerAxisInPatch,   solversHaloSize,1,0);
+  exahype2::enumerator::AoSLexicographicEnumerator QInEnumerator       (                        1, numberOfVolumesPerAxisInPatch,haloSize,unknowns,auxiliaryVariables);
+  exahype2::enumerator::AoSLexicographicEnumerator QOutEnumerator      (                        1, numberOfVolumesPerAxisInPatch,       0,unknowns,auxiliaryVariables);
+  exahype2::enumerator::AoSLexicographicEnumerator fluxEnumerator      (patchData.numberOfCells, numberOfVolumesPerAxisInPatch,   solversHaloSize,unknowns,0);
+  exahype2::enumerator::AoSLexicographicEnumerator ncpEnumerator       (patchData.numberOfCells, numberOfVolumesPerAxisInPatch+1, solversHaloSize,unknowns,0);
+  exahype2::enumerator::AoSLexicographicEnumerator eigenvalueEnumerator(patchData.numberOfCells, numberOfVolumesPerAxisInPatch,   solversHaloSize,1,0);
 
   double* tempFluxX                  = evaluateFlux                     ? tarch::allocateMemory( fluxEnumerator.size(),      tarch::MemoryLocation::Heap ) : nullptr;
   double* tempFluxY                  = evaluateFlux                     ? tarch::allocateMemory( fluxEnumerator.size(),      tarch::MemoryLocation::Heap ) : nullptr;

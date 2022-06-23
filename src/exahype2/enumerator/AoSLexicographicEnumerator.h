@@ -1,7 +1,7 @@
 // This file is part of the ExaHyPE2 project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
-#ifndef _EXAHYPE2_FV_ENUMERATOR_SOA_LEXICOGRAPHIC_VOLUME_ENUMERATOR_H_
-#define _EXAHYPE2_FV_ENUMERATOR_SOA_LEXICOGRAPHIC_VOLUME_ENUMERATOR_H_
+#ifndef _EXAHYPE2_ENUMERATOR_AOS_LEXICOGRAPHIC_ENUMERATOR_H_
+#define _EXAHYPE2_ENUMERATOR_AOS_LEXICOGRAPHIC_ENUMERATOR_H_
 
 
 #include "tarch/la/Vector.h"
@@ -10,23 +10,28 @@
 
 #include <functional>
 #include <string>
-#include <iostream>
 
 
 namespace exahype2 {
-  namespace fv {
-    namespace enumerator {
+  namespace enumerator {
     /**
-     * This native SoA enumerator uses SoA within the patches plus over patches: It
-     * first enumerates all Q[0] data from patch one, then all Q[0] from patch two,
-     * then all Q[0] from patch three, and so forth. After that, it continues with
-     * Q[1]. This means: The enumerator interleaves the individual patches.
+     * Default enumerator for volumes
+     *
+     * We assume that we have a lexicographic ordering of the patch data and
+     * all data therein are ordered lexicographically and stored in as AoS.
+     *
+     * @param numberOfPatches_ This field is irrelevant for this enumerator,
+     *   as the patches are enumerated one after another, i.e. there is no
+     *   patch interleaving. To be formally correct, you should set it to 1
+     *   if you construct and enumerator over the input or output data, as
+     *   there is one patch per cell.
      */
-      #if defined(GPUOffloadingOMP)
-//      #pragma omp declare target
-      #endif
-      struct SoALexicographicVolumeEnumerator {
-        SoALexicographicVolumeEnumerator(int numberOfPatches, int numberOfVolumesPerAxisInPatch, int haloSize, int unknowns, int numberOfAuxiliaryVariables):
+    #if defined(GPUOffloadingOMP)
+//     #pragma omp declare target
+    #endif
+    struct AoSLexicographicEnumerator {
+      public:
+        AoSLexicographicEnumerator(int numberOfPatches, int numberOfVolumesPerAxisInPatch, int haloSize, int unknowns, int numberOfAuxiliaryVariables):
           _numberOfPatches(numberOfPatches),
           _numberOfVolumesPerAxisInPatch(numberOfVolumesPerAxisInPatch),
           _haloSize(haloSize),
@@ -61,14 +66,10 @@ namespace exahype2 {
           }
         }
 
-	#if !defined(GPUOffloadingOMP)
+        #if !defined(GPUOffloadingOMP)
         std::string toString() const;
-#endif
+        #endif
 
-
-        /**
-         * Returns the total size.
-         */
         int size() const {
           if (Dimensions==2) {
             return _numberOfPatches
@@ -85,17 +86,15 @@ namespace exahype2 {
           }
         }
 
-
         const int _numberOfPatches;
         const int _numberOfVolumesPerAxisInPatch;
         const int _haloSize;
         const int _unknowns;
         const int _numberOfAuxiliaryVariables;
-      };
-      #if defined(GPUOffloadingOMP)
+    };
+    #if defined(GPUOffloadingOMP)
 //      #pragma omp end declare target
-      #endif
-    }
+    #endif
   }
 }
 

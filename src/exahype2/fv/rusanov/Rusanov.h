@@ -571,7 +571,7 @@ namespace exahype2 {
         int                     haloSize,
         int                     unknowns,
         int                     auxiliaryVariables,
-        typename TempDataEnumerator = exahype2::fv::enumerator::AoSoALexicographicVolumeEnumerator
+        typename TempDataEnumerator = exahype2::enumerator::AoSoALexicographicEnumerator
       >
       static void timeStepWithRusanov_batched_heap_static_calls(
         ::exahype2::CellData&   patchData,

@@ -19,6 +19,9 @@ class SeparateSweeps( RungeKuttaDG ):
     we compute the linear reconstruction, project this one onto the faces
     and also compute the volumetric prediction. In the second step, we 
     solve the Riemann problem and add it to the prediction.
+    
+    @todo We don't have to store all data all the time. At the moment, we 
+      do, but it is not particularly clever.
 
   """
 
@@ -73,12 +76,12 @@ class SeparateSweeps( RungeKuttaDG ):
       self._second_grid_sweep_within_RK_step += ")"
     self._second_grid_sweep_within_RK_step += ")" 
 
-    self._current_time_step_projection.send_condition                 = "true"
-    self._current_time_step_projection.receive_and_merge_condition    = "true"
+    self._previous_estimate_projection.generator.send_condition               = "true"
+    self._previous_estimate_projection.generator.receive_and_merge_condition  = "true"
 
-    self._estimates_projection.generator.send_condition               = "true"
-    self._estimates_projection.generator.receive_and_merge_condition  = "true"
-
+    self._Riemann_solution.generator.send_condition               = "false"
+    self._Riemann_solution.generator.receive_and_merge_condition  = "false"
+    
     #self._patch_overlap_new.generator.send_condition               = "true"
     #self._patch_overlap_new.generator.receive_and_merge_condition  = "true"
 
@@ -118,11 +121,10 @@ class SeparateSweeps( RungeKuttaDG ):
     self._action_set_solve_volume_integral.guards = [
       "{} and repositories::{}.getSolverState()=={}::SolverState::ProjectOnFacesAndComputeVolumeIntegralOfStep{}".format(self._store_cell_data_default_guard(),self.get_name_of_global_instance(),self._name,step) for step in range(0,self.number_of_Runge_Kutta_steps())
     ]
-    
+        
     self._action_set_add_volume_and_face_solution.guards = [
       "{} and repositories::{}.getSolverState()=={}::SolverState::ProjectOnFacesAndComputeVolumeIntegralOfStep{}".format(self._store_cell_data_default_guard(),self.get_name_of_global_instance(),self._name,step) for step in range(0,self.number_of_Runge_Kutta_steps())
     ]
-    
 #    self._action_set_compute_final_linear_combination_and_project_solution_onto_faces.guard = self._store_cell_data_default_guard() + " and repositories::{}.getSolverState()=={}::SolverState::ProjectOnFacesAndComputeVolumeIntegralOfStep{}".format(self.get_name_of_global_instance(),self._name,self.number_of_Runge_Kutta_steps()-1)
     self._action_set_compute_final_linear_combination_and_project_solution_onto_faces.guard = self._store_cell_data_default_guard() + " and repositories::{}.getSolverState()=={}::SolverState::SolveRiemannProblemAndAddToVolumeIntegralOfStep{}".format(self.get_name_of_global_instance(),self._name,self.number_of_Runge_Kutta_steps()-1)
 
