@@ -41,6 +41,7 @@ class HandleBoundary(AbstractRungeKuttaDGActionSet):
       },  
       marker.x(),
       marker.h(),
+      // @todo bin mir net sicher, ob das stimmt. Schliesslich sollte es ja der neue Zeitschritt des intermediate Dings sein
       {{FACE_METADATA_ACCESSOR}}.getNewTimeStamp(marker.getSelectedFaceNumber()<Dimensions ? 1 : 0),
       repositories::{{SOLVER_INSTANCE}}.getMinTimeStepSize(),
       {{ORDER}},                                                   
@@ -48,7 +49,7 @@ class HandleBoundary(AbstractRungeKuttaDGActionSet):
       {{NUMBER_OF_AUXILIARY_VARIABLES}},
       marker.getSelectedFaceNumber(),
       repositories::{{SOLVER_INSTANCE}}.QuadraturePoints,
-      fineGridFace{{UNKNOWN_IDENTIFIER}}.value
+      fineGridFace{{UNKNOWN_IDENTIFIER}}EstimateProjection.value
     );
 
     logTraceOut( "touchFaceFirstTime(...)" );

@@ -39,7 +39,7 @@ BasisFunctionValuesRight {
 
 void exahype2::dg::tests::DGTest::run(){
   testMethod(UtilsTest);
-  testMethod(runDGEuler);
+//  testMethod(runDGEuler);
 //  testMethod(runDGElastic);
 //  testMethod(runTest);
 }
@@ -118,18 +118,20 @@ void exahype2::dg::tests::DGTest::UtilsTest(){
 
 }
 
+
+/*
+ * In one step of a DG solver, following substeps are taken:
+ * 1) computation of the integral within the cell, for this all contributions within the cell
+ *    are computed, so the local source as well as flux and ncp contributions of neighbouring
+ *    nodes are computed and added to each node.
+ * 2) These local solutions are extrapolated to the cell surface and exchanged with the
+ *    neigbouring nodes
+ * 3) Using extrapolated values on the surface of the own and neighbouring cells, the flux
+ *    between the two cells is computed (here a rusanov flux is used)
+ * 4) Finally, the contributions from the neighbouring cells are added to each node in a cell
+ */
 void exahype2::dg::tests::DGTest::runDGEuler(){
-  /*
-   * In one step of a DG solver, following substeps are taken:
-   * 1) computation of the integral within the cell, for this all contributions within the cell
-   *    are computed, so the local source as well as flux and ncp contributions of neighbouring
-   *    nodes are computed and added to each node.
-   * 2) These local solutions are extrapolated to the cell surface and exchanged with the
-   *    neigbouring nodes
-   * 3) Using extrapolated values on the surface of the own and neighbouring cells, the flux
-   *    between the two cells is computed (here a rusanov flux is used)
-   * 4) Finally, the contributions from the neighbouring cells are added to each node in a cell
-   */
+/*
 
   file_stream << "Starting Euler test in " << Dimensions << " dimensions\n\n";
 
@@ -226,9 +228,7 @@ void exahype2::dg::tests::DGTest::runDGEuler(){
   }
 
 
-  /*
-   * Step 2), the values computed in step 1) are extrapolated to the surface boundary
-   */
+  // Step 2), the values computed in step 1) are extrapolated to the surface boundary
   projectVolumetricDataOntoFaces(
     QIn,
     order,
@@ -273,11 +273,9 @@ void exahype2::dg::tests::DGTest::runDGEuler(){
   }
 
 
-  /*
-   *  project data onto opposite face as well to trade with "identical" cell,
-   *  this essentially simulates the exchange of surface data with the
-   *  neighbouring cells which Peano would take care of for us normally
-   */
+  // *  project data onto opposite face as well to trade with "identical" cell,
+  // *  this essentially simulates the exchange of surface data with the
+  // *  neighbouring cells which Peano would take care of for us normally
   projectVolumetricDataOntoFaces(
     QIn,
     order,
@@ -294,24 +292,16 @@ void exahype2::dg::tests::DGTest::runDGEuler(){
 #endif
   );
 
-  /*
-  * The faces are assembled into one pointer construct for ease of access in the
-  * next steps. In addition information about whether the faces are at the boundary
-  * is provided since at the boundary the flux must be computed with boundary values
-  * instead of using the extrapolated solution from the neighbour.
-  */
+
+  //* The faces are assembled into one pointer construct for ease of access in the
+  //* next steps. In addition information about whether the faces are at the boundary
+  //* is provided since at the boundary the flux must be computed with boundary values
+  //* instead of using the extrapolated solution from the neighbour.
   double* QHull[Dimensions*2];
   QHull[0] = QLeft;
   QHull[1] = QRight;
   QHull[2] = QDown;
   QHull[3] = QUp;
-/*
-  bool atBoundary[Dimensions*2];
-  atBoundary[0] = false;
-  atBoundary[1] = true;
-  atBoundary[2] = false;
-  atBoundary[3] = true;
-*/
 
 #if Dimensions==3
   QHull[4] = QBack;
@@ -323,10 +313,6 @@ void exahype2::dg::tests::DGTest::runDGEuler(){
   double maxEigenvaluePerFace[2*Dimensions];
 
 
-  /*
-   * this computes the maximal eigenvalue of the solution on each surface
-   * for the rusanov flux computation
-   */
   getMaxEigenvaluePerFace(
     [&](
       const double * __restrict__                 Q,
@@ -354,9 +340,6 @@ void exahype2::dg::tests::DGTest::runDGEuler(){
   }
 
 
-  /*
-   * This step computes the rusanov flux for each surface at each node
-   */
   computeRusanovOnHull(
       [&](
           const double * __restrict__                  Q,
@@ -397,10 +380,8 @@ void exahype2::dg::tests::DGTest::runDGEuler(){
   }
 
 
-  /*
-   * The contributions from the computed rusanov flux are then added to the nodes
-   * within the cell.
-   */
+  // * The contributions from the computed rusanov flux are then added to the nodes
+  // * within the cell.
   applyRiemannToPatch(
       QOut,
       QHullForRiemann,
@@ -443,6 +424,7 @@ void exahype2::dg::tests::DGTest::runDGEuler(){
   delete[] QHullForRiemann;
 
 
+*/
 }//runDGEuler
 
 void exahype2::dg::tests::DGTest::runDGElastic(){
@@ -753,6 +735,7 @@ void exahype2::dg::tests::DGTest::runDGElastic(){
   /*
    * This step computes the rusanov flux for each surface at each node
    */
+/*
   computeRusanovOnHull(
       [&](
           const double * __restrict__                  Q,
@@ -789,6 +772,7 @@ void exahype2::dg::tests::DGTest::runDGElastic(){
         true,
         true
         );
+*/
 
   file_stream << "\nRusanov Fluxes per Face:\n";
   for(int f=0; f<2*Dimensions; f++){

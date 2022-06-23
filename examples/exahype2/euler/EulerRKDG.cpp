@@ -236,6 +236,9 @@ double ::examples::exahype2::euler::EulerRKDG::maxEigenvalue(
   double                                       dt,
   int                                          normal
 )  {
+  // @todo raus
+  logWarning( "maxEigenvalue(...)", "was here: " << x << " x " << normal );
+
   assertion(normal>=0);
   assertion(normal<Dimensions);
   //assertion( Q[0]>0.0 );

@@ -165,7 +165,8 @@ namespace exahype2 {
         int                     haloSize,
         int                     unknowns,
 
-        CellDescription hier rein
+        @todo CellDescription hier rein
+        @todo Normalise signature re other solvers
 
 */
     // @todo Massenmatrix ist 1d? Oder lumped oder was?
