@@ -252,3 +252,21 @@ void exahype2::dg::tests::elasticNonConservativeProduct(
   BgradQ[7] = 0;
   BgradQ[8] = 0;
 }
+
+
+
+
+void exahype2::dg::tests::testBoundaryConditions(
+        const double * __restrict__                  Qinside,
+        double * __restrict__                        Qoutside,
+        const tarch::la::Vector<Dimensions,double>&  x,
+        double                                       t,
+        int                                          normal
+      ){
+
+  Qoutside[0] = Qinside[0];
+  Qoutside[1] = x[0];
+  Qoutside[2] = t;
+  Qoutside[3] = normal;
+
+}

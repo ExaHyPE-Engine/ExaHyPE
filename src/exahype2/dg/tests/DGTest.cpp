@@ -46,7 +46,8 @@ void exahype2::dg::tests::DGTest::run(){
 
 void exahype2::dg::tests::DGTest::UtilsTest(){
 
-  const int nodesPerAxis = 4;
+  const int order = 3;
+  const int nodesPerAxis = order+1;
   const int nodesPerCell = getNodesPerCell(nodesPerAxis);
 
   validateEquals(nodesPerCell, std::pow(nodesPerAxis,Dimensions));
@@ -115,6 +116,92 @@ void exahype2::dg::tests::DGTest::UtilsTest(){
       validateNumericalEquals((float)(lastCellIndex%nodesPerAxis), (float)nodesPerAxis-1.0);
     }
   }
+
+
+  /*
+   * testing applyBoundaryConditions to make sure the nodes are written in the right positions
+   * and with the right values.
+   */
+
+  const int nodesPerFace = nodesPerCell/nodesPerAxis;
+  const int strideQ = 4; // in order to test Q, x, t, normal
+  double QFaces[2*2*nodesPerFace*strideQ];
+  double* QFacesL = &QFaces[0]; //left face construct
+  double* QFacesR = &QFaces[2*nodesPerFace*strideQ]; //right face construct
+
+  //utility parameters
+  const tarch::la::Vector<Dimensions, double> x({0.0, 0.0});
+  double t = 3.14;
+
+  file_stream << "NodesPerFace: " << nodesPerFace << "\n";
+
+  for(int node=0; node<nodesPerFace; node++){
+    for(int i=0; i<strideQ; i++){
+      /*
+       * Initialize right nodes of left face and left nodes of right face
+       */
+      QFacesL[(2*node+1)*strideQ+i] = i+1.0;
+      QFacesR[2*node*strideQ+i]     = i+1.0;
+    }
+  }
+
+  applyBoundaryConditions(
+    [&](
+      const double * __restrict__                  Qinside,
+      double * __restrict__                        Qoutside,
+      const tarch::la::Vector<Dimensions,double>&  x,
+      double                                       t,
+      int                                          normal
+    ) -> void {
+      testBoundaryConditions(Qinside,Qoutside,x,t,normal);
+    },
+    QFacesL,
+    order,
+    3, //unknowns (sum of unknowns and aux just needs to be 4)
+    1, //auxiliaryVariables
+    x,
+    t,
+    0, //faceNormal
+    0 //lr=0, left face
+    );
+
+  applyBoundaryConditions(
+    [&](
+      const double * __restrict__                  Qinside,
+      double * __restrict__                        Qoutside,
+      const tarch::la::Vector<Dimensions,double>&  x,
+      double                                       t,
+      int                                          normal
+    ) -> void {
+      testBoundaryConditions(Qinside,Qoutside,x,t,normal);
+    },
+    QFacesR,
+    order,
+    2, //unknowns (sum of unknowns and aux just needs to be 4)
+    2, //auxiliaryVariables
+    x,
+    t,
+    1, //faceNormal
+    1 //lr=1, right face
+    );
+
+  for(int node=0; node<nodesPerFace; node++){
+
+    //values on left face
+    validateNumericalEquals( QFacesL[2*node*strideQ+0], 1.0);
+    validateNumericalEquals( QFacesL[2*node*strideQ+1], 0.0);
+    validateNumericalEquals( QFacesL[2*node*strideQ+2], 3.14);
+    validateNumericalEquals( QFacesL[2*node*strideQ+3], 0);
+
+    //values on right face
+    validateNumericalEquals( QFacesR[(2*node+1)*strideQ+0], 1.0);
+    validateNumericalEquals( QFacesR[(2*node+1)*strideQ+1], 0.0);
+    validateNumericalEquals( QFacesR[(2*node+1)*strideQ+2], 3.14);
+    validateNumericalEquals( QFacesR[(2*node+1)*strideQ+3], 1);
+
+  }
+
+
 
 }
 

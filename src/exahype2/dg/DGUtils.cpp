@@ -264,6 +264,63 @@ void exahype2::dg::subtractCell(
 }
 
 
+void exahype2::dg::applyBoundaryConditions(
+    BoundaryConditions                          boundaryConditions,
+    double*                                     QFace,
+    const int                                   order,
+    const int                                   unknowns,
+    const int                                   auxiliaryVariables,
+    const tarch::la::Vector<Dimensions,double>& x,
+    const double                                t,
+    const int                                   faceNormal,
+    const int                                   lr
+    ){
+
+  const int nodesPerAxis = order+1;
+  const int nodesPerFace = getNodesPerCell(nodesPerAxis)/nodesPerAxis;
+
+  const int strideQ = unknowns+auxiliaryVariables;
+
+  /*
+   * This sets the inside and outside faces to the first left and right
+   * faces as required.
+   * If we're looking at the left face of the cell, the outside of the cell
+   * is on it's left and inversely, which is why we use (1-lr).
+  */
+
+  /*
+   * For reference of where first left and right faces would be
+  const double* qlStart = &Face[0];
+  const double* qrStart = &Face[strideQ];
+  */
+  const double* qIn = &QFace[(1-lr)*strideQ];
+  double* qOut      = &QFace[(lr)*strideQ];
+
+  //iterate over all nodes of the face using the values on the inside to
+  // set the values on the outside using the boundaryConditons() function
+  for(int node=0; node<nodesPerFace; node++){
+
+    // set boundary Conditions for given node
+    boundaryConditions(
+          qIn,
+          qOut,
+          x, //TODO: add positioning
+          t,
+          faceNormal
+          );
+
+    /*
+     * advancing the pointers to the next node, since this skips over
+     * a left and a right face, it skips over 2*strideQ elements
+     */
+    qIn   += 2*strideQ;
+    qOut  += 2*strideQ;
+
+  }// for node
+
+}
+
+
 std::string exahype2::dg::plotPatch(
         const double* __restrict__ Q,
         const int order,

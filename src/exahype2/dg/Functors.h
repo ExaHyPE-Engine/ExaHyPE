@@ -94,6 +94,21 @@ namespace exahype2 {
       double                                       dt,
       int                                          normal
     ) >   MaxEigenvalue;
+
+
+
+    /*
+     * This is only used within DGUtils in order to apply the boundary conditions
+     * to a given face.
+     */
+    typedef std::function< void(
+      const double * __restrict__                  Qinside,
+      double * __restrict__                        Qoutside,
+      const tarch::la::Vector<Dimensions,double>&  x,
+      double                                       t,
+      int                                          normal
+    ) >   BoundaryConditions;
+
   }
 }
 

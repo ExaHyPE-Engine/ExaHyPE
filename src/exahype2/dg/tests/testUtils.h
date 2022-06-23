@@ -105,6 +105,17 @@ namespace exahype2 {
         double * __restrict__                                         BgradQ
       );
 
+
+    // test boundary condition function to check whether applying boundary conditions works
+    void testBoundaryConditions(
+            const double * __restrict__                  Qinside,
+            double * __restrict__                        Qoutside,
+            const tarch::la::Vector<Dimensions,double>&  x,
+            double                                       t,
+            int                                          normal
+          );
+
+
     }
   }
 }
