@@ -371,7 +371,7 @@ if __name__ == "__main__":
             const int leftCellSerialised  = peano4::utils::dLinearised(leftCell, patchSize + 2*1);
             const int rightCellSerialised = peano4::utils::dLinearised(rightCell,patchSize + 2*1);
             for (int i=0; i<real_var; i++) {
-              reconstructedPatch[cellSerialised*(real_var+aux_var)+real_var+i*3+d] =
+              reconstructedPatch[cellSerialised*(real_var+aux_var)+real_var+d*real_var+i] =
                 ( reconstructedPatch[rightCellSerialised*(real_var+aux_var)+i] - reconstructedPatch[leftCellSerialised*(real_var+aux_var)+i] ) / 2.0 / volumeH;
             }
           }

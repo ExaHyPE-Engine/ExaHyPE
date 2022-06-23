@@ -18,7 +18,7 @@ enum class Scenario {
   BreakingDam,
   BreakingDamWithDynamicAMR,
   BreakingDamResolutionStudies,
-  ConstantSolution,
+  ConstantSolution
 };
 
 
@@ -147,7 +147,7 @@ void examples::exahype2::euler::Euler::initialCondition(
         Q[1] = 0;    // velocities
         Q[2] = 0;
         Q[3] = 0;
-        Q[4] = isInTheCentre ? 1.0 : 0.0; // inner energy
+        Q[4] = isInTheCentre ? 1.0 : 0.05; // inner energy
       }
       break;
     case Scenario::BreakingDam:
@@ -170,7 +170,7 @@ void examples::exahype2::euler::Euler::initialCondition(
         Q[1] = 0;    // velocities
         Q[2] = 0;
         Q[3] = 0;
-        Q[4] = isInTheCentre ? 1.0 : 0.2; // inner energy
+        Q[4] = isInTheCentre ? 1.0 : 0.1; // inner energy
       }
       break;
   }

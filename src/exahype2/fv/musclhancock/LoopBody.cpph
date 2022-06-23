@@ -66,9 +66,9 @@ void exahype2::fv::musclhancock::internal::computeTimeDerivative_LoopBody(
   
   //second, add the -B(Q)*\nabla Q, it ask users to define B on the left of the PDE.
   for (int unknown=0; unknown<QInEnumerator._unknowns; unknown++) {
-    gradientQ[QInEnumerator._unknowns*0+unknown]=QInGathered[ QInEnumerator._unknowns*1+unknown ];
-    gradientQ[QInEnumerator._unknowns*1+unknown]=QInGathered[ QInEnumerator._unknowns*2+unknown ];
-    gradientQ[QInEnumerator._unknowns*2+unknown]=QInGathered[ QInEnumerator._unknowns*3+unknown ];
+    gradientQ[QInEnumerator._unknowns*0+unknown]=QInGathered[ QInEnumerator._unknowns*1+unknown ]; //\partial_x Q_i
+    gradientQ[QInEnumerator._unknowns*1+unknown]=QInGathered[ QInEnumerator._unknowns*2+unknown ]; //\partial_y Q_i
+    gradientQ[QInEnumerator._unknowns*2+unknown]=QInGathered[ QInEnumerator._unknowns*3+unknown ]; //\partial_z Q_i
   }
   for (int normal=0; normal<3; normal++){
     ncp(
