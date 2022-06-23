@@ -268,8 +268,7 @@ void exahype2::dg::applyBoundaryConditions(
     BoundaryConditions                          boundaryConditions,
     double*                                     QFace,
     const int                                   order,
-    const int                                   unknowns,
-    const int                                   auxiliaryVariables,
+    const int                                   strideQ,
     const tarch::la::Vector<Dimensions,double>& x,
     const double                                t,
     const int                                   faceNormal,
@@ -278,8 +277,6 @@ void exahype2::dg::applyBoundaryConditions(
 
   const int nodesPerAxis = order+1;
   const int nodesPerFace = getNodesPerCell(nodesPerAxis)/nodesPerAxis;
-
-  const int strideQ = unknowns+auxiliaryVariables;
 
   /*
    * This sets the inside and outside faces to the first left and right

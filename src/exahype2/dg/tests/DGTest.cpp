@@ -133,8 +133,6 @@ void exahype2::dg::tests::DGTest::UtilsTest(){
   const tarch::la::Vector<Dimensions, double> x({0.0, 0.0});
   double t = 3.14;
 
-  file_stream << "NodesPerFace: " << nodesPerFace << "\n";
-
   for(int node=0; node<nodesPerFace; node++){
     for(int i=0; i<strideQ; i++){
       /*
@@ -157,8 +155,7 @@ void exahype2::dg::tests::DGTest::UtilsTest(){
     },
     QFacesL,
     order,
-    3, //unknowns (sum of unknowns and aux just needs to be 4)
-    1, //auxiliaryVariables
+    4, //strideQ
     x,
     t,
     0, //faceNormal
@@ -177,8 +174,7 @@ void exahype2::dg::tests::DGTest::UtilsTest(){
     },
     QFacesR,
     order,
-    2, //unknowns (sum of unknowns and aux just needs to be 4)
-    2, //auxiliaryVariables
+    4, //strideQ
     x,
     t,
     1, //faceNormal
