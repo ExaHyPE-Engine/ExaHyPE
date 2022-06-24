@@ -198,6 +198,35 @@ void exahype2::dg::tests::DGTest::UtilsTest(){
   }
 
 
+  /*
+   * testing getMaxEigenvalue
+   */
+
+  //reusing array from gradient test
+  for(int i=0; i<nodesPerCell; i++){
+    cellQin[2*i+0] = i;
+    cellQin[2*i+1] = i+1;
+  }
+
+  double maxEval = getMaxEigenvalue(
+      [&](
+          const double * __restrict__                 Q,
+          const tarch::la::Vector<Dimensions,double>& x,
+          double                                      t,
+          double                                      dt,
+          int                                         normal
+          ) -> double {
+            testEigenvalue(Q,x,t,dt,normal);
+          },
+      cellQin,
+      order,
+      2, //strideQ
+      x,
+      t,
+      0.1 //dt
+      );
+
+  validateNumericalEquals(maxEval, (Dimensions-1)*(nodesPerCell-1));
 
 }
 

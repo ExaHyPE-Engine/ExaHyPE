@@ -8,7 +8,7 @@
 #include <fstream>
 
 #include "../../dg/CellIntegral.h"
-#include "../../dg/rusanov/Riemann.h"
+#include "../../dg/Riemann.h"
 #include "../../dg/tests/testUtils.h"
 #include "../../dg/DGUtils.h"
 
