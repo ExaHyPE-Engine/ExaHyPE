@@ -3,40 +3,54 @@
 from .SolverCodeSnippets import SolverCodeSnippets
 
 
-class FixedTimeSteppingCodeSnippets( SolverCodeSnippets ):
+class AdaptiveTimeSteppingCodeSnippets( SolverCodeSnippets ):
   """
   
   Code snippet generator for all fixed time stepping solvers
   
   """
-      
 
   def create_abstract_solver_user_declarations(self):
     return """
 private:
-  double _timeStepSize;
+  double _maxEigenvalue;
+  double _admissibleTimeStepSize;
 public:
-  double getTimeStepSize() const;  
+  void setMaxEigenvalue( double eigenvalue );  
+  /**
+   * @return Admissible time step size for the current sweep, i.e. 
+   *         return _admissibleTimeStepSize. This value always refers
+   *         to the minimum mesh volume size. If you use subcycling,
+   *         you have to scale it for cells that are not on the finest
+   *         mesh resolution. 
+   */
+  virtual double getAdmissibleTimeStepSize() const;  
     """  
 
 
   def create_abstract_solver_user_definitions(self):
     return """
-double {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::getTimeStepSize() const {
-  return _timeStepSize;
+void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::setMaxEigenvalue( double eigenvalue ) {
+  if ( tarch::la::greater( eigenvalue, 0.0 ) ) {
+    tarch::multicore::Lock lock(_semaphore);
+    _maxEigenvalue = std::max(_maxEigenvalue,eigenvalue);
+  }
+}    
+
+
+double {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::getAdmissibleTimeStepSize() const {
+  return _admissibleTimeStepSize;
 }
     """  
 
 
   def create_abstract_solver_constructor_statements(self):
-    return """
-  _timeStepSize = 0.0;
-"""    
+    return "_admissibleTimeStepSize = 0.0;"
   
   
   def create_compute_time_step_size(self):
     return """
-  const double timeStepSize = repositories::{{SOLVER_INSTANCE}}.getTimeStepSize();
+  double timeStepSize = repositories::{{SOLVER_INSTANCE}}.getAdmissibleTimeStepSize();
 """
 
   
@@ -51,6 +65,41 @@ double {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::getTimeStepSize() const {
     
     """
     return """
-  const double newTimeStepSize = timeStepSize;
+    repositories::{{SOLVER_INSTANCE}}.setMaxEigenvalue( maxEigenvalue );  
+    
+    // This is a value set for stats reasons. We'll ignore it later as we 
+    // ask for a new valid time step size from getAdmissibleTimeStepSize().
+    const double newTimeStepSize = repositories::{{SOLVER_INSTANCE}}.getAdmissibleTimeStepSize();
 """
 
+
+  def create_finish_time_step_implementation(self):
+    """
+  
+    This routine is inserted after we have reduced all global quantities. These
+    are the quantities with the postfix ThisTimeStep.
+  
+    """ 
+    return """
+  #ifdef Parallel
+  double newMaxEigenvalue = _maxEigenvalue;
+  tarch::mpi::Rank::getInstance().allReduce(
+        &newMaxEigenvalue,
+        &_maxEigenvalue,
+        1,
+        MPI_DOUBLE,
+        MPI_MAX, 
+        [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); }
+        );
+  #endif
+
+  if ( tarch::la::smaller(_maxEigenvalue, 0.0 ) ) {
+    ::exahype2::triggerNonCriticalAssertion( __FILE__, __LINE__, "_maxEigenvalue>=0", "invalid max eigenvalue: " + std::to_string(_maxEigenvalue) );
+    // keep time step size invariant
+    // _admissibleTimeStepSize = _admissibleTimeStepSize;
+  }
+  else if ( tarch::la::equals(_maxEigenvalue, 0.0 ) ) {
+    logWarning( "finishTimeStep(...)", "maximum eigenvalue approaches 0.0. For nonlinear PDEs, this often means the PDE becomes stationary. It could also be a bug however" ); 
+    _admissibleTimeStepSize = 0.0;
+  }
+"""  

@@ -186,36 +186,5 @@ def create_start_time_step_implementation_for_adaptive_time_stepping_with_subcyc
   return statistics + clear_max_eigenvalue
   
 
-def create_start_time_step_implementation_for_adaptive_time_stepping(use_enclave_tasking):
-  predicate = """
-    tarch::mpi::Rank::getInstance().isGlobalMaster() 
-    and
-    _maxVolumeH>0.0
-  """
-  
-  if use_enclave_tasking:
-    predicate += """and (_solverState == SolverState::Primary or _solverState == SolverState::PrimaryAfterGridInitialisation) """
-      
-  statistics = """
-  if (""" + predicate + """) {
-    logInfo( "startTimeStep()", "Solver {{SOLVER_NAME}}:" );
-    logInfo( "startTimeStep()", "t            = " << _minTimeStampThisTimeStep );
-    logInfo( "startTimeStep()", "dt           = " << getAdmissibleTimeStepSize() );
-    logInfo( "startTimeStep()", "h_{min}      = " << _minVolumeHThisTimeStep << " (volume size)");
-    logInfo( "startTimeStep()", "h_{max}      = " << _maxVolumeHThisTimeStep << " (volume size)" );
-    logInfo( "startTimeStep()", "lambda_{max} = " << _maxEigenvalue );
-  }
-"""
-    
-  if use_enclave_tasking:
-    clear_max_eigenvalue = """if (_solverState == SolverState::Primary or _solverState == SolverState::PrimaryAfterGridInitialisation) {
-  _maxEigenvalue = 0.0;
-}"""
-  else:
-    clear_max_eigenvalue = """if (_solverState == SolverState::TimeStep or _solverState == SolverState::TimeStepAfterGridInitialisation) {
-  _maxEigenvalue = 0.0;
-}"""
-
-  return statistics + clear_max_eigenvalue
 
 
