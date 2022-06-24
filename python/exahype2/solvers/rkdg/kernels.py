@@ -831,39 +831,6 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::sourceTerm(
   return Template.render(**d)
 
 
-def create_finish_time_step_implementation_for_fixed_time_stepping(normalised_time_step_size):
-  return """
-  assertion( _minCellH >= 0.0 );
-  assertion( MaxAdmissibleCellH > 0.0 );
-  _timeStepSize  = """ + str(normalised_time_step_size) + """;
-"""
-
-def create_start_time_step_implementation_for_fixed_time_stepping(normalised_time_step_size):
-  """
-  
-  We roll over all reduced data after the last time step, and we 
-  plot status info in the first step.
-  
-  """
-  return """
-  if (
-    tarch::mpi::Rank::getInstance().isGlobalMaster() 
-    and
-    _maxCellH>0.0
-    and
-    isFirstGridSweepOfTimeStep()
-  ) {
-    logInfo( "step()", "Solver {{SOLVER_NAME}}:" );
-    logInfo( "step()", "t       = " << _minTimeStampThisTimeStep );
-    logInfo( "step()", "dt      = " << getTimeStepSize() );
-    logInfo( "step()", "h_{min} = " << _minCellHThisTimeStep );
-    logInfo( "step()", "h_{max} = " << _maxCellHThisTimeStep );
-  }
-  
-  _timeStepSize  = """ + str(normalised_time_step_size) + """;  
-"""
-
-
 def get_face_overlap_merge_implementation(patch_overlap):
   d = {
     "OVERLAP": patch_overlap.dim[0]/2, #assumed to always be two, but present here anyway
@@ -893,3 +860,32 @@ def get_face_overlap_merge_implementation(patch_overlap):
 """
 
   return template.format(**d)
+  
+
+def create_start_time_step_implementation_for_fixed_time_stepping(normalised_time_step_size):
+  """
+  
+  We roll over all reduced data after the last time step, and we 
+  plot status info in the first step.
+  
+  """
+  return """
+  if (
+    tarch::mpi::Rank::getInstance().isGlobalMaster() 
+    and
+    _maxCellH>0.0
+    and
+    isFirstGridSweepOfTimeStep()
+  ) {
+    logInfo( "step()", "Solver {{SOLVER_NAME}}:" );
+    logInfo( "step()", "t       = " << _minTimeStampThisTimeStep );
+    logInfo( "step()", "dt      = " << getTimeStepSize() );
+    logInfo( "step()", "h_{min} = " << _minCellHThisTimeStep );
+    logInfo( "step()", "h_{max} = " << _maxCellHThisTimeStep );
+  }
+  
+  _timeStepSize  = """ + str(normalised_time_step_size) + """;  
+"""
+  
+  
+  

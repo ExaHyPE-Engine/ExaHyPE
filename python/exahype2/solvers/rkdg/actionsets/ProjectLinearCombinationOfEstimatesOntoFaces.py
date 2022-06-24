@@ -13,6 +13,18 @@ class ProjectLinearCombinationOfEstimatesOntoFaces(AbstractRungeKuttaDGActionSet
   the faces, so we can then solve the Riemann problems. So the projection 
   happens in one grid sweep, the corresponding Riemann solve in the next one.
   
+  ## Time step sizes and time stamps
+
+  Besides the actual projection, I also set the fields
+    
+      {{FACE_METADATA_ACCESSOR}}(d).setUpdated(1,true);
+      {{FACE_METADATA_ACCESSOR}}(d).setUpdatedTimeStamp(1,{{CELL_METADATA_ACCESSOR}}.getTimeStamp());
+      {{FACE_METADATA_ACCESSOR}}(d+Dimensions).setUpdated(0,true);
+      {{FACE_METADATA_ACCESSOR}}(d+Dimensions).setUpdatedTimeStamp(0,{{CELL_METADATA_ACCESSOR}}.getTimeStamp());
+
+  on the face label. So the face now has a copy of the time stamp of the cell
+  plus there's a marker that we are in the process of updating the adjacent
+  cell.  
   
   """
   
@@ -50,6 +62,14 @@ class ProjectLinearCombinationOfEstimatesOntoFaces(AbstractRungeKuttaDGActionSet
     );
     #endif
 
+    for (int d=0; d<Dimensions; d++) {
+      {{FACE_METADATA_ACCESSOR}}(d).setUpdated(1,true);
+      {{FACE_METADATA_ACCESSOR}}(d).setUpdatedTimeStamp(1,{{CELL_METADATA_ACCESSOR}}.getTimeStamp());
+      {{FACE_METADATA_ACCESSOR}}(d+Dimensions).setUpdated(0,true);
+      {{FACE_METADATA_ACCESSOR}}(d+Dimensions).setUpdatedTimeStamp(0,{{CELL_METADATA_ACCESSOR}}.getTimeStamp());
+      logDebug( "touchCellLastTime(...)", "update {{FACE_METADATA_ACCESSOR}}(" << d << ")(1)" );
+      logDebug( "touchCellLastTime(...)", "update {{FACE_METADATA_ACCESSOR}}(" << (d+Dimensions) << ")(0)" );
+    }
   }
   {% endfor %}
 """
@@ -89,6 +109,8 @@ class ProjectLinearCombinationOfEstimatesOntoFaces(AbstractRungeKuttaDGActionSet
       self._solver._init_dictionary_with_default_parameters(d)
       self._solver.add_entries_to_text_replacement_dictionary(d)
       d[ "PREDICATES" ]                               = self.guards
+      d[ "FACE_METADATA_ACCESSOR" ] = "fineGridFaces"  + self._solver._face_label.name
+      d[ "CELL_METADATA_ACCESSOR" ] = "fineGridCell""" + self._solver._cell_label.name
       result = jinja2.Template(self.TemplateProject).render(**d)
       pass 
     return result

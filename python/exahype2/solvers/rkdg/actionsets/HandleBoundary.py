@@ -15,13 +15,26 @@ class HandleBoundary(AbstractRungeKuttaDGActionSet):
   the faces, so we can then solve the Riemann problems. So the projection 
   happens in one grid sweep, the corresponding Riemann solve in the next one.
   
+  ## Time step/time stamp handling
+  
+  We rely on ProjectLinearCombinationOfEstimatesOntoFaces to project the 
+  current solution onto the faces.
+  
   
   """
   
   TemplateProject = """
-<<<<<<< HEAD
+    /*
+    In Peano the faces are ordered by direction, then dimension, so in 3D it would be the face in negative direction in dimension 0, then 1, then 2
+      followed by the the face in positive direction of dimensions 0, then 1, then 2. The kernels expect the faces to be ordered by dimension, then
+      direction, so first left face in dimension0, then right face in dimension 0, and so on for the other dimensions.
+      Therefore when the Hull is arranged, the order of these faces are shuffled correspondingly.    
+    2d: 0,1,2,3 -> 0,2,1,3
+    3d: 0,1,2,3,4,5 -> 0,3,1,4,2,5
+    */
+  {% for PREDICATE_NO in range(0,PREDICATES|length) %}
   if (
-    {{PREDICATE}}
+    {{PREDICATES[PREDICATE_NO]}}
     and
     not repositories::{{SOLVER_INSTANCE}}.PeriodicBC[marker.getSelectedFaceNumber()%Dimensions]
     and
@@ -29,8 +42,22 @@ class HandleBoundary(AbstractRungeKuttaDGActionSet):
     and 
     fineGridFace{{SOLVER_NAME}}FaceLabel.getBoundary()
   ) {
-    logTraceInWith3Arguments( "touchFaceFirstTime(...)", fineGridFace{{SOLVER_NAME}}FaceLabel.toString(), (repositories::{{SOLVER_INSTANCE}}.PeriodicBC[marker.getSelectedFaceNumber()%Dimensions]), marker.toString() );
-
+    // see action set ProjectLinearCombinationOfEstimatesOntoFaces and docu of action set
+    const double timeStampOldSolution    = std::max(
+      fineGridFace{{SOLVER_NAME}}FaceLabel.getUpdatedTimeStamp()(0),
+      fineGridFace{{SOLVER_NAME}}FaceLabel.getUpdatedTimeStamp()(1)
+    );
+      
+  
+    // Set the variable
+    // double timeStepSize
+    {{COMPUTE_TIME_STEP_SIZE}}
+    
+    const double timeStamp = timeStampOldSolution + {{BUTCHER_TABLEAU_RELATIVE_TIME_STEP_SIZES[PREDICATE_NO]}} * timeStepSize;
+    
+    assertion3( tarch::la::greaterEquals( timeStepSize, 0.0 ),  timeStamp, timeStepSize, timeStampOldSolution );
+    assertion3( tarch::la::greaterEquals( timeStamp, 0.0 ),     timeStamp, timeStepSize, timeStampOldSolution );
+      
     ::exahype2::dg::applyBoundaryConditions(
       [&](
         const double * __restrict__                  Qinside,
@@ -44,8 +71,7 @@ class HandleBoundary(AbstractRungeKuttaDGActionSet):
       },  
       marker.x(),
       marker.h(),
-      // @todo bin mir net sicher, ob das stimmt. Schliesslich sollte es ja der neue Zeitschritt des intermediate Dings sein
-      {{FACE_METADATA_ACCESSOR}}.getNewTimeStamp(marker.getSelectedFaceNumber()<Dimensions ? 1 : 0),
+      timeStamp,
       repositories::{{SOLVER_INSTANCE}}.getMinTimeStepSize(),
       {{ORDER}},                                                   
       {{NUMBER_OF_UNKNOWNS}},
@@ -54,90 +80,6 @@ class HandleBoundary(AbstractRungeKuttaDGActionSet):
       repositories::{{SOLVER_INSTANCE}}.QuadraturePoints,
       fineGridFace{{UNKNOWN_IDENTIFIER}}EstimateProjection.value
     );
-
-    logTraceOut( "touchFaceFirstTime(...)" );
-=======
-  {% for PREDICATE_NO in range(0,PREDICATES|length) %}
-  if ({{PREDICATES[PREDICATE_NO]}}) {
- 
-    const double timeStampOldSolution    = fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStamp();
-  
-    // Set the variable
-    // double timeStepSize
-    {{COMPUTE_TIME_STEP_SIZE}}
-    
-    const double timeStamp = timeStampOldSolution + {{BUTCHER_TABLEAU_RELATIVE_TIME_STEP_SIZES[PREDICATE_NO]}} * timeStepSize;
-    
-    assertion3( tarch::la::greaterEquals( timeStepSize, 0.0 ),  timeStamp, timeStepSize, timeStampOldSolution );
-    assertion3( tarch::la::greaterEquals( timeStamp, 0.0 ),     timeStamp, timeStepSize, timeStampOldSolution );
-      
-    /*
-    In Peano the faces are ordered by direction, then dimension, so in 3D it would be the face in negative direction in dimension 0, then 1, then 2
-      followed by the the face in positive direction of dimensions 0, then 1, then 2. The kernels expect the faces to be ordered by dimension, then
-      direction, so first left face in dimension0, then right face in dimension 0, and so on for the other dimensions.
-      Therefore when the Hull is arranged, the order of these faces are shuffled correspondingly.    
-    2d: 0,1,2,3 -> 0,2,1,3
-    3d: 0,1,2,3,4,5 -> 0,3,1,4,2,5
-    */
-    
-    for(int dim=0; dim<Dimensions; dim++){
-   
-      //Left face
-      if(fineGridFaces{{SOLVER_NAME}}FaceLabel(dim).getBoundary() and
-        not repositories::{{SOLVER_INSTANCE}}.PeriodicBC[dim]){
-        
-        ::exahype2::dg::applyBoundaryConditions(
-          [&](
-            const double * __restrict__                  Qinside,
-            double * __restrict__                        Qoutside,
-            const tarch::la::Vector<Dimensions,double>&  x,
-            double                                       t,
-            int                                          normal
-          ) -> void {
-            repositories::{{SOLVER_INSTANCE}}.boundaryConditions(Qinside,Qoutside,x,t,normal);
-          },
-          fineGridFaces{{UNKNOWN_IDENTIFIER}}Estimates(dim).value,
-          {{ORDER}},
-          {{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}},
-          marker.x(),
-          timeStamp,
-          dim,
-          0
-        );
-        
-      }
-
-      //Right face
-      if(fineGridFaces{{SOLVER_NAME}}FaceLabel(dim+Dimensions).getBoundary() and
-        not repositories::{{SOLVER_INSTANCE}}.PeriodicBC[dim+Dimensions]){
-        
-        ::exahype2::dg::applyBoundaryConditions(
-          [&](
-            const double * __restrict__                  Qinside,
-            double * __restrict__                        Qoutside,
-            const tarch::la::Vector<Dimensions,double>&  x,
-            double                                       t,
-            int                                          normal
-          ) -> void {
-            repositories::{{SOLVER_INSTANCE}}.boundaryConditions(Qinside,Qoutside,x,t,normal);
-          },
-          fineGridFaces{{UNKNOWN_IDENTIFIER}}Estimates(dim+Dimensions).value,
-          {{ORDER}},
-          {{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}},
-          marker.x(),
-          timeStamp,
-          dim,
-          1
-        );
-        
-      }
-
-      
-    }// for dim
-  
-  
-  
->>>>>>> c61af3b44a8cd826bc82f80846b0e0b19c58615f
   }
   {% endfor %}
 """
@@ -176,13 +118,8 @@ class HandleBoundary(AbstractRungeKuttaDGActionSet):
       d = {}
       self._solver._init_dictionary_with_default_parameters(d)
       self._solver.add_entries_to_text_replacement_dictionary(d)
-<<<<<<< HEAD
-      d[ "PREDICATE" ]                 = self.guard
-      d[ "FACE_METADATA_ACCESSOR" ] = "fineGridFace"  + self._solver._face_label.name
-=======
       d[ "PREDICATES" ]            = self.guards
       d[ "BUTCHER_TABLEAU_RELATIVE_TIME_STEP_SIZES" ] = self._butcher_tableau.time_step_sizes()
->>>>>>> c61af3b44a8cd826bc82f80846b0e0b19c58615f
       result = jinja2.Template(self.TemplateProject).render(**d)
       pass 
     return result

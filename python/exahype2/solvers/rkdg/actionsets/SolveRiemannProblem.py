@@ -23,12 +23,9 @@ class SolveRiemannProblem(AbstractRungeKuttaDGActionSet):
 
   {% for PREDICATE_NO in range(0,PREDICATES|length) %}
   if ({{PREDICATES[PREDICATE_NO]}}) {
-<<<<<<< HEAD
-    const double timeStampOldSolution = {{FACE_METADATA_ACCESSOR}}.getNewTimeStamp(marker.getSelectedFaceNumber()<Dimensions ? 1 : 0);
-=======
+    // const double timeStampOldSolution = {{FACE_METADATA_ACCESSOR}}.getNewTimeStamp(marker.getSelectedFaceNumber()<Dimensions ? 1 : 0);
   
     const double timeStampOldSolution    = fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStamp();
->>>>>>> c61af3b44a8cd826bc82f80846b0e0b19c58615f
     
     // Set the variable
     // double timeStepSize
@@ -39,9 +36,7 @@ class SolveRiemannProblem(AbstractRungeKuttaDGActionSet):
     assertion3( tarch::la::greaterEquals( timeStepSize, 0.0 ),  timeStamp, timeStepSize, timeStampOldSolution );
     assertion3( tarch::la::greaterEquals( timeStamp, 0.0 ),     timeStamp, timeStepSize, timeStampOldSolution );
     
-<<<<<<< HEAD
-    ::exahype2::dg::rusanov::solveRiemannProblem_pointwise_in_situ(
-=======
+    //::exahype2::dg::rusanov::solveRiemannProblem_pointwise_in_situ(
     #if Dimensions==2
     double* QOut = fineGridCell{{UNKNOWN_IDENTIFIER}}Estimates.value + {{PREDICATE_NO}} * {{NUMBER_OF_DOFS_PER_CELL_2D}} * ({{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}});
 
@@ -98,7 +93,6 @@ class SolveRiemannProblem(AbstractRungeKuttaDGActionSet):
     #endif      
     
     ::exahype2::dg::computeRusanovOnHull(
->>>>>>> c61af3b44a8cd826bc82f80846b0e0b19c58615f
       [&](
         const double * __restrict__                  Q,
         const tarch::la::Vector<Dimensions,double>&  x,
