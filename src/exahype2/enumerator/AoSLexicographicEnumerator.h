@@ -15,7 +15,7 @@
 namespace exahype2 {
   namespace enumerator {
     /**
-     * Default enumerator for volumes
+     * Default enumerator for all DoFs in ExaHyPE 2
      *
      * We assume that we have a lexicographic ordering of the patch data and
      * all data therein are ordered lexicographically and stored in as AoS.
@@ -53,16 +53,16 @@ namespace exahype2 {
         ) const InlineMethod {
           if (Dimensions==2) {
             return (patchIndex % _numberOfPatches) * (_numberOfVolumesPerAxisInPatch+2*_haloSize) * (_numberOfVolumesPerAxisInPatch+2*_haloSize) * (_unknowns+_numberOfAuxiliaryVariables)
-                 + (volumeIndex(1)+_haloSize) * (_numberOfVolumesPerAxisInPatch+2*_haloSize) * (_unknowns+_numberOfAuxiliaryVariables)
-                 + (volumeIndex(0)+_haloSize) * (_unknowns+_numberOfAuxiliaryVariables)
-                 + unknown;
+                 +      (volumeIndex(1)+_haloSize) *                                                (_numberOfVolumesPerAxisInPatch+2*_haloSize) * (_unknowns+_numberOfAuxiliaryVariables)
+                 +      (volumeIndex(0)+_haloSize) *                                                                                               (_unknowns+_numberOfAuxiliaryVariables)
+                 +                        unknown;
           }
           else {
             return (patchIndex % _numberOfPatches) * (_numberOfVolumesPerAxisInPatch+2*_haloSize) * (_numberOfVolumesPerAxisInPatch+2*_haloSize) * (_numberOfVolumesPerAxisInPatch+2*_haloSize) * (_unknowns+_numberOfAuxiliaryVariables)
-                 + (volumeIndex(2)+_haloSize) * (_numberOfVolumesPerAxisInPatch+2*_haloSize) * (_numberOfVolumesPerAxisInPatch+2*_haloSize) * (_unknowns+_numberOfAuxiliaryVariables)
-                 + (volumeIndex(1)+_haloSize) * (_numberOfVolumesPerAxisInPatch+2*_haloSize) * (_unknowns+_numberOfAuxiliaryVariables)
-                 + (volumeIndex(0)+_haloSize) * (_unknowns+_numberOfAuxiliaryVariables)
-                 + unknown;
+                 +      (volumeIndex(2)+_haloSize) *                                                (_numberOfVolumesPerAxisInPatch+2*_haloSize) * (_numberOfVolumesPerAxisInPatch+2*_haloSize) * (_unknowns+_numberOfAuxiliaryVariables)
+                 +      (volumeIndex(1)+_haloSize) *                                                                                               (_numberOfVolumesPerAxisInPatch+2*_haloSize) * (_unknowns+_numberOfAuxiliaryVariables)
+                 +      (volumeIndex(0)+_haloSize) *                                                                                                                                              (_unknowns+_numberOfAuxiliaryVariables)
+                 +                        unknown;
           }
         }
 
