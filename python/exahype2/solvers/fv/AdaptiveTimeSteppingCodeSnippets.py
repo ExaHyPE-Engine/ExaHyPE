@@ -55,7 +55,7 @@ class AdaptiveTimeSteppingCodeSnippets( exahype2.solvers.AdaptiveTimeSteppingCod
     patches, i.e. we have to devide by the volume count per axis.
     
     """
-    return super( AdaptiveTimeSteppingCodeSnippets, self ).create_finish_time_step_implementation() + """
+    code_snippet = super( AdaptiveTimeSteppingCodeSnippets, self ).create_finish_time_step_implementation() + """
   if ( tarch::la::greater(_maxEigenvalue, 0.0 ) ) {
     _admissibleTimeStepSize = """ + str(self._time_step_relaxation) + """ * _minVolumeHThisTimeStep / _maxEigenvalue;
     if ( std::isnan(_admissibleTimeStepSize) or std::isinf(_admissibleTimeStepSize) ) {
@@ -66,4 +66,12 @@ class AdaptiveTimeSteppingCodeSnippets( exahype2.solvers.AdaptiveTimeSteppingCod
     }
   }
 """
+    if self._use_enclave_tasking:
+      return """
+if (_solverState==SolverState::Secondary) {
+""" + code_snippet + """
+}
+"""
+    else:
+      return code_snippet
 
