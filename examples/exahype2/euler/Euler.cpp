@@ -4,7 +4,7 @@
 #include "Constants.h"
 #include "exahype2/NonCriticalAssertions.h"
 
-#include "exahype2/fv/enumerator/PatchAccess.h"
+#include "exahype2/fv/PatchAccess.h"
 
 
 
@@ -209,7 +209,7 @@ void examples::exahype2::euler::Euler::sourceTerm(
   double                                       dt,
   double * __restrict__ S
 ) {
-  ::exahype2::fv::enumerator::PatchAccess access(
+  ::exahype2::fv::PatchAccess access(
     Q,                         // make it initially point to input
     NumberOfFiniteVolumesPerAxisPerPatch, // defined in superclass
     1,                         // halo size, which you know as user
