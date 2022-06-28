@@ -7,6 +7,18 @@ tarch::logging::Log   examples::exahype2::euler::EulerRKDG::_log( "examples::exa
 
 
 
+/**
+ * With plain DG, Rusanov and without an additional limiter, we cannot solve
+ * discontinuous initial condition. At the moment, most of the scenarios
+ * below thus are physically meaningless. The only setup that should work
+ * out-of-the-box is the Gaussian, as it is infinitely smooth. Having said
+ * this, the Gaussian still can run into problems if it is too steep: If the
+ * polynomial order and mesh resolution are too low, the Gaussian continues
+ * to look like a discontinuous initial condition and thus introduces
+ * problems. I therefore scale its diameter with the maximum cell width. In
+ * a real setup, I should also take the polynomial order into account, but
+ * I kind of keep it simple here.
+ */
 enum class Scenario {
   PointExplosion,
   PointExplosionWithDynamicAMR,
@@ -144,7 +156,8 @@ void examples::exahype2::euler::EulerRKDG::initialCondition(
         tarch::la::Vector<Dimensions,double> circleCentre = {0.18,0.3,0.6};
         #endif
 
-        const double peakDeviation = 0.05;
+        // see comment on Gaussian initial condition above
+        const double peakDeviation = MaxAdmissibleCellH;
         double distance = tarch::la::norm2( x-circleCentre );
         double exponent = - (distance * distance) / 2.0 / peakDeviation / peakDeviation;
 
@@ -219,9 +232,6 @@ void examples::exahype2::euler::EulerRKDG::boundaryConditions(
     Qoutside[i] = Qinside[i];
   }
 
-  // @todo raus
-  logWarning( "boundaryConditions(...)", "was here: " << x << " x " << normal );
-
   logTraceOut( "boundaryConditions(...)" );
 }
 
@@ -236,9 +246,6 @@ double ::examples::exahype2::euler::EulerRKDG::maxEigenvalue(
   double                                       dt,
   int                                          normal
 )  {
-  // @todo raus
-  logWarning( "maxEigenvalue(...)", "was here: " << x << " x " << normal );
-
   assertion(normal>=0);
   assertion(normal<Dimensions);
   //assertion( Q[0]>0.0 );
@@ -256,8 +263,8 @@ double ::examples::exahype2::euler::EulerRKDG::maxEigenvalue(
   const double p = (gamma-1) * (Q[4] - 0.5*irho*(Q[1]*Q[1]+Q[2]*Q[2]));
   #endif
 
-  nonCriticalAssertion8( p>=0.0, Q[0], Q[1], Q[2], Q[3], Q[4], x, t, normal );
-  const double c   = std::sqrt(gamma * p * irho);
+  nonCriticalAssertion9( tarch::la::greaterEquals(p,0.0), Q[0], Q[1], Q[2], Q[3], Q[4], x, t, normal, p );
+  const double c   = std::sqrt( std::max(0.0,gamma * p * irho) );
 
   const double u_n = Q[normal + 1] * irho;
   double result = std::max( std::abs(u_n - c), std::abs(u_n + c) );
