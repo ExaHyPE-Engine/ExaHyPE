@@ -15,6 +15,18 @@
 #include "Functors.h"
 
 
+
+/**
+ * @todo
+ *
+ * - More overviews documentation here which links to the correct Python files
+ * - Find out which routines are not used anymore and remove them
+ * - Clean-up/update hte unit tests (Tobias has broken some)
+ * - BasisFunctionValues are symmetric and should be removed
+ * - Mass matrix is not used correctly. Not sure if the inverted one is always symmetric (it is definitely not)
+ */
+
+
 namespace exahype2 {
   namespace dg {
     /**
@@ -56,6 +68,24 @@ namespace exahype2 {
     /**
      * Take polynomial within cell and project it onto the faces
      *
+     * ## Ordering
+     *
+     *                           2 3
+     *                           0 1
+     *                     2 3 [ o o ] 2 3
+     *                     0 1 [ o o ] 0 1
+     *                           2 3
+     *                           0 1
+     *
+     * Each individual face is ordered lexicographically. So we go from left to
+     * right, and we always start closest to the origin or the coordinate system
+     * if we interpret the cell as the unit square.
+     *
+     * The sketch above illustrates the ordering of the four faces for a p=1
+     * discretisation where we have two dofs per direction per face per side.
+     *
+     *
+     *
      * @param cellQ Pointer to cell data. The array has the size
      *   @f$ unknowns \times (order+1)^d@f$.
      *
@@ -87,14 +117,6 @@ namespace exahype2 {
      *   from the adjacent cell below. The remaining entries are the projections
      *   from above.
      *
-     *  ordering:
-     *
-     *         2 3
-     *         0 1
-     *   2 3 [ o o ] 2 3
-     *   0 1 [ o o ] 0 1
-     *         2 3
-     *         0 1
      */
     void projectVolumetricDataOntoFaces(
       const double* __restrict__          cellQ,
@@ -274,9 +296,13 @@ namespace exahype2 {
     /*
      * Plot Face
      *
-     * usually used for debugging
+     * Usually used for debugging. We plot all unknowns, i.e. both the unknowns
+     * form the left and the right adjacent side. The order is linear, i.e. you
+     * have to take the normal into account when you want to find out how the
+     * unknowns are spatially arranged.
+     *
+     * See the discussion around ExaHyPE's lexicographic ordering.
      */
-
     std::string plotFace(
         const double* __restrict__ Q,
         const int order,
@@ -284,6 +310,25 @@ namespace exahype2 {
         const int auxiliaryVariables
         );
 
+
+    // @todo Docu: Das ist im Wesentlichen applyRiemannToPatch() von Riemann.h
+    //  Evtl gehoert das in CellIntegral oder aehnlich
+// Doku rueberziehen
+    void addFaceSolutionToPatch(
+      const double* const __restrict__          faceQLeft,
+      const double* const __restrict__          faceQRight,
+      const double* const __restrict__          faceQBottom,
+      const double* const __restrict__          faceQUp,
+      int                                 order,
+      int                                 unknowns,
+      const int                           auxiliaryVariables,
+      const tarch::la::Vector<2,double>&  cellSize,
+      const double                dt,
+      const double* const __restrict__    BasisFunctionValuesLeft,
+      const double* const __restrict__    BasisFunctionValuesRight,
+      const double* __restrict__          quadratureWeights,
+      double* __restrict__                cellQ
+    );
   }
 }
 

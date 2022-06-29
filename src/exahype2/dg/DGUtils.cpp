@@ -48,6 +48,35 @@ void exahype2::dg::projectVolumetricDataOntoFaces(
   double* const __restrict__          faceQBottom,
   double* const __restrict__          faceQUp
 ) {
+  // project left/right
+  for (int y=0; y<order+1; y++)
+  for (int unknown=0; unknown<unknowns; unknown++) {
+    faceQLeft [ (2*y+1)*unknowns+unknown ] = 0.0;
+    faceQRight[ (2*y+0)*unknowns+unknown ] = 0.0;
+  }
+
+  for (int y=0; y<order+1; y++)
+  for (int x=0; x<order+1; x++)
+  for (int unknown=0; unknown<unknowns; unknown++) {
+    faceQLeft [ (2*y+1)*unknowns+unknown ] += BasisFunctionValuesLeft[x]  * cellQ[ (y*(order+1)+x)*unknowns + unknown ];
+    faceQRight[ (2*y+0)*unknowns+unknown ] += BasisFunctionValuesRight[x] * cellQ[ (y*(order+1)+x)*unknowns + unknown ];
+  }
+
+  // project up/down
+  for (int x=0; x<order+1; x++)
+  for (int unknown=0; unknown<unknowns; unknown++) {
+    faceQBottom [ (x+order+1)*unknowns+unknown ] = 0.0;
+    faceQUp     [ (x        )*unknowns+unknown ] = 0.0;
+  }
+
+  for (int y=0; y<order+1; y++)
+  for (int x=0; x<order+1; x++)
+  for (int unknown=0; unknown<unknowns; unknown++) {
+    faceQBottom [ (x+order+1)*unknowns+unknown ] += BasisFunctionValuesLeft[y]  * cellQ[ (y*(order+1)+x)*unknowns + unknown ];
+    faceQUp     [ (x        )*unknowns+unknown ] += BasisFunctionValuesRight[y] * cellQ[ (y*(order+1)+x)*unknowns + unknown ];
+  }
+
+  return;
 
   int nodesPerAxis = order+1;
 
@@ -96,8 +125,6 @@ void exahype2::dg::projectVolumetricDataOntoFaces(
   double* const __restrict__          faceQFront,
   double* const __restrict__          faceQBack
 ) {
-  // @todo implement
-
   int nodesPerAxis = order+1;
   int nodesPerFace = nodesPerAxis*nodesPerAxis;
 
@@ -356,7 +383,7 @@ std::string exahype2::dg::plotFace(
   std::ostringstream result;
 
   result << "(" << std::endl;
-  for(int node=0; node<nodesPerFace; node++){
+  for(int node=0; node<2*nodesPerFace; node++){
     result << "node " << std::to_string(node) << "[";
     for(int var=0; var<strideQ-1; var++){
         result << std::to_string(Q[node*strideQ+var]) << ", ";
@@ -368,4 +395,65 @@ std::string exahype2::dg::plotFace(
   return result.str();
 }
 
+
+void exahype2::dg::addFaceSolutionToPatch(
+  const double* const __restrict__          faceQLeft,
+  const double* const __restrict__          faceQRight,
+  const double* const __restrict__          faceQBottom,
+  const double* const __restrict__          faceQUp,
+  int                                 order,
+  int                                 unknowns,
+  const int                           auxiliaryVariables,
+  const tarch::la::Vector<2,double>&  cellSize,
+  const double                dt,
+  const double* const __restrict__    BasisFunctionValuesLeft,
+  const double* const __restrict__    BasisFunctionValuesRight,
+  const double* __restrict__          quadratureWeights,
+  double* __restrict__                Q
+) {
+  const int strideQ      = unknowns+auxiliaryVariables;
+  const int nodesPerAxis = order+1;
+  const int nodesPerFace = getNodesPerCell(nodesPerAxis)/nodesPerAxis;
+  const int nodesPerCell = getNodesPerCell(nodesPerAxis);
+  tarch::la::Vector<Dimensions,int> strides = getStrides(nodesPerAxis);
+
+  for(int node=0; node<nodesPerCell; node++){
+
+    tarch::la::Vector<Dimensions,int> index = getIndex(node, strides);
+
+    // grab from left/right
+    {
+      int dim = 0;
+      const double coeff0 = dt/cellSize(dim);
+      const double coeff1 = coeff0/quadratureWeights[index[dim]];
+      const double coeffLeft  = coeff1*BasisFunctionValuesLeft[index[dim]];
+      const double coeffRight = coeff1*BasisFunctionValuesRight[index[dim]];
+    //const int leftFaceNode  = cellIndexToHullIndex(index, dim, 0, nodesPerAxis);
+    //const int rightFaceNode = cellIndexToHullIndex(index, dim, 1, nodesPerAxis);
+      const int leftFaceNode  = cellIndexToHullIndex(index, dim, 0, nodesPerAxis);
+      const int rightFaceNode = leftFaceNode+1;
+      for(int var=0; var<unknowns; var++){
+        Q[node*strideQ+var] += coeffLeft * faceQLeft [leftFaceNode*strideQ+var];
+        Q[node*strideQ+var] -= coeffLeft * faceQRight[rightFaceNode*strideQ+var];
+      }
+    }
+
+    // grab from top/down
+    {
+      int dim = 1;
+      const double coeff0 = dt/cellSize(dim);
+      const double coeff1 = coeff0/quadratureWeights[index[dim]];
+      const double coeffLeft  = coeff1*BasisFunctionValuesLeft[index[dim]];
+      const double coeffRight = coeff1*BasisFunctionValuesRight[index[dim]];
+    //const int leftFaceNode  = cellIndexToHullIndex(index, dim, 0, nodesPerAxis);
+    //const int rightFaceNode = cellIndexToHullIndex(index, dim, 1, nodesPerAxis);
+      const int leftFaceNode  = cellIndexToHullIndex(index, dim, 0, nodesPerAxis);
+      const int rightFaceNode = leftFaceNode+order+1;
+      for(int var=0; var<unknowns; var++){
+        Q[node*strideQ+var] += coeffLeft * faceQBottom[leftFaceNode*strideQ+var];
+        Q[node*strideQ+var] -= coeffLeft * faceQUp    [rightFaceNode*strideQ+var];
+      }
+    }
+  } //node
+}
 
