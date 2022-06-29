@@ -38,6 +38,7 @@ ExaHyPE2Sources = \
   enumerator/SoALexicographicEnumerator.cpp \
   enumerator/SingleDoFEnumerator.cpp \
   enumerator/AoSoALexicographicEnumerator.cpp \
+  enumerator/FaceAoSLexicographicEnumerator.cpp \
   fv/BoundaryConditions.cpp \
   fv/PatchUtils.cpp \
   fv/PatchAccess.cpp \
