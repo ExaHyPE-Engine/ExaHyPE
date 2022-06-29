@@ -310,25 +310,6 @@ namespace exahype2 {
         const int auxiliaryVariables
         );
 
-
-    // @todo Docu: Das ist im Wesentlichen applyRiemannToPatch() von Riemann.h
-    //  Evtl gehoert das in CellIntegral oder aehnlich
-// Doku rueberziehen
-    void addFaceSolutionToPatch(
-      const double* const __restrict__          faceQLeft,
-      const double* const __restrict__          faceQRight,
-      const double* const __restrict__          faceQBottom,
-      const double* const __restrict__          faceQUp,
-      int                                 order,
-      int                                 unknowns,
-      const int                           auxiliaryVariables,
-      const tarch::la::Vector<2,double>&  cellSize,
-      const double                dt,
-      const double* const __restrict__    BasisFunctionValuesLeft,
-      const double* const __restrict__    BasisFunctionValuesRight,
-      const double* __restrict__          quadratureWeights,
-      double* __restrict__                cellQ
-    );
   }
 }
 

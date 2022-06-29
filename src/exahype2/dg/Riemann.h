@@ -89,9 +89,67 @@ namespace exahype2 {
       const bool                                    useNCP
       );
 
+
+  /*
+   * Given a numerical flux at the various faces, this computes and adds the Riemann
+   * integral of this flux on the nodes of the cell to compute the solution at the
+   * following timestep.
+   * Computes this flux for a 2-dimensional cell
+   *
+   * @param cellQ the current solution, expected to be the solution already updated
+   *   with local contributions. (See Euler.h)
+   *
+   * @param faceQX This should contain a value for the numerical flux at each node along
+   * the corresponding face. This is typically computed by a Riemann solver such as
+   * a Rusanov solver.
+   *
+   * @param: BasisFunctionValuesLeft (respectively Right): as the name implies, this is
+   *  the numerical value of the basis function value evaluated at the left node in
+   *  1 dimension. This has a part in determining how much the value at the boundary
+   *  influences the value at a given node.
+   *  Note that the Basis function values on the right side are symmetric to those on the
+   *  left side, so the BasisFunctionValuesLeft are also used there.
+   *
+   * @param quadratureWeights: quadrature weight of the given quadrature node 1 dimension
+   */
+  void computeRiemannIntegralAndAddToCell(
+    const double* const __restrict__    faceQLeft,
+    const double* const __restrict__    faceQRight,
+    const double* const __restrict__    faceQBottom,
+    const double* const __restrict__    faceQUp,
+    int                                 order,
+    int                                 unknowns,
+    const int                           auxiliaryVariables,
+    const tarch::la::Vector<2,double>&  cellSize,
+    const double                        dt,
+    const double* const __restrict__    BasisFunctionValuesLeft,
+    const double* __restrict__          quadratureWeights,
+    double* __restrict__                cellQ
+  );
+
+
+  void computeRiemannIntegralAndAddToCell(
+    const double* const __restrict__    faceQLeft,
+    const double* const __restrict__    faceQRight,
+    const double* const __restrict__    faceQBottom,
+    const double* const __restrict__    faceQUp,
+    const double* const __restrict__    faceQFront,
+    const double* const __restrict__    faceQBack,
+    int                                 order,
+    int                                 unknowns,
+    const int                           auxiliaryVariables,
+    const tarch::la::Vector<2,double>&  cellSize,
+    const double                        dt,
+    const double* const __restrict__    BasisFunctionValuesLeft,
+    const double* __restrict__          quadratureWeights,
+    double* __restrict__                cellQ
+  );
+
   /*
    * Given a numerical flux at the surface from QHullIn, this applies this flux to
    * the values of Q to compute the next solution.
+   * As opposed to previous two functions this is a generic function which works for
+   * any number of dimensions.
    *
    * @param Q the current solution, expected to be the solution already updated
    *   with local contributions. (See Euler.h)
