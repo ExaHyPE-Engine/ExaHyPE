@@ -39,7 +39,7 @@ floatparams = {
 }
 
 intparams = {"LapseType":1, "tp_grid_setup":0, "swi":99, "ReSwi":0, "source":0}
-
+#sss
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='ExaHyPE 2 - CCZ4 script')
     parser.add_argument("-maxh",   "--max-h",       dest="max_h",           type=float, required="True",  help="upper limit for refinement. Refers to volume size, i.e. not to patch size" )
@@ -371,8 +371,9 @@ if __name__ == "__main__":
             const int leftCellSerialised  = peano4::utils::dLinearised(leftCell, patchSize + 2*1);
             const int rightCellSerialised = peano4::utils::dLinearised(rightCell,patchSize + 2*1);
             for (int i=0; i<real_var; i++) {
-              reconstructedPatch[cellSerialised*(real_var+aux_var)+real_var+d*real_var+i] =
-                ( reconstructedPatch[rightCellSerialised*(real_var+aux_var)+i] - reconstructedPatch[leftCellSerialised*(real_var+aux_var)+i] ) / 2.0 / volumeH;
+              double rightgradient=reconstructedPatch[rightCellSerialised*(real_var+aux_var)+i] - reconstructedPatch[cellSerialised*(real_var+aux_var)+i];
+              double leftgradient=reconstructedPatch[cellSerialised*(real_var+aux_var)+i] - reconstructedPatch[leftCellSerialised*(real_var+aux_var)+i];
+              reconstructedPatch[cellSerialised*(real_var+aux_var)+real_var+d*real_var+i] = rightgradient < leftgradient ? rightgradient: leftgradient;
             }
           }
         }
