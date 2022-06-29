@@ -72,31 +72,32 @@ class RungeKuttaDG(object):
     current time step, we need the shots into the future. for RK(_rk_order), we need _rk_order
     of these snapshots. They are called estimates. 
     
-    On the boundary, I store both the left and right solution projections. We neglect the 
-    possibility of local time stepping here - local time stepping is tricky with Runge-Kutta - 
-    and therefore only project the current linear combination of estimates for the Runge-Kutta
-    step onto the faces. So in the first Runge-Kutta step, it is always the current solution
-    which we project onto the face. In the second step, we project a linear combination of the 
-    current solution and the outcome of the first trial (Euler step) onto the face, and so 
-    forth.
+    On the boundary, I store both the left and right solution projections. If you look at the 
+    details, you observe that we two types of projections:
+
+    _previous_estimate_projection
+    _old_time_step_projection
+
+    Previous estimate is the one projection tied to the Runge-Kutta scheme: Prior to each new
+    RK step, we project the previous estimate onto the face. So prior to the first step, we 
+    project the current solution onto the face. Prior to the second RK step, we project the 
+    linear combination after the first RK step onto the face, and so forth. This is in line
+    with the Runge-Kutta Butcher tableau.
     
+    When we construct the new time step's solution, i.e. in the final grid sweep of the RK 
+    scheme, we project the current time step once again into 
+    _old_time_step_solution. So we back up this projection. As an epilogue, we project the 
+    (new) solution onto the projection. This way, we always know the old and the new solution wihtin the
+    two fields and can interpolate in time if we have to.
+        
     Our DG implementation is not tied to one particular Riemann solver, even though most 
     users will likely use Rusanov. Therefore, it is not clear which data is to be projected
     onto the faces. For plain Rusanov with only a flux function, the solutions are sufficient. 
     Other Riemann solvers or Rusanov's ncp terms however require the derivatives. So I give
     the code the opportunity to work with different data cardinalities.
     
-    The actual Riemann problem then is always solved twice: both the left and the right
-    adjacent cell solve the Riemann problem and directly add the outcome to their local 
-    cell solution. This way, I avoid that we need temporary data structures for the outcome
-    of the Riemann solves. This is not an absolutely clean approach, as we should really
-    split it up into
-    
-    - Solve Riemann problem;
-    - Project back onto cell;
-    - Add reconstructed data onto volume integral.
-    
     More details are provided in create_data_structures().
+
     
     :: Control flow between this class and subclasses
     
@@ -430,6 +431,7 @@ We use RK(""" + str(self._rk_order) + """) for the time stepping.
     self._estimates                         = peano4.datamodel.Patch( (self.number_of_Runge_Kutta_steps()*(self._dg_order+1),self._dg_order+1,self._dg_order+1),     self._unknowns+self._auxiliary_variables, self._unknown_identifier() + "Estimates" )
     self._linear_combination_of_estimates   = peano4.datamodel.Patch( (self._dg_order+1,self._dg_order+1,self._dg_order+1),                      self._unknowns+self._auxiliary_variables, self._unknown_identifier() + "LinearCombination")
     self._previous_estimate_projection      = peano4.datamodel.Patch( (2,self._number_of_face_projections*(self._dg_order+1),self._dg_order+1),  self._unknowns+self._auxiliary_variables, self._unknown_identifier() + "EstimateProjection" )
+    self._old_time_step_projection          = peano4.datamodel.Patch( (2,self._number_of_face_projections*(self._dg_order+1),self._dg_order+1),  self._unknowns+self._auxiliary_variables, self._unknown_identifier() + "OldTimeStepProjection" )
     self._Riemann_solution                  = peano4.datamodel.Patch( (2,self._dg_order+1,self._dg_order+1),  self._unknowns, self._unknown_identifier() + "RiemannSolution" )
            
     self._previous_estimate_projection.generator.merge_method_definition = get_face_overlap_merge_implementation(self._previous_estimate_projection)
@@ -438,20 +440,20 @@ We use RK(""" + str(self._rk_order) + """) for the time stepping.
 #include "repositories/SolverRepository.h" 
 """
 
-    self._current_time_step.generator.store_persistent_condition = self._store_cell_data_default_guard()
-    self._current_time_step.generator.load_persistent_condition  = self._load_cell_data_default_guard()
-    
     self._previous_estimate_projection.generator.store_persistent_condition = self._store_cell_data_default_guard()
     self._previous_estimate_projection.generator.load_persistent_condition  = self._load_cell_data_default_guard()
+
+    self._old_time_step_projection.generator.store_persistent_condition = self._store_cell_data_default_guard()
+    self._old_time_step_projection.generator.load_persistent_condition  = self._load_cell_data_default_guard()
 
     self._linear_combination_of_estimates.store_persistent_condition = "false"
     self._linear_combination_of_estimates.load_persistent_condition = "false"
 
-    self._previous_estimate_projection.generator.store_persistent_condition = self._store_face_data_default_guard()
-    self._previous_estimate_projection.generator.load_persistent_condition  = self._load_face_data_default_guard()
-
     self._previous_estimate_projection.generator.send_condition               = "false"
     self._previous_estimate_projection.generator.receive_and_merge_condition  = "false"
+
+    self._old_time_step_projection.generator.send_condition               = "false"
+    self._old_time_step_projection.generator.receive_and_merge_condition  = "false"
 
     self._Riemann_solution.generator.store_persistent_condition = self._store_face_data_default_guard()
     self._Riemann_solution.generator.load_persistent_condition  = self._load_face_data_default_guard()
@@ -468,6 +470,9 @@ We use RK(""" + str(self._rk_order) + """) for the time stepping.
 #include "../repositories/SolverRepository.h"
 """    
     self._previous_estimate_projection.generator.includes  += """
+#include "../repositories/SolverRepository.h"
+"""    
+    self._old_time_step_projection.generator.includes  += """
 #include "../repositories/SolverRepository.h"
 """    
     self._Riemann_solution.generator.includes  += """
@@ -575,6 +580,7 @@ We use RK(""" + str(self._rk_order) + """) for the time stepping.
     datamodel.add_cell(self._linear_combination_of_estimates)
     datamodel.add_face(self._face_label)
     datamodel.add_face(self._previous_estimate_projection)
+    datamodel.add_face(self._old_time_step_projection)
     datamodel.add_face(self._Riemann_solution)
 
  
@@ -593,6 +599,7 @@ We use RK(""" + str(self._rk_order) + """) for the time stepping.
     step.use_cell(self._linear_combination_of_estimates)
     step.use_face(self._face_label)
     step.use_face(self._previous_estimate_projection)
+    step.use_face(self._old_time_step_projection)
     step.use_face(self._Riemann_solution)
     
   
@@ -698,7 +705,6 @@ We use RK(""" + str(self._rk_order) + """) for the time stepping.
     #step.add_action_set( self._action_set_roll_over_update_of_faces )
     step.add_action_set( self._action_set_update_face_label )
     step.add_action_set( self._action_set_update_cell_label )
-    #step.add_action_set( self._action_set_project_patch_onto_faces )
 
 
     mapping = []    

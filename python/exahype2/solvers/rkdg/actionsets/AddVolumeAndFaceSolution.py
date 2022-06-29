@@ -3,6 +3,8 @@
 
 from .AbstractRungeKuttaDGActionSet import AbstractRungeKuttaDGActionSet
 
+from exahype2.solvers.ButcherTableau                import ButcherTableau
+
 import peano4
 import jinja2
 
@@ -17,10 +19,8 @@ class AddVolumeAndFaceSolution(AbstractRungeKuttaDGActionSet):
   """
   
   TemplateProject = """
-
   {% for PREDICATE_NO in range(0,PREDICATES|length) %}
   if ({{PREDICATES[PREDICATE_NO]}}) {
-/*    
     const double timeStampOldSolution    = fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStamp();
     
     // Set the variable
@@ -33,147 +33,48 @@ class AddVolumeAndFaceSolution(AbstractRungeKuttaDGActionSet):
     assertion3( tarch::la::greaterEquals( timeStamp, 0.0 ),     timeStamp, timeStepSize, timeStampOldSolution );
     
     #if Dimensions==2
-    ::exahype2::dg::applyRusanovToHullAndAddToSolution_pointwise_in_situ(
-      [&](
-        const double * __restrict__                  Q,
-        const tarch::la::Vector<Dimensions,double>&  x,
-        double                                       t,
-        double                                       dt,
-        int                                          normal,
-        double * __restrict__                        F
-      )->void {
-        {% if FLUX_IMPLEMENTATION!="<none>" %}
-        repositories::{{SOLVER_INSTANCE}}.flux(Q,x,t,dt,normal,F);
-        {% endif %}
-      }, //flux
-      [&](
-          const double * __restrict__                  Q,
-          const double * __restrict__                  deltaQ,
-          const tarch::la::Vector<Dimensions,double>&  x,
-          double                                       t,
-          double                                       dt,
-          int                                          normal,
-          double * __restrict__                        F
-        ) -> void {
-          {% if NCP_IMPLEMENTATION!="<none>" %}
-          repositories::{{SOLVER_INSTANCE}}.nonconservativeProduct(Q, deltaQ, x, t, dt, normal, F);
-          {% endif %}          
-      }, //ncp
-      [&](
-          const double * __restrict__                  Q,
-          const tarch::la::Vector<Dimensions,double>&  x,
-          double                                       t,
-          double                                       dt,
-          int                                          normal,
-          double * __restrict__                        F
-        ) -> double {
-          return repositories::{{SOLVER_INSTANCE}}.maxEigenvalue(Q, dQdx, x, t, dt, normal);
-      }, // maxEigenvalue
-      QHull,
-      QHullForRiemann,
+    double* QOut = fineGridCell{{UNKNOWN_IDENTIFIER}}Estimates.value + {{PREDICATE_NO}} * {{NUMBER_OF_DOFS_PER_CELL_2D}} * ({{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}});
+
+    ::exahype2::dg::addFaceSolutionToPatch(
+      fineGridFaces{{UNKNOWN_IDENTIFIER}}RiemannSolution(0).value, //left
+      fineGridFaces{{UNKNOWN_IDENTIFIER}}RiemannSolution(2).value, //right
+      fineGridFaces{{UNKNOWN_IDENTIFIER}}RiemannSolution(1).value, //down
+      fineGridFaces{{UNKNOWN_IDENTIFIER}}RiemannSolution(3).value, //up
       {{ORDER}},                                                   
       {{NUMBER_OF_UNKNOWNS}},
       {{NUMBER_OF_AUXILIARY_VARIABLES}},
       marker.x(),
-      marker.h()(0),
-      timeStamp,
-      timeStepSize,
-      maxEigenvaluePerFace,
-      {{ "true" if FLUX_IMPLEMENTATION!="<none>" else "false" }}, //useFlux
-      {{ "true" if NCP_IMPLEMENTATION!="<none>" else "false" }} //useNCP
-    );
-
-
-
-    #elif Dimensions==3
-
-    #endif      
-
-    }
-    
-    ::exahype2::dg::getMaxEigenvaluePerFace(
-      [&](
-        const double * __restrict__                 Q,
-        const tarch::la::Vector<Dimensions,double>& x,
-        double                                      t,
-        double                                      dt,
-        int                                         normal
-        ) -> double {
-          return repositories::{{SOLVER_INSTANCE}}.maxEigenvalue(Q,x,t,dt,normal);
-        },
-      QHull,
-      {{ORDER}},                                                   
-      {{NUMBER_OF_UNKNOWNS}},
-      {{NUMBER_OF_AUXILIARY_VARIABLES}},
-      marker.x(),
-      timeStamp,
-      timeStepSize,
-      maxEigenvaluePerFace
-    );
-    
-    #if Dimensions==2
-    double QHullForRiemann[2*Dimensions*{{NUMBER_OF_DOFS_PER_FACE_2D}}*({{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}})];
-    #elif Dimensions==3
-    double QHullForRiemann[2*Dimensions*{{NUMBER_OF_DOFS_PER_FACE_3D}}*({{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}})];
-    #endif      
-    
-    ::exahype2::dg::computeRusanovOnHull(
-      [&](
-        const double * __restrict__                  Q,
-        const tarch::la::Vector<Dimensions,double>&  x,
-        double                                       t,
-        double                                       dt,
-        int                                          normal,
-        double * __restrict__                        F
-      )->void {
-        {% if FLUX_IMPLEMENTATION!="<none>" %}
-        repositories::{{SOLVER_INSTANCE}}.flux(Q,x,t,dt,normal,F);
-        {% endif %}
-      }, //flux
-      [&](
-          const double * __restrict__                  Q,
-          const double * __restrict__                  dQdx,
-          const tarch::la::Vector<Dimensions,double>&  x,
-          double                                       t,
-          double                                       dt,
-          int                                          normal,
-          double * __restrict__                        F
-        ) -> void {
-          {% if NCP_IMPLEMENTATION!="<none>" %}
-          repositories::{{SOLVER_INSTANCE}}.nonconservativeProduct(Q, dQdx, x, t, dt, normal, F);
-          {% endif %}          
-      }, //ncp
-      QHull,
-      QHullForRiemann,
-      {{ORDER}},                                                   
-      {{NUMBER_OF_UNKNOWNS}},
-      {{NUMBER_OF_AUXILIARY_VARIABLES}},
-      marker.x(),
-      marker.h()(0),
-      timeStamp,
-      timeStepSize,
-      maxEigenvaluePerFace,
-      {{ "true" if FLUX_IMPLEMENTATION!="<none>" else "false" }}, //useFlux
-      {{ "true" if NCP_IMPLEMENTATION!="<none>" else "false" }} //useNCP
-    );
-                
-    ::exahype2::dg::applyRiemannToPatch(
-      QOut,
-      QHullForRiemann,
-      {{ORDER}},                                                   
-      {{NUMBER_OF_UNKNOWNS}},
-      {{NUMBER_OF_AUXILIARY_VARIABLES}},
-      marker.h()(0),
       timeStepSize,
       repositories::{{SOLVER_INSTANCE}}.BasisFunctionValuesLeft,
       repositories::{{SOLVER_INSTANCE}}.BasisFunctionValuesRight,
-      repositories::{{SOLVER_INSTANCE}}.QuadratureWeights
+      repositories::{{SOLVER_INSTANCE}}.QuadratureWeights,
+      QOut
     );
-*/
+    #elif Dimensions==3
+    double* QOut = fineGridCell{{UNKNOWN_IDENTIFIER}}Estimates.value + {{PREDICATE_NO}} * {{NUMBER_OF_DOFS_PER_CELL_3D}} * ({{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}});
+    
+    ::exahype2::dg::addFaceSolutionToPatch(
+      fineGridFaces{{UNKNOWN_IDENTIFIER}}RiemannSolution(0).value, //left
+      fineGridFaces{{UNKNOWN_IDENTIFIER}}RiemannSolution(3).value, //right
+      fineGridFaces{{UNKNOWN_IDENTIFIER}}RiemannSolution(1).value, //down
+      fineGridFaces{{UNKNOWN_IDENTIFIER}}RiemannSolution(4).value, //up
+      fineGridFaces{{UNKNOWN_IDENTIFIER}}RiemannSolution(2).value, //front
+      fineGridFaces{{UNKNOWN_IDENTIFIER}}RiemannSolution(5).value, //back
+      {{ORDER}},                                                   
+      {{NUMBER_OF_UNKNOWNS}},
+      {{NUMBER_OF_AUXILIARY_VARIABLES}},
+      marker.x(),
+      timeStepSize,
+      repositories::{{SOLVER_INSTANCE}}.BasisFunctionValuesLeft,
+      repositories::{{SOLVER_INSTANCE}}.BasisFunctionValuesRight,
+      repositories::{{SOLVER_INSTANCE}}.QuadratureWeights,
+      QOut
+    );
+    #endif
   }
   {% endfor %}
-
 """
+
   
   def __init__(self,solver):
     """
@@ -187,7 +88,8 @@ class AddVolumeAndFaceSolution(AbstractRungeKuttaDGActionSet):
     
     """
     super(AddVolumeAndFaceSolution,self).__init__(solver)
-    self.guards                   = []
+    self.guards           = []
+    self._butcher_tableau = ButcherTableau(self._solver._rk_order)
     
 
   @property
@@ -210,7 +112,9 @@ class AddVolumeAndFaceSolution(AbstractRungeKuttaDGActionSet):
       d = {}
       self._solver._init_dictionary_with_default_parameters(d)
       self._solver.add_entries_to_text_replacement_dictionary(d)
-      d[ "PREDICATEs" ]      = self._guards
+      d[ "PREDICATES" ]              = self._guards
+      d[ "BUTCHER_TABLEAU_WEIGHTS" ] = self._butcher_tableau.weight_matrix()      
+      d[ "BUTCHER_TABLEAU_RELATIVE_TIME_STEP_SIZES" ] = self._butcher_tableau.time_step_sizes()
       result = jinja2.Template(self.TemplateProject).render(**d)
       pass 
     return result

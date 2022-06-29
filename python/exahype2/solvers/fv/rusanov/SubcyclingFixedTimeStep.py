@@ -11,17 +11,13 @@ from .kernels import create_abstract_solver_declarations
 from .kernels import create_abstract_solver_definitions
 from .kernels import create_solver_declarations
 from .kernels import create_solver_definitions
-from .kernels import create_compute_time_step_size_for_fixed_time_stepping_with_subcycling
+
+from exahype2.solvers.fv.FixedSubcyclingTimeSteppingCodeSnippets import FixedSubcyclingTimeSteppingCodeSnippets
 
 from .kernels import SolverVariant
 from .kernels import RiemannKernelVariant
 
 from exahype2.solvers.fv.kernels import create_halo_layer_construction_with_interpolation_for_reconstructed_patch
-
-from exahype2.solvers.kernels import create_abstract_solver_user_declarations_for_fixed_time_stepping
-from exahype2.solvers.kernels import create_abstract_solver_user_definitions_for_fixed_time_stepping
-from exahype2.solvers.kernels import create_finish_time_step_implementation_for_fixed_time_stepping
-from exahype2.solvers.fv.kernels import create_start_time_step_implementation_for_fixed_time_stepping_with_subcycling
 
 
 class SubcyclingFixedTimeStep( SingleSweep ):
@@ -53,12 +49,7 @@ class SubcyclingFixedTimeStep( SingleSweep ):
     self._ncp_implementation                  = PDETerms.None_Implementation
     self._eigenvalues_implementation          = PDETerms.None_Implementation
     self._source_term_implementation          = PDETerms.None_Implementation
-    
-    self._compute_time_step_size              = create_compute_time_step_size_for_fixed_time_stepping_with_subcycling( time_step_size, name )
-    self._compute_new_time_step_size          = """
-const double newTimeStepSize = timeStepSize;
-"""    
-    
+        
     self.set_implementation(flux=flux, 
       ncp=ncp, 
       eigenvalues=eigenvalues, 
@@ -115,16 +106,22 @@ const double newTimeStepSize = timeStepSize;
       riemann_kernel_variant = RiemannKernelVariant.BatchedAoSoAHeap
     )
 
+    solver_code_snippets = FixedSubcyclingTimeSteppingCodeSnippets(self._time_step_size,False,True)
+
     self._abstract_solver_user_declarations  = create_abstract_solver_declarations(self._flux_implementation, self._ncp_implementation, self._eigenvalues_implementation, self._source_term_implementation, False)
-    self._abstract_solver_user_declarations += create_abstract_solver_user_declarations_for_fixed_time_stepping()
+    self._abstract_solver_user_declarations += solver_code_snippets.create_abstract_solver_user_declarations()
     self._abstract_solver_user_definitions   = create_abstract_solver_definitions(self._flux_implementation, self._ncp_implementation, self._eigenvalues_implementation, self._source_term_implementation, False)
-    self._abstract_solver_user_definitions  += create_abstract_solver_user_definitions_for_fixed_time_stepping()
+    self._abstract_solver_user_definitions  += solver_code_snippets.create_abstract_solver_user_definitions()
 
     self._solver_user_declarations           = create_solver_declarations(self._flux_implementation, self._ncp_implementation, self._eigenvalues_implementation, self._source_term_implementation, False)
     self._solver_user_definitions            = create_solver_definitions(self._flux_implementation, self._ncp_implementation, self._eigenvalues_implementation, self._source_term_implementation, False)
 
-    self._start_time_step_implementation     = create_start_time_step_implementation_for_fixed_time_stepping_with_subcycling(False)
-    self._finish_time_step_implementation    = create_finish_time_step_implementation_for_fixed_time_stepping(self._time_step_size)
+    self._compute_time_step_size              = solver_code_snippets.create_compute_time_step_size()
+    self._compute_new_time_step_size          = solver_code_snippets.create_compute_new_time_step_size()
+
+    self._start_time_step_implementation     = solver_code_snippets.create_start_time_step_implementation()
+    self._finish_time_step_implementation    = solver_code_snippets.create_finish_time_step_implementation()
+    self._constructor_implementation         = solver_code_snippets.create_abstract_solver_constructor_statements()
 
     self._user_action_set_includes += """
 #include "exahype2/TimeStepping.h"

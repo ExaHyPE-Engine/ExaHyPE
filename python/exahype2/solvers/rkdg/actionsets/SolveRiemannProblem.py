@@ -20,13 +20,18 @@ class SolveRiemannProblem(AbstractRungeKuttaDGActionSet):
   """
   
   TemplateProject = """
-
   {% for PREDICATE_NO in range(0,PREDICATES|length) %}
   if ({{PREDICATES[PREDICATE_NO]}}) {
-    // const double timeStampOldSolution = {{FACE_METADATA_ACCESSOR}}.getNewTimeStamp(marker.getSelectedFaceNumber()<Dimensions ? 1 : 0);
-  
-    const double timeStampOldSolution    = fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStamp();
+    // no support for local time stepping or subcycling 
     
+    // @todo net klar, ob wir richtigen verwenden
+    
+    assertionNumericalEquals(
+      {{FACE_METADATA_ACCESSOR}}.getNewTimeStamp(0),
+      {{FACE_METADATA_ACCESSOR}}.getNewTimeStamp(1)
+    );
+    const double timeStampOldSolution = {{FACE_METADATA_ACCESSOR}}.getNewTimeStamp(0);
+  
     // Set the variable
     // double timeStepSize
     {{COMPUTE_TIME_STEP_SIZE}}
@@ -38,61 +43,14 @@ class SolveRiemannProblem(AbstractRungeKuttaDGActionSet):
     
     //::exahype2::dg::rusanov::solveRiemannProblem_pointwise_in_situ(
     #if Dimensions==2
-    double* QOut = fineGridCell{{UNKNOWN_IDENTIFIER}}Estimates.value + {{PREDICATE_NO}} * {{NUMBER_OF_DOFS_PER_CELL_2D}} * ({{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}});
-
+    const double* __restrict__ QIn  = fineGridFace{{UNKNOWN_IDENTIFIER}}EstimateProjection.value + {{PREDICATE_NO}} * {{NUMBER_OF_DOFS_PER_CELL_2D}} * ({{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}});
+    double* __restrict__       QOut = fineGridFace{{UNKNOWN_IDENTIFIER}}RiemannSolution.value    + {{PREDICATE_NO}} * {{NUMBER_OF_DOFS_PER_CELL_2D}} * ({{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}});
     #elif Dimensions==3
-    double* QOut = fineGridCell{{UNKNOWN_IDENTIFIER}}Estimates.value + {{PREDICATE_NO}} * {{NUMBER_OF_DOFS_PER_CELL_3D}} * ({{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}});
+    const double* __restrict__ QIn = fineGridFace{{UNKNOWN_IDENTIFIER}}EstimateProjection.value + {{PREDICATE_NO}} * {{NUMBER_OF_DOFS_PER_CELL_3D}} * ({{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}});
     #endif
-    
-    double* QHull[Dimensions*2];
-    //bool    atBoundary[Dimensions*2];
-    double maxEigenvaluePerFace[Dimensions*2];
-    
-    /*
-    In Peano the faces are ordered by direction, then dimension, so in 3D it would be the face in negative direction in dimension 0, then 1, then 2
-      followed by the the face in positive direction of dimensions 0, then 1, then 2. The kernels expect the faces to be ordered by dimension, then
-      direction, so first left face in dimension0, then right face in dimension 0, and so on for the other dimensions.
-      Therefore when the Hull is arranged, the order of these faces are shuffled correspondingly.    
-    2d: 0,1,2,3 -> 0,2,1,3
-    3d: 0,1,2,3,4,5 -> 0,3,1,4,2,5
-    */
-    
-    for(int face=0; face<Dimensions; face++){
-      QHull[2*face]        = fineGridFaces{{UNKNOWN_IDENTIFIER}}Estimates(face).value;
-      //atBoundary[2*face]   = fineGridFaces{{SOLVER_NAME}}FaceLabel(face).getBoundary() and
-      //                       not repositories::{{SOLVER_INSTANCE}}.PeriodicBC[face];
-      QHull[2*face+1]      = fineGridFaces{{UNKNOWN_IDENTIFIER}}Estimates(face+Dimensions).value;
-      //atBoundary[2*face+1] = fineGridFaces{{SOLVER_NAME}}FaceLabel(face+Dimensions).getBoundary() and
-      //                       not repositories::{{SOLVER_INSTANCE}}.PeriodicBC[face+Dimensions];        
-    }
-    
-    ::exahype2::dg::getMaxEigenvaluePerFace(
-      [&](
-        const double * __restrict__                 Q,
-        const tarch::la::Vector<Dimensions,double>& x,
-        double                                      t,
-        double                                      dt,
-        int                                         normal
-        ) -> double {
-          return repositories::{{SOLVER_INSTANCE}}.maxEigenvalue(Q,x,t,dt,normal);
-        },
-      QHull,
-      {{ORDER}},                                                   
-      {{NUMBER_OF_UNKNOWNS}},
-      {{NUMBER_OF_AUXILIARY_VARIABLES}},
-      marker.x(),
-      timeStamp,
-      timeStepSize,
-      maxEigenvaluePerFace
-    );
-    
-    #if Dimensions==2
-    double QHullForRiemann[2*Dimensions*{{NUMBER_OF_DOFS_PER_FACE_2D}}*({{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}})];
-    #elif Dimensions==3
-    double QHullForRiemann[2*Dimensions*{{NUMBER_OF_DOFS_PER_FACE_3D}}*({{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}})];
-    #endif      
-    
-    ::exahype2::dg::computeRusanovOnHull(
+
+
+    ::exahype2::dg::rusanov::solveRiemannProblem_pointwise_in_situ(
       [&](
         const double * __restrict__                  Q,
         const tarch::la::Vector<Dimensions,double>&  x,
