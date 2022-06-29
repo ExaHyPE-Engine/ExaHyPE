@@ -124,7 +124,8 @@
  * The volumetric part can be evaluated as it is: We compute the F weights and
  * multiply it directly with the matrix over the gradients. Actually, we are not
  * even interested in this matrix, but we are interested in the mass matrix inverse
- * times the derivative matrix. This can all be precomputed.
+ * times the derivative matrix. This can all be precomputed. The scaling of the
+ * volumetric contribution is in @f$ 1/h @f$.
  *
  * The Riemann problem arising can again be solved via a standard Rusanov, e.g.,
  * and mainly has to find a proper representation for @f$ F(Q) @f$ on the faces.
