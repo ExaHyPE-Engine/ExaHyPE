@@ -25,6 +25,18 @@
 
 tarch::logging::Log  tarch::multicore::Core::_log( "tarch::multicore::Core" );
 
+#if defined(GPUOffloadingOMP)
+bool checkOMPOffloading() {
+  bool canOffload = false;
+  #pragma omp target map(tofrom : canOffload)
+  {
+    if (!omp_is_initial_device()) {
+      canOffload = true;
+    }
+  }
+  return canOffload;
+}
+#endif
 
 tarch::multicore::Core::Core():
   _numberOfThreads( omp_get_max_threads() ),
@@ -33,6 +45,10 @@ tarch::multicore::Core::Core():
 
   #if defined(GPUOffloadingOMP)
   _numberOfDevices = omp_get_num_devices();
+   if (!checkOMPOffloading()) {
+    std::cerr << "Cannot do GPU Offloading with OMP" << std::endl;
+    exit(-1);
+  }
   #endif
 
   #if defined(GPUOffloadingSYCL)
