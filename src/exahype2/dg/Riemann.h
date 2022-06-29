@@ -18,7 +18,6 @@
 
 namespace exahype2 {
   namespace dg {
-
   /*
    * Evaluates the eigenvalue at each node along each face and, for each face
    * returns the greatest eigenvalue along this face.
