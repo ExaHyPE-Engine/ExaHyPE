@@ -270,3 +270,18 @@ void exahype2::dg::tests::testBoundaryConditions(
   Qoutside[3] = normal;
 
 }
+
+
+
+double exahype2::dg::tests::testEigenvalue(
+    const double * __restrict__                 Q,
+    const tarch::la::Vector<Dimensions,double>& x,
+    double                                      t,
+    double                                      dt,
+    int                                         normal
+    ){
+
+  double result = Q[0]*normal;
+  return result;
+
+}

@@ -168,6 +168,40 @@ void exahype2::dg::cellIntegral_patchwise_computeAndUpdate_functors(
 }
 
 
+double exahype2::dg::getMaxEigenvalue(
+  MaxEigenvalue                                  maxEigenvalue,
+  const double* __restrict__                     Q,
+  const int                                      order,
+  const int                                      strideQ,
+  const tarch::la::Vector<Dimensions,double>&    x,
+  const double                                   t,
+  const double                                   dt
+  ){
+
+  const int nodesPerAxis = order+1;
+  const int nodesPerCell = getNodesPerCell(nodesPerAxis);
+  double maxEigenvalueCell = std::numeric_limits<double>::min();
+
+  //for each node in the cell
+  for(int node=0; node<nodesPerCell; node++){
+    //for each direction
+    for(int direction=0; direction<Dimensions; direction++){
+      double maxEigenvalueNode = maxEigenvalue(
+        &Q[node*strideQ],
+        x,
+        t,
+        dt,
+        direction
+      );
+
+      maxEigenvalueCell = std::max(maxEigenvalueCell, std::abs(maxEigenvalueNode));
+    }
+  }
+
+  return maxEigenvalueCell;
+}
+
+
 void exahype2::dg::internal::copySolution(
   const double* __restrict__                    cellQin,
   const int                                     order,

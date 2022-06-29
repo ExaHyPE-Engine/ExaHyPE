@@ -196,6 +196,23 @@ namespace exahype2 {
     );
 
 
+    /*
+     * Computes the greatest eigenvalue over all nodes in a cell
+     * @param strideQ: number of elements per node per cell, usually number of
+     *    unknowns + number of auxiliary variables
+     * @param dt: timestep
+     */
+    double getMaxEigenvalue(
+        MaxEigenvalue                                  maxEigenvalue,
+        const double* __restrict__                     Q,
+        const int                                      order,
+        const int                                      strideQ,
+        const tarch::la::Vector<Dimensions,double>&    x,
+        const double                                   t,
+        const double                                   dt
+        );
+
+
     namespace internal {
       /**
        * Copy solution over for one node

@@ -83,7 +83,7 @@ namespace exahype2 {
         const double * __restrict__                 Q,
         const tarch::la::Vector<Dimensions,double>& x,
         double                                      t,
-        double                                       dt,
+        double                                      dt,
         int                                         normal
         );
 
@@ -115,6 +115,14 @@ namespace exahype2 {
             int                                          normal
           );
 
+
+    double testEigenvalue(
+        const double * __restrict__                 Q,
+        const tarch::la::Vector<Dimensions,double>& x,
+        double                                      t,
+        double                                      dt,
+        int                                         normal
+        );
 
     }
   }
