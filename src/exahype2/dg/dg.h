@@ -127,6 +127,18 @@
  *
  *
  *
+ * ## Todo list
+ *
+ * - The file Riemann.h/Riemann.cpp should go away. However, we might need its computation
+ *   of maximum eigenvalues over the faces - though I think it should be the maximum over
+ *   the cell's eigenvalues instead. In this case, the file pair can completely go away.
+ * - My Riemann solver atm is only working point-wisely. Marc made the point that you might
+ *   want to use the face-wise maximum eigenvalue. We have to implement this variant.
+ * - The generic Enumerator.h file lacks docu.
+ * - Is the FaceAoSEnumerator really used and properly documented?
+ * - 3d version of face to cell projection is missing
+ * - 2d version of cell to face projection is buggy or not nice. Clean-up
+ * - Look through DGUtils and tidy is up.
  *
  *
  *
