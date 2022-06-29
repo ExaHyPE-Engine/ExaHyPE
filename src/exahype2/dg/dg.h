@@ -117,69 +117,104 @@
  * ## Flux term
  *
  * As any shape function has local support within one cell, we can evaluate
+ * per cell by employing integration by parts:
  *
- * @f$ \int  _c \left( F(Q(t)), \nabla \phi \right) dx @f$
+ * @f$ \int  _c div F(Q(t))\ \phi dx = - \int  _c \Big( F(Q(t), \nabla \phi \Big) dx  + \int _{\partial c} F(Q(t)) \ \phi \ n dS(x) @f$
  *
- * per cell:
+ * The volumetric part can be evaluated as it is: We compute the F weights and
+ * multiply it directly with the matrix over the gradients. Actually, we are not
+ * even interested in this matrix, but we are interested in the mass matrix inverse
+ * times the derivative matrix. This can all be precomputed.
  *
- * ### Volumetric contributions
- *
- * @todo This part has yet to be written; we also need links where this can be found in the source code documentation
- *
- * ### Riemann problem (Rusanov)
- *
- * @todo This part has yet to be written; we also need links where this can be found in the source code documentation
- *
- *
- * ## Projection onto faces
- *
- * The switch from a face representation to a volumetric representation and back is
- * a key ingredient of any DG scheme. In my formulae above, the projection of the
- * polynomial onto the
- *
- * @todo This part has yet to be written; we also need links where this can be found in the source code documentation
+ * The Riemann problem arising can again be solved via a standard Rusanov, e.g.,
+ * and mainly has to find a proper representation for @f$ F(Q) @f$ on the faces.
+ * We use the average for Rusanov subject to an additional damping over the jump
+ * times the maximum eigenvalue of the system.
  *
  *
  * ## Non-conservative product
  *
+ * You find some discussions of the treatment of the non-conservative product in papers by Michael Dumbser
+ * et al, e.g. I found the discussion around @f$ P_NP_M @f$ patch-conservative products in his paper
+ * "Space-time adaptive ADER discontinuous Galerkin schemes for nonlinear hyperelasticity with material failure"
+ * particularly helpsful (<a href="https://arxiv.org/abs/2003.02760>">arXiv:2003.02760</a>). Have a look
+ * notably into (21).
+ *
+ * Personally, I always use the following formalism which might be formally slightly wrong (but it gives
+ * the same result as Michael's work, so I'm happy):
+ *
+ * Our fundamental observation is that @f$ \nabla \phi @f$ is nicer than @f$ \nabla Q @f$ as we can
+ * completely pre-compute it. Within the DG weak formulation, it is clear that we somehow have to roll
+ * over the derivative through integration by parts. Just let's keep in mind that we really want to avoid
+ * a term like @f$ \nabla B(Q) @f$ - this one would be nasty due to chain rule kicking in and the Hessian
+ * (tensor) structure. So we end up with the following insights:
+ *
+ * @f$ \int _{\partial c} \Big( B(Q(t))\ Q(t), \phi \Big) \ n_x\ dS(x) =  \int _c \Big( B(Q(t)), \nabla _x \Big( Q(t)\phi \Big) \Big) dx =  \int _c \Big( B(Q(t)) \ \nabla _x Q(t), \phi \Big) dx + \int _c \Big( B(Q(t)) \ \nabla _x \phi, Q(t) \Big) dx @f$
+ *
+ * But this is a cell-wise expression. We have to take the weak ansatz over the whole domain @f$ \Omega _h = \sum c @f$.
+ *
+ * We look at the expression for one test function. We know that test functions have local support
+ * on one cell. Let this cell be called c.
+ *
+ * @f$ \int _{\Omega } \Big( B(Q(t)) \ \nabla _x Q(t), \phi \Big) dx = \sum _{c^{\pm}} \int _{\partial c^{\pm}} \Big( B(Q(t))\ Q(t), \phi \Big) \ n_x\ dS(x) - \int _{c} \Big( B(Q(t)) \ \nabla _x \phi, Q(t) \Big) \ dx @f$
+ *
+ *
+ * The volumetric integral reduces to an integral over c as the support disappears.
+ * Each face integral enters the formula twice - once from the left and once from the right.
+ * As we have discontinuous functions, these two contributions do not cancel each other out.
+ * The Q values are different.
+ *
+ *
  * ### Volumetric part
  *
- * For the solution of the non-conservative product, we first note that the evaluation
- * within the cell is pretty straightforward:
- *
- * @f$ \int  _c \Big( B(Q(t)) \nabla Q(t), \phi \Big) dx @f$
- *
- * is something we can treat directly:
- *
- * - We first run over all the individual quadrature points within the cell
- * - Per point, compute $ \nabla Q(t)$. This is trivial, as we represent Q with our
- *   shape functions, i.e. we can precompute the derivatives and simply scale them
- *   with the weights of Q's shape functions at the integration points: As Q is a
- *   linear combination of shape functions, the derivative is a linear combination
- *   of the derivatives of the shape functions.
- * - Ask the user's non-conservative product to give you the results of @f$ B(Q(t)) \cdot \nabla Q(t) @f$.
- *   We assume that we can repressent the result again with shape functions. This is
- *   a numerical approximation - in general the result of this will not be representable
- *   by our polynomials.
- * - As the result is tested against @f$ \phi @f$, we get a mass matrix over the
- *   outcome, but the time stepping then immediately multiplies the outcome with the
- *   inverse of the mass matrix, so these contributions kick out.
- *
- * Our calculation can be written down as
- *
- * @f$ Q^{(new)} \gets Q^{(new)} + dt \cdot ncp \Big( D\cdot Q \Big) @f$
- *
- * where the D is the precomputed derivative operator over the solution. This
- * instruction adds the copied over old solution subject to an additional source
- * term. We have to apply the update per dimension.
+ * - We first run over all the individual quadrature points within the cell.
+ * - Per point, we evaluate @f$ B(Q(t)) @f$.
+ * - We scale this contribution with @f$ Q(t) @f$, i.e. we actually evaluate
+ *   @f$ \int _{c} \Big( B(Q(t)) \ \nabla _x \phi, Q(t) \Big) \ dx = Q(t)^T B(Q(t)) \cdot ... @f$.
+ *   We assume that this term can be represented within the same function space from which we
+ *   took our shape functions. This is an approximation, but that's what we have currently
+ *   baked into our Python scripts.
+ * - Now we multiply the result vector of weights with the precomputed derivative shape functions
+ *   over which we have integrated already. This gives us a @f$ h^{-1} @f$ scaling.
+ * - The result is subject to a multiplication with an inverted mass matrix. There's no need
+ *   to have this multiplication explicitly in the code. We can directly incorporate it within
+ *   the derivative matrix. The overall scaling of the contributions from the volumetric part remain in @f$ h^{-1} @f$.
  *
  *
+ * ### The Riemann problem
  *
- * ### Impact on Riemann problem
+ * We note that almost all face integrals disappear per test @f$ \phi @f$. Only those over
+ * faces adjacent to the test support cell remain. But each face is there twice, as we had to
+ * first split @f$ \Omega @f$ before we do the integration by parts. I try to denote this by
+ * the symbol @f$ \partial c^{\pm} @f$. The left and right sum contribution collapse as follows:
  *
- * ## Add Riemann solution to volumetric data
+ * @f$ \int _{\partial c^{\pm}} \Big( B(Q(t))\ Q(t), \phi \Big) \ n_x\ dS(x) = \int _{\partial c^{+}} \Big( B(Q(t))\ Q(t), \phi \Big) \ n_x\ dS(x) - \int _{\partial c^{-}} \Big( B(Q(t))\ Q(t), \phi \Big) \ n_x\ dS(x) = \int _{\partial c} \Big( B(Q(t))\ (Q^+(t)-Q^-(t) ), \phi \Big) \ dS(x)  @f$
  *
- * @todo This part has yet to be written; we also need links where this can be found in the source code documentation
+ * The remaining question now is what @f$ B(Q(t)) | _{\partial c} @f$ looks like. After all,
+ * this is where the solution is not defined. We simply use averaging in our code, i.e.
+ *
+ * @f$ B( \frac{1}{2} (Q^+(t)+Q^-(t) ) )\ (Q^+(t)-Q^-(t) ) @f$
+ *
+ * Once again, we have an ncp term here. Different to the one above, we apply it to the jump, i.e.
+ * the solution difference, this time. We do not apply it to a gradient! In this way, the
+ * Riemann problem here is more similar to the Finite Volume formulation. Note that the notion
+ * of left and right depends on the test function of interest, i.e. the outcome of this Riemann
+ * problems goes with a switched sign into the left and right adjacent cell.
+ *
+ * Remark: The work by Dumbser et al have an overall factor of 0.5 in the Riemann problem.
+ * I don't see where this comes from (in the Finite Volume case, it is clear where it comes from).
+ * So likely there's a term missing in this explanation.
+ *
+ *
+ * ## Getting the face data back
+ *
+ * Once we know the point-wise Riemann solution, we can assume that this point-wise solution
+ * spans functions in the shape space restricted to the faces.
+ * That is, the individual points of the Riemann solution serve as weights to shape functions
+ * which live on the face only.
+ * We can analytically integrate over those guys (we know the shapes and have a linear combination)
+ * and then project the data back by applying the mass matrix.
+ * As the mass matrix is scaled with @f$ h^d @f$, the impact of the Riemann solution is in @f$ h^{-1} @f$.
  *
  *
  * ## Todo list
