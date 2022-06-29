@@ -32,11 +32,44 @@ void exahype2::fv::rusanov::cpp::timeStepWithRusanov_patchwise_heap_static_calls
    */
   constexpr int solversHaloSize        = 1;
 
-  exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator QInHostEnumerator       (                        1, numberOfVolumesPerAxisInPatch, haloSize, unknowns, auxiliaryVariables);
-  exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator QOutHostEnumerator      (                        1, numberOfVolumesPerAxisInPatch,        0, unknowns, auxiliaryVariables);
-  TempDataEnumerator fluxHostEnumerator      (hostPatchData.numberOfCells, numberOfVolumesPerAxisInPatch,   solversHaloSize, unknowns, 0);
-  TempDataEnumerator ncpHostEnumerator       (hostPatchData.numberOfCells, numberOfVolumesPerAxisInPatch+1, solversHaloSize, unknowns, 0);
-  TempDataEnumerator eigenvalueHostEnumerator(hostPatchData.numberOfCells, numberOfVolumesPerAxisInPatch,   solversHaloSize,        1, 0);
+
+  // The first two variables are not being used, and the others
+  // use only the size, which is the same as the non-host variables
+  exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator QInHostEnumerator(
+    1, 
+    numberOfVolumesPerAxisInPatch, 
+    haloSize, 
+    unknowns, 
+    auxiliaryVariables
+  );
+  exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator QOutHostEnumerator(
+    1, 
+    numberOfVolumesPerAxisInPatch,
+    0, 
+    unknowns, 
+    auxiliaryVariables
+  );
+  TempDataEnumerator fluxHostEnumerator(
+    hostPatchData.numberOfCells, 
+    numberOfVolumesPerAxisInPatch,   
+    solversHaloSize, 
+    unknowns, 
+    0
+  );
+  TempDataEnumerator ncpHostEnumerator(
+    hostPatchData.numberOfCells, 
+    numberOfVolumesPerAxisInPatch+1,
+    solversHaloSize, 
+    unknowns, 
+    0
+  );
+  TempDataEnumerator eigenvalueHostEnumerator(
+    hostPatchData.numberOfCells, 
+    numberOfVolumesPerAxisInPatch,   
+    solversHaloSize,        
+    1, 
+    0
+  );
   
   double* tempFluxX = new double[fluxHostEnumerator.size()];
   double* tempFluxY = new double[fluxHostEnumerator.size()];
@@ -49,7 +82,7 @@ void exahype2::fv::rusanov::cpp::timeStepWithRusanov_patchwise_heap_static_calls
   double* tempEigenvalueZ = new double[eigenvalueHostEnumerator.size()];
 
   // The cartesian products have to be located on the heap so that they are accessible from the GPU.
-  // Here we define types to able to allocated in heap.
+  // Here we define types to be able to allocate in heap.
   using cart_prod_2d = decltype(tl::views::cartesian_product(
     std::views::iota(0,1), 
     std::views::iota(0,1)
@@ -66,7 +99,7 @@ void exahype2::fv::rusanov::cpp::timeStepWithRusanov_patchwise_heap_static_calls
     std::views::iota(0,1)
   ));
 
-  // Definition of the cartesian products.
+  // Cartesian products definition.
   auto* range2d = new cart_prod_2d;
   *range2d = tl::views::cartesian_product(
     std::views::iota(0,numberOfVolumesPerAxisInPatch),
@@ -175,88 +208,79 @@ void exahype2::fv::rusanov::cpp::timeStepWithRusanov_patchwise_heap_static_calls
 
   for (int patchIndex=0; patchIndex<hostPatchData.numberOfCells; patchIndex++) {
 
-    if (Dimensions==2 and evaluateSource) {
-      std::for_each(
-        std::execution::par_unseq,
-        range2d->begin(),
-        range2d->end(),
-        [&](auto ids){
-          auto [x,y] = ids;
-          internal::copySolutionAndAddSourceTerm_LoopBody<Solver>(
-            hostPatchData.QIn[patchIndex],
-            QInEnumerator,
-            hostPatchData.patchCentre[patchIndex],
-            hostPatchData.patchSize[patchIndex],
-            patchIndex,
-            volumeIndex2d(x,y),
-            hostPatchData.t[patchIndex],
-            hostPatchData.dt[patchIndex],
-            hostPatchData.QOut[patchIndex],
-            QOutEnumerator
-          );
-        }
-      );
-    }
-    
-    else if (Dimensions==3 and evaluateSource) {
-      std::for_each(
-        std::execution::par_unseq,
-        range3d->begin(),
-        range3d->end(),
-        [&](auto ids){
-          auto [x,y,z] = ids;
-          internal::copySolutionAndAddSourceTerm_LoopBody<Solver>(
-            hostPatchData.QIn[patchIndex],
-            QInEnumerator,
-            hostPatchData.patchCentre[patchIndex],
-            hostPatchData.patchSize[patchIndex],
-            patchIndex,
-            volumeIndex3d(x,y,z),
-            hostPatchData.t[patchIndex],
-            hostPatchData.dt[patchIndex],
-            hostPatchData.QOut[patchIndex],
-            QOutEnumerator
-          );
-        }
-      );
-    }
-
-    else if (Dimensions==2) {
+    if (Dimensions==2) {
       std::for_each(
         std::execution::par_unseq,
         range2d_unknown_aux->begin(),
         range2d_unknown_aux->end(),
         [&](auto ids){
+
           auto [x,y,unknown] = ids;
-          internal::copySolution_LoopBody(
-            hostPatchData.QIn[patchIndex],
-            QInEnumerator,
-            patchIndex,
-            volumeIndex2d(x,y),
-            unknown,
-            hostPatchData.QOut[patchIndex],
-            QOutEnumerator
-          );
+
+          if (evaluateSource == true) {
+            internal::copySolutionAndAddSourceTerm_LoopBody<Solver>(
+              hostPatchData.QIn[patchIndex],
+              QInEnumerator,
+              hostPatchData.patchCentre[patchIndex],
+              hostPatchData.patchSize[patchIndex],
+              patchIndex,
+              volumeIndex2d(x,y),
+              hostPatchData.t[patchIndex],
+              hostPatchData.dt[patchIndex],
+              hostPatchData.QOut[patchIndex],
+              QOutEnumerator
+            );
+          }
+          else if (evaluateSource == false) {
+            internal::copySolution_LoopBody(
+              hostPatchData.QIn[patchIndex],
+              QInEnumerator,
+              patchIndex,
+              volumeIndex2d(x,y),
+              unknown,
+              hostPatchData.QOut[patchIndex],
+              QOutEnumerator
+            );
+          }
+    
         }
       );
     }
-
-    else if (Dimensions==3){
+    else if (Dimensions==3) {
       std::for_each(
         std::execution::par_unseq,
         range3d_unknown_aux->begin(),
         range3d_unknown_aux->end(),
         [&](auto ids){
           auto [x,y,z,unknown] = ids;
-          internal::copySolution_LoopBody(
-            hostPatchData.QIn[patchIndex],
-            QInEnumerator,
-            patchIndex,
-            volumeIndex3d(x,y,z),
-            unknown,
-            hostPatchData.QOut[patchIndex],
-            QOutEnumerator
-          );
+
+          if (evaluateSource == true) {
+            internal::copySolutionAndAddSourceTerm_LoopBody<Solver>(
+              hostPatchData.QIn[patchIndex],
+              QInEnumerator,
+              hostPatchData.patchCentre[patchIndex],
+              hostPatchData.patchSize[patchIndex],
+              patchIndex,
+              volumeIndex3d(x,y,z),
+              hostPatchData.t[patchIndex],
+              hostPatchData.dt[patchIndex],
+              hostPatchData.QOut[patchIndex],
+              QOutEnumerator
+            );
+          }
+
+          else if (evaluateSource == false) {
+            internal::copySolution_LoopBody(
+              hostPatchData.QIn[patchIndex],
+              QInEnumerator,
+              patchIndex,
+              volumeIndex3d(x,y,z),
+              unknown,
+              hostPatchData.QOut[patchIndex],
+              QOutEnumerator
+            );
+          }
+
         }
       );
     }
