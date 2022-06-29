@@ -84,7 +84,9 @@
  * @f$ \partial _t Q(t) @f$ lives in Q's polynomial space: We start with a Q and we end
  * up in a Q, and the way how we can construct this Q representation is the same for
  * preimage and image. Therefore, also the difference can be represented by the polynomials
- * that we use for the two of them.
+ * that we use for the two of them. In theory, we thus have to apply @f$ M^{-1} @f$ in
+ * multiple steps later on. As we will see however, it falls together with the mass matrix
+ * itself in most cases and thus does not enter the actual computation.
  *
  *
  * ## Source term
@@ -97,34 +99,87 @@
  *
  * @f$ dt\cdot M^{-1}M\dot S(Q) = dt\cdot S(Q) @f$
  *
- * To update the current solution with the source term thus can be combined with the
+ * in line with the discussion above. The update the current solution with the source
+ * term thus can be combined straightforwardly with the
  * copying: We take the current solution, add the source term times the time step size,
  * and write it into the image.
+ * We can write this down as
+ *
+ * @f$ Q^{(new)} \gets Q^{(old)} + dt \cdot S(Q^{(old)}) @f$
  *
  * The copy-over can be found within exahype2::dg::cellIntegral_patchwise_computeAndUpdate_functors()
  * or variants thereof. It is a simple loop over all of the dofs within the cell.
  *
+ * The source term solely enters the volumetric calculations.
+ * It does not show up in any face integral.
  *
- * ## Volume integral
+ *
+ * ## Flux term
  *
  * As any shape function has local support within one cell, we can evaluate
  *
  * @f$ \int  _c \left( F(Q(t)), \nabla \phi \right) dx @f$
  *
- * only within a cell:
+ * per cell:
  *
- * ## Projection from and onto faces
+ * ### Volumetric contributions
+ *
+ * @todo This part has yet to be written; we also need links where this can be found in the source code documentation
+ *
+ * ### Riemann problem (Rusanov)
+ *
+ * @todo This part has yet to be written; we also need links where this can be found in the source code documentation
+ *
+ *
+ * ## Projection onto faces
  *
  * The switch from a face representation to a volumetric representation and back is
  * a key ingredient of any DG scheme. In my formulae above, the projection of the
  * polynomial onto the
  *
+ * @todo This part has yet to be written; we also need links where this can be found in the source code documentation
+ *
  *
  * ## Non-conservative product
  *
- * Warum kommt das ueberhaupt in das Randproblem mit rein? Kann ich doch rein
- * ueber das Volumen abbilden.
+ * ### Volumetric part
  *
+ * For the solution of the non-conservative product, we first note that the evaluation
+ * within the cell is pretty straightforward:
+ *
+ * @f$ \int  _c \Big( B(Q(t)) \nabla Q(t), \phi \Big) dx @f$
+ *
+ * is something we can treat directly:
+ *
+ * - We first run over all the individual quadrature points within the cell
+ * - Per point, compute $ \nabla Q(t)$. This is trivial, as we represent Q with our
+ *   shape functions, i.e. we can precompute the derivatives and simply scale them
+ *   with the weights of Q's shape functions at the integration points: As Q is a
+ *   linear combination of shape functions, the derivative is a linear combination
+ *   of the derivatives of the shape functions.
+ * - Ask the user's non-conservative product to give you the results of @f$ B(Q(t)) \cdot \nabla Q(t) @f$.
+ *   We assume that we can repressent the result again with shape functions. This is
+ *   a numerical approximation - in general the result of this will not be representable
+ *   by our polynomials.
+ * - As the result is tested against @f$ \phi @f$, we get a mass matrix over the
+ *   outcome, but the time stepping then immediately multiplies the outcome with the
+ *   inverse of the mass matrix, so these contributions kick out.
+ *
+ * Our calculation can be written down as
+ *
+ * @f$ Q^{(new)} \gets Q^{(new)} + dt \cdot ncp \Big( D\cdot Q \Big) @f$
+ *
+ * where the D is the precomputed derivative operator over the solution. This
+ * instruction adds the copied over old solution subject to an additional source
+ * term. We have to apply the update per dimension.
+ *
+ *
+ *
+ * ### Impact on Riemann problem
+ *
+ * ## Add Riemann solution to volumetric data
+ *
+ * @todo This part has yet to be written; we also need links where this can be found in the source code documentation
  *
  *
  * ## Todo list
@@ -139,8 +194,11 @@
  * - 3d version of face to cell projection is missing
  * - 2d version of cell to face projection is buggy or not nice. Clean-up
  * - Look through DGUtils and tidy is up.
- *
- *
+ * - Strides should completely go away and should be subsumed in the enumerators. So the
+ *   enumerators is where all the logic sits and the logic is completely encapsulated there.
+ * - Remove L and R basis functions as they are redundant?
+ * - Investigate if we could remove a few other matrices from the generated Python code
+ * - Point sources implement
  *
  *
  */
