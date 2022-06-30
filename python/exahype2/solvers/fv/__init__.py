@@ -3,10 +3,4 @@
 from exahype2.solvers.fv.PDETerms    import PDETerms
 
 import exahype2.solvers.fv.rusanov
-<<<<<<< HEAD
-=======
-import exahype2.solvers.fv.musclhancock
-#import exahype2.solvers.fv.clawpack
-#import exahype2.solvers.fv.riemann
->>>>>>> refs/remotes/origin/ccz4-cpp
 
