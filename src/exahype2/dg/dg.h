@@ -125,12 +125,92 @@
  * multiply it directly with the matrix over the gradients. Actually, we are not
  * even interested in this matrix, but we are interested in the mass matrix inverse
  * times the derivative matrix. This can all be precomputed. The scaling of the
- * volumetric contribution is in @f$ 1/h @f$.
+ * volumetric contribution is in @f$ 1/h @f$ - the integral over the cell times the inverse
+ * of the mass matrix kick all of their derivative terms/scalings out, and we have
+ * a remaining @f$ h^{-1} @f$ from @f$ \nabla \phi @f$.
+ * We conclude that the volumetric term can be implemented generically.
+ * All it needs is the flux terms supplemented by the user.
  *
- * The Riemann problem arising can again be solved via a standard Rusanov, e.g.,
- * and mainly has to find a proper representation for @f$ F(Q) @f$ on the faces.
- * We use the average for Rusanov subject to an additional damping over the jump
- * times the maximum eigenvalue of the system.
+ * The Riemann problem
+ *
+ * @f$ \int _{\partial c} F(Q(t)) \ \phi \ n dS(x) @f$
+ *
+ * requires more work, as Q (and hence F) are not defined on the cell faces.
+ * One generic way to tackle this is to exploit standard Rusanov, e.g.
+ * In this case, we employ some averaging of the faces subject to additional
+ * damping.
+ *
+ * @f$ \int _{\partial c} F(Q(t)) \ \phi \ n dS(x) \mapsto  \int _{\partial c} \Big( \frac{1}{2}(F(Q^-(t))+F(Q^+(t))) - \frac{1}{2} \lambda _{max}(Q^-(t),Q^+(t)) (Q^+(t)-Q^-(t))  \Big) \ \phi \ n dS(x) @f$
+ *
+ *
+ * ## Projection onto faces
+ *
+ * To apply any Riemann solver of our choice, we first have to project the current
+ * solution @f$ Q(t) @f$ from within the cell onto the faces.
+ * This projection is realised by a dedicated Python action set which is fed the
+ * polynomial basis functions.
+ *
+ * We can exploit the fact that we employ Lagrangian basis functions and that we also
+ * work with Cartesian tensor product structures.
+ * Due to these choices, we know that any projection of the current solution representation
+ * within the cell can be mapped onto a Lagrangian polynomial of exactly the same order
+ * on the face.
+ * Furthermore, everything is beautifully lined up:
+ * In 2d, all the integration point within a cell along a horizontal line span up a
+ * polynomial, and we can thus multiply them with this polynomial and thus reconstruct
+ * the polynomials value on the left and right faces' sample point (which also is exactly
+ * on this line).
+ * We don't even have to use Gauss-Lobatto points.
+ * It works with Gauss-Legendre just as well (with Lobatta, we could avoid the construction
+ * of the polynomial and just read out the solution value right at the face; we do not
+ * exploit this fact).
+ *
+ * @image html solution-projection.png
+ *
+ * In the 2d example above, the four bottom sample points and their weight define the
+ * blue polynomial along the horizontal line. The other 12 integration points in the
+ * cell have no influence on the solution value along this line. Consequently, we can
+ * compute the left and right solution solely by these four weights.
+ *
+ * On the left face, we have a polynomial with the same order (3rd order here), but it
+ * is - obviously - a 1d polynomial and not one resulting from a tensor product.
+ * Once we know the the volumetric polynomials value on the left face, we can directly
+ * set this value as weight on the face's quadrature point (green weight).
+ *
+ * Each face has a left and a right side, and the solutions left and right will not be the same
+ * as we work in a Discontinuous Galerkin setup. We hence do not store four weights in the
+ * example above, but we do hold eight weights, i.e. both the weights from the left and the
+ * right side. These weights are stored lexicographically in line with the Finite Volume
+ * solver. See the documentation of the face enumerator exahype2::enumerator::FaceAoSLexicographicEnumerator.
+ * In the vanilla version of ExaHyPE, we do only store the solution left and right. For more
+ * sophisticated Riemann solver, you can also store derivatives, e.g., from both sides.
+ *
+ * The projection onto the faces is an operation within the polynomial function space.
+ * As there's no integral or something similar involved, it is a plain multiplication of
+ * the sample points' weights within the cell with the corresponding weights of the
+ * polynomial.
+ *
+ *
+ *
+ * ## Getting the face data back
+ *
+ * Let the outcome of a Riemann solve (the solution) be everything under the face integral
+ * besides the @f$ \phi @f$ test function.
+ * For the Rusanov example above, we would call the result of
+ *
+ * @f$ \frac{1}{2}(F(Q^-(t))+F(Q^+(t))) - \frac{1}{2} \lambda _{max}(Q^-(t),Q^+(t)) (Q^+(t)-Q^-(t)) @f$
+ *
+ * the solution to the Riemann problem.
+ *
+ *
+ * Once we know the point-wise Riemann solution, we know that this point-wise solution
+ * spans functions in the shape space restricted to the faces.
+ * That is, the individual points of the Riemann solution serve as weights to shape functions
+ * which live on the face only.
+ * We can analytically integrate over those guys (we know the shapes and have a linear combination)
+ * and then project the data back by applying the mass matrix.
+ * As the mass matrix is scaled with @f$ h^d @f$, the impact of the Riemann solution is in @f$ h^{-1} @f$.
+ *
  *
  *
  * ## Non-conservative product
@@ -205,17 +285,6 @@
  * Remark: The work by Dumbser et al have an overall factor of 0.5 in the Riemann problem.
  * I don't see where this comes from (in the Finite Volume case, it is clear where it comes from).
  * So likely there's a term missing in this explanation.
- *
- *
- * ## Getting the face data back
- *
- * Once we know the point-wise Riemann solution, we can assume that this point-wise solution
- * spans functions in the shape space restricted to the faces.
- * That is, the individual points of the Riemann solution serve as weights to shape functions
- * which live on the face only.
- * We can analytically integrate over those guys (we know the shapes and have a linear combination)
- * and then project the data back by applying the mass matrix.
- * As the mass matrix is scaled with @f$ h^d @f$, the impact of the Riemann solution is in @f$ h^{-1} @f$.
  *
  *
  * ## Todo list

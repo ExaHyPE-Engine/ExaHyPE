@@ -33,7 +33,7 @@ if __name__ == "__main__":
     parser.add_argument("-plt",      "--plot-step-size",      dest="plot_step_size",  type=float, default=0.04, help="Plot step size (0 to switch it off)" )
     parser.add_argument("-m",        "--mode",                dest="mode",            default="release",  help="|".join(modes.keys()) )
     parser.add_argument("-ext",      "--extension",           dest="extension",       choices=["cellcount","rhointer"],   default="cellcount",  help="Pick extension, i.e. the way to calculate the mass. Default is cell counting" )
-    parser.add_argument("-impl",     "--implementation",      dest="implementation",  choices=["fv-global-fixed", "fv-global-adaptive", "fv-global-fixed-enclave", "fv-global-adaptive-enclave","fv-subcyling-adaptive-enclave","fv-local-enclave"], required="True",  help="Pick solver type" )
+    parser.add_argument("-impl",     "--implementation",      dest="implementation",  choices=["fv-global-fixed", "fv-global-adaptive", "fv-global-fixed-enclave", "fv-global-adaptive-enclave","fv-subcyling-adaptive-enclave","fv-local-enclave", "fv-musclhancock"], required="True",  help="Pick solver type" )
     parser.add_argument("-bc",       "--boundary-condition",  dest="boundary",        choices=["periodic","neumann","extrapolate", "hybrid"], default="neumann",  help="Pick the type of Boundary condtion" )
     parser.add_argument("-et",       "--end-time",            dest="end_time",        type=float, default=1.0, help="End (terminal) time" )
     parser.add_argument("-tn",       "--tracer-name",         dest="tra_name",        type=str, default="de",  help="name of output tracer file (temporary)" )
@@ -70,6 +70,9 @@ if __name__ == "__main__":
        SuperClass = exahype2.solvers.fv.rusanov.SubcyclingAdaptiveTimeStepWithEnclaveTasking
     if args.implementation=="fv-local-enclave":
        SuperClass = exahype2.solvers.fv.rusanov.LocalTimeStepWithEnclaveTasking
+    if args.implementation=="fv-musclhancock":
+       SuperClass = exahype2.solvers.fv.musclhancock.GlobalAdaptiveTimeStep
+
 
     class SSInfallSolver( SuperClass ):
       def __init__(self, name, patch_size, min_volume_h, max_volume_h, cfl, domain_r):
@@ -170,6 +173,7 @@ if __name__ == "__main__":
         const int patchSize = """ + str( self._patch.dim[0] ) + """;
         double volumeH = ::exahype2::fv::getVolumeLength(marker.h(),patchSize);
         int aux_var=""" + str( self._auxiliary_variables ) + """;
+        int real_var=5;
         double domain_r=""" + str( self._domain_r ) + """;
         int sample=repositories::{{SOLVER_INSTANCE}}.sample_number;
         dfor(cell,patchSize) {
@@ -187,11 +191,9 @@ if __name__ == "__main__":
           
           double p   =  (5.0/3.0-1)*(e-0.5*(m1*m1+m2*m2+m3*m3)/rho);
           if (p<0) {
-            reconstructedPatch[cellSerialised*(5+aux_var)+4]=0.5*(m1*m1+m2*m2+m3*m3)/rho+1e-14; 
+            reconstructedPatch[cellSerialised*(real_var+aux_var)+4]=0.5*(m1*m1+m2*m2+m3*m3)/rho+1e-14; 
           }
           
-          //int test=0;
-          if (abs(coor(0))>0.6*domain_r or abs(coor(1))>0.6*domain_r or abs(coor(2))>0.6*domain_r){ 
           for (int d=0; d<3; d++) {
             tarch::la::Vector<Dimensions,int> leftCell  = currentCell;
             tarch::la::Vector<Dimensions,int> rightCell = currentCell;
@@ -199,14 +201,11 @@ if __name__ == "__main__":
             rightCell(d) += 1;
             const int leftCellSerialised  = peano4::utils::dLinearised(leftCell, patchSize + 2*1);
             const int rightCellSerialised = peano4::utils::dLinearised(rightCell,patchSize + 2*1);
-            for (int i=0; i<5; i++){
-              if (cell(d)==0) {reconstructedPatch[cellSerialised*(5+aux_var)+5+i*3+d] =( reconstructedPatch[rightCellSerialised*(5+aux_var)+i] - reconstructedPatch[cellSerialised*(5+aux_var)+i] )/ volumeH;}
-              else if (cell(d)==(patchSize-1)) {reconstructedPatch[cellSerialised*(5+aux_var)+5+i*3+d] =( reconstructedPatch[cellSerialised*(5+aux_var)+i] - reconstructedPatch[leftCellSerialised*(5+aux_var)+i] )/ volumeH;}
-              else {reconstructedPatch[cellSerialised*(5+aux_var)+5+i*3+d] =( reconstructedPatch[rightCellSerialised*(5+aux_var)+i] - reconstructedPatch[leftCellSerialised*(5+aux_var)+i] )/ 2.0 / volumeH;}
+            for (int i=0; i<real_var; i++){
+              double rightgradient=reconstructedPatch[rightCellSerialised*(real_var+aux_var)+i] - reconstructedPatch[cellSerialised*(real_var+aux_var)+i];
+              double leftgradient=reconstructedPatch[cellSerialised*(real_var+aux_var)+i] - reconstructedPatch[leftCellSerialised*(real_var+aux_var)+i];
+              reconstructedPatch[cellSerialised*(real_var+aux_var)+real_var+d*real_var+i] = rightgradient < leftgradient ? rightgradient: leftgradient;
             }
-          }
-          } else{
-            for (int d=0; d<15; d++) {reconstructedPatch[cellSerialised*(5+aux_var)+5+d]=0;}
           }
         }        
     """
