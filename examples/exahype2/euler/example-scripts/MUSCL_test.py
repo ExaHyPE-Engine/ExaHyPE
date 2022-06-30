@@ -133,6 +133,7 @@ elif args.type=="fv-musclhancock":
     min_h, max_h,
     flux = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
     eigenvalues = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
+    sources = exahype2.solvers.aderdg.PDETerms.User_Defined_Implementation,
     time_step_relaxation = 0.01
   )
 
