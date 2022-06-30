@@ -1,6 +1,6 @@
 #include "StrategyFactory.h"
+
 #include "Hardcoded.h"
-#include "GeneticOptimisation.h"
 #include "AllOnGPU.h"
 
 #include "tarch/multicore/Tasks.h"
@@ -15,9 +15,6 @@ tarch::multicore::orchestration::Strategy* tarch::multicore::orchestration::pars
   }
   else if ( realisationString==std::string( "backfill" ) ) {
     return Hardcoded::createBackfill();
-  }
-  else if ( realisationString==std::string( "genetic-optimisation" ) ) {
-    return new GeneticOptimisation();
   }
   else if ( realisationString.find( "fuse-immediately-" )==0 ) {
     std::string argument = realisationString.substr( std::string("fuse-immediately-").size() );

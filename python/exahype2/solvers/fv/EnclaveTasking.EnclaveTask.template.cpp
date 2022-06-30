@@ -15,6 +15,8 @@
 #include "exahype2/EnclaveBookkeeping.h"
 #include "exahype2/EnclaveTask.h"
 
+#include "exahype2/enumerator/Enumerator.h"
+
 #include "peano4/parallel/parallel.h"
 
 #include "peano4/utils/Loop.h"

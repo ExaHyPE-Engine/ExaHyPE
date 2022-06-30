@@ -108,6 +108,7 @@ double ::examples::exahype2::elastic3d::elastic3d::maxEigenvalue(
   const tarch::la::Vector<Dimensions,double>&  faceCentre,
   const tarch::la::Vector<Dimensions,double>&  volumeH,
   double                                       t,
+  double                                       dt,
   int                                          normal
 )  {
   logTraceInWith4Arguments( "maxEigenvalue(...)", faceCentre, volumeH, t, normal );
@@ -127,6 +128,7 @@ void ::examples::exahype2::elastic3d::elastic3d::flux(
   const tarch::la::Vector<Dimensions,double>&  faceCentre,
   const tarch::la::Vector<Dimensions,double>&  volumeH,
   double                                       t,
+  double                                       dt,
   int                                          normal,
   double * __restrict__ F // F[9]
 )  {

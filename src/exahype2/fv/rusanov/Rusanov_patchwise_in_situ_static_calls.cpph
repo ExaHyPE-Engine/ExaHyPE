@@ -1,6 +1,6 @@
 #include "Rusanov.h"
 #include "tarch/compiler/CompilerSpecificSettings.h"
-#include "exahype2/fv/enumerator/SingleVolumeEnumerator.h"
+#include "exahype2/enumerator/SingleDoFEnumerator.h"
 
 
 template <
@@ -24,9 +24,9 @@ void exahype2::fv::rusanov::timeStepWithRusanov_patchwise_in_situ_static_calls(
    */
   constexpr int solversHaloSize        = 1;
 
-  exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator QInEnumerator       (                        1, numberOfVolumesPerAxisInPatch,solversHaloSize,unknowns,auxiliaryVariables);
-  exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator QOutEnumerator      (                        1, numberOfVolumesPerAxisInPatch,              0,unknowns,auxiliaryVariables);
-  exahype2::fv::enumerator::SingleVolumeEnumerator           singleVolumeEnumerator(unknowns,0);
+  exahype2::enumerator::AoSLexicographicEnumerator QInEnumerator       (                        1, numberOfVolumesPerAxisInPatch,solversHaloSize,unknowns,auxiliaryVariables);
+  exahype2::enumerator::AoSLexicographicEnumerator QOutEnumerator      (                        1, numberOfVolumesPerAxisInPatch,              0,unknowns,auxiliaryVariables);
+  exahype2::enumerator::SingleDoFEnumerator           singleVolumeEnumerator(unknowns,0);
 
   for (int patchIndex=0; patchIndex<patchData.numberOfCells; patchIndex++) {
     if (Dimensions==2 and evaluateSource) {

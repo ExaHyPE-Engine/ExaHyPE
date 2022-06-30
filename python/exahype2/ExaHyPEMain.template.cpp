@@ -7,6 +7,7 @@
 #include "tarch/UnitTests.h"
 #include "tarch/multicore/multicore.h"
 #include "tarch/multicore/Core.h"
+#include "tarch/multicore/otter.h"
 #include "tarch/timing/Watch.h"
 #include "tarch/timing/Measurement.h"
 #include "tarch/tests/TreeTestCaseCollection.h"

@@ -25,12 +25,23 @@ ExaHyPE2Sources = \
   aderdg/RiemannAoS.cpp \
   aderdg/RusanovNonlinearAoS.cpp \
   aderdg/tests/ADERDGTest.cpp \
+  aderdg_kernels/Basis/GaussLegendreBasis.cpp \
+  aderdg_kernels/Basis/GaussLobattoBasis.cpp \
+  aderdg_kernels/AderUtils.cpp \
+  dg/BoundaryConditions.cpp \
+  dg/DGUtils.cpp \
+  dg/CellIntegral.cpp \
+  dg/rusanov/Riemann.cpp \
+  dg/tests/DGTest.cpp \
+  dg/tests/testUtils.cpp \
+  enumerator/AoSLexicographicEnumerator.cpp \
+  enumerator/SoALexicographicEnumerator.cpp \
+  enumerator/SingleDoFEnumerator.cpp \
+  enumerator/AoSoALexicographicEnumerator.cpp \
+  enumerator/FaceAoSLexicographicEnumerator.cpp \
   fv/BoundaryConditions.cpp \
   fv/PatchUtils.cpp \
-  fv/enumerator/AoSLexicographicVolumeEnumerator.cpp \
-  fv/enumerator/SoALexicographicVolumeEnumerator.cpp \
-  fv/enumerator/AoSoALexicographicVolumeEnumerator.cpp \
-  fv/enumerator/PatchAccess.cpp \
+  fv/PatchAccess.cpp \
   fv/rusanov/sycl/GPUCellData.cpp \
   fv/rusanov/tests/CopyPatchTest.cpp \
   fv/rusanov/tests/ApplySplit1DRiemannToPatchTest.cpp

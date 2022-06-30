@@ -134,4 +134,3 @@ void exahype2::fv::validatePatch (
   logTraceOut( "validatePatch(...)" );
   #endif
 }
-

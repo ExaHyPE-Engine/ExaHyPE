@@ -10,12 +10,12 @@ try:
     import mpmath
     havenumpy=True
 except ImportError:
-    print("Numpy/mpmath is not available, not loading dg")
+    print("Numpy/mpmath is not available, not loading rkdg")
     print("Numpy/mpmath is not available, not loading aderdg")
 
 if havenumpy:
-    import exahype2.solvers.aderdg
-    import exahype2.solvers.dg
+    import exahype2.solvers.rkdg
+    #import exahype2.solvers.aderdg
     
 import exahype2.grid
 import exahype2.gpu
