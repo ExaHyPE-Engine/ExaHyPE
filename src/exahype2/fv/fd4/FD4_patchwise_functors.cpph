@@ -29,8 +29,8 @@ void exahype2::fv::fd4::timeStepWithFD4_patchwise_heap_functors(
 
   bool evaluateKODissipation=true;
   
-  exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator QInEnumerator (1,numberOfVolumesPerAxisInPatch,haloSize,unknowns,auxiliaryVariables);
-  exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator QOutEnumerator(1,numberOfVolumesPerAxisInPatch,0,       unknowns,auxiliaryVariables);
+  exahype2::enumerator::AoSLexicographicEnumerator QInEnumerator (1,numberOfVolumesPerAxisInPatch,haloSize,unknowns,auxiliaryVariables);
+  exahype2::enumerator::AoSLexicographicEnumerator QOutEnumerator(1,numberOfVolumesPerAxisInPatch,0,       unknowns,auxiliaryVariables);
 
   double* tempDifferentialSourceX =  evaluateDifferentialSource                    ? tarch::allocateMemory( QOutEnumerator.size(),tarch::MemoryLocation::Heap ) : nullptr;
   double* tempDifferentialSourceY =  evaluateDifferentialSource                    ? tarch::allocateMemory( QOutEnumerator.size(),tarch::MemoryLocation::Heap ) : nullptr;

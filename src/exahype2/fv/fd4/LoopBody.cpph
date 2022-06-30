@@ -258,7 +258,7 @@ void exahype2::fv::fd4::internal::updateSolutionWithKODissipationTerm_LoopBody(
     double QKODspTerm = QKODsp[QKODspEnumerator(patchIndex, volumeIndex, unknown)];
 
     // TODO: define sigmaKO
-    double sigmaKO=0.001;
+    double sigmaKO=0.0001;
     QOut[ QOutEnumerator(patchIndex, volumeIndex,unknown) ] += sigmaKO * dt / patchSize(normal) * QOutEnumerator._numberOfVolumesPerAxisInPatch * QKODspTerm
 
     #if !defined(GPUOffloadingOMP) and  !defined(GPUOffloadingSYCL)

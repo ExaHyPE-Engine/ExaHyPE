@@ -151,16 +151,16 @@ if __name__ == "__main__":
             min_volume_h=min_volume_h, max_volume_h=max_volume_h,
             time_step_relaxation=cfl
           )
-        elif SuperClass==exahype2.solvers.fv.rusanov.SubcyclingAdaptiveTimeStepWithEnclaveTasking:
-          SuperClass.__init__(#change to linear interpolation in time by hand here
-            self,
-            name=name, patch_size=patch_size,
-            unknowns=number_of_unknowns,
-            auxiliary_variables=0,
-            min_volume_h=min_volume_h, max_volume_h=max_volume_h,
-            time_step_relaxation=cfl,
-            interpolate_linearly_in_time=True
-          )
+       # elif SuperClass==exahype2.solvers.fv.rusanov.SubcyclingAdaptiveTimeStepWithEnclaveTasking:
+       #   SuperClass.__init__(#change to linear interpolation in time by hand here
+       #     self,
+       #     name=name, patch_size=patch_size,
+       #     unknowns=number_of_unknowns,
+       #     auxiliary_variables=0,
+       #     min_volume_h=min_volume_h, max_volume_h=max_volume_h,
+       #     time_step_relaxation=cfl,
+       #     interpolate_linearly_in_time=True
+       #   )
         else:
           SuperClass.__init__(
             self,
