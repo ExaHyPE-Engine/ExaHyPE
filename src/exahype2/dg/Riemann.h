@@ -18,76 +18,88 @@
 
 namespace exahype2 {
   namespace dg {
-  /*
-   * Evaluates the eigenvalue at each node along each face and, for each face
-   * returns the greatest eigenvalue along this face.
-   * This is used for the computation of the rusanov flux
-   *
-   * @param QHull is an array of double pointers, it contains pointers to each
-   *  face of the cell in order of dimension and negative then positive direction
-   *  e.g. QHull[0] is a pointer to the first element of the left face along
-   *  direction 0, QHull[1] to the right face along direction 0, QHull[2] to the left
-   *  face along direction 1, etc.
-   *  Note that each face has a left and right side because it contains values from its
-   *  left and right cells. The order of the nodes is always left, right, left, right
-   *  and each node contains unknowns+auxiliaryVariables elements so the first
-   *  unknowns+auxiliaryVariable elements correspond to first node of the left side,
-   *  the second to the first node of the right side and so on.
-   *
-   *
-   * @param eigenvalues is the array into which the values are inserted in the same order
-   *
-   *  ordering on each face:
-   *
-   *         2 3
-   *         0 1
-   *   2 3 [ o o ] 2 3
-   *   0 1 [ o o ] 0 1
-   *         2 3
-   *         0 1
-   *
-   */
-  void getMaxEigenvaluePerFace(
-      MaxEigenvalue                                 maxEigenvalue,
-      double* __restrict__                          QHull[Dimensions*2],
-      const int                                     order,
-      const int                                     unknowns,
-      const int                                     auxiliaryVariables,
-      const tarch::la::Vector<Dimensions,double>&   x,
-      const double                                  t,
-      const double                                  dt,
-      double                                        eigenvalues[Dimensions*2]
-      );
 
-  /*
-   * Computes the numerical value of the rusanov flux (or lax-friedrich)
-   *  along each node of each face.
+
+  /**
+   * Take polynomial within cell and project it onto the faces
    *
-   * @param QHullIn see above
+   * ## Ordering
    *
-   * @param QHullOut is where the computed values are put, this has a similar structure
-   *  to QHullIn but since we only require one value for the flux instead of a value on
-   *  the left and right sides of the face this is only half as large
+   *                           2 3
+   *                           0 1
+   *                     2 3 [ o o ] 2 3
+   *                     0 1 [ o o ] 0 1
+   *                           2 3
+   *                           0 1
    *
-   * @todo das getMaxEigenvalue sollte nicht separat sein (oder in internal) und direkt
-   * hier verwendet werden, so dass die Signatur einfacher wird.
+   * Each individual face is ordered lexicographically. So we go from left to
+   * right, and we always start closest to the origin or the coordinate system
+   * if we interpret the cell as the unit square.
+   *
+   * The sketch above illustrates the ordering of the four faces for a p=1
+   * discretisation where we have two dofs per direction per face per side.
+   *
+   *
+   *
+   * @param cellQ Pointer to cell data. The array has the size
+   *   @f$ unknowns \times (order+1)^d@f$.
+   *
+   * @param unkonwns Integer greater or equal to 1. These number comprises both
+   *   real unknowns in the hyperbolic sense and auxiliary variables.
+   *
+   * @param order Integer greater or equal to 0. The number of nodes in each
+   *  dimension will be equal to order+1
+   *
+   * @param BasisFunctionValuesLeft Array of size order+1 which clarifies (in 1d)
+   *   how to project the order+1 quadrature weights onto a value on the left
+   *   face. For Gauss Lobatto, this is a trivial array (you can read out the
+   *   value directly from the leftmost quadrature point, but for any other
+   *   basis, you need a linear combination of all the quadrature points in the
+   *   cell.
+   *
+   * @param faceQLeft Left unknowns. This array hosts @f$ 2 \times (order+1)^(d-1) * unknowns@f$
+   *   values, as it holds the (projected) values from the left side of the face
+   *   and those from the right. The ordering of these values is lexicographic,
+   *   i.e. the first unknowns entries are those at the bottom of the vertical
+   *   face from the left adjacent cell. The next unknowns entries are those
+   *   at the bottom of the face from the right adjacent cell. The next are then
+   *   again left, then right, then left and so on.
+   *   This function will fill the right values since the current cell is to the
+   *   right of its own left face.
+   *
+   * @param faceQBottom Bottom unknowns. See faceQLeft. Again, we order
+   *   lexicographically. This time, the first half of the entries are those
+   *   from the adjacent cell below. The remaining entries are the projections
+   *   from above.
+   *
    */
-  void computeRusanovOnHull(
-      Flux                                          flux,
-      NonConservativeProduct                        nonConservativeProduct,
-      double*                                       QHullIn[Dimensions*2],
-      double* __restrict__                          QHullOut,
-      const int                                     order,
-      const int                                     unknowns,
-      const int                                     auxiliaryVariables,
-      const tarch::la::Vector<Dimensions,double>&   x,
-      const double                                  dx,
-      const double                                  t,
-      const double                                  dt,
-      const double                                  maxEigenvalueAlongFace[Dimensions*2],
-      const bool                                    useFlux,
-      const bool                                    useNCP
-      );
+  void projectVolumetricDataOntoFaces(
+    const double* __restrict__          cellQ,
+    int                                 order,
+    int                                 unknowns,
+    const double* const __restrict__    BasisFunctionValuesLeft,
+    double* const __restrict__          faceQLeft,
+    double* const __restrict__          faceQRight,
+    double* const __restrict__          faceQBottom,
+    double* const __restrict__          faceQUp
+  );
+
+  /**
+   * 3d counterpart to other projectVolumetricDataOntoFaces() variant.
+   */
+  void projectVolumetricDataOntoFaces(
+    const double* __restrict__          cellQ,
+    int                                 order,
+    int                                 unknowns,
+    const double* const __restrict__    BasisFunctionValuesLeft,
+    double* const __restrict__          faceQLeft,
+    double* const __restrict__          faceQRight,
+    double* const __restrict__          faceQFront,
+    double* const __restrict__          faceQBack,
+    double* const __restrict__          faceQBottom,
+    double* const __restrict__          faceQUp
+  );
+
 
 
   /*
