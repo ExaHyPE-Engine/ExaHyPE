@@ -150,7 +150,7 @@ namespace exahype2 {
     int                                 order,
     int                                 unknowns,
     const int                           auxiliaryVariables,
-    const tarch::la::Vector<2,double>&  cellSize,
+    const tarch::la::Vector<3,double>&  cellSize,
     const double                        dt,
     const double* const __restrict__    BasisFunctionValuesLeft,
     const double* __restrict__          quadratureWeights,
