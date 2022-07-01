@@ -28,7 +28,7 @@ class GlobalFixedTimeStep( SingleSweep ):
   ):
     """
   
-    normalised_time_step_size: Float
+    time_step_size: Float
       This is the normalised time step size w.r.t. the coarsest admissible h value. If
       the code employs AMR on top of it and refines further, it will automatically 
       downscale the time step size accordingly. So hand in a valid time step size w.r.t.
@@ -44,6 +44,10 @@ class GlobalFixedTimeStep( SingleSweep ):
     self._eigenvalues_implementation          = PDETerms.None_Implementation
     self._source_term_implementation          = PDETerms.None_Implementation
     
+    self._user_action_set_includes += """
+#include "exahype2/fv/musclhancock/MusclHancock.h"
+"""
+
     self.set_implementation(flux=flux, 
       ncp=ncp, 
       eigenvalues=eigenvalues, 
@@ -87,7 +91,7 @@ class GlobalFixedTimeStep( SingleSweep ):
     )
 
     solver_code_snippets = FixedTimeSteppingCodeSnippets(self._normalised_time_step_size,False)
-    
+
     self._abstract_solver_user_declarations  = create_abstract_solver_declarations(self._flux_implementation, self._ncp_implementation, self._eigenvalues_implementation, self._source_term_implementation, False)
     self._abstract_solver_user_declarations += solver_code_snippets.create_abstract_solver_user_declarations()
     self._abstract_solver_user_definitions   = create_abstract_solver_definitions(self._flux_implementation, self._ncp_implementation, self._eigenvalues_implementation, self._source_term_implementation, False)
@@ -95,6 +99,9 @@ class GlobalFixedTimeStep( SingleSweep ):
 
     self._compute_time_step_size              = solver_code_snippets.create_compute_time_step_size()
     self._compute_new_time_step_size          = solver_code_snippets.create_compute_new_time_step_size()
+    
+    self._solver_user_declarations           = create_solver_declarations(self._flux_implementation, self._ncp_implementation, self._eigenvalues_implementation, self._source_term_implementation, False)
+    self._solver_user_definitions            = create_solver_definitions(self._flux_implementation, self._ncp_implementation, self._eigenvalues_implementation, self._source_term_implementation, False)
 
     self._start_time_step_implementation     = solver_code_snippets.create_start_time_step_implementation()
     self._finish_time_step_implementation    = solver_code_snippets.create_finish_time_step_implementation()
@@ -102,8 +109,3 @@ class GlobalFixedTimeStep( SingleSweep ):
       
     super(GlobalFixedTimeStep,self).set_implementation(boundary_conditions, refinement_criterion, initial_conditions, memory_location, use_split_loop, additional_action_set_includes, additional_user_includes)
 
-  @property
-  def user_action_set_includes(self):
-    return super(GlobalFixedTimeStep, self).user_action_set_includes + """
-#include "exahype2/fv/musclhancock/MusclHancock.h"
-"""

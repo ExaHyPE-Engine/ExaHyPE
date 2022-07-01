@@ -26,7 +26,7 @@ class GlobalAdaptiveTimeStep( SingleSweep ):
     boundary_conditions=None,refinement_criterion=None,initial_conditions=None,source_term=None,
     plot_grid_properties=False, overlap=1, kernel_namespace="musclhancock"
   ):
-    super(GlobalAdaptiveTimeStep,self).__init__(name, patch_size, overlap, unknowns, auxiliary_variables, min_volume_h, max_volume_h, plot_grid_properties, kernel_namespace) 
+    super(GlobalAdaptiveTimeStep,self).__init__(name, patch_size, overlap, unknowns, auxiliary_variables, min_volume_h, max_volume_h, plot_grid_properties, kernel_namespace="musclhancock") 
     
     self._time_step_relaxation = time_step_relaxation
 
@@ -88,7 +88,7 @@ class GlobalAdaptiveTimeStep( SingleSweep ):
 
     self._solver_user_declarations           = create_solver_declarations(self._flux_implementation, self._ncp_implementation, self._eigenvalues_implementation, self._source_term_implementation, False)
     self._solver_user_definitions            = create_solver_definitions(self._flux_implementation, self._ncp_implementation, self._eigenvalues_implementation, self._source_term_implementation, False)
-    
+
     self._compute_time_step_size              = solver_code_snippets.create_compute_time_step_size()
     self._compute_new_time_step_size          = solver_code_snippets.create_compute_new_time_step_size()
 
