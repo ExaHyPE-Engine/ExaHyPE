@@ -108,7 +108,7 @@ void exahype2::dg::projectVolumetricDataOntoFaces(
 }
 
 
-void exahype2::dg::computeRiemannIntegralAndAddToCell(
+void exahype2::dg::integrateOverRiemannSolutionsAndAddToVolume_GaussLegendre(
   const double* const __restrict__    faceQLeft,
   const double* const __restrict__    faceQRight,
   const double* const __restrict__    faceQBottom,
@@ -117,30 +117,29 @@ void exahype2::dg::computeRiemannIntegralAndAddToCell(
   int                                 unknowns,
   const int                           auxiliaryVariables,
   const tarch::la::Vector<2,double>&  cellSize,
-  const double                        dt,
   const double* const __restrict__    BasisFunctionValuesLeft,
-  const double* __restrict__          quadratureWeights,
+  const double* __restrict__          MassMatrixDiagonal1d,
   double* __restrict__                cellQ
   ){
-
-
   const int strideQ = unknowns+auxiliaryVariables;
 
   //generic coefficients by dimension
-  const double coeff0 = dt/cellSize[0];
-  const double coeff1 = dt/cellSize[1];
+  const double coeff0 = 1.0/cellSize[0];
+  const double coeff1 = 1.0/cellSize[1];
 
   for (int x=0; x<order+1; x++){
 
     //coefficients of faces in x direction
-    const double coeffNode0 = coeff0/quadratureWeights[x];
+    // @todo const double coeffNode0 = coeff0/quadratureWeights[x];
+    const double coeffNode0 = coeff0;
     const double coeffLeft    = coeffNode0*BasisFunctionValuesLeft[x];
     const double coeffRight   = coeffNode0*BasisFunctionValuesLeft[order-x];
 
     for (int y=0; y<order+1; y++){
 
       //coefficients of faces in y direction
-      const double coeffNode1 = coeff1/quadratureWeights[y];
+      // @todo const double coeffNode1 = coeff1/quadratureWeights[y];
+      const double coeffNode1 = coeff1;
       const double coeffBottom  = coeffNode1*BasisFunctionValuesLeft[y];
       const double coeffUp      = coeffNode1*BasisFunctionValuesLeft[order-y];
 
@@ -159,7 +158,7 @@ void exahype2::dg::computeRiemannIntegralAndAddToCell(
 }
 
 
-void exahype2::dg::computeRiemannIntegralAndAddToCell(
+void exahype2::dg::integrateOverRiemannSolutionsAndAddToVolume_GaussLegendre(
   const double* const __restrict__    faceQLeft,
   const double* const __restrict__    faceQRight,
   const double* const __restrict__    faceQFront,
@@ -170,40 +169,40 @@ void exahype2::dg::computeRiemannIntegralAndAddToCell(
   int                                 unknowns,
   const int                           auxiliaryVariables,
   const tarch::la::Vector<3,double>&  cellSize,
-  const double                        dt,
   const double* const __restrict__    BasisFunctionValuesLeft,
-  const double* __restrict__          quadratureWeights,
+  const double* __restrict__          MassMatrixDiagonal1d,
   double* __restrict__                cellQ
   ){
-
-
   const int strideQ = unknowns+auxiliaryVariables;
   const int nodesPerAxis = order+1;
   const int nodesPerFace = getNodesPerCell(nodesPerAxis)/nodesPerAxis;
 
   //generic coefficients by dimension
-  const double coeff0 = dt/cellSize[0];
-  const double coeff1 = dt/cellSize[1];
-  const double coeff2 = dt/cellSize[2];
+  const double coeff0 = 1.0/cellSize[0];
+  const double coeff1 = 1.0/cellSize[1];
+  const double coeff2 = 1.0/cellSize[2];
 
   for (int x=0; x<order+1; x++){
 
     //coefficients of faces in x direction
-    const double coeffNode0 = coeff0/quadratureWeights[x];
+    // @todo const double coeffNode0 = coeff0/quadratureWeights[x];
+    const double coeffNode0 = coeff0;
     const double coeffLeft  = coeffNode0*BasisFunctionValuesLeft[x];
     const double coeffRight = coeffNode0*BasisFunctionValuesLeft[order-x];
 
     for (int y=0; y<order+1; y++){
 
       //coefficients of faces in y direction
-      const double coeffNode1 = coeff1/quadratureWeights[y];
+      // @todo const double coeffNode1 = coeff1/quadratureWeights[y];
+      const double coeffNode1 = coeff1;
       const double coeffFront = coeffNode1*BasisFunctionValuesLeft[y];
       const double coeffBack  = coeffNode1*BasisFunctionValuesLeft[order-y];
 
       for (int z=0; z<order+1; z++){
 
         //coefficients of faces in z direction
-        const double coeffNode2   = coeff2/quadratureWeights[z];
+        // @todo const double coeffNode2   = coeff2/quadratureWeights[z];
+        const double coeffNode2   = coeff2;
         const double coeffBottom  = coeffNode2*BasisFunctionValuesLeft[z];
         const double coeffUp      = coeffNode2*BasisFunctionValuesLeft[order-z];
 

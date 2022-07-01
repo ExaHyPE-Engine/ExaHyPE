@@ -212,3 +212,38 @@ void exahype2::dg::internal::copySolution(
   }
 }
 
+
+void exahype2::dg::multiplyWithInvertedMassMatrixAndAddToSolution_GaussLegendre(
+  ::exahype2::CellData&                          cellData,
+  const int                                      order,
+  const int                                      unknowns,
+  const int                                      auxiliaryVariables,
+  const double* __restrict__                     massMatrixDiagonal1d
+) {
+  const int nodesPerAxis = order+1;
+  const int strideQ      = unknowns+auxiliaryVariables;
+  const int nodesPerCell = getNodesPerCell(nodesPerAxis);
+  tarch::la::Vector<Dimensions,int> strides = getStrides(nodesPerAxis);
+
+  //for each node in each cell
+  for (int currentCell=0; currentCell<cellData.numberOfCells; currentCell++)
+  for (int node=0; node<nodesPerCell; node++) {
+    const double* __restrict__                  cellQin  = cellData.QIn[currentCell];
+    double* __restrict__                        cellQout = cellData.QOut[currentCell];
+    const double                                dt       = cellData.dt[currentCell];
+
+    tarch::la::Vector<Dimensions,int> index = getIndex(node, strides);
+
+    double coeff = 1.0;
+    for (int dim=0; dim<Dimensions; dim++) {
+      coeff *= massMatrixDiagonal1d[ index(dim) ];
+    }
+
+    for(int var=0; var<unknowns; var++) {
+      cellQout[node+var] += 1.0 / coeff * cellQin[node+var];
+    }
+    for(int var=auxiliaryVariables; var<unknowns+auxiliaryVariables; var++) {
+      cellQout[node+var] = cellQin[node+var];
+    }
+  }
+}

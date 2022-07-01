@@ -31,6 +31,7 @@ ExaHyPE2Sources = \
   dg/BoundaryConditions.cpp \
   dg/DGUtils.cpp \
   dg/CellIntegral.cpp \
+  dg/Riemann.cpp \
   dg/rusanov/Riemann.cpp \
   dg/tests/DGTest.cpp \
   dg/tests/testUtils.cpp \

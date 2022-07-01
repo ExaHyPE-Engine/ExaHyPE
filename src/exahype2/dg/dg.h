@@ -96,11 +96,11 @@
  * This is the last step of our algorithm: We assume that we have a quantity @f$ \hat Q @f$
  * in each and every sample point. We multiply these quantities with the inverse of the
  * mass matrix and add it, subject to a scaling with dt, to the old solution. This
- * operation is called multiplyWithInvertedMassMatrixAndAddToSolution().
+ * operation is called exahype2::dg::multiplyWithInvertedMassMatrixAndAddToSolution_GaussLegendre() or variants thereof.
  * So far, the algorithm thus consists of two steps:
  *
  * - (unspecified) Compute the @f$ \hat Q @f$ value per degree of freedom in each and every cell.
- * - (3) Run over each cell. Per cell, call multiplyWithInvertedMassMatrixAndAddToSolution().
+ * - (3) Run over each cell. Per cell, call exahype2::dg::multiplyWithInvertedMassMatrixAndAddToSolution_GaussLegendre() or variants thereof.
  *   This routine takes the Q values of the cell, and adds the contribution @f$ dt \cdot M^{-1} \hat Q @f$.
  *
  *
@@ -492,6 +492,13 @@
  *
  * ## Todo list
  *
+ * Wo sind die aux values?
+ *
+ *- Q explizit rueberkopieren
+ *- - dt eben doch immer rein
+ * - Projection hat auxiliary variables. Ist das drin?
+ * - Loesung net.
+ * - Linear combination hat auch aux variables.
  * - The file Riemann.h/Riemann.cpp should go away. However, we might need its computation
  *   of maximum eigenvalues over the faces - though I think it should be the maximum over
  *   the cell's eigenvalues instead. In this case, the file pair can completely go away.
@@ -507,7 +514,7 @@
  * - Remove L and R basis functions as they are redundant?
  * - Investigate if we could remove a few other matrices from the generated Python code
  * - Point sources implement
- *
+ * - Miste den AbstractDG Loeser aus. Nicht alle Daten werden gebraucht.
  *
  */
 

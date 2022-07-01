@@ -55,16 +55,21 @@ class SolveVolumeIntegral(AbstractRungeKuttaDGActionSet):
     double* QOut = fineGridCell{{UNKNOWN_IDENTIFIER}}Estimates.value + {{PREDICATE_NO}} * {{NUMBER_OF_DOFS_PER_CELL_3D}} * ({{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}});
     #endif
     
-    ::exahype2::dg::cellIntegral_patchwise_computeAndUpdate_functors(
-      QIn,  
-      QOut,
+    ::exahype2::CellData cellData(
+      QIn,
+      marker.x(),
+      marker.h(),
+      timeStamp,
+      timeStepSize,
+      QOut
+    );
+   
+    
+    ::exahype2::dg::cellIntegral_patchwise_GaussLegendre_functors(
+      cellData,
       {{ORDER}},                                                   
       {{NUMBER_OF_UNKNOWNS}},
       {{NUMBER_OF_AUXILIARY_VARIABLES}},
-      marker.x(),
-      marker.h()(0), //assume square/cubic cells
-      timeStamp,
-      timeStepSize,
       [&](
         const double * __restrict__                  Q,
         const tarch::la::Vector<Dimensions,double>&  x,
@@ -115,7 +120,6 @@ class SolveVolumeIntegral(AbstractRungeKuttaDGActionSet):
         {% endif %}
       }, //source
       repositories::{{SOLVER_INSTANCE}}.QuadraturePoints,
-      repositories::{{SOLVER_INSTANCE}}.QuadratureWeights,
       repositories::{{SOLVER_INSTANCE}}.MassMatrix,
       repositories::{{SOLVER_INSTANCE}}.StiffnessOperator,
       repositories::{{SOLVER_INSTANCE}}.DerivativeOperator,
@@ -124,43 +128,6 @@ class SolveVolumeIntegral(AbstractRungeKuttaDGActionSet):
       {{ "true" if SOURCE_TERM_IMPLEMENTATION!="<none>" else "false" }}, //useSource
       {{ "true" if POINT_SOURCES_IMPLEMENTATION!="<none>" else "false" }} //useSource
     );    
-
-    /*
-    #if Dimensions==2
-    const int facePosition = {{PREDICATE_NO}}*{{NUMBER_OF_DOFS_PER_FACE_2D}}*({{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}});
-    #elif Dimensions==3
-    const int facePosition = {{PREDICATE_NO}}*{{NUMBER_OF_DOFS_PER_FACE_3D}}*({{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}});
-    #endif
-
-    #if Dimensions==2
-    ::exahype2::dg::projectVolumetricDataOntoFaces(
-      QIn,
-      {{ORDER}},
-      {{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}},
-      repositories::{{SOLVER_INSTANCE}}.BasisFunctionValuesLeft,
-      repositories::{{SOLVER_INSTANCE}}.BasisFunctionValuesRight,
-      fineGridFaces{{UNKNOWN_IDENTIFIER}}Estimates(0).value + facePosition, //left
-      fineGridFaces{{UNKNOWN_IDENTIFIER}}Estimates(2).value + facePosition, //right
-      fineGridFaces{{UNKNOWN_IDENTIFIER}}Estimates(1).value + facePosition, //down
-      fineGridFaces{{UNKNOWN_IDENTIFIER}}Estimates(3).value + facePosition  //up
-    );
-    #elif Dimensions==3
-    ::exahype2::dg::projectVolumetricDataOntoFaces(
-      QIn,
-      {{ORDER}},
-      {{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}},
-      repositories::{{SOLVER_INSTANCE}}.BasisFunctionValuesLeft,
-      repositories::{{SOLVER_INSTANCE}}.BasisFunctionValuesRight,
-      fineGridFaces{{UNKNOWN_IDENTIFIER}}Estimates(0).value + facePosition, //left
-      fineGridFaces{{UNKNOWN_IDENTIFIER}}Estimates(3).value + facePosition, //right
-      fineGridFaces{{UNKNOWN_IDENTIFIER}}Estimates(1).value + facePosition, //down
-      fineGridFaces{{UNKNOWN_IDENTIFIER}}Estimates(4).value + facePosition, //up
-      fineGridFaces{{UNKNOWN_IDENTIFIER}}Estimates(2).value + facePosition, //front
-      fineGridFaces{{UNKNOWN_IDENTIFIER}}Estimates(5).value + facePosition  //back
-    );
-    #endif
-    */
-    
   }  
   
   {% endfor %}

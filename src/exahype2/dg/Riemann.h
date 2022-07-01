@@ -124,7 +124,7 @@ namespace exahype2 {
    *
    * @param quadratureWeights: quadrature weight of the given quadrature node 1 dimension
    */
-  void computeRiemannIntegralAndAddToCell(
+  void integrateOverRiemannSolutionsAndAddToVolume_GaussLegendre(
     const double* const __restrict__    faceQLeft,
     const double* const __restrict__    faceQRight,
     const double* const __restrict__    faceQBottom,
@@ -133,14 +133,13 @@ namespace exahype2 {
     int                                 unknowns,
     const int                           auxiliaryVariables,
     const tarch::la::Vector<2,double>&  cellSize,
-    const double                        dt,
     const double* const __restrict__    BasisFunctionValuesLeft,
-    const double* __restrict__          quadratureWeights,
+    const double* __restrict__          MassMatrixDiagonal1d,
     double* __restrict__                cellQ
   );
 
 
-  void computeRiemannIntegralAndAddToCell(
+  void integrateOverRiemannSolutionsAndAddToVolume_GaussLegendre(
     const double* const __restrict__    faceQLeft,
     const double* const __restrict__    faceQRight,
     const double* const __restrict__    faceQBottom,
@@ -151,9 +150,8 @@ namespace exahype2 {
     int                                 unknowns,
     const int                           auxiliaryVariables,
     const tarch::la::Vector<3,double>&  cellSize,
-    const double                        dt,
     const double* const __restrict__    BasisFunctionValuesLeft,
-    const double* __restrict__          quadratureWeights,
+    const double* __restrict__          MassMatrixDiagonal1d,
     double* __restrict__                cellQ
   );
 

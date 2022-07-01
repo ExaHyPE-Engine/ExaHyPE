@@ -208,14 +208,32 @@ namespace exahype2 {
       NonConservativeProduct                         nonConservativeProduct,
       Source                                         source,
       PointSources                                   pointSources,
-      const double* __restrict__                     QuadratureNodes,
-      const double* __restrict__                     MassMatrixDiagonal,
-      const double* __restrict__                     StiffnessMatrix,
-      const double* __restrict__                     DerivativeOperator,
+      const double* __restrict__                     QuadratureNodes1d,
+      const double* __restrict__                     MassMatrixDiagonal1d,
+      const double* __restrict__                     StiffnessMatrix1d,
+      const double* __restrict__                     DerivativeOperator1d,
       bool                                           evaluateFlux,
       bool                                           evaluateNonconservativeProduct,
       bool                                           evaluateSource,
       bool                                           evaluatePointSources
+    );
+
+
+    /**
+     * This is the final step of any DG algorithm. Consult dg.h for a
+     * clearer explanation.
+     *
+     * This routine assumes that the mass matrix is a diagonal. Therefore,
+     * the inversion is trivial.
+     *
+     * This routine also copies over the material parameters.
+     */
+    void multiplyWithInvertedMassMatrixAndAddToSolution_GaussLegendre(
+      ::exahype2::CellData&                          cellData,
+      const int                                      order,
+      const int                                      unknowns,
+      const int                                      auxiliaryVariables,
+      const double* __restrict__                     MassMatrixDiagonal1d
     );
 
 
@@ -243,6 +261,8 @@ namespace exahype2 {
        * This method signature is kind of an overkill (we don't need all of the
        * variables), but I decided to keep the internal routines as close to
        * each other as possible.
+       *
+       * @todo raus?
        */
       void copySolution(
         const double* __restrict__                    cellQin,
