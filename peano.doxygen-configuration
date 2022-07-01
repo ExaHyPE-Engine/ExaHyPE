@@ -51,7 +51,7 @@ PROJECT_BRIEF          =
 # and the maximum width should not exceed 200 pixels. Doxygen will copy the logo
 # to the output directory.
 
-PROJECT_LOGO           = Peano-logo.png
+PROJECT_LOGO           = src/Peano-logo.png
 
 # The OUTPUT_DIRECTORY tag is used to specify the (relative or absolute) path
 # into which the generated documentation will be written. If a relative path is
@@ -244,13 +244,25 @@ TCL_SUBST              =
 
 OPTIMIZE_OUTPUT_FOR_C  = YES
 
+#
+# This option is not documented by doxygen and not automatically inserted, but 
+# it makes doxygen interpret standard Python comments with """ ... """ as proper
+# markup, i.e. it renders them as proper HTML. Without the flag, they appear as
+# verbatim.
+#
+PYTHON_DOCSTRING = NO
+
+#
+# We set this option to YES, as our C++ organisation resembles the one of Python,
+# i.e. subnamespaces are really organised through subdirectories.
+#
 # Set the OPTIMIZE_OUTPUT_JAVA tag to YES if your project consists of Java or
 # Python sources only. Doxygen will then generate output that is more tailored
 # for that language. For instance, namespaces will be presented as packages,
 # qualified scopes will look different, etc.
 # The default value is: NO.
 
-OPTIMIZE_OUTPUT_JAVA   = NO
+OPTIMIZE_OUTPUT_JAVA   = YES
 
 # Set the OPTIMIZE_FOR_FORTRAN tag to YES if your project consists of Fortran
 # sources. Doxygen will then generate output that is tailored for Fortran.
@@ -754,7 +766,7 @@ WARN_LOGFILE           =
 # Note: If this tag is empty the current directory is searched.
 
 
-INPUT                    = . 
+INPUT                    = src python 
 
 # This tag can be used to specify the character encoding of the source files
 # that doxygen parses. Internally doxygen uses the UTF-8 encoding. Doxygen uses
@@ -774,7 +786,7 @@ INPUT_ENCODING         = UTF-8
 # *.md, *.mm, *.dox, *.py, *.f90, *.f, *.for, *.tcl, *.vhd, *.vhdl, *.ucf,
 # *.qsf, *.as and *.js.
 
-FILE_PATTERNS          = *.h *.def *.cpp *.cpph
+FILE_PATTERNS          = *.h *.def *.cpp *.cpph *.py
 
 # The RECURSIVE tag can be used to specify whether or not subdirectories should
 # be searched for input files as well.

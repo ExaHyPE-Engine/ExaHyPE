@@ -14,6 +14,9 @@ mp.pretty = False
 
 class LagrangeBasis():
   """
+
+  Lagrange Basis 
+  
   
   Method representing a Lagrange basis which is used as a factory mechanism
   to produce all the vectors and matrices that we need within the DG solvers.
@@ -21,6 +24,94 @@ class LagrangeBasis():
   GaussLobatto. The only two things that are relevant for a user are the two
   routines quadrature_points() and quadrature_weights() as well as the routine
   to befill a map with replacement rules: init_dictionary_with_default_parameters()
+  
+  
+  ## Generated vectors and matrices
+  
+ 
+  ### QuadraturePoints
+  
+  The quadrature points are an array of size [p+1] if p is the order of the 
+  chosen polyomial. As we don't want to tie this abstract superclass to one
+  particular layout of the quadrature points, we delegate the construction
+  of these guys to _compute_quadrature_points_and_weights(), which is an 
+  abstract function, i.e. subclasses have to implement it. Most subclasses 
+  will simply delegate this call to numpy.
+  
+  The resulting double array defines the spacing of the quadrature points 
+  over the unit interval. See the helper routine exahype2::dg::getQuadraturePoint()
+  for an example how the points are used to identify the actual location in 
+  space of the quadrature points.
+  
+  
+  ### QuadratureWeights
+  
+  The quadrature weights are an array of size [p+1] if p is the order of the 
+  chosen polynomial. They are set in line with the quadrature points by a 
+  specific subclass.
+  
+  
+  @todo
+  
+  Brauchen wir das Zeugs wirklich? Das sind die Gewichte unter Gauss Legendre
+  und damit die Diagonaleintraege der Massenmatrix. Aber es ist nicht die 
+  eigentliche Massenmatrix
+  
+  
+  Usually, we rely on numpy's gauss_legendre or gauss_lobatto routine to get 
+  these weights. 
+    
+    const double QuadratureWeights[2+1];
+
+
+  ### StiffnessOperator
+
+  The stiffness operator is a [p+1]x[p+1] matrix which is constructed in
+  __compute_stiffness_operator().
+
+  The matrix holds 
+  
+  @f$  K_{ij} = <\partial _x \phi _i, \phi _j> = w_j (\partial _x \phi _j) (x_i) @f$
+    
+  where @f$ \phi _i, \phi _j @f$ are Lagrange basis functions associated with
+  the support (quadrature) points @f$ x_i @f$ and @f$ x_j @f$ within the unit
+  interval.
+ 
+  If you have a vector of p+1 entries, it defines a polynomial (aka function f) over the unit
+  interval. If you multiply this vector if @f$ K @f$, you get the outcome of
+  
+  @f$ \int _{[0.1]} \Big( \partial _x f, \phi _j \Big) dx @f$
+  
+  for the different tests @f$ \phi _j @f$. If your interval is not the unit 
+  one but has side length $h$, you have to multiply the outcome with $h$ as 
+  you integrate. At the same time, the derivative however has to be rescaled
+  with @f$ h^{-1} @f$ and the two h-recalibrations thus cancel out.
+  If you have a 2d or 3d function space, you still have to multiple with these 
+  shape functions, and you will still get an additional @f$ h^d @f$ scaling 
+  of the outcome.
+  
+  
+  In this construction, we exploit the fact that we work with Gauss-Legendre
+  polynomials which are products:
+  
+  @f$  \phi _i (x) = \prod _{j \not= i} \frac{x-x_j}{x_i-x_j} @f$
+  
+  If we compute the @f$ \partial _x \phi _i(x) @f$ for any of these guys,
+  we get a huge sum, but the sum is very structured:
+  
+  
+  2d and 3d?
+
+    :note: Exact for both Lobatto and Legendre nodes due to the reduced degree in one scalar product operand.
+
+
+
+  ### Mass matrix
+  
+  __compute_mass_matrix
+  
+  ## 
+  
   
   """
   
@@ -106,8 +197,15 @@ class LagrangeBasis():
      
   def __compute_mass_matrix(self):
     """
+    
+    Reference mass matrix
+   
+   
+    See class documentation.
+     
+    
     Computes the (reference) element mass matrix for an approximation of
-    order self.__max_poly_order.
+    order self.__max_poly_order. The result is 
 
     We evaluate the scalar product:
 
@@ -142,19 +240,14 @@ class LagrangeBasis():
 
   def __compute_stiffness_operator(self):
     """
+    
     Computes the (reference) element stiffness matrix for an approximation of order self.__max_poly_order.
     
-    Computes:
-
-    K_ij = <d/dx phi_i, phi_j>_[0,1] = w_j (d/dx phi_j) (x_i) 
+    See class for documentation. Has to be documented there, as doxygen
+    ignores private Python routines.
     
-    where phi_i,phi_j are Lagrange basis functions associated with
-    N support points x_i and x_j within the unit-interval.
-    They are polynomials of maximum order N-1.
-
-    :note: Exact for both Lobatto and Legendre nodes due to the reduced degree in one scalar product operand.
-
     :return: The (reference) element stiffness matrix.
+    
     """
     # init matrix with zero
     Kxi = [[mp.mpf(0) for _ in range(self.__num_points)] for _ in range(self.__num_points)]
@@ -164,10 +257,6 @@ class LagrangeBasis():
       for i in range(0,self.__num_points):
         Kxi[i][j] = self.__quadrature_weights[j]*phi_xi[i]
        
-    #for i in range(0,self.__num_points):
-    #  phi, phi_xi = self.__evaluate(self.__quadrature_points[i])
-    #  for k in range(0,self.__num_points):
-    #    Kxi[k][i] = self.__quadrature_weights[i]*phi_xi[k]*phi[i] 
     return Kxi
   
 
@@ -391,8 +480,10 @@ class LagrangeBasis():
   
   def _transform_and_sort_points_and_weights(self,quadrature_points,quadrature_weights):
     """
+    
     Transform quadrature quadrature_points and quadrature_weights for interval [-1,1]
     to quadrature_points and quadrature_weights for interval [0,1].
+
     """
     transformed_quadrature_weights = []
     transformed_quadrature_points   = []
@@ -455,13 +546,13 @@ class LagrangeBasis():
   
   def quadrature_weights(self,render=True):
     return LagrangeBasis.__render_tensor_1(self.__quadrature_weights) if render else self.__quadrature_weights
-  
-  
+    
 
 class GaussLegendreBasis(LagrangeBasis):
   def _compute_quadrature_points_and_weights(self,num_points):
     x,w = gauss_legendre(num_points,PREC_DIGITS) 
     return self._transform_and_sort_points_and_weights(x,w)
+
 
 class GaussLobattoBasis(LagrangeBasis):
   def _compute_quadrature_points_and_weights(self,num_points):

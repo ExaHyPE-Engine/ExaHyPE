@@ -4,20 +4,15 @@
 
 
 void exahype2::dg::cellIntegral_patchwise_computeAndUpdate_functors(
-    const double* __restrict__                    cellQin,
-    double* __restrict__                          cellQout,
-    const int                                     order,
-    const int                                     unknowns,
-    const int                                     auxiliaryVariables,
-    const tarch::la::Vector<Dimensions,double>&    x,
-    const double                                   dx,
-    const double                                   t,
-    const double                                   dt,
+    ::exahype2::CellData&                          cellData,
+    const int                                      order,
+    const int                                      unknowns,
+    const int                                      auxiliaryVariables,
     Flux                                           flux,
     NonConservativeProduct                         nonConservativeProduct,
     Source                                         source,
     PointSources                                   pointSources,
-    const double* __restrict__	                   quadNodes,
+    const double* __restrict__	                   quadratureNodes,
     const double* __restrict__                     quadWeights,
     const double* __restrict__                     MassMatrix,
     const double* __restrict__                     StiffnessMatrix,
@@ -27,30 +22,26 @@ void exahype2::dg::cellIntegral_patchwise_computeAndUpdate_functors(
     const bool                                     useSource,
     const bool                                     usePointSources
 ) {
+  double* fluxValues      = useFlux   ? new double[unknowns] : nullptr;
+  double* sourceValues    = useSource ? new double[unknowns] : nullptr;
+  double* gradientValues  = useNCP    ? new double[unknowns+auxiliaryVariables] : nullptr;
+  double* ncpValues       = useNCP    ? new double[unknowns] : nullptr;
 
-  const int nodesPerAxis = order+1;
+  for (int currentCell=0; currentCell<cellData.numberOfCells; currentCell++) {
+    const double* __restrict__                  cellQin  = cellData.QIn[currentCell];
+    double* __restrict__                        cellQout = cellData.QOut[currentCell];
+    const tarch::la::Vector<Dimensions,double>  x        = cellData.cellCentre[currentCell];
+    const double                                dx       = (cellData.cellSize[currentCell])(0);
+    const double                                t        = cellData.t[currentCell];
+    const double                                dt       = cellData.dt[currentCell];
+
+    const int nodesPerAxis = order+1;
   const int strideQ=unknowns+auxiliaryVariables;
   const int nodesPerCell = getNodesPerCell(nodesPerAxis);
   tarch::la::Vector<Dimensions,int> strides = getStrides(nodesPerAxis);
 
   const double invDx = 1.0/dx;
   const double coeff0 = dt*invDx; //We assume that the cells are cubes, e.g. A/V = 1/dx
-
-  double* fluxValues      = nullptr;
-  double* sourceValues    = nullptr;
-  double* gradientValues  = nullptr;
-  double* ncpValues       = nullptr;
-
-  if(useFlux){
-    fluxValues      = new double[unknowns]{0.0};
-  }
-  if(useSource){
-    sourceValues    = new double[unknowns]{0.0};
-  }
-  if(useNCP){
-    gradientValues  = new double[strideQ*Dimensions]{0.0};
-    ncpValues       = new double[unknowns]{0.0};
-  }
 
   //which node's value is being computed
   for(int node=0; node<nodesPerCell; node++){
@@ -84,7 +75,7 @@ void exahype2::dg::cellIntegral_patchwise_computeAndUpdate_functors(
               dx,
               contributingNodeIndex,
               order,
-              quadNodes);
+              quadratureNodes);
 
           flux( &cellQin[neighbourNode*strideQ],
                 x,
@@ -108,7 +99,7 @@ void exahype2::dg::cellIntegral_patchwise_computeAndUpdate_functors(
         dx,
         index,
         order,
-        quadNodes);
+        quadratureNodes);
 
     if(useSource){
       //compute source term contributions
@@ -153,6 +144,7 @@ void exahype2::dg::cellIntegral_patchwise_computeAndUpdate_functors(
     } //if useNCP
 
   } //node
+  } // loop over individual cells
 
   if(useFlux){
     delete [] fluxValues;
@@ -164,7 +156,6 @@ void exahype2::dg::cellIntegral_patchwise_computeAndUpdate_functors(
     delete [] gradientValues;
     delete [] ncpValues;
   }
-
 }
 
 

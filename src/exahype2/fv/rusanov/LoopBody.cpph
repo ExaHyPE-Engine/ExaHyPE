@@ -374,10 +374,10 @@ void exahype2::fv::rusanov::internal::computeMaxEigenvalue_LoopBody(
 }
 
 
-template <class QInEnumeratorType>
+template <class QOutEnumeratorType>
 double exahype2::fv::rusanov::internal::reduceMaxEigenvalue_LoopBody(
-  const double* __restrict__                   QIn,
-  QInEnumeratorType                            QInEnumerator,
+  const double* __restrict__                     QOut,
+  QInEnumeratorType                              QOutEnumerator,
     exahype2::fv::rusanov::MaxEigenvalue         maxEigenvalue,
     const tarch::la::Vector<Dimensions,double>&  patchCentre,
     const tarch::la::Vector<Dimensions,double>&  patchSize,
@@ -386,14 +386,14 @@ double exahype2::fv::rusanov::internal::reduceMaxEigenvalue_LoopBody(
     double                                       t,
     double                                       dt
 ) {
-    double QInGathered[QInEnumerator._unknowns+QInEnumerator._numberOfAuxiliaryVariables];
+    double QGathered[QOutEnumerator._unknowns+QOutEnumerator._numberOfAuxiliaryVariables];
 
     // gather
     #if defined(SharedOMP)
     #pragma omp simd
     #endif
-    for (int unknown=0; unknown<QInEnumerator._unknowns+QInEnumerator._numberOfAuxiliaryVariables; unknown++) {
-      QInGathered[unknown] = QIn[ QInEnumerator(patchIndex,volumeIndex,unknown) ];
+    for (int unknown=0; unknown<QOutEnumerator._unknowns+QOutEnumerator._numberOfAuxiliaryVariables; unknown++) {
+      QGathered[unknown] = QIn[ QOutEnumerator(patchIndex,volumeIndex,unknown) ];
     }
 
     double result = 0.0;
@@ -402,9 +402,9 @@ double exahype2::fv::rusanov::internal::reduceMaxEigenvalue_LoopBody(
       result = std::max(
         result,
         maxEigenvalue(
-          QInGathered,
-          ::exahype2::fv::getVolumeCentre( patchCentre, patchSize, QInEnumerator._numberOfVolumesPerAxisInPatch, volumeIndex ),
-          ::exahype2::fv::getVolumeSize( patchSize, QInEnumerator._numberOfVolumesPerAxisInPatch ),
+          QGathered,
+          ::exahype2::fv::getVolumeCentre( patchCentre, patchSize, QOutEnumerator._numberOfVolumesPerAxisInPatch, volumeIndex ),
+          ::exahype2::fv::getVolumeSize( patchSize, QOutEnumerator._numberOfVolumesPerAxisInPatch ),
           t,
           dt,
           normal
@@ -418,15 +418,15 @@ double exahype2::fv::rusanov::internal::reduceMaxEigenvalue_LoopBody(
 
 template <>
 double exahype2::fv::rusanov::internal::reduceMaxEigenvalue_LoopBody(
-    const double* __restrict__                   QIn,
-    exahype2::enumerator::AoSLexicographicEnumerator QInEnumerator,
-    exahype2::fv::rusanov::MaxEigenvalue         maxEigenvalue,
-    const tarch::la::Vector<Dimensions,double>&  patchCentre,
-    const tarch::la::Vector<Dimensions,double>&  patchSize,
-    int                                          patchIndex,
-    const tarch::la::Vector<Dimensions,int>&     volumeIndex,
-    double                                       t,
-    double                                       dt
+  const double* __restrict__                       QOut,
+  exahype2::enumerator::AoSLexicographicEnumerator QOutEnumerator,
+  exahype2::fv::rusanov::MaxEigenvalue         maxEigenvalue,
+  const tarch::la::Vector<Dimensions,double>&  patchCentre,
+  const tarch::la::Vector<Dimensions,double>&  patchSize,
+  int                                          patchIndex,
+  const tarch::la::Vector<Dimensions,int>&     volumeIndex,
+  double                                       t,
+  double                                       dt
 ) {
     double result = 0.0;
     for (int normal=0; normal<Dimensions; normal++) {
@@ -434,9 +434,9 @@ double exahype2::fv::rusanov::internal::reduceMaxEigenvalue_LoopBody(
       result = std::max(
         result,
         maxEigenvalue(
-          QIn + QInEnumerator(patchIndex,volumeIndex,0),
-          ::exahype2::fv::getVolumeCentre( patchCentre, patchSize, QInEnumerator._numberOfVolumesPerAxisInPatch, volumeIndex ),
-          ::exahype2::fv::getVolumeSize( patchSize, QInEnumerator._numberOfVolumesPerAxisInPatch ),
+          QOut + QOutEnumerator(patchIndex,volumeIndex,0),
+          ::exahype2::fv::getVolumeCentre( patchCentre, patchSize, QOutEnumerator._numberOfVolumesPerAxisInPatch, volumeIndex ),
+          ::exahype2::fv::getVolumeSize( patchSize, QOutEnumerator._numberOfVolumesPerAxisInPatch ),
           t,
           dt,
           normal
@@ -447,10 +447,10 @@ double exahype2::fv::rusanov::internal::reduceMaxEigenvalue_LoopBody(
 }
 
 
-template <typename Solver, class QInEnumeratorType>
+template <typename Solver, class QOutEnumeratorType>
 double exahype2::fv::rusanov::internal::reduceMaxEigenvalue_LoopBody(
-  const double* __restrict__                   QIn,
-  const QInEnumeratorType&                     QInEnumerator,
+  const double* __restrict__                   QOut,
+  const QInEnumeratorType&                     QOutEnumerator,
   const tarch::la::Vector<Dimensions,double>&  patchCentre,
   const tarch::la::Vector<Dimensions,double>&  patchSize,
   int                                          patchIndex,
@@ -458,11 +458,11 @@ double exahype2::fv::rusanov::internal::reduceMaxEigenvalue_LoopBody(
   double                                       t,
   double                                       dt
 ) {
-  double QInGathered[QInEnumerator._unknowns+QInEnumerator._numberOfAuxiliaryVariables];
+  double QGathered[QOutEnumerator._unknowns+QOutEnumerator._numberOfAuxiliaryVariables];
 
   // gather
-  for (int unknown=0; unknown<QInEnumerator._unknowns+QInEnumerator._numberOfAuxiliaryVariables; unknown++) {
-    QInGathered[unknown] = QIn[ QInEnumerator(patchIndex,volumeIndex,unknown) ];
+  for (int unknown=0; unknown<QOutEnumerator._unknowns+QOutEnumerator._numberOfAuxiliaryVariables; unknown++) {
+    QGathered[unknown] = QOut[ QOutEnumerator(patchIndex,volumeIndex,unknown) ];
   }
 
   double result = 0.0;
@@ -471,9 +471,9 @@ double exahype2::fv::rusanov::internal::reduceMaxEigenvalue_LoopBody(
     result = std::max(
       result,
       Solver::maxEigenvalue(
-          QInGathered,
-          ::exahype2::fv::getVolumeCentre( patchCentre, patchSize, QInEnumerator._numberOfVolumesPerAxisInPatch, volumeIndex ),
-          ::exahype2::fv::getVolumeSize( patchSize, QInEnumerator._numberOfVolumesPerAxisInPatch ),
+          QGathered,
+          ::exahype2::fv::getVolumeCentre( patchCentre, patchSize, QOutEnumerator._numberOfVolumesPerAxisInPatch, volumeIndex ),
+          ::exahype2::fv::getVolumeSize( patchSize, QOutEnumerator._numberOfVolumesPerAxisInPatch ),
           t,
           dt,
           normal,
@@ -488,8 +488,8 @@ double exahype2::fv::rusanov::internal::reduceMaxEigenvalue_LoopBody(
 
 template <typename Solver>
 double exahype2::fv::rusanov::internal::reduceMaxEigenvalue_LoopBody(
-  const double* __restrict__                   QIn,
-  const exahype2::enumerator::AoSLexicographicEnumerator&  QInEnumerator,
+  const double* __restrict__                   QOut,
+  const exahype2::enumerator::AoSLexicographicEnumerator&  QOutEnumerator,
   const tarch::la::Vector<Dimensions,double>&  patchCentre,
   const tarch::la::Vector<Dimensions,double>&  patchSize,
   int                                          patchIndex,
@@ -503,9 +503,9 @@ double exahype2::fv::rusanov::internal::reduceMaxEigenvalue_LoopBody(
     result = std::max(
      result,
       Solver::maxEigenvalue(
-        QIn + QInEnumerator(patchIndex,volumeIndex,0),
-        ::exahype2::fv::getVolumeCentre( patchCentre, patchSize, QInEnumerator._numberOfVolumesPerAxisInPatch, volumeIndex ),
-        ::exahype2::fv::getVolumeSize( patchSize, QInEnumerator._numberOfVolumesPerAxisInPatch ),
+        QOut + QOutEnumerator(patchIndex,volumeIndex,0),
+        ::exahype2::fv::getVolumeCentre( patchCentre, patchSize, QOutEnumerator._numberOfVolumesPerAxisInPatch, volumeIndex ),
+        ::exahype2::fv::getVolumeSize( patchSize, QOutEnumerator._numberOfVolumesPerAxisInPatch ),
         t,
         dt,
         normal,
