@@ -63,7 +63,7 @@ void exahype2::dg::applyBoundaryConditions(
     boundaryCondition(
       Q + insideDoFSerialised,
       Q + outsideDoFSerialised,
-      x, t, dt, faceNumber
+      x, t, dt, faceNumber%Dimensions
     );
   }
 

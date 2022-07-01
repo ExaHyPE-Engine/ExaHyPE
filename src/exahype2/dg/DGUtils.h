@@ -58,88 +58,6 @@ namespace exahype2 {
       const double* __restrict__          quadraturePoints
     );
 
-    /**
-     * Take polynomial within cell and project it onto the faces
-     *
-     * ## Ordering
-     *
-     *                           2 3
-     *                           0 1
-     *                     2 3 [ o o ] 2 3
-     *                     0 1 [ o o ] 0 1
-     *                           2 3
-     *                           0 1
-     *
-     * Each individual face is ordered lexicographically. So we go from left to
-     * right, and we always start closest to the origin or the coordinate system
-     * if we interpret the cell as the unit square.
-     *
-     * The sketch above illustrates the ordering of the four faces for a p=1
-     * discretisation where we have two dofs per direction per face per side.
-     *
-     *
-     *
-     * @param cellQ Pointer to cell data. The array has the size
-     *   @f$ unknowns \times (order+1)^d@f$.
-     *
-     * @param unkonwns Integer greater or equal to 1. These number comprises both
-     *   real unknowns in the hyperbolic sense and auxiliary variables.
-     *
-     * @param order Integer greater or equal to 0. The number of nodes in each
-     *  dimension will be equal to order+1
-     *
-     * @param BasisFunctionValuesLeft Array of size order+1 which clarifies (in 1d)
-     *   how to project the order+1 quadrature weights onto a value on the left
-     *   face. For Gauss Lobatto, this is a trivial array (you can read out the
-     *   value directly from the leftmost quadrature point, but for any other
-     *   basis, you need a linear combination of all the quadrature points in the
-     *   cell.
-     *
-     * @param faceQLeft Left unknowns. This array hosts @f$ 2 \times (order+1)^(d-1) * unknowns@f$
-     *   values, as it holds the (projected) values from the left side of the face
-     *   and those from the right. The ordering of these values is lexicographic,
-     *   i.e. the first unknowns entries are those at the bottom of the vertical
-     *   face from the left adjacent cell. The next unknowns entries are those
-     *   at the bottom of the face from the right adjacent cell. The next are then
-     *   again left, then right, then left and so on.
-     *   This function will fill the right values since the current cell is to the
-     *   right of its own left face.
-     *
-     * @param faceQBottom Bottom unknowns. See faceQLeft. Again, we order
-     *   lexicographically. This time, the first half of the entries are those
-     *   from the adjacent cell below. The remaining entries are the projections
-     *   from above.
-     *
-     */
-    void projectVolumetricDataOntoFaces(
-      const double* __restrict__          cellQ,
-      int                                 order,
-      int                                 unknowns,
-      const double* const __restrict__    BasisFunctionValuesLeft,
-      const double* const __restrict__    BasisFunctionValuesRight,
-      double* const __restrict__          faceQLeft,
-      double* const __restrict__          faceQRight,
-      double* const __restrict__          faceQBottom,
-      double* const __restrict__          faceQUp
-    );
-
-    /**
-     * 3d counterpart to other projectVolumetricDataOntoFaces() variant.
-     */
-    void projectVolumetricDataOntoFaces(
-      const double* __restrict__          cellQ,
-      int                                 order,
-      int                                 unknowns,
-      const double* const __restrict__    BasisFunctionValuesLeft,
-      const double* const __restrict__    BasisFunctionValuesRight,
-      double* const __restrict__          faceQLeft,
-      double* const __restrict__          faceQRight,
-      double* const __restrict__          faceQBottom,
-      double* const __restrict__          faceQUp,
-      double* const __restrict__          faceQFront,
-      double* const __restrict__          faceQBack
-    );
-
 
     /**
      * The number of nodes in a cell is basically the input to the
@@ -247,29 +165,6 @@ namespace exahype2 {
         const int                   order,
         const int                   unknowns,
         const int                   auxiliaryVariables
-        );
-
-
-    /*
-     * Applies boundary conditions to a given face on the boundary, this
-     * fills in the values on the "outside" of the face with values computed from the
-     * boundaryConditions() function.
-     *
-     * @param strideQ: number of elements per node, typically this is the number of
-     *  unknowns + the number of auxiliary variables
-     *
-     * @param lr: int which denotes whether the face is on the left of the cell or on the
-     * right of the self (values respectively 0 and 1)
-     */
-    void applyBoundaryConditions(
-        BoundaryConditions                          boundaryConditions,
-        double*                                     QFace,
-        const int                                   order,
-        const int                                   strideQ,
-        const tarch::la::Vector<Dimensions,double>& x,
-        const double                                t,
-        const int                                   faceNormal,
-        const int                                   lr
         );
 
 
