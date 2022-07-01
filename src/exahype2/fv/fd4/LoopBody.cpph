@@ -218,8 +218,8 @@ void exahype2::fv::fd4::internal::updateSolutionWithDifferentialSourceTerm_LoopB
     
     // QDiffSrc is B_i*deltaQ_i for the central volume, and B here is defined on the LEFT of the equation.
     double QDiffSrcTerm = QDiffSrc[QDiffSrcEnumerator(patchIndex, volumeIndex, unknown)];
-
-    QOut[ QOutEnumerator(patchIndex, volumeIndex,unknown) ] += dt / patchSize(normal) * QOutEnumerator._numberOfVolumesPerAxisInPatch * QDiffSrcTerm
+    //take care we have an extra minus sign because we moved the diffsrc terms to the RIGHT!
+    QOut[ QOutEnumerator(patchIndex, volumeIndex,unknown) ] -= dt / patchSize(normal) * QOutEnumerator._numberOfVolumesPerAxisInPatch * QDiffSrcTerm
 
     #if !defined(GPUOffloadingOMP) and  !defined(GPUOffloadingSYCL)
     assertion8(
@@ -258,7 +258,7 @@ void exahype2::fv::fd4::internal::updateSolutionWithKODissipationTerm_LoopBody(
     double QKODspTerm = QKODsp[QKODspEnumerator(patchIndex, volumeIndex, unknown)];
 
     // TODO: define sigmaKO
-    double sigmaKO=0.0001;
+    double sigmaKO=8.0;
     QOut[ QOutEnumerator(patchIndex, volumeIndex,unknown) ] += sigmaKO * dt / patchSize(normal) * QOutEnumerator._numberOfVolumesPerAxisInPatch * QKODspTerm
 
     #if !defined(GPUOffloadingOMP) and  !defined(GPUOffloadingSYCL)
