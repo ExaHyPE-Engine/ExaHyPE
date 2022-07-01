@@ -143,6 +143,7 @@ void exahype2::dg::tests::DGTest::UtilsTest(){
     }
   }
 
+/*
   applyBoundaryConditions(
     [&](
       const double * __restrict__                  Qinside,
@@ -180,6 +181,7 @@ void exahype2::dg::tests::DGTest::UtilsTest(){
     1, //faceNormal
     1 //lr=1, right face
     );
+*/
 
   for(int node=0; node<nodesPerFace; node++){
 
@@ -597,6 +599,7 @@ void exahype2::dg::tests::DGTest::runDGElastic(){
     QOut
     );
 
+/*
   cellIntegral_patchwise_computeAndUpdate_functors(
       QIn,
       QOut,
@@ -647,6 +650,7 @@ void exahype2::dg::tests::DGTest::runDGElastic(){
       true,
       true,
       false);
+*/
 
   for(int i=0; i<nodesPerCell; i++){
     for(int var=0; var<auxiliaryVariables;var++){
@@ -672,6 +676,7 @@ void exahype2::dg::tests::DGTest::runDGElastic(){
   /*
    * Step 2), the values computed in step 1) are extrapolated to the surface boundary
    */
+/*
   projectVolumetricDataOntoFaces(
     QIn,
     order,
@@ -687,6 +692,7 @@ void exahype2::dg::tests::DGTest::runDGElastic(){
     QBack
 #endif
   );
+*/
 
   double initialValues[auxiliaryVariables];
   elasticInitial(initialValues);
@@ -770,6 +776,7 @@ void exahype2::dg::tests::DGTest::runDGElastic(){
    *  this essentially simulates the exchange of surface data with the
    *  neighbouring cells which Peano would take care of for us normally
    */
+/*
   projectVolumetricDataOntoFaces(
     QIn,
     order,
@@ -785,6 +792,7 @@ void exahype2::dg::tests::DGTest::runDGElastic(){
     QFront
 #endif
   );
+*/
 
   /*
   * The faces are assembled into one pointer construct for ease of access in the
@@ -816,6 +824,7 @@ void exahype2::dg::tests::DGTest::runDGElastic(){
    * this computes the maximal eigenvalue of the solution on each surface
    * for the rusanov flux computation
    */
+/*
   getMaxEigenvaluePerFace(
     [&](
       const double * __restrict__                 Q,
@@ -835,6 +844,7 @@ void exahype2::dg::tests::DGTest::runDGElastic(){
     dt,
     maxEigenvaluePerFace
   );
+*/
 
   file_stream << "\nMax Eigenvalues per Face:\n";
   for(int i=0; i<Dimensions*2; i++){
@@ -903,6 +913,7 @@ void exahype2::dg::tests::DGTest::runDGElastic(){
    * The contributions from the computed rusanov flux are then added to the nodes
    * within the cell.
    */
+/*
   applyRiemannToPatch(
       QOut,
       QHullForRiemann,
@@ -915,6 +926,7 @@ void exahype2::dg::tests::DGTest::runDGElastic(){
       BasisFunctionValuesRight,
       QuadratureWeights
       );
+*/
 
   file_stream << "\nFinal values are: \n";
   for(int i=0; i<nodesPerCell; i++){

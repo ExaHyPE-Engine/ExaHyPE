@@ -51,7 +51,7 @@ class LagrangeBasis():
   specific subclass.
   
   
-  @todo
+  @todo We don't need the mass matrix for this. We need a diagonal. And we don't have to expose the weights
   
   Brauchen wir das Zeugs wirklich? Das sind die Gewichte unter Gauss Legendre
   und damit die Diagonaleintraege der Massenmatrix. Aber es ist nicht die 

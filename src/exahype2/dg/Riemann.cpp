@@ -226,6 +226,7 @@ void exahype2::dg::computeRiemannIntegralAndAddToCell(
 }
 
 
+/*
 void exahype2::dg::applyRiemannToPatch(
     double* __restrict__        Q,
     const double* __restrict__  QHullIn,
@@ -269,6 +270,7 @@ void exahype2::dg::applyRiemannToPatch(
 
 
 }
+*/
 
 
 

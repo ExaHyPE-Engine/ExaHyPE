@@ -100,18 +100,32 @@
 namespace exahype2 {
   namespace dg {
     /*
+     * Volumetric kernel for Gauss-Legendre shape functions using functors
      *
-     *
-     * ## Visibility/realisation
-     *
-     * The Euler variant is static and all in the header. As I discuss in Rusanov.h, this is
-     * not nice. For DG, we have way heavier routines, to it is reasonable to model the kernels
-     * as proper functions with implementation files.
-     *
+     * Computes the @f$ \hat Q @f$ from the generic Discontinuous Galerkin
+     * explanation. That is the volumetric part of the weak formulation. It
+     * does not include the previous time step's solution, and it is not (yet)
+     * multiplied with the time step size or the inverse of the mass matrix.
      *
      * ## Algorithmic steps
      *
-     * - Copy over in into out. We run an explicit Euler, so the value is updated
+     * This version of the volumetric kernel works purely dof-wisely. That is,
+     * we iterate over the @f$ (p+1)^d @f$ quadrature points within the cell
+     * and compute the entries from @f$ \hat Q @f$. Per dof, we run through
+     * the following steps:
+     *
+     * - Set the outcome to zero. This is important, as we accumulate from
+     *   hereon.
+     * - If you want to use a flux function: We know that the contribution of
+     *   the flux term for one point only depends on the other dofs in the
+     *   same line/row/column of the Cartesian dof layout. This is due to
+     *   the fact that we use Legendre polynomials. Here, the polynomials are
+     *   orthogonal, which simplifies things. So we don't have to loop over
+     *   all dofs, but we can only loop in all directions once.
+     *
+     *
+     *
+     * Copy over in into out. We run an explicit Euler, so the value is updated
      *   according to a formula @f$ Q(t+\Delta t) = Q(t) + \Delta t \cdot (F + NCP) + S @f$
      *   ,the first part of which are the values at the last timestep
      *
@@ -184,29 +198,24 @@ namespace exahype2 {
      * @param: DerivativeOperator contains the derivative of the basis function evaluated
      *  at the quadrature node.
      *
-     *
-     *
-     *
-     * @todo Which of these matrices are really used?
      */
-    void cellIntegral_patchwise_functors(
-        ::exahype2::CellData&                          cellData,
-        const int                                      order,
-        const int                                      unknowns,
-        const int                                      auxiliaryVariables,
-        Flux                                           flux,
-        NonConservativeProduct                         nonConservativeProduct,
-        Source                                         source,
-        PointSources                                   pointSources,
-        const double* __restrict__                     quadratureNodes,
-        const double* __restrict__                     quadWeights,
-        const double* __restrict__                     MassMatrix,
-        const double* __restrict__                     StiffnessMatrix,
-        const double* __restrict__                     DerivativeOperator,
-        bool                                           evaluateFlux,
-        bool                                           evaluateNonconservativeProduct,
-        bool                                           evaluateSource,
-        bool                                           evaluatePointSources
+    void cellIntegral_patchwise_GaussLegendre_functors(
+      ::exahype2::CellData&                          cellData,
+      const int                                      order,
+      const int                                      unknowns,
+      const int                                      auxiliaryVariables,
+      Flux                                           flux,
+      NonConservativeProduct                         nonConservativeProduct,
+      Source                                         source,
+      PointSources                                   pointSources,
+      const double* __restrict__                     QuadratureNodes,
+      const double* __restrict__                     MassMatrixDiagonal,
+      const double* __restrict__                     StiffnessMatrix,
+      const double* __restrict__                     DerivativeOperator,
+      bool                                           evaluateFlux,
+      bool                                           evaluateNonconservativeProduct,
+      bool                                           evaluateSource,
+      bool                                           evaluatePointSources
     );
 
 

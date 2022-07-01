@@ -176,8 +176,9 @@ namespace exahype2 {
    *
    * @param quadratureWeights: quadrature weight of the given quadrature node 1 dimension
    *
-   * @todo Name ist nicht gut. Sollte wohl eher add sein.
+   * @todo Gibt es nimmer. Wurde praktisch durch computeRiemannIntegralAndAddToCell() ersetzt
    */
+/*
   void applyRiemannToPatch(
       double* __restrict__        Q,
       const double* __restrict__  QHullIn,
@@ -190,6 +191,7 @@ namespace exahype2 {
       const double* __restrict__  BasisFunctionValuesRight,
       const double* __restrict__  quadratureWeights
       );
+*/
 
   }
 }

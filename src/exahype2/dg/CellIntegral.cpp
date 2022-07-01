@@ -3,29 +3,28 @@
 #include "peano4/utils/Loop.h"
 
 
-void exahype2::dg::cellIntegral_patchwise_computeAndUpdate_functors(
-    ::exahype2::CellData&                          cellData,
-    const int                                      order,
-    const int                                      unknowns,
-    const int                                      auxiliaryVariables,
-    Flux                                           flux,
-    NonConservativeProduct                         nonConservativeProduct,
-    Source                                         source,
-    PointSources                                   pointSources,
-    const double* __restrict__	                   quadratureNodes,
-    const double* __restrict__                     quadWeights,
-    const double* __restrict__                     MassMatrix,
-    const double* __restrict__                     StiffnessMatrix,
-    const double* __restrict__                     DerivativeOperator,
-    const bool                                     useFlux,
-    const bool                                     useNCP,
-    const bool                                     useSource,
-    const bool                                     usePointSources
+void exahype2::dg::cellIntegral_patchwise_GaussLegendre_functors(
+  ::exahype2::CellData&                          cellData,
+  const int                                      order,
+  const int                                      unknowns,
+  const int                                      auxiliaryVariables,
+  Flux                                           flux,
+  NonConservativeProduct                         nonConservativeProduct,
+  Source                                         source,
+  PointSources                                   pointSources,
+  const double* __restrict__                     quadratureNodes,
+  const double* __restrict__                     massMatrixDiagonal,
+  const double* __restrict__                     stiffnessMatrix,
+  const double* __restrict__                     derivativeOperator,
+  bool                                           evaluateFlux,
+  bool                                           evaluateNonconservativeProduct,
+  bool                                           evaluateSource,
+  bool                                           evaluatePointSources
 ) {
-  double* fluxValues      = useFlux   ? new double[unknowns] : nullptr;
-  double* sourceValues    = useSource ? new double[unknowns] : nullptr;
-  double* gradientValues  = useNCP    ? new double[unknowns+auxiliaryVariables] : nullptr;
-  double* ncpValues       = useNCP    ? new double[unknowns] : nullptr;
+  double* fluxValues      = evaluateFlux   ? new double[unknowns] : nullptr;
+  double* sourceValues    = evaluateSource ? new double[unknowns] : nullptr;
+  double* gradientValues  = evaluateNonconservativeProduct    ? new double[unknowns+auxiliaryVariables] : nullptr;
+  double* ncpValues       = evaluateNonconservativeProduct    ? new double[unknowns] : nullptr;
 
   for (int currentCell=0; currentCell<cellData.numberOfCells; currentCell++) {
     const double* __restrict__                  cellQin  = cellData.QIn[currentCell];
@@ -36,37 +35,22 @@ void exahype2::dg::cellIntegral_patchwise_computeAndUpdate_functors(
     const double                                dt       = cellData.dt[currentCell];
 
     const int nodesPerAxis = order+1;
-  const int strideQ=unknowns+auxiliaryVariables;
-  const int nodesPerCell = getNodesPerCell(nodesPerAxis);
-  tarch::la::Vector<Dimensions,int> strides = getStrides(nodesPerAxis);
+    const int strideQ=unknowns+auxiliaryVariables;
+    const int nodesPerCell = getNodesPerCell(nodesPerAxis);
+    tarch::la::Vector<Dimensions,int> strides = getStrides(nodesPerAxis);
 
-  const double invDx = 1.0/dx;
-  const double coeff0 = dt*invDx; //We assume that the cells are cubes, e.g. A/V = 1/dx
+    //which node's value is being computed
+    for(int node=0; node<nodesPerCell; node++){
+      for(int var=0; var<strideQ; var++){
+        cellQout[node*strideQ+var] = 0.0;
+      }
 
-  //which node's value is being computed
-  for(int node=0; node<nodesPerCell; node++){
+      tarch::la::Vector<Dimensions,int> index = getIndex(node, strides);
 
-    for(int var=0; var<strideQ; var++){
-      cellQout[node*strideQ+var] = 0.0;
-    }
-
-    /*
-    for(int var=0; var<auxiliaryVariables; var++){
-      cellQout[node*strideQ+unknowns+var] = cellQin[node*strideQ+unknowns+var];
-    }
-    */
-
-    tarch::la::Vector<Dimensions,int> index = getIndex(node, strides);
-
-    if(useFlux){
-      // direction in which flux contributions are being computed
-      for(int dim=0; dim<Dimensions; dim++){
-
-        double coeff1 = coeff0 / quadWeights[index[dim]];
-
-        // contributing node along this direction
+      if(evaluateFlux){
+        // direction in which flux contributions are being computed
+        for(int dim=0; dim<Dimensions; dim++)
         for(int i=0; i<nodesPerAxis; i++){
-
           // compute contributing node real position
           const int neighbourNode = node + (i - index[dim])*strides[dim];
           tarch::la::Vector<Dimensions,int> contributingNodeIndex = index;
@@ -84,75 +68,96 @@ void exahype2::dg::cellIntegral_patchwise_computeAndUpdate_functors(
                 dim, //normal
                 fluxValues);
 
-          double coeff = coeff1 * StiffnessMatrix[i+index[dim]*nodesPerAxis];
+          // Coefficient within matrix is tensor product over dimensions, too
+          double coeff = stiffnessMatrix[i+index[dim]*nodesPerAxis];
+          for (int dd=0; dd<Dimensions; dd++) {
+            coeff *= (dd==dim) ? 1.0 : massMatrixDiagonal[ index(dim) ];
+          }
+
           for(int var=0; var<unknowns; var++){
-              cellQout[node*strideQ+var] += coeff * fluxValues[var];
+            cellQout[node*strideQ+var] += coeff * fluxValues[var];
           } //var
+        } // dim/i combination
+      }//if useFlux
 
-        } //i
-      } //dim
-    }//if useFlux
+      if(evaluateSource){
+        //compute real node position
+        tarch::la::Vector<Dimensions,double> position = getQuadraturePoint( x,
+          dx,
+          index,
+          order,
+          quadratureNodes);
 
-
-    //compute real node position
-    tarch::la::Vector<Dimensions,double> position = getQuadraturePoint( x,
-        dx,
-        index,
-        order,
-        quadratureNodes);
-
-    if(useSource){
-      //compute source term contributions
-      source( &cellQin[node*strideQ],
+        //compute source term contributions
+        source( &cellQin[node*strideQ],
               position,
               t,
               dt,
               sourceValues);
-      for(int var=0; var<unknowns; var++){
-        cellQout[node*strideQ+var] += dt * sourceValues[var];
-      } //var
-    } //if useSource
 
-    if(useNCP){
-
-      computeGradient(
-        cellQin,
-        DerivativeOperator,
-        invDx,
-        nodesPerAxis,
-        strideQ,
-        node,
-        gradientValues
-        );
-
-      for(int dim=0; dim<Dimensions; dim++){
-
-        nonConservativeProduct(
-          &cellQin[node*strideQ],
-          &gradientValues[dim*strideQ],
-          position,
-          t,
-          dt,
-          dim,
-          ncpValues);
+        #if Dimensions==2
+        double coeff = massMatrixDiagonal[ index(0) ] * massMatrixDiagonal[ index(1) ];
+        #else
+        double coeff = massMatrixDiagonal[ index(0) ] * massMatrixDiagonal[ index(1) ] * massMatrixDiagonal[ index(2) ];
+        #endif
 
         for(int var=0; var<unknowns; var++){
-          cellQout[node*strideQ+var] += dt * ncpValues[var];
+          cellQout[node*strideQ+var] += coeff * sourceValues[var];
         } //var
+      } //if useSource
 
-      } //dim
-    } //if useNCP
+      // @todo Point Source missing
 
-  } //node
+      if (evaluateNonconservativeProduct) {
+        //compute real node position
+        tarch::la::Vector<Dimensions,double> position = getQuadraturePoint( x,
+          dx,
+          index,
+          order,
+          quadratureNodes);
+
+        computeGradient(
+          cellQin,
+          derivativeOperator,
+          1.0 / dx,
+          nodesPerAxis,
+          strideQ,
+          node,
+          gradientValues
+        );
+
+        for(int dim=0; dim<Dimensions; dim++) {
+          nonConservativeProduct(
+            &cellQin[node*strideQ],
+            &gradientValues[dim*strideQ],
+            position,
+            t,
+            dt,
+            dim,
+            ncpValues);
+
+          // @todo There's a matrix missing, isn't it? Or
+          //  can we now really model this via the mass matrix?
+          double coeff = 1.0;
+          for (int dd=0; dd<Dimensions; dd++) {
+            coeff *= massMatrixDiagonal[ index(dim) ];
+          }
+
+          for(int var=0; var<unknowns; var++){
+            cellQout[node*strideQ+var] += coeff * ncpValues[var];
+          } //var
+        } //dim
+      } //if useNCP
+    } //node
   } // loop over individual cells
 
-  if(useFlux){
+  if (evaluateFlux) {
     delete [] fluxValues;
   }
-  if(useSource){
+  if (evaluateSource) {
     delete [] sourceValues;
   }
-  if(useNCP){
+  if (evaluateNonconservativeProduct) {
     delete [] gradientValues;
     delete [] ncpValues;
   }

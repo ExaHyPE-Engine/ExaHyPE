@@ -368,7 +368,7 @@ namespace exahype2 {
         template <class QOutEnumeratorType>
         static double reduceMaxEigenvalue_LoopBody(
           const double* __restrict__                   QOut,
-          QInEnumeratorType                            QOutEnumerator,
+          QOutEnumeratorType                           QOutEnumerator,
           exahype2::fv::rusanov::MaxEigenvalue         maxEigenvalue,
           const tarch::la::Vector<Dimensions,double>&  patchCentre,
           const tarch::la::Vector<Dimensions,double>&  patchSize,
@@ -410,7 +410,7 @@ namespace exahype2 {
         template <typename Solver, class QOutEnumeratorType>
         static double reduceMaxEigenvalue_LoopBody(
           const double* __restrict__                   QOut,
-          const QInEnumeratorType&                     QOutEnumerator,
+          const QOutEnumeratorType&                    QOutEnumerator,
           const tarch::la::Vector<Dimensions,double>&  patchCentre,
           const tarch::la::Vector<Dimensions,double>&  patchSize,
           int                                          patchIndex,

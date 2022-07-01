@@ -376,28 +376,28 @@ void exahype2::fv::rusanov::internal::computeMaxEigenvalue_LoopBody(
 
 template <class QOutEnumeratorType>
 double exahype2::fv::rusanov::internal::reduceMaxEigenvalue_LoopBody(
-  const double* __restrict__                     QOut,
-  QInEnumeratorType                              QOutEnumerator,
-    exahype2::fv::rusanov::MaxEigenvalue         maxEigenvalue,
-    const tarch::la::Vector<Dimensions,double>&  patchCentre,
-    const tarch::la::Vector<Dimensions,double>&  patchSize,
-    int                                          patchIndex,
-    const tarch::la::Vector<Dimensions,int>&     volumeIndex,
-    double                                       t,
-    double                                       dt
+  const double* __restrict__                   QOut,
+  QOutEnumeratorType                           QOutEnumerator,
+  exahype2::fv::rusanov::MaxEigenvalue         maxEigenvalue,
+  const tarch::la::Vector<Dimensions,double>&  patchCentre,
+  const tarch::la::Vector<Dimensions,double>&  patchSize,
+  int                                          patchIndex,
+  const tarch::la::Vector<Dimensions,int>&     volumeIndex,
+  double                                       t,
+  double                                       dt
 ) {
-    double QGathered[QOutEnumerator._unknowns+QOutEnumerator._numberOfAuxiliaryVariables];
+  double QGathered[QOutEnumerator._unknowns+QOutEnumerator._numberOfAuxiliaryVariables];
 
-    // gather
-    #if defined(SharedOMP)
-    #pragma omp simd
-    #endif
-    for (int unknown=0; unknown<QOutEnumerator._unknowns+QOutEnumerator._numberOfAuxiliaryVariables; unknown++) {
-      QGathered[unknown] = QIn[ QOutEnumerator(patchIndex,volumeIndex,unknown) ];
-    }
+  // gather
+  #if defined(SharedOMP)
+  #pragma omp simd
+  #endif
+  for (int unknown=0; unknown<QOutEnumerator._unknowns+QOutEnumerator._numberOfAuxiliaryVariables; unknown++) {
+    QGathered[unknown] = QOut[ QOutEnumerator(patchIndex,volumeIndex,unknown) ];
+  }
 
-    double result = 0.0;
-    for (int normal=0; normal<Dimensions; normal++) {
+  double result = 0.0;
+  for (int normal=0; normal<Dimensions; normal++) {
       // actual computation via user's functor
       result = std::max(
         result,
@@ -410,9 +410,9 @@ double exahype2::fv::rusanov::internal::reduceMaxEigenvalue_LoopBody(
           normal
         )
       );
-    }
+  }
 
-    return result;
+  return result;
 }
 
 
@@ -450,7 +450,7 @@ double exahype2::fv::rusanov::internal::reduceMaxEigenvalue_LoopBody(
 template <typename Solver, class QOutEnumeratorType>
 double exahype2::fv::rusanov::internal::reduceMaxEigenvalue_LoopBody(
   const double* __restrict__                   QOut,
-  const QInEnumeratorType&                     QOutEnumerator,
+  const QOutEnumeratorType&                    QOutEnumerator,
   const tarch::la::Vector<Dimensions,double>&  patchCentre,
   const tarch::la::Vector<Dimensions,double>&  patchSize,
   int                                          patchIndex,

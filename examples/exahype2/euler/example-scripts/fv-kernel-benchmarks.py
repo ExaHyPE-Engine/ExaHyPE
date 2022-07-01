@@ -48,7 +48,7 @@ if args.file=="":
     # Create a project and configure it to end up in a subnamespace (and thus
     # subdirectory). 
     #
-    project = exahype2.Project( ["examples", "exahype2", "euler"], "finitevolumes", ".", executable="kernel-benchmark" )
+    project = exahype2.Project( ["examples", "exahype2", "euler"], "finitevolumes", ".", executable="fv-kernel-benchmark" )
     
     #
     # Add the Finite Volumes solver
@@ -104,7 +104,7 @@ if args.file=="":
     peano4_project = project.generate_Peano4_project(args.verbose)
     peano4_project.constants.export_const_with_type( "Accuracy", str(args.accuracy), "double" )
     peano4_project.generate()
-    benchmark_main_file = os.path.dirname(os.path.realpath(__file__)) + "/kernel-benchmarks.cpp"
+    benchmark_main_file = os.path.dirname(os.path.realpath(__file__)) + "/fv-kernel-benchmarks.cpp"
     print( "replace generated main with benchmark main file {}".format(benchmark_main_file) )
     os.system( "cp {} finitevolumes-main.cpp".format(benchmark_main_file) )
     os.system( "make clean" )
