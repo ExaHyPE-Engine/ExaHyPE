@@ -13,61 +13,93 @@
  * collection of routines. It is rather a toolbox than a real solver. It is the
  * Python code which serves as glue. It takes the individual events triggered
  * by Peano's mesh traversal, augments it with ExaHyPE-specific data structure,
- * and maps it onto DG routines. The mapping from traversal event onto DG
- * computations is realised via action sets.
+ * and maps it onto DG routines. Furthermore, the generated Python code holds
+ * all the DG matrices and vectors. These are not hardwired into the C++
+ * routines but passed in as arguments (pointers). The mapping from the
+ * traversal events onto DG computations is realised via action sets. This is
+ * the Peano terminology.
  *
  * We rely on the generic DG formulation for
  *
  * @f$ \partial _t Q(t) + div F(Q(t)) = S(Q(t)) @f$
  *
  * which is subject to a weak formulation. A discussion of non-conservative
- * terms can be found further down. So we examine the weak formulation which
- * has to hold for any reasonably smooth test function @f$ \phi @f$:
+ * terms can be found further down. For the time being, we focus on a
+ * conservative formulation and examine the weak formulation which
+ * has to hold for any reasonably smooth test function @f$ \phi = \phi (x)@f$:
  *
  * @f$ \int _{\Omega } \left( \partial _t Q(t), \phi \right) dx + \int _{\Omega } \left( div F(Q(t)), \phi \right) dx = \int _{\Omega } \left(S(Q(t)), \phi \right) dx @f$
  *
  * In the DG framework, any test function @f$ \phi @f$ has strict local support
- * which reduces the weak formulation to a cell expression.
- * Within a cell, our shape function is continuous.
+ * which reduces the weak formulation to a cell expression: We know that
+ * @f$ \phi \not= 0 @f$ inside one specific cell c, but it equals zero
+ * everywhere else. Within this one cell, our shape function is continuous.
  * Therefore, we can roll over the divergence operator and obtain
  *
  * @f$ \int _c \left( \partial _t Q(t), \phi \right) dx - \int  _c \left( F(Q(t)), \nabla \phi \right) dx + \int _{\partial c} \left( F(Q(t)), \phi \right) dS(x) = \int _c \left(S(Q(t)), \phi \right) dx @f$
  *
  * It doesn't really matter for the discussion here how we treat the time
- * derivative. In ExaHyPE 2, we mainly use Runge-Kutta. If the
+ * derivative. Our discussion focuses on how we compute @f$ \partial _t Q @f$
+ * and it is then up to your time integrator of choice how to process this
+ * information further.
+ *
+ * In ExaHyPE 2, we mainly use Runge-Kutta. If the
  * weak formulation is subject to Runge-Kutta, we evaluate
  * a series of forward shots/trials and then combine these shots finally into
  * the new solution. All we need is a description of the time derivative,
  * which we obtain from the weak formulation above.
- *
- * Our C++ toolbox is really independent of the
- * time integration scheme. Therefore, I decided to place it in a namespace
+ * As our C++ toolbox is independent of the
+ * time integration scheme used, I decided to place it in a namespace
  * dg, whereas the Python glue code might have different namespaces reflecting
  * different timestepping schemes.
  *
  *
- * ## A single time step, i.e. the computation of @f$ \partial _t Q @f$
+ * ## A single time step
  *
- * If we want to realise a single time step, the scheme above gives us all the operators
- * that we need. Below, we discuss these classic Discontinuous Galerkin steps and map
- * them onto the ExaHyPE 2 routines. As we deal with a single time step, let
+ * If we want to realise a single time step, the scheme above gives us all the
+ * operators that we need. On this page, I do not discuss Discontinuous
+ * Galerkin in detail, but I try to point out, how the individual steps are
+ * integrated into the mesh traversal, and how I split them up into individual
+ * routines.
+ *
+ * As we deal with a single time step, let
  *
  * @f$ \partial _t Q(t) \approx 1/dt \cdot \left( Q^{(new)} - Q^{(old)} \right) @f$
  *
+ * where the @f$ dt @f$ is the time step size.
  * We insert this into the left hand side of the weak formulation, write simply Q
  * instead of @f$ Q^{(old)} @f$ (as we are lazy) and obtain
  *
  * @f$ \int _c \left( Q^{(new)}, \phi \right) dx = \int _c \left( Q, \phi \right) dx + dt \cdot \left( \int  _c \left( F(Q), \nabla \phi \right) dx - \int _{\partial c} \left( F(Q), \phi \right) dS(x) + \int _c \left(S(Q), \phi \right) dx \right) @f$
  *
- * We have @f$ (p+1)^d @f$ degrees of freedom in our square/cube cells. Each carries
+ * ExaHyPE works with cubic or square cells and a Cartesian layout of the degrees
+ * of freedom therein.
+ * We thus have @f$ (p+1)^d @f$ degrees of freedom in our square/cube cells. Each carries
  * n unknowns, but they are all treated the same, i.e. independent of each other.
- * So it is sufficient to look at one unknown and to know that the F and S term
- * can potentially couple this unknown to any other one from the previous time step.
- * Each of the @f$ (p+1)^d @f$ unknowns carries one shape function (from the same space
- * as @f$ \phi @f$). As the integrals only span one cell, we get something like
+ * So it is sufficient to look at one unknown. We may assume that the Q is scalar.
+ * The F and S term can potentially couple n unknows per dof from the previous
+ * time step with each other. But that's none of our business.
+ *
+ * @image html shape-functions.png
+ *
+ * Each of the @f$ (p+1)^d @f$ unknowns carries one shape function.
+ * The picture above illustrates this: There's a polynomial, it is tied to one
+ * particular dof, and this dof holds a weight, i.e. a scaling of this one shape
+ * function. The test functions @f$ \phi @f$ are polynomials, too.
+ * All of these polynomials live only within one cell.
+ * The solution is then actually a combination of all of the polynomials scaled
+ * by the dof weights.
+ * In the sketch, the solution is a linear combination of 16 polyomials within
+ * this very cell.
+ * Then it might jump on the cell face, and in the next adjacent cell there are
+ * another 16 dofs which determine the solution's shape.
+ *
+ * As the integrals of the weak formulation span one cell only, we get something
+ * like
  *
  * @f$ M Q^{(new)} = MQ + dt \cdot \Big( ... \Big) Q^* @f$
  *
+ * per cell.
  * There is a square mass matrix which results from the integral above which tells us
  * that a linear combination of the new values within a cell equals the same linear
  * combination of the previous solution plus dt times an expression over all previous
@@ -75,17 +107,14 @@
  * point out that we use a lot more values than only those within one cell.
  *
  * The M is the <b>MassMatrix</b>. Let all the dofs within a cell be enumerated
- * lexicographically. Each value scales the underlying shape function. We use a
- * Ritz-Galerkin shape function design, i.e. our test functions are the same as
- * our shape functions. The first
+ * lexicographically. Each value scales the underlying shape function. The first
  * line of the mass matrix then tells us what the linear combination of all of these
  * shape functions scaled by the weights and tested against the first gives under the
  * integral. The second line of the @f$ M Q^{(new)} @f$ tells us what the test of the
  * linear combination against the second test function gives us.
  *
  * We can compute the mass matrix a priori. This is done
- * by the Python script exahype2.solvers.LagrangeBasis (you have to pick the search
- * dialogue in the generated web page if you want to find the docu in the browser).
+ * by the Python script exahype2.solvers.LagrangeBasis for example.
  * The computed matrix is then written into the abstract solver base class of the user
  * and can be handed over to any computational routine. We note that we will (more
  * often) need the inverse and that the equation above eliminates the mass matrix
@@ -94,14 +123,18 @@
  * @f$ Q^{(new)}(T) = Q + dt \cdot M^{-1} \Big( \dots \Big) Q^* =: Q + dt \cdot M^{-1} \hat Q@f$
  *
  * This is the last step of our algorithm: We assume that we have a quantity @f$ \hat Q @f$
- * in each and every sample point. We multiply these quantities with the inverse of the
+ * in each and every sample point. Its entries have to be discussed. We multiply these quantities with the inverse of the
  * mass matrix and add it, subject to a scaling with dt, to the old solution. This
  * operation is called exahype2::dg::multiplyWithInvertedMassMatrixAndAddToSolution_GaussLegendre() or variants thereof.
  * So far, the algorithm thus consists of two steps:
  *
- * - (unspecified) Compute the @f$ \hat Q @f$ value per degree of freedom in each and every cell.
+ * - (unspecified) Compute the @f$ \hat Q @f$ value per degree of freedom in each and every cell somehow.
  * - (3) Run over each cell. Per cell, call exahype2::dg::multiplyWithInvertedMassMatrixAndAddToSolution_GaussLegendre() or variants thereof.
  *   This routine takes the Q values of the cell, and adds the contribution @f$ dt \cdot M^{-1} \hat Q @f$.
+ *
+ * You will find exahype2::dg::multiplyWithInvertedMassMatrixAndAddToSolution_GaussLegendre()
+ * and its cousins in the file exahype2/dg/CellIntegral.h as they correspond, as name and
+ * derivation suggest, from an integral formulation over integrals.
  *
  *
  * ## Mass matrix
@@ -109,24 +142,32 @@
  * You can pick different shape functions. For different shape functions, you get
  * different mass matrices. For some mass matrices, we provide specialised versions of
  * multiplyWithMassMatrixAndAddToSolution() which either overload the original routine
- * or have a slightly altered name.
+ * or have a slightly altered name. All of them have in common that the underlying
+ * shape functions have local support. They never extend beyond a cell. Therefore,
+ * mass matrices are always square and have exactly @f$ (p+1)^d @f$ rows/columns.
  *
- * All of our shape functions have tensor-product structure, i.e. they can be
- * written down as
- *
- * @f$ \phi (x,y,z) = \phi (x) \cdot \phi (y) \cdot \phi (z) @f$
- *
- * We furthermore notice that @f$ M @f$ in general is a dense matrix. If we enumerate
+ * We notice that @f$ M @f$ in general is a dense matrix. If we enumerate
  * the functions, the entries of the matrix stem from
  *
  * @f$ M_{ij} = \int _c \Big( \phi _i, \phi _j \Big) dx @f$
  *
- * which defines our entries. There are two big special cases:
+ * which defines our entries. There are important special cases:
  *
+ * - If we use a Ritz-Galerkin shape function choice, i.e. pick the test
+ *   functions from the same function space as our shape functions, then
+ *   the matrix is symmetric. We might want to exploit this, though there's
+ *   limited gain if we make our abstract solver precompute the inverse.
  * - If we use Gauss-Legendre shape functions, the polynomials are orthogonal. Therefore,
  *   the mass matrix becomes a diagonal matrix. Its inversion is trivial.
  * - Due to its construction, we expect M to be very diagonal dominant. Codes thus might
  *   want to use a lumped, i.e. diagonalised, approximation of M.
+ * - If our shape functions have tensor-product structure, i.e. can be
+ *   written down as
+ *
+ *   @f$ \phi (x,y,z) = \phi (x) \cdot \phi (y) \cdot \phi (z) @f$
+ *
+ *   we can run further optimisations. Again, it is up to the DG routines
+ *   to exploit this fact.
  *
  * As we use Discontinuous Galerkin where the individual shape functions are
  * confined to a cell, M couples really only dofs of one cell with each other.
@@ -135,15 +176,13 @@
  * codes might nevertheless prefer lumped (diagonalised) matrices for performance
  * reasons.
  *
+ *
  * Purists might argue that most setups don't need the inverse of the mass
  * matrix, as the mass matrix inverse coincides with the mass matrix inside the
  * @f$ \hat Q @f$ term. However, there are cases where this is on the case
  * (below), and if you find out that your mass matrix is a diagonal, then we
  * offer specialised versions for this anyway and you can afford the few
  * additional multiplications.
- *
- *
- * @todo Insert multiplyWithInvertedDiagonalMassMatrixAndAddToSolution() into the code as explicit step. It is not there yet.
  *
  *
  * ## The computation of the @f$ \hat Q @f$

@@ -18,12 +18,12 @@ class LagrangeBasis():
   Lagrange Basis 
   
   
-  Method representing a Lagrange basis which is used as a factory mechanism
-  to produce all the vectors and matrices that we need within the DG solvers.
-  Never use this class directly, but always rely on GaussLegendre or 
-  GaussLobatto. The only two things that are relevant for a user are the two
-  routines quadrature_points() and quadrature_weights() as well as the routine
-  to befill a map with replacement rules: init_dictionary_with_default_parameters()
+  Method representing an abstract Lagrange basis which is used as a factory 
+  mechanism to produce vectors and matrices that we need within DG solvers.
+  Never use this class directly, but always a subclass. The most relevant 
+  routine for a user is init_dictionary_with_default_parameters() which is 
+  a routine to befill a map with replacement rules, i.e. with the precomputed
+  matrices and vectors.
   
   
   ## Generated vectors and matrices
@@ -125,8 +125,8 @@ class LagrangeBasis():
     # operators
     self.__mass_matrix                     = self.__compute_mass_matrix()
     self.__stiffness_operator              = self.__compute_stiffness_operator()
-    self.__K1                              = self.__compute_K1()
-    self.__inverted_predictor_lhs_operator = mp.inverse(self.__K1).tolist()
+    #self.__K1                              = self.__compute_K1()
+    #self.__inverted_predictor_lhs_operator = mp.inverse(self.__K1).tolist()
     self.__basis_function_values_left,_    = self.__evaluate(mp.mpf(0.0))
     self.__basis_function_values_right,_   = self.__evaluate(mp.mpf(1.0))
     self.__derivative_operator    = self.__compute_derivative_operator()
