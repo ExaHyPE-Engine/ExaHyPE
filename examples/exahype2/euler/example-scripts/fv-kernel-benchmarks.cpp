@@ -176,8 +176,8 @@ void runBenchmarks(int patches) {
       patchData.t[i]             = TimeStamp;
       patchData.dt[i]            = TimeStepSize;
       patchData.QOut[i]          = new double[ NumberOfOutputEntries ];
-      patchData.patchCentre[i]   = tarch::la::Vector<Dimensions,double>(CellOffset+0.5*CellSize);
-      patchData.patchSize[i]     = tarch::la::Vector<Dimensions,double>(CellSize);
+      patchData.cellCentre[i]   = tarch::la::Vector<Dimensions,double>(CellOffset+0.5*CellSize);
+      patchData.cellSize[i]     = tarch::la::Vector<Dimensions,double>(CellSize);
       initInputData( patchData.QIn[i] );
     }
 
@@ -223,8 +223,8 @@ void runBenchmarks(int patches) {
       patchData[hostTask].t[i]     = TimeStamp;
       patchData[hostTask].dt[i]    = TimeStepSize;
       patchData[hostTask].QOut[i]  = new double[ NumberOfOutputEntries ];
-      patchData[hostTask].patchCentre[i]     = tarch::la::Vector<Dimensions,double>(CellOffset+0.5*CellSize);
-      patchData[hostTask].patchSize[i]       = tarch::la::Vector<Dimensions,double>(CellSize);
+      patchData[hostTask].cellCentre[i]     = tarch::la::Vector<Dimensions,double>(CellOffset+0.5*CellSize);
+      patchData[hostTask].cellSize[i]       = tarch::la::Vector<Dimensions,double>(CellSize);
     }
 
     tarch::timing::Watch singleKernelWatch( "::", "main()", false );

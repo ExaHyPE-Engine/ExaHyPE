@@ -357,11 +357,18 @@ namespace exahype2 {
         /**
          * This is the actual eigenvalue loop which reduces the directional
          * eigenvalues.
+         *
+         * @param QOut The new (updated) solution over which we reduce the
+         *   eigenvalues.
+         *
+         * @param QOutEnumerator Identificator how the output array is
+         *   enumerated. Will be AoS most of the time, as this is Peano's
+         *   default data ordering.
          */
-        template <class QInEnumeratorType>
+        template <class QOutEnumeratorType>
         static double reduceMaxEigenvalue_LoopBody(
-          const double* __restrict__                   QIn,
-          QInEnumeratorType                            QInEnumerator,
+          const double* __restrict__                   QOut,
+          QOutEnumeratorType                           QOutEnumerator,
           exahype2::fv::rusanov::MaxEigenvalue         maxEigenvalue,
           const tarch::la::Vector<Dimensions,double>&  patchCentre,
           const tarch::la::Vector<Dimensions,double>&  patchSize,
@@ -372,10 +379,15 @@ namespace exahype2 {
         ) InlineMethod;
 
 
+        /**
+         * Specialisation anticipating that the ordering of the output
+         * data will be AoS in almost all the cases. So it makes sense
+         * to exploit this knowledge performance-wisely.
+         */
         template <>
         KeywordToAvoidDuplicateSymbolsForInlinedFunctions double reduceMaxEigenvalue_LoopBody(
-          const double* __restrict__                   QIn,
-          exahype2::enumerator::AoSLexicographicEnumerator QInEnumerator,
+          const double* __restrict__                   QOut,
+          exahype2::enumerator::AoSLexicographicEnumerator QOutEnumerator,
           exahype2::fv::rusanov::MaxEigenvalue         maxEigenvalue,
           const tarch::la::Vector<Dimensions,double>&  patchCentre,
           const tarch::la::Vector<Dimensions,double>&  patchSize,
@@ -386,16 +398,19 @@ namespace exahype2 {
         ) InlineMethod;
 
 
+        /**
+         * Specialised version for GPU. See generic variant for documentation.
+         */
         #if defined(SharedOMP) and (!defined(__INTEL_LLVM_COMPILER) or !defined(GPUOffloadingOMP))
         #pragma omp declare simd
         #endif
         #if defined(GPUOffloadingOMP)
         #pragma omp declare target
         #endif
-        template <typename Solver, class QInEnumeratorType>
+        template <typename Solver, class QOutEnumeratorType>
         static double reduceMaxEigenvalue_LoopBody(
-          const double* __restrict__                   QIn,
-          const QInEnumeratorType&                     QInEnumerator,
+          const double* __restrict__                   QOut,
+          const QOutEnumeratorType&                    QOutEnumerator,
           const tarch::la::Vector<Dimensions,double>&  patchCentre,
           const tarch::la::Vector<Dimensions,double>&  patchSize,
           int                                          patchIndex,
@@ -408,6 +423,12 @@ namespace exahype2 {
         #endif
 
 
+        /**
+         * Optimised version for the GPU which is furthermore optimised
+         * towards one specific unknown enumeration. This is the enumeration
+         * we encounter in almost all of the cases, so it makes sense to
+         * specialise for this one.
+         */
         #if defined(SharedOMP) and (!defined(__INTEL_LLVM_COMPILER) or !defined(GPUOffloadingOMP))
         #pragma omp declare simd
         #endif
@@ -416,8 +437,8 @@ namespace exahype2 {
         #endif
         template <typename Solver>
         static double reduceMaxEigenvalue_LoopBody(
-          const double* __restrict__                   QIn,
-          const exahype2::enumerator::AoSLexicographicEnumerator&  QInEnumerator,
+          const double* __restrict__                   QOut,
+          const exahype2::enumerator::AoSLexicographicEnumerator&  QOutEnumerator,
           const tarch::la::Vector<Dimensions,double>&  patchCentre,
           const tarch::la::Vector<Dimensions,double>&  patchSize,
           int                                          patchIndex,

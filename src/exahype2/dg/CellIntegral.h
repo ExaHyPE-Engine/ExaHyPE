@@ -94,22 +94,38 @@
 #include "peano4/grid/GridControlEvent.h"
 #include "peano4/utils/Globals.h"
 
+#include "exahype2/CellData.h"
+
 
 namespace exahype2 {
   namespace dg {
     /*
+     * Volumetric kernel for Gauss-Legendre shape functions using functors
      *
-     *
-     * ## Visibility/realisation
-     *
-     * The Euler variant is static and all in the header. As I discuss in Rusanov.h, this is
-     * not nice. For DG, we have way heavier routines, to it is reasonable to model the kernels
-     * as proper functions with implementation files.
-     *
+     * Computes the @f$ \hat Q @f$ from the generic Discontinuous Galerkin
+     * explanation. That is the volumetric part of the weak formulation. It
+     * does not include the previous time step's solution, and it is not (yet)
+     * multiplied with the time step size or the inverse of the mass matrix.
      *
      * ## Algorithmic steps
      *
-     * - Copy over in into out. We run an explicit Euler, so the value is updated
+     * This version of the volumetric kernel works purely dof-wisely. That is,
+     * we iterate over the @f$ (p+1)^d @f$ quadrature points within the cell
+     * and compute the entries from @f$ \hat Q @f$. Per dof, we run through
+     * the following steps:
+     *
+     * - Set the outcome to zero. This is important, as we accumulate from
+     *   hereon.
+     * - If you want to use a flux function: We know that the contribution of
+     *   the flux term for one point only depends on the other dofs in the
+     *   same line/row/column of the Cartesian dof layout. This is due to
+     *   the fact that we use Legendre polynomials. Here, the polynomials are
+     *   orthogonal, which simplifies things. So we don't have to loop over
+     *   all dofs, but we can only loop in all directions once.
+     *
+     *
+     *
+     * Copy over in into out. We run an explicit Euler, so the value is updated
      *   according to a formula @f$ Q(t+\Delta t) = Q(t) + \Delta t \cdot (F + NCP) + S @f$
      *   ,the first part of which are the values at the last timestep
      *
@@ -122,33 +138,57 @@ namespace exahype2 {
      *  -> For each dimension and each node in that dimension (including oneself), use
      *     the precomputed flux at that node to compute its contribution to the current node.
      *
-     *  @param cellQin: solution of the function at each node for the previous timestep.
-     *    a cell will have (order+1) nodes along each direction, each with
-     *    (unknowns+auxiliaryVariables) values for a total of
-     *    (unknowns+auxiliaryVariables)*(order+1)^d values in total
      *
-     *  @param quadNodes: location of quadrature nodes along a dimension in a reference
-     *   element we expect the nodes to be gauss-legendre or gauss-lobatto quadrature
-     *   nodes since we implicitly integrate by summing over these using their weights.
      *
-     *  @param quadWeights: corresponding weight of each node
+     * ## Arguments
      *
-     *  @param cellQout: is where the computed solution of the function at next timestep
-     *    are put
+     * @param cellData The routine computes the DG cell contributions over
+     *   multiple cells in one go. cellData is the wrapper around these cells,
+     *   i.e. holds the pointers to input and ouput data, time step sizes, ...
+     *   However, all cells carry the same polynomial degree and solve the
+     *   same PDE.
      *
-     * @param cellQin, out: input and output cells
+     * @param order Order of underlying dg polynomials. This specifies the number
+     *   of nodes in each dimension, which is order+1 (you need two points to specify
+     *   a linear polynomial for example). The order has to be the same for all cells
+     *   handed over via cellData.
      *
-     * @param order: order of underlying dg polynomial, this specifies the number
-     *  of nodes in each dimension, which is order+1 (you need two points to specify
-     *  a linear polynomial for example)
+     * @param unknowns Mumber of unknowns whose values must be updated. If you
+     *   solve a PDE with n eqations over a function Q with n+m entries, then n
+     *   is the number of unknonws that evolve according to the hyperbolic system
+     *   of PDEs, and m are auxiliary (material) parameters. They do not change due
+     *   to the PDE (though any user function might want to alter them).
      *
-     * @param unknowns: number of unknowns whose values must be updated
+     * @param auxiliaryVariables. Auxiliary variables. See description of unknowns.
      *
-     * @param auxiliaryVariables: variables which still have local values but do not
-     *  change over time.
+     * @param quadratureNodes Location of quadrature nodes along one dimension in a
+     *   reference element (length). We usually expect the nodes to be
+     *   Gauss-Legendre or Gauss-Lobatto quadrature points, but we don't really
+     *   bake these considerations into the present routine. However, we do
+     *   hardcode the information that we work with a Cartesian tensor product
+     *   layout of the dofs, i.e. the (x,y,z) position can be computed per
+     *   entry with y and z being independent of x. See getQuadraturePoint()
+     *   for some documentation.
      *
-     * @param quadNodes, quadWeights: used both for gaussian interpolation and are assumed
-     *  to be the support points of underlying lagrange polynomials
+     *
+     *
+     *
+     *
+     *
+     *
+     *
+     *
+     *
+     *
+     *
+     *
+     *
+     *
+     *
+        const double* __restrict__                     quadWeights,
+     *
+     *
+     *    since we implicitly integrate by summing over these using their weights.
      *
      * @param: MassMatrix: MassMatrix contains the quadrature weights on the diagonal.
      *
@@ -157,42 +197,25 @@ namespace exahype2 {
      *
      * @param: DerivativeOperator contains the derivative of the basis function evaluated
      *  at the quadrature node.
+     *
      */
-/*
-    void timeStepEuler_patchwise_functors(
-        ::exahype2::CellData&   patchData,
-        int                     numberOfVolumesPerAxisInPatch,
-        int                     haloSize,
-        int                     unknowns,
-
-        @todo CellDescription hier rein
-        @todo Normalise signature re other solvers
-
-*/
-    // @todo Massenmatrix ist 1d? Oder lumped oder was?
-    void cellIntegral_patchwise_computeAndUpdate_functors(
-        const double* __restrict__                     cellQin,
-        double* __restrict__                           cellQout,
-        const int                                      order,
-        const int                                      unknowns,
-        const int                                      auxiliaryVariables,
-        const tarch::la::Vector<Dimensions,double>&    x,
-        const double                                   dx,
-        const double                                   t,
-        const double                                   dt,
-        Flux                                           flux,
-        NonConservativeProduct                         nonConservativeProduct,
-        Source                                         source,
-        PointSources                                   pointSources,
-        const double* __restrict__                     quadNodes,
-        const double* __restrict__                     quadWeights,
-        const double* __restrict__                     MassMatrix,
-        const double* __restrict__                     StiffnessMatrix,
-        const double* __restrict__                     DerivativeOperator,
-        bool                                           evaluateFlux,
-        bool                                           evaluateNonconservativeProduct,
-        bool                                           evaluateSource,
-        bool                                           evaluatePointSources
+    void cellIntegral_patchwise_GaussLegendre_functors(
+      ::exahype2::CellData&                          cellData,
+      const int                                      order,
+      const int                                      unknowns,
+      const int                                      auxiliaryVariables,
+      Flux                                           flux,
+      NonConservativeProduct                         nonConservativeProduct,
+      Source                                         source,
+      PointSources                                   pointSources,
+      const double* __restrict__                     QuadratureNodes,
+      const double* __restrict__                     MassMatrixDiagonal,
+      const double* __restrict__                     StiffnessMatrix,
+      const double* __restrict__                     DerivativeOperator,
+      bool                                           evaluateFlux,
+      bool                                           evaluateNonconservativeProduct,
+      bool                                           evaluateSource,
+      bool                                           evaluatePointSources
     );
 
 

@@ -1,172 +1,111 @@
 #include "Riemann.h"
 
-void exahype2::dg::getMaxEigenvaluePerFace(
-    MaxEigenvalue                                 maxEigenvalue,
-    double* __restrict__                          QHull[Dimensions*2],
-    const int                                     order,
-    const int                                     unknowns,
-    const int                                     auxiliaryVariables,
-    const tarch::la::Vector<Dimensions,double>&   x,
-    const double                                  t,
-    const double                                  dt,
-    double                                        eigenvalues[Dimensions*2]
-    ){
 
-  const int nodesPerAxis = order+1;
-  const int nodesPerFace = getNodesPerCell(nodesPerAxis)/nodesPerAxis;
-
-  const int strideQ = unknowns+auxiliaryVariables;
-
-  for(int dim=0; dim<Dimensions; dim++){
-
-    for(int lr=0; lr<2; lr++){
-
-      eigenvalues[2*dim+lr] = std::numeric_limits<double>::min();
-
-      for(int node=0; node<2*nodesPerFace; node++){
-        double result = maxEigenvalue(
-          &QHull[2*dim+lr][node*strideQ], //if left face, then inner side is the right one and reversely
-          x,
-          t,
-          dt,
-          dim
-        );
-        eigenvalues[2*dim+lr] = std::max(eigenvalues[2*dim+lr], std::abs(result));
-      }
-
-    }
+void exahype2::dg::projectVolumetricDataOntoFaces(
+  const double* __restrict__          cellQ,
+  int                                 order,
+  int                                 unknowns,
+  const double* const __restrict__    BasisFunctionValuesLeft,
+  double* const __restrict__          faceQLeft,
+  double* const __restrict__          faceQRight,
+  double* const __restrict__          faceQBottom,
+  double* const __restrict__          faceQUp
+) {
+  // project left/right
+  for (int y=0; y<order+1; y++)
+  for (int unknown=0; unknown<unknowns; unknown++) {
+    faceQLeft [ (2*y+1)*unknowns+unknown ] = 0.0;
+    faceQRight[ (2*y+0)*unknowns+unknown ] = 0.0;
   }
 
-}
-
-void exahype2::dg::computeRusanovOnHull(
-    Flux                                          flux,
-    NonConservativeProduct                        nonConservativeProduct,
-    double*                                       QHullIn[Dimensions*2],
-    double* __restrict__                          QHullOut,
-    const int                                     order,
-    const int                                     unknowns,
-    const int                                     auxiliaryVariables,
-    const tarch::la::Vector<Dimensions,double>&   x,
-    const double                                  dx,
-    const double                                  t,
-    const double                                  dt,
-    const double                                  maxEigenvalueAlongFace[Dimensions*2],
-    const bool                                    useFlux,
-    const bool                                    useNCP
-    ){
-
-  const int nodesPerAxis = order+1;
-  const int nodesPerFace = getNodesPerCell(nodesPerAxis)/nodesPerAxis;
-
-  const int strideQ = unknowns+auxiliaryVariables;
-
-  double* fluxValuesLeft      = nullptr;
-  double* fluxValuesRight     = nullptr;
-  double* ncpValues           = nullptr;
-  double* QValues             = nullptr;
-  double* gradQValues         = nullptr;
-
-  if(useFlux){
-    fluxValuesLeft  = new double[unknowns]{0.0};
-    fluxValuesRight = new double[unknowns]{0.0};
-  }
-  if(useNCP){
-    ncpValues       = new double[strideQ]{0.0};
-    QValues         = new double[strideQ]{0.0};
-    gradQValues     = new double[strideQ]{0.0};
+  for (int y=0; y<order+1; y++)
+  for (int x=0; x<order+1; x++)
+  for (int unknown=0; unknown<unknowns; unknown++) {
+    faceQLeft [ (2*y+1)*unknowns+unknown ] += BasisFunctionValuesLeft[x]  * cellQ[ (y*(order+1)+x)*unknowns + unknown ];
+    faceQRight[ (2*y+0)*unknowns+unknown ] += BasisFunctionValuesLeft[order-x] * cellQ[ (y*(order+1)+x)*unknowns + unknown ];
   }
 
-  for(int dim=0; dim<Dimensions; dim++){
-
-    for(int lr=0; lr<2; lr++){
-
-      const double coeff = 0.5*maxEigenvalueAlongFace[2*dim+lr];
-      const double* ql = nullptr;
-      const double* qr = nullptr;
-
-      for(int node=0; node<nodesPerFace; node++){
-
-        /*for dimension i you need to skip 2*(i-1) faces
-        **if right face you additionally need to skip left face
-        **each skipped face having 2*nodesPerFace elements since it contains elements
-        **from its left and right
-        **Then when looking at node n you still need to skip all elements before it, so
-        **a total of 2*n elements by the same logic
-        */
-
-        ql = &QHullIn[2*dim+lr][2*node*strideQ];
-        qr = &QHullIn[2*dim+lr][(2*node+1)*strideQ];
-
-        for(int var=0; var<unknowns; var++){
-          QHullOut[((2*dim+lr)*nodesPerFace+node)*strideQ+var] = 0.0;
-        }
-
-        if(useFlux){
-            flux( ql,
-                  x, //TODO: add positioning
-                  t,
-                  dt,
-                  dim, //normal
-                  fluxValuesLeft);
-            flux( qr,
-                  x, //TODO: add positioning
-                  t,
-                  dt,
-                  dim, //normal
-                  fluxValuesRight);
-
-            for(int var=0; var<unknowns; var++){
-              //Rusanov flux
-              QHullOut[((2*dim+lr)*nodesPerFace+node)*strideQ+var] += 0.5*(fluxValuesLeft[var]+fluxValuesRight[var])
-                  - coeff*(qr[var]-ql[var]);
-            } //var
-
-        } //if useFlux
-
-        if(useNCP){
-          for(int var=0; var<strideQ; var++){
-            gradQValues[var] = qr[var] - ql[var];
-          }
-          for(int var=0; var<strideQ; var++){
-            QValues[var] = 0.5* (qr[var] + ql[var]);
-          }
-
-          nonConservativeProduct(
-              QValues,
-              gradQValues,
-              x, //TODO: add positioning
-              t,
-              dt,
-              dim,
-              ncpValues);
-
-          // this is 0.5 for the left face and -0.5 for the right face, this is just the term that takes into account the direction multiplied with 0.5
-          const double coeff = (-0.5 + 1.0*lr);
-
-          for(int var=0; var<unknowns; var++){
-            QHullOut[((2*dim+lr)*nodesPerFace+node)*strideQ+var] += coeff*ncpValues[var];
-          }
-
-        }
-
-      } //node
-    } //lr
-  } //dim
-
-  if(useFlux){
-    delete [] fluxValuesLeft;
-    delete [] fluxValuesRight;
+  // project up/down
+  for (int x=0; x<order+1; x++)
+  for (int unknown=0; unknown<unknowns; unknown++) {
+    faceQBottom [ (x+order+1)*unknowns+unknown ] = 0.0;
+    faceQUp     [ (x        )*unknowns+unknown ] = 0.0;
   }
-  if(useNCP){
-    delete [] ncpValues;
-    delete [] QValues;
-    delete [] gradQValues;
+
+  for (int y=0; y<order+1; y++)
+  for (int x=0; x<order+1; x++)
+  for (int unknown=0; unknown<unknowns; unknown++) {
+    faceQBottom [ (x+order+1)*unknowns+unknown ] += BasisFunctionValuesLeft[y]  * cellQ[ (y*(order+1)+x)*unknowns + unknown ];
+    faceQUp     [ (x        )*unknowns+unknown ] += BasisFunctionValuesLeft[order-y] * cellQ[ (y*(order+1)+x)*unknowns + unknown ];
   }
 
 }
 
 
+void exahype2::dg::projectVolumetricDataOntoFaces(
+  const double* __restrict__          cellQ,
+  int                                 order,
+  int                                 unknowns,
+  const double* const __restrict__    BasisFunctionValuesLeft,
+  double* const __restrict__          faceQLeft,
+  double* const __restrict__          faceQRight,
+  double* const __restrict__          faceQFront,
+  double* const __restrict__          faceQBack,
+  double* const __restrict__          faceQBottom,
+  double* const __restrict__          faceQUp
+) {
+
+  int nodesPerAxis = order+1;
+  int nodesPerFace = nodesPerAxis*nodesPerAxis;
+
+  // project left/right
+  for (int y=0; y<order+1; y++)
+  for (int z=0; z<order+1; z++)
+  for (int unknown=0; unknown<unknowns; unknown++) {
+    faceQLeft   [ (2*(y+z*nodesPerAxis)+1)*unknowns+unknown ] = 0.0;
+    faceQRight  [ (2*(y+z*nodesPerAxis)+0)*unknowns+unknown ] = 0.0;
+  }
+
+  for (int x=0; x<order+1; x++)
+  for (int y=0; y<order+1; y++)
+  for (int z=0; z<order+1; z++)
+  for (int unknown=0; unknown<unknowns; unknown++) {
+    faceQLeft   [ (2*(y+z*nodesPerAxis)+1)*unknowns+unknown ] += BasisFunctionValuesLeft[x] * cellQ[ (z*nodesPerFace+y*nodesPerAxis+x)*unknowns + unknown ];
+    faceQRight  [ (2*(y+z*nodesPerAxis)+0)*unknowns+unknown ] += BasisFunctionValuesLeft[order-x] * cellQ[ (z*nodesPerFace+y*nodesPerAxis+x)*unknowns + unknown ];
+  }
+
+  // project front/back
+  for (int x=0; x<order+1; x++)
+  for (int z=0; z<order+1; z++)
+  for (int unknown=0; unknown<unknowns; unknown++) {
+    faceQFront [ (x+0*nodesPerAxis+z*2*nodesPerAxis)*unknowns+unknown ] = 0.0;
+    faceQBack  [ (x+1*nodesPerAxis+z*2*nodesPerAxis)*unknowns+unknown ] = 0.0;
+  }
+  for (int x=0; x<order+1; x++)
+  for (int y=0; y<order+1; y++)
+  for (int z=0; z<order+1; z++)
+  for (int unknown=0; unknown<unknowns; unknown++) {
+    faceQFront [ (x+0*nodesPerAxis+z*2*nodesPerAxis)*unknowns+unknown ] += BasisFunctionValuesLeft[y] * cellQ[ (z*nodesPerFace+y*nodesPerAxis+x)*unknowns + unknown ];
+    faceQBack  [ (x+1*nodesPerAxis+z*2*nodesPerAxis)*unknowns+unknown ] += BasisFunctionValuesLeft[order-y] * cellQ[ (z*nodesPerFace+y*nodesPerAxis+x)*unknowns + unknown ];
+  }
+
+  // project down/up
+  for (int x=0; x<order+1; x++)
+  for (int y=0; y<order+1; y++)
+  for (int unknown=0; unknown<unknowns; unknown++) {
+    faceQBottom [ (x+y*nodesPerAxis+0*nodesPerFace)*unknowns+unknown ] = 0.0;
+    faceQUp     [ (x+y*nodesPerAxis+1*nodesPerFace)*unknowns+unknown ] = 0.0;
+  }
+
+  for (int x=0; x<order+1; x++)
+  for (int y=0; y<order+1; y++)
+  for (int z=0; z<order+1; z++)
+  for (int unknown=0; unknown<unknowns; unknown++) {
+    faceQBottom [ (x+y*nodesPerAxis+0*nodesPerFace)*unknowns+unknown ] += BasisFunctionValuesLeft[z] * cellQ[ (z*nodesPerFace+y*nodesPerAxis+x)*unknowns + unknown ];
+    faceQUp     [ (x+y*nodesPerAxis+1*nodesPerFace)*unknowns+unknown ] += BasisFunctionValuesLeft[order-z] * cellQ[ (z*nodesPerFace+y*nodesPerAxis+x)*unknowns + unknown ];
+  }
+
+}
 
 
 void exahype2::dg::computeRiemannIntegralAndAddToCell(
@@ -184,40 +123,38 @@ void exahype2::dg::computeRiemannIntegralAndAddToCell(
   double* __restrict__                cellQ
   ){
 
-  const int strideQ      = unknowns+auxiliaryVariables;
-  const int nodesPerAxis = order+1;
-  const int nodesPerFace = getNodesPerCell(nodesPerAxis)/nodesPerAxis;
-  const int nodesPerCell = getNodesPerCell(nodesPerAxis);
-  tarch::la::Vector<Dimensions,int> strides = getStrides(nodesPerAxis);
+
+  const int strideQ = unknowns+auxiliaryVariables;
 
   //generic coefficients by dimension
   const double coeff0 = dt/cellSize[0];
   const double coeff1 = dt/cellSize[1];
 
-  for(int node=0; node<nodesPerCell; node++){
+  for (int x=0; x<order+1; x++){
 
-    tarch::la::Vector<Dimensions,int> index = getIndex(node, strides);
+    //coefficients of faces in x direction
+    const double coeffNode0 = coeff0/quadratureWeights[x];
+    const double coeffLeft    = coeffNode0*BasisFunctionValuesLeft[x];
+    const double coeffRight   = coeffNode0*BasisFunctionValuesLeft[order-x];
 
-    const double coeffNode0 = coeff0/quadratureWeights[index[0]];
-    const double coeffLeft    = coeffNode0*BasisFunctionValuesLeft[index[0]];
-    const double coeffRight   = coeffNode0*BasisFunctionValuesLeft[order-index[0]];
+    for (int y=0; y<order+1; y++){
 
-    const double coeffNode1 = coeff1/quadratureWeights[index[1]];
-    const double coeffBottom  = coeffNode1*BasisFunctionValuesLeft[index[1]];
-    const double coeffUp      = coeffNode1*BasisFunctionValuesLeft[order-index[1]];
+      //coefficients of faces in y direction
+      const double coeffNode1 = coeff1/quadratureWeights[y];
+      const double coeffBottom  = coeffNode1*BasisFunctionValuesLeft[y];
+      const double coeffUp      = coeffNode1*BasisFunctionValuesLeft[order-y];
 
-    const double* leftFaceNode    = &faceQLeft[index[0]*strideQ];
-    const double* rightFaceNode   = &faceQRight[index[0]*strideQ];
-    const double* bottomFaceNode  = &faceQBottom[index[1]*strideQ];
-    const double* upperFaceNode   = &faceQUp[index[1]*strideQ];
+      for (int var=0; var<strideQ; var++) {
+        cellQ[ ( x + y*(order+1))*strideQ + var ] +=
+              coeffLeft   * faceQLeft   [ y*strideQ + var ]
+            - coeffRight  * faceQRight  [ y*strideQ + var ]
+            + coeffBottom * faceQBottom [ x*strideQ+var ]
+            - coeffUp     * faceQUp  [ x*strideQ+var ];
+      }//var
 
+    }//y
+  }//x
 
-    for(int var=0; var<unknowns; var++){
-      cellQ[node*strideQ+var] += coeffLeft*leftFaceNode[var] - coeffRight*rightFaceNode[var]
-                            + coeffBottom*bottomFaceNode[var] - coeffUp*upperFaceNode[var];
-    }
-
-  } //node
 
 }
 
@@ -225,65 +162,71 @@ void exahype2::dg::computeRiemannIntegralAndAddToCell(
 void exahype2::dg::computeRiemannIntegralAndAddToCell(
   const double* const __restrict__    faceQLeft,
   const double* const __restrict__    faceQRight,
-  const double* const __restrict__    faceQBottom,
-  const double* const __restrict__    faceQUp,
   const double* const __restrict__    faceQFront,
   const double* const __restrict__    faceQBack,
+  const double* const __restrict__    faceQBottom,
+  const double* const __restrict__    faceQUp,
   int                                 order,
   int                                 unknowns,
   const int                           auxiliaryVariables,
-  const tarch::la::Vector<2,double>&  cellSize,
+  const tarch::la::Vector<3,double>&  cellSize,
   const double                        dt,
   const double* const __restrict__    BasisFunctionValuesLeft,
   const double* __restrict__          quadratureWeights,
   double* __restrict__                cellQ
   ){
 
-  const int strideQ      = unknowns+auxiliaryVariables;
+
+  const int strideQ = unknowns+auxiliaryVariables;
   const int nodesPerAxis = order+1;
   const int nodesPerFace = getNodesPerCell(nodesPerAxis)/nodesPerAxis;
-  const int nodesPerCell = getNodesPerCell(nodesPerAxis);
-  tarch::la::Vector<Dimensions,int> strides = getStrides(nodesPerAxis);
 
   //generic coefficients by dimension
   const double coeff0 = dt/cellSize[0];
   const double coeff1 = dt/cellSize[1];
   const double coeff2 = dt/cellSize[2];
 
-  for(int node=0; node<nodesPerCell; node++){
+  for (int x=0; x<order+1; x++){
 
-    tarch::la::Vector<Dimensions,int> index = getIndex(node, strides);
+    //coefficients of faces in x direction
+    const double coeffNode0 = coeff0/quadratureWeights[x];
+    const double coeffLeft  = coeffNode0*BasisFunctionValuesLeft[x];
+    const double coeffRight = coeffNode0*BasisFunctionValuesLeft[order-x];
 
-    const double coeffNode0 = coeff0/quadratureWeights[index[0]];
-    const double coeffLeft    = coeffNode0*BasisFunctionValuesLeft[index[0]];
-    const double coeffRight   = coeffNode0*BasisFunctionValuesLeft[order-index[0]];
+    for (int y=0; y<order+1; y++){
 
-    const double coeffNode1 = coeff1/quadratureWeights[index[1]];
-    const double coeffBottom  = coeffNode1*BasisFunctionValuesLeft[index[1]];
-    const double coeffUp      = coeffNode1*BasisFunctionValuesLeft[order-index[1]];
+      //coefficients of faces in y direction
+      const double coeffNode1 = coeff1/quadratureWeights[y];
+      const double coeffFront = coeffNode1*BasisFunctionValuesLeft[y];
+      const double coeffBack  = coeffNode1*BasisFunctionValuesLeft[order-y];
 
-    const double coeffNode2 = coeff2/quadratureWeights[index[2]];
-    const double coeffFront   = coeffNode2*BasisFunctionValuesLeft[index[2]];
-    const double coeffBack    = coeffNode2*BasisFunctionValuesLeft[order-index[2]];
+      for (int z=0; z<order+1; z++){
 
-    const double* leftFaceNode    = &faceQLeft[index[0]*strideQ];
-    const double* rightFaceNode   = &faceQRight[index[0]*strideQ];
-    const double* bottomFaceNode  = &faceQBottom[index[1]*strideQ];
-    const double* upperFaceNode   = &faceQUp[index[1]*strideQ];
-    const double* frontFaceNode   = &faceQFront[index[2]*strideQ];
-    const double* backFaceNode    = &faceQBack[index[2]*strideQ];
+        //coefficients of faces in z direction
+        const double coeffNode2   = coeff2/quadratureWeights[z];
+        const double coeffBottom  = coeffNode2*BasisFunctionValuesLeft[z];
+        const double coeffUp      = coeffNode2*BasisFunctionValuesLeft[order-z];
 
-    for(int var=0; var<unknowns; var++){
-      cellQ[node*strideQ+var] += coeffLeft*leftFaceNode[var] - coeffRight*rightFaceNode[var]
-                            + coeffBottom*bottomFaceNode[var] - upperFaceNode[var]
-                            + coeffFront*frontFaceNode[var] - coeffBack*backFaceNode[var];
-    }
+        for (int var=0; var<strideQ; var++) {
+          cellQ[ (z*nodesPerFace+y*nodesPerAxis+x)*strideQ + var ] +=
+              coeffLeft   * faceQLeft   [(y+z*nodesPerAxis)*strideQ+var]
+            - coeffRight  * faceQRight  [(y+z*nodesPerAxis)*strideQ+var]
+            + coeffFront  * faceQFront  [(x+z*nodesPerAxis)*strideQ+var]
+            - coeffBack   * faceQBack   [(x+z*nodesPerAxis)*strideQ+var]
+            + coeffBottom * faceQBottom [(x+y*nodesPerAxis)*strideQ+var]
+            - coeffUp     * faceQUp     [(x+y*nodesPerAxis)*strideQ+var]
+            ;
+        }//var
 
-  } //node
+      }//z
+    }//y
+  }//x
+
 
 }
 
 
+/*
 void exahype2::dg::applyRiemannToPatch(
     double* __restrict__        Q,
     const double* __restrict__  QHullIn,
@@ -327,6 +270,7 @@ void exahype2::dg::applyRiemannToPatch(
 
 
 }
+*/
 
 
 

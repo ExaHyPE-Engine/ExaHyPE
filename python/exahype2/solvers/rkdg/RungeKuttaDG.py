@@ -26,7 +26,7 @@ import exahype2.solvers.rkdg.actionsets
 
 from enum import IntEnum
 
-from exahype2.solvers.rkdg.LagrangeBasis import GaussLegendreBasis, GaussLobattoBasis
+from exahype2.solvers.LagrangeBasis import GaussLegendreBasis
 
 
 class Polynomials(IntEnum):
@@ -64,6 +64,10 @@ class RungeKuttaDG(object):
     you have called the superclass' operation. I recommend that you refrain from
     defining completely new guards. Use the predefined guards instead and
     refine them by adding more and and or clauses.
+    
+    If you want to study the mathematics routines used by all the Python-generated
+    code, read the Discontinous Galerkin page in dg.h.
+    
 
     :: Data structures
 
