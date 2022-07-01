@@ -9,141 +9,267 @@
  * @page DG Discontinuous Galerkin
  *
  * ExaHyPE's discontinuous Galerkin realisation provides support for plain
- * higher-order DG with generic, i.e. problem-unspecific, Riemann solvers.
- * The C++ code is a collection of routines, it is rather a toolbox than a
- * real solver. It is the Python code which serves as glue. It takes the
- * individual events triggered by Peano's mesh traversal, augments it with
- * ExaHyPE-specific data structure, and maps it onto DG routines. This
- * mapping is realised/called action sets.
+ * higher-order DG with Riemann solvers of your choice. The C++ code is a mere
+ * collection of routines. It is rather a toolbox than a real solver. It is the
+ * Python code which serves as glue. It takes the individual events triggered
+ * by Peano's mesh traversal, augments it with ExaHyPE-specific data structure,
+ * and maps it onto DG routines. The mapping from traversal event onto DG
+ * computations is realised via action sets.
  *
  * We rely on the generic DG formulation for
  *
- * @f$ \partial _t Q(t) + div F(Q(t)) = S @f$
+ * @f$ \partial _t Q(t) + div F(Q(t)) = S(Q(t)) @f$
  *
- * which is subject to a weak formulation.
+ * which is subject to a weak formulation. A discussion of non-conservative
+ * terms can be found further down. So we examine the weak formulation which
+ * has to hold for any reasonably smooth test function @f$ \phi @f$:
  *
- * @f$ \int \left( \partial _t Q(t), \phi \right) dx + \int \left( div F(Q(t)), \phi \right) dx = \int \left(S, \phi \right) dx @f$
+ * @f$ \int _{\Omega } \left( \partial _t Q(t), \phi \right) dx + \int _{\Omega } \left( div F(Q(t)), \phi \right) dx = \int _{\Omega } \left(S(Q(t)), \phi \right) dx @f$
  *
- * We can roll over the divergence operator per cell and obtain
+ * In the DG framework, any test function @f$ \phi @f$ has strict local support
+ * which reduces the weak formulation to a cell expression.
+ * Within a cell, our shape function is continuous.
+ * Therefore, we can roll over the divergence operator and obtain
  *
- * @f$ \int _c \left( \partial _t Q(t), \phi \right) dx - \int  _c \left( F(Q(t)), \nabla \phi \right) dx + \int _{\partial c} \left( F(Q(t)), \phi \right) dS(x) = \int _c \left(S, \phi \right) dx @f$
+ * @f$ \int _c \left( \partial _t Q(t), \phi \right) dx - \int  _c \left( F(Q(t)), \nabla \phi \right) dx + \int _{\partial c} \left( F(Q(t)), \phi \right) dS(x) = \int _c \left(S(Q(t)), \phi \right) dx @f$
  *
- *
- * The weak formulation is subject to a standard Runge-Kutta, i.e. we evaluate
+ * It doesn't really matter for the discussion here how we treat the time
+ * derivative. In ExaHyPE 2, we mainly use Runge-Kutta. If the
+ * weak formulation is subject to Runge-Kutta, we evaluate
  * a series of forward shots/trials and then combine these shots finally into
- * the new solution. However, the C++ toolbox is really independent of the
+ * the new solution. All we need is a description of the time derivative,
+ * which we obtain from the weak formulation above.
+ *
+ * Our C++ toolbox is really independent of the
  * time integration scheme. Therefore, I decided to place it in a namespace
  * dg, whereas the Python glue code might have different namespaces reflecting
  * different timestepping schemes.
  *
- * For a single time step (or Runge-Kutta trial), we end up with a linear equation
- * system per cell. The individual steps and operators within this formula are subject of discussion
- * below.
  *
+ * ## A single time step, i.e. the computation of @f$ \partial _t Q @f$
  *
- * ## Data format
- *
- * The main data format discussion can be found in the python subdirectory of
- * Peano. For Runge-Kutta, you have for example
- *
- *         exahype2.rkdg.RungeKuttaDG
- *
- * which serves as base class for different implementation variants. The base
- * class mainly creates the data structures (a polynomial per cell, the polynomial's
- * projections onto the face, all meta data, and the intermediate solutions for the
- * Runge-Kutta scheme) and defines all potential operations on these meta data,
- * i.e. all the glue code linked to the present C++ routines.
- *
- * It is however the job of the Python subclasses to switch the individual actions
- * on or off per grid sweep. While the Python docu provides more details on the
- * actual behaviour of the actions, the present file discusses some of the elementary
- * steps needed by any time stepping scheme, and which routines in C++ realise these
- * steps. That is, we discuss how things are implemented and what they do, but we
- * leave it to Python to orchestrate when these steps are actually done.
- *
- *
- * ## A single time step
- *
- * If we want to realise a single time step, the scheme above clarifies that we have
- * to copy over the solution and then progress along the temporal derivative for the
- * time step size @f$ dt @f$. Let
+ * If we want to realise a single time step, the scheme above gives us all the operators
+ * that we need. Below, we discuss these classic Discontinuous Galerkin steps and map
+ * them onto the ExaHyPE 2 routines. As we deal with a single time step, let
  *
  * @f$ \partial _t Q(t) \approx 1/dt \cdot \left( Q^{(new)} - Q^{(old)} \right) @f$
  *
- * So any time stepping scheme has to copy over the old solution and then add the
- * derivative subject to a scaling.
+ * We insert this into the left hand side of the weak formulation, write simply Q
+ * instead of @f$ Q^{(old)} @f$ (as we are lazy) and obtain
  *
- * We do not have the derivative in the Discontinuous Galerkin scheme. We only have
- * a weak representation of the derivative. As we assume that @f$ \partial _t Q(t) @f$
- * is constant over a time step and as we assume that this derivative can be represented
- * in the same basis as @f$ Q(t) @f$, the integral formulation above gives us an
+ * @f$ \int _c \left( Q^{(new)}, \phi \right) dx = \int _c \left( Q, \phi \right) dx + dt \cdot \left( \int  _c \left( F(Q), \nabla \phi \right) dx - \int _{\partial c} \left( F(Q), \phi \right) dS(x) + \int _c \left(S(Q), \phi \right) dx \right) @f$
  *
- * @f$ M \partial Q(T) @f$
+ * We have @f$ (p+1)^d @f$ degrees of freedom in our square/cube cells. Each carries
+ * n unknowns, but they are all treated the same, i.e. independent of each other.
+ * So it is sufficient to look at one unknown and to know that the F and S term
+ * can potentially couple this unknown to any other one from the previous time step.
+ * Each of the @f$ (p+1)^d @f$ unknowns carries one shape function (from the same space
+ * as @f$ \phi @f$). As the integrals only span one cell, we get something like
  *
- * term, i.e. the derivative times a mass matrix. It makes sense to assume that
- * @f$ \partial _t Q(t) @f$ lives in Q's polynomial space: We start with a Q and we end
- * up in a Q, and the way how we can construct this Q representation is the same for
- * preimage and image. Therefore, also the difference can be represented by the polynomials
- * that we use for the two of them. In theory, we thus have to apply @f$ M^{-1} @f$ in
- * multiple steps later on. As we will see however, it falls together with the mass matrix
- * itself in most cases and thus does not enter the actual computation.
+ * @f$ M Q^{(new)} = MQ + dt \cdot \Big( ... \Big) Q^* @f$
+ *
+ * There is a square mass matrix which results from the integral above which tells us
+ * that a linear combination of the new values within a cell equals the same linear
+ * combination of the previous solution plus dt times an expression over all previous
+ * values of the time step. This is the reason I add the star. It is just there to
+ * point out that we use a lot more values than only those within one cell.
+ *
+ * The M is the <b>MassMatrix</b>. Let all the dofs within a cell be enumerated
+ * lexicographically. Each value scales the underlying shape function. We use a
+ * Ritz-Galerkin shape function design, i.e. our test functions are the same as
+ * our shape functions. The first
+ * line of the mass matrix then tells us what the linear combination of all of these
+ * shape functions scaled by the weights and tested against the first gives under the
+ * integral. The second line of the @f$ M Q^{(new)} @f$ tells us what the test of the
+ * linear combination against the second test function gives us.
+ *
+ * We can compute the mass matrix a priori. This is done
+ * by the Python script exahype2.solvers.LagrangeBasis (you have to pick the search
+ * dialogue in the generated web page if you want to find the docu in the browser).
+ * The computed matrix is then written into the abstract solver base class of the user
+ * and can be handed over to any computational routine. We note that we will (more
+ * often) need the inverse and that the equation above eliminates the mass matrix
+ * from the previous solution:
+ *
+ * @f$ Q^{(new)}(T) = Q + dt \cdot M^{-1} \Big( \dots \Big) Q^* =: Q + dt \cdot M^{-1} \hat Q@f$
+ *
+ * This is the last step of our algorithm: We assume that we have a quantity @f$ \hat Q @f$
+ * in each and every sample point. We multiply these quantities with the inverse of the
+ * mass matrix and add it, subject to a scaling with dt, to the old solution. This
+ * operation is called multiplyWithInvertedMassMatrixAndAddToSolution().
+ * So far, the algorithm thus consists of two steps:
+ *
+ * - (unspecified) Compute the @f$ \hat Q @f$ value per degree of freedom in each and every cell.
+ * - (3) Run over each cell. Per cell, call multiplyWithInvertedMassMatrixAndAddToSolution().
+ *   This routine takes the Q values of the cell, and adds the contribution @f$ dt \cdot M^{-1} \hat Q @f$.
  *
  *
- * ## Source term
+ * ## Mass matrix
  *
- * When we integrate over @f$ (S,\phi ) @f$, we obtain a matrix-vector product
+ * You can pick different shape functions. For different shape functions, you get
+ * different mass matrices. For some mass matrices, we provide specialised versions of
+ * multiplyWithMassMatrixAndAddToSolution() which either overload the original routine
+ * or have a slightly altered name.
+ *
+ * All of our shape functions have tensor-product structure, i.e. they can be
+ * written down as
+ *
+ * @f$ \phi (x,y,z) = \phi (x) \cdot \phi (y) \cdot \phi (z) @f$
+ *
+ * We furthermore notice that @f$ M @f$ in general is a dense matrix. If we enumerate
+ * the functions, the entries of the matrix stem from
+ *
+ * @f$ M_{ij} = \int _c \Big( \phi _i, \phi _j \Big) dx @f$
+ *
+ * which defines our entries. There are two big special cases:
+ *
+ * - If we use Gauss-Legendre shape functions, the polynomials are orthogonal. Therefore,
+ *   the mass matrix becomes a diagonal matrix. Its inversion is trivial.
+ * - Due to its construction, we expect M to be very diagonal dominant. Codes thus might
+ *   want to use a lumped, i.e. diagonalised, approximation of M.
+ *
+ * As we use Discontinuous Galerkin where the individual shape functions are
+ * confined to a cell, M couples really only dofs of one cell with each other.
+ * There is no reason to use a lumped matrix as the (global) inverse then also
+ * has block structure, i.e. couples only dofs from within one cell. But some
+ * codes might nevertheless prefer lumped (diagonalised) matrices for performance
+ * reasons.
+ *
+ * Purists might argue that most setups don't need the inverse of the mass
+ * matrix, as the mass matrix inverse coincides with the mass matrix inside the
+ * @f$ \hat Q @f$ term. However, there are cases where this is on the case
+ * (below), and if you find out that your mass matrix is a diagonal, then we
+ * offer specialised versions for this anyway and you can afford the few
+ * additional multiplications.
+ *
+ *
+ * @todo Insert multiplyWithInvertedDiagonalMassMatrixAndAddToSolution() into the code as explicit step. It is not there yet.
+ *
+ *
+ * ## The computation of the @f$ \hat Q @f$
+ *
+ * From the definition above, we note that the ith entry of @f$ \hat Q @f$ denotes
+ * what happens if we have a global solution Q and test it against the test function
+ * @f$ \phi _i @f$ carried by this ith dof from a cell.
+ * The computation of this intermediate value @f$ \hat Q @f$ consists of two types
+ * of contributions:
+ * Contributions from the face integrals and contributions from the volumetric terms.
+ * I discuss the terms individually and split any term discussion again up into two
+ * parts if a term arises under the surface and the volume integral.
+ *
+ * This is different to the implementation where you find a routine cellIntegral_patchwise()
+ * which does all the volumetric stuff, while the handling of the face contributions
+ * is done differently.
+ *
+ * ### Source terms
+ *
+ * In ExaHyPE's DG code, we distinguish two types of source terms: Volumetric
+ * source terms and point sources. Usually, I mean volumetric source terms when
+ * I speak of a source.
+ *
+ * Once we assume that S(Q) is something that exists in each and every point
+ * within the domain, we have to make a decision how to represent it as a function.
+ * It is convenient to assume that S can be represented in the same way as the
+ * solution Q, i.e. as linear combination of the same type of shape functions.
+ *
+ * In this case, we obtain a matrix-vector product
  *
  * @f$ M\dot S(Q) @f$
  *
- * However, we never use this term. Instead, we are interested in
+ * when we integrate over @f$ (S,\phi ) @f$. If we insert this formalism into the
+ * equations above, we recognise that we would never need the outcome of the matrix-vector
+ * product. Instead, we are interested in
  *
  * @f$ dt\cdot M^{-1}M\dot S(Q) = dt\cdot S(Q) @f$
  *
- * in line with the discussion above. The update the current solution with the source
- * term thus can be combined straightforwardly with the
- * copying: We take the current solution, add the source term times the time step size,
- * and write it into the image.
- * We can write this down as
+ * in the end. However, I made the design decision that I want to have these steps
+ * as proper separate steps. The reason is that we have to treat some other terms
+ * differently:
  *
- * @f$ Q^{(new)} \gets Q^{(old)} + dt \cdot S(Q^{(old)}) @f$
+ * Point sources are modelled as Dirac terms within S:
  *
- * The copy-over can be found within exahype2::dg::cellIntegral_patchwise_computeAndUpdate_functors()
- * or variants thereof. It is a simple loop over all of the dofs within the cell.
+ * @f$ \int _c \Big( \delta _p, \phi \Big) dx = \phi (p) @f$
+ *
+ * So we basically get, for a test with a test function @f$ \phi @f$, the value
+ * of this test function at the point source (times a calibration if the point
+ * source should not be one).
+ * Our implementation runs over all point sources within a cell.
+ * As we know that the test functions span only the current cell and disappear
+ * everywhere else, we don't have to check all point sources out there.
+ * Per point source, we test over all the @f$ (p+1)^d @f$ test functions
+ * associated with the dofs of this cell, and add the corresponding values to
+ * @f$ \hat Q @f$.
  *
  * The source term solely enters the volumetric calculations.
  * It does not show up in any face integral.
+ * With source terms, our algorithm implementation consists of the following steps:
+ *
+ * - (1.1.a) Set @f$ \hat Q \gets 0 @f$ per degree of freedom in each and every cell.
+ * - t.b.d.
+ * - (1.1.b) Compute source term contribution to @f$ \hat Q @f$
+ * - t.b.d.
+ * - (5) Per cell, take the Q values and add the contribution @f$ dt \cdot M^{-1} \hat Q @f$.
  *
  *
- * ## Flux term
+ * ### Flux term
  *
  * As any shape function has local support within one cell, we can evaluate
  * per cell by employing integration by parts:
  *
  * @f$ \int  _c div F(Q(t))\ \phi dx = - \int  _c \Big( F(Q(t), \nabla \phi \Big) dx  + \int _{\partial c} F(Q(t)) \ \phi \ n dS(x) @f$
  *
- * The volumetric part can be evaluated as it is: We compute the F weights and
- * multiply it directly with the matrix over the gradients. Actually, we are not
- * even interested in this matrix, but we are interested in the mass matrix inverse
- * times the derivative matrix. This can all be precomputed. The scaling of the
- * volumetric contribution is in @f$ 1/h @f$ - the integral over the cell times the inverse
- * of the mass matrix kick all of their derivative terms/scalings out, and we have
- * a remaining @f$ h^{-1} @f$ from @f$ \nabla \phi @f$.
- * We conclude that the volumetric term can be implemented generically.
- * All it needs is the flux terms supplemented by the user.
+ * The volumetric integral looks complicated, but it can be broken down into
+ * simpler steps. First, we consider a one-dimensional setup. Let us assume
+ * that we can represent @f$ F(Q) @f$ once again with our shape functions.
+ * That's not point-wisely true usually, but we can work with this assumption.
+ * If this is the case, then the @f$ F(Q) @f$ can be written down as an evaluation
+ * of the Fs in the quadrature point, and then we can take the outcome and
+ * interpret it as weight of the shape functions. So we get expressions like
  *
- * The Riemann problem
+ * @f$ \int \Big( F(Q(x_i)) \phi _i, \nabla \phi _j \Big) dx @f$
  *
- * @f$ \int _{\partial c} F(Q(t)) \ \phi \ n dS(x) @f$
+ * which are then linearly combined to give us the integral. We now observe
+ * that we know the test functions, i.e. we can also precompute the derivative.
+ * Furthermore, we can move the weight out of the integral. This gives us
  *
- * requires more work, as Q (and hence F) are not defined on the cell faces.
- * One generic way to tackle this is to exploit standard Rusanov, e.g.
- * In this case, we employ some averaging of the faces subject to additional
- * damping.
+ * @f$ F(Q(x_i)) \int \Big( \phi _i, \nabla \phi _j \Big) dx = D Q @f$
  *
- * @f$ \int _{\partial c} F(Q(t)) \ \phi \ n dS(x) \mapsto  \int _{\partial c} \Big( \frac{1}{2}(F(Q^-(t))+F(Q^+(t))) - \frac{1}{2} \lambda _{max}(Q^-(t),Q^+(t)) (Q^+(t)-Q^-(t))  \Big) \ \phi \ n dS(x) @f$
+ * where the matrix D is the <b>StiffnessOperator</b> and Q is the vector of
+ * the unknowns.
+ *
+ * If we have a a two-dimensional problem, we note that we benefit from the
+ * tensor product structure once again. As
+ *
+ * @f$ \phi (x,y,z) = \phi (x) \cdot \phi (y) \cdot \phi (z) @f$
+ *
+ * decomposes the function into a product of independent ones, we can also
+ * decompose the integral:
+ *
+ * @f$ \int \Big( F_x(Q(x_i,y_i)) \phi _i, \nabla _x \phi _j \Big) d(x,y) = F_x(Q(x_i,y_i)) \int \Big( \phi _i(x)\phi _i(y), \nabla _x \phi _j(x)\phi _j(y) \Big) d(x,y) = F_x(Q(x_i,y_i)) \int \Big( \phi _i(x), \nabla _x \phi _j(x) \Big) dx \int \Big( \phi _i(y), \phi _j(y) \Big) dy @f$
+ *
+ * which are then linearly combined to give us the integral. In the generic
+ * case, we will need to make D a @f$ (p+1)^d \times (p+1)^d @f$ matrix.
+ * If we have Gauss-Legendre polynomials however, we can once again exploit
+ * the fact that the polynomials are orthogonal. It is hence sufficient to
+ * have a one-dimensional @f$ D_{1d} @f$ diffusion operator and the one-dimensional
+ * mass entries to construct all diffusion operators.
+ *
+ * The scaling of the volumetric contribution is in @f$ h^{d-1} @f$. We have a
+ * @f$ h^d @f$ from the integral, and we have
+ * a @f$ h^{-1} @f$ from @f$ \nabla \phi @f$.
+ * The source term solely enters the volumetric calculations.
+ * It does not show up in any face integral.
+ * With source terms, our algorithm implementation consists of the following steps:
+ *
+ * - (1.1.a) Set @f$ \hat Q \gets 0 @f$ per degree of freedom in each and every cell.
+ * - t.b.d.
+ * - (1.1.b) Compute source term contribution to @f$ \hat Q @f$
+ * - (1.1.c) Compute volumetric flux contribution to @f$ \hat Q @f$
+ * - t.b.d.
+ * - (5) Per cell, take the Q values and add the contribution @f$ dt \cdot M^{-1} \hat Q @f$.
  *
  *
- * ## Projection onto faces
+ * #### Projection onto faces
  *
  * To apply any Riemann solver of our choice, we first have to project the current
  * solution @f$ Q(t) @f$ from within the cell onto the faces.
@@ -191,11 +317,35 @@
  * polynomial.
  *
  *
+ * #### The Riemann problem
  *
- * ## Getting the face data back
+ * @f$ \int _{\partial c} F(Q(t)) \ \phi \ n dS(x) @f$
  *
- * Let the outcome of a Riemann solve (the solution) be everything under the face integral
- * besides the @f$ \phi @f$ test function.
+ * requires work (and care), as Q (and hence F) are not defined on the cell faces.
+ * One generic way to tackle this is to exploit standard Rusanov, e.g.
+ * In this case, we employ some averaging of the faces subject to additional
+ * damping.
+ *
+ * @f$ \int _{\partial c} F(Q(t)) \ \phi \ n dS(x) \mapsto  \int _{\partial c} \Big( \frac{1}{2}(F(Q^-(t))+F(Q^+(t))) - \frac{1}{2} \lambda _{max}(Q^-(t),Q^+(t)) (Q^+(t)-Q^-(t))  \Big) \ \phi \ n dS(x) @f$
+ *
+ * This is what we do when we touch a face. We simply take the projected Q values
+ * from left and right and compute what F looks like. In theory, left and right
+ * could be difference. Therefore, we hold two outputs.
+ *
+ * - (1.1.a) Set @f$ \hat Q \gets 0 @f$ per degree of freedom in each and every cell.
+ * - (1.2) Project Q onto faces
+ * - (1.1.b) Compute source term contribution to @f$ \hat Q @f$
+ * - (1.1.c) Compute volumetric flux contribution to @f$ \hat Q @f$
+ * - (2) Compute the solution to the Riemann problem, i.e. the effective F values.
+ * - t.b.d.
+ * - (5) Per cell, take the Q values and add the contribution @f$ dt \cdot M^{-1} \hat Q @f$.
+ *
+ *
+ *
+ * #### Getting the face data back
+ *
+ * Let the outcome of a Riemann solve (the solution) be the thing under the face integral
+ * without the @f$ \phi @f$ test function.
  * For the Rusanov example above, we would call the result of
  *
  * @f$ \frac{1}{2}(F(Q^-(t))+F(Q^+(t))) - \frac{1}{2} \lambda _{max}(Q^-(t),Q^+(t)) (Q^+(t)-Q^-(t)) @f$
@@ -208,9 +358,29 @@
  * That is, the individual points of the Riemann solution serve as weights to shape functions
  * which live on the face only.
  * We can analytically integrate over those guys (we know the shapes and have a linear combination)
- * and then project the data back by applying the mass matrix.
- * As the mass matrix is scaled with @f$ h^d @f$, the impact of the Riemann solution is in @f$ h^{-1} @f$.
+ * and then project the data back.
+ * Once again, the integral is the mass matrix, though, this time, a mass matrix on the submanifold.
+ * It has a scaling of @f$ h^{d-1} @f$.
  *
+ * Every single test on the face is the result of a projection of a volumetric test function onto
+ * the face.
+ * This explains how the outcome affects the @f$ \hat Q @f$: We simply take the outcome and distribute
+ * it according to the original projection matrix.
+ * Mathematically, this equals a multiplication with the transpose.
+ * There's no scaling involved in this step anymore.
+ *
+ *
+ * ### Summary
+ *
+ * The whole algorithm implementation hence reads as follows:
+ *
+ * - (1.1.a) Set @f$ \hat Q \gets 0 @f$ per degree of freedom in each and every cell.
+ * - (1.2) Project Q onto faces
+ * - (1.1.b) Compute source term contribution to @f$ \hat Q @f$
+ * - (1.1.c) Compute volumetric flux contribution to @f$ \hat Q @f$
+ * - (2) Compute the solution to the Riemann problem
+ * - (4) Problem Riemann solution back into cell and add it to @f$ \hat Q @f$
+ * - (5) Per cell, take the Q values and add the contribution @f$ dt \cdot M^{-1} \hat Q @f$.
  *
  *
  * ## Non-conservative product
@@ -285,6 +455,39 @@
  * Remark: The work by Dumbser et al have an overall factor of 0.5 in the Riemann problem.
  * I don't see where this comes from (in the Finite Volume case, it is clear where it comes from).
  * So likely there's a term missing in this explanation.
+ *
+ *
+ * ## Further documentation
+ *
+ * ### Related documentation within the code
+ *
+ * It makes sense to study the Finite Differences discussion where similar data
+ * structures are used and similar design decisions are made. For a discussion of
+ * the used linear operators (matrices and vectors), please consult the Python
+ * class exaype2.solvers.LagrangeBasis (use search field in the webpage generated by doxygen),
+ * as all of our vanilla routines rely on Lagrange function bases.
+ *
+ *
+ * ### Data format
+ *
+ * The main data format discussion, i.e. what do we store where and when, can be found in the python subdirectory of
+ * Peano. For Runge-Kutta, you have for example
+ *
+ *         exahype2.rkdg.RungeKuttaDG
+ *
+ * which serves as base class for different implementation variants. The base
+ * class mainly creates the data structures (a polynomial per cell, the polynomial's
+ * projections onto the face, all meta data, and the intermediate solutions for the
+ * Runge-Kutta scheme) and defines all potential operations on these meta data,
+ * i.e. all the glue code linked to the present C++ routines.
+ *
+ * It is however the job of the Python subclasses to switch the individual actions
+ * on or off per grid sweep. While the Python docu provides more details on the
+ * actual behaviour of the actions, the present file discusses some of the elementary
+ * steps needed by any time stepping scheme, and which routines in C++ realise these
+ * steps. That is, we discuss how things are implemented and what they do, but we
+ * leave it to Python to orchestrate when these steps are actually done.
+ *
  *
  *
  * ## Todo list
