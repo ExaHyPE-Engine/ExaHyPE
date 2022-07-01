@@ -114,7 +114,7 @@
  * linear combination against the second test function gives us.
  *
  * We can compute the mass matrix a priori. This is done
- * by the Python script exahype2.solvers.LagrangeBasis for example.
+ * by the Python script exahype2.solvers.LagrangeBasisWithDiagonalMassMatrix for example.
  * The computed matrix is then written into the abstract solver base class of the user
  * and can be handed over to any computational routine. We note that we will (more
  * often) need the inverse and that the equation above eliminates the mass matrix
@@ -125,14 +125,14 @@
  * This is the last step of our algorithm: We assume that we have a quantity @f$ \hat Q @f$
  * in each and every sample point. Its entries have to be discussed. We multiply these quantities with the inverse of the
  * mass matrix and add it, subject to a scaling with dt, to the old solution. This
- * operation is called exahype2::dg::multiplyWithInvertedMassMatrixAndAddToSolution_GaussLegendre() or variants thereof.
+ * operation is called exahype2::dg::multiplyWithInvertedMassMatrixCopyAuxiliaryVariablesAndAddToSolution_GaussLegendre() or variants thereof.
  * So far, the algorithm thus consists of two steps:
  *
  * - (unspecified) Compute the @f$ \hat Q @f$ value per degree of freedom in each and every cell somehow.
- * - (3) Run over each cell. Per cell, call exahype2::dg::multiplyWithInvertedMassMatrixAndAddToSolution_GaussLegendre() or variants thereof.
+ * - (3) Run over each cell. Per cell, call exahype2::dg::multiplyWithInvertedMassMatrixCopyAuxiliaryVariablesAndAddToSolution_GaussLegendre() or variants thereof.
  *   This routine takes the Q values of the cell, and adds the contribution @f$ dt \cdot M^{-1} \hat Q @f$.
  *
- * You will find exahype2::dg::multiplyWithInvertedMassMatrixAndAddToSolution_GaussLegendre()
+ * You will find exahype2::dg::multiplyWithInvertedMassMatrixCopyAuxiliaryVariablesAndAddToSolution_GaussLegendre()
  * and its cousins in the file exahype2/dg/CellIntegral.h as they correspond, as name and
  * derivation suggest, from an integral formulation over integrals.
  *
@@ -140,34 +140,35 @@
  * ## Mass matrix
  *
  * You can pick different shape functions. For different shape functions, you get
- * different mass matrices. For some mass matrices, we provide specialised versions of
- * multiplyWithMassMatrixAndAddToSolution() which either overload the original routine
- * or have a slightly altered name. All of them have in common that the underlying
- * shape functions have local support. They never extend beyond a cell. Therefore,
- * mass matrices are always square and have exactly @f$ (p+1)^d @f$ rows/columns.
- *
- * We notice that @f$ M @f$ in general is a dense matrix. If we enumerate
- * the functions, the entries of the matrix stem from
+ * different mass matrices. @f$ M @f$ in general is a dense matrix.
+ * Its entries of the matrix stem from
  *
  * @f$ M_{ij} = \int _c \Big( \phi _i, \phi _j \Big) dx @f$
  *
- * which defines our entries. There are important special cases:
+ * For some (approximations of) mass matrices or particular choices of the shape
+ * fuctions, we provide specialised versions of
+ * DG's mathematical steps. All mass matrices have in common that the underlying
+ * shape functions have local support. They never extend beyond a cell. Therefore,
+ * mass matrices are always square and have exactly @f$ (p+1)^d @f$ rows/columns.
+ *
+ * Important special cases of mass matrices arise if some of the following
+ * properties hold:
  *
  * - If we use a Ritz-Galerkin shape function choice, i.e. pick the test
  *   functions from the same function space as our shape functions, then
  *   the matrix is symmetric. We might want to exploit this, though there's
  *   limited gain if we make our abstract solver precompute the inverse.
  * - If we use Gauss-Legendre shape functions, the polynomials are orthogonal. Therefore,
- *   the mass matrix becomes a diagonal matrix. Its inversion is trivial.
+ *   the mass matrix becomes a diagonal matrix. Its inversion is trivial. See
+ *   exaype2.solvers.GaussLegendreBasis for details.
  * - Due to its construction, we expect M to be very diagonal dominant. Codes thus might
- *   want to use a lumped, i.e. diagonalised, approximation of M.
+ *   want to use a lumped, i.e. diagonalised, approximation of M. See
+ *   exahype2.solvers.LagrangeBasisWithDiagonalMassMatrix for details.
  * - If our shape functions have tensor-product structure, i.e. can be
- *   written down as
- *
- *   @f$ \phi (x,y,z) = \phi (x) \cdot \phi (y) \cdot \phi (z) @f$
- *
- *   we can run further optimisations. Again, it is up to the DG routines
- *   to exploit this fact.
+ *   written down as @f$ \phi (x) = \phi (x_1) \cdot \phi (x_2) \cdot \phi (x_3) @f$ we
+ *   can run optimisations: A lot of non-mass matrices are constructed by
+ *   tensor products of a 1d matrix with a 1d mass matrix or two 1d mass
+ *   matrices.
  *
  * As we use Discontinuous Galerkin where the individual shape functions are
  * confined to a cell, M couples really only dofs of one cell with each other.
@@ -179,13 +180,15 @@
  *
  * Purists might argue that most setups don't need the inverse of the mass
  * matrix, as the mass matrix inverse coincides with the mass matrix inside the
- * @f$ \hat Q @f$ term. However, there are cases where this is on the case
- * (below), and if you find out that your mass matrix is a diagonal, then we
- * offer specialised versions for this anyway and you can afford the few
- * additional multiplications.
+ * @f$ \hat Q @f$ term. However, there are cases where this is not the case,
+ * and if you know that your mass matrix is a diagonal, then we
+ * offer specialised versions for this anyway, and you can afford the few
+ * additional multiplications that result from the fact that our @f$ \hat Q @f$
+ * is the result of the test and we do not mangle in the inverse of the mass
+ * matrix a priori.
  *
  *
- * ## The computation of the @f$ \hat Q @f$
+ * ## The computation of the right-hand side that is multiplied with the inverse of the mass matrix
  *
  * From the definition above, we note that the ith entry of @f$ \hat Q @f$ denotes
  * what happens if we have a global solution Q and test it against the test function
@@ -196,9 +199,11 @@
  * I discuss the terms individually and split any term discussion again up into two
  * parts if a term arises under the surface and the volume integral.
  *
- * This is different to the implementation where you find a routine cellIntegral_patchwise()
- * which does all the volumetric stuff, while the handling of the face contributions
+ * This is different to the implementation where you find a routine cellIntegral_patchwise_GaussLegendre_functors()
+ * or any of its cousins
+ * which does all the volumetric stuff in one rush, while the handling of the face contributions
  * is done differently.
+ *
  *
  * ### Source terms
  *
@@ -503,7 +508,7 @@
  * It makes sense to study the Finite Differences discussion where similar data
  * structures are used and similar design decisions are made. For a discussion of
  * the used linear operators (matrices and vectors), please consult the Python
- * class exaype2.solvers.LagrangeBasis (use search field in the webpage generated by doxygen),
+ * class exaype2.solvers.LagrangeBasisWithDiagonalMassMatrix,
  * as all of our vanilla routines rely on Lagrange function bases.
  *
  *

@@ -12,18 +12,27 @@ RENDER_DIGITS = 64
 mp.dps    = PREC_DIGITS
 mp.pretty = False
 
-class LagrangeBasis():
+class LagrangeBasisWithDiagonalMassMatrix():
   """
 
-  Lagrange Basis 
+  Lagrange Basis with a diagonal mass matrix
   
   
-  Method representing an abstract Lagrange basis which is used as a factory 
+  Class representing an abstract Lagrange basis which is used as a factory 
   mechanism to produce vectors and matrices that we need within DG solvers.
-  Never use this class directly, but always a subclass. The most relevant 
+  Never use this class directly, but always a subclass. As with all basis 
+  classes, the most relevant 
   routine for a user is init_dictionary_with_default_parameters() which is 
   a routine to befill a map with replacement rules, i.e. with the precomputed
-  matrices and vectors.
+  matrices and vectors. The class assumes that the mass matrix is a diagonal 
+  matrix. 
+  This is not true in general, i.e. holds only for Gauss-Legendre sampling
+  points, but you might want to work with lumped matrices, and then this 
+  class is the right starting point.
+  
+  Further to the initialisation, some using classes use quadrature_points().
+  The exahype2.solvers.rkdg.RungeKuttaDG solver for example uses it to 
+  initialise the mapping of the plotter properly.
   
   
   ## Generated vectors and matrices
@@ -118,22 +127,7 @@ class LagrangeBasis():
   def __init__(self,num_points):
     self.__num_points = num_points
     self.__max_poly_order = num_points - 1
-    # quadrature_points, quadrature_weights
     self.__quadrature_points, self.__quadrature_weights = self._compute_quadrature_points_and_weights(num_points)
-    # interpolation weights
-    self.__barycentric_weights             = self.__compute_barycentric_weights()
-    # operators
-    self.__mass_matrix                     = self.__compute_mass_matrix()
-    self.__stiffness_operator              = self.__compute_stiffness_operator()
-    #self.__K1                              = self.__compute_K1()
-    #self.__inverted_predictor_lhs_operator = mp.inverse(self.__K1).tolist()
-    self.__basis_function_values_left,_    = self.__evaluate(mp.mpf(0.0))
-    self.__basis_function_values_right,_   = self.__evaluate(mp.mpf(1.0))
-    self.__derivative_operator    = self.__compute_derivative_operator()
-    self.__equidistant_grid_projector      = self.__compute_equidistant_grid_projector()
-    self.__fine_grid_projector             = [None]*3
-    for j in range(0,3):
-      self.__fine_grid_projector[j] = self.__compute_fine_grid_projector(j)
       
       
   def __str__(self):
@@ -508,31 +502,48 @@ class LagrangeBasis():
     def snake_to_camel(word):
       return ''.join(x.capitalize() or '_' for x in word.lower().split('_'))
 
+#    self.__barycentric_weights             = self.__compute_barycentric_weights()
+    # operators
+#    self.__mass_matrix                     = self.__compute_mass_matrix()
+#    self.__stiffness_operator              = self.__compute_stiffness_operator()
+#    self.__basis_function_values_left,_    = self.__evaluate(mp.mpf(0.0))
+#    self.__derivative_operator             = self.__compute_derivative_operator()
+#    self.__equidistant_grid_projector      = self.__compute_equidistant_grid_projector()
+#    self.__fine_grid_projector             = [None]*3
+#    for j in range(0,3):
+#      self.__fine_grid_projector[j] = self.__compute_fine_grid_projector(j)
+
+#    basisDeclarations = ""
+#    basisInitializers = ""
+#    for var in ["quadrature_points",
+#                "quadrature_weights",
+#                "barycentric_weights",
+#                "basis_function_values_left","basis_function_values_right","derivative_operator","mass_matrix","stiffness_operator","equidistant_grid_projector","fine_grid_projector"]:
+#      var_key  = "_LagrangeBasis__" + var # prefix for privat variables of class LagrangeBasis
+#      var_name = snake_to_camel(var) # C++ name
+#      if var in ["quadrature_points","quadrature_weights","barycentric_weights","basis_function_values_left","basis_function_values_right"]:
+#          basisDeclarations += "const double {var_name}[{order}+1];\n".format(indent="  "*2,var_name=var_name,order=self.__max_poly_order)
+#          basisInitializers += "{var_name}{initializer},\n".format(var_name=var_name,\
+#              initializer=LagrangeBasis.__make_initializer_list(LagrangeBasis.__render_tensor_1(getattr(self,var_key))))
+#      elif var in ["fine_grid_projector"]:
+#          if multiDimArrays:
+#            basisDeclarations += "const double {var_name}[3][{order}+1][{order}+1];\n".format(indent="  "*2,var_name=var_name,order=self.__max_poly_order)
+#          else:
+#            basisDeclarations += "const double {var_name}[3][({order}+1)*({order}+1)];\n".format(indent="  "*2,var_name=var_name,order=self.__max_poly_order)
+#          basisInitializers += "{var_name}{initializer},\n".format(var_name=var_name,\
+#            initializer="{" + \
+#              ",".join([LagrangeBasis.__make_initializer_list(LagrangeBasis.__render_tensor_2(elem,multiDimArrays)) for elem in self.__fine_grid_projector]) +\
+#             "}")
+#      else:
+#          if multiDimArrays:
+#            basisDeclarations += "const double {var_name}[{order}+1][{order}+1];\n".format(indent="  "*2,var_name=var_name,order=self.__max_poly_order)
+#          else:
+#            basisDeclarations += "const double {var_name}[({order}+1)*({order}+1)];\n".format(indent="  "*2,var_name=var_name,order=self.__max_poly_order)
+#          basisInitializers += "{var_name}{initializer},\n".format(var_name=var_name,\
+#              initializer=LagrangeBasis.__make_initializer_list(LagrangeBasis.__render_tensor_2(getattr(self,var_key),multiDimArrays)))
+
     basisDeclarations = ""
     basisInitializers = ""
-    for var in ["quadrature_points","quadrature_weights","barycentric_weights","basis_function_values_left","basis_function_values_right","derivative_operator","mass_matrix","stiffness_operator","inverted_predictor_lhs_operator","equidistant_grid_projector","fine_grid_projector"]:
-      var_key  = "_LagrangeBasis__" + var # prefix for privat variables of class LagrangeBasis
-      var_name = snake_to_camel(var) # C++ name
-      if var in ["quadrature_points","quadrature_weights","barycentric_weights","basis_function_values_left","basis_function_values_right"]:
-          basisDeclarations += "const double {var_name}[{order}+1];\n".format(indent="  "*2,var_name=var_name,order=self.__max_poly_order)
-          basisInitializers += "{var_name}{initializer},\n".format(var_name=var_name,\
-              initializer=LagrangeBasis.__make_initializer_list(LagrangeBasis.__render_tensor_1(getattr(self,var_key))))
-      elif var in ["fine_grid_projector"]:
-          if multiDimArrays:
-            basisDeclarations += "const double {var_name}[3][{order}+1][{order}+1];\n".format(indent="  "*2,var_name=var_name,order=self.__max_poly_order)
-          else:
-            basisDeclarations += "const double {var_name}[3][({order}+1)*({order}+1)];\n".format(indent="  "*2,var_name=var_name,order=self.__max_poly_order)
-          basisInitializers += "{var_name}{initializer},\n".format(var_name=var_name,\
-            initializer="{" + \
-              ",".join([LagrangeBasis.__make_initializer_list(LagrangeBasis.__render_tensor_2(elem,multiDimArrays)) for elem in self.__fine_grid_projector]) +\
-             "}")
-      else:
-          if multiDimArrays:
-            basisDeclarations += "const double {var_name}[{order}+1][{order}+1];\n".format(indent="  "*2,var_name=var_name,order=self.__max_poly_order)
-          else:
-            basisDeclarations += "const double {var_name}[({order}+1)*({order}+1)];\n".format(indent="  "*2,var_name=var_name,order=self.__max_poly_order)
-          basisInitializers += "{var_name}{initializer},\n".format(var_name=var_name,\
-              initializer=LagrangeBasis.__make_initializer_list(LagrangeBasis.__render_tensor_2(getattr(self,var_key),multiDimArrays)))
     
     d["ORDER"]              = self.__max_poly_order
     d["BASIS_DECLARATIONS"] = basisDeclarations  
@@ -541,20 +552,36 @@ class LagrangeBasis():
    
   # public
   def quadrature_points(self,render=True):
-    return LagrangeBasis.__render_tensor_1(self.__quadrature_points) if render else self.__quadrature_points
+    return self.__render_tensor_1(self.__quadrature_points) if render else self.__quadrature_points
   
   
   def quadrature_weights(self,render=True):
-    return LagrangeBasis.__render_tensor_1(self.__quadrature_weights) if render else self.__quadrature_weights
+    return self.__render_tensor_1(self.__quadrature_weights) if render else self.__quadrature_weights
     
 
-class GaussLegendreBasis(LagrangeBasis):
+class GaussLegendreBasis(LagrangeBasisWithDiagonalMassMatrix):
+  """
+  
+  The Gauss-Legendre Basis is by construction the only basis which 
+  yields diagonal mass matrices
+  
+  """
   def _compute_quadrature_points_and_weights(self,num_points):
     x,w = gauss_legendre(num_points,PREC_DIGITS) 
     return self._transform_and_sort_points_and_weights(x,w)
 
 
-class GaussLobattoBasis(LagrangeBasis):
+
+class GaussLobattoBasisWithLumpedDiagonalBasis(LagrangeBasisWithDiagonalMassMatrix):
+  """
+
+  The Gauss-Lobatto quadrature points do not yield a diagonal mass
+  matrix. They yield a full matrix. However, there are codes which 
+  ignore this fact and lump the basis. Mathematically, this is 
+  equivalent to hte  Gauss-Lobatto quadrature because this leads to a diagonal matrix that is easy to invert
+  
+  """
   def _compute_quadrature_points_and_weights(self,num_points):
+    raise Exception( "check implementation. See class comment")
     x,w = gauss_lobatto(num_points,PREC_DIGITS) 
     return self._transform_and_sort_points_and_weights(x,w)

@@ -3,84 +3,6 @@
 #ifndef _EXAHYPE2_DG_CELL_INTEGRAL_H_
 #define _EXAHYPE2_DG_CELL_INTEGRAL_H_
 
-/*
- * @page DG Discontinous Galerkin methods in ExaHyPE
- *
- *
- * For a comprehensive explanation of the Discontinuous galerkin method, check out
- * appropriate literature, but very briefly:
- *
- * We approximate the solution of an equation on a volume by a polynomial of order p,
- * which we interpolate by Lagrangian polynomials. As we solely support Lagrangian
- * polynomials, we have the simple property that the shape functions are 1 in the
- * associated sample point, but 0 in all other points.
- *
- *  This lets us simply use the values of the function at the points as coefficients of the lagrange polynomials.
- *  As support nodes of the lagrange polynomial we use gaussian interpolation points, which lets us approximate an integral in a dimension
- *  by summing up the values of the values of the function at the quadrature points along this dimension.
- *
- *  These two properties let us construct an approximation of the integral of the function, which we divide into two parts: one purely local
- *  volume part and one riemann part which approximates the flux over the boundary.
- *
- *  In this file is the implementation of the approximation using discontinuous galerkin of the volume part, the flux over the boundary is then
- *  in Riemann.h
- *
- *
- * ## Runge-Kutta vs DG
- *
- * I have thought quite a lot whether I call the C++ namespace rkdg or dg. Eventually,
- * I decided to stick to DG. After all, RK is basically a sequence of Euler
- * steps with different starting points and time step sizes, where the all
- * intermediate and the final solution are constructed through a linear combination
- * of all previous Euler outcomes. These Euler steps then employ Discontinous Galerkin
- * operators, so it seemed to be safer to stick to DG which is then used by RK.
- *
- * This is in line with the Finite Volume naming convention. Here, FV is the overarching
- * namespace, and the Python script then discriminates MUSCL vs Rusanov, e.g.
- *
- *
- *
- *
- *
- *  ## Cell integral
- *
- *  This header file contains only routines computing the cell integrals resulting
- *  from an explicit (Euler) time step. An Euler step is the fundamental building
- *  block behind any Runge-Kutta scheme, as
- *
- *
- *
- *
- * We exploit the fact that we can update all the updates within a cell independently:
- * All the unknowns within a patch can (and do) affect every single unknown in the
- * output, but the output variables do not interact. After all, it is an explicit scheme.
-  * Consequently, we can loop over all the unknowns in parallel (if we want).
-  *
-     * This function computes the change of the solution in the cell if it were an isolated
-     * system. That is to say it ignores any contribution over the surface of the cell.
-     * Given this, the solution at the next timestep is the solution at the current timestep
-     * plus disturbances caused by:
-     *
-     *  - sources, which are purely local. At every node, there may be an increase or a
-     *    decrease caused by sources or sinks at that location.
-     *
-     *  - the flux, which is not local. Every node's value may increase or decrease according
-     *    to some flux coming from or going into its neighbouring nodes. This flux exists in
-     *    every dimension and therefore in total is the sum of the flux contributions going
-     *    into this node from every neighbouring node along each dimension.
-     *    Since the flux at each node is required for each neighbouring node, we can precompute
-     *    these fluxes only once and reuse their values, but this increases the total memory
-     *    footprint.
-     *
-     *  - the non-conservative product (ncp), which represents non-conservative effects on the
-     *    solution. One example of this is friction in fluids, which causes energy to be lost.
-     *    This is local but unlike the source has a direction (there will be a contribution of
-     *    the friction on your overall energy for both your velocity in x and y direction for
-     *    example) and in general requires the gradient of the solution in each of these directions.
- *
- *
- */
-
 
 #include <vector>
 #include <algorithm>
@@ -228,7 +150,7 @@ namespace exahype2 {
      *
      * This routine also copies over the material parameters.
      */
-    void multiplyWithInvertedMassMatrixAndAddToSolution_GaussLegendre(
+    void multiplyWithInvertedMassMatrixCopyAuxiliaryVariablesAndAddToSolution_GaussLegendre(
       ::exahype2::CellData&                          cellData,
       const int                                      order,
       const int                                      unknowns,
@@ -262,7 +184,8 @@ namespace exahype2 {
        * variables), but I decided to keep the internal routines as close to
        * each other as possible.
        *
-       * @todo raus?
+       * @todo Noch komplett auf diese Micro-Kernel-Notation umstellen, die Dominic im ADER eingefuehrt hat
+       *  Das aber erst machen, nachdem wir die Enumeratoren da haben
        */
       void copySolution(
         const double* __restrict__                    cellQin,

@@ -26,7 +26,7 @@ import exahype2.solvers.rkdg.actionsets
 
 from enum import IntEnum
 
-from exahype2.solvers.LagrangeBasis import GaussLegendreBasis
+from exahype2.solvers.LagrangeBasisWithDiagonalMassMatrix import GaussLegendreBasis
 
 
 class Polynomials(IntEnum):
