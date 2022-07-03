@@ -1,18 +1,29 @@
-import mpmath as mp
+# This file is part of the ExaHyPE2 project. For conditions of distribution and 
+# use, please see the copyright notice at www.peano-framework.org
+
+
+#import mpmath as mp
 #import numpy as np
-from sympy.integrals.quadrature import gauss_legendre, gauss_lobatto # quadrature_points by default in [-1,1]
+#from sympy.integrals.quadrature import gauss_legendre, gauss_lobatto # quadrature_points by default in [-1,1]
+
+
+import scipy
+from scipy.integrate import quad
 
 from abc import abstractmethod
 
-import re
+from .LagrangeBasis import LagrangeBasis
 
-PREC_DIGITS   = 256
-RENDER_DIGITS = 64
+#import re
+#from numpy.lib.polynomial import poly
 
-mp.dps    = PREC_DIGITS
-mp.pretty = False
+#PREC_DIGITS   = 256
 
-class LagrangeBasisWithDiagonalMassMatrix():
+#mp.dps    = PREC_DIGITS
+#mp.pretty = False
+
+
+class LagrangeBasisWithDiagonalMassMatrix(LagrangeBasis):
   """
 
   Lagrange Basis with a diagonal mass matrix
@@ -38,40 +49,36 @@ class LagrangeBasisWithDiagonalMassMatrix():
   ## Generated vectors and matrices
   
  
-  ### QuadraturePoints
+  ### QuadraturePoints1d
   
   The quadrature points are an array of size [p+1] if p is the order of the 
-  chosen polyomial. As we don't want to tie this abstract superclass to one
-  particular layout of the quadrature points, we delegate the construction
-  of these guys to _compute_quadrature_points_and_weights(), which is an 
-  abstract function, i.e. subclasses have to implement it. Most subclasses 
-  will simply delegate this call to numpy.
-  
-  The resulting double array defines the spacing of the quadrature points 
+  chosen polyomial. The double array defines the spacing of the quadrature points 
   over the unit interval. See the helper routine exahype2::dg::getQuadraturePoint()
   for an example how the points are used to identify the actual location in 
   space of the quadrature points.
   
-  
-  ### QuadratureWeights
-  
-  The quadrature weights are an array of size [p+1] if p is the order of the 
-  chosen polynomial. They are set in line with the quadrature points by a 
-  specific subclass.
-  
-  
-  @todo We don't need the mass matrix for this. We need a diagonal. And we don't have to expose the weights
-  
-  Brauchen wir das Zeugs wirklich? Das sind die Gewichte unter Gauss Legendre
-  und damit die Diagonaleintraege der Massenmatrix. Aber es ist nicht die 
-  eigentliche Massenmatrix
-  
-  
-  Usually, we rely on numpy's gauss_legendre or gauss_lobatto routine to get 
-  these weights. 
-    
-    const double QuadratureWeights[2+1];
+  As we work in a tensor product world, the 2d and 3d quadrature points can be 
+  simply consructed by multiplying the respective coordinate system indices.
 
+  
+  ### MassMatrixDiagonal1d
+
+  Computes the (reference) element mass matrix' diagonal. The mass matrix is defined
+  via
+
+  @f$  \int _{(0,1)}(\phi _i, \phi _j) dx, i,j = 1 ... N > 0 @f$
+
+  where @f$ \phi _i,\phi _j @f$ are Lagrange basis functions associated with
+  the quadrature within the unit-interval. They are polynomials of maximum order N-1.
+
+  Our implementation is quite some overkill, as I assemble the whole mass matrix 
+  and thne extract only the diagonal.  If we use Legendre nodes as support points, 
+  this diagonal is an exact evaluation, i.e. the mass matrix is diagonal. If
+  we use Lobatto nodes, it is an approximation.
+
+  @todo I don't know if we need renormalisation for Lobatto nodes, i.e. if we 
+  should ensure that the row sum is preserved
+    
 
   ### StiffnessOperator
 
@@ -124,16 +131,16 @@ class LagrangeBasisWithDiagonalMassMatrix():
   
   """
   
-  def __init__(self,num_points):
-    self.__num_points = num_points
-    self.__max_poly_order = num_points - 1
-    self.__quadrature_points, self.__quadrature_weights = self._compute_quadrature_points_and_weights(num_points)
+  def __init__(self,polynomial_order):
+    super(LagrangeBasisWithDiagonalMassMatrix,self).__init__(polynomial_order)
       
       
   def __str__(self):
     d = {}
-    self._init_dictionary_with_default_parameters(d)
+    self.init_dictionary_with_default_parameters(d,True)
     return "<{}.{} object>: {}".format(self.__class__.__module__,self.__class__.__name__,d)
+
+
   __repr__ = __str__
   
   
@@ -146,6 +153,7 @@ class LagrangeBasisWithDiagonalMassMatrix():
        xi:
         The reference element point the basis functions are evaluated at.
         Here, xi refers to the greek letter that is often used as a reference element coordinate.
+        
     Returns:
        phi:
         Basis function values.
@@ -176,8 +184,10 @@ class LagrangeBasisWithDiagonalMassMatrix():
 
   def __compute_barycentric_weights(self):
     """
+    
     See Eq. 3.2 in
     https://people.maths.ox.ac.uk/trefethen/barycentric.pdf
+    
     """
     result = [0.0]*self.__num_points
     for j,xj in enumerate(self.__quadrature_points):
@@ -189,47 +199,21 @@ class LagrangeBasisWithDiagonalMassMatrix():
     return result
      
      
-  def __compute_mass_matrix(self):
+  def __compute_mass_matrix_diagonal(self):
     """
     
-    Reference mass matrix
-   
-   
-    See class documentation.
-     
-    
-    Computes the (reference) element mass matrix for an approximation of
-    order self.__max_poly_order. The result is 
-
-    We evaluate the scalar product:
-
-    (phi_i, phi_j)_[0,1], i,j = 1 ... N > 0 
-
-    where phi_i,phi_j are Lagrange basis functions associated with
-    N support points x_i and x_j within the unit-interval.
-    They are polynomials of maximum order N-1.
-
-    We evaluate the scalar product via a degree N Gauss quadrature rule that uses basis function support points 
-    as evaluation points.
-    If we use Legendre nodes as support points, this is an exact evaluation if
-    we use Lobatto nodes, this is an approximation.
-  
-    :note:
-
-    :return: The (reference) element mass matrix. Exact for Gauss-Legrende nodes, inexact for Gauss-Lobatto (diagnoal lumping).
+    Reference mass matrix. See class documentation. I moved the docu there,
+    as doxygen does not extract documentation from private routines in Python.
+         
     """
-    # init matrix with zeros
-    MM = [[mp.mpf(0) for _ in range(self.__num_points)] for _ in range(self.__num_points)]
-   
-    for i in range(0,self.__num_points):
-      MM[i][i] = self.__quadrature_weights[i]
- 
-    #for i in range(0,self.__num_points):
-    #  phi, _ = self.__evaluate(self.__quadrature_points[i])
-    #  for k in range(0,self.__num_points):
-    #    for l in range(0,self.__num_points):
-    #      MM[k][l] += self.__quadrature_weights[i]*phi[k]*phi[l]
-    return MM
+    mass_matrix = [ [0.0 for _ in range(0,self.dofs_per_axis)] for _ in range(0,self.dofs_per_axis) ]
+    
+    for row in range(0,self.dofs_per_axis):
+      for col in range(0,self.dofs_per_axis):
+        ans,err = quad(lambda x: self.value1d(x,row) * self.value1d(x,col),0,1)
+        mass_matrix[row][col] = ans
+
+    return [ mass_matrix[i][i] for i in range(0,self.dofs_per_axis) ]
 
 
   def __compute_stiffness_operator(self):
@@ -382,87 +366,6 @@ class LagrangeBasisWithDiagonalMassMatrix():
     return equidistantGridProjector
   
 
-  # private class methods
-  @classmethod
-  def __make_initializer_list(cls,rendered_tensor):
-    """
-    
-    This implementation is a little bit nasty: We use the resulting strings within
-    jinja2 templates which are then repeatedly resolved/rendered. Therefore, we have
-    to be carefully not to write {{ where we want to have two brackets. Instead, we 
-    have to write { { (not the space) so the render engine does not consider an
-    initialisation list with nested arrays as a jinja2 token.
-    
-    :param rendered_tensor: (nested) list of str elements
-    :return: C++ initializer list for tensor
-    
-    """
-    def descend(current):
-      if type(current) is list:
-        result =" {"
-        for element in current[:-1]:
-          result += descend(element)
-          result += ","
-        result += descend(current[-1])
-        result += "} "
-        return result
-      else:
-        return current
-    return descend(rendered_tensor)
-  
-
-  @classmethod
-  def __render_tensor_1(cls,tensor):
-    """
-    Converts nested list or numpy matrix to nested list of strings.
-    :param tensor: list or numpy vector storing  mpmath numbers
-    """
-    result = []
-    for elem in tensor:
-      result.append(mp.nstr(elem,n=RENDER_DIGITS))
-    return result
-  
-  
-  @classmethod
-  def __render_tensor_2(cls,tensor,multiDimArray=True):
-    """
-    Converts nested list or numpy matrix to nested list of strings.
-    :param tensor: nested list or numpy matrix storing  mpmath numbers
-    """
-    result = []
-    for row in tensor:
-       resultRow = []
-       for elem in row:
-         resultRow.append(mp.nstr(elem,n=RENDER_DIGITS))
-       if multiDimArray:
-         result.append(resultRow)
-       else:
-         result += resultRow
-    return result
-  
-
-  @classmethod
-  def __render_tensor_3(cls,tensor,multiDimArray=True):
-    """
-    Converts nested list or numpy matrix to nested list of strings.
-    :param tensor: nested list or numpy matrix storing  mpmath numbers
-    """
-    result = []
-    for r1 in tensor:
-       tmp1 = []
-       for r2 in r1:
-          tmp2 = []
-          for elem in r2:
-            tmp2.append(mp.nstr(elem,n=RENDER_DIGITS))
-          if multiDimArray:
-            tmp1.append(tmp2)
-          else:
-            result += tmp2
-       if multiDimArray:
-         result.append(tmp1)
-    return result
-
-
   # protected 
   @abstractmethod
   def _compute_quadrature_points_and_weights(self,num_points):
@@ -472,103 +375,100 @@ class LagrangeBasisWithDiagonalMassMatrix():
     assert False, "To be implemented by subclass."
   
   
-  def _transform_and_sort_points_and_weights(self,quadrature_points,quadrature_weights):
-    """
-    
-    Transform quadrature quadrature_points and quadrature_weights for interval [-1,1]
-    to quadrature_points and quadrature_weights for interval [0,1].
-
-    """
-    transformed_quadrature_weights = []
-    transformed_quadrature_points   = []
-    # weight
-    for i,w in enumerate(quadrature_weights):
-      x = quadrature_points[i]
-      wT = mp.mpf(w)/mp.mpf(2.0)
-      xT = (mp.mpf(x)+mp.mpf(1.0))/mp.mpf(2.0)
-      transformed_quadrature_weights.append(wT)
-      transformed_quadrature_points.append(xT)
-    # sort
-    sorted_transformed_quadrature_points = sorted(transformed_quadrature_points)
-    sorted_transformed_quadrature_weights = []
-    for i,xs in enumerate(sorted_transformed_quadrature_points):
-      n  = transformed_quadrature_points.index(xs) 
-      ws = transformed_quadrature_weights[n]
-      sorted_transformed_quadrature_weights.append(ws)
-    return sorted_transformed_quadrature_points, sorted_transformed_quadrature_weights
-  
-  
-  def init_dictionary_with_default_parameters(self,d,multiDimArrays=False):
+  def init_dictionary_with_default_parameters(self,dictionary,use_multidimensional_arrays):
     def snake_to_camel(word):
       return ''.join(x.capitalize() or '_' for x in word.lower().split('_'))
-
-#    self.__barycentric_weights             = self.__compute_barycentric_weights()
-    # operators
-#    self.__mass_matrix                     = self.__compute_mass_matrix()
-#    self.__stiffness_operator              = self.__compute_stiffness_operator()
-#    self.__basis_function_values_left,_    = self.__evaluate(mp.mpf(0.0))
-#    self.__derivative_operator             = self.__compute_derivative_operator()
-#    self.__equidistant_grid_projector      = self.__compute_equidistant_grid_projector()
-#    self.__fine_grid_projector             = [None]*3
-#    for j in range(0,3):
-#      self.__fine_grid_projector[j] = self.__compute_fine_grid_projector(j)
-
-#    basisDeclarations = ""
-#    basisInitializers = ""
-#    for var in ["quadrature_points",
-#                "quadrature_weights",
-#                "barycentric_weights",
-#                "basis_function_values_left","basis_function_values_right","derivative_operator","mass_matrix","stiffness_operator","equidistant_grid_projector","fine_grid_projector"]:
-#      var_key  = "_LagrangeBasis__" + var # prefix for privat variables of class LagrangeBasis
-#      var_name = snake_to_camel(var) # C++ name
-#      if var in ["quadrature_points","quadrature_weights","barycentric_weights","basis_function_values_left","basis_function_values_right"]:
-#          basisDeclarations += "const double {var_name}[{order}+1];\n".format(indent="  "*2,var_name=var_name,order=self.__max_poly_order)
-#          basisInitializers += "{var_name}{initializer},\n".format(var_name=var_name,\
-#              initializer=LagrangeBasis.__make_initializer_list(LagrangeBasis.__render_tensor_1(getattr(self,var_key))))
-#      elif var in ["fine_grid_projector"]:
-#          if multiDimArrays:
-#            basisDeclarations += "const double {var_name}[3][{order}+1][{order}+1];\n".format(indent="  "*2,var_name=var_name,order=self.__max_poly_order)
-#          else:
-#            basisDeclarations += "const double {var_name}[3][({order}+1)*({order}+1)];\n".format(indent="  "*2,var_name=var_name,order=self.__max_poly_order)
-#          basisInitializers += "{var_name}{initializer},\n".format(var_name=var_name,\
-#            initializer="{" + \
-#              ",".join([LagrangeBasis.__make_initializer_list(LagrangeBasis.__render_tensor_2(elem,multiDimArrays)) for elem in self.__fine_grid_projector]) +\
-#             "}")
-#      else:
-#          if multiDimArrays:
-#            basisDeclarations += "const double {var_name}[{order}+1][{order}+1];\n".format(indent="  "*2,var_name=var_name,order=self.__max_poly_order)
-#          else:
-#            basisDeclarations += "const double {var_name}[({order}+1)*({order}+1)];\n".format(indent="  "*2,var_name=var_name,order=self.__max_poly_order)
-#          basisInitializers += "{var_name}{initializer},\n".format(var_name=var_name,\
-#              initializer=LagrangeBasis.__make_initializer_list(LagrangeBasis.__render_tensor_2(getattr(self,var_key),multiDimArrays)))
 
     basisDeclarations = ""
     basisInitializers = ""
     
-    d["ORDER"]              = self.__max_poly_order
-    d["BASIS_DECLARATIONS"] = basisDeclarations  
-    d["BASIS_INITIALIZERS"] = basisInitializers
-   
-   
-  # public
-  def quadrature_points(self,render=True):
-    return self.__render_tensor_1(self.__quadrature_points) if render else self.__quadrature_points
-  
-  
-  def quadrature_weights(self,render=True):
-    return self.__render_tensor_1(self.__quadrature_weights) if render else self.__quadrature_weights
+    dictionary["ORDER"]               = self.order
+    dictionary["BASIS_DECLARATIONS"]  = ""
+    dictionary["BASIS_INITIALIZERS"]  = ""
     
+    dictionary["BASIS_DECLARATIONS"] += "const double QuadraturePoints1d[DGOrder+1];\n"
+    dictionary["BASIS_INITIALIZERS"] += "             QuadraturePoints1d{},\n".format( self._render_tensor_1(self.quadrature_points) )
+
+    dictionary["BASIS_DECLARATIONS"] += "const double MassMatrixDiagonal1d[DGOrder+1];\n"
+    dictionary["BASIS_INITIALIZERS"] += "             MassMatrixDiagonal1d{},\n".format( self._render_tensor_1(self.__compute_mass_matrix_diagonal()) )
+#    dictionary["BASIS_INITIALIZERS"] += "             MassMatrixDiagonal1d{},\n".format( self._render_tensor_1(self.__compute_mass_matrix_diagonal()) )
+    #      if var in ["quadrature_points","quadrature_weights","barycentric_weights","basis_function_values_left","basis_function_values_right"]:
+#          basisDeclarations += "const double {var_name}[{order}+1];\n".format(indent="  "*2,var_name=var_name,order=self.__max_poly_order)
+#          basisInitializers += "{var_name}{initializer},\n".format(var_name=var_name,\
+
+
+  @property
+  @abstractmethod
+  def quadrature_points(self):
+    assert False, "to be implemented by subclass"
+
+
+  def value1d(self,x,number):
+    """
+    
+    Return the numberth shape function's value at x
+    
+    """  
+    enumerator  = 1.0
+    denominator = 1.0
+    for i in range(0,self.dofs_per_axis):
+      if i!=number:
+        enumerator  *= (x-self.quadrature_points[i])
+        denominator *= (self.quadrature_points[number]-self.quadrature_points[i])
+    return enumerator/denominator
+
+
+
+
+   
+  
+from scipy.special import legendre
+from scipy.special import roots_sh_legendre
 
 class GaussLegendreBasis(LagrangeBasisWithDiagonalMassMatrix):
   """
   
   The Gauss-Legendre Basis is by construction the only basis which 
-  yields diagonal mass matrices
+  yields diagonal mass matrices. I rely solely on SciPy here to 
+  construct these functions, as I'm interested in numerical values
+  only, and as the normal SciPy accuracy is sufficient. 
+  
+  There might be more elegant implementations using SymPy which 
+  exploit the special structure behind Gauss-Legendre. But I prefer
+  here to stick to one Python package only.
   
   """
-  def _compute_quadrature_points_and_weights(self,num_points):
-    x,w = gauss_legendre(num_points,PREC_DIGITS) 
-    return self._transform_and_sort_points_and_weights(x,w)
+  
+  def __init__(self,polynomial_order):
+    super(GaussLegendreBasis,self).__init__(polynomial_order)  
+    
+  
+  @property
+  def quadrature_points(self):
+    """
+    
+    It seems to be a little bit weird that I have to use the polynomial
+    order plus one here, but you have to read the docu to understand 
+    that we are evaluating the polynomial of a certain order to get the 
+    roots. So the argument has to be equal to the number of quadrature
+    points that I wannt have.
+    
+    I originally used the roots_legendre and then did recalibrate the 
+    result manually. Today, SciPy directly offers a shifted Legendre
+    function which I can use directly. So I don't need an expression like
+    
+    
+          return [ x/2.0+0.5 for x in roots_on_minus_one_one_interval ]
+
+
+    anymore. The nicest definition of the shifted Legendre shape functions
+    can, as so often, be found on Wikipedia:
+    
+    https://en.wikipedia.org/wiki/Legendre_polynomials#Shifted_Legendre_polynomials
+    
+    """
+    roots, weight = scipy.special.roots_sh_legendre(self._polynomial_order+1)
+    return roots    
 
 
 
@@ -578,10 +478,18 @@ class GaussLobattoBasisWithLumpedDiagonalBasis(LagrangeBasisWithDiagonalMassMatr
   The Gauss-Lobatto quadrature points do not yield a diagonal mass
   matrix. They yield a full matrix. However, there are codes which 
   ignore this fact and lump the basis. Mathematically, this is 
-  equivalent to hte  Gauss-Lobatto quadrature because this leads to a diagonal matrix that is easy to invert
+  equivalent to the Gauss-Lobatto quadrature because this leads to a diagonal matrix that is easy to invert
   
   """
-  def _compute_quadrature_points_and_weights(self,num_points):
+  
+  def __init__(self,polynomial_order):
+    super(GaussLobattoBasisWithLumpedDiagonalBasis,self).__init__(polynomial_order)  
+    
+    
+  @property
+  def quadrature_points(self):
+    assert False, "to be implemented by subclass"
     raise Exception( "check implementation. See class comment")
-    x,w = gauss_lobatto(num_points,PREC_DIGITS) 
+    x,w = quadrature.gauss_lobatto(self.dofs_per_axis,PREC_DIGITS) 
     return self._transform_and_sort_points_and_weights(x,w)
+

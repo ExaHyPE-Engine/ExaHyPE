@@ -26,15 +26,18 @@ class SeparateSweeps( RungeKuttaDG ):
   """
 
 
-  def __init__(self, name, dg_order, rk_order, polynomials, unknowns, auxiliary_variables, min_cell_h, max_cell_h, plot_grid_properties):
+  def __init__(self, 
+               name, 
+               rk_order, 
+               polynomial_basis, 
+               unknowns, auxiliary_variables, min_cell_h, max_cell_h, plot_grid_properties):
     """
 
 
     """
     super(SeparateSweeps, self).__init__(name, 
-                                         dg_order, 
                                          rk_order, 
-                                         polynomials, 
+                                         polynomial_basis, 
                                          1,     # number of face projections
                                          unknowns, auxiliary_variables, min_cell_h, max_cell_h, plot_grid_properties)
     

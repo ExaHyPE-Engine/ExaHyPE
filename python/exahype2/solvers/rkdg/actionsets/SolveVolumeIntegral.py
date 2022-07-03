@@ -119,7 +119,7 @@ class SolveVolumeIntegral(AbstractRungeKuttaDGActionSet):
         return std::vector<::exahype2::dg::PointSource>();
         {% endif %}
       }, //source
-      repositories::{{SOLVER_INSTANCE}}.QuadraturePoints,
+      repositories::{{SOLVER_INSTANCE}}.QuadraturePoints1d,
       repositories::{{SOLVER_INSTANCE}}.MassMatrix,
       repositories::{{SOLVER_INSTANCE}}.StiffnessOperator,
       repositories::{{SOLVER_INSTANCE}}.DerivativeOperator,

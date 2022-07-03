@@ -24,23 +24,6 @@ from abc import abstractmethod
 import exahype2
 import exahype2.solvers.rkdg.actionsets
 
-from enum import IntEnum
-
-from exahype2.solvers.LagrangeBasisWithDiagonalMassMatrix import GaussLegendreBasis
-
-
-class Polynomials(IntEnum):
-  """
-  
-   Superclass has to be IntEnum, as I use this one within Jinja2 templates
-   where I struggled to compare against enum variants. I however can always
-   compare against integers.
-  
-  """
-  Gauss_Legendre = 0,
-  Gauss_Lobatto = 1
-  
-
 
 class RungeKuttaDG(object):
   """ 
@@ -68,8 +51,8 @@ class RungeKuttaDG(object):
     If you want to study the mathematics routines used by all the Python-generated
     code, read the Discontinous Galerkin page in dg.h.
     
-
-    :: Data structures
+    
+    # Data structures
 
     Each cell hosts a DG polynomial of order _dg_order. Technically, we store this polynomial
     in a regular array (blockstructured data) with (_dg_order+1)^d entries. On top of this 
@@ -165,10 +148,19 @@ class RungeKuttaDG(object):
       
     self._compute_new_time_step_size          = "const double newTimeStepSize = timeStepSize;"
              
+    # Attributes
+    
+    polynomial_basis: solvers.LagrangeBasis
+      Any proper polynomial basis such as solvers.GaussLegendreBasis             
+      
   """
   
       
-  def __init__(self, name, dg_order, rk_order, polynomials, number_of_face_projections, unknowns, auxiliary_variables, min_cell_h, max_cell_h, plot_grid_properties):
+  def __init__(self, 
+               name, 
+               rk_order, 
+               polynomial_basis, 
+               number_of_face_projections, unknowns, auxiliary_variables, min_cell_h, max_cell_h, plot_grid_properties):
     """
     
   Constructor of the Runge-Kutta Discontinuous Galerkin solver
@@ -240,9 +232,8 @@ class RungeKuttaDG(object):
     """
     self._name              = name
     
-    self._dg_order          = dg_order
-    self._rk_order          = rk_order
-    self._polynomials       = polynomials
+    self._rk_order                   = rk_order
+    self._basis                      = polynomial_basis
     self._number_of_face_projections = number_of_face_projections
     
     self._unknowns             = unknowns
@@ -267,13 +258,6 @@ class RungeKuttaDG(object):
 
     self._compute_time_step_size              = None
     self._compute_new_time_step_size          = None
-
-    if polynomials is exahype2.solvers.rkdg.Polynomials.Gauss_Legendre:
-      self._basis = GaussLegendreBasis(dg_order+1)
-    elif polynomials is exahype2.solvers.rkdg.Polynomials.Gauss_Lobatto:
-      self._basis = GaussLobattoBasis(dg_order+1)
-    else:
-      raise Exception( "No proper basis chosen: {}".format(polynomials) )
     
     self._preprocess_reconstructed_patch      = ""
     self._postprocess_updated_patch           = ""
@@ -307,7 +291,7 @@ class RungeKuttaDG(object):
     result = """
 Name:                   """ + self._name + """
 Type:                   """ + self.__class__.__name__ + """
-RK/DG order:            """ + str(self._rk_order) + "/" + str(self._dg_order) + """
+RK/DG order:            """ + str(self._rk_order) + "/" + str(self._basis.order) + """
 Unknowns:               """ + str( self._unknowns ) + """
 Auxiliary variables:    """ + str( self._auxiliary_variables ) + """
 h_cell_min:             """ + str( self._min_cell_h ) + """
@@ -357,8 +341,6 @@ The spacetree will at most have """ + str(self.get_max_number_of_spacetree_level
 
 The spacetree will thus span at least """ + str(self.get_coarsest_number_of_cells(domain_size)) + """ cells per coordinate axis. 
 The spacetree will thus span at most """ + str(self.get_finest_number_of_cells(domain_size)) + """ cells per coordinate axis. 
-
-ExaHyPE 2 embeds polynomials of order """ + str(self._dg_order) + """ into the finest tree level.
 
 We use RK(""" + str(self._rk_order) + """) for the time stepping.
 
@@ -431,12 +413,12 @@ We use RK(""" + str(self._rk_order) + """) for the time stepping.
          
        
     """
-    self._current_time_step                 = peano4.datamodel.Patch( (self._dg_order+1,self._dg_order+1,self._dg_order+1),                      self._unknowns+self._auxiliary_variables, self._unknown_identifier() )
-    self._estimates                         = peano4.datamodel.Patch( (self.number_of_Runge_Kutta_steps()*(self._dg_order+1),self._dg_order+1,self._dg_order+1),     self._unknowns+self._auxiliary_variables, self._unknown_identifier() + "Estimates" )
-    self._linear_combination_of_estimates   = peano4.datamodel.Patch( (self._dg_order+1,self._dg_order+1,self._dg_order+1),                      self._unknowns+self._auxiliary_variables, self._unknown_identifier() + "LinearCombination")
-    self._previous_estimate_projection      = peano4.datamodel.Patch( (2,self._number_of_face_projections*(self._dg_order+1),self._dg_order+1),  self._unknowns+self._auxiliary_variables, self._unknown_identifier() + "EstimateProjection" )
-    self._old_time_step_projection          = peano4.datamodel.Patch( (2,self._number_of_face_projections*(self._dg_order+1),self._dg_order+1),  self._unknowns+self._auxiliary_variables, self._unknown_identifier() + "OldTimeStepProjection" )
-    self._Riemann_solution                  = peano4.datamodel.Patch( (2,self._dg_order+1,self._dg_order+1),  self._unknowns, self._unknown_identifier() + "RiemannSolution" )
+    self._current_time_step                 = peano4.datamodel.Patch( (self._basis.dofs_per_axis,self._basis.dofs_per_axis,self._basis.dofs_per_axis),                      self._unknowns+self._auxiliary_variables, self._unknown_identifier() )
+    self._estimates                         = peano4.datamodel.Patch( (self.number_of_Runge_Kutta_steps()*(self._basis.dofs_per_axis),self._basis.dofs_per_axis,self._basis.dofs_per_axis),     self._unknowns+self._auxiliary_variables, self._unknown_identifier() + "Estimates" )
+    self._linear_combination_of_estimates   = peano4.datamodel.Patch( (self._basis.dofs_per_axis,self._basis.dofs_per_axis,self._basis.dofs_per_axis),                      self._unknowns+self._auxiliary_variables, self._unknown_identifier() + "LinearCombination")
+    self._previous_estimate_projection      = peano4.datamodel.Patch( (2,self._number_of_face_projections*(self._basis.dofs_per_axis),self._basis.dofs_per_axis),  self._unknowns+self._auxiliary_variables, self._unknown_identifier() + "EstimateProjection" )
+    self._old_time_step_projection          = peano4.datamodel.Patch( (2,self._number_of_face_projections*(self._basis.dofs_per_axis),self._basis.dofs_per_axis),  self._unknowns+self._auxiliary_variables, self._unknown_identifier() + "OldTimeStepProjection" )
+    self._Riemann_solution                  = peano4.datamodel.Patch( (2,self._basis.dofs_per_axis,self._basis.dofs_per_axis),  self._unknowns, self._unknown_identifier() + "RiemannSolution" )
            
     self._previous_estimate_projection.generator.merge_method_definition = get_face_overlap_merge_implementation(self._previous_estimate_projection)
     self._previous_estimate_projection.generator.includes     += """
@@ -712,9 +694,9 @@ We use RK(""" + str(self._rk_order) + """) for the time stepping.
 
 
     mapping = []    
-    for z in self._basis.quadrature_points():
-      for y in self._basis.quadrature_points():
-        for x in self._basis.quadrature_points():
+    for z in self._basis.quadrature_points:
+      for y in self._basis.quadrature_points:
+        for x in self._basis.quadrature_points:
           mapping.append( (x,y,z) )
           
           
@@ -848,7 +830,7 @@ We use RK(""" + str(self._rk_order) + """) for the time stepping.
 
 
     """
-    d["DG_ORDER"]                       = self._dg_order
+    d["DG_ORDER"]                       = self._basis.order
     d["RK_ORDER"]                       = self._rk_order
     d["RK_STEPS"]                       = self.number_of_Runge_Kutta_steps()
 
@@ -858,13 +840,11 @@ We use RK(""" + str(self._rk_order) + """) for the time stepping.
     d["NUMBER_OF_UNKNOWNS"]             = self._unknowns
     d["NUMBER_OF_AUXILIARY_VARIABLES"]  = self._auxiliary_variables
 
-    d[ "NUMBER_OF_DOFS_PER_CELL_2D" ] = (self._dg_order+1) * (self._dg_order+1);
-    d[ "NUMBER_OF_DOFS_PER_CELL_3D" ] = (self._dg_order+1) * (self._dg_order+1) * (self._dg_order+1);
+    d[ "NUMBER_OF_DOFS_PER_CELL_2D" ] = (self._basis.dofs_per_axis) * (self._basis.dofs_per_axis);
+    d[ "NUMBER_OF_DOFS_PER_CELL_3D" ] = (self._basis.dofs_per_axis) * (self._basis.dofs_per_axis) * (self._basis.dofs_per_axis);
     
-    d[ "NUMBER_OF_DOFS_PER_FACE_2D" ] = (self._dg_order+1)
-    d[ "NUMBER_OF_DOFS_PER_FACE_3D" ] = (self._dg_order+1) * (self._dg_order+1)
-
-    d["POLYNOMIALS"]                    = str(self._polynomials)
+    d[ "NUMBER_OF_DOFS_PER_FACE_2D" ] = (self._basis.dofs_per_axis)
+    d[ "NUMBER_OF_DOFS_PER_FACE_3D" ] = (self._basis.dofs_per_axis) * (self._basis.dofs_per_axis)
 
     d[ "ASSERTION_WITH_1_ARGUMENTS" ] = "nonCriticalAssertion1"
     d[ "ASSERTION_WITH_2_ARGUMENTS" ] = "nonCriticalAssertion2"
@@ -903,7 +883,7 @@ We use RK(""" + str(self._rk_order) + """) for the time stepping.
     d[ "NCP_IMPLEMENTATION"]                  = self._ncp_implementation
     d[ "SOURCE_TERM_IMPLEMENTATION"]          = self._source_term_implementation
     d[ "POINT_SOURCES_IMPLEMENTATION"]        = self._point_sources_implementation
-    self._basis.init_dictionary_with_default_parameters(d)        
+    self._basis.init_dictionary_with_default_parameters(d,False)
 
   
   @property

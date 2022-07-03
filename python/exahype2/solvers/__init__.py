@@ -7,3 +7,4 @@ from .FixedSubcyclingTimeSteppingCodeSnippets    import FixedSubcyclingTimeStepp
 from .AdaptiveSubcyclingTimeSteppingCodeSnippets import AdaptiveSubcyclingTimeSteppingCodeSnippets
 from .LocalTimeSteppingCodeSnippets              import LocalTimeSteppingCodeSnippets
 
+from .LagrangeBasisWithDiagonalMassMatrix        import GaussLegendreBasis

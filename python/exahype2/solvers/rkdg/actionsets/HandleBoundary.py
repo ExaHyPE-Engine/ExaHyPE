@@ -77,7 +77,7 @@ class HandleBoundary(AbstractRungeKuttaDGActionSet):
       {{NUMBER_OF_UNKNOWNS}},
       {{NUMBER_OF_AUXILIARY_VARIABLES}},
       marker.getSelectedFaceNumber(),
-      repositories::{{SOLVER_INSTANCE}}.QuadraturePoints,
+      repositories::{{SOLVER_INSTANCE}}.QuadraturePoints1d,
       fineGridFace{{UNKNOWN_IDENTIFIER}}EstimateProjection.value
     );
   }

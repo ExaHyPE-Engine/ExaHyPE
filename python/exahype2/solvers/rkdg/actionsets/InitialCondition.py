@@ -15,7 +15,7 @@ class InitialCondition(AbstractRungeKuttaDGActionSet):
       repositories::{{SOLVER_INSTANCE}}.initialCondition(
         fineGridCell{{UNKNOWN_IDENTIFIER}}.value + linearisedIndex,
         ::exahype2::dg::getQuadraturePoint(
-          marker.x(), marker.h(), index, repositories::{{SOLVER_INSTANCE}}.DGOrder, repositories::{{SOLVER_INSTANCE}}.QuadraturePoints
+          marker.x(), marker.h(), index, repositories::{{SOLVER_INSTANCE}}.DGOrder, repositories::{{SOLVER_INSTANCE}}.QuadraturePoints1d
         ),
         marker.h(),
         index,
