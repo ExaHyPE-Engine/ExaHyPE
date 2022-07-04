@@ -17,23 +17,24 @@ namespace exahype2 {
     /**
      * Default enumerator for all DoFs in ExaHyPE 2
      *
-     * We assume that we have a lexicographic ordering of the patch data and
+     * We assume that we have a lexicographic ordering of the patch data or
+     * DG degree of freedom (quadrature points) and
      * all data therein are ordered lexicographically and stored in as AoS.
      *
-     * @param numberOfPatches_ This field is irrelevant for this enumerator,
-     *   as the patches are enumerated one after another, i.e. there is no
-     *   patch interleaving. To be formally correct, you should set it to 1
-     *   if you construct and enumerator over the input or output data, as
-     *   there is one patch per cell.
+     * @see Enumerator.h for a generic description of attribute semantics.
+     *
+     *
+     * @param numberOfCells_ The cells are enumerated one after another, i.e.
+     *   we work with an array of cells hosting arrays of structs.
+     *
+     * @param haloSize Number of dofs around the cell which do not carry
+     *   active information, i.e. data you write to.
      */
-    #if defined(GPUOffloadingOMP)
-//     #pragma omp declare target
-    #endif
     struct AoSLexicographicEnumerator {
       public:
-        AoSLexicographicEnumerator(int numberOfPatches, int numberOfVolumesPerAxisInPatch, int haloSize, int unknowns, int numberOfAuxiliaryVariables):
-          _numberOfPatches(numberOfPatches),
-          _numberOfVolumesPerAxisInPatch(numberOfVolumesPerAxisInPatch),
+        AoSLexicographicEnumerator(int numberOfCells, int numberOfDoFsPerAxisInCell, int haloSize, int unknowns, int numberOfAuxiliaryVariables):
+          _numberOfCells(numberOfCells),
+          _numberOfDoFsPerAxisInCell(numberOfDoFsPerAxisInCell),
           _haloSize(haloSize),
           _unknowns(unknowns),
           _numberOfAuxiliaryVariables(numberOfAuxiliaryVariables){}
@@ -47,20 +48,20 @@ namespace exahype2 {
          * @todo modulo Operator muss ich noch dokumentieren
          */
         int operator()(
-          int patchIndex,
+          int cellIndex,
           const tarch::la::Vector<Dimensions,int>&  volumeIndex,
           int unknown
         ) const InlineMethod {
           if (Dimensions==2) {
-            return (patchIndex % _numberOfPatches) * (_numberOfVolumesPerAxisInPatch+2*_haloSize) * (_numberOfVolumesPerAxisInPatch+2*_haloSize) * (_unknowns+_numberOfAuxiliaryVariables)
-                 +      (volumeIndex(1)+_haloSize) *                                                (_numberOfVolumesPerAxisInPatch+2*_haloSize) * (_unknowns+_numberOfAuxiliaryVariables)
+            return (cellIndex % _numberOfCells) * (_numberOfDoFsPerAxisInCell+2*_haloSize) * (_numberOfDoFsPerAxisInCell+2*_haloSize) * (_unknowns+_numberOfAuxiliaryVariables)
+                 +      (volumeIndex(1)+_haloSize) *                                                (_numberOfDoFsPerAxisInCell+2*_haloSize) * (_unknowns+_numberOfAuxiliaryVariables)
                  +      (volumeIndex(0)+_haloSize) *                                                                                               (_unknowns+_numberOfAuxiliaryVariables)
                  +                        unknown;
           }
           else {
-            return (patchIndex % _numberOfPatches) * (_numberOfVolumesPerAxisInPatch+2*_haloSize) * (_numberOfVolumesPerAxisInPatch+2*_haloSize) * (_numberOfVolumesPerAxisInPatch+2*_haloSize) * (_unknowns+_numberOfAuxiliaryVariables)
-                 +      (volumeIndex(2)+_haloSize) *                                                (_numberOfVolumesPerAxisInPatch+2*_haloSize) * (_numberOfVolumesPerAxisInPatch+2*_haloSize) * (_unknowns+_numberOfAuxiliaryVariables)
-                 +      (volumeIndex(1)+_haloSize) *                                                                                               (_numberOfVolumesPerAxisInPatch+2*_haloSize) * (_unknowns+_numberOfAuxiliaryVariables)
+            return (cellIndex % _numberOfCells) * (_numberOfDoFsPerAxisInCell+2*_haloSize) * (_numberOfDoFsPerAxisInCell+2*_haloSize) * (_numberOfDoFsPerAxisInCell+2*_haloSize) * (_unknowns+_numberOfAuxiliaryVariables)
+                 +      (volumeIndex(2)+_haloSize) *                                                (_numberOfDoFsPerAxisInCell+2*_haloSize) * (_numberOfDoFsPerAxisInCell+2*_haloSize) * (_unknowns+_numberOfAuxiliaryVariables)
+                 +      (volumeIndex(1)+_haloSize) *                                                                                               (_numberOfDoFsPerAxisInCell+2*_haloSize) * (_unknowns+_numberOfAuxiliaryVariables)
                  +      (volumeIndex(0)+_haloSize) *                                                                                                                                              (_unknowns+_numberOfAuxiliaryVariables)
                  +                        unknown;
           }
@@ -72,29 +73,38 @@ namespace exahype2 {
 
         int size() const {
           if (Dimensions==2) {
-            return _numberOfPatches
-                * (_numberOfVolumesPerAxisInPatch+2*_haloSize)
-                * (_numberOfVolumesPerAxisInPatch+2*_haloSize)
+            return _numberOfCells
+                * (_numberOfDoFsPerAxisInCell+2*_haloSize)
+                * (_numberOfDoFsPerAxisInCell+2*_haloSize)
                 * (_unknowns+_numberOfAuxiliaryVariables);
           }
           else {
-            return _numberOfPatches
-                * (_numberOfVolumesPerAxisInPatch+2*_haloSize)
-                * (_numberOfVolumesPerAxisInPatch+2*_haloSize)
-                * (_numberOfVolumesPerAxisInPatch+2*_haloSize)
+            return _numberOfCells
+                * (_numberOfDoFsPerAxisInCell+2*_haloSize)
+                * (_numberOfDoFsPerAxisInCell+2*_haloSize)
+                * (_numberOfDoFsPerAxisInCell+2*_haloSize)
                 * (_unknowns+_numberOfAuxiliaryVariables);
           }
         }
 
-        const int _numberOfPatches;
-        const int _numberOfVolumesPerAxisInPatch;
+        int numberOfDofsPerCell() const {
+          if (Dimensions==2) {
+            return (_numberOfDoFsPerAxisInCell+2*_haloSize)
+                 * (_numberOfDoFsPerAxisInCell+2*_haloSize);
+          }
+          else {
+            return (_numberOfDoFsPerAxisInCell+2*_haloSize)
+                 * (_numberOfDoFsPerAxisInCell+2*_haloSize)
+                 * (_numberOfDoFsPerAxisInCell+2*_haloSize);
+          }
+        }
+
+        const int _numberOfCells;
+        const int _numberOfDoFsPerAxisInCell;
         const int _haloSize;
         const int _unknowns;
         const int _numberOfAuxiliaryVariables;
     };
-    #if defined(GPUOffloadingOMP)
-//      #pragma omp end declare target
-    #endif
   }
 }
 
