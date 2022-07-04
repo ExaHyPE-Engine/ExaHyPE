@@ -125,14 +125,14 @@
  * This is the last step of our algorithm: We assume that we have a quantity @f$ \hat Q @f$
  * in each and every sample point. Its entries have to be discussed. We multiply these quantities with the inverse of the
  * mass matrix and add it, subject to a scaling with dt, to the old solution. This
- * operation is called exahype2::dg::multiplyWithInvertedMassMatrixCopyAuxiliaryVariablesAndAddToSolution_GaussLegendre() or variants thereof.
+ * operation is called exahype2::dg::multiplyWithInvertedMassMatrixAndAddToSolution_GaussLegendre() or variants thereof.
  * So far, the algorithm thus consists of two steps:
  *
  * - (unspecified) Compute the @f$ \hat Q @f$ value per degree of freedom in each and every cell somehow.
- * - (3) Run over each cell. Per cell, call exahype2::dg::multiplyWithInvertedMassMatrixCopyAuxiliaryVariablesAndAddToSolution_GaussLegendre() or variants thereof.
+ * - (3) Run over each cell. Per cell, call exahype2::dg::multiplyWithInvertedMassMatrixAndAddToSolution_GaussLegendre() or variants thereof.
  *   This routine takes the Q values of the cell, and adds the contribution @f$ dt \cdot M^{-1} \hat Q @f$.
  *
- * You will find exahype2::dg::multiplyWithInvertedMassMatrixCopyAuxiliaryVariablesAndAddToSolution_GaussLegendre()
+ * You will find exahype2::dg::multiplyWithInvertedMassMatrixAndAddToSolution_GaussLegendre()
  * and its cousins in the file exahype2/dg/CellIntegral.h as they correspond, as name and
  * derivation suggest, from an integral formulation over integrals.
  *

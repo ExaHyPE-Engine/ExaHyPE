@@ -213,7 +213,7 @@ void exahype2::dg::internal::copySolution(
 }
 
 
-void exahype2::dg::multiplyWithInvertedMassMatrixCopyAuxiliaryVariablesAndAddToSolution_GaussLegendre(
+void exahype2::dg::multiplyWithInvertedMassMatrixAndAddToSolution_GaussLegendre(
   ::exahype2::CellData&                          cellData,
   const int                                      order,
   const int                                      unknowns,
@@ -234,16 +234,20 @@ void exahype2::dg::multiplyWithInvertedMassMatrixCopyAuxiliaryVariablesAndAddToS
 
     tarch::la::Vector<Dimensions,int> index = getIndex(node, strides);
 
+    // determine d-dimenional mass' matrix entry
     double coeff = 1.0;
     for (int dim=0; dim<Dimensions; dim++) {
       coeff *= massMatrixDiagonal1d[ index(dim) ];
     }
 
     for(int var=0; var<unknowns; var++) {
-      cellQout[node+var] += 1.0 / coeff * cellQin[node+var];
+      cellQout[node*strideQ+var] += 1.0 / coeff * cellQout[node*strideQ+var];
     }
-    for(int var=auxiliaryVariables; var<unknowns+auxiliaryVariables; var++) {
-      cellQout[node+var] = cellQin[node+var];
+
+    // copy over old time step solution including auxiliary variables
+    // and add them to solution
+    for(int var=0; var<unknowns+auxiliaryVariables; var++) {
+      cellQout[node*strideQ+var] = cellQin[node*strideQ+var] + dt * cellQout[node*strideQ+var];
     }
   }
 }

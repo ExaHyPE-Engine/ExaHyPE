@@ -142,15 +142,40 @@ namespace exahype2 {
 
 
     /**
+     * Final step of DG algorithm
+     *
      * This is the final step of any DG algorithm. Consult dg.h for a
      * clearer explanation.
      *
-     * This routine assumes that the mass matrix is a diagonal. Therefore,
-     * the inversion is trivial.
+     * - I assume that the input points to the old time step's solution.
+     *   This is typically
      *
-     * This routine also copies over the material parameters.
+     *        fineGridCell{{UNKNOWN_IDENTIFIER}}LinearCombination
+     *
+     *   in a Discontinuous Galerkin context.
+     * - I assume that the output points to the new time step's data. This is
+     *   usually
+     *
+     *        fineGridCell{{UNKNOWN_IDENTIFIER}}Estimates
+     *
+     *   subject to some shifts.
+     * - The output already holds the flux contributions, source terms, and
+     *   so forth, but these contributions are stored in the weak image space,
+     *   i.e. we still have to multiply them with the inverse of a mass matrix.
+     * - The output does not yet hold any auxiliary (material) parameters.
+     *
+     * This routine assumes that the mass matrix is a diagonal. Therefore,
+     * the inversion is trivial. The routine also copies over the material
+     * parameters. So we realise the folling steps:
+     *
+     * - We multiply the data that's already stored in QOut with the inverse
+     *   of the mass matrix.
+     * - We scale it with dt and then add the data from QIn.
+     * - We copy the auxiliary variables from QIn over.
+     *
+     *
      */
-    void multiplyWithInvertedMassMatrixCopyAuxiliaryVariablesAndAddToSolution_GaussLegendre(
+    void multiplyWithInvertedMassMatrixAndAddToSolution_GaussLegendre(
       ::exahype2::CellData&                          cellData,
       const int                                      order,
       const int                                      unknowns,
