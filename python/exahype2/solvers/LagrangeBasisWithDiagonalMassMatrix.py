@@ -72,9 +72,16 @@ class LagrangeBasisWithDiagonalMassMatrix(LagrangeBasis):
   the quadrature within the unit-interval. They are polynomials of maximum order N-1.
 
   Our implementation is quite some overkill, as I assemble the whole mass matrix 
-  and thne extract only the diagonal.  If we use Legendre nodes as support points, 
+  and then extract only the diagonal.  If we use Legendre nodes as support points, 
   this diagonal is an exact evaluation, i.e. the mass matrix is diagonal. If
   we use Lobatto nodes, it is an approximation.
+  
+  Please note that this is a 1d mass matrix: If we have a polynomial of order p,
+  we have @f$ (p+1)^d @f$ dofs in total per cell. My matrix has only the dimensions
+  @f$ (p+1) \times (p+1) @f$ so it effectively only models how the dofs along one 
+  horizontal or vertical line within the cell do interact. This is totally sufficient
+  if we know that we have a tensor product approach of the shape functions and a 
+  diagonal mass matrix.
 
   @todo I don't know if we need renormalisation for Lobatto nodes, i.e. if we 
   should ensure that the row sum is preserved
@@ -143,44 +150,6 @@ class LagrangeBasisWithDiagonalMassMatrix(LagrangeBasis):
 
   __repr__ = __str__
   
-  
-  # private methods
-  def __evaluate(self,xi):
-    """
-    Evaluates a lagrange polynomial and its first derivative at a given point.
-    
-    Args:
-       xi:
-        The reference element point the basis functions are evaluated at.
-        Here, xi refers to the greek letter that is often used as a reference element coordinate.
-        
-    Returns:
-       phi:
-        Basis function values.
-       phi_xi:
-        First derivatives of the basis functions.
-    """
-    phi  = [mp.mpf(1.)]*(self.__num_points) 
-    phi_xi = [mp.mpf(0.)]*(self.__num_points)
-    xin = self.__quadrature_points
-    for m in range(0,self.__num_points):
-      for j in range(0,self.__num_points):
-        if j == m:
-          continue 
-        phi[m] = phi[m]*(xi-xin[j])/(xin[m]-xin[j])
-      for i in range(0,self.__num_points):
-        if i == m:
-          continue
-        tmp = 1.;
-        for j in range(0,self.__num_points):
-          if j == i:
-            continue
-          if j == m:
-            continue
-          tmp = tmp*(xi-xin[j])/(xin[m]-xin[j])
-        phi_xi[m] += tmp/(xin[m]-xin[i])
-    return phi, phi_xi  
-
 
   def __compute_barycentric_weights(self):
     """
@@ -227,15 +196,24 @@ class LagrangeBasisWithDiagonalMassMatrix(LagrangeBasis):
     :return: The (reference) element stiffness matrix.
     
     """
-    # init matrix with zero
-    Kxi = [[mp.mpf(0) for _ in range(self.__num_points)] for _ in range(self.__num_points)]
+    stiffness_matrix = [ [0.0 for _ in range(0,self.dofs_per_axis)] for _ in range(0,self.dofs_per_axis) ]
     
-    for j in range(0,self.__num_points):
-      phi, phi_xi = self.__evaluate(self.__quadrature_points[j])
-      for i in range(0,self.__num_points):
-        Kxi[i][j] = self.__quadrature_weights[j]*phi_xi[i]
+    for row in range(0,self.dofs_per_axis):
+      for col in range(0,self.dofs_per_axis):
+        ans,err = quad(lambda x: self.derivative1d(x,row) * self.value1d(x,col),0,1)
+        stiffness_matrix[row][col] = ans
+
+    return stiffness_matrix
+
+    # init matrix with zero
+    #Kxi = [[mp.mpf(0) for _ in range(self.__num_points)] for _ in range(self.__num_points)]
+    
+    #for j in range(0,self.__num_points):
+    #  phi, phi_xi = self.__evaluate(self.__quadrature_points[j])
+    #  for i in range(0,self.__num_points):
+    #    Kxi[i][j] = self.__quadrature_weights[j]*phi_xi[i]
        
-    return Kxi
+    #return Kxi
   
 
   def __compute_K1(self):
@@ -266,6 +244,16 @@ class LagrangeBasisWithDiagonalMassMatrix(LagrangeBasis):
       
   def __compute_derivative_operator(self):
     """
+
+    Construct a matrix which is given the p+1 weights of the shape function
+    along a 1d line. It then returns the p+1 gradients at the integration 
+    points.
+    
+    
+    
+    
+    @todo Clean up below and validate
+        
     Computes basis function derivatives at each support point.
     Transposes the resulting operator.
 
@@ -302,16 +290,13 @@ class LagrangeBasisWithDiagonalMassMatrix(LagrangeBasis):
     :note: If you want to use this operator to compute the gradient of the solution,
     you need to use the transpose.
     """
-    # matmul
-    # @todo: get rid of this numpy dependency, as mass matrix is diagonal
-    #dudx_orig  = np.dot(mp.inverse(self.__mass_matrix).tolist(),np.transpose(self.__stiffness_operator))
-    dudx = [[mp.mpf(0) for _ in range(self.__num_points)] for _ in range(self.__num_points)]
-    for i in range(0, self.__num_points):
-      phi, phi_xi = self.__evaluate(self.__quadrature_points[i])
-      for j in range(0, self.__num_points):
-        dudx[i][j] = phi_xi[j]
-        #print(dudx[i][j] - dudx_orig[i][j])
-    return dudx
+    dQdx = [ [0.0 for _ in range(0,self.dofs_per_axis)] for _ in range(0,self.dofs_per_axis) ]
+    
+    for row in range(0,self.dofs_per_axis):
+      for col in range(0,self.dofs_per_axis):
+        dQdx[row][col] = self.derivative1d( self.quadrature_points[row], col)
+
+    return dQdx
   
 
   def __compute_fine_grid_projector(self, j):
@@ -341,7 +326,16 @@ class LagrangeBasisWithDiagonalMassMatrix(LagrangeBasis):
         fineGridProjector[m][i] = phi_i[m]
     return fineGridProjector
   
-
+  
+  def __compute_basis_function_values_left(self):
+    """
+    
+    Compute per basis function what the very left value of the polynomial would be
+    
+    """
+    return [ self.value1d(0.0, number) for number in range(self.dofs_per_axis) ]  
+    
+      
   def __compute_equidistant_grid_projector(self):
     """
     Transforms the degrees of freedom located at non-equidistant Lagrange support points
@@ -391,10 +385,21 @@ class LagrangeBasisWithDiagonalMassMatrix(LagrangeBasis):
 
     dictionary["BASIS_DECLARATIONS"] += "const double MassMatrixDiagonal1d[DGOrder+1];\n"
     dictionary["BASIS_INITIALIZERS"] += "             MassMatrixDiagonal1d{},\n".format( self._render_tensor_1(self.__compute_mass_matrix_diagonal()) )
-#    dictionary["BASIS_INITIALIZERS"] += "             MassMatrixDiagonal1d{},\n".format( self._render_tensor_1(self.__compute_mass_matrix_diagonal()) )
-    #      if var in ["quadrature_points","quadrature_weights","barycentric_weights","basis_function_values_left","basis_function_values_right"]:
-#          basisDeclarations += "const double {var_name}[{order}+1];\n".format(indent="  "*2,var_name=var_name,order=self.__max_poly_order)
-#          basisInitializers += "{var_name}{initializer},\n".format(var_name=var_name,\
+
+    if use_multidimensional_arrays:        
+      dictionary["BASIS_DECLARATIONS"] += "const double StiffnessOperator1d[DGOrder+1][DGOrder+1];\n"
+    else:
+      dictionary["BASIS_DECLARATIONS"] += "const double StiffnessOperator1d[(DGOrder+1)*(DGOrder+1)];\n"
+    dictionary["BASIS_INITIALIZERS"] += "             StiffnessOperator1d{},\n".format( self._render_tensor_2(self.__compute_stiffness_operator(),use_multidimensional_arrays) )
+
+    dictionary["BASIS_DECLARATIONS"] += "const double BasisFunctionValuesLeft1d[DGOrder+1];\n"
+    dictionary["BASIS_INITIALIZERS"] += "             BasisFunctionValuesLeft1d{},\n".format( self._render_tensor_1(self.__compute_basis_function_values_left()) )
+
+    if use_multidimensional_arrays:        
+      dictionary["BASIS_DECLARATIONS"] += "const double DerivativeOperator1d[DGOrder+1][DGOrder+1];\n"
+    else:
+      dictionary["BASIS_DECLARATIONS"] += "const double DerivativeOperator1d[(DGOrder+1)*(DGOrder+1)];\n"
+    dictionary["BASIS_INITIALIZERS"] += "             DerivativeOperator1d{},\n".format( self._render_tensor_2(self.__compute_derivative_operator(),use_multidimensional_arrays) )
 
 
   @property
@@ -408,15 +413,43 @@ class LagrangeBasisWithDiagonalMassMatrix(LagrangeBasis):
     
     Return the numberth shape function's value at x
     
+    This equals Dominic's old evaluate function, but that one evaluated all the 
+    polynomials in one rush, whereas this one only looks at shape function number
+    number. Also, Dominic's version did both the value and the derivative. I 
+    split this one up into two version.
+    
     """  
     enumerator  = 1.0
-    denominator = 1.0
     for i in range(0,self.dofs_per_axis):
       if i!=number:
         enumerator  *= (x-self.quadrature_points[i])
+        
+    denominator = 1.0
+    for i in range(0,self.dofs_per_axis):
+      if i!=number:
         denominator *= (self.quadrature_points[number]-self.quadrature_points[i])
+        
     return enumerator/denominator
 
+
+
+  def derivative1d(self,x,number):
+    """
+    
+    Return the numberth shape function's value at x
+    
+    """  
+    result = 0.0
+    for l in range(0,self.dofs_per_axis):
+      if l!=number:
+        enumerator  = 1.0
+        denominator = 1.0/(self.quadrature_points[number]-self.quadrature_points[l])
+        for m in range(0,self.dofs_per_axis):
+          if m!=number and m!=l:
+            enumerator  *= x-self.quadrature_points[m]
+            denominator *= 1.0/(self.quadrature_points[number]-self.quadrature_points[m])
+        result += enumerator/denominator
+    return result
 
 
 

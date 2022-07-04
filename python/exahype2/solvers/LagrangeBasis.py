@@ -57,48 +57,35 @@ class LagrangeBasis():
     """
     result = "{} {}".format( vector_seperator[0], tensor[0] )
     for elem in tensor[1:]:
-      result += ", "
+      result += entry_seperator
       result += str(elem)
     result += vector_seperator[1]
     return result
   
   
-  def _render_tensor_2(self,tensor,use_multidimensional_arrays):
+  def _render_tensor_2(self,tensor,use_multidimensional_arrays,entry_seperator=",",vector_seperator=("{","}")):
     """
     Converts nested list or numpy matrix to nested list of strings.
     :param tensor: nested list or numpy matrix storing  mpmath numbers
     """
-    result = []
-    for row in tensor:
-       resultRow = []
-       for elem in row:
-         resultRow.append(mp.nstr(elem,n=self._render_digits))
-       if use_multidimensional_arrays:
-         result.append(resultRow)
-       else:
-         result += resultRow
+    def render_row(row):
+      row_result = ""
+      if use_multidimensional_arrays:
+        row_result += vector_seperator[0]
+      row_result += str(row[0])
+      for elem in row[1:]:
+        row_result += entry_seperator
+        row_result += str(elem)
+      if use_multidimensional_arrays:
+        row_result += vector_seperator[1]
+      return row_result
+        
+    
+    result = vector_seperator[0]
+    result += render_row(tensor[0])
+    for row in tensor[1:]:
+      result += entry_seperator
+      result += render_row(row)
+    result += vector_seperator[1]
     return result
-  
 
-  def _render_tensor_3(self,tensor,use_multidimensional_arrays):
-    """
-    
-    Converts nested list or numpy matrix to nested list of strings.
-    
-    :param tensor: nested list or numpy matrix storing  mpmath numbers
-    
-    """
-    result = []
-    for r1 in tensor:
-       tmp1 = []
-       for r2 in r1:
-          tmp2 = []
-          for elem in r2:
-            tmp2.append(mp.nstr(elem,n=self._render_digits))
-          if use_multidimensional_arrays:
-            tmp1.append(tmp2)
-          else:
-            result += tmp2
-       if use_multidimensional_arrays:
-         result.append(tmp1)
-    return result
