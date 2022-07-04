@@ -2,6 +2,8 @@
 
 #include "peano4/utils/Loop.h"
 
+#include "exahype2/enumerator/AoSLexicographicEnumerator.h"
+
 
 void exahype2::dg::cellIntegral_patchwise_GaussLegendre_functors(
   ::exahype2::CellData&                          cellData,
@@ -220,34 +222,55 @@ void exahype2::dg::multiplyWithInvertedMassMatrixAndAddToSolution_GaussLegendre(
   const int                                      auxiliaryVariables,
   const double* __restrict__                     massMatrixDiagonal1d
 ) {
-  const int nodesPerAxis = order+1;
-  const int strideQ      = unknowns+auxiliaryVariables;
-  const int nodesPerCell = getNodesPerCell(nodesPerAxis);
-  tarch::la::Vector<Dimensions,int> strides = getStrides(nodesPerAxis);
+  exahype2::enumerator::AoSLexicographicEnumerator enumerator(
+    1,           // number of cells
+    order+1,     // numberOfDoFsPerAxisInCell,
+    0,           // haloSize,
+    unknowns, auxiliaryVariables
+  );
 
-  //for each node in each cell
+  #if Dimensions==2
   for (int currentCell=0; currentCell<cellData.numberOfCells; currentCell++)
-  for (int node=0; node<nodesPerCell; node++) {
+  for (int x=0; x<order+1; x++)
+  for (int y=0; y<order+1; y++) {
     const double* __restrict__                  cellQin  = cellData.QIn[currentCell];
     double* __restrict__                        cellQout = cellData.QOut[currentCell];
     const double                                dt       = cellData.dt[currentCell];
 
-    tarch::la::Vector<Dimensions,int> index = getIndex(node, strides);
-
     // determine d-dimenional mass' matrix entry
-    double coeff = 1.0;
-    for (int dim=0; dim<Dimensions; dim++) {
-      coeff *= massMatrixDiagonal1d[ index(dim) ];
-    }
+    double diagonal = massMatrixDiagonal1d[ x ] * massMatrixDiagonal1d[ y ];
 
     for(int var=0; var<unknowns; var++) {
-      cellQout[node*strideQ+var] += 1.0 / coeff * cellQout[node*strideQ+var];
+      cellQout[ enumerator(currentCell,{x,y},var) ] += 1.0 / diagonal * cellQout[enumerator(currentCell,{x,y},var)];
     }
 
     // copy over old time step solution including auxiliary variables
     // and add them to solution
     for(int var=0; var<unknowns+auxiliaryVariables; var++) {
-      cellQout[node*strideQ+var] = cellQin[node*strideQ+var] + dt * cellQout[node*strideQ+var];
+      cellQout[enumerator(currentCell,{x,y},var)] = cellQin[enumerator(currentCell,{x,y},var)] + dt * cellQout[enumerator(currentCell,{x,y},var)];
     }
   }
+  #else
+  for (int currentCell=0; currentCell<cellData.numberOfCells; currentCell++)
+  for (int x=0; x<order+1; x++)
+  for (int y=0; y<order+1; y++)
+  for (int z=0; z<order+1; z++) {
+    const double* __restrict__                  cellQin  = cellData.QIn[currentCell];
+    double* __restrict__                        cellQout = cellData.QOut[currentCell];
+    const double                                dt       = cellData.dt[currentCell];
+
+    // determine d-dimenional mass' matrix entry
+    double diagonal = massMatrixDiagonal1d[ x ] * massMatrixDiagonal1d[ y ] * massMatrixDiagonal1d[ z ];
+
+    for(int var=0; var<unknowns; var++) {
+      cellQout[ enumerator(currentCell,{x,y,z},var) ] += 1.0 / diagonal * cellQout[enumerator(currentCell,{x,y,z},var)];
+    }
+
+    // copy over old time step solution including auxiliary variables
+    // and add them to solution
+    for(int var=0; var<unknowns+auxiliaryVariables; var++) {
+      cellQout[enumerator(currentCell,{x,y,z},var)] = cellQin[enumerator(currentCell,{x,y,z},var)] + dt * cellQout[enumerator(currentCell,{x,y,z},var)];
+    }
+  }
+  #endif
 }

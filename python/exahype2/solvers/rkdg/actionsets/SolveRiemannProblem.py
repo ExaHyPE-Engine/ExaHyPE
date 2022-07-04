@@ -26,9 +26,10 @@ class SolveRiemannProblem(AbstractRungeKuttaDGActionSet):
     
     // @todo net klar, ob wir richtigen verwenden
     
-    assertionNumericalEquals(
+    assertionNumericalEquals1(
       {{FACE_METADATA_ACCESSOR}}.getNewTimeStamp(0),
-      {{FACE_METADATA_ACCESSOR}}.getNewTimeStamp(1)
+      {{FACE_METADATA_ACCESSOR}}.getNewTimeStamp(1),
+      {{FACE_METADATA_ACCESSOR}}.toString()
     );
     const double timeStampOldSolution = {{FACE_METADATA_ACCESSOR}}.getNewTimeStamp(0);
   
