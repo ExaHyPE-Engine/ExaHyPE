@@ -26,6 +26,9 @@
 tarch::logging::Log  tarch::multicore::Core::_log( "tarch::multicore::Core" );
 
 #if defined(GPUOffloadingOMP)
+// TODO: This check should be placed in the Python code generator
+// and only be used for GPU-type solvers so that we still can
+// revert back to a CPU-type solver if this check fails.
 bool checkOMPOffloading() {
   bool canOffload = false;
   #pragma omp target map(tofrom : canOffload)
@@ -46,7 +49,8 @@ tarch::multicore::Core::Core():
   #if defined(GPUOffloadingOMP)
   _numberOfDevices = omp_get_num_devices();
    if (!checkOMPOffloading()) {
-    std::cerr << "Cannot do GPU Offloading with OMP" << std::endl;
+    std::cerr << "tarch was built with OpenMP GPU offloading support (--with-gpu=omp). "
+      "Either your chosen compiler does not support GPU offloading or your hardware does not have the required compute capability." << std::endl;
     exit(-1);
   }
   #endif
