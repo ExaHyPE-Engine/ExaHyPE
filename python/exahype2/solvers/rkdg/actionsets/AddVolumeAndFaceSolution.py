@@ -49,8 +49,8 @@ class AddVolumeAndFaceSolution(AbstractRungeKuttaDGActionSet):
       {{NUMBER_OF_UNKNOWNS}},
       {{NUMBER_OF_AUXILIARY_VARIABLES}},
       marker.h(),
-      repositories::{{SOLVER_INSTANCE}}.BasisFunctionValuesLeft,
-      repositories::{{SOLVER_INSTANCE}}.QuadratureWeights,
+      repositories::{{SOLVER_INSTANCE}}.BasisFunctionValuesLeft1d,
+      repositories::{{SOLVER_INSTANCE}}.MassMatrixDiagonal1d,
       QOut
     );
     #elif Dimensions==3
@@ -67,8 +67,8 @@ class AddVolumeAndFaceSolution(AbstractRungeKuttaDGActionSet):
       {{NUMBER_OF_UNKNOWNS}},
       {{NUMBER_OF_AUXILIARY_VARIABLES}},
       marker.h(),
-      repositories::{{SOLVER_INSTANCE}}.BasisFunctionValuesLeft,
-      repositories::{{SOLVER_INSTANCE}}.QuadratureWeights,
+      repositories::{{SOLVER_INSTANCE}}.BasisFunctionValuesLeft1d,
+      repositories::{{SOLVER_INSTANCE}}.MassMatrixDiagonal1d,
       QOut
     );
     #endif
@@ -87,7 +87,7 @@ class AddVolumeAndFaceSolution(AbstractRungeKuttaDGActionSet):
       {{ORDER}},                                                   
       {{NUMBER_OF_UNKNOWNS}},
       {{NUMBER_OF_AUXILIARY_VARIABLES}},
-      repositories::{{SOLVER_INSTANCE}}.MassMatrix
+      repositories::{{SOLVER_INSTANCE}}.MassMatrixDiagonal1d
     );
   }
   {% endfor %}

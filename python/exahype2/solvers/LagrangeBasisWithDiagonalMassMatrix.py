@@ -48,9 +48,38 @@ class LagrangeBasisWithDiagonalMassMatrix(LagrangeBasis):
   
   ## Generated vectors and matrices
   
- 
-  ### QuadraturePoints1d
+  I decided to "outsource" the documentation of the individual fields to 
+  class attributes of their own. This way, they are visible both in the 
+  doxygen documentation and I can pipe them into the generated C++ code.
+   
+  - QuadraturePoints1d
+  - MassMatrixDiagonal1d
+  - StiffnessOperator
+
   
+  ## Realisation
+  
+  The first version of this utility class has been written by Dominic E.
+  Charrier. It relied on NumPy and SymPy in several places. The current
+  version is stripped down and solely uses SciPy.
+  
+  
+  """
+  
+  def __init__(self,polynomial_order):
+    super(LagrangeBasisWithDiagonalMassMatrix,self).__init__(polynomial_order)
+      
+      
+  def __str__(self):
+    d = {}
+    self.init_dictionary_with_default_parameters(d,True)
+    return "<{}.{} object>: {}".format(self.__class__.__module__,self.__class__.__name__,d)
+
+
+  __repr__ = __str__
+  
+
+  QuadraturePoints1dDocumentation = """
   The quadrature points are an array of size [p+1] if p is the order of the 
   chosen polyomial. The double array defines the spacing of the quadrature points 
   over the unit interval. See the helper routine exahype2::dg::getQuadraturePoint()
@@ -59,10 +88,10 @@ class LagrangeBasisWithDiagonalMassMatrix(LagrangeBasis):
   
   As we work in a tensor product world, the 2d and 3d quadrature points can be 
   simply consructed by multiplying the respective coordinate system indices.
+"""
 
-  
-  ### MassMatrixDiagonal1d
 
+  MassMatrix1dDocumentation = """
   Computes the (reference) element mass matrix' diagonal. The mass matrix is defined
   via
 
@@ -85,10 +114,15 @@ class LagrangeBasisWithDiagonalMassMatrix(LagrangeBasis):
 
   @todo I don't know if we need renormalisation for Lobatto nodes, i.e. if we 
   should ensure that the row sum is preserved
+  
+  This is an operation which maps nodal data into a weak space, i.e. the outcome has
+  to be scaled with h to be correct. It stems from a 1d integral. If you want to 
+  compute the real mass matrix output, you have to multiply the outcome along each
+  coordinate axis.
+"""
     
-
-  ### StiffnessOperator
-
+     
+  StiffnessOperator1dDocumentation = """
   The stiffness operator is a [p+1]x[p+1] matrix which is constructed in
   __compute_stiffness_operator().
 
@@ -110,47 +144,43 @@ class LagrangeBasisWithDiagonalMassMatrix(LagrangeBasis):
   you integrate. At the same time, the derivative however has to be rescaled
   with @f$ h^{-1} @f$ and the two h-recalibrations thus cancel out.
   If you have a 2d or 3d function space, you still have to multiple with these 
-  shape functions, and you will still get an additional @f$ h^d @f$ scaling 
-  of the outcome.
+  shape functions (see discussion around mass matrix), and you will get an 
+  additional @f$ h^{d-1} @f$ scaling of the outcome.
   
-  
-  In this construction, we exploit the fact that we work with Gauss-Legendre
-  polynomials which are products:
-  
-  @f$  \phi _i (x) = \prod _{j \not= i} \frac{x-x_j}{x_i-x_j} @f$
-  
-  If we compute the @f$ \partial _x \phi _i(x) @f$ for any of these guys,
-  we get a huge sum, but the sum is very structured:
-  
-  
-  2d and 3d?
+  We note that the outcome is exact for both Lobatto and Legendre nodes due to 
+  the reduced degree in one scalar product operand.
+"""
 
-    :note: Exact for both Lobatto and Legendre nodes due to the reduced degree in one scalar product operand.
-
-
-
-  ### Mass matrix
+    
+  BasisFunctionValuesLeft1dDocumentation = """
+  This is a vector of p+1 entries which tells you for a 1d interval
+  what the function on the left side is. Assume all Lagrange polynomials
+  are defined over the unit interval. The first entry in this matrix 
+  tells you what the leftmost polynomial's value is at x=0. The second
+  entry discusses the impact of the second polynomial. If you have a 
+  vector of p+1 shape function weights, you can compute the scalar
+  product of this vector and this weight vector, and you'll know what 
+  the solution at the point x=0 is.
   
-  __compute_mass_matrix
+  If the rightmost value, i.e. the value at x=1 is of interest, the order
+  within this vector has to be inverted.
   
-  ## 
-  
-  
-  """
-  
-  def __init__(self,polynomial_order):
-    super(LagrangeBasisWithDiagonalMassMatrix,self).__init__(polynomial_order)
-      
-      
-  def __str__(self):
-    d = {}
-    self.init_dictionary_with_default_parameters(d,True)
-    return "<{}.{} object>: {}".format(self.__class__.__module__,self.__class__.__name__,d)
-
-
-  __repr__ = __str__
-  
-
+  This is a nodal 1d operation, i.e. there are no integrals or similar 
+  involved. We take the real 1d polyomial from the shape function.
+"""
+    
+  DerivativeOperator1dDocumentation = """
+    Matrix which is given the p+1 weights of the shape function
+    along a 1d line. It then returns the p+1 gradients at the integration 
+    points.
+    
+    This is a point-wise operator, i.e. it works directly with the weights
+    of the shape function in the function space. It does not involve any
+    integral et al. Furthermore, it is exact given a certain Lagrange 
+    polynomial. 
+"""    
+    
+    
   def __compute_barycentric_weights(self):
     """
     
@@ -190,10 +220,8 @@ class LagrangeBasisWithDiagonalMassMatrix(LagrangeBasis):
     
     Computes the (reference) element stiffness matrix for an approximation of order self.__max_poly_order.
     
-    See class for documentation. Has to be documented there, as doxygen
-    ignores private Python routines.
-    
-    :return: The (reference) element stiffness matrix.
+    @see StiffnessOperator1dDocumentation which is also used to dump documentation
+      into generated C++ code.
     
     """
     stiffness_matrix = [ [0.0 for _ in range(0,self.dofs_per_axis)] for _ in range(0,self.dofs_per_axis) ]
@@ -204,20 +232,13 @@ class LagrangeBasisWithDiagonalMassMatrix(LagrangeBasis):
         stiffness_matrix[row][col] = ans
 
     return stiffness_matrix
-
-    # init matrix with zero
-    #Kxi = [[mp.mpf(0) for _ in range(self.__num_points)] for _ in range(self.__num_points)]
-    
-    #for j in range(0,self.__num_points):
-    #  phi, phi_xi = self.__evaluate(self.__quadrature_points[j])
-    #  for i in range(0,self.__num_points):
-    #    Kxi[i][j] = self.__quadrature_weights[j]*phi_xi[i]
-       
-    #return Kxi
   
 
   def __compute_K1(self):
     """
+    
+    @todo Not yet updated atm but seems also not to be used anywhere
+    
     Computes the difference between the reference element mass operator 
     evaluated at point xi=1.0 and the element stiffness matrix.
     
@@ -245,50 +266,9 @@ class LagrangeBasisWithDiagonalMassMatrix(LagrangeBasis):
   def __compute_derivative_operator(self):
     """
 
-    Construct a matrix which is given the p+1 weights of the shape function
-    along a 1d line. It then returns the p+1 gradients at the integration 
-    points.
-    
-    
-    
-    
-    @todo Clean up below and validate
-        
-    Computes basis function derivatives at each support point.
-    Transposes the resulting operator.
+    @see DerivativeOperator1dDocumentation which is also used to dump documentation
+      into generated C++ code.
 
-    u = sum_i u_i phi_i
-
-    => d/dx u = sum_j (d/dx phi_j) u_j   
-   
-    To construct the gradient field, we make the ansatz:
-
-    grad u = sum_i g_i phi_i
-
-    =>
-
-    g_i = ( d/dx u, phi_i )_[0,1] / (phi_i,phi_i)_[0,1] = sum_j (d/dx phi_j, phi_i)_[0,1] / w_i
- 
-        = w_i (d/dx phi_j) (x_i) / w_i = (d/dx phi_j) (x_i)
-
-        = DUDX^T 
- 
-    where DUDX is the operator computed by this function:
-
-    DUDX_ij = (d/dx phi_i) (x_j) 
-    
-    It can be further written as
-
-    DUDX_ij = 1/w_i * K^T_ij
-
-    where the stiffness matrix K is defined as 
-
-    K_ij = <d/dx phi_i, phi_j>_[0,1] = w_j (d/dx phi_j) (x_i) 
- 
-    :return: transposed derivative operator
-
-    :note: If you want to use this operator to compute the gradient of the solution,
-    you need to use the transpose.
     """
     dQdx = [ [0.0 for _ in range(0,self.dofs_per_axis)] for _ in range(0,self.dofs_per_axis) ]
     
@@ -301,6 +281,9 @@ class LagrangeBasisWithDiagonalMassMatrix(LagrangeBasis):
 
   def __compute_fine_grid_projector(self, j):
     """
+    
+    @todo Definitely useful, but not used atm
+    
     Transforms the degrees of freedom located on a coarse grid edge
     quadrature_points to degrees of freedoms located on quadrature_points of a fine grid edge.
     The difference in levels is 1.
@@ -332,12 +315,18 @@ class LagrangeBasisWithDiagonalMassMatrix(LagrangeBasis):
     
     Compute per basis function what the very left value of the polynomial would be
     
+    @see BasisFunctionValuesLeft1dDocumentation which defines what this routine
+      does and is also used to inject documentation into the generated C++ code.
+    
     """
     return [ self.value1d(0.0, number) for number in range(self.dofs_per_axis) ]  
     
       
   def __compute_equidistant_grid_projector(self):
     """
+    
+    @todo Not used atm, but definitely useful
+    
     Transforms the degrees of freedom located at non-equidistant Lagrange support points
     quadrature_points to degrees of freedoms located at quadrature_points of an equidistant grid over (0,1).
     
@@ -380,25 +369,40 @@ class LagrangeBasisWithDiagonalMassMatrix(LagrangeBasis):
     dictionary["BASIS_DECLARATIONS"]  = ""
     dictionary["BASIS_INITIALIZERS"]  = ""
     
-    dictionary["BASIS_DECLARATIONS"] += "const double QuadraturePoints1d[DGOrder+1];\n"
+    dictionary["BASIS_DECLARATIONS"] += "/**\n"
+    dictionary["BASIS_DECLARATIONS"] += self.QuadraturePoints1dDocumentation
+    dictionary["BASIS_DECLARATIONS"] += "*/\n"
+    dictionary["BASIS_DECLARATIONS"] += "const double QuadraturePoints1d[DGOrder+1];\n\n"
     dictionary["BASIS_INITIALIZERS"] += "             QuadraturePoints1d{},\n".format( self._render_tensor_1(self.quadrature_points) )
 
-    dictionary["BASIS_DECLARATIONS"] += "const double MassMatrixDiagonal1d[DGOrder+1];\n"
+    dictionary["BASIS_DECLARATIONS"] += "/**\n"
+    dictionary["BASIS_DECLARATIONS"] += self.MassMatrix1dDocumentation
+    dictionary["BASIS_DECLARATIONS"] += "*/\n"
+    dictionary["BASIS_DECLARATIONS"] += "const double MassMatrixDiagonal1d[DGOrder+1];\n\n"
     dictionary["BASIS_INITIALIZERS"] += "             MassMatrixDiagonal1d{},\n".format( self._render_tensor_1(self.__compute_mass_matrix_diagonal()) )
 
+    dictionary["BASIS_DECLARATIONS"] += "/**\n"
+    dictionary["BASIS_DECLARATIONS"] += self.StiffnessOperator1dDocumentation
+    dictionary["BASIS_DECLARATIONS"] += "*/\n"
     if use_multidimensional_arrays:        
-      dictionary["BASIS_DECLARATIONS"] += "const double StiffnessOperator1d[DGOrder+1][DGOrder+1];\n"
+      dictionary["BASIS_DECLARATIONS"] += "const double StiffnessOperator1d[DGOrder+1][DGOrder+1];\n\n"
     else:
-      dictionary["BASIS_DECLARATIONS"] += "const double StiffnessOperator1d[(DGOrder+1)*(DGOrder+1)];\n"
+      dictionary["BASIS_DECLARATIONS"] += "const double StiffnessOperator1d[(DGOrder+1)*(DGOrder+1)];\n\n"
     dictionary["BASIS_INITIALIZERS"] += "             StiffnessOperator1d{},\n".format( self._render_tensor_2(self.__compute_stiffness_operator(),use_multidimensional_arrays) )
 
-    dictionary["BASIS_DECLARATIONS"] += "const double BasisFunctionValuesLeft1d[DGOrder+1];\n"
+    dictionary["BASIS_DECLARATIONS"] += "/**\n"
+    dictionary["BASIS_DECLARATIONS"] += self.BasisFunctionValuesLeft1dDocumentation
+    dictionary["BASIS_DECLARATIONS"] += "*/\n"
+    dictionary["BASIS_DECLARATIONS"] += "const double BasisFunctionValuesLeft1d[DGOrder+1];\n\n"
     dictionary["BASIS_INITIALIZERS"] += "             BasisFunctionValuesLeft1d{},\n".format( self._render_tensor_1(self.__compute_basis_function_values_left()) )
 
+    dictionary["BASIS_DECLARATIONS"] += "/**\n"
+    dictionary["BASIS_DECLARATIONS"] += self.DerivativeOperator1dDocumentation
+    dictionary["BASIS_DECLARATIONS"] += "*/\n"
     if use_multidimensional_arrays:        
-      dictionary["BASIS_DECLARATIONS"] += "const double DerivativeOperator1d[DGOrder+1][DGOrder+1];\n"
+      dictionary["BASIS_DECLARATIONS"] += "const double DerivativeOperator1d[DGOrder+1][DGOrder+1];\n\n"
     else:
-      dictionary["BASIS_DECLARATIONS"] += "const double DerivativeOperator1d[(DGOrder+1)*(DGOrder+1)];\n"
+      dictionary["BASIS_DECLARATIONS"] += "const double DerivativeOperator1d[(DGOrder+1)*(DGOrder+1)];\n\n"
     dictionary["BASIS_INITIALIZERS"] += "             DerivativeOperator1d{},\n".format( self._render_tensor_2(self.__compute_derivative_operator(),use_multidimensional_arrays) )
 
 
@@ -432,11 +436,44 @@ class LagrangeBasisWithDiagonalMassMatrix(LagrangeBasis):
     return enumerator/denominator
 
 
-
   def derivative1d(self,x,number):
     """
     
-    Return the numberth shape function's value at x
+    Return the numberth shape function's derivative at x
+    
+    u = sum_i u_i phi_i
+
+    => d/dx u = sum_j (d/dx phi_j) u_j   
+   
+    To construct the gradient field, we make the ansatz:
+
+    grad u = sum_i g_i phi_i
+
+    =>
+
+    g_i = ( d/dx u, phi_i )_[0,1] / (phi_i,phi_i)_[0,1] = sum_j (d/dx phi_j, phi_i)_[0,1] / w_i
+ 
+        = w_i (d/dx phi_j) (x_i) / w_i = (d/dx phi_j) (x_i)
+
+        = DUDX^T 
+ 
+    where DUDX is the operator computed by this function:
+
+    DUDX_ij = (d/dx phi_i) (x_j) 
+    
+    It can be further written as
+
+    DUDX_ij = 1/w_i * K^T_ij
+
+    where the stiffness matrix K is defined as 
+
+    K_ij = <d/dx phi_i, phi_j>_[0,1] = w_j (d/dx phi_j) (x_i) 
+ 
+    :return: transposed derivative operator
+
+    :note: If you want to use this operator to compute the gradient of the solution,
+    you need to use the transpose.
+
     
     """  
     result = 0.0

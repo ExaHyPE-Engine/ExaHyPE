@@ -44,7 +44,7 @@ class ProjectLinearCombinationOfEstimatesOntoFaces(AbstractRungeKuttaDGActionSet
       QIn,
       {{ORDER}},
       {{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}},
-      repositories::{{SOLVER_INSTANCE}}.BasisFunctionValuesLeft,
+      repositories::{{SOLVER_INSTANCE}}.BasisFunctionValuesLeft1d,
       fineGridFaces{{UNKNOWN_IDENTIFIER}}EstimateProjection(0).value, //left
       fineGridFaces{{UNKNOWN_IDENTIFIER}}EstimateProjection(2).value, //right
       fineGridFaces{{UNKNOWN_IDENTIFIER}}EstimateProjection(1).value, //down
@@ -55,7 +55,7 @@ class ProjectLinearCombinationOfEstimatesOntoFaces(AbstractRungeKuttaDGActionSet
       QIn,
       {{ORDER}},
       {{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}},
-      repositories::{{SOLVER_INSTANCE}}.BasisFunctionValuesLeft,
+      repositories::{{SOLVER_INSTANCE}}.BasisFunctionValuesLeft1d,
       fineGridFaces{{UNKNOWN_IDENTIFIER}}EstimateProjection(0).value, //left
       fineGridFaces{{UNKNOWN_IDENTIFIER}}EstimateProjection(3).value, //right
       fineGridFaces{{UNKNOWN_IDENTIFIER}}EstimateProjection(1).value, //down
@@ -88,7 +88,7 @@ class ProjectLinearCombinationOfEstimatesOntoFaces(AbstractRungeKuttaDGActionSet
       QIn,
       {{ORDER}},
       {{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}},
-      repositories::{{SOLVER_INSTANCE}}.BasisFunctionValuesLeft,
+      repositories::{{SOLVER_INSTANCE}}.BasisFunctionValuesLeft1d,
       fineGridFaces{{UNKNOWN_IDENTIFIER}}OldTimeStepProjection(0).value, //left
       fineGridFaces{{UNKNOWN_IDENTIFIER}}OldTimeStepProjection(2).value, //right
       fineGridFaces{{UNKNOWN_IDENTIFIER}}OldTimeStepProjection(1).value, //down
@@ -99,7 +99,7 @@ class ProjectLinearCombinationOfEstimatesOntoFaces(AbstractRungeKuttaDGActionSet
       QIn,
       {{ORDER}},
       {{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}},
-      repositories::{{SOLVER_INSTANCE}}.BasisFunctionValuesLeft,
+      repositories::{{SOLVER_INSTANCE}}.BasisFunctionValuesLeft1d,
       fineGridFaces{{UNKNOWN_IDENTIFIER}}OldTimeStepProjection(0).value, //left
       fineGridFaces{{UNKNOWN_IDENTIFIER}}OldTimeStepProjection(3).value, //right
       fineGridFaces{{UNKNOWN_IDENTIFIER}}OldTimeStepProjection(1).value, //down
@@ -134,7 +134,7 @@ class ProjectLinearCombinationOfEstimatesOntoFaces(AbstractRungeKuttaDGActionSet
       QIn,
       {{ORDER}},
       {{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}},
-      repositories::{{SOLVER_INSTANCE}}.BasisFunctionValuesLeft,
+      repositories::{{SOLVER_INSTANCE}}.BasisFunctionValuesLeft1d,
       fineGridFaces{{UNKNOWN_IDENTIFIER}}EstimateProjection(0).value, //left
       fineGridFaces{{UNKNOWN_IDENTIFIER}}EstimateProjection(2).value, //right
       fineGridFaces{{UNKNOWN_IDENTIFIER}}EstimateProjection(1).value, //down
@@ -145,7 +145,7 @@ class ProjectLinearCombinationOfEstimatesOntoFaces(AbstractRungeKuttaDGActionSet
       QIn,
       {{ORDER}},
       {{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}},
-      repositories::{{SOLVER_INSTANCE}}.BasisFunctionValuesLeft,
+      repositories::{{SOLVER_INSTANCE}}.BasisFunctionValuesLeft1d,
       fineGridFaces{{UNKNOWN_IDENTIFIER}}EstimateProjection(0).value, //left
       fineGridFaces{{UNKNOWN_IDENTIFIER}}EstimateProjection(3).value, //right
       fineGridFaces{{UNKNOWN_IDENTIFIER}}EstimateProjection(1).value, //down

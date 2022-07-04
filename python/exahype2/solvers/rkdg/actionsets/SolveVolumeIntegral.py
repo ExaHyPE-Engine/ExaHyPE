@@ -120,7 +120,7 @@ class SolveVolumeIntegral(AbstractRungeKuttaDGActionSet):
         {% endif %}
       }, //source
       repositories::{{SOLVER_INSTANCE}}.QuadraturePoints1d,
-      repositories::{{SOLVER_INSTANCE}}.MassMatrix1d,
+      repositories::{{SOLVER_INSTANCE}}.MassMatrixDiagonal1d,
       repositories::{{SOLVER_INSTANCE}}.StiffnessOperator1d,
       repositories::{{SOLVER_INSTANCE}}.DerivativeOperator1d,
       {{ "true" if FLUX_IMPLEMENTATION!="<none>" else "false" }}, //useFlux

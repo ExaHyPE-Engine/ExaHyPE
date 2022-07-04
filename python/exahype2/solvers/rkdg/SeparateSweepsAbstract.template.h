@@ -92,13 +92,6 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
      */
     static constexpr double MinAdmissibleCellH  = {{MIN_CELL_H}};
 
-    /**
-     * Quadrature points, derivative operators, and various projectors
-     *
-     * For a description of the operators, please consult the Python class
-     * exahype2.LagrangeBasis. This Python class precomputes all the vectors
-     * and entries injected here and also describes where they come from.
-     */
 {{BASIS_DECLARATIONS | indent(4,True) }}
 
 
