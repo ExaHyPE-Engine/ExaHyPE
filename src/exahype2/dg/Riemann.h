@@ -104,8 +104,15 @@ namespace exahype2 {
 
   /*
    * Given a numerical flux at the various faces, this computes and adds the Riemann
-   * integral of this flux on the nodes of the cell to compute the solution at the
-   * following timestep.
+   * integral of this flux to the nodes of the cell.
+   *
+   *
+   * ## Realisation
+   *
+   * The code is a nested for loop, i.e. a 2d Cartesian loop. Per loop body, we add
+   * the results from left, right, bottom and top.
+   *
+   *
    * Computes this flux for a 2-dimensional cell
    *
    * @param cellQ the current solution, expected to be the solution already updated
@@ -123,6 +130,8 @@ namespace exahype2 {
    *  left side, so the BasisFunctionValuesLeft are also used there.
    *
    * @param quadratureWeights: quadrature weight of the given quadrature node 1 dimension
+   *
+   * @see projectVolumetricDataOntoFaces()
    */
   void integrateOverRiemannSolutionsAndAddToVolume_GaussLegendre(
     const double* const __restrict__    faceQLeft,
@@ -139,6 +148,10 @@ namespace exahype2 {
   );
 
 
+  /**
+   * 3d counterpart of other integrateOverRiemannSolutionsAndAddToVolume_GaussLegendre()
+   * routine.
+   */
   void integrateOverRiemannSolutionsAndAddToVolume_GaussLegendre(
     const double* const __restrict__    faceQLeft,
     const double* const __restrict__    faceQRight,

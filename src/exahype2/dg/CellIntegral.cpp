@@ -215,7 +215,7 @@ void exahype2::dg::internal::copySolution(
 }
 
 
-void exahype2::dg::multiplyWithInvertedMassMatrixAndAddToSolution_GaussLegendre(
+void exahype2::dg::multiplyWithInvertedMassMatrixAndClearAuxiliaryVariables_GaussLegendre(
   ::exahype2::CellData&                          cellData,
   const int                                      order,
   const int                                      unknowns,
@@ -241,13 +241,14 @@ void exahype2::dg::multiplyWithInvertedMassMatrixAndAddToSolution_GaussLegendre(
     double diagonal = massMatrixDiagonal1d[ x ] * massMatrixDiagonal1d[ y ];
 
     for(int var=0; var<unknowns; var++) {
-      cellQout[ enumerator(currentCell,{x,y},var) ] += 1.0 / diagonal * cellQout[enumerator(currentCell,{x,y},var)];
+//      cellQout[ enumerator(currentCell,{x,y},var) ] = cellQin[enumerator(currentCell,{x,y},var)] + dt * 1.0 / diagonal * cellQout[enumerator(currentCell,{x,y},var)];
+      cellQout[ enumerator(currentCell,{x,y},var) ] = cellQin[enumerator(currentCell,{x,y},var)];
+      // @todo raus
+      assertion5( cellQout[ enumerator(currentCell,{x,y},var) ]>=0.0,  cellQout[ enumerator(currentCell,{x,y},var) ], currentCell, x, y, var );
+      assertion5( cellQout[ enumerator(currentCell,{x,y},var) ]<=1.0, cellQout[ enumerator(currentCell,{x,y},var) ], currentCell, x, y, var );
     }
-
-    // copy over old time step solution including auxiliary variables
-    // and add them to solution
-    for(int var=0; var<unknowns+auxiliaryVariables; var++) {
-      cellQout[enumerator(currentCell,{x,y},var)] = cellQin[enumerator(currentCell,{x,y},var)] + dt * cellQout[enumerator(currentCell,{x,y},var)];
+    for(int var=unknowns; var<unknowns+auxiliaryVariables; var++) {
+      cellQout[enumerator(currentCell,{x,y},var)] = cellQin[enumerator(currentCell,{x,y},var)];
     }
   }
   #else

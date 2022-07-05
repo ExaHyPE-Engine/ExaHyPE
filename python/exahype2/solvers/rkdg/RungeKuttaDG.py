@@ -380,10 +380,15 @@ We use RK(""" + str(self._rk_order) + """) for the time stepping.
      _time_step: Patch ( (_dg_order+1)x(_dg_order+1)x(_dg_order+1) )
        Actual polynomial data of the DG patch in the current time step. 
 
-     _estimates: Patch ( (_dg_order+1)x(_dg_order+1)x(_dg_order+1)xon of RK steps )
+     _rhs_estimates: Patch ( (_dg_order+1)x(_dg_order+1)x(_dg_order+1)xno of RK steps )
        These are the Runge-Kutta extrapolations. It is important that the
        rk_order is mixed into the first argument, as the triple is automatically
-       truncated to a tuple if the code is translated with 2d.
+       truncated to a tuple if the code is translated with 2d. Please note that the 
+       term rhs refers to the right-hand side of an ODE
+       
+       @f$ \partial Q = F(Q) @f$
+       
+       and thus does not include auxiliary variables.
        
      _linear_combination_of_estimates: Patch ( (_dg_order+1)x(_dg_order+1)x(_dg_order+1) )
        Non-persistent helper data structure.
@@ -414,20 +419,20 @@ We use RK(""" + str(self._rk_order) + """) for the time stepping.
        
     """
     self._current_time_step                 = peano4.datamodel.Patch( (self._basis.dofs_per_axis,self._basis.dofs_per_axis,self._basis.dofs_per_axis),                      self._unknowns+self._auxiliary_variables, self._unknown_identifier() )
-    self._estimates                         = peano4.datamodel.Patch( (self.number_of_Runge_Kutta_steps()*(self._basis.dofs_per_axis),self._basis.dofs_per_axis,self._basis.dofs_per_axis),     self._unknowns+self._auxiliary_variables, self._unknown_identifier() + "Estimates" )
+    self._rhs_estimates                     = peano4.datamodel.Patch( (self.number_of_Runge_Kutta_steps()*(self._basis.dofs_per_axis),self._basis.dofs_per_axis,self._basis.dofs_per_axis),     self._unknowns, self._unknown_identifier() + "RhsEstimates" )
     self._linear_combination_of_estimates   = peano4.datamodel.Patch( (self._basis.dofs_per_axis,self._basis.dofs_per_axis,self._basis.dofs_per_axis),                      self._unknowns+self._auxiliary_variables, self._unknown_identifier() + "LinearCombination")
-    self._previous_estimate_projection      = peano4.datamodel.Patch( (2,self._number_of_face_projections*(self._basis.dofs_per_axis),self._basis.dofs_per_axis),  self._unknowns+self._auxiliary_variables, self._unknown_identifier() + "EstimateProjection" )
+    self._current_estimate_projection       = peano4.datamodel.Patch( (2,self._number_of_face_projections*(self._basis.dofs_per_axis),self._basis.dofs_per_axis),  self._unknowns+self._auxiliary_variables, self._unknown_identifier() + "EstimateProjection" )
     self._old_time_step_projection          = peano4.datamodel.Patch( (2,self._number_of_face_projections*(self._basis.dofs_per_axis),self._basis.dofs_per_axis),  self._unknowns+self._auxiliary_variables, self._unknown_identifier() + "OldTimeStepProjection" )
     self._Riemann_solution                  = peano4.datamodel.Patch( (2,self._basis.dofs_per_axis,self._basis.dofs_per_axis),  self._unknowns, self._unknown_identifier() + "RiemannSolution" )
            
-    self._previous_estimate_projection.generator.merge_method_definition = get_face_overlap_merge_implementation(self._previous_estimate_projection)
-    self._previous_estimate_projection.generator.includes     += """
+    self._current_estimate_projection.generator.merge_method_definition = get_face_overlap_merge_implementation(self._current_estimate_projection)
+    self._current_estimate_projection.generator.includes     += """
 #include "peano4/utils/Loop.h"
 #include "repositories/SolverRepository.h" 
 """
 
-    self._previous_estimate_projection.generator.store_persistent_condition = self._store_cell_data_default_guard()
-    self._previous_estimate_projection.generator.load_persistent_condition  = self._load_cell_data_default_guard()
+    self._current_estimate_projection.generator.store_persistent_condition = self._store_cell_data_default_guard()
+    self._current_estimate_projection.generator.load_persistent_condition  = self._load_cell_data_default_guard()
 
     self._old_time_step_projection.generator.store_persistent_condition = self._store_cell_data_default_guard()
     self._old_time_step_projection.generator.load_persistent_condition  = self._load_cell_data_default_guard()
@@ -435,8 +440,8 @@ We use RK(""" + str(self._rk_order) + """) for the time stepping.
     self._linear_combination_of_estimates.store_persistent_condition = "false"
     self._linear_combination_of_estimates.load_persistent_condition = "false"
 
-    self._previous_estimate_projection.generator.send_condition               = "false"
-    self._previous_estimate_projection.generator.receive_and_merge_condition  = "false"
+    self._current_estimate_projection.generator.send_condition               = "false"
+    self._current_estimate_projection.generator.receive_and_merge_condition  = "false"
 
     self._old_time_step_projection.generator.send_condition               = "false"
     self._old_time_step_projection.generator.receive_and_merge_condition  = "false"
@@ -452,10 +457,10 @@ We use RK(""" + str(self._rk_order) + """) for the time stepping.
     self._current_time_step.generator.includes  += """
 #include "../repositories/SolverRepository.h"
 """    
-    self._estimates.generator.includes  += """
+    self._rhs_estimates.generator.includes  += """
 #include "../repositories/SolverRepository.h"
 """    
-    self._previous_estimate_projection.generator.includes  += """
+    self._current_estimate_projection.generator.includes  += """
 #include "../repositories/SolverRepository.h"
 """    
     self._old_time_step_projection.generator.includes  += """
@@ -562,10 +567,10 @@ We use RK(""" + str(self._rk_order) + """) for the time stepping.
 #      print( str(self._patch_overlap_new) )
     datamodel.add_cell(self._cell_label)
     datamodel.add_cell(self._current_time_step)
-    datamodel.add_cell(self._estimates)
+    datamodel.add_cell(self._rhs_estimates)
     datamodel.add_cell(self._linear_combination_of_estimates)
     datamodel.add_face(self._face_label)
-    datamodel.add_face(self._previous_estimate_projection)
+    datamodel.add_face(self._current_estimate_projection)
     datamodel.add_face(self._old_time_step_projection)
     datamodel.add_face(self._Riemann_solution)
 
@@ -581,10 +586,10 @@ We use RK(""" + str(self._rk_order) + """) for the time stepping.
     """
     step.use_cell(self._cell_label)
     step.use_cell(self._current_time_step)
-    step.use_cell(self._estimates)
+    step.use_cell(self._rhs_estimates)
     step.use_cell(self._linear_combination_of_estimates)
     step.use_face(self._face_label)
-    step.use_face(self._previous_estimate_projection)
+    step.use_face(self._current_estimate_projection)
     step.use_face(self._old_time_step_projection)
     step.use_face(self._Riemann_solution)
     

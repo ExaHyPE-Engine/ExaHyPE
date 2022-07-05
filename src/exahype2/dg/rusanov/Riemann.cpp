@@ -111,6 +111,11 @@ void exahype2::dg::rusanov::solveRiemannProblem_pointwise_in_situ(
         solution[ outputEnumerator(rightDoF,var) ] -= 0.5 * deltaQ[var] * ncpValues[var];
       }
     }
+
+    for(int var=0; var<unknowns; var++){
+      solution[ outputEnumerator(leftDoF,var)  ] = 0.0;
+      solution[ outputEnumerator(rightDoF,var) ] = 0.0;
+    }
   }
 
   delete[] deltaQ;

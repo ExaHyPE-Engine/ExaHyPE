@@ -162,7 +162,29 @@ namespace exahype2 {
      * - The output already holds the flux contributions, source terms, and
      *   so forth, but these contributions are stored in the weak image space,
      *   i.e. we still have to multiply them with the inverse of a mass matrix.
-     * - The output does not yet hold any auxiliary (material) parameters.
+     * - The output shall holds the flux contributions in a Runge-Kutta sense,
+     *   i.e. it shall not hold the new time step but the amount that's added.
+     *
+     *
+     * Let
+     *
+     * @f$ \partial Q = F(Q) @f$
+     *
+     * be our ODE of interest. Runge-Kutta will construct new solutions according
+     * to a rule
+     *
+     * @f$ Q^{(new)} = c_i \cdot dt \cdot (a_{i1} k_1 + a_{i2} k_2 + \dots )  @f$
+     *
+     * The linear combination field will holds the current @f$ Q^{(new)} @f$. The
+     * estimates however have to be the individual @f$ k_j @f$ from above. That means,
+     * they are not to be scaled by any time step size, and they do not incorporate
+     * the original time step. Their auxiliary variables also have to be zero, so we
+     * can simply compute the above expression without altering the auxiliaries.
+     *
+     * You can alter the auxiliary variables, but then you have to ensure that you
+     *  estimates
+     *
+     *
      *
      * This routine assumes that the mass matrix is a diagonal. Therefore,
      * the inversion is trivial. The routine also copies over the material
@@ -175,7 +197,7 @@ namespace exahype2 {
      *
      *
      */
-    void multiplyWithInvertedMassMatrixAndAddToSolution_GaussLegendre(
+    void multiplyWithInvertedMassMatrixAndClearAuxiliaryVariables_GaussLegendre(
       ::exahype2::CellData&                          cellData,
       const int                                      order,
       const int                                      unknowns,

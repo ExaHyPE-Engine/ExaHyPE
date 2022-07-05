@@ -32,14 +32,12 @@ class AddVolumeAndFaceSolution(AbstractRungeKuttaDGActionSet):
     assertion3( tarch::la::greaterEquals( timeStepSize, 0.0 ),  timeStamp, timeStepSize, timeStampOldSolution );
     assertion3( tarch::la::greaterEquals( timeStamp, 0.0 ),     timeStamp, timeStepSize, timeStampOldSolution );
 
-    double* QIn  = fineGridCell{{UNKNOWN_IDENTIFIER}}LinearCombination.value;
     #if Dimensions==2
-    double* QOut = fineGridCell{{UNKNOWN_IDENTIFIER}}Estimates.value + {{PREDICATE_NO}} * {{NUMBER_OF_DOFS_PER_CELL_2D}} * ({{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}});
+    double* QOut = fineGridCell{{UNKNOWN_IDENTIFIER}}RhsEstimates.value + {{PREDICATE_NO}} * {{NUMBER_OF_DOFS_PER_CELL_2D}} * {{NUMBER_OF_UNKNOWNS}};
     #elif Dimensions==3
-    double* QOut = fineGridCell{{UNKNOWN_IDENTIFIER}}Estimates.value + {{PREDICATE_NO}} * {{NUMBER_OF_DOFS_PER_CELL_3D}} * ({{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}});
+    double* QOut = fineGridCell{{UNKNOWN_IDENTIFIER}}RhsEstimates.value + {{PREDICATE_NO}} * {{NUMBER_OF_DOFS_PER_CELL_3D}} * {{NUMBER_OF_UNKNOWNS}};
     #endif
-
-/*        
+/*
     #if Dimensions==2
     ::exahype2::dg::integrateOverRiemannSolutionsAndAddToVolume_GaussLegendre(
       fineGridFaces{{UNKNOWN_IDENTIFIER}}RiemannSolution(0).value, //left
@@ -55,7 +53,7 @@ class AddVolumeAndFaceSolution(AbstractRungeKuttaDGActionSet):
       QOut
     );
     #elif Dimensions==3
-    double* QOut = fineGridCell{{UNKNOWN_IDENTIFIER}}Estimates.value + {{PREDICATE_NO}} * {{NUMBER_OF_DOFS_PER_CELL_3D}} * ({{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}});
+    double* QOut = fineGridCell{{UNKNOWN_IDENTIFIER}}RhsEstimates.value + {{PREDICATE_NO}} * {{NUMBER_OF_DOFS_PER_CELL_3D}} * ({{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}});
     
     ::exahype2::dg::integrateOverRiemannSolutionsAndAddToVolume_GaussLegendre(
       fineGridFaces{{UNKNOWN_IDENTIFIER}}RiemannSolution(0).value, //left
@@ -74,8 +72,9 @@ class AddVolumeAndFaceSolution(AbstractRungeKuttaDGActionSet):
     );
     #endif
 */
+
     ::exahype2::CellData cellData(
-      QIn,
+      nullptr,
       marker.x(),
       marker.h(),
       timeStamp,
@@ -83,7 +82,7 @@ class AddVolumeAndFaceSolution(AbstractRungeKuttaDGActionSet):
       QOut
     );
 
-    ::exahype2::dg::multiplyWithInvertedMassMatrixAndAddToSolution_GaussLegendre(
+    ::exahype2::dg::multiplyWithInvertedMassMatrixAndClearAuxiliaryVariables_GaussLegendre(
       cellData,
       {{ORDER}},                                                   
       {{NUMBER_OF_UNKNOWNS}},

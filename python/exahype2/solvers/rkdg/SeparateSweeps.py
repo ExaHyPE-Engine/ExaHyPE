@@ -81,8 +81,8 @@ class SeparateSweeps( RungeKuttaDG ):
     """
     super(SeparateSweeps, self).create_data_structures()
 
-    self._previous_estimate_projection.generator.send_condition               = "true"
-    self._previous_estimate_projection.generator.receive_and_merge_condition  = "true"
+    self._current_estimate_projection.generator.send_condition               = "true"
+    self._current_estimate_projection.generator.receive_and_merge_condition  = "true"
 
     self._Riemann_solution.generator.send_condition               = "false"
     self._Riemann_solution.generator.receive_and_merge_condition  = "false"

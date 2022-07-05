@@ -120,41 +120,39 @@ void exahype2::dg::integrateOverRiemannSolutionsAndAddToVolume_GaussLegendre(
   const double* const __restrict__    BasisFunctionValuesLeft,
   const double* __restrict__          MassMatrixDiagonal1d,
   double* __restrict__                cellQ
-  ){
+){
   const int strideQ = unknowns+auxiliaryVariables;
 
+  // @todo raus
+  assertionMsg( false, "should not be called yet, as I have not debugged it properly" );
+
   //generic coefficients by dimension
-  const double coeff0 = 1.0/cellSize[0];
-  const double coeff1 = 1.0/cellSize[1];
+  // @todo das ist falsch. In 3d dann auch. Hier sit kein Gradint nirgends drin
+//  const double coeff0 = 1.0/cellSize[0];
+//  const double coeff1 = 1.0/cellSize[1];
 
-  for (int x=0; x<order+1; x++){
+  for( int x=0; x<order+1; x++ )
+  for( int y=0; y<order+1; y++ ) {
+    const double coeffLeft    = MassMatrixDiagonal1d[y]*BasisFunctionValuesLeft[x];
+    const double coeffRight   = MassMatrixDiagonal1d[y]*BasisFunctionValuesLeft[order-x];
 
-    //coefficients of faces in x direction
-    // @todo const double coeffNode0 = coeff0/quadratureWeights[x];
-    const double coeffNode0 = coeff0;
-    const double coeffLeft    = coeffNode0*BasisFunctionValuesLeft[x];
-    const double coeffRight   = coeffNode0*BasisFunctionValuesLeft[order-x];
+    const double coeffBottom  = MassMatrixDiagonal1d[x]*BasisFunctionValuesLeft[y];
+    const double coeffUp      = MassMatrixDiagonal1d[x]*BasisFunctionValuesLeft[order-y];
 
-    for (int y=0; y<order+1; y++){
+    for (int var=0; var<strideQ; var++) {
+      // @todo raus
+      assertionNumericalEquals( faceQLeft  [ y*strideQ + var ], 0.0 );
+      assertionNumericalEquals( faceQRight [ y*strideQ + var ], 0.0 );
+      assertionNumericalEquals( faceQBottom[ y*strideQ + var ], 0.0 );
+      assertionNumericalEquals( faceQUp    [ y*strideQ + var ], 0.0 );
 
-      //coefficients of faces in y direction
-      // @todo const double coeffNode1 = coeff1/quadratureWeights[y];
-      const double coeffNode1 = coeff1;
-      const double coeffBottom  = coeffNode1*BasisFunctionValuesLeft[y];
-      const double coeffUp      = coeffNode1*BasisFunctionValuesLeft[order-y];
-
-      for (int var=0; var<strideQ; var++) {
-        cellQ[ ( x + y*(order+1))*strideQ + var ] +=
-              coeffLeft   * faceQLeft   [ y*strideQ + var ]
-            - coeffRight  * faceQRight  [ y*strideQ + var ]
-            + coeffBottom * faceQBottom [ x*strideQ+var ]
-            - coeffUp     * faceQUp  [ x*strideQ+var ];
-      }//var
-
-    }//y
-  }//x
-
-
+      cellQ[ ( x + y*(order+1))*strideQ + var ] +=
+            coeffLeft   * faceQLeft   [ y*strideQ + var ]
+          - coeffRight  * faceQRight  [ y*strideQ + var ]
+          + coeffBottom * faceQBottom [ x*strideQ+var ]
+          - coeffUp     * faceQUp     [ x*strideQ+var ];
+    }//var
+  }//x,y
 }
 
 
