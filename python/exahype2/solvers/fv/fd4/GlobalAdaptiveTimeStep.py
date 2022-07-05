@@ -24,7 +24,7 @@ class GlobalAdaptiveTimeStep( SingleSweep ):
     ncp=None, 
     eigenvalues=PDETerms.User_Defined_Implementation, 
     boundary_conditions=None,refinement_criterion=None,initial_conditions=None,source_term=None,
-    plot_grid_properties=False, overlap=1, kernel_namespace="fd4"
+    plot_grid_properties=False, overlap=1, kernel_namespace="fd4", KOSigma=8.0
   ):
     super(GlobalAdaptiveTimeStep,self).__init__(name, patch_size, overlap, unknowns, auxiliary_variables, min_volume_h, max_volume_h, plot_grid_properties, kernel_namespace="fd4") 
     
@@ -36,6 +36,7 @@ class GlobalAdaptiveTimeStep( SingleSweep ):
     self._source_term_implementation          = PDETerms.None_Implementation
     
     self._compute_eigenvalue                  = True
+    self._KO_Sigma                            = KOSigma
     
     self.set_implementation(flux=flux, 
       ncp=ncp, 
@@ -53,7 +54,8 @@ class GlobalAdaptiveTimeStep( SingleSweep ):
     memory_location         = None,
     use_split_loop          = False,
     additional_action_set_includes = "",
-    additional_user_includes       = ""
+    additional_user_includes       = "",
+    KOSigma                 = -999
   ):
     """
       If you pass in User_Defined, then the generator will create C++ stubs
@@ -67,16 +69,19 @@ class GlobalAdaptiveTimeStep( SingleSweep ):
 
       This routine should be the very last invoked by the constructor.
     """
+
     if flux                 is not None:  self._flux_implementation                       = flux
     if ncp                  is not None:  self._ncp_implementation                        = ncp
     if eigenvalues          is not None:  self._eigenvalues_implementation                = eigenvalues
     if source_term          is not None:  self._source_term_implementation                = source_term
+    if not                KOSigma==-999:  self._KO_Sigma                                  = KOSigma
 
     self._compute_kernel_call = create_compute_Riemann_kernel_for_FD4(
       self._flux_implementation, self._ncp_implementation, self._source_term_implementation, 
       compute_max_eigenvalue_of_next_time_step=True,
       solver_variant = SolverVariant.WithVirtualFunctions,
-      riemann_kernel_variant = RiemannKernelVariant.PatchWiseAoSHeap
+      riemann_kernel_variant = RiemannKernelVariant.PatchWiseAoSHeap,
+      KOSigma=self._KO_Sigma
     )
 
     solver_code_snippets = AdaptiveTimeSteppingCodeSnippets(self._time_step_relaxation,False)

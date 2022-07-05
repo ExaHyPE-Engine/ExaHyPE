@@ -19,6 +19,7 @@ namespace exahype2 {
         int                     haloSize,
         int                     unknowns,
         int                     auxiliaryVariables,
+        double                  KOSigma,
         bool                    evaluateFlux,
         bool                    evaluateDifferentialSource, //for ncp
         bool                    evaluateAlgebraicSource, //real source

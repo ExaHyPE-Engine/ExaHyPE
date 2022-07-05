@@ -184,6 +184,7 @@ namespace exahype2 {
         #endif
         template <typename QOutEnumeratorType>
         static void updateSolutionWithKODissipationTerm_LoopBody(
+          const double                                 KOSigma,
           const double* __restrict__                   QKODspX,
           const double* __restrict__                   QKODspY,
           const double* __restrict__                   QKODspZ,
@@ -202,10 +203,10 @@ namespace exahype2 {
         #endif
 
 
-        template <class QInEnumeratorType>
+        template <class QOutEnumeratorType>
         static double reduceMaxEigenvalue_LoopBody(
-          const double* __restrict__                   QIn,
-          const QInEnumeratorType&                     QInEnumerator,
+          const double* __restrict__                   QOut,
+          const QOutEnumeratorType&                    QOutEnumerator,
           exahype2::fv::fd4::MaxEigenvalue             maxEigenvalue,
           const tarch::la::Vector<Dimensions,double>&  patchCentre,
           const tarch::la::Vector<Dimensions,double>&  patchSize,

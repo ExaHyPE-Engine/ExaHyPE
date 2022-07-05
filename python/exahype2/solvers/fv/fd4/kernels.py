@@ -41,7 +41,8 @@ def create_compute_Riemann_kernel_for_FD4(flux_implementation,
                                               source_implementation, 
                                               compute_max_eigenvalue_of_next_time_step, 
                                               solver_variant,
-                                              riemann_kernel_variant):
+                                              riemann_kernel_variant,
+                                              KOSigma):
   """
   
   I return only the unqualified function call, i.e. without any namespaces.
@@ -110,6 +111,7 @@ def create_compute_Riemann_kernel_for_FD4(flux_implementation,
   {{HALO_SIZE}},
   {{NUMBER_OF_UNKNOWNS}},
   {{NUMBER_OF_AUXILIARY_VARIABLES}},
+  {{KOSIGMA}},
   {% if FLUX_IMPLEMENTATION=="<none>" %} false {% else %} true {% endif %},
   {% if NCP_IMPLEMENTATION=="<none>" %} false {% else %} true {% endif %},
   {% if SOURCE_IMPLEMENTATION=="<none>" %} false {% else %} true {% endif %},
@@ -211,6 +213,7 @@ def create_compute_Riemann_kernel_for_FD4(flux_implementation,
   d[ "NCP_IMPLEMENTATION" ]          = ncp_implementation
   d[ "SOURCE_IMPLEMENTATION" ]       = source_implementation
   d[ "COMPUTE_MAX_EIGENVALUE" ]      = compute_max_eigenvalue_of_next_time_step
+  d[ "KOSIGMA" ]                     = KOSigma
   #if EnumeratorTemplateTypes[riemann_kernel_variant]==None:
   #  d[ "TEMP_DATA_ENUMERATOR" ]      = "::exahype2::fv::enumerator::AoSoALexicographicEnumerator"
   #else:

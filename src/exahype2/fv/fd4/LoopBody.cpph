@@ -240,6 +240,7 @@ void exahype2::fv::fd4::internal::updateSolutionWithDifferentialSourceTerm_LoopB
 
 template <typename QOutEnumeratorType>
 void exahype2::fv::fd4::internal::updateSolutionWithKODissipationTerm_LoopBody(
+  const double                                 KOSigma,
   const double* __restrict__                   QKODspX,
   const double* __restrict__                   QKODspY,
   const double* __restrict__                   QKODspZ,
@@ -257,9 +258,8 @@ void exahype2::fv::fd4::internal::updateSolutionWithKODissipationTerm_LoopBody(
     
     double QKODspTerm = QKODsp[QKODspEnumerator(patchIndex, volumeIndex, unknown)];
 
-    // TODO: define sigmaKO
-    double sigmaKO=8.0;
-    QOut[ QOutEnumerator(patchIndex, volumeIndex,unknown) ] += sigmaKO * dt / patchSize(normal) * QOutEnumerator._numberOfVolumesPerAxisInPatch * QKODspTerm
+    //double sigmaKO=8.0;
+    QOut[ QOutEnumerator(patchIndex, volumeIndex,unknown) ] += KOSigma * dt / patchSize(normal) * QOutEnumerator._numberOfVolumesPerAxisInPatch * QKODspTerm
 
     #if !defined(GPUOffloadingOMP) and  !defined(GPUOffloadingSYCL)
     assertion8(
@@ -279,10 +279,10 @@ void exahype2::fv::fd4::internal::updateSolutionWithKODissipationTerm_LoopBody(
 
 
 
-template <class QInEnumeratorType>
+template <class QOutEnumeratorType>
 double exahype2::fv::fd4::internal::reduceMaxEigenvalue_LoopBody(
-    const double* __restrict__                   QIn,
-    const QInEnumeratorType&                     QInEnumerator,
+    const double* __restrict__                   QOut,
+    const QOutEnumeratorType&                    QOutEnumerator,
     exahype2::fv::fd4::MaxEigenvalue             maxEigenvalue,
     const tarch::la::Vector<Dimensions,double>&  patchCentre,
     const tarch::la::Vector<Dimensions,double>&  patchSize,
@@ -291,14 +291,14 @@ double exahype2::fv::fd4::internal::reduceMaxEigenvalue_LoopBody(
     double                                       t,
     double                                       dt
 ) {
-    double QInGathered[QInEnumerator._unknowns+QInEnumerator._numberOfAuxiliaryVariables];
+    double QGathered[QOutEnumerator._unknowns+QOutEnumerator._numberOfAuxiliaryVariables];
 
     // gather
     #if defined(SharedOMP)
     #pragma omp simd
     #endif
-    for (int unknown=0; unknown<QInEnumerator._unknowns+QInEnumerator._numberOfAuxiliaryVariables; unknown++) {
-      QInGathered[unknown] = QIn[ QInEnumerator(patchIndex,volumeIndex,unknown) ];
+    for (int unknown=0; unknown<QOutEnumerator._unknowns+QOutEnumerator._numberOfAuxiliaryVariables; unknown++) {
+      QGathered[unknown] = QOut[ QOutEnumerator(patchIndex,volumeIndex,unknown) ];
     }
 
     double result = 0.0;
@@ -306,9 +306,9 @@ double exahype2::fv::fd4::internal::reduceMaxEigenvalue_LoopBody(
       result = std::max(
         result,
         maxEigenvalue(
-          QInGathered,
-          ::exahype2::fv::getVolumeCentre( patchCentre, patchSize, QInEnumerator._numberOfVolumesPerAxisInPatch, volumeIndex ),
-          ::exahype2::fv::getVolumeSize( patchSize, QInEnumerator._numberOfVolumesPerAxisInPatch ),
+          QGathered,
+          ::exahype2::fv::getVolumeCentre( patchCentre, patchSize, QOutEnumerator._numberOfVolumesPerAxisInPatch, volumeIndex ),
+          ::exahype2::fv::getVolumeSize( patchSize, QOutEnumerator._numberOfVolumesPerAxisInPatch ),
           t,
           dt,
           normal
