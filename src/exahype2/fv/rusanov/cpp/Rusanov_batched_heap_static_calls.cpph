@@ -2,12 +2,6 @@
 #include "tarch/compiler/CompilerSpecificSettings.h"
 #include "exahype2/fv/rusanov/LoopBody.h"
 
-#include <vector>
-#include <iterator>
-#include <execution>
-#include <algorithm>
-#include <numeric>
-
 template <
   typename Solver,
   int      numberOfVolumesPerAxisInPatch,

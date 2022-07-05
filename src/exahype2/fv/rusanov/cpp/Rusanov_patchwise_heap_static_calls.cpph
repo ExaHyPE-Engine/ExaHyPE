@@ -1,13 +1,6 @@
 #include "Rusanov.h"
 #include "tarch/compiler/CompilerSpecificSettings.h"
 #include "exahype2/fv/rusanov/LoopBody.h"
-#include "extra/cartesian_product.h"
-
-#include <vector>
-#include <iterator>
-#include <execution>
-#include <algorithm>
-#include <numeric>
 
 template <
   typename Solver,
@@ -31,7 +24,6 @@ void exahype2::fv::rusanov::cpp::timeStepWithRusanov_patchwise_heap_static_calls
    * take into account from the solver's perspective.
    */
   constexpr int solversHaloSize        = 1;
-
 
   // The first two variables are not being used, and the others
   // use only the size, which is the same as the non-host variables
