@@ -10,11 +10,16 @@ import jinja2
 class LinearCombinationOfEstimates(AbstractRungeKuttaDGActionSet):
   """
   
-  
+  Computes a linear combination of all of the estimates according to the
+  Butcher Tableau.
   
   """
   
   TemplateLinearCombination = """
+  // Set the variable
+  // double timeStepSize
+  {{COMPUTE_TIME_STEP_SIZE}}
+    
   {% for PREDICATE_NO in range(0,PREDICATES|length) %}
   if ({{PREDICATES[PREDICATE_NO]}}) {
     #if Dimensions==2
@@ -26,7 +31,7 @@ class LinearCombinationOfEstimates(AbstractRungeKuttaDGActionSet):
       {% if BUTCHER_TABLEAU_WEIGHTS[PREDICATE_NO][WEIGHT_NO]==0 %}
       // *(fineGridCell{{UNKNOWN_IDENTIFIER}}LinearCombination.value + index) += {{BUTCHER_TABLEAU_WEIGHTS[PREDICATE_NO][WEIGHT_NO]}}* *(fineGridCell{{UNKNOWN_IDENTIFIER}}Estimates.value + index + {{WEIGHT_NO}} * {{NUMBER_OF_DOFS_PER_CELL_2D}} * ({{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}));
       {% else %}
-      *(fineGridCell{{UNKNOWN_IDENTIFIER}}LinearCombination.value + index) += {{BUTCHER_TABLEAU_WEIGHTS[PREDICATE_NO][WEIGHT_NO]}}* *(fineGridCell{{UNKNOWN_IDENTIFIER}}Estimates.value + index + {{WEIGHT_NO}} * {{NUMBER_OF_DOFS_PER_CELL_2D}} * ({{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}));
+      *(fineGridCell{{UNKNOWN_IDENTIFIER}}LinearCombination.value + index) += {{BUTCHER_TABLEAU_RELATIVE_TIME_STEP_SIZES[PREDICATE_NO]}} * timeStepSize * {{BUTCHER_TABLEAU_WEIGHTS[PREDICATE_NO][WEIGHT_NO]}}* *(fineGridCell{{UNKNOWN_IDENTIFIER}}Estimates.value + index + {{WEIGHT_NO}} * {{NUMBER_OF_DOFS_PER_CELL_2D}} * ({{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}));
       {% endif %}
       {% endfor %}
     }
@@ -41,7 +46,7 @@ class LinearCombinationOfEstimates(AbstractRungeKuttaDGActionSet):
       {% if BUTCHER_TABLEAU_WEIGHTS[PREDICATE_NO][WEIGHT_NO]==0 %}
       // *(fineGridCell{{UNKNOWN_IDENTIFIER}}LinearCombination.value + index) += {{BUTCHER_TABLEAU_WEIGHTS[PREDICATE_NO][WEIGHT_NO]}}* *(fineGridCell{{UNKNOWN_IDENTIFIER}}Estimates.value + index + {{WEIGHT_NO}} * {{NUMBER_OF_DOFS_PER_CELL_3D}} * ({{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}));
       {% else %}
-      *(fineGridCell{{UNKNOWN_IDENTIFIER}}LinearCombination.value + index) += {{BUTCHER_TABLEAU_WEIGHTS[PREDICATE_NO][WEIGHT_NO]}}* *(fineGridCell{{UNKNOWN_IDENTIFIER}}Estimates.value + index + {{WEIGHT_NO}} * {{NUMBER_OF_DOFS_PER_CELL_3D}} * ({{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}));
+      *(fineGridCell{{UNKNOWN_IDENTIFIER}}LinearCombination.value + index) += {{BUTCHER_TABLEAU_RELATIVE_TIME_STEP_SIZES[PREDICATE_NO]}} * timeStepSize * {{BUTCHER_TABLEAU_WEIGHTS[PREDICATE_NO][WEIGHT_NO]}}* *(fineGridCell{{UNKNOWN_IDENTIFIER}}Estimates.value + index + {{WEIGHT_NO}} * {{NUMBER_OF_DOFS_PER_CELL_3D}} * ({{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}));
       {% endif %}
       {% endfor %}
     }
@@ -83,8 +88,9 @@ class LinearCombinationOfEstimates(AbstractRungeKuttaDGActionSet):
       d = {}
       self._solver._init_dictionary_with_default_parameters(d)
       self._solver.add_entries_to_text_replacement_dictionary(d)
-      d[ "PREDICATES" ]                 = self.guards
-      d[ "BUTCHER_TABLEAU_WEIGHTS" ]    = self._butcher_tableau.weight_matrix()      
+      d[ "PREDICATES" ]                               = self.guards
+      d[ "BUTCHER_TABLEAU_WEIGHTS" ]                  = self._butcher_tableau.weight_matrix()
+      d[ "BUTCHER_TABLEAU_RELATIVE_TIME_STEP_SIZES" ] = self._butcher_tableau.time_step_sizes()
       result = jinja2.Template(self.TemplateLinearCombination).render(**d)
       pass 
     return result

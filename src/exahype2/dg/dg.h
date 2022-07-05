@@ -42,6 +42,9 @@
  * derivative. Our discussion focuses on how we compute @f$ \partial _t Q @f$
  * and it is then up to your time integrator of choice how to process this
  * information further.
+ * From hereon, any reference to @f$ \partial _t Q @f$ means we speak about
+ * the change of the value in time for one particular quadrature point, i.e. one particular weight.
+ *
  *
  * In ExaHyPE 2, we mainly use Runge-Kutta. If the
  * weak formulation is subject to Runge-Kutta, we evaluate
@@ -56,21 +59,14 @@
  *
  * ## A single time step
  *
- * If we want to realise a single time step, the scheme above gives us all the
- * operators that we need. On this page, I do not discuss Discontinuous
+ * On this page, I do not discuss Discontinuous
  * Galerkin in detail, but I try to point out, how the individual steps are
  * integrated into the mesh traversal, and how I split them up into individual
  * routines.
  *
- * As we deal with a single time step, let
+ * We solve
  *
- * @f$ \partial _t Q(t) \approx 1/dt \cdot \left( Q^{(new)} - Q^{(old)} \right) @f$
- *
- * where the @f$ dt @f$ is the time step size.
- * We insert this into the left hand side of the weak formulation, write simply Q
- * instead of @f$ Q^{(old)} @f$ (as we are lazy) and obtain
- *
- * @f$ \int _c \left( Q^{(new)}, \phi \right) dx = \int _c \left( Q, \phi \right) dx + dt \cdot \left( \int  _c \left( F(Q), \nabla \phi \right) dx - \int _{\partial c} \left( F(Q), \phi \right) dS(x) + \int _c \left(S(Q), \phi \right) dx \right) @f$
+ * @f$ \int _c \left( \partial _t Q, \phi \right) dx = \int _c \left( Q, \phi \right) dx + dt \cdot \left( \int  _c \left( F(Q), \nabla \phi \right) dx - \int _{\partial c} \left( F(Q), \phi \right) dS(x) + \int _c \left(S(Q), \phi \right) dx \right) @f$
  *
  * ExaHyPE works with cubic or square cells and a Cartesian layout of the degrees
  * of freedom therein.
@@ -97,12 +93,11 @@
  * As the integrals of the weak formulation span one cell only, we get something
  * like
  *
- * @f$ M Q^{(new)} = MQ + dt \cdot \Big( ... \Big) Q^* @f$
+ * @f$ M \Big( \partial _t Q \Big) =  \Big( ... \Big) Q^* @f$
  *
  * per cell.
  * There is a square mass matrix which results from the integral above which tells us
- * that a linear combination of the new values within a cell equals the same linear
- * combination of the previous solution plus dt times an expression over all previous
+ * that a linear combination of the derivatives within a cell equals an expression over all previous
  * values of the time step. This is the reason I add the star. It is just there to
  * point out that we use a lot more values than only those within one cell.
  *
@@ -117,10 +112,9 @@
  * by the Python script exahype2.solvers.LagrangeBasisWithDiagonalMassMatrix for example.
  * The computed matrix is then written into the abstract solver base class of the user
  * and can be handed over to any computational routine. We note that we will (more
- * often) need the inverse and that the equation above eliminates the mass matrix
- * from the previous solution:
+ * often) need the inverse.
  *
- * @f$ Q^{(new)}(T) = Q + dt \cdot M^{-1} \Big( \dots \Big) Q^* =: Q + dt \cdot M^{-1} \hat Q@f$
+ * @f$ \partial _t Q(T) = M^{-1} \Big( \dots \Big) Q^* =: Q + dt \cdot M^{-1} \hat Q@f$
  *
  * This is the last step of our algorithm: We assume that we have a quantity @f$ \hat Q @f$
  * in each and every sample point. Its entries have to be discussed. We multiply these quantities with the inverse of the
