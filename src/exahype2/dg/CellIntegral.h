@@ -156,12 +156,14 @@ namespace exahype2 {
      * - I assume that the output points to the new time step's data. This is
      *   usually
      *
-     *        fineGridCell{{UNKNOWN_IDENTIFIER}}Estimates
+     *        fineGridCell{{UNKNOWN_IDENTIFIER}}RhsEstimates
      *
      *   subject to some shifts.
      * - The output already holds the flux contributions, source terms, and
      *   so forth, but these contributions are stored in the weak image space,
      *   i.e. we still have to multiply them with the inverse of a mass matrix.
+     *   The output also contains the Riemann solutions, back-propagated into
+     *   the volume.
      * - The output shall holds the flux contributions in a Runge-Kutta sense,
      *   i.e. it shall not hold the new time step but the amount that's added.
      *
@@ -178,24 +180,17 @@ namespace exahype2 {
      * The linear combination field will holds the current @f$ Q^{(new)} @f$. The
      * estimates however have to be the individual @f$ k_j @f$ from above. That means,
      * they are not to be scaled by any time step size, and they do not incorporate
-     * the original time step. Their auxiliary variables also have to be zero, so we
-     * can simply compute the above expression without altering the auxiliaries.
+     * the original time step. They also do not carry any auxiliary variables. So
+     * we don't need the input data
      *
-     * You can alter the auxiliary variables, but then you have to ensure that you
-     *  estimates
+     *        fineGridCell{{UNKNOWN_IDENTIFIER}}LinearCombination
      *
+     * in this routine. We focus on the output.
      *
-     *
-     * This routine assumes that the mass matrix is a diagonal. Therefore,
-     * the inversion is trivial. The routine also copies over the material
-     * parameters. So we realise the folling steps:
-     *
-     * - We multiply the data that's already stored in QOut with the inverse
-     *   of the mass matrix.
-     * - We scale it with dt and then add the data from QIn.
-     * - We copy the auxiliary variables from QIn over.
-     *
-     *
+     * This particular routine assumes that the mass matrix is a diagonal. Therefore,
+     * the inversion is trivial: We iterate over all degrees of freedom. This is a
+     * d-dimensional for loop (dfor). Per dof, we compute the diagonal, and every
+     * unknown then is scaled by the inverse of this diagonal.
      */
     void multiplyWithInvertedMassMatrixAndClearAuxiliaryVariables_GaussLegendre(
       ::exahype2::CellData&                          cellData,

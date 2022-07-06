@@ -223,55 +223,26 @@ void exahype2::dg::multiplyWithInvertedMassMatrixAndClearAuxiliaryVariables_Gaus
   const double* __restrict__                     massMatrixDiagonal1d
 ) {
   exahype2::enumerator::AoSLexicographicEnumerator enumerator(
-    1,           // number of cells
-    order+1,     // numberOfDoFsPerAxisInCell,
-    0,           // haloSize,
-    unknowns, auxiliaryVariables
+    1,           // number of cells in one memory chunk
+    order+1,     // numberOfDoFsPerAxisInCell
+    0,           // no halo
+    unknowns,
+    0            // no auxiliary variables here
   );
 
-  #if Dimensions==2
-  for (int currentCell=0; currentCell<cellData.numberOfCells; currentCell++)
-  for (int x=0; x<order+1; x++)
-  for (int y=0; y<order+1; y++) {
-    const double* __restrict__                  cellQin  = cellData.QIn[currentCell];
-    double* __restrict__                        cellQout = cellData.QOut[currentCell];
-    const double                                dt       = cellData.dt[currentCell];
+  for (int currentCell=0; currentCell<cellData.numberOfCells; currentCell++) {
+    dfor( dof, order+1 ) {
+      double* __restrict__  cellQInOut = cellData.QOut[currentCell];
 
-    // determine d-dimenional mass' matrix entry
-    double diagonal = massMatrixDiagonal1d[ x ] * massMatrixDiagonal1d[ y ];
+      #if Dimensions==2
+      double diagonal = massMatrixDiagonal1d[ dof(0) ] * massMatrixDiagonal1d[ dof(1) ];
+      #else
+      double diagonal = massMatrixDiagonal1d[ dof(0) ] * massMatrixDiagonal1d[ dof(1) ] * massMatrixDiagonal1d[ dof(2) ];
+      #endif
 
-    for(int var=0; var<unknowns; var++) {
-//      cellQout[ enumerator(currentCell,{x,y},var) ] = cellQin[enumerator(currentCell,{x,y},var)] + dt * 1.0 / diagonal * cellQout[enumerator(currentCell,{x,y},var)];
-      cellQout[ enumerator(currentCell,{x,y},var) ] = cellQin[enumerator(currentCell,{x,y},var)];
-      // @todo raus
-      assertion5( cellQout[ enumerator(currentCell,{x,y},var) ]>=0.0,  cellQout[ enumerator(currentCell,{x,y},var) ], currentCell, x, y, var );
-      assertion5( cellQout[ enumerator(currentCell,{x,y},var) ]<=1.0, cellQout[ enumerator(currentCell,{x,y},var) ], currentCell, x, y, var );
-    }
-    for(int var=unknowns; var<unknowns+auxiliaryVariables; var++) {
-      cellQout[enumerator(currentCell,{x,y},var)] = cellQin[enumerator(currentCell,{x,y},var)];
+      for(int var=0; var<unknowns; var++) {
+        cellQInOut[ enumerator(currentCell,dof,var) ] = 1.0 / diagonal * cellQInOut[enumerator(currentCell,dof,var)];
+      }
     }
   }
-  #else
-  for (int currentCell=0; currentCell<cellData.numberOfCells; currentCell++)
-  for (int x=0; x<order+1; x++)
-  for (int y=0; y<order+1; y++)
-  for (int z=0; z<order+1; z++) {
-    const double* __restrict__                  cellQin  = cellData.QIn[currentCell];
-    double* __restrict__                        cellQout = cellData.QOut[currentCell];
-    const double                                dt       = cellData.dt[currentCell];
-
-    // determine d-dimenional mass' matrix entry
-    double diagonal = massMatrixDiagonal1d[ x ] * massMatrixDiagonal1d[ y ] * massMatrixDiagonal1d[ z ];
-
-    for(int var=0; var<unknowns; var++) {
-      cellQout[ enumerator(currentCell,{x,y,z},var) ] += 1.0 / diagonal * cellQout[enumerator(currentCell,{x,y,z},var)];
-    }
-
-    // copy over old time step solution including auxiliary variables
-    // and add them to solution
-    for(int var=0; var<unknowns+auxiliaryVariables; var++) {
-      cellQout[enumerator(currentCell,{x,y,z},var)] = cellQin[enumerator(currentCell,{x,y,z},var)] + dt * cellQout[enumerator(currentCell,{x,y,z},var)];
-    }
-  }
-  #endif
 }
