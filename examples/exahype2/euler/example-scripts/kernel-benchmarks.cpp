@@ -262,7 +262,6 @@ void runBenchmarks(int patches) {
       taskGroup.run(
         [&]() -> void {
           tarch::multicore::Lock lock(semaphore);
-/*
           kernel(
             device,
             patchData[hostTask],
@@ -271,7 +270,6 @@ void runBenchmarks(int patches) {
             false ,
             computeCFL
           );
-*/
         }
       );
     }
