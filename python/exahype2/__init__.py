@@ -15,6 +15,7 @@ except ImportError:
 
 if havenumpy:
     import exahype2.solvers.rkdg
+    import exahype2.solvers.rkfd
     #import exahype2.solvers.aderdg
     
 import exahype2.grid

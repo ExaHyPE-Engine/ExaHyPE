@@ -71,6 +71,7 @@ void exahype2::dg::cellIntegral_patchwise_GaussLegendre_functors(
                 fluxValues);
 
           // Coefficient within matrix is tensor product over dimensions, too
+          // @todo Dieser Index ist nahezu 100% falsch
           double coeff = stiffnessMatrix[i+index[dim]*nodesPerAxis];
           for (int dd=0; dd<Dimensions; dd++) {
             coeff *= (dd==dim) ? 1.0 : massMatrixDiagonal[ index(dim) ];

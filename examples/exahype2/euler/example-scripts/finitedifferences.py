@@ -104,7 +104,7 @@ auxiliary_variables = 1
 thesolver = None
 solver_name = "EulerDG"
 if args.type=="global-fixed-fd-4":
-  thesolver = exahype2.solvers.fv.rusanov.GlobalFixedTimeStep(
+  thesolver = exahype2.solvers.rkfd.fd4.GlobalFixedTimeStep(
     solver_name,
     args.patch_size,
     unknowns, auxiliary_variables,
