@@ -4,4 +4,6 @@ from exahype2.solvers.fv.PDETerms    import PDETerms
 
 import exahype2.solvers.fv.rusanov
 import exahype2.solvers.fv.musclhancock
+import exahype2.solvers.fv.fd4
+
 

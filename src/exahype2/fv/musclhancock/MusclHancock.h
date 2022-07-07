@@ -4,11 +4,11 @@
 #define _EXAHYPE2_FV_MUSCLHAN_MUSCL_H_
 
 
-
 #include "Functors.h"
 #include "LoopBody.h"
 
 #include "exahype2/CellData.h"
+
 
 namespace exahype2 {
   namespace fv {

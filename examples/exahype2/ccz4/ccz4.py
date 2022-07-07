@@ -49,7 +49,7 @@ if __name__ == "__main__":
     parser.add_argument("-m",    "--mode",            dest="mode",            default="release",  help="|".join(modes.keys()) )
     parser.add_argument( "--gpu",            dest="GPU",            default=False, action="store_true",  help="Run with accelerator support" )
     parser.add_argument("-ext",  "--extension",       dest="extension",       choices=["none", "gradient", "AMRadm", "Full"],   default="none",  help="Pick extension, i.e. what should be plotted on top. Default is none" )
-    parser.add_argument("-impl", "--implementation",  dest="implementation",  choices=["fv-global-fixed", "fv-global-adaptive", "fv-global-fixed-enclave", "fv-global-adaptive-enclave","fv-subcyling-adaptive-enclave","fv-local-enclave", "fv-musclhancock"], required="True",  help="Pick solver type" )
+    parser.add_argument("-impl", "--implementation",  dest="implementation",  choices=["fv-global-fixed", "fv-global-adaptive", "fv-global-fixed-enclave", "fv-global-adaptive-enclave","fv-subcyling-adaptive-enclave","fv-local-enclave", "fv-musclhancock", "fd-fourth-order", "fd-fourth-order-fixed"], required="True",  help="Pick solver type" )
     parser.add_argument("-no-pbc",  "--no-periodic-boundary-conditions",      dest="periodic_bc", action="store_false", default="True",  help="switch on or off the periodic BC" )
     parser.add_argument("-AMRMarker",  "--AMR-marker",      dest="marker", choices=["none", "poisson"],   default="none",  help="switch on or off the AMR boundary marker" )
     parser.add_argument("-et",   "--end-time",        dest="end_time",        type=float, default=1.0, help="End (terminal) time" )
@@ -88,6 +88,11 @@ if __name__ == "__main__":
        SuperClass = exahype2.solvers.fv.rusanov.LocalTimeStepWithEnclaveTasking
     if args.implementation=="fv-musclhancock":
        SuperClass = exahype2.solvers.fv.musclhancock.GlobalAdaptiveTimeStep
+    if args.implementation=="fd-fourth-order":
+       SuperClass = exahype2.solvers.fv.fd4.GlobalAdaptiveTimeStep
+    if args.implementation=="fd-fourth-order-fixed":
+       SuperClass = exahype2.solvers.fv.fd4.GlobalFixedTimeStep
+
 
     class CCZ4Solver( SuperClass ):
       def __init__(self, name, patch_size, min_volume_h, max_volume_h, cfl, domain_r):
@@ -146,15 +151,15 @@ if __name__ == "__main__":
             min_volume_h=min_volume_h, max_volume_h=max_volume_h,
             time_step_relaxation=cfl
           )
-        elif SuperClass==exahype2.solvers.fv.rusanov.SubcyclingAdaptiveTimeStepWithEnclaveTasking:
-          SuperClass.__init__(#change to linear interpolation in time by hand here
+        elif SuperClass==exahype2.solvers.fv.fd4.GlobalAdaptiveTimeStep:
+          SuperClass.__init__(
             self,
             name=name, patch_size=patch_size,
             unknowns=number_of_unknowns,
             auxiliary_variables=0,
             min_volume_h=min_volume_h, max_volume_h=max_volume_h,
             time_step_relaxation=cfl,
-            interpolate_linearly_in_time=True
+            KOSigma=8.0
           )
         else:
           SuperClass.__init__(
@@ -163,7 +168,7 @@ if __name__ == "__main__":
             unknowns=number_of_unknowns,
             auxiliary_variables=0,
             min_volume_h=min_volume_h, max_volume_h=max_volume_h,
-            time_step_relaxation=cfl,
+            time_step_relaxation=cfl
             #use_gpu =args.GPU #=="fv-fixed-gpu" else False
 #                        use_gpu = True if args.implementation=="fv-adaptive-gpu" else False
           )
@@ -604,6 +609,9 @@ if __name__ == "__main__":
         
     if args.interpolation=="order-2":
       my_solver.overlap=2
+
+    if args.implementation=="fd-fourth-order" or args.implementation=="fd-fourth-order-fixed":
+      my_solver.overlap=3
 
     my_solver.restriction = "averaging" # "linear"
 
