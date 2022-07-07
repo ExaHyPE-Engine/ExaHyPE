@@ -240,6 +240,8 @@ void exahype2::dg::multiplyWithInvertedMassMatrixAndClearAuxiliaryVariables_Gaus
       double diagonal = massMatrixDiagonal1d[ dof(0) ] * massMatrixDiagonal1d[ dof(1) ] * massMatrixDiagonal1d[ dof(2) ];
       #endif
 
+      assertion( diagonal>0.0 );
+
       for(int var=0; var<unknowns; var++) {
         cellQInOut[ enumerator(currentCell,dof,var) ] = 1.0 / diagonal * cellQInOut[enumerator(currentCell,dof,var)];
       }

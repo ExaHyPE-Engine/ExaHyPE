@@ -123,14 +123,6 @@ void exahype2::dg::integrateOverRiemannSolutionsAndAddToVolume_GaussLegendre(
 ){
   const int strideQ = unknowns+auxiliaryVariables;
 
-  // @todo raus
-  assertionMsg( false, "should not be called yet, as I have not debugged it properly" );
-
-  //generic coefficients by dimension
-  // @todo das ist falsch. In 3d dann auch. Hier sit kein Gradint nirgends drin
-//  const double coeff0 = 1.0/cellSize[0];
-//  const double coeff1 = 1.0/cellSize[1];
-
   for( int x=0; x<order+1; x++ )
   for( int y=0; y<order+1; y++ ) {
     const double coeffLeft    = MassMatrixDiagonal1d[y]*BasisFunctionValuesLeft[x];
@@ -140,12 +132,6 @@ void exahype2::dg::integrateOverRiemannSolutionsAndAddToVolume_GaussLegendre(
     const double coeffUp      = MassMatrixDiagonal1d[x]*BasisFunctionValuesLeft[order-y];
 
     for (int var=0; var<strideQ; var++) {
-      // @todo raus
-      assertionNumericalEquals( faceQLeft  [ y*strideQ + var ], 0.0 );
-      assertionNumericalEquals( faceQRight [ y*strideQ + var ], 0.0 );
-      assertionNumericalEquals( faceQBottom[ y*strideQ + var ], 0.0 );
-      assertionNumericalEquals( faceQUp    [ y*strideQ + var ], 0.0 );
-
       cellQ[ ( x + y*(order+1))*strideQ + var ] +=
             coeffLeft   * faceQLeft   [ y*strideQ + var ]
           - coeffRight  * faceQRight  [ y*strideQ + var ]
