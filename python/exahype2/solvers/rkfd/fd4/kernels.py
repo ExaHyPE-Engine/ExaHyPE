@@ -512,7 +512,7 @@ GPUCallableMethod void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::sourceTerm(
   d[ "NCP_IMPLEMENTATION"]                  = ncp_implementation
   d[ "EIGENVALUES_IMPLEMENTATION"]          = eigenvalues_implementation
   d[ "SOURCE_TERM_IMPLEMENTATION"]          = source_term_implementation
-  d[ "STATELESS_PDE_TERMS"]                             = pde_terms_without_state  
+  d[ "STATELESS_PDE_TERMS"]                 = pde_terms_without_state  
   return Template.render(**d)
 
 

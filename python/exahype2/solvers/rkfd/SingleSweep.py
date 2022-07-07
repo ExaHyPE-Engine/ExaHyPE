@@ -114,7 +114,7 @@ class UpdateCell(ReconstructPatchAndApplyFunctor):
   
   def get_includes(self):
     return """
-#include "exahype2/fv/BoundaryConditions.h"
+#include "exahype2/fd/BoundaryConditions.h"
 #include "exahype2/NonCriticalAssertions.h"
 """ + self._solver._get_default_includes() + self._solver.user_action_set_includes
 

@@ -113,7 +113,7 @@ class HandleBoundary(AbstractRKFDActionSet):
 
   def get_includes(self):
     return """
-#include "exahype2/fv/BoundaryConditions.h"
+#include "exahype2/fd/BoundaryConditions.h"
 """ + AbstractRKFDActionSet.get_includes(self) 
 
 

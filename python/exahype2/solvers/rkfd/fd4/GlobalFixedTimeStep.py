@@ -24,7 +24,7 @@ class GlobalFixedTimeStep( SingleSweep ):
     ncp=None, 
     eigenvalues=PDETerms.User_Defined_Implementation, 
     boundary_conditions=None,refinement_criterion=None,initial_conditions=None,source_term=None,
-    plot_grid_properties=False, overlap=1, kernel_namespace="fd4", KOSigma=8.0
+    plot_grid_properties=False, overlap=3, kernel_namespace="fd4", KOSigma=8.0
   ):
     """
   
@@ -37,6 +37,8 @@ class GlobalFixedTimeStep( SingleSweep ):
     """
     super(GlobalFixedTimeStep,self).__init__(name, patch_size, overlap, unknowns, auxiliary_variables, min_volume_h, max_volume_h, plot_grid_properties, kernel_namespace="fd4") 
     
+    if overlap<3:
+      raise Exception( "overlap has to be at least 3 but was {}".format(overlap) )
     self._normalised_time_step_size = normalised_time_step_size
 
     self._flux_implementation                 = PDETerms.None_Implementation
@@ -47,7 +49,7 @@ class GlobalFixedTimeStep( SingleSweep ):
     self._KO_Sigma                            = KOSigma
     
     self._user_action_set_includes += """
-#include "exahype2/fv/fd4/FD4.h"
+#include "exahype2/fd/FD4.h"
 """
 
     self.set_implementation(flux=flux, 

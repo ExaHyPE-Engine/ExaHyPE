@@ -219,7 +219,8 @@ class DynamicAMR( peano4.toolbox.blockstructured.DynamicAMR ):
   fineGridCell""" + solver._cell_label.name + """.setTimeStepSize( coarseGridCell""" + solver._cell_label.name + """.getTimeStepSize() );
 """
 
-    self.__Template_DestroyCell_Core += """    
+    self.__Template_DestroyCell_Core += """
+  // exploit the fact that we can "reuse" some FV utils here    
   ::exahype2::fv::validatePatch(
     {{FINE_GRID_CELL}}.value,
     {{UNKNOWNS}},
