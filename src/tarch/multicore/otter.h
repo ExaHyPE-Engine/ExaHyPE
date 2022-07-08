@@ -34,6 +34,8 @@ namespace otter {
 #if defined(UseOtter)
 #include <otter/otter-serial.h>
 #else
+#define OTTER_SRC_ARGS
+
 #define otterTraceInitialise()
 #define otterTraceFinalise(void)
 #define otterParallelBegin()
