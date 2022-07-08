@@ -16,7 +16,6 @@ import peano4
 import exahype2
 import argparse
 
-
 print( """
 Please call this script from the directory hosting the Makefile and the
 sources. Typically, I invoke the script via
@@ -114,7 +113,7 @@ if args.type=="global-fixed-fd-4":
     flux = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
     eigenvalues = exahype2.solvers.fv.PDETerms.User_Defined_Implementation # not required here, but I like the signatures to be the same for all solver variants
   )
-  thesolver.overlap=2
+  thesolver.overlap=3
 
 
 thesolver.set_implementation( refinement_criterion=exahype2.solvers.fv.PDETerms.User_Defined_Implementation )
