@@ -1,7 +1,7 @@
 # This file is part of the ExaHyPE2 project. For conditions of distribution and 
 # use, please see the copyright notice at www.peano-framework.org
-from exahype2.solvers.fv.SingleSweep import SingleSweep
-from exahype2.solvers.fv.PDETerms    import PDETerms
+from exahype2.solvers.rkfd.SingleSweep import SingleSweep
+from exahype2.solvers.rkfd.PDETerms    import PDETerms
 
 import jinja2
 
@@ -11,7 +11,7 @@ from exahype2.solvers.rkfd.kernels import create_abstract_solver_declarations
 from exahype2.solvers.rkfd.kernels import create_abstract_solver_definitions
 from exahype2.solvers.rkfd.kernels import create_solver_declarations
 from exahype2.solvers.rkfd.kernels import create_solver_definitions
-
+#
 from exahype2.solvers.rkfd.kernels import SolverVariant
 from exahype2.solvers.rkfd.kernels import RiemannKernelVariant
 
@@ -25,10 +25,12 @@ class GlobalAdaptiveTimeStep( SingleSweep ):
     ncp=None, 
     eigenvalues=PDETerms.User_Defined_Implementation, 
     boundary_conditions=None,refinement_criterion=None,initial_conditions=None,source_term=None,
-    plot_grid_properties=False, overlap=3, KOSigma=8.0
+    plot_grid_properties=False, KOSigma=8.0
   ):
-    kernel_namespace="fd4"
-    super(GlobalAdaptiveTimeStep,self).__init__(name, patch_size, overlap, rk_order, unknowns, auxiliary_variables, min_volume_h, max_volume_h, plot_grid_properties, kernel_namespace) 
+    super(GlobalAdaptiveTimeStep,self).__init__(name, 
+                                             patch_size, 
+                                             3, #overlap, 
+                                             rk_order, unknowns, auxiliary_variables, min_volume_h, max_volume_h, plot_grid_properties, kernel_namespace="fd4") 
 
     self._time_step_relaxation = time_step_relaxation
 
