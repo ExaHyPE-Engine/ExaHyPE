@@ -313,8 +313,8 @@ The finest mesh width of """ + str(self.get_finest_volume_size(domain_size)) + "
        
     """
     self._patch                = peano4.datamodel.Patch( (self._patch_size,self._patch_size,self._patch_size), self._unknowns+self._auxiliary_variables, self._unknown_identifier() )
-    self._patch_linear_combination_of_estimates = peano4.datamodel.Patch( (self._patch_size,self._patch_size,self._patch_size), self._unknowns+self._auxiliary_variables, self._unknown_identifier() + "LinearCombinationOfEstimates" )
-    self._patch_estimates      = peano4.datamodel.Patch( (self._patch_size,self._patch_size,self._patch_size), self._unknowns+self._auxiliary_variables, self._unknown_identifier() + "Estimates" )
+    self._patch_linear_combination_of_estimates = peano4.datamodel.Patch( (self._patch_size,self._patch_size,self._patch_size), self._unknowns+self._auxiliary_variables, self._unknown_identifier() + "LinearCombination" )
+    self._patch_estimates      = peano4.datamodel.Patch( (self._patch_size,self._patch_size,self._patch_size), self._unknowns+self._auxiliary_variables, self._unknown_identifier() + "RhsEstimates" )
     self._patch_overlap_old    = peano4.datamodel.Patch( (2*self._overlap,self._patch_size,self._patch_size),  self._unknowns+self._auxiliary_variables, self._unknown_identifier() + "Old" )
     self._patch_overlap_new    = peano4.datamodel.Patch( (2*self._overlap,self._patch_size,self._patch_size),  self._unknowns+self._auxiliary_variables, self._unknown_identifier() + "New" )
     self._patch_overlap_update = peano4.datamodel.Patch( (2*self._overlap,self._patch_size,self._patch_size),  self._unknowns+self._auxiliary_variables, self._unknown_identifier() + "Update" )
@@ -429,6 +429,9 @@ The finest mesh width of """ + str(self.get_finest_volume_size(domain_size)) + "
     self._action_set_roll_over_update_of_faces                   = exahype2.solvers.rkfd.actionsets.RollOverUpdatedFace(self, self._store_face_data_default_guard() )
     self._action_set_copy_new_faces_onto_old_faces               = peano4.toolbox.blockstructured.BackupPatchOverlap(self._patch_overlap_new, self._patch_overlap_old, False, self._store_face_data_default_guard(), self._get_default_includes())
     self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement = exahype2.solvers.rkfd.actionsets.DynamicAMR( solver=self, interpolation=self._interpolation, restriction=self._restriction )
+
+    self._action_set_linear_combination_of_estimates                                  = exahype2.solvers.rkfd.actionsets.LinearCombinationOfEstimates(self)
+    self._action_set_compute_final_linear_combination_and_project_solution_onto_faces = exahype2.solvers.rkfd.actionsets.ComputeFinalLinearCombinationAndProjectSolutionOntoFaces(solver=self,guard=self._store_cell_data_default_guard())
 
     # This one is different: it is the hook-in point for other solvers, so we create it 
     # only once if it does not exist
@@ -674,7 +677,9 @@ The finest mesh width of """ + str(self.get_finest_volume_size(domain_size)) + "
     step.add_action_set( self._action_set_update_face_label )
     step.add_action_set( self._action_set_update_cell_label )
     step.add_action_set( self._action_set_handle_boundary )
+    step.add_action_set( self._action_set_linear_combination_of_estimates )
     step.add_action_set( self._action_set_update_cell )
+    step.add_action_set( self._action_set_compute_final_linear_combination_and_project_solution_onto_faces )
     step.add_action_set( self._action_set_postprocess_solution )
     step.add_action_set( self._action_set_project_patch_onto_faces )
     step.add_action_set( self._action_set_AMR )
@@ -754,6 +759,8 @@ The finest mesh width of """ + str(self.get_finest_volume_size(domain_size)) + "
     d["NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS"]     = self._patch.dim[0]
     d["OVERLAP"]                        = self._overlap
     d["HALO_SIZE"]                      = int(self._patch_overlap_old.dim[0]/2)
+    d["RK_ORDER"]                       = self._rk_order
+    d["RK_STEPS"]                       = self.number_of_Runge_Kutta_steps()
     d["SOLVER_INSTANCE"]                = self.get_name_of_global_instance()
     d["SOLVER_NAME"]                    = self._name
     d["UNKNOWN_IDENTIFIER"]             = self._unknown_identifier()
@@ -800,6 +807,14 @@ The finest mesh width of """ + str(self.get_finest_volume_size(domain_size)) + "
 
     d[ "KERNEL_NAMESPACE"]                    = self._kernel_namespace
 
+    # RungeKuttaDG hat einige er Implementeirungen hier oben schon, weil es ja fuer alle Riemann Loeser gilt
+    #    d[ "FLUX_IMPLEMENTATION"]                 = self._flux_implementation
+    #d[ "NCP_IMPLEMENTATION"]                  = self._ncp_implementation
+    #d[ "SOURCE_TERM_IMPLEMENTATION"]          = self._source_term_implementation
+    #d[ "POINT_SOURCES_IMPLEMENTATION"]        = self._point_sources_implementation
+
+    # setimplementation ist also hier
+    
     
   @property
   def unknowns(self):

@@ -9,4 +9,7 @@ from .DynamicAMR            import DynamicAMR
 from .PostprocessSolution   import EmptyPostprocessSolution
 from .PostprocessSolution   import VolumeWisePostprocessSolution
 
+from .ComputeFinalLinearCombinationAndProjectSolutionOntoFaces  import ComputeFinalLinearCombinationAndProjectSolutionOntoFaces
+from .LinearCombinationOfEstimates                              import LinearCombinationOfEstimates
+
 

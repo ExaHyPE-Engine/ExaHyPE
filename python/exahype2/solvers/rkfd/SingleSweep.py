@@ -122,9 +122,16 @@ class UpdateCell(ReconstructPatchAndApplyFunctor):
 
 
 
+#
+# Todo should have different name
+#
 class SingleSweep( CellCenteredFiniteDifferences ):
   """
     Probably the simplest solver you could think off. 
+    
+    This particular variant works only for Runge-Kutta order greater or equal
+    to two.
+    
 
     :: Write your own specialisation ::
     
@@ -148,6 +155,9 @@ class SingleSweep( CellCenteredFiniteDifferences ):
 
     """
     super(SingleSweep, self).__init__(name, patch_size, overlap, rk_order, unknowns, auxiliary_variables, min_volume_h, max_volume_h, plot_grid_properties, kernel_namespace)
+    
+    if rk_order<2:
+      raise Exception( "Runge-Kutta order has to be at least 2 but was {}".format(rk_order) )
 
     self._solver_template_file_class_name     = "SingleSweep"
 
@@ -173,7 +183,7 @@ class SingleSweep( CellCenteredFiniteDifferences ):
       "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::GridInitialisation" + \
       ")"
     first_iteration_after_initialisation_guard = "(" + \
-      "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::TimeStepAfterGridInitialisation or " + \
+      "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::RungeKuttaSubStep0AfterGridInitialisation or " + \
       "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::PlottingAfterGridInitialisation" + \
     ")"
 
@@ -195,6 +205,10 @@ class SingleSweep( CellCenteredFiniteDifferences ):
     """
     super(SingleSweep, self).create_action_sets()
     self._action_set_update_cell = UpdateCell(self)
+    self._action_set_linear_combination_of_estimates.guards = [
+      "{} and repositories::{}.getSolverState()=={}::SolverState::RungeKuttaSubStep{}".format(self._store_cell_data_default_guard(),self.get_name_of_global_instance(),self._name,step) for step in range(0,self.number_of_Runge_Kutta_steps())
+    ]
+    self._action_set_compute_final_linear_combination_and_project_solution_onto_faces.guard = self._store_cell_data_default_guard() + " and repositories::{}.getSolverState()=={}::SolverState::RungeKuttaSubStep{}".format(self.get_name_of_global_instance(),self._name,self.number_of_Runge_Kutta_steps()-1)
 
 
   @property

@@ -189,12 +189,24 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startTimeStep(
   double globalMinTimeStepSize,
   double globalMaxTimeStepSize
 ) {
-  if ( _solverState==SolverState::GridInitialisation ) {
-    _solverState     = SolverState::TimeStepAfterGridInitialisation;
-  }
-  else {
-    assertion( _solverState!=SolverState::GridConstruction );
-    _solverState     = SolverState::TimeStep;
+  switch (_solverState) {
+    case SolverState::GridConstruction:
+      _solverState = SolverState::GridInitialisation;
+      break;
+  {% for item in range(RK_STEPS-1) %}
+    case SolverState::RungeKuttaSubStep{{item}}:
+      _solverState = SolverState::RungeKuttaSubStep{{item+1}};
+      break;
+  {%- endfor %}
+    case SolverState::Plotting:
+    case SolverState::PlottingAfterGridInitialisation:
+    case SolverState::GridInitialisation:
+    case SolverState::RungeKuttaSubStep{{RK_STEPS-1}}:
+      _solverState = SolverState::RungeKuttaSubStep0;
+      break;
+    case SolverState::RungeKuttaSubStep0AfterGridInitialisation:
+      _solverState = SolverState::RungeKuttaSubStep1;
+      break;
   }
 
   {{START_TIME_STEP_IMPLEMENTATION}}
@@ -324,7 +336,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startPlottingStep(
   double globalMinTimeStepSize,
   double globalMaxTimeStepSize
 ) {
-  if ( _solverState== SolverState::GridInitialisation) {
+  if ( _solverState==SolverState::GridInitialisation ) {
     _solverState = SolverState::PlottingAfterGridInitialisation;
   }
   else {
@@ -343,31 +355,33 @@ std::string {{NAMESPACE | join("::")}}::{{CLASSNAME}}::toString(SolverState stat
       return "grid-construction";
     case SolverState::GridInitialisation:
       return "grid-initialisation";
-    case SolverState::TimeStep:
-      return "time-step";
     case SolverState::Plotting:
       return "plotting";
-    case SolverState::TimeStepAfterGridInitialisation:
-      return "time-step-after-grid-initialisation";
-    case SolverState::PlottingAfterGridInitialisation:
-      return "plotting-after-grid-initialisation";
+    {% for item in range(RK_STEPS) %}
+    case SolverState::RungeKuttaSubStep{{item}}:
+      return "runge-kutta-step-{{item}}";
+      break;
+    {%- endfor %}
   }
   return "<undef>";
 }
 
 
 bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::mayPlot() const {
-  return true;
+  return isLastGridSweepOfTimeStep()
+      or _solverState==SolverState::GridInitialisation
+      or _solverState==SolverState::Plotting;
 }
 
 
 bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::isFirstGridSweepOfTimeStep() const {
-  return true;
+  return _solverState==SolverState::RungeKuttaSubStep0
+      or _solverState==SolverState::RungeKuttaSubStep0AfterGridInitialisation;
 }
 
 
 bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::isLastGridSweepOfTimeStep() const {
-  return true;
+  return _solverState==SolverState::RungeKuttaSubStep{{RK_STEPS-1}};
 }
 
 
