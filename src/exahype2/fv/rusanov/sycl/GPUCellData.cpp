@@ -2,7 +2,7 @@
 #if defined(GPUOffloadingSYCL)
 
 #include "exahype2/CellData.h"
-#include "exahype2/fv/enumerator/AoSLexicographicVolumeEnumerator.h"
+#include "exahype2/enumerator/AoSLexicographicVolumeEnumerator.h"
 #include <cstring>
 
 
