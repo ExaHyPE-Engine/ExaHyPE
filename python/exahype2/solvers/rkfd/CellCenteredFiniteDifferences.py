@@ -313,6 +313,8 @@ The finest mesh width of """ + str(self.get_finest_volume_size(domain_size)) + "
        
     """
     self._patch                = peano4.datamodel.Patch( (self._patch_size,self._patch_size,self._patch_size), self._unknowns+self._auxiliary_variables, self._unknown_identifier() )
+    self._patch_linear_combination_of_estimates = peano4.datamodel.Patch( (self._patch_size,self._patch_size,self._patch_size), self._unknowns+self._auxiliary_variables, self._unknown_identifier() + "LinearCombinationOfEstimates" )
+    self._patch_estimates      = peano4.datamodel.Patch( (self._patch_size,self._patch_size,self._patch_size), self._unknowns+self._auxiliary_variables, self._unknown_identifier() + "Estimates" )
     self._patch_overlap_old    = peano4.datamodel.Patch( (2*self._overlap,self._patch_size,self._patch_size),  self._unknowns+self._auxiliary_variables, self._unknown_identifier() + "Old" )
     self._patch_overlap_new    = peano4.datamodel.Patch( (2*self._overlap,self._patch_size,self._patch_size),  self._unknowns+self._auxiliary_variables, self._unknown_identifier() + "New" )
     self._patch_overlap_update = peano4.datamodel.Patch( (2*self._overlap,self._patch_size,self._patch_size),  self._unknowns+self._auxiliary_variables, self._unknown_identifier() + "Update" )
@@ -332,6 +334,12 @@ The finest mesh width of """ + str(self.get_finest_volume_size(domain_size)) + "
     self._patch.generator.store_persistent_condition = self._store_cell_data_default_guard()
     self._patch.generator.load_persistent_condition  = self._load_cell_data_default_guard()
     
+    self._patch_estimates.generator.store_persistent_condition = self._store_cell_data_default_guard()
+    self._patch_estimates.generator.load_persistent_condition  = self._load_cell_data_default_guard()
+
+    self._patch_linear_combination_of_estimates.generator.store_persistent_condition = self._store_cell_data_default_guard()
+    self._patch_linear_combination_of_estimates.generator.load_persistent_condition  = self._load_cell_data_default_guard()
+
     self._patch_overlap_old.generator.send_condition               = "false"
     self._patch_overlap_old.generator.receive_and_merge_condition  = "false"
 
@@ -351,6 +359,12 @@ The finest mesh width of """ + str(self.get_finest_volume_size(domain_size)) + "
     self._patch_overlap_update.generator.load_persistent_condition    = "false"
 
     self._patch.generator.includes  += """
+#include "../repositories/SolverRepository.h"
+"""    
+    self._patch_estimates.generator.includes  += """
+#include "../repositories/SolverRepository.h"
+"""    
+    self._patch_linear_combination_of_estimates.generator.includes  += """
 #include "../repositories/SolverRepository.h"
 """    
     self._patch_overlap_old.generator.includes  += """
@@ -477,6 +491,8 @@ The finest mesh width of """ + str(self.get_finest_volume_size(domain_size)) + "
       print( str(self._patch_overlap_new) )
     datamodel.add_cell(self._cell_label)
     datamodel.add_cell(self._patch)
+    datamodel.add_cell(self._patch_linear_combination_of_estimates)
+    datamodel.add_cell(self._patch_estimates)
     datamodel.add_face(self._patch_overlap_old)
     datamodel.add_face(self._patch_overlap_new)
     datamodel.add_face(self._patch_overlap_update)
@@ -493,6 +509,8 @@ The finest mesh width of """ + str(self.get_finest_volume_size(domain_size)) + "
     
     """
     step.use_cell(self._patch)
+    step.use_cell(self._patch_linear_combination_of_estimates)
+    step.use_cell(self._patch_estimates)
     step.use_cell(self._cell_label)
     step.use_face(self._patch_overlap_old)
     step.use_face(self._patch_overlap_new)
