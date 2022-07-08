@@ -1,7 +1,7 @@
 // This file is part of the ExaHyPE2 project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
-#ifndef _EXAHYPE2_FV_PATCH_UTILS_H_
-#define _EXAHYPE2_FV_PATCH_UTILS_H_
+#ifndef _EXAHYPE2_FD_PATCH_UTILS_H_
+#define _EXAHYPE2_FD_PATCH_UTILS_H_
 
 
 #include <vector>
@@ -12,48 +12,31 @@
 #include "peano4/grid/GridControlEvent.h"
 #include "peano4/utils/Globals.h"
 
+#include "exahype2/fv/PatchUtils.h"
+
 
 namespace exahype2 {
-  namespace fv {
+  namespace fd {
     /**
-     * We need this routine within vectorised and GPUised code. Therefore,
-     * it has to be in the header (as link-time optimisation is quite tricky
-     * for many compilers). To avoid the implied multiple symbol errors, I
-     * declare the function as static. Now the compilers plot warning, but
-     * everything seems to work.
+     * @see exahype2::fv::getVolumeSize()
      */
-    static tarch::la::Vector<2,double>  getVolumeSize(
+    static tarch::la::Vector<2,double>  getGridCellSize(
       const tarch::la::Vector<2,double>&  h,
-      int                                 numberOfVolumesPerAxisInPatch
+      int                                 numberOfGridCellsPerPatchPerAxis
     )
     //InlineMethod
     {
-      tarch::la::Vector<2,double> volumeSize;
-
-      for (int d=0; d<2; d++) {
-        #if !defined(GPUOffloadingSYCL) and !defined(GPUOffloadingOMP)
-        assertion2( numberOfVolumesPerAxisInPatch>=1, h, numberOfVolumesPerAxisInPatch );
-        #endif
-        volumeSize(d) = h(d)/numberOfVolumesPerAxisInPatch;
-      }
-
-      return volumeSize;
+      return ::exahype2::fv::getVolumeSize(h,numberOfGridCellsPerPatchPerAxis);
     }
 
 
-    static tarch::la::Vector<3,double>  getVolumeSize(
+    static tarch::la::Vector<3,double>  getGridCellSize(
       const tarch::la::Vector<3,double>&  h,
-      int                                 numberOfVolumesPerAxisInPatch
+      int                                 numberOfGridCellsPerPatchPerAxis
     )
     //InlineMethod
     {
-      tarch::la::Vector<3,double> volumeSize;
-
-      for (int d=0; d<3; d++) {
-        volumeSize(d) = h(d)/numberOfVolumesPerAxisInPatch;
-      }
-
-      return volumeSize;
+      return ::exahype2::fv::getVolumeSize(h,numberOfGridCellsPerPatchPerAxis);
     }
 
 
@@ -72,57 +55,28 @@ namespace exahype2 {
      * @param h      Size of the cell
      * @param index  Index of Finite Volume (in lexicographic ordering)
      */
-    static tarch::la::Vector<2,double>  getVolumeCentre(
+    static tarch::la::Vector<2,double>  getGridCellCentre(
       const tarch::la::Vector<2,double>&  x,
       const tarch::la::Vector<2,double>&  h,
-      int                                 numberOfVolumesPerAxisInPatch,
+      int                                 numberOfGridCellsPerPatchPerAxis,
       const tarch::la::Vector<2,int>&     index
     )
     //InlineMethod
     {
-      tarch::la::Vector<2,double> volumeSize = getVolumeSize(h,numberOfVolumesPerAxisInPatch);
-      tarch::la::Vector<2,double> result     = x - 0.5 * h + 0.5 * volumeSize;
-      for (int d=0; d<2; d++) {
-        result(d) += index(d) * volumeSize(d);
-      }
-      return result;
+      return ::exahype2::fv::getVolumeCentre(x,h,numberOfGridCellsPerPatchPerAxis,index);
     }
 
 
-    static tarch::la::Vector<3,double>  getVolumeCentre(
+    static tarch::la::Vector<3,double>  getGridCellCentre(
       const tarch::la::Vector<3,double>&  x,
       const tarch::la::Vector<3,double>&  h,
-      int                                 numberOfVolumesPerAxisInPatch,
+      int                                 numberOfGridCellsPerPatchPerAxis,
       const tarch::la::Vector<3,int>&     index
     )
     //InlineMethod
     {
-      tarch::la::Vector<3,double> volumeSize = getVolumeSize(h,numberOfVolumesPerAxisInPatch);
-      tarch::la::Vector<3,double> result     = x - 0.5 * h + 0.5 * volumeSize;
-      for (int d=0; d<3; d++) {
-        result(d) += index(d) * volumeSize(d);
-      }
-      return result;
+      return ::exahype2::fv::getVolumeCentre(x,h,numberOfGridCellsPerPatchPerAxis,index);
     }
-
-
-    /**
-     * With GCC 10, it was impossible to return/copy the vector class. We
-     * almost never need it however, as we work with cubes. This specialisation
-     * thus does the job.
-     *
-     * @see getVolumeSize()
-     */
-    double  getVolumeLength(
-      const tarch::la::Vector<2,double>&  h,
-      int                                 numberOfVolumesPerAxisInPatch
-    );
-
-
-    double  getVolumeLength(
-      const tarch::la::Vector<3,double>&  h,
-      int                                 numberOfVolumesPerAxisInPatch
-    );
 
 
     /**
@@ -131,7 +85,7 @@ namespace exahype2 {
      *
      * @return Data of one volume as tuple.
      */
-    std::string plotVolume(
+    std::string plotGridCell(
       const double* __restrict__ Q,
       int    unknowns
     );
@@ -153,7 +107,7 @@ namespace exahype2 {
       const double* __restrict__ Q,
       int    unknowns,
       int    auxiliaryVariables,
-      int    numberOfVolumesPerAxisInPatch,
+      int    numberOfGridCellsPerPatchPerAxis,
       int    haloSize,
       const std::string& location = "",
       bool   triggerNonCriticalAssertion = true,
@@ -172,7 +126,7 @@ namespace exahype2 {
       const double* __restrict__ Q,
       int    unknowns,
       int    auxiliaryVariables,
-      int    numberOfVolumesPerAxisInPatch,
+      int    numberOfGridCellsPerPatchPerAxis,
       int    haloSize
     );
   }

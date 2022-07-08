@@ -6,39 +6,48 @@ from exahype2.solvers.rkfd.PDETerms    import PDETerms
 import jinja2
 
 from .kernels import create_compute_Riemann_kernel_for_FD4
-from .kernels import create_abstract_solver_declarations
-from .kernels import create_abstract_solver_definitions
-from .kernels import create_solver_declarations
-from .kernels import create_solver_definitions
 
-from .kernels import SolverVariant
-from .kernels import RiemannKernelVariant
+from exahype2.solvers.rkfd.kernels import create_abstract_solver_declarations
+from exahype2.solvers.rkfd.kernels import create_abstract_solver_definitions
+from exahype2.solvers.rkfd.kernels import create_solver_declarations
+from exahype2.solvers.rkfd.kernels import create_solver_definitions
+
+from exahype2.solvers.rkfd.kernels import SolverVariant
+from exahype2.solvers.rkfd.kernels import RiemannKernelVariant
 
 from exahype2.solvers.rkfd.FixedTimeSteppingCodeSnippets import FixedTimeSteppingCodeSnippets
 
 
 class GlobalFixedTimeStep( SingleSweep ):
   def __init__(self, 
-    name, patch_size, unknowns, auxiliary_variables, min_volume_h, max_volume_h, normalised_time_step_size,
+    name, patch_size, rk_order, unknowns, auxiliary_variables, min_volume_h, max_volume_h, normalised_time_step_size,
     flux=PDETerms.User_Defined_Implementation, 
     ncp=None, 
-    eigenvalues=PDETerms.User_Defined_Implementation, 
+    eigenvalues=PDETerms.None_Implementation, 
     boundary_conditions=None,refinement_criterion=None,initial_conditions=None,source_term=None,
-    plot_grid_properties=False, overlap=3, kernel_namespace="fd4", KOSigma=8.0
+    plot_grid_properties=False, KOSigma=8.0
   ):
     """
+    
+    eigenvalues: C++ source code or from PDETerms or None
+      By default is None_Implementation, as we don't need eigenvalues as long as we
+      work with fixed time step sizes. You can change it manually. Still, the fixed
+      time stepping won't use the eigenvalues but you might have code that has it and
+      that you don't want to change.
+      
   
-    time_step_size: Float
+    normalised_time_step_size: Float
       This is the normalised time step size w.r.t. the coarsest admissible h value. If
       the code employs AMR on top of it and refines further, it will automatically 
       downscale the time step size accordingly. So hand in a valid time step size w.r.t.
       to max_volume_h.
   
     """
-    super(GlobalFixedTimeStep,self).__init__(name, patch_size, overlap, unknowns, auxiliary_variables, min_volume_h, max_volume_h, plot_grid_properties, kernel_namespace="fd4") 
+    super(GlobalFixedTimeStep,self).__init__(name, 
+                                             patch_size, 
+                                             3, #overlap, 
+                                             rk_order, unknowns, auxiliary_variables, min_volume_h, max_volume_h, plot_grid_properties, kernel_namespace="fd4") 
     
-    if overlap<3:
-      raise Exception( "overlap has to be at least 3 but was {}".format(overlap) )
     self._normalised_time_step_size = normalised_time_step_size
 
     self._flux_implementation                 = PDETerms.None_Implementation
@@ -49,7 +58,7 @@ class GlobalFixedTimeStep( SingleSweep ):
     self._KO_Sigma                            = KOSigma
     
     self._user_action_set_includes += """
-#include "exahype2/fd/FD4.h"
+#include "exahype2/fd/fd4/FD4.h"
 """
 
     self.set_implementation(flux=flux, 
@@ -69,7 +78,7 @@ class GlobalFixedTimeStep( SingleSweep ):
     use_split_loop          = False,
     additional_action_set_includes = "",
     additional_user_includes       = "",
-    KOSigma                 = -999
+    KOSigma                 = None
   ):
     """
       If you pass in User_Defined, then the generator will create C++ stubs
@@ -83,11 +92,11 @@ class GlobalFixedTimeStep( SingleSweep ):
 
       This routine should be the very last invoked by the constructor.
     """
-    if flux                 is not None:  self._flux_implementation                       = flux
-    if ncp                  is not None:  self._ncp_implementation                        = ncp
-    if eigenvalues          is not None:  self._eigenvalues_implementation                = eigenvalues
-    if source_term          is not None:  self._source_term_implementation                = source_term
-    if not                KOSigma==-999:  self._KO_Sigma                                  = KOSigma
+    if flux                 is not None:    self._flux_implementation                       = flux
+    if ncp                  is not None:    self._ncp_implementation                        = ncp
+    if eigenvalues          is not None:    self._eigenvalues_implementation                = eigenvalues
+    if source_term          is not None:    self._source_term_implementation                = source_term
+    if not                  KOSigma==None:  self._KO_Sigma                                  = KOSigma
 
     self._compute_kernel_call = create_compute_Riemann_kernel_for_FD4(
       self._flux_implementation, self._ncp_implementation, self._source_term_implementation, 

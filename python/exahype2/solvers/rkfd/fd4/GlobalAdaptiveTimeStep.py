@@ -6,15 +6,16 @@ from exahype2.solvers.fv.PDETerms    import PDETerms
 import jinja2
 
 from .kernels import create_compute_Riemann_kernel_for_FD4
-from .kernels import create_abstract_solver_declarations
-from .kernels import create_abstract_solver_definitions
-from .kernels import create_solver_declarations
-from .kernels import create_solver_definitions
+
+from exahype2.solvers.rkfd.kernels import create_abstract_solver_declarations
+from exahype2.solvers.rkfd.kernels import create_abstract_solver_definitions
+from exahype2.solvers.rkfd.kernels import create_solver_declarations
+from exahype2.solvers.rkfd.kernels import create_solver_definitions
+
+from exahype2.solvers.rkfd.kernels import SolverVariant
+from exahype2.solvers.rkfd.kernels import RiemannKernelVariant
 
 from exahype2.solvers.fv.AdaptiveTimeSteppingCodeSnippets import AdaptiveTimeSteppingCodeSnippets
-
-from .kernels import SolverVariant
-from .kernels import RiemannKernelVariant
 
 
 class GlobalAdaptiveTimeStep( SingleSweep ):

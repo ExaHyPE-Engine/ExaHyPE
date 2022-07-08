@@ -1,23 +1,25 @@
 // This file is part of the ExaHyPE2 project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
-#ifndef _EXAHYPE2_FD4_H_
-#define _EXAHYPE2_FD4_H_
+#ifndef _EXAHYPE2_FD_FD4_H_
+#define _EXAHYPE2_FD_FD4_H_
 
 
-#include "Functors.h"
-#include "LoopBody.h"
+#include "exahype2/fd/Functors.h"
+#include "exahype2/fd/LoopBody.h"
+#include "exahype2/fd/fd4/LoopBody.h"
 
 #include "exahype2/CellData.h"
 
 
 namespace exahype2 {
   namespace fd {
-    /**
-     * Fourth-order Finite Differences
-     */
-    static void timeStepWithFD4_patchwise_heap_functors(
+    namespace fd4 {
+      /**
+       * Fourth-order Finite Differences
+       */
+      static void timeStep_patchwise_heap_functors(
         ::exahype2::CellData&   patchData,
-        int                     numberOfVolumesPerAxisInPatch,
+        int                     numberOfGridCellsPerPatchPerAxis,
         int                     haloSize,
         int                     unknowns,
         int                     auxiliaryVariables,
@@ -35,11 +37,12 @@ namespace exahype2 {
       __attribute__((always_inline))
       #endif
       ;
+    }
   }
 }
 
 
-#include "FD4_Helper.cpph"
+#include "exahype2/fd/FD_Helper.cpph"
 #include "FD4_patchwise_functors.cpph"
 
 #endif

@@ -1,81 +1,12 @@
 #include "tarch/compiler/CompilerSpecificSettings.h"
 #include "exahype2/Solver.h"
-#include "exahype2/fv/PatchUtils.h"
+#include "exahype2/fd/PatchUtils.h"
 
 
-#if defined(GPUOffloadingOMP)
-#pragma omp declare target
-#endif
-template <class QInEnumeratorType, class QOutEnumeratorType>
-void exahype2::fd::internal::copySolution_LoopBody(
-  const double* __restrict__                QIn,
-  const QInEnumeratorType&                  QInEnumerator,
-  int                                       patchIndex,
-  const tarch::la::Vector<Dimensions,int>&  volumeIndex,
-  int                                       unknown,
-  double* __restrict__                      QOut,
-  const QOutEnumeratorType&                 QOutEnumerator
-) {
-  QOut[ QOutEnumerator(patchIndex,volumeIndex,unknown) ] = QIn[ QInEnumerator(patchIndex,volumeIndex,unknown) ];
-}
-#if defined(GPUOffloadingOMP)
-#pragma omp end declare target
-#endif
 
 
 template <class QInEnumeratorType, class QOutEnumeratorType>
-void exahype2::fd::internal::copySolutionAndAddAlgebraicSourceTerm_LoopBody(
-  const double* __restrict__                   QIn,
-  const QInEnumeratorType&                     QInEnumerator,
-  exahype2::fd::Source          	       AlgebraicSource,
-  const tarch::la::Vector<Dimensions,double>&  patchCentre,
-  const tarch::la::Vector<Dimensions,double>&  patchSize,
-  int                                          patchIndex,
-  const tarch::la::Vector<Dimensions,int>&     volumeIndex,
-  double                                       t,
-  double                                       dt,
-  double* __restrict__                         QOut,
-  const QOutEnumeratorType&                    QOutEnumerator
-) {
-  double QInGathered[QInEnumerator._unknowns+QInEnumerator._numberOfAuxiliaryVariables];
-  double QAlgebraicSourceGathered[QInEnumerator._unknowns];
-
-  // gather
-  for (int unknown=0; unknown<QInEnumerator._unknowns+QInEnumerator._numberOfAuxiliaryVariables; unknown++) {
-    QInGathered[unknown] = QIn[ QInEnumerator(patchIndex,volumeIndex,unknown) ];
-  }
-
-  AlgebraicSource(
-      QInGathered,
-      ::exahype2::fv::getVolumeCentre( patchCentre, patchSize, QInEnumerator._numberOfDoFsPerAxisInCell, volumeIndex ),
-      ::exahype2::fv::getVolumeSize( patchSize, QInEnumerator._numberOfDoFsPerAxisInCell ),
-      t,
-      dt,
-      QAlgebraicSourceGathered
-  );
-
-  for (int unknown=0; unknown<QInEnumerator._unknowns; unknown++) {
-    QOut[ QOutEnumerator(patchIndex,volumeIndex,unknown) ] = QIn[ QInEnumerator(patchIndex,volumeIndex,unknown) ]
-                                                             + dt * QAlgebraicSourceGathered[unknown];
-    assertion4(
-      QOut[ QOutEnumerator(patchIndex, volumeIndex,unknown) ]==QOut[ QOutEnumerator(patchIndex, volumeIndex,unknown) ],
-      dt, unknown, volumeIndex,
-      QOutEnumerator(patchIndex,volumeIndex,unknown)
-    );
-  }
-  for (int unknown=QInEnumerator._unknowns; unknown<QInEnumerator._unknowns+QInEnumerator._numberOfAuxiliaryVariables; unknown++) {
-    QOut[ QOutEnumerator(patchIndex,volumeIndex,unknown) ] = QIn[QInEnumerator(patchIndex,volumeIndex,unknown)];
-    assertion4(
-      QOut[ QOutEnumerator(patchIndex, volumeIndex,unknown) ]==QOut[ QOutEnumerator(patchIndex, volumeIndex,unknown) ],
-      dt, unknown, volumeIndex,
-      QOutEnumerator(patchIndex, volumeIndex,unknown)
-    );
-  }
-}
-
-
-template <class QInEnumeratorType, class QOutEnumeratorType>
-void exahype2::fd::internal::computeDifferentialSourceTerm_LoopBody(
+void exahype2::fd::fd4::internal::computeDifferentialSourceTerm_LoopBody(
   const double* __restrict__                     QIn,
   const QInEnumeratorType&                       QInEnumerator,
   exahype2::fd::NonconservativeProduct      DifferentialSource,
@@ -118,8 +49,8 @@ void exahype2::fd::internal::computeDifferentialSourceTerm_LoopBody(
 
   DifferentialSource(
     CentralQ, DeltaQ,
-    ::exahype2::fv::getVolumeCentre( patchCentre, patchSize, QInEnumerator._numberOfDoFsPerAxisInCell, volumeIndex ),
-    ::exahype2::fv::getVolumeSize( patchSize, QInEnumerator._numberOfDoFsPerAxisInCell ),
+    ::exahype2::fd::getGridCellCentre( patchCentre, patchSize, QInEnumerator._numberOfDoFsPerAxisInCell, volumeIndex ),
+    ::exahype2::fd::getGridCellSize( patchSize, QInEnumerator._numberOfDoFsPerAxisInCell ),
     t,
     dt,
     normal,
@@ -139,7 +70,7 @@ void exahype2::fd::internal::computeDifferentialSourceTerm_LoopBody(
 
 
 template <class QInEnumeratorType, class QOutEnumeratorType>
-void exahype2::fd::internal::computeKreissOligerDissipationTerm_LoopBody(
+void exahype2::fd::fd4::internal::computeKreissOligerDissipationTerm_LoopBody(
   const double* __restrict__                     QIn,
   const QInEnumeratorType&                       QInEnumerator,
   const tarch::la::Vector<Dimensions,double>&    patchCentre,
@@ -200,7 +131,7 @@ void exahype2::fd::internal::computeKreissOligerDissipationTerm_LoopBody(
 
 
 template <typename QOutEnumeratorType>
-void exahype2::fd::internal::updateSolutionWithDifferentialSourceTerm_LoopBody(
+void exahype2::fd::fd4::internal::updateSolutionWithDifferentialSourceTerm_LoopBody(
   const double* __restrict__                   QDiffSrcX,
   const double* __restrict__                   QDiffSrcY,
   const double* __restrict__                   QDiffSrcZ,
@@ -239,7 +170,7 @@ void exahype2::fd::internal::updateSolutionWithDifferentialSourceTerm_LoopBody(
 
 
 template <typename QOutEnumeratorType>
-void exahype2::fd::internal::updateSolutionWithKODissipationTerm_LoopBody(
+void exahype2::fd::fd4::internal::updateSolutionWithKODissipationTerm_LoopBody(
   const double                                 KOSigma,
   const double* __restrict__                   QKODspX,
   const double* __restrict__                   QKODspY,
@@ -275,45 +206,4 @@ void exahype2::fd::internal::updateSolutionWithKODissipationTerm_LoopBody(
                      updateAlongOneCoordinateDirection( QKODspX, 0 );
                      updateAlongOneCoordinateDirection( QKODspY, 1 );
   if (Dimensions==3) updateAlongOneCoordinateDirection( QKODspZ, 2 );
-}
-
-
-template <class QOutEnumeratorType>
-double exahype2::fd::internal::reduceMaxEigenvalue_LoopBody(
-    const double* __restrict__                   QOut,
-    const QOutEnumeratorType&                    QOutEnumerator,
-    exahype2::fd::MaxEigenvalue                  maxEigenvalue,
-    const tarch::la::Vector<Dimensions,double>&  patchCentre,
-    const tarch::la::Vector<Dimensions,double>&  patchSize,
-    int                                          patchIndex,
-    const tarch::la::Vector<Dimensions,int>&     volumeIndex,
-    double                                       t,
-    double                                       dt
-) {
-    double QGathered[QOutEnumerator._unknowns+QOutEnumerator._numberOfAuxiliaryVariables];
-
-    // gather
-    #if defined(SharedOMP)
-    #pragma omp simd
-    #endif
-    for (int unknown=0; unknown<QOutEnumerator._unknowns+QOutEnumerator._numberOfAuxiliaryVariables; unknown++) {
-      QGathered[unknown] = QOut[ QOutEnumerator(patchIndex,volumeIndex,unknown) ];
-    }
-
-    double result = 0.0;
-    for (int normal=0; normal<Dimensions; normal++) {
-      result = std::max(
-        result,
-        maxEigenvalue(
-          QGathered,
-          ::exahype2::fv::getVolumeCentre( patchCentre, patchSize, QOutEnumerator._numberOfDoFsPerAxisInCell, volumeIndex ),
-          ::exahype2::fv::getVolumeSize( patchSize, QOutEnumerator._numberOfDoFsPerAxisInCell ),
-          t,
-          dt,
-          normal
-        )
-      );
-    }
-
-    return result;
 }

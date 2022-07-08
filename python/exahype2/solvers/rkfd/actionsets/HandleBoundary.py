@@ -29,7 +29,7 @@ class HandleBoundary(AbstractRKFDActionSet):
       fineGridFace{{SOLVER_NAME}}FaceLabel.getBoundary()
     ) {
       logTraceInWith3Arguments( "touchFaceFirstTime(...)", fineGridFace{{SOLVER_NAME}}FaceLabel.toString(), (repositories::{{SOLVER_INSTANCE}}.PeriodicBC[marker.getSelectedFaceNumber()%Dimensions]), marker.toString() );
-      ::exahype2::fv::applyBoundaryConditions(
+      ::exahype2::fd::applyBoundaryConditions(
         [&](
           const double * __restrict__                  Qinside,
           double * __restrict__                        Qoutside,
@@ -51,7 +51,7 @@ class HandleBoundary(AbstractRKFDActionSet):
         marker.getSelectedFaceNumber(),
         fineGridFace{{UNKNOWN_IDENTIFIER}}New.value
       );
-      ::exahype2::fv::applyBoundaryConditions(
+      ::exahype2::fd::applyBoundaryConditions(
         [&](
           const double * __restrict__                  Qinside,
           double * __restrict__                        Qoutside,

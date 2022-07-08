@@ -18,6 +18,7 @@ import exahype2.solvers.rkfd.actionsets
     
 from .PDETerms import PDETerms
 
+from exahype2.solvers.ButcherTableau              import RungeKutta_steps
 
 class CellCenteredFiniteDifferences(object):
   """ 
@@ -29,7 +30,7 @@ class CellCenteredFiniteDifferences(object):
   """
   
       
-  def __init__(self, name, patch_size, overlap, unknowns, auxiliary_variables, min_meshcell_h, max_meshcell_h, plot_grid_properties, kernel_namespace="rusanov"):
+  def __init__(self, name, patch_size, overlap, rk_order, unknowns, auxiliary_variables, min_meshcell_h, max_meshcell_h, plot_grid_properties, kernel_namespace):
     """
   name: string
      A unique name for the solver. This one will be used for all generated 
@@ -73,6 +74,7 @@ class CellCenteredFiniteDifferences(object):
 
     self._patch_size           = patch_size  
     self._overlap              = overlap
+    self._rk_order             = rk_order
     self._unknowns             = unknowns
     self._auxiliary_variables  = auxiliary_variables
 
@@ -80,6 +82,8 @@ class CellCenteredFiniteDifferences(object):
     self._user_action_set_includes  = ""
     self._user_solver_includes      = ""
     
+    self._kernel_namespace = kernel_namespace
+
     if min_meshcell_h>max_meshcell_h:
        print( "Error: min_meshcell_h (" + str(min_meshcell_h) + ") is bigger than max_meshcell_h (" + str(max_meshcell_h) + ")" )
 
@@ -124,8 +128,6 @@ class CellCenteredFiniteDifferences(object):
     self._interpolation = "piecewise_constant"
     self._restriction   = "averaging"
     
-    self._kernel_namespace = kernel_namespace
-
     self.create_data_structures()
     self.create_action_sets()
 
@@ -135,6 +137,7 @@ class CellCenteredFiniteDifferences(object):
 Name:                   """ + self._name + """
 Type:                   """ + self.__class__.__name__ + """
 Patch size:             """ + str( self._patch_size ) + """  
+Runge-Kutta order:      """ + str( self._rk_order ) + """
 Overlap:                """ + str( self._overlap ) + """  
 Unknowns:               """ + str( self._unknowns ) + """
 Auxiliary variables:    """ + str( self._auxiliary_variables ) + """
@@ -238,6 +241,10 @@ The finest mesh width of """ + str(self.get_finest_volume_size(domain_size)) + "
     
     """
     return self._user_solver_includes
+
+
+  def number_of_Runge_Kutta_steps(self):
+    return RungeKutta_steps(self._rk_order)
 
   
   def add_user_action_set_includes(self,value):

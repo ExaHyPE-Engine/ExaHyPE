@@ -107,11 +107,12 @@ if args.type=="global-fixed-fd-4":
   thesolver = exahype2.solvers.rkfd.fd4.GlobalFixedTimeStep(
     solver_name,
     args.patch_size,
+    args.rk_order,
     unknowns, auxiliary_variables,
     min_h, max_h,
     time_step_size,
     flux = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
-    eigenvalues = exahype2.solvers.fv.PDETerms.User_Defined_Implementation
+    eigenvalues = exahype2.solvers.fv.PDETerms.User_Defined_Implementation # not required here, but I like the signatures to be the same for all solver variants
   )
   thesolver.overlap=2
 

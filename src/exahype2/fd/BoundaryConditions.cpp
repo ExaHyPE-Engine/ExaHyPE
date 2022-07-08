@@ -2,10 +2,13 @@
 
 #include "peano4/utils/Globals.h"
 #include "peano4/utils/Loop.h"
-#include "PatchUtils.h"
+
+#include "tarch/logging/Log.h"
+
+#include "exahype2/fd/PatchUtils.h"
 
 
-void exahype2::fv::applyBoundaryConditions(
+void exahype2::fd::applyBoundaryConditions(
   std::function< void(
     const double* __restrict__                   Qinside,
     double * __restrict__                        Qoutside,
@@ -19,17 +22,15 @@ void exahype2::fv::applyBoundaryConditions(
   const tarch::la::Vector<Dimensions,double>&  patchSize,
   double                                       t,
   double                                       dt,
-  int                                          numberOfVolumesPerAxisInPatch,
+  int                                          numberOfGridCellsPerPatchPerAxis,
   int                                          overlap,
   int                                          unknowns,
   int                                          faceNumber,
   double* __restrict__                         Q
 ) {
-  static tarch::logging::Log _log( "exahype2::fv" );
+  static tarch::logging::Log _log( "exahype2::fd" );
 
-  assertionMsg( overlap==1, "other overlaps not yet supported. @Han, we have to discuss this or you make a proposal" );
-
-  auto serialisePatchIndex = [&](tarch::la::Vector<Dimensions,int> overlapCell) {{
+  auto serialisePatchIndex = [&](tarch::la::Vector<Dimensions,int> overlapCell) {
     int base   = 1;
     int result = 0;
     for (int d=0; d<Dimensions; d++) {{
@@ -38,63 +39,63 @@ void exahype2::fv::applyBoundaryConditions(
         base *= 2*overlap;
       }}
       else {{
-        base *= numberOfVolumesPerAxisInPatch;
+        base *= numberOfGridCellsPerPatchPerAxis;
       }}
     }}
     return result;
-  }};
+  };
 
-  logTraceInWith4Arguments( "applyBoundaryConditions(...)", faceCentre, patchSize, numberOfVolumesPerAxisInPatch, faceNumber);
+  logTraceInWith4Arguments( "applyBoundaryConditions(...)", faceCentre, patchSize, numberOfGridCellsPerPatchPerAxis, faceNumber);
 
-  tarch::la::Vector<Dimensions,double> volumeH    = exahype2::fv::getVolumeSize(patchSize, numberOfVolumesPerAxisInPatch);
+  tarch::la::Vector<Dimensions,double> volumeH    = exahype2::fd::getGridCellSize(patchSize, numberOfGridCellsPerPatchPerAxis);
   tarch::la::Vector<Dimensions,double> faceOffset = faceCentre - 0.5 * patchSize;
   faceOffset(faceNumber%Dimensions) += 0.5 * patchSize(faceNumber%Dimensions);
 
-  dfore(volume,numberOfVolumesPerAxisInPatch,faceNumber % Dimensions,0) {
-    tarch::la::Vector<Dimensions,int> insideVolume  = volume;
-    tarch::la::Vector<Dimensions,int> outsideVolume = volume;
+  dfore(volume,numberOfGridCellsPerPatchPerAxis,faceNumber % Dimensions,0) {
+    tarch::la::Vector<Dimensions,int> insideGridCell  = volume;
+    tarch::la::Vector<Dimensions,int> outsideGridCell = volume;
     tarch::la::Vector<Dimensions,double> x          = faceOffset + tarch::la::multiplyComponents( tarch::la::convertScalar<double>(volume)+tarch::la::Vector<Dimensions,double>(0.5), volumeH);
 
     x(faceNumber%Dimensions) -= 0.5 * volumeH(faceNumber%Dimensions);
 
     for (int layer=0; layer<overlap; layer++){
     if (faceNumber<Dimensions) {
-      insideVolume(faceNumber % Dimensions)  = overlap-layer;
-      outsideVolume(faceNumber % Dimensions) = overlap-1-layer;
+      insideGridCell(faceNumber % Dimensions)  = overlap-layer;
+      outsideGridCell(faceNumber % Dimensions) = overlap-1-layer;
   
-      int insideVolumeSerialised  = serialisePatchIndex(insideVolume);
-      int outsideVolumeSerialised = serialisePatchIndex(outsideVolume);
+      int insideGridCellSerialised  = serialisePatchIndex(insideGridCell);
+      int outsideGridCellSerialised = serialisePatchIndex(outsideGridCell);
 
       logDebug(
         "applyBoundaryConditions(...)",
-        insideVolume << "->" << outsideVolume << " (" << insideVolumeSerialised << "->" << outsideVolumeSerialised << "): " <<
-        "(" << *(Q + insideVolumeSerialised * unknowns) << ",...)^T->" <<
-        "(" << *(Q + outsideVolumeSerialised * unknowns) << ",...)^T"
+        insideGridCell << "->" << outsideGridCell << " (" << insideGridCellSerialised << "->" << outsideGridCellSerialised << "): " <<
+        "(" << *(Q + insideGridCellSerialised * unknowns) << ",...)^T->" <<
+        "(" << *(Q + outsideGridCellSerialised * unknowns) << ",...)^T"
       );
 
       boundaryCondition(
-        Q + insideVolumeSerialised * unknowns,
-        Q + outsideVolumeSerialised * unknowns,
+        Q + insideGridCellSerialised * unknowns,
+        Q + outsideGridCellSerialised * unknowns,
         x, volumeH, t, dt, faceNumber
       );
     }
     else {
-      insideVolume(faceNumber % Dimensions)  = layer+overlap-1;
-      outsideVolume(faceNumber % Dimensions) = layer+overlap;
+      insideGridCell(faceNumber % Dimensions)  = layer+overlap-1;
+      outsideGridCell(faceNumber % Dimensions) = layer+overlap;
 
-      int insideVolumeSerialised  = serialisePatchIndex(insideVolume);
-      int outsideVolumeSerialised = serialisePatchIndex(outsideVolume);
+      int insideGridCellSerialised  = serialisePatchIndex(insideGridCell);
+      int outsideGridCellSerialised = serialisePatchIndex(outsideGridCell);
 
       logDebug(
         "applyBoundaryConditions(...)",
-        insideVolume << "->" << outsideVolume << " (" << insideVolumeSerialised << "->" << outsideVolumeSerialised << "): " <<
-        "(" << *(Q + insideVolumeSerialised * unknowns) << ",...)^T->" <<
-        "(" << *(Q + outsideVolumeSerialised * unknowns) << ",...)^T"
+        insideGridCell << "->" << outsideGridCell << " (" << insideGridCellSerialised << "->" << outsideGridCellSerialised << "): " <<
+        "(" << *(Q + insideGridCellSerialised * unknowns) << ",...)^T->" <<
+        "(" << *(Q + outsideGridCellSerialised * unknowns) << ",...)^T"
       );
 
       boundaryCondition(
-        Q + insideVolumeSerialised * unknowns,
-        Q + outsideVolumeSerialised * unknowns,
+        Q + insideGridCellSerialised * unknowns,
+        Q + outsideGridCellSerialised * unknowns,
         x, volumeH, t, dt, faceNumber
       );
     }
