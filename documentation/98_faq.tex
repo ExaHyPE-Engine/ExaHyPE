@@ -121,5 +121,23 @@ for (int i=0; i<NumberOfUnknowns+NumberOfAuxiliaryVariables; i++) {
   as you do not use the auxiliary variables to exchange information between
   patches, but you have to set proper values nevertheless. Otherwise, all of
   \Peano's assertions will fail as it detects data corruption.
+  \item \textbf{My higher order solver yields physically slightly unreasonable
+  data for the Riemann solves.}
+  If you use a higher-order scheme \ExaHyPE\ has to project your polynomial 
+  solution onto the faces. For this, it uses pre-assembled matrices which are
+  stored in double precision. However, round-off errors might lead to situations
+  where you get small deviations---we have seen densities around $-10^{-8}$ for
+  the Euler equations, e.g. Usually, such round-off errors are fine, but you
+  might run into problems if you take the square root of such tiny negative
+  values, e.g. It is therefore important that you apply the maximum function:
+  \begin{code}
+// Naive code leading into problems:  
+// nonCriticalAssertion8( p>=0.0, Q[0], Q[1], Q[2], Q[3], Q[4], x, t, normal );
+// const double c   = std::sqrt( gamma * p * irho );
+
+// working code:
+nonCriticalAssertion9( tarch::la::greaterEquals(p,0.0), Q[0], Q[1], Q[2], Q[3], Q[4], x, t, normal, p );
+const double c   = std::sqrt( std::max(0.0,gamma * p * irho) );
+  \end{code}
   \item To be continued \dots
 \end{itemize}

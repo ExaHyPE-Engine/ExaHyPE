@@ -14,56 +14,56 @@
 
 
 namespace exahype2 {
+  /**
+   * Representation of a number of cells which contains all information
+   * that's required to process the stored patches or polynomial shape
+   * functions (given you know the semantics of the data).
+   *
+   * This struct is a mixture of AoS and SoA. All data besides the Qin and
+   * result are SoA. The reason for this "inconsistent" model is that we
+   * want to transfer the patch data to accelerators quickly, while we also
+   * want to avoid to copy too much stuff around. So we leave the big input
+   * fields and basically manage just pointers to that. All scalar or small
+   * vector data are converted in SoA which makes it fairly straightforward
+   * later to move them over to an accelerator.
+   *
+   * ## Memory responsibility
+   *
+   * The PatchData object is a meta object. It does not administer any major
+   * heap data itself. That is, its QIn data has to be redirected to the
+   * reconstructed data, i.e. the patch data including the halos, by the user.
+   * This happens for example in applyKernelToCell() where we create a
+   * PatchData object over both allocated input and output data.
+   */
+  struct CellData {
+    double**   QIn;
+    tarch::la::Vector<Dimensions,double>*   cellCentre;
+    tarch::la::Vector<Dimensions,double>*   cellSize;
+    double*    t;
+    double*    dt;
+    int*       id;
+    const int  numberOfCells;
+    double**   QOut;
+    double*    maxEigenvalue;
+
     /**
-     * Representation of a number of patches which contains all information
-     * that's required to process them (given you know the semantics of the
-     * data).
-     *
-     * This struct is a mixture of AoS and SoA. All data besides the Qin and
-     * result are SoA. The reason for this "inconsistent" model is that we
-     * want to transfer the patch data to accelerators quickly, while we also
-     * want to avoid to copy too much stuff around. So we leave the big input
-     * fields and basically manage just pointers to that. All scalar or small
-     * vector data are converted in SoA which makes it fairly straightforward
-     * later to move them over to an accelerator.
-     *
-     * ## Memory responsibility
-     *
-     * The PatchData object is a meta object. It does not administer any major
-     * heap data itself. That is, its QIn data has to be redirected to the
-     * reconstructed data, i.e. the patch data including the halos, by the user.
-     * This happens for example in applyKernelToCell() where we create a
-     * PatchData object over both allocated input and output data.
+     * Construct patch data object for one single cell.
      */
-    struct CellData {
-      double**   QIn;
-      tarch::la::Vector<Dimensions,double>*   patchCentre;
-      tarch::la::Vector<Dimensions,double>*   patchSize;
-      double*    t;
-      double*    dt;
-      int*       id;
-      const int  numberOfCells;
-      double**   QOut;
-      double*    maxEigenvalue;
+    CellData(
+      double*   QIn,
+      const tarch::la::Vector<Dimensions,double>&   cellCentre_,
+      const tarch::la::Vector<Dimensions,double>&   cellSize_,
+      double    t,
+      double    dt,
+      double*   QOut
+    );
 
-      /**
-       * Construct patch data object for one single cell.
-       */
-      CellData(
-        double*   QIn,
-        const tarch::la::Vector<Dimensions,double>&   patchCentre_,
-        const tarch::la::Vector<Dimensions,double>&   patchSize_,
-        double    t,
-        double    dt,
-        double*   QOut
-      );
+    CellData( int numberOfCells_ );
 
-      CellData( int numberOfCells_ );
+    ~CellData();
 
-      ~CellData();
-
-      std::string toString() const;
-    } ;
+    std::string toString() const;
+  };
 }
 
 #endif

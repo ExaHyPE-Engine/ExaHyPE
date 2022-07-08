@@ -14,16 +14,12 @@ from .kernels import create_solver_definitions
 from .kernels import SolverVariant
 from .kernels import RiemannKernelVariant
 
-from exahype2.solvers.fv.kernels import create_compute_time_step_size_for_fixed_time_stepping
-from exahype2.solvers.fv.kernels import create_abstract_solver_user_declarations_for_fixed_time_stepping
-from exahype2.solvers.fv.kernels import create_abstract_solver_user_definitions_for_fixed_time_stepping
-from exahype2.solvers.fv.kernels import create_finish_time_step_implementation_for_fixed_time_stepping
-from exahype2.solvers.fv.kernels import create_start_time_step_implementation_for_fixed_time_stepping
+from exahype2.solvers.fv.FixedTimeSteppingCodeSnippets import FixedTimeSteppingCodeSnippets
 
 
 class GlobalFixedTimeStepWithEnclaveTasking( EnclaveTasking ):
   def __init__(self, 
-    name, patch_size, unknowns, auxiliary_variables, min_volume_h, max_volume_h, time_step_size,
+    name, patch_size, unknowns, auxiliary_variables, min_volume_h, max_volume_h, normalised_time_step_size,
     flux=PDETerms.User_Defined_Implementation, 
     ncp=None, 
     eigenvalues=PDETerms.User_Defined_Implementation, 
@@ -42,18 +38,12 @@ class GlobalFixedTimeStepWithEnclaveTasking( EnclaveTasking ):
     """
     super(GlobalFixedTimeStepWithEnclaveTasking,self).__init__(name, patch_size, overlap, unknowns, auxiliary_variables, min_volume_h, max_volume_h, plot_grid_properties,pde_terms_without_state) 
     
-    self._time_step_size = time_step_size
+    self._normalised_time_step_size = normalised_time_step_size
 
     self._flux_implementation                 = PDETerms.None_Implementation
     self._ncp_implementation                  = PDETerms.None_Implementation
     self._eigenvalues_implementation          = PDETerms.None_Implementation
     self._source_term_implementation          = PDETerms.None_Implementation
-    
-    self._compute_time_step_size              = create_compute_time_step_size_for_fixed_time_stepping( time_step_size )
-    self._compute_new_time_step_size          = create_compute_time_step_size_for_fixed_time_stepping( time_step_size ) + """
-  const double newTimeStepSize = timeStepSize;
-"""    
-
     
     self.set_implementation(flux=flux, 
       ncp=ncp, 
@@ -111,16 +101,22 @@ class GlobalFixedTimeStepWithEnclaveTasking( EnclaveTasking ):
       riemann_kernel_variant = RiemannKernelVariant.BatchedAoSoAHeap
     )
 
+    solver_code_snippets = FixedTimeSteppingCodeSnippets(self._normalised_time_step_size,True)
+
     self._abstract_solver_user_declarations  = create_abstract_solver_declarations(self._flux_implementation, self._ncp_implementation, self._eigenvalues_implementation, self._source_term_implementation, self._pde_terms_without_state)
-    self._abstract_solver_user_declarations += create_abstract_solver_user_declarations_for_fixed_time_stepping()
+    self._abstract_solver_user_declarations += solver_code_snippets.create_abstract_solver_user_declarations()
     self._abstract_solver_user_definitions   = create_abstract_solver_definitions(self._flux_implementation, self._ncp_implementation, self._eigenvalues_implementation, self._source_term_implementation, self._pde_terms_without_state)
-    self._abstract_solver_user_definitions  += create_abstract_solver_user_definitions_for_fixed_time_stepping()
+    self._abstract_solver_user_definitions  += solver_code_snippets.create_abstract_solver_user_definitions()
 
     self._solver_user_declarations          = create_solver_declarations(self._flux_implementation, self._ncp_implementation, self._eigenvalues_implementation, self._source_term_implementation, self._pde_terms_without_state)
     self._solver_user_definitions           = create_solver_definitions(self._flux_implementation, self._ncp_implementation, self._eigenvalues_implementation, self._source_term_implementation, self._pde_terms_without_state)
 
-    self._start_time_step_implementation     = create_start_time_step_implementation_for_fixed_time_stepping(True)
-    self._finish_time_step_implementation    = create_finish_time_step_implementation_for_fixed_time_stepping(self._time_step_size)
+    self._compute_time_step_size              = solver_code_snippets.create_compute_time_step_size()
+    self._compute_new_time_step_size          = solver_code_snippets.create_compute_new_time_step_size()
+
+    self._start_time_step_implementation     = solver_code_snippets.create_start_time_step_implementation()
+    self._finish_time_step_implementation    = solver_code_snippets.create_finish_time_step_implementation()
+    self._constructor_implementation         = solver_code_snippets.create_abstract_solver_constructor_statements()
 
     super(GlobalFixedTimeStepWithEnclaveTasking,self).set_implementation(boundary_conditions, refinement_criterion, initial_conditions, memory_location, use_split_loop, additional_action_set_includes, additional_user_includes)
 

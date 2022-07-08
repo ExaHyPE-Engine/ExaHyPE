@@ -1,7 +1,7 @@
 #include "FiniteVolumeCCZ4.h"
 #include "exahype2/RefinementControl.h"
 #include "exahype2/NonCriticalAssertions.h"
-#include "exahype2/fv/enumerator/PatchAccess.h"
+#include "exahype2/fv/PatchAccess.h"
 
 #include <algorithm>
 
@@ -164,14 +164,14 @@ void examples::exahype2::ccz4::FiniteVolumeCCZ4::sourceTerm(
   //  S[i] = 0.0;
   //}
   examples::exahype2::ccz4::FiniteVolumeCCZ4::sourceTerm(Q, volumeX, volumeH, t, dt, S, Offloadable::Yes);
-
+ /*
   if (CCZ4smoothing>0){// then we apply simple laplacian smoothing
     constexpr int NumberOfRefinementLayers = 3;
     double Radius[NumberOfRefinementLayers] = {5.0*1.8, 3.0*1.8, 1.5*1.8};
     double radius=volumeX(0)*volumeX(0)+volumeX(1)*volumeX(1)+volumeX(2)*volumeX(2); radius=pow(radius,0.5);
-    ::exahype2::fv::enumerator::PatchAccess access(
+    ::exahype2::fv::PatchAccess access(
       Q,                         // make it initially point to input
-      NumberOfFiniteVolumesPerAxisPerPatch, // defined in superclass
+      NumberOfDoFsPerAxisInCell, // defined in superclass
       1,                         // halo size, which you know as user
       NumberOfUnknowns,          // defined in superclass
       NumberOfAuxiliaryVariables // defined in superclass
@@ -188,7 +188,7 @@ void examples::exahype2::ccz4::FiniteVolumeCCZ4::sourceTerm(
       coef=CCZ4smoothing;
       S[unknown]+=coef*laplacian;
     }
-  }
+  }*/
 
 #if !defined(GPUOffloadingOMP)
   for(int i=0; i<NumberOfUnknowns; i++){

@@ -4,297 +4,7 @@ from exahype2.solvers.fv.PDETerms  import PDETerms
 
 import jinja2
 from enum import Enum
-
-
-def create_compute_time_step_size_for_fixed_time_stepping_with_subcycling( time_step_size, solver_name, remove_accumulation_errors=True ):
-  if remove_accumulation_errors:
-    return """
-  // The fixed solver's _timeStepSize scales with min volume h, i.e. it is 
-  // always chosen such that the finest grid does something meaningful.
-  const double originalStepSize = repositories::{{SOLVER_INSTANCE}}.getMinPatchSize(false)>0.0 ?
-    repositories::{{SOLVER_INSTANCE}}.getTimeStepSize() * marker.h()(0) / repositories::{{SOLVER_INSTANCE}}.getMinPatchSize(false) :
-    0.0;
-  double timeStepSize = ::exahype2::removeTimeStepAccumulationErrorsFromCell( fineGridCell""" + solver_name + """CellLabel, fineGridFaces""" + solver_name + """FaceLabel, originalStepSize);
-"""  
-  else:
-    return """
-  // The fixed solver's _timeStepSize scales with min volume h, i.e. it is 
-  // always chosen such that the finest grid does something meaningful.
-  double timeStepSize = repositories::{{SOLVER_INSTANCE}}.getMinPatchSize(false)>0.0 ?
-    repositories::{{SOLVER_INSTANCE}}.getTimeStepSize() * marker.h()(0) / repositories::{{SOLVER_INSTANCE}}.getMinPatchSize(false) :
-    0.0;
-"""  
-
-
-def create_compute_time_step_size_kernel_for_adaptive_time_stepping_with_subcycling( solver_name, remove_accumulation_errors=True ):
-  if remove_accumulation_errors:
-    return """
-  // The fixed solver's _timeStepSize scales with min volume h, i.e. it is 
-  // always chosen such that the finest grid does something meaningful.
-  const double originalTimeStepSize = repositories::{{SOLVER_INSTANCE}}.getMinPatchSize(false)>0.0 ?
-    repositories::{{SOLVER_INSTANCE}}.getAdmissibleTimeStepSize() * marker.h()(0) / repositories::{{SOLVER_INSTANCE}}.getMinPatchSize(false) :
-    0.0;
-  double timeStepSize = ::exahype2::removeTimeStepAccumulationErrorsFromCell( fineGridCell""" + solver_name + """CellLabel, fineGridFaces""" + solver_name + """FaceLabel, originalTimeStepSize);
-"""
-  else:
-    return """
-  // The fixed solver's _timeStepSize scales with min volume h, i.e. it is 
-  // always chosen such that the finest grid does something meaningful.
-  double timeStepSize = repositories::{{SOLVER_INSTANCE}}.getMinPatchSize(false)>0.0 ?
-    repositories::{{SOLVER_INSTANCE}}.getAdmissibleTimeStepSize() * marker.h()(0) / repositories::{{SOLVER_INSTANCE}}.getMinPatchSize(false) :
-    0.0;
-"""
-
-
-def create_compute_time_step_size_kernel_for_local_time_stepping( solver_name, time_step_relaxation ):
-  result = """
-  double timeStepSize = ::exahype2::removeTimeStepAccumulationErrorsFromCell( fineGridCell""" + solver_name + """CellLabel, fineGridFaces""" + solver_name + """FaceLabel, fineGridCell""" + solver_name + """CellLabel.getTimeStepSize() );
-"""
-
-  return result
-
-
-def create_compute_time_step_size_kernel_for_adaptive_time_stepping():
-  return """
-  double timeStepSize = repositories::{{SOLVER_INSTANCE}}.getAdmissibleTimeStepSize();
-"""
-
-
-def create_compute_new_time_step_size_kernel_for_local_time_stepping(time_step_relaxation, avoid_staircase_effect, discretisation_steps):
-  """
-  
-  :: Zero eigenvalues
-  
-  If you solve non-linear problems, cells can have a zero eigenvalue. It means that 
-  nothing happens within this cell. There are two options on the table: You can take
-  the biggest global eigenvalue and march forward using this value. In ExaHyPE 2, 
-  this yields a staircase effect if you have larger, regular region, then we have 
-  something similar to many stencil codes which then update the cells in the middle
-  again, and then those in the middle again, and so forth.
-  
-  We can avoid this by making a cell march if an only if one neighbour has advanced.
-  In this case large global areas where nothing happens lag behind. 
-  
-  
-  avoid_staircase_effect: Boolean
-  
-  discretisation_steps: Integer  
-    See exahype2::discretiseAndTruncateTimeStepSizes() for a description of admissible
-    values and the semantics of the values.
-  
-  """
-  determine_eigenvalue = """
-    repositories::{{SOLVER_INSTANCE}}.setMaxEigenvalue( maxEigenvalue );  
-"""
-
-  if avoid_staircase_effect:
-    compute_time_step_sizes = """    
-    double newTimeStepSize = 0.0;
-    const double minGlobalTimeStepSize = repositories::{{SOLVER_INSTANCE}}.getMinTimeStepSize()<std::numeric_limits<double>::max() ? repositories::{{SOLVER_INSTANCE}}.getMinTimeStepSize() : 0.0;
-    const double maxGlobalTimeStepSize = repositories::{{SOLVER_INSTANCE}}.getMaxEigenvalue()>0.0 ? """ + str(time_step_relaxation) + """ * repositories::{{SOLVER_INSTANCE}}.getMaxVolumeSize(false) / repositories::{{SOLVER_INSTANCE}}.getMaxEigenvalue() : 0.0;
-    if ( tarch::la::greater( maxEigenvalue,0.0) ) {
-      newTimeStepSize = ::exahype2::discretiseAndTruncateTimeStepSizes(
-        """ + str(time_step_relaxation) + """ * marker.h()(0) / {{NUMBER_OF_VOLUMES_PER_AXIS}} / maxEigenvalue,
-        maxGlobalTimeStepSize,
-        """ + str(discretisation_steps) + """
-      );
-    }
-    else {
-      const double minTimeStampOfNeighbours = ::exahype2::getMinTimeStampOfNeighboursAhead(fineGridCell{{SOLVER_NAME}}CellLabel, fineGridFaces{{SOLVER_NAME}}FaceLabel);
-
-      newTimeStepSize = minTimeStampOfNeighbours - fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStamp();
-    }
-"""    
-  else:
-    compute_time_step_sizes = """    
-    double       newTimeStepSize       = 0.0;
-    //const double minGlobalTimeStepSize = repositories::{{SOLVER_INSTANCE}}.getMaxEigenvalue()>0.0 ? """ + str(time_step_relaxation) + """ * repositories::{{SOLVER_INSTANCE}}.getMinVolumeSize(false) / repositories::{{SOLVER_INSTANCE}}.getMaxEigenvalue() : 0.0;
-    const double minGlobalTimeStepSize = repositories::{{SOLVER_INSTANCE}}.getMinTimeStepSize()<std::numeric_limits<double>::max() ? repositories::{{SOLVER_INSTANCE}}.getMinTimeStepSize() : 0.0;
-    const double maxGlobalTimeStepSize = repositories::{{SOLVER_INSTANCE}}.getMaxEigenvalue()>0.0 ? """ + str(time_step_relaxation) + """ * repositories::{{SOLVER_INSTANCE}}.getMaxVolumeSize(false) / repositories::{{SOLVER_INSTANCE}}.getMaxEigenvalue() : 0.0;
-    if ( tarch::la::greater( maxEigenvalue,0.0) ) {
-      newTimeStepSize = ::exahype2::discretiseAndTruncateTimeStepSizes(
-        """ + str(time_step_relaxation) + """ * marker.h()(0) / {{NUMBER_OF_VOLUMES_PER_AXIS}} / maxEigenvalue,
-        maxGlobalTimeStepSize,
-        """ + str(discretisation_steps) + """
-      );
-    }
-    else if ( tarch::la::greater( repositories::{{SOLVER_INSTANCE}}.getMaxEigenvalue(),0.0) ) {
-      newTimeStepSize = minGlobalTimeStepSize;
-    }
-"""    
-   
     
-#  set_time_step_size = """    
-#    if ( tarch::la::equals(newTimeStepSize,0.0) ) {
-#      logDebug( "touchCellFirstTime(...)", "can't do a time step on cell " << marker.toString() << " as global max eigenvalue=" << repositories::{{SOLVER_INSTANCE}}.getMaxEigenvalue() );
-#      fineGridCell{{SOLVER_NAME}}CellLabel.setTimeStepSize(0.0);    
-#    }
-#    else {
-#      fineGridCell{{SOLVER_NAME}}CellLabel.setTimeStepSize(newTimeStepSize);    
-#    }
-#"""
-
-  return determine_eigenvalue + compute_time_step_sizes
-  #+ set_time_step_size
-    
-    
-def create_compute_new_time_step_size_kernel_for_adaptive_time_stepping():
-  return """
-    repositories::{{SOLVER_INSTANCE}}.setMaxEigenvalue( maxEigenvalue );  
-    
-    // This is a value set for stats reasons. We'll ignore it later as we 
-    // ask for a new valid time step size from getAdmissibleTimeStepSize().
-    //const double newTimeStepSize = 0.0;
-    const double newTimeStepSize =  repositories::{{SOLVER_INSTANCE}}.getMinPatchSize(false)>0.0 ?
-      repositories::{{SOLVER_INSTANCE}}.getAdmissibleTimeStepSize() * marker.h()(0) / repositories::{{SOLVER_INSTANCE}}.getMinPatchSize(false) :
-      0.0;
-
-"""
-
-
-def create_constructor_implementation_for_adaptive_time_stepping():
-  return "_admissibleTimeStepSize = 0.0;"
-
-
-def create_constructor_implementation_for_local_time_stepping():
-  return "_maxEigenvalue = std::numeric_limits<double>::max();"
-  
-
-def create_abstract_solver_user_declarations_for_adaptive_time_stepping():
-  return """
-private:
-  double _maxEigenvalue;
-  double _admissibleTimeStepSize;
-public:
-  void setMaxEigenvalue( double eigenvalue );  
-  /**
-   * @return Admissible time step size for the current sweep, i.e. 
-   *         return _admissibleTimeStepSize. This value always refers
-   *         to the minimum mesh volume size. If you use subcycling,
-   *         you have to scale it for cells that are not on the finest
-   *         mesh resolution. 
-   */
-  virtual double getAdmissibleTimeStepSize() const;  
-    """  
-    
-    
-def create_abstract_solver_user_declarations_for_local_time_stepping():
-  return """
-private:
-  double _maxEigenvalue;
-  double _maxEigenvalueOfPreviousSweep;
-public:
-  /**
-   * @return Minimum non-zero eigenvalue. Keep in mind that the per-cell 
-   *         eigenvalues can become zero for some non-linear problems (if 
-   *         nothing happens), so it is important to neglect those when we
-   *         take the minimum.
-   */
-  double getMaxEigenvalue() const;  
-
-  void setMaxEigenvalue( double eigenvalue );
-    """  
-    
-    
-def create_abstract_solver_user_definitions_for_adaptive_time_stepping():
-  return """
-void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::setMaxEigenvalue( double eigenvalue ) {
-  if ( tarch::la::greater( eigenvalue, 0.0 ) ) {
-    tarch::multicore::Lock lock(_semaphore);
-    _maxEigenvalue = std::max(_maxEigenvalue,eigenvalue);
-  }
-}    
-
-
-double {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::getAdmissibleTimeStepSize() const {
-  return _admissibleTimeStepSize;
-}
-    """  
-    
-    
-def create_abstract_solver_user_definitions_for_local_time_stepping():
-  return """
-void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::setMaxEigenvalue( double eigenvalue ) {
-  if ( tarch::la::greater( eigenvalue, 0.0 ) ) {
-    tarch::multicore::Lock lock(_semaphore);
-    _maxEigenvalue = std::max(_maxEigenvalue,eigenvalue);
-  }
-}    
-
-
-double {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::getMaxEigenvalue() const {
-  return _maxEigenvalueOfPreviousSweep;
-}
-    """  
-
-
-def create_finish_time_step_implementation_for_local_time_stepping():
-  """
-  
-  This routine is inserted after we have reduced all global quantities. These
-  are the quantities with the postfix ThisTimeStep.
-  
-  """ 
-  return """
-  #ifdef Parallel
-  double newMaxEigenvalue = _maxEigenvalue;
-  tarch::mpi::Rank::getInstance().allReduce(
-        &newMaxEigenvalue,
-        &_maxEigenvalue,
-        1,
-        MPI_DOUBLE,
-        MPI_MAX, 
-        [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); }
-        );
-  #endif
-  
-  if ( _solverState == SolverState::Secondary ) {
-    _maxEigenvalueOfPreviousSweep = _maxEigenvalue;
-  }
-"""
-    
-    
-def create_finish_time_step_implementation_for_adaptive_time_stepping(time_step_relaxation):
-  """
-  
-  This routine is inserted after we have reduced all global quantities. These
-  are the quantities with the postfix ThisTimeStep.
-  
-  """ 
-  return """
-  #ifdef Parallel
-  double newMaxEigenvalue = _maxEigenvalue;
-  tarch::mpi::Rank::getInstance().allReduce(
-        &newMaxEigenvalue,
-        &_maxEigenvalue,
-        1,
-        MPI_DOUBLE,
-        MPI_MAX, 
-        [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); }
-        );
-  #endif
-
-  if ( tarch::la::smaller(_maxEigenvalue, 0.0 ) ) {
-    ::exahype2::triggerNonCriticalAssertion( __FILE__, __LINE__, "_maxEigenvalue>=0", "invalid max eigenvalue: " + std::to_string(_maxEigenvalue) );
-    // keep time step size invariant
-    // _admissibleTimeStepSize = _admissibleTimeStepSize;
-  }
-  else if ( tarch::la::equals(_maxEigenvalue, 0.0 ) ) {
-    logWarning( "finishTimeStep(...)", "maximum eigenvalue approaches 0.0. For nonlinear PDEs, this often means the PDE becomes stationary. It could also be a bug however" ); 
-    _admissibleTimeStepSize = 0.0;
-  }
-  else {
-    const double minVolumeSize = _minVolumeHThisTimeStep;
-    _admissibleTimeStepSize = """ + str(time_step_relaxation) + """ * minVolumeSize / _maxEigenvalue;
-    if ( std::isnan(_admissibleTimeStepSize) or std::isinf(_admissibleTimeStepSize) ) {
-      ::exahype2::triggerNonCriticalAssertion( __FILE__, __LINE__, "_admissibleTimeStepSize>0", "invalid (NaN of inf) time step size: " + std::to_string(_admissibleTimeStepSize) );
-    }
-    if (tarch::la::smallerEquals(_admissibleTimeStepSize,0.0,1e-10) ) {
-      logWarning( "finishTimeStep(...)", "degenerated time step size of " << std::to_string(_admissibleTimeStepSize) << ". Problem might be extremely stiff (and can't be solved) or there could be a bug (h_volume=" << minVolumeSize << ")" );
-    }
-  }
-"""  
-
 
 class SolverVariant(Enum):
   WithVirtualFunctions = 0,
@@ -368,25 +78,25 @@ def create_compute_Riemann_kernel_for_Rusanov(flux_implementation,
   }
   
   EnumeratorTemplateTypes = {
-    RiemannKernelVariant.PatchWiseAoSStack:              "::exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator",
-    RiemannKernelVariant.PatchWiseAoSoAStack:            "::exahype2::fv::enumerator::AoSoALexicographicVolumeEnumerator",
-    RiemannKernelVariant.PatchWiseSoAStack:              "::exahype2::fv::enumerator::SoALexicographicVolumeEnumerator",
-    RiemannKernelVariant.BatchedAoSStack:                "::exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator",
-    RiemannKernelVariant.BatchedAoSoAStack:              "::exahype2::fv::enumerator::AoSoALexicographicVolumeEnumerator",
-    RiemannKernelVariant.BatchedSoAStack:                "::exahype2::fv::enumerator::SoALexicographicVolumeEnumerator",
-    RiemannKernelVariant.PatchWiseSplitTermsAoSStack:    "::exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator",
-    RiemannKernelVariant.PatchWiseSplitTermsAoSoAStack:  "::exahype2::fv::enumerator::AoSoALexicographicVolumeEnumerator",
-    RiemannKernelVariant.PatchWiseAoSHeap:               "::exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator",
-    RiemannKernelVariant.PatchWiseAoSoAHeap:             "::exahype2::fv::enumerator::AoSoALexicographicVolumeEnumerator",
-    RiemannKernelVariant.PatchWiseSoAHeap:               "::exahype2::fv::enumerator::SoALexicographicVolumeEnumerator",
-    RiemannKernelVariant.BatchedAoSHeap:                 "::exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator",
-    RiemannKernelVariant.BatchedAoSoAHeap:               "::exahype2::fv::enumerator::AoSoALexicographicVolumeEnumerator",
-    RiemannKernelVariant.BatchedSoAHeap:                 "::exahype2::fv::enumerator::SoALexicographicVolumeEnumerator",
-    RiemannKernelVariant.TaskGraphAoSHeap:               "::exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator",
-    RiemannKernelVariant.TaskGraphAoSoAHeap:             "::exahype2::fv::enumerator::AoSoALexicographicVolumeEnumerator",
-    RiemannKernelVariant.TaskGraphSoAHeap:               "::exahype2::fv::enumerator::SoALexicographicVolumeEnumerator",
-    RiemannKernelVariant.PatchWiseSplitTermsAoSHeap:     "::exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator",
-    RiemannKernelVariant.PatchWiseSplitTermsAoSoAHeap:   "::exahype2::fv::enumerator::AoSoALexicographicVolumeEnumerator",
+    RiemannKernelVariant.PatchWiseAoSStack:              "::exahype2::enumerator::AoSLexicographicEnumerator",
+    RiemannKernelVariant.PatchWiseAoSoAStack:            "::exahype2::enumerator::AoSoALexicographicEnumerator",
+    RiemannKernelVariant.PatchWiseSoAStack:              "::exahype2::enumerator::SoALexicographicEnumerator",
+    RiemannKernelVariant.BatchedAoSStack:                "::exahype2::enumerator::AoSLexicographicEnumerator",
+    RiemannKernelVariant.BatchedAoSoAStack:              "::exahype2::enumerator::AoSoALexicographicEnumerator",
+    RiemannKernelVariant.BatchedSoAStack:                "::exahype2::enumerator::SoALexicographicEnumerator",
+    RiemannKernelVariant.PatchWiseSplitTermsAoSStack:    "::exahype2::enumerator::AoSLexicographicEnumerator",
+    RiemannKernelVariant.PatchWiseSplitTermsAoSoAStack:  "::exahype2::enumerator::AoSoALexicographicEnumerator",
+    RiemannKernelVariant.PatchWiseAoSHeap:               "::exahype2::enumerator::AoSLexicographicEnumerator",
+    RiemannKernelVariant.PatchWiseAoSoAHeap:             "::exahype2::enumerator::AoSoALexicographicEnumerator",
+    RiemannKernelVariant.PatchWiseSoAHeap:               "::exahype2::enumerator::SoALexicographicEnumerator",
+    RiemannKernelVariant.BatchedAoSHeap:                 "::exahype2::enumerator::AoSLexicographicEnumerator",
+    RiemannKernelVariant.BatchedAoSoAHeap:               "::exahype2::enumerator::AoSoALexicographicEnumerator",
+    RiemannKernelVariant.BatchedSoAHeap:                 "::exahype2::enumerator::SoALexicographicEnumerator",
+    RiemannKernelVariant.TaskGraphAoSHeap:               "::exahype2::enumerator::AoSLexicographicEnumerator",
+    RiemannKernelVariant.TaskGraphAoSoAHeap:             "::exahype2::enumerator::AoSoALexicographicEnumerator",
+    RiemannKernelVariant.TaskGraphSoAHeap:               "::exahype2::enumerator::SoALexicographicEnumerator",
+    RiemannKernelVariant.PatchWiseSplitTermsAoSHeap:     "::exahype2::enumerator::AoSLexicographicEnumerator",
+    RiemannKernelVariant.PatchWiseSplitTermsAoSoAHeap:   "::exahype2::enumerator::AoSoALexicographicEnumerator",
     RiemannKernelVariant.PatchWiseInSitu:           None,
     RiemannKernelVariant.BatchedInSitu:             None
   }
@@ -502,7 +212,7 @@ def create_compute_Riemann_kernel_for_Rusanov(flux_implementation,
   d[ "SOURCE_IMPLEMENTATION" ]       = source_implementation
   d[ "COMPUTE_MAX_EIGENVALUE" ]      = compute_max_eigenvalue_of_next_time_step
   #if EnumeratorTemplateTypes[riemann_kernel_variant]==None:
-  #  d[ "TEMP_DATA_ENUMERATOR" ]      = "::exahype2::fv::enumerator::AoSoALexicographicVolumeEnumerator"
+  #  d[ "TEMP_DATA_ENUMERATOR" ]      = "::exahype2::fv::enumerator::AoSoALexicographicEnumerator"
   #else:
   d[ "TEMP_DATA_ENUMERATOR" ]      = EnumeratorTemplateTypes[riemann_kernel_variant]
   return result.render(**d)

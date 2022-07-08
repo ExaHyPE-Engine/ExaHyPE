@@ -54,9 +54,13 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::merge(const {{CLASSNAME}}& neigh
     else if (
       p->getParallelState()==DoFType::ParallelState::Virtual
     ) {
-      logDebug( "merge(...)", "incoming particle " << p->toString() << " is virtual on neighbour, but it was not deleted there. Assume it has just switched from local to virtual as it has moved and thus is now local here" );
-      p->setParallelState( DoFType::ParallelState::Local );
-      this->push_back(p);
+      logDebug(
+        "merge(...)",
+        "incoming particle " << p->toString() << " is virtual on neighbour, yet was not deleted there. " <<
+        "Assume it had just switched from local to virtual there, as it had moved. " <<
+        "We should have got the virtual copy in the step before which we have switched to local here already if it fits into our domain. " <<
+        "Hence, ignore this incoming copy."
+      );
     }
     else {
       assertion1(false,p->toString());
@@ -208,11 +212,11 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::clone( const {{CLASSNAME}}& othe
 
 
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishedTraversal() {
-  int globalNumberOfLifts            = 0;
-  int globalNumberOfDrops            = 0;
-  int globalNumberOfSieveAssignments = 0;
-  int globalRealNumberOfParticles   = 0;
-  int globalVirtualNumberOfParticles = 0;
+  int globalNumberOfLifts               = 0;
+  int globalNumberOfDrops               = 0;
+  int globalNumberOfSieveAssignments    = 0;
+  int globalRealNumberOfParticles       = 0;
+  int globalVirtualNumberOfParticles    = 0;
   int globalEliminatedSpatialDuplicates = 0;
   #if Parallel
   tarch::mpi::Rank::getInstance().reduce(
@@ -278,7 +282,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishedTraversal() {
     );
   }
 
-  if (globalRealNumberOfParticles==1) exit(-1);
+  if (globalRealNumberOfParticles==1 or globalRealNumberOfParticles>2) exit(-1);
 
   _numberOfLifts = 0;
   _numberOfDrops = 0;
