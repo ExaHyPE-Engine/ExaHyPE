@@ -1,0 +1,568 @@
+#include "tarch/compiler/CompilerSpecificSettings.h"
+#include "exahype2/Solver.h"
+#include "exahype2/fv/PatchUtils.h"
+#include <cmath>
+
+#if defined(GPUOffloadingOMP)
+#pragma omp declare target
+#endif
+template <class QInEnumeratorType, class QOutEnumeratorType>
+void exahype2::fv::musclhancock::internal::copySolution_LoopBody(
+  const double* __restrict__                QIn,
+  const QInEnumeratorType&                  QInEnumerator,
+  int                                       patchIndex,
+  const tarch::la::Vector<Dimensions,int>&  volumeIndex,
+  int                                       unknown,
+  double* __restrict__                      QOut,
+  const QOutEnumeratorType&                 QOutEnumerator
+) {
+  QOut[ QOutEnumerator(patchIndex,volumeIndex,unknown) ] = QIn[QInEnumerator(patchIndex,volumeIndex,unknown)];
+}
+#if defined(GPUOffloadingOMP)
+#pragma omp end declare target
+#endif
+
+template <class QInEnumeratorType, class QInterEnumeratorType>
+void exahype2::fv::musclhancock::internal::computeTimeDerivative_LoopBody(
+    const double* __restrict__                          QIn,
+    const QInEnumeratorType                             QInEnumerator,
+    exahype2::fv::musclhancock::Flux                    flux,
+    exahype2::fv::musclhancock::NonconservativeProduct  ncp,
+    exahype2::fv::musclhancock::Source                  source,
+    const tarch::la::Vector<Dimensions,double>&         patchCentre,
+    const tarch::la::Vector<Dimensions,double>&         patchSize,
+    int                                                 patchIndex,
+    const tarch::la::Vector<Dimensions,int>&            volumeIndex,
+    double                                              t,
+    double                                              dt,
+    double* __restrict__                                timederivative,
+    QInterEnumeratorType                                QInterEnumerator
+) {
+  double QInGathered[QInEnumerator._unknowns+QInEnumerator._numberOfAuxiliaryVariables];
+  double temp[QInEnumerator._unknowns], shiftQ[QInEnumerator._unknowns];
+  double gradientQ[QInEnumerator._unknowns*3];
+
+
+  // gather
+  #if defined(SharedOMP)
+  #pragma omp simd
+  #endif
+  for (int unknown=0; unknown<QInEnumerator._unknowns+QInEnumerator._numberOfAuxiliaryVariables; unknown++) {
+    QInGathered[unknown] = QIn[ QInEnumerator(patchIndex,volumeIndex,unknown) ];
+  }
+
+  //first, initialize time derivative with source term
+  source(
+      QInGathered,
+      ::exahype2::fv::getVolumeCentre( patchCentre, patchSize, QInEnumerator._numberOfDoFsPerAxisInCell, volumeIndex ),
+      ::exahype2::fv::getVolumeSize( patchSize, QInEnumerator._numberOfDoFsPerAxisInCell ),
+      t,
+      dt,
+      temp
+  );
+  for (int unknown=0; unknown<QInEnumerator._unknowns; unknown++) {
+    timederivative[QInterEnumerator(patchIndex,volumeIndex,unknown)] = temp[ unknown ];
+  }
+  
+  //second, add the -B(Q)*\nabla Q, it ask users to define B on the left of the PDE.
+  for (int unknown=0; unknown<QInEnumerator._unknowns; unknown++) {
+    gradientQ[QInEnumerator._unknowns*0+unknown]=QInGathered[ QInEnumerator._unknowns*1+unknown ]; //\partial_x Q_i
+    gradientQ[QInEnumerator._unknowns*1+unknown]=QInGathered[ QInEnumerator._unknowns*2+unknown ]; //\partial_y Q_i
+    gradientQ[QInEnumerator._unknowns*2+unknown]=QInGathered[ QInEnumerator._unknowns*3+unknown ]; //\partial_z Q_i
+  }
+  for (int normal=0; normal<3; normal++){
+    ncp(
+      QInGathered, gradientQ+QInEnumerator._unknowns*normal,
+      ::exahype2::fv::getVolumeCentre( patchCentre, patchSize, QInEnumerator._numberOfDoFsPerAxisInCell, volumeIndex ),
+      ::exahype2::fv::getVolumeSize( patchSize, QInEnumerator._numberOfDoFsPerAxisInCell ),
+      t,
+      dt,
+      normal,
+      temp
+    );
+    for (int unknown=0; unknown<QInEnumerator._unknowns; unknown++) {
+      timederivative[QInterEnumerator(patchIndex,volumeIndex,unknown)] -=temp[ unknown ];
+    }
+  }
+  
+  //third, add flux contribution
+  for (int normal=0; normal<3; normal++){
+  
+    for (int unknown=0; unknown<QInEnumerator._unknowns; unknown++) {
+      shiftQ[unknown]=QInGathered[unknown]-0.5*gradientQ[QInEnumerator._unknowns*normal+unknown]*::exahype2::fv::getVolumeSize( patchSize, QInEnumerator._numberOfDoFsPerAxisInCell )(normal);
+    }
+    flux(
+      shiftQ,
+      ::exahype2::fv::getVolumeCentre( patchCentre, patchSize, QInEnumerator._numberOfDoFsPerAxisInCell, volumeIndex ),
+      ::exahype2::fv::getVolumeSize( patchSize, QInEnumerator._numberOfDoFsPerAxisInCell ),
+      t, dt, normal, temp
+    );
+    for (int unknown=0; unknown<QInEnumerator._unknowns; unknown++) {
+      timederivative[QInterEnumerator(patchIndex,volumeIndex,unknown)] +=temp[ unknown ]/::exahype2::fv::getVolumeSize( patchSize, QInEnumerator._numberOfDoFsPerAxisInCell )(normal);
+    }
+    
+    for (int unknown=0; unknown<QInEnumerator._unknowns; unknown++) {
+      shiftQ[unknown]=QInGathered[unknown]+0.5*gradientQ[QInEnumerator._unknowns*normal+unknown]*::exahype2::fv::getVolumeSize( patchSize, QInEnumerator._numberOfDoFsPerAxisInCell )(normal);
+    }
+    flux(
+      shiftQ,
+      ::exahype2::fv::getVolumeCentre( patchCentre, patchSize, QInEnumerator._numberOfDoFsPerAxisInCell, volumeIndex ),
+      ::exahype2::fv::getVolumeSize( patchSize, QInEnumerator._numberOfDoFsPerAxisInCell ),
+      t, dt, normal, temp
+    );
+    for (int unknown=0; unknown<QInEnumerator._unknowns; unknown++) {
+      timederivative[QInterEnumerator(patchIndex,volumeIndex,unknown)] -=temp[ unknown ]/::exahype2::fv::getVolumeSize( patchSize, QInEnumerator._numberOfDoFsPerAxisInCell )(normal);
+    }
+    
+  }
+  
+}
+
+template <class QInEnumeratorType, class QInterEnumeratorType>
+void exahype2::fv::musclhancock::internal::computeQonFace_LoopBody(
+    const double* __restrict__                   QIn,
+    const QInEnumeratorType                     QInEnumerator,
+    const tarch::la::Vector<Dimensions,double>&  patchCentre,
+    const tarch::la::Vector<Dimensions,double>&  patchSize,
+    int                                          patchIndex,
+    const tarch::la::Vector<Dimensions,int>&     volumeIndex,
+    double                                       t,
+    double                                       dt,
+    double* __restrict__                         timederivative,
+    double* __restrict__                         QfaceXneg,
+    double* __restrict__                         QfaceXpos,
+    double* __restrict__                         QfaceYneg,
+    double* __restrict__                         QfaceYpos,
+    double* __restrict__                         QfaceZneg,
+    double* __restrict__                         QfaceZpos,
+    QInterEnumeratorType                         QInterEnumerator
+) {
+    double QInGathered[QInEnumerator._unknowns+QInEnumerator._numberOfAuxiliaryVariables];
+    //double gradientQ[QInEnumerator._unknowns*3];
+    //double deriTGathered[QInEnumerator._unknowns];
+    const tarch::la::Vector<Dimensions,double>  VolumeSize=::exahype2::fv::getVolumeSize( patchSize, QInEnumerator._numberOfDoFsPerAxisInCell );
+    
+    //VolumeSize=::exahype2::fv::getVolumeSize( patchSize, QInEnumerator._numberOfDoFsPerAxisInCell );
+    // gather
+    #if defined(SharedOMP)
+    #pragma omp simd
+    #endif
+    for (int unknown=0; unknown<QInEnumerator._unknowns+QInEnumerator._numberOfAuxiliaryVariables; unknown++) {
+      QInGathered[unknown] = QIn[ QInEnumerator(patchIndex,volumeIndex,unknown) ];
+    }
+    for (int unknown=0; unknown<QInEnumerator._unknowns; unknown++) {
+      //Q^{n+1/2}_{i-1/2}   
+      QfaceXneg[QInterEnumerator(patchIndex,volumeIndex,unknown)]=QInGathered[unknown]
+                                                                  +0.5*dt*timederivative[ QInterEnumerator(patchIndex,volumeIndex,unknown) ]
+                                                                  -0.5*VolumeSize(0)*QInGathered[ QInEnumerator._unknowns*1+unknown ];
+      QfaceYneg[QInterEnumerator(patchIndex,volumeIndex,unknown)]=QInGathered[unknown]
+                                                                  +0.5*dt*timederivative[ QInterEnumerator(patchIndex,volumeIndex,unknown) ]
+                                                                  -0.5*VolumeSize(1)*QInGathered[ QInEnumerator._unknowns*2+unknown ];
+      QfaceZneg[QInterEnumerator(patchIndex,volumeIndex,unknown)]=QInGathered[unknown]
+                                                                  +0.5*dt*timederivative[ QInterEnumerator(patchIndex,volumeIndex,unknown) ]
+                                                                  -0.5*VolumeSize(2)*QInGathered[ QInEnumerator._unknowns*3+unknown ];    
+      //Q^{n+1/2}_{i+1/2}                                                            
+      QfaceXpos[QInterEnumerator(patchIndex,volumeIndex,unknown)]=QInGathered[unknown]
+                                                                  +0.5*dt*timederivative[ QInterEnumerator(patchIndex,volumeIndex,unknown) ]
+                                                                  +0.5*VolumeSize(0)*QInGathered[ QInEnumerator._unknowns*1+unknown ];
+      QfaceYpos[QInterEnumerator(patchIndex,volumeIndex,unknown)]=QInGathered[unknown]
+                                                                  +0.5*dt*timederivative[ QInterEnumerator(patchIndex,volumeIndex,unknown) ]
+                                                                  +0.5*VolumeSize(0)*QInGathered[ QInEnumerator._unknowns*2+unknown ];
+      QfaceZpos[QInterEnumerator(patchIndex,volumeIndex,unknown)]=QInGathered[unknown]
+                                                                  +0.5*dt*timederivative[ QInterEnumerator(patchIndex,volumeIndex,unknown) ]
+                                                                  +0.5*VolumeSize(0)*QInGathered[ QInEnumerator._unknowns*3+unknown ];
+    }
+
+}
+
+template <class QInEnumeratorType, class QMaxEigenvalueEnumeratorType>
+void exahype2::fv::musclhancock::internal::computeMaxEigenvalue_LoopBody(
+    const double* __restrict__                   QIn,
+    QInEnumeratorType                            QInEnumerator,
+    exahype2::fv::musclhancock::MaxEigenvalue         maxEigenvalue,
+    const tarch::la::Vector<Dimensions,double>&  patchCentre,
+    const tarch::la::Vector<Dimensions,double>&  patchSize,
+    int                                          patchIndex,
+    const tarch::la::Vector<Dimensions,int>&     volumeIndex,
+    double                                       t,
+    double                                       dt,
+    int                                          normal,
+    double* __restrict__                         QMaxEigenvalue,
+    QMaxEigenvalueEnumeratorType                 QMaxEigenvalueEnumerator
+) {
+    double QInGathered[QInEnumerator._unknowns+QInEnumerator._numberOfAuxiliaryVariables];
+
+    // gather
+    #if defined(SharedOMP)
+    #pragma omp simd
+    #endif
+    for (int unknown=0; unknown<QInEnumerator._unknowns+QInEnumerator._numberOfAuxiliaryVariables; unknown++) {
+      QInGathered[unknown] = QIn[ QInEnumerator(patchIndex,volumeIndex,unknown) ];
+    }
+
+    // actual computation via user's functor
+    QMaxEigenvalue[ QMaxEigenvalueEnumerator(patchIndex,volumeIndex,0) ] =
+      maxEigenvalue(
+        QInGathered,
+        ::exahype2::fv::getVolumeCentre( patchCentre, patchSize, QInEnumerator._numberOfDoFsPerAxisInCell, volumeIndex ),
+        ::exahype2::fv::getVolumeSize( patchSize, QInEnumerator._numberOfDoFsPerAxisInCell ),
+        t,
+        dt,
+        normal
+      );
+}
+
+#if defined(GPUOffloadingOMP)
+#pragma omp declare target
+#endif
+template <typename QInEnumeratorType, typename QInterEnumeratorType, typename QMaxEigenvalueEnumeratorType, typename QOutEnumeratorType>
+void exahype2::fv::musclhancock::internal::updateSolutionWithEigenvalueDamping_LoopBody(
+  const double* __restrict__                   QIn,
+  const QInEnumeratorType                      QInEnumerator,
+  const double* __restrict__                   tempMaxEigenvalueX,
+  const double* __restrict__                   tempMaxEigenvalueY,
+  const double* __restrict__                   tempMaxEigenvalueZ,
+  const QMaxEigenvalueEnumeratorType &         eigenvalueEnumerator,
+  const tarch::la::Vector<Dimensions,double>&  patchCentre,
+  const tarch::la::Vector<Dimensions,double>&  patchSize,
+  int                                          patchIndex,
+  const tarch::la::Vector<Dimensions,int>&     volumeIndex,
+  int                                          unknown,
+  double                                       dt,
+  double* __restrict__                         QOut,
+  const QOutEnumeratorType &                   QOutEnumerator,
+  double* __restrict__                         QfaceXneg,
+  double* __restrict__                         QfaceXpos, 
+  double* __restrict__                         QfaceYneg,
+  double* __restrict__                         QfaceYpos,
+  double* __restrict__                         QfaceZneg,
+  double* __restrict__                         QfaceZpos,
+  QInterEnumeratorType                         QInterEnumerator
+) {
+  auto updateAlongOneDirection = [=](const double* __restrict__ tempMaxEigenvalue, const double* __restrict__ QfaceNLeft, const double* __restrict__ QfaceNRight, int normal) {
+    tarch::la::Vector<Dimensions,int> leftVolume   = volumeIndex;
+    tarch::la::Vector<Dimensions,int> rightVolume  = volumeIndex;
+    leftVolume(normal)--;
+    rightVolume(normal)++;
+
+    double leftVolumeValue   = tempMaxEigenvalue[eigenvalueEnumerator(patchIndex, leftVolume,  0)];
+    double centerVolumeValue = tempMaxEigenvalue[eigenvalueEnumerator(patchIndex, volumeIndex, 0)];
+    double rightVolumeValue  = tempMaxEigenvalue[eigenvalueEnumerator(patchIndex, rightVolume, 0)];
+
+    const double lambdaLeft  = tempMaxEigenvalue[eigenvalueEnumerator(patchIndex, leftVolume,0)] > tempMaxEigenvalue[eigenvalueEnumerator(patchIndex, volumeIndex,0)] 
+                             ? tempMaxEigenvalue[eigenvalueEnumerator(patchIndex, leftVolume,0)] 
+                             : tempMaxEigenvalue[eigenvalueEnumerator(patchIndex, volumeIndex,0)];
+    const double lambdaRight = tempMaxEigenvalue[eigenvalueEnumerator(patchIndex, rightVolume,0)] > tempMaxEigenvalue[eigenvalueEnumerator(patchIndex, volumeIndex,0)]
+                             ? tempMaxEigenvalue[eigenvalueEnumerator(patchIndex, rightVolume,0)] 
+                             : tempMaxEigenvalue[eigenvalueEnumerator(patchIndex, volumeIndex,0)];
+    double fluxLeft  = - lambdaLeft  * (QfaceNLeft[QInterEnumerator(patchIndex, volumeIndex,unknown)] - QfaceNRight[QInterEnumerator(patchIndex, leftVolume,unknown)]);
+    double fluxRight = - lambdaRight * (QfaceNLeft[QInterEnumerator(patchIndex, rightVolume,unknown)] - QfaceNRight[QInterEnumerator(patchIndex, volumeIndex,unknown)]);
+
+    QOut[ QOutEnumerator(patchIndex, volumeIndex,unknown) ] +=  dt / patchSize(normal) * QOutEnumerator._numberOfDoFsPerAxisInCell * (fluxLeft - fluxRight)*0.5;
+  };
+                     updateAlongOneDirection(tempMaxEigenvalueX, QfaceXneg, QfaceXpos, 0);
+                     updateAlongOneDirection(tempMaxEigenvalueY, QfaceYneg, QfaceYpos, 1);
+  if (Dimensions==3) updateAlongOneDirection(tempMaxEigenvalueZ, QfaceZneg, QfaceZpos, 2);
+}
+#if defined(GPUOffloadingOMP)
+#pragma omp end declare target
+#endif
+
+template <class QInEnumeratorType, class QInterEnumeratorType, class QFluxEnumeratorType>
+void exahype2::fv::musclhancock::internal::computeFlux_LoopBody(
+  double* __restrict__                         QfaceNLeft,
+  double* __restrict__                         QfaceNRight,
+  QInterEnumeratorType                         QInterEnumerator,
+  QInEnumeratorType                            QInEnumerator,
+  exahype2::fv::musclhancock::Flux                  flux,
+  const tarch::la::Vector<Dimensions,double>&  patchCentre,
+  const tarch::la::Vector<Dimensions,double>&  patchSize,
+  int                                          patchIndex,
+  const tarch::la::Vector<Dimensions,int>&     volumeIndex,
+  double                                       t,
+  double                                       dt,
+  int                                          normal,
+  double* __restrict__                         QFluxL,
+  double* __restrict__                         QFluxR,
+  QFluxEnumeratorType                          QFluxEnumerator
+) {
+  double QLeft[QInEnumerator._unknowns], QRight[QInEnumerator._unknowns];
+  double tempFlux[QInEnumerator._unknowns];
+
+  for (int unknown=0; unknown<QInEnumerator._unknowns; unknown++) {
+    QLeft[unknown]  = QfaceNLeft[ QInterEnumerator(patchIndex,volumeIndex,unknown) ];
+    QRight[unknown] = QfaceNRight[ QInterEnumerator(patchIndex,volumeIndex,unknown) ];
+  }
+
+  flux(
+      QLeft,
+      ::exahype2::fv::getVolumeCentre( patchCentre, patchSize, QInEnumerator._numberOfDoFsPerAxisInCell, volumeIndex ),
+      ::exahype2::fv::getVolumeSize( patchSize, QInEnumerator._numberOfDoFsPerAxisInCell ),
+      t,
+      dt,
+      normal,
+      tempFlux
+  );
+  for (int unknown=0; unknown<QInEnumerator._unknowns; unknown++) {
+    QFluxL[ QFluxEnumerator(patchIndex,volumeIndex,unknown) ] = tempFlux[unknown];
+  }
+  
+  flux(
+      QRight,
+      ::exahype2::fv::getVolumeCentre( patchCentre, patchSize, QInEnumerator._numberOfDoFsPerAxisInCell, volumeIndex ),
+      ::exahype2::fv::getVolumeSize( patchSize, QInEnumerator._numberOfDoFsPerAxisInCell ),
+      t,
+      dt,
+      normal,
+      tempFlux
+  );
+  for (int unknown=0; unknown<QInEnumerator._unknowns; unknown++) {
+    QFluxR[ QFluxEnumerator(patchIndex,volumeIndex,unknown) ] = tempFlux[unknown];
+  }
+}
+
+template <typename QFluxEnumeratorType, typename QOutEnumeratorType>
+void exahype2::fv::musclhancock::internal::updateSolutionWithFlux_LoopBody(
+    const double* __restrict__                   tempFluxXL,
+    const double* __restrict__                   tempFluxYL,
+    const double* __restrict__                   tempFluxZL,
+    const double* __restrict__                   tempFluxXR,
+    const double* __restrict__                   tempFluxYR,
+    const double* __restrict__                   tempFluxZR,
+    const QFluxEnumeratorType                    fluxEnumerator,
+    const tarch::la::Vector<Dimensions,double>&  patchCentre,
+    const tarch::la::Vector<Dimensions,double>&  patchSize,
+    int                                          patchIndex,
+    const tarch::la::Vector<Dimensions,int>&     volumeIndex,
+    int                                          unknown,
+    double                                       dt,
+    double* __restrict__                         QOut,
+    const QOutEnumeratorType&                    QOutEnumerator
+) {
+  auto updateAlongOneDirection = [=](const double* __restrict__ tempFluxNL, const double* __restrict__ tempFluxNR, int normal) {
+    tarch::la::Vector<Dimensions,int> leftVolume   = volumeIndex;
+    tarch::la::Vector<Dimensions,int> rightVolume  = volumeIndex;
+    leftVolume(normal)--;
+    rightVolume(normal)++;
+
+    double fluxLeft  = 0.5 * tempFluxNR[fluxEnumerator(patchIndex, leftVolume,unknown)]
+                     + 0.5 * tempFluxNL[fluxEnumerator(patchIndex, volumeIndex,unknown)];
+    double fluxRight = 0.5 * tempFluxNR[fluxEnumerator(patchIndex, volumeIndex,unknown)]
+                     + 0.5 * tempFluxNL[fluxEnumerator(patchIndex, rightVolume,unknown)];
+    if ( std::isnan(fluxLeft - fluxRight) )
+    {std::cout<<"fluxLeft: "<<std::to_string(fluxLeft)<<" fluxRight: "<<std::to_string(fluxRight)<<" flux result: "<<dt / patchSize(normal) * QOutEnumerator._numberOfDoFsPerAxisInCell*(fluxLeft - fluxRight)<<std::endl;}
+
+    //QOut[ QOutEnumerator(patchIndex, volumeIndex,unknown) ] += 1e-12*(fluxLeft-fluxRight);
+    QOut[ QOutEnumerator(patchIndex, volumeIndex,unknown) ] += dt / patchSize(normal) * QOutEnumerator._numberOfDoFsPerAxisInCell
+                                                               *(fluxLeft - fluxRight);
+  };
+                     updateAlongOneDirection(tempFluxXL, tempFluxXR, 0);
+                     updateAlongOneDirection(tempFluxYL, tempFluxYR, 1);
+  if (Dimensions==3) updateAlongOneDirection(tempFluxZL, tempFluxZR, 2);
+}
+
+
+template <class QInEnumeratorType, class QInterEnumeratorType, class QNCPFaceEnumeratorType>
+void exahype2::fv::musclhancock::internal::computeDTerm_LoopBody(
+  double* __restrict__                           QfaceNLeft,
+  double* __restrict__                           QfaceNRight,
+  QInterEnumeratorType                           QInterEnumerator,
+  QInEnumeratorType                              QInEnumerator,
+  exahype2::fv::musclhancock::NonconservativeProduct  ncp,
+  const tarch::la::Vector<Dimensions,double>&    patchCentre,
+  const tarch::la::Vector<Dimensions,double>&    patchSize,
+  int                                            patchIndex,
+  const tarch::la::Vector<Dimensions,int>&       volumeIndex,
+  double                                         t,
+  double                                         dt,
+  int                                            normal,
+  double* __restrict__                           QD,
+  const QNCPFaceEnumeratorType                   QNcpEnumerator
+) {
+  double QAverage[QInEnumerator._unknowns];
+  double DeltaQ[QInEnumerator._unknowns];
+  double QFluxGathered[QInEnumerator._unknowns];
+
+  tarch::la::Vector<Dimensions,int> leftAdjacentVolume  = volumeIndex;
+  tarch::la::Vector<Dimensions,int> rightAdjacentVolume = volumeIndex;
+  rightAdjacentVolume(normal)++;
+
+  // gather
+  for (int unknown=0; unknown<QInEnumerator._unknowns; unknown++) {
+    QAverage[unknown] = 0.5 * QfaceNRight[ QInterEnumerator(patchIndex,leftAdjacentVolume,unknown) ]
+                        + 0.5 * QfaceNLeft[ QInterEnumerator(patchIndex,rightAdjacentVolume,unknown) ];
+    DeltaQ[unknown]    = QfaceNLeft[ QInterEnumerator(patchIndex,rightAdjacentVolume,unknown) ]
+                         - QfaceNRight[ QInterEnumerator(patchIndex,leftAdjacentVolume,unknown) ];
+  }
+
+  ncp(
+    QAverage, DeltaQ,
+    ::exahype2::fv::getVolumeCentre( patchCentre, patchSize, QInEnumerator._numberOfDoFsPerAxisInCell, volumeIndex ),
+    ::exahype2::fv::getVolumeSize( patchSize, QInEnumerator._numberOfDoFsPerAxisInCell ),
+    t,
+    dt,
+    normal,
+    QFluxGathered
+  );
+
+  for (int unknown=0; unknown<QInEnumerator._unknowns; unknown++) {
+    QD[ QNcpEnumerator(patchIndex,volumeIndex,unknown) ] = QFluxGathered[unknown];
+  }
+}
+
+template <typename QNCPFaceEnumeratorType, typename QOutEnumeratorType>
+void exahype2::fv::musclhancock::internal::updateSolutionWithDTerm_LoopBody(
+  const double* __restrict__                   QDX,
+  const double* __restrict__                   QDY,
+  const double* __restrict__                   QDZ,
+  const QNCPFaceEnumeratorType                 ncpEnumerator,
+  const tarch::la::Vector<Dimensions,double>&  patchCentre,
+  const tarch::la::Vector<Dimensions,double>&  patchSize,
+  int                                          patchIndex,
+  const tarch::la::Vector<Dimensions,int>&     volumeIndex,
+  int                                          unknown,
+  double                                       dt,
+  double* __restrict__                         QOut,
+  const QOutEnumeratorType&                    QOutEnumerator
+) {
+  auto updateAlongOneCoordinateDirection = [=](const double* __restrict__ QD, int normal) {
+    tarch::la::Vector<Dimensions,int> leftFace   = volumeIndex;
+    tarch::la::Vector<Dimensions,int> rightFace  = volumeIndex;
+    leftFace(normal)--;
+    
+    double fluxLeft  = QD[ncpEnumerator(patchIndex, leftFace, unknown)];
+    double fluxRight = QD[ncpEnumerator(patchIndex, rightFace, unknown)];
+
+   //contribution from D term is negative
+    QOut[ QOutEnumerator(patchIndex, volumeIndex,unknown) ] += dt / patchSize(normal) * QOutEnumerator._numberOfDoFsPerAxisInCell *
+       (fluxLeft + fluxRight)*(-0.5);
+  };
+                     updateAlongOneCoordinateDirection( QDX, 0 );
+                     updateAlongOneCoordinateDirection( QDY, 1 );
+  if (Dimensions==3) updateAlongOneCoordinateDirection( QDZ, 2 );
+}
+
+
+//function on working
+template <class QInEnumeratorType, class QInterEnumeratorType, class QOutEnumeratorType>
+void exahype2::fv::musclhancock::internal::updateSolutionwithNCPandSource_LoopBody(
+  const double* __restrict__                   QIn,
+  const QInterEnumeratorType                   QInterEnumerator,
+  const QInEnumeratorType                      QInEnumerator,
+  exahype2::fv::musclhancock::NonconservativeProduct  ncp,
+  exahype2::fv::musclhancock::Source                source,
+  const tarch::la::Vector<Dimensions,double>&  patchCentre,
+  const tarch::la::Vector<Dimensions,double>&  patchSize,
+  int                                          patchIndex,
+  const tarch::la::Vector<Dimensions,int>&     volumeIndex,
+  double                                       t,
+  double                                       dt,
+  double*                                      timeDerivative,
+  double* __restrict__                         QOut,
+  const QOutEnumeratorType&                    QOutEnumerator,
+  bool                                         evalNCP,
+  bool                                         evalSRC
+) {
+  double QInGathered[QInEnumerator._unknowns+QInEnumerator._numberOfAuxiliaryVariables];
+  double QSourceGathered[QInEnumerator._unknowns];
+  double QNCPGathered[QInEnumerator._unknowns];
+  double gradientQ[QInEnumerator._unknowns*3];
+
+  // gather
+  for (int unknown=0; unknown<QInEnumerator._unknowns+QInEnumerator._numberOfAuxiliaryVariables; unknown++) {
+    QInGathered[unknown] = QIn[ QInEnumerator(patchIndex,volumeIndex,unknown) ];
+  }
+  for (int unknown=0; unknown<QInEnumerator._unknowns; unknown++) {
+    gradientQ[QInEnumerator._unknowns*0+unknown]=QInGathered[ QInEnumerator._unknowns*1+unknown ];
+    gradientQ[QInEnumerator._unknowns*1+unknown]=QInGathered[ QInEnumerator._unknowns*2+unknown ];
+    gradientQ[QInEnumerator._unknowns*2+unknown]=QInGathered[ QInEnumerator._unknowns*3+unknown ];
+  }
+  for (int unknown=0; unknown<QInEnumerator._unknowns; unknown++) {
+    QInGathered[unknown] += 0.5*dt*timeDerivative[ QInterEnumerator(patchIndex,volumeIndex,unknown) ];  //Q^n+1/2_i
+  }
+  //
+
+  if (evalSRC){
+  //add source contribution
+  source(
+      QInGathered,
+      ::exahype2::fv::getVolumeCentre( patchCentre, patchSize, QInEnumerator._numberOfDoFsPerAxisInCell, volumeIndex ),
+      ::exahype2::fv::getVolumeSize( patchSize, QInEnumerator._numberOfDoFsPerAxisInCell ),
+      t,
+      dt,
+      QSourceGathered
+  );
+  for (int unknown=0; unknown<QInEnumerator._unknowns; unknown++) {
+    QOut[ QOutEnumerator(patchIndex,volumeIndex,unknown) ] += dt * QSourceGathered[unknown];
+  }
+  }
+
+  if (evalNCP){
+  //add ncp contribution
+  for (int normal=0; normal<3; normal++){
+    ncp(
+      QInGathered, gradientQ+QInEnumerator._unknowns*normal,
+      ::exahype2::fv::getVolumeCentre( patchCentre, patchSize, QInEnumerator._numberOfDoFsPerAxisInCell, volumeIndex ),
+      ::exahype2::fv::getVolumeSize( patchSize, QInEnumerator._numberOfDoFsPerAxisInCell ),
+      t,
+      dt,
+      normal,
+      QNCPGathered
+    );
+    for (int unknown=0; unknown<QInEnumerator._unknowns; unknown++) {
+      QOut[ QOutEnumerator(patchIndex,volumeIndex,unknown) ] -= dt * QNCPGathered[unknown];
+    }
+  }
+  }
+}
+
+//function on working
+template <class QInEnumeratorType>
+double exahype2::fv::musclhancock::internal::reduceMaxEigenvalue_LoopBody(
+  const double* __restrict__                   QIn,
+  QInEnumeratorType                            QInEnumerator,
+    exahype2::fv::musclhancock::MaxEigenvalue         maxEigenvalue,
+    const tarch::la::Vector<Dimensions,double>&  patchCentre,
+    const tarch::la::Vector<Dimensions,double>&  patchSize,
+    int                                          patchIndex,
+    const tarch::la::Vector<Dimensions,int>&     volumeIndex,
+    double                                       t,
+    double                                       dt
+) {
+    double QInGathered[QInEnumerator._unknowns+QInEnumerator._numberOfAuxiliaryVariables];
+
+    // gather
+    #if defined(SharedOMP)
+    #pragma omp simd
+    #endif
+    for (int unknown=0; unknown<QInEnumerator._unknowns+QInEnumerator._numberOfAuxiliaryVariables; unknown++) {
+      QInGathered[unknown] = QIn[ QInEnumerator(patchIndex,volumeIndex,unknown) ];
+    }
+
+    double result = 0.0;
+    for (int normal=0; normal<Dimensions; normal++) {
+      // actual computation via user's functor
+      result = std::max(
+        result,
+        maxEigenvalue(
+          QInGathered,
+          ::exahype2::fv::getVolumeCentre( patchCentre, patchSize, QInEnumerator._numberOfDoFsPerAxisInCell, volumeIndex ),
+          ::exahype2::fv::getVolumeSize( patchSize, QInEnumerator._numberOfDoFsPerAxisInCell ),
+          t,
+          dt,
+          normal
+        )
+      );
+    }
+
+    return result;
+}
+
+///////////////////////////////////////////////////////////
+//old stuff below
+///////////////////////////////////////////////////////////
+
+
+
+
+

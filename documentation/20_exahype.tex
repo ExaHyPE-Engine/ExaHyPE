@@ -245,7 +245,8 @@ libtoolize; aclocal; autoconf; autoheader; cp src/config.h.in .; automake --add-
 ./configure --enable-exahype --enable-loadbalancing --enable-blockstructured
   \end{bash}
    These are the extensions. 
-   If you want to benchmark the kernels on your GPU, too, you have to add add \texttt{--enable-gpu=xxx}.
+   If you want to benchmark the kernels on your GPU, too, you have to add add
+   \texttt{--with-gpu=xxx}.
    The \texttt{xxx} clarifies which GPU backend to use. Type in \texttt{--help}
    for additional information. You will furthermore have to add additional flags
    on particular system.

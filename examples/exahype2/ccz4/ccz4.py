@@ -26,7 +26,7 @@ floatparams = {
 	"itau":1.0, "k1":0.1, "k2":0.0, "k3":0.5, "eta":1.0,
         "f":0.75, "g":0.0, "xi":1.0, "e":1.0, "c":1.0, "mu":0.2, "ds":1.0,
         "sk":1.0, "bs":1.0,
-        "domain_r":0.5, "smoothing":0.0 #, \
+        "domain_r":0.5, "smoothing":0.0, "KOSigma":8.0 #, \
 	#"itau":1.0, "k1":0.1, "k2":0.0, "k3":0.5, "eta":1.0,
         #"f":1.0, "g":0.0, "xi":1.0, "e":1.0, "c":1.0, "mu":0.2, "ds":1.0,
         #"sk":1.0, "bs":1.0#, \
@@ -39,7 +39,7 @@ floatparams = {
 }
 
 intparams = {"LapseType":1, "tp_grid_setup":0, "swi":99, "ReSwi":0, "source":0}
-
+#sss
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='ExaHyPE 2 - CCZ4 script')
     parser.add_argument("-maxh",   "--max-h",       dest="max_h",           type=float, required="True",  help="upper limit for refinement. Refers to volume size, i.e. not to patch size" )
@@ -49,7 +49,7 @@ if __name__ == "__main__":
     parser.add_argument("-m",    "--mode",            dest="mode",            default="release",  help="|".join(modes.keys()) )
     parser.add_argument( "--gpu",            dest="GPU",            default=False, action="store_true",  help="Run with accelerator support" )
     parser.add_argument("-ext",  "--extension",       dest="extension",       choices=["none", "gradient", "AMRadm", "Full"],   default="none",  help="Pick extension, i.e. what should be plotted on top. Default is none" )
-    parser.add_argument("-impl", "--implementation",  dest="implementation",  choices=["fv-global-fixed", "fv-global-adaptive", "fv-global-fixed-enclave", "fv-global-adaptive-enclave","fv-subcyling-adaptive-enclave","fv-local-enclave"], required="True",  help="Pick solver type" )
+    parser.add_argument("-impl", "--implementation",  dest="implementation",  choices=["fv-global-fixed", "fv-global-adaptive", "fv-global-fixed-enclave", "fv-global-adaptive-enclave","fv-subcyling-adaptive-enclave","fv-local-enclave", "fv-musclhancock", "fd-fourth-order", "fd-fourth-order-fixed"], required="True",  help="Pick solver type" )
     parser.add_argument("-no-pbc",  "--no-periodic-boundary-conditions",      dest="periodic_bc", action="store_false", default="True",  help="switch on or off the periodic BC" )
     parser.add_argument("-AMRMarker",  "--AMR-marker",      dest="marker", choices=["none", "poisson"],   default="none",  help="switch on or off the AMR boundary marker" )
     parser.add_argument("-et",   "--end-time",        dest="end_time",        type=float, default=1.0, help="End (terminal) time" )
@@ -86,9 +86,16 @@ if __name__ == "__main__":
        SuperClass = exahype2.solvers.fv.rusanov.SubcyclingAdaptiveTimeStepWithEnclaveTasking
     if args.implementation=="fv-local-enclave":
        SuperClass = exahype2.solvers.fv.rusanov.LocalTimeStepWithEnclaveTasking
+    if args.implementation=="fv-musclhancock":
+       SuperClass = exahype2.solvers.fv.musclhancock.GlobalAdaptiveTimeStep
+    if args.implementation=="fd-fourth-order":
+       SuperClass = exahype2.solvers.rkfd.fd4.GlobalAdaptiveTimeStep
+    if args.implementation=="fd-fourth-order-fixed":
+       SuperClass = exahype2.solvers.rkfd.fd4.GlobalFixedTimeStep
+
 
     class CCZ4Solver( SuperClass ):
-      def __init__(self, name, patch_size, min_volume_h, max_volume_h, cfl, domain_r):
+      def __init__(self, name, patch_size, min_volume_h, max_volume_h, cfl, domain_r, KOSig):
         unknowns = {
           "G":6,
           "K":6,
@@ -144,15 +151,25 @@ if __name__ == "__main__":
             min_volume_h=min_volume_h, max_volume_h=max_volume_h,
             time_step_relaxation=cfl
           )
-        elif SuperClass==exahype2.solvers.fv.rusanov.SubcyclingAdaptiveTimeStepWithEnclaveTasking:
-          SuperClass.__init__(#change to linear interpolation in time by hand here
+        elif SuperClass==exahype2.solvers.rkfd.fd4.GlobalAdaptiveTimeStep:
+          SuperClass.__init__(
             self,
-            name=name, patch_size=patch_size,
+            name=name, patch_size=patch_size, rk_order=1,
             unknowns=number_of_unknowns,
             auxiliary_variables=0,
             min_volume_h=min_volume_h, max_volume_h=max_volume_h,
             time_step_relaxation=cfl,
-            interpolate_linearly_in_time=True
+            KOSigma=KOSig
+          )
+        elif SuperClass==exahype2.solvers.rkfd.fd4.GlobalFixedTimeStep:
+          SuperClass.__init__(
+            self,
+            name=name, patch_size=patch_size, rk_order=1,
+            unknowns=number_of_unknowns,
+            auxiliary_variables=0,
+            min_volume_h=min_volume_h, max_volume_h=max_volume_h,
+            normalised_time_step_size=0.001,
+            KOSigma=KOSig
           )
         else:
           SuperClass.__init__(
@@ -161,7 +178,7 @@ if __name__ == "__main__":
             unknowns=number_of_unknowns,
             auxiliary_variables=0,
             min_volume_h=min_volume_h, max_volume_h=max_volume_h,
-            time_step_relaxation=cfl,
+            time_step_relaxation=cfl
             #use_gpu =args.GPU #=="fv-fixed-gpu" else False
 #                        use_gpu = True if args.implementation=="fv-adaptive-gpu" else False
           )
@@ -174,7 +191,8 @@ if __name__ == "__main__":
           ncp=exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
           flux=exahype2.solvers.fv.PDETerms.None_Implementation,
           source_term=exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
-          refinement_criterion = exahype2.solvers.fv.PDETerms.User_Defined_Implementation
+          refinement_criterion = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
+          eigenvalues = exahype2.solvers.fv.PDETerms.User_Defined_Implementation
         )
 
         self.postprocess_updated_patch = """
@@ -369,10 +387,10 @@ if __name__ == "__main__":
             const int leftCellSerialised  = peano4::utils::dLinearised(leftCell, patchSize + 2*1);
             const int rightCellSerialised = peano4::utils::dLinearised(rightCell,patchSize + 2*1);
             for (int i=0; i<real_var; i++) {
-              reconstructedPatch[cellSerialised*(real_var+aux_var)+real_var+i*3+d] =
-                ( reconstructedPatch[rightCellSerialised*(real_var+aux_var)+i] - reconstructedPatch[leftCellSerialised*(real_var+aux_var)+i] ) / 2.0 / volumeH;
+              double rightgradient=reconstructedPatch[rightCellSerialised*(real_var+aux_var)+i] - reconstructedPatch[cellSerialised*(real_var+aux_var)+i];
+              double leftgradient=reconstructedPatch[cellSerialised*(real_var+aux_var)+i] - reconstructedPatch[leftCellSerialised*(real_var+aux_var)+i];
+              reconstructedPatch[cellSerialised*(real_var+aux_var)+real_var+d*real_var+i] = rightgradient < leftgradient ? rightgradient: leftgradient;
             }
-
           }
         }
     """
@@ -582,7 +600,7 @@ if __name__ == "__main__":
           sources = exahype2.solvers.aderdg.PDETerms.User_Defined_Implementation
       )
     else:
-      my_solver = CCZ4Solver(solver_name, args.patch_size, min_h, args.max_h, args.cfl, args.CCZ4domain_r)
+      my_solver = CCZ4Solver(solver_name, args.patch_size, min_h, args.max_h, args.cfl, args.CCZ4domain_r,args.CCZ4KOSigma)
       userinfo.append(("CFL ratio set as "+str(args.cfl), None))
 
 ########################################################################################
@@ -602,6 +620,9 @@ if __name__ == "__main__":
         
     if args.interpolation=="order-2":
       my_solver.overlap=2
+
+    if args.implementation=="fd-fourth-order" or args.implementation=="fd-fourth-order-fixed":
+      my_solver.overlap=3
 
     my_solver.restriction = "averaging" # "linear"
 

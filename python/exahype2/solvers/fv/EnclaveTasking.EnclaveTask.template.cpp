@@ -15,6 +15,8 @@
 #include "exahype2/EnclaveBookkeeping.h"
 #include "exahype2/EnclaveTask.h"
 
+#include "exahype2/enumerator/Enumerator.h"
+
 #include "peano4/parallel/parallel.h"
 
 #include "peano4/utils/Loop.h"
@@ -330,8 +332,8 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse( const std::list<Task*>& ot
   int currentTask = 0;
   for (auto& p: otherTasks) {
     patchData.QIn[currentTask]         = static_cast<{{NAMESPACE | join("::")}}::{{CLASSNAME}}*>(p)->_inputValues;
-    patchData.patchCentre[currentTask] = static_cast<{{NAMESPACE | join("::")}}::{{CLASSNAME}}*>(p)->_marker.x();
-    patchData.patchSize[currentTask]   = static_cast<{{NAMESPACE | join("::")}}::{{CLASSNAME}}*>(p)->_marker.h();
+    patchData.cellCentre[currentTask]  = static_cast<{{NAMESPACE | join("::")}}::{{CLASSNAME}}*>(p)->_marker.x();
+    patchData.cellSize[currentTask]    = static_cast<{{NAMESPACE | join("::")}}::{{CLASSNAME}}*>(p)->_marker.h();
     patchData.t[currentTask]           = static_cast<{{NAMESPACE | join("::")}}::{{CLASSNAME}}*>(p)->_t;
     patchData.dt[currentTask]          = static_cast<{{NAMESPACE | join("::")}}::{{CLASSNAME}}*>(p)->_dt;
     patchData.id[currentTask]          = static_cast<{{NAMESPACE | join("::")}}::{{CLASSNAME}}*>(p)->_id;
@@ -340,8 +342,8 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse( const std::list<Task*>& ot
     currentTask++;
   }
   patchData.QIn[currentTask]         = _inputValues;
-  patchData.patchCentre[currentTask] = _marker.x();
-  patchData.patchSize[currentTask]   = _marker.h();
+  patchData.cellCentre[currentTask]  = _marker.x();
+  patchData.cellSize[currentTask]    = _marker.h();
   patchData.t[currentTask]           = _t;
   patchData.dt[currentTask]          = _dt;
   patchData.id[currentTask]          = _id;
@@ -376,24 +378,6 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse( const std::list<Task*>& ot
     foundOffloadingBranch = true;
 
     ::exahype2::fv::rusanov::sycl::{{FUSED_COMPUTE_KERNEL_CALL_GPU}}
-
-/*
-    #if Dimensions==2
-    ::exahype2::fv::Fusanov_2D_with_SYCL_offloading
-    #elif Dimensions==3
-    ::exahype2::fv::Fusanov_3D_with_SYCL_offloading
-    #endif
-    {{FUSED_RIEMANN_SOLVER_TEMPLATE_ARGUMENTS}}
-    (
-      1,
-      pD,
-      _numberOfInputValues,
-      _numberOfResultValues,
-	  tarch::multicore::getSYCLQueue(targetDevice),
-	  {1,1,1} // if we really have to, we can make the range qualifiers template parameters. If there's a
-              // way to pass them in as arrays, then I'd prefer it that way. Up to you
-    );
-*/
   }
   #endif
 

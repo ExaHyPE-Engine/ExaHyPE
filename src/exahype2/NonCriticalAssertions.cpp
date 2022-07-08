@@ -59,6 +59,22 @@ void exahype2::triggerNonCriticalAssertion( std::string file, int line, std::str
       #if defined(Parallel) and defined(MPISupportsSingleSidedCommunication)
       int rank = tarch::mpi::Rank::getInstance().getRank();
 
+      /**
+
+From Joachim Protze:
+
+
+
+From the mpi_win_free man page:
+> It can be invoked by a process only after it has completed its involvement in RMA communications on window win, that is, the process has called MPI_Win_fence, or called MPI_Win_unlock to match a previous call to MPI_Win_lock. When the call returns, the window memory can be freed.
+The recommendation from my colleague:
+Start a communication epoch with mpi_win_lock,
+write the data with mpi_put,
+complete the communication on origin and target with mpi_win_flush, and
+close the epoch with mpi_win_unlock.Although the flush ensures completion on the target process, the c/c++ semantics don't guarantee that you will see the changed value. Making the value respectively the pointer volatile should solve this.The flush is a blocking call, so the process will be blocked until the target process has received the data. As I understand the use case, this call is not on the critical path, so nothing to worry performance-wise.To communicate with all other processes, you can use win_lock_all and win_flush_all instead of the P2P version.
+
+
+       */
       MPI_Put( &rank, 1, MPI_INT, 0, 0, 1, MPI_INT, assertionWindow );
       #elif defined(Parallel)
       assertionMsg( false, "Noncritical assertion triggered, but system does not support single-sided communication so program will shut down immediately");

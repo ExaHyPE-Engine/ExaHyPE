@@ -1,0 +1,500 @@
+#include "../../../tarch/multicore/otter.h"
+#include "MusclHancock.h"
+
+
+void exahype2::fv::musclhancock::timeStepWithMusclHancock_patchwise_heap_functors(
+  ::exahype2::CellData&   patchData,
+  int                     numberOfVolumesPerAxisInPatch,
+  int                     haloSize,
+  int                     unknowns,
+  int                     auxiliaryVariables,
+  bool                    evaluateFlux,
+  bool                    evaluateNonconservativeProduct,
+  bool                    evaluateSource,
+  bool                    evaluateMaximumEigenvalueAfterTimeStep,
+  Flux                    flux,
+  NonconservativeProduct  nonconservativeProduct,
+  Source                  source,
+  MaxEigenvalue           maxEigenvalue
+) {
+  static tarch::logging::Log _log( "exahype2::fv::musclhancock" );
+
+  /**
+   * The halo size passed in by the user might differ from the one that we have to evaluate/
+   * take into account from the solver's perspective.
+   */
+  constexpr int solversHaloSize        = 1;
+
+  assertionEquals(haloSize,1);
+  assertionEquals(3*unknowns,auxiliaryVariables);
+
+  exahype2::enumerator::AoSLexicographicEnumerator QInEnumerator       (                      1,   numberOfVolumesPerAxisInPatch,          haloSize,unknowns,auxiliaryVariables);
+  exahype2::enumerator::AoSLexicographicEnumerator QOutEnumerator      (                      1,   numberOfVolumesPerAxisInPatch,                 0,unknowns,auxiliaryVariables);
+  exahype2::enumerator::AoSLexicographicEnumerator fluxEnumerator      (patchData.numberOfCells,   numberOfVolumesPerAxisInPatch,   solversHaloSize,unknowns,                 0);
+  exahype2::enumerator::AoSLexicographicEnumerator ncpEnumerator       (patchData.numberOfCells, numberOfVolumesPerAxisInPatch+1,   solversHaloSize,unknowns,                 0);
+  exahype2::enumerator::AoSLexicographicEnumerator eigenvalueEnumerator(patchData.numberOfCells,   numberOfVolumesPerAxisInPatch,   solversHaloSize,       1,                 0);
+
+  double* tempFluxXL                  = evaluateFlux                     ? tarch::allocateMemory( fluxEnumerator.size(),      tarch::MemoryLocation::Heap ) : nullptr;
+  double* tempFluxYL                  = evaluateFlux                     ? tarch::allocateMemory( fluxEnumerator.size(),      tarch::MemoryLocation::Heap ) : nullptr;
+  double* tempFluxZL                  = (evaluateFlux and Dimensions==3) ? tarch::allocateMemory( fluxEnumerator.size(),      tarch::MemoryLocation::Heap ) : nullptr;
+  double* tempFluxXR                  = evaluateFlux                     ? tarch::allocateMemory( fluxEnumerator.size(),      tarch::MemoryLocation::Heap ) : nullptr;
+  double* tempFluxYR                  = evaluateFlux                     ? tarch::allocateMemory( fluxEnumerator.size(),      tarch::MemoryLocation::Heap ) : nullptr;
+  double* tempFluxZR                  = (evaluateFlux and Dimensions==3) ? tarch::allocateMemory( fluxEnumerator.size(),      tarch::MemoryLocation::Heap ) : nullptr;
+  double* tempDX                      = evaluateNonconservativeProduct                     ? tarch::allocateMemory( ncpEnumerator.size(),        tarch::MemoryLocation::Heap ) : nullptr;
+  double* tempDY                      = evaluateNonconservativeProduct                     ? tarch::allocateMemory( ncpEnumerator.size(),        tarch::MemoryLocation::Heap ) : nullptr;
+  double* tempDZ                      = (evaluateNonconservativeProduct and Dimensions==3) ? tarch::allocateMemory( ncpEnumerator.size(),        tarch::MemoryLocation::Heap ) : nullptr;
+  double* tempEigenvalueX             =                                    tarch::allocateMemory( eigenvalueEnumerator.size(),      tarch::MemoryLocation::Heap );
+  double* tempEigenvalueY             =                                    tarch::allocateMemory( eigenvalueEnumerator.size(),      tarch::MemoryLocation::Heap );
+  double* tempEigenvalueZ             = (Dimensions==3)                  ? tarch::allocateMemory( eigenvalueEnumerator.size(),      tarch::MemoryLocation::Heap ) : nullptr;
+
+  exahype2::enumerator::AoSLexicographicEnumerator QInterEnumerator       (                      1,   numberOfVolumesPerAxisInPatch,          haloSize,unknowns,              0);
+  //used to sotre the time derivatives 
+  double* timeDerivative             = tarch::allocateMemory( QInterEnumerator.size(),      tarch::MemoryLocation::Heap );
+  //face value
+  double* QfaceXneg                  = tarch::allocateMemory( QInterEnumerator.size(),      tarch::MemoryLocation::Heap );
+  double* QfaceXpos                  = tarch::allocateMemory( QInterEnumerator.size(),      tarch::MemoryLocation::Heap );
+  double* QfaceYneg                  = tarch::allocateMemory( QInterEnumerator.size(),      tarch::MemoryLocation::Heap );
+  double* QfaceYpos                  = tarch::allocateMemory( QInterEnumerator.size(),      tarch::MemoryLocation::Heap );
+  double* QfaceZneg                  = tarch::allocateMemory( QInterEnumerator.size(),      tarch::MemoryLocation::Heap );
+  double* QfaceZpos                  = tarch::allocateMemory( QInterEnumerator.size(),      tarch::MemoryLocation::Heap );
+
+
+  for (int patchIndex=0; patchIndex<patchData.numberOfCells; patchIndex++) {
+    //logDebug( "timeStepWithMusclHancock_sequential(...)", "evaluate source terms and/or copy solution over" );
+    //step1:copy solution
+    if (Dimensions==3) {
+      for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++)
+      for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
+      for (int z = 0; z < numberOfVolumesPerAxisInPatch; z++)
+      for (int unknown=0; unknown<unknowns+auxiliaryVariables; unknown++) {
+        internal::copySolution_LoopBody(
+          patchData.QIn[patchIndex],
+          QInEnumerator,
+          patchIndex,
+          volumeIndex3d(x,y,z),
+          unknown,
+          patchData.QOut[patchIndex],
+          QOutEnumerator
+        );
+      }
+    }
+
+    //step2: calculate the time derivatives
+    for (int x = -solversHaloSize; x < numberOfVolumesPerAxisInPatch+solversHaloSize; x++)
+    for (int y = -solversHaloSize; y < numberOfVolumesPerAxisInPatch+solversHaloSize; y++)
+    for (int z = -solversHaloSize; z < numberOfVolumesPerAxisInPatch+solversHaloSize; z++)
+    {
+    if ( ((x<0 or x>=numberOfVolumesPerAxisInPatch) and (y<0 or y>=numberOfVolumesPerAxisInPatch)) or
+         ((x<0 or x>=numberOfVolumesPerAxisInPatch) and (z<0 or z>=numberOfVolumesPerAxisInPatch)) or
+         ((y<0 or y>=numberOfVolumesPerAxisInPatch) and (z<0 or z>=numberOfVolumesPerAxisInPatch))  )
+         {}
+      //for now, we assume that we use a full setup (include flux, ncp and source)
+    else {
+      internal::computeTimeDerivative_LoopBody(
+        patchData.QIn[patchIndex],
+        QInEnumerator,
+        flux, nonconservativeProduct, source,
+        patchData.cellCentre[patchIndex],
+        patchData.cellSize[patchIndex],
+        patchIndex,
+        volumeIndex3d(x,y,z),
+        patchData.t[patchIndex],
+        patchData.dt[patchIndex],
+        timeDerivative,
+        QInterEnumerator
+       );
+    }
+    }
+
+    //step2.1: calculate the quantites on the face
+    //Q_i, dt, dx_i -> Q^n+1/2_i-1/2, so on...
+    for (int x = -solversHaloSize; x < numberOfVolumesPerAxisInPatch+solversHaloSize; x++)
+    for (int y = -solversHaloSize; y < numberOfVolumesPerAxisInPatch+solversHaloSize; y++)
+    for (int z = -solversHaloSize; z < numberOfVolumesPerAxisInPatch+solversHaloSize; z++)
+    if ( ((x<0 or x>=numberOfVolumesPerAxisInPatch) and (y<0 or y>=numberOfVolumesPerAxisInPatch)) or
+         ((x<0 or x>=numberOfVolumesPerAxisInPatch) and (z<0 or z>=numberOfVolumesPerAxisInPatch)) or
+         ((y<0 or y>=numberOfVolumesPerAxisInPatch) and (z<0 or z>=numberOfVolumesPerAxisInPatch))  )
+         {}
+    else {
+      internal::computeQonFace_LoopBody(
+        patchData.QIn[patchIndex],
+        QInEnumerator,
+        patchData.cellCentre[patchIndex],
+        patchData.cellSize[patchIndex],
+        patchIndex,
+        volumeIndex3d(x,y,z),
+        patchData.t[patchIndex],
+        patchData.dt[patchIndex],
+        timeDerivative,
+        QfaceXneg, QfaceXpos,
+        QfaceYneg, QfaceYpos,
+        QfaceZneg, QfaceZpos,
+        QInterEnumerator
+       );
+    }
+
+    //step3: calculate max eigenvalue and update the solution with eigenvalue damping
+    if (Dimensions==3) {
+      otterLoopBegin();
+      for (int x = -solversHaloSize; x < numberOfVolumesPerAxisInPatch+solversHaloSize; x++)
+      for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
+      for (int z = 0; z < numberOfVolumesPerAxisInPatch; z++) {
+        otterLoopIterationBegin();
+        internal::computeMaxEigenvalue_LoopBody(
+              patchData.QIn[patchIndex],
+              QInEnumerator,
+              maxEigenvalue,
+              patchData.cellCentre[patchIndex],
+              patchData.cellSize[patchIndex],
+              patchIndex,
+              volumeIndex3d(x,y,z),
+              patchData.t[patchIndex], patchData.dt[patchIndex],
+              0,
+              tempEigenvalueX,
+              eigenvalueEnumerator
+        );
+        otterLoopIterationEnd();
+      }
+      otterLoopEnd();
+
+      otterLoopBegin();
+      for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++)
+      for (int y = -solversHaloSize; y < numberOfVolumesPerAxisInPatch+solversHaloSize; y++)
+      for (int z = 0; z < numberOfVolumesPerAxisInPatch; z++) {
+        otterLoopIterationBegin();
+        internal::computeMaxEigenvalue_LoopBody(
+              patchData.QIn[patchIndex],
+              QInEnumerator,
+              maxEigenvalue,
+              patchData.cellCentre[patchIndex],
+              patchData.cellSize[patchIndex],
+              patchIndex,
+              volumeIndex3d(x,y,z),
+              patchData.t[patchIndex], patchData.dt[patchIndex],
+              1,
+              tempEigenvalueY,
+              eigenvalueEnumerator
+        );
+        otterLoopIterationEnd();
+      }
+      otterLoopEnd();
+
+      otterLoopBegin();
+      for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++)
+      for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
+      for (int z = -solversHaloSize; z < numberOfVolumesPerAxisInPatch+solversHaloSize; z++) {
+        otterLoopIterationBegin();
+        internal::computeMaxEigenvalue_LoopBody(
+              patchData.QIn[patchIndex],
+              QInEnumerator,
+              maxEigenvalue,
+              patchData.cellCentre[patchIndex],
+              patchData.cellSize[patchIndex],
+              patchIndex,
+              volumeIndex3d(x,y,z),
+              patchData.t[patchIndex], patchData.dt[patchIndex],
+              2,
+              tempEigenvalueZ,
+              eigenvalueEnumerator
+        );
+        otterLoopIterationEnd();
+      }
+      otterLoopEnd();
+
+
+////////////////////////////////////////////////
+//todo everyting below ask for q on the face rather than q at volume center!
+////////////////////////////////////////////////
+
+      for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++)
+      for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
+      for (int z = 0; z < numberOfVolumesPerAxisInPatch; z++)
+      for (int unknown = 0; unknown < unknowns; unknown++) {
+        internal::updateSolutionWithEigenvalueDamping_LoopBody(
+          patchData.QIn[patchIndex],
+          QInEnumerator,
+          tempEigenvalueX,
+          tempEigenvalueY,
+          tempEigenvalueZ,
+          eigenvalueEnumerator,
+          patchData.cellCentre[patchIndex],
+          patchData.cellSize[patchIndex],
+          patchIndex,
+          volumeIndex3d(x,y,z),
+          unknown,
+          patchData.dt[patchIndex],
+          patchData.QOut[patchIndex],
+          QOutEnumerator,
+          QfaceXneg, QfaceXpos,
+          QfaceYneg, QfaceYpos,
+          QfaceZneg, QfaceZpos,
+          QInterEnumerator
+        );
+      }
+    }
+
+
+//now we have both space and time derivative
+
+    //step4: compute and update flux part
+    //std::cout<<"flux check: "<<std::to_string(1)<<" fluxRight: "<<std::to_string(2)<<std::endl;
+    if (evaluateFlux and Dimensions==3) {
+      otterLoopBegin();
+      for (int x = -solversHaloSize; x < numberOfVolumesPerAxisInPatch+solversHaloSize; x++)
+      for (int y =         0; y < numberOfVolumesPerAxisInPatch;          y++)
+      for (int z =         0; z < numberOfVolumesPerAxisInPatch;          z++) {
+        otterLoopIterationBegin();
+        internal::computeFlux_LoopBody(
+          QfaceXneg, QfaceXpos, QInterEnumerator, QInEnumerator,
+          flux,
+          patchData.cellCentre[patchIndex],
+          patchData.cellSize[patchIndex],
+          patchIndex,
+          volumeIndex3d(x,y,z),
+          patchData.t[patchIndex],
+          patchData.dt[patchIndex],
+          0, // normal
+          tempFluxXL, tempFluxXR,
+          fluxEnumerator
+        );
+        otterLoopIterationEnd();
+      }
+      otterLoopEnd();
+
+      otterLoopBegin();
+      for (int x =         0; x < numberOfVolumesPerAxisInPatch;           x++)
+      for (int y = -solversHaloSize; y < numberOfVolumesPerAxisInPatch+solversHaloSize;  y++)
+      for (int z =         0; z < numberOfVolumesPerAxisInPatch;           z++) {
+        otterLoopIterationBegin();
+        internal::computeFlux_LoopBody(
+          QfaceYneg, QfaceYpos, QInterEnumerator, QInEnumerator,
+          flux,
+          patchData.cellCentre[patchIndex],
+          patchData.cellSize[patchIndex],
+          patchIndex,
+          volumeIndex3d(x,y,z),
+          patchData.t[patchIndex],
+          patchData.dt[patchIndex],
+          1, // normal
+          tempFluxYL, tempFluxYR,
+          fluxEnumerator
+        );
+        otterLoopIterationEnd();
+      }
+      otterLoopEnd();
+
+      otterLoopBegin();
+      for (int x =         0; x < numberOfVolumesPerAxisInPatch;           x++)
+      for (int y =         0; y < numberOfVolumesPerAxisInPatch;           y++)
+      for (int z = -solversHaloSize; z < numberOfVolumesPerAxisInPatch+solversHaloSize;  z++) {
+        otterLoopIterationBegin();
+        internal::computeFlux_LoopBody(
+          QfaceZneg, QfaceZpos, QInterEnumerator, QInEnumerator,
+          flux,
+          patchData.cellCentre[patchIndex],
+          patchData.cellSize[patchIndex],
+          patchIndex,
+          volumeIndex3d(x,y,z),
+          patchData.t[patchIndex],
+          patchData.dt[patchIndex],
+          2, // normal
+          tempFluxZL, tempFluxZR,
+          fluxEnumerator
+        );
+        otterLoopIterationEnd();
+      }
+      otterLoopEnd();
+
+      for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++)
+      for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
+      for (int z = 0; z < numberOfVolumesPerAxisInPatch; z++)
+      for (int unknown=0; unknown<unknowns; unknown++) {
+        internal::updateSolutionWithFlux_LoopBody(
+          tempFluxXL, tempFluxYL, tempFluxZL,
+          tempFluxXR, tempFluxYR, tempFluxZR,
+          fluxEnumerator,
+          patchData.cellCentre[patchIndex],
+          patchData.cellSize[patchIndex],
+          patchIndex,
+          volumeIndex3d(x,y,z),
+          unknown,
+          patchData.dt[patchIndex],
+          *(patchData.QOut + patchIndex),
+          QOutEnumerator
+        );
+      }
+    }
+   
+
+    //step5: compute and update D part
+    //tricky thing: it is actually identical what we use for ncp now
+    if (evaluateNonconservativeProduct and Dimensions==3) {
+        otterLoopBegin();
+        for (int z =         0; z < numberOfVolumesPerAxisInPatch;            z++)
+        for (int y =         0; y < numberOfVolumesPerAxisInPatch;            y++)
+        for (int x = -solversHaloSize; x < numberOfVolumesPerAxisInPatch+solversHaloSize-1; x++) {
+          otterLoopIterationBegin();
+          internal::computeDTerm_LoopBody(
+            QfaceXneg, QfaceXpos, QInterEnumerator, QInEnumerator,
+            nonconservativeProduct,
+            patchData.cellCentre[patchIndex],
+            patchData.cellSize[patchIndex],
+            patchIndex,
+            volumeIndex3d(x,y,z),
+            patchData.t[patchIndex],
+            patchData.dt[patchIndex],
+            0, // normal
+            tempDX,
+            ncpEnumerator
+          );
+          otterLoopIterationEnd();
+        }
+        otterLoopEnd();
+
+        otterLoopBegin();
+        for (int x =         0; x < numberOfVolumesPerAxisInPatch;            x++)
+        for (int y = -solversHaloSize; y < numberOfVolumesPerAxisInPatch+solversHaloSize-1; y++)
+        for (int z =         0; z < numberOfVolumesPerAxisInPatch;            z++) {
+          otterLoopIterationBegin();
+          internal::computeDTerm_LoopBody(
+            QfaceYneg, QfaceYpos, QInterEnumerator, QInEnumerator,
+            nonconservativeProduct,
+            patchData.cellCentre[patchIndex],
+            patchData.cellSize[patchIndex],
+            patchIndex,
+            volumeIndex3d(x,y,z),
+            patchData.t[patchIndex],
+            patchData.dt[patchIndex],
+            1, // normal
+            tempDY,
+            ncpEnumerator
+          );
+          otterLoopIterationEnd();
+        }
+        otterLoopEnd();
+
+        otterLoopBegin();
+        for (int x =         0; x < numberOfVolumesPerAxisInPatch;            x++)
+        for (int y =         0; y < numberOfVolumesPerAxisInPatch;            y++)
+        for (int z = -solversHaloSize; z < numberOfVolumesPerAxisInPatch+solversHaloSize-1; z++) {
+          otterLoopIterationBegin();
+          internal::computeDTerm_LoopBody(
+            QfaceZneg, QfaceZpos, QInterEnumerator, QInEnumerator,
+            nonconservativeProduct,
+            patchData.cellCentre[patchIndex],
+            patchData.cellSize[patchIndex],
+            patchIndex,
+            volumeIndex3d(x,y,z),
+            patchData.t[patchIndex],
+            patchData.dt[patchIndex],
+            2, // normal
+            tempDZ,
+            ncpEnumerator
+          );
+          otterLoopIterationEnd();
+        }
+        otterLoopEnd();
+
+        otterLoopBegin();
+        for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++)
+        for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
+        for (int z = 0; z < numberOfVolumesPerAxisInPatch; z++)
+        for (int unknown=0; unknown<unknowns; unknown++) {
+          otterLoopIterationBegin();
+          internal::updateSolutionWithDTerm_LoopBody(
+            tempDX, tempDY, tempDZ,
+            ncpEnumerator,
+            patchData.cellCentre[patchIndex],
+            patchData.cellSize[patchIndex],
+            patchIndex,
+            volumeIndex3d(x,y,z),
+            unknown,
+            patchData.dt[patchIndex],
+            *(patchData.QOut + patchIndex),
+            QOutEnumerator
+          );
+          otterLoopIterationEnd();
+        }
+        otterLoopEnd();
+    }
+
+    //step6: update the source term and ncp term
+    //this function now cause crash in foccz4
+    otterLoopBegin();
+    for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++)
+    for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
+    for (int z = 0; z < numberOfVolumesPerAxisInPatch; z++)
+    for (int unknown = 0; unknown < unknowns; unknown++) {
+      otterLoopIterationBegin();
+      //for now, we assume that we use a full setup (include ncp and source)
+      internal::updateSolutionwithNCPandSource_LoopBody(
+        patchData.QIn[patchIndex],
+        QInterEnumerator, QInEnumerator,
+        nonconservativeProduct,
+        source,
+        patchData.cellCentre[patchIndex],
+        patchData.cellSize[patchIndex],
+        patchIndex,
+        volumeIndex3d(x,y,z),
+        patchData.t[patchIndex],
+        patchData.dt[patchIndex],
+        timeDerivative,
+        patchData.QOut[patchIndex],
+        QOutEnumerator,
+        evaluateNonconservativeProduct,
+        evaluateSource
+       );
+      otterLoopIterationEnd();
+    }
+    otterLoopEnd();
+
+    //step7: compute maximum eigenvalue for subsequent time step
+    if (evaluateMaximumEigenvalueAfterTimeStep) {
+      double newMaxEigenvalue = 0.0;
+      otterLoopBegin(); // @todo how do I clarify that this is a reduction? Do we need this info here?
+      for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++)
+      for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
+      for (int z = 0; z < numberOfVolumesPerAxisInPatch; z++) {
+        otterLoopIterationBegin();
+        newMaxEigenvalue = std::max(
+          newMaxEigenvalue,
+          internal::reduceMaxEigenvalue_LoopBody(
+            *(patchData.QOut + patchIndex),
+            QOutEnumerator,
+            maxEigenvalue,
+            patchData.cellCentre[patchIndex],
+            patchData.cellSize[patchIndex],
+            patchIndex,
+            volumeIndex3d(x,y,z),
+            patchData.t[patchIndex],
+            patchData.dt[patchIndex]
+          )
+        );
+        otterLoopIterationEnd();
+      }
+      otterLoopEnd();
+      patchData.maxEigenvalue[patchIndex] = newMaxEigenvalue;
+    }
+  }
+
+  if (tempFluxXL!=nullptr)               tarch::freeMemory(tempFluxXL, tarch::MemoryLocation::Heap);
+  if (tempFluxYL!=nullptr)               tarch::freeMemory(tempFluxYL, tarch::MemoryLocation::Heap);
+  if (tempFluxZL!=nullptr)               tarch::freeMemory(tempFluxZL, tarch::MemoryLocation::Heap);
+  if (tempFluxXR!=nullptr)               tarch::freeMemory(tempFluxXR, tarch::MemoryLocation::Heap);
+  if (tempFluxYR!=nullptr)               tarch::freeMemory(tempFluxYR, tarch::MemoryLocation::Heap);
+  if (tempFluxZR!=nullptr)               tarch::freeMemory(tempFluxZR, tarch::MemoryLocation::Heap);
+  if (tempDX!=nullptr) tarch::freeMemory(tempDX, tarch::MemoryLocation::Heap);
+  if (tempDY!=nullptr) tarch::freeMemory(tempDY, tarch::MemoryLocation::Heap);
+  if (tempDZ!=nullptr) tarch::freeMemory(tempDZ, tarch::MemoryLocation::Heap);
+  if (tempEigenvalueX!=nullptr)         tarch::freeMemory(tempEigenvalueX, tarch::MemoryLocation::Heap);
+  if (tempEigenvalueY!=nullptr)         tarch::freeMemory(tempEigenvalueY, tarch::MemoryLocation::Heap);
+  if (tempEigenvalueZ!=nullptr)         tarch::freeMemory(tempEigenvalueZ, tarch::MemoryLocation::Heap);
+  tarch::freeMemory(timeDerivative, tarch::MemoryLocation::Heap);
+  tarch::freeMemory(QfaceXneg, tarch::MemoryLocation::Heap);
+  tarch::freeMemory(QfaceXpos, tarch::MemoryLocation::Heap);
+  tarch::freeMemory(QfaceYneg, tarch::MemoryLocation::Heap);
+  tarch::freeMemory(QfaceYpos, tarch::MemoryLocation::Heap);
+  tarch::freeMemory(QfaceZneg, tarch::MemoryLocation::Heap);
+  tarch::freeMemory(QfaceZpos, tarch::MemoryLocation::Heap);
+}
+

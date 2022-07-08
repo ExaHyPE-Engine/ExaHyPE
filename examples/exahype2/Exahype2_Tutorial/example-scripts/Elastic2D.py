@@ -13,8 +13,8 @@ project = exahype2.Project( ["examples", "exahype2", "elastic2d"], "elastic2d", 
 #
 unknowns       = 5
 time_step_size = 0.001
-max_h          = 0.4
-min_h          = 0.2
+max_h          = 0.2
+min_h          = 0.06
 
 #
 # Still the same solver, but this time we use named arguments. This is the way
@@ -30,7 +30,6 @@ thesolver = exahype2.solvers.fv.rusanov.GlobalAdaptiveTimeStep(
   unknowns, auxiliary_variables,
   min_h, max_h,
   flux = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
-  eigenvalues = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
   ncp = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
   time_step_relaxation = 0.01
 )
@@ -49,7 +48,8 @@ project.set_global_simulation_parameters(
   dimensions = 2,
   offset = [0.0,0.0],
   size = [10.0,10.0],
-  end_time = 0.01,
+  min_end_time = 0.04,
+  max_end_time = 0.04,
   first_plot_time_stamp = 0.0,
   time_in_between_plots = 0.001,      # snapshots
   periodic_BC = [False, False, False]

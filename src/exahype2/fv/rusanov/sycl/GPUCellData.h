@@ -105,14 +105,14 @@ namespace exahype2 {
            */
           GPUCellData(
             const ::exahype2::CellData& hostObject,
-            const exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator& inEnumerator,
-            const exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator& outEnumerator,
+            const exahype2::enumerator::AoSLexicographicEnumerator& inEnumerator,
+            const exahype2::enumerator::AoSLexicographicEnumerator& outEnumerator,
             ::sycl::queue& queue
           );
 
           void destroy(
             ::exahype2::CellData& hostObject,
-            const exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator& outEnumerator,
+            const exahype2::enumerator::AoSLexicographicEnumerator& outEnumerator,
             bool copyEigenvaluesBack,
             ::sycl::queue& queue
           );

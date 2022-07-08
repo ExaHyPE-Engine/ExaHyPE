@@ -16,29 +16,29 @@ namespace exahype2 {
   namespace fv {
     namespace rusanov {
       typedef std::function< void(
-        const double * __restrict__ Q,
-        const tarch::la::Vector<Dimensions,double>&  volumeX,
-        const tarch::la::Vector<Dimensions,double>&  volumeH,
+        const double * __restrict__                  Q,
+        const tarch::la::Vector<Dimensions,double>&  x,
+        const tarch::la::Vector<Dimensions,double>&  h,
         double                                       t,
         double                                       dt,
-        double * __restrict__ S
+        double * __restrict__                        S
       ) >  Source;
 
       typedef std::function< void(
-        const double * __restrict__ Q,
-        const tarch::la::Vector<Dimensions,double>&  faceCentre,
-        const tarch::la::Vector<Dimensions,double>&  volumeH,
+        const double * __restrict__                  Q,
+        const tarch::la::Vector<Dimensions,double>&  x,
+        const tarch::la::Vector<Dimensions,double>&  h,
         double                                       t,
         double                                       dt,
         int                                          normal,
-        double * __restrict__ F
+        double * __restrict__                        F
       ) >  Flux;
 
       typedef std::function< void(
         const double * __restrict__                  Q,
         const double * __restrict__                  deltaQ,
-        const tarch::la::Vector<Dimensions,double>&  faceCentre,
-        const tarch::la::Vector<Dimensions,double>&  volumeH,
+        const tarch::la::Vector<Dimensions,double>&  x,
+        const tarch::la::Vector<Dimensions,double>&  h,
         double                                       t,
         double                                       dt,
         int                                          normal,
@@ -46,9 +46,9 @@ namespace exahype2 {
       ) >   NonconservativeProduct;
 
       typedef std::function< double(
-        const double * __restrict__ Q,
-        const tarch::la::Vector<Dimensions,double>&  faceCentre,
-        const tarch::la::Vector<Dimensions,double>&  volumeH,
+        const double * __restrict__                  Q,
+        const tarch::la::Vector<Dimensions,double>&  x,
+        const tarch::la::Vector<Dimensions,double>&  h,
         double                                       t,
         double                                       dt,
         int                                          normal

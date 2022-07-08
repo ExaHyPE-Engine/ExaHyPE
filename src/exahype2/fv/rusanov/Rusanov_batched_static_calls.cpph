@@ -17,8 +17,8 @@ namespace exahype2{ namespace fv{ namespace rusanov{ namespace internal{
     bool                    evaluateNonconservativeProduct,
     bool                    evaluateSource,
     bool                    evaluateMaximumEigenvalueAfterTimeStep,
-    const exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator& QInEnumerator,
-    const exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator& QOutEnumerator,
+    const exahype2::enumerator::AoSLexicographicEnumerator& QInEnumerator,
+    const exahype2::enumerator::AoSLexicographicEnumerator& QOutEnumerator,
     const TempDataEnumerator& fluxEnumerator,
     const TempDataEnumerator& ncpEnumerator,
     const TempDataEnumerator& eigenvalueEnumerator,
@@ -50,8 +50,8 @@ namespace exahype2{ namespace fv{ namespace rusanov{ namespace internal{
         internal::copySolutionAndAddSourceTerm_LoopBody<Solver>(
           patchData.QIn[patchIndex],
           QInEnumerator,
-          patchData.patchCentre[patchIndex],
-          patchData.patchSize[patchIndex],
+          patchData.cellCentre[patchIndex],
+          patchData.cellSize[patchIndex],
           patchIndex,
           volumeIndex2d(x,y),
           patchData.t[patchIndex],
@@ -76,8 +76,8 @@ namespace exahype2{ namespace fv{ namespace rusanov{ namespace internal{
         internal::copySolutionAndAddSourceTerm_LoopBody<Solver>(
           patchData.QIn[patchIndex],
           QInEnumerator,
-          patchData.patchCentre[patchIndex],
-          patchData.patchSize[patchIndex],
+          patchData.cellCentre[patchIndex],
+          patchData.cellSize[patchIndex],
           patchIndex,
           volumeIndex3d(x,y,z),
           patchData.t[patchIndex],
@@ -150,8 +150,8 @@ namespace exahype2{ namespace fv{ namespace rusanov{ namespace internal{
         internal::computeMaxEigenvalue_LoopBody<Solver>(
             patchData.QIn[patchIndex],
             QInEnumerator,
-            patchData.patchCentre[patchIndex],
-            patchData.patchSize[patchIndex],
+            patchData.cellCentre[patchIndex],
+            patchData.cellSize[patchIndex],
             patchIndex,
             volumeIndex2d(x,y),
             patchData.t[patchIndex], patchData.dt[patchIndex],
@@ -174,8 +174,8 @@ namespace exahype2{ namespace fv{ namespace rusanov{ namespace internal{
         internal::computeMaxEigenvalue_LoopBody<Solver>(
             patchData.QIn[patchIndex],
             QInEnumerator,
-            patchData.patchCentre[patchIndex],
-            patchData.patchSize[patchIndex],
+            patchData.cellCentre[patchIndex],
+            patchData.cellSize[patchIndex],
             patchIndex,
             volumeIndex2d(x,y),
             patchData.t[patchIndex], patchData.dt[patchIndex],
@@ -203,8 +203,8 @@ namespace exahype2{ namespace fv{ namespace rusanov{ namespace internal{
           tempEigenvalueY,
           tempEigenvalueZ,
           eigenvalueEnumerator,
-          patchData.patchCentre[patchIndex],
-          patchData.patchSize[patchIndex],
+          patchData.cellCentre[patchIndex],
+          patchData.cellSize[patchIndex],
           patchIndex,
           volumeIndex2d(x,y),
           unknown,
@@ -229,8 +229,8 @@ namespace exahype2{ namespace fv{ namespace rusanov{ namespace internal{
         internal::computeMaxEigenvalue_LoopBody<Solver>(
               patchData.QIn[patchIndex],
               QInEnumerator,
-              patchData.patchCentre[patchIndex],
-              patchData.patchSize[patchIndex],
+              patchData.cellCentre[patchIndex],
+              patchData.cellSize[patchIndex],
               patchIndex,
               volumeIndex3d(x,y,z),
               patchData.t[patchIndex], patchData.dt[patchIndex],
@@ -254,8 +254,8 @@ namespace exahype2{ namespace fv{ namespace rusanov{ namespace internal{
         internal::computeMaxEigenvalue_LoopBody<Solver>(
               patchData.QIn[patchIndex],
               QInEnumerator,
-              patchData.patchCentre[patchIndex],
-              patchData.patchSize[patchIndex],
+              patchData.cellCentre[patchIndex],
+              patchData.cellSize[patchIndex],
               patchIndex,
               volumeIndex3d(x,y,z),
               patchData.t[patchIndex], patchData.dt[patchIndex],
@@ -279,8 +279,8 @@ namespace exahype2{ namespace fv{ namespace rusanov{ namespace internal{
         internal::computeMaxEigenvalue_LoopBody<Solver>(
               patchData.QIn[patchIndex],
               QInEnumerator,
-              patchData.patchCentre[patchIndex],
-              patchData.patchSize[patchIndex],
+              patchData.cellCentre[patchIndex],
+              patchData.cellSize[patchIndex],
               patchIndex,
               volumeIndex3d(x,y,z),
               patchData.t[patchIndex], patchData.dt[patchIndex],
@@ -310,8 +310,8 @@ namespace exahype2{ namespace fv{ namespace rusanov{ namespace internal{
             tempEigenvalueY,
             tempEigenvalueZ,
             eigenvalueEnumerator,
-            patchData.patchCentre[patchIndex],
-            patchData.patchSize[patchIndex],
+            patchData.cellCentre[patchIndex],
+            patchData.cellSize[patchIndex],
             patchIndex,
             volumeIndex3d(x,y,z),
             unknown,
@@ -336,8 +336,8 @@ namespace exahype2{ namespace fv{ namespace rusanov{ namespace internal{
         internal::computeFlux_LoopBody<Solver>(
           patchData.QIn[patchIndex],
           QInEnumerator,
-          patchData.patchCentre[patchIndex],
-          patchData.patchSize[patchIndex],
+          patchData.cellCentre[patchIndex],
+          patchData.cellSize[patchIndex],
           patchIndex,
           volumeIndex2d(x,y),
           patchData.t[patchIndex],
@@ -361,8 +361,8 @@ namespace exahype2{ namespace fv{ namespace rusanov{ namespace internal{
         internal::computeFlux_LoopBody<Solver>(
           patchData.QIn[patchIndex],
           QInEnumerator,
-          patchData.patchCentre[patchIndex],
-          patchData.patchSize[patchIndex],
+          patchData.cellCentre[patchIndex],
+          patchData.cellSize[patchIndex],
           patchIndex,
           volumeIndex2d(x,y),
           patchData.t[patchIndex],
@@ -387,8 +387,8 @@ namespace exahype2{ namespace fv{ namespace rusanov{ namespace internal{
         internal::updateSolutionWithFlux_LoopBody(
             tempFluxX, tempFluxY, tempFluxZ,
             fluxEnumerator,
-            patchData.patchCentre[patchIndex],
-            patchData.patchSize[patchIndex],
+            patchData.cellCentre[patchIndex],
+            patchData.cellSize[patchIndex],
             patchIndex,
             volumeIndex2d(x,y),
             unknown,
@@ -413,8 +413,8 @@ namespace exahype2{ namespace fv{ namespace rusanov{ namespace internal{
         internal::computeFlux_LoopBody<Solver>(
           patchData.QIn[patchIndex],
           QInEnumerator,
-          patchData.patchCentre[patchIndex],
-          patchData.patchSize[patchIndex],
+          patchData.cellCentre[patchIndex],
+          patchData.cellSize[patchIndex],
           patchIndex,
           volumeIndex3d(x,y,z),
           patchData.t[patchIndex],
@@ -439,8 +439,8 @@ namespace exahype2{ namespace fv{ namespace rusanov{ namespace internal{
         internal::computeFlux_LoopBody<Solver>(
           patchData.QIn[patchIndex],
           QInEnumerator,
-          patchData.patchCentre[patchIndex],
-          patchData.patchSize[patchIndex],
+          patchData.cellCentre[patchIndex],
+          patchData.cellSize[patchIndex],
           patchIndex,
           volumeIndex3d(x,y,z),
           patchData.t[patchIndex],
@@ -465,8 +465,8 @@ namespace exahype2{ namespace fv{ namespace rusanov{ namespace internal{
         internal::computeFlux_LoopBody<Solver>(
           patchData.QIn[patchIndex],
           QInEnumerator,
-          patchData.patchCentre[patchIndex],
-          patchData.patchSize[patchIndex],
+          patchData.cellCentre[patchIndex],
+          patchData.cellSize[patchIndex],
           patchIndex,
           volumeIndex3d(x,y,z),
           patchData.t[patchIndex],
@@ -492,8 +492,8 @@ namespace exahype2{ namespace fv{ namespace rusanov{ namespace internal{
         internal::updateSolutionWithFlux_LoopBody(
             tempFluxX, tempFluxY, tempFluxZ,
             fluxEnumerator,
-            patchData.patchCentre[patchIndex],
-            patchData.patchSize[patchIndex],
+            patchData.cellCentre[patchIndex],
+            patchData.cellSize[patchIndex],
             patchIndex,
             volumeIndex3d(x,y,z),
             unknown,
@@ -519,8 +519,8 @@ namespace exahype2{ namespace fv{ namespace rusanov{ namespace internal{
         internal::computeNonconservativeFlux_LoopBody<Solver,unknowns,auxiliaryVariables>(
           patchData.QIn[patchIndex],
           QInEnumerator,
-          patchData.patchCentre[patchIndex],
-          patchData.patchSize[patchIndex],
+          patchData.cellCentre[patchIndex],
+          patchData.cellSize[patchIndex],
           patchIndex,
           volumeIndex2d(x,y),
           patchData.t[patchIndex],
@@ -544,8 +544,8 @@ namespace exahype2{ namespace fv{ namespace rusanov{ namespace internal{
         internal::computeNonconservativeFlux_LoopBody<Solver,unknowns,auxiliaryVariables>(
           patchData.QIn[patchIndex],
           QInEnumerator,
-          patchData.patchCentre[patchIndex],
-          patchData.patchSize[patchIndex],
+          patchData.cellCentre[patchIndex],
+          patchData.cellSize[patchIndex],
           patchIndex,
           volumeIndex2d(x,y),
           patchData.t[patchIndex],
@@ -570,8 +570,8 @@ namespace exahype2{ namespace fv{ namespace rusanov{ namespace internal{
         internal::updateSolutionWithNonconservativeFlux_LoopBody(
             tempNonconservativeProductX, tempNonconservativeProductY, tempNonconservativeProductZ,
             ncpEnumerator,
-            patchData.patchCentre[patchIndex],
-            patchData.patchSize[patchIndex],
+            patchData.cellCentre[patchIndex],
+            patchData.cellSize[patchIndex],
             patchIndex,
             volumeIndex2d(x,y),
             unknown,
@@ -596,8 +596,8 @@ namespace exahype2{ namespace fv{ namespace rusanov{ namespace internal{
         internal::computeNonconservativeFlux_LoopBody<Solver,unknowns,auxiliaryVariables>(
             patchData.QIn[patchIndex],
             QInEnumerator,
-            patchData.patchCentre[patchIndex],
-            patchData.patchSize[patchIndex],
+            patchData.cellCentre[patchIndex],
+            patchData.cellSize[patchIndex],
             patchIndex,
             volumeIndex3d(x,y,z),
             patchData.t[patchIndex],
@@ -622,8 +622,8 @@ namespace exahype2{ namespace fv{ namespace rusanov{ namespace internal{
         internal::computeNonconservativeFlux_LoopBody<Solver,unknowns,auxiliaryVariables>(
             patchData.QIn[patchIndex],
             QInEnumerator,
-            patchData.patchCentre[patchIndex],
-            patchData.patchSize[patchIndex],
+            patchData.cellCentre[patchIndex],
+            patchData.cellSize[patchIndex],
             patchIndex,
             volumeIndex3d(x,y,z),
             patchData.t[patchIndex],
@@ -648,8 +648,8 @@ namespace exahype2{ namespace fv{ namespace rusanov{ namespace internal{
         internal::computeNonconservativeFlux_LoopBody<Solver,unknowns,auxiliaryVariables>(
             patchData.QIn[patchIndex],
             QInEnumerator,
-            patchData.patchCentre[patchIndex],
-            patchData.patchSize[patchIndex],
+            patchData.cellCentre[patchIndex],
+            patchData.cellSize[patchIndex],
             patchIndex,
             volumeIndex3d(x,y,z),
             patchData.t[patchIndex],
@@ -675,8 +675,8 @@ namespace exahype2{ namespace fv{ namespace rusanov{ namespace internal{
         internal::updateSolutionWithNonconservativeFlux_LoopBody(
           tempNonconservativeProductX, tempNonconservativeProductY, tempNonconservativeProductZ,
           ncpEnumerator,
-          patchData.patchCentre[patchIndex],
-          patchData.patchSize[patchIndex],
+          patchData.cellCentre[patchIndex],
+          patchData.cellSize[patchIndex],
           patchIndex,
           volumeIndex3d(x,y,z),
           unknown,
@@ -705,8 +705,8 @@ namespace exahype2{ namespace fv{ namespace rusanov{ namespace internal{
             internal::reduceMaxEigenvalue_LoopBody<Solver>(
               *(patchData.QOut + patchIndex),
               QOutEnumerator,
-              patchData.patchCentre[patchIndex],
-              patchData.patchSize[patchIndex],
+              patchData.cellCentre[patchIndex],
+              patchData.cellSize[patchIndex],
               patchIndex,
               volumeIndex2d(x,y),
               patchData.t[patchIndex],
@@ -735,8 +735,8 @@ namespace exahype2{ namespace fv{ namespace rusanov{ namespace internal{
             internal::reduceMaxEigenvalue_LoopBody<Solver>(
               *(patchData.QOut + patchIndex),
               QOutEnumerator,
-              patchData.patchCentre[patchIndex],
-              patchData.patchSize[patchIndex],
+              patchData.cellCentre[patchIndex],
+              patchData.cellSize[patchIndex],
               patchIndex,
               volumeIndex3d(x,y,z),
               patchData.t[patchIndex],
@@ -774,8 +774,8 @@ void exahype2::fv::rusanov::timeStepWithRusanov_batched_call_stack_static_calls(
    */
   constexpr int solversHaloSize        = 1;
 
-  exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator QInEnumerator       (                        1, numberOfVolumesPerAxisInPatch,haloSize,unknowns,auxiliaryVariables);
-  exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator QOutEnumerator      (                        1, numberOfVolumesPerAxisInPatch,       0,unknowns,auxiliaryVariables);
+  exahype2::enumerator::AoSLexicographicEnumerator QInEnumerator       (                        1, numberOfVolumesPerAxisInPatch,haloSize,unknowns,auxiliaryVariables);
+  exahype2::enumerator::AoSLexicographicEnumerator QOutEnumerator      (                        1, numberOfVolumesPerAxisInPatch,       0,unknowns,auxiliaryVariables);
   TempDataEnumerator fluxEnumerator      (patchData.numberOfCells, numberOfVolumesPerAxisInPatch,  solversHaloSize,unknowns,0);
   TempDataEnumerator ncpEnumerator       (patchData.numberOfCells, numberOfVolumesPerAxisInPatch+1,solversHaloSize,unknowns,0);
   TempDataEnumerator eigenvalueEnumerator(patchData.numberOfCells, numberOfVolumesPerAxisInPatch,  solversHaloSize,1,0);
@@ -835,8 +835,8 @@ void exahype2::fv::rusanov::timeStepWithRusanov_batched_heap_static_calls(
    */
   constexpr int solversHaloSize        = 1;
 
-  exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator QInEnumerator       (                        1, numberOfVolumesPerAxisInPatch,haloSize,unknowns,auxiliaryVariables);
-  exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator QOutEnumerator      (                        1, numberOfVolumesPerAxisInPatch,       0,unknowns,auxiliaryVariables);
+  exahype2::enumerator::AoSLexicographicEnumerator QInEnumerator       (                        1, numberOfVolumesPerAxisInPatch,haloSize,unknowns,auxiliaryVariables);
+  exahype2::enumerator::AoSLexicographicEnumerator QOutEnumerator      (                        1, numberOfVolumesPerAxisInPatch,       0,unknowns,auxiliaryVariables);
   TempDataEnumerator fluxEnumerator      (patchData.numberOfCells, numberOfVolumesPerAxisInPatch,solversHaloSize,unknowns,0);
   TempDataEnumerator ncpEnumerator       (patchData.numberOfCells, numberOfVolumesPerAxisInPatch+1,solversHaloSize,unknowns,0);
   TempDataEnumerator eigenvalueEnumerator(patchData.numberOfCells, numberOfVolumesPerAxisInPatch,solversHaloSize,1,0);
