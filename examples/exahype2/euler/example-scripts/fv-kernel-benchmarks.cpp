@@ -240,7 +240,7 @@ void runBenchmarks(int patches) {
     logInfo("main()", "completed measurements for single thread on device " << device << ", " << markerName << ": " << singleKernelWatch.getCalendarTime() << " / " << (singleKernelWatch.getCalendarTime()/patches/EulerOnGPU::NumberOfFiniteVolumesPerAxisPerPatch/EulerOnGPU::NumberOfFiniteVolumesPerAxisPerPatch/EulerOnGPU::NumberOfFiniteVolumesPerAxisPerPatch) );
 
     tarch::timing::Watch parallelKernelWatch( "::", "main()", false );
-    #if defined(GPUOffloadingOMP)
+    #if defined(GPUOffloadingOMP) and defined(SharedOMP)
     #pragma omp parallel for
     for (int hostTask=1; hostTask<MaxHostTasks; hostTask++) {
       kernel(
@@ -256,12 +256,9 @@ void runBenchmarks(int patches) {
 
     #if defined(GPUOffloadingSYCL) and defined(SharedTBB)
     ::tbb::task_group taskGroup;
-    // @todo remove semaphore
-    tarch::multicore::BooleanSemaphore semaphore;
     for (int hostTask=1; hostTask<MaxHostTasks; hostTask++) {
       taskGroup.run(
         [&]() -> void {
-          tarch::multicore::Lock lock(semaphore);
           kernel(
             device,
             patchData[hostTask],
@@ -341,7 +338,7 @@ void runBenchmarks(int patches) {
     logWarning( "main()", "no device found" );
   }
   for (int device=0; device<tarch::multicore::Core::getInstance().getNumberOfGPUs(); device++) {
-    logInfo( "main()", "device " << device );
+    logInfo( "main()", "device " << device << " (first kernel triggered by one thread, then kernel triggered by four threads if multithreading enabled)" );
     testFusedVariantOnDevice(
       device,
       ::exahype2::fv::rusanov::omp::timeStepWithRusanov_patchwise_heap_static_calls<EulerOnGPU,EulerOnGPU::NumberOfFiniteVolumesPerAxisPerPatch, 1, 5, 0,exahype2::enumerator::AoSLexicographicEnumerator>,
@@ -380,7 +377,7 @@ void runBenchmarks(int patches) {
     logWarning( "main()", "no device found" );
   }
   for (int device=0; device<tarch::multicore::Core::getInstance().getNumberOfGPUs(); device++) {
-    logInfo( "main()", "device " << device );
+    logInfo( "main()", "device " << device << " (first kernel triggered by one thread, then kernel triggered by four threads if multithreading enabled)" );
     testFusedVariantOnDevice(
       device,
       ::exahype2::fv::rusanov::cpp::timeStepWithRusanov_patchwise_heap_static_calls<EulerOnGPU,EulerOnGPU::NumberOfFiniteVolumesPerAxisPerPatch, 1, 5, 0,exahype2::enumerator::AoSLexicographicEnumerator>,
@@ -419,7 +416,7 @@ void runBenchmarks(int patches) {
     logWarning( "main()", "no device found" );
   }
   for (int device=0; device<tarch::multicore::Core::getInstance().getNumberOfGPUs(); device++) {
-    logInfo( "main()", "device " << device );
+    logInfo( "main()", "device " << device << " (first kernel triggered by one thread, then kernel triggered by four threads if multithreading enabled)" );
     testFusedVariantOnDevice(
       device,
       ::exahype2::fv::rusanov::sycl::timeStepWithRusanov_taskgraph_heap_static_calls<EulerOnGPU,EulerOnGPU::NumberOfFiniteVolumesPerAxisPerPatch, 1, 5, 0,exahype2::enumerator::AoSLexicographicEnumerator>,
