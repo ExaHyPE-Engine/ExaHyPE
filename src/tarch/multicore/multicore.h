@@ -284,6 +284,8 @@ and
   #pragma omp end declare target
   #elif defined(GPUOffloadingSYCL)
   GPUCallableMethod void gpuAbort();
+  #elif defined(GPUOffloadingCPP)
+  __host__ __device__ void gpuAbort();
   #else
   void gpuAbort();
   #endif
