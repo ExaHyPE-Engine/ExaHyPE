@@ -278,6 +278,25 @@ build: 2d, no mpi, omp (8 threads), debug level=2
 
 
 
+
+\section{SYCL troubleshooting}
+\begin{itemize}
+  \item \textbf{\Peano\ always uses all GPUs, but I don't want to use all the
+  (virtual) devices}.
+  \Peano\ uses, by default, all devices that are visible and associates one SYCL
+  queue with each device. Most DPC++ runtimes can however filter the number of
+  visible devices. See the Intel documentation, for example, at
+  \url{https://intel.github.io/llvm-docs/EnvironmentVariables.html}. A simple
+  \begin{bash}
+export SYCL_DEVICE_TYPE=CPU  
+  \end{bash}
+  does the trick.
+  \url
+  \item To be continued \dots
+\end{itemize}
+
+
+
 \section{External tools}
 \begin{itemize}
   \item \textbf{The Intel tools yield invalid or messed up results}. Ensure 
