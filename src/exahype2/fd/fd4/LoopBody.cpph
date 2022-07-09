@@ -146,11 +146,10 @@ void exahype2::fd::fd4::internal::updateSolutionWithDifferentialSourceTerm_LoopB
   const QOutEnumeratorType&                    QOutEnumerator
 ) {
   auto updateAlongOneCoordinateDirection = [=](const double* __restrict__ QDiffSrc, int normal) {
-    
     // QDiffSrc is B_i*deltaQ_i for the central volume, and B here is defined on the LEFT of the equation.
     double QDiffSrcTerm = QDiffSrc[QDiffSrcEnumerator(patchIndex, volumeIndex, unknown)];
     //take care we have an extra minus sign because we moved the diffsrc terms to the RIGHT!
-    QOut[ QOutEnumerator(patchIndex, volumeIndex,unknown) ] -= dt / patchSize(normal) * QOutEnumerator._numberOfDoFsPerAxisInCell * QDiffSrcTerm
+    QOut[ QOutEnumerator(patchIndex, volumeIndex,unknown) ] -= dt / patchSize(normal) * QOutEnumerator._numberOfDoFsPerAxisInCell * QDiffSrcTerm;
 
     #if !defined(GPUOffloadingOMP) and  !defined(GPUOffloadingSYCL)
     assertion8(
@@ -186,11 +185,10 @@ void exahype2::fd::fd4::internal::updateSolutionWithKODissipationTerm_LoopBody(
   const QOutEnumeratorType&                    QOutEnumerator
 ) {
   auto updateAlongOneCoordinateDirection = [=](const double* __restrict__ QKODsp, int normal) {
-    
     double QKODspTerm = QKODsp[QKODspEnumerator(patchIndex, volumeIndex, unknown)];
 
     //double sigmaKO=8.0;
-    QOut[ QOutEnumerator(patchIndex, volumeIndex,unknown) ] += KOSigma * dt / patchSize(normal) * QOutEnumerator._numberOfDoFsPerAxisInCell * QKODspTerm
+    QOut[ QOutEnumerator(patchIndex, volumeIndex,unknown) ] += KOSigma * dt / patchSize(normal) * QOutEnumerator._numberOfDoFsPerAxisInCell * QKODspTerm;
 
     #if !defined(GPUOffloadingOMP) and  !defined(GPUOffloadingSYCL)
     assertion8(

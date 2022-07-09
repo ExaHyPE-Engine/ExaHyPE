@@ -3,6 +3,12 @@
 #ifndef _EXAHYPE2_FV_RUSANOV_CPP_RUSANOV_H_
 #define _EXAHYPE2_FV_RUSANOV_CPP_RUSANOV_H_
 
+#include <vector>
+#include <iterator>
+#include <execution>
+#include <algorithm>
+#include <numeric>
+#include "extra/cartesian_product.h"
 
 namespace exahype2 {
   namespace fv {

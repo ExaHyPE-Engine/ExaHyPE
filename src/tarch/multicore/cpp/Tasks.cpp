@@ -8,6 +8,15 @@
 
 #include "tarch/logging/Statistics.h"
 
+#if defined(GPUOffloadingCPP)
+
+#include <vector>
+#include <iterator>
+#include <execution>
+#include <algorithm>
+#include <numeric>
+
+#endif
 
 #if defined(SharedCPP)
 
