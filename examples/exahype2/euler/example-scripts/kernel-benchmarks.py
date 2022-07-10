@@ -25,7 +25,7 @@ python3 example-scripts/finitevolumes-with-ExaHyPE2-benchmark.py arguments
 """)
 
 parser = argparse.ArgumentParser(description='ExaHyPE 2 - Euler benchmarking script')
-parser.add_argument("-j",   "--parallel-builds",   dest="j",              type=int, default=-1, help="Parallel builds" )
+parser.add_argument("-j",   "--parallel-builds",   dest="j",              type=int, default=4, help="Parallel builds" )
 parser.add_argument("-d",   "--dim",               dest="dim",            type=int, default=2, help="Dimensions" )
 parser.add_argument("-pd",  "--peano-dir",         dest="peanodir",                 default="../../../", help="Peano4 directory" )
 parser.add_argument("-v",   "--verbose",           dest="verbose",        action="store_true", default=False, help="Verbose")
