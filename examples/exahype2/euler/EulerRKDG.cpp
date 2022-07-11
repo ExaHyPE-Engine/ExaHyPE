@@ -20,6 +20,7 @@ tarch::logging::Log   examples::exahype2::euler::EulerRKDG::_log( "examples::exa
  * I kind of keep it simple here.
  */
 enum class Scenario {
+  ConstantSolution,
   PointExplosion,
   PointExplosionWithDynamicAMR,
   GaussianExplosion,
@@ -30,7 +31,8 @@ enum class Scenario {
 };
 
 
-Scenario scenario = Scenario::GaussianExplosion;
+Scenario scenario = Scenario::ConstantSolution;
+//Scenario scenario = Scenario::GaussianExplosion;
 //Scenario scenario = Scenario::PointExplosion;
 //Scenario scenario = Scenario::PointExplosionWithDynamicAMR;
 //Scenario scenario = Scenario::BreakingDam;
@@ -54,6 +56,7 @@ Scenario scenario = Scenario::GaussianExplosion;
   #endif
 
   switch (scenario) {
+    case Scenario::ConstantSolution:
     case Scenario::PointExplosion:
     case Scenario::GaussianExplosion:
       {
@@ -144,6 +147,15 @@ void examples::exahype2::euler::EulerRKDG::initialCondition(
   }
 
   switch (scenario) {
+    case Scenario::ConstantSolution:
+      {
+        Q[0] = 0.1;  // rho
+        Q[1] = 0;    // velocities
+        Q[2] = 0;
+        Q[3] = 0;
+        Q[4] = 1.0;
+      }
+      break;
     case Scenario::GaussianExplosion:
     case Scenario::GaussianExplosionWithDynamicAMR:
       {

@@ -5,8 +5,8 @@
 std::string exahype2::enumerator::AoSLexicographicEnumerator::toString() const {
   std::ostringstream msg;
   msg << "(AoS-lex"
-      << ",#patches=" << _numberOfPatches
-      << ",#vols=" << _numberOfVolumesPerAxisInPatch
+      << ",#cells=" << _numberOfCells
+      << ",#dofs=" << _numberOfDoFsPerAxisInCell
       << ",#halo=" << _haloSize
       << ",#unknowns=" << _unknowns
       << ",#aux=" << _numberOfAuxiliaryVariables

@@ -4,8 +4,6 @@ from exahype2.solvers.rkdg.SeparateSweeps import SeparateSweeps
 from exahype2.solvers.rkdg.PDETerms       import PDETerms
 
 
-#from exahype2.solvers.fv.kernels import create_source_term_kernel
-#from exahype2.solvers.fv.kernels import create_compute_Riemann_kernel_for_Rusanov
 from exahype2.solvers.rkdg.kernels import create_abstract_solver_declarations
 from exahype2.solvers.rkdg.kernels import create_abstract_solver_definitions
 from exahype2.solvers.rkdg.kernels import create_solver_declarations
@@ -15,7 +13,6 @@ from exahype2.solvers.rkdg.kernels import create_solver_definitions
 class GlobalAdaptiveTimeStep( SeparateSweeps ):
   def __init__(self, 
     name, 
-    dg_order, 
     rk_order,
     polynomials,
     unknowns, auxiliary_variables, min_cell_h, max_cell_h, time_step_relaxation,
@@ -28,7 +25,7 @@ class GlobalAdaptiveTimeStep( SeparateSweeps ):
     source_term=PDETerms.None_Implementation,
     plot_grid_properties=False
   ):
-    super(GlobalAdaptiveTimeStep,self).__init__(name, dg_order, rk_order, polynomials, unknowns, auxiliary_variables, min_cell_h, max_cell_h, plot_grid_properties) 
+    super(GlobalAdaptiveTimeStep,self).__init__(name, rk_order, polynomials, unknowns, auxiliary_variables, min_cell_h, max_cell_h, plot_grid_properties) 
    
     self._time_step_relaxation = time_step_relaxation
 

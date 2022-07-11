@@ -31,6 +31,7 @@ ExaHyPE2Sources = \
   dg/BoundaryConditions.cpp \
   dg/DGUtils.cpp \
   dg/CellIntegral.cpp \
+  dg/Riemann.cpp \
   dg/rusanov/Riemann.cpp \
   dg/tests/DGTest.cpp \
   dg/tests/testUtils.cpp \
@@ -39,6 +40,8 @@ ExaHyPE2Sources = \
   enumerator/SingleDoFEnumerator.cpp \
   enumerator/AoSoALexicographicEnumerator.cpp \
   enumerator/FaceAoSLexicographicEnumerator.cpp \
+  fd/BoundaryConditions.cpp \
+  fd/PatchUtils.cpp \
   fv/BoundaryConditions.cpp \
   fv/PatchUtils.cpp \
   fv/PatchAccess.cpp \

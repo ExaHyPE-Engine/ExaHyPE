@@ -50,21 +50,26 @@ class SolveVolumeIntegral(AbstractRungeKuttaDGActionSet):
 
     double* QIn  = fineGridCell{{UNKNOWN_IDENTIFIER}}LinearCombination.value;
     #if Dimensions==2
-    double* QOut = fineGridCell{{UNKNOWN_IDENTIFIER}}Estimates.value + {{PREDICATE_NO}} * {{NUMBER_OF_DOFS_PER_CELL_2D}} * ({{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}});
+    double* QOut = fineGridCell{{UNKNOWN_IDENTIFIER}}RhsEstimates.value + {{PREDICATE_NO}} * {{NUMBER_OF_DOFS_PER_CELL_2D}} * {{NUMBER_OF_UNKNOWNS}};
     #elif Dimensions==3
-    double* QOut = fineGridCell{{UNKNOWN_IDENTIFIER}}Estimates.value + {{PREDICATE_NO}} * {{NUMBER_OF_DOFS_PER_CELL_3D}} * ({{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}});
+    double* QOut = fineGridCell{{UNKNOWN_IDENTIFIER}}RhsEstimates.value + {{PREDICATE_NO}} * {{NUMBER_OF_DOFS_PER_CELL_3D}} * {{NUMBER_OF_UNKNOWNS}};
     #endif
     
-    ::exahype2::dg::cellIntegral_patchwise_computeAndUpdate_functors(
-      QIn,  
-      QOut,
+    ::exahype2::CellData cellData(
+      QIn,
+      marker.x(),
+      marker.h(),
+      timeStamp,
+      timeStepSize,
+      QOut
+    );
+   
+    
+    ::exahype2::dg::cellIntegral_patchwise_GaussLegendre_functors(
+      cellData,
       {{ORDER}},                                                   
       {{NUMBER_OF_UNKNOWNS}},
       {{NUMBER_OF_AUXILIARY_VARIABLES}},
-      marker.x(),
-      marker.h()(0), //assume square/cubic cells
-      timeStamp,
-      timeStepSize,
       [&](
         const double * __restrict__                  Q,
         const tarch::la::Vector<Dimensions,double>&  x,
@@ -114,53 +119,15 @@ class SolveVolumeIntegral(AbstractRungeKuttaDGActionSet):
         return std::vector<::exahype2::dg::PointSource>();
         {% endif %}
       }, //source
-      repositories::{{SOLVER_INSTANCE}}.QuadraturePoints,
-      repositories::{{SOLVER_INSTANCE}}.QuadratureWeights,
-      repositories::{{SOLVER_INSTANCE}}.MassMatrix,
-      repositories::{{SOLVER_INSTANCE}}.StiffnessOperator,
-      repositories::{{SOLVER_INSTANCE}}.DerivativeOperator,
+      repositories::{{SOLVER_INSTANCE}}.QuadraturePoints1d,
+      repositories::{{SOLVER_INSTANCE}}.MassMatrixDiagonal1d,
+      repositories::{{SOLVER_INSTANCE}}.StiffnessOperator1d,
+      repositories::{{SOLVER_INSTANCE}}.DerivativeOperator1d,
       {{ "true" if FLUX_IMPLEMENTATION!="<none>" else "false" }}, //useFlux
       {{ "true" if NCP_IMPLEMENTATION!="<none>" else "false" }}, //useNCP
       {{ "true" if SOURCE_TERM_IMPLEMENTATION!="<none>" else "false" }}, //useSource
       {{ "true" if POINT_SOURCES_IMPLEMENTATION!="<none>" else "false" }} //useSource
     );    
-
-    /*
-    #if Dimensions==2
-    const int facePosition = {{PREDICATE_NO}}*{{NUMBER_OF_DOFS_PER_FACE_2D}}*({{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}});
-    #elif Dimensions==3
-    const int facePosition = {{PREDICATE_NO}}*{{NUMBER_OF_DOFS_PER_FACE_3D}}*({{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}});
-    #endif
-
-    #if Dimensions==2
-    ::exahype2::dg::projectVolumetricDataOntoFaces(
-      QIn,
-      {{ORDER}},
-      {{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}},
-      repositories::{{SOLVER_INSTANCE}}.BasisFunctionValuesLeft,
-      repositories::{{SOLVER_INSTANCE}}.BasisFunctionValuesRight,
-      fineGridFaces{{UNKNOWN_IDENTIFIER}}Estimates(0).value + facePosition, //left
-      fineGridFaces{{UNKNOWN_IDENTIFIER}}Estimates(2).value + facePosition, //right
-      fineGridFaces{{UNKNOWN_IDENTIFIER}}Estimates(1).value + facePosition, //down
-      fineGridFaces{{UNKNOWN_IDENTIFIER}}Estimates(3).value + facePosition  //up
-    );
-    #elif Dimensions==3
-    ::exahype2::dg::projectVolumetricDataOntoFaces(
-      QIn,
-      {{ORDER}},
-      {{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}},
-      repositories::{{SOLVER_INSTANCE}}.BasisFunctionValuesLeft,
-      repositories::{{SOLVER_INSTANCE}}.BasisFunctionValuesRight,
-      fineGridFaces{{UNKNOWN_IDENTIFIER}}Estimates(0).value + facePosition, //left
-      fineGridFaces{{UNKNOWN_IDENTIFIER}}Estimates(3).value + facePosition, //right
-      fineGridFaces{{UNKNOWN_IDENTIFIER}}Estimates(1).value + facePosition, //down
-      fineGridFaces{{UNKNOWN_IDENTIFIER}}Estimates(4).value + facePosition, //up
-      fineGridFaces{{UNKNOWN_IDENTIFIER}}Estimates(2).value + facePosition, //front
-      fineGridFaces{{UNKNOWN_IDENTIFIER}}Estimates(5).value + facePosition  //back
-    );
-    #endif
-    */
-    
   }  
   
   {% endfor %}
@@ -204,7 +171,6 @@ class SolveVolumeIntegral(AbstractRungeKuttaDGActionSet):
       self._solver._init_dictionary_with_default_parameters(d)
       self._solver.add_entries_to_text_replacement_dictionary(d)
       d[ "PREDICATES" ]                               = self.guards
-      d[ "BUTCHER_TABLEAU_WEIGHTS" ]                  = self._butcher_tableau.weight_matrix()
       d[ "BUTCHER_TABLEAU_RELATIVE_TIME_STEP_SIZES" ] = self._butcher_tableau.time_step_sizes()
       result = jinja2.Template(self.TemplateCellKernel).render(**d)
       pass 

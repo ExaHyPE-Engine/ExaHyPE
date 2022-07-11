@@ -38,7 +38,7 @@ BasisFunctionValuesRight {
 
 
 void exahype2::dg::tests::DGTest::run(){
-  testMethod(UtilsTest);
+//  testMethod(UtilsTest);
 //  testMethod(runDGEuler);
 //  testMethod(runDGElastic);
 //  testMethod(runTest);

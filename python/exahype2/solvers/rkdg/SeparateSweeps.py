@@ -26,15 +26,18 @@ class SeparateSweeps( RungeKuttaDG ):
   """
 
 
-  def __init__(self, name, dg_order, rk_order, polynomials, unknowns, auxiliary_variables, min_cell_h, max_cell_h, plot_grid_properties):
+  def __init__(self, 
+               name, 
+               rk_order, 
+               polynomial_basis, 
+               unknowns, auxiliary_variables, min_cell_h, max_cell_h, plot_grid_properties):
     """
 
 
     """
     super(SeparateSweeps, self).__init__(name, 
-                                         dg_order, 
                                          rk_order, 
-                                         polynomials, 
+                                         polynomial_basis, 
                                          1,     # number of face projections
                                          unknowns, auxiliary_variables, min_cell_h, max_cell_h, plot_grid_properties)
     
@@ -78,8 +81,8 @@ class SeparateSweeps( RungeKuttaDG ):
     """
     super(SeparateSweeps, self).create_data_structures()
 
-    self._previous_estimate_projection.generator.send_condition               = "true"
-    self._previous_estimate_projection.generator.receive_and_merge_condition  = "true"
+    self._current_estimate_projection.generator.send_condition               = "true"
+    self._current_estimate_projection.generator.receive_and_merge_condition  = "true"
 
     self._Riemann_solution.generator.send_condition               = "false"
     self._Riemann_solution.generator.receive_and_merge_condition  = "false"

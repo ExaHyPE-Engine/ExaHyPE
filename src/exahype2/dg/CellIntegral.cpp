@@ -2,6 +2,8 @@
 
 #include "peano4/utils/Loop.h"
 
+#include "exahype2/enumerator/AoSLexicographicEnumerator.h"
+
 
 void exahype2::dg::cellIntegral_patchwise_GaussLegendre_functors(
   ::exahype2::CellData&                          cellData,
@@ -69,6 +71,7 @@ void exahype2::dg::cellIntegral_patchwise_GaussLegendre_functors(
                 fluxValues);
 
           // Coefficient within matrix is tensor product over dimensions, too
+          // @todo Dieser Index ist nahezu 100% falsch
           double coeff = stiffnessMatrix[i+index[dim]*nodesPerAxis];
           for (int dd=0; dd<Dimensions; dd++) {
             coeff *= (dd==dim) ? 1.0 : massMatrixDiagonal[ index(dim) ];
@@ -212,3 +215,37 @@ void exahype2::dg::internal::copySolution(
   }
 }
 
+
+void exahype2::dg::multiplyWithInvertedMassMatrixAndClearAuxiliaryVariables_GaussLegendre(
+  ::exahype2::CellData&                          cellData,
+  const int                                      order,
+  const int                                      unknowns,
+  const int                                      auxiliaryVariables,
+  const double* __restrict__                     massMatrixDiagonal1d
+) {
+  exahype2::enumerator::AoSLexicographicEnumerator enumerator(
+    1,           // number of cells in one memory chunk
+    order+1,     // numberOfDoFsPerAxisInCell
+    0,           // no halo
+    unknowns,
+    0            // no auxiliary variables here
+  );
+
+  for (int currentCell=0; currentCell<cellData.numberOfCells; currentCell++) {
+    dfor( dof, order+1 ) {
+      double* __restrict__  cellQInOut = cellData.QOut[currentCell];
+
+      #if Dimensions==2
+      double diagonal = massMatrixDiagonal1d[ dof(0) ] * massMatrixDiagonal1d[ dof(1) ];
+      #else
+      double diagonal = massMatrixDiagonal1d[ dof(0) ] * massMatrixDiagonal1d[ dof(1) ] * massMatrixDiagonal1d[ dof(2) ];
+      #endif
+
+      assertion( diagonal>0.0 );
+
+      for(int var=0; var<unknowns; var++) {
+        cellQInOut[ enumerator(currentCell,dof,var) ] = 1.0 / diagonal * cellQInOut[enumerator(currentCell,dof,var)];
+      }
+    }
+  }
+}
