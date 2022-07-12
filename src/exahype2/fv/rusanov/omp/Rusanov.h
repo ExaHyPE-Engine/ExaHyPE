@@ -113,8 +113,8 @@ namespace exahype2 {
         #pragma omp declare target
         struct GPUCellData {
           double**   QIn;
-          tarch::la::Vector<Dimensions,double>*   patchCentre;
-          tarch::la::Vector<Dimensions,double>*   patchSize;
+          tarch::la::Vector<Dimensions,double>*   cellCentre;
+          tarch::la::Vector<Dimensions,double>*   cellSize;
           double*    t;
           double*    dt;
           int        numberOfCells;

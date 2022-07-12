@@ -100,7 +100,7 @@ double getMaxMeshSize() {
 double getMaxAdmissibleMeshSize() {
   double result = 0.0;
   {% for item in SOLVERS -%}
-    result = std::max( result, {{ item[1] }}.MaxAdmissiblePatchH );
+    result = std::max( result, {{ item[1] }}.MaxAdmissibleCellH );
   {%- endfor %}
   return result;
 }
@@ -109,7 +109,7 @@ double getMaxAdmissibleMeshSize() {
 double getMinAdmissibleMeshSize() {
   double result = 0.0;
   {% for item in SOLVERS -%}
-    result = std::max( result, {{ item[1] }}.MinAdmissiblePatchH );
+    result = std::max( result, {{ item[1] }}.MinAdmissibleCellH );
   {%- endfor %}
   return result;
 }

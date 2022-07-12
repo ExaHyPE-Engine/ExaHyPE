@@ -47,8 +47,8 @@ void exahype2::fv::rusanov::internal::copySolutionAndAddSourceTerm_LoopBody(
 
   source(
       QInGathered,
-      ::exahype2::fv::getVolumeCentre( patchCentre, patchSize, QInEnumerator._numberOfVolumesPerAxisInPatch, volumeIndex ),
-      ::exahype2::fv::getVolumeSize( patchSize, QInEnumerator._numberOfVolumesPerAxisInPatch ),
+      ::exahype2::fv::getVolumeCentre( patchCentre, patchSize, QInEnumerator._numberOfDoFsPerAxisInCell, volumeIndex ),
+      ::exahype2::fv::getVolumeSize( patchSize, QInEnumerator._numberOfDoFsPerAxisInCell ),
       t,
       dt,
       QSourceGathered
@@ -77,7 +77,7 @@ void exahype2::fv::rusanov::internal::copySolutionAndAddSourceTerm_LoopBody(
 template <>
 void exahype2::fv::rusanov::internal::copySolutionAndAddSourceTerm_LoopBody(
   const double* __restrict__                QIn,
-  const exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator& QInEnumerator,
+  const exahype2::enumerator::AoSLexicographicEnumerator& QInEnumerator,
   exahype2::fv::rusanov::Source             source,
   const tarch::la::Vector<Dimensions,double>&  patchCentre,
   const tarch::la::Vector<Dimensions,double>&  patchSize,
@@ -86,12 +86,12 @@ void exahype2::fv::rusanov::internal::copySolutionAndAddSourceTerm_LoopBody(
   double                                    t,
   double                                    dt,
   double* __restrict__                      QOut,
-  const exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator&  QOutEnumerator
+  const exahype2::enumerator::AoSLexicographicEnumerator&  QOutEnumerator
 ) {
   source(
     QIn + QInEnumerator(patchIndex,volumeIndex,0),
-    ::exahype2::fv::getVolumeCentre( patchCentre, patchSize, QInEnumerator._numberOfVolumesPerAxisInPatch, volumeIndex ),
-    ::exahype2::fv::getVolumeSize( patchSize, QInEnumerator._numberOfVolumesPerAxisInPatch ),
+    ::exahype2::fv::getVolumeCentre( patchCentre, patchSize, QInEnumerator._numberOfDoFsPerAxisInCell, volumeIndex ),
+    ::exahype2::fv::getVolumeSize( patchSize, QInEnumerator._numberOfDoFsPerAxisInCell ),
     t,
     dt,
     QOut + QOutEnumerator(patchIndex,volumeIndex,0)
@@ -147,8 +147,8 @@ void exahype2::fv::rusanov::internal::copySolutionAndAddSourceTerm_LoopBody(
 
   Solver::sourceTerm(
       QInGathered,
-      ::exahype2::fv::getVolumeCentre( patchCentre, patchSize, QInEnumerator._numberOfVolumesPerAxisInPatch, volumeIndex ),
-      ::exahype2::fv::getVolumeSize( patchSize, QInEnumerator._numberOfVolumesPerAxisInPatch ),
+      ::exahype2::fv::getVolumeCentre( patchCentre, patchSize, QInEnumerator._numberOfDoFsPerAxisInCell, volumeIndex ),
+      ::exahype2::fv::getVolumeSize( patchSize, QInEnumerator._numberOfDoFsPerAxisInCell ),
       t,
       dt,
       QSourceGathered,
@@ -195,7 +195,7 @@ void exahype2::fv::rusanov::internal::copySolutionAndAddSourceTerm_LoopBody(
 template <typename Solver>
 void exahype2::fv::rusanov::internal::copySolutionAndAddSourceTerm_LoopBody(
     const double* __restrict__                QIn,
-    const exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator& QInEnumerator,
+    const exahype2::enumerator::AoSLexicographicEnumerator& QInEnumerator,
     const tarch::la::Vector<Dimensions,double>&  patchCentre,
     const tarch::la::Vector<Dimensions,double>&  patchSize,
     int                                       patchIndex,
@@ -203,12 +203,12 @@ void exahype2::fv::rusanov::internal::copySolutionAndAddSourceTerm_LoopBody(
     double                                    t,
     double                                    dt,
     double* __restrict__                      QOut,
-    const exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator& QOutEnumerator
+    const exahype2::enumerator::AoSLexicographicEnumerator& QOutEnumerator
 ) {
   Solver::sourceTerm(
     QIn + QInEnumerator(patchIndex,volumeIndex,0),
-    ::exahype2::fv::getVolumeCentre( patchCentre, patchSize, QInEnumerator._numberOfVolumesPerAxisInPatch, volumeIndex ),
-    ::exahype2::fv::getVolumeSize( patchSize, QInEnumerator._numberOfVolumesPerAxisInPatch ),
+    ::exahype2::fv::getVolumeCentre( patchCentre, patchSize, QInEnumerator._numberOfDoFsPerAxisInCell, volumeIndex ),
+    ::exahype2::fv::getVolumeSize( patchSize, QInEnumerator._numberOfDoFsPerAxisInCell ),
     t,
     dt,
     QOut + QOutEnumerator(patchIndex,volumeIndex,0),
@@ -273,8 +273,8 @@ void exahype2::fv::rusanov::internal::computeMaxEigenvalue_LoopBody(
     QMaxEigenvalue[ QMaxEigenvalueEnumerator(patchIndex,volumeIndex,0) ] =
       maxEigenvalue(
         QInGathered,
-        ::exahype2::fv::getVolumeCentre( patchCentre, patchSize, QInEnumerator._numberOfVolumesPerAxisInPatch, volumeIndex ),
-        ::exahype2::fv::getVolumeSize( patchSize, QInEnumerator._numberOfVolumesPerAxisInPatch ),
+        ::exahype2::fv::getVolumeCentre( patchCentre, patchSize, QInEnumerator._numberOfDoFsPerAxisInCell, volumeIndex ),
+        ::exahype2::fv::getVolumeSize( patchSize, QInEnumerator._numberOfDoFsPerAxisInCell ),
         t,
         dt,
         normal
@@ -285,7 +285,7 @@ void exahype2::fv::rusanov::internal::computeMaxEigenvalue_LoopBody(
 template <class QMaxEigenvalueEnumeratorType>
 void exahype2::fv::rusanov::internal::computeMaxEigenvalue_LoopBody(
     const double* __restrict__                   QIn,
-    exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator  QInEnumerator,
+    exahype2::enumerator::AoSLexicographicEnumerator  QInEnumerator,
     exahype2::fv::rusanov::MaxEigenvalue         maxEigenvalue,
     const tarch::la::Vector<Dimensions,double>&  patchCentre,
     const tarch::la::Vector<Dimensions,double>&  patchSize,
@@ -300,8 +300,8 @@ void exahype2::fv::rusanov::internal::computeMaxEigenvalue_LoopBody(
     QMaxEigenvalue[ QMaxEigenvalueEnumerator(patchIndex,volumeIndex,0) ] =
       maxEigenvalue(
         QIn + QInEnumerator(patchIndex,volumeIndex,0),
-        ::exahype2::fv::getVolumeCentre( patchCentre, patchSize, QInEnumerator._numberOfVolumesPerAxisInPatch, volumeIndex ),
-        ::exahype2::fv::getVolumeSize( patchSize, QInEnumerator._numberOfVolumesPerAxisInPatch ),
+        ::exahype2::fv::getVolumeCentre( patchCentre, patchSize, QInEnumerator._numberOfDoFsPerAxisInCell, volumeIndex ),
+        ::exahype2::fv::getVolumeSize( patchSize, QInEnumerator._numberOfDoFsPerAxisInCell ),
         t,
         dt,
         normal
@@ -337,8 +337,8 @@ void exahype2::fv::rusanov::internal::computeMaxEigenvalue_LoopBody(
     QMaxEigenvalue[ QMaxEigenvalueEnumerator(patchIndex,volumeIndex,0) ] =
       Solver::maxEigenvalue(
         QInGathered,
-        ::exahype2::fv::getVolumeCentre( patchCentre, patchSize, QInEnumerator._numberOfVolumesPerAxisInPatch, volumeIndex ),
-        ::exahype2::fv::getVolumeSize( patchSize, QInEnumerator._numberOfVolumesPerAxisInPatch ),
+        ::exahype2::fv::getVolumeCentre( patchCentre, patchSize, QInEnumerator._numberOfDoFsPerAxisInCell, volumeIndex ),
+        ::exahype2::fv::getVolumeSize( patchSize, QInEnumerator._numberOfDoFsPerAxisInCell ),
         t,
         dt,
         normal,
@@ -350,7 +350,7 @@ void exahype2::fv::rusanov::internal::computeMaxEigenvalue_LoopBody(
 template <typename Solver, class QMaxEigenvalueEnumeratorType>
 void exahype2::fv::rusanov::internal::computeMaxEigenvalue_LoopBody(
   const double* __restrict__                                         QIn,
-  const exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator&  QInEnumerator,
+  const exahype2::enumerator::AoSLexicographicEnumerator&  QInEnumerator,
   const tarch::la::Vector<Dimensions,double>&                        patchCentre,
   const tarch::la::Vector<Dimensions,double>&                        patchSize,
   int                                                                patchIndex,
@@ -364,8 +364,8 @@ void exahype2::fv::rusanov::internal::computeMaxEigenvalue_LoopBody(
     QMaxEigenvalue[ QMaxEigenvalueEnumerator(patchIndex,volumeIndex,0) ] =
       Solver::maxEigenvalue(
         QIn + QInEnumerator(patchIndex,volumeIndex,0),
-        ::exahype2::fv::getVolumeCentre( patchCentre, patchSize, QInEnumerator._numberOfVolumesPerAxisInPatch, volumeIndex ),
-        ::exahype2::fv::getVolumeSize( patchSize, QInEnumerator._numberOfVolumesPerAxisInPatch ),
+        ::exahype2::fv::getVolumeCentre( patchCentre, patchSize, QInEnumerator._numberOfDoFsPerAxisInCell, volumeIndex ),
+        ::exahype2::fv::getVolumeSize( patchSize, QInEnumerator._numberOfDoFsPerAxisInCell ),
         t,
         dt,
         normal,
@@ -374,83 +374,11 @@ void exahype2::fv::rusanov::internal::computeMaxEigenvalue_LoopBody(
 }
 
 
-template <class QInEnumeratorType>
+template <class QOutEnumeratorType>
 double exahype2::fv::rusanov::internal::reduceMaxEigenvalue_LoopBody(
-  const double* __restrict__                   QIn,
-  QInEnumeratorType                            QInEnumerator,
-    exahype2::fv::rusanov::MaxEigenvalue         maxEigenvalue,
-    const tarch::la::Vector<Dimensions,double>&  patchCentre,
-    const tarch::la::Vector<Dimensions,double>&  patchSize,
-    int                                          patchIndex,
-    const tarch::la::Vector<Dimensions,int>&     volumeIndex,
-    double                                       t,
-    double                                       dt
-) {
-    double QInGathered[QInEnumerator._unknowns+QInEnumerator._numberOfAuxiliaryVariables];
-
-    // gather
-    #if defined(SharedOMP)
-    #pragma omp simd
-    #endif
-    for (int unknown=0; unknown<QInEnumerator._unknowns+QInEnumerator._numberOfAuxiliaryVariables; unknown++) {
-      QInGathered[unknown] = QIn[ QInEnumerator(patchIndex,volumeIndex,unknown) ];
-    }
-
-    double result = 0.0;
-    for (int normal=0; normal<Dimensions; normal++) {
-      // actual computation via user's functor
-      result = std::max(
-        result,
-        maxEigenvalue(
-          QInGathered,
-          ::exahype2::fv::getVolumeCentre( patchCentre, patchSize, QInEnumerator._numberOfVolumesPerAxisInPatch, volumeIndex ),
-          ::exahype2::fv::getVolumeSize( patchSize, QInEnumerator._numberOfVolumesPerAxisInPatch ),
-          t,
-          dt,
-          normal
-        )
-      );
-    }
-
-    return result;
-}
-
-
-template <>
-double exahype2::fv::rusanov::internal::reduceMaxEigenvalue_LoopBody(
-    const double* __restrict__                   QIn,
-    exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator QInEnumerator,
-    exahype2::fv::rusanov::MaxEigenvalue         maxEigenvalue,
-    const tarch::la::Vector<Dimensions,double>&  patchCentre,
-    const tarch::la::Vector<Dimensions,double>&  patchSize,
-    int                                          patchIndex,
-    const tarch::la::Vector<Dimensions,int>&     volumeIndex,
-    double                                       t,
-    double                                       dt
-) {
-    double result = 0.0;
-    for (int normal=0; normal<Dimensions; normal++) {
-      // actual computation via user's functor
-      result = std::max(
-        result,
-        maxEigenvalue(
-          QIn + QInEnumerator(patchIndex,volumeIndex,0),
-          ::exahype2::fv::getVolumeCentre( patchCentre, patchSize, QInEnumerator._numberOfVolumesPerAxisInPatch, volumeIndex ),
-          ::exahype2::fv::getVolumeSize( patchSize, QInEnumerator._numberOfVolumesPerAxisInPatch ),
-          t,
-          dt,
-          normal
-        )
-      );
-    }
-    return result;
-}
-
-
-template <typename Solver, class QInEnumeratorType>
-double exahype2::fv::rusanov::internal::reduceMaxEigenvalue_LoopBody(
-  const double* __restrict__                   QIn,
-  const QInEnumeratorType&                     QInEnumerator,
+  const double* __restrict__                   QOut,
+  QOutEnumeratorType                           QOutEnumerator,
+  exahype2::fv::rusanov::MaxEigenvalue         maxEigenvalue,
   const tarch::la::Vector<Dimensions,double>&  patchCentre,
   const tarch::la::Vector<Dimensions,double>&  patchSize,
   int                                          patchIndex,
@@ -458,11 +386,83 @@ double exahype2::fv::rusanov::internal::reduceMaxEigenvalue_LoopBody(
   double                                       t,
   double                                       dt
 ) {
-  double QInGathered[QInEnumerator._unknowns+QInEnumerator._numberOfAuxiliaryVariables];
+  double QGathered[QOutEnumerator._unknowns+QOutEnumerator._numberOfAuxiliaryVariables];
 
   // gather
-  for (int unknown=0; unknown<QInEnumerator._unknowns+QInEnumerator._numberOfAuxiliaryVariables; unknown++) {
-    QInGathered[unknown] = QIn[ QInEnumerator(patchIndex,volumeIndex,unknown) ];
+  #if defined(SharedOMP)
+  #pragma omp simd
+  #endif
+  for (int unknown=0; unknown<QOutEnumerator._unknowns+QOutEnumerator._numberOfAuxiliaryVariables; unknown++) {
+    QGathered[unknown] = QOut[ QOutEnumerator(patchIndex,volumeIndex,unknown) ];
+  }
+
+  double result = 0.0;
+  for (int normal=0; normal<Dimensions; normal++) {
+      // actual computation via user's functor
+      result = std::max(
+        result,
+        maxEigenvalue(
+          QGathered,
+          ::exahype2::fv::getVolumeCentre( patchCentre, patchSize, QOutEnumerator._numberOfDoFsPerAxisInCell, volumeIndex ),
+          ::exahype2::fv::getVolumeSize( patchSize, QOutEnumerator._numberOfDoFsPerAxisInCell ),
+          t,
+          dt,
+          normal
+        )
+      );
+  }
+
+  return result;
+}
+
+
+template <>
+double exahype2::fv::rusanov::internal::reduceMaxEigenvalue_LoopBody(
+  const double* __restrict__                       QOut,
+  exahype2::enumerator::AoSLexicographicEnumerator QOutEnumerator,
+  exahype2::fv::rusanov::MaxEigenvalue         maxEigenvalue,
+  const tarch::la::Vector<Dimensions,double>&  patchCentre,
+  const tarch::la::Vector<Dimensions,double>&  patchSize,
+  int                                          patchIndex,
+  const tarch::la::Vector<Dimensions,int>&     volumeIndex,
+  double                                       t,
+  double                                       dt
+) {
+    double result = 0.0;
+    for (int normal=0; normal<Dimensions; normal++) {
+      // actual computation via user's functor
+      result = std::max(
+        result,
+        maxEigenvalue(
+          QOut + QOutEnumerator(patchIndex,volumeIndex,0),
+          ::exahype2::fv::getVolumeCentre( patchCentre, patchSize, QOutEnumerator._numberOfDoFsPerAxisInCell, volumeIndex ),
+          ::exahype2::fv::getVolumeSize( patchSize, QOutEnumerator._numberOfDoFsPerAxisInCell ),
+          t,
+          dt,
+          normal
+        )
+      );
+    }
+    return result;
+}
+
+
+template <typename Solver, class QOutEnumeratorType>
+double exahype2::fv::rusanov::internal::reduceMaxEigenvalue_LoopBody(
+  const double* __restrict__                   QOut,
+  const QOutEnumeratorType&                    QOutEnumerator,
+  const tarch::la::Vector<Dimensions,double>&  patchCentre,
+  const tarch::la::Vector<Dimensions,double>&  patchSize,
+  int                                          patchIndex,
+  const tarch::la::Vector<Dimensions,int>&     volumeIndex,
+  double                                       t,
+  double                                       dt
+) {
+  double QGathered[QOutEnumerator._unknowns+QOutEnumerator._numberOfAuxiliaryVariables];
+
+  // gather
+  for (int unknown=0; unknown<QOutEnumerator._unknowns+QOutEnumerator._numberOfAuxiliaryVariables; unknown++) {
+    QGathered[unknown] = QOut[ QOutEnumerator(patchIndex,volumeIndex,unknown) ];
   }
 
   double result = 0.0;
@@ -471,9 +471,9 @@ double exahype2::fv::rusanov::internal::reduceMaxEigenvalue_LoopBody(
     result = std::max(
       result,
       Solver::maxEigenvalue(
-          QInGathered,
-          ::exahype2::fv::getVolumeCentre( patchCentre, patchSize, QInEnumerator._numberOfVolumesPerAxisInPatch, volumeIndex ),
-          ::exahype2::fv::getVolumeSize( patchSize, QInEnumerator._numberOfVolumesPerAxisInPatch ),
+          QGathered,
+          ::exahype2::fv::getVolumeCentre( patchCentre, patchSize, QOutEnumerator._numberOfDoFsPerAxisInCell, volumeIndex ),
+          ::exahype2::fv::getVolumeSize( patchSize, QOutEnumerator._numberOfDoFsPerAxisInCell ),
           t,
           dt,
           normal,
@@ -488,8 +488,8 @@ double exahype2::fv::rusanov::internal::reduceMaxEigenvalue_LoopBody(
 
 template <typename Solver>
 double exahype2::fv::rusanov::internal::reduceMaxEigenvalue_LoopBody(
-  const double* __restrict__                   QIn,
-  const exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator&  QInEnumerator,
+  const double* __restrict__                   QOut,
+  const exahype2::enumerator::AoSLexicographicEnumerator&  QOutEnumerator,
   const tarch::la::Vector<Dimensions,double>&  patchCentre,
   const tarch::la::Vector<Dimensions,double>&  patchSize,
   int                                          patchIndex,
@@ -503,9 +503,9 @@ double exahype2::fv::rusanov::internal::reduceMaxEigenvalue_LoopBody(
     result = std::max(
      result,
       Solver::maxEigenvalue(
-        QIn + QInEnumerator(patchIndex,volumeIndex,0),
-        ::exahype2::fv::getVolumeCentre( patchCentre, patchSize, QInEnumerator._numberOfVolumesPerAxisInPatch, volumeIndex ),
-        ::exahype2::fv::getVolumeSize( patchSize, QInEnumerator._numberOfVolumesPerAxisInPatch ),
+        QOut + QOutEnumerator(patchIndex,volumeIndex,0),
+        ::exahype2::fv::getVolumeCentre( patchCentre, patchSize, QOutEnumerator._numberOfDoFsPerAxisInCell, volumeIndex ),
+        ::exahype2::fv::getVolumeSize( patchSize, QOutEnumerator._numberOfDoFsPerAxisInCell ),
         t,
         dt,
         normal,
@@ -542,8 +542,8 @@ void exahype2::fv::rusanov::internal::computeFlux_LoopBody(
 
   flux(
       QInGathered,
-      ::exahype2::fv::getVolumeCentre( patchCentre, patchSize, QInEnumerator._numberOfVolumesPerAxisInPatch, volumeIndex ),
-      ::exahype2::fv::getVolumeSize( patchSize, QInEnumerator._numberOfVolumesPerAxisInPatch ),
+      ::exahype2::fv::getVolumeCentre( patchCentre, patchSize, QInEnumerator._numberOfDoFsPerAxisInCell, volumeIndex ),
+      ::exahype2::fv::getVolumeSize( patchSize, QInEnumerator._numberOfDoFsPerAxisInCell ),
       t,
       dt,
       normal,
@@ -562,7 +562,7 @@ void exahype2::fv::rusanov::internal::computeFlux_LoopBody(
 template <class QFluxEnumeratorType>
 void exahype2::fv::rusanov::internal::computeFlux_LoopBody(
     const double* __restrict__                QIn,
-    exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator QInEnumerator,
+    exahype2::enumerator::AoSLexicographicEnumerator QInEnumerator,
     exahype2::fv::rusanov::Flux         flux,
     const tarch::la::Vector<Dimensions,double>&  patchCentre,
     const tarch::la::Vector<Dimensions,double>&  patchSize,
@@ -576,8 +576,8 @@ void exahype2::fv::rusanov::internal::computeFlux_LoopBody(
 ) {
     flux(
       QIn[ QInEnumerator(patchIndex,volumeIndex,0) ],
-      ::exahype2::fv::getVolumeCentre( patchCentre, patchSize, QInEnumerator._numberOfVolumesPerAxisInPatch, volumeIndex ),
-      ::exahype2::fv::getVolumeSize( patchSize, QInEnumerator._numberOfVolumesPerAxisInPatch ),
+      ::exahype2::fv::getVolumeCentre( patchCentre, patchSize, QInEnumerator._numberOfDoFsPerAxisInCell, volumeIndex ),
+      ::exahype2::fv::getVolumeSize( patchSize, QInEnumerator._numberOfDoFsPerAxisInCell ),
       t,
       dt,
       normal,
@@ -597,7 +597,7 @@ void exahype2::fv::rusanov::internal::computeFlux_LoopBody(
 
 void exahype2::fv::rusanov::internal::computeFlux_LoopBody(
     const double* __restrict__                                  QIn,
-    exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator  QInEnumerator,
+    exahype2::enumerator::AoSLexicographicEnumerator  QInEnumerator,
     exahype2::fv::rusanov::Flux         flux,
     const tarch::la::Vector<Dimensions,double>&                 patchCentre,
     const tarch::la::Vector<Dimensions,double>&                 patchSize,
@@ -607,12 +607,12 @@ void exahype2::fv::rusanov::internal::computeFlux_LoopBody(
     double                                                      dt,
     int                                                         normal,
     double* __restrict__                                        QFlux,
-    exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator  QFluxEnumerator
+    exahype2::enumerator::AoSLexicographicEnumerator  QFluxEnumerator
 ) {
   flux(
     QIn + QInEnumerator(patchIndex,volumeIndex,0),
-    ::exahype2::fv::getVolumeCentre( patchCentre, patchSize, QInEnumerator._numberOfVolumesPerAxisInPatch, volumeIndex ),
-    ::exahype2::fv::getVolumeSize( patchSize, QInEnumerator._numberOfVolumesPerAxisInPatch ),
+    ::exahype2::fv::getVolumeCentre( patchCentre, patchSize, QInEnumerator._numberOfDoFsPerAxisInCell, volumeIndex ),
+    ::exahype2::fv::getVolumeSize( patchSize, QInEnumerator._numberOfDoFsPerAxisInCell ),
     t,
     dt,
     normal,
@@ -646,8 +646,8 @@ void exahype2::fv::rusanov::internal::computeFlux_LoopBody(
 
   Solver::flux(
       QInGathered,
-      ::exahype2::fv::getVolumeCentre( patchCentre, patchSize, QInEnumerator._numberOfVolumesPerAxisInPatch, volumeIndex ),
-      ::exahype2::fv::getVolumeSize( patchSize, QInEnumerator._numberOfVolumesPerAxisInPatch ),
+      ::exahype2::fv::getVolumeCentre( patchCentre, patchSize, QInEnumerator._numberOfDoFsPerAxisInCell, volumeIndex ),
+      ::exahype2::fv::getVolumeSize( patchSize, QInEnumerator._numberOfDoFsPerAxisInCell ),
       t,
       dt,
       normal,
@@ -670,7 +670,7 @@ template <
 >
 void exahype2::fv::rusanov::internal::computeFlux_LoopBody(
   const double* __restrict__                QIn,
-  const exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator & QInEnumerator,
+  const exahype2::enumerator::AoSLexicographicEnumerator & QInEnumerator,
   const tarch::la::Vector<Dimensions,double>&  patchCentre,
   const tarch::la::Vector<Dimensions,double>&  patchSize,
   int                                          patchIndex,
@@ -686,8 +686,8 @@ void exahype2::fv::rusanov::internal::computeFlux_LoopBody(
 
   Solver::flux(
     QIn + QInEnumerator(patchIndex,volumeIndex,0),
-    ::exahype2::fv::getVolumeCentre( patchCentre, patchSize, QInEnumerator._numberOfVolumesPerAxisInPatch, volumeIndex ),
-    ::exahype2::fv::getVolumeSize( patchSize, QInEnumerator._numberOfVolumesPerAxisInPatch ),
+    ::exahype2::fv::getVolumeCentre( patchCentre, patchSize, QInEnumerator._numberOfDoFsPerAxisInCell, volumeIndex ),
+    ::exahype2::fv::getVolumeSize( patchSize, QInEnumerator._numberOfDoFsPerAxisInCell ),
     t,
     dt,
     normal,
@@ -710,7 +710,7 @@ void exahype2::fv::rusanov::internal::computeFlux_LoopBody(
 template<typename Solver>
 void exahype2::fv::rusanov::internal::computeFlux_LoopBody(
   const double* __restrict__                                         QIn,
-  const exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator&  QInEnumerator,
+  const exahype2::enumerator::AoSLexicographicEnumerator&  QInEnumerator,
   const tarch::la::Vector<Dimensions,double>&                        patchCentre,
   const tarch::la::Vector<Dimensions,double>&                        patchSize,
   int                                                                patchIndex,
@@ -719,12 +719,12 @@ void exahype2::fv::rusanov::internal::computeFlux_LoopBody(
   double                                                             dt,
   int                                                                normal,
   double* __restrict__                                               QFlux,
-  const exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator&  QFluxEnumerator
+  const exahype2::enumerator::AoSLexicographicEnumerator&  QFluxEnumerator
 ) {
   Solver::flux(
     QIn + QInEnumerator(patchIndex,volumeIndex,0),
-    ::exahype2::fv::getVolumeCentre( patchCentre, patchSize, QInEnumerator._numberOfVolumesPerAxisInPatch, volumeIndex ),
-    ::exahype2::fv::getVolumeSize( patchSize, QInEnumerator._numberOfVolumesPerAxisInPatch ),
+    ::exahype2::fv::getVolumeCentre( patchCentre, patchSize, QInEnumerator._numberOfDoFsPerAxisInCell, volumeIndex ),
+    ::exahype2::fv::getVolumeSize( patchSize, QInEnumerator._numberOfDoFsPerAxisInCell ),
     t,
     dt,
     normal,
@@ -770,9 +770,9 @@ void exahype2::fv::rusanov::internal::updateSolutionWithFlux_LoopBody(
     );
     #endif
 
-    //QOut[ QOutEnumerator(patchIndex, volumeIndex,unknown) ] += dt / patchSize(normal) * QOutEnumerator._numberOfVolumesPerAxisInPatch *
+    //QOut[ QOutEnumerator(patchIndex, volumeIndex,unknown) ] += dt / patchSize(normal) * QOutEnumerator._numberOfDoFsPerAxisInCell *
     //   (fluxLeft - fluxRight);
-    QOut[ QOutEnumerator(patchIndex, volumeIndex,unknown) ] += dt / patchSize(normal) * QOutEnumerator._numberOfVolumesPerAxisInPatch *
+    QOut[ QOutEnumerator(patchIndex, volumeIndex,unknown) ] += dt / patchSize(normal) * QOutEnumerator._numberOfDoFsPerAxisInCell *
         0.5 * (tempFlux[fluxEnumerator(patchIndex, leftVolume,unknown)]-tempFlux[fluxEnumerator(patchIndex, rightVolume,unknown)]);
   };
 
@@ -804,10 +804,10 @@ void exahype2::fv::rusanov::internal::updateSolutionWithFlux_LoopBody(
   double flux = 0.5 * (fluxL[fluxEnumerator(patchIndex,leftVolume,unknown)] + fluxR[fluxEnumerator(patchIndex,rightVolume,unknown)]);
 
   if (leftVolume(normal)>=0) {
-    QOut[ QOutEnumerator(patchIndex, leftVolume, unknown) ] -= dt / patchSize(normal) * QOutEnumerator._numberOfVolumesPerAxisInPatch * flux;
+    QOut[ QOutEnumerator(patchIndex, leftVolume, unknown) ] -= dt / patchSize(normal) * QOutEnumerator._numberOfDoFsPerAxisInCell * flux;
   }
-  if (rightVolume(normal)<QOutEnumerator._numberOfVolumesPerAxisInPatch) {
-    QOut[ QOutEnumerator(patchIndex, rightVolume, unknown) ] += dt / patchSize(normal) * QOutEnumerator._numberOfVolumesPerAxisInPatch * flux;
+  if (rightVolume(normal)<QOutEnumerator._numberOfDoFsPerAxisInCell) {
+    QOut[ QOutEnumerator(patchIndex, rightVolume, unknown) ] += dt / patchSize(normal) * QOutEnumerator._numberOfDoFsPerAxisInCell * flux;
   }
 }
 
@@ -831,10 +831,10 @@ void exahype2::fv::rusanov::internal::updateSolutionWithNonconservativeFlux_Loop
   rightVolume(normal)++;
 
   if (leftVolume(normal)>=0) {
-    QOut[ QOutEnumerator(patchIndex, leftVolume, unknown) ] -= dt / patchSize(normal) * QOutEnumerator._numberOfVolumesPerAxisInPatch * fluxNCP[ fluxEnumerator(patchIndex, faceIndex, unknown) ]*0.5;
+    QOut[ QOutEnumerator(patchIndex, leftVolume, unknown) ] -= dt / patchSize(normal) * QOutEnumerator._numberOfDoFsPerAxisInCell * fluxNCP[ fluxEnumerator(patchIndex, faceIndex, unknown) ]*0.5;
   }
-  if (rightVolume(normal)<QOutEnumerator._numberOfVolumesPerAxisInPatch) {
-    QOut[ QOutEnumerator(patchIndex, rightVolume, unknown) ] -= dt / patchSize(normal) * QOutEnumerator._numberOfVolumesPerAxisInPatch * fluxNCP[ fluxEnumerator(patchIndex, faceIndex, unknown) ]*0.5;
+  if (rightVolume(normal)<QOutEnumerator._numberOfDoFsPerAxisInCell) {
+    QOut[ QOutEnumerator(patchIndex, rightVolume, unknown) ] -= dt / patchSize(normal) * QOutEnumerator._numberOfDoFsPerAxisInCell * fluxNCP[ fluxEnumerator(patchIndex, faceIndex, unknown) ]*0.5;
   }
 }
 
@@ -878,7 +878,7 @@ void exahype2::fv::rusanov::internal::updateSolutionWithEigenvalueDamping_LoopBo
     double fluxLeft  = - lambdaLeft * (QIn[QInEnumerator(patchIndex, volumeIndex,unknown)] - QIn[QInEnumerator(patchIndex, leftVolume,unknown)]);
     double fluxRight = - lambdaRight * (QIn[QInEnumerator(patchIndex, rightVolume,unknown)] - QIn[QInEnumerator(patchIndex, volumeIndex,unknown)]);
 
-    QOut[ QOutEnumerator(patchIndex, volumeIndex,unknown) ] +=  dt / patchSize(normal) * QOutEnumerator._numberOfVolumesPerAxisInPatch * (fluxLeft - fluxRight)*0.5;
+    QOut[ QOutEnumerator(patchIndex, volumeIndex,unknown) ] +=  dt / patchSize(normal) * QOutEnumerator._numberOfDoFsPerAxisInCell * (fluxLeft - fluxRight)*0.5;
 
     #if !defined(GPUOffloadingOMP) and  !defined(GPUOffloadingSYCL)
     assertion7(
@@ -917,7 +917,7 @@ void exahype2::fv::rusanov::internal::updateSolutionWithEigenvalueDamping_LoopBo
     double fluxLeft  = - lambdaLeft * (QIn[QInEnumerator(patchIndex, volumeIndex,unknown)] - QIn[QInEnumerator(patchIndex, leftVolume,unknown)]);
     double fluxRight = - lambdaRight * (QIn[QInEnumerator(patchIndex, rightVolume,unknown)] - QIn[QInEnumerator(patchIndex, volumeIndex,unknown)]);
 
-    QOut[ QOutEnumerator(patchIndex, volumeIndex,unknown) ] +=  dt / patchSize(normal) * QOutEnumerator._numberOfVolumesPerAxisInPatch * (fluxLeft - fluxRight);
+    QOut[ QOutEnumerator(patchIndex, volumeIndex,unknown) ] +=  dt / patchSize(normal) * QOutEnumerator._numberOfDoFsPerAxisInCell * (fluxLeft - fluxRight);
   }
 */
 }
@@ -958,10 +958,10 @@ void exahype2::fv::rusanov::internal::updateSolutionWithEigenvalueDamping_LoopBo
   #endif
 
   if (leftVolume(normal)>=0) {
-    QOut[ QOutEnumerator(patchIndex, leftVolume,unknown) ]  -=  dt / patchSize(normal) * QOutEnumerator._numberOfVolumesPerAxisInPatch * flux*0.5;
+    QOut[ QOutEnumerator(patchIndex, leftVolume,unknown) ]  -=  dt / patchSize(normal) * QOutEnumerator._numberOfDoFsPerAxisInCell * flux*0.5;
   }
-  if (rightVolume(normal)<QOutEnumerator._numberOfVolumesPerAxisInPatch) {
-    QOut[ QOutEnumerator(patchIndex, rightVolume,unknown) ] +=  dt / patchSize(normal) * QOutEnumerator._numberOfVolumesPerAxisInPatch * flux*0.5;
+  if (rightVolume(normal)<QOutEnumerator._numberOfDoFsPerAxisInCell) {
+    QOut[ QOutEnumerator(patchIndex, rightVolume,unknown) ] +=  dt / patchSize(normal) * QOutEnumerator._numberOfDoFsPerAxisInCell * flux*0.5;
   }
 }
 #if defined(GPUOffloadingOMP)
@@ -1004,8 +1004,8 @@ void exahype2::fv::rusanov::internal::computeNonconservativeFlux_LoopBody(
 
   ncp(
     QAverage, DeltaQ,
-    ::exahype2::fv::getVolumeCentre( patchCentre, patchSize, QInEnumerator._numberOfVolumesPerAxisInPatch, volumeIndex ),
-    ::exahype2::fv::getVolumeSize( patchSize, QInEnumerator._numberOfVolumesPerAxisInPatch ),
+    ::exahype2::fv::getVolumeCentre( patchCentre, patchSize, QInEnumerator._numberOfDoFsPerAxisInCell, volumeIndex ),
+    ::exahype2::fv::getVolumeSize( patchSize, QInEnumerator._numberOfDoFsPerAxisInCell ),
     t,
     dt,
     normal,
@@ -1064,8 +1064,8 @@ void exahype2::fv::rusanov::internal::computeNonconservativeFlux_LoopBody(
 
   Solver::nonconservativeProduct(
     QAverage, DeltaQ,
-    ::exahype2::fv::getVolumeCentre( patchCentre, patchSize, QInEnumerator._numberOfVolumesPerAxisInPatch, volumeIndex ),
-    ::exahype2::fv::getVolumeSize( patchSize, QInEnumerator._numberOfVolumesPerAxisInPatch ),
+    ::exahype2::fv::getVolumeCentre( patchCentre, patchSize, QInEnumerator._numberOfDoFsPerAxisInCell, volumeIndex ),
+    ::exahype2::fv::getVolumeSize( patchSize, QInEnumerator._numberOfDoFsPerAxisInCell ),
     t,
     dt,
     normal,
@@ -1112,7 +1112,7 @@ void exahype2::fv::rusanov::internal::updateSolutionWithNonconservativeFlux_Loop
     double fluxRight = - QNcp[ncpEnumerator(patchIndex, rightFace, unknown)];
 
     //left flux have another minus sign as the normal vector direction for the left face goes against the flux
-    QOut[ QOutEnumerator(patchIndex, volumeIndex,unknown) ] += dt / patchSize(normal) * QOutEnumerator._numberOfVolumesPerAxisInPatch *
+    QOut[ QOutEnumerator(patchIndex, volumeIndex,unknown) ] += dt / patchSize(normal) * QOutEnumerator._numberOfDoFsPerAxisInCell *
        (-fluxLeft + fluxRight)*(0.5);// for now it correpond to 1/2 in our past discussion.
 
     #if !defined(GPUOffloadingOMP) and  !defined(GPUOffloadingSYCL)

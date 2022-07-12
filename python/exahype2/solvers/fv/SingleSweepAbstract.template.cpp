@@ -189,8 +189,6 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startTimeStep(
   double globalMinTimeStepSize,
   double globalMaxTimeStepSize
 ) {
-  {{START_TIME_STEP_IMPLEMENTATION}}
-
   if ( _solverState==SolverState::GridInitialisation ) {
     _solverState     = SolverState::TimeStepAfterGridInitialisation;
   }
@@ -198,6 +196,8 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startTimeStep(
     assertion( _solverState!=SolverState::GridConstruction );
     _solverState     = SolverState::TimeStep;
   }
+
+  {{START_TIME_STEP_IMPLEMENTATION}}
 
   _minTimeStamp = _minTimeStampThisTimeStep;
   _maxTimeStamp = _maxTimeStampThisTimeStep;
@@ -235,6 +235,8 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishTimeStep() {
 
   double newLocalMinTimeStamp = _localMinTimeStampThisTimeStep;
   double newLocalMaxTimeStamp = _localMaxTimeStampThisTimeStep;
+
+  int newPatchUpdates = _patchUpdates;
 
   tarch::mpi::Rank::getInstance().allReduce(
       &newMinTimeStamp,
@@ -293,6 +295,14 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishTimeStep() {
       &_localMaxTimeStampThisTimeStep,
       1, MPI_DOUBLE,
       MPI_MAX,
+      [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); }
+      );
+
+  tarch::mpi::Rank::getInstance().allReduce(
+      &newPatchUpdates,
+      &_patchUpdates,
+      1, MPI_INT,
+      MPI_SUM,
       [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); }
       );
   #endif

@@ -3,6 +3,11 @@
 #ifndef _TARCH_TESTS_TEST_MACROS_H_
 #define _TARCH_TESTS_TEST_MACROS_H_
 
+#if defined(GPUOffloadingCPP)
+#include <algorithm>
+#include <execution>
+#endif
+
 #ifdef Parallel
 #include <mpi.h>
 #endif

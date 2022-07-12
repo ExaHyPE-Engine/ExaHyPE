@@ -7,9 +7,9 @@
 
 #include "Functors.h"
 
-#include "exahype2/fv/enumerator/AoSLexicographicVolumeEnumerator.h"
-#include "exahype2/fv/enumerator/SoALexicographicVolumeEnumerator.h"
-#include "exahype2/fv/enumerator/AoSoALexicographicVolumeEnumerator.h"
+#include "exahype2/enumerator/AoSLexicographicEnumerator.h"
+#include "exahype2/enumerator/SoALexicographicEnumerator.h"
+#include "exahype2/enumerator/AoSoALexicographicEnumerator.h"
 
 #include "tarch/multicore/multicore.h"
 
@@ -182,7 +182,7 @@ namespace exahype2 {
         KeywordToAvoidDuplicateSymbolsForInlinedFunctions
         void copySolutionAndAddSourceTerm_LoopBody(
           const double* __restrict__                QIn,
-          const exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator& QInEnumerator,
+          const exahype2::enumerator::AoSLexicographicEnumerator& QInEnumerator,
           exahype2::fv::rusanov::Source                source,
           const tarch::la::Vector<Dimensions,double>&  patchCentre,
           const tarch::la::Vector<Dimensions,double>&  patchSize,
@@ -191,7 +191,7 @@ namespace exahype2 {
           double                                    t,
           double                                    dt,
           double* __restrict__                      QOut,
-          const exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator& QOutEnumerator
+          const exahype2::enumerator::AoSLexicographicEnumerator& QOutEnumerator
         )  InlineMethod;
 
 
@@ -228,7 +228,7 @@ namespace exahype2 {
         template <typename Solver>
         static void copySolutionAndAddSourceTerm_LoopBody(
           const double* __restrict__                QIn,
-          const exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator&  QInEnumerator,
+          const exahype2::enumerator::AoSLexicographicEnumerator&  QInEnumerator,
           const tarch::la::Vector<Dimensions,double>&  patchCentre,
           const tarch::la::Vector<Dimensions,double>&  patchSize,
           int                                       patchIndex,
@@ -236,7 +236,7 @@ namespace exahype2 {
           double                                    t,
           double                                    dt,
           double* __restrict__                      QOut,
-          const exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator&  QOutEnumerator
+          const exahype2::enumerator::AoSLexicographicEnumerator&  QOutEnumerator
         )  InlineMethod;
         #if defined(GPUOffloadingOMP)
         #pragma omp end declare target
@@ -284,7 +284,7 @@ namespace exahype2 {
         template <class QMaxEigenvalueEnumeratorType>
         static void computeMaxEigenvalue_LoopBody(
           const double* __restrict__                   QIn,
-          exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator  QInEnumerator,
+          exahype2::enumerator::AoSLexicographicEnumerator  QInEnumerator,
           exahype2::fv::rusanov::MaxEigenvalue         maxEigenvalue,
           const tarch::la::Vector<Dimensions,double>&  patchCentre,
           const tarch::la::Vector<Dimensions,double>&  patchSize,
@@ -338,7 +338,7 @@ namespace exahype2 {
         template <typename Solver, class QMaxEigenvalueEnumeratorType>
         static void computeMaxEigenvalue_LoopBody(
           const double* __restrict__                   QIn,
-          const exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator&  QInEnumerator,
+          const exahype2::enumerator::AoSLexicographicEnumerator&  QInEnumerator,
           const tarch::la::Vector<Dimensions,double>&  patchCentre,
           const tarch::la::Vector<Dimensions,double>&  patchSize,
           int                                          patchIndex,
@@ -357,11 +357,18 @@ namespace exahype2 {
         /**
          * This is the actual eigenvalue loop which reduces the directional
          * eigenvalues.
+         *
+         * @param QOut The new (updated) solution over which we reduce the
+         *   eigenvalues.
+         *
+         * @param QOutEnumerator Identificator how the output array is
+         *   enumerated. Will be AoS most of the time, as this is Peano's
+         *   default data ordering.
          */
-        template <class QInEnumeratorType>
+        template <class QOutEnumeratorType>
         static double reduceMaxEigenvalue_LoopBody(
-          const double* __restrict__                   QIn,
-          QInEnumeratorType                            QInEnumerator,
+          const double* __restrict__                   QOut,
+          QOutEnumeratorType                           QOutEnumerator,
           exahype2::fv::rusanov::MaxEigenvalue         maxEigenvalue,
           const tarch::la::Vector<Dimensions,double>&  patchCentre,
           const tarch::la::Vector<Dimensions,double>&  patchSize,
@@ -372,10 +379,15 @@ namespace exahype2 {
         ) InlineMethod;
 
 
+        /**
+         * Specialisation anticipating that the ordering of the output
+         * data will be AoS in almost all the cases. So it makes sense
+         * to exploit this knowledge performance-wisely.
+         */
         template <>
         KeywordToAvoidDuplicateSymbolsForInlinedFunctions double reduceMaxEigenvalue_LoopBody(
-          const double* __restrict__                   QIn,
-          exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator QInEnumerator,
+          const double* __restrict__                   QOut,
+          exahype2::enumerator::AoSLexicographicEnumerator QOutEnumerator,
           exahype2::fv::rusanov::MaxEigenvalue         maxEigenvalue,
           const tarch::la::Vector<Dimensions,double>&  patchCentre,
           const tarch::la::Vector<Dimensions,double>&  patchSize,
@@ -386,16 +398,19 @@ namespace exahype2 {
         ) InlineMethod;
 
 
+        /**
+         * Specialised version for GPU. See generic variant for documentation.
+         */
         #if defined(SharedOMP) and (!defined(__INTEL_LLVM_COMPILER) or !defined(GPUOffloadingOMP))
         #pragma omp declare simd
         #endif
         #if defined(GPUOffloadingOMP)
         #pragma omp declare target
         #endif
-        template <typename Solver, class QInEnumeratorType>
+        template <typename Solver, class QOutEnumeratorType>
         static double reduceMaxEigenvalue_LoopBody(
-          const double* __restrict__                   QIn,
-          const QInEnumeratorType&                     QInEnumerator,
+          const double* __restrict__                   QOut,
+          const QOutEnumeratorType&                    QOutEnumerator,
           const tarch::la::Vector<Dimensions,double>&  patchCentre,
           const tarch::la::Vector<Dimensions,double>&  patchSize,
           int                                          patchIndex,
@@ -408,6 +423,12 @@ namespace exahype2 {
         #endif
 
 
+        /**
+         * Optimised version for the GPU which is furthermore optimised
+         * towards one specific unknown enumeration. This is the enumeration
+         * we encounter in almost all of the cases, so it makes sense to
+         * specialise for this one.
+         */
         #if defined(SharedOMP) and (!defined(__INTEL_LLVM_COMPILER) or !defined(GPUOffloadingOMP))
         #pragma omp declare simd
         #endif
@@ -416,8 +437,8 @@ namespace exahype2 {
         #endif
         template <typename Solver>
         static double reduceMaxEigenvalue_LoopBody(
-          const double* __restrict__                   QIn,
-          const exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator&  QInEnumerator,
+          const double* __restrict__                   QOut,
+          const exahype2::enumerator::AoSLexicographicEnumerator&  QOutEnumerator,
           const tarch::la::Vector<Dimensions,double>&  patchCentre,
           const tarch::la::Vector<Dimensions,double>&  patchSize,
           int                                          patchIndex,
@@ -463,7 +484,7 @@ namespace exahype2 {
          */
         static void computeFlux_LoopBody(
           const double* __restrict__                                  QIn,
-          exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator  QInEnumerator,
+          exahype2::enumerator::AoSLexicographicEnumerator  QInEnumerator,
           exahype2::fv::rusanov::Flux                                 flux,
           const tarch::la::Vector<Dimensions,double>&                 patchCentre,
           const tarch::la::Vector<Dimensions,double>&                 patchSize,
@@ -473,7 +494,7 @@ namespace exahype2 {
           double                                                      dt,
           int                                                         normal,
           double* __restrict__                                        QFlux,
-          exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator  QFluxEnumerator
+          exahype2::enumerator::AoSLexicographicEnumerator  QFluxEnumerator
         ) InlineMethod;
 
 
@@ -517,7 +538,7 @@ namespace exahype2 {
         >
         static void computeFlux_LoopBody(
           const double* __restrict__                                  QIn,
-          const exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator & QInEnumerator,
+          const exahype2::enumerator::AoSLexicographicEnumerator & QInEnumerator,
           const tarch::la::Vector<Dimensions,double>&                 patchCentre,
           const tarch::la::Vector<Dimensions,double>&                 patchSize,
           int                                                         patchIndex,
@@ -543,7 +564,7 @@ namespace exahype2 {
         template <typename Solver>
         static void computeFlux_LoopBody(
           const double* __restrict__                                  QIn,
-          const exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator&  QInEnumerator,
+          const exahype2::enumerator::AoSLexicographicEnumerator&  QInEnumerator,
           const tarch::la::Vector<Dimensions,double>&                 patchCentre,
           const tarch::la::Vector<Dimensions,double>&                 patchSize,
           int                                                         patchIndex,
@@ -552,7 +573,7 @@ namespace exahype2 {
           double                                                      dt,
           int                                                         normal,
           double* __restrict__                                        QFlux,
-          const exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator&  QFluxEnumerator
+          const exahype2::enumerator::AoSLexicographicEnumerator&  QFluxEnumerator
         ) InlineMethod;
         #if defined(GPUOffloadingOMP)
         #pragma omp end declare target
