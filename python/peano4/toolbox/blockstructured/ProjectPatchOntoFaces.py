@@ -6,18 +6,27 @@ from peano4.solversteps.ActionSet import ActionSet
 
 class ProjectPatchOntoFaces(ActionSet):
   """
-  This class assumes that you have NxNxN patch within your block. It also assumes that 
-  you have an 2MxNxN patch on your faces. M<N. The code interprets these face-associated
-  data as overlap with the patch, hooks into touchCellLastTime, and projects the cell's
-  patch data onto the overlap (simple copy). 
+  
+  This class assumes that you have NxNxN patch within your block. It also 
+  assumes that you have an 2MxNxN patch on your faces. M<N. The code interprets
+  these face-associated data as overlap with the patch, hooks into 
+  touchCellLastTime, and projects the cell's patch data onto the overlap 
+  (simple copy). 
   
   And then runs over your grid and maps the patch data on the respective entries of the 
   face patch which is an auxiliary data structure.
   
   
-  patch          Instance of peano4.datamodel.Patch
-  patch_overlap  Instance of peano4.datamodel.Patch. Consult remark above about how the
-                 dimensions of this overlap patch have to match. 
+  # Attributes
+  
+  patch: peano4.datamodel.Patch
+    This is the input data structure, i.e. the patch from which we extract
+    the boundary data.
+    
+  patch_overlap: peano4.datamodel.Patch. 
+    Consult remark above about how the dimensions of this overlap patch have 
+    to match. 
+    
   """
   
   
