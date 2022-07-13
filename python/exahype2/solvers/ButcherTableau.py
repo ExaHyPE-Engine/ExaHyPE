@@ -3,7 +3,7 @@
 
 import peano4
 import jinja2
-from sympy.assumptions.handlers import order
+
 
 def RungeKutta_steps(order):
   if order<1:

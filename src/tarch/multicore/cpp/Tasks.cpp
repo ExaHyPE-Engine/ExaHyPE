@@ -49,12 +49,18 @@ namespace {
       tasks.begin(),
       tasks.end(),
       [](auto&& item) -> void {
+        #if !defined(GPUOffloadingCPP)
         ::tarch::logging::Statistics::getInstance().inc( BSPTasksStatisticsIdentifier, 1.0, true );
+        #endif
         while (item->run()) {
+          #if !defined(GPUOffloadingCPP)
           std::this_thread::yield();
+          #endif
         }
         delete item;
+        #if !defined(GPUOffloadingCPP)
         ::tarch::logging::Statistics::getInstance().inc( BSPTasksStatisticsIdentifier, -1.0, true );
+        #endif
       }
     );
   }
@@ -81,16 +87,22 @@ namespace {
     auto bspLoopBody = [&](int iterationCounter) -> void {
       spawnedTasks++;
 
+      #if !defined(GPUOffloadingCPP)
       ::tarch::logging::Statistics::getInstance().inc( BSPTasksStatisticsIdentifier, 1.0, true );
+      #endif
       if (iterationCounter<tasks.size()) {
         while (tasks[iterationCounter]->run()) {
+          #if !defined(GPUOffloadingCPP)
           std::this_thread::yield();
+          #endif
         }
         delete tasks[iterationCounter];
       }
 
+      #if !defined(GPUOffloadingCPP)
       ::tarch::logging::Statistics::getInstance().inc( BSPTasksStatisticsIdentifier, -1.0, true );
-  
+      #endif
+
       pendingTasks--;
 
       const auto fusion       = strategy->getNumberOfTasksToFuseAndTargetDevice();
@@ -119,7 +131,9 @@ namespace {
         else { // no local tasks left over
           tarch::multicore::internal::copyInternalTaskQueuesOverIntoGlobalQueue(threadNumber);
           const int numberOfTasksToProcess = std::max(1,tarch::multicore::getNumberOfPendingTasks(-1)/2);
+          #if !defined(GPUOffloadingCPP)
           ::tarch::logging::Statistics::getInstance().log( BackfillWhileWaitingForBSPTasks, numberOfTasksToProcess );
+          #endif
           processedSomeTasks = tarch::multicore::processPendingTasks( numberOfTasksToProcess );
         }
       }
@@ -146,7 +160,9 @@ void tarch::multicore::native::spawnTask(Task*  job) {
   std::future<void> dontWait = std::async( std::launch::async,
     [job] () -> void {
       while (job->run()) {
+        #if !defined(GPUOffloadingCPP)
         std::this_thread::yield();
+        #endif
       }
       delete job;
     }
@@ -211,7 +227,9 @@ void tarch::multicore::native::processFusedTask(Task*  myTask, const std::list< 
 
 
 void tarch::multicore::native::deferRunningThreadAndContinueWithOtherTasks() {
+  #if !defined(GPUOffloadingCPP)
   std::this_thread::yield();
+  #endif
 }
 
 #endif

@@ -55,6 +55,12 @@ void tarch::gpuAbort() {
 GPUCallableMethod void tarch::gpuAbort() {
 }
 
+#elif defined(GPUOffloadingCPP)
+
+__host__ __device__ void tarch::gpuAbort(){
+  std::abort();
+};
+
 #else
 void tarch::gpuAbort() {
   std::abort();

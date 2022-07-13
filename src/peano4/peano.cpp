@@ -53,7 +53,7 @@ void peano4:: writeCopyrightMessage() {
     #elif defined(SharedSYCL)
     buildInfo += ", sycl threading";
     #elif defined(SharedCPP)
-    buildInfo += ", C++ threading
+    buildInfo += ", C++ threading";
     #else
     buildInfo += ", no threading";
     #endif
@@ -69,7 +69,7 @@ void peano4:: writeCopyrightMessage() {
     #elif defined(GPUOffloadingSYCL)
     buildInfo += ", sycl";
     #elif defined(GPUOffloadingCPP)
-    buildInfo += ", C++ offloading
+    buildInfo += ", C++ offloading";
     #else
     buildInfo += ", no gpu support";
     #endif

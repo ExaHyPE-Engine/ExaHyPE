@@ -1,6 +1,6 @@
 # This file is part of the ExaHyPE2 project. For conditions of distribution and 
 # use, please see the copyright notice at www.peano-framework.org
-from exahype2.solvers.rkfd.SingleSweep import SingleSweep
+from exahype2.solvers.rkfd.OneSweepPerRungeKuttaStep import OneSweepPerRungeKuttaStep
 from exahype2.solvers.rkfd.PDETerms    import PDETerms
 
 import jinja2
@@ -18,7 +18,7 @@ from exahype2.solvers.rkfd.kernels import RiemannKernelVariant
 from exahype2.solvers.rkfd.FixedTimeSteppingCodeSnippets import FixedTimeSteppingCodeSnippets
 
 
-class GlobalFixedTimeStep( SingleSweep ):
+class GlobalFixedTimeStep( OneSweepPerRungeKuttaStep ):
   def __init__(self, 
     name, patch_size, rk_order, unknowns, auxiliary_variables, min_volume_h, max_volume_h, normalised_time_step_size,
     flux=PDETerms.User_Defined_Implementation, 
@@ -50,11 +50,6 @@ class GlobalFixedTimeStep( SingleSweep ):
     
     self._normalised_time_step_size = normalised_time_step_size
 
-    self._flux_implementation                 = PDETerms.None_Implementation
-    self._ncp_implementation                  = PDETerms.None_Implementation
-    self._eigenvalues_implementation          = PDETerms.None_Implementation
-    self._source_term_implementation          = PDETerms.None_Implementation
-
     self._KO_Sigma                            = KOSigma
     
     self._user_action_set_includes += """
@@ -71,11 +66,9 @@ class GlobalFixedTimeStep( SingleSweep ):
 
 
   def set_implementation(self,
-    flux=None,ncp=None,
-    eigenvalues=None,
-    boundary_conditions=None,refinement_criterion=None,initial_conditions=None,source_term=None,
+    flux=None, ncp=None, source_term=None, eigenvalues=None,
+    boundary_conditions=None,refinement_criterion=None,initial_conditions=None,
     memory_location         = None,
-    use_split_loop          = False,
     additional_action_set_includes = "",
     additional_user_includes       = "",
     KOSigma                 = None
@@ -92,10 +85,10 @@ class GlobalFixedTimeStep( SingleSweep ):
 
       This routine should be the very last invoked by the constructor.
     """
-    if flux                 is not None:    self._flux_implementation                       = flux
-    if ncp                  is not None:    self._ncp_implementation                        = ncp
-    if eigenvalues          is not None:    self._eigenvalues_implementation                = eigenvalues
-    if source_term          is not None:    self._source_term_implementation                = source_term
+    super(GlobalFixedTimeStep,self).set_implementation(  
+      flux, ncp, source_term, eigenvalues,
+      boundary_conditions, refinement_criterion, initial_conditions, memory_location, additional_action_set_includes, additional_user_includes)
+
     if not                  KOSigma==None:  self._KO_Sigma                                  = KOSigma
 
     self._compute_kernel_call = create_compute_Riemann_kernel_for_FD4(
@@ -123,5 +116,5 @@ class GlobalFixedTimeStep( SingleSweep ):
     self._finish_time_step_implementation    = solver_code_snippets.create_finish_time_step_implementation()
     self._constructor_implementation         = solver_code_snippets.create_abstract_solver_constructor_statements()
       
-    super(GlobalFixedTimeStep,self).set_implementation(boundary_conditions, refinement_criterion, initial_conditions, memory_location, use_split_loop, additional_action_set_includes, additional_user_includes)
+    self.create_action_sets()
 
