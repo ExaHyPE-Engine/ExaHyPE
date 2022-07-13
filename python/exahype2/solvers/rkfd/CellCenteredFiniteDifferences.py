@@ -532,6 +532,10 @@ The finest mesh width of """ + str(self.get_finest_volume_size(domain_size)) + "
      add the AMR action set first which means it will be called last when we go
      from fine to coarse levels within the tree.
      
+     The projection onto the faces is a postprocessing step. This is different 
+     to DG, where we need face data for the current time step's solution. Here,
+     we ensure that all halos are valid for the subsequent time step again.
+     
      :: Ordering ::
      
      The order of the action sets is preserved throughout the steps down within

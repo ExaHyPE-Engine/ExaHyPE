@@ -65,6 +65,9 @@ class ProjectPatchOntoFaces( AbstractRKFDActionSet ):
   if ({{PREDICATES[PREDICATE_NO]}}) {
     logTraceIn( "touchCellLastTime(...)---ProjectPatchOntoFaces" );
     
+    ::exahype2::enumerator::AoSLexicographicEnumerator enumeratorWithAuxiliaryVariables( 1, {{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}}, 0, {{NUMBER_OF_UNKNOWNS}}, {{NUMBER_OF_AUXILIARY_VARIABLES}});
+    ::exahype2::enumerator::AoSLexicographicEnumerator enumeratorWithoutAuxiliaryVariables( {{RK_STEPS}}, {{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}}, 0, {{NUMBER_OF_UNKNOWNS}}, 0 );
+
     // Set the variable
     // double timeStepSize
     {{COMPUTE_TIME_STEP_SIZE}}
@@ -82,18 +85,19 @@ class ProjectPatchOntoFaces( AbstractRKFDActionSet ):
           patchCell(d)   = i;
           overlapCell(d) = i+{{OVERLAP}};
           
-          int patchCellSerialised   = peano4::utils::dLinearised(patchCell,{{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}});
+          // I could use the enumerator as well. Doesn't really matter here. One 
+          // thing is tied to ExaHyPE, the other one to the blockstructured toolbox.
           int overlapCellSerialised = toolbox::blockstructured::serialiseVoxelIndexInOverlap(overlapCell,{{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}},{{OVERLAP}},d);
-          for (int j=0; j<{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}; j++) {
+          for (int j=0; j<{{NUMBER_OF_UNKNOWNS}}; j++) {
             {{FACES_ACCESSOR}}(d).value[overlapCellSerialised*({{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}})+j] = 
-              {{CELL_ACCESSOR}}.value[patchCellSerialised*({{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}})+j];
+              {{CELL_ACCESSOR}}.value[ enumeratorWithAuxiliaryVariables(0,patchCell,j) ];
 
             {% if PREDICATE_NO<PREDICATES|length %}
               {% for WEIGHT_NO in range(0,BUTCHER_TABLEAU_WEIGHTS[PREDICATE_NO+1]|length) %}
               {% if BUTCHER_TABLEAU_WEIGHTS[PREDICATE_NO+1][WEIGHT_NO]!=0 %}
-              reconstructedPatch[ enumeratorWithAuxiliaryVariablesOnReconstructedPatch(0,dof,unknown) ] += 
-                {{BUTCHER_TABLEAU_RELATIVE_TIME_STEP_SIZES[PREDICATE_NO]}} * timeStepSize * {{BUTCHER_TABLEAU_WEIGHTS[PREDICATE_NO][WEIGHT_NO]}} * 
-                fineGridCell{{UNKNOWN_IDENTIFIER}}RhsEstimates.value[ enumeratorWithoutAuxiliaryVariables({{PREDICATE_NO}},dof,unknown) ];
+                {{FACES_ACCESSOR}}(d).value[overlapCellSerialised*({{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}})+j] += 
+                  {{BUTCHER_TABLEAU_RELATIVE_TIME_STEP_SIZES[PREDICATE_NO+1]}} * timeStepSize * {{BUTCHER_TABLEAU_WEIGHTS[PREDICATE_NO+1][WEIGHT_NO]}} * 
+                  fineGridCell{{UNKNOWN_IDENTIFIER}}RhsEstimates.value[ enumeratorWithoutAuxiliaryVariables({{PREDICATE_NO}},patchCell,j) ];
               {% endif %}
               {% endfor %}
             {% endif %}
