@@ -16,6 +16,8 @@ namespace exahype2 {
     namespace fd4 {
       /**
        * Fourth-order Finite Differences
+       *
+       * @todo This routine works only for the ncp terms, i.e. the flux term is not implemented yet.
        */
       static void timeStep_patchwise_heap_functors(
         ::exahype2::CellData&   patchData,
@@ -28,6 +30,7 @@ namespace exahype2 {
         bool                    evaluateDifferentialSource, //for ncp
         bool                    evaluateAlgebraicSource, //real source
         bool                    evaluateMaximumEigenvalueAfterTimeStep,
+        bool                    copyOldTimeStepAndScaleWithTimeStepSize,
         Flux                    flux,
         NonconservativeProduct  DifferentialSource,
         Source                  AlgebraicSource,
