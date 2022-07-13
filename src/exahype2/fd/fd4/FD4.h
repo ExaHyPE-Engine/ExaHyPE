@@ -17,7 +17,20 @@ namespace exahype2 {
       /**
        * Fourth-order Finite Differences
        *
-       * @todo This routine works only for the ncp terms, i.e. the flux term is not implemented yet.
+       * This routine relies on the fact that we have a halo size of 3.
+       *
+       *
+       * @param copyOldTimeStepAndScaleWithTimeStepSize The routine can be used
+       *   in two ways: Either for a classic explicit Euler or in a Runge-Kutta
+       *   context. For the latter, we evaluate the outcome of the right-hand
+       *   side of an ODE formulation @f$ \partial _t Q(t) = F(t) @f$, i.e. we
+       *   store the F. In an Euler context, we evaluate F, too, but then
+       *   immediately scale it with the time step size and add the original
+       *   time step's data. We copy stuff over.
+       *
+       * @param KOSigma Penalty term for the sixth order derivative. Scales
+       *   the Kreiss Oliger dissipation. If you set it to 0.0, the term is not
+       *   evaluated at all.
        */
       static void timeStep_patchwise_heap_functors(
         ::exahype2::CellData&   patchData,
