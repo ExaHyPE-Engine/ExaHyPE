@@ -19,53 +19,6 @@ namespace exahype2 {
     namespace fd4 {
       constexpr int PickAllEntriesFromOutputVector = -1;
       namespace internal {
-
-        #if defined(SharedOMP) and (!defined(__INTEL_LLVM_COMPILER) or !defined(GPUOffloadingOMP))
-        #pragma omp declare simd
-        #endif
-        template <class QInEnumeratorType, class QOutEnumeratorType>
-        static void computeFlux_LoopBody(
-          const double* __restrict__                     QIn,
-          const QInEnumeratorType&                       QInEnumerator,
-          exahype2::fd::Flux                             flux,
-          const tarch::la::Vector<Dimensions,double>&    patchCentre,
-          const tarch::la::Vector<Dimensions,double>&    patchSize,
-          int                                            patchIndex,
-          const tarch::la::Vector<Dimensions,int>&       volumeIndex,
-          double                                         t,
-          double                                         dt,
-          int                                            normal,
-          double* __restrict__                           QFlux,
-          const QOutEnumeratorType&                      QFluxEnumerator,
-          int                                            pick = PickAllEntriesFromOutputVector
-        ) InlineMethod;
-
-        #if defined(SharedOMP) and (!defined(__INTEL_LLVM_COMPILER) or !defined(GPUOffloadingOMP))
-        #pragma omp declare simd
-        #endif
-        #if defined(GPUOffloadingOMP)
-        #pragma omp declare target
-        #endif
-        template <typename QOutEnumeratorType>
-        static void updateSolutionWithFlux_LoopBody(
-          const double* __restrict__                   QFluxX,
-          const double* __restrict__                   QFluxY,
-          const double* __restrict__                   QFluxZ,
-          const QOutEnumeratorType&                    QFluxEnumerator,
-          const tarch::la::Vector<Dimensions,double>&  patchCentre,
-          const tarch::la::Vector<Dimensions,double>&  patchSize,
-          int                                          patchIndex,
-          const tarch::la::Vector<Dimensions,int>&     volumeIndex,
-          int                                          unknown,
-          double                                       dt,
-          double* __restrict__                         QOut,
-          const QOutEnumeratorType&                    QOutEnumerator
-        ) InlineMethod;
-        #if defined(GPUOffloadingOMP)
-        #pragma omp end declare target
-        #endif
-
-
         /**
          * This function calculates the source term that involves B_i\nabla_iQ where
          * i is the spatial dimension. These involve first gradients of quantitiets 
@@ -173,6 +126,61 @@ namespace exahype2 {
           const double* __restrict__                   QKODspY,
           const double* __restrict__                   QKODspZ,
           const QOutEnumeratorType&                    QKODspEnumerator,
+          const tarch::la::Vector<Dimensions,double>&  patchCentre,
+          const tarch::la::Vector<Dimensions,double>&  patchSize,
+          int                                          patchIndex,
+          const tarch::la::Vector<Dimensions,int>&     volumeIndex,
+          int                                          unknown,
+          double                                       dt,
+          double* __restrict__                         QOut,
+          const QOutEnumeratorType&                    QOutEnumerator
+        ) InlineMethod;
+        #if defined(GPUOffloadingOMP)
+        #pragma omp end declare target
+        #endif
+
+
+        /**
+         * @todo Plain copy of the FV solver. Not sure if it is the right one for
+         * FD. Anyway, it is not optimised at all, even if we use the AoS data format,
+         * i.e. do no re-arrangement at all.
+         */
+        #if defined(SharedOMP) and (!defined(__INTEL_LLVM_COMPILER) or !defined(GPUOffloadingOMP))
+        #pragma omp declare simd
+        #endif
+        template <class QInEnumeratorType, class QFluxEnumeratorType>
+        static void computeFlux_LoopBody(
+          const double* __restrict__                QIn,
+          QInEnumeratorType                   QInEnumerator,
+          exahype2::fd::Flux                           flux,
+          const tarch::la::Vector<Dimensions,double>&  patchCentre,
+          const tarch::la::Vector<Dimensions,double>&  patchSize,
+          int                                          patchIndex,
+          const tarch::la::Vector<Dimensions,int>&     volumeIndex,
+          double                                       t,
+          double                              dt,
+          int                                 normal,
+          double* __restrict__                QFlux,
+          QFluxEnumeratorType                 QFluxEnumerator
+        ) InlineMethod;
+
+
+        /**
+         * @todo Plain copy of the FV solver. Not sure if it is the right one for
+         * FD.
+         */
+        #if defined(SharedOMP) and (!defined(__INTEL_LLVM_COMPILER) or !defined(GPUOffloadingOMP))
+        #pragma omp declare simd
+        #endif
+        #if defined(GPUOffloadingOMP)
+        #pragma omp declare target
+        #endif
+        template <typename QFluxEnumeratorType, typename QOutEnumeratorType>
+        static void updateSolutionWithFlux_LoopBody(
+          const double* __restrict__                   tempFluxX,
+          const double* __restrict__                   tempFluxY,
+          const double* __restrict__                   tempFluxZ,
+          const QFluxEnumeratorType&                   fluxEnumerator,
           const tarch::la::Vector<Dimensions,double>&  patchCentre,
           const tarch::la::Vector<Dimensions,double>&  patchSize,
           int                                          patchIndex,
