@@ -679,6 +679,7 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanov_patchwise_heap_static_calls
           )
         );
       }
+      patchData.maxEigenvalue[patchIndex] = newMaxEigenvalue;
     }
   } // This is the end of the target offloading block
 
