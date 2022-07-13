@@ -336,11 +336,22 @@ def create_abstract_solver_declarations(flux_implementation, ncp_implementation,
      * never called. So I embed the (empty) implementation directly into the
      * header.
      */
+
+    #if defined(_NVHPC_STDPAR_GPU) 
+    #define HOST_DEVICE __host__ __device__
+    #define HOST __host__
+    #define DEVICE __device__
+    #else
+    #define HOST_DEVICE 
+    #define HOST
+    #define DEVICE
+    #endif
+    
     #if defined(GPUOffloadingOMP)
     #pragma omp declare target
     #endif
     #if defined(GPUOffloadingCPP)
-    __host__ __device__ static GPUCallableMethod void nonconservativeProduct(
+    HOST_DEVICE static GPUCallableMethod void nonconservativeProduct(
     #else
     static GPUCallableMethod void nonconservativeProduct(
     #endif
@@ -394,7 +405,7 @@ def create_abstract_solver_declarations(flux_implementation, ncp_implementation,
     #pragma omp declare target
     #endif
     #if defined(GPUOffloadingCPP)
-    __host__ __device__ static GPUCallableMethod void sourceTerm(
+    HOST_DEVICE static GPUCallableMethod void sourceTerm(
     #else
     static GPUCallableMethod void sourceTerm(
     #endif
@@ -562,7 +573,7 @@ GPUCallableMethod void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::flux(
 #endif
 #if !defined(GPUOffloadingSYCL)
 #if defined(GPUOffloadingCPP)
-__host__ __device__ GPUCallableMethod void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::nonconservativeProduct(
+HOST_DEVICE GPUCallableMethod void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::nonconservativeProduct(
 #else
 GPUCallableMethod void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::nonconservativeProduct(
 #endif
@@ -595,7 +606,7 @@ GPUCallableMethod void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::nonconservat
 #endif
 #if !defined(GPUOffloadingSYCL)
 #if defined(GPUOffloadingCPP)
-__host__ __device__ GPUCallableMethod void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::sourceTerm(
+HOST_DEVICE GPUCallableMethod void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::sourceTerm(
 #else
 GPUCallableMethod void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::sourceTerm(
 #endif

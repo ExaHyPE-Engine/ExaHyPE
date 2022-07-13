@@ -21,11 +21,40 @@ void exahype2::fv::rusanov::cpp::timeStepWithRusanov_batched_heap_static_calls(
   #if defined(GPUOffloadingCPP)
   constexpr int solversHaloSize        = 1;
 
-  exahype2::enumerator::AoSLexicographicEnumerator QInHostEnumerator       (                        1, numberOfVolumesPerAxisInPatch, haloSize, unknowns, auxiliaryVariables);
-  exahype2::enumerator::AoSLexicographicEnumerator QOutHostEnumerator      (                        1, numberOfVolumesPerAxisInPatch,        0, unknowns, auxiliaryVariables);
-  TempDataEnumerator fluxHostEnumerator      (hostPatchData.numberOfCells, numberOfVolumesPerAxisInPatch,   solversHaloSize, unknowns, 0);
-  TempDataEnumerator ncpHostEnumerator       (hostPatchData.numberOfCells, numberOfVolumesPerAxisInPatch+1, solversHaloSize, unknowns, 0);
-  TempDataEnumerator eigenvalueHostEnumerator(hostPatchData.numberOfCells, numberOfVolumesPerAxisInPatch,   solversHaloSize,        1, 0);
+  exahype2::enumerator::AoSLexicographicEnumerator QInHostEnumerator(
+    1, 
+    numberOfVolumesPerAxisInPatch, 
+    haloSize, 
+    unknowns, 
+    auxiliaryVariables
+  );
+  exahype2::enumerator::AoSLexicographicEnumerator QOutHostEnumerator(
+    1, 
+    numberOfVolumesPerAxisInPatch,
+    0, 
+    unknowns, 
+    auxiliaryVariables
+  );
+  TempDataEnumerator fluxHostEnumerator(
+    hostPatchData.numberOfCells, 
+    numberOfVolumesPerAxisInPatch,   
+    solversHaloSize, 
+    unknowns, 
+    0
+  );
+  TempDataEnumerator ncpHostEnumerator(
+    hostPatchData.numberOfCells, 
+    numberOfVolumesPerAxisInPatch+1, 
+    solversHaloSize, 
+    unknowns, 
+  0);
+  TempDataEnumerator eigenvalueHostEnumerator(
+    hostPatchData.numberOfCells, 
+    numberOfVolumesPerAxisInPatch,   
+    solversHaloSize,        
+    1, 
+    0
+  );
 
   // @todo change once sorted out by NVIDIA
   double* tempFluxX = new double[fluxHostEnumerator.size()];
@@ -37,9 +66,6 @@ void exahype2::fv::rusanov::cpp::timeStepWithRusanov_batched_heap_static_calls(
   double* tempEigenvalueX = new double[eigenvalueHostEnumerator.size()];
   double* tempEigenvalueY = new double[eigenvalueHostEnumerator.size()];
   double* tempEigenvalueZ = new double[eigenvalueHostEnumerator.size()];
-
-  double**  mappedPointersToQIn          = new double*[ hostPatchData.numberOfCells ];
-  double**  mappedPointersToQOut         = new double*[ hostPatchData.numberOfCells ];
 
   // The cartesian products have to be located on the heap so that they are accessible from the GPU.
   // Here we define types to able to allocated in heap.
@@ -160,21 +186,42 @@ void exahype2::fv::rusanov::cpp::timeStepWithRusanov_batched_heap_static_calls(
     std::views::iota(-solversHaloSize,numberOfVolumesPerAxisInPatch+solversHaloSize-1)
   );
 
-  for (int patchIndex=0; patchIndex<hostPatchData.numberOfCells; patchIndex++) {
-    double* currentQIn  = hostPatchData.QIn[patchIndex];
-    double* currentQOut = hostPatchData.QOut[patchIndex];
-    
-    mappedPointersToQIn[patchIndex]  = currentQIn;
-    mappedPointersToQOut[patchIndex] = currentQOut;
-  }
 
-  const int numberOfCells            = hostPatchData.numberOfCells;
-  double*   rawPointerToCellCentres = hostPatchData.cellCentre[0].data();
-  double*   rawPointerToCellSizes   = hostPatchData.cellSize[0].data();
-  double*   t                        = hostPatchData.t;
-  double*   dt                       = hostPatchData.dt;
-  double*   maxEigenvalue            = hostPatchData.maxEigenvalue;
-
+  exahype2::enumerator::AoSLexicographicEnumerator QInEnumerator(
+    1, 
+    numberOfVolumesPerAxisInPatch,
+    haloSize,
+    unknowns,
+    auxiliaryVariables
+  );
+  exahype2::enumerator::AoSLexicographicEnumerator QOutEnumerator(
+    1, 
+    numberOfVolumesPerAxisInPatch,
+    0,
+    unknowns,
+    auxiliaryVariables
+  );
+  TempDataEnumerator fluxEnumerator(
+    hostPatchData.numberOfCells, 
+    numberOfVolumesPerAxisInPatch,
+    haloSize,
+    unknowns,
+    0
+  );
+  TempDataEnumerator ncpEnumerator(
+    hostPatchData.numberOfCells,
+    numberOfVolumesPerAxisInPatch+1,
+    haloSize,
+    unknowns,
+    0
+  );
+  TempDataEnumerator eigenvalueEnumerator(
+    hostPatchData.numberOfCells, 
+    numberOfVolumesPerAxisInPatch,
+    haloSize,
+    1,
+    0
+  );
 
   if (Dimensions==2 and evaluateSource) {
 
@@ -184,34 +231,20 @@ void exahype2::fv::rusanov::cpp::timeStepWithRusanov_batched_heap_static_calls(
       range2d_cell->end(),
       [&](auto ids){
         auto [x,y,patchIndex] = ids;
-        GPUCellData patchData;
-        patchData.numberOfCells = numberOfCells;
-        patchData.cellCentre   = (tarch::la::Vector<Dimensions,double>*)(rawPointerToCellCentres);
-        patchData.cellSize     = (tarch::la::Vector<Dimensions,double>*)(rawPointerToCellSizes);
-        patchData.QIn           = mappedPointersToQIn;
-        patchData.QOut          = mappedPointersToQOut;
-        patchData.t             = t;
-        patchData.dt            = dt;
-        patchData.maxEigenvalue = maxEigenvalue;
-
-        exahype2::enumerator::AoSLexicographicEnumerator QInEnumerator       (                        1, numberOfVolumesPerAxisInPatch,haloSize,unknowns,auxiliaryVariables);
-        exahype2::enumerator::AoSLexicographicEnumerator QOutEnumerator      (                        1, numberOfVolumesPerAxisInPatch,       0,unknowns,auxiliaryVariables);
-        TempDataEnumerator fluxEnumerator      (patchData.numberOfCells, numberOfVolumesPerAxisInPatch,haloSize,unknowns,0);
-        TempDataEnumerator ncpEnumerator       (patchData.numberOfCells, numberOfVolumesPerAxisInPatch+1,haloSize,unknowns,0);
-        TempDataEnumerator eigenvalueEnumerator(patchData.numberOfCells, numberOfVolumesPerAxisInPatch,haloSize,1,0);
 
         internal::copySolutionAndAddSourceTerm_LoopBody<Solver>(
-          patchData.QIn[patchIndex],
+          hostPatchData.QIn[patchIndex],
           QInEnumerator,
-          patchData.cellCentre[patchIndex],
-          patchData.cellSize[patchIndex],
+          hostPatchData.cellCentre[patchIndex],
+          hostPatchData.cellSize[patchIndex],
           patchIndex,
           volumeIndex2d(x,y),
-          patchData.t[patchIndex],
-          patchData.dt[patchIndex],
-          patchData.QOut[patchIndex],
+          hostPatchData.t[patchIndex],
+          hostPatchData.dt[patchIndex],
+          hostPatchData.QOut[patchIndex],
           QOutEnumerator
         );
+
       }
     );
   }
@@ -222,34 +255,20 @@ void exahype2::fv::rusanov::cpp::timeStepWithRusanov_batched_heap_static_calls(
       range3d_cell->end(),
       [&](auto ids){
         auto [x,y,z,patchIndex] = ids;
-        GPUCellData patchData;
-        patchData.numberOfCells = numberOfCells;
-        patchData.cellCentre   = (tarch::la::Vector<Dimensions,double>*)(rawPointerToCellCentres);
-        patchData.cellSize     = (tarch::la::Vector<Dimensions,double>*)(rawPointerToCellSizes);
-        patchData.QIn           = mappedPointersToQIn;
-        patchData.QOut          = mappedPointersToQOut;
-        patchData.t             = t;
-        patchData.dt            = dt;
-        patchData.maxEigenvalue = maxEigenvalue;
-
-        exahype2::enumerator::AoSLexicographicEnumerator QInEnumerator       (                        1, numberOfVolumesPerAxisInPatch,haloSize,unknowns,auxiliaryVariables);
-        exahype2::enumerator::AoSLexicographicEnumerator QOutEnumerator      (                        1, numberOfVolumesPerAxisInPatch,       0,unknowns,auxiliaryVariables);
-        TempDataEnumerator fluxEnumerator      (patchData.numberOfCells, numberOfVolumesPerAxisInPatch,haloSize,unknowns,0);
-        TempDataEnumerator ncpEnumerator       (patchData.numberOfCells, numberOfVolumesPerAxisInPatch+1,haloSize,unknowns,0);
-        TempDataEnumerator eigenvalueEnumerator(patchData.numberOfCells, numberOfVolumesPerAxisInPatch,haloSize,1,0);
 
         internal::copySolutionAndAddSourceTerm_LoopBody<Solver>(
-          patchData.QIn[patchIndex],
+          hostPatchData.QIn[patchIndex],
           QInEnumerator,
-          patchData.cellCentre[patchIndex],
-          patchData.cellSize[patchIndex],
+          hostPatchData.cellCentre[patchIndex],
+          hostPatchData.cellSize[patchIndex],
           patchIndex,
           volumeIndex3d(x,y,z),
-          patchData.t[patchIndex],
-          patchData.dt[patchIndex],
-          patchData.QOut[patchIndex],
+          hostPatchData.t[patchIndex],
+          hostPatchData.dt[patchIndex],
+          hostPatchData.QOut[patchIndex],
           QOutEnumerator
         );
+
       }
     );
   }
@@ -260,31 +279,17 @@ void exahype2::fv::rusanov::cpp::timeStepWithRusanov_batched_heap_static_calls(
       range2d_cell_unknown_aux->end(),
       [&](auto ids){
         auto [x,y,patchIndex,unknown] = ids;
-        GPUCellData patchData;
-        patchData.numberOfCells = numberOfCells;
-        patchData.cellCentre   = (tarch::la::Vector<Dimensions,double>*)(rawPointerToCellCentres);
-        patchData.cellSize     = (tarch::la::Vector<Dimensions,double>*)(rawPointerToCellSizes);
-        patchData.QIn           = mappedPointersToQIn;
-        patchData.QOut          = mappedPointersToQOut;
-        patchData.t             = t;
-        patchData.dt            = dt;
-        patchData.maxEigenvalue = maxEigenvalue;
-
-        exahype2::enumerator::AoSLexicographicEnumerator QInEnumerator       (                        1, numberOfVolumesPerAxisInPatch,haloSize,unknowns,auxiliaryVariables);
-        exahype2::enumerator::AoSLexicographicEnumerator QOutEnumerator      (                        1, numberOfVolumesPerAxisInPatch,       0,unknowns,auxiliaryVariables);
-        TempDataEnumerator fluxEnumerator      (patchData.numberOfCells, numberOfVolumesPerAxisInPatch,haloSize,unknowns,0);
-        TempDataEnumerator ncpEnumerator       (patchData.numberOfCells, numberOfVolumesPerAxisInPatch+1,haloSize,unknowns,0);
-        TempDataEnumerator eigenvalueEnumerator(patchData.numberOfCells, numberOfVolumesPerAxisInPatch,haloSize,1,0);
 
         internal::copySolution_LoopBody(
-          patchData.QIn[patchIndex],
+          hostPatchData.QIn[patchIndex],
           QInEnumerator,
           patchIndex,
           volumeIndex2d(x,y),
           unknown,
-          patchData.QOut[patchIndex],
+          hostPatchData.QOut[patchIndex],
           QOutEnumerator
         );
+
       }
     );
   }
@@ -295,31 +300,17 @@ void exahype2::fv::rusanov::cpp::timeStepWithRusanov_batched_heap_static_calls(
       range3d_cell_unknown_aux->end(),
       [&](auto ids){
         auto [x,y,z,patchIndex,unknown] = ids;
-        GPUCellData patchData;
-        patchData.numberOfCells = numberOfCells;
-        patchData.cellCentre   = (tarch::la::Vector<Dimensions,double>*)(rawPointerToCellCentres);
-        patchData.cellSize     = (tarch::la::Vector<Dimensions,double>*)(rawPointerToCellSizes);
-        patchData.QIn           = mappedPointersToQIn;
-        patchData.QOut          = mappedPointersToQOut;
-        patchData.t             = t;
-        patchData.dt            = dt;
-        patchData.maxEigenvalue = maxEigenvalue;
-
-        exahype2::enumerator::AoSLexicographicEnumerator QInEnumerator       (                        1, numberOfVolumesPerAxisInPatch,haloSize,unknowns,auxiliaryVariables);
-        exahype2::enumerator::AoSLexicographicEnumerator QOutEnumerator      (                        1, numberOfVolumesPerAxisInPatch,       0,unknowns,auxiliaryVariables);
-        TempDataEnumerator fluxEnumerator      (patchData.numberOfCells, numberOfVolumesPerAxisInPatch,haloSize,unknowns,0);
-        TempDataEnumerator ncpEnumerator       (patchData.numberOfCells, numberOfVolumesPerAxisInPatch+1,haloSize,unknowns,0);
-        TempDataEnumerator eigenvalueEnumerator(patchData.numberOfCells, numberOfVolumesPerAxisInPatch,haloSize,1,0);
 
         internal::copySolution_LoopBody(
-          patchData.QIn[patchIndex],
+          hostPatchData.QIn[patchIndex],
           QInEnumerator,
           patchIndex,
           volumeIndex3d(x,y,z),
           unknown,
-          patchData.QOut[patchIndex],
+          hostPatchData.QOut[patchIndex],
           QOutEnumerator
         );
+
       }
     );
   }
@@ -332,34 +323,21 @@ void exahype2::fv::rusanov::cpp::timeStepWithRusanov_batched_heap_static_calls(
       range1d_cell_solvhalosize->end(),
       [&](auto ids){
         auto [y,patchIndex,x] = ids;
-        GPUCellData patchData;
-        patchData.numberOfCells = numberOfCells;
-        patchData.cellCentre   = (tarch::la::Vector<Dimensions,double>*)(rawPointerToCellCentres);
-        patchData.cellSize     = (tarch::la::Vector<Dimensions,double>*)(rawPointerToCellSizes);
-        patchData.QIn           = mappedPointersToQIn;
-        patchData.QOut          = mappedPointersToQOut;
-        patchData.t             = t;
-        patchData.dt            = dt;
-        patchData.maxEigenvalue = maxEigenvalue;
-
-        exahype2::enumerator::AoSLexicographicEnumerator QInEnumerator       (                        1, numberOfVolumesPerAxisInPatch,haloSize,unknowns,auxiliaryVariables);
-        exahype2::enumerator::AoSLexicographicEnumerator QOutEnumerator      (                        1, numberOfVolumesPerAxisInPatch,       0,unknowns,auxiliaryVariables);
-        TempDataEnumerator fluxEnumerator      (patchData.numberOfCells, numberOfVolumesPerAxisInPatch,haloSize,unknowns,0);
-        TempDataEnumerator ncpEnumerator       (patchData.numberOfCells, numberOfVolumesPerAxisInPatch+1,haloSize,unknowns,0);
-        TempDataEnumerator eigenvalueEnumerator(patchData.numberOfCells, numberOfVolumesPerAxisInPatch,haloSize,1,0);
 
         internal::computeMaxEigenvalue_LoopBody<Solver>(
-          patchData.QIn[patchIndex],
+          hostPatchData.QIn[patchIndex],
           QInEnumerator,
-          patchData.cellCentre[patchIndex],
-          patchData.cellSize[patchIndex],
+          hostPatchData.cellCentre[patchIndex],
+          hostPatchData.cellSize[patchIndex],
           patchIndex,
           volumeIndex2d(x,y),
-          patchData.t[patchIndex], patchData.dt[patchIndex],
+          hostPatchData.t[patchIndex], 
+          hostPatchData.dt[patchIndex],
           0,
           tempEigenvalueX,
           eigenvalueEnumerator
         );
+
       }
     );
 
@@ -369,34 +347,21 @@ void exahype2::fv::rusanov::cpp::timeStepWithRusanov_batched_heap_static_calls(
       range1d_cell_solvhalosize->end(),
       [&](auto ids){
         auto [x,patchIndex,y] = ids;
-        GPUCellData patchData;
-        patchData.numberOfCells = numberOfCells;
-        patchData.cellCentre   = (tarch::la::Vector<Dimensions,double>*)(rawPointerToCellCentres);
-        patchData.cellSize     = (tarch::la::Vector<Dimensions,double>*)(rawPointerToCellSizes);
-        patchData.QIn           = mappedPointersToQIn;
-        patchData.QOut          = mappedPointersToQOut;
-        patchData.t             = t;
-        patchData.dt            = dt;
-        patchData.maxEigenvalue = maxEigenvalue;
-
-        exahype2::enumerator::AoSLexicographicEnumerator QInEnumerator       (                        1, numberOfVolumesPerAxisInPatch,haloSize,unknowns,auxiliaryVariables);
-        exahype2::enumerator::AoSLexicographicEnumerator QOutEnumerator      (                        1, numberOfVolumesPerAxisInPatch,       0,unknowns,auxiliaryVariables);
-        TempDataEnumerator fluxEnumerator      (patchData.numberOfCells, numberOfVolumesPerAxisInPatch,haloSize,unknowns,0);
-        TempDataEnumerator ncpEnumerator       (patchData.numberOfCells, numberOfVolumesPerAxisInPatch+1,haloSize,unknowns,0);
-        TempDataEnumerator eigenvalueEnumerator(patchData.numberOfCells, numberOfVolumesPerAxisInPatch,haloSize,1,0);
 
         internal::computeMaxEigenvalue_LoopBody<Solver>(
-          patchData.QIn[patchIndex],
+          hostPatchData.QIn[patchIndex],
           QInEnumerator,
-          patchData.cellCentre[patchIndex],
-          patchData.cellSize[patchIndex],
+          hostPatchData.cellCentre[patchIndex],
+          hostPatchData.cellSize[patchIndex],
           patchIndex,
           volumeIndex2d(x,y),
-          patchData.t[patchIndex], patchData.dt[patchIndex],
+          hostPatchData.t[patchIndex], 
+          hostPatchData.dt[patchIndex],
           1,
           tempEigenvalueY,
           eigenvalueEnumerator
         );
+
       }
     );
 
@@ -406,38 +371,24 @@ void exahype2::fv::rusanov::cpp::timeStepWithRusanov_batched_heap_static_calls(
       range2d_cell_unknown->end(),
       [&](auto ids){
         auto [x,y,patchIndex,unknown] = ids;
-        GPUCellData patchData;
-        patchData.numberOfCells = numberOfCells;
-        patchData.cellCentre   = (tarch::la::Vector<Dimensions,double>*)(rawPointerToCellCentres);
-        patchData.cellSize     = (tarch::la::Vector<Dimensions,double>*)(rawPointerToCellSizes);
-        patchData.QIn           = mappedPointersToQIn;
-        patchData.QOut          = mappedPointersToQOut;
-        patchData.t             = t;
-        patchData.dt            = dt;
-        patchData.maxEigenvalue = maxEigenvalue;
-
-        exahype2::enumerator::AoSLexicographicEnumerator QInEnumerator       (                        1, numberOfVolumesPerAxisInPatch,haloSize,unknowns,auxiliaryVariables);
-        exahype2::enumerator::AoSLexicographicEnumerator QOutEnumerator      (                        1, numberOfVolumesPerAxisInPatch,       0,unknowns,auxiliaryVariables);
-        TempDataEnumerator fluxEnumerator      (patchData.numberOfCells, numberOfVolumesPerAxisInPatch,haloSize,unknowns,0);
-        TempDataEnumerator ncpEnumerator       (patchData.numberOfCells, numberOfVolumesPerAxisInPatch+1,haloSize,unknowns,0);
-        TempDataEnumerator eigenvalueEnumerator(patchData.numberOfCells, numberOfVolumesPerAxisInPatch,haloSize,1,0);
 
         internal::updateSolutionWithEigenvalueDamping_LoopBody(
-          patchData.QIn[patchIndex],
+          hostPatchData.QIn[patchIndex],
           QInEnumerator,
           tempEigenvalueX,
           tempEigenvalueY,
           tempEigenvalueZ,
           eigenvalueEnumerator,
-          patchData.cellCentre[patchIndex],
-          patchData.cellSize[patchIndex],
+          hostPatchData.cellCentre[patchIndex],
+          hostPatchData.cellSize[patchIndex],
           patchIndex,
           volumeIndex2d(x,y),
           unknown,
-          patchData.dt[patchIndex],
-          patchData.QOut[patchIndex],
+          hostPatchData.dt[patchIndex],
+          hostPatchData.QOut[patchIndex],
           QOutEnumerator
         );
+
       }
     );
   }
@@ -449,34 +400,21 @@ void exahype2::fv::rusanov::cpp::timeStepWithRusanov_batched_heap_static_calls(
       range2d_cell_solvhalosize->end(),
       [&](auto ids){
         auto [z,y,patchIndex,x] = ids;
-        GPUCellData patchData;
-        patchData.numberOfCells = numberOfCells;
-        patchData.cellCentre   = (tarch::la::Vector<Dimensions,double>*)(rawPointerToCellCentres);
-        patchData.cellSize     = (tarch::la::Vector<Dimensions,double>*)(rawPointerToCellSizes);
-        patchData.QIn           = mappedPointersToQIn;
-        patchData.QOut          = mappedPointersToQOut;
-        patchData.t             = t;
-        patchData.dt            = dt;
-        patchData.maxEigenvalue = maxEigenvalue;
-
-        exahype2::enumerator::AoSLexicographicEnumerator QInEnumerator       (                        1, numberOfVolumesPerAxisInPatch,haloSize,unknowns,auxiliaryVariables);
-        exahype2::enumerator::AoSLexicographicEnumerator QOutEnumerator      (                        1, numberOfVolumesPerAxisInPatch,       0,unknowns,auxiliaryVariables);
-        TempDataEnumerator fluxEnumerator      (patchData.numberOfCells, numberOfVolumesPerAxisInPatch,haloSize,unknowns,0);
-        TempDataEnumerator ncpEnumerator       (patchData.numberOfCells, numberOfVolumesPerAxisInPatch+1,haloSize,unknowns,0);
-        TempDataEnumerator eigenvalueEnumerator(patchData.numberOfCells, numberOfVolumesPerAxisInPatch,haloSize,1,0);
 
         internal::computeMaxEigenvalue_LoopBody<Solver>(
-          patchData.QIn[patchIndex],
+          hostPatchData.QIn[patchIndex],
           QInEnumerator,
-          patchData.cellCentre[patchIndex],
-          patchData.cellSize[patchIndex],
+          hostPatchData.cellCentre[patchIndex],
+          hostPatchData.cellSize[patchIndex],
           patchIndex,
           volumeIndex3d(x,y,z),
-          patchData.t[patchIndex], patchData.dt[patchIndex],
+          hostPatchData.t[patchIndex], 
+          hostPatchData.dt[patchIndex],
           0,
           tempEigenvalueX,
           eigenvalueEnumerator
         );
+
       }
     );
 
@@ -486,34 +424,21 @@ void exahype2::fv::rusanov::cpp::timeStepWithRusanov_batched_heap_static_calls(
       range2d_cell_solvhalosize->end(),
       [&](auto ids){
         auto [z,x,patchIndex,y] = ids;
-        GPUCellData patchData;
-        patchData.numberOfCells = numberOfCells;
-        patchData.cellCentre   = (tarch::la::Vector<Dimensions,double>*)(rawPointerToCellCentres);
-        patchData.cellSize     = (tarch::la::Vector<Dimensions,double>*)(rawPointerToCellSizes);
-        patchData.QIn           = mappedPointersToQIn;
-        patchData.QOut          = mappedPointersToQOut;
-        patchData.t             = t;
-        patchData.dt            = dt;
-        patchData.maxEigenvalue = maxEigenvalue;
-
-        exahype2::enumerator::AoSLexicographicEnumerator QInEnumerator       (                        1, numberOfVolumesPerAxisInPatch,haloSize,unknowns,auxiliaryVariables);
-        exahype2::enumerator::AoSLexicographicEnumerator QOutEnumerator      (                        1, numberOfVolumesPerAxisInPatch,       0,unknowns,auxiliaryVariables);
-        TempDataEnumerator fluxEnumerator      (patchData.numberOfCells, numberOfVolumesPerAxisInPatch,haloSize,unknowns,0);
-        TempDataEnumerator ncpEnumerator       (patchData.numberOfCells, numberOfVolumesPerAxisInPatch+1,haloSize,unknowns,0);
-        TempDataEnumerator eigenvalueEnumerator(patchData.numberOfCells, numberOfVolumesPerAxisInPatch,haloSize,1,0);
 
         internal::computeMaxEigenvalue_LoopBody<Solver>(
-          patchData.QIn[patchIndex],
+          hostPatchData.QIn[patchIndex],
           QInEnumerator,
-          patchData.cellCentre[patchIndex],
-          patchData.cellSize[patchIndex],
+          hostPatchData.cellCentre[patchIndex],
+          hostPatchData.cellSize[patchIndex],
           patchIndex,
           volumeIndex3d(x,y,z),
-          patchData.t[patchIndex], patchData.dt[patchIndex],
+          hostPatchData.t[patchIndex], 
+          hostPatchData.dt[patchIndex],
           1,
           tempEigenvalueY,
           eigenvalueEnumerator
         );
+
       }
     );
 
@@ -523,34 +448,21 @@ void exahype2::fv::rusanov::cpp::timeStepWithRusanov_batched_heap_static_calls(
       range2d_cell_solvhalosize->end(),
       [&](auto ids){
         auto [y,x,patchIndex,z] = ids;
-        GPUCellData patchData;
-        patchData.numberOfCells = numberOfCells;
-        patchData.cellCentre   = (tarch::la::Vector<Dimensions,double>*)(rawPointerToCellCentres);
-        patchData.cellSize     = (tarch::la::Vector<Dimensions,double>*)(rawPointerToCellSizes);
-        patchData.QIn           = mappedPointersToQIn;
-        patchData.QOut          = mappedPointersToQOut;
-        patchData.t             = t;
-        patchData.dt            = dt;
-        patchData.maxEigenvalue = maxEigenvalue;
-
-        exahype2::enumerator::AoSLexicographicEnumerator QInEnumerator       (                        1, numberOfVolumesPerAxisInPatch,haloSize,unknowns,auxiliaryVariables);
-        exahype2::enumerator::AoSLexicographicEnumerator QOutEnumerator      (                        1, numberOfVolumesPerAxisInPatch,       0,unknowns,auxiliaryVariables);
-        TempDataEnumerator fluxEnumerator      (patchData.numberOfCells, numberOfVolumesPerAxisInPatch,haloSize,unknowns,0);
-        TempDataEnumerator ncpEnumerator       (patchData.numberOfCells, numberOfVolumesPerAxisInPatch+1,haloSize,unknowns,0);
-        TempDataEnumerator eigenvalueEnumerator(patchData.numberOfCells, numberOfVolumesPerAxisInPatch,haloSize,1,0);
-
+    
         internal::computeMaxEigenvalue_LoopBody<Solver>(
-          patchData.QIn[patchIndex],
+          hostPatchData.QIn[patchIndex],
           QInEnumerator,
-          patchData.cellCentre[patchIndex],
-          patchData.cellSize[patchIndex],
+          hostPatchData.cellCentre[patchIndex],
+          hostPatchData.cellSize[patchIndex],
           patchIndex,
           volumeIndex3d(x,y,z),
-          patchData.t[patchIndex], patchData.dt[patchIndex],
+          hostPatchData.t[patchIndex], 
+          hostPatchData.dt[patchIndex],
           2,
           tempEigenvalueZ,
           eigenvalueEnumerator
         );
+
       }
     );
 
@@ -560,38 +472,24 @@ void exahype2::fv::rusanov::cpp::timeStepWithRusanov_batched_heap_static_calls(
       range3d_cell_unknown->end(),
       [&](auto ids){
         auto [x,y,z,patchIndex,unknown] = ids;
-        GPUCellData patchData;
-        patchData.numberOfCells = numberOfCells;
-        patchData.cellCentre   = (tarch::la::Vector<Dimensions,double>*)(rawPointerToCellCentres);
-        patchData.cellSize     = (tarch::la::Vector<Dimensions,double>*)(rawPointerToCellSizes);
-        patchData.QIn           = mappedPointersToQIn;
-        patchData.QOut          = mappedPointersToQOut;
-        patchData.t             = t;
-        patchData.dt            = dt;
-        patchData.maxEigenvalue = maxEigenvalue;
-
-        exahype2::enumerator::AoSLexicographicEnumerator QInEnumerator       (                        1, numberOfVolumesPerAxisInPatch,haloSize,unknowns,auxiliaryVariables);
-        exahype2::enumerator::AoSLexicographicEnumerator QOutEnumerator      (                        1, numberOfVolumesPerAxisInPatch,       0,unknowns,auxiliaryVariables);
-        TempDataEnumerator fluxEnumerator      (patchData.numberOfCells, numberOfVolumesPerAxisInPatch,haloSize,unknowns,0);
-        TempDataEnumerator ncpEnumerator       (patchData.numberOfCells, numberOfVolumesPerAxisInPatch+1,haloSize,unknowns,0);
-        TempDataEnumerator eigenvalueEnumerator(patchData.numberOfCells, numberOfVolumesPerAxisInPatch,haloSize,1,0);
-
+        
         internal::updateSolutionWithEigenvalueDamping_LoopBody(
-          patchData.QIn[patchIndex],
+          hostPatchData.QIn[patchIndex],
           QInEnumerator,
           tempEigenvalueX,
           tempEigenvalueY,
           tempEigenvalueZ,
           eigenvalueEnumerator,
-          patchData.cellCentre[patchIndex],
-          patchData.cellSize[patchIndex],
+          hostPatchData.cellCentre[patchIndex],
+          hostPatchData.cellSize[patchIndex],
           patchIndex,
           volumeIndex3d(x,y,z),
           unknown,
-          patchData.dt[patchIndex],
-          patchData.QOut[patchIndex],
+          hostPatchData.dt[patchIndex],
+          hostPatchData.QOut[patchIndex],
           QOutEnumerator
         );
+
       }
     );
 
@@ -605,35 +503,21 @@ void exahype2::fv::rusanov::cpp::timeStepWithRusanov_batched_heap_static_calls(
       range1d_cell_solvhalosize->end(),
       [&](auto ids){
         auto [y,patchIndex,x] = ids;
-        GPUCellData patchData;
-        patchData.numberOfCells = numberOfCells;
-        patchData.cellCentre   = (tarch::la::Vector<Dimensions,double>*)(rawPointerToCellCentres);
-        patchData.cellSize     = (tarch::la::Vector<Dimensions,double>*)(rawPointerToCellSizes);
-        patchData.QIn           = mappedPointersToQIn;
-        patchData.QOut          = mappedPointersToQOut;
-        patchData.t             = t;
-        patchData.dt            = dt;
-        patchData.maxEigenvalue = maxEigenvalue;
-
-        exahype2::enumerator::AoSLexicographicEnumerator QInEnumerator       (                        1, numberOfVolumesPerAxisInPatch,haloSize,unknowns,auxiliaryVariables);
-        exahype2::enumerator::AoSLexicographicEnumerator QOutEnumerator      (                        1, numberOfVolumesPerAxisInPatch,       0,unknowns,auxiliaryVariables);
-        TempDataEnumerator fluxEnumerator      (patchData.numberOfCells, numberOfVolumesPerAxisInPatch,haloSize,unknowns,0);
-        TempDataEnumerator ncpEnumerator       (patchData.numberOfCells, numberOfVolumesPerAxisInPatch+1,haloSize,unknowns,0);
-        TempDataEnumerator eigenvalueEnumerator(patchData.numberOfCells, numberOfVolumesPerAxisInPatch,haloSize,1,0);
-
+        
         internal::computeFlux_LoopBody<Solver>(
-          patchData.QIn[patchIndex],
+          hostPatchData.QIn[patchIndex],
           QInEnumerator,
-          patchData.cellCentre[patchIndex],
-          patchData.cellSize[patchIndex],
+          hostPatchData.cellCentre[patchIndex],
+          hostPatchData.cellSize[patchIndex],
           patchIndex,
           volumeIndex2d(x,y),
-          patchData.t[patchIndex],
-          patchData.dt[patchIndex],
+          hostPatchData.t[patchIndex],
+          hostPatchData.dt[patchIndex],
           0, // normal
           tempFluxX,
           fluxEnumerator
         );
+
       }
     );
 
@@ -643,35 +527,21 @@ void exahype2::fv::rusanov::cpp::timeStepWithRusanov_batched_heap_static_calls(
       range1d_cell_solvhalosize->end(),
       [&](auto ids){
         auto [x,patchIndex,y] = ids;
-        GPUCellData patchData;
-        patchData.numberOfCells = numberOfCells;
-        patchData.cellCentre   = (tarch::la::Vector<Dimensions,double>*)(rawPointerToCellCentres);
-        patchData.cellSize     = (tarch::la::Vector<Dimensions,double>*)(rawPointerToCellSizes);
-        patchData.QIn           = mappedPointersToQIn;
-        patchData.QOut          = mappedPointersToQOut;
-        patchData.t             = t;
-        patchData.dt            = dt;
-        patchData.maxEigenvalue = maxEigenvalue;
-
-        exahype2::enumerator::AoSLexicographicEnumerator QInEnumerator       (                        1, numberOfVolumesPerAxisInPatch,haloSize,unknowns,auxiliaryVariables);
-        exahype2::enumerator::AoSLexicographicEnumerator QOutEnumerator      (                        1, numberOfVolumesPerAxisInPatch,       0,unknowns,auxiliaryVariables);
-        TempDataEnumerator fluxEnumerator      (patchData.numberOfCells, numberOfVolumesPerAxisInPatch,haloSize,unknowns,0);
-        TempDataEnumerator ncpEnumerator       (patchData.numberOfCells, numberOfVolumesPerAxisInPatch+1,haloSize,unknowns,0);
-        TempDataEnumerator eigenvalueEnumerator(patchData.numberOfCells, numberOfVolumesPerAxisInPatch,haloSize,1,0);
-
+        
         internal::computeFlux_LoopBody<Solver>(
-          patchData.QIn[patchIndex],
+          hostPatchData.QIn[patchIndex],
           QInEnumerator,
-          patchData.cellCentre[patchIndex],
-          patchData.cellSize[patchIndex],
+          hostPatchData.cellCentre[patchIndex],
+          hostPatchData.cellSize[patchIndex],
           patchIndex,
           volumeIndex2d(x,y),
-          patchData.t[patchIndex],
-          patchData.dt[patchIndex],
+          hostPatchData.t[patchIndex],
+          hostPatchData.dt[patchIndex],
           1, // normal
           tempFluxY,
           fluxEnumerator
         );
+
       }
     );
 
@@ -681,32 +551,53 @@ void exahype2::fv::rusanov::cpp::timeStepWithRusanov_batched_heap_static_calls(
       range2d_cell_unknown->end(),
       [&](auto ids){
         auto [x,y,patchIndex,unknown] = ids;
-        GPUCellData patchData;
-        patchData.numberOfCells = numberOfCells;
-        patchData.cellCentre   = (tarch::la::Vector<Dimensions,double>*)(rawPointerToCellCentres);
-        patchData.cellSize     = (tarch::la::Vector<Dimensions,double>*)(rawPointerToCellSizes);
-        patchData.QIn           = mappedPointersToQIn;
-        patchData.QOut          = mappedPointersToQOut;
-        patchData.t             = t;
-        patchData.dt            = dt;
-        patchData.maxEigenvalue = maxEigenvalue;
-
-        exahype2::enumerator::AoSLexicographicEnumerator QInEnumerator       (                        1, numberOfVolumesPerAxisInPatch,haloSize,unknowns,auxiliaryVariables);
-        exahype2::enumerator::AoSLexicographicEnumerator QOutEnumerator      (                        1, numberOfVolumesPerAxisInPatch,       0,unknowns,auxiliaryVariables);
-        TempDataEnumerator fluxEnumerator      (patchData.numberOfCells, numberOfVolumesPerAxisInPatch,haloSize,unknowns,0);
-        TempDataEnumerator ncpEnumerator       (patchData.numberOfCells, numberOfVolumesPerAxisInPatch+1,haloSize,unknowns,0);
-        TempDataEnumerator eigenvalueEnumerator(patchData.numberOfCells, numberOfVolumesPerAxisInPatch,haloSize,1,0);
+        
+        exahype2::enumerator::AoSLexicographicEnumerator QInEnumerator(
+          1, 
+          numberOfVolumesPerAxisInPatch,
+          haloSize,
+          unknowns,
+          auxiliaryVariables
+        );
+        exahype2::enumerator::AoSLexicographicEnumerator QOutEnumerator(
+          1, 
+          numberOfVolumesPerAxisInPatch,
+          0,
+          unknowns,
+          auxiliaryVariables
+        );
+        TempDataEnumerator fluxEnumerator(
+          hostPatchData.numberOfCells, 
+          numberOfVolumesPerAxisInPatch,
+          haloSize,
+          unknowns,
+          0
+        );
+        TempDataEnumerator ncpEnumerator(
+          hostPatchData.numberOfCells,
+          numberOfVolumesPerAxisInPatch+1,
+          haloSize,
+          unknowns,
+          0
+        );
+        TempDataEnumerator eigenvalueEnumerator(
+          hostPatchData.numberOfCells, 
+          numberOfVolumesPerAxisInPatch,
+          haloSize,
+          1,
+          0
+        );
 
         internal::updateSolutionWithFlux_LoopBody(
           tempFluxX, tempFluxY, tempFluxZ,
           fluxEnumerator,
-          patchData.cellCentre[patchIndex],
-          patchData.cellSize[patchIndex],
+          hostPatchData.cellCentre[patchIndex],
+          hostPatchData.cellSize[patchIndex],
           patchIndex,
           volumeIndex2d(x,y),
           unknown,
-          patchData.dt[patchIndex],
-          *(patchData.QOut + patchIndex),
+          hostPatchData.dt[patchIndex],
+          *(hostPatchData.QOut + patchIndex),
           QOutEnumerator
         );
       }
@@ -721,35 +612,21 @@ void exahype2::fv::rusanov::cpp::timeStepWithRusanov_batched_heap_static_calls(
       range2d_cell_solvhalosize->end(),
       [&](auto ids){
         auto [z,y,patchIndex,x] = ids;
-        GPUCellData patchData;
-        patchData.numberOfCells = numberOfCells;
-        patchData.cellCentre   = (tarch::la::Vector<Dimensions,double>*)(rawPointerToCellCentres);
-        patchData.cellSize     = (tarch::la::Vector<Dimensions,double>*)(rawPointerToCellSizes);
-        patchData.QIn           = mappedPointersToQIn;
-        patchData.QOut          = mappedPointersToQOut;
-        patchData.t             = t;
-        patchData.dt            = dt;
-        patchData.maxEigenvalue = maxEigenvalue;
-
-        exahype2::enumerator::AoSLexicographicEnumerator QInEnumerator       (                        1, numberOfVolumesPerAxisInPatch,haloSize,unknowns,auxiliaryVariables);
-        exahype2::enumerator::AoSLexicographicEnumerator QOutEnumerator      (                        1, numberOfVolumesPerAxisInPatch,       0,unknowns,auxiliaryVariables);
-        TempDataEnumerator fluxEnumerator      (patchData.numberOfCells, numberOfVolumesPerAxisInPatch,haloSize,unknowns,0);
-        TempDataEnumerator ncpEnumerator       (patchData.numberOfCells, numberOfVolumesPerAxisInPatch+1,haloSize,unknowns,0);
-        TempDataEnumerator eigenvalueEnumerator(patchData.numberOfCells, numberOfVolumesPerAxisInPatch,haloSize,1,0);
-
+        
         internal::computeFlux_LoopBody<Solver>(
-          patchData.QIn[patchIndex],
+          hostPatchData.QIn[patchIndex],
           QInEnumerator,
-          patchData.cellCentre[patchIndex],
-          patchData.cellSize[patchIndex],
+          hostPatchData.cellCentre[patchIndex],
+          hostPatchData.cellSize[patchIndex],
           patchIndex,
           volumeIndex3d(x,y,z),
-          patchData.t[patchIndex],
-          patchData.dt[patchIndex],
+          hostPatchData.t[patchIndex],
+          hostPatchData.dt[patchIndex],
           0, // normal
           tempFluxX,
           fluxEnumerator
-      );
+        );
+
       }
     );
 
@@ -759,35 +636,21 @@ void exahype2::fv::rusanov::cpp::timeStepWithRusanov_batched_heap_static_calls(
       range2d_cell_solvhalosize->end(),
       [&](auto ids){
         auto [z,x,patchIndex,y] = ids;
-        GPUCellData patchData;
-        patchData.numberOfCells = numberOfCells;
-        patchData.cellCentre   = (tarch::la::Vector<Dimensions,double>*)(rawPointerToCellCentres);
-        patchData.cellSize     = (tarch::la::Vector<Dimensions,double>*)(rawPointerToCellSizes);
-        patchData.QIn           = mappedPointersToQIn;
-        patchData.QOut          = mappedPointersToQOut;
-        patchData.t             = t;
-        patchData.dt            = dt;
-        patchData.maxEigenvalue = maxEigenvalue;
-
-        exahype2::enumerator::AoSLexicographicEnumerator QInEnumerator       (                        1, numberOfVolumesPerAxisInPatch,haloSize,unknowns,auxiliaryVariables);
-        exahype2::enumerator::AoSLexicographicEnumerator QOutEnumerator      (                        1, numberOfVolumesPerAxisInPatch,       0,unknowns,auxiliaryVariables);
-        TempDataEnumerator fluxEnumerator      (patchData.numberOfCells, numberOfVolumesPerAxisInPatch,haloSize,unknowns,0);
-        TempDataEnumerator ncpEnumerator       (patchData.numberOfCells, numberOfVolumesPerAxisInPatch+1,haloSize,unknowns,0);
-        TempDataEnumerator eigenvalueEnumerator(patchData.numberOfCells, numberOfVolumesPerAxisInPatch,haloSize,1,0);
-
+        
         internal::computeFlux_LoopBody<Solver>(
-          patchData.QIn[patchIndex],
+          hostPatchData.QIn[patchIndex],
           QInEnumerator,
-          patchData.cellCentre[patchIndex],
-          patchData.cellSize[patchIndex],
+          hostPatchData.cellCentre[patchIndex],
+          hostPatchData.cellSize[patchIndex],
           patchIndex,
           volumeIndex3d(x,y,z),
-          patchData.t[patchIndex],
-          patchData.dt[patchIndex],
+          hostPatchData.t[patchIndex],
+          hostPatchData.dt[patchIndex],
           1, // normal
           tempFluxY,
           fluxEnumerator
         );
+
       }
     );
 
@@ -797,35 +660,21 @@ void exahype2::fv::rusanov::cpp::timeStepWithRusanov_batched_heap_static_calls(
       range2d_cell_solvhalosize->end(),
       [&](auto ids){
         auto [x,y,patchIndex,z] = ids;
-        GPUCellData patchData;
-        patchData.numberOfCells = numberOfCells;
-        patchData.cellCentre   = (tarch::la::Vector<Dimensions,double>*)(rawPointerToCellCentres);
-        patchData.cellSize     = (tarch::la::Vector<Dimensions,double>*)(rawPointerToCellSizes);
-        patchData.QIn           = mappedPointersToQIn;
-        patchData.QOut          = mappedPointersToQOut;
-        patchData.t             = t;
-        patchData.dt            = dt;
-        patchData.maxEigenvalue = maxEigenvalue;
-
-        exahype2::enumerator::AoSLexicographicEnumerator QInEnumerator       (                        1, numberOfVolumesPerAxisInPatch,haloSize,unknowns,auxiliaryVariables);
-        exahype2::enumerator::AoSLexicographicEnumerator QOutEnumerator      (                        1, numberOfVolumesPerAxisInPatch,       0,unknowns,auxiliaryVariables);
-        TempDataEnumerator fluxEnumerator      (patchData.numberOfCells, numberOfVolumesPerAxisInPatch,haloSize,unknowns,0);
-        TempDataEnumerator ncpEnumerator       (patchData.numberOfCells, numberOfVolumesPerAxisInPatch+1,haloSize,unknowns,0);
-        TempDataEnumerator eigenvalueEnumerator(patchData.numberOfCells, numberOfVolumesPerAxisInPatch,haloSize,1,0);
 
         internal::computeFlux_LoopBody<Solver>(
-          patchData.QIn[patchIndex],
+          hostPatchData.QIn[patchIndex],
           QInEnumerator,
-          patchData.cellCentre[patchIndex],
-          patchData.cellSize[patchIndex],
+          hostPatchData.cellCentre[patchIndex],
+          hostPatchData.cellSize[patchIndex],
           patchIndex,
           volumeIndex3d(x,y,z),
-          patchData.t[patchIndex],
-          patchData.dt[patchIndex],
+          hostPatchData.t[patchIndex],
+          hostPatchData.dt[patchIndex],
           2, // normal
           tempFluxZ,
           fluxEnumerator
         );
+
       }
     );
 
@@ -835,34 +684,20 @@ void exahype2::fv::rusanov::cpp::timeStepWithRusanov_batched_heap_static_calls(
       range3d_cell_unknown->end(),
       [&](auto ids){
         auto [x,y,z,patchIndex,unknown] = ids;
-        GPUCellData patchData;
-        patchData.numberOfCells = numberOfCells;
-        patchData.cellCentre   = (tarch::la::Vector<Dimensions,double>*)(rawPointerToCellCentres);
-        patchData.cellSize     = (tarch::la::Vector<Dimensions,double>*)(rawPointerToCellSizes);
-        patchData.QIn           = mappedPointersToQIn;
-        patchData.QOut          = mappedPointersToQOut;
-        patchData.t             = t;
-        patchData.dt            = dt;
-        patchData.maxEigenvalue = maxEigenvalue;
-
-        exahype2::enumerator::AoSLexicographicEnumerator QInEnumerator       (                        1, numberOfVolumesPerAxisInPatch,haloSize,unknowns,auxiliaryVariables);
-        exahype2::enumerator::AoSLexicographicEnumerator QOutEnumerator      (                        1, numberOfVolumesPerAxisInPatch,       0,unknowns,auxiliaryVariables);
-        TempDataEnumerator fluxEnumerator      (patchData.numberOfCells, numberOfVolumesPerAxisInPatch,haloSize,unknowns,0);
-        TempDataEnumerator ncpEnumerator       (patchData.numberOfCells, numberOfVolumesPerAxisInPatch+1,haloSize,unknowns,0);
-        TempDataEnumerator eigenvalueEnumerator(patchData.numberOfCells, numberOfVolumesPerAxisInPatch,haloSize,1,0);
 
         internal::updateSolutionWithFlux_LoopBody(
           tempFluxX, tempFluxY, tempFluxZ,
           fluxEnumerator,
-          patchData.cellCentre[patchIndex],
-          patchData.cellSize[patchIndex],
+          hostPatchData.cellCentre[patchIndex],
+          hostPatchData.cellSize[patchIndex],
           patchIndex,
           volumeIndex3d(x,y,z),
           unknown,
-          patchData.dt[patchIndex],
-          *(patchData.QOut + patchIndex),
+          hostPatchData.dt[patchIndex],
+          *(hostPatchData.QOut + patchIndex),
           QOutEnumerator
         );
+
       }
     );
   }
@@ -875,35 +710,21 @@ void exahype2::fv::rusanov::cpp::timeStepWithRusanov_batched_heap_static_calls(
       range1d_cell_solvhalosize_m->end(),
       [&](auto ids){
         auto [y,patchIndex,x] = ids;
-        GPUCellData patchData;
-        patchData.numberOfCells = numberOfCells;
-        patchData.cellCentre   = (tarch::la::Vector<Dimensions,double>*)(rawPointerToCellCentres);
-        patchData.cellSize     = (tarch::la::Vector<Dimensions,double>*)(rawPointerToCellSizes);
-        patchData.QIn           = mappedPointersToQIn;
-        patchData.QOut          = mappedPointersToQOut;
-        patchData.t             = t;
-        patchData.dt            = dt;
-        patchData.maxEigenvalue = maxEigenvalue;
-
-        exahype2::enumerator::AoSLexicographicEnumerator QInEnumerator       (                        1, numberOfVolumesPerAxisInPatch,haloSize,unknowns,auxiliaryVariables);
-        exahype2::enumerator::AoSLexicographicEnumerator QOutEnumerator      (                        1, numberOfVolumesPerAxisInPatch,       0,unknowns,auxiliaryVariables);
-        TempDataEnumerator fluxEnumerator      (patchData.numberOfCells, numberOfVolumesPerAxisInPatch,haloSize,unknowns,0);
-        TempDataEnumerator ncpEnumerator       (patchData.numberOfCells, numberOfVolumesPerAxisInPatch+1,haloSize,unknowns,0);
-        TempDataEnumerator eigenvalueEnumerator(patchData.numberOfCells, numberOfVolumesPerAxisInPatch,haloSize,1,0);
 
         internal::computeNonconservativeFlux_LoopBody<Solver,unknowns,auxiliaryVariables>(
-          patchData.QIn[patchIndex],
+          hostPatchData.QIn[patchIndex],
           QInEnumerator,
-          patchData.cellCentre[patchIndex],
-          patchData.cellSize[patchIndex],
+          hostPatchData.cellCentre[patchIndex],
+          hostPatchData.cellSize[patchIndex],
           patchIndex,
           volumeIndex2d(x,y),
-          patchData.t[patchIndex],
-          patchData.dt[patchIndex],
+          hostPatchData.t[patchIndex],
+          hostPatchData.dt[patchIndex],
           0, // normal
           tempNonconservativeProductX,
           ncpEnumerator
         );
+
       }
     );
 
@@ -913,35 +734,21 @@ void exahype2::fv::rusanov::cpp::timeStepWithRusanov_batched_heap_static_calls(
       range1d_cell_solvhalosize_m->end(),
       [&](auto ids){
         auto [x,patchIndex,y] = ids;
-        GPUCellData patchData;
-        patchData.numberOfCells = numberOfCells;
-        patchData.cellCentre   = (tarch::la::Vector<Dimensions,double>*)(rawPointerToCellCentres);
-        patchData.cellSize     = (tarch::la::Vector<Dimensions,double>*)(rawPointerToCellSizes);
-        patchData.QIn           = mappedPointersToQIn;
-        patchData.QOut          = mappedPointersToQOut;
-        patchData.t             = t;
-        patchData.dt            = dt;
-        patchData.maxEigenvalue = maxEigenvalue;
-
-        exahype2::enumerator::AoSLexicographicEnumerator QInEnumerator       (                        1, numberOfVolumesPerAxisInPatch,haloSize,unknowns,auxiliaryVariables);
-        exahype2::enumerator::AoSLexicographicEnumerator QOutEnumerator      (                        1, numberOfVolumesPerAxisInPatch,       0,unknowns,auxiliaryVariables);
-        TempDataEnumerator fluxEnumerator      (patchData.numberOfCells, numberOfVolumesPerAxisInPatch,haloSize,unknowns,0);
-        TempDataEnumerator ncpEnumerator       (patchData.numberOfCells, numberOfVolumesPerAxisInPatch+1,haloSize,unknowns,0);
-        TempDataEnumerator eigenvalueEnumerator(patchData.numberOfCells, numberOfVolumesPerAxisInPatch,haloSize,1,0);
 
         internal::computeNonconservativeFlux_LoopBody<Solver,unknowns,auxiliaryVariables>(
-          patchData.QIn[patchIndex],
+          hostPatchData.QIn[patchIndex],
           QInEnumerator,
-          patchData.cellCentre[patchIndex],
-          patchData.cellSize[patchIndex],
+          hostPatchData.cellCentre[patchIndex],
+          hostPatchData.cellSize[patchIndex],
           patchIndex,
           volumeIndex2d(x,y),
-          patchData.t[patchIndex],
-          patchData.dt[patchIndex],
+          hostPatchData.t[patchIndex],
+          hostPatchData.dt[patchIndex],
           1, // normal
           tempNonconservativeProductY,
           ncpEnumerator
         );
+
       }
     );
 
@@ -951,34 +758,20 @@ void exahype2::fv::rusanov::cpp::timeStepWithRusanov_batched_heap_static_calls(
       range2d_cell_unknown->end(),
       [&](auto ids){
         auto [x,y,patchIndex,unknown] = ids;
-        GPUCellData patchData;
-        patchData.numberOfCells = numberOfCells;
-        patchData.cellCentre   = (tarch::la::Vector<Dimensions,double>*)(rawPointerToCellCentres);
-        patchData.cellSize     = (tarch::la::Vector<Dimensions,double>*)(rawPointerToCellSizes);
-        patchData.QIn           = mappedPointersToQIn;
-        patchData.QOut          = mappedPointersToQOut;
-        patchData.t             = t;
-        patchData.dt            = dt;
-        patchData.maxEigenvalue = maxEigenvalue;
-
-        exahype2::enumerator::AoSLexicographicEnumerator QInEnumerator       (                        1, numberOfVolumesPerAxisInPatch,haloSize,unknowns,auxiliaryVariables);
-        exahype2::enumerator::AoSLexicographicEnumerator QOutEnumerator      (                        1, numberOfVolumesPerAxisInPatch,       0,unknowns,auxiliaryVariables);
-        TempDataEnumerator fluxEnumerator      (patchData.numberOfCells, numberOfVolumesPerAxisInPatch,haloSize,unknowns,0);
-        TempDataEnumerator ncpEnumerator       (patchData.numberOfCells, numberOfVolumesPerAxisInPatch+1,haloSize,unknowns,0);
-        TempDataEnumerator eigenvalueEnumerator(patchData.numberOfCells, numberOfVolumesPerAxisInPatch,haloSize,1,0);
 
         internal::updateSolutionWithNonconservativeFlux_LoopBody(
           tempNonconservativeProductX, tempNonconservativeProductY, tempNonconservativeProductZ,
           ncpEnumerator,
-          patchData.cellCentre[patchIndex],
-          patchData.cellSize[patchIndex],
+          hostPatchData.cellCentre[patchIndex],
+          hostPatchData.cellSize[patchIndex],
           patchIndex,
           volumeIndex2d(x,y),
           unknown,
-          patchData.dt[patchIndex],
-          *(patchData.QOut + patchIndex),
+          hostPatchData.dt[patchIndex],
+          *(hostPatchData.QOut + patchIndex),
           QOutEnumerator
         );
+
       }
     );
   }
@@ -990,35 +783,21 @@ void exahype2::fv::rusanov::cpp::timeStepWithRusanov_batched_heap_static_calls(
       range2d_cell_solvhalosize_m->end(),
       [&](auto ids){
         auto [z,y,patchIndex,x] = ids;
-        GPUCellData patchData;
-        patchData.numberOfCells = numberOfCells;
-        patchData.cellCentre   = (tarch::la::Vector<Dimensions,double>*)(rawPointerToCellCentres);
-        patchData.cellSize     = (tarch::la::Vector<Dimensions,double>*)(rawPointerToCellSizes);
-        patchData.QIn           = mappedPointersToQIn;
-        patchData.QOut          = mappedPointersToQOut;
-        patchData.t             = t;
-        patchData.dt            = dt;
-        patchData.maxEigenvalue = maxEigenvalue;
-
-        exahype2::enumerator::AoSLexicographicEnumerator QInEnumerator       (                        1, numberOfVolumesPerAxisInPatch,haloSize,unknowns,auxiliaryVariables);
-        exahype2::enumerator::AoSLexicographicEnumerator QOutEnumerator      (                        1, numberOfVolumesPerAxisInPatch,       0,unknowns,auxiliaryVariables);
-        TempDataEnumerator fluxEnumerator      (patchData.numberOfCells, numberOfVolumesPerAxisInPatch,haloSize,unknowns,0);
-        TempDataEnumerator ncpEnumerator       (patchData.numberOfCells, numberOfVolumesPerAxisInPatch+1,haloSize,unknowns,0);
-        TempDataEnumerator eigenvalueEnumerator(patchData.numberOfCells, numberOfVolumesPerAxisInPatch,haloSize,1,0);
 
         internal::computeNonconservativeFlux_LoopBody<Solver,unknowns,auxiliaryVariables>(
-          patchData.QIn[patchIndex],
+          hostPatchData.QIn[patchIndex],
           QInEnumerator,
-          patchData.cellCentre[patchIndex],
-          patchData.cellSize[patchIndex],
+          hostPatchData.cellCentre[patchIndex],
+          hostPatchData.cellSize[patchIndex],
           patchIndex,
           volumeIndex3d(x,y,z),
-          patchData.t[patchIndex],
-          patchData.dt[patchIndex],
+          hostPatchData.t[patchIndex],
+          hostPatchData.dt[patchIndex],
           0, // normal
           tempNonconservativeProductX,
           ncpEnumerator
         );
+
       }
     );
 
@@ -1028,35 +807,21 @@ void exahype2::fv::rusanov::cpp::timeStepWithRusanov_batched_heap_static_calls(
       range2d_cell_solvhalosize_m->end(),
       [&](auto ids){
         auto [z,x,patchIndex,y] = ids;
-        GPUCellData patchData;
-        patchData.numberOfCells = numberOfCells;
-        patchData.cellCentre   = (tarch::la::Vector<Dimensions,double>*)(rawPointerToCellCentres);
-        patchData.cellSize     = (tarch::la::Vector<Dimensions,double>*)(rawPointerToCellSizes);
-        patchData.QIn           = mappedPointersToQIn;
-        patchData.QOut          = mappedPointersToQOut;
-        patchData.t             = t;
-        patchData.dt            = dt;
-        patchData.maxEigenvalue = maxEigenvalue;
-
-        exahype2::enumerator::AoSLexicographicEnumerator QInEnumerator       (                        1, numberOfVolumesPerAxisInPatch,haloSize,unknowns,auxiliaryVariables);
-        exahype2::enumerator::AoSLexicographicEnumerator QOutEnumerator      (                        1, numberOfVolumesPerAxisInPatch,       0,unknowns,auxiliaryVariables);
-        TempDataEnumerator fluxEnumerator      (patchData.numberOfCells, numberOfVolumesPerAxisInPatch,haloSize,unknowns,0);
-        TempDataEnumerator ncpEnumerator       (patchData.numberOfCells, numberOfVolumesPerAxisInPatch+1,haloSize,unknowns,0);
-        TempDataEnumerator eigenvalueEnumerator(patchData.numberOfCells, numberOfVolumesPerAxisInPatch,haloSize,1,0);
 
         internal::computeNonconservativeFlux_LoopBody<Solver,unknowns,auxiliaryVariables>(
-          patchData.QIn[patchIndex],
+          hostPatchData.QIn[patchIndex],
           QInEnumerator,
-          patchData.cellCentre[patchIndex],
-          patchData.cellSize[patchIndex],
+          hostPatchData.cellCentre[patchIndex],
+          hostPatchData.cellSize[patchIndex],
           patchIndex,
           volumeIndex3d(x,y,z),
-          patchData.t[patchIndex],
-          patchData.dt[patchIndex],
+          hostPatchData.t[patchIndex],
+          hostPatchData.dt[patchIndex],
           1, // normal
           tempNonconservativeProductY,
           ncpEnumerator
         );
+
       }
     );
 
@@ -1066,35 +831,21 @@ void exahype2::fv::rusanov::cpp::timeStepWithRusanov_batched_heap_static_calls(
       range2d_cell_solvhalosize_m->end(),
       [&](auto ids){
         auto [y,x,patchIndex,z] = ids;
-        GPUCellData patchData;
-        patchData.numberOfCells = numberOfCells;
-        patchData.cellCentre   = (tarch::la::Vector<Dimensions,double>*)(rawPointerToCellCentres);
-        patchData.cellSize     = (tarch::la::Vector<Dimensions,double>*)(rawPointerToCellSizes);
-        patchData.QIn           = mappedPointersToQIn;
-        patchData.QOut          = mappedPointersToQOut;
-        patchData.t             = t;
-        patchData.dt            = dt;
-        patchData.maxEigenvalue = maxEigenvalue;
-
-        exahype2::enumerator::AoSLexicographicEnumerator QInEnumerator       (                        1, numberOfVolumesPerAxisInPatch,haloSize,unknowns,auxiliaryVariables);
-        exahype2::enumerator::AoSLexicographicEnumerator QOutEnumerator      (                        1, numberOfVolumesPerAxisInPatch,       0,unknowns,auxiliaryVariables);
-        TempDataEnumerator fluxEnumerator      (patchData.numberOfCells, numberOfVolumesPerAxisInPatch,haloSize,unknowns,0);
-        TempDataEnumerator ncpEnumerator       (patchData.numberOfCells, numberOfVolumesPerAxisInPatch+1,haloSize,unknowns,0);
-        TempDataEnumerator eigenvalueEnumerator(patchData.numberOfCells, numberOfVolumesPerAxisInPatch,haloSize,1,0);
 
         internal::computeNonconservativeFlux_LoopBody<Solver,unknowns,auxiliaryVariables>(
-          patchData.QIn[patchIndex],
+          hostPatchData.QIn[patchIndex],
           QInEnumerator,
-          patchData.cellCentre[patchIndex],
-          patchData.cellSize[patchIndex],
+          hostPatchData.cellCentre[patchIndex],
+          hostPatchData.cellSize[patchIndex],
           patchIndex,
           volumeIndex3d(x,y,z),
-          patchData.t[patchIndex],
-          patchData.dt[patchIndex],
+          hostPatchData.t[patchIndex],
+          hostPatchData.dt[patchIndex],
           2, // normal
           tempNonconservativeProductY,
           ncpEnumerator
         );
+
       }
     );
 
@@ -1104,57 +855,27 @@ void exahype2::fv::rusanov::cpp::timeStepWithRusanov_batched_heap_static_calls(
       range3d_cell_unknown->end(),
       [&](auto ids){
         auto [x,y,z,patchIndex,unknown] = ids;
-        GPUCellData patchData;
-        patchData.numberOfCells = numberOfCells;
-        patchData.cellCentre   = (tarch::la::Vector<Dimensions,double>*)(rawPointerToCellCentres);
-        patchData.cellSize     = (tarch::la::Vector<Dimensions,double>*)(rawPointerToCellSizes);
-        patchData.QIn           = mappedPointersToQIn;
-        patchData.QOut          = mappedPointersToQOut;
-        patchData.t             = t;
-        patchData.dt            = dt;
-        patchData.maxEigenvalue = maxEigenvalue;
-
-        exahype2::enumerator::AoSLexicographicEnumerator QInEnumerator       (                        1, numberOfVolumesPerAxisInPatch,haloSize,unknowns,auxiliaryVariables);
-        exahype2::enumerator::AoSLexicographicEnumerator QOutEnumerator      (                        1, numberOfVolumesPerAxisInPatch,       0,unknowns,auxiliaryVariables);
-        TempDataEnumerator fluxEnumerator      (patchData.numberOfCells, numberOfVolumesPerAxisInPatch,haloSize,unknowns,0);
-        TempDataEnumerator ncpEnumerator       (patchData.numberOfCells, numberOfVolumesPerAxisInPatch+1,haloSize,unknowns,0);
-        TempDataEnumerator eigenvalueEnumerator(patchData.numberOfCells, numberOfVolumesPerAxisInPatch,haloSize,1,0);
 
         internal::updateSolutionWithNonconservativeFlux_LoopBody(
           tempNonconservativeProductX, tempNonconservativeProductY, tempNonconservativeProductZ,
           ncpEnumerator,
-          patchData.cellCentre[patchIndex],
-          patchData.cellSize[patchIndex],
+          hostPatchData.cellCentre[patchIndex],
+          hostPatchData.cellSize[patchIndex],
           patchIndex,
           volumeIndex3d(x,y,z),
           unknown,
-          patchData.dt[patchIndex],
-          *(patchData.QOut + patchIndex),
+          hostPatchData.dt[patchIndex],
+          *(hostPatchData.QOut + patchIndex),
           QOutEnumerator
         );
+
       }
     );
   }
 
 
   if (evaluateMaximumEigenvalueAfterTimeStep and Dimensions==2) {
-    for (int patchIndex=0; patchIndex<numberOfCells; patchIndex++) {
-      GPUCellData patchData;
-      patchData.numberOfCells = numberOfCells;
-      patchData.cellCentre   = (tarch::la::Vector<Dimensions,double>*)(rawPointerToCellCentres);
-      patchData.cellSize     = (tarch::la::Vector<Dimensions,double>*)(rawPointerToCellSizes);
-      patchData.QIn           = mappedPointersToQIn;
-      patchData.QOut          = mappedPointersToQOut;
-      patchData.t             = t;
-      patchData.dt            = dt;
-      patchData.maxEigenvalue = maxEigenvalue;
-
-      exahype2::enumerator::AoSLexicographicEnumerator QInEnumerator       (                        1, numberOfVolumesPerAxisInPatch,haloSize,unknowns,auxiliaryVariables);
-      exahype2::enumerator::AoSLexicographicEnumerator QOutEnumerator      (                        1, numberOfVolumesPerAxisInPatch,       0,unknowns,auxiliaryVariables);
-      TempDataEnumerator fluxEnumerator      (patchData.numberOfCells, numberOfVolumesPerAxisInPatch,haloSize,unknowns,0);
-      TempDataEnumerator ncpEnumerator       (patchData.numberOfCells, numberOfVolumesPerAxisInPatch+1,haloSize,unknowns,0);
-      TempDataEnumerator eigenvalueEnumerator(patchData.numberOfCells, numberOfVolumesPerAxisInPatch,haloSize,1,0);
-
+    for (int patchIndex=0; patchIndex<hostPatchData.numberOfCells; patchIndex++) {
 
       double newMaxEigenvalue = 0.0;
 
@@ -1167,39 +888,24 @@ void exahype2::fv::rusanov::cpp::timeStepWithRusanov_batched_heap_static_calls(
           newMaxEigenvalue = std::max(
             newMaxEigenvalue,
             internal::reduceMaxEigenvalue_LoopBody<Solver>(
-              *(patchData.QOut + patchIndex),
+              *(hostPatchData.QOut + patchIndex),
               QOutEnumerator,
-              patchData.cellCentre[patchIndex],
-              patchData.cellSize[patchIndex],
+              hostPatchData.cellCentre[patchIndex],
+              hostPatchData.cellSize[patchIndex],
               patchIndex,
               volumeIndex2d(x,y),
-              patchData.t[patchIndex],
-              patchData.dt[patchIndex]
+              hostPatchData.t[patchIndex],
+              hostPatchData.dt[patchIndex]
             )
           );
         }
       );
 
-      patchData.maxEigenvalue[patchIndex] = newMaxEigenvalue;
+      hostPatchData.maxEigenvalue[patchIndex] = newMaxEigenvalue;
     }
   }
   else if (evaluateMaximumEigenvalueAfterTimeStep) {
-    for (int patchIndex=0; patchIndex<numberOfCells; patchIndex++) {
-      GPUCellData patchData;
-      patchData.numberOfCells = numberOfCells;
-      patchData.cellCentre   = (tarch::la::Vector<Dimensions,double>*)(rawPointerToCellCentres);
-      patchData.cellSize     = (tarch::la::Vector<Dimensions,double>*)(rawPointerToCellSizes);
-      patchData.QIn           = mappedPointersToQIn;
-      patchData.QOut          = mappedPointersToQOut;
-      patchData.t             = t;
-      patchData.dt            = dt;
-      patchData.maxEigenvalue = maxEigenvalue;
-
-      exahype2::enumerator::AoSLexicographicEnumerator QInEnumerator       (                        1, numberOfVolumesPerAxisInPatch,haloSize,unknowns,auxiliaryVariables);
-      exahype2::enumerator::AoSLexicographicEnumerator QOutEnumerator      (                        1, numberOfVolumesPerAxisInPatch,       0,unknowns,auxiliaryVariables);
-      TempDataEnumerator fluxEnumerator      (patchData.numberOfCells, numberOfVolumesPerAxisInPatch,haloSize,unknowns,0);
-      TempDataEnumerator ncpEnumerator       (patchData.numberOfCells, numberOfVolumesPerAxisInPatch+1,haloSize,unknowns,0);
-      TempDataEnumerator eigenvalueEnumerator(patchData.numberOfCells, numberOfVolumesPerAxisInPatch,haloSize,1,0);
+    for (int patchIndex=0; patchIndex<hostPatchData.numberOfCells; patchIndex++) {
 
       double newMaxEigenvalue = 0.0;
 
@@ -1212,26 +918,21 @@ void exahype2::fv::rusanov::cpp::timeStepWithRusanov_batched_heap_static_calls(
           newMaxEigenvalue = std::max(
             newMaxEigenvalue,
             internal::reduceMaxEigenvalue_LoopBody<Solver>(
-              *(patchData.QOut + patchIndex),
+              *(hostPatchData.QOut + patchIndex),
               QOutEnumerator,
-              patchData.cellCentre[patchIndex],
-              patchData.cellSize[patchIndex],
+              hostPatchData.cellCentre[patchIndex],
+              hostPatchData.cellSize[patchIndex],
               patchIndex,
               volumeIndex3d(x,y,z),
-              patchData.t[patchIndex],
-              patchData.dt[patchIndex]
+              hostPatchData.t[patchIndex],
+              hostPatchData.dt[patchIndex]
             )
           );
         }
       );
 
-      patchData.maxEigenvalue[patchIndex] = newMaxEigenvalue;
+      hostPatchData.maxEigenvalue[patchIndex] = newMaxEigenvalue;
     }
-  }
-
-  for (int patchIndex=0; patchIndex<hostPatchData.numberOfCells; patchIndex++) {
-    const double* currentQIn  = hostPatchData.QIn[patchIndex];
-    double*       currentQOut = hostPatchData.QOut[patchIndex];
   }
 
   delete[] tempFluxX;
@@ -1243,8 +944,6 @@ void exahype2::fv::rusanov::cpp::timeStepWithRusanov_batched_heap_static_calls(
   delete[] tempEigenvalueX;
   delete[] tempEigenvalueY;
   delete[] tempEigenvalueZ;
-  delete[] mappedPointersToQIn;
-  delete[] mappedPointersToQOut;
   delete[] range2d;
   delete[] range3d;
   delete[] range2d_cell;
