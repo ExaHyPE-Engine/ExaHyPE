@@ -135,8 +135,8 @@ void exahype2::dg::integrateOverRiemannSolutionsAndAddToVolume_GaussLegendre(
       cellQ[ ( x + y*(order+1))*strideQ + var ] +=
             coeffLeft   * faceQLeft   [ y*strideQ + var ]
           - coeffRight  * faceQRight  [ y*strideQ + var ]
-          + coeffBottom * faceQBottom [ x*strideQ+var ]
-          - coeffUp     * faceQUp     [ x*strideQ+var ];
+          + coeffBottom * faceQBottom [ x*strideQ + var ]
+          - coeffUp     * faceQUp     [ x*strideQ + var ];
     }//var
   }//x,y
 }
