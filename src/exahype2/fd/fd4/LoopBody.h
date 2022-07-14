@@ -144,30 +144,31 @@ namespace exahype2 {
          * @todo Plain copy of the FV solver. Not sure if it is the right one for
          * FD. Anyway, it is not optimised at all, even if we use the AoS data format,
          * i.e. do no re-arrangement at all.
+         * update it to a fd version, however, it may be incorrect either. it actually calculates \partial_i F_i
          */
         #if defined(SharedOMP) and (!defined(__INTEL_LLVM_COMPILER) or !defined(GPUOffloadingOMP))
         #pragma omp declare simd
         #endif
-        template <class QInEnumeratorType, class QFluxEnumeratorType>
+        template <class QInEnumeratorType, class QOutEnumeratorType>
         static void computeFlux_LoopBody(
-          const double* __restrict__                QIn,
-          QInEnumeratorType                   QInEnumerator,
+          const double* __restrict__                   QIn,
+          const QInEnumeratorType&                           QInEnumerator,
           exahype2::fd::Flux                           flux,
           const tarch::la::Vector<Dimensions,double>&  patchCentre,
           const tarch::la::Vector<Dimensions,double>&  patchSize,
           int                                          patchIndex,
           const tarch::la::Vector<Dimensions,int>&     volumeIndex,
           double                                       t,
-          double                              dt,
-          int                                 normal,
-          double* __restrict__                QFlux,
-          QFluxEnumeratorType                 QFluxEnumerator
+          double                                       dt,
+          int                                          normal,
+          double* __restrict__                         QFlux,
+          const QOutEnumeratorType&                          QFluxEnumerator
         ) InlineMethod;
-
 
         /**
          * @todo Plain copy of the FV solver. Not sure if it is the right one for
          * FD.
+         * update it to a fd version, however, it may be incorrect either.
          */
         #if defined(SharedOMP) and (!defined(__INTEL_LLVM_COMPILER) or !defined(GPUOffloadingOMP))
         #pragma omp declare simd
@@ -175,12 +176,12 @@ namespace exahype2 {
         #if defined(GPUOffloadingOMP)
         #pragma omp declare target
         #endif
-        template <typename QFluxEnumeratorType, typename QOutEnumeratorType>
+        template <typename QOutEnumeratorType>
         static void updateSolutionWithFlux_LoopBody(
           const double* __restrict__                   tempFluxX,
           const double* __restrict__                   tempFluxY,
           const double* __restrict__                   tempFluxZ,
-          const QFluxEnumeratorType&                   fluxEnumerator,
+          const QOutEnumeratorType&                   fluxEnumerator,
           const tarch::la::Vector<Dimensions,double>&  patchCentre,
           const tarch::la::Vector<Dimensions,double>&  patchSize,
           int                                          patchIndex,
