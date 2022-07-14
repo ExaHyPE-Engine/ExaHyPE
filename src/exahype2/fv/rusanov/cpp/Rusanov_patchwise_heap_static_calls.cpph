@@ -203,7 +203,7 @@ void exahype2::fv::rusanov::cpp::timeStepWithRusanov_patchwise_heap_static_calls
         std::execution::par_unseq,
         range2d_unknown_aux->begin(),
         range2d_unknown_aux->end(),
-        [=](auto ids){
+        [&,QOutEnumerator,tempEigenvalueX,tempEigenvalueY,tempEigenvalueZ,tempFluxX,tempFluxY,tempFluxZ,tempNonconservativeProductX,tempNonconservativeProductY,tempNonconservativeProductZ,QInEnumerator,eigenvalueEnumerator,fluxEnumerator,patchIndex,ncpEnumerator,evaluateSource](auto ids){
 
           auto [x,y,unknown] = ids;
 
@@ -241,7 +241,7 @@ void exahype2::fv::rusanov::cpp::timeStepWithRusanov_patchwise_heap_static_calls
         std::execution::par_unseq,
         range3d_unknown_aux->begin(),
         range3d_unknown_aux->end(),
-        [=](auto ids){
+        [&,QOutEnumerator,tempEigenvalueX,tempEigenvalueY,tempEigenvalueZ,tempFluxX,tempFluxY,tempFluxZ,tempNonconservativeProductX,tempNonconservativeProductY,tempNonconservativeProductZ,QInEnumerator,eigenvalueEnumerator,fluxEnumerator,patchIndex,ncpEnumerator,evaluateSource](auto ids){
           auto [x,y,z,unknown] = ids;
 
           if (evaluateSource == true) {
@@ -281,7 +281,7 @@ void exahype2::fv::rusanov::cpp::timeStepWithRusanov_patchwise_heap_static_calls
         std::execution::par_unseq,
         range1d_solvhalosize->begin(),
         range1d_solvhalosize->end(),
-        [=](auto ids){
+        [&,QOutEnumerator,tempEigenvalueX,tempEigenvalueY,tempEigenvalueZ,tempFluxX,tempFluxY,tempFluxZ,tempNonconservativeProductX,tempNonconservativeProductY,tempNonconservativeProductZ,QInEnumerator,eigenvalueEnumerator,fluxEnumerator,patchIndex,ncpEnumerator,evaluateSource](auto ids){
           auto [y,x] = ids;
           
           internal::computeMaxEigenvalue_LoopBody<Solver>(
@@ -316,7 +316,7 @@ void exahype2::fv::rusanov::cpp::timeStepWithRusanov_patchwise_heap_static_calls
         std::execution::par_unseq,
         range2d_unknown->begin(),
         range2d_unknown->end(),
-        [=](auto ids){
+        [&,QOutEnumerator,tempEigenvalueX,tempEigenvalueY,tempEigenvalueZ,tempFluxX,tempFluxY,tempFluxZ,tempNonconservativeProductX,tempNonconservativeProductY,tempNonconservativeProductZ,QInEnumerator,eigenvalueEnumerator,fluxEnumerator,patchIndex,ncpEnumerator,evaluateSource](auto ids){
           auto [y,x,unknown] = ids;
           internal::updateSolutionWithEigenvalueDamping_LoopBody(
             hostPatchData.QIn[patchIndex],
@@ -343,7 +343,7 @@ void exahype2::fv::rusanov::cpp::timeStepWithRusanov_patchwise_heap_static_calls
         std::execution::par_unseq,
         range2d_solvhalosize->begin(),
         range2d_solvhalosize->end(),
-        [=](auto ids){
+        [&,QOutEnumerator,tempEigenvalueX,tempEigenvalueY,tempEigenvalueZ,tempFluxX,tempFluxY,tempFluxZ,tempNonconservativeProductX,tempNonconservativeProductY,tempNonconservativeProductZ,QInEnumerator,eigenvalueEnumerator,fluxEnumerator,patchIndex,ncpEnumerator,evaluateSource](auto ids){
           auto [v,w,u] = ids;
 
           internal::computeMaxEigenvalue_LoopBody<Solver>(
@@ -392,7 +392,7 @@ void exahype2::fv::rusanov::cpp::timeStepWithRusanov_patchwise_heap_static_calls
         std::execution::par_unseq,
         range3d_unknown->begin(),
         range3d_unknown->end(),
-        [=](auto ids){
+        [&,QOutEnumerator,tempEigenvalueX,tempEigenvalueY,tempEigenvalueZ,tempFluxX,tempFluxY,tempFluxZ,tempNonconservativeProductX,tempNonconservativeProductY,tempNonconservativeProductZ,QInEnumerator,eigenvalueEnumerator,fluxEnumerator,patchIndex,ncpEnumerator,evaluateSource](auto ids){
           auto [x,y,z,unknown] = ids;
           internal::updateSolutionWithEigenvalueDamping_LoopBody(
             hostPatchData.QIn[patchIndex],
@@ -421,7 +421,7 @@ void exahype2::fv::rusanov::cpp::timeStepWithRusanov_patchwise_heap_static_calls
         std::execution::par_unseq,
         range1d_solvhalosize->begin(),
         range1d_solvhalosize->end(),
-        [=](auto ids){
+        [&,QOutEnumerator,tempEigenvalueX,tempEigenvalueY,tempEigenvalueZ,tempFluxX,tempFluxY,tempFluxZ,tempNonconservativeProductX,tempNonconservativeProductY,tempNonconservativeProductZ,QInEnumerator,eigenvalueEnumerator,fluxEnumerator,patchIndex,ncpEnumerator,evaluateSource](auto ids){
           auto [y,x] = ids;
 
           internal::computeFlux_LoopBody<Solver>(
@@ -459,7 +459,7 @@ void exahype2::fv::rusanov::cpp::timeStepWithRusanov_patchwise_heap_static_calls
         std::execution::par_unseq,
         range2d_unknown->begin(),
         range2d_unknown->end(),
-        [=](auto ids){
+        [&,QOutEnumerator,tempEigenvalueX,tempEigenvalueY,tempEigenvalueZ,tempFluxX,tempFluxY,tempFluxZ,tempNonconservativeProductX,tempNonconservativeProductY,tempNonconservativeProductZ,QInEnumerator,eigenvalueEnumerator,fluxEnumerator,patchIndex,ncpEnumerator,evaluateSource](auto ids){
           auto [x,y,unknown] = ids;
           internal::updateSolutionWithFlux_LoopBody(
             tempFluxX, tempFluxY, tempFluxZ,
@@ -484,7 +484,7 @@ void exahype2::fv::rusanov::cpp::timeStepWithRusanov_patchwise_heap_static_calls
         std::execution::par_unseq,
         range2d_solvhalosize->begin(),
         range2d_solvhalosize->end(),
-        [=](auto ids){
+        [&,QOutEnumerator,tempEigenvalueX,tempEigenvalueY,tempEigenvalueZ,tempFluxX,tempFluxY,tempFluxZ,tempNonconservativeProductX,tempNonconservativeProductY,tempNonconservativeProductZ,QInEnumerator,eigenvalueEnumerator,fluxEnumerator,patchIndex,ncpEnumerator,evaluateSource](auto ids){
           auto [v,w,u] = ids;
           internal::computeFlux_LoopBody<Solver>(
             hostPatchData.QIn[patchIndex],
@@ -535,7 +535,7 @@ void exahype2::fv::rusanov::cpp::timeStepWithRusanov_patchwise_heap_static_calls
         std::execution::par_unseq,
         range3d_unknown->begin(),
         range3d_unknown->end(),
-        [=](auto ids){
+        [&,QOutEnumerator,tempEigenvalueX,tempEigenvalueY,tempEigenvalueZ,tempFluxX,tempFluxY,tempFluxZ,tempNonconservativeProductX,tempNonconservativeProductY,tempNonconservativeProductZ,QInEnumerator,eigenvalueEnumerator,fluxEnumerator,patchIndex,ncpEnumerator,evaluateSource](auto ids){
           auto [x,y,z,unknown] = ids;
           internal::updateSolutionWithFlux_LoopBody(
             tempFluxX, tempFluxY, tempFluxZ,
@@ -560,7 +560,7 @@ void exahype2::fv::rusanov::cpp::timeStepWithRusanov_patchwise_heap_static_calls
         std::execution::par_unseq,
         range1d_solvhalosize_m->begin(),
         range1d_solvhalosize_m->end(),
-        [=](auto ids){
+        [&,QOutEnumerator,tempEigenvalueX,tempEigenvalueY,tempEigenvalueZ,tempFluxX,tempFluxY,tempFluxZ,tempNonconservativeProductX,tempNonconservativeProductY,tempNonconservativeProductZ,QInEnumerator,eigenvalueEnumerator,fluxEnumerator,patchIndex,ncpEnumerator,evaluateSource](auto ids){
           auto [y,x] = ids;
           internal::computeNonconservativeFlux_LoopBody<Solver,unknowns,auxiliaryVariables>(
             hostPatchData.QIn[patchIndex],
@@ -596,7 +596,7 @@ void exahype2::fv::rusanov::cpp::timeStepWithRusanov_patchwise_heap_static_calls
         std::execution::par_unseq,
         range2d_unknown->begin(),
         range2d_unknown->end(),
-        [=](auto ids){
+        [&,QOutEnumerator,tempEigenvalueX,tempEigenvalueY,tempEigenvalueZ,tempFluxX,tempFluxY,tempFluxZ,tempNonconservativeProductX,tempNonconservativeProductY,tempNonconservativeProductZ,QInEnumerator,eigenvalueEnumerator,fluxEnumerator,patchIndex,ncpEnumerator,evaluateSource](auto ids){
           auto [x,y,unknown] = ids;
           internal::updateSolutionWithNonconservativeFlux_LoopBody(
             tempNonconservativeProductX, tempNonconservativeProductY, tempNonconservativeProductZ,
@@ -620,7 +620,7 @@ void exahype2::fv::rusanov::cpp::timeStepWithRusanov_patchwise_heap_static_calls
         std::execution::par_unseq,
         range2d_solvhalosize_m->begin(),
         range2d_solvhalosize_m->end(),
-        [=](auto ids){
+        [&,QOutEnumerator,tempEigenvalueX,tempEigenvalueY,tempEigenvalueZ,tempFluxX,tempFluxY,tempFluxZ,tempNonconservativeProductX,tempNonconservativeProductY,tempNonconservativeProductZ,QInEnumerator,eigenvalueEnumerator,fluxEnumerator,patchIndex,ncpEnumerator,evaluateSource](auto ids){
           auto [v,w,u] = ids;
 
           internal::computeNonconservativeFlux_LoopBody<Solver,unknowns,auxiliaryVariables>(
@@ -672,7 +672,7 @@ void exahype2::fv::rusanov::cpp::timeStepWithRusanov_patchwise_heap_static_calls
         std::execution::par_unseq,
         range3d_unknown->begin(),
         range3d_unknown->end(),
-        [=](auto ids){
+        [&,QOutEnumerator,tempEigenvalueX,tempEigenvalueY,tempEigenvalueZ,tempFluxX,tempFluxY,tempFluxZ,tempNonconservativeProductX,tempNonconservativeProductY,tempNonconservativeProductZ,QInEnumerator,eigenvalueEnumerator,fluxEnumerator,patchIndex,ncpEnumerator,evaluateSource](auto ids){
           auto [x,y,z,unknown] = ids;
           internal::updateSolutionWithNonconservativeFlux_LoopBody(
             tempNonconservativeProductX, tempNonconservativeProductY, tempNonconservativeProductZ,
@@ -694,45 +694,56 @@ void exahype2::fv::rusanov::cpp::timeStepWithRusanov_patchwise_heap_static_calls
       logDebug( "timeStepWithRusanov_overlap1_sequential(...)", "compute maximum eigenvalue for subsequent time step" );
       double newMaxEigenvalue = 0.0;
 
-      for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
-      for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++) {
-        newMaxEigenvalue = std::max(
-          newMaxEigenvalue,
-          internal::reduceMaxEigenvalue_LoopBody<Solver>(
-            *(hostPatchData.QOut + patchIndex),
-            QOutEnumerator,
-            hostPatchData.cellCentre[patchIndex],
-            hostPatchData.cellSize[patchIndex],
-            patchIndex,
-            volumeIndex2d(x,y),
-            hostPatchData.t[patchIndex],
-            hostPatchData.dt[patchIndex]
-          )
-        );
-      }
+      std::for_each(
+        std::execution::seq,
+        range2d->begin(),
+        range2d->end(),
+        [&,QOutEnumerator,tempEigenvalueX,tempEigenvalueY,tempEigenvalueZ,tempFluxX,tempFluxY,tempFluxZ,tempNonconservativeProductX,tempNonconservativeProductY,tempNonconservativeProductZ,QInEnumerator,eigenvalueEnumerator,fluxEnumerator,patchIndex,ncpEnumerator,evaluateSource](auto ids){
+          auto [x,y] = ids;
+          newMaxEigenvalue = std::max(
+            newMaxEigenvalue,
+            internal::reduceMaxEigenvalue_LoopBody<Solver>(
+              *(hostPatchData.QOut + patchIndex),
+              QOutEnumerator,
+              hostPatchData.cellCentre[patchIndex],
+              hostPatchData.cellSize[patchIndex],
+              patchIndex,
+              volumeIndex2d(x,y),
+              hostPatchData.t[patchIndex],
+              hostPatchData.dt[patchIndex]
+            )
+          );
+        }
+      );
+
       hostPatchData.maxEigenvalue[patchIndex] = newMaxEigenvalue;
     }
     
     else if (evaluateMaximumEigenvalueAfterTimeStep and Dimensions==3) {
       double newMaxEigenvalue = 0.0;
 
-      for (int z = 0; z < numberOfVolumesPerAxisInPatch; z++)
-      for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
-      for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++) {
-        newMaxEigenvalue = std::max(
-          newMaxEigenvalue,
-          internal::reduceMaxEigenvalue_LoopBody<Solver>(
-            *(hostPatchData.QOut + patchIndex),
-            QOutEnumerator,
-            hostPatchData.cellCentre[patchIndex],
-            hostPatchData.cellSize[patchIndex],
-            patchIndex,
-            volumeIndex3d(x,y,z),
-            hostPatchData.t[patchIndex],
-            hostPatchData.dt[patchIndex]
-          )
-        );
-      }
+      std::for_each(
+        std::execution::seq,
+        range3d->begin(),
+        range3d->end(),
+        [&,QOutEnumerator,tempEigenvalueX,tempEigenvalueY,tempEigenvalueZ,tempFluxX,tempFluxY,tempFluxZ,tempNonconservativeProductX,tempNonconservativeProductY,tempNonconservativeProductZ,QInEnumerator,eigenvalueEnumerator,fluxEnumerator,patchIndex,ncpEnumerator,evaluateSource](auto ids){
+          auto [x,y,z] = ids;
+          newMaxEigenvalue = std::max(
+            newMaxEigenvalue,
+            internal::reduceMaxEigenvalue_LoopBody<Solver>(
+              *(hostPatchData.QOut + patchIndex),
+              QOutEnumerator,
+              hostPatchData.cellCentre[patchIndex],
+              hostPatchData.cellSize[patchIndex],
+              patchIndex,
+              volumeIndex3d(x,y,z),
+              hostPatchData.t[patchIndex],
+              hostPatchData.dt[patchIndex]
+            )
+          );
+        }
+      );
+
       hostPatchData.maxEigenvalue[patchIndex] = newMaxEigenvalue;
     }
   } // This is the end of the target offloading block
