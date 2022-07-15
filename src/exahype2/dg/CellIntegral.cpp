@@ -64,7 +64,7 @@ void exahype2::dg::cellIntegral_patchwise_GaussLegendre_functors(
               quadratureNodes);
 
           flux( &cellQin[neighbourNode*strideQ],
-                x,
+                position,
                 t,
                 dt,
                 dim, //normal

@@ -520,6 +520,23 @@ void exahype2::dg::tests::DGTest::runDGEuler(){
     file_stream << "]\n";
   }
 
+  multiplyWithInvertedMassMatrixAndClearAuxiliaryVariables_GaussLegendre(
+    cellData,
+    order,
+    unknowns,
+    auxiliaryVariables,
+    QuadratureWeights
+  );
+
+
+  file_stream << "multiplied with mass matrix, this gives: \n";
+  for(int i=0; i<nodesPerCell; i++){
+    file_stream << "node " << i << ": [";
+    for(int var=0; var<unknowns;var++){
+      file_stream << QOut[i*strideQ+var] << ", ";
+    }
+    file_stream << "]\n";
+  }
 
   // Step 2), the values computed in step 1) are extrapolated to the surface boundary
   projectVolumetricDataOntoFaces(
@@ -583,21 +600,6 @@ void exahype2::dg::tests::DGTest::runDGEuler(){
   );
 
 
-  for(int f=0; f<2*Dimensions; f++){
-
-    double* currentFace = F[f];
-    file_stream << "\nFace " << f << ": \n";
-
-    for(int node=0; node<2*nodesPerFace; node++){
-      file_stream << "node " << node << ": [";
-      for(int var=0; var<strideQ; var++){
-        file_stream << currentFace[node*strideQ+var] << ", ";
-      }
-      file_stream << "]\n";
-    }
-
-  }
-
 
   //* The faces are assembled into one pointer construct for ease of access in the
   //* next steps. In addition information about whether the faces are at the boundary
@@ -656,7 +658,6 @@ void exahype2::dg::tests::DGTest::runDGEuler(){
   }
 
 
-
   file_stream << "\nRusanov Fluxes per Face:\n";
   for(int f=0; f<2*Dimensions; f++){
     file_stream << "At face " << f << "\n";
@@ -671,16 +672,25 @@ void exahype2::dg::tests::DGTest::runDGEuler(){
   }
 
 
+  for(int i=0; i<nodesPerCell*strideQ; i++){
+    QOut[i] = 0.0;
+  }
+
   // * The contributions from the computed rusanov flux are then added to the nodes
   // * within the cell.
   integrateOverRiemannSolutionsAndAddToVolume_GaussLegendre(
-    QLeft,
-    QRight,
-    QDown,
-    QUp,
-#if Dimensions==3
-    QBack,
-    QFront,
+#if Dimensions==2
+    &QHullForRiemann[(0*2+1)*nodesPerFace*strideQ], //left
+    &QHullForRiemann[(2*2+0)*nodesPerFace*strideQ], //right
+    &QHullForRiemann[(1*2+1)*nodesPerFace*strideQ], //down
+    &QHullForRiemann[(3*2+0)*nodesPerFace*strideQ], //up
+#else
+    &QHullForRiemann[(0*2+1)*nodesPerFace*strideQ], //left
+    &QHullForRiemann[(3*2+0)*nodesPerFace*strideQ], //right
+    &QHullForRiemann[(1*2+1)*nodesPerFace*strideQ], //down
+    &QHullForRiemann[(4*2+0)*nodesPerFace*strideQ], //up
+    &QHullForRiemann[(2*2+1)*2*nodesPerFace*strideQ], //back
+    &QHullForRiemann[(5*2+0)*2*nodesPerFace*strideQ], //front
 #endif
     order,
     unknowns,
@@ -691,6 +701,26 @@ void exahype2::dg::tests::DGTest::runDGEuler(){
     QOut
   );
 
+
+  file_stream << "\nValues from Riemann Integral are: \n";
+  for(int i=0; i<nodesPerCell; i++){
+    file_stream << "node " << i << ": [";
+    for(int var=0; var<unknowns;var++){
+      file_stream << QOut[i*strideQ+var] << ", ";
+//      validateNumericalEquals(QOut[i*strideQ+var], 0.0);
+    }
+    file_stream << "]\n";
+  }
+
+
+
+  multiplyWithInvertedMassMatrixAndClearAuxiliaryVariables_GaussLegendre(
+    cellData,
+    order,
+    unknowns,
+    auxiliaryVariables,
+    QuadratureWeights
+  );
 
   //Finally we check that after all these steps have been taken QOut, which should be the sum of the volume and face contributions, is zero
 
@@ -703,9 +733,6 @@ void exahype2::dg::tests::DGTest::runDGEuler(){
     }
     file_stream << "]\n";
   }
-
-
-  file_stream << "\n\n";
 
 
   delete[] QIn;
@@ -723,6 +750,3 @@ void exahype2::dg::tests::DGTest::runDGEuler(){
 
 
 }//runDGEuler
-
-
-
