@@ -224,24 +224,32 @@ void exahype2::fv::rusanov::cpp::timeStepWithRusanov_batched_heap_static_calls(
   );
 
   if (Dimensions==2 and evaluateSource) {
-
+    
     std::for_each(
       std::execution::par_unseq,
       range2d_cell->begin(),
       range2d_cell->end(),
-      [&,QOutEnumerator,eigenvalueEnumerator,fluxEnumerator,tempFluxX,tempFluxY,tempFluxZ,ncpEnumerator,QInEnumerator,tempEigenvalueX,tempEigenvalueY,tempEigenvalueZ,tempNonconservativeProductX,tempNonconservativeProductY,tempNonconservativeProductZ](auto ids){
+      [
+        =,
+        QIn=hostPatchData.QIn,
+        cellCentre=hostPatchData.cellCentre,
+        cellSize=hostPatchData.cellSize,
+        t=hostPatchData.t,
+        dt=hostPatchData.dt,
+        QOut=hostPatchData.QOut
+      ](auto ids){
         auto [x,y,patchIndex] = ids;
 
         internal::copySolutionAndAddSourceTerm_LoopBody<Solver>(
-          hostPatchData.QIn[patchIndex],
+          QIn[patchIndex],
           QInEnumerator,
-          hostPatchData.cellCentre[patchIndex],
-          hostPatchData.cellSize[patchIndex],
+          cellCentre[patchIndex],
+          cellSize[patchIndex],
           patchIndex,
           volumeIndex2d(x,y),
-          hostPatchData.t[patchIndex],
-          hostPatchData.dt[patchIndex],
-          hostPatchData.QOut[patchIndex],
+          t[patchIndex],
+          dt[patchIndex],
+          QOut[patchIndex],
           QOutEnumerator
         );
 
@@ -253,19 +261,27 @@ void exahype2::fv::rusanov::cpp::timeStepWithRusanov_batched_heap_static_calls(
       std::execution::par_unseq,
       range3d_cell->begin(),
       range3d_cell->end(),
-      [&,QOutEnumerator,eigenvalueEnumerator,fluxEnumerator,tempFluxX,tempFluxY,tempFluxZ,ncpEnumerator,QInEnumerator,tempEigenvalueX,tempEigenvalueY,tempEigenvalueZ,tempNonconservativeProductX,tempNonconservativeProductY,tempNonconservativeProductZ](auto ids){
+      [
+        =,
+        QIn=hostPatchData.QIn,
+        cellCentre=hostPatchData.cellCentre,
+        cellSize=hostPatchData.cellSize,
+        t=hostPatchData.t,
+        dt=hostPatchData.dt,
+        QOut=hostPatchData.QOut
+      ](auto ids){
         auto [x,y,z,patchIndex] = ids;
 
         internal::copySolutionAndAddSourceTerm_LoopBody<Solver>(
-          hostPatchData.QIn[patchIndex],
+          QIn[patchIndex],
           QInEnumerator,
-          hostPatchData.cellCentre[patchIndex],
-          hostPatchData.cellSize[patchIndex],
+          cellCentre[patchIndex],
+          cellSize[patchIndex],
           patchIndex,
           volumeIndex3d(x,y,z),
-          hostPatchData.t[patchIndex],
-          hostPatchData.dt[patchIndex],
-          hostPatchData.QOut[patchIndex],
+          t[patchIndex],
+          dt[patchIndex],
+          QOut[patchIndex],
           QOutEnumerator
         );
 
@@ -277,16 +293,20 @@ void exahype2::fv::rusanov::cpp::timeStepWithRusanov_batched_heap_static_calls(
       std::execution::par_unseq,
       range2d_cell_unknown_aux->begin(),
       range2d_cell_unknown_aux->end(),
-      [&,QOutEnumerator,eigenvalueEnumerator,fluxEnumerator,tempFluxX,tempFluxY,tempFluxZ,ncpEnumerator,QInEnumerator,tempEigenvalueX,tempEigenvalueY,tempEigenvalueZ,tempNonconservativeProductX,tempNonconservativeProductY,tempNonconservativeProductZ](auto ids){
+      [
+        =,
+        QIn=hostPatchData.QIn,
+        QOut=hostPatchData.QOut
+      ](auto ids){
         auto [x,y,patchIndex,unknown] = ids;
 
         internal::copySolution_LoopBody(
-          hostPatchData.QIn[patchIndex],
+          QIn[patchIndex],
           QInEnumerator,
           patchIndex,
           volumeIndex2d(x,y),
           unknown,
-          hostPatchData.QOut[patchIndex],
+          QOut[patchIndex],
           QOutEnumerator
         );
 
@@ -298,16 +318,20 @@ void exahype2::fv::rusanov::cpp::timeStepWithRusanov_batched_heap_static_calls(
       std::execution::par_unseq,
       range3d_cell_unknown_aux->begin(),
       range3d_cell_unknown_aux->end(),
-      [&,QOutEnumerator,eigenvalueEnumerator,fluxEnumerator,tempFluxX,tempFluxY,tempFluxZ,ncpEnumerator,QInEnumerator,tempEigenvalueX,tempEigenvalueY,tempEigenvalueZ,tempNonconservativeProductX,tempNonconservativeProductY,tempNonconservativeProductZ](auto ids){
+      [
+        =,
+        QIn=hostPatchData.QIn,
+        QOut=hostPatchData.QOut
+      ](auto ids){
         auto [x,y,z,patchIndex,unknown] = ids;
 
         internal::copySolution_LoopBody(
-          hostPatchData.QIn[patchIndex],
+          QIn[patchIndex],
           QInEnumerator,
           patchIndex,
           volumeIndex3d(x,y,z),
           unknown,
-          hostPatchData.QOut[patchIndex],
+          QOut[patchIndex],
           QOutEnumerator
         );
 
@@ -321,18 +345,25 @@ void exahype2::fv::rusanov::cpp::timeStepWithRusanov_batched_heap_static_calls(
       std::execution::par_unseq,
       range1d_cell_solvhalosize->begin(),
       range1d_cell_solvhalosize->end(),
-      [&,QOutEnumerator,eigenvalueEnumerator,fluxEnumerator,tempFluxX,tempFluxY,tempFluxZ,ncpEnumerator,QInEnumerator,tempEigenvalueX,tempEigenvalueY,tempEigenvalueZ,tempNonconservativeProductX,tempNonconservativeProductY,tempNonconservativeProductZ](auto ids){
+      [
+        =,
+        QIn=hostPatchData.QIn,
+        cellCentre=hostPatchData.cellCentre,
+        cellSize=hostPatchData.cellSize,
+        t=hostPatchData.t,
+        dt=hostPatchData.dt
+      ](auto ids){
         auto [y,patchIndex,x] = ids;
 
         internal::computeMaxEigenvalue_LoopBody<Solver>(
-          hostPatchData.QIn[patchIndex],
+          QIn[patchIndex],
           QInEnumerator,
-          hostPatchData.cellCentre[patchIndex],
-          hostPatchData.cellSize[patchIndex],
+          cellCentre[patchIndex],
+          cellSize[patchIndex],
           patchIndex,
           volumeIndex2d(x,y),
-          hostPatchData.t[patchIndex], 
-          hostPatchData.dt[patchIndex],
+          t[patchIndex], 
+          dt[patchIndex],
           0,
           tempEigenvalueX,
           eigenvalueEnumerator
@@ -345,18 +376,25 @@ void exahype2::fv::rusanov::cpp::timeStepWithRusanov_batched_heap_static_calls(
       std::execution::par_unseq,
       range1d_cell_solvhalosize->begin(),
       range1d_cell_solvhalosize->end(),
-      [&,QOutEnumerator,eigenvalueEnumerator,fluxEnumerator,tempFluxX,tempFluxY,tempFluxZ,ncpEnumerator,QInEnumerator,tempEigenvalueX,tempEigenvalueY,tempEigenvalueZ,tempNonconservativeProductX,tempNonconservativeProductY,tempNonconservativeProductZ](auto ids){
+      [
+        =,
+        QIn=hostPatchData.QIn,
+        cellCentre=hostPatchData.cellCentre,
+        cellSize=hostPatchData.cellSize,
+        t=hostPatchData.t,
+        dt=hostPatchData.dt
+      ](auto ids){
         auto [x,patchIndex,y] = ids;
 
         internal::computeMaxEigenvalue_LoopBody<Solver>(
-          hostPatchData.QIn[patchIndex],
+          QIn[patchIndex],
           QInEnumerator,
-          hostPatchData.cellCentre[patchIndex],
-          hostPatchData.cellSize[patchIndex],
+          cellCentre[patchIndex],
+          cellSize[patchIndex],
           patchIndex,
           volumeIndex2d(x,y),
-          hostPatchData.t[patchIndex], 
-          hostPatchData.dt[patchIndex],
+          t[patchIndex], 
+          dt[patchIndex],
           1,
           tempEigenvalueY,
           eigenvalueEnumerator
@@ -369,23 +407,30 @@ void exahype2::fv::rusanov::cpp::timeStepWithRusanov_batched_heap_static_calls(
       std::execution::par_unseq,
       range2d_cell_unknown->begin(),
       range2d_cell_unknown->end(),
-      [&,QOutEnumerator,eigenvalueEnumerator,fluxEnumerator,tempFluxX,tempFluxY,tempFluxZ,ncpEnumerator,QInEnumerator,tempEigenvalueX,tempEigenvalueY,tempEigenvalueZ,tempNonconservativeProductX,tempNonconservativeProductY,tempNonconservativeProductZ](auto ids){
+      [
+        =,
+        QIn=hostPatchData.QIn,
+        cellCentre=hostPatchData.cellCentre,
+        cellSize=hostPatchData.cellSize,
+        dt=hostPatchData.dt,
+        QOut=hostPatchData.QOut
+      ](auto ids){
         auto [x,y,patchIndex,unknown] = ids;
 
         internal::updateSolutionWithEigenvalueDamping_LoopBody(
-          hostPatchData.QIn[patchIndex],
+          QIn[patchIndex],
           QInEnumerator,
           tempEigenvalueX,
           tempEigenvalueY,
           tempEigenvalueZ,
           eigenvalueEnumerator,
-          hostPatchData.cellCentre[patchIndex],
-          hostPatchData.cellSize[patchIndex],
+          cellCentre[patchIndex],
+          cellSize[patchIndex],
           patchIndex,
           volumeIndex2d(x,y),
           unknown,
-          hostPatchData.dt[patchIndex],
-          hostPatchData.QOut[patchIndex],
+          dt[patchIndex],
+          QOut[patchIndex],
           QOutEnumerator
         );
 
@@ -398,18 +443,25 @@ void exahype2::fv::rusanov::cpp::timeStepWithRusanov_batched_heap_static_calls(
       std::execution::par_unseq,
       range2d_cell_solvhalosize->begin(),
       range2d_cell_solvhalosize->end(),
-      [&,QOutEnumerator,eigenvalueEnumerator,fluxEnumerator,tempFluxX,tempFluxY,tempFluxZ,ncpEnumerator,QInEnumerator,tempEigenvalueX,tempEigenvalueY,tempEigenvalueZ,tempNonconservativeProductX,tempNonconservativeProductY,tempNonconservativeProductZ](auto ids){
+      [
+        =,
+        QIn=hostPatchData.QIn,
+        cellCentre=hostPatchData.cellCentre,
+        cellSize=hostPatchData.cellSize,
+        t=hostPatchData.t,
+        dt=hostPatchData.dt
+      ](auto ids){
         auto [z,y,patchIndex,x] = ids;
 
         internal::computeMaxEigenvalue_LoopBody<Solver>(
-          hostPatchData.QIn[patchIndex],
+          QIn[patchIndex],
           QInEnumerator,
-          hostPatchData.cellCentre[patchIndex],
-          hostPatchData.cellSize[patchIndex],
+          cellCentre[patchIndex],
+          cellSize[patchIndex],
           patchIndex,
           volumeIndex3d(x,y,z),
-          hostPatchData.t[patchIndex], 
-          hostPatchData.dt[patchIndex],
+          t[patchIndex], 
+          dt[patchIndex],
           0,
           tempEigenvalueX,
           eigenvalueEnumerator
@@ -422,18 +474,25 @@ void exahype2::fv::rusanov::cpp::timeStepWithRusanov_batched_heap_static_calls(
       std::execution::par_unseq,
       range2d_cell_solvhalosize->begin(),
       range2d_cell_solvhalosize->end(),
-      [&,QOutEnumerator,eigenvalueEnumerator,fluxEnumerator,tempFluxX,tempFluxY,tempFluxZ,ncpEnumerator,QInEnumerator,tempEigenvalueX,tempEigenvalueY,tempEigenvalueZ,tempNonconservativeProductX,tempNonconservativeProductY,tempNonconservativeProductZ](auto ids){
+      [
+        =,
+        QIn=hostPatchData.QIn,
+        cellCentre=hostPatchData.cellCentre,
+        cellSize=hostPatchData.cellSize,
+        t=hostPatchData.t,
+        dt=hostPatchData.dt
+      ](auto ids){
         auto [z,x,patchIndex,y] = ids;
 
         internal::computeMaxEigenvalue_LoopBody<Solver>(
-          hostPatchData.QIn[patchIndex],
+          QIn[patchIndex],
           QInEnumerator,
-          hostPatchData.cellCentre[patchIndex],
-          hostPatchData.cellSize[patchIndex],
+          cellCentre[patchIndex],
+          cellSize[patchIndex],
           patchIndex,
           volumeIndex3d(x,y,z),
-          hostPatchData.t[patchIndex], 
-          hostPatchData.dt[patchIndex],
+          t[patchIndex], 
+          dt[patchIndex],
           1,
           tempEigenvalueY,
           eigenvalueEnumerator
@@ -446,18 +505,25 @@ void exahype2::fv::rusanov::cpp::timeStepWithRusanov_batched_heap_static_calls(
       std::execution::par_unseq,
       range2d_cell_solvhalosize->begin(),
       range2d_cell_solvhalosize->end(),
-      [&,QOutEnumerator,eigenvalueEnumerator,fluxEnumerator,tempFluxX,tempFluxY,tempFluxZ,ncpEnumerator,QInEnumerator,tempEigenvalueX,tempEigenvalueY,tempEigenvalueZ,tempNonconservativeProductX,tempNonconservativeProductY,tempNonconservativeProductZ](auto ids){
+      [
+        =,
+        QIn=hostPatchData.QIn,
+        cellCentre=hostPatchData.cellCentre,
+        cellSize=hostPatchData.cellSize,
+        t=hostPatchData.t,
+        dt=hostPatchData.dt
+      ](auto ids){
         auto [y,x,patchIndex,z] = ids;
     
         internal::computeMaxEigenvalue_LoopBody<Solver>(
-          hostPatchData.QIn[patchIndex],
+          QIn[patchIndex],
           QInEnumerator,
-          hostPatchData.cellCentre[patchIndex],
-          hostPatchData.cellSize[patchIndex],
+          cellCentre[patchIndex],
+          cellSize[patchIndex],
           patchIndex,
           volumeIndex3d(x,y,z),
-          hostPatchData.t[patchIndex], 
-          hostPatchData.dt[patchIndex],
+          t[patchIndex], 
+          dt[patchIndex],
           2,
           tempEigenvalueZ,
           eigenvalueEnumerator
@@ -470,23 +536,30 @@ void exahype2::fv::rusanov::cpp::timeStepWithRusanov_batched_heap_static_calls(
       std::execution::par_unseq,
       range3d_cell_unknown->begin(),
       range3d_cell_unknown->end(),
-      [&,QOutEnumerator,eigenvalueEnumerator,fluxEnumerator,tempFluxX,tempFluxY,tempFluxZ,ncpEnumerator,QInEnumerator,tempEigenvalueX,tempEigenvalueY,tempEigenvalueZ,tempNonconservativeProductX,tempNonconservativeProductY,tempNonconservativeProductZ](auto ids){
+      [
+        =,
+        QIn=hostPatchData.QIn,
+        cellCentre=hostPatchData.cellCentre,
+        cellSize=hostPatchData.cellSize,
+        dt=hostPatchData.dt,
+        QOut=hostPatchData.QOut
+      ](auto ids){
         auto [x,y,z,patchIndex,unknown] = ids;
         
         internal::updateSolutionWithEigenvalueDamping_LoopBody(
-          hostPatchData.QIn[patchIndex],
+          QIn[patchIndex],
           QInEnumerator,
           tempEigenvalueX,
           tempEigenvalueY,
           tempEigenvalueZ,
           eigenvalueEnumerator,
-          hostPatchData.cellCentre[patchIndex],
-          hostPatchData.cellSize[patchIndex],
+          cellCentre[patchIndex],
+          cellSize[patchIndex],
           patchIndex,
           volumeIndex3d(x,y,z),
           unknown,
-          hostPatchData.dt[patchIndex],
-          hostPatchData.QOut[patchIndex],
+          dt[patchIndex],
+          QOut[patchIndex],
           QOutEnumerator
         );
 
@@ -501,18 +574,25 @@ void exahype2::fv::rusanov::cpp::timeStepWithRusanov_batched_heap_static_calls(
       std::execution::par_unseq,
       range1d_cell_solvhalosize->begin(),
       range1d_cell_solvhalosize->end(),
-      [&,QOutEnumerator,eigenvalueEnumerator,fluxEnumerator,tempFluxX,tempFluxY,tempFluxZ,ncpEnumerator,QInEnumerator,tempEigenvalueX,tempEigenvalueY,tempEigenvalueZ,tempNonconservativeProductX,tempNonconservativeProductY,tempNonconservativeProductZ](auto ids){
+      [
+        =,
+        QIn=hostPatchData.QIn,
+        cellCentre=hostPatchData.cellCentre,
+        cellSize=hostPatchData.cellSize,
+        t=hostPatchData.t,
+        dt=hostPatchData.dt
+      ](auto ids){
         auto [y,patchIndex,x] = ids;
         
         internal::computeFlux_LoopBody<Solver>(
-          hostPatchData.QIn[patchIndex],
+          QIn[patchIndex],
           QInEnumerator,
-          hostPatchData.cellCentre[patchIndex],
-          hostPatchData.cellSize[patchIndex],
+          cellCentre[patchIndex],
+          cellSize[patchIndex],
           patchIndex,
           volumeIndex2d(x,y),
-          hostPatchData.t[patchIndex],
-          hostPatchData.dt[patchIndex],
+          t[patchIndex],
+          dt[patchIndex],
           0, // normal
           tempFluxX,
           fluxEnumerator
@@ -525,18 +605,25 @@ void exahype2::fv::rusanov::cpp::timeStepWithRusanov_batched_heap_static_calls(
       std::execution::par_unseq,
       range1d_cell_solvhalosize->begin(),
       range1d_cell_solvhalosize->end(),
-      [&,QOutEnumerator,eigenvalueEnumerator,fluxEnumerator,tempFluxX,tempFluxY,tempFluxZ,ncpEnumerator,QInEnumerator,tempEigenvalueX,tempEigenvalueY,tempEigenvalueZ,tempNonconservativeProductX,tempNonconservativeProductY,tempNonconservativeProductZ](auto ids){
+      [
+        =,
+        QIn=hostPatchData.QIn,
+        cellCentre=hostPatchData.cellCentre,
+        cellSize=hostPatchData.cellSize,
+        t=hostPatchData.t,
+        dt=hostPatchData.dt
+      ](auto ids){
         auto [x,patchIndex,y] = ids;
         
         internal::computeFlux_LoopBody<Solver>(
-          hostPatchData.QIn[patchIndex],
+          QIn[patchIndex],
           QInEnumerator,
-          hostPatchData.cellCentre[patchIndex],
-          hostPatchData.cellSize[patchIndex],
+          cellCentre[patchIndex],
+          cellSize[patchIndex],
           patchIndex,
           volumeIndex2d(x,y),
-          hostPatchData.t[patchIndex],
-          hostPatchData.dt[patchIndex],
+          t[patchIndex],
+          dt[patchIndex],
           1, // normal
           tempFluxY,
           fluxEnumerator
@@ -549,55 +636,25 @@ void exahype2::fv::rusanov::cpp::timeStepWithRusanov_batched_heap_static_calls(
       std::execution::par_unseq,
       range2d_cell_unknown->begin(),
       range2d_cell_unknown->end(),
-      [&,QOutEnumerator,eigenvalueEnumerator,fluxEnumerator,tempFluxX,tempFluxY,tempFluxZ,ncpEnumerator,QInEnumerator,tempEigenvalueX,tempEigenvalueY,tempEigenvalueZ,tempNonconservativeProductX,tempNonconservativeProductY,tempNonconservativeProductZ](auto ids){
+      [
+        =,
+        cellCentre=hostPatchData.cellCentre,
+        cellSize=hostPatchData.cellSize,
+        dt=hostPatchData.dt,
+        QOut=hostPatchData.QOut
+      ](auto ids){
         auto [x,y,patchIndex,unknown] = ids;
-        
-        exahype2::enumerator::AoSLexicographicEnumerator QInEnumerator(
-          1, 
-          numberOfVolumesPerAxisInPatch,
-          haloSize,
-          unknowns,
-          auxiliaryVariables
-        );
-        exahype2::enumerator::AoSLexicographicEnumerator QOutEnumerator(
-          1, 
-          numberOfVolumesPerAxisInPatch,
-          0,
-          unknowns,
-          auxiliaryVariables
-        );
-        TempDataEnumerator fluxEnumerator(
-          hostPatchData.numberOfCells, 
-          numberOfVolumesPerAxisInPatch,
-          haloSize,
-          unknowns,
-          0
-        );
-        TempDataEnumerator ncpEnumerator(
-          hostPatchData.numberOfCells,
-          numberOfVolumesPerAxisInPatch+1,
-          haloSize,
-          unknowns,
-          0
-        );
-        TempDataEnumerator eigenvalueEnumerator(
-          hostPatchData.numberOfCells, 
-          numberOfVolumesPerAxisInPatch,
-          haloSize,
-          1,
-          0
-        );
 
         internal::updateSolutionWithFlux_LoopBody(
           tempFluxX, tempFluxY, tempFluxZ,
           fluxEnumerator,
-          hostPatchData.cellCentre[patchIndex],
-          hostPatchData.cellSize[patchIndex],
+          cellCentre[patchIndex],
+          cellSize[patchIndex],
           patchIndex,
           volumeIndex2d(x,y),
           unknown,
-          hostPatchData.dt[patchIndex],
-          *(hostPatchData.QOut + patchIndex),
+          dt[patchIndex],
+          *(QOut + patchIndex),
           QOutEnumerator
         );
       }
@@ -610,18 +667,25 @@ void exahype2::fv::rusanov::cpp::timeStepWithRusanov_batched_heap_static_calls(
       std::execution::par_unseq,
       range2d_cell_solvhalosize->begin(),
       range2d_cell_solvhalosize->end(),
-      [&,QOutEnumerator,eigenvalueEnumerator,fluxEnumerator,tempFluxX,tempFluxY,tempFluxZ,ncpEnumerator,QInEnumerator,tempEigenvalueX,tempEigenvalueY,tempEigenvalueZ,tempNonconservativeProductX,tempNonconservativeProductY,tempNonconservativeProductZ](auto ids){
+      [
+        =,
+        QIn=hostPatchData.QIn,
+        cellCentre=hostPatchData.cellCentre,
+        cellSize=hostPatchData.cellSize,
+        t=hostPatchData.t,
+        dt=hostPatchData.dt
+      ](auto ids){
         auto [z,y,patchIndex,x] = ids;
         
         internal::computeFlux_LoopBody<Solver>(
-          hostPatchData.QIn[patchIndex],
+          QIn[patchIndex],
           QInEnumerator,
-          hostPatchData.cellCentre[patchIndex],
-          hostPatchData.cellSize[patchIndex],
+          cellCentre[patchIndex],
+          cellSize[patchIndex],
           patchIndex,
           volumeIndex3d(x,y,z),
-          hostPatchData.t[patchIndex],
-          hostPatchData.dt[patchIndex],
+          t[patchIndex],
+          dt[patchIndex],
           0, // normal
           tempFluxX,
           fluxEnumerator
@@ -634,18 +698,25 @@ void exahype2::fv::rusanov::cpp::timeStepWithRusanov_batched_heap_static_calls(
       std::execution::par_unseq,
       range2d_cell_solvhalosize->begin(),
       range2d_cell_solvhalosize->end(),
-      [&,QOutEnumerator,eigenvalueEnumerator,fluxEnumerator,tempFluxX,tempFluxY,tempFluxZ,ncpEnumerator,QInEnumerator,tempEigenvalueX,tempEigenvalueY,tempEigenvalueZ,tempNonconservativeProductX,tempNonconservativeProductY,tempNonconservativeProductZ](auto ids){
+      [
+        =,
+        QIn=hostPatchData.QIn,
+        cellCentre=hostPatchData.cellCentre,
+        cellSize=hostPatchData.cellSize,
+        t=hostPatchData.t,
+        dt=hostPatchData.dt
+      ](auto ids){
         auto [z,x,patchIndex,y] = ids;
         
         internal::computeFlux_LoopBody<Solver>(
-          hostPatchData.QIn[patchIndex],
+          QIn[patchIndex],
           QInEnumerator,
-          hostPatchData.cellCentre[patchIndex],
-          hostPatchData.cellSize[patchIndex],
+          cellCentre[patchIndex],
+          cellSize[patchIndex],
           patchIndex,
           volumeIndex3d(x,y,z),
-          hostPatchData.t[patchIndex],
-          hostPatchData.dt[patchIndex],
+          t[patchIndex],
+          dt[patchIndex],
           1, // normal
           tempFluxY,
           fluxEnumerator
@@ -658,18 +729,25 @@ void exahype2::fv::rusanov::cpp::timeStepWithRusanov_batched_heap_static_calls(
       std::execution::par_unseq,
       range2d_cell_solvhalosize->begin(),
       range2d_cell_solvhalosize->end(),
-      [&,QOutEnumerator,eigenvalueEnumerator,fluxEnumerator,tempFluxX,tempFluxY,tempFluxZ,ncpEnumerator,QInEnumerator,tempEigenvalueX,tempEigenvalueY,tempEigenvalueZ,tempNonconservativeProductX,tempNonconservativeProductY,tempNonconservativeProductZ](auto ids){
+      [
+        =,
+        QIn=hostPatchData.QIn,
+        cellCentre=hostPatchData.cellCentre,
+        cellSize=hostPatchData.cellSize,
+        t=hostPatchData.t,
+        dt=hostPatchData.dt
+      ](auto ids){
         auto [x,y,patchIndex,z] = ids;
 
         internal::computeFlux_LoopBody<Solver>(
-          hostPatchData.QIn[patchIndex],
+          QIn[patchIndex],
           QInEnumerator,
-          hostPatchData.cellCentre[patchIndex],
-          hostPatchData.cellSize[patchIndex],
+          cellCentre[patchIndex],
+          cellSize[patchIndex],
           patchIndex,
           volumeIndex3d(x,y,z),
-          hostPatchData.t[patchIndex],
-          hostPatchData.dt[patchIndex],
+          t[patchIndex],
+          dt[patchIndex],
           2, // normal
           tempFluxZ,
           fluxEnumerator
@@ -682,19 +760,25 @@ void exahype2::fv::rusanov::cpp::timeStepWithRusanov_batched_heap_static_calls(
       std::execution::par_unseq,
       range3d_cell_unknown->begin(),
       range3d_cell_unknown->end(),
-      [&,QOutEnumerator,eigenvalueEnumerator,fluxEnumerator,tempFluxX,tempFluxY,tempFluxZ,ncpEnumerator,QInEnumerator,tempEigenvalueX,tempEigenvalueY,tempEigenvalueZ,tempNonconservativeProductX,tempNonconservativeProductY,tempNonconservativeProductZ](auto ids){
+      [
+        =,
+        cellCentre=hostPatchData.cellCentre,
+        cellSize=hostPatchData.cellSize,
+        dt=hostPatchData.dt,
+        QOut=hostPatchData.QOut
+      ](auto ids){
         auto [x,y,z,patchIndex,unknown] = ids;
 
         internal::updateSolutionWithFlux_LoopBody(
           tempFluxX, tempFluxY, tempFluxZ,
           fluxEnumerator,
-          hostPatchData.cellCentre[patchIndex],
-          hostPatchData.cellSize[patchIndex],
+          cellCentre[patchIndex],
+          cellSize[patchIndex],
           patchIndex,
           volumeIndex3d(x,y,z),
           unknown,
-          hostPatchData.dt[patchIndex],
-          *(hostPatchData.QOut + patchIndex),
+          dt[patchIndex],
+          *(QOut + patchIndex),
           QOutEnumerator
         );
 
@@ -708,18 +792,25 @@ void exahype2::fv::rusanov::cpp::timeStepWithRusanov_batched_heap_static_calls(
       std::execution::par_unseq,
       range1d_cell_solvhalosize_m->begin(),
       range1d_cell_solvhalosize_m->end(),
-      [&,QOutEnumerator,eigenvalueEnumerator,fluxEnumerator,tempFluxX,tempFluxY,tempFluxZ,ncpEnumerator,QInEnumerator,tempEigenvalueX,tempEigenvalueY,tempEigenvalueZ,tempNonconservativeProductX,tempNonconservativeProductY,tempNonconservativeProductZ](auto ids){
+      [
+        =,
+        QIn=hostPatchData.QIn,
+        cellCentre=hostPatchData.cellCentre,
+        cellSize=hostPatchData.cellSize,
+        t=hostPatchData.t,
+        dt=hostPatchData.dt
+      ](auto ids){
         auto [y,patchIndex,x] = ids;
 
         internal::computeNonconservativeFlux_LoopBody<Solver,unknowns,auxiliaryVariables>(
-          hostPatchData.QIn[patchIndex],
+          QIn[patchIndex],
           QInEnumerator,
-          hostPatchData.cellCentre[patchIndex],
-          hostPatchData.cellSize[patchIndex],
+          cellCentre[patchIndex],
+          cellSize[patchIndex],
           patchIndex,
           volumeIndex2d(x,y),
-          hostPatchData.t[patchIndex],
-          hostPatchData.dt[patchIndex],
+          t[patchIndex],
+          dt[patchIndex],
           0, // normal
           tempNonconservativeProductX,
           ncpEnumerator
@@ -732,18 +823,25 @@ void exahype2::fv::rusanov::cpp::timeStepWithRusanov_batched_heap_static_calls(
       std::execution::par_unseq,
       range1d_cell_solvhalosize_m->begin(),
       range1d_cell_solvhalosize_m->end(),
-      [&,QOutEnumerator,eigenvalueEnumerator,fluxEnumerator,tempFluxX,tempFluxY,tempFluxZ,ncpEnumerator,QInEnumerator,tempEigenvalueX,tempEigenvalueY,tempEigenvalueZ,tempNonconservativeProductX,tempNonconservativeProductY,tempNonconservativeProductZ](auto ids){
+      [
+        =,
+        QIn=hostPatchData.QIn,
+        cellCentre=hostPatchData.cellCentre,
+        cellSize=hostPatchData.cellSize,
+        t=hostPatchData.t,
+        dt=hostPatchData.dt
+      ](auto ids){
         auto [x,patchIndex,y] = ids;
 
         internal::computeNonconservativeFlux_LoopBody<Solver,unknowns,auxiliaryVariables>(
-          hostPatchData.QIn[patchIndex],
+          QIn[patchIndex],
           QInEnumerator,
-          hostPatchData.cellCentre[patchIndex],
-          hostPatchData.cellSize[patchIndex],
+          cellCentre[patchIndex],
+          cellSize[patchIndex],
           patchIndex,
           volumeIndex2d(x,y),
-          hostPatchData.t[patchIndex],
-          hostPatchData.dt[patchIndex],
+          t[patchIndex],
+          dt[patchIndex],
           1, // normal
           tempNonconservativeProductY,
           ncpEnumerator
@@ -756,19 +854,25 @@ void exahype2::fv::rusanov::cpp::timeStepWithRusanov_batched_heap_static_calls(
       std::execution::par_unseq,
       range2d_cell_unknown->begin(),
       range2d_cell_unknown->end(),
-      [&,QOutEnumerator,eigenvalueEnumerator,fluxEnumerator,tempFluxX,tempFluxY,tempFluxZ,ncpEnumerator,QInEnumerator,tempEigenvalueX,tempEigenvalueY,tempEigenvalueZ,tempNonconservativeProductX,tempNonconservativeProductY,tempNonconservativeProductZ](auto ids){
+      [
+        =,
+        cellCentre=hostPatchData.cellCentre,
+        cellSize=hostPatchData.cellSize,
+        dt=hostPatchData.dt,
+        QOut=hostPatchData.QOut
+      ](auto ids){
         auto [x,y,patchIndex,unknown] = ids;
 
         internal::updateSolutionWithNonconservativeFlux_LoopBody(
           tempNonconservativeProductX, tempNonconservativeProductY, tempNonconservativeProductZ,
           ncpEnumerator,
-          hostPatchData.cellCentre[patchIndex],
-          hostPatchData.cellSize[patchIndex],
+          cellCentre[patchIndex],
+          cellSize[patchIndex],
           patchIndex,
           volumeIndex2d(x,y),
           unknown,
-          hostPatchData.dt[patchIndex],
-          *(hostPatchData.QOut + patchIndex),
+          dt[patchIndex],
+          *(QOut + patchIndex),
           QOutEnumerator
         );
 
@@ -781,18 +885,25 @@ void exahype2::fv::rusanov::cpp::timeStepWithRusanov_batched_heap_static_calls(
       std::execution::par_unseq,
       range2d_cell_solvhalosize_m->begin(),
       range2d_cell_solvhalosize_m->end(),
-      [&,QOutEnumerator,eigenvalueEnumerator,fluxEnumerator,tempFluxX,tempFluxY,tempFluxZ,ncpEnumerator,QInEnumerator,tempEigenvalueX,tempEigenvalueY,tempEigenvalueZ,tempNonconservativeProductX,tempNonconservativeProductY,tempNonconservativeProductZ](auto ids){
+      [
+        =,
+        QIn=hostPatchData.QIn,
+        cellCentre=hostPatchData.cellCentre,
+        cellSize=hostPatchData.cellSize,
+        t=hostPatchData.t,
+        dt=hostPatchData.dt
+      ](auto ids){
         auto [z,y,patchIndex,x] = ids;
 
         internal::computeNonconservativeFlux_LoopBody<Solver,unknowns,auxiliaryVariables>(
-          hostPatchData.QIn[patchIndex],
+          QIn[patchIndex],
           QInEnumerator,
-          hostPatchData.cellCentre[patchIndex],
-          hostPatchData.cellSize[patchIndex],
+          cellCentre[patchIndex],
+          cellSize[patchIndex],
           patchIndex,
           volumeIndex3d(x,y,z),
-          hostPatchData.t[patchIndex],
-          hostPatchData.dt[patchIndex],
+          t[patchIndex],
+          dt[patchIndex],
           0, // normal
           tempNonconservativeProductX,
           ncpEnumerator
@@ -805,18 +916,25 @@ void exahype2::fv::rusanov::cpp::timeStepWithRusanov_batched_heap_static_calls(
       std::execution::par_unseq,
       range2d_cell_solvhalosize_m->begin(),
       range2d_cell_solvhalosize_m->end(),
-      [&,QOutEnumerator,eigenvalueEnumerator,fluxEnumerator,tempFluxX,tempFluxY,tempFluxZ,ncpEnumerator,QInEnumerator,tempEigenvalueX,tempEigenvalueY,tempEigenvalueZ,tempNonconservativeProductX,tempNonconservativeProductY,tempNonconservativeProductZ](auto ids){
+      [
+        =,
+        QIn=hostPatchData.QIn,
+        cellCentre=hostPatchData.cellCentre,
+        cellSize=hostPatchData.cellSize,
+        t=hostPatchData.t,
+        dt=hostPatchData.dt
+      ](auto ids){
         auto [z,x,patchIndex,y] = ids;
 
         internal::computeNonconservativeFlux_LoopBody<Solver,unknowns,auxiliaryVariables>(
-          hostPatchData.QIn[patchIndex],
+          QIn[patchIndex],
           QInEnumerator,
-          hostPatchData.cellCentre[patchIndex],
-          hostPatchData.cellSize[patchIndex],
+          cellCentre[patchIndex],
+          cellSize[patchIndex],
           patchIndex,
           volumeIndex3d(x,y,z),
-          hostPatchData.t[patchIndex],
-          hostPatchData.dt[patchIndex],
+          t[patchIndex],
+          dt[patchIndex],
           1, // normal
           tempNonconservativeProductY,
           ncpEnumerator
@@ -829,18 +947,25 @@ void exahype2::fv::rusanov::cpp::timeStepWithRusanov_batched_heap_static_calls(
       std::execution::par_unseq,
       range2d_cell_solvhalosize_m->begin(),
       range2d_cell_solvhalosize_m->end(),
-      [&,QOutEnumerator,eigenvalueEnumerator,fluxEnumerator,tempFluxX,tempFluxY,tempFluxZ,ncpEnumerator,QInEnumerator,tempEigenvalueX,tempEigenvalueY,tempEigenvalueZ,tempNonconservativeProductX,tempNonconservativeProductY,tempNonconservativeProductZ](auto ids){
+      [
+        =,
+        QIn=hostPatchData.QIn,
+        cellCentre=hostPatchData.cellCentre,
+        cellSize=hostPatchData.cellSize,
+        t=hostPatchData.t,
+        dt=hostPatchData.dt
+      ](auto ids){
         auto [y,x,patchIndex,z] = ids;
 
         internal::computeNonconservativeFlux_LoopBody<Solver,unknowns,auxiliaryVariables>(
-          hostPatchData.QIn[patchIndex],
+          QIn[patchIndex],
           QInEnumerator,
-          hostPatchData.cellCentre[patchIndex],
-          hostPatchData.cellSize[patchIndex],
+          cellCentre[patchIndex],
+          cellSize[patchIndex],
           patchIndex,
           volumeIndex3d(x,y,z),
-          hostPatchData.t[patchIndex],
-          hostPatchData.dt[patchIndex],
+          t[patchIndex],
+          dt[patchIndex],
           2, // normal
           tempNonconservativeProductY,
           ncpEnumerator
@@ -853,19 +978,25 @@ void exahype2::fv::rusanov::cpp::timeStepWithRusanov_batched_heap_static_calls(
       std::execution::par_unseq,
       range3d_cell_unknown->begin(),
       range3d_cell_unknown->end(),
-      [&,QOutEnumerator,eigenvalueEnumerator,fluxEnumerator,tempFluxX,tempFluxY,tempFluxZ,ncpEnumerator,QInEnumerator,tempEigenvalueX,tempEigenvalueY,tempEigenvalueZ,tempNonconservativeProductX,tempNonconservativeProductY,tempNonconservativeProductZ](auto ids){
+      [
+        =,
+        cellCentre=hostPatchData.cellCentre,
+        cellSize=hostPatchData.cellSize,
+        dt=hostPatchData.dt,
+        QOut=hostPatchData.QOut
+      ](auto ids){
         auto [x,y,z,patchIndex,unknown] = ids;
 
         internal::updateSolutionWithNonconservativeFlux_LoopBody(
           tempNonconservativeProductX, tempNonconservativeProductY, tempNonconservativeProductZ,
           ncpEnumerator,
-          hostPatchData.cellCentre[patchIndex],
-          hostPatchData.cellSize[patchIndex],
+          cellCentre[patchIndex],
+          cellSize[patchIndex],
           patchIndex,
           volumeIndex3d(x,y,z),
           unknown,
-          hostPatchData.dt[patchIndex],
-          *(hostPatchData.QOut + patchIndex),
+          dt[patchIndex],
+          *(QOut + patchIndex),
           QOutEnumerator
         );
 
@@ -883,19 +1014,27 @@ void exahype2::fv::rusanov::cpp::timeStepWithRusanov_batched_heap_static_calls(
         std::execution::seq,
         range2d->begin(),
         range2d->end(),
-        [&,QOutEnumerator,eigenvalueEnumerator,fluxEnumerator,tempFluxX,tempFluxY,tempFluxZ,ncpEnumerator,QInEnumerator,tempEigenvalueX,tempEigenvalueY,tempEigenvalueZ,tempNonconservativeProductX,tempNonconservativeProductY,tempNonconservativeProductZ](auto ids){
+        [
+          =,
+          &newMaxEigenvalue,
+          QOut=hostPatchData.QOut,
+          cellCentre=hostPatchData.cellCentre,
+          cellSize=hostPatchData.cellSize,
+          t=hostPatchData.t,
+          dt=hostPatchData.dt
+        ](auto ids){
           auto [x,y] = ids;
           newMaxEigenvalue = std::max(
             newMaxEigenvalue,
             internal::reduceMaxEigenvalue_LoopBody<Solver>(
-              *(hostPatchData.QOut + patchIndex),
+              *(QOut + patchIndex),
               QOutEnumerator,
-              hostPatchData.cellCentre[patchIndex],
-              hostPatchData.cellSize[patchIndex],
+              cellCentre[patchIndex],
+              cellSize[patchIndex],
               patchIndex,
               volumeIndex2d(x,y),
-              hostPatchData.t[patchIndex],
-              hostPatchData.dt[patchIndex]
+              t[patchIndex],
+              dt[patchIndex]
             )
           );
         }
@@ -913,19 +1052,27 @@ void exahype2::fv::rusanov::cpp::timeStepWithRusanov_batched_heap_static_calls(
         std::execution::seq,
         range3d->begin(),
         range3d->end(),
-        [&,QOutEnumerator,eigenvalueEnumerator,fluxEnumerator,tempFluxX,tempFluxY,tempFluxZ,ncpEnumerator,QInEnumerator,tempEigenvalueX,tempEigenvalueY,tempEigenvalueZ,tempNonconservativeProductX,tempNonconservativeProductY,tempNonconservativeProductZ](auto ids){
+        [
+          =,
+          &newMaxEigenvalue,
+          QOut=hostPatchData.QOut,
+          cellCentre=hostPatchData.cellCentre,
+          cellSize=hostPatchData.cellSize,
+          t=hostPatchData.t,
+          dt=hostPatchData.dt
+        ](auto ids){
           auto [x,y,z] = ids;
           newMaxEigenvalue = std::max(
             newMaxEigenvalue,
             internal::reduceMaxEigenvalue_LoopBody<Solver>(
-              *(hostPatchData.QOut + patchIndex),
+              *(QOut + patchIndex),
               QOutEnumerator,
-              hostPatchData.cellCentre[patchIndex],
-              hostPatchData.cellSize[patchIndex],
+              cellCentre[patchIndex],
+              cellSize[patchIndex],
               patchIndex,
               volumeIndex3d(x,y,z),
-              hostPatchData.t[patchIndex],
-              hostPatchData.dt[patchIndex]
+              t[patchIndex],
+              dt[patchIndex]
             )
           );
         }
