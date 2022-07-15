@@ -73,7 +73,7 @@ void exahype2::dg::cellIntegral_patchwise_GaussLegendre_functors(
           // Coefficient within matrix is tensor product over dimensions, too
           double coeff = stiffnessMatrix[i+index[dim]*nodesPerAxis];
           for (int dd=0; dd<Dimensions; dd++) {
-            coeff *= (dd==dim) ? 1.0 : massMatrixDiagonal[ index(dim) ];
+            coeff *= (dd==dim) ? 1.0 : massMatrixDiagonal[ index[dd] ];
           }
 
           for(int var=0; var<unknowns; var++){
