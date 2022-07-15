@@ -53,8 +53,6 @@ BasisFunctionValuesRight {
 void exahype2::dg::tests::DGTest::run(){
   testMethod(UtilsTest);
   testMethod(runDGEuler);
-//  testMethod(runDGElastic);
-//  testMethod(runTest);
 }
 
 void exahype2::dg::tests::DGTest::UtilsTest(){
@@ -510,7 +508,15 @@ void exahype2::dg::tests::DGTest::runDGEuler(){
       false,    //ncp
       false,    //source
       false);   //pointSources
-
+/*
+    multiplyWithInvertedMassMatrixAndClearAuxiliaryVariables_GaussLegendre(
+      cellData,
+      order,
+      unknowns,
+      auxiliaryVariables,
+      QuadratureWeights
+    );
+*/
   file_stream << "\nComputed volume integral values are: \n";
   for(int i=0; i<nodesPerCell; i++){
     file_stream << "node " << i << ": [";
@@ -519,24 +525,7 @@ void exahype2::dg::tests::DGTest::runDGEuler(){
     }
     file_stream << "]\n";
   }
-
-  multiplyWithInvertedMassMatrixAndClearAuxiliaryVariables_GaussLegendre(
-    cellData,
-    order,
-    unknowns,
-    auxiliaryVariables,
-    QuadratureWeights
-  );
-
-
-  file_stream << "multiplied with mass matrix, this gives: \n";
-  for(int i=0; i<nodesPerCell; i++){
-    file_stream << "node " << i << ": [";
-    for(int var=0; var<unknowns;var++){
-      file_stream << QOut[i*strideQ+var] << ", ";
-    }
-    file_stream << "]\n";
-  }
+  file_stream << "\n";
 
   // Step 2), the values computed in step 1) are extrapolated to the surface boundary
   projectVolumetricDataOntoFaces(
@@ -665,16 +654,16 @@ void exahype2::dg::tests::DGTest::runDGEuler(){
       file_stream << "at node " << i << ": [";
       for(int var=0; var<strideQ; var++){
         file_stream << QHullForRiemann[(f*2*nodesPerFace+i)*strideQ+var] << ", ";
-        //validateNumericalEquals(QHullForRiemann[(f*nodesPerFace+i)*strideQ+var], 0.0);
       }
       file_stream << "]\n";
     }
   }
 
-
+/*
   for(int i=0; i<nodesPerCell*strideQ; i++){
     QOut[i] = 0.0;
   }
+*/
 
   // * The contributions from the computed rusanov flux are then added to the nodes
   // * within the cell.
@@ -689,8 +678,8 @@ void exahype2::dg::tests::DGTest::runDGEuler(){
     &QHullForRiemann[(3*2+0)*nodesPerFace*strideQ], //right
     &QHullForRiemann[(1*2+1)*nodesPerFace*strideQ], //down
     &QHullForRiemann[(4*2+0)*nodesPerFace*strideQ], //up
-    &QHullForRiemann[(2*2+1)*2*nodesPerFace*strideQ], //back
-    &QHullForRiemann[(5*2+0)*2*nodesPerFace*strideQ], //front
+    &QHullForRiemann[(2*2+1)*nodesPerFace*strideQ], //back
+    &QHullForRiemann[(5*2+0)*nodesPerFace*strideQ], //front
 #endif
     order,
     unknowns,
@@ -707,7 +696,6 @@ void exahype2::dg::tests::DGTest::runDGEuler(){
     file_stream << "node " << i << ": [";
     for(int var=0; var<unknowns;var++){
       file_stream << QOut[i*strideQ+var] << ", ";
-//      validateNumericalEquals(QOut[i*strideQ+var], 0.0);
     }
     file_stream << "]\n";
   }
@@ -729,7 +717,7 @@ void exahype2::dg::tests::DGTest::runDGEuler(){
     file_stream << "node " << i << ": [";
     for(int var=0; var<unknowns;var++){
       file_stream << QOut[i*strideQ+var] << ", ";
-//      validateNumericalEquals(QOut[i*strideQ+var], 0.0);
+      validateNumericalEquals(QOut[i*strideQ+var], 0.0);
     }
     file_stream << "]\n";
   }
