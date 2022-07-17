@@ -46,6 +46,9 @@ ExaHyPE2Sources = \
   fv/PatchUtils.cpp \
   fv/PatchAccess.cpp \
   fv/rusanov/sycl/GPUCellData.cpp \
+  fv/rusanov/omp/opt/Rusanov.cpp \
+  fv/rusanov/omp/opt/GPUCellData.cpp \
+  fv/rusanov/omp/opt/GPUScratchpadData.cpp \
   fv/rusanov/tests/CopyPatchTest.cpp \
   fv/rusanov/tests/ApplySplit1DRiemannToPatchTest.cpp
 
