@@ -34,7 +34,7 @@
  * which reduces the weak formulation to a cell expression: We know that
  * @f$ \phi \not= 0 @f$ inside one specific cell c, but it equals zero
  * everywhere else. Within this one cell, our shape function is continuous.
- * Therefore, we can roll over the divergence operator and obtain
+ * Therefore, we can apply integration by parts and the product rule for divergence and obtain
  *
  * @f$ \int _c \left( \partial _t Q(t), \phi \right) dx - \int  _c \left( F(Q(t)), \nabla \phi \right) dx + \int _{\partial c} \left( F(Q(t)), \phi \right) dS(x) = \int _c \left(S(Q(t)), \phi \right) dx @f$
  *
@@ -68,19 +68,20 @@
  *
  * @f$ \int _c \left( \partial _t Q, \phi \right) dx = \int _c \left( Q, \phi \right) dx + dt \cdot \left( \int  _c \left( F(Q), \nabla \phi \right) dx - \int _{\partial c} \left( F(Q), \phi \right) dS(x) + \int _c \left(S(Q), \phi \right) dx \right) @f$
  *
+ * Which is just one step of the forward euler method with the time derivative from above.
  * ExaHyPE works with cubic or square cells and a Cartesian layout of the degrees
  * of freedom therein.
  * We thus have @f$ (p+1)^d @f$ degrees of freedom in our square/cube cells. Each carries
  * n unknowns, but they are all treated the same, i.e. independent of each other.
  * So it is sufficient to look at one unknown. We may assume that the Q is scalar.
- * The F and S term can potentially couple n unknows per dof from the previous
- * time step with each other. But that's none of our business.
+ * The F and S term can potentially couple n unknowns per dof from the previous
+ * time step with each other. But this is irrelevant to the formulation of the problem.
  *
  * @image html shape-functions.png
  *
  * Each of the @f$ (p+1)^d @f$ unknowns carries one shape function.
- * The picture above illustrates this: There's a polynomial, it is tied to one
- * particular dof, and this dof holds a weight, i.e. a scaling of this one shape
+ * The picture above illustrates this: There's a polynomial which is tied to one
+ * particular dof and this dof holds a weight, i.e. a scaling of this one shape
  * function. The test functions @f$ \phi @f$ are polynomials, too.
  * All of these polynomials live only within one cell.
  * The solution is then actually a combination of all of the polynomials scaled
@@ -117,7 +118,7 @@
  * @f$ \partial _t Q(T) = M^{-1} \Big( \dots \Big) Q^* =: Q + dt \cdot M^{-1} \hat Q@f$
  *
  * This is the last step of our algorithm: We assume that we have a quantity @f$ \hat Q @f$
- * in each and every sample point. Its entries have to be discussed. We multiply these quantities with the inverse of the
+ * in each and every sample point whose entries will be discussed later. We multiply these quantities with the inverse of the
  * mass matrix and add it, subject to a scaling with dt, to the old solution. This
  * operation is called exahype2::dg::multiplyWithInvertedMassMatrixAndAddToSolution_GaussLegendre() or variants thereof.
  * So far, the algorithm thus consists of two steps:
@@ -128,14 +129,14 @@
  *
  * You will find exahype2::dg::multiplyWithInvertedMassMatrixAndAddToSolution_GaussLegendre()
  * and its cousins in the file exahype2/dg/CellIntegral.h as they correspond, as name and
- * derivation suggest, from an integral formulation over integrals.
+ * derivation suggest, to an integral formulation over integrals.
  *
  *
  * ## Mass matrix
  *
  * You can pick different shape functions. For different shape functions, you get
  * different mass matrices. @f$ M @f$ in general is a dense matrix.
- * Its entries of the matrix stem from
+ * Its entries stem from
  *
  * @f$ M_{ij} = \int _c \Big( \phi _i, \phi _j \Big) dx @f$
  *
@@ -242,9 +243,9 @@
  * It does not show up in any face integral.
  * With source terms, our algorithm implementation consists of the following steps:
  *
- * - (1.1.a) Set @f$ \hat Q \gets 0 @f$ per degree of freedom in each and every cell.
+ * - (1) Set @f$ \hat Q \gets 0 @f$ per degree of freedom in each and every cell.
  * - t.b.d.
- * - (1.1.b) Compute source term contribution to @f$ \hat Q @f$
+ * - (3.1) Compute source term contribution to @f$ \hat Q @f$
  * - t.b.d.
  * - (5) Per cell, take the Q values and add the contribution @f$ dt \cdot M^{-1} \hat Q @f$.
  *
@@ -270,9 +271,9 @@
  * that we know the test functions, i.e. we can also precompute the derivative.
  * Furthermore, we can move the weight out of the integral. This gives us
  *
- * @f$ F(Q(x_i)) \int \Big( \phi _i, \nabla \phi _j \Big) dx = D Q @f$
+ * @f$ F(Q(x_i)) \int \Big( \phi _i, \nabla \phi _j \Big) dx = D F(Q) @f$
  *
- * where the matrix D is the <b>StiffnessOperator</b> and Q is the vector of
+ * where the matrix D is the <b>StiffnessOperator</b> which is the product of quadrature weights and the integral over the test functions and its derivative. Q is the vector of
  * the unknowns.
  *
  * If we have a a two-dimensional problem, we note that we benefit from the
@@ -299,10 +300,10 @@
  * It does not show up in any face integral.
  * With source terms, our algorithm implementation consists of the following steps:
  *
- * - (1.1.a) Set @f$ \hat Q \gets 0 @f$ per degree of freedom in each and every cell.
+ * - (1) Set @f$ \hat Q \gets 0 @f$ per degree of freedom in each and every cell.
  * - t.b.d.
- * - (1.1.b) Compute source term contribution to @f$ \hat Q @f$
- * - (1.1.c) Compute volumetric flux contribution to @f$ \hat Q @f$
+ * - (3.1) Compute source term contribution to @f$ \hat Q @f$
+ * - (3.2) Compute volumetric flux contribution to @f$ \hat Q @f$
  * - t.b.d.
  * - (5) Per cell, take the Q values and add the contribution @f$ dt \cdot M^{-1} \hat Q @f$.
  *
@@ -325,16 +326,16 @@
  * the polynomials value on the left and right faces' sample point (which also is exactly
  * on this line).
  * We don't even have to use Gauss-Lobatto points.
- * It works with Gauss-Legendre just as well (with Lobatta, we could avoid the construction
- * of the polynomial and just read out the solution value right at the face; we do not
+ * It works with Gauss-Legendre just as well (with Lobatto, we could avoid the construction
+ * of the polynomial and just read out the solution value right at the face; we do not yet 
  * exploit this fact).
  *
  * @image html solution-projection.png
  *
  * In the 2d example above, the four bottom sample points and their weight define the
  * blue polynomial along the horizontal line. The other 12 integration points in the
- * cell have no influence on the solution value along this line. Consequently, we can
- * compute the left and right solution solely by these four weights.
+ * cell have no influence on the solution value along this line because the Lagrange polynomials are 0 there. 
+ * Consequently, we can compute the left and right solution solely by these four weights.
  *
  * On the left face, we have a polynomial with the same order (3rd order here), but it
  * is - obviously - a 1d polynomial and not one resulting from a tensor product.
@@ -360,21 +361,22 @@
  * @f$ \int _{\partial c} F(Q(t)) \ \phi \ n dS(x) @f$
  *
  * requires work (and care), as Q (and hence F) are not defined on the cell faces.
- * One generic way to tackle this is to exploit standard Rusanov, e.g.
- * In this case, we employ some averaging of the faces subject to additional
+ * We therefore have to approximate the physical flux F by a numerical flux, there are several
+ * definitions for numerical fluxes, but one generic way to tackle this is to exploit standard 
+ * Rusanov, e.g. In this case, we employ some averaging of the faces subject to additional
  * damping.
  *
  * @f$ \int _{\partial c} F(Q(t)) \ \phi \ n dS(x) \mapsto  \int _{\partial c} \Big( \frac{1}{2}(F(Q^-(t))+F(Q^+(t))) - \frac{1}{2} \lambda _{max}(Q^-(t),Q^+(t)) (Q^+(t)-Q^-(t))  \Big) \ \phi \ n dS(x) @f$
  *
  * This is what we do when we touch a face. We simply take the projected Q values
- * from left and right and compute what F looks like. In theory, left and right
- * could be difference. Therefore, we hold two outputs.
+ * from left and right and compute what F looks like. In theory the solutions to the 
+ * left and right of the face could be different. Therefore we hold both outputs.
  *
- * - (1.1.a) Set @f$ \hat Q \gets 0 @f$ per degree of freedom in each and every cell.
- * - (1.2) Project Q onto faces
- * - (1.1.b) Compute source term contribution to @f$ \hat Q @f$
- * - (1.1.c) Compute volumetric flux contribution to @f$ \hat Q @f$
- * - (2) Compute the solution to the Riemann problem, i.e. the effective F values.
+ * - (1) Set @f$ \hat Q \gets 0 @f$ per degree of freedom in each and every cell.
+ * - (2) Project Q onto faces
+ * - (3.1) Compute source term contribution to @f$ \hat Q @f$
+ * - (3.2) Compute volumetric flux contribution to @f$ \hat Q @f$
+ * - (4.1) Compute the solution to the Riemann problem, i.e. the effective F values.
  * - t.b.d.
  * - (5) Per cell, take the Q values and add the contribution @f$ dt \cdot M^{-1} \hat Q @f$.
  *
@@ -388,23 +390,24 @@
  *
  * @f$ \frac{1}{2}(F(Q^-(t))+F(Q^+(t))) - \frac{1}{2} \lambda _{max}(Q^-(t),Q^+(t)) (Q^+(t)-Q^-(t)) @f$
  *
- * the solution to the Riemann problem.
+ * the solution to the Riemann problem. This is essentially a numerical approximation of the physical flux
+ * between neighbouring volumes (and therefore cells.)
  *
  *
  * Once we know the point-wise Riemann solution, we know that this point-wise solution
  * spans functions in the shape space restricted to the faces.
  * That is, the individual points of the Riemann solution serve as weights to shape functions
  * which live on the face only.
- * We can analytically integrate over those guys (we know the shapes and have a linear combination)
+ * We can analytically integrate over these (we know the shapes and have a linear combination)
  * and then project the data back.
- * Once again, the integral is the mass matrix, though, this time, a mass matrix on the submanifold.
+ * Once again, the integral is the mass matrix, though this time a mass matrix on the submanifold.
  * It has a scaling of @f$ h^{d-1} @f$.
  *
  * Every single test on the face is the result of a projection of a volumetric test function onto
  * the face.
  * This explains how the outcome affects the @f$ \hat Q @f$: We simply take the outcome and distribute
  * it according to the original projection matrix.
- * Mathematically, this equals a multiplication with the transpose.
+ * Mathematically this equals a multiplication with the transpose.
  * There's no scaling involved in this step anymore.
  *
  *
@@ -412,12 +415,12 @@
  *
  * The whole algorithm implementation hence reads as follows:
  *
- * - (1.1.a) Set @f$ \hat Q \gets 0 @f$ per degree of freedom in each and every cell.
- * - (1.2) Project Q onto faces
- * - (1.1.b) Compute source term contribution to @f$ \hat Q @f$
- * - (1.1.c) Compute volumetric flux contribution to @f$ \hat Q @f$
- * - (2) Compute the solution to the Riemann problem
- * - (4) Problem Riemann solution back into cell and add it to @f$ \hat Q @f$
+ * - (1) Set @f$ \hat Q \gets 0 @f$ per degree of freedom in each and every cell.
+ * - (2) Project Q onto faces
+ * - (3.1) Compute source term contribution to @f$ \hat Q @f$
+ * - (3.2) Compute volumetric flux contribution to @f$ \hat Q @f$
+ * - (4.1) Compute the solution to the Riemann problem
+ * - (4.2) Project Riemann solution back into cell and add it to @f$ \hat Q @f$
  * - (5) Per cell, take the Q values and add the contribution @f$ dt \cdot M^{-1} \hat Q @f$.
  *
  *
@@ -426,10 +429,10 @@
  * You find some discussions of the treatment of the non-conservative product in papers by Michael Dumbser
  * et al, e.g. I found the discussion around @f$ P_NP_M @f$ patch-conservative products in his paper
  * "Space-time adaptive ADER discontinuous Galerkin schemes for nonlinear hyperelasticity with material failure"
- * particularly helpsful (<a href="https://arxiv.org/abs/2003.02760>">arXiv:2003.02760</a>). Have a look
+ * particularly helpful (<a href="https://arxiv.org/abs/2003.02760>">arXiv:2003.02760</a>). Have a look
  * notably into (21).
  *
- * Personally, I always use the following formalism which might be formally slightly wrong (but it gives
+ * Personally, I always use the following formalism which might formally be slightly wrong (but it gives
  * the same result as Michael's work, so I'm happy):
  *
  * Our fundamental observation is that @f$ \nabla \phi @f$ is nicer than @f$ \nabla Q @f$ as we can
@@ -496,6 +499,12 @@
  *
  *
  * ## Further documentation
+ * 
+ * ### Tests
+ * 
+ * There exist in /tests some integration tests for these implementations, if you have a hard time
+ * understanding how the various functions here should be called and in what order this might be a good
+ * place to start in order to see what one timestep of forward euler looks like.
  *
  * ### Related documentation within the code
  *
@@ -536,20 +545,12 @@
  *- - dt eben doch immer rein
  * - Projection hat auxiliary variables. Ist das drin?
  * - Loesung net.
- * - Linear combination hat auch aux variables.
- * - The file Riemann.h/Riemann.cpp should go away. However, we might need its computation
- *   of maximum eigenvalues over the faces - though I think it should be the maximum over
- *   the cell's eigenvalues instead. In this case, the file pair can completely go away.
- * - My Riemann solver atm is only working point-wisely. Marc made the point that you might
- *   want to use the face-wise maximum eigenvalue. We have to implement this variant.
+ * - Linear combination hat auch aux variables, diese sind nicht nötig da sie sich nicht verändern.
  * - The generic Enumerator.h file lacks docu.
  * - Is the FaceAoSEnumerator really used and properly documented?
- * - 3d version of face to cell projection is missing
- * - 2d version of cell to face projection is buggy or not nice. Clean-up
  * - Look through DGUtils and tidy is up.
  * - Strides should completely go away and should be subsumed in the enumerators. So the
  *   enumerators is where all the logic sits and the logic is completely encapsulated there.
- * - Remove L and R basis functions as they are redundant?
  * - Investigate if we could remove a few other matrices from the generated Python code
  * - Point sources implement
  * - Miste den AbstractDG Loeser aus. Nicht alle Daten werden gebraucht.

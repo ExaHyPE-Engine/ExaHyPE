@@ -7,10 +7,14 @@
 #include <iostream>
 #include <fstream>
 
-#include "../../dg/CellIntegral.h"
-#include "../../dg/Riemann.h"
-#include "../../dg/tests/testUtils.h"
-#include "../../dg/DGUtils.h"
+#include "../DGUtils.h"
+#include "../CellIntegral.h"
+#include "../Riemann.h"
+#include "../rusanov/Riemann.h"
+#include "../BoundaryConditions.h"
+#include "testUtils.h"
+#include "exahype2/CellData.h"
+
 
 namespace exahype2 {
   namespace dg {
