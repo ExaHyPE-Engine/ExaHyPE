@@ -135,11 +135,12 @@ void exahype2::dg::integrateOverRiemannSolutionsAndAddToVolume_GaussLegendre(
       cellQ[ ( x + y*(order+1))*strideQ + var ] +=
             coeffLeft   * faceQLeft   [ y*strideQ + var ]
           - coeffRight  * faceQRight  [ y*strideQ + var ]
-          + coeffBottom * faceQBottom [ x*strideQ+var ]
-          - coeffUp     * faceQUp     [ x*strideQ+var ];
+          + coeffBottom * faceQBottom [ x*strideQ + var ]
+          - coeffUp     * faceQUp     [ x*strideQ + var ];
     }//var
   }//x,y
 }
+
 
 
 void exahype2::dg::integrateOverRiemannSolutionsAndAddToVolume_GaussLegendre(
@@ -162,33 +163,24 @@ void exahype2::dg::integrateOverRiemannSolutionsAndAddToVolume_GaussLegendre(
   const int nodesPerFace = getNodesPerCell(nodesPerAxis)/nodesPerAxis;
 
   //generic coefficients by dimension
+  /*
   const double coeff0 = 1.0/cellSize[0];
   const double coeff1 = 1.0/cellSize[1];
   const double coeff2 = 1.0/cellSize[2];
+  */
+  for (int x=0; x<order+1; x++)
+  for (int y=0; y<order+1; y++)
+  for (int z=0; z<order+1; z++){
 
-  for (int x=0; x<order+1; x++){
-
-    //coefficients of faces in x direction
-    // @todo const double coeffNode0 = coeff0/quadratureWeights[x];
-    const double coeffNode0 = coeff0;
-    const double coeffLeft  = coeffNode0*BasisFunctionValuesLeft[x];
-    const double coeffRight = coeffNode0*BasisFunctionValuesLeft[order-x];
-
-    for (int y=0; y<order+1; y++){
-
-      //coefficients of faces in y direction
-      // @todo const double coeffNode1 = coeff1/quadratureWeights[y];
-      const double coeffNode1 = coeff1;
-      const double coeffFront = coeffNode1*BasisFunctionValuesLeft[y];
-      const double coeffBack  = coeffNode1*BasisFunctionValuesLeft[order-y];
-
-      for (int z=0; z<order+1; z++){
-
+        //coefficients of faces in x direction
+        const double coeffLeft  = MassMatrixDiagonal1d[y]*MassMatrixDiagonal1d[z]*BasisFunctionValuesLeft[x];
+        const double coeffRight = MassMatrixDiagonal1d[y]*MassMatrixDiagonal1d[z]*BasisFunctionValuesLeft[order-x];
+        //coefficients of faces in y direction
+        const double coeffFront = MassMatrixDiagonal1d[x]*MassMatrixDiagonal1d[z]*BasisFunctionValuesLeft[y];
+        const double coeffBack  = MassMatrixDiagonal1d[x]*MassMatrixDiagonal1d[z]*BasisFunctionValuesLeft[order-y];
         //coefficients of faces in z direction
-        // @todo const double coeffNode2   = coeff2/quadratureWeights[z];
-        const double coeffNode2   = coeff2;
-        const double coeffBottom  = coeffNode2*BasisFunctionValuesLeft[z];
-        const double coeffUp      = coeffNode2*BasisFunctionValuesLeft[order-z];
+        const double coeffBottom  = MassMatrixDiagonal1d[x]*MassMatrixDiagonal1d[y]*BasisFunctionValuesLeft[z];
+        const double coeffUp      = MassMatrixDiagonal1d[x]*MassMatrixDiagonal1d[y]*BasisFunctionValuesLeft[order-z];
 
         for (int var=0; var<strideQ; var++) {
           cellQ[ (z*nodesPerFace+y*nodesPerAxis+x)*strideQ + var ] +=
@@ -201,9 +193,7 @@ void exahype2::dg::integrateOverRiemannSolutionsAndAddToVolume_GaussLegendre(
             ;
         }//var
 
-      }//z
-    }//y
-  }//x
+  }//x,y,z
 
 
 }
