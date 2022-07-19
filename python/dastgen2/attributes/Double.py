@@ -33,7 +33,7 @@ class Double(Attribute):
     if self._relative_accuracy_in_bits==None:
       return [ ("_" + self._name, "double", "" ) ]
     else:
-      return [ ("_" + self._name, "double", "[[clang::compress(" + str(self._relative_accuracy_in_bits) + ")]]" ) ]
+      return [ ("_" + self._name, "double", "[[clang::compress_truncate_mantissa(" + str(self._relative_accuracy_in_bits) + ")]]" ) ]
 
 
   def get_method_body(self,signature):

@@ -36,7 +36,8 @@ class DoubleArray(Double):
 
   def get_plain_C_attributes(self):
     if self._relative_accuracy_in_bits != None:
-      return [ ("_" + self._name + "[" + self._cardinality + "]", "double", "[[clang::compress(" + str(self._relative_accuracy_in_bits) + ")]]" ) ]
+      return [ ("_" + self._name + "[" + self._cardinality + "]", "double",
+        "[[clang::compress_truncate_mantissa(" + str(self._relative_accuracy_in_bits) + ")]]" ) ]
     else:
       return [ ("_" + self._name + "[" + self._cardinality + "]", "double", "" ) ]
 

@@ -23,7 +23,8 @@ class IntegerArray(Integer):
 
   def get_plain_C_attributes(self):
     if self._min_value!=None or self._max_value!=None:
-      return [ ("_" + self._name + "[" + self._cardinality + "]", "double", "[[clang::compress(" + str(self._min_value) + "-" + str(self._max_value) + ")]]" ) ]
+      return [ ("_" + self._name + "[" + self._cardinality + "]", "double",
+        "[[clang::compress_range(" + str(self._min_value) + "-" + str(self._max_value) + ")]]" ) ]
     else:
       return [ ("_" + self._name + "[" + self._cardinality + "]", "double", "" ) ]
 
