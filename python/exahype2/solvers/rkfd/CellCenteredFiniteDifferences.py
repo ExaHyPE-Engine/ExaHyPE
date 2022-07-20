@@ -600,6 +600,9 @@ The finest mesh width of """ + str(self.get_finest_volume_size(domain_size)) + "
      Consult the discussion in add_actions_to_init_grid() around the order
      of the individual action sets.
      
+     
+     ## Adaptive mesh refinement
+     
      It is important that we have the coupling/dynamic AMR part in here, as 
      there might be pending AMR refinement requests that now are realised.
      For the same reason, we need the update of the face label and the update
@@ -612,19 +615,23 @@ The finest mesh width of """ + str(self.get_finest_volume_size(domain_size)) + "
      To make the restriction work, we have to project the solutions onto the 
      faces.
      
+     
+     ## Roll over face data
+     
+     Das ist ein Kaese, weil das nur einspringt, wenn project wahr ist
+     
+     
     """
     d = {}
     self._init_dictionary_with_default_parameters(d)
     self.add_entries_to_text_replacement_dictionary(d)
 
     step.add_action_set( self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement )
-    step.add_action_set( self._action_set_roll_over_update_of_faces )
+    #    step.add_action_set( self._action_set_roll_over_update_of_faces )
     step.add_action_set( self._action_set_update_face_label )
     step.add_action_set( self._action_set_update_cell_label )
-    step.add_action_set( self._action_set_project_patch_onto_faces )
-    #step.add_action_set( self._action_set_AMR_commit_without_further_analysis )
+    #    step.add_action_set( self._action_set_project_patch_onto_faces )
 
-# @todo New time stamp choice update in DG and ADER-DG
     step.add_action_set( peano4.toolbox.blockstructured.PlotPatchesInPeanoBlockFormat( 
       filename=output_path + "solution-" + self._name, 
       patch=self._patch, 
