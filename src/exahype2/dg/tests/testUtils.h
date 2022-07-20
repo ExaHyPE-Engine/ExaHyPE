@@ -112,6 +112,17 @@ namespace exahype2 {
             double * __restrict__                        Qoutside,
             const tarch::la::Vector<Dimensions,double>&  x,
             double                                       t,
+            double                                       dt,
+            int                                          normal
+          );
+
+
+    void secondTestBoundaryConditions(
+            const double * __restrict__                  Qinside,
+            double * __restrict__                        Qoutside,
+            const tarch::la::Vector<Dimensions,double>&  x,
+            double                                       t,
+            double                                       dt,
             int                                          normal
           );
 
