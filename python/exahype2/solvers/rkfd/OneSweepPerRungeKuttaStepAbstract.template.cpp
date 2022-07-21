@@ -197,16 +197,22 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startTimeStep(
     case SolverState::RungeKuttaSubStep{{item}}:
       _solverState = SolverState::RungeKuttaSubStep{{item+1}};
       break;
-  {%- endfor %}
+  {% endfor %}
     case SolverState::Plotting:
     case SolverState::PlottingAfterGridInitialisation:
     case SolverState::GridInitialisation:
     case SolverState::RungeKuttaSubStep{{RK_STEPS-1}}:
       _solverState = SolverState::RungeKuttaSubStep0;
       break;
+    {% if RK_STEPS>1 %}
     case SolverState::RungeKuttaSubStep0AfterGridInitialisation:
       _solverState = SolverState::RungeKuttaSubStep1;
       break;
+    {% else %}
+    case SolverState::RungeKuttaSubStep0AfterGridInitialisation:
+      _solverState = SolverState::RungeKuttaSubStep0;
+      break;
+    {% endif %}
   }
 
   {{START_TIME_STEP_IMPLEMENTATION}}

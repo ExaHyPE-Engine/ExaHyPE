@@ -8,7 +8,7 @@ from exahype2.solvers.ButcherTableau                import ButcherTableau
 import peano4
 import jinja2
 
-class ComputeFinalLinearCombinationAndProjectSolutionOntoFaces(AbstractRKFDActionSet):
+class ComputeFinalLinearCombination(AbstractRKFDActionSet):
   """
   
   We solve the ODE
@@ -72,7 +72,7 @@ class ComputeFinalLinearCombinationAndProjectSolutionOntoFaces(AbstractRKFDActio
       the old solution and the time step should also be moved over
     
     """
-    super(ComputeFinalLinearCombinationAndProjectSolutionOntoFaces,self).__init__(solver)
+    super(ComputeFinalLinearCombination,self).__init__(solver)
     self.guard            = guard
     self._butcher_tableau = ButcherTableau(self._solver._rk_order)
     
@@ -96,6 +96,6 @@ class ComputeFinalLinearCombinationAndProjectSolutionOntoFaces(AbstractRKFDActio
 
 
   def get_includes(self):
-    return super(ComputeFinalLinearCombinationAndProjectSolutionOntoFaces,self).get_includes() + """
+    return super(ComputeFinalLinearCombination,self).get_includes() + """
 #include "exahype2/enumerator/AoSLexicographicEnumerator.h"
 """    

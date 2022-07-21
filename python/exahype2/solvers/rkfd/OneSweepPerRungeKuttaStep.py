@@ -78,9 +78,7 @@ class UpdateCell(ReconstructPatchAndApplyFunctor):
           }      
         }
         
-        {% if PREDICATE_NO!=PREDICATES|length-1 %}
         targetPatch = fineGridCell{{UNKNOWN_IDENTIFIER}}RhsEstimates.value + enumeratorWithoutAuxiliaryVariables({{PREDICATE_NO}},0,0);
-        {% endif %}        
       }
       {% endfor %} 
    
@@ -228,8 +226,8 @@ class OneSweepPerRungeKuttaStep( CellCenteredFiniteDifferences ):
     """
     super(OneSweepPerRungeKuttaStep, self).__init__(name, patch_size, overlap, rk_order, unknowns, auxiliary_variables, min_volume_h, max_volume_h, plot_grid_properties, kernel_namespace)
     
-    if rk_order<2:
-      raise Exception( "Runge-Kutta order has to be at least 2 but was {}".format(rk_order) )
+    if rk_order<1:
+      raise Exception( "Runge-Kutta order has to be at least 1 but was {}".format(rk_order) )
 
     self._solver_template_file_class_name     = "OneSweepPerRungeKuttaStep"
 

@@ -125,7 +125,7 @@ class ProjectPatchOntoFaces( AbstractRKFDActionSet ):
             fineGridCellEulerRKFDQ.value[ enumeratorWithAuxiliaryVariables(0,patchCell,0) ]
           );
           for (int j=0; j<{{NUMBER_OF_UNKNOWNS}}; j++) {
-            {{FACES_ACCESSOR}}(d+Dimensions).value[overlapCellSerialised*{{UNKNOWNS}}+j] = 
+            {{FACES_ACCESSOR}}(d+Dimensions).value[overlapCellSerialised*({{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}})+j] = 
               {{CELL_ACCESSOR}}.value[ enumeratorWithAuxiliaryVariables(0,patchCell,j) ];
 
             {% if PREDICATE_NO<PREDICATES|length %}
