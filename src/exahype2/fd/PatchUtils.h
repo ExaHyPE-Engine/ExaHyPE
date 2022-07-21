@@ -127,7 +127,8 @@ namespace exahype2 {
       int    unknowns,
       int    auxiliaryVariables,
       int    numberOfGridCellsPerPatchPerAxis,
-      int    haloSize
+      int    haloSize,
+      bool   prettyPrint = true
     );
   }
 }

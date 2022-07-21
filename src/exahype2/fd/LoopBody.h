@@ -40,6 +40,28 @@ namespace exahype2 {
 
 
         /**
+         * The complicated way to write =0.
+         */
+        #if defined(SharedOMP) and (!defined(__INTEL_LLVM_COMPILER) or !defined(GPUOffloadingOMP))
+        #pragma omp declare simd
+        #endif
+        #if defined(GPUOffloadingOMP)
+        #pragma omp declare target
+        #endif
+        template <class QOutEnumeratorType>
+        static void clearSolution_LoopBody(
+          int                                       patchIndex,
+          const tarch::la::Vector<Dimensions,int>&  volumeIndex,
+          int                                       unknown,
+          double* __restrict__                      QOut,
+          const QOutEnumeratorType&                 QOutEnumerator
+        ) InlineMethod;
+        #if defined(GPUOffloadingOMP)
+        #pragma omp end declare target
+        #endif
+
+
+        /**
          * Copy previous solution over into new time step and add source term
          *
          * This is the first step of the method of line, where we basically copy

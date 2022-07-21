@@ -39,7 +39,7 @@ struct peano4::grid::GridTraversalEvent {
 
 
     GridTraversalEvent() {}
-    GridTraversalEvent(tarch::la::Vector<Dimensions,double>  __x, tarch::la::Vector<Dimensions,double>  __h, std::bitset<TwoPowerD>  __hasBeenRefined, std::bitset<TwoPowerD>  __willBeRefined, std::bitset<TwoPowerD>  __isVertexLocal, std::bitset<TwoTimesD>  __isFaceLocal, bool  __isCellLocal, bool  __isParentCellLocal, std::bitset<TwoPowerD>  __isVertexAdjacentToParallelDomainBoundary, std::bitset<TwoTimesD>  __isFaceAdjacentToParallelDomainBoundary, tarch::la::Vector<TwoPowerD,int>  __vertexDataFrom, tarch::la::Vector<TwoPowerD,int>  __vertexDataTo, tarch::la::Vector<TwoTimesD,int>  __faceDataFrom, tarch::la::Vector<TwoTimesD,int>  __faceDataTo, int  __cellData, tarch::la::Vector<Dimensions,int>  __relativePositionToFather, int  __invokingSpacetree, int  __invokingSpacetreeIsNotInvolvedInAnyDynamicLoadBalancing);
+    GridTraversalEvent(tarch::la::Vector<Dimensions,double>  __x, tarch::la::Vector<Dimensions,double>  __h, std::bitset<TwoPowerD>  __hasBeenRefined, std::bitset<TwoPowerD>  __willBeRefined, std::bitset<TwoPowerD>  __isVertexLocal, std::bitset<TwoTimesD>  __isFaceLocal, bool  __isCellLocal, bool  __isParentCellLocal, std::bitset<TwoPowerD>  __isVertexAdjacentToParallelDomainBoundary, std::bitset<TwoTimesD>  __isFaceAdjacentToParallelDomainBoundary, tarch::la::Vector<TwoPowerD,int>  __vertexDataFrom, tarch::la::Vector<TwoPowerD,int>  __vertexDataTo, tarch::la::Vector<TwoTimesD,int>  __faceDataFrom, tarch::la::Vector<TwoTimesD,int>  __faceDataTo, int  __cellData, tarch::la::Vector<Dimensions,int>  __relativePositionToFather, int  __invokingSpacetree, bool  __invokingSpacetreeIsNotInvolvedInAnyDynamicLoadBalancing);
 
     tarch::la::Vector<Dimensions,double>   getX() const;
     void   setX(const tarch::la::Vector<Dimensions,double>& value);
@@ -107,8 +107,8 @@ struct peano4::grid::GridTraversalEvent {
     void   setRelativePositionToFather(int index, int value);
     int   getInvokingSpacetree() const;
     void   setInvokingSpacetree(int value);
-    int   getInvokingSpacetreeIsNotInvolvedInAnyDynamicLoadBalancing() const;
-    void   setInvokingSpacetreeIsNotInvolvedInAnyDynamicLoadBalancing(int value);
+    bool   getInvokingSpacetreeIsNotInvolvedInAnyDynamicLoadBalancing() const;
+    void   setInvokingSpacetreeIsNotInvolvedInAnyDynamicLoadBalancing(bool value);
 
 
 
@@ -156,24 +156,24 @@ struct peano4::grid::GridTraversalEvent {
     std::string toString() const;
   
   private:
-      tarch::la::Vector<Dimensions,double>   _x;
-      tarch::la::Vector<Dimensions,double>   _h;
-    [[clang::compress]]  std::bitset<TwoPowerD>   _hasBeenRefined;
-    [[clang::compress]]  std::bitset<TwoPowerD>   _willBeRefined;
-    [[clang::compress]]  std::bitset<TwoPowerD>   _isVertexLocal;
-    [[clang::compress]]  std::bitset<TwoTimesD>   _isFaceLocal;
-      bool   _isCellLocal;
-      bool   _isParentCellLocal;
-    [[clang::compress]]  std::bitset<TwoPowerD>   _isVertexAdjacentToParallelDomainBoundary;
-    [[clang::compress]]  std::bitset<TwoTimesD>   _isFaceAdjacentToParallelDomainBoundary;
+    [[clang::truncate_mantissa(3)]]  double   _x[Dimensions];
+    [[clang::truncate_mantissa(3)]]  double   _h[Dimensions];
+    [[clang::pack]]  bool   _hasBeenRefined[TwoPowerD];
+    [[clang::pack]]  bool   _willBeRefined[TwoPowerD];
+    [[clang::pack]]  bool   _isVertexLocal[TwoPowerD];
+    [[clang::pack]]  bool   _isFaceLocal[TwoTimesD];
+    [[clang::pack]]  bool   _isCellLocal;
+    [[clang::pack]]  bool   _isParentCellLocal;
+    [[clang::pack]]  bool   _isVertexAdjacentToParallelDomainBoundary[TwoPowerD];
+    [[clang::pack]]  bool   _isFaceAdjacentToParallelDomainBoundary[TwoTimesD];
       tarch::la::Vector<TwoPowerD,int>   _vertexDataFrom;
       tarch::la::Vector<TwoPowerD,int>   _vertexDataTo;
       tarch::la::Vector<TwoTimesD,int>   _faceDataFrom;
       tarch::la::Vector<TwoTimesD,int>   _faceDataTo;
       int   _cellData;
-      tarch::la::Vector<Dimensions,int>   _relativePositionToFather;
+    [[clang::pack_range(0,3)]]  int   _relativePositionToFather[Dimensions];
       int   _invokingSpacetree;
-      int   _invokingSpacetreeIsNotInvolvedInAnyDynamicLoadBalancing;
+    [[clang::pack]]  bool   _invokingSpacetreeIsNotInvolvedInAnyDynamicLoadBalancing;
 
 
 

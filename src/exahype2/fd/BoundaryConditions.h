@@ -17,9 +17,13 @@ namespace exahype2 {
     /**
      * Apply boundary conditions. Works only for a halo size of 1.
      *
+     * @param unknownsPlusAuxiliaryVariables Number of unknowns plus the number
+     *   of auxiliary variables. The boundary treatment routine does not
+     *   distinguish how the two types of quantities are handled, so it is
+     *   reasonable to only pass in the sum.
      *
-     * @param faceNumber Is usually taken from marker.getSelectedFaceNumber() and
-     *  is thus a number between 0 and 2d-1.
+     * @param faceNumber Is usually taken from marker.getSelectedFaceNumber()
+     *   and is thus a number between 0 and 2d-1.
      *
      */
     void applyBoundaryConditions(
@@ -38,7 +42,7 @@ namespace exahype2 {
       double                                       dt,
       int                                          numberOfGridCellsPerPatchPerAxis,
       int                                          overlap,
-      int                                          unknowns,
+      int                                          unknownsPlusAuxiliaryVariables,
       int                                          faceNumber,
       double* __restrict__                         Q
     );

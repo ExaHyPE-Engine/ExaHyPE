@@ -43,12 +43,47 @@ std::string exahype2::fv::plotPatch(
   int    unknowns,
   int    auxiliaryVariables,
   int    numberOfVolumesPerAxisInPatch,
-  int    haloSize
+  int    haloSize,
+  bool   prettyPrint
 ) {
   const int PatchSize = numberOfVolumesPerAxisInPatch+2*haloSize;
 
   std::ostringstream result;
 
+  if (prettyPrint) result << std::endl;
+
+  #if Dimensions==2
+  for (int y=0; y<PatchSize; y++) {
+    for (int x=0; x<PatchSize; x++) {
+      int index = (y*PatchSize+x) * (unknowns+auxiliaryVariables);
+
+      // It is a diagonal entry if this counter is bigger than 1. If it equals
+      // 0, it is interior. If it equals 1, then this is a face-connected halo
+      // entry.
+      bool isDiagonal = (x<haloSize and y<haloSize)
+                     or (x>=numberOfVolumesPerAxisInPatch+haloSize and y<haloSize)
+                     or (x<haloSize and y>=numberOfVolumesPerAxisInPatch+haloSize)
+                     or (x>=numberOfVolumesPerAxisInPatch+haloSize and y>=numberOfVolumesPerAxisInPatch+haloSize);
+
+      result << "(";
+      for (int i=0; i<unknowns+auxiliaryVariables; i++) {
+        const int entry = index+i;
+
+        if (i==0)
+          result << "d[" << entry << "]=";
+        else
+          result << ",d[" << entry << "]=";
+
+        if (not isDiagonal)
+          result << Q[entry];
+        else
+          result << "x";
+      }
+      result << ")";
+    }
+    result << std::endl;
+  }
+  #else
   dfor (k,PatchSize) {
     int index = peano4::utils::dLinearised(k,PatchSize) * (unknowns+auxiliaryVariables);
 
@@ -73,6 +108,9 @@ std::string exahype2::fv::plotPatch(
     }
     result << ")";
   }
+  #endif
+
+  if (prettyPrint) result << std::endl;
 
   return result.str();
 }

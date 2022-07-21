@@ -9,6 +9,8 @@ class IntegerArray(Integer):
     self._cardinality = cardinality
     self._min_value   = min_value
     self._max_value   = max_value
+    self.compress     = min_value!=None or max_value!=None
+
 
     
   def get_methods(self,_full_qualified_class_name):
@@ -23,7 +25,7 @@ class IntegerArray(Integer):
 
   def get_plain_C_attributes(self):
     if self._min_value!=None or self._max_value!=None:
-      return [ ("_" + self._name + "[" + self._cardinality + "]", "double", "[[clang::compress(" + str(self._min_value) + "-" + str(self._max_value) + ")]]" ) ]
+      return [ ("_" + self._name + "[" + self._cardinality + "]", "double", "[[clang::pack_range(" + str(self._min_value) + "," + str(self._max_value) + ")]]" ) ]
     else:
       return [ ("_" + self._name + "[" + self._cardinality + "]", "double", "" ) ]
 

@@ -111,8 +111,8 @@ struct peano4::grid::GridStatistics {
       int   _numberOfLocalRefinedCells;
       int   _numberOfRemoteRefinedCells;
       int   _stationarySweeps;
-      bool   _coarseningHasBeenVetoed;
-      bool   _removedEmptySubtree;
+    [[clang::pack]]  bool   _coarseningHasBeenVetoed;
+    [[clang::pack]]  bool   _removedEmptySubtree;
       tarch::la::Vector<Dimensions,double>   _minH;
 
 

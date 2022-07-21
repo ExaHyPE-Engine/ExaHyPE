@@ -286,7 +286,7 @@ class OneSweepPerRungeKuttaStep( CellCenteredFiniteDifferences ):
     self._action_set_compute_final_linear_combination.guard = self._store_cell_data_default_guard() + " and repositories::{}.getSolverState()=={}::SolverState::RungeKuttaSubStep{}".format(self.get_name_of_global_instance(),self._name,self.number_of_Runge_Kutta_steps()-1)
     self._action_set_project_patch_onto_faces.guards        = [
       "{} and repositories::{}.getSolverState()=={}::SolverState::RungeKuttaSubStep{}".format(self._store_cell_data_default_guard(),self.get_name_of_global_instance(),self._name,step) for step in range(0,self.number_of_Runge_Kutta_steps())
-    ]
+    ] + [ "{} and repositories::{}.getSolverState()=={}::SolverState::GridInitialisation".format(self._store_cell_data_default_guard(),self.get_name_of_global_instance(),self._name) ]
 
 
   @property

@@ -173,7 +173,8 @@ namespace exahype2 {
       int    unknowns,
       int    auxiliaryVariables,
       int    numberOfVolumesPerAxisInPatch,
-      int    haloSize
+      int    haloSize,
+      bool   prettyPrint = false
     );
   }
 }

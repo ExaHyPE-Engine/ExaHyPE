@@ -123,7 +123,7 @@ struct {FULL_QUALIFIED_CLASS_NAME} {{
   """
   
   
-  def _get_flattened_attributes(self):
+  def _get_plain_C_attributes(self):
     """
     
       We can hold multiple attributes and some of these attributes in 
@@ -147,10 +147,13 @@ struct {FULL_QUALIFIED_CLASS_NAME} {{
   
   def _get_constructor_arguments(self):
     result  = "("
-    for attribute in self._get_flattened_attributes():
-      if attribute!=self._get_flattened_attributes()[0]:
-        result += ", "
-      result += attribute[1] + "  _" + attribute[0]
+    is_first = True
+    for attribute in self._attributes:
+      for entry in attribute.get_constructor_arguments():
+        if not is_first:
+          result += ", "
+        is_first = False
+        result += entry[1] + "  _" + entry[0]
     result += ")"
     return result
 
@@ -173,7 +176,7 @@ struct {FULL_QUALIFIED_CLASS_NAME} {{
       d[ "PUBLIC_FIELDS" ]           += attribute.get_public_fields()
 
     d[ "ATTRIBUTE_DECLARATIONS" ]     = ""
-    for attribute in self._get_flattened_attributes():
+    for attribute in self._get_plain_C_attributes():
       d[ "ATTRIBUTE_DECLARATIONS" ]  += "    " + attribute[2] + "  " + attribute[1] + "   " + attribute[0] + ";\n"
 
     d[ "METHOD_DECLARATIONS" ]        = ""
@@ -205,7 +208,12 @@ struct {FULL_QUALIFIED_CLASS_NAME} {{
 
   def __generate_constructor_definition(self, output):
     output.write( self._full_qualified_name + "::" + dastgen2.get_unqualified_class_name(self._full_qualified_name) + self._get_constructor_arguments() )
-    if self._embed_attributes_into_data_store:
+
+    use_setters_instead_of_initialisation_list = self._embed_attributes_into_data_store    
+    for attribute in self._attributes:
+      use_setters_instead_of_initialisation_list = use_setters_instead_of_initialisation_list or attribute.use_setter_to_initialise_arguments()
+
+    if use_setters_instead_of_initialisation_list:
       output.write( "{\n" )
       for attribute in self._attributes:
         output.write( "set" + attribute._name[0].title() + attribute._name[1:].split( "[" )[0] + "( __" + attribute._name.split( "[" )[0] + ");\n" )

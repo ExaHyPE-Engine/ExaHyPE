@@ -43,7 +43,7 @@ class FixedTimeSteppingCodeSnippets( exahype2.solvers.FixedTimeSteppingCodeSnipp
 
   def create_finish_time_step_implementation(self):
     return """
-  assertion( _minVolumeH >= 0.0 );
+  assertion( _minGridCellH >= 0.0 );
   assertion( MaxAdmissibleGridCellH > 0.0 );
   if (_minGridCellH <= MaxAdmissibleGridCellH) {
     _timeStepSize  = """ + str(self._normalised_time_step_size) + """ * _minGridCellH / MaxAdmissibleGridCellH;
