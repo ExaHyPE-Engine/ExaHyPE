@@ -124,13 +124,27 @@ namespace {
 /**
  * Read spawnAndWaitAsTaskLoop() first.
  *
+ * ## Implementation details
+ *
+ * The tasks here are always spawned into the host queue. Consequently, they
+ * will run on the CPU and thus should be able to invoke virtual functions and
+ * access global variables. Our experiments with Intel DPC++ however suggest
+ * that this is not the case and that SYCL/DPC++ refuses to translate this
+ * code: you have to spawn explicitly as host task.
+ *
+ *
+ * @author Andrew Mallinson
+ * @author Tobias Weinzierl
+ *
+ *
  * @see spawnAndWaitAsTaskLoop()
  */
 void tarch::multicore::native::spawnTask(Task*  job) {
   nonblockingTasksCounter++;
 
   sycl::event e = tarch::multicore::getSYCLQueue(tarch::multicore::HostDefaultQueue).submit([&](auto &h) {
-    h.single_task([=]() {
+//    h.single_task([=]() {
+    h.host_task([=]() {
       while (job->run()) {}
       delete job;
       nonblockingTasksCounter--;

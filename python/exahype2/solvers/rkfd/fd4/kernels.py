@@ -91,6 +91,7 @@ def create_compute_Riemann_kernel_for_FD4(flux_implementation,
   {% if NCP_IMPLEMENTATION=="<none>" %} false {% else %} true {% endif %},
   {% if SOURCE_IMPLEMENTATION=="<none>" %} false {% else %} true {% endif %},
   {% if COMPUTE_MAX_EIGENVALUE==False %} false {% else %} true {% endif %},
+  false, // Runge-Kutta, so no need to copy old data over or to take dt into account
   [&](
     const double * __restrict__ Q,
     const tarch::la::Vector<Dimensions,double>&  faceCentre,

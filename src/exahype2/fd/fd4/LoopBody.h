@@ -46,34 +46,6 @@ namespace exahype2 {
           int                                            pick = PickAllEntriesFromOutputVector
         ) InlineMethod;
 
-
-        /**
-         * This function calculates the Kreiss Oliger dissipation term that is needed
-         * to dissipate high-frequency modes. The KO term is calculated at order N=3
-         * in order to make sure that it is of higher order accruacy than the chosen    
-         * finite difference scheme used in other parts of the equations. It requires
-	 * us to have access to at least 3 halo layers on each side of a given patch.
-         */
-        #if defined(SharedOMP) and (!defined(__INTEL_LLVM_COMPILER) or !defined(GPUOffloadingOMP))
-        #pragma omp declare simd
-        #endif
-        template <class QInEnumeratorType, class QOutEnumeratorType>
-        static void computeKreissOligerDissipationTerm_LoopBody(
-          const double* __restrict__                     QIn,
-          const QInEnumeratorType&                       QInEnumerator,
-          const tarch::la::Vector<Dimensions,double>&    patchCentre,
-          const tarch::la::Vector<Dimensions,double>&    patchSize,
-          int                                            patchIndex,
-          const tarch::la::Vector<Dimensions,int>&       volumeIndex,
-          double                                         t,
-          double                                         dt,
-          int                                            normal,
-          double* __restrict__                           QKODsp,
-          const QOutEnumeratorType&                      QKODspEnumerator,
-          int                                            pick = PickAllEntriesFromOutputVector
-        ) InlineMethod;
-
-
         /**
          * Add the difference source contributions to one volume.
          *
@@ -107,6 +79,31 @@ namespace exahype2 {
         #pragma omp end declare target
         #endif
 
+        /**
+         * This function calculates the Kreiss Oliger dissipation term that is needed
+         * to dissipate high-frequency modes. The KO term is calculated at order N=3
+         * in order to make sure that it is of higher order accruacy than the chosen    
+         * finite difference scheme used in other parts of the equations. It requires
+	 * us to have access to at least 3 halo layers on each side of a given patch.
+         */
+        #if defined(SharedOMP) and (!defined(__INTEL_LLVM_COMPILER) or !defined(GPUOffloadingOMP))
+        #pragma omp declare simd
+        #endif
+        template <class QInEnumeratorType, class QOutEnumeratorType>
+        static void computeKreissOligerDissipationTerm_LoopBody(
+          const double* __restrict__                     QIn,
+          const QInEnumeratorType&                       QInEnumerator,
+          const tarch::la::Vector<Dimensions,double>&    patchCentre,
+          const tarch::la::Vector<Dimensions,double>&    patchSize,
+          int                                            patchIndex,
+          const tarch::la::Vector<Dimensions,int>&       volumeIndex,
+          double                                         t,
+          double                                         dt,
+          int                                            normal,
+          double* __restrict__                           QKODsp,
+          const QOutEnumeratorType&                      QKODspEnumerator,
+          int                                            pick = PickAllEntriesFromOutputVector
+        ) InlineMethod;
 
         /**
          * Add the Kreiss Oliger dissipation contributions to one volume.
@@ -129,6 +126,62 @@ namespace exahype2 {
           const double* __restrict__                   QKODspY,
           const double* __restrict__                   QKODspZ,
           const QOutEnumeratorType&                    QKODspEnumerator,
+          const tarch::la::Vector<Dimensions,double>&  patchCentre,
+          const tarch::la::Vector<Dimensions,double>&  patchSize,
+          int                                          patchIndex,
+          const tarch::la::Vector<Dimensions,int>&     volumeIndex,
+          int                                          unknown,
+          double                                       dt,
+          double* __restrict__                         QOut,
+          const QOutEnumeratorType&                    QOutEnumerator
+        ) InlineMethod;
+        #if defined(GPUOffloadingOMP)
+        #pragma omp end declare target
+        #endif
+
+
+        /**
+         * @todo Plain copy of the FV solver. Not sure if it is the right one for
+         * FD. Anyway, it is not optimised at all, even if we use the AoS data format,
+         * i.e. do no re-arrangement at all.
+         * update it to a fd version, however, it may be incorrect either. it actually calculates \partial_i F_i
+         */
+        #if defined(SharedOMP) and (!defined(__INTEL_LLVM_COMPILER) or !defined(GPUOffloadingOMP))
+        #pragma omp declare simd
+        #endif
+        template <class QInEnumeratorType, class QOutEnumeratorType>
+        static void computeFlux_LoopBody(
+          const double* __restrict__                   QIn,
+          const QInEnumeratorType&                           QInEnumerator,
+          exahype2::fd::Flux                           flux,
+          const tarch::la::Vector<Dimensions,double>&  patchCentre,
+          const tarch::la::Vector<Dimensions,double>&  patchSize,
+          int                                          patchIndex,
+          const tarch::la::Vector<Dimensions,int>&     volumeIndex,
+          double                                       t,
+          double                                       dt,
+          int                                          normal,
+          double* __restrict__                         QFlux,
+          const QOutEnumeratorType&                          QFluxEnumerator
+        ) InlineMethod;
+
+        /**
+         * @todo Plain copy of the FV solver. Not sure if it is the right one for
+         * FD.
+         * update it to a fd version, however, it may be incorrect either.
+         */
+        #if defined(SharedOMP) and (!defined(__INTEL_LLVM_COMPILER) or !defined(GPUOffloadingOMP))
+        #pragma omp declare simd
+        #endif
+        #if defined(GPUOffloadingOMP)
+        #pragma omp declare target
+        #endif
+        template <typename QOutEnumeratorType>
+        static void updateSolutionWithFlux_LoopBody(
+          const double* __restrict__                   tempFluxX,
+          const double* __restrict__                   tempFluxY,
+          const double* __restrict__                   tempFluxZ,
+          const QOutEnumeratorType&                   fluxEnumerator,
           const tarch::la::Vector<Dimensions,double>&  patchCentre,
           const tarch::la::Vector<Dimensions,double>&  patchSize,
           int                                          patchIndex,

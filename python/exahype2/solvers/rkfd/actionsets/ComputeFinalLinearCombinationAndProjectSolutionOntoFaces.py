@@ -35,10 +35,10 @@ class ComputeFinalLinearCombinationAndProjectSolutionOntoFaces(AbstractRKFDActio
   if ({{PREDICATE}}) {
     {{COMPUTE_TIME_STEP_SIZE}}
 
-    ::exahype2::enumerator::AoSLexicographicEnumerator enumeratorWithAuxiliaryVariables   ( 1,            {{ORDER}}+1, 0, {{NUMBER_OF_UNKNOWNS}}, {{NUMBER_OF_AUXILIARY_VARIABLES}});
-    ::exahype2::enumerator::AoSLexicographicEnumerator enumeratorWithoutAuxiliaryVariables( {{RK_STEPS}}, {{ORDER}}+1, 0, {{NUMBER_OF_UNKNOWNS}}, 0 );
+    ::exahype2::enumerator::AoSLexicographicEnumerator enumeratorWithAuxiliaryVariables   ( 1,            {{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}}, 0, {{NUMBER_OF_UNKNOWNS}}, {{NUMBER_OF_AUXILIARY_VARIABLES}});
+    ::exahype2::enumerator::AoSLexicographicEnumerator enumeratorWithoutAuxiliaryVariables( {{RK_STEPS}}, {{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}}, 0, {{NUMBER_OF_UNKNOWNS}}, 0 );
     
-    dfor( dof, {{ORDER}}+1 ) {
+    dfor( dof, {{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}} ) {
       for (int unknown=0; unknown<{{NUMBER_OF_UNKNOWNS}}; unknown++) {
         {% for WEIGHT_NO in range(0,WEIGHTS|length) %}
         fineGridCell{{UNKNOWN_IDENTIFIER}}.value[ enumeratorWithAuxiliaryVariables(0,dof,unknown) ] += 

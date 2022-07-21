@@ -101,7 +101,7 @@ time_step_size = 0.1 * min_h
 auxiliary_variables = 1
 
 thesolver = None
-solver_name = "EulerDG"
+solver_name = "EulerRKFD"
 if args.type=="global-fixed-fd-4":
   thesolver = exahype2.solvers.rkfd.fd4.GlobalFixedTimeStep(
     solver_name,

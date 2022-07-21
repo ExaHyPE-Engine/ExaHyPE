@@ -23,6 +23,24 @@ void exahype2::fd::internal::copySolution_LoopBody(
 #endif
 
 
+#if defined(GPUOffloadingOMP)
+#pragma omp declare target
+#endif
+template <class QOutEnumeratorType>
+void exahype2::fd::internal::clearSolution_LoopBody(
+  int                                       patchIndex,
+  const tarch::la::Vector<Dimensions,int>&  volumeIndex,
+  int                                       unknown,
+  double* __restrict__                      QOut,
+  const QOutEnumeratorType&                 QOutEnumerator
+) {
+  QOut[ QOutEnumerator(patchIndex,volumeIndex,unknown) ] = 0.0;
+}
+#if defined(GPUOffloadingOMP)
+#pragma omp end declare target
+#endif
+
+
 template <class QInEnumeratorType, class QOutEnumeratorType>
 void exahype2::fd::internal::copySolutionAndAddAlgebraicSourceTerm_LoopBody(
   const double* __restrict__                   QIn,

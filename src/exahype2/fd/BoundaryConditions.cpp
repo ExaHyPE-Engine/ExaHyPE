@@ -6,6 +6,7 @@
 #include "tarch/logging/Log.h"
 
 #include "exahype2/fd/PatchUtils.h"
+#include "exahype2/enumerator/FaceAoSLexicographicEnumerator.h"
 
 
 void exahype2::fd::applyBoundaryConditions(
@@ -24,28 +25,20 @@ void exahype2::fd::applyBoundaryConditions(
   double                                       dt,
   int                                          numberOfGridCellsPerPatchPerAxis,
   int                                          overlap,
-  int                                          unknowns,
+  int                                          unknownsPlusAuxiliaryVariables,
   int                                          faceNumber,
   double* __restrict__                         Q
 ) {
   static tarch::logging::Log _log( "exahype2::fd" );
-
-  auto serialisePatchIndex = [&](tarch::la::Vector<Dimensions,int> overlapCell) {
-    int base   = 1;
-    int result = 0;
-    for (int d=0; d<Dimensions; d++) {{
-      result += overlapCell(d) * base;
-      if (d==faceNumber % Dimensions) {{
-        base *= 2*overlap;
-      }}
-      else {{
-        base *= numberOfGridCellsPerPatchPerAxis;
-      }}
-    }}
-    return result;
-  };
-
   logTraceInWith4Arguments( "applyBoundaryConditions(...)", faceCentre, patchSize, numberOfGridCellsPerPatchPerAxis, faceNumber);
+
+  exahype2::enumerator::FaceAoSLexicographicEnumerator enumerator(
+    faceNumber,
+    numberOfGridCellsPerPatchPerAxis,
+    overlap,
+    unknownsPlusAuxiliaryVariables,
+    0
+  );
 
   tarch::la::Vector<Dimensions,double> volumeH    = exahype2::fd::getGridCellSize(patchSize, numberOfGridCellsPerPatchPerAxis);
   tarch::la::Vector<Dimensions,double> faceOffset = faceCentre - 0.5 * patchSize;
@@ -58,47 +51,28 @@ void exahype2::fd::applyBoundaryConditions(
 
     x(faceNumber%Dimensions) -= 0.5 * volumeH(faceNumber%Dimensions);
 
-    for (int layer=0; layer<overlap; layer++){
-    if (faceNumber<Dimensions) {
-      insideGridCell(faceNumber % Dimensions)  = overlap-layer;
-      outsideGridCell(faceNumber % Dimensions) = overlap-1-layer;
-  
-      int insideGridCellSerialised  = serialisePatchIndex(insideGridCell);
-      int outsideGridCellSerialised = serialisePatchIndex(outsideGridCell);
+    for (int layer=0; layer<overlap; layer++) {
+      if (faceNumber<Dimensions) {
+        insideGridCell(faceNumber % Dimensions)  = overlap-layer;
+        outsideGridCell(faceNumber % Dimensions) = overlap-1-layer;
+      }
+      else {
+        insideGridCell(faceNumber % Dimensions)  = layer+overlap-1;
+        outsideGridCell(faceNumber % Dimensions) = layer+overlap;
+      }
 
       logDebug(
         "applyBoundaryConditions(...)",
-        insideGridCell << "->" << outsideGridCell << " (" << insideGridCellSerialised << "->" << outsideGridCellSerialised << "): " <<
-        "(" << *(Q + insideGridCellSerialised * unknowns) << ",...)^T->" <<
-        "(" << *(Q + outsideGridCellSerialised * unknowns) << ",...)^T"
+        faceCentre << " x " << faceNumber << ": " <<
+        insideGridCell << "->" << outsideGridCell << " (" << enumerator(insideGridCell,0) << "->" << enumerator(outsideGridCell,0) << "): " <<
+        *(Q + enumerator(insideGridCell,0))
       );
 
       boundaryCondition(
-        Q + insideGridCellSerialised * unknowns,
-        Q + outsideGridCellSerialised * unknowns,
+        Q + enumerator(insideGridCell,0),
+        Q + enumerator(outsideGridCell,0),
         x, volumeH, t, dt, faceNumber
       );
-    }
-    else {
-      insideGridCell(faceNumber % Dimensions)  = layer+overlap-1;
-      outsideGridCell(faceNumber % Dimensions) = layer+overlap;
-
-      int insideGridCellSerialised  = serialisePatchIndex(insideGridCell);
-      int outsideGridCellSerialised = serialisePatchIndex(outsideGridCell);
-
-      logDebug(
-        "applyBoundaryConditions(...)",
-        insideGridCell << "->" << outsideGridCell << " (" << insideGridCellSerialised << "->" << outsideGridCellSerialised << "): " <<
-        "(" << *(Q + insideGridCellSerialised * unknowns) << ",...)^T->" <<
-        "(" << *(Q + outsideGridCellSerialised * unknowns) << ",...)^T"
-      );
-
-      boundaryCondition(
-        Q + insideGridCellSerialised * unknowns,
-        Q + outsideGridCellSerialised * unknowns,
-        x, volumeH, t, dt, faceNumber
-      );
-    }
     }
   }
 
