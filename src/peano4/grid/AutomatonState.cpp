@@ -7,14 +7,14 @@
 
 
 
-peano4::grid::AutomatonState::AutomatonState(int  __level, tarch::la::Vector<Dimensions,double>  __x, tarch::la::Vector<Dimensions,double>  __h, bool  __inverted, std::bitset<Dimensions>  __evenFlags, tarch::la::Vector<DimensionsTimesTwo,int>  __accessNumber):
-    _level(__level)
-  , _x(__x)
-  , _h(__h)
-  , _inverted(__inverted)
-  , _evenFlags(__evenFlags)
-  , _accessNumber(__accessNumber)
-  {}
+peano4::grid::AutomatonState::AutomatonState(int  __level, tarch::la::Vector<Dimensions,double>  __x, tarch::la::Vector<Dimensions,double>  __h, bool  __inverted, std::bitset<Dimensions>  __evenFlags, tarch::la::Vector<DimensionsTimesTwo,int>  __accessNumber){
+setLevel( __level);
+setX( __x);
+setH( __h);
+setInverted( __inverted);
+setEvenFlags( __evenFlags);
+setAccessNumber( __accessNumber);
+}
 
 
 
@@ -48,42 +48,58 @@ void   peano4::grid::AutomatonState::setLevel(int value) {
 
 
 tarch::la::Vector<Dimensions,double>   peano4::grid::AutomatonState::getX() const {
-  return   _x;
-}
+
+  tarch::la::Vector<Dimensions,double> result;
+  for( int i=0; i<Dimensions; i++) {
+    result(i) =   _x[i];
+  }
+  return result;
+      }
 
 
 void   peano4::grid::AutomatonState::setX(const tarch::la::Vector<Dimensions,double>& value) {
-  _x = value;
-}
+
+  for( int i=0; i<Dimensions; i++) {
+      _x[i] = value(i);
+  }
+      }
 
 
 double   peano4::grid::AutomatonState::getX(int index) const {
-  return   _x(index);
+  return   _x[index];
 }
 
 
 void   peano4::grid::AutomatonState::setX(int index, double value) {
-  _x(index) = value;
+  _x[index] = value;
 }
 
 
 tarch::la::Vector<Dimensions,double>   peano4::grid::AutomatonState::getH() const {
-  return   _h;
-}
+
+  tarch::la::Vector<Dimensions,double> result;
+  for( int i=0; i<Dimensions; i++) {
+    result(i) =   _h[i];
+  }
+  return result;
+      }
 
 
 void   peano4::grid::AutomatonState::setH(const tarch::la::Vector<Dimensions,double>& value) {
-  _h = value;
-}
+
+  for( int i=0; i<Dimensions; i++) {
+      _h[i] = value(i);
+  }
+      }
 
 
 double   peano4::grid::AutomatonState::getH(int index) const {
-  return   _h(index);
+  return   _h[index];
 }
 
 
 void   peano4::grid::AutomatonState::setH(int index, double value) {
-  _h(index) = value;
+  _h[index] = value;
 }
 
 
@@ -98,12 +114,16 @@ void   peano4::grid::AutomatonState::setInverted(bool value) {
 
 
 std::bitset<Dimensions>   peano4::grid::AutomatonState::getEvenFlags() const {
-  return   _evenFlags;
+
+  std::bitset<Dimensions> result;
+  for (int i=0; i<Dimensions; i++) result[i] =   _evenFlags[i];
+  return result;
 }
 
 
 void   peano4::grid::AutomatonState::setEvenFlags(const std::bitset<Dimensions>&  value) {
-  _evenFlags = value;
+
+  for (int i=0; i<Dimensions; i++)   _evenFlags[i]=value[i];
 }
 
 
@@ -118,27 +138,35 @@ void   peano4::grid::AutomatonState::setEvenFlags(int index, bool value) {
 
 
 void   peano4::grid::AutomatonState::flipEvenFlags(int index) {
-  _evenFlags.flip(index);
+  _evenFlags[index] = not   _evenFlags[index];
 }
 
 
 tarch::la::Vector<DimensionsTimesTwo,int>   peano4::grid::AutomatonState::getAccessNumber() const {
-  return    _accessNumber;
-}
+
+  tarch::la::Vector<DimensionsTimesTwo,int> result;
+  for( int i=0; i<DimensionsTimesTwo; i++) {
+    result(i) =   _accessNumber[i];
+  }
+  return result;
+      }
 
 
 void   peano4::grid::AutomatonState::setAccessNumber(const tarch::la::Vector<DimensionsTimesTwo,int>& value) {
-  _accessNumber = value;
-}
+
+  for( int i=0; i<DimensionsTimesTwo; i++) {
+      _accessNumber[i] = value(i);
+  }
+      }
 
 
 int   peano4::grid::AutomatonState::getAccessNumber(int index) const {
-  return   _accessNumber(index);
+  return   _accessNumber[index];
 }
 
 
 void   peano4::grid::AutomatonState::setAccessNumber(int index, int value) {
-  _accessNumber(index) = value;
+  _accessNumber[index] = value;
 }
 
 

@@ -40,14 +40,16 @@ std::string exahype2::fd::plotPatch(
   int    unknowns,
   int    auxiliaryVariables,
   int    numberOfVolumesPerAxisInPatch,
-  int    haloSize
+  int    haloSize,
+  bool   prettyPrint
 ) {
   return exahype2::fv::plotPatch(
     Q,
     unknowns,
     auxiliaryVariables,
     numberOfVolumesPerAxisInPatch,
-    haloSize
+    haloSize,
+    prettyPrint
   );
 }
 

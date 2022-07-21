@@ -22,13 +22,13 @@ class BooleanArray(Boolean):
 
   def get_plain_C_attributes(self):
     if self.compress:
-      return [ ("_" + self._name, "std::bitset<" + self._cardinality + ">", "[[clang::compress]]" ) ]
+      return [ ("_" + self._name + "[" + self._cardinality + "]", "bool", "[[clang::pack]]" ) ]
     else:
       return [ ("_" + self._name, "std::bitset<" + self._cardinality + ">", "" ) ]
 
 
   def get_first_plain_C_attribute(self):
-    return [ ("_" + self._name , "double" ) ]
+    return [ ("_" + self._name , "bool" ) ]
 
 
   def get_method_body(self,signature):
@@ -36,23 +36,44 @@ class BooleanArray(Boolean):
       name = "  _dataStore._" + self._name
     else:
       name = "  _" + self._name
+    if signature.startswith( "flip" ) and  "index" in signature and self.compress:
+      return name + "[index] = not " + name + "[index];\n"
     if signature.startswith( "flip" ) and  "index" in signature:
       return name + ".flip(index);\n"
     elif signature.startswith( "get" ) and  "index" in signature:
       return "  return " + name + "[index];\n"
     elif signature.startswith( "set" ) and  "index" in signature:
       return name + "[index] = value;\n"
+    elif signature.startswith( "get" ) and self.compress:
+      return """
+  std::bitset<""" + self._cardinality + """> result;
+  for (int i=0; i<""" + self._cardinality + """; i++) result[i] = """ + name + """[i];
+  return result;
+"""
     elif signature.startswith( "get" ):
       return "  return " + name + ";\n"
+    elif signature.startswith( "set" ) and self.compress:
+      return """
+  for (int i=0; i<""" + self._cardinality + """; i++) """ + name + """[i]=value[i];
+"""      
     elif signature.startswith( "set" ):
       return name + " = value;\n"
     else:
       assert(False)
     return ""
+ 
   
   def get_native_MPI_type(self):
     return [ ("MPI_UNSIGNED_LONG", 1 ) ]
-      
+ 
+ 
+  def get_constructor_arguments(self):
+    return [( "_"+self._name, "std::bitset<" + self._cardinality + ">" )]
+  
+  
+  def use_setter_to_initialise_arguments(self):
+    return self.compress
+
   
   def get_to_string(self):
     """

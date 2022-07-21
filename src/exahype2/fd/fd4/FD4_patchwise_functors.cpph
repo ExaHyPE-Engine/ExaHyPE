@@ -38,9 +38,11 @@ void exahype2::fd::fd4::timeStep_patchwise_heap_functors(
   double* tempKODissipationY      =  evaluateKODissipation                         ? tarch::allocateMemory( QOutEnumerator.size(),tarch::MemoryLocation::Heap ) : nullptr;
   double* tempKODissipationZ      = (evaluateKODissipation      and Dimensions==3) ? tarch::allocateMemory( QOutEnumerator.size(),tarch::MemoryLocation::Heap ) : nullptr;
 
-  
+
   // STEP 1: copy solution from old array to new array, and/or add the change due to algebraic source terms
   for (int patchIndex=0; patchIndex<patchData.numberOfCells; patchIndex++) {
+    const double timeStepSize = copyOldTimeStepAndScaleWithTimeStepSize ? patchData.dt[patchIndex] : 1.0;
+
     logDebug( "timeStepWithFD4_sequential(...)", "evaluate algebraic source terms and/or copy solution over" );
     if (Dimensions==2 and evaluateAlgebraicSource and copyOldTimeStepAndScaleWithTimeStepSize) {
       otterLoopBegin();
@@ -56,7 +58,7 @@ void exahype2::fd::fd4::timeStep_patchwise_heap_functors(
           patchIndex,
           gridCellIndex2d(x,y),
           patchData.t[patchIndex],
-          patchData.dt[patchIndex],
+          timeStepSize,
           patchData.QOut[patchIndex],
           QOutEnumerator
         );
@@ -79,7 +81,7 @@ void exahype2::fd::fd4::timeStep_patchwise_heap_functors(
           patchIndex,
           gridCellIndex3d(x,y,z),
           patchData.t[patchIndex],
-          patchData.dt[patchIndex],
+          timeStepSize,
           patchData.QOut[patchIndex],
           QOutEnumerator
         );
@@ -126,8 +128,40 @@ void exahype2::fd::fd4::timeStep_patchwise_heap_functors(
       }
       otterLoopEnd();
     }
+    else if (Dimensions==3){
+      otterLoopBegin();
+      for (int x = 0; x < numberOfGridCellsPerPatchPerAxis; x++)
+      for (int y = 0; y < numberOfGridCellsPerPatchPerAxis; y++)
+      for (int z = 0; z < numberOfGridCellsPerPatchPerAxis; z++)
+      for (int unknown=0; unknown<unknowns+auxiliaryVariables; unknown++) {
+        otterLoopIterationBegin();
+        ::exahype2::fd::internal::clearSolution_LoopBody(
+          patchIndex,
+          gridCellIndex3d(x,y,z),
+          unknown,
+          patchData.QOut[patchIndex],
+          QOutEnumerator
+        );
+        otterLoopIterationEnd();
+      }
+      otterLoopEnd();
+    }
     else {
-      assertionMsg( false, "I need something here without the copy, so just a plain set to zero; the routines below also have to be stripped of their time scaling, i.e. the time scaling is 1" );
+      otterLoopBegin();
+      for (int x = 0; x < numberOfGridCellsPerPatchPerAxis; x++)
+      for (int y = 0; y < numberOfGridCellsPerPatchPerAxis; y++)
+      for (int unknown=0; unknown<unknowns+auxiliaryVariables; unknown++) {
+        otterLoopIterationBegin();
+        ::exahype2::fd::internal::clearSolution_LoopBody(
+          patchIndex,
+          gridCellIndex2d(x,y),
+          unknown,
+          patchData.QOut[patchIndex],
+          QOutEnumerator
+        );
+        otterLoopIterationEnd();
+      }
+      otterLoopEnd();
     }
 
 
@@ -136,6 +170,7 @@ void exahype2::fd::fd4::timeStep_patchwise_heap_functors(
       otterLoopBegin();
       for (int x = 0; x < numberOfGridCellsPerPatchPerAxis; x++)
       for (int y = 0; y < numberOfGridCellsPerPatchPerAxis; y++) {
+        std::cout << " " << x << "x" << y << ",n=0";
         otterLoopIterationBegin();
         internal::computeFlux_LoopBody(
           patchData.QIn[patchIndex],
@@ -146,7 +181,7 @@ void exahype2::fd::fd4::timeStep_patchwise_heap_functors(
           patchIndex,
           gridCellIndex2d(x,y),
           patchData.t[patchIndex],
-          patchData.dt[patchIndex],
+          timeStepSize,
           0, // normal
           tempFluxX,
           QOutEnumerator
@@ -158,6 +193,7 @@ void exahype2::fd::fd4::timeStep_patchwise_heap_functors(
       otterLoopBegin();
       for (int x = 0; x < numberOfGridCellsPerPatchPerAxis; x++)
       for (int y = 0; y < numberOfGridCellsPerPatchPerAxis; y++) {
+        std::cout << " " << x << "x" << y << ",n=1";
         otterLoopIterationBegin();
         internal::computeFlux_LoopBody(
           patchData.QIn[patchIndex],
@@ -168,7 +204,7 @@ void exahype2::fd::fd4::timeStep_patchwise_heap_functors(
           patchIndex,
           gridCellIndex2d(x,y),
           patchData.t[patchIndex],
-          patchData.dt[patchIndex],
+          timeStepSize,
           1, // normal
           tempFluxY,
           QOutEnumerator
@@ -190,7 +226,7 @@ void exahype2::fd::fd4::timeStep_patchwise_heap_functors(
           patchIndex,
           gridCellIndex2d(x,y),
           unknown,
-          patchData.dt[patchIndex],
+          timeStepSize,
           *(patchData.QOut + patchIndex),
           QOutEnumerator
         );
@@ -213,7 +249,7 @@ void exahype2::fd::fd4::timeStep_patchwise_heap_functors(
           patchIndex,
           gridCellIndex3d(x,y,z),
           patchData.t[patchIndex],
-          patchData.dt[patchIndex],
+          timeStepSize,
           0, // normal
           tempFluxX,
           QOutEnumerator
@@ -236,7 +272,7 @@ void exahype2::fd::fd4::timeStep_patchwise_heap_functors(
           patchIndex,
           gridCellIndex3d(x,y,z),
           patchData.t[patchIndex],
-          patchData.dt[patchIndex],
+          timeStepSize,
           1, // normal
           tempFluxY,
           QOutEnumerator
@@ -259,7 +295,7 @@ void exahype2::fd::fd4::timeStep_patchwise_heap_functors(
           patchIndex,
           gridCellIndex3d(x,y,z),
           patchData.t[patchIndex],
-          patchData.dt[patchIndex],
+          timeStepSize,
           2, // normal
           tempFluxZ,
           QOutEnumerator
@@ -280,7 +316,7 @@ void exahype2::fd::fd4::timeStep_patchwise_heap_functors(
           patchIndex,
           gridCellIndex2d(x,y),
           unknown,
-          patchData.dt[patchIndex],
+          timeStepSize,
           *(patchData.QOut + patchIndex),
           QOutEnumerator
         );
@@ -302,7 +338,7 @@ void exahype2::fd::fd4::timeStep_patchwise_heap_functors(
           patchIndex,
           gridCellIndex2d(x,y),
           patchData.t[patchIndex],
-          patchData.dt[patchIndex],
+          timeStepSize,
           0, // normal
           tempDifferentialSourceX,
           QOutEnumerator
@@ -324,7 +360,7 @@ void exahype2::fd::fd4::timeStep_patchwise_heap_functors(
           patchIndex,
           gridCellIndex2d(x,y),
           patchData.t[patchIndex],
-          patchData.dt[patchIndex],
+          timeStepSize,
           1, // normal
           tempDifferentialSourceY,
           QOutEnumerator
@@ -346,7 +382,7 @@ void exahype2::fd::fd4::timeStep_patchwise_heap_functors(
           patchIndex,
           gridCellIndex2d(x,y),
           unknown,
-          patchData.dt[patchIndex],
+          timeStepSize,
           *(patchData.QOut + patchIndex),
           QOutEnumerator
         );
@@ -369,7 +405,7 @@ void exahype2::fd::fd4::timeStep_patchwise_heap_functors(
           patchIndex,
           gridCellIndex3d(x,y,z),
           patchData.t[patchIndex],
-          patchData.dt[patchIndex],
+          timeStepSize,
           0, // normal
           tempDifferentialSourceX,
           QOutEnumerator
@@ -392,7 +428,7 @@ void exahype2::fd::fd4::timeStep_patchwise_heap_functors(
           patchIndex,
           gridCellIndex3d(x,y,z),
           patchData.t[patchIndex],
-          patchData.dt[patchIndex],
+          timeStepSize,
           1, // normal
           tempDifferentialSourceY,
           QOutEnumerator
@@ -415,7 +451,7 @@ void exahype2::fd::fd4::timeStep_patchwise_heap_functors(
           patchIndex,
           gridCellIndex3d(x,y,z),
           patchData.t[patchIndex],
-          patchData.dt[patchIndex],
+          timeStepSize,
           2, // normal
           tempDifferentialSourceZ,
           QOutEnumerator
@@ -438,7 +474,7 @@ void exahype2::fd::fd4::timeStep_patchwise_heap_functors(
           patchIndex,
           gridCellIndex3d(x,y,z),
           unknown,
-          patchData.dt[patchIndex],
+          timeStepSize,
           *(patchData.QOut + patchIndex),
           QOutEnumerator
         );
@@ -461,7 +497,7 @@ void exahype2::fd::fd4::timeStep_patchwise_heap_functors(
           patchIndex,
           gridCellIndex2d(x,y),
           patchData.t[patchIndex],
-          patchData.dt[patchIndex],
+          timeStepSize,
           0, // normal
           tempKODissipationX,
           QOutEnumerator
@@ -482,7 +518,7 @@ void exahype2::fd::fd4::timeStep_patchwise_heap_functors(
           patchIndex,
           gridCellIndex2d(x,y),
           patchData.t[patchIndex],
-          patchData.dt[patchIndex],
+          timeStepSize,
           1, // normal
           tempKODissipationY,
           QOutEnumerator
@@ -504,7 +540,7 @@ void exahype2::fd::fd4::timeStep_patchwise_heap_functors(
           patchIndex,
           gridCellIndex2d(x,y),
           unknown,
-          patchData.dt[patchIndex],
+          timeStepSize,
           *(patchData.QOut + patchIndex),
           QOutEnumerator
         );
@@ -526,7 +562,7 @@ void exahype2::fd::fd4::timeStep_patchwise_heap_functors(
             patchIndex,
             gridCellIndex3d(x,y,z),
             patchData.t[patchIndex],
-            patchData.dt[patchIndex],
+            timeStepSize,
             0, // normal
             tempKODissipationX,
             QOutEnumerator
@@ -548,7 +584,7 @@ void exahype2::fd::fd4::timeStep_patchwise_heap_functors(
             patchIndex,
             gridCellIndex3d(x,y,z),
             patchData.t[patchIndex],
-            patchData.dt[patchIndex],
+            timeStepSize,
             1, // normal
             tempKODissipationY,
             QOutEnumerator
@@ -570,7 +606,7 @@ void exahype2::fd::fd4::timeStep_patchwise_heap_functors(
             patchIndex,
             gridCellIndex3d(x,y,z),
             patchData.t[patchIndex],
-            patchData.dt[patchIndex],
+            timeStepSize,
             2, // normal
             tempKODissipationZ,
             QOutEnumerator
@@ -593,7 +629,7 @@ void exahype2::fd::fd4::timeStep_patchwise_heap_functors(
             patchIndex,
             gridCellIndex3d(x,y,z),
             unknown,
-            patchData.dt[patchIndex],
+            timeStepSize,
             *(patchData.QOut + patchIndex),
             QOutEnumerator
           );
@@ -622,7 +658,7 @@ void exahype2::fd::fd4::timeStep_patchwise_heap_functors(
             patchIndex,
             gridCellIndex3d(x,y,z),
             patchData.t[patchIndex],
-            patchData.dt[patchIndex]
+            timeStepSize
           )
         );
         otterLoopIterationEnd();

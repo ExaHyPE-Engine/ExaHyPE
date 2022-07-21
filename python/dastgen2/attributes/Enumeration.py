@@ -60,7 +60,7 @@ class Enumeration(Attribute):
 
   def get_plain_C_attributes(self):
     if self.compress:
-      return [ ("_" + self._name, self._enum_name(), "[[clang::compress]]" ) ]
+      return [ ("_" + self._name, self._enum_name(), "[[clang::pack]]" ) ]
     else:
       return [ ("_" + self._name, self._enum_name(), "" ) ]
 
