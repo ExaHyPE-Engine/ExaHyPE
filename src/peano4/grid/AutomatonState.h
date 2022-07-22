@@ -109,12 +109,12 @@ struct peano4::grid::AutomatonState {
     std::string toString() const;
   
   private:
-      int   _level;
-      tarch::la::Vector<Dimensions,double>   _x;
-      tarch::la::Vector<Dimensions,double>   _h;
-      bool   _inverted;
-    [[clang::compress]]  std::bitset<Dimensions>   _evenFlags;
-      tarch::la::Vector<DimensionsTimesTwo,int>   _accessNumber;
+    [[clang::pack_range(0,63)]]  int   _level;
+    [[clang::truncate_mantissa(4)]]  double   _x[Dimensions];
+    [[clang::truncate_mantissa(4)]]  double   _h[Dimensions];
+    [[clang::pack]]  bool   _inverted;
+    [[clang::pack]]  bool   _evenFlags[Dimensions];
+    [[clang::pack_range(-4,TwoPowerD)]]  int   _accessNumber[DimensionsTimesTwo];
 
 
 

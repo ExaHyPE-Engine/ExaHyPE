@@ -29,7 +29,7 @@ class Integer(Attribute):
     if self._min_value==None and self._max_value==None:
       return [ ("_" + self._name, "int", "" ) ]
     else:
-      return [ ("_" + self._name, "int", "[[clang::compress::" + str(self._min_value) + "-" + str(self._max_value) + "]]" ) ]
+      return [ ("_" + self._name, "int", "[[clang::pack_range(" + str(self._min_value) + "," + str(self._max_value) + ")]]" ) ]
 
 
   def get_method_body(self,signature):

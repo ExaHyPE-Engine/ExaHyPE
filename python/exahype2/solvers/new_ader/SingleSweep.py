@@ -40,8 +40,8 @@ class SingleSweep( ADERDG ):
     ")"
     
     # face estimates from the space-time predictor should be sent in predictor step and received and used in the correction step 
-    self._estimates_projection.generator.send_condition               = "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::Prediction"
-    self._estimates_projection.generator.receive_and_merge_condition  = "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::Correction"
+    self._rhs_estimates_projection.generator.send_condition               = "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::Prediction"
+    self._rhs_estimates_projection.generator.receive_and_merge_condition  = "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::Correction"
     
     self._flux_estimates_projection.generator.send_condition               = "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::Prediction"
     self._flux_estimates_projection.generator.receive_and_merge_condition  = "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::Correction"

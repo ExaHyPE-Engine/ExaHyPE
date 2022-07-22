@@ -48,8 +48,8 @@ void exahype2::fv::fd4::internal::copySolutionAndAddAlgebraicSourceTerm_LoopBody
 
   AlgebraicSource(
       QInGathered,
-      ::exahype2::fv::getVolumeCentre( patchCentre, patchSize, QInEnumerator._numberOfVolumesPerAxisInPatch, volumeIndex ),
-      ::exahype2::fv::getVolumeSize( patchSize, QInEnumerator._numberOfVolumesPerAxisInPatch ),
+      ::exahype2::fv::getVolumeCentre( patchCentre, patchSize, QInEnumerator._numberOfDoFsPerAxisInCell, volumeIndex ),
+      ::exahype2::fv::getVolumeSize( patchSize, QInEnumerator._numberOfDoFsPerAxisInCell ),
       t,
       dt,
       QAlgebraicSourceGathered
@@ -141,8 +141,8 @@ void exahype2::fv::fd4::internal::computeDifferentialSourceTerm_LoopBody(
 
   DifferentialSource(
     CentralQ, DeltaQ,
-    ::exahype2::fv::getVolumeCentre( patchCentre, patchSize, QInEnumerator._numberOfVolumesPerAxisInPatch, volumeIndex ),
-    ::exahype2::fv::getVolumeSize( patchSize, QInEnumerator._numberOfVolumesPerAxisInPatch ),
+    ::exahype2::fv::getVolumeCentre( patchCentre, patchSize, QInEnumerator._numberOfDoFsPerAxisInCell, volumeIndex ),
+    ::exahype2::fv::getVolumeSize( patchSize, QInEnumerator._numberOfDoFsPerAxisInCell ),
     t,
     dt,
     normal,
@@ -317,7 +317,7 @@ void exahype2::fv::fd4::internal::updateSolutionWithDifferentialSourceTerm_LoopB
     // QDiffSrc is B_i*deltaQ_i for the central volume, and B here is defined on the LEFT of the equation.
     double QDiffSrcTerm = QDiffSrc[QDiffSrcEnumerator(patchIndex, volumeIndex, unknown)];
     //take care we have an extra minus sign because we moved the diffsrc terms to the RIGHT!
-    QOut[ QOutEnumerator(patchIndex, volumeIndex,unknown) ] -= dt / patchSize(normal) * QOutEnumerator._numberOfVolumesPerAxisInPatch * QDiffSrcTerm
+    QOut[ QOutEnumerator(patchIndex, volumeIndex,unknown) ] -= dt / patchSize(normal) * QOutEnumerator._numberOfDoFsPerAxisInCell * QDiffSrcTerm
 
     #if !defined(GPUOffloadingOMP) and  !defined(GPUOffloadingSYCL)
     assertion8(
@@ -357,7 +357,7 @@ void exahype2::fv::fd4::internal::updateSolutionWithKODissipationTerm_LoopBody(
     double QKODspTerm = QKODsp[QKODspEnumerator(patchIndex, volumeIndex, unknown)];
 
     //double sigmaKO=8.0;
-    QOut[ QOutEnumerator(patchIndex, volumeIndex,unknown) ] += KOSigma * dt / patchSize(normal) * QOutEnumerator._numberOfVolumesPerAxisInPatch * QKODspTerm
+    QOut[ QOutEnumerator(patchIndex, volumeIndex,unknown) ] += KOSigma * dt / patchSize(normal) * QOutEnumerator._numberOfDoFsPerAxisInCell * QKODspTerm
 
     #if !defined(GPUOffloadingOMP) and  !defined(GPUOffloadingSYCL)
     assertion8(
@@ -432,8 +432,8 @@ double exahype2::fv::fd4::internal::reduceMaxEigenvalue_LoopBody(
         result,
         maxEigenvalue(
           QGathered,
-          ::exahype2::fv::getVolumeCentre( patchCentre, patchSize, QOutEnumerator._numberOfVolumesPerAxisInPatch, volumeIndex ),
-          ::exahype2::fv::getVolumeSize( patchSize, QOutEnumerator._numberOfVolumesPerAxisInPatch ),
+          ::exahype2::fv::getVolumeCentre( patchCentre, patchSize, QOutEnumerator._numberOfDoFsPerAxisInCell, volumeIndex ),
+          ::exahype2::fv::getVolumeSize( patchSize, QOutEnumerator._numberOfDoFsPerAxisInCell ),
           t,
           dt,
           normal

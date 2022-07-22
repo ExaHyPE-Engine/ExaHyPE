@@ -48,6 +48,12 @@ void exahype2::dg::rusanov::solveRiemannProblem_pointwise_in_situ(
     leftDoF(faceNumber % Dimensions)  = 0;
     rightDoF(faceNumber % Dimensions) = 1;
 
+    //initialize solution to 0
+    for(int var=0; var<unknowns; var++){
+      solution[ outputEnumerator(leftDoF,var)  ] = 0.0;
+      solution[ outputEnumerator(rightDoF,var) ] = 0.0;
+    }
+
     for(int var=0; var<unknowns+auxiliaryVariables; var++){
       deltaQ[ var ] = projectedValues[ inputEnumerator(rightDoF,var) ]
                     - projectedValues[ inputEnumerator(leftDoF,var) ];
@@ -111,6 +117,8 @@ void exahype2::dg::rusanov::solveRiemannProblem_pointwise_in_situ(
         solution[ outputEnumerator(rightDoF,var) ] -= 0.5 * deltaQ[var] * ncpValues[var];
       }
     }
+
+
   }
 
   delete[] deltaQ;

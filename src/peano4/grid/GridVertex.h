@@ -116,8 +116,8 @@ struct peano4::grid::GridVertex {
       State   _state;
       tarch::la::Vector<TwoPowerD,int>   _adjacentRanks;
       tarch::la::Vector<TwoPowerD,int>   _backupOfAdjacentRanks;
-      bool   _hasBeenAntecessorOfRefinedVertexInPreviousTreeSweep;
-      bool   _isAntecessorOfRefinedVertexInCurrentTreeSweep;
+    [[clang::pack]]  bool   _hasBeenAntecessorOfRefinedVertexInPreviousTreeSweep;
+    [[clang::pack]]  bool   _isAntecessorOfRefinedVertexInCurrentTreeSweep;
       int   _numberOfAdjacentRefinedLocalCells;
       tarch::la::Vector<Dimensions,double>   _x;
       int   _level;

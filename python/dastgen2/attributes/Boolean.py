@@ -6,7 +6,7 @@ from .Attribute import Attribute
 class Boolean(Attribute):
   def __init__(self, name):
     Attribute.__init__(self, name)
-    self.compress       = False
+    self.compress       = True
     
     
   def get_methods(self,_full_qualified_class_name):
@@ -19,7 +19,7 @@ class Boolean(Attribute):
 
   def get_plain_C_attributes(self):
     if self.compress:
-      return [ ("_" + self._name, "bool", "[[clang::compress]]" ) ]
+      return [ ("_" + self._name, "bool", "[[clang::pack]]" ) ]
     else:
       return [ ("_" + self._name, "bool", "" ) ]
 

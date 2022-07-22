@@ -16,7 +16,6 @@ from exahype2.solvers.rkdg.FixedTimeSteppingCodeSnippets import FixedTimeSteppin
 class GlobalFixedTimeStep( SeparateSweeps ):
   def __init__(self, 
     name, 
-    dg_order, 
     rk_order,
     polynomials,
     unknowns, auxiliary_variables, min_cell_h, max_cell_h, time_step_size,
@@ -29,7 +28,7 @@ class GlobalFixedTimeStep( SeparateSweeps ):
     source_term=PDETerms.None_Implementation,
     plot_grid_properties=False
   ):
-    super(GlobalFixedTimeStep,self).__init__(name, dg_order, rk_order, polynomials, unknowns, auxiliary_variables, min_cell_h, max_cell_h, plot_grid_properties) 
+    super(GlobalFixedTimeStep,self).__init__(name, rk_order, polynomials, unknowns, auxiliary_variables, min_cell_h, max_cell_h, plot_grid_properties) 
    
     self._normalised_time_step_size = time_step_size
 

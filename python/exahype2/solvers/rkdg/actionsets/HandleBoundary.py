@@ -24,14 +24,6 @@ class HandleBoundary(AbstractRungeKuttaDGActionSet):
   """
   
   TemplateProject = """
-    /*
-    In Peano the faces are ordered by direction, then dimension, so in 3D it would be the face in negative direction in dimension 0, then 1, then 2
-      followed by the the face in positive direction of dimensions 0, then 1, then 2. The kernels expect the faces to be ordered by dimension, then
-      direction, so first left face in dimension0, then right face in dimension 0, and so on for the other dimensions.
-      Therefore when the Hull is arranged, the order of these faces are shuffled correspondingly.    
-    2d: 0,1,2,3 -> 0,2,1,3
-    3d: 0,1,2,3,4,5 -> 0,3,1,4,2,5
-    */
   {% for PREDICATE_NO in range(0,PREDICATES|length) %}
   if (
     {{PREDICATES[PREDICATE_NO]}}
@@ -42,12 +34,16 @@ class HandleBoundary(AbstractRungeKuttaDGActionSet):
     and 
     fineGridFace{{SOLVER_NAME}}FaceLabel.getBoundary()
   ) {
-    // see action set ProjectLinearCombinationOfEstimatesOntoFaces and docu of action set
-    const double timeStampOldSolution    = std::max(
-      fineGridFace{{SOLVER_NAME}}FaceLabel.getUpdatedTimeStamp()(0),
-      fineGridFace{{SOLVER_NAME}}FaceLabel.getUpdatedTimeStamp()(1)
-    );
+    if (marker.getSelectedFaceNumber()<Dimensions) {
+      fineGridFace{{SOLVER_NAME}}FaceLabel.setUpdatedTimeStamp(0, fineGridFace{{SOLVER_NAME}}FaceLabel.getUpdatedTimeStamp(1) );
+      fineGridFace{{SOLVER_NAME}}FaceLabel.setNewTimeStamp    (0, fineGridFace{{SOLVER_NAME}}FaceLabel.getNewTimeStamp(1) );
+    }
+    else {
+      fineGridFace{{SOLVER_NAME}}FaceLabel.setUpdatedTimeStamp(1, fineGridFace{{SOLVER_NAME}}FaceLabel.getUpdatedTimeStamp(0) );
+      fineGridFace{{SOLVER_NAME}}FaceLabel.setNewTimeStamp(    1, fineGridFace{{SOLVER_NAME}}FaceLabel.getNewTimeStamp(0) );
+    }
       
+    const double timeStampOldSolution = fineGridFace{{SOLVER_NAME}}FaceLabel.getUpdatedTimeStamp()(0);
   
     // Set the variable
     // double timeStepSize
@@ -77,7 +73,7 @@ class HandleBoundary(AbstractRungeKuttaDGActionSet):
       {{NUMBER_OF_UNKNOWNS}},
       {{NUMBER_OF_AUXILIARY_VARIABLES}},
       marker.getSelectedFaceNumber(),
-      repositories::{{SOLVER_INSTANCE}}.QuadraturePoints,
+      repositories::{{SOLVER_INSTANCE}}.QuadraturePoints1d,
       fineGridFace{{UNKNOWN_IDENTIFIER}}EstimateProjection.value
     );
   }

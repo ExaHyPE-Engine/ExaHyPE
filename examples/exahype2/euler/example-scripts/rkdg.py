@@ -101,9 +101,8 @@ if args.gpu:
 if args.type=="global-fixed":
   thesolver = exahype2.solvers.rkdg.rusanov.GlobalFixedTimeStep(
     solver_name,
-    args.dg_order,
     args.rk_order,
-    exahype2.solvers.rkdg.Polynomials.Gauss_Legendre,
+    exahype2.solvers.GaussLegendreBasis(args.dg_order),
     unknowns, auxiliary_variables,
     min_h, max_h,
     0.001, # time step size
@@ -112,9 +111,8 @@ if args.type=="global-fixed":
 if args.type=="global-adaptive":
   thesolver = exahype2.solvers.rkdg.rusanov.GlobalAdaptiveTimeStep(
     solver_name,
-    args.dg_order,
     args.rk_order,
-    exahype2.solvers.rkdg.Polynomials.Gauss_Legendre,
+    exahype2.solvers.GaussLegendreBasis(args.dg_order),
     unknowns, auxiliary_variables,
     min_h, max_h,
     0.5,

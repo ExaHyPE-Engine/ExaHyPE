@@ -21,25 +21,47 @@ namespace exahype2 {
      * within a cell or a patch, but you need an enumeration of the faces if you
      * work patch-wisely.
      *
+     * ## Enumeration
      *
      * The DoFs along a face are enumerated lexicographically.
      *
      * So if we talk about faceNumber 0, we have an enumeration of
      *
-     * 6 | 7
-     * 4 | 5
-     * 2 | 3
-     * 0 | 1
+     *               6 | 7
+     *               4 | 5
+     *               2 | 3
+     *               0 | 1
      *
      * If we talk about number 1, we have
      *
-     * 7 8 9 10 11 12 13 14
-     * -------------
-     * 0 1 2 3 4 5 6
+     *               7  8  9 10 11 12 13
+     *               -------------------
+     *               0  1  2  3  4  5  6
+     *
+     * The ASCII art above gives only examples for a halo size of one, where we
+     * have two cells along the normal. The extension to bigger halo sizes is
+     * straightforward:
+     *
+     *
+     *               21 22 23 24 25 26 27
+     *               14 15 16 17 18 19 20
+     *               --------------------
+     *                7  8  9 10 11 12 13
+     *                0  1  2  3  4  5  6
+     *
+     *
+     * ## Differences to volumetric enumerators
+     *
+     * Face enumerators always refer only to one batch, i.e. one piece of face
+     * data. ExaHyPE's volumetric enumerators in contrast can index a whole
+     * batch of cells in one go.
+     *
+     *
      */
     struct FaceAoSLexicographicEnumerator {
       public:
         /**
+         *
          * @param faceNumber An integer value between 0 (inclusive) and
          *   2*Dimensions (exklusive). Standard Peano enumeration of faces.
          *
@@ -49,7 +71,10 @@ namespace exahype2 {
          *
          * @param haloSize For a Finite Volume solver, this is one if each
          *   patch is augmented with one halo volume around it. For a DG solver,
-         *   it is 1 if you project only one quantity, i.e. the solution.
+         *   it is 1 if you project only one quantity, i.e. the solution. However,
+         *   you might have a value bigger than 1 if you also project higher order
+         *   properties such as the first derivative along the normal. Some
+         *   code snippets within ExaHyPE call the haloSize overlap.
          */
         FaceAoSLexicographicEnumerator(
           int faceNumber,

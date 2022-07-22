@@ -26,7 +26,7 @@ floatparams = {
 	"itau":1.0, "k1":0.1, "k2":0.0, "k3":0.5, "eta":1.0,
         "f":0.75, "g":0.0, "xi":1.0, "e":1.0, "c":1.0, "mu":0.2, "ds":1.0,
         "sk":1.0, "bs":1.0,
-        "domain_r":0.5, "smoothing":0.0 #, \
+        "domain_r":0.5, "smoothing":0.0, "KOSigma":8.0 #, \
 	#"itau":1.0, "k1":0.1, "k2":0.0, "k3":0.5, "eta":1.0,
         #"f":1.0, "g":0.0, "xi":1.0, "e":1.0, "c":1.0, "mu":0.2, "ds":1.0,
         #"sk":1.0, "bs":1.0#, \
@@ -89,13 +89,13 @@ if __name__ == "__main__":
     if args.implementation=="fv-musclhancock":
        SuperClass = exahype2.solvers.fv.musclhancock.GlobalAdaptiveTimeStep
     if args.implementation=="fd-fourth-order":
-       SuperClass = exahype2.solvers.fv.fd4.GlobalAdaptiveTimeStep
+       SuperClass = exahype2.solvers.rkfd.fd4.GlobalAdaptiveTimeStep
     if args.implementation=="fd-fourth-order-fixed":
-       SuperClass = exahype2.solvers.fv.fd4.GlobalFixedTimeStep
+       SuperClass = exahype2.solvers.rkfd.fd4.GlobalFixedTimeStep
 
 
     class CCZ4Solver( SuperClass ):
-      def __init__(self, name, patch_size, min_volume_h, max_volume_h, cfl, domain_r):
+      def __init__(self, name, patch_size, min_volume_h, max_volume_h, cfl, domain_r, KOSig):
         unknowns = {
           "G":6,
           "K":6,
@@ -151,15 +151,25 @@ if __name__ == "__main__":
             min_volume_h=min_volume_h, max_volume_h=max_volume_h,
             time_step_relaxation=cfl
           )
-        elif SuperClass==exahype2.solvers.fv.fd4.GlobalAdaptiveTimeStep:
+        elif SuperClass==exahype2.solvers.rkfd.fd4.GlobalAdaptiveTimeStep:
           SuperClass.__init__(
             self,
-            name=name, patch_size=patch_size,
+            name=name, patch_size=patch_size, rk_order=1,
             unknowns=number_of_unknowns,
             auxiliary_variables=0,
             min_volume_h=min_volume_h, max_volume_h=max_volume_h,
             time_step_relaxation=cfl,
-            KOSigma=12.0
+            KOSigma=KOSig
+          )
+        elif SuperClass==exahype2.solvers.rkfd.fd4.GlobalFixedTimeStep:
+          SuperClass.__init__(
+            self,
+            name=name, patch_size=patch_size, rk_order=4,
+            unknowns=number_of_unknowns,
+            auxiliary_variables=0,
+            min_volume_h=min_volume_h, max_volume_h=max_volume_h,
+            normalised_time_step_size=0.001,
+            KOSigma=KOSig
           )
         else:
           SuperClass.__init__(
@@ -181,29 +191,31 @@ if __name__ == "__main__":
           ncp=exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
           flux=exahype2.solvers.fv.PDETerms.None_Implementation,
           source_term=exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
-          refinement_criterion = exahype2.solvers.fv.PDETerms.User_Defined_Implementation
+          refinement_criterion = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
+          eigenvalues = exahype2.solvers.fv.PDETerms.User_Defined_Implementation
         )
 
-        self.postprocess_updated_patch = """
-  {
-    #if Dimensions==2
-    constexpr int itmax = {{NUMBER_OF_VOLUMES_PER_AXIS}} * {{NUMBER_OF_VOLUMES_PER_AXIS}};
-    #endif
-
-    #if Dimensions==3
-    constexpr int itmax = {{NUMBER_OF_VOLUMES_PER_AXIS}} * {{NUMBER_OF_VOLUMES_PER_AXIS}} * {{NUMBER_OF_VOLUMES_PER_AXIS}};
-    #endif
-
-    int index = 0;
-    for (int i=0;i<itmax;i++)
-    {
-
-    // dfor( volume, {{NUMBER_OF_VOLUMES_PER_AXIS}} ) {
-      examples::exahype2::ccz4::enforceCCZ4constraints( targetPatch+index );
-      index += {{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}};
-    }
-  }
-"""
+# @todo fix
+#        self.postprocess_updated_patch = """
+#  {
+#    #if Dimensions==2
+#    constexpr int itmax = {{NUMBER_OF_VOLUMES_PER_AXIS}} * {{NUMBER_OF_VOLUMES_PER_AXIS}};
+#    #endif
+#
+#    #if Dimensions==3
+#    constexpr int itmax = {{NUMBER_OF_VOLUMES_PER_AXIS}} * {{NUMBER_OF_VOLUMES_PER_AXIS}} * {{NUMBER_OF_VOLUMES_PER_AXIS}};
+#    #endif
+#
+#    int index = 0;
+#    for (int i=0;i<itmax;i++)
+#    {
+#
+#    // dfor( volume, {{NUMBER_OF_VOLUMES_PER_AXIS}} ) {
+#      examples::exahype2::ccz4::enforceCCZ4constraints( targetPatch+index );
+#      index += {{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}};
+#    }
+#  }
+#"""
 
    
       def create_action_sets(self):
@@ -589,7 +601,7 @@ if __name__ == "__main__":
           sources = exahype2.solvers.aderdg.PDETerms.User_Defined_Implementation
       )
     else:
-      my_solver = CCZ4Solver(solver_name, args.patch_size, min_h, args.max_h, args.cfl, args.CCZ4domain_r)
+      my_solver = CCZ4Solver(solver_name, args.patch_size, min_h, args.max_h, args.cfl, args.CCZ4domain_r,args.CCZ4KOSigma)
       userinfo.append(("CFL ratio set as "+str(args.cfl), None))
 
 ########################################################################################

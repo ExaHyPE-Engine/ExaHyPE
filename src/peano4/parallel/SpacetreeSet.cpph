@@ -243,9 +243,9 @@ void peano4::parallel::SpacetreeSet::finishAllOutstandingSendsAndReceives( Conta
   bool allSendReceivesFinished = false;
 
   #ifdef UseSmartMPI
-  tarch::timing::Watch dataExchangeTime("peano4::parallel::SpacetreeSet", "traverse", false );
+  tarch::timing::Watch dataExchangeTime("peano4::parallel::SpacetreeSet", "traverse", false);
   #endif
-  
+
   while (not allSendReceivesFinished) {
     allSendReceivesFinished = true;
     for (auto& sourceStackKey: keys) {
@@ -257,7 +257,7 @@ void peano4::parallel::SpacetreeSet::finishAllOutstandingSendsAndReceives( Conta
         const int rank = stackContainer.getForPush(sourceStackKey)->sendingOrReceiving();
         if ( rank>=0 ) {
           dataExchangeTime.stop();
-          smartmpi::reportMPIWaitTime(dataExchangeTime.getCPUTime(),rank);
+          smartmpi::reportWaitTime(dataExchangeTime.getCPUTime(),rank);
         }
         #endif
       }

@@ -8,7 +8,7 @@ tarch::timing::Watch::Watch(
   const std::string& className,
   const std::string& operationName,
   const bool         plotResultInDestructor,
-  bool               startToTickImmediately
+  bool               startToTickImmediately // = true
   ):
   _log( className ),
   _plotResultInDestructor(plotResultInDestructor),
@@ -18,7 +18,7 @@ tarch::timing::Watch::Watch(
   _elapsedClockTicks( 0 ),
   _elapsedTime(),
   _isRunning(startToTickImmediately) {
-  
+
   if (startToTickImmediately) {
     start();
   }

@@ -20,8 +20,8 @@ class Peano4IntegerArray(dastgen2.attributes.IntegerArray):
 
 
   def get_plain_C_attributes(self):
-    if self._min_value!=None or self._max_value!=None:
-      return [ ("_" + self._name + "[" + self._cardinality + "]", "double", "[[clang::compress(" + str(self._min_value) + "-" + str(self._max_value) + ")]]" ) ]
+    if self.compress:
+      return [ ("_" + self._name + "[" + self._cardinality + "]", "int", "[[clang::pack_range(" + str(self._min_value) + "," + str(self._max_value) + ")]]" ) ]
     else:
       return [ ("_" + self._name, "tarch::la::Vector<" + self._cardinality + ",int>", "" ) ]
 
@@ -29,25 +29,35 @@ class Peano4IntegerArray(dastgen2.attributes.IntegerArray):
   def get_first_plain_C_attribute(self):
     return [ ("_" + self._name + ".data()[0]", "int" ) ]
 
+ 
+  def get_constructor_arguments(self):
+      return [ ("_" + self._name, "tarch::la::Vector<" + self._cardinality + ",int>" ) ]
+
 
   def get_method_body(self,signature):
     if self.use_data_store:
       name = "  _dataStore._" + self._name
     else:
       name = "  _" + self._name
-    if signature.startswith( "get" ) and  "index" in signature and self._min_value==None and self._max_value==None:
+      
+    if signature.startswith( "get" ) and  "index" in signature and not self.compress:
       return "  return " + name + "(index);\n"
-    elif signature.startswith( "set" ) and  "index" in signature and self._min_value==None and self._max_value==None:
+    elif signature.startswith( "set" ) and  "index" in signature and not self.compress:
       return name + "(index) = value;\n"
-    elif signature.startswith( "get" ) and self._min_value==None and self._max_value==None:
+    elif signature.startswith( "get" ) and  "index" in signature and not self.compress:
+      return "  return " + name + "(index);\n"
+    elif signature.startswith( "set" ) and  "index" in signature and not self.compress:
+      return name + "(index) = value;\n"
+    elif signature.startswith( "get" ) and not self.compress:
       return "  return  " + name + ";\n"
-    elif signature.startswith( "set" ) and self._min_value==None and self._max_value==None:
+    elif signature.startswith( "set" ) and not self.compress:
       return name + " = value;\n"
+  
     elif signature.startswith( "get" ) and  "index" in signature:
       return "  return " + name + "[index];\n"
     elif signature.startswith( "set" ) and  "index" in signature:
       return name + "[index] = value;\n"
-    elif signature.startswith( "get" ) and self._min_value==None:
+    elif signature.startswith( "get" ):
       return """
   tarch::la::Vector<""" + self._cardinality + """,int> result;
   for( int i=0; i<""" + self._cardinality + """; i++) {
@@ -55,21 +65,26 @@ class Peano4IntegerArray(dastgen2.attributes.IntegerArray):
   }
   return result;
       """
-    elif signature.startswith( "set" ) and self._min_value==None:
+    elif signature.startswith( "set" ):
       return """
   for( int i=0; i<""" + self._cardinality + """; i++) {
     """ + name + """[i] = value(i);
   }
       """
     else:
-      assert(False)
+      assert False, "signature=" + signature
+
     return ""
 
   
   def get_native_MPI_type(self):
     return [ ("MPI_INT", self._cardinality ) ]
       
-  
+    
+  def use_setter_to_initialise_arguments(self):
+    return self.compress
+
+
   def get_to_string(self):
     """
     

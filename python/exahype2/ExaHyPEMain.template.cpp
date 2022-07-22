@@ -353,6 +353,7 @@ void step() {{
       {{
         tarch::logging::LogFilter::getInstance().switchProgramPhase( "init-grid" );
         repositories::loadBalancer.enable(false);
+        otterPhaseBegin( "init" );
 
         repositories::startGridInitialisationStep();
         
@@ -362,8 +363,6 @@ void step() {{
         gridConstructionMeasurement.setValue( watch.getCalendarTime() );
 
         repositories::finishGridInitialisationStep();
-
-        otterTraceStart();
       }}
       break;
     case repositories::StepRepository::Steps::PlotSolution:
@@ -374,7 +373,7 @@ void step() {{
         const double minTimeStepSize = repositories::getMinTimeStepSize();
         const double maxTimeStepSize = repositories::getMaxTimeStepSize();
 
-        otterPhaseSwitch( "plotting" );
+        otterPhaseSwitch( "plot" );
         repositories::startPlottingStep( minTimeStamp, maxTimeStamp, minTimeStepSize, maxTimeStepSize );
 
         observers::PlotSolution  observer;
@@ -470,11 +469,9 @@ int main(int argc, char** argv) {{
 
   tarch::logging::Statistics::getInstance().clear();
 
-  otterTraceInitialise();
-  otterTraceStop();
+  otterTraceInitialise(OTTER_SRC_ARGS());
 
   #if defined(SharedOMP)
-  otterParallelBegin();
   #pragma omp parallel
   {{
   #pragma omp master 
@@ -517,7 +514,6 @@ int main(int argc, char** argv) {{
   #if defined(SharedOMP)
   }}
   }}
-  otterParallelEnd();
   #endif
 
   tarch::logging::Statistics::getInstance().writeToCSV();

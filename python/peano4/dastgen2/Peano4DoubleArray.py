@@ -12,7 +12,7 @@ class Peano4DoubleArray(dastgen2.attributes.DoubleArray):
      
   """
   
-  def __init__(self, name, cardinality, relative_accuracy_in_bits=None):
+  def __init__(self, name, cardinality, valid_mantissa_bits=None):
     """
       See superclass' constructor.
       
@@ -21,7 +21,7 @@ class Peano4DoubleArray(dastgen2.attributes.DoubleArray):
         a string which is defined via a pragma or constexpr later.
         
     """
-    dastgen2.attributes.DoubleArray.__init__(self, name, cardinality,relative_accuracy_in_bits)
+    dastgen2.attributes.DoubleArray.__init__(self, name, cardinality,valid_mantissa_bits)
     self._cardinality               = cardinality
     
     
@@ -36,34 +36,42 @@ class Peano4DoubleArray(dastgen2.attributes.DoubleArray):
 
 
   def get_plain_C_attributes(self):
-    if self._relative_accuracy_in_bits != None:
-      return [ ("_" + self._name + "[" + self._cardinality + "]", "double", "[[clang::compress(" + str(self._relative_accuracy_in_bits) + ")]]" ) ]
+    if self._valid_mantissa_bits != None:
+      return [ ("_" + self._name + "[" + self._cardinality + "]", "double", "[[clang::truncate_mantissa(" + str(self._valid_mantissa_bits) + ")]]" ) ]
     else:
       return [ ("_" + self._name, "tarch::la::Vector<" + self._cardinality + ",double>", "" ) ]
+
+    
+  def use_setter_to_initialise_arguments(self):
+    return self._valid_mantissa_bits != None
 
 
   def get_first_plain_C_attribute(self):
     return [ ("_" + self._name + ".data()[0]", "double" ) ]
 
+ 
+  def get_constructor_arguments(self):
+      return [ ("_" + self._name, "tarch::la::Vector<" + self._cardinality + ",double>" ) ]
 
+  
   def get_method_body(self,signature):
     if self.use_data_store:
       name = "  _dataStore._" + self._name
     else:
       name = "  _" + self._name
-    if signature.startswith( "get" ) and  "index" in signature and self._relative_accuracy_in_bits == None:
+    if signature.startswith( "get" ) and  "index" in signature and self._valid_mantissa_bits == None:
       return "  return " + name + "(index);\n"
-    elif signature.startswith( "set" ) and  "index" in signature and self._relative_accuracy_in_bits == None:
+    elif signature.startswith( "set" ) and  "index" in signature and self._valid_mantissa_bits == None:
       return  name + "(index) = value;\n"
-    elif signature.startswith( "get" ) and self._relative_accuracy_in_bits == None:
+    elif signature.startswith( "get" ) and self._valid_mantissa_bits == None:
       return "  return " + name + ";\n"
-    elif signature.startswith( "set" ) and self._relative_accuracy_in_bits == None:
+    elif signature.startswith( "set" ) and self._valid_mantissa_bits == None:
       return name + " = value;\n"
-    elif signature.startswith( "get" ) and  "index" in signature and self._relative_accuracy_in_bits != None:
+    elif signature.startswith( "get" ) and  "index" in signature and self._valid_mantissa_bits != None:
       return "  return " + name + "[index];\n"
-    elif signature.startswith( "set" ) and  "index" in signature and self._relative_accuracy_in_bits != None:
+    elif signature.startswith( "set" ) and  "index" in signature and self._valid_mantissa_bits != None:
       return  name + "[index] = value;\n"
-    elif signature.startswith( "get" ) and self._relative_accuracy_in_bits != None:
+    elif signature.startswith( "get" ) and self._valid_mantissa_bits != None:
       return """
   tarch::la::Vector<""" + self._cardinality + """,double> result;
   for( int i=0; i<""" + self._cardinality + """; i++) {
@@ -71,7 +79,7 @@ class Peano4DoubleArray(dastgen2.attributes.DoubleArray):
   }
   return result;
       """
-    elif signature.startswith( "set" ) and self._relative_accuracy_in_bits != None:
+    elif signature.startswith( "set" ) and self._valid_mantissa_bits != None:
       return """
   for( int i=0; i<""" + self._cardinality + """; i++) {
     """ + name + """[i] = value(i);

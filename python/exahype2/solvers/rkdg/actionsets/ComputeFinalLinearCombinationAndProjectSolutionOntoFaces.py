@@ -11,46 +11,43 @@ import jinja2
 class ComputeFinalLinearCombinationAndProjectSolutionOntoFaces(AbstractRungeKuttaDGActionSet):
   """
   
-  The linear combination of the Runge Kutta trials has to be projected onto
-  the faces, so we can then solve the Riemann problems. So the projection 
-  happens in one grid sweep, the corresponding Riemann solve in the next one.
+  We solve the ODE
   
+  @f$ \partial Q = F(Q) @f$
+  
+  where we have multiple guesses for F according to the Butcher tableau. The final 
+  solution can be written down as linear combination over these guesses:
+  
+  
+  @f$ Q^{new} = Q^{old} + a_1 \cdot dt \cdot F_1(Q) + a_2 \cdot dt \cdot F_2(Q) + \dots @f$
+  
+  We observe the following simple facts:
+  
+  - The data in fineGridCell{{UNKNOWN_IDENTIFIER}}.value holds @f$ Q^{old} @f$
+  - The data in fineGridCell{{UNKNOWN_IDENTIFIER}}.value shall hold @f$ Q^{new} @f$ eventually.
+    We thus can simply add the scaled estimated to it.
+  - The estimates do not alter the auxiliary variables.
+  - We can thus just keep the previous auxiliary variables implicitly.  
   
   """
   
   TemplateProject = """
   if ({{PREDICATE}}) {
+    {{COMPUTE_TIME_STEP_SIZE}}
 
-    #if Dimensions==2
-    for (int dof=0; dof<{{NUMBER_OF_DOFS_PER_CELL_2D}}; dof++)
-    for (int unknown=0; unknown<{{NUMBER_OF_UNKNOWNS}}; unknown++) {
-      const int destIndex = dof*({{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}})+unknown;
-      //*(fineGridCell{{UNKNOWN_IDENTIFIER}}.value + destIndex) = 0.0;
-      int srcIndex = destIndex;
-      {% for WEIGHT in WEIGHTS %}
-      *(fineGridCell{{UNKNOWN_IDENTIFIER}}.value + destIndex) += {{WEIGHT}} * *(fineGridCell{{UNKNOWN_IDENTIFIER}}Estimates.value + srcIndex);
-      srcIndex += {{NUMBER_OF_DOFS_PER_CELL_2D}}*({{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}});
-      {% endfor %}
+    ::exahype2::enumerator::AoSLexicographicEnumerator enumeratorWithAuxiliaryVariables   ( 1,            {{ORDER}}+1, 0, {{NUMBER_OF_UNKNOWNS}}, {{NUMBER_OF_AUXILIARY_VARIABLES}});
+    ::exahype2::enumerator::AoSLexicographicEnumerator enumeratorWithoutAuxiliaryVariables( {{RK_STEPS}}, {{ORDER}}+1, 0, {{NUMBER_OF_UNKNOWNS}}, 0 );
+    
+    dfor( dof, {{ORDER}}+1 ) {
+      for (int unknown=0; unknown<{{NUMBER_OF_UNKNOWNS}}; unknown++) {
+        {% for WEIGHT_NO in range(0,WEIGHTS|length) %}
+        fineGridCell{{UNKNOWN_IDENTIFIER}}.value[ enumeratorWithAuxiliaryVariables(0,dof,unknown) ] += 
+          timeStepSize * {{WEIGHTS[WEIGHT_NO]}} * fineGridCell{{UNKNOWN_IDENTIFIER}}RhsEstimates.value[ enumeratorWithAuxiliaryVariables({{WEIGHT_NO}},dof,unknown) ];
+        {% endfor %}
+      }
     }
-    #elif Dimensions==3
-    for (int dof=0; dof<{{NUMBER_OF_DOFS_PER_CELL_3D}}; dof++)
-    for (int unknown=0; unknown<{{NUMBER_OF_UNKNOWNS}}; unknown++) {
-      const int destIndex = dof*({{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}})+unknown;
-      //*(fineGridCell{{UNKNOWN_IDENTIFIER}}.value + destIndex) = 0.0;
-
-      int srcIndex = destIndex;
-      {% for WEIGHT in WEIGHTS %}
-      *(fineGridCell{{UNKNOWN_IDENTIFIER}}.value + destIndex) += {{WEIGHT}} * *(fineGridCell{{UNKNOWN_IDENTIFIER}}Estimates.value + srcIndex);
-      srcIndex += {{NUMBER_OF_DOFS_PER_CELL_3D}}*({{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}});
-      {% endfor %}
-    }
-    #endif
     
     const double timeStamp = fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStamp();
-    
-    // Set the variable
-    // double timeStepSize
-    {{COMPUTE_TIME_STEP_SIZE}}
     
     // Set the variable
     // double newTimeStepSize
@@ -96,3 +93,9 @@ class ComputeFinalLinearCombinationAndProjectSolutionOntoFaces(AbstractRungeKutt
 
   def get_action_set_name(self):
     return __name__.replace(".py", "").replace(".", "_")
+
+
+  def get_includes(self):
+    return super(ComputeFinalLinearCombinationAndProjectSolutionOntoFaces,self).get_includes() + """
+#include "exahype2/enumerator/AoSLexicographicEnumerator.h"
+"""    
