@@ -135,6 +135,30 @@ namespace exahype2 {
 
 
         /**
+         * This function calculates the lopsided advection term using finite difference
+	 * at 4th-order accuracy. It requires 3 halo layers on each side of a given patch.
+         */
+        #if defined(SharedOMP) and (!defined(__INTEL_LLVM_COMPILER) or !defined(GPUOffloadingOMP))
+        #pragma omp declare simd
+        #endif
+        template <class QInEnumeratorType, class QOutEnumeratorType>
+        static void computeLopsidedAdvectionTerm_LoopBody(
+          const double* __restrict__                     QIn,
+          const QInEnumeratorType&                       QInEnumerator,
+          const tarch::la::Vector<Dimensions,double>&    patchCentre,
+          const tarch::la::Vector<Dimensions,double>&    patchSize,
+          int                                            patchIndex,
+          const tarch::la::Vector<Dimensions,int>&       volumeIndex,
+          double                                         t,
+          double                                         dt,
+          int                                            normal,
+          double* __restrict__                           QAdvec,
+          const QOutEnumeratorType&                      QAdvecEnumerator,
+          int                                            pick = PickAllEntriesFromOutputVector
+        ) InlineMethod;
+
+
+        /**
          * Add the difference source contributions to one volume.
          *
          * The differential source is defined at the centres of volumes, i.e. we know 
@@ -189,6 +213,40 @@ namespace exahype2 {
           const double* __restrict__                   QKODspY,
           const double* __restrict__                   QKODspZ,
           const QOutEnumeratorType&                    QKODspEnumerator,
+          const tarch::la::Vector<Dimensions,double>&  patchCentre,
+          const tarch::la::Vector<Dimensions,double>&  patchSize,
+          int                                          patchIndex,
+          const tarch::la::Vector<Dimensions,int>&     volumeIndex,
+          int                                          unknown,
+          double                                       dt,
+          double* __restrict__                         QOut,
+          const QOutEnumeratorType&                    QOutEnumerator
+        ) InlineMethod;
+        #if defined(GPUOffloadingOMP)
+        #pragma omp end declare target
+        #endif
+
+
+        /**
+         * Add the Lopsided advection contributions to one volume.
+         *
+         * The lopsided advection is defined at the centres of volumes, i.e. we know 
+	 * that QAdvecX, QAdvecY, QAdvecZ hold one (vector) entry per volume and 
+	 * QAdvecEnumerator, which is identical to QOutEnumerator, is aware that we
+         * work with volume centres.
+         */
+        #if defined(SharedOMP) and (!defined(__INTEL_LLVM_COMPILER) or !defined(GPUOffloadingOMP))
+        #pragma omp declare simd
+        #endif
+        #if defined(GPUOffloadingOMP)
+        #pragma omp declare target
+        #endif
+        template <typename QOutEnumeratorType>
+        static void updateSolutionWithLopsidedAdvectionTerm_LoopBody(
+          const double* __restrict__                   QAdvecX,
+          const double* __restrict__                   QAdvecY,
+          const double* __restrict__                   QAdvecZ,
+          const QOutEnumeratorType&                    QAdvecEnumerator,
           const tarch::la::Vector<Dimensions,double>&  patchCentre,
           const tarch::la::Vector<Dimensions,double>&  patchSize,
           int                                          patchIndex,

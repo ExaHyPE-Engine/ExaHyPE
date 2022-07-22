@@ -159,7 +159,7 @@ if __name__ == "__main__":
             auxiliary_variables=0,
             min_volume_h=min_volume_h, max_volume_h=max_volume_h,
             time_step_relaxation=cfl,
-            KOSigma=8.0
+            KOSigma=12.0
           )
         else:
           SuperClass.__init__(
