@@ -159,6 +159,9 @@ express Statement of Purpose.
     this CC0 or use of the Work.
 */
 
+#ifndef _CARTESIAN_PRODUCT_DEF_
+#define _CARTESIAN_PRODUCT_DEF_
+
 #include <algorithm>
 #include <concepts>
 #include <functional>
@@ -1334,4 +1337,5 @@ int main() {
   }
   return 0;
 }
+#endif
 #endif

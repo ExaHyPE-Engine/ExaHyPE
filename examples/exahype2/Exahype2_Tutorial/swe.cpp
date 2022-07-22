@@ -18,7 +18,7 @@ tarch::logging::Log   examples::exahype2::swe::swe::_log( "examples::exahype2::s
   if(tarch::la::equals(t, 0.0)){
 	  tarch::la::Vector<Dimensions,double> centre = {0.5, 0.5};
 	  bool nearCentre = tarch::la::norm2(volumeX-centre)>0.19 && tarch::la::norm2(volumeX-centre)<0.21;
-	  result = (nearCentre ? ::exahype2::RefinementCommand::Refine : ::exahype2::RefinementCommand::Coarsen);
+	  result = (nearCentre ? ::exahype2::RefinementCommand::Refine : ::exahype2::RefinementCommand::Erase);
   }
   return result;
 }
@@ -68,6 +68,7 @@ double ::examples::exahype2::swe::swe::maxEigenvalue(
   const tarch::la::Vector<Dimensions,double>&  faceCentre,
   const tarch::la::Vector<Dimensions,double>&  volumeH,
   double                                       t,
+  double                                       dt,
   int                                          normal
 )  {
 	  double result = 1.0;
@@ -96,6 +97,7 @@ void ::examples::exahype2::swe::swe::flux(
   const tarch::la::Vector<Dimensions,double>&  faceCentre,
   const tarch::la::Vector<Dimensions,double>&  volumeH,
   double                                       t,
+  double                                       dt,
   int                                          normal,
   double * __restrict__ F // F[3]
 )  {

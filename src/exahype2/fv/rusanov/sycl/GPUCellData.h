@@ -9,6 +9,7 @@
 #include "tarch/la/Vector.h"
 #include "peano4/utils/Globals.h"
 #include "tarch/multicore/sycl/SYCL.h"
+#include "exahype2/enumerator/AoSLexicographicEnumerator.h"
 
 
 namespace exahype2 {
@@ -54,8 +55,8 @@ namespace exahype2 {
          */
         struct GPUCellData {
           double**   QIn;
-          tarch::la::Vector<Dimensions,double>*   patchCentre;
-          tarch::la::Vector<Dimensions,double>*   patchSize;
+          tarch::la::Vector<Dimensions,double>*   cellCentre;
+          tarch::la::Vector<Dimensions,double>*   cellSize;
           double*    t;
           double*    dt;
           int        numberOfCells;
@@ -105,14 +106,14 @@ namespace exahype2 {
            */
           GPUCellData(
             const ::exahype2::CellData& hostObject,
-            const exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator& inEnumerator,
-            const exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator& outEnumerator,
+            const ::exahype2::enumerator::AoSLexicographicEnumerator& inEnumerator,
+            const ::exahype2::enumerator::AoSLexicographicEnumerator& outEnumerator,
             ::sycl::queue& queue
           );
 
           void destroy(
             ::exahype2::CellData& hostObject,
-            const exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator& outEnumerator,
+            const ::exahype2::enumerator::AoSLexicographicEnumerator& outEnumerator,
             bool copyEigenvaluesBack,
             ::sycl::queue& queue
           );

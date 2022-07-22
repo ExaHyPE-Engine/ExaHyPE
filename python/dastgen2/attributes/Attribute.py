@@ -35,6 +35,29 @@ class Attribute(object):
     """
     return 
 
+  
+  def use_setter_to_initialise_arguments(self):
+    """
+    
+    You can use this flag to control if the generated data object shall 
+    use initialisation lists or plain old setters inside the constructor.
+    
+    """
+    return False
+
+  
+  def get_constructor_arguments(self):
+    """
+    
+    Return list of tuple of arguments for the constructor. The first 
+    tuple entry is the name, the second one the type. By default,
+    I take them from the plain C attributes, but you can alter
+    this behaviour.
+    
+    """
+    return self.get_plain_C_attributes()
+           
+  
   @abc.abstractmethod
   def get_plain_C_attributes(self):
     """
@@ -43,7 +66,13 @@ class Attribute(object):
       the second one the type. The third one can be C++ attributes.
       Type has to be plain C.
       
+      ## Arrays
+      
+      Arrays can be modelled by adding a cardinality ("[15]" for example)
+      to the first triple entry, i.e. the name. 
+      
     """
+    assert False, "abstract function should not be called"
     return
 
 

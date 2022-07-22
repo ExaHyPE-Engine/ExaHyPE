@@ -1,16 +1,10 @@
 """
 
  A very simple example which demonstrates how to configure a patch-based
- Finite Volume solver in Peano4. The code relies on snippets from ExaHyPE2.
- However, it relies only on ExaHyPE's C/FORTRAN compute kernels, i.e. the
- sophisticated build environment of this H2020 project is not used. The
+ Finite Volume solver in ExaHyPE 2. The
  solver simulates the simple Euler equations.
 
 """
-#python3 example-scripts/finitevolumes.py -maxh 0.1 -t global-adaptive-enclave -i linear -pdt 0.3 -f -d 3 -j 128
-#python3 example-scripts/finitevolumes.py -maxh 0.1 -t global-adaptive-enclave -i order-2 -pdt 0.2 -f -d 2 -j 128 -m assert
-#testing bc function
-#python3 example-scripts/finitevolumes.py -maxh 0.04 -t global-adaptive-enclave -i order-2 -pdt 0.2 -f -d 2 -j 128
 
 
 #
@@ -27,7 +21,14 @@ print( """
 Please call this script from the directory hosting the Makefile and the
 sources. Typically, I invoke the script via
 
-python3 example-scripts/finitevolumes-with-ExaHyPE2-benchmark.py arguments
+python3 example-scripts/finitevolumes.py arguments
+
+but you can use it with a `do not compile' flag and then simply call
+
+make
+
+once all glue code is generated. Invoke the script with --help to get
+detailed information about the arguments.
 """)
 
 modes = {

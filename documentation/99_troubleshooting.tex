@@ -273,6 +273,29 @@ build: 2d, no mpi, omp (8 threads), debug level=2
   will be a message immediately after that clarifies that you manually reduce
   the thread count. If you work in a SLURM/batch environment, changing the
   thread/core count in the batch script might be more convenient.
+  \item {\bf I run into linker errors like \texttt{undefined reference to
+  `omp\_get\_mapped\_ptr'}}. This happens if your system requires you to specify
+  an OpenMP target when you translate with GPU offloading support. Compare to
+  the examples on page \pageref{section:supercomputers:openmp}.
+  \item To be continued \dots
+\end{itemize}
+
+
+
+
+\section{SYCL troubleshooting}
+\begin{itemize}
+  \item \textbf{\Peano\ always uses all GPUs, but I don't want to use all the
+  (virtual) devices}.
+  \Peano\ uses, by default, all devices that are visible and associates one SYCL
+  queue with each device. Most DPC++ runtimes can however filter the number of
+  visible devices. See the Intel documentation, for example, at
+  \url{https://intel.github.io/llvm-docs/EnvironmentVariables.html}. A simple
+  \begin{bash}
+export SYCL_DEVICE_TYPE=CPU  
+  \end{bash}
+  does the trick.
+  \url
   \item To be continued \dots
 \end{itemize}
 

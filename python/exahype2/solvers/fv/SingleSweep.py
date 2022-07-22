@@ -34,9 +34,9 @@ class UpdateCell(ReconstructPatchAndApplyFunctor):
       ); // previous time step has to be valid
   
       ::exahype2::CellData  patchData( reconstructedPatch, marker.x(), marker.h(), timeStamp, timeStepSize, targetPatch );
-      
-      ::exahype2::fv::rusanov::{{COMPUTE_KERNEL_CALL}}  
-      
+           
+      ::exahype2::fv::{{KERNEL_NAMESPACE}}::{{COMPUTE_KERNEL_CALL}} 
+
       {{POSTPROCESS_UPDATED_PATCH}}
 
       ::exahype2::fv::validatePatch(
@@ -141,13 +141,13 @@ class SingleSweep( FV ):
   """
 
 
-  def __init__(self, name, patch_size, overlap, unknowns, auxiliary_variables, min_volume_h, max_volume_h, plot_grid_properties):
+  def __init__(self, name, patch_size, overlap, unknowns, auxiliary_variables, min_volume_h, max_volume_h, plot_grid_properties, kernel_namespace="rusanov"):
     """
 
       Instantiate a generic FV scheme with an overlap of 1.
 
     """
-    super(SingleSweep, self).__init__(name, patch_size, overlap, unknowns, auxiliary_variables, min_volume_h, max_volume_h, plot_grid_properties)
+    super(SingleSweep, self).__init__(name, patch_size, overlap, unknowns, auxiliary_variables, min_volume_h, max_volume_h, plot_grid_properties, kernel_namespace)
 
     self._solver_template_file_class_name     = "SingleSweep"
 

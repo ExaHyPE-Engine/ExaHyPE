@@ -69,7 +69,9 @@ void peano4::EnclaveParticleBookkeeping<Particle>::waitForTasksToTerminate(int t
     bool processedTasks = ::tarch::multicore::processPendingTasks(ThreePowerD);
 
     if (not processedTasks) {
+      #if !defined(GPUOffloadingCPP)
       tarch::multicore::yield();
+      #endif
     }
 
     lock.lock();

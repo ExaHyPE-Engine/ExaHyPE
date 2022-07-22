@@ -57,6 +57,7 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
      */
     static constexpr double MaxAdmissiblePatchH  = {{MAX_VOLUME_H}} * NumberOfFiniteVolumesPerAxisPerPatch;
     static constexpr double MaxAdmissibleVolumeH = {{MAX_VOLUME_H}};
+    static constexpr double MaxAdmissibleCellH   = MaxAdmissiblePatchH;
 
     /**
      * Minimum mesh size that this solver wants to support. Peano 4 tries
@@ -68,6 +69,7 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
      */
     static constexpr double MinAdmissiblePatchH  = {{MIN_VOLUME_H}} * NumberOfFiniteVolumesPerAxisPerPatch;
     static constexpr double MinAdmissibleVolumeH = {{MIN_VOLUME_H}};
+    static constexpr double MinAdmissibleCellH   = MinAdmissiblePatchH;
 
 
     {{CLASSNAME}}();

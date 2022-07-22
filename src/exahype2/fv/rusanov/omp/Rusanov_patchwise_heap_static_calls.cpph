@@ -26,8 +26,8 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanov_patchwise_heap_static_calls
    */
   constexpr int solversHaloSize        = 1;
 
-  exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator QInHostEnumerator       (                        1, numberOfVolumesPerAxisInPatch, haloSize, unknowns, auxiliaryVariables);
-  exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator QOutHostEnumerator      (                        1, numberOfVolumesPerAxisInPatch,        0, unknowns, auxiliaryVariables);
+  exahype2::enumerator::AoSLexicographicEnumerator QInHostEnumerator       (                        1, numberOfVolumesPerAxisInPatch, haloSize, unknowns, auxiliaryVariables);
+  exahype2::enumerator::AoSLexicographicEnumerator QOutHostEnumerator      (                        1, numberOfVolumesPerAxisInPatch,        0, unknowns, auxiliaryVariables);
   TempDataEnumerator fluxHostEnumerator      (hostPatchData.numberOfCells, numberOfVolumesPerAxisInPatch,   solversHaloSize, unknowns, 0);
   TempDataEnumerator ncpHostEnumerator       (hostPatchData.numberOfCells, numberOfVolumesPerAxisInPatch+1, solversHaloSize, unknowns, 0);
   TempDataEnumerator eigenvalueHostEnumerator(hostPatchData.numberOfCells, numberOfVolumesPerAxisInPatch,   solversHaloSize,        1, 0);
@@ -117,15 +117,15 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanov_patchwise_heap_static_calls
   }
 
   const int numberOfCells            = hostPatchData.numberOfCells;
-  double*   rawPointerToPatchCentres = hostPatchData.patchCentre[0].data();
-  double*   rawPointerToPatchSizes   = hostPatchData.patchSize[0].data();
+  double*   rawPointerToCellCentres  = hostPatchData.cellCentre[0].data();
+  double*   rawPointerToCellSizes    = hostPatchData.cellSize[0].data();
   double*   t                        = hostPatchData.t;
   double*   dt                       = hostPatchData.dt;
   double*   maxEigenvalue            = hostPatchData.maxEigenvalue;
 
   #pragma omp target teams distribute device(targetDevice) \
-    map(to:rawPointerToPatchCentres[0:hostPatchData.numberOfCells*Dimensions]) \
-    map(to:rawPointerToPatchSizes  [0:hostPatchData.numberOfCells*Dimensions]) \
+    map(to:rawPointerToCellCentres[0:hostPatchData.numberOfCells*Dimensions]) \
+    map(to:rawPointerToCellSizes  [0:hostPatchData.numberOfCells*Dimensions]) \
     map(to:mappedPointersToQIn     [0:hostPatchData.numberOfCells])            \
     map(to:mappedPointersToQOut    [0:hostPatchData.numberOfCells])            \
     map(to:t[0:hostPatchData.numberOfCells]) \
@@ -135,16 +135,16 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanov_patchwise_heap_static_calls
     // @todo docu manual assembly of patch data meta object on GPU
     GPUCellData patchData;
     patchData.numberOfCells = numberOfCells;
-    patchData.patchCentre   = (tarch::la::Vector<Dimensions,double>*)(rawPointerToPatchCentres);
-    patchData.patchSize     = (tarch::la::Vector<Dimensions,double>*)(rawPointerToPatchSizes);
+    patchData.cellCentre   = (tarch::la::Vector<Dimensions,double>*)(rawPointerToCellCentres);
+    patchData.cellSize     = (tarch::la::Vector<Dimensions,double>*)(rawPointerToCellSizes);
     patchData.QIn           = mappedPointersToQIn;
     patchData.QOut          = mappedPointersToQOut;
     patchData.t             = t;
     patchData.dt            = dt;
     patchData.maxEigenvalue = maxEigenvalue;
 
-    exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator QInEnumerator       (                        1, numberOfVolumesPerAxisInPatch,haloSize,unknowns,auxiliaryVariables);
-    exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator QOutEnumerator      (                        1, numberOfVolumesPerAxisInPatch,       0,unknowns,auxiliaryVariables);
+    exahype2::enumerator::AoSLexicographicEnumerator QInEnumerator       (                        1, numberOfVolumesPerAxisInPatch,haloSize,unknowns,auxiliaryVariables);
+    exahype2::enumerator::AoSLexicographicEnumerator QOutEnumerator      (                        1, numberOfVolumesPerAxisInPatch,       0,unknowns,auxiliaryVariables);
     TempDataEnumerator fluxEnumerator      (patchData.numberOfCells, numberOfVolumesPerAxisInPatch,haloSize,unknowns,0);
     TempDataEnumerator ncpEnumerator       (patchData.numberOfCells, numberOfVolumesPerAxisInPatch+1,haloSize,unknowns,0);
     TempDataEnumerator eigenvalueEnumerator(patchData.numberOfCells, numberOfVolumesPerAxisInPatch,haloSize,1,0);
@@ -156,8 +156,8 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanov_patchwise_heap_static_calls
         internal::copySolutionAndAddSourceTerm_LoopBody<Solver>(
           patchData.QIn[patchIndex],
           QInEnumerator,
-          patchData.patchCentre[patchIndex],
-          patchData.patchSize[patchIndex],
+          patchData.cellCentre[patchIndex],
+          patchData.cellSize[patchIndex],
           patchIndex,
           volumeIndex2d(x,y),
           patchData.t[patchIndex],
@@ -175,8 +175,8 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanov_patchwise_heap_static_calls
         internal::copySolutionAndAddSourceTerm_LoopBody<Solver>(
           patchData.QIn[patchIndex],
           QInEnumerator,
-          patchData.patchCentre[patchIndex],
-          patchData.patchSize[patchIndex],
+          patchData.cellCentre[patchIndex],
+          patchData.cellSize[patchIndex],
           patchIndex,
           volumeIndex3d(x,y,z),
           patchData.t[patchIndex],
@@ -227,8 +227,8 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanov_patchwise_heap_static_calls
         internal::computeMaxEigenvalue_LoopBody<Solver>(
             patchData.QIn[patchIndex],
             QInEnumerator,
-            patchData.patchCentre[patchIndex],
-            patchData.patchSize[patchIndex],
+            patchData.cellCentre[patchIndex],
+            patchData.cellSize[patchIndex],
             patchIndex,
             volumeIndex2d(x,y),
             patchData.t[patchIndex], patchData.dt[patchIndex],
@@ -244,8 +244,8 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanov_patchwise_heap_static_calls
         internal::computeMaxEigenvalue_LoopBody<Solver>(
             patchData.QIn[patchIndex],
             QInEnumerator,
-            patchData.patchCentre[patchIndex],
-            patchData.patchSize[patchIndex],
+            patchData.cellCentre[patchIndex],
+            patchData.cellSize[patchIndex],
             patchIndex,
             volumeIndex2d(x,y),
             patchData.t[patchIndex], patchData.dt[patchIndex],
@@ -267,8 +267,8 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanov_patchwise_heap_static_calls
           tempEigenvalueY,
           tempEigenvalueZ,
           eigenvalueEnumerator,
-          patchData.patchCentre[patchIndex],
-          patchData.patchSize[patchIndex],
+          patchData.cellCentre[patchIndex],
+          patchData.cellSize[patchIndex],
           patchIndex,
           volumeIndex2d(x,y),
           unknown,
@@ -286,8 +286,8 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanov_patchwise_heap_static_calls
         internal::computeMaxEigenvalue_LoopBody<Solver>(
           patchData.QIn[patchIndex],
           QInEnumerator,
-          patchData.patchCentre[patchIndex],
-          patchData.patchSize[patchIndex],
+          patchData.cellCentre[patchIndex],
+          patchData.cellSize[patchIndex],
           patchIndex,
           volumeIndex3d(x,y,z),
           patchData.t[patchIndex], patchData.dt[patchIndex],
@@ -305,8 +305,8 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanov_patchwise_heap_static_calls
         internal::computeMaxEigenvalue_LoopBody<Solver>(
               patchData.QIn[patchIndex],
               QInEnumerator,
-              patchData.patchCentre[patchIndex],
-              patchData.patchSize[patchIndex],
+              patchData.cellCentre[patchIndex],
+              patchData.cellSize[patchIndex],
               patchIndex,
               volumeIndex3d(x,y,z),
               patchData.t[patchIndex], patchData.dt[patchIndex],
@@ -324,8 +324,8 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanov_patchwise_heap_static_calls
         internal::computeMaxEigenvalue_LoopBody<Solver>(
               patchData.QIn[patchIndex],
               QInEnumerator,
-              patchData.patchCentre[patchIndex],
-              patchData.patchSize[patchIndex],
+              patchData.cellCentre[patchIndex],
+              patchData.cellSize[patchIndex],
               patchIndex,
               volumeIndex3d(x,y,z),
               patchData.t[patchIndex], patchData.dt[patchIndex],
@@ -348,8 +348,8 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanov_patchwise_heap_static_calls
           tempEigenvalueY,
           tempEigenvalueZ,
           eigenvalueEnumerator,
-          patchData.patchCentre[patchIndex],
-          patchData.patchSize[patchIndex],
+          patchData.cellCentre[patchIndex],
+          patchData.cellSize[patchIndex],
           patchIndex,
           volumeIndex3d(x,y,z),
           unknown,
@@ -368,8 +368,8 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanov_patchwise_heap_static_calls
         internal::computeFlux_LoopBody<Solver>(
           patchData.QIn[patchIndex],
           QInEnumerator,
-          patchData.patchCentre[patchIndex],
-          patchData.patchSize[patchIndex],
+          patchData.cellCentre[patchIndex],
+          patchData.cellSize[patchIndex],
           patchIndex,
           volumeIndex2d(x,y),
           patchData.t[patchIndex],
@@ -387,8 +387,8 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanov_patchwise_heap_static_calls
         internal::computeFlux_LoopBody<Solver>(
           patchData.QIn[patchIndex],
           QInEnumerator,
-          patchData.patchCentre[patchIndex],
-          patchData.patchSize[patchIndex],
+          patchData.cellCentre[patchIndex],
+          patchData.cellSize[patchIndex],
           patchIndex,
           volumeIndex2d(x,y),
           patchData.t[patchIndex],
@@ -407,8 +407,8 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanov_patchwise_heap_static_calls
         internal::updateSolutionWithFlux_LoopBody(
           tempFluxX, tempFluxY, tempFluxZ,
           fluxEnumerator,
-          patchData.patchCentre[patchIndex],
-          patchData.patchSize[patchIndex],
+          patchData.cellCentre[patchIndex],
+          patchData.cellSize[patchIndex],
           patchIndex,
           volumeIndex2d(x,y),
           unknown,
@@ -426,8 +426,8 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanov_patchwise_heap_static_calls
         internal::computeFlux_LoopBody<Solver>(
           patchData.QIn[patchIndex],
           QInEnumerator,
-          patchData.patchCentre[patchIndex],
-          patchData.patchSize[patchIndex],
+          patchData.cellCentre[patchIndex],
+          patchData.cellSize[patchIndex],
           patchIndex,
           volumeIndex3d(x,y,z),
           patchData.t[patchIndex],
@@ -446,8 +446,8 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanov_patchwise_heap_static_calls
         internal::computeFlux_LoopBody<Solver>(
           patchData.QIn[patchIndex],
           QInEnumerator,
-          patchData.patchCentre[patchIndex],
-          patchData.patchSize[patchIndex],
+          patchData.cellCentre[patchIndex],
+          patchData.cellSize[patchIndex],
           patchIndex,
           volumeIndex3d(x,y,z),
           patchData.t[patchIndex],
@@ -466,8 +466,8 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanov_patchwise_heap_static_calls
         internal::computeFlux_LoopBody<Solver>(
           patchData.QIn[patchIndex],
           QInEnumerator,
-          patchData.patchCentre[patchIndex],
-          patchData.patchSize[patchIndex],
+          patchData.cellCentre[patchIndex],
+          patchData.cellSize[patchIndex],
           patchIndex,
           volumeIndex3d(x,y,z),
           patchData.t[patchIndex],
@@ -487,8 +487,8 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanov_patchwise_heap_static_calls
         internal::updateSolutionWithFlux_LoopBody(
           tempFluxX, tempFluxY, tempFluxZ,
           fluxEnumerator,
-          patchData.patchCentre[patchIndex],
-          patchData.patchSize[patchIndex],
+          patchData.cellCentre[patchIndex],
+          patchData.cellSize[patchIndex],
           patchIndex,
           volumeIndex3d(x,y,z),
           unknown,
@@ -507,8 +507,8 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanov_patchwise_heap_static_calls
         internal::computeNonconservativeFlux_LoopBody<Solver,unknowns,auxiliaryVariables>(
           patchData.QIn[patchIndex],
           QInEnumerator,
-          patchData.patchCentre[patchIndex],
-          patchData.patchSize[patchIndex],
+          patchData.cellCentre[patchIndex],
+          patchData.cellSize[patchIndex],
           patchIndex,
           volumeIndex2d(x,y),
           patchData.t[patchIndex],
@@ -526,8 +526,8 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanov_patchwise_heap_static_calls
         internal::computeNonconservativeFlux_LoopBody<Solver,unknowns,auxiliaryVariables>(
           patchData.QIn[patchIndex],
           QInEnumerator,
-          patchData.patchCentre[patchIndex],
-          patchData.patchSize[patchIndex],
+          patchData.cellCentre[patchIndex],
+          patchData.cellSize[patchIndex],
           patchIndex,
           volumeIndex2d(x,y),
           patchData.t[patchIndex],
@@ -546,8 +546,8 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanov_patchwise_heap_static_calls
         internal::updateSolutionWithNonconservativeFlux_LoopBody(
           tempNonconservativeProductX, tempNonconservativeProductY, tempNonconservativeProductZ,
           ncpEnumerator,
-          patchData.patchCentre[patchIndex],
-          patchData.patchSize[patchIndex],
+          patchData.cellCentre[patchIndex],
+          patchData.cellSize[patchIndex],
           patchIndex,
           volumeIndex2d(x,y),
           unknown,
@@ -565,8 +565,8 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanov_patchwise_heap_static_calls
           internal::computeNonconservativeFlux_LoopBody<Solver,unknowns,auxiliaryVariables>(
             patchData.QIn[patchIndex],
             QInEnumerator,
-            patchData.patchCentre[patchIndex],
-            patchData.patchSize[patchIndex],
+            patchData.cellCentre[patchIndex],
+            patchData.cellSize[patchIndex],
             patchIndex,
             volumeIndex3d(x,y,z),
             patchData.t[patchIndex],
@@ -585,8 +585,8 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanov_patchwise_heap_static_calls
           internal::computeNonconservativeFlux_LoopBody<Solver,unknowns,auxiliaryVariables>(
             patchData.QIn[patchIndex],
             QInEnumerator,
-            patchData.patchCentre[patchIndex],
-            patchData.patchSize[patchIndex],
+            patchData.cellCentre[patchIndex],
+            patchData.cellSize[patchIndex],
             patchIndex,
             volumeIndex3d(x,y,z),
             patchData.t[patchIndex],
@@ -605,8 +605,8 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanov_patchwise_heap_static_calls
           internal::computeNonconservativeFlux_LoopBody<Solver,unknowns,auxiliaryVariables>(
             patchData.QIn[patchIndex],
             QInEnumerator,
-            patchData.patchCentre[patchIndex],
-            patchData.patchSize[patchIndex],
+            patchData.cellCentre[patchIndex],
+            patchData.cellSize[patchIndex],
             patchIndex,
             volumeIndex3d(x,y,z),
             patchData.t[patchIndex],
@@ -626,8 +626,8 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanov_patchwise_heap_static_calls
           internal::updateSolutionWithNonconservativeFlux_LoopBody(
             tempNonconservativeProductX, tempNonconservativeProductY, tempNonconservativeProductZ,
             ncpEnumerator,
-            patchData.patchCentre[patchIndex],
-            patchData.patchSize[patchIndex],
+            patchData.cellCentre[patchIndex],
+            patchData.cellSize[patchIndex],
             patchIndex,
             volumeIndex3d(x,y,z),
             unknown,
@@ -648,8 +648,8 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanov_patchwise_heap_static_calls
           internal::reduceMaxEigenvalue_LoopBody<Solver>(
             *(patchData.QOut + patchIndex),
             QOutEnumerator,
-            patchData.patchCentre[patchIndex],
-            patchData.patchSize[patchIndex],
+            patchData.cellCentre[patchIndex],
+            patchData.cellSize[patchIndex],
             patchIndex,
             volumeIndex2d(x,y),
             patchData.t[patchIndex],
@@ -670,8 +670,8 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanov_patchwise_heap_static_calls
           internal::reduceMaxEigenvalue_LoopBody<Solver>(
             *(patchData.QOut + patchIndex),
             QOutEnumerator,
-            patchData.patchCentre[patchIndex],
-            patchData.patchSize[patchIndex],
+            patchData.cellCentre[patchIndex],
+            patchData.cellSize[patchIndex],
             patchIndex,
             volumeIndex3d(x,y,z),
             patchData.t[patchIndex],

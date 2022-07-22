@@ -27,8 +27,6 @@ void exahype2::fv::applyBoundaryConditions(
 ) {
   static tarch::logging::Log _log( "exahype2::fv" );
 
-  assertionMsg( overlap==1, "other overlaps not yet supported. @Han, we have to discuss this or you make a proposal" );
-
   auto serialisePatchIndex = [&](tarch::la::Vector<Dimensions,int> overlapCell) {{
     int base   = 1;
     int result = 0;
