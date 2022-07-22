@@ -46,6 +46,7 @@ Scenario scenario = Scenario::GaussianProfile;
   #endif
 
   switch (scenario) {
+    case Scenario::GaussianProfile:
     case Scenario::PointExplosion:
       {
         // This is an example how to implement a priori refinement. If
