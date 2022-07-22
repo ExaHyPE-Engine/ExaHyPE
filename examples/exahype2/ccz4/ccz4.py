@@ -195,26 +195,27 @@ if __name__ == "__main__":
           eigenvalues = exahype2.solvers.fv.PDETerms.User_Defined_Implementation
         )
 
-        self.postprocess_updated_patch = """
-  {
-    #if Dimensions==2
-    constexpr int itmax = {{NUMBER_OF_VOLUMES_PER_AXIS}} * {{NUMBER_OF_VOLUMES_PER_AXIS}};
-    #endif
-
-    #if Dimensions==3
-    constexpr int itmax = {{NUMBER_OF_VOLUMES_PER_AXIS}} * {{NUMBER_OF_VOLUMES_PER_AXIS}} * {{NUMBER_OF_VOLUMES_PER_AXIS}};
-    #endif
-
-    int index = 0;
-    for (int i=0;i<itmax;i++)
-    {
-
-    // dfor( volume, {{NUMBER_OF_VOLUMES_PER_AXIS}} ) {
-      examples::exahype2::ccz4::enforceCCZ4constraints( targetPatch+index );
-      index += {{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}};
-    }
-  }
-"""
+# @todo fix
+#        self.postprocess_updated_patch = """
+#  {
+#    #if Dimensions==2
+#    constexpr int itmax = {{NUMBER_OF_VOLUMES_PER_AXIS}} * {{NUMBER_OF_VOLUMES_PER_AXIS}};
+#    #endif
+#
+#    #if Dimensions==3
+#    constexpr int itmax = {{NUMBER_OF_VOLUMES_PER_AXIS}} * {{NUMBER_OF_VOLUMES_PER_AXIS}} * {{NUMBER_OF_VOLUMES_PER_AXIS}};
+#    #endif
+#
+#    int index = 0;
+#    for (int i=0;i<itmax;i++)
+#    {
+#
+#    // dfor( volume, {{NUMBER_OF_VOLUMES_PER_AXIS}} ) {
+#      examples::exahype2::ccz4::enforceCCZ4constraints( targetPatch+index );
+#      index += {{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}};
+#    }
+#  }
+#"""
 
    
       def create_action_sets(self):

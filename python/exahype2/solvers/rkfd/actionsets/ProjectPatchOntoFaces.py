@@ -219,5 +219,6 @@ class ProjectPatchOntoFaces( AbstractRKFDActionSet ):
 #include "peano4/utils/Loop.h"
 #include "toolbox/blockstructured/Enumeration.h"
 #include "exahype2/fd/BoundaryConditions.h"
+#include "exahype2/enumerator/Enumerator.h"
 """ + AbstractRKFDActionSet.get_includes(self) 
 

@@ -87,7 +87,7 @@ class UpdateCell(ReconstructPatchAndApplyFunctor):
       assertion2( tarch::la::greaterEquals( timeStamp, 0.0 ),    timeStamp, timeStepSize );
       assertion2( tarch::la::greaterEquals( timeStepSize, 0.0 ), timeStamp, timeStepSize );
 
-      ::exahype2::fv::validatePatch(
+      ::exahype2::fd::validatePatch(
         reconstructedPatch,
         {{NUMBER_OF_UNKNOWNS}},
         {{NUMBER_OF_AUXILIARY_VARIABLES}},
@@ -102,7 +102,7 @@ class UpdateCell(ReconstructPatchAndApplyFunctor):
 
       {{POSTPROCESS_UPDATED_PATCH}}
 
-      ::exahype2::fv::validatePatch(
+      ::exahype2::fd::validatePatch(
         targetPatch,
         {{NUMBER_OF_UNKNOWNS}},
         {{NUMBER_OF_AUXILIARY_VARIABLES}},
@@ -187,8 +187,9 @@ class UpdateCell(ReconstructPatchAndApplyFunctor):
   
   def get_includes(self):
     return """
-#include "exahype2/fd/BoundaryConditions.h"
 #include "exahype2/NonCriticalAssertions.h"
+#include "exahype2/enumerator/Enumerator.h"
+#include "exahype2/fd/PatchUtils.h"
 """ + self._solver._get_default_includes() + self._solver.user_action_set_includes
 
 

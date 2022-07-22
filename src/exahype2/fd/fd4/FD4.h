@@ -5,9 +5,6 @@
 
 
 #include "exahype2/fd/Functors.h"
-#include "exahype2/fd/LoopBody.h"
-#include "exahype2/fd/fd4/LoopBody.h"
-
 #include "exahype2/CellData.h"
 
 
@@ -19,6 +16,21 @@ namespace exahype2 {
        *
        * This routine relies on the fact that we have a halo size of 3.
        *
+       * ## Comparison to other solvers
+       *
+       * Compared to the Finite Differences solver, this routine does not
+       * accept any eigenvalue. On the one hand, this is clear, as the finite
+       * differences formulation per se does not require an eigenvalue within
+       * the discretisation. On the other hand, it is important to keep in mind
+       * that the routine is used within a Runge-Kutta context, where the
+       * eigenvalue is required for adaptive time stepping after the last
+       * Runge-Kutta step, when we have actually computed the new solution.
+       * For this reason, it makes sense to outsource the eigenvalue
+       * computation to a routine of its own. Compuare to reduceMaxEigenvalue_patchwise_functors()
+       * for some details.
+       *
+       *
+       * ## Arguments
        *
        * @param copyOldTimeStepAndScaleWithTimeStepSize The routine can be used
        *   in two ways: Either for a classic explicit Euler or in a Runge-Kutta
@@ -32,7 +44,7 @@ namespace exahype2 {
        *   the Kreiss Oliger dissipation. If you set it to 0.0, the term is not
        *   evaluated at all.
        */
-      static void timeStep_patchwise_heap_functors(
+      void timeStep_patchwise_heap_functors(
         ::exahype2::CellData&   patchData,
         int                     numberOfGridCellsPerPatchPerAxis,
         int                     haloSize,
@@ -42,12 +54,10 @@ namespace exahype2 {
         bool                    evaluateFlux,
         bool                    evaluateDifferentialSource, //for ncp
         bool                    evaluateAlgebraicSource, //real source
-        bool                    evaluateMaximumEigenvalueAfterTimeStep,
         bool                    copyOldTimeStepAndScaleWithTimeStepSize,
         Flux                    flux,
         NonconservativeProduct  DifferentialSource,
-        Source                  AlgebraicSource,
-        MaxEigenvalue           maxEigenvalue
+        Source                  AlgebraicSource
       )
       #if defined(UseManualInlining)
       __attribute__((always_inline))
@@ -57,8 +67,5 @@ namespace exahype2 {
   }
 }
 
-
-#include "exahype2/fd/FD_Helper.cpph"
-#include "FD4_patchwise_functors.cpph"
 
 #endif

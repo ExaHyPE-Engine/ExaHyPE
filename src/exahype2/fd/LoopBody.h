@@ -7,6 +7,8 @@
 
 #include "Functors.h"
 
+#include "exahype2/CellData.h"
+
 #include "exahype2/enumerator/AoSLexicographicEnumerator.h"
 #include "exahype2/enumerator/SoALexicographicEnumerator.h"
 #include "exahype2/enumerator/AoSoALexicographicEnumerator.h"
@@ -17,6 +19,22 @@
 namespace exahype2 {
   namespace fd {
       constexpr int PickAllEntriesFromOutputVector = -1;
+
+      /**
+       * ## Modifiers
+       *
+       * I need this static keyword to avoid multiple definition errors in the
+       * linker. No clue why.
+       */
+      void reduceMaxEigenvalue_patchwise_functors(
+        ::exahype2::CellData&   patchData,
+        int                     numberOfGridCellsPerPatchPerAxis,
+        int                     unknowns,
+        int                     auxiliaryVariables,
+        MaxEigenvalue           maxEigenvalue
+      );
+
+
       namespace internal {
         #if defined(SharedOMP) and (!defined(__INTEL_LLVM_COMPILER) or !defined(GPUOffloadingOMP))
         #pragma omp declare simd

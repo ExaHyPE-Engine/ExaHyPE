@@ -1,5 +1,8 @@
-#include "tarch/multicore/otter.h"
 #include "FD4.h"
+#include "tarch/multicore/otter.h"
+#include "exahype2/fd/LoopBody.h"
+#include "exahype2/fd/fd4/LoopBody.h"
+#include "exahype2/fd/FD_Helper.cpph"
 
 
 void exahype2::fd::fd4::timeStep_patchwise_heap_functors(
@@ -12,12 +15,10 @@ void exahype2::fd::fd4::timeStep_patchwise_heap_functors(
   bool                    evaluateFlux,
   bool                    evaluateDifferentialSource, //for ncp
   bool                    evaluateAlgebraicSource, //real source
-  bool                    evaluateMaximumEigenvalueAfterTimeStep,
   bool                    copyOldTimeStepAndScaleWithTimeStepSize,
   Flux                    flux,
   NonconservativeProduct  DifferentialSource,
-  Source                  AlgebraicSource,
-  MaxEigenvalue           maxEigenvalue
+  Source                  AlgebraicSource
 ) {
   static tarch::logging::Log _log( "exahype2::fd" );
 
@@ -634,35 +635,6 @@ void exahype2::fd::fd4::timeStep_patchwise_heap_functors(
           otterLoopIterationEnd();
         }
         otterLoopEnd();
-    }
-
-
-    // STEP4: compute maximum eigenvalue for subsequent time step
-    if (evaluateMaximumEigenvalueAfterTimeStep) {
-      double newMaxEigenvalue = 0.0;
-      otterLoopBegin(); // TODO: how do I clarify that this is a reduction? Do we need this info here?
-      for (int x = 0; x < numberOfGridCellsPerPatchPerAxis; x++)
-      for (int y = 0; y < numberOfGridCellsPerPatchPerAxis; y++)
-      for (int z = 0; z < numberOfGridCellsPerPatchPerAxis; z++) {
-        otterLoopIterationBegin();
-        newMaxEigenvalue = std::max(
-          newMaxEigenvalue,
-          ::exahype2::fd::internal::reduceMaxEigenvalue_LoopBody(
-            *(patchData.QOut + patchIndex),
-            QOutEnumerator,
-            maxEigenvalue,
-            patchData.cellCentre[patchIndex],
-            patchData.cellSize[patchIndex],
-            patchIndex,
-            gridCellIndex3d(x,y,z),
-            patchData.t[patchIndex],
-            timeStepSize
-          )
-        );
-        otterLoopIterationEnd();
-      }
-      otterLoopEnd();
-      patchData.maxEigenvalue[patchIndex] = newMaxEigenvalue;
     }
   }
 
