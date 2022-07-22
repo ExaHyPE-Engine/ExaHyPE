@@ -18,7 +18,9 @@ class AdaptiveTimeSteppingCodeSnippets( exahype2.solvers.AdaptiveTimeSteppingCod
     predicate = """
     tarch::mpi::Rank::getInstance().isGlobalMaster() 
     and
-    _maxGridCellH>0.0
+    _maxGridCellHThisTimeStep>0.0
+    and
+    isFirstGridSweepOfTimeStep()
   """
   
     if self._use_enclave_tasking:
@@ -52,7 +54,7 @@ class AdaptiveTimeSteppingCodeSnippets( exahype2.solvers.AdaptiveTimeSteppingCod
     """
     code_snippet = super( AdaptiveTimeSteppingCodeSnippets, self ).create_finish_time_step_implementation() + """
   if ( tarch::la::greater(_maxEigenvalue, 0.0 ) ) {
-    _admissibleTimeStepSize = """ + str(self._time_step_relaxation) + """ * _minGridCellHThisTimeStep / _maxEigenvalue;
+    _admissibleTimeStepSize = """ + str(self._time_step_relaxation) + """ * _minGridCellHThisTimeStep / _maxEigenvalue / {{RK_ORDER}} / {{RK_ORDER}};
     if ( std::isnan(_admissibleTimeStepSize) or std::isinf(_admissibleTimeStepSize) ) {
       ::exahype2::triggerNonCriticalAssertion( __FILE__, __LINE__, "_admissibleTimeStepSize>0", "invalid (NaN of inf) time step size: " + std::to_string(_admissibleTimeStepSize) );
     }

@@ -110,20 +110,6 @@ class UpdateCell(ReconstructPatchAndApplyFunctor):
         0, // halo
         std::string(__FILE__) + "(" + std::to_string(__LINE__) + "): " + marker.toString()
       ); // outcome has to be valid
-      
-      {% if COMPUTE_MAX_EIGENVALUE %}
-      const double maxEigenvalue = patchData.maxEigenvalue[0];
-      {% endif %}
-      
-      // Set the variable
-      // double newTimeStepSize
-      {{COMPUTE_NEW_TIME_STEP_SIZE}}
-    
-      fineGridCell{{SOLVER_NAME}}CellLabel.setTimeStamp(timeStamp+timeStepSize);
-      fineGridCell{{SOLVER_NAME}}CellLabel.setTimeStepSize(newTimeStepSize);
-      fineGridCell{{SOLVER_NAME}}CellLabel.setHasUpdated(true);
-    
-      repositories::{{SOLVER_INSTANCE}}.update(newTimeStepSize, timeStamp+timeStepSize, marker.h()(0) );
   """ )
 
 
@@ -144,18 +130,6 @@ class UpdateCell(ReconstructPatchAndApplyFunctor):
     )
     self._solver = solver
     
-    self._Template_TouchCellFirstTime_Epilogue += """
-  else if (not marker.willBeRefined() and not marker.hasBeenRefined()) {{
-    const double timeStamp    = fineGridCell{SOLVER_NAME}CellLabel.getTimeStamp();
-    const double timeStepSize = fineGridCell{SOLVER_NAME}CellLabel.getTimeStepSize();
-    
-    assertion2( tarch::la::greaterEquals( timeStepSize, 0.0 ), timeStepSize, timeStamp );
-    assertion2( tarch::la::greaterEquals( timeStamp, 0.0 ),    timeStepSize, timeStamp );
-
-    repositories::{SOLVER_INSTANCE}.update(0.0, timeStamp, marker.h()(0) );
-  }}
-"""
-
     self._Template_TouchCellFirstTime_Preamble = """
   fineGridCell""" + solver._name + """CellLabel.setHasUpdated(false);
 """ + self._Template_TouchCellFirstTime_Preamble

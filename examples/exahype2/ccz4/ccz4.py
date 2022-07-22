@@ -164,7 +164,7 @@ if __name__ == "__main__":
         elif SuperClass==exahype2.solvers.rkfd.fd4.GlobalFixedTimeStep:
           SuperClass.__init__(
             self,
-            name=name, patch_size=patch_size, rk_order=1,
+            name=name, patch_size=patch_size, rk_order=4,
             unknowns=number_of_unknowns,
             auxiliary_variables=0,
             min_volume_h=min_volume_h, max_volume_h=max_volume_h,

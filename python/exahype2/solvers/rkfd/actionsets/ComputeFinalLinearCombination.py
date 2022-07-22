@@ -46,6 +46,11 @@ class ComputeFinalLinearCombination(AbstractRKFDActionSet):
         {% endfor %}
       }
     }
+
+      {% if COMPUTE_MAX_EIGENVALUE %}
+      assertionMsg(false, "erst mal den Kernel aufrufen, damit das befuellt ist")
+      const double maxEigenvalue = patchData.maxEigenvalue[0];
+      {% endif %}
     
     const double timeStamp = fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStamp();
     
