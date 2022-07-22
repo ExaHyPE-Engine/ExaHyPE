@@ -113,25 +113,27 @@ double {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::getAdmissibleTimeStepSize() 
   
     """ 
     return """
-  #ifdef Parallel
-  double newMaxEigenvalue = _maxEigenvalue;
-  tarch::mpi::Rank::getInstance().allReduce(
-        &newMaxEigenvalue,
-        &_maxEigenvalue,
+  if ( isLastGridSweepOfTimeStep() ) {
+    #ifdef Parallel
+    double newMaxEigenvalue = _maxEigenvalue;
+    tarch::mpi::Rank::getInstance().allReduce(
+          &newMaxEigenvalue,
+         &_maxEigenvalue,
         1,
         MPI_DOUBLE,
         MPI_MAX, 
         [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); }
         );
-  #endif
+    #endif
 
-  if ( tarch::la::smaller(_maxEigenvalue, 0.0 ) ) {
-    ::exahype2::triggerNonCriticalAssertion( __FILE__, __LINE__, "_maxEigenvalue>=0", "invalid max eigenvalue: " + std::to_string(_maxEigenvalue) );
-    // keep time step size invariant
-    // _admissibleTimeStepSize = _admissibleTimeStepSize;
-  }
-  else if ( tarch::la::equals(_maxEigenvalue, 0.0 ) ) {
-    logWarning( "finishTimeStep(...)", "maximum eigenvalue approaches 0.0. For nonlinear PDEs, this often means the PDE becomes stationary. It could also be a bug however" ); 
-    _admissibleTimeStepSize = 0.0;
+    if ( tarch::la::smaller(_maxEigenvalue, 0.0 ) ) {
+      ::exahype2::triggerNonCriticalAssertion( __FILE__, __LINE__, "_maxEigenvalue>=0", "invalid max eigenvalue: " + std::to_string(_maxEigenvalue) );
+      // keep time step size invariant
+      // _admissibleTimeStepSize = _admissibleTimeStepSize;
+    }
+    else if ( tarch::la::equals(_maxEigenvalue, 0.0 ) ) {
+      logWarning( "finishTimeStep(...)", "maximum eigenvalue approaches 0.0. For nonlinear PDEs, this often means the PDE becomes stationary. It could also be a bug however" ); 
+      _admissibleTimeStepSize = 0.0;
+    }
   }
 """  
