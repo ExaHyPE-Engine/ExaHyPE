@@ -49,8 +49,8 @@ namespace exahype2 {
        */
       typedef std::function< double(
         const double * __restrict__ Q,
-        const tarch::la::Vector<Dimensions,double>&  volumeX,
-        const tarch::la::Vector<Dimensions,double>&  volumeH,
+        const tarch::la::Vector<Dimensions,double>&  gridCellX,
+        const tarch::la::Vector<Dimensions,double>&  gridCellH,
         double                                       t,
         double                                       dt,
         int                                          normal

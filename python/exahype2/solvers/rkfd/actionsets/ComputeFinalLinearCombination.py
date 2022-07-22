@@ -47,12 +47,30 @@ class ComputeFinalLinearCombination(AbstractRKFDActionSet):
       }
     }
 
-      {% if COMPUTE_MAX_EIGENVALUE %}
-      assertionMsg(false, "erst mal den Kernel aufrufen, damit das befuellt ist")
-      const double maxEigenvalue = patchData.maxEigenvalue[0];
-      {% endif %}
-    
     const double timeStamp = fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStamp();
+
+    {% if COMPUTE_MAX_EIGENVALUE %}
+    ::exahype2::CellData  patchData( nullptr, marker.x(), marker.h(), timeStamp, timeStepSize, fineGridCell{{UNKNOWN_IDENTIFIER}}.value );
+
+    ::exahype2::fd::reduceMaxEigenvalue_patchwise_functors(
+      patchData,
+      {{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}},
+      {{NUMBER_OF_UNKNOWNS}},
+      {{NUMBER_OF_AUXILIARY_VARIABLES}},
+      [&](
+        const double * __restrict__ Q,
+        const tarch::la::Vector<Dimensions,double>&  gridCellCentre,
+        const tarch::la::Vector<Dimensions,double>&  gridCellH,
+        double                                       t,
+        double                                       dt,
+        int                                          normal
+      )->double {
+        return repositories::{{SOLVER_INSTANCE}}.maxEigenvalue( Q, gridCellCentre, gridCellH, t, dt, normal );
+      }
+    );
+
+    const double maxEigenvalue = patchData.maxEigenvalue[0];
+    {% endif %}
     
     // Set the variable
     // double newTimeStepSize
@@ -102,5 +120,6 @@ class ComputeFinalLinearCombination(AbstractRKFDActionSet):
 
   def get_includes(self):
     return super(ComputeFinalLinearCombination,self).get_includes() + """
+#include "exahype2/fd/LoopBody.h"
 #include "exahype2/enumerator/AoSLexicographicEnumerator.h"
 """    

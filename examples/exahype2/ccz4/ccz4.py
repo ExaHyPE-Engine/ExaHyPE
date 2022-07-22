@@ -154,7 +154,7 @@ if __name__ == "__main__":
         elif SuperClass==exahype2.solvers.rkfd.fd4.GlobalAdaptiveTimeStep:
           SuperClass.__init__(
             self,
-            name=name, patch_size=patch_size, rk_order=1,
+            name=name, patch_size=patch_size, rk_order=2,
             unknowns=number_of_unknowns,
             auxiliary_variables=0,
             min_volume_h=min_volume_h, max_volume_h=max_volume_h,
@@ -168,7 +168,7 @@ if __name__ == "__main__":
             unknowns=number_of_unknowns,
             auxiliary_variables=0,
             min_volume_h=min_volume_h, max_volume_h=max_volume_h,
-            normalised_time_step_size=0.001,
+            normalised_time_step_size=0.01,
             KOSigma=KOSig
           )
         else:
