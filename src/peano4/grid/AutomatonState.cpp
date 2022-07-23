@@ -18,23 +18,39 @@ setAccessNumber( __accessNumber);
 
 
 
+peano4::grid::AutomatonState::AutomatonState( const AutomatonState& copy ) {
+  setLevel( copy.getLevel() );
+  setX( copy.getX() );
+  setH( copy.getH() );
+  setInverted( copy.getInverted() );
+  setEvenFlags( copy.getEvenFlags() );
+  setAccessNumber( copy.getAccessNumber() );
+}
+
+
+
+
+
 std::string peano4::grid::AutomatonState::toString() const {
   std::ostringstream out;
   out << "(";
   out << "level=" << _level;
   out << ","; 
-  out << "x=" << _x;
+  out << "x=" << getX();
   out << ","; 
-  out << "h=" << _h;
+  out << "h=" << getH();
   out << ","; 
   out << "inverted=" << _inverted;
   out << ","; 
   out << "evenFlags=" << _evenFlags;
   out << ","; 
-  out << "accessNumber=" << _accessNumber;
+  out << "accessNumber=" << getAccessNumber();
   out << ")";
   return out.str();
 }
+
+
+
 
 
 int   peano4::grid::AutomatonState::getLevel() const {
@@ -114,16 +130,12 @@ void   peano4::grid::AutomatonState::setInverted(bool value) {
 
 
 std::bitset<Dimensions>   peano4::grid::AutomatonState::getEvenFlags() const {
-
-  std::bitset<Dimensions> result;
-  for (int i=0; i<Dimensions; i++) result[i] =   _evenFlags[i];
-  return result;
+  return   _evenFlags;
 }
 
 
 void   peano4::grid::AutomatonState::setEvenFlags(const std::bitset<Dimensions>&  value) {
-
-  for (int i=0; i<Dimensions; i++)   _evenFlags[i]=value[i];
+  _evenFlags = value;
 }
 
 
@@ -138,7 +150,7 @@ void   peano4::grid::AutomatonState::setEvenFlags(int index, bool value) {
 
 
 void   peano4::grid::AutomatonState::flipEvenFlags(int index) {
-  _evenFlags[index] = not   _evenFlags[index];
+  _evenFlags.flip(index);
 }
 
 

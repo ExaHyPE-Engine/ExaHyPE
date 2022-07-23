@@ -31,6 +31,9 @@ std::string peano4::grid::GridControlEvent::toString() const {
 }
 
 
+
+
+
 peano4::grid::GridControlEvent::RefinementControl   peano4::grid::GridControlEvent::getRefinementControl() const {
   return _refinementControl;
 }

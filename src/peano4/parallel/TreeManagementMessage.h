@@ -44,13 +44,14 @@ struct peano4::parallel::TreeManagementMessage {
     TreeManagementMessage() {}
     TreeManagementMessage(int  __masterSpacetreeId, int  __workerSpacetreeId, Action  __action);
 
+
     int   getMasterSpacetreeId() const;
     void   setMasterSpacetreeId(int value);
     int   getWorkerSpacetreeId() const;
     void   setWorkerSpacetreeId(int value);
     peano4::parallel::TreeManagementMessage::Action   getAction() const;
     void   setAction(Action value);
-
+    TreeManagementMessage(const TreeManagementMessage& copy) = default;
 
 
 #ifdef Parallel

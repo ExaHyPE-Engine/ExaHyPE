@@ -41,9 +41,10 @@ struct tarch::mpi::IntegerMessage {
     IntegerMessage() {}
     IntegerMessage(int  __value);
 
+
     int   getValue() const;
     void   setValue(int value);
-
+    IntegerMessage(const IntegerMessage& copy) = default;
 
 
 #ifdef Parallel

@@ -92,7 +92,7 @@ class UpdateCell(ReconstructPatchAndApplyFunctor):
         {{NUMBER_OF_UNKNOWNS}},
         {{NUMBER_OF_AUXILIARY_VARIABLES}},
         {{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}},
-        1, // halo
+        {{HALO_SIZE}}, // halo
         std::string(__FILE__) + "(" + std::to_string(__LINE__) + "): " + marker.toString()
       ); // previous time step has to be valid
   

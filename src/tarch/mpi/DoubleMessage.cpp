@@ -22,6 +22,9 @@ std::string tarch::mpi::DoubleMessage::toString() const {
 }
 
 
+
+
+
 double   tarch::mpi::DoubleMessage::getValue() const {
   return _value;
 }

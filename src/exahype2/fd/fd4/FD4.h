@@ -16,6 +16,18 @@ namespace exahype2 {
        *
        * This routine relies on the fact that we have a halo size of 3.
        *
+       *
+       * ## Enumerators
+       *
+       * The enumerators span only one patch each, as we run through the patches
+       * one by one. It is important to recognise that the input enumerator creates
+       * indices over an array which holds auxiliary (material) parameters, while
+       * the output does not hold auxiliary ones. It solely holds the fluxes of the
+       * unknowns which are evolved according to the PDE.
+       *
+       * Both input and output enumerator use AoS ordering.
+       *
+       *
        * ## Comparison to other solvers
        *
        * Compared to the Finite Differences solver, this routine does not

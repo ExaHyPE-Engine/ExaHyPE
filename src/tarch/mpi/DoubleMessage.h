@@ -41,9 +41,10 @@ struct tarch::mpi::DoubleMessage {
     DoubleMessage() {}
     DoubleMessage(double  __value);
 
+
     double   getValue() const;
     void   setValue(double value);
-
+    DoubleMessage(const DoubleMessage& copy) = default;
 
 
 #ifdef Parallel
