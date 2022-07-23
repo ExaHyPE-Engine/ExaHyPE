@@ -61,6 +61,7 @@ struct {FULL_QUALIFIED_CLASS_NAME} {{
     {UNQUALIFIED_CLASS_NAME}() {{}}
     {UNQUALIFIED_CLASS_NAME}{CONSTRUCTOR_ARGUMENTS};
 
+
 {METHOD_DECLARATIONS}
 
 {ASPECT_METHOD_DECLARATIONS}
@@ -158,6 +159,13 @@ struct {FULL_QUALIFIED_CLASS_NAME} {{
     return result
 
 
+  def __use_default_copy_constructor(self):
+    use_default_constructor = True
+    for attribute in self._attributes:
+      use_default_constructor = use_default_constructor and attribute.use_default_copy_constructor()
+    return use_default_constructor
+
+
   def write_header_file(self,full_qualified_filename):
     d = {}
     d[ "INCLUDE_GUARD" ]              = dastgen2.get_include_guard(self._full_qualified_name)
@@ -193,6 +201,11 @@ struct {FULL_QUALIFIED_CLASS_NAME} {{
         
         
     d[ "CONSTRUCTOR_ARGUMENTS" ] = self._get_constructor_arguments()
+
+    if self.__use_default_copy_constructor():
+      d[ "METHOD_DECLARATIONS" ] += "    " + dastgen2.get_unqualified_class_name(self._full_qualified_name) + "(const " + dastgen2.get_unqualified_class_name(self._full_qualified_name) + "& copy) = default;"
+    else:
+      d[ "METHOD_DECLARATIONS" ] += "    " + dastgen2.get_unqualified_class_name(self._full_qualified_name) + "(const " + dastgen2.get_unqualified_class_name(self._full_qualified_name) + "& copy);"
 
 
     if full_qualified_filename.find( "/" ) != -1:
@@ -241,6 +254,17 @@ struct {FULL_QUALIFIED_CLASS_NAME} {{
       output.write("  out << \")\";\n")
       output.write("  return out.str();\n")
       output.write("}\n\n\n")
+
+
+  def __generate_explicit_copy_constructor(self,output):
+      output.write(self._full_qualified_name + "::" + dastgen2.get_unqualified_class_name(self._full_qualified_name) + "( const " + dastgen2.get_unqualified_class_name(self._full_qualified_name) + "& copy ) {\n")
+      for attribute in self._attributes:
+        uppercase_name = attribute.name[0].upper() + attribute.name[1:]
+        output.write("  set" + uppercase_name + "( copy.get" + uppercase_name + "() );\n")
+      output.write("}\n\n\n")
+
+      
+  def __generate_accessors(self, output):
       for attribute in self._attributes:
           for method in attribute.get_methods(self._full_qualified_name):
               output.write(method[1] + "   " + self._full_qualified_name + "::" + method[0] + " {\n")
@@ -249,15 +273,6 @@ struct {FULL_QUALIFIED_CLASS_NAME} {{
       
 
   def write_implementation_file(self,full_qualified_filename):
-    #d = {}
-    #d[ "INCLUDE_GUARD" ]              = dastgen2.get_include_guard(self._full_qualified_name)
-    #d[ "UNQUALIFIED_CLASS_NAME" ]     = dastgen2.get_unqualified_class_name(self._full_qualified_name)
-    #d[ "FULL_QUALIFIED_CLASS_NAME" ]  = self._full_qualified_name
-    #d[ "OPEN_NAMESPACES" ]            = ""
-    #d[ "CLOSE_NAMESPACES" ]           = ""
-    #d[ "SETTER_GETTER_DECLARATIONS" ] = ""
-    #for i in dastgen2.get_namespaces( self._full_qualified_name ):
-
     with open( full_qualified_filename, "w" ) as output:
       output.write( "#include \"" + dastgen2.get_unqualified_class_name(self._full_qualified_name) + ".h\"\n\n\n" )
 
@@ -272,7 +287,15 @@ struct {FULL_QUALIFIED_CLASS_NAME} {{
       if self.has_nondefault_constructor:
         self.__generate_constructor_definition(output)
         output.write( "\n\n\n" )
+
+      if not self.__use_default_copy_constructor():
+        self.__generate_explicit_copy_constructor(output)
+        output.write( "\n\n\n" )
+      
       self.__generate_toString_definition(output)
+      output.write( "\n\n\n" )
+
+      self.__generate_accessors(output)
       output.write( "\n\n\n" )
 
       for aspect in self._aspects:
