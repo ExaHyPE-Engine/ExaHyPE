@@ -222,25 +222,28 @@ void exahype2::fd::fd4::internal::computeFlux_LoopBody(
   double* __restrict__                           QFlux,
   const QOutEnumeratorType&                      QFluxEnumerator
 ) {
-  double tempQ[QInEnumerator._unknowns];
-  double tempFlux[QInEnumerator._unknowns];
-  double QFluxGathered[QInEnumerator._unknowns];
-  for (int unknown=0; unknown<QInEnumerator._unknowns; unknown++) {QFluxGathered[unknown] = 0.0;}
-  //tarch::la::Vector<Dimensions,int>       centralVolume  = volumeIndex;
+  double* tempQ          = new double[QInEnumerator._unknowns + QInEnumerator._numberOfAuxiliaryVariables];
+  double* tempFlux       = new double[QInEnumerator._unknowns];
+  double* QFluxGathered  = new double[QInEnumerator._unknowns];
+
+  for (int unknown=0; unknown<QInEnumerator._unknowns; unknown++) {
+    QFluxGathered[unknown] = 0.0;
+  }
+
   tarch::la::Vector<Dimensions,int>  leftAdjacentVolume1 = volumeIndex;
   tarch::la::Vector<Dimensions,int>  leftAdjacentVolume2 = volumeIndex;
   tarch::la::Vector<Dimensions,int> rightAdjacentVolume1 = volumeIndex;
   tarch::la::Vector<Dimensions,int> rightAdjacentVolume2 = volumeIndex;
 
-  rightAdjacentVolume1(normal)++;
-  rightAdjacentVolume2(normal)++;
-  rightAdjacentVolume2(normal)++;
-   leftAdjacentVolume1(normal)--;
-   leftAdjacentVolume2(normal)--;
-   leftAdjacentVolume2(normal)--;
+  rightAdjacentVolume1(normal) += 1;
+  rightAdjacentVolume2(normal) += 2;
+   leftAdjacentVolume1(normal) -= 1;
+   leftAdjacentVolume2(normal) -= 2;
 
   //F^-
-  for (int unknown=0; unknown<QInEnumerator._unknowns; unknown++) {tempQ[unknown] = QIn[ QInEnumerator(patchIndex, leftAdjacentVolume1, unknown) ];}
+  for (int unknown=0; unknown<QInEnumerator._unknowns + QInEnumerator._numberOfAuxiliaryVariables; unknown++) {
+    tempQ[unknown] = QIn[ QInEnumerator(patchIndex, leftAdjacentVolume1, unknown) ];
+  }
   flux(
       tempQ,
       ::exahype2::fv::getVolumeCentre( patchCentre, patchSize, QInEnumerator._numberOfDoFsPerAxisInCell, volumeIndex ),
@@ -251,11 +254,13 @@ void exahype2::fd::fd4::internal::computeFlux_LoopBody(
       tempFlux
   );
   for (int unknown=0; unknown<QInEnumerator._unknowns; unknown++) {
-    QFluxGathered[QInEnumerator._unknowns]-=(8.0/12.0)*tempFlux[QInEnumerator._unknowns]/(::exahype2::fv::getVolumeSize( patchSize, QInEnumerator._numberOfDoFsPerAxisInCell )(normal));
+    QFluxGathered[unknown] -= (8.0/12.0)*tempFlux[unknown]/(::exahype2::fd::getGridCellSize( patchSize, QInEnumerator._numberOfDoFsPerAxisInCell )(normal));
   }
 
   //F^--
-  for (int unknown=0; unknown<QInEnumerator._unknowns; unknown++) {tempQ[unknown] = QIn[ QInEnumerator(patchIndex, leftAdjacentVolume2, unknown) ];}
+  for (int unknown=0; unknown<QInEnumerator._unknowns + QInEnumerator._numberOfAuxiliaryVariables; unknown++) {
+    tempQ[unknown] = QIn[ QInEnumerator(patchIndex, leftAdjacentVolume2, unknown) ];
+  }
   flux(
       tempQ,
       ::exahype2::fv::getVolumeCentre( patchCentre, patchSize, QInEnumerator._numberOfDoFsPerAxisInCell, volumeIndex ),
@@ -266,11 +271,13 @@ void exahype2::fd::fd4::internal::computeFlux_LoopBody(
       tempFlux
   );
   for (int unknown=0; unknown<QInEnumerator._unknowns; unknown++) {
-    QFluxGathered[QInEnumerator._unknowns]+=(1.0/12.0)*tempFlux[QInEnumerator._unknowns]/(::exahype2::fv::getVolumeSize( patchSize, QInEnumerator._numberOfDoFsPerAxisInCell )(normal));
+    QFluxGathered[unknown]+=(1.0/12.0)*tempFlux[unknown]/(::exahype2::fd::getGridCellSize( patchSize, QInEnumerator._numberOfDoFsPerAxisInCell )(normal));
   }
 
   //F^+
-  for (int unknown=0; unknown<QInEnumerator._unknowns; unknown++) {tempQ[unknown] = QIn[ QInEnumerator(patchIndex, rightAdjacentVolume1, unknown) ];}
+  for (int unknown=0; unknown<QInEnumerator._unknowns + QInEnumerator._numberOfAuxiliaryVariables; unknown++) {
+    tempQ[unknown] = QIn[ QInEnumerator(patchIndex, rightAdjacentVolume1, unknown) ];
+  }
   flux(
       tempQ,
       ::exahype2::fv::getVolumeCentre( patchCentre, patchSize, QInEnumerator._numberOfDoFsPerAxisInCell, volumeIndex ),
@@ -281,11 +288,13 @@ void exahype2::fd::fd4::internal::computeFlux_LoopBody(
       tempFlux
   );
   for (int unknown=0; unknown<QInEnumerator._unknowns; unknown++) {
-    QFluxGathered[QInEnumerator._unknowns]+=(8.0/12.0)*tempFlux[QInEnumerator._unknowns]/(::exahype2::fv::getVolumeSize( patchSize, QInEnumerator._numberOfDoFsPerAxisInCell )(normal));
+    QFluxGathered[unknown]+=(8.0/12.0)*tempFlux[unknown]/(::exahype2::fd::getGridCellSize( patchSize, QInEnumerator._numberOfDoFsPerAxisInCell )(normal));
   }
 
   //F^++
-  for (int unknown=0; unknown<QInEnumerator._unknowns; unknown++) {tempQ[unknown] = QIn[ QInEnumerator(patchIndex, rightAdjacentVolume2, unknown) ];}
+  for (int unknown=0; unknown<QInEnumerator._unknowns + QInEnumerator._numberOfAuxiliaryVariables; unknown++) {
+    tempQ[unknown] = QIn[ QInEnumerator(patchIndex, rightAdjacentVolume2, unknown) ];
+  }
   flux(
       tempQ,
       ::exahype2::fv::getVolumeCentre( patchCentre, patchSize, QInEnumerator._numberOfDoFsPerAxisInCell, volumeIndex ),
@@ -296,14 +305,19 @@ void exahype2::fd::fd4::internal::computeFlux_LoopBody(
       tempFlux
   );
   for (int unknown=0; unknown<QInEnumerator._unknowns; unknown++) {
-    QFluxGathered[QInEnumerator._unknowns]-=(1.0/12.0)*tempFlux[QInEnumerator._unknowns]/(::exahype2::fv::getVolumeSize( patchSize, QInEnumerator._numberOfDoFsPerAxisInCell )(normal));
+    QFluxGathered[unknown]-=(1.0/12.0)*tempFlux[unknown]/(::exahype2::fd::getGridCellSize( patchSize, QInEnumerator._numberOfDoFsPerAxisInCell )(normal));
   }
 
+  // scatter accumulated result
   for (int unknown=0; unknown<QInEnumerator._unknowns; unknown++) {
     QFlux[ QFluxEnumerator(patchIndex,volumeIndex,unknown) ] = QFluxGathered[unknown];
   }
 
+  delete[] tempQ;
+  delete[] tempFlux;
+  delete[] QFluxGathered;
 }
+
 
 template <typename QOutEnumeratorType>
 void exahype2::fd::fd4::internal::updateSolutionWithFlux_LoopBody(

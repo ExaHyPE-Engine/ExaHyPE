@@ -22,7 +22,7 @@ void exahype2::fd::fd4::timeStep_patchwise_heap_functors(
 ) {
   static tarch::logging::Log _log( "exahype2::fd" );
 
-  assertionEquals(haloSize,3); // TODO: this is the data stricture halo size which I think should be 3, but check
+  assertionEquals(haloSize,3);
 
   bool evaluateKODissipation = KOSigma>0.0;
 
