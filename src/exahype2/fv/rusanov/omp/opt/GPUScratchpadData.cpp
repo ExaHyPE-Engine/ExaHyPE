@@ -1,12 +1,10 @@
 #include "GPUScratchpadData.h"
 
 #include <omp.h>
-#include <iostream>
 
 exahype2::fv::rusanov::omp::opt::GPUScratchpadData::GPUScratchpadData(int deviceId_, size_t fluxSize, size_t ncpSize, size_t eigenvalueSize)
     : deviceId(deviceId_) {
 
-    printf("Allocating GPU scratchpad data\n");
     tempFluxX = reinterpret_cast<double*>(omp_target_alloc(fluxSize * sizeof(double), deviceId));
     tempFluxY = reinterpret_cast<double*>(omp_target_alloc(fluxSize * sizeof(double), deviceId));
     tempFluxZ = reinterpret_cast<double*>(omp_target_alloc(fluxSize * sizeof(double), deviceId));
@@ -19,7 +17,6 @@ exahype2::fv::rusanov::omp::opt::GPUScratchpadData::GPUScratchpadData(int device
 }
 
 exahype2::fv::rusanov::omp::opt::GPUScratchpadData::~GPUScratchpadData() {
-    printf("Freeing GPU scratchpad data\n");
     omp_target_free(tempFluxX, deviceId);
     omp_target_free(tempFluxY, deviceId);
     omp_target_free(tempFluxZ, deviceId);

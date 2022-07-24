@@ -218,6 +218,7 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanov_batched_heap_static_calls(
     }
   }
 
+/*
   if (Dimensions==2) {
     #pragma omp target teams distribute parallel for simd collapse(3) device(targetDevice)
     for (int patchIndex=0; patchIndex<numberOfCells; patchIndex++)
@@ -1058,7 +1059,7 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanov_batched_heap_static_calls(
       }
       patchData.maxEigenvalue[patchIndex] = newMaxEigenvalue;
     }
-  }
+  }*/
 
   #pragma omp target exit data map(delete:rawPointerToCellCentres[0:hostPatchData.numberOfCells*Dimensions]) device(targetDevice)
   #pragma omp target exit data map(delete:rawPointerToCellSizes[0:hostPatchData.numberOfCells*Dimensions]) device(targetDevice)

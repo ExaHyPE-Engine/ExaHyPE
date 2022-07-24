@@ -1,0 +1,7 @@
+*.o
+*.Po
+*.a
+*.dirstamp
+*.pyc
+/Makefile
+/Makefile.in

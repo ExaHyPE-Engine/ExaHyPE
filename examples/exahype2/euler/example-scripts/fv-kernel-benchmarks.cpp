@@ -161,7 +161,7 @@ void runBenchmarks(int patches) {
 
     logInfo("main()", "completed measurements for baseline on host: "       << watch.getCalendarTime() << " / " << (watch.getCalendarTime()/patches/EulerOnGPU::NumberOfFiniteVolumesPerAxisPerPatch/EulerOnGPU::NumberOfFiniteVolumesPerAxisPerPatch/EulerOnGPU::NumberOfFiniteVolumesPerAxisPerPatch) );
     if (errors > 0) {
-      //logInfo("main()", "   -> max difference of outcome for all patches is " << maxDifference << " (admissible accuracy=" << examples::exahype2::euler::Accuracy << ")" << " for " << errors << " entries");
+      logInfo("main()", "   -> max difference of outcome for all patches is " << maxDifference << " (admissible accuracy=" << examples::exahype2::euler::Accuracy << ")" << " for " << errors << " entries");
     }
   }
 
@@ -207,7 +207,7 @@ void runBenchmarks(int patches) {
 
     logInfo("main()", "completed measurements for " << markerName << " on host: " << watch.getCalendarTime() << " / " << (watch.getCalendarTime()/patches/EulerOnGPU::NumberOfFiniteVolumesPerAxisPerPatch/EulerOnGPU::NumberOfFiniteVolumesPerAxisPerPatch/EulerOnGPU::NumberOfFiniteVolumesPerAxisPerPatch) );
     if (errors > 0) {
-      //logInfo("main()", "   -> max difference of outcome for all patches is " << maxDifference << " (admissible accuracy=" << examples::exahype2::euler::Accuracy << ")" << " for " << errors << " entries");
+      logInfo("main()", "   -> max difference of outcome for all patches is " << maxDifference << " (admissible accuracy=" << examples::exahype2::euler::Accuracy << ")" << " for " << errors << " entries");
     }
   };
 
@@ -257,7 +257,7 @@ void runBenchmarks(int patches) {
 
     logInfo("main()", "completed measurements for single thread on device " << device << ", " << markerName << ": " << singleKernelWatch.getCalendarTime() << " / " << (singleKernelWatch.getCalendarTime()/patches/EulerOnGPU::NumberOfFiniteVolumesPerAxisPerPatch/EulerOnGPU::NumberOfFiniteVolumesPerAxisPerPatch/EulerOnGPU::NumberOfFiniteVolumesPerAxisPerPatch) );
     if (errors > 0) {
-      //logInfo("main()", "   -> max difference of outcome for all patches is " << maxDifference << " (admissible accuracy=" << examples::exahype2::euler::Accuracy << ")" << " for " << errors << " entries");
+      logInfo("main()", "   -> max difference of outcome for all patches is " << maxDifference << " (admissible accuracy=" << examples::exahype2::euler::Accuracy << ")" << " for " << errors << " entries");
     }
 
 /*
@@ -322,15 +322,15 @@ void runBenchmarks(int patches) {
     );
   }
 
-  testFusedVariant(
+  /*testFusedVariant(
     ::exahype2::fv::rusanov::timeStepWithRusanov_patchwise_heap_static_calls<EulerOnGPU,EulerOnGPU::NumberOfFiniteVolumesPerAxisPerPatch, 1, 5, 0,exahype2::enumerator::AoSLexicographicEnumerator>,
     "heap, patch-wise, AoS", true
-  );
+  );*/
   testFusedVariant(
     ::exahype2::fv::rusanov::timeStepWithRusanov_batched_heap_static_calls<EulerOnGPU,EulerOnGPU::NumberOfFiniteVolumesPerAxisPerPatch, 1, 5, 0,exahype2::enumerator::AoSLexicographicEnumerator>,
     "heap, batched, AoS", true
   );
-  testFusedVariant(
+  /*testFusedVariant(
     ::exahype2::fv::rusanov::timeStepWithRusanov_patchwise_heap_static_calls<EulerOnGPU,EulerOnGPU::NumberOfFiniteVolumesPerAxisPerPatch, 1, 5, 0,exahype2::enumerator::AoSoALexicographicEnumerator>,
     "heap, patch-wise, AoSoA", true
   );
@@ -345,8 +345,9 @@ void runBenchmarks(int patches) {
   testFusedVariant(
     ::exahype2::fv::rusanov::timeStepWithRusanov_batched_heap_static_calls<EulerOnGPU,EulerOnGPU::NumberOfFiniteVolumesPerAxisPerPatch, 1, 5, 0,exahype2::enumerator::SoALexicographicEnumerator>,
     "heap, batched, SoA", true
-  );
+  );*/
 
+/*
   testFusedVariant(
     ::exahype2::fv::rusanov::timeStepWithRusanov_patchwise_in_situ_static_calls<EulerOnGPU,EulerOnGPU::NumberOfFiniteVolumesPerAxisPerPatch, 1, 5, 0>,
     "heap, patch-wise, in-situ", true
@@ -355,6 +356,7 @@ void runBenchmarks(int patches) {
     ::exahype2::fv::rusanov::timeStepWithRusanov_batched_in_situ_static_calls<EulerOnGPU,EulerOnGPU::NumberOfFiniteVolumesPerAxisPerPatch, 1, 5, 0>,
     "heap, batched, in-situ", true
   );
+  */
 
 
   #if defined(GPUOffloadingOMP)
@@ -363,7 +365,7 @@ void runBenchmarks(int patches) {
   }
   for (int device=0; device<tarch::multicore::Core::getInstance().getNumberOfGPUs(); device++) {
 
-    logInfo( "main()", "device " << device << " (first kernel triggered by one thread, then kernel triggered by four threads if multithreading enabled)" );
+    /*logInfo( "main()", "device " << device << " (first kernel triggered by one thread, then kernel triggered by four threads if multithreading enabled)" );
     testFusedVariantOnDevice(
       device,
       ::exahype2::fv::rusanov::omp::timeStepWithRusanov_patchwise_heap_static_calls<EulerOnGPU,EulerOnGPU::NumberOfFiniteVolumesPerAxisPerPatch, 1, 5, 0,exahype2::enumerator::AoSLexicographicEnumerator>,
@@ -380,11 +382,11 @@ void runBenchmarks(int patches) {
       "omp, patch-wise, SoA", true
     );*/
 
-    testFusedVariantOnDevice(
+    /*testFusedVariantOnDevice(
       device,
       ::exahype2::fv::rusanov::omp::opt::timeStepWithRusanov_patchwise_heap_static_calls<EulerOnGPU,EulerOnGPU::NumberOfFiniteVolumesPerAxisPerPatch, 1, 5, 0,exahype2::enumerator::AoSLexicographicEnumerator>,
       "omp::opt, patch-wise, AoS", true
-    );
+    );*/
     /*testFusedVariantOnDevice(
       device,
       ::exahype2::fv::rusanov::omp::opt::timeStepWithRusanov_patchwise_heap_static_calls<EulerOnGPU,EulerOnGPU::NumberOfFiniteVolumesPerAxisPerPatch, 1, 5, 0,exahype2::enumerator::AoSoALexicographicEnumerator>,
@@ -415,7 +417,7 @@ void runBenchmarks(int patches) {
     testFusedVariantOnDevice(
       device,
       ::exahype2::fv::rusanov::omp::opt::timeStepWithRusanov_batched_heap_static_calls<EulerOnGPU,EulerOnGPU::NumberOfFiniteVolumesPerAxisPerPatch, 1, 5, 0,exahype2::enumerator::AoSLexicographicEnumerator>,
-      "om::opt, batched, AoS", true
+      "omp::opt, batched, AoS", true
     );
     /*testFusedVariantOnDevice(
       device,
@@ -560,6 +562,8 @@ int main(int argc, char** argv) {
 
     runBenchmarks(patches);
   }
+
+  runBenchmarks(1);
 
   otterTraceFinalise();
 
