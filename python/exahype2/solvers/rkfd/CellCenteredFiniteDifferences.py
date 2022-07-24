@@ -312,8 +312,9 @@ The finest mesh width of """ + str(self.get_finest_volume_size(domain_size)) + "
        persistently.
        
     """
+    print( "THIS IS LIKELY WRONG: {} x {{".format(self.number_of_Runge_Kutta_steps()) )
     self._patch                = peano4.datamodel.Patch( (self._patch_size,self._patch_size,self._patch_size), self._unknowns+self._auxiliary_variables, self._unknown_identifier() )
-    self._patch_estimates      = peano4.datamodel.Patch( self.number_of_Runge_Kutta_steps()*(self._patch_size,self._patch_size,self._patch_size), self._unknowns, self._unknown_identifier() + "RhsEstimates" )
+    self._patch_estimates      = peano4.datamodel.Patch( (self.number_of_Runge_Kutta_steps()*self._patch_size,self._patch_size,self._patch_size), self._unknowns, self._unknown_identifier() + "RhsEstimates" )
     self._patch_overlap_old    = peano4.datamodel.Patch( (2*self._overlap,self._patch_size,self._patch_size),  self._unknowns+self._auxiliary_variables, self._unknown_identifier() + "Old" )
     self._patch_overlap_new    = peano4.datamodel.Patch( (2*self._overlap,self._patch_size,self._patch_size),  self._unknowns+self._auxiliary_variables, self._unknown_identifier() + "New" )
     self._patch_overlap_update = peano4.datamodel.Patch( (2*self._overlap,self._patch_size,self._patch_size),  self._unknowns+self._auxiliary_variables, self._unknown_identifier() + "Update" )
