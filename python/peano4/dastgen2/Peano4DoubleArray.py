@@ -34,6 +34,10 @@ class Peano4DoubleArray(dastgen2.attributes.DoubleArray):
       ("set" + accessor_name + "(int index, double value)", "void"),
     ]
 
+  
+  def use_default_copy_constructor(self):
+    return self._valid_mantissa_bits == None
+
 
   def get_plain_C_attributes(self):
     if self._valid_mantissa_bits != None:
@@ -99,7 +103,9 @@ class Peano4DoubleArray(dastgen2.attributes.DoubleArray):
       Return string representation of attribute.
 
     """
-    if self.use_data_store:
+    if self._valid_mantissa_bits != None:
+      return "get" + self._name[0].upper() + self._name[1:] + "()"
+    elif self.use_data_store:
       return "_dataStore._" + self._name
     else:
       return "_" + self._name

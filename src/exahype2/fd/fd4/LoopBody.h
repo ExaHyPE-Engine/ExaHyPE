@@ -141,10 +141,16 @@ namespace exahype2 {
 
 
         /**
-         * @todo Plain copy of the FV solver. Not sure if it is the right one for
-         * FD. Anyway, it is not optimised at all, even if we use the AoS data format,
-         * i.e. do no re-arrangement at all.
-         * update it to a fd version, however, it may be incorrect either. it actually calculates \partial_i F_i
+         * This routine computes @f$ \partial_i F_i @f$ where i is the
+         * argument normal.
+         *
+         * It is not optimised: Whenever we use the AoS data format,
+         * we could directly evaluate the flux terms without any gathering
+         * or copying. As we don't optimise/specialise, we always first have
+         * to gather the solution before we invoke the user kernel. A similar
+         * argument holds or QFluxGathered: the solution is gathered within
+         * this temporary array, before we scatter it into the image.
+         *
          */
         #if defined(SharedOMP) and (!defined(__INTEL_LLVM_COMPILER) or !defined(GPUOffloadingOMP))
         #pragma omp declare simd
@@ -166,9 +172,12 @@ namespace exahype2 {
         ) InlineMethod;
 
         /**
-         * @todo Plain copy of the FV solver. Not sure if it is the right one for
-         * FD.
-         * update it to a fd version, however, it may be incorrect either.
+         * Plain update of flux in a finite differences scheme.
+         *
+         * We assume that the temp arrays hold the flux in x, y and z
+         * direction in the cell centre, i.e. within the degree of freedom.
+         * We therefore simply can take these flux components, scale them
+         * with dt, and add them to the solution.
          */
         #if defined(SharedOMP) and (!defined(__INTEL_LLVM_COMPILER) or !defined(GPUOffloadingOMP))
         #pragma omp declare simd

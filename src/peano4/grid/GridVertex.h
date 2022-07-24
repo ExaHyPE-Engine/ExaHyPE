@@ -44,6 +44,7 @@ struct peano4::grid::GridVertex {
     GridVertex() {}
     GridVertex(State  __state, tarch::la::Vector<TwoPowerD,int>  __adjacentRanks, tarch::la::Vector<TwoPowerD,int>  __backupOfAdjacentRanks, bool  __hasBeenAntecessorOfRefinedVertexInPreviousTreeSweep, bool  __isAntecessorOfRefinedVertexInCurrentTreeSweep, int  __numberOfAdjacentRefinedLocalCells, tarch::la::Vector<Dimensions,double>  __x, int  __level);
 
+
     peano4::grid::GridVertex::State   getState() const;
     void   setState(State value);
     tarch::la::Vector<TwoPowerD,int>   getAdjacentRanks() const;
@@ -66,7 +67,7 @@ struct peano4::grid::GridVertex {
     void   setX(int index, double value);
     int   getLevel() const;
     void   setLevel(int value);
-
+    GridVertex(const GridVertex& copy) = default;
 
 
 #ifdef Parallel

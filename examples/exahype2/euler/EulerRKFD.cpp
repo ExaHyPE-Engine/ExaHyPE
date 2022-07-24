@@ -90,6 +90,12 @@ void examples::exahype2::euler::EulerRKFD::initialCondition(
     Q[i] = 0.0;
   }
 
+  #if Dimensions==2
+  tarch::la::Vector<Dimensions,double> circleCentre = {0.5,0.3};
+  #else
+  tarch::la::Vector<Dimensions,double> circleCentre = {0.18,0.3,0.6};
+  #endif
+
   switch (scenario) {
     case Scenario::PointExplosion:
     case Scenario::PointExplosionWithDynamicAMR:
@@ -97,11 +103,6 @@ void examples::exahype2::euler::EulerRKFD::initialCondition(
         logDebug( "initialCondition(...)", "set point explosion initial condition" );
         // Manual offset to make the wave originate slightly to the left of the center --- helps
         // to detect if wave is moving to the left or right
-        #if Dimensions==2
-        tarch::la::Vector<Dimensions,double> circleCentre = {0.5,0.3};
-        #else
-        tarch::la::Vector<Dimensions,double> circleCentre = {0.18,0.3,0.6};
-        #endif
 
         // initial conditions
         bool isInTheCentre = ( tarch::la::norm2( gridCellCentre-circleCentre ) < 0.05 );
@@ -118,11 +119,6 @@ void examples::exahype2::euler::EulerRKFD::initialCondition(
         logDebug( "initialCondition(...)", "set point explosion initial condition" );
         // Manual offset to make the wave originate slightly to the left of the center --- helps
         // to detect if wave is moving to the left or right
-        #if Dimensions==2
-        tarch::la::Vector<Dimensions,double> circleCentre = {0.5,0.3};
-        #else
-        tarch::la::Vector<Dimensions,double> circleCentre = {0.18,0.3,0.6};
-        #endif
 
         // see comment on Gaussian initial condition above
         const double peakDeviation = MaxAdmissibleCellH;

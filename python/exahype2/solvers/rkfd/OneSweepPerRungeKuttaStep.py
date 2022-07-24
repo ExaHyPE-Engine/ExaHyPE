@@ -78,9 +78,7 @@ class UpdateCell(ReconstructPatchAndApplyFunctor):
           }      
         }
         
-        {% if PREDICATE_NO!=PREDICATES|length-1 %}
         targetPatch = fineGridCell{{UNKNOWN_IDENTIFIER}}RhsEstimates.value + enumeratorWithoutAuxiliaryVariables({{PREDICATE_NO}},0,0);
-        {% endif %}        
       }
       {% endfor %} 
    
@@ -89,12 +87,12 @@ class UpdateCell(ReconstructPatchAndApplyFunctor):
       assertion2( tarch::la::greaterEquals( timeStamp, 0.0 ),    timeStamp, timeStepSize );
       assertion2( tarch::la::greaterEquals( timeStepSize, 0.0 ), timeStamp, timeStepSize );
 
-      ::exahype2::fv::validatePatch(
+      ::exahype2::fd::validatePatch(
         reconstructedPatch,
         {{NUMBER_OF_UNKNOWNS}},
         {{NUMBER_OF_AUXILIARY_VARIABLES}},
         {{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}},
-        1, // halo
+        {{HALO_SIZE}}, // halo
         std::string(__FILE__) + "(" + std::to_string(__LINE__) + "): " + marker.toString()
       ); // previous time step has to be valid
   
@@ -104,7 +102,7 @@ class UpdateCell(ReconstructPatchAndApplyFunctor):
 
       {{POSTPROCESS_UPDATED_PATCH}}
 
-      ::exahype2::fv::validatePatch(
+      ::exahype2::fd::validatePatch(
         targetPatch,
         {{NUMBER_OF_UNKNOWNS}},
         {{NUMBER_OF_AUXILIARY_VARIABLES}},
@@ -112,20 +110,6 @@ class UpdateCell(ReconstructPatchAndApplyFunctor):
         0, // halo
         std::string(__FILE__) + "(" + std::to_string(__LINE__) + "): " + marker.toString()
       ); // outcome has to be valid
-      
-      {% if COMPUTE_MAX_EIGENVALUE %}
-      const double maxEigenvalue = patchData.maxEigenvalue[0];
-      {% endif %}
-      
-      // Set the variable
-      // double newTimeStepSize
-      {{COMPUTE_NEW_TIME_STEP_SIZE}}
-    
-      fineGridCell{{SOLVER_NAME}}CellLabel.setTimeStamp(timeStamp+timeStepSize);
-      fineGridCell{{SOLVER_NAME}}CellLabel.setTimeStepSize(newTimeStepSize);
-      fineGridCell{{SOLVER_NAME}}CellLabel.setHasUpdated(true);
-    
-      repositories::{{SOLVER_INSTANCE}}.update(newTimeStepSize, timeStamp+timeStepSize, marker.h()(0) );
   """ )
 
 
@@ -146,18 +130,6 @@ class UpdateCell(ReconstructPatchAndApplyFunctor):
     )
     self._solver = solver
     
-    self._Template_TouchCellFirstTime_Epilogue += """
-  else if (not marker.willBeRefined() and not marker.hasBeenRefined()) {{
-    const double timeStamp    = fineGridCell{SOLVER_NAME}CellLabel.getTimeStamp();
-    const double timeStepSize = fineGridCell{SOLVER_NAME}CellLabel.getTimeStepSize();
-    
-    assertion2( tarch::la::greaterEquals( timeStepSize, 0.0 ), timeStepSize, timeStamp );
-    assertion2( tarch::la::greaterEquals( timeStamp, 0.0 ),    timeStepSize, timeStamp );
-
-    repositories::{SOLVER_INSTANCE}.update(0.0, timeStamp, marker.h()(0) );
-  }}
-"""
-
     self._Template_TouchCellFirstTime_Preamble = """
   fineGridCell""" + solver._name + """CellLabel.setHasUpdated(false);
 """ + self._Template_TouchCellFirstTime_Preamble
@@ -189,8 +161,9 @@ class UpdateCell(ReconstructPatchAndApplyFunctor):
   
   def get_includes(self):
     return """
-#include "exahype2/fd/BoundaryConditions.h"
 #include "exahype2/NonCriticalAssertions.h"
+#include "exahype2/enumerator/Enumerator.h"
+#include "exahype2/fd/PatchUtils.h"
 """ + self._solver._get_default_includes() + self._solver.user_action_set_includes
 
 
@@ -228,8 +201,8 @@ class OneSweepPerRungeKuttaStep( CellCenteredFiniteDifferences ):
     """
     super(OneSweepPerRungeKuttaStep, self).__init__(name, patch_size, overlap, rk_order, unknowns, auxiliary_variables, min_volume_h, max_volume_h, plot_grid_properties, kernel_namespace)
     
-    if rk_order<2:
-      raise Exception( "Runge-Kutta order has to be at least 2 but was {}".format(rk_order) )
+    if rk_order<1:
+      raise Exception( "Runge-Kutta order has to be at least 1 but was {}".format(rk_order) )
 
     self._solver_template_file_class_name     = "OneSweepPerRungeKuttaStep"
 

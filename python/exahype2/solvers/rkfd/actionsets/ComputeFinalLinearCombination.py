@@ -8,7 +8,7 @@ from exahype2.solvers.ButcherTableau                import ButcherTableau
 import peano4
 import jinja2
 
-class ComputeFinalLinearCombinationAndProjectSolutionOntoFaces(AbstractRKFDActionSet):
+class ComputeFinalLinearCombination(AbstractRKFDActionSet):
   """
   
   We solve the ODE
@@ -42,12 +42,35 @@ class ComputeFinalLinearCombinationAndProjectSolutionOntoFaces(AbstractRKFDActio
       for (int unknown=0; unknown<{{NUMBER_OF_UNKNOWNS}}; unknown++) {
         {% for WEIGHT_NO in range(0,WEIGHTS|length) %}
         fineGridCell{{UNKNOWN_IDENTIFIER}}.value[ enumeratorWithAuxiliaryVariables(0,dof,unknown) ] += 
-          timeStepSize * {{WEIGHTS[WEIGHT_NO]}} * fineGridCell{{UNKNOWN_IDENTIFIER}}RhsEstimates.value[ enumeratorWithAuxiliaryVariables({{WEIGHT_NO}},dof,unknown) ];
+          timeStepSize * {{WEIGHTS[WEIGHT_NO]}} * fineGridCell{{UNKNOWN_IDENTIFIER}}RhsEstimates.value[ enumeratorWithoutAuxiliaryVariables({{WEIGHT_NO}},dof,unknown) ];
         {% endfor %}
       }
     }
-    
+
     const double timeStamp = fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStamp();
+
+    {% if COMPUTE_MAX_EIGENVALUE %}
+    ::exahype2::CellData  patchData( nullptr, marker.x(), marker.h(), timeStamp, timeStepSize, fineGridCell{{UNKNOWN_IDENTIFIER}}.value );
+
+    ::exahype2::fd::reduceMaxEigenvalue_patchwise_functors(
+      patchData,
+      {{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}},
+      {{NUMBER_OF_UNKNOWNS}},
+      {{NUMBER_OF_AUXILIARY_VARIABLES}},
+      [&](
+        const double * __restrict__ Q,
+        const tarch::la::Vector<Dimensions,double>&  gridCellCentre,
+        const tarch::la::Vector<Dimensions,double>&  gridCellH,
+        double                                       t,
+        double                                       dt,
+        int                                          normal
+      )->double {
+        return repositories::{{SOLVER_INSTANCE}}.maxEigenvalue( Q, gridCellCentre, gridCellH, t, dt, normal );
+      }
+    );
+
+    const double maxEigenvalue = patchData.maxEigenvalue[0];
+    {% endif %}
     
     // Set the variable
     // double newTimeStepSize
@@ -72,7 +95,7 @@ class ComputeFinalLinearCombinationAndProjectSolutionOntoFaces(AbstractRKFDActio
       the old solution and the time step should also be moved over
     
     """
-    super(ComputeFinalLinearCombinationAndProjectSolutionOntoFaces,self).__init__(solver)
+    super(ComputeFinalLinearCombination,self).__init__(solver)
     self.guard            = guard
     self._butcher_tableau = ButcherTableau(self._solver._rk_order)
     
@@ -96,6 +119,7 @@ class ComputeFinalLinearCombinationAndProjectSolutionOntoFaces(AbstractRKFDActio
 
 
   def get_includes(self):
-    return super(ComputeFinalLinearCombinationAndProjectSolutionOntoFaces,self).get_includes() + """
+    return super(ComputeFinalLinearCombination,self).get_includes() + """
+#include "exahype2/fd/LoopBody.h"
 #include "exahype2/enumerator/AoSLexicographicEnumerator.h"
 """    

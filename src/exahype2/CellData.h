@@ -41,7 +41,6 @@ namespace exahype2 {
     tarch::la::Vector<Dimensions,double>*   cellSize;
     double*    t;
     double*    dt;
-    int*       id;
     const int  numberOfCells;
     double**   QOut;
     double*    maxEigenvalue;

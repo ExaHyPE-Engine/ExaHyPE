@@ -4,10 +4,10 @@ from .Boolean import Boolean
 
 
 class BooleanArray(Boolean):
-  def __init__(self, name, cardinality):
+  def __init__(self, name, cardinality, compress=False):
     Boolean.__init__(self, name)
     self._cardinality = cardinality
-    self.compress     = True
+    self.compress     = compress
    
     
   def get_methods(self,_full_qualified_class_name):
@@ -75,13 +75,19 @@ class BooleanArray(Boolean):
     return self.compress
 
   
+  def use_default_copy_constructor(self):
+    return not self.compress
+
+
   def get_to_string(self):
     """
     
       Return string representation of attribute.
 
     """
-    if self.use_data_store:
+    if self.compress:
+      return "get" + self._name[0].upper() + self._name[1:] + "()"
+    elif self.use_data_store:
       return "_dataStore._" + self._name
     else:
       return "_" + self._name

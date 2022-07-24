@@ -26,7 +26,7 @@ floatparams = {
 	"itau":1.0, "k1":0.1, "k2":0.0, "k3":0.5, "eta":1.0,
         "f":0.75, "g":0.0, "xi":1.0, "e":1.0, "c":1.0, "mu":0.2, "ds":1.0,
         "sk":1.0, "bs":1.0,
-        "domain_r":0.5, "smoothing":0.0, "KOSigma":8.0 #, \
+        "domain_r":0.5, "smoothing":0.0, "KOSigma":12.0 #, \
 	#"itau":1.0, "k1":0.1, "k2":0.0, "k3":0.5, "eta":1.0,
         #"f":1.0, "g":0.0, "xi":1.0, "e":1.0, "c":1.0, "mu":0.2, "ds":1.0,
         #"sk":1.0, "bs":1.0#, \
@@ -154,7 +154,7 @@ if __name__ == "__main__":
         elif SuperClass==exahype2.solvers.rkfd.fd4.GlobalAdaptiveTimeStep:
           SuperClass.__init__(
             self,
-            name=name, patch_size=patch_size, rk_order=1,
+            name=name, patch_size=patch_size, rk_order=4,
             unknowns=number_of_unknowns,
             auxiliary_variables=0,
             min_volume_h=min_volume_h, max_volume_h=max_volume_h,
@@ -164,11 +164,11 @@ if __name__ == "__main__":
         elif SuperClass==exahype2.solvers.rkfd.fd4.GlobalFixedTimeStep:
           SuperClass.__init__(
             self,
-            name=name, patch_size=patch_size, rk_order=1,
+            name=name, patch_size=patch_size, rk_order=4,
             unknowns=number_of_unknowns,
             auxiliary_variables=0,
             min_volume_h=min_volume_h, max_volume_h=max_volume_h,
-            normalised_time_step_size=0.001,
+            normalised_time_step_size=0.01,
             KOSigma=KOSig
           )
         else:
@@ -196,7 +196,21 @@ if __name__ == "__main__":
         )
 
         self.postprocess_updated_patch = """
-  {
+{
+"""
+        
+        if SuperClass==exahype2.solvers.rkfd.fd4.GlobalAdaptiveTimeStep or SuperClass==exahype2.solvers.rkfd.fd4.GlobalFixedTimeStep:
+          self.postprocess_updated_patch += """
+    #if Dimensions==2
+    constexpr int itmax = {{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}} * {{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}};
+    #endif
+
+    #if Dimensions==3
+    constexpr int itmax = {{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}} * {{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}} * {{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}};
+    #endif
+"""
+        else:
+          self.postprocess_updated_patch += """
     #if Dimensions==2
     constexpr int itmax = {{NUMBER_OF_VOLUMES_PER_AXIS}} * {{NUMBER_OF_VOLUMES_PER_AXIS}};
     #endif
@@ -204,12 +218,12 @@ if __name__ == "__main__":
     #if Dimensions==3
     constexpr int itmax = {{NUMBER_OF_VOLUMES_PER_AXIS}} * {{NUMBER_OF_VOLUMES_PER_AXIS}} * {{NUMBER_OF_VOLUMES_PER_AXIS}};
     #endif
+"""
 
+        self.postprocess_updated_patch += """
     int index = 0;
     for (int i=0;i<itmax;i++)
     {
-
-    // dfor( volume, {{NUMBER_OF_VOLUMES_PER_AXIS}} ) {
       examples::exahype2::ccz4::enforceCCZ4constraints( targetPatch+index );
       index += {{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}};
     }

@@ -24,7 +24,9 @@ class FixedTimeSteppingCodeSnippets( exahype2.solvers.FixedTimeSteppingCodeSnipp
     predicate = """
       tarch::mpi::Rank::getInstance().isGlobalMaster() 
       and
-      _maxVolumeH>0.0
+      _maxVolumeHThisTimeStep>0.0
+      and
+      isFirstGridSweepOfTimeStep() 
     """
   
     if self._use_enclave_tasking:
@@ -43,13 +45,15 @@ class FixedTimeSteppingCodeSnippets( exahype2.solvers.FixedTimeSteppingCodeSnipp
 
   def create_finish_time_step_implementation(self):
     return """
-  assertion( _minVolumeH >= 0.0 );
-  assertion( MaxAdmissibleVolumeH > 0.0 );
-  if (_minVolumeH <= MaxAdmissibleVolumeH) {
-    _timeStepSize  = """ + str(self._normalised_time_step_size) + """ * _minVolumeH / MaxAdmissibleVolumeH;
-  }
-  else {
-    _timeStepSize = 0.0;
+  if ( isLastGridSweepOfTimeStep() ) {
+    assertion( _minVolumeH >= 0.0 );
+    assertion( MaxAdmissibleVolumeH > 0.0 );
+    if (_minVolumeHThisTimeStep <= MaxAdmissibleVolumeH) {
+      _timeStepSize  = """ + str(self._normalised_time_step_size) + """ * _minVolumeHThisTimeStep / MaxAdmissibleVolumeH;
+    }
+    else {
+      _timeStepSize = 0.0;
+    }
   }
 """
 

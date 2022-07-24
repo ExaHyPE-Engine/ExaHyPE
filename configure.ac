@@ -387,13 +387,15 @@ AM_CONDITIONAL([VTK_LIBRARY_VERSION_9],[test "$vtk_version" = "9"])
 #
 
 AC_ARG_ENABLE(feexcept,
-  AS_HELP_STRING([--disable-feexcept],[do not use floating-point exception handling]),
-  [feexcept=${enableval}], [feexcept=yes])
-AC_MSG_CHECKING(for feexcept); AC_MSG_RESULT($feexcept)
+  AS_HELP_STRING([--enable-feexcept],[use floating-point exception handling]),
+  [ AC_MSG_CHECKING(for feexcept)
+    case "${withval}" in
+      no)    AC_MSG_RESULT(no);    enable_feexcept=false ;;
+      *)     AC_MSG_RESULT(yes);   enable_feexcept=true  ;;
+    esac ],
+  [ AC_MSG_CHECKING(for feexcept); AC_MSG_RESULT(no); enable_feexcept=false ])
+AM_CONDITIONAL([UseFEExcept],[test "x$enable_feexcept" = xtrue])
 
-if test "$feexcept" == yes; then
-  AC_DEFINE([UseFEExcept], [1], [UseFEExcept])
-fi
 
 #
 # ===============================================================

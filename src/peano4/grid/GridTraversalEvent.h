@@ -41,6 +41,7 @@ struct peano4::grid::GridTraversalEvent {
     GridTraversalEvent() {}
     GridTraversalEvent(tarch::la::Vector<Dimensions,double>  __x, tarch::la::Vector<Dimensions,double>  __h, std::bitset<TwoPowerD>  __hasBeenRefined, std::bitset<TwoPowerD>  __willBeRefined, std::bitset<TwoPowerD>  __isVertexLocal, std::bitset<TwoTimesD>  __isFaceLocal, bool  __isCellLocal, bool  __isParentCellLocal, std::bitset<TwoPowerD>  __isVertexAdjacentToParallelDomainBoundary, std::bitset<TwoTimesD>  __isFaceAdjacentToParallelDomainBoundary, tarch::la::Vector<TwoPowerD,int>  __vertexDataFrom, tarch::la::Vector<TwoPowerD,int>  __vertexDataTo, tarch::la::Vector<TwoTimesD,int>  __faceDataFrom, tarch::la::Vector<TwoTimesD,int>  __faceDataTo, int  __cellData, tarch::la::Vector<Dimensions,int>  __relativePositionToFather, int  __invokingSpacetree, bool  __invokingSpacetreeIsNotInvolvedInAnyDynamicLoadBalancing);
 
+
     tarch::la::Vector<Dimensions,double>   getX() const;
     void   setX(const tarch::la::Vector<Dimensions,double>& value);
     double   getX(int index) const;
@@ -109,7 +110,7 @@ struct peano4::grid::GridTraversalEvent {
     void   setInvokingSpacetree(int value);
     bool   getInvokingSpacetreeIsNotInvolvedInAnyDynamicLoadBalancing() const;
     void   setInvokingSpacetreeIsNotInvolvedInAnyDynamicLoadBalancing(bool value);
-
+    GridTraversalEvent(const GridTraversalEvent& copy);
 
 
 #ifdef Parallel
@@ -158,14 +159,14 @@ struct peano4::grid::GridTraversalEvent {
   private:
     [[clang::truncate_mantissa(3)]]  double   _x[Dimensions];
     [[clang::truncate_mantissa(3)]]  double   _h[Dimensions];
-    [[clang::pack]]  bool   _hasBeenRefined[TwoPowerD];
-    [[clang::pack]]  bool   _willBeRefined[TwoPowerD];
-    [[clang::pack]]  bool   _isVertexLocal[TwoPowerD];
-    [[clang::pack]]  bool   _isFaceLocal[TwoTimesD];
+      std::bitset<TwoPowerD>   _hasBeenRefined;
+      std::bitset<TwoPowerD>   _willBeRefined;
+      std::bitset<TwoPowerD>   _isVertexLocal;
+      std::bitset<TwoTimesD>   _isFaceLocal;
     [[clang::pack]]  bool   _isCellLocal;
     [[clang::pack]]  bool   _isParentCellLocal;
-    [[clang::pack]]  bool   _isVertexAdjacentToParallelDomainBoundary[TwoPowerD];
-    [[clang::pack]]  bool   _isFaceAdjacentToParallelDomainBoundary[TwoTimesD];
+      std::bitset<TwoPowerD>   _isVertexAdjacentToParallelDomainBoundary;
+      std::bitset<TwoTimesD>   _isFaceAdjacentToParallelDomainBoundary;
       tarch::la::Vector<TwoPowerD,int>   _vertexDataFrom;
       tarch::la::Vector<TwoPowerD,int>   _vertexDataTo;
       tarch::la::Vector<TwoTimesD,int>   _faceDataFrom;
