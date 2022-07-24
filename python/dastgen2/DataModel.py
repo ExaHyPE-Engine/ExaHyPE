@@ -124,28 +124,6 @@ struct {FULL_QUALIFIED_CLASS_NAME} {{
   """
   
   
-  def _get_plain_C_attributes(self):
-    """
-    
-      We can hold multiple attributes and some of these attributes in 
-      turn can hold multiple (plain C) attributes. This operation
-      flattens this two-level hierarchy, i.e. gives back a plain list
-      of C attributes.
-      
-    """  
-    flattened_attributes = []
-    for attribute in self._attributes:
-      flattened_attributes           += attribute.get_plain_C_attributes()
-    return flattened_attributes
-
-
-  def _get_flattened_declarations(self):
-    flattened_method_declarations = []
-    for attribute in self._attributes:
-      flattened_method_declarations  += attribute.get_methods(self._full_qualified_name)
-    return flattened_method_declarations
-
-  
   def _get_constructor_arguments(self):
     result  = "("
     is_first = True
@@ -166,6 +144,26 @@ struct {FULL_QUALIFIED_CLASS_NAME} {{
     return use_default_constructor
 
 
+  def __construct_ifdef_string(self,symbol_list):
+    """
+    
+    Return empty string if symbol_list is empty. Otherwise construct
+    the whole ifdef thing.
+    
+    """
+    result = ""
+    if symbol_list!=[]:
+      result += "#if "
+      added_one_ifdef = False
+      for i in symbol_list:
+        if added_one_ifdef:
+          result += " and "
+        added_one_ifdef = True
+        result += i
+      result += "\n"
+    return result
+
+
   def write_header_file(self,full_qualified_filename):
     d = {}
     d[ "INCLUDE_GUARD" ]              = dastgen2.get_include_guard(self._full_qualified_name)
@@ -184,12 +182,32 @@ struct {FULL_QUALIFIED_CLASS_NAME} {{
       d[ "PUBLIC_FIELDS" ]           += attribute.get_public_fields()
 
     d[ "ATTRIBUTE_DECLARATIONS" ]     = ""
-    for attribute in self._get_plain_C_attributes():
-      d[ "ATTRIBUTE_DECLARATIONS" ]  += "    " + attribute[2] + "  " + attribute[1] + "   " + attribute[0] + ";\n"
+    for attribute in self._attributes:
+      d[ "ATTRIBUTE_DECLARATIONS" ] += self.__construct_ifdef_string(attribute.ifdefs)
+          
+      for subattribute in attribute.get_plain_C_attributes():   # one attribute logically can map onto multiple technical atttributes
+        if len(subattribute)==4:
+          d[ "ATTRIBUTE_DECLARATIONS" ]  += self.__construct_ifdef_string(subattribute[3])
+          d[ "ATTRIBUTE_DECLARATIONS" ]  += "    " + subattribute[2] + "  " + subattribute[1] + "   " + subattribute[0] + ";\n"
+          d[ "ATTRIBUTE_DECLARATIONS" ]  += "#endif\n"
+        elif len(subattribute)==3:
+          d[ "ATTRIBUTE_DECLARATIONS" ]  += "    " + subattribute[2] + "  " + subattribute[1] + "   " + subattribute[0] + ";\n"
+        elif len(subattribute)==2:
+          d[ "ATTRIBUTE_DECLARATIONS" ]  += "    " + subattribute[1] + "   " + subattribute[0] + ";\n"
+        else:
+          assert False, "wrong number of attribute tuples"
+
+      if attribute.ifdefs!=[]:
+        d[ "ATTRIBUTE_DECLARATIONS" ]  += "#endif \n"
 
     d[ "METHOD_DECLARATIONS" ]        = ""
-    for method in self._get_flattened_declarations():
-      d[ "METHOD_DECLARATIONS" ]     += "    " + method[1] + "   " + method[0] + ";\n"
+    for attribute in self._attributes:
+      if attribute.ifdefs!=[]:
+        d[ "METHOD_DECLARATIONS" ]     += self.__construct_ifdef_string(attribute.ifdefs)
+      for method in attribute.get_methods(self._full_qualified_name):
+        d[ "METHOD_DECLARATIONS" ]     += "    " + method[1] + "   " + method[0] + ";\n"
+      if attribute.ifdefs!=[]:
+        d[ "METHOD_DECLARATIONS" ]     += "#endif \n"
 
     d[ "ASPECT_ATTRIBUTES" ]             = ""
     d[ "ASPECT_METHOD_DECLARATIONS" ]    = ""
@@ -220,26 +238,24 @@ struct {FULL_QUALIFIED_CLASS_NAME} {{
 
 
   def __generate_constructor_definition(self, output):
+    """
+    
+    In this generation business, I faced multiple issues with initialisation
+    lists: where are comma if some fields are not defined, which fields can
+    I copy directly, and which ones do I have to copy manually, and so forth.
+    
+    
+    """
     output.write( self._full_qualified_name + "::" + dastgen2.get_unqualified_class_name(self._full_qualified_name) + self._get_constructor_arguments() )
 
-    use_setters_instead_of_initialisation_list = self._embed_attributes_into_data_store    
+    output.write( "{\n" )
     for attribute in self._attributes:
-      use_setters_instead_of_initialisation_list = use_setters_instead_of_initialisation_list or attribute.use_setter_to_initialise_arguments()
-
-    if use_setters_instead_of_initialisation_list:
-      output.write( "{\n" )
-      for attribute in self._attributes:
-        output.write( "set" + attribute._name[0].title() + attribute._name[1:].split( "[" )[0] + "( __" + attribute._name.split( "[" )[0] + ");\n" )
-      output.write( "}\n")
-    else:
-      output.write( ":\n" )
-      for attribute in self._attributes:
-        if attribute==self._attributes[0]:
-          output.write( "    " )
-        else:
-          output.write( "  , " )
-        output.write( "_" + attribute._name.split("[")[0] + "(__" + attribute._name.split("[")[0] + ")\n" )
-      output.write( "  {}\n")
+      if attribute.ifdefs!=[]:
+        output.write( self.__construct_ifdef_string(attribute.ifdefs) )
+      output.write( "set" + attribute._name[0].title() + attribute._name[1:].split( "[" )[0] + "( __" + attribute._name.split( "[" )[0] + ");\n" )
+      if attribute.ifdefs!=[]:
+        output.write( "#endif \n" )
+    output.write( "}\n")
 
   
   def __generate_toString_definition(self, output):
@@ -247,9 +263,13 @@ struct {FULL_QUALIFIED_CLASS_NAME} {{
       output.write("  std::ostringstream out;\n")
       output.write("  out << \"(\";\n")
       for attribute in self._attributes:
-          if self._attributes.index(attribute) != 0:
-              output.write("""  out << ","; \n""")
-          output.write("  out << \"" + attribute._name + "=\" << " + attribute.get_to_string() + ";\n")
+        if attribute.ifdefs!=[]:
+          output.write( self.__construct_ifdef_string(attribute.ifdefs) )
+        if self._attributes.index(attribute) != 0:
+            output.write("""  out << ","; \n""")
+        output.write("  out << \"" + attribute._name + "=\" << " + attribute.get_to_string() + ";\n")
+        if attribute.ifdefs!=[]:
+          output.write( "#endif \n" )
       
       output.write("  out << \")\";\n")
       output.write("  return out.str();\n")
@@ -259,17 +279,25 @@ struct {FULL_QUALIFIED_CLASS_NAME} {{
   def __generate_explicit_copy_constructor(self,output):
       output.write(self._full_qualified_name + "::" + dastgen2.get_unqualified_class_name(self._full_qualified_name) + "( const " + dastgen2.get_unqualified_class_name(self._full_qualified_name) + "& copy ) {\n")
       for attribute in self._attributes:
+        if attribute.ifdefs!=[]:
+          output.write( self.__construct_ifdef_string(attribute.ifdefs) )
         uppercase_name = attribute.name[0].upper() + attribute.name[1:]
         output.write("  set" + uppercase_name + "( copy.get" + uppercase_name + "() );\n")
+        if attribute.ifdefs!=[]:
+          output.write( "#endif \n" )
       output.write("}\n\n\n")
 
       
   def __generate_accessors(self, output):
       for attribute in self._attributes:
-          for method in attribute.get_methods(self._full_qualified_name):
-              output.write(method[1] + "   " + self._full_qualified_name + "::" + method[0] + " {\n")
-              output.write(attribute.get_method_body(method[0]))
-              output.write("}\n\n\n")
+        if attribute.ifdefs!=[]:
+          output.write( self.__construct_ifdef_string(attribute.ifdefs) )
+        for method in attribute.get_methods(self._full_qualified_name):
+          output.write(method[1] + "   " + self._full_qualified_name + "::" + method[0] + " {\n")
+          output.write(attribute.get_method_body(method[0]))
+          output.write("}\n\n\n")
+        if attribute.ifdefs!=[]:
+          output.write( "#endif \n\n\n" )
       
 
   def write_implementation_file(self,full_qualified_filename):

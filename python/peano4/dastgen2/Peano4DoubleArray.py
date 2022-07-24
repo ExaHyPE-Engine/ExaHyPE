@@ -12,7 +12,7 @@ class Peano4DoubleArray(dastgen2.attributes.DoubleArray):
      
   """
   
-  def __init__(self, name, cardinality, valid_mantissa_bits=None):
+  def __init__(self, name, cardinality, valid_mantissa_bits=None, ifdefs=[]):
     """
       See superclass' constructor.
       
@@ -21,9 +21,9 @@ class Peano4DoubleArray(dastgen2.attributes.DoubleArray):
         a string which is defined via a pragma or constexpr later.
         
     """
-    dastgen2.attributes.DoubleArray.__init__(self, name, cardinality,valid_mantissa_bits)
+    super(Peano4DoubleArray,self).__init__(name, cardinality,valid_mantissa_bits=valid_mantissa_bits,ifdefs=ifdefs)
     self._cardinality               = cardinality
-    
+
     
   def get_methods(self,_full_qualified_class_name):
     accessor_name = self._name[:1].title() + self._name[1:]
@@ -43,11 +43,7 @@ class Peano4DoubleArray(dastgen2.attributes.DoubleArray):
     if self._valid_mantissa_bits != None:
       return [ ("_" + self._name + "[" + self._cardinality + "]", "double", "[[clang::truncate_mantissa(" + str(self._valid_mantissa_bits) + ")]]" ) ]
     else:
-      return [ ("_" + self._name, "tarch::la::Vector<" + self._cardinality + ",double>", "" ) ]
-
-    
-  def use_setter_to_initialise_arguments(self):
-    return self._valid_mantissa_bits != None
+      return [ ("_" + self._name, "tarch::la::Vector<" + self._cardinality + ",double>" ) ]
 
 
   def get_first_plain_C_attribute(self):

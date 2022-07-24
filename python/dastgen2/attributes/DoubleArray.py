@@ -18,8 +18,9 @@ class DoubleArray(Double):
      symbol, i.e. a name defined via ifdef somewhere in your code.
           
   """
-  def __init__(self, name, cardinality, valid_mantissa_bits=None):
-    Double.__init__(self, name)
+  def __init__(self, name, cardinality, valid_mantissa_bits=None, ifdefs=[]):
+    Double.__init__(self, name, ifdefs=ifdefs)
+
     self._cardinality = cardinality
     self._valid_mantissa_bits = valid_mantissa_bits
 

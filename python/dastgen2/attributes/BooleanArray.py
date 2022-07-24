@@ -1,6 +1,7 @@
 # This file is part of the DaStGen2 project. For conditions of distribution and
 # use, please see the copyright notice at www.peano-framework.org
 from .Boolean import Boolean
+from dastgen2.Utils import LLVMSymbol
 
 
 class BooleanArray(Boolean):
@@ -15,7 +16,7 @@ class BooleanArray(Boolean):
   
   
   
-  def __init__(self, name, cardinality, compress=False):
+  def __init__(self, name, cardinality, compress=False, ifdefs=[]):
     """
     
     C++ offers the bitset to accommodate an array of boolean flags. While
@@ -38,7 +39,7 @@ class BooleanArray(Boolean):
       use native array of boolean.
     
     """
-    Boolean.__init__(self, name)
+    Boolean.__init__(self, name, ifdefs=ifdefs)
     self._cardinality = cardinality
     self.compress     = compress
    
@@ -55,9 +56,12 @@ class BooleanArray(Boolean):
 
   def get_plain_C_attributes(self):
     if self.compress:
-      return [ ("_" + self._name + "[" + self._cardinality + "]", "bool", "[[clang::pack]]" ) ]
+      return [ 
+        ("_" + self._name + "[" + self._cardinality + "]", "bool",                                   "[[clang::pack]]", ["defined(" + LLVMSymbol + ")"] ),
+        ("_" + self._name,                                 "std::bitset<" + self._cardinality + ">", "",                ["!defined(" + LLVMSymbol + ")"] )
+      ]
     else:
-      return [ ("_" + self._name, "std::bitset<" + self._cardinality + ">", "" ) ]
+      return [ ("_" + self._name, "std::bitset<" + self._cardinality + ">" ) ]
 
 
   def get_first_plain_C_attribute(self):
@@ -79,10 +83,10 @@ class BooleanArray(Boolean):
       return name + "[index] = value;\n"
     elif signature.startswith( "get" ) and self.compress:
       return """
-  std::bitset<""" + self._cardinality + """> result;
-  for (int i=0; i<""" + self._cardinality + """; i++) result[i] = """ + name + """[i];
+  std::bitset<{}> result;
+  for (int i=0; i<{}; i++) result[i] = {}[i];
   return result;
-"""
+""".format(self._cardinality,self._cardinality,name)
     elif signature.startswith( "get" ):
       return "  return " + name + ";\n"
     elif signature.startswith( "set" ) and self.compress:
@@ -103,10 +107,6 @@ class BooleanArray(Boolean):
   def get_constructor_arguments(self):
     return [( "_"+self._name, "std::bitset<" + self._cardinality + ">" )]
   
-  
-  def use_setter_to_initialise_arguments(self):
-    return self.compress
-
   
   def use_default_copy_constructor(self):
     return not self.compress
