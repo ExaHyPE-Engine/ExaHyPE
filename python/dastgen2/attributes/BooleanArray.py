@@ -4,7 +4,40 @@ from .Boolean import Boolean
 
 
 class BooleanArray(Boolean):
+  """
+  
+  Represent an array of boolean flags 
+  
+  Consult the constructor on details onto which C++ data these flags 
+  are mapped.
+  
+  """
+  
+  
+  
   def __init__(self, name, cardinality, compress=False):
+    """
+    
+    C++ offers the bitset to accommodate an array of boolean flags. While
+    a bitset provides a memory-efficient way to encode a set of booleans,
+    it is not efficient if we use it in combination with other booleans or
+    other bitsets, as the C++ compiler will insert empty bits to align 
+    each attribute at least with a byte. 
+    
+    Our LLVM modification can eliminate these fill-in bits, but it does 
+    not natively support bitsets (as we, in general, do not cover stuff
+    from the standard library). If you want to use the extension, you have
+    to model the bitset as an array of booleans natively. 
+    
+    
+    
+    ## Attributes
+    
+    compress: Boolean
+      Without compression (default), map array onto bitet. Otherwise,
+      use native array of boolean.
+    
+    """
     Boolean.__init__(self, name)
     self._cardinality = cardinality
     self.compress     = compress
