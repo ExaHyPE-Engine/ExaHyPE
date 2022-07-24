@@ -38,10 +38,12 @@ class GlobalFixedTimeStep( OneSweepPerRungeKuttaStep ):
       
   
     normalised_time_step_size: Float
-      This is the normalised time step size w.r.t. the coarsest admissible h value. If
+      This is the normalised time step size w.r.t. the coarsest admissible h value
+      and the polynomial order. If
       the code employs AMR on top of it and refines further, it will automatically 
       downscale the time step size accordingly. So hand in a valid time step size w.r.t.
-      to max_volume_h.
+      to max_volume_h. The actual polynomial order enters the chosen time step size
+      as an additional @f$ p^{-2} @f$ scaling.
   
     """
     super(GlobalFixedTimeStep,self).__init__(name, 

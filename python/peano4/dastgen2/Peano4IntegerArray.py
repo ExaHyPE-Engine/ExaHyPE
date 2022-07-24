@@ -32,6 +32,10 @@ class Peano4IntegerArray(dastgen2.attributes.IntegerArray):
  
   def get_constructor_arguments(self):
       return [ ("_" + self._name, "tarch::la::Vector<" + self._cardinality + ",int>" ) ]
+    
+      
+  def use_default_copy_constructor(self):
+    return not self.compress
 
 
   def get_method_body(self,signature):
@@ -91,7 +95,9 @@ class Peano4IntegerArray(dastgen2.attributes.IntegerArray):
       Return string representation of attribute.
 
     """
-    if self.use_data_store:
+    if self.compress:
+      return "get" + self._name[0].upper() + self._name[1:] + "()"
+    elif self.use_data_store:
       return "_dataStore._" + self._name
     else:
       return "_" + self._name

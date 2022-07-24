@@ -41,9 +41,10 @@ struct peano4::parallel::StartTraversalMessage {
     StartTraversalMessage() {}
     StartTraversalMessage(int  __stepIdentifier);
 
+
     int   getStepIdentifier() const;
     void   setStepIdentifier(int value);
-
+    StartTraversalMessage(const StartTraversalMessage& copy) = default;
 
 
 #ifdef Parallel

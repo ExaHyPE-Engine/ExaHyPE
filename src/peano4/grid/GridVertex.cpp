@@ -43,6 +43,9 @@ std::string peano4::grid::GridVertex::toString() const {
 }
 
 
+
+
+
 peano4::grid::GridVertex::State   peano4::grid::GridVertex::getState() const {
   return _state;
 }

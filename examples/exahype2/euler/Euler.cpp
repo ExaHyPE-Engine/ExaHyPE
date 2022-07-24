@@ -46,6 +46,7 @@ Scenario scenario = Scenario::GaussianProfile;
   #endif
 
   switch (scenario) {
+    case Scenario::GaussianProfile:
     case Scenario::PointExplosion:
       {
         // This is an example how to implement a priori refinement. If
@@ -128,18 +129,17 @@ void examples::exahype2::euler::Euler::initialCondition(
     Q[i] = 0.0;
   }
 
+  #if Dimensions==3
+  tarch::la::Vector<Dimensions,double> circleCentre = {0.18,0.3,0.6};
+  #else
+  tarch::la::Vector<Dimensions,double> circleCentre = {0.5,0.3};
+  #endif
+
   switch (scenario) {
     case Scenario::PointExplosion:
     case Scenario::PointExplosionWithDynamicAMR:
       {
         logDebug( "initialCondition(...)", "set point explosion initial condition" );
-        // Manual offset to make the wave originate slightly to the left of the center --- helps
-        // to detect if wave is moving to the left or right
-        #if Dimensions==2
-        tarch::la::Vector<Dimensions,double> circleCentre = {0.5,0.3};
-        #else
-        tarch::la::Vector<Dimensions,double> circleCentre = {0.18,0.3,0.6};
-        #endif
 
         // initial conditions
         bool isInTheCentre = ( tarch::la::norm2( volumeCentre-circleCentre ) < 0.05 );
@@ -164,14 +164,15 @@ void examples::exahype2::euler::Euler::initialCondition(
       break;
     case Scenario::GaussianProfile:
       {
-        tarch::la::Vector<Dimensions,double> circleCentre = {0.5,0.5,0.5};
-        double radius = tarch::la::norm2( volumeCentre-circleCentre );
+        const double peakDeviation = MaxAdmissibleCellH;
+        double distance = tarch::la::norm2( volumeCentre-circleCentre );
+        double exponent = - (distance * distance) / 2.0 / peakDeviation / peakDeviation;
 
         Q[0] = 0.1;  // rho
         Q[1] = 0;    // velocities
         Q[2] = 0;
         Q[3] = 0;
-        Q[4] = std::exp(-10.0*radius*radius);
+        Q[4] = std::exp( exponent );
       }
       break;
   }

@@ -27,12 +27,18 @@ class String(Attribute):
       ("set" + accessor_name + "(const std::string& value)", "void")
     ]
 
+
   def get_plain_C_attributes(self):
     return [ 
       ("_" + self._name + "[" + str(self._max_length) + "]", "char" ),
       ("_" + self._name + "Length", "int" )
     ]
 
+
+  def get_setter_getter_name(self):
+      return self._name
+
+  
   def get_method_body(self,signature):
     if signature.startswith( "get" ):
       return """

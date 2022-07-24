@@ -54,6 +54,26 @@ std::string exahype2::fd::plotPatch(
 }
 
 
+std::string exahype2::fd::plotPatchOverlap(
+  const double* __restrict__ Q,
+  int    unknowns,
+  int    auxiliaryVariables,
+  int    numberOfGridCellsPerPatchPerAxis,
+  int    haloSize,
+  int    normal,
+  bool   prettyPrint
+) {
+  return exahype2::fv::plotPatchOverlap(
+      Q,
+      unknowns,
+      auxiliaryVariables,
+      numberOfGridCellsPerPatchPerAxis,
+      haloSize,
+      normal,
+      prettyPrint
+    );
+}
+
 
 void exahype2::fd::validatePatch (
   const double *__restrict__ Q, int unknowns,

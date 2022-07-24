@@ -44,6 +44,7 @@ struct peano4::grid::GridControlEvent {
     GridControlEvent() {}
     GridControlEvent(RefinementControl  __refinementControl, tarch::la::Vector<Dimensions,double>  __offset, tarch::la::Vector<Dimensions,double>  __width, tarch::la::Vector<Dimensions,double>  __h);
 
+
     peano4::grid::GridControlEvent::RefinementControl   getRefinementControl() const;
     void   setRefinementControl(RefinementControl value);
     tarch::la::Vector<Dimensions,double>   getOffset() const;
@@ -58,7 +59,7 @@ struct peano4::grid::GridControlEvent {
     void   setH(const tarch::la::Vector<Dimensions,double>& value);
     double   getH(int index) const;
     void   setH(int index, double value);
-
+    GridControlEvent(const GridControlEvent& copy) = default;
 
 
 #ifdef Parallel

@@ -112,6 +112,8 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::update(double timeStepSize, doub
   assertion1(patchSize>0.0,patchSize);
   _maxGridCellHThisTimeStep = std::max(_maxGridCellHThisTimeStep,patchSize / NumberOfGridCellsPerPatchPerAxis);
   _minGridCellHThisTimeStep = std::min(_minGridCellHThisTimeStep,patchSize / NumberOfGridCellsPerPatchPerAxis);
+
+  logDebug( "update(double,double,double)", "updated with dt=" << timeStepSize << ", t=" << timeStamp << ", h=" << patchSize << ": t(new)=" << _minTimeStampThisTimeStep );
 }
 
 
@@ -197,46 +199,56 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startTimeStep(
     case SolverState::RungeKuttaSubStep{{item}}:
       _solverState = SolverState::RungeKuttaSubStep{{item+1}};
       break;
-  {%- endfor %}
+  {% endfor %}
     case SolverState::Plotting:
     case SolverState::PlottingAfterGridInitialisation:
     case SolverState::GridInitialisation:
     case SolverState::RungeKuttaSubStep{{RK_STEPS-1}}:
       _solverState = SolverState::RungeKuttaSubStep0;
       break;
+    {% if RK_STEPS>1 %}
     case SolverState::RungeKuttaSubStep0AfterGridInitialisation:
       _solverState = SolverState::RungeKuttaSubStep1;
       break;
+    {% else %}
+    case SolverState::RungeKuttaSubStep0AfterGridInitialisation:
+      _solverState = SolverState::RungeKuttaSubStep0;
+      break;
+    {% endif %}
   }
 
   {{START_TIME_STEP_IMPLEMENTATION}}
 
-  _minTimeStamp = _minTimeStampThisTimeStep;
-  _maxTimeStamp = _maxTimeStampThisTimeStep;
+  if ( isFirstGridSweepOfTimeStep() ) {
+    _minTimeStamp = _minTimeStampThisTimeStep;
+    _maxTimeStamp = _maxTimeStampThisTimeStep;
 
-  _minTimeStampThisTimeStep = std::numeric_limits<double>::max();
-  _maxTimeStampThisTimeStep = std::numeric_limits<double>::min();
+    _minTimeStampThisTimeStep = std::numeric_limits<double>::max();
+    _maxTimeStampThisTimeStep = std::numeric_limits<double>::min();
 
-  _minTimeStepSize = _minTimeStepSizeThisTimeStep;
-  _maxTimeStepSize = _maxTimeStepSizeThisTimeStep;
+    _minTimeStepSize = _minTimeStepSizeThisTimeStep;
+    _maxTimeStepSize = _maxTimeStepSizeThisTimeStep;
 
-  _minTimeStepSizeThisTimeStep = std::numeric_limits<double>::max();
-  _maxTimeStepSizeThisTimeStep = std::numeric_limits<double>::min();
+    _minTimeStepSizeThisTimeStep = std::numeric_limits<double>::max();
+    _maxTimeStepSizeThisTimeStep = std::numeric_limits<double>::min();
 
-  _minGridCellH = _minGridCellHThisTimeStep;
-  _maxGridCellH = _maxGridCellHThisTimeStep;
+    _minGridCellH = _minGridCellHThisTimeStep;
+    _maxGridCellH = _maxGridCellHThisTimeStep;
 
-  _maxGridCellHThisTimeStep      = 0.0;
-  _minGridCellHThisTimeStep      = std::numeric_limits<double>::max()/NumberOfGridCellsPerPatchPerAxis/2.0;
+    _maxGridCellHThisTimeStep      = 0.0;
+    _minGridCellHThisTimeStep      = std::numeric_limits<double>::max()/NumberOfGridCellsPerPatchPerAxis/2.0;
 
-  _localMinTimeStampThisTimeStep = std::numeric_limits<double>::max();
-  _localMaxTimeStampThisTimeStep = std::numeric_limits<double>::min();
+    _localMinTimeStampThisTimeStep = std::numeric_limits<double>::max();
+    _localMaxTimeStampThisTimeStep = std::numeric_limits<double>::min();
 
-  _patchUpdates    = 0;
+    _patchUpdates    = 0;
+  }
 }
 
 
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishTimeStep() {
+  if ( isLastGridSweepOfTimeStep() ) {
+
   #ifdef Parallel
   double newMinTimeStamp = _minTimeStampThisTimeStep;
   double newMaxTimeStamp = _maxTimeStampThisTimeStep;
@@ -319,11 +331,12 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishTimeStep() {
       );
   #endif
 
-  if ( _minTimeStampThisTimeStep>=std::numeric_limits<double>::max()/10.0) {
-    _minTimeStampThisTimeStep = 0.0;
-  }
-  if ( _maxTimeStampThisTimeStep>=std::numeric_limits<double>::max()/10.0 ) {
-    _maxTimeStampThisTimeStep = 0.0;
+    if ( _minTimeStampThisTimeStep>=std::numeric_limits<double>::max()/10.0) {
+      _minTimeStampThisTimeStep = 0.0;
+    }
+    if ( _maxTimeStampThisTimeStep>=std::numeric_limits<double>::max()/10.0 ) {
+      _maxTimeStampThisTimeStep = 0.0;
+    }
   }
 
   {{FINISH_TIME_STEP_IMPLEMENTATION}}

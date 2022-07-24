@@ -14,6 +14,8 @@ class Attribute(object):
     self.use_data_store = False
 
 
+
+
   def get_public_fields(self):
     """
     
@@ -45,6 +47,17 @@ class Attribute(object):
     """
     return False
 
+
+  def use_default_copy_constructor(self):
+    """
+    
+    If this routine returns False, the generator will create a copy 
+    constructor copying each attribute over via a setter/getter
+    combination.
+    
+    """
+    return True
+  
   
   def get_constructor_arguments(self):
     """
@@ -94,7 +107,18 @@ class Attribute(object):
       the whole implementation.
       
     """
+    assert False, "not implemented"
     return
+
+
+  @property
+  def name(self):
+    """
+    
+    I expect that there's at least one setter/getter pair
+    
+    """
+    return self._name
 
 
   @abc.abstractmethod

@@ -41,6 +41,7 @@ struct peano4::grid::AutomatonState {
     AutomatonState() {}
     AutomatonState(int  __level, tarch::la::Vector<Dimensions,double>  __x, tarch::la::Vector<Dimensions,double>  __h, bool  __inverted, std::bitset<Dimensions>  __evenFlags, tarch::la::Vector<DimensionsTimesTwo,int>  __accessNumber);
 
+
     int   getLevel() const;
     void   setLevel(int value);
     tarch::la::Vector<Dimensions,double>   getX() const;
@@ -62,7 +63,7 @@ struct peano4::grid::AutomatonState {
     void   setAccessNumber(const tarch::la::Vector<DimensionsTimesTwo,int>& value);
     int   getAccessNumber(int index) const;
     void   setAccessNumber(int index, int value);
-
+    AutomatonState(const AutomatonState& copy);
 
 
 #ifdef Parallel
@@ -113,7 +114,7 @@ struct peano4::grid::AutomatonState {
     [[clang::truncate_mantissa(4)]]  double   _x[Dimensions];
     [[clang::truncate_mantissa(4)]]  double   _h[Dimensions];
     [[clang::pack]]  bool   _inverted;
-    [[clang::pack]]  bool   _evenFlags[Dimensions];
+      std::bitset<Dimensions>   _evenFlags;
     [[clang::pack_range(-4,TwoPowerD)]]  int   _accessNumber[DimensionsTimesTwo];
 
 
