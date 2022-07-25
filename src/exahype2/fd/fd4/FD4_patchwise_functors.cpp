@@ -638,6 +638,9 @@ void exahype2::fd::fd4::timeStep_patchwise_heap_functors(
     }
   }
 
+  if (tempFluxX!=nullptr) tarch::freeMemory(tempFluxX, tarch::MemoryLocation::Heap);
+  if (tempFluxY!=nullptr) tarch::freeMemory(tempFluxY, tarch::MemoryLocation::Heap);
+  if (tempFluxZ!=nullptr) tarch::freeMemory(tempFluxZ, tarch::MemoryLocation::Heap);
   if (tempDifferentialSourceX!=nullptr) tarch::freeMemory(tempDifferentialSourceX, tarch::MemoryLocation::Heap);
   if (tempDifferentialSourceY!=nullptr) tarch::freeMemory(tempDifferentialSourceY, tarch::MemoryLocation::Heap);
   if (tempDifferentialSourceZ!=nullptr) tarch::freeMemory(tempDifferentialSourceZ, tarch::MemoryLocation::Heap);

@@ -221,7 +221,7 @@ grid_vertex.add_attribute( dastgen2.attributes.Boolean( "isAntecessorOfRefinedVe
 grid_vertex.add_attribute( dastgen2.attributes.Integer( "numberOfAdjacentRefinedLocalCells" ) )
 
 # Brauch ich nur im Debug mode. Das wird bisher net unterstuetzt
-grid_vertex.add_attribute( peano4.dastgen2.Peano4DoubleArray( "x", "Dimensions" ))
+grid_vertex.add_attribute( peano4.dastgen2.Peano4DoubleArray( "x", "Dimensions", "", ["PeanoDebug>0"] ))
 grid_vertex.add_attribute( dastgen2.attributes.Integer( "level" ) )
 
 grid_vertex.add_aspect( peano4.dastgen2.MPI( peano4.datamodel.DoFAssociation.Generic ) )

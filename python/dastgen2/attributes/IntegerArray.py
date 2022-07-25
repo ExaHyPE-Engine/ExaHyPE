@@ -4,8 +4,8 @@ from .Integer import Integer
 
 
 class IntegerArray(Integer):
-  def __init__(self, name, cardinality, min_value=None, max_value=None):
-    Integer.__init__(self, name)
+  def __init__(self, name, cardinality, min_value=None, max_value=None, ifdefs=[]):
+    Integer.__init__(self, name, ifdefs=ifdefs)
     self._cardinality = cardinality
     self._min_value   = min_value
     self._max_value   = max_value

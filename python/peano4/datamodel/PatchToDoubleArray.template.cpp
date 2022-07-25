@@ -218,4 +218,9 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::shutdownDatatype() {
   
 
 MPI_Datatype   {{NAMESPACE | join("::")}}::{{CLASSNAME}}::Datatype;
+
+
+MPI_Datatype   {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getDatatype() {
+  return Datatype;
+}
 #endif

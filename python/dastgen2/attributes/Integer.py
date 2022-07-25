@@ -4,7 +4,7 @@ from .Attribute import Attribute
 
 
 class Integer(Attribute):
-  def __init__(self, name, min_value=None, max_value=None):
+  def __init__(self, name, min_value=None, max_value=None, ifdefs=[]):
     """
     
     min_value: None or integer value
@@ -12,7 +12,7 @@ class Integer(Attribute):
       is given by the precompiler.
     
     """
-    Attribute.__init__(self, name)
+    Attribute.__init__(self, name, ifdefs)
     self._min_value = min_value
     self._max_value = max_value
     

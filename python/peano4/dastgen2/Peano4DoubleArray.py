@@ -1,6 +1,7 @@
 # This file is part of the DaStGen2 project. For conditions of distribution and
 # use, please see the copyright notice at www.peano-framework.org
 import dastgen2.attributes.DoubleArray
+from dastgen2.Utils import LLVMSymbol
 
 
 class Peano4DoubleArray(dastgen2.attributes.DoubleArray):
@@ -12,7 +13,7 @@ class Peano4DoubleArray(dastgen2.attributes.DoubleArray):
      
   """
   
-  def __init__(self, name, cardinality, valid_mantissa_bits=None):
+  def __init__(self, name, cardinality, valid_mantissa_bits=None, ifdefs=[]):
     """
       See superclass' constructor.
       
@@ -21,9 +22,9 @@ class Peano4DoubleArray(dastgen2.attributes.DoubleArray):
         a string which is defined via a pragma or constexpr later.
         
     """
-    dastgen2.attributes.DoubleArray.__init__(self, name, cardinality,valid_mantissa_bits)
+    super(Peano4DoubleArray,self).__init__(name, cardinality,valid_mantissa_bits=valid_mantissa_bits,ifdefs=ifdefs)
     self._cardinality               = cardinality
-    
+
     
   def get_methods(self,_full_qualified_class_name):
     accessor_name = self._name[:1].title() + self._name[1:]
@@ -41,13 +42,12 @@ class Peano4DoubleArray(dastgen2.attributes.DoubleArray):
 
   def get_plain_C_attributes(self):
     if self._valid_mantissa_bits != None:
-      return [ ("_" + self._name + "[" + self._cardinality + "]", "double", "[[clang::truncate_mantissa(" + str(self._valid_mantissa_bits) + ")]]" ) ]
+      return [ 
+        ("_" + self._name + "[" + self._cardinality + "]", "double",                                              "[[clang::truncate_mantissa(" + str(self._valid_mantissa_bits) + ")]]", ["defined(" + LLVMSymbol + ")" ] ),
+        ("_" + self._name,                                 "tarch::la::Vector<" + self._cardinality + ",double>", "",                                                                     ["!defined(" + LLVMSymbol + ")"] )
+      ]
     else:
-      return [ ("_" + self._name, "tarch::la::Vector<" + self._cardinality + ",double>", "" ) ]
-
-    
-  def use_setter_to_initialise_arguments(self):
-    return self._valid_mantissa_bits != None
+      return [ ("_" + self._name, "tarch::la::Vector<" + self._cardinality + ",double>" ) ]
 
 
   def get_first_plain_C_attribute(self):
