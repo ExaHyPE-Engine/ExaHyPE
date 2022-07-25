@@ -1,6 +1,8 @@
 #include "tarch/compiler/CompilerSpecificSettings.h"
 #include "exahype2/Solver.h"
 #include "exahype2/fd/PatchUtils.h"
+#include "tarch/multicore/otter.h"
+
 
 
 #if defined(GPUOffloadingOMP)

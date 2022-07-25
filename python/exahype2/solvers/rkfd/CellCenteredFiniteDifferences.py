@@ -313,7 +313,7 @@ The finest mesh width of """ + str(self.get_finest_volume_size(domain_size)) + "
        
     """
     self._patch                = peano4.datamodel.Patch( (self._patch_size,self._patch_size,self._patch_size), self._unknowns+self._auxiliary_variables, self._unknown_identifier() )
-    self._patch_estimates      = peano4.datamodel.Patch( (self._patch_size,self._patch_size,self._patch_size), self._unknowns+self._auxiliary_variables, self._unknown_identifier() + "RhsEstimates" )
+    self._patch_estimates      = peano4.datamodel.Patch( (self.number_of_Runge_Kutta_steps()*self._patch_size,self._patch_size,self._patch_size), self._unknowns, self._unknown_identifier() + "RhsEstimates" )
     self._patch_overlap_old    = peano4.datamodel.Patch( (2*self._overlap,self._patch_size,self._patch_size),  self._unknowns+self._auxiliary_variables, self._unknown_identifier() + "Old" )
     self._patch_overlap_new    = peano4.datamodel.Patch( (2*self._overlap,self._patch_size,self._patch_size),  self._unknowns+self._auxiliary_variables, self._unknown_identifier() + "New" )
     self._patch_overlap_update = peano4.datamodel.Patch( (2*self._overlap,self._patch_size,self._patch_size),  self._unknowns+self._auxiliary_variables, self._unknown_identifier() + "Update" )
@@ -423,7 +423,7 @@ The finest mesh width of """ + str(self.get_finest_volume_size(domain_size)) + "
     self._action_set_copy_new_faces_onto_old_faces               = peano4.toolbox.blockstructured.BackupPatchOverlap(self._patch_overlap_new, self._patch_overlap_old, False, self._store_face_data_default_guard(), self._get_default_includes())
     self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement = exahype2.solvers.rkfd.actionsets.DynamicAMR( solver=self, interpolation=self._interpolation, restriction=self._restriction )
 
-    self._action_set_compute_final_linear_combination = exahype2.solvers.rkfd.actionsets.ComputeFinalLinearCombinationAndProjectSolutionOntoFaces(solver=self,guard=self._store_cell_data_default_guard())
+    self._action_set_compute_final_linear_combination = exahype2.solvers.rkfd.actionsets.ComputeFinalLinearCombination(solver=self,guard=self._store_cell_data_default_guard())
 
     # This one is different: it is the hook-in point for other solvers, so we create it 
     # only once if it does not exist

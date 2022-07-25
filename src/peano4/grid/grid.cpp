@@ -48,7 +48,9 @@ peano4::grid::GridVertex peano4::grid::createVertex(
   result.setBackupOfAdjacentRanks( adjacentRanks );
   result.setHasBeenAntecessorOfRefinedVertexInPreviousTreeSweep(not isNewFineGridVertex);
   result.setIsAntecessorOfRefinedVertexInCurrentTreeSweep(not isNewFineGridVertex);
+  #if PeanoDebug>0
   result.setX(x);
+  #endif
   result.setLevel(level);
 
   // not required logically, but makes valgrind's memchecker happy
@@ -362,7 +364,7 @@ void peano4::grid::reduceGridControlEvents( std::vector<GridControlEvent>& event
 
     if (sizes[i]>0) {
       MPI_Bcast(
-        events.data() + offset, sizes[i], GridControlEvent::Datatype, i, tarch::mpi::Rank::getInstance().getCommunicator()
+        events.data() + offset, sizes[i], GridControlEvent::getDatatype(), i, tarch::mpi::Rank::getInstance().getCommunicator()
       );
       offset += sizes[i];
     }

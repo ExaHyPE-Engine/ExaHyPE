@@ -205,7 +205,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startTimeStep(
 
   {{START_TIME_STEP_IMPLEMENTATION}}
 
-  if (_solverState==SolverState::ProjectOnFacesAndComputeVolumeIntegralOfStep0) {
+  if ( isFirstGridSweepOfTimeStep() ) {
     _minTimeStamp = _minTimeStampThisTimeStep;
     _maxTimeStamp = _maxTimeStampThisTimeStep;
 
@@ -235,7 +235,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startTimeStep(
 
 
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishTimeStep() {
-  if ( _solverState==SolverState::SolveRiemannProblemAndAddToVolumeIntegralOfStep{{RK_STEPS-1}} ) {
+  if ( isLastGridSweepOfTimeStep() ) {
 
   #ifdef Parallel
   double newMinTimeStamp    = _minTimeStampThisTimeStep;

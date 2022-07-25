@@ -1,11 +1,12 @@
 # This file is part of the DaStGen2 project. For conditions of distribution and
 # use, please see the copyright notice at www.peano-framework.org
 import dastgen2.attributes.IntegerArray
+from dastgen2.Utils import LLVMSymbol
 
 
 class Peano4IntegerArray(dastgen2.attributes.IntegerArray):
-  def __init__(self, name, cardinality, min_value=None, max_value=None):
-    dastgen2.attributes.IntegerArray.__init__(self, name, cardinality, min_value, max_value)
+  def __init__(self, name, cardinality, min_value=None, max_value=None, ifdefs=[]):
+    dastgen2.attributes.IntegerArray.__init__(self, name, cardinality, min_value, max_value, ifdefs=ifdefs)
     self._cardinality = cardinality
 
     
@@ -21,9 +22,12 @@ class Peano4IntegerArray(dastgen2.attributes.IntegerArray):
 
   def get_plain_C_attributes(self):
     if self.compress:
-      return [ ("_" + self._name + "[" + self._cardinality + "]", "int", "[[clang::pack_range(" + str(self._min_value) + "," + str(self._max_value) + ")]]" ) ]
+      return [ 
+        ("_" + self._name + "[" + self._cardinality + "]", "int",                                             "[[clang::pack_range(" + str(self._min_value) + "," + str(self._max_value) + ")]]", ["defined(" + LLVMSymbol + ")" ] ), 
+        ("_" + self._name,                                 "tarch::la::Vector<" + self._cardinality + ",int>", "",                                                                                ["!defined(" + LLVMSymbol + ")"] )
+      ]
     else:
-      return [ ("_" + self._name, "tarch::la::Vector<" + self._cardinality + ",int>", "" ) ]
+      return [ ("_" + self._name, "tarch::la::Vector<" + self._cardinality + ",int>" ) ]
 
 
   def get_first_plain_C_attribute(self):
@@ -32,6 +36,10 @@ class Peano4IntegerArray(dastgen2.attributes.IntegerArray):
  
   def get_constructor_arguments(self):
       return [ ("_" + self._name, "tarch::la::Vector<" + self._cardinality + ",int>" ) ]
+    
+      
+  def use_default_copy_constructor(self):
+    return not self.compress
 
 
   def get_method_body(self,signature):
@@ -80,18 +88,16 @@ class Peano4IntegerArray(dastgen2.attributes.IntegerArray):
   def get_native_MPI_type(self):
     return [ ("MPI_INT", self._cardinality ) ]
       
-    
-  def use_setter_to_initialise_arguments(self):
-    return self.compress
-
-
+      
   def get_to_string(self):
     """
     
       Return string representation of attribute.
 
     """
-    if self.use_data_store:
+    if self.compress:
+      return "get" + self._name[0].upper() + self._name[1:] + "()"
+    elif self.use_data_store:
       return "_dataStore._" + self._name
     else:
       return "_" + self._name

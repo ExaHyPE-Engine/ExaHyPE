@@ -9,23 +9,19 @@ class AdaptiveTimeSteppingCodeSnippets( exahype2.solvers.AdaptiveTimeSteppingCod
   Code snippet generator for fixed time stepping in the Runge-Kutta schemes
   
   """
-  def __init__(self, time_step_relaxation, use_enclave_tasking):
+  def __init__(self, time_step_relaxation):
     self._time_step_relaxation = time_step_relaxation
-    self._use_enclave_tasking  = use_enclave_tasking
 
 
   def create_start_time_step_implementation(self):
-    predicate = """
+    return """
+  if ( 
     tarch::mpi::Rank::getInstance().isGlobalMaster() 
     and
     _maxVolumeH>0.0
-  """
-  
-    if self._use_enclave_tasking:
-      predicate += """and (_solverState == SolverState::Primary or _solverState == SolverState::PrimaryAfterGridInitialisation) """
-      
-    statistics = """
-  if (""" + predicate + """) {
+    and
+    isFirstGridSweepOfTimeStep()
+  ) {
     logInfo( "startTimeStep()", "Solver {{SOLVER_NAME}}:" );
     logInfo( "startTimeStep()", "t            = " << _minTimeStampThisTimeStep );
     logInfo( "startTimeStep()", "dt           = " << getAdmissibleTimeStepSize() );
@@ -33,18 +29,11 @@ class AdaptiveTimeSteppingCodeSnippets( exahype2.solvers.AdaptiveTimeSteppingCod
     logInfo( "startTimeStep()", "h_{max}      = " << _maxVolumeHThisTimeStep << " (volume size)" );
     logInfo( "startTimeStep()", "lambda_{max} = " << _maxEigenvalue );
   }
-"""
-    
-    if self._use_enclave_tasking:
-      clear_max_eigenvalue = """if (_solverState == SolverState::Primary or _solverState == SolverState::PrimaryAfterGridInitialisation) {
-  _maxEigenvalue = 0.0;
-}"""
-    else:
-      clear_max_eigenvalue = """if (_solverState == SolverState::TimeStep or _solverState == SolverState::TimeStepAfterGridInitialisation) {
-  _maxEigenvalue = 0.0;
-}"""
 
-    return statistics + clear_max_eigenvalue
+  if ( isFirstGridSweepOfTimeStep() ) {
+    _maxEigenvalue = 0.0;
+  }
+"""
 
 
   def create_finish_time_step_implementation(self):
@@ -55,8 +44,12 @@ class AdaptiveTimeSteppingCodeSnippets( exahype2.solvers.AdaptiveTimeSteppingCod
     patches, i.e. we have to devide by the volume count per axis.
     
     """
-    code_snippet = super( AdaptiveTimeSteppingCodeSnippets, self ).create_finish_time_step_implementation() + """
-  if ( tarch::la::greater(_maxEigenvalue, 0.0 ) ) {
+    return super( AdaptiveTimeSteppingCodeSnippets, self ).create_finish_time_step_implementation() + """
+  if ( 
+    isLastGridSweepOfTimeStep() 
+    and 
+    tarch::la::greater(_maxEigenvalue, 0.0 ) 
+  ) {
     _admissibleTimeStepSize = """ + str(self._time_step_relaxation) + """ * _minVolumeHThisTimeStep / _maxEigenvalue;
     if ( std::isnan(_admissibleTimeStepSize) or std::isinf(_admissibleTimeStepSize) ) {
       ::exahype2::triggerNonCriticalAssertion( __FILE__, __LINE__, "_admissibleTimeStepSize>0", "invalid (NaN of inf) time step size: " + std::to_string(_admissibleTimeStepSize) );
@@ -66,12 +59,4 @@ class AdaptiveTimeSteppingCodeSnippets( exahype2.solvers.AdaptiveTimeSteppingCod
     }
   }
 """
-    if self._use_enclave_tasking:
-      return """
-if (_solverState==SolverState::Secondary) {
-""" + code_snippet + """
-}
-"""
-    else:
-      return code_snippet
 

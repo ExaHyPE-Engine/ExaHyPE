@@ -23,8 +23,8 @@ class Enumeration(Attribute):
      as enumeration identifiers.
   
   """
-  def __init__(self, name, variants):
-    Attribute.__init__(self, name)
+  def __init__(self, name, variants, ifdefs=[]):
+    Attribute.__init__(self, name, ifdefs)
     self._variants    = variants
     self.compress     = True
     

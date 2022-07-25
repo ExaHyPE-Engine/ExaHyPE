@@ -95,7 +95,7 @@ class GlobalAdaptiveTimeStepWithEnclaveTasking( EnclaveTasking ):
       riemann_kernel_variant = RiemannKernelVariant.BatchedAoSoAHeap
     )
 
-    solver_code_snippets = AdaptiveTimeSteppingCodeSnippets(self._time_step_relaxation,True)
+    solver_code_snippets = AdaptiveTimeSteppingCodeSnippets(self._time_step_relaxation)
     
     self._abstract_solver_user_declarations  = create_abstract_solver_declarations(self._flux_implementation, self._ncp_implementation, self._eigenvalues_implementation, self._source_term_implementation, self._pde_terms_without_state)
     self._abstract_solver_user_declarations += solver_code_snippets.create_abstract_solver_user_declarations()

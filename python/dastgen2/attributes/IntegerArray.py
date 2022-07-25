@@ -4,15 +4,24 @@ from .Integer import Integer
 
 
 class IntegerArray(Integer):
-  def __init__(self, name, cardinality, min_value=None, max_value=None):
-    Integer.__init__(self, name)
+  def __init__(self, name, cardinality, min_value=None, max_value=None, ifdefs=[]):
+    Integer.__init__(self, name, ifdefs=ifdefs)
     self._cardinality = cardinality
     self._min_value   = min_value
     self._max_value   = max_value
     self.compress     = min_value!=None or max_value!=None
 
 
+  def use_default_copy_constructor(self):
+    """
     
+    Cannot use the default copy constructor, as it is an array, 
+    i.e. we need some manual deep copying.
+    
+    """
+    return False;
+
+
   def get_methods(self,_full_qualified_class_name):
     accessor_name = self._name[:1].title() + self._name[1:]
     return [ 

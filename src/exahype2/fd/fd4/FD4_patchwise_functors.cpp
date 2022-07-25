@@ -1,5 +1,8 @@
-#include "tarch/multicore/otter.h"
 #include "FD4.h"
+#include "tarch/multicore/otter.h"
+#include "exahype2/fd/LoopBody.h"
+#include "exahype2/fd/fd4/LoopBody.h"
+#include "exahype2/fd/FD_Helper.cpph"
 
 
 void exahype2::fd::fd4::timeStep_patchwise_heap_functors(
@@ -12,21 +15,19 @@ void exahype2::fd::fd4::timeStep_patchwise_heap_functors(
   bool                    evaluateFlux,
   bool                    evaluateDifferentialSource, //for ncp
   bool                    evaluateAlgebraicSource, //real source
-  bool                    evaluateMaximumEigenvalueAfterTimeStep,
   bool                    copyOldTimeStepAndScaleWithTimeStepSize,
   Flux                    flux,
   NonconservativeProduct  DifferentialSource,
-  Source                  AlgebraicSource,
-  MaxEigenvalue           maxEigenvalue
+  Source                  AlgebraicSource
 ) {
   static tarch::logging::Log _log( "exahype2::fd" );
 
-  assertionEquals(haloSize,3); // TODO: this is the data stricture halo size which I think should be 3, but check
+  assertionEquals(haloSize,3);
 
   bool evaluateKODissipation = KOSigma>0.0;
 
   exahype2::enumerator::AoSLexicographicEnumerator QInEnumerator (1,numberOfGridCellsPerPatchPerAxis,haloSize,unknowns,auxiliaryVariables);
-  exahype2::enumerator::AoSLexicographicEnumerator QOutEnumerator(1,numberOfGridCellsPerPatchPerAxis,0,       unknowns,auxiliaryVariables);
+  exahype2::enumerator::AoSLexicographicEnumerator QOutEnumerator(1,numberOfGridCellsPerPatchPerAxis,0,       unknowns,0);
 
   double* tempFluxX =  evaluateFlux                                                ? tarch::allocateMemory( QOutEnumerator.size(),tarch::MemoryLocation::Heap ) : nullptr;
   double* tempFluxY =  evaluateFlux                                                ? tarch::allocateMemory( QOutEnumerator.size(),tarch::MemoryLocation::Heap ) : nullptr;
@@ -170,7 +171,6 @@ void exahype2::fd::fd4::timeStep_patchwise_heap_functors(
       otterLoopBegin();
       for (int x = 0; x < numberOfGridCellsPerPatchPerAxis; x++)
       for (int y = 0; y < numberOfGridCellsPerPatchPerAxis; y++) {
-        std::cout << " " << x << "x" << y << ",n=0";
         otterLoopIterationBegin();
         internal::computeFlux_LoopBody(
           patchData.QIn[patchIndex],
@@ -193,7 +193,6 @@ void exahype2::fd::fd4::timeStep_patchwise_heap_functors(
       otterLoopBegin();
       for (int x = 0; x < numberOfGridCellsPerPatchPerAxis; x++)
       for (int y = 0; y < numberOfGridCellsPerPatchPerAxis; y++) {
-        std::cout << " " << x << "x" << y << ",n=1";
         otterLoopIterationBegin();
         internal::computeFlux_LoopBody(
           patchData.QIn[patchIndex],
@@ -637,37 +636,11 @@ void exahype2::fd::fd4::timeStep_patchwise_heap_functors(
         }
         otterLoopEnd();
     }
-
-
-    // STEP4: compute maximum eigenvalue for subsequent time step
-    if (evaluateMaximumEigenvalueAfterTimeStep) {
-      double newMaxEigenvalue = 0.0;
-      otterLoopBegin(); // TODO: how do I clarify that this is a reduction? Do we need this info here?
-      for (int x = 0; x < numberOfGridCellsPerPatchPerAxis; x++)
-      for (int y = 0; y < numberOfGridCellsPerPatchPerAxis; y++)
-      for (int z = 0; z < numberOfGridCellsPerPatchPerAxis; z++) {
-        otterLoopIterationBegin();
-        newMaxEigenvalue = std::max(
-          newMaxEigenvalue,
-          ::exahype2::fd::internal::reduceMaxEigenvalue_LoopBody(
-            *(patchData.QOut + patchIndex),
-            QOutEnumerator,
-            maxEigenvalue,
-            patchData.cellCentre[patchIndex],
-            patchData.cellSize[patchIndex],
-            patchIndex,
-            gridCellIndex3d(x,y,z),
-            patchData.t[patchIndex],
-            timeStepSize
-          )
-        );
-        otterLoopIterationEnd();
-      }
-      otterLoopEnd();
-      patchData.maxEigenvalue[patchIndex] = newMaxEigenvalue;
-    }
   }
 
+  if (tempFluxX!=nullptr) tarch::freeMemory(tempFluxX, tarch::MemoryLocation::Heap);
+  if (tempFluxY!=nullptr) tarch::freeMemory(tempFluxY, tarch::MemoryLocation::Heap);
+  if (tempFluxZ!=nullptr) tarch::freeMemory(tempFluxZ, tarch::MemoryLocation::Heap);
   if (tempDifferentialSourceX!=nullptr) tarch::freeMemory(tempDifferentialSourceX, tarch::MemoryLocation::Heap);
   if (tempDifferentialSourceY!=nullptr) tarch::freeMemory(tempDifferentialSourceY, tarch::MemoryLocation::Heap);
   if (tempDifferentialSourceZ!=nullptr) tarch::freeMemory(tempDifferentialSourceZ, tarch::MemoryLocation::Heap);

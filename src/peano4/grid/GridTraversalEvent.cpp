@@ -30,12 +30,37 @@ setInvokingSpacetreeIsNotInvolvedInAnyDynamicLoadBalancing( __invokingSpacetreeI
 
 
 
+peano4::grid::GridTraversalEvent::GridTraversalEvent( const GridTraversalEvent& copy ) {
+  setX( copy.getX() );
+  setH( copy.getH() );
+  setHasBeenRefined( copy.getHasBeenRefined() );
+  setWillBeRefined( copy.getWillBeRefined() );
+  setIsVertexLocal( copy.getIsVertexLocal() );
+  setIsFaceLocal( copy.getIsFaceLocal() );
+  setIsCellLocal( copy.getIsCellLocal() );
+  setIsParentCellLocal( copy.getIsParentCellLocal() );
+  setIsVertexAdjacentToParallelDomainBoundary( copy.getIsVertexAdjacentToParallelDomainBoundary() );
+  setIsFaceAdjacentToParallelDomainBoundary( copy.getIsFaceAdjacentToParallelDomainBoundary() );
+  setVertexDataFrom( copy.getVertexDataFrom() );
+  setVertexDataTo( copy.getVertexDataTo() );
+  setFaceDataFrom( copy.getFaceDataFrom() );
+  setFaceDataTo( copy.getFaceDataTo() );
+  setCellData( copy.getCellData() );
+  setRelativePositionToFather( copy.getRelativePositionToFather() );
+  setInvokingSpacetree( copy.getInvokingSpacetree() );
+  setInvokingSpacetreeIsNotInvolvedInAnyDynamicLoadBalancing( copy.getInvokingSpacetreeIsNotInvolvedInAnyDynamicLoadBalancing() );
+}
+
+
+
+
+
 std::string peano4::grid::GridTraversalEvent::toString() const {
   std::ostringstream out;
   out << "(";
-  out << "x=" << _x;
+  out << "x=" << getX();
   out << ","; 
-  out << "h=" << _h;
+  out << "h=" << getH();
   out << ","; 
   out << "hasBeenRefined=" << _hasBeenRefined;
   out << ","; 
@@ -63,7 +88,7 @@ std::string peano4::grid::GridTraversalEvent::toString() const {
   out << ","; 
   out << "cellData=" << _cellData;
   out << ","; 
-  out << "relativePositionToFather=" << _relativePositionToFather;
+  out << "relativePositionToFather=" << getRelativePositionToFather();
   out << ","; 
   out << "invokingSpacetree=" << _invokingSpacetree;
   out << ","; 
@@ -71,6 +96,9 @@ std::string peano4::grid::GridTraversalEvent::toString() const {
   out << ")";
   return out.str();
 }
+
+
+
 
 
 tarch::la::Vector<Dimensions,double>   peano4::grid::GridTraversalEvent::getX() const {
@@ -130,16 +158,12 @@ void   peano4::grid::GridTraversalEvent::setH(int index, double value) {
 
 
 std::bitset<TwoPowerD>   peano4::grid::GridTraversalEvent::getHasBeenRefined() const {
-
-  std::bitset<TwoPowerD> result;
-  for (int i=0; i<TwoPowerD; i++) result[i] =   _hasBeenRefined[i];
-  return result;
+  return   _hasBeenRefined;
 }
 
 
 void   peano4::grid::GridTraversalEvent::setHasBeenRefined(const std::bitset<TwoPowerD>&  value) {
-
-  for (int i=0; i<TwoPowerD; i++)   _hasBeenRefined[i]=value[i];
+  _hasBeenRefined = value;
 }
 
 
@@ -154,21 +178,17 @@ void   peano4::grid::GridTraversalEvent::setHasBeenRefined(int index, bool value
 
 
 void   peano4::grid::GridTraversalEvent::flipHasBeenRefined(int index) {
-  _hasBeenRefined[index] = not   _hasBeenRefined[index];
+  _hasBeenRefined.flip(index);
 }
 
 
 std::bitset<TwoPowerD>   peano4::grid::GridTraversalEvent::getWillBeRefined() const {
-
-  std::bitset<TwoPowerD> result;
-  for (int i=0; i<TwoPowerD; i++) result[i] =   _willBeRefined[i];
-  return result;
+  return   _willBeRefined;
 }
 
 
 void   peano4::grid::GridTraversalEvent::setWillBeRefined(const std::bitset<TwoPowerD>&  value) {
-
-  for (int i=0; i<TwoPowerD; i++)   _willBeRefined[i]=value[i];
+  _willBeRefined = value;
 }
 
 
@@ -183,21 +203,17 @@ void   peano4::grid::GridTraversalEvent::setWillBeRefined(int index, bool value)
 
 
 void   peano4::grid::GridTraversalEvent::flipWillBeRefined(int index) {
-  _willBeRefined[index] = not   _willBeRefined[index];
+  _willBeRefined.flip(index);
 }
 
 
 std::bitset<TwoPowerD>   peano4::grid::GridTraversalEvent::getIsVertexLocal() const {
-
-  std::bitset<TwoPowerD> result;
-  for (int i=0; i<TwoPowerD; i++) result[i] =   _isVertexLocal[i];
-  return result;
+  return   _isVertexLocal;
 }
 
 
 void   peano4::grid::GridTraversalEvent::setIsVertexLocal(const std::bitset<TwoPowerD>&  value) {
-
-  for (int i=0; i<TwoPowerD; i++)   _isVertexLocal[i]=value[i];
+  _isVertexLocal = value;
 }
 
 
@@ -212,21 +228,17 @@ void   peano4::grid::GridTraversalEvent::setIsVertexLocal(int index, bool value)
 
 
 void   peano4::grid::GridTraversalEvent::flipIsVertexLocal(int index) {
-  _isVertexLocal[index] = not   _isVertexLocal[index];
+  _isVertexLocal.flip(index);
 }
 
 
 std::bitset<TwoTimesD>   peano4::grid::GridTraversalEvent::getIsFaceLocal() const {
-
-  std::bitset<TwoTimesD> result;
-  for (int i=0; i<TwoTimesD; i++) result[i] =   _isFaceLocal[i];
-  return result;
+  return   _isFaceLocal;
 }
 
 
 void   peano4::grid::GridTraversalEvent::setIsFaceLocal(const std::bitset<TwoTimesD>&  value) {
-
-  for (int i=0; i<TwoTimesD; i++)   _isFaceLocal[i]=value[i];
+  _isFaceLocal = value;
 }
 
 
@@ -241,7 +253,7 @@ void   peano4::grid::GridTraversalEvent::setIsFaceLocal(int index, bool value) {
 
 
 void   peano4::grid::GridTraversalEvent::flipIsFaceLocal(int index) {
-  _isFaceLocal[index] = not   _isFaceLocal[index];
+  _isFaceLocal.flip(index);
 }
 
 
@@ -266,16 +278,12 @@ void   peano4::grid::GridTraversalEvent::setIsParentCellLocal(bool value) {
 
 
 std::bitset<TwoPowerD>   peano4::grid::GridTraversalEvent::getIsVertexAdjacentToParallelDomainBoundary() const {
-
-  std::bitset<TwoPowerD> result;
-  for (int i=0; i<TwoPowerD; i++) result[i] =   _isVertexAdjacentToParallelDomainBoundary[i];
-  return result;
+  return   _isVertexAdjacentToParallelDomainBoundary;
 }
 
 
 void   peano4::grid::GridTraversalEvent::setIsVertexAdjacentToParallelDomainBoundary(const std::bitset<TwoPowerD>&  value) {
-
-  for (int i=0; i<TwoPowerD; i++)   _isVertexAdjacentToParallelDomainBoundary[i]=value[i];
+  _isVertexAdjacentToParallelDomainBoundary = value;
 }
 
 
@@ -290,21 +298,17 @@ void   peano4::grid::GridTraversalEvent::setIsVertexAdjacentToParallelDomainBoun
 
 
 void   peano4::grid::GridTraversalEvent::flipIsVertexAdjacentToParallelDomainBoundary(int index) {
-  _isVertexAdjacentToParallelDomainBoundary[index] = not   _isVertexAdjacentToParallelDomainBoundary[index];
+  _isVertexAdjacentToParallelDomainBoundary.flip(index);
 }
 
 
 std::bitset<TwoTimesD>   peano4::grid::GridTraversalEvent::getIsFaceAdjacentToParallelDomainBoundary() const {
-
-  std::bitset<TwoTimesD> result;
-  for (int i=0; i<TwoTimesD; i++) result[i] =   _isFaceAdjacentToParallelDomainBoundary[i];
-  return result;
+  return   _isFaceAdjacentToParallelDomainBoundary;
 }
 
 
 void   peano4::grid::GridTraversalEvent::setIsFaceAdjacentToParallelDomainBoundary(const std::bitset<TwoTimesD>&  value) {
-
-  for (int i=0; i<TwoTimesD; i++)   _isFaceAdjacentToParallelDomainBoundary[i]=value[i];
+  _isFaceAdjacentToParallelDomainBoundary = value;
 }
 
 
@@ -319,7 +323,7 @@ void   peano4::grid::GridTraversalEvent::setIsFaceAdjacentToParallelDomainBounda
 
 
 void   peano4::grid::GridTraversalEvent::flipIsFaceAdjacentToParallelDomainBoundary(int index) {
-  _isFaceAdjacentToParallelDomainBoundary[index] = not   _isFaceAdjacentToParallelDomainBoundary[index];
+  _isFaceAdjacentToParallelDomainBoundary.flip(index);
 }
 
 
@@ -524,7 +528,15 @@ void peano4::grid::GridTraversalEvent::receiveAndPollDanglingMessages(peano4::gr
     
 #ifdef Parallel
 
+#if !defined(__MPI_ATTRIBUTES_LANGUAGE_EXTENSION__)      
 MPI_Datatype peano4::grid::GridTraversalEvent::Datatype;
+#endif
+
+
+[[clang::map_mpi_datatype]]
+MPI_Datatype peano4::grid::GridTraversalEvent::getDatatype() {
+  return Datatype;
+}
 
 int peano4::grid::GridTraversalEvent::getSenderRank() const {
   return _senderDestinationRank;
@@ -532,56 +544,131 @@ int peano4::grid::GridTraversalEvent::getSenderRank() const {
 
 
 void peano4::grid::GridTraversalEvent::initDatatype() {
+  #if !defined(__MPI_ATTRIBUTES_LANGUAGE_EXTENSION__)
   peano4::grid::GridTraversalEvent  instances[2];
-    
-  MPI_Datatype subtypes[] = { MPI_DOUBLE, MPI_DOUBLE, MPI_UNSIGNED_LONG, MPI_UNSIGNED_LONG, MPI_UNSIGNED_LONG, MPI_UNSIGNED_LONG, MPI_BYTE, MPI_BYTE, MPI_UNSIGNED_LONG, MPI_UNSIGNED_LONG, MPI_INT, MPI_INT, MPI_INT, MPI_INT, MPI_INT, MPI_INT, MPI_INT, MPI_BYTE };
-    
-  int blocklen[] = { Dimensions, Dimensions, 1, 1, 1, 1, 1, 1, 1, 1, TwoPowerD, TwoPowerD, TwoTimesD, TwoTimesD, 1, Dimensions, 1, 1 };
 
-  const int NumberOfAttributes = 18;
-    
+  int NumberOfAttributes = 0;
+  NumberOfAttributes++;
+  NumberOfAttributes++;
+  NumberOfAttributes++;
+  NumberOfAttributes++;
+  NumberOfAttributes++;
+  NumberOfAttributes++;
+  NumberOfAttributes++;
+  NumberOfAttributes++;
+  NumberOfAttributes++;
+  NumberOfAttributes++;
+  NumberOfAttributes++;
+  NumberOfAttributes++;
+  NumberOfAttributes++;
+  NumberOfAttributes++;
+  NumberOfAttributes++;
+  NumberOfAttributes++;
+  NumberOfAttributes++;
+  NumberOfAttributes++;
+
+  MPI_Datatype* subtypes = new MPI_Datatype[NumberOfAttributes];
+  int*          blocklen = new int[NumberOfAttributes]; 
+  MPI_Aint*     disp     = new MPI_Aint[NumberOfAttributes];
+  
+  int counter            = 0;
+  subtypes[counter] = MPI_DOUBLE;
+  blocklen[counter] = Dimensions;
+  counter++;
+  subtypes[counter] = MPI_DOUBLE;
+  blocklen[counter] = Dimensions;
+  counter++;
+  subtypes[counter] = MPI_UNSIGNED_LONG;
+  blocklen[counter] = 1;
+  counter++;
+  subtypes[counter] = MPI_UNSIGNED_LONG;
+  blocklen[counter] = 1;
+  counter++;
+  subtypes[counter] = MPI_UNSIGNED_LONG;
+  blocklen[counter] = 1;
+  counter++;
+  subtypes[counter] = MPI_UNSIGNED_LONG;
+  blocklen[counter] = 1;
+  counter++;
+  subtypes[counter] = MPI_BYTE;
+  blocklen[counter] = 1;
+  counter++;
+  subtypes[counter] = MPI_BYTE;
+  blocklen[counter] = 1;
+  counter++;
+  subtypes[counter] = MPI_UNSIGNED_LONG;
+  blocklen[counter] = 1;
+  counter++;
+  subtypes[counter] = MPI_UNSIGNED_LONG;
+  blocklen[counter] = 1;
+  counter++;
+  subtypes[counter] = MPI_INT;
+  blocklen[counter] = TwoPowerD;
+  counter++;
+  subtypes[counter] = MPI_INT;
+  blocklen[counter] = TwoPowerD;
+  counter++;
+  subtypes[counter] = MPI_INT;
+  blocklen[counter] = TwoTimesD;
+  counter++;
+  subtypes[counter] = MPI_INT;
+  blocklen[counter] = TwoTimesD;
+  counter++;
+  subtypes[counter] = MPI_INT;
+  blocklen[counter] = 1;
+  counter++;
+  subtypes[counter] = MPI_INT;
+  blocklen[counter] = Dimensions;
+  counter++;
+  subtypes[counter] = MPI_INT;
+  blocklen[counter] = 1;
+  counter++;
+  subtypes[counter] = MPI_BYTE;
+  blocklen[counter] = 1;
+  counter++;
+   
   MPI_Aint  baseFirstInstance;
   MPI_Aint  baseSecondInstance;
   MPI_Get_address( &instances[0], &baseFirstInstance );
   MPI_Get_address( &instances[1], &baseSecondInstance );
-  MPI_Aint  disp[ NumberOfAttributes ];
-  int       currentAddress = 0;
-  MPI_Get_address( &(instances[0]._x.data()[0]), &disp[currentAddress] );
-  currentAddress++;
-  MPI_Get_address( &(instances[0]._h.data()[0]), &disp[currentAddress] );
-  currentAddress++;
-  MPI_Get_address( &(instances[0]._hasBeenRefined), &disp[currentAddress] );
-  currentAddress++;
-  MPI_Get_address( &(instances[0]._willBeRefined), &disp[currentAddress] );
-  currentAddress++;
-  MPI_Get_address( &(instances[0]._isVertexLocal), &disp[currentAddress] );
-  currentAddress++;
-  MPI_Get_address( &(instances[0]._isFaceLocal), &disp[currentAddress] );
-  currentAddress++;
-  MPI_Get_address( &(instances[0]._isCellLocal), &disp[currentAddress] );
-  currentAddress++;
-  MPI_Get_address( &(instances[0]._isParentCellLocal), &disp[currentAddress] );
-  currentAddress++;
-  MPI_Get_address( &(instances[0]._isVertexAdjacentToParallelDomainBoundary), &disp[currentAddress] );
-  currentAddress++;
-  MPI_Get_address( &(instances[0]._isFaceAdjacentToParallelDomainBoundary), &disp[currentAddress] );
-  currentAddress++;
-  MPI_Get_address( &(instances[0]._vertexDataFrom.data()[0]), &disp[currentAddress] );
-  currentAddress++;
-  MPI_Get_address( &(instances[0]._vertexDataTo.data()[0]), &disp[currentAddress] );
-  currentAddress++;
-  MPI_Get_address( &(instances[0]._faceDataFrom.data()[0]), &disp[currentAddress] );
-  currentAddress++;
-  MPI_Get_address( &(instances[0]._faceDataTo.data()[0]), &disp[currentAddress] );
-  currentAddress++;
-  MPI_Get_address( &(instances[0]._cellData), &disp[currentAddress] );
-  currentAddress++;
-  MPI_Get_address( &(instances[0]._relativePositionToFather.data()[0]), &disp[currentAddress] );
-  currentAddress++;
-  MPI_Get_address( &(instances[0]._invokingSpacetree), &disp[currentAddress] );
-  currentAddress++;
-  MPI_Get_address( &(instances[0]._invokingSpacetreeIsNotInvolvedInAnyDynamicLoadBalancing), &disp[currentAddress] );
-  currentAddress++;
+  
+  counter = 0;
+  MPI_Get_address( &(instances[0]._x.data()[0]), &disp[counter] );
+  counter++;
+  MPI_Get_address( &(instances[0]._h.data()[0]), &disp[counter] );
+  counter++;
+  MPI_Get_address( &(instances[0]._hasBeenRefined), &disp[counter] );
+  counter++;
+  MPI_Get_address( &(instances[0]._willBeRefined), &disp[counter] );
+  counter++;
+  MPI_Get_address( &(instances[0]._isVertexLocal), &disp[counter] );
+  counter++;
+  MPI_Get_address( &(instances[0]._isFaceLocal), &disp[counter] );
+  counter++;
+  MPI_Get_address( &(instances[0]._isCellLocal), &disp[counter] );
+  counter++;
+  MPI_Get_address( &(instances[0]._isParentCellLocal), &disp[counter] );
+  counter++;
+  MPI_Get_address( &(instances[0]._isVertexAdjacentToParallelDomainBoundary), &disp[counter] );
+  counter++;
+  MPI_Get_address( &(instances[0]._isFaceAdjacentToParallelDomainBoundary), &disp[counter] );
+  counter++;
+  MPI_Get_address( &(instances[0]._vertexDataFrom.data()[0]), &disp[counter] );
+  counter++;
+  MPI_Get_address( &(instances[0]._vertexDataTo.data()[0]), &disp[counter] );
+  counter++;
+  MPI_Get_address( &(instances[0]._faceDataFrom.data()[0]), &disp[counter] );
+  counter++;
+  MPI_Get_address( &(instances[0]._faceDataTo.data()[0]), &disp[counter] );
+  counter++;
+  MPI_Get_address( &(instances[0]._cellData), &disp[counter] );
+  counter++;
+  MPI_Get_address( &(instances[0]._relativePositionToFather.data()[0]), &disp[counter] );
+  counter++;
+  MPI_Get_address( &(instances[0]._invokingSpacetree), &disp[counter] );
+  counter++;
+  MPI_Get_address( &(instances[0]._invokingSpacetreeIsNotInvolvedInAnyDynamicLoadBalancing), &disp[counter] );
+  counter++;
 
   MPI_Aint offset = disp[0] - baseFirstInstance;
   MPI_Aint extent = baseSecondInstance - baseFirstInstance - offset;
@@ -596,11 +683,21 @@ void peano4::grid::GridTraversalEvent::initDatatype() {
   errorCode += MPI_Type_commit( &Datatype );
   errorCode += MPI_Type_free( &tmpType );
   if (errorCode) std::cerr << "error constructing MPI datatype in " << __FILE__ << ":" << __LINE__ << std::endl;
+
+  delete[] subtypes;
+  delete[] blocklen; 
+  delete[] disp;
+
+  #else
+  // invoke routine once to trigger lazy initialisation
+  getDatatype();
+  #endif
 }
 
 
 void peano4::grid::GridTraversalEvent::shutdownDatatype() {
-  MPI_Type_free( &Datatype );
+  MPI_Datatype type = getDatatype();
+  MPI_Type_free( &type );
 }
 
 
