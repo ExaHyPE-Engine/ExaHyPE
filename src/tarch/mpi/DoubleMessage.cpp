@@ -7,9 +7,9 @@
 
 
 
-tarch::mpi::DoubleMessage::DoubleMessage(double  __value):
-    _value(__value)
-  {}
+tarch::mpi::DoubleMessage::DoubleMessage(double  __value){
+setValue( __value);
+}
 
 
 
@@ -98,7 +98,15 @@ void tarch::mpi::DoubleMessage::receiveAndPollDanglingMessages(tarch::mpi::Doubl
     
 #ifdef Parallel
 
+#if !defined(__MPI_ATTRIBUTES_LANGUAGE_EXTENSION__)      
 MPI_Datatype tarch::mpi::DoubleMessage::Datatype;
+#endif
+
+
+[[clang::map_mpi_datatype]]
+MPI_Datatype tarch::mpi::DoubleMessage::getDatatype() {
+  return Datatype;
+}
 
 int tarch::mpi::DoubleMessage::getSenderRank() const {
   return _senderDestinationRank;
@@ -106,22 +114,29 @@ int tarch::mpi::DoubleMessage::getSenderRank() const {
 
 
 void tarch::mpi::DoubleMessage::initDatatype() {
+  #if !defined(__MPI_ATTRIBUTES_LANGUAGE_EXTENSION__)
   tarch::mpi::DoubleMessage  instances[2];
-    
-  MPI_Datatype subtypes[] = { MPI_DOUBLE };
-    
-  int blocklen[] = { 1 };
 
-  const int NumberOfAttributes = 1;
-    
+  int NumberOfAttributes = 0;
+  NumberOfAttributes++;
+
+  MPI_Datatype* subtypes = new MPI_Datatype[NumberOfAttributes];
+  int*          blocklen = new int[NumberOfAttributes]; 
+  MPI_Aint*     disp     = new MPI_Aint[NumberOfAttributes];
+  
+  int counter            = 0;
+  subtypes[counter] = MPI_DOUBLE;
+  blocklen[counter] = 1;
+  counter++;
+   
   MPI_Aint  baseFirstInstance;
   MPI_Aint  baseSecondInstance;
   MPI_Get_address( &instances[0], &baseFirstInstance );
   MPI_Get_address( &instances[1], &baseSecondInstance );
-  MPI_Aint  disp[ NumberOfAttributes ];
-  int       currentAddress = 0;
-  MPI_Get_address( &(instances[0]._value), &disp[currentAddress] );
-  currentAddress++;
+  
+  counter = 0;
+  MPI_Get_address( &(instances[0]._value), &disp[counter] );
+  counter++;
 
   MPI_Aint offset = disp[0] - baseFirstInstance;
   MPI_Aint extent = baseSecondInstance - baseFirstInstance - offset;
@@ -136,11 +151,21 @@ void tarch::mpi::DoubleMessage::initDatatype() {
   errorCode += MPI_Type_commit( &Datatype );
   errorCode += MPI_Type_free( &tmpType );
   if (errorCode) std::cerr << "error constructing MPI datatype in " << __FILE__ << ":" << __LINE__ << std::endl;
+
+  delete[] subtypes;
+  delete[] blocklen; 
+  delete[] disp;
+
+  #else
+  // invoke routine once to trigger lazy initialisation
+  getDatatype();
+  #endif
 }
 
 
 void tarch::mpi::DoubleMessage::shutdownDatatype() {
-  MPI_Type_free( &Datatype );
+  MPI_Datatype type = getDatatype();
+  MPI_Type_free( &type );
 }
 
 

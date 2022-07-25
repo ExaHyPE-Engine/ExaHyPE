@@ -1,6 +1,7 @@
 # This file is part of the DaStGen2 project. For conditions of distribution and
 # use, please see the copyright notice at www.peano-framework.org
 import dastgen2.attributes.IntegerArray
+from dastgen2.Utils import LLVMSymbol
 
 
 class Peano4IntegerArray(dastgen2.attributes.IntegerArray):
@@ -21,7 +22,10 @@ class Peano4IntegerArray(dastgen2.attributes.IntegerArray):
 
   def get_plain_C_attributes(self):
     if self.compress:
-      return [ ("_" + self._name + "[" + self._cardinality + "]", "int", "[[clang::pack_range(" + str(self._min_value) + "," + str(self._max_value) + ")]]" ) ]
+      return [ 
+        ("_" + self._name + "[" + self._cardinality + "]", "int",                                             "[[clang::pack_range(" + str(self._min_value) + "," + str(self._max_value) + ")]]", ["defined(" + LLVMSymbol + ")" ] ), 
+        ("_" + self._name,                                 "tarch::la::Vector<" + self._cardinality + ",int>", "",                                                                                ["!defined(" + LLVMSymbol + ")"] )
+      ]
     else:
       return [ ("_" + self._name, "tarch::la::Vector<" + self._cardinality + ",int>" ) ]
 

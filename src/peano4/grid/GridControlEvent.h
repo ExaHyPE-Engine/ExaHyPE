@@ -70,15 +70,29 @@ struct peano4::grid::GridControlEvent {
 
     #ifdef Parallel
     /**
+     * Hands out MPI datatype if we work without the LLVM MPI extension.
+     * If we work with this additional feature, this is the routine where
+     * the lazy initialisation is done and the datatype is also cached.
+     */
+    [[clang::map_mpi_datatype]]
+    static MPI_Datatype  getDatatype();
+    
+    
+    /**
      * @return The rank of the sender of an object. It only make ssense to call
      *         this routine after you've invoked receive with MPI_ANY_SOURCE.
      */
     int getSenderRank() const;
     
     /**
-     * To be called prior to any MPI usage of this class.
+     * Wrapper around getDatatype() to trigger lazy evaluation if we
+     * use the lazy initialisation.
      */
     static void initDatatype();
+    
+    /**
+     * Free the underlying MPI datatype.
+     */
     static void shutdownDatatype();
             
     /**
@@ -107,18 +121,26 @@ struct peano4::grid::GridControlEvent {
   
   private:
       RefinementControl   _refinementControl;
-      tarch::la::Vector<Dimensions,double>   _offset;
-      tarch::la::Vector<Dimensions,double>   _width;
-      tarch::la::Vector<Dimensions,double>   _h;
+    tarch::la::Vector<Dimensions,double>   _offset;
+    tarch::la::Vector<Dimensions,double>   _width;
+    tarch::la::Vector<Dimensions,double>   _h;
 
 
 
 
     #ifdef Parallel
-    public:
-      static MPI_Datatype  Datatype;
     private:
-    int                  _senderDestinationRank;
+      int                  _senderDestinationRank;
+
+      #if !defined(__MPI_ATTRIBUTES_LANGUAGE_EXTENSION__)      
+      /**
+       * Whenever we use LLVM's MPI extension (DaStGe), we rely on lazy
+       * initialisation of the datatype. However, Peano calls init explicitly
+       * in most cases. Without the LLVM extension which caches the MPI 
+       * datatype once constructed, this field stores the type.
+       */
+      static MPI_Datatype  Datatype;
+      #endif
     #endif
 
 

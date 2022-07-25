@@ -1,6 +1,7 @@
 # This file is part of the DaStGen2 project. For conditions of distribution and
 # use, please see the copyright notice at www.peano-framework.org
 import dastgen2.attributes.DoubleArray
+from dastgen2.Utils import LLVMSymbol
 
 
 class Peano4DoubleArray(dastgen2.attributes.DoubleArray):
@@ -41,7 +42,10 @@ class Peano4DoubleArray(dastgen2.attributes.DoubleArray):
 
   def get_plain_C_attributes(self):
     if self._valid_mantissa_bits != None:
-      return [ ("_" + self._name + "[" + self._cardinality + "]", "double", "[[clang::truncate_mantissa(" + str(self._valid_mantissa_bits) + ")]]" ) ]
+      return [ 
+        ("_" + self._name + "[" + self._cardinality + "]", "double",                                              "[[clang::truncate_mantissa(" + str(self._valid_mantissa_bits) + ")]]", ["defined(" + LLVMSymbol + ")" ] ),
+        ("_" + self._name,                                 "tarch::la::Vector<" + self._cardinality + ",double>", "",                                                                     ["!defined(" + LLVMSymbol + ")"] )
+      ]
     else:
       return [ ("_" + self._name, "tarch::la::Vector<" + self._cardinality + ",double>" ) ]
 
