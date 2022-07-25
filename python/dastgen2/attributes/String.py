@@ -16,8 +16,8 @@ class String(Attribute):
               array with max_length entries.
               
   """
-  def __init__(self, name, max_length=80):
-    Attribute.__init__(self, name)
+  def __init__(self, name, max_length=80, ifdefs=[]):
+    Attribute.__init__(self, name, ifdefs)
     self._max_length = max_length
     
   def get_methods(self,_full_qualified_name):

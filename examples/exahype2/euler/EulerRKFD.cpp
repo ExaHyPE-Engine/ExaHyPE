@@ -178,11 +178,31 @@ double ::examples::exahype2::euler::EulerRKFD::maxEigenvalue(
 )  {
   logTraceInWith4Arguments( "maxEigenvalue(...)", faceCentre, volumeH, t, normal );
 
-  assertion(false);
+  assertion(normal>=0);
+  assertion(normal<Dimensions);
+  //assertion( Q[0]>0.0 );
 
+  if (Q[0]<=0.0 or Q[0]!=Q[0]) {
+    ::exahype2::triggerNonCriticalAssertion( __FILE__, __LINE__, "Q[0]>0", "density negative" );
+    assertion(false);
+  }
+
+  constexpr double gamma = 1.4;
+  const double irho = 1./Q[0];
+  #if Dimensions==3
+  const double p = (gamma-1) * (Q[4] - 0.5*irho*(Q[1]*Q[1]+Q[2]*Q[2]+Q[3]*Q[3]));
+  #else
+  const double p = (gamma-1) * (Q[4] - 0.5*irho*(Q[1]*Q[1]+Q[2]*Q[2]));
+  #endif
+
+  nonCriticalAssertion9( tarch::la::greaterEquals(p,0.0), Q[0], Q[1], Q[2], Q[3], Q[4], x, t, normal, p );
+  const double c   = std::sqrt( std::max(0.0,gamma * p * irho) );
+
+  const double u_n = Q[normal + 1] * irho;
+  double result = std::max( std::abs(u_n - c), std::abs(u_n + c) );
+  nonCriticalAssertion13( result>=0.0, result, p, u_n, irho, c, Q[0], Q[1], Q[2], Q[3], Q[4], x, t, normal );
   logTraceOut( "maxEigenvalue(...)" );
-
-  return 0.0;
+  return result;
 }
 
 

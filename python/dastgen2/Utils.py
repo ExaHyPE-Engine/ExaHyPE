@@ -2,6 +2,9 @@
 # use, please see the copyright notice at www.peano-framework.org
 
 
+LLVMSymbol = "__PACKED_ATTRIBUTES_LANGUAGE_EXTENSION__"
+
+
 def get_include_guard( full_qualified_name ):
   return "_INCLUDE_" + full_qualified_name.replace( "::", "_").upper() + "_"
 

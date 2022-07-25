@@ -16,6 +16,7 @@ exahype2::CellData::CellData(
   t[0]           = t_;
   dt[0]          = dt_;
   QOut[0]        = QOut_;
+  id[0]          = -1;
 }
 
 
@@ -26,6 +27,7 @@ exahype2::CellData::CellData( int numberOfCells_ ):
   cellSize      = new (std::align_val_t(AlignmentOnHeap)) tarch::la::Vector<Dimensions,double>[numberOfCells];
   t             = new (std::align_val_t(AlignmentOnHeap)) double[numberOfCells];
   dt            = new (std::align_val_t(AlignmentOnHeap)) double[numberOfCells];
+  id            = new (std::align_val_t(AlignmentOnHeap)) int[numberOfCells];
   QOut          = new (std::align_val_t(AlignmentOnHeap)) double*[numberOfCells];
   maxEigenvalue = new (std::align_val_t(AlignmentOnHeap)) double[numberOfCells];
 }
@@ -38,6 +40,7 @@ exahype2::CellData::~CellData() {
   delete[] t;
   delete[] dt;
   delete[] QOut;
+  delete[] id;
   delete[] maxEigenvalue;
 }
 
@@ -50,6 +53,7 @@ std::string exahype2::CellData::toString() const {
         << ",h=" << cellSize[i]
         << ",t=" << t[i]
         << ",dt=" << dt[i]
+        << ",id=" << id[i]
         << ",lambda=" << maxEigenvalue[i]
         << ")";
   }

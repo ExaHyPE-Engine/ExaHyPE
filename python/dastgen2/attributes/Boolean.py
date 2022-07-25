@@ -4,8 +4,8 @@ from .Attribute import Attribute
 
 
 class Boolean(Attribute):
-  def __init__(self, name):
-    Attribute.__init__(self, name)
+  def __init__(self, name, ifdefs=[]):
+    Attribute.__init__(self, name, ifdefs)
     self.compress       = True
     
     
