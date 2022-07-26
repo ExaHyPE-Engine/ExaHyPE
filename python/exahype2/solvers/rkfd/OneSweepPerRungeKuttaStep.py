@@ -100,8 +100,6 @@ class UpdateCell(ReconstructPatchAndApplyFunctor):
            
       ::exahype2::fd::{{KERNEL_NAMESPACE}}::{{COMPUTE_KERNEL_CALL}} 
 
-      {{POSTPROCESS_UPDATED_PATCH}}
-
       ::exahype2::fd::validatePatch(
         targetPatch,
         {{NUMBER_OF_UNKNOWNS}},

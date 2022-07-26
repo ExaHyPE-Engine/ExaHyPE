@@ -49,6 +49,19 @@ class ComputeFinalLinearCombination(AbstractRKFDActionSet):
 
     const double timeStamp = fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStamp();
 
+    double* targetPatch = fineGridCell{{UNKNOWN_IDENTIFIER}}.value;
+    
+    {{POSTPROCESS_UPDATED_PATCH}}
+
+    ::exahype2::fd::validatePatch(
+      targetPatch,
+      {{NUMBER_OF_UNKNOWNS}},
+      {{NUMBER_OF_AUXILIARY_VARIABLES}},
+      {{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}},
+      0, // halo
+      std::string(__FILE__) + "(" + std::to_string(__LINE__) + "): " + marker.toString()
+    ); // outcome has to be valid
+
     {% if COMPUTE_MAX_EIGENVALUE %}
     ::exahype2::CellData  patchData( nullptr, marker.x(), marker.h(), timeStamp, timeStepSize, fineGridCell{{UNKNOWN_IDENTIFIER}}.value );
 
