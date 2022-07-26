@@ -121,11 +121,11 @@ struct peano4::grid::GridStatistics {
     std::string toString() const;
   
   private:
-      int   _numberOfLocalUnrefinedCells;
-      int   _numberOfRemoteUnrefinedCells;
-      int   _numberOfLocalRefinedCells;
-      int   _numberOfRemoteRefinedCells;
-      int   _stationarySweeps;
+    [[clang::pack_range(0,std::numeric_limits<int>::max())]]  int   _numberOfLocalUnrefinedCells;
+    [[clang::pack_range(0,std::numeric_limits<int>::max())]]  int   _numberOfRemoteUnrefinedCells;
+    [[clang::pack_range(0,std::numeric_limits<int>::max())]]  int   _numberOfLocalRefinedCells;
+    [[clang::pack_range(0,std::numeric_limits<int>::max())]]  int   _numberOfRemoteRefinedCells;
+    [[clang::pack_range(0,std::numeric_limits<int>::max())]]  int   _stationarySweeps;
     [[clang::pack]]  bool   _coarseningHasBeenVetoed;
     [[clang::pack]]  bool   _removedEmptySubtree;
     tarch::la::Vector<Dimensions,double>   _minH;

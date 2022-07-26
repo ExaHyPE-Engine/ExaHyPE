@@ -62,21 +62,21 @@ std::string peano4::grid::GridTraversalEvent::toString() const {
   out << ","; 
   out << "h=" << getH();
   out << ","; 
-  out << "hasBeenRefined=" << _hasBeenRefined;
+  out << "hasBeenRefined=" << getHasBeenRefined();
   out << ","; 
-  out << "willBeRefined=" << _willBeRefined;
+  out << "willBeRefined=" << getWillBeRefined();
   out << ","; 
-  out << "isVertexLocal=" << _isVertexLocal;
+  out << "isVertexLocal=" << getIsVertexLocal();
   out << ","; 
-  out << "isFaceLocal=" << _isFaceLocal;
+  out << "isFaceLocal=" << getIsFaceLocal();
   out << ","; 
   out << "isCellLocal=" << _isCellLocal;
   out << ","; 
   out << "isParentCellLocal=" << _isParentCellLocal;
   out << ","; 
-  out << "isVertexAdjacentToParallelDomainBoundary=" << _isVertexAdjacentToParallelDomainBoundary;
+  out << "isVertexAdjacentToParallelDomainBoundary=" << getIsVertexAdjacentToParallelDomainBoundary();
   out << ","; 
-  out << "isFaceAdjacentToParallelDomainBoundary=" << _isFaceAdjacentToParallelDomainBoundary;
+  out << "isFaceAdjacentToParallelDomainBoundary=" << getIsFaceAdjacentToParallelDomainBoundary();
   out << ","; 
   out << "vertexDataFrom=" << _vertexDataFrom;
   out << ","; 
@@ -158,12 +158,16 @@ void   peano4::grid::GridTraversalEvent::setH(int index, double value) {
 
 
 std::bitset<TwoPowerD>   peano4::grid::GridTraversalEvent::getHasBeenRefined() const {
-  return   _hasBeenRefined;
+
+  std::bitset<TwoPowerD> result;
+  for (int i=0; i<TwoPowerD; i++) result[i] =   _hasBeenRefined[i];
+  return result;
 }
 
 
 void   peano4::grid::GridTraversalEvent::setHasBeenRefined(const std::bitset<TwoPowerD>&  value) {
-  _hasBeenRefined = value;
+
+  for (int i=0; i<TwoPowerD; i++)   _hasBeenRefined[i]=value[i];
 }
 
 
@@ -178,17 +182,21 @@ void   peano4::grid::GridTraversalEvent::setHasBeenRefined(int index, bool value
 
 
 void   peano4::grid::GridTraversalEvent::flipHasBeenRefined(int index) {
-  _hasBeenRefined.flip(index);
+  _hasBeenRefined[index] = not   _hasBeenRefined[index];
 }
 
 
 std::bitset<TwoPowerD>   peano4::grid::GridTraversalEvent::getWillBeRefined() const {
-  return   _willBeRefined;
+
+  std::bitset<TwoPowerD> result;
+  for (int i=0; i<TwoPowerD; i++) result[i] =   _willBeRefined[i];
+  return result;
 }
 
 
 void   peano4::grid::GridTraversalEvent::setWillBeRefined(const std::bitset<TwoPowerD>&  value) {
-  _willBeRefined = value;
+
+  for (int i=0; i<TwoPowerD; i++)   _willBeRefined[i]=value[i];
 }
 
 
@@ -203,17 +211,21 @@ void   peano4::grid::GridTraversalEvent::setWillBeRefined(int index, bool value)
 
 
 void   peano4::grid::GridTraversalEvent::flipWillBeRefined(int index) {
-  _willBeRefined.flip(index);
+  _willBeRefined[index] = not   _willBeRefined[index];
 }
 
 
 std::bitset<TwoPowerD>   peano4::grid::GridTraversalEvent::getIsVertexLocal() const {
-  return   _isVertexLocal;
+
+  std::bitset<TwoPowerD> result;
+  for (int i=0; i<TwoPowerD; i++) result[i] =   _isVertexLocal[i];
+  return result;
 }
 
 
 void   peano4::grid::GridTraversalEvent::setIsVertexLocal(const std::bitset<TwoPowerD>&  value) {
-  _isVertexLocal = value;
+
+  for (int i=0; i<TwoPowerD; i++)   _isVertexLocal[i]=value[i];
 }
 
 
@@ -228,17 +240,21 @@ void   peano4::grid::GridTraversalEvent::setIsVertexLocal(int index, bool value)
 
 
 void   peano4::grid::GridTraversalEvent::flipIsVertexLocal(int index) {
-  _isVertexLocal.flip(index);
+  _isVertexLocal[index] = not   _isVertexLocal[index];
 }
 
 
 std::bitset<TwoTimesD>   peano4::grid::GridTraversalEvent::getIsFaceLocal() const {
-  return   _isFaceLocal;
+
+  std::bitset<TwoTimesD> result;
+  for (int i=0; i<TwoTimesD; i++) result[i] =   _isFaceLocal[i];
+  return result;
 }
 
 
 void   peano4::grid::GridTraversalEvent::setIsFaceLocal(const std::bitset<TwoTimesD>&  value) {
-  _isFaceLocal = value;
+
+  for (int i=0; i<TwoTimesD; i++)   _isFaceLocal[i]=value[i];
 }
 
 
@@ -253,7 +269,7 @@ void   peano4::grid::GridTraversalEvent::setIsFaceLocal(int index, bool value) {
 
 
 void   peano4::grid::GridTraversalEvent::flipIsFaceLocal(int index) {
-  _isFaceLocal.flip(index);
+  _isFaceLocal[index] = not   _isFaceLocal[index];
 }
 
 
@@ -278,12 +294,16 @@ void   peano4::grid::GridTraversalEvent::setIsParentCellLocal(bool value) {
 
 
 std::bitset<TwoPowerD>   peano4::grid::GridTraversalEvent::getIsVertexAdjacentToParallelDomainBoundary() const {
-  return   _isVertexAdjacentToParallelDomainBoundary;
+
+  std::bitset<TwoPowerD> result;
+  for (int i=0; i<TwoPowerD; i++) result[i] =   _isVertexAdjacentToParallelDomainBoundary[i];
+  return result;
 }
 
 
 void   peano4::grid::GridTraversalEvent::setIsVertexAdjacentToParallelDomainBoundary(const std::bitset<TwoPowerD>&  value) {
-  _isVertexAdjacentToParallelDomainBoundary = value;
+
+  for (int i=0; i<TwoPowerD; i++)   _isVertexAdjacentToParallelDomainBoundary[i]=value[i];
 }
 
 
@@ -298,17 +318,21 @@ void   peano4::grid::GridTraversalEvent::setIsVertexAdjacentToParallelDomainBoun
 
 
 void   peano4::grid::GridTraversalEvent::flipIsVertexAdjacentToParallelDomainBoundary(int index) {
-  _isVertexAdjacentToParallelDomainBoundary.flip(index);
+  _isVertexAdjacentToParallelDomainBoundary[index] = not   _isVertexAdjacentToParallelDomainBoundary[index];
 }
 
 
 std::bitset<TwoTimesD>   peano4::grid::GridTraversalEvent::getIsFaceAdjacentToParallelDomainBoundary() const {
-  return   _isFaceAdjacentToParallelDomainBoundary;
+
+  std::bitset<TwoTimesD> result;
+  for (int i=0; i<TwoTimesD; i++) result[i] =   _isFaceAdjacentToParallelDomainBoundary[i];
+  return result;
 }
 
 
 void   peano4::grid::GridTraversalEvent::setIsFaceAdjacentToParallelDomainBoundary(const std::bitset<TwoTimesD>&  value) {
-  _isFaceAdjacentToParallelDomainBoundary = value;
+
+  for (int i=0; i<TwoTimesD; i++)   _isFaceAdjacentToParallelDomainBoundary[i]=value[i];
 }
 
 
@@ -323,7 +347,7 @@ void   peano4::grid::GridTraversalEvent::setIsFaceAdjacentToParallelDomainBounda
 
 
 void   peano4::grid::GridTraversalEvent::flipIsFaceAdjacentToParallelDomainBoundary(int index) {
-  _isFaceAdjacentToParallelDomainBoundary.flip(index);
+  _isFaceAdjacentToParallelDomainBoundary[index] = not   _isFaceAdjacentToParallelDomainBoundary[index];
 }
 
 
