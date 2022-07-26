@@ -159,7 +159,9 @@ automaton_state.add_attribute( dastgen2.attributes.Boolean( "inverted" ) )
 automaton_state.add_attribute( dastgen2.attributes.BooleanArray( "evenFlags",
     "Dimensions", compress=True ) )
 
-automaton_state.add_attribute( peano4.dastgen2.Peano4IntegerArray( "accessNumber", cardinality="DimensionsTimesTwo", min_value=-4,max_value="TwoPowerD" ) )
+automaton_state.add_attribute( peano4.dastgen2.Peano4IntegerArray(
+    "accessNumber", cardinality="DimensionsTimesTwo",
+    min_value="-TwoTimesD", max_value="TwoTimesD" ) )
 
 automaton_state.add_aspect( peano4.dastgen2.MPI( peano4.datamodel.DoFAssociation.Generic )  )
 automaton_state.add_aspect( dastgen2.aspects.MPI() )
