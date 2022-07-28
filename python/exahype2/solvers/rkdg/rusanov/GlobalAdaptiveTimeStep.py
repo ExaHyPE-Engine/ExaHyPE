@@ -23,7 +23,7 @@ class GlobalAdaptiveTimeStep( SeparateSweeps ):
     ncp=PDETerms.None_Implementation, 
     point_source=PDETerms.None_Implementation,
     boundary_conditions=PDETerms.User_Defined_Implementation,
-    refinement_criterion=PDETerms.None_Implementation,
+    refinement_criterion=PDETerms.Empty_Implementation,
     initial_conditions=PDETerms.User_Defined_Implementation,
     source_term=PDETerms.None_Implementation,
     plot_grid_properties=False

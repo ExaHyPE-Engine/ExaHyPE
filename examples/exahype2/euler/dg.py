@@ -27,17 +27,15 @@ project = exahype2.Project( ["examples", "exahype2", "euler"], "dg", ".", execut
 # Add the Finite Volumes solver
 #
 dimensions     = 2
-unknowns       = 5
 max_h          = 0.1
 min_h          = max_h
-time_step_size = 0.1 * min_h
 patch_size     = 8
 unknowns       = 1 + dimensions + 1  # density, velocity, energy
 
 thesolver = exahype2.solvers.rkdg.rusanov.GlobalAdaptiveTimeStep(
     "EulerDG",
     unknowns = unknowns, auxiliary_variables = 0,
-    polynomials = exahype2.solvers.GaussLegendreBasis(4), rk_order = 4,
+    polynomials = exahype2.solvers.GaussLegendreBasis(4), rk_order = 1,
     min_cell_h = min_h, max_cell_h = max_h,
     flux = exahype2.solvers.rkdg.PDETerms.User_Defined_Implementation,
     eigenvalues = exahype2.solvers.rkdg.PDETerms.User_Defined_Implementation,
@@ -79,8 +77,8 @@ project.set_load_balancing( "toolbox::loadbalancing::RecursiveSubdivision", "new
 # Parse configure settings, generate all glue code, and compile code
 #
 verbose    = False
-build_mode = peano4.output.CompileMode.Release
-#build_mode = peano4.output.CompileMode.Asserts
+#build_mode = peano4.output.CompileMode.Release
+build_mode = peano4.output.CompileMode.Asserts
 #build_mode = peano4.output.CompileMode.Debug
 peano_dir  = "../../.."
 project.set_Peano4_installation( peano_dir, build_mode )
