@@ -103,7 +103,7 @@ namespace exahype2 {
          * @see copySolution_LoopBody() for vectorisation details.
          */
         template <class QInEnumeratorType, class QOutEnumeratorType>
-        static void copySolutionAndAddAlgebraicSourceTerm_LoopBody(
+        static void addAlgebraicSourceTerm_LoopBody(
           const double* __restrict__                   QIn,
           const QInEnumeratorType&                     QInEnumerator,
           exahype2::fd::Source                    AlgebraicSource,

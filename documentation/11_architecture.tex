@@ -46,45 +46,26 @@ I discuss the layers bottom-up:
 \end{itemize}
 
 
-\section*{Organisation of guidebook}
+\section*{Code organisation}
 
-The guidebook is split into parts anticipating the layered architecture of the
-code.
-
-One part discusses the C++ features offered both by the
-tarch and \Peano's core.
-This part is very useful for anybody who writes C++ code within \Peano, and it
-also gives information how \Peano\ works under the hood. 
-Some developers might be able to work completely without the details described
-in this part.
-However, as soon as you have some linear algebra operations for example, you
-might want to be familiar with the core features.
+\Peano's core is a collection of static libraries. 
+A \Peano\ application consists of C++ glue code which combines all of these
+libraries.
+This glue code is generated through the Python API.
 
 
-One part gives some examples how to work with the Python API. 
-Most people who use this API won't be able to stick to Python only, but:
-The API is powerful mechanism generating C++ glue code and C++
-stubs.
-The latter still have to be befilled with actual computations by the user.
-So the API takes away the responsibility to assemble the application, but it
-does not completely hide away C++.
+\begin{itemize}
+  \item[documentation] Hosts the \LaTeX\ sources of the document that you hold
+  in your hands.
+  \item[python] Holds the Python API scripts. Within the \texttt{python}
+  subdirectory, you find scripts for both the \Peano\ core API, toolboxes and
+  large-scale \Peano\ applications.
+  \item[src] Holds the C++ Peano sources of the Peano core and all the
+  toolboxes.
+  \item[examples] Collection of simple examples. Most of them are hard-coded,
+  stand-alone codes.
+  \item[benchmarks] Collection of benchmark scripts.
+  \item[applications] Proper, real-world applications.
+\end{itemize}
 
 
-One part discusses how to use big projects built on top of
-\Peano\ that have a very high abstraction level.
-\ExaHyPE/ExaClaw are the two biggest fishes at the moment.
-If you work on this level, you can likely completely ignore the other Python
-details and a lot of the C++ low level details for quite a while.
-
-
-Another part finally discusses how to extend the Python API.
-This is relevant for all the developers that do not only want to create a code
-with \Peano\ but want to make their stuff easily available to others.
-After that, I spend a few pages to summarise design decisions (rationale)
-underrlying the code.
-This might help to understand why certain things work the way they do.
-
-
-An appendix gives further information on particular machines, file formats, and
-so forth. 
-It hosts an FAQ and tips how to combine/use \Peano\ with other tools.

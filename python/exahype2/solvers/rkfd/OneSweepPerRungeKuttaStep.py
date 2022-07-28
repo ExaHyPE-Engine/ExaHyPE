@@ -100,8 +100,6 @@ class UpdateCell(ReconstructPatchAndApplyFunctor):
            
       ::exahype2::fd::{{KERNEL_NAMESPACE}}::{{COMPUTE_KERNEL_CALL}} 
 
-      {{POSTPROCESS_UPDATED_PATCH}}
-
       ::exahype2::fd::validatePatch(
         targetPatch,
         {{NUMBER_OF_UNKNOWNS}},
@@ -193,13 +191,13 @@ class OneSweepPerRungeKuttaStep( CellCenteredFiniteDifferences ):
   """
 
 
-  def __init__(self, name, patch_size, overlap, rk_order, unknowns, auxiliary_variables, min_volume_h, max_volume_h, plot_grid_properties, kernel_namespace):
+  def __init__(self, name, patch_size, overlap, rk_order, unknowns, auxiliary_variables, min_meshcell_h, max_meshcell_h, plot_grid_properties, kernel_namespace):
     """
 
       Instantiate a generic FV scheme with an overlap of 1.
 
     """
-    super(OneSweepPerRungeKuttaStep, self).__init__(name, patch_size, overlap, rk_order, unknowns, auxiliary_variables, min_volume_h, max_volume_h, plot_grid_properties, kernel_namespace)
+    super(OneSweepPerRungeKuttaStep, self).__init__(name, patch_size, overlap, rk_order, unknowns, auxiliary_variables, min_meshcell_h, max_meshcell_h, plot_grid_properties, kernel_namespace)
     
     if rk_order<1:
       raise Exception( "Runge-Kutta order has to be at least 1 but was {}".format(rk_order) )
