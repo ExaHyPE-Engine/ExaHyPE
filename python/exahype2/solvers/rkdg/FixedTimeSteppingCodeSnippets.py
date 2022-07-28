@@ -55,7 +55,7 @@ class FixedTimeSteppingCodeSnippets( exahype2.solvers.FixedTimeSteppingCodeSnipp
   assertion( _minCellH >= 0.0 );
   assertion( MaxAdmissibleCellH > 0.0 );
   if (_minCellH <= MaxAdmissibleCellH) {
-    _timeStepSize  = """ + str(self._normalised_time_step_size) + """ * _minCellH;
+    _timeStepSize  = """ + str(self._normalised_time_step_size) + """;// * _minCellH;
   }
   else {
     _timeStepSize = 0.0;
