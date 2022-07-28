@@ -4,6 +4,7 @@ import os
 
 import peano4
 import peano4.datamodel
+import peano4.toolbox.blockstructured
 import peano4.output.TemplatedHeaderFile
 import peano4.output.TemplatedHeaderImplementationFilePair
 import peano4.output.Jinja2TemplatedHeaderFile
@@ -425,7 +426,8 @@ We use RK(""" + str(self._rk_order) + """) for the time stepping.
     self._old_time_step_projection          = peano4.datamodel.Patch( (2,self._number_of_face_projections*(self._basis.dofs_per_axis),self._basis.dofs_per_axis),  self._unknowns+self._auxiliary_variables, self._unknown_identifier() + "OldTimeStepProjection" )
     self._Riemann_solution                  = peano4.datamodel.Patch( (2,self._basis.dofs_per_axis,self._basis.dofs_per_axis),  self._unknowns, self._unknown_identifier() + "RiemannSolution" )
            
-    self._current_estimate_projection.generator.merge_method_definition = get_face_overlap_merge_implementation(self._current_estimate_projection)
+    self._current_estimate_projection.generator.merge_method_definition = peano4.toolbox.blockstructured.get_face_overlap_merge_implementation(self._current_estimate_projection)
+      #get_face_overlap_merge_implementation(self._current_estimate_projection)
     self._current_estimate_projection.generator.includes     += """
 #include "peano4/utils/Loop.h"
 #include "repositories/SolverRepository.h" 

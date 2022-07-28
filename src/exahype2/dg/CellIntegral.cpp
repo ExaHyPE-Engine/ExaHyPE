@@ -43,8 +43,8 @@ void exahype2::dg::cellIntegral_patchwise_GaussLegendre_functors(
 
     //which node's value is being computed
     for(int node=0; node<nodesPerCell; node++){
-      for(int var=0; var<strideQ; var++){
-        cellQout[node*strideQ+var] = 0.0;
+      for(int var=0; var<unknowns; var++){
+        cellQout[node*unknowns+var] = 0.0;
       }
 
       tarch::la::Vector<Dimensions,int> index = getIndex(node, strides);
@@ -78,7 +78,7 @@ void exahype2::dg::cellIntegral_patchwise_GaussLegendre_functors(
           }
 
           for(int var=0; var<unknowns; var++){
-            cellQout[node*strideQ+var] += coeff * fluxValues[var];
+            cellQout[node*unknowns+var] += coeff * fluxValues[var];
           } //var
         } // dim/i combination
       }//if useFlux
@@ -105,7 +105,7 @@ void exahype2::dg::cellIntegral_patchwise_GaussLegendre_functors(
         #endif
 
         for(int var=0; var<unknowns; var++){
-          cellQout[node*strideQ+var] += coeff * sourceValues[var];
+          cellQout[node*unknowns+var] += coeff * sourceValues[var];
         } //var
       } //if useSource
 
@@ -147,7 +147,7 @@ void exahype2::dg::cellIntegral_patchwise_GaussLegendre_functors(
           }
 
           for(int var=0; var<unknowns; var++){
-            cellQout[node*strideQ+var] += coeff * ncpValues[var];
+            cellQout[node*unknowns+var] += coeff * ncpValues[var];
           } //var
         } //dim
       } //if useNCP
