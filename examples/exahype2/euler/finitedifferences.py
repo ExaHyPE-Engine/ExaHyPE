@@ -20,7 +20,7 @@ import exahype2
 # Create a project and configure it to end up in a subnamespace (and thus
 # subdirectory). 
 #
-project = exahype2.Project( ["examples", "exahype2", "euler"], "finitevolumes", ".", executable="finitedifferences" )
+project = exahype2.Project( ["examples", "exahype2", "euler"], "dg", ".", executable="finitedifferences" )
 
 
 #
@@ -30,7 +30,6 @@ dimensions     = 2
 unknowns       = 5
 max_h          = 0.01
 min_h          = max_h
-time_step_size = 0.1 * min_h
 patch_size     = 8
 unknowns       = 1 + dimensions + 1  # density, velocity, energy
 
@@ -38,10 +37,10 @@ thesolver = exahype2.solvers.rkfd.fd4.GlobalAdaptiveTimeStep(
     "EulerFD",
     patch_size,
     unknowns = unknowns, auxiliary_variables = 0,
-    min_volume_h = min_h, max_volume_h = max_h,
+    min_meshcell_h = min_h, max_meshcell_h = max_h,
     rk_order = 4,
     flux = exahype2.solvers.rkfd.PDETerms.User_Defined_Implementation,
-    eigenvalues = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
+    eigenvalues = exahype2.solvers.rkfd.PDETerms.User_Defined_Implementation,
     time_step_relaxation = 0.01
   )
 

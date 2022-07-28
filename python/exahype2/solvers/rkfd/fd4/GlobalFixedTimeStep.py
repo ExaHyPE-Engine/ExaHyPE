@@ -21,7 +21,7 @@ from exahype2.solvers.rkfd.FixedTimeSteppingCodeSnippets import FixedTimeSteppin
 
 class GlobalFixedTimeStep( OneSweepPerRungeKuttaStep ):
   def __init__(self, 
-    name, patch_size, rk_order, unknowns, auxiliary_variables, min_volume_h, max_volume_h, normalised_time_step_size,
+    name, patch_size, rk_order, unknowns, auxiliary_variables, min_meshcell_h, max_meshcell_h, normalised_time_step_size,
     flux=PDETerms.User_Defined_Implementation, 
     ncp=None, 
     eigenvalues=PDETerms.None_Implementation, 
@@ -42,14 +42,14 @@ class GlobalFixedTimeStep( OneSweepPerRungeKuttaStep ):
       and the polynomial order. If
       the code employs AMR on top of it and refines further, it will automatically 
       downscale the time step size accordingly. So hand in a valid time step size w.r.t.
-      to max_volume_h. The actual polynomial order enters the chosen time step size
+      to max_meshcell_h. The actual polynomial order enters the chosen time step size
       as an additional @f$ p^{-2} @f$ scaling.
   
     """
     super(GlobalFixedTimeStep,self).__init__(name, 
                                              patch_size, 
                                              3, #overlap, 
-                                             rk_order, unknowns, auxiliary_variables, min_volume_h, max_volume_h, plot_grid_properties, kernel_namespace="fd4") 
+                                             rk_order, unknowns, auxiliary_variables, min_meshcell_h, max_meshcell_h, plot_grid_properties, kernel_namespace="fd4") 
     
     self._normalised_time_step_size = normalised_time_step_size
 

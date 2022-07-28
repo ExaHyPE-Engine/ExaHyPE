@@ -48,3 +48,7 @@ integrator.
 The DG example uses a fourth order DG scheme in combination with fourth
 order Runge-Kutta.
          
+    python3 dg.py
+    ./dg
+
+         

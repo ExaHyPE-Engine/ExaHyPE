@@ -30,7 +30,6 @@ dimensions     = 2
 unknowns       = 5
 max_h          = 0.01
 min_h          = max_h
-time_step_size = 0.1 * min_h
 patch_size     = 8
 unknowns       = 1 + dimensions + 1  # density, velocity, energy
 
