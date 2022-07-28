@@ -40,26 +40,23 @@ void exahype2::fd::fd4::timeStep_patchwise_heap_functors(
   double* tempKODissipationZ      = (evaluateKODissipation      and Dimensions==3) ? tarch::allocateMemory( QOutEnumerator.size(),tarch::MemoryLocation::Heap ) : nullptr;
 
 
-  // STEP 1: copy solution from old array to new array, and/or add the change due to algebraic source terms
   for (int patchIndex=0; patchIndex<patchData.numberOfCells; patchIndex++) {
     const double timeStepSize = copyOldTimeStepAndScaleWithTimeStepSize ? patchData.dt[patchIndex] : 1.0;
 
-    logDebug( "timeStepWithFD4_sequential(...)", "evaluate algebraic source terms and/or copy solution over" );
-    if (Dimensions==2 and evaluateAlgebraicSource and copyOldTimeStepAndScaleWithTimeStepSize) {
+    // STEP 1: copy solution from old array to new array, or set all to zero
+    if ( Dimensions==3 and copyOldTimeStepAndScaleWithTimeStepSize ) {
       otterLoopBegin();
       for (int x = 0; x < numberOfGridCellsPerPatchPerAxis; x++)
-      for (int y = 0; y < numberOfGridCellsPerPatchPerAxis; y++) {
+      for (int y = 0; y < numberOfGridCellsPerPatchPerAxis; y++)
+      for (int z = 0; z < numberOfGridCellsPerPatchPerAxis; z++)
+      for (int unknown=0; unknown<unknowns+auxiliaryVariables; unknown++) {
         otterLoopIterationBegin();
-        ::exahype2::fd::internal::copySolutionAndAddAlgebraicSourceTerm_LoopBody(
+        ::exahype2::fd::internal::copySolution_LoopBody(
           patchData.QIn[patchIndex],
           QInEnumerator,
-          AlgebraicSource,
-          patchData.cellCentre[patchIndex],
-          patchData.cellSize[patchIndex],
           patchIndex,
-          gridCellIndex2d(x,y),
-          patchData.t[patchIndex],
-          timeStepSize,
+          gridCellIndex3d(x,y,z),
+          unknown,
           patchData.QOut[patchIndex],
           QOutEnumerator
         );
@@ -67,22 +64,17 @@ void exahype2::fd::fd4::timeStep_patchwise_heap_functors(
       }
       otterLoopEnd();
     }
-    else if (Dimensions==3 and evaluateAlgebraicSource and copyOldTimeStepAndScaleWithTimeStepSize) {
+    else if (Dimensions==3 and not copyOldTimeStepAndScaleWithTimeStepSize){
       otterLoopBegin();
       for (int x = 0; x < numberOfGridCellsPerPatchPerAxis; x++)
       for (int y = 0; y < numberOfGridCellsPerPatchPerAxis; y++)
-      for (int z = 0; z < numberOfGridCellsPerPatchPerAxis; z++) {
+      for (int z = 0; z < numberOfGridCellsPerPatchPerAxis; z++)
+      for (int unknown=0; unknown<unknowns+auxiliaryVariables; unknown++) {
         otterLoopIterationBegin();
-        ::exahype2::fd::internal::copySolutionAndAddAlgebraicSourceTerm_LoopBody(
-          patchData.QIn[patchIndex],
-          QInEnumerator,
-          AlgebraicSource,
-          patchData.cellCentre[patchIndex],
-          patchData.cellSize[patchIndex],
+        ::exahype2::fd::internal::clearSolution_LoopBody(
           patchIndex,
           gridCellIndex3d(x,y,z),
-          patchData.t[patchIndex],
-          timeStepSize,
+          unknown,
           patchData.QOut[patchIndex],
           QOutEnumerator
         );
@@ -101,44 +93,6 @@ void exahype2::fd::fd4::timeStep_patchwise_heap_functors(
           QInEnumerator,
           patchIndex,
           gridCellIndex2d(x,y),
-          unknown,
-          patchData.QOut[patchIndex],
-          QOutEnumerator
-        );
-        otterLoopIterationEnd();
-      }
-      otterLoopEnd();
-    }
-    else if ( copyOldTimeStepAndScaleWithTimeStepSize ) {
-      otterLoopBegin();
-      for (int x = 0; x < numberOfGridCellsPerPatchPerAxis; x++)
-      for (int y = 0; y < numberOfGridCellsPerPatchPerAxis; y++)
-      for (int z = 0; z < numberOfGridCellsPerPatchPerAxis; z++)
-      for (int unknown=0; unknown<unknowns+auxiliaryVariables; unknown++) {
-        otterLoopIterationBegin();
-        ::exahype2::fd::internal::copySolution_LoopBody(
-          patchData.QIn[patchIndex],
-          QInEnumerator,
-          patchIndex,
-          gridCellIndex3d(x,y,z),
-          unknown,
-          patchData.QOut[patchIndex],
-          QOutEnumerator
-        );
-        otterLoopIterationEnd();
-      }
-      otterLoopEnd();
-    }
-    else if (Dimensions==3){
-      otterLoopBegin();
-      for (int x = 0; x < numberOfGridCellsPerPatchPerAxis; x++)
-      for (int y = 0; y < numberOfGridCellsPerPatchPerAxis; y++)
-      for (int z = 0; z < numberOfGridCellsPerPatchPerAxis; z++)
-      for (int unknown=0; unknown<unknowns+auxiliaryVariables; unknown++) {
-        otterLoopIterationBegin();
-        ::exahype2::fd::internal::clearSolution_LoopBody(
-          patchIndex,
-          gridCellIndex3d(x,y,z),
           unknown,
           patchData.QOut[patchIndex],
           QOutEnumerator
@@ -166,7 +120,54 @@ void exahype2::fd::fd4::timeStep_patchwise_heap_functors(
     }
 
 
-    // STEP 2: Evaluate flux and update solution accordingly 
+    // Step 2: Add source terms
+    if (Dimensions==2 and evaluateAlgebraicSource) {
+      otterLoopBegin();
+      for (int x = 0; x < numberOfGridCellsPerPatchPerAxis; x++)
+      for (int y = 0; y < numberOfGridCellsPerPatchPerAxis; y++) {
+        otterLoopIterationBegin();
+        ::exahype2::fd::internal::addAlgebraicSourceTerm_LoopBody(
+          patchData.QIn[patchIndex],
+          QInEnumerator,
+          AlgebraicSource,
+          patchData.cellCentre[patchIndex],
+          patchData.cellSize[patchIndex],
+          patchIndex,
+          gridCellIndex2d(x,y),
+          patchData.t[patchIndex],
+          timeStepSize,
+          patchData.QOut[patchIndex],
+          QOutEnumerator
+        );
+        otterLoopIterationEnd();
+      }
+      otterLoopEnd();
+    }
+    else if (Dimensions==3 and evaluateAlgebraicSource) {
+      otterLoopBegin();
+      for (int x = 0; x < numberOfGridCellsPerPatchPerAxis; x++)
+      for (int y = 0; y < numberOfGridCellsPerPatchPerAxis; y++)
+      for (int z = 0; z < numberOfGridCellsPerPatchPerAxis; z++) {
+        otterLoopIterationBegin();
+        ::exahype2::fd::internal::addAlgebraicSourceTerm_LoopBody(
+          patchData.QIn[patchIndex],
+          QInEnumerator,
+          AlgebraicSource,
+          patchData.cellCentre[patchIndex],
+          patchData.cellSize[patchIndex],
+          patchIndex,
+          gridCellIndex3d(x,y,z),
+          patchData.t[patchIndex],
+          timeStepSize,
+          patchData.QOut[patchIndex],
+          QOutEnumerator
+        );
+        otterLoopIterationEnd();
+      }
+      otterLoopEnd();
+    }
+
+    // STEP 3: Evaluate flux and update solution accordingly
     if (evaluateFlux and Dimensions==2) {
       otterLoopBegin();
       for (int x = 0; x < numberOfGridCellsPerPatchPerAxis; x++)
@@ -322,7 +323,7 @@ void exahype2::fd::fd4::timeStep_patchwise_heap_functors(
       }
     }
 
-    // STEP 3: Evaluate differential source and update solution accordingly 
+    // STEP 4: Evaluate differential source and update solution accordingly
     if (evaluateDifferentialSource and Dimensions==2) {
       otterLoopBegin();
       for (int x = 0; x < numberOfGridCellsPerPatchPerAxis; x++)
@@ -482,7 +483,7 @@ void exahype2::fd::fd4::timeStep_patchwise_heap_functors(
       otterLoopEnd();
     }
 
-    // STEP 4: compute the Kreiss Oliger dissipation and add it to the solution
+    // STEP 5: compute the Kreiss Oliger dissipation and add it to the solution
     if (evaluateKODissipation and Dimensions==2) {
       otterLoopBegin();
       for (int x = 0; x < numberOfGridCellsPerPatchPerAxis; x++)

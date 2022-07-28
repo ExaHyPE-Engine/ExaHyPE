@@ -41,11 +41,11 @@ class FixedTimeSteppingCodeSnippets( exahype2.solvers.FixedTimeSteppingCodeSnipp
       
     return """
   if (""" + predicate + """) {
-    logInfo( "step()", "Solver {{SOLVER_NAME}}:" );
-    logInfo( "step()", "t       = " << _minTimeStampThisTimeStep );
-    logInfo( "step()", "dt      = " << getTimeStepSize() );
-    logInfo( "step()", "h_{min} = " << _minCellHThisTimeStep );
-    logInfo( "step()", "h_{max} = " << _maxCellHThisTimeStep );
+    logInfo( "startTimeStep()", "Solver {{SOLVER_NAME}}:" );
+    logInfo( "startTimeStep()", "t       = " << _minTimeStampThisTimeStep );
+    logInfo( "startTimeStep()", "dt      = " << getTimeStepSize() );
+    logInfo( "startTimeStep()", "h_{min} = " << _minCellHThisTimeStep );
+    logInfo( "startTimeStep()", "h_{max} = " << _maxCellHThisTimeStep );
   }
 """
 

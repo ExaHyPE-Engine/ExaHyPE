@@ -26,7 +26,7 @@ floatparams = {
 	"itau":1.0, "k1":0.1, "k2":0.0, "k3":0.5, "eta":1.0,
         "f":0.75, "g":0.0, "xi":1.0, "e":1.0, "c":1.0, "mu":0.2, "ds":1.0,
         "sk":1.0, "bs":1.0,
-        "domain_r":0.5, "smoothing":0.0, "KOSigma":12.0 #, \
+        "domain_r":0.5, "smoothing":0.0, "KOSigma":4.0 #, \
 	#"itau":1.0, "k1":0.1, "k2":0.0, "k3":0.5, "eta":1.0,
         #"f":1.0, "g":0.0, "xi":1.0, "e":1.0, "c":1.0, "mu":0.2, "ds":1.0,
         #"sk":1.0, "bs":1.0#, \
@@ -49,7 +49,7 @@ if __name__ == "__main__":
     parser.add_argument("-m",    "--mode",            dest="mode",            default="release",  help="|".join(modes.keys()) )
     parser.add_argument( "--gpu",            dest="GPU",            default=False, action="store_true",  help="Run with accelerator support" )
     parser.add_argument("-ext",  "--extension",       dest="extension",       choices=["none", "gradient", "AMRadm", "Full"],   default="none",  help="Pick extension, i.e. what should be plotted on top. Default is none" )
-    parser.add_argument("-impl", "--implementation",  dest="implementation",  choices=["fv-global-fixed", "fv-global-adaptive", "fv-global-fixed-enclave", "fv-global-adaptive-enclave","fv-subcyling-adaptive-enclave","fv-local-enclave", "fv-musclhancock", "fd-fourth-order", "fd-fourth-order-fixed"], required="True",  help="Pick solver type" )
+    parser.add_argument("-impl", "--implementation",  dest="implementation",  choices=["fv-global-fixed", "fv-global-adaptive", "fv-global-fixed-enclave", "fv-global-adaptive-enclave","fv-subcyling-adaptive-enclave","fv-local-enclave", "fv-musclhancock", "fd4-rk1-adaptive", "fd4-rk1-fixed", "fd4-rk4-adaptive", "fd4-rk4-fixed", "fv-fd4"], required="True",  help="Pick solver type" )
     parser.add_argument("-no-pbc",  "--no-periodic-boundary-conditions",      dest="periodic_bc", action="store_false", default="True",  help="switch on or off the periodic BC" )
     parser.add_argument("-AMRMarker",  "--AMR-marker",      dest="marker", choices=["none", "poisson"],   default="none",  help="switch on or off the AMR boundary marker" )
     parser.add_argument("-et",   "--end-time",        dest="end_time",        type=float, default=1.0, help="End (terminal) time" )
@@ -88,10 +88,12 @@ if __name__ == "__main__":
        SuperClass = exahype2.solvers.fv.rusanov.LocalTimeStepWithEnclaveTasking
     if args.implementation=="fv-musclhancock":
        SuperClass = exahype2.solvers.fv.musclhancock.GlobalAdaptiveTimeStep
-    if args.implementation=="fd-fourth-order":
+    if args.implementation=="fd4-rk1-adaptive" or args.implementation=="fd4-rk4-adaptive":
        SuperClass = exahype2.solvers.rkfd.fd4.GlobalAdaptiveTimeStep
-    if args.implementation=="fd-fourth-order-fixed":
+    if args.implementation=="fd4-rk1-fixed" or args.implementation=="fd4-rk4-fixed":
        SuperClass = exahype2.solvers.rkfd.fd4.GlobalFixedTimeStep
+    if args.implementation=="fv-fd4":
+       SuperClass = exahype2.solvers.fv.fd4.GlobalAdaptiveTimeStep
 
 
     class CCZ4Solver( SuperClass ):
@@ -152,9 +154,13 @@ if __name__ == "__main__":
             time_step_relaxation=cfl
           )
         elif SuperClass==exahype2.solvers.rkfd.fd4.GlobalAdaptiveTimeStep:
+          if args.implementation=="fd4-rk1-adaptive":
+            rk_order = 1
+          else:
+            rk_order = 4
           SuperClass.__init__(
             self,
-            name=name, patch_size=patch_size, rk_order=4,
+            name=name, patch_size=patch_size, rk_order=rk_order,
             unknowns=number_of_unknowns,
             auxiliary_variables=0,
             min_volume_h=min_volume_h, max_volume_h=max_volume_h,
@@ -162,13 +168,27 @@ if __name__ == "__main__":
             KOSigma=KOSig
           )
         elif SuperClass==exahype2.solvers.rkfd.fd4.GlobalFixedTimeStep:
+          if args.implementation=="fd4-rk1-fixed":
+            rk_order = 1
+          else:
+            rk_order = 4
           SuperClass.__init__(
             self,
-            name=name, patch_size=patch_size, rk_order=4,
+            name=name, patch_size=patch_size, rk_order=rk_order,
             unknowns=number_of_unknowns,
             auxiliary_variables=0,
             min_volume_h=min_volume_h, max_volume_h=max_volume_h,
             normalised_time_step_size=0.01,
+            KOSigma=KOSig
+          )
+        elif SuperClass==exahype2.solvers.fv.fd4.GlobalAdaptiveTimeStep:
+          SuperClass.__init__(
+            self,
+            name=name, patch_size=patch_size,
+            unknowns=number_of_unknowns,
+            auxiliary_variables=0,
+            min_volume_h=min_volume_h, max_volume_h=max_volume_h,
+            time_step_relaxation=cfl,
             KOSigma=KOSig
           )
         else:
@@ -635,7 +655,7 @@ if __name__ == "__main__":
     if args.interpolation=="order-2":
       my_solver.overlap=2
 
-    if args.implementation=="fd-fourth-order" or args.implementation=="fd-fourth-order-fixed":
+    if args.implementation=="fd-fourth-order" or args.implementation=="fd-fourth-order-fixed" or args.implementation=="fv-fd4":
       my_solver.overlap=3
 
     my_solver.restriction = "averaging" # "linear"
