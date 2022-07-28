@@ -237,6 +237,7 @@ void exahype2::dg::tests::DGTest::UtilsTest(){
     cellQin[2*i+1] = i+1;
   }
 
+/*
   double maxEval = getMaxEigenvalue(
       [&](
           const double * __restrict__                 Q,
@@ -256,6 +257,7 @@ void exahype2::dg::tests::DGTest::UtilsTest(){
       );
 
   validateNumericalEquals(maxEval, (Dimensions-1)*(nodesPerCell-1));
+*/
 
 
 

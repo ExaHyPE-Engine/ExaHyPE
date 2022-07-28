@@ -20,10 +20,11 @@ class GlobalFixedTimeStep( SeparateSweeps ):
     polynomials,
     unknowns, auxiliary_variables, min_cell_h, max_cell_h, time_step_size,
     flux=PDETerms.User_Defined_Implementation, 
+    eigenvalues=PDETerms.None_Implementation, 
     ncp=PDETerms.None_Implementation, 
     point_source=PDETerms.None_Implementation,
     boundary_conditions=PDETerms.User_Defined_Implementation,
-    refinement_criterion=PDETerms.None_Implementation,
+    refinement_criterion=PDETerms.Empty_Implementation,
     initial_conditions=PDETerms.User_Defined_Implementation,
     source_term=PDETerms.None_Implementation,
     plot_grid_properties=False
@@ -38,6 +39,7 @@ class GlobalFixedTimeStep( SeparateSweeps ):
                             additional_action_set_includes="", 
                             additional_user_includes="",
                             flux=flux,
+                            eigenvalues=eigenvalues,
                             ncp=ncp,
                             source_term=source_term,
                             point_source=point_source
@@ -50,6 +52,7 @@ class GlobalFixedTimeStep( SeparateSweeps ):
     boundary_conditions=None,
     refinement_criterion=None,
     initial_conditions=None,
+    eigenvalues=None,
     source_term=None,
     point_source=None,
     additional_action_set_includes = "",
@@ -62,7 +65,7 @@ class GlobalFixedTimeStep( SeparateSweeps ):
                                                        additional_user_includes="",
                                                        flux=flux,
                                                        ncp=ncp,
-                                                       eigenvalues=PDETerms.User_Defined_Implementation,
+                                                       eigenvalues=eigenvalues,
                                                        source_term=source_term,
                                                        point_source=point_source
                                                        )

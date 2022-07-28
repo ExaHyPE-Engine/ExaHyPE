@@ -121,12 +121,9 @@ class CellCenteredFiniteDifferences(object):
     self._finish_time_step_implementation          = ""
     self._constructor_implementation               = ""
 
-    self._boundary_conditions_implementation  = PDETerms.User_Defined_Implementation
-    self._refinement_criterion_implementation = PDETerms.Empty_Implementation
-    self._initial_conditions_implementation   = PDETerms.User_Defined_Implementation
-
-    self._interpolation = "piecewise_constant"
-    self._restriction   = "averaging"
+    self._boundary_conditions_implementation  = None
+    self._refinement_criterion_implementation = None
+    self._initial_conditions_implementation   = None
     
     self.create_data_structures()
     self.create_action_sets()
