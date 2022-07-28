@@ -50,7 +50,7 @@ class AdaptiveTimeSteppingCodeSnippets( exahype2.solvers.AdaptiveTimeSteppingCod
     and 
     tarch::la::greater(_maxEigenvalue, 0.0 ) 
   ) {
-    _admissibleTimeStepSize = """ + str(self._time_step_relaxation) + """ * _minGridCellHThisTimeStep / _maxEigenvalue / {{RK_ORDER}} / {{RK_ORDER}};
+    _admissibleTimeStepSize = """ + str(self._time_step_relaxation) + """ * _minCellHThisTimeStep / _maxEigenvalue / {{RK_ORDER}} / {{RK_ORDER}};
     if ( std::isnan(_admissibleTimeStepSize) or std::isinf(_admissibleTimeStepSize) ) {
       ::exahype2::triggerNonCriticalAssertion( __FILE__, __LINE__, "_admissibleTimeStepSize>0", "invalid (NaN of inf) time step size: " + std::to_string(_admissibleTimeStepSize) );
     }
