@@ -39,8 +39,12 @@ void examples::exahype2::testing::testing::initialCondition(
   double distanceFromCentre2 = std::sqrt((x[0]-0.4)*(x[0]-0.4)+(x[1]-0.5)*(x[1]-0.5));
   bool nearCentre = (distanceFromCentre1<0.08||distanceFromCentre2<0.08);
 
-  Q[0] = (nearCentre? 0.1 : 0.0);
+  Q[0] = (nearCentre? 1.0 : 0.0);
 
+/*
+  bool nearCentre = point[0]==2 && point[1]==2;
+  Q[0] = (point[0]==2&&point[1]==2 ? 1.0 : 0.0);
+*/
   //velocities
   Q[1] = 0.0;
   Q[2] = 0.0;
@@ -65,9 +69,9 @@ void examples::exahype2::testing::testing::boundaryConditions(
 ) {
   logTraceInWith3Arguments( "boundaryConditions(...)", x, t, normal );
 
-  Qoutside[0] = 0.0;
-  Qoutside[1] = 0.0;
-  Qoutside[2] = 0.0;
+  Qoutside[0] = Qinside[0];
+  Qoutside[1] = Qinside[1];
+  Qoutside[2] = Qinside[2];
   Qoutside[3] = 2.7;
   Qoutside[4] = 3.0;
 

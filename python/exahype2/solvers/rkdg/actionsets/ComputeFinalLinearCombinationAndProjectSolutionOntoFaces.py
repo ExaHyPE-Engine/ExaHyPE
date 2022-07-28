@@ -42,7 +42,7 @@ class ComputeFinalLinearCombinationAndProjectSolutionOntoFaces(AbstractRungeKutt
       for (int unknown=0; unknown<{{NUMBER_OF_UNKNOWNS}}; unknown++) {
         {% for WEIGHT_NO in range(0,WEIGHTS|length) %}
         fineGridCell{{UNKNOWN_IDENTIFIER}}.value[ enumeratorWithAuxiliaryVariables(0,dof,unknown) ] += 
-          timeStepSize * {{WEIGHTS[WEIGHT_NO]}} * fineGridCell{{UNKNOWN_IDENTIFIER}}RhsEstimates.value[ enumeratorWithAuxiliaryVariables({{WEIGHT_NO}},dof,unknown) ];
+          timeStepSize * {{WEIGHTS[WEIGHT_NO]}} * fineGridCell{{UNKNOWN_IDENTIFIER}}RhsEstimates.value[ enumeratorWithoutAuxiliaryVariables({{WEIGHT_NO}},dof,unknown) ];
         {% endfor %}
       }
     }

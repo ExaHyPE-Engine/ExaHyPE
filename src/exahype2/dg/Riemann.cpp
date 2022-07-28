@@ -121,22 +121,24 @@ void exahype2::dg::integrateOverRiemannSolutionsAndAddToVolume_GaussLegendre(
   const double* __restrict__          MassMatrixDiagonal1d,
   double* __restrict__                cellQ
 ){
+
+  const int nPA = order+1; //nodes per axis
   const int strideQ = unknowns+auxiliaryVariables;
 
-  for( int x=0; x<order+1; x++ )
-  for( int y=0; y<order+1; y++ ) {
+  for( int x=0; x<nPA; x++ )
+  for( int y=0; y<nPA; y++ ) {
     const double coeffLeft    = MassMatrixDiagonal1d[y]*BasisFunctionValuesLeft[x];
     const double coeffRight   = MassMatrixDiagonal1d[y]*BasisFunctionValuesLeft[order-x];
 
     const double coeffBottom  = MassMatrixDiagonal1d[x]*BasisFunctionValuesLeft[y];
     const double coeffUp      = MassMatrixDiagonal1d[x]*BasisFunctionValuesLeft[order-y];
 
-    for (int var=0; var<strideQ; var++) {
-      cellQ[ ( x + y*(order+1))*strideQ + var ] +=
-            coeffLeft   * faceQLeft   [ y*strideQ + var ]
-          - coeffRight  * faceQRight  [ y*strideQ + var ]
-          + coeffBottom * faceQBottom [ x*strideQ + var ]
-          - coeffUp     * faceQUp     [ x*strideQ + var ];
+    for (int var=0; var<unknowns; var++) {
+      cellQ[ ( x + y*nPA)*unknowns + var ] +=
+          coeffLeft   * faceQLeft   [ (2*y+1)*unknowns + var ]
+        - coeffRight  * faceQRight  [ 2*y*unknowns + var ]
+        + coeffBottom * faceQBottom [ (x+nPA)*unknowns + var ]
+        - coeffUp     * faceQUp     [ x*unknowns + var ];
     }//var
   }//x,y
 }
@@ -182,14 +184,14 @@ void exahype2::dg::integrateOverRiemannSolutionsAndAddToVolume_GaussLegendre(
         const double coeffBottom  = MassMatrixDiagonal1d[x]*MassMatrixDiagonal1d[y]*BasisFunctionValuesLeft[z];
         const double coeffUp      = MassMatrixDiagonal1d[x]*MassMatrixDiagonal1d[y]*BasisFunctionValuesLeft[order-z];
 
-        for (int var=0; var<strideQ; var++) {
-          cellQ[ (z*nodesPerFace+y*nodesPerAxis+x)*strideQ + var ] +=
-              coeffLeft   * faceQLeft   [(y+z*nodesPerAxis)*strideQ+var]
-            - coeffRight  * faceQRight  [(y+z*nodesPerAxis)*strideQ+var]
-            + coeffFront  * faceQFront  [(x+z*nodesPerAxis)*strideQ+var]
-            - coeffBack   * faceQBack   [(x+z*nodesPerAxis)*strideQ+var]
-            + coeffBottom * faceQBottom [(x+y*nodesPerAxis)*strideQ+var]
-            - coeffUp     * faceQUp     [(x+y*nodesPerAxis)*strideQ+var]
+        for (int var=0; var<unknowns; var++) {
+          cellQ[ (z*nodesPerFace+y*nodesPerAxis+x)*unknowns + var ] +=
+              coeffLeft   * faceQLeft   [(y+z*nodesPerAxis)*unknowns+var]
+            - coeffRight  * faceQRight  [(y+z*nodesPerAxis)*unknowns+var]
+            + coeffFront  * faceQFront  [(x+z*nodesPerAxis)*unknowns+var]
+            - coeffBack   * faceQBack   [(x+z*nodesPerAxis)*unknowns+var]
+            + coeffBottom * faceQBottom [(x+y*nodesPerAxis)*unknowns+var]
+            - coeffUp     * faceQUp     [(x+y*nodesPerAxis)*unknowns+var]
             ;
         }//var
 
