@@ -117,15 +117,15 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanov_patchwise_heap_static_calls
   }
 
   const int numberOfCells            = hostPatchData.numberOfCells;
-  double*   rawPointerToPatchCentres = hostPatchData.patchCentre[0].data();
-  double*   rawPointerToPatchSizes   = hostPatchData.patchSize[0].data();
+  double*   rawPointerToCellCentres  = hostPatchData.cellCentre[0].data();
+  double*   rawPointerToCellSizes    = hostPatchData.cellSize[0].data();
   double*   t                        = hostPatchData.t;
   double*   dt                       = hostPatchData.dt;
   double*   maxEigenvalue            = hostPatchData.maxEigenvalue;
 
   #pragma omp target teams distribute device(targetDevice) \
-    map(to:rawPointerToPatchCentres[0:hostPatchData.numberOfCells*Dimensions]) \
-    map(to:rawPointerToPatchSizes  [0:hostPatchData.numberOfCells*Dimensions]) \
+    map(to:rawPointerToCellCentres[0:hostPatchData.numberOfCells*Dimensions]) \
+    map(to:rawPointerToCellSizes  [0:hostPatchData.numberOfCells*Dimensions]) \
     map(to:mappedPointersToQIn     [0:hostPatchData.numberOfCells])            \
     map(to:mappedPointersToQOut    [0:hostPatchData.numberOfCells])            \
     map(to:t[0:hostPatchData.numberOfCells]) \
@@ -135,8 +135,8 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanov_patchwise_heap_static_calls
     // @todo docu manual assembly of patch data meta object on GPU
     GPUCellData patchData;
     patchData.numberOfCells = numberOfCells;
-    patchData.patchCentre   = (tarch::la::Vector<Dimensions,double>*)(rawPointerToPatchCentres);
-    patchData.patchSize     = (tarch::la::Vector<Dimensions,double>*)(rawPointerToPatchSizes);
+    patchData.cellCentre   = (tarch::la::Vector<Dimensions,double>*)(rawPointerToCellCentres);
+    patchData.cellSize     = (tarch::la::Vector<Dimensions,double>*)(rawPointerToCellSizes);
     patchData.QIn           = mappedPointersToQIn;
     patchData.QOut          = mappedPointersToQOut;
     patchData.t             = t;

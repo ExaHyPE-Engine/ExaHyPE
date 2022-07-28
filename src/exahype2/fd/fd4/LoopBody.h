@@ -1,11 +1,11 @@
 // This file is part of the ExaHyPE2 project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
-#ifndef _EXAHYPE2_FV_FD4_LOOP_BODY_H_
-#define _EXAHYPE2_FV_FD4_LOOP_BODY_H_
+#ifndef _EXAHYPE2_FD_FD4_LOOP_BODY_H_
+#define _EXAHYPE2_FD_FD4_LOOP_BODY_H_
 
 
 
-#include "Functors.h"
+#include "exahype2/fd/Functors.h"
 
 #include "exahype2/enumerator/AoSLexicographicEnumerator.h"
 #include "exahype2/enumerator/SoALexicographicEnumerator.h"
@@ -15,70 +15,10 @@
 
 
 namespace exahype2 {
-  namespace fv {
+  namespace fd {
     namespace fd4 {
       constexpr int PickAllEntriesFromOutputVector = -1;
       namespace internal {
-        #if defined(SharedOMP) and (!defined(__INTEL_LLVM_COMPILER) or !defined(GPUOffloadingOMP))
-        #pragma omp declare simd
-        #endif
-        #if defined(GPUOffloadingOMP)
-        #pragma omp declare target
-        #endif
-        template <class QInEnumeratorType, class QOutEnumeratorType>
-        static void copySolution_LoopBody(
-          const double* __restrict__                QIn,
-          const QInEnumeratorType&                  QInEnumerator,
-          int                                       patchIndex,
-          const tarch::la::Vector<Dimensions,int>&  volumeIndex,
-          int                                       unknown,
-          double* __restrict__                      QOut,
-          const QOutEnumeratorType&                 QOutEnumerator
-        ) InlineMethod;
-        #if defined(GPUOffloadingOMP)
-        #pragma omp end declare target
-        #endif
-
-
-        /**
-         * Copy previous solution over into new time step and add source term
-         *
-         * This is the first step of the method of line, where we basically copy
-         * @f$ Q^{(old)} @f$ into @f$ Q^{(new)} @f$. In the same sweep, we also
-         * add the algebraic source term subject to the time step size:
-         *
-         * @f$ Q^{(new)} = Q^{(old)} + \Delta t \cdot S(Q^{(old)}) @f$
-         *
-         * We reiterate that Q holds two types of entries: The actual data subject
-         * to the PDE (and algebraic and differential source terms) and arbitrary
-         * auxiliary variables per volume that the user has specified. Auxiliary
-         * parameters are coupling terms, material parameters, helper
-         * variables that you use to compute some metrics, ... They are not
-         * evolved as part of the PDE. As the source term affects only the PDE
-         * variables, we copy these entries in Q over and add the source term 
-	 * contribution, while the auxilibary parameters remain plain copies.
-         *
-         *
-         * No SIMD declaration here, as we can't SIMDise over functors anyway.
-         *
-         * @see copySolution_LoopBody() for vectorisation details.
-         */
-        template <class QInEnumeratorType, class QOutEnumeratorType>
-        static void copySolutionAndAddAlgebraicSourceTerm_LoopBody(
-          const double* __restrict__                   QIn,
-          const QInEnumeratorType&                     QInEnumerator,
-          exahype2::fv::fd4::Source                    AlgebraicSource,
-          const tarch::la::Vector<Dimensions,double>&  patchCentre,
-          const tarch::la::Vector<Dimensions,double>&  patchSize,
-          int                                          patchIndex,
-          const tarch::la::Vector<Dimensions,int>&     volumeIndex,
-          double                                       t,
-          double                                       dt,
-          double* __restrict__                         QOut,
-          const QOutEnumeratorType&                    QOutEnumerator
-        ) InlineMethod;
-
-
         /**
          * This function calculates the source term that involves B_i\nabla_iQ where
          * i is the spatial dimension. These involve first gradients of quantitiets 
@@ -93,7 +33,7 @@ namespace exahype2 {
         static void computeDifferentialSourceTerm_LoopBody(
           const double* __restrict__                     QIn,
           const QInEnumeratorType&                       QInEnumerator,
-          exahype2::fv::fd4::NonconservativeProduct      DifferentialSource,
+          exahype2::fd::NonconservativeProduct           DifferentialSource,
           const tarch::la::Vector<Dimensions,double>&    patchCentre,
           const tarch::la::Vector<Dimensions,double>&    patchSize,
           int                                            patchIndex,
@@ -105,34 +45,6 @@ namespace exahype2 {
           const QOutEnumeratorType&                      QDiffSrcEnumerator,
           int                                            pick = PickAllEntriesFromOutputVector
         ) InlineMethod;
-
-
-        /**
-         * This function calculates the Kreiss Oliger dissipation term that is needed
-         * to dissipate high-frequency modes. The KO term is calculated at order N=3
-         * in order to make sure that it is of higher order accruacy than the chosen    
-         * finite difference scheme used in other parts of the equations. It requires
-	 * us to have access to at least 3 halo layers on each side of a given patch.
-         */
-        #if defined(SharedOMP) and (!defined(__INTEL_LLVM_COMPILER) or !defined(GPUOffloadingOMP))
-        #pragma omp declare simd
-        #endif
-        template <class QInEnumeratorType, class QOutEnumeratorType>
-        static void computeKreissOligerDissipationTerm_LoopBody(
-          const double* __restrict__                     QIn,
-          const QInEnumeratorType&                       QInEnumerator,
-          const tarch::la::Vector<Dimensions,double>&    patchCentre,
-          const tarch::la::Vector<Dimensions,double>&    patchSize,
-          int                                            patchIndex,
-          const tarch::la::Vector<Dimensions,int>&       volumeIndex,
-          double                                         t,
-          double                                         dt,
-          int                                            normal,
-          double* __restrict__                           QKODsp,
-          const QOutEnumeratorType&                      QKODspEnumerator,
-          int                                            pick = PickAllEntriesFromOutputVector
-        ) InlineMethod;
-
 
         /**
          * Add the difference source contributions to one volume.
@@ -167,6 +79,31 @@ namespace exahype2 {
         #pragma omp end declare target
         #endif
 
+        /**
+         * This function calculates the Kreiss Oliger dissipation term that is needed
+         * to dissipate high-frequency modes. The KO term is calculated at order N=3
+         * in order to make sure that it is of higher order accruacy than the chosen    
+         * finite difference scheme used in other parts of the equations. It requires
+	 * us to have access to at least 3 halo layers on each side of a given patch.
+         */
+        #if defined(SharedOMP) and (!defined(__INTEL_LLVM_COMPILER) or !defined(GPUOffloadingOMP))
+        #pragma omp declare simd
+        #endif
+        template <class QInEnumeratorType, class QOutEnumeratorType>
+        static void computeKreissOligerDissipationTerm_LoopBody(
+          const double* __restrict__                     QIn,
+          const QInEnumeratorType&                       QInEnumerator,
+          const tarch::la::Vector<Dimensions,double>&    patchCentre,
+          const tarch::la::Vector<Dimensions,double>&    patchSize,
+          int                                            patchIndex,
+          const tarch::la::Vector<Dimensions,int>&       volumeIndex,
+          double                                         t,
+          double                                         dt,
+          int                                            normal,
+          double* __restrict__                           QKODsp,
+          const QOutEnumeratorType&                      QKODspEnumerator,
+          int                                            pick = PickAllEntriesFromOutputVector
+        ) InlineMethod;
 
         /**
          * Add the Kreiss Oliger dissipation contributions to one volume.
@@ -203,20 +140,69 @@ namespace exahype2 {
         #endif
 
 
-        template <class QOutEnumeratorType>
-        static double reduceMaxEigenvalue_LoopBody(
-          const double* __restrict__                   QOut,
-          const QOutEnumeratorType&                    QOutEnumerator,
-          exahype2::fv::fd4::MaxEigenvalue             maxEigenvalue,
+        /**
+         * This routine computes @f$ \partial_i F_i @f$ where i is the
+         * argument normal.
+         *
+         * It is not optimised: Whenever we use the AoS data format,
+         * we could directly evaluate the flux terms without any gathering
+         * or copying. As we don't optimise/specialise, we always first have
+         * to gather the solution before we invoke the user kernel. A similar
+         * argument holds or QFluxGathered: the solution is gathered within
+         * this temporary array, before we scatter it into the image.
+         *
+         */
+        #if defined(SharedOMP) and (!defined(__INTEL_LLVM_COMPILER) or !defined(GPUOffloadingOMP))
+        #pragma omp declare simd
+        #endif
+        template <class QInEnumeratorType, class QOutEnumeratorType>
+        static void computeFlux_LoopBody(
+          const double* __restrict__                   QIn,
+          const QInEnumeratorType&                           QInEnumerator,
+          exahype2::fd::Flux                           flux,
           const tarch::la::Vector<Dimensions,double>&  patchCentre,
           const tarch::la::Vector<Dimensions,double>&  patchSize,
           int                                          patchIndex,
           const tarch::la::Vector<Dimensions,int>&     volumeIndex,
           double                                       t,
-          double                                       dt
+          double                                       dt,
+          int                                          normal,
+          double* __restrict__                         QFlux,
+          const QOutEnumeratorType&                          QFluxEnumerator
         ) InlineMethod;
 
-
+        /**
+         * Plain update of flux in a finite differences scheme.
+         *
+         * We assume that the temp arrays hold the flux in x, y and z
+         * direction in the cell centre, i.e. within the degree of freedom.
+         * We therefore simply can take these flux components, scale them
+         * with dt, and add them to the solution.
+         */
+        #if defined(SharedOMP) and (!defined(__INTEL_LLVM_COMPILER) or !defined(GPUOffloadingOMP))
+        #pragma omp declare simd
+        #endif
+        #if defined(GPUOffloadingOMP)
+        #pragma omp declare target
+        #endif
+        template <typename QOutEnumeratorType>
+        static void updateSolutionWithFlux_LoopBody(
+          const double* __restrict__                   tempFluxX,
+          const double* __restrict__                   tempFluxY,
+          const double* __restrict__                   tempFluxZ,
+          const QOutEnumeratorType&                   fluxEnumerator,
+          const tarch::la::Vector<Dimensions,double>&  patchCentre,
+          const tarch::la::Vector<Dimensions,double>&  patchSize,
+          int                                          patchIndex,
+          const tarch::la::Vector<Dimensions,int>&     volumeIndex,
+          int                                          unknown,
+          double                                       dt,
+          double* __restrict__                         QOut,
+          const QOutEnumeratorType&                    QOutEnumerator
+        ) InlineMethod;
+        #if defined(GPUOffloadingOMP)
+        #pragma omp end declare target
+        #endif
       }
     }
   }

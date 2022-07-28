@@ -3,7 +3,7 @@
 
 import peano4
 import jinja2
-from sympy.assumptions.handlers import order
+
 
 def RungeKutta_steps(order):
   if order<1:
@@ -29,6 +29,8 @@ class ButcherTableau(object):
       return [0]
     elif self._order==2:
       return [0,1/2]
+    elif self._order==3:
+      return [0,1/2,1]
     elif self._order==4:
       return [0,1/3,2/3,1]
     else:
@@ -46,6 +48,8 @@ class ButcherTableau(object):
       return [1]
     elif self._order==2:
       return [0,1]
+    elif self._order==3:
+      return [1/6,2/3,1/6]
     elif self._order==4:
       return [1/8, 3/8, 3/8, 1/8 ]
     else:
@@ -61,6 +65,12 @@ class ButcherTableau(object):
       return [
         [0,0],
         [0.5,0]
+      ]
+    if self._order==3:
+      return [
+        [  0, 0, 0],
+        [0.5, 0, 0],
+        [ -1, 2, 0],
       ]
     if self._order==4:
 #0      

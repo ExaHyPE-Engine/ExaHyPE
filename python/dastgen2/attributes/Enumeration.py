@@ -23,8 +23,8 @@ class Enumeration(Attribute):
      as enumeration identifiers.
   
   """
-  def __init__(self, name, variants):
-    Attribute.__init__(self, name)
+  def __init__(self, name, variants, ifdefs=[]):
+    Attribute.__init__(self, name, ifdefs)
     self._variants    = variants
     self.compress     = False
     
@@ -60,7 +60,7 @@ class Enumeration(Attribute):
 
   def get_plain_C_attributes(self):
     if self.compress:
-      return [ ("_" + self._name, self._enum_name(), "[[clang::compress]]" ) ]
+      return [ ("_" + self._name, self._enum_name(), "[[clang::pack]]" ) ]
     else:
       return [ ("_" + self._name, self._enum_name(), "" ) ]
 

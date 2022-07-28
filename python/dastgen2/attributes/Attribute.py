@@ -9,9 +9,10 @@ class Attribute(object):
    Represents one attribute 
    
   """
-  def __init__(self, name):
+  def __init__(self, name, ifdefs=[]):
     self._name          = name
     self.use_data_store = False
+    self.ifdefs         = ifdefs
 
 
   def get_public_fields(self):
@@ -35,15 +36,73 @@ class Attribute(object):
     """
     return 
 
+
+  def use_default_copy_constructor(self):
+    """
+    
+    If this routine returns False, the generator will create a copy 
+    constructor copying each attribute over via a setter/getter
+    combination.
+    
+    """
+    return True
+  
+  
+  def get_constructor_arguments(self):
+    """
+    
+    Return list of tuple of arguments for the constructor. The first 
+    tuple entry is the name, the second one the type. By default,
+    I take them from the plain C attributes, but you can alter
+    this behaviour.
+    
+    """
+    return self.get_plain_C_attributes()
+           
+  
   @abc.abstractmethod
   def get_plain_C_attributes(self):
     """
     
-      Return list of triples. The first triple entry always is the name, 
-      the second one the type. The third one can be C++ attributes.
+      Return list of n-tuples. The tuple can either host two, three or 
+      four entries. 
+
+
+      ### Two entries
+      
+      The first triple entry always is the name, the second one the type. 
       Type has to be plain C.
       
+      ### Three entries
+      
+      The first triple entry always is the name, the second one the type. 
+      Type has to be plain C. The third entry is a C++ attribute, i.e.
+      a string embedded into [[...]].
+
+      ### Four entries
+      
+      The first triple entry always is the name, the second one the type. 
+      Type has to be plain C. The third entry is a C++ attribute, i.e.
+      a string embedded into [[...]].
+      The fourth attribute is a list of ifdef symbols that have to be 
+      defined to use this attribute. The list of 
+      symbols is concatenated with an and. You can return an empty list.
+      All symbol definitions can also be expressions such sa DEBUG>0
+      or defined(DEBUG).
+      
+      Please note that these latter ifdefs are something completely 
+      different than the base class ifdefs. The base class ifdefs are
+      to be used if you want to switch attributes on and off. The
+      attributes here are used to switch between realisation variants.
+      
+      
+      ## Arrays
+      
+      Arrays can be modelled by adding a cardinality ("[15]" for example)
+      to the first triple entry, i.e. the name. 
+      
     """
+    assert False, "abstract function should not be called"
     return
 
 
@@ -65,7 +124,18 @@ class Attribute(object):
       the whole implementation.
       
     """
+    assert False, "not implemented"
     return
+
+
+  @property
+  def name(self):
+    """
+    
+    I expect that there's at least one setter/getter pair
+    
+    """
+    return self._name
 
 
   @abc.abstractmethod

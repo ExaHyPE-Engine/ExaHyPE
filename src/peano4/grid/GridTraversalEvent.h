@@ -39,7 +39,8 @@ struct peano4::grid::GridTraversalEvent {
 
 
     GridTraversalEvent() {}
-    GridTraversalEvent(tarch::la::Vector<Dimensions,double>  __x, tarch::la::Vector<Dimensions,double>  __h, std::bitset<TwoPowerD>  __hasBeenRefined, std::bitset<TwoPowerD>  __willBeRefined, std::bitset<TwoPowerD>  __isVertexLocal, std::bitset<TwoTimesD>  __isFaceLocal, bool  __isCellLocal, bool  __isParentCellLocal, std::bitset<TwoPowerD>  __isVertexAdjacentToParallelDomainBoundary, std::bitset<TwoTimesD>  __isFaceAdjacentToParallelDomainBoundary, tarch::la::Vector<TwoPowerD,int>  __vertexDataFrom, tarch::la::Vector<TwoPowerD,int>  __vertexDataTo, tarch::la::Vector<TwoTimesD,int>  __faceDataFrom, tarch::la::Vector<TwoTimesD,int>  __faceDataTo, int  __cellData, tarch::la::Vector<Dimensions,int>  __relativePositionToFather, int  __invokingSpacetree, int  __invokingSpacetreeIsNotInvolvedInAnyDynamicLoadBalancing);
+    GridTraversalEvent(tarch::la::Vector<Dimensions,double>  __x, tarch::la::Vector<Dimensions,double>  __h, std::bitset<TwoPowerD>  __hasBeenRefined, std::bitset<TwoPowerD>  __willBeRefined, std::bitset<TwoPowerD>  __isVertexLocal, std::bitset<TwoTimesD>  __isFaceLocal, bool  __isCellLocal, bool  __isParentCellLocal, std::bitset<TwoPowerD>  __isVertexAdjacentToParallelDomainBoundary, std::bitset<TwoTimesD>  __isFaceAdjacentToParallelDomainBoundary, tarch::la::Vector<TwoPowerD,int>  __vertexDataFrom, tarch::la::Vector<TwoPowerD,int>  __vertexDataTo, tarch::la::Vector<TwoTimesD,int>  __faceDataFrom, tarch::la::Vector<TwoTimesD,int>  __faceDataTo, int  __cellData, tarch::la::Vector<Dimensions,int>  __relativePositionToFather, int  __invokingSpacetree, bool  __invokingSpacetreeIsNotInvolvedInAnyDynamicLoadBalancing);
+
 
     tarch::la::Vector<Dimensions,double>   getX() const;
     void   setX(const tarch::la::Vector<Dimensions,double>& value);
@@ -107,9 +108,9 @@ struct peano4::grid::GridTraversalEvent {
     void   setRelativePositionToFather(int index, int value);
     int   getInvokingSpacetree() const;
     void   setInvokingSpacetree(int value);
-    int   getInvokingSpacetreeIsNotInvolvedInAnyDynamicLoadBalancing() const;
-    void   setInvokingSpacetreeIsNotInvolvedInAnyDynamicLoadBalancing(int value);
-
+    bool   getInvokingSpacetreeIsNotInvolvedInAnyDynamicLoadBalancing() const;
+    void   setInvokingSpacetreeIsNotInvolvedInAnyDynamicLoadBalancing(bool value);
+    GridTraversalEvent(const GridTraversalEvent& copy);
 
 
 #ifdef Parallel
@@ -120,15 +121,29 @@ struct peano4::grid::GridTraversalEvent {
 
     #ifdef Parallel
     /**
+     * Hands out MPI datatype if we work without the LLVM MPI extension.
+     * If we work with this additional feature, this is the routine where
+     * the lazy initialisation is done and the datatype is also cached.
+     */
+    [[clang::map_mpi_datatype]]
+    static MPI_Datatype  getDatatype();
+    
+    
+    /**
      * @return The rank of the sender of an object. It only make ssense to call
      *         this routine after you've invoked receive with MPI_ANY_SOURCE.
      */
     int getSenderRank() const;
     
     /**
-     * To be called prior to any MPI usage of this class.
+     * Wrapper around getDatatype() to trigger lazy evaluation if we
+     * use the lazy initialisation.
      */
     static void initDatatype();
+    
+    /**
+     * Free the underlying MPI datatype.
+     */
     static void shutdownDatatype();
             
     /**
@@ -156,33 +171,56 @@ struct peano4::grid::GridTraversalEvent {
     std::string toString() const;
   
   private:
+#if defined(__PACKED_ATTRIBUTES_LANGUAGE_EXTENSION__)
+    [[clang::truncate_mantissa(3)]]  double   _x[Dimensions];
+#endif
+#if !defined(__PACKED_ATTRIBUTES_LANGUAGE_EXTENSION__)
       tarch::la::Vector<Dimensions,double>   _x;
+#endif
+#if defined(__PACKED_ATTRIBUTES_LANGUAGE_EXTENSION__)
+    [[clang::truncate_mantissa(3)]]  double   _h[Dimensions];
+#endif
+#if !defined(__PACKED_ATTRIBUTES_LANGUAGE_EXTENSION__)
       tarch::la::Vector<Dimensions,double>   _h;
-    [[clang::compress]]  std::bitset<TwoPowerD>   _hasBeenRefined;
-    [[clang::compress]]  std::bitset<TwoPowerD>   _willBeRefined;
-    [[clang::compress]]  std::bitset<TwoPowerD>   _isVertexLocal;
-    [[clang::compress]]  std::bitset<TwoTimesD>   _isFaceLocal;
-      bool   _isCellLocal;
-      bool   _isParentCellLocal;
-    [[clang::compress]]  std::bitset<TwoPowerD>   _isVertexAdjacentToParallelDomainBoundary;
-    [[clang::compress]]  std::bitset<TwoTimesD>   _isFaceAdjacentToParallelDomainBoundary;
-      tarch::la::Vector<TwoPowerD,int>   _vertexDataFrom;
-      tarch::la::Vector<TwoPowerD,int>   _vertexDataTo;
-      tarch::la::Vector<TwoTimesD,int>   _faceDataFrom;
-      tarch::la::Vector<TwoTimesD,int>   _faceDataTo;
+#endif
+    std::bitset<TwoPowerD>   _hasBeenRefined;
+    std::bitset<TwoPowerD>   _willBeRefined;
+    std::bitset<TwoPowerD>   _isVertexLocal;
+    std::bitset<TwoTimesD>   _isFaceLocal;
+    [[clang::pack]]  bool   _isCellLocal;
+    [[clang::pack]]  bool   _isParentCellLocal;
+    std::bitset<TwoPowerD>   _isVertexAdjacentToParallelDomainBoundary;
+    std::bitset<TwoTimesD>   _isFaceAdjacentToParallelDomainBoundary;
+    tarch::la::Vector<TwoPowerD,int>   _vertexDataFrom;
+    tarch::la::Vector<TwoPowerD,int>   _vertexDataTo;
+    tarch::la::Vector<TwoTimesD,int>   _faceDataFrom;
+    tarch::la::Vector<TwoTimesD,int>   _faceDataTo;
       int   _cellData;
+#if defined(__PACKED_ATTRIBUTES_LANGUAGE_EXTENSION__)
+    [[clang::pack_range(0,3)]]  int   _relativePositionToFather[Dimensions];
+#endif
+#if !defined(__PACKED_ATTRIBUTES_LANGUAGE_EXTENSION__)
       tarch::la::Vector<Dimensions,int>   _relativePositionToFather;
+#endif
       int   _invokingSpacetree;
-      int   _invokingSpacetreeIsNotInvolvedInAnyDynamicLoadBalancing;
+    [[clang::pack]]  bool   _invokingSpacetreeIsNotInvolvedInAnyDynamicLoadBalancing;
 
 
 
 
     #ifdef Parallel
-    public:
-      static MPI_Datatype  Datatype;
     private:
-    int                  _senderDestinationRank;
+      int                  _senderDestinationRank;
+
+      #if !defined(__MPI_ATTRIBUTES_LANGUAGE_EXTENSION__)      
+      /**
+       * Whenever we use LLVM's MPI extension (DaStGe), we rely on lazy
+       * initialisation of the datatype. However, Peano calls init explicitly
+       * in most cases. Without the LLVM extension which caches the MPI 
+       * datatype once constructed, this field stores the type.
+       */
+      static MPI_Datatype  Datatype;
+      #endif
     #endif
 
 

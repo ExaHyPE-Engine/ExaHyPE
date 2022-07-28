@@ -1,4 +1,5 @@
 #include "peano.h"
+#include "../config.h"
 
 #include "peano4/utils/Loop.h"
 #include "peano4/parallel/Node.h"
@@ -27,7 +28,7 @@
 #endif
 
 
-void peano4::writeCopyrightMessage() {
+void peano4:: writeCopyrightMessage() {
   static bool wrote = false;
   if (
     not wrote and tarch::mpi::Rank::getInstance().getRank() == tarch::mpi::Rank::getGlobalMasterRank() ) {
@@ -52,7 +53,7 @@ void peano4::writeCopyrightMessage() {
     #elif defined(SharedSYCL)
     buildInfo += ", sycl threading";
     #elif defined(SharedCPP)
-    buildInfo += ", C++ threading
+    buildInfo += ", C++ threading";
     #else
     buildInfo += ", no threading";
     #endif
@@ -67,8 +68,8 @@ void peano4::writeCopyrightMessage() {
     buildInfo += ", omp offloading";
     #elif defined(GPUOffloadingSYCL)
     buildInfo += ", sycl";
-    #elif defined(SharedCPP)
-    buildInfo += ", C++ offloading
+    #elif defined(GPUOffloadingCPP)
+    buildInfo += ", C++ offloading";
     #else
     buildInfo += ", no gpu support";
     #endif

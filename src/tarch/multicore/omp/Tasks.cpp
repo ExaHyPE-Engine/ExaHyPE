@@ -8,6 +8,9 @@
 
 #include "tarch/logging/Statistics.h"
 
+#ifdef UseSmartMPI
+#include "smartmpi.h"
+#endif
 
 #if defined(SharedOMP)
 
@@ -56,10 +59,20 @@ namespace {
       }
       #endif
     }
+
+    #ifdef UseSmartMPI
+    tarch::timing::Watch taskWaitTime("spawnAndWaitAsTaskLoop", "taskwait", false);
+    #endif
+
     #pragma omp taskwait // wait for all elements from tasks to complete
                          // do not wait for the children of tasks
                          // but do children if you have time (this does not
                          // happen however)
+
+    #ifdef UseSmartMPI
+    taskWaitTime.stop();
+    smartmpi::reportWaitTime(taskWaitTime.getCPUTime(),tarch::mpi::Rank::getInstance().getRank());
+    #endif
   }
 
 
@@ -178,7 +191,7 @@ namespace {
         }
 
         ::tarch::logging::Statistics::getInstance().inc( BSPTasksStatisticsIdentifier, -1.0, true );
-  
+
         #if defined(__NVCOMPILER)
         #pragma omp atomic
         #else
@@ -221,10 +234,20 @@ namespace {
       }
       #endif
     }
+
+    #ifdef UseSmartMPI
+    tarch::timing::Watch taskWaitTime("spawnAndWaitAsExplicitTasksWithPolling", "taskwait", false);
+    #endif
+
     #pragma omp taskwait // wait for all elements from tasks to complete
                          // do not wait for the children of tasks
                          // but do children if you have time (this does not
                          // happen however)
+
+    #ifdef UseSmartMPI
+    taskWaitTime.stop();
+    smartmpi::reportWaitTime(taskWaitTime.getCPUTime(),tarch::mpi::Rank::getInstance().getRank());
+    #endif
   }
 }
 

@@ -52,13 +52,15 @@ class FixedTimeSteppingCodeSnippets( exahype2.solvers.FixedTimeSteppingCodeSnipp
 
   def create_finish_time_step_implementation(self):
     return """
-  assertion( _minCellH >= 0.0 );
-  assertion( MaxAdmissibleCellH > 0.0 );
-  if (_minCellH <= MaxAdmissibleCellH) {
-    _timeStepSize  = """ + str(self._normalised_time_step_size) + """;// * _minCellH;
-  }
-  else {
-    _timeStepSize = 0.0;
+  if ( isLastGridSweepOfTimeStep() ) {
+    assertion( _minCellH >= 0.0 );
+    assertion( MaxAdmissibleCellH > 0.0 );
+    if (_minCellHThisTimeStep <= MaxAdmissibleCellH) {
+      _timeStepSize  = """ + str(self._normalised_time_step_size) + """ * _minCellHThisTimeStep / {{RK_ORDER}} / {{RK_ORDER}};
+    }
+    else {
+      _timeStepSize = 0.0;
+    }
   }
 """
 

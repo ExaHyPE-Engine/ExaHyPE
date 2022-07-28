@@ -19,9 +19,6 @@ class SeparateSweeps( RungeKuttaDG ):
     we compute the linear reconstruction, project this one onto the faces
     and also compute the volumetric prediction. In the second step, we 
     solve the Riemann problem and add it to the prediction.
-    
-    @todo We don't have to store all data all the time. At the moment, we 
-      do, but it is not particularly clever.
 
   """
 

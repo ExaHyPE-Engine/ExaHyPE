@@ -336,10 +336,25 @@ def create_abstract_solver_declarations(flux_implementation, ncp_implementation,
      * never called. So I embed the (empty) implementation directly into the
      * header.
      */
+
+    #if defined(_NVHPC_STDPAR_GPU) 
+    #define HOST_DEVICE __host__ __device__
+    #define HOST __host__
+    #define DEVICE __device__
+    #else
+    #define HOST_DEVICE 
+    #define HOST
+    #define DEVICE
+    #endif
+    
     #if defined(GPUOffloadingOMP)
     #pragma omp declare target
     #endif
+    #if defined(GPUOffloadingCPP)
+    HOST_DEVICE static GPUCallableMethod void nonconservativeProduct(
+    #else
     static GPUCallableMethod void nonconservativeProduct(
+    #endif
       const double * __restrict__                  Q,       // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
       const double * __restrict__                  deltaQ,  // deltaQ[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
       const tarch::la::Vector<Dimensions,double>&  faceCentre,
@@ -389,7 +404,11 @@ def create_abstract_solver_declarations(flux_implementation, ncp_implementation,
     #if defined(GPUOffloadingOMP)
     #pragma omp declare target
     #endif
+    #if defined(GPUOffloadingCPP)
+    HOST_DEVICE static GPUCallableMethod void sourceTerm(
+    #else
     static GPUCallableMethod void sourceTerm(
+    #endif
       const double * __restrict__ Q,
       const tarch::la::Vector<Dimensions,double>&  volumeCentre,
       const tarch::la::Vector<Dimensions,double>&  volumeH,
@@ -553,7 +572,11 @@ GPUCallableMethod void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::flux(
 #pragma omp declare target
 #endif
 #if !defined(GPUOffloadingSYCL)
+#if defined(GPUOffloadingCPP)
+HOST_DEVICE GPUCallableMethod void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::nonconservativeProduct(
+#else
 GPUCallableMethod void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::nonconservativeProduct(
+#endif
       const double * __restrict__                  Q,        // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
       const double * __restrict__                  deltaQ,   // deltaQ[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
       const tarch::la::Vector<Dimensions,double>&  faceCentre,
@@ -582,7 +605,11 @@ GPUCallableMethod void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::nonconservat
 #pragma omp declare target
 #endif
 #if !defined(GPUOffloadingSYCL)
+#if defined(GPUOffloadingCPP)
+HOST_DEVICE GPUCallableMethod void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::sourceTerm(
+#else
 GPUCallableMethod void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::sourceTerm(
+#endif
       const double * __restrict__ Q,
       const tarch::la::Vector<Dimensions,double>&  volumeCentre,
       const tarch::la::Vector<Dimensions,double>&  volumeH,

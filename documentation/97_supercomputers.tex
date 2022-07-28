@@ -104,6 +104,7 @@ which sets the most aggressive generic optimisation.
 
 
 \paragraph{OpenMP}
+\label{section:supercomputers:openmp}
 
 For OpenMP, we usually use the Intel runtime:
 
@@ -545,7 +546,7 @@ The GPU support is added via
 module load nsight-systems cuda llvm
 module load mvapich2/2.3.5-2 
 ./configure --enable-exahype --enable-loadbalancing-toolbox \
- --with-multithreading=omp  --with-mpi=mpicxx --enable-gpu=nvidia \
+ --with-multithreading=omp  --with-mpi=mpicxx --with-gpu=omp \
  CXX=clang++ \
  CXXFLAGS="-fopenmp -fopenmp-targets=nvptx64-nvidia-cuda"
 \end{code}

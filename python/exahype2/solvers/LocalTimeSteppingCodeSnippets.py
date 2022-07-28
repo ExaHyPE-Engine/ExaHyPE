@@ -89,7 +89,7 @@ double {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::getMaxEigenvalue() const {
     const double maxGlobalTimeStepSize = repositories::{{SOLVER_INSTANCE}}.getMaxEigenvalue()>0.0 ? """ + str(time_step_relaxation) + """ * repositories::{{SOLVER_INSTANCE}}.getMaxVolumeSize(false) / repositories::{{SOLVER_INSTANCE}}.getMaxEigenvalue() : 0.0;
     if ( tarch::la::greater( maxEigenvalue,0.0) ) {
       newTimeStepSize = ::exahype2::discretiseAndTruncateTimeStepSizes(
-        """ + str(time_step_relaxation) + """ * marker.h()(0) / {{NUMBER_OF_VOLUMES_PER_AXIS}} / maxEigenvalue,
+        """ + str(time_step_relaxation) + """ * marker.h()(0) / {{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}} / maxEigenvalue,
         maxGlobalTimeStepSize,
         """ + str(discretisation_steps) + """
       );
@@ -108,7 +108,7 @@ double {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::getMaxEigenvalue() const {
     const double maxGlobalTimeStepSize = repositories::{{SOLVER_INSTANCE}}.getMaxEigenvalue()>0.0 ? """ + str(time_step_relaxation) + """ * repositories::{{SOLVER_INSTANCE}}.getMaxVolumeSize(false) / repositories::{{SOLVER_INSTANCE}}.getMaxEigenvalue() : 0.0;
     if ( tarch::la::greater( maxEigenvalue,0.0) ) {
       newTimeStepSize = ::exahype2::discretiseAndTruncateTimeStepSizes(
-        """ + str(time_step_relaxation) + """ * marker.h()(0) / {{NUMBER_OF_VOLUMES_PER_AXIS}} / maxEigenvalue,
+        """ + str(time_step_relaxation) + """ * marker.h()(0) / {{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}} / maxEigenvalue,
         maxGlobalTimeStepSize,
         """ + str(discretisation_steps) + """
       );

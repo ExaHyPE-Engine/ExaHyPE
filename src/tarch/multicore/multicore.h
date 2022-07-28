@@ -13,6 +13,16 @@
   #define SharedMemoryParallelisation
 #endif
 
+#if defined(_NVHPC_STDPAR_GPU) 
+ #define HOST_DEVICE __host__ __device__
+ #define HOST __host__
+ #define DEVICE __device__
+#else
+ #define HOST_DEVICE 
+ #define HOST
+ #define DEVICE
+#endif
+
 
 
 #ifndef _TARCH_MULTICORE_MULTICORE_H_
@@ -284,6 +294,8 @@ and
   #pragma omp end declare target
   #elif defined(GPUOffloadingSYCL)
   GPUCallableMethod void gpuAbort();
+  #elif defined(GPUOffloadingCPP)
+  HOST_DEVICE void gpuAbort();
   #else
   void gpuAbort();
   #endif

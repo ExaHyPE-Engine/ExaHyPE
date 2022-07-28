@@ -1,7 +1,7 @@
 // This file is part of the ExaHyPE2 project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
-#ifndef _EXAHYPE2_FV_FD4_FUNCTORS_H_
-#define _EXAHYPE2_FV_FD4_FUNCTORS_H_
+#ifndef _EXAHYPE2_FD_FUNCTORS_H_
+#define _EXAHYPE2_FD_FUNCTORS_H_
 
 
 #include "tarch/la/Vector.h"
@@ -13,8 +13,7 @@
 
 
 namespace exahype2 {
-  namespace fv {
-    namespace fd4 {
+  namespace fd {
       typedef std::function< void(
         const double * __restrict__ Q,
         const tarch::la::Vector<Dimensions,double>&  volumeX,
@@ -45,15 +44,17 @@ namespace exahype2 {
         double * __restrict__                        DiffSrc
       ) >   NonconservativeProduct;
 
+      /**
+       * The max eigenvalue is used if and only if you have adaptive time stepping.
+       */
       typedef std::function< double(
         const double * __restrict__ Q,
-        const tarch::la::Vector<Dimensions,double>&  volumeX,
-        const tarch::la::Vector<Dimensions,double>&  volumeH,
+        const tarch::la::Vector<Dimensions,double>&  gridCellX,
+        const tarch::la::Vector<Dimensions,double>&  gridCellH,
         double                                       t,
         double                                       dt,
         int                                          normal
       ) >   MaxEigenvalue;
-    }
   }
 }
 

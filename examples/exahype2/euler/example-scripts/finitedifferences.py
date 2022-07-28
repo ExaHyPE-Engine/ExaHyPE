@@ -16,7 +16,6 @@ import peano4
 import exahype2
 import argparse
 
-
 print( """
 Please call this script from the directory hosting the Makefile and the
 sources. Typically, I invoke the script via
@@ -50,7 +49,7 @@ parser.add_argument("-pd", "--peano-dir",              dest="peanodir",         
 parser.add_argument("-cd", "--configure-dir",          dest="configuredir",             default="../../../", help="Location of configure" )
 parser.add_argument("-o",  "--output",                 dest="out",                      default="peano4", help="Executable name" )
 parser.add_argument("-f",  "--force",                  dest="force",                    default=False, action="store_true", help="Allow overwriting of output file" )
-parser.add_argument("-t",   "--type",                  dest="type",                     choices=["global-fixed-fd-4"] )
+parser.add_argument("-t",   "--type",                  dest="type",                     choices=["global-fixed-fd-4", "global-adaptive-fd-4"] )
 parser.add_argument("-rk-order",   "--rk-order",       dest="rk_order",          type=int, required=True, help="order of time discretisation (RK scheme)" )
 parser.add_argument("-pdt", "--plot-dt",               dest="plot_snapshot_interval", default=0, help="Time interval in-between two snapshots (switched off by default")
 parser.add_argument("-v",   "--verbose",               dest="verbose",          action="store_true", default=False, help="Verbose")
@@ -102,18 +101,29 @@ time_step_size = 0.1 * min_h
 auxiliary_variables = 1
 
 thesolver = None
-solver_name = "EulerDG"
+solver_name = "EulerRKFD"
 if args.type=="global-fixed-fd-4":
-  thesolver = exahype2.solvers.fv.rusanov.GlobalFixedTimeStep(
+  thesolver = exahype2.solvers.rkfd.fd4.GlobalFixedTimeStep(
     solver_name,
     args.patch_size,
+    args.rk_order,
     unknowns, auxiliary_variables,
     min_h, max_h,
     time_step_size,
     flux = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
-    eigenvalues = exahype2.solvers.fv.PDETerms.User_Defined_Implementation
+    eigenvalues = exahype2.solvers.fv.PDETerms.User_Defined_Implementation # not required here, but I like the signatures to be the same for all solver variants
   )
-  thesolver.overlap=2
+if args.type=="global-adaptive-fd-4":
+  thesolver = exahype2.solvers.rkfd.fd4.GlobalAdaptiveTimeStep(
+    solver_name,
+    args.patch_size,
+    args.rk_order,
+    unknowns, auxiliary_variables,
+    min_h, max_h,
+    time_step_relaxation = 0.1,
+    flux = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
+    eigenvalues = exahype2.solvers.fv.PDETerms.User_Defined_Implementation # not required here, but I like the signatures to be the same for all solver variants
+  )
 
 
 thesolver.set_implementation( refinement_criterion=exahype2.solvers.fv.PDETerms.User_Defined_Implementation )

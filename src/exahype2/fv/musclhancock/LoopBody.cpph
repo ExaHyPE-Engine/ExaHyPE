@@ -54,8 +54,8 @@ void exahype2::fv::musclhancock::internal::computeTimeDerivative_LoopBody(
   //first, initialize time derivative with source term
   source(
       QInGathered,
-      ::exahype2::fv::getVolumeCentre( patchCentre, patchSize, QInEnumerator._numberOfVolumesPerAxisInPatch, volumeIndex ),
-      ::exahype2::fv::getVolumeSize( patchSize, QInEnumerator._numberOfVolumesPerAxisInPatch ),
+      ::exahype2::fv::getVolumeCentre( patchCentre, patchSize, QInEnumerator._numberOfDoFsPerAxisInCell, volumeIndex ),
+      ::exahype2::fv::getVolumeSize( patchSize, QInEnumerator._numberOfDoFsPerAxisInCell ),
       t,
       dt,
       temp
@@ -73,8 +73,8 @@ void exahype2::fv::musclhancock::internal::computeTimeDerivative_LoopBody(
   for (int normal=0; normal<3; normal++){
     ncp(
       QInGathered, gradientQ+QInEnumerator._unknowns*normal,
-      ::exahype2::fv::getVolumeCentre( patchCentre, patchSize, QInEnumerator._numberOfVolumesPerAxisInPatch, volumeIndex ),
-      ::exahype2::fv::getVolumeSize( patchSize, QInEnumerator._numberOfVolumesPerAxisInPatch ),
+      ::exahype2::fv::getVolumeCentre( patchCentre, patchSize, QInEnumerator._numberOfDoFsPerAxisInCell, volumeIndex ),
+      ::exahype2::fv::getVolumeSize( patchSize, QInEnumerator._numberOfDoFsPerAxisInCell ),
       t,
       dt,
       normal,
@@ -89,29 +89,29 @@ void exahype2::fv::musclhancock::internal::computeTimeDerivative_LoopBody(
   for (int normal=0; normal<3; normal++){
   
     for (int unknown=0; unknown<QInEnumerator._unknowns; unknown++) {
-      shiftQ[unknown]=QInGathered[unknown]-0.5*gradientQ[QInEnumerator._unknowns*normal+unknown]*::exahype2::fv::getVolumeSize( patchSize, QInEnumerator._numberOfVolumesPerAxisInPatch )(normal);
+      shiftQ[unknown]=QInGathered[unknown]-0.5*gradientQ[QInEnumerator._unknowns*normal+unknown]*::exahype2::fv::getVolumeSize( patchSize, QInEnumerator._numberOfDoFsPerAxisInCell )(normal);
     }
     flux(
       shiftQ,
-      ::exahype2::fv::getVolumeCentre( patchCentre, patchSize, QInEnumerator._numberOfVolumesPerAxisInPatch, volumeIndex ),
-      ::exahype2::fv::getVolumeSize( patchSize, QInEnumerator._numberOfVolumesPerAxisInPatch ),
+      ::exahype2::fv::getVolumeCentre( patchCentre, patchSize, QInEnumerator._numberOfDoFsPerAxisInCell, volumeIndex ),
+      ::exahype2::fv::getVolumeSize( patchSize, QInEnumerator._numberOfDoFsPerAxisInCell ),
       t, dt, normal, temp
     );
     for (int unknown=0; unknown<QInEnumerator._unknowns; unknown++) {
-      timederivative[QInterEnumerator(patchIndex,volumeIndex,unknown)] +=temp[ unknown ]/::exahype2::fv::getVolumeSize( patchSize, QInEnumerator._numberOfVolumesPerAxisInPatch )(normal);
+      timederivative[QInterEnumerator(patchIndex,volumeIndex,unknown)] +=temp[ unknown ]/::exahype2::fv::getVolumeSize( patchSize, QInEnumerator._numberOfDoFsPerAxisInCell )(normal);
     }
     
     for (int unknown=0; unknown<QInEnumerator._unknowns; unknown++) {
-      shiftQ[unknown]=QInGathered[unknown]+0.5*gradientQ[QInEnumerator._unknowns*normal+unknown]*::exahype2::fv::getVolumeSize( patchSize, QInEnumerator._numberOfVolumesPerAxisInPatch )(normal);
+      shiftQ[unknown]=QInGathered[unknown]+0.5*gradientQ[QInEnumerator._unknowns*normal+unknown]*::exahype2::fv::getVolumeSize( patchSize, QInEnumerator._numberOfDoFsPerAxisInCell )(normal);
     }
     flux(
       shiftQ,
-      ::exahype2::fv::getVolumeCentre( patchCentre, patchSize, QInEnumerator._numberOfVolumesPerAxisInPatch, volumeIndex ),
-      ::exahype2::fv::getVolumeSize( patchSize, QInEnumerator._numberOfVolumesPerAxisInPatch ),
+      ::exahype2::fv::getVolumeCentre( patchCentre, patchSize, QInEnumerator._numberOfDoFsPerAxisInCell, volumeIndex ),
+      ::exahype2::fv::getVolumeSize( patchSize, QInEnumerator._numberOfDoFsPerAxisInCell ),
       t, dt, normal, temp
     );
     for (int unknown=0; unknown<QInEnumerator._unknowns; unknown++) {
-      timederivative[QInterEnumerator(patchIndex,volumeIndex,unknown)] -=temp[ unknown ]/::exahype2::fv::getVolumeSize( patchSize, QInEnumerator._numberOfVolumesPerAxisInPatch )(normal);
+      timederivative[QInterEnumerator(patchIndex,volumeIndex,unknown)] -=temp[ unknown ]/::exahype2::fv::getVolumeSize( patchSize, QInEnumerator._numberOfDoFsPerAxisInCell )(normal);
     }
     
   }
@@ -140,9 +140,9 @@ void exahype2::fv::musclhancock::internal::computeQonFace_LoopBody(
     double QInGathered[QInEnumerator._unknowns+QInEnumerator._numberOfAuxiliaryVariables];
     //double gradientQ[QInEnumerator._unknowns*3];
     //double deriTGathered[QInEnumerator._unknowns];
-    const tarch::la::Vector<Dimensions,double>  VolumeSize=::exahype2::fv::getVolumeSize( patchSize, QInEnumerator._numberOfVolumesPerAxisInPatch );
+    const tarch::la::Vector<Dimensions,double>  VolumeSize=::exahype2::fv::getVolumeSize( patchSize, QInEnumerator._numberOfDoFsPerAxisInCell );
     
-    //VolumeSize=::exahype2::fv::getVolumeSize( patchSize, QInEnumerator._numberOfVolumesPerAxisInPatch );
+    //VolumeSize=::exahype2::fv::getVolumeSize( patchSize, QInEnumerator._numberOfDoFsPerAxisInCell );
     // gather
     #if defined(SharedOMP)
     #pragma omp simd
@@ -204,8 +204,8 @@ void exahype2::fv::musclhancock::internal::computeMaxEigenvalue_LoopBody(
     QMaxEigenvalue[ QMaxEigenvalueEnumerator(patchIndex,volumeIndex,0) ] =
       maxEigenvalue(
         QInGathered,
-        ::exahype2::fv::getVolumeCentre( patchCentre, patchSize, QInEnumerator._numberOfVolumesPerAxisInPatch, volumeIndex ),
-        ::exahype2::fv::getVolumeSize( patchSize, QInEnumerator._numberOfVolumesPerAxisInPatch ),
+        ::exahype2::fv::getVolumeCentre( patchCentre, patchSize, QInEnumerator._numberOfDoFsPerAxisInCell, volumeIndex ),
+        ::exahype2::fv::getVolumeSize( patchSize, QInEnumerator._numberOfDoFsPerAxisInCell ),
         t,
         dt,
         normal
@@ -258,7 +258,7 @@ void exahype2::fv::musclhancock::internal::updateSolutionWithEigenvalueDamping_L
     double fluxLeft  = - lambdaLeft  * (QfaceNLeft[QInterEnumerator(patchIndex, volumeIndex,unknown)] - QfaceNRight[QInterEnumerator(patchIndex, leftVolume,unknown)]);
     double fluxRight = - lambdaRight * (QfaceNLeft[QInterEnumerator(patchIndex, rightVolume,unknown)] - QfaceNRight[QInterEnumerator(patchIndex, volumeIndex,unknown)]);
 
-    QOut[ QOutEnumerator(patchIndex, volumeIndex,unknown) ] +=  dt / patchSize(normal) * QOutEnumerator._numberOfVolumesPerAxisInPatch * (fluxLeft - fluxRight)*0.5;
+    QOut[ QOutEnumerator(patchIndex, volumeIndex,unknown) ] +=  dt / patchSize(normal) * QOutEnumerator._numberOfDoFsPerAxisInCell * (fluxLeft - fluxRight)*0.5;
   };
                      updateAlongOneDirection(tempMaxEigenvalueX, QfaceXneg, QfaceXpos, 0);
                      updateAlongOneDirection(tempMaxEigenvalueY, QfaceYneg, QfaceYpos, 1);
@@ -296,8 +296,8 @@ void exahype2::fv::musclhancock::internal::computeFlux_LoopBody(
 
   flux(
       QLeft,
-      ::exahype2::fv::getVolumeCentre( patchCentre, patchSize, QInEnumerator._numberOfVolumesPerAxisInPatch, volumeIndex ),
-      ::exahype2::fv::getVolumeSize( patchSize, QInEnumerator._numberOfVolumesPerAxisInPatch ),
+      ::exahype2::fv::getVolumeCentre( patchCentre, patchSize, QInEnumerator._numberOfDoFsPerAxisInCell, volumeIndex ),
+      ::exahype2::fv::getVolumeSize( patchSize, QInEnumerator._numberOfDoFsPerAxisInCell ),
       t,
       dt,
       normal,
@@ -309,8 +309,8 @@ void exahype2::fv::musclhancock::internal::computeFlux_LoopBody(
   
   flux(
       QRight,
-      ::exahype2::fv::getVolumeCentre( patchCentre, patchSize, QInEnumerator._numberOfVolumesPerAxisInPatch, volumeIndex ),
-      ::exahype2::fv::getVolumeSize( patchSize, QInEnumerator._numberOfVolumesPerAxisInPatch ),
+      ::exahype2::fv::getVolumeCentre( patchCentre, patchSize, QInEnumerator._numberOfDoFsPerAxisInCell, volumeIndex ),
+      ::exahype2::fv::getVolumeSize( patchSize, QInEnumerator._numberOfDoFsPerAxisInCell ),
       t,
       dt,
       normal,
@@ -350,10 +350,10 @@ void exahype2::fv::musclhancock::internal::updateSolutionWithFlux_LoopBody(
     double fluxRight = 0.5 * tempFluxNR[fluxEnumerator(patchIndex, volumeIndex,unknown)]
                      + 0.5 * tempFluxNL[fluxEnumerator(patchIndex, rightVolume,unknown)];
     if ( std::isnan(fluxLeft - fluxRight) )
-    {std::cout<<"fluxLeft: "<<std::to_string(fluxLeft)<<" fluxRight: "<<std::to_string(fluxRight)<<" flux result: "<<dt / patchSize(normal) * QOutEnumerator._numberOfVolumesPerAxisInPatch*(fluxLeft - fluxRight)<<std::endl;}
+    {std::cout<<"fluxLeft: "<<std::to_string(fluxLeft)<<" fluxRight: "<<std::to_string(fluxRight)<<" flux result: "<<dt / patchSize(normal) * QOutEnumerator._numberOfDoFsPerAxisInCell*(fluxLeft - fluxRight)<<std::endl;}
 
     //QOut[ QOutEnumerator(patchIndex, volumeIndex,unknown) ] += 1e-12*(fluxLeft-fluxRight);
-    QOut[ QOutEnumerator(patchIndex, volumeIndex,unknown) ] += dt / patchSize(normal) * QOutEnumerator._numberOfVolumesPerAxisInPatch
+    QOut[ QOutEnumerator(patchIndex, volumeIndex,unknown) ] += dt / patchSize(normal) * QOutEnumerator._numberOfDoFsPerAxisInCell
                                                                *(fluxLeft - fluxRight);
   };
                      updateAlongOneDirection(tempFluxXL, tempFluxXR, 0);
@@ -397,8 +397,8 @@ void exahype2::fv::musclhancock::internal::computeDTerm_LoopBody(
 
   ncp(
     QAverage, DeltaQ,
-    ::exahype2::fv::getVolumeCentre( patchCentre, patchSize, QInEnumerator._numberOfVolumesPerAxisInPatch, volumeIndex ),
-    ::exahype2::fv::getVolumeSize( patchSize, QInEnumerator._numberOfVolumesPerAxisInPatch ),
+    ::exahype2::fv::getVolumeCentre( patchCentre, patchSize, QInEnumerator._numberOfDoFsPerAxisInCell, volumeIndex ),
+    ::exahype2::fv::getVolumeSize( patchSize, QInEnumerator._numberOfDoFsPerAxisInCell ),
     t,
     dt,
     normal,
@@ -434,7 +434,7 @@ void exahype2::fv::musclhancock::internal::updateSolutionWithDTerm_LoopBody(
     double fluxRight = QD[ncpEnumerator(patchIndex, rightFace, unknown)];
 
    //contribution from D term is negative
-    QOut[ QOutEnumerator(patchIndex, volumeIndex,unknown) ] += dt / patchSize(normal) * QOutEnumerator._numberOfVolumesPerAxisInPatch *
+    QOut[ QOutEnumerator(patchIndex, volumeIndex,unknown) ] += dt / patchSize(normal) * QOutEnumerator._numberOfDoFsPerAxisInCell *
        (fluxLeft + fluxRight)*(-0.5);
   };
                      updateAlongOneCoordinateDirection( QDX, 0 );
@@ -486,8 +486,8 @@ void exahype2::fv::musclhancock::internal::updateSolutionwithNCPandSource_LoopBo
   //add source contribution
   source(
       QInGathered,
-      ::exahype2::fv::getVolumeCentre( patchCentre, patchSize, QInEnumerator._numberOfVolumesPerAxisInPatch, volumeIndex ),
-      ::exahype2::fv::getVolumeSize( patchSize, QInEnumerator._numberOfVolumesPerAxisInPatch ),
+      ::exahype2::fv::getVolumeCentre( patchCentre, patchSize, QInEnumerator._numberOfDoFsPerAxisInCell, volumeIndex ),
+      ::exahype2::fv::getVolumeSize( patchSize, QInEnumerator._numberOfDoFsPerAxisInCell ),
       t,
       dt,
       QSourceGathered
@@ -502,8 +502,8 @@ void exahype2::fv::musclhancock::internal::updateSolutionwithNCPandSource_LoopBo
   for (int normal=0; normal<3; normal++){
     ncp(
       QInGathered, gradientQ+QInEnumerator._unknowns*normal,
-      ::exahype2::fv::getVolumeCentre( patchCentre, patchSize, QInEnumerator._numberOfVolumesPerAxisInPatch, volumeIndex ),
-      ::exahype2::fv::getVolumeSize( patchSize, QInEnumerator._numberOfVolumesPerAxisInPatch ),
+      ::exahype2::fv::getVolumeCentre( patchCentre, patchSize, QInEnumerator._numberOfDoFsPerAxisInCell, volumeIndex ),
+      ::exahype2::fv::getVolumeSize( patchSize, QInEnumerator._numberOfDoFsPerAxisInCell ),
       t,
       dt,
       normal,
@@ -546,8 +546,8 @@ double exahype2::fv::musclhancock::internal::reduceMaxEigenvalue_LoopBody(
         result,
         maxEigenvalue(
           QInGathered,
-          ::exahype2::fv::getVolumeCentre( patchCentre, patchSize, QInEnumerator._numberOfVolumesPerAxisInPatch, volumeIndex ),
-          ::exahype2::fv::getVolumeSize( patchSize, QInEnumerator._numberOfVolumesPerAxisInPatch ),
+          ::exahype2::fv::getVolumeCentre( patchCentre, patchSize, QInEnumerator._numberOfDoFsPerAxisInCell, volumeIndex ),
+          ::exahype2::fv::getVolumeSize( patchSize, QInEnumerator._numberOfDoFsPerAxisInCell ),
           t,
           dt,
           normal

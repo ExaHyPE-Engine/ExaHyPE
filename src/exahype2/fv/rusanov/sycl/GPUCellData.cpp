@@ -2,19 +2,19 @@
 #if defined(GPUOffloadingSYCL)
 
 #include "exahype2/CellData.h"
-#include "exahype2/fv/enumerator/AoSLexicographicVolumeEnumerator.h"
+#include "exahype2/enumerator/AoSLexicographicEnumerator.h"
 #include <cstring>
 
 
 exahype2::fv::rusanov::sycl::GPUCellData::GPUCellData(
   const ::exahype2::CellData& hostObject,
-  const exahype2::enumerator::AoSLexicographicEnumerator& inEnumerator,
-  const exahype2::enumerator::AoSLexicographicEnumerator& outEnumerator,
+  const ::exahype2::enumerator::AoSLexicographicEnumerator& inEnumerator,
+  const ::exahype2::enumerator::AoSLexicographicEnumerator& outEnumerator,
   ::sycl::queue& queue
 ) {
   numberOfCells = hostObject.numberOfCells;
-  patchCentre   = ::sycl::malloc_shared< tarch::la::Vector<Dimensions,double> >(numberOfCells, queue);
-  patchSize     = ::sycl::malloc_shared< tarch::la::Vector<Dimensions,double> >(numberOfCells, queue);
+  cellCentre    = ::sycl::malloc_shared< tarch::la::Vector<Dimensions,double> >(numberOfCells, queue);
+  cellSize      = ::sycl::malloc_shared< tarch::la::Vector<Dimensions,double> >(numberOfCells, queue);
   QIn           = ::sycl::malloc_shared< double* >(numberOfCells, queue);
   QOut          = ::sycl::malloc_shared< double* >(numberOfCells, queue);
   t             = ::sycl::malloc_shared< double >(numberOfCells, queue);
@@ -22,8 +22,8 @@ exahype2::fv::rusanov::sycl::GPUCellData::GPUCellData(
   maxEigenvalue = ::sycl::malloc_shared< double >(numberOfCells, queue);
 
   for (int i=0; i<numberOfCells; i++) {
-    patchCentre[i] = hostObject.patchCentre[i];
-    patchSize[i]   = hostObject.patchSize[i];
+    cellCentre[i]  = hostObject.cellCentre[i];
+    cellSize[i]    = hostObject.cellSize[i];
     t[i]           = hostObject.t[i];
     dt[i]          = hostObject.dt[i];
 
@@ -52,8 +52,8 @@ void exahype2::fv::rusanov::sycl::GPUCellData::destroy(
     std::memcpy( hostObject.maxEigenvalue, maxEigenvalue, numberOfCells );
   }
 
-  ::sycl::free( patchCentre, queue);
-  ::sycl::free( patchSize, queue);
+  ::sycl::free( cellCentre, queue);
+  ::sycl::free( cellSize, queue);
   ::sycl::free( QIn, queue);
   ::sycl::free( QOut, queue);
   ::sycl::free( t, queue);
