@@ -1,5 +1,5 @@
 #include "EulerDG.h"
-#include "exahype2/RefinementControl.h"
+#include "exahype2/NonCriticalAssertions.h"
 
 
 tarch::logging::Log   examples::exahype2::euler::EulerDG::_log( "examples::exahype2::euler::EulerDG" );
@@ -25,7 +25,7 @@ void examples::exahype2::euler::EulerDG::initialCondition(
   #endif
 
   const double peakDeviation = MaxAdmissibleCellH;
-  double distance = tarch::la::norm2( volumeCentre-circleCentre );
+  double distance = tarch::la::norm2( x-circleCentre );
   double exponent = - (distance * distance) / 2.0 / peakDeviation / peakDeviation;
 
   Q[0]            = 0.1;                  // rho
@@ -44,8 +44,8 @@ void examples::exahype2::euler::EulerDG::boundaryConditions(
 ) {
   logTraceInWith3Arguments( "boundaryConditions(...)", x, t, normal );
 
-  nonCriticalAssertion5( Qinside[0]>1e-12, faceCentre, volumeH, t, normal, Qinside[0] );
-  assertion5( Qinside[0]>1e-12, faceCentre, volumeH, t, normal, Qinside[0] );
+  nonCriticalAssertion4( Qinside[0]>1e-12, x, t, normal, Qinside[0] );
+  assertion4( Qinside[0]>1e-12, x, t, normal, Qinside[0] );
 
   for (int i=0; i<NumberOfUnknowns+NumberOfAuxiliaryVariables; i++) {
     Qoutside[i] = Qinside[i];

@@ -23,7 +23,7 @@ class GlobalAdaptiveTimeStep( SeparateSweeps ):
     ncp=PDETerms.None_Implementation, 
     point_source=PDETerms.None_Implementation,
     boundary_conditions=PDETerms.User_Defined_Implementation,
-    refinement_criterion=PDETerms.None_Implementation,
+    refinement_criterion=PDETerms.Empty_Implementation,
     initial_conditions=PDETerms.User_Defined_Implementation,
     source_term=PDETerms.None_Implementation,
     plot_grid_properties=False
@@ -31,6 +31,7 @@ class GlobalAdaptiveTimeStep( SeparateSweeps ):
     super(GlobalAdaptiveTimeStep,self).__init__(name, rk_order, polynomials, unknowns, auxiliary_variables, min_cell_h, max_cell_h, plot_grid_properties) 
    
     self._time_step_relaxation = time_step_relaxation
+    self._compute_eigenvalue   = True
 
     self.set_implementation(boundary_conditions=boundary_conditions, 
                             refinement_criterion=refinement_criterion,

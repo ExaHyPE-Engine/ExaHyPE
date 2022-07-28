@@ -167,6 +167,53 @@ void exahype2::dg::cellIntegral_patchwise_GaussLegendre_functors(
 }
 
 
+void exahype2::dg::reduceMaxEigenvalue_patchwise_functors(
+  ::exahype2::CellData&   cellData,
+  const int               order,
+  const int               unknowns,
+  const int               auxiliaryVariables,
+  MaxEigenvalue           maxEigenvalue,
+  const double* __restrict__   QuadratureNodes1d
+) {
+  ::exahype2::enumerator::AoSLexicographicEnumerator  enumerator(
+    1, // number of patches stored per continuous memory segment
+    order+1,
+    0, // halo
+    unknowns,
+    auxiliaryVariables
+  );
+
+  for (int cellIndex=0; cellIndex<cellData.numberOfCells; cellIndex++) {
+    double eigenvalue = std::numeric_limits<double>::min();
+
+    dfor(k,order+1) {
+      for(int direction=0; direction<Dimensions; direction++) {
+        double nodeEigenvalue = maxEigenvalue(
+          cellData.QOut[cellIndex] + enumerator(0,k,0),
+          getQuadraturePoint(
+            cellData.cellCentre[cellIndex],
+            cellData.cellSize[cellIndex],
+            k,
+            order,
+            QuadratureNodes1d
+          ),
+          cellData.t[cellIndex],
+          cellData.dt[cellIndex],
+          direction
+        );
+
+        assertion( nodeEigenvalue>=0.0 );
+
+        eigenvalue = std::max(eigenvalue, nodeEigenvalue);
+      }
+    }
+
+    cellData.maxEigenvalue[cellIndex] = eigenvalue;
+  }
+}
+
+
+/*
 double exahype2::dg::getMaxEigenvalue(
   MaxEigenvalue                                  maxEigenvalue,
   const double* __restrict__                     Q,
@@ -199,6 +246,7 @@ double exahype2::dg::getMaxEigenvalue(
 
   return maxEigenvalueCell;
 }
+*/
 
 
 void exahype2::dg::internal::copySolution(
