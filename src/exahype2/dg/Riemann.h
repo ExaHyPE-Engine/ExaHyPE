@@ -13,7 +13,11 @@
 #include "tarch/multicore/multicore.h"
 
 #include "peano4/grid/GridControlEvent.h"
+#include "peano4/utils/Loop.h"
 #include "peano4/utils/Globals.h"
+
+#include "exahype2/enumerator/FaceAoSLexicographicEnumerator.h"
+#include "exahype2/enumerator/AoSLexicographicEnumerator.h"
 
 
 namespace exahype2 {

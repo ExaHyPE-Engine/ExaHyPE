@@ -27,7 +27,6 @@ project = exahype2.Project( ["examples", "exahype2", "euler"], "dg", ".", execut
 # Add the Finite Volumes solver
 #
 dimensions     = 2
-unknowns       = 5
 max_h          = 0.1
 min_h          = max_h
 patch_size     = 8
@@ -36,7 +35,7 @@ unknowns       = 1 + dimensions + 1  # density, velocity, energy
 thesolver = exahype2.solvers.rkdg.rusanov.GlobalAdaptiveTimeStep(
     "EulerDG",
     unknowns = unknowns, auxiliary_variables = 0,
-    polynomials = exahype2.solvers.GaussLegendreBasis(4), rk_order = 1,
+    polynomials = exahype2.solvers.GaussLegendreBasis(4), rk_order = 4,
     min_cell_h = min_h, max_cell_h = max_h,
     flux = exahype2.solvers.rkdg.PDETerms.User_Defined_Implementation,
     eigenvalues = exahype2.solvers.rkdg.PDETerms.User_Defined_Implementation,

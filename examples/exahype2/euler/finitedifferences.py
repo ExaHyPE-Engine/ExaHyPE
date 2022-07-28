@@ -27,7 +27,6 @@ project = exahype2.Project( ["examples", "exahype2", "euler"], "dg", ".", execut
 # Add the Finite Volumes solver
 #
 dimensions     = 2
-unknowns       = 5
 max_h          = 0.01
 min_h          = max_h
 patch_size     = 8
