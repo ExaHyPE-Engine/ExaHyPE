@@ -35,11 +35,11 @@ unknowns       = 1 + dimensions + 1  # density, velocity, energy
 thesolver = exahype2.solvers.rkdg.rusanov.GlobalAdaptiveTimeStep(
     "EulerDG",
     unknowns = unknowns, auxiliary_variables = 0,
-    polynomials = exahype2.solvers.GaussLegendreBasis(4), rk_order = 1,
+    polynomials = exahype2.solvers.GaussLegendreBasis(4), rk_order = 4,
     min_cell_h = min_h, max_cell_h = max_h,
     flux = exahype2.solvers.rkdg.PDETerms.User_Defined_Implementation,
     eigenvalues = exahype2.solvers.rkdg.PDETerms.User_Defined_Implementation,
-    time_step_relaxation = 0.01
+    time_step_relaxation = 0.1
   )
 
 
@@ -77,8 +77,8 @@ project.set_load_balancing( "toolbox::loadbalancing::RecursiveSubdivision", "new
 # Parse configure settings, generate all glue code, and compile code
 #
 verbose    = False
-#build_mode = peano4.output.CompileMode.Release
-build_mode = peano4.output.CompileMode.Asserts
+build_mode = peano4.output.CompileMode.Release
+#build_mode = peano4.output.CompileMode.Asserts
 #build_mode = peano4.output.CompileMode.Debug
 peano_dir  = "../../.."
 project.set_Peano4_installation( peano_dir, build_mode )
@@ -87,12 +87,12 @@ peano4_project.build(make_clean_first=True)
 
 print( """
 
-ExaHyPE 2's Finite Volume example built successfully. Next, run the code with
+ExaHyPE 2's Discontinuous Galerkin (DG) example built successfully. Next, run the code with
 
-./finitevolumes
+./dg
 
 To convert the written files into native Paraview files, call
 
-pvpython ../../../python/peano4/visualisation/render.py --filter-fine-grid solution-EulerFV.peano-patch-file
+pvpython ../../../python/peano4/visualisation/render.py --filter-fine-grid solution-EulerDG.peano-patch-file
 
 """)

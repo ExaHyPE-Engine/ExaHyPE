@@ -31,6 +31,7 @@ class GlobalAdaptiveTimeStep( SeparateSweeps ):
     super(GlobalAdaptiveTimeStep,self).__init__(name, rk_order, polynomials, unknowns, auxiliary_variables, min_cell_h, max_cell_h, plot_grid_properties) 
    
     self._time_step_relaxation = time_step_relaxation
+    self._compute_eigenvalue   = True
 
     self.set_implementation(boundary_conditions=boundary_conditions, 
                             refinement_criterion=refinement_criterion,
