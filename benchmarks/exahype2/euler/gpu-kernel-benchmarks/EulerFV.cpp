@@ -5,28 +5,8 @@
 tarch::logging::Log   examples::exahype2::euler::EulerFV::_log( "examples::exahype2::euler::EulerFV" );
 
 
-
-
-::exahype2::RefinementCommand examples::exahype2::euler::EulerFV::refinementCriterion(
-  const double * __restrict__ Q, // Q[5+0]
-  const tarch::la::Vector<Dimensions,double>&  volumeX,
-  const tarch::la::Vector<Dimensions,double>&  volumeH,
-  double                                       t
-) {
-  logTraceInWith3Arguments( "refinementCriterion(...)", volumeX, volumeH, t );
-  ::exahype2::RefinementCommand result = ::exahype2::RefinementCommand::Keep;
-
-  // see comments in header file
-
-  logTraceOutWith1Argument( "refinementCriterion(...)", ::toString(result) );
-  return result;
-}
-
-
-
-
 void examples::exahype2::euler::EulerFV::initialCondition(
-  double * __restrict__ Q,
+  double * __restrict__                        Q,
   const tarch::la::Vector<Dimensions,double>&  volumeCentre,
   const tarch::la::Vector<Dimensions,double>&  volumeH,
   bool                                         gridIsConstructred
@@ -56,11 +36,16 @@ void examples::exahype2::euler::EulerFV::boundaryConditions(
   int                                          normal
 ) {
   logTraceInWith4Arguments( "boundaryConditions(...)", faceCentre, volumeH, t, normal );
-  // @todo implement
+
+  ::applications::exahype2::euler::NeumannBoundaryConditions(
+    Qinside, Qoutside, // Qoutside[5+0]
+    faceCentre, volumeH, t, normal,
+    NumberOfUnknowns,
+    NumberOfAuxiliaryVariables
+  );
+
   logTraceOut( "boundaryConditions(...)" );
 }
-
-
 
 
 
@@ -73,8 +58,15 @@ double ::examples::exahype2::euler::EulerFV::maxEigenvalue(
   int                                          normal
 )  {
   logTraceInWith4Arguments( "maxEigenvalue(...)", faceCentre, volumeH, t, normal );
-  // @todo implement
-  logTraceOut( "maxEigenvalue(...)" );
+
+  double result = ::applications::exahype2::euler::maxEigenvalue(
+    Q,
+    faceCentre, volumeH, t, dt, normal,
+    NumberOfUnknowns, NumberOfAuxiliaryVariables
+  );
+
+  logTraceOutWith1Argument( "maxEigenvalue(...)", result );
+  return result;
 }
 
 
@@ -90,6 +82,13 @@ void ::examples::exahype2::euler::EulerFV::flux(
   double * __restrict__ F // F[5]
 )  {
   logTraceInWith4Arguments( "flux(...)", faceCentre, volumeH, t, normal );
-  // @todo implement
+
+  ::applications::exahype2::euler::flux(
+    Q,
+    faceCentre, volumeH, t, dt, normal,
+    NumberOfUnknowns, NumberOfAuxiliaryVariables,
+    F
+  );
+
   logTraceOut( "flux(...)" );
 }

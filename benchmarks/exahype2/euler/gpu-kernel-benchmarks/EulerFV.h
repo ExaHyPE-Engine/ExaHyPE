@@ -27,37 +27,6 @@ class examples::exahype2::euler::EulerFV: public examples::exahype2::euler::Abst
     static tarch::logging::Log   _log;
 
   public:
-    
-    /**
-     * Refinement criterion
-     *
-     * ExaHypE2 is guided by a maximum and minimum mesh (patch) size.
-     * All (dynamic) AMR is constrained by these values, i.e. if your
-     * mesh is coarser than the maximum mesh size, ExaHyPE 2 will
-     * automatically refine. If you try to refine further than the
-     * minimum mesh size, ExaHyPE 2 will ignore any refinement.
-     *
-     * Consequently, you are fine if you work with a regular mesh:
-     * You set the maximum mesh size, and you leave everything else
-     * to Peano 4/ExaHyPE 2. If you want to have an adaptive mesh,
-     * use this routine to implement the refinement pattern.
-     *
-     * @param Q This is the (current) solution. The data is not set
-     *  to a valid value throughout grid construction. That is: If
-     *  t equals 0.0, you cannot assume that Q is properly initialised.
-     *  Therefore, Q usually is only evaluated by dynamic AMR codes
-     *  which make the solution follow
-     */
-    ::exahype2::RefinementCommand refinementCriterion(
-      const double * __restrict__ Q, // Q[5+0],
-      const tarch::la::Vector<Dimensions,double>&  volumeCentre,
-      const tarch::la::Vector<Dimensions,double>&  volumeH,
-      double                                       t
-    ) override;
-    
-
-
-    
     void initialCondition(
       double * __restrict__ Q,
       const tarch::la::Vector<Dimensions,double>&  volumeCentre,
@@ -146,7 +115,13 @@ class examples::exahype2::euler::EulerFV: public examples::exahype2::euler::Abst
       double                                       dt,
       int                                          normal,
       Offloadable
-    );
+    ) {
+      return ::applications::exahype2::euler::maxEigenvalue(
+        Q,
+        faceCentre, volumeH, t, dt, normal,
+        NumberOfUnknowns, NumberOfAuxiliaryVariables
+      );
+    }
     #if defined(GPUOffloadingOMP)
     #pragma omp end declare target
     #endif
@@ -180,7 +155,14 @@ class examples::exahype2::euler::EulerFV: public examples::exahype2::euler::Abst
       int                                          normal,
       double * __restrict__                        F, // F[5]
       Offloadable
-    );
+    ) {
+      ::applications::exahype2::euler::flux(
+        Q,
+        faceCentre, volumeH, t, dt, normal,
+        NumberOfUnknowns, NumberOfAuxiliaryVariables,
+        F
+      );
+    }
     #if defined(GPUOffloadingOMP)
     #pragma omp end declare target
     #endif

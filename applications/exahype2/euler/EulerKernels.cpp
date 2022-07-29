@@ -1,8 +1,8 @@
 #include "EulerKernels.h"
+#include "exahype2/NonCriticalAssertions.h"
 
-@include cpp file into Python script
 
-
+/*
 void examples::exahype2::euler::EulerFV::initialCondition(
   double * __restrict__ Q,
   const tarch::la::Vector<Dimensions,double>&  volumeCentre,
@@ -30,39 +30,38 @@ void examples::exahype2::euler::EulerFV::initialCondition(
 
   logTraceOut( "initialCondition(...)" );
 }
+*/
 
 
-void examples::exahype2::euler::EulerFV::boundaryConditions(
+void applications::exahype2::euler::NeumannBoundaryConditions(
   const double * __restrict__                  Qinside, // Qinside[5+0]
   double * __restrict__                        Qoutside, // Qoutside[5+0]
   const tarch::la::Vector<Dimensions,double>&  faceCentre,
   const tarch::la::Vector<Dimensions,double>&  volumeH,
   double                                       t,
-  int                                          normal
+  int                                          normal,
+  int                                          numberOfUnknowns,
+  int                                          numberOfAuxiliaryVariables
 ) {
-  logTraceInWith4Arguments( "boundaryConditions(...)", faceCentre, volumeH, t, normal );
-
   nonCriticalAssertion5( Qinside[0]>1e-12, faceCentre, volumeH, t, normal, Qinside[0] );
   assertion5( Qinside[0]>1e-12, faceCentre, volumeH, t, normal, Qinside[0] );
 
-  for (int i=0; i<NumberOfUnknowns+NumberOfAuxiliaryVariables; i++) {
+  for (int i=0; i<numberOfUnknowns+numberOfAuxiliaryVariables; i++) {
     Qoutside[i] = Qinside[i];
   }
-
-  logTraceOut( "boundaryConditions(...)" );
 }
 
 
-double ::examples::exahype2::euler::EulerFV::maxEigenvalue(
-  const double * __restrict__ Q, // Q[5+0],
+double ::applications::exahype2::euler::maxEigenvalue(
+  const double * __restrict__                  Q,
   const tarch::la::Vector<Dimensions,double>&  faceCentre,
   const tarch::la::Vector<Dimensions,double>&  volumeH,
   double                                       t,
   double                                       dt,
-  int                                          normal
+  int                                          normal,
+  int                                          numberOfUnknowns,
+  int                                          numberOfAuxiliaryVariables
 )  {
-  logTraceInWith4Arguments( "maxEigenvalue(...)", faceCentre, volumeH, t, normal );
-
   assertion(normal>=0);
   assertion(normal<Dimensions);
 
@@ -85,21 +84,21 @@ double ::examples::exahype2::euler::EulerFV::maxEigenvalue(
   double result = std::max( std::abs(u_n - c), std::abs(u_n + c) );
   nonCriticalAssertion9( result>=0.0, result, p, u_n, irho, c, faceCentre, volumeH, t, normal );
 
-  logTraceOutWith1Argument( "maxEigenvalue(...)", result );
   return result;
 }
 
 
-void ::examples::exahype2::euler::EulerFV::flux(
-  const double * __restrict__ Q, // Q[5+0],
+void ::applications::exahype2::euler::flux(
+  const double * __restrict__                  Q,
   const tarch::la::Vector<Dimensions,double>&  faceCentre,
   const tarch::la::Vector<Dimensions,double>&  volumeH,
   double                                       t,
   double                                       dt,
   int                                          normal,
-  double * __restrict__ F // F[5]
+  int                                          numberOfUnknowns,
+  int                                          numberOfAuxiliaryVariables,
+  double * __restrict__                        F
 )  {
-  logTraceInWith4Arguments( "flux(...)", faceCentre, volumeH, t, normal );
   assertion4( normal>=0, faceCentre, volumeH, t, normal );
   assertion4( normal<Dimensions, faceCentre, volumeH, t, normal);
 
@@ -123,8 +122,5 @@ void ::examples::exahype2::euler::EulerFV::flux(
   #else
   F[3] = coeff*Q[3] + coeff*p;
   #endif
-
-  logTraceOutWith4Arguments( "flux(...)", faceCentre, volumeH, t, normal );
 }
-
 
