@@ -6,6 +6,7 @@
 
 #include "tarch/la/Vector.h"
 #include "peano4/utils/Globals.h"
+#include "tarch/multicore/multicore.h"
 
 
 namespace applications {
@@ -24,7 +25,7 @@ namespace applications {
         int                                          normal,
         int                                          numberOfUnknowns,
         int                                          numberOfAuxiliaryVariables
-      );
+      ) InlineMethod;
 
 
       /**
@@ -42,7 +43,44 @@ namespace applications {
         int                                          normal,
         int                                          numberOfUnknowns,
         int                                          numberOfAuxiliaryVariables
-      );
+      ) InlineMethod;
+
+
+      /**
+       * GPU variant of the max eigenvalue computation
+       *
+       * It differs from the vanilla version in two ways:
+       *
+       * - It does not host any assertions or validity checks, as those are not
+       *   available on an accelerator.
+       * - It is all in the header to force/enable the compiler to inline stuff
+       *   directly and, hence, to generate GPU code.
+       */
+      static GPUCallableMethod double maxEigenvalueOnGPU(
+        const double * __restrict__                  Q,
+        const tarch::la::Vector<Dimensions,double>&  faceCentre,
+        const tarch::la::Vector<Dimensions,double>&  volumeH,
+        double                                       t,
+        double                                       dt,
+        int                                          normal,
+        int                                          numberOfUnknowns,
+        int                                          numberOfAuxiliaryVariables
+      ) InlineMethod {
+        constexpr double gamma = 1.4;
+        const double irho = 1./Q[0];
+        #if Dimensions==3
+        const double p = (gamma-1) * (Q[4] - 0.5*irho*(Q[1]*Q[1]+Q[2]*Q[2]+Q[3]*Q[3]));
+        #else
+        const double p = (gamma-1) * (Q[3] - 0.5*irho*(Q[1]*Q[1]+Q[2]*Q[2]));
+        #endif
+
+        const double c   = std::sqrt(gamma * p * irho);
+
+        const double u_n = Q[normal + 1] * irho;
+        double result = std::max( std::abs(u_n - c), std::abs(u_n + c) );
+
+        return result;
+      }
 
 
       /**
@@ -61,7 +99,51 @@ namespace applications {
         int                                          numberOfUnknowns,
         int                                          numberOfAuxiliaryVariables,
         double * __restrict__                        F
-      );
+      ) InlineMethod;
+
+
+      /**
+       * GPU variant of the flux computation
+       *
+       * It differs from the vanilla version in two ways:
+       *
+       * - It does not host any assertions or validity checks, as those are not
+       *   available on an accelerator.
+       * - It is all in the header to force/enable the compiler to inline stuff
+       *   directly and, hence, to generate GPU code.
+       */
+      static GPUCallableMethod void fluxOnGPU(
+        const double * __restrict__                  Q,
+        const tarch::la::Vector<Dimensions,double>&  faceCentre,
+        const tarch::la::Vector<Dimensions,double>&  volumeH,
+        double                                       t,
+        double                                       dt,
+        int                                          normal,
+        int                                          numberOfUnknowns,
+        int                                          numberOfAuxiliaryVariables,
+        double * __restrict__                        F
+      ) InlineMethod {
+        constexpr double gamma = 1.4;
+        const double irho = 1./Q[0];
+        #if Dimensions==3
+        const double p = (gamma-1) * (Q[4] - 0.5*irho*(Q[1]*Q[1]+Q[2]*Q[2]+Q[3]*Q[3]));
+        #else
+        const double p = (gamma-1) * (Q[3] - 0.5*irho*(Q[1]*Q[1]+Q[2]*Q[2]));
+        #endif
+
+        const double coeff = irho*Q[normal+1];
+        F[0] = coeff*Q[0];
+        F[1] = coeff*Q[1];
+        F[2] = coeff*Q[2];
+        F[normal+1] += p;
+
+        #if Dimensions==3
+        F[3] = coeff*Q[3];
+        F[4] = coeff*Q[4] + coeff*p;
+        #else
+        F[3] = coeff*Q[3] + coeff*p;
+        #endif
+      }
     }
   }
 }

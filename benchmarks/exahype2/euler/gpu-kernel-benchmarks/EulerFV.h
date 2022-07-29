@@ -116,7 +116,7 @@ class examples::exahype2::euler::EulerFV: public examples::exahype2::euler::Abst
       int                                          normal,
       Offloadable
     ) {
-      return ::applications::exahype2::euler::maxEigenvalue(
+      return ::applications::exahype2::euler::maxEigenvalueOnGPU(
         Q,
         faceCentre, volumeH, t, dt, normal,
         NumberOfUnknowns, NumberOfAuxiliaryVariables
@@ -156,7 +156,7 @@ class examples::exahype2::euler::EulerFV: public examples::exahype2::euler::Abst
       double * __restrict__                        F, // F[5]
       Offloadable
     ) {
-      ::applications::exahype2::euler::flux(
+      ::applications::exahype2::euler::fluxOnGPU(
         Q,
         faceCentre, volumeH, t, dt, normal,
         NumberOfUnknowns, NumberOfAuxiliaryVariables,

@@ -198,7 +198,6 @@ void testFusedVariantWithStaticFunctionCalls(
 
   tarch::timing::Watch watch( "::", "main()", false );
 
-  logInfo( "main(...)", "here" );
   kernel(
     patchData,
     true ,
