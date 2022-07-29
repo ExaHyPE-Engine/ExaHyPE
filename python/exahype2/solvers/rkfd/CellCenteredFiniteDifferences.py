@@ -124,6 +124,9 @@ class CellCenteredFiniteDifferences(object):
     self._boundary_conditions_implementation  = None
     self._refinement_criterion_implementation = None
     self._initial_conditions_implementation   = None
+
+    self._interpolation = "linear"
+    self._restriction   = "injection"
     
     self.create_data_structures()
     self.create_action_sets()

@@ -1,104 +1,17 @@
 import os
-import argparse
 
 import peano4
 import exahype2
+import dastgen2
 
 import peano4.toolbox.particles
-import dastgen2
 
 from Probe_file_gene import tracer_seeds_generate
 
-from peano4.toolbox.blockstructured.DynamicAMR                 import DynamicAMR
-import numpy as np
+#       SuperClass = exahype2.solvers.fv.rusanov.GlobalAdaptiveTimeStepWithEnclaveTasking
+#       SuperClass = exahype2.solvers.rkfd.fd4.GlobalAdaptiveTimeStep
 
-
-modes = { 
-  "release": peano4.output.CompileMode.Release,
-  "trace":   peano4.output.CompileMode.Trace,
-  "assert":  peano4.output.CompileMode.Asserts, "stats":  peano4.output.CompileMode.Stats,
-  "debug":   peano4.output.CompileMode.Debug,
-}
-
-floatparams = {
-        "GLMc0":1.5, "GLMc":1.2, "GLMd":2.0, "GLMepsA":1.0, "GLMepsP":1.0,
-        "GLMepsD":1.0, 
-	"itau":1.0, "k1":0.1, "k2":0.0, "k3":0.5, "eta":1.0,
-        "f":0.75, "g":0.0, "xi":1.0, "e":1.0, "c":1.0, "mu":0.2, "ds":1.0,
-        "sk":1.0, "bs":1.0,
-        "domain_r":0.5, "smoothing":0.0, "KOSigma":4.0 #, \
-	#"itau":1.0, "k1":0.1, "k2":0.0, "k3":0.5, "eta":1.0,
-        #"f":1.0, "g":0.0, "xi":1.0, "e":1.0, "c":1.0, "mu":0.2, "ds":1.0,
-        #"sk":1.0, "bs":1.0#, \
-	#"par_b":666.0, "center_offset_x":-1.0, "center_offset_y":0.0, "center_offset_z":0.0, \
-	#"target_m_plus":1.0, "par_p_plus_x":0.0, "par_p_plus_y":0.0, "par_p_plus_z":0.0, \
-	#"par_s_plus_x":0.0, "par_s_plus_y":0.0, "par_s_plus_z":0.0, \
-	#"target_m_minus":1.0, "par_p_minus_x":0.0, "par_p_minus_y":0.0, "par_p_minus_z":0.0, \
-	#"par_s_minus_x":0.0, "par_s_minus_y":0.0, "par_s_minus_z":0.0, \
-	#"tp_epsilon":1e-6
-}
-
-intparams = {"LapseType":1, "tp_grid_setup":0, "swi":99, "ReSwi":0, "source":0}
-#sss
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description='ExaHyPE 2 - CCZ4 script')
-    parser.add_argument("-maxh",   "--max-h",       dest="max_h",           type=float, required="True",  help="upper limit for refinement. Refers to volume size, i.e. not to patch size" )
-    parser.add_argument("-minh",   "--min-h",       dest="min_h",           type=float, default=0,  help="lower limit for refinement (set to 0 to make it equal to max_h - default). Refers to volume size, i.e. not to patch size" )
-    parser.add_argument("-ps",   "--patch-size",      dest="patch_size",      type=int, default=6,    help="Patch size, i.e. number of volumes per patch per direction" )
-    parser.add_argument("-plt",  "--plot-step-size",  dest="plot_step_size",  type=float, default=0.04, help="Plot step size (0 to switch it off)" )
-    parser.add_argument("-m",    "--mode",            dest="mode",            default="release",  help="|".join(modes.keys()) )
-    parser.add_argument( "--gpu",            dest="GPU",            default=False, action="store_true",  help="Run with accelerator support" )
-    parser.add_argument("-ext",  "--extension",       dest="extension",       choices=["none", "gradient", "AMRadm", "Full"],   default="none",  help="Pick extension, i.e. what should be plotted on top. Default is none" )
-    parser.add_argument("-impl", "--implementation",  dest="implementation",  choices=["fv-global-fixed", "fv-global-adaptive", "fv-global-fixed-enclave", "fv-global-adaptive-enclave","fv-subcyling-adaptive-enclave","fv-local-enclave", "fv-musclhancock", "fd4-rk1-adaptive", "fd4-rk1-fixed", "fd4-rk4-adaptive", "fd4-rk4-fixed", "fv-fd4"], required="True",  help="Pick solver type" )
-    parser.add_argument("-no-pbc",  "--no-periodic-boundary-conditions",      dest="periodic_bc", action="store_false", default="True",  help="switch on or off the periodic BC" )
-    parser.add_argument("-AMRMarker",  "--AMR-marker",      dest="marker", choices=["none", "poisson"],   default="none",  help="switch on or off the AMR boundary marker" )
-    parser.add_argument("-et",   "--end-time",        dest="end_time",        type=float, default=1.0, help="End (terminal) time" )
-    parser.add_argument("-pst",   "--plot-start-time",        dest="plot_start_time",        type=float, default=0.0, help="start time for plot" )
-    parser.add_argument("-s",    "--scenario",        dest="scenario",        choices=["gauge", "dia_gauge", "linear", "single-puncture","two-punctures"], required="True", help="Scenario" )
-    parser.add_argument("-cfl",      "--CFL-ratio",           dest="cfl",             type=float, default=0.1, help="Set CFL ratio" )
-    parser.add_argument("-tracer", "--add-tracer",    dest="add_tracer", type=int, default=0,  help="Add tracers and specify the seeds. 0-switch off, 1-x axis, 2-xy plane, 3-over domain (evenly), 4-over domain(with noise option), 5-inserted by coordinate, 6-spherical surface(Gauss_Legendre_quadrature), 7-spherical surface(t-design)" )
-    parser.add_argument("-tn", "--tracer-name",       dest="tra_name",    type=str, default="de",  help="name of output tracer file (temporary)" )
-    parser.add_argument("-exn", "--exe-name",        dest="exe_name",    type=str, default="",  help="name of output executable file" )
-    parser.add_argument("-outdir", "--output-directory",        dest="path",    type=str, default="./",  help="specify the output directory, include the patch file and tracer file" )
-    parser.add_argument("-interp",   "--interpolation", dest="interpolation",     choices=["constant","order-2","linear-constant-extrap","linear-linear-extrap","linear-con-extrap-lin-normal-interp","linear-lin-extrap-lin-normal-interp"], default="linear-lin-extrap-lin-normal-interp",  help="interpolation scheme for AMR" )
-    parser.add_argument("-restrict", "--restriction",   dest="restriction",       choices=["average", "inject" ], default="average",  help="restriction scheme for AMR" )
-
-
-    for k, v in floatparams.items(): parser.add_argument("--{}".format(k), dest="CCZ4{}".format(k), type=float, default=v, help="default: %(default)s")
-    for k, v in intparams.items():
-      if k=="ReSwi":
-        parser.add_argument("--{}".format(k), dest="CCZ4{}".format(k), type=int, default=v, help="default: %(default)s, choose refinement criterion, 0-no refinement, 1-radius based, 2-SBH phi gradient based, 3-BBH phi gradient based. Notice: 2 and 3 only work with -ext Full")
-      else: parser.add_argument("--{}".format(k), dest="CCZ4{}".format(k), type=int, default=v, help="default: %(default)s")
-
-    args = parser.parse_args()
-
-    SuperClass = None
-
-    if args.implementation=="fv-global-fixed":
-       SuperClass = exahype2.solvers.fv.rusanov.GlobalFixedTimeStep
-    if args.implementation=="fv-global-adaptive":
-       SuperClass = exahype2.solvers.fv.rusanov.GlobalAdaptiveTimeStep
-    if args.implementation=="fv-global-fixed-enclave":
-       SuperClass = exahype2.solvers.fv.rusanov.GlobalFixedTimeStepWithEnclaveTasking
-    if args.implementation=="fv-global-adaptive-enclave":
-       SuperClass = exahype2.solvers.fv.rusanov.GlobalAdaptiveTimeStepWithEnclaveTasking
-    if args.implementation=="fv-subcyling-adaptive-enclave": 
-       SuperClass = exahype2.solvers.fv.rusanov.SubcyclingAdaptiveTimeStepWithEnclaveTasking
-    if args.implementation=="fv-local-enclave":
-       SuperClass = exahype2.solvers.fv.rusanov.LocalTimeStepWithEnclaveTasking
-    if args.implementation=="fv-musclhancock":
-       SuperClass = exahype2.solvers.fv.musclhancock.GlobalAdaptiveTimeStep
-    if args.implementation=="fd4-rk1-adaptive" or args.implementation=="fd4-rk4-adaptive":
-       SuperClass = exahype2.solvers.rkfd.fd4.GlobalAdaptiveTimeStep
-    if args.implementation=="fd4-rk1-fixed" or args.implementation=="fd4-rk4-fixed":
-       SuperClass = exahype2.solvers.rkfd.fd4.GlobalFixedTimeStep
-    if args.implementation=="fv-fd4":
-       SuperClass = exahype2.solvers.fv.fd4.GlobalAdaptiveTimeStep
-
-
-    class CCZ4Solver( SuperClass ):
-      def __init__(self, name, patch_size, min_volume_h, max_volume_h, cfl, domain_r, KOSig):
-        unknowns = {
+unknowns = {
           "G":6,
           "K":6,
           "theta":1,
@@ -119,9 +32,21 @@ if __name__ == "__main__":
           "K0":1,
         }
 
-        number_of_unknowns = sum(unknowns.values())
 
-        self._my_user_includes = """
+my_solver = exahype2.solvers.fv.rusanov.GlobalAdaptiveTimeStepWithEnclaveTasking(name                 = "CCZ4FV", 
+                                                                                 patch_size           = 5,
+                                                                                 unknowns             = sum(unknowns.values()),
+                                                                                 auxiliary_variables  = 0,
+                                                                                 min_volume_h         = 0.05, 
+                                                                                 max_volume_h         = 0.05,
+                                                                                 time_step_relaxation = 0.1,
+            time_step_size=1e-2,
+            use_gpu =args.GPU #=="fv-fixed-gpu" else False
+)
+
+
+
+my_solver._my_user_includes = """
 #include "../CCZ4Kernels.h"
 """
 
@@ -163,7 +88,7 @@ if __name__ == "__main__":
             name=name, patch_size=patch_size, rk_order=rk_order,
             unknowns=number_of_unknowns,
             auxiliary_variables=0,
-            min_volume_h=min_volume_h, max_volume_h=max_volume_h,
+            min_meshcell_h=min_meshcell_h, max_volume_h=max_volume_h,
             time_step_relaxation=cfl,
             KOSigma=KOSig
           )
