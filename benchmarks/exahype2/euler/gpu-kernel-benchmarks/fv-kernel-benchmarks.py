@@ -18,10 +18,9 @@ import argparse
 
 
 print( """
-Please call this script from the directory hosting the Makefile and the
-sources. Typically, I invoke the script via
 
-python3 example-scripts/finitevolumes-with-ExaHyPE2-benchmark.py arguments
+ExaHyPE 2 Finite Volume kernel benchmark
+
 """)
 
 parser = argparse.ArgumentParser(description='ExaHyPE 2 - Euler benchmarking script')
