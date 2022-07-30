@@ -13,7 +13,7 @@ parser = argparse.ArgumentParser(description='ExaHyPE 2 - Euler benchmarking scr
 parser.add_argument("-j",   "--parallel-builds",   dest="j",              type=int, default=-1, help="Parallel builds" )
 parser.add_argument("-pd",  "--peano-dir",         dest="peanodir",       default="../../../../", help="Peano4 directory" )
 parser.add_argument("-v",   "--verbose",           dest="verbose",        action="store_true", default=False, help="Verbose")
-parser.add_argument("-s",   "--solver",            dest="solver",         choices=["fv", "fd4-rk1"], required=True, help="Pick solver type" )
+parser.add_argument("-s",   "--solver",            dest="solver",         choices=["fv", "fd4-rk1", "fd4-rk2", "fd4-rk3", "fd4-rk4"], required=True, help="Pick solver type" )
 parser.add_argument("-et",  "--end-time",          dest="end_time",       type=float, default=1.0, help="End of simulation" )
 args = parser.parse_args()
 
@@ -63,9 +63,36 @@ if args.solver=="fv":
                                                                                    max_volume_h         = 0.05,
                                                                                    time_step_relaxation = 0.1)
 if args.solver=="fd4-rk1":
-  my_solver = exahype2.solvers.rkfd.fd4.GlobalAdaptiveTimeStep(name                 = "CCZ4FD", 
+  my_solver = exahype2.solvers.rkfd.fd4.GlobalAdaptiveTimeStep(name                 = "CCZ4FD4RK1", 
                                                                patch_size           = 5,
                                                                rk_order             = 1,
+                                                               unknowns             = sum(unknowns.values()),
+                                                               auxiliary_variables  = 0,
+                                                               min_meshcell_h       = 0.05, 
+                                                               max_meshcell_h       = 0.05,
+                                                               time_step_relaxation = 0.1)
+if args.solver=="fd4-rk2":
+  my_solver = exahype2.solvers.rkfd.fd4.GlobalAdaptiveTimeStep(name                 = "CCZ4FD4RK2", 
+                                                               patch_size           = 5,
+                                                               rk_order             = 2,
+                                                               unknowns             = sum(unknowns.values()),
+                                                               auxiliary_variables  = 0,
+                                                               min_meshcell_h       = 0.05, 
+                                                               max_meshcell_h       = 0.05,
+                                                               time_step_relaxation = 0.1)
+if args.solver=="fd4-rk3":
+  my_solver = exahype2.solvers.rkfd.fd4.GlobalAdaptiveTimeStep(name                 = "CCZ4FD4RK3", 
+                                                               patch_size           = 5,
+                                                               rk_order             = 3,
+                                                               unknowns             = sum(unknowns.values()),
+                                                               auxiliary_variables  = 0,
+                                                               min_meshcell_h       = 0.05, 
+                                                               max_meshcell_h       = 0.05,
+                                                               time_step_relaxation = 0.1)
+if args.solver=="fd4-rk4":
+  my_solver = exahype2.solvers.rkfd.fd4.GlobalAdaptiveTimeStep(name                 = "CCZ4FD4RK4", 
+                                                               patch_size           = 5,
+                                                               rk_order             = 4,
                                                                unknowns             = sum(unknowns.values()),
                                                                auxiliary_variables  = 0,
                                                                min_meshcell_h       = 0.05, 
@@ -174,7 +201,7 @@ if args.solver=="fv":
     }
   }
 """
-elif args.solver=="fd4-rk1":
+if args.solver=="fd4-rk1" or args.solver=="fd4-rk2" or args.solver=="fd4-rk3" or args.solver=="fd4-rk4":
   my_solver.postprocess_updated_patch = """
 {
     constexpr int itmax = {{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}} * {{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}} * {{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}};
@@ -189,12 +216,7 @@ elif args.solver=="fd4-rk1":
 
 
 
-project = None
-if args.solver=="fv":
-  project = exahype2.Project( ["benchmarks", "exahype2", "ccz4"], "ccz4", executable="finitevolumes")
-elif args.solver=="fd4-rk1":
-  project = exahype2.Project( ["benchmarks", "exahype2", "ccz4"], "fd4rk1", executable="fd4rk")
-
+project = exahype2.Project( ["benchmarks", "exahype2", "ccz4"], "ccz4", executable=args.solver)
 
 
 
@@ -226,14 +248,14 @@ project.add_solver(my_solver)
 tracer_particles = project.add_tracer( name="Tracer",attribute_count=59 )
 project.add_action_set_to_initialisation( 
   exahype2.tracer.InsertParticlesbyCoordinates( 
-    particle_set=tracer_particles, coordinates=[[0.4251,0,0],[-0.4251,0,0],[0.2,0.2,0]]))
+    particle_set=tracer_particles, coordinates=[[-0.4251,0,0],[0,0,0],[0.4251,0,0]]))
 project.add_action_set_to_timestepping(
   peano4.toolbox.particles.UpdateParallelState(
     particle_set=tracer_particles
   )
 )
 
-if args.solver=="fv" or args.solver=="fd4-rk1":
+if args.solver=="fv" or args.solver=="fd4-rk1" or args.solver=="fd4-rk2" or args.solver=="fd4-rk3" or args.solver=="fd4-rk4":
   project.add_action_set_to_timestepping(exahype2.tracer.FiniteVolumesTracing(tracer_particles,
                                                                               my_solver,
                                                                               [],        # velocity indices: don't move them [17,18,19]
@@ -242,16 +264,11 @@ if args.solver=="fv" or args.solver=="fd4-rk1":
                                                                               time_stepping_kernel="toolbox::particles::StaticPosition"))
 
 
-database_name = None
-if args.solver=="fv":
-  database_name = "TracerFV"
-elif args.solver=="fd4-rk1":
-  database_name = "TracerFD1RK1"
 
 project.add_action_set_to_timestepping(exahype2.tracer.DumpTrajectoryIntoDatabase(
   particle_set=tracer_particles,
   solver=my_solver,
-  filename=database_name,
+  filename="Tracer-" + args.solver,
   data_delta_between_two_snapsots=1e16,
   time_delta_between_two_snapsots=0.01
   ))
