@@ -1961,12 +1961,24 @@ project.add_action_set_to_initialisation(
   particle_set=tracer_particles,
   h=args.h/8.0, noise=True 
 ))
+project.add_action_set_to_timestepping(
+  peano4.toolbox.particles.UpdateParallelState(
+    particle_set=tracer_particles
+  )
+)
 \end{code}
 
 
+\begin{definition}
+ All of \Peano's particle toolbox routines are written for large-scale
+ parallel (MPI) runs.
+ Therefore, you have to add \texttt{UpdateParallelState} to the time stepping
+ always.
+\end{definition}
 
 \noindent
-With this additional seed, you can run your code and visualise the particles. 
+With this additional seed and the update of the particle state, you can run your
+code and visualise the particles.
 However, these particles do not move at all yet or track the actual data of
 interest.
 To facilitate this, you have to map your solution onto the particle first.

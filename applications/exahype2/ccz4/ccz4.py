@@ -823,6 +823,11 @@ if __name__ == "__main__":
           #observer_kernel="toolbox::particles::ObLinearInterp"
         )
       )
+      project.add_action_set_to_timestepping(
+        peano4.toolbox.particles.UpdateParallelState(
+          particle_set=tracer_particles
+        )
+      )
       if args.add_tracer==1 or args.add_tracer==2 or args.add_tracer==3 :
         tracer_seeds_generate(Type=args.add_tracer, a=-15, b=15, N_x=1000,N_y=1,N_z=1)
         project.add_action_set_to_initialisation( exahype2.tracer.InsertParticlesFromFile( particle_set=tracer_particles, filename=tracer_name[args.add_tracer]+".dat", scale_factor=1)) #"Line.dat" #slide.dat #volume.dat
