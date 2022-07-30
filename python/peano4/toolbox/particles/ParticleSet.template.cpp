@@ -224,6 +224,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishedTraversal() {
     &_numberOfLifts,
     1, MPI_INT,
     MPI_SUM,
+    tarch::mpi::Rank::getGlobalMasterRank(),
     [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); }
   );
   tarch::mpi::Rank::getInstance().reduce(
@@ -231,6 +232,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishedTraversal() {
     &_numberOfDrops,
     1, MPI_INT,
     MPI_SUM,
+    tarch::mpi::Rank::getGlobalMasterRank(),
     [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); }
   );
   tarch::mpi::Rank::getInstance().reduce(
@@ -238,6 +240,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishedTraversal() {
     &_numberOfAssignmentsToGlobalSieve,
     1, MPI_INT,
     MPI_SUM,
+    tarch::mpi::Rank::getGlobalMasterRank(),
     [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); }
   );
   tarch::mpi::Rank::getInstance().reduce(
@@ -245,6 +248,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishedTraversal() {
     &_totalRealParticleCount,
     1, MPI_INT,
     MPI_SUM,
+    tarch::mpi::Rank::getGlobalMasterRank(),
     [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); }
   );
   tarch::mpi::Rank::getInstance().reduce(
@@ -252,6 +256,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishedTraversal() {
     &_totalVirtualParticleCount,
     1, MPI_INT,
     MPI_SUM,
+    tarch::mpi::Rank::getGlobalMasterRank(),
     [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); }
   );
   tarch::mpi::Rank::getInstance().reduce(
@@ -259,6 +264,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishedTraversal() {
     &_totalEliminatedSpatialDuplicates,
     1, MPI_INT,
     MPI_SUM,
+    tarch::mpi::Rank::getGlobalMasterRank(),
     [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); }
   );
   #else
