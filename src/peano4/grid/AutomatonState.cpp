@@ -42,7 +42,7 @@ std::string peano4::grid::AutomatonState::toString() const {
   out << ","; 
   out << "inverted=" << _inverted;
   out << ","; 
-  out << "evenFlags=" << _evenFlags;
+  out << "evenFlags=" << getEvenFlags();
   out << ","; 
   out << "accessNumber=" << getAccessNumber();
   out << ")";
@@ -130,12 +130,16 @@ void   peano4::grid::AutomatonState::setInverted(bool value) {
 
 
 std::bitset<Dimensions>   peano4::grid::AutomatonState::getEvenFlags() const {
-  return   _evenFlags;
+
+  std::bitset<Dimensions> result;
+  for (int i=0; i<Dimensions; i++) result[i] =   _evenFlags[i];
+  return result;
 }
 
 
 void   peano4::grid::AutomatonState::setEvenFlags(const std::bitset<Dimensions>&  value) {
-  _evenFlags = value;
+
+  for (int i=0; i<Dimensions; i++)   _evenFlags[i]=value[i];
 }
 
 
@@ -150,7 +154,7 @@ void   peano4::grid::AutomatonState::setEvenFlags(int index, bool value) {
 
 
 void   peano4::grid::AutomatonState::flipEvenFlags(int index) {
-  _evenFlags.flip(index);
+  _evenFlags[index] = not   _evenFlags[index];
 }
 
 

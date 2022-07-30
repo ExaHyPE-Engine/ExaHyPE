@@ -130,12 +130,17 @@ struct peano4::grid::GridVertex {
     std::string toString() const;
   
   private:
-      State   _state;
-    tarch::la::Vector<TwoPowerD,int>   _adjacentRanks;
+    [[clang::pack]]  State   _state;
+#if defined(__PACKED_ATTRIBUTES_LANGUAGE_EXTENSION__)
+    [[clang::pack_range(-1,std::numeric_limits<int>::max())]]  int   _adjacentRanks[TwoPowerD];
+#endif
+#if !defined(__PACKED_ATTRIBUTES_LANGUAGE_EXTENSION__)
+      tarch::la::Vector<TwoPowerD,int>   _adjacentRanks;
+#endif
     tarch::la::Vector<TwoPowerD,int>   _backupOfAdjacentRanks;
     [[clang::pack]]  bool   _hasBeenAntecessorOfRefinedVertexInPreviousTreeSweep;
     [[clang::pack]]  bool   _isAntecessorOfRefinedVertexInCurrentTreeSweep;
-      int   _numberOfAdjacentRefinedLocalCells;
+    [[clang::pack_range(0,TwoPowerD)]]  int   _numberOfAdjacentRefinedLocalCells;
 #if PeanoDebug>0
 #if defined(__PACKED_ATTRIBUTES_LANGUAGE_EXTENSION__)
     [[clang::truncate_mantissa()]]  double   _x[Dimensions];

@@ -183,14 +183,44 @@ struct peano4::grid::GridTraversalEvent {
 #if !defined(__PACKED_ATTRIBUTES_LANGUAGE_EXTENSION__)
       tarch::la::Vector<Dimensions,double>   _h;
 #endif
-    std::bitset<TwoPowerD>   _hasBeenRefined;
-    std::bitset<TwoPowerD>   _willBeRefined;
-    std::bitset<TwoPowerD>   _isVertexLocal;
-    std::bitset<TwoTimesD>   _isFaceLocal;
+#if defined(__PACKED_ATTRIBUTES_LANGUAGE_EXTENSION__)
+    [[clang::pack]]  bool   _hasBeenRefined[TwoPowerD];
+#endif
+#if !defined(__PACKED_ATTRIBUTES_LANGUAGE_EXTENSION__)
+      std::bitset<TwoPowerD>   _hasBeenRefined;
+#endif
+#if defined(__PACKED_ATTRIBUTES_LANGUAGE_EXTENSION__)
+    [[clang::pack]]  bool   _willBeRefined[TwoPowerD];
+#endif
+#if !defined(__PACKED_ATTRIBUTES_LANGUAGE_EXTENSION__)
+      std::bitset<TwoPowerD>   _willBeRefined;
+#endif
+#if defined(__PACKED_ATTRIBUTES_LANGUAGE_EXTENSION__)
+    [[clang::pack]]  bool   _isVertexLocal[TwoPowerD];
+#endif
+#if !defined(__PACKED_ATTRIBUTES_LANGUAGE_EXTENSION__)
+      std::bitset<TwoPowerD>   _isVertexLocal;
+#endif
+#if defined(__PACKED_ATTRIBUTES_LANGUAGE_EXTENSION__)
+    [[clang::pack]]  bool   _isFaceLocal[TwoTimesD];
+#endif
+#if !defined(__PACKED_ATTRIBUTES_LANGUAGE_EXTENSION__)
+      std::bitset<TwoTimesD>   _isFaceLocal;
+#endif
     [[clang::pack]]  bool   _isCellLocal;
     [[clang::pack]]  bool   _isParentCellLocal;
-    std::bitset<TwoPowerD>   _isVertexAdjacentToParallelDomainBoundary;
-    std::bitset<TwoTimesD>   _isFaceAdjacentToParallelDomainBoundary;
+#if defined(__PACKED_ATTRIBUTES_LANGUAGE_EXTENSION__)
+    [[clang::pack]]  bool   _isVertexAdjacentToParallelDomainBoundary[TwoPowerD];
+#endif
+#if !defined(__PACKED_ATTRIBUTES_LANGUAGE_EXTENSION__)
+      std::bitset<TwoPowerD>   _isVertexAdjacentToParallelDomainBoundary;
+#endif
+#if defined(__PACKED_ATTRIBUTES_LANGUAGE_EXTENSION__)
+    [[clang::pack]]  bool   _isFaceAdjacentToParallelDomainBoundary[TwoTimesD];
+#endif
+#if !defined(__PACKED_ATTRIBUTES_LANGUAGE_EXTENSION__)
+      std::bitset<TwoTimesD>   _isFaceAdjacentToParallelDomainBoundary;
+#endif
     tarch::la::Vector<TwoPowerD,int>   _vertexDataFrom;
     tarch::la::Vector<TwoPowerD,int>   _vertexDataTo;
     tarch::la::Vector<TwoTimesD,int>   _faceDataFrom;
@@ -202,7 +232,7 @@ struct peano4::grid::GridTraversalEvent {
 #if !defined(__PACKED_ATTRIBUTES_LANGUAGE_EXTENSION__)
       tarch::la::Vector<Dimensions,int>   _relativePositionToFather;
 #endif
-      int   _invokingSpacetree;
+    [[clang::pack_range(-1,std::numeric_limits<int>::max())]]  int   _invokingSpacetree;
     [[clang::pack]]  bool   _invokingSpacetreeIsNotInvolvedInAnyDynamicLoadBalancing;
 
 

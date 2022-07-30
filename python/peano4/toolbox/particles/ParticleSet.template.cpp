@@ -282,7 +282,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishedTraversal() {
     );
   }
 
-  if (globalRealNumberOfParticles==1 or globalRealNumberOfParticles>2) exit(-1);
+  if (globalRealNumberOfParticles==1) exit(-1);
 
   _numberOfLifts = 0;
   _numberOfDrops = 0;
