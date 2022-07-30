@@ -285,7 +285,14 @@ class OneSweepPerRungeKuttaStep( CellCenteredFiniteDifferences ):
     if refinement_criterion is not None:  self._refinement_criterion_implementation       = refinement_criterion
     if initial_conditions   is not None:  self._initial_conditions_implementation         = initial_conditions
     if memory_location      is not None:  self._reconstructed_array_memory_location       = memory_location
-
+    
+    if boundary_conditions==exahype2.solvers.fv.PDETerms.None_Implementation:
+      assert False, "boundary conditions cannot be none"
+    if refinement_criterion==exahype2.solvers.fv.PDETerms.None_Implementation:
+      assert False, "refinement criterion cannot be none"
+    if initial_conditions==exahype2.solvers.fv.PDETerms.None_Implementation:
+      assert False, "initial conditions cannot be none"
+      
     if flux                 is not None:  self._flux_implementation                       = flux
     if ncp                  is not None:  self._ncp_implementation                        = ncp
     if eigenvalues          is not None:  self._eigenvalues_implementation                = eigenvalues

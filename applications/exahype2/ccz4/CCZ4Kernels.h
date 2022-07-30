@@ -1,8 +1,8 @@
 //
 // ExaHyPE2 CCZ4 implementation
 //
-#ifndef _examples_exahype2_ccz4_CCZ4_Kernels_H_
-#define _examples_exahype2_ccz4_CCZ4_Kernels_H_
+#ifndef _APPLICATIONS_EXAHYPE2_CCZ4_CCZ4KERNELS_H_
+#define _APPLICATIONS_EXAHYPE2_CCZ4_CCZ4KERNELS_H_
 
 
 #include <cmath>
@@ -10,7 +10,7 @@
 #include "tarch/multicore/multicore.h"
 
 
-namespace examples {
+namespace applications {
   namespace exahype2 {
     namespace ccz4 {
 /*
@@ -72,6 +72,19 @@ namespace examples {
         const double CCZ4k3
       ) InlineMethod;
 
+
+
+      #if defined(SharedOMP)
+      #pragma omp declare simd
+      #endif
+      KeywordToAvoidDuplicateSymbolsForInlinedFunctions double maxEigenvalue(
+        const double* const Q,
+        int                 normal,
+        const double        CCZ4e,
+        const double        CCZ4ds,
+        const double        CCZ4GLMc,
+        const double        CCZ4GLMd
+      ) InlineMethod;
 
       /**
        * This is a postprocessing routine to monitor if the physical constraints

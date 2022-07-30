@@ -1,6 +1,25 @@
+#include <algorithm>
 
 
-void examples::exahype2::ccz4::source(double* S, const double* const Q,
+double applications::exahype2::ccz4::maxEigenvalue(
+        const double* const Q,
+        int                 normal,
+        const double        CCZ4e,
+        const double        CCZ4ds,
+        const double        CCZ4GLMc,
+        const double        CCZ4GLMd
+) {
+  const double qmin = std::min({Q[0],Q[3],Q[5]});
+  const double alpha = std::max({1.0, std::exp(Q[16])}) * std::max({1.0, std::exp(Q[54])}) / std::sqrt(qmin);
+
+  constexpr double sqrtwo = 1.4142135623730951;
+  const double tempA = alpha * std::max({sqrtwo, CCZ4e, CCZ4ds, CCZ4GLMc/alpha, CCZ4GLMd/alpha});
+  const double tempB = Q[17+normal];//DOT_PRODUCT(Q(18:20),nv(:))
+  return std::max({1.0, std::abs(-tempA-tempB), std::abs(tempA-tempB)});
+}
+
+
+void applications::exahype2::ccz4::source(double* S, const double* const Q,
       const int CCZ4LapseType,
       const double CCZ4ds,
       const double CCZ4c,
@@ -386,7 +405,7 @@ void examples::exahype2::ccz4::source(double* S, const double* const Q,
 }
 
 
-void examples::exahype2::ccz4::ncp(double* BgradQ, const double* const Q, const double* const gradQSerialised, const int normal,
+void applications::exahype2::ccz4::ncp(double* BgradQ, const double* const Q, const double* const gradQSerialised, const int normal,
       const int CCZ4LapseType,
       const double CCZ4ds,
       const double CCZ4c,

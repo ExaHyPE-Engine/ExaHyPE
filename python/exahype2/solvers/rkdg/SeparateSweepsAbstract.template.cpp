@@ -148,7 +148,9 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::boundaryConditions(
   double                                       t,
   int                                          normal
 ) {
+  {% if BOUNDARY_CONDITIONS_IMPLEMENTATION!="<empty>" %}
   {{BOUNDARY_CONDITIONS_IMPLEMENTATION}}
+  {% endif %}
 }
 {% endif %}
 

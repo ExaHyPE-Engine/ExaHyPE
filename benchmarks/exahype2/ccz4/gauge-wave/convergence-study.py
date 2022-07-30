@@ -10,6 +10,11 @@ import peano4.toolbox.particles
 #       SuperClass = exahype2.solvers.fv.rusanov.GlobalAdaptiveTimeStepWithEnclaveTasking
 #       SuperClass = exahype2.solvers.rkfd.fd4.GlobalAdaptiveTimeStep
 
+
+#
+# This part si only for convenience. We could use these symbols to augment
+# the output files, but I don't use this feature here.
+#
 unknowns = {
           "G":6,
           "K":6,
@@ -32,6 +37,9 @@ unknowns = {
         }
 
 
+#
+# Create solver class
+#
 my_solver = exahype2.solvers.fv.rusanov.GlobalAdaptiveTimeStepWithEnclaveTasking(name                 = "CCZ4FV", 
                                                                                  patch_size           = 5,
                                                                                  unknowns             = sum(unknowns.values()),
@@ -40,26 +48,96 @@ my_solver = exahype2.solvers.fv.rusanov.GlobalAdaptiveTimeStepWithEnclaveTasking
                                                                                  max_volume_h         = 0.05,
                                                                                  time_step_relaxation = 0.1)
 
-
-
-my_solver._my_user_includes = """
-#include "../CCZ4Kernels.h"
-"""
-
-
-my_solver.set_implementation(
-          boundary_conditions  = exahype2.solvers.fv.PDETerms.Empty_Implementation,
-          ncp                  = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
-          flux                 = exahype2.solvers.fv.PDETerms.None_Implementation,
-          source_term          = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
-          refinement_criterion = exahype2.solvers.fv.PDETerms.Empty_Implementation,
-          eigenvalues          = exahype2.solvers.fv.PDETerms.User_Defined_Implementation
-        )
-
-
+#
+# Add the compute kernels and initial condition implementations from the 
+# real application to this project, so we we can use them.
+#
 my_solver.add_user_action_set_includes( """
 #include "CCZ4Kernels.h"
 """)
+my_solver.add_user_solver_includes( """
+#include "CCZ4Kernels.h"
+#include "InitialValues.h"
+#include <cstring>
+""")
+
+
+#
+# I need a couple of constants. I could either replace them directly
+# within the Python snippets below, but I prefer here to go a different
+# way and to export them as proper C++ constants.
+#
+# There are two ways to inject solver constants into Peano: We can either
+# add them to the Makefile as global const expressions, or we can add 
+# them to the ExaHyPE2 solver. The latter is the route we go down here, 
+# as these constants logically belong to the solver and not to the project.
+#
+integer_constants = {
+  "CCZ4LapseType":0, 
+}
+double_constants = {
+  "CCZ4ds":   1.0, 
+  "CCZ4c":    1.0, 
+  "CCZ4e":    1.0, 
+  "CCZ4f":    0.75,
+  "CCZ4bs":   0.0,
+  "CCZ4sk":   0.0,
+  "CCZ4xi":   1.0,
+  "CCZ4itau": 1.0,
+  "CCZ4eta":  1.0,
+  "CCZ4k1":   0.1,
+  "CCZ4k2":   0.0,
+  "CCZ4k3":   0.5,
+  "CCZ4GLMc": 1.2,
+  "CCZ4GLMd": 2.0,
+  "CCZ4mu":   0.2,
+}
+
+for key, value in integer_constants.items():   
+  my_solver.add_solver_constants("static constexpr int {} = {};".format(key, value))
+for key, value in double_constants.items():   
+  my_solver.add_solver_constants("static constexpr double {} = {};".format(key, value))
+
+
+#
+# All of our solver routines (events) will basically delegate to some 
+# functions in the CCZ4 kernels. So we refrain from creating any meaningful
+# C++ implementation and tell the solver directly which routines to delegate
+# to.
+#
+# boundary conditions: remain empty, as we employ periodic BCs anyway
+# ncp:                 call kernel routine
+#
+my_solver.set_implementation(
+          boundary_conditions  = exahype2.solvers.fv.PDETerms.Empty_Implementation,
+          ncp                  = """
+  double deltaQSerialised[NumberOfUnknowns*3];
+  for (int i=0; i<NumberOfUnknowns; i++) {
+    deltaQSerialised[i+0*NumberOfUnknowns] = 0.0;
+    deltaQSerialised[i+1*NumberOfUnknowns] = 0.0;
+    deltaQSerialised[i+2*NumberOfUnknowns] = 0.0;
+
+    deltaQSerialised[i+normal*NumberOfUnknowns] = deltaQ[i];
+  }
+  ::applications::exahype2::ccz4::ncp(BTimesDeltaQ, Q, deltaQSerialised, normal, CCZ4LapseType, CCZ4ds, CCZ4c, CCZ4e, CCZ4f, CCZ4bs, CCZ4sk, CCZ4xi, CCZ4mu);
+""",
+          flux                 = exahype2.solvers.fv.PDETerms.None_Implementation,
+          source_term          = """
+  memset(S, 0.0, NumberOfUnknowns*sizeof(double)); 
+  ::applications::exahype2::ccz4::source(S,Q, CCZ4LapseType, CCZ4ds, CCZ4c, CCZ4e, CCZ4f, CCZ4bs, CCZ4sk, CCZ4xi, CCZ4itau, CCZ4eta, CCZ4k1, CCZ4k2, CCZ4k3);
+""",
+          refinement_criterion = exahype2.solvers.fv.PDETerms.Empty_Implementation,
+          eigenvalues          = """
+  return ::applications::exahype2::ccz4::maxEigenvalue(Q, normal, CCZ4e, CCZ4ds, CCZ4GLMc, CCZ4GLMd );
+"""          ,
+          initial_conditions   = "for (int i=0; i<NumberOfUnknowns+NumberOfAuxiliaryVariables; i++) Q[i] = 0.0; ::applications::exahype2::ccz4::gaugeWave(Q, volumeCentre, 0);"
+        )
+
+#
+# Postprocessing
+
+# @todo docu
+#
 my_solver.postprocess_updated_patch = """
 {
     constexpr int itmax = {{NUMBER_OF_VOLUMES_PER_AXIS}} * {{NUMBER_OF_VOLUMES_PER_AXIS}} * {{NUMBER_OF_VOLUMES_PER_AXIS}};
@@ -72,8 +150,6 @@ my_solver.postprocess_updated_patch = """
   }
 """
 
-   
-my_solver.add_solver_constants( """static constexpr int Scenario=0; /* Gauge wave */  """ )
 
 
 project = exahype2.Project( ["benchmarks", "exahype2", "ccz4"], "ccz4", executable="finitevolumes")
@@ -101,6 +177,39 @@ solverconstants=""
 
 project.add_solver(my_solver)
 
+
+
+########################################################################################
+#Tracer setting 
+########################################################################################
+tracer_particles = project.add_tracer( name="Tracer",attribute_count=59 )
+project.add_action_set_to_initialisation( 
+  exahype2.tracer.InsertParticlesbyCoordinates( 
+    particle_set=tracer_particles, coordinates=[[0.4251,0,0],[-0.4251,0,0],[0.2,0.2,0]]))
+project.add_action_set_to_timestepping(exahype2.tracer.FiniteVolumesTracing(tracer_particles,
+                                                                            my_solver,
+                                                                            [],        # velocity indices: don't move them [17,18,19]
+                                                                            range(59), # data indices
+                                                                            0,         # scaling of velocities
+                                                                            time_stepping_kernel="toolbox::particles::StaticPosition"))
+project.add_action_set_to_timestepping(exahype2.tracer.DumpTrajectoryIntoDatabase(
+  particle_set=tracer_particles,
+  solver=my_solver,
+  filename="TracerFV",
+  data_delta_between_two_snapsots=1e16,
+  time_delta_between_two_snapsots=0.02
+  ))
+#        use_relative_deltas=False,
+#        initial_record_time=55#args.end_time*2.0/3.0
+#        #last_record_time=1e3
+#      ))
+      #data_delta_between_two_snapsots,position_delta_between_two_snapsots,filename,          
+      #,,-1,"zz",1000))
+
+
+########################################################################################
+# Build the project
+########################################################################################
 #build_mode = peano4.output.CompileMode.Debug
 build_mode = peano4.output.CompileMode.Release
     
@@ -124,45 +233,11 @@ project.set_Peano4_installation("../../../..", build_mode)
 
 project.set_load_balancing("toolbox::loadbalancing::RecursiveSubdivision","(new ::exahype2::LoadBalancingConfiguration(0.98,0))" )
 
-########################################################################################
-#Tracer setting 
-########################################################################################
-#    if not args.add_tracer==0:
-#      tracer_name = {1:"line", 2:"slide", 3:"volume", 6:"Gauss_Legendre_quadrature", 7:"t-design"}
-#      tracer_particles = project.add_tracer( name="MyTracer",attribute_count=65 )
-#       #project.add_action_set_to_timestepping(exahype2.tracer.FiniteVolumesTracing(tracer_particles,my_solver,[17,18,19],[16],-1,time_stepping_kernel="toolbox::particles::explicitEulerWithoutInterpolation"))
-#      project.add_action_set_to_timestepping(
-#        exahype2.tracer.FiniteVolumesTracing(
-#          tracer_particles,my_solver,
-#          [17,18,19],range(65),-1,
-#          #time_stepping_kernel="toolbox::particles::LinearInterp",
-#          time_stepping_kernel="toolbox::particles::StaticPosition"#,
-#          #observer_kernel="toolbox::particles::ObLinearInterp"
-#        )
-#      )
-#        project.add_action_set_to_initialisation( exahype2.tracer.InsertParticlesbyCoordinates ( particle_set=tracer_particles, N=3, coor_s=[[0.4251,0,0],[-0.4251,0,0],[0.2,0.2,0]]))
-
-#      project.add_action_set_to_timestepping(exahype2.tracer.DumpTrajectoryIntoDatabase(
-#        particle_set=tracer_particles,
-#        solver=my_solver,
-#        filename=path1+"zz"+args.tra_name,
-#        number_of_entries_between_two_db_flushes=2000,
-#        output_precision=10,
-#        position_delta_between_two_snapsots=1e16,
-#        data_delta_between_two_snapsots=1e16,
-#        time_delta_between_two_snapsots=0.02,
-#        use_relative_deltas=False,
-#        initial_record_time=55#args.end_time*2.0/3.0
-#        #last_record_time=1e3
-#      ))
-      #data_delta_between_two_snapsots,position_delta_between_two_snapsots,filename,          
-      #,,-1,"zz",1000))
-
 
 peano4_project = project.generate_Peano4_project(verbose=True)
 
 
-peano4_project.output.makefile.add_CXX_flag( "-DCCZ4EINSTEIN" )
+#peano4_project.output.makefile.add_CXX_flag( "-DCCZ4EINSTEIN" )
 peano4_project.output.makefile.add_cpp_file( "../../../../applications/exahype2/ccz4/InitialValues.cpp" )
 peano4_project.output.makefile.add_cpp_file( "../../../../applications/exahype2/ccz4/CCZ4Kernels.cpp" )
 peano4_project.output.makefile.add_header_search_path( "../../../../applications/exahype2/ccz4" )

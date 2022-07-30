@@ -56,7 +56,7 @@ namespace applications {
        * - It is all in the header to force/enable the compiler to inline stuff
        *   directly and, hence, to generate GPU code.
        */
-      static GPUCallableMethod double maxEigenvalueOnGPU(
+      KeywordToAvoidDuplicateSymbolsForInlinedFunctions double maxEigenvalueOnGPU(
         const double * __restrict__                  Q,
         const tarch::la::Vector<Dimensions,double>&  faceCentre,
         const tarch::la::Vector<Dimensions,double>&  volumeH,
@@ -112,7 +112,7 @@ namespace applications {
        * - It is all in the header to force/enable the compiler to inline stuff
        *   directly and, hence, to generate GPU code.
        */
-      static GPUCallableMethod void fluxOnGPU(
+      KeywordToAvoidDuplicateSymbolsForInlinedFunctions void fluxOnGPU(
         const double * __restrict__                  Q,
         const tarch::la::Vector<Dimensions,double>&  faceCentre,
         const tarch::la::Vector<Dimensions,double>&  volumeH,

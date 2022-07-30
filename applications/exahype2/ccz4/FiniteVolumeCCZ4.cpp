@@ -16,11 +16,11 @@
 TP::TwoPunctures* _tp = new TP::TwoPunctures();
 #endif
 
-tarch::logging::Log   examples::exahype2::ccz4::FiniteVolumeCCZ4::_log( "examples::exahype2::ccz4::FiniteVolumeCCZ4" );
+tarch::logging::Log   applications::exahype2::ccz4::FiniteVolumeCCZ4::_log( "applications::exahype2::ccz4::FiniteVolumeCCZ4" );
 
 #ifdef IncludeTwoPunctures
 //pre-process, solve the puncture equations
-void examples::exahype2::ccz4::FiniteVolumeCCZ4::prepare(TP::TwoPunctures* tp){
+void applications::exahype2::ccz4::FiniteVolumeCCZ4::prepare(TP::TwoPunctures* tp){
     //first we set the parameter. TODO:find a way to read parameter from python script
     //int swi=0;//0--single black hole, 1--BBH hoc, 2--BBH rotation, 3--GW150914
     
@@ -83,7 +83,7 @@ void examples::exahype2::ccz4::FiniteVolumeCCZ4::prepare(TP::TwoPunctures* tp){
 }
 #endif
 
-examples::exahype2::ccz4::FiniteVolumeCCZ4::FiniteVolumeCCZ4() {
+applications::exahype2::ccz4::FiniteVolumeCCZ4::FiniteVolumeCCZ4() {
   if ( Scenario==0 || Scenario==1 ) {
     const char* name = "GaugeWave";//nothing to do here for now
     int length = strlen(name);
@@ -100,7 +100,7 @@ examples::exahype2::ccz4::FiniteVolumeCCZ4::FiniteVolumeCCZ4() {
   }
 }
 
-void examples::exahype2::ccz4::FiniteVolumeCCZ4::initialCondition(
+void applications::exahype2::ccz4::FiniteVolumeCCZ4::initialCondition(
   double * __restrict__ Q,
   const tarch::la::Vector<Dimensions,double>&  volumeX,
   const tarch::la::Vector<Dimensions,double>&  volumeH,
@@ -109,19 +109,19 @@ void examples::exahype2::ccz4::FiniteVolumeCCZ4::initialCondition(
   logTraceInWith3Arguments( "initialCondition(...)", volumeX, volumeH, gridIsConstructred );
 
   if ( Scenario==0 ) {
-    examples::exahype2::ccz4::gaugeWave(Q, volumeX, 0);
+    applications::exahype2::ccz4::gaugeWave(Q, volumeX, 0);
   }
   else if ( Scenario==3 ) {
-    examples::exahype2::ccz4::diagonal_gaugeWave(Q, volumeX, 0);
+    applications::exahype2::ccz4::diagonal_gaugeWave(Q, volumeX, 0);
   }
   else if ( Scenario==1 ) {
-    examples::exahype2::ccz4::linearWave(Q, volumeX, 0);
+    applications::exahype2::ccz4::linearWave(Q, volumeX, 0);
   }
   #ifdef IncludeTwoPunctures
   else if ( Scenario==2 ) {
 
    // We use the bool to trigger the hgh res interpolation once the grid is constructed
-    examples::exahype2::ccz4::ApplyTwoPunctures(Q, volumeX, 0, _tp, not gridIsConstructred); //we interpolate for real IC here.
+    applications::exahype2::ccz4::ApplyTwoPunctures(Q, volumeX, 0, _tp, not gridIsConstructred); //we interpolate for real IC here.
   }
   #endif
   else {
@@ -146,7 +146,7 @@ void examples::exahype2::ccz4::FiniteVolumeCCZ4::initialCondition(
 }
 
 
-void examples::exahype2::ccz4::FiniteVolumeCCZ4::sourceTerm(
+void applications::exahype2::ccz4::FiniteVolumeCCZ4::sourceTerm(
   const double * __restrict__                  Q, // Q[59+0]
   const tarch::la::Vector<Dimensions,double>&  volumeX,
   const tarch::la::Vector<Dimensions,double>&  volumeH,
@@ -163,7 +163,7 @@ void examples::exahype2::ccz4::FiniteVolumeCCZ4::sourceTerm(
  // for (int i=NumberOfUnknowns; i<NumberOfUnknowns+NumberOfAuxiliaryVariables; i++) {
   //  S[i] = 0.0;
   //}
-  examples::exahype2::ccz4::FiniteVolumeCCZ4::sourceTerm(Q, volumeX, volumeH, t, dt, S, Offloadable::Yes);
+  applications::exahype2::ccz4::FiniteVolumeCCZ4::sourceTerm(Q, volumeX, volumeH, t, dt, S, Offloadable::Yes);
  /*
   if (CCZ4smoothing>0){// then we apply simple laplacian smoothing
     constexpr int NumberOfRefinementLayers = 3;
@@ -199,7 +199,7 @@ void examples::exahype2::ccz4::FiniteVolumeCCZ4::sourceTerm(
 }
 
 
-void examples::exahype2::ccz4::FiniteVolumeCCZ4::boundaryConditions(
+void applications::exahype2::ccz4::FiniteVolumeCCZ4::boundaryConditions(
   const double * __restrict__                  Qinside, // Qinside[59+0]
   double * __restrict__                        Qoutside, // Qoutside[59+0]
   const tarch::la::Vector<Dimensions,double>&  faceCentre,
@@ -216,7 +216,7 @@ void examples::exahype2::ccz4::FiniteVolumeCCZ4::boundaryConditions(
 }
 
 
-double examples::exahype2::ccz4::FiniteVolumeCCZ4::maxEigenvalue(
+double applications::exahype2::ccz4::FiniteVolumeCCZ4::maxEigenvalue(
   const double * __restrict__ Q, // Q[59+0],
   const tarch::la::Vector<Dimensions,double>&  faceCentre,
   const tarch::la::Vector<Dimensions,double>&  volumeH,
@@ -229,7 +229,7 @@ double examples::exahype2::ccz4::FiniteVolumeCCZ4::maxEigenvalue(
 }
 
 
-void examples::exahype2::ccz4::FiniteVolumeCCZ4::nonconservativeProduct(
+void applications::exahype2::ccz4::FiniteVolumeCCZ4::nonconservativeProduct(
   const double * __restrict__ Q, // Q[59+0],
   const double * __restrict__             deltaQ, // [59+0]
   const tarch::la::Vector<Dimensions,double>&  faceCentre,
@@ -257,7 +257,7 @@ void examples::exahype2::ccz4::FiniteVolumeCCZ4::nonconservativeProduct(
 #if defined(GPUOffloadingOMP)
 #pragma omp declare target
 #endif
-void examples::exahype2::ccz4::FiniteVolumeCCZ4::nonconservativeProduct(
+void applications::exahype2::ccz4::FiniteVolumeCCZ4::nonconservativeProduct(
   const double * __restrict__ Q, // Q[59+0],
   const double * __restrict__             deltaQ, // [59+0]
   const tarch::la::Vector<Dimensions,double>&  faceCentre,
@@ -281,13 +281,13 @@ void examples::exahype2::ccz4::FiniteVolumeCCZ4::nonconservativeProduct(
   //  BgradQ[i] = 0.0;
   //}
   ncp(BgradQ, Q, gradQSerialised, normal, CCZ4LapseType, CCZ4ds, CCZ4c, CCZ4e, CCZ4f, CCZ4bs, CCZ4sk, CCZ4xi, CCZ4mu);
-   //examples::exahype2::ccz4::FiniteVolumeCCZ4::nonconservativeProduct(Q, deltaQ, faceCentre, volumeH, t, normal, BgradQ);
+   //applications::exahype2::ccz4::FiniteVolumeCCZ4::nonconservativeProduct(Q, deltaQ, faceCentre, volumeH, t, normal, BgradQ);
 }
 #if defined(GPUOffloadingOMP)
 #pragma omp end declare target
 #endif
 
-::exahype2::RefinementCommand examples::exahype2::ccz4::FiniteVolumeCCZ4::refinementCriterion(
+::exahype2::RefinementCommand applications::exahype2::ccz4::FiniteVolumeCCZ4::refinementCriterion(
   const double * __restrict__ Q,
   const tarch::la::Vector<Dimensions,double>& volumeCentre,
   const tarch::la::Vector<Dimensions,double>& volumeH,

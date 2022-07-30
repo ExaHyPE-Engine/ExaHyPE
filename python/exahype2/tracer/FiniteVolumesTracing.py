@@ -36,6 +36,11 @@ class FiniteVolumesTracing(peano4.toolbox.particles.ParticleParticleInteraction)
     scaling_of_velocities: Float
      Can we set 0 if you don't want the particles to move.
 
+    time_stepping_kernel: string
+     Function call which does projection onto the particles and the actual 
+     position update. Hand in "toolbox::particles::StaticPosition" if you 
+     don't want the particles' to move.
+     
     """
     
     self.tracerDict = {}

@@ -837,7 +837,7 @@ The finest mesh width of """ + str(self.get_finest_volume_size(domain_size)) + "
 
   def set_solver_constants(self, datastring): self.solver_constants_ = datastring
 
-  def add_solver_constants(self, datastring): self.solver_constants_ += datastring
+  def add_solver_constants(self, datastring): self.solver_constants_ += datastring + "\n"
 
 
   def _init_dictionary_with_default_parameters(self,d):
