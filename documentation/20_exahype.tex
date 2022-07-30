@@ -1929,9 +1929,6 @@ add the
 \end{code}
 
 \noindent
-Let \texttt{thesolver} be your \ExaHyPE\ solver instance in the Python script.
-Not all solvers currently support tracers (efficiently), but we are continuously
-improving the tracer support.
 Adding tracers is fairly simple.
 Each tracer has to have a name, and you also have to inform the project how many
 attributes you plan to track per tracer:
@@ -1939,6 +1936,13 @@ attributes you plan to track per tracer:
 \begin{code}
 tracer_particles = project.add_tracer( name="MyTracer",attribute_count=2 )
 \end{code} 
+
+
+\begin{remark}
+ Study the in-code documentation of the involved classes. 
+ Tracers can track only some attributes, they can move or stay at one place,
+ and they can also interact with each other. 
+\end{remark}
 
 
 \noindent
@@ -1966,14 +1970,22 @@ With this additional seed, you can run your code and visualise the particles.
 However, these particles do not move at all yet or track the actual data of
 interest.
 To facilitate this, you have to map your solution onto the particle first.
-After that, you can decide to move the particles---though this is optional,
-i.e.~the tracing API also allows you to have stationary trackers (probes).
-
+Let \texttt{thesolver} be your \ExaHyPE\ solver instance in the Python script.
+Not all solvers currently support tracers (efficiently), but we are continuously
+improving the tracer support.
+With the solver instance and the tracers, we can couple the two ingredients.
+You have to pick different coupling schemes depending on the type of your
+solver:
 
 \begin{code}
 project.add_action_set_to_timestepping(
- exahype2.tracer.FiniteVolumesTracing(tracer_particles,thesolver,[1,2],[0,4],1.1*patch_size
-))
+  exahype2.tracer.FiniteVolumesTracing(
+    tracer_particles,
+    thesolver,
+    [],        # velocity indices
+    range(59), # data indices
+    0,         # scaling of velocities
+    time_stepping_kernel="toolbox::particles::StaticPosition"))
 \end{code}
 
 
@@ -2002,7 +2014,7 @@ The \texttt{DumpTrajectoryIntoDatabase} documentation provides more detail.
 
 If you want to write your own particle seed, I recommend that you copy over an
 existing one and adopt it to your need.
-Switch to \texttt{python/exahype2/tracer} and copy the class
+Switch to \texttt{python/exahype2/tracer} and copy the class \linebreak
 \texttt{InsertParticlesAlongCartesianMesh} over to modify it.
 The invocation within your Python application script then has to be altered,
 too:
