@@ -145,7 +145,36 @@ for key, value in double_constants.items():
 # boundary conditions: remain empty, as we employ periodic BCs anyway
 # ncp:                 call kernel routine
 #
-my_solver.set_implementation(
+if ("rk" in args.solver and "dg" in args.solver):
+  my_solver.set_implementation(
+          boundary_conditions  = exahype2.solvers.fv.PDETerms.Empty_Implementation,
+          ncp                  = """
+  double dQdxSerialised[NumberOfUnknowns*3];
+  for (int i=0; i<NumberOfUnknowns; i++) {
+    dQdxSerialised[i+0*NumberOfUnknowns] = 0.0;
+    dQdxSerialised[i+1*NumberOfUnknowns] = 0.0;
+    dQdxSerialised[i+2*NumberOfUnknowns] = 0.0;
+
+    dQdxSerialised[i+normal*NumberOfUnknowns] = dQdx[i];
+  }
+  ::applications::exahype2::ccz4::ncp(BgradQ, Q, dQdxSerialised, normal, CCZ4LapseType, CCZ4ds, CCZ4c, CCZ4e, CCZ4f, CCZ4bs, CCZ4sk, CCZ4xi, CCZ4mu);
+""",
+          flux                 = exahype2.solvers.fv.PDETerms.None_Implementation,
+          source_term          = """
+  memset(S, 0.0, NumberOfUnknowns*sizeof(double)); 
+  ::applications::exahype2::ccz4::source(S,Q, CCZ4LapseType, CCZ4ds, CCZ4c, CCZ4e, CCZ4f, CCZ4bs, CCZ4sk, CCZ4xi, CCZ4itau, CCZ4eta, CCZ4k1, CCZ4k2, CCZ4k3);
+""",
+          refinement_criterion = exahype2.solvers.fv.PDETerms.Empty_Implementation,
+          eigenvalues          = """
+  return ::applications::exahype2::ccz4::maxEigenvalue(Q, normal, CCZ4e, CCZ4ds, CCZ4GLMc, CCZ4GLMd );
+"""          ,
+          initial_conditions   = """
+  for (int i=0; i<NumberOfUnknowns+NumberOfAuxiliaryVariables; i++) Q[i] = 0.0; 
+  ::applications::exahype2::ccz4::gaugeWave(Q, x, 0);
+"""
+        )
+else:    
+  my_solver.set_implementation(
           boundary_conditions  = exahype2.solvers.fv.PDETerms.Empty_Implementation,
           ncp                  = """
   double deltaQSerialised[NumberOfUnknowns*3];
@@ -167,14 +196,15 @@ my_solver.set_implementation(
           eigenvalues          = """
   return ::applications::exahype2::ccz4::maxEigenvalue(Q, normal, CCZ4e, CCZ4ds, CCZ4GLMc, CCZ4GLMd );
 """          ,
-          initial_conditions   = "for (int i=0; i<NumberOfUnknowns+NumberOfAuxiliaryVariables; i++) Q[i] = 0.0; ::applications::exahype2::ccz4::gaugeWave(Q, volumeCentre, 0);"
-        )
-
-#
+          initial_conditions   = """
+for (int i=0; i<NumberOfUnknowns+NumberOfAuxiliaryVariables; i++) Q[i] = 0.0; 
+::applications::exahype2::ccz4::gaugeWave(Q, volumeCentre, 0);
+"""
+        )    
+    
+# ===============
 # Postprocessing
-
-# @todo docu
-#
+# ===============
 if args.solver=="fv":
   my_solver.postprocess_updated_patch = """
 {
@@ -262,12 +292,13 @@ if args.solver=="fv" or "fd4-rk" in args.solver:
                                                                               time_stepping_kernel="toolbox::particles::StaticPosition"))
 
 if "rk" in args.solver and "dg" in args.solver:
-  project.add_action_set_to_timestepping(exahype2.tracer.DiscontinuousGalerkinTracing(tracer_particles,
-                                                                                      my_solver,
-                                                                                      [],        # velocity indices: don't move them [17,18,19]
-                                                                                      range(59), # data indices
-                                                                                      0,         # scaling of velocities
-                                                                                      time_stepping_kernel="toolbox::particles::StaticPosition"))
+  print( "WARNING: Haven't written the tracer yet")
+#  project.add_action_set_to_timestepping(exahype2.tracer.DiscontinuousGalerkinTracing(tracer_particles,
+#                                                                                      my_solver,
+#                                                                                      [],        # velocity indices: don't move them [17,18,19]
+#                                                                                      range(59), # data indices
+#                                                                                      0,         # scaling of velocities
+#                                                                                      time_stepping_kernel="toolbox::particles::StaticPosition"))
 
 
 project.add_action_set_to_timestepping(exahype2.tracer.DumpTrajectoryIntoDatabase(

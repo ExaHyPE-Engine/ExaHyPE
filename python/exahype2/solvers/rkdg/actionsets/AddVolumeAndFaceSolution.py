@@ -53,8 +53,6 @@ class AddVolumeAndFaceSolution(AbstractRungeKuttaDGActionSet):
       QOut
     );
     #elif Dimensions==3
-    double* QOut = fineGridCell{{UNKNOWN_IDENTIFIER}}RhsEstimates.value + {{PREDICATE_NO}} * {{NUMBER_OF_DOFS_PER_CELL_3D}} * ({{NUMBER_OF_UNKNOWNS}};//+{{NUMBER_OF_AUXILIARY_VARIABLES}});
-    
     ::exahype2::dg::integrateOverRiemannSolutionsAndAddToVolume_GaussLegendre(
       fineGridFaces{{UNKNOWN_IDENTIFIER}}RiemannSolution(0).value, //left
       fineGridFaces{{UNKNOWN_IDENTIFIER}}RiemannSolution(3).value, //right

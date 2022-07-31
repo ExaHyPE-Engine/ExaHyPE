@@ -206,6 +206,7 @@ double {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::maxEigenvalue(
   const double * __restrict__ Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
   const tarch::la::Vector<Dimensions,double>&  x,
   double                                       t,
+  double                                       dt,
   int                                          normal
 ) {
   {{EIGENVALUES_IMPLEMENTATION}}
@@ -229,8 +230,8 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::flux(
 
 {% if NCP_IMPLEMENTATION!="<none>" and NCP_IMPLEMENTATION!="<user-defined>" %}
 void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::nonconservativeProduct(
-  const double * __restrict__ Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
-  const double * __restrict__             deltaQ, // [{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+  const double * __restrict__                  Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
+  const double * __restrict__                  dQdx, // [{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
   const tarch::la::Vector<Dimensions,double>&  x,
   double                                       t,
   double                                       dt,
@@ -463,13 +464,13 @@ def create_solver_declarations(flux_implementation, ncp_implementation, eigenval
      
     {% if NCP_IMPLEMENTATION=="<user-defined>" %}
     virtual void nonconservativeProduct(
-      const double * __restrict__ Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
-      const double * __restrict__             deltaQ, // [{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+      const double * __restrict__                  Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
+      const double * __restrict__                  dQdx, // [{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
       const tarch::la::Vector<Dimensions,double>&  x,
       double                                       t,
       double                                       dt,
       int                                          normal,
-      double * __restrict__ BgradQ // BgradQ[{{NUMBER_OF_UNKNOWNS}}]
+      double * __restrict__                        BgradQ // BgradQ[{{NUMBER_OF_UNKNOWNS}}]
     ) override;
     {% endif %}
     
@@ -624,8 +625,8 @@ def create_solver_declarations(flux_implementation, ncp_implementation, eigenval
     #pragma omp declare target
     #endif
     static void nonconservativeProduct(
-      const double * __restrict__                  Q,         // Q[5+0],
-      const double * __restrict__                  deltaQ,    // [5+0]
+      const double * __restrict__                  Q,       // Q[5+0],
+      const double * __restrict__                  dQdx,    // [5+0]
       const tarch::la::Vector<Dimensions,double>&  x,
       double                                       t,
       double                                       dt,
@@ -683,13 +684,13 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::flux(
 
 {% if NCP_IMPLEMENTATION=="<user-defined>" %}
 void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::nonconservativeProduct(
-  const double * __restrict__ Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
-  const double * __restrict__             deltaQ, // [{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+  const double * __restrict__                  Q,    // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
+  const double * __restrict__                  dQdx, // [{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
   const tarch::la::Vector<Dimensions,double>&  x,
   double                                       t,
   double                                       dt,
   int                                          normal,
-  double * __restrict__ BgradQ // BgradQ[{{NUMBER_OF_UNKNOWNS}}]
+  double * __restrict__                        BgradQ // BgradQ[{{NUMBER_OF_UNKNOWNS}}]
 )  {
   logTraceInWith4Arguments( "nonconservativeProduct(...)", x, t, dt, normal );
   // @todo implement
@@ -762,13 +763,13 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::flux(
     #pragma omp declare target
     #endif
 void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::nonconservativeProduct(
-  const double * __restrict__ Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
-  const double * __restrict__             deltaQ, // [{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+  const double * __restrict__                  Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
+  const double * __restrict__                  dQdx, // [{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
   const tarch::la::Vector<Dimensions,double>&  x,
   double                                       t,
   double                                       dt,
   int                                          normal,
-  double * __restrict__ BgradQ,
+  double * __restrict__                        BgradQ,
   Offloadable
 )  {
   // @todo implement

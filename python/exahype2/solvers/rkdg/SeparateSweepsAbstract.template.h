@@ -94,6 +94,7 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
 
 {{BASIS_DECLARATIONS | indent(4,True) }}
 
+    {{SOLVER_CONSTANTS}}
 
     {{CLASSNAME}}();
 

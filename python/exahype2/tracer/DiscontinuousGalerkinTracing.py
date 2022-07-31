@@ -120,7 +120,7 @@ if (
       
     if data_indices!=[]:
       cell_compute_kernel += """
-      tarch::la::Vector<Dimensions,int> voxel = toolbox::particles::mapParticleOntoVoxel(marker,{{PATCH_SIZE}},p->getX());
+      tarch::la::Vector<Dimensions,int> voxel = toolbox::particles::mapParticleOntoDGPolynomial(marker,{{PATCH_SIZE}},p->getX());
       int voxelIndex = peano4::utils::dLinearised(voxel,{{PATCH_SIZE}});
       double* Q      = fineGridCell{{SOLVER_NAME}}Q.value + voxelIndex * ({{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}});
       tarch::la::Vector<""" + str(len(data_indices)) + """,double> data;
