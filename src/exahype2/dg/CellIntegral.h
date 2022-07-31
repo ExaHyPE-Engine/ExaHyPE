@@ -29,37 +29,57 @@ namespace exahype2 {
      * does not include the previous time step's solution, and it is not (yet)
      * multiplied with the time step size or the inverse of the mass matrix.
      *
-     * ## Algorithmic steps
+     * The whole implementation works cell-wisely, i.e. runs through cell by
+     * cell. Within each cell, it works dof-wisely, i.e. it runs through each
+     * individual dof and accumulates all the PDE contriutions to this dof.
+     * This second loop is for loop over node, and the d-dimensional index
+     * of node if given by index.
      *
-     * This version of the volumetric kernel works purely dof-wisely. That is,
-     * we iterate over the @f$ (p+1)^d @f$ quadrature points within the cell
-     * and compute the entries from @f$ \hat Q @f$. Per dof, we run through
-     * the following steps:
+     * ## Flux evaluation
      *
-     * - Set the outcome to zero. This is important, as we accumulate from
-     *   hereon.
-     * - If you want to use a flux function: We know that the contribution of
-     *   the flux term for one point only depends on the other dofs in the
-     *   same line/row/column of the Cartesian dof layout. This is due to
-     *   the fact that we use Legendre polynomials. Here, the polynomials are
-     *   orthogonal, which simplifies things. So we don't have to loop over
-     *   all dofs, but we can only loop in all directions once.
+     * This version of the volumetric kernel uses the Gauss Legendre property,
+     * i.e. the orthogonality of the polynomials, plus the tensor product style
+     * of the shape functions aggressively.
+     *
+     * For the flux, we first loop over the dimensions (dim) as we have
+     * fluxes in all d directions. We are interested how the dof in the
+     * position index changes due to all the fluxes around. So we want to
+     * find out what happens if we test against the test function @f$ \phi @f$
+     * in the index dof.
+     *
+     * For the flux, tensor products and orthogonality means that the flux
+     * in x-direction in any point really only interferes with the unknowns
+     * along the x-direction along this same line: We test @f$ F(Q) \partial_x \phi @f$
+     * and assume that @f$ \phi = \phi _{1d}(x)\phi _{1d}(y)\phi _{1d}(z) @f$.
+     * Furthermore, lets represent @f$ F(Q) @f$ with the same polynomials,
+     * too. In the product of the flux with the test function (which now
+     * consists of 2d ingredients), all the polynomials besides the @f$ \partial _x \phi(x) @f$
+     * are orthogonal - the fact that the polynomials have been chosen as
+     * orthogonal ones means that their derivatives are obviously not automatically
+     * orthogonal.
+     *
+     * So all the shape functions spanning F where the y and z coordinates do
+     * not match cancel out in the example above if the test functions don't
+     * have the same coordinates. We are left with all the shapes along the
+     * x-axis within the cubic cell. Analogous arguments hold for y and z.
      *
      *
+     * ## Algebraic source
      *
-     * Copy over in into out. We run an explicit Euler, so the value is updated
-     *   according to a formula @f$ Q(t+\Delta t) = Q(t) + \Delta t \cdot (F + NCP) + S @f$
-     *   ,the first part of which are the values at the last timestep
+     * The treatment of the source term is close to trivial: We assume that
+     * we can represent the source @f$ S(Q) @f$ in the shape space. Again,
+     * we exploit the orthogonality. If we want to test what the impact of
+     * the source is if we test against the index-th test function, the
+     * orthogonality implies that we only have take S(Q) in index multiplied
+     * with its shape function. We get a mass matrix entry.
      *
-     * - Precompute value of the flux function at each node
      *
-     * - For each node in the cell, add the change (Δt \cdot (F + NCP) + S essentially)
-     *  -> Add purely local source contribution
-     *  -> For each direction, compute the gradient in that direction, then using this
-     *     compute the non-conservative product in that direction and add it
-     *  -> For each dimension and each node in that dimension (including oneself), use
-     *     the precomputed flux at that node to compute its contribution to the current node.
+     * ## Non-conservative product
      *
+     * The non-conservative product once again relies on a very crude numerical
+     * approximation: We assume that @f$ B_x(Q) \partial _x Q @f$ can be
+     * represented within our orthogonal shape space. Consequently, it is
+     * tried exactly in the same way as the algebraic source.
      *
      *
      * ## Arguments

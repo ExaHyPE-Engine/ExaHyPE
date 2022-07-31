@@ -139,8 +139,6 @@ void exahype2::dg::cellIntegral_patchwise_GaussLegendre_functors(
             dim,
             ncpValues);
 
-          // @todo There's a matrix missing, isn't it? Or
-          //  can we now really model this via the mass matrix?
           double coeff = 1.0;
           for (int dd=0; dd<Dimensions; dd++) {
             coeff *= massMatrixDiagonal[ index(dim) ];
