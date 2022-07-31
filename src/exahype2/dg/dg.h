@@ -473,12 +473,35 @@
  * @f$ \int _{\partial c^{\epsilon}} \Big( B_x(Q)\nabla _xQ, \phi \Big) dx @f$
  *
  * where the @f$ Q @f$ once more is not properly defined. In line with the Rusanov approximation,
- * we assume that Q is roughly the average when we evaluate B. We still have a volumetric formulation,
- * so the @f$ \phi @f$ term either picks the right or the left half of the term. This yields a total
- * contribution of
+ * we assume that Q is roughly the average when we evaluate B, i.e. we evaluate the term
  *
- * @f$ \pm B \Big( \frac{1}{2}Q^- + \frac{1}{2}Q^+ \Big) \frac{1}{2} \Big( Q^+ - Q^- \Big) @f$
+ * @f$ B_x(Q) \mapsto B_x \Big( \frac{1}{2}Q^- + \frac{1}{2}Q^+ \Big) @f$
  *
+ * In the implementation, we note that we now use the term B in two different scenarios: As an
+ * application to the gradient and as an application to the average. Obviously, it makes no sense
+ * to ask users to provide B twice (they are exactly the same operator), so we call the argument
+ * always gradient in the implementation but in the boundary context, we hand the average into
+ * the function.
+ *
+ * The gradient at the cell interface is not known, but we can approximate it with a standard
+ * finite differences formulation where h is the volume size along the coordinate axis:
+ *
+ * @f$ \nabla _xQ \mapsto \frac{1}{h} \Big( Q^+ - Q^- \Big) @f$
+ *
+ * So far, we still have a volumetric formulation, where the @f$ \phi @f$ term either picks the right
+ * or the left half of the term. This yields another factor of 0.5. We finally integrate along the
+ * normal to obtain a face integral in line with the flux term, i.e. we get a real integral over the
+ * face but the 1/h term is eliminated by the integration. We end up with
+ *
+ * @f$ \int _{\partial c^{\epsilon}} \Big( B_x(Q)\nabla _xQ, \phi \Big) dx \mapsto \pm \int _{\partial c} B_x \Big( \frac{1}{2}Q^- + \frac{1}{2}Q^+ \Big) \frac{1}{2} \Big( Q^+ - Q^- \Big) \ n dS(x) @f$
+ *
+ * Usually, the
+ *
+ * @f$ B_x \Big( \frac{1}{2}Q^- + \frac{1}{2}Q^+ \Big) \frac{1}{2} \Big( Q^+ - Q^- \Big) @f$
+ *
+ * is expressed in terms of the shape functions projected onto the faces. As we follow
+ * a tensor product ansatz, we obtain a d-1-dimensional mass matrix that has to be applied
+ * to the face values.
  *
  *
  * ## Data format
