@@ -139,11 +139,6 @@ class SeparateSweeps( RungeKuttaDG ):
     ]
 
 
-  def get_user_action_set_includes(self):
-    return super(SeparateSweeps, self).get_user_action_set_includes() + """
-"""
-
-
   ## @todo raus
   def set_preprocess_reconstructed_patch_kernel(self,kernel):
     """

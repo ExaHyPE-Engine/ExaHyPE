@@ -35,10 +35,6 @@ class FiniteVolumesTracing(peano4.toolbox.particles.ParticleParticleInteraction)
 
     particle_set: ParticleSet
  
-    h: Float
-     Initial spacing of particles. Use -1 if you want to have one particle
-     per cell.
-
     velocity_indices: [Int]
      Indices within voxel field that denote velocity. So if the entries 4,6,8
      from a field define the velocities (we start counting with 0), then you 

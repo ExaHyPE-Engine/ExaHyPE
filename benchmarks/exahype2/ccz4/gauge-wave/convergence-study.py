@@ -13,8 +13,9 @@ parser = argparse.ArgumentParser(description='ExaHyPE 2 - Euler benchmarking scr
 parser.add_argument("-j",   "--parallel-builds",   dest="j",              type=int, default=-1, help="Parallel builds" )
 parser.add_argument("-pd",  "--peano-dir",         dest="peanodir",       default="../../../../", help="Peano4 directory" )
 parser.add_argument("-v",   "--verbose",           dest="verbose",        action="store_true", default=False, help="Verbose")
-parser.add_argument("-s",   "--solver",            dest="solver",         choices=["fv", "fd4-rk1", "fd4-rk2", "fd4-rk3", "fd4-rk4"], required=True, help="Pick solver type" )
+parser.add_argument("-s",   "--solver",            dest="solver",         choices=["fv", "fd4-rk1", "fd4-rk2", "fd4-rk3", "fd4-rk4", "dg1-rk1", "dg2-rk2", "dg3-rk3", "dg4-rk4"], required=True, help="Pick solver type" )
 parser.add_argument("-et",  "--end-time",          dest="end_time",       type=float, default=1.0, help="End of simulation" )
+parser.add_argument("-cs",  "--cell-size",         dest="cell_size",      type=float, default=0.3, help="Cell size" )
 args = parser.parse_args()
 
 
@@ -59,44 +60,29 @@ if args.solver=="fv":
                                                                                    patch_size           = 5,
                                                                                    unknowns             = sum(unknowns.values()),
                                                                                    auxiliary_variables  = 0,
-                                                                                   min_volume_h         = 0.05, 
-                                                                                   max_volume_h         = 0.05,
+                                                                                   min_volume_h         = args.cell_size / 5, 
+                                                                                   max_volume_h         = args.cell_size / 5,
                                                                                    time_step_relaxation = 0.1)
-if args.solver=="fd4-rk1":
-  my_solver = exahype2.solvers.rkfd.fd4.GlobalAdaptiveTimeStep(name                 = "CCZ4FD4RK1", 
+if "fd4-rk" in args.solver:
+  order = int(args.solver[-1])
+  my_solver = exahype2.solvers.rkfd.fd4.GlobalAdaptiveTimeStep(name                 = "CCZ4FD4RK" + str(order), 
                                                                patch_size           = 5,
-                                                               rk_order             = 1,
+                                                               rk_order             = order,
                                                                unknowns             = sum(unknowns.values()),
                                                                auxiliary_variables  = 0,
-                                                               min_meshcell_h       = 0.05, 
-                                                               max_meshcell_h       = 0.05,
+                                                               min_meshcell_h       = args.cell_size / 5, 
+                                                               max_meshcell_h       = args.cell_size / 5,
                                                                time_step_relaxation = 0.1)
-if args.solver=="fd4-rk2":
-  my_solver = exahype2.solvers.rkfd.fd4.GlobalAdaptiveTimeStep(name                 = "CCZ4FD4RK2", 
-                                                               patch_size           = 5,
-                                                               rk_order             = 2,
+if "rk" in args.solver and "dg" in args.solver:
+  space_order = int(args.solver[2])
+  time_order  = int(args.solver[6])
+  my_solver = exahype2.solvers.rkdg.rusanov.GlobalAdaptiveTimeStep(name             = "CCZ4DG"  + str(space_order) + "RK" + str(time_order),
+                                                               rk_order             = time_order,
+                                                               polynomials          = exahype2.solvers.GaussLegendreBasis(space_order),
                                                                unknowns             = sum(unknowns.values()),
                                                                auxiliary_variables  = 0,
-                                                               min_meshcell_h       = 0.05, 
-                                                               max_meshcell_h       = 0.05,
-                                                               time_step_relaxation = 0.1)
-if args.solver=="fd4-rk3":
-  my_solver = exahype2.solvers.rkfd.fd4.GlobalAdaptiveTimeStep(name                 = "CCZ4FD4RK3", 
-                                                               patch_size           = 5,
-                                                               rk_order             = 3,
-                                                               unknowns             = sum(unknowns.values()),
-                                                               auxiliary_variables  = 0,
-                                                               min_meshcell_h       = 0.05, 
-                                                               max_meshcell_h       = 0.05,
-                                                               time_step_relaxation = 0.1)
-if args.solver=="fd4-rk4":
-  my_solver = exahype2.solvers.rkfd.fd4.GlobalAdaptiveTimeStep(name                 = "CCZ4FD4RK4", 
-                                                               patch_size           = 5,
-                                                               rk_order             = 4,
-                                                               unknowns             = sum(unknowns.values()),
-                                                               auxiliary_variables  = 0,
-                                                               min_meshcell_h       = 0.05, 
-                                                               max_meshcell_h       = 0.05,
+                                                               min_cell_h       = args.cell_size, 
+                                                               max_cell_h       = args.cell_size,
                                                                time_step_relaxation = 0.1)
 
 #
@@ -201,7 +187,7 @@ if args.solver=="fv":
     }
   }
 """
-if args.solver=="fd4-rk1" or args.solver=="fd4-rk2" or args.solver=="fd4-rk3" or args.solver=="fd4-rk4":
+if "fd4-rk" in args.solver:
   my_solver.postprocess_updated_patch = """
 {
     constexpr int itmax = {{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}} * {{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}} * {{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}};
@@ -213,10 +199,22 @@ if args.solver=="fd4-rk1" or args.solver=="fd4-rk2" or args.solver=="fd4-rk3" or
     }
   }
 """
+if "rk" in args.solver and "dg" in args.solver:
+  my_solver.postprocess_updated_patch = """
+{
+    constexpr int itmax = ({{ORDER}}+1) * ({{ORDER}}+1) * ({{ORDER}}+1);
+    int index = 0;
+    for (int i=0;i<itmax;i++)
+    {
+      applications::exahype2::ccz4::enforceCCZ4constraints( targetPatch+index );
+      index += {{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}};
+    }
+  }
+"""
 
 
 
-project = exahype2.Project( ["benchmarks", "exahype2", "ccz4"], "ccz4", executable=args.solver)
+project = exahype2.Project( ["benchmarks", "exahype2", "ccz4"], "ccz4", executable=args.solver + "-" + str(args.cell_size))
 
 
 
@@ -255,7 +253,7 @@ project.add_action_set_to_timestepping(
   )
 )
 
-if args.solver=="fv" or args.solver=="fd4-rk1" or args.solver=="fd4-rk2" or args.solver=="fd4-rk3" or args.solver=="fd4-rk4":
+if args.solver=="fv" or "fd4-rk" in args.solver:
   project.add_action_set_to_timestepping(exahype2.tracer.FiniteVolumesTracing(tracer_particles,
                                                                               my_solver,
                                                                               [],        # velocity indices: don't move them [17,18,19]
@@ -263,14 +261,21 @@ if args.solver=="fv" or args.solver=="fd4-rk1" or args.solver=="fd4-rk2" or args
                                                                               0,         # scaling of velocities
                                                                               time_stepping_kernel="toolbox::particles::StaticPosition"))
 
+if "rk" in args.solver and "dg" in args.solver:
+  project.add_action_set_to_timestepping(exahype2.tracer.DiscontinuousGalerkinTracing(tracer_particles,
+                                                                                      my_solver,
+                                                                                      [],        # velocity indices: don't move them [17,18,19]
+                                                                                      range(59), # data indices
+                                                                                      0,         # scaling of velocities
+                                                                                      time_stepping_kernel="toolbox::particles::StaticPosition"))
 
 
 project.add_action_set_to_timestepping(exahype2.tracer.DumpTrajectoryIntoDatabase(
   particle_set=tracer_particles,
   solver=my_solver,
-  filename="Tracer-" + args.solver,
+  filename="Tracer-" + args.solver + "-" + str(args.cell_size),
   data_delta_between_two_snapsots=1e16,
-  time_delta_between_two_snapsots=0.01
+  time_delta_between_two_snapsots=0.0001
   ))
 
 
@@ -304,7 +309,6 @@ project.set_load_balancing("toolbox::loadbalancing::RecursiveSubdivision","(new 
 peano4_project = project.generate_Peano4_project(verbose=args.verbose)
 
 
-#peano4_project.output.makefile.add_CXX_flag( "-DCCZ4EINSTEIN" )
 peano4_project.output.makefile.add_cpp_file( "../../../../applications/exahype2/ccz4/InitialValues.cpp" )
 peano4_project.output.makefile.add_cpp_file( "../../../../applications/exahype2/ccz4/CCZ4Kernels.cpp" )
 peano4_project.output.makefile.add_header_search_path( "../../../../applications/exahype2/ccz4" )
