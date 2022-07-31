@@ -81,6 +81,12 @@ namespace exahype2 {
      * represented within our orthogonal shape space. Consequently, it is
      * tried exactly in the same way as the algebraic source.
      *
+     * This approach seems to be super inaccurate, but we have to keep in mind
+     * that B can be highly non-linear. So we don't know anything about the
+     * analytical shape of @f$ B_x(Q) \partial _x Q @f$ anyway: It could be
+     * any type of polynomial. So it is convenient to assume that it is once
+     * again from the same space as @f$ \phi @f$.
+     *
      *
      * ## Arguments
      *
