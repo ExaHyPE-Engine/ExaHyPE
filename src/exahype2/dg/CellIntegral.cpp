@@ -25,7 +25,8 @@ void exahype2::dg::cellIntegral_patchwise_GaussLegendre_functors(
 ) {
   double* fluxValues      = evaluateFlux   ? new double[unknowns] : nullptr;
   double* sourceValues    = evaluateSource ? new double[unknowns] : nullptr;
-  double* gradientValues  = evaluateNonconservativeProduct    ? new double[unknowns+auxiliaryVariables] : nullptr;
+  // @todo Voellig ueberdimensioniert. Den Faktor Dimensions sollte man entfernen
+  double* gradientValues  = evaluateNonconservativeProduct    ? new double[Dimensions*(unknowns+auxiliaryVariables)] : nullptr;
   double* ncpValues       = evaluateNonconservativeProduct    ? new double[unknowns] : nullptr;
 
   for (int currentCell=0; currentCell<cellData.numberOfCells; currentCell++) {
@@ -120,6 +121,9 @@ void exahype2::dg::cellIntegral_patchwise_GaussLegendre_functors(
           quadratureNodes);
 
         for(int dim=0; dim<Dimensions; dim++) {
+          // @todo Siehe unten: Ich haette gerne nur die Richtungsableitung.
+          //       Die langt vollkommen und dann koennen wir mit viel kleineren
+          //       temporaeren Daten arbeiten im Kernel
           computeGradient(
             cellQin,
             derivativeOperator,
@@ -132,6 +136,10 @@ void exahype2::dg::cellIntegral_patchwise_GaussLegendre_functors(
 
           nonConservativeProduct(
             &cellQin[node*strideQ],
+            // @todo Das ist doch voelliger Bloedsinn. Wir brauchen
+            //       nur den Gradienten entlang dim. Daher sollte
+            //       gradientValues nur n Eintraege haben (nicht 3*n)
+            //       und dann brauchen wir kein Array hier.
             &gradientValues[dim*strideQ],
             position,
             t,
