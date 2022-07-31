@@ -131,6 +131,10 @@ void exahype2::dg::cellIntegral_patchwise_GaussLegendre_functors(
           gradientValues
         );
 
+        for(int var=0; var<Dimensions*(unknowns+auxiliaryVariables); var++){
+          assertion(gradientValues[var]==gradientValues[var]);
+        }
+
         double coeff = 1.0;
         for (int dd=0; dd<Dimensions; dd++) {
           coeff *= massMatrixDiagonal[ index(dd) ];
@@ -152,6 +156,7 @@ void exahype2::dg::cellIntegral_patchwise_GaussLegendre_functors(
             ncpValues);
 
           for(int var=0; var<unknowns; var++){
+            assertion(ncpValues[var]==ncpValues[var]);
             cellQout[node*unknowns+var] += coeff * ncpValues[var];
           } //var
         } //dim
