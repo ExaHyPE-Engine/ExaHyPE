@@ -17,7 +17,7 @@
 #include "libtwopunctures/TP_bindding.h"
 #endif
 
-void examples::exahype2::ccz4::gaugeWave(
+void applications::exahype2::ccz4::gaugeWave(
   double * __restrict__ Q, // Q[64+0],
   const tarch::la::Vector<Dimensions,double>&  x,
   double t
@@ -50,7 +50,7 @@ void examples::exahype2::ccz4::gaugeWave(
   Q[55] = dxphi/phi;					//P_x
 }
 
-void examples::exahype2::ccz4::diagonal_gaugeWave(
+void applications::exahype2::ccz4::diagonal_gaugeWave(
   double * __restrict__ Q, // Q[64+0],
   const tarch::la::Vector<Dimensions,double>&  x,
   double t
@@ -89,7 +89,7 @@ void examples::exahype2::ccz4::diagonal_gaugeWave(
   Q[56] = pow(H,-1.0)*(peak_number*pi*ICA/3.0)*cos(phase);		//P_x
 }
 
-void examples::exahype2::ccz4::linearWave(
+void applications::exahype2::ccz4::linearWave(
   double * __restrict__ Q, // Q[64+0],
   const tarch::la::Vector<Dimensions,double>&  X,
   double t
@@ -117,7 +117,7 @@ void examples::exahype2::ccz4::linearWave(
 
 
 #ifdef IncludeTwoPunctures
-void examples::exahype2::ccz4::ApplyTwoPunctures(
+void applications::exahype2::ccz4::ApplyTwoPunctures(
   double * __restrict__ Q, // Q[64+0],
   const tarch::la::Vector<Dimensions,double>&  X,
   double t,

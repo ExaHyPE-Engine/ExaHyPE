@@ -138,9 +138,14 @@ struct peano4::grid::AutomatonState {
       tarch::la::Vector<Dimensions,double>   _h;
 #endif
     [[clang::pack]]  bool   _inverted;
-    std::bitset<Dimensions>   _evenFlags;
 #if defined(__PACKED_ATTRIBUTES_LANGUAGE_EXTENSION__)
-    [[clang::pack_range(-4,TwoPowerD)]]  int   _accessNumber[DimensionsTimesTwo];
+    [[clang::pack]]  bool   _evenFlags[Dimensions];
+#endif
+#if !defined(__PACKED_ATTRIBUTES_LANGUAGE_EXTENSION__)
+      std::bitset<Dimensions>   _evenFlags;
+#endif
+#if defined(__PACKED_ATTRIBUTES_LANGUAGE_EXTENSION__)
+    [[clang::pack_range(-TwoTimesD,TwoTimesD)]]  int   _accessNumber[DimensionsTimesTwo];
 #endif
 #if !defined(__PACKED_ATTRIBUTES_LANGUAGE_EXTENSION__)
       tarch::la::Vector<DimensionsTimesTwo,int>   _accessNumber;

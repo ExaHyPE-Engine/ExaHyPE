@@ -5,8 +5,8 @@
  *
  */
 
-#ifndef __EXAHYPE_CCZ4_INITIAL_VALUES__
-#define __EXAHYPE_CCZ4_INITIAL_VALUES__
+#ifndef _APPLICATIONS_EXAHYPE2_CCZ4_INITIAL_VALUES__
+#define _APPLICATIONS_EXAHYPE2_CCZ4_INITIAL_VALUES__
 
 #include "tarch/la/Vector.h"
 
@@ -17,7 +17,7 @@
 #endif
 
 
-namespace examples {
+namespace applications {
   namespace exahype2 {
     namespace ccz4 {
       void gaugeWave(

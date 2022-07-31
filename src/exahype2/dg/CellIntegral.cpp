@@ -119,17 +119,17 @@ void exahype2::dg::cellIntegral_patchwise_GaussLegendre_functors(
           order,
           quadratureNodes);
 
-        computeGradient(
-          cellQin,
-          derivativeOperator,
-          1.0 / dx,
-          nodesPerAxis,
-          strideQ,
-          node,
-          gradientValues
-        );
-
         for(int dim=0; dim<Dimensions; dim++) {
+          computeGradient(
+            cellQin,
+            derivativeOperator,
+            1.0 / dx,
+            nodesPerAxis,
+            strides[dim],
+            node,
+            gradientValues
+          );
+
           nonConservativeProduct(
             &cellQin[node*strideQ],
             &gradientValues[dim*strideQ],

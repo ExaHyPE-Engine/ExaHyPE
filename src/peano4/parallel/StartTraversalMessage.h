@@ -105,7 +105,7 @@ struct peano4::parallel::StartTraversalMessage {
     std::string toString() const;
   
   private:
-      int   _stepIdentifier;
+    [[clang::pack_range(0,std::numeric_limits<int>::max())]]  int   _stepIdentifier;
 
 
 

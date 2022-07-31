@@ -107,8 +107,8 @@ struct peano4::parallel::TreeEntry {
     std::string toString() const;
   
   private:
-      int   _id;
-      int   _master;
+    [[clang::pack_range(0,std::numeric_limits<int>::max())]]  int   _id;
+    [[clang::pack_range(-1,std::numeric_limits<int>::max())]]  int   _master;
 
 
 

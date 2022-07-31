@@ -131,8 +131,10 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::update(double timeStepSize, doub
 
 {% if INITIAL_CONDITIONS_IMPLEMENTATION!="<user-defined>" %}
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::initialCondition(
-  double * __restrict__ Q,
+  double * __restrict__                        Q,     // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
   const tarch::la::Vector<Dimensions,double>&  x,
+  const tarch::la::Vector<Dimensions,double>&  h,
+  const tarch::la::Vector<Dimensions,int>&     index,
   bool                                         gridIsConstructred
 ) {
   {{INITIAL_CONDITIONS_IMPLEMENTATION}}
@@ -148,7 +150,9 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::boundaryConditions(
   double                                       t,
   int                                          normal
 ) {
+  {% if BOUNDARY_CONDITIONS_IMPLEMENTATION!="<empty>" %}
   {{BOUNDARY_CONDITIONS_IMPLEMENTATION}}
+  {% endif %}
 }
 {% endif %}
 

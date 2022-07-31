@@ -11,7 +11,7 @@
 #if defined(GPUOffloadingOMP)
 #pragma omp declare target
 #endif
-void examples::exahype2::ccz4::enforceCCZ4constraints(double * luh)
+void applications::exahype2::ccz4::enforceCCZ4constraints(double * luh)
 {
     double g_cov[3][3] = { {luh[0], luh[1], luh[2]}, {luh[1], luh[3], luh[4]}, {luh[2], luh[4], luh[5]} };
     const double det = luh[0]*luh[3]*luh[5] - luh[0]*luh[4]*luh[4] - luh[1]*luh[1]*luh[5] + 2*luh[1]*luh[2]*luh[4] -luh[2]*luh[2]*luh[3];
@@ -107,7 +107,7 @@ void examples::exahype2::ccz4::enforceCCZ4constraints(double * luh)
 #if defined(GPUOffloadingOMP)
 #pragma omp declare target
 #endif
-void examples::exahype2::ccz4::admconstraints(double* constraints, const double* const Q, const double* const gradQSerialised)
+void applications::exahype2::ccz4::admconstraints(double* constraints, const double* const Q, const double* const gradQSerialised)
 {
     constexpr int nVar(59);
     double gradQin[59][3] ={0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
@@ -296,7 +296,7 @@ void examples::exahype2::ccz4::admconstraints(double* constraints, const double*
 #if defined(GPUOffloadingOMP)
 #pragma omp declare target
 #endif
-void examples::exahype2::ccz4::Psi4Calc(double* Psi4, const double* const Q, const double* const gradQSerialised, double* coor)
+void applications::exahype2::ccz4::Psi4Calc(double* Psi4, const double* const Q, const double* const gradQSerialised, double* coor)
 {
     constexpr int nVar(59);
     double gradQin[59][3] ={0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
@@ -531,7 +531,7 @@ void examples::exahype2::ccz4::Psi4Calc(double* Psi4, const double* const Q, con
 #if defined(GPUOffloadingOMP)
 #pragma omp declare target
 #endif
-void examples::exahype2::ccz4::TestingOutput(double* terms, const double* const Q, const double* const gradQSerialised)
+void applications::exahype2::ccz4::TestingOutput(double* terms, const double* const Q, const double* const gradQSerialised)
 {
     const double alpha = std::exp(std::fmax(-20., std::fmin(20.,Q[16])));
     //printf("alpha %f\n",alpha);
@@ -765,7 +765,7 @@ void examples::exahype2::ccz4::TestingOutput(double* terms, const double* const 
 #if defined(GPUOffloadingOMP)
 #pragma omp declare target
 #endif
-void examples::exahype2::ccz4::ThetaOutputNCP(double* NCPterm, const double* const Q, const double* const gradQSerialised, int normal)
+void applications::exahype2::ccz4::ThetaOutputNCP(double* NCPterm, const double* const Q, const double* const gradQSerialised, int normal)
 {
     const double alpha = std::exp(std::fmax(-20., std::fmin(20.,Q[16])));
     //printf("alpha %f\n",alpha);

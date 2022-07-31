@@ -44,7 +44,7 @@ std::string peano4::grid::GridVertex::toString() const {
   out << "(";
   out << "state=" << (_state==State::HangingVertex? "HangingVertex" : "")  << (_state==State::New? "New" : "")  << (_state==State::Unrefined? "Unrefined" : "")  << (_state==State::Refined? "Refined" : "")  << (_state==State::RefinementTriggered? "RefinementTriggered" : "")  << (_state==State::Refining? "Refining" : "")  << (_state==State::EraseTriggered? "EraseTriggered" : "")  << (_state==State::Erasing? "Erasing" : "")  << (_state==State::Delete? "Delete" : "") ;
   out << ","; 
-  out << "adjacentRanks=" << _adjacentRanks;
+  out << "adjacentRanks=" << getAdjacentRanks();
   out << ","; 
   out << "backupOfAdjacentRanks=" << _backupOfAdjacentRanks;
   out << ","; 
@@ -78,22 +78,30 @@ void   peano4::grid::GridVertex::setState(State value) {
 
 
 tarch::la::Vector<TwoPowerD,int>   peano4::grid::GridVertex::getAdjacentRanks() const {
-  return    _adjacentRanks;
-}
+
+  tarch::la::Vector<TwoPowerD,int> result;
+  for( int i=0; i<TwoPowerD; i++) {
+    result(i) =   _adjacentRanks[i];
+  }
+  return result;
+      }
 
 
 void   peano4::grid::GridVertex::setAdjacentRanks(const tarch::la::Vector<TwoPowerD,int>& value) {
-  _adjacentRanks = value;
-}
+
+  for( int i=0; i<TwoPowerD; i++) {
+      _adjacentRanks[i] = value(i);
+  }
+      }
 
 
 int   peano4::grid::GridVertex::getAdjacentRanks(int index) const {
-  return   _adjacentRanks(index);
+  return   _adjacentRanks[index];
 }
 
 
 void   peano4::grid::GridVertex::setAdjacentRanks(int index, int value) {
-  _adjacentRanks(index) = value;
+  _adjacentRanks[index] = value;
 }
 
 

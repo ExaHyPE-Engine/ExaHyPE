@@ -244,9 +244,9 @@ class RungeKuttaDG(object):
     self._max_cell_h         = max_cell_h 
     self._plot_grid_properties = plot_grid_properties
 
-    self.solver_constants_         = ""
-    self.user_action_set_includes  = ""
-    self.user_solver_includes      = ""
+    self._solver_constants          = ""
+    self._user_action_set_includes  = ""
+    self._user_solver_includes      = ""
     
     if min_cell_h>max_cell_h:
        raise Exception( "Error: min_cell_h (" + str(min_cell_h) + ") is bigger than max_cell_h (" + str(max_cell_h) + ")" )
@@ -351,12 +351,46 @@ We use RK(""" + str(self._rk_order) + """) for the time stepping.
 """ 
   
 
-  def get_user_action_set_includes(self):
-    return self.user_action_set_includes
+  @property
+  def user_action_set_includes(self):
+    """
+    
+    Add further includes to this property, if your action sets require some additional
+    routines from other header files.
+    
+    """
+    return self._user_action_set_includes
 
   
-  def get_user_solver_includes(self):
-    return self.user_solver_includes
+  @property
+  def user_solver_includes(self):
+    """
+    
+    Add further includes to this property, if your solver requires some additional
+    routines from other header files.
+    
+    """
+    return self._user_solver_includes
+
+  
+  def add_user_action_set_includes(self,value):
+    """
+    
+    Add further includes to this property, if your action sets require some additional
+    routines from other header files.
+    
+    """
+    self._user_action_set_includes += value
+
+  
+  def add_user_solver_includes(self,value):
+    """
+    
+    Add further includes to this property, if your solver requires some additional
+    routines from other header files.
+    
+    """
+    self._user_solver_includes += value
 
   
   @abstractmethod
@@ -823,9 +857,9 @@ We use RK(""" + str(self._rk_order) + """) for the time stepping.
     output.makefile.add_cpp_file( "Abstract" + self._name + ".cpp" )
     output.makefile.add_cpp_file( self._name + ".cpp" )
 
-  def set_solver_constants(self, datastring): self.solver_constants_ = datastring
+  def set_solver_constants(self, datastring): self._solver_constants = datastring
 
-  def add_solver_constants(self, datastring): self.solver_constants_ += datastring
+  def add_solver_constants(self, datastring): self._solver_constants += datastring
 
 
   def _init_dictionary_with_default_parameters(self,d):
@@ -868,9 +902,9 @@ We use RK(""" + str(self._rk_order) + """) for the time stepping.
     d[ "MAX_CELL_H"] = self._max_cell_h
     d[ "MIN_CELL_H"] = self._min_cell_h
 
-    d[ "SOLVER_CONSTANTS" ] = self.solver_constants_
+    d[ "SOLVER_CONSTANTS" ] = self._solver_constants
 
-    d[ "SOLVER_INCLUDES" ]  = self.get_user_solver_includes()
+    d[ "SOLVER_INCLUDES" ]  = self.user_solver_includes
     
     #d[ "SOURCE_TERM_CALL"]                    = jinja2.Template(self._source_term_call, undefined=jinja2.DebugUndefined).render( **d )
     #d[ "RIEMANN_SOLVER_CALL"]                 = jinja2.Template(self._Riemann_solver_call, undefined=jinja2.DebugUndefined).render( **d )
@@ -961,14 +995,21 @@ We use RK(""" + str(self._rk_order) + """) for the time stepping.
     if refinement_criterion is not None:  self._refinement_criterion_implementation       = refinement_criterion
     if initial_conditions   is not None:  self._initial_conditions_implementation         = initial_conditions
 
+    if boundary_conditions==exahype2.solvers.fv.PDETerms.None_Implementation:
+      assert False, "boundary conditions cannot be none"
+    if refinement_criterion==exahype2.solvers.fv.PDETerms.None_Implementation:
+      assert False, "refinement criterion cannot be none"
+    if initial_conditions==exahype2.solvers.fv.PDETerms.None_Implementation:
+      assert False, "initial conditions cannot be none"
+      
     if flux                 is not None:  self._flux_implementation                       = flux
     if ncp                  is not None:  self._ncp_implementation                        = ncp
     if eigenvalues          is not None:  self._eigenvalues_implementation                = eigenvalues
     if source_term          is not None:  self._source_term_implementation                = source_term
     if point_source         is not None:  self._point_sources_implementation              = point_source
     
-    self.user_action_set_includes += additional_action_set_includes
-    self.user_solver_includes     += additional_user_includes
+    self.add_user_action_set_includes( additional_action_set_includes )
+    self.add_user_solver_includes(     additional_user_includes )
 
     self.create_data_structures()
     self.create_action_sets()
