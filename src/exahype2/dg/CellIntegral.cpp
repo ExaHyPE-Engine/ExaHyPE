@@ -131,6 +131,11 @@ void exahype2::dg::cellIntegral_patchwise_GaussLegendre_functors(
           gradientValues
         );
 
+        double coeff = 1.0;
+        for (int dd=0; dd<Dimensions; dd++) {
+          coeff *= massMatrixDiagonal[ index(dd) ];
+        }
+
         for(int dim=0; dim<Dimensions; dim++) {
 
           nonConservativeProduct(
@@ -145,11 +150,6 @@ void exahype2::dg::cellIntegral_patchwise_GaussLegendre_functors(
             dt,
             dim,
             ncpValues);
-
-          double coeff = 1.0;
-          for (int dd=0; dd<Dimensions; dd++) {
-            coeff *= massMatrixDiagonal[ index(dim) ];
-          }
 
           for(int var=0; var<unknowns; var++){
             cellQout[node*unknowns+var] += coeff * ncpValues[var];
