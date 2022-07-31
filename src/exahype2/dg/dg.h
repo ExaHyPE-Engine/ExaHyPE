@@ -430,95 +430,67 @@
  * et al, e.g. I found the discussion around @f$ P_NP_M @f$ patch-conservative products in his paper
  * "Space-time adaptive ADER discontinuous Galerkin schemes for nonlinear hyperelasticity with material failure"
  * particularly helpful (<a href="https://arxiv.org/abs/2003.02760>">arXiv:2003.02760</a>). Have a look
- * notably into (21).
+ * notably into (21). Other useful sources of information can be found in this
+ * <a href="https://www.math.u-bordeaux.fr/~rabgrall/dfg-cnrs/talks/diehl.pdf">presentation</a>, e.g.
  *
- * Personally, I always use the following formalism which might formally be slightly wrong (but it gives
- * the same result as Michael's work, so I'm happy):
- *
- * Our fundamental observation is that @f$ \nabla \phi @f$ is nicer than @f$ \nabla Q @f$ as we can
- * completely pre-compute it. Within the DG weak formulation, it is clear that we somehow have to roll
- * over the derivative through integration by parts. Just let's keep in mind that we really want to avoid
- * a term like @f$ \nabla B(Q) @f$ - this one would be nasty due to chain rule kicking in and the Hessian
- * (tensor) structure. So we end up with the following insights:
- *
- * @f$ \int _{\partial c} \Big( B(Q(t))\ Q(t), \phi \Big) \ n_x\ dS(x) =  \int _c \Big( B(Q(t)), \nabla _x \Big( Q(t)\phi \Big) \Big) dx =  \int _c \Big( B(Q(t)) \ \nabla _x Q(t), \phi \Big) dx + \int _c \Big( B(Q(t)) \ \nabla _x \phi, Q(t) \Big) dx @f$
- *
- * But this is a cell-wise expression. We have to take the weak ansatz over the whole domain @f$ \Omega _h = \sum c @f$.
- *
- * We look at the expression for one test function. We know that test functions have local support
- * on one cell. Let this cell be called c.
- *
- * @f$ \int _{\Omega } \Big( B(Q(t)) \ \nabla _x Q(t), \phi \Big) dx = \sum _{c^{\pm}} \int _{\partial c^{\pm}} \Big( B(Q(t))\ Q(t), \phi \Big) \ n_x\ dS(x) - \int _{c} \Big( B(Q(t)) \ \nabla _x \phi, Q(t) \Big) \ dx @f$
+ * Personally, I always use the following hand-wavy explanation:
  *
  *
- * The volumetric integral reduces to an integral over c as the support disappears.
- * Each face integral enters the formula twice - once from the left and once from the right.
- * As we have discontinuous functions, these two contributions do not cancel each other out.
- * The Q values are different.
+ * ### Volumentric part
+ *
+ * We usually keep the @f$ B_x(Q)\nabla _xQ @f$ term as it is and assume that we can represent the
+ * outcome again in the same polynomial space that we used for the shape functions. This is quite a
+ * crude approximation, as the ncp terms can be really non-linear and nasty, so it is unlikely that
+ * the analytical solution can be represented by the same linear combination of shape functions as the
+ * input. But we don't really know that much about the ncp term anyway, so any other choice of shape
+ * functions to represent the outcome would be equally flawed.
+ *
+ * If the @f$ B_x(Q)\nabla _xQ @f$ term projects into our ansatz space, then the whole ncp contributions
+ * enter our equations as one giant mass matrix times B(Q). However, that's only a part of the story.
+ *
+ * Whenever we study
+ *
+ * @f$ \int _\Omega \Big( B_x(Q)\nabla _xQ, \phi \Big) dx @f$
+ *
+ * we know that we can split up the integral into a sum over integrals over the cells but that
+ * the faces require special care, as the solution jumps there. In the context of the ncp, we
+ * follow the argument by Hulsen et al: The idea is that we split up the integral domain into
+ * two areas: The face plus and @f$ \epsilon @f$ environment and the remainder of the cells. So we
+ * get a sum over the faces (plus the tiny area around them) and the remaining cells. We have already
+ * discussed the latter. Here, we obtain a mass matrix.
+ *
+ * ### The face contribution
+ *
+ * In this @f$ \epsilon @f$-environment around the face, now approximate @f$ Q @f$ with a continuous
+ * function. So we interpolate between @f$ Q^- @f$ and @f$ Q^+ @f$. As we make @f$ \epsilon @f$ smaller
+ * and smaller, the interpolation approximates the jump between @f$ Q^- @f$ and @f$ Q^+ @f$ better
+ * and better. The literature makes quite a lot of fuzz about pathes here and path-conservative
+ * integrals, but really most of the time it is sufficient to think of it as an interpolation which
+ * smoothes out the jump.
+ *
+ * We end up with an integral
+ *
+ * @f$ \int _{\partial c^{\epsilon}} \Big( B_x(Q)\nabla _xQ, \phi \Big) dx @f$
+ *
+ * where the @f$ Q @f$ once more is not properly defined. In line with the Rusanov approximation,
+ * we assume that Q is roughly the average when we evaluate B. We still have a volumetric formulation,
+ * so the @f$ \phi @f$ term either picks the right or the left half of the term. This yields a total
+ * contribution of
+ *
+ * @f$ \pm B \Big( \frac{1}{2}Q^- + \frac{1}{2}Q^+ \Big) \frac{1}{2} \Big( Q^+ - Q^- \Big) @f$
  *
  *
- * ### Volumetric part
  *
- * - We first run over all the individual quadrature points within the cell.
- * - Per point, we evaluate @f$ B(Q(t)) @f$.
- * - We scale this contribution with @f$ Q(t) @f$, i.e. we actually evaluate
- *   @f$ \int _{c} \Big( B(Q(t)) \ \nabla _x \phi, Q(t) \Big) \ dx = Q(t)^T B(Q(t)) \cdot ... @f$.
- *   We assume that this term can be represented within the same function space from which we
- *   took our shape functions. This is an approximation, but that's what we have currently
- *   baked into our Python scripts.
- * - Now we multiply the result vector of weights with the precomputed derivative shape functions
- *   over which we have integrated already. This gives us a @f$ h^{-1} @f$ scaling.
- * - The result is subject to a multiplication with an inverted mass matrix. There's no need
- *   to have this multiplication explicitly in the code. We can directly incorporate it within
- *   the derivative matrix. The overall scaling of the contributions from the volumetric part remain in @f$ h^{-1} @f$.
+ * ## Data format
  *
+ * Even though we try to separate the spatial from the temporal discretisation, it is the
+ * Runge-Kutta DG scheme which is currently the most mature version within ExaHyPE 2.
+ * The main data format discussion, i.e. what do we store where and when, can thus be found
+ * in the python subdirectory
  *
- * ### The Riemann problem
+ *         exahype2.rkdg
  *
- * We note that almost all face integrals disappear per test @f$ \phi @f$. Only those over
- * faces adjacent to the test support cell remain. But each face is there twice, as we had to
- * first split @f$ \Omega @f$ before we do the integration by parts. I try to denote this by
- * the symbol @f$ \partial c^{\pm} @f$. The left and right sum contribution collapse as follows:
- *
- * @f$ \int _{\partial c^{\pm}} \Big( B(Q(t))\ Q(t), \phi \Big) \ n_x\ dS(x) = \int _{\partial c^{+}} \Big( B(Q(t))\ Q(t), \phi \Big) \ n_x\ dS(x) - \int _{\partial c^{-}} \Big( B(Q(t))\ Q(t), \phi \Big) \ n_x\ dS(x) = \int _{\partial c} \Big( B(Q(t))\ (Q^+(t)-Q^-(t) ), \phi \Big) \ dS(x)  @f$
- *
- * The remaining question now is what @f$ B(Q(t)) | _{\partial c} @f$ looks like. After all,
- * this is where the solution is not defined. We simply use averaging in our code, i.e.
- *
- * @f$ B( \frac{1}{2} (Q^+(t)+Q^-(t) ) )\ (Q^+(t)-Q^-(t) ) @f$
- *
- * Once again, we have an ncp term here. Different to the one above, we apply it to the jump, i.e.
- * the solution difference, this time. We do not apply it to a gradient! In this way, the
- * Riemann problem here is more similar to the Finite Volume formulation. Note that the notion
- * of left and right depends on the test function of interest, i.e. the outcome of this Riemann
- * problems goes with a switched sign into the left and right adjacent cell.
- *
- * Remark: The work by Dumbser et al have an overall factor of 0.5 in the Riemann problem.
- * I don't see where this comes from (in the Finite Volume case, it is clear where it comes from).
- * So likely there's a term missing in this explanation.
- *
- *
- * ## Further documentation
- * 
- * ### Tests
- * 
- * There exist in /tests some integration tests for these implementations, if you have a hard time
- * understanding how the various functions here should be called and in what order this might be a good
- * place to start in order to see what one timestep of forward euler looks like.
- *
- * ### Related documentation within the code
- *
- * It makes sense to study the Finite Differences discussion where similar data
- * structures are used and similar design decisions are made. For a discussion of
- * the used linear operators (matrices and vectors), please consult the Python
- * class exaype2.solvers.LagrangeBasisWithDiagonalMassMatrix,
- * as all of our vanilla routines rely on Lagrange function bases.
- *
- *
- * ### Data format
- *
- * The main data format discussion, i.e. what do we store where and when, can be found in the python subdirectory of
- * Peano. For Runge-Kutta, you have for example
+ * and the class
  *
  *         exahype2.rkdg.RungeKuttaDG
  *
@@ -539,21 +511,10 @@
  *
  * ## Todo list
  *
- * Wo sind die aux values?
- *
- *- Q explizit rueberkopieren
- *- - dt eben doch immer rein
- * - Projection hat auxiliary variables. Ist das drin?
- * - Loesung net.
- * - Linear combination hat auch aux variables, diese sind nicht nötig da sie sich nicht verändern.
- * - The generic Enumerator.h file lacks docu.
- * - Is the FaceAoSEnumerator really used and properly documented?
- * - Look through DGUtils and tidy is up.
  * - Strides should completely go away and should be subsumed in the enumerators. So the
  *   enumerators is where all the logic sits and the logic is completely encapsulated there.
  * - Investigate if we could remove a few other matrices from the generated Python code
- * - Point sources implement
- * - Miste den AbstractDG Loeser aus. Nicht alle Daten werden gebraucht.
+ * - Point sources are missing
  *
  */
 
