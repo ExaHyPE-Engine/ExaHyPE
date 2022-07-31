@@ -16,11 +16,10 @@ parser.add_argument("-v",   "--verbose",           dest="verbose",        action
 parser.add_argument("-s",   "--solver",            dest="solver",         choices=["fv", "fd4-rk1", "fd4-rk2", "fd4-rk3", "fd4-rk4", "dg1-rk1", "dg2-rk2", "dg3-rk3", "dg4-rk4"], required=True, help="Pick solver type" )
 parser.add_argument("-et",  "--end-time",          dest="end_time",       type=float, default=1.0, help="End of simulation" )
 parser.add_argument("-cs",  "--cell-size",         dest="cell_size",      type=float, default=0.3, help="Cell size" )
+parser.add_argument("-asserts",  "--asserts",      dest="asserts",        action="store_true", default=False, help="Switch on assertions" )
 args = parser.parse_args()
 
 
-#       SuperClass = exahype2.solvers.fv.rusanov.GlobalAdaptiveTimeStepWithEnclaveTasking
-#       SuperClass = exahype2.solvers.rkfd.fd4.GlobalAdaptiveTimeStep
 
 
 #
@@ -201,6 +200,7 @@ for (int i=0; i<NumberOfUnknowns+NumberOfAuxiliaryVariables; i++) Q[i] = 0.0;
 ::applications::exahype2::ccz4::gaugeWave(Q, volumeCentre, 0);
 """
         )    
+
     
 # ===============
 # Postprocessing
@@ -313,8 +313,11 @@ project.add_action_set_to_timestepping(exahype2.tracer.DumpTrajectoryIntoDatabas
 ########################################################################################
 # Build the project
 ########################################################################################
-#build_mode = peano4.output.CompileMode.Debug
-build_mode = peano4.output.CompileMode.Release
+
+if args.asserts:
+  build_mode = peano4.output.CompileMode.Asserts
+else:
+  build_mode = peano4.output.CompileMode.Release
     
 dimensions  = 3
 offset      = [-0.5, -0.5, -0,5] 
