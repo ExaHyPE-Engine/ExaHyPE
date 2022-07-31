@@ -120,19 +120,18 @@ void exahype2::dg::cellIntegral_patchwise_GaussLegendre_functors(
           order,
           quadratureNodes);
 
+        //computes gradient values in all directions for the given node
+        computeGradient(
+          cellQin,
+          derivativeOperator,
+          1.0 / dx,
+          nodesPerAxis,
+          strideQ,
+          node,
+          gradientValues
+        );
+
         for(int dim=0; dim<Dimensions; dim++) {
-          // @todo Siehe unten: Ich haette gerne nur die Richtungsableitung.
-          //       Die langt vollkommen und dann koennen wir mit viel kleineren
-          //       temporaeren Daten arbeiten im Kernel
-          computeGradient(
-            cellQin,
-            derivativeOperator,
-            1.0 / dx,
-            nodesPerAxis,
-            strides[dim],
-            node,
-            gradientValues
-          );
 
           nonConservativeProduct(
             &cellQin[node*strideQ],
