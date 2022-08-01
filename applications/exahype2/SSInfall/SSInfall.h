@@ -6,20 +6,20 @@
 // This is generated. If you change fundamental properties, you will have to 
 // generate this file. Backup your manual changes before you do so.
 //
-#ifndef _examples_exahype2_SSInfall_SSInfall_H_
-#define _examples_exahype2_SSInfall_SSInfall_H_
+#ifndef _applications_exahype2_SSInfall_SSInfall_H_
+#define _applications_exahype2_SSInfall_SSInfall_H_
 
 #include "AbstractSSInfall.h"
 #include "tarch/logging/Log.h"
 #include <iomanip>
 
-namespace examples {namespace exahype2 {namespace SSInfall {
+namespace applications {namespace exahype2 {namespace SSInfall {
   class SSInfall;
 
 }}}
 
 
-class examples::exahype2::SSInfall::SSInfall: public AbstractSSInfall {
+class applications::exahype2::SSInfall::SSInfall: public AbstractSSInfall {
   private:
     static tarch::logging::Log   _log;
 

@@ -269,7 +269,7 @@ if __name__ == "__main__":
       exe += args.exe_name
     if not args.tra_name=="de":
       exe += "_" + args.tra_name
-    project = exahype2.Project( ["examples", "exahype2", "SSInfall"], "SSInfall", executable=exe)
+    project = exahype2.Project( ["applications", "exahype2", "SSInfall"], "SSInfall", executable=exe)
 
 ########################################################################################
 #Pick solver
