@@ -22,13 +22,10 @@ class exahype2::dg::tests::CellIntegralTest : public tarch::tests::TestCase {
     const double QuadratureWeights[3+1];
     const double MassMatrix[(3+1)*(3+1)];
     const double StiffnessOperator[(3+1)*(3+1)];
-    const double DerivativeOperator[(3+1)*(3+1)];
-    const double BasisFunctionValuesLeft[(3+1)];
-    const double BasisFunctionValuesRight[(3+1)];
 
-    void UtilsTest();
     void runDGEuler();
     void runDGElastic();
+    void testMultiplyWithInvertedMassMatrix_GaussLegendre();
 
   public:
     CellIntegralTest();

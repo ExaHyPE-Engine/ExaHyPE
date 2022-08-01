@@ -170,15 +170,10 @@ namespace exahype2 {
     /**
      * Final step of DG algorithm
      *
-     * This is the final step of any DG algorithm. Consult dg.h for a
+     * This is the final step of any DG algorithm step, i.e. any Runge-Kutta
+     * step. Consult dg.h for a
      * clearer explanation.
      *
-     * - I assume that the input points to the old time step's solution.
-     *   This is typically
-     *
-     *        fineGridCell{{UNKNOWN_IDENTIFIER}}LinearCombination
-     *
-     *   in a Discontinuous Galerkin context.
      * - I assume that the output points to the new time step's data. This is
      *   usually
      *
@@ -193,32 +188,12 @@ namespace exahype2 {
      * - The output shall holds the flux contributions in a Runge-Kutta sense,
      *   i.e. it shall not hold the new time step but the amount that's added.
      *
-     *
-     * Let
-     *
-     * @f$ \partial Q = F(Q) @f$
-     *
-     * be our ODE of interest. Runge-Kutta will construct new solutions according
-     * to a rule
-     *
-     * @f$ Q^{(new)} = c_i \cdot dt \cdot (a_{i1} k_1 + a_{i2} k_2 + \dots )  @f$
-     *
-     * The linear combination field will holds the current @f$ Q^{(new)} @f$. The
-     * estimates however have to be the individual @f$ k_j @f$ from above. That means,
-     * they are not to be scaled by any time step size, and they do not incorporate
-     * the original time step. They also do not carry any auxiliary variables. So
-     * we don't need the input data
-     *
-     *        fineGridCell{{UNKNOWN_IDENTIFIER}}LinearCombination
-     *
-     * in this routine. We focus on the output.
-     *
      * This particular routine assumes that the mass matrix is a diagonal. Therefore,
      * the inversion is trivial: We iterate over all degrees of freedom. This is a
      * d-dimensional for loop (dfor). Per dof, we compute the diagonal, and every
      * unknown then is scaled by the inverse of this diagonal.
      */
-    void multiplyWithInvertedMassMatrixAndClearAuxiliaryVariables_GaussLegendre(
+    void multiplyWithInvertedMassMatrix_GaussLegendre(
       ::exahype2::CellData&                          cellData,
       const int                                      order,
       const int                                      unknowns,

@@ -274,7 +274,7 @@ void exahype2::dg::internal::copySolution(
 }
 
 
-void exahype2::dg::multiplyWithInvertedMassMatrixAndClearAuxiliaryVariables_GaussLegendre(
+void exahype2::dg::multiplyWithInvertedMassMatrix_GaussLegendre(
   ::exahype2::CellData&                          cellData,
   const int                                      order,
   const int                                      unknowns,

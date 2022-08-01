@@ -23,6 +23,7 @@ namespace exahype2 {
 
 class exahype2::dg::rusanov::tests::RiemannTest : public tarch::tests::TestCase {
   private:
+    void testIntegrateOverRiemannSolutionsAndAddToVolume_GaussLegendre();
   public:
     RiemannTest();
 

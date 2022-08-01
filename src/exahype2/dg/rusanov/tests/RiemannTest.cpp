@@ -7,5 +7,15 @@ exahype2::dg::rusanov::tests::RiemannTest::RiemannTest():
 
 
 void exahype2::dg::rusanov::tests::RiemannTest::run() {
+  testMethod( testIntegrateOverRiemannSolutionsAndAddToVolume_GaussLegendre );
+}
+
+
+
+
+
+void exahype2::dg::rusanov::tests::RiemannTest::testIntegrateOverRiemannSolutionsAndAddToVolume_GaussLegendre() {
 
 }
+
+
