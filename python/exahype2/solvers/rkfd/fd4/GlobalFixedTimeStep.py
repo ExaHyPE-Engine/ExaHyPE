@@ -23,9 +23,11 @@ class GlobalFixedTimeStep( OneSweepPerRungeKuttaStep ):
   def __init__(self, 
     name, patch_size, rk_order, unknowns, auxiliary_variables, min_meshcell_h, max_meshcell_h, normalised_time_step_size,
     flux=PDETerms.User_Defined_Implementation, 
-    ncp=None, 
+    ncp=PDETerms.None_Implementation, 
     eigenvalues=PDETerms.None_Implementation, 
-    boundary_conditions=None,refinement_criterion=None,initial_conditions=None,source_term=None,
+    boundary_conditions=PDETerms.User_Defined_Implementation,
+    refinement_criterion=PDETerms.Empty_Implementation,
+    initial_conditions=PDETerms.User_Defined_Implementation,
     plot_grid_properties=False, KOSigma=8.0
   ):
     """

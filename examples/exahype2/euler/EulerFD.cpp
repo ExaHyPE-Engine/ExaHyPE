@@ -111,8 +111,8 @@ void ::examples::exahype2::euler::EulerFD::flux(
 )  {
   logTraceInWith4Arguments( "flux(...)", faceCentre, gridCellH, t, normal );
 
-  assertion4( normal>=0, faceCentre, volumeH, t, normal );
-  assertion4( normal<Dimensions, faceCentre, volumeH, t, normal);
+  assertion4( normal>=0, faceCentre, gridCellH, t, normal );
+  assertion4( normal<Dimensions, faceCentre, gridCellH, t, normal);
 
   constexpr double gamma = 1.4;
   const double irho = 1./Q[0];
@@ -137,25 +137,3 @@ void ::examples::exahype2::euler::EulerFD::flux(
 
   logTraceOut( "flux(...)" );
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

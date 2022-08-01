@@ -112,9 +112,9 @@ struct peano4::parallel::TreeManagementMessage {
     std::string toString() const;
   
   private:
-      int   _masterSpacetreeId;
-      int   _workerSpacetreeId;
-      Action   _action;
+    [[clang::pack_range(-1,std::numeric_limits<int>::max())]]  int   _masterSpacetreeId;
+    [[clang::pack_range(0,std::numeric_limits<int>::max())]]  int   _workerSpacetreeId;
+    [[clang::pack]]  Action   _action;
 
 
 

@@ -19,7 +19,7 @@
 #include "CCZ4Kernels.h"
 
 
-namespace examples {
+namespace applications {
   namespace exahype2 {
     namespace ccz4 {
       class FiniteVolumeCCZ4;
@@ -28,7 +28,7 @@ namespace examples {
 }
 
 
-class examples::exahype2::ccz4::FiniteVolumeCCZ4: public AbstractFiniteVolumeCCZ4 {
+class applications::exahype2::ccz4::FiniteVolumeCCZ4: public AbstractFiniteVolumeCCZ4 {
   private:
     static tarch::logging::Log   _log;
 

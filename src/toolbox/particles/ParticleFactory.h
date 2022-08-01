@@ -29,6 +29,8 @@ namespace toolbox {
      * - the move state which is set to New.
      * - the parallel state is set to Virtual.
      *
+     * @todo Please check: I don't think we can and should set the move state
+     *   here. The new is obsolete anyway.
      *
      * ## Parallel lifecycle
      *

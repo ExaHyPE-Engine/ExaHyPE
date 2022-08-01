@@ -21,9 +21,12 @@ class GlobalAdaptiveTimeStep( SingleSweep ):
   def __init__(self, 
     name, patch_size, unknowns, auxiliary_variables, min_volume_h, max_volume_h, time_step_relaxation,
     flux=PDETerms.User_Defined_Implementation, 
-    ncp=None, 
+    ncp=PDETerms.None_Implementation, 
     eigenvalues=PDETerms.User_Defined_Implementation, 
-    boundary_conditions=None,refinement_criterion=None,initial_conditions=None,source_term=None,
+    boundary_conditions=PDETerms.User_Defined_Implementation,
+    refinement_criterion=PDETerms.Empty_Implementation,
+    initial_conditions=PDETerms.User_Defined_Implementation,
+    source_term=PDETerms.None_Implementation,
     plot_grid_properties=False, overlap=1
   ):
     super(GlobalAdaptiveTimeStep,self).__init__(name, patch_size, overlap, unknowns, auxiliary_variables, min_volume_h, max_volume_h, plot_grid_properties) 

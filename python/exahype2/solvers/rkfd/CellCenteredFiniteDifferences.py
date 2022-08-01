@@ -78,7 +78,7 @@ class CellCenteredFiniteDifferences(object):
     self._unknowns             = unknowns
     self._auxiliary_variables  = auxiliary_variables
 
-    self.solver_constants_         = ""
+    self._solver_constants         = ""
     self._user_action_set_includes  = ""
     self._user_solver_includes      = ""
     
@@ -121,12 +121,12 @@ class CellCenteredFiniteDifferences(object):
     self._finish_time_step_implementation          = ""
     self._constructor_implementation               = ""
 
-    self._boundary_conditions_implementation  = PDETerms.User_Defined_Implementation
-    self._refinement_criterion_implementation = PDETerms.Empty_Implementation
-    self._initial_conditions_implementation   = PDETerms.User_Defined_Implementation
+    self._boundary_conditions_implementation  = None
+    self._refinement_criterion_implementation = None
+    self._initial_conditions_implementation   = None
 
-    self._interpolation = "piecewise_constant"
-    self._restriction   = "averaging"
+    self._interpolation = "linear_with_constant_extrapolation"
+    self._restriction   = "inject"
     
     self.create_data_structures()
     self.create_action_sets()
@@ -739,9 +739,9 @@ The finest mesh width of """ + str(self.get_finest_volume_size(domain_size)) + "
     output.makefile.add_cpp_file( "Abstract" + self._name + ".cpp" )
     output.makefile.add_cpp_file( self._name + ".cpp" )
 
-  def set_solver_constants(self, datastring): self.solver_constants_ = datastring
+  def set_solver_constants(self, datastring): self._solver_constants = datastring
 
-  def add_solver_constants(self, datastring): self.solver_constants_ += datastring
+  def add_solver_constants(self, datastring): self._solver_constants += datastring
 
 
   def _init_dictionary_with_default_parameters(self,d):
@@ -780,7 +780,7 @@ The finest mesh width of """ + str(self.get_finest_volume_size(domain_size)) + "
     d[ "MAX_GRID_CELL_H"] = self._max_meshcell_h
     d[ "MIN_GRID_CELL_H"] = self._min_meshcell_h
 
-    d[ "SOLVER_CONSTANTS" ] = self.solver_constants_
+    d[ "SOLVER_CONSTANTS" ] = self._solver_constants
 
     d[ "SOLVER_INCLUDES" ]  = self.user_solver_includes
 

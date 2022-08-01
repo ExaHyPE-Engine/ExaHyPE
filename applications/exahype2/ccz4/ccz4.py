@@ -244,7 +244,7 @@ if __name__ == "__main__":
     int index = 0;
     for (int i=0;i<itmax;i++)
     {
-      examples::exahype2::ccz4::enforceCCZ4constraints( targetPatch+index );
+      applications::exahype2::ccz4::enforceCCZ4constraints( targetPatch+index );
       index += {{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}};
     }
   }
@@ -594,7 +594,7 @@ if __name__ == "__main__":
       exe += args.exe_name
     if not args.tra_name=="de":
       exe += "_" + args.tra_name
-    project = exahype2.Project( ["examples", "exahype2", "ccz4"], "ccz4", executable=exe)
+    project = exahype2.Project( ["applications", "exahype2", "ccz4"], "ccz4", executable=exe)
 
 ########################################################################################
 #Pick solver
@@ -821,6 +821,11 @@ if __name__ == "__main__":
           #time_stepping_kernel="toolbox::particles::LinearInterp",
           time_stepping_kernel="toolbox::particles::StaticPosition"#,
           #observer_kernel="toolbox::particles::ObLinearInterp"
+        )
+      )
+      project.add_action_set_to_timestepping(
+        peano4.toolbox.particles.UpdateParallelState(
+          particle_set=tracer_particles
         )
       )
       if args.add_tracer==1 or args.add_tracer==2 or args.add_tracer==3 :

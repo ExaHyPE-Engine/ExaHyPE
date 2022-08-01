@@ -27,7 +27,7 @@ python3 example-scripts/finitevolumes-with-ExaHyPE2-benchmark.py arguments
 parser = argparse.ArgumentParser(description='ExaHyPE 2 - Euler benchmarking script')
 parser.add_argument("-j",   "--parallel-builds",   dest="j",              type=int, default=-1, help="Parallel builds" )
 parser.add_argument("-d",   "--dim",               dest="dim",            type=int, default=2, help="Dimensions" )
-parser.add_argument("-pd",  "--peano-dir",         dest="peanodir",                 default="../../../", help="Peano4 directory" )
+parser.add_argument("-pd",  "--peano-dir",         dest="peanodir",       default="../../../../", help="Peano4 directory" )
 parser.add_argument("-v",   "--verbose",           dest="verbose",        action="store_true", default=False, help="Verbose")
 parser.add_argument(        "--debug",             dest="debug"  ,        action="store_true", default=False, help="Verbose")
 parser.add_argument("-ps",  "--patch-size",        dest="patch_size",     type=int, default=17, help="Dimensions" )
@@ -44,17 +44,20 @@ if args.file=="":
     import peano4
     import exahype2
     
+    dimensions = args.dim
+    
     #
     # Create a project and configure it to end up in a subnamespace (and thus
     # subdirectory). 
     #
-    project = exahype2.Project( ["examples", "exahype2", "euler"], "finitevolumes", ".", executable="fv-kernel-benchmark" )
+    project = exahype2.Project( ["examples", "exahype2", "euler"], "fv-kernel-benchmarks", ".", executable="fv-kernel-benchmarks" )
     
     #
     # Add the Finite Volumes solver
     #
-    solver_name = "EulerOnGPU"
-    unknowns       = 5
+    solver_name = "EulerFV"
+    
+    unknowns       = 1+dimensions+1
     max_h          = 0.01
     min_h          = 0.01
     auxiliary_variables = 0
@@ -70,16 +73,13 @@ if args.file=="":
       eigenvalues = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
       pde_terms_without_state = True
     )
-    
-    thesolver.set_implementation( refinement_criterion=exahype2.solvers.fv.PDETerms.User_Defined_Implementation )
-    
+        
     project.add_solver( thesolver )
     
     
     #
     # Configure build
     #
-    dimensions = args.dim
     if args.debug:
       build_mode = peano4.output.CompileMode.Debug
     else:
@@ -103,10 +103,12 @@ if args.file=="":
     #
     peano4_project = project.generate_Peano4_project(args.verbose)
     peano4_project.constants.export_const_with_type( "Accuracy", str(args.accuracy), "double" )
+    peano4_project.output.makefile.add_cpp_file( "../../../../applications/exahype2/euler/EulerKernels.cpp" )
+    peano4_project.output.makefile.add_header_search_path( "../../../../applications/exahype2/euler" )
     peano4_project.generate()
-    benchmark_main_file = os.path.dirname(os.path.realpath(__file__)) + "/fv-kernel-benchmarks.cpp"
-    print( "replace generated main with benchmark main file {}".format(benchmark_main_file) )
-    os.system( "cp {} finitevolumes-main.cpp".format(benchmark_main_file) )
+    #benchmark_main_file = os.path.dirname(os.path.realpath(__file__)) + "/fv-kernel-benchmarks.cpp"
+    #print( "replace generated main with benchmark main file {}".format(benchmark_main_file) )
+    #os.system( "cp {} finitevolumes-main.cpp".format(benchmark_main_file) )
     os.system( "make clean" )
     if args.j>0:
       os.system( "make -j{}".format(args.j) )
