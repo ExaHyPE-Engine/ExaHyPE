@@ -33,8 +33,9 @@ ExaHyPE2Sources = \
   dg/CellIntegral.cpp \
   dg/Riemann.cpp \
   dg/rusanov/Riemann.cpp \
-  dg/tests/DGTest.cpp \
-  dg/tests/testUtils.cpp \
+  dg/tests/CellIntegralTest.cpp \
+  dg/tests/TestUtils.cpp \
+  dg/rusanov/tests/RiemannTest.cpp \
   enumerator/AoSLexicographicEnumerator.cpp \
   enumerator/SoALexicographicEnumerator.cpp \
   enumerator/SingleDoFEnumerator.cpp \

@@ -48,9 +48,6 @@ namespace exahype2 {
    * @param cellQ Pointer to cell data. The array has the size
    *   @f$ unknowns \times (order+1)^d@f$.
    *
-   * @param unkonwns Integer greater or equal to 1. These number comprises both
-   *   real unknowns in the hyperbolic sense and auxiliary variables.
-   *
    * @param order Integer greater or equal to 0. The number of nodes in each
    *  dimension will be equal to order+1
    *
@@ -81,6 +78,7 @@ namespace exahype2 {
     const double* __restrict__          cellQ,
     int                                 order,
     int                                 unknowns,
+    int                                 auxiliaryVariables,
     const double* const __restrict__    BasisFunctionValuesLeft,
     double* const __restrict__          faceQLeft,
     double* const __restrict__          faceQRight,
@@ -95,6 +93,7 @@ namespace exahype2 {
     const double* __restrict__          cellQ,
     int                                 order,
     int                                 unknowns,
+    int                                 auxiliaryVariables,
     const double* const __restrict__    BasisFunctionValuesLeft,
     double* const __restrict__          faceQLeft,
     double* const __restrict__          faceQRight,

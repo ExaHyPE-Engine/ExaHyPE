@@ -6,9 +6,9 @@ from peano4.solversteps.ActionSet import ActionSet
 
 def get_face_overlap_merge_implementation(patch_overlap):
   d = {
-    "OVERLAP": patch_overlap.dim[0]/2,
-    "DOFS_PER_AXIS": patch_overlap.dim[1],
-    "UNKNOWNS": patch_overlap.no_of_unknowns
+    "OVERLAP":       int(patch_overlap.dim[0]/2),
+    "DOFS_PER_AXIS": int(patch_overlap.dim[1]),
+    "UNKNOWNS":      int(patch_overlap.no_of_unknowns)
   }
   
   
@@ -37,8 +37,9 @@ def get_face_overlap_merge_implementation(patch_overlap):
       
       int volumeSerialised = serialisePatchIndex(volume, faceNormal);
       for (int k=0; k<{UNKNOWNS}; k++) {{
-        assertion4( 
+        assertion5( 
           neighbour.value[volumeSerialised*{UNKNOWNS}+k]==neighbour.value[volumeSerialised*{UNKNOWNS}+k],
+          value[volumeSerialised*{UNKNOWNS}+k],
           k, {UNKNOWNS},
           volume,
           marker.toString()

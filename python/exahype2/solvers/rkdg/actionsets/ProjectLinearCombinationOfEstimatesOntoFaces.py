@@ -43,7 +43,8 @@ class ProjectLinearCombinationOfEstimatesOntoFaces(AbstractRungeKuttaDGActionSet
     ::exahype2::dg::projectVolumetricDataOntoFaces(
       QIn,
       {{ORDER}},
-      {{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}},
+      {{NUMBER_OF_UNKNOWNS}},
+      {{NUMBER_OF_AUXILIARY_VARIABLES}},
       repositories::{{SOLVER_INSTANCE}}.BasisFunctionValuesLeft1d,
       fineGridFaces{{UNKNOWN_IDENTIFIER}}EstimateProjection(0).value, //left
       fineGridFaces{{UNKNOWN_IDENTIFIER}}EstimateProjection(2).value, //right
@@ -54,7 +55,8 @@ class ProjectLinearCombinationOfEstimatesOntoFaces(AbstractRungeKuttaDGActionSet
     ::exahype2::dg::projectVolumetricDataOntoFaces(
       QIn,
       {{ORDER}},
-      {{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}},
+      {{NUMBER_OF_UNKNOWNS}},
+      {{NUMBER_OF_AUXILIARY_VARIABLES}},
       repositories::{{SOLVER_INSTANCE}}.BasisFunctionValuesLeft1d,
       fineGridFaces{{UNKNOWN_IDENTIFIER}}EstimateProjection(0).value, //left
       fineGridFaces{{UNKNOWN_IDENTIFIER}}EstimateProjection(3).value, //right
@@ -87,7 +89,8 @@ class ProjectLinearCombinationOfEstimatesOntoFaces(AbstractRungeKuttaDGActionSet
     ::exahype2::dg::projectVolumetricDataOntoFaces(
       QIn,
       {{ORDER}},
-      {{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}},
+      {{NUMBER_OF_UNKNOWNS}},
+      {{NUMBER_OF_AUXILIARY_VARIABLES}},
       repositories::{{SOLVER_INSTANCE}}.BasisFunctionValuesLeft1d,
       fineGridFaces{{UNKNOWN_IDENTIFIER}}OldTimeStepProjection(0).value, //left
       fineGridFaces{{UNKNOWN_IDENTIFIER}}OldTimeStepProjection(2).value, //right
@@ -98,7 +101,8 @@ class ProjectLinearCombinationOfEstimatesOntoFaces(AbstractRungeKuttaDGActionSet
     ::exahype2::dg::projectVolumetricDataOntoFaces(
       QIn,
       {{ORDER}},
-      {{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}},
+      {{NUMBER_OF_UNKNOWNS}},
+      {{NUMBER_OF_AUXILIARY_VARIABLES}},
       repositories::{{SOLVER_INSTANCE}}.BasisFunctionValuesLeft1d,
       fineGridFaces{{UNKNOWN_IDENTIFIER}}OldTimeStepProjection(0).value, //left
       fineGridFaces{{UNKNOWN_IDENTIFIER}}OldTimeStepProjection(3).value, //right
@@ -133,7 +137,8 @@ class ProjectLinearCombinationOfEstimatesOntoFaces(AbstractRungeKuttaDGActionSet
     ::exahype2::dg::projectVolumetricDataOntoFaces(
       QIn,
       {{ORDER}},
-      {{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}},
+      {{NUMBER_OF_UNKNOWNS}},
+      {{NUMBER_OF_AUXILIARY_VARIABLES}},
       repositories::{{SOLVER_INSTANCE}}.BasisFunctionValuesLeft1d,
       fineGridFaces{{UNKNOWN_IDENTIFIER}}EstimateProjection(0).value, //left
       fineGridFaces{{UNKNOWN_IDENTIFIER}}EstimateProjection(2).value, //right
@@ -144,7 +149,8 @@ class ProjectLinearCombinationOfEstimatesOntoFaces(AbstractRungeKuttaDGActionSet
     ::exahype2::dg::projectVolumetricDataOntoFaces(
       QIn,
       {{ORDER}},
-      {{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}},
+      {{NUMBER_OF_UNKNOWNS}},
+      {{NUMBER_OF_AUXILIARY_VARIABLES}},
       repositories::{{SOLVER_INSTANCE}}.BasisFunctionValuesLeft1d,
       fineGridFaces{{UNKNOWN_IDENTIFIER}}EstimateProjection(0).value, //left
       fineGridFaces{{UNKNOWN_IDENTIFIER}}EstimateProjection(3).value, //right

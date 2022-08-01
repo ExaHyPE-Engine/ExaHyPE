@@ -1,11 +1,29 @@
-#include "../../dg/tests/DGTest.h"
+#include "../../dg/tests/CellIntegralTest.h"
+
+#include <cmath>
+#include <iostream>
+#include <fstream>
+
+#include "../DGUtils.h"
+#include "../CellIntegral.h"
+#include "../Riemann.h"
+#include "../rusanov/Riemann.h"
+#include "../BoundaryConditions.h"
+#include "TestUtils.h"
+#include "exahype2/CellData.h"
+
+
+namespace {
+  std::ofstream file_stream;
+}
+
 
 /*
  * We use precomputed values for lagrange polynomials as basis function
  *  on Gauss-Legendre nodes
  */
-exahype2::dg::tests::DGTest::DGTest():
-TestCase ("exahype2::dg::DGTest"),
+exahype2::dg::tests::CellIntegralTest::CellIntegralTest():
+TestCase ("exahype2::dg::CellIntegralTest"),
 QuadraturePoints {0.069431844202973713731097404888714663684368133544921875,0.33000947820757187134432797392946667969226837158203125,0.66999052179242812865567202607053332030773162841796875,0.9305681557970262307577513638534583151340484619140625},
 QuadratureWeights {
   0.1739274225687269248563637802362791262567043304443359375,0.32607257743127304738806060413480736315250396728515625,
@@ -49,13 +67,13 @@ BasisFunctionValuesRight {
 }
 
 
-void exahype2::dg::tests::DGTest::run(){
+void exahype2::dg::tests::CellIntegralTest::run(){
   testMethod(UtilsTest);
   testMethod(runDGEuler);
   testMethod(runDGElastic);
 }
 
-void exahype2::dg::tests::DGTest::UtilsTest(){
+void exahype2::dg::tests::CellIntegralTest::UtilsTest(){
 
   const int order = 3;
   const int nodesPerAxis = order+1;
@@ -298,7 +316,8 @@ void exahype2::dg::tests::DGTest::UtilsTest(){
   projectVolumetricDataOntoFaces(
     cellQin,
     order,
-    strideQ,
+    strideQ, // should be unknowns
+    0,       // auxiliary variables
     BasisFunctionValuesLeft,
     QxL,
     QxR,
@@ -413,7 +432,7 @@ void exahype2::dg::tests::DGTest::UtilsTest(){
  *    between the two cells is computed (here a rusanov flux is used)
  * 4) Finally, the contributions from the neighbouring cells are added to each node in a cell
  */
-void exahype2::dg::tests::DGTest::runDGEuler(){
+void exahype2::dg::tests::CellIntegralTest::runDGEuler(){
 
 
   file_stream << "Starting Euler test in " << Dimensions << " dimensions\n\n";
@@ -526,7 +545,8 @@ void exahype2::dg::tests::DGTest::runDGEuler(){
   projectVolumetricDataOntoFaces(
     QIn,
     order,
-    unknowns+auxiliaryVariables,
+    unknowns,
+    auxiliaryVariables,
     BasisFunctionValuesLeft,
     QLeft,
     QRight,
@@ -571,7 +591,8 @@ void exahype2::dg::tests::DGTest::runDGEuler(){
   projectVolumetricDataOntoFaces(
     QIn,
     order,
-    unknowns+auxiliaryVariables,
+    unknowns,
+    auxiliaryVariables,
     BasisFunctionValuesLeft,
     QRight,
     QLeft,
@@ -736,7 +757,7 @@ void exahype2::dg::tests::DGTest::runDGEuler(){
 
 
 
-void exahype2::dg::tests::DGTest::runDGElastic(){
+void exahype2::dg::tests::CellIntegralTest::runDGElastic(){
 
   file_stream << "\n\nStarting Elastic test in " << Dimensions << " dimensions\n\n";
 
@@ -928,7 +949,8 @@ void exahype2::dg::tests::DGTest::runDGElastic(){
   projectVolumetricDataOntoFaces(
     QIn,
     order,
-    unknowns+auxiliaryVariables,
+    unknowns,
+    auxiliaryVariables,
     BasisFunctionValuesLeft1d,
     QLeft,
     QRight,
@@ -958,7 +980,8 @@ void exahype2::dg::tests::DGTest::runDGElastic(){
   projectVolumetricDataOntoFaces(
     QIn,
     order,
-    unknowns+auxiliaryVariables,
+    unknowns,
+    auxiliaryVariables,
     BasisFunctionValuesLeft1d,
     QRight,
     QLeft,

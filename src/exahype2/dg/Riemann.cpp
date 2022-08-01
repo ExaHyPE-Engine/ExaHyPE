@@ -1,42 +1,49 @@
 #include "Riemann.h"
+#include "exahype2/enumerator/AoSLexicographicEnumerator.h"
+#include "exahype2/enumerator/FaceAoSLexicographicEnumerator.h"
 
 
 void exahype2::dg::projectVolumetricDataOntoFaces(
   const double* __restrict__          cellQ,
   int                                 order,
   int                                 unknowns,
+  int                                 auxiliaryVariables,
   const double* const __restrict__    BasisFunctionValuesLeft,
   double* const __restrict__          faceQLeft,
   double* const __restrict__          faceQRight,
   double* const __restrict__          faceQBottom,
   double* const __restrict__          faceQUp
 ) {
+  exahype2::enumerator::AoSLexicographicEnumerator     cellEnumerator(1,order+1,0,unknowns,auxiliaryVariables);
+  exahype2::enumerator::FaceAoSLexicographicEnumerator leftRightFaceEnumerator(0,order+1,1,unknowns,auxiliaryVariables);
+  exahype2::enumerator::FaceAoSLexicographicEnumerator bottomTopFaceEnumerator(1,order+1,1,unknowns,auxiliaryVariables);
+
   // project left/right
   for (int y=0; y<order+1; y++)
   for (int unknown=0; unknown<unknowns; unknown++) {
-    faceQLeft [ (2*y+1)*unknowns+unknown ] = 0.0;
-    faceQRight[ (2*y+0)*unknowns+unknown ] = 0.0;
+    faceQLeft [ leftRightFaceEnumerator({1,y},unknown) ] = 0.0;
+    faceQRight[ leftRightFaceEnumerator({0,y},unknown) ] = 0.0;
   }
 
   for (int y=0; y<order+1; y++)
   for (int x=0; x<order+1; x++)
   for (int unknown=0; unknown<unknowns; unknown++) {
-    faceQLeft [ (2*y+1)*unknowns+unknown ] += BasisFunctionValuesLeft[x]  * cellQ[ (y*(order+1)+x)*unknowns + unknown ];
-    faceQRight[ (2*y+0)*unknowns+unknown ] += BasisFunctionValuesLeft[order-x] * cellQ[ (y*(order+1)+x)*unknowns + unknown ];
+    faceQLeft [ leftRightFaceEnumerator({1,y},unknown) ] += BasisFunctionValuesLeft[x]       * cellQ[ cellEnumerator(0,{x,y},unknown) ];
+    faceQRight[ leftRightFaceEnumerator({0,y},unknown) ] += BasisFunctionValuesLeft[order-x] * cellQ[ cellEnumerator(0,{x,y},unknown) ];
   }
 
   // project up/down
   for (int x=0; x<order+1; x++)
   for (int unknown=0; unknown<unknowns; unknown++) {
-    faceQBottom [ (x+order+1)*unknowns+unknown ] = 0.0;
-    faceQUp     [ (x        )*unknowns+unknown ] = 0.0;
+    faceQBottom [ bottomTopFaceEnumerator({x,1},unknown) ] = 0.0;
+    faceQUp     [ bottomTopFaceEnumerator({x,0},unknown) ] = 0.0;
   }
 
   for (int y=0; y<order+1; y++)
   for (int x=0; x<order+1; x++)
   for (int unknown=0; unknown<unknowns; unknown++) {
-    faceQBottom [ (x+order+1)*unknowns+unknown ] += BasisFunctionValuesLeft[y]  * cellQ[ (y*(order+1)+x)*unknowns + unknown ];
-    faceQUp     [ (x        )*unknowns+unknown ] += BasisFunctionValuesLeft[order-y] * cellQ[ (y*(order+1)+x)*unknowns + unknown ];
+    faceQBottom [ bottomTopFaceEnumerator({x,1},unknown) ] += BasisFunctionValuesLeft[y]       * cellQ[ cellEnumerator(0,{x,y},unknown) ];
+    faceQUp     [ bottomTopFaceEnumerator({x,0},unknown) ] += BasisFunctionValuesLeft[order-y] * cellQ[ cellEnumerator(0,{x,y},unknown) ];
   }
 
 }
@@ -46,6 +53,7 @@ void exahype2::dg::projectVolumetricDataOntoFaces(
   const double* __restrict__          cellQ,
   int                                 order,
   int                                 unknowns,
+  int                                 auxiliaryVariables,
   const double* const __restrict__    BasisFunctionValuesLeft,
   double* const __restrict__          faceQLeft,
   double* const __restrict__          faceQRight,
@@ -54,6 +62,11 @@ void exahype2::dg::projectVolumetricDataOntoFaces(
   double* const __restrict__          faceQBottom,
   double* const __restrict__          faceQUp
 ) {
+  exahype2::enumerator::AoSLexicographicEnumerator     cellEnumerator(1,order+1,0,unknowns,auxiliaryVariables);
+  exahype2::enumerator::FaceAoSLexicographicEnumerator leftRightFaceEnumerator(0,order+1,1,unknowns,auxiliaryVariables);
+  exahype2::enumerator::FaceAoSLexicographicEnumerator bottomTopFaceEnumerator(1,order+1,1,unknowns,auxiliaryVariables);
+  exahype2::enumerator::FaceAoSLexicographicEnumerator frontBackFaceEnumerator(2,order+1,1,unknowns,auxiliaryVariables);
+
 
   int nodesPerAxis = order+1;
   int nodesPerFace = nodesPerAxis*nodesPerAxis;
@@ -62,49 +75,48 @@ void exahype2::dg::projectVolumetricDataOntoFaces(
   for (int y=0; y<order+1; y++)
   for (int z=0; z<order+1; z++)
   for (int unknown=0; unknown<unknowns; unknown++) {
-    faceQLeft   [ (2*(y+z*nodesPerAxis)+1)*unknowns+unknown ] = 0.0;
-    faceQRight  [ (2*(y+z*nodesPerAxis)+0)*unknowns+unknown ] = 0.0;
+    faceQLeft   [ leftRightFaceEnumerator({1,y,z},unknown) ] = 0.0;
+    faceQRight  [ leftRightFaceEnumerator({0,y,z},unknown) ] = 0.0;
   }
 
   for (int x=0; x<order+1; x++)
   for (int y=0; y<order+1; y++)
   for (int z=0; z<order+1; z++)
   for (int unknown=0; unknown<unknowns; unknown++) {
-    faceQLeft   [ (2*(y+z*nodesPerAxis)+1)*unknowns+unknown ] += BasisFunctionValuesLeft[x] * cellQ[ (z*nodesPerFace+y*nodesPerAxis+x)*unknowns + unknown ];
-    faceQRight  [ (2*(y+z*nodesPerAxis)+0)*unknowns+unknown ] += BasisFunctionValuesLeft[order-x] * cellQ[ (z*nodesPerFace+y*nodesPerAxis+x)*unknowns + unknown ];
-  }
-
-  // project front/back
-  for (int x=0; x<order+1; x++)
-  for (int z=0; z<order+1; z++)
-  for (int unknown=0; unknown<unknowns; unknown++) {
-    faceQFront [ (x+0*nodesPerAxis+z*2*nodesPerAxis)*unknowns+unknown ] = 0.0;
-    faceQBack  [ (x+1*nodesPerAxis+z*2*nodesPerAxis)*unknowns+unknown ] = 0.0;
-  }
-  for (int x=0; x<order+1; x++)
-  for (int y=0; y<order+1; y++)
-  for (int z=0; z<order+1; z++)
-  for (int unknown=0; unknown<unknowns; unknown++) {
-    faceQFront [ (x+0*nodesPerAxis+z*2*nodesPerAxis)*unknowns+unknown ] += BasisFunctionValuesLeft[y] * cellQ[ (z*nodesPerFace+y*nodesPerAxis+x)*unknowns + unknown ];
-    faceQBack  [ (x+1*nodesPerAxis+z*2*nodesPerAxis)*unknowns+unknown ] += BasisFunctionValuesLeft[order-y] * cellQ[ (z*nodesPerFace+y*nodesPerAxis+x)*unknowns + unknown ];
+    faceQLeft   [ leftRightFaceEnumerator({1,y,z},unknown) ] += BasisFunctionValuesLeft[x]       * cellQ[ cellEnumerator(0,{x,y,z},unknown) ];
+    faceQRight  [ leftRightFaceEnumerator({0,y,z},unknown) ] += BasisFunctionValuesLeft[order-x] * cellQ[ cellEnumerator(0,{x,y,z},unknown) ];
   }
 
   // project down/up
   for (int x=0; x<order+1; x++)
-  for (int y=0; y<order+1; y++)
+  for (int z=0; z<order+1; z++)
   for (int unknown=0; unknown<unknowns; unknown++) {
-    faceQBottom [ (x+y*nodesPerAxis+0*nodesPerFace)*unknowns+unknown ] = 0.0;
-    faceQUp     [ (x+y*nodesPerAxis+1*nodesPerFace)*unknowns+unknown ] = 0.0;
+    faceQBottom [ bottomTopFaceEnumerator({x,1,z},unknown) ] = 0.0;
+    faceQUp     [ bottomTopFaceEnumerator({x,0,z},unknown) ] = 0.0;
   }
 
   for (int x=0; x<order+1; x++)
   for (int y=0; y<order+1; y++)
   for (int z=0; z<order+1; z++)
   for (int unknown=0; unknown<unknowns; unknown++) {
-    faceQBottom [ (x+y*nodesPerAxis+0*nodesPerFace)*unknowns+unknown ] += BasisFunctionValuesLeft[z] * cellQ[ (z*nodesPerFace+y*nodesPerAxis+x)*unknowns + unknown ];
-    faceQUp     [ (x+y*nodesPerAxis+1*nodesPerFace)*unknowns+unknown ] += BasisFunctionValuesLeft[order-z] * cellQ[ (z*nodesPerFace+y*nodesPerAxis+x)*unknowns + unknown ];
+    faceQBottom [ bottomTopFaceEnumerator({x,1,z},unknown) ] += BasisFunctionValuesLeft[z]       * cellQ[ cellEnumerator(0,{x,y,z},unknown) ];
+    faceQUp     [ bottomTopFaceEnumerator({x,0,z},unknown) ] += BasisFunctionValuesLeft[order-z] * cellQ[ cellEnumerator(0,{x,y,z},unknown) ];
   }
 
+  // project front/back
+  for (int x=0; x<order+1; x++)
+  for (int y=0; y<order+1; y++)
+  for (int unknown=0; unknown<unknowns; unknown++) {
+    faceQFront [ frontBackFaceEnumerator({x,y,1},unknown) ] = 0.0;
+    faceQBack  [ frontBackFaceEnumerator({x,y,0},unknown) ] = 0.0;
+  }
+  for (int x=0; x<order+1; x++)
+  for (int y=0; y<order+1; y++)
+  for (int z=0; z<order+1; z++)
+  for (int unknown=0; unknown<unknowns; unknown++) {
+    faceQFront [ frontBackFaceEnumerator({x,y,1},unknown) ] += BasisFunctionValuesLeft[y]       * cellQ[ cellEnumerator(0,{x,y,z},unknown) ];
+    faceQBack  [ frontBackFaceEnumerator({x,y,0},unknown) ] += BasisFunctionValuesLeft[order-y] * cellQ[ cellEnumerator(0,{x,y,z},unknown) ];
+  }
 }
 
 
