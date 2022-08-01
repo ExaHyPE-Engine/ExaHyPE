@@ -97,10 +97,10 @@ namespace exahype2 {
     const double* const __restrict__    BasisFunctionValuesLeft,
     double* const __restrict__          faceQLeft,
     double* const __restrict__          faceQRight,
-    double* const __restrict__          faceQFront,
-    double* const __restrict__          faceQBack,
     double* const __restrict__          faceQBottom,
-    double* const __restrict__          faceQUp
+    double* const __restrict__          faceQUp,
+    double* const __restrict__          faceQFront,
+    double* const __restrict__          faceQBack
   );
 
 
@@ -170,43 +170,6 @@ namespace exahype2 {
     const double* __restrict__          MassMatrixDiagonal1d,
     double* __restrict__                cellQ
   );
-
-  /*
-   * Given a numerical flux at the surface from QHullIn, this applies this flux to
-   * the values of Q to compute the next solution.
-   * As opposed to previous two functions this is a generic function which works for
-   * any number of dimensions.
-   *
-   * @param Q the current solution, expected to be the solution already updated
-   *   with local contributions. (See Euler.h)
-   *
-   * @param QHullIn see computeRusanov above. This should contain a value for the
-   *   numerical flux at each node along each face
-   *
-   * @param: BasisFunctionValuesLeft (respectively Right): as the name implies, this is
-   *  the numerical value of the basis function value evaluated at the left node in
-   *  1 dimension. This has a part in determining how much the value at the boundary
-   *  influences the value at a given node.
-   *
-   * @param quadratureWeights: quadrature weight of the given quadrature node 1 dimension
-   *
-   * @todo Gibt es nimmer. Wurde praktisch durch computeRiemannIntegralAndAddToCell() ersetzt
-   */
-/*
-  void applyRiemannToPatch(
-      double* __restrict__        Q,
-      const double* __restrict__  QHullIn,
-      const int                   order,
-      const int                   unknowns,
-      const int                   auxiliaryVariables,
-      const double                dx,
-      const double                dt,
-      const double* __restrict__  BasisFunctionValuesLeft,
-      const double* __restrict__  BasisFunctionValuesRight,
-      const double* __restrict__  quadratureWeights
-      );
-*/
-
   }
 }
 

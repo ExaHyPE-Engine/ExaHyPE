@@ -31,20 +31,16 @@ void exahype2::dg::tests::RiemannTest::testProjectVolumetricDataOntoFacesForCons
   double QxR[2*nodesPerFace*2];
   double QyL[2*nodesPerFace*2];
   double QyR[2*nodesPerFace*2];
-  #if Dimensions==3
   double QzL[2*nodesPerFace*2];
   double QzR[2*nodesPerFace*2];
-  #endif
 
   for(int i=0; i<2*nodesPerFace*2;i++){
     QxL[i] = 0.0;
     QxR[i] = 0.0;
     QyL[i] = 0.0;
     QyR[i] = 0.0;
-    #if Dimensions==3
     QzL[i] = 0.0;
     QzR[i] = 0.0;
-    #endif
   }
 
   projectVolumetricDataOntoFaces(
@@ -73,6 +69,12 @@ void exahype2::dg::tests::RiemannTest::testProjectVolumetricDataOntoFacesForCons
   validateNumericalEquals( QxL[7], -1.0 );
   validateNumericalEquals( QxL[8],  0.0 );
   validateNumericalEquals( QxL[9],  0.0 );
+  #if Dimensions==3
+  validateNumericalEquals( QxL[20],  0.0 );
+  validateNumericalEquals( QxL[21],  0.0 );
+  validateNumericalEquals( QxL[22],  1.0 );
+  validateNumericalEquals( QxL[23], -1.0 );
+  #endif
 
   validateNumericalEquals( QxR[0],  1.0 );
   validateNumericalEquals( QxR[1], -1.0 );
@@ -91,27 +93,51 @@ void exahype2::dg::tests::RiemannTest::testProjectVolumetricDataOntoFacesForCons
   validateNumericalEquals( QyL[3],   0.0 );
   validateNumericalEquals( QyL[4],   0.0 );
   validateNumericalEquals( QyL[5],   0.0 );
-
+  validateNumericalEquals( QyL[10],  1.0 );
+  validateNumericalEquals( QyL[11], -1.0 );
+  validateNumericalEquals( QyL[12],  1.0 );
+  validateNumericalEquals( QyL[13], -1.0 );
   #if Dimensions==3
-  validateNumericalEquals( QyL[(order+1)*(order+1)*2+0],   1.0 );
-  validateNumericalEquals( QyL[(order+1)*(order+1)*2+1],  -1.0 );
-  validateNumericalEquals( QyL[(order+1)*(order+1)*2+2],  1.0 );
-  validateNumericalEquals( QyL[(order+1)*(order+1)*2+1], -1.0 );
-  #else
-  validateNumericalEquals( QyL[(order+1)*2+0],   1.0 );
-  validateNumericalEquals( QyL[(order+1)*2+1],  -1.0 );
-  validateNumericalEquals( QyL[(order+1)*2+2],  1.0 );
-  validateNumericalEquals( QyL[(order+1)*2+1], -1.0 );
+  exahype2::enumerator::FaceAoSLexicographicEnumerator bottomTopFaceEnumerator(1,3+1,1,1,1);
+
+  validateEquals( bottomTopFaceEnumerator({0,0,0},0), 0 );
+  validateEquals( bottomTopFaceEnumerator({0,0,0},1), 1 );
+  validateEquals( bottomTopFaceEnumerator({1,0,0},0), 2 );
+  validateEquals( bottomTopFaceEnumerator({1,0,0},1), 3 );
+  validateEquals( bottomTopFaceEnumerator({0,1,0},0), 8 );
+  validateEquals( bottomTopFaceEnumerator({0,1,0},1), 9 );
+  validateEquals( bottomTopFaceEnumerator({1,1,0},0), 10 );
+  validateEquals( bottomTopFaceEnumerator({1,1,0},1), 11 );
+  validateEquals( bottomTopFaceEnumerator({2,1,0},0), 12 );
+  validateEquals( bottomTopFaceEnumerator({2,1,0},1), 13 );
+  validateEquals( bottomTopFaceEnumerator({3,1,0},0), 14 );
+  validateEquals( bottomTopFaceEnumerator({3,1,0},1), 15 );
+  validateEquals( bottomTopFaceEnumerator({0,0,1},0), 16 );
+  validateEquals( bottomTopFaceEnumerator({0,0,1},1), 17 );
+
+  validateNumericalEquals( QyL[16],  0.0 );
+  validateNumericalEquals( QyL[17],  0.0 );
+  validateNumericalEquals( QyL[18],  0.0 );
+  validateNumericalEquals( QyL[19],  0.0 );
+  validateNumericalEquals( QyL[20],  0.0 );
+  validateNumericalEquals( QyL[21],  0.0 );
+  validateNumericalEquals( QyL[24],  1.0 );
+  validateNumericalEquals( QyL[25], -1.0 );
+  validateNumericalEquals( QyL[26],  1.0 );
+  validateNumericalEquals( QyL[27], -1.0 );
   #endif
 
   #if Dimensions==3
-  validateNumericalEquals( QzL[0],  0.0 );
-  validateNumericalEquals( QzL[1],  0.0 );
-  validateNumericalEquals( QzL[2],  0.0 );
-  validateNumericalEquals( QzL[3],  0.0 );
-  validateNumericalEquals( QzL[4],  0.0 );
-  validateNumericalEquals( QzL[5],  0.0 );
-  validateNumericalEquals( QzL[(order+1)*(order+1)*2+0],  1.0 );
-  validateNumericalEquals( QzL[(order+1)*(order+1)*2+1], -1.0 );
+  validateNumericalEquals( QzL[0],   0.0 );
+  validateNumericalEquals( QzL[1],   0.0 );
+  validateNumericalEquals( QzL[2],   0.0 );
+  validateNumericalEquals( QzL[3],   0.0 );
+  validateNumericalEquals( QzL[4],   0.0 );
+  validateNumericalEquals( QzL[5],   0.0 );
+  validateNumericalEquals( QzL[32],  1.0 );
+  validateNumericalEquals( QzL[33], -1.0 );
+
+  validateNumericalEquals( QzR[0],  1.0 );
+  validateNumericalEquals( QzR[1], -1.0 );
   #endif
 }

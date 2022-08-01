@@ -57,19 +57,15 @@ void exahype2::dg::projectVolumetricDataOntoFaces(
   const double* const __restrict__    BasisFunctionValuesLeft,
   double* const __restrict__          faceQLeft,
   double* const __restrict__          faceQRight,
-  double* const __restrict__          faceQFront,
-  double* const __restrict__          faceQBack,
   double* const __restrict__          faceQBottom,
-  double* const __restrict__          faceQUp
+  double* const __restrict__          faceQUp,
+  double* const __restrict__          faceQFront,
+  double* const __restrict__          faceQBack
 ) {
   exahype2::enumerator::AoSLexicographicEnumerator     cellEnumerator(1,order+1,0,unknowns,auxiliaryVariables);
   exahype2::enumerator::FaceAoSLexicographicEnumerator leftRightFaceEnumerator(0,order+1,1,unknowns,auxiliaryVariables);
   exahype2::enumerator::FaceAoSLexicographicEnumerator bottomTopFaceEnumerator(1,order+1,1,unknowns,auxiliaryVariables);
   exahype2::enumerator::FaceAoSLexicographicEnumerator frontBackFaceEnumerator(2,order+1,1,unknowns,auxiliaryVariables);
-
-
-  int nodesPerAxis = order+1;
-  int nodesPerFace = nodesPerAxis*nodesPerAxis;
 
   // project left/right
   for (int y=0; y<order+1; y++)
