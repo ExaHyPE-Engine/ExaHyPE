@@ -163,7 +163,7 @@ if __name__ == "__main__":
             name=name, patch_size=patch_size, rk_order=rk_order,
             unknowns=number_of_unknowns,
             auxiliary_variables=0,
-            min_volume_h=min_volume_h, max_volume_h=max_volume_h,
+            min_meshcell_h=min_volume_h, max_meshcell_h=max_volume_h,
             time_step_relaxation=cfl,
             KOSigma=KOSig
           )
@@ -177,7 +177,7 @@ if __name__ == "__main__":
             name=name, patch_size=patch_size, rk_order=rk_order,
             unknowns=number_of_unknowns,
             auxiliary_variables=0,
-            min_volume_h=min_volume_h, max_volume_h=max_volume_h,
+            min_meshcell_h=min_volume_h, max_meshcell_h=max_volume_h,
             normalised_time_step_size=0.01,
             KOSigma=KOSig
           )

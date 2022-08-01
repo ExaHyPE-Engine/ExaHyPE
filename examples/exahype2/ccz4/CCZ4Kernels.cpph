@@ -462,7 +462,33 @@ void examples::exahype2::ccz4::ncp(double* BgradQ, const double* const Q, const 
     for (int n = 0; n < 3; n++)
     for (int j = 0; j < 3; j++) dgup[k][m][l] -= g_contr[m][n]*g_contr[j][l]*2*DD[k][n][j];
 
+    const double phi = std::exp(std::fmax(-20., std::fmin(20.,Q[54])));
+    const double phi2 = phi*phi;
+
     const double PP[3] = {Q[55], Q[56], Q[57]};
+    double dPP[3][3] = {
+        {gradQin[55][0],gradQin[56][0],gradQin[57][0]},
+        {gradQin[55][1],gradQin[56][1],gradQin[57][1]},
+        {gradQin[55][2],gradQin[56][2],gradQin[57][2]}
+    };
+
+    //here we adjust how we calculate dPP, i.e. the second derivative of \phi. as we now input \partial_i \partial_j \phi, we just need to reconstruct \partial_i P_j from it.
+    //anything else can be kept the same.
+    //for (int i = 0; i < 3; i++)
+    //for (int j = 0; j < 3; j++) dPP[i][j]=dPP[i][j]/phi-PP[i]*PP[j];
+
+    const double AA[3] = {Q[23], Q[24], Q[25]};
+    double dAA[3][3] = {
+        {gradQin[23][0],gradQin[24][0],gradQin[25][0]},
+        {gradQin[23][1],gradQin[24][1],gradQin[25][1]},
+        {gradQin[23][2],gradQin[24][2],gradQin[25][2]}
+    };
+
+    //here we adjust how we calculate dAA, i.e. the second derivative of \alpha. as we now input \partial_i \partial_j \alpha, we just need to reconstruct \partial_i A_j from it.
+    //anything else can be kept the same.
+    //for (int i = 0; i < 3; i++)
+    //for (int j = 0; j < 3; j++) dAA[i][j]=dAA[i][j]/alpha-AA[i]*AA[j];
+
 
     double Christoffel[3][3][3]       = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
     double Christoffel_tilde[3][3][3] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
@@ -486,9 +512,6 @@ void examples::exahype2::ccz4::ncp(double* BgradQ, const double* const Q, const 
     for (int i = 0; i < 3; i++) Gtilde[i] += g_contr[j][l] * Christoffel_tilde[j][l][i];
 
     const double Ghat[3] = {Q[13], Q[14], Q[15]};
-
-    const double phi = std::exp(std::fmax(-20., std::fmin(20.,Q[54])));
-    const double phi2 = phi*phi;
 
     double Z[3] = {0,0,0};
     for (int i=0;i<3;i++)
@@ -533,14 +556,6 @@ void examples::exahype2::ccz4::ncp(double* BgradQ, const double* const Q, const 
             }
         }
     };
-
-
-    const double dPP[3][3] = {
-        {gradQin[55][0],gradQin[56][0],gradQin[57][0]},
-        {gradQin[55][1],gradQin[56][1],gradQin[57][1]},
-        {gradQin[55][2],gradQin[56][2],gradQin[57][2]}
-    };
-
 
     double dChristoffelNCP[3][3][3][3] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
     double dChristoffel_tildeNCP[3][3][3][3] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
@@ -602,14 +617,6 @@ void examples::exahype2::ccz4::ncp(double* BgradQ, const double* const Q, const 
     for (int i = 0; i < 3; i++)
     for (int j = 0; j < 3; j++) RPlusTwoNablaZNCP += g_contr[i][j]*RicciPlusNablaZNCP[i][j]; // TODO fuse these steps
     RPlusTwoNablaZNCP*=phi2;
-
-
-    const double AA[3] = {Q[23], Q[24], Q[25]};
-    const double dAA[3][3] = {
-        {gradQin[23][0],gradQin[24][0],gradQin[25][0]},
-        {gradQin[23][1],gradQin[24][1],gradQin[25][1]},
-        {gradQin[23][2],gradQin[24][2],gradQin[25][2]}
-    };
 
     double nablaijalphaNCP[3][3];
     for (int i = 0; i < 3; i++)
