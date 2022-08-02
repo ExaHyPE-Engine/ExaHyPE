@@ -15,6 +15,7 @@
 #
 import os, sys
 import argparse
+import numpy
 
 
 print( """
@@ -25,13 +26,13 @@ python3 example-scripts/finitevolumes-with-ExaHyPE2-benchmark.py arguments
 """)
 
 parser = argparse.ArgumentParser(description='ExaHyPE 2 - Euler benchmarking script')
-parser.add_argument("-j",   "--parallel-builds",   dest="j",              type=int, default=4, help="Parallel builds" )
+parser.add_argument("-j",   "--parallel-builds",   dest="j",              type=int, default=8, help="Parallel builds" )
 parser.add_argument("-d",   "--dim",               dest="dim",            type=int, default=2, help="Dimensions" )
 parser.add_argument("-pd",  "--peano-dir",         dest="peanodir",                 default="../../../", help="Peano4 directory" )
 parser.add_argument("-v",   "--verbose",           dest="verbose",        action="store_true", default=False, help="Verbose")
 parser.add_argument(        "--debug",             dest="debug"  ,        action="store_true", default=False, help="Verbose")
-parser.add_argument("-ps",  "--patch-size",        dest="patch_size",     type=int, default=17, help="Dimensions" )
-parser.add_argument("-a",   "--accuracy",          dest="accuracy",       type=float, default=1e-10, help="Floating point accuracy to which the different kernel variants have to match (absolute)" )
+parser.add_argument("-ps",  "--patch-size",        dest="patch_size",     type=int, default=5, help="Dimensions" )
+parser.add_argument("-a",   "--accuracy",          dest="accuracy",       type=float, default=numpy.finfo(float).eps, help="Floating point accuracy to which the different kernel variants have to match (absolute)" )
 parser.add_argument("-f",   "--file",              dest="file",           default="", help="Specify to convert an output file into a bar plot. If you omit this flag, the script will actually build the benchmark" )
 args = parser.parse_args()
 

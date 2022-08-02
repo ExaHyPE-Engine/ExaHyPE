@@ -596,9 +596,9 @@ namespace exahype2 {
         #endif
         template <typename QFluxEnumeratorType, typename QOutEnumeratorType>
         static void updateSolutionWithFlux_LoopBody(
-          const double* __restrict__                   tempFluxX,
-          const double* __restrict__                   tempFluxY,
-          const double* __restrict__                   tempFluxZ,
+          double* __restrict__                   tempFluxX,
+          double* __restrict__                   tempFluxY,
+          double* __restrict__                   tempFluxZ,
           const QFluxEnumeratorType&                   fluxEnumerator,
           const tarch::la::Vector<Dimensions,double>&  patchCentre,
           const tarch::la::Vector<Dimensions,double>&  patchSize,

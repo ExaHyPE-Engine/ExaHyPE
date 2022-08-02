@@ -37,18 +37,22 @@
 #include <tbb/task_group.h>
 #endif
 
+//#ifdef UseFEExcept
+#include <fenv.h>
+#pragma float_control(precise, on)
+#pragma STDC FENV_ACCESS ON
+//#endif
+
 using namespace examples::exahype2::euler;
 
-
 tarch::logging::Log _log("::");
-
 
 tarch::timing::Measurement   gridConstructionMeasurement;
 tarch::timing::Measurement   timeStepMeasurement;
 tarch::timing::Measurement   plotMeasurement;
 
+double validMaxEigenvalue = 0;
 double* validOutcome = nullptr;
-
 
 #if Dimensions==2
 constexpr int NumberOfInputEntries  = (EulerOnGPU::NumberOfFiniteVolumesPerAxisPerPatch+2)*(EulerOnGPU::NumberOfFiniteVolumesPerAxisPerPatch+2) * EulerOnGPU::NumberOfUnknowns;
@@ -57,7 +61,6 @@ constexpr int NumberOfOutputEntries = (EulerOnGPU::NumberOfFiniteVolumesPerAxisP
 constexpr int NumberOfInputEntries  = (EulerOnGPU::NumberOfFiniteVolumesPerAxisPerPatch+2)*(EulerOnGPU::NumberOfFiniteVolumesPerAxisPerPatch+2)*(EulerOnGPU::NumberOfFiniteVolumesPerAxisPerPatch+2) * EulerOnGPU::NumberOfUnknowns;
 constexpr int NumberOfOutputEntries = (EulerOnGPU::NumberOfFiniteVolumesPerAxisPerPatch+0)*(EulerOnGPU::NumberOfFiniteVolumesPerAxisPerPatch+0)*(EulerOnGPU::NumberOfFiniteVolumesPerAxisPerPatch+0) * EulerOnGPU::NumberOfUnknowns;
 #endif
-
 
 /**
  * Set input data
@@ -76,26 +79,25 @@ void initInputData( double* Q ) {
   }
 }
 
-
 /**
  * Make a persistent snapshot of a solution and assume, from hereon, that
  * this snapshot is the valid data. You can call this routine as often as
  * you want. Only the very first call will trigger a snapshot.
  */
-void storeOutcome( const double* Q ) {
+void storeOutcome( const double* Q, const double maxEigenvalue) {
   if (validOutcome==nullptr) {
     validOutcome = new double[ NumberOfOutputEntries ];
     std::memcpy(validOutcome,Q,sizeof(double)*NumberOfOutputEntries);
     logInfo( "storeOutcome(double*)", "bookmarked reference solution" );
   }
+  validMaxEigenvalue = maxEigenvalue;
 }
-
 
 /**
  * Works if and only if storeOutcome has been performed
  * before.
  */
-std::tuple<double, int> validateOutcome( const double* Q, int patchIndex ) {
+std::tuple<double, int> validateOutcome( double* Q, int patchIndex , const double maxEigenvalue) {
   int index = 0;
   int errors = 0;
   double maxDifference = 0.0;
@@ -103,13 +105,19 @@ std::tuple<double, int> validateOutcome( const double* Q, int patchIndex ) {
     if (not tarch::la::equals( Q[i], validOutcome[i], examples::exahype2::euler::Accuracy) ) {
       errors++;
     }
+      std::cout.precision(17);
+      //std::cout << std::fixed << "Q[" << i << "]=validOutcome[" << i << "]: " << Q[i] << "=" << validOutcome[i] << std::endl;
+
     maxDifference = std::max(maxDifference, std::abs(Q[i]-validOutcome[i]) );
     index++;
   }
-    return { maxDifference, errors };
+  if (not tarch::la::equals( maxEigenvalue, validMaxEigenvalue, examples::exahype2::euler::Accuracy)) {
+    std::cout << std::fixed << "ERROR: maxEigenvalue[" << patchIndex << "]!=validMaxEigenvalue[" << patchIndex << "]: " << maxEigenvalue << "!=" << validMaxEigenvalue << std::endl;
+  }
+  std::cout << std::fixed << "maxEigenvalue[" << patchIndex << "]=validMaxEigenvalue[" << patchIndex << "]: " << maxEigenvalue << "=" << validMaxEigenvalue << std::endl;
+
+  return { maxDifference, errors };
 }
-
-
 
 constexpr double TimeStamp    = 0.5;
 constexpr double TimeStepSize = 1e-6;
@@ -138,9 +146,10 @@ void runBenchmarks(int patches) {
       initInputData( inputData[i] );
     }
 
+    double outputMaxEigenvalue = 0;
     tarch::timing::Watch watch( "::", "main()", false );
     for (int i=0; i<patches; i++) {
-      tasks::EulerOnGPUEnclaveTask::applyKernelToCell(
+      outputMaxEigenvalue = tasks::EulerOnGPUEnclaveTask::applyKernelToCell(
         marker,
         TimeStamp,            // double t
         TimeStepSize,         // double dt
@@ -152,8 +161,8 @@ void runBenchmarks(int patches) {
     int errors = 0;
     double maxDifference = 0.0;
     for (int i=0; i<patches; i++) {
-      storeOutcome( outputData[i] );
-      auto [maxDifferencePerPatch, errorsPerPatch] = validateOutcome( outputData[i],i );
+      storeOutcome( outputData[i],outputMaxEigenvalue );
+      auto [maxDifferencePerPatch, errorsPerPatch] = validateOutcome( outputData[i],i ,outputMaxEigenvalue);
       errors += errorsPerPatch;
       maxDifference = std::max(maxDifference, maxDifferencePerPatch);
       delete[] outputData[i];
@@ -198,7 +207,7 @@ void runBenchmarks(int patches) {
     int errors = 0;
     double maxDifference = 0.0;
     for (int i=0; i<patches; i++) {
-      auto [maxDifferencePerPatch, errorsPerPatch] = validateOutcome( patchData.QOut[i],i );
+      auto [maxDifferencePerPatch, errorsPerPatch] = validateOutcome( patchData.QOut[i],i,patchData.maxEigenvalue[i]);
       errors += errorsPerPatch;
       maxDifference = std::max(maxDifference, maxDifferencePerPatch);
       delete[] patchData.QIn[i];
@@ -210,7 +219,6 @@ void runBenchmarks(int patches) {
       logInfo("main()", "   -> max difference of outcome for all patches is " << maxDifference << " (admissible accuracy=" << examples::exahype2::euler::Accuracy << ")" << " for " << errors << " entries");
     }
   };
-
 
   auto testFusedVariantOnDevice = [&](
     int device,
@@ -234,6 +242,7 @@ void runBenchmarks(int patches) {
       patchData[hostTask].QOut[i]  = new double[ NumberOfOutputEntries ];
       patchData[hostTask].cellCentre[i]     = tarch::la::Vector<Dimensions,double>(CellOffset+0.5*CellSize);
       patchData[hostTask].cellSize[i]       = tarch::la::Vector<Dimensions,double>(CellSize);
+      initInputData(patchData[hostTask].QIn[i]);
     }
 
     tarch::timing::Watch singleKernelWatch( "::", "main()", false );
@@ -250,7 +259,7 @@ void runBenchmarks(int patches) {
     int errors = 0;
     double maxDifference = 0.0;
     for (int i=0; i<patches; i++) {
-      auto [maxDifferencePerPatch, errorsPerPatch] = validateOutcome( patchData[0].QOut[i],i );
+      auto [maxDifferencePerPatch, errorsPerPatch] = validateOutcome( patchData[0].QOut[i],i,patchData[0].maxEigenvalue[i]);
       errors += errorsPerPatch;
       maxDifference = std::max(maxDifference, maxDifferencePerPatch);
     }
@@ -312,24 +321,24 @@ void runBenchmarks(int patches) {
   #else
   if (patches<=4) {
   #endif
-    testFusedVariant(
+    /*testFusedVariant(
       ::exahype2::fv::rusanov::timeStepWithRusanov_patchwise_call_stack_static_calls<EulerOnGPU,EulerOnGPU::NumberOfFiniteVolumesPerAxisPerPatch, 1, 5, 0,exahype2::enumerator::AoSLexicographicEnumerator>,
       "call stack, patch-wise, AoS", true
     );
     testFusedVariant(
       ::exahype2::fv::rusanov::timeStepWithRusanov_batched_call_stack_static_calls<EulerOnGPU,EulerOnGPU::NumberOfFiniteVolumesPerAxisPerPatch, 1, 5, 0,exahype2::enumerator::AoSLexicographicEnumerator>,
       "call stack, batched, AoS", true
-    );
+    );*/
   }
 
   /*testFusedVariant(
     ::exahype2::fv::rusanov::timeStepWithRusanov_patchwise_heap_static_calls<EulerOnGPU,EulerOnGPU::NumberOfFiniteVolumesPerAxisPerPatch, 1, 5, 0,exahype2::enumerator::AoSLexicographicEnumerator>,
     "heap, patch-wise, AoS", true
   );*/
-  testFusedVariant(
+  /*testFusedVariant(
     ::exahype2::fv::rusanov::timeStepWithRusanov_batched_heap_static_calls<EulerOnGPU,EulerOnGPU::NumberOfFiniteVolumesPerAxisPerPatch, 1, 5, 0,exahype2::enumerator::AoSLexicographicEnumerator>,
     "heap, batched, AoS", true
-  );
+  );*/
   /*testFusedVariant(
     ::exahype2::fv::rusanov::timeStepWithRusanov_patchwise_heap_static_calls<EulerOnGPU,EulerOnGPU::NumberOfFiniteVolumesPerAxisPerPatch, 1, 5, 0,exahype2::enumerator::AoSoALexicographicEnumerator>,
     "heap, patch-wise, AoSoA", true
@@ -365,7 +374,7 @@ void runBenchmarks(int patches) {
   }
   for (int device=0; device<tarch::multicore::Core::getInstance().getNumberOfGPUs(); device++) {
 
-    /*logInfo( "main()", "device " << device << " (first kernel triggered by one thread, then kernel triggered by four threads if multithreading enabled)" );
+    //logInfo( "main()", "device " << device << " (first kernel triggered by one thread, then kernel triggered by four threads if multithreading enabled)" );
     testFusedVariantOnDevice(
       device,
       ::exahype2::fv::rusanov::omp::timeStepWithRusanov_patchwise_heap_static_calls<EulerOnGPU,EulerOnGPU::NumberOfFiniteVolumesPerAxisPerPatch, 1, 5, 0,exahype2::enumerator::AoSLexicographicEnumerator>,
@@ -398,11 +407,11 @@ void runBenchmarks(int patches) {
       "omp::opt, patch-wise, SoA", true
     );*/
 
-    testFusedVariantOnDevice(
+    /*testFusedVariantOnDevice(
       device,
       ::exahype2::fv::rusanov::omp::timeStepWithRusanov_batched_heap_static_calls<EulerOnGPU,EulerOnGPU::NumberOfFiniteVolumesPerAxisPerPatch, 1, 5, 0,exahype2::enumerator::AoSLexicographicEnumerator>,
       "omp, batched, AoS", true
-    );
+    );*/
     /*testFusedVariantOnDevice(
       device,
       ::exahype2::fv::rusanov::omp::timeStepWithRusanov_batched_heap_static_calls<EulerOnGPU,EulerOnGPU::NumberOfFiniteVolumesPerAxisPerPatch, 1, 5, 0,exahype2::enumerator::AoSoALexicographicEnumerator>,
@@ -414,11 +423,11 @@ void runBenchmarks(int patches) {
       "omp, batched, SoA", true
     );*/
 
-    testFusedVariantOnDevice(
+    /*testFusedVariantOnDevice(
       device,
       ::exahype2::fv::rusanov::omp::opt::timeStepWithRusanov_batched_heap_static_calls<EulerOnGPU,EulerOnGPU::NumberOfFiniteVolumesPerAxisPerPatch, 1, 5, 0,exahype2::enumerator::AoSLexicographicEnumerator>,
       "omp::opt, batched, AoS", true
-    );
+    );*/
     /*testFusedVariantOnDevice(
       device,
       ::exahype2::fv::rusanov::omp::opt::timeStepWithRusanov_batched_heap_static_calls<EulerOnGPU,EulerOnGPU::NumberOfFiniteVolumesPerAxisPerPatch, 1, 5, 0,exahype2::enumerator::AoSoALexicographicEnumerator>,
@@ -523,6 +532,10 @@ int main(int argc, char** argv) {
   tarch::multicore::initSmartMPI();
   peano4::fillLookupTables();
 
+//#ifdef UseFEExcept
+  //feenableexcept(FE_DIVBYZERO | FE_INVALID | FE_OVERFLOW);
+//#endif
+
   if ( tarch::mpi::Rank::getInstance().getNumberOfRanks()>1 and tarch::multicore::Core::getInstance().getNumberOfThreads()<=1 ) {
     logError("main()", "MPI runs without multithreading are not supported currently.");
     return ExitCodeInvalidBuild;
@@ -560,12 +573,14 @@ int main(int argc, char** argv) {
     msg << "benchmark-" << patches;
     otterPhaseSwitch( msg.str().c_str() );
 
-    runBenchmarks(patches);
+    //runBenchmarks(patches);
   }
 
   runBenchmarks(1);
 
   otterTraceFinalise();
+
+  delete validOutcome;
 
 //  repositories::finishSimulation();
 

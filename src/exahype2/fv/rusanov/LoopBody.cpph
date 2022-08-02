@@ -2,7 +2,6 @@
 #include "exahype2/Solver.h"
 #include "exahype2/fv/PatchUtils.h"
 
-
 #if defined(GPUOffloadingOMP)
 #pragma omp declare target
 #endif
@@ -736,9 +735,9 @@ void exahype2::fv::rusanov::internal::computeFlux_LoopBody(
 
 template <typename QFluxEnumeratorType, typename QOutEnumeratorType>
 void exahype2::fv::rusanov::internal::updateSolutionWithFlux_LoopBody(
-    const double* __restrict__                   tempFluxX,
-    const double* __restrict__                   tempFluxY,
-    const double* __restrict__                   tempFluxZ,
+    double* __restrict__                   tempFluxX,
+    double* __restrict__                   tempFluxY,
+    double* __restrict__                   tempFluxZ,
     const QFluxEnumeratorType&                   fluxEnumerator,
     const tarch::la::Vector<Dimensions,double>&  patchCentre,
     const tarch::la::Vector<Dimensions,double>&  patchSize,
@@ -749,13 +748,13 @@ void exahype2::fv::rusanov::internal::updateSolutionWithFlux_LoopBody(
     double* __restrict__                         QOut,
     const QOutEnumeratorType&                    QOutEnumerator
 ) {
-  auto updateAlongOneDirection = [=](const double* __restrict__ tempFlux, int normal) {
+  auto updateAlongOneDirection = [=](double* __restrict__ tempFlux, int normal) {
     tarch::la::Vector<Dimensions,int> leftVolume   = volumeIndex;
-    tarch::la::Vector<Dimensions,int> rightVolume  = volumeIndex;
+    //tarch::la::Vector<Dimensions,int> rightVolume  = volumeIndex;
     leftVolume(normal)--;
-    rightVolume(normal)++;
+    //rightVolume(normal)++;
 
-    double fluxLeft  = 0.5 * tempFlux[fluxEnumerator(patchIndex, leftVolume,unknown)]
+    /*double fluxLeft  = 0.5 * tempFlux[fluxEnumerator(patchIndex, leftVolume,unknown)]
                      + 0.5 * tempFlux[fluxEnumerator(patchIndex, volumeIndex,unknown)];
     double fluxRight = 0.5 * tempFlux[fluxEnumerator(patchIndex, volumeIndex,unknown)]
                      + 0.5 * tempFlux[fluxEnumerator(patchIndex, rightVolume,unknown)];
@@ -768,15 +767,20 @@ void exahype2::fv::rusanov::internal::updateSolutionWithFlux_LoopBody(
       tempFlux[fluxEnumerator(patchIndex, rightVolume,unknown)],
       patchIndex, volumeIndex, unknown
     );
-    #endif
+    #endif*/
 
     //QOut[ QOutEnumerator(patchIndex, volumeIndex,unknown) ] += dt / patchSize(normal) * QOutEnumerator._numberOfDoFsPerAxisInCell *
     //   (fluxLeft - fluxRight);
-    QOut[ QOutEnumerator(patchIndex, volumeIndex,unknown) ] += dt / patchSize(normal) * QOutEnumerator._numberOfDoFsPerAxisInCell *
-        0.5 * (tempFlux[fluxEnumerator(patchIndex, leftVolume,unknown)]-tempFlux[fluxEnumerator(patchIndex, rightVolume,unknown)]);
+    /*QOut[ ] += dt / patchSize(normal) * QOutEnumerator._numberOfDoFsPerAxisInCell *
+        0.5 * (tempFlux[fluxEnumerator(patchIndex, leftVolume,unknown)]-tempFlux[fluxEnumerator(patchIndex, rightVolume,unknown)]);*/
+
+      //QOut[QOutEnumerator(patchIndex, volumeIndex,unknown) ] = tempFlux[fluxEnumerator(patchIndex, rightVolume,unknown)];
+      tarch::la::Vector<Dimensions,int> rightVolume = tarch::la::Vector<Dimensions,int>({volumeIndex(0), volumeIndex(1)-1, volumeIndex(2)});
+      tempFlux[fluxEnumerator(patchIndex, rightVolume,unknown)] = volumeIndex(1)+1;
+
   };
 
-                     updateAlongOneDirection(tempFluxX,0);
+                     //updateAlongOneDirection(tempFluxX,0);
                      updateAlongOneDirection(tempFluxY,1);
   if (Dimensions==3) updateAlongOneDirection(tempFluxZ,2);
 }
