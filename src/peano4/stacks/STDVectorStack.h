@@ -346,7 +346,7 @@ class peano4::stacks::STDVectorStack {
       logDebug( "startSend(int,int,bool)", toString());
 
       _ioMPIRequest = new MPI_Request;
-      int result = MPI_Isend( _data.data(), _currentElement, T::Datatype, _ioRank, _ioTag, comm, _ioMPIRequest);
+      int result = MPI_Isend( _data.data(), _currentElement, T::getDatatype(), _ioRank, _ioTag, comm, _ioMPIRequest);
       if  (result!=MPI_SUCCESS) {
         logError( "startSend(int,int,bool)", "was not able to send to node " << rank << " on tag " << tag
           << ": " << tarch::mpi::MPIReturnValueToString(result)
@@ -374,7 +374,7 @@ class peano4::stacks::STDVectorStack {
       assertion( _ioMPIRequest == nullptr );
       _ioMPIRequest = new MPI_Request;
 
-      int result = MPI_Irecv( _data.data(), _data.size(), T::Datatype, _ioRank, _ioTag, comm, _ioMPIRequest);
+      int result = MPI_Irecv( _data.data(), _data.size(), T::getDatatype(), _ioRank, _ioTag, comm, _ioMPIRequest);
       if  (result!=MPI_SUCCESS) {
         logError( "startReceive(int,int,int)", "was not able to receive " << numberOfElements << " values from node " << rank << " on tag " << tag
            << ": " << tarch::mpi::MPIReturnValueToString(result)

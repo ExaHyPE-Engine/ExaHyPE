@@ -11,14 +11,14 @@ class Double(Attribute):
     with a scalar.
     
   """
-  def __init__(self, name, relative_accuracy_in_bits=None):
+  def __init__(self, name, valid_mantissa_bits=None, ifdefs=[]):
     """
     
     @Pawel Can you add some docu?
     
     """
-    Attribute.__init__(self, name)
-    self._relative_accuracy_in_bits = relative_accuracy_in_bits
+    Attribute.__init__(self, name, ifdefs)
+    self._valid_mantissa_bits = valid_mantissa_bits
     
     
   def get_methods(self,_full_qualified_class_name):
@@ -30,10 +30,10 @@ class Double(Attribute):
 
 
   def get_plain_C_attributes(self):
-    if self._relative_accuracy_in_bits==None:
+    if self._valid_mantissa_bits==None:
       return [ ("_" + self._name, "double", "" ) ]
     else:
-      return [ ("_" + self._name, "double", "[[clang::compress(" + str(self._relative_accuracy_in_bits) + ")]]" ) ]
+      return [ ("_" + self._name, "double", "[[clang::truncate_mantissa(" + str(self._valid_mantissa_bits) + ")]]" ) ]
 
 
   def get_method_body(self,signature):

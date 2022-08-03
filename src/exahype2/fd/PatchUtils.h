@@ -127,8 +127,21 @@ namespace exahype2 {
       int    unknowns,
       int    auxiliaryVariables,
       int    numberOfGridCellsPerPatchPerAxis,
-      int    haloSize
+      int    haloSize,
+      bool   prettyPrint = false
     );
+
+
+    std::string plotPatchOverlap(
+      const double* __restrict__ Q,
+      int    unknowns,
+      int    auxiliaryVariables,
+      int    numberOfGridCellsPerPatchPerAxis,
+      int    haloSize,
+      int    normal,
+      bool   prettyPrint = false
+    );
+
   }
 }
 

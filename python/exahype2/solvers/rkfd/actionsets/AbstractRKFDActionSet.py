@@ -36,6 +36,7 @@ class AbstractRKFDActionSet( ActionSet ):
   def get_includes(self):
     return """
 #include <functional>
+#include "exahype2/fd/PatchUtils.h"
 """ + self._solver._get_default_includes() + self._solver.user_action_set_includes 
 
 

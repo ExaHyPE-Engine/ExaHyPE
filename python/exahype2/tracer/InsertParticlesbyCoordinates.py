@@ -11,7 +11,7 @@ import dastgen2.attributes.Integer
 
 
 class InsertParticlesbyCoordinates(ActionSet):
-  def __init__(self,particle_set,coor_s=[[0,0,0],[0,0,0]]):
+  def __init__(self,particle_set,coordinates=[[0,0,0],[0,0,0]]):
     """
 =
 
@@ -19,7 +19,7 @@ class InsertParticlesbyCoordinates(ActionSet):
  
     N: number of particles
 
-    coor_s: [ [Int,Int,Int] ]
+    coordinates: [ [Int,Int,Int] ]
       Coordinates for the particle. If you work in 2d, the third coordinate
       is simply ignored. But you always need three coordinates.
 
@@ -28,8 +28,8 @@ class InsertParticlesbyCoordinates(ActionSet):
     self.d = {}
     self.d[ "PARTICLE" ]                 = particle_set.particle_model.name
     self.d[ "PARTICLES_CONTAINER" ]      = particle_set.name
-    self.d[ "N" ]                        = len(coor_s)
-    self._coor_s			             = coor_s
+    self.d[ "N" ]                        = len(coordinates)
+    self._coordinates			             = coordinates
     
 
   __Template_TouchCellFirstTime = jinja2.Template("""
@@ -40,19 +40,19 @@ class InsertParticlesbyCoordinates(ActionSet):
     if (
       not marker.willBeRefined() 
       and 
-      (marker.getOffset()(0) <= coor_s[i][0] and marker.getOffset()(0)+marker.h()(0) > coor_s[i][0])
+      (marker.getOffset()(0) <= coordinates[i][0] and marker.getOffset()(0)+marker.h()(0) > coordinates[i][0])
       and
-      (marker.getOffset()(1) <= coor_s[i][1] and marker.getOffset()(1)+marker.h()(1) > coor_s[i][1])
+      (marker.getOffset()(1) <= coordinates[i][1] and marker.getOffset()(1)+marker.h()(1) > coordinates[i][1])
       #if Dimensions==3
       and
-      (marker.getOffset()(2) <= coor_s[i][2] and marker.getOffset()(2)+marker.h()(2) > coor_s[i][2])
+      (marker.getOffset()(2) <= coordinates[i][2] and marker.getOffset()(2)+marker.h()(2) > coordinates[i][2])
       #endif
     )
     {
       globaldata::{{PARTICLE}}* newParticle = new globaldata::{{PARTICLE}}();
       newParticle->setNumber(0, _spacetreeId);
       newParticle->setNumber(1, _particleNumberOnThisTree);
-      toolbox::particles::init(*newParticle,{coor_s[i][0],coor_s[i][1],coor_s[i][2]},0.0);
+      toolbox::particles::init(*newParticle,{coordinates[i][0],coordinates[i][1],coordinates[i][2]},0.0);
       _particleNumberOnThisTree++;
       logInfo( "touchVertexFirstTime(...)", "insert " << _particleNumberOnThisTree << "th particle at " << newParticle->toString() );
       // just insert them; will be re-assigned then anyway
@@ -92,9 +92,9 @@ class InsertParticlesbyCoordinates(ActionSet):
   def Read_In_Coor(self):
     result=""
     for i in range(self.d["N"]):
-      result+= "  coor_s["+str(i)+"][0]="+str(self._coor_s[i][0])+";"
-      result+= " coor_s["+str(i)+"][1]="+str(self._coor_s[i][1])+";"
-      result+= " coor_s["+str(i)+"][2]="+str(self._coor_s[i][2])+";"
+      result+= "  coordinates["+str(i)+"][0]="+str(self._coordinates[i][0])+";"
+      result+= " coordinates["+str(i)+"][1]="+str(self._coordinates[i][1])+";"
+      result+= " coordinates["+str(i)+"][2]="+str(self._coordinates[i][2])+";"
       result+= "\n"
     return result
 
@@ -110,5 +110,5 @@ class InsertParticlesbyCoordinates(ActionSet):
      return f"""
   int _particleNumberOnThisTree;
   int _spacetreeId;
-  double coor_s["""+str(self.d["N"])+"""][3];
+  double coordinates["""+str(self.d["N"])+"""][3];
 """

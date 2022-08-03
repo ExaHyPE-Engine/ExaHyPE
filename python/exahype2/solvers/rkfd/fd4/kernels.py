@@ -90,7 +90,6 @@ def create_compute_Riemann_kernel_for_FD4(flux_implementation,
   {% if FLUX_IMPLEMENTATION=="<none>" %} false {% else %} true {% endif %},
   {% if NCP_IMPLEMENTATION=="<none>" %} false {% else %} true {% endif %},
   {% if SOURCE_IMPLEMENTATION=="<none>" %} false {% else %} true {% endif %},
-  {% if COMPUTE_MAX_EIGENVALUE==False %} false {% else %} true {% endif %},
   false, // Runge-Kutta, so no need to copy old data over or to take dt into account
   [&](
     const double * __restrict__ Q,
@@ -129,20 +128,6 @@ def create_compute_Riemann_kernel_for_FD4(flux_implementation,
   )->void {
     {% if SOURCE_IMPLEMENTATION!="<none>" %}
     repositories::{{SOLVER_INSTANCE}}.sourceTerm( Q, volumeX, volumeH, t, dt, S );
-    {% endif %}
-  },
-  [&](
-    const double * __restrict__ Q,
-    const tarch::la::Vector<Dimensions,double>&  faceCentre,
-    const tarch::la::Vector<Dimensions,double>&  volumeH,
-    double                                       t,
-    double                                       dt,
-    int                                          normal
-  )->double {
-    {% if COMPUTE_MAX_EIGENVALUE==False %} 
-    return 0.0; // dummy value; should not be called anyway
-    {% else %}
-    return repositories::{{SOLVER_INSTANCE}}.maxEigenvalue( Q, faceCentre, volumeH, t, dt, normal);
     {% endif %}
   }
 );

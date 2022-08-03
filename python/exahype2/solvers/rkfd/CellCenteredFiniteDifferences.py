@@ -78,7 +78,7 @@ class CellCenteredFiniteDifferences(object):
     self._unknowns             = unknowns
     self._auxiliary_variables  = auxiliary_variables
 
-    self.solver_constants_         = ""
+    self._solver_constants         = ""
     self._user_action_set_includes  = ""
     self._user_solver_includes      = ""
     
@@ -121,12 +121,12 @@ class CellCenteredFiniteDifferences(object):
     self._finish_time_step_implementation          = ""
     self._constructor_implementation               = ""
 
-    self._boundary_conditions_implementation  = PDETerms.User_Defined_Implementation
-    self._refinement_criterion_implementation = PDETerms.Empty_Implementation
-    self._initial_conditions_implementation   = PDETerms.User_Defined_Implementation
+    self._boundary_conditions_implementation  = None
+    self._refinement_criterion_implementation = None
+    self._initial_conditions_implementation   = None
 
-    self._interpolation = "piecewise_constant"
-    self._restriction   = "averaging"
+    self._interpolation = "linear_with_constant_extrapolation"
+    self._restriction   = "inject"
     
     self.create_data_structures()
     self.create_action_sets()
@@ -313,7 +313,7 @@ The finest mesh width of """ + str(self.get_finest_volume_size(domain_size)) + "
        
     """
     self._patch                = peano4.datamodel.Patch( (self._patch_size,self._patch_size,self._patch_size), self._unknowns+self._auxiliary_variables, self._unknown_identifier() )
-    self._patch_estimates      = peano4.datamodel.Patch( (self._patch_size,self._patch_size,self._patch_size), self._unknowns+self._auxiliary_variables, self._unknown_identifier() + "RhsEstimates" )
+    self._patch_estimates      = peano4.datamodel.Patch( (self.number_of_Runge_Kutta_steps()*self._patch_size,self._patch_size,self._patch_size), self._unknowns, self._unknown_identifier() + "RhsEstimates" )
     self._patch_overlap_old    = peano4.datamodel.Patch( (2*self._overlap,self._patch_size,self._patch_size),  self._unknowns+self._auxiliary_variables, self._unknown_identifier() + "Old" )
     self._patch_overlap_new    = peano4.datamodel.Patch( (2*self._overlap,self._patch_size,self._patch_size),  self._unknowns+self._auxiliary_variables, self._unknown_identifier() + "New" )
     self._patch_overlap_update = peano4.datamodel.Patch( (2*self._overlap,self._patch_size,self._patch_size),  self._unknowns+self._auxiliary_variables, self._unknown_identifier() + "Update" )
@@ -423,7 +423,7 @@ The finest mesh width of """ + str(self.get_finest_volume_size(domain_size)) + "
     self._action_set_copy_new_faces_onto_old_faces               = peano4.toolbox.blockstructured.BackupPatchOverlap(self._patch_overlap_new, self._patch_overlap_old, False, self._store_face_data_default_guard(), self._get_default_includes())
     self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement = exahype2.solvers.rkfd.actionsets.DynamicAMR( solver=self, interpolation=self._interpolation, restriction=self._restriction )
 
-    self._action_set_compute_final_linear_combination = exahype2.solvers.rkfd.actionsets.ComputeFinalLinearCombinationAndProjectSolutionOntoFaces(solver=self,guard=self._store_cell_data_default_guard())
+    self._action_set_compute_final_linear_combination = exahype2.solvers.rkfd.actionsets.ComputeFinalLinearCombination(solver=self,guard=self._store_cell_data_default_guard())
 
     # This one is different: it is the hook-in point for other solvers, so we create it 
     # only once if it does not exist
@@ -600,6 +600,9 @@ The finest mesh width of """ + str(self.get_finest_volume_size(domain_size)) + "
      Consult the discussion in add_actions_to_init_grid() around the order
      of the individual action sets.
      
+     
+     ## Adaptive mesh refinement
+     
      It is important that we have the coupling/dynamic AMR part in here, as 
      there might be pending AMR refinement requests that now are realised.
      For the same reason, we need the update of the face label and the update
@@ -612,19 +615,23 @@ The finest mesh width of """ + str(self.get_finest_volume_size(domain_size)) + "
      To make the restriction work, we have to project the solutions onto the 
      faces.
      
+     
+     ## Roll over face data
+     
+     Das ist ein Kaese, weil das nur einspringt, wenn project wahr ist
+     
+     
     """
     d = {}
     self._init_dictionary_with_default_parameters(d)
     self.add_entries_to_text_replacement_dictionary(d)
 
     step.add_action_set( self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement )
-    step.add_action_set( self._action_set_roll_over_update_of_faces )
+    #    step.add_action_set( self._action_set_roll_over_update_of_faces )
     step.add_action_set( self._action_set_update_face_label )
     step.add_action_set( self._action_set_update_cell_label )
-    step.add_action_set( self._action_set_project_patch_onto_faces )
-    #step.add_action_set( self._action_set_AMR_commit_without_further_analysis )
+    #    step.add_action_set( self._action_set_project_patch_onto_faces )
 
-# @todo New time stamp choice update in DG and ADER-DG
     step.add_action_set( peano4.toolbox.blockstructured.PlotPatchesInPeanoBlockFormat( 
       filename=output_path + "solution-" + self._name, 
       patch=self._patch, 
@@ -732,9 +739,9 @@ The finest mesh width of """ + str(self.get_finest_volume_size(domain_size)) + "
     output.makefile.add_cpp_file( "Abstract" + self._name + ".cpp" )
     output.makefile.add_cpp_file( self._name + ".cpp" )
 
-  def set_solver_constants(self, datastring): self.solver_constants_ = datastring
+  def set_solver_constants(self, datastring): self._solver_constants = datastring
 
-  def add_solver_constants(self, datastring): self.solver_constants_ += datastring
+  def add_solver_constants(self, datastring): self._solver_constants += datastring
 
 
   def _init_dictionary_with_default_parameters(self,d):
@@ -773,7 +780,7 @@ The finest mesh width of """ + str(self.get_finest_volume_size(domain_size)) + "
     d[ "MAX_GRID_CELL_H"] = self._max_meshcell_h
     d[ "MIN_GRID_CELL_H"] = self._min_meshcell_h
 
-    d[ "SOLVER_CONSTANTS" ] = self.solver_constants_
+    d[ "SOLVER_CONSTANTS" ] = self._solver_constants
 
     d[ "SOLVER_INCLUDES" ]  = self.user_solver_includes
 

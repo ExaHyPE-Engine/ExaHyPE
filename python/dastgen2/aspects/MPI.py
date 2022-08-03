@@ -1,6 +1,7 @@
 # This file is part of the DaStGen2 project. For conditions of distribution and
 # use, please see the copyright notice at www.peano-framework.org
 from dastgen2 import *
+from dastgen2.DataModel import construct_ifdef_string
 
 
 class MPI(object):
@@ -27,10 +28,18 @@ class MPI(object):
   def get_attributes(self):
     return """
     #ifdef Parallel
-    public:
-      static MPI_Datatype  Datatype;
     private:
-    int                  _senderDestinationRank;
+      int                  _senderDestinationRank;
+
+      #if !defined(__MPI_ATTRIBUTES_LANGUAGE_EXTENSION__)      
+      /**
+       * Whenever we use LLVM's MPI extension (DaStGe), we rely on lazy
+       * initialisation of the datatype. However, Peano calls init explicitly
+       * in most cases. Without the LLVM extension which caches the MPI 
+       * datatype once constructed, this field stores the type.
+       */
+      static MPI_Datatype  Datatype;
+      #endif
     #endif
 """
 
@@ -38,15 +47,29 @@ class MPI(object):
     return """
     #ifdef Parallel
     /**
+     * Hands out MPI datatype if we work without the LLVM MPI extension.
+     * If we work with this additional feature, this is the routine where
+     * the lazy initialisation is done and the datatype is also cached.
+     */
+    [[clang::map_mpi_datatype]]
+    static MPI_Datatype  getDatatype();
+    
+    
+    /**
      * @return The rank of the sender of an object. It only make ssense to call
      *         this routine after you've invoked receive with MPI_ANY_SOURCE.
      */
     int getSenderRank() const;
     
     /**
-     * To be called prior to any MPI usage of this class.
+     * Wrapper around getDatatype() to trigger lazy evaluation if we
+     * use the lazy initialisation.
      */
     static void initDatatype();
+    
+    /**
+     * Free the underlying MPI datatype.
+     */
     static void shutdownDatatype();
             
     /**
@@ -76,7 +99,15 @@ class MPI(object):
     result = """
 #ifdef Parallel
 
+#if !defined(__MPI_ATTRIBUTES_LANGUAGE_EXTENSION__)      
 MPI_Datatype """ + full_qualified_name + """::Datatype;
+#endif
+
+
+[[clang::map_mpi_datatype]]
+MPI_Datatype """ + full_qualified_name + """::getDatatype() {
+  return Datatype;
+}
 
 int """ + full_qualified_name + """::getSenderRank() const {
   return _senderDestinationRank;
@@ -84,56 +115,57 @@ int """ + full_qualified_name + """::getSenderRank() const {
 
 
 void """ + full_qualified_name + """::initDatatype() {
-  """
-    result += full_qualified_name + """  instances[2];
-    
-  MPI_Datatype subtypes[] = { """
+  #if !defined(__MPI_ATTRIBUTES_LANGUAGE_EXTENSION__)
+  """ + full_qualified_name + """  instances[2];
 
+  int NumberOfAttributes = 0;
+"""
 
-    flattened_mpi_attributes = []
     for i in self._data_model._attributes:
-      flattened_mpi_attributes += i.get_native_MPI_type()
-      
-    wrote_first = False
-    for i in flattened_mpi_attributes:
-      if wrote_first:
-        result += ", "
+      if (i.ifdefs!=[]):
+        result += construct_ifdef_string(i.ifdefs)
+        result += "  NumberOfAttributes++;\n#endif \n"
       else:
-        wrote_first = True
-      result += i[0]
-  
-  
-    result += """ };
+        result += "  NumberOfAttributes++;\n"
     
-  int blocklen[] = { """ 
+    result += """
+  MPI_Datatype* subtypes = new MPI_Datatype[NumberOfAttributes];
+  int*          blocklen = new int[NumberOfAttributes]; 
+  MPI_Aint*     disp     = new MPI_Aint[NumberOfAttributes];
   
-    wrote_first = False
-    for i in flattened_mpi_attributes:
-      if wrote_first:
-        result += ", "
-      else:
-        wrote_first = True
-      result += str(i[1])
-    
-    result += """ };
+  int counter            = 0;
+"""  
 
-  const int NumberOfAttributes = """
-    result += str(len(flattened_mpi_attributes))
-    result += """;
-    
+    for i in self._data_model._attributes:
+      if (i.ifdefs!=[]):
+        result += construct_ifdef_string(i.ifdefs)
+      for ii in i.get_native_MPI_type():
+        result += "  subtypes[counter] = " + ii[0] + ";\n"
+        result += "  blocklen[counter] = " + str(ii[1]) + ";\n"
+        result += "  counter++;\n"
+      if (i.ifdefs!=[]):
+        result += "#endif\n"
+  
+    result += """   
   MPI_Aint  baseFirstInstance;
   MPI_Aint  baseSecondInstance;
   MPI_Get_address( &instances[0], &baseFirstInstance );
   MPI_Get_address( &instances[1], &baseSecondInstance );
-  MPI_Aint  disp[ NumberOfAttributes ];
-  int       currentAddress = 0;
+  
+  counter = 0;
 """
+
     for i in self._data_model._attributes:
+      if (i.ifdefs!=[]):
+        result += "\n"
+        result += construct_ifdef_string(i.ifdefs)
       for ii in i.get_first_plain_C_attribute():
         result += "  MPI_Get_address( &(instances[0]."
         result += ii[0]
-        result += "), &disp[currentAddress] );\n"
-        result += "  currentAddress++;\n"
+        result += "), &disp[counter] );\n"
+        result += "  counter++;\n"
+      if (i.ifdefs!=[]):
+        result += "#endif\n"
       
     result += """
   MPI_Aint offset = disp[0] - baseFirstInstance;
@@ -149,11 +181,21 @@ void """ + full_qualified_name + """::initDatatype() {
   errorCode += MPI_Type_commit( &Datatype );
   errorCode += MPI_Type_free( &tmpType );
   if (errorCode) std::cerr << "error constructing MPI datatype in " << __FILE__ << ":" << __LINE__ << std::endl;
+
+  delete[] subtypes;
+  delete[] blocklen; 
+  delete[] disp;
+
+  #else
+  // invoke routine once to trigger lazy initialisation
+  getDatatype();
+  #endif
 }
 
 
 void """ + full_qualified_name + """::shutdownDatatype() {
-  MPI_Type_free( &Datatype );
+  MPI_Datatype type = getDatatype();
+  MPI_Type_free( &type );
 }
 
 

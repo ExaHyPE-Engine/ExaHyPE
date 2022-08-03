@@ -102,7 +102,7 @@ void exahype2::dg::tests::eulerInitial(
 
 void exahype2::dg::tests::elasticInitial(double * __restrict__ Q){
   for(int i=0; i<9; i++){
-    Q[i] = 0.0; //6 stresses, 3 velocities
+    Q[i] = 1.0; //6 stresses, 3 velocities
   }
   //auxiliary variables
   Q[9]  = 4.0; //rho
@@ -261,6 +261,7 @@ void exahype2::dg::tests::testBoundaryConditions(
         double * __restrict__                        Qoutside,
         const tarch::la::Vector<Dimensions,double>&  x,
         double                                       t,
+        double                                       dt,
         int                                          normal
       ){
 
@@ -285,3 +286,25 @@ double exahype2::dg::tests::testEigenvalue(
   return result;
 
 }
+
+
+
+
+void exahype2::dg::tests::secondTestBoundaryConditions(
+        const double * __restrict__                  Qinside,
+        double * __restrict__                        Qoutside,
+        const tarch::la::Vector<Dimensions,double>&  x,
+        double                                       t,
+        double                                       dt,
+        int                                          normal
+      ){
+
+  Qoutside[0] = 1.0;
+  Qoutside[1] = 2.0;
+  Qoutside[2] = 3.0;
+  Qoutside[3] = 4.0;
+
+}
+
+
+

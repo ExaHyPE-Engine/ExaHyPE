@@ -638,7 +638,6 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanov_patchwise_heap_static_calls
         }
     }
     if (evaluateMaximumEigenvalueAfterTimeStep and Dimensions==2) {
-      logDebug( "timeStepWithRusanov_overlap1_sequential(...)", "compute maximum eigenvalue for subsequent time step" );
       double newMaxEigenvalue = 0.0;
       #pragma omp parallel for collapse(2) reduction(max:newMaxEigenvalue)
       for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)

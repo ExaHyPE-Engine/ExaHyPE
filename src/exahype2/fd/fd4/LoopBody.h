@@ -19,53 +19,6 @@ namespace exahype2 {
     namespace fd4 {
       constexpr int PickAllEntriesFromOutputVector = -1;
       namespace internal {
-
-        #if defined(SharedOMP) and (!defined(__INTEL_LLVM_COMPILER) or !defined(GPUOffloadingOMP))
-        #pragma omp declare simd
-        #endif
-        template <class QInEnumeratorType, class QOutEnumeratorType>
-        static void computeFlux_LoopBody(
-          const double* __restrict__                     QIn,
-          const QInEnumeratorType&                       QInEnumerator,
-          exahype2::fd::Flux                             flux,
-          const tarch::la::Vector<Dimensions,double>&    patchCentre,
-          const tarch::la::Vector<Dimensions,double>&    patchSize,
-          int                                            patchIndex,
-          const tarch::la::Vector<Dimensions,int>&       volumeIndex,
-          double                                         t,
-          double                                         dt,
-          int                                            normal,
-          double* __restrict__                           QFlux,
-          const QOutEnumeratorType&                      QFluxEnumerator,
-          int                                            pick = PickAllEntriesFromOutputVector
-        ) InlineMethod;
-
-        #if defined(SharedOMP) and (!defined(__INTEL_LLVM_COMPILER) or !defined(GPUOffloadingOMP))
-        #pragma omp declare simd
-        #endif
-        #if defined(GPUOffloadingOMP)
-        #pragma omp declare target
-        #endif
-        template <typename QOutEnumeratorType>
-        static void updateSolutionWithFlux_LoopBody(
-          const double* __restrict__                   QFluxX,
-          const double* __restrict__                   QFluxY,
-          const double* __restrict__                   QFluxZ,
-          const QOutEnumeratorType&                    QFluxEnumerator,
-          const tarch::la::Vector<Dimensions,double>&  patchCentre,
-          const tarch::la::Vector<Dimensions,double>&  patchSize,
-          int                                          patchIndex,
-          const tarch::la::Vector<Dimensions,int>&     volumeIndex,
-          int                                          unknown,
-          double                                       dt,
-          double* __restrict__                         QOut,
-          const QOutEnumeratorType&                    QOutEnumerator
-        ) InlineMethod;
-        #if defined(GPUOffloadingOMP)
-        #pragma omp end declare target
-        #endif
-
-
         /**
          * This function calculates the source term that involves B_i\nabla_iQ where
          * i is the spatial dimension. These involve first gradients of quantitiets 
@@ -173,6 +126,71 @@ namespace exahype2 {
           const double* __restrict__                   QKODspY,
           const double* __restrict__                   QKODspZ,
           const QOutEnumeratorType&                    QKODspEnumerator,
+          const tarch::la::Vector<Dimensions,double>&  patchCentre,
+          const tarch::la::Vector<Dimensions,double>&  patchSize,
+          int                                          patchIndex,
+          const tarch::la::Vector<Dimensions,int>&     volumeIndex,
+          int                                          unknown,
+          double                                       dt,
+          double* __restrict__                         QOut,
+          const QOutEnumeratorType&                    QOutEnumerator
+        ) InlineMethod;
+        #if defined(GPUOffloadingOMP)
+        #pragma omp end declare target
+        #endif
+
+
+        /**
+         * This routine computes @f$ \partial_i F_i @f$ where i is the
+         * argument normal.
+         *
+         * It is not optimised: Whenever we use the AoS data format,
+         * we could directly evaluate the flux terms without any gathering
+         * or copying. As we don't optimise/specialise, we always first have
+         * to gather the solution before we invoke the user kernel. A similar
+         * argument holds or QFluxGathered: the solution is gathered within
+         * this temporary array, before we scatter it into the image.
+         *
+         */
+        #if defined(SharedOMP) and (!defined(__INTEL_LLVM_COMPILER) or !defined(GPUOffloadingOMP))
+        #pragma omp declare simd
+        #endif
+        template <class QInEnumeratorType, class QOutEnumeratorType>
+        static void computeFlux_LoopBody(
+          const double* __restrict__                   QIn,
+          const QInEnumeratorType&                           QInEnumerator,
+          exahype2::fd::Flux                           flux,
+          const tarch::la::Vector<Dimensions,double>&  patchCentre,
+          const tarch::la::Vector<Dimensions,double>&  patchSize,
+          int                                          patchIndex,
+          const tarch::la::Vector<Dimensions,int>&     volumeIndex,
+          double                                       t,
+          double                                       dt,
+          int                                          normal,
+          double* __restrict__                         QFlux,
+          const QOutEnumeratorType&                          QFluxEnumerator
+        ) InlineMethod;
+
+        /**
+         * Plain update of flux in a finite differences scheme.
+         *
+         * We assume that the temp arrays hold the flux in x, y and z
+         * direction in the cell centre, i.e. within the degree of freedom.
+         * We therefore simply can take these flux components, scale them
+         * with dt, and add them to the solution.
+         */
+        #if defined(SharedOMP) and (!defined(__INTEL_LLVM_COMPILER) or !defined(GPUOffloadingOMP))
+        #pragma omp declare simd
+        #endif
+        #if defined(GPUOffloadingOMP)
+        #pragma omp declare target
+        #endif
+        template <typename QOutEnumeratorType>
+        static void updateSolutionWithFlux_LoopBody(
+          const double* __restrict__                   tempFluxX,
+          const double* __restrict__                   tempFluxY,
+          const double* __restrict__                   tempFluxZ,
+          const QOutEnumeratorType&                   fluxEnumerator,
           const tarch::la::Vector<Dimensions,double>&  patchCentre,
           const tarch::la::Vector<Dimensions,double>&  patchSize,
           int                                          patchIndex,

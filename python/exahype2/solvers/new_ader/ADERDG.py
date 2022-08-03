@@ -49,7 +49,7 @@ class ADERDG( object ):
 
     self._plot_grid_properties = plot_grid_properties    
 
-    self.solver_constants_         = ""
+    self._solver_constants         = ""
     self.user_action_set_includes  = ""
     self.user_solver_includes      = ""
     self.plot_description = ""    
@@ -400,9 +400,9 @@ class ADERDG( object ):
     output.makefile.add_cpp_file( "Abstract" + self._name + ".cpp" )
     output.makefile.add_cpp_file( self._name + ".cpp" )
 
-  def set_solver_constants(self, datastring): self.solver_constants_ = datastring
+  def set_solver_constants(self, datastring): self._solver_constants = datastring
 
-  def add_solver_constants(self, datastring): self.solver_constants_ += datastring  
+  def add_solver_constants(self, datastring): self._solver_constants += datastring  
   
   
   @property
@@ -477,7 +477,7 @@ class ADERDG( object ):
     d[ "MAX_CELL_H"] = self._max_cell_h
     d[ "MIN_CELL_H"] = self._min_cell_h
 
-    d[ "SOLVER_CONSTANTS" ] = self.solver_constants_
+    d[ "SOLVER_CONSTANTS" ] = self._solver_constants
     d[ "SOLVER_INCLUDES" ]  = self.get_user_solver_includes()
     
     d[ "BOUNDARY_CONDITIONS_IMPLEMENTATION"]  = self._boundary_conditions_implementation

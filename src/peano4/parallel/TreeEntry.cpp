@@ -7,10 +7,10 @@
 
 
 
-peano4::parallel::TreeEntry::TreeEntry(int  __id, int  __master):
-    _id(__id)
-  , _master(__master)
-  {}
+peano4::parallel::TreeEntry::TreeEntry(int  __id, int  __master){
+setId( __id);
+setMaster( __master);
+}
 
 
 
@@ -23,6 +23,9 @@ std::string peano4::parallel::TreeEntry::toString() const {
   out << ")";
   return out.str();
 }
+
+
+
 
 
 int   peano4::parallel::TreeEntry::getId() const {
@@ -108,7 +111,15 @@ void peano4::parallel::TreeEntry::receiveAndPollDanglingMessages(peano4::paralle
     
 #ifdef Parallel
 
+#if !defined(__MPI_ATTRIBUTES_LANGUAGE_EXTENSION__)      
 MPI_Datatype peano4::parallel::TreeEntry::Datatype;
+#endif
+
+
+[[clang::map_mpi_datatype]]
+MPI_Datatype peano4::parallel::TreeEntry::getDatatype() {
+  return Datatype;
+}
 
 int peano4::parallel::TreeEntry::getSenderRank() const {
   return _senderDestinationRank;
@@ -116,24 +127,35 @@ int peano4::parallel::TreeEntry::getSenderRank() const {
 
 
 void peano4::parallel::TreeEntry::initDatatype() {
+  #if !defined(__MPI_ATTRIBUTES_LANGUAGE_EXTENSION__)
   peano4::parallel::TreeEntry  instances[2];
-    
-  MPI_Datatype subtypes[] = { MPI_INT, MPI_INT };
-    
-  int blocklen[] = { 1, 1 };
 
-  const int NumberOfAttributes = 2;
-    
+  int NumberOfAttributes = 0;
+  NumberOfAttributes++;
+  NumberOfAttributes++;
+
+  MPI_Datatype* subtypes = new MPI_Datatype[NumberOfAttributes];
+  int*          blocklen = new int[NumberOfAttributes]; 
+  MPI_Aint*     disp     = new MPI_Aint[NumberOfAttributes];
+  
+  int counter            = 0;
+  subtypes[counter] = MPI_INT;
+  blocklen[counter] = 1;
+  counter++;
+  subtypes[counter] = MPI_INT;
+  blocklen[counter] = 1;
+  counter++;
+   
   MPI_Aint  baseFirstInstance;
   MPI_Aint  baseSecondInstance;
   MPI_Get_address( &instances[0], &baseFirstInstance );
   MPI_Get_address( &instances[1], &baseSecondInstance );
-  MPI_Aint  disp[ NumberOfAttributes ];
-  int       currentAddress = 0;
-  MPI_Get_address( &(instances[0]._id), &disp[currentAddress] );
-  currentAddress++;
-  MPI_Get_address( &(instances[0]._master), &disp[currentAddress] );
-  currentAddress++;
+  
+  counter = 0;
+  MPI_Get_address( &(instances[0]._id), &disp[counter] );
+  counter++;
+  MPI_Get_address( &(instances[0]._master), &disp[counter] );
+  counter++;
 
   MPI_Aint offset = disp[0] - baseFirstInstance;
   MPI_Aint extent = baseSecondInstance - baseFirstInstance - offset;
@@ -148,11 +170,21 @@ void peano4::parallel::TreeEntry::initDatatype() {
   errorCode += MPI_Type_commit( &Datatype );
   errorCode += MPI_Type_free( &tmpType );
   if (errorCode) std::cerr << "error constructing MPI datatype in " << __FILE__ << ":" << __LINE__ << std::endl;
+
+  delete[] subtypes;
+  delete[] blocklen; 
+  delete[] disp;
+
+  #else
+  // invoke routine once to trigger lazy initialisation
+  getDatatype();
+  #endif
 }
 
 
 void peano4::parallel::TreeEntry::shutdownDatatype() {
-  MPI_Type_free( &Datatype );
+  MPI_Datatype type = getDatatype();
+  MPI_Type_free( &type );
 }
 
 

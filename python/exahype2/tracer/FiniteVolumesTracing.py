@@ -9,6 +9,23 @@ import jinja2
 
 
 class FiniteVolumesTracing(peano4.toolbox.particles.ParticleParticleInteraction):
+  """
+  
+  Particle tracing over the Finite Volumes solver. 
+
+  The action set works for cell-centered Finite Differences, too.
+  
+  
+  ## Update plug-in points
+  
+  We only update cells which are marked with getHasUpdated(). For enclave solvers,
+  we assume that this flag is only set after a cell has updated. For Runge-Kutta
+  type solvers, I assume that this flag is set by the computation of the final 
+  linear combination of estimates.
+  
+  """
+  
+  
   def __init__(self,particle_set, solver, velocity_indices, data_indices, scaling_of_velocities, time_stepping_kernel="toolbox::particles::explicitEulerWithoutInterpolation", observer_kernel=" "):
     """
 
@@ -18,10 +35,6 @@ class FiniteVolumesTracing(peano4.toolbox.particles.ParticleParticleInteraction)
 
     particle_set: ParticleSet
  
-    h: Float
-     Initial spacing of particles. Use -1 if you want to have one particle
-     per cell.
-
     velocity_indices: [Int]
      Indices within voxel field that denote velocity. So if the entries 4,6,8
      from a field define the velocities (we start counting with 0), then you 
@@ -36,6 +49,11 @@ class FiniteVolumesTracing(peano4.toolbox.particles.ParticleParticleInteraction)
     scaling_of_velocities: Float
      Can we set 0 if you don't want the particles to move.
 
+    time_stepping_kernel: string
+     Function call which does projection onto the particles and the actual 
+     position update. Hand in "toolbox::particles::StaticPosition" if you 
+     don't want the particles' to move.
+     
     """
     
     self.tracerDict = {}
@@ -60,7 +78,11 @@ class FiniteVolumesTracing(peano4.toolbox.particles.ParticleParticleInteraction)
     
     cell_compute_kernel = """
 //Run over local set
-if ( not marker.willBeRefined() and fineGridCell{{SOLVER_NAME}}CellLabel.getHasUpdated() ) {
+if ( 
+  not marker.willBeRefined() 
+  and 
+  fineGridCell{{SOLVER_NAME}}CellLabel.getHasUpdated() 
+) {
   for (auto& p: localParticles) {
     if ( 
       p->getMoveState()==globaldata::{{PARTICLE}}::MoveState::NotMovedYet

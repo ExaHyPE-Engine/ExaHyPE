@@ -44,10 +44,10 @@ class SolveRiemannProblem(AbstractRungeKuttaDGActionSet):
     
     //::exahype2::dg::rusanov::solveRiemannProblem_pointwise_in_situ(
     #if Dimensions==2
-    const double* __restrict__ QIn  = fineGridFace{{UNKNOWN_IDENTIFIER}}EstimateProjection.value + {{PREDICATE_NO}} * {{NUMBER_OF_DOFS_PER_CELL_2D}} * ({{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}});
-    double* __restrict__       QOut = fineGridFace{{UNKNOWN_IDENTIFIER}}RiemannSolution.value    + {{PREDICATE_NO}} * {{NUMBER_OF_DOFS_PER_CELL_2D}} * ({{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}});
+    const double* __restrict__ QIn  = fineGridFace{{UNKNOWN_IDENTIFIER}}EstimateProjection.value; // + {{PREDICATE_NO}} * {{NUMBER_OF_DOFS_PER_CELL_2D}} * ({{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}});
+    double* __restrict__       QOut = fineGridFace{{UNKNOWN_IDENTIFIER}}RiemannSolution.value; //    + {{PREDICATE_NO}} * {{NUMBER_OF_DOFS_PER_CELL_2D}} * ({{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}});
     #elif Dimensions==3
-    const double* __restrict__ QIn = fineGridFace{{UNKNOWN_IDENTIFIER}}EstimateProjection.value + {{PREDICATE_NO}} * {{NUMBER_OF_DOFS_PER_CELL_3D}} * ({{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}});
+    const double* __restrict__ QIn = fineGridFace{{UNKNOWN_IDENTIFIER}}EstimateProjection.value; // + {{PREDICATE_NO}} * {{NUMBER_OF_DOFS_PER_CELL_3D}} * ({{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}});
     #endif
 
 

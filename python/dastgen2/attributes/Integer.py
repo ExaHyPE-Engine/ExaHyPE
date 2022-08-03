@@ -4,7 +4,7 @@ from .Attribute import Attribute
 
 
 class Integer(Attribute):
-  def __init__(self, name, min_value=None, max_value=None):
+  def __init__(self, name, min_value=None, max_value=None, ifdefs=[]):
     """
     
     min_value: None or integer value
@@ -12,7 +12,7 @@ class Integer(Attribute):
       is given by the precompiler.
     
     """
-    Attribute.__init__(self, name)
+    Attribute.__init__(self, name, ifdefs)
     self._min_value = min_value
     self._max_value = max_value
     
@@ -29,7 +29,7 @@ class Integer(Attribute):
     if self._min_value==None and self._max_value==None:
       return [ ("_" + self._name, "int", "" ) ]
     else:
-      return [ ("_" + self._name, "int", "[[clang::compress::" + str(self._min_value) + "-" + str(self._max_value) + "]]" ) ]
+      return [ ("_" + self._name, "int", "[[clang::pack_range(" + str(self._min_value) + "," + str(self._max_value) + ")]]" ) ]
 
 
   def get_method_body(self,signature):

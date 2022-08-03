@@ -7,16 +7,35 @@
 
 
 
-peano4::grid::GridVertex::GridVertex(State  __state, tarch::la::Vector<TwoPowerD,int>  __adjacentRanks, tarch::la::Vector<TwoPowerD,int>  __backupOfAdjacentRanks, bool  __hasBeenAntecessorOfRefinedVertexInPreviousTreeSweep, bool  __isAntecessorOfRefinedVertexInCurrentTreeSweep, int  __numberOfAdjacentRefinedLocalCells, tarch::la::Vector<Dimensions,double>  __x, int  __level):
-    _state(__state)
-  , _adjacentRanks(__adjacentRanks)
-  , _backupOfAdjacentRanks(__backupOfAdjacentRanks)
-  , _hasBeenAntecessorOfRefinedVertexInPreviousTreeSweep(__hasBeenAntecessorOfRefinedVertexInPreviousTreeSweep)
-  , _isAntecessorOfRefinedVertexInCurrentTreeSweep(__isAntecessorOfRefinedVertexInCurrentTreeSweep)
-  , _numberOfAdjacentRefinedLocalCells(__numberOfAdjacentRefinedLocalCells)
-  , _x(__x)
-  , _level(__level)
-  {}
+peano4::grid::GridVertex::GridVertex(State  __state, tarch::la::Vector<TwoPowerD,int>  __adjacentRanks, tarch::la::Vector<TwoPowerD,int>  __backupOfAdjacentRanks, bool  __hasBeenAntecessorOfRefinedVertexInPreviousTreeSweep, bool  __isAntecessorOfRefinedVertexInCurrentTreeSweep, int  __numberOfAdjacentRefinedLocalCells, tarch::la::Vector<Dimensions,double>  __x, int  __level){
+setState( __state);
+setAdjacentRanks( __adjacentRanks);
+setBackupOfAdjacentRanks( __backupOfAdjacentRanks);
+setHasBeenAntecessorOfRefinedVertexInPreviousTreeSweep( __hasBeenAntecessorOfRefinedVertexInPreviousTreeSweep);
+setIsAntecessorOfRefinedVertexInCurrentTreeSweep( __isAntecessorOfRefinedVertexInCurrentTreeSweep);
+setNumberOfAdjacentRefinedLocalCells( __numberOfAdjacentRefinedLocalCells);
+#if PeanoDebug>0
+setX( __x);
+#endif 
+setLevel( __level);
+}
+
+
+
+peano4::grid::GridVertex::GridVertex( const GridVertex& copy ) {
+  setState( copy.getState() );
+  setAdjacentRanks( copy.getAdjacentRanks() );
+  setBackupOfAdjacentRanks( copy.getBackupOfAdjacentRanks() );
+  setHasBeenAntecessorOfRefinedVertexInPreviousTreeSweep( copy.getHasBeenAntecessorOfRefinedVertexInPreviousTreeSweep() );
+  setIsAntecessorOfRefinedVertexInCurrentTreeSweep( copy.getIsAntecessorOfRefinedVertexInCurrentTreeSweep() );
+  setNumberOfAdjacentRefinedLocalCells( copy.getNumberOfAdjacentRefinedLocalCells() );
+#if PeanoDebug>0
+  setX( copy.getX() );
+#endif 
+  setLevel( copy.getLevel() );
+}
+
+
 
 
 
@@ -25,7 +44,7 @@ std::string peano4::grid::GridVertex::toString() const {
   out << "(";
   out << "state=" << (_state==State::HangingVertex? "HangingVertex" : "")  << (_state==State::New? "New" : "")  << (_state==State::Unrefined? "Unrefined" : "")  << (_state==State::Refined? "Refined" : "")  << (_state==State::RefinementTriggered? "RefinementTriggered" : "")  << (_state==State::Refining? "Refining" : "")  << (_state==State::EraseTriggered? "EraseTriggered" : "")  << (_state==State::Erasing? "Erasing" : "")  << (_state==State::Delete? "Delete" : "") ;
   out << ","; 
-  out << "adjacentRanks=" << _adjacentRanks;
+  out << "adjacentRanks=" << getAdjacentRanks();
   out << ","; 
   out << "backupOfAdjacentRanks=" << _backupOfAdjacentRanks;
   out << ","; 
@@ -34,13 +53,18 @@ std::string peano4::grid::GridVertex::toString() const {
   out << "isAntecessorOfRefinedVertexInCurrentTreeSweep=" << _isAntecessorOfRefinedVertexInCurrentTreeSweep;
   out << ","; 
   out << "numberOfAdjacentRefinedLocalCells=" << _numberOfAdjacentRefinedLocalCells;
+#if PeanoDebug>0
   out << ","; 
-  out << "x=" << _x;
+  out << "x=" << getX();
+#endif 
   out << ","; 
   out << "level=" << _level;
   out << ")";
   return out.str();
 }
+
+
+
 
 
 peano4::grid::GridVertex::State   peano4::grid::GridVertex::getState() const {
@@ -54,22 +78,30 @@ void   peano4::grid::GridVertex::setState(State value) {
 
 
 tarch::la::Vector<TwoPowerD,int>   peano4::grid::GridVertex::getAdjacentRanks() const {
-  return    _adjacentRanks;
-}
+
+  tarch::la::Vector<TwoPowerD,int> result;
+  for( int i=0; i<TwoPowerD; i++) {
+    result(i) =   _adjacentRanks[i];
+  }
+  return result;
+      }
 
 
 void   peano4::grid::GridVertex::setAdjacentRanks(const tarch::la::Vector<TwoPowerD,int>& value) {
-  _adjacentRanks = value;
-}
+
+  for( int i=0; i<TwoPowerD; i++) {
+      _adjacentRanks[i] = value(i);
+  }
+      }
 
 
 int   peano4::grid::GridVertex::getAdjacentRanks(int index) const {
-  return   _adjacentRanks(index);
+  return   _adjacentRanks[index];
 }
 
 
 void   peano4::grid::GridVertex::setAdjacentRanks(int index, int value) {
-  _adjacentRanks(index) = value;
+  _adjacentRanks[index] = value;
 }
 
 
@@ -123,24 +155,36 @@ void   peano4::grid::GridVertex::setNumberOfAdjacentRefinedLocalCells(int value)
 }
 
 
+#if PeanoDebug>0
 tarch::la::Vector<Dimensions,double>   peano4::grid::GridVertex::getX() const {
-  return   _x;
-}
+
+  tarch::la::Vector<Dimensions,double> result;
+  for( int i=0; i<Dimensions; i++) {
+    result(i) =   _x[i];
+  }
+  return result;
+      }
 
 
 void   peano4::grid::GridVertex::setX(const tarch::la::Vector<Dimensions,double>& value) {
-  _x = value;
-}
+
+  for( int i=0; i<Dimensions; i++) {
+      _x[i] = value(i);
+  }
+      }
 
 
 double   peano4::grid::GridVertex::getX(int index) const {
-  return   _x(index);
+  return   _x[index];
 }
 
 
 void   peano4::grid::GridVertex::setX(int index, double value) {
-  _x(index) = value;
+  _x[index] = value;
 }
+
+
+#endif 
 
 
 int   peano4::grid::GridVertex::getLevel() const {
@@ -216,7 +260,15 @@ void peano4::grid::GridVertex::receiveAndPollDanglingMessages(peano4::grid::Grid
     
 #ifdef Parallel
 
+#if !defined(__MPI_ATTRIBUTES_LANGUAGE_EXTENSION__)      
 MPI_Datatype peano4::grid::GridVertex::Datatype;
+#endif
+
+
+[[clang::map_mpi_datatype]]
+MPI_Datatype peano4::grid::GridVertex::getDatatype() {
+  return Datatype;
+}
 
 int peano4::grid::GridVertex::getSenderRank() const {
   return _senderDestinationRank;
@@ -224,36 +276,78 @@ int peano4::grid::GridVertex::getSenderRank() const {
 
 
 void peano4::grid::GridVertex::initDatatype() {
+  #if !defined(__MPI_ATTRIBUTES_LANGUAGE_EXTENSION__)
   peano4::grid::GridVertex  instances[2];
-    
-  MPI_Datatype subtypes[] = { MPI_INT, MPI_INT, MPI_INT, MPI_BYTE, MPI_BYTE, MPI_INT, MPI_DOUBLE, MPI_INT };
-    
-  int blocklen[] = { 1, TwoPowerD, TwoPowerD, 1, 1, 1, Dimensions, 1 };
 
-  const int NumberOfAttributes = 8;
-    
+  int NumberOfAttributes = 0;
+  NumberOfAttributes++;
+  NumberOfAttributes++;
+  NumberOfAttributes++;
+  NumberOfAttributes++;
+  NumberOfAttributes++;
+  NumberOfAttributes++;
+#if PeanoDebug>0
+  NumberOfAttributes++;
+#endif 
+  NumberOfAttributes++;
+
+  MPI_Datatype* subtypes = new MPI_Datatype[NumberOfAttributes];
+  int*          blocklen = new int[NumberOfAttributes]; 
+  MPI_Aint*     disp     = new MPI_Aint[NumberOfAttributes];
+  
+  int counter            = 0;
+  subtypes[counter] = MPI_INT;
+  blocklen[counter] = 1;
+  counter++;
+  subtypes[counter] = MPI_INT;
+  blocklen[counter] = TwoPowerD;
+  counter++;
+  subtypes[counter] = MPI_INT;
+  blocklen[counter] = TwoPowerD;
+  counter++;
+  subtypes[counter] = MPI_BYTE;
+  blocklen[counter] = 1;
+  counter++;
+  subtypes[counter] = MPI_BYTE;
+  blocklen[counter] = 1;
+  counter++;
+  subtypes[counter] = MPI_INT;
+  blocklen[counter] = 1;
+  counter++;
+#if PeanoDebug>0
+  subtypes[counter] = MPI_DOUBLE;
+  blocklen[counter] = Dimensions;
+  counter++;
+#endif
+  subtypes[counter] = MPI_INT;
+  blocklen[counter] = 1;
+  counter++;
+   
   MPI_Aint  baseFirstInstance;
   MPI_Aint  baseSecondInstance;
   MPI_Get_address( &instances[0], &baseFirstInstance );
   MPI_Get_address( &instances[1], &baseSecondInstance );
-  MPI_Aint  disp[ NumberOfAttributes ];
-  int       currentAddress = 0;
-  MPI_Get_address( &(instances[0]._state), &disp[currentAddress] );
-  currentAddress++;
-  MPI_Get_address( &(instances[0]._adjacentRanks.data()[0]), &disp[currentAddress] );
-  currentAddress++;
-  MPI_Get_address( &(instances[0]._backupOfAdjacentRanks.data()[0]), &disp[currentAddress] );
-  currentAddress++;
-  MPI_Get_address( &(instances[0]._hasBeenAntecessorOfRefinedVertexInPreviousTreeSweep), &disp[currentAddress] );
-  currentAddress++;
-  MPI_Get_address( &(instances[0]._isAntecessorOfRefinedVertexInCurrentTreeSweep), &disp[currentAddress] );
-  currentAddress++;
-  MPI_Get_address( &(instances[0]._numberOfAdjacentRefinedLocalCells), &disp[currentAddress] );
-  currentAddress++;
-  MPI_Get_address( &(instances[0]._x.data()[0]), &disp[currentAddress] );
-  currentAddress++;
-  MPI_Get_address( &(instances[0]._level), &disp[currentAddress] );
-  currentAddress++;
+  
+  counter = 0;
+  MPI_Get_address( &(instances[0]._state), &disp[counter] );
+  counter++;
+  MPI_Get_address( &(instances[0]._adjacentRanks.data()[0]), &disp[counter] );
+  counter++;
+  MPI_Get_address( &(instances[0]._backupOfAdjacentRanks.data()[0]), &disp[counter] );
+  counter++;
+  MPI_Get_address( &(instances[0]._hasBeenAntecessorOfRefinedVertexInPreviousTreeSweep), &disp[counter] );
+  counter++;
+  MPI_Get_address( &(instances[0]._isAntecessorOfRefinedVertexInCurrentTreeSweep), &disp[counter] );
+  counter++;
+  MPI_Get_address( &(instances[0]._numberOfAdjacentRefinedLocalCells), &disp[counter] );
+  counter++;
+
+#if PeanoDebug>0
+  MPI_Get_address( &(instances[0]._x.data()[0]), &disp[counter] );
+  counter++;
+#endif
+  MPI_Get_address( &(instances[0]._level), &disp[counter] );
+  counter++;
 
   MPI_Aint offset = disp[0] - baseFirstInstance;
   MPI_Aint extent = baseSecondInstance - baseFirstInstance - offset;
@@ -268,11 +362,21 @@ void peano4::grid::GridVertex::initDatatype() {
   errorCode += MPI_Type_commit( &Datatype );
   errorCode += MPI_Type_free( &tmpType );
   if (errorCode) std::cerr << "error constructing MPI datatype in " << __FILE__ << ":" << __LINE__ << std::endl;
+
+  delete[] subtypes;
+  delete[] blocklen; 
+  delete[] disp;
+
+  #else
+  // invoke routine once to trigger lazy initialisation
+  getDatatype();
+  #endif
 }
 
 
 void peano4::grid::GridVertex::shutdownDatatype() {
-  MPI_Type_free( &Datatype );
+  MPI_Datatype type = getDatatype();
+  MPI_Type_free( &type );
 }
 
 

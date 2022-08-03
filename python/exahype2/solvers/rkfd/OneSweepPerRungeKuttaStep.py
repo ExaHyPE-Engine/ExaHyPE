@@ -78,9 +78,7 @@ class UpdateCell(ReconstructPatchAndApplyFunctor):
           }      
         }
         
-        {% if PREDICATE_NO!=PREDICATES|length-1 %}
         targetPatch = fineGridCell{{UNKNOWN_IDENTIFIER}}RhsEstimates.value + enumeratorWithoutAuxiliaryVariables({{PREDICATE_NO}},0,0);
-        {% endif %}        
       }
       {% endfor %} 
    
@@ -89,12 +87,12 @@ class UpdateCell(ReconstructPatchAndApplyFunctor):
       assertion2( tarch::la::greaterEquals( timeStamp, 0.0 ),    timeStamp, timeStepSize );
       assertion2( tarch::la::greaterEquals( timeStepSize, 0.0 ), timeStamp, timeStepSize );
 
-      ::exahype2::fv::validatePatch(
+      ::exahype2::fd::validatePatch(
         reconstructedPatch,
         {{NUMBER_OF_UNKNOWNS}},
         {{NUMBER_OF_AUXILIARY_VARIABLES}},
         {{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}},
-        1, // halo
+        {{HALO_SIZE}}, // halo
         std::string(__FILE__) + "(" + std::to_string(__LINE__) + "): " + marker.toString()
       ); // previous time step has to be valid
   
@@ -102,9 +100,7 @@ class UpdateCell(ReconstructPatchAndApplyFunctor):
            
       ::exahype2::fd::{{KERNEL_NAMESPACE}}::{{COMPUTE_KERNEL_CALL}} 
 
-      {{POSTPROCESS_UPDATED_PATCH}}
-
-      ::exahype2::fv::validatePatch(
+      ::exahype2::fd::validatePatch(
         targetPatch,
         {{NUMBER_OF_UNKNOWNS}},
         {{NUMBER_OF_AUXILIARY_VARIABLES}},
@@ -112,20 +108,6 @@ class UpdateCell(ReconstructPatchAndApplyFunctor):
         0, // halo
         std::string(__FILE__) + "(" + std::to_string(__LINE__) + "): " + marker.toString()
       ); // outcome has to be valid
-      
-      {% if COMPUTE_MAX_EIGENVALUE %}
-      const double maxEigenvalue = patchData.maxEigenvalue[0];
-      {% endif %}
-      
-      // Set the variable
-      // double newTimeStepSize
-      {{COMPUTE_NEW_TIME_STEP_SIZE}}
-    
-      fineGridCell{{SOLVER_NAME}}CellLabel.setTimeStamp(timeStamp+timeStepSize);
-      fineGridCell{{SOLVER_NAME}}CellLabel.setTimeStepSize(newTimeStepSize);
-      fineGridCell{{SOLVER_NAME}}CellLabel.setHasUpdated(true);
-    
-      repositories::{{SOLVER_INSTANCE}}.update(newTimeStepSize, timeStamp+timeStepSize, marker.h()(0) );
   """ )
 
 
@@ -146,18 +128,6 @@ class UpdateCell(ReconstructPatchAndApplyFunctor):
     )
     self._solver = solver
     
-    self._Template_TouchCellFirstTime_Epilogue += """
-  else if (not marker.willBeRefined() and not marker.hasBeenRefined()) {{
-    const double timeStamp    = fineGridCell{SOLVER_NAME}CellLabel.getTimeStamp();
-    const double timeStepSize = fineGridCell{SOLVER_NAME}CellLabel.getTimeStepSize();
-    
-    assertion2( tarch::la::greaterEquals( timeStepSize, 0.0 ), timeStepSize, timeStamp );
-    assertion2( tarch::la::greaterEquals( timeStamp, 0.0 ),    timeStepSize, timeStamp );
-
-    repositories::{SOLVER_INSTANCE}.update(0.0, timeStamp, marker.h()(0) );
-  }}
-"""
-
     self._Template_TouchCellFirstTime_Preamble = """
   fineGridCell""" + solver._name + """CellLabel.setHasUpdated(false);
 """ + self._Template_TouchCellFirstTime_Preamble
@@ -189,8 +159,9 @@ class UpdateCell(ReconstructPatchAndApplyFunctor):
   
   def get_includes(self):
     return """
-#include "exahype2/fd/BoundaryConditions.h"
 #include "exahype2/NonCriticalAssertions.h"
+#include "exahype2/enumerator/Enumerator.h"
+#include "exahype2/fd/PatchUtils.h"
 """ + self._solver._get_default_includes() + self._solver.user_action_set_includes
 
 
@@ -220,16 +191,16 @@ class OneSweepPerRungeKuttaStep( CellCenteredFiniteDifferences ):
   """
 
 
-  def __init__(self, name, patch_size, overlap, rk_order, unknowns, auxiliary_variables, min_volume_h, max_volume_h, plot_grid_properties, kernel_namespace):
+  def __init__(self, name, patch_size, overlap, rk_order, unknowns, auxiliary_variables, min_meshcell_h, max_meshcell_h, plot_grid_properties, kernel_namespace):
     """
 
       Instantiate a generic FV scheme with an overlap of 1.
 
     """
-    super(OneSweepPerRungeKuttaStep, self).__init__(name, patch_size, overlap, rk_order, unknowns, auxiliary_variables, min_volume_h, max_volume_h, plot_grid_properties, kernel_namespace)
+    super(OneSweepPerRungeKuttaStep, self).__init__(name, patch_size, overlap, rk_order, unknowns, auxiliary_variables, min_meshcell_h, max_meshcell_h, plot_grid_properties, kernel_namespace)
     
-    if rk_order<2:
-      raise Exception( "Runge-Kutta order has to be at least 2 but was {}".format(rk_order) )
+    if rk_order<1:
+      raise Exception( "Runge-Kutta order has to be at least 1 but was {}".format(rk_order) )
 
     self._solver_template_file_class_name     = "OneSweepPerRungeKuttaStep"
 
@@ -286,7 +257,7 @@ class OneSweepPerRungeKuttaStep( CellCenteredFiniteDifferences ):
     self._action_set_compute_final_linear_combination.guard = self._store_cell_data_default_guard() + " and repositories::{}.getSolverState()=={}::SolverState::RungeKuttaSubStep{}".format(self.get_name_of_global_instance(),self._name,self.number_of_Runge_Kutta_steps()-1)
     self._action_set_project_patch_onto_faces.guards        = [
       "{} and repositories::{}.getSolverState()=={}::SolverState::RungeKuttaSubStep{}".format(self._store_cell_data_default_guard(),self.get_name_of_global_instance(),self._name,step) for step in range(0,self.number_of_Runge_Kutta_steps())
-    ]
+    ] + [ "{} and repositories::{}.getSolverState()=={}::SolverState::GridInitialisation".format(self._store_cell_data_default_guard(),self.get_name_of_global_instance(),self._name) ]
 
 
   @property
@@ -314,7 +285,14 @@ class OneSweepPerRungeKuttaStep( CellCenteredFiniteDifferences ):
     if refinement_criterion is not None:  self._refinement_criterion_implementation       = refinement_criterion
     if initial_conditions   is not None:  self._initial_conditions_implementation         = initial_conditions
     if memory_location      is not None:  self._reconstructed_array_memory_location       = memory_location
-
+    
+    if boundary_conditions==exahype2.solvers.fv.PDETerms.None_Implementation:
+      assert False, "boundary conditions cannot be none"
+    if refinement_criterion==exahype2.solvers.fv.PDETerms.None_Implementation:
+      assert False, "refinement criterion cannot be none"
+    if initial_conditions==exahype2.solvers.fv.PDETerms.None_Implementation:
+      assert False, "initial conditions cannot be none"
+      
     if flux                 is not None:  self._flux_implementation                       = flux
     if ncp                  is not None:  self._ncp_implementation                        = ncp
     if eigenvalues          is not None:  self._eigenvalues_implementation                = eigenvalues
