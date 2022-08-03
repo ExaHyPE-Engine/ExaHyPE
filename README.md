@@ -1,6 +1,6 @@
-<p align="center">
+<div align="center">
 <img src="./documentation/Peano-logo.png"/>
-</p>
+</div>
 
 ## <u>Table of Contents</u>
 - [<u>Table of Contents</u>](#utable-of-contentsu)
@@ -99,8 +99,9 @@ work directly against the libraries built in the source directory.
 ### Running a Simulation
 ```shell
 export PYTHONPATH=$PEANO_DIR/python
-cd examples/exahype2/euler
+cd applications/exahype2/euler
 python3 example-scripts/finitevolumes.py -maxh 0.05 -gpu -t global-fixed-enclave -et 0.01
+./peano4
 ```
 
 ### Cleanup
