@@ -73,10 +73,9 @@ if args.file=="":
       eigenvalues = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
       pde_terms_without_state = True
     )
-        
+
     project.add_solver( thesolver )
-    
-    
+
     #
     # Configure build
     #
@@ -96,8 +95,7 @@ if args.file=="":
     )
     project.set_load_balancing( "toolbox::loadbalancing::RecursiveSubdivision", "new ::exahype2::LoadBalancingConfiguration()" )
     project.set_Peano4_installation( args.peanodir, build_mode )
-    
-    
+
     #
     # Generate code and then copy cpp file over main
     #
@@ -106,9 +104,9 @@ if args.file=="":
     peano4_project.output.makefile.add_cpp_file( "../../../../applications/exahype2/euler/EulerKernels.cpp" )
     peano4_project.output.makefile.add_header_search_path( "../../../../applications/exahype2/euler" )
     peano4_project.generate()
-    #benchmark_main_file = os.path.dirname(os.path.realpath(__file__)) + "/fv-kernel-benchmarks.cpp"
-    #print( "replace generated main with benchmark main file {}".format(benchmark_main_file) )
-    #os.system( "cp {} finitevolumes-main.cpp".format(benchmark_main_file) )
+    benchmark_main_file = os.path.dirname(os.path.realpath(__file__)) + "/fv-kernel-benchmarks.cpp"
+    print( "Replace generated main with benchmark main file {}".format(benchmark_main_file) )
+    os.system( "cp {} fv-kernel-benchmarks-main.cpp".format(benchmark_main_file) )
     os.system( "make clean" )
     if args.j>0:
       os.system( "make -j{}".format(args.j) )
