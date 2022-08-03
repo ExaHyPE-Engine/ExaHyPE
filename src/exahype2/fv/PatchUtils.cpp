@@ -43,12 +43,45 @@ std::string exahype2::fv::plotPatch(
   int    unknowns,
   int    auxiliaryVariables,
   int    numberOfVolumesPerAxisInPatch,
-  int    haloSize
+  int    haloSize,
+  bool   prettyPrint
 ) {
   const int PatchSize = numberOfVolumesPerAxisInPatch+2*haloSize;
 
   std::ostringstream result;
 
+  if (prettyPrint) result << std::endl;
+
+  #if Dimensions==2
+  for (int y=0; y<PatchSize; y++) {
+    for (int x=0; x<PatchSize; x++) {
+      int index = (y*PatchSize+x) * (unknowns+auxiliaryVariables);
+
+      // It is a diagonal entry if this counter is bigger than 1. If it equals
+      // 0, it is interior. If it equals 1, then this is a face-connected halo
+      // entry.
+      bool isDiagonal = (x<haloSize and y<haloSize)
+                     or (x>=numberOfVolumesPerAxisInPatch+haloSize and y<haloSize)
+                     or (x<haloSize and y>=numberOfVolumesPerAxisInPatch+haloSize)
+                     or (x>=numberOfVolumesPerAxisInPatch+haloSize and y>=numberOfVolumesPerAxisInPatch+haloSize);
+
+      result << "(";
+      for (int i=0; i<unknowns+auxiliaryVariables; i++) {
+        const int entry = index+i;
+
+        if (i!=0)
+          result << ",";
+
+        if (not isDiagonal)
+          result << Q[entry];
+        else
+          result << "x";
+      }
+      result << ")";
+    }
+    result << std::endl;
+  }
+  #else
   dfor (k,PatchSize) {
     int index = peano4::utils::dLinearised(k,PatchSize) * (unknowns+auxiliaryVariables);
 
@@ -73,10 +106,63 @@ std::string exahype2::fv::plotPatch(
     }
     result << ")";
   }
+  #endif
+
+  if (prettyPrint) result << std::endl;
 
   return result.str();
 }
 
+
+
+std::string exahype2::fv::plotPatchOverlap(
+  const double* __restrict__ Q,
+  int    unknowns,
+  int    auxiliaryVariables,
+  int    numberOfVolumesPerAxisInPatch,
+  int    haloSize,
+  int    normal,
+  bool   prettyPrint
+) {
+  assertion(normal>=0);
+  assertion(normal<Dimensions);
+
+  std::ostringstream result;
+
+  if (prettyPrint) result << std::endl;
+
+  #if Dimensions==2
+  if (normal==0) {
+    for (int y=0; y<numberOfVolumesPerAxisInPatch; y++) {
+      for (int x=0; x<2*haloSize; x++) {
+        int index = (y*numberOfVolumesPerAxisInPatch+x) * (unknowns+auxiliaryVariables);
+        result << "(";
+        for (int i=0; i<unknowns+auxiliaryVariables; i++) {
+          const int entry = index+i;
+
+          if (i!=0)
+            result << ",";
+
+          result << Q[entry];
+        }
+        result << ")";
+        if (x==haloSize-1)
+          result << " | ";
+      }
+      result << std::endl;
+    }
+  }
+  else {
+    result << "<not implemented yet>";
+  }
+  #else
+  result << "<not implemented yet>";
+  #endif
+
+  if (prettyPrint) result << std::endl;
+
+  return result.str();
+}
 
 
 void exahype2::fv::validatePatch (

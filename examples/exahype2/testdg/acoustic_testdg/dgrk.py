@@ -8,13 +8,14 @@ project = exahype2.Project( ["examples", "exahype2", "testing"], "testing", ".",
 
 theSolver=exahype2.solvers.rkdg.rusanov.GlobalFixedTimeStep(
   name="testing",
-  dg_order=3, rk_order=2,
-  polynomials=exahype2.solvers.rkdg.Polynomials.Gauss_Legendre,
+  rk_order=2,
+  polynomials=exahype2.solvers.GaussLegendreBasis(4), #dg_order
   unknowns=3, auxiliary_variables=2,
-  min_cell_h=0.1, max_cell_h=0.1,
-  time_step_size=0.0001)
+  min_cell_h=0.05, max_cell_h=0.05,
+  time_step_size=0.0001,
+  flux=exahype2.solvers.rkdg.PDETerms.User_Defined_Implementation)
 
-theSolver.set_implementation( refinement_criterion=exahype2.solvers.fv.PDETerms.User_Defined_Implementation)
+theSolver.set_implementation( refinement_criterion=exahype2.solvers.rkdg.PDETerms.User_Defined_Implementation)
 
 project.add_solver(theSolver)
 
@@ -22,10 +23,10 @@ project.set_global_simulation_parameters(
   dimensions = 2,
   offset = [0.0,0.0,0.0],
   size = [1.0,1.0,1.0],
-  min_end_time = 0.03,
-  max_end_time = 0.03,
+  min_end_time = 0.3,
+  max_end_time = 0.3,
   first_plot_time_stamp = 0.0,
-  time_in_between_plots = 0.0003,      # snapshots
+  time_in_between_plots = 0.001,      # snapshots
   periodic_BC = [False,False,False]
 )
 

@@ -206,7 +206,10 @@ namespace exahype2 {
      * @param strideQ: number of elements per node per cell, usually number of
      *    unknowns + number of auxiliary variables
      * @param dt: timestep
+     *
+     * @deprecated due to reduceMaxEigenvalue_patchwise_functors()
      */
+/*
     double getMaxEigenvalue(
         MaxEigenvalue                                  maxEigenvalue,
         const double* __restrict__                     Q,
@@ -216,7 +219,21 @@ namespace exahype2 {
         const double                                   t,
         const double                                   dt
         );
+*/
 
+
+    /**
+     * Compute the maximum eigenvalues over a sequence of cells and store the
+     * result in the respective CellData entry.
+     */
+    void reduceMaxEigenvalue_patchwise_functors(
+      ::exahype2::CellData&   cellData,
+      const int               order,
+      const int               unknowns,
+      const int               auxiliaryVariables,
+      MaxEigenvalue           maxEigenvalue,
+      const double* __restrict__   QuadratureNodes1d
+    );
 
     namespace internal {
       /**

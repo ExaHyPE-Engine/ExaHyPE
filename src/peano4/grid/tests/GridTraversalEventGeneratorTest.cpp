@@ -136,7 +136,9 @@ void peano4::grid::tests::GridTraversalEventGeneratorTest::testCreateLeaveCellTr
     vertices[kScalar].setAdjacentRanks( tarch::la::Vector<TwoPowerD,int>(peano4::grid::InvalidRank) );
     vertices[kScalar].setHasBeenAntecessorOfRefinedVertexInPreviousTreeSweep(true);
     vertices[kScalar].setIsAntecessorOfRefinedVertexInCurrentTreeSweep(true);
+    #if PeanoDebug>0
     vertices[kScalar].setX(tarch::la::convertScalar<double>(k));
+    #endif
     vertices[kScalar].setLevel(0);
   }
 

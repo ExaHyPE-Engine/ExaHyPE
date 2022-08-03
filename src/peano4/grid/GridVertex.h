@@ -44,6 +44,7 @@ struct peano4::grid::GridVertex {
     GridVertex() {}
     GridVertex(State  __state, tarch::la::Vector<TwoPowerD,int>  __adjacentRanks, tarch::la::Vector<TwoPowerD,int>  __backupOfAdjacentRanks, bool  __hasBeenAntecessorOfRefinedVertexInPreviousTreeSweep, bool  __isAntecessorOfRefinedVertexInCurrentTreeSweep, int  __numberOfAdjacentRefinedLocalCells, tarch::la::Vector<Dimensions,double>  __x, int  __level);
 
+
     peano4::grid::GridVertex::State   getState() const;
     void   setState(State value);
     tarch::la::Vector<TwoPowerD,int>   getAdjacentRanks() const;
@@ -60,13 +61,15 @@ struct peano4::grid::GridVertex {
     void   setIsAntecessorOfRefinedVertexInCurrentTreeSweep(bool value);
     int   getNumberOfAdjacentRefinedLocalCells() const;
     void   setNumberOfAdjacentRefinedLocalCells(int value);
+#if PeanoDebug>0
     tarch::la::Vector<Dimensions,double>   getX() const;
     void   setX(const tarch::la::Vector<Dimensions,double>& value);
     double   getX(int index) const;
     void   setX(int index, double value);
+#endif 
     int   getLevel() const;
     void   setLevel(int value);
-
+    GridVertex(const GridVertex& copy);
 
 
 #ifdef Parallel
@@ -77,15 +80,29 @@ struct peano4::grid::GridVertex {
 
     #ifdef Parallel
     /**
+     * Hands out MPI datatype if we work without the LLVM MPI extension.
+     * If we work with this additional feature, this is the routine where
+     * the lazy initialisation is done and the datatype is also cached.
+     */
+    [[clang::map_mpi_datatype]]
+    static MPI_Datatype  getDatatype();
+    
+    
+    /**
      * @return The rank of the sender of an object. It only make ssense to call
      *         this routine after you've invoked receive with MPI_ANY_SOURCE.
      */
     int getSenderRank() const;
     
     /**
-     * To be called prior to any MPI usage of this class.
+     * Wrapper around getDatatype() to trigger lazy evaluation if we
+     * use the lazy initialisation.
      */
     static void initDatatype();
+    
+    /**
+     * Free the underlying MPI datatype.
+     */
     static void shutdownDatatype();
             
     /**
@@ -113,23 +130,43 @@ struct peano4::grid::GridVertex {
     std::string toString() const;
   
   private:
-      State   _state;
+    [[clang::pack]]  State   _state;
+#if defined(__PACKED_ATTRIBUTES_LANGUAGE_EXTENSION__)
+    [[clang::pack_range(-1,std::numeric_limits<int>::max())]]  int   _adjacentRanks[TwoPowerD];
+#endif
+#if !defined(__PACKED_ATTRIBUTES_LANGUAGE_EXTENSION__)
       tarch::la::Vector<TwoPowerD,int>   _adjacentRanks;
-      tarch::la::Vector<TwoPowerD,int>   _backupOfAdjacentRanks;
-      bool   _hasBeenAntecessorOfRefinedVertexInPreviousTreeSweep;
-      bool   _isAntecessorOfRefinedVertexInCurrentTreeSweep;
-      int   _numberOfAdjacentRefinedLocalCells;
+#endif
+    tarch::la::Vector<TwoPowerD,int>   _backupOfAdjacentRanks;
+    [[clang::pack]]  bool   _hasBeenAntecessorOfRefinedVertexInPreviousTreeSweep;
+    [[clang::pack]]  bool   _isAntecessorOfRefinedVertexInCurrentTreeSweep;
+    [[clang::pack_range(0,TwoPowerD)]]  int   _numberOfAdjacentRefinedLocalCells;
+#if PeanoDebug>0
+#if defined(__PACKED_ATTRIBUTES_LANGUAGE_EXTENSION__)
+    [[clang::truncate_mantissa()]]  double   _x[Dimensions];
+#endif
+#if !defined(__PACKED_ATTRIBUTES_LANGUAGE_EXTENSION__)
       tarch::la::Vector<Dimensions,double>   _x;
+#endif
+#endif 
       int   _level;
 
 
 
 
     #ifdef Parallel
-    public:
-      static MPI_Datatype  Datatype;
     private:
-    int                  _senderDestinationRank;
+      int                  _senderDestinationRank;
+
+      #if !defined(__MPI_ATTRIBUTES_LANGUAGE_EXTENSION__)      
+      /**
+       * Whenever we use LLVM's MPI extension (DaStGe), we rely on lazy
+       * initialisation of the datatype. However, Peano calls init explicitly
+       * in most cases. Without the LLVM extension which caches the MPI 
+       * datatype once constructed, this field stores the type.
+       */
+      static MPI_Datatype  Datatype;
+      #endif
     #endif
 
 

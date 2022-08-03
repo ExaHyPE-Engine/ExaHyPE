@@ -34,11 +34,17 @@
 
 
 struct {{NAMESPACE | join("::")}}::{{CLASSNAME}} {
+  #if Parallel
+  private:
+    static MPI_Datatype   Datatype;
+  public:
+  #endif
   #if PeanoDebug>=1
   private:
     tarch::la::Vector<Dimensions,double> _debugX;
     tarch::la::Vector<Dimensions,double> _debugH;
-  
+
+
   public:
     void setDebugX( const tarch::la::Vector<Dimensions,double>& data );
     void setDebugH( const tarch::la::Vector<Dimensions,double>& data );
@@ -86,19 +92,23 @@ struct {{NAMESPACE | join("::")}}::{{CLASSNAME}} {
   
   #ifdef Parallel
   /**
-   * Sets the Datatype to MPI_Double.
+   * Initialises the MPI datatype.
    */
   static void initDatatype();
 
   /**
-   * Degenerates to nop here, but we need such a function to fit to all other types.
+   * Free MPI datatype.
    */
   static void shutdownDatatype();
   
   /**
-   * Map each entry to an MPI_DOUBLE.
+   * Map each entry to an MPI_DOUBLE. So we will end up with three
+   * arrays of doubles: one for the x, one for the size of the
+   * patchy data, and one for the actual data. This holds for the
+   * debug mode. In release mode, it is the plain data only, i.e.
+   * one sequence of doubles.
    */
-  static MPI_Datatype   Datatype;
+  static MPI_Datatype   getDatatype();
   #endif
 };
 

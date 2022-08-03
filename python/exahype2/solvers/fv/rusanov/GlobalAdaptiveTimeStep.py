@@ -21,9 +21,12 @@ class GlobalAdaptiveTimeStep( SingleSweep ):
   def __init__(self, 
     name, patch_size, unknowns, auxiliary_variables, min_volume_h, max_volume_h, time_step_relaxation,
     flux=PDETerms.User_Defined_Implementation, 
-    ncp=None, 
+    ncp=PDETerms.None_Implementation, 
     eigenvalues=PDETerms.User_Defined_Implementation, 
-    boundary_conditions=None,refinement_criterion=None,initial_conditions=None,source_term=None,
+    boundary_conditions=PDETerms.User_Defined_Implementation,
+    refinement_criterion=PDETerms.Empty_Implementation,
+    initial_conditions=PDETerms.User_Defined_Implementation,
+    source_term=PDETerms.None_Implementation,
     plot_grid_properties=False, overlap=1
   ):
     super(GlobalAdaptiveTimeStep,self).__init__(name, patch_size, overlap, unknowns, auxiliary_variables, min_volume_h, max_volume_h, plot_grid_properties) 
@@ -79,7 +82,7 @@ class GlobalAdaptiveTimeStep( SingleSweep ):
       riemann_kernel_variant = RiemannKernelVariant.PatchWiseAoSHeap
     )
 
-    solver_code_snippets = AdaptiveTimeSteppingCodeSnippets(self._time_step_relaxation,False)
+    solver_code_snippets = AdaptiveTimeSteppingCodeSnippets(self._time_step_relaxation)
 
     self._abstract_solver_user_declarations  = create_abstract_solver_declarations(self._flux_implementation, self._ncp_implementation, self._eigenvalues_implementation, self._source_term_implementation, False)
     self._abstract_solver_user_declarations += solver_code_snippets.create_abstract_solver_user_declarations()

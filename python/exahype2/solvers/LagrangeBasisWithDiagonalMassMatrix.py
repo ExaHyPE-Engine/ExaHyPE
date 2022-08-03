@@ -13,6 +13,7 @@ from scipy.integrate import quad
 from abc import abstractmethod
 
 from .LagrangeBasis import LagrangeBasis
+from numpy import number
 
 #import re
 #from numpy.lib.polynomial import poly
@@ -476,6 +477,7 @@ class LagrangeBasisWithDiagonalMassMatrix(LagrangeBasis):
 
     
     """  
+
     result = 0.0
     for l in range(0,self.dofs_per_axis):
       if l!=number:
@@ -485,12 +487,8 @@ class LagrangeBasisWithDiagonalMassMatrix(LagrangeBasis):
           if m!=number and m!=l:
             enumerator  *= x-self.quadrature_points[m]
             denominator *= 1.0/(self.quadrature_points[number]-self.quadrature_points[m])
-        result += enumerator/denominator
+        result += enumerator*denominator
     return result
-
-
-
-   
   
 from scipy.special import legendre
 from scipy.special import roots_sh_legendre

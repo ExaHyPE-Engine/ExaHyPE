@@ -15,33 +15,37 @@ from exahype2.solvers.rkfd.kernels import create_solver_definitions
 from exahype2.solvers.rkfd.kernels import SolverVariant
 from exahype2.solvers.rkfd.kernels import RiemannKernelVariant
 
-from exahype2.solvers.fv.AdaptiveTimeSteppingCodeSnippets import AdaptiveTimeSteppingCodeSnippets
+from exahype2.solvers.rkfd.AdaptiveTimeSteppingCodeSnippets import AdaptiveTimeSteppingCodeSnippets
 
 
 class GlobalAdaptiveTimeStep( OneSweepPerRungeKuttaStep ):
   def __init__(self, 
-    name, patch_size, rk_order, unknowns, auxiliary_variables, min_volume_h, max_volume_h, time_step_relaxation,
+    name, patch_size, rk_order, unknowns, auxiliary_variables, min_meshcell_h, max_meshcell_h, time_step_relaxation,
     flux=PDETerms.User_Defined_Implementation, 
-    ncp=None, 
+    ncp=PDETerms.None_Implementation, 
+    point_source=PDETerms.None_Implementation,
+    boundary_conditions=PDETerms.User_Defined_Implementation,
+    refinement_criterion=PDETerms.Empty_Implementation,
+    initial_conditions=PDETerms.User_Defined_Implementation,
+    source_term=PDETerms.None_Implementation,
     eigenvalues=PDETerms.User_Defined_Implementation, 
-    boundary_conditions=None,refinement_criterion=None,initial_conditions=None,source_term=None,
     plot_grid_properties=False, KOSigma=8.0
   ):
     super(GlobalAdaptiveTimeStep,self).__init__(name, 
                                              patch_size, 
                                              3, #overlap, 
-                                             rk_order, unknowns, auxiliary_variables, min_volume_h, max_volume_h, plot_grid_properties, kernel_namespace="fd4") 
+                                             rk_order, unknowns, auxiliary_variables, min_meshcell_h, max_meshcell_h, plot_grid_properties, kernel_namespace="fd4") 
 
     self._time_step_relaxation = time_step_relaxation
 
-    self._flux_implementation                 = PDETerms.None_Implementation
-    self._ncp_implementation                  = PDETerms.None_Implementation
-    self._eigenvalues_implementation          = PDETerms.None_Implementation
-    self._source_term_implementation          = PDETerms.None_Implementation
-    
-    self._compute_eigenvalue                  = True
     self._KO_Sigma                            = KOSigma
+
+    self._compute_eigenvalue                  = True
     
+    self._user_action_set_includes += """
+#include "exahype2/fd/fd4/FD4.h"
+"""
+
     self.set_implementation(flux=flux, 
       ncp=ncp, 
       eigenvalues=eigenvalues, 
@@ -52,11 +56,9 @@ class GlobalAdaptiveTimeStep( OneSweepPerRungeKuttaStep ):
 
 
   def set_implementation(self,
-    flux=None,ncp=None,
-    eigenvalues=None,
-    boundary_conditions=None,refinement_criterion=None,initial_conditions=None,source_term=None,
+    flux=None, ncp=None, source_term=None, eigenvalues=None,
+    boundary_conditions=None,refinement_criterion=None,initial_conditions=None,
     memory_location         = None,
-    use_split_loop          = False,
     additional_action_set_includes = "",
     additional_user_includes       = "",
     KOSigma                 = None
@@ -73,12 +75,11 @@ class GlobalAdaptiveTimeStep( OneSweepPerRungeKuttaStep ):
 
       This routine should be the very last invoked by the constructor.
     """
+    super(GlobalAdaptiveTimeStep,self).set_implementation(  
+      flux, ncp, source_term, eigenvalues,
+      boundary_conditions, refinement_criterion, initial_conditions, memory_location, additional_action_set_includes, additional_user_includes)
 
-    if flux                 is not None:  self._flux_implementation                       = flux
-    if ncp                  is not None:  self._ncp_implementation                        = ncp
-    if eigenvalues          is not None:  self._eigenvalues_implementation                = eigenvalues
-    if source_term          is not None:  self._source_term_implementation                = source_term
-    if not                KOSigma==None:  self._KO_Sigma                                  = KOSigma
+    if not                  KOSigma==None:  self._KO_Sigma                                  = KOSigma
 
     self._compute_kernel_call = create_compute_Riemann_kernel_for_FD4(
       self._flux_implementation, self._ncp_implementation, self._source_term_implementation, 
@@ -88,7 +89,7 @@ class GlobalAdaptiveTimeStep( OneSweepPerRungeKuttaStep ):
       KOSigma=self._KO_Sigma
     )
 
-    solver_code_snippets = AdaptiveTimeSteppingCodeSnippets(self._time_step_relaxation,False)
+    solver_code_snippets = AdaptiveTimeSteppingCodeSnippets(self._time_step_relaxation)
 
     self._abstract_solver_user_declarations  = create_abstract_solver_declarations(self._flux_implementation, self._ncp_implementation, self._eigenvalues_implementation, self._source_term_implementation, False)
     self._abstract_solver_user_declarations += solver_code_snippets.create_abstract_solver_user_declarations()
@@ -105,11 +106,5 @@ class GlobalAdaptiveTimeStep( OneSweepPerRungeKuttaStep ):
     self._finish_time_step_implementation    = solver_code_snippets.create_finish_time_step_implementation()
     self._constructor_implementation         = solver_code_snippets.create_abstract_solver_constructor_statements()
     
-    super(GlobalAdaptiveTimeStep,self).set_implementation(boundary_conditions, refinement_criterion, initial_conditions, memory_location, use_split_loop, additional_action_set_includes, additional_user_includes)
+    self.create_action_sets()
 
-
-  @property
-  def user_action_set_includes(self):
-    return super(GlobalAdaptiveTimeStep, self).user_action_set_includes + """
-#include "exahype2/fd/fd4/FD4.h"
-"""

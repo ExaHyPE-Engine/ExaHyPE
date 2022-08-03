@@ -41,13 +41,38 @@ namespace exahype2 {
     tarch::la::Vector<Dimensions,double>*   cellSize;
     double*    t;
     double*    dt;
+    /**
+     * Id of underlying task. Required when we fuse many enclave tasks
+     * and load them off to the GPU, as we have to know afterwards which
+     * outcome corresponds to which task.
+     */
     int*       id;
+
+    /**
+     * As we store data as SoA, we have to know how big the actual
+     * arrays are.
+     */
     const int  numberOfCells;
+
+    /**
+     * Out values.
+     */
     double**   QOut;
+    
+    /**
+     * Out values.
+     */
     double*    maxEigenvalue;
 
     /**
      * Construct patch data object for one single cell.
+     *
+     * Usually, I do so only to be able to use the same kernels everywhere:
+     * Kernels accept CellData, i.e. multiple patches. Even if we have only
+     * one cell, we thus wrap this cell's data into an instance of CellData
+     * and pass it in. The id can be set to any dummy in this case, as we
+     * know which task has wrapped this single cell, i.e. we usually do not
+     * read it later.
      */
     CellData(
       double*   QIn,

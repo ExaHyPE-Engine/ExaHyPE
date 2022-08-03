@@ -3,6 +3,7 @@
 import peano4
 import peano4.output.Jinja2TemplatedHeaderImplementationFilePair
 
+import dastgen2
 
 import os
 import sys
@@ -301,6 +302,40 @@ thus appreciate any citation of the original release paper
   def add_tracer(self,name,attribute_count=0,plot=True):
     """
     
+    
+    ## Particle properties
+    
+    We rely on the particle toolbox. Therefore, our particles have
+    already a position x, a cut off radius (which we don't usually 
+    use here), and a (parallel) state. The cut-off radius determines
+    how Peano sorts particles within the tree, and we can set it to 
+    zero here. This ensures that the particle has no real volume and 
+    thus is always sieved through to the finest grid level.
+    
+    @see peano4.toolbox.particles.Particle
+
+    Besides those pre-defined attributes, we add one more vector field
+    to each particle which we simply call data. Data stores, as one 
+    large array, all the properties that we want to track per tracer.
+    We also need an additional enumeration which clarifies if a 
+    particle has moved already or not. This is important to ensure
+    that tracers can follow the fluid flow. Finally, we add each 
+    particle a number which is a tuple consisting of the tree number
+    (on which tree has a particle been generationed plus what was the
+    tree-local number of this particle at the time). Through this 
+    tuple, we can track tracers later on even if they move accross
+    domains.
+        
+    We can plot the data - if there is data to be tracked - directly,
+    as it is a large double array. For the index, we have to type cast
+    the data, as this is a tuple of integers, and Peano's VTK plotter
+    supports only double vectors.
+    
+    @see peano4.toolbox.particles.PlotParticlesInVTKFormat.add_attribute_to_plot()
+        
+    
+    ## Arguments 
+    
     name: String
       Has to be a unique name for this tracer
       
@@ -326,7 +361,10 @@ thus appreciate any citation of the original release paper
       particle_attr    = peano4.dastgen2.Peano4DoubleArray("data",str(attribute_count))
       particle.data.add_attribute(particle_attr)
 
-    particle_number = peano4.dastgen2.Peano4DoubleArray("number","2")
+
+    particle.data.add_attribute( dastgen2.attributes.Enumeration("MoveState",["NotMovedYet","Moved"]) )
+
+    particle_number = peano4.dastgen2.Peano4IntegerArray("number","2")
     particle.data.add_attribute(particle_number)
 
     particles = peano4.toolbox.particles.ParticleSet(particle)
@@ -368,7 +406,10 @@ thus appreciate any citation of the original release paper
 """)
       if attribute_count>0:
         particle_plotter.add_attribute_to_plot(particle_attr,attribute_count)
-      particle_plotter.add_attribute_to_plot(particle_number,2)
+      particle_plotter.add_attribute_to_plot(particle_number,
+                                             2,
+                                             "tarch::la::convertScalar<double>(p->getNumber())"
+                                             )
       
       self.plot_solution.add_action_set( particle_plotter ) 
       

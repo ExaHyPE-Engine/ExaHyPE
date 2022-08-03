@@ -18,10 +18,11 @@ class DoubleArray(Double):
      symbol, i.e. a name defined via ifdef somewhere in your code.
           
   """
-  def __init__(self, name, cardinality, relative_accuracy_in_bits=None):
-    Double.__init__(self, name)
+  def __init__(self, name, cardinality, valid_mantissa_bits=None, ifdefs=[]):
+    Double.__init__(self, name, ifdefs=ifdefs)
+
     self._cardinality = cardinality
-    self._relative_accuracy_in_bits = relative_accuracy_in_bits
+    self._valid_mantissa_bits = valid_mantissa_bits
 
     
   def get_methods(self,_full_qualified_class_name):
@@ -34,15 +35,26 @@ class DoubleArray(Double):
     ]
 
 
+  def use_default_copy_constructor(self):
+    """
+    
+    Cannot use the default copy constructor, as it is an array, 
+    i.e. we need some manual deep copying.
+    
+    """
+    return False;
+
+
   def get_plain_C_attributes(self):
-    if self._relative_accuracy_in_bits != None:
-      return [ ("_" + self._name + "[" + self._cardinality + "]", "double", "[[clang::compress(" + str(self._relative_accuracy_in_bits) + ")]]" ) ]
+    if self._valid_mantissa_bits != None:
+      return [ ("_" + self._name + "[" + self._cardinality + "]", "double", "[[clang::truncate_mantissa(" + str(self._valid_mantissa_bits) + ")]]" ) ]
     else:
       return [ ("_" + self._name + "[" + self._cardinality + "]", "double", "" ) ]
 
 
   def get_first_plain_C_attribute(self):
     return [ ("_" + self._name + "[0]", "double" ) ]
+
 
   def get_method_body(self,signature):
     if self.use_data_store:

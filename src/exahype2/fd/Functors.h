@@ -16,8 +16,8 @@ namespace exahype2 {
   namespace fd {
       typedef std::function< void(
         const double * __restrict__ Q,
-        const tarch::la::Vector<Dimensions,double>&  volumeX,
-        const tarch::la::Vector<Dimensions,double>&  volumeH,
+        const tarch::la::Vector<Dimensions,double>&  gridCellX,
+        const tarch::la::Vector<Dimensions,double>&  gridCellH,
         double                                       t,
         double                                       dt,
         double * __restrict__ 		             AlgeSrc
@@ -26,7 +26,7 @@ namespace exahype2 {
       typedef std::function< void(
         const double * __restrict__ Q,
         const tarch::la::Vector<Dimensions,double>&  faceCentre,
-        const tarch::la::Vector<Dimensions,double>&  volumeH,
+        const tarch::la::Vector<Dimensions,double>&  gridCellH,
         double                                       t,
         double                                       dt,
         int                                          normal,
@@ -36,8 +36,8 @@ namespace exahype2 {
       typedef std::function< void(
         const double * __restrict__                  Q,
         const double * __restrict__                  deltaQ,
-        const tarch::la::Vector<Dimensions,double>&  volumeX,
-        const tarch::la::Vector<Dimensions,double>&  volumeH,
+        const tarch::la::Vector<Dimensions,double>&  gridCellX,
+        const tarch::la::Vector<Dimensions,double>&  gridCellH,
         double                                       t,
         double                                       dt,
         int                                          normal,
@@ -49,8 +49,8 @@ namespace exahype2 {
        */
       typedef std::function< double(
         const double * __restrict__ Q,
-        const tarch::la::Vector<Dimensions,double>&  volumeX,
-        const tarch::la::Vector<Dimensions,double>&  volumeH,
+        const tarch::la::Vector<Dimensions,double>&  gridCellX,
+        const tarch::la::Vector<Dimensions,double>&  gridCellH,
         double                                       t,
         double                                       dt,
         int                                          normal

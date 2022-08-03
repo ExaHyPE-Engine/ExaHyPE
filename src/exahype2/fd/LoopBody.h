@@ -7,6 +7,8 @@
 
 #include "Functors.h"
 
+#include "exahype2/CellData.h"
+
 #include "exahype2/enumerator/AoSLexicographicEnumerator.h"
 #include "exahype2/enumerator/SoALexicographicEnumerator.h"
 #include "exahype2/enumerator/AoSoALexicographicEnumerator.h"
@@ -17,6 +19,22 @@
 namespace exahype2 {
   namespace fd {
       constexpr int PickAllEntriesFromOutputVector = -1;
+
+      /**
+       * ## Modifiers
+       *
+       * I need this static keyword to avoid multiple definition errors in the
+       * linker. No clue why.
+       */
+      void reduceMaxEigenvalue_patchwise_functors(
+        ::exahype2::CellData&   patchData,
+        int                     numberOfGridCellsPerPatchPerAxis,
+        int                     unknowns,
+        int                     auxiliaryVariables,
+        MaxEigenvalue           maxEigenvalue
+      );
+
+
       namespace internal {
         #if defined(SharedOMP) and (!defined(__INTEL_LLVM_COMPILER) or !defined(GPUOffloadingOMP))
         #pragma omp declare simd
@@ -28,6 +46,28 @@ namespace exahype2 {
         static void copySolution_LoopBody(
           const double* __restrict__                QIn,
           const QInEnumeratorType&                  QInEnumerator,
+          int                                       patchIndex,
+          const tarch::la::Vector<Dimensions,int>&  volumeIndex,
+          int                                       unknown,
+          double* __restrict__                      QOut,
+          const QOutEnumeratorType&                 QOutEnumerator
+        ) InlineMethod;
+        #if defined(GPUOffloadingOMP)
+        #pragma omp end declare target
+        #endif
+
+
+        /**
+         * The complicated way to write =0.
+         */
+        #if defined(SharedOMP) and (!defined(__INTEL_LLVM_COMPILER) or !defined(GPUOffloadingOMP))
+        #pragma omp declare simd
+        #endif
+        #if defined(GPUOffloadingOMP)
+        #pragma omp declare target
+        #endif
+        template <class QOutEnumeratorType>
+        static void clearSolution_LoopBody(
           int                                       patchIndex,
           const tarch::la::Vector<Dimensions,int>&  volumeIndex,
           int                                       unknown,
@@ -63,7 +103,7 @@ namespace exahype2 {
          * @see copySolution_LoopBody() for vectorisation details.
          */
         template <class QInEnumeratorType, class QOutEnumeratorType>
-        static void copySolutionAndAddAlgebraicSourceTerm_LoopBody(
+        static void addAlgebraicSourceTerm_LoopBody(
           const double* __restrict__                   QIn,
           const QInEnumeratorType&                     QInEnumerator,
           exahype2::fd::Source                    AlgebraicSource,

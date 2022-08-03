@@ -34,13 +34,14 @@ exahype2::CellData::CellData( int numberOfCells_ ):
 
 
 exahype2::CellData::~CellData() {
-  delete QIn;
-  delete cellCentre;
-  delete cellSize;
-  delete t;
-  delete dt;
-  delete QOut;
-  delete maxEigenvalue;
+  delete[] QIn;
+  delete[] cellCentre;
+  delete[] cellSize;
+  delete[] t;
+  delete[] dt;
+  delete[] QOut;
+  delete[] id;
+  delete[] maxEigenvalue;
 }
 
 

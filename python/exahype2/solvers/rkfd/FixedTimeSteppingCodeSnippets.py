@@ -24,7 +24,9 @@ class FixedTimeSteppingCodeSnippets( exahype2.solvers.FixedTimeSteppingCodeSnipp
     predicate = """
       tarch::mpi::Rank::getInstance().isGlobalMaster() 
       and
-      _maxGridCellH>0.0
+      _maxGridCellHThisTimeStep>0.0
+      and
+      isFirstGridSweepOfTimeStep()
     """
   
     if self._use_enclave_tasking:
@@ -32,24 +34,26 @@ class FixedTimeSteppingCodeSnippets( exahype2.solvers.FixedTimeSteppingCodeSnipp
       
     return """
   if (""" + predicate + """) {
-    logInfo( "step()", "Solver {{SOLVER_NAME}}:" );
-    logInfo( "step()", "t       = " << _minTimeStampThisTimeStep );
-    logInfo( "step()", "dt      = " << getTimeStepSize() );
-    logInfo( "step()", "h_{min} = " << _minGridCellHThisTimeStep << " (individual grid cell within a patch)");
-    logInfo( "step()", "h_{max} = " << _maxGridCellHThisTimeStep << " (individual grid cell within a patch)" );
+    logInfo( "startTimeStep()", "Solver {{SOLVER_NAME}}:" );
+    logInfo( "startTimeStep()", "t       = " << _minTimeStampThisTimeStep );
+    logInfo( "startTimeStep()", "dt      = " << getTimeStepSize() );
+    logInfo( "startTimeStep()", "h_{min} = " << _minGridCellHThisTimeStep << " (individual grid cell within a patch)");
+    logInfo( "startTimeStep()", "h_{max} = " << _maxGridCellHThisTimeStep << " (individual grid cell within a patch)" );
   }
 """
 
 
   def create_finish_time_step_implementation(self):
     return """
-  assertion( _minVolumeH >= 0.0 );
-  assertion( MaxAdmissibleGridCellH > 0.0 );
-  if (_minGridCellH <= MaxAdmissibleGridCellH) {
-    _timeStepSize  = """ + str(self._normalised_time_step_size) + """ * _minGridCellH / MaxAdmissibleGridCellH;
-  }
-  else {
-    _timeStepSize = 0.0;
+  if ( isLastGridSweepOfTimeStep() ) {
+    assertion( _minGridCellH >= 0.0 );
+    assertion( MaxAdmissibleGridCellH > 0.0 );
+    if (_minGridCellHThisTimeStep <= MaxAdmissibleGridCellH) {
+      _timeStepSize  = """ + str(self._normalised_time_step_size) + """ * _minGridCellHThisTimeStep / MaxAdmissibleGridCellH / {{RK_ORDER}} / {{RK_ORDER}};
+    }
+    else {
+      _timeStepSize = 0.0;
+    }
   }
 """
 

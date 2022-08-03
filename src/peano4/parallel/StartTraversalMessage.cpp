@@ -7,9 +7,9 @@
 
 
 
-peano4::parallel::StartTraversalMessage::StartTraversalMessage(int  __stepIdentifier):
-    _stepIdentifier(__stepIdentifier)
-  {}
+peano4::parallel::StartTraversalMessage::StartTraversalMessage(int  __stepIdentifier){
+setStepIdentifier( __stepIdentifier);
+}
 
 
 
@@ -20,6 +20,9 @@ std::string peano4::parallel::StartTraversalMessage::toString() const {
   out << ")";
   return out.str();
 }
+
+
+
 
 
 int   peano4::parallel::StartTraversalMessage::getStepIdentifier() const {
@@ -95,7 +98,15 @@ void peano4::parallel::StartTraversalMessage::receiveAndPollDanglingMessages(pea
     
 #ifdef Parallel
 
+#if !defined(__MPI_ATTRIBUTES_LANGUAGE_EXTENSION__)      
 MPI_Datatype peano4::parallel::StartTraversalMessage::Datatype;
+#endif
+
+
+[[clang::map_mpi_datatype]]
+MPI_Datatype peano4::parallel::StartTraversalMessage::getDatatype() {
+  return Datatype;
+}
 
 int peano4::parallel::StartTraversalMessage::getSenderRank() const {
   return _senderDestinationRank;
@@ -103,22 +114,29 @@ int peano4::parallel::StartTraversalMessage::getSenderRank() const {
 
 
 void peano4::parallel::StartTraversalMessage::initDatatype() {
+  #if !defined(__MPI_ATTRIBUTES_LANGUAGE_EXTENSION__)
   peano4::parallel::StartTraversalMessage  instances[2];
-    
-  MPI_Datatype subtypes[] = { MPI_INT };
-    
-  int blocklen[] = { 1 };
 
-  const int NumberOfAttributes = 1;
-    
+  int NumberOfAttributes = 0;
+  NumberOfAttributes++;
+
+  MPI_Datatype* subtypes = new MPI_Datatype[NumberOfAttributes];
+  int*          blocklen = new int[NumberOfAttributes]; 
+  MPI_Aint*     disp     = new MPI_Aint[NumberOfAttributes];
+  
+  int counter            = 0;
+  subtypes[counter] = MPI_INT;
+  blocklen[counter] = 1;
+  counter++;
+   
   MPI_Aint  baseFirstInstance;
   MPI_Aint  baseSecondInstance;
   MPI_Get_address( &instances[0], &baseFirstInstance );
   MPI_Get_address( &instances[1], &baseSecondInstance );
-  MPI_Aint  disp[ NumberOfAttributes ];
-  int       currentAddress = 0;
-  MPI_Get_address( &(instances[0]._stepIdentifier), &disp[currentAddress] );
-  currentAddress++;
+  
+  counter = 0;
+  MPI_Get_address( &(instances[0]._stepIdentifier), &disp[counter] );
+  counter++;
 
   MPI_Aint offset = disp[0] - baseFirstInstance;
   MPI_Aint extent = baseSecondInstance - baseFirstInstance - offset;
@@ -133,11 +151,21 @@ void peano4::parallel::StartTraversalMessage::initDatatype() {
   errorCode += MPI_Type_commit( &Datatype );
   errorCode += MPI_Type_free( &tmpType );
   if (errorCode) std::cerr << "error constructing MPI datatype in " << __FILE__ << ":" << __LINE__ << std::endl;
+
+  delete[] subtypes;
+  delete[] blocklen; 
+  delete[] disp;
+
+  #else
+  // invoke routine once to trigger lazy initialisation
+  getDatatype();
+  #endif
 }
 
 
 void peano4::parallel::StartTraversalMessage::shutdownDatatype() {
-  MPI_Type_free( &Datatype );
+  MPI_Datatype type = getDatatype();
+  MPI_Type_free( &type );
 }
 
 

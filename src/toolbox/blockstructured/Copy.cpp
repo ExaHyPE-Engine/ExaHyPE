@@ -2,6 +2,7 @@
 #include "tarch/Assertions.h"
 
 #include <cmath>
+#include <algorithm>
 
 
 void toolbox::blockstructured::copyUnknown(

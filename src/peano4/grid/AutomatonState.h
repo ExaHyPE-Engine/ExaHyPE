@@ -41,6 +41,7 @@ struct peano4::grid::AutomatonState {
     AutomatonState() {}
     AutomatonState(int  __level, tarch::la::Vector<Dimensions,double>  __x, tarch::la::Vector<Dimensions,double>  __h, bool  __inverted, std::bitset<Dimensions>  __evenFlags, tarch::la::Vector<DimensionsTimesTwo,int>  __accessNumber);
 
+
     int   getLevel() const;
     void   setLevel(int value);
     tarch::la::Vector<Dimensions,double>   getX() const;
@@ -62,7 +63,7 @@ struct peano4::grid::AutomatonState {
     void   setAccessNumber(const tarch::la::Vector<DimensionsTimesTwo,int>& value);
     int   getAccessNumber(int index) const;
     void   setAccessNumber(int index, int value);
-
+    AutomatonState(const AutomatonState& copy);
 
 
 #ifdef Parallel
@@ -73,15 +74,29 @@ struct peano4::grid::AutomatonState {
 
     #ifdef Parallel
     /**
+     * Hands out MPI datatype if we work without the LLVM MPI extension.
+     * If we work with this additional feature, this is the routine where
+     * the lazy initialisation is done and the datatype is also cached.
+     */
+    [[clang::map_mpi_datatype]]
+    static MPI_Datatype  getDatatype();
+    
+    
+    /**
      * @return The rank of the sender of an object. It only make ssense to call
      *         this routine after you've invoked receive with MPI_ANY_SOURCE.
      */
     int getSenderRank() const;
     
     /**
-     * To be called prior to any MPI usage of this class.
+     * Wrapper around getDatatype() to trigger lazy evaluation if we
+     * use the lazy initialisation.
      */
     static void initDatatype();
+    
+    /**
+     * Free the underlying MPI datatype.
+     */
     static void shutdownDatatype();
             
     /**
@@ -109,21 +124,49 @@ struct peano4::grid::AutomatonState {
     std::string toString() const;
   
   private:
-      int   _level;
+    [[clang::pack_range(0,63)]]  int   _level;
+#if defined(__PACKED_ATTRIBUTES_LANGUAGE_EXTENSION__)
+    [[clang::truncate_mantissa(4)]]  double   _x[Dimensions];
+#endif
+#if !defined(__PACKED_ATTRIBUTES_LANGUAGE_EXTENSION__)
       tarch::la::Vector<Dimensions,double>   _x;
+#endif
+#if defined(__PACKED_ATTRIBUTES_LANGUAGE_EXTENSION__)
+    [[clang::truncate_mantissa(4)]]  double   _h[Dimensions];
+#endif
+#if !defined(__PACKED_ATTRIBUTES_LANGUAGE_EXTENSION__)
       tarch::la::Vector<Dimensions,double>   _h;
-      bool   _inverted;
-    [[clang::compress]]  std::bitset<Dimensions>   _evenFlags;
+#endif
+    [[clang::pack]]  bool   _inverted;
+#if defined(__PACKED_ATTRIBUTES_LANGUAGE_EXTENSION__)
+    [[clang::pack]]  bool   _evenFlags[Dimensions];
+#endif
+#if !defined(__PACKED_ATTRIBUTES_LANGUAGE_EXTENSION__)
+      std::bitset<Dimensions>   _evenFlags;
+#endif
+#if defined(__PACKED_ATTRIBUTES_LANGUAGE_EXTENSION__)
+    [[clang::pack_range(-TwoTimesD,TwoTimesD)]]  int   _accessNumber[DimensionsTimesTwo];
+#endif
+#if !defined(__PACKED_ATTRIBUTES_LANGUAGE_EXTENSION__)
       tarch::la::Vector<DimensionsTimesTwo,int>   _accessNumber;
+#endif
 
 
 
 
     #ifdef Parallel
-    public:
-      static MPI_Datatype  Datatype;
     private:
-    int                  _senderDestinationRank;
+      int                  _senderDestinationRank;
+
+      #if !defined(__MPI_ATTRIBUTES_LANGUAGE_EXTENSION__)      
+      /**
+       * Whenever we use LLVM's MPI extension (DaStGe), we rely on lazy
+       * initialisation of the datatype. However, Peano calls init explicitly
+       * in most cases. Without the LLVM extension which caches the MPI 
+       * datatype once constructed, this field stores the type.
+       */
+      static MPI_Datatype  Datatype;
+      #endif
     #endif
 
 
