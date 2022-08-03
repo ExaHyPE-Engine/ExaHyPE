@@ -28,6 +28,12 @@ class DumpTrajectoryIntoDatabase(peano4.solversteps.ActionSet):
      value, as theyare tracer, while stationary seismograms usually do not change
      their position at all.
      
+     If you work with stationary particles, you can set this parameter to literally
+     anything, as it will never become relevant. If you want the dump to write a 
+     snapshot only after fixed time intervals, set this value to a very high 
+     threshold, so it never kicks in and triggers a data dump. In this case, only
+     the time stamp differences will issue data writes.
+     
     time_delta_between_two_snapsots: Float
      this parameter ask the code to dump particle into database after certain time 
      interval of time_delta_between_two_snapsots, even data and position do not change 

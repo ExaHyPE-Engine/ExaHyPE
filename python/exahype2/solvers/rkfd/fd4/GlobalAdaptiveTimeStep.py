@@ -20,17 +20,21 @@ from exahype2.solvers.rkfd.AdaptiveTimeSteppingCodeSnippets import AdaptiveTimeS
 
 class GlobalAdaptiveTimeStep( OneSweepPerRungeKuttaStep ):
   def __init__(self, 
-    name, patch_size, rk_order, unknowns, auxiliary_variables, min_volume_h, max_volume_h, time_step_relaxation,
+    name, patch_size, rk_order, unknowns, auxiliary_variables, min_meshcell_h, max_meshcell_h, time_step_relaxation,
     flux=PDETerms.User_Defined_Implementation, 
-    ncp=None, 
+    ncp=PDETerms.None_Implementation, 
+    point_source=PDETerms.None_Implementation,
+    boundary_conditions=PDETerms.User_Defined_Implementation,
+    refinement_criterion=PDETerms.Empty_Implementation,
+    initial_conditions=PDETerms.User_Defined_Implementation,
+    source_term=PDETerms.None_Implementation,
     eigenvalues=PDETerms.User_Defined_Implementation, 
-    boundary_conditions=None,refinement_criterion=None,initial_conditions=None,source_term=None,
     plot_grid_properties=False, KOSigma=8.0
   ):
     super(GlobalAdaptiveTimeStep,self).__init__(name, 
                                              patch_size, 
                                              3, #overlap, 
-                                             rk_order, unknowns, auxiliary_variables, min_volume_h, max_volume_h, plot_grid_properties, kernel_namespace="fd4") 
+                                             rk_order, unknowns, auxiliary_variables, min_meshcell_h, max_meshcell_h, plot_grid_properties, kernel_namespace="fd4") 
 
     self._time_step_relaxation = time_step_relaxation
 

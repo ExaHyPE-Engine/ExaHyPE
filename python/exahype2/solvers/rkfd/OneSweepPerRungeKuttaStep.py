@@ -100,8 +100,6 @@ class UpdateCell(ReconstructPatchAndApplyFunctor):
            
       ::exahype2::fd::{{KERNEL_NAMESPACE}}::{{COMPUTE_KERNEL_CALL}} 
 
-      {{POSTPROCESS_UPDATED_PATCH}}
-
       ::exahype2::fd::validatePatch(
         targetPatch,
         {{NUMBER_OF_UNKNOWNS}},
@@ -193,13 +191,13 @@ class OneSweepPerRungeKuttaStep( CellCenteredFiniteDifferences ):
   """
 
 
-  def __init__(self, name, patch_size, overlap, rk_order, unknowns, auxiliary_variables, min_volume_h, max_volume_h, plot_grid_properties, kernel_namespace):
+  def __init__(self, name, patch_size, overlap, rk_order, unknowns, auxiliary_variables, min_meshcell_h, max_meshcell_h, plot_grid_properties, kernel_namespace):
     """
 
       Instantiate a generic FV scheme with an overlap of 1.
 
     """
-    super(OneSweepPerRungeKuttaStep, self).__init__(name, patch_size, overlap, rk_order, unknowns, auxiliary_variables, min_volume_h, max_volume_h, plot_grid_properties, kernel_namespace)
+    super(OneSweepPerRungeKuttaStep, self).__init__(name, patch_size, overlap, rk_order, unknowns, auxiliary_variables, min_meshcell_h, max_meshcell_h, plot_grid_properties, kernel_namespace)
     
     if rk_order<1:
       raise Exception( "Runge-Kutta order has to be at least 1 but was {}".format(rk_order) )
@@ -287,7 +285,14 @@ class OneSweepPerRungeKuttaStep( CellCenteredFiniteDifferences ):
     if refinement_criterion is not None:  self._refinement_criterion_implementation       = refinement_criterion
     if initial_conditions   is not None:  self._initial_conditions_implementation         = initial_conditions
     if memory_location      is not None:  self._reconstructed_array_memory_location       = memory_location
-
+    
+    if boundary_conditions==exahype2.solvers.fv.PDETerms.None_Implementation:
+      assert False, "boundary conditions cannot be none"
+    if refinement_criterion==exahype2.solvers.fv.PDETerms.None_Implementation:
+      assert False, "refinement criterion cannot be none"
+    if initial_conditions==exahype2.solvers.fv.PDETerms.None_Implementation:
+      assert False, "initial conditions cannot be none"
+      
     if flux                 is not None:  self._flux_implementation                       = flux
     if ncp                  is not None:  self._ncp_implementation                        = ncp
     if eigenvalues          is not None:  self._eigenvalues_implementation                = eigenvalues

@@ -120,7 +120,7 @@ struct peano4::grid::GridControlEvent {
     std::string toString() const;
   
   private:
-      RefinementControl   _refinementControl;
+    [[clang::pack]]  RefinementControl   _refinementControl;
     tarch::la::Vector<Dimensions,double>   _offset;
     tarch::la::Vector<Dimensions,double>   _width;
     tarch::la::Vector<Dimensions,double>   _h;

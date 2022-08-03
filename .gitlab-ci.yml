@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 ReFrame-DINE:
   stage: build
   tags:
@@ -22,3 +23,64 @@ ReFrame-Hamilton:
     - module load python/3.6.8
     - TESTLIB=/ddn/data/gcgt96/Peano/reframe/tests REFRAME_ROOT=/ddn/data/gcgt96 ./euler.sh $CI_COMMIT_SHA
 
+=======
+# This file is a template, and might need editing before it works on your project.
+# use the official gcc image, based on debian
+# can use verions as well, like gcc:5.2
+# see https://hub.docker.com/_/gcc/
+#image: gcc
+
+#before_script:
+#  - eval $(ssh-agent -s)
+#  - echo "$SSH_PRIVATE_KEY" | tr -d '\r' | ssh-add -
+#  - mkdir -p ~/.ssh
+#  - chmod 700 ~/.ssh
+#  - ssh-keyscan "$CIMACHINE" >> ~/.ssh/known_hosts
+#  - chmod 644 ~/.ssh/known_hosts
+
+hellohamilton:
+  stage: build
+  tags:
+    - hamilton
+  script:
+    - hostname
+    - whoami
+    - pwd
+    - ls
+
+#Test SSH:
+#  script:
+#    - pwd
+#    - ls
+#    - whoami
+#    - hostname
+#    - echo $CI_COMMIT_SHA
+#    - echo $CI_COMMIT_BRANCH
+#  # try to connect to machine
+#    - ssh "$CIUSER"@"$CIMACHINE" bash ./print.sh $CI_COMMIT_BRANCH
+
+
+#build:
+  #stage: build
+  ## instead of calling g++ directly you can also use some build toolkit like make
+  ## install the necessary build tools when needed
+  ## before_script:
+  ##   - apt update && apt -y install make autoconf
+  #script:
+    #- bash ci/autotools.sh
+    #- bash ci/configure_openmp.sh
+    #- make -j
+  ##artifacts:
+    ##paths:
+      ##- mybinary
+      ## depending on your build setup it's most likely a good idea to cache outputs to reduce the build time
+      ## cache:
+      ##   paths:
+      ##     - "*.o"
+
+# run tests using the binary built before
+#est:
+# stage: test
+# script:
+#   - ./runmytests.sh
+>>>>>>> refs/remotes/origin/ccz4-cpp-ci

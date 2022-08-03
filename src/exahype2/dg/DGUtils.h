@@ -121,14 +121,18 @@ namespace exahype2 {
         );
 
     /*
-     * computes the gradient of Q in a given direction for a given node
-     * mostly used for the non-conservative product which requires this
+     * Computes the gradient of Q in a given direction for a given node
+     *
+     * Mostly used for the non-conservative product.
+     *
      * Since the solution is represented by the sum of basis functions, its
      * derivative at a given node is the sum of the derivatives of the basis
      * functions evaluated at that node.
      * The derivative operator contains the value of the derivatives evaluated
      * at the quadrature nodes, therefore it only needs to be multiplied by
      * their coefficients.
+     *
+     *
      * u(x) = \sum_i \phi_i(x) * u_i => du(x)/dx = d\phi_i(x_i)/dx * u_i
      *
      * @param invDx: the inverse of the size of the cell in any one dimension, this

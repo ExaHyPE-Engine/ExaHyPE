@@ -102,7 +102,7 @@ void exahype2::dg::tests::eulerInitial(
 
 void exahype2::dg::tests::elasticInitial(double * __restrict__ Q){
   for(int i=0; i<9; i++){
-    Q[i] = 0.0; //6 stresses, 3 velocities
+    Q[i] = 1.0; //6 stresses, 3 velocities
   }
   //auxiliary variables
   Q[9]  = 4.0; //rho

@@ -42,13 +42,41 @@ class ComputeFinalLinearCombinationAndProjectSolutionOntoFaces(AbstractRungeKutt
       for (int unknown=0; unknown<{{NUMBER_OF_UNKNOWNS}}; unknown++) {
         {% for WEIGHT_NO in range(0,WEIGHTS|length) %}
         fineGridCell{{UNKNOWN_IDENTIFIER}}.value[ enumeratorWithAuxiliaryVariables(0,dof,unknown) ] += 
-          timeStepSize * {{WEIGHTS[WEIGHT_NO]}} * fineGridCell{{UNKNOWN_IDENTIFIER}}RhsEstimates.value[ enumeratorWithAuxiliaryVariables({{WEIGHT_NO}},dof,unknown) ];
+          timeStepSize * {{WEIGHTS[WEIGHT_NO]}} * fineGridCell{{UNKNOWN_IDENTIFIER}}RhsEstimates.value[ enumeratorWithoutAuxiliaryVariables({{WEIGHT_NO}},dof,unknown) ];
         {% endfor %}
       }
     }
     
+
     const double timeStamp = fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStamp();
+
+    double* targetPatch = fineGridCell{{UNKNOWN_IDENTIFIER}}.value;
     
+    {{POSTPROCESS_UPDATED_PATCH}}
+
+    {% if COMPUTE_MAX_EIGENVALUE %}
+    ::exahype2::CellData  cellData( nullptr, marker.x(), marker.h(), timeStamp, timeStepSize, fineGridCell{{UNKNOWN_IDENTIFIER}}.value );
+
+    ::exahype2::dg::reduceMaxEigenvalue_patchwise_functors(
+      cellData,
+      {{ORDER}},                                                   
+      {{NUMBER_OF_UNKNOWNS}},
+      {{NUMBER_OF_AUXILIARY_VARIABLES}},
+      [&](
+        const double * __restrict__ Q,
+        const tarch::la::Vector<Dimensions,double>&  x,
+        double                                       t,
+        double                                       dt,
+        int                                          normal
+      )->double {
+        return repositories::{{SOLVER_INSTANCE}}.maxEigenvalue( Q, x, t, dt, normal );
+      },
+      repositories::{{SOLVER_INSTANCE}}.QuadraturePoints1d
+    );
+
+    const double maxEigenvalue = cellData.maxEigenvalue[0];
+    {% endif %}
+        
     // Set the variable
     // double newTimeStepSize
     {{COMPUTE_NEW_TIME_STEP_SIZE}}

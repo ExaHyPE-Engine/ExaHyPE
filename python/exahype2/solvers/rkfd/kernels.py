@@ -208,7 +208,7 @@ def create_abstract_solver_declarations(flux_implementation, ncp_implementation,
     #endif
     static GPUCallableMethod void sourceTerm(
       const double * __restrict__ Q,
-      const tarch::la::Vector<Dimensions,double>&  volumeCentre,
+      const tarch::la::Vector<Dimensions,double>&  gridCellCentre,
       const tarch::la::Vector<Dimensions,double>&  gridCellH,
       double                                       t,
       double                                       dt,
@@ -228,7 +228,7 @@ def create_abstract_solver_declarations(flux_implementation, ncp_implementation,
     {% if SOURCE_TERM_IMPLEMENTATION!="<none>" %}
     virtual void sourceTerm(
       const double * __restrict__ Q,
-      const tarch::la::Vector<Dimensions,double>&  volumeCentre,
+      const tarch::la::Vector<Dimensions,double>&  gridCellCentre,
       const tarch::la::Vector<Dimensions,double>&  gridCellH,
       double                                       t,
       double                                       dt,
@@ -298,7 +298,7 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::nonconservativeProduct(
 #if !defined(GPUOffloadingSYCL)
 void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::sourceTerm(
   const double * __restrict__                  Q,
-  const tarch::la::Vector<Dimensions,double>&  volumeCentre,
+  const tarch::la::Vector<Dimensions,double>&  gridCellCentre,
   const tarch::la::Vector<Dimensions,double>&  gridCellH,
   double                                       t,
   double                                       dt,
@@ -401,7 +401,7 @@ GPUCallableMethod void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::nonconservat
 #if !defined(GPUOffloadingSYCL)
 GPUCallableMethod void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::sourceTerm(
       const double * __restrict__ Q,
-      const tarch::la::Vector<Dimensions,double>&  volumeCentre,
+      const tarch::la::Vector<Dimensions,double>&  gridCellCentre,
       const tarch::la::Vector<Dimensions,double>&  gridCellH,
       double                                       t,
       double                                       dt,
@@ -436,7 +436,7 @@ def create_solver_declarations(flux_implementation, ncp_implementation, eigenval
     {% if SOURCE_TERM_IMPLEMENTATION=="<user-defined>" %}
     void sourceTerm(
       const double * __restrict__ Q,
-      const tarch::la::Vector<Dimensions,double>&  volumeCentre,
+      const tarch::la::Vector<Dimensions,double>&  gridCellCentre,
       const tarch::la::Vector<Dimensions,double>&  gridCellH,
       double                                       t,
       double                                       dt,
@@ -510,7 +510,7 @@ def create_solver_declarations(flux_implementation, ncp_implementation, eigenval
     #endif
     static GPUCallableMethod void sourceTerm(
        const double * __restrict__ Q,
-       const tarch::la::Vector<Dimensions,double>&  volumeCentre,
+       const tarch::la::Vector<Dimensions,double>&  gridCellCentre,
        const tarch::la::Vector<Dimensions,double>&  gridCellH,
        double                                       t,
        double                                       dt,
@@ -776,7 +776,7 @@ GPUCallableMethod void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::nonconservat
     #endif
 GPUCallableMethod void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::sourceTerm(
   const double * __restrict__ Q,
-  const tarch::la::Vector<Dimensions,double>&  volumeCentre,
+  const tarch::la::Vector<Dimensions,double>&  gridCellCentre,
   const tarch::la::Vector<Dimensions,double>&  gridCellH,
   double                                       t,
   double                                       dt,
