@@ -1,4 +1,4 @@
-#include "finitevolumes-main.h"
+#include "EulerFVRusanovBenchmarks-main.h"
 #include "Constants.h"
 
 #include "tarch/logging/Log.h"
@@ -25,11 +25,10 @@
 
 #include "toolbox/loadbalancing/loadbalancing.h"
 
-
 #include "exahype2/NonCriticalAssertions.h"
 #include "exahype2/UserInterface.h"
 
-#include "tasks/EulerFVEnclaveTask.h"
+#include "tasks/EulerFVRusanovEnclaveTask.h"
 
 #include "config.h"
 
@@ -43,23 +42,23 @@
 #pragma STDC FENV_ACCESS ON
 //#endif
 
-using namespace examples::exahype2::euler;
+using namespace benchmarks::exahype2::euler;
 
 tarch::logging::Log _log("::");
 
-tarch::timing::Measurement   gridConstructionMeasurement;
-tarch::timing::Measurement   timeStepMeasurement;
-tarch::timing::Measurement   plotMeasurement;
+tarch::timing::Measurement gridConstructionMeasurement;
+tarch::timing::Measurement timeStepMeasurement;
+tarch::timing::Measurement plotMeasurement;
 
 double validMaxEigenvalue = 0;
 double* validOutcome = nullptr;
 
 #if Dimensions==2
-constexpr int NumberOfInputEntries  = (EulerFV::NumberOfFiniteVolumesPerAxisPerPatch+2)*(EulerFV::NumberOfFiniteVolumesPerAxisPerPatch+2) * EulerFV::NumberOfUnknowns;
-constexpr int NumberOfOutputEntries = (EulerFV::NumberOfFiniteVolumesPerAxisPerPatch+0)*(EulerFV::NumberOfFiniteVolumesPerAxisPerPatch+0) * EulerFV::NumberOfUnknowns;
+constexpr int NumberOfInputEntries  = (EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch+2)*(EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch+2) * EulerFVRusanov::NumberOfUnknowns;
+constexpr int NumberOfOutputEntries = (EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch+0)*(EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch+0) * EulerFVRusanov::NumberOfUnknowns;
 #else
-constexpr int NumberOfInputEntries  = (EulerFV::NumberOfFiniteVolumesPerAxisPerPatch+2)*(EulerFV::NumberOfFiniteVolumesPerAxisPerPatch+2)*(EulerFV::NumberOfFiniteVolumesPerAxisPerPatch+2) * EulerFV::NumberOfUnknowns;
-constexpr int NumberOfOutputEntries = (EulerFV::NumberOfFiniteVolumesPerAxisPerPatch+0)*(EulerFV::NumberOfFiniteVolumesPerAxisPerPatch+0)*(EulerFV::NumberOfFiniteVolumesPerAxisPerPatch+0) * EulerFV::NumberOfUnknowns;
+constexpr int NumberOfInputEntries  = (EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch+2)*(EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch+2)*(EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch+2) * EulerFVRusanov::NumberOfUnknowns;
+constexpr int NumberOfOutputEntries = (EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch+0)*(EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch+0)*(EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch+0) * EulerFVRusanov::NumberOfUnknowns;
 #endif
 
 void initInputData( double* Q ) {
@@ -95,7 +94,7 @@ std::tuple<double, int> validateOutcome( double* Q, int patchIndex , const doubl
   int errors = 0;
   double maxDifference = 0.0;
   for (int i=0; i<NumberOfOutputEntries; i++) {
-    if (not tarch::la::equals( Q[i], validOutcome[i], examples::exahype2::euler::Accuracy) ) {
+    if (not tarch::la::equals( Q[i], validOutcome[i], Accuracy) ) {
       errors++;
     }
       std::cout.precision(17);
@@ -104,7 +103,7 @@ std::tuple<double, int> validateOutcome( double* Q, int patchIndex , const doubl
     maxDifference = std::max(maxDifference, std::abs(Q[i]-validOutcome[i]) );
     index++;
   }
-  if (not tarch::la::equals( maxEigenvalue, validMaxEigenvalue, examples::exahype2::euler::Accuracy)) {
+  if (not tarch::la::equals( maxEigenvalue, validMaxEigenvalue, Accuracy)) {
     std::cout << std::fixed << "ERROR: maxEigenvalue[" << patchIndex << "]!=validMaxEigenvalue[" << patchIndex << "]: " << maxEigenvalue << "!=" << validMaxEigenvalue << std::endl;
   }
   std::cout << std::fixed << "maxEigenvalue[" << patchIndex << "]=validMaxEigenvalue[" << patchIndex << "]: " << maxEigenvalue << "=" << validMaxEigenvalue << std::endl;
@@ -112,10 +111,10 @@ std::tuple<double, int> validateOutcome( double* Q, int patchIndex , const doubl
   return { maxDifference, errors };
 }
 
-constexpr double TimeStamp    = 0.5;
-constexpr double TimeStepSize = 1e-6;
-constexpr double CellSize     = 0.1;
-constexpr double CellOffset   = 4.0;
+static constexpr double TimeStamp    = 0.5;
+static constexpr double TimeStepSize = 1e-6;
+static constexpr double CellSize     = 0.1;
+static constexpr double CellOffset   = 4.0;
 
 /**
  * Run the benchmark for one particular number of patches per fused kernel call.
@@ -142,7 +141,7 @@ void runBenchmarks(int patches) {
     double outputMaxEigenvalue = 0;
     tarch::timing::Watch watch( "::", "main()", false );
     for (int i=0; i<patches; i++) {
-      outputMaxEigenvalue = tasks::EulerFVEnclaveTask::applyKernelToCell(
+      outputMaxEigenvalue = tasks::EulerFVRusanovEnclaveTask::applyKernelToCell(
         marker,
         TimeStamp,            // double t
         TimeStepSize,         // double dt
@@ -161,9 +160,9 @@ void runBenchmarks(int patches) {
       delete[] outputData[i];
     }
 
-    logInfo("main()", "completed measurements for baseline on host: "       << watch.getCalendarTime() << " / " << (watch.getCalendarTime()/patches/EulerFV::NumberOfFiniteVolumesPerAxisPerPatch/EulerFV::NumberOfFiniteVolumesPerAxisPerPatch/EulerFV::NumberOfFiniteVolumesPerAxisPerPatch) );
+    logInfo("main()", "completed measurements for baseline on host: "       << watch.getCalendarTime() << " / " << (watch.getCalendarTime()/patches/EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch/EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch/EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch) );
     if (errors > 0) {
-      logInfo("main()", "   -> max difference of outcome for all patches is " << maxDifference << " (admissible accuracy=" << examples::exahype2::euler::Accuracy << ")" << " for " << errors << " entries");
+      logInfo("main()", "   -> max difference of outcome for all patches is " << maxDifference << " (admissible accuracy=" << Accuracy << ")" << " for " << errors << " entries");
     }
   }
 
@@ -207,9 +206,9 @@ void runBenchmarks(int patches) {
       delete[] patchData.QOut[i];
     }
 
-    logInfo("main()", "completed measurements for " << markerName << " on host: " << watch.getCalendarTime() << " / " << (watch.getCalendarTime()/patches/EulerFV::NumberOfFiniteVolumesPerAxisPerPatch/EulerFV::NumberOfFiniteVolumesPerAxisPerPatch/EulerFV::NumberOfFiniteVolumesPerAxisPerPatch) );
+    logInfo("main()", "completed measurements for " << markerName << " on host: " << watch.getCalendarTime() << " / " << (watch.getCalendarTime()/patches/EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch/EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch/EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch) );
     if (errors > 0) {
-      logInfo("main()", "   -> max difference of outcome for all patches is " << maxDifference << " (admissible accuracy=" << examples::exahype2::euler::Accuracy << ")" << " for " << errors << " entries");
+      logInfo("main()", "   -> max difference of outcome for all patches is " << maxDifference << " (admissible accuracy=" << Accuracy << ")" << " for " << errors << " entries");
     }
   };
 
@@ -257,9 +256,9 @@ void runBenchmarks(int patches) {
       maxDifference = std::max(maxDifference, maxDifferencePerPatch);
     }
 
-    logInfo("main()", "completed measurements for single thread on device " << device << ", " << markerName << ": " << singleKernelWatch.getCalendarTime() << " / " << (singleKernelWatch.getCalendarTime()/patches/EulerFV::NumberOfFiniteVolumesPerAxisPerPatch/EulerFV::NumberOfFiniteVolumesPerAxisPerPatch/EulerFV::NumberOfFiniteVolumesPerAxisPerPatch) );
+    logInfo("main()", "completed measurements for single thread on device " << device << ", " << markerName << ": " << singleKernelWatch.getCalendarTime() << " / " << (singleKernelWatch.getCalendarTime()/patches/EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch/EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch/EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch) );
     if (errors > 0) {
-      logInfo("main()", "   -> max difference of outcome for all patches is " << maxDifference << " (admissible accuracy=" << examples::exahype2::euler::Accuracy << ")" << " for " << errors << " entries");
+      logInfo("main()", "   -> max difference of outcome for all patches is " << maxDifference << " (admissible accuracy=" << Accuracy << ")" << " for " << errors << " entries");
     }
 
 /*
@@ -370,7 +369,7 @@ void runBenchmarks(int patches) {
     //logInfo( "main()", "device " << device << " (first kernel triggered by one thread, then kernel triggered by four threads if multithreading enabled)" );
     testFusedVariantOnDevice(
       device,
-      ::exahype2::fv::rusanov::omp::timeStepWithRusanov_patchwise_heap_static_calls<EulerFV,EulerFV::NumberOfFiniteVolumesPerAxisPerPatch, 1, 5, 0,exahype2::enumerator::AoSLexicographicEnumerator>,
+      ::exahype2::fv::rusanov::omp::timeStepWithRusanov_patchwise_heap_static_calls<EulerFVRusanov,EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch, 1, 5, 0,exahype2::enumerator::AoSLexicographicEnumerator>,
       "omp, patch-wise, AoS", true
     );
     /*testFusedVariantOnDevice(
@@ -443,32 +442,32 @@ void runBenchmarks(int patches) {
     logInfo( "main()", "device " << device << " (first kernel triggered by one thread, then kernel triggered by four threads if multithreading enabled)" );
     testFusedVariantOnDevice(
       device,
-      ::exahype2::fv::rusanov::cpp::timeStepWithRusanov_patchwise_heap_static_calls<EulerFV,EulerFV::NumberOfFiniteVolumesPerAxisPerPatch, 1, 5, 0,exahype2::enumerator::AoSLexicographicEnumerator>,
+      ::exahype2::fv::rusanov::cpp::timeStepWithRusanov_patchwise_heap_static_calls<EulerFVRusanov,EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch, 1, 5, 0,exahype2::enumerator::AoSLexicographicEnumerator>,
       "cpp, patch-wise, AoS", true
     );
     testFusedVariantOnDevice(
       device,
-      ::exahype2::fv::rusanov::cpp::timeStepWithRusanov_batched_heap_static_calls<EulerFV,EulerFV::NumberOfFiniteVolumesPerAxisPerPatch, 1, 5, 0,exahype2::enumerator::AoSLexicographicEnumerator>,
+      ::exahype2::fv::rusanov::cpp::timeStepWithRusanov_batched_heap_static_calls<EulerFVRusanov,EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch, 1, 5, 0,exahype2::enumerator::AoSLexicographicEnumerator>,
       "cpp, batched, AoS", true
     );
     testFusedVariantOnDevice(
       device,
-      ::exahype2::fv::rusanov::cpp::timeStepWithRusanov_patchwise_heap_static_calls<EulerFV,EulerFV::NumberOfFiniteVolumesPerAxisPerPatch, 1, 5, 0,exahype2::enumerator::AoSoALexicographicEnumerator>,
+      ::exahype2::fv::rusanov::cpp::timeStepWithRusanov_patchwise_heap_static_calls<EulerFVRusanov,EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch, 1, 5, 0,exahype2::enumerator::AoSoALexicographicEnumerator>,
       "cpp, patch-wise, AoSoA", true
     );
     testFusedVariantOnDevice(
       device,
-      ::exahype2::fv::rusanov::cpp::timeStepWithRusanov_batched_heap_static_calls<EulerFV,EulerFV::NumberOfFiniteVolumesPerAxisPerPatch, 1, 5, 0,exahype2::enumerator::AoSoALexicographicEnumerator>,
+      ::exahype2::fv::rusanov::cpp::timeStepWithRusanov_batched_heap_static_calls<EulerFVRusanov,EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch, 1, 5, 0,exahype2::enumerator::AoSoALexicographicEnumerator>,
       "cpp, batched, AoSoA", true
     );
     testFusedVariantOnDevice(
       device,
-      ::exahype2::fv::rusanov::cpp::timeStepWithRusanov_patchwise_heap_static_calls<EulerFV,EulerFV::NumberOfFiniteVolumesPerAxisPerPatch, 1, 5, 0,exahype2::enumerator::SoALexicographicEnumerator>,
+      ::exahype2::fv::rusanov::cpp::timeStepWithRusanov_patchwise_heap_static_calls<EulerFVRusanov,EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch, 1, 5, 0,exahype2::enumerator::SoALexicographicEnumerator>,
       "cpp, patch-wise, SoA", true
     );
     testFusedVariantOnDevice(
       device,
-      ::exahype2::fv::rusanov::cpp::timeStepWithRusanov_batched_heap_static_calls<EulerFV,EulerFV::NumberOfFiniteVolumesPerAxisPerPatch, 1, 5, 0,exahype2::enumerator::SoALexicographicEnumerator>,
+      ::exahype2::fv::rusanov::cpp::timeStepWithRusanov_batched_heap_static_calls<EulerFVRusanov,EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch, 1, 5, 0,exahype2::enumerator::SoALexicographicEnumerator>,
       "cpp, batched, SoA", true
     );
   }
@@ -482,32 +481,32 @@ void runBenchmarks(int patches) {
     logInfo( "main()", "device " << device << " (first kernel triggered by one thread, then kernel triggered by four threads if multithreading enabled)" );
     testFusedVariantOnDevice(
       device,
-      ::exahype2::fv::rusanov::sycl::timeStepWithRusanov_taskgraph_heap_static_calls<EulerFV,EulerFV::NumberOfFiniteVolumesPerAxisPerPatch, 1, 5, 0,exahype2::enumerator::AoSLexicographicEnumerator>,
+      ::exahype2::fv::rusanov::sycl::timeStepWithRusanov_taskgraph_heap_static_calls<EulerFVRusanov,EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch, 1, 5, 0,exahype2::enumerator::AoSLexicographicEnumerator>,
       "sycl, task-graph, AoS", true
     );
     testFusedVariantOnDevice(
       device,
-      ::exahype2::fv::rusanov::sycl::timeStepWithRusanov_batched_heap_static_calls<EulerFV,EulerFV::NumberOfFiniteVolumesPerAxisPerPatch, 1, 5, 0,exahype2::enumerator::AoSLexicographicEnumerator>,
+      ::exahype2::fv::rusanov::sycl::timeStepWithRusanov_batched_heap_static_calls<EulerFVRusanov,EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch, 1, 5, 0,exahype2::enumerator::AoSLexicographicEnumerator>,
       "sycl, batched, AoS", true
     );
     testFusedVariantOnDevice(
       device,
-      ::exahype2::fv::rusanov::sycl::timeStepWithRusanov_taskgraph_heap_static_calls<EulerFV,EulerFV::NumberOfFiniteVolumesPerAxisPerPatch, 1, 5, 0,exahype2::enumerator::AoSoALexicographicEnumerator>,
+      ::exahype2::fv::rusanov::sycl::timeStepWithRusanov_taskgraph_heap_static_calls<EulerFVRusanov,EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch, 1, 5, 0,exahype2::enumerator::AoSoALexicographicEnumerator>,
       "sycl, task-graph, AoSoA", true
     );
     testFusedVariantOnDevice(
       device,
-      ::exahype2::fv::rusanov::sycl::timeStepWithRusanov_batched_heap_static_calls<EulerFV,EulerFV::NumberOfFiniteVolumesPerAxisPerPatch, 1, 5, 0,exahype2::enumerator::AoSoALexicographicEnumerator>,
+      ::exahype2::fv::rusanov::sycl::timeStepWithRusanov_batched_heap_static_calls<EulerFVRusanov,EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch, 1, 5, 0,exahype2::enumerator::AoSoALexicographicEnumerator>,
       "sycl, batched, AoSoA", true
     );
     testFusedVariantOnDevice(
       device,
-      ::exahype2::fv::rusanov::sycl::timeStepWithRusanov_taskgraph_heap_static_calls<EulerFV,EulerFV::NumberOfFiniteVolumesPerAxisPerPatch, 1, 5, 0,exahype2::enumerator::SoALexicographicEnumerator>,
+      ::exahype2::fv::rusanov::sycl::timeStepWithRusanov_taskgraph_heap_static_calls<EulerFVRusanov,EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch, 1, 5, 0,exahype2::enumerator::SoALexicographicEnumerator>,
       "sycl, task-graph, SoA", true
     );
     testFusedVariantOnDevice(
       device,
-      ::exahype2::fv::rusanov::sycl::timeStepWithRusanov_taskgraph_heap_static_calls<EulerFV,EulerFV::NumberOfFiniteVolumesPerAxisPerPatch, 1, 5, 0,exahype2::enumerator::SoALexicographicEnumerator>,
+      ::exahype2::fv::rusanov::sycl::timeStepWithRusanov_taskgraph_heap_static_calls<EulerFVRusanov,EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch, 1, 5, 0,exahype2::enumerator::SoALexicographicEnumerator>,
       "sycl, batched, SoA", true
     );
   }
@@ -538,8 +537,7 @@ int main(int argc, char** argv) {
     return ExitCodeInvalidArguments;
   }
 
-  examples::exahype2::euler::repositories::DataRepository::initDatatypes();
-
+  repositories::DataRepository::initDatatypes();
   repositories::startSimulation();
 
   otterTraceInitialise();
@@ -574,9 +572,8 @@ int main(int argc, char** argv) {
 
   delete validOutcome;
 
-//  repositories::finishSimulation();
-
-  examples::exahype2::euler::repositories::DataRepository::shutdownDatatypes();
+  repositories::finishSimulation();
+  repositories::DataRepository::shutdownDatatypes();
   tarch::multicore::shutdownSmartMPI();
   exahype2::shutdownNonCritialAssertionEnvironment();
   peano4::shutdownParallelEnvironment();

@@ -4,14 +4,14 @@ import numpy
 
 print("""
 
-ExaHyPE 2 Finite Volume kernel benchmark
+ExaHyPE 2 - Euler Finite Volume Rusanov Benchmarks
 
 """)
 
 parser = argparse.ArgumentParser(description='ExaHyPE 2 - Euler FV Rusanov benchmarking script')
 parser.add_argument("-j",   "--parallel-builds",   dest="j",              type=int, default=8, help="Parallel builds")
 parser.add_argument("-d",   "--dim",               dest="dim",            type=int, default=2, help="Number of space dimensions")
-parser.add_argument("-pd",  "--peano-dir",         dest="peanodir",       default="../../../../", help="Peano directory")
+parser.add_argument("-pd",  "--peano-dir",         dest="peanodir",       default="../../../", help="Peano directory")
 parser.add_argument("-v",   "--verbose",           dest="verbose",        action="store_true", default=False, help="Verbose")
 parser.add_argument(        "--debug",             dest="debug"  ,        action="store_true", default=False, help="Verbose")
 parser.add_argument("-ps",  "--patch-size",        dest="patch_size",     type=int, default=3, help="Number of finite volumes per axis (dimension) per patch.")
@@ -28,14 +28,14 @@ if args.file=="":
     import exahype2
 
     dimensions = args.dim
-    project = exahype2.Project( ["examples", "exahype2", "euler"], "fv-kernel-benchmarks", ".", executable="fv-kernel-benchmarks" )
+    project = exahype2.Project( ["benchmarks", "exahype2", "euler"], "EulerFVRusanovBenchmarks", ".", executable="EulerFVRusanovBenchmarks" )
 
     unknowns            = 1+dimensions+1
     max_h               = 0.01
     min_h               = 0.01
     auxiliary_variables = 0
 
-    solver_name = "EulerFV"
+    solver_name = "EulerFVRusanov"
 
     fv_rusanov_solver = exahype2.solvers.fv.rusanov.GlobalAdaptiveTimeStepWithEnclaveTasking(
       solver_name,
@@ -75,12 +75,12 @@ if args.file=="":
     #
     peano4_project = project.generate_Peano4_project(args.verbose)
     peano4_project.constants.export_const_with_type( "Accuracy", str(args.accuracy), "double" )
-    peano4_project.output.makefile.add_cpp_file( "../../../../applications/exahype2/euler/EulerKernels.cpp" )
-    peano4_project.output.makefile.add_header_search_path( "../../../../applications/exahype2/euler" )
+    peano4_project.output.makefile.add_cpp_file( "../../../applications/exahype2/euler/EulerKernels.cpp" )
+    peano4_project.output.makefile.add_header_search_path( "../../../applications/exahype2/euler" )
     peano4_project.generate()
-    benchmark_main_file = os.path.dirname(os.path.realpath(__file__)) + "/fv-kernel-benchmarks.cpp"
+    benchmark_main_file = os.path.dirname(os.path.realpath(__file__)) + "/EulerFVRusanovBenchmarks.cpp"
     print( "Replace generated main with benchmark main file {}".format(benchmark_main_file) )
-    os.system( "cp {} fv-kernel-benchmarks-main.cpp".format(benchmark_main_file) )
+    os.system( "cp {} EulerFVRusanovBenchmarks-main.cpp".format(benchmark_main_file) )
     os.system( "make clean" )
     if args.j>0:
       os.system( "make -j{}".format(args.j) )
