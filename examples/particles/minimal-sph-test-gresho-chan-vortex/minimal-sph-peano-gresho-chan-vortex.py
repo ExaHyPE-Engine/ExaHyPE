@@ -372,40 +372,52 @@ initialisation_snippet = """
   tarch::la::Vector<Dimensions,double> x_0(0.5);
 
   // Distance of particle to centre
-  tarch::la::Vector<Dimensions,double> dist = particle->getX() - x_0;
-  double norm_dist = tarch::la::norm2(dist);
+  tarch::la::Vector<Dimensions,double> pos = particle->getX();
+  tarch::la::Vector<Dimensions,double> dist = pos - x_0;
+  double r = tarch::la::norm2(dist);
+
+  // avoid velocity divergences with r=0
+  r += 1e-10;
   
   /* Initial azhimutal velocity */
   double v_phi; 
 
-  if( norm_dist >= 0 && norm_dist < 0.2) {
-    v_phi = 5.0 * norm_dist;
-  } else if( norm_dist >= 0.2 && norm_dist < 0.4){
-    v_phi = 2.0 - 5.0 * norm_dist;
+  if( r >= 0 && r < 0.2) {
+    v_phi = 5.0 * r;
+  } else if( r >= 0.2 && r < 0.4){
+    v_phi = 2.0 - 5.0 * r;
   } else {
     v_phi = 0;
   }
 
   // Set velocity profile
-  particle->setV( v_phi );
+  tarch::la::Vector<Dimensions,double> v_ini;
+  
+  // x and y particle coordinates
+  const double pos_x = pos[0];
+  const double pos_y = pos[1];
+  
+  v_ini[0] = - v_phi * (pos_y - 0.5) / r;
+  v_ini[1] =   v_phi * (pos_x - 0.5) / r;
+  
+  particle->setV( v_ini );
 
   /* Initial pressure profile */
   double pressure;
 
-  if( norm_dist >= 0 && norm_dist < 0.2) {
-    pressure = 5.0 + 12.5 * norm_dist * norm_dist;
-  } else if( norm_dist >= 0.2 && norm_dist < 0.4){
-    pressure = 9.0 + 12.5 * norm_dist * norm_dist - 20.0 * r + 4.0 * math::log( 5.0 * norm_dist );
+  if( r >= 0 && r < 0.2) {
+    pressure = 5.0 + 12.5 * r * r;
+  } else if( r >= 0.2 && r < 0.4){
+    pressure = 9.0 + 12.5 * r * r - 20.0 * r + 4.0 * log( 5.0 * r );
   } else {
-    pressure = 3.0 + 4.0 * math::log( 2.0 );
+    pressure = 3.0 + 4.0 * log( 2.0 );
   }
 
   // Set pressure profile
   particle->setPressure( pressure );
 
   /* Set U from the EoS */
-  double u_ini = gas_internal_energy_from_pressure( particle->getDensity(),
-      particle->getPressure() );
+  double u_ini = gas_internal_energy_from_pressure( particle->getDensity(), particle->getPressure() );
   particle->setU( u_ini ); 
 
   /* Set sound speed */
@@ -471,6 +483,7 @@ if args.one_dimensions_setup:
     initialisation_call=initialisation_snippet,
     noise=args.random_particle_layout,
     additional_includes=""" 
+    #include <cmath>
     #include "Constants.h" 
     #include "kernel_hydro.h"
     #include "equation_of_state.h"
@@ -485,6 +498,7 @@ else:
     initialisation_call=initialisation_snippet,
     noise=args.random_particle_layout,
     additional_includes=""" 
+    #include <cmath>
     #include "Constants.h" 
     #include "kernel_hydro.h"
     #include "equation_of_state.h"

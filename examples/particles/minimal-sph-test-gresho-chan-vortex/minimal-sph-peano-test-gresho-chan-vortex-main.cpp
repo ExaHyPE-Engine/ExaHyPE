@@ -1,4 +1,4 @@
-#include "minimal-sph-peano-test-noh-problem-main.h"
+#include "minimal-sph-peano-test-gresho-chan-vortex-main.h"
 #include "Constants.h"
 #include "kernel_hydro.h"
 #include "equation_of_state.h"
