@@ -36,11 +36,9 @@
 #include <tbb/task_group.h>
 #endif
 
-//#ifdef UseFEExcept
 #include <fenv.h>
 #pragma float_control(precise, on)
 #pragma STDC FENV_ACCESS ON
-//#endif
 
 using namespace benchmarks::exahype2::euler;
 
@@ -62,12 +60,16 @@ constexpr int NumberOfOutputEntries = (EulerFVRusanov::NumberOfFiniteVolumesPerA
 #endif
 
 void initInputData( double* Q ) {
-  for (int i=0; i<NumberOfInputEntries/5; i++) {
-    Q[i*5+0] = 1.0;
-    Q[i*5+1] = std::sin( 1.0 * i / (NumberOfInputEntries) * tarch::la::PI );
-    Q[i*5+2] = std::sin( 2.0 * i / (NumberOfInputEntries) * tarch::la::PI );
-    Q[i*5+3] = std::sin( 3.0 * i / (NumberOfInputEntries) * tarch::la::PI );
-    Q[i*5+4] = 1.1 + std::sin( i / (NumberOfInputEntries) * tarch::la::PI );
+  for (int i=0; i<NumberOfInputEntries/EulerFVRusanov::NumberOfUnknowns; i++) {
+    Q[i*EulerFVRusanov::NumberOfUnknowns+0] = 1.0;
+    Q[i*EulerFVRusanov::NumberOfUnknowns+1] = std::sin( 1.0 * i / (NumberOfInputEntries) * tarch::la::PI );
+    Q[i*EulerFVRusanov::NumberOfUnknowns+2] = std::sin( 2.0 * i / (NumberOfInputEntries) * tarch::la::PI );
+#if Dimensions == 3
+    Q[i*EulerFVRusanov::NumberOfUnknowns+3] = std::sin( 3.0 * i / (NumberOfInputEntries) * tarch::la::PI );
+    Q[i*EulerFVRusanov::NumberOfUnknowns+4] = 1.1 + std::sin( i / (NumberOfInputEntries) * tarch::la::PI );
+#else
+    Q[i*EulerFVRusanov::NumberOfUnknowns+3] = 1.1 + std::sin( i / (NumberOfInputEntries) * tarch::la::PI );
+#endif
   }
 }
 
@@ -96,17 +98,15 @@ std::tuple<double, int> validateOutcome( double* Q, int patchIndex , const doubl
   for (int i=0; i<NumberOfOutputEntries; i++) {
     if (not tarch::la::equals( Q[i], validOutcome[i], Accuracy) ) {
       errors++;
+      std::cout.precision(16);
+      std::cout << std::fixed << "Q[" << i << "]!=validOutcome[" << i << "]: " << Q[i] << "!=" << validOutcome[i] << std::endl;
     }
-      std::cout.precision(17);
-      //std::cout << std::fixed << "Q[" << i << "]=validOutcome[" << i << "]: " << Q[i] << "=" << validOutcome[i] << std::endl;
-
     maxDifference = std::max(maxDifference, std::abs(Q[i]-validOutcome[i]) );
     index++;
   }
   if (not tarch::la::equals( maxEigenvalue, validMaxEigenvalue, Accuracy)) {
-    std::cout << std::fixed << "ERROR: maxEigenvalue[" << patchIndex << "]!=validMaxEigenvalue[" << patchIndex << "]: " << maxEigenvalue << "!=" << validMaxEigenvalue << std::endl;
+    std::cout << std::fixed << " maxEigenvalue[" << patchIndex << "]!=validMaxEigenvalue[" << patchIndex << "]: " << maxEigenvalue << "!=" << validMaxEigenvalue << std::endl;
   }
-  std::cout << std::fixed << "maxEigenvalue[" << patchIndex << "]=validMaxEigenvalue[" << patchIndex << "]: " << maxEigenvalue << "=" << validMaxEigenvalue << std::endl;
 
   return { maxDifference, errors };
 }
@@ -145,7 +145,8 @@ void runBenchmarks(int patches) {
         marker,
         TimeStamp,            // double t
         TimeStepSize,         // double dt
-        inputData[i],outputData[i]
+        inputData[i],
+        outputData[i]
       );
     }
     watch.stop();
@@ -185,7 +186,6 @@ void runBenchmarks(int patches) {
     }
 
     tarch::timing::Watch watch( "::", "main()", false );
-
     kernel(
       patchData,
       true ,
@@ -193,7 +193,6 @@ void runBenchmarks(int patches) {
       false ,
       computeCFL
     );
-
     watch.stop();
 
     int errors = 0;
@@ -305,7 +304,6 @@ void runBenchmarks(int patches) {
       delete[] patchData[hostTask].QIn[i];
       delete[] patchData[hostTask].QOut[i];
     }
-
   };
 
   #if Dimension==2
@@ -313,73 +311,68 @@ void runBenchmarks(int patches) {
   #else
   if (patches<=4) {
   #endif
-    /*testFusedVariant(
-      ::exahype2::fv::rusanov::timeStepWithRusanov_patchwise_call_stack_static_calls<EulerFV,EulerFV::NumberOfFiniteVolumesPerAxisPerPatch, 1, 5, 0,exahype2::enumerator::AoSLexicographicEnumerator>,
+    testFusedVariant(
+      ::exahype2::fv::rusanov::timeStepWithRusanov_patchwise_call_stack_static_calls<EulerFVRusanov,EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch, 1, EulerFVRusanov::NumberOfUnknowns, 0,exahype2::enumerator::AoSLexicographicEnumerator>,
       "call stack, patch-wise, AoS", true
     );
     testFusedVariant(
-      ::exahype2::fv::rusanov::timeStepWithRusanov_batched_call_stack_static_calls<EulerFV,EulerFV::NumberOfFiniteVolumesPerAxisPerPatch, 1, 5, 0,exahype2::enumerator::AoSLexicographicEnumerator>,
+      ::exahype2::fv::rusanov::timeStepWithRusanov_batched_call_stack_static_calls<EulerFVRusanov,EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch, 1, EulerFVRusanov::NumberOfUnknowns, 0,exahype2::enumerator::AoSLexicographicEnumerator>,
       "call stack, batched, AoS", true
-    );*/
+    );
   }
 
-  /*testFusedVariant(
-    ::exahype2::fv::rusanov::timeStepWithRusanov_patchwise_heap_static_calls<EulerFV,EulerFV::NumberOfFiniteVolumesPerAxisPerPatch, 1, 5, 0,exahype2::enumerator::AoSLexicographicEnumerator>,
+  testFusedVariant(
+    ::exahype2::fv::rusanov::timeStepWithRusanov_patchwise_heap_static_calls<EulerFVRusanov,EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch, 1, EulerFVRusanov::NumberOfUnknowns, 0,exahype2::enumerator::AoSLexicographicEnumerator>,
     "heap, patch-wise, AoS", true
+  );
+  testFusedVariant(
+    ::exahype2::fv::rusanov::timeStepWithRusanov_patchwise_heap_static_calls<EulerFVRusanov,EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch, 1, EulerFVRusanov::NumberOfUnknowns, 0,exahype2::enumerator::AoSoALexicographicEnumerator>,
+    "heap, patch-wise, AoSoA", true
+  );
+  testFusedVariant(
+    ::exahype2::fv::rusanov::timeStepWithRusanov_patchwise_heap_static_calls<EulerFVRusanov,EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch, 1, EulerFVRusanov::NumberOfUnknowns, 0,exahype2::enumerator::SoALexicographicEnumerator>,
+    "heap, patch-wise, SoA", true
+  );
+  /*testFusedVariant(
+    ::exahype2::fv::rusanov::timeStepWithRusanov_patchwise_in_situ_static_calls<EulerFVRusanov,EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch, 1, EulerFVRusanov::NumberOfUnknowns, 0>,
+    "heap, patch-wise, in-situ", true
   );*/
+
   /*testFusedVariant(
     ::exahype2::fv::rusanov::timeStepWithRusanov_batched_heap_static_calls<EulerFV,EulerFV::NumberOfFiniteVolumesPerAxisPerPatch, 1, 5, 0,exahype2::enumerator::AoSLexicographicEnumerator>,
     "heap, batched, AoS", true
-  );*/
-  /*testFusedVariant(
-    ::exahype2::fv::rusanov::timeStepWithRusanov_patchwise_heap_static_calls<EulerFV,EulerFV::NumberOfFiniteVolumesPerAxisPerPatch, 1, 5, 0,exahype2::enumerator::AoSoALexicographicEnumerator>,
-    "heap, patch-wise, AoSoA", true
   );
   testFusedVariant(
     ::exahype2::fv::rusanov::timeStepWithRusanov_batched_heap_static_calls<EulerFV,EulerFV::NumberOfFiniteVolumesPerAxisPerPatch, 1, 5, 0,exahype2::enumerator::AoSoALexicographicEnumerator>,
     "heap, batched, AoSoA", true
   );
   testFusedVariant(
-    ::exahype2::fv::rusanov::timeStepWithRusanov_patchwise_heap_static_calls<EulerFV,EulerFV::NumberOfFiniteVolumesPerAxisPerPatch, 1, 5, 0,exahype2::enumerator::SoALexicographicEnumerator>,
-    "heap, patch-wise, SoA", true
-  );
-  testFusedVariant(
     ::exahype2::fv::rusanov::timeStepWithRusanov_batched_heap_static_calls<EulerFV,EulerFV::NumberOfFiniteVolumesPerAxisPerPatch, 1, 5, 0,exahype2::enumerator::SoALexicographicEnumerator>,
     "heap, batched, SoA", true
-  );*/
-
-/*
-  testFusedVariant(
-    ::exahype2::fv::rusanov::timeStepWithRusanov_patchwise_in_situ_static_calls<EulerFV,EulerFV::NumberOfFiniteVolumesPerAxisPerPatch, 1, 5, 0>,
-    "heap, patch-wise, in-situ", true
   );
-  testFusedVariant(
     ::exahype2::fv::rusanov::timeStepWithRusanov_batched_in_situ_static_calls<EulerFV,EulerFV::NumberOfFiniteVolumesPerAxisPerPatch, 1, 5, 0>,
     "heap, batched, in-situ", true
-  );
-  */
-
+  );*/
 
   #if defined(GPUOffloadingOMP)
   if ( tarch::multicore::Core::getInstance().getNumberOfGPUs()==0 ) {
     logWarning( "main()", "no device found" );
   }
   for (int device=0; device<tarch::multicore::Core::getInstance().getNumberOfGPUs(); device++) {
-
-    //logInfo( "main()", "device " << device << " (first kernel triggered by one thread, then kernel triggered by four threads if multithreading enabled)" );
+    logInfo( "main()", "device " << device << " (first kernel triggered by one thread, then kernel triggered by four threads if multithreading enabled)" );
     testFusedVariantOnDevice(
       device,
-      ::exahype2::fv::rusanov::omp::timeStepWithRusanov_patchwise_heap_static_calls<EulerFVRusanov,EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch, 1, 5, 0,exahype2::enumerator::AoSLexicographicEnumerator>,
+      ::exahype2::fv::rusanov::omp::timeStepWithRusanov_patchwise_heap_static_calls<EulerFVRusanov,EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch, 1, EulerFVRusanov::NumberOfUnknowns, 0,exahype2::enumerator::AoSLexicographicEnumerator>,
       "omp, patch-wise, AoS", true
     );
     /*testFusedVariantOnDevice(
       device,
-      ::exahype2::fv::rusanov::omp::timeStepWithRusanov_patchwise_heap_static_calls<EulerFV,EulerFV::NumberOfFiniteVolumesPerAxisPerPatch, 1, 5, 0,exahype2::enumerator::AoSoALexicographicEnumerator>,
+      ::exahype2::fv::rusanov::omp::timeStepWithRusanov_patchwise_heap_static_calls<EulerFVRusanov,EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch, 1, EulerFVRusanov::NumberOfUnknowns, 0,exahype2::enumerator::AoSoALexicographicEnumerator>,
       "omp, patch-wise, AoSoA", true
-    );
-    testFusedVariantOnDevice(
+    );*/
+    /*testFusedVariantOnDevice(
       device,
-      ::exahype2::fv::rusanov::omp::timeStepWithRusanov_patchwise_heap_static_calls<EulerFV,EulerFV::NumberOfFiniteVolumesPerAxisPerPatch, 1, 5, 0,exahype2::enumerator::SoALexicographicEnumerator>,
+      ::exahype2::fv::rusanov::omp::timeStepWithRusanov_patchwise_heap_static_calls<EulerFVRusanov,EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch, 1, EulerFVRusanov::NumberOfUnknowns, 0,exahype2::enumerator::SoALexicographicEnumerator>,
       "omp, patch-wise, SoA", true
     );*/
 
@@ -523,10 +516,6 @@ int main(int argc, char** argv) {
   tarch::multicore::initSmartMPI();
   peano4::fillLookupTables();
 
-//#ifdef UseFEExcept
-  //feenableexcept(FE_DIVBYZERO | FE_INVALID | FE_OVERFLOW);
-//#endif
-
   if ( tarch::mpi::Rank::getInstance().getNumberOfRanks()>1 and tarch::multicore::Core::getInstance().getNumberOfThreads()<=1 ) {
     logError("main()", "MPI runs without multithreading are not supported currently.");
     return ExitCodeInvalidBuild;
@@ -547,12 +536,13 @@ int main(int argc, char** argv) {
   const bool isGlobalMaster     =     tarch::mpi::Rank::getInstance().isGlobalMaster();
   const bool isPeanoComputeNode = not tarch::mpi::Rank::getInstance().isGlobalMaster();
 
-
   #if defined(GPUOffloadingSYCL)
   if ( tarch::multicore::Core::getInstance().getNumberOfGPUs()>0 ) {
     logWarning( "main()", "you might have to set ZE_SERIALIZE=1|2|3 before you start the benchmark" );
   }
   #endif
+
+  feenableexcept(FE_DIVBYZERO | FE_INVALID | FE_OVERFLOW);
 
   #if Dimensions==2
   for (int patches=1; patches<=1024*2*2*2*2; patches*=2) {
@@ -563,10 +553,8 @@ int main(int argc, char** argv) {
     msg << "benchmark-" << patches;
     otterPhaseSwitch( msg.str().c_str() );
 
-    //runBenchmarks(patches);
+    runBenchmarks(patches);
   }
-
-  runBenchmarks(1);
 
   otterTraceFinalise();
 

@@ -52,7 +52,7 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanov_patchwise_heap_static_calls
     #pragma omp target enter data map(to:currentQIn[0:QInHostEnumerator.size()] ) device(targetDevice)
     #pragma omp target enter data map(alloc:currentQOut[0:QOutHostEnumerator.size()] ) device(targetDevice)
 
-    mappedPointersToQIn[patchIndex]  = (double*) omp_get_mapped_ptr( currentQIn,  targetDevice );
+    mappedPointersToQIn[patchIndex] = (double*) omp_get_mapped_ptr( currentQIn,  targetDevice );
     mappedPointersToQOut[patchIndex] = (double*) omp_get_mapped_ptr( currentQOut, targetDevice );
   }
 
@@ -71,9 +71,9 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanov_patchwise_heap_static_calls
     map(to:t[0:hostPatchData.numberOfCells]) \
     map(to:dt[0:hostPatchData.numberOfCells]) \
     map(from:maxEigenvalue[0:hostPatchData.numberOfCells]) \
-    map(from:tempFluxX[0:fluxHostEnumerator.size()]) \
-    map(from:tempFluxY[0:fluxHostEnumerator.size()]) \
-    map(from:tempFluxZ[0:fluxHostEnumerator.size()]) \
+    map(alloc:tempFluxX[0:fluxHostEnumerator.size()]) \
+    map(alloc:tempFluxY[0:fluxHostEnumerator.size()]) \
+    map(alloc:tempFluxZ[0:fluxHostEnumerator.size()]) \
     map(alloc:tempNonconservativeProductX[0:ncpHostEnumerator.size()]) \
     map(alloc:tempNonconservativeProductY[0:ncpHostEnumerator.size()]) \
     map(alloc:tempNonconservativeProductZ[0:ncpHostEnumerator.size()]) \
@@ -359,7 +359,7 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanov_patchwise_heap_static_calls
         );
       }
     }
-    /*else if (evaluateFlux and Dimensions==3) {
+    else if (evaluateFlux and Dimensions==3) {
       #pragma omp parallel for collapse(3)
       for (int z = 0; z < numberOfVolumesPerAxisInPatch; z++)
       for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
@@ -611,7 +611,7 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanov_patchwise_heap_static_calls
         );
       }
       patchData.maxEigenvalue[patchIndex] = newMaxEigenvalue;
-    }*/
+    }
   } // This is the end of the target offloading block
 
   for (int patchIndex=0; patchIndex<hostPatchData.numberOfCells; patchIndex++) {
@@ -619,12 +619,6 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanov_patchwise_heap_static_calls
     double*       currentQOut = hostPatchData.QOut[patchIndex];
     #pragma omp target exit data map(delete:currentQIn[0:QInHostEnumerator.size()] ) device(targetDevice)
     #pragma omp target exit data map(from:currentQOut[0:QOutHostEnumerator.size()] ) device(targetDevice)
-  }
-
-  printf("GPU VERSION:\n");
-  for (int i = 0; i<fluxHostEnumerator.size(); i++) {
-          std::cout.precision(17);
-      std::cout << std::fixed << "[" << i << "]: TempFluxX " << tempFluxX[i] << ", TempFluxY " << tempFluxY[i] << std::endl;
   }
 
   delete[] mappedPointersToQIn;

@@ -364,7 +364,7 @@ void exahype2::fv::rusanov::timeStepWithRusanov_patchwise_heap_functors(
       }
       otterLoopEnd();
     }
-    /*else if (evaluateFlux and Dimensions==3) {
+    else if (evaluateFlux and Dimensions==3) {
       otterLoopBegin();
       for (int x = -solversHaloSize; x < numberOfVolumesPerAxisInPatch+solversHaloSize; x++)
       for (int y =         0; y < numberOfVolumesPerAxisInPatch;          y++)
@@ -668,13 +668,7 @@ void exahype2::fv::rusanov::timeStepWithRusanov_patchwise_heap_functors(
       }
       otterLoopEnd();
       patchData.maxEigenvalue[patchIndex] = newMaxEigenvalue;
-    }*/
-  }
-
-  printf("CPU VERSION:\n");
-  for (int i = 0; i<fluxEnumerator.size(); i++) {
-          std::cout.precision(17);
-      std::cout << std::fixed << "[" << i << "]: TempFluxX " << tempFluxX[i] << ", TempFluxY " << tempFluxY[i] << std::endl;
+    }
   }
 
   if (tempFluxX!=nullptr)               tarch::freeMemory(tempFluxX, tarch::MemoryLocation::Heap);
@@ -687,4 +681,3 @@ void exahype2::fv::rusanov::timeStepWithRusanov_patchwise_heap_functors(
   if (tempEigenvalueY!=nullptr)         tarch::freeMemory(tempEigenvalueY, tarch::MemoryLocation::Heap);
   if (tempEigenvalueZ!=nullptr)         tarch::freeMemory(tempEigenvalueZ, tarch::MemoryLocation::Heap);
 }
-

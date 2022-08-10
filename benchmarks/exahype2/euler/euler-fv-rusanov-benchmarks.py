@@ -14,7 +14,7 @@ parser.add_argument("-d",   "--dim",               dest="dim",            type=i
 parser.add_argument("-pd",  "--peano-dir",         dest="peanodir",       default="../../../", help="Peano directory")
 parser.add_argument("-v",   "--verbose",           dest="verbose",        action="store_true", default=False, help="Verbose")
 parser.add_argument(        "--debug",             dest="debug"  ,        action="store_true", default=False, help="Verbose")
-parser.add_argument("-ps",  "--patch-size",        dest="patch_size",     type=int, default=3, help="Number of finite volumes per axis (dimension) per patch.")
+parser.add_argument("-ps",  "--patch-size",        dest="patch_size",     type=int, default=5, help="Number of finite volumes per axis (dimension) per patch.")
 parser.add_argument("-a",   "--accuracy",          dest="accuracy",       type=float, default=numpy.finfo(float).eps, help="Floating point accuracy to which the different kernel variants have to match (absolute).")
 parser.add_argument("-f",   "--file",              dest="file",           default="", help="Specify to convert an output file into a bar plot. If you omit this flag, the script will actually build the benchmark.")
 args = parser.parse_args()
