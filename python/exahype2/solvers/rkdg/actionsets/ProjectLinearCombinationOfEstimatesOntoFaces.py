@@ -85,12 +85,12 @@ class ProjectLinearCombinationOfEstimatesOntoFaces(AbstractRungeKuttaDGActionSet
     for (int d=0; d<Dimensions; d++) {
       {{FACE_METADATA_ACCESSOR}}(d).setUpdated(1,true);
       {{FACE_METADATA_ACCESSOR}}(d).setUpdatedTimeStamp(1,{{CELL_METADATA_ACCESSOR}}.getTimeStamp());
-      {{FACE_METADATA_ACCESSOR}}(d).setOldTimeStamp(    1,{{FACE_METADATA_ACCESSOR}}(d).getNewTimeStamp());
+      {{FACE_METADATA_ACCESSOR}}(d).setOldTimeStamp(    1,{{FACE_METADATA_ACCESSOR}}(d).getNewTimeStamp(1));
       {{FACE_METADATA_ACCESSOR}}(d).setNewTimeStamp(    1,{{CELL_METADATA_ACCESSOR}}.getTimeStamp());
 
       {{FACE_METADATA_ACCESSOR}}(d+Dimensions).setUpdated(0,true);
       {{FACE_METADATA_ACCESSOR}}(d+Dimensions).setUpdatedTimeStamp(0,{{CELL_METADATA_ACCESSOR}}.getTimeStamp());
-      {{FACE_METADATA_ACCESSOR}}(d+Dimensions).setOldTimeStamp(    0,{{FACE_METADATA_ACCESSOR}}(d+Dimensions).getNewTimeStamp());
+      {{FACE_METADATA_ACCESSOR}}(d+Dimensions).setOldTimeStamp(    0,{{FACE_METADATA_ACCESSOR}}(d+Dimensions).getNewTimeStamp(0));
       {{FACE_METADATA_ACCESSOR}}(d+Dimensions).setNewTimeStamp(    0,{{CELL_METADATA_ACCESSOR}}.getTimeStamp());
 
       logDebug( "touchCellLastTime(...)", "update {{FACE_METADATA_ACCESSOR}}(" << d << ")(1)" );
