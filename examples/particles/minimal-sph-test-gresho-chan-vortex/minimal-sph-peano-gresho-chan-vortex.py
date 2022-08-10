@@ -534,10 +534,11 @@ touch_particle_first_time_compute_kernel = """
    *
    */
 
-  if(localParticle->getParallelState()==globaldata::Particle::ParallelState::Local
-//  and localParticle->getHasConverged()==false 
-  and not localParticle->getIsBoundaryParticle()
-  ) {  
+  if( 
+    localParticle->getParallelState() == globaldata::Particle::ParallelState::Local
+//  and not localParticle->getHasConverged()
+    and not localParticle->getIsBoundaryParticle() )
+    {  
 
     // we'll accumulate the data throughout mesh/particle traversal
     localParticle->setDensity (0.0);                      
@@ -611,67 +612,67 @@ particle_particle_compute_kernel = """
     tarch::la::smaller( r, cutoffR ) 
     and 
     tarch::la::greater( r, 0.0 )         /* Self-contribution is calculated elsewhere */  
-//  and localParticle->getHasConverged()==false
+//  and not localParticle->getHasConverged()
     and 
     not localParticle->getIsBoundaryParticle() ) 
     {  
-      // Evaluate kernel and its derivative
-      double w_a, dw_a_dq;
-      kernel_deval(q_a, w_a, dw_a_dq);
+    // Evaluate kernel and its derivative
+    double w_a, dw_a_dq;
+    kernel_deval(q_a, w_a, dw_a_dq);
 
-      // Normalization factors 
-      double W_a, dW_a_dh;
-      W_a = w_a / std::pow( h_a, Dimensions );
-      dW_a_dh = - ( Dimensions*w_a + q_a*dw_a_dq ) / std::pow( h_a, Dimensions +1 );
+    // Normalization factors 
+    double W_a, dW_a_dh;
+    W_a = w_a / std::pow( h_a, Dimensions );
+    dW_a_dh = - ( Dimensions*w_a + q_a*dw_a_dq ) / std::pow( h_a, Dimensions +1 );
 
-      /*************************************************************/
-
-
-      // SWIFT M4 KERNEL TEST
-      double w;
-      double dw_dh;
-      kernel_deval_SWIFT(q_a, w, dw_dh);
-      W_a = w / std::pow( h_a, Dimensions );
-      dW_a_dh = - ( Dimensions * w + q_a * dw_dh ) / std::pow( h_a, Dimensions +1 );
+    /*************************************************************/
 
 
-      /*************************************************************/
+    // SWIFT M4 KERNEL TEST
+    double w;
+    double dw_dh;
+    kernel_deval_SWIFT(q_a, w, dw_dh);
+    W_a = w / std::pow( h_a, Dimensions );
+    dW_a_dh = - ( Dimensions * w + q_a * dw_dh ) / std::pow( h_a, Dimensions +1 );
 
-      /* Increment density */
-      localParticle->setDensity( localParticle-> getDensity() + m_b * W_a ); 
 
-      /* Increment fractional number density */
-      localParticle->setWcount ( localParticle-> getWcount () +       W_a );
-      
-      /* Debug: Increment number of detected neighbours */
-      localParticle->setNcount ( localParticle-> getNcount () + 1 ); 
+    /*************************************************************/
 
-      /* Increment drho/dh */
-      localParticle->setRho_dh   ( localParticle->getRho_dh()    + m_b*dW_a_dh ); 
+    /* Increment density */
+    localParticle->setDensity( localParticle-> getDensity() + m_b * W_a ); 
 
-      /* Increment Omega */
-      /* Notice that this is the same as drho_dh in SWIFT */
-      localParticle->setOmega    ( localParticle->getOmega()     + m_b*dW_a_dh );
+    /* Increment fractional number density */
+    localParticle->setWcount ( localParticle-> getWcount () +       W_a );
+    
+    /* Debug: Increment number of detected neighbours */
+    localParticle->setNcount ( localParticle-> getNcount () + 1 ); 
 
-      /* Increment dWcount/dh */
-      localParticle->setWcount_dh( localParticle->getWcount_dh() +     dW_a_dh ); 
+    /* Increment drho/dh */
+    localParticle->setRho_dh   ( localParticle->getRho_dh()    + m_b*dW_a_dh ); 
 
-      /* Now we need to compute the div terms */
-      const double r_inv = r ? 1.0 / r : 0.0;     
-      const double fac_a = m_a * dw_a_dq * r_inv;
+    /* Increment Omega */
+    /* Notice that this is the same as drho_dh in SWIFT */
+    localParticle->setOmega    ( localParticle->getOmega()     + m_b*dW_a_dh );
 
-      /* Compute dv dot r */
-      dv_ab = localParticle->getV() - activeParticle->getV();
-      const double dvdr = tarch::la::dot( dv_ab , dx );
-      localParticle->setDiv_v( localParticle->getDiv_v() - fac_a * dvdr );
-      
-      /* Compute dv cross r */
-      /* 2D Term only has 1 component (z) */
-      const double curlvr2D = dv_ab[0]*dx[1] - dv_ab[1]*dx[0];
-      localParticle->setRot_v( localParticle->getRot_v() + fac_a * curlvr2D );
+    /* Increment dWcount/dh */
+    localParticle->setWcount_dh( localParticle->getWcount_dh() +     dW_a_dh ); 
 
-      assertion3( not std::isnan( localParticle->getOmega() ), localParticle->toString(), localParticle->getOmega(), dW_a_dh );
-    } 
+    /* Now we need to compute the div terms */
+    const double r_inv = r ? 1.0 / r : 0.0;     
+    const double fac_a = m_a * dw_a_dq * r_inv;
+
+    /* Compute dv dot r */
+    dv_ab = localParticle->getV() - activeParticle->getV();
+    const double dvdr = tarch::la::dot( dv_ab , dx );
+    localParticle->setDiv_v( localParticle->getDiv_v() - fac_a * dvdr );
+    
+    /* Compute dv cross r */
+    /* 2D Term only has 1 component (z) */
+    const double curlvr2D = dv_ab[0]*dx[1] - dv_ab[1]*dx[0];
+    localParticle->setRot_v( localParticle->getRot_v() + fac_a * curlvr2D );
+
+    assertion3( not std::isnan( localParticle->getOmega() ), localParticle->toString(), localParticle->getOmega(), dW_a_dh );
+  } 
 
 """
 
@@ -692,7 +693,7 @@ touch_particle_last_time_compute_kernel = """
 
   if(
     localParticle->getParallelState()==globaldata::Particle::ParallelState::Local
-//  and localParticle->getHasConverged()==false
+//  and not localParticle->getHasConverged()
     and 
     not localParticle->getIsBoundaryParticle() )
     {
@@ -963,10 +964,10 @@ touch_particle_last_time_compute_kernel = """
 
 
 calc_densities.add_action_set( peano4.toolbox.particles.ParticleParticleInteraction(
-  particle_set=particles,
-  particle_particle_interaction_kernel=particle_particle_compute_kernel,
-  touch_vertex_first_time_compute_particle_update_kernel=touch_particle_first_time_compute_kernel,
-  touch_vertex_last_time_compute_particle_update_kernel=touch_particle_last_time_compute_kernel,
+  particle_set = particles,
+  particle_particle_interaction_kernel = particle_particle_compute_kernel,
+  touch_vertex_first_time_compute_particle_update_kernel= touch_particle_first_time_compute_kernel,
+  touch_vertex_last_time_compute_particle_update_kernel = touch_particle_last_time_compute_kernel,
   additional_includes="""
 #include "Constants.h"
 #include "kernel_hydro.h"
@@ -990,9 +991,30 @@ project.solversteps.add_step(calc_densities)
 force_non_sym_particles = peano4.solversteps.Step( "ForceNonSym" )
 force_non_sym_particles.use_vertex(particles)
 force_non_sym_particles.use_cell(particle_tree_analysis.cell_marker)
-force_non_sym_particles.add_action_set( peano4.toolbox.particles.ParticleParticleInteraction(
-  particle_set=particles,
-  particle_particle_interaction_kernel="""
+
+touch_particle_first_time_compute_kernel = """
+
+  /* Done by "hydro_reset_acceleration" in SWIFT */
+  
+  if( 
+    localParticle->getParallelState() == globaldata::Particle::ParallelState::Local
+    and 
+    not localParticle->getIsBoundaryParticle() ) 
+    {
+
+    /* Reset the acceleration*/
+    localParticle->setA   (0.0);   
+    
+    /* Reset the time derivatives */
+    localParticle->setUDot(0.0);   
+    localParticle->setHDot(0.0);   
+    localParticle->setV_sig_AV(2.0 * localParticle->getSoundSpeed());
+
+  }
+
+"""
+
+particle_particle_compute_kernel = """
   
 /*
  * Non-symmetric force interaction between two particles (as per Swift terminology). 
@@ -1034,134 +1056,131 @@ force_non_sym_particles.add_action_set( peano4.toolbox.particles.ParticleParticl
   // Get actual interaction radius
   const double cutoffR = KERNEL_SUPPORT_RAD*h_a;
  
-  if ( tarch::la::smaller( r,cutoffR ) ) {
-    if ( tarch::la::greater( r,0.0 ) ) {
+  if( 
+    tarch::la::smaller( r,cutoffR ) 
+    and
+    tarch::la::greater( r,0.0 ) 
+    and 
+    not localParticle->getIsBoundaryParticle() ) 
+    {
 
-      // Evaluate kernel and its derivative for particle a
-      double w_a, dw_a_dq;
-      kernel_deval(q_a, w_a, dw_a_dq);
+    // Evaluate kernel and its derivative for particle a
+    double w_a, dw_a_dq;
+    kernel_deval(q_a, w_a, dw_a_dq);
 
-      // Evaluate kernel and its derivative for particle b
-      double w_b, dw_b_dq;
-      kernel_deval(q_b, w_b, dw_b_dq);
+    // Evaluate kernel and its derivative for particle b
+    double w_b, dw_b_dq;
+    kernel_deval(q_b, w_b, dw_b_dq);
 
-      // Normalization factors 
-      double wa_dr = dw_a_dq / std::pow( h_a, Dimensions + 1 );
-      double wb_dr = dw_b_dq / std::pow( h_b, Dimensions + 1 );
+    // Normalization factors 
+    double wa_dr = dw_a_dq / std::pow( h_a, Dimensions + 1 );
+    double wb_dr = dw_b_dq / std::pow( h_b, Dimensions + 1 );
 
-      /*************************************************************/
+    /*************************************************************/
 
-      // SWIFT M4 KERNEL TEST
-      double wa, wb;
-      double dw_dqa, dw_dqb;
+    // SWIFT M4 KERNEL TEST
+    double wa, wb;
+    double dw_dqa, dw_dqb;
 
-      kernel_deval_SWIFT(q_a, wa, dw_dqa);
-      kernel_deval_SWIFT(q_b, wb, dw_dqb);
-      wa_dr = dw_dqa / std::pow( h_a, Dimensions + 1 );
-      wb_dr = dw_dqb / std::pow( h_b, Dimensions + 1 );
+    kernel_deval_SWIFT(q_a, wa, dw_dqa);
+    kernel_deval_SWIFT(q_b, wb, dw_dqb);
+    wa_dr = dw_dqa / std::pow( h_a, Dimensions + 1 );
+    wb_dr = dw_dqb / std::pow( h_b, Dimensions + 1 );
 
-      /*************************************************************/
+    /*************************************************************/
 
-      /* Variable smoothing length term */
-      
-      /* SWIFT "f" */
-      const double f_ab = 1.0 - localParticle ->getF()/m_b;
-      const double f_ba = 1.0 - activeParticle->getF()/m_a;
-
-      /* Price "Omega" */
-//      const double f_ab = 1.0 / localParticle->getOmega() ;
-//      const double f_ba = 1.0 / activeParticle->getOmega() ;
-
-      /* Compute gradient terms */
-      const double P_over_rho2_a = P_a / (rho_a * rho_a) * f_ab;
-      const double P_over_rho2_b = P_b / (rho_b * rho_b) * f_ba;
-
-      /* Compute dv dot r. */
-      double dvdr = tarch::la::dot( (localParticle->getV() - activeParticle->getV()), dx );
-
-      /* Are the particles moving towards each others ? */
-      const double omega_ab = std::min(dvdr, 0.0);
-      const double mu_ab = r_inv * omega_ab; /* This is 0 or negative */
-  
-      /* Compute sound speeds and signal velocity */
-      const double v_sig = localParticle->getSoundSpeed() + activeParticle->getSoundSpeed() -
-                           BETA_AV * mu_ab;
-  
-      /* Balsara term */
-      const double balsara_a = localParticle ->getBalsara();
-      const double balsara_b = activeParticle->getBalsara();
-  
-      /* Construct the full viscosity term */
-      const double rho_ab = 0.5 * (rho_a + rho_b);
-      const double visc = -0.25 * v_sig * mu_ab * (balsara_a + balsara_b) / rho_ab;
-
-      /* Convolve with the kernel */
-      const double visc_acc_term = 0.5 * visc * (wa_dr * f_ab + wb_dr * f_ba) * r_inv;
-
-      /* SPH acceleration term */
-      const double sph_acc_term = (P_over_rho2_a * wa_dr + P_over_rho2_b * wb_dr) * r_inv;
-      
-      /* Assemble the acceleration */
-      const double acc = sph_acc_term + visc_acc_term;
-            
-      /* Use the force Luke ! */
-      localParticle->setA( localParticle->getA() - m_b * acc * dx );
-      assertion8( not tarch::la::isEntryNan( localParticle->getA() ), localParticle->toString(), sph_acc_term, visc_acc_term, f_ab, f_ba,
-                  activeParticle->getOmega(), activeParticle->getF(), activeParticle->getIsBoundaryParticle() );
-              
-      /* Get the time derivative for u. */
-      const double sph_du_term_a = P_over_rho2_a * dvdr * r_inv * wa_dr;
-
-      /* Viscosity term */
-      const double visc_du_term = 0.5 * visc_acc_term * dvdr;
-
-      /* Assemble the energy equation term */
-      const double du_dt_a = sph_du_term_a + visc_du_term;
-
-      /* Internal energy time derivative */
-      localParticle->setUDot(localParticle->getUDot() + m_b * du_dt_a);
-
-      /* Get the time derivative for h. */
-      localParticle->setHDot(localParticle->getHDot() - m_b * dvdr * r_inv/rho_b * wa_dr * f_ab);
-      assertion6( not std::isnan( localParticle->getHDot() ), localParticle->toString(), dvdr, r_inv, wa_dr, f_ab, f_ba );
-
-      /* Update the signal velocity */
-      localParticle->setV_sig_AV( std::max(localParticle->getV_sig_AV(), v_sig) );
-    }
-  }
-  
-""",
-
-  touch_vertex_first_time_compute_particle_update_kernel="""
-
-  /* Done by "hydro_reset_acceleration" in SWIFT */
-  
-  if(localParticle->getParallelState()==globaldata::Particle::ParallelState::Local){
-
-    /* Reset the acceleration*/
-    localParticle->setA   (0.0);   
+    /* Variable smoothing length term */
     
-    /* Reset the time derivatives */
-    localParticle->setUDot(0.0);   
-    localParticle->setHDot(0.0);   
-    localParticle->setV_sig_AV(2.0 * localParticle->getSoundSpeed());
+    /* SWIFT "f" */
+    const double f_ab = 1.0 - localParticle ->getF()/m_b;
+    const double f_ba = 1.0 - activeParticle->getF()/m_a;
 
+    /* Price "Omega" */
+//    const double f_ab = 1.0 / localParticle->getOmega() ;
+//    const double f_ba = 1.0 / activeParticle->getOmega() ;
+
+    /* Compute gradient terms */
+    const double P_over_rho2_a = P_a / (rho_a * rho_a) * f_ab;
+    const double P_over_rho2_b = P_b / (rho_b * rho_b) * f_ba;
+
+    /* Compute dv dot r. */
+    double dvdr = tarch::la::dot( (localParticle->getV() - activeParticle->getV()), dx );
+
+    /* Are the particles moving towards each others ? */
+    const double omega_ab = std::min(dvdr, 0.0);
+    const double mu_ab = r_inv * omega_ab; /* This is 0 or negative */
+  
+    /* Compute sound speeds and signal velocity */
+    const double v_sig = localParticle->getSoundSpeed() + activeParticle->getSoundSpeed() -
+                         BETA_AV * mu_ab;
+  
+    /* Balsara term */
+    const double balsara_a = localParticle ->getBalsara();
+    const double balsara_b = activeParticle->getBalsara();
+  
+    /* Construct the full viscosity term */
+    const double rho_ab = 0.5 * (rho_a + rho_b);
+    const double visc = -0.25 * v_sig * mu_ab * (balsara_a + balsara_b) / rho_ab;
+
+    /* Convolve with the kernel */
+    const double visc_acc_term = 0.5 * visc * (wa_dr * f_ab + wb_dr * f_ba) * r_inv;
+
+    /* SPH acceleration term */
+    const double sph_acc_term = (P_over_rho2_a * wa_dr + P_over_rho2_b * wb_dr) * r_inv;
+    
+    /* Assemble the acceleration */
+    const double acc = sph_acc_term + visc_acc_term;
+          
+    /* Use the force Luke ! */
+    localParticle->setA( localParticle->getA() - m_b * acc * dx );
+    assertion8( not tarch::la::isEntryNan( localParticle->getA() ), localParticle->toString(), sph_acc_term, visc_acc_term, f_ab, f_ba,
+                activeParticle->getOmega(), activeParticle->getF(), activeParticle->getIsBoundaryParticle() );
+            
+    /* Get the time derivative for u. */
+    const double sph_du_term_a = P_over_rho2_a * dvdr * r_inv * wa_dr;
+
+    /* Viscosity term */
+    const double visc_du_term = 0.5 * visc_acc_term * dvdr;
+
+    /* Assemble the energy equation term */
+    const double du_dt_a = sph_du_term_a + visc_du_term;
+
+    /* Internal energy time derivative */
+    localParticle->setUDot(localParticle->getUDot() + m_b * du_dt_a);
+
+    /* Get the time derivative for h. */
+    localParticle->setHDot(localParticle->getHDot() - m_b * dvdr * r_inv/rho_b * wa_dr * f_ab);
+    assertion6( not std::isnan( localParticle->getHDot() ), localParticle->toString(), dvdr, r_inv, wa_dr, f_ab, f_ba );
+
+    /* Update the signal velocity */
+    localParticle->setV_sig_AV( std::max(localParticle->getV_sig_AV(), v_sig) );
+  }
+  
+"""
+
+touch_particle_last_time_compute_kernel = """
+
+  /* Done by "hydro_end_force" does in SWIFT */
+
+  if( 
+    localParticle->getParallelState()==globaldata::Particle::ParallelState::Local
+    and 
+    not localParticle->getIsBoundaryParticle() ) 
+    {
+
+    localParticle->setHDot( 
+      localParticle->getHDot() * localParticle->getSmoothingLength() / Dimensions);
+  
   }
 
-""",
-  touch_vertex_last_time_compute_particle_update_kernel="""
+"""
 
-   /* Done by "hydro_end_force" does in SWIFT */
-
-   if(localParticle->getParallelState()==globaldata::Particle::ParallelState::Local){
-
-     localParticle->setHDot( 
-       localParticle->getHDot() * localParticle->getSmoothingLength() / Dimensions);
-  
-   }
-
-""",
-  additional_includes="""
+force_non_sym_particles.add_action_set( peano4.toolbox.particles.ParticleParticleInteraction(
+  particle_set = particles,
+  particle_particle_interaction_kernel = particle_particle_compute_kernel,
+  touch_vertex_first_time_compute_particle_update_kernel= touch_particle_first_time_compute_kernel, 
+  touch_vertex_last_time_compute_particle_update_kernel = touch_particle_last_time_compute_kernel,
+  additional_includes = """
 #include "Constants.h"
 #include <cmath>
 #include "kernel_hydro.h"
@@ -1196,35 +1215,39 @@ project.solversteps.add_step(force_non_sym_particles)
 kick1_particles = peano4.solversteps.Step( "Kick1" )
 kick1_particles.use_vertex(particles)
 kick1_particles.use_cell(particle_tree_analysis.cell_marker)
-kick1_particles.add_action_set( peano4.toolbox.particles.ParticleParticleInteraction(
-  particle_set=particles,
-  particle_particle_interaction_kernel="""
+
+touch_particle_first_time_compute_kernel = """
+  
+  if( 
+    localParticle->getParallelState() == globaldata::Particle::ParallelState::Local 
+    and 
+    not localParticle->getIsBoundaryParticle() )
+    {
+  
+    /* Prepare the particle for kick */
+    localParticle->setHasBeenKicked(false);
+    
+  }
+    
+"""
+
+particle_particle_compute_kernel = """
     
   /* We do not excecute any specific action here */
   
-""",
-  touch_vertex_first_time_compute_particle_update_kernel="""
-  
-    if(localParticle->getParallelState()==globaldata::Particle::ParallelState::Local){
-    
-      /* Prepare the particle for kick */
-      localParticle->setHasBeenKicked(false);
-      
-    }
-    
+"""
 
-""",
-  touch_vertex_last_time_compute_particle_update_kernel="""
+touch_particle_last_time_compute_kernel = """
   
   const double dt_kick_hydro = 0.5 * GLOBAL_TIME_STEP_SIZE;
   
-  if (
-      not localParticle->getHasBeenKicked()
-      and
-      localParticle->getParallelState() == globaldata::Particle::ParallelState::Local
-      and 
-      not localParticle->getIsBoundaryParticle()
-    ){
+  if(
+    localParticle->getParallelState() == globaldata::Particle::ParallelState::Local
+    and 
+    not localParticle->getHasBeenKicked()
+    and
+    not localParticle->getIsBoundaryParticle() )
+    {
   
     /* Kick the particle */
     localParticle->setV_full( localParticle->getV_full() + dt_kick_hydro * localParticle->getA() );
@@ -1237,10 +1260,16 @@ kick1_particles.add_action_set( peano4.toolbox.particles.ParticleParticleInterac
     
     localParticle->setHasBeenKicked(true);
     
-    }
+  }
     
-""",
-  additional_includes="""
+"""
+
+kick1_particles.add_action_set( peano4.toolbox.particles.ParticleParticleInteraction(
+  particle_set = particles,
+  particle_particle_interaction_kernel = particle_particle_compute_kernel,
+  touch_vertex_first_time_compute_particle_update_kernel= touch_particle_first_time_compute_kernel,
+  touch_vertex_last_time_compute_particle_update_kernel = touch_particle_last_time_compute_kernel,
+  additional_includes = """
 #include "Constants.h"
 #include <cmath>
 """
@@ -1261,32 +1290,38 @@ project.solversteps.add_step(kick1_particles)
 kick2_particles = peano4.solversteps.Step( "Kick2" )
 kick2_particles.use_vertex(particles)
 kick2_particles.use_cell(particle_tree_analysis.cell_marker)
-kick2_particles.add_action_set( peano4.toolbox.particles.ParticleParticleInteraction(
-  particle_set=particles,
-  particle_particle_interaction_kernel="""
+
+touch_particle_first_time_compute_kernel = """
+  
+  if(
+    localParticle->getParallelState() == globaldata::Particle::ParallelState::Local
+    and
+    not localParticle->getIsBoundaryParticle() )
+    {
+  
+    /* Prepare the particle for kick */
+    localParticle->setHasBeenKicked(false);
+  }
+    
+"""
+
+particle_particle_compute_kernel = """
     
   /* We do not excecute any specific action here */
   
-""",
-  touch_vertex_first_time_compute_particle_update_kernel="""
-  
-    if(localParticle->getParallelState()==globaldata::Particle::ParallelState::Local){
-    
-      /* Prepare the particle for kick */
-      localParticle->setHasBeenKicked(false);
-    }
-    
-""",
-  touch_vertex_last_time_compute_particle_update_kernel="""
+"""
+
+touch_particle_last_time_compute_kernel = """
   
   const double dt_kick_hydro = 0.5 * GLOBAL_TIME_STEP_SIZE;
 
-  if (not localParticle->getHasBeenKicked()
-      and
-      localParticle->getParallelState()==globaldata::Particle::ParallelState::Local
-      and 
-      not localParticle->getIsBoundaryParticle()
-      ){
+  if( 
+    localParticle->getParallelState()==globaldata::Particle::ParallelState::Local
+    and 
+    not localParticle->getHasBeenKicked()
+    and
+    not localParticle->getIsBoundaryParticle() )
+    {
   
     /* Kick the particle */
     localParticle->setV_full( localParticle->getV_full() + dt_kick_hydro * localParticle->getA() );
@@ -1321,7 +1356,13 @@ kick2_particles.add_action_set( peano4.toolbox.particles.ParticleParticleInterac
 
   }
     
-""",
+"""
+
+kick2_particles.add_action_set( peano4.toolbox.particles.ParticleParticleInteraction(
+  particle_set = particles,
+  particle_particle_interaction_kernel = particle_particle_compute_kernel,
+  touch_vertex_first_time_compute_particle_update_kernel= touch_particle_first_time_compute_kernel,
+  touch_vertex_last_time_compute_particle_update_kernel = touch_particle_last_time_compute_kernel,
   additional_includes="""
 #include "Constants.h"
 #include "equation_of_state.h"
@@ -1351,32 +1392,33 @@ project.solversteps.add_step(kick2_particles)
 drift_particles = peano4.solversteps.Step( "Drift" )
 drift_particles.use_vertex(particles)
 drift_particles.use_cell(particle_tree_analysis.cell_marker)
-drift_particles.add_action_set( peano4.toolbox.particles.ParticleParticleInteraction(
-  particle_set=particles,
-  particle_particle_interaction_kernel="""
+
+touch_particle_first_time_compute_kernel = """
+
+  /* We do not excecute any specific action here */
+
+"""
+
+particle_particle_compute_kernel = """
     
   /* We do not excecute any specific action here */
   
-""",
-  touch_vertex_first_time_compute_particle_update_kernel="""
+"""
 
-  /* We do not excecute any specific action here */
-
-""",
-  touch_vertex_last_time_compute_particle_update_kernel="""
+touch_particle_last_time_compute_kernel = """
   
   /* We update the position in this stage to avoid updating multiple times 
    * when a particle moves into a different cell. */
   
   const double timeStepSize = GLOBAL_TIME_STEP_SIZE;
   
-  if (
-    localParticle->getMoveState()!=globaldata::Particle::MoveState::Moved
-    and
-    localParticle->getParallelState()==globaldata::Particle::ParallelState::Local
+  if(
+    localParticle->getParallelState() == globaldata::Particle::ParallelState::Local
     and 
-    not localParticle->getIsBoundaryParticle()
-    ){
+    localParticle->getMoveState() != globaldata::Particle::MoveState::Moved
+    and
+    not localParticle->getIsBoundaryParticle() )
+    {
   
     /* Drift the particle (update position for a full time-step) */
     localParticle->setX( localParticle->getX() + timeStepSize * localParticle->getV_full() );
@@ -1385,9 +1427,14 @@ drift_particles.add_action_set( peano4.toolbox.particles.ParticleParticleInterac
     localParticle->setMoveState( globaldata::Particle::MoveState::Moved );
   }
   
-    
-""",
-  additional_includes="""
+"""
+
+drift_particles.add_action_set( peano4.toolbox.particles.ParticleParticleInteraction(
+  particle_set = particles,
+  particle_particle_interaction_kernel = particle_particle_compute_kernel,
+  touch_vertex_first_time_compute_particle_update_kernel= touch_particle_first_time_compute_kernel,
+  touch_vertex_last_time_compute_particle_update_kernel = touch_particle_last_time_compute_kernel,
+  additional_includes = """
 #include "Constants.h"
 #include "equation_of_state.h"
 #include <cmath>
@@ -1408,37 +1455,47 @@ project.solversteps.add_step(drift_particles)
 hydro_kick_extra = peano4.solversteps.Step( "HydroKickExtra" )
 hydro_kick_extra.use_vertex(particles)
 hydro_kick_extra.use_cell(particle_tree_analysis.cell_marker)
-hydro_kick_extra.add_action_set( peano4.toolbox.particles.ParticleParticleInteraction(
-  particle_set=particles,
-  particle_particle_interaction_kernel="""
+
+touch_particle_first_time_compute_kernel = """
+  
+  if( 
+    localParticle->getParallelState() == globaldata::Particle::ParallelState::Local
+    and
+    not localParticle->getIsBoundaryParticle() )
+    {
+  
+    /* Prepare the particle for kick */
+    localParticle->setHasBeenKicked(false);
+
+  }
+    
+"""
+
+particle_particle_compute_kernel = """
     
   /* We do not excecute any specific action here */
   
-""",
-  touch_vertex_first_time_compute_particle_update_kernel="""
+"""
+
+touch_particle_last_time_compute_kernel = """
   
-    if(localParticle->getParallelState()==globaldata::Particle::ParallelState::Local){
-    
-      /* Prepare the particle for kick */
-      localParticle->setHasBeenKicked(false);
-    }
-    
-""",
-  touch_vertex_last_time_compute_particle_update_kernel="""
-  
-/**
- * @brief Kick the additional variables
- *
- * Additional hydrodynamic quantites are kicked forward in time here. These
- * include thermal quantities (thermal energy or total energy or entropy, ...).
- *
- */
+  /**
+   * @brief Kick the additional variables
+   *
+   * Additional hydrodynamic quantites are kicked forward in time here. These
+   * include thermal quantities (thermal energy or total energy or entropy, ...).
+   *
+   */
 
   const double dt_therm = 0.5 * GLOBAL_TIME_STEP_SIZE;
   
-  if (not localParticle->getHasBeenKicked()
-  and
-  localParticle->getParallelState()==globaldata::Particle::ParallelState::Local){
+  if(
+    localParticle->getParallelState() == globaldata::Particle::ParallelState::Local
+    and 
+    not localParticle->getHasBeenKicked()
+    and
+    not localParticle->getIsBoundaryParticle() )
+    {
       
     /* Integrate the internal energy forward in time */
     const double delta_u = localParticle->getUDot() * dt_therm;
@@ -1449,14 +1506,21 @@ hydro_kick_extra.add_action_set( peano4.toolbox.particles.ParticleParticleIntera
 
     /* Check against absolute minimum.
      * Default value is zero. */
-    if (localParticle->getU_full() < 0.0) {
+    if (localParticle->getU_full() < 0.0) 
+    {
       localParticle->setU_full(0.0);
       localParticle->setUDot(0.0);
     }
     
   }
     
-""",
+"""
+
+hydro_kick_extra.add_action_set( peano4.toolbox.particles.ParticleParticleInteraction(
+  particle_set=particles,
+  particle_particle_interaction_kernel = particle_particle_compute_kernel,
+  touch_vertex_first_time_compute_particle_update_kernel= touch_particle_first_time_compute_kernel,
+  touch_vertex_last_time_compute_particle_update_kernel = touch_particle_last_time_compute_kernel,
   additional_includes="""
 #include "Constants.h"
 #include <cmath>
@@ -1468,24 +1532,25 @@ hydro_kick_extra.add_action_set( peano4.toolbox.particles.UpdateParticleGridAsso
 hydro_kick_extra.add_action_set( peano4.toolbox.particles.UpdateParallelState(particles) )
 project.solversteps.add_step(hydro_kick_extra)
 
+
 ##  Prediction step (relevant when using local time-stepping)
 
 predict_hydro_particles = peano4.solversteps.Step( "PredictHydro" )
 predict_hydro_particles.use_vertex(particles)
 predict_hydro_particles.use_cell(particle_tree_analysis.cell_marker)
-predict_hydro_particles.add_action_set( peano4.toolbox.particles.ParticleParticleInteraction(
-  particle_set=particles,
-  particle_particle_interaction_kernel="""
+
+touch_particle_first_time_compute_kernel = """
+
+  /* We do not excecute any specific action here */
+
+"""
+particle_particle_compute_kernel = """
     
   /* We do not excecute any specific action here */
   
-""",
-  touch_vertex_first_time_compute_particle_update_kernel="""
+"""
 
-  /* We do not excecute any specific action here */
-
-""",
-  touch_vertex_last_time_compute_particle_update_kernel="""
+touch_particle_last_time_compute_kernel = """
 
   /* Predict hydro terms (SWIFT) 
    * Relevant for inactive particles when using local-timestepping */
@@ -1497,7 +1562,8 @@ predict_hydro_particles.add_action_set( peano4.toolbox.particles.ParticleParticl
   const double dt_therm = dt_kick_hydro;
 //  const double dt_therm = dt_drift;
   
-  if( localParticle->getParallelState() == globaldata::Particle::ParallelState::Local 
+  if( 
+    localParticle->getParallelState() == globaldata::Particle::ParallelState::Local 
     and 
     not localParticle->getIsBoundaryParticle() )
     {
@@ -1564,9 +1630,15 @@ predict_hydro_particles.add_action_set( peano4.toolbox.particles.ParticleParticl
       localParticle->setSoundSpeed(soundspeed);
       localParticle->setV_sig_AV( std::max(localParticle->getV_sig_AV(), 2.0 * soundspeed) );
     
-    }
+  }
     
-""",
+"""
+
+predict_hydro_particles.add_action_set( peano4.toolbox.particles.ParticleParticleInteraction(
+  particle_set=particles,
+  particle_particle_interaction_kernel = particle_particle_compute_kernel,
+  touch_vertex_first_time_compute_particle_update_kernel= touch_particle_first_time_compute_kernel,
+  touch_vertex_last_time_compute_particle_update_kernel = touch_particle_last_time_compute_kernel,
   additional_includes="""
 #include "Constants.h"
 #include "equation_of_state.h"
@@ -1588,28 +1660,37 @@ project.solversteps.add_step(predict_hydro_particles)
 kick_particles_corrector = peano4.solversteps.Step( "KickCorrector" )
 kick_particles_corrector.use_vertex(particles)
 kick_particles_corrector.use_cell(particle_tree_analysis.cell_marker)
-kick_particles_corrector.add_action_set( peano4.toolbox.particles.ParticleParticleInteraction(
-  particle_set=particles,
-  particle_particle_interaction_kernel="""
+
+touch_particle_first_time_compute_kernel = """
+  
+  if(
+    localParticle->getParallelState() == globaldata::Particle::ParallelState::Local
+    and
+    not localParticle->getIsBoundaryParticle() )
+    {
+
+    localParticle->setHasBeenKicked(false);
+
+  }
+    
+"""
+particle_particle_compute_kernel = """
     
   /* We do not excecute any specific action here */
   
-""",
-  touch_vertex_first_time_compute_particle_update_kernel="""
-  
-    if(localParticle->getParallelState()==globaldata::Particle::ParallelState::Local){
-      localParticle->setHasBeenKicked(false);
-    }
-    
-""",
-  touch_vertex_last_time_compute_particle_update_kernel="""
+"""
+
+touch_particle_last_time_compute_kernel = """
   
   const double timeStepSize_half = 0.5 * GLOBAL_TIME_STEP_SIZE;
   
-  if( not localParticle->getHasBeenKicked()
-      and
-      localParticle->getParallelState()==globaldata::Particle::ParallelState::Local
- ){
+  if(
+    localParticle->getParallelState() == globaldata::Particle::ParallelState::Local 
+    and
+    not localParticle->getHasBeenKicked()
+    and
+    not localParticle->getIsBoundaryParticle() )
+    {
   
     /* Kick the particle */
     localParticle->setV_full( localParticle->getV() + 
@@ -1622,7 +1703,13 @@ kick_particles_corrector.add_action_set( peano4.toolbox.particles.ParticlePartic
     
   }
     
-""",
+"""
+
+kick_particles_corrector.add_action_set( peano4.toolbox.particles.ParticleParticleInteraction(
+  particle_set=particles,
+  particle_particle_interaction_kernel = particle_particle_compute_kernel,
+  touch_vertex_first_time_compute_particle_update_kernel= touch_particle_first_time_compute_kernel,
+  touch_vertex_last_time_compute_particle_update_kernel = touch_particle_last_time_compute_kernel,
   additional_includes="""
 #include "Constants.h"
 #include <cmath>
@@ -1643,27 +1730,38 @@ project.solversteps.add_step(kick_particles_corrector)
 kick_corrector_extra = peano4.solversteps.Step( "KickCorrectorExtra" )
 kick_corrector_extra.use_vertex(particles)
 kick_corrector_extra.use_cell(particle_tree_analysis.cell_marker)
-kick_corrector_extra.add_action_set( peano4.toolbox.particles.ParticleParticleInteraction(
-  particle_set=particles,
-  particle_particle_interaction_kernel="""
+
+touch_particle_first_time_compute_kernel = """
+  
+  if(
+    localParticle->getParallelState() == globaldata::Particle::ParallelState::Local
+    and 
+    not localParticle->getIsBoundaryParticle() )
+    {
+
+    localParticle->setHasBeenKicked(false);
+
+  }
+    
+"""
+
+particle_particle_compute_kernel = """
     
   /* We do not excecute any specific action here */
   
-""",
-  touch_vertex_first_time_compute_particle_update_kernel="""
-  
-    if(localParticle->getParallelState()==globaldata::Particle::ParallelState::Local){
-      localParticle->setHasBeenKicked(false);
-    }
-    
-""",
-  touch_vertex_last_time_compute_particle_update_kernel="""
+"""
+
+touch_particle_last_time_compute_kernel = """
   
   const double timeStepSize_half = 0.5*GLOBAL_TIME_STEP_SIZE;
   
-  if( not localParticle->getHasBeenKicked()
-      and
-      localParticle->getParallelState()==globaldata::Particle::ParallelState::Local){
+  if( 
+    localParticle->getParallelState() == globaldata::Particle::ParallelState::Local
+    and
+    not localParticle->getHasBeenKicked()
+    and
+    not localParticle->getIsBoundaryParticle() )
+    {
   
     /* Kick the internal energy of the particle */
     
@@ -1677,7 +1775,13 @@ kick_corrector_extra.add_action_set( peano4.toolbox.particles.ParticleParticleIn
     
   }
     
-""",
+"""
+
+kick_corrector_extra.add_action_set( peano4.toolbox.particles.ParticleParticleInteraction(
+  particle_set=particles,
+  particle_particle_interaction_kernel = particle_particle_compute_kernel,
+  touch_vertex_first_time_compute_particle_update_kernel= touch_particle_first_time_compute_kernel,
+  touch_vertex_last_time_compute_particle_update_kernel = touch_particle_last_time_compute_kernel,
   additional_includes="""
 #include "Constants.h"
 #include <cmath>
@@ -1698,30 +1802,40 @@ project.solversteps.add_step(kick_corrector_extra)
 reset_HasConverged_step = peano4.solversteps.Step( "ResetHasConverged" )
 reset_HasConverged_step.use_vertex(particles)
 reset_HasConverged_step.use_cell(particle_tree_analysis.cell_marker)
-reset_HasConverged_step.add_action_set( peano4.toolbox.particles.ParticleParticleInteraction(
-  particle_set=particles,
-  particle_particle_interaction_kernel="""
-    
-  /* We do not excecute any specific action here */
-  
-""",
-  touch_vertex_first_time_compute_particle_update_kernel="""
+
+touch_particle_first_time_compute_kernel = """
   
   /* We do not excecute any specific action here */
 
+"""
+
+particle_particle_compute_kernel = """
     
-""",
-  touch_vertex_last_time_compute_particle_update_kernel="""
+  /* We do not excecute any specific action here */
+  
+"""
+
+touch_particle_last_time_compute_kernel = """
   
   /* Reset HasConverged property back to false so we can perform new N-R iterations */
   
-  if(localParticle->getParallelState()==globaldata::Particle::ParallelState::Local){
+  if(
+    localParticle->getParallelState() == globaldata::Particle::ParallelState::Local
+    and
+    not localParticle->getIsBoundaryParticle() )
+    {
     
     localParticle->setHasConverged(false);
     
   }
     
-""",
+"""
+
+reset_HasConverged_step.add_action_set( peano4.toolbox.particles.ParticleParticleInteraction(
+  particle_set=particles,
+  particle_particle_interaction_kernel = particle_particle_compute_kernel,
+  touch_vertex_first_time_compute_particle_update_kernel= touch_particle_first_time_compute_kernel,
+  touch_vertex_last_time_compute_particle_update_kernel = touch_particle_last_time_compute_kernel,
   additional_includes="""
 #include "Constants.h"
 #include <cmath>
@@ -1742,22 +1856,22 @@ project.solversteps.add_step(reset_HasConverged_step)
 init_time_step = peano4.solversteps.Step( "InitTimeStep" )
 init_time_step.use_vertex(particles)
 init_time_step.use_cell(particle_tree_analysis.cell_marker)
-init_time_step.add_action_set( peano4.toolbox.particles.ParticleParticleInteraction(
-  particle_set=particles,
-  particle_particle_interaction_kernel="""
-    
-  /* We do not excecute any specific action here */
-  
-""",
-  touch_vertex_first_time_compute_particle_update_kernel="""
+
+touch_particle_first_time_compute_kernel = """
   
   /* We do not excecute any specific action here */
 
+"""
+
+particle_particle_compute_kernel = """
     
-""",
-  touch_vertex_last_time_compute_particle_update_kernel="""
+  /* We do not excecute any specific action here */
+  
+"""
+
+touch_particle_last_time_compute_kernel = """
    
-  if( localParticle->getParallelState()==globaldata::Particle::ParallelState::Local ){
+  if( localParticle->getParallelState() == globaldata::Particle::ParallelState::Local ){
   
     /* Store value of h at the beggining of current time-step */
     localParticle->setSmoothingLengthPrevious( localParticle->getSmoothingLength() );
@@ -1773,22 +1887,29 @@ init_time_step.add_action_set( peano4.toolbox.particles.ParticleParticleInteract
     /* Flag if particle is at boundary of the simulation box */
     localParticle->setIsBoundaryParticle(false);
     const double max_dist_boundary = 0.05;
+
     for (int d=0; d<Dimensions; d++) {
       if ( localParticle->getX()(d) < max_dist_boundary || 
-           localParticle->getX()(d) > (1.0 - max_dist_boundary) ) {
+           localParticle->getX()(d) > (1.0 - max_dist_boundary) ) 
+      {
 
         localParticle->setIsBoundaryParticle(true);
 
       }
     }
 
-    
     /* Also prepare particle for Drift step */
     localParticle->setMoveState( globaldata::Particle::MoveState::NotMovedYet );    
 
   }
     
-""",
+"""
+
+init_time_step.add_action_set( peano4.toolbox.particles.ParticleParticleInteraction(
+  particle_set=particles,
+  particle_particle_interaction_kernel = particle_particle_compute_kernel,
+  touch_vertex_first_time_compute_particle_update_kernel= touch_particle_first_time_compute_kernel,
+  touch_vertex_last_time_compute_particle_update_kernel = touch_particle_last_time_compute_kernel,
   additional_includes="""
 #include "Constants.h"
 #include <cmath>
@@ -1810,30 +1931,34 @@ project.solversteps.add_step(init_time_step)
 impose_BC_particles = peano4.solversteps.Step( "ImposeBC" )
 impose_BC_particles.use_vertex(particles)
 impose_BC_particles.use_cell(particle_tree_analysis.cell_marker)
-impose_BC_particles.add_action_set( peano4.toolbox.particles.ParticleParticleInteraction(
-  particle_set=particles,
-  particle_particle_interaction_kernel="""
+
+touch_particle_first_time_compute_kernel = """
+  
+   if( localParticle->getParallelState() == globaldata::Particle::ParallelState::Local ){
+
+     localParticle->setMoveState( globaldata::Particle::MoveState::NotMovedYet );
+
+   }
+
+"""
+particle_particle_compute_kernel = """
     
   /* We do not excecute any specific action here */
   
-""",
-  touch_vertex_first_time_compute_particle_update_kernel="""
-  
-   if(localParticle->getParallelState()==globaldata::Particle::ParallelState::Local){
-     localParticle->setMoveState( globaldata::Particle::MoveState::NotMovedYet );
-   }
+"""
 
-""",
-  touch_vertex_last_time_compute_particle_update_kernel="""
+touch_particle_last_time_compute_kernel = """
     
-  if (
-  localParticle->getMoveState()!=globaldata::Particle::MoveState::Moved
-  and
-  localParticle->getParallelState()==globaldata::Particle::ParallelState::Local
-  ){
+  if(
+    localParticle->getParallelState() == globaldata::Particle::ParallelState::Local
+    and
+    localParticle->getMoveState() != globaldata::Particle::MoveState::Moved
+    and
+    not localParticle->getIsBoundaryParticle() )
+    {
   
-    for (int d=0; d<Dimensions; d++) {
-      if ( localParticle->getX()(d)<0.0 ) {
+    for( int d=0; d<Dimensions; d++ ){
+      if( localParticle->getX()(d)<0.0 ){
 
         /* Reflecting BC */   
         localParticle->setX     ( d, std::abs(localParticle->getX     ()(d)) );
@@ -1841,7 +1966,7 @@ impose_BC_particles.add_action_set( peano4.toolbox.particles.ParticleParticleInt
         localParticle->setV_full( d, std::abs(localParticle->getV_full()(d)) );
 
       }
-      if ( localParticle->getX()(d)>1.0 ) {
+      if( localParticle->getX()(d)>1.0 ){
 
         /* Reflecting BC */   
         localParticle->setX     ( d,    2.0 - localParticle->getX     ()(d)  );
@@ -1852,11 +1977,16 @@ impose_BC_particles.add_action_set( peano4.toolbox.particles.ParticleParticleInt
     
       localParticle->setMoveState( globaldata::Particle::MoveState::Moved );
       
-      } /* End for dimensions */
+    } /* End for dimensions */
       
-    }
+  }
     
-""",
+"""
+impose_BC_particles.add_action_set( peano4.toolbox.particles.ParticleParticleInteraction(
+  particle_set=particles,
+  particle_particle_interaction_kernel = particle_particle_compute_kernel,
+  touch_vertex_first_time_compute_particle_update_kernel= touch_particle_first_time_compute_kernel,
+  touch_vertex_last_time_compute_particle_update_kernel = touch_particle_last_time_compute_kernel,
   additional_includes="""
 #include "Constants.h"
 #include <cmath>
@@ -1878,30 +2008,39 @@ project.solversteps.add_step(impose_BC_particles)
 end_time_step = peano4.solversteps.Step( "EndTimeStep" )
 end_time_step.use_vertex(particles)
 end_time_step.use_cell(particle_tree_analysis.cell_marker)
-end_time_step.add_action_set( peano4.toolbox.particles.ParticleParticleInteraction(
-  particle_set=particles,
-  particle_particle_interaction_kernel="""
+
+touch_particle_first_time_compute_kernel = """
+  
+  /* Mark that particle needs to be updated */
+
+  if( 
+    localParticle->getParallelState() == globaldata::Particle::ParallelState::Local
+    and
+    not localParticle->getIsBoundaryParticle() )
+    {
+
+    localParticle->setHasBeenKicked(false);
+
+  }
+    
+"""
+particle_particle_compute_kernel = """
     
   /* We do not excecute any specific action here */
   
-""",
-  touch_vertex_first_time_compute_particle_update_kernel="""
-  
-    /* Mark particle needs to be updated */
+"""
 
-    if(localParticle->getParallelState()==globaldata::Particle::ParallelState::Local){
-      localParticle->setHasBeenKicked(false);
-    }
-    
-""",
-  touch_vertex_last_time_compute_particle_update_kernel="""
+touch_particle_last_time_compute_kernel = """
   
   const double timeStepSize = GLOBAL_TIME_STEP_SIZE;
   
-  if( not localParticle->getHasBeenKicked()
-      and
-      localParticle->getParallelState()==globaldata::Particle::ParallelState::Local
- ){
+  if(
+    localParticle->getParallelState() == globaldata::Particle::ParallelState::Local
+    and
+    not localParticle->getHasBeenKicked()
+    and
+    not localParticle->getIsBoundaryParticle() )
+    {
       
     /* Calculate max time-step size value allowed by the CFL condition */
     const double soundspeed = localParticle->getSoundSpeed();
@@ -1911,12 +2050,18 @@ end_time_step.add_action_set( peano4.toolbox.particles.ParticleParticleInteracti
     assertion1( tarch::la::greaterEquals( localParticle->getTimeStepSize(), timeStepSize ), 
                  localParticle->toString() );
 
-    /* Mark particle is done */
+    /* Mark that particle is done */
     localParticle->setHasBeenKicked(true);
     
   }
     
-""",
+"""
+
+end_time_step.add_action_set( peano4.toolbox.particles.ParticleParticleInteraction(
+  particle_set=particles,
+  particle_particle_interaction_kernel = particle_particle_compute_kernel,
+  touch_vertex_first_time_compute_particle_update_kernel= touch_particle_first_time_compute_kernel,
+  touch_vertex_last_time_compute_particle_update_kernel = touch_particle_last_time_compute_kernel,
   additional_includes="""
 #include "Constants.h"
 #include <cmath>
@@ -1939,19 +2084,19 @@ project.solversteps.add_step(end_time_step)
 rearrange_particles = peano4.solversteps.Step( "RearrangeAtStart" )
 rearrange_particles.use_vertex(particles)
 rearrange_particles.use_cell(particle_tree_analysis.cell_marker)
-rearrange_particles.add_action_set( peano4.toolbox.particles.ParticleParticleInteraction(
-  particle_set=particles,
-  particle_particle_interaction_kernel="""
-    
-  /* We do not excecute any specific action here */
-  
-""",
-  touch_vertex_first_time_compute_particle_update_kernel="""
+
+touch_particle_first_time_compute_kernel = """
   
   /* We do not excecute any specific action here */
 
-""",
-  touch_vertex_last_time_compute_particle_update_kernel="""
+"""
+particle_particle_compute_kernel = """
+    
+  /* We do not excecute any specific action here */
+  
+"""
+
+touch_particle_last_time_compute_kernel = """
   
 /*
   // 1D test -- put particle into straight lines
@@ -1974,7 +2119,13 @@ rearrange_particles.add_action_set( peano4.toolbox.particles.ParticleParticleInt
 */  
   
     
-""",
+"""
+
+rearrange_particles.add_action_set( peano4.toolbox.particles.ParticleParticleInteraction(
+  particle_set=particles,
+  particle_particle_interaction_kernel = particle_particle_compute_kernel,
+  touch_vertex_first_time_compute_particle_update_kernel= touch_particle_first_time_compute_kernel,
+  touch_vertex_last_time_compute_particle_update_kernel = touch_particle_last_time_compute_kernel,
   additional_includes="""
 #include "Constants.h"
 #include <cmath>
@@ -1987,12 +2138,15 @@ rearrange_particles.add_action_set( peano4.toolbox.particles.UpdateParallelState
 project.solversteps.add_step(rearrange_particles)
 
 
-# ### Plots setup
+# End of actions' declarations --------------------------------------------------
+
+# Plot setup -------------------------------------------------------------------
 # 
-# I will have to plot the outcome (or any snapshot). With particles, each of my dumps produces two types of files: particle data and mesh data. For the mesh, I rely on the toolbox's grid plotting. The plot is the step where we don't need the AMR criterion - the particles don't move here after all. We however run the tree analysis, so it is up-to-date for the next step.
-
-# In[ ]:
-
+# I will have to plot the outcome (or any snapshot). With particles, each of my
+# dumps produces two types of files: particle data and mesh data. For the mesh,
+# I rely on the toolbox's grid plotting. The plot is the step where we don't
+# need the AMR criterion - the particles don't move here after all. We however
+# run the tree analysis, so it is up-to-date for the next step.
 
 # Particle plotter
 particle_plotter = peano4.toolbox.particles.PlotParticlesInVTKFormat( "particles", particles, time_stamp_evaluation=peano4.toolbox.particles.PlotParticlesInVTKFormat.CountTimeSteps )
@@ -2044,9 +2198,6 @@ project.solversteps.add_step(print_solution)
 # ## Generate the actual C++ code
 # 
 # Next, we generate the actual Peano 4 C++ code:
-
-# In[ ]:
-
 
 # For clang, we need to add the "-lstdc++fs" flag to the makefile
 # We can do this manually in the generated code, or use
