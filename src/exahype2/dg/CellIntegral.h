@@ -29,37 +29,63 @@ namespace exahype2 {
      * does not include the previous time step's solution, and it is not (yet)
      * multiplied with the time step size or the inverse of the mass matrix.
      *
-     * ## Algorithmic steps
+     * The whole implementation works cell-wisely, i.e. runs through cell by
+     * cell. Within each cell, it works dof-wisely, i.e. it runs through each
+     * individual dof and accumulates all the PDE contriutions to this dof.
+     * This second loop is for loop over node, and the d-dimensional index
+     * of node if given by index.
      *
-     * This version of the volumetric kernel works purely dof-wisely. That is,
-     * we iterate over the @f$ (p+1)^d @f$ quadrature points within the cell
-     * and compute the entries from @f$ \hat Q @f$. Per dof, we run through
-     * the following steps:
+     * ## Flux evaluation
      *
-     * - Set the outcome to zero. This is important, as we accumulate from
-     *   hereon.
-     * - If you want to use a flux function: We know that the contribution of
-     *   the flux term for one point only depends on the other dofs in the
-     *   same line/row/column of the Cartesian dof layout. This is due to
-     *   the fact that we use Legendre polynomials. Here, the polynomials are
-     *   orthogonal, which simplifies things. So we don't have to loop over
-     *   all dofs, but we can only loop in all directions once.
+     * This version of the volumetric kernel uses the Gauss Legendre property,
+     * i.e. the orthogonality of the polynomials, plus the tensor product style
+     * of the shape functions aggressively.
+     *
+     * For the flux, we first loop over the dimensions (dim) as we have
+     * fluxes in all d directions. We are interested how the dof in the
+     * position index changes due to all the fluxes around. So we want to
+     * find out what happens if we test against the test function @f$ \phi @f$
+     * in the index dof.
+     *
+     * For the flux, tensor products and orthogonality means that the flux
+     * in x-direction in any point really only interferes with the unknowns
+     * along the x-direction along this same line: We test @f$ F(Q) \partial_x \phi @f$
+     * and assume that @f$ \phi = \phi _{1d}(x)\phi _{1d}(y)\phi _{1d}(z) @f$.
+     * Furthermore, lets represent @f$ F(Q) @f$ with the same polynomials,
+     * too. In the product of the flux with the test function (which now
+     * consists of 2d ingredients), all the polynomials besides the @f$ \partial _x \phi(x) @f$
+     * are orthogonal - the fact that the polynomials have been chosen as
+     * orthogonal ones means that their derivatives are obviously not automatically
+     * orthogonal.
+     *
+     * So all the shape functions spanning F where the y and z coordinates do
+     * not match cancel out in the example above if the test functions don't
+     * have the same coordinates. We are left with all the shapes along the
+     * x-axis within the cubic cell. Analogous arguments hold for y and z.
      *
      *
+     * ## Algebraic source
      *
-     * Copy over in into out. We run an explicit Euler, so the value is updated
-     *   according to a formula @f$ Q(t+\Delta t) = Q(t) + \Delta t \cdot (F + NCP) + S @f$
-     *   ,the first part of which are the values at the last timestep
+     * The treatment of the source term is close to trivial: We assume that
+     * we can represent the source @f$ S(Q) @f$ in the shape space. Again,
+     * we exploit the orthogonality. If we want to test what the impact of
+     * the source is if we test against the index-th test function, the
+     * orthogonality implies that we only have take S(Q) in index multiplied
+     * with its shape function. We get a mass matrix entry.
      *
-     * - Precompute value of the flux function at each node
      *
-     * - For each node in the cell, add the change (Δt \cdot (F + NCP) + S essentially)
-     *  -> Add purely local source contribution
-     *  -> For each direction, compute the gradient in that direction, then using this
-     *     compute the non-conservative product in that direction and add it
-     *  -> For each dimension and each node in that dimension (including oneself), use
-     *     the precomputed flux at that node to compute its contribution to the current node.
+     * ## Non-conservative product
      *
+     * The non-conservative product once again relies on a very crude numerical
+     * approximation: We assume that @f$ B_x(Q) \partial _x Q @f$ can be
+     * represented within our orthogonal shape space. Consequently, it is
+     * tried exactly in the same way as the algebraic source.
+     *
+     * This approach seems to be super inaccurate, but we have to keep in mind
+     * that B can be highly non-linear. So we don't know anything about the
+     * analytical shape of @f$ B_x(Q) \partial _x Q @f$ anyway: It could be
+     * any type of polynomial. So it is convenient to assume that it is once
+     * again from the same space as @f$ \phi @f$.
      *
      *
      * ## Arguments
@@ -144,15 +170,10 @@ namespace exahype2 {
     /**
      * Final step of DG algorithm
      *
-     * This is the final step of any DG algorithm. Consult dg.h for a
+     * This is the final step of any DG algorithm step, i.e. any Runge-Kutta
+     * step. Consult dg.h for a
      * clearer explanation.
      *
-     * - I assume that the input points to the old time step's solution.
-     *   This is typically
-     *
-     *        fineGridCell{{UNKNOWN_IDENTIFIER}}LinearCombination
-     *
-     *   in a Discontinuous Galerkin context.
      * - I assume that the output points to the new time step's data. This is
      *   usually
      *
@@ -167,32 +188,12 @@ namespace exahype2 {
      * - The output shall holds the flux contributions in a Runge-Kutta sense,
      *   i.e. it shall not hold the new time step but the amount that's added.
      *
-     *
-     * Let
-     *
-     * @f$ \partial Q = F(Q) @f$
-     *
-     * be our ODE of interest. Runge-Kutta will construct new solutions according
-     * to a rule
-     *
-     * @f$ Q^{(new)} = c_i \cdot dt \cdot (a_{i1} k_1 + a_{i2} k_2 + \dots )  @f$
-     *
-     * The linear combination field will holds the current @f$ Q^{(new)} @f$. The
-     * estimates however have to be the individual @f$ k_j @f$ from above. That means,
-     * they are not to be scaled by any time step size, and they do not incorporate
-     * the original time step. They also do not carry any auxiliary variables. So
-     * we don't need the input data
-     *
-     *        fineGridCell{{UNKNOWN_IDENTIFIER}}LinearCombination
-     *
-     * in this routine. We focus on the output.
-     *
      * This particular routine assumes that the mass matrix is a diagonal. Therefore,
      * the inversion is trivial: We iterate over all degrees of freedom. This is a
      * d-dimensional for loop (dfor). Per dof, we compute the diagonal, and every
      * unknown then is scaled by the inverse of this diagonal.
      */
-    void multiplyWithInvertedMassMatrixAndClearAuxiliaryVariables_GaussLegendre(
+    void multiplyWithInvertedMassMatrix_GaussLegendre(
       ::exahype2::CellData&                          cellData,
       const int                                      order,
       const int                                      unknowns,
