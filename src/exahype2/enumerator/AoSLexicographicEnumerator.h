@@ -15,11 +15,24 @@
 namespace exahype2 {
   namespace enumerator {
     /**
-     * Default enumerator for all DoFs in ExaHyPE 2
+     * Array of struct enumerator
+     *
+     * This is the default enumerator for all DoFs in ExaHyPE 2.
      *
      * We assume that we have a lexicographic ordering of the patch data or
-     * DG degree of freedom (quadrature points) and
-     * all data therein are ordered lexicographically and stored in as AoS.
+     * DG degree of freedom (quadrature points) and all data therein are
+     * ordered lexicographically and stored in as AoS: All data are
+     *
+     * - organised as array of structs, i.e. if you store quantities (a,b,c) per
+     *   degree of freedom (dof), then the array first holds the a value of the first
+     *   dof, then the b value, then the c value, and then it continues with the
+     *   a value of the next dof.
+     * - organised lexicographically, i.e. we first enumerate all the degrees of
+     *   freedom along the x-axis, then along the y-axis, then along the z-axis.
+     * - organised from left to right, bottom-up and front to back.
+     * - organised one patch after another, i.e. we first enumerate all the values
+     *   of the first patch, before we continue with any value of the second
+     *   patch.
      *
      * @see Enumerator.h for a generic description of attribute semantics.
      *
