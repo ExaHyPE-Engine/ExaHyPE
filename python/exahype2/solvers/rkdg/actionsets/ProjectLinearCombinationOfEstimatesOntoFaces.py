@@ -33,7 +33,7 @@ class ProjectLinearCombinationOfEstimatesOntoFaces(AbstractRungeKuttaDGActionSet
   """
  
   
-  TemplateProjectAsPreamble = """
+  TemplateProjectLinearCombination = """
   {% for PREDICATE_NO in range(0,PREDICATES|length) %}
   if ({{PREDICATES[PREDICATE_NO]}}) {
 
@@ -69,61 +69,12 @@ class ProjectLinearCombinationOfEstimatesOntoFaces(AbstractRungeKuttaDGActionSet
 
     for (int d=0; d<Dimensions; d++) {
       {{FACE_METADATA_ACCESSOR}}(d).setUpdated(1,true);
-      {{FACE_METADATA_ACCESSOR}}(d).setUpdatedTimeStamp(1,{{CELL_METADATA_ACCESSOR}}.getTimeStamp());
       {{FACE_METADATA_ACCESSOR}}(d+Dimensions).setUpdated(0,true);
-      {{FACE_METADATA_ACCESSOR}}(d+Dimensions).setUpdatedTimeStamp(0,{{CELL_METADATA_ACCESSOR}}.getTimeStamp());
       logDebug( "touchCellLastTime(...)", "update {{FACE_METADATA_ACCESSOR}}(" << d << ")(1)" );
       logDebug( "touchCellLastTime(...)", "update {{FACE_METADATA_ACCESSOR}}(" << (d+Dimensions) << ")(0)" );
     }
   }
   {% endfor %}
-
-
-
-  if (
-    repositories::{{SOLVER_INSTANCE}}.isLastGridSweepOfTimeStep()
-  ) {
-    double* QIn  = fineGridCell{{UNKNOWN_IDENTIFIER}}LinearCombination.value;
-    
-    #if Dimensions==2
-    ::exahype2::dg::projectVolumetricDataOntoFaces(
-      QIn,
-      {{ORDER}},
-      {{NUMBER_OF_UNKNOWNS}},
-      {{NUMBER_OF_AUXILIARY_VARIABLES}},
-      repositories::{{SOLVER_INSTANCE}}.BasisFunctionValuesLeft1d,
-      fineGridFaces{{UNKNOWN_IDENTIFIER}}OldTimeStepProjection(0).value, //left
-      fineGridFaces{{UNKNOWN_IDENTIFIER}}OldTimeStepProjection(2).value, //right
-      fineGridFaces{{UNKNOWN_IDENTIFIER}}OldTimeStepProjection(1).value, //down
-      fineGridFaces{{UNKNOWN_IDENTIFIER}}OldTimeStepProjection(3).value  //up
-    );
-    #elif Dimensions==3
-    ::exahype2::dg::projectVolumetricDataOntoFaces(
-      QIn,
-      {{ORDER}},
-      {{NUMBER_OF_UNKNOWNS}},
-      {{NUMBER_OF_AUXILIARY_VARIABLES}},
-      repositories::{{SOLVER_INSTANCE}}.BasisFunctionValuesLeft1d,
-      fineGridFaces{{UNKNOWN_IDENTIFIER}}OldTimeStepProjection(0).value, //left
-      fineGridFaces{{UNKNOWN_IDENTIFIER}}OldTimeStepProjection(3).value, //right
-      fineGridFaces{{UNKNOWN_IDENTIFIER}}OldTimeStepProjection(1).value, //down
-      fineGridFaces{{UNKNOWN_IDENTIFIER}}OldTimeStepProjection(4).value, //up
-      fineGridFaces{{UNKNOWN_IDENTIFIER}}OldTimeStepProjection(2).value, //front
-      fineGridFaces{{UNKNOWN_IDENTIFIER}}OldTimeStepProjection(5).value  //back
-    );
-    #endif
-
-    for (int d=0; d<Dimensions; d++) {
-      {{FACE_METADATA_ACCESSOR}}(d).setUpdated(1,true);
-      {{FACE_METADATA_ACCESSOR}}(d).setOldTimeStamp(1,{{FACE_METADATA_ACCESSOR}}(d).getUpdatedTimeStamp(1));
-      {{FACE_METADATA_ACCESSOR}}(d).setNewTimeStamp(1,{{CELL_METADATA_ACCESSOR}}.getTimeStamp());
-      {{FACE_METADATA_ACCESSOR}}(d+Dimensions).setUpdated(0,true);
-      {{FACE_METADATA_ACCESSOR}}(d+Dimensions).setOldTimeStamp(0,{{FACE_METADATA_ACCESSOR}}(d).getUpdatedTimeStamp(0));
-      {{FACE_METADATA_ACCESSOR}}(d+Dimensions).setNewTimeStamp(0,{{CELL_METADATA_ACCESSOR}}.getTimeStamp());
-      logDebug( "touchCellLastTime(...)", "update {{FACE_METADATA_ACCESSOR}}(" << d << ")(1)" );
-      logDebug( "touchCellLastTime(...)", "update {{FACE_METADATA_ACCESSOR}}(" << (d+Dimensions) << ")(0)" );
-    }
-  }
 """
   
 
@@ -131,41 +82,17 @@ class ProjectLinearCombinationOfEstimatesOntoFaces(AbstractRungeKuttaDGActionSet
   if (
     repositories::{{SOLVER_INSTANCE}}.isLastGridSweepOfTimeStep()
   ) {
-    double* QIn  = fineGridCell{{UNKNOWN_IDENTIFIER}}.value;
-    
-    #if Dimensions==2
-    ::exahype2::dg::projectVolumetricDataOntoFaces(
-      QIn,
-      {{ORDER}},
-      {{NUMBER_OF_UNKNOWNS}},
-      {{NUMBER_OF_AUXILIARY_VARIABLES}},
-      repositories::{{SOLVER_INSTANCE}}.BasisFunctionValuesLeft1d,
-      fineGridFaces{{UNKNOWN_IDENTIFIER}}EstimateProjection(0).value, //left
-      fineGridFaces{{UNKNOWN_IDENTIFIER}}EstimateProjection(2).value, //right
-      fineGridFaces{{UNKNOWN_IDENTIFIER}}EstimateProjection(1).value, //down
-      fineGridFaces{{UNKNOWN_IDENTIFIER}}EstimateProjection(3).value  //up
-    );
-    #elif Dimensions==3
-    ::exahype2::dg::projectVolumetricDataOntoFaces(
-      QIn,
-      {{ORDER}},
-      {{NUMBER_OF_UNKNOWNS}},
-      {{NUMBER_OF_AUXILIARY_VARIABLES}},
-      repositories::{{SOLVER_INSTANCE}}.BasisFunctionValuesLeft1d,
-      fineGridFaces{{UNKNOWN_IDENTIFIER}}EstimateProjection(0).value, //left
-      fineGridFaces{{UNKNOWN_IDENTIFIER}}EstimateProjection(3).value, //right
-      fineGridFaces{{UNKNOWN_IDENTIFIER}}EstimateProjection(1).value, //down
-      fineGridFaces{{UNKNOWN_IDENTIFIER}}EstimateProjection(4).value, //up
-      fineGridFaces{{UNKNOWN_IDENTIFIER}}EstimateProjection(2).value, //front
-      fineGridFaces{{UNKNOWN_IDENTIFIER}}EstimateProjection(5).value  //back
-    );
-    #endif
-
     for (int d=0; d<Dimensions; d++) {
       {{FACE_METADATA_ACCESSOR}}(d).setUpdated(1,true);
       {{FACE_METADATA_ACCESSOR}}(d).setUpdatedTimeStamp(1,{{CELL_METADATA_ACCESSOR}}.getTimeStamp());
+      {{FACE_METADATA_ACCESSOR}}(d).setOldTimeStamp(    1,{{FACE_METADATA_ACCESSOR}}(d).getNewTimeStamp());
+      {{FACE_METADATA_ACCESSOR}}(d).setNewTimeStamp(    1,{{CELL_METADATA_ACCESSOR}}.getTimeStamp());
+
       {{FACE_METADATA_ACCESSOR}}(d+Dimensions).setUpdated(0,true);
       {{FACE_METADATA_ACCESSOR}}(d+Dimensions).setUpdatedTimeStamp(0,{{CELL_METADATA_ACCESSOR}}.getTimeStamp());
+      {{FACE_METADATA_ACCESSOR}}(d+Dimensions).setOldTimeStamp(    0,{{FACE_METADATA_ACCESSOR}}(d+Dimensions).getNewTimeStamp());
+      {{FACE_METADATA_ACCESSOR}}(d+Dimensions).setNewTimeStamp(    0,{{CELL_METADATA_ACCESSOR}}.getTimeStamp());
+
       logDebug( "touchCellLastTime(...)", "update {{FACE_METADATA_ACCESSOR}}(" << d << ")(1)" );
       logDebug( "touchCellLastTime(...)", "update {{FACE_METADATA_ACCESSOR}}(" << (d+Dimensions) << ")(0)" );
     }
@@ -211,7 +138,7 @@ class ProjectLinearCombinationOfEstimatesOntoFaces(AbstractRungeKuttaDGActionSet
     d[ "FACE_METADATA_ACCESSOR" ] = "fineGridFaces"  + self._solver._face_label.name
     d[ "CELL_METADATA_ACCESSOR" ] = "fineGridCell""" + self._solver._cell_label.name
     if operation_name==peano4.solversteps.ActionSet.OPERATION_TOUCH_CELL_FIRST_TIME:
-      result = jinja2.Template(self.TemplateProjectAsPreamble).render(**d)
+      result = jinja2.Template(self.TemplateProjectLinearCombination).render(**d)
       pass 
     if operation_name==peano4.solversteps.ActionSet.OPERATION_TOUCH_CELL_LAST_TIME:
       result = jinja2.Template(self.TemplateProjectAsEpilogue).render(**d)
