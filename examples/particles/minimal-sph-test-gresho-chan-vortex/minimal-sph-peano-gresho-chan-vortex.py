@@ -607,14 +607,14 @@ particle_particle_compute_kernel = """
   // Get actual interaction radius
   const double cutoffR = KERNEL_SUPPORT_RAD*h_a;
 
-  if (
+  if(
     tarch::la::smaller( r, cutoffR ) 
     and 
     tarch::la::greater( r, 0.0 )         /* Self-contribution is calculated elsewhere */  
 //  and localParticle->getHasConverged()==false
     and 
-    not localParticle->getIsBoundaryParticle()
-  ) {  
+    not localParticle->getIsBoundaryParticle() ) 
+    {  
       // Evaluate kernel and its derivative
       double w_a, dw_a_dq;
       kernel_deval(q_a, w_a, dw_a_dq);
@@ -672,9 +672,11 @@ particle_particle_compute_kernel = """
 
       assertion3( not std::isnan( localParticle->getOmega() ), localParticle->toString(), localParticle->getOmega(), dW_a_dh );
     } 
+
 """
 
 touch_particle_last_time_compute_kernel = """
+
   /* This is equivalent to the hydro_end_density function in SWIFT */
 
   /* @brief Finishes the calculations from the density loop
@@ -692,8 +694,9 @@ touch_particle_last_time_compute_kernel = """
     localParticle->getParallelState()==globaldata::Particle::ParallelState::Local
 //  and localParticle->getHasConverged()==false
     and 
-    not localParticle->getIsBoundaryParticle()
-  ){
+    not localParticle->getIsBoundaryParticle() )
+    {
+
     /* Retrieve some properties */
     const double m_a = localParticle->getMass();
     const double h_a = localParticle->getSmoothingLength();
@@ -1218,7 +1221,9 @@ kick1_particles.add_action_set( peano4.toolbox.particles.ParticleParticleInterac
   if (
       not localParticle->getHasBeenKicked()
       and
-      localParticle->getParallelState()==globaldata::Particle::ParallelState::Local
+      localParticle->getParallelState() == globaldata::Particle::ParallelState::Local
+      and 
+      not localParticle->getIsBoundaryParticle()
     ){
   
     /* Kick the particle */
@@ -1278,7 +1283,10 @@ kick2_particles.add_action_set( peano4.toolbox.particles.ParticleParticleInterac
 
   if (not localParticle->getHasBeenKicked()
       and
-      localParticle->getParallelState()==globaldata::Particle::ParallelState::Local){
+      localParticle->getParallelState()==globaldata::Particle::ParallelState::Local
+      and 
+      not localParticle->getIsBoundaryParticle()
+      ){
   
     /* Kick the particle */
     localParticle->setV_full( localParticle->getV_full() + dt_kick_hydro * localParticle->getA() );
@@ -1366,6 +1374,8 @@ drift_particles.add_action_set( peano4.toolbox.particles.ParticleParticleInterac
     localParticle->getMoveState()!=globaldata::Particle::MoveState::Moved
     and
     localParticle->getParallelState()==globaldata::Particle::ParallelState::Local
+    and 
+    not localParticle->getIsBoundaryParticle()
     ){
   
     /* Drift the particle (update position for a full time-step) */
@@ -1487,7 +1497,10 @@ predict_hydro_particles.add_action_set( peano4.toolbox.particles.ParticleParticl
   const double dt_therm = dt_kick_hydro;
 //  const double dt_therm = dt_drift;
   
-  if (localParticle->getParallelState()==globaldata::Particle::ParallelState::Local ) {
+  if( localParticle->getParallelState() == globaldata::Particle::ParallelState::Local 
+    and 
+    not localParticle->getIsBoundaryParticle() )
+    {
   
       /* Predict velocities for hydro terms */
       localParticle->setV( localParticle->getV() + localParticle->getA() * dt_kick_hydro );
