@@ -132,6 +132,4 @@ namespace exahype2 {
 #include "Rusanov_patchwise_heap_static_calls.cpph"
 #include "Rusanov_batched_heap_static_calls.cpph"
 
-//#include "opt/Rusanov.h"
-
 #endif

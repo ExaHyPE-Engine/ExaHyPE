@@ -83,8 +83,7 @@ Use configure's help to find out which options you want to use.
 Some exemplary configure commands are given below. For detailed information please refer to the guidebook.
 
 ```shell
-./configure --with-multithreading=omp --with-gpu=omp --enable-exahype --enable-loadbalancing --enable-blockstructured CC=nvc++ CXX=nvc++ CXXFLAGS="-O4 -std=c++20 -mp=gpu -gpu=cc70" LDFLAGS="-mp=gpu -gpu=cc70"
-./configure --with-multithreading=omp --with-gpu=omp --enable-exahype --enable-loadbalancing --enable-blockstructured CC=nvc++ CXX=nvc++ CXXFLAGS="-O4 -std=c++20 -mp=gpu -gpu=cc86,autocompare" LDFLAGS="-mp=gpu -gpu=cc86,autocompare"
+./configure --with-multithreading=omp --with-gpu=omp --enable-exahype --enable-loadbalancing --enable-blockstructured CC=nvc++ CXX=nvc++ CXXFLAGS="-O4 -std=c++20 -mp=gpu -gpu=cc86" LDFLAGS="-mp=gpu -gpu=cc86"
 ./configure --with-multithreading=omp --with-gpu=omp --enable-exahype --enable-loadbalancing --enable-blockstructured CC=clang CXX=clang++ CXXFLAGS="-O3 -std=c++20 -fopenmp -fopenmp-targets=nvptx64-nvidia-cuda -Xopenmp-target -march=sm_86"
 ```
 

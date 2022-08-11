@@ -143,8 +143,8 @@ void runBenchmarks(int patches) {
     for (int i=0; i<patches; i++) {
       outputMaxEigenvalue = tasks::EulerFVRusanovEnclaveTask::applyKernelToCell(
         marker,
-        TimeStamp,            // double t
-        TimeStepSize,         // double dt
+        TimeStamp,
+        TimeStepSize,
         inputData[i],
         outputData[i]
       );
@@ -164,6 +164,7 @@ void runBenchmarks(int patches) {
     logInfo("main()", "completed measurements for baseline on host: "       << watch.getCalendarTime() << " / " << (watch.getCalendarTime()/patches/EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch/EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch/EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch) );
     if (errors > 0) {
       logInfo("main()", "   -> max difference of outcome for all patches is " << maxDifference << " (admissible accuracy=" << Accuracy << ")" << " for " << errors << " entries");
+      exit(-1);
     }
   }
 
@@ -208,6 +209,7 @@ void runBenchmarks(int patches) {
     logInfo("main()", "completed measurements for " << markerName << " on host: " << watch.getCalendarTime() << " / " << (watch.getCalendarTime()/patches/EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch/EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch/EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch) );
     if (errors > 0) {
       logInfo("main()", "   -> max difference of outcome for all patches is " << maxDifference << " (admissible accuracy=" << Accuracy << ")" << " for " << errors << " entries");
+      exit(-1);
     }
   };
 
@@ -258,6 +260,7 @@ void runBenchmarks(int patches) {
     logInfo("main()", "completed measurements for single thread on device " << device << ", " << markerName << ": " << singleKernelWatch.getCalendarTime() << " / " << (singleKernelWatch.getCalendarTime()/patches/EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch/EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch/EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch) );
     if (errors > 0) {
       logInfo("main()", "   -> max difference of outcome for all patches is " << maxDifference << " (admissible accuracy=" << Accuracy << ")" << " for " << errors << " entries");
+      exit(-1);
     }
 
 /*
@@ -338,19 +341,20 @@ void runBenchmarks(int patches) {
     "heap, patch-wise, in-situ", true
   );*/
 
-  /*testFusedVariant(
-    ::exahype2::fv::rusanov::timeStepWithRusanov_batched_heap_static_calls<EulerFV,EulerFV::NumberOfFiniteVolumesPerAxisPerPatch, 1, 5, 0,exahype2::enumerator::AoSLexicographicEnumerator>,
+  testFusedVariant(
+    ::exahype2::fv::rusanov::timeStepWithRusanov_batched_heap_static_calls<EulerFVRusanov,EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch, 1, EulerFVRusanov::NumberOfUnknowns, 0,exahype2::enumerator::AoSLexicographicEnumerator>,
     "heap, batched, AoS", true
   );
   testFusedVariant(
-    ::exahype2::fv::rusanov::timeStepWithRusanov_batched_heap_static_calls<EulerFV,EulerFV::NumberOfFiniteVolumesPerAxisPerPatch, 1, 5, 0,exahype2::enumerator::AoSoALexicographicEnumerator>,
+    ::exahype2::fv::rusanov::timeStepWithRusanov_batched_heap_static_calls<EulerFVRusanov,EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch, 1, EulerFVRusanov::NumberOfUnknowns, 0,exahype2::enumerator::AoSoALexicographicEnumerator>,
     "heap, batched, AoSoA", true
   );
   testFusedVariant(
-    ::exahype2::fv::rusanov::timeStepWithRusanov_batched_heap_static_calls<EulerFV,EulerFV::NumberOfFiniteVolumesPerAxisPerPatch, 1, 5, 0,exahype2::enumerator::SoALexicographicEnumerator>,
+    ::exahype2::fv::rusanov::timeStepWithRusanov_batched_heap_static_calls<EulerFVRusanov,EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch, 1, EulerFVRusanov::NumberOfUnknowns, 0,exahype2::enumerator::SoALexicographicEnumerator>,
     "heap, batched, SoA", true
   );
-    ::exahype2::fv::rusanov::timeStepWithRusanov_batched_in_situ_static_calls<EulerFV,EulerFV::NumberOfFiniteVolumesPerAxisPerPatch, 1, 5, 0>,
+  /*testFusedVariant(
+    ::exahype2::fv::rusanov::timeStepWithRusanov_batched_in_situ_static_calls<EulerFVRusanov,EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch, 1, EulerFVRusanov::NumberOfUnknowns, 0>,
     "heap, batched, in-situ", true
   );*/
 
@@ -376,19 +380,19 @@ void runBenchmarks(int patches) {
       "omp, patch-wise, SoA", true
     );*/
 
-    /*testFusedVariantOnDevice(
+    testFusedVariantOnDevice(
       device,
-      ::exahype2::fv::rusanov::omp::opt::timeStepWithRusanov_patchwise_heap_static_calls<EulerFV,EulerFV::NumberOfFiniteVolumesPerAxisPerPatch, 1, 5, 0,exahype2::enumerator::AoSLexicographicEnumerator>,
+      ::exahype2::fv::rusanov::omp::opt::timeStepWithRusanov_patchwise_heap_static_calls<EulerFVRusanov,EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch, 1, EulerFVRusanov::NumberOfUnknowns, 0,exahype2::enumerator::AoSLexicographicEnumerator>,
       "omp::opt, patch-wise, AoS", true
-    );*/
+    );
     /*testFusedVariantOnDevice(
       device,
-      ::exahype2::fv::rusanov::omp::opt::timeStepWithRusanov_patchwise_heap_static_calls<EulerFV,EulerFV::NumberOfFiniteVolumesPerAxisPerPatch, 1, 5, 0,exahype2::enumerator::AoSoALexicographicEnumerator>,
+      ::exahype2::fv::rusanov::omp::opt::timeStepWithRusanov_patchwise_heap_static_calls<EulerFVRusanov,EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch, 1, EulerFVRusanov::NumberOfUnknowns, 0,exahype2::enumerator::AoSoALexicographicEnumerator>,
       "omp::opt, patch-wise, AoSoA", true
     );
     testFusedVariantOnDevice(
       device,
-      ::exahype2::fv::rusanov::omp::opt::timeStepWithRusanov_patchwise_heap_static_calls<EulerFV,EulerFV::NumberOfFiniteVolumesPerAxisPerPatch, 1, 5, 0,exahype2::enumerator::SoALexicographicEnumerator>,
+      ::exahype2::fv::rusanov::omp::opt::timeStepWithRusanov_patchwise_heap_static_calls<EulerFVRusanov,EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch, 1, EulerFVRusanov::NumberOfUnknowns, 0,exahype2::enumerator::SoALexicographicEnumerator>,
       "omp::opt, patch-wise, SoA", true
     );*/
 
@@ -425,7 +429,6 @@ void runBenchmarks(int patches) {
     );*/
   }
   #endif
-
 
   #if defined(GPUOffloadingCPP)
   if ( tarch::multicore::Core::getInstance().getNumberOfGPUs()==0 ) {
@@ -555,7 +558,6 @@ int main(int argc, char** argv) {
 
     runBenchmarks(patches);
   }
-
   otterTraceFinalise();
 
   delete validOutcome;

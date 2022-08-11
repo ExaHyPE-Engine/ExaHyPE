@@ -134,7 +134,6 @@ void exahype2::fv::rusanov::timeStepWithRusanov_patchwise_heap_functors(
       otterLoopEnd();
     }
 
-
     if (Dimensions==2) {
       otterLoopBegin();
       for (int x = -solversHaloSize; x < numberOfVolumesPerAxisInPatch+solversHaloSize; x++)
@@ -202,7 +201,7 @@ void exahype2::fv::rusanov::timeStepWithRusanov_patchwise_heap_functors(
         otterLoopIterationEnd();
       }
       otterLoopEnd();
-    } 
+    }
     else {
       otterLoopBegin();
       for (int x = -solversHaloSize; x < numberOfVolumesPerAxisInPatch+solversHaloSize; x++)
