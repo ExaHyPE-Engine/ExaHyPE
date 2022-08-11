@@ -48,8 +48,7 @@ peano4::grid::Spacetree::Spacetree(
   _statistics.setStationarySweeps(0);
   clear( _statistics, _id==0 );
 
-  // @debug
-  logWarning( "Spacetree(...)", "create spacetree with " << offset << "x" << width << " and periodic BCs=" << _periodicBC );
+  logDebug( "Spacetree(...)", "create spacetree with " << offset << "x" << width << " and periodic BCs=" << _periodicBC );
 }
 
 

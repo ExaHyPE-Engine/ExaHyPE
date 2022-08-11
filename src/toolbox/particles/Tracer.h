@@ -41,6 +41,9 @@ namespace toolbox {
       const tarch::la::Vector<Dimensions,double>& particleX
     );
 
+    /**
+     * @see ObLinearInterp()
+     */
     tarch::la::Vector<Dimensions,double> LinearInterp(
       const peano4::datamanagement::CellMarker&   marker,
       int                                         voxelsPerAxis,
@@ -62,6 +65,13 @@ namespace toolbox {
       const tarch::la::Vector<Dimensions,double>& particleX
     );
 
+    /**
+     * This is a linear interpolation where we accept that particles rarely
+     * align with the voxel centres. So we actually identify the @f$ 2^d @f$
+     * voxels closest to particleX, and then we interpolate between those
+     * guys. Different to LinearInterp(), we do not interpolate the whole
+     * (velocity) vector, but we interpolate only a scalar.
+     */
     double ObLinearInterp(
       const peano4::datamanagement::CellMarker&   marker,
       int                                         voxelsPerAxis,
