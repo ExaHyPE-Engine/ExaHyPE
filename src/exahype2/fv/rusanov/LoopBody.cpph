@@ -21,7 +21,6 @@ void exahype2::fv::rusanov::internal::copySolution_LoopBody(
 #pragma omp end declare target
 #endif
 
-
 template <class QInEnumeratorType, class QOutEnumeratorType>
 void exahype2::fv::rusanov::internal::copySolutionAndAddSourceTerm_LoopBody(
   const double* __restrict__                   QIn,
@@ -114,7 +113,6 @@ void exahype2::fv::rusanov::internal::copySolutionAndAddSourceTerm_LoopBody(
     );
   }
 }
-
 
 #if defined(GPUOffloadingOMP)
 #pragma omp declare target
@@ -732,8 +730,9 @@ void exahype2::fv::rusanov::internal::updateSolutionWithFlux_LoopBody(
   auto updateAlongOneDirection = [=](double* __restrict__ tempFlux, const int normal) {
     tarch::la::Vector<Dimensions,int> leftVolume = volumeIndex;
     tarch::la::Vector<Dimensions,int> rightVolume = volumeIndex;
-    leftVolume(normal)--;
-    rightVolume(normal)++;
+    normal == 0 ? (leftVolume(0)--, rightVolume(0)++) :
+    normal == 1 ? (leftVolume(1)--, rightVolume(1)++) :
+                  (leftVolume(2)--, rightVolume(2)++);
 
     const double fluxLeft  = 0.5 * tempFlux[fluxEnumerator(patchIndex, leftVolume,unknown)]
                            + 0.5 * tempFlux[fluxEnumerator(patchIndex, volumeIndex,unknown)];
@@ -836,8 +835,9 @@ void exahype2::fv::rusanov::internal::updateSolutionWithEigenvalueDamping_LoopBo
   auto updateAlongOneDirection = [=](const double* __restrict__ tempMaxEigenvalue, int normal) {
     tarch::la::Vector<Dimensions,int> leftVolume   = volumeIndex;
     tarch::la::Vector<Dimensions,int> rightVolume  = volumeIndex;
-    leftVolume(normal)--;
-    rightVolume(normal)++;
+    normal == 0 ? (leftVolume(0)--, rightVolume(0)++) :
+    normal == 1 ? (leftVolume(1)--, rightVolume(1)++) :
+                  (leftVolume(2)--, rightVolume(2)++);
 
     double leftVolumeValue   = tempMaxEigenvalue[eigenvalueEnumerator(patchIndex, leftVolume,  0)];
     double centerVolumeValue = tempMaxEigenvalue[eigenvalueEnumerator(patchIndex, volumeIndex, 0)];
