@@ -79,7 +79,7 @@ class AddVolumeAndFaceSolution(AbstractRungeKuttaDGActionSet):
       QOut
     );
 
-    ::exahype2::dg::multiplyWithInvertedMassMatrixAndClearAuxiliaryVariables_GaussLegendre(
+    ::exahype2::dg::multiplyWithInvertedMassMatrix_GaussLegendre(
       cellData,
       {{ORDER}},                                                   
       {{NUMBER_OF_UNKNOWNS}},

@@ -25,7 +25,8 @@ void exahype2::dg::cellIntegral_patchwise_GaussLegendre_functors(
 ) {
   double* fluxValues      = evaluateFlux   ? new double[unknowns] : nullptr;
   double* sourceValues    = evaluateSource ? new double[unknowns] : nullptr;
-  double* gradientValues  = evaluateNonconservativeProduct    ? new double[unknowns+auxiliaryVariables] : nullptr;
+  // @todo Voellig ueberdimensioniert. Den Faktor Dimensions sollte man entfernen
+  double* gradientValues  = evaluateNonconservativeProduct    ? new double[Dimensions*(unknowns+auxiliaryVariables)] : nullptr;
   double* ncpValues       = evaluateNonconservativeProduct    ? new double[unknowns] : nullptr;
 
   for (int currentCell=0; currentCell<cellData.numberOfCells; currentCell++) {
@@ -119,19 +120,34 @@ void exahype2::dg::cellIntegral_patchwise_GaussLegendre_functors(
           order,
           quadratureNodes);
 
+        //computes gradient values in all directions for the given node
+        computeGradient(
+          cellQin,
+          derivativeOperator,
+          1.0 / dx,
+          nodesPerAxis,
+          strideQ,
+          node,
+          gradientValues
+        );
+
+        for(int var=0; var<Dimensions*(unknowns+auxiliaryVariables); var++){
+          assertion(gradientValues[var]==gradientValues[var]);
+        }
+
+        double coeff = 1.0;
+        for (int dd=0; dd<Dimensions; dd++) {
+          coeff *= massMatrixDiagonal[ index(dd) ];
+        }
+
         for(int dim=0; dim<Dimensions; dim++) {
-          computeGradient(
-            cellQin,
-            derivativeOperator,
-            1.0 / dx,
-            nodesPerAxis,
-            strides[dim],
-            node,
-            gradientValues
-          );
 
           nonConservativeProduct(
             &cellQin[node*strideQ],
+            // @todo Das ist doch voelliger Bloedsinn. Wir brauchen
+            //       nur den Gradienten entlang dim. Daher sollte
+            //       gradientValues nur n Eintraege haben (nicht 3*n)
+            //       und dann brauchen wir kein Array hier.
             &gradientValues[dim*strideQ],
             position,
             t,
@@ -139,14 +155,8 @@ void exahype2::dg::cellIntegral_patchwise_GaussLegendre_functors(
             dim,
             ncpValues);
 
-          // @todo There's a matrix missing, isn't it? Or
-          //  can we now really model this via the mass matrix?
-          double coeff = 1.0;
-          for (int dd=0; dd<Dimensions; dd++) {
-            coeff *= massMatrixDiagonal[ index(dim) ];
-          }
-
           for(int var=0; var<unknowns; var++){
+            assertion(ncpValues[var]==ncpValues[var]);
             cellQout[node*unknowns+var] += coeff * ncpValues[var];
           } //var
         } //dim
@@ -264,7 +274,7 @@ void exahype2::dg::internal::copySolution(
 }
 
 
-void exahype2::dg::multiplyWithInvertedMassMatrixAndClearAuxiliaryVariables_GaussLegendre(
+void exahype2::dg::multiplyWithInvertedMassMatrix_GaussLegendre(
   ::exahype2::CellData&                          cellData,
   const int                                      order,
   const int                                      unknowns,

@@ -23,9 +23,6 @@ class SolveRiemannProblem(AbstractRungeKuttaDGActionSet):
   {% for PREDICATE_NO in range(0,PREDICATES|length) %}
   if ({{PREDICATES[PREDICATE_NO]}}) {
     // no support for local time stepping or subcycling 
-    
-    // @todo net klar, ob wir richtigen verwenden
-    
     assertionNumericalEquals1(
       {{FACE_METADATA_ACCESSOR}}.getNewTimeStamp(0),
       {{FACE_METADATA_ACCESSOR}}.getNewTimeStamp(1),
@@ -42,14 +39,8 @@ class SolveRiemannProblem(AbstractRungeKuttaDGActionSet):
     assertion3( tarch::la::greaterEquals( timeStepSize, 0.0 ),  timeStamp, timeStepSize, timeStampOldSolution );
     assertion3( tarch::la::greaterEquals( timeStamp, 0.0 ),     timeStamp, timeStepSize, timeStampOldSolution );
     
-    //::exahype2::dg::rusanov::solveRiemannProblem_pointwise_in_situ(
-    #if Dimensions==2
-    const double* __restrict__ QIn  = fineGridFace{{UNKNOWN_IDENTIFIER}}EstimateProjection.value; // + {{PREDICATE_NO}} * {{NUMBER_OF_DOFS_PER_CELL_2D}} * ({{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}});
-    double* __restrict__       QOut = fineGridFace{{UNKNOWN_IDENTIFIER}}RiemannSolution.value; //    + {{PREDICATE_NO}} * {{NUMBER_OF_DOFS_PER_CELL_2D}} * ({{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}});
-    #elif Dimensions==3
-    const double* __restrict__ QIn = fineGridFace{{UNKNOWN_IDENTIFIER}}EstimateProjection.value; // + {{PREDICATE_NO}} * {{NUMBER_OF_DOFS_PER_CELL_3D}} * ({{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}});
-    #endif
-
+    const double* __restrict__ QIn  = fineGridFace{{UNKNOWN_IDENTIFIER}}EstimateProjection.value;
+    double* __restrict__       QOut = fineGridFace{{UNKNOWN_IDENTIFIER}}RiemannSolution.value;
 
     ::exahype2::dg::rusanov::solveRiemannProblem_pointwise_in_situ(
       [&](

@@ -16,10 +16,28 @@
 namespace exahype2 {
   namespace enumerator {
   /**
+   * SoA Lexicographic Enumerator
+   *
+   * Enumerates the degrees of freedom assuming that they are
+   *
+   * - organised as structure of arrays, i.e. if you store quantities (a,b,c) per
+   *   degree of freedom, then the array first holds the a values, then all the b
+   *   values, then all the c values.
+   * - organised lexicographically, i.e. we first enumerate all the degrees of
+   *   freedom along the x-axis, then along the y-axis, then along the z-axis.
+   * - organised from left to right, bottom-up and front to back.
+   * - organised one patch after another, i.e. we first enumerate all the a values
+   *   of the first patch, followed by all the a unknowns of the second patch, and
+   *   so forth. After the a values of the last patch, we continue with the b values
+   *   in the examples with (a,b,c) per degree of freedom.
+   *
+   *
    * This native SoA enumerator uses SoA within the patches plus over patches: It
    * first enumerates all Q[0] data from patch one, then all Q[0] from patch two,
    * then all Q[0] from patch three, and so forth. After that, it continues with
    * Q[1]. This means: The enumerator interleaves the individual patches.
+   *
+   * @see Enumerator.h for a generic description of attribute semantics.
    */
     #if defined(GPUOffloadingOMP)
 //      #pragma omp declare target
@@ -37,8 +55,6 @@ namespace exahype2 {
        *
        * The index always refers to the interior of the patches. So you can use negative
        * indices if you want.
-       *
-       * @todo modulo Operator muss ich noch dokumentieren
        */
       int operator()(
         int patchIndex,

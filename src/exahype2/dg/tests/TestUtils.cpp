@@ -1,4 +1,5 @@
-#include "../../dg/tests/testUtils.h"
+#include "../../dg/tests/TestUtils.h"
+
 
 void exahype2::dg::tests::eulerFlux(
         const double * __restrict__                  Q,

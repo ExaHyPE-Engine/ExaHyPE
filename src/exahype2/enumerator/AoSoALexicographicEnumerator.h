@@ -15,8 +15,27 @@
 namespace exahype2 {
   namespace enumerator {
     /**
+     * AoSoA Lexicographic Enumerator
+     *
+     * Enumerates the degrees of freedom assuming that they are
+     *
+     * - organised as structure of arrays, i.e. if you store quantities (a,b,c) per
+     *   degree of freedom, then the array first holds the a values, then all the b
+     *   values, then all the c values.
+     * - organised lexicographically, i.e. we first enumerate all the degrees of
+     *   freedom along the x-axis, then along the y-axis, then along the z-axis.
+     * - organised from left to right, bottom-up and front to back.
+     * - organised per patch with this pattern, i.e. we first enumerate all the a values
+     *   of the first patch, then all the b values, the all the c values. After that
+     *   we continue with the data of the second patch.
+     *
      * This enumerator enumerates the patches one after the other (AoS). Within each
-     * patch, it then however switches to an SoA data layout.
+     * patch, it then however switches to an SoA data layout. The enumeration thus is
+     * a hybrid between AoS and SoA. The last property in the enumeration above is the
+     * decisive difference to the SoALexicographicEnumerator.
+     *
+     *
+     * @see Enumerator.h for a generic description of attribute semantics.
      */
     #if defined(GPUOffloadingOMP)
 //      #pragma omp declare target

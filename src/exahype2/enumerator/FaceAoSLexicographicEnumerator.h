@@ -64,6 +64,11 @@ namespace exahype2 {
          *
          * @param faceNumber An integer value between 0 (inclusive) and
          *   2*Dimensions (exklusive). Standard Peano enumeration of faces.
+         *   While you can pass in a number bigger than Dimensions, i.e.
+         *   while you can distinguish between left and right face, both
+         *   the left and right face have the same dof enumeration. Consequently,
+         *   the initialisation with i gives you the same as the initialisation
+         *   with i+Dimensions.
          *
          * @param numberOfDoFsPerAxisInPatch Number of volumes per direction
          *   if you work with block-structured Finite Volumes. order+1 if you
