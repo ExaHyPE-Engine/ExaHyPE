@@ -60,16 +60,16 @@ double ::applications::exahype2::euler::maxEigenvalue(
   double                                       dt,
   int                                          normal,
   int                                          numberOfUnknowns,
-  int                                          numberOfAuxiliaryVariables
+  int                                          numberOfAuxiliaryVariables,
+  double                                       gamma
 )  {
   assertion(normal>=0);
   assertion(normal<Dimensions);
 
   if (Q[0]<=0.0 or Q[0]!=Q[0]) {
-    ::exahype2::triggerNonCriticalAssertion( __FILE__, __LINE__, "Q[0]>0", "density negative" );
+    ::exahype2::triggerNonCriticalAssertion( __FILE__, __LINE__, "Q[0]>0", "density negative (Q[0]=" + std::to_string( Q[0] ) + ")" );
   }
 
-  constexpr double gamma = 1.4;
   const double irho = 1./Q[0];
   #if Dimensions==3
   const double p = (gamma-1) * (Q[4] - 0.5*irho*(Q[1]*Q[1]+Q[2]*Q[2]+Q[3]*Q[3]));
@@ -97,12 +97,12 @@ void ::applications::exahype2::euler::flux(
   int                                          normal,
   int                                          numberOfUnknowns,
   int                                          numberOfAuxiliaryVariables,
-  double * __restrict__                        F
+  double * __restrict__                        F,
+  double                                       gamma
 )  {
   assertion4( normal>=0, faceCentre, volumeH, t, normal );
   assertion4( normal<Dimensions, faceCentre, volumeH, t, normal);
 
-  constexpr double gamma = 1.4;
   const double irho = 1./Q[0];
   #if Dimensions==3
   const double p = (gamma-1) * (Q[4] - 0.5*irho*(Q[1]*Q[1]+Q[2]*Q[2]+Q[3]*Q[3]));

@@ -12,6 +12,8 @@
 #include "AbstractSelfSimilarInfall.h"
 #include "tarch/logging/Log.h"
 
+#include "spherical-accretion/MassAccumulator.h"
+
 
 namespace examples {namespace exahype2 {namespace euler {namespace sphericalaccretionupscaling {
   class SelfSimilarInfall;
@@ -23,11 +25,40 @@ class examples::exahype2::euler::sphericalaccretionupscaling::SelfSimilarInfall:
   private:
     static tarch::logging::Log   _log;
 
+    /**
+     * Use class from application folders.
+     */
+    ::applications::exahype2::euler::sphericalaccretion::MassAccumulator  _accumulator;
+
   public:
-    
+    static constexpr double BaseDensity      = 0.1;
+    static constexpr double Gamma            = 5.0/3.0;
+    static constexpr double rhoInitial       = 1.0;
+    static constexpr double DeltaRho         = 0.05;
+    static constexpr double pInitial         = 1e-6;
+    static constexpr double aInitial         = 0.001;
+    static constexpr double InitialDeltaM    = 0.15 / 4.0 / tarch::la::PI;
+    static constexpr double InitialTopHatRadius = 0.05;
+
+    /**
+     * Add density of one voxel to global bookkeeping
+     */
+    void addDensity(
+      const tarch::la::Vector<Dimensions,double>&  volumeCentre,
+      const tarch::la::Vector<Dimensions,double>&  volumeH,
+      double                                       density
+    );
 
 
-    
+    /**
+     * We start with a top hat overdensity. Please note that the initial overdensity
+     * does not enter the initial fluxes: The Euler equation are totally agnostic in
+     * principle of the density. However, the overdensity will enter the mass
+     * accumulation in the first time step. Nevertheless, we need a consistent setup
+     * and we get this consistent setup if and only if we push the solution initially
+     * to the right direction. Otherwise, we get a zero time step and all is messed
+     * up.
+     */
     void initialCondition(
       double * __restrict__ Q,
       const tarch::la::Vector<Dimensions,double>&  volumeCentre,
@@ -36,11 +67,15 @@ class examples::exahype2::euler::sphericalaccretionupscaling::SelfSimilarInfall:
     ) override;
     
 
-    
-    
+    /**
+     * Apply Neumann boundary conditions
+     *
+     * I'm super lazy here and rely on the pre-manufactured routine from the
+     * EulerKernels.h which are shipped with the actual Euler application.
+     */
     virtual void boundaryConditions(
-      const double * __restrict__ Qinside, // Qinside[5+0]
-      double * __restrict__ Qoutside, // Qoutside[5+0]
+      const double * __restrict__                  Qinside,
+      double * __restrict__                        Qoutside,
       const tarch::la::Vector<Dimensions,double>&  faceCentre,
       const tarch::la::Vector<Dimensions,double>&  volumeH,
       double                                       t,
@@ -48,9 +83,20 @@ class examples::exahype2::euler::sphericalaccretionupscaling::SelfSimilarInfall:
     )  override;
     
 
-    
-  public:
-    
+    /**
+     * Fake source term
+     *
+     * The term is a fake, i.e. does not fit to the original paper force that you find
+     * in the application folder. However, it shared some commonalities:
+     *
+     * - The force does not kick in immediately but fades in (a parameter).
+     * - The force depends on the amount of mass (overdensity) from the voxel centre
+     *   to the origin.
+     * - The source forces always drag the solution towards the centre. That does not
+     *   mean that we have fluid flow into that direction, as the pressure might
+     *   actually be stronger and push the fluid away.
+     * - The force scales with the density.
+     */
     void sourceTerm(
       const double * __restrict__ Q,
       const tarch::la::Vector<Dimensions,double>&  volumeCentre,
@@ -61,16 +107,17 @@ class examples::exahype2::euler::sphericalaccretionupscaling::SelfSimilarInfall:
     ) override;
     
 
-    
     /**
      * Determine max eigenvalue over Jacobian in a given point with solution values
-     * (states) Q. All parameters are in.
+     * (states) Q. As we use the plain Euler equations and "solely" modify the
+     * right-hand side compared to the baseline version, we can work with the
+     * eigenvalue realisation as it is provided by the applications folds.
      *
      * @return Max eigenvalue. Result has to be positive, so we are actually speaking
      *   about the maximum absolute eigenvalue.
      */
     virtual double maxEigenvalue(
-      const double * __restrict__ Q, // Q[5+0],
+      const double * __restrict__                  Q,
       const tarch::la::Vector<Dimensions,double>&  faceCentre,
       const tarch::la::Vector<Dimensions,double>&  volumeH,
       double                                       t,
@@ -79,8 +126,10 @@ class examples::exahype2::euler::sphericalaccretionupscaling::SelfSimilarInfall:
     ) override;
     
 
-
-    
+    /**
+     * Same story again: This is the standard Euler flux which is independent of
+     * any modification of the right-hand side.
+     */
     virtual void flux(
       const double * __restrict__ Q, // Q[5+0],
       const tarch::la::Vector<Dimensions,double>&  faceCentre,
@@ -91,21 +140,13 @@ class examples::exahype2::euler::sphericalaccretionupscaling::SelfSimilarInfall:
       double * __restrict__ F // F[5]
     ) override;
     
-     
-     
-    
-    
-   
-    
 
-
-    
-
-
-    
-     
-   
-        
+    /**
+     * According to the docu, I always call the superclass routine. After that,
+     * I check whether this has been the last sweep of the current time step.
+     * If so, we let the mass accummulation know.
+     */
+    void finishTimeStep() override;
 };
 
 
