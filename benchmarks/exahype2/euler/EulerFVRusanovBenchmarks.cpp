@@ -373,7 +373,7 @@ void runBenchmarks(int patches) {
       device,
       ::exahype2::fv::rusanov::omp::timeStepWithRusanov_patchwise_heap_static_calls<EulerFVRusanov,EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch, 1, EulerFVRusanov::NumberOfUnknowns, 0,exahype2::enumerator::AoSoALexicographicEnumerator>,
       "omp, patch-wise, AoSoA", true
-    );*/
+    );
     /*testFusedVariantOnDevice(
       device,
       ::exahype2::fv::rusanov::omp::timeStepWithRusanov_patchwise_heap_static_calls<EulerFVRusanov,EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch, 1, EulerFVRusanov::NumberOfUnknowns, 0,exahype2::enumerator::SoALexicographicEnumerator>,
@@ -396,35 +396,35 @@ void runBenchmarks(int patches) {
       "omp::opt, patch-wise, SoA", true
     );*/
 
-    /*testFusedVariantOnDevice(
-      device,
-      ::exahype2::fv::rusanov::omp::timeStepWithRusanov_batched_heap_static_calls<EulerFV,EulerFV::NumberOfFiniteVolumesPerAxisPerPatch, 1, 5, 0,exahype2::enumerator::AoSLexicographicEnumerator>,
-      "omp, batched, AoS", true
-    );*/
-    /*testFusedVariantOnDevice(
-      device,
-      ::exahype2::fv::rusanov::omp::timeStepWithRusanov_batched_heap_static_calls<EulerFV,EulerFV::NumberOfFiniteVolumesPerAxisPerPatch, 1, 5, 0,exahype2::enumerator::AoSoALexicographicEnumerator>,
-      "omp, batched, AoSoA", true
-    );
     testFusedVariantOnDevice(
       device,
-      ::exahype2::fv::rusanov::omp::timeStepWithRusanov_batched_heap_static_calls<EulerFV,EulerFV::NumberOfFiniteVolumesPerAxisPerPatch, 1, 5, 0,exahype2::enumerator::SoALexicographicEnumerator>,
+      ::exahype2::fv::rusanov::omp::timeStepWithRusanov_batched_heap_static_calls<EulerFVRusanov,EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch, 1, EulerFVRusanov::NumberOfUnknowns, 0,exahype2::enumerator::AoSLexicographicEnumerator>,
+      "omp, batched, AoS", true
+    );
+    /*testFusedVariantOnDevice(
+      device,
+      ::exahype2::fv::rusanov::omp::timeStepWithRusanov_batched_heap_static_calls<EulerFVRusanov,EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch, 1, EulerFVRusanov::NumberOfUnknowns, 0,exahype2::enumerator::AoSoALexicographicEnumerator>,
+      "omp, batched, AoSoA", true
+    );
+    /*testFusedVariantOnDevice(
+      device,
+      ::exahype2::fv::rusanov::omp::timeStepWithRusanov_batched_heap_static_calls<EulerFVRusanov,EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch, 1, EulerFVRusanov::NumberOfUnknowns, 0,exahype2::enumerator::SoALexicographicEnumerator>,
       "omp, batched, SoA", true
     );*/
 
-    /*testFusedVariantOnDevice(
+    testFusedVariantOnDevice(
       device,
-      ::exahype2::fv::rusanov::omp::opt::timeStepWithRusanov_batched_heap_static_calls<EulerFV,EulerFV::NumberOfFiniteVolumesPerAxisPerPatch, 1, 5, 0,exahype2::enumerator::AoSLexicographicEnumerator>,
+      ::exahype2::fv::rusanov::omp::opt::timeStepWithRusanov_batched_heap_static_calls<EulerFVRusanov,EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch, 1, EulerFVRusanov::NumberOfUnknowns, 0,exahype2::enumerator::AoSLexicographicEnumerator>,
       "omp::opt, batched, AoS", true
-    );*/
+    );
     /*testFusedVariantOnDevice(
       device,
-      ::exahype2::fv::rusanov::omp::opt::timeStepWithRusanov_batched_heap_static_calls<EulerFV,EulerFV::NumberOfFiniteVolumesPerAxisPerPatch, 1, 5, 0,exahype2::enumerator::AoSoALexicographicEnumerator>,
+      ::exahype2::fv::rusanov::omp::opt::timeStepWithRusanov_batched_heap_static_calls<EulerFVRusanov,EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch, 1, EulerFVRusanov::NumberOfUnknowns, 0,exahype2::enumerator::AoSoALexicographicEnumerator>,
       "omp::opt, batched, AoSoA", true
     );
     testFusedVariantOnDevice(
       device,
-      ::exahype2::fv::rusanov::omp::opt::timeStepWithRusanov_batched_heap_static_calls<EulerFV,EulerFV::NumberOfFiniteVolumesPerAxisPerPatch, 1, 5, 0,exahype2::enumerator::SoALexicographicEnumerator>,
+      ::exahype2::fv::rusanov::omp::opt::timeStepWithRusanov_batched_heap_static_calls<EulerFVRusanov,EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch, 1, EulerFVRusanov::NumberOfUnknowns, 0,exahype2::enumerator::SoALexicographicEnumerator>,
       "omp::opt, batched, SoA", true
     );*/
   }
@@ -438,32 +438,32 @@ void runBenchmarks(int patches) {
     logInfo( "main()", "device " << device << " (first kernel triggered by one thread, then kernel triggered by four threads if multithreading enabled)" );
     testFusedVariantOnDevice(
       device,
-      ::exahype2::fv::rusanov::cpp::timeStepWithRusanov_patchwise_heap_static_calls<EulerFVRusanov,EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch, 1, 5, 0,exahype2::enumerator::AoSLexicographicEnumerator>,
+      ::exahype2::fv::rusanov::cpp::timeStepWithRusanov_patchwise_heap_static_calls<EulerFVRusanov,EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch, 1, EulerFVRusanov::NumberOfUnknowns, 0,exahype2::enumerator::AoSLexicographicEnumerator>,
       "cpp, patch-wise, AoS", true
     );
     testFusedVariantOnDevice(
       device,
-      ::exahype2::fv::rusanov::cpp::timeStepWithRusanov_batched_heap_static_calls<EulerFVRusanov,EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch, 1, 5, 0,exahype2::enumerator::AoSLexicographicEnumerator>,
+      ::exahype2::fv::rusanov::cpp::timeStepWithRusanov_batched_heap_static_calls<EulerFVRusanov,EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch, 1, EulerFVRusanov::NumberOfUnknowns, 0,exahype2::enumerator::AoSLexicographicEnumerator>,
       "cpp, batched, AoS", true
     );
     testFusedVariantOnDevice(
       device,
-      ::exahype2::fv::rusanov::cpp::timeStepWithRusanov_patchwise_heap_static_calls<EulerFVRusanov,EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch, 1, 5, 0,exahype2::enumerator::AoSoALexicographicEnumerator>,
+      ::exahype2::fv::rusanov::cpp::timeStepWithRusanov_patchwise_heap_static_calls<EulerFVRusanov,EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch, 1, EulerFVRusanov::NumberOfUnknowns, 0,exahype2::enumerator::AoSoALexicographicEnumerator>,
       "cpp, patch-wise, AoSoA", true
     );
     testFusedVariantOnDevice(
       device,
-      ::exahype2::fv::rusanov::cpp::timeStepWithRusanov_batched_heap_static_calls<EulerFVRusanov,EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch, 1, 5, 0,exahype2::enumerator::AoSoALexicographicEnumerator>,
+      ::exahype2::fv::rusanov::cpp::timeStepWithRusanov_batched_heap_static_calls<EulerFVRusanov,EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch, 1, EulerFVRusanov::NumberOfUnknowns, 0,exahype2::enumerator::AoSoALexicographicEnumerator>,
       "cpp, batched, AoSoA", true
     );
     testFusedVariantOnDevice(
       device,
-      ::exahype2::fv::rusanov::cpp::timeStepWithRusanov_patchwise_heap_static_calls<EulerFVRusanov,EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch, 1, 5, 0,exahype2::enumerator::SoALexicographicEnumerator>,
+      ::exahype2::fv::rusanov::cpp::timeStepWithRusanov_patchwise_heap_static_calls<EulerFVRusanov,EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch, 1, EulerFVRusanov::NumberOfUnknowns, 0,exahype2::enumerator::SoALexicographicEnumerator>,
       "cpp, patch-wise, SoA", true
     );
     testFusedVariantOnDevice(
       device,
-      ::exahype2::fv::rusanov::cpp::timeStepWithRusanov_batched_heap_static_calls<EulerFVRusanov,EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch, 1, 5, 0,exahype2::enumerator::SoALexicographicEnumerator>,
+      ::exahype2::fv::rusanov::cpp::timeStepWithRusanov_batched_heap_static_calls<EulerFVRusanov,EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch, 1, EulerFVRusanov::NumberOfUnknowns, 0,exahype2::enumerator::SoALexicographicEnumerator>,
       "cpp, batched, SoA", true
     );
   }
@@ -477,32 +477,32 @@ void runBenchmarks(int patches) {
     logInfo( "main()", "device " << device << " (first kernel triggered by one thread, then kernel triggered by four threads if multithreading enabled)" );
     testFusedVariantOnDevice(
       device,
-      ::exahype2::fv::rusanov::sycl::timeStepWithRusanov_taskgraph_heap_static_calls<EulerFVRusanov,EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch, 1, 5, 0,exahype2::enumerator::AoSLexicographicEnumerator>,
+      ::exahype2::fv::rusanov::sycl::timeStepWithRusanov_taskgraph_heap_static_calls<EulerFVRusanov,EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch, 1, EulerFVRusanov::NumberOfUnknowns, 0,exahype2::enumerator::AoSLexicographicEnumerator>,
       "sycl, task-graph, AoS", true
     );
     testFusedVariantOnDevice(
       device,
-      ::exahype2::fv::rusanov::sycl::timeStepWithRusanov_batched_heap_static_calls<EulerFVRusanov,EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch, 1, 5, 0,exahype2::enumerator::AoSLexicographicEnumerator>,
+      ::exahype2::fv::rusanov::sycl::timeStepWithRusanov_batched_heap_static_calls<EulerFVRusanov,EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch, 1, EulerFVRusanov::NumberOfUnknowns, 0,exahype2::enumerator::AoSLexicographicEnumerator>,
       "sycl, batched, AoS", true
     );
     testFusedVariantOnDevice(
       device,
-      ::exahype2::fv::rusanov::sycl::timeStepWithRusanov_taskgraph_heap_static_calls<EulerFVRusanov,EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch, 1, 5, 0,exahype2::enumerator::AoSoALexicographicEnumerator>,
+      ::exahype2::fv::rusanov::sycl::timeStepWithRusanov_taskgraph_heap_static_calls<EulerFVRusanov,EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch, 1, EulerFVRusanov::NumberOfUnknowns, 0,exahype2::enumerator::AoSoALexicographicEnumerator>,
       "sycl, task-graph, AoSoA", true
     );
     testFusedVariantOnDevice(
       device,
-      ::exahype2::fv::rusanov::sycl::timeStepWithRusanov_batched_heap_static_calls<EulerFVRusanov,EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch, 1, 5, 0,exahype2::enumerator::AoSoALexicographicEnumerator>,
+      ::exahype2::fv::rusanov::sycl::timeStepWithRusanov_batched_heap_static_calls<EulerFVRusanov,EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch, 1, EulerFVRusanov::NumberOfUnknowns, 0,exahype2::enumerator::AoSoALexicographicEnumerator>,
       "sycl, batched, AoSoA", true
     );
     testFusedVariantOnDevice(
       device,
-      ::exahype2::fv::rusanov::sycl::timeStepWithRusanov_taskgraph_heap_static_calls<EulerFVRusanov,EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch, 1, 5, 0,exahype2::enumerator::SoALexicographicEnumerator>,
+      ::exahype2::fv::rusanov::sycl::timeStepWithRusanov_taskgraph_heap_static_calls<EulerFVRusanov,EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch, 1, EulerFVRusanov::NumberOfUnknowns, 0,exahype2::enumerator::SoALexicographicEnumerator>,
       "sycl, task-graph, SoA", true
     );
     testFusedVariantOnDevice(
       device,
-      ::exahype2::fv::rusanov::sycl::timeStepWithRusanov_taskgraph_heap_static_calls<EulerFVRusanov,EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch, 1, 5, 0,exahype2::enumerator::SoALexicographicEnumerator>,
+      ::exahype2::fv::rusanov::sycl::timeStepWithRusanov_taskgraph_heap_static_calls<EulerFVRusanov,EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch, 1, EulerFVRusanov::NumberOfUnknowns, 0,exahype2::enumerator::SoALexicographicEnumerator>,
       "sycl, batched, SoA", true
     );
   }
