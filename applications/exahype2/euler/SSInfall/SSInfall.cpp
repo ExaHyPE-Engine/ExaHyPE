@@ -1,7 +1,8 @@
-#include "SSInfall.h"
+#include "../../../applications/exahype2/euler/SSInfall/SSInfall.h"
+
+#include "../../../applications/exahype2/euler/SSInfall/Constants.h"
 #include "exahype2/RefinementControl.h"
 
-#include "Constants.h"
 #include "exahype2/NonCriticalAssertions.h"
 #include "tarch/multicore/Lock.h"
 

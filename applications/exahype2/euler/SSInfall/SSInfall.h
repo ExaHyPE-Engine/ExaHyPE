@@ -9,9 +9,9 @@
 #ifndef _examples_exahype2_SSInfall_SSInfall_H_
 #define _examples_exahype2_SSInfall_SSInfall_H_
 
-#include "AbstractSSInfall.h"
 #include "tarch/logging/Log.h"
 #include <iomanip>
+#include "../../../applications/exahype2/euler/SSInfall/AbstractSSInfall.h"
 
 namespace examples {namespace exahype2 {namespace SSInfall {
   class SSInfall;

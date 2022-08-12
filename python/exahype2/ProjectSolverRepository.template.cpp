@@ -1,7 +1,6 @@
-#include "SolverRepository.h"
-
 #include <algorithm>
 
+#include "../../applications/exahype2/euler/SSInfall/repositories/SolverRepository.h"
 #include "peano4/grid/grid.h"
 #include "peano4/parallel/SpacetreeSet.h"
 

@@ -1,3 +1,12 @@
+#include "../../applications/exahype2/euler/SSInfall/observers/CreateGrid.h"
+#include "../../applications/exahype2/euler/SSInfall/observers/CreateGridAndConvergeLoadBalancing.h"
+#include "../../applications/exahype2/euler/SSInfall/observers/CreateGridButPostponeRefinement.h"
+#include "../../applications/exahype2/euler/SSInfall/observers/InitGrid.h"
+#include "../../applications/exahype2/euler/SSInfall/observers/PlotSolution.h"
+#include "../../applications/exahype2/euler/SSInfall/observers/TimeStep.h"
+#include "../../applications/exahype2/euler/SSInfall/repositories/DataRepository.h"
+#include "../../applications/exahype2/euler/SSInfall/repositories/SolverRepository.h"
+#include "../../applications/exahype2/euler/SSInfall/repositories/StepRepository.h"
 #include "{MAIN_NAME}.h"
 #include "Constants.h"
 
@@ -16,17 +25,6 @@
 #include "peano4/grid/Spacetree.h"
 #include "peano4/parallel/SpacetreeSet.h"
 #include "peano4/UnitTests.h"
-
-#include "repositories/DataRepository.h"
-#include "repositories/StepRepository.h"
-#include "repositories/SolverRepository.h"
-
-#include "observers/CreateGrid.h"
-#include "observers/CreateGridButPostponeRefinement.h"
-#include "observers/CreateGridAndConvergeLoadBalancing.h"
-#include "observers/InitGrid.h"
-#include "observers/PlotSolution.h"
-#include "observers/TimeStep.h"
 
 #include "toolbox/loadbalancing/loadbalancing.h"
 
