@@ -1,5 +1,6 @@
-#include "../../../applications/exahype2/euler/SSInfall/SSInfall.h"
+#include "../spherical-accretion/SSInfall.h"
 
+#include "../spherical-accretion/Constants.h"
 #include "../../../applications/exahype2/euler/SSInfall/Constants.h"
 #include "exahype2/RefinementControl.h"
 
