@@ -1,6 +1,6 @@
 #include <algorithm>
 
-#include "../../applications/exahype2/euler/spherical-accretion/repositories/SolverRepository.h"
+#include "SolverRepository.h"
 #include "peano4/grid/grid.h"
 #include "peano4/parallel/SpacetreeSet.h"
 
