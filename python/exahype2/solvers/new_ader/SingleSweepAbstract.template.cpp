@@ -397,8 +397,12 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishSimulation() {
 }
 
 
-void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::solutionUpdate(double* luh, const double* const luhOld, const double* const lduh, const double dt){
-  kernels::aderdg::generic::c::solutionUpdate<{{NAMESPACE | join("::")}}::{{CLASSNAME}}>(
+template<typename T>
+void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::solutionUpdate(double* luh, const double* const luhOld, const T* const lduh, const double dt){
+  kernels::aderdg::generic::c::solutionUpdate<
+    {{NAMESPACE | join("::")}}::{{CLASSNAME}},
+    T
+      >(
       *this,
       luh,
       luhOld,
@@ -409,7 +413,25 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::solutionUpdate(double* luh, cons
 
 
 
-int {{NAMESPACE | join("::")}}::{{CLASSNAME}}::spaceTimePredictor(double*  lQhbnd, double* lFhbnd, double* lQi, double* rhs, double* lFi, double* gradQ, double* lQhi, double* lFhi, const double* const luh, const tarch::la::Vector<Dimensions, double>& cellCentre, const tarch::la::Vector<Dimensions, double>& cellSize, const double t, const double dt){
+template void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::solutionUpdate<float>(double* luh, const double* const luhOld, const float* const lduh, const double dt);
+
+template void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::solutionUpdate<double>(double* luh, const double* const luhOld, const double* const lduh, const double dt);
+
+
+int {{NAMESPACE | join("::")}}::{{CLASSNAME}}::spaceTimePredictor(
+    {{PREDICTOR_STORAGE_PRECISION}}*         lQhbnd,
+    {{PREDICTOR_STORAGE_PRECISION}}*         lFhbnd,
+    {{PREDICTOR_COMPUTATION_PRECISION}}*          lQi,
+    {{PREDICTOR_COMPUTATION_PRECISION}}*          rhs,
+    {{PREDICTOR_COMPUTATION_PRECISION}}*          lFi,
+    {{PREDICTOR_COMPUTATION_PRECISION}}*          gradQ,
+    {{PREDICTOR_COMPUTATION_PRECISION}}*          lQhi,
+    {{PREDICTOR_COMPUTATION_PRECISION}}*          lFhi,
+    const {{SOLUTION_STORAGE_PRECISION}}* const   luh,
+    const tarch::la::Vector<Dimensions, double>&  cellCentre,
+    const tarch::la::Vector<Dimensions, double>&  cellSize,
+    const double t,
+    const double dt){
 
   {% if IS_LINEAR is sameas True %}
   //template <bool usePointSource, bool useSource, bool useFlux, bool useNCP, bool useMM,typename SolverType>
@@ -448,8 +470,10 @@ int {{NAMESPACE | join("::")}}::{{CLASSNAME}}::spaceTimePredictor(double*  lQhbn
     false, //viscousFlux
     {{ "true" if USE_NCP!="<none>" else "false" }}, //useNCP
     false, //noTimeAveraging
-    {{NAMESPACE | join("::")}}::{{CLASSNAME}}>(
-
+    {{NAMESPACE | join("::")}}::{{CLASSNAME}},
+    {{PREDICTOR_COMPUTATION_PRECISION}}, //predictor_computation_precision
+    {{PREDICTOR_STORAGE_PRECISION}} //predictor_storage_precision
+    >(
       *this,
       lQhbnd,
       nullptr,
@@ -472,7 +496,7 @@ int {{NAMESPACE | join("::")}}::{{CLASSNAME}}::spaceTimePredictor(double*  lQhbn
 
 
 
-void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::volumeIntegral(double* lduh, const double* const lFhi, const tarch::la::Vector<Dimensions, double>& cellSize){
+void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::volumeIntegral({{PREDICTOR_COMPUTATION_PRECISION}}* lduh, const {{PREDICTOR_COMPUTATION_PRECISION}}* const lFhi, const tarch::la::Vector<Dimensions, double>& cellSize){
 
   {% if IS_LINEAR is sameas True %}
   //template <typename SolverType,bool useSource, bool useFlux, int numberOfVariables, int basisSize>
@@ -490,6 +514,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::volumeIntegral(double* lduh, con
   //template <typename SolverType, bool useSourceOrNCP, bool useFlux, bool noTimeAveraging, const int numberOfVariables, int basisSize>
   kernels::aderdg::generic::c::volumeIntegralNonlinear<
     {{NAMESPACE | join("::")}}::{{CLASSNAME}},
+    {{PREDICTOR_COMPUTATION_PRECISION}}, //predictor_computation_precision
     {{ "true" if USE_NCP!="<none>" or USE_SOURCE!="<none>" else "false" }}, //useSourceOrNCP
     {{ "true" if USE_FLUX!="<none>" else "false" }}, //useFlux
     false, //noTimeAveraging
@@ -607,29 +632,21 @@ double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::maxScaledEigenvalue(const doub
 }
 
 
-void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::viscousFlux(const double* const Q,const double* const gradQ, double** const F) {
+
+{% for PRECISION_NUM in range(0,COMPUTATION_PRECISIONS|length) %}
+
+void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::viscousFlux(const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const Q, const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const gradQ, {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}** const F) {
   // should not be called
+  exit(1);
 }
 
-void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::viscousEigenvalues(const double* const Q,const int direction,double* const lambda) {
+
+void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::viscousEigenvalues(const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const Q, const int direction, {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const lambda) {
   //should not be called
+  exit(1);
 }
 
-void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::flux(const double* const Q,double** const F) {
-  // should not be called
-}
-
-void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::nonConservativeProduct(const double* const Q,const double* const gradQ,double* const BgradQ) {
-  // should not be called
-}
-
-void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::algebraicSource(const tarch::la::Vector<Dimensions, double>& x, double t, const double *const Q, double *S) {
-  // should not be called
-}
-
-void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::pointSource(const double* const Q,const double* const x,const double t,const double dt, double* const forceVector,int n) {
-  // should not be called
-}
+{% endfor %}
 
 
 {{ABSTRACT_SOLVER_USER_DEFINITIONS}}

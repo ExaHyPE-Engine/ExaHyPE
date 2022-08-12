@@ -1,8 +1,8 @@
   # This file is part of the ExaHyPE2 project. For conditions of distribution and 
 # use, please see the copyright notice at www.peano-framework.org
+from exahype2.solvers.new_ader.ADERDG         import PrecisionType
 from exahype2.solvers.new_ader.SingleSweep    import SingleSweep
 from exahype2.solvers.new_ader.PDETerms       import PDETerms
-
 
 from exahype2.solvers.new_ader.kernels import create_abstract_solver_declarations
 from exahype2.solvers.new_ader.kernels import create_abstract_solver_definitions
@@ -36,9 +36,11 @@ class GlobalAdaptiveTimeStep( SingleSweep ):
     initial_conditions=PDETerms.User_Defined_Implementation,
     source_term=PDETerms.None_Implementation,
     is_linear=False,
-    plot_grid_properties=False
+    plot_grid_properties=False,
+    predictor_persistent_storage_precision=PrecisionType.double,
+    predictor_computation_precision=PrecisionType.double
   ):
-    super(GlobalAdaptiveTimeStep,self).__init__(name, order, polynomials, unknowns, auxiliary_variables, min_cell_h, max_cell_h, is_linear, plot_grid_properties) 
+    super(GlobalAdaptiveTimeStep,self).__init__(name, order, polynomials, unknowns, auxiliary_variables, min_cell_h, max_cell_h, is_linear, plot_grid_properties, predictor_persistent_storage_precision, predictor_computation_precision) 
    
     self._cflSafetyFactor = time_step_relaxation
 
@@ -77,13 +79,14 @@ class GlobalAdaptiveTimeStep( SingleSweep ):
                                                        point_source=point_source
                                                        )
 
-    self._abstract_solver_user_declarations  = create_abstract_solver_declarations(self._flux_implementation, self._ncp_implementation, self._eigenvalues_implementation, self._source_term_implementation, self._point_sources_implementation, False)
+    corrector_precisions = list(set([self._predictor_computation_precision, self._corrector_computation_precision]))
+    self._abstract_solver_user_declarations  = create_abstract_solver_declarations(self._flux_implementation, self._ncp_implementation, self._eigenvalues_implementation, self._source_term_implementation, self._point_sources_implementation, corrector_precisions, False)
     self._abstract_solver_user_declarations += create_abstract_solver_user_declarations_for_adaptive_time_stepping()
-    self._abstract_solver_user_definitions   = create_abstract_solver_definitions( self._flux_implementation, self._ncp_implementation, self._eigenvalues_implementation, self._source_term_implementation, self._point_sources_implementation, False)
+    self._abstract_solver_user_definitions   = create_abstract_solver_definitions( self._flux_implementation, self._ncp_implementation, self._eigenvalues_implementation, self._source_term_implementation, self._point_sources_implementation, corrector_precisions, False)
     self._abstract_solver_user_definitions  += create_abstract_solver_user_definitions_for_adaptive_time_stepping()
     
-    self._solver_user_declarations           = create_solver_declarations(self._flux_implementation, self._ncp_implementation, self._eigenvalues_implementation, self._source_term_implementation, self._point_sources_implementation, False)
-    self._solver_user_definitions            = create_solver_definitions( self._flux_implementation, self._ncp_implementation, self._eigenvalues_implementation, self._source_term_implementation, self._point_sources_implementation, False)
+    self._solver_user_declarations           = create_solver_declarations(self._flux_implementation, self._ncp_implementation, self._eigenvalues_implementation, self._source_term_implementation, self._point_sources_implementation, corrector_precisions, False)
+    self._solver_user_definitions            = create_solver_definitions( self._flux_implementation, self._ncp_implementation, self._eigenvalues_implementation, self._source_term_implementation, self._point_sources_implementation, corrector_precisions, False)
     
     self._constructor_implementation         = create_constructor_implementation_for_adaptive_time_stepping()
     

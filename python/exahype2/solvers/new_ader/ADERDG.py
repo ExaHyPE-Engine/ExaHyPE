@@ -25,11 +25,13 @@ class Polynomials(IntEnum):
   Gauss_Legendre = 0,
   Gauss_Lobatto = 1
   
-
-    
+class PrecisionType():
+  float = "float"
+  double = "double"
+  long_double = "long double"
 
 class ADERDG( object ):
-  def __init__(self, name, order, polynomials, unknowns, auxiliary_variables, min_cell_h, max_cell_h, is_linear, plot_grid_properties=False):
+  def __init__(self, name, order, polynomials, unknowns, auxiliary_variables, min_cell_h, max_cell_h, is_linear, plot_grid_properties=False, predictor_persistent_storage_precision=PrecisionType.double, predictor_computation_precision=PrecisionType.double):
 
     self._name = name
     
@@ -47,7 +49,12 @@ class ADERDG( object ):
 #    if is_linear==True: self._is_linear="true"
 #    else: self._is_linear=="false"
 
-    self._plot_grid_properties = plot_grid_properties    
+    self._plot_grid_properties = plot_grid_properties
+
+    self._predictor_computation_precision        = predictor_computation_precision
+    self._corrector_computation_precision        = PrecisionType.double
+    self._solution_persistent_storage_precision  = PrecisionType.double
+    self._predictor_persistent_storage_precision = predictor_persistent_storage_precision
 
     self._solver_constants         = ""
     self.user_action_set_includes  = ""
@@ -64,14 +71,14 @@ class ADERDG( object ):
     else:
       raise Exception( "No proper basis chosen: {}".format(polynomials) )
 
-    self._flux_implementation                 = None
-    self._ncp_implementation                  = None
-    self._eigenvalues_implementation          = None
-    self._source_term_implementation          = None
-    self._point_sources_implementation         = None
-    self._boundary_conditions_implementation  = None
-    self._refinement_criterion_implementation = None
-    self._initial_conditions_implementation   = None
+    self._flux_implementation                 = PDETerms.None_Implementation
+    self._ncp_implementation                  = PDETerms.None_Implementation
+    self._eigenvalues_implementation          = PDETerms.None_Implementation
+    self._source_term_implementation          = PDETerms.None_Implementation
+    self._point_sources_implementation        = PDETerms.None_Implementation
+    self._boundary_conditions_implementation  = PDETerms.None_Implementation
+    self._refinement_criterion_implementation = PDETerms.None_Implementation
+    self._initial_conditions_implementation   = PDETerms.None_Implementation
 
     self._compute_time_step_size              = "#error Not yet defined"
     
@@ -99,8 +106,6 @@ class ADERDG( object ):
     
     # safety factor for CFL (Courant-Friedrichs-Lewy) condition
     self._cflSafetyFactor = 0.0
-    
-    
 
     self._action_set_postprocess_solution = None
 
@@ -114,9 +119,9 @@ class ADERDG( object ):
     self._number_of_face_projections = 1;
 
     #current time step contains the solution, projections are respectively the projection of the solution and of the fluxes as predicted by the space-time predictor
-    self._current_time_step             = peano4.datamodel.Patch( (self._order+1,self._order+1,self._order+1), self._unknowns+self._auxiliary_variables, self._unknown_identifier() )
-    self._rhs_estimates_projection          = peano4.datamodel.Patch( (2,self._order+1,self._order+1),  self._unknowns+self._auxiliary_variables, self._unknown_identifier() + "Estimates" )
-    self._flux_estimates_projection     = peano4.datamodel.Patch( (2,self._order+1,self._order+1),  self._unknowns, self._unknown_identifier() + "FluxEstimates" )    
+    self._current_time_step             = peano4.datamodel.Patch( (self._order+1,self._order+1,self._order+1), self._unknowns+self._auxiliary_variables, self._unknown_identifier(), "double" )
+    self._rhs_estimates_projection      = peano4.datamodel.Patch( (2,self._order+1,self._order+1),  self._unknowns+self._auxiliary_variables, self._unknown_identifier() + "Estimates", self._predictor_persistent_storage_precision )
+    self._flux_estimates_projection     = peano4.datamodel.Patch( (2,self._order+1,self._order+1),  self._unknowns, self._unknown_identifier() + "FluxEstimates", self._predictor_persistent_storage_precision )    
         
     #custom merge implementation takes into account that the faces project such that the left cell projects to the left half of the face and the right cell projects to the right half
     self._rhs_estimates_projection.generator.merge_method_definition = get_face_overlap_merge_implementation(self._rhs_estimates_projection)
@@ -463,6 +468,14 @@ class ADERDG( object ):
     d["USE_GAUSS_LOBATTO"] = ("true" if self._polynomials is Polynomials.Gauss_Lobatto else "false")
     d["POLYNOMIAL_TYPE"] = ("lobatto" if self._polynomials is Polynomials.Gauss_Lobatto else "legendre")
 
+    d["SOLUTION_STORAGE_PRECISION"]       = self._solution_persistent_storage_precision
+    d["PREDICTOR_STORAGE_PRECISION"]      = self._predictor_persistent_storage_precision
+    d["PREDICTOR_COMPUTATION_PRECISION"]  = self._predictor_computation_precision
+    d["CORRECTOR_COMPUTATION_PRECISION"]  = self._corrector_computation_precision
+    
+    d["COMPUTATION_PRECISIONS"] = list(set([self._predictor_computation_precision, self._corrector_computation_precision]))
+    d["NUMBER_OF_PRECISIONS"]   = len(d["COMPUTATION_PRECISIONS"])
+
     d[ "ASSERTION_WITH_1_ARGUMENTS" ] = "nonCriticalAssertion1"
     d[ "ASSERTION_WITH_2_ARGUMENTS" ] = "nonCriticalAssertion2"
     d[ "ASSERTION_WITH_3_ARGUMENTS" ] = "nonCriticalAssertion3"
@@ -526,7 +539,7 @@ class ADERDG( object ):
     if ncp                  is not None:  self._ncp_implementation                        = ncp
     if eigenvalues          is not None:  self._eigenvalues_implementation                = eigenvalues
     if source_term          is not None:  self._source_term_implementation                = source_term
-    if point_source         is not None:  self._point_sources_implementation               = source_term
+    if point_source         is not None:  self._point_sources_implementation              = source_term
     
     self.user_action_set_includes += additional_action_set_includes
     self.user_solver_includes     += additional_user_includes

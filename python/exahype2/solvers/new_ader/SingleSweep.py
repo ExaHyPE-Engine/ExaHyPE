@@ -1,13 +1,13 @@
 # This file is part of the ExaHyPE2 project. For conditions of distribution and 
 # use, please see the copyright notice at www.peano-framework.org
-from .ADERDG  import ADERDG
+from .ADERDG  import ADERDG, PrecisionType
 
 from .PDETerms import PDETerms
  
 import jinja2
 
 class SingleSweep( ADERDG ):
-  def __init__(self, name, order, polynomials, unknowns, auxiliary_variables, min_cell_h, max_cell_h, is_linear, plot_grid_properties=False):
+  def __init__(self, name, order, polynomials, unknowns, auxiliary_variables, min_cell_h, max_cell_h, is_linear, plot_grid_properties=False, predictor_persistent_storage_precision=PrecisionType.double, predictor_computation_precision=PrecisionType.double):
 
     super(SingleSweep, self).__init__(
       name,
@@ -18,7 +18,9 @@ class SingleSweep( ADERDG ):
       min_cell_h,
       max_cell_h,
       is_linear,
-      plot_grid_properties)
+      plot_grid_properties,
+      predictor_persistent_storage_precision,
+      predictor_computation_precision)
         
     self._solver_template_file_class_name     = "SingleSweep"
     
