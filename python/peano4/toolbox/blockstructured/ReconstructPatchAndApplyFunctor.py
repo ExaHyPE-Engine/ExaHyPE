@@ -3,10 +3,10 @@
 from peano4.solversteps.ActionSet import ActionSet
 
 
-from enum import Enum
+from enum import IntEnum
 
 
-class ReconstructedArrayMemoryLocation(Enum):
+class ReconstructedArrayMemoryLocation(IntEnum):
   """
    All arrays are held on the call stack. Might not work with PGI compilers or 
    Clang, but it does work with GCC and Intel. This mode is the preferred one,
@@ -131,7 +131,6 @@ class ReconstructPatchAndApplyFunctor(ActionSet):
       d[ "ASSERTION_PREFIX_FOR_HALO" ] = "false"
     else:
       d[ "ASSERTION_PREFIX_FOR_HALO" ] = "true"
-      
 
     if self.reconstructed_array_memory_location==ReconstructedArrayMemoryLocation.Heap or self.reconstructed_array_memory_location==ReconstructedArrayMemoryLocation.HeapWithoutDelete:
       d[ "CREATE_RECONSTRUCTED_PATCH" ] = """
@@ -168,7 +167,7 @@ class ReconstructPatchAndApplyFunctor(ActionSet):
     #endif
 """    
     else:  
-      printf( "Error: memory allocation mode for patch reconstruction not known")
+      print( "Error: memory allocation mode for patch reconstruction not known")
 
 
     if self.reconstructed_array_memory_location==ReconstructedArrayMemoryLocation.Heap:
