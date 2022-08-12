@@ -44,9 +44,6 @@ void exahype2::fv::rusanov::timeStepWithRusanov_patchwise_heap_functors(
   double* tempEigenvalueY            =                                    tarch::allocateMemory( eigenvalueEnumerator.size(),      tarch::MemoryLocation::Heap );
   double* tempEigenvalueZ            = (Dimensions==3)                  ? tarch::allocateMemory( eigenvalueEnumerator.size(),      tarch::MemoryLocation::Heap ) : nullptr;
 
-  memset(tempFluxX, 0, fluxEnumerator.size() * sizeof(double));
-  memset(tempFluxY, 0, fluxEnumerator.size() * sizeof(double));
-
   for (int patchIndex=0; patchIndex<patchData.numberOfCells; patchIndex++) {
     logDebug( "timeStepWithRusanov_sequential(...)", "evaluate source terms and/or copy solution over" );
     if (Dimensions==2 and evaluateSource) {
