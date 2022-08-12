@@ -27,12 +27,12 @@ namespace c {
 
 #if Dimensions == 2
 
-template <typename SolverType>
+template <typename SolverType, typename pType>
 void solutionUpdate(
     SolverType& solver,
     double* luh,
     const double* const luhOld,
-    const double* const lduh,
+    const pType* const lduh,
     const double dt) {
   constexpr int numberOfVariables  = SolverType::NumberOfVariables;
   constexpr int numberOfParameters = SolverType::NumberOfParameters;
