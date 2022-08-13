@@ -1,13 +1,13 @@
-#include "SelfSimilarInfall.h"
 #include "exahype2/RefinementControl.h"
 #include "EulerKernels.h"
+#include "SelfSimilarInfallFV.h"
 
 
-tarch::logging::Log   examples::exahype2::euler::sphericalaccretionupscaling::SelfSimilarInfall::_log( "examples::exahype2::euler::sphericalaccretionupscaling::SelfSimilarInfall" );
+tarch::logging::Log   benchmarks::exahype2::euler::sphericalaccretionupscaling::SelfSimilarInfallFV::_log( "benchmarks::exahype2::euler::sphericalaccretionupscaling::SelfSimilarInfallFV" );
 
 
 
-void examples::exahype2::euler::sphericalaccretionupscaling::SelfSimilarInfall::addDensity(
+void benchmarks::exahype2::euler::sphericalaccretionupscaling::SelfSimilarInfallFV::addDensity(
   const tarch::la::Vector<Dimensions,double>&  volumeCentre,
   const tarch::la::Vector<Dimensions,double>&  volumeH,
   double                                       density
@@ -21,13 +21,13 @@ void examples::exahype2::euler::sphericalaccretionupscaling::SelfSimilarInfall::
 }
 
 
-void examples::exahype2::euler::sphericalaccretionupscaling::SelfSimilarInfall::initialCondition(
+void benchmarks::exahype2::euler::sphericalaccretionupscaling::SelfSimilarInfallFV::initialCondition(
   double * __restrict__                        Q,
   const tarch::la::Vector<Dimensions,double>&  volumeX,
   const tarch::la::Vector<Dimensions,double>&  volumeH,
   bool                                         gridIsConstructred
 ) {
-  logTraceInWith3Arguments( "initialCondition(...)", volumeCentre, volumeH, gridIsConstructred );
+  logTraceInWith3Arguments( "initialCondition(...)", volumeX, volumeH, gridIsConstructred );
 
   for (int i=0; i<NumberOfUnknowns+NumberOfAuxiliaryVariables; i++) {
     Q[i] = 0.0;
@@ -62,7 +62,7 @@ void examples::exahype2::euler::sphericalaccretionupscaling::SelfSimilarInfall::
 }
 
 
-void examples::exahype2::euler::sphericalaccretionupscaling::SelfSimilarInfall::boundaryConditions(
+void benchmarks::exahype2::euler::sphericalaccretionupscaling::SelfSimilarInfallFV::boundaryConditions(
   const double * __restrict__                  Qinside, // Qinside[5+0]
   double * __restrict__                        Qoutside, // Qoutside[5+0]
   const tarch::la::Vector<Dimensions,double>&  faceCentre,
@@ -87,7 +87,7 @@ void examples::exahype2::euler::sphericalaccretionupscaling::SelfSimilarInfall::
 }
 
 
-double ::examples::exahype2::euler::sphericalaccretionupscaling::SelfSimilarInfall::maxEigenvalue(
+double ::benchmarks::exahype2::euler::sphericalaccretionupscaling::SelfSimilarInfallFV::maxEigenvalue(
   const double * __restrict__                  Q,
   const tarch::la::Vector<Dimensions,double>&  faceCentre,
   const tarch::la::Vector<Dimensions,double>&  volumeH,
@@ -115,7 +115,7 @@ double ::examples::exahype2::euler::sphericalaccretionupscaling::SelfSimilarInfa
 }
 
 
-void ::examples::exahype2::euler::sphericalaccretionupscaling::SelfSimilarInfall::flux(
+void ::benchmarks::exahype2::euler::sphericalaccretionupscaling::SelfSimilarInfallFV::flux(
   const double * __restrict__                  Q,
   const tarch::la::Vector<Dimensions,double>&  faceCentre,
   const tarch::la::Vector<Dimensions,double>&  volumeH,
@@ -143,7 +143,7 @@ void ::examples::exahype2::euler::sphericalaccretionupscaling::SelfSimilarInfall
 }
 
 
-void ::examples::exahype2::euler::sphericalaccretionupscaling::SelfSimilarInfall::sourceTerm(
+void ::benchmarks::exahype2::euler::sphericalaccretionupscaling::SelfSimilarInfallFV::sourceTerm(
   const double * __restrict__                  Q, // Q[5+0]
   const tarch::la::Vector<Dimensions,double>&  volumeX,
   const tarch::la::Vector<Dimensions,double>&  volumeH,
@@ -157,12 +157,10 @@ void ::examples::exahype2::euler::sphericalaccretionupscaling::SelfSimilarInfall
 
   double a   = 1e-3 * 0.0287 * std::pow((-t/11.8+0.1694*std::pow(aInitial,-0.5)),-2); //when code time ~ 2*(a_i^(-0.5)-1), a~1
 
-  double massInterpolated = _accumulator.getMass( distance );
-
-  // @todo bei Diesem Vorzeichen bin ich mir net sicher
+  double massInterpolated = _accumulator.getMass_linearInterpolation( distance );
 
   S[0] = 0.0;  // rho
-  if (tarch::la::greater(distance,0.0)) {
+  if (false and tarch::la::greater(distance,0.0)) {
     double normalisedDistance = std::max(1.0,distance);
 
     double forceDensity = a * Q[0] * massInterpolated / std::pow( normalisedDistance, 3.0 );
@@ -184,10 +182,72 @@ void ::examples::exahype2::euler::sphericalaccretionupscaling::SelfSimilarInfall
 }
 
 
-void ::examples::exahype2::euler::sphericalaccretionupscaling::SelfSimilarInfall::finishTimeStep() {
-  AbstractSelfSimilarInfall::finishTimeStep();
+void ::benchmarks::exahype2::euler::sphericalaccretionupscaling::SelfSimilarInfallFV::finishTimeStep() {
+  AbstractSelfSimilarInfallFV::finishTimeStep();
   if (isLastGridSweepOfTimeStep()) {
     _accumulator.finishAccumulation();
   }
 }
 
+
+    #if defined(GPUOffloadingOMP)
+    #pragma omp declare target
+    #endif
+GPUCallableMethod double ::benchmarks::exahype2::euler::sphericalaccretionupscaling::SelfSimilarInfallFV::maxEigenvalue(
+  const double * __restrict__ Q, // Q[5+0],
+  const tarch::la::Vector<Dimensions,double>&  faceCentre,
+  const tarch::la::Vector<Dimensions,double>&  volumeH,
+  double                                       t,
+  double                                       dt,
+  int                                          normal,
+  Offloadable
+)  {
+  // @todo implement
+}
+    #if defined(GPUOffloadingOMP)
+    #pragma omp end declare target
+    #endif
+
+
+
+
+    #if defined(GPUOffloadingOMP)
+    #pragma omp declare target
+    #endif
+GPUCallableMethod void ::benchmarks::exahype2::euler::sphericalaccretionupscaling::SelfSimilarInfallFV::flux(
+  const double * __restrict__ Q, // Q[5+0],
+  const tarch::la::Vector<Dimensions,double>&  faceCentre,
+  const tarch::la::Vector<Dimensions,double>&  volumeH,
+  double                                       t,
+  double                                       dt,
+  int                                          normal,
+  double * __restrict__ F,
+  Offloadable
+)  {
+  // @todo implement
+}
+    #if defined(GPUOffloadingOMP)
+    #pragma omp end declare target
+    #endif
+
+
+    #if defined(GPUOffloadingOMP)
+    #pragma omp declare target
+    #endif
+GPUCallableMethod void ::benchmarks::exahype2::euler::sphericalaccretionupscaling::SelfSimilarInfallFV::sourceTerm(
+  const double * __restrict__                  Q,
+  const tarch::la::Vector<Dimensions,double>&  volumeCentre,
+  const tarch::la::Vector<Dimensions,double>&  volumeH,
+  double                                       t,
+  double                                       dt,
+  double * __restrict__                        S,
+  Offloadable
+) {
+  // @todo implement but ensure that all entries of S are properly set
+  for (int i=0; i<NumberOfUnknowns; i++) {
+    S[i] = 0.0;
+  }
+}
+    #if defined(GPUOffloadingOMP)
+    #pragma omp end declare target
+    #endif

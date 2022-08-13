@@ -1,5 +1,6 @@
 #include "MassAccumulator.h"
 
+#include "tarch/Assertions.h"
 #include "tarch/multicore/Lock.h"
 
 #include <cmath>
@@ -107,7 +108,7 @@ void applications::exahype2::euler::sphericalaccretion::MassAccumulator::finishA
       }
     }
   }
-  logInfo( "finishAccumulation()", "roll over " << maxShell << " out of " << _previousMassAccumulated.size() << " buckets" );
+  logInfo( "finishAccumulation()", "roll over " << maxShell << " out of " << _previousMassAccumulated.size() << " buckets (remaining buckets make no significant contribution)" );
   _previousMassAccumulated.resize(maxShell);
 
 

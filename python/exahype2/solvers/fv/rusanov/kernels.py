@@ -570,7 +570,6 @@ GPUCallableMethod void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::nonconservat
   {{NCP_IMPLEMENTATION}}
   {% endif %}
 }
-#endif
 #if defined(GPUOffloadingOMP)
 #pragma omp end declare target
 #endif

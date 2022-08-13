@@ -6,22 +6,22 @@
 // This is generated. If you change fundamental properties, you will have to 
 // generate this file. Backup your manual changes before you do so.
 //
-#ifndef _examples_exahype2_euler_sphericalaccretionupscaling_SelfSimilarInfall_H_
-#define _examples_exahype2_euler_sphericalaccretionupscaling_SelfSimilarInfall_H_
+#ifndef _examples_exahype2_euler_sphericalaccretionupscaling_SelfSimilarInfallFV_H_
+#define _examples_exahype2_euler_sphericalaccretionupscaling_SelfSimilarInfallFV_H_
 
-#include "AbstractSelfSimilarInfall.h"
+#include "AbstractSelfSimilarInfallFV.h"
 #include "tarch/logging/Log.h"
 
 #include "spherical-accretion/MassAccumulator.h"
 
 
-namespace examples {namespace exahype2 {namespace euler {namespace sphericalaccretionupscaling {
-  class SelfSimilarInfall;
+namespace benchmarks {namespace exahype2 {namespace euler {namespace sphericalaccretionupscaling {
+  class SelfSimilarInfallFV;
 
 }}}}
 
 
-class examples::exahype2::euler::sphericalaccretionupscaling::SelfSimilarInfall: public examples::exahype2::euler::sphericalaccretionupscaling::AbstractSelfSimilarInfall {
+class benchmarks::exahype2::euler::sphericalaccretionupscaling::SelfSimilarInfallFV: public benchmarks::exahype2::euler::sphericalaccretionupscaling::AbstractSelfSimilarInfallFV {
   private:
     static tarch::logging::Log   _log;
 
@@ -147,6 +147,102 @@ class examples::exahype2::euler::sphericalaccretionupscaling::SelfSimilarInfall:
      * If so, we let the mass accummulation know.
      */
     void finishTimeStep() override;
+    /**
+     * To obtain the best performance, I recommend to man inline command to 
+     * this signature and to copy the implementation into the header. So it would
+     * read 
+     *
+     * static inline void sourceTerm( ... ) {
+     *  code here
+     * }
+     *
+     * The GPU offloading requires static functions. As we cannot overload the
+     * original (virtual) function with a static alternative, we do the
+     * TBB trick and overload by adding an additional enum. It has no semantics
+     * but helps the compiler to distinguish the different function variants.
+     */
+    #if defined(GPUOffloadingOMP)
+    #pragma omp declare target
+    #endif
+    static GPUCallableMethod void sourceTerm(
+       const double * __restrict__                  Q,
+       const tarch::la::Vector<Dimensions,double>&  volumeCentre,
+       const tarch::la::Vector<Dimensions,double>&  volumeH,
+       double                                       t,
+       double                                       dt,
+       double * __restrict__                        S,
+       Offloadable
+    );
+    #if defined(GPUOffloadingOMP)
+    #pragma omp end declare target
+    #endif
+    
+
+
+    
+    /**
+     * To obtain the best performance, I recommend to man inline command to 
+     * this signature and to copy the implementation into the header. So it would
+     * read 
+     *
+     * static inline double maxEigenvalue( ... ) {
+     *  code here
+     * }
+     *
+     * The GPU offloading requires static functions. As we cannot overload the
+     * original (virtual) function with a static alternative, we do the
+     * TBB trick and overload by adding an additional enum. It has no semantics
+     * but helps the compiler to distinguish the different function variants.
+     */
+    #if defined(GPUOffloadingOMP)
+    #pragma omp declare target
+    #endif
+    static GPUCallableMethod double maxEigenvalue(
+      const double * __restrict__ Q, // Q[5+0],
+      const tarch::la::Vector<Dimensions,double>&  faceCentre,
+      const tarch::la::Vector<Dimensions,double>&  volumeH,
+      double                                       t,
+      double                                       dt,
+      int                                          normal,
+      Offloadable
+    );
+    #if defined(GPUOffloadingOMP)
+    #pragma omp end declare target
+    #endif
+    
+
+
+    
+    /**
+     * To obtain the best performance, I recommend to man inline command to 
+     * this signature and to copy the implementation into the header. So it would
+     * read 
+     *
+     * static inline void flux( ... ) {
+     *  code here
+     * }
+     *
+     * The GPU offloading requires static functions. As we cannot overload the
+     * original (virtual) function with a static alternative, we do the
+     * TBB trick and overload by adding an additional enum. It has no semantics
+     * but helps the compiler to distinguish the different function variants.
+     */
+    #if defined(GPUOffloadingOMP)
+    #pragma omp declare target
+    #endif
+    static GPUCallableMethod void flux(
+      const double * __restrict__ Q, // Q[5+0],
+      const tarch::la::Vector<Dimensions,double>&  faceCentre,
+      const tarch::la::Vector<Dimensions,double>&  volumeH,
+      double                                       t,
+      double                                       dt,
+      int                                          normal,
+      double * __restrict__                        F, // F[5]
+      Offloadable
+    );
+    #if defined(GPUOffloadingOMP)
+    #pragma omp end declare target
+    #endif
 };
 
 

@@ -26,61 +26,52 @@ parser = argparse.ArgumentParser(description='ExaHyPE 2 - Euler benchmarking scr
 parser.add_argument("-j",   "--parallel-builds",   dest="j",              type=int, default=-1, help="Parallel builds" )
 parser.add_argument("-pd",  "--peano-dir",         dest="peanodir",       default="../../../../", help="Peano4 directory" )
 parser.add_argument("-v",   "--verbose",           dest="verbose",        action="store_true", default=False, help="Verbose")
-parser.add_argument(        "--debug",             dest="debug"  ,        action="store_true", default=False, help="Enable assertions (slow)")
+parser.add_argument("-m",   "--mode",              dest="mode",           choices=["release","stats","asserts"], required=True, help="Pick build type" )
 parser.add_argument(        "--plot",              dest="plot"  ,         action="store_true", default=False, help="Plot solution in regular time intervals")
 parser.add_argument("-s",   "--solver",            dest="solver",         choices=["fv-4", "fv-6", "fv-8", "fd4-rk1", "fd4-rk2", "fd4-rk3", "fd4-rk4", "dg1-rk1", "dg2-rk2", "dg3-rk3", "dg4-rk4", "dg4-rk1", "dg4-rk2", "dg4-rk3"], required=True, help="Pick solver type" )
-parser.add_argument("-f",   "--file",              dest="file",           default="", help="Specify to convert an output file into a bar plot. If you omit this flag, the script will actually build the benchmark" )
 args = parser.parse_args()
 
 
 
     
-    
-#
-# Create a project and configure it to end up in a subnamespace (and thus
-# subdirectory). 
-#
-project = exahype2.Project( ["examples", "exahype2", "euler", "sphericalaccretionupscaling"], "fv", ".", executable="fv" )
 
-    
 #
 # Add the Finite Volumes solver
 #
 solver_name = "SelfSimilarInfall"
 dimensions  = 3
-unknowns = {
+unknowns    = {
   "rho": 1,
   "j":   dimensions,
   "E":   1,
 }
-number_of_unknowns = sum(unknowns.values())
-if args.debug:
-  max_h          = 0.5/args.patch_size
-  min_h          = 0.5/args.patch_size
-else:
-  max_h          = 0.1/args.patch_size
-  min_h          = 0.1/args.patch_size
+number_of_unknowns  = sum(unknowns.values())
+max_h               = 0.1
+min_h               = 0.1
 auxiliary_variables = 0
 
 
+executable_name = "benchmark-"
+
 if "fv" in args.solver:
   patch_size = int(args.solver[-1])
-  my_solver = exahype2.solvers.fv.rusanov.GlobalAdaptiveTimeStepWithEnclaveTasking(name                 = solver_name + "FV", 
+  thesolver = exahype2.solvers.fv.rusanov.GlobalAdaptiveTimeStepWithEnclaveTasking(name                 = solver_name + "FV", 
                                                                                    patch_size           = 5,
                                                                                    unknowns             = number_of_unknowns,
                                                                                    auxiliary_variables  = auxiliary_variables,
-                                                                                   min_volume_h         = max_h / patch_size, 
-                                                                                   max_volume_h         = max_h / patch_size,
+                                                                                   min_volume_h         = max_h / 8, 
+                                                                                   max_volume_h         = max_h / 8,
                                                                                    time_step_relaxation = 0.1,
                                                                                    flux                 = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
                                                                                    eigenvalues          = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
                                                                                    source_term          = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
                                                                                    pde_terms_without_state = True
                                                                                   )
+  executable_name = executable_name + "FV-" + str(patch_size)
 if "rk" in args.solver and "dg" in args.solver:
   space_order = int(args.solver[2])
   time_order  = int(args.solver[6])
-  my_solver = exahype2.solvers.rkdg.rusanov.GlobalAdaptiveTimeStep(name                 = solver_name + "DG",
+  thesolver = exahype2.solvers.rkdg.rusanov.GlobalAdaptiveTimeStep(name                 = solver_name + "DG",
                                                                    rk_order             = time_order,
                                                                    polynomials          = exahype2.solvers.GaussLegendreBasis(space_order),
                                                                    unknowns             = number_of_unknowns,
@@ -93,6 +84,7 @@ if "rk" in args.solver and "dg" in args.solver:
                                                                    source_term          = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
                                                                    pde_terms_without_state = True
                                                                    )
+  executable_name = executable_name + "RK" + str(time_order) + "DG" + str(space_order)
 
 thesolver._action_set_postprocess_solution = exahype2.solvers.fv.actionsets.VolumeWisePostprocessSolution(thesolver)
 thesolver._action_set_postprocess_solution.guard = "repositories::{{SOLVER_INSTANCE}}.isLastGridSweepOfTimeStep()"
@@ -100,16 +92,23 @@ thesolver._action_set_postprocess_solution.add_postprocessing_kernel( """
   repositories::{{SOLVER_INSTANCE}}.addDensity(volumeX,volumeH,value[0]);  
 """     )
         
+#
+# Create a project and configure it to end up in a subnamespace (and thus
+# subdirectory). 
+#
+project = exahype2.Project( ["benchmarks", "exahype2", "euler", "sphericalaccretionupscaling"], "benchmark", ".", executable=executable_name )
 project.add_solver( thesolver )
     
     
 #
 # Configure build
 #
-if args.debug:
-  build_mode = peano4.output.CompileMode.Debug
-else:
+if args.mode=="release":
   build_mode = peano4.output.CompileMode.Release
+if args.mode=="stats":
+  build_mode = peano4.output.CompileMode.Stats
+if args.mode=="asserts":
+  build_mode = peano4.output.CompileMode.Asserts
 
 if args.plot:
   plot_interval = 0.1
