@@ -39,6 +39,10 @@ class VolumeWisePostprocessSolution(AbstractFVActionSet):
   FV.create_action_sets(). Once the instance does exist, you can tailor it. But you
   can also completely overwrite it.
   
+  See also FV.postprocess_updated_patch(self, kernel) for a discussion what options
+  ExaHyPE offers for postprocessing. This volume-wise postprocessing might be too
+  heavy-weight for some applications.
+  
   """
   def __init__(self,solver):
     AbstractFVActionSet.__init__(self,solver)

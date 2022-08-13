@@ -65,6 +65,10 @@ class applications::exahype2::euler::sphericalaccretion::MassAccumulator {
 
     double               _maxDistanceThatMakesContribution;
 
+    /**
+     * Identifies the right bucket. There's no guarantee that such a bucket
+     * does exist already
+     */
     int getBucket( double radius ) const;
   public:
     /**

@@ -1,6 +1,7 @@
 #include "MassAccumulator.h"
 
 #include "tarch/Assertions.h"
+#include "tarch/la/Vector.h"
 #include "tarch/multicore/Lock.h"
 
 #include <cmath>
@@ -62,15 +63,22 @@ double applications::exahype2::euler::sphericalaccretion::MassAccumulator::getMa
       leftBucket--;
       rightWeight = (radius-(leftBucket+0.5)*_shellWidth) / _shellWidth;
     }
-    else if (bucket<_previousMassAccumulated.size()-1) {
+    else if ( radius-bucket*_shellWidth < _shellWidth/2.0 and bucket==0 ) {
+      rightWeight = 1.0;
+    }
+    else if (radius-bucket*_shellWidth >= _shellWidth/2.0 and bucket<_previousMassAccumulated.size()-1) {
       rightBucket++;
       rightWeight = (radius-(leftBucket+0.5)*_shellWidth) / _shellWidth;
     }
+    else if (radius-bucket*_shellWidth >= _shellWidth/2.0 and bucket==_previousMassAccumulated.size()-1) {
+      rightWeight = 0.0;
+    }
+    else {
+      assertion(false);
+    }
 
-    assertion(rightWeight>=0.0);
-    assertion(rightWeight<=0.0);
-
-    std::cout << " " << rightWeight;
+    assertion6( tarch::la::greaterEquals( rightWeight,0.0 ), rightWeight, leftBucket, rightBucket, bucket, radius, _shellWidth);
+    assertion6( tarch::la::smallerEquals( rightWeight,1.0 ), rightWeight, leftBucket, rightBucket, bucket, radius, _shellWidth);
 
     return rightWeight * _previousMassAccumulated.at(rightBucket) + (1.0-rightWeight) * _previousMassAccumulated.at(leftBucket);
   }

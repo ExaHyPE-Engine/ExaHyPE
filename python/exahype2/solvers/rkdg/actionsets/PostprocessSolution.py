@@ -32,7 +32,7 @@ class EmptyPostprocessSolution(AbstractRungeKuttaDGActionSet):
 
 
 
-class VolumeWisePostprocessSolution(AbstractRungeKuttaDGActionSet):
+class DoFWisePostprocessSolution(AbstractRungeKuttaDGActionSet):
   """
   
   PostprocessSolution differs from other action sets, as I only create it once. See 
@@ -41,7 +41,7 @@ class VolumeWisePostprocessSolution(AbstractRungeKuttaDGActionSet):
   
   """
   def __init__(self,solver):
-    super(EmptyPostprocessSolution,self).__init__(solver)
+    super(DoFWisePostprocessSolution,self).__init__(solver)
     self.guard               = "true"
     self._compute_kernel     = ""
 
@@ -53,8 +53,8 @@ class VolumeWisePostprocessSolution(AbstractRungeKuttaDGActionSet):
     variables which are well-defined:
     
     - value: Is a pointer to the current finite volume's data
-    - volumeX: A tarch::la::Vector over doubles
-    - volumeH: A tarch::la::Vector over doubles
+    - x: A tarch::la::Vector over doubles
+    - marker.h(): A tarch::la::Vector over doubles
     
     
     operation_per_point: String
@@ -68,15 +68,19 @@ class VolumeWisePostprocessSolution(AbstractRungeKuttaDGActionSet):
     {{PREDICATE}}
   ) { 
     logTraceIn( "touchCellFirstTime(...)" );
-    int index = 0;
-    dfor( volume, {{NUMBER_OF_VOLUMES_PER_AXIS}} ) {
-      double* value   = fineGridCell{{UNKNOWN_IDENTIFIER}}.value + index;
-      auto    volumeX = ::exahype2::getVolumeCentre( marker.x(), marker.h(), {{NUMBER_OF_VOLUMES_PER_AXIS}}, volume);
-      auto    volumeH = ::exahype2::getVolumeSize( marker.h(), {{NUMBER_OF_VOLUMES_PER_AXIS}});
-      
+    ::exahype2::enumerator::AoSLexicographicEnumerator enumerator(
+      1, // only one patch
+      {{DG_ORDER}}+1,
+      0, // int haloSize,
+      {{NUMBER_OF_UNKNOWNS}},
+      {{NUMBER_OF_AUXILIARY_VARIABLES}}
+    );
+    dfor( index, {{DG_ORDER}}+1 ) {
+      double* values   = fineGridCell{{UNKNOWN_IDENTIFIER}}.value + enumerator(0,index,0);
+      auto    x        = ::exahype2::dg::getQuadraturePoint(
+        marker.x(), marker.h(), index, repositories::{{SOLVER_INSTANCE}}.DGOrder, repositories::{{SOLVER_INSTANCE}}.QuadraturePoints1d
+      );
       """ + operation_per_point + """
-      
-      index += {{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}};
     }
     logTraceOut( "touchCellFirstTime(...)" );
   } 
@@ -98,3 +102,10 @@ class VolumeWisePostprocessSolution(AbstractRungeKuttaDGActionSet):
 
   def get_action_set_name(self):
     return __name__.replace(".py", "").replace(".", "_")
+
+
+  def get_includes(self):
+    return super(DoFWisePostprocessSolution,self).get_includes() + """
+#include "exahype2/enumerator/AoSLexicographicEnumerator.h"
+"""
+

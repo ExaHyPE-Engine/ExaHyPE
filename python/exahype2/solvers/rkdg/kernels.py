@@ -705,10 +705,15 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::sourceTerm(
   const tarch::la::Vector<Dimensions,double>&  x,
   double                                       t,
   double                                       dt,
-  double * __restrict__                        S  // S[{{NUMBER_OF_UNKNOWNS}}
+  double * __restrict__                        S  // S[{{NUMBER_OF_UNKNOWNS}}]
 ) {
   logTraceInWith3Arguments( "sourceTerm(...)", x, t, dt );
-  // @todo implement
+
+  // @todo implement and ensure that all entries of S are properly set
+  for (int i=0; i<NumberOfUnknowns; i++) {
+    S[i] = 0.0;
+  }
+  
   logTraceOut( "sourceTerm(...)" );
 }
 {% endif %}

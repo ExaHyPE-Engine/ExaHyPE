@@ -44,7 +44,6 @@ void applications::exahype2::euler::NeumannBoundaryConditions(
   int                                          numberOfAuxiliaryVariables
 ) {
   nonCriticalAssertion5( Qinside[0]>1e-12, faceCentre, volumeH, t, normal, Qinside[0] );
-  assertion5( Qinside[0]>1e-12, faceCentre, volumeH, t, normal, Qinside[0] );
 
   for (int i=0; i<numberOfUnknowns+numberOfAuxiliaryVariables; i++) {
     Qoutside[i] = Qinside[i];
@@ -67,7 +66,7 @@ double ::applications::exahype2::euler::maxEigenvalue(
   assertion(normal<Dimensions);
 
   if (Q[0]<=0.0 or Q[0]!=Q[0]) {
-    ::exahype2::triggerNonCriticalAssertion( __FILE__, __LINE__, "Q[0]>0", "density negative (Q[0]=" + std::to_string( Q[0] ) + ")" );
+    ::exahype2::triggerNonCriticalAssertion( __FILE__, __LINE__, "Q[0]>0", "density negative (Q[0]=" + std::to_string( Q[0] ) + ") at x=" + toString(faceCentre) );
   }
 
   const double irho = 1./Q[0];

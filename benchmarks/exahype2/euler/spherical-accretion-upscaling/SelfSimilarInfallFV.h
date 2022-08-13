@@ -33,11 +33,9 @@ class benchmarks::exahype2::euler::sphericalaccretionupscaling::SelfSimilarInfal
   public:
     static constexpr double BaseDensity      = 0.1;
     static constexpr double Gamma            = 5.0/3.0;
-    static constexpr double rhoInitial       = 1.0;
-    static constexpr double DeltaRho         = 0.05;
     static constexpr double pInitial         = 1e-6;
     static constexpr double aInitial         = 0.001;
-    static constexpr double InitialDeltaM    = 0.15 / 4.0 / tarch::la::PI;
+    static constexpr double AdditionalMass   = 0.15;
     static constexpr double InitialTopHatRadius = 0.05;
 
     /**
@@ -54,10 +52,11 @@ class benchmarks::exahype2::euler::sphericalaccretionupscaling::SelfSimilarInfal
      * We start with a top hat overdensity. Please note that the initial overdensity
      * does not enter the initial fluxes: The Euler equation are totally agnostic in
      * principle of the density. However, the overdensity will enter the mass
-     * accumulation in the first time step. Nevertheless, we need a consistent setup
-     * and we get this consistent setup if and only if we push the solution initially
-     * to the right direction. Otherwise, we get a zero time step and all is messed
-     * up.
+     * accumulation in the first time step.
+     *
+     * It is important that we inject some initial energy into the system to close the
+     * PDE. This energy can be the same everywhere to get the setup going, but we may
+     * not set it to zero. If we do this, the system doesn't evolve at al.
      */
     void initialCondition(
       double * __restrict__ Q,
@@ -147,6 +146,8 @@ class benchmarks::exahype2::euler::sphericalaccretionupscaling::SelfSimilarInfal
      * If so, we let the mass accummulation know.
      */
     void finishTimeStep() override;
+
+
     /**
      * To obtain the best performance, I recommend to man inline command to 
      * this signature and to copy the implementation into the header. So it would
