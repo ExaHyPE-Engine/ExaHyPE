@@ -11,6 +11,7 @@ import os, sys
 import argparse
 import peano4
 import exahype2
+from future.backports.test.support import patch
 
 
 print( """
@@ -25,8 +26,9 @@ parser = argparse.ArgumentParser(description='ExaHyPE 2 - Euler benchmarking scr
 parser.add_argument("-j",   "--parallel-builds",   dest="j",              type=int, default=-1, help="Parallel builds" )
 parser.add_argument("-pd",  "--peano-dir",         dest="peanodir",       default="../../../../", help="Peano4 directory" )
 parser.add_argument("-v",   "--verbose",           dest="verbose",        action="store_true", default=False, help="Verbose")
-parser.add_argument(        "--debug",             dest="debug"  ,        action="store_true", default=False, help="Verbose")
-parser.add_argument("-ps",  "--patch-size",        dest="patch_size",     type=int, default=6, help="Dimensions" )
+parser.add_argument(        "--debug",             dest="debug"  ,        action="store_true", default=False, help="Enable assertions (slow)")
+parser.add_argument(        "--plot",              dest="plot"  ,         action="store_true", default=False, help="Plot solution in regular time intervals")
+parser.add_argument("-s",   "--solver",            dest="solver",         choices=["fv-4", "fv-6", "fv-8", "fd4-rk1", "fd4-rk2", "fd4-rk3", "fd4-rk4", "dg1-rk1", "dg2-rk2", "dg3-rk3", "dg4-rk4", "dg4-rk1", "dg4-rk2", "dg4-rk3"], required=True, help="Pick solver type" )
 parser.add_argument("-f",   "--file",              dest="file",           default="", help="Specify to convert an output file into a bar plot. If you omit this flag, the script will actually build the benchmark" )
 args = parser.parse_args()
 
@@ -59,19 +61,38 @@ else:
   max_h          = 0.1/args.patch_size
   min_h          = 0.1/args.patch_size
 auxiliary_variables = 0
-    
-thesolver = exahype2.solvers.fv.rusanov.GlobalAdaptiveTimeStepWithEnclaveTasking(
-      solver_name,
-      args.patch_size,
-      number_of_unknowns, auxiliary_variables,
-      min_volume_h = 0.01, 
-      max_volume_h = 0.01,
-      time_step_relaxation = 0.01,
-      flux        = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
-      eigenvalues = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
-      source_term = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
-      pde_terms_without_state = False
-    )
+
+
+if "fv" in args.solver:
+  patch_size = int(args.solver[-1])
+  my_solver = exahype2.solvers.fv.rusanov.GlobalAdaptiveTimeStepWithEnclaveTasking(name                 = solver_name + "FV", 
+                                                                                   patch_size           = 5,
+                                                                                   unknowns             = number_of_unknowns,
+                                                                                   auxiliary_variables  = auxiliary_variables,
+                                                                                   min_volume_h         = max_h / patch_size, 
+                                                                                   max_volume_h         = max_h / patch_size,
+                                                                                   time_step_relaxation = 0.1,
+                                                                                   flux                 = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
+                                                                                   eigenvalues          = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
+                                                                                   source_term          = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
+                                                                                   pde_terms_without_state = True
+                                                                                  )
+if "rk" in args.solver and "dg" in args.solver:
+  space_order = int(args.solver[2])
+  time_order  = int(args.solver[6])
+  my_solver = exahype2.solvers.rkdg.rusanov.GlobalAdaptiveTimeStep(name                 = solver_name + "DG",
+                                                                   rk_order             = time_order,
+                                                                   polynomials          = exahype2.solvers.GaussLegendreBasis(space_order),
+                                                                   unknowns             = number_of_unknowns,
+                                                                   auxiliary_variables  = auxiliary_variables,
+                                                                   min_cell_h           = max_h, 
+                                                                   max_cell_h           = min_h,
+                                                                   time_step_relaxation = 0.1,
+                                                                   flux                 = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
+                                                                   eigenvalues          = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
+                                                                   source_term          = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
+                                                                   pde_terms_without_state = True
+                                                                   )
 
 thesolver._action_set_postprocess_solution = exahype2.solvers.fv.actionsets.VolumeWisePostprocessSolution(thesolver)
 thesolver._action_set_postprocess_solution.guard = "repositories::{{SOLVER_INSTANCE}}.isLastGridSweepOfTimeStep()"
@@ -89,6 +110,11 @@ if args.debug:
   build_mode = peano4.output.CompileMode.Debug
 else:
   build_mode = peano4.output.CompileMode.Release
+
+if args.plot:
+  plot_interval = 0.1
+else:  
+  plot_interval = 0.0
   
 cube_size = 1
 project.set_global_simulation_parameters(
@@ -98,7 +124,7 @@ project.set_global_simulation_parameters(
   min_end_time = 4.0,
   max_end_time = 4.0,
   first_plot_time_stamp = 0.0,
-  time_in_between_plots = 0.04,
+  time_in_between_plots = plot_interval,
   periodic_BC           = [False, False, False]
 )
 

@@ -84,7 +84,8 @@ class applications::exahype2::euler::sphericalaccretion::MassAccumulator {
      *
      * @param radius
      */
-    double getMass(double radius) const;
+    double getMass_piecewiseConstantInterpolation(double radius) const;
+    double getMass_linearInterpolation(double radius) const;
 
     /**
      * Roll over the current (accumulating) data set into previous mass, determine

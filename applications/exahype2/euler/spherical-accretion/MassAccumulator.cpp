@@ -29,7 +29,7 @@ void applications::exahype2::euler::sphericalaccretion::MassAccumulator::addMass
 }
 
 
-double applications::exahype2::euler::sphericalaccretion::MassAccumulator::getMass(double radius) const {
+double applications::exahype2::euler::sphericalaccretion::MassAccumulator::getMass_piecewiseConstantInterpolation(double radius) const {
   int bucket = getBucket(radius);
   if (_previousMassAccumulated.empty()) {
     return 0.0;
@@ -39,6 +39,39 @@ double applications::exahype2::euler::sphericalaccretion::MassAccumulator::getMa
   }
   else {
     return _previousMassAccumulated.at(bucket);
+  }
+}
+
+
+double applications::exahype2::euler::sphericalaccretion::MassAccumulator::getMass_linearInterpolation(double radius) const {
+  int bucket = getBucket(radius);
+
+  if (_previousMassAccumulated.empty()) {
+    return 0.0;
+  }
+  else if (_previousMassAccumulated.size()<=bucket) {
+    return _previousMassAccumulated.at(_previousMassAccumulated.size()-1);
+  }
+  else {
+    int    leftBucket  = bucket;
+    int    rightBucket = bucket;
+    double rightWeight = 1.0;
+
+    if ( radius-bucket*_shellWidth < _shellWidth/2.0 and bucket>0 ) {
+      leftBucket--;
+      rightWeight = (radius-(leftBucket+0.5)*_shellWidth) / _shellWidth;
+    }
+    else if (bucket<_previousMassAccumulated.size()-1) {
+      rightBucket++;
+      rightWeight = (radius-(leftBucket+0.5)*_shellWidth) / _shellWidth;
+    }
+
+    assertion(rightWeight>=0.0);
+    assertion(rightWeight<=0.0);
+
+    std::cout << " " << rightWeight;
+
+    return rightWeight * _previousMassAccumulated.at(rightBucket) + (1.0-rightWeight) * _previousMassAccumulated.at(leftBucket);
   }
 }
 

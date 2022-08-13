@@ -155,9 +155,11 @@ void ::examples::exahype2::euler::sphericalaccretionupscaling::SelfSimilarInfall
 
   double distance = tarch::la::norm2( volumeX );
 
-  double a   = 1e-4 * 0.0287 * std::pow((-t/11.8+0.1694*std::pow(aInitial,-0.5)),-2); //when code time ~ 2*(a_i^(-0.5)-1), a~1
+  double a   = 1e-3 * 0.0287 * std::pow((-t/11.8+0.1694*std::pow(aInitial,-0.5)),-2); //when code time ~ 2*(a_i^(-0.5)-1), a~1
 
   double massInterpolated = _accumulator.getMass( distance );
+
+  // @todo bei Diesem Vorzeichen bin ich mir net sicher
 
   S[0] = 0.0;  // rho
   if (tarch::la::greater(distance,0.0)) {
