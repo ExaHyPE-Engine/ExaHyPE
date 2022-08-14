@@ -439,6 +439,7 @@ public:
 {% for PRECISION_NUM in range(0,COMPUTATION_PRECISIONS|length) %}
     void viscousFlux(const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const Q, const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const gradQ, {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}** const F);
     void viscousEigenvalues(const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const Q, const int direction, {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const lambda);
+    void multiplyMaterialParameterMatrix(const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const Q, {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}** const rhs);
 {% endfor %}
 
 

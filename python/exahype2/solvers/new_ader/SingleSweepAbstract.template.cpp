@@ -442,7 +442,10 @@ int {{NAMESPACE | join("::")}}::{{CLASSNAME}}::spaceTimePredictor(
     {{ "true" if USE_FLUX!="<none>" else "false" }}, //useFlux
     {{ "true" if USE_NCP!="<none>" else "false" }}, //useNCP
     false, //useMM
-    {{NAMESPACE | join("::")}}::{{CLASSNAME}}>(
+    {{NAMESPACE | join("::")}}::{{CLASSNAME}},
+    {{PREDICTOR_COMPUTATION_PRECISION}}, //predictor_computation_precision
+    {{PREDICTOR_STORAGE_PRECISION}} //predictor_storage_precision
+    >(
 
       *this,
       lQhbnd,
@@ -502,6 +505,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::volumeIntegral({{PREDICTOR_COMPU
   //template <typename SolverType,bool useSource, bool useFlux, int numberOfVariables, int basisSize>
   kernels::aderdg::generic::c::volumeIntegralLinear<
     {{NAMESPACE | join("::")}}::{{CLASSNAME}},
+    {{PREDICTOR_COMPUTATION_PRECISION}}, //predictor_computation_precision
     {{ "true" if USE_SOURCE!="<none>" else "false" }}, //useSource
     {{ "true" if USE_FLUX!="<none>" else "false" }}, //useFlux
     {{NUMBER_OF_UNKNOWNS}},
@@ -646,6 +650,11 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::viscousEigenvalues(const {{COMPU
   exit(1);
 }
 
+
+void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::multiplyMaterialParameterMatrix(const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const Q, {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}** const rhs){
+  //should not be called
+  exit(1);
+}
 {% endfor %}
 
 
