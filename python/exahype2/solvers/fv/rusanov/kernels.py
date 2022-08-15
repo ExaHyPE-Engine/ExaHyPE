@@ -595,7 +595,6 @@ GPUCallableMethod void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::sourceTerm(
   {{SOURCE_TERM_IMPLEMENTATION}}
   {% endif %}
 }
-#endif
 #if defined(GPUOffloadingOMP)
 #pragma omp end declare target
 #endif

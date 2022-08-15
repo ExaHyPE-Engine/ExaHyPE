@@ -3,7 +3,11 @@
 #if defined(GPUOffloadingOMP)
 #pragma omp declare target
 #endif
+#if defined(GPUOffloadingCPP)
+int exahype2::aderdg::getNodesPerCell(int nodesPerAxis) {
+#else
 GPUCallableMethod int exahype2::aderdg::getNodesPerCell(int nodesPerAxis) {
+#endif
   int nodesPerCell = 1;
   for ( int d = 0; d < Dimensions; d++ ) { nodesPerCell *= nodesPerAxis; }
   return nodesPerCell;
@@ -15,7 +19,11 @@ GPUCallableMethod int exahype2::aderdg::getNodesPerCell(int nodesPerAxis) {
 #if defined(GPUOffloadingOMP)
 #pragma omp declare target
 #endif
+#if defined(GPUOffloadingCPP)
+int exahype2::aderdg::getSpaceTimeNodesPerCell(int nodesPerAxis) {
+#else
 GPUCallableMethod int exahype2::aderdg::getSpaceTimeNodesPerCell(int nodesPerAxis) {
+#endif
   int nodesPerCell = 1;
   for ( int d = 0; d < Dimensions+1; d++ ) { nodesPerCell *= nodesPerAxis; }
   return nodesPerCell;
@@ -27,7 +35,11 @@ GPUCallableMethod int exahype2::aderdg::getSpaceTimeNodesPerCell(int nodesPerAxi
 #if defined(GPUOffloadingOMP)
 #pragma omp declare target
 #endif
+#if defined(GPUOffloadingCPP)
+tarch::la::Vector<Dimensions+1,int> exahype2::aderdg::getStrides(
+#else
 GPUCallableMethod tarch::la::Vector<Dimensions+1,int> exahype2::aderdg::getStrides(
+#endif
    int nodesPerAxis,
    bool strides4SpaceTimeQuantity) {
   tarch::la::Vector<Dimensions+1,int> strides(1);
@@ -48,7 +60,11 @@ GPUCallableMethod tarch::la::Vector<Dimensions+1,int> exahype2::aderdg::getStrid
 #if defined(GPUOffloadingOMP)
 #pragma omp declare target
 #endif
+#if defined(GPUOffloadingCPP)
+int exahype2::aderdg::lineariseIndex(
+#else
 GPUCallableMethod int exahype2::aderdg::lineariseIndex(
+#endif
    const tarch::la::Vector<Dimensions+1,int>& index,
    const tarch::la::Vector<Dimensions+1,int>& strides
 ) {
@@ -65,7 +81,11 @@ GPUCallableMethod int exahype2::aderdg::lineariseIndex(
 #if defined(GPUOffloadingOMP)
 #pragma omp declare target
 #endif
+#if defined(GPUOffloadingCPP)
+tarch::la::Vector<Dimensions+1,int> exahype2::aderdg::delineariseIndex(
+#else
 GPUCallableMethod tarch::la::Vector<Dimensions+1,int> exahype2::aderdg::delineariseIndex(
+#endif
   int scalarIndex,
   const tarch::la::Vector<Dimensions+1,int>& strides) {
   tarch::la::Vector<Dimensions+1,int> index(-1); // valid index component values are non-negative
@@ -90,7 +110,11 @@ GPUCallableMethod tarch::la::Vector<Dimensions+1,int> exahype2::aderdg::delinear
 #if defined(GPUOffloadingOMP)
 #pragma omp declare target
 #endif
+#if defined(GPUOffloadingCPP)
+tarch::la::Vector<Dimensions+1,double> exahype2::aderdg::getCoordinates(
+#else
 GPUCallableMethod tarch::la::Vector<Dimensions+1,double> exahype2::aderdg::getCoordinates(
+#endif
   const tarch::la::Vector<Dimensions+1,int>& index,
   const tarch::la::Vector<Dimensions,double>& centre,
   const double                              dx,
@@ -115,7 +139,11 @@ GPUCallableMethod tarch::la::Vector<Dimensions+1,double> exahype2::aderdg::getCo
 #if defined(GPUOffloadingOMP)
 #pragma omp declare target
 #endif
+#if defined(GPUOffloadingCPP)
+tarch::la::Vector<Dimensions+1,double> exahype2::aderdg::getCoordinatesOnFace(
+#else
 GPUCallableMethod tarch::la::Vector<Dimensions+1,double> exahype2::aderdg::getCoordinatesOnFace(
+#endif
   const tarch::la::Vector<Dimensions+1,int>& indexOnFace,
   const tarch::la::Vector<Dimensions,double>& faceCentre,
   const int                                 direction,
@@ -147,7 +175,11 @@ GPUCallableMethod tarch::la::Vector<Dimensions+1,double> exahype2::aderdg::getCo
 #if defined(GPUOffloadingOMP)
 #pragma omp declare target
 #endif
+#if defined(GPUOffloadingCPP)
+int exahype2::aderdg::mapCellIndexToScalarFaceIndex(
+#else
 GPUCallableMethod int exahype2::aderdg::mapCellIndexToScalarFaceIndex(
+#endif
   const tarch::la::Vector<Dimensions+1,int>& indexCell,
   const int                                 direction,
   const int                                 nodesPerAxis
@@ -170,7 +202,11 @@ GPUCallableMethod int exahype2::aderdg::mapCellIndexToScalarFaceIndex(
 #if defined(GPUOffloadingOMP)
 #pragma omp declare target
 #endif
+#if defined(GPUOffloadingCPP)
+int exahype2::aderdg::mapCellIndexToScalarHullIndex(
+#else
 GPUCallableMethod int exahype2::aderdg::mapCellIndexToScalarHullIndex(
+#endif
   const tarch::la::Vector<Dimensions+1,int>& indexCell,
   const int                                 direction,
   const int                                 orientation,
@@ -197,7 +233,11 @@ GPUCallableMethod int exahype2::aderdg::mapCellIndexToScalarHullIndex(
 #if defined(GPUOffloadingOMP)
 #pragma omp declare target
 #endif
+#if defined(GPUOffloadingCPP)
+int exahype2::aderdg::mapSpaceTimeFaceIndexToScalarCellIndex(
+#else
 GPUCallableMethod int exahype2::aderdg::mapSpaceTimeFaceIndexToScalarCellIndex(
+#endif
   const tarch::la::Vector<Dimensions+1,int>& indexFace,
   const int                                 direction,
   const int                                 id,
@@ -221,7 +261,11 @@ GPUCallableMethod int exahype2::aderdg::mapSpaceTimeFaceIndexToScalarCellIndex(
 #if defined(GPUOffloadingOMP)
 #pragma omp declare target
 #endif
+#if defined(GPUOffloadingCPP)
+void exahype2::aderdg::gradient_AoS(
+#else
 GPUCallableMethod void exahype2::aderdg::gradient_AoS(
+#endif
   const double* __restrict__ const QIn,
   const double* __restrict__ const dudx,
   const double                     invDx,
@@ -256,7 +300,11 @@ GPUCallableMethod void exahype2::aderdg::gradient_AoS(
 #if defined(GPUOffloadingOMP)
 #pragma omp declare target
 #endif
+#if defined(GPUOffloadingCPP)
+tarch::la::Vector<Dimensions,double> exahype2::aderdg::mapToReferenceCoordinates(
+#else
 GPUCallableMethod tarch::la::Vector<Dimensions,double> exahype2::aderdg::mapToReferenceCoordinates(
+#endif
   const tarch::la::Vector<Dimensions,double>& x,
   const tarch::la::Vector<Dimensions,double>& cellCentre,
   const double                                dx) {
@@ -275,7 +323,11 @@ GPUCallableMethod tarch::la::Vector<Dimensions,double> exahype2::aderdg::mapToRe
 #if defined(GPUOffloadingOMP)
 #pragma omp declare target
 #endif
+#if defined(GPUOffloadingCPP)
+void exahype2::aderdg::interpolate_AoS(
+#else
 GPUCallableMethod void exahype2::aderdg::interpolate_AoS(
+#endif
   const double* __restrict__ const            UIn,
   const double* __restrict__ const            nodes,
   const double* __restrict__ const            barycentricWeights,

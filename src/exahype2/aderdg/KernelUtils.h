@@ -13,7 +13,11 @@ namespace exahype2 {
     #if defined(GPUOffloadingOMP)
     #pragma omp declare target
     #endif
+    #if defined(GPUOffloadingCPP)
+    int getNodesPerCell(int nodesPerAxis);
+    #else
     GPUCallableMethod int getNodesPerCell(int nodesPerAxis);
+    #endif
     #if defined(GPUOffloadingOMP)
     #pragma omp end declare target
     #endif
@@ -21,7 +25,11 @@ namespace exahype2 {
     #if defined(GPUOffloadingOMP)
     #pragma omp declare target
     #endif
+    #if defined(GPUOffloadingCPP)
+    int getSpaceTimeNodesPerCell(int nodesPerAxis);
+    #else
     GPUCallableMethod int getSpaceTimeNodesPerCell(int nodesPerAxis);
+    #endif
     #if defined(GPUOffloadingOMP)
     #pragma omp end declare target
     #endif
@@ -42,7 +50,11 @@ namespace exahype2 {
      #if defined(GPUOffloadingOMP)
      #pragma omp declare target
      #endif
+     #if defined(GPUOffloadingCPP)
+     tarch::la::Vector<Dimensions+1,int> getStrides(
+     #else
      GPUCallableMethod tarch::la::Vector<Dimensions+1,int> getStrides(
+     #endif
         int nodesPerAxis,
         bool strides4SpaceTimeQuantity = true);
     #if defined(GPUOffloadingOMP)
@@ -57,7 +69,11 @@ namespace exahype2 {
      #if defined(GPUOffloadingOMP)
      #pragma omp declare target
      #endif
+     #if defined(GPUOffloadingCPP)
+     int lineariseIndex(
+     #else
      GPUCallableMethod int lineariseIndex(
+     #endif
         const tarch::la::Vector<Dimensions+1,int>& index,
         const tarch::la::Vector<Dimensions+1,int>& strides);
     #if defined(GPUOffloadingOMP)
@@ -76,7 +92,11 @@ namespace exahype2 {
      #if defined(GPUOffloadingOMP)
      #pragma omp declare target
      #endif
+     #if defined(GPUOffloadingCPP)
+     tarch::la::Vector<Dimensions+1,int> delineariseIndex(
+     #else
      GPUCallableMethod tarch::la::Vector<Dimensions+1,int> delineariseIndex(
+     #endif
        int scalarIndex,
        const tarch::la::Vector<Dimensions+1,int>& strides);       
     #if defined(GPUOffloadingOMP)
@@ -92,7 +112,11 @@ namespace exahype2 {
      #if defined(GPUOffloadingOMP)
      #pragma omp declare target
      #endif
+     #if defined(GPUOffloadingCPP)
+     tarch::la::Vector<Dimensions+1,double> getCoordinates(
+     #else
      GPUCallableMethod tarch::la::Vector<Dimensions+1,double> getCoordinates(
+     #endif
        const tarch::la::Vector<Dimensions+1,int>&  index,
        const tarch::la::Vector<Dimensions,double>& centre,
        const double                                dx,
@@ -113,7 +137,11 @@ namespace exahype2 {
      #if defined(GPUOffloadingOMP)
      #pragma omp declare target
      #endif
+     #if defined(GPUOffloadingCPP)
+     tarch::la::Vector<Dimensions+1,double> getCoordinatesOnFace(
+     #else
      GPUCallableMethod tarch::la::Vector<Dimensions+1,double> getCoordinatesOnFace(
+     #endif
        const tarch::la::Vector<Dimensions+1,int>& indexOnFace,
        const tarch::la::Vector<Dimensions,double>& faceCentre,
        const int                                   direction,
@@ -135,7 +163,11 @@ namespace exahype2 {
      #if defined(GPUOffloadingOMP)
      #pragma omp declare target
      #endif
+     #if defined(GPUOffloadingCPP)
+     int mapCellIndexToScalarFaceIndex(
+     #else
      GPUCallableMethod int mapCellIndexToScalarFaceIndex(
+     #endif
         const tarch::la::Vector<Dimensions+1,int>& indexCell,
         const int                                  direction,
         const int                                  nodesPerAxis);
@@ -153,7 +185,11 @@ namespace exahype2 {
      #if defined(GPUOffloadingOMP)
      #pragma omp declare target
      #endif
+     #if defined(GPUOffloadingCPP)
+     int mapCellIndexToScalarHullIndex(
+     #else
      GPUCallableMethod int mapCellIndexToScalarHullIndex(
+     #endif
        const tarch::la::Vector<Dimensions+1,int>& indexCell,
        const int                                  direction,
        const int                                  orientation,
@@ -170,7 +206,11 @@ namespace exahype2 {
      #if defined(GPUOffloadingOMP)
      #pragma omp declare target
      #endif
+     #if defined(GPUOffloadingCPP)
+     int mapSpaceTimeFaceIndexToScalarCellIndex(
+     #else
      GPUCallableMethod int mapSpaceTimeFaceIndexToScalarCellIndex(
+     #endif
        const tarch::la::Vector<Dimensions+1,int>& indexFace,
        const int                                 direction,
        const int                                 id,
@@ -220,7 +260,11 @@ namespace exahype2 {
     #if defined(GPUOffloadingOMP)
     #pragma omp declare target
     #endif
+    #if defined(GPUOffloadingCPP)
+    void gradient_AoS(
+    #else
     GPUCallableMethod void gradient_AoS(
+    #endif
       const double* __restrict__ const QIn,
       const double* __restrict__ const dudx,
       const double                     invDx,
@@ -244,7 +288,11 @@ namespace exahype2 {
     #if defined(GPUOffloadingOMP)
     #pragma omp declare target
     #endif
+    #if defined(GPUOffloadingCPP)
+    tarch::la::Vector<Dimensions,double> mapToReferenceCoordinates(
+    #else
     GPUCallableMethod tarch::la::Vector<Dimensions,double> mapToReferenceCoordinates(
+    #endif
       const tarch::la::Vector<Dimensions,double>& x,
       const tarch::la::Vector<Dimensions,double>& cellCentre,
       const double                                dx);
@@ -261,7 +309,11 @@ namespace exahype2 {
     #if defined(GPUOffloadingOMP)
     #pragma omp declare target
     #endif
+    #if defined(GPUOffloadingCPP)
+    void interpolate_AoS(
+    #else
     GPUCallableMethod void interpolate_AoS(
+    #endif
       const double* __restrict__ const            UIn,
       const double* __restrict__ const            nodes,
       const double* __restrict__ const            barycentricWeights,
