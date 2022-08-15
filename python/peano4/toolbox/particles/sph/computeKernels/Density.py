@@ -6,7 +6,7 @@
 
 class ComputeDensityAndUpdateSmoothingLength:
   """
-  Compute kernels for the SPH density calculation.
+  Compute kernels for the SPH density calculation
   Non-symmetric case, i.e. only one particle (the `local` particle) is updated.
   """
 
@@ -128,10 +128,10 @@ class ComputeDensityAndUpdateSmoothingLength:
 
           /* SWIFT KERNEL */
           double W_a, dW_a_dh;
-          double w, dw_dh;
-          kernel_deval_SWIFT(q_a, w, dw_dh);
+          double w, dw_dx;
+          kernel_deval_SWIFT(q_a, w, dw_dx);
           W_a = w / std::pow( h_a, HYDRO_DIMENSIONS );
-          dW_a_dh = - ( HYDRO_DIMENSIONS * w + q_a * dw_dh ) / std::pow( h_a, HYDRO_DIMENSIONS + 1 );
+          dW_a_dh = - ( HYDRO_DIMENSIONS * w + q_a * dw_dx ) / std::pow( h_a, HYDRO_DIMENSIONS + 1 );
 
           /* Increment density */
           localParticle->setDensity( localParticle-> getDensity() + m_b * W_a ); 
@@ -154,7 +154,7 @@ class ComputeDensityAndUpdateSmoothingLength:
 
           /* Now we need to compute the div terms */
           const double r_inv = r ? 1.0 / r : 0.0;     
-          const double fac_a = m_a * dw_a_dq * r_inv;
+          const double fac_a = m_b * dw_dx * r_inv;
 
           /* Compute dv dot r */
           dv_ab = localParticle->getV() - activeParticle->getV();
@@ -249,7 +249,7 @@ class ComputeDensityAndUpdateSmoothingLength:
           if (HYDRO_DIMENSIONS == 2){  /* in 2D sims Rot_v is a scalar */
             curl_v = std::sqrt( localParticle->getRot_v() * localParticle->getRot_v() );
           } else {
-            curl_v = tarch::la::norm2( localParticle->getRot_v() );
+            // @TODO: add 3D case as well.
           }
         
           /* Compute the norm of div v */
