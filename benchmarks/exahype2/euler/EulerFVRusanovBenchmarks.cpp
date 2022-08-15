@@ -1,6 +1,7 @@
 #include "EulerFVRusanovBenchmarks-main.h"
 #include "Constants.h"
 
+#include "tarch/FenvWrapper.h"
 #include "tarch/logging/Log.h"
 #include "tarch/logging/Statistics.h"
 #include "tarch/logging/LogFilter.h"
@@ -36,10 +37,6 @@
 #include <tbb/task_group.h>
 #endif
 
-#include <fenv.h>
-#pragma float_control(precise, on)
-#pragma STDC FENV_ACCESS ON
-
 using namespace benchmarks::exahype2::euler;
 
 tarch::logging::Log _log("::");
@@ -58,6 +55,70 @@ constexpr int NumberOfOutputEntries = (EulerFVRusanov::NumberOfFiniteVolumesPerA
 constexpr int NumberOfInputEntries  = (EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch+2)*(EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch+2)*(EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch+2) * EulerFVRusanov::NumberOfUnknowns;
 constexpr int NumberOfOutputEntries = (EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch+0)*(EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch+0)*(EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch+0) * EulerFVRusanov::NumberOfUnknowns;
 #endif
+
+void runBenchmarks(int);
+
+int main(int argc, char** argv) {
+  const int ExitCodeSuccess          = 0;
+  const int ExitCodeInvalidArguments = 2;
+  const int ExitCodeInvalidBuild     = 3;
+
+  peano4::initParallelEnvironment(&argc,&argv);
+  exahype2::initNonCritialAssertionEnvironment();
+  tarch::multicore::initSmartMPI();
+  peano4::fillLookupTables();
+
+  tarch::feenableexcept(FE_DIVBYZERO | FE_INVALID | FE_OVERFLOW);
+
+  if ( tarch::mpi::Rank::getInstance().getNumberOfRanks()>1 and tarch::multicore::Core::getInstance().getNumberOfThreads()<=1 ) {
+    logError("main()", "MPI runs without multithreading are not supported currently.");
+    return ExitCodeInvalidBuild;
+  }
+
+  if (not exahype2::parseCommandLineArguments(argc,argv) ) {
+    logError("main()", "Invalid command line arguments.");
+    return ExitCodeInvalidArguments;
+  }
+
+  repositories::DataRepository::initDatatypes();
+  repositories::startSimulation();
+
+  otterTraceInitialise();
+
+  tarch::logging::Statistics::getInstance().clear();
+
+  const bool isGlobalMaster     =     tarch::mpi::Rank::getInstance().isGlobalMaster();
+  const bool isPeanoComputeNode = not tarch::mpi::Rank::getInstance().isGlobalMaster();
+
+  #if defined(GPUOffloadingSYCL)
+  if ( tarch::multicore::Core::getInstance().getNumberOfGPUs()>0 ) {
+    logWarning( "main()", "you might have to set ZE_SERIALIZE=1|2|3 before you start the benchmark" );
+  }
+  #endif
+
+  #if Dimensions==2
+  for (int patches=1; patches<=1024*2*2*2*2; patches*=2) {
+  #else
+  for (int patches=1; patches<=1024*2; patches*=2) {
+  #endif
+    std::stringstream msg;
+    msg << "benchmark-" << patches;
+    otterPhaseSwitch( msg.str().c_str() );
+
+    runBenchmarks(patches);
+  }
+  otterTraceFinalise();
+
+  delete validOutcome;
+
+  repositories::finishSimulation();
+  repositories::DataRepository::shutdownDatatypes();
+  tarch::multicore::shutdownSmartMPI();
+  exahype2::shutdownNonCritialAssertionEnvironment();
+  peano4::shutdownParallelEnvironment();
+
+  return ExitCodeSuccess;
+}
 
 void initInputData( double* Q ) {
   for (int i=0; i<NumberOfInputEntries/EulerFVRusanov::NumberOfUnknowns; i++) {
@@ -374,7 +435,7 @@ void runBenchmarks(int patches) {
       ::exahype2::fv::rusanov::omp::timeStepWithRusanov_patchwise_heap_static_calls<EulerFVRusanov,EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch, 1, EulerFVRusanov::NumberOfUnknowns, 0,exahype2::enumerator::AoSoALexicographicEnumerator>,
       "omp, patch-wise, AoSoA", true
     );
-    /*testFusedVariantOnDevice(
+    testFusedVariantOnDevice(
       device,
       ::exahype2::fv::rusanov::omp::timeStepWithRusanov_patchwise_heap_static_calls<EulerFVRusanov,EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch, 1, EulerFVRusanov::NumberOfUnknowns, 0,exahype2::enumerator::SoALexicographicEnumerator>,
       "omp, patch-wise, SoA", true
@@ -406,7 +467,7 @@ void runBenchmarks(int patches) {
       ::exahype2::fv::rusanov::omp::timeStepWithRusanov_batched_heap_static_calls<EulerFVRusanov,EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch, 1, EulerFVRusanov::NumberOfUnknowns, 0,exahype2::enumerator::AoSoALexicographicEnumerator>,
       "omp, batched, AoSoA", true
     );
-    /*testFusedVariantOnDevice(
+    testFusedVariantOnDevice(
       device,
       ::exahype2::fv::rusanov::omp::timeStepWithRusanov_batched_heap_static_calls<EulerFVRusanov,EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch, 1, EulerFVRusanov::NumberOfUnknowns, 0,exahype2::enumerator::SoALexicographicEnumerator>,
       "omp, batched, SoA", true
@@ -507,66 +568,4 @@ void runBenchmarks(int patches) {
     );
   }
   #endif
-}
-
-int main(int argc, char** argv) {
-  const int ExitCodeSuccess          = 0;
-  const int ExitCodeInvalidArguments = 2;
-  const int ExitCodeInvalidBuild     = 3;
-
-  peano4::initParallelEnvironment(&argc,&argv);
-  exahype2::initNonCritialAssertionEnvironment();
-  tarch::multicore::initSmartMPI();
-  peano4::fillLookupTables();
-
-  if ( tarch::mpi::Rank::getInstance().getNumberOfRanks()>1 and tarch::multicore::Core::getInstance().getNumberOfThreads()<=1 ) {
-    logError("main()", "MPI runs without multithreading are not supported currently.");
-    return ExitCodeInvalidBuild;
-  }
-
-  if (not exahype2::parseCommandLineArguments(argc,argv) ) {
-    logError("main()", "Invalid command line arguments.");
-    return ExitCodeInvalidArguments;
-  }
-
-  repositories::DataRepository::initDatatypes();
-  repositories::startSimulation();
-
-  otterTraceInitialise();
-
-  tarch::logging::Statistics::getInstance().clear();
-
-  const bool isGlobalMaster     =     tarch::mpi::Rank::getInstance().isGlobalMaster();
-  const bool isPeanoComputeNode = not tarch::mpi::Rank::getInstance().isGlobalMaster();
-
-  #if defined(GPUOffloadingSYCL)
-  if ( tarch::multicore::Core::getInstance().getNumberOfGPUs()>0 ) {
-    logWarning( "main()", "you might have to set ZE_SERIALIZE=1|2|3 before you start the benchmark" );
-  }
-  #endif
-
-  feenableexcept(FE_DIVBYZERO | FE_INVALID | FE_OVERFLOW);
-
-  #if Dimensions==2
-  for (int patches=1; patches<=1024*2*2*2*2; patches*=2) {
-  #else
-  for (int patches=1; patches<=1024*2; patches*=2) {
-  #endif
-    std::stringstream msg;
-    msg << "benchmark-" << patches;
-    otterPhaseSwitch( msg.str().c_str() );
-
-    runBenchmarks(patches);
-  }
-  otterTraceFinalise();
-
-  delete validOutcome;
-
-  repositories::finishSimulation();
-  repositories::DataRepository::shutdownDatatypes();
-  tarch::multicore::shutdownSmartMPI();
-  exahype2::shutdownNonCritialAssertionEnvironment();
-  peano4::shutdownParallelEnvironment();
-
-  return ExitCodeSuccess;
 }

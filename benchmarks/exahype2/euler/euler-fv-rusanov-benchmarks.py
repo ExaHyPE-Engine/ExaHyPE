@@ -8,7 +8,7 @@ ExaHyPE 2 - Euler Finite Volume Rusanov Benchmarks
 
 """)
 
-parser = argparse.ArgumentParser(description='ExaHyPE 2 - Euler FV Rusanov benchmarking script')
+parser = argparse.ArgumentParser(description='ExaHyPE 2 - Euler FV Rusanov Benchmarking Script')
 parser.add_argument("-j",   "--parallel-builds",   dest="j",              type=int, default=8, help="Parallel builds")
 parser.add_argument("-d",   "--dim",               dest="dim",            type=int, default=2, help="Number of space dimensions")
 parser.add_argument("-pd",  "--peano-dir",         dest="peanodir",       default="../../../", help="Peano directory")

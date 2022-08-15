@@ -38,24 +38,24 @@ void exahype2::fv::rusanov::omp::opt::timeStepWithRusanov_batched_heap_static_ca
   static TempDataEnumerator eigenvalueHostEnumeratorMax(MaxNumberOfPossiblePatchEntries, numberOfVolumesPerAxisInPatch,   solversHaloSize,        1, 0);
 
   static GPUScratchpadData deviceScratchpadData(targetDevice, FluxHostEnumeratorMax.size(), ncpHostEnumeratorMax.size(), eigenvalueHostEnumeratorMax.size());
-  double* tempFluxX = deviceScratchpadData.tempFluxX;
-  double* tempFluxY = deviceScratchpadData.tempFluxY;
-  double* tempFluxZ = deviceScratchpadData.tempFluxZ;
+  double* tempFluxX                   = deviceScratchpadData.tempFluxX;
+  double* tempFluxY                   = deviceScratchpadData.tempFluxY;
+  double* tempFluxZ                   = deviceScratchpadData.tempFluxZ; // TODO: Should not be allocated for 2D builds
   double* tempNonconservativeProductX = deviceScratchpadData.tempNonconservativeProductX;
   double* tempNonconservativeProductY = deviceScratchpadData.tempNonconservativeProductY;
   double* tempNonconservativeProductZ = deviceScratchpadData.tempNonconservativeProductZ;
-  double* tempEigenvalueX = deviceScratchpadData.tempEigenvalueX;
-  double* tempEigenvalueY = deviceScratchpadData.tempEigenvalueY;
-  double* tempEigenvalueZ = deviceScratchpadData.tempEigenvalueZ;
+  double* tempEigenvalueX             = deviceScratchpadData.tempEigenvalueX;
+  double* tempEigenvalueY             = deviceScratchpadData.tempEigenvalueY;
+  double* tempEigenvalueZ             = deviceScratchpadData.tempEigenvalueZ;
 
   static GPUCellData devicePatchData(targetDevice, MaxNumberOfPossiblePatchEntries, QInHostEnumerator.size(), QOutHostEnumerator.size());
-  double* mappedPointersToQIns      = devicePatchData.QIn;
-  double* mappedPointersToQOuts     = devicePatchData.QOut;
-  double* rawPointerToCellCentres   = devicePatchData.cellCentre;
-  double* rawPointerToCellSizes     = devicePatchData.cellSize;
-  double* ts                        = devicePatchData.t;
-  double* dts                       = devicePatchData.dt;
-  double* maxEigenvalues            = devicePatchData.maxEigenvalue;
+  double* mappedPointersToQIns        = devicePatchData.QIn;
+  double* mappedPointersToQOuts       = devicePatchData.QOut;
+  double* rawPointerToCellCentres     = devicePatchData.cellCentre;
+  double* rawPointerToCellSizes       = devicePatchData.cellSize;
+  double* ts                          = devicePatchData.t;
+  double* dts                         = devicePatchData.dt;
+  double* maxEigenvalues              = devicePatchData.maxEigenvalue;
 
   std::vector<double> tmpQIn(hostPatchData.numberOfCells * QInHostEnumerator.size());
   for (int patchIndex=0; patchIndex<hostPatchData.numberOfCells; patchIndex++) {
@@ -74,12 +74,9 @@ void exahype2::fv::rusanov::omp::opt::timeStepWithRusanov_batched_heap_static_ca
 
   if (Dimensions==2 and evaluateSource) {
     #pragma omp target teams distribute parallel for simd collapse(3) device(targetDevice) \
-        is_device_ptr(tempFluxX, tempFluxY, tempFluxZ, \
-            tempNonconservativeProductX, tempNonconservativeProductY, tempNonconservativeProductZ, \
-            tempEigenvalueX, tempEigenvalueY, tempEigenvalueZ, \
-            mappedPointersToQIns, mappedPointersToQOuts, \
+        is_device_ptr(mappedPointersToQIns, mappedPointersToQOuts, \
             rawPointerToCellCentres, rawPointerToCellSizes, \
-            ts, dts, maxEigenvalues)
+            ts, dts)
     for (int patchIndex=0; patchIndex<numberOfCells; patchIndex++)
     for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
     for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++) {
@@ -112,12 +109,9 @@ void exahype2::fv::rusanov::omp::opt::timeStepWithRusanov_batched_heap_static_ca
   }
   else if (Dimensions==3 and evaluateSource) {
     #pragma omp target teams distribute parallel for simd collapse(4) device(targetDevice) \
-        is_device_ptr(tempFluxX, tempFluxY, tempFluxZ, \
-            tempNonconservativeProductX, tempNonconservativeProductY, tempNonconservativeProductZ, \
-            tempEigenvalueX, tempEigenvalueY, tempEigenvalueZ, \
-            mappedPointersToQIns, mappedPointersToQOuts, \
-            rawPointerToCellCentres, rawPointerToCellSizes, \
-            ts, dts, maxEigenvalues)
+      is_device_ptr(mappedPointersToQIns, mappedPointersToQOuts, \
+        rawPointerToCellCentres, rawPointerToCellSizes, \
+        ts, dts)
     for (int patchIndex=0; patchIndex<numberOfCells; patchIndex++)
     for (int z = 0; z < numberOfVolumesPerAxisInPatch; z++)
     for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
@@ -151,12 +145,7 @@ void exahype2::fv::rusanov::omp::opt::timeStepWithRusanov_batched_heap_static_ca
   }
   else if (Dimensions==2) {
     #pragma omp target teams distribute parallel for simd collapse(4) device(targetDevice) \
-        is_device_ptr(tempFluxX, tempFluxY, tempFluxZ, \
-          tempNonconservativeProductX, tempNonconservativeProductY, tempNonconservativeProductZ, \
-          tempEigenvalueX, tempEigenvalueY, tempEigenvalueZ, \
-          mappedPointersToQIns, mappedPointersToQOuts, \
-          rawPointerToCellCentres, rawPointerToCellSizes, \
-          ts, dts, maxEigenvalues)
+      is_device_ptr(mappedPointersToQIns, mappedPointersToQOuts)
     for (int patchIndex=0; patchIndex<numberOfCells; patchIndex++)
     for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
     for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++)
@@ -169,10 +158,6 @@ void exahype2::fv::rusanov::omp::opt::timeStepWithRusanov_batched_heap_static_ca
 
       double* QIn = &mappedPointersToQIns[patchIndex * QInEnumerator.size()];
       double* QOut = &mappedPointersToQOuts[patchIndex * QOutEnumerator.size()];
-      const tarch::la::Vector<Dimensions,double>& patchCentre = rawPointerToCellCentres[patchIndex];
-      const tarch::la::Vector<Dimensions,double>& patchSize = rawPointerToCellSizes[patchIndex];
-      const double t = ts[patchIndex];
-      const double dt = dts[patchIndex];
 
       internal::copySolution_LoopBody(
           QIn,
@@ -187,12 +172,7 @@ void exahype2::fv::rusanov::omp::opt::timeStepWithRusanov_batched_heap_static_ca
   }
   else {
     #pragma omp target teams distribute parallel for simd collapse(5) device(targetDevice) \
-        is_device_ptr(tempFluxX, tempFluxY, tempFluxZ, \
-      tempNonconservativeProductX, tempNonconservativeProductY, tempNonconservativeProductZ, \
-      tempEigenvalueX, tempEigenvalueY, tempEigenvalueZ, \
-      mappedPointersToQIns, mappedPointersToQOuts, \
-      rawPointerToCellCentres, rawPointerToCellSizes, \
-      ts, dts, maxEigenvalues)
+      is_device_ptr(mappedPointersToQIns, mappedPointersToQOuts)
     for (int patchIndex=0; patchIndex<numberOfCells; patchIndex++)
     for (int z = 0; z < numberOfVolumesPerAxisInPatch; z++)
     for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
@@ -206,10 +186,6 @@ void exahype2::fv::rusanov::omp::opt::timeStepWithRusanov_batched_heap_static_ca
 
       double* QIn = &mappedPointersToQIns[patchIndex * QInEnumerator.size()];
       double* QOut = &mappedPointersToQOuts[patchIndex * QOutEnumerator.size()];
-      const tarch::la::Vector<Dimensions,double>& patchCentre = rawPointerToCellCentres[patchIndex];
-      const tarch::la::Vector<Dimensions,double>& patchSize = rawPointerToCellSizes[patchIndex];
-      const double t = ts[patchIndex];
-      const double dt = dts[patchIndex];
 
       internal::copySolution_LoopBody(
           QIn,
@@ -225,12 +201,10 @@ void exahype2::fv::rusanov::omp::opt::timeStepWithRusanov_batched_heap_static_ca
 
   if (Dimensions==2) {
     #pragma omp target teams distribute parallel for simd collapse(3) device(targetDevice) \
-            is_device_ptr(tempFluxX, tempFluxY, tempFluxZ, \
-      tempNonconservativeProductX, tempNonconservativeProductY, tempNonconservativeProductZ, \
-      tempEigenvalueX, tempEigenvalueY, tempEigenvalueZ, \
-      mappedPointersToQIns, mappedPointersToQOuts, \
-      rawPointerToCellCentres, rawPointerToCellSizes, \
-      ts, dts, maxEigenvalues)
+      is_device_ptr(tempEigenvalueX, \
+        mappedPointersToQIns, \
+        rawPointerToCellCentres, rawPointerToCellSizes, \
+        ts, dts)
     for (int patchIndex=0; patchIndex<numberOfCells; patchIndex++)
     for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
     for (int x = 0; x < numberOfVolumesPerAxisInPatch+2*solversHaloSize; x++) {
@@ -241,7 +215,6 @@ void exahype2::fv::rusanov::omp::opt::timeStepWithRusanov_batched_heap_static_ca
       TempDataEnumerator eigenvalueEnumerator(numberOfCells, numberOfVolumesPerAxisInPatch,haloSize,1,0);
 
       double* QIn = &mappedPointersToQIns[patchIndex * QInEnumerator.size()];
-      double* QOut = &mappedPointersToQOuts[patchIndex * QOutEnumerator.size()];
       const tarch::la::Vector<Dimensions,double>& patchCentre = rawPointerToCellCentres[patchIndex];
       const tarch::la::Vector<Dimensions,double>& patchSize = rawPointerToCellSizes[patchIndex];
       const double t = ts[patchIndex];
@@ -263,12 +236,10 @@ void exahype2::fv::rusanov::omp::opt::timeStepWithRusanov_batched_heap_static_ca
     }
 
     #pragma omp target teams distribute parallel for simd collapse(3) device(targetDevice) \
-                            is_device_ptr(tempFluxX, tempFluxY, tempFluxZ, \
-                  tempNonconservativeProductX, tempNonconservativeProductY, tempNonconservativeProductZ, \
-                  tempEigenvalueX, tempEigenvalueY, tempEigenvalueZ, \
-                  mappedPointersToQIns, mappedPointersToQOuts, \
-                  rawPointerToCellCentres, rawPointerToCellSizes, \
-                  ts, dts, maxEigenvalues)
+      is_device_ptr(tempEigenvalueY, \
+        mappedPointersToQIns, \
+        rawPointerToCellCentres, rawPointerToCellSizes, \
+        ts, dts)
     for (int patchIndex=0; patchIndex<numberOfCells; patchIndex++)
     for (int y = 0; y < numberOfVolumesPerAxisInPatch+2*solversHaloSize; y++)
     for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++) {
@@ -279,7 +250,6 @@ void exahype2::fv::rusanov::omp::opt::timeStepWithRusanov_batched_heap_static_ca
       TempDataEnumerator eigenvalueEnumerator(numberOfCells, numberOfVolumesPerAxisInPatch,haloSize,1,0);
 
       double* QIn = &mappedPointersToQIns[patchIndex * QInEnumerator.size()];
-      double* QOut = &mappedPointersToQOuts[patchIndex * QOutEnumerator.size()];
       const tarch::la::Vector<Dimensions,double>& patchCentre = rawPointerToCellCentres[patchIndex];
       const tarch::la::Vector<Dimensions,double>& patchSize = rawPointerToCellSizes[patchIndex];
       const double t = ts[patchIndex];
@@ -301,12 +271,10 @@ void exahype2::fv::rusanov::omp::opt::timeStepWithRusanov_batched_heap_static_ca
     }
 
     #pragma omp target teams distribute parallel for simd collapse(4) device(targetDevice) \
-                is_device_ptr(tempFluxX, tempFluxY, tempFluxZ, \
-      tempNonconservativeProductX, tempNonconservativeProductY, tempNonconservativeProductZ, \
-      tempEigenvalueX, tempEigenvalueY, tempEigenvalueZ, \
-      mappedPointersToQIns, mappedPointersToQOuts, \
-      rawPointerToCellCentres, rawPointerToCellSizes, \
-      ts, dts, maxEigenvalues)
+      is_device_ptr(tempEigenvalueX, tempEigenvalueY, tempEigenvalueZ, \
+        mappedPointersToQIns, mappedPointersToQOuts, \
+        rawPointerToCellCentres, rawPointerToCellSizes, \
+        dts)
     for (int patchIndex=0; patchIndex<numberOfCells; patchIndex++)
     for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
     for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++)
@@ -321,7 +289,6 @@ void exahype2::fv::rusanov::omp::opt::timeStepWithRusanov_batched_heap_static_ca
       double* QOut = &mappedPointersToQOuts[patchIndex * QOutEnumerator.size()];
       const tarch::la::Vector<Dimensions,double>& patchCentre = rawPointerToCellCentres[patchIndex];
       const tarch::la::Vector<Dimensions,double>& patchSize = rawPointerToCellSizes[patchIndex];
-      const double t = ts[patchIndex];
       const double dt = dts[patchIndex];
 
       internal::updateSolutionWithEigenvalueDamping_LoopBody(
@@ -344,12 +311,10 @@ void exahype2::fv::rusanov::omp::opt::timeStepWithRusanov_batched_heap_static_ca
   }
   else {
     #pragma omp target teams distribute parallel for simd collapse(4) device(targetDevice) \
-                    is_device_ptr(tempFluxX, tempFluxY, tempFluxZ, \
-      tempNonconservativeProductX, tempNonconservativeProductY, tempNonconservativeProductZ, \
-      tempEigenvalueX, tempEigenvalueY, tempEigenvalueZ, \
-      mappedPointersToQIns, mappedPointersToQOuts, \
-      rawPointerToCellCentres, rawPointerToCellSizes, \
-      ts, dts, maxEigenvalues)
+      is_device_ptr(tempEigenvalueX, \
+        mappedPointersToQIns, \
+        rawPointerToCellCentres, rawPointerToCellSizes, \
+        ts, dts)
     for (int patchIndex=0; patchIndex<numberOfCells; patchIndex++)
     for (int z = 0; z < numberOfVolumesPerAxisInPatch; z++)
     for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
@@ -361,7 +326,6 @@ void exahype2::fv::rusanov::omp::opt::timeStepWithRusanov_batched_heap_static_ca
       TempDataEnumerator eigenvalueEnumerator(numberOfCells, numberOfVolumesPerAxisInPatch,haloSize,1,0);
 
       double* QIn = &mappedPointersToQIns[patchIndex * QInEnumerator.size()];
-      double* QOut = &mappedPointersToQOuts[patchIndex * QOutEnumerator.size()];
       const tarch::la::Vector<Dimensions,double>& patchCentre = rawPointerToCellCentres[patchIndex];
       const tarch::la::Vector<Dimensions,double>& patchSize = rawPointerToCellSizes[patchIndex];
       const double t = ts[patchIndex];
@@ -383,12 +347,10 @@ void exahype2::fv::rusanov::omp::opt::timeStepWithRusanov_batched_heap_static_ca
     }
 
     #pragma omp target teams distribute parallel for simd collapse(4) device(targetDevice) \
-                        is_device_ptr(tempFluxX, tempFluxY, tempFluxZ, \
-      tempNonconservativeProductX, tempNonconservativeProductY, tempNonconservativeProductZ, \
-      tempEigenvalueX, tempEigenvalueY, tempEigenvalueZ, \
-      mappedPointersToQIns, mappedPointersToQOuts, \
-      rawPointerToCellCentres, rawPointerToCellSizes, \
-      ts, dts, maxEigenvalues)
+      is_device_ptr(tempEigenvalueY, \
+        mappedPointersToQIns, \
+        rawPointerToCellCentres, rawPointerToCellSizes, \
+        ts, dts)
     for (int patchIndex=0; patchIndex<numberOfCells; patchIndex++)
     for (int z = 0; z < numberOfVolumesPerAxisInPatch; z++)
     for (int y = 0; y < numberOfVolumesPerAxisInPatch+2*solversHaloSize; y++)
@@ -400,7 +362,6 @@ void exahype2::fv::rusanov::omp::opt::timeStepWithRusanov_batched_heap_static_ca
       TempDataEnumerator eigenvalueEnumerator(numberOfCells, numberOfVolumesPerAxisInPatch,haloSize,1,0);
 
       double* QIn = &mappedPointersToQIns[patchIndex * QInEnumerator.size()];
-      double* QOut = &mappedPointersToQOuts[patchIndex * QOutEnumerator.size()];
       const tarch::la::Vector<Dimensions,double>& patchCentre = rawPointerToCellCentres[patchIndex];
       const tarch::la::Vector<Dimensions,double>& patchSize = rawPointerToCellSizes[patchIndex];
       const double t = ts[patchIndex];
@@ -422,12 +383,10 @@ void exahype2::fv::rusanov::omp::opt::timeStepWithRusanov_batched_heap_static_ca
     }
 
     #pragma omp target teams distribute parallel for simd collapse(4) device(targetDevice) \
-                  is_device_ptr(tempFluxX, tempFluxY, tempFluxZ, \
-                  tempNonconservativeProductX, tempNonconservativeProductY, tempNonconservativeProductZ, \
-                  tempEigenvalueX, tempEigenvalueY, tempEigenvalueZ, \
-                  mappedPointersToQIns, mappedPointersToQOuts, \
-                  rawPointerToCellCentres, rawPointerToCellSizes, \
-                  ts, dts, maxEigenvalues)
+      is_device_ptr(tempEigenvalueZ, \
+        mappedPointersToQIns, \
+        rawPointerToCellCentres, rawPointerToCellSizes, \
+        ts, dts)
     for (int patchIndex=0; patchIndex<numberOfCells; patchIndex++)
     for (int z = 0; z < numberOfVolumesPerAxisInPatch+2*solversHaloSize; z++)
     for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
@@ -439,7 +398,6 @@ void exahype2::fv::rusanov::omp::opt::timeStepWithRusanov_batched_heap_static_ca
       TempDataEnumerator eigenvalueEnumerator(numberOfCells, numberOfVolumesPerAxisInPatch,haloSize,1,0);
 
       double* QIn = &mappedPointersToQIns[patchIndex * QInEnumerator.size()];
-      double* QOut = &mappedPointersToQOuts[patchIndex * QOutEnumerator.size()];
       const tarch::la::Vector<Dimensions,double>& patchCentre = rawPointerToCellCentres[patchIndex];
       const tarch::la::Vector<Dimensions,double>& patchSize = rawPointerToCellSizes[patchIndex];
       const double t = ts[patchIndex];
@@ -461,12 +419,10 @@ void exahype2::fv::rusanov::omp::opt::timeStepWithRusanov_batched_heap_static_ca
     }
 
     #pragma omp target teams distribute parallel for simd collapse(5) device(targetDevice) \
-                  is_device_ptr(tempFluxX, tempFluxY, tempFluxZ, \
-                  tempNonconservativeProductX, tempNonconservativeProductY, tempNonconservativeProductZ, \
-                  tempEigenvalueX, tempEigenvalueY, tempEigenvalueZ, \
-                  mappedPointersToQIns, mappedPointersToQOuts, \
-                  rawPointerToCellCentres, rawPointerToCellSizes, \
-                  ts, dts, maxEigenvalues)
+      is_device_ptr(tempEigenvalueX, tempEigenvalueY, tempEigenvalueZ, \
+        mappedPointersToQIns, mappedPointersToQOuts, \
+        rawPointerToCellCentres, rawPointerToCellSizes, \
+        dts)
     for (int patchIndex=0; patchIndex<numberOfCells; patchIndex++)
     for (int z = 0; z < numberOfVolumesPerAxisInPatch; z++)
     for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
@@ -482,7 +438,6 @@ void exahype2::fv::rusanov::omp::opt::timeStepWithRusanov_batched_heap_static_ca
       double* QOut = &mappedPointersToQOuts[patchIndex * QOutEnumerator.size()];
       const tarch::la::Vector<Dimensions,double>& patchCentre = rawPointerToCellCentres[patchIndex];
       const tarch::la::Vector<Dimensions,double>& patchSize = rawPointerToCellSizes[patchIndex];
-      const double t = ts[patchIndex];
       const double dt = dts[patchIndex];
 
       internal::updateSolutionWithEigenvalueDamping_LoopBody(
@@ -506,12 +461,10 @@ void exahype2::fv::rusanov::omp::opt::timeStepWithRusanov_batched_heap_static_ca
 
   if (evaluateFlux and Dimensions==2) {
     #pragma omp target teams distribute parallel for simd collapse(3) device(targetDevice) \
-                  is_device_ptr(tempFluxX, tempFluxY, tempFluxZ, \
-                  tempNonconservativeProductX, tempNonconservativeProductY, tempNonconservativeProductZ, \
-                  tempEigenvalueX, tempEigenvalueY, tempEigenvalueZ, \
-                  mappedPointersToQIns, mappedPointersToQOuts, \
-                  rawPointerToCellCentres, rawPointerToCellSizes, \
-                  ts, dts, maxEigenvalues)
+      is_device_ptr(tempFluxX, \
+        mappedPointersToQIns, \
+        rawPointerToCellCentres, rawPointerToCellSizes, \
+        ts, dts)
     for (int patchIndex=0; patchIndex<numberOfCells; patchIndex++)
     for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
     for (int x = 0; x < numberOfVolumesPerAxisInPatch+2*solversHaloSize; x++) {
@@ -522,7 +475,6 @@ void exahype2::fv::rusanov::omp::opt::timeStepWithRusanov_batched_heap_static_ca
       TempDataEnumerator eigenvalueEnumerator(numberOfCells, numberOfVolumesPerAxisInPatch,haloSize,1,0);
 
       double* QIn = &mappedPointersToQIns[patchIndex * QInEnumerator.size()];
-      double* QOut = &mappedPointersToQOuts[patchIndex * QOutEnumerator.size()];
       const tarch::la::Vector<Dimensions,double>& patchCentre = rawPointerToCellCentres[patchIndex];
       const tarch::la::Vector<Dimensions,double>& patchSize = rawPointerToCellSizes[patchIndex];
       const double t = ts[patchIndex];
@@ -544,12 +496,10 @@ void exahype2::fv::rusanov::omp::opt::timeStepWithRusanov_batched_heap_static_ca
     }
 
     #pragma omp target teams distribute parallel for simd collapse(3) device(targetDevice) \
-                  is_device_ptr(tempFluxX, tempFluxY, tempFluxZ, \
-                  tempNonconservativeProductX, tempNonconservativeProductY, tempNonconservativeProductZ, \
-                  tempEigenvalueX, tempEigenvalueY, tempEigenvalueZ, \
-                  mappedPointersToQIns, mappedPointersToQOuts, \
-                  rawPointerToCellCentres, rawPointerToCellSizes, \
-                  ts, dts, maxEigenvalues)
+      is_device_ptr(tempFluxY, \
+        mappedPointersToQIns, \
+        rawPointerToCellCentres, rawPointerToCellSizes, \
+        ts, dts)
     for (int patchIndex=0; patchIndex<numberOfCells; patchIndex++)
     for (int y = 0; y < numberOfVolumesPerAxisInPatch+2*solversHaloSize; y++)
     for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++) {
@@ -560,7 +510,6 @@ void exahype2::fv::rusanov::omp::opt::timeStepWithRusanov_batched_heap_static_ca
       TempDataEnumerator eigenvalueEnumerator(numberOfCells, numberOfVolumesPerAxisInPatch,haloSize,1,0);
 
       double* QIn = &mappedPointersToQIns[patchIndex * QInEnumerator.size()];
-      double* QOut = &mappedPointersToQOuts[patchIndex * QOutEnumerator.size()];
       const tarch::la::Vector<Dimensions,double>& patchCentre = rawPointerToCellCentres[patchIndex];
       const tarch::la::Vector<Dimensions,double>& patchSize = rawPointerToCellSizes[patchIndex];
       const double t = ts[patchIndex];
@@ -582,12 +531,10 @@ void exahype2::fv::rusanov::omp::opt::timeStepWithRusanov_batched_heap_static_ca
     }
 
     #pragma omp target teams distribute parallel for simd collapse(4) device(targetDevice) \
-                  is_device_ptr(tempFluxX, tempFluxY, tempFluxZ, \
-                  tempNonconservativeProductX, tempNonconservativeProductY, tempNonconservativeProductZ, \
-                  tempEigenvalueX, tempEigenvalueY, tempEigenvalueZ, \
-                  mappedPointersToQIns, mappedPointersToQOuts, \
-                  rawPointerToCellCentres, rawPointerToCellSizes, \
-                  ts, dts, maxEigenvalues)
+      is_device_ptr(tempFluxX, tempFluxY, tempFluxZ, \
+        mappedPointersToQOuts, \
+        rawPointerToCellCentres, rawPointerToCellSizes, \
+        dts)
     for (int patchIndex=0; patchIndex<numberOfCells; patchIndex++)
     for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
     for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++)
@@ -598,11 +545,9 @@ void exahype2::fv::rusanov::omp::opt::timeStepWithRusanov_batched_heap_static_ca
       TempDataEnumerator ncpEnumerator       (numberOfCells, numberOfVolumesPerAxisInPatch+1,haloSize,unknowns,0);
       TempDataEnumerator eigenvalueEnumerator(numberOfCells, numberOfVolumesPerAxisInPatch,haloSize,1,0);
 
-      double* QIn = &mappedPointersToQIns[patchIndex * QInEnumerator.size()];
       double* QOut = &mappedPointersToQOuts[patchIndex * QOutEnumerator.size()];
       const tarch::la::Vector<Dimensions,double>& patchCentre = rawPointerToCellCentres[patchIndex];
       const tarch::la::Vector<Dimensions,double>& patchSize = rawPointerToCellSizes[patchIndex];
-      const double t = ts[patchIndex];
       const double dt = dts[patchIndex];
 
       internal::updateSolutionWithFlux_LoopBody(
@@ -621,12 +566,10 @@ void exahype2::fv::rusanov::omp::opt::timeStepWithRusanov_batched_heap_static_ca
   }
   else if (evaluateFlux and Dimensions==3) {
     #pragma omp target teams distribute parallel for simd collapse(4) device(targetDevice) \
-                  is_device_ptr(tempFluxX, tempFluxY, tempFluxZ, \
-                  tempNonconservativeProductX, tempNonconservativeProductY, tempNonconservativeProductZ, \
-                  tempEigenvalueX, tempEigenvalueY, tempEigenvalueZ, \
-                  mappedPointersToQIns, mappedPointersToQOuts, \
-                  rawPointerToCellCentres, rawPointerToCellSizes, \
-                  ts, dts, maxEigenvalues)
+      is_device_ptr(tempFluxX, \
+        mappedPointersToQIns, \
+        rawPointerToCellCentres, rawPointerToCellSizes, \
+        ts, dts)
     for (int patchIndex=0; patchIndex<numberOfCells; patchIndex++)
     for (int z = 0; z < numberOfVolumesPerAxisInPatch; z++)
     for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
@@ -638,7 +581,6 @@ void exahype2::fv::rusanov::omp::opt::timeStepWithRusanov_batched_heap_static_ca
       TempDataEnumerator eigenvalueEnumerator(numberOfCells, numberOfVolumesPerAxisInPatch,haloSize,1,0);
 
       double* QIn = &mappedPointersToQIns[patchIndex * QInEnumerator.size()];
-      double* QOut = &mappedPointersToQOuts[patchIndex * QOutEnumerator.size()];
       const tarch::la::Vector<Dimensions,double>& patchCentre = rawPointerToCellCentres[patchIndex];
       const tarch::la::Vector<Dimensions,double>& patchSize = rawPointerToCellSizes[patchIndex];
       const double t = ts[patchIndex];
@@ -660,12 +602,10 @@ void exahype2::fv::rusanov::omp::opt::timeStepWithRusanov_batched_heap_static_ca
     }
 
     #pragma omp target teams distribute parallel for simd collapse(4) device(targetDevice) \
-                  is_device_ptr(tempFluxX, tempFluxY, tempFluxZ, \
-                  tempNonconservativeProductX, tempNonconservativeProductY, tempNonconservativeProductZ, \
-                  tempEigenvalueX, tempEigenvalueY, tempEigenvalueZ, \
-                  mappedPointersToQIns, mappedPointersToQOuts, \
-                  rawPointerToCellCentres, rawPointerToCellSizes, \
-                  ts, dts, maxEigenvalues)
+      is_device_ptr(tempFluxY, \
+        mappedPointersToQIns, \
+        rawPointerToCellCentres, rawPointerToCellSizes, \
+        ts, dts)
     for (int patchIndex=0; patchIndex<numberOfCells; patchIndex++)
     for (int z = 0; z < numberOfVolumesPerAxisInPatch; z++)
     for (int y = 0; y < numberOfVolumesPerAxisInPatch+2*solversHaloSize; y++)
@@ -677,7 +617,6 @@ void exahype2::fv::rusanov::omp::opt::timeStepWithRusanov_batched_heap_static_ca
       TempDataEnumerator eigenvalueEnumerator(numberOfCells, numberOfVolumesPerAxisInPatch,haloSize,1,0);
 
       double* QIn = &mappedPointersToQIns[patchIndex * QInEnumerator.size()];
-      double* QOut = &mappedPointersToQOuts[patchIndex * QOutEnumerator.size()];
       const tarch::la::Vector<Dimensions,double>& patchCentre = rawPointerToCellCentres[patchIndex];
       const tarch::la::Vector<Dimensions,double>& patchSize = rawPointerToCellSizes[patchIndex];
       const double t = ts[patchIndex];
@@ -699,12 +638,10 @@ void exahype2::fv::rusanov::omp::opt::timeStepWithRusanov_batched_heap_static_ca
     }
 
     #pragma omp target teams distribute parallel for simd collapse(4) device(targetDevice) \
-                  is_device_ptr(tempFluxX, tempFluxY, tempFluxZ, \
-                  tempNonconservativeProductX, tempNonconservativeProductY, tempNonconservativeProductZ, \
-                  tempEigenvalueX, tempEigenvalueY, tempEigenvalueZ, \
-                  mappedPointersToQIns, mappedPointersToQOuts, \
-                  rawPointerToCellCentres, rawPointerToCellSizes, \
-                  ts, dts, maxEigenvalues)
+      is_device_ptr(tempFluxZ, \
+        mappedPointersToQIns, \
+        rawPointerToCellCentres, rawPointerToCellSizes, \
+        ts, dts)
     for (int patchIndex=0; patchIndex<numberOfCells; patchIndex++)
     for (int z = 0; z < numberOfVolumesPerAxisInPatch+2*solversHaloSize;  z++)
     for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
@@ -716,7 +653,6 @@ void exahype2::fv::rusanov::omp::opt::timeStepWithRusanov_batched_heap_static_ca
       TempDataEnumerator eigenvalueEnumerator(numberOfCells, numberOfVolumesPerAxisInPatch,haloSize,1,0);
 
       double* QIn = &mappedPointersToQIns[patchIndex * QInEnumerator.size()];
-      double* QOut = &mappedPointersToQOuts[patchIndex * QOutEnumerator.size()];
       const tarch::la::Vector<Dimensions,double>& patchCentre = rawPointerToCellCentres[patchIndex];
       const tarch::la::Vector<Dimensions,double>& patchSize = rawPointerToCellSizes[patchIndex];
       const double t = ts[patchIndex];
@@ -738,12 +674,10 @@ void exahype2::fv::rusanov::omp::opt::timeStepWithRusanov_batched_heap_static_ca
     }
 
     #pragma omp target teams distribute parallel for simd collapse(5) device(targetDevice) \
-                  is_device_ptr(tempFluxX, tempFluxY, tempFluxZ, \
-                  tempNonconservativeProductX, tempNonconservativeProductY, tempNonconservativeProductZ, \
-                  tempEigenvalueX, tempEigenvalueY, tempEigenvalueZ, \
-                  mappedPointersToQIns, mappedPointersToQOuts, \
-                  rawPointerToCellCentres, rawPointerToCellSizes, \
-                  ts, dts, maxEigenvalues)
+      is_device_ptr(tempFluxX, tempFluxY, tempFluxZ, \
+        mappedPointersToQOuts, \
+        rawPointerToCellCentres, rawPointerToCellSizes, \
+        dts)
     for (int patchIndex=0; patchIndex<numberOfCells; patchIndex++)
     for (int z = 0; z < numberOfVolumesPerAxisInPatch; z++)
     for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
@@ -755,11 +689,9 @@ void exahype2::fv::rusanov::omp::opt::timeStepWithRusanov_batched_heap_static_ca
       TempDataEnumerator ncpEnumerator       (numberOfCells, numberOfVolumesPerAxisInPatch+1,haloSize,unknowns,0);
       TempDataEnumerator eigenvalueEnumerator(numberOfCells, numberOfVolumesPerAxisInPatch,haloSize,1,0);
 
-      double* QIn = &mappedPointersToQIns[patchIndex * QInEnumerator.size()];
       double* QOut = &mappedPointersToQOuts[patchIndex * QOutEnumerator.size()];
       const tarch::la::Vector<Dimensions,double>& patchCentre = rawPointerToCellCentres[patchIndex];
       const tarch::la::Vector<Dimensions,double>& patchSize = rawPointerToCellSizes[patchIndex];
-      const double t = ts[patchIndex];
       const double dt = dts[patchIndex];
 
       internal::updateSolutionWithFlux_LoopBody(
@@ -780,12 +712,10 @@ void exahype2::fv::rusanov::omp::opt::timeStepWithRusanov_batched_heap_static_ca
 
   if (evaluateNonconservativeProduct and Dimensions==2) {
     #pragma omp target teams distribute parallel for simd collapse(3) device(targetDevice) \
-                  is_device_ptr(tempFluxX, tempFluxY, tempFluxZ, \
-                  tempNonconservativeProductX, tempNonconservativeProductY, tempNonconservativeProductZ, \
-                  tempEigenvalueX, tempEigenvalueY, tempEigenvalueZ, \
-                  mappedPointersToQIns, mappedPointersToQOuts, \
-                  rawPointerToCellCentres, rawPointerToCellSizes, \
-                  ts, dts, maxEigenvalues)
+      is_device_ptr(tempNonconservativeProductX, \
+        mappedPointersToQIns, \
+        rawPointerToCellCentres, rawPointerToCellSizes, \
+        ts, dts)
     for (int patchIndex=0; patchIndex<numberOfCells; patchIndex++)
     for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
     for (int x = 0; x < numberOfVolumesPerAxisInPatch+2*solversHaloSize-1; x++) {
@@ -796,7 +726,6 @@ void exahype2::fv::rusanov::omp::opt::timeStepWithRusanov_batched_heap_static_ca
       TempDataEnumerator eigenvalueEnumerator(numberOfCells, numberOfVolumesPerAxisInPatch,haloSize,1,0);
 
       double* QIn = &mappedPointersToQIns[patchIndex * QInEnumerator.size()];
-      double* QOut = &mappedPointersToQOuts[patchIndex * QOutEnumerator.size()];
       const tarch::la::Vector<Dimensions,double>& patchCentre = rawPointerToCellCentres[patchIndex];
       const tarch::la::Vector<Dimensions,double>& patchSize = rawPointerToCellSizes[patchIndex];
       const double t = ts[patchIndex];
@@ -818,12 +747,10 @@ void exahype2::fv::rusanov::omp::opt::timeStepWithRusanov_batched_heap_static_ca
     }
 
     #pragma omp target teams distribute parallel for simd collapse(3) device(targetDevice) \
-                  is_device_ptr(tempFluxX, tempFluxY, tempFluxZ, \
-                  tempNonconservativeProductX, tempNonconservativeProductY, tempNonconservativeProductZ, \
-                  tempEigenvalueX, tempEigenvalueY, tempEigenvalueZ, \
-                  mappedPointersToQIns, mappedPointersToQOuts, \
-                  rawPointerToCellCentres, rawPointerToCellSizes, \
-                  ts, dts, maxEigenvalues)
+      is_device_ptr(tempNonconservativeProductY, \
+        mappedPointersToQIns, \
+        rawPointerToCellCentres, rawPointerToCellSizes, \
+        ts, dts)
     for (int patchIndex=0; patchIndex<numberOfCells; patchIndex++)
     for (int y = 0; y < numberOfVolumesPerAxisInPatch+2*solversHaloSize-1; y++)
     for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++) {
@@ -834,7 +761,6 @@ void exahype2::fv::rusanov::omp::opt::timeStepWithRusanov_batched_heap_static_ca
       TempDataEnumerator eigenvalueEnumerator(numberOfCells, numberOfVolumesPerAxisInPatch,haloSize,1,0);
 
       double* QIn = &mappedPointersToQIns[patchIndex * QInEnumerator.size()];
-      double* QOut = &mappedPointersToQOuts[patchIndex * QOutEnumerator.size()];
       const tarch::la::Vector<Dimensions,double>& patchCentre = rawPointerToCellCentres[patchIndex];
       const tarch::la::Vector<Dimensions,double>& patchSize = rawPointerToCellSizes[patchIndex];
       const double t = ts[patchIndex];
@@ -856,12 +782,10 @@ void exahype2::fv::rusanov::omp::opt::timeStepWithRusanov_batched_heap_static_ca
     }
 
     #pragma omp target teams distribute parallel for simd collapse(4) device(targetDevice) \
-                  is_device_ptr(tempFluxX, tempFluxY, tempFluxZ, \
-                  tempNonconservativeProductX, tempNonconservativeProductY, tempNonconservativeProductZ, \
-                  tempEigenvalueX, tempEigenvalueY, tempEigenvalueZ, \
-                  mappedPointersToQIns, mappedPointersToQOuts, \
-                  rawPointerToCellCentres, rawPointerToCellSizes, \
-                  ts, dts, maxEigenvalues)
+      is_device_ptr(tempNonconservativeProductX, tempNonconservativeProductY, tempNonconservativeProductZ, \
+        mappedPointersToQOuts, \
+        rawPointerToCellCentres, rawPointerToCellSizes, \
+        dts)
     for (int patchIndex=0; patchIndex<numberOfCells; patchIndex++)
     for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
     for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++)
@@ -872,15 +796,15 @@ void exahype2::fv::rusanov::omp::opt::timeStepWithRusanov_batched_heap_static_ca
       TempDataEnumerator ncpEnumerator       (numberOfCells, numberOfVolumesPerAxisInPatch+1,haloSize,unknowns,0);
       TempDataEnumerator eigenvalueEnumerator(numberOfCells, numberOfVolumesPerAxisInPatch,haloSize,1,0);
 
-      double* QIn = &mappedPointersToQIns[patchIndex * QInEnumerator.size()];
       double* QOut = &mappedPointersToQOuts[patchIndex * QOutEnumerator.size()];
       const tarch::la::Vector<Dimensions,double>& patchCentre = rawPointerToCellCentres[patchIndex];
       const tarch::la::Vector<Dimensions,double>& patchSize = rawPointerToCellSizes[patchIndex];
-      const double t = ts[patchIndex];
       const double dt = dts[patchIndex];
 
       internal::updateSolutionWithNonconservativeFlux_LoopBody(
-            tempNonconservativeProductX, tempNonconservativeProductY, tempNonconservativeProductZ,
+            tempNonconservativeProductX,
+            tempNonconservativeProductY,
+            tempNonconservativeProductZ,
             ncpEnumerator,
             patchCentre,
             patchSize,
@@ -895,12 +819,10 @@ void exahype2::fv::rusanov::omp::opt::timeStepWithRusanov_batched_heap_static_ca
   }
   else if (evaluateNonconservativeProduct and Dimensions==3) {
     #pragma omp target teams distribute parallel for simd collapse(4) device(targetDevice) \
-                  is_device_ptr(tempFluxX, tempFluxY, tempFluxZ, \
-                  tempNonconservativeProductX, tempNonconservativeProductY, tempNonconservativeProductZ, \
-                  tempEigenvalueX, tempEigenvalueY, tempEigenvalueZ, \
-                  mappedPointersToQIns, mappedPointersToQOuts, \
-                  rawPointerToCellCentres, rawPointerToCellSizes, \
-                  ts, dts, maxEigenvalues)
+      is_device_ptr(tempNonconservativeProductX, \
+        mappedPointersToQIns, \
+        rawPointerToCellCentres, rawPointerToCellSizes, \
+        ts, dts)
     for (int patchIndex=0; patchIndex<numberOfCells; patchIndex++)
     for (int z = 0; z < numberOfVolumesPerAxisInPatch; z++)
     for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
@@ -912,7 +834,6 @@ void exahype2::fv::rusanov::omp::opt::timeStepWithRusanov_batched_heap_static_ca
       TempDataEnumerator eigenvalueEnumerator(numberOfCells, numberOfVolumesPerAxisInPatch,haloSize,1,0);
 
       double* QIn = &mappedPointersToQIns[patchIndex * QInEnumerator.size()];
-      double* QOut = &mappedPointersToQOuts[patchIndex * QOutEnumerator.size()];
       const tarch::la::Vector<Dimensions,double>& patchCentre = rawPointerToCellCentres[patchIndex];
       const tarch::la::Vector<Dimensions,double>& patchSize = rawPointerToCellSizes[patchIndex];
       const double t = ts[patchIndex];
@@ -934,12 +855,10 @@ void exahype2::fv::rusanov::omp::opt::timeStepWithRusanov_batched_heap_static_ca
     }
 
     #pragma omp target teams distribute parallel for simd collapse(4) device(targetDevice) \
-                  is_device_ptr(tempFluxX, tempFluxY, tempFluxZ, \
-                  tempNonconservativeProductX, tempNonconservativeProductY, tempNonconservativeProductZ, \
-                  tempEigenvalueX, tempEigenvalueY, tempEigenvalueZ, \
-                  mappedPointersToQIns, mappedPointersToQOuts, \
-                  rawPointerToCellCentres, rawPointerToCellSizes, \
-                  ts, dts, maxEigenvalues)
+      is_device_ptr(tempNonconservativeProductY, \
+        mappedPointersToQIns, \
+        rawPointerToCellCentres, rawPointerToCellSizes, \
+        ts, dts)
     for (int patchIndex=0; patchIndex<numberOfCells; patchIndex++)
     for (int z = 0; z < numberOfVolumesPerAxisInPatch; z++)
     for (int y = 0; y < numberOfVolumesPerAxisInPatch+2*solversHaloSize-1; y++)
@@ -951,7 +870,6 @@ void exahype2::fv::rusanov::omp::opt::timeStepWithRusanov_batched_heap_static_ca
       TempDataEnumerator eigenvalueEnumerator(numberOfCells, numberOfVolumesPerAxisInPatch,haloSize,1,0);
 
       double* QIn = &mappedPointersToQIns[patchIndex * QInEnumerator.size()];
-      double* QOut = &mappedPointersToQOuts[patchIndex * QOutEnumerator.size()];
       const tarch::la::Vector<Dimensions,double>& patchCentre = rawPointerToCellCentres[patchIndex];
       const tarch::la::Vector<Dimensions,double>& patchSize = rawPointerToCellSizes[patchIndex];
       const double t = ts[patchIndex];
@@ -973,12 +891,10 @@ void exahype2::fv::rusanov::omp::opt::timeStepWithRusanov_batched_heap_static_ca
     }
 
     #pragma omp target teams distribute parallel for simd collapse(4) device(targetDevice) \
-                  is_device_ptr(tempFluxX, tempFluxY, tempFluxZ, \
-                  tempNonconservativeProductX, tempNonconservativeProductY, tempNonconservativeProductZ, \
-                  tempEigenvalueX, tempEigenvalueY, tempEigenvalueZ, \
-                  mappedPointersToQIns, mappedPointersToQOuts, \
-                  rawPointerToCellCentres, rawPointerToCellSizes, \
-                  ts, dts, maxEigenvalues)
+      is_device_ptr(tempNonconservativeProductZ, \
+        mappedPointersToQIns, \
+        rawPointerToCellCentres, rawPointerToCellSizes, \
+        ts, dts)
     for (int patchIndex=0; patchIndex<numberOfCells; patchIndex++)
     for (int z = 0; z < numberOfVolumesPerAxisInPatch+2*solversHaloSize-1; z++)
     for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
@@ -990,7 +906,6 @@ void exahype2::fv::rusanov::omp::opt::timeStepWithRusanov_batched_heap_static_ca
       TempDataEnumerator eigenvalueEnumerator(numberOfCells, numberOfVolumesPerAxisInPatch,haloSize,1,0);
 
       double* QIn = &mappedPointersToQIns[patchIndex * QInEnumerator.size()];
-      double* QOut = &mappedPointersToQOuts[patchIndex * QOutEnumerator.size()];
       const tarch::la::Vector<Dimensions,double>& patchCentre = rawPointerToCellCentres[patchIndex];
       const tarch::la::Vector<Dimensions,double>& patchSize = rawPointerToCellSizes[patchIndex];
       const double t = ts[patchIndex];
@@ -1012,12 +927,10 @@ void exahype2::fv::rusanov::omp::opt::timeStepWithRusanov_batched_heap_static_ca
     }
 
     #pragma omp target teams distribute parallel for simd collapse(5) device(targetDevice) \
-                  is_device_ptr(tempFluxX, tempFluxY, tempFluxZ, \
-                  tempNonconservativeProductX, tempNonconservativeProductY, tempNonconservativeProductZ, \
-                  tempEigenvalueX, tempEigenvalueY, tempEigenvalueZ, \
-                  mappedPointersToQIns, mappedPointersToQOuts, \
-                  rawPointerToCellCentres, rawPointerToCellSizes, \
-                  ts, dts, maxEigenvalues)
+      is_device_ptr(tempNonconservativeProductX, tempNonconservativeProductY, tempNonconservativeProductZ, \
+        mappedPointersToQOuts, \
+        rawPointerToCellCentres, rawPointerToCellSizes, \
+        dts)
     for (int patchIndex=0; patchIndex<numberOfCells; patchIndex++)
     for (int z = 0; z < numberOfVolumesPerAxisInPatch; z++)
     for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
@@ -1029,15 +942,15 @@ void exahype2::fv::rusanov::omp::opt::timeStepWithRusanov_batched_heap_static_ca
       TempDataEnumerator ncpEnumerator       (numberOfCells, numberOfVolumesPerAxisInPatch+1,haloSize,unknowns,0);
       TempDataEnumerator eigenvalueEnumerator(numberOfCells, numberOfVolumesPerAxisInPatch,haloSize,1,0);
 
-      double* QIn = &mappedPointersToQIns[patchIndex * QInEnumerator.size()];
       double* QOut = &mappedPointersToQOuts[patchIndex * QOutEnumerator.size()];
       const tarch::la::Vector<Dimensions,double>& patchCentre = rawPointerToCellCentres[patchIndex];
       const tarch::la::Vector<Dimensions,double>& patchSize = rawPointerToCellSizes[patchIndex];
-      const double t = ts[patchIndex];
       const double dt = dts[patchIndex];
 
       internal::updateSolutionWithNonconservativeFlux_LoopBody(
-          tempNonconservativeProductX, tempNonconservativeProductY, tempNonconservativeProductZ,
+          tempNonconservativeProductX,
+          tempNonconservativeProductY,
+          tempNonconservativeProductZ,
           ncpEnumerator,
           patchCentre,
           patchSize,
@@ -1053,12 +966,9 @@ void exahype2::fv::rusanov::omp::opt::timeStepWithRusanov_batched_heap_static_ca
 
   if (evaluateMaximumEigenvalueAfterTimeStep and Dimensions==2) {
     #pragma omp target teams distribute device(targetDevice) \
-                  is_device_ptr(tempFluxX, tempFluxY, tempFluxZ, \
-                  tempNonconservativeProductX, tempNonconservativeProductY, tempNonconservativeProductZ, \
-                  tempEigenvalueX, tempEigenvalueY, tempEigenvalueZ, \
-                  mappedPointersToQIns, mappedPointersToQOuts, \
-                  rawPointerToCellCentres, rawPointerToCellSizes, \
-                  ts, dts, maxEigenvalues)
+      is_device_ptr(mappedPointersToQOuts, \
+        rawPointerToCellCentres, rawPointerToCellSizes, \
+        ts, dts, maxEigenvalues)
     for (int patchIndex=0; patchIndex<numberOfCells; patchIndex++) {
       exahype2::enumerator::AoSLexicographicEnumerator QInEnumerator       (                        1, numberOfVolumesPerAxisInPatch,haloSize,unknowns,auxiliaryVariables);
       exahype2::enumerator::AoSLexicographicEnumerator QOutEnumerator      (                        1, numberOfVolumesPerAxisInPatch,       0,unknowns,auxiliaryVariables);
@@ -1066,7 +976,6 @@ void exahype2::fv::rusanov::omp::opt::timeStepWithRusanov_batched_heap_static_ca
       TempDataEnumerator ncpEnumerator       (numberOfCells, numberOfVolumesPerAxisInPatch+1,haloSize,unknowns,0);
       TempDataEnumerator eigenvalueEnumerator(numberOfCells, numberOfVolumesPerAxisInPatch,haloSize,1,0);
 
-      double* QIn = &mappedPointersToQIns[patchIndex * QInEnumerator.size()];
       double* QOut = &mappedPointersToQOuts[patchIndex * QOutEnumerator.size()];
       const tarch::la::Vector<Dimensions,double>& patchCentre = rawPointerToCellCentres[patchIndex];
       const tarch::la::Vector<Dimensions,double>& patchSize = rawPointerToCellSizes[patchIndex];
@@ -1095,12 +1004,9 @@ void exahype2::fv::rusanov::omp::opt::timeStepWithRusanov_batched_heap_static_ca
   }
   else if (evaluateMaximumEigenvalueAfterTimeStep) {
     #pragma omp target teams distribute device(targetDevice) \
-                  is_device_ptr(tempFluxX, tempFluxY, tempFluxZ, \
-                  tempNonconservativeProductX, tempNonconservativeProductY, tempNonconservativeProductZ, \
-                  tempEigenvalueX, tempEigenvalueY, tempEigenvalueZ, \
-                  mappedPointersToQIns, mappedPointersToQOuts, \
-                  rawPointerToCellCentres, rawPointerToCellSizes, \
-                  ts, dts, maxEigenvalues)
+      is_device_ptr(mappedPointersToQOuts, \
+        rawPointerToCellCentres, rawPointerToCellSizes, \
+        ts, dts, maxEigenvalues)
     for (int patchIndex=0; patchIndex<numberOfCells; patchIndex++) {
       exahype2::enumerator::AoSLexicographicEnumerator QInEnumerator       (                        1, numberOfVolumesPerAxisInPatch,haloSize,unknowns,auxiliaryVariables);
       exahype2::enumerator::AoSLexicographicEnumerator QOutEnumerator      (                        1, numberOfVolumesPerAxisInPatch,       0,unknowns,auxiliaryVariables);
@@ -1108,7 +1014,6 @@ void exahype2::fv::rusanov::omp::opt::timeStepWithRusanov_batched_heap_static_ca
       TempDataEnumerator ncpEnumerator       (numberOfCells, numberOfVolumesPerAxisInPatch+1,haloSize,unknowns,0);
       TempDataEnumerator eigenvalueEnumerator(numberOfCells, numberOfVolumesPerAxisInPatch,haloSize,1,0);
 
-      double* QIn = &mappedPointersToQIns[patchIndex * QInEnumerator.size()];
       double* QOut = &mappedPointersToQOuts[patchIndex * QOutEnumerator.size()];
       const tarch::la::Vector<Dimensions,double>& patchCentre = rawPointerToCellCentres[patchIndex];
       const tarch::la::Vector<Dimensions,double>& patchSize = rawPointerToCellSizes[patchIndex];
@@ -1150,5 +1055,3 @@ void exahype2::fv::rusanov::omp::opt::timeStepWithRusanov_batched_heap_static_ca
   assertionMsg(false, "this routine should only be used in combination with OpenMP offloading, as it has a device parameter" );
   #endif
 }
-
-

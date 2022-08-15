@@ -632,4 +632,3 @@ void exahype2::fv::rusanov::omp::opt::timeStepWithRusanov_patchwise_heap_static_
   assertionMsg(false, "this routine should only be used in combination with OpenMP offloading, as it has a device parameter" );
   #endif
 }
-

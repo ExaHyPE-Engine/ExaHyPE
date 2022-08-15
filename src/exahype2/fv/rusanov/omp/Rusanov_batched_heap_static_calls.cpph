@@ -1073,8 +1073,8 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanov_batched_heap_static_calls(
   #pragma omp target exit data map(delete:tempEigenvalueZ[0:eigenvalueHostEnumerator.size()] ) device(targetDevice)
 
   for (int patchIndex=0; patchIndex<hostPatchData.numberOfCells; patchIndex++) {
-    const double* currentQIn  = hostPatchData.QIn[patchIndex];
-    double*       currentQOut = hostPatchData.QOut[patchIndex];
+    [[maybe_unused]] const double* currentQIn  = hostPatchData.QIn[patchIndex];
+    [[maybe_unused]] double*       currentQOut = hostPatchData.QOut[patchIndex];
     #pragma omp target exit data map(delete:currentQIn[0:QInHostEnumerator.size()] ) device(targetDevice)
     #pragma omp target exit data map(from:currentQOut[0:QOutHostEnumerator.size()] ) device(targetDevice)
   }
