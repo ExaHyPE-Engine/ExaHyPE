@@ -1,28 +1,28 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# # Minimal SPH (Swift)
-# ## Noh problem (spherical collapse ) test for Peano SPH
+# # Minimal SPH (Swift) ## Noh problem (spherical collapse ) test for Peano SPH
 # 
-# 
-# In this test, particles are initialised at rest in regular grid configuration and periodic BC. Gas has negligible presure. Energy ($E$) is injected to a (or group of) central particle and the blast should propagate isotropically, up to boundary effects. See, e.g., Springel and Hernquist, Mon. Not. R. Astron. Soc. 333, 649–664 (2002).
-
 # ## Particle behaviour
 # 
-# As usual, in peano 4 the particle-particle interactions are handled in terms of the active and local particle sets. Notice that in this we now do not simply rely on the particles of the adjacent vertices of a cell -- see the sketch below. To understand what the individual particles in the sketch are supposed to mean and how they are maintained and exposed to the user, please consult the documentation of the ParticleParticleInteraction class in the Python toolbox directory. It contains a lot explanations.
+# As usual, in peano 4 the particle-particle interactions are handled in terms
+# of the active and local particle sets. Notice that in this we now do not
+# simply rely on the particles of the adjacent vertices of a cell -- see the
+# sketch below. To understand what the individual particles in the sketch are
+# supposed to mean and how they are maintained and exposed to the user, please
+# consult the documentation of the ParticleParticleInteraction class in the
+# Python toolbox directory. It contains a lot explanations.
 # 
-# **Remarks**:
-# - For particle-particle interactions: bear in mind that the local set is a subset of the active set, so be careful about any unwanted self-interactions.
-# - In this scheme, the following relation should be satisfied:
+# **Remarks**: - For particle-particle interactions: bear in mind that the local
+# set is a subset of the active set, so be careful about any unwanted
+# self-interactions. - In this scheme, the following relation should be
+# satisfied:
 # 
-# \begin{align}
-# H_{\rm SPH} \leq R^{\rm peano}_{\rm cutoff} \leq \frac{\Delta x}{2}\,,
-# \end{align}
+# \begin{align} H_{\rm SPH} \leq R^{\rm peano}_{\rm cutoff} \leq \frac{\Delta
+    # x}{2}\,, \end{align}
 # 
-# where $H_{\rm SPH}$($\equiv\gamma_K h$) is the SPH interaction radius, $R^{\rm peano}_{\rm cutoff}$ is the internal cut-off radius and $\Delta x$ the cell size.
-
-# In[ ]:
-
+# where $H_{\rm SPH}$($\equiv\gamma_K h$) is the SPH interaction radius, $R^{\rm peano}_{\rm cutoff}$ is the internal cut-off radius and $\Delta x$ the
+# cell size.
 
 import os
 
@@ -37,6 +37,8 @@ import subprocess
 
 import argparse
 
+# SPH initialisation snippets
+import peano4.toolbox.particles.sph.initSnippets.NohProblem
 
 
 modes = {
@@ -241,12 +243,16 @@ project.datamodel.add_vertex       (particles)
 # In[ ]:
 
 
+# Peano4 dimensions (for data structures)
 Dimensions = 2
 project.output.makefile.set_dimension(Dimensions)
 
 from numpy import pi
 
 GLOBAL_TIME_STEP_SIZE = "1e-4"
+
+# Effective SPH dimensions
+HYDRO_DIMENSIONS = 2
 
 # Particle number along 1 dimension
 HYDRO_PART_NUMBER = str(round(1.0 / args.particle_distance));
@@ -294,6 +300,7 @@ elif(Dimensions==3):
 print("Smoothing length free factor: " + SMOOTH_L_FAC)
 print("Kernel Root value (sigma): " + CUBIC_SPLINE_SIGMA)
 
+project.constants.export_const_with_type("HYDRO_DIMENSIONS" , str(HYDRO_DIMENSIONS), "double")
 project.constants.export_const_with_type("GLOBAL_TIME_STEP_SIZE", GLOBAL_TIME_STEP_SIZE, "double")
 project.constants.export_const_with_type("HYDRO_PART_NUMBER", HYDRO_PART_NUMBER, "double")
 project.constants.export_const_with_type("HYDRO_DEFAULT_MAX_ITERATIONS", HYDRO_DEFAULT_MAX_ITERATIONS, "int")
@@ -329,112 +336,15 @@ create_grid.use_cell(particle_tree_analysis.cell_marker)
 project.solversteps.add_step(create_grid)
 
 
-# ## Initial conditions for particles
+# -----------------------------------------------------------------------------
+# Initial conditions for particles
+# -----------------------------------------------------------------------------
 
-# In[ ]:
+# 2D Noh Problem
+ICs = peano4.toolbox.particles.sph.initSnippets.NohProblem.NohProblemIC( dimensions=HYDRO_DIMENSIONS )
+initialisation_snippet = ICs.initialisation_snippet
 
-
-initialisation_snippet = """
- 
-  /*
-   * Initial Conditions for the particular SPH test
-   * 
-   * Noh problem: we give particles an initial velocity towards the centre
-   *
-   */
-   
-  // Internal cutoff radious used by Peano and with max value R = grid_size/2
-  /* For grid_size = 1/3 */
-  particle->setCutOffRadius(1.0 / 3.0 / 2.0);
-  
-  particle->setDensity ( 1.0 );        
-  particle->setMass( particle->getDensity() / std::pow(HYDRO_PART_NUMBER, 2) );
-
-  particle->setSmoothingLength( SMOOTH_L_FAC * std::pow(particle->getMass()/particle->getDensity(), 1.0/Dimensions) );
-  particle->setSmoothingLengthPrevious( particle->getSmoothingLength() );
- 
-  particle->setU( 1e-6 ); 
-
-  /* Compute the pressure from the EoS */
-  const double pressure = gas_pressure_from_internal_energy( particle->getDensity(), particle->getU() );
-  
-  particle->setPressure( pressure );
-
-  const double soundspeed = gas_soundspeed_from_internal_energy( particle->getU() );
-  
-  particle->setSoundSpeed(soundspeed);
-
-  /* 
-   * Set initial velocity for the spherical collapse 
-   */
-
-  // Box centre
-  tarch::la::Vector<Dimensions,double> x_0(0.5);
-
-  // Distance of particle to centre
-  tarch::la::Vector<Dimensions,double> dist = particle->getX() - x_0;
-  double norm_dist = tarch::la::norm2(dist);
-  
-  // Cap min value of distance
-  if ( tarch::la::equals(norm_dist, 0.0) ){
-    norm_dist = 1e-10;
-  }
-
-  // Set velocity
-  tarch::la::Vector<Dimensions,double> v_ini = -1.0 * dist / norm_dist;
-
-  particle->setV( v_ini );
-
-  /* Verbose */
-  logInfo( "Init()", "dist = " << dist );
-  logInfo( "Init()", "v_ini = " << v_ini );
-  logInfo( "Init()", "Particle: " << particle->toString() );
-
-
-  /* Initialize remaining fields  */
-  
-  // Vectors
-  for(int d=0; d<Dimensions; d++){
-     particle->setA          (d,0);
-     particle->setA_prev_step(d,0);
-  }
- 
-  /* For 2D sims, we only get one component */
-  particle->setRot_v(0);
-  
-  /* Initialise the "extended" arrays */
-  particle->setV_full(particle->getV());
-  particle->setU_full(particle->getU());
-
-  particle->setUDot  (0.0);        
-  particle->setUDot_prev_step(0.0);        
-  particle->setHDot  (0.0);        
-  particle->setWcount(0.0);        
-  particle->setNcount(0  );        
-  particle->setOmega (1.0);  // set to 1 to avoid problem with boundary particles.
-  particle->setF     (0.0);        
-  particle->setRho_dh(0.0);           
-  particle->setWcount_dh(0.0);  
-
-  particle->setHLeft (HYDRO_h_MIN);        
-  particle->setHRight(HYDRO_h_MAX);        
-  
-  particle->setTimeStepSize(GLOBAL_TIME_STEP_SIZE);
-  particle->setHasConverged(false);
-  particle->setHasNoNeighbours(false);
-  particle->setHasBeenKicked(false);
-  particle->setResidual(0.0);
-  particle->setIterCount(0);
-  particle->setIsBoundaryParticle(false);
-
-  // Artificial viscosity scheme
-  particle->setDiv_v   (0.0);
-  particle->setV_sig_AV(2.0 * particle->getSoundSpeed());
-  particle->setBalsara (0.0);
- 
- 
-"""
-
+# Add step
 init_setup = peano4.solversteps.Step( name="Init", add_user_defined_actions=False )
 init_setup.use_vertex(particles)
 init_setup.use_cell(particle_tree_analysis.cell_marker)
@@ -445,7 +355,7 @@ if args.one_dimensions_setup:
   init_setup.add_action_set( peano4.toolbox.particles.InsertParticlesAlongCartesianLayoutIntoUnrefinedCells(
     particle_set=particles,
     distance_between_particles=args.particle_distance,
-    initialisation_call=initialisation_snippet,
+    initialisation_call = initialisation_snippet,
     noise=args.random_particle_layout,
     additional_includes=""" 
     #include "Constants.h" 
@@ -472,6 +382,7 @@ else:
 init_setup.add_action_set( particle_tree_analysis )
 project.solversteps.add_step(init_setup)
 
+# -----------------------------------------------------------------------------
 
 # # Model the steps of the simulation
 # 
