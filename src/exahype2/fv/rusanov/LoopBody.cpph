@@ -2,7 +2,6 @@
 #include "exahype2/Solver.h"
 #include "exahype2/fv/PatchUtils.h"
 
-
 #if defined(GPUOffloadingOMP)
 #pragma omp declare target
 #endif
@@ -533,6 +532,7 @@ void exahype2::fv::rusanov::internal::computeFlux_LoopBody(
   double* __restrict__                         QFlux,
   QFluxEnumeratorType                          QFluxEnumerator
 ) {
+  
   double QInGathered[QInEnumerator._unknowns+QInEnumerator._numberOfAuxiliaryVariables];
   double QFluxGathered[QInEnumerator._unknowns];
 
@@ -636,8 +636,9 @@ void exahype2::fv::rusanov::internal::computeFlux_LoopBody(
   const QFluxEnumeratorType &                QFluxEnumerator,
   int                                 pick
 ) {
-  double QInGathered[QInEnumerator._unknowns+QInEnumerator._numberOfAuxiliaryVariables];
-  double QFluxGathered[QInEnumerator._unknowns];
+  
+  double* QInGathered   = new double[QInEnumerator._unknowns+QInEnumerator._numberOfAuxiliaryVariables];
+  double* QFluxGathered = new double[QInEnumerator._unknowns];
 
   // gather
   for (int unknown=0; unknown<QInEnumerator._unknowns+QInEnumerator._numberOfAuxiliaryVariables; unknown++) {
@@ -654,11 +655,15 @@ void exahype2::fv::rusanov::internal::computeFlux_LoopBody(
       QFluxGathered,
       ::exahype2::Solver::Offloadable::Yes
   );
-
+  
   // scatter
   for (int unknown=0; unknown<QInEnumerator._unknowns; unknown++) {
     QFlux[ QFluxEnumerator(patchIndex,volumeIndex,unknown) ] = QFluxGathered[unknown];
   }
+
+  delete[] QInGathered;
+  delete[] QFluxGathered;
+
 }
 
 
