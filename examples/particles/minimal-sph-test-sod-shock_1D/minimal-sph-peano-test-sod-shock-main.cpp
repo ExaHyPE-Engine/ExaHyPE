@@ -42,7 +42,6 @@
 #include "observers/KickCorrector.h"
 #include "observers/KickCorrectorExtra.h"
 #include "observers/HydroKickExtra.h"
-#include "observers/RearrangeAtStart.h"
 #include "observers/ResetHasConverged.h"
 #include "observers/InitTimeStep.h"
 #include "observers/ImposeBC.h"
@@ -131,11 +130,6 @@ int main(int argc, char** argv) {
     examples::particles::observers::Init initObserver;
     peano4::parallel::SpacetreeSet::getInstance().traverse(initObserver);
     logInfo( "main()", "added particles" )
-
-//    /* Initial step (e.g., re-arrange the particles into a particular configuration) */
-//    examples::particles::observers::RearrangeAtStart rearrangeObserver;
-//    peano4::parallel::SpacetreeSet::getInstance().traverse(rearrangeObserver);
-//    logInfo( "main()", "particles rearranged" )
 
     examples::particles::observers::Plot plotObserver;
     peano4::parallel::SpacetreeSet::getInstance().traverse(plotObserver);
