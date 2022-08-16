@@ -27,10 +27,12 @@ class GreshoChanVortexIC:
       /* For grid_size = 1/3 */
       particle->setCutOffRadius(1.0 / 3.0 / 2.0);
       
+      /* Constant density field */
       particle->setDensity ( 1.0 );        
-      particle->setMass( particle->getDensity() / std::pow(HYDRO_PART_NUMBER, 2) );
+      particle->setMass( particle->getDensity() / std::pow(HYDRO_PART_NUMBER, HYDRO_DIMENSIONS) );
 
-      particle->setSmoothingLength( SMOOTH_L_FAC * std::pow(particle->getMass()/particle->getDensity(), 1.0/Dimensions) );
+      /* Initial estimate for smoothing length */
+      particle->setSmoothingLength( SMOOTH_L_FAC * std::pow(particle->getMass()/particle->getDensity(), 1.0 / HYDRO_DIMENSIONS) );
       particle->setSmoothingLengthPrevious( particle->getSmoothingLength() );
      
       // Box centre

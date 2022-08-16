@@ -29,12 +29,12 @@ class SedovBlastIC:
       /* For grid_size = 1/3 */
       particle->setCutOffRadius(1.0 / 3.0 / 2.0);
       
+      /* Constant density field */
       particle->setDensity ( 1.0 );        
-      particle->setMass( particle->getDensity() / std::pow(HYDRO_PART_NUMBER, 2) );
+      particle->setMass( particle->getDensity() / std::pow(HYDRO_PART_NUMBER, HYDRO_DIMENSIONS) );
 
-    //  particle->setPressure( 1e-6);
-      
-      particle->setSmoothingLength( SMOOTH_L_FAC * std::pow(particle->getMass()/particle->getDensity(), 1.0/Dimensions) );
+      /* Initial estimate for smoothing length */
+      particle->setSmoothingLength( SMOOTH_L_FAC * std::pow(particle->getMass()/particle->getDensity(), 1.0 / HYDRO_DIMENSIONS) );
       particle->setSmoothingLengthPrevious( particle->getSmoothingLength() );
      
       // Initialise the blast
@@ -46,42 +46,35 @@ class SedovBlastIC:
        if ( tarch::la::smaller( dist_blast, SPIKE_RADIUS ) ) {
          particle->setU( BLAST_ENERGY / 12.0 / particle->getMass() );
        } else {
-         particle->setU( 0.0 ); 
+         particle->setU( 1e-6 );  // negligible background value
        }
 
-//     /* New method */
-//     /* Smooth the explosion with kernel */
-//     const double h = particle->getSmoothingLength();
-//     const double R_smooth = 4.0 * h;
+//       /* New method */
+//       /* Smooth the explosion with kernel */
+//       const double h = particle->getSmoothingLength();
+//       const double R_smooth = 4.0 * h;
+//       
+//       // Evaluate kernel
+//       const double q = dist_blast / h;
+//       double w, dw_dq;
+//       kernel_deval(q, w, dw_dq);
 //     
-//     // Evaluate kernel
-//     const double q = dist_blast / h;
-//     double w, dw_dq;
-//     kernel_deval(q, w, dw_dq);
-//   
-//     // Normalization factors 
-//     const double W = w / std::pow( h, Dimensions );
-//   
-//    if ( tarch::la::smallerEquals( dist_blast, R_smooth ) ) {
-//      particle->setU( BLAST_ENERGY * W ) ;
-//    } else {
-//      particle->setU( 0.0 ); 
-//    }
-
-      /* Set non-zero (background) value in order to get non-zero sound speed across the whole domain */
-      if( tarch::la::equals(particle->getU(),0) ){
-//      particle->setU( particle->getPressure()/( (GAMMA-1) * particle->getDensity() ) ); 
-        particle->setU( 1e-6 ); 
-      }
+//       // Normalization factors 
+//       const double W = w / std::pow( h, Dimensions );
+//     
+//      if ( tarch::la::smallerEquals( dist_blast, R_smooth ) ) {
+//        particle->setU( BLAST_ENERGY * W ) ;
+//      } else {
+//        particle->setU( 1e-6 );  // negligible background value
+//      }
 
       /* Compute the pressure from the EoS */
       const double pressure = gas_pressure_from_internal_energy( particle->getDensity(), particle->getU() );
-      
       particle->setPressure( pressure );
       
-      // Evaluate (global) time-step size using u from exploding particle (h_ini is homogeneous)
-      const double soundspeed = std::sqrt( GAMMA * particle->getPressure()/particle->getDensity() );
-      particle->setSoundSpeed(soundspeed);
+      /* Compute the sound speed */
+      const double soundspeed = gas_soundspeed_from_internal_energy( particle->getU() );
+      particle->setSoundSpeed( soundspeed );
       
       /* Initialize remaining fields  */
       
@@ -143,11 +136,11 @@ class SedovBlastIC:
       /* For grid_size = 1/3 */
       particle->setCutOffRadius(1.0 / 3.0 / 2.0);
       
+      /* Constant density field */
       particle->setDensity ( 1.0 );        
       particle->setMass( particle->getDensity() / std::pow(HYDRO_PART_NUMBER, HYDRO_DIMENSIONS) );
 
-//    particle->setPressure( 1e-6);
-      
+      /* Initial estimate for smoothing length */
       particle->setSmoothingLength( SMOOTH_L_FAC * std::pow(particle->getMass()/particle->getDensity(), 1.0/HYDRO_DIMENSIONS ) );
       particle->setSmoothingLengthPrevious( particle->getSmoothingLength() );
      
@@ -161,42 +154,35 @@ class SedovBlastIC:
        if ( tarch::la::smaller( dist_blast, spike_radius ) ) {
          particle->setU( BLAST_ENERGY / 4.0 / particle->getMass() );
        } else {
-         particle->setU( 0.0 ); 
+         particle->setU( 1e-6 );  // negligible background value
        }
 
-      //   /* New method */
-      //   /* Smooth the explosion with kernel */
-      //   const double h = particle->getSmoothingLength();
-      //   const double R_smooth = 4.0 * h;
-      //   
-      //   // Evaluate kernel
-      //   const double q = dist_blast / h;
-      //   double w, dw_dq;
-      //   kernel_deval(q, w, dw_dq);
-      // 
-      //   // Normalization factors 
-      //   const double W = w / std::pow( h, HYDRO_DIMENSIONS );
-      // 
-      //  if ( tarch::la::smallerEquals( dist_blast, R_smooth ) ) {
-      //    particle->setU( BLAST_ENERGY * W ) ;
-      //  } else {
-      //    particle->setU( 0.0 ); 
-      //  }
-
-        /* Set non-zero (background) value in order to get non-zero sound speed across the whole domain */
-        if( tarch::la::equals(particle->getU(),0) ){
-      //    particle->setU( particle->getPressure()/( (GAMMA-1) * particle->getDensity() ) ); 
-        particle->setU( 1e-6 ); 
-      }
+//       /* New method */
+//       /* Smooth the explosion with kernel */
+//       const double h = particle->getSmoothingLength();
+//       const double R_smooth = 4.0 * h;
+//       
+//       // Evaluate kernel
+//       const double q = dist_blast / h;
+//       double w, dw_dq;
+//       kernel_deval(q, w, dw_dq);
+//     
+//       // Normalization factors 
+//       const double W = w / std::pow( h, Dimensions );
+//     
+//      if ( tarch::la::smallerEquals( dist_blast, R_smooth ) ) {
+//        particle->setU( BLAST_ENERGY * W ) ;
+//      } else {
+//        particle->setU( 1e-6 );  // negligible background value
+//      }
 
       /* Compute the pressure from the EoS */
       const double pressure = gas_pressure_from_internal_energy( particle->getDensity(), particle->getU() );
-      
       particle->setPressure( pressure );
       
-      // Evaluate (global) time-step size using u from exploding particle (h_ini is homogeneous)
-      const double soundspeed = std::sqrt( GAMMA * particle->getPressure()/particle->getDensity() );
-      particle->setSoundSpeed(soundspeed);
+      /* Compute the sound speed */
+      const double soundspeed = gas_soundspeed_from_internal_energy( particle->getU() );
+      particle->setSoundSpeed( soundspeed );
       
       /* Initialize remaining fields  */
       

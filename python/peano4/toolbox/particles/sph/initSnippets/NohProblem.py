@@ -1,5 +1,5 @@
 # @TODO: add dependence on SPH scheme (only minimal SPH ATM)
-# @TODO: add dependence on input parameters, e.g. grid size, HYDRO_DIMENSIONS...
+# @TODO: add dependence on input parameters, e.g. grid size ...
 
 class NohProblemIC:
   """
@@ -16,29 +16,33 @@ class NohProblemIC:
        */
        
       /*
-       * Initial Conditions.
-       * Noh problem: we give particles an initial velocity towards the centre
+       * Initial Conditions: the Noh problem.
+       * We give particles an initial velocity towards the centre.
+       * Particles will then develop a shock that propagates outwards.
+       *
        */
        
       // Internal cutoff radious used by Peano and with max value R = grid_size/2
       /* For grid_size = 1/3 */
       particle->setCutOffRadius(1.0 / 3.0 / 2.0);
       
+      /* Constant density field */
       particle->setDensity ( 1.0 );        
-      particle->setMass( particle->getDensity() / std::pow(HYDRO_PART_NUMBER, 2) );
+      particle->setMass( particle->getDensity() / std::pow(HYDRO_PART_NUMBER, HYDRO_DIMENSIONS) );
 
-      particle->setSmoothingLength( SMOOTH_L_FAC * std::pow(particle->getMass()/particle->getDensity(), 1.0/Dimensions) );
+      /* Initial estimate for smoothing length */
+      particle->setSmoothingLength( SMOOTH_L_FAC * std::pow(particle->getMass() / particle->getDensity(), 1.0 / HYDRO_DIMENSIONS) );
       particle->setSmoothingLengthPrevious( particle->getSmoothingLength() );
      
+      /* Set neglibible internal energy */
       particle->setU( 1e-6 ); 
 
       /* Compute the pressure from the EoS */
       const double pressure = gas_pressure_from_internal_energy( particle->getDensity(), particle->getU() );
-      
       particle->setPressure( pressure );
 
+      /* Compute the sound speed */
       const double soundspeed = gas_soundspeed_from_internal_energy( particle->getU() );
-      
       particle->setSoundSpeed(soundspeed);
 
       /* 
@@ -66,7 +70,6 @@ class NohProblemIC:
       logInfo( "Init()", "dist = " << dist );
       logInfo( "Init()", "v_ini = " << v_ini );
       logInfo( "Init()", "Particle: " << particle->toString() );
-
 
       /* Initialize remaining fields  */
       

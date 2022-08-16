@@ -17,28 +17,32 @@ class SodIC:
        */
 
       /*
-       * Initial Conditions.
-       * Sod shockwave.
+       * Initial Conditions: Sod shockwave.
+       * Particles are deposited in two regions with different densities.
+       * @TODO: implement particles positions to achieve this.
        */
      
       // Internal cutoff radious used by Peano and with max value R = grid_size/2
       /* For grid_size = 1/3 */
       particle->setCutOffRadius(1.0 / 3.0 / 2.0);
       
+      /* Constant density field */
       particle->setDensity ( 1.0 );        
       particle->setMass( particle->getDensity() / std::pow(HYDRO_PART_NUMBER, HYDRO_DIMENSIONS) );
+
+      /* Set neglibible internal energy */
       particle->setU( 1e-6 ); 
 
+      /* Initial estimate for smoothing length */
       particle->setSmoothingLength( SMOOTH_L_FAC * std::pow(particle->getMass()/particle->getDensity(), 1.0/HYDRO_DIMENSIONS ) );
       particle->setSmoothingLengthPrevious( particle->getSmoothingLength() );
      
       /* Compute the pressure from the EoS */
       const double pressure = gas_pressure_from_internal_energy( particle->getDensity(), particle->getU() );
-      
       particle->setPressure( pressure );
       
-      // Evaluate (global) time-step size using u from exploding particle (h_ini is homogeneous)
-      const double soundspeed = std::sqrt( GAMMA * particle->getPressure()/particle->getDensity() );
+      /* Set sound speed */
+      const double soundspeed = gas_soundspeed_from_internal_energy( particle->getU() );
       particle->setSoundSpeed(soundspeed);
       
       /* Initialize remaining fields  */
@@ -84,8 +88,8 @@ class SodIC:
       particle->setBalsara (0.0);
 
       
-      /* Option a) Displace particles here 
-       * Can be combined with the guard option
+      /* Calculate particle displacements.
+       * Can be combined with the guard option.
        */
       
       particle->setMoveState( globaldata::Particle::MoveState::NotMovedYet );    
@@ -104,7 +108,7 @@ class SodIC:
         const double dx_new = 2.0 * part_spacing;
       
         // Set origin from which to displace away from
-      //  const double offset = round( HYDRO_PART_NUMBER/2 ) * part_spacing; // 0.503937 for 127 parts
+      //  const double offset = round( HYDRO_PART_NUMBER / 2 ) * part_spacing; // 0.503937 for 127 parts
         const double offset = 0.0;  // first particle on the left of the box.
         
         // Relative position of the particle
