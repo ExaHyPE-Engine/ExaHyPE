@@ -18,14 +18,14 @@ namespace exahype2 {
 
 class exahype2::dg::tests::CellIntegralTest : public tarch::tests::TestCase {
   private:
-    const double QuadraturePoints[3+1];
-    const double QuadratureWeights[3+1];
-    const double MassMatrix[(3+1)*(3+1)];
-    const double StiffnessOperator[(3+1)*(3+1)];
+    const double QuadraturePoints1d[4+1];
+    const double MassMatrixDiagonal1d[4+1];
+    const double StiffnessOperator1d[(4+1)*(4+1)];
+    const double BasisFunctionValuesLeft1d[4+1];
+    const double DerivativeOperator1d[(4+1)*(4+1)];
 
     void runDGEuler();
     void runDGElastic();
-    void testMultiplyWithInvertedMassMatrix_GaussLegendre();
 
   public:
     CellIntegralTest();
