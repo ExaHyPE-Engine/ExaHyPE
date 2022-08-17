@@ -4,7 +4,6 @@
 
 #include "exahype2/enumerator/AoSLexicographicEnumerator.h"
 
-
 void exahype2::dg::cellIntegral_patchwise_GaussLegendre_functors(
   ::exahype2::CellData&                          cellData,
   const int                                      order,
@@ -23,13 +22,31 @@ void exahype2::dg::cellIntegral_patchwise_GaussLegendre_functors(
   bool                                           evaluateSource,
   bool                                           evaluatePointSources
 ) {
+
+  exahype2::enumerator::AoSLexicographicEnumerator enumeratorIn(
+    1,           // number of cells in one memory chunk
+    order+1,     // numberOfDoFsPerAxisInCell
+    0,           // no halo
+    unknowns,
+    auxiliaryVariables
+  );
+
+  exahype2::enumerator::AoSLexicographicEnumerator enumeratorOut(
+    1,           // number of cells in one memory chunk
+    order+1,     // numberOfDoFsPerAxisInCell
+    0,           // no halo
+    unknowns,
+    0            // no auxiliary variables
+  );
+
   double* fluxValues      = evaluateFlux   ? new double[unknowns] : nullptr;
   double* sourceValues    = evaluateSource ? new double[unknowns] : nullptr;
-  // @todo Voellig ueberdimensioniert. Den Faktor Dimensions sollte man entfernen
-  double* gradientValues  = evaluateNonconservativeProduct    ? new double[Dimensions*(unknowns+auxiliaryVariables)] : nullptr;
+  double* gradientValues  = evaluateNonconservativeProduct    ? new double[(unknowns+auxiliaryVariables)] : nullptr;
   double* ncpValues       = evaluateNonconservativeProduct    ? new double[unknowns] : nullptr;
 
+
   for (int currentCell=0; currentCell<cellData.numberOfCells; currentCell++) {
+
     const double* __restrict__                  cellQin  = cellData.QIn[currentCell];
     double* __restrict__                        cellQout = cellData.QOut[currentCell];
     const tarch::la::Vector<Dimensions,double>  x        = cellData.cellCentre[currentCell];
@@ -40,31 +57,29 @@ void exahype2::dg::cellIntegral_patchwise_GaussLegendre_functors(
     const int nodesPerAxis = order+1;
     const int strideQ=unknowns+auxiliaryVariables;
     const int nodesPerCell = getNodesPerCell(nodesPerAxis);
-    tarch::la::Vector<Dimensions,int> strides = getStrides(nodesPerAxis);
 
-    //which node's value is being computed
-    for(int node=0; node<nodesPerCell; node++){
+    dfor( dof, order+1 ) {
+
       for(int var=0; var<unknowns; var++){
-        cellQout[node*unknowns+var] = 0.0;
+        cellQout[enumeratorOut(currentCell,dof,var)] = 0.0;
       }
-
-      tarch::la::Vector<Dimensions,int> index = getIndex(node, strides);
 
       if(evaluateFlux){
         // direction in which flux contributions are being computed
         for(int dim=0; dim<Dimensions; dim++)
         for(int i=0; i<nodesPerAxis; i++){
           // compute contributing node real position
-          const int neighbourNode = node + (i - index[dim])*strides[dim];
-          tarch::la::Vector<Dimensions,int> contributingNodeIndex = index;
+//          const int neighbourNode = node + (i - index[dim])*strides[dim];
+          tarch::la::Vector<Dimensions,int> contributingNodeIndex = dof;
           contributingNodeIndex[dim] = i;
-          tarch::la::Vector<Dimensions,double> position = getQuadraturePoint( x,
+          tarch::la::Vector<Dimensions,double> position = getQuadraturePoint(
+              x,
               dx,
               contributingNodeIndex,
               order,
               quadratureNodes);
 
-          flux( &cellQin[neighbourNode*strideQ],
+          flux( &cellQin[enumeratorIn(currentCell, contributingNodeIndex, 0)],
                 position,
                 t,
                 dt,
@@ -72,83 +87,84 @@ void exahype2::dg::cellIntegral_patchwise_GaussLegendre_functors(
                 fluxValues);
 
           // Coefficient within matrix is tensor product over dimensions, too
-          // @todo Dieser Index ist nahezu 100% falsch
-          double coeff = stiffnessMatrix[i+index[dim]*nodesPerAxis];
+          double coeff = stiffnessMatrix[i+dof(dim)*nodesPerAxis];
           for (int dd=0; dd<Dimensions; dd++) {
-            coeff *= (dd==dim) ? 1.0 : massMatrixDiagonal[ index[dd] ];
+            coeff *= (dd==dim) ? 1.0 : massMatrixDiagonal[ dof(dd) ];
           }
 
           for(int var=0; var<unknowns; var++){
-            cellQout[node*unknowns+var] += coeff * fluxValues[var];
+            cellQout[enumeratorOut(currentCell, dof, var)] += coeff * fluxValues[var];
           } //var
         } // dim/i combination
       }//if useFlux
 
       if(evaluateSource){
         //compute real node position
-        tarch::la::Vector<Dimensions,double> position = getQuadraturePoint( x,
+        tarch::la::Vector<Dimensions,double> position = getQuadraturePoint(
+          x,
           dx,
-          index,
+          dof,
           order,
           quadratureNodes);
 
         //compute source term contributions
-        source( &cellQin[node*strideQ],
+        source( &cellQin[enumeratorIn(currentCell, dof, 0)],
               position,
               t,
               dt,
               sourceValues);
 
         #if Dimensions==2
-        double coeff = massMatrixDiagonal[ index(0) ] * massMatrixDiagonal[ index(1) ];
+        double coeff = massMatrixDiagonal[ dof(0) ] * massMatrixDiagonal[ dof(1) ];
         #else
-        double coeff = massMatrixDiagonal[ index(0) ] * massMatrixDiagonal[ index(1) ] * massMatrixDiagonal[ index(2) ];
+        double coeff = massMatrixDiagonal[ dof(0) ] * massMatrixDiagonal[ dof(1) ] * massMatrixDiagonal[ dof(2) ];
         #endif
 
         for(int var=0; var<unknowns; var++){
-          cellQout[node*unknowns+var] += coeff * sourceValues[var];
+          cellQout[enumeratorOut(currentCell, dof, var)] += coeff * sourceValues[var];
         } //var
       } //if useSource
 
       // @todo Point Source missing
 
       if (evaluateNonconservativeProduct) {
+
         //compute real node position
         tarch::la::Vector<Dimensions,double> position = getQuadraturePoint( x,
           dx,
-          index,
+          dof,
           order,
           quadratureNodes);
 
-        //computes gradient values in all directions for the given node
-        computeGradient(
-          cellQin,
-          derivativeOperator,
-          1.0 / dx,
-          nodesPerAxis,
-          strideQ,
-          node,
-          gradientValues
-        );
-
-        for(int var=0; var<Dimensions*(unknowns+auxiliaryVariables); var++){
-          assertion(gradientValues[var]==gradientValues[var]);
-        }
-
         double coeff = 1.0;
         for (int dd=0; dd<Dimensions; dd++) {
-          coeff *= massMatrixDiagonal[ index(dd) ];
+          coeff *= massMatrixDiagonal[ dof(dd) ];
         }
 
         for(int dim=0; dim<Dimensions; dim++) {
 
+          //computes gradient values in all directions for the given node
+          std::fill(gradientValues, &gradientValues[strideQ-1], 0.0);
+
+          const int invDx = 1 / dx;
+
+          // computing gradients in direction dim
+          for(int node=0; node<nodesPerAxis; node++){
+            tarch::la::Vector<Dimensions,int> contributingNodeIndex = dof;
+            contributingNodeIndex[dim] = node;
+            const double coeffDerivative = invDx * derivativeOperator[node + nodesPerAxis*dof(dim)];
+
+            for(int var=0; var<strideQ; var++){
+              gradientValues[var] += coeffDerivative * cellQin[enumeratorIn(currentCell, contributingNodeIndex, var)];
+              assertion(gradientValues[var]==gradientValues[var]);
+            } // var
+
+          } //node
+
+
           nonConservativeProduct(
-            &cellQin[node*strideQ],
-            // @todo Das ist doch voelliger Bloedsinn. Wir brauchen
-            //       nur den Gradienten entlang dim. Daher sollte
-            //       gradientValues nur n Eintraege haben (nicht 3*n)
-            //       und dann brauchen wir kein Array hier.
-            &gradientValues[dim*strideQ],
+            &cellQin[enumeratorIn(currentCell, dof, 0)],
+            gradientValues,
             position,
             t,
             dt,
@@ -157,12 +173,18 @@ void exahype2::dg::cellIntegral_patchwise_GaussLegendre_functors(
 
           for(int var=0; var<unknowns; var++){
             assertion(ncpValues[var]==ncpValues[var]);
-            cellQout[node*unknowns+var] += coeff * ncpValues[var];
+            cellQout[enumeratorOut(currentCell, dof, var)] += coeff * ncpValues[var];
           } //var
         } //dim
+
       } //if useNCP
-    } //node
-  } // loop over individual cells
+
+
+    } // dof
+
+  } //currentCell
+
+
 
   if (evaluateFlux) {
     delete [] fluxValues;
