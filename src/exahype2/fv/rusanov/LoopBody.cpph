@@ -603,7 +603,13 @@ void exahype2::fv::rusanov::internal::computeFlux_LoopBody(
   );
 }
 
-template <typename Solver, class QInEnumeratorType, class QFluxEnumeratorType>
+template <
+  typename  Solver,
+  int       numberOfUnknowns,
+  int       numberOfAuxiliaryVariables,
+  class     QInEnumeratorType,
+  class     QFluxEnumeratorType
+>
 void exahype2::fv::rusanov::internal::computeFlux_LoopBody(
   const double* __restrict__                    QIn,
   const QInEnumeratorType &                     QInEnumerator,
@@ -618,11 +624,11 @@ void exahype2::fv::rusanov::internal::computeFlux_LoopBody(
   const QFluxEnumeratorType &                   QFluxEnumerator,
   int                                           pick
 ) {
-  double QInGathered[QInEnumerator._unknowns+QInEnumerator._numberOfAuxiliaryVariables];
-  double QFluxGathered[QInEnumerator._unknowns];
+  double QInGathered[numberOfUnknowns+numberOfAuxiliaryVariables];
+  double QFluxGathered[numberOfUnknowns];
 
   // gather
-  for (int unknown=0; unknown<QInEnumerator._unknowns+QInEnumerator._numberOfAuxiliaryVariables; unknown++) {
+  for (int unknown=0; unknown<numberOfUnknowns+numberOfAuxiliaryVariables; unknown++) {
     QInGathered[unknown] = QIn[ QInEnumerator(patchIndex,volumeIndex,unknown) ];
   }
 
@@ -638,7 +644,7 @@ void exahype2::fv::rusanov::internal::computeFlux_LoopBody(
   );
 
   // scatter
-  for (int unknown=0; unknown<QInEnumerator._unknowns; unknown++) {
+  for (int unknown=0; unknown<numberOfUnknowns; unknown++) {
     QFlux[ QFluxEnumerator(patchIndex,volumeIndex,unknown) ] = QFluxGathered[unknown];
   }
 }

@@ -97,7 +97,7 @@ int main(int argc, char** argv) {
   #endif
 
   #if Dimensions==2
-  for (int patches=1; patches<=1024*2*2*2*2; patches*=2) {
+  for (int patches=1; patches<=1024*2*2*2/**2*/; patches*=2) { // TODO: Need to fix the memory pre-allocation routines for the omp::opt Rusanov variants so that we don't run out of memory that fast.
   #else
   for (int patches=1; patches<=1024*2; patches*=2) {
   #endif
@@ -430,7 +430,7 @@ void runBenchmarks(int patches) {
       ::exahype2::fv::rusanov::omp::timeStepWithRusanov_patchwise_heap_static_calls<EulerFVRusanov,EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch, 1, EulerFVRusanov::NumberOfUnknowns, 0,exahype2::enumerator::AoSLexicographicEnumerator>,
       "omp, patch-wise, AoS", true
     );
-    /*testFusedVariantOnDevice(
+    testFusedVariantOnDevice(
       device,
       ::exahype2::fv::rusanov::omp::timeStepWithRusanov_patchwise_heap_static_calls<EulerFVRusanov,EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch, 1, EulerFVRusanov::NumberOfUnknowns, 0,exahype2::enumerator::AoSoALexicographicEnumerator>,
       "omp, patch-wise, AoSoA", true
@@ -439,14 +439,14 @@ void runBenchmarks(int patches) {
       device,
       ::exahype2::fv::rusanov::omp::timeStepWithRusanov_patchwise_heap_static_calls<EulerFVRusanov,EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch, 1, EulerFVRusanov::NumberOfUnknowns, 0,exahype2::enumerator::SoALexicographicEnumerator>,
       "omp, patch-wise, SoA", true
-    );*/
+    );
 
     testFusedVariantOnDevice(
       device,
       ::exahype2::fv::rusanov::omp::opt::timeStepWithRusanov_patchwise_heap_static_calls<EulerFVRusanov,EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch, 1, EulerFVRusanov::NumberOfUnknowns, 0,exahype2::enumerator::AoSLexicographicEnumerator>,
       "omp::opt, patch-wise, AoS", true
     );
-    /*testFusedVariantOnDevice(
+    testFusedVariantOnDevice(
       device,
       ::exahype2::fv::rusanov::omp::opt::timeStepWithRusanov_patchwise_heap_static_calls<EulerFVRusanov,EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch, 1, EulerFVRusanov::NumberOfUnknowns, 0,exahype2::enumerator::AoSoALexicographicEnumerator>,
       "omp::opt, patch-wise, AoSoA", true
@@ -455,14 +455,14 @@ void runBenchmarks(int patches) {
       device,
       ::exahype2::fv::rusanov::omp::opt::timeStepWithRusanov_patchwise_heap_static_calls<EulerFVRusanov,EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch, 1, EulerFVRusanov::NumberOfUnknowns, 0,exahype2::enumerator::SoALexicographicEnumerator>,
       "omp::opt, patch-wise, SoA", true
-    );*/
+    );
 
     testFusedVariantOnDevice(
       device,
       ::exahype2::fv::rusanov::omp::timeStepWithRusanov_batched_heap_static_calls<EulerFVRusanov,EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch, 1, EulerFVRusanov::NumberOfUnknowns, 0,exahype2::enumerator::AoSLexicographicEnumerator>,
       "omp, batched, AoS", true
     );
-    /*testFusedVariantOnDevice(
+    testFusedVariantOnDevice(
       device,
       ::exahype2::fv::rusanov::omp::timeStepWithRusanov_batched_heap_static_calls<EulerFVRusanov,EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch, 1, EulerFVRusanov::NumberOfUnknowns, 0,exahype2::enumerator::AoSoALexicographicEnumerator>,
       "omp, batched, AoSoA", true
@@ -471,7 +471,7 @@ void runBenchmarks(int patches) {
       device,
       ::exahype2::fv::rusanov::omp::timeStepWithRusanov_batched_heap_static_calls<EulerFVRusanov,EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch, 1, EulerFVRusanov::NumberOfUnknowns, 0,exahype2::enumerator::SoALexicographicEnumerator>,
       "omp, batched, SoA", true
-    );*/
+    );
 
     testFusedVariantOnDevice(
       device,
