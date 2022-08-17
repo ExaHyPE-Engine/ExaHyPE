@@ -46,7 +46,7 @@ void exahype2::dg::tests::DGUtilsTest::testComputeGradientOnConstantSolution() {
 
   // 1 unknown, 1 auxiliary variable
   double cellQin[2*nodesPerCell];
-  double gradientValues[Dimensions];
+  double gradientValues[2*Dimensions];
   for(int i=0; i<2*nodesPerCell; i++){
     cellQin[i] = 1.0;
   }
