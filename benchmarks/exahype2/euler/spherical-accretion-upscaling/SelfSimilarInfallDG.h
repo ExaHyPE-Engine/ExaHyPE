@@ -13,6 +13,10 @@
 #include "tarch/logging/Log.h"
 
 #include "spherical-accretion/MassAccumulator.h"
+#include "spherical-accretion/GravityModel.h"
+
+#include "EulerKernels.h"
+
 
 namespace benchmarks {namespace exahype2 {namespace euler {namespace sphericalaccretionupscaling {
   class SelfSimilarInfallDG;
@@ -28,6 +32,12 @@ class benchmarks::exahype2::euler::sphericalaccretionupscaling::SelfSimilarInfal
      * Use class from application folders.
      */
     ::applications::exahype2::euler::sphericalaccretion::MassAccumulator  _accumulator;
+
+    /**
+     * After each time step, we backup the total mass in this static variable.
+     * It has to be static, as we want to use it in stateless terms later on.
+     */
+    static double TotalMassInPreviousTimeStep;
   public:
     static constexpr double BaseDensity      = 0.1;
     static constexpr double Gamma            = 5.0/3.0;

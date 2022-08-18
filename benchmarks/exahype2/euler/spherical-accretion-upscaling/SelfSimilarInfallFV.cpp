@@ -1,10 +1,11 @@
 #include "exahype2/RefinementControl.h"
-#include "EulerKernels.h"
 #include "SelfSimilarInfallFV.h"
-#include "spherical-accretion/GravityModel.h"
 
 tarch::logging::Log   benchmarks::exahype2::euler::sphericalaccretionupscaling::SelfSimilarInfallFV::_log( "benchmarks::exahype2::euler::sphericalaccretionupscaling::SelfSimilarInfallFV" );
 
+
+
+double benchmarks::exahype2::euler::sphericalaccretionupscaling::SelfSimilarInfallFV::TotalMassInPreviousTimeStep = 0.0;
 
 
 benchmarks::exahype2::euler::sphericalaccretionupscaling::SelfSimilarInfallFV::SelfSimilarInfallFV() {
@@ -175,68 +176,19 @@ void ::benchmarks::exahype2::euler::sphericalaccretionupscaling::SelfSimilarInfa
   AbstractSelfSimilarInfallFV::finishTimeStep();
   if (isLastGridSweepOfTimeStep()) {
     _accumulator.finishAccumulation();
+    TotalMassInPreviousTimeStep = _accumulator.getTotalMass();
   }
 }
 
 
-    #if defined(GPUOffloadingOMP)
-    #pragma omp declare target
-    #endif
-GPUCallableMethod double ::benchmarks::exahype2::euler::sphericalaccretionupscaling::SelfSimilarInfallFV::maxEigenvalue(
-  const double * __restrict__ Q, // Q[5+0],
-  const tarch::la::Vector<Dimensions,double>&  faceCentre,
-  const tarch::la::Vector<Dimensions,double>&  volumeH,
+bool ::benchmarks::exahype2::euler::sphericalaccretionupscaling::SelfSimilarInfallFV::patchCanUseStatelessPDETerms(
+  const tarch::la::Vector<Dimensions,double>&  patchCentre,
+  const tarch::la::Vector<Dimensions,double>&  patchH,
   double                                       t,
-  double                                       dt,
-  int                                          normal,
-  Offloadable
-)  {
-  // @todo implement
+  double                                       dt
+) const {
+  const double radius = tarch::la::norm2( patchCentre );
+  //  return radius > _accumulator.getMaxRelevantRadius();
+  return radius > _accumulator.getMaxRelevantRadius() + std::sqrt(Dimensions) * patchH(0) * patchH(0);
 }
-    #if defined(GPUOffloadingOMP)
-    #pragma omp end declare target
-    #endif
 
-
-
-
-    #if defined(GPUOffloadingOMP)
-    #pragma omp declare target
-    #endif
-GPUCallableMethod void ::benchmarks::exahype2::euler::sphericalaccretionupscaling::SelfSimilarInfallFV::flux(
-  const double * __restrict__ Q, // Q[5+0],
-  const tarch::la::Vector<Dimensions,double>&  faceCentre,
-  const tarch::la::Vector<Dimensions,double>&  volumeH,
-  double                                       t,
-  double                                       dt,
-  int                                          normal,
-  double * __restrict__ F,
-  Offloadable
-)  {
-  // @todo implement
-}
-    #if defined(GPUOffloadingOMP)
-    #pragma omp end declare target
-    #endif
-
-
-    #if defined(GPUOffloadingOMP)
-    #pragma omp declare target
-    #endif
-GPUCallableMethod void ::benchmarks::exahype2::euler::sphericalaccretionupscaling::SelfSimilarInfallFV::sourceTerm(
-  const double * __restrict__                  Q,
-  const tarch::la::Vector<Dimensions,double>&  volumeCentre,
-  const tarch::la::Vector<Dimensions,double>&  volumeH,
-  double                                       t,
-  double                                       dt,
-  double * __restrict__                        S,
-  Offloadable
-) {
-  // @todo implement but ensure that all entries of S are properly set
-  for (int i=0; i<NumberOfUnknowns; i++) {
-    S[i] = 0.0;
-  }
-}
-    #if defined(GPUOffloadingOMP)
-    #pragma omp end declare target
-    #endif

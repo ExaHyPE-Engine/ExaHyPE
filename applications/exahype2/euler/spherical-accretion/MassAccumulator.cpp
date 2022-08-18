@@ -129,7 +129,7 @@ void applications::exahype2::euler::sphericalaccretion::MassAccumulator::finishA
 
 
 double applications::exahype2::euler::sphericalaccretion::MassAccumulator::getMaxRelevantRadius() const {
-  return (_previousMassAccumulated.size()+1.0) * _shellWidth;
+  return _previousMassAccumulated.empty() ? std::numeric_limits<double>::max() : (_previousMassAccumulated.size()+1.0) * _shellWidth;
 }
 
 

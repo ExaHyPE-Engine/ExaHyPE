@@ -20,13 +20,19 @@ tarch::multicore::orchestration::Strategy* tarch::multicore::orchestration::pars
     std::string argument = realisationString.substr( std::string("fuse-immediately-").size() );
     int maxFusion = atoi( argument.c_str() );
     assertion(maxFusion>=1);
-    return Hardcoded::createFuseAll(maxFusion, true, tarch::multicore::Task::Host);
+    return Hardcoded::createFuseAll(maxFusion, true, false, tarch::multicore::Task::Host);
+  }
+  else if ( realisationString.find( "fuse-or-process-immediately-" )==0 ) {
+    std::string argument = realisationString.substr( std::string("fuse-immediately-").size() );
+    int maxFusion = atoi( argument.c_str() );
+    assertion(maxFusion>=1);
+    return Hardcoded::createFuseAll(maxFusion, true, true, tarch::multicore::Task::Host);
   }
   else if ( realisationString.find( "fuse-late-" )==0 ) {
     std::string argument = realisationString.substr( std::string("fuse-late-").size() );
     int maxFusion = atoi( argument.c_str() );
     assertion(maxFusion>=1);
-    return Hardcoded::createFuseAll(maxFusion, false, tarch::multicore::Task::Host);
+    return Hardcoded::createFuseAll(maxFusion, false, false, tarch::multicore::Task::Host);
   }
   else if ( realisationString.find( "all-on-gpu-" )==0 ) {
     std::string argument = realisationString.substr( std::string("all-on-gpu-").size() );
@@ -47,10 +53,10 @@ tarch::multicore::orchestration::Strategy* tarch::multicore::orchestration::pars
 
 
 std::string tarch::multicore::orchestration::getListOfRealisations() {
-  return "bsp,backfill,fuse-immediately-[1,2,3...],fuse-late-[1,2,3...],native,all-on-gpu-[0,1,...],genetic-optimisation,default";
+  return "bsp,backfill,fuse-immediately-[1,2,3...],fuse-or-process-immediately-[1,2,3...],fuse-late-[1,2,3...],native,all-on-gpu-[0,1,...],genetic-optimisation,default  (default is fuse-or-process-immediately-256 with deployment to device/GPU 0)";
 }
 
 
 tarch::multicore::orchestration::Strategy* tarch::multicore::orchestration::createDefaultStrategy() {
-  return Hardcoded::createFuseAll(1, true, tarch::multicore::Task::Host);
+  return Hardcoded::createFuseAll(16, true, true, 0);
 }

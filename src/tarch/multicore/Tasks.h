@@ -354,9 +354,17 @@ namespace tarch {
 
       /**
        *
+       * The routine searches through the global task queue and tries to
+       * fuse tasks. Therefore, calling the routine is kind of pointless
+       * if you haven't committed the tasks to the global queue yet. In
+       * all places where you invoke the routine, it is thus important
+       * that you've committed any thread-local tasks to the global queue
+       * if you think that fusion should be successful.
+       *
        * # Thread safety
        *
        * The method locks and unlocks the queue. So don't lock it yourself.
+       *
        */
       bool fusePendingTasks(const tarch::multicore::orchestration::Strategy::FuseInstruction&  fuseInstruction);
 

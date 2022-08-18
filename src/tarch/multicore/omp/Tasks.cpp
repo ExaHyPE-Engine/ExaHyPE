@@ -6,8 +6,6 @@
 #include "tarch/services/ServiceRepository.h"
 #include "tarch/mpi/Rank.h"
 
-#include "tarch/logging/Statistics.h"
-
 #ifdef UseSmartMPI
 #include "smartmpi.h"
 #endif
@@ -19,10 +17,6 @@ namespace {
 
   const int StandardPriority           = 16;
   const int BackgroundConsumerPriority = 1;
-
-  const std::string BSPTasksStatisticsIdentifier( "tarch::multicore::bsp-tasks");
-  const std::string BackfillWhileWaitingForBSPTasks( "tarch::multicore::backfill");
-
 
   /**
    * Native mapping of a task loop onto a task loop
@@ -51,10 +45,8 @@ namespace {
       #pragma omp task
       {
       #endif
-      ::tarch::logging::Statistics::getInstance().inc( BSPTasksStatisticsIdentifier, 1.0, true );
       while (tasks[i]->run()) {}
       delete tasks[i];
-      ::tarch::logging::Statistics::getInstance().inc( BSPTasksStatisticsIdentifier, -1.0, true );
       #if defined(__NVCOMPILER)
       }
       #endif
@@ -182,15 +174,12 @@ namespace {
         #pragma omp atomic
         spawnedTasks++;
 
-        ::tarch::logging::Statistics::getInstance().inc( BSPTasksStatisticsIdentifier, 1.0, true );
         if (i<tasks.size()) {
           while (tasks[i]->run()) {
             #pragma omp taskyield
           }
           delete tasks[i];
         }
-
-        ::tarch::logging::Statistics::getInstance().inc( BSPTasksStatisticsIdentifier, -1.0, true );
 
         #if defined(__NVCOMPILER)
         #pragma omp atomic
@@ -218,6 +207,7 @@ namespace {
 
           bool processedSomeTasks = false;
           if (numberOfPendingTasks>=fusion.minTasks) {
+            tarch::multicore::internal::copyInternalTaskQueuesOverIntoGlobalQueue(threadNumber);
             processedSomeTasks = tarch::multicore::internal::fusePendingTasks(fusion);
           }
           else if (numberOfPendingTasks>0) {
@@ -226,7 +216,6 @@ namespace {
           else { // no local tasks left over
             tarch::multicore::internal::copyInternalTaskQueuesOverIntoGlobalQueue(threadNumber);
             const int numberOfTasksToProcess = std::max(1,tarch::multicore::getNumberOfPendingTasks(-1)/2);
-            ::tarch::logging::Statistics::getInstance().log( BackfillWhileWaitingForBSPTasks, numberOfTasksToProcess );
             processedSomeTasks = tarch::multicore::processPendingTasks( numberOfTasksToProcess );
           }
         }

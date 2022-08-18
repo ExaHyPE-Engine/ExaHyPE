@@ -64,7 +64,7 @@ class tarch::multicore::orchestration::Hardcoded: public tarch::multicore::orche
      *   back any task production thread.
      * @param targetDevice Non-negative number or tarch::multicore::Task::Host
      */
-    static Hardcoded* createFuseAll(int numberOfTasksToFuse, bool fuseImmediately, int targetDevice);
+    static Hardcoded* createFuseAll(int numberOfTasksToFuse, bool fuseImmediately, bool processTasksWhileWaitingInBSPArea, int targetDevice);
 
     Hardcoded(
       int  numberOfTasksToHoldBack,

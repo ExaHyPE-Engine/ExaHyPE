@@ -11,7 +11,6 @@ import os, sys
 import argparse
 import peano4
 import exahype2
-from future.backports.test.support import patch
 
 
 print( """
@@ -28,6 +27,7 @@ parser.add_argument("-pd",  "--peano-dir",         dest="peanodir",       defaul
 parser.add_argument("-v",   "--verbose",           dest="verbose",        action="store_true", default=False, help="Verbose")
 parser.add_argument("-m",   "--mode",              dest="mode",           choices=["release","stats","asserts"], required=True, help="Pick build type" )
 parser.add_argument(        "--plot",              dest="plot"  ,         action="store_true", default=False, help="Plot solution in regular time intervals")
+parser.add_argument(        "--gpu",               dest="gpu",            action="store_true", default=False, help="Use GPU support (or aggressive task tuning)")
 parser.add_argument("-s",   "--solver",            dest="solver",         choices=["fv-4", "fv-6", "fv-8", "dg1-rk1", "dg2-rk2", "dg3-rk3", "dg4-rk4"], required=True, help="Pick solver type. For the Finite Volume (fv) solvers, the second index is the patch/block size. For DG, you can pick different Runge-Kutta time integration orders" )
 args = parser.parse_args()
 
@@ -46,8 +46,12 @@ unknowns    = {
   "E":   1,
 }
 number_of_unknowns  = sum(unknowns.values())
-max_h               = 0.2
-min_h               = 0.2
+if args.plot:
+  max_h               = 0.2
+  min_h               = 0.2
+else:
+  max_h               = 0.1
+  min_h               = 0.1
 auxiliary_variables = 0
 
 
@@ -65,7 +69,7 @@ if "fv" in args.solver:
                                                                                    flux                 = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
                                                                                    eigenvalues          = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
                                                                                    source_term          = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
-                                                                                   #pde_terms_without_state = True
+                                                                                   pde_terms_without_state = args.gpu
                                                                                   )
   executable_name = executable_name + "FV-" + str(patch_size)
   
@@ -88,7 +92,7 @@ if "rk" in args.solver and "dg" in args.solver:
                                                                    flux                 = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
                                                                    eigenvalues          = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
                                                                    source_term          = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
-                                                                   #pde_terms_without_state = True
+                                                                   pde_terms_without_state = args.gpu
                                                                    )
   executable_name = executable_name + "RK" + str(time_order) + "DG" + str(space_order)
 
