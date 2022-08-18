@@ -188,7 +188,6 @@ bool ::benchmarks::exahype2::euler::sphericalaccretionupscaling::SelfSimilarInfa
   double                                       dt
 ) const {
   const double radius = tarch::la::norm2( patchCentre );
-  //  return radius > _accumulator.getMaxRelevantRadius();
   return radius > _accumulator.getMaxRelevantRadius() + std::sqrt(Dimensions) * patchH(0) * patchH(0);
 }
 

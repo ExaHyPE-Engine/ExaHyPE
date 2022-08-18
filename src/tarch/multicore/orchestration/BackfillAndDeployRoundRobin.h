@@ -17,10 +17,16 @@ namespace tarch {
 
 
 /**
- * A hard coded strategy that can realise a few standard tasking patterns
+ * This mapping holds back all tasks in the user-defined queues throughout the
+ * BSP section, i.e. no tasks should become a native one at this time. It also
+ * allows the code to fuse tasks immediately. After we've terminated the BSP
+ * section, all pending tasks are mapped onto native ones (see case distinction
+ * in realisation of getNumberOfTasksToHoldBack()).
  *
- *
- *
+ * When we use the GPU, we always allow the code to fuse as many tasks as it
+ * can, though we limited the minimum number of tasks to a hard-coded value.
+ * If there are multiple GPUs, we toggle between those guys, i.e. we use the
+ * GPUs in a round-robin fashion.
  */
 class tarch::multicore::orchestration::BackfillAndDeployRoundRobin: public tarch::multicore::orchestration::Strategy {
   private:

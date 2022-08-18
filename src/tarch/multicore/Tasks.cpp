@@ -188,9 +188,6 @@ bool tarch::multicore::internal::processThreadLocalTask(int threadNumber) {
   tarch::multicore::Task* myTask = localNonblockingTasks[threadNumber].front();
   localNonblockingTasks[threadNumber].pop_front();
 
-  //::tarch::logging::Statistics::getInstance().log( BackfillWhileWaitingForBSPTasks, numberOfTasksToProcess );
-//  ::tarch::logging::Statistics::getInstance().inc( BSPTasksStatisticsIdentifier, 1.0, true );
-
   bool requeue = myTask->run();
   if (requeue)
     spawnTask( myTask );
