@@ -99,6 +99,28 @@ class applications::exahype2::euler::sphericalaccretion::MassAccumulator {
      * Call this routine after each time step, not after each grid sweep.
      */
     void finishAccumulation();
+
+    /**
+     * Return the biggest radius which contributes towards mass
+     *
+     * We know after each step that only a finite number of shells contain meaningful
+     * data. The number of shells that we maintain is bounded. We furthermore assume
+     * that the solution does not change suddenly, i.e. the mass distribution evolves
+     * smoothly in time. This makes us assume that the number of relevant shells grows
+     * at most by one per time step, which in turn defines the maximum radius which
+     * actually makes a contribution to the total mass.
+     *
+     * @return Max radius which we think might yield meaningful data
+     */
+    double getMaxRelevantRadius() const;
+
+    /**
+     * This routine returns the total mass. This is the mass accumulated in all
+     * shells, i.e. the accumulated mass of the biggest shell.
+     *
+     * @return Total mass accumulated
+     */
+    double getTotalMass() const;
 };
 
 
