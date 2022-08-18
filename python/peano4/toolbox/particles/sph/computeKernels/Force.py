@@ -1,4 +1,4 @@
-# @TODO: add other SPH schemes besides the minimal SPH one.
+# @TODO: add other SPH schemes besides the minimal SPH one (i.e. SPHENIX)
 
 # -----------------------------------------------------------------------------
 # Force loop compute kernels 
