@@ -9,6 +9,9 @@ tarch::logging::Log   benchmarks::exahype2::euler::sphericalaccretionupscaling::
 
 
 
+double benchmarks::exahype2::euler::sphericalaccretionupscaling::SelfSimilarInfallDG::TotalMassInPreviousTimeStep = 0.0;
+
+
 benchmarks::exahype2::euler::sphericalaccretionupscaling::SelfSimilarInfallDG::SelfSimilarInfallDG() {
 //  _accumulator.addMass(AdditionalMass,0.0);
 }
@@ -174,5 +177,6 @@ void ::benchmarks::exahype2::euler::sphericalaccretionupscaling::SelfSimilarInfa
   AbstractSelfSimilarInfallDG::finishTimeStep();
   if (isLastGridSweepOfTimeStep()) {
     _accumulator.finishAccumulation();
+    TotalMassInPreviousTimeStep = _accumulator.getTotalMass();
   }
 }

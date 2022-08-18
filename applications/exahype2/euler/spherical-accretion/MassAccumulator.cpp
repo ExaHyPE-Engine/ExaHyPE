@@ -126,3 +126,14 @@ void applications::exahype2::euler::sphericalaccretion::MassAccumulator::finishA
     logInfo( "finishAccumulation()", "bucket (r<" << currentShellWidth << ") = " << p );
   }
 }
+
+
+double applications::exahype2::euler::sphericalaccretion::MassAccumulator::getMaxRelevantRadius() const {
+  return _previousMassAccumulated.empty() ? std::numeric_limits<double>::max() : (_previousMassAccumulated.size()+1.0) * _shellWidth;
+}
+
+
+double applications::exahype2::euler::sphericalaccretion::MassAccumulator::getTotalMass() const {
+  return _previousMassAccumulated.back();
+}
+

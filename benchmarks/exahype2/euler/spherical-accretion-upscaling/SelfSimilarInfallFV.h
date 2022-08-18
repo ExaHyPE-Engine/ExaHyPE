@@ -13,12 +13,20 @@
 #include "tarch/logging/Log.h"
 
 #include "spherical-accretion/MassAccumulator.h"
+#include "spherical-accretion/GravityModel.h"
+
+#include "EulerKernels.h"
 
 
-namespace benchmarks {namespace exahype2 {namespace euler {namespace sphericalaccretionupscaling {
-  class SelfSimilarInfallFV;
-
-}}}}
+namespace benchmarks {
+  namespace exahype2 {
+    namespace euler {
+      namespace sphericalaccretionupscaling {
+        class SelfSimilarInfallFV;
+      }
+    }
+  }
+}
 
 
 class benchmarks::exahype2::euler::sphericalaccretionupscaling::SelfSimilarInfallFV: public benchmarks::exahype2::euler::sphericalaccretionupscaling::AbstractSelfSimilarInfallFV {
@@ -30,12 +38,17 @@ class benchmarks::exahype2::euler::sphericalaccretionupscaling::SelfSimilarInfal
      */
     ::applications::exahype2::euler::sphericalaccretion::MassAccumulator  _accumulator;
 
+    /**
+     * After each time step, we backup the total mass in this static variable.
+     * It has to be static, as we want to use it in stateless terms later on.
+     */
+    static double TotalMassInPreviousTimeStep;
   public:
-    static constexpr double BaseDensity      = 0.1;
-    static constexpr double Gamma            = 5.0/3.0;
-    static constexpr double pInitial         = 1e-6;
-    static constexpr double aInitial         = 0.001;
-    static constexpr double AdditionalMass   = 0.15;
+    static constexpr double BaseDensity         = 0.1;
+    static constexpr double Gamma               = 5.0/3.0;
+    static constexpr double pInitial            = 1e-6;
+    static constexpr double aInitial            = 0.001;
+    static constexpr double AdditionalMass      = 0.15;
     static constexpr double InitialTopHatRadius = 0.05;
 
     SelfSimilarInfallFV();
@@ -151,18 +164,9 @@ class benchmarks::exahype2::euler::sphericalaccretionupscaling::SelfSimilarInfal
 
 
     /**
-     * To obtain the best performance, I recommend to man inline command to 
-     * this signature and to copy the implementation into the header. So it would
-     * read 
-     *
-     * static inline void sourceTerm( ... ) {
-     *  code here
-     * }
-     *
-     * The GPU offloading requires static functions. As we cannot overload the
-     * original (virtual) function with a static alternative, we do the
-     * TBB trick and overload by adding an additional enum. It has no semantics
-     * but helps the compiler to distinguish the different function variants.
+     * Manually inlined version of the source term. As this variant is only called
+     * outside of the area of relevance, we know that the mass acting on the volume
+     * is the total mass.
      */
     #if defined(GPUOffloadingOMP)
     #pragma omp declare target
@@ -175,27 +179,28 @@ class benchmarks::exahype2::euler::sphericalaccretionupscaling::SelfSimilarInfal
        double                                       dt,
        double * __restrict__                        S,
        Offloadable
-    );
+    ) {
+      for (int i=0; i<NumberOfUnknowns; i++) {
+        S[i] = 0.0;
+      }
+
+      applications::exahype2::euler::sphericalaccretion::addGravitationalSource_AlphaCDM(
+        S,
+        volumeCentre,
+        Q,
+        TotalMassInPreviousTimeStep,
+        aInitial,
+        t
+      );
+    }
     #if defined(GPUOffloadingOMP)
     #pragma omp end declare target
     #endif
-    
-
 
     
     /**
-     * To obtain the best performance, I recommend to man inline command to 
-     * this signature and to copy the implementation into the header. So it would
-     * read 
-     *
-     * static inline double maxEigenvalue( ... ) {
-     *  code here
-     * }
-     *
-     * The GPU offloading requires static functions. As we cannot overload the
-     * original (virtual) function with a static alternative, we do the
-     * TBB trick and overload by adding an additional enum. It has no semantics
-     * but helps the compiler to distinguish the different function variants.
+     * Manually inlined. Otherwise the same as the virtual function without
+     * the logging.
      */
     #if defined(GPUOffloadingOMP)
     #pragma omp declare target
@@ -208,7 +213,19 @@ class benchmarks::exahype2::euler::sphericalaccretionupscaling::SelfSimilarInfal
       double                                       dt,
       int                                          normal,
       Offloadable
-    );
+    ) {
+      return ::applications::exahype2::euler::maxEigenvalue(
+          Q,
+          faceCentre,
+          volumeH,
+          t,
+          dt,
+          normal,
+          NumberOfUnknowns,
+          NumberOfAuxiliaryVariables,
+          Gamma
+        );
+    }
     #if defined(GPUOffloadingOMP)
     #pragma omp end declare target
     #endif
@@ -217,18 +234,8 @@ class benchmarks::exahype2::euler::sphericalaccretionupscaling::SelfSimilarInfal
 
     
     /**
-     * To obtain the best performance, I recommend to man inline command to 
-     * this signature and to copy the implementation into the header. So it would
-     * read 
-     *
-     * static inline void flux( ... ) {
-     *  code here
-     * }
-     *
-     * The GPU offloading requires static functions. As we cannot overload the
-     * original (virtual) function with a static alternative, we do the
-     * TBB trick and overload by adding an additional enum. It has no semantics
-     * but helps the compiler to distinguish the different function variants.
+     * Manually inlined. Otherwise the same as the virtual function without
+     * the logging.
      */
     #if defined(GPUOffloadingOMP)
     #pragma omp declare target
@@ -242,10 +249,35 @@ class benchmarks::exahype2::euler::sphericalaccretionupscaling::SelfSimilarInfal
       int                                          normal,
       double * __restrict__                        F, // F[5]
       Offloadable
-    );
+    ) {
+      ::applications::exahype2::euler::flux(
+        Q,
+        faceCentre,
+        volumeH,
+        t,
+        dt,
+        normal,
+        NumberOfUnknowns,
+        NumberOfAuxiliaryVariables,
+        F,
+        Gamma
+      );
+    }
     #if defined(GPUOffloadingOMP)
     #pragma omp end declare target
     #endif
+
+
+    /**
+     * Outside of the critical area, we can use the stateless PDE terms.
+     */
+    bool patchCanUseStatelessPDETerms(
+      const tarch::la::Vector<Dimensions,double>&  patchCentre,
+      const tarch::la::Vector<Dimensions,double>&  patchH,
+      double                                       t,
+      double                                       dt
+    ) const override;
+
 };
 
 

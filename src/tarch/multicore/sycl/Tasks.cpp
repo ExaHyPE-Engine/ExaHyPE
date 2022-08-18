@@ -8,8 +8,6 @@
 #include "tarch/services/ServiceRepository.h"
 #include "tarch/mpi/Rank.h"
 
-#include "tarch/logging/Statistics.h"
-
 
 
 #if defined(SharedSYCL)
@@ -23,9 +21,6 @@ namespace {
    * Seems that there is no atomic in tbb. So I use the standard one.
    */
   std::atomic<int> nonblockingTasksCounter          = 0;
-
-  const std::string BSPTasksStatisticsIdentifier( "tarch::multicore::bsp-tasks");
-  const std::string BackfillWhileWaitingForBSPTasks( "tarch::multicore::backfill");
 
   /**
    * Native mapping of a task loop onto a SYCL loop
@@ -101,6 +96,7 @@ namespace {
 
             bool processedSomeTasks = false;
             if (numberOfPendingTasks>=fusion.minTasks) {
+              internal::copyInternalTaskQueuesOverIntoGlobalQueue(threadNumber);
               processedSomeTasks = tarch::multicore::internal::fusePendingTasks(fusion);
             }
             else if (numberOfPendingTasks>0) {
