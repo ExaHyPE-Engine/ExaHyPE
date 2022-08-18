@@ -94,6 +94,7 @@ class HandleBoundary(AbstractRungeKuttaDGActionSet):
     super(HandleBoundary,self).__init__(solver)
     self.guards            = []
     self._butcher_tableau     = ButcherTableau(self._solver._rk_order)
+
     
   @property
   def guards(self):
@@ -107,6 +108,7 @@ class HandleBoundary(AbstractRungeKuttaDGActionSet):
     if new_guards!=[] and len(new_guards)!=self._solver.number_of_Runge_Kutta_steps():
       raise Exception( "Expect one guard per Runge Kutta step. Have {} steps but got guards {}".format(solver.number_of_Runge_Kutta_steps(),guards) )
     self._guards = new_guards
+
 
   def get_body_of_operation(self,operation_name):
     result = ""

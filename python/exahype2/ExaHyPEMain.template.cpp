@@ -1,4 +1,16 @@
 #include "{MAIN_NAME}.h"
+
+#include "observers/CreateGrid.h"
+#include "observers/CreateGridAndConvergeLoadBalancing.h"
+#include "observers/CreateGridButPostponeRefinement.h"
+#include "observers/InitGrid.h"
+#include "observers/PlotSolution.h"
+#include "observers/TimeStep.h"
+
+#include "repositories/DataRepository.h"
+#include "repositories/SolverRepository.h"
+#include "repositories/StepRepository.h"
+
 #include "Constants.h"
 
 #include "tarch/logging/Log.h"
@@ -16,17 +28,6 @@
 #include "peano4/grid/Spacetree.h"
 #include "peano4/parallel/SpacetreeSet.h"
 #include "peano4/UnitTests.h"
-
-#include "repositories/DataRepository.h"
-#include "repositories/StepRepository.h"
-#include "repositories/SolverRepository.h"
-
-#include "observers/CreateGrid.h"
-#include "observers/CreateGridButPostponeRefinement.h"
-#include "observers/CreateGridAndConvergeLoadBalancing.h"
-#include "observers/InitGrid.h"
-#include "observers/PlotSolution.h"
-#include "observers/TimeStep.h"
 
 #include "toolbox/loadbalancing/loadbalancing.h"
 

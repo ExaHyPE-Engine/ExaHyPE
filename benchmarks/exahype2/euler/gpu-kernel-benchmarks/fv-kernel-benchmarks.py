@@ -1,10 +1,7 @@
 """
 
  A very simple example which demonstrates how to configure a patch-based
- Finite Volume solver in Peano4. The code relies on snippets from ExaHyPE2.
- However, it relies only on ExaHyPE's C/FORTRAN compute kernels, i.e. the
- sophisticated build environment of this H2020 project is not used. The
- solver simulates the simple Euler equations.
+ Finite Volume solver in Peano4. 
 
 """
 
@@ -20,6 +17,8 @@ import argparse
 print( """
 
 ExaHyPE 2 Finite Volume kernel benchmark
+
+@author 2022 Tobias Weinzierl, Mario Wille
 
 """)
 

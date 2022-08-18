@@ -9,7 +9,7 @@
 #ifndef _examples_exahype2_selfgravitation_Poisson_H_
 #define _examples_exahype2_selfgravitation_Poisson_H_
 
-#include "AbstractPoisson.h"
+#include "../selfgravitation-with-Poisson/AbstractPoisson.h"
 #include "tarch/logging/Log.h"
 
 namespace examples {namespace exahype2 {namespace selfgravitation {

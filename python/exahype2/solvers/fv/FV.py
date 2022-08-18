@@ -972,28 +972,49 @@ The finest mesh width of """ + str(self.get_finest_volume_size(domain_size)) + "
 
     The postprocessing kernel often looks similar to the following code:
 
-  {
-    int index = 0;
-    dfor( volume, {{NUMBER_OF_VOLUMES_PER_AXIS}} ) {
-      enforceCCZ4constraints( targetPatch+index );
-      index += {{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}};
-    }
-  }
-
-
-    Within this kernel, you have at least the following variables available:
+         {
+           int index = 0;
+           dfor( volume, {{NUMBER_OF_VOLUMES_PER_AXIS}} ) {
+             enforceCCZ4constraints( targetPatch+index );
+             index += {{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}};
+           }
+         }
+         
+     but often, it is nicer ot user one of the pre-defined kernels in ExaHyPE
+     for postprocessing:
+     
+         ::exahype2::fv::mapInnerNeighbourVoxelAlongBoundayOntoAuxiliaryVariable(
+           targetPatch,
+           {{NUMBER_OF_VOLUMES_PER_AXIS}},
+           {{NUMBER_OF_UNKNOWNS}},
+           {{NUMBER_OF_AUXILIARY_VARIABLES}}
+         );
+         
+         
+    As highlighted from the examples above, you can use normal ExaHyPE constant
+    within your injected code. Furthermore, you have the following two variables
+    available:
 
     - targetPatch This is a pointer to the whole data structure (one large
-        array).
-        The patch is not supplemented by a halo layer.
-    - reconstructedPatch This is a pointer to the data snapshot before the
-        actual update. This data is combined with the halo layer, i.e. if you
-        work with 7x7 patches and a halo of 2, the pointer points to a 11x11
-        patch.
-    - marker
+        array). The patch is not supplemented by a halo layer.
+    - marker An instance of the CellMarker which identifies the cell.
 
-    Furthermore, you can use all the symbols (via Jinja2 syntax) from
-    _init_dictionary_with_default_parameters().
+    In ExaHyPE's finite volume solvers, there are two different ways how to inject
+    postprocessing: You can either define your own postprocessing step by setting
+    _action_set_postprocess_solution, or you can use this setter to inject some
+    source code. The two options are not equivalent: The snippet injected here is
+    executed directly after the kernel update. Consequently, it also runs on a GPU
+    if GPUs are employed, or it runs directly after a task has been launched to 
+    update a cell.
+    
+    The postprocessing action set is launched when the cell update is committed, 
+    i.e. after the cell task has terminated or a task result came back from the
+    GPU. Consequently, the snippet injected here might not have access to global
+    variables (if it executes on a GPU) while the postprocessing action set 
+    always has access to the global program state.
+
+
+    ## Attributes
 
     kernel: String
       C++ code that holds the postprocessing kernel
