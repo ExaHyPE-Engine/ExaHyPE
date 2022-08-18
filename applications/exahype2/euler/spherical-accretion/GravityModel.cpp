@@ -1,6 +1,20 @@
 #include "GravityModel.h"
 
 
+void applications::exahype2::euler::sphericalaccretion::initialiseHomogeneousDensity(
+  double * __restrict__                        Q,
+  double                                       baselineDensity,
+  double                                       baselinePressure,
+  double                                       gamma
+) {
+  Q[0] = baselineDensity;
+  Q[1] = 0.0;
+  Q[2] = 0.0;
+  Q[3] = 0.0;
+  Q[4] = 0.5*baselinePressure/(gamma-1);
+}
+
+
 void applications::exahype2::euler::sphericalaccretion::initialiseOverdensity_topHat(
   double * __restrict__                        Q,
   const tarch::la::Vector<Dimensions,double>&  x,

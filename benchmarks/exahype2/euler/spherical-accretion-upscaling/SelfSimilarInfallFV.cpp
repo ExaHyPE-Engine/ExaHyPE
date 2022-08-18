@@ -7,6 +7,11 @@ tarch::logging::Log   benchmarks::exahype2::euler::sphericalaccretionupscaling::
 
 
 
+benchmarks::exahype2::euler::sphericalaccretionupscaling::SelfSimilarInfallFV::SelfSimilarInfallFV() {
+//  _accumulator.addMass(AdditionalMass,0.0);
+}
+
+
 void benchmarks::exahype2::euler::sphericalaccretionupscaling::SelfSimilarInfallFV::addDensity(
   const tarch::la::Vector<Dimensions,double>&  volumeCentre,
   const tarch::la::Vector<Dimensions,double>&  volumeH,
@@ -42,6 +47,15 @@ void benchmarks::exahype2::euler::sphericalaccretionupscaling::SelfSimilarInfall
     pInitial,
     Gamma
   );
+
+/*
+  applications::exahype2::euler::sphericalaccretion::initialiseHomogeneousDensity(
+    Q,
+    BaseDensity,
+    pInitial,
+    Gamma
+  );
+*/
 
   logTraceOut( "initialCondition(...)" );
 }

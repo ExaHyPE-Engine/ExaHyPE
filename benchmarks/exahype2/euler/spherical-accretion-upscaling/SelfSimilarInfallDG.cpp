@@ -9,6 +9,11 @@ tarch::logging::Log   benchmarks::exahype2::euler::sphericalaccretionupscaling::
 
 
 
+benchmarks::exahype2::euler::sphericalaccretionupscaling::SelfSimilarInfallDG::SelfSimilarInfallDG() {
+//  _accumulator.addMass(AdditionalMass,0.0);
+}
+
+
 void benchmarks::exahype2::euler::sphericalaccretionupscaling::SelfSimilarInfallDG::addDensity(
   const tarch::la::Vector<Dimensions,double>&  x,
   const tarch::la::Vector<3,double>&           cellSize,
@@ -46,6 +51,14 @@ void benchmarks::exahype2::euler::sphericalaccretionupscaling::SelfSimilarInfall
     pInitial,
     Gamma
   );
+/*
+  applications::exahype2::euler::sphericalaccretion::initialiseHomogeneousDensity(
+    Q,
+    BaseDensity,
+    pInitial,
+    Gamma
+  );
+*/
 
   logTraceOut( "initialCondition(...)" );
 }

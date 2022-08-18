@@ -38,6 +38,8 @@ class benchmarks::exahype2::euler::sphericalaccretionupscaling::SelfSimilarInfal
     static constexpr double AdditionalMass   = 0.15;
     static constexpr double InitialTopHatRadius = 0.05;
 
+    SelfSimilarInfallFV();
+
     /**
      * Add density of one voxel to global bookkeeping
      */

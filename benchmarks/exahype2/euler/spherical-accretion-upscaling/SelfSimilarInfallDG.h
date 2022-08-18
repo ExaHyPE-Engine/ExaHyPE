@@ -36,6 +36,8 @@ class benchmarks::exahype2::euler::sphericalaccretionupscaling::SelfSimilarInfal
     static constexpr double AdditionalMass   = 0.15;
     static constexpr double InitialTopHatRadius = 0.05;
 
+    SelfSimilarInfallDG();
+
     /**
      * Add mass corresponding to one degree of freedom. This is the value in
      * this dof (as we work with a Lagrangian formulation) times the quadrature

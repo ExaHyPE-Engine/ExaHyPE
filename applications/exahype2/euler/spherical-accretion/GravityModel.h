@@ -26,6 +26,14 @@ namespace applications {
         );
 
 
+        void initialiseHomogeneousDensity(
+          double * __restrict__                        Q,
+          double                                       baselineDensity,
+          double                                       baselinePressure,
+          double                                       gamma
+        );
+
+
         void initialiseOverdensity_Gaussian(
           double * __restrict__                        Q,
           const tarch::la::Vector<Dimensions,double>&  x,
