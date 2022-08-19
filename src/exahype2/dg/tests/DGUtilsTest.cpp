@@ -12,8 +12,8 @@ exahype2::dg::tests::DGUtilsTest::DGUtilsTest():
 
 
 void exahype2::dg::tests::DGUtilsTest::run(){
-  testMethod( testComputeGradientOnConstantSolution );
   testMethod( testGetIndex );
+  testMethod( testComputeGradientOnConstantSolution );
 }
 
 
@@ -40,6 +40,7 @@ void exahype2::dg::tests::DGUtilsTest::testGetIndex() {
 
 
 void exahype2::dg::tests::DGUtilsTest::testComputeGradientOnConstantSolution() {
+  #if Dimensions==2
   const int order        = 3;
   const int nodesPerAxis = order+1;
   const int nodesPerCell = getNodesPerCell(nodesPerAxis);
@@ -65,5 +66,5 @@ void exahype2::dg::tests::DGUtilsTest::testComputeGradientOnConstantSolution() {
       validateNumericalEquals(gradientValues[var], 0.0);
     }
   }
-
+  #endif
 }

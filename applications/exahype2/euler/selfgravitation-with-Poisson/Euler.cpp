@@ -1,4 +1,5 @@
-#include "Euler.h"
+#include "../selfgravitation-with-Poisson/Euler.h"
+
 #include "exahype2/RefinementControl.h"
 #include "exahype2/NonCriticalAssertions.h"
 

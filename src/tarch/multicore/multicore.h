@@ -13,17 +13,6 @@
   #define SharedMemoryParallelisation
 #endif
 
-#if defined(_NVHPC_STDPAR_GPU) 
- #define HOST_DEVICE __host__ __device__
- #define HOST __host__
- #define DEVICE __device__
-#else
- #define HOST_DEVICE 
- #define HOST
- #define DEVICE
-#endif
-
-
 
 #ifndef _TARCH_MULTICORE_MULTICORE_H_
 #define _TARCH_MULTICORE_MULTICORE_H_
@@ -255,6 +244,7 @@ and
   };
 
 
+
   /**
    * We need an annotation GPUCallableMethod for some targets like HIP. This
    * marker is to be used before the return type is written down. This is different
@@ -264,6 +254,8 @@ and
     #define GPUCallableMethod __host__ __device__
   #elif defined(GPUOffloadingSYCL)
     #define GPUCallableMethod SYCL_EXTERNAL
+  #elif defined(GPUOffloadingCPP) && defined(_NVHPC_STDPAR_GPU)
+    #define GPUCallableMethod __host__ __device__
   #else
     #define GPUCallableMethod
   #endif
@@ -295,7 +287,7 @@ and
   #elif defined(GPUOffloadingSYCL)
   GPUCallableMethod void gpuAbort();
   #elif defined(GPUOffloadingCPP)
-  HOST_DEVICE void gpuAbort();
+  GPUCallableMethod void gpuAbort();
   #else
   void gpuAbort();
   #endif

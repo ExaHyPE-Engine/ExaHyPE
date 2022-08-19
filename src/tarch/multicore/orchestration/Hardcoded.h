@@ -62,9 +62,9 @@ class tarch::multicore::orchestration::Hardcoded: public tarch::multicore::orche
      *   end up in a local queue. If a thread runs out of work, it looks into this
      *   queue and then fuses. So the fuse happens later, but it does not hold
      *   back any task production thread.
-     * @param targetDevice Non-negative number or tarch::multicore::Task::Host
+     * @param targetDevice Non-negative number or tarch::multicore::Task::Host.
      */
-    static Hardcoded* createFuseAll(int numberOfTasksToFuse, bool fuseImmediately, int targetDevice);
+    static Hardcoded* createFuseAll(int numberOfTasksToFuse, bool fuseImmediately, bool processTasksWhileWaitingInBSPArea, int targetDevice);
 
     Hardcoded(
       int  numberOfTasksToHoldBack,

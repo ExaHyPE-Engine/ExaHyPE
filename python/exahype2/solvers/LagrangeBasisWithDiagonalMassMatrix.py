@@ -42,7 +42,7 @@ class LagrangeBasisWithDiagonalMassMatrix(LagrangeBasis):
   points, but you might want to work with lumped matrices, and then this 
   class is the right starting point.
   
-  Further to the initialisation, some using classes use quadrature_points().
+  Further to the initialisation, some using classes use quadrature_points_and_weights().
   The exahype2.solvers.rkdg.RungeKuttaDG solver for example uses it to 
   initialise the mapping of the plotter properly.
   
@@ -88,7 +88,21 @@ class LagrangeBasisWithDiagonalMassMatrix(LagrangeBasis):
   space of the quadrature points.
   
   As we work in a tensor product world, the 2d and 3d quadrature points can be 
-  simply consructed by multiplying the respective coordinate system indices.
+  simply constructed by multiplying the respective coordinate system indices.
+"""
+  
+
+  QuadratureWeights1dDocumentation = """
+  The quadrature weights are an array of size [p+1] if p is the order of the 
+  chosen polyomial. The double array defines the integral over the polynomial
+  over the unit interval. We use Lagrangian bases here, i.e. only one polynomial
+  of the basis is 1 in a quadrature point, while all the others are 0. However,
+  the fact that it is 1 in the point, does not tell us anything about the 
+  integral over this particular polynomial. That's the weight associated with 
+  it.
+  
+  As we work in a tensor product world, the 2d and 3d weights can be 
+  simply constructed by multiplying the respective coordinate system indices.
 """
 
 
@@ -349,15 +363,6 @@ class LagrangeBasisWithDiagonalMassMatrix(LagrangeBasis):
         equidistantGridProjector[m][i] = phi_i[m]
     return equidistantGridProjector
   
-
-  # protected 
-  @abstractmethod
-  def _compute_quadrature_points_and_weights(self,num_points):
-    """
-    To be implemented by subclass.
-    """
-    assert False, "To be implemented by subclass."
-  
   
   def init_dictionary_with_default_parameters(self,dictionary,use_multidimensional_arrays):
     def snake_to_camel(word):
@@ -375,6 +380,12 @@ class LagrangeBasisWithDiagonalMassMatrix(LagrangeBasis):
     dictionary["BASIS_DECLARATIONS"] += "*/\n"
     dictionary["BASIS_DECLARATIONS"] += "const double QuadraturePoints1d[DGOrder+1];\n\n"
     dictionary["BASIS_INITIALIZERS"] += "             QuadraturePoints1d{},\n".format( self._render_tensor_1(self.quadrature_points) )
+    
+    dictionary["BASIS_DECLARATIONS"] += "/**\n"
+    dictionary["BASIS_DECLARATIONS"] += self.QuadratureWeights1dDocumentation
+    dictionary["BASIS_DECLARATIONS"] += "*/\n"
+    dictionary["BASIS_DECLARATIONS"] += "const double QuadratureWeights1d[DGOrder+1];\n\n"
+    dictionary["BASIS_INITIALIZERS"] += "             QuadratureWeights1d{},\n".format( self._render_tensor_1(self.quadrature_weights) )
 
     dictionary["BASIS_DECLARATIONS"] += "/**\n"
     dictionary["BASIS_DECLARATIONS"] += self.MassMatrix1dDocumentation
@@ -410,6 +421,12 @@ class LagrangeBasisWithDiagonalMassMatrix(LagrangeBasis):
   @property
   @abstractmethod
   def quadrature_points(self):
+    assert False, "to be implemented by subclass"
+
+
+  @property
+  @abstractmethod
+  def quadrature_weights(self):
     assert False, "to be implemented by subclass"
 
 
@@ -535,8 +552,36 @@ class GaussLegendreBasis(LagrangeBasisWithDiagonalMassMatrix):
     https://en.wikipedia.org/wiki/Legendre_polynomials#Shifted_Legendre_polynomials
     
     """
-    roots, weight = scipy.special.roots_sh_legendre(self._polynomial_order+1)
+    roots, weights = scipy.special.roots_sh_legendre(self._polynomial_order+1)
     return roots    
+    
+  
+  @property
+  def quadrature_weights(self):
+    """
+    
+    It seems to be a little bit weird that I have to use the polynomial
+    order plus one here, but you have to read the docu to understand 
+    that we are evaluating the polynomial of a certain order to get the 
+    roots. So the argument has to be equal to the number of quadrature
+    points that I wannt have.
+    
+    I originally used the roots_legendre and then did recalibrate the 
+    result manually. Today, SciPy directly offers a shifted Legendre
+    function which I can use directly. So I don't need an expression like
+    
+    
+          return [ x/2.0+0.5 for x in roots_on_minus_one_one_interval ]
+
+
+    anymore. The nicest definition of the shifted Legendre shape functions
+    can, as so often, be found on Wikipedia:
+    
+    https://en.wikipedia.org/wiki/Legendre_polynomials#Shifted_Legendre_polynomials
+    
+    """
+    roots, weights = scipy.special.roots_sh_legendre(self._polynomial_order+1)
+    return weights
 
 
 

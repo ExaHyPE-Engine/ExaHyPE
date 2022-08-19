@@ -1,7 +1,6 @@
 #include "../../../tarch/multicore/otter.h"
 #include "Rusanov.h"
 
-
 namespace exahype2{ namespace fv{ namespace rusanov{ namespace internal{
   static void timeStepWithRusanov_batched_functors(
     ::exahype2::CellData&   patchData,

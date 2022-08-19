@@ -27,10 +27,6 @@
 namespace {
   std::atomic<int> nonblockingTasksCounter          = 0;
 
-  const std::string BSPTasksStatisticsIdentifier( "tarch::multicore::bsp-tasks");
-  const std::string BackfillWhileWaitingForBSPTasks( "tarch::multicore::backfill");
-
-
   /**
    * Native mapping of a task loop onto a task loop
    *
@@ -123,6 +119,7 @@ namespace {
 
         bool processedSomeTasks = false;
         if (numberOfPendingTasks>=fusion.minTasks) {
+          internal::copyInternalTaskQueuesOverIntoGlobalQueue(threadNumber);
           processedSomeTasks = tarch::multicore::internal::fusePendingTasks(fusion);
         }
         else if (numberOfPendingTasks>0) {
