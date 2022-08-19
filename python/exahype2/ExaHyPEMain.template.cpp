@@ -13,7 +13,6 @@
 
 #include "Constants.h"
 
-#include "tarch/FenvWrapper.h"
 #include "tarch/logging/Log.h"
 #include "tarch/logging/Statistics.h"
 #include "tarch/logging/LogFilter.h"
@@ -37,6 +36,12 @@
 #include "exahype2/NonCriticalAssertions.h"
 #include "exahype2/UserInterface.h"
 #include "exahype2/UnitTests.h"
+
+#ifdef UseFEExcept
+#include <fenv.h>
+#pragma float_control(precise, on)
+#pragma STDC FENV_ACCESS ON
+#endif
 
 using namespace {FULL_NAMESPACE};
 
@@ -419,18 +424,22 @@ int main(int argc, char** argv) {{
   const int ExitCodeInvalidArguments = 2;
   const int ExitCodeInvalidBuild     = 3;
 
+#ifdef UseFEExcept
+  feenableexcept(FE_DIVBYZERO | FE_INVALID | FE_OVERFLOW);
+#endif
+
   peano4::initParallelEnvironment(&argc,&argv);
   exahype2::initNonCritialAssertionEnvironment();
   tarch::multicore::initSmartMPI();
   peano4::fillLookupTables();
+ 
+  
   peano4::initSingletons(
     DomainOffset,
     DomainSize,
     PeriodicBC
   );
-
-  tarch::feenableexcept(FE_DIVBYZERO | FE_INVALID | FE_OVERFLOW);
-
+  
   if ( tarch::mpi::Rank::getInstance().getNumberOfRanks()>1 and tarch::multicore::Core::getInstance().getNumberOfThreads()<=1 ) {{
     logError("main()", "MPI runs without multithreading are not supported currently.");
     return ExitCodeInvalidBuild;
