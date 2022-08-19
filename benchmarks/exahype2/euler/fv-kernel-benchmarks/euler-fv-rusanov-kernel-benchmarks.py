@@ -13,7 +13,7 @@ ExaHyPE 2 - Euler Finite Volume Rusanov Kernel Benchmarks
 parser = argparse.ArgumentParser(description='ExaHyPE 2 - Euler FV Rusanov Kernel Benchmarking Script')
 parser.add_argument("-j",   "--parallel-builds",   dest="j",              type=int, default=8, help="Parallel builds")
 parser.add_argument("-d",   "--dim",               dest="dim",            type=int, default=2, help="Number of space dimensions")
-parser.add_argument("-pd",  "--peano-dir",         dest="peanodir",       default="../../../../", help="Peano directory")
+parser.add_argument("-pd",  "--peano-dir",         dest="peanodir",       default="../../../../", help="Peano4 directory")
 parser.add_argument("-v",   "--verbose",           dest="verbose",        action="store_true", default=False, help="Verbose")
 parser.add_argument(        "--debug",             dest="debug"  ,        action="store_true", default=False, help="Verbose")
 parser.add_argument("-ps",  "--patch-size",        dest="patch_size",     type=int, default=17, help="Number of finite volumes per axis (dimension) per patch.")

@@ -4,6 +4,8 @@
 #include "tarch/compiler/CompilerSpecificSettings.h"
 #include "exahype2/fv/rusanov/LoopBody.h"
 
+#include <cstring>
+
 template <
   typename Solver,
   int      numberOfVolumesPerAxisInPatch,
@@ -59,7 +61,7 @@ void exahype2::fv::rusanov::omp::opt::timeStepWithRusanov_batched_heap_static_ca
 
   std::vector<double> tmpQIn(hostPatchData.numberOfCells * QInHostEnumerator.size());
   for (int patchIndex=0; patchIndex<hostPatchData.numberOfCells; patchIndex++) {
-    memcpy(&tmpQIn[patchIndex * QInHostEnumerator.size()], hostPatchData.QIn[patchIndex], QInHostEnumerator.size() * sizeof(double));
+    std::memcpy(&tmpQIn[patchIndex * QInHostEnumerator.size()], hostPatchData.QIn[patchIndex], QInHostEnumerator.size() * sizeof(double));
   }
 
   auto hostId = omp_get_initial_device();
@@ -1045,7 +1047,7 @@ void exahype2::fv::rusanov::omp::opt::timeStepWithRusanov_batched_heap_static_ca
   std::vector<double> tmpQOut(hostPatchData.numberOfCells * QOutHostEnumerator.size());
   omp_target_memcpy(&tmpQOut[0], mappedPointersToQOuts, hostPatchData.numberOfCells * QOutHostEnumerator.size() * sizeof(double), 0, 0, hostId, targetDevice);
   for (int patchIndex=0; patchIndex<hostPatchData.numberOfCells; patchIndex++) {
-    memcpy(hostPatchData.QOut[patchIndex], &tmpQOut[patchIndex * QOutHostEnumerator.size()], QOutHostEnumerator.size() * sizeof(double));
+    std::memcpy(hostPatchData.QOut[patchIndex], &tmpQOut[patchIndex * QOutHostEnumerator.size()], QOutHostEnumerator.size() * sizeof(double));
   }
   omp_target_memcpy(hostPatchData.maxEigenvalue, maxEigenvalues, hostPatchData.numberOfCells * sizeof(double), 0, 0, hostId, targetDevice);
 

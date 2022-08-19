@@ -1,7 +1,5 @@
 #include "../../../tarch/multicore/otter.h"
 #include "Rusanov.h"
-#include <stdio.h>
-#include <string.h>
 
 void exahype2::fv::rusanov::timeStepWithRusanov_patchwise_heap_functors(
   ::exahype2::CellData&   patchData,
