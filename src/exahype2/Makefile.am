@@ -50,6 +50,7 @@ ExaHyPE2Sources = \
   fv/BoundaryConditions.cpp \
   fv/PatchUtils.cpp \
   fv/PatchAccess.cpp \
+  fv/PostprocessingKernels.cpp \
   fv/rusanov/sycl/GPUCellData.cpp \
   fv/rusanov/omp/opt/Rusanov.cpp \
   fv/rusanov/omp/opt/GPUCellData.cpp \

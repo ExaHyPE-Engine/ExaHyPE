@@ -39,9 +39,10 @@ namespace {
 
   tarch::logging::Log _log( "tarch::multicore" );
 
-  const std::string PendingTasksStatisticsIdentifier( "tarch::multicore::pending-tasks" );
+  const std::string BSPConcurrencyLevelStatisticsIdentifier( "tarch::multicore::bsp-concurrency-level" );
+  const std::string GlobalPendingTasksStatisticsIdentifier( "tarch::multicore::global-pending-tasks" );
+  const std::string ThreadLocalPendingTasksStatisticsIdentifier( "tarch::multicore::thread-local-pending-tasks" );
   const std::string FuseTasksStatisticsIdentifier( "tarch::multicore::fuse-tasks");
-  const std::string BSPTasksStatisticsIdentifier( "tarch::multicore::bsp-tasks");
 
   /**
    * This routine processes one pending tasks.
@@ -175,7 +176,15 @@ int tarch::multicore::internal::mapPendingTasksOntoNativeTasks(int maxTasks) {
 }
 
 
+/**
+ * ## Statistics
+ *
+ * We do log the number of thread-local tasks, but also found out that these are
+ * often tiny. So if you sample it, it might not come through.
+ */
 bool tarch::multicore::internal::processThreadLocalTask(int threadNumber) {
+  ::tarch::logging::Statistics::getInstance().log( ThreadLocalPendingTasksStatisticsIdentifier, localNonblockingTasks[threadNumber].size() );
+
   tarch::multicore::Task* myTask = localNonblockingTasks[threadNumber].front();
   localNonblockingTasks[threadNumber].pop_front();
 
@@ -209,6 +218,8 @@ bool tarch::multicore::internal::processThreadLocalTask(int threadNumber) {
 bool tarch::multicore::internal::fusePendingTasks(const tarch::multicore::orchestration::Strategy::FuseInstruction&  fuseInstruction) {
   logDebug( "fusePendingTasks(int)", "process " << globalNonblockingTasks.size() << " tasks subject to " << fuseInstruction.toString() );
 
+  ::tarch::logging::Statistics::getInstance().log( GlobalPendingTasksStatisticsIdentifier, tarch::multicore::getNumberOfPendingTasks(-1) );
+
   tarch::multicore::Task* myTask = nullptr;
   std::list< tarch::multicore::Task* > tasksOfSameType;
 
@@ -238,7 +249,7 @@ bool tarch::multicore::internal::fusePendingTasks(const tarch::multicore::orches
     }
     lock.free();
 
-    ::tarch::logging::Statistics::getInstance().log( FuseTasksStatisticsIdentifier, tasksOfSameType.size() );
+    ::tarch::logging::Statistics::getInstance().log( FuseTasksStatisticsIdentifier, tasksOfSameType.size(), true );
 
     native::processFusedTask(myTask, tasksOfSameType, fuseInstruction.device);
   }
@@ -394,7 +405,7 @@ bool tarch::multicore::TaskWithoutCopyOfFunctor::run() {
 bool tarch::multicore::processPendingTasks(int maxTasks, bool fifo) {
   assertion(maxTasks>=0);
 
-  ::tarch::logging::Statistics::getInstance().log( PendingTasksStatisticsIdentifier, tarch::multicore::getNumberOfPendingTasks(-1) );
+  ::tarch::logging::Statistics::getInstance().log( GlobalPendingTasksStatisticsIdentifier, tarch::multicore::getNumberOfPendingTasks(-1) );
 
   bool  result        = false;
   while (maxTasks>0) {
@@ -457,8 +468,6 @@ void tarch::multicore::spawnTask(Task*  task) {
       internal::fusePendingTasks(fusionCommand);
     }
   }
-
-  ::tarch::logging::Statistics::getInstance().log( PendingTasksStatisticsIdentifier, tarch::multicore::getNumberOfPendingTasks(-1) );
 }
 
 
@@ -531,6 +540,12 @@ void tarch::multicore::spawnTask(Task*  task) {
 *
 * @image html layered-openmp-steps.png
 *
+*
+* ## Statistics
+*
+* It is important to know how many BSP sections are active at a point. So I disable
+* any sampling here.
+*
 * @see  processPendingTasks(int)
 */
 void tarch::multicore::spawnAndWait(
@@ -539,6 +554,8 @@ void tarch::multicore::spawnAndWait(
   static tarch::logging::Log _log( "tarch::multicore" );
 
   if (not tasks.empty()) {
+    ::tarch::logging::Statistics::getInstance().inc( BSPConcurrencyLevelStatisticsIdentifier, static_cast<int>(tasks.size()), true );
+
     orchestrationStrategy->startBSPSection();
     native::spawnAndWait(tasks,orchestrationStrategy);
     orchestrationStrategy->endBSPSection();
@@ -558,6 +575,7 @@ void tarch::multicore::spawnAndWait(
       internal::mapPendingTasksOntoNativeTasks(numberOfTasksToProcessNow);
     }
 
+    ::tarch::logging::Statistics::getInstance().inc( BSPConcurrencyLevelStatisticsIdentifier, -static_cast<int>(tasks.size()), true );
   }
 }
 

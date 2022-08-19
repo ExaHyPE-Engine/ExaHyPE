@@ -6,6 +6,8 @@ print("""
 
 ExaHyPE 2 - Euler Finite Volume Rusanov Kernel Benchmarks
 
+@author 2022 Tobias Weinzierl, Mario Wille
+
 """)
 
 parser = argparse.ArgumentParser(description='ExaHyPE 2 - Euler FV Rusanov Kernel Benchmarking Script')

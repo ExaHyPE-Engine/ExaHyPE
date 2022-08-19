@@ -216,7 +216,12 @@ void exahype2::aderdg::corrector_addNcpContributions_body_AoS(
 #pragma omp declare target
 #endif
 */
+
+#if defined(GPUOffloadingCPP)
+void exahype2::aderdg::corrector_addRiemannContributions_body_AoS(
+#else
 GPUCallableMethod void exahype2::aderdg::corrector_addRiemannContributions_body_AoS(
+#endif
   double * __restrict__             UOut,
   const double * const __restrict__ riemannResultIn,
   const double * const __restrict__ weights,

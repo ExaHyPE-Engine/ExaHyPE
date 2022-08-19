@@ -4,6 +4,19 @@
 #include "tarch/la/la.h"
 
 
+double  exahype2::dg::getQuadratureWeight(
+  const tarch::la::Vector<3,double>&  cellSize,
+  const tarch::la::Vector<3,int>&     index,
+  const double* __restrict__          quadratureWeights
+) {
+  double result = 1.0;
+  for (int d=0; d<Dimensions; d++) {
+    result *= cellSize(d) * quadratureWeights[d];
+  }
+  return result;
+}
+
+
 tarch::la::Vector<2,double>  exahype2::dg::getQuadraturePoint(
   const tarch::la::Vector<2,double>&  cellCentre,
   const tarch::la::Vector<2,double>&  cellSize,

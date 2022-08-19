@@ -1,4 +1,5 @@
-#include "Poisson.h"
+#include "../selfgravitation-with-Poisson/Poisson.h"
+
 #include "exahype2/RefinementControl.h"
 #include "tarch/multicore/Lock.h"
 
