@@ -419,10 +419,6 @@ int main(int argc, char** argv) {{
   const int ExitCodeInvalidArguments = 2;
   const int ExitCodeInvalidBuild     = 3;
 
-#ifdef UseFEExcept
-  feenableexcept(FE_DIVBYZERO | FE_INVALID | FE_OVERFLOW);
-#endif
-
   peano4::initParallelEnvironment(&argc,&argv);
   exahype2::initNonCritialAssertionEnvironment();
   tarch::multicore::initSmartMPI();
