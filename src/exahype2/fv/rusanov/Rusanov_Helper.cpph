@@ -1,3 +1,5 @@
+#ifndef _EXAHYPE2_FV_RUSANOV_RUSANOV_HELPER_CPPH_
+#define _EXAHYPE2_FV_RUSANOV_RUSANOV_HELPER_CPPH_
 
 namespace {
   /**
@@ -36,3 +38,5 @@ namespace {
   #pragma omp end declare target
   #endif
 }
+
+#endif
