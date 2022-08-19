@@ -100,8 +100,7 @@ work directly against the libraries built in the source directory.
 ```shell
 export PYTHONPATH=$PEANO_DIR/python
 cd applications/exahype2/euler
-python3 example-scripts/finitevolumes.py -maxh 0.05 -gpu -t global-fixed-enclave -et 0.01
-./peano4
+python3 example-scripts/finitevolumes.py -maxh 0.05
 ```
 
 ### Cleanup

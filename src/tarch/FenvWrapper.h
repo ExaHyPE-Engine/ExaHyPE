@@ -8,6 +8,7 @@
 // clang-format off
 
 #ifndef HAVE_FEENABLEEXCEPT
+// TODO: Should discriminate between compilers. NVC++ doesn't support the FENV environment yet.
 #if defined(__APPLE__) && defined(__MACH__)
 #if defined __i386__ || defined __x86_64__
 

@@ -56,7 +56,7 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanov_batched_heap_static_calls(
 
     #pragma omp target enter data map(to:currentQIn[0:QInHostEnumerator.size()] ) device(targetDevice)
     #pragma omp target enter data map(alloc:currentQOut[0:QOutHostEnumerator.size()] ) device(targetDevice)
-    
+
     mappedPointersToQIn[patchIndex]  = (double*) omp_get_mapped_ptr( currentQIn,  targetDevice );
     mappedPointersToQOut[patchIndex] = (double*) omp_get_mapped_ptr( currentQOut, targetDevice );
   }

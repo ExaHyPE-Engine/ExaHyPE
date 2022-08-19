@@ -6,7 +6,7 @@
 
 #include "EulerKernels.h"
 
-namespace benchmarks { namespace exahype2 { namespace euler { 
+namespace benchmarks { namespace exahype2 { namespace euler {
   class EulerFVRusanov;
 }}}
 

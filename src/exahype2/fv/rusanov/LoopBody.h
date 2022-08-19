@@ -529,8 +529,9 @@ namespace exahype2 {
         #pragma omp end declare target
         #endif
 
-
-        #if defined(SharedOMP) and (!defined(__INTEL_LLVM_COMPILER) or !defined(GPUOffloadingOMP))
+        // TODO: Do we need this? I commented it out for now so that we don't get in conflict with the function above.
+        // -> Either delete this function or we should explicit give QInEnumeratorType as a template argument in the loop body calls.
+        /*#if defined(SharedOMP) and (!defined(__INTEL_LLVM_COMPILER) or !defined(GPUOffloadingOMP))
         #pragma omp declare simd
         #endif
         #if defined(GPUOffloadingOMP)
@@ -558,8 +559,7 @@ namespace exahype2 {
         ) InlineMethod;
         #if defined(GPUOffloadingOMP)
         #pragma omp end declare target
-        #endif
-
+        #endif*/
 
         #if defined(SharedOMP) and (!defined(__INTEL_LLVM_COMPILER) or !defined(GPUOffloadingOMP))
         #pragma omp declare simd
