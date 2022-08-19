@@ -13,7 +13,7 @@
 
 #include "Constants.h"
 
-#include "tarch/FenvWrapper.h
+#include "tarch/FenvWrapper.h"
 #include "tarch/logging/Log.h"
 #include "tarch/logging/Statistics.h"
 #include "tarch/logging/LogFilter.h"
