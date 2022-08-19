@@ -81,6 +81,7 @@ if "fv" in args.solver:
 if "rk" in args.solver and "dg" in args.solver:
   space_order = int(args.solver[2])
   time_order  = int(args.solver[6])
+  #thesolver = exahype2.solvers.rkdg.rusanov.GlobalAdaptiveTimeStepWithEnclaveTasking(name                 = solver_name + "DG",
   thesolver = exahype2.solvers.rkdg.rusanov.GlobalAdaptiveTimeStep(name                 = solver_name + "DG",
                                                                    rk_order             = time_order,
                                                                    polynomials          = exahype2.solvers.GaussLegendreBasis(space_order),
@@ -92,7 +93,7 @@ if "rk" in args.solver and "dg" in args.solver:
                                                                    flux                 = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
                                                                    eigenvalues          = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
                                                                    source_term          = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
-                                                                   pde_terms_without_state = args.gpu
+                                                                   #pde_terms_without_state = args.gpu
                                                                    )
   executable_name = executable_name + "RK" + str(time_order) + "DG" + str(space_order)
 
