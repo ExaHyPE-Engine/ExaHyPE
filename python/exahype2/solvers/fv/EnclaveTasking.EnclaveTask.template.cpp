@@ -53,7 +53,7 @@ double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::applyKernelToCell(
 ) {
   ::exahype2::CellData  patchData( reconstructedPatch, marker.x(), marker.h(), t, dt, targetPatch );
 
-  ::exahype2::fv::rusanov::{{COMPUTE_KERNEL_CALL}}
+  ::exahype2::fv::{{KERNEL_NAMESPACE}}::{{COMPUTE_KERNEL_CALL}}
 
   ::exahype2::fv::validatePatch(
     targetPatch,
@@ -362,14 +362,14 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse( const std::list<Task*>& ot
   #if defined(GPUOffloadingOMP)
   if (targetDevice>=0) {
     foundOffloadingBranch = true;
-    ::exahype2::fv::rusanov::omp::{{FUSED_COMPUTE_KERNEL_CALL_GPU}}
+    ::exahype2::fv::{{KERNEL_NAMESPACE}}::omp::{{FUSED_COMPUTE_KERNEL_CALL_GPU}}
   }
   #endif
 
   #if defined(GPUOffloadingHIP)
   if (targetDevice>=0) {
     foundOffloadingBranch = true;
-    ::exahype2::fv::rusanov::hip::{{FUSED_COMPUTE_KERNEL_CALL_GPU}}
+    ::exahype2::fv::{{KERNEL_NAMESPACE}}::hip::{{FUSED_COMPUTE_KERNEL_CALL_GPU}}
   }
   #endif
 
@@ -377,12 +377,12 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse( const std::list<Task*>& ot
   if (targetDevice>=0 or targetDevice==Host) {
     foundOffloadingBranch = true;
 
-    ::exahype2::fv::rusanov::sycl::{{FUSED_COMPUTE_KERNEL_CALL_GPU}}
+    ::exahype2::fv::{{KERNEL_NAMESPACE}}::sycl::{{FUSED_COMPUTE_KERNEL_CALL_GPU}}
   }
   #endif
 
   if (not foundOffloadingBranch) {
-    ::exahype2::fv::rusanov::{{FUSED_COMPUTE_KERNEL_CALL_CPU}}
+    ::exahype2::fv::{{KERNEL_NAMESPACE}}::{{FUSED_COMPUTE_KERNEL_CALL_CPU}}
   }
 
   otterParallelEnd();

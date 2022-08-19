@@ -54,6 +54,10 @@ class LinearCombinationOfEstimates(AbstractRungeKuttaDGActionSet):
           fineGridCell{{UNKNOWN_IDENTIFIER}}.value[ enumeratorWithAuxiliaryVariables(0,dof,unknown) ];      
       }
     }
+      
+    {% if PREDICATE_NO==0 %}
+    {{PREPROCESS_UPDATED_CELL}}
+    {% endif %}
   }
   {% endfor %} 
 """

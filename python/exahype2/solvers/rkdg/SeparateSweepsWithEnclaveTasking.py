@@ -11,7 +11,83 @@ import jinja2
 
 import os
 
+from exahype2.solvers.fv.actionsets.AbstractFVActionSet             import AbstractFVActionSet
+
 from peano4.toolbox.blockstructured.ReconstructPatchAndApplyFunctor import ReconstructPatchAndApplyFunctor
+
+
+class MergeEnclaveTaskOutcome(AbstractFVActionSet):
+  Template = """
+  if ( 
+    not marker.hasBeenRefined()
+    and 
+    {{GUARD}}
+    and
+    repositories::{{SOLVER_INSTANCE}}.getSolverState()=={{SOLVER_NAME}}::SolverState::Secondary 
+  ) {
+    const int taskNumber = fineGridCell{{LABEL_NAME}}.getSemaphoreNumber();
+    if ( marker.hasBeenEnclaveCell() and taskNumber>=0 ) {
+      double maxEigenvalue;
+      ::exahype2::EnclaveBookkeeping::getInstance().waitForTaskToTerminateAndCopyResultOver( taskNumber, fineGridCell{{UNKNOWN_IDENTIFIER}}.value, maxEigenvalue );
+
+      ::exahype2::fv::validatePatch(
+        fineGridCell{{UNKNOWN_IDENTIFIER}}.value,
+        {{NUMBER_OF_UNKNOWNS}},
+        {{NUMBER_OF_AUXILIARY_VARIABLES}},
+        {{NUMBER_OF_VOLUMES_PER_AXIS}},
+        0,
+        std::string(__FILE__) + ": " + std::to_string(__LINE__) + "; marker=" + marker.toString()
+      );
+      
+      {{COMPUTE_NEW_TIME_STEP_SIZE}}
+
+      fineGridCell{{LABEL_NAME}}.setSemaphoreNumber( ::exahype2::EnclaveBookkeeping::NoEnclaveTaskNumber );
+      fineGridCell{{SOLVER_NAME}}CellLabel.setHasUpdated(true);
+      fineGridCell{{SOLVER_NAME}}CellLabel.setTimeStepSize(newTimeStepSize);
+    }
+    
+    if ( fineGridCell{{SOLVER_NAME}}CellLabel.getHasUpdated() ) {
+      double*  targetPatch = fineGridCell{{UNKNOWN_IDENTIFIER}}.value;
+
+// noe, kommt spaeter automatisch      
+      {{POSTPROCESS_UPDATED_CELL}}
+
+      repositories::{{SOLVER_INSTANCE}}.update(
+        fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStepSize(),
+        fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStamp(),
+        marker.h()(0)
+      );
+    }
+    else {
+      repositories::{{SOLVER_INSTANCE}}.update(
+        0.0,
+        fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStamp(),
+        marker.h()(0)
+      );
+    }
+  }
+"""
+  def __init__(self,solver):
+    AbstractFVActionSet.__init__(self,solver)
+    self.label_name = exahype2.grid.UpdateCellLabel.get_attribute_name(solver._name)
+    self.guard      = "true"
+
+
+  def get_body_of_operation(self,operation_name):
+    result = ""
+    if operation_name==peano4.solversteps.ActionSet.OPERATION_TOUCH_CELL_FIRST_TIME:
+      d = {}
+      self._solver._init_dictionary_with_default_parameters(d)
+      self._solver.add_entries_to_text_replacement_dictionary(d)
+      d[ "LABEL_NAME" ] = self.label_name      
+      d[ "GUARD" ]      = self.guard
+      result = jinja2.Template(self.Template).render(**d)
+      pass 
+    return result
+
+
+  def get_action_set_name(self):
+    return __name__.replace(".py", "").replace(".", "_")
 
 
 class SeparateSweepsWithEnclaveTasking( SeparateSweeps ):
@@ -54,6 +130,9 @@ class SeparateSweepsWithEnclaveTasking( SeparateSweeps ):
     
     self._solver_template_file_class_name     = "SeparateSweeps"
     self._pde_terms_without_state             = pde_terms_without_state
+
+    self._fused_compute_kernel_call_cpu       = "#error Not yet defined. Set self._fused_Riemann_solver_call in your Python solver class."
+    self._fused_compute_kernel_call_gpu       = "#error Not yet defined. Set self._fused_Riemann_solver_call in your Python solver class."
    
     self.create_action_sets()
     self.create_data_structures()

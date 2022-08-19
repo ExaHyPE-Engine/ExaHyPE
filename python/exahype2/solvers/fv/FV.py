@@ -155,7 +155,17 @@ class FV(object):
   """
   
       
-  def __init__(self, name, patch_size, overlap, unknowns, auxiliary_variables, min_volume_h, max_volume_h, plot_grid_properties, kernel_namespace="rusanov"):
+  def __init__(
+    self, 
+    name, 
+    patch_size, 
+    overlap, 
+    unknowns, 
+    auxiliary_variables, 
+    min_volume_h, 
+    max_volume_h, 
+    plot_grid_properties, 
+    kernel_namespace):
     """
   name: string
      A unique name for the solver. This one will be used for all generated 

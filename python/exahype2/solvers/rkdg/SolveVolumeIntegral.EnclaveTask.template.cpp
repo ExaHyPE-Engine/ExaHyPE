@@ -44,33 +44,85 @@ int {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getEnclaveTaskTypeId() {
 }
 
 
-double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::applyKernelToCell(
+void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::applyKernelToCell(
   const ::peano4::datamanagement::CellMarker& marker,
-  double                                      t,
-  double                                      dt,
-  double* __restrict__                        reconstructedPatch,
-  double* __restrict__                        targetPatch
+  double                                      timeStamp,
+  double                                      timeStepSize,
+  double* __restrict__                        QIn,
+  double* __restrict__                        QOut
 ) {
-  ::exahype2::CellData  patchData( reconstructedPatch, marker.x(), marker.h(), t, dt, targetPatch );
+  ::exahype2::CellData cellData(
+    QIn,
+    marker.x(),
+    marker.h(),
+    timeStamp,
+    timeStepSize,
+    QOut
+  );
 
-  ::exahype2::fv::rusanov::{{COMPUTE_KERNEL_CALL}}
-
-  ::exahype2::fv::validatePatch(
-    targetPatch,
+  ::exahype2::dg::cellIntegral_patchwise_GaussLegendre_functors(
+    cellData,
+    {{ORDER}},
     {{NUMBER_OF_UNKNOWNS}},
     {{NUMBER_OF_AUXILIARY_VARIABLES}},
-    {{NUMBER_OF_VOLUMES_PER_AXIS}},
-    0, // halo
-    std::string(__FILE__) + "(" + std::to_string(__LINE__) + "): " + marker.toString()
-  ); // outcome has to be valid
-
-  tarch::freeMemory(reconstructedPatch,tarch::MemoryLocation::Heap );
-
-  {% if COMPUTE_MAX_EIGENVALUE %}
-  return patchData.maxEigenvalue[0];
-  {% else %}
-  return 0.0;
-  {% endif %}
+    [&](
+      const double * __restrict__                  Q,
+      const tarch::la::Vector<Dimensions,double>&  x,
+      double                                       t,
+      double                                       dt,
+      int                                          normal,
+      double * __restrict__                        F
+    )->void {
+      {% if FLUX_IMPLEMENTATION!="<none>" %}
+      repositories::{{SOLVER_INSTANCE}}.flux(Q,x,t,dt,normal,F);
+      {% endif %}
+    }, //flux
+    [&](
+        const double * __restrict__                  Q,
+        const double * __restrict__                  dQdx,
+        const tarch::la::Vector<Dimensions,double>&  x,
+        double                                       t,
+        double                                       dt,
+        int                                          normal,
+        double * __restrict__                        F
+      ) -> void {
+        {% if NCP_IMPLEMENTATION!="<none>" %}
+        repositories::{{SOLVER_INSTANCE}}.nonconservativeProduct(Q, dQdx, x, t, dt, normal, F);
+        {% endif %}
+      }, //ncp
+    [&](
+      const double * __restrict__                  Q,
+      const tarch::la::Vector<Dimensions,double>&  x,
+      double                                       t,
+      double                                       dt,
+      double * __restrict__                        S
+    ) -> void {
+      {% if SOURCE_TERM_IMPLEMENTATION!="<none>" %}
+      repositories::{{SOLVER_INSTANCE}}.sourceTerm(Q,x,t,dt,S);
+      {% endif %}
+    }, //source
+    [&](
+      const double * __restrict__                  Q,
+      const tarch::la::Vector<Dimensions,double>&  cellCentre,
+      const tarch::la::Vector<Dimensions,double>&  cellH,
+      double                                       t,
+      double                                       dt
+    ) -> std::vector<::exahype2::dg::PointSource> {
+      {% if POINT_SOURCES_IMPLEMENTATION!="<none>" %}
+      return repositories::{{SOLVER_INSTANCE}}.pointSources(Q,cellCentre,cellH,t,dt);
+      {% else %}
+      return std::vector<::exahype2::dg::PointSource>();
+      {% endif %}
+    }, //source
+    repositories::{{SOLVER_INSTANCE}}.QuadraturePoints1d,
+    repositories::{{SOLVER_INSTANCE}}.MassMatrixDiagonal1d,
+    repositories::{{SOLVER_INSTANCE}}.StiffnessOperator1d,
+    repositories::{{SOLVER_INSTANCE}}.DerivativeOperator1d,
+    {{ "true" if FLUX_IMPLEMENTATION!="<none>" else "false" }}, //useFlux
+    {{ "true" if NCP_IMPLEMENTATION!="<none>" else "false" }}, //useNCP
+    {{ "true" if SOURCE_TERM_IMPLEMENTATION!="<none>" else "false" }}, //useSource
+    {{ "true" if POINT_SOURCES_IMPLEMENTATION!="<none>" else "false" }} //useSource
+  );
 }
 
 
@@ -80,23 +132,23 @@ double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::applyKernelToCell(
   const ::peano4::datamanagement::CellMarker& marker,
   double                                      t,
   double                                      dt,
-  double* __restrict__                        reconstructedPatch
+  double* __restrict__                        copyOfLinearCombinationOfPreviousShots
 ):
   ::exahype2::EnclaveTask(
     _enclaveTaskTypeId,
     marker,
     t,
     dt,
-    reconstructedPatch,
+    copyOfLinearCombinationOfPreviousShots,
     #if Dimensions==2
-    {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_PLUS_HALO_2D}},
-    {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_2D}},
+    {{NUMBER_OF_DOFS_PER_CELL_2D}}*({{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}),
+    {{NUMBER_OF_DOFS_PER_CELL_2D}}* {{NUMBER_OF_UNKNOWNS}},
     #else
-    {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_PLUS_HALO_3D}},
-    {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_3D}},
+    {{NUMBER_OF_DOFS_PER_CELL_3D}}*({{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}),
+    {{NUMBER_OF_DOFS_PER_CELL_3D}}* {{NUMBER_OF_UNKNOWNS}},
     #endif
     [&]() -> void {
-      _maxEigenvalue = applyKernelToCell(
+      applyKernelToCell(
         _marker,
         _t,
         _dt,

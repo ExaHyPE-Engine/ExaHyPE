@@ -87,22 +87,22 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::EnclaveTask
     static int getEnclaveTaskTypeId();
 
     /**
-     * @return Max eigenvalue over cell
+     *
      */
-    static double applyKernelToCell(
+    static void applyKernelToCell(
       const ::peano4::datamanagement::CellMarker& marker, 
-      double                                      t,
-      double                                      dt,
-      double* __restrict__                        reconstructedPatch, 
-      double* __restrict__                        targetPatch
+      double                                      timeStamp,
+      double                                      timeStepSize,
+      double* __restrict__                        QIn,
+      double* __restrict__                        QOut
     );
     
     
     {{CLASSNAME}}(
       const ::peano4::datamanagement::CellMarker& marker, 
-      double                                      t,
-      double                                      dt,
-      double* __restrict__                        reconstructedPatch
+      double                                      timeStamp,
+      double                                      timeStepSize,
+      double* __restrict__                        copyOfLinearCombinationOfPreviousShots
     );
 
     bool isSmartMPITask() const override;
