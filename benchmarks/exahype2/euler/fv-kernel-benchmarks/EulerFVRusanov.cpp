@@ -1,11 +1,9 @@
-#include "EulerFV.h"
+#include "EulerFVRusanov.h"
 #include "exahype2/RefinementControl.h"
 
+tarch::logging::Log benchmarks::exahype2::euler::EulerFVRusanov::_log("benchmarks::exahype2::euler::EulerFVRusanov");
 
-tarch::logging::Log   examples::exahype2::euler::EulerFV::_log( "examples::exahype2::euler::EulerFV" );
-
-
-void examples::exahype2::euler::EulerFV::initialCondition(
+void benchmarks::exahype2::euler::EulerFVRusanov::initialCondition(
   double * __restrict__                        Q,
   const tarch::la::Vector<Dimensions,double>&  volumeCentre,
   const tarch::la::Vector<Dimensions,double>&  volumeH,
@@ -13,9 +11,6 @@ void examples::exahype2::euler::EulerFV::initialCondition(
 ) {
   logTraceInWith3Arguments( "initialCondition(...)", volumeCentre, volumeH, gridIsConstructred );
 
-  // @todo Implement your stuff here, but ensure all entries are
-  //   initialised incl all auxiliary variables. The snippet below
-  //   sets everything to zero
   for (int i=0; i<NumberOfUnknowns+NumberOfAuxiliaryVariables; i++) {
     Q[i] = 0.0;
   }
@@ -23,11 +18,7 @@ void examples::exahype2::euler::EulerFV::initialCondition(
   logTraceOut( "initialCondition(...)" );
 }
 
-
-
-
-
-void examples::exahype2::euler::EulerFV::boundaryConditions(
+void benchmarks::exahype2::euler::EulerFVRusanov::boundaryConditions(
   const double * __restrict__                  Qinside, // Qinside[5+0]
   double * __restrict__                        Qoutside, // Qoutside[5+0]
   const tarch::la::Vector<Dimensions,double>&  faceCentre,
@@ -47,9 +38,7 @@ void examples::exahype2::euler::EulerFV::boundaryConditions(
   logTraceOut( "boundaryConditions(...)" );
 }
 
-
-
-double ::examples::exahype2::euler::EulerFV::maxEigenvalue(
+double benchmarks::exahype2::euler::EulerFVRusanov::maxEigenvalue(
   const double * __restrict__ Q, // Q[5+0],
   const tarch::la::Vector<Dimensions,double>&  faceCentre,
   const tarch::la::Vector<Dimensions,double>&  volumeH,
@@ -69,10 +58,7 @@ double ::examples::exahype2::euler::EulerFV::maxEigenvalue(
   return result;
 }
 
-
-
-
-void ::examples::exahype2::euler::EulerFV::flux(
+void benchmarks::exahype2::euler::EulerFVRusanov::flux(
   const double * __restrict__ Q, // Q[5+0],
   const tarch::la::Vector<Dimensions,double>&  faceCentre,
   const tarch::la::Vector<Dimensions,double>&  volumeH,

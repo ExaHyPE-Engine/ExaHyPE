@@ -1,6 +1,4 @@
-According to good scientific practice, publications on results achieved in 
-whole or in part due to Peano should cite at least one paper presenting the 
-Peano software. 
+According to good scientific practice, publications on results achieved in whole or in part due to Peano should cite at least one paper presenting the Peano software.
 
 The owner wishes to make the software available to all users to use, reproduce,
 modify, distribute and redistribute also for commercial purposes under the
@@ -16,14 +14,12 @@ modules, and to copy and distribute the resulting executable under terms of
 your choice, provided that you also meet, for each linked independent module, 
 the terms and conditions of this license of that module. 
 
-
-Copyright (c) 2009-2012, Technische Universitaet Muenchen 
-Copyright (c) 2013-2022, Durham University 
+Copyright (c) 2009-2022, Technische Universitaet Muenchen
+Copyright (c) 2013-2022, Durham University
 
 All rights reserved.
 
-Redistribution and use in source and binary forms, with or without 
-modification, are permitted provided that the following conditions are met:
+Redistribution and use in source and binary forms, with or without modification, are permitted provided that the following conditions are met:
 
  Redistributions of source code must retain the above copyright notice, this
     list of conditions and the following disclaimer.
@@ -48,4 +44,3 @@ LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON
 ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-

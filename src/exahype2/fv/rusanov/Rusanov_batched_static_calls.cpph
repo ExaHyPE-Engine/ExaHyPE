@@ -333,7 +333,7 @@ namespace exahype2{ namespace fv{ namespace rusanov{ namespace internal{
       for (int patchIndex=0; patchIndex<patchData.numberOfCells; patchIndex++)
       for (int x = -solversHaloSize; x < numberOfVolumesPerAxisInPatch+solversHaloSize; x++) {
         otterLoopIterationBegin();
-        internal::computeFlux_LoopBody<Solver>(
+        internal::computeFlux_LoopBody<Solver, unknowns, auxiliaryVariables>(
           patchData.QIn[patchIndex],
           QInEnumerator,
           patchData.cellCentre[patchIndex],
@@ -358,7 +358,7 @@ namespace exahype2{ namespace fv{ namespace rusanov{ namespace internal{
       for (int patchIndex=0; patchIndex<patchData.numberOfCells; patchIndex++)
       for (int x =         0; x < numberOfVolumesPerAxisInPatch;           x++) {
         otterLoopIterationBegin();
-        internal::computeFlux_LoopBody<Solver>(
+        internal::computeFlux_LoopBody<Solver, unknowns, auxiliaryVariables>(
           patchData.QIn[patchIndex],
           QInEnumerator,
           patchData.cellCentre[patchIndex],
@@ -410,7 +410,7 @@ namespace exahype2{ namespace fv{ namespace rusanov{ namespace internal{
       for (int patchIndex=0; patchIndex<patchData.numberOfCells; patchIndex++)
       for (int x = -solversHaloSize; x < numberOfVolumesPerAxisInPatch+solversHaloSize; x++) {
         otterLoopIterationBegin();
-        internal::computeFlux_LoopBody<Solver>(
+        internal::computeFlux_LoopBody<Solver, unknowns, auxiliaryVariables>(
           patchData.QIn[patchIndex],
           QInEnumerator,
           patchData.cellCentre[patchIndex],
@@ -436,7 +436,7 @@ namespace exahype2{ namespace fv{ namespace rusanov{ namespace internal{
       for (int patchIndex=0; patchIndex<patchData.numberOfCells; patchIndex++)
       for (int x =         0; x < numberOfVolumesPerAxisInPatch;           x++) {
         otterLoopIterationBegin();
-        internal::computeFlux_LoopBody<Solver>(
+        internal::computeFlux_LoopBody<Solver, unknowns, auxiliaryVariables>(
           patchData.QIn[patchIndex],
           QInEnumerator,
           patchData.cellCentre[patchIndex],
@@ -462,7 +462,7 @@ namespace exahype2{ namespace fv{ namespace rusanov{ namespace internal{
       for (int patchIndex=0; patchIndex<patchData.numberOfCells; patchIndex++)
       for (int x =         0; x < numberOfVolumesPerAxisInPatch;           x++) {
         otterLoopIterationBegin();
-        internal::computeFlux_LoopBody<Solver>(
+        internal::computeFlux_LoopBody<Solver, unknowns, auxiliaryVariables>(
           patchData.QIn[patchIndex],
           QInEnumerator,
           patchData.cellCentre[patchIndex],

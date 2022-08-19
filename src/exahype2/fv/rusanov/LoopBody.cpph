@@ -21,7 +21,6 @@ void exahype2::fv::rusanov::internal::copySolution_LoopBody(
 #pragma omp end declare target
 #endif
 
-
 template <class QInEnumeratorType, class QOutEnumeratorType>
 void exahype2::fv::rusanov::internal::copySolutionAndAddSourceTerm_LoopBody(
   const double* __restrict__                   QIn,
@@ -72,7 +71,6 @@ void exahype2::fv::rusanov::internal::copySolutionAndAddSourceTerm_LoopBody(
   }
 }
 
-
 template <>
 void exahype2::fv::rusanov::internal::copySolutionAndAddSourceTerm_LoopBody(
   const double* __restrict__                QIn,
@@ -115,7 +113,6 @@ void exahype2::fv::rusanov::internal::copySolutionAndAddSourceTerm_LoopBody(
     );
   }
 }
-
 
 #if defined(GPUOffloadingOMP)
 #pragma omp declare target
@@ -280,7 +277,6 @@ void exahype2::fv::rusanov::internal::computeMaxEigenvalue_LoopBody(
       );
 }
 
-
 template <class QMaxEigenvalueEnumeratorType>
 void exahype2::fv::rusanov::internal::computeMaxEigenvalue_LoopBody(
     const double* __restrict__                   QIn,
@@ -306,7 +302,6 @@ void exahype2::fv::rusanov::internal::computeMaxEigenvalue_LoopBody(
         normal
       );
 }
-
 
 template <typename Solver, class QInEnumeratorType, class QMaxEigenvalueEnumeratorType>
 void exahype2::fv::rusanov::internal::computeMaxEigenvalue_LoopBody(
@@ -345,7 +340,6 @@ void exahype2::fv::rusanov::internal::computeMaxEigenvalue_LoopBody(
       );
 }
 
-
 template <typename Solver, class QMaxEigenvalueEnumeratorType>
 void exahype2::fv::rusanov::internal::computeMaxEigenvalue_LoopBody(
   const double* __restrict__                                         QIn,
@@ -371,7 +365,6 @@ void exahype2::fv::rusanov::internal::computeMaxEigenvalue_LoopBody(
         ::exahype2::Solver::Offloadable::Yes
       );
 }
-
 
 template <class QOutEnumeratorType>
 double exahype2::fv::rusanov::internal::reduceMaxEigenvalue_LoopBody(
@@ -414,7 +407,6 @@ double exahype2::fv::rusanov::internal::reduceMaxEigenvalue_LoopBody(
   return result;
 }
 
-
 template <>
 double exahype2::fv::rusanov::internal::reduceMaxEigenvalue_LoopBody(
   const double* __restrict__                       QOut,
@@ -444,7 +436,6 @@ double exahype2::fv::rusanov::internal::reduceMaxEigenvalue_LoopBody(
     }
     return result;
 }
-
 
 template <typename Solver, class QOutEnumeratorType>
 double exahype2::fv::rusanov::internal::reduceMaxEigenvalue_LoopBody(
@@ -484,7 +475,6 @@ double exahype2::fv::rusanov::internal::reduceMaxEigenvalue_LoopBody(
   return result;
 }
 
-
 template <typename Solver>
 double exahype2::fv::rusanov::internal::reduceMaxEigenvalue_LoopBody(
   const double* __restrict__                   QOut,
@@ -516,7 +506,6 @@ double exahype2::fv::rusanov::internal::reduceMaxEigenvalue_LoopBody(
   return result;
 }
 
-
 template <class QInEnumeratorType, class QFluxEnumeratorType>
 void exahype2::fv::rusanov::internal::computeFlux_LoopBody(
   const double* __restrict__                   QIn,
@@ -532,7 +521,6 @@ void exahype2::fv::rusanov::internal::computeFlux_LoopBody(
   double* __restrict__                         QFlux,
   QFluxEnumeratorType                          QFluxEnumerator
 ) {
-  
   double QInGathered[QInEnumerator._unknowns+QInEnumerator._numberOfAuxiliaryVariables];
   double QFluxGathered[QInEnumerator._unknowns];
 
@@ -556,9 +544,6 @@ void exahype2::fv::rusanov::internal::computeFlux_LoopBody(
   }
 }
 
-
-
-/*
 template <class QFluxEnumeratorType>
 void exahype2::fv::rusanov::internal::computeFlux_LoopBody(
     const double* __restrict__                QIn,
@@ -592,8 +577,6 @@ void exahype2::fv::rusanov::internal::computeFlux_LoopBody(
       QFlux[ QFluxEnumerator(patchIndex,volumeIndex,unknown) ] = QFluxGathered[unknown];
     }
 }
-*/
-
 
 void exahype2::fv::rusanov::internal::computeFlux_LoopBody(
     const double* __restrict__                                  QIn,
@@ -620,28 +603,32 @@ void exahype2::fv::rusanov::internal::computeFlux_LoopBody(
   );
 }
 
-
-template <typename Solver, class QInEnumeratorType, class QFluxEnumeratorType>
+template <
+  typename  Solver,
+  int       numberOfUnknowns,
+  int       numberOfAuxiliaryVariables,
+  class     QInEnumeratorType,
+  class     QFluxEnumeratorType
+>
 void exahype2::fv::rusanov::internal::computeFlux_LoopBody(
-  const double* __restrict__                QIn,
-  const QInEnumeratorType &                  QInEnumerator,
-  const tarch::la::Vector<Dimensions,double>&  patchCentre,
-  const tarch::la::Vector<Dimensions,double>&  patchSize,
-  int                                          patchIndex,
-  const tarch::la::Vector<Dimensions,int>&     volumeIndex,
-  double                                       t,
-  double                              dt,
-  int                                 normal,
-  double* __restrict__                QFlux,
-  const QFluxEnumeratorType &                QFluxEnumerator,
-  int                                 pick
+  const double* __restrict__                    QIn,
+  const QInEnumeratorType &                     QInEnumerator,
+  const tarch::la::Vector<Dimensions,double>&   patchCentre,
+  const tarch::la::Vector<Dimensions,double>&   patchSize,
+  int                                           patchIndex,
+  const tarch::la::Vector<Dimensions,int>&      volumeIndex,
+  double                                        t,
+  double                                        dt,
+  int                                           normal,
+  double* __restrict__                          QFlux,
+  const QFluxEnumeratorType &                   QFluxEnumerator,
+  int                                           pick
 ) {
-  
-  double* QInGathered   = new double[QInEnumerator._unknowns+QInEnumerator._numberOfAuxiliaryVariables];
-  double* QFluxGathered = new double[QInEnumerator._unknowns];
+  double QInGathered[numberOfUnknowns+numberOfAuxiliaryVariables];
+  double QFluxGathered[numberOfUnknowns];
 
   // gather
-  for (int unknown=0; unknown<QInEnumerator._unknowns+QInEnumerator._numberOfAuxiliaryVariables; unknown++) {
+  for (int unknown=0; unknown<numberOfUnknowns+numberOfAuxiliaryVariables; unknown++) {
     QInGathered[unknown] = QIn[ QInEnumerator(patchIndex,volumeIndex,unknown) ];
   }
 
@@ -655,23 +642,18 @@ void exahype2::fv::rusanov::internal::computeFlux_LoopBody(
       QFluxGathered,
       ::exahype2::Solver::Offloadable::Yes
   );
-  
+
   // scatter
-  for (int unknown=0; unknown<QInEnumerator._unknowns; unknown++) {
+  for (int unknown=0; unknown<numberOfUnknowns; unknown++) {
     QFlux[ QFluxEnumerator(patchIndex,volumeIndex,unknown) ] = QFluxGathered[unknown];
   }
-
-  delete[] QInGathered;
-  delete[] QFluxGathered;
-
 }
 
-
 template <
-  typename Solver,
-  int   numberOfUnknowns,
-  int   numberOfAuxiliaryVariables,
-  class QFluxEnumeratorType
+  typename  Solver,
+  int       numberOfUnknowns,
+  int       numberOfAuxiliaryVariables,
+  class     QFluxEnumeratorType
 >
 void exahype2::fv::rusanov::internal::computeFlux_LoopBody(
   const double* __restrict__                QIn,
@@ -711,8 +693,7 @@ void exahype2::fv::rusanov::internal::computeFlux_LoopBody(
   }
 }
 
-
-template<typename Solver>
+template <typename Solver>
 void exahype2::fv::rusanov::internal::computeFlux_LoopBody(
   const double* __restrict__                                         QIn,
   const exahype2::enumerator::AoSLexicographicEnumerator&  QInEnumerator,
@@ -737,35 +718,34 @@ void exahype2::fv::rusanov::internal::computeFlux_LoopBody(
     ::exahype2::Solver::Offloadable::Yes
   );
 }
-
-
 template <typename QFluxEnumeratorType, typename QOutEnumeratorType>
 void exahype2::fv::rusanov::internal::updateSolutionWithFlux_LoopBody(
-    const double* __restrict__                   tempFluxX,
-    const double* __restrict__                   tempFluxY,
-    const double* __restrict__                   tempFluxZ,
-    const QFluxEnumeratorType&                   fluxEnumerator,
-    const tarch::la::Vector<Dimensions,double>&  patchCentre,
-    const tarch::la::Vector<Dimensions,double>&  patchSize,
-    int                                          patchIndex,
-    const tarch::la::Vector<Dimensions,int>&     volumeIndex,
-    int                                          unknown,
-    double                                       dt,
-    double* __restrict__                         QOut,
-    const QOutEnumeratorType&                    QOutEnumerator
+    const double* __restrict__                    tempFluxX,
+    const double* __restrict__                    tempFluxY,
+    const double* __restrict__                    tempFluxZ,
+    const QFluxEnumeratorType&                    fluxEnumerator,
+    const tarch::la::Vector<Dimensions,double>&   patchCentre,
+    const tarch::la::Vector<Dimensions,double>&   patchSize,
+    int                                           patchIndex,
+    const tarch::la::Vector<Dimensions,int>&      volumeIndex,
+    int                                           unknown,
+    double                                        dt,
+    double* __restrict__                          QOut,
+    const QOutEnumeratorType&                     QOutEnumerator
 ) {
-  auto updateAlongOneDirection = [=](const double* __restrict__ tempFlux, int normal) {
-    tarch::la::Vector<Dimensions,int> leftVolume   = volumeIndex;
-    tarch::la::Vector<Dimensions,int> rightVolume  = volumeIndex;
-    leftVolume(normal)--;
-    rightVolume(normal)++;
+  auto updateAlongOneDirection = [=](const double* __restrict__ tempFlux, const int normal) {
+    tarch::la::Vector<Dimensions,int> leftVolume = volumeIndex;
+    tarch::la::Vector<Dimensions,int> rightVolume = volumeIndex;
+    normal == 0 ? (leftVolume(0)--, rightVolume(0)++) :
+    normal == 1 ? (leftVolume(1)--, rightVolume(1)++) :
+                  (leftVolume(2)--, rightVolume(2)++);
 
-    double fluxLeft  = 0.5 * tempFlux[fluxEnumerator(patchIndex, leftVolume,unknown)]
-                     + 0.5 * tempFlux[fluxEnumerator(patchIndex, volumeIndex,unknown)];
-    double fluxRight = 0.5 * tempFlux[fluxEnumerator(patchIndex, volumeIndex,unknown)]
-                     + 0.5 * tempFlux[fluxEnumerator(patchIndex, rightVolume,unknown)];
+    const double fluxLeft  = 0.5 * tempFlux[fluxEnumerator(patchIndex, leftVolume,unknown)]
+                           + 0.5 * tempFlux[fluxEnumerator(patchIndex, volumeIndex,unknown)];
+    const double fluxRight = 0.5 * tempFlux[fluxEnumerator(patchIndex, volumeIndex,unknown)]
+                           + 0.5 * tempFlux[fluxEnumerator(patchIndex, rightVolume,unknown)];
 
-    #if !defined(GPUOffloadingOMP) and  !defined(GPUOffloadingSYCL)
+    #if !defined(GPUOffloadingOMP) and !defined(GPUOffloadingSYCL)
     assertionNumericalEquals6(
       fluxLeft - fluxRight, 0.5 * tempFlux[fluxEnumerator(patchIndex, leftVolume,unknown)]-0.5 * tempFlux[fluxEnumerator(patchIndex, rightVolume,unknown)],
       tempFlux[fluxEnumerator(patchIndex, leftVolume,unknown)],
@@ -774,18 +754,14 @@ void exahype2::fv::rusanov::internal::updateSolutionWithFlux_LoopBody(
       patchIndex, volumeIndex, unknown
     );
     #endif
-
-    //QOut[ QOutEnumerator(patchIndex, volumeIndex,unknown) ] += dt / patchSize(normal) * QOutEnumerator._numberOfDoFsPerAxisInCell *
-    //   (fluxLeft - fluxRight);
-    QOut[ QOutEnumerator(patchIndex, volumeIndex,unknown) ] += dt / patchSize(normal) * QOutEnumerator._numberOfDoFsPerAxisInCell *
-        0.5 * (tempFlux[fluxEnumerator(patchIndex, leftVolume,unknown)]-tempFlux[fluxEnumerator(patchIndex, rightVolume,unknown)]);
+    QOut[ QOutEnumerator(patchIndex, volumeIndex, unknown) ] += dt / patchSize(normal) * QOutEnumerator._numberOfDoFsPerAxisInCell * (fluxLeft - fluxRight);
+    /*QOut[ ] += dt / patchSize(normal) * QOutEnumerator._numberOfDoFsPerAxisInCell * 0.5 * (tempFlux[fluxEnumerator(patchIndex, leftVolume, unknown)]-tempFlux[fluxEnumerator(patchIndex, rightVolume,unknown)]);*/
   };
 
                      updateAlongOneDirection(tempFluxX,0);
                      updateAlongOneDirection(tempFluxY,1);
   if (Dimensions==3) updateAlongOneDirection(tempFluxZ,2);
 }
-
 
 template <typename FluxEnumeratorType, typename QOutEnumeratorType>
 void exahype2::fv::rusanov::internal::updateSolutionWithFlux_LoopBody(
@@ -816,7 +792,6 @@ void exahype2::fv::rusanov::internal::updateSolutionWithFlux_LoopBody(
   }
 }
 
-
 template <typename QNCPFaceEnumeratorType, typename QOutEnumeratorType>
 void exahype2::fv::rusanov::internal::updateSolutionWithNonconservativeFlux_LoopBody(
   const double* __restrict__                   fluxNCP,
@@ -843,7 +818,6 @@ void exahype2::fv::rusanov::internal::updateSolutionWithNonconservativeFlux_Loop
   }
 }
 
-
 #if defined(GPUOffloadingOMP)
 #pragma omp declare target
 #endif
@@ -867,8 +841,9 @@ void exahype2::fv::rusanov::internal::updateSolutionWithEigenvalueDamping_LoopBo
   auto updateAlongOneDirection = [=](const double* __restrict__ tempMaxEigenvalue, int normal) {
     tarch::la::Vector<Dimensions,int> leftVolume   = volumeIndex;
     tarch::la::Vector<Dimensions,int> rightVolume  = volumeIndex;
-    leftVolume(normal)--;
-    rightVolume(normal)++;
+    normal == 0 ? (leftVolume(0)--, rightVolume(0)++) :
+    normal == 1 ? (leftVolume(1)--, rightVolume(1)++) :
+                  (leftVolume(2)--, rightVolume(2)++);
 
     double leftVolumeValue   = tempMaxEigenvalue[eigenvalueEnumerator(patchIndex, leftVolume,  0)];
     double centerVolumeValue = tempMaxEigenvalue[eigenvalueEnumerator(patchIndex, volumeIndex, 0)];
@@ -898,38 +873,10 @@ void exahype2::fv::rusanov::internal::updateSolutionWithEigenvalueDamping_LoopBo
                      updateAlongOneDirection(tempMaxEigenvalueX,0);
                      updateAlongOneDirection(tempMaxEigenvalueY,1);
   if (Dimensions==3) updateAlongOneDirection(tempMaxEigenvalueZ,2);
-
-/*
-  {
-    const int normal = 0;
-    const double* tempMaxEigenvalue = tempMaxEigenvalueX;
-
-    tarch::la::Vector<Dimensions,int> leftVolume   = volumeIndex;
-    tarch::la::Vector<Dimensions,int> rightVolume  = volumeIndex;
-    leftVolume(normal)--;
-    rightVolume(normal)++;
-
-    double leftVolumeValue   = tempMaxEigenvalue[eigenvalueEnumerator(patchIndex, leftVolume,  0)];
-    double centerVolumeValue = tempMaxEigenvalue[eigenvalueEnumerator(patchIndex, volumeIndex, 0)];
-    double rightVolumeValue  = tempMaxEigenvalue[eigenvalueEnumerator(patchIndex, rightVolume, 0)];
-
-    const double lambdaLeft  = tempMaxEigenvalue[eigenvalueEnumerator(patchIndex, leftVolume,0)] > tempMaxEigenvalue[eigenvalueEnumerator(patchIndex, volumeIndex,0)]
-                             ? tempMaxEigenvalue[eigenvalueEnumerator(patchIndex, leftVolume,0)]
-                             : tempMaxEigenvalue[eigenvalueEnumerator(patchIndex, volumeIndex,0)];
-    const double lambdaRight = tempMaxEigenvalue[eigenvalueEnumerator(patchIndex, rightVolume,0)] > tempMaxEigenvalue[eigenvalueEnumerator(patchIndex, volumeIndex,0)]
-                             ? tempMaxEigenvalue[eigenvalueEnumerator(patchIndex, rightVolume,0)]
-                             : tempMaxEigenvalue[eigenvalueEnumerator(patchIndex, volumeIndex,0)];
-    double fluxLeft  = - lambdaLeft * (QIn[QInEnumerator(patchIndex, volumeIndex,unknown)] - QIn[QInEnumerator(patchIndex, leftVolume,unknown)]);
-    double fluxRight = - lambdaRight * (QIn[QInEnumerator(patchIndex, rightVolume,unknown)] - QIn[QInEnumerator(patchIndex, volumeIndex,unknown)]);
-
-    QOut[ QOutEnumerator(patchIndex, volumeIndex,unknown) ] +=  dt / patchSize(normal) * QOutEnumerator._numberOfDoFsPerAxisInCell * (fluxLeft - fluxRight);
-  }
-*/
 }
 #if defined(GPUOffloadingOMP)
 #pragma omp end declare target
 #endif
-
 
 #if defined(GPUOffloadingOMP)
 #pragma omp declare target
@@ -973,8 +920,6 @@ void exahype2::fv::rusanov::internal::updateSolutionWithEigenvalueDamping_LoopBo
 #pragma omp end declare target
 #endif
 
-
-
 template <class QInEnumeratorType, class QNCPFaceEnumeratorType>
 void exahype2::fv::rusanov::internal::computeNonconservativeFlux_LoopBody(
   const double* __restrict__                     QIn,
@@ -1017,7 +962,6 @@ void exahype2::fv::rusanov::internal::computeNonconservativeFlux_LoopBody(
     QFluxGathered
   );
 
-
   if (pick==PickAllEntriesFromOutputVector) {
     // scatter
     for (int unknown=0; unknown<QInEnumerator._unknowns; unknown++) {
@@ -1028,7 +972,6 @@ void exahype2::fv::rusanov::internal::computeNonconservativeFlux_LoopBody(
     QNcp[ QNcpEnumerator(patchIndex,volumeIndex,pick) ] = QFluxGathered[pick];
   }
 }
-
 
 template <
   typename Solver,
@@ -1089,7 +1032,6 @@ void exahype2::fv::rusanov::internal::computeNonconservativeFlux_LoopBody(
   }
 }
 
-
 template <typename QNCPFaceEnumeratorType, typename QOutEnumeratorType>
 void exahype2::fv::rusanov::internal::updateSolutionWithNonconservativeFlux_LoopBody(
   const double* __restrict__                   QNcpX,
@@ -1109,7 +1051,7 @@ void exahype2::fv::rusanov::internal::updateSolutionWithNonconservativeFlux_Loop
     tarch::la::Vector<Dimensions,int> leftFace   = volumeIndex;
     tarch::la::Vector<Dimensions,int> rightFace  = volumeIndex;
     leftFace(normal)--;
-    
+
     //the QNcp is calculating (Q^+ - Q^-)B_i for the considered face, and B here is defined on the LEFT of the equation.
     //for fluxleft, it is the flux^+ of the left face, so it have a plus sign
     //for fluxright, it is the flux^- of the right face, so it have a minus sign.
