@@ -123,7 +123,8 @@ void riemannSolverLinear(SolverType& solver, double* FL, double* FR,
         std::copy_n(Qdiff,numberOfVariables,gradQ[2]);            
           
         if(useNCP) {
-          solver.nonConservativeProduct(Qavg, gradQ, ncp);
+//          solver.nonConservativeProduct(Qavg, gradQ, ncp);
+          solver.nonConservativeProduct(Qavg, gradQ_vec, ncp_vec);
         
           if(useMM){
             solver.multiplyMaterialParameterMatrix(Qavg, ncp);

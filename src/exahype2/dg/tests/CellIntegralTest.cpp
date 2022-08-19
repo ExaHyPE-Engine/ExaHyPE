@@ -24,29 +24,24 @@ namespace {
  */
 exahype2::dg::tests::CellIntegralTest::CellIntegralTest():
 TestCase ("exahype2::dg::CellIntegralTest"),
-QuadraturePoints {0.069431844202973713731097404888714663684368133544921875,0.33000947820757187134432797392946667969226837158203125,0.66999052179242812865567202607053332030773162841796875,0.9305681557970262307577513638534583151340484619140625},
-QuadratureWeights {
-  0.1739274225687269248563637802362791262567043304443359375,0.32607257743127304738806060413480736315250396728515625,
-  0.32607257743127304738806060413480736315250396728515625,0.1739274225687269248563637802362791262567043304443359375},
-MassMatrix {
-    0.1739274225687269248563637802362791262567043304443359375,0.0,0.0,0.0,
-    0.0,0.32607257743127304738806060413480736315250396728515625,0.0,0.0,
-    0.0,0.0,0.32607257743127304738806060413480736315250396728515625,0.0,
-    0.0,0.0,0.0,0.1739274225687269248563637802362791262567043304443359375},
-StiffnessOperator {
-  -1.1590524262142825051569161587394773960113525390625,-0.494037528020547400675610560938366688787937164306640625,0.214358954361956122180998818294028751552104949951171875,-0.201974321866382811041518152705975808203220367431640625,
-  1.69062826161228674237690938753075897693634033203125,-0.250693983347795967819848783619818277657032012939453125,-0.95909046573029943516530693159438669681549072265625,0.73355015726438665968345276269246824085712432861328125,
-  -0.7335501572643867707057552252081222832202911376953125,0.95909046573029943516530693159438669681549072265625,0.250693983347795634752941396072856150567531585693359375,-1.690628261612286298287699537468142807483673095703125,
-  0.2019743218663829775749718464794568717479705810546875,-0.21435895436195628871445251206750981509685516357421875,0.494037528020547622720215485969674773514270782470703125,1.159052426214282949246126008802093565464019775390625}
 
-/*
-  ,MassMatrixDiagonal1d{
-      0.1739274225687269248563637802362791262567043304443359375,
-      0.32607257743127304738806060413480736315250396728515625,
-      0.32607257743127304738806060413480736315250396728515625,
-      0.1739274225687269248563637802362791262567043304443359375
-    }
-*/
+  QuadraturePoints1d { 0.04691007703066802,0.23076534494715845,0.5,0.7692346550528415,0.9530899229693319},
+  MassMatrixDiagonal1d { 0.11846344252809464,0.23931433524968335,0.2844444444444444,0.2393143352496833,0.11846344252809476},
+  BasisFunctionValuesLeft1d { 1.5514080490943134,-0.8931583920000723,0.5333333333333335,-0.2679416522233877,0.07635866179581295},
+  DerivativeOperator1d {
+    -10.1340811913090842466544927447102963924407958984375,15.4039041703444912201348415692336857318878173828125,-8.0870875087753280041624748264439404010772705078125,3.920798231666558830710300753707997500896453857421875,-1.1035337019266335811806811761925928294658660888671875,
+    -1.9205120472639156670169313656515441834926605224609375,-1.516706434335750142139431773102842271327972412109375,4.80550130432859834428427348029799759387969970703125,-1.8571160532876695992143822877551428973674774169921875,0.488833230558736009374598552312818355858325958251953125,
+    0.602336319455663016242397134192287921905517578125,-2.870776484669482986333832741365768015384674072265625,-0.000000000000001332267629550187848508358001708984375,2.870776484669483874512252441491000354290008544921875,-0.60233631945566312726469959670794196426868438720703125,
+    -0.48883323055873584284114485853933729231357574462890625,1.8571160532876682669467527375672943890094757080078125,-4.80550130432860012064111288054846227169036865234375,1.5167064343357505862286416231654584407806396484375,1.9205120472639156670169313656515441834926605224609375,
+    1.1035337019266331370914713261299766600131988525390625,-3.920798231666557942531881053582765161991119384765625,8.087087508775329780519314226694405078887939453125,-15.4039041703444912201348415692336857318878173828125,10.13408119130908602301133214496076107025146484375},
+
+    StiffnessOperator1d {
+    -1.2005181447816875017764459698810242116451263427734375,-0.459606063929972219472830374797922559082508087158203125,0.1713312197562774918946360003246809355914592742919921875,-0.11698479961911900648630080468137748539447784423828125,0.130728401276001104935886587554705329239368438720703125,
+    1.824799516391880427335081549244932830333709716796875,-0.362969592101977378550969888237887062132358551025390625,-0.81657642230598626031934372804244048893451690673828125,0.4444344937740536405357261173776350915431976318359375,-0.464471255981286024194787387386895716190338134765625,
+    -0.95802422631547734521717529787565581500530242919921875,1.15002535018688423207322557573206722736358642578125,-0.0000000000000003789561257387200741506709440429594952952620993784360603484628882,-1.150025350186884676162435425794683396816253662109375,0.95802422631547756726178022290696389973163604736328125,
+    0.464471255981286079705938618644722737371921539306640625,-0.44443449377405397360263350492459721863269805908203125,0.81657642230598648236394865307374857366085052490234375,0.362969592101977489573272350753541104495525360107421875,-1.824799516391880427335081549244932830333709716796875,
+    -0.13072840127600116044703781881253235042095184326171875,0.11698479961911904811966422812474775128066539764404296875,-0.1713312197562775196502116159535944461822509765625,0.459606063929972219472830374797922559082508087158203125,1.2005181447816877238210508949123322963714599609375}
+
 {
 #if Dimensions==2
   file_stream.open("src/exahype2/dg/tests/results2D.log");
@@ -59,99 +54,7 @@ StiffnessOperator {
 void exahype2::dg::tests::CellIntegralTest::run(){
   testMethod(runDGEuler);
   testMethod(runDGElastic);
-  testMethod( testMultiplyWithInvertedMassMatrix_GaussLegendre );
 }
-
-
-/*
-  double t = 3.14;
-  double dt = 0.0;
-
-
-  for(int node=0; node<nodesPerFace; node++){
-    for(int i=0; i<strideQ; i++){
-
-       * Initialize right nodes of left face and left nodes of right face
-
-      QFacesL[(2*node+1)*strideQ+i] = i+1.0;
-      QFacesR[2*node*strideQ+i]     = i+1.0;
-    }
-  }
-
-  applyBoundaryConditions(
-    [&](
-      const double * __restrict__                  Qinside,
-      double * __restrict__                        Qoutside,
-      const tarch::la::Vector<Dimensions,double>&  x,
-      double                                       t,
-      double                                       dt,
-      int                                          normal
-    ) -> void {
-      testBoundaryConditions(Qinside,Qoutside,x,t,dt,normal);
-    },
-    x, //faceCentre
-    cellSize,
-    t,
-    dt,
-    order,
-    2, //unknowns
-    2, //aux vars
-    0, //faceNumber
-    QuadraturePoints,
-    QFacesL
-  );
-
-  applyBoundaryConditions(
-    [&](
-      const double * __restrict__                  Qinside,
-      double * __restrict__                        Qoutside,
-      const tarch::la::Vector<Dimensions,double>&  x,
-      double                                       t,
-      double                                       dt,
-      int                                          normal
-    ) -> void {
-      testBoundaryConditions(Qinside,Qoutside,x,t,dt,normal);
-    },
-    x, //faceCentre
-    cellSize,
-    t,
-    dt,
-    order,
-    2, //unknowns
-    2, //aux vars
-    Dimensions, //faceNumber
-    QuadraturePoints,
-    QFacesR
-  );
-
-  for(int node=0; node<nodesPerFace; node++){
-
-    //values on left face
-    validateNumericalEquals( QFacesL[2*node*strideQ+0], 1.0);
-    validateNumericalEquals( QFacesL[2*node*strideQ+1], 0.0);
-    validateNumericalEquals( QFacesL[2*node*strideQ+2], 3.14);
-    validateNumericalEquals( QFacesL[2*node*strideQ+3], 0);
-
-    //values on right face
-    validateNumericalEquals( QFacesR[(2*node+1)*strideQ+0], 1.0);
-    validateNumericalEquals( QFacesR[(2*node+1)*strideQ+1], 0.0);
-    validateNumericalEquals( QFacesR[(2*node+1)*strideQ+2], 3.14);
-    validateNumericalEquals( QFacesR[(2*node+1)*strideQ+3], 0);
-
-  }
-
-
-
-   * testing getMaxEigenvalue
-
-
-  //reusing array from gradient test
-  for(int i=0; i<nodesPerCell; i++){
-    cellQin[2*i+0] = i;
-    cellQin[2*i+1] = i+1;
-  }
-*/
-
 
 
 
@@ -168,7 +71,7 @@ void exahype2::dg::tests::CellIntegralTest::run(){
  * 4) Finally, the contributions from the neighbouring cells are added to each node in a cell
  */
 void exahype2::dg::tests::CellIntegralTest::runDGEuler(){
-/*
+
 
 
   file_stream << "Starting Euler test in " << Dimensions << " dimensions\n\n";
@@ -188,7 +91,7 @@ void exahype2::dg::tests::CellIntegralTest::runDGEuler(){
   //using euler equations as example
   const int unknowns = 5;
   const int auxiliaryVariables = 0;
-  const int order = 3;
+  const int order = 4;
 
   //Parameter initialisation and memory allocation
   const int nodesPerAxis  = order+1;
@@ -210,7 +113,7 @@ void exahype2::dg::tests::CellIntegralTest::runDGEuler(){
 #endif
 
   //values of the rusanov fluxes on the faces
-  double* QHullForRiemann = new double[2*Dimensions*2*nodesPerFace*strideQ];
+  double* QHullForRiemann = new double[2*Dimensions*2*nodesPerFace*unknowns];
 
 
   ::exahype2::CellData cellData(
@@ -257,10 +160,10 @@ void exahype2::dg::tests::CellIntegralTest::runDGEuler(){
       nullptr, //ncp
       nullptr, //source
       nullptr, //pointSources
-      QuadraturePoints,
-      QuadratureWeights, //massMatrixDiagonal
-      StiffnessOperator,
-      DerivativeOperator,
+      QuadraturePoints1d,
+      MassMatrixDiagonal1d, //massMatrixDiagonal
+      StiffnessOperator1d,
+      DerivativeOperator1d,
       true,     //flux
       false,    //ncp
       false,    //source
@@ -277,177 +180,6 @@ void exahype2::dg::tests::CellIntegralTest::runDGEuler(){
   }
   file_stream << "\n";
 
-
-  delete[] QIn;
-  delete[] QOut;
-  delete[] QLeft;
-  delete[] QRight;
-  delete[] QDown;
-  delete[] QUp;
-#if Dimensions==3
-  delete[] QFront;
-  delete[] QBack;
-#endif
-  delete[] QHullForRiemann;
-*/
-}//runDGEuler
-
-
-
-void exahype2::dg::tests::CellIntegralTest::runDGElastic(){
-/*
-
-  file_stream << "\n\nStarting Elastic test in " << Dimensions << " dimensions\n\n";
-
-  // geometry
-#if Dimensions==2
-  const tarch::la::Vector<2, double> x({0.0, 0.0});
-  const tarch::la::Vector<2, double> cellSize({1.0, 1.0});
-#else
-  const tarch::la::Vector<3, double> x({0.0, 0.0, 0.0});
-  const tarch::la::Vector<3, double> cellSize({1.0, 1.0, 1.0});
-#endif
-  const double dx = 0.01;
-  const double t  = 0.0;
-  const double dt = 0.01;
-
-  //using euler equations as example
-  const int unknowns = 9;
-  const int auxiliaryVariables = 3;
-  const int order = 4;
-
-  double QuadraturePoints1d[5]{ 0.04691007703066802,0.23076534494715845,0.5,0.7692346550528415,0.9530899229693319};
-  double MassMatrixDiagonal1d[5]{ 0.11846344252809464,0.23931433524968335,0.2844444444444444,0.2393143352496833,0.11846344252809476};
-  double BasisFunctionValuesLeft1d[5]{ 1.5514080490943134,-0.8931583920000723,0.5333333333333335,-0.2679416522233877,0.07635866179581295};
-  double DerivativeOperator1d[5*5]{
-    -10.1340811913090842466544927447102963924407958984375,15.4039041703444912201348415692336857318878173828125,-8.0870875087753280041624748264439404010772705078125,3.920798231666558830710300753707997500896453857421875,-1.1035337019266335811806811761925928294658660888671875,
-    -1.9205120472639156670169313656515441834926605224609375,-1.516706434335750142139431773102842271327972412109375,4.80550130432859834428427348029799759387969970703125,-1.8571160532876695992143822877551428973674774169921875,0.488833230558736009374598552312818355858325958251953125,
-    0.602336319455663016242397134192287921905517578125,-2.870776484669482986333832741365768015384674072265625,-0.000000000000001332267629550187848508358001708984375,2.870776484669483874512252441491000354290008544921875,-0.60233631945566312726469959670794196426868438720703125,
-    -0.48883323055873584284114485853933729231357574462890625,1.8571160532876682669467527375672943890094757080078125,-4.80550130432860012064111288054846227169036865234375,1.5167064343357505862286416231654584407806396484375,1.9205120472639156670169313656515441834926605224609375,
-    1.1035337019266331370914713261299766600131988525390625,-3.920798231666557942531881053582765161991119384765625,8.087087508775329780519314226694405078887939453125,-15.4039041703444912201348415692336857318878173828125,10.13408119130908602301133214496076107025146484375};
-  double StiffnessOperator1d[5*5]{
-    -1.2005181447816875017764459698810242116451263427734375,-0.459606063929972219472830374797922559082508087158203125,0.1713312197562774918946360003246809355914592742919921875,-0.11698479961911900648630080468137748539447784423828125,0.130728401276001104935886587554705329239368438720703125,
-    1.824799516391880427335081549244932830333709716796875,-0.362969592101977378550969888237887062132358551025390625,-0.81657642230598626031934372804244048893451690673828125,0.4444344937740536405357261173776350915431976318359375,-0.464471255981286024194787387386895716190338134765625,
-    -0.95802422631547734521717529787565581500530242919921875,1.15002535018688423207322557573206722736358642578125,-0.0000000000000003789561257387200741506709440429594952952620993784360603484628882,-1.150025350186884676162435425794683396816253662109375,0.95802422631547756726178022290696389973163604736328125,
-    0.464471255981286079705938618644722737371921539306640625,-0.44443449377405397360263350492459721863269805908203125,0.81657642230598648236394865307374857366085052490234375,0.362969592101977489573272350753541104495525360107421875,-1.824799516391880427335081549244932830333709716796875,
-    -0.13072840127600116044703781881253235042095184326171875,0.11698479961911904811966422812474775128066539764404296875,-0.1713312197562775196502116159535944461822509765625,0.459606063929972219472830374797922559082508087158203125,1.2005181447816877238210508949123322963714599609375};
-
-
-  DerivativeOperator1d{
-    -10.1340811913090842466544927447102963924407958984375,15.4039041703444912201348415692336857318878173828125,-8.0870875087753280041624748264439404010772705078125,3.920798231666558830710300753707997500896453857421875,-1.1035337019266335811806811761925928294658660888671875,
-    -1.9205120472639156670169313656515441834926605224609375,-1.516706434335750142139431773102842271327972412109375,4.80550130432859834428427348029799759387969970703125,-1.8571160532876695992143822877551428973674774169921875,0.488833230558736009374598552312818355858325958251953125,
-    0.602336319455663016242397134192287921905517578125,-2.870776484669482986333832741365768015384674072265625,-0.000000000000001332267629550187848508358001708984375,2.870776484669483874512252441491000354290008544921875,-0.60233631945566312726469959670794196426868438720703125,
-    -0.48883323055873584284114485853933729231357574462890625,1.8571160532876682669467527375672943890094757080078125,-4.80550130432860012064111288054846227169036865234375,1.5167064343357505862286416231654584407806396484375,1.9205120472639156670169313656515441834926605224609375,
-    1.1035337019266331370914713261299766600131988525390625,-3.920798231666557942531881053582765161991119384765625,8.087087508775329780519314226694405078887939453125,-15.4039041703444912201348415692336857318878173828125,10.13408119130908602301133214496076107025146484375},
-  StiffnessOperator1d{
-    -1.2005181447816875017764459698810242116451263427734375,-0.459606063929972219472830374797922559082508087158203125,0.1713312197562774918946360003246809355914592742919921875,-0.11698479961911900648630080468137748539447784423828125,0.130728401276001104935886587554705329239368438720703125,
-    1.824799516391880427335081549244932830333709716796875,-0.362969592101977378550969888237887062132358551025390625,-0.81657642230598626031934372804244048893451690673828125,0.4444344937740536405357261173776350915431976318359375,-0.464471255981286024194787387386895716190338134765625,
-    -0.95802422631547734521717529787565581500530242919921875,1.15002535018688423207322557573206722736358642578125,-0.0000000000000003789561257387200741506709440429594952952620993784360603484628882,-1.150025350186884676162435425794683396816253662109375,0.95802422631547756726178022290696389973163604736328125,
-    0.464471255981286079705938618644722737371921539306640625,-0.44443449377405397360263350492459721863269805908203125,0.81657642230598648236394865307374857366085052490234375,0.362969592101977489573272350753541104495525360107421875,-1.824799516391880427335081549244932830333709716796875,
-    -0.13072840127600116044703781881253235042095184326171875,0.11698479961911904811966422812474775128066539764404296875,-0.1713312197562775196502116159535944461822509765625,0.459606063929972219472830374797922559082508087158203125,1.2005181447816877238210508949123322963714599609375},
-
-
-  //Parameter initialisation and memory allocation
-  const int nodesPerAxis  = order+1;
-  const int nodesPerCell  = getNodesPerCell(nodesPerAxis);
-  const int nodesPerFace  = nodesPerCell/nodesPerAxis;
-  const int strideQ       = unknowns+auxiliaryVariables;
-
-  //values in the cell at the beginning and end
-  double* QIn = new double[nodesPerCell*strideQ];
-  double* QOut = new double[nodesPerCell*unknowns];
-  //values on the faces
-  double* QLeft = new double[2*nodesPerFace*strideQ];
-  double* QRight = new double[2*nodesPerFace*strideQ];
-  double* QDown = new double[2*nodesPerFace*strideQ];
-  double* QUp = new double[2*nodesPerFace*strideQ];
-#if Dimensions==3
-  double* QFront = new double[2*nodesPerFace*strideQ];
-  double* QBack = new double[2*nodesPerFace*strideQ];
-#endif
-
-  //values of the rusanov fluxes on the faces
-  double* QHullForRiemann = new double[2*Dimensions*2*nodesPerFace*strideQ];
-
-
-  ::exahype2::CellData cellData(
-      QIn,
-      x,
-      cellSize,
-      t,
-      dt,
-      QOut
-      );
-
-
-  //setting initial conditions
-
-  file_stream << "Initial conditions: \n";
-  for(int i=0; i<nodesPerCell; i++){
-    elasticInitial(&QIn[i*strideQ]);
-    file_stream << "node " << i << " [";
-    for(int var=0; var<strideQ; var++){
-      file_stream << QIn[i*strideQ+var] << ", ";
-    }
-    file_stream << "]\n";
-  }
-*/
-
-/*
-  //for later comparisons
-  double QInit[strideQ];
-  elasticInitial(QInit);
-
-  cellIntegral_patchwise_GaussLegendre_functors(
-    cellData,
-    order,
-    unknowns,
-    auxiliaryVariables,
-    [&](
-        const double * __restrict__                  Q,
-        const tarch::la::Vector<Dimensions,double>&  x,
-        double                                       t,
-        double                                       dt,
-        int                                          normal,
-        double * __restrict__                        F
-        ) -> void {
-        elasticFlux(Q,x,t,dt,normal,F);
-    },
-    [&](
-        const double * __restrict__                  Q,
-        const double * __restrict__                  dQdx,
-        const tarch::la::Vector<Dimensions,double>&  x,
-        double                                       t,
-        double                                       dt,
-        int                                          normal,
-        double * __restrict__                        BgradQ
-      ) -> void{
-      elasticNonConservativeProduct(Q, dQdx, x, t, dt, normal, BgradQ);
-    },
-    nullptr, //source
-    nullptr, //pointSources
-    QuadraturePoints1d,
-    MassMatrixDiagonal1d, //massMatrixDiagonal
-    StiffnessOperator1d,
-    DerivativeOperator1d,
-    true,     //flux
-    false,    //ncp TODO: check error
-    false,    //source
-    false);   //pointSources
-
-  file_stream << "\nComputed volume integral values are: \n";
-  for(int i=0; i<nodesPerCell; i++){
-    file_stream << "node " << i << ": [";
-    for(int var=0; var<unknowns;var++){
-      file_stream << QOut[i*unknowns+var] << ", ";
-    }
-    file_stream << "]\n";
-  }
-  file_stream << "\n";
-*/
-
-
-/*
   // Step 2), the values computed in step 1) are extrapolated to the surface boundary
   projectVolumetricDataOntoFaces(
     QIn,
@@ -549,19 +281,9 @@ void exahype2::dg::tests::CellIntegralTest::runDGElastic(){
           int                                          normal,
           double * __restrict__                        F
           ) -> void {
-          elasticFlux(Q,x,t,dt,normal,F);
+          eulerFlux(Q,x,t,dt,normal,F);
       },
-      [&](
-          const double * __restrict__                  Q,
-          const double * __restrict__                  dQdx,
-          const tarch::la::Vector<Dimensions,double>&  x,
-          double                                       t,
-          double                                       dt,
-          int                                          normal,
-          double * __restrict__                        BgradQ
-        ) -> void{
-        elasticNonConservativeProduct(Q, dQdx, x, t, dt, normal, BgradQ);
-      },
+      nullptr,
       [&](
         const double * __restrict__                 Q,
         const tarch::la::Vector<Dimensions,double>& x,
@@ -569,7 +291,7 @@ void exahype2::dg::tests::CellIntegralTest::runDGElastic(){
         double                                      dt,
         int                                         normal
         ) -> double {
-          return elasticEigenvalue(Q,x,t,dt,normal);
+          return eulerEigenvalue(Q,x,t,dt,normal);
       },
       x,
       cellSize,
@@ -602,11 +324,6 @@ void exahype2::dg::tests::CellIntegralTest::runDGElastic(){
   }
 
 
-  for(int i=0; i<strideQ*nodesPerCell; i++){
-    QOut[i] = 0.0;
-  }
-
-
   //  The contributions from the computed rusanov flux are then added to the nodes
   //  within the cell.
   integrateOverRiemannSolutionsAndAddToVolume_GaussLegendre(
@@ -633,6 +350,7 @@ void exahype2::dg::tests::CellIntegralTest::runDGElastic(){
   );
 
 
+
   file_stream << "\nValues after Riemann Integral are: \n";
   for(int i=0; i<nodesPerCell; i++){
     file_stream << "node " << i << ": [";
@@ -643,7 +361,7 @@ void exahype2::dg::tests::CellIntegralTest::runDGElastic(){
   }
 
 
-  multiplyWithInvertedMassMatrixAndClearAuxiliaryVariables_GaussLegendre(
+  multiplyWithInvertedMassMatrix_GaussLegendre(
     cellData,
     order,
     unknowns,
@@ -675,15 +393,128 @@ void exahype2::dg::tests::CellIntegralTest::runDGElastic(){
   delete[] QBack;
 #endif
   delete[] QHullForRiemann;
-*/
 
-} //runDGElastic
+}//runDGEuler
 
 
-/*
 
-void exahype2::dg::rusanov::tests::RiemannTest::testProjectVolumetricDataOntoFaces() {
+void exahype2::dg::tests::CellIntegralTest::runDGElastic(){
+
+
+  file_stream << "\n\nStarting Elastic test in " << Dimensions << " dimensions\n\n";
+
+  // geometry
+#if Dimensions==2
+  const tarch::la::Vector<2, double> x({0.0, 0.0});
+  const tarch::la::Vector<2, double> cellSize({1.0, 1.0});
+#else
+  const tarch::la::Vector<3, double> x({0.0, 0.0, 0.0});
+  const tarch::la::Vector<3, double> cellSize({1.0, 1.0, 1.0});
+#endif
+  const double dx = 0.01;
+  const double t  = 0.0;
+  const double dt = 0.01;
+
+  //using euler equations as example
+  const int unknowns = 9;
+  const int auxiliaryVariables = 3;
+  const int order = 4;
+
+  //Parameter initialisation and memory allocation
+  const int nodesPerAxis  = order+1;
+  const int nodesPerCell  = getNodesPerCell(nodesPerAxis);
+  const int nodesPerFace  = nodesPerCell/nodesPerAxis;
   const int strideQ       = unknowns+auxiliaryVariables;
+
+  //values in the cell at the beginning and end
+  double* QIn = new double[nodesPerCell*strideQ];
+  double* QOut = new double[nodesPerCell*unknowns];
+  //values on the faces
+  double* QLeft = new double[2*nodesPerFace*strideQ];
+  double* QRight = new double[2*nodesPerFace*strideQ];
+  double* QDown = new double[2*nodesPerFace*strideQ];
+  double* QUp = new double[2*nodesPerFace*strideQ];
+#if Dimensions==3
+  double* QFront = new double[2*nodesPerFace*strideQ];
+  double* QBack = new double[2*nodesPerFace*strideQ];
+#endif
+
+  //values of the rusanov fluxes on the faces
+  double* QHullForRiemann = new double[2*Dimensions*2*nodesPerFace*strideQ];
+
+
+  ::exahype2::CellData cellData(
+      QIn,
+      x,
+      cellSize,
+      t,
+      dt,
+      QOut
+      );
+
+
+  //setting initial conditions
+
+  file_stream << "Initial conditions: \n";
+  for(int i=0; i<nodesPerCell; i++){
+    elasticInitial(&QIn[i*strideQ]);
+    file_stream << "node " << i << " [";
+    for(int var=0; var<strideQ; var++){
+      file_stream << QIn[i*strideQ+var] << ", ";
+    }
+    file_stream << "]\n";
+  }
+
+  //for later comparisons
+  double QInit[strideQ];
+  elasticInitial(QInit);
+
+  cellIntegral_patchwise_GaussLegendre_functors(
+    cellData,
+    order,
+    unknowns,
+    auxiliaryVariables,
+    [&](
+        const double * __restrict__                  Q,
+        const tarch::la::Vector<Dimensions,double>&  x,
+        double                                       t,
+        double                                       dt,
+        int                                          normal,
+        double * __restrict__                        F
+        ) -> void {
+        elasticFlux(Q,x,t,dt,normal,F);
+    },
+    [&](
+        const double * __restrict__                  Q,
+        const double * __restrict__                  dQdx,
+        const tarch::la::Vector<Dimensions,double>&  x,
+        double                                       t,
+        double                                       dt,
+        int                                          normal,
+        double * __restrict__                        BgradQ
+      ) -> void{
+      elasticNonConservativeProduct(Q, dQdx, x, t, dt, normal, BgradQ);
+    },
+    nullptr, //source
+    nullptr, //pointSources
+    QuadraturePoints1d,
+    MassMatrixDiagonal1d, //massMatrixDiagonal
+    StiffnessOperator1d,
+    DerivativeOperator1d,
+    true,     //flux
+    true,    //ncp
+    false,    //source
+    false);   //pointSources
+
+  file_stream << "\nComputed volume integral values are: \n";
+  for(int i=0; i<nodesPerCell; i++){
+    file_stream << "node " << i << ": [";
+    for(int var=0; var<unknowns;var++){
+      file_stream << (std::abs(QOut[i*unknowns+var]) <0.0000001 ? 0.0 : QOut[i*unknowns+var]) << ", ";
+    }
+    file_stream << "]\n";
+  }
+  file_stream << "\n";
 
   // Step 2), the values computed in step 1) are extrapolated to the surface boundary
   projectVolumetricDataOntoFaces(
@@ -691,7 +522,7 @@ void exahype2::dg::rusanov::tests::RiemannTest::testProjectVolumetricDataOntoFac
     order,
     unknowns,
     auxiliaryVariables,
-    BasisFunctionValuesLeft,
+    BasisFunctionValuesLeft1d,
     QLeft,
     QRight,
     QDown,
@@ -713,21 +544,6 @@ void exahype2::dg::rusanov::tests::RiemannTest::testProjectVolumetricDataOntoFac
   F[5] = QBack;
 #endif
 
-  for(int f=0; f<2*Dimensions; f++){
-
-    double* currentFace = F[f];
-    file_stream << "\nFace " << f << ": \n";
-
-    for(int node=0; node<2*nodesPerFace; node++){
-      file_stream << "node " << node << ": [";
-      for(int var=0; var<strideQ; var++){
-        file_stream << currentFace[node*strideQ+var] << ", ";
-      }
-      file_stream << "]\n";
-    }
-
-  }
-
 
   // *  project data onto opposite face as well to trade with "identical" cell,
   // *  this essentially simulates the exchange of surface data with the
@@ -737,7 +553,7 @@ void exahype2::dg::rusanov::tests::RiemannTest::testProjectVolumetricDataOntoFac
     order,
     unknowns,
     auxiliaryVariables,
-    BasisFunctionValuesLeft,
+    BasisFunctionValuesLeft1d,
     QRight,
     QLeft,
     QUp,
@@ -747,7 +563,22 @@ void exahype2::dg::rusanov::tests::RiemannTest::testProjectVolumetricDataOntoFac
     QFront
 #endif
   );
-}
+
+
+  for(int f=0; f<2*Dimensions; f++){
+
+    double* currentFace = F[f];
+    file_stream << "\nFace " << f << ": \n";
+
+    for(int node=0; node<2*nodesPerFace; node++){
+      file_stream << "node " << node << ": [";
+      for(int var=0; var<strideQ; var++){
+        file_stream << (std::abs(currentFace[node*strideQ+var])<0.00001 ? 0.0 : currentFace[node*strideQ+var]) << ", ";
+      }
+      file_stream << "]\n";
+    }
+
+  }
 
 
   //* The faces are assembled into one pointer construct for ease of access in the
@@ -755,15 +586,24 @@ void exahype2::dg::rusanov::tests::RiemannTest::testProjectVolumetricDataOntoFac
   //* is provided since at the boundary the flux must be computed with boundary values
   //* instead of using the extrapolated solution from the neighbour.
   double* QHull[Dimensions*2];
+#if Dimensions==2
   QHull[0] = QLeft;
-  QHull[1] = QRight;
-  QHull[2] = QDown;
+  QHull[2] = QRight;
+  QHull[1] = QDown;
   QHull[3] = QUp;
-
-#if Dimensions==3
-  QHull[4] = QBack;
+#elif Dimensions==3
+  QHull[0] = QLeft;
+  QHull[3] = QRight;
+  QHull[1] = QDown;
+  QHull[4] = QUp;
+  QHull[2] = QBack;
   QHull[5] = QFront;
 #endif
+
+
+  for(int i=0; i<2*Dimensions*2*nodesPerFace*unknowns; i++){
+    QHullForRiemann[i] = 0.0;
+  }
 
 
   for(int face=0; face<2*Dimensions; face++){
@@ -777,9 +617,19 @@ void exahype2::dg::rusanov::tests::RiemannTest::testProjectVolumetricDataOntoFac
           int                                          normal,
           double * __restrict__                        F
           ) -> void {
-          eulerFlux(Q,x,t,dt,normal,F);
+          elasticFlux(Q,x,t,dt,normal,F);
       },
-      nullptr, //ncp
+      [&](
+          const double * __restrict__                  Q,
+          const double * __restrict__                  dQdx,
+          const tarch::la::Vector<Dimensions,double>&  x,
+          double                                       t,
+          double                                       dt,
+          int                                          normal,
+          double * __restrict__                        BgradQ
+        ) -> void{
+        elasticNonConservativeProduct(Q, dQdx, x, t, dt, normal, BgradQ);
+      },
       [&](
         const double * __restrict__                 Q,
         const tarch::la::Vector<Dimensions,double>& x,
@@ -787,7 +637,7 @@ void exahype2::dg::rusanov::tests::RiemannTest::testProjectVolumetricDataOntoFac
         double                                      dt,
         int                                         normal
         ) -> double {
-          return eulerEigenvalue(Q,x,t,dt,normal);
+          return elasticEigenvalue(Q,x,t,dt,normal);
       },
       x,
       cellSize,
@@ -797,11 +647,11 @@ void exahype2::dg::rusanov::tests::RiemannTest::testProjectVolumetricDataOntoFac
       unknowns,
       auxiliaryVariables,
       face, //faceNumber
-      QuadraturePoints,
+      QuadraturePoints1d,
       true, //useFlux
-      false, //useNCP
+      true, //useNCP
       QHull[face], //TODO
-      &QHullForRiemann[face*2*nodesPerFace*strideQ]
+      &QHullForRiemann[face*2*nodesPerFace*unknowns]
       );
 
   }
@@ -813,79 +663,84 @@ void exahype2::dg::rusanov::tests::RiemannTest::testProjectVolumetricDataOntoFac
     for(int i=0; i<2*nodesPerFace; i++){
       file_stream << "at node " << i << ": [";
       for(int var=0; var<unknowns; var++){
-        file_stream << QHullForRiemann[(f*2*nodesPerFace+i)*unknowns+var] << ", ";
+        file_stream << (std::abs(QHullForRiemann[(f*2*nodesPerFace+i)*unknowns+var])<0.000001 ? 0.0 : QHullForRiemann[(f*2*nodesPerFace+i)*unknowns+var]) << ", ";
       }
       file_stream << "]\n";
     }
   }
 
-}
 
-
-void exahype2::dg::rusanov::tests::RiemannTest::testIntegrateOverRiemannSolutionsAndAddToVolume_GaussLegendre() {
-  // * The contributions from the computed rusanov flux are then added to the nodes
-  // * within the cell.
+  //  The contributions from the computed rusanov flux are then added to the nodes
+  //  within the cell.
   integrateOverRiemannSolutionsAndAddToVolume_GaussLegendre(
 #if Dimensions==2
-    &QHullForRiemann[(0*2+0)*nodesPerFace*strideQ], //left
-    &QHullForRiemann[(2*2+0)*nodesPerFace*strideQ], //right
-    &QHullForRiemann[(1*2+0)*nodesPerFace*strideQ], //down
-    &QHullForRiemann[(3*2+0)*nodesPerFace*strideQ], //up
+    &QHullForRiemann[(0*2+0)*nodesPerFace*unknowns], //left
+    &QHullForRiemann[(2*2+0)*nodesPerFace*unknowns], //right
+    &QHullForRiemann[(1*2+0)*nodesPerFace*unknowns], //down
+    &QHullForRiemann[(3*2+0)*nodesPerFace*unknowns], //up
 #else
-    &QHullForRiemann[(0*2+0)*nodesPerFace*strideQ], //left
-    &QHullForRiemann[(3*2+0)*nodesPerFace*strideQ], //right
-    &QHullForRiemann[(1*2+0)*nodesPerFace*strideQ], //down
-    &QHullForRiemann[(4*2+0)*nodesPerFace*strideQ], //up
-    &QHullForRiemann[(2*2+0)*nodesPerFace*strideQ], //front
-    &QHullForRiemann[(5*2+0)*nodesPerFace*strideQ], //back
+    &QHullForRiemann[(0*2+0)*nodesPerFace*unknowns], //left
+    &QHullForRiemann[(3*2+0)*nodesPerFace*unknowns], //right
+    &QHullForRiemann[(1*2+0)*nodesPerFace*unknowns], //down
+    &QHullForRiemann[(4*2+0)*nodesPerFace*unknowns], //up
+    &QHullForRiemann[(2*2+0)*nodesPerFace*unknowns], //front
+    &QHullForRiemann[(5*2+0)*nodesPerFace*unknowns], //back
 #endif
     order,
     unknowns,
     auxiliaryVariables,
     cellSize,
-    BasisFunctionValuesLeft,
-    QuadratureWeights,
+    BasisFunctionValuesLeft1d,
+    MassMatrixDiagonal1d,
     QOut
   );
 
 
-  file_stream << "\nValues from Riemann Integral are: \n";
+
+  file_stream << "\nValues after Riemann Integral are: \n";
   for(int i=0; i<nodesPerCell; i++){
     file_stream << "node " << i << ": [";
     for(int var=0; var<unknowns;var++){
-      file_stream << QOut[i*unknowns+var] << ", ";
+      file_stream << (std::abs(QOut[i*unknowns+var]) <0.0000001 ? 0.0 : QOut[i*unknowns+var]) << ", ";
     }
     file_stream << "]\n";
   }
 
-}
 
-
-*/
-
-void exahype2::dg::tests::CellIntegralTest::testMultiplyWithInvertedMassMatrix_GaussLegendre() {
-/*
   multiplyWithInvertedMassMatrix_GaussLegendre(
     cellData,
     order,
     unknowns,
     auxiliaryVariables,
-    QuadratureWeights
+    MassMatrixDiagonal1d
   );
-*/
 
   //Finally we check that after all these steps have been taken QOut, which should be the sum of the volume and face contributions, is zero
 
-/*
-file_stream << "\nFinal values are: \n";
-for(int i=0; i<nodesPerCell; i++){
-  file_stream << "node " << i << ": [";
-  for(int var=0; var<unknowns;var++){
-    file_stream << QOut[i*unknowns+var] << ", ";
-    validateNumericalEquals(QOut[i*unknowns+var], 0.0);
+  file_stream << "\nFinal values are: \n";
+  for(int i=0; i<nodesPerCell; i++){
+    file_stream << "node " << i << ": [";
+    for(int var=0; var<unknowns;var++){
+      file_stream << (std::abs(QOut[i*unknowns+var]) <0.0000001 ? 0.0 : QOut[i*unknowns+var]) << ", ";
+//      validateNumericalEquals(QOut[i*strideQ+var], 0.0);
+    }
+    file_stream << "]\n";
   }
-  file_stream << "]\n";
-}
-*/
-}
+
+
+  delete[] QIn;
+  delete[] QOut;
+  delete[] QLeft;
+  delete[] QRight;
+  delete[] QDown;
+  delete[] QUp;
+#if Dimensions==3
+  delete[] QFront;
+  delete[] QBack;
+#endif
+
+  delete[] QHullForRiemann;
+
+
+} //runDGElastic
 

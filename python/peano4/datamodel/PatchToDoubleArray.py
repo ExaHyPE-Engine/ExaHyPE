@@ -4,6 +4,22 @@ import peano4.output.Jinja2TemplatedHeaderImplementationFilePair
 import os
 
 from .DoF import DoFAssociation
+    
+class FloatTypes():
+  def __init__(self, float_type):
+      if float_type=="float":
+        self.cpp = "float"
+        self.mpi = "MPI_FLOAT"
+      elif float_type=="double":
+        self.cpp = "double"
+        self.mpi = "MPI_DOUBLE"
+      elif float_type=="long double":
+        self.cpp = "long double"
+        self.mpi = "MPI_LONG_DOUBLE"
+      elif float_type=="half":
+        raise Exception("Float type half not currently available")
+      else:
+        raise Exception("Float type not recognized")
 
 
 class PatchToDoubleArray():
@@ -20,7 +36,7 @@ class PatchToDoubleArray():
   toolbox.
   
   """
-  def __init__(self,patch):
+  def __init__(self,patch, float_type="double"):
     """
     
       includes  Includes to be added to the generated file. This is something
@@ -35,6 +51,7 @@ class PatchToDoubleArray():
     self.store_persistent_condition  = "true"
     self.load_persistent_condition   = "true"
     self.includes                    = ""
+    self.float_type                  = FloatTypes(float_type)
 
 
   def __str__(self):
@@ -83,7 +100,9 @@ class PatchToDoubleArray():
         "DATA_ASSOCIATION":            int(self.data.association),
         "MERGE_METHOD_DEFINITION":     self.merge_method_definition,
         "STORE_PERSISTENT_CONDITION":  self.store_persistent_condition,
-        "LOAD_PERSISTENT_CONDITION":   self.load_persistent_condition
+        "LOAD_PERSISTENT_CONDITION":   self.load_persistent_condition,
+        "FLOAT_TYPE":                  self.float_type.cpp,
+        "MPI_FLOAT_TYPE":              self.float_type.mpi
       }
 
     """

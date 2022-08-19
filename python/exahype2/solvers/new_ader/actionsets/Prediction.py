@@ -2,6 +2,7 @@
 # use, please see the copyright notice at www.peano-framework.org
 
 from .AbstractAderDGActionSet import AbstractAderDGActionSet
+from ..kernels import create_array_and_convert_from_type
 
 #import peano4
 import peano4.solversteps
@@ -49,21 +50,21 @@ class Prediction(AbstractAderDGActionSet):
     constexpr int totalSize = sizeLQi + sizeRhs + sizeLFi + sizeGradQ +
                           sizeLQhi + sizeLFhi + sizeLQhi;
   
-    double block[totalSize];
-    double* memory = block;
+    {{PREDICTOR_COMPUTATION_PRECISION}} block[totalSize];
+    {{PREDICTOR_COMPUTATION_PRECISION}}* memory = block;
         
-    double* lQi   = memory; memory+=sizeLQi;
-    double* rhs   = memory; memory+=sizeRhs;
-    double* lFi   = memory; memory+=sizeLFi;
-    double* gradQ = memory; memory+=sizeGradQ;
+    {{PREDICTOR_COMPUTATION_PRECISION}}* lQi   = memory; memory+=sizeLQi;
+    {{PREDICTOR_COMPUTATION_PRECISION}}* rhs   = memory; memory+=sizeRhs;
+    {{PREDICTOR_COMPUTATION_PRECISION}}* lFi   = memory; memory+=sizeLFi;
+    {{PREDICTOR_COMPUTATION_PRECISION}}* gradQ = memory; memory+=sizeGradQ;
     
-    double* lQhi = memory; memory+=sizeLQhi;
-    double* lFhi = memory; memory+=sizeLFhi;
-    double* lduh = memory; memory+=sizeLQhi;
+    {{PREDICTOR_COMPUTATION_PRECISION}}* lQhi = memory; memory+=sizeLQhi;
+    {{PREDICTOR_COMPUTATION_PRECISION}}* lFhi = memory; memory+=sizeLFhi;
+    {{PREDICTOR_COMPUTATION_PRECISION}}* lduh = memory; memory+=sizeLQhi;
     
-    double lQhbnd[2*Dimensions*spaceFaceSize*(NumberOfVariables+NumberOfParameters)]{0.0};
-    double lFhbnd[2*Dimensions*spaceFaceSize*NumberOfVariables]{0.0};
-    //double lGradQhbnd[2*Dimensions*Dimensions*spaceFaceSize*(NumberOfVariables+NumberOfParameters)]{0.0};
+    {{PREDICTOR_STORAGE_PRECISION}} lQhbnd[2*Dimensions*spaceFaceSize*(NumberOfVariables+NumberOfParameters)]{0.0};
+    {{PREDICTOR_STORAGE_PRECISION}} lFhbnd[2*Dimensions*spaceFaceSize*NumberOfVariables]{0.0};
+    //{{PREDICTOR_STORAGE_PRECISION}} lGradQhbnd[2*Dimensions*Dimensions*spaceFaceSize*(NumberOfVariables+NumberOfParameters)]{0.0};
 
     int numberOfIterations = repositories::{{SOLVER_INSTANCE}}.spaceTimePredictor(
       lQhbnd,
@@ -108,7 +109,7 @@ class Prediction(AbstractAderDGActionSet):
   
     const int basisElementsByFace  = spaceFaceSize*(NumberOfVariables+NumberOfParameters);
     const int fluxElementsByFace   = spaceFaceSize*NumberOfVariables;
-  
+
     for(int d=0; d<Dimensions; d++){
       //Projected solution estimations
       std::copy_n(&lQhbnd[2*d*basisElementsByFace], basisElementsByFace, fineGridFaces{{UNKNOWN_IDENTIFIER}}Estimates(d).value+basisElementsByFace);
@@ -145,7 +146,7 @@ class Prediction(AbstractAderDGActionSet):
       d = {}
       self._solver._init_dictionary_with_default_parameters(d)
       self._solver.add_entries_to_text_replacement_dictionary(d)
-      d[ "PREDICATE" ]                 = self.guard
+      d[ "PREDICATE" ]                  = self.guard
       result = jinja2.Template(self.TemplateProject).render(**d)
       pass 
     return result

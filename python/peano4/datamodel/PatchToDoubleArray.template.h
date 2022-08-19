@@ -41,21 +41,21 @@ struct {{NAMESPACE | join("::")}}::{{CLASSNAME}} {
   #endif
   #if PeanoDebug>=1
   private:
-    tarch::la::Vector<Dimensions,double> _debugX;
-    tarch::la::Vector<Dimensions,double> _debugH;
+    tarch::la::Vector<Dimensions,{{FLOAT_TYPE}}> _debugX;
+    tarch::la::Vector<Dimensions,{{FLOAT_TYPE}}> _debugH;
 
 
   public:
-    void setDebugX( const tarch::la::Vector<Dimensions,double>& data );
-    void setDebugH( const tarch::la::Vector<Dimensions,double>& data );
-    tarch::la::Vector<Dimensions,double> getDebugX() const;
-    tarch::la::Vector<Dimensions,double> getDebugH() const;
+    void setDebugX( const tarch::la::Vector<Dimensions,{{FLOAT_TYPE}}>& data );
+    void setDebugH( const tarch::la::Vector<Dimensions,{{FLOAT_TYPE}}>& data );
+    tarch::la::Vector<Dimensions,{{FLOAT_TYPE}}> getDebugX() const;
+    tarch::la::Vector<Dimensions,{{FLOAT_TYPE}}> getDebugH() const;
   #endif
 
   #if Dimensions==2
-  double                                 value[{{CARDINALITY_2D}}];
+  {{FLOAT_TYPE}}                                 value[{{CARDINALITY_2D}}];
   #else
-  double                                 value[{{CARDINALITY_3D}}];
+  {{FLOAT_TYPE}}                                 value[{{CARDINALITY_3D}}];
   #endif
   
   {{CLASSNAME}}();
