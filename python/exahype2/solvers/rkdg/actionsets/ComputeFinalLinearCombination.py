@@ -52,7 +52,7 @@ class ComputeFinalLinearCombination(AbstractRungeKuttaDGActionSet):
 
     double* targetPatch = fineGridCell{{UNKNOWN_IDENTIFIER}}.value;
     
-    {{POSTPROCESS_UPDATED_PATCH}}
+    {{POSTPROCESS_UPDATED_CELL}}
 
     {% if COMPUTE_MAX_EIGENVALUE %}
     ::exahype2::CellData  cellData( nullptr, marker.x(), marker.h(), timeStamp, timeStepSize, fineGridCell{{UNKNOWN_IDENTIFIER}}.value );

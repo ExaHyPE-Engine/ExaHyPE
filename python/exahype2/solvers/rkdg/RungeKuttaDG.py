@@ -249,8 +249,8 @@ class RungeKuttaDG(object):
     self._compute_time_step_size              = None
     self._compute_new_time_step_size          = None
     
-    self._preprocess_reconstructed_patch      = ""
-    self._postprocess_updated_patch           = ""
+    self._preprocess_cell                     = ""
+    self._postprocess_updated_cell            = ""
 
     self._flux_implementation                 = None
     self._ncp_implementation                  = None
@@ -843,7 +843,7 @@ We use RK(""" + str(self._rk_order) + """) for the time stepping.
       This one is called by all algorithmic steps before I invoke
       add_entries_to_text_replacement_dictionary().
 
-      See the remarks on set_postprocess_updated_patch_kernel to understand why
+      See the remarks on set_postprocess_updated_cell_kernel to understand why
       we have to apply the (partially befilled) dictionary to create a new entry
       for this very dictionary.
 
@@ -883,8 +883,8 @@ We use RK(""" + str(self._rk_order) + """) for the time stepping.
     
     #d[ "SOURCE_TERM_CALL"]                    = jinja2.Template(self._source_term_call, undefined=jinja2.DebugUndefined).render( **d )
     #d[ "RIEMANN_SOLVER_CALL"]                 = jinja2.Template(self._Riemann_solver_call, undefined=jinja2.DebugUndefined).render( **d )
-    #d[ "PREPROCESS_RECONSTRUCTED_PATCH" ]     = jinja2.Template(self._preprocess_reconstructed_patch, undefined=jinja2.DebugUndefined).render( **d )
-    d[ "POSTPROCESS_UPDATED_PATCH" ]          = jinja2.Template(self._postprocess_updated_patch, undefined=jinja2.DebugUndefined).render( **d )
+    d[ "PREPROCESS_RECONSTRUCTED_CELL" ]      = jinja2.Template(self._preprocess_cell, undefined=jinja2.DebugUndefined).render( **d )
+    d[ "POSTPROCESS_UPDATED_CELL" ]           = jinja2.Template(self._postprocess_updated_cell, undefined=jinja2.DebugUndefined).render( **d )
     d[ "BOUNDARY_CONDITIONS_IMPLEMENTATION"]  = self._boundary_conditions_implementation
     d[ "REFINEMENT_CRITERION_IMPLEMENTATION"] = self._refinement_criterion_implementation
     d[ "INITIAL_CONDITIONS_IMPLEMENTATION"]   = self._initial_conditions_implementation

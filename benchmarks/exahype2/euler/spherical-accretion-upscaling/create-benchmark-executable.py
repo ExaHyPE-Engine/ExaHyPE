@@ -81,7 +81,7 @@ if "fv" in args.solver:
 if "rk" in args.solver and "dg" in args.solver:
   space_order = int(args.solver[2])
   time_order  = int(args.solver[6])
-  thesolver = exahype2.solvers.rkdg.rusanov.GlobalAdaptiveTimeStep(name                 = solver_name + "DG",
+  thesolver = exahype2.solvers.rkdg.rusanov.GlobalAdaptiveTimeStepWithEnclaveTasking(name                 = solver_name + "DG",
                                                                    rk_order             = time_order,
                                                                    polynomials          = exahype2.solvers.GaussLegendreBasis(space_order),
                                                                    unknowns             = number_of_unknowns,

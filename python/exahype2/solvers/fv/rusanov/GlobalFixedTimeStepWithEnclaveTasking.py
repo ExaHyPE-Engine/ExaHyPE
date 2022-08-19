@@ -39,7 +39,16 @@ class GlobalFixedTimeStepWithEnclaveTasking( EnclaveTasking ):
       to max_volume_h.
   
     """
-    super(GlobalFixedTimeStepWithEnclaveTasking,self).__init__(name, patch_size, overlap, unknowns, auxiliary_variables, min_volume_h, max_volume_h, plot_grid_properties,pde_terms_without_state) 
+    super(GlobalFixedTimeStepWithEnclaveTasking,self).__init__(name, 
+                                                               patch_size, 
+                                                               overlap, 
+                                                               unknowns, 
+                                                               auxiliary_variables, 
+                                                               min_volume_h, 
+                                                               max_volume_h, 
+                                                               plot_grid_properties,
+                                                               pde_terms_without_state,
+                                                               kernel_namespace="rusanov") 
     
     self._normalised_time_step_size = normalised_time_step_size
 
