@@ -3,6 +3,7 @@
 #include "GPUScratchpadData.h"
 #include "tarch/compiler/CompilerSpecificSettings.h"
 #include "exahype2/fv/rusanov/LoopBody.h"
+#include "exahype2/fv/rusanov/Rusanov_Helper.cpph"
 
 #include <cstring>
 
