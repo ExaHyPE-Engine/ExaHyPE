@@ -107,22 +107,26 @@ void applications::exahype2::euler::sphericalaccretion::MassAccumulator::finishA
   _previousMassAccumulated.insert( _previousMassAccumulated.end(), _currentMass.begin(), _currentMass.end() );
   _currentMass.clear();
 
-  int  maxShell         = 1;
+  // accumulate
   for (int i=0; i<_previousMassAccumulated.size(); i++) {
     if (i>0) {
       _previousMassAccumulated[i] += _previousMassAccumulated[i-1];
-      if (
-        tarch::la::equals( _previousMassAccumulated[i], 0.0 )
-        or
-        std::abs(_previousMassAccumulated[i] / _previousMassAccumulated[i-1]) > 1.0+_threshold
-      ) {
-        maxShell++;
-      }
     }
   }
-  maxShell++;
-  logInfo( "finishAccumulation()", "roll over " << maxShell << " out of " << _previousMassAccumulated.size() << " buckets (remaining buckets make no significant contribution)" );
-  _previousMassAccumulated.resize(maxShell);
+
+  int  largestRelevantShell = _previousMassAccumulated.size()-2;
+  while (
+    largestRelevantShell > 0
+    and
+    not tarch::la::equals( _previousMassAccumulated[largestRelevantShell], 0.0 )
+    and
+    std::abs(_previousMassAccumulated[largestRelevantShell+1] / _previousMassAccumulated[largestRelevantShell]) < 1.0+_threshold
+  ) {
+    largestRelevantShell--;
+  }
+  largestRelevantShell++;
+  logInfo( "finishAccumulation()", "roll over " << largestRelevantShell << " out of " << _previousMassAccumulated.size() << " buckets (remaining buckets make no significant contribution)" );
+  _previousMassAccumulated.resize( std::max(0,largestRelevantShell) );
 
 
   double currentShellWidth = 0.0;

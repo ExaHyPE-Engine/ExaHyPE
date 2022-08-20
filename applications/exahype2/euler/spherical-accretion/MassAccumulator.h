@@ -60,7 +60,14 @@ class applications::exahype2::euler::sphericalaccretion::MassAccumulator {
     const double _shellWidth;
     const double _threshold;
 
+    /**
+     * Holds mass per shell. Is used to accumulate data.
+     */
     std::vector<double>  _currentMass;
+
+    /**
+     * Holds accumulated mass per shell.
+     */
     std::vector<double>  _previousMassAccumulated;
 
     double               _maxDistanceThatMakesContribution;
