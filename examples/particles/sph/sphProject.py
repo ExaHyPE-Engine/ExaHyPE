@@ -6,13 +6,10 @@
 # ------------------------------------------------------------------------------
 
 # SPH scheme: Minimal SPH (Swift)
-# Setup: Gresho-Chan vortex test for Peano SPH
+# Setup: SPH BENCHMARK
 # 
-# In this test, particles are initialised at rest in regular grid configuration
-# and periodic BC. Gas has negligible presure. Energy ($E$) is injected to a (or
-# group of) central particle and the blast should propagate isotropically,
-# up to boundary effects. See, e.g., Springel and Hernquist, Mon. Not. R.
-# Astron. Soc. 333, 649–664 (2002).
+
+# @TODO add description of SPH BENCHMARK
 
 # Particle behaviour
 # 
@@ -59,6 +56,7 @@ import peano4.toolbox.particles.sph.initSnippets
 # SPH compute kernels library
 import peano4.toolbox.particles.sph.computeKernels
 
+# Compilation modes
 modes = {
   "release": peano4.output.CompileMode.Release,
   "trace":   peano4.output.CompileMode.Trace,
@@ -67,7 +65,9 @@ modes = {
   "debug":   peano4.output.CompileMode.Debug,
 }
 
+# -----------------------------------------------------------------------------
 # Command line arguments for this script
+# -----------------------------------------------------------------------------
 parser = argparse.ArgumentParser(description='Peano-4 SPH benchmarking script')
 parser.add_argument("-m",     "--mode",               dest="mode",                         default="release",           help="|".join(modes.keys()) )
 parser.add_argument("-c",     "--clean",              dest="clean_temporary_directories",  action="store_true",         help="Remove temporary directories before script starts" )
@@ -94,7 +94,7 @@ if args.clean_temporary_directories:
 # Initialise Peano4 project  
 # -----------------------------------------------------------------------------
 project = peano4.Project( ["examples", "particles"],
-    "minimal-sph-peano-test-gresho-chan-vortex", "." )
+    "minimal-sph-peano-BENCHMARK", "." )
 
 # Prepare code
 # 
@@ -190,7 +190,7 @@ has_been_kicked_attr  = dastgen2.attributes.Boolean("hasBeenKicked")
 # Extra ------------------------------------------------------------------------
 has_no_neighbours_attr= dastgen2.attributes.Boolean("hasNoNeighbours")
 is_boundary_part_attr = dastgen2.attributes.Boolean("isBoundaryParticle")
-time_attr             = dastgen2.attributes.Double("time")
+time_attr             = dastgen2.attributes.Double("time") # @TODO implement in init snippet library et al
 a_prev_step_attr      = peano4.dastgen2.Peano4DoubleArray("a_prev_step","Dimensions") # for PHANTOM corrector
 uDot_prev_step_attr   = dastgen2.attributes.Double("uDot_prev_step")                  # for PHANTOM corrector
 Ncount_attr           = dastgen2.attributes.Integer("Ncount")                         # integer number count
@@ -286,6 +286,7 @@ H_TOLERANCE = "1e-4"
 
 # SPH kernel parameters -------------------------------------------------------
 #KERNEL_SUPPORT_RAD = "2"  # "gamma" parameter for Price et al 2018 M4 kernel
+KERNEL_SUPPORT_RAD = "1.936492"  #  1D SWIFT M5 Kernel
 #KERNEL_SUPPORT_RAD = "1.732051"  #  1D SWIFT M4 Kernel
 KERNEL_SUPPORT_RAD = "1.778002"  #  2D SWIFT M4 Kernel
 
@@ -355,7 +356,7 @@ project.solversteps.add_step(create_grid)
 # -----------------------------------------------------------------------------
 # Set Initial conditions for particles
 # -----------------------------------------------------------------------------
-# Gresho-Chan vortex:
+# Here you have to call the corresponding ICs for the current BENCHMARK.
 ICs = peano4.toolbox.particles.sph.initSnippets.GreshoChanVortexIC( dimensions=HYDRO_DIMENSIONS )
 initialisation_snippet = ICs.initialisation_snippet
 
@@ -899,29 +900,25 @@ project.solversteps.add_step(print_solution)
 # ------------------------------------------------------------------------------
 # Next, we generate the actual Peano 4 C++ code:
 
-# If using Pawel's clang, in some cases we need to add the "-lstdc++fs" flag to
-# the makefile We can do this manually in the generated code, or use
+# By default, Peano will generate a main file from a basic template.
+# Alternatively, here we generate the full main file for an SPH simulation. For
+# this we have to change the 'DefaultSequence' to the 'SPHSequence' using the
+# following call:
+project.set_sph_sequence('minimal')
+
+# If using Pawel's clang version, in some cases we need to add the "-lstdc++fs"
+# flag to the makefile. We can do this manually in the generated code. In
+# principle we could also use
+
 
 #project.output.makefile.add_library("-lstdc++fs")
 
 # which, however, has to be modified to remove the "-l" appended by default
-# Otherwise we can just compile.
+
+# Otherwise, we are ready to generate the C++ code.
 project.generate()
 
-# ## Write the main
-# 
-# Do not forget to include the generated header files, e.g., 
-#     
-#     //
-#     // =================
-#     // inserted manually
-#     // =================
-#     //
-#     #include "observers/CreateGrid.h"
-#     #include "observers/Init.h"
-#     #include "observers/Plot.h"
-#     #include "observers/Move.h"
-# 
+ 
 
 # ------------------------------------------------------------------------------
 #  Compile the code
