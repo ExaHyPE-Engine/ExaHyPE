@@ -203,7 +203,7 @@ void exahype2::RefinementControl::finishStep() {
     tarch::multicore::Lock lock( _semaphore );
     _committedEvents.clear();
 
-    NewEvents::iterator p = _newEvents.begin();
+    auto p = _newEvents.begin();
     while (p!=_newEvents.end()) {
       _committedEvents.push_back( p->first );
       p->second--;
