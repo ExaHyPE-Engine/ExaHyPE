@@ -114,17 +114,16 @@ void applications::exahype2::euler::sphericalaccretion::MassAccumulator::finishA
     }
   }
 
-  int  largestRelevantShell = _previousMassAccumulated.size()-2;
-  while (
-    largestRelevantShell > 0
-    and
-    not tarch::la::equals( _previousMassAccumulated[largestRelevantShell], 0.0 )
-    and
-    std::abs(_previousMassAccumulated[largestRelevantShell+1] / _previousMassAccumulated[largestRelevantShell]) < 1.0+_threshold
-  ) {
-    largestRelevantShell--;
+  int largestRelevantShell = 0;
+  for (int i=0; i<_previousMassAccumulated.size()-1; i++) {
+    if (
+      not tarch::la::equals( _previousMassAccumulated[i], 0.0 )
+      and
+      std::abs(_previousMassAccumulated[i+1] / _previousMassAccumulated[i]) >= 1.0+_threshold
+    ) {
+      largestRelevantShell = std::max(largestRelevantShell,i+1);
+    }
   }
-  largestRelevantShell++;
   logInfo( "finishAccumulation()", "roll over " << largestRelevantShell << " out of " << _previousMassAccumulated.size() << " buckets (remaining buckets make no significant contribution)" );
   _previousMassAccumulated.resize( std::max(0,largestRelevantShell) );
 

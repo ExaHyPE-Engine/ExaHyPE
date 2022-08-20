@@ -99,11 +99,42 @@ class applications::exahype2::euler::sphericalaccretion::MassAccumulator {
     double getMass_linearInterpolation(double radius) const;
 
     /**
-     * Roll over the current (accumulating) data set into previous mass, determine
-     * new cut-off, i.e. biggest shell that will play a role, the total mass within
-     * those shells that count, and write some info.
+     * Finalise data accumulation for next time step
      *
-     * Call this routine after each time step, not after each grid sweep.
+     * The routine runs through a sequence of steps:
+     *
+     * - Allreduce _currentMass such that all data from all ranks is available
+     *   on all ranks. The reduction operator is the sum.
+     * - Roll over the current data set into previousMassAccumulated and clear
+     *   that latter. It is, from now on, available for the next accumulation
+     *   again.
+     * - Compute accumulated data by running through shells inside-out.
+     *   _currentMass holds the mass per shell, but eventually we are
+     *   interested in the accumulated mass, i.e. the integral from the center
+     *   over the radius r. Note that some shells can be empty as either no
+     *   (over-)mass is there anymore or a shell was not hit by an integration
+     *   point or finite volume centre. So the accumulated result is
+     *   monotonously growing (usually), but the growth is not strict
+     *   monotonously growing.
+     * - Find out from which radius on the accumulated data makes no big
+     *   difference anymore. Truncate the data series here. We effectively now
+     *   know the maximum radius which makes a difference to the mass
+     *   accumulation.
+     *
+     *
+     * ## Cut off radius
+     *
+     * For the cut-off radius, I run through all differences between successive
+     * accumulated shells/buckets. If two successive buckets have a (relative)
+     * difference which is bigger than 1.0+_threshold, i.e. they differ
+     * significantly, this is a potential cut-off: the bigger bucket is one we
+     * should definitely still take into account. I take the maximum over all
+     * of these cut-off candidates.
+     *
+     * It is important that we analyse all bucket differences: We cannot stop
+     * this analysis early, as some shells might be empty (see reasons above).
+     * So even if two buckets i and i+1 do not differ at all, it might still be
+     * that i+1 and i+2 differ significantly.
      */
     void finishAccumulation();
 
