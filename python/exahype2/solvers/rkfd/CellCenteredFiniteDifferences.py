@@ -554,11 +554,11 @@ The finest mesh width of """ + str(self.get_finest_volume_size(domain_size)) + "
     step.add_action_set( self._action_set_copy_new_faces_onto_old_faces )
     step.add_action_set( self._action_set_roll_over_update_of_faces )
     step.add_action_set( self._action_set_initial_conditions ) 
-    step.add_action_set( self._action_set_postprocess_solution )
     step.add_action_set( self._action_set_project_patch_onto_faces )
     step.add_action_set( self._action_set_update_face_label )
     step.add_action_set( self._action_set_update_cell_label )
     step.add_action_set( self._action_set_AMR )
+    step.add_action_set( self._action_set_postprocess_solution )
     
     
   def add_actions_to_create_grid(self, step, evaluate_refinement_criterion):
@@ -681,8 +681,8 @@ The finest mesh width of """ + str(self.get_finest_volume_size(domain_size)) + "
     step.add_action_set( self._action_set_update_cell )
     step.add_action_set( self._action_set_project_patch_onto_faces )
     step.add_action_set( self._action_set_compute_final_linear_combination )
-    step.add_action_set( self._action_set_postprocess_solution )
     step.add_action_set( self._action_set_AMR )
+    step.add_action_set( self._action_set_postprocess_solution )
 
 
   @abstractmethod

@@ -270,8 +270,6 @@ class benchmarks::exahype2::euler::sphericalaccretionupscaling::SelfSimilarInfal
 
     /**
      * Outside of the critical area, we can use the stateless PDE terms.
-     *
-     * @todo Sollte immer ueberschreibbar sein
      */
     bool patchCanUseStatelessPDETerms(
       const tarch::la::Vector<Dimensions,double>&  patchCentre,
@@ -280,6 +278,7 @@ class benchmarks::exahype2::euler::sphericalaccretionupscaling::SelfSimilarInfal
       double                                       dt
     ) const override;
 
+//    Die Information was ausserhalb liegt, wird noch net im guard genutzt
 };
 
 

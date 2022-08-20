@@ -39,6 +39,16 @@ class DoFWisePostprocessSolution(AbstractRungeKuttaDGActionSet):
   FV.create_action_sets(). Once the instance does exist, you can tailor it. But you
   can also completely overwrite it.
   
+  The postprocessing plugs into touch cell last time. It is the last action set added
+  by the default implementation. Therefore, it is the first action set of which 
+  touchCellLastTime() is called. The reason why I plug into the leaving of the cell
+  is that some solvers may add further action sets to the solve. Enclave tasking for
+  example adds the merger as additional action set. These action sets plug into 
+  touchCellFirstTime() - and consequently their first time is called after the
+  postprocessing's first time. By making the postprocessing use touchCellLastTime(),
+  I ensure that any additional action set added by a subclass can still precede the 
+  postprocessing.
+  
   """
   def __init__(self,solver):
     super(DoFWisePostprocessSolution,self).__init__(solver)
@@ -90,7 +100,7 @@ class DoFWisePostprocessSolution(AbstractRungeKuttaDGActionSet):
 
   def get_body_of_operation(self,operation_name):
     result = ""
-    if operation_name==peano4.solversteps.ActionSet.OPERATION_TOUCH_CELL_FIRST_TIME:
+    if operation_name==peano4.solversteps.ActionSet.OPERATION_TOUCH_CELL_LAST_TIME:
       d = {}
       self._solver._init_dictionary_with_default_parameters(d)
       self._solver.add_entries_to_text_replacement_dictionary(d)

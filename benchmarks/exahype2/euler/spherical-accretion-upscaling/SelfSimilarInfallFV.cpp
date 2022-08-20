@@ -23,6 +23,8 @@ void benchmarks::exahype2::euler::sphericalaccretionupscaling::SelfSimilarInfall
 
   double mass = overDensity * tarch::la::volume( volumeH );
 
+  logDebug( "touchCellFirstTime(...)", "dump data of " << volumeCentre << ": " << density << " x " << volumeH << "->" << radius << " x " << mass );
+
   _accumulator.addMass(mass,radius);
 }
 
@@ -48,6 +50,8 @@ void benchmarks::exahype2::euler::sphericalaccretionupscaling::SelfSimilarInfall
     pInitial,
     Gamma
   );
+
+  logDebug( "initialCondition(...)", volumeX << " (" << tarch::la::norm2(volumeX) << ") -> " << Q[0] );
 
 /*
   applications::exahype2::euler::sphericalaccretion::initialiseHomogeneousDensity(
