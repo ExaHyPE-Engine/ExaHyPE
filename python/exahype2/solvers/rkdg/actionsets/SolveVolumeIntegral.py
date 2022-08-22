@@ -55,8 +55,6 @@ class SolveVolumeIntegral(AbstractRungeKuttaDGActionSet):
     double* QOut = fineGridCell{{UNKNOWN_IDENTIFIER}}RhsEstimates.value + {{PREDICATE_NO}} * {{NUMBER_OF_DOFS_PER_CELL_3D}} * {{NUMBER_OF_UNKNOWNS}};
     #endif
     
-    // Hier kommt der Task Aufruf rein
-    
     ::exahype2::CellData cellData(
       QIn,
       marker.x(),
@@ -65,15 +63,33 @@ class SolveVolumeIntegral(AbstractRungeKuttaDGActionSet):
       timeStepSize,
       QOut
     );
-   
-    ::exahype2::dg::{{KERNEL_NAMESPACE}}::{{VOLUMETRIC_SOLVER_CALL}}    
+
+    if (marker.willBeSkeletonCell()) {
+      ::exahype2::dg::{{KERNEL_NAMESPACE}}::{{VOLUMETRIC_SOLVER_CALL}}    
+    }
+    else {
+      {% if SPAWN_VOLUME_KERNEL_AS_TASK %}
+      ::exahype2::dg::{{KERNEL_NAMESPACE}}::{{VOLUMETRIC_SOLVER_CALL}}    
+      {% else %}
+      assertion( marker.willBeEnclaveCell() );
+      assertion( not marker.willBeRefined() );
+      auto newEnclaveTask = new tasks::{{SOLVER_NAME}}EnclaveTask(
+        marker,
+        timeStamp,
+        timeStepSize,
+        QIn
+      );
+      fineGridCell{{SEMAPHORE_LABEL}}.setSemaphoreNumber( newEnclaveTask->getTaskId() );
+      tarch::multicore::spawnTask( newEnclaveTask );
+      {% endif %}
+    }
   }  
   
   {% endfor %}
 """
   
   
-  def __init__(self,solver):
+  def __init__(self,solver,spawn_volume_kernel_as_task = False):
     """
     
     guard_project: String (C++ code)
@@ -85,8 +101,9 @@ class SolveVolumeIntegral(AbstractRungeKuttaDGActionSet):
     
     """
     super(SolveVolumeIntegral,self).__init__(solver)
-    self.guards               = []
-    self._butcher_tableau     = ButcherTableau(self._solver._rk_order)
+    self.guards                      = []
+    self._butcher_tableau            = ButcherTableau(self._solver._rk_order)
+    self.spawn_volume_kernel_as_task = spawn_volume_kernel_as_task
     
 
   @property
@@ -111,6 +128,7 @@ class SolveVolumeIntegral(AbstractRungeKuttaDGActionSet):
       self._solver.add_entries_to_text_replacement_dictionary(d)
       d[ "PREDICATES" ]                               = self.guards
       d[ "BUTCHER_TABLEAU_RELATIVE_TIME_STEP_SIZES" ] = self._butcher_tableau.time_step_sizes()
+      d[ "SPAWN_VOLUME_KERNEL_AS_TASK"]               = self.spawn_volume_kernel_as_task
       result = jinja2.Template(self.TemplateCellKernel).render(**d)
       pass 
     return result
@@ -118,4 +136,14 @@ class SolveVolumeIntegral(AbstractRungeKuttaDGActionSet):
 
   def get_action_set_name(self):
     return __name__.replace(".py", "").replace(".", "_")
+
+
+  def get_includes(self):
+    if self.spawn_volume_kernel_as_task:
+      return super( SolveVolumeIntegral, self ).get_includes() + """
+#include "tasks/""" + self._solver._name + """EnclaveTask.h"
+"""
+    else:
+      return super( SolveVolumeIntegral, self ).get_includes()
+
 

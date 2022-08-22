@@ -8,7 +8,12 @@
 
 #include "../DGUtils.h"
 #include "../Functors.h"
+
+/**
+ * For the generic kernels that I use here most of the time
+ */
 #include "../CellIntegral.h"
+#include "../Riemann.h"
 
 #include "tarch/la/Vector.h"
 #include "tarch/multicore/multicore.h"

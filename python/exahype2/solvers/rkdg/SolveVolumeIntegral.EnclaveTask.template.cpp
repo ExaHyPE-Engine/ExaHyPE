@@ -60,7 +60,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::applyKernelToCell(
     QOut
   );
 
-  {{VOLUMETRIC_SOLVER_CALL}}
+  ::exahype2::dg::{{KERNEL_NAMESPACE}}::{{VOLUMETRIC_SOLVER_CALL}}
 }
 
 
@@ -77,7 +77,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::applyKernelToCell(
     marker,
     t,
     dt,
-    copyOfLinearCombinationOfPreviousShots,
+    nullptr, // input data not ready at this point
     #if Dimensions==2
     {{NUMBER_OF_DOFS_PER_CELL_2D}}*({{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}),
     {{NUMBER_OF_DOFS_PER_CELL_2D}}* {{NUMBER_OF_UNKNOWNS}},
@@ -93,12 +93,17 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::applyKernelToCell(
         _inputValues,
         _outputValues
       );
+
+      tarch::freeMemory( _inputValues, tarch::MemoryLocation::Heap );
     }
   )
   #ifdef UseSmartMPI
   , smartmpi::Task(_enclaveTaskTypeId)
   #endif
-{}
+{
+  _inputValues = allocateMemory(_numberOfInputValues, tarch::MemoryLocation::Heap);
+  std::copy_n( copyOfLinearCombinationOfPreviousShots, _numberOfInputValues, _inputValues );
+}
 
 
 bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::isSmartMPITask() const {
