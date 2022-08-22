@@ -69,7 +69,6 @@ class tarch::logging::Statistics {
 
     int                   _maxCountInBetweenTwoMeasurements;
     double                _maxTimeInBetweenTwoMeasurements;
-    double                _relativeIntervalDifferenceThreshold;
 
     tarch::timing::Watch  _globalWatch;
 
@@ -79,8 +78,9 @@ class tarch::logging::Statistics {
      * The watch is used to track time (obviously) and the counter counts the
      * number of hits. If you enable sampling, the counter can trigger writes,
      * i.e. you can specify after how many hits you wanna dump data. The actual
-     * data is a four-tuple of time stamp, current value, minimal value over
-     * the tracked period and maximum value.
+     * data is a five-tuple of time stamp, current value, minimal value over
+     * the tracked period and maximum value. The last entry holds the number of
+     * writes to the bucket.
      */
     struct DataSet {
       /**
@@ -88,7 +88,7 @@ class tarch::logging::Statistics {
        */
       tarch::timing::Watch  _watch;
       int                   _counter;
-      std::vector< std::tuple<double,double,double,double> >   _data;
+      std::vector< std::tuple<double,double,double,double,int> >   _data;
       /**
        * As we hold data sets within a map, we need a default constructor.
        * However, this one yields an invalid data set.
@@ -114,12 +114,6 @@ class tarch::logging::Statistics {
      *
      * If the data has not changed since the last snapshot, I don't write
      * anything.
-     *
-     * Finally, I've added an additional test: If the current data is smaller
-     * than 90% of the maximum data, and is 110% of the minimum data, then
-     * I write as well.
-     *
-     * @see _relativeIntervalDifferenceThreshold
      *
      * @return Write a new snapshot.
      */

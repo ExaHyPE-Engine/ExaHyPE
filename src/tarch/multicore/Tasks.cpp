@@ -249,7 +249,7 @@ bool tarch::multicore::internal::fusePendingTasks(const tarch::multicore::orches
     }
     lock.free();
 
-    ::tarch::logging::Statistics::getInstance().log( FuseTasksStatisticsIdentifier, tasksOfSameType.size(), true );
+    ::tarch::logging::Statistics::getInstance().log( FuseTasksStatisticsIdentifier, tasksOfSameType.size() );
 
     native::processFusedTask(myTask, tasksOfSameType, fuseInstruction.device);
   }
@@ -446,15 +446,7 @@ void tarch::multicore::spawnTask(Task*  task) {
   }
   else {
     localNonblockingTasks[threadNumber].push_back(task);
-
-    // comment these three lines in (and remove the one above) to work with one
-    // global task queue only
-/*
-    tarch::multicore::Lock lock(nonblockingTasksSemaphore);
-    globalNonblockingTasks.push_back(task);
-    lock.free();
-*/
-    
+    ::tarch::logging::Statistics::getInstance().log( ThreadLocalPendingTasksStatisticsIdentifier, localNonblockingTasks[threadNumber].size() );
 
     logDebug( "spawnTask(...)", "enqueued task (#tasks=" << localNonblockingTasks[threadNumber].size() << ")" );
 

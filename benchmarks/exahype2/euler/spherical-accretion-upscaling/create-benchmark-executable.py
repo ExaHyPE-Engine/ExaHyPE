@@ -50,8 +50,8 @@ if args.plot:
   max_h               = 0.2
   min_h               = 0.2
 else:
-  max_h               = 0.1
-  min_h               = 0.1
+  max_h               = 0.04
+  min_h               = 0.04
 auxiliary_variables = 0
 
 

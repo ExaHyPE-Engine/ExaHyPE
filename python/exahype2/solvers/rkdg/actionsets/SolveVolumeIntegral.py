@@ -6,7 +6,9 @@ from .AbstractRungeKuttaDGActionSet import AbstractRungeKuttaDGActionSet
 from exahype2.solvers.ButcherTableau                import ButcherTableau
 
 import peano4
+import exahype2
 import jinja2
+
 
 class SolveVolumeIntegral(AbstractRungeKuttaDGActionSet):
   """
@@ -69,8 +71,6 @@ class SolveVolumeIntegral(AbstractRungeKuttaDGActionSet):
     }
     else {
       {% if SPAWN_VOLUME_KERNEL_AS_TASK %}
-      ::exahype2::dg::{{KERNEL_NAMESPACE}}::{{VOLUMETRIC_SOLVER_CALL}}    
-      {% else %}
       assertion( marker.willBeEnclaveCell() );
       assertion( not marker.willBeRefined() );
       auto newEnclaveTask = new tasks::{{SOLVER_NAME}}EnclaveTask(
@@ -81,6 +81,8 @@ class SolveVolumeIntegral(AbstractRungeKuttaDGActionSet):
       );
       fineGridCell{{SEMAPHORE_LABEL}}.setSemaphoreNumber( newEnclaveTask->getTaskId() );
       tarch::multicore::spawnTask( newEnclaveTask );
+      {% else %}
+      ::exahype2::dg::{{KERNEL_NAMESPACE}}::{{VOLUMETRIC_SOLVER_CALL}}    
       {% endif %}
     }
   }  
@@ -129,6 +131,7 @@ class SolveVolumeIntegral(AbstractRungeKuttaDGActionSet):
       d[ "PREDICATES" ]                               = self.guards
       d[ "BUTCHER_TABLEAU_RELATIVE_TIME_STEP_SIZES" ] = self._butcher_tableau.time_step_sizes()
       d[ "SPAWN_VOLUME_KERNEL_AS_TASK"]               = self.spawn_volume_kernel_as_task
+      d[ "SEMAPHORE_LABEL" ]      = exahype2.grid.UpdateCellLabel.get_attribute_name(self._solver._name)
       result = jinja2.Template(self.TemplateCellKernel).render(**d)
       pass 
     return result
