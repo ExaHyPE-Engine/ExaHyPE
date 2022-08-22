@@ -11,6 +11,11 @@
  * For the full license text, see LICENSE.txt
  **/
 
+/*
+ * pCompType is the type in which the predictor should be computed, typically this would be double
+ * pStoreType is the type in which the values predicted by this should be stored, typically this would be double
+ */
+
 #include <cstring>
 #include "../../Utils/KernelUtils.h"
 
@@ -27,12 +32,12 @@ namespace c {
  * and extrapolated predictor lQhbnd.
  * Currently we simply copy them over from the solution array.
  */
-template <bool usePointSource, bool useSource, bool useFlux, bool useNCP, bool useMM,typename SolverType>
+template <bool usePointSource, bool useSource, bool useFlux, bool useNCP, bool useMM,typename SolverType, typename pCompType, typename pStoreType>
 void spaceTimePredictorLinear(SolverType& solver,
-    double* lQbnd, double* lFbnd,
-    double* lQi, double* lFi, double* gradQ,
-    double* PSi, double* PSderivatives, double* tmp_PSderivatives,
-    double* lQhi,double* lFhi,
+    pStoreType* lQbnd, pStoreType* lFbnd,
+    pCompType* lQi, pCompType* lFi, pCompType* gradQ,
+    pCompType* PSi, pCompType* PSderivatives, pCompType* tmp_PSderivatives,
+    pCompType* lQhi, pCompType* lFhi,
     const double* const luh,
     const tarch::la::Vector<Dimensions, double>& cellCenter,
     const tarch::la::Vector<Dimensions, double>& invDx,
@@ -52,7 +57,7 @@ void spaceTimePredictorLinear(SolverType& solver,
   
   constexpr int sourceIndex = Dimensions;
 
-  const double invDt = 1. / dt;
+  const pCompType invDt = 1. / dt;
   
   // Matrices
   
@@ -77,12 +82,12 @@ void spaceTimePredictorLinear(SolverType& solver,
   idx4 idx_luh(basisSize, basisSize, basisSize, numberOfData);
   
   // local tmp array
-  double fluxDerivative[basisSize*numberOfVariables];
+  pCompType fluxDerivative[basisSize*numberOfVariables];
   idx2 idx_fluxDerivative(basisSize, numberOfVariables);
   
   idx2 idx_ncpResult(Dimensions, numberOfVariables);
-  double* ncpResult[Dimensions];
-  double ncpResult_vec[numberOfVariables*Dimensions] = {0.0};
+  pCompType* ncpResult[Dimensions];
+  pCompType ncpResult_vec[numberOfVariables*Dimensions] = {0.0};
   
   ncpResult[0] = &ncpResult_vec[idx_ncpResult(0,0)];
   ncpResult[1] = &ncpResult_vec[idx_ncpResult(1,0)];
@@ -113,7 +118,7 @@ void spaceTimePredictorLinear(SolverType& solver,
       for (int k = 0; k < basisSize; k++) {
         for (int l = 0; l < basisSize; l++) {
           for (int m = 0; m < numberOfVariables; m++) { //skip parameters
-            double sum = 0.0;
+            pCompType sum = 0.0;
             for (int n = 1; n <  basisSize+1; n++) {
               //#if defined(_GLL)
               //const double weight = gaussLobattoWeights[order][n-1];
@@ -188,7 +193,7 @@ void spaceTimePredictorLinear(SolverType& solver,
       for (int j = 0; j < basisSize; j++) {
         for (int k = 0; k < basisSize; k++) {
           for (int l = 0; l < basisSize; l++) {
-            double* F[3]; 
+            pCompType* F[3]; 
             F[0]      = lFi + idx_lFi(i, j, k, l, 0, 0);
             F[1]      = lFi + idx_lFi(i, j, k, l, 1, 0);
             F[2]      = lFi + idx_lFi(i, j, k, l, 2, 0);
@@ -311,7 +316,7 @@ void spaceTimePredictorLinear(SolverType& solver,
         for (int k = 0; k < basisSize; k++) {
           for (int l = 0; l < basisSize; l++) {
             std::fill_n(&ncpResult_vec[0],Dimensions*numberOfVariables, 0.); // zero out ncpResult
-            double* G[3];
+            pCompType* G[3];
             G[0]      = gradQ + idx_gradQ(j, k, l, 0, 0);
             G[1]      = gradQ + idx_gradQ(j, k, l, 1, 0);
             G[2]      = gradQ + idx_gradQ(j, k, l, 2, 0);
@@ -334,7 +339,7 @@ void spaceTimePredictorLinear(SolverType& solver,
       for (int j = 0; j < basisSize; j++) {
         for (int k = 0; k < basisSize; k++) {
           for (int l = 0; l < basisSize; l++) {
-            double* F[3];
+            pCompType* F[3];
             F[0]      = lFi + idx_lFi(i, j, k, l, 0, 0);
             F[1]      = lFi + idx_lFi(i, j, k, l, 1, 0);
             F[2]      = lFi + idx_lFi(i, j, k, l, 2, 0);
@@ -486,7 +491,7 @@ void spaceTimePredictorLinear(SolverType& solver,
         for (int l = 0; l < basisSize; l++) {
           for (int m = 0; m < basisSize; m++) {
             for (int n = 0; n < numberOfVariables/* skip parameters */; n++) {
-              double sum = 0.0;
+              pCompType sum = 0.0;
               for (int n0 = 1; n0 <  basisSize+1; n0++) {
                 //#if defined(_GLL)
                 //const double weight = gaussLobattoWeights[order][n0-1];

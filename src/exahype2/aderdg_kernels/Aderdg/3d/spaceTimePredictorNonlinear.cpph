@@ -11,6 +11,11 @@
  * For the full license text, see LICENSE.txt
  **/
 
+/*
+ * pCompType is the type in which the predictor should be computed, typically this would be double
+ * pStoreType is the type in which the values predicted by this should be stored, typically this would be double
+ */
+
 #include <cstring>
 
 #include "tarch/la/Vector.h"
@@ -37,14 +42,16 @@ namespace {
  *
  */
 template <bool useSource, bool useFlux, bool useViscousFlux, bool useNCP,
-          typename SolverType>
-int aderPicardLoopNonlinear(SolverType& solver, const double* luh,
-                            const double t,
-                            const double dt,
+          typename SolverType, typename pCompType>
+int aderPicardLoopNonlinear(SolverType& solver,
+                            const double* luh, const double t, const double dt,
                             const tarch::la::Vector<Dimensions, double>& cellCenter,
                             const tarch::la::Vector<Dimensions, double>& invDx,
-                            double* lQi, double* rhs, double* lFi,
-                            double* gradQ) {
+                            pCompType* lQi, pCompType* rhs, 
+                            pCompType* lFi, pCompType* gradQ) {
+  
+  
+  
   constexpr int numberOfVariables = SolverType::NumberOfVariables;
   constexpr int numberOfParameters = SolverType::NumberOfParameters;
   constexpr int numberOfData = numberOfVariables + numberOfParameters;
@@ -98,19 +105,17 @@ int aderPicardLoopNonlinear(SolverType& solver, const double* luh,
   auto gradQCur = gradQ;  // no need to allocate here.
   if (useViscousFlux) {
     // Allocate new buffer for averaged gradient.
-    gradQCur = new double[sizeGradQ];
+    gradQCur = new pCompType[sizeGradQ];
   }
 
   int iter = 0;
   for (; iter < MaxIterations; iter++) {
-    // TODO(Lukas) Do i need to reset the gradient here?
-    std::memset(gradQ, 0.0, sizeGradQ * sizeof(double));
+    std::memset(gradQ, 0.0, sizeGradQ * sizeof(pCompType));
     for (int i = 0; i < basisSize; i++) {  // time DOF
       // Compute gradients only if nonconservative contributions have to be
       // computed or if the flux depends on the gradient.
       if (useNCP || useViscousFlux) {
-        std::memset(gradQCur, 0.0,
-            sizeGradQ * sizeof(double));
+        std::memset(gradQCur, 0, sizeGradQ * sizeof(pCompType));
 
         // Compute the "derivatives" (contributions of the stiffness matrix)
         // x direction (independent from the y and z derivatives)
@@ -198,13 +203,13 @@ int aderPicardLoopNonlinear(SolverType& solver, const double* luh,
           for (int k = 0; k < basisSize; k++) {    // y
             for (int l = 0; l < basisSize; l++) {  // x
               // Call PDE fluxes
-              const double* Q = lQi + idx_lQi(j, k, l, i, 0);
-              double* F[3];
+              const pCompType* Q = lQi + idx_lQi(j, k, l, i, 0);
+
+              pCompType* F[3];
               F[0] = lFi + idx_lFi(i, j, k, l, 0, 0);
               F[1] = lFi + idx_lFi(i, j, k, l, 1, 0);
               F[2] = lFi + idx_lFi(i, j, k, l, 2, 0);
               if (useViscousFlux) {
-                // TODO(Lukas) Is the index correct here?
                 solver.viscousFlux(Q, gradQCur + idx_gradQ(j, k, l, 0, 0), F);
               } else {
                 solver.flux(Q, F);
@@ -330,7 +335,7 @@ int aderPicardLoopNonlinear(SolverType& solver, const double* luh,
                                     SolverType::weights[order][k] *
                                     SolverType::weights[order][l];
               const double updateSize = weight * dt;
-              double* S = lFi + idx_lFi(i, j, k, l, 3, 0);
+              pCompType* S = lFi + idx_lFi(i, j, k, l, 3, 0);
 
               // by intention, gradQCur is undefined here if useNCP is not true.
               // This is because algebraicSource is only a function of Q and S.
@@ -347,7 +352,7 @@ int aderPicardLoopNonlinear(SolverType& solver, const double* luh,
                 std::fill_n(S, numberOfVariables, 0.0);
               }
               if (useNCP) {
-                double ncp[numberOfVariables];
+                pCompType ncp[numberOfVariables];
                 solver.nonConservativeProduct(
                     lQi + idx_lQi(j, k, l, i, 0),
                     gradQCur + idx_gradQ(j, k, l, 0, 0), ncp);
@@ -369,7 +374,7 @@ int aderPicardLoopNonlinear(SolverType& solver, const double* luh,
 
     // 3. Multiply with (K1)^(-1) to get the discrete time integral of the
     // discrete Picard iteration
-    double sq_res = 0.0;
+    pCompType sq_res = 0.0;
     for (int i = 0; i < basisSize; i++) {
       for (int j = 0; j < basisSize; j++) {
         for (int k = 0; k < basisSize; k++) {
@@ -381,22 +386,17 @@ int aderPicardLoopNonlinear(SolverType& solver, const double* luh,
           // Matrix operation
           for (int l = 0; l < basisSize; l++) {  // time
             for (int m = 0; m < numberOfVariables; m++) {
-              double lQi_new = 0;
+              pCompType lQi_new = 0;
               for (int n = 0; n < basisSize; n++) {  // time
-                lQi_new +=
-                    iweight * rhs[idx_rhs(n, i, j, k, m)] *
-                    SolverType::iK1[order][l][n];  // note: iK1 is already the
-                                                // transposed inverse of K1
+                lQi_new += iweight * rhs[idx_rhs(n, i, j, k, m)] *
+                    SolverType::iK1[order][l][n];  // note: iK1 is already the transposed inverse of K1
 
                 assertion3(std::isfinite(rhs[idx_rhs(n, i, j, k, m)]),
                            rhs[idx_rhs(n, i, j, k, m)], dt, invDx);
               }
-              sq_res += (lQi_new - lQi[idx_lQi(i, j, k, l, m)]) *
-                        (lQi_new - lQi[idx_lQi(i, j, k, l, m)]);
-              assertion3(std::isfinite(lQi[idx_lQi(i, j, k, l, m)]),
-                         idx_lQi(i, j, k, l, m), dt, invDx);
-              assertion3(std::isfinite(lQi_new), idx_lQi(i, j, k, l, m), dt,
-                         invDx);
+              sq_res += (lQi_new - lQi[idx_lQi(i, j, k, l, m)]) * (lQi_new - lQi[idx_lQi(i, j, k, l, m)]);
+              assertion3(std::isfinite(lQi[idx_lQi(i, j, k, l, m)]), idx_lQi(i, j, k, l, m), dt, invDx);
+              assertion3(std::isfinite(lQi_new), idx_lQi(i, j, k, l, m), dt, invDx);
               lQi[idx_lQi(i, j, k, l, m)] = lQi_new;
             }
           }
@@ -406,12 +406,13 @@ int aderPicardLoopNonlinear(SolverType& solver, const double* luh,
 
     // 4. Exit condition
     if (!useMaxPicardIterations) {
-      constexpr double tol = 1e-7;
+      constexpr pCompType tol = 1e-7;
       if (sq_res < tol * tol) {
         break;
       }
 
       if (iter == MaxIterations) {  // No convergence after last iteration
+        /* TODO MML: reactivate warning
         static tarch::logging::Log _log("kernels::aderdg::generic::c");
         logWarning("aderPicardLoopNonlinear(...)",
                    "|res|^2=" << sq_res << " > |tol|^2=" << tol * tol
@@ -419,6 +420,7 @@ int aderPicardLoopNonlinear(SolverType& solver, const double* luh,
                               << " iterations. Solver seems not to "
                                  "have converged properly within "
                                  "maximum number of iteration steps");
+       */
       }
     }
   }  // end iter
@@ -438,11 +440,10 @@ int aderPicardLoopNonlinear(SolverType& solver, const double* luh,
  *  We have to consider that we store parameters in lQi
  *  and lQhi, and have to adjust the index accordingly.
  */
-template <typename SolverType,bool useSource, bool useFlux, bool useNCP, int numberOfVariables,
-          int numberOfParameters, int basisSize>
-void aderPredictorNonlinear(const double* lQi, const double* lFi, double* lQhi,
-                            double* lFhi_x, double* lFhi_y, double* lFhi_z,
-                            double* lShi) {
+template <typename SolverType, typename pCompType, bool useSource, bool useFlux, bool useNCP, int numberOfVariables, int numberOfParameters, int basisSize>
+void aderPredictorNonlinear(const pCompType* lQi, const pCompType* lFi, pCompType* lQhi,
+      pCompType* lFhi_x, pCompType* lFhi_y, pCompType* lFhi_z,
+      pCompType* lShi) {
   // Immediately compute the time - averaged space - time polynomials
 
   constexpr int basisSize2 = basisSize * basisSize;
@@ -514,12 +515,10 @@ void aderPredictorNonlinear(const double* lQi, const double* lFi, double* lQhi,
   }
 }
 
-template <typename SolverType,bool useFlux, bool useViscousFlux, int numberOfVariables,
-          int numberOfParameters, int basisSize>
-void aderExtrapolatorNonlinear(const double* lQhi, const double* lGradQi,
-                               const double* lFhi_x, const double* lFhi_y,
-                               const double* lFhi_z, double* lQhbnd,
-                               double* lGradQhbnd, double* lFhbnd) {
+template <typename SolverType, typename pCompType, typename pStoreType, bool useFlux, bool useViscousFlux, int numberOfVariables, int numberOfParameters, int basisSize>
+void aderExtrapolatorNonlinear(const pCompType* lQhi, const pCompType* lGradQi,
+                               const pCompType* lFhi_x, const pCompType* lFhi_y, const pCompType* lFhi_z, 
+                               pStoreType* lQhbnd, pStoreType* lGradQhbnd, pStoreType* lFhbnd) {
   // Compute the boundary-extrapolated values for Q and F*n
   constexpr int basisSize2 = basisSize * basisSize;
   constexpr int order = basisSize - 1;
@@ -686,11 +685,10 @@ void aderExtrapolatorNonlinear(const double* lQhi, const double* lGradQi,
   }
 }
 
-template <typename SolverType,bool useFlux, int numberOfVariables, int numberOfParameters,
-	  int basisSize>
-void aderTimeAveragingExtrapolatorNonlinear(const double* lQi,
-					    const double* lFi, double* lQhbnd,
-					    double* lFhbnd) {
+template <typename SolverType, typename pCompType, typename pStoreType, bool useFlux, int numberOfVariables, int numberOfParameters, int basisSize>
+void aderTimeAveragingExtrapolatorNonlinear(
+    const pCompType* lQi, const pCompType* lFi,
+    pStoreType* lQhbnd, pStoreType* lFhbnd) {
   // Compute the boundary-extrapolated values for Q and F*n
 
   const int order = basisSize - 1;
@@ -813,20 +811,22 @@ void aderTimeAveragingExtrapolatorNonlinear(const double* lQi,
 
 }  // namespace
 
-template <bool useSource, bool useFlux, bool useViscousFlux, bool useNCP,
-          bool noTimeAveraging, typename SolverType>
+template <bool useSource, bool useFlux, bool useViscousFlux, bool useNCP, bool noTimeAveraging, typename SolverType, typename pCompType, typename pStoreType>
 int spaceTimePredictorNonlinear(
-    SolverType& solver, double* lQhbnd, double* lGradQhbnd, double* lFhbnd,
-    double* lQi, double* rhs, double* lFi, double* gradQ, double* lQhi,
-    double* lFhi, const double* const luh,
+    SolverType& solver, pStoreType* lQhbnd, pStoreType* lGradQhbnd, pStoreType* lFhbnd,
+    pCompType* lQi, pCompType* rhs, pCompType* lFi, pCompType* gradQ, pCompType* lQhi,
+    pCompType* lFhi, const double* const luh,
     const tarch::la::Vector<Dimensions, double>& cellCenter,
-    const tarch::la::Vector<Dimensions, double>& invDx, double t, double dt) {
+    const tarch::la::Vector<Dimensions, double>& invDx,
+    double t,
+    double dt) {
+  
   constexpr int numberOfVariables = SolverType::NumberOfVariables;
   constexpr int numberOfParameters = SolverType::NumberOfParameters;
   constexpr int basisSize = SolverType::Order + 1;
 
   const int iterations =
-      aderPicardLoopNonlinear<useSource, useFlux, useViscousFlux, useNCP, SolverType>(
+      aderPicardLoopNonlinear<useSource, useFlux, useViscousFlux, useNCP, SolverType, pCompType>(
               solver, luh, t, dt, cellCenter, invDx, lQi, rhs, lFi, gradQ);
 
   idx5 idx_gradQ(basisSize, basisSize, basisSize, Dimensions,
@@ -835,14 +835,14 @@ int spaceTimePredictorNonlinear(
   if (noTimeAveraging) {
     // TODO(Lukas) what shall we do for this case?
     assert(false);
-    aderTimeAveragingExtrapolatorNonlinear<SolverType,useFlux, numberOfVariables, numberOfParameters, basisSize>(
+    aderTimeAveragingExtrapolatorNonlinear<SolverType, pCompType, pStoreType, useFlux, numberOfVariables, numberOfParameters, basisSize>(
         lQi, lFi, lQhbnd, lFhbnd);
   } else {
     constexpr int basisSize2 = basisSize * basisSize;
     constexpr int basisSize3 = basisSize2 * basisSize;
 
     // Note: gradQ is already time-averaged!
-    aderPredictorNonlinear<SolverType,useSource, useFlux, useNCP, numberOfVariables, numberOfParameters, basisSize>(
+    aderPredictorNonlinear<SolverType, pCompType, useSource, useFlux, useNCP, numberOfVariables, numberOfParameters, basisSize>(
         lQi, lFi, lQhi,
         &lFhi[0 * basisSize3 * numberOfVariables],  // lFhi_x
         &lFhi[1 * basisSize3 * numberOfVariables],  // lFhi_y
@@ -850,8 +850,7 @@ int spaceTimePredictorNonlinear(
         &lFhi[3 * basisSize3 * numberOfVariables]   // lShi
     );
 
-    aderExtrapolatorNonlinear<SolverType,useFlux, useViscousFlux, numberOfVariables,
-                              numberOfParameters, basisSize>(
+    aderExtrapolatorNonlinear<SolverType, pCompType, pStoreType, useFlux, useViscousFlux, numberOfVariables, numberOfParameters, basisSize>(
         lQhi, gradQ,
         &lFhi[0 * basisSize3 * numberOfVariables],  // lFhi_x
         &lFhi[1 * basisSize3 * numberOfVariables],  // lFhi_y

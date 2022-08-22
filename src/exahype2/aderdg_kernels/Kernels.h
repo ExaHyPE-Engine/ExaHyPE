@@ -64,34 +64,38 @@ namespace c {
 /**
  * @param SolverType Has to be of type ADERDG Solver.
  */
-template <bool usePointSource, bool useSource, bool useFlux, bool useNCP, bool useMM ,typename SolverType>
+template <bool usePointSource, bool useSource, bool useFlux, bool useNCP, bool useMM ,typename SolverType, typename pCompType, typename pStoreType>
 void spaceTimePredictorLinear(SolverType& solver,
-    double* lQbnd, double* lFbnd,
-    double* lQi, double* lFi, double* gradQ,
-    double* PSi, double* PSderivatives, double* tmp_PSderivatives,
-    double* lQhi,double* lFhi,
+    pStoreType* lQbnd, pStoreType* lFbnd,
+    pCompType* lQi, pCompType* lFi, pCompType* gradQ,
+    pCompType* PSi, pCompType* PSderivatives, pCompType* tmp_PSderivatives,
+    pCompType* lQhi, pCompType* lFhi,
     const double* const luh,
+    const tarch::la::Vector<Dimensions, double>& cellCenter,
     const tarch::la::Vector<Dimensions, double>& invDx,
+    const double t,
     const double dt);
 
-template <bool useSource, bool useFlux, bool useNCP, bool noTimeAveraging, typename SolverType>
+template <bool useSource, bool useFlux, bool useNCP, bool noTimeAveraging, typename SolverType, typename pCompType, typename pStoreType>
 int spaceTimePredictorNonlinear(
     SolverType& solver,
-    double*  lQhbnd, double* lFhbnd,
-    double* lQi,double* rhs,double* lFi,double* gradQ,double* lQhi,double* lFhi,
+    pStoreType*  lQhbnd, pStoreType* lGradQhbnd, pStoreType* lFhbnd,
+    pCompType* lQi, pCompType* rhs, pCompType* lFi, pCompType* gradQ, pCompType* lQhi, pCompType* lFhi,
     const double* const luh,
+    const tarch::la::Vector<Dimensions, double>& cellCenter,
     const tarch::la::Vector<Dimensions, double>& invDx,
+    double t,
     const double dt);
 
-template <typename SolverType>
-void solutionUpdate(SolverType& solver, double* luh, const double* const luhOld, const double* const lduh, const double dt);
+template <typename SolverType, typename pType>
+void solutionUpdate(SolverType& solver, double* luh, const double* const luhOld, const pType* const lduh, const double dt);
 
-template <typename SolverType, bool useSourceOrNCP, bool useFlux, int numberOfVariables, int basisSize>
-void volumeIntegralLinear(double* lduh, const double* const lFhi,
+template <typename SolverType, typename pCompType, bool useSourceOrNCP, bool useFlux, int numberOfVariables, int basisSize>
+void volumeIntegralLinear(pCompType* lduh, const pCompType* const lFhi,
                           const tarch::la::Vector<Dimensions, double>& dx);
 
-template <typename SolverType, bool useSourceOrNCP, bool useFlux, bool noTimeAveraging, int numberOfVariables, int basisSize>
-void volumeIntegralNonlinear(double* lduh, const double* const lFi,
+template <typename SolverType, typename pCompType, bool useSourceOrNCP, bool useFlux, bool noTimeAveraging, int numberOfVariables, int basisSize>
+void volumeIntegralNonlinear(pCompType* lduh, const pCompType* const lFi,
                              const tarch::la::Vector<Dimensions, double>& dx);
 
 template <typename SolverType, int numberOfVariables, int basisSize>

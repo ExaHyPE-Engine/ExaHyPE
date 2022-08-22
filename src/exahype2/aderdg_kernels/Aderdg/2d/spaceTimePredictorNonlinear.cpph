@@ -42,7 +42,8 @@ namespace {
  */
 
 
-template <bool useSource, bool useFlux, bool useViscousFlux, bool useNCP, typename SolverType, typename pCompType>
+template <bool useSource, bool useFlux, bool useViscousFlux, bool useNCP,
+          typename SolverType, typename pCompType>
 int aderPicardLoopNonlinear(SolverType& solver,
                              const double* luh, const double t, const double dt,
                              const tarch::la::Vector<Dimensions, double>& cellCenter,
@@ -105,6 +106,8 @@ int aderPicardLoopNonlinear(SolverType& solver,
   for (; iter < MaxIterations; iter++) {
       std::memset(gradQ, 0, sizeGradQ * sizeof(pCompType));
     for (int i = 0; i < basisSize; i++) {  // time DOF
+      // Compute gradients only if nonconservative contributions have to be
+      // computed or if the flux depends on the gradient.
       if(useNCP || useViscousFlux) {
         std::memset(gradQCur, 0, sizeGradQ * sizeof(pCompType));
 
@@ -314,7 +317,7 @@ int aderPicardLoopNonlinear(SolverType& solver,
       }
       
       if (iter == MaxIterations) {  // No convergence after last iteration
-        /*
+        /* TODO MML: reactivate warning
         static tarch::logging::Log _log("kernels::aderdg::generic::c");
         logWarning("aderPicardLoopNonlinear(...)",
             "|res|^2=" << sq_res << " > |tol|^2=" << tol * tol << " after "
@@ -342,7 +345,10 @@ int aderPicardLoopNonlinear(SolverType& solver,
  */
 template <typename SolverType, typename pCompType, bool useSource, bool useFlux, bool useNCP, int numberOfVariables, int numberOfParameters, int basisSize>
 void aderPredictorNonlinear(const pCompType* lQi, const pCompType* lFi, pCompType* lQhi,
-    pCompType* lFhi_x, pCompType* lFhi_y, pCompType* lShi) {
+        pCompType* lFhi_x, pCompType* lFhi_y,
+        pCompType* lShi) {
+  // Immediately compute the time - averaged space - time polynomials
+  
   constexpr int basisSize2 = basisSize * basisSize;
   constexpr int order      = basisSize - 1;
   
@@ -400,8 +406,9 @@ void aderPredictorNonlinear(const pCompType* lQi, const pCompType* lFi, pCompTyp
 }
 
 template<typename SolverType, typename pCompType, typename pStoreType, bool useFlux,bool useViscousFlux,int numberOfVariables,int numberOfParameters,int basisSize>
-void aderExtrapolatorNonlinear(const pCompType* lQhi, const pCompType* lGradQi, const pCompType* lFhi_x,
-    const pCompType* lFhi_y, pStoreType* lQhbnd, pStoreType* lGradQhbnd, pStoreType* lFhbnd) {
+void aderExtrapolatorNonlinear(const pCompType* lQhi, const pCompType* lGradQi,
+                               const pCompType* lFhi_x, const pCompType* lFhi_y, 
+                               pStoreType* lQhbnd, pStoreType* lGradQhbnd, pStoreType* lFhbnd) {
   // Compute the boundary-extrapolated values for Q and F*n
   constexpr int order=basisSize-1;
   constexpr int numberOfData = numberOfVariables+numberOfParameters;
@@ -620,12 +627,12 @@ int spaceTimePredictorNonlinear(
   constexpr int basisSize          = SolverType::Order+1;
 
   const int iterations =
-          aderPicardLoopNonlinear<useSource, useFlux, useViscousFlux, useNCP, SolverType,pCompType>(
+          aderPicardLoopNonlinear<useSource, useFlux, useViscousFlux, useNCP, SolverType, pCompType>(
                   solver, luh, t, dt, cellCenter, invDx, lQi, rhs, lFi, gradQ);
   
   if(noTimeAveraging) {
     // TODO(Lukas) what shall we do for this case?
-    aderTimeAveragingExtrapolatorNonlinear<SolverType,pCompType,pStoreType,useFlux,numberOfVariables,numberOfParameters, basisSize>(
+    aderTimeAveragingExtrapolatorNonlinear<SolverType, pCompType, pStoreType, useFlux, numberOfVariables, numberOfParameters, basisSize>(
         lQi,
         lFi,
         lQhbnd, lFhbnd);
@@ -633,13 +640,13 @@ int spaceTimePredictorNonlinear(
     constexpr int basisSize2 = basisSize * basisSize;
 
     // Note: gradQ is already time-averaged!
-    aderPredictorNonlinear<SolverType,pCompType,useSource, useFlux, useNCP, numberOfVariables, numberOfParameters, basisSize>(
+    aderPredictorNonlinear<SolverType, pCompType, useSource, useFlux, useNCP, numberOfVariables, numberOfParameters, basisSize>(
         lQi, lFi, lQhi,
         &lFhi[0 * basisSize2 * numberOfVariables],  // lFhi_x
         &lFhi[1 * basisSize2 * numberOfVariables],  // lFhi_y
         &lFhi[2 * basisSize2 * numberOfVariables]   // lShi
     );
-    aderExtrapolatorNonlinear<SolverType,pCompType,pStoreType,useFlux,useViscousFlux, numberOfVariables,numberOfParameters, basisSize>(
+    aderExtrapolatorNonlinear<SolverType, pCompType, pStoreType, useFlux, useViscousFlux, numberOfVariables, numberOfParameters, basisSize>(
         lQhi, gradQ,
         &lFhi[0 * basisSize2 * numberOfVariables],  // lFhi_x
         &lFhi[1 * basisSize2 * numberOfVariables],  // lFhi_y

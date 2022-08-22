@@ -26,8 +26,11 @@
  * Depending on the template parameter noTimeAveraging, lFi
  * is either a space-time volume flux (false) or a time-averaged flux (true). 
  */
-template <typename SolverType, bool useSourceOrNCP, bool useFlux, bool noTimeAveraging, const int numberOfVariables, int basisSize>
-void kernels::aderdg::generic::c::volumeIntegralNonlinear(double* lduh, const double* const lFi,
+
+// pCompType is the precision in which the solution should be computed, typically this would be double
+
+template <typename SolverType, typename pCompType, bool useSourceOrNCP, bool useFlux, bool noTimeAveraging, const int numberOfVariables, int basisSize>
+void kernels::aderdg::generic::c::volumeIntegralNonlinear(pCompType* lduh, const pCompType* const lFi,
                              const tarch::la::Vector<Dimensions, double>& dx) {
   const int order = basisSize - 1;
   const int basisSize2 = basisSize  * basisSize;

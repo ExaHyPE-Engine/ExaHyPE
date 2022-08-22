@@ -18,8 +18,10 @@
 
 #if Dimensions == 3
 
-template <typename SolverType, bool useSource, bool useFlux, int numberOfVariables, int basisSize>
-void kernels::aderdg::generic::c::volumeIntegralLinear(double* lduh, const double* const lFhi,
+// pCompType is the precision in which the solution should be computed, typically this would be double
+
+template <typename SolverType, typename pCompType, bool useSource, bool useFlux, int numberOfVariables, int basisSize>
+void kernels::aderdg::generic::c::volumeIntegralLinear(pCompType* lduh, const pCompType* const lFhi,
     const tarch::la::Vector<Dimensions, double>& dx) {
   // for linear non-conservative PDE, the volume integral is trivial, since it
   // only involves the element mass matrix, which later will cancel

@@ -23,6 +23,8 @@ namespace c {
 
 #if Dimensions == 2
 
+// pType is the precision in which the solution should be computed, typically this would be double
+
 template <typename SolverType, typename pCompType, bool useSource, bool useFlux, int numberOfVariables, int basisSize>
 void volumeIntegralLinear(pCompType* lduh, const pCompType* const lFhi,
                           const tarch::la::Vector<Dimensions, double>& dx) {

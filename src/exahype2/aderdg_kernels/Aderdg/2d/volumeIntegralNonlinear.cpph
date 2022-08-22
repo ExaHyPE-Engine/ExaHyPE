@@ -31,6 +31,9 @@ namespace c {
  * Depending on the template parameter noTimeAveraging, lFi
  * is either a space-time volume flux (false) or a time-averaged flux (true). 
  */
+
+// pType is the precision in which the solution should be computed, typically this would be double
+
 template <typename SolverType, typename pType, bool useSourceOrNCP, bool useFlux, bool noTimeAveraging, const int numberOfVariables, int basisSize>
 void volumeIntegralNonlinear(pType* lduh, const pType* const lFi,
                              const tarch::la::Vector<Dimensions, double>& dx) {

@@ -11,6 +11,11 @@
  * For the full license text, see LICENSE.txt
  **/
 
+/*
+ * pCompType is the type in which the predictor should be computed, typically this would be double
+ * pStoreType is the type in which the values predicted by this should be stored, typically this would be double
+ */
+
 #include <cstring>
 #include "../../Utils/KernelUtils.h"
 

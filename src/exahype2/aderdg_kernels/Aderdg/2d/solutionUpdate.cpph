@@ -27,6 +27,8 @@ namespace c {
 
 #if Dimensions == 2
 
+// pType is the precision in which the contribution was computed, typically this would be double
+
 template <typename SolverType, typename pType>
 void solutionUpdate(
     SolverType& solver,

@@ -25,12 +25,14 @@ namespace c {
 
 #if Dimensions == 3
 
-template <typename SolverType>
+// pType is the precision in which the contribution was computed, typically this would be double
+
+template <typename SolverType, typename pType>
 void solutionUpdate(
     SolverType& solver,
     double* luh,
     const double* const luhOld,
-    const double* const lduh,
+    const pType* const lduh,
     const double dt) {
   constexpr int numberOfVariables  = SolverType::NumberOfVariables;
   constexpr int numberOfParameters = SolverType::NumberOfParameters;
