@@ -9,6 +9,11 @@ from exahype2.solvers.rkdg.kernels import create_abstract_solver_definitions
 from exahype2.solvers.rkdg.kernels import create_solver_declarations
 from exahype2.solvers.rkdg.kernels import create_solver_definitions
 
+from exahype2.solvers.rkdg.kernels         import create_volumetric_solver_call
+from exahype2.solvers.rkdg.kernels         import create_add_solver_contributions_call
+from exahype2.solvers.rkdg.kernels         import create_multiply_with_inverted_mass_matrix_call
+from exahype2.solvers.rkdg.rusanov.kernels import create_Riemann_solver_call
+
 from exahype2.solvers.rkdg.AdaptiveTimeSteppingCodeSnippets import AdaptiveTimeSteppingCodeSnippets
 
 
@@ -32,6 +37,12 @@ class GlobalAdaptiveTimeStep( SeparateSweeps ):
    
     self._time_step_relaxation = time_step_relaxation
     self._compute_eigenvalue   = True
+
+    self._kernel_namespace              = "rusanov"
+    self._volumetric_solver_call        = create_volumetric_solver_call( self._basis )
+    self._Riemann_solver_call           = create_Riemann_solver_call( self._basis )
+    self._add_solver_contributions_call = create_add_solver_contributions_call( self._basis )
+    self._multiply_with_inverted_mass_matrix_call = create_multiply_with_inverted_mass_matrix_call( self._basis )
 
     self.set_implementation(boundary_conditions=boundary_conditions, 
                             refinement_criterion=refinement_criterion,
@@ -103,3 +114,10 @@ class GlobalAdaptiveTimeStep( SeparateSweeps ):
     self._start_time_step_implementation     = solver_code_snippets.create_start_time_step_implementation()
     self._finish_time_step_implementation    = solver_code_snippets.create_finish_time_step_implementation()
     self._constructor_implementation         = solver_code_snippets.create_abstract_solver_constructor_statements()
+
+
+  @property
+  def user_action_set_includes(self):
+    return super(GlobalAdaptiveTimeStep, self).user_action_set_includes + """
+#include "exahype2/dg/rusanov/Rusanov.h"
+"""

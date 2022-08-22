@@ -66,70 +66,7 @@ class SolveVolumeIntegral(AbstractRungeKuttaDGActionSet):
       QOut
     );
    
-    
-    ::exahype2::dg::cellIntegral_patchwise_GaussLegendre_functors(
-      cellData,
-      {{ORDER}},                                                   
-      {{NUMBER_OF_UNKNOWNS}},
-      {{NUMBER_OF_AUXILIARY_VARIABLES}},
-      [&](
-        const double * __restrict__                  Q,
-        const tarch::la::Vector<Dimensions,double>&  x,
-        double                                       t,
-        double                                       dt,
-        int                                          normal,
-        double * __restrict__                        F
-      )->void {
-        {% if FLUX_IMPLEMENTATION!="<none>" %}
-        repositories::{{SOLVER_INSTANCE}}.flux(Q,x,t,dt,normal,F);
-        {% endif %}
-      }, //flux
-      [&](
-          const double * __restrict__                  Q,
-          const double * __restrict__                  dQdx,
-          const tarch::la::Vector<Dimensions,double>&  x,
-          double                                       t,
-          double                                       dt,
-          int                                          normal,
-          double * __restrict__                        F
-        ) -> void {
-          {% if NCP_IMPLEMENTATION!="<none>" %}
-          repositories::{{SOLVER_INSTANCE}}.nonconservativeProduct(Q, dQdx, x, t, dt, normal, F);
-          {% endif %}          
-        }, //ncp
-      [&](
-        const double * __restrict__                  Q,
-        const tarch::la::Vector<Dimensions,double>&  x,
-        double                                       t,
-        double                                       dt,
-        double * __restrict__                        S
-      ) -> void {
-        {% if SOURCE_TERM_IMPLEMENTATION!="<none>" %}
-        repositories::{{SOLVER_INSTANCE}}.sourceTerm(Q,x,t,dt,S);
-        {% endif %}
-      }, //source
-      [&](
-        const double * __restrict__                  Q,
-        const tarch::la::Vector<Dimensions,double>&  cellCentre,
-        const tarch::la::Vector<Dimensions,double>&  cellH,
-        double                                       t,
-        double                                       dt
-      ) -> std::vector<::exahype2::dg::PointSource> {
-        {% if POINT_SOURCES_IMPLEMENTATION!="<none>" %}
-        return repositories::{{SOLVER_INSTANCE}}.pointSources(Q,cellCentre,cellH,t,dt);
-        {% else %}
-        return std::vector<::exahype2::dg::PointSource>();
-        {% endif %}
-      }, //source
-      repositories::{{SOLVER_INSTANCE}}.QuadraturePoints1d,
-      repositories::{{SOLVER_INSTANCE}}.MassMatrixDiagonal1d,
-      repositories::{{SOLVER_INSTANCE}}.StiffnessOperator1d,
-      repositories::{{SOLVER_INSTANCE}}.DerivativeOperator1d,
-      {{ "true" if FLUX_IMPLEMENTATION!="<none>" else "false" }}, //useFlux
-      {{ "true" if NCP_IMPLEMENTATION!="<none>" else "false" }}, //useNCP
-      {{ "true" if SOURCE_TERM_IMPLEMENTATION!="<none>" else "false" }}, //useSource
-      {{ "true" if POINT_SOURCES_IMPLEMENTATION!="<none>" else "false" }} //useSource
-    );    
+    ::exahype2::dg::{{KERNEL_NAMESPACE}}::{{VOLUMETRIC_SOLVER_CALL}}    
   }  
   
   {% endfor %}

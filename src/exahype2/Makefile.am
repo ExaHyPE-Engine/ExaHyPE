@@ -32,7 +32,7 @@ ExaHyPE2Sources = \
   dg/DGUtils.cpp \
   dg/CellIntegral.cpp \
   dg/Riemann.cpp \
-  dg/rusanov/Riemann.cpp \
+  dg/rusanov/Rusanov.cpp \
   dg/tests/CellIntegralTest.cpp \
   dg/tests/DGUtilsTest.cpp \
   dg/tests/RiemannTest.cpp \
