@@ -12,6 +12,8 @@ For the benchmarks, it is reasonable to build all solvers in release mode withou
 plotting functionality. For the standard set of strong scaling tests, I recommend the 
 following builds:
 
+     export PYTHONPATH=../../../../python 
+
      python3 create-benchmark-executable.py -m release -s fv-4
      python3 create-benchmark-executable.py -m release -s fv-6
      python3 create-benchmark-executable.py -m release -s fv-8
@@ -20,6 +22,13 @@ following builds:
      python3 create-benchmark-executable.py -m release -s dg4-rk4
 
 
-46
+## Run experiments
+
+I recommend to map the runs onto SLURM array scripts. An example script is contained
+within the present directory. It is tailored towards the Hamilton supercomputer at 
+Durham, but certainly can serve as a baseline script or inspiration for your own 
+scripts.
+
+
 
 
