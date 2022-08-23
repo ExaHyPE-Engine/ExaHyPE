@@ -39,13 +39,13 @@ class Correction(AbstractAderDGActionSet):
     #endif
     
     double* luh = fineGridCell{{UNKNOWN_IDENTIFIER}}.value;
-    double lduh[spaceBasisSize*NumberOfVariables]{0.0};
+    {{CORRECTOR_COMPUTATION_PRECISION}} lduh[spaceBasisSize*NumberOfVariables]{0.0};
 
     const int basisElementsByFace = spaceFaceSize*(NumberOfVariables+NumberOfParameters);
     const int fluxElementsByFace = spaceFaceSize*NumberOfVariables;
     
-    double FL[fluxElementsByFace];
-    double FR[fluxElementsByFace];
+    {{CORRECTOR_COMPUTATION_PRECISION}} FL[fluxElementsByFace];
+    {{CORRECTOR_COMPUTATION_PRECISION}} FR[fluxElementsByFace];
     
     /*
     2d: 0,1,2,3 -> 0,2,1,3
@@ -55,16 +55,9 @@ class Correction(AbstractAderDGActionSet):
     for(int d=0; d<Dimensions; d++){
     
       //negative face
-      double* QL = fineGridFaces{{UNKNOWN_IDENTIFIER}}Estimates(d).value;
-      double* QR = fineGridFaces{{UNKNOWN_IDENTIFIER}}Estimates(d).value+basisElementsByFace;
-      /*
-      double* FL = fineGridFaces{{UNKNOWN_IDENTIFIER}}FluxEstimates(d).value;
-      double* FR = fineGridFaces{{UNKNOWN_IDENTIFIER}}FluxEstimates(d).value+fluxElementsByFace;
-      */
-      /*
-      std::copy_n(fineGridFaces{{UNKNOWN_IDENTIFIER}}Estimates(d).value, basisElementsByFace, QL);
-      std::copy_n(fineGridFaces{{UNKNOWN_IDENTIFIER}}Estimates(d).value+basisElementsByFace, basisElementsByFace, QR);
-      */
+      {{PREDICTOR_STORAGE_PRECISION}}* QL = fineGridFaces{{UNKNOWN_IDENTIFIER}}Estimates(d).value;
+      {{PREDICTOR_STORAGE_PRECISION}}* QR = fineGridFaces{{UNKNOWN_IDENTIFIER}}Estimates(d).value+basisElementsByFace;
+
       /*
       **  Data from the face is copied into a buffer because operations are directly performed on this
       **  by the kernels and we want the faces to remain unmodified for the neighbour.
@@ -80,47 +73,88 @@ class Correction(AbstractAderDGActionSet):
          since this is the negative face, the "right" side of the negative face is on the "inside"
          towards the cell
         */
-        repositories::{{SOLVER_INSTANCE}}.boundaryConditions(
+        
+        kernels::aderdg::generic::c::boundaryConditions<
+          false, //useGradientFlux, essentially useViscousFlux
+          {{SOLVER_NAME}}>(
+            repositories::{{SOLVER_INSTANCE}},
+            FL,
+            QL,
+            FR,
+            QR,
+            nullptr, //gradQ
+            marker.x(),
+            marker.h(),
+            timeStamp,
+            timeStepSize,
+            2*d, //faceIndex
+            d //normalNonZero
+            );
+        
+        }
+      
+      {% if IS_LINEAR is sameas True %}
+      //template <bool useFlux, bool useNCP, bool useMM, typename SolverType>
+      kernels::aderdg::generic::c::riemannSolverLinear<
+        {{ "true" if USE_FLUX!="<none>" else "false" }}, //useFlux
+        {{ "true" if USE_NCP!="<none>" else "false" }}, //useNCP
+        false, //useMM
+        {{SOLVER_NAME}}>(
+          repositories::{{SOLVER_INSTANCE}},
           FL,
-          QL,
           FR,
+          QL,
           QR,
-          nullptr, //gradQ
-          marker.x(),
-          marker.h(),
           timeStamp,
           timeStepSize,
-          2*d, //faceIndex
-          d  //normalNonZero
-        );        
-      }
+          d //direction
+          );
+      {% else %}
+      //template <bool useNCP, bool useViscousFlux, typename SolverType>
+      kernels::aderdg::generic::c::riemannSolverNonlinear<
+        {{ "true" if USE_NCP!="<none>" else "false" }}, //useNCP
+        false, //useViscousFlux
+        {{SOLVER_NAME}}>(
+          repositories::{{SOLVER_INSTANCE}},
+          FL,
+          FR,
+          QL,
+          QR,
+          timeStamp,
+          timeStepSize,
+          marker.h(),
+          d //direction
+          );
+      {% endif %}    
 
-      repositories::{{SOLVER_INSTANCE}}.riemannSolver(
-        FL,
-        FR,
-        QL,
-        QR,
-        timeStamp  ,
-        timeStepSize,
-        marker.h(),
-        d //direction
-      );
-      
-      repositories::{{SOLVER_INSTANCE}}.faceIntegral(
-        lduh,
-        FR,
-        d, //direction
-        0, //orientation of the face within the cell
-        marker.h()
-      );
-      
+      {% if IS_LINEAR is sameas True %}
+      kernels::aderdg::generic::c::faceIntegralLinear<
+        {{SOLVER_NAME}},
+        {{NUMBER_OF_UNKNOWNS}},
+        {{ORDER}}+1>(
+          lduh,
+          FR,
+          d, //direction
+          0, //orientation
+          marker.h()
+          );
+      {% else %}
+      kernels::aderdg::generic::c::faceIntegralNonlinear<
+        {{SOLVER_NAME}},
+        {{NUMBER_OF_UNKNOWNS}},
+        {{ORDER}}+1>(
+          lduh,
+          FR,
+          d, //direction
+          0, //orientation
+          marker.h()
+          );
+      {% endif %}
+
+
       //positive face
       QL = fineGridFaces{{UNKNOWN_IDENTIFIER}}Estimates(d+Dimensions).value;
       QR = fineGridFaces{{UNKNOWN_IDENTIFIER}}Estimates(d+Dimensions).value+basisElementsByFace;
-      /*
-      FL = fineGridFaces{{UNKNOWN_IDENTIFIER}}FluxEstimates(d+Dimensions).value;
-      FR = fineGridFaces{{UNKNOWN_IDENTIFIER}}FluxEstimates(d+Dimensions).value+fluxElementsByFace;
-      */
       std::copy_n(fineGridFaces{{UNKNOWN_IDENTIFIER}}FluxEstimates(d+Dimensions).value, fluxElementsByFace, FL);
       std::copy_n(fineGridFaces{{UNKNOWN_IDENTIFIER}}FluxEstimates(d+Dimensions).value+fluxElementsByFace, fluxElementsByFace, FR);
 
@@ -132,50 +166,99 @@ class Correction(AbstractAderDGActionSet):
          since this is the positive face, the "left" side of the positive face is on the "inside"
          towards the cell
         */
-              
-        repositories::{{SOLVER_INSTANCE}}.boundaryConditions(
-          FR,
-          QR,
+
+        kernels::aderdg::generic::c::boundaryConditions<
+          false, //useGradientFlux, essentially useViscousFlux
+          {{SOLVER_NAME}}>(
+            repositories::{{SOLVER_INSTANCE}},
+            FR,
+            QR,
+            FL,
+            QL,
+            nullptr, //gradQ
+            marker.x(),
+            marker.h(),
+            timeStamp,
+            timeStepSize,
+            2*d+1, //faceIndex
+            d //normalNonZero
+            );
+            
+      }
+      
+      
+      {% if IS_LINEAR is sameas True %}
+      //template <bool useFlux, bool useNCP, bool useMM, typename SolverType>
+      kernels::aderdg::generic::c::riemannSolverLinear<
+        {{ "true" if USE_FLUX!="<none>" else "false" }}, //useFlux
+        {{ "true" if USE_NCP!="<none>" else "false" }}, //useNCP
+        false, //useMM
+        {{SOLVER_NAME}}>(
+          repositories::{{SOLVER_INSTANCE}},
           FL,
+          FR,
           QL,
-          nullptr, //gradQ
-          marker.x(),
-          marker.h(),
+          QR,
           timeStamp,
           timeStepSize,
-          2*d+1, //faceIndex
-          d  //normalNonZero
-        );        
-      }
+          d //direction
+          );
+      {% else %}
+      //template <bool useNCP, bool useViscousFlux, typename SolverType>
+      kernels::aderdg::generic::c::riemannSolverNonlinear<
+        {{ "true" if USE_NCP!="<none>" else "false" }}, //useNCP
+        false, //useViscousFlux
+        {{SOLVER_NAME}}>(
+          repositories::{{SOLVER_INSTANCE}},
+          FL,
+          FR,
+          QL,
+          QR,
+          timeStamp,
+          timeStepSize,
+          marker.h(),
+          d //direction
+          );
+      {% endif %}    
 
-      repositories::{{SOLVER_INSTANCE}}.riemannSolver(
-        FL,
-        FR,
-        QL,
-        QR,
-        timeStamp  ,
-        timeStepSize,
-        marker.h(),
-        d //direction
-      );
-
-      repositories::{{SOLVER_INSTANCE}}.faceIntegral(
-        lduh,
-        FL,
-        d, //direction
-        1, //orientation of the face within the cell
-        marker.h()
-      );
-            
+      {% if IS_LINEAR is sameas True %}
+      kernels::aderdg::generic::c::faceIntegralLinear<
+        {{SOLVER_NAME}},
+        {{NUMBER_OF_UNKNOWNS}},
+        {{ORDER}}+1>(
+          lduh,
+          FL,
+          d, //direction
+          1, //orientation
+          marker.h()
+          );
+      {% else %}
+      kernels::aderdg::generic::c::faceIntegralNonlinear<
+        {{SOLVER_NAME}},
+        {{NUMBER_OF_UNKNOWNS}},
+        {{ORDER}}+1>(
+          lduh,
+          FL,
+          d, //direction
+          1, //orientation
+          marker.h()
+          );
+      {% endif %}
+      
     }// for d    
     
 
-    repositories::{{SOLVER_INSTANCE}}.solutionUpdate(
-      luh,
-      luh,
-      lduh,
-      timeStepSize
-    );
+    kernels::aderdg::generic::c::solutionUpdate<
+      {{SOLVER_NAME}},
+      {{CORRECTOR_COMPUTATION_PRECISION}}
+        >(
+        repositories::{{SOLVER_INSTANCE}},
+        luh,
+        luh,
+        lduh,
+        timeStepSize
+      );
+
 
     {{COMPUTE_NEW_TIME_STEP_SIZE}}
   
@@ -220,4 +303,5 @@ class Correction(AbstractAderDGActionSet):
 
   def get_includes(self):
     return super(Correction,self).get_includes() + """
+#include "exahype2/aderdg_kernels/Kernels.h"
       """

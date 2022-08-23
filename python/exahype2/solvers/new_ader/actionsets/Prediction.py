@@ -66,35 +66,110 @@ class Prediction(AbstractAderDGActionSet):
     {{PREDICTOR_STORAGE_PRECISION}} lFhbnd[2*Dimensions*spaceFaceSize*NumberOfVariables]{0.0};
     //{{PREDICTOR_STORAGE_PRECISION}} lGradQhbnd[2*Dimensions*Dimensions*spaceFaceSize*(NumberOfVariables+NumberOfParameters)]{0.0};
 
-    int numberOfIterations = repositories::{{SOLVER_INSTANCE}}.spaceTimePredictor(
-      lQhbnd,
-      lFhbnd,
-      lQi,
-      rhs,
-      lFi,
-      gradQ,
-      lQhi,
-      lFhi,
-      luh,
-      marker.x(),
-      marker.h(),
-      timeStamp,
-      timeStepSize
-    );
+
+    {% if IS_LINEAR is sameas True %}  
+    //template <bool usePointSource, bool useSource, bool useFlux, bool useNCP, bool useMM,typename SolverType>
+  
+    kernels::aderdg::generic::c::spaceTimePredictorLinear<
+      false, //usePointSource
+      {{ "true" if USE_SOURCE!="<none>" else "false" }}, //source
+      {{ "true" if USE_FLUX!="<none>" else "false" }}, //useFlux
+      {{ "true" if USE_NCP!="<none>" else "false" }}, //useNCP
+      false, //useMM
+      {{SOLVER_NAME}},
+      {{PREDICTOR_COMPUTATION_PRECISION}}, //predictor_computation_precision
+      {{PREDICTOR_STORAGE_PRECISION}} //predictor_storage_precision
+      >(
+  
+        repositories::{{SOLVER_INSTANCE}},
+        lQhbnd,
+        lFhbnd,
+        lQi,
+        lFi,
+        gradQ,
+        nullptr, //PSi
+        nullptr, //PSderivatives
+        nullptr, //tmp_PSderivatives
+        lQhi,
+        lFhi,
+        luh,
+        marker.x(), //cellCentre
+        tarch::la::invertEntries(marker.h()), //cellSize
+        timeStamp,
+        timeStepSize
+        );
+      int numberOfIterations = 1;
+    {% else %}
+    //template <bool useSource, bool useFlux, bool useViscousFlux, bool useNCP, typename SolverType>
+    int numberOfIterations = kernels::aderdg::generic::c::spaceTimePredictorNonlinear<
+      {{ "true" if USE_SOURCE!="<none>" else "false" }}, //source
+      {{ "true" if USE_FLUX!="<none>" else "false" }}, //useFlux
+      false, //viscousFlux
+      {{ "true" if USE_NCP!="<none>" else "false" }}, //useNCP
+      false, //noTimeAveraging
+      {{SOLVER_NAME}},
+      {{PREDICTOR_COMPUTATION_PRECISION}}, //predictor_computation_precision
+      {{PREDICTOR_STORAGE_PRECISION}} //predictor_storage_precision
+      >(
+        repositories::{{SOLVER_INSTANCE}},
+        lQhbnd,
+        nullptr,
+        lFhbnd,
+        lQi,
+        rhs,
+        lFi,
+        gradQ,
+        lQhi,
+        lFhi,
+        luh,
+        marker.x(), //cellCentre
+        tarch::la::invertEntries(marker.h()), //cellSize
+        timeStamp,
+        timeStepSize
+        );
+    {% endif %}
     
-    repositories::{{SOLVER_INSTANCE}}.volumeIntegral(
-      lduh,
-      lFhi,
-      marker.h()    
-    );  
-  
-    repositories::{{SOLVER_INSTANCE}}.solutionUpdate(
+    
+    {% if IS_LINEAR is sameas True %}
+    //template <typename SolverType,bool useSource, bool useFlux, int numberOfVariables, int basisSize>
+    kernels::aderdg::generic::c::volumeIntegralLinear<
+      {{SOLVER_NAME}},
+      {{PREDICTOR_COMPUTATION_PRECISION}}, //predictor_computation_precision
+      {{ "true" if USE_SOURCE!="<none>" else "false" }}, //useSource
+      {{ "true" if USE_FLUX!="<none>" else "false" }}, //useFlux
+      {{NUMBER_OF_UNKNOWNS}},
+      {{ORDER}}+1>(
+        lduh,
+        lFhi,
+        marker.h() //cellSize
+        );
+    {% else %}
+    //template <typename SolverType, bool useSourceOrNCP, bool useFlux, bool noTimeAveraging, const int numberOfVariables, int basisSize>
+    kernels::aderdg::generic::c::volumeIntegralNonlinear<
+      {{SOLVER_NAME}},
+      {{PREDICTOR_COMPUTATION_PRECISION}}, //predictor_computation_precision
+      {{ "true" if USE_NCP!="<none>" or USE_SOURCE!="<none>" else "false" }}, //useSourceOrNCP
+      {{ "true" if USE_FLUX!="<none>" else "false" }}, //useFlux
+      false, //noTimeAveraging
+      {{NUMBER_OF_UNKNOWNS}},
+      {{ORDER}}+1>(
+        lduh,
+        lFhi,
+        marker.h() //cellSize
+        );
+    {% endif %}
+    
+    kernels::aderdg::generic::c::solutionUpdate<
+    {{SOLVER_NAME}},
+    {{PREDICTOR_COMPUTATION_PRECISION}} //predictor_computation_precision
+      >(
+      repositories::{{SOLVER_INSTANCE}},
       luh,
       luh,
       lduh,
       timeStepSize
-    );
-  
+      );
+      
     /*
     Copy the estimates into the face data containers. Note that peano uses a different ordering of
     the faces that the kernels, so these are reordered somewhat.

@@ -910,11 +910,15 @@ def create_compute_time_step_size_for_adaptive_time_stepping():
 def create_compute_new_time_step_size_for_adaptive_time_stepping():
   return """
   
-    double maxEigenvalue = repositories::{{SOLVER_INSTANCE}}.maxScaledEigenvalue(
-      luh,
-      marker.x()
-      );  
-  
+    double maxEigenvalue = kernels::aderdg::generic::c::maxScaledEigenvalue<
+      {{SOLVER_NAME}},
+      false //useViscousFlux
+      >(
+        repositories::{{SOLVER_INSTANCE}},
+        luh,
+        marker.x()
+      );
+
     repositories::{{SOLVER_INSTANCE}}.setMaxEigenvalue( maxEigenvalue );  
     
     // This is a value set for stats reasons. We'll ignore it later as we 
