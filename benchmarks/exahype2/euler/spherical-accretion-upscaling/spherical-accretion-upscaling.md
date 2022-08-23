@@ -14,12 +14,12 @@ following builds:
 
      export PYTHONPATH=../../../../python 
 
-     python3 create-benchmark-executable.py -m release -s fv-4
-     python3 create-benchmark-executable.py -m release -s fv-6
-     python3 create-benchmark-executable.py -m release -s fv-8
-     python3 create-benchmark-executable.py -m release -s dg2-rk2
-     python3 create-benchmark-executable.py -m release -s dg3-rk3
-     python3 create-benchmark-executable.py -m release -s dg4-rk4
+     python3 create-benchmark-executable.py --type 0 -m release -s fv-4
+     python3 create-benchmark-executable.py --type 0 -m release -s fv-6
+     python3 create-benchmark-executable.py --type 0 -m release -s fv-8
+     python3 create-benchmark-executable.py --type 0 -m release -s dg2-rk2
+     python3 create-benchmark-executable.py --type 0 -m release -s dg3-rk3
+     python3 create-benchmark-executable.py --type 0 -m release -s dg4-rk4
 
 
 ## Run experiments

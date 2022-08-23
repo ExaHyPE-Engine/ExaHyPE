@@ -21,9 +21,12 @@ module load gcc
 export OMP_PROC_BIND=close
 #$SLURM_JOB_NUM_NODES
 
-for executable in benchmark-FV-4 benchmark-FV-6 benchmark-FV-8 benchmark-RK2DG2 benchmark-RK3DG3 benchmark-RK4DG4
-do 
-  ./$executable --threads $SLURM_ARRAY_TASK_ID > single-node-$executable-$SLURM_ARRAY_TASK_ID-cores.data
+for extension in "0"
+do
+ for executable in benchmark-FV-4 benchmark-FV-6 benchmark-FV-8 benchmark-RK2DG2 benchmark-RK3DG3 benchmark-RK4DG4
+ do 
+  ./$executable-$extension --threads $SLURM_ARRAY_TASK_ID > single-node-$executable-$extension-$SLURM_ARRAY_TASK_ID-cores.data
+ done
 done
  
 

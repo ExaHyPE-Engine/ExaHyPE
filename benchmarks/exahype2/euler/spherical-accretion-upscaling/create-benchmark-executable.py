@@ -46,16 +46,16 @@ unknowns    = {
   "E":   1,
 }
 number_of_unknowns  = sum(unknowns.values())
-if args.mode=="plot":
+if args.type=="plot":
   max_h               = 0.2
   min_h               = 0.2
-elif args.mode=="0":
+elif args.type=="0":
   max_h               = 0.01
   min_h               = 0.01
 auxiliary_variables = 0
 
 
-executable_name = "benchmark-"
+executable_name = "benchmark-" + args.type
 
 if "fv" in args.solver:
   patch_size = int(args.solver[-1])
@@ -138,7 +138,7 @@ if args.mode=="stats":
 if args.mode=="asserts":
   build_mode = peano4.output.CompileMode.Asserts
 
-if args.mode=="plot":
+if args.type=="plot":
   plot_interval = 0.1
 else:  
   plot_interval = 0.0
