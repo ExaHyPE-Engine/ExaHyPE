@@ -10,7 +10,6 @@
 #include "repositories/StepRepository.h"
 #include "repositories/SolverRepository.h"
 
-#include "tarch/FenvWrapper.h"
 #include "tarch/logging/Log.h"
 #include "tarch/logging/Statistics.h"
 #include "tarch/logging/LogFilter.h"
@@ -29,6 +28,10 @@
 #include "tasks/EulerFVRusanovEnclaveTask.h"
 
 #include "config.h"
+
+//#ifdef UseFenv
+//#include "tarch/FenvWrapper.h"
+//#endif
 
 #if defined(SharedTBB)
 #include <tbb/task_group.h>
@@ -523,7 +526,9 @@ int main(int argc, char** argv) {
   tarch::multicore::initSmartMPI();
   peano4::fillLookupTables();
 
-  tarch::feenableexcept(FE_DIVBYZERO | FE_INVALID | FE_OVERFLOW);
+//#ifdef UseFenv
+  //tarch::feenableexcept(FE_DIVBYZERO | FE_INVALID | FE_OVERFLOW);
+//#endif
 
   if ( tarch::mpi::Rank::getInstance().getNumberOfRanks()>1 and tarch::multicore::Core::getInstance().getNumberOfThreads()<=1 ) {
     logError("main()", "MPI runs without multithreading are not supported currently.");

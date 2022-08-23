@@ -1,8 +1,6 @@
 #ifndef __TARCH_FENV_WRAPPER_H__
 #define __TARCH_FENV_WRAPPER_H__
 
-#ifdef UseFenv
-
 #include <fenv.h>
 
 // clang-format off
@@ -120,7 +118,10 @@ namespace tarch {
 
 namespace tarch {
     inline int feenableexcept(unsigned int excepts) {
-        //#pragma float_control(precise, on)
+        // https://docs.microsoft.com/en-us/cpp/preprocessor/fenv-access?view=msvc-170
+        // https://docs.microsoft.com/en-us/cpp/preprocessor/float-control?view=msvc-170
+        // https://www.mail-archive.com/cfe-commits@lists.llvm.org/msg205011.html
+        #pragma float_control(precise, on)
         #pragma STDC FENV_ACCESS ON
         fexcept_t flags;
         // Save current exception flags
@@ -132,7 +133,7 @@ namespace tarch {
     }
 
     inline int fedisableexcept(unsigned int excepts) {
-        //#pragma float_control(precise, on)
+        #pragma float_control(precise, on)
         #pragma STDC FENV_ACCESS ON
         fexcept_t flags;
         // Save current exception flags
@@ -144,19 +145,6 @@ namespace tarch {
 }
 
 #endif
-#endif
-
-#else
-
-#define FE_DIVBYZERO 0
-#define FE_INVALID 0
-#define FE_OVERFLOW 0
-
-namespace tarch {
-    inline void feenableexcept(unsigned int) {}
-    inline void fedisableexcept(unsigned int) {}
-}
-
 #endif
 
 #endif // __TARCH_FENV_WRAPPER_H__

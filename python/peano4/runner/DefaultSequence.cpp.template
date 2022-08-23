@@ -1,7 +1,6 @@
 #include "{MAIN_NAME}.h"
 #include "Constants.h"
 
-#include "tarch/FenvWrapper.h"
 #include "tarch/logging/Log.h"
 #include "tarch/logging/LogFilter.h"
 #include "tarch/multicore/multicore.h"
@@ -15,6 +14,10 @@
 
 #include "peano4/UnitTests.h"
 #include "tarch/UnitTests.h"
+
+//#ifdef UseFenv
+//#include "tarch/FenvWrapper.h"
+//#endif
 
 tarch::logging::Log _log("::");
 
@@ -105,7 +108,9 @@ int main(int argc, char** argv) {{
     0
   );
 
-  tarch::feenableexcept(FE_DIVBYZERO | FE_INVALID | FE_OVERFLOW);
+//#ifdef UseFenv
+  //tarch::feenableexcept(FE_DIVBYZERO | FE_INVALID | FE_OVERFLOW);
+//#endif
 
   #if PeanoDebug>=2
   tarch::tests::TestCase* peanoCoreTests = peano4::getUnitTests();
