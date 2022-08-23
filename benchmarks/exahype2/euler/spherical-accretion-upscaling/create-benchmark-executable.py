@@ -71,7 +71,7 @@ if "fv" in args.solver:
                                                                                    source_term          = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
                                                                                    pde_terms_without_state = args.gpu
                                                                                   )
-  executable_name = executable_name + "FV-" + str(patch_size)
+  executable_name = executable_name + "-FV-" + str(patch_size)
   
   thesolver._action_set_postprocess_solution = exahype2.solvers.fv.actionsets.VolumeWisePostprocessSolution(thesolver)
   thesolver._action_set_postprocess_solution.guard = "repositories::{{SOLVER_INSTANCE}}.isLastGridSweepOfTimeStep()"
@@ -94,7 +94,7 @@ if "rk" in args.solver and "dg" in args.solver:
                                                                    source_term          = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
                                                                    pde_terms_without_state = args.gpu
                                                                    )
-  executable_name = executable_name + "RK" + str(time_order) + "DG" + str(space_order)
+  executable_name = executable_name + "-RK" + str(time_order) + "DG" + str(space_order)
 
   thesolver._action_set_postprocess_solution = exahype2.solvers.rkdg.actionsets.DoFWisePostprocessSolution(thesolver)
   thesolver._action_set_postprocess_solution.guard = "repositories::{{SOLVER_INSTANCE}}.isLastGridSweepOfTimeStep()"
