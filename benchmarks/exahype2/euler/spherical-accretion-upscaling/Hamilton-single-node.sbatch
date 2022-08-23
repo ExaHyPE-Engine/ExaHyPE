@@ -23,7 +23,7 @@ export OMP_PROC_BIND=close
 
 for executable in benchmark-FV-4 benchmark-FV-6 benchmark-FV-8 benchmark-RK2DG2 benchmark-RK3DG3 benchmark-RK4DG4
 do 
-  ./$executable > single-node-$SLURM_ARRAY_JOB_ID-cores.data
+  ./$executable --threads $SLURM_ARRAY_TASK_ID > single-node-$SLURM_ARRAY_TASK_ID-cores.data
 done
  
 
