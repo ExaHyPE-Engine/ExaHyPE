@@ -6,10 +6,10 @@
 - [<u>Table of Contents</u>](#utable-of-contentsu)
 - [<u>General Information</u>](#ugeneral-informationu)
 - [<u>Availability</u>](#uavailabilityu)
-- [<u>Supported platforms</u>](#usupported-platformsu)
-- [<u>Dependencies and prerequisites</u>](#udependencies-and-prerequisitesu)
-- [<u>How to build and run (using GNU autotools)</u>](#uhow-to-build-and-run-using-gnu-autotoolsu)
-  - [Setup build environment](#setup-build-environment)
+- [<u>Supported Platforms</u>](#usupported-platformsu)
+- [<u>Dependencies and Prerequisites</u>](#udependencies-and-prerequisitesu)
+- [<u>How to Build and Run (using GNU autotools)</u>](#uhow-to-build-and-run-using-gnu-autotoolsu)
+  - [Setup your build environment](#setup-your-build-environment)
   - [Configure your build](#configure-your-build)
   - [Compilation](#compilation)
   - [Running a Simulation](#running-a-simulation)
@@ -34,11 +34,11 @@ All software is available as open source through www.peano-framework.org.
 This page also holds extensive documentation (written, extracted from 
 source code and as video tutorials).
 
-## <u>Supported platforms</u>
+## <u>Supported Platforms</u>
 We test and maintain Peano for Linux only.
 If you prefer Windows or MacOS, it should work as long as you provide the mandatory tools, but we won't be able to help.
 
-## <u>Dependencies and prerequisites</u>
+## <u>Dependencies and Prerequisites</u>
 Peano's core is plain C++17/C++20 code. 
 We however use a whole set of tools around it.
 The most important ones are:
@@ -56,14 +56,14 @@ A detailed list can be found in the guidebook which we ship with the
 download (TeX sources). It is also available through the webpage where
 it is built in regular intervals.
 
-## <u>How to build and run (using GNU autotools)</u>
+## <u>How to Build and Run (using GNU autotools)</u>
 Peano's build process relies on the autotool chain.
 It yields a couple of libraries and executables. 
 Most codes then use Peano's Python API to build an application on top of the libraries.
 You obviously also can create a sole C++ application.
 The Python API actually yields such applications, too, i.e. Python is not required to run the simulations but only to construct them.
 
-### Setup build environment
+### Setup your build environment
 If you download a Peano archive, you can skip this step.
 If you work against the Peano repository, you however have to run these steps:
 
@@ -82,9 +82,21 @@ Use configure's help to find out which options you want to use.
 
 Some exemplary configure commands are given below. For detailed information please refer to the guidebook.
 
+* Intel
 ```shell
-./configure --with-multithreading=omp --with-gpu=omp --enable-exahype --enable-loadbalancing --enable-blockstructured CC=nvc++ CXX=nvc++ CXXFLAGS="-O4 -std=c++20 -mp=gpu -gpu=cc86" LDFLAGS="-mp=gpu -gpu=cc86"
-./configure --with-multithreading=omp --with-gpu=omp --enable-exahype --enable-loadbalancing --enable-blockstructured CC=clang CXX=clang++ CXXFLAGS="-O3 -std=c++20 -fopenmp -fopenmp-targets=nvptx64-nvidia-cuda -Xopenmp-target -march=sm_86"
+./configure --with-multithreading=omp --enable-exahype --enable-loadbalancing --enable-blockstructured --enable-fenv CC=icx CXX=icpx CXXFLAGS="-O3 -std=c++20 -fiopenmp" LDFLAGS="-fiopenmp"
+
+./configure --with-multithreading=omp --with-gpu=omp --enable-exahype --enable-loadbalancing --enable-blockstructured --enable-fenv CC=icx CXX=icpx CXXFLAGS="-O3 -std=c++20 -fiopenmp -fopenmp-targets=spir64" LDFLAGS="-fiopenmp"
+```
+
+* LLVM
+```shell
+./configure --with-multithreading=omp --with-gpu=omp --enable-exahype --enable-loadbalancing --enable-blockstructured --enable-fenv CC=clang CXX=clang++ CXXFLAGS="-O3 -std=c++17 -fopenmp -fopenmp-targets=nvptx64-nvidia-cuda -Xopenmp-target -march=sm_86"
+```
+
+* NVHPC
+```shell
+./configure --with-multithreading=omp --with-gpu=omp --enable-exahype --enable-loadbalancing --enable-blockstructured --enable-fenv CC=nvc++ CXX=nvc++ CXXFLAGS="-O4 -std=c++20 -mp=gpu -gpu=cc86" LDFLAGS="-mp=gpu -gpu=cc86"
 ```
 
 ### Compilation
