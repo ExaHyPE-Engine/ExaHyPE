@@ -87,7 +87,14 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::EnclaveTask
     static int getEnclaveTaskTypeId();
 
     /**
+     * Simple call to compute kernels. No data is allocated or freed.
      *
+     * ## Difference to Finite Volume solver
+     *
+     * The finite volume solver assumes that _inputValues are reconstructed
+     * values, i.e. a temporary data field on the heap. So we don't have to
+     * allocate anything but we have to free stuff after the run. This is
+     * done here in the Finite Volume solver.
      */
     static void applyKernelToCell(
       const ::peano4::datamanagement::CellMarker& marker, 
@@ -98,6 +105,14 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::EnclaveTask
     );
     
     
+    /**
+     * Initialise superclass with right compute functor
+     *
+     * Besides the "configuration" of the superclass, we have to copy the
+     * QIn data from the marker manually.
+     *
+     * @see applyKernelToCell()
+     */
     {{CLASSNAME}}(
       const ::peano4::datamanagement::CellMarker& marker, 
       double                                      timeStamp,

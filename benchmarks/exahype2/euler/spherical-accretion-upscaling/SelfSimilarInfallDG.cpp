@@ -45,6 +45,18 @@ void benchmarks::exahype2::euler::sphericalaccretionupscaling::SelfSimilarInfall
     Q[i] = 0.0;
   }
 
+/*
+  applications::exahype2::euler::sphericalaccretion::initialiseOverdensity_topHat(
+    Q,
+    x,
+    InitialTopHatRadius,
+    AdditionalMass,
+    BaseDensity,
+    pInitial,
+    Gamma
+  );
+*/
+
   applications::exahype2::euler::sphericalaccretion::initialiseOverdensity_hyperbolicSecant(
     Q,
     x,
@@ -54,7 +66,8 @@ void benchmarks::exahype2::euler::sphericalaccretionupscaling::SelfSimilarInfall
     pInitial,
     Gamma
   );
-/*
+
+  /*
   applications::exahype2::euler::sphericalaccretion::initialiseHomogeneousDensity(
     Q,
     BaseDensity,

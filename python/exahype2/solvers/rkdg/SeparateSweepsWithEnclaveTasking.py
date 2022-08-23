@@ -18,59 +18,31 @@ from peano4.toolbox.blockstructured.ReconstructPatchAndApplyFunctor import Recon
 
 class MergeEnclaveTaskOutcome(AbstractFVActionSet):
   Template = """
+  {% for PREDICATE_NO in range(0,PREDICATES|length) %}
   if ( 
     not marker.hasBeenRefined()
     and 
-    {{GUARD}}
+    marker.hasBeenEnclaveCell()
     and
-    repositories::{{SOLVER_INSTANCE}}.getSolverState()=={{SOLVER_NAME}}::SolverState::Secondary 
+    {{PREDICATES[PREDICATE_NO]}}
   ) {
-    const int taskNumber = fineGridCell{{LABEL_NAME}}.getSemaphoreNumber();
-    if ( marker.hasBeenEnclaveCell() and taskNumber>=0 ) {
-      double maxEigenvalue;
-      ::exahype2::EnclaveBookkeeping::getInstance().waitForTaskToTerminateAndCopyResultOver( taskNumber, fineGridCell{{UNKNOWN_IDENTIFIER}}.value, maxEigenvalue );
-
-      ::exahype2::fv::validatePatch(
-        fineGridCell{{UNKNOWN_IDENTIFIER}}.value,
-        {{NUMBER_OF_UNKNOWNS}},
-        {{NUMBER_OF_AUXILIARY_VARIABLES}},
-        {{NUMBER_OF_VOLUMES_PER_AXIS}},
-        0,
-        std::string(__FILE__) + ": " + std::to_string(__LINE__) + "; marker=" + marker.toString()
-      );
-      
-      {{COMPUTE_NEW_TIME_STEP_SIZE}}
-
-      fineGridCell{{LABEL_NAME}}.setSemaphoreNumber( ::exahype2::EnclaveBookkeeping::NoEnclaveTaskNumber );
-      fineGridCell{{SOLVER_NAME}}CellLabel.setHasUpdated(true);
-      fineGridCell{{SOLVER_NAME}}CellLabel.setTimeStepSize(newTimeStepSize);
-    }
+    #if Dimensions==2
+    double* QOut = fineGridCell{{UNKNOWN_IDENTIFIER}}RhsEstimates.value + {{PREDICATE_NO}} * {{NUMBER_OF_DOFS_PER_CELL_2D}} * {{NUMBER_OF_UNKNOWNS}};
+    #elif Dimensions==3
+    double* QOut = fineGridCell{{UNKNOWN_IDENTIFIER}}RhsEstimates.value + {{PREDICATE_NO}} * {{NUMBER_OF_DOFS_PER_CELL_3D}} * {{NUMBER_OF_UNKNOWNS}};
+    #endif
     
-    if ( fineGridCell{{SOLVER_NAME}}CellLabel.getHasUpdated() ) {
-      double*  targetPatch = fineGridCell{{UNKNOWN_IDENTIFIER}}.value;
-
-// noe, kommt spaeter automatisch      
-      {{POSTPROCESS_UPDATED_CELL}}
-
-      repositories::{{SOLVER_INSTANCE}}.update(
-        fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStepSize(),
-        fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStamp(),
-        marker.h()(0)
-      );
-    }
-    else {
-      repositories::{{SOLVER_INSTANCE}}.update(
-        0.0,
-        fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStamp(),
-        marker.h()(0)
-      );
+    const int taskNumber = fineGridCell{{LABEL_NAME}}.getSemaphoreNumber();
+    if ( taskNumber>=0 ) {
+      double maxEigenvalue; // not used here
+      ::exahype2::EnclaveBookkeeping::getInstance().waitForTaskToTerminateAndCopyResultOver( taskNumber, QOut, maxEigenvalue );
     }
   }
+  {% endfor %}
 """
   def __init__(self,solver):
-    AbstractFVActionSet.__init__(self,solver)
+    super( MergeEnclaveTaskOutcome, self ).__init__(solver)
     self.label_name = exahype2.grid.UpdateCellLabel.get_attribute_name(solver._name)
-    self.guard      = "true"
 
 
   def get_body_of_operation(self,operation_name):
@@ -80,7 +52,7 @@ class MergeEnclaveTaskOutcome(AbstractFVActionSet):
       self._solver._init_dictionary_with_default_parameters(d)
       self._solver.add_entries_to_text_replacement_dictionary(d)
       d[ "LABEL_NAME" ] = self.label_name      
-      d[ "GUARD" ]      = self.guard
+      d[ "PREDICATES" ] = self._solver._secondary_sweeps_of_Runge_Kutta_step
       result = jinja2.Template(self.Template).render(**d)
       pass 
     return result
@@ -88,6 +60,12 @@ class MergeEnclaveTaskOutcome(AbstractFVActionSet):
 
   def get_action_set_name(self):
     return __name__.replace(".py", "").replace(".", "_")
+
+
+  def get_includes(self):
+    return super( MergeEnclaveTaskOutcome, self ).get_includes() + """
+#include "exahype2/EnclaveBookkeeping.h"
+"""    
 
 
 class SeparateSweepsWithEnclaveTasking( SeparateSweeps ):
@@ -172,6 +150,10 @@ class SeparateSweepsWithEnclaveTasking( SeparateSweeps ):
     """
     super(SeparateSweepsWithEnclaveTasking, self).create_action_sets()
 
+    self._action_set_solve_volume_integral.spawn_volume_kernel_as_task = True
+
+    self._action_set_merge_enclave_task_outcome = MergeEnclaveTaskOutcome(self)                                                                                 
+
     
   def add_implementation_files_to_project(self,namespace,output):
     """
@@ -188,6 +170,7 @@ class SeparateSweepsWithEnclaveTasking( SeparateSweeps ):
     # Some includes might logically belong into the action sets, but now they are 
     # 'outsourced' into the enclave task. So we manually add it here.
     implementationDictionary[ "SOLVER_INCLUDES" ] += self.user_solver_includes
+    implementationDictionary[ "SOLVER_INCLUDES" ] += self.user_action_set_includes
 
     task_name = self._enclave_task_name()
     generated_solver_files = peano4.output.Jinja2TemplatedHeaderImplementationFilePair(
@@ -213,3 +196,12 @@ class SeparateSweepsWithEnclaveTasking( SeparateSweeps ):
   def _enclave_task_name(self): 
     return "{}EnclaveTask".format(self._name)
 
+
+  def add_actions_to_perform_time_step(self, step):
+    """
+      Add enclave aspect to time stepping
+       
+    """
+    super(SeparateSweepsWithEnclaveTasking, self).add_actions_to_perform_time_step(step)
+    step.add_action_set( self._action_set_merge_enclave_task_outcome )
+ 

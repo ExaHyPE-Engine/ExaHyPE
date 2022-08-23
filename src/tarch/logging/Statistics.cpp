@@ -19,9 +19,8 @@ tarch::logging::Statistics& tarch::logging::Statistics::getInstance() {
 
 
 tarch::logging::Statistics::Statistics():
-  _maxCountInBetweenTwoMeasurements(100),
-  _maxTimeInBetweenTwoMeasurements(2.0),
-  _relativeIntervalDifferenceThreshold(0.2),
+  _maxCountInBetweenTwoMeasurements(1000),
+  _maxTimeInBetweenTwoMeasurements(1.0),
   _globalWatch( "tarch::logging::Statistics", "Statistics", false) {
 }
 
@@ -36,7 +35,7 @@ tarch::logging::Statistics::DataSet::DataSet():
 tarch::logging::Statistics::DataSet::DataSet(double time):
   _watch("tarch::logging::Statistics", "Statistics", false),
   _counter(0) {
-  _data.push_back( std::make_tuple(time,0,0,0) );
+  _data.push_back( std::make_tuple(time,0.0,0.0,0.0,0) );
 }
 
 
@@ -46,7 +45,8 @@ void tarch::logging::Statistics::DataSet::createNewSnapshot(double time) {
     time,
     lastValueFromPreviousSnapshot,
     lastValueFromPreviousSnapshot,
-    lastValueFromPreviousSnapshot
+    lastValueFromPreviousSnapshot,
+    0
   ));
 }
 
@@ -75,22 +75,12 @@ bool tarch::logging::Statistics::acceptNewData(const std::string& identifier, bo
     result = false;
   }
   else if (
-    _map[identifier]._counter>_maxCountInBetweenTwoMeasurements
+    _map[identifier]._counter>=_maxCountInBetweenTwoMeasurements
     or
     _map[identifier]._watch.getCalendarTime() > _maxTimeInBetweenTwoMeasurements
   ) {
-    return true;
-  }
-  else if (
-    std::abs(std::get<1>( _map[identifier]._data.back() )) > 1.0
-    and
-    (std::get<1>( _map[identifier]._data.back() )>(1.0+_relativeIntervalDifferenceThreshold)*std::get<2>( _map[identifier]._data.back() ))
-    and
-    (std::get<1>( _map[identifier]._data.back() )<(1.0-_relativeIntervalDifferenceThreshold)*std::get<3>( _map[identifier]._data.back() ))
-  ) {
     result = true;
   }
-
 
   if (result) {
     _map[identifier]._counter = 0;
@@ -116,6 +106,7 @@ void tarch::logging::Statistics::updateDataSnapshot(const std::string& identifie
   std::get<1>( _map[identifier]._data.back() ) = value;
   std::get<2>( _map[identifier]._data.back() ) = std::min(std::get<2>( _map[identifier]._data.back() ), value);
   std::get<3>( _map[identifier]._data.back() ) = std::max(std::get<3>( _map[identifier]._data.back() ), value);
+  std::get<4>( _map[identifier]._data.back() ) = 1 + std::get<4>( _map[identifier]._data.back() );
 }
 
 
@@ -185,11 +176,15 @@ void tarch::logging::Statistics::writeToCSV( std::string filename ) {
           and
           std::get<0>(p.second._data.front()) < t + _maxTimeInBetweenTwoMeasurements
         ) {
-          file << ", (" << std::get<1>(p.second._data.front()) << "/" << std::get<2>(p.second._data.front()) << "/" << std::get<3>(p.second._data.front()) << ")";
+          file << ", (" << std::get<1>(p.second._data.front())
+              << "/" << std::get<2>(p.second._data.front())
+              << "/" << std::get<3>(p.second._data.front())
+              << "/#" << std::get<4>(p.second._data.front())
+              << ")";
           p.second._data.erase(p.second._data.begin());
         }
         else {
-          file << ", (././.)";
+          file << ", (./././.)";
         }
       }
     }

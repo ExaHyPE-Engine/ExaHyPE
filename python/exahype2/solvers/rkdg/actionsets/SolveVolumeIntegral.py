@@ -6,7 +6,9 @@ from .AbstractRungeKuttaDGActionSet import AbstractRungeKuttaDGActionSet
 from exahype2.solvers.ButcherTableau                import ButcherTableau
 
 import peano4
+import exahype2
 import jinja2
+
 
 class SolveVolumeIntegral(AbstractRungeKuttaDGActionSet):
   """
@@ -55,8 +57,6 @@ class SolveVolumeIntegral(AbstractRungeKuttaDGActionSet):
     double* QOut = fineGridCell{{UNKNOWN_IDENTIFIER}}RhsEstimates.value + {{PREDICATE_NO}} * {{NUMBER_OF_DOFS_PER_CELL_3D}} * {{NUMBER_OF_UNKNOWNS}};
     #endif
     
-    // Hier kommt der Task Aufruf rein
-    
     ::exahype2::CellData cellData(
       QIn,
       marker.x(),
@@ -65,78 +65,33 @@ class SolveVolumeIntegral(AbstractRungeKuttaDGActionSet):
       timeStepSize,
       QOut
     );
-   
-    
-    ::exahype2::dg::cellIntegral_patchwise_GaussLegendre_functors(
-      cellData,
-      {{ORDER}},                                                   
-      {{NUMBER_OF_UNKNOWNS}},
-      {{NUMBER_OF_AUXILIARY_VARIABLES}},
-      [&](
-        const double * __restrict__                  Q,
-        const tarch::la::Vector<Dimensions,double>&  x,
-        double                                       t,
-        double                                       dt,
-        int                                          normal,
-        double * __restrict__                        F
-      )->void {
-        {% if FLUX_IMPLEMENTATION!="<none>" %}
-        repositories::{{SOLVER_INSTANCE}}.flux(Q,x,t,dt,normal,F);
-        {% endif %}
-      }, //flux
-      [&](
-          const double * __restrict__                  Q,
-          const double * __restrict__                  dQdx,
-          const tarch::la::Vector<Dimensions,double>&  x,
-          double                                       t,
-          double                                       dt,
-          int                                          normal,
-          double * __restrict__                        F
-        ) -> void {
-          {% if NCP_IMPLEMENTATION!="<none>" %}
-          repositories::{{SOLVER_INSTANCE}}.nonconservativeProduct(Q, dQdx, x, t, dt, normal, F);
-          {% endif %}          
-        }, //ncp
-      [&](
-        const double * __restrict__                  Q,
-        const tarch::la::Vector<Dimensions,double>&  x,
-        double                                       t,
-        double                                       dt,
-        double * __restrict__                        S
-      ) -> void {
-        {% if SOURCE_TERM_IMPLEMENTATION!="<none>" %}
-        repositories::{{SOLVER_INSTANCE}}.sourceTerm(Q,x,t,dt,S);
-        {% endif %}
-      }, //source
-      [&](
-        const double * __restrict__                  Q,
-        const tarch::la::Vector<Dimensions,double>&  cellCentre,
-        const tarch::la::Vector<Dimensions,double>&  cellH,
-        double                                       t,
-        double                                       dt
-      ) -> std::vector<::exahype2::dg::PointSource> {
-        {% if POINT_SOURCES_IMPLEMENTATION!="<none>" %}
-        return repositories::{{SOLVER_INSTANCE}}.pointSources(Q,cellCentre,cellH,t,dt);
-        {% else %}
-        return std::vector<::exahype2::dg::PointSource>();
-        {% endif %}
-      }, //source
-      repositories::{{SOLVER_INSTANCE}}.QuadraturePoints1d,
-      repositories::{{SOLVER_INSTANCE}}.MassMatrixDiagonal1d,
-      repositories::{{SOLVER_INSTANCE}}.StiffnessOperator1d,
-      repositories::{{SOLVER_INSTANCE}}.DerivativeOperator1d,
-      {{ "true" if FLUX_IMPLEMENTATION!="<none>" else "false" }}, //useFlux
-      {{ "true" if NCP_IMPLEMENTATION!="<none>" else "false" }}, //useNCP
-      {{ "true" if SOURCE_TERM_IMPLEMENTATION!="<none>" else "false" }}, //useSource
-      {{ "true" if POINT_SOURCES_IMPLEMENTATION!="<none>" else "false" }} //useSource
-    );    
+
+    if (marker.willBeSkeletonCell()) {
+      ::exahype2::dg::{{KERNEL_NAMESPACE}}::{{VOLUMETRIC_SOLVER_CALL}}    
+    }
+    else {
+      {% if SPAWN_VOLUME_KERNEL_AS_TASK %}
+      assertion( marker.willBeEnclaveCell() );
+      assertion( not marker.willBeRefined() );
+      auto newEnclaveTask = new tasks::{{SOLVER_NAME}}EnclaveTask(
+        marker,
+        timeStamp,
+        timeStepSize,
+        QIn
+      );
+      fineGridCell{{SEMAPHORE_LABEL}}.setSemaphoreNumber( newEnclaveTask->getTaskId() );
+      tarch::multicore::spawnTask( newEnclaveTask );
+      {% else %}
+      ::exahype2::dg::{{KERNEL_NAMESPACE}}::{{VOLUMETRIC_SOLVER_CALL}}    
+      {% endif %}
+    }
   }  
   
   {% endfor %}
 """
   
   
-  def __init__(self,solver):
+  def __init__(self,solver,spawn_volume_kernel_as_task = False):
     """
     
     guard_project: String (C++ code)
@@ -148,8 +103,9 @@ class SolveVolumeIntegral(AbstractRungeKuttaDGActionSet):
     
     """
     super(SolveVolumeIntegral,self).__init__(solver)
-    self.guards               = []
-    self._butcher_tableau     = ButcherTableau(self._solver._rk_order)
+    self.guards                      = []
+    self._butcher_tableau            = ButcherTableau(self._solver._rk_order)
+    self.spawn_volume_kernel_as_task = spawn_volume_kernel_as_task
     
 
   @property
@@ -174,6 +130,8 @@ class SolveVolumeIntegral(AbstractRungeKuttaDGActionSet):
       self._solver.add_entries_to_text_replacement_dictionary(d)
       d[ "PREDICATES" ]                               = self.guards
       d[ "BUTCHER_TABLEAU_RELATIVE_TIME_STEP_SIZES" ] = self._butcher_tableau.time_step_sizes()
+      d[ "SPAWN_VOLUME_KERNEL_AS_TASK"]               = self.spawn_volume_kernel_as_task
+      d[ "SEMAPHORE_LABEL" ]      = exahype2.grid.UpdateCellLabel.get_attribute_name(self._solver._name)
       result = jinja2.Template(self.TemplateCellKernel).render(**d)
       pass 
     return result
@@ -181,4 +139,14 @@ class SolveVolumeIntegral(AbstractRungeKuttaDGActionSet):
 
   def get_action_set_name(self):
     return __name__.replace(".py", "").replace(".", "_")
+
+
+  def get_includes(self):
+    if self.spawn_volume_kernel_as_task:
+      return super( SolveVolumeIntegral, self ).get_includes() + """
+#include "tasks/""" + self._solver._name + """EnclaveTask.h"
+"""
+    else:
+      return super( SolveVolumeIntegral, self ).get_includes()
+
 

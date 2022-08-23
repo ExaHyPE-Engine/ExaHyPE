@@ -7,8 +7,8 @@
 #include "../DGUtils.h"
 #include "../CellIntegral.h"
 #include "../Riemann.h"
-#include "../rusanov/Riemann.h"
 #include "../BoundaryConditions.h"
+#include "../rusanov/Rusanov.h"
 #include "TestUtils.h"
 #include "exahype2/CellData.h"
 

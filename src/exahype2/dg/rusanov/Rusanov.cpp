@@ -1,8 +1,7 @@
-#include "Riemann.h"
-
 #include "exahype2/enumerator/FaceAoSLexicographicEnumerator.h"
 
 #include "peano4/utils/Loop.h"
+#include "Rusanov.h"
 
 
 void exahype2::dg::rusanov::solveRiemannProblem_pointwise_in_situ(

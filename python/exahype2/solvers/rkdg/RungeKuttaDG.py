@@ -224,6 +224,12 @@ class RungeKuttaDG(object):
     self._basis                      = polynomial_basis
     self._number_of_face_projections = number_of_face_projections
     
+    self._volumetric_solver_call         = "#error Please set the solver property _volumetric_kernel in the Python class"
+    self._Riemann_solver_call            = "#error Please set the solver property _Riemann_solver in the Python class"
+    self._add_solver_contributions_call  = "#error Please set the solver property _add_solver_contributions_call in the Python class"
+    self._multiply_with_inverted_mass_matrix_call = "#error Please set the solver property _multiply_with_inverted_mass_matrix_call in the Python class"
+    self._kernel_namespace               = "#error Please set the solver property _kernel_namespace in the Python class"
+     
     self._unknowns             = unknowns
     self._auxiliary_variables  = auxiliary_variables
 
@@ -858,7 +864,7 @@ We use RK(""" + str(self._rk_order) + """) for the time stepping.
     d["UNKNOWN_IDENTIFIER"]             = self._unknown_identifier()
     d["NUMBER_OF_UNKNOWNS"]             = self._unknowns
     d["NUMBER_OF_AUXILIARY_VARIABLES"]  = self._auxiliary_variables
-
+    
     d[ "NUMBER_OF_DOFS_PER_CELL_2D" ] = (self._basis.dofs_per_axis) * (self._basis.dofs_per_axis);
     d[ "NUMBER_OF_DOFS_PER_CELL_3D" ] = (self._basis.dofs_per_axis) * (self._basis.dofs_per_axis) * (self._basis.dofs_per_axis);
     
@@ -904,7 +910,16 @@ We use RK(""" + str(self._rk_order) + """) for the time stepping.
     d[ "POINT_SOURCES_IMPLEMENTATION"]        = self._point_sources_implementation
     
     d[ "COMPUTE_MAX_EIGENVALUE" ]             = self._compute_eigenvalue
+
+    d["KERNEL_NAMESPACE"]                        = self._kernel_namespace
+    
     self._basis.init_dictionary_with_default_parameters(d,False)
+    
+    # Has to come last, as we already use the other entries    
+    d["VOLUMETRIC_SOLVER_CALL"]                  = jinja2.Template(self._volumetric_solver_call, undefined=jinja2.DebugUndefined).render( **d )
+    d["RIEMANN_SOLVER_CALL"]                     = jinja2.Template(self._Riemann_solver_call, undefined=jinja2.DebugUndefined).render( **d )
+    d["ADD_SOLVER_CONTRIBUTIONS_CALL"]           = jinja2.Template(self._add_solver_contributions_call, undefined=jinja2.DebugUndefined).render( **d )
+    d["MULTIPLY_WITH_INVERTED_MASS_MATRIX_CALL"] = jinja2.Template(self._multiply_with_inverted_mass_matrix_call, undefined=jinja2.DebugUndefined).render( **d )
 
   
   @property

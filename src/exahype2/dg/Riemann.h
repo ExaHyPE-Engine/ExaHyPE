@@ -136,40 +136,40 @@ namespace exahype2 {
    *
    * @see projectVolumetricDataOntoFaces()
    */
-  void integrateOverRiemannSolutionsAndAddToVolume_GaussLegendre(
-    const double* const __restrict__    faceQLeft,
-    const double* const __restrict__    faceQRight,
-    const double* const __restrict__    faceQBottom,
-    const double* const __restrict__    faceQUp,
-    int                                 order,
-    int                                 unknowns,
-    const int                           auxiliaryVariables,
-    const tarch::la::Vector<2,double>&  cellSize,
-    const double* const __restrict__    BasisFunctionValuesLeft,
-    const double* __restrict__          MassMatrixDiagonal1d,
-    double* __restrict__                cellQ
-  );
+    void integrateOverRiemannSolutionsAndAddToVolume_GaussLegendre(
+      const double* const __restrict__    faceQLeft,
+      const double* const __restrict__    faceQRight,
+      const double* const __restrict__    faceQBottom,
+      const double* const __restrict__    faceQUp,
+      int                                 order,
+      int                                 unknowns,
+      const int                           auxiliaryVariables,
+      const tarch::la::Vector<2,double>&  cellSize,
+      const double* const __restrict__    BasisFunctionValuesLeft,
+      const double* __restrict__          MassMatrixDiagonal1d,
+      double* __restrict__                cellQ
+    );
 
 
-  /**
-   * 3d counterpart of other integrateOverRiemannSolutionsAndAddToVolume_GaussLegendre()
-   * routine.
-   */
-  void integrateOverRiemannSolutionsAndAddToVolume_GaussLegendre(
-    const double* const __restrict__    faceQLeft,
-    const double* const __restrict__    faceQRight,
-    const double* const __restrict__    faceQBottom,
-    const double* const __restrict__    faceQUp,
-    const double* const __restrict__    faceQFront,
-    const double* const __restrict__    faceQBack,
-    int                                 order,
-    int                                 unknowns,
-    const int                           auxiliaryVariables,
-    const tarch::la::Vector<3,double>&  cellSize,
-    const double* const __restrict__    BasisFunctionValuesLeft,
-    const double* __restrict__          MassMatrixDiagonal1d,
-    double* __restrict__                cellQ
-  );
+    /**
+     * 3d counterpart of other integrateOverRiemannSolutionsAndAddToVolume_GaussLegendre()
+     * routine.
+     */
+    void integrateOverRiemannSolutionsAndAddToVolume_GaussLegendre(
+      const double* const __restrict__    faceQLeft,
+      const double* const __restrict__    faceQRight,
+      const double* const __restrict__    faceQBottom,
+      const double* const __restrict__    faceQUp,
+      const double* const __restrict__    faceQFront,
+      const double* const __restrict__    faceQBack,
+      int                                 order,
+      int                                 unknowns,
+      const int                           auxiliaryVariables,
+      const tarch::la::Vector<3,double>&  cellSize,
+      const double* const __restrict__    BasisFunctionValuesLeft,
+      const double* __restrict__          MassMatrixDiagonal1d,
+      double* __restrict__                cellQ
+    );
   }
 }
 
