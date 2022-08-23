@@ -85,7 +85,6 @@ Some exemplary configure commands are given below. For detailed information plea
 * Intel
 ```shell
 ./configure --with-multithreading=omp --enable-exahype --enable-loadbalancing --enable-blockstructured --enable-fenv CC=icx CXX=icpx CXXFLAGS="-O3 -std=c++20 -fiopenmp" LDFLAGS="-fiopenmp"
-
 ./configure --with-multithreading=omp --with-gpu=omp --enable-exahype --enable-loadbalancing --enable-blockstructured --enable-fenv CC=icx CXX=icpx CXXFLAGS="-O3 -std=c++20 -fiopenmp -fopenmp-targets=spir64" LDFLAGS="-fiopenmp"
 ```
 
