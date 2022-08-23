@@ -26,7 +26,7 @@ parser.add_argument("-j",   "--parallel-builds",   dest="j",              type=i
 parser.add_argument("-pd",  "--peano-dir",         dest="peanodir",       default="../../../../", help="Peano4 directory" )
 parser.add_argument("-v",   "--verbose",           dest="verbose",        action="store_true", default=False, help="Verbose")
 parser.add_argument("-m",   "--mode",              dest="mode",           choices=["release","stats","asserts"], required=True, help="Pick build type" )
-parser.add_argument(        "--plot",              dest="plot"  ,         action="store_true", default=False, help="Plot solution in regular time intervals")
+parser.add_argument("-t",   "--type",              dest="type",           choices=["plot","0"], required=True, help="Pick scenario" )
 parser.add_argument(        "--gpu",               dest="gpu",            action="store_true", default=False, help="Use GPU support (or aggressive task tuning)")
 parser.add_argument("-s",   "--solver",            dest="solver",         choices=["fv-4", "fv-6", "fv-8", "dg1-rk1", "dg2-rk2", "dg3-rk3", "dg4-rk4"], required=True, help="Pick solver type. For the Finite Volume (fv) solvers, the second index is the patch/block size. For DG, you can pick different Runge-Kutta time integration orders" )
 args = parser.parse_args()
@@ -46,12 +46,12 @@ unknowns    = {
   "E":   1,
 }
 number_of_unknowns  = sum(unknowns.values())
-if args.plot:
+if args.mode=="plot":
   max_h               = 0.2
   min_h               = 0.2
-else:
-  max_h               = 0.04
-  min_h               = 0.04
+elif args.mode=="0":
+  max_h               = 0.01
+  min_h               = 0.01
 auxiliary_variables = 0
 
 
@@ -138,18 +138,18 @@ if args.mode=="stats":
 if args.mode=="asserts":
   build_mode = peano4.output.CompileMode.Asserts
 
-if args.plot:
+if args.mode=="plot":
   plot_interval = 0.1
 else:  
   plot_interval = 0.0
   
 cube_size = 1
 project.set_global_simulation_parameters(
-  dimensions = dimensions,
-  offset = [-cube_size/2.0, -cube_size/2.0, -cube_size/2.0],
-  size   = [ cube_size, cube_size, cube_size],
-  min_end_time = 4.0,
-  max_end_time = 4.0,
+  dimensions            = dimensions,
+  offset                = [-cube_size/2.0, -cube_size/2.0, -cube_size/2.0],
+  size                  = [ cube_size, cube_size, cube_size],
+  min_end_time          = 4.0,
+  max_end_time          = 4.0,
   first_plot_time_stamp = 0.0,
   time_in_between_plots = plot_interval,
   periodic_BC           = [False, False, False]

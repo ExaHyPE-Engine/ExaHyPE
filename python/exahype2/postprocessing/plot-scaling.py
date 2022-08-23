@@ -4,6 +4,7 @@ import argparse
 import tarfile
 import os
 import exahype2.postprocessing
+import sys
 
 
 import matplotlib.pyplot as plt
@@ -17,15 +18,28 @@ Symbols = [ "o", "s", "<", ">" , "v", "^" ]
 
 
 
+def add_linear_speedup_trend_line():
+    global max_x        
+    global max_serial_y
+    global min_serial_y
+    
+    plt.plot( [1,max_x], [max_serial_y,max_serial_y/max_x], "--", color="#ababab" )
+    plt.plot( [1,max_x], [min_serial_y,min_serial_y/max_x], "--", color="#ababab" )
+    
+
+
 def visualise( data_points, symbol_counter, colour_counter):
-    global single_node_time 
     global max_x        
     global max_time         
+    global max_serial_y
+    global min_serial_y
     
     (x_data, y_data) = exahype2.postprocessing.extract_times_per_step( data_points, args.max_cores_per_rank )    
-     
+    
     if len(x_data)>0:
-      max_x = max(max_x,x_data[-1])
+      max_x        = max(max_x,x_data[-1])
+      max_serial_y = max(max_serial_y,y_data[0])
+      min_serial_y = min(min_serial_y,y_data[0])
     
     if args.plot_efficiency:
       normalised_fasted_time = y_data[0] * x_data[0]
@@ -74,10 +88,10 @@ A generic script to create speedup plots.
   parser.add_argument("--solver-name",        dest="solver_name",     help="Solver name (leave blank if there is only one solver)", default="" )
   args = parser.parse_args()
 
-
-  single_node_time = -1
   max_x        = -1
-  max_time         = -1
+  max_time     = -1
+  min_serial_y = sys.float_info.max
+  max_serial_y = 0
   
   plt.clf()
 
@@ -140,6 +154,7 @@ A generic script to create speedup plots.
   if args.plot_efficiency:
     plt.ylabel( "Efficiency" )
   else:
+    add_linear_speedup_trend_line()
     plt.ylabel( "Time per time step [t]=s" )
   if args.log_x:
     plt.xscale( "log", base=2 )
