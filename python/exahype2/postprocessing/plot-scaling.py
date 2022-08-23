@@ -48,9 +48,9 @@ def visualise( data_points, symbol_counter, colour_counter):
       plt.plot( x_data, y_data, symbol, color=my_color, markevery=my_markevery )
     else:
       try:
-        my_label = args.labels.split(",")[ args.file.split(",").index(file) ]
+        my_label = args.labels.split(",")[ args.file.index(file) ]
       except:
-        raise Exception( "Unable to extract " + str(args.file.split(",").index(file)) + "th entry from " + args.labels + ": " + str(args.labels.split(",")) )
+        raise Exception( "Unable to extract " + str(args.file.index(file)) + "th entry from " + args.labels + ": " + str(args.labels.split(",")) )
       plt.plot( x_data, y_data, symbol, label=my_label, color=my_color, markevery=my_markevery )
     
 
@@ -62,15 +62,16 @@ ExaHyPE 2 scaling plotter:
 A generic script to create speedup plots.
 
 """)
-  parser.add_argument("file",   help="filename of the file to parse (should be a tar.gz file or a directory). If you have multiple files, seperate them with a comma")
+  parser.add_argument("file", nargs="+",    help="filename of the file to parse. You can specify multiple files")
   parser.add_argument("-v",                  "--verbose", help="increase output verbosity", action="store_true" )
   parser.add_argument("--max-cores-per-rank", dest="max_cores_per_rank", type=int, help="max number of cores per rank (pick 0 if you have only one core count per rank, pick -1 if you want to plot single-node data)", default=0)
   parser.add_argument("--group-data",         dest="group_data",      help="group k consecutive measurements as one piece of data, i.e. use similar styles (default=0, i.e. off)", default=0, type=int )
   parser.add_argument("--log-x",              dest="log_x",           help="plot with logarithmic axes", action="store_true" )
   parser.add_argument("--log-y",              dest="log_y",           help="plot with logarithmic axes", action="store_true" )
   parser.add_argument("--plot-efficiency",    dest="plot_efficiency", help="Don't plot raw times but efficiency", action="store_true" )
-  parser.add_argument("--labels",             dest="labels",          help="Plot labels. You can use $...$ to use the math mode, but you will have to escape the dollars with a \\", default="" )
+  parser.add_argument("--labels",             dest="labels",          help="Plot labels. You can use $...$ to use the math mode, but you will have to escape the dollars with a \\. Separate with , and ensure there's exactly one entry per file", default="" )
   parser.add_argument("--output",             dest="output",          help="output file prefix (file name extension is added automatically)", default="" )
+  parser.add_argument("--solver-name",        dest="solver_name",     help="Solver name (leave blank if there is only one solver)", default="" )
   args = parser.parse_args()
 
 
@@ -83,7 +84,7 @@ A generic script to create speedup plots.
   symbol_counter = 0
   colour_counter = 0
     
-  for file in args.file.split(","):
+  for file in args.file:
     if os.path.isdir(file):
       print( "Parse file " + file )
       data_points = []
@@ -91,7 +92,7 @@ A generic script to create speedup plots.
         print( "========================================================================")
         print( file + "/" + data_file + " from " + file )
         print( "========================================================================")
-        new_data = exahype2.postprocessing.PerformanceData(file + "/" + data_file, args.verbose)
+        new_data = exahype2.postprocessing.PerformanceData(file + "/" + data_file, args.solver_name, args.verbose)
         if new_data.valid:
           data_points.append( new_data ) 
       visualise( data_points, symbol_counter, colour_counter )
@@ -114,7 +115,7 @@ A generic script to create speedup plots.
           print( data_file + " from " + file )
           print( "========================================================================")
           tar.extract( data_file )
-          new_data = exahype2.postprocessing.PerformanceData(data_file, args.verbose)
+          new_data = exahype2.postprocessing.PerformanceData(data_file, args.solver_name, args.verbose)
           if new_data.valid:
             data_points.append( new_data ) 
           os.remove( data_file )
@@ -159,9 +160,8 @@ A generic script to create speedup plots.
   plt.xticks( xtics, xlabels )
   
   plt.legend()
-  filename = args.file.replace( ".tar.gz", "").replace( ".tar", "" )
   output_file_name = args.output
   if output_file_name=="":
-      output_file_name = filename
+      output_file_name = args.file[0].replace( ".tar.gz", "").replace( ".tar", "" )
   plt.savefig( output_file_name + ".pdf" )
   plt.savefig( output_file_name + ".png" )
