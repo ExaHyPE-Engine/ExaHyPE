@@ -103,6 +103,9 @@ void applications::exahype2::euler::sphericalaccretion::MassAccumulator::finishA
     [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); }
   );
   #endif
+
+  logInfo( "finishAccumulation()", "old relevant radius equals r=" << getMaxRelevantRadius() );
+
   _previousMassAccumulated.clear();
   _previousMassAccumulated.insert( _previousMassAccumulated.end(), _currentMass.begin(), _currentMass.end() );
   _currentMass.clear();
@@ -124,8 +127,9 @@ void applications::exahype2::euler::sphericalaccretion::MassAccumulator::finishA
       largestRelevantShell = std::max(largestRelevantShell,i+1);
     }
   }
+  largestRelevantShell = std::max(0,std::min(largestRelevantShell+1,static_cast<int>(_previousMassAccumulated.size())));
   logInfo( "finishAccumulation()", "roll over " << largestRelevantShell << " out of " << _previousMassAccumulated.size() << " buckets (remaining buckets make no significant contribution)" );
-  _previousMassAccumulated.resize( std::max(0,largestRelevantShell) );
+  _previousMassAccumulated.resize( largestRelevantShell );
 
 
   double currentShellWidth = 0.0;
@@ -133,6 +137,7 @@ void applications::exahype2::euler::sphericalaccretion::MassAccumulator::finishA
     currentShellWidth += _shellWidth;
     logInfo( "finishAccumulation()", "bucket (r<=" << currentShellWidth << ") = " << p );
   }
+  logInfo( "finishAccumulation()", "new relevant radius equals r=" << getMaxRelevantRadius() );
 }
 
 

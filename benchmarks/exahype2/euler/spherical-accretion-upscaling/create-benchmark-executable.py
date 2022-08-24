@@ -53,8 +53,8 @@ elif args.type=="plot" and "dg" in args.solver:
   max_h               = 0.1
   min_h               = 0.1
 elif args.type=="0":
-  max_h               = 0.01
-  min_h               = 0.01
+  max_h               = 0.03
+  min_h               = 0.03
 auxiliary_variables = 0
 
 
