@@ -6,6 +6,22 @@ benchmark is that it covers a wide range of features even though the actual setu
 comparatively simple.
 
 
+## Benchmark scenarios
+
+Each benchmark is built in two versions: One optimises the compute kernels for cells
+aggressively, where the cell does not have any side effect. The other one skips this
+optimisation.
+
+Besides that and the different solver flavours, we have different scnearios:
+
+
+scenario | description
+----------------------
+plot
+0
+
+ 
+
 ## Build executables
 
 For the benchmarks, it is reasonable to build all solvers in release mode without any
@@ -14,12 +30,25 @@ following builds:
 
      export PYTHONPATH=../../../../python 
 
-     python3 create-benchmark-executable.py --type 0 -m release -s fv-4
-     python3 create-benchmark-executable.py --type 0 -m release -s fv-6
-     python3 create-benchmark-executable.py --type 0 -m release -s fv-8
-     python3 create-benchmark-executable.py --type 0 -m release -s dg2-rk2
-     python3 create-benchmark-executable.py --type 0 -m release -s dg3-rk3
-     python3 create-benchmark-executable.py --type 0 -m release -s dg4-rk4
+     for type in 0
+     do
+       python3 create-benchmark-executable.py --scenario $scenario -m release -s fv-4
+       python3 create-benchmark-executable.py --scenario $scenario -m release -s fv-6
+       python3 create-benchmark-executable.py --scenario $scenario -m release -s fv-8
+       python3 create-benchmark-executable.py --scenario $scenario -m release -s dg2-rk2
+       python3 create-benchmark-executable.py --scenario $scenario -m release -s dg3-rk3
+       python3 create-benchmark-executable.py --scenario $scenario -m release -s dg4-rk4
+     
+       python3 create-benchmark-executable.py --scenario $scenario -m release -s fv-4 --optimise-stateless
+       python3 create-benchmark-executable.py --scenario $scenario -m release -s fv-6 --optimise-stateless
+       python3 create-benchmark-executable.py --scenario $scenario -m release -s fv-8 --optimise-stateless
+       python3 create-benchmark-executable.py --scenario $scenario -m release -s dg2-rk2 --optimise-stateless
+       python3 create-benchmark-executable.py --scenario $scenario -m release -s dg3-rk3 --optimise-stateless
+       python3 create-benchmark-executable.py --scenario $scenario -m release -s dg4-rk4 --optimise-stateless
+     done     
+     
+     
+     
 
 
 ## Run experiments

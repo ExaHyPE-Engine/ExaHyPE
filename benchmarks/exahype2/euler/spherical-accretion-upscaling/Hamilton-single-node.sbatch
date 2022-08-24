@@ -25,7 +25,8 @@ for extension in "0"
 do
  for executable in benchmark-FV-4 benchmark-FV-6 benchmark-FV-8 benchmark-RK2DG2 benchmark-RK3DG3 benchmark-RK4DG4
  do 
-  ./$executable-$extension --threads $SLURM_ARRAY_TASK_ID > single-node-$executable-$extension-$SLURM_ARRAY_TASK_ID-cores.data
+  ./$executable-no-opt-$extension --threads $SLURM_ARRAY_TASK_ID > single-node-$executable-no-opt-$extension-$SLURM_ARRAY_TASK_ID-cores.data
+  ./$executable-opt-$extension    --threads $SLURM_ARRAY_TASK_ID > single-node-$executable-opt-$extension-$SLURM_ARRAY_TASK_ID-cores.data
  done
 done
  

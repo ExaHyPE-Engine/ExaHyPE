@@ -77,12 +77,16 @@ class VolumeWisePostprocessSolution(AbstractFVActionSet):
     
     """
     self._compute_kernel += """
+  {{COMPUTE_TIME_STEP_SIZE}}
+  const double timeStamp = fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStamp();
+    
   if (
     not marker.hasBeenRefined() 
     and 
     {{PREDICATE}}
   ) { 
     logTraceIn( "touchCellFirstTime(...)" );
+    
     int index = 0;
     dfor( volume, {{NUMBER_OF_VOLUMES_PER_AXIS}} ) {
       double* value   = fineGridCell{{UNKNOWN_IDENTIFIER}}.value + index;

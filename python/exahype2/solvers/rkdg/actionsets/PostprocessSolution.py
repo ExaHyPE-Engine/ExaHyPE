@@ -72,12 +72,16 @@ class DoFWisePostprocessSolution(AbstractRungeKuttaDGActionSet):
     
     """
     self._compute_kernel += """
+  {{COMPUTE_TIME_STEP_SIZE}}
+  const double timeStamp = fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStamp();
+    
   if (
     not marker.hasBeenRefined() 
     and 
     {{PREDICATE}}
   ) { 
     logTraceIn( "touchCellFirstTime(...)" );
+    
     ::exahype2::enumerator::AoSLexicographicEnumerator enumerator(
       1, // only one patch
       {{DG_ORDER}}+1,

@@ -120,6 +120,13 @@ class benchmarks::exahype2::euler::sphericalaccretionupscaling::SelfSimilarInfal
      * If so, we let the mass accummulation know.
      */
     void finishTimeStep() override;
+
+    bool cellCanUseStatelessPDETerms(
+      const tarch::la::Vector<Dimensions,double>&  patchCentre,
+      const tarch::la::Vector<Dimensions,double>&  patchH,
+      double                                       t,
+      double                                       dt
+    ) const override;
 };
 
 
