@@ -7,22 +7,26 @@
 
 namespace exahype2::fv::rusanov::omp::opt {
     struct GPUCellData {
-        double* QIn{nullptr};
-        double* QOut{nullptr};
-        double* cellCentre{nullptr};
-        double* cellSize{nullptr};
-        double* t{nullptr};
-        double* dt{nullptr};
-        double* maxEigenvalue{nullptr};
+        double* QIn;
+        double* QOut;
+        double* cellCentre;
+        double* cellSize;
+        double* t;
+        double* dt;
+        double* maxEigenvalue;
 
         int deviceId;
+        bool isAllocated;
 
-        GPUCellData(int deviceId, int maxNumberOfPatches, size_t QInSize, size_t QOutSize);
+        explicit GPUCellData();
         ~GPUCellData();
-        GPUCellData(const GPUCellData&) = delete;
+        GPUCellData(GPUCellData const&) = delete;
+        GPUCellData& operator = (GPUCellData const&) = delete;
         GPUCellData(GPUCellData&&) = delete;
-        GPUCellData& operator = (const GPUCellData&) = delete;
         GPUCellData& operator = (GPUCellData&&) = delete;
+
+        void allocate(int deviceId, size_t QInSize, size_t QOutSize);
+        void free();
     };
 }
 

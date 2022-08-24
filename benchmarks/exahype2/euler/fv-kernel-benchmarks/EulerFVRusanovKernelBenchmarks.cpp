@@ -120,6 +120,12 @@ static constexpr double TimeStepSize = 1e-6;
 static constexpr double CellSize     = 0.1;
 static constexpr double CellOffset   = 4.0;
 
+#if defined(GPUOffloadingOMP)
+// TODO: Should be placed in a "RusanovMemoryManager" later on
+::exahype2::fv::rusanov::omp::opt::GPUCellData devicePatchData;
+::exahype2::fv::rusanov::omp::opt::GPUScratchpadData deviceScratchpadData;
+#endif
+
 /**
  * Run the benchmark for one particular number of patches per fused kernel call.
  */
@@ -233,10 +239,10 @@ void runBenchmarks(int patches) {
 
     for (int hostTask=0; hostTask<MaxHostTasks; hostTask++)
     for (int i=0; i<patches; i++) {
-      patchData[hostTask].QIn[i]   = new double[ NumberOfInputEntries ];
-      patchData[hostTask].t[i]     = TimeStamp;
-      patchData[hostTask].dt[i]    = TimeStepSize;
-      patchData[hostTask].QOut[i]  = new double[ NumberOfOutputEntries ];
+      patchData[hostTask].QIn[i]            = new double[ NumberOfInputEntries ];
+      patchData[hostTask].t[i]              = TimeStamp;
+      patchData[hostTask].dt[i]             = TimeStepSize;
+      patchData[hostTask].QOut[i]           = new double[ NumberOfOutputEntries ];
       patchData[hostTask].cellCentre[i]     = tarch::la::Vector<Dimensions,double>(CellOffset+0.5*CellSize);
       patchData[hostTask].cellSize[i]       = tarch::la::Vector<Dimensions,double>(CellSize);
       initInputData(patchData[hostTask].QIn[i]);
@@ -313,6 +319,70 @@ void runBenchmarks(int patches) {
     }
   };
 
+#if defined(GPUOffloadingOMP)
+    auto testFusedVariantOnDeviceWithOptimizedMemoryAllocation = [&](
+    int device,
+    std::function<void(
+      int                                                   device,
+      exahype2::CellData&                                   patchData,
+      exahype2::fv::rusanov::omp::opt::GPUCellData&         devicePatchData,
+      exahype2::fv::rusanov::omp::opt::GPUScratchpadData&   deviceScratchpadData,
+      bool                                                  evaluateFlux,
+      bool                                                  evaluateNonconservativeProduct,
+      bool                                                  evaluateSource,
+      bool                                                  evaluateMaximumEigenvalueAfterTimeStep
+    )> kernel, std::string markerName, bool computeCFL ) {
+
+    constexpr int MaxHostTasks = 5;
+    ::exahype2::CellData patchData[MaxHostTasks] = { patches, patches, patches, patches, patches };
+
+    for (int hostTask=0; hostTask<MaxHostTasks; hostTask++)
+    for (int i=0; i<patches; i++) {
+      patchData[hostTask].QIn[i]            = new double[ NumberOfInputEntries ];
+      patchData[hostTask].t[i]              = TimeStamp;
+      patchData[hostTask].dt[i]             = TimeStepSize;
+      patchData[hostTask].QOut[i]           = new double[ NumberOfOutputEntries ];
+      patchData[hostTask].cellCentre[i]     = tarch::la::Vector<Dimensions,double>(CellOffset+0.5*CellSize);
+      patchData[hostTask].cellSize[i]       = tarch::la::Vector<Dimensions,double>(CellSize);
+      initInputData(patchData[hostTask].QIn[i]);
+    }
+
+    tarch::timing::Watch singleKernelWatch( "::", "main()", false );
+    kernel(
+      device,
+      patchData[0],
+      devicePatchData,
+      deviceScratchpadData,
+      true ,
+      false ,
+      false ,
+      computeCFL
+    );
+    singleKernelWatch.stop();
+
+    int errors = 0;
+    double maxDifference = 0.0;
+    for (int i=0; i<patches; i++) {
+      auto [maxDifferencePerPatch, errorsPerPatch] = validateOutcome( patchData[0].QOut[i],i,patchData[0].maxEigenvalue[i]);
+      errors += errorsPerPatch;
+      maxDifference = std::max(maxDifference, maxDifferencePerPatch);
+    }
+
+    logInfo("main()", "completed measurements for single thread on device " << device << ", " << markerName << ": " << singleKernelWatch.getCalendarTime() << " / " << (singleKernelWatch.getCalendarTime()/patches/EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch/EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch/EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch) );
+    if (errors > 0) {
+      logInfo("main()", "   -> max difference of outcome for all patches is " << maxDifference << " (admissible accuracy=" << Accuracy << ")" << " for " << errors << " entries");
+      exit(-1);
+    }
+
+    for (int hostTask=0; hostTask<MaxHostTasks; hostTask++)
+    for (int i=0; i<patches; i++) {
+      //validateOutcome( patchData[hostTask].QOut[i],i );
+      delete[] patchData[hostTask].QIn[i];
+      delete[] patchData[hostTask].QOut[i];
+    }
+  };
+#endif
+
   #if Dimension==2
   if (patches<=64) {
   #else
@@ -384,24 +454,21 @@ void runBenchmarks(int patches) {
       "omp, patch-wise, SoA", true
     );
 
-    testFusedVariantOnDevice(
+    testFusedVariantOnDeviceWithOptimizedMemoryAllocation(
       device,
       ::exahype2::fv::rusanov::omp::opt::timeStepWithRusanov_patchwise_heap_static_calls<EulerFVRusanov,EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch, 1, EulerFVRusanov::NumberOfUnknowns, EulerFVRusanov::NumberOfAuxiliaryVariables,exahype2::enumerator::AoSLexicographicEnumerator>,
       "omp::opt, patch-wise, AoS", true
     );
-
-    // TODO: Need to fix the memory pre-allocation routines for the omp::opt Rusanov variants so that we don't run out of memory that fast.
-
-    /*testFusedVariantOnDevice(
+    testFusedVariantOnDeviceWithOptimizedMemoryAllocation(
       device,
       ::exahype2::fv::rusanov::omp::opt::timeStepWithRusanov_patchwise_heap_static_calls<EulerFVRusanov,EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch, 1, EulerFVRusanov::NumberOfUnknowns, EulerFVRusanov::NumberOfAuxiliaryVariables,exahype2::enumerator::AoSoALexicographicEnumerator>,
       "omp::opt, patch-wise, AoSoA", true
     );
-    testFusedVariantOnDevice(
+    testFusedVariantOnDeviceWithOptimizedMemoryAllocation(
       device,
       ::exahype2::fv::rusanov::omp::opt::timeStepWithRusanov_patchwise_heap_static_calls<EulerFVRusanov,EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch, 1, EulerFVRusanov::NumberOfUnknowns, EulerFVRusanov::NumberOfAuxiliaryVariables,exahype2::enumerator::SoALexicographicEnumerator>,
       "omp::opt, patch-wise, SoA", true
-    );*/
+    );
 
     testFusedVariantOnDevice(
       device,
@@ -419,21 +486,21 @@ void runBenchmarks(int patches) {
       "omp, batched, SoA", true
     );
 
-    testFusedVariantOnDevice(
+    testFusedVariantOnDeviceWithOptimizedMemoryAllocation(
       device,
       ::exahype2::fv::rusanov::omp::opt::timeStepWithRusanov_batched_heap_static_calls<EulerFVRusanov,EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch, 1, EulerFVRusanov::NumberOfUnknowns, EulerFVRusanov::NumberOfAuxiliaryVariables,exahype2::enumerator::AoSLexicographicEnumerator>,
       "omp::opt, batched, AoS", true
     );
-    /*testFusedVariantOnDevice(
+    testFusedVariantOnDeviceWithOptimizedMemoryAllocation(
       device,
       ::exahype2::fv::rusanov::omp::opt::timeStepWithRusanov_batched_heap_static_calls<EulerFVRusanov,EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch, 1, EulerFVRusanov::NumberOfUnknowns, EulerFVRusanov::NumberOfAuxiliaryVariables,exahype2::enumerator::AoSoALexicographicEnumerator>,
       "omp::opt, batched, AoSoA", true
     );
-    testFusedVariantOnDevice(
+    testFusedVariantOnDeviceWithOptimizedMemoryAllocation(
       device,
       ::exahype2::fv::rusanov::omp::opt::timeStepWithRusanov_batched_heap_static_calls<EulerFVRusanov,EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch, 1, EulerFVRusanov::NumberOfUnknowns, EulerFVRusanov::NumberOfAuxiliaryVariables,exahype2::enumerator::SoALexicographicEnumerator>,
       "omp::opt, batched, SoA", true
-    );*/
+    );
   }
   #endif
 
