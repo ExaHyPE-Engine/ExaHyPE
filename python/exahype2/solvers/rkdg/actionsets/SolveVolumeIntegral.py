@@ -73,7 +73,7 @@ class SolveVolumeIntegral(AbstractRungeKuttaDGActionSet):
       {% if SPAWN_VOLUME_KERNEL_AS_TASK %}
       assertion( marker.willBeEnclaveCell() );
       assertion( not marker.willBeRefined() );
-      auto newEnclaveTask = new tasks::{{SOLVER_NAME}}EnclaveTask(
+      auto newEnclaveTask = new tasks::{{SOLVER_NAME}}_VolumetricSolverEnclaveTask(
         marker,
         timeStamp,
         timeStepSize,
@@ -144,7 +144,7 @@ class SolveVolumeIntegral(AbstractRungeKuttaDGActionSet):
   def get_includes(self):
     if self.spawn_volume_kernel_as_task:
       return super( SolveVolumeIntegral, self ).get_includes() + """
-#include "tasks/""" + self._solver._name + """EnclaveTask.h"
+#include "tasks/""" + self._solver._name + """_VolumetricSolverEnclaveTask.h"
 """
     else:
       return super( SolveVolumeIntegral, self ).get_includes()

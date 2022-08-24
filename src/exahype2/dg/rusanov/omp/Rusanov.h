@@ -1,0 +1,40 @@
+// This file is part of the ExaHyPE2 project. For conditions of distribution and
+// use, please see the copyright notice at www.peano-framework.org
+#ifndef _EXAHYPE2_DG_RUSANOV_OMP_RUSANOV_H_
+#define _EXAHYPE2_DG_RUSANOV_OMP_RUSANOV_H_
+
+
+namespace exahype2 {
+  namespace dg {
+    namespace rusanov {
+      namespace omp {
+        template <
+          typename Solver,
+          int      order,
+          int      unknowns,
+          int      auxiliaryVariables
+        >
+        void cellIntegral_patchwise_GaussLegendre(
+          int                                            targetDevice,
+          ::exahype2::CellData&                          cellData,
+          bool                                           evaluateFlux,
+          bool                                           evaluateNonconservativeProduct,
+          bool                                           evaluateSource,
+          bool                                           evaluatePointSources
+        ) {
+          // @todo No docu yet
+          // @todo Should refer to a generic OMP implementation and not the static variant
+          ::exahype2::dg::cellIntegral_patchwise_GaussLegendre<Solver,order,unknowns,auxiliaryVariables>(
+            cellData,
+            evaluateFlux,
+            evaluateNonconservativeProduct,
+            evaluateSource,
+            evaluatePointSources
+          );
+        }
+      }
+    }
+  }
+}
+
+#endif

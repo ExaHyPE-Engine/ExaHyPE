@@ -167,6 +167,21 @@ namespace exahype2 {
     );
 
 
+    template <
+      typename Solver,
+      int      order,
+      int      unknowns,
+      int      auxiliaryVariables
+    >
+    void cellIntegral_patchwise_GaussLegendre(
+      ::exahype2::CellData&                          cellData,
+      bool                                           evaluateFlux,
+      bool                                           evaluateNonconservativeProduct,
+      bool                                           evaluateSource,
+      bool                                           evaluatePointSources
+    );
+
+
     /**
      * Final step of DG algorithm
      *
@@ -200,27 +215,6 @@ namespace exahype2 {
       const int                                      auxiliaryVariables,
       const double* __restrict__                     MassMatrixDiagonal1d
     );
-
-
-    /*
-     * Computes the greatest eigenvalue over all nodes in a cell
-     * @param strideQ: number of elements per node per cell, usually number of
-     *    unknowns + number of auxiliary variables
-     * @param dt: timestep
-     *
-     * @deprecated due to reduceMaxEigenvalue_patchwise_functors()
-     */
-/*
-    double getMaxEigenvalue(
-        MaxEigenvalue                                  maxEigenvalue,
-        const double* __restrict__                     Q,
-        const int                                      order,
-        const int                                      strideQ,
-        const tarch::la::Vector<Dimensions,double>&    x,
-        const double                                   t,
-        const double                                   dt
-        );
-*/
 
 
     /**
@@ -258,5 +252,9 @@ namespace exahype2 {
     }
   }
 }
+
+
+#include "CellIntegral.cpph"
+
 
 #endif

@@ -9,6 +9,8 @@ from exahype2.solvers.rkdg.kernels import create_abstract_solver_definitions
 from exahype2.solvers.rkdg.kernels import create_solver_declarations
 from exahype2.solvers.rkdg.kernels import create_solver_definitions
 
+from exahype2.solvers.rkdg.kernels import SolverVariant
+
 from exahype2.solvers.rkdg.kernels         import create_volumetric_solver_call
 from exahype2.solvers.rkdg.kernels         import create_add_solver_contributions_call
 from exahype2.solvers.rkdg.kernels         import create_multiply_with_inverted_mass_matrix_call
@@ -48,8 +50,9 @@ class GlobalAdaptiveTimeStepWithEnclaveTasking( SeparateSweepsWithEnclaveTasking
     self._compute_eigenvalue   = True
 
     self._kernel_namespace              = "rusanov"
-    #self._volumetric_solver_call        = create_volumetric_solver_call( self._basis, pde_terms_without_state ) 
-    self._volumetric_solver_call        = create_volumetric_solver_call( self._basis ) 
+    self._volumetric_solver_call        = create_volumetric_solver_call( self._basis, SolverVariant.WithVirtualFunctions ) 
+    self._fused_volumetric_kernel_call_cpu = create_volumetric_solver_call( self._basis, SolverVariant.Stateless ) 
+    self._fused_volumetric_kernel_call_gpu = create_volumetric_solver_call( self._basis, SolverVariant.Accelerator ) 
     self._Riemann_solver_call           = create_Riemann_solver_call( self._basis )
     self._add_solver_contributions_call = create_add_solver_contributions_call( self._basis )
     self._multiply_with_inverted_mass_matrix_call = create_multiply_with_inverted_mass_matrix_call( self._basis )

@@ -308,7 +308,7 @@ smartmpi::Task* {{NAMESPACE | join("::")}}::{{CLASSNAME}}::receiveOutcome(int ra
 
 {% if STATELESS_PDE_TERMS %}
 bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::canFuse() const {
-  return repositories::{{SOLVER_INSTANCE}}.patchCanUseStatelessPDETerms(
+  return repositories::{{SOLVER_INSTANCE}}.cellCanUseStatelessPDETerms(
     _marker.x(),
     _marker.h(),
     _t,
@@ -323,26 +323,26 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::canFuse() const {
 bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse( const std::list<Task*>& otherTasks, int targetDevice ) {
   logDebug( "fuse(...)", "asked to fuse " << (otherTasks.size()+1) << " tasks into one large GPU task" );
 
-  ::exahype2::CellData patchData(otherTasks.size()+1);
+  ::exahype2::CellData cellData(otherTasks.size()+1);
   int currentTask = 0;
   for (auto& p: otherTasks) {
-    patchData.QIn[currentTask]         = static_cast<{{NAMESPACE | join("::")}}::{{CLASSNAME}}*>(p)->_inputValues;
-    patchData.cellCentre[currentTask]  = static_cast<{{NAMESPACE | join("::")}}::{{CLASSNAME}}*>(p)->_marker.x();
-    patchData.cellSize[currentTask]    = static_cast<{{NAMESPACE | join("::")}}::{{CLASSNAME}}*>(p)->_marker.h();
-    patchData.t[currentTask]           = static_cast<{{NAMESPACE | join("::")}}::{{CLASSNAME}}*>(p)->_t;
-    patchData.dt[currentTask]          = static_cast<{{NAMESPACE | join("::")}}::{{CLASSNAME}}*>(p)->_dt;
-    patchData.id[currentTask]          = static_cast<{{NAMESPACE | join("::")}}::{{CLASSNAME}}*>(p)->_id;
-    patchData.QOut[currentTask]        = tarch::allocateMemory( _numberOfResultValues, tarch::MemoryLocation::Heap );
+    cellData.QIn[currentTask]         = static_cast<{{NAMESPACE | join("::")}}::{{CLASSNAME}}*>(p)->_inputValues;
+    cellData.cellCentre[currentTask]  = static_cast<{{NAMESPACE | join("::")}}::{{CLASSNAME}}*>(p)->_marker.x();
+    cellData.cellSize[currentTask]    = static_cast<{{NAMESPACE | join("::")}}::{{CLASSNAME}}*>(p)->_marker.h();
+    cellData.t[currentTask]           = static_cast<{{NAMESPACE | join("::")}}::{{CLASSNAME}}*>(p)->_t;
+    cellData.dt[currentTask]          = static_cast<{{NAMESPACE | join("::")}}::{{CLASSNAME}}*>(p)->_dt;
+    cellData.id[currentTask]          = static_cast<{{NAMESPACE | join("::")}}::{{CLASSNAME}}*>(p)->_id;
+    cellData.QOut[currentTask]        = tarch::allocateMemory( _numberOfResultValues, tarch::MemoryLocation::Heap );
     delete p;
     currentTask++;
   }
-  patchData.QIn[currentTask]         = _inputValues;
-  patchData.cellCentre[currentTask]  = _marker.x();
-  patchData.cellSize[currentTask]    = _marker.h();
-  patchData.t[currentTask]           = _t;
-  patchData.dt[currentTask]          = _dt;
-  patchData.id[currentTask]          = _id;
-  patchData.QOut[currentTask]        = tarch::allocateMemory( _numberOfResultValues, tarch::MemoryLocation::Heap );
+  cellData.QIn[currentTask]         = _inputValues;
+  cellData.cellCentre[currentTask]  = _marker.x();
+  cellData.cellSize[currentTask]    = _marker.h();
+  cellData.t[currentTask]           = _t;
+  cellData.dt[currentTask]          = _dt;
+  cellData.id[currentTask]          = _id;
+  cellData.QOut[currentTask]        = tarch::allocateMemory( _numberOfResultValues, tarch::MemoryLocation::Heap );
 
 
   //
@@ -357,14 +357,14 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse( const std::list<Task*>& ot
   #if defined(GPUOffloadingOMP)
   if (targetDevice>=0) {
     foundOffloadingBranch = true;
-    ::exahype2::fv::rusanov::omp::{{FUSED_COMPUTE_KERNEL_CALL_GPU}}
+    ::exahype2::dg::rusanov::omp::{{FUSED_VOLUMETRIC_KERNEL_CALL_GPU}}
   }
   #endif
 
   #if defined(GPUOffloadingHIP)
   if (targetDevice>=0) {
     foundOffloadingBranch = true;
-    ::exahype2::fv::rusanov::hip::{{FUSED_COMPUTE_KERNEL_CALL_GPU}}
+    ::exahype2::dg::rusanov::hip::{{FUSED_VOLUMETRIC_KERNEL_CALL_GPU}}
   }
   #endif
 
@@ -372,12 +372,12 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse( const std::list<Task*>& ot
   if (targetDevice>=0 or targetDevice==Host) {
     foundOffloadingBranch = true;
 
-    ::exahype2::fv::rusanov::sycl::{{FUSED_COMPUTE_KERNEL_CALL_GPU}}
+    ::exahype2::dg::rusanov::sycl::{{FUSED_VOLUMETRIC_KERNEL_CALL_GPU}}
   }
   #endif
 
   if (not foundOffloadingBranch) {
-    ::exahype2::fv::rusanov::{{FUSED_COMPUTE_KERNEL_CALL_CPU}}
+    ::exahype2::dg::rusanov::{{FUSED_VOLUMETRIC_KERNEL_CALL_CPU}}
   }
 
   otterParallelEnd();
@@ -387,9 +387,9 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse( const std::list<Task*>& ot
   // Bring back results
   // ==================
   //
-  for (int i=0; i<patchData.numberOfCells; i++) {
-    tarch::freeMemory( patchData.QIn[i], tarch::MemoryLocation::Heap );
-    ::exahype2::EnclaveBookkeeping::getInstance().finishedTask(patchData.id[i], _numberOfResultValues, patchData.QOut[i], patchData.maxEigenvalue[i]);
+  for (int i=0; i<cellData.numberOfCells; i++) {
+    tarch::freeMemory( cellData.QIn[i], tarch::MemoryLocation::Heap );
+    ::exahype2::EnclaveBookkeeping::getInstance().finishedTask(cellData.id[i], _numberOfResultValues, cellData.QOut[i], cellData.maxEigenvalue[i]);
   }
 
   // Don't rerun, so return false

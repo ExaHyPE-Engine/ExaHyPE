@@ -21,6 +21,10 @@
 #include "peano4/grid/GridControlEvent.h"
 #include "peano4/utils/Globals.h"
 
+#if defined(GPUOffloadingOMP)
+#include "exahype2/dg/rusanov/omp/Rusanov.h"
+#endif
+
 
 namespace exahype2 {
   namespace dg {
@@ -188,6 +192,29 @@ namespace exahype2 {
           BasisFunctionValuesLeft,
           MassMatrixDiagonal1d,
           cellQ
+        );
+      }
+
+
+      template <
+        typename Solver,
+        int      order,
+        int      unknowns,
+        int      auxiliaryVariables
+      >
+      void cellIntegral_patchwise_GaussLegendre(
+        ::exahype2::CellData&                          cellData,
+        bool                                           evaluateFlux,
+        bool                                           evaluateNonconservativeProduct,
+        bool                                           evaluateSource,
+        bool                                           evaluatePointSources
+      ) {
+        ::exahype2::dg::cellIntegral_patchwise_GaussLegendre<Solver,order,unknowns,auxiliaryVariables>(
+          cellData,
+          evaluateFlux,
+          evaluateNonconservativeProduct,
+          evaluateSource,
+          evaluatePointSources
         );
       }
     }

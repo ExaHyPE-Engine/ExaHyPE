@@ -17,8 +17,10 @@ Besides that and the different solver flavours, we have different scnearios:
 
 scenario | description
 ----------------------
-plot
-0
+plot      | Very simple regular grid setup, which just helps you to visualise the 
+          | setup and problem challenge. Coarse mesh and early termination criterion,
+          | i.e. not really anything interesting here to see.
+0         | Simple regular 
 
  
 
@@ -32,19 +34,19 @@ following builds:
 
      for type in 0
      do
-       python3 create-benchmark-executable.py --scenario $scenario -m release -s fv-4
-       python3 create-benchmark-executable.py --scenario $scenario -m release -s fv-6
-       python3 create-benchmark-executable.py --scenario $scenario -m release -s fv-8
-       python3 create-benchmark-executable.py --scenario $scenario -m release -s dg2-rk2
-       python3 create-benchmark-executable.py --scenario $scenario -m release -s dg3-rk3
-       python3 create-benchmark-executable.py --scenario $scenario -m release -s dg4-rk4
+       python3 create-benchmark-executable.py --type $type -m release -s fv-4
+       python3 create-benchmark-executable.py --type $type -m release -s fv-6
+       python3 create-benchmark-executable.py --type $type -m release -s fv-8
+       python3 create-benchmark-executable.py --type $type -m release -s dg2-rk2
+       python3 create-benchmark-executable.py --type $type -m release -s dg3-rk3
+       python3 create-benchmark-executable.py --type $type -m release -s dg4-rk4
      
-       python3 create-benchmark-executable.py --scenario $scenario -m release -s fv-4 --optimise-stateless
-       python3 create-benchmark-executable.py --scenario $scenario -m release -s fv-6 --optimise-stateless
-       python3 create-benchmark-executable.py --scenario $scenario -m release -s fv-8 --optimise-stateless
-       python3 create-benchmark-executable.py --scenario $scenario -m release -s dg2-rk2 --optimise-stateless
-       python3 create-benchmark-executable.py --scenario $scenario -m release -s dg3-rk3 --optimise-stateless
-       python3 create-benchmark-executable.py --scenario $scenario -m release -s dg4-rk4 --optimise-stateless
+       python3 create-benchmark-executable.py --type $type -m release -s fv-4 --optimise-stateless
+       python3 create-benchmark-executable.py --type $type -m release -s fv-6 --optimise-stateless
+       python3 create-benchmark-executable.py --type $type -m release -s fv-8 --optimise-stateless
+       python3 create-benchmark-executable.py --type $type -m release -s dg2-rk2 --optimise-stateless
+       python3 create-benchmark-executable.py --type $type -m release -s dg3-rk3 --optimise-stateless
+       python3 create-benchmark-executable.py --type $type -m release -s dg4-rk4 --optimise-stateless
      done     
      
      
@@ -65,12 +67,14 @@ work best with archives over file sets, which also makes it easier to grab data 
 the supercomputer if you don't want to postprocess on the machine:
 
 
-     tar -czvf single-node-benchmark-FV-4.tar.gz single-node-benchmark-FV-4*.data
-     tar -czvf single-node-benchmark-FV-6.tar.gz single-node-benchmark-FV-6*.data
-     tar -czvf single-node-benchmark-FV-8.tar.gz single-node-benchmark-FV-8*.data
-     tar -czvf single-node-benchmark-RK2DG2.tar.gz single-node-benchmark-RK2DG2*.data
-     tar -czvf single-node-benchmark-RK3DG3.tar.gz single-node-benchmark-RK3DG3*.data
-     tar -czvf single-node-benchmark-RK4DG4.tar.gz single-node-benchmark-RK4DG4*.data
+     for type in 0
+     do
+       for solver in FV-4 FV-6 FV-8 RK2DG2 RK3DG3 RK4DG4
+       do
+         tar -czvf single-node-benchmark-$type-no-opt-$solver.tar.gz single-node-benchmark-$type-no-opt-$solver-*.data
+       done
+     done
+     
      
 All data that does not end with .data (and does not end up in archives) can safely
 be removed from the benchmark point of view. We do not evaluate it further here.
