@@ -21,12 +21,14 @@ module load gcc
 export OMP_PROC_BIND=close
 #$SLURM_JOB_NUM_NODES
 
-for extension in "0"
+for type in 0
 do
- for executable in benchmark-FV-4 benchmark-FV-6 benchmark-FV-8 benchmark-RK2DG2 benchmark-RK3DG3 benchmark-RK4DG4
+ for solver in FV-4 FV-6 FV-8 RK2DG2 RK3DG3 RK4DG4
  do 
-  ./$executable-no-opt-$extension --threads $SLURM_ARRAY_TASK_ID > single-node-$executable-no-opt-$extension-$SLURM_ARRAY_TASK_ID-cores.data
-  ./$executable-opt-$extension    --threads $SLURM_ARRAY_TASK_ID > single-node-$executable-opt-$extension-$SLURM_ARRAY_TASK_ID-cores.data
+  executable=benchmark-$type-no-opt-$solver
+  ./$executable --threads $SLURM_ARRAY_TASK_ID > single-node-$executable-$SLURM_ARRAY_TASK_ID-cores.data
+  executable=benchmark-$type-opt-$solver
+  ./$executable --threads $SLURM_ARRAY_TASK_ID > single-node-$executable-$SLURM_ARRAY_TASK_ID-cores.data
  done
 done
  
