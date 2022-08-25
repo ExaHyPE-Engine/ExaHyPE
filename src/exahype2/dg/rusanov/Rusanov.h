@@ -86,7 +86,7 @@ namespace exahype2 {
        *
        * static keyword required to avoid multiple definition linker errors.
        */
-      static void cellIntegral_patchwise_GaussLegendre_functors(
+      static void cellIntegral_patchwise_in_situ_GaussLegendre_functors(
         ::exahype2::CellData&                          cellData,
         const int                                      order,
         const int                                      unknowns,
@@ -104,7 +104,7 @@ namespace exahype2 {
         bool                                           evaluateSource,
         bool                                           evaluatePointSources
       ) {
-        ::exahype2::dg::cellIntegral_patchwise_GaussLegendre_functors(
+        ::exahype2::dg::cellIntegral_patchwise_in_situ_GaussLegendre_functors(
             cellData,
             order, unknowns, auxiliaryVariables,
             flux,  nonConservativeProduct,  source,  pointSources,
@@ -202,14 +202,14 @@ namespace exahype2 {
         int      unknowns,
         int      auxiliaryVariables
       >
-      void cellIntegral_patchwise_GaussLegendre(
+      void cellIntegral_patchwise_in_situ_GaussLegendre(
         ::exahype2::CellData&                          cellData,
         bool                                           evaluateFlux,
         bool                                           evaluateNonconservativeProduct,
         bool                                           evaluateSource,
         bool                                           evaluatePointSources
       ) {
-        ::exahype2::dg::cellIntegral_patchwise_GaussLegendre<Solver,order,unknowns,auxiliaryVariables>(
+        ::exahype2::dg::cellIntegral_patchwise_in_situ_GaussLegendre<Solver,order,unknowns,auxiliaryVariables>(
           cellData,
           evaluateFlux,
           evaluateNonconservativeProduct,

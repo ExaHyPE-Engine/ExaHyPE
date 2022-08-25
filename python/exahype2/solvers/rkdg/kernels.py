@@ -933,7 +933,7 @@ def create_volumetric_solver_call(polynomial_basis, solver_variant):
   
   """
   if isinstance( polynomial_basis, exahype2.solvers.GaussLegendreBasis) and solver_variant==SolverVariant.WithVirtualFunctions:
-    return """cellIntegral_patchwise_GaussLegendre_functors(
+    return """cellIntegral_patchwise_in_situ_GaussLegendre_functors(
       cellData,
       {{ORDER}},                                                   
       {{NUMBER_OF_UNKNOWNS}},
@@ -998,7 +998,7 @@ def create_volumetric_solver_call(polynomial_basis, solver_variant):
     );
 """
   elif isinstance( polynomial_basis, exahype2.solvers.GaussLegendreBasis) and solver_variant==SolverVariant.Stateless:
-    return """cellIntegral_patchwise_GaussLegendre<{{SOLVER_NAME}},{{ORDER}},{{NUMBER_OF_UNKNOWNS}},{{NUMBER_OF_AUXILIARY_VARIABLES}}>(
+    return """cellIntegral_patchwise_in_situ_GaussLegendre<{{SOLVER_NAME}},{{ORDER}},{{NUMBER_OF_UNKNOWNS}},{{NUMBER_OF_AUXILIARY_VARIABLES}}>(
       cellData,
       {{ "true" if FLUX_IMPLEMENTATION!="<none>" else "false" }},          //useFlux
       {{ "true" if NCP_IMPLEMENTATION!="<none>" else "false" }},           //useNCP
@@ -1007,7 +1007,7 @@ def create_volumetric_solver_call(polynomial_basis, solver_variant):
     );
 """
   elif isinstance( polynomial_basis, exahype2.solvers.GaussLegendreBasis) and solver_variant==SolverVariant.Accelerator:
-    return """cellIntegral_patchwise_GaussLegendre<{{SOLVER_NAME}},{{ORDER}},{{NUMBER_OF_UNKNOWNS}},{{NUMBER_OF_AUXILIARY_VARIABLES}}>(
+    return """cellIntegral_patchwise_in_situ_GaussLegendre<{{SOLVER_NAME}},{{ORDER}},{{NUMBER_OF_UNKNOWNS}},{{NUMBER_OF_AUXILIARY_VARIABLES}}>(
       targetDevice,
       cellData,
       {{ "true" if FLUX_IMPLEMENTATION!="<none>" else "false" }},          //useFlux

@@ -142,7 +142,7 @@ void exahype2::dg::tests::CellIntegralTest::runDGEuler(){
   double QInit[strideQ];
   eulerInitial(QInit);
 
-    cellIntegral_patchwise_GaussLegendre_functors(
+    cellIntegral_patchwise_in_situ_GaussLegendre_functors(
       cellData,
       order,
       unknowns,
@@ -469,7 +469,7 @@ void exahype2::dg::tests::CellIntegralTest::runDGElastic(){
   double QInit[strideQ];
   elasticInitial(QInit);
 
-  cellIntegral_patchwise_GaussLegendre_functors(
+  cellIntegral_patchwise_in_situ_GaussLegendre_functors(
     cellData,
     order,
     unknowns,

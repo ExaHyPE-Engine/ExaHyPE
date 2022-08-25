@@ -8,7 +8,7 @@ template <
   int      unknowns,
   int      auxiliaryVariables
 >
-void exahype2::dg::cellIntegral_patchwise_GaussLegendre(
+void exahype2::dg::cellIntegral_patchwise_in_situ_GaussLegendre(
   ::exahype2::CellData&                          cellData,
   bool                                           evaluateFlux,
   bool                                           evaluateNonconservativeProduct,
@@ -72,12 +72,15 @@ void exahype2::dg::cellIntegral_patchwise_GaussLegendre(
               order,
               Solver::QuadraturePoints1d);
 
-          flux( &cellQin[enumeratorIn(currentCell, contributingNodeIndex, 0)],
-                position,
-                t,
-                dt,
-                dim, //normal
-                fluxValues);
+          Solver::flux(
+            &cellQin[enumeratorIn(currentCell, contributingNodeIndex, 0)],
+            position,
+            t,
+            dt,
+            dim, //normal
+            fluxValues,
+            Solver::Offloadable::Yes
+          );
 
           // Coefficient within matrix is tensor product over dimensions, too
           double coeff = Solver::StiffnessOperator1d[i+dof(dim)*nodesPerAxis];
@@ -101,11 +104,14 @@ void exahype2::dg::cellIntegral_patchwise_GaussLegendre(
           Solver::QuadraturePoints1d);
 
         //compute source term contributions
-        source( &cellQin[enumeratorIn(currentCell, dof, 0)],
-              position,
-              t,
-              dt,
-              sourceValues);
+        Solver::sourceTerm(
+          &cellQin[enumeratorIn(currentCell, dof, 0)],
+          position,
+          t,
+          dt,
+          sourceValues,
+          Solver::Offloadable::Yes
+        );
 
         #if Dimensions==2
         double coeff = Solver::MassMatrixDiagonal1d[ dof(0) ] * Solver::MassMatrixDiagonal1d[ dof(1) ];
@@ -155,14 +161,16 @@ void exahype2::dg::cellIntegral_patchwise_GaussLegendre(
           } //node
 
 
-          nonConservativeProduct(
+          Solver::nonconservativeProduct(
             &cellQin[enumeratorIn(currentCell, dof, 0)],
             gradientValues,
             position,
             t,
             dt,
             dim,
-            ncpValues);
+            ncpValues,
+            Solver::Offloadable::Yes
+          );
 
           for(int var=0; var<unknowns; var++){
             assertion(ncpValues[var]==ncpValues[var]);

@@ -14,7 +14,7 @@ namespace exahype2 {
           int      unknowns,
           int      auxiliaryVariables
         >
-        void cellIntegral_patchwise_GaussLegendre(
+        void cellIntegral_patchwise_in_situ_GaussLegendre(
           int                                            targetDevice,
           ::exahype2::CellData&                          cellData,
           bool                                           evaluateFlux,
@@ -24,7 +24,7 @@ namespace exahype2 {
         ) {
           // @todo No docu yet
           // @todo Should refer to a generic OMP implementation and not the static variant
-          ::exahype2::dg::cellIntegral_patchwise_GaussLegendre<Solver,order,unknowns,auxiliaryVariables>(
+          ::exahype2::dg::cellIntegral_patchwise_in_situ_GaussLegendre<Solver,order,unknowns,auxiliaryVariables>(
             cellData,
             evaluateFlux,
             evaluateNonconservativeProduct,
