@@ -143,7 +143,7 @@ void exahype2::fv::rusanov::cpp::timeStepWithRusanov_batched_heap_static_calls(
   *range1d_cell_solvhalosize = tl::views::cartesian_product(
     std::views::iota(0,numberOfVolumesPerAxisInPatch),
     std::views::iota(0,hostPatchData.numberOfCells),
-    std::views::iota(-solversHaloSize,numberOfVolumesPerAxisInPatch+solversHaloSize)
+    std::views::iota(0,numberOfVolumesPerAxisInPatch+2*solversHaloSize)
   );
 
   auto* range2d_cell_solvhalosize = new cart_prod_4d;
@@ -151,7 +151,7 @@ void exahype2::fv::rusanov::cpp::timeStepWithRusanov_batched_heap_static_calls(
     std::views::iota(0,numberOfVolumesPerAxisInPatch),
     std::views::iota(0,numberOfVolumesPerAxisInPatch),
     std::views::iota(0,hostPatchData.numberOfCells),
-    std::views::iota(-solversHaloSize,numberOfVolumesPerAxisInPatch+solversHaloSize)
+    std::views::iota(0,numberOfVolumesPerAxisInPatch+2*solversHaloSize)
   );
 
   auto* range2d_cell_unknown = new cart_prod_4d;
@@ -175,7 +175,7 @@ void exahype2::fv::rusanov::cpp::timeStepWithRusanov_batched_heap_static_calls(
   *range1d_cell_solvhalosize_m = tl::views::cartesian_product(
     std::views::iota(0,numberOfVolumesPerAxisInPatch),
     std::views::iota(0,hostPatchData.numberOfCells),
-    std::views::iota(-solversHaloSize,numberOfVolumesPerAxisInPatch+solversHaloSize-1)
+    std::views::iota(0,numberOfVolumesPerAxisInPatch+2*solversHaloSize-1)
   );
 
   auto* range2d_cell_solvhalosize_m = new cart_prod_4d;
@@ -183,7 +183,7 @@ void exahype2::fv::rusanov::cpp::timeStepWithRusanov_batched_heap_static_calls(
     std::views::iota(0,numberOfVolumesPerAxisInPatch),
     std::views::iota(0,numberOfVolumesPerAxisInPatch),
     std::views::iota(0,hostPatchData.numberOfCells),
-    std::views::iota(-solversHaloSize,numberOfVolumesPerAxisInPatch+solversHaloSize-1)
+    std::views::iota(0,numberOfVolumesPerAxisInPatch+2*solversHaloSize-1)
   );
 
 
@@ -361,7 +361,7 @@ void exahype2::fv::rusanov::cpp::timeStepWithRusanov_batched_heap_static_calls(
           cellCentre[patchIndex],
           cellSize[patchIndex],
           patchIndex,
-          volumeIndex2d(x,y),
+          volumeIndex2d(x-solversHaloSize,y),
           t[patchIndex], 
           dt[patchIndex],
           0,
@@ -392,7 +392,7 @@ void exahype2::fv::rusanov::cpp::timeStepWithRusanov_batched_heap_static_calls(
           cellCentre[patchIndex],
           cellSize[patchIndex],
           patchIndex,
-          volumeIndex2d(x,y),
+          volumeIndex2d(x,y-solversHaloSize),
           t[patchIndex], 
           dt[patchIndex],
           1,
@@ -459,7 +459,7 @@ void exahype2::fv::rusanov::cpp::timeStepWithRusanov_batched_heap_static_calls(
           cellCentre[patchIndex],
           cellSize[patchIndex],
           patchIndex,
-          volumeIndex3d(x,y,z),
+          volumeIndex3d(x-solversHaloSize,y,z),
           t[patchIndex], 
           dt[patchIndex],
           0,
@@ -490,7 +490,7 @@ void exahype2::fv::rusanov::cpp::timeStepWithRusanov_batched_heap_static_calls(
           cellCentre[patchIndex],
           cellSize[patchIndex],
           patchIndex,
-          volumeIndex3d(x,y,z),
+          volumeIndex3d(x,y-solversHaloSize,z),
           t[patchIndex], 
           dt[patchIndex],
           1,
@@ -521,7 +521,7 @@ void exahype2::fv::rusanov::cpp::timeStepWithRusanov_batched_heap_static_calls(
           cellCentre[patchIndex],
           cellSize[patchIndex],
           patchIndex,
-          volumeIndex3d(x,y,z),
+          volumeIndex3d(x,y,z-solversHaloSize),
           t[patchIndex], 
           dt[patchIndex],
           2,
@@ -590,7 +590,7 @@ void exahype2::fv::rusanov::cpp::timeStepWithRusanov_batched_heap_static_calls(
           cellCentre[patchIndex],
           cellSize[patchIndex],
           patchIndex,
-          volumeIndex2d(x,y),
+          volumeIndex2d(x-solversHaloSize,y),
           t[patchIndex],
           dt[patchIndex],
           0, // normal
@@ -621,7 +621,7 @@ void exahype2::fv::rusanov::cpp::timeStepWithRusanov_batched_heap_static_calls(
           cellCentre[patchIndex],
           cellSize[patchIndex],
           patchIndex,
-          volumeIndex2d(x,y),
+          volumeIndex2d(x,y-solversHaloSize),
           t[patchIndex],
           dt[patchIndex],
           1, // normal
@@ -683,7 +683,7 @@ void exahype2::fv::rusanov::cpp::timeStepWithRusanov_batched_heap_static_calls(
           cellCentre[patchIndex],
           cellSize[patchIndex],
           patchIndex,
-          volumeIndex3d(x,y,z),
+          volumeIndex3d(x-solversHaloSize,y,z),
           t[patchIndex],
           dt[patchIndex],
           0, // normal
@@ -714,7 +714,7 @@ void exahype2::fv::rusanov::cpp::timeStepWithRusanov_batched_heap_static_calls(
           cellCentre[patchIndex],
           cellSize[patchIndex],
           patchIndex,
-          volumeIndex3d(x,y,z),
+          volumeIndex3d(x,y-solversHaloSize,z),
           t[patchIndex],
           dt[patchIndex],
           1, // normal
@@ -745,7 +745,7 @@ void exahype2::fv::rusanov::cpp::timeStepWithRusanov_batched_heap_static_calls(
           cellCentre[patchIndex],
           cellSize[patchIndex],
           patchIndex,
-          volumeIndex3d(x,y,z),
+          volumeIndex3d(x,y,z-solversHaloSize),
           t[patchIndex],
           dt[patchIndex],
           2, // normal
@@ -808,7 +808,7 @@ void exahype2::fv::rusanov::cpp::timeStepWithRusanov_batched_heap_static_calls(
           cellCentre[patchIndex],
           cellSize[patchIndex],
           patchIndex,
-          volumeIndex2d(x,y),
+          volumeIndex2d(x-solversHaloSize,y),
           t[patchIndex],
           dt[patchIndex],
           0, // normal
@@ -839,7 +839,7 @@ void exahype2::fv::rusanov::cpp::timeStepWithRusanov_batched_heap_static_calls(
           cellCentre[patchIndex],
           cellSize[patchIndex],
           patchIndex,
-          volumeIndex2d(x,y),
+          volumeIndex2d(x,y-solversHaloSize),
           t[patchIndex],
           dt[patchIndex],
           1, // normal
@@ -901,7 +901,7 @@ void exahype2::fv::rusanov::cpp::timeStepWithRusanov_batched_heap_static_calls(
           cellCentre[patchIndex],
           cellSize[patchIndex],
           patchIndex,
-          volumeIndex3d(x,y,z),
+          volumeIndex3d(x-solversHaloSize,y,z),
           t[patchIndex],
           dt[patchIndex],
           0, // normal
@@ -932,7 +932,7 @@ void exahype2::fv::rusanov::cpp::timeStepWithRusanov_batched_heap_static_calls(
           cellCentre[patchIndex],
           cellSize[patchIndex],
           patchIndex,
-          volumeIndex3d(x,y,z),
+          volumeIndex3d(x,y-solversHaloSize,z),
           t[patchIndex],
           dt[patchIndex],
           1, // normal
@@ -963,7 +963,7 @@ void exahype2::fv::rusanov::cpp::timeStepWithRusanov_batched_heap_static_calls(
           cellCentre[patchIndex],
           cellSize[patchIndex],
           patchIndex,
-          volumeIndex3d(x,y,z),
+          volumeIndex3d(x,y,z-solversHaloSize),
           t[patchIndex],
           dt[patchIndex],
           2, // normal
@@ -1106,6 +1106,6 @@ void exahype2::fv::rusanov::cpp::timeStepWithRusanov_batched_heap_static_calls(
   delete[] range2d_cell_solvhalosize_m;
 
   #else
-  assertionMsg(false, "this routine should only be used in combination with OpenMP offloading, as it has a device parameter" );
+  assertionMsg(false, "this routine should only be used in combination with CPP offloading, as it has a device parameter" );
   #endif
 }
