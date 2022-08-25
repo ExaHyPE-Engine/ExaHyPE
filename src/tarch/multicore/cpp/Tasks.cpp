@@ -119,7 +119,7 @@ namespace {
 
         bool processedSomeTasks = false;
         if (numberOfPendingTasks>=fusion.minTasks) {
-          internal::copyInternalTaskQueuesOverIntoGlobalQueue(threadNumber);
+          tarch::multicore::internal::copyInternalTaskQueuesOverIntoGlobalQueue(threadNumber);
           processedSomeTasks = tarch::multicore::internal::fusePendingTasks(fusion);
         }
         else if (numberOfPendingTasks>0) {

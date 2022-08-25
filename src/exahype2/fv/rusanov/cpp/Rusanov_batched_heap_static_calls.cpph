@@ -584,7 +584,7 @@ void exahype2::fv::rusanov::cpp::timeStepWithRusanov_batched_heap_static_calls(
       ](auto ids){
         auto [y,patchIndex,x] = ids;
         
-        internal::computeFlux_LoopBody<Solver>(
+        internal::computeFlux_LoopBody<Solver, unknowns, auxiliaryVariables>(
           QIn[patchIndex],
           QInEnumerator,
           cellCentre[patchIndex],
@@ -615,7 +615,7 @@ void exahype2::fv::rusanov::cpp::timeStepWithRusanov_batched_heap_static_calls(
       ](auto ids){
         auto [x,patchIndex,y] = ids;
         
-        internal::computeFlux_LoopBody<Solver>(
+        internal::computeFlux_LoopBody<Solver, unknowns, auxiliaryVariables>(
           QIn[patchIndex],
           QInEnumerator,
           cellCentre[patchIndex],
@@ -677,7 +677,7 @@ void exahype2::fv::rusanov::cpp::timeStepWithRusanov_batched_heap_static_calls(
       ](auto ids){
         auto [z,y,patchIndex,x] = ids;
         
-        internal::computeFlux_LoopBody<Solver>(
+        internal::computeFlux_LoopBody<Solver, unknowns, auxiliaryVariables>(
           QIn[patchIndex],
           QInEnumerator,
           cellCentre[patchIndex],
@@ -708,7 +708,7 @@ void exahype2::fv::rusanov::cpp::timeStepWithRusanov_batched_heap_static_calls(
       ](auto ids){
         auto [z,x,patchIndex,y] = ids;
         
-        internal::computeFlux_LoopBody<Solver>(
+        internal::computeFlux_LoopBody<Solver, unknowns, auxiliaryVariables>(
           QIn[patchIndex],
           QInEnumerator,
           cellCentre[patchIndex],
@@ -739,7 +739,7 @@ void exahype2::fv::rusanov::cpp::timeStepWithRusanov_batched_heap_static_calls(
       ](auto ids){
         auto [x,y,patchIndex,z] = ids;
 
-        internal::computeFlux_LoopBody<Solver>(
+        internal::computeFlux_LoopBody<Solver, unknowns, auxiliaryVariables>(
           QIn[patchIndex],
           QInEnumerator,
           cellCentre[patchIndex],
