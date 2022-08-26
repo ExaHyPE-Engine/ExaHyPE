@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --job-name=single-node
+#SBATCH --job-name=single-node-RKDG
 #SBATCH -p multi
 #SBATCH --nodes=1
 #SBATCH -c 128
@@ -23,7 +23,7 @@ export OMP_PROC_BIND=close
 
 for type in 0
 do
- for solver in FV-4 FV-6 FV-8 RK2DG2 RK3DG3 RK4DG4
+ for solver in RK2DG2 RK3DG3 RK4DG4
  do 
   executable=benchmark-$type-no-opt-$solver
   ./$executable --threads $SLURM_ARRAY_TASK_ID > single-node-$executable-$SLURM_ARRAY_TASK_ID-cores.data
