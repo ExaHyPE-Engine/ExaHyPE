@@ -3,4 +3,6 @@
 from .PDETerms                                       import PDETerms
 
 from .ADERDG                                         import Polynomials
+
+import exahype2.solvers.new_ader.kernelgenerator
 import exahype2.solvers.new_ader.rusanov
