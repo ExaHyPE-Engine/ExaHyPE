@@ -2,7 +2,8 @@
 #SBATCH --job-name=single-node-RKDG
 #SBATCH -p multi
 #SBATCH --nodes=1
-#SBATCH -c 128
+#SBATCH --ntasks-per-node=1
+#SBATCH --cpus-per-task=128
 #SBATCH --time=04:00:00
 #SBATCH --mail-type=END
 #SBATCH --mail-user=tobias.weinzierl@durham.ac.uk
@@ -20,13 +21,14 @@ module load intelmpi
 export OMP_PROC_BIND=close
 #$SLURM_JOB_NUM_NODES
 
+
 for type in reg-0
 do
  for solver in FV-8 RK4DG4
  do 
   executable=benchmark-$type-opt-$solver
   echo $executable
-  mpirun ./$executable > single-node-$executable-$SLURM_NTASKS-mpi-tasks-on-node.data
+  mpirun ./$executable > single-node-$executable-$SLURM_NTASKS_PER_NODE-mpi-tasks-on-node.data
  done
 done
  
