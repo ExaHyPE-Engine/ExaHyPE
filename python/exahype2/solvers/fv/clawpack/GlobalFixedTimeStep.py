@@ -128,7 +128,7 @@ class GlobalFixedTimeStep( SingleSweep ):
     #self.user_action_set_includes += rpn
 
 
-  def add_implementation_files_to_project(self,namespace,output):
+  def add_implementation_files_to_project(self,namespace,output, dimensions):
     """
 
       We just tell the superclass too add its implementation files, 
@@ -136,7 +136,7 @@ class GlobalFixedTimeStep( SingleSweep ):
       constructor.
           
     """
-    super(GlobalFixedTimeStep,self).add_implementation_files_to_project(namespace,output)
+    super(GlobalFixedTimeStep,self).add_implementation_files_to_project(namespace,output, dimensions)
     for f in self._Riemann_solver_implementation_files:
       output.makefile.add_Fortran_file(f)
 

@@ -11,6 +11,7 @@ import exahype2.solvers.new_ader.actionsets
 from exahype2.solvers.new_ader.LagrangeBasis import GaussLegendreBasis, GaussLobattoBasis
 from .PDETerms import PDETerms
 from .kernels import get_face_overlap_merge_implementation
+from .kernelgenerator import generate_aderdg_kernels
 
 import os
 from abc import abstractmethod
@@ -356,7 +357,40 @@ class ADERDG( object ):
     self.plot_description = description
 
 
-  def add_implementation_files_to_project(self,namespace,output):
+  def generate_kernels(self, namespace, output, dimensions):
+    print("a")
+    full_qualified_namespace = ""
+    for i in namespace:
+      full_qualified_namespace += i + "::"
+    full_qualified_namespace += self._name
+        
+    is_linear = ("linear" if self._is_linear else "nonlinear")
+    generate_aderdg_kernels(
+        full_qualified_namespace, is_linear,
+        self._unknowns, self._auxiliary_variables,
+        self._order, dimensions,
+        useFlux               = (True if self._flux_implementation != PDETerms.None_Implementation else False),
+        useFluxVect           = False, 
+        useNCP                = (True if self._ncp_implementation != PDETerms.None_Implementation else False),
+        useNCPVect            = False,
+        useSource             = (True if self._source_term_implementation != PDETerms.None_Implementation else False),
+        useSourceVect         = False,
+        usePointSources       = (True if self._point_sources_implementation != PDETerms.None_Implementation else False), 
+        useMaterialParam      = False,
+        useMaterialParamVect  = False,
+        useGaussLobatto       = (True if self._polynomials is Polynomials.Gauss_Lobatto else False),
+        useVectPDE            = False
+      )
+    
+    output.makefile.add_cpp_file("generated/kernels/aderdg/" + is_linear + "/Quadrature.cpp")
+    output.makefile.add_cpp_file("generated/kernels/aderdg/" + is_linear + "/gemmsCPP.cpp")
+    output.makefile.add_cpp_file("generated/kernels/aderdg/" + is_linear + "/DGMatrices.cpp")
+    output.makefile.add_cpp_file("generated/kernels/aderdg/" + is_linear + "/fusedSpaceTimePredictorVolumeIntegral.cpp")
+    output.makefile.add_cpp_file("generated/kernels/aderdg/" + is_linear + "/riemannSolver.cpp")
+    output.makefile.add_cpp_file("generated/kernels/aderdg/" + is_linear + "/faceIntegral.cpp")
+    output.makefile.add_cpp_file("generated/kernels/aderdg/" + is_linear + "/solutionUpdate.cpp")
+
+  def add_implementation_files_to_project(self,namespace,output, dimensions):
     """
     
      The ExaHyPE2 project will call this operation when it sets
@@ -404,6 +438,8 @@ class ADERDG( object ):
     output.add( generated_solver_files )
     output.makefile.add_cpp_file( "Abstract" + self._name + ".cpp" )
     output.makefile.add_cpp_file( self._name + ".cpp" )
+    
+    self.generate_kernels(namespace, output, dimensions)
 
   def set_solver_constants(self, datastring): self._solver_constants = datastring
 

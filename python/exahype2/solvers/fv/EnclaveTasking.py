@@ -445,12 +445,12 @@ class EnclaveTasking( FV ):
     step.add_action_set( self._action_set_merge_enclave_task_outcome )
  
 
-  def add_implementation_files_to_project(self,namespace,output):
+  def add_implementation_files_to_project(self,namespace,output, dimensions):
     """
       Add the enclave task for the GPU
     """
 
-    super(EnclaveTasking, self).add_implementation_files_to_project(namespace, output)
+    super(EnclaveTasking, self).add_implementation_files_to_project(namespace, output, dimensions)
     templatefile_prefix = os.path.join(os.path.dirname(os.path.realpath(__file__)), "EnclaveTasking.EnclaveTask.template")
 
     implementationDictionary = {}

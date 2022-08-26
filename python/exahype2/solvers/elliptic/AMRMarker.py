@@ -382,7 +382,7 @@ const double boundaryValue = 0.0;
     pass
 
 
-  def add_implementation_files_to_project(self,namespace,output):
+  def add_implementation_files_to_project(self,namespace,output, dimensions):
     """
     
      The ExaHyPE2 project will call this operation when it sets
