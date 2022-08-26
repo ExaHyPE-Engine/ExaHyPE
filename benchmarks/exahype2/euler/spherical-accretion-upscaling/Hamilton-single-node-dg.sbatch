@@ -15,20 +15,22 @@ module purge
 module load oneapi
 export FLAVOUR_NOCONFLICT=1
 module load gcc
-#module load intelmpi
+module load intelmpi
 
 
 export OMP_PROC_BIND=close
 #$SLURM_JOB_NUM_NODES
 
-for type in 0
+for type in reg-0
 do
  for solver in RK2DG2 RK3DG3 RK4DG4
  do 
   executable=benchmark-$type-no-opt-$solver
-  ./$executable --threads $SLURM_ARRAY_TASK_ID > single-node-$executable-$SLURM_ARRAY_TASK_ID-cores.data
+  echo $executable
+  mpirun ./$executable --threads $SLURM_ARRAY_TASK_ID > single-node-$executable-$SLURM_ARRAY_TASK_ID-cores.data
   executable=benchmark-$type-opt-$solver
-  ./$executable --threads $SLURM_ARRAY_TASK_ID > single-node-$executable-$SLURM_ARRAY_TASK_ID-cores.data
+  echo $executable
+  mpirun ./$executable --threads $SLURM_ARRAY_TASK_ID > single-node-$executable-$SLURM_ARRAY_TASK_ID-cores.data
  done
 done
  
