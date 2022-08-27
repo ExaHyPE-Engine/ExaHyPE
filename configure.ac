@@ -387,14 +387,14 @@ AM_CONDITIONAL([VTK_LIBRARY_VERSION_9],[test "$vtk_version" = "9"])
 #
 
 AC_ARG_ENABLE(fenv,
-  AS_HELP_STRING([--enable-fenv],[use floating-point exception handling [default=false]]),
+  AS_HELP_STRING([--enable-fenv],[enable floating-point exception handling [default=false]]),
   [ AC_MSG_CHECKING(for fenv)
     case "${withval}" in
-      no)    AC_MSG_RESULT(no);    fenv=false ;;
-      *)     AC_MSG_RESULT(yes);   fenv=true  ;;
+      no)    AC_MSG_RESULT(no);    use_fenv=false ;;
+      *)     AC_MSG_RESULT(yes);   use_fenv=true  ;;
     esac ],
-  [ AC_MSG_CHECKING(for fenv); AC_MSG_RESULT(no); fenv=false ])
-AM_CONDITIONAL([UseFenv],[test "x$fenv" = xtrue])
+  [ AC_MSG_CHECKING(for fenv); AC_MSG_RESULT(no); use_fenv=false ])
+AM_CONDITIONAL([UseFenv],[test "x$use_fenv" = xtrue])
 
 #
 # ===============================================================

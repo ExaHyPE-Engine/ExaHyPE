@@ -9,6 +9,8 @@ from exahype2.solvers.rkdg.kernels import create_abstract_solver_definitions
 from exahype2.solvers.rkdg.kernels import create_solver_declarations
 from exahype2.solvers.rkdg.kernels import create_solver_definitions
 
+from exahype2.solvers.rkdg.kernels import SolverVariant
+
 from exahype2.solvers.rkdg.kernels         import create_volumetric_solver_call
 from exahype2.solvers.rkdg.kernels         import create_add_solver_contributions_call
 from exahype2.solvers.rkdg.kernels         import create_multiply_with_inverted_mass_matrix_call
@@ -48,7 +50,9 @@ class GlobalAdaptiveTimeStepWithEnclaveTasking( SeparateSweepsWithEnclaveTasking
     self._compute_eigenvalue   = True
 
     self._kernel_namespace              = "rusanov"
-    self._volumetric_solver_call        = create_volumetric_solver_call( self._basis )
+    self._volumetric_solver_call        = create_volumetric_solver_call( self._basis, SolverVariant.WithVirtualFunctions ) 
+    self._fused_volumetric_kernel_call_cpu = create_volumetric_solver_call( self._basis, SolverVariant.Stateless ) 
+    self._fused_volumetric_kernel_call_gpu = create_volumetric_solver_call( self._basis, SolverVariant.Accelerator ) 
     self._Riemann_solver_call           = create_Riemann_solver_call( self._basis )
     self._add_solver_contributions_call = create_add_solver_contributions_call( self._basis )
     self._multiply_with_inverted_mass_matrix_call = create_multiply_with_inverted_mass_matrix_call( self._basis )
@@ -109,13 +113,8 @@ class GlobalAdaptiveTimeStepWithEnclaveTasking( SeparateSweepsWithEnclaveTasking
     self._abstract_solver_user_definitions   = create_abstract_solver_definitions( self._flux_implementation, self._ncp_implementation, self._eigenvalues_implementation, self._source_term_implementation, self._point_sources_implementation, pde_terms_without_state=self._pde_terms_without_state)
     self._abstract_solver_user_definitions  += solver_code_snippets.create_abstract_solver_user_definitions()
     
-    # @todo wo ist der Konstruktor?
-    
     self._solver_user_declarations           = create_solver_declarations(self._flux_implementation, self._ncp_implementation, self._eigenvalues_implementation, self._source_term_implementation, self._point_sources_implementation, pde_terms_without_state=self._pde_terms_without_state)
     self._solver_user_definitions            = create_solver_definitions( self._flux_implementation, self._ncp_implementation, self._eigenvalues_implementation, self._source_term_implementation, self._point_sources_implementation, pde_terms_without_state=self._pde_terms_without_state)
-    
-    # Nothing fancy to be done for fixed time stepping
-    #self._constructor_implementation         = create_constructor_implementation_for_adaptive_time_stepping()
     
     self._compute_time_step_size              = solver_code_snippets.create_compute_time_step_size()
     self._compute_new_time_step_size          = solver_code_snippets.create_compute_new_time_step_size()

@@ -9,6 +9,8 @@ from exahype2.solvers.rkdg.kernels import create_abstract_solver_definitions
 from exahype2.solvers.rkdg.kernels import create_solver_declarations
 from exahype2.solvers.rkdg.kernels import create_solver_definitions
 
+from exahype2.solvers.rkdg.kernels import SolverVariant
+
 from exahype2.solvers.rkdg.kernels         import create_volumetric_solver_call
 from exahype2.solvers.rkdg.kernels         import create_add_solver_contributions_call
 from exahype2.solvers.rkdg.kernels         import create_multiply_with_inverted_mass_matrix_call
@@ -39,7 +41,7 @@ class GlobalFixedTimeStep( SeparateSweeps ):
     self._normalised_time_step_size = time_step_size
 
     self._kernel_namespace              = "rusanov"
-    self._volumetric_solver_call        = create_volumetric_solver_call( self._basis )
+    self._volumetric_solver_call        = create_volumetric_solver_call( self._basis, SolverVariant.WithVirtualFunctions )
     self._Riemann_solver_call           = create_Riemann_solver_call( self._basis )
     self._add_solver_contributions_call = create_add_solver_contributions_call( self._basis )
     self._multiply_with_inverted_mass_matrix_call = create_multiply_with_inverted_mass_matrix_call( self._basis )

@@ -22,13 +22,13 @@ ExaHyPE 2 Finite Volume version of the self-similarity tests of the MNRAS paper
 """)
 
 parser = argparse.ArgumentParser(description='ExaHyPE 2 - Euler benchmarking script')
-parser.add_argument("-j",   "--parallel-builds",   dest="j",              type=int, default=-1, help="Parallel builds" )
-parser.add_argument("-pd",  "--peano-dir",         dest="peanodir",       default="../../../../", help="Peano4 directory" )
-parser.add_argument("-v",   "--verbose",           dest="verbose",        action="store_true", default=False, help="Verbose")
-parser.add_argument("-m",   "--mode",              dest="mode",           choices=["release","stats","asserts"], required=True, help="Pick build type" )
-parser.add_argument(        "--plot",              dest="plot"  ,         action="store_true", default=False, help="Plot solution in regular time intervals")
-parser.add_argument(        "--gpu",               dest="gpu",            action="store_true", default=False, help="Use GPU support (or aggressive task tuning)")
-parser.add_argument("-s",   "--solver",            dest="solver",         choices=["fv-4", "fv-6", "fv-8", "dg1-rk1", "dg2-rk2", "dg3-rk3", "dg4-rk4"], required=True, help="Pick solver type. For the Finite Volume (fv) solvers, the second index is the patch/block size. For DG, you can pick different Runge-Kutta time integration orders" )
+parser.add_argument("-j",   "--parallel-builds",    dest="j",              type=int, default=-1, help="Parallel builds" )
+parser.add_argument("-pd",  "--peano-dir",          dest="peanodir",       default="../../../../", help="Peano4 directory" )
+parser.add_argument("-v",   "--verbose",            dest="verbose",        action="store_true", default=False, help="Verbose")
+parser.add_argument("-m",   "--mode",               dest="mode",           choices=["release","stats","asserts"], required=True, help="Pick build type" )
+parser.add_argument("-t",   "--type",               dest="type",           choices=["plot","reg-0"], required=True, help="Pick scenario" )
+parser.add_argument(        "--optimise-stateless", dest="optimise_stateless",            action="store_true", default=False, help="Optimise stateless/side-effect free cells (required for GPU offloading)")
+parser.add_argument("-s",   "--solver",             dest="solver",         choices=["fv-4", "fv-6", "fv-8", "dg1-rk1", "dg2-rk2", "dg3-rk3", "dg4-rk4"], required=True, help="Pick solver type. For the Finite Volume (fv) solvers, the second index is the patch/block size. For DG, you can pick different Runge-Kutta time integration orders" )
 args = parser.parse_args()
 
 
@@ -46,17 +46,25 @@ unknowns    = {
   "E":   1,
 }
 number_of_unknowns  = sum(unknowns.values())
-if args.plot:
+if args.type=="plot" and "fv" in args.solver:
   max_h               = 0.2
   min_h               = 0.2
-else:
-  max_h               = 0.04
-  min_h               = 0.04
+elif args.type=="plot" and "dg" in args.solver:
+  max_h               = 0.1
+  min_h               = 0.1
+elif args.type=="reg-0":
+  max_h               = 0.03
+  min_h               = 0.03
 auxiliary_variables = 0
 
 
-executable_name = "benchmark-"
+executable_name = "benchmark-" + args.type
+if args.optimise_stateless:
+  executable_name = executable_name + "-opt"
+else:
+  executable_name = executable_name + "-no-opt"
 
+    
 if "fv" in args.solver:
   patch_size = int(args.solver[-1])
   thesolver = exahype2.solvers.fv.rusanov.GlobalAdaptiveTimeStepWithEnclaveTasking(name                 = solver_name + "FV", 
@@ -69,12 +77,16 @@ if "fv" in args.solver:
                                                                                    flux                 = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
                                                                                    eigenvalues          = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
                                                                                    source_term          = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
-                                                                                   pde_terms_without_state = args.gpu
+                                                                                   pde_terms_without_state = args.optimise_stateless
                                                                                   )
-  executable_name = executable_name + "FV-" + str(patch_size)
+  executable_name = executable_name + "-FV-" + str(patch_size)
   
   thesolver._action_set_postprocess_solution = exahype2.solvers.fv.actionsets.VolumeWisePostprocessSolution(thesolver)
-  thesolver._action_set_postprocess_solution.guard = "repositories::{{SOLVER_INSTANCE}}.isLastGridSweepOfTimeStep()"
+  thesolver._action_set_postprocess_solution.guard = """
+repositories::{{SOLVER_INSTANCE}}.isLastGridSweepOfTimeStep() 
+and 
+not repositories::{{SOLVER_INSTANCE}}.patchCanUseStatelessPDETerms(marker.x(), marker.h(), timeStamp, timeStepSize)
+"""
   thesolver._action_set_postprocess_solution.add_postprocessing_kernel( """
     repositories::{{SOLVER_INSTANCE}}.addDensity(volumeX,volumeH,value[0]);  
   """     )
@@ -92,12 +104,16 @@ if "rk" in args.solver and "dg" in args.solver:
                                                                    flux                 = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
                                                                    eigenvalues          = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
                                                                    source_term          = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
-                                                                   pde_terms_without_state = args.gpu
+                                                                   pde_terms_without_state = args.optimise_stateless
                                                                    )
-  executable_name = executable_name + "RK" + str(time_order) + "DG" + str(space_order)
+  executable_name = executable_name + "-RK" + str(time_order) + "DG" + str(space_order)
 
   thesolver._action_set_postprocess_solution = exahype2.solvers.rkdg.actionsets.DoFWisePostprocessSolution(thesolver)
-  thesolver._action_set_postprocess_solution.guard = "repositories::{{SOLVER_INSTANCE}}.isLastGridSweepOfTimeStep()"
+  thesolver._action_set_postprocess_solution.guard = """
+repositories::{{SOLVER_INSTANCE}}.isLastGridSweepOfTimeStep() 
+and 
+not repositories::{{SOLVER_INSTANCE}}.cellCanUseStatelessPDETerms(marker.x(), marker.h(), timeStamp, timeStepSize)
+"""
   thesolver._action_set_postprocess_solution.add_postprocessing_kernel( """
     repositories::{{SOLVER_INSTANCE}}.addDensity(x, marker.h(), index, values[0]);  
   """     )
@@ -138,18 +154,18 @@ if args.mode=="stats":
 if args.mode=="asserts":
   build_mode = peano4.output.CompileMode.Asserts
 
-if args.plot:
+if args.type=="plot":
   plot_interval = 0.1
 else:  
   plot_interval = 0.0
   
 cube_size = 1
 project.set_global_simulation_parameters(
-  dimensions = dimensions,
-  offset = [-cube_size/2.0, -cube_size/2.0, -cube_size/2.0],
-  size   = [ cube_size, cube_size, cube_size],
-  min_end_time = 4.0,
-  max_end_time = 4.0,
+  dimensions            = dimensions,
+  offset                = [-cube_size/2.0, -cube_size/2.0, -cube_size/2.0],
+  size                  = [ cube_size, cube_size, cube_size],
+  min_end_time          = 4.0,
+  max_end_time          = 4.0,
   first_plot_time_stamp = 0.0,
   time_in_between_plots = plot_interval,
   periodic_BC           = [False, False, False]

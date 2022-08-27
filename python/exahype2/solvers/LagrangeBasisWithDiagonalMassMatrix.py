@@ -378,44 +378,54 @@ class LagrangeBasisWithDiagonalMassMatrix(LagrangeBasis):
     dictionary["BASIS_DECLARATIONS"] += "/**\n"
     dictionary["BASIS_DECLARATIONS"] += self.QuadraturePoints1dDocumentation
     dictionary["BASIS_DECLARATIONS"] += "*/\n"
-    dictionary["BASIS_DECLARATIONS"] += "const double QuadraturePoints1d[DGOrder+1];\n\n"
-    dictionary["BASIS_INITIALIZERS"] += "             QuadraturePoints1d{},\n".format( self._render_tensor_1(self.quadrature_points) )
+    #dictionary["BASIS_DECLARATIONS"] += "static const double QuadraturePoints1d[DGOrder+1];\n\n"
+    #dictionary["BASIS_INITIALIZERS"] += "             QuadraturePoints1d{},\n".format( self._render_tensor_1(self.quadrature_points) )
+    dictionary["BASIS_DECLARATIONS"] += "static constexpr double QuadraturePoints1d[] = {};\n\n".format( self._render_tensor_1(self.quadrature_points) )
     
     dictionary["BASIS_DECLARATIONS"] += "/**\n"
     dictionary["BASIS_DECLARATIONS"] += self.QuadratureWeights1dDocumentation
     dictionary["BASIS_DECLARATIONS"] += "*/\n"
-    dictionary["BASIS_DECLARATIONS"] += "const double QuadratureWeights1d[DGOrder+1];\n\n"
-    dictionary["BASIS_INITIALIZERS"] += "             QuadratureWeights1d{},\n".format( self._render_tensor_1(self.quadrature_weights) )
+    #dictionary["BASIS_DECLARATIONS"] += "const double QuadratureWeights1d[DGOrder+1];\n\n"
+    #dictionary["BASIS_INITIALIZERS"] += "             QuadratureWeights1d{},\n".format( self._render_tensor_1(self.quadrature_weights) )
+    dictionary["BASIS_DECLARATIONS"] += "static constexpr double QuadratureWeights1d[] = {};\n\n".format( self._render_tensor_1(self.quadrature_weights) )
 
     dictionary["BASIS_DECLARATIONS"] += "/**\n"
     dictionary["BASIS_DECLARATIONS"] += self.MassMatrix1dDocumentation
     dictionary["BASIS_DECLARATIONS"] += "*/\n"
-    dictionary["BASIS_DECLARATIONS"] += "const double MassMatrixDiagonal1d[DGOrder+1];\n\n"
-    dictionary["BASIS_INITIALIZERS"] += "             MassMatrixDiagonal1d{},\n".format( self._render_tensor_1(self.__compute_mass_matrix_diagonal()) )
+    #dictionary["BASIS_DECLARATIONS"] += "const double MassMatrixDiagonal1d[DGOrder+1];\n\n"
+    #dictionary["BASIS_INITIALIZERS"] += "             MassMatrixDiagonal1d{},\n".format( self._render_tensor_1(self.__compute_mass_matrix_diagonal()) )
+    dictionary["BASIS_DECLARATIONS"] += "static constexpr double MassMatrixDiagonal1d[] = {};\n\n".format( self._render_tensor_1(self.__compute_mass_matrix_diagonal()) )
 
     dictionary["BASIS_DECLARATIONS"] += "/**\n"
     dictionary["BASIS_DECLARATIONS"] += self.StiffnessOperator1dDocumentation
     dictionary["BASIS_DECLARATIONS"] += "*/\n"
     if use_multidimensional_arrays:        
-      dictionary["BASIS_DECLARATIONS"] += "const double StiffnessOperator1d[DGOrder+1][DGOrder+1];\n\n"
+      #dictionary["BASIS_DECLARATIONS"] += "const double StiffnessOperator1d[DGOrder+1][DGOrder+1];\n\n"
+      #dictionary["BASIS_INITIALIZERS"] += "             StiffnessOperator1d{},\n".format( self._render_tensor_2(self.__compute_stiffness_operator(),use_multidimensional_arrays) )
+      dictionary["BASIS_DECLARATIONS"] += "static constexpr double StiffnessOperator1d[][] = {};\n\n".format( self._render_tensor_2(self.__compute_stiffness_operator(),use_multidimensional_arrays) )
     else:
-      dictionary["BASIS_DECLARATIONS"] += "const double StiffnessOperator1d[(DGOrder+1)*(DGOrder+1)];\n\n"
-    dictionary["BASIS_INITIALIZERS"] += "             StiffnessOperator1d{},\n".format( self._render_tensor_2(self.__compute_stiffness_operator(),use_multidimensional_arrays) )
+      #dictionary["BASIS_DECLARATIONS"] += "const double StiffnessOperator1d[(DGOrder+1)*(DGOrder+1)];\n\n"
+      #dictionary["BASIS_INITIALIZERS"] += "             StiffnessOperator1d{},\n".format( self._render_tensor_2(self.__compute_stiffness_operator(),use_multidimensional_arrays) )
+      dictionary["BASIS_DECLARATIONS"] += "static constexpr double StiffnessOperator1d[] = {};\n\n".format( self._render_tensor_2(self.__compute_stiffness_operator(),use_multidimensional_arrays) )
 
     dictionary["BASIS_DECLARATIONS"] += "/**\n"
     dictionary["BASIS_DECLARATIONS"] += self.BasisFunctionValuesLeft1dDocumentation
     dictionary["BASIS_DECLARATIONS"] += "*/\n"
-    dictionary["BASIS_DECLARATIONS"] += "const double BasisFunctionValuesLeft1d[DGOrder+1];\n\n"
-    dictionary["BASIS_INITIALIZERS"] += "             BasisFunctionValuesLeft1d{},\n".format( self._render_tensor_1(self.__compute_basis_function_values_left()) )
+    #dictionary["BASIS_DECLARATIONS"] += "const double BasisFunctionValuesLeft1d[DGOrder+1];\n\n"
+    #dictionary["BASIS_INITIALIZERS"] += "             BasisFunctionValuesLeft1d{},\n".format( self._render_tensor_1(self.__compute_basis_function_values_left()) )
+    dictionary["BASIS_DECLARATIONS"] += "static constexpr double BasisFunctionValuesLeft1d[] = {};\n\n".format( self._render_tensor_1(self.__compute_basis_function_values_left()) )
 
     dictionary["BASIS_DECLARATIONS"] += "/**\n"
     dictionary["BASIS_DECLARATIONS"] += self.DerivativeOperator1dDocumentation
     dictionary["BASIS_DECLARATIONS"] += "*/\n"
     if use_multidimensional_arrays:        
-      dictionary["BASIS_DECLARATIONS"] += "const double DerivativeOperator1d[DGOrder+1][DGOrder+1];\n\n"
+      #dictionary["BASIS_DECLARATIONS"] += "const double DerivativeOperator1d[DGOrder+1][DGOrder+1];\n\n"
+      #dictionary["BASIS_INITIALIZERS"] += "             DerivativeOperator1d{},\n".format( self._render_tensor_2(self.__compute_derivative_operator(),use_multidimensional_arrays) )
+      dictionary["BASIS_DECLARATIONS"] += "static constexpr double DerivativeOperator1d[][] = {};\n\n".format( self._render_tensor_2(self.__compute_derivative_operator(),use_multidimensional_arrays) )
     else:
-      dictionary["BASIS_DECLARATIONS"] += "const double DerivativeOperator1d[(DGOrder+1)*(DGOrder+1)];\n\n"
-    dictionary["BASIS_INITIALIZERS"] += "             DerivativeOperator1d{},\n".format( self._render_tensor_2(self.__compute_derivative_operator(),use_multidimensional_arrays) )
+      #dictionary["BASIS_DECLARATIONS"] += "const double DerivativeOperator1d[(DGOrder+1)*(DGOrder+1)];\n\n"
+      #dictionary["BASIS_INITIALIZERS"] += "             DerivativeOperator1d{},\n".format( self._render_tensor_2(self.__compute_derivative_operator(),use_multidimensional_arrays) )
+      dictionary["BASIS_DECLARATIONS"] += "static constexpr double DerivativeOperator1d[] = {};\n\n".format( self._render_tensor_2(self.__compute_derivative_operator(),use_multidimensional_arrays) )
 
 
   @property

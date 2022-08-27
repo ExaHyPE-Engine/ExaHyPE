@@ -7,24 +7,28 @@
 
 namespace exahype2::fv::rusanov::omp::opt {
     struct GPUScratchpadData {
-        double* tempFluxX{nullptr};
-        double* tempFluxY{nullptr};
-        double* tempFluxZ{nullptr};
-        double* tempNonconservativeProductX{nullptr};
-        double* tempNonconservativeProductY{nullptr};
-        double* tempNonconservativeProductZ{nullptr};
-        double* tempEigenvalueX{nullptr};
-        double* tempEigenvalueY{nullptr};
-        double* tempEigenvalueZ{nullptr};
+        double* tempFluxX;
+        double* tempFluxY;
+        double* tempFluxZ;
+        double* tempNonconservativeProductX;
+        double* tempNonconservativeProductY;
+        double* tempNonconservativeProductZ;
+        double* tempEigenvalueX;
+        double* tempEigenvalueY;
+        double* tempEigenvalueZ;
 
         int deviceId;
+        bool isAllocated;
 
-        GPUScratchpadData(int deviceId, size_t fluxSize, size_t ncpSize, size_t eigenvalueSize);
+        explicit GPUScratchpadData();
         ~GPUScratchpadData();
-        GPUScratchpadData(const GPUScratchpadData&) = delete;
+        GPUScratchpadData(GPUScratchpadData const&) = delete;
+        GPUScratchpadData& operator = (GPUScratchpadData const&) = delete;
         GPUScratchpadData(GPUScratchpadData&&) = delete;
-        GPUScratchpadData& operator = (const GPUScratchpadData&) = delete;
         GPUScratchpadData& operator = (GPUScratchpadData&&) = delete;
+
+        void allocate(int deviceId, size_t fluxSize, size_t ncpSize, size_t eigenvalueSize);
+        void free();
     };
 }
 

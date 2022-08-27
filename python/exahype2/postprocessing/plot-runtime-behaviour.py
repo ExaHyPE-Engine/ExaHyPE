@@ -15,7 +15,7 @@ Default plotter for various standard ExaHyPE dumps. The plotter examines
 and illustrates the runtime per time step behaviour.
 
 """)
-  parser.add_argument("file", nargs="+",    help="filename of the file to parse. Can we multiple files")
+  parser.add_argument("file", nargs="+",    help="filename of the file to parse. You can specify multiple files")
   parser.add_argument("-v",     "--verbose",     dest="verbose",    help="increase output verbosity",   action="store_true", default=False )
   parser.add_argument("-log-y", "--log-ysaxis",  dest="log_yscale", help="increase output verbosity",   action="store_true", default=False )
   parser.add_argument("-t",     "--type",    dest="type",    help="Pick plot variant", choices=[

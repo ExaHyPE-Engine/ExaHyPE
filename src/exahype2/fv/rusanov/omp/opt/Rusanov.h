@@ -3,17 +3,20 @@
 #ifndef _EXAHYPE2_FV_RUSANOV_OMP_OPT_RUSANOV_H_
 #define _EXAHYPE2_FV_RUSANOV_OMP_OPT_RUSANOV_H_
 
+#include "GPUCellData.h"
+#include "GPUScratchpadData.h"
+
 #include "exahype2/CellData.h"
 
 namespace exahype2 {
   namespace fv {
     namespace rusanov {
       namespace omp::opt {
-        static constexpr int MaxNumberOfPossiblePatchEntries = 1024*2*2*2*2; // "|P|_max", magic number for now, such that the kernel benchmarks work
+        static constexpr int MaxNumberOfPossiblePatchEntries = 1024*2*2*2*2;
 
-        static int currentOffloadedPatches = 0; // Counter "A", use atomics to increment/decrement
+        static int currentOffloadedPatches = 0;
 
-        bool offloadIntoPreallocatedMemory(int numberOfPatchesToOffload);
+        int canOffloadIntoPreallocatedMemory(int numberOfPatchesToOffload);
         int leavePreallocatedMemoryFromOffloading(int numberOfPatchesLeaving);
 
         template <
@@ -27,6 +30,8 @@ namespace exahype2 {
         static void timeStepWithRusanov_patchwise_heap_static_calls(
           int                     targetDevice,
           exahype2::CellData&     patchData,
+          GPUCellData&            devicePatchData,
+          GPUScratchpadData&      deviceScratchpadData,
           bool                    evaluateFlux,
           bool                    evaluateNonconservativeProduct,
           bool                    evaluateSource,
@@ -48,6 +53,8 @@ namespace exahype2 {
         static void timeStepWithRusanov_batched_heap_static_calls(
           int                     targetDevice,
           exahype2::CellData&     patchData,
+          GPUCellData&            devicePatchData,
+          GPUScratchpadData&      deviceScratchpadData,
           bool                    evaluateFlux,
           bool                    evaluateNonconservativeProduct,
           bool                    evaluateSource,

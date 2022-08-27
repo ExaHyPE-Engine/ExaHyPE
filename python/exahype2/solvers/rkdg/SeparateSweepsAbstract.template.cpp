@@ -398,8 +398,8 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishSimulation() {
 
 
 bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::cellCanUseStatelessPDETerms(
-  const tarch::la::Vector<Dimensions,double>&  patchCentre,
-  const tarch::la::Vector<Dimensions,double>&  patchH,
+  const tarch::la::Vector<Dimensions,double>&  cellCentre,
+  const tarch::la::Vector<Dimensions,double>&  cellH,
   double                                       t,
   double                                       dt
 ) const {

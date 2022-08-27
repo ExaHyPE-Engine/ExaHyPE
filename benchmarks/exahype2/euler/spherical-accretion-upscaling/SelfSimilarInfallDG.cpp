@@ -193,3 +193,15 @@ void ::benchmarks::exahype2::euler::sphericalaccretionupscaling::SelfSimilarInfa
     TotalMassInPreviousTimeStep = _accumulator.getTotalMass();
   }
 }
+
+
+bool ::benchmarks::exahype2::euler::sphericalaccretionupscaling::SelfSimilarInfallDG::cellCanUseStatelessPDETerms(
+  const tarch::la::Vector<Dimensions,double>&  cellCentre,
+  const tarch::la::Vector<Dimensions,double>&  cellH,
+  double                                       t,
+  double                                       dt
+) const {
+  const double radius = tarch::la::norm2( cellCentre );
+  return radius > _accumulator.getMaxRelevantRadius() + std::sqrt(Dimensions) * cellH(0) * cellH(0);
+
+}

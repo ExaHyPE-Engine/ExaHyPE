@@ -4,13 +4,13 @@
 
 #include "exahype2/enumerator/AoSLexicographicEnumerator.h"
 
-void exahype2::dg::cellIntegral_patchwise_GaussLegendre_functors(
+void exahype2::dg::cellIntegral_patchwise_in_situ_GaussLegendre_functors(
   ::exahype2::CellData&                          cellData,
   const int                                      order,
   const int                                      unknowns,
   const int                                      auxiliaryVariables,
   Flux                                           flux,
-  NonConservativeProduct                         nonConservativeProduct,
+  NonConservativeProduct                         nonconservativeProduct,
   Source                                         source,
   PointSources                                   pointSources,
   const double* __restrict__                     quadratureNodes,
@@ -162,7 +162,7 @@ void exahype2::dg::cellIntegral_patchwise_GaussLegendre_functors(
           } //node
 
 
-          nonConservativeProduct(
+          nonconservativeProduct(
             &cellQin[enumeratorIn(currentCell, dof, 0)],
             gradientValues,
             position,

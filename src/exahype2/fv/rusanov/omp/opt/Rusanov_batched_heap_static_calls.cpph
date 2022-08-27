@@ -1,8 +1,7 @@
 #include "Rusanov.h"
-#include "GPUCellData.h"
-#include "GPUScratchpadData.h"
 #include "tarch/compiler/CompilerSpecificSettings.h"
 #include "exahype2/fv/rusanov/LoopBody.h"
+#include "exahype2/fv/rusanov/Rusanov_Helper.cpph"
 
 #include <cstring>
 
@@ -17,13 +16,15 @@ template <
 void exahype2::fv::rusanov::omp::opt::timeStepWithRusanov_batched_heap_static_calls(
   int                     targetDevice,
   ::exahype2::CellData&   hostPatchData,
+  GPUCellData&            devicePatchData,
+  GPUScratchpadData&      deviceScratchpadData,
   bool                    evaluateFlux,
   bool                    evaluateNonconservativeProduct,
   bool                    evaluateSource,
   bool                    evaluateMaximumEigenvalueAfterTimeStep
 ) {
   #if defined(GPUOffloadingOMP)
-  while (not offloadIntoPreallocatedMemory(hostPatchData.numberOfCells)) {
+  while (not canOffloadIntoPreallocatedMemory(hostPatchData.numberOfCells)) {
     printf("Cannot offload to GPU -> suspending for now\n");
   }
 
@@ -35,14 +36,14 @@ void exahype2::fv::rusanov::omp::opt::timeStepWithRusanov_batched_heap_static_ca
   TempDataEnumerator ncpHostEnumerator       (hostPatchData.numberOfCells, numberOfVolumesPerAxisInPatch+1, solversHaloSize, unknowns, 0);
   TempDataEnumerator eigenvalueHostEnumerator(hostPatchData.numberOfCells, numberOfVolumesPerAxisInPatch,   solversHaloSize,        1, 0);
 
-  static TempDataEnumerator FluxHostEnumeratorMax      (MaxNumberOfPossiblePatchEntries, numberOfVolumesPerAxisInPatch,   solversHaloSize, unknowns, 0);
+  static TempDataEnumerator fluxHostEnumeratorMax      (MaxNumberOfPossiblePatchEntries, numberOfVolumesPerAxisInPatch,   solversHaloSize, unknowns, 0);
   static TempDataEnumerator ncpHostEnumeratorMax       (MaxNumberOfPossiblePatchEntries, numberOfVolumesPerAxisInPatch+1, solversHaloSize, unknowns, 0);
   static TempDataEnumerator eigenvalueHostEnumeratorMax(MaxNumberOfPossiblePatchEntries, numberOfVolumesPerAxisInPatch,   solversHaloSize,        1, 0);
 
-  static GPUScratchpadData deviceScratchpadData(targetDevice, FluxHostEnumeratorMax.size(), ncpHostEnumeratorMax.size(), eigenvalueHostEnumeratorMax.size());
+  deviceScratchpadData.allocate(targetDevice, fluxHostEnumeratorMax.size(), ncpHostEnumeratorMax.size(), eigenvalueHostEnumeratorMax.size());
   double* tempFluxX                   = deviceScratchpadData.tempFluxX;
   double* tempFluxY                   = deviceScratchpadData.tempFluxY;
-  double* tempFluxZ                   = deviceScratchpadData.tempFluxZ; // TODO: Should not be allocated for 2D builds
+  double* tempFluxZ                   = deviceScratchpadData.tempFluxZ;
   double* tempNonconservativeProductX = deviceScratchpadData.tempNonconservativeProductX;
   double* tempNonconservativeProductY = deviceScratchpadData.tempNonconservativeProductY;
   double* tempNonconservativeProductZ = deviceScratchpadData.tempNonconservativeProductZ;
@@ -50,7 +51,7 @@ void exahype2::fv::rusanov::omp::opt::timeStepWithRusanov_batched_heap_static_ca
   double* tempEigenvalueY             = deviceScratchpadData.tempEigenvalueY;
   double* tempEigenvalueZ             = deviceScratchpadData.tempEigenvalueZ;
 
-  static GPUCellData devicePatchData(targetDevice, MaxNumberOfPossiblePatchEntries, QInHostEnumerator.size(), QOutHostEnumerator.size());
+  devicePatchData.allocate(targetDevice, QInHostEnumerator.size(), QOutHostEnumerator.size());
   double* mappedPointersToQIns        = devicePatchData.QIn;
   double* mappedPointersToQOuts       = devicePatchData.QOut;
   double* rawPointerToCellCentres     = devicePatchData.cellCentre;

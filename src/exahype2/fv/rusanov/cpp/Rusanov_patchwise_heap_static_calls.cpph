@@ -121,14 +121,14 @@ void exahype2::fv::rusanov::cpp::timeStepWithRusanov_patchwise_heap_static_calls
   auto* range1d_solvhalosize = new cart_prod_2d;
   *range1d_solvhalosize = tl::views::cartesian_product(
     std::views::iota(0,numberOfVolumesPerAxisInPatch),
-    std::views::iota(-solversHaloSize,numberOfVolumesPerAxisInPatch+solversHaloSize)
+    std::views::iota(0,numberOfVolumesPerAxisInPatch+2*solversHaloSize)
   );
 
   auto* range2d_solvhalosize = new cart_prod_3d;
   *range2d_solvhalosize = tl::views::cartesian_product(
     std::views::iota(0,numberOfVolumesPerAxisInPatch),
     std::views::iota(0,numberOfVolumesPerAxisInPatch),
-    std::views::iota(-solversHaloSize,numberOfVolumesPerAxisInPatch+solversHaloSize)
+    std::views::iota(0,numberOfVolumesPerAxisInPatch+2*solversHaloSize)
   );
 
   auto* range2d_unknown_aux = new cart_prod_3d;
@@ -149,14 +149,14 @@ void exahype2::fv::rusanov::cpp::timeStepWithRusanov_patchwise_heap_static_calls
   auto* range1d_solvhalosize_m = new cart_prod_2d;
   *range1d_solvhalosize_m = tl::views::cartesian_product(
     std::views::iota(0,numberOfVolumesPerAxisInPatch),
-    std::views::iota(-solversHaloSize,numberOfVolumesPerAxisInPatch+solversHaloSize-1)
+    std::views::iota(0,numberOfVolumesPerAxisInPatch+2*solversHaloSize-1)
   );
 
   auto* range2d_solvhalosize_m = new cart_prod_3d;
   *range2d_solvhalosize_m = tl::views::cartesian_product(
     std::views::iota(0,numberOfVolumesPerAxisInPatch),
     std::views::iota(0,numberOfVolumesPerAxisInPatch),  
-    std::views::iota(-solversHaloSize,numberOfVolumesPerAxisInPatch+solversHaloSize-1)
+    std::views::iota(0,numberOfVolumesPerAxisInPatch+2*solversHaloSize-1)
   );
 
   exahype2::enumerator::AoSLexicographicEnumerator QInEnumerator(
@@ -313,7 +313,7 @@ void exahype2::fv::rusanov::cpp::timeStepWithRusanov_patchwise_heap_static_calls
             cellCentre[patchIndex],
             cellSize[patchIndex],
             patchIndex,
-            volumeIndex2d(x,y),
+            volumeIndex2d(x-solversHaloSize,y),
             t[patchIndex], 
             dt[patchIndex],
             0,
@@ -327,7 +327,7 @@ void exahype2::fv::rusanov::cpp::timeStepWithRusanov_patchwise_heap_static_calls
             cellCentre[patchIndex],
             cellSize[patchIndex],
             patchIndex,
-            volumeIndex2d(y,x),
+            volumeIndex2d(y,x-solversHaloSize),
             t[patchIndex], 
             dt[patchIndex],
             1,
@@ -391,7 +391,7 @@ void exahype2::fv::rusanov::cpp::timeStepWithRusanov_patchwise_heap_static_calls
             cellCentre[patchIndex],
             cellSize[patchIndex],
             patchIndex,
-            volumeIndex3d(u,v,w),
+            volumeIndex3d(u-solversHaloSize,v,w),
             t[patchIndex], 
             dt[patchIndex],
             0,
@@ -405,7 +405,7 @@ void exahype2::fv::rusanov::cpp::timeStepWithRusanov_patchwise_heap_static_calls
             cellCentre[patchIndex],
             cellSize[patchIndex],
             patchIndex,
-            volumeIndex3d(w,u,v),
+            volumeIndex3d(w,u-solversHaloSize,v),
             t[patchIndex], 
             dt[patchIndex],
             1,
@@ -419,7 +419,7 @@ void exahype2::fv::rusanov::cpp::timeStepWithRusanov_patchwise_heap_static_calls
             cellCentre[patchIndex],
             cellSize[patchIndex],
             patchIndex,
-            volumeIndex3d(v,w,u),
+            volumeIndex3d(v,w,u-solversHaloSize),
             t[patchIndex],
             dt[patchIndex],
             2,
@@ -480,13 +480,13 @@ void exahype2::fv::rusanov::cpp::timeStepWithRusanov_patchwise_heap_static_calls
         ](auto ids){
           auto [y,x] = ids;
 
-          internal::computeFlux_LoopBody<Solver>(
+          internal::computeFlux_LoopBody<Solver, unknowns, auxiliaryVariables>(
             QIn[patchIndex],
             QInEnumerator,
             cellCentre[patchIndex],
             cellSize[patchIndex],
             patchIndex,
-            volumeIndex2d(x,y),
+            volumeIndex2d(x-solversHaloSize,y),
             t[patchIndex],
             dt[patchIndex],
             0, // normal
@@ -494,13 +494,13 @@ void exahype2::fv::rusanov::cpp::timeStepWithRusanov_patchwise_heap_static_calls
             fluxEnumerator
           );
 
-          internal::computeFlux_LoopBody<Solver>(
+          internal::computeFlux_LoopBody<Solver, unknowns, auxiliaryVariables>(
             QIn[patchIndex],
             QInEnumerator,
             cellCentre[patchIndex],
             cellSize[patchIndex],
             patchIndex,
-            volumeIndex2d(y,x),
+            volumeIndex2d(y,x-solversHaloSize),
             t[patchIndex],
             dt[patchIndex],
             1, // normal
@@ -555,13 +555,13 @@ void exahype2::fv::rusanov::cpp::timeStepWithRusanov_patchwise_heap_static_calls
           dt=hostPatchData.dt
         ](auto ids){
           auto [v,w,u] = ids;
-          internal::computeFlux_LoopBody<Solver>(
+          internal::computeFlux_LoopBody<Solver, unknowns, auxiliaryVariables>(
             QIn[patchIndex],
             QInEnumerator,
             cellCentre[patchIndex],
             cellSize[patchIndex],
             patchIndex,
-            volumeIndex3d(u,v,w),
+            volumeIndex3d(u-solversHaloSize,v,w),
             t[patchIndex],
             dt[patchIndex],
             0, // normal
@@ -569,13 +569,13 @@ void exahype2::fv::rusanov::cpp::timeStepWithRusanov_patchwise_heap_static_calls
             fluxEnumerator
           );
 
-          internal::computeFlux_LoopBody<Solver>(
+          internal::computeFlux_LoopBody<Solver, unknowns, auxiliaryVariables>(
             QIn[patchIndex],
             QInEnumerator,
             cellCentre[patchIndex],
             cellSize[patchIndex],
             patchIndex,
-            volumeIndex3d(w,u,v),
+            volumeIndex3d(w,u-solversHaloSize,v),
             t[patchIndex],
             dt[patchIndex],
             1, // normal
@@ -583,13 +583,13 @@ void exahype2::fv::rusanov::cpp::timeStepWithRusanov_patchwise_heap_static_calls
             fluxEnumerator
           );
 
-          internal::computeFlux_LoopBody<Solver>(
+          internal::computeFlux_LoopBody<Solver, unknowns, auxiliaryVariables>(
             QIn[patchIndex],
             QInEnumerator,
             cellCentre[patchIndex],
             cellSize[patchIndex],
             patchIndex,
-            volumeIndex3d(v,w,u),
+            volumeIndex3d(v,w,u-solversHaloSize),
             t[patchIndex],
             dt[patchIndex],
             2, // normal
@@ -650,7 +650,7 @@ void exahype2::fv::rusanov::cpp::timeStepWithRusanov_patchwise_heap_static_calls
             cellCentre[patchIndex],
             cellSize[patchIndex],
             patchIndex,
-            volumeIndex2d(x,y),
+            volumeIndex2d(x-solversHaloSize,y),
             t[patchIndex],
             dt[patchIndex],
             0, // normal
@@ -664,7 +664,7 @@ void exahype2::fv::rusanov::cpp::timeStepWithRusanov_patchwise_heap_static_calls
             cellCentre[patchIndex],
             cellSize[patchIndex],
             patchIndex,
-            volumeIndex2d(y,x),
+            volumeIndex2d(y,x-solversHaloSize),
             t[patchIndex],
             dt[patchIndex],
             1, // normal
@@ -724,7 +724,7 @@ void exahype2::fv::rusanov::cpp::timeStepWithRusanov_patchwise_heap_static_calls
             cellCentre[patchIndex],
             cellSize[patchIndex],
             patchIndex,
-            volumeIndex3d(u,v,w),
+            volumeIndex3d(u-solversHaloSize,v,w),
             t[patchIndex],
             dt[patchIndex],
             0, // normal
@@ -738,7 +738,7 @@ void exahype2::fv::rusanov::cpp::timeStepWithRusanov_patchwise_heap_static_calls
             cellCentre[patchIndex],
             cellSize[patchIndex],
             patchIndex,
-            volumeIndex3d(w,u,v),
+            volumeIndex3d(w,u-solversHaloSize,v),
             t[patchIndex],
             dt[patchIndex],
             1, // normal
@@ -752,7 +752,7 @@ void exahype2::fv::rusanov::cpp::timeStepWithRusanov_patchwise_heap_static_calls
             cellCentre[patchIndex],
             cellSize[patchIndex],
             patchIndex,
-            volumeIndex3d(v,w,u),
+            volumeIndex3d(v,w,u-solversHaloSize),
             t[patchIndex],
             dt[patchIndex],
             2, // normal

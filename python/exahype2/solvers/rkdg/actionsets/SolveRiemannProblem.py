@@ -28,7 +28,8 @@ class SolveRiemannProblem(AbstractRungeKuttaDGActionSet):
       {{FACE_METADATA_ACCESSOR}}.getNewTimeStamp(1),
       {{FACE_METADATA_ACCESSOR}}.toString()
     );
-    const double timeStampOldSolution = {{FACE_METADATA_ACCESSOR}}.getNewTimeStamp(0);
+    // Doesn't make a difference if we pick left or right
+    const double timeStampOldSolution = {{FACE_METADATA_ACCESSOR}}.getOldTimeStamp(0);
   
     // Set the variable
     // double timeStepSize
@@ -36,8 +37,8 @@ class SolveRiemannProblem(AbstractRungeKuttaDGActionSet):
     
     const double timeStamp = timeStampOldSolution + {{BUTCHER_TABLEAU_RELATIVE_TIME_STEP_SIZES[PREDICATE_NO]}} * timeStepSize;
     
-    assertion3( tarch::la::greaterEquals( timeStepSize, 0.0 ),  timeStamp, timeStepSize, timeStampOldSolution );
-    assertion3( tarch::la::greaterEquals( timeStamp, 0.0 ),     timeStamp, timeStepSize, timeStampOldSolution );
+    assertion5( tarch::la::greaterEquals( timeStepSize, 0.0 ),  timeStamp, timeStepSize, timeStampOldSolution, {{FACE_METADATA_ACCESSOR}}.toString(), marker.toString() );
+    assertion5( tarch::la::greaterEquals( timeStamp, 0.0 ),     timeStamp, timeStepSize, timeStampOldSolution, {{FACE_METADATA_ACCESSOR}}.toString(), marker.toString() );
     
     const double* __restrict__ QIn  = fineGridFace{{UNKNOWN_IDENTIFIER}}EstimateProjection.value;
     double* __restrict__       QOut = fineGridFace{{UNKNOWN_IDENTIFIER}}RiemannSolution.value;

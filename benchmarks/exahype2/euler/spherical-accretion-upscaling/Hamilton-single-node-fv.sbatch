@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --job-name=single-node
+#SBATCH --job-name=single-node-FV
 #SBATCH -p multi
 #SBATCH --nodes=1
 #SBATCH -c 128
@@ -15,15 +15,23 @@ module purge
 module load oneapi
 export FLAVOUR_NOCONFLICT=1
 module load gcc
-#module load intelmpi
+module load intelmpi
 
 
 export OMP_PROC_BIND=close
 #$SLURM_JOB_NUM_NODES
 
-for executable in benchmark-FV-4 benchmark-FV-6 benchmark-FV-8 benchmark-RK2DG2 benchmark-RK3DG3 benchmark-RK4DG4
-do 
-  ./$executable --threads $SLURM_ARRAY_TASK_ID > single-node-$executable-$SLURM_ARRAY_TASK_ID-cores.data
+for type in reg-0
+do
+ for solver in FV-4 FV-6 FV-8
+ do 
+  executable=benchmark-$type-no-opt-$solver
+  echo $executable
+  mpirun ./$executable --threads $SLURM_ARRAY_TASK_ID > single-node-$executable-$SLURM_ARRAY_TASK_ID-cores.data
+  executable=benchmark-$type-opt-$solver
+  echo $executable
+  mpirun ./$executable --threads $SLURM_ARRAY_TASK_ID > single-node-$executable-$SLURM_ARRAY_TASK_ID-cores.data
+ done
 done
  
 

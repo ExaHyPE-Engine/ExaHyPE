@@ -109,8 +109,8 @@ class SeparateSweepsWithEnclaveTasking( SeparateSweeps ):
     self._solver_template_file_class_name     = "SeparateSweeps"
     self._pde_terms_without_state             = pde_terms_without_state
 
-    self._fused_compute_kernel_call_cpu       = "#error Not yet defined. Set self._fused_Riemann_solver_call in your Python solver class."
-    self._fused_compute_kernel_call_gpu       = "#error Not yet defined. Set self._fused_Riemann_solver_call in your Python solver class."
+    self._fused_volumetric_kernel_call_cpu       = "#error Not yet defined. Set self._fused_volumetric_kernel_call_cpu in your Python solver class."
+    self._fused_volumetric_kernel_call_gpu       = "#error Not yet defined. Set self._fused_volumetric_kernel_call_gpu in your Python solver class."
    
     self.create_action_sets()
     self.create_data_structures()
@@ -172,7 +172,7 @@ class SeparateSweepsWithEnclaveTasking( SeparateSweeps ):
     implementationDictionary[ "SOLVER_INCLUDES" ] += self.user_solver_includes
     implementationDictionary[ "SOLVER_INCLUDES" ] += self.user_action_set_includes
 
-    task_name = self._enclave_task_name()
+    task_name = self._volumetric_solver_enclave_task_name()
     generated_solver_files = peano4.output.Jinja2TemplatedHeaderImplementationFilePair(
       "{}.h".format(templatefile_prefix),
       "{}.cpp".format(templatefile_prefix),
@@ -193,8 +193,8 @@ class SeparateSweepsWithEnclaveTasking( SeparateSweeps ):
         exahype2.gpu.add_exahype_objects(output.makefile)
 
 
-  def _enclave_task_name(self): 
-    return "{}EnclaveTask".format(self._name)
+  def _volumetric_solver_enclave_task_name(self): 
+    return "{}_VolumetricSolverEnclaveTask".format(self._name)
 
 
   def add_actions_to_perform_time_step(self, step):
@@ -204,4 +204,15 @@ class SeparateSweepsWithEnclaveTasking( SeparateSweeps ):
     """
     super(SeparateSweepsWithEnclaveTasking, self).add_actions_to_perform_time_step(step)
     step.add_action_set( self._action_set_merge_enclave_task_outcome )
+
+
+  def add_entries_to_text_replacement_dictionary(self,d):
+    super(SeparateSweepsWithEnclaveTasking, self).add_entries_to_text_replacement_dictionary(d)
+    d[ "FUSED_VOLUMETRIC_KERNEL_CALL_CPU"] = jinja2.Template(self._fused_volumetric_kernel_call_cpu, undefined=jinja2.DebugUndefined).render( **d )
+    d[ "FUSED_VOLUMETRIC_KERNEL_CALL_GPU"] = jinja2.Template(self._fused_volumetric_kernel_call_gpu, undefined=jinja2.DebugUndefined).render( **d )
+
+    d[ "SEMAPHORE_LABEL" ]      = exahype2.grid.UpdateCellLabel.get_attribute_name(self._name)
+    d[ "STATELESS_PDE_TERMS" ]  = self._pde_terms_without_state
+ 
+    
  
