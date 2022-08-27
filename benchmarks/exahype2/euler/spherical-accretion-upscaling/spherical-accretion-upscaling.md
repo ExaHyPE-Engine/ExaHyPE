@@ -15,21 +15,22 @@ optimisation.
 Besides that and the different solver flavours, we have different scenarios:
 
 
-<table>
-<tr><td> scenario </td><td> description </td></tr>
-<tr><td> plot </td><td>
-  Very simple regular grid setup, which just helps you to visualise the 
-  setup and problem challenge. Coarse mesh and early termination criterion,
-  i.e. not really anything interesting here to see. 
-  </td></tr>
-<tr><td> 0 </td><td>
-  Simple regular grid over the unit interval. This is by far the smallest
-  setup. Well-suited for a single node run, it is not really a setup that
-  represents a computation which could yield scientific insight. Too small
-  is the computational domain and the resolution around the black hole is 
-  insufficient to track the evoluation if the masses and the arising shocks. 
-  </td></tr>
-</table>
+        ------------------------------------------------------------------
+        | scenario | description
+        ------------------------------------------------------------------
+        | plot     | Very simple regular grid setup, which just helps you 
+        |          | to visualise the setup and problem challenge. Coarse 
+        |          | mesh and early termination criterion, i.e. not really
+        |          | anything interesting here to see.
+        ------------------------------------------------------------------
+        | reg-0    | Simple regular grid over the unit interval. This is 
+        |          | by far the smallest setup. Well-suited for a single 
+        |          | node run, it is not really a setup that represents a 
+        |          | computation which could yield scientific insight. Too 
+        |          | small is the computational domain and the resolution 
+        |          | around the overdensity is insufficient to track the 
+        |          | evolution if the masses and the arising shocks. 
+        ------------------------------------------------------------------
 
  
 
@@ -58,6 +59,9 @@ following builds:
        python3 create-benchmark-executable.py --type $type -m release -s dg4-rk4 --optimise-stateless
      done     
      
+     
+### Underlying core configurations
+
 I usually configure my builds with MPI and a tasking back-end of choice (OpenMP,
 TBB, SYCL or C++) and use GPUs for all benchmarks if they are available. As always,
 the Python script will pick up the autotool settings from the general Peano build.     
@@ -66,13 +70,29 @@ Consult the documentation's appendix (the pdf in the documentation subdirectory)
 for some characteristic settings and module choices that we use quite regularly.
 My Hamilton 8 (a Durham machine) setup for example reads
  
-     module purge
-     module load oneapi
-     export FLAVOUR_NOCONFLICT=1
-     module load gcc
-     module load intelmpi
-     export I_MPI_CXX=icpx
+      module purge
+      module load oneapi
+      export FLAVOUR_NOCONFLICT=1
+      module load gcc
+      module load intelmpi
+      export I_MPI_CXX=icpx
      ./configure CC=icpx CXX=icpx CXXFLAGS="-Ofast --std=c++20 -mtune=native -march=native -fma -fomit-frame-pointer -fiopenmp -Wno-unknown-attributes" LDFLAGS="-fiopenmp" --with-multithreading=omp --enable-exahype --enable-loadbalancing --enable-blockstructured --with-mpi=mpiicpc
+
+### Clean-up
+
+If you want to clean up your directory after the builds, run the following 
+steps:
+
+       rm Abstract*
+       rm Readme*
+       rm *.o
+       rm Constants.h Makefile benchmark-main.*
+       
+If you also want to clean up the directories with all the glue code, you can 
+invoke      
+
+        rm -rf celldata facedata observers repositories tasks
+        
 
 
 ## Run experiments
@@ -81,6 +101,9 @@ I recommend to map the runs onto SLURM array scripts. An example script is conta
 within the present directory. It is tailored towards the Hamilton supercomputer at 
 Durham, but certainly can serve as a baseline script or inspiration for your own 
 scripts.
+
+
+### Copy data back
 
 I solely rely on Peano's pre-manufactured postprocessing scripts for this benchmark 
 Consult Peano's documentation (the pdf in the directory with the name documentation)
@@ -119,6 +142,9 @@ good first impression of the code performance:
       export PYTHONPATH=../../../../python
       python3 ../../../../python/exahype2/postprocessing/plot-scaling.py
 
+
+### Single node scaling
+
 We first study the impact of the optimisation on the various solvers:
       
       for type in 0
@@ -155,3 +181,24 @@ exclusively on performance aspects here:
 
 <img src="example-output/single-node-solver-types-0-opt.png" />
 
+
+### Distribution of threads vs ranks
+
+It is not clear how many ranks one should use per node and, consequently,
+how many cores can be used effectively by a rank. This choice, likely, 
+depends on the type of NUMA architectures used.
+
+It is hence reasonably to play around with different rank distributions 
+before we upscaling further. On AMD's EPYC with 128 cores per node, I 
+typically study the following setups:
+
+      number of ranks per node  |  number of cores per rank
+      -----------------------------------------------------
+      1                         |  128
+      2                         |   64
+      4                         |   32
+      8                         |   16
+      16                        |    8
+      32                        |    4
+      
+Note that SLURM refers to tasks, and not to ranks.
