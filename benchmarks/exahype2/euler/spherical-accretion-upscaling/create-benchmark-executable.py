@@ -46,15 +46,36 @@ unknowns    = {
   "E":   1,
 }
 number_of_unknowns  = sum(unknowns.values())
-if args.type=="plot" and "fv" in args.solver:
-  max_h               = 0.2
-  min_h               = 0.2
-elif args.type=="plot" and "dg" in args.solver:
-  max_h               = 0.1
-  min_h               = 0.1
+
+if args.type=="plot" in args.solver:
+  baseline_max_h               = 0.2
+  baseline_min_h               = 0.2
 elif args.type=="reg-0":
-  max_h               = 0.03
-  min_h               = 0.03
+  baseline_max_h               = 0.008
+  baseline_min_h               = 0.008
+
+#
+# For Finite Volumes, we use the same mesh size, as the mesh size
+# corresponds to volume sizes, and the patch size is, in principle,
+# only a way to organise the volumes. For DG, we really have to make
+# the cells coarser with increasing order (to fit into memory and
+# to remain reasonable by means of accuracy).
+#
+if "dg2-" in args.solver:
+  max_h = baseline_max_h * 3
+  min_h = baseline_max_h * 3
+elif "dg3-" in args.solver:
+  max_h = baseline_max_h * 4
+  min_h = baseline_max_h * 4 
+elif "dg4-" in args.solver:
+  max_h = baseline_max_h * 5
+  min_h = baseline_max_h * 5
+elif "fv-" in args.solver:
+  max_h = baseline_max_h 
+  min_h = baseline_max_h 
+
+
+
 auxiliary_variables = 0
 
 
@@ -71,8 +92,8 @@ if "fv" in args.solver:
                                                                                    patch_size           = patch_size,
                                                                                    unknowns             = number_of_unknowns,
                                                                                    auxiliary_variables  = auxiliary_variables,
-                                                                                   min_volume_h         = max_h / 8, 
-                                                                                   max_volume_h         = max_h / 8,
+                                                                                   min_volume_h         = max_h, 
+                                                                                   max_volume_h         = max_h,
                                                                                    time_step_relaxation = 0.1,
                                                                                    flux                 = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
                                                                                    eigenvalues          = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
