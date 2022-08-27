@@ -89,8 +89,9 @@ double applications::exahype2::euler::sphericalaccretion::MassAccumulator::getMa
 
 void applications::exahype2::euler::sphericalaccretion::MassAccumulator::finishAccumulation() {
   #ifdef Parallel
-  int globalMaxNumberOfBuckets = 0;
+  int globalMaxNumberOfBuckets = _currentMass.size();
   int localMaxNumberOfBuckets  = _currentMass.size();
+  logDebug( "finishAccumulation()", "have " << localMaxNumberOfBuckets << " shells/buckets on rank" );
   tarch::mpi::Rank::getInstance().allReduce(
     &localMaxNumberOfBuckets,
     &globalMaxNumberOfBuckets,
@@ -98,8 +99,9 @@ void applications::exahype2::euler::sphericalaccretion::MassAccumulator::finishA
     MPI_MAX,
     [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); }
   );
+  logDebug( "finishAccumulation()", "have " << globalMaxNumberOfBuckets << " shells/buckets globally" );
 
-  assertion( globalMaxNumberOfBuckets<=_currentMass.size() );
+  assertion2( globalMaxNumberOfBuckets>=_currentMass.size(), globalMaxNumberOfBuckets, _currentMass.size() );
   while (globalMaxNumberOfBuckets<_currentMass.size()) {
     _currentMass.push_back( 0.0 );
   }
@@ -107,7 +109,8 @@ void applications::exahype2::euler::sphericalaccretion::MassAccumulator::finishA
   double* globalBucketValues = new double[globalMaxNumberOfBuckets];
   double* localBucketValues  = new double[globalMaxNumberOfBuckets];
   for (int bucket=0; bucket<globalMaxNumberOfBuckets; bucket++) {
-    localBucketValues[bucket] = _currentMass[bucket];
+    localBucketValues[bucket]  = _currentMass[bucket];
+    globalBucketValues[bucket] = _currentMass[bucket];
   }
 
   tarch::mpi::Rank::getInstance().allReduce(
