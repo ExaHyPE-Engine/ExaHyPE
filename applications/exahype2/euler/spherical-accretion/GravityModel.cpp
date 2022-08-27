@@ -67,17 +67,18 @@ void applications::exahype2::euler::sphericalaccretion::initialiseOverdensity_Ga
   double                                       additionalMass,
   double                                       baselineDensity,
   double                                       baselinePressure,
-  double                                       gamma
+  double                                       gamma,
+  double                                       gaussianScaling
 ) {
   double radius = tarch::la::norm2( x );
 
-  double standardDeviation = 2.0 * topHatRadius;
+  double standardDeviation = topHatRadius;
 
   double exponent          = -0.5 * (radius/standardDeviation) * (radius/standardDeviation);
 
   double gaussian          = 1.0 / ( standardDeviation * std::sqrt(2.0*tarch::la::PI) ) * std::exp( exponent );
 
-  double additionalDensity = additionalMass * gaussian;
+  double additionalDensity = additionalMass * gaussian * gaussianScaling;
 
   Q[0] = baselineDensity + additionalDensity;
   Q[1] = 0.0;
