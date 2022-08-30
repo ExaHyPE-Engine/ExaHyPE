@@ -37,7 +37,7 @@ class InsertParticlesFromFile(ActionSet):
     tarch::multicore::Lock lock( _semaphore );
   
     std::list< tarch::la::Vector<Dimensions,double> > coords = _fileReader.getParticlesWithinVoxel(marker.x(), marker.h(), true);  
-    for (auto& p: coords) {
+    for (auto* p: coords) {
       globaldata::{{PARTICLE}}* newParticle = new globaldata::{{PARTICLE}}();
       newParticle->setNumber(0, _spacetreeId);
       newParticle->setNumber(1, _particleNumberOnThisTree);

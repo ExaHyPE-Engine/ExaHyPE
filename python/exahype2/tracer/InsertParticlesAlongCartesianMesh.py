@@ -50,7 +50,7 @@ class InsertParticlesAlongCartesianMesh(ActionSet):
       {{ROUND_DOWN}},
       {{NOISE}}
     );
-    for (auto& p: newParticles) {
+    for (auto* p: newParticles) {
       p->setNumber(0,_spacetreeId);
       p->setNumber(1,_particleNumberOnThisTree);
       _particleNumberOnThisTree++;

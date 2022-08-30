@@ -130,7 +130,7 @@ class ParticleParticleInteraction(ActionSet):
 
   __Template_TouchVertexFirstTime = jinja2.Template("""
   auto& localParticles = fineGridVertex{{LOCAL_PARTICLES_CONTAINER}};
-  for (auto& localParticle: localParticles ) {
+  for (auto* localParticle: localParticles ) {
     {{TOUCH_VERTEX_FIRST_COMPUTE_KERNEL}}
   }
 """)
@@ -138,7 +138,7 @@ class ParticleParticleInteraction(ActionSet):
 
   __Template_TouchVertexLastTime = jinja2.Template("""
   auto& localParticles = fineGridVertex{{LOCAL_PARTICLES_CONTAINER}};
-  for (auto& localParticle: localParticles ) {
+  for (auto* localParticle: localParticles ) {
     {{TOUCH_VERTEX_LAST_COMPUTE_KERNEL}}
   }
 """)
@@ -149,11 +149,11 @@ class ParticleParticleInteraction(ActionSet):
     std::list< globaldata::{{LOCAL_PARTICLE}}* >  localParticles;
     _numberOfActiveParticlesAdded.push_back(0);
     for (int i=0; i<TwoPowerD; i++) {
-      for (auto& p: fineGridVertices{{ACTIVE_PARTICLES_CONTAINER}}(i) ) {
+      for (auto* p: fineGridVertices{{ACTIVE_PARTICLES_CONTAINER}}(i) ) {
         _activeParticles.push_front( p );
         _numberOfActiveParticlesAdded.back()++;
       }
-      for (auto& p: fineGridVertices{{LOCAL_PARTICLES_CONTAINER}}(i) ) {
+      for (auto* p: fineGridVertices{{LOCAL_PARTICLES_CONTAINER}}(i) ) {
         {% if BIASED_LOCALITY_CHECK %}
         bool append = marker.isContainedWithBias( p->getX() );
         {% else %}
@@ -166,8 +166,8 @@ class ParticleParticleInteraction(ActionSet):
     }
 
     std::list< globaldata::{{ACTIVE_PARTICLE}}* >&  activeParticles = _activeParticles;
-    for (auto& localParticle: localParticles )
-    for (auto& activeParticle: activeParticles ) {
+    for (auto* localParticle: localParticles )
+    for (auto* activeParticle: activeParticles ) {
       {{PARTICLE_PARTICLE_INTERACTION_KERNEL}}
     }
   }
