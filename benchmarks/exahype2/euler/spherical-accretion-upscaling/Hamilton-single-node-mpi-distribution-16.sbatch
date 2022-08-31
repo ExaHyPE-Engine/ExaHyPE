@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --job-name=single-node-RKDG
+#SBATCH --job-name=mpi-dist-16
 #SBATCH -p multi
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=16
