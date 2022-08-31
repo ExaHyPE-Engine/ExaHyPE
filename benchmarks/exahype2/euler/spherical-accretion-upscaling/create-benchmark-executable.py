@@ -47,7 +47,7 @@ unknowns    = {
 }
 number_of_unknowns  = sum(unknowns.values())
 
-if args.type=="plot" in args.solver:
+if args.type=="plot":
   baseline_max_h               = 0.2
   baseline_min_h               = 0.2
 elif args.type=="reg-0":
@@ -84,6 +84,11 @@ if args.optimise_stateless:
   executable_name = executable_name + "-opt"
 else:
   executable_name = executable_name + "-no-opt"
+
+
+if args.mode!="release":
+  executable_name = executable_name + "-" + args.mode
+
 
     
 if "fv" in args.solver:
