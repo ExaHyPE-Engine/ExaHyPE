@@ -102,20 +102,17 @@ void applications::exahype2::euler::sphericalaccretion::MassAccumulator::finishA
   logDebug( "finishAccumulation()", "have " << globalMaxNumberOfBuckets << " shells/buckets globally" );
 
   assertion2( globalMaxNumberOfBuckets>=_currentMass.size(), globalMaxNumberOfBuckets, _currentMass.size() );
-  while (globalMaxNumberOfBuckets<_currentMass.size()) {
-    _currentMass.push_back( 0.0 );
-  }
 
   double* globalBucketValues = new double[globalMaxNumberOfBuckets];
   double* localBucketValues  = new double[globalMaxNumberOfBuckets];
   for (int bucket=0; bucket<globalMaxNumberOfBuckets; bucket++) {
-    localBucketValues[bucket]  = _currentMass[bucket];
-    globalBucketValues[bucket] = _currentMass[bucket];
+    localBucketValues[bucket]  = bucket < _currentMass.size() ? _currentMass[bucket] : 0.0;
+    globalBucketValues[bucket] = bucket < _currentMass.size() ? _currentMass[bucket] : 0.0;
   }
 
   tarch::mpi::Rank::getInstance().allReduce(
-    &localBucketValues,
-    &globalBucketValues,
+    localBucketValues,
+    globalBucketValues,
     globalMaxNumberOfBuckets, 
     MPI_DOUBLE,
     MPI_SUM,
@@ -123,13 +120,18 @@ void applications::exahype2::euler::sphericalaccretion::MassAccumulator::finishA
   );
 
   for (int bucket=0; bucket<globalMaxNumberOfBuckets; bucket++) {
-    _currentMass[bucket] = globalBucketValues[bucket];
+    if (bucket<_currentMass.size()) {
+      _currentMass[bucket] = globalBucketValues[bucket];
+    }
+    else {
+      _currentMass.push_back( globalBucketValues[bucket] );
+    }
   }
   delete[] globalBucketValues;
   delete[] localBucketValues;
   #endif
 
-  logInfo( "finishAccumulation()", "old relevant radius equals r=" << getMaxRelevantRadius() );
+  logDebug( "finishAccumulation()", "old relevant radius equals r=" << getMaxRelevantRadius() );
 
   _previousMassAccumulated.clear();
   _previousMassAccumulated.insert( _previousMassAccumulated.end(), _currentMass.begin(), _currentMass.end() );
@@ -153,16 +155,20 @@ void applications::exahype2::euler::sphericalaccretion::MassAccumulator::finishA
     }
   }
   largestRelevantShell = std::max(0,std::min(largestRelevantShell+1,static_cast<int>(_previousMassAccumulated.size())));
-  logInfo( "finishAccumulation()", "roll over " << largestRelevantShell << " out of " << _previousMassAccumulated.size() << " buckets (remaining buckets make no significant contribution)" );
+  logDebug( "finishAccumulation()", "roll over " << largestRelevantShell << " out of " << _previousMassAccumulated.size() << " buckets (remaining buckets make no significant contribution)" );
   _previousMassAccumulated.resize( largestRelevantShell );
 
 
   double currentShellWidth = 0.0;
   for( auto& p: _previousMassAccumulated ) {
     currentShellWidth += _shellWidth;
-    logInfo( "finishAccumulation()", "bucket (r<=" << currentShellWidth << ") = " << p );
+    if (tarch::mpi::Rank::getInstance().isGlobalMaster()) {
+      logInfo( "finishAccumulation()", "bucket (r<=" << currentShellWidth << ") = " << p );
+    }
   }
-  logInfo( "finishAccumulation()", "new relevant radius equals r=" << getMaxRelevantRadius() );
+  if (tarch::mpi::Rank::getInstance().isGlobalMaster()) {
+    logInfo( "finishAccumulation()", "new relevant radius equals r=" << getMaxRelevantRadius() );
+  }
 }
 
 
