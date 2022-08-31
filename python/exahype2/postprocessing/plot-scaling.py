@@ -134,7 +134,13 @@ A generic script to create speedup plots.
             data_points.append( new_data ) 
           os.remove( data_file )
           
-        visualise( data_points, symbol_counter, colour_counter )
+        if args.verbose:
+          print( "have successfully parsed {} files".format(len(data_files)) )
+
+        if len(data_files)>0:
+          visualise( data_points, symbol_counter, colour_counter )
+        else:
+          print( "ERROR: no files in archive")
       except Exception as e:
         print( "Error: " + str(e) )
         tar = None
