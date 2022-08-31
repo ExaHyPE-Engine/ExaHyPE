@@ -7,7 +7,7 @@
 #SBATCH --time=04:00:00
 #SBATCH --mail-type=END
 #SBATCH --mail-user=tobias.weinzierl@durham.ac.uk
-#SBATCH --mail-user=tobias.weinzierl@durham.ac.uk
+#SBATCH --qos=shortwide
 
 source /etc/profile.d/modules.sh
 
