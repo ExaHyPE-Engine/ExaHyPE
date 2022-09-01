@@ -64,8 +64,8 @@ class exahype2::EnclaveTask: public tarch::multicore::Task {
     /**
      * These are the reconstructed values
      */
-    double*                                      _inputValues;
-    double*                                      _outputValues;
+    const double* __restrict__                   _inputValues;
+    double* __restrict__                         _outputValues;
     const double                                 _t;
     const double                                 _dt;
     int                                          _numberOfInputValues;
@@ -87,7 +87,7 @@ class exahype2::EnclaveTask: public tarch::multicore::Task {
       const ::peano4::datamanagement::CellMarker&    marker,
       double                                         t,
       double                                         dt,
-      double*                                        inputValues,
+      const double* __restrict__                     inputValues,
       int                                            numberOfInputValues,
       int                                            numberOfResultValues,
       Functor                                        functor
