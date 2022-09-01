@@ -101,7 +101,7 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::EnclaveTask
       const ::peano4::datamanagement::CellMarker& marker, 
       double                                      t,
       double                                      dt,
-      double* __restrict__                        reconstructedPatch, 
+      const double* __restrict__                  reconstructedPatch,
       double* __restrict__                        targetPatch
     );
     
@@ -110,7 +110,7 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::EnclaveTask
       const ::peano4::datamanagement::CellMarker& marker, 
       double                                      t,
       double                                      dt,
-      double* __restrict__                        reconstructedPatch
+      const double* __restrict__                  reconstructedPatch
     );
 
     bool isSmartMPITask() const override;
