@@ -70,7 +70,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::applyKernelToCell(
   const ::peano4::datamanagement::CellMarker& marker,
   double                                      t,
   double                                      dt,
-  double* __restrict__                        copyOfLinearCombinationOfPreviousShots
+  const double* __restrict__                  copyOfLinearCombinationOfPreviousShots
 ):
   ::exahype2::EnclaveTask(
     _enclaveTaskTypeId,

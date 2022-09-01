@@ -73,7 +73,7 @@ void exahype2::dg::tests::CellIntegralTest::runEulerOrder2OnStationarySetup() {
   double QOut[numberOfDoFs * (unknowns+auxiliaryVariables)];
 
   for (int dof=0; dof<numberOfDoFs; dof++) {
-    QIn[dof*(unknowns+auxiliaryVariables)+0] = 1.0;
+    QIn[dof*(unknowns+auxiliaryVariables)+0] = 0.1;
     QIn[dof*(unknowns+auxiliaryVariables)+1] = 0.0;
     QIn[dof*(unknowns+auxiliaryVariables)+2] = 0.0;
     QIn[dof*(unknowns+auxiliaryVariables)+3] = 0.0;
@@ -126,7 +126,7 @@ void exahype2::dg::tests::CellIntegralTest::runEulerOrder2OnStationarySetup() {
   }
 
   for (int dof=0; dof<numberOfDoFs; dof++) {
-    QIn[dof*(unknowns+auxiliaryVariables)+0] = 1.0;
+    QIn[dof*(unknowns+auxiliaryVariables)+0] = 0.1;
     QIn[dof*(unknowns+auxiliaryVariables)+1] = 0.0;
     QIn[dof*(unknowns+auxiliaryVariables)+2] = 0.0;
     QIn[dof*(unknowns+auxiliaryVariables)+3] = 0.0;
@@ -204,7 +204,7 @@ void exahype2::dg::tests::CellIntegralTest::runEulerOrder4OnStationarySetup() {
   double QOut[numberOfDoFs * (unknowns+auxiliaryVariables)];
 
   for (int dof=0; dof<numberOfDoFs; dof++) {
-    QIn[dof*(unknowns+auxiliaryVariables)+0] = 1.0;
+    QIn[dof*(unknowns+auxiliaryVariables)+0] = 0.1;
     QIn[dof*(unknowns+auxiliaryVariables)+1] = 0.0;
     QIn[dof*(unknowns+auxiliaryVariables)+2] = 0.0;
     QIn[dof*(unknowns+auxiliaryVariables)+3] = 0.0;
