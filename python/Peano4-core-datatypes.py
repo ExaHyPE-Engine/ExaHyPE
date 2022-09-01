@@ -152,8 +152,10 @@ grid_statistics.write_implementation_file("../src/peano4/grid/GridStatistics.cpp
 automaton_state = dastgen2.DataModel( "peano4::grid::AutomatonState" )
 
 automaton_state.add_attribute( dastgen2.attributes.Integer( "level",min_value=0,max_value=63 ) )
-automaton_state.add_attribute( peano4.dastgen2.Peano4DoubleArray( "x", "Dimensions", valid_mantissa_bits=4 ))
-automaton_state.add_attribute( peano4.dastgen2.Peano4DoubleArray( "h", "Dimensions", valid_mantissa_bits=4 ))
+automaton_state.add_attribute( peano4.dastgen2.Peano4DoubleArray( "x",
+    "Dimensions", valid_mantissa_bits=23 ))
+automaton_state.add_attribute( peano4.dastgen2.Peano4DoubleArray( "h",
+    "Dimensions", valid_mantissa_bits=23 ))
 
 automaton_state.add_attribute( dastgen2.attributes.Boolean( "inverted" ) )
 automaton_state.add_attribute( dastgen2.attributes.BooleanArray( "evenFlags",
@@ -179,8 +181,10 @@ automaton_state.write_implementation_file("../src/peano4/grid/AutomatonState.cpp
 #
 grid_traversal_event = dastgen2.DataModel( "peano4::grid::GridTraversalEvent" )
 
-grid_traversal_event.add_attribute( peano4.dastgen2.Peano4DoubleArray( "x", "Dimensions", 3 ))
-grid_traversal_event.add_attribute( peano4.dastgen2.Peano4DoubleArray( "h", "Dimensions", 3 ))
+grid_traversal_event.add_attribute( peano4.dastgen2.Peano4DoubleArray( "x",
+    "Dimensions", valid_mantissa_bits=23 ) )
+grid_traversal_event.add_attribute( peano4.dastgen2.Peano4DoubleArray( "h",
+    "Dimensions", valid_mantissa_bits=23 ) )
 grid_traversal_event.add_attribute( dastgen2.attributes.BooleanArray(
     "hasBeenRefined", "TwoPowerD", compress=True ) )
 grid_traversal_event.add_attribute( dastgen2.attributes.BooleanArray(
@@ -245,7 +249,7 @@ grid_vertex.add_attribute( dastgen2.attributes.Integer(
 
 # Brauch ich nur im Debug mode. Das wird bisher net unterstuetzt
 grid_vertex.add_attribute( peano4.dastgen2.Peano4DoubleArray( "x", "Dimensions",
-    valid_mantissa_bits= 4, ifdefs = ["PeanoDebug>0"] ) )
+    valid_mantissa_bits= 23, ifdefs = ["PeanoDebug>0"] ) )
 grid_vertex.add_attribute( dastgen2.attributes.Integer( "level" ) )
 
 grid_vertex.add_aspect( peano4.dastgen2.MPI( peano4.datamodel.DoFAssociation.Generic ) )

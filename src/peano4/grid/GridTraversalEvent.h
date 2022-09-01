@@ -172,13 +172,13 @@ struct peano4::grid::GridTraversalEvent {
   
   private:
 #if defined(__PACKED_ATTRIBUTES_LANGUAGE_EXTENSION__)
-    [[clang::truncate_mantissa(3)]]  double   _x[Dimensions];
+    [[clang::truncate_mantissa(23)]]  double   _x[Dimensions];
 #endif
 #if !defined(__PACKED_ATTRIBUTES_LANGUAGE_EXTENSION__)
       tarch::la::Vector<Dimensions,double>   _x;
 #endif
 #if defined(__PACKED_ATTRIBUTES_LANGUAGE_EXTENSION__)
-    [[clang::truncate_mantissa(3)]]  double   _h[Dimensions];
+    [[clang::truncate_mantissa(23)]]  double   _h[Dimensions];
 #endif
 #if !defined(__PACKED_ATTRIBUTES_LANGUAGE_EXTENSION__)
       tarch::la::Vector<Dimensions,double>   _h;
