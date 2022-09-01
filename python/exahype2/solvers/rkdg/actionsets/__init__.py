@@ -5,11 +5,12 @@ from .AdaptivityCriterion                 import AdaptivityCriterion
 from .InitialCondition                    import InitialCondition
 from .LinearCombinationOfEstimates        import LinearCombinationOfEstimates
 from .ProjectLinearCombinationOfEstimatesOntoFaces import ProjectLinearCombinationOfEstimatesOntoFaces
-from .ComputeFinalLinearCombinationAndProjectSolutionOntoFaces                     import ComputeFinalLinearCombinationAndProjectSolutionOntoFaces
+from .ComputeFinalLinearCombination       import ComputeFinalLinearCombination
 from .SolveVolumeIntegral                 import SolveVolumeIntegral
 from .HandleBoundary                      import HandleBoundary
 from .SolveRiemannProblem                 import SolveRiemannProblem
 from .AddVolumeAndFaceSolution            import AddVolumeAndFaceSolution
 from .DynamicAMR                          import DynamicAMR
 from .PostprocessSolution                 import EmptyPostprocessSolution
+from .PostprocessSolution                 import DoFWisePostprocessSolution
 

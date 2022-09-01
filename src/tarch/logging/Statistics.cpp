@@ -1,4 +1,5 @@
 #include "Statistics.h"
+#include "tarch/Assertions.h"
 #include "tarch/multicore/Lock.h"
 #include "tarch/mpi/Rank.h"
 
@@ -18,8 +19,8 @@ tarch::logging::Statistics& tarch::logging::Statistics::getInstance() {
 
 
 tarch::logging::Statistics::Statistics():
-  _maxCountInBetweenTwoMeasurements(100),
-  _maxTimeInBetweenTwoMeasurements(2.0),
+  _maxCountInBetweenTwoMeasurements(1000),
+  _maxTimeInBetweenTwoMeasurements(1.0),
   _globalWatch( "tarch::logging::Statistics", "Statistics", false) {
 }
 
@@ -31,25 +32,57 @@ tarch::logging::Statistics::DataSet::DataSet():
 }
 
 
+tarch::logging::Statistics::DataSet::DataSet(double time):
+  _watch("tarch::logging::Statistics", "Statistics", false),
+  _counter(0) {
+  _data.push_back( std::make_tuple(time,0.0,0.0,0.0,0) );
+}
+
+
+void tarch::logging::Statistics::DataSet::createNewSnapshot(double time) {
+  double lastValueFromPreviousSnapshot = std::get<1>( _data.back() );
+  _data.push_back( std::make_tuple(
+    time,
+    lastValueFromPreviousSnapshot,
+    lastValueFromPreviousSnapshot,
+    lastValueFromPreviousSnapshot,
+    0
+  ));
+}
+
+
 void tarch::logging::Statistics::clear() {
   _map.clear();
 }
 
 
 bool tarch::logging::Statistics::acceptNewData(const std::string& identifier, bool disableSampling) {
-  if ( _map.count( identifier )==0 ) {
-    _map.insert( std::pair<std::string,DataSet>( identifier, DataSet() ));
-  }
-
   _map[identifier]._counter++;
   _map[identifier]._watch.stop();
 
-  bool counterGuard = _map[identifier]._counter>_maxCountInBetweenTwoMeasurements;
-  bool timerGuard   = _map[identifier]._watch.getCalendarTime() > _maxTimeInBetweenTwoMeasurements;
+  bool result = false;
 
-  bool guard = disableSampling or counterGuard or timerGuard;
+  if (
+    disableSampling
+  ) {
+   result = true;
+  }
+  else if (
+    _map[identifier]._data.size()>1
+    and
+    std::get<1>( _map[identifier]._data[_map[identifier]._data.size()-1] ) == std::get<1>( _map[identifier]._data[_map[identifier]._data.size()-2] )
+  ) {
+    result = false;
+  }
+  else if (
+    _map[identifier]._counter>=_maxCountInBetweenTwoMeasurements
+    or
+    _map[identifier]._watch.getCalendarTime() > _maxTimeInBetweenTwoMeasurements
+  ) {
+    result = true;
+  }
 
-  if (guard) {
+  if (result) {
     _map[identifier]._counter = 0;
     _map[identifier]._watch.start();
     return true;
@@ -58,41 +91,50 @@ bool tarch::logging::Statistics::acceptNewData(const std::string& identifier, bo
 }
 
 
+void tarch::logging::Statistics::initData(const std::string& identifier) {
+  if ( _map.count( identifier )==0 ) {
+     _globalWatch.stop();
+     double t = _globalWatch.getCalendarTime();
+
+    _map.insert( std::pair<std::string,DataSet>( identifier, DataSet(t) ));
+  }
+}
+
+
+void tarch::logging::Statistics::updateDataSnapshot(const std::string& identifier, double value) {
+  assertion( _map.count( identifier )==1 );
+  std::get<1>( _map[identifier]._data.back() ) = value;
+  std::get<2>( _map[identifier]._data.back() ) = std::min(std::get<2>( _map[identifier]._data.back() ), value);
+  std::get<3>( _map[identifier]._data.back() ) = std::max(std::get<3>( _map[identifier]._data.back() ), value);
+  std::get<4>( _map[identifier]._data.back() ) = 1 + std::get<4>( _map[identifier]._data.back() );
+}
+
 
 #ifdef TrackStatistics
 void tarch::logging::Statistics::log( const std::string& identifier, double value, bool disableSampling ) {
   tarch::multicore::Lock lock(_semaphore);
+  initData(identifier);
+  updateDataSnapshot(identifier,value);
   if ( acceptNewData(identifier, disableSampling) ) {
     _globalWatch.stop();
     double t = _globalWatch.getCalendarTime();
     logDebug( "log(string,double)", identifier << "=" << value );
-    _map[identifier]._data.push_back( std::pair<double,double>(t,value) );
+    _map[identifier].createNewSnapshot(t);
   }
 }
 
 
 void tarch::logging::Statistics::inc( const std::string& identifier, double value, bool disableSampling ) {
   tarch::multicore::Lock lock(_semaphore);
+  initData( identifier );
 
-  if ( _map.count( identifier )==0 ) {
-     _globalWatch.stop();
-     double t = _globalWatch.getCalendarTime();
+  double newValue = std::get<1>( _map[identifier]._data.back() ) + value;
+  updateDataSnapshot(identifier,newValue);
 
-    _map.insert( std::pair<std::string,DataSet>( identifier, DataSet() ));
-    _map[identifier]._data.push_back( std::pair<double,double>(t,value) );
-    _map[identifier]._data.push_back( std::pair<double,double>(t,value) ); // second one will be updated
-  }
-  else {
-    double newValue = _map[identifier]._data.back().second + value;
-    _map[identifier]._data.back().second = newValue;
-
-    if ( acceptNewData(identifier, disableSampling) ) {
-      _globalWatch.stop();
-      double t = _globalWatch.getCalendarTime();
-      _map[identifier]._data.back().first  = t;
-
-      _map[identifier]._data.push_back( std::pair<double,double>(t,newValue) );
-    }
+  if ( acceptNewData(identifier, disableSampling) ) {
+    _globalWatch.stop();
+    double t = _globalWatch.getCalendarTime();
+    _map[identifier].createNewSnapshot(t);
   }
 }
 #endif
@@ -120,7 +162,10 @@ void tarch::logging::Statistics::writeToCSV( std::string filename ) {
     t = std::numeric_limits<double>::max();
     for (auto& p: _map) {
       if (not p.second._data.empty()) {
-        t = std::min(t,p.second._data.front().first);
+        t = std::min(
+          t,
+          std::get<0>(p.second._data.front())
+        );
       }
     } 
     if (t<std::numeric_limits<double>::max()) {
@@ -129,13 +174,17 @@ void tarch::logging::Statistics::writeToCSV( std::string filename ) {
         if (
           not p.second._data.empty()
           and
-          p.second._data.front().first < t + _maxTimeInBetweenTwoMeasurements
+          std::get<0>(p.second._data.front()) < t + _maxTimeInBetweenTwoMeasurements
         ) {
-          file << ", " << p.second._data[0].second;
+          file << ", (" << std::get<1>(p.second._data.front())
+              << "/" << std::get<2>(p.second._data.front())
+              << "/" << std::get<3>(p.second._data.front())
+              << "/#" << std::get<4>(p.second._data.front())
+              << ")";
           p.second._data.erase(p.second._data.begin());
         }
         else {
-          file << ", ";
+          file << ", (./././.)";
         }
       }
     }

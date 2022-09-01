@@ -410,7 +410,6 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::mayPlot() const {
 {{ABSTRACT_SOLVER_USER_DEFINITIONS}}
 
 
-{% if STATELESS_PDE_TERMS %}
 bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::patchCanUseStatelessPDETerms(
   const tarch::la::Vector<Dimensions,double>&  patchCentre,
   const tarch::la::Vector<Dimensions,double>&  patchH,
@@ -419,7 +418,6 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::patchCanUseStatelessPDETerms(
 ) const {
   return true;
 }
-{% endif %}
 
 
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startSimulation() {

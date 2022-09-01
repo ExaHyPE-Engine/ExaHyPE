@@ -113,14 +113,12 @@ void riemannSolverLinear(SolverType& solver, double* FL, double* FR,
       
     
       if(useNCP) {
-        //solver.nonConservativeProduct(Qavg, gradQ, ncp);        
-        solver.nonConservativeProduct(Qavg, gradQ_vec, ncp[direction]);
+//        solver.nonConservativeProduct(Qavg, gradQ, ncp);
+        solver.nonConservativeProduct(Qavg, gradQ_vec, ncp_vec);
         
-        /*
         if(useMM){
           solver.multiplyMaterialParameterMatrix(Qavg, ncp);
         }
-        */
         
         for(int l=0; l < numberOfVariables; l++) {
           FL[idx_FLR(j, l)] += ncp[direction][l];
@@ -131,11 +129,9 @@ void riemannSolverLinear(SolverType& solver, double* FL, double* FR,
       if(useFlux){
         solver.flux(Qdiff, flux);
 
-        /*
         if(useMM){
           solver.multiplyMaterialParameterMatrix(Qavg, flux);
         }
-        */
   
         for(int l=0; l < numberOfVariables; l++) {
           FL[idx_FLR(j, l)] +=  flux[direction][l];

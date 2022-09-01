@@ -14,6 +14,21 @@ class UpdateFaceLabel(ActionSet):
   
    SetLabels is an action set which is automatically merged into all ExaHyPE2
    steps by the project. There's nothing for the user solvers to be done here.
+   
+   There are four different fields per face:
+   
+   - Updated: Boolean[2]
+     Shows if the corresponding adjacent cell (left vs right) has performed a
+     time step.
+   - UpdatedTimeStamp: Double[2]
+     Used only by the Finite Volumes solver so far to store a new time stamp
+     temporarily which is later on rolled over into the real time stamp.
+   - NewTimeStamp: Double[2]
+     New (and also current time stamp). This time stamp determines for example
+     if you want to do a local time step or not.
+   - OldTimeStamp: Double[2]
+     Time stamp of previous time step. The old time stamp is required for the
+     in-time interpolation, e.g.
   
   """
   def __init__(self, solver_name):

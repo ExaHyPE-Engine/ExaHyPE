@@ -692,10 +692,15 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::sourceTerm(
   const tarch::la::Vector<Dimensions,double>&  gridCellH,
   double                                       t,
   double                                       dt,
-  double * __restrict__                        S  // S[{{NUMBER_OF_UNKNOWNS}}
+  double * __restrict__                        S  // S[{{NUMBER_OF_UNKNOWNS}}]
 ) {
   logTraceInWith4Arguments( "sourceTerm(...)", gridCellX, gridCellH, t, dt );
-  // @todo implement
+
+  // @todo implement and ensure that all entries of S are properly set
+  for (int i=0; i<NumberOfUnknowns; i++) {
+    S[i] = 0.0;
+  }
+  
   logTraceOut( "sourceTerm(...)" );
 }
 {% endif %}

@@ -1,7 +1,6 @@
 #include "../../../tarch/multicore/otter.h"
 #include "Rusanov.h"
 
-
 void exahype2::fv::rusanov::timeStepWithRusanov_patchwise_heap_functors(
   ::exahype2::CellData&   patchData,
   int                     numberOfVolumesPerAxisInPatch,
@@ -130,7 +129,6 @@ void exahype2::fv::rusanov::timeStepWithRusanov_patchwise_heap_functors(
       otterLoopEnd();
     }
 
-
     if (Dimensions==2) {
       otterLoopBegin();
       for (int x = -solversHaloSize; x < numberOfVolumesPerAxisInPatch+solversHaloSize; x++)
@@ -173,7 +171,6 @@ void exahype2::fv::rusanov::timeStepWithRusanov_patchwise_heap_functors(
         otterLoopIterationEnd();
       }
       otterLoopEnd();
-
 
       otterLoopBegin();
       for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++)
@@ -678,4 +675,3 @@ void exahype2::fv::rusanov::timeStepWithRusanov_patchwise_heap_functors(
   if (tempEigenvalueY!=nullptr)         tarch::freeMemory(tempEigenvalueY, tarch::MemoryLocation::Heap);
   if (tempEigenvalueZ!=nullptr)         tarch::freeMemory(tempEigenvalueZ, tarch::MemoryLocation::Heap);
 }
-

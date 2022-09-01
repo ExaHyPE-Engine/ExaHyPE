@@ -17,10 +17,10 @@ namespace tarch {
 
 
 /**
- * A hard coded strategy that can realise a few standard tasking patterns
- *
- *
- *
+ * Deploy all tasks to the GPU. Hold back all tasks in local queues until we hit
+ * the end of the BSP section. After that, let the code deploy all the tasks onto
+ * a GPU in one big rush, i.e. the orchestration strategy deploys all GPU tasks
+ * onto one GPU only.
  */
 class tarch::multicore::orchestration::AllOnGPU: public tarch::multicore::orchestration::Strategy {
   private:

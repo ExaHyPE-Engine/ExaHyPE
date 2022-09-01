@@ -52,7 +52,16 @@ class SubcyclingAdaptiveTimeStepWithEnclaveTasking( EnclaveTasking ):
     """
     self._interpolate_linearly_in_time        = interpolate_linearly_in_time
     
-    super(SubcyclingAdaptiveTimeStepWithEnclaveTasking,self).__init__(name, patch_size, overlap, unknowns, auxiliary_variables, min_volume_h, max_volume_h, plot_grid_properties,pde_terms_without_state) 
+    super(SubcyclingAdaptiveTimeStepWithEnclaveTasking,self).__init__(name, 
+                                                                      patch_size, 
+                                                                      overlap, 
+                                                                      unknowns, 
+                                                                      auxiliary_variables, 
+                                                                      min_volume_h, 
+                                                                      max_volume_h, 
+                                                                      plot_grid_properties,
+                                                                      pde_terms_without_state,
+                                                                      kernel_namespace="rusanov") 
     
     self._time_step_relaxation = time_step_relaxation
 

@@ -23,8 +23,8 @@ namespace c {
 
 #if Dimensions == 2
 
-template <typename SolverType,bool useSource, bool useFlux, int numberOfVariables, int basisSize>
-void volumeIntegralLinear(double* lduh, const double* const lFhi,
+template <typename SolverType, typename pCompType, bool useSource, bool useFlux, int numberOfVariables, int basisSize>
+void volumeIntegralLinear(pCompType* lduh, const pCompType* const lFhi,
                           const tarch::la::Vector<Dimensions, double>& dx) {
   // for linear non-conservative PDE, the volume integral is trivial, since it
   // only involves the element mass matrix, which later will cancel

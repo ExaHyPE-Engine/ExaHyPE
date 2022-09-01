@@ -209,31 +209,6 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
 
 
     /**
-     * Compute the flux with diffusive component.
-     * These are not currently available for use, but are defined nonetheless because the kernels,
-     * which are written generically, need them to compile
-     *
-     * \param[in]  Q the conserved variabels (and parameters) associated with a
-     *               quadrature point as C array.
-     *             gradQ the gradient of the conserved variabels (and parameters) associated
-     *                   with a quadrature point as C array.
-     * \param[inout] F a C array with shape [nDim][nVars]. That is, this is an C list
-     *               holding pointers to actual lists. Thus, the storage may be noncontinous.
-     *               In any case, the storage has already been allocated.
-     */
-    virtual void viscousFlux(const double* const Q, const double* const gradQ, double** const F);
-    virtual void viscousEigenvalues(const double* const Q,const int direction,double* const lambda);
-
-    /*
-     * Still needed: flux, nonCon, AlgebraicSource, pointSource, boundaryValues, eigenvalues
-     */
-    virtual void flux(const double* const Q,double** const F);
-    virtual void nonConservativeProduct(const double* const Q,const double* const gradQ,double* const BgradQ);
-    virtual void algebraicSource(const tarch::la::Vector<Dimensions, double>& x, double t, const double *const Q, double *S);
-    virtual void pointSource(const double* const Q,const double* const x,const double t,const double dt, double* const forceVector,int n);
-    //virtual void eigenvalues(const double* const Q,const int direction,double* const lambda) = 0;
-
-    /**
      * If you hook into this routine, ensure the abstract base class
      * operation is still invoked.
      */
@@ -355,20 +330,21 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
      * information and a link to the class from which they get some parameters as well as certain static vectors and matrices such as the
      * quadrature nodes, weights, mass matrix and so on.
      */
+    template<typename T>
     void solutionUpdate(
         double* luh,
         const double* const luhOld,
-        const double* const lduh,
+        const T* const lduh,
         const double dt
         );
 
     int spaceTimePredictor(
-        double*  lQhbnd,
-        double* lFhbnd,
-        double* lQi,double* rhs,
-        double* lFi,double* gradQ,
-        double* lQhi,double* lFhi,
-        const double* const luh,
+        {{PREDICTOR_STORAGE_PRECISION}}* lQhbnd,
+        {{PREDICTOR_STORAGE_PRECISION}}* lFhbnd,
+        {{PREDICTOR_COMPUTATION_PRECISION}}* lQi,{{PREDICTOR_COMPUTATION_PRECISION}}* rhs,
+        {{PREDICTOR_COMPUTATION_PRECISION}}* lFi,{{PREDICTOR_COMPUTATION_PRECISION}}* gradQ,
+        {{PREDICTOR_COMPUTATION_PRECISION}}* lQhi,{{PREDICTOR_COMPUTATION_PRECISION}}* lFhi,
+        const {{SOLUTION_STORAGE_PRECISION}}* const luh,
         const tarch::la::Vector<Dimensions, double>& cellCentre,
         const tarch::la::Vector<Dimensions, double>& cellSize,
         const double t,
@@ -376,8 +352,8 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
         );
 
     void volumeIntegral(
-      double* lduh,
-      const double* const lFhi,
+      {{PREDICTOR_COMPUTATION_PRECISION}}* lduh,
+      const {{PREDICTOR_COMPUTATION_PRECISION}}* const lFhi,
       const tarch::la::Vector<Dimensions, double>& cellSize);
 
     void boundaryConditions(
@@ -445,6 +421,27 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
     int        _cellUpdates;
 
     tarch::multicore::BooleanSemaphore  _semaphore;
+
+    /**
+     * Compute the flux with diffusive component.
+     * These are not currently available for use, but are defined nonetheless because the kernels,
+     * which are written generically, need them to compile
+     *
+     * \param[in]  Q the conserved variabels (and parameters) associated with a
+     *               quadrature point as C array.
+     *             gradQ the gradient of the conserved variabels (and parameters) associated
+     *                   with a quadrature point as C array.
+     * \param[inout] F a C array with shape [nDim][nVars]. That is, this is an C list
+     *               holding pointers to actual lists. Thus, the storage may be noncontinous.
+     *               In any case, the storage has already been allocated.
+     */
+public:
+{% for PRECISION_NUM in range(0,COMPUTATION_PRECISIONS|length) %}
+    void viscousFlux(const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const Q, const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const gradQ, {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}** const F);
+    void viscousEigenvalues(const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const Q, const int direction, {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const lambda);
+    void multiplyMaterialParameterMatrix(const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const Q, {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}** const rhs);
+{% endfor %}
+
 
   {{ABSTRACT_SOLVER_USER_DECLARATIONS}}
 };

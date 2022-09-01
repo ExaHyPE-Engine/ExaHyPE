@@ -189,18 +189,29 @@ class tarch::mpi::Rank {
     /**
      * Wrapper around allreduce
      *
-     * Peano relies heavily on unexpected, asynchronous message exchange to admin
-     * the workload. Ranks tell other ranks on the fly, for example, if they
-     * delete trees or create new ones. They also use MPI messages to realise
-     * global semaphores.
+     * Use this wrapper in Peano to reduce a value to all ranks. We recommend
+     * not to use plain MPI within Peano applications, as Peano relies on MPI+X
+     * and is strongly dynamic, i.e. you never know how many threads a rank
+     * currently employs and if one of the ranks maybe just has started to send
+     * around point to point load balancing messages.
      *
-     * As a consequence, any reduction runs risk to introduce a deadlock: Rank A
-     * enters an allreduce. Rank B sends something to A and then would enter the
-     * allreduce. However, this send of A (and perhaps an immediate receive of a
-     * confirmation message) might not go through, as A is busy in the reduction.
-     * Therefore, we should never use an allreduce but instead issue a non-blocking
-     * allreduce. While the reduce is pending, we should be able to do something
-     * else such as answering to further request messages.
+     *
+     * ## Rationale
+     *
+     * Peano relies heavily on unexpected, asynchronous message exchange to
+     * admin the workload. Ranks tell other ranks on the fly, for example, if
+     * they delete trees or create new ones. They also use MPI messages to
+     * realise global semaphores.
+     *
+     * As a consequence, any reduction runs risk to introduce a deadlock: Rank
+     * A enters an allreduce. Rank B sends something to A (for example a
+     * request that it would like to load balance later) and then would enter
+     * the allreduce. However, this send of a message to A (and perhaps an
+     * immediate receive of a confirmation message) might not go through, as A
+     * is busy in the reduction. Therefore, we should never use an allreduce
+     * but instead issue a non-blocking allreduce. While the reduce is pending,
+     * we should be able to do something else such as answering to further
+     * request messages.
      *
      * This allreduce allows us to do so. The default waitor is a receive of
      * pending messages. So most codes use the allReduce as follows:
@@ -217,15 +228,26 @@ class tarch::mpi::Rank {
      *
      * ## Rationale behind ifdefs
      *
-     * I wanted to make this routine a normal one that degenerates to nop if you
-     * don't translate with MPI support. However, that doesn't work as the signature
-     * requires MPI-specific datatypes.
+     * I wanted to make this routine a normal one that degenerates to nop if
+     * you don't translate with MPI support. However, that doesn't work as the
+     * signature requires MPI-specific datatypes.
      *
      *
      * ## Multithreading
      *
-     * This reduction is completely agnostic of any multithreading. Therefore, I do
-     * recommend not to use this routine within any action set.
+     * This reduction is completely agnostic of any multithreading. Therefore,
+     * I do recommend not to use this routine within any action set.
+     *
+     *
+     * ## Attribute semantics
+     *
+     * The routine adheres to the plain MPI semantics. As it passes the MPI_Op
+     * argument through to MPI, we also support all reduction operators.
+     *
+     * In line with MPI, please ensure that the receive buffer already holds
+     * the local contribution. Notably, the routine does not copy over the
+     * content from sendbuf into recvbuf.
+     *
      */
     void allReduce(
       const void *sendbuf, void *recvbuf, int count,

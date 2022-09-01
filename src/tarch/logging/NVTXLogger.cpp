@@ -16,7 +16,7 @@
 #include "config.h"
 
 #ifdef UseNVIDIA
-#include <nvToolsExt.h>
+#include <nvtx3/nvToolsExt.h>
 #endif
 
 

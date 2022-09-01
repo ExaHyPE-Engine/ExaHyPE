@@ -1,4 +1,16 @@
 #include "{MAIN_NAME}.h"
+
+#include "observers/CreateGrid.h"
+#include "observers/CreateGridAndConvergeLoadBalancing.h"
+#include "observers/CreateGridButPostponeRefinement.h"
+#include "observers/InitGrid.h"
+#include "observers/PlotSolution.h"
+#include "observers/TimeStep.h"
+
+#include "repositories/DataRepository.h"
+#include "repositories/SolverRepository.h"
+#include "repositories/StepRepository.h"
+
 #include "Constants.h"
 
 #include "tarch/logging/Log.h"
@@ -17,17 +29,6 @@
 #include "peano4/parallel/SpacetreeSet.h"
 #include "peano4/UnitTests.h"
 
-#include "repositories/DataRepository.h"
-#include "repositories/StepRepository.h"
-#include "repositories/SolverRepository.h"
-
-#include "observers/CreateGrid.h"
-#include "observers/CreateGridButPostponeRefinement.h"
-#include "observers/CreateGridAndConvergeLoadBalancing.h"
-#include "observers/InitGrid.h"
-#include "observers/PlotSolution.h"
-#include "observers/TimeStep.h"
-
 #include "toolbox/loadbalancing/loadbalancing.h"
 
 #include "toolbox/blockstructured/UnitTests.h"
@@ -36,11 +37,9 @@
 #include "exahype2/UserInterface.h"
 #include "exahype2/UnitTests.h"
 
-#ifdef UseFEExcept
-#include <fenv.h>
-#pragma float_control(precise, on)
-#pragma STDC FENV_ACCESS ON
-#endif
+//#ifdef UseFenv
+//#include "tarch/FenvWrapper.h"
+//#endif
 
 using namespace {FULL_NAMESPACE};
 
@@ -415,30 +414,24 @@ void step() {{
       break;
   }}
 }}
-  
-  
+
 int main(int argc, char** argv) {{
   const int ExitCodeSuccess          = 0;
   const int ExitCodeUnitTestsFailed  = 1;
   const int ExitCodeInvalidArguments = 2;
   const int ExitCodeInvalidBuild     = 3;
 
-#ifdef UseFEExcept
-  feenableexcept(FE_DIVBYZERO | FE_INVALID | FE_OVERFLOW);
-#endif
-
   peano4::initParallelEnvironment(&argc,&argv);
   exahype2::initNonCritialAssertionEnvironment();
   tarch::multicore::initSmartMPI();
   peano4::fillLookupTables();
- 
-  
+
   peano4::initSingletons(
     DomainOffset,
     DomainSize,
     PeriodicBC
   );
-  
+
   if ( tarch::mpi::Rank::getInstance().getNumberOfRanks()>1 and tarch::multicore::Core::getInstance().getNumberOfThreads()<=1 ) {{
     logError("main()", "MPI runs without multithreading are not supported currently.");
     return ExitCodeInvalidBuild;
@@ -448,9 +441,13 @@ int main(int argc, char** argv) {{
     logError("main()", "Invalid command line arguments.");
     return ExitCodeInvalidArguments;
   }}
-  
+
   {FULL_NAMESPACE}::repositories::DataRepository::initDatatypes();
-  
+
+//#ifdef UseFenv
+  //tarch::feenableexcept(FE_DIVBYZERO | FE_INVALID | FE_OVERFLOW);
+//#endif
+
   #if PeanoDebug>=2
   tarch::tests::TreeTestCaseCollection* unitTests = new tarch::tests::TreeTestCaseCollection("");
   unitTests->addTestCase( peano4::getUnitTests() );
@@ -477,8 +474,7 @@ int main(int argc, char** argv) {{
   #pragma omp master 
   {{
   #endif
-	  
-	  
+
   #if defined(UseSmartMPI)
   const bool isGlobalMaster     =     tarch::mpi::Rank::getInstance().isGlobalMaster() and smartmpi::isComputeRank();
   const bool isPeanoComputeNode = not tarch::mpi::Rank::getInstance().isGlobalMaster() and smartmpi::isComputeRank();
@@ -486,8 +482,7 @@ int main(int argc, char** argv) {{
   const bool isGlobalMaster     =     tarch::mpi::Rank::getInstance().isGlobalMaster();
   const bool isPeanoComputeNode = not tarch::mpi::Rank::getInstance().isGlobalMaster();
   #endif
-	  
-	  
+
   if ( isGlobalMaster ) {{
     while ( selectNextAlgorithmicStep() ) {{
       step();
@@ -510,7 +505,7 @@ int main(int argc, char** argv) {{
     }}
   }}
   #endif
-  
+
   #if defined(SharedOMP)
   }}
   }}
