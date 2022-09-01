@@ -118,11 +118,11 @@ void exahype2::dg::tests::CellIntegralTest::runEulerOrder2OnStationarySetup() {
 
 
   for (int dof=0; dof<numberOfDoFs; dof++) {
-    validateNumericalEqualsWithParams2( QOut[dof*(unknowns+auxiliaryVariables)+0], 0.0, dof, plotPatch( QOut, order, unknowns, auxiliaryVariables ) );
-    validateNumericalEqualsWithParams2( QOut[dof*(unknowns+auxiliaryVariables)+1], 0.0, dof, plotPatch( QOut, order, unknowns, auxiliaryVariables ) );
-    validateNumericalEqualsWithParams2( QOut[dof*(unknowns+auxiliaryVariables)+2], 0.0, dof, plotPatch( QOut, order, unknowns, auxiliaryVariables ) );
-    validateNumericalEqualsWithParams2( QOut[dof*(unknowns+auxiliaryVariables)+3], 0.0, dof, plotPatch( QOut, order, unknowns, auxiliaryVariables ) );
-    validateNumericalEqualsWithParams2( QOut[dof*(unknowns+auxiliaryVariables)+4], 0.0, dof, plotPatch( QOut, order, unknowns, auxiliaryVariables ) );
+    validateNumericalEqualsWithParams2( QOut[dof*(unknowns+auxiliaryVariables)+0], 0.0, dof, plotCell( QOut, order, unknowns, auxiliaryVariables ) );
+    validateNumericalEqualsWithParams2( QOut[dof*(unknowns+auxiliaryVariables)+1], 0.0, dof, plotCell( QOut, order, unknowns, auxiliaryVariables ) );
+    validateNumericalEqualsWithParams2( QOut[dof*(unknowns+auxiliaryVariables)+2], 0.0, dof, plotCell( QOut, order, unknowns, auxiliaryVariables ) );
+    validateNumericalEqualsWithParams2( QOut[dof*(unknowns+auxiliaryVariables)+3], 0.0, dof, plotCell( QOut, order, unknowns, auxiliaryVariables ) );
+    validateNumericalEqualsWithParams2( QOut[dof*(unknowns+auxiliaryVariables)+4], 0.0, dof, plotCell( QOut, order, unknowns, auxiliaryVariables ) );
   }
 
   for (int dof=0; dof<numberOfDoFs; dof++) {
@@ -163,20 +163,20 @@ void exahype2::dg::tests::CellIntegralTest::runEulerOrder2OnStationarySetup() {
 
   dfor(dof,order+1) {
     int dofLinearised = peano4::utils::dLinearised(dof,order+1);
-    validateNumericalEqualsWithParams2( QOut[dofLinearised*(unknowns+auxiliaryVariables)+0], 0.0, dof, plotPatch( QOut, order, unknowns, auxiliaryVariables ) );
+    validateNumericalEqualsWithParams2( QOut[dofLinearised*(unknowns+auxiliaryVariables)+0], 0.0, dof, plotCell( QOut, order, unknowns, auxiliaryVariables ) );
     if (dof(0)<(order+1)/2) {
-      validateWithParams2( QOut[dofLinearised*(unknowns+auxiliaryVariables)+1]<0.0, dof, plotPatch( QOut, order, unknowns, auxiliaryVariables ) );
+      validateWithParams2( QOut[dofLinearised*(unknowns+auxiliaryVariables)+1]<0.0, dof, plotCell( QOut, order, unknowns, auxiliaryVariables ) );
     }
     else if (dof(0)>(order+1)/2) {
-      validateWithParams2( QOut[dofLinearised*(unknowns+auxiliaryVariables)+1]>0.0, dof, plotPatch( QOut, order, unknowns, auxiliaryVariables ) );
+      validateWithParams2( QOut[dofLinearised*(unknowns+auxiliaryVariables)+1]>0.0, dof, plotCell( QOut, order, unknowns, auxiliaryVariables ) );
     }
     if (dof(1)<(order+1)/2) {
-      validateWithParams2( QOut[dofLinearised*(unknowns+auxiliaryVariables)+2]<0.0, dof, plotPatch( QOut, order, unknowns, auxiliaryVariables ) );
+      validateWithParams2( QOut[dofLinearised*(unknowns+auxiliaryVariables)+2]<0.0, dof, plotCell( QOut, order, unknowns, auxiliaryVariables ) );
     }
     else if (dof(1)>(order+1)/2) {
-      validateWithParams2( QOut[dofLinearised*(unknowns+auxiliaryVariables)+2]>0.0, dof, plotPatch( QOut, order, unknowns, auxiliaryVariables ) );
+      validateWithParams2( QOut[dofLinearised*(unknowns+auxiliaryVariables)+2]>0.0, dof, plotCell( QOut, order, unknowns, auxiliaryVariables ) );
     }
-    validateNumericalEqualsWithParams2( QOut[dofLinearised*(unknowns+auxiliaryVariables)+4], 0.0, dof, plotPatch( QOut, order, unknowns, auxiliaryVariables ) );
+    validateNumericalEqualsWithParams2( QOut[dofLinearised*(unknowns+auxiliaryVariables)+4], 0.0, dof, plotCell( QOut, order, unknowns, auxiliaryVariables ) );
   }
 }
 
@@ -249,11 +249,11 @@ void exahype2::dg::tests::CellIntegralTest::runEulerOrder4OnStationarySetup() {
 
 
   for (int dof=0; dof<numberOfDoFs; dof++) {
-    validateNumericalEqualsWithParams2( QOut[dof*(unknowns+auxiliaryVariables)+0], 0.0, dof, plotPatch( QOut, order, unknowns, auxiliaryVariables ) );
-    validateNumericalEqualsWithParams2( QOut[dof*(unknowns+auxiliaryVariables)+1], 0.0, dof, plotPatch( QOut, order, unknowns, auxiliaryVariables ) );
-    validateNumericalEqualsWithParams2( QOut[dof*(unknowns+auxiliaryVariables)+2], 0.0, dof, plotPatch( QOut, order, unknowns, auxiliaryVariables ) );
-    validateNumericalEqualsWithParams2( QOut[dof*(unknowns+auxiliaryVariables)+3], 0.0, dof, plotPatch( QOut, order, unknowns, auxiliaryVariables ) );
-    validateNumericalEqualsWithParams2( QOut[dof*(unknowns+auxiliaryVariables)+4], 0.0, dof, plotPatch( QOut, order, unknowns, auxiliaryVariables ) );
+    validateNumericalEqualsWithParams2( QOut[dof*(unknowns+auxiliaryVariables)+0], 0.0, dof, plotCell( QOut, order, unknowns, auxiliaryVariables ) );
+    validateNumericalEqualsWithParams2( QOut[dof*(unknowns+auxiliaryVariables)+1], 0.0, dof, plotCell( QOut, order, unknowns, auxiliaryVariables ) );
+    validateNumericalEqualsWithParams2( QOut[dof*(unknowns+auxiliaryVariables)+2], 0.0, dof, plotCell( QOut, order, unknowns, auxiliaryVariables ) );
+    validateNumericalEqualsWithParams2( QOut[dof*(unknowns+auxiliaryVariables)+3], 0.0, dof, plotCell( QOut, order, unknowns, auxiliaryVariables ) );
+    validateNumericalEqualsWithParams2( QOut[dof*(unknowns+auxiliaryVariables)+4], 0.0, dof, plotCell( QOut, order, unknowns, auxiliaryVariables ) );
   }
 }
 
