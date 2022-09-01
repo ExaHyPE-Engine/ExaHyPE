@@ -96,8 +96,11 @@ void tarch::tests::TreeTestCaseCollection::run( const std::string& prefix ) {
     }
   }
 
-  if ( _errors==0 and _testCases.empty() ) {
+  if ( _errors==0 and _testCases.empty() and _subTests.empty() ) {
     logInformation += " pass (no local tests)";
+  }
+  else if ( _errors==0 and _testCases.empty() ) {
+    logInformation += " pass (no local tests, subtests all successful)";
   }
   else if (_errors==0 and _testCases.size()==1) {
     logInformation += " ok (1 test)";
