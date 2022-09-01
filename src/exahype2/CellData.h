@@ -36,7 +36,7 @@ namespace exahype2 {
    * PatchData object over both allocated input and output data.
    */
   struct CellData {
-    double**   QIn;
+    const double**   QIn;
     tarch::la::Vector<Dimensions,double>*   cellCentre;
     tarch::la::Vector<Dimensions,double>*   cellSize;
     double*    t;
@@ -75,7 +75,7 @@ namespace exahype2 {
      * read it later.
      */
     CellData(
-      double*   QIn,
+      const double*   QIn,
       const tarch::la::Vector<Dimensions,double>&   cellCentre_,
       const tarch::la::Vector<Dimensions,double>&   cellSize_,
       double    t,

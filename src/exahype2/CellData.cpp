@@ -2,7 +2,7 @@
 
 
 exahype2::CellData::CellData(
-  double*   QIn_,
+  const double*   QIn_,
   const tarch::la::Vector<Dimensions,double>&   cellCentre_,
   const tarch::la::Vector<Dimensions,double>&   cellSize_,
   double    t_,
@@ -22,7 +22,7 @@ exahype2::CellData::CellData(
 
 exahype2::CellData::CellData( int numberOfCells_ ):
   numberOfCells(numberOfCells_) {
-  QIn           = new (std::align_val_t(AlignmentOnHeap)) double*[numberOfCells];
+  QIn           = new (std::align_val_t(AlignmentOnHeap)) const double*[numberOfCells];
   cellCentre    = new (std::align_val_t(AlignmentOnHeap)) tarch::la::Vector<Dimensions,double>[numberOfCells];
   cellSize      = new (std::align_val_t(AlignmentOnHeap)) tarch::la::Vector<Dimensions,double>[numberOfCells];
   t             = new (std::align_val_t(AlignmentOnHeap)) double[numberOfCells];
