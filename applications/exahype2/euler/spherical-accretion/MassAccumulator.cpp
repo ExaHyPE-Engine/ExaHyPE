@@ -6,6 +6,8 @@
 #include "tarch/mpi/Rank.h"
 #include "tarch/services/ServiceRepository.h"
 
+#include "exahype2/NonCriticalAssertions.h"
+
 #include <cmath>
 
 
@@ -54,7 +56,7 @@ double applications::exahype2::euler::sphericalaccretion::MassAccumulator::getMa
     return 0.0;
   }
   else if (_previousMassAccumulated.size()<=bucket) {
-    return _previousMassAccumulated.at(_previousMassAccumulated.size()-1);
+    return _previousMassAccumulated.back();
   }
   else {
     int    leftBucket  = bucket;
@@ -68,11 +70,11 @@ double applications::exahype2::euler::sphericalaccretion::MassAccumulator::getMa
     else if ( radius-bucket*_shellWidth < _shellWidth/2.0 and bucket==0 ) {
       rightWeight = 1.0;
     }
-    else if (radius-bucket*_shellWidth >= _shellWidth/2.0 and bucket<_previousMassAccumulated.size()-1) {
+    else if (radius-bucket*_shellWidth >= _shellWidth/2.0 and bucket<static_cast<int>(_previousMassAccumulated.size())-1) {
       rightBucket++;
       rightWeight = (radius-(leftBucket+0.5)*_shellWidth) / _shellWidth;
     }
-    else if (radius-bucket*_shellWidth >= _shellWidth/2.0 and bucket==_previousMassAccumulated.size()-1) {
+    else if (radius-bucket*_shellWidth >= _shellWidth/2.0 and bucket==static_cast<int>(_previousMassAccumulated.size())-1) {
       rightWeight = 0.0;
     }
     else {
@@ -106,8 +108,9 @@ void applications::exahype2::euler::sphericalaccretion::MassAccumulator::finishA
   double* globalBucketValues = new double[globalMaxNumberOfBuckets];
   double* localBucketValues  = new double[globalMaxNumberOfBuckets];
   for (int bucket=0; bucket<globalMaxNumberOfBuckets; bucket++) {
-    localBucketValues[bucket]  = bucket < _currentMass.size() ? _currentMass[bucket] : 0.0;
-    globalBucketValues[bucket] = bucket < _currentMass.size() ? _currentMass[bucket] : 0.0;
+    localBucketValues[bucket]  = bucket < static_cast<int>(_currentMass.size()) ? _currentMass[bucket] : 0.0;
+    globalBucketValues[bucket] = bucket < static_cast<int>(_currentMass.size()) ? _currentMass[bucket] : 0.0;
+    logDebug( "finishAccumulation()", "bucket " << bucket << " hosts value " << globalBucketValues[bucket] );
   }
 
   tarch::mpi::Rank::getInstance().allReduce(
@@ -138,14 +141,12 @@ void applications::exahype2::euler::sphericalaccretion::MassAccumulator::finishA
   _currentMass.clear();
 
   // accumulate
-  for (int i=0; i<_previousMassAccumulated.size(); i++) {
-    if (i>0) {
-      _previousMassAccumulated[i] += _previousMassAccumulated[i-1];
-    }
+  for (int i=1; i<static_cast<int>(_previousMassAccumulated.size()); i++) {
+    _previousMassAccumulated[i] += _previousMassAccumulated[i-1];
   }
 
   int largestRelevantShell = 0;
-  for (int i=0; i<_previousMassAccumulated.size()-1; i++) {
+  for (int i=0; i<static_cast<int>(_previousMassAccumulated.size())-1; i++) {
     if (
       not tarch::la::equals( _previousMassAccumulated[i], 0.0 )
       and
@@ -178,6 +179,6 @@ double applications::exahype2::euler::sphericalaccretion::MassAccumulator::getMa
 
 
 double applications::exahype2::euler::sphericalaccretion::MassAccumulator::getTotalMass() const {
-  return _previousMassAccumulated.back();
+  return _previousMassAccumulated.empty() ? 0.0 : _previousMassAccumulated.back();
 }
 
