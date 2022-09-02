@@ -133,19 +133,12 @@ class SeparateSweepsWithEnclaveTasking( SeparateSweeps ):
     """
 
       Call superclass routine and then reconfigure the update cell call.
-      Only the UpdateCell action set is specific to a single sweep.
+      Only the UpdateCell action set is specific to an enclave solver.
       
       This operation is implicity called via the superconstructor.
       
-      :: Guards around linear combination of estimates
-      
-      We rely on the action set LinearCombination as it is initialised in the 
-      superclass. So the only thing we have to do is to ensure that the 
-      linear combination over the estimates is computed if and only if this 
-      is required. For the separate sweeps, we compute the linear combinations
-      if the cell holds data, i.e. is on the finest level, and if it is the 
-      primary of the two sweeps which realise a RK step, i.e. the one where
-      we later on project onto the faces.  
+      It is important that we add the action set at the right point. See
+      add_actions_to_perform_time_step() for a discussion.       
       
     """
     super(SeparateSweepsWithEnclaveTasking, self).create_action_sets()
@@ -199,11 +192,19 @@ class SeparateSweepsWithEnclaveTasking( SeparateSweeps ):
 
   def add_actions_to_perform_time_step(self, step):
     """
-      Add enclave aspect to time stepping
+    
+      Add enclave aspect to time stepping. If you study the superclass'
+      routine add_actions_to_perform_time_step() and consider that this action
+      set is invoked in the secondary grid sweep, then it becomes clear that
+      this merger has to come first, i.e. we first add the action set and then
+      we call the superclass' add_action_set().
+      
+      We need the result of the volumetric operation before we sum up this
+      volumetric solution and the Riemann solution. 
        
     """
-    super(SeparateSweepsWithEnclaveTasking, self).add_actions_to_perform_time_step(step)
     step.add_action_set( self._action_set_merge_enclave_task_outcome )
+    super(SeparateSweepsWithEnclaveTasking, self).add_actions_to_perform_time_step(step)
 
 
   def add_entries_to_text_replacement_dictionary(self,d):

@@ -51,6 +51,39 @@ class SolveVolumeIntegral(AbstractRungeKuttaDGActionSet):
     assertion3( tarch::la::greaterEquals( timeStamp, 0.0 ),     timeStamp, timeStepSize, timeStampOldSolution );
 
     double* QIn  = fineGridCell{{UNKNOWN_IDENTIFIER}}LinearCombination.value;
+    
+    {% if SPAWN_VOLUME_KERNEL_AS_TASK %}
+    if (marker.willBeSkeletonCell()) {
+      #if Dimensions==2
+      double* QOut = fineGridCell{{UNKNOWN_IDENTIFIER}}RhsEstimates.value + {{PREDICATE_NO}} * {{NUMBER_OF_DOFS_PER_CELL_2D}} * {{NUMBER_OF_UNKNOWNS}};
+      #elif Dimensions==3
+      double* QOut = fineGridCell{{UNKNOWN_IDENTIFIER}}RhsEstimates.value + {{PREDICATE_NO}} * {{NUMBER_OF_DOFS_PER_CELL_3D}} * {{NUMBER_OF_UNKNOWNS}};
+      #endif
+    
+      ::exahype2::CellData cellData(
+        QIn,
+        marker.x(),
+        marker.h(),
+        timeStamp,
+        timeStepSize,
+        QOut
+      );
+      
+      ::exahype2::dg::{{KERNEL_NAMESPACE}}::{{VOLUMETRIC_SOLVER_CALL}}    
+    }
+    else {
+      assertion( marker.willBeEnclaveCell() );
+      assertion( not marker.willBeRefined() );
+      auto newEnclaveTask = new tasks::{{SOLVER_NAME}}_VolumetricSolverEnclaveTask(
+        marker,
+        timeStamp,
+        timeStepSize,
+        QIn
+      );
+      fineGridCell{{SEMAPHORE_LABEL}}.setSemaphoreNumber( newEnclaveTask->getTaskId() );
+      tarch::multicore::spawnTask( newEnclaveTask );
+    }
+    {% else %}
     #if Dimensions==2
     double* QOut = fineGridCell{{UNKNOWN_IDENTIFIER}}RhsEstimates.value + {{PREDICATE_NO}} * {{NUMBER_OF_DOFS_PER_CELL_2D}} * {{NUMBER_OF_UNKNOWNS}};
     #elif Dimensions==3
@@ -66,25 +99,8 @@ class SolveVolumeIntegral(AbstractRungeKuttaDGActionSet):
       QOut
     );
 
-    if (marker.willBeSkeletonCell()) {
-      ::exahype2::dg::{{KERNEL_NAMESPACE}}::{{VOLUMETRIC_SOLVER_CALL}}    
-    }
-    else {
-      {% if SPAWN_VOLUME_KERNEL_AS_TASK %}
-      assertion( marker.willBeEnclaveCell() );
-      assertion( not marker.willBeRefined() );
-      auto newEnclaveTask = new tasks::{{SOLVER_NAME}}_VolumetricSolverEnclaveTask(
-        marker,
-        timeStamp,
-        timeStepSize,
-        QIn
-      );
-      fineGridCell{{SEMAPHORE_LABEL}}.setSemaphoreNumber( newEnclaveTask->getTaskId() );
-      tarch::multicore::spawnTask( newEnclaveTask );
-      {% else %}
-      ::exahype2::dg::{{KERNEL_NAMESPACE}}::{{VOLUMETRIC_SOLVER_CALL}}    
-      {% endif %}
-    }
+    ::exahype2::dg::{{KERNEL_NAMESPACE}}::{{VOLUMETRIC_SOLVER_CALL}}    
+    {% endif %}
   }  
   
   {% endfor %}

@@ -758,12 +758,32 @@ We use RK(""" + str(self._rk_order) + """) for the time stepping.
   def add_actions_to_perform_time_step(self, step):
     """
  
-    @todo: 
-       
-    AMR
+    The tricky part here is that we have to get the order right.
     
-    It is important that we do the inter-grid transfer operators before we 
-    apply the boundary conditions.
+    - Update of the labels: This can be done as very first step, as it 
+      might feed into follow-up steps.
+    - linear combination: This has to be the first step of a Runge-Kutta
+      scheme. Without this first step, there's absolutely nothing we can 
+      do properly.
+    - couple resolutions and AMR: Once we have the linear combination,
+      we can couple different resolutions.
+    - project linear combination onto faces: This should be done as soon
+      as possible but after we've determined the linear combination. After
+      all, we need the solution representation on the faces asap.
+    - solve volume integral: can run in parallel to the projection onto
+      the faces.
+    - handle boundary: doesn't really matter when we insert it, as it plugs
+      into the first face load, while all the other stuff so far are volumetric
+      operations.
+      It is important that we do the inter-grid transfer operators before we 
+      apply the boundary conditions.
+    - solve Riemann problem: the constraint here is that it has to come after
+      the boundary handling.
+    - add volume and face solution: last
+    
+    If we use enclave tasking, we have to be careful when we insert the merger.
+    See SeparateSweepsWithEnclaveTasking.add_actions_to_perform_time_step() for
+    a discussion of the details.
     
     """
     d = {}
@@ -772,8 +792,8 @@ We use RK(""" + str(self._rk_order) + """) for the time stepping.
 
     step.add_action_set( self._action_set_update_face_label )
     step.add_action_set( self._action_set_update_cell_label )
-    step.add_action_set( self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement )
     step.add_action_set( self._action_set_linear_combination_of_estimates )
+    step.add_action_set( self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement )
     step.add_action_set( self._action_set_project_linear_combination_onto_faces )
     step.add_action_set( self._action_set_solve_volume_integral )
     step.add_action_set( self._action_set_handle_boundary )
