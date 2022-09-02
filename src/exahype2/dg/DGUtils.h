@@ -187,7 +187,7 @@ namespace exahype2 {
      * usually used for debugging
      */
 
-    std::string plotPatch(
+    std::string plotCell(
         const double* __restrict__ Q,
         const int order,
         const int unknowns,

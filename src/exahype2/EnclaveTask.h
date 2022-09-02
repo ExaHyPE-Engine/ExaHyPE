@@ -62,10 +62,13 @@ class exahype2::EnclaveTask: public tarch::multicore::Task {
 
     const ::peano4::datamanagement::CellMarker   _marker;
     /**
-     * These are the reconstructed values
+     * These are the reconstructed values in the Finite Volume sense and the
+     * linear combination in the DG solver. In both cases, the enclave task
+     * will free the memory once it has terminated, so the attribute may not
+     * be const here.
      */
-    double*                                      _inputValues;
-    double*                                      _outputValues;
+    double* __restrict__                         _inputValues;
+    double* __restrict__                         _outputValues;
     const double                                 _t;
     const double                                 _dt;
     int                                          _numberOfInputValues;
@@ -81,13 +84,15 @@ class exahype2::EnclaveTask: public tarch::multicore::Task {
      * <pre>
     static int enclaveTaskTypeId = peano4::parallel::Tasks::getTaskType("{{SOLVER_INSTANCE}}");
 </pre>    
+     *
+     * @see _inputValues for a discussion of const qualifiers
      */
     EnclaveTask(
       int                                            enclaveTaskTypeId,
       const ::peano4::datamanagement::CellMarker&    marker,
       double                                         t,
       double                                         dt,
-      double*                                        inputValues,
+      double* __restrict__                           inputValues,
       int                                            numberOfInputValues,
       int                                            numberOfResultValues,
       Functor                                        functor

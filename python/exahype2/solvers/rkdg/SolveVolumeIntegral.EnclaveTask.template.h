@@ -100,7 +100,7 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::EnclaveTask
       const ::peano4::datamanagement::CellMarker& marker, 
       double                                      timeStamp,
       double                                      timeStepSize,
-      double* __restrict__                        QIn,
+      const double* __restrict__                  QIn,
       double* __restrict__                        QOut
     );
     
@@ -109,7 +109,9 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::EnclaveTask
      * Initialise superclass with right compute functor
      *
      * Besides the "configuration" of the superclass, we have to copy the
-     * QIn data from the marker manually.
+     * QIn data from the marker manually. So we initialise the superclass
+     * with a new chunk for memory, and we fill this information with
+     * proper content in the subclass constructor.
      *
      * @see applyKernelToCell()
      */
@@ -117,7 +119,7 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::EnclaveTask
       const ::peano4::datamanagement::CellMarker& marker, 
       double                                      timeStamp,
       double                                      timeStepSize,
-      double* __restrict__                        copyOfLinearCombinationOfPreviousShots
+      const double* __restrict__                  copyOfLinearCombinationOfPreviousShots
     );
 
     bool isSmartMPITask() const override;

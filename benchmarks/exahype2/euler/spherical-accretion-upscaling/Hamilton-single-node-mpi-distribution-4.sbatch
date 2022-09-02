@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --job-name=single-node-RKDG
+#SBATCH --job-name=mpi-dist-4
 #SBATCH -p multi
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=4
@@ -7,7 +7,7 @@
 #SBATCH --time=04:00:00
 #SBATCH --mail-type=END
 #SBATCH --mail-user=tobias.weinzierl@durham.ac.uk
-#SBATCH --mail-user=tobias.weinzierl@durham.ac.uk
+#SBATCH --qos=shortwide
 
 source /etc/profile.d/modules.sh
 

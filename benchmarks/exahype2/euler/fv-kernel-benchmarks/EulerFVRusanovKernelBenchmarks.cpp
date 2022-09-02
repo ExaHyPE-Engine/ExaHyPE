@@ -110,6 +110,7 @@ std::tuple<double, int> validateOutcome( double* Q, int patchIndex , const doubl
   }
   if (not tarch::la::equals( maxEigenvalue, validMaxEigenvalue, Accuracy)) {
     std::cout << std::fixed << " maxEigenvalue[" << patchIndex << "]!=validMaxEigenvalue[" << patchIndex << "]: " << maxEigenvalue << "!=" << validMaxEigenvalue << std::endl;
+    exit(-1);
   }
 
   return { maxDifference, errors };

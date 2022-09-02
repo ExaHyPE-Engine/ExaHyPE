@@ -94,6 +94,8 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::EnclaveTask
      * allocate anything but we have to free stuff after the run. This is
      * done here in the Finite Volume solver.
      *
+     * The routine also frees the memory reconstructedPatch points to.
+     * Therefore, the argument is not const.
      *
      * @return Max eigenvalue over cell
      */
@@ -101,7 +103,7 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::EnclaveTask
       const ::peano4::datamanagement::CellMarker& marker, 
       double                                      t,
       double                                      dt,
-      double* __restrict__                        reconstructedPatch, 
+      double* __restrict__                        reconstructedPatch,
       double* __restrict__                        targetPatch
     );
     

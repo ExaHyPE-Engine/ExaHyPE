@@ -116,12 +116,22 @@ the supercomputer if you don't want to postprocess on the machine:
      do
        for solver in FV-4 FV-6 FV-8 RK2DG2 RK3DG3 RK4DG4
        do
-         tar -czvf single-node-benchmark-$type-no-opt-$solver.tar.gz single-node-benchmark-$type-no-opt-$solver-*.data
-         tar -czvf single-node-benchmark-$type-opt-$solver.tar.gz    single-node-benchmark-$type-opt-$solver-*.data
+         tar -czvf single-node-benchmark-$type-no-opt-$solver.tar.gz single-node-benchmark-$type-no-opt-$solver-*-cores.data
+         tar -czvf single-node-benchmark-$type-opt-$solver.tar.gz    single-node-benchmark-$type-opt-$solver-*-cores.data
        done
      done
      
      
+
+     for type in reg-0
+     do
+       for solver in FV-8 RK4DG4
+       do
+         tar -czvf single-node-benchmark-$type-$solver-different-mpi-tasks-on-node.tar.gz    single-node-benchmark-$type-opt-$solver-*-mpi-tasks-on-node.data
+       done
+     done
+     
+
 All data that does not end with .data (and does not end up in archives) can safely
 be removed from the benchmark point of view. We do not evaluate it further here.
 
@@ -147,7 +157,7 @@ good first impression of the code performance:
 
 We first study the impact of the optimisation on the various solvers:
       
-      for type in 0
+      for type in reg-0
       do
        for solver in FV-4 FV-6 FV-8 RK2DG2 RK3DG3 RK4DG4
        do
@@ -158,9 +168,15 @@ We first study the impact of the optimisation on the various solvers:
 If you run these scripts, you obtain a couple plots in pdf and png format which show the 
 shared memory scaling behaviour on one node. If you have enabled GPUs, the runs should 
 offload to the accelerators, too.
+The two plots below show the performance of the code on an EPYC node with 128 cores and
+they compare Finite Volumes with a patch size of 4x4x4 with a code with patch size 8x8x8.
+We clearly see that the impact of good scalability is only a secondary runtime criterion:
+Bigger patches just have so much lower overhead, that it is hard for the scaling to make
+this up.
 
 
-<img src="example-output/single-node-benchmarks-0-FV-4.png" />
+<img src="example-output/single-node-assess-optimisation-reg-0-FV-4.png" />
+<img src="example-output/single-node-assess-optimisation-reg-0-FV-8.png" />
 
 
 We next compare different orders and patch sizes against each other by means of 
@@ -169,7 +185,7 @@ would have to include the obtained accuracy in one way or another, but we focus
 exclusively on performance aspects here:
       
       
-      for type in 0
+      for type in reg-0
       do
        for optimisation in opt no-opt
        do
@@ -201,4 +217,17 @@ typically study the following setups:
       16                        |    8
       32                        |    4
       
-Note that SLURM refers to tasks, and not to ranks.
+Note that SLURM refers to tasks, and not to ranks. The postprocessing can be
+done, once again, via the pre-defined scripts, though you might prefer 
+something fancier, custom-made for your own plots in this case:
+
+      
+      for type in reg-0
+      do
+       #for solver in FV-8 RK4DG4
+       for solver in FV-8
+       do
+        python3 ../../../../python/exahype2/postprocessing/plot-scaling.py --log-x --log-y --output single-node-different-mpi-tasks-on-node-$type-$solver single-node-benchmark-$type-$solver-different-mpi-tasks-on-node.tar.gz -v
+       done
+      done
+      

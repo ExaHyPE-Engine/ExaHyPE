@@ -158,8 +158,7 @@ void exahype2::dg::subtractCell(
     const int                   order,
     const int                   unknowns,
     const int                   auxiliaryVariables
-    ){
-
+) {
   const int nodesPerAxis = order+1;
   const int nodesPerCell = getNodesPerCell(nodesPerAxis);
   const int strideQ = unknowns+auxiliaryVariables;
@@ -169,17 +168,15 @@ void exahype2::dg::subtractCell(
       QOut[node*strideQ+var] -= Qsubstract[node*strideQ+var];
     }
   }
-
 }
 
 
-std::string exahype2::dg::plotPatch(
-        const double* __restrict__ Q,
-        const int order,
-        const int unknowns,
-        const int auxiliaryVariables
-        ){
-
+std::string exahype2::dg::plotCell(
+  const double* __restrict__ Q,
+  const int order,
+  const int unknowns,
+  const int auxiliaryVariables
+) {
   const int nodesPerCell = getNodesPerCell(order+1);
   const int strideQ = unknowns+auxiliaryVariables;
 
@@ -198,13 +195,13 @@ std::string exahype2::dg::plotPatch(
   return result.str();
 }
 
-std::string exahype2::dg::plotFace(
-        const double* __restrict__ Q,
-        const int order,
-        const int unknowns,
-        const int auxiliaryVariables
-        ){
 
+std::string exahype2::dg::plotFace(
+  const double* __restrict__ Q,
+  const int order,
+  const int unknowns,
+  const int auxiliaryVariables
+) {
   const int nodesPerFace = getNodesPerCell(order+1)/(order+1);
   const int strideQ = unknowns+auxiliaryVariables;
 

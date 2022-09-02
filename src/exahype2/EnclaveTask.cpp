@@ -13,7 +13,7 @@ exahype2::EnclaveTask::EnclaveTask(
   const ::peano4::datamanagement::CellMarker&    marker,
   double                                         t,
   double                                         dt,
-  double*                                        inputValues,
+  double* __restrict__                           inputValues,
   int                                            numberOfInputValues,
   int                                            numberOfResultValues,
   Functor                                        functor
