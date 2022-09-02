@@ -88,8 +88,7 @@ namespace applications {
           double                                       additionalMass,
           double                                       baselineDensity,
           double                                       baselinePressure,
-          double                                       gamma,
-          double                                       gaussianScaling = 1.0
+          double                                       gamma
         );
 
 
