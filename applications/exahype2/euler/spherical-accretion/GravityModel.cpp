@@ -11,7 +11,7 @@ void applications::exahype2::euler::sphericalaccretion::initialiseHomogeneousDen
   Q[1] = 0.0;
   Q[2] = 0.0;
   Q[3] = 0.0;
-  Q[4] = 0.5*baselinePressure/(gamma-1);
+  Q[4] = 0.0;
 }
 
 
@@ -36,25 +36,6 @@ void applications::exahype2::euler::sphericalaccretion::initialiseOverdensity_to
   Q[2] = 0.0;
   Q[3] = 0.0;
   Q[4] = 0.5*baselinePressure/(gamma-1);
-
-//  const double recalibratedDistanceFromCentre = std::max( distanceFromCentre, InitialTopHatRadius ) / InitialTopHatRadius;
-
-//  double normalisedInitialVelocity = 1.5 * aInitial * InitialDeltaM / std::pow(recalibratedDistanceFromCentre,3.0) * Q[0];
-
-//  if ( tarch::la::greater(distanceFromCentre,0.0) ) {
-//    Q[1] = -normalisedInitialVelocity * volumeX(0)/distanceFromCentre;    // velocities
-//    Q[2] = -normalisedInitialVelocity * volumeX(1)/distanceFromCentre;    // velocities
-//    Q[3] = -normalisedInitialVelocity * volumeX(2)/distanceFromCentre;    // velocities
-//      Q[4] = ;
-//  }
-//  else {
-//    Q[1] = 0.0;
-//    Q[2] = 0.0;
-//    Q[3] = 0.0;
-//  }
-
-//  Q[4] = 0.5*(Q[1]*Q[1]+Q[2]*Q[2]+Q[3]*Q[3])/Q[0]+pInitial/(Gamma-1); // inner energy
-
 }
 
 
@@ -67,12 +48,12 @@ void applications::exahype2::euler::sphericalaccretion::initialiseOverdensity_Ga
   double                                       additionalMass,
   double                                       baselineDensity,
   double                                       baselinePressure,
-  double                                       gamma,
-  double                                       gaussianScaling
+  double                                       gamma
 ) {
-  double radius = tarch::la::norm2( x );
-
   double standardDeviation = topHatRadius;
+  double gaussianScaling   = 1.0; 
+
+  double radius = tarch::la::norm2( x );
 
   double exponent          = -0.5 * (radius/standardDeviation) * (radius/standardDeviation);
 
