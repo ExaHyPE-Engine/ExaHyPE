@@ -46,7 +46,6 @@ void tarch::multicore::initSYCLQueues(const std::set<int>& deviceList) {
   for (auto &platform : platforms) {
     auto devices = platform.get_devices();
     for (auto &device : devices ) {
-      std::cout << "I try to initialise " << numberOfDevices << std::endl;
       if ( syclQueues.count(numberOfDevices)>0 ) {
         std::cout << "skip device #" << numberOfDevices << " (SYCL queue already set up)" << std::endl;
       }

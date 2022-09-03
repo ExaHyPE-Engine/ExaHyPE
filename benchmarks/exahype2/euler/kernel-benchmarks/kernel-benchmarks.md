@@ -41,6 +41,11 @@ can ensure that we use a certain thread count only, and you can pick the GPUs
 that the benchmark should assess. 
 
 
+The latter remark is wrong for SYCL: Here, you explicitly have to specify which 
+GPUs you want to use. OpenMP in contrast uses all the devices that are available
+by default. If you want SYCL to assess all queues, you can still pass in all.
+
+
 ## Visualiation of results
 
 If you want to use the pre-manufactured visualisation scripts, you have to pipe

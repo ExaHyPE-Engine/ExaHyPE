@@ -37,7 +37,6 @@ tarch::multicore::Core::Core():
   _numberOfDevices( 0 ) {
   internal::configureInternalTaskQueues(_numberOfThreads);
   listSYCLQueues();
-  std::cout << "Now I add " << HostDefaultQueue << " to the device list" << std::endl;
   _devicesToUse.insert(HostDefaultQueue);
   initSYCLQueues( _devicesToUse );
   _numberOfDevices = getNumberOfSYCLQueues();
