@@ -9,7 +9,6 @@
 #include "tarch/mpi/Rank.h"
 
 
-
 #if defined(SharedSYCL)
 #include <tbb/task_group.h>
 #include <tbb/task_arena.h>
@@ -36,10 +35,8 @@ namespace {
 
     for (auto& p: tasks) {
       tarch::multicore::getSYCLQueue(tarch::multicore::HostDefaultQueue).submit([&](auto &h) {
-        ::tarch::logging::Statistics::getInstance().inc( BSPTasksStatisticsIdentifier, 1.0, true );
         while (p->run()) {}
         delete p;
-        ::tarch::logging::Statistics::getInstance().inc( BSPTasksStatisticsIdentifier, -1.0, true );
       });
     }
 
@@ -71,10 +68,8 @@ namespace {
       tarch::multicore::getSYCLQueue(tarch::multicore::HostDefaultQueue).submit([&,p](auto &h) {
           spawnedTasks++;
 
-          ::tarch::logging::Statistics::getInstance().inc( BSPTasksStatisticsIdentifier, 1.0, true );
           while (p->run()) {}
           delete p;
-          ::tarch::logging::Statistics::getInstance().inc( BSPTasksStatisticsIdentifier, -1.0, true );
   
           pendingTasks--;
 
@@ -96,7 +91,7 @@ namespace {
 
             bool processedSomeTasks = false;
             if (numberOfPendingTasks>=fusion.minTasks) {
-              internal::copyInternalTaskQueuesOverIntoGlobalQueue(threadNumber);
+              tarch::multicore::internal::copyInternalTaskQueuesOverIntoGlobalQueue(threadNumber);
               processedSomeTasks = tarch::multicore::internal::fusePendingTasks(fusion);
             }
             else if (numberOfPendingTasks>0) {
@@ -105,7 +100,6 @@ namespace {
             else { // no local tasks left over
               tarch::multicore::internal::copyInternalTaskQueuesOverIntoGlobalQueue(threadNumber);
               const int numberOfTasksToProcess = std::max(1,tarch::multicore::getNumberOfPendingTasks(-1)/2);
-              ::tarch::logging::Statistics::getInstance().log( BackfillWhileWaitingForBSPTasks, numberOfTasksToProcess );
               processedSomeTasks = tarch::multicore::processPendingTasks( numberOfTasksToProcess );
             }
           }
