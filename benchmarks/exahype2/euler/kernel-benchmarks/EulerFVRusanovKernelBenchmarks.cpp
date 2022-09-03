@@ -1,15 +1,15 @@
-#include "EulerFVRusanovKernelBenchmarks-main.h"
-#include "Constants.h"
-#include "observers/CreateGrid.h"
-#include "observers/CreateGridButPostponeRefinement.h"
-#include "observers/CreateGridAndConvergeLoadBalancing.h"
-#include "observers/InitGrid.h"
-#include "observers/PlotSolution.h"
-#include "observers/TimeStep.h"
-#include "repositories/DataRepository.h"
-#include "repositories/StepRepository.h"
-#include "repositories/SolverRepository.h"
-
+#include "../kernel-benchmarks/Constants.h"
+#include "../kernel-benchmarks/EulerFVRusanovKernelBenchmarks-main.h"
+#include "../kernel-benchmarks/observers/CreateGrid.h"
+#include "../kernel-benchmarks/observers/CreateGridAndConvergeLoadBalancing.h"
+#include "../kernel-benchmarks/observers/CreateGridButPostponeRefinement.h"
+#include "../kernel-benchmarks/observers/InitGrid.h"
+#include "../kernel-benchmarks/observers/PlotSolution.h"
+#include "../kernel-benchmarks/observers/TimeStep.h"
+#include "../kernel-benchmarks/repositories/DataRepository.h"
+#include "../kernel-benchmarks/repositories/SolverRepository.h"
+#include "../kernel-benchmarks/repositories/StepRepository.h"
+#include "../kernel-benchmarks/tasks/EulerFVRusanovEnclaveTask.h"
 #include "tarch/logging/Log.h"
 #include "tarch/logging/Statistics.h"
 #include "tarch/logging/LogFilter.h"
@@ -24,8 +24,6 @@
 
 #include "exahype2/NonCriticalAssertions.h"
 #include "exahype2/UserInterface.h"
-
-#include "tasks/EulerFVRusanovEnclaveTask.h"
 
 #include "config.h"
 

@@ -170,9 +170,8 @@ shared memory scaling behaviour on one node. If you have enabled GPUs, the runs 
 offload to the accelerators, too.
 The two plots below show the performance of the code on an EPYC node with 128 cores and
 they compare Finite Volumes with a patch size of 4x4x4 with a code with patch size 8x8x8.
-We clearly see that the impact of good scalability is only a secondary runtime criterion:
-Bigger patches just have so much lower overhead, that it is hard for the scaling to make
-this up.
+We clearly see that smaller patch sizes lead to better scaling, which is reasonable, as we
+have more freedom to distribute the (smaller) patches.
 
 
 <img src="example-output/single-node-assess-optimisation-reg-0-FV-4.png" />
@@ -195,7 +194,22 @@ exclusively on performance aspects here:
       done
       
 
-<img src="example-output/single-node-solver-types-0-opt.png" />
+Plots like the one below suggest that the patch size had by far a more significant
+impact than the scalability. 
+Indeed, we fix a minimum volume size for the Finite Volume scheme and ExaHyPE just
+makes the grid fine enough to meet this size. 
+However, that does not mean that all codes operate with the same cell size.
+To get reliable statements on the time-to-solution, one would have to calibrate the 
+timings with the number of actual volumes in the mesh.
+This is something the pre-defined scripts do not offer. 
+However, it is easy to build your own scripts based upon what's there in the repo.
+While such calibration exercises are straightforward with Finite Volumes (even 
+though you have to do them first), it remains unclear how to compare different DG
+versions with each other. 
+
+
+<img src="example-output/single-node-FV-solver-types-reg-0-opt.png" />
+
 
 
 ### Distribution of threads vs ranks
@@ -224,10 +238,6 @@ something fancier, custom-made for your own plots in this case:
       
       for type in reg-0
       do
-       #for solver in FV-8 RK4DG4
-       for solver in FV-8
-       do
-        python3 ../../../../python/exahype2/postprocessing/plot-scaling.py --log-x --log-y --output single-node-different-mpi-tasks-on-node-$type-$solver single-node-benchmark-$type-$solver-different-mpi-tasks-on-node.tar.gz -v
-       done
+       python3 ../../../../python/exahype2/postprocessing/plot-scaling.py --log-x --log-y --output single-node-different-mpi-tasks-on-node-$type --labels FV-8,RK4DG4 single-node-benchmark-$type-FV-8-different-mpi-tasks-on-node.tar.gz single-node-benchmark-$type-RK4DG4-different-mpi-tasks-on-node.tar.gz
       done
       

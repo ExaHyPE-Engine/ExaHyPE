@@ -5,6 +5,8 @@
 
 
 #include <thread>
+#include <set>
+
 #include "tarch/logging/Log.h"
 
 
@@ -46,8 +48,9 @@ class tarch::multicore::Core {
 
     Core();
 
-    int _numberOfThreads;
-    int _numberOfDevices;
+    int               _numberOfThreads;
+    int               _numberOfDevices;
+    std::set<int>     _devicesToUse;
   public:
     /**
      * The default is what the system management typically gives you. So if
@@ -81,7 +84,7 @@ class tarch::multicore::Core {
      *        of threads) or it equals DefaultNumberOfThreads which means that the code should
      *        use the default number of threads.
      */
-    void configure( int numberOfThreads = UseDefaultNumberOfThreads );
+    void configure( int numberOfThreads = UseDefaultNumberOfThreads, const std::set<int>& devicesToUse = {} );
 
     /**
      * Shutdown parallel environment.
@@ -112,6 +115,11 @@ class tarch::multicore::Core {
      * @return Logical thread number
      */
     int getThreadNumber() const;
+
+    /**
+     * Query if a particular device is available for offloading.
+     */
+    bool isDeviceAvailable(int number) const;
 };
 
 

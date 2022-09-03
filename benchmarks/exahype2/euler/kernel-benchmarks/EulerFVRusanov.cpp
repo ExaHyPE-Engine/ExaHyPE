@@ -1,4 +1,5 @@
-#include "EulerFVRusanov.h"
+#include "../kernel-benchmarks/EulerFVRusanov.h"
+
 #include "exahype2/RefinementControl.h"
 
 tarch::logging::Log benchmarks::exahype2::euler::EulerFVRusanov::_log("benchmarks::exahype2::euler::EulerFVRusanov");

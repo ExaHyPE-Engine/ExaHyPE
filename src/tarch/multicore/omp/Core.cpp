@@ -69,7 +69,9 @@ tarch::multicore::Core& tarch::multicore::Core::getInstance() {
 }
 
 
-void tarch::multicore::Core::configure( int numberOfThreads ) {
+void tarch::multicore::Core::configure( int numberOfThreads, const std::set<int>& devicesToUse ) {
+  _devicesToUse = devicesToUse;
+
   if ( omp_get_num_procs() != omp_get_max_threads() ) {
     logWarning( "configure(int)", "omp_get_num_procs reports " << omp_get_num_procs() << " while omp_get_max_threads reports " << omp_get_max_threads() << ". Take smaller value to avoid overbooking" );
   }
@@ -129,5 +131,12 @@ int tarch::multicore::Core::getCoreNumber() const {
   return 0;
   #endif
 }
+
+
+bool tarch::multicore::Core::isDeviceAvailable(int number) const {
+  return _devicesToUse.empty() or _devicesToUse.count(number)>0;
+}
+
+
 
 #endif

@@ -54,6 +54,9 @@
 #pragma pop_macro("assertion")
 
 
+#include <set>
+
+
 namespace tarch {
   namespace multicore {
     /**
@@ -74,7 +77,23 @@ namespace tarch {
      */
     int getNumberOfSYCLQueues();
 
-    void initSYCLQueues();
+    /**
+     * This routine creates one SYCL queue per enabled device. The routine
+     * works incrementally, i.e. you can call it multiple times and it will
+     * shut down or create additional queues as the number of available
+     * devices changes.
+     *
+     * @param deviceList List of devices to initialise. Can be empty if you
+     *   want all of them to be filled with a SYCL queue.
+     */
+    void initSYCLQueues(const std::set<int>& deviceList);
+
+    /**
+     * Write available queues to cout. The logging interface is not used, as
+     * the logging might not be up when you invoke this routine for the first
+     * time.
+     */
+    void listSYCLQueues();
 
     constexpr int HostDefaultQueue = -1;
   }
