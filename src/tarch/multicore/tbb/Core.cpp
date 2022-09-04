@@ -57,7 +57,9 @@ tarch::multicore::Core& tarch::multicore::Core::getInstance() {
 }
 
 
-void tarch::multicore::Core::configure( int numberOfThreads ) {
+void tarch::multicore::Core::configure( int numberOfThreads, const std::set<int>& devicesToUse ) {
+  _devicesToUse = devicesToUse;
+
   if (globalControl!=nullptr) delete globalControl;
   globalControl = nullptr;
   if (numberOfThreads != UseDefaultNumberOfThreads) {
@@ -109,6 +111,11 @@ int tarch::multicore::Core::getCoreNumber() const {
 
 int tarch::multicore::Core::getThreadNumber() const {
   return tbb::this_task_arena::current_thread_index();
+}
+
+
+bool tarch::multicore::Core::isDeviceAvailable(int number) const {
+  return number==HostDevice or _devicesToUse.empty() or _devicesToUse.count(number)>0;
 }
 
 

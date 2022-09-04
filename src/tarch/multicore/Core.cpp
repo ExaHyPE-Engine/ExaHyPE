@@ -44,7 +44,7 @@ tarch::multicore::Core& tarch::multicore::Core::getInstance() {
 }
 
 
-void tarch::multicore::Core::configure( int numberOfThreads ) {
+void tarch::multicore::Core::configure( int numberOfThreads, const std::vector<int>& devicesToUse ) {
   internal::configureInternalTaskQueues(numberOfThreads);
 }
 

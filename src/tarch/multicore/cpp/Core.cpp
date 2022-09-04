@@ -42,7 +42,9 @@ tarch::multicore::Core& tarch::multicore::Core::getInstance() {
 }
 
 
-void tarch::multicore::Core::configure( int numberOfThreads ) {
+void tarch::multicore::Core::configure( int numberOfThreads, const std::set<int>& devicesToUse ) {
+  _devicesToUse = devicesToUse;
+
   if (numberOfThreads != UseDefaultNumberOfThreads) {
     _numberOfThreads = numberOfThreads;
   }
@@ -91,6 +93,11 @@ int tarch::multicore::Core::getCoreNumber() const {
 
 int tarch::multicore::Core::getThreadNumber() const {
   return getCoreNumber();
+}
+
+
+bool tarch::multicore::Core::isDeviceAvailable(int number) const {
+  return _devicesToUse.empty() or _devicesToUse.count(number)>0;
 }
 
 

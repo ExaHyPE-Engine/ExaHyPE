@@ -1,7 +1,7 @@
 #ifndef __BENCHMARKS_EXAHYPE2_EULER_EULERFVRUSANOV_H__
 #define __BENCHMARKS_EXAHYPE2_EULER_EULERFVRUSANOV_H__
 
-#include "AbstractEulerFVRusanov.h"
+#include "../kernel-benchmarks/AbstractEulerFVRusanov.h"
 #include "tarch/logging/Log.h"
 
 #include "EulerKernels.h"

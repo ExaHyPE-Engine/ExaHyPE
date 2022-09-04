@@ -300,12 +300,7 @@ def create_abstract_solver_declarations(flux_implementation, ncp_implementation,
       int                                          normal,
       double * __restrict__                        F, // F[{{NUMBER_OF_UNKNOWNS}}]
       Offloadable
-    )
-    #if defined(GPUOffloadingSYCL)
-    {}
-    #else
-    ;
-    #endif
+    );
     #if defined(GPUOffloadingOMP)
     #pragma omp end declare target
     #endif
@@ -349,12 +344,7 @@ def create_abstract_solver_declarations(flux_implementation, ncp_implementation,
       int                                          normal,
       double * __restrict__                        BTimesDeltaQ, // BTimesDeltaQ[{{NUMBER_OF_UNKNOWNS}}]
       Offloadable
-    )
-    #if defined(GPUOffloadingSYCL)
-    {}
-    #else
-    ;
-    #endif
+    );
     #if defined(GPUOffloadingOMP)
     #pragma omp end declare target
     #endif
@@ -397,12 +387,7 @@ def create_abstract_solver_declarations(flux_implementation, ncp_implementation,
       double                                       dt,
       double * __restrict__                        S,
       Offloadable
-    )
-    #if defined(GPUOffloadingSYCL)
-    {}
-    #else
-    ;
-    #endif
+    );
     #if defined(GPUOffloadingOMP)
     #pragma omp end declare target
     #endif
