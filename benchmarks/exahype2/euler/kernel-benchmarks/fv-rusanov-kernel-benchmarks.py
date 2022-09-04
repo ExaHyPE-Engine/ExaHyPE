@@ -30,7 +30,7 @@ if args.dim not in [2,3]:
 
 
 dimensions = args.dim
-project = exahype2.Project( ["benchmarks", "exahype2", "euler"], "EulerFVRusanovKernelBenchmarks", ".", executable="EulerFVRusanovKernelBenchmarks" )
+project = exahype2.Project( ["benchmarks", "exahype2", "euler"], "EulerFVRusanovKernelBenchmarks", ".", executable="kernel-benchmark-fv-" + str(args.dim) + "d-patch-size-"+ str(args.patch_size) )
 
 unknowns            = 1+dimensions+1
 max_h               = 0.01

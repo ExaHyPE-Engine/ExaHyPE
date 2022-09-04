@@ -16,6 +16,17 @@ that I tend to build from time to time.
 
 ### Finite Volumes
 
+I typically create a bunch of benchmarks around the Finite Volume solvers:
+
+    python3 fv-rusanov-kernel-benchmarks.py --dim 2 --patch-size 4 
+    python3 fv-rusanov-kernel-benchmarks.py --dim 2 --patch-size 6 
+    python3 fv-rusanov-kernel-benchmarks.py --dim 2 --patch-size 8 
+
+    python3 fv-rusanov-kernel-benchmarks.py --dim 3 --patch-size 4 
+    python3 fv-rusanov-kernel-benchmarks.py --dim 3 --patch-size 6 
+    python3 fv-rusanov-kernel-benchmarks.py --dim 3 --patch-size 8 
+
+
 
 ### Clean up
 
@@ -43,15 +54,25 @@ of them play no role here, but the thread count and the gpu filters do, i.e. you
 can ensure that we use a certain thread count only, and you can pick the GPUs 
 that the benchmark should assess. 
 
-I typically run the 
-
-
-
 Note the slightly different semantics of the GPU setting for SYCL and OpenMP: 
 For SYCL, you explicitly have to specify which GPUs you want to use. You can 
 pass all as argument, but you have to pass something. Otherwise, ExaHyPE will
 only use the host. OpenMP in contrast uses all the devices that are available
 by default. 
+
+
+
+### Finite Volumes
+
+I typically run the Finite Volume solvers with
+
+    ./kernel-benchmark-fv-2d-patch-size-4 --threads 1 -gpus all
+    ./kernel-benchmark-fv-2d-patch-size-4 --threads 2 -gpus all
+    ./kernel-benchmark-fv-2d-patch-size-4 --threads 4 -gpus all
+    ./kernel-benchmark-fv-2d-patch-size-4 --threads 8 -gpus all
+
+to obtain a first insight into how the throughput changes as more and more 
+threads hit the GPUs with kernel invocations.
 
 
 ## Visualiation of results
