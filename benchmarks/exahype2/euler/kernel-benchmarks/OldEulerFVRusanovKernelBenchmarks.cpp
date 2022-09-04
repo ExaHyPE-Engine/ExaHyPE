@@ -1,15 +1,15 @@
-#include "../kernel-benchmarks/Constants.h"
-#include "../kernel-benchmarks/EulerFVRusanovKernelBenchmarks-main.h"
-#include "../kernel-benchmarks/observers/CreateGrid.h"
-#include "../kernel-benchmarks/observers/CreateGridAndConvergeLoadBalancing.h"
-#include "../kernel-benchmarks/observers/CreateGridButPostponeRefinement.h"
-#include "../kernel-benchmarks/observers/InitGrid.h"
-#include "../kernel-benchmarks/observers/PlotSolution.h"
-#include "../kernel-benchmarks/observers/TimeStep.h"
-#include "../kernel-benchmarks/repositories/DataRepository.h"
-#include "../kernel-benchmarks/repositories/SolverRepository.h"
-#include "../kernel-benchmarks/repositories/StepRepository.h"
-#include "../kernel-benchmarks/tasks/EulerFVRusanovEnclaveTask.h"
+#include "Constants.h"
+#include "EulerFVRusanovKernelBenchmarks-main.h"
+#include "observers/CreateGrid.h"
+#include "observers/CreateGridAndConvergeLoadBalancing.h"
+#include "observers/CreateGridButPostponeRefinement.h"
+#include "observers/InitGrid.h"
+#include "observers/PlotSolution.h"
+#include "observers/TimeStep.h"
+#include "repositories/DataRepository.h"
+#include "repositories/SolverRepository.h"
+#include "repositories/StepRepository.h"
+#include "tasks/EulerFVRusanovEnclaveTask.h"
 #include "tarch/logging/Log.h"
 #include "tarch/logging/Statistics.h"
 #include "tarch/logging/LogFilter.h"
@@ -89,9 +89,11 @@ void storeOutcome( const double* Q, const double maxEigenvalue) {
   validMaxEigenvalue = maxEigenvalue;
 }
 
+
 /**
- * Works if and only if storeOutcome has been performed
- * before.
+ * Works if and only if storeOutcome has been performed before.
+ *
+ * @return Tuple of maximum difference and total number of errors.
  */
 std::tuple<double, int> validateOutcome( double* Q, int patchIndex , const double maxEigenvalue) {
   int index = 0;
@@ -114,10 +116,12 @@ std::tuple<double, int> validateOutcome( double* Q, int patchIndex , const doubl
   return { maxDifference, errors };
 }
 
+
 static constexpr double TimeStamp    = 0.5;
 static constexpr double TimeStepSize = 1e-6;
 static constexpr double CellSize     = 0.1;
 static constexpr double CellOffset   = 4.0;
+
 
 #if defined(GPUOffloadingOMP)
 // TODO: Should be placed in a "RusanovMemoryManager" later on
