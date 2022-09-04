@@ -37,10 +37,10 @@ tarch::multicore::Core::Core():
   _numberOfDevices( 0 ) {
   internal::configureInternalTaskQueues(_numberOfThreads);
   listSYCLQueues();
-  _devicesToUse.insert(HostDefaultQueue);
+  _devicesToUse.insert(tarch::multicore::Core::HostDevice);
   initSYCLQueues( _devicesToUse );
   _numberOfDevices = getNumberOfSYCLQueues();
-  _numberOfThreads = getSYCLQueue(HostDefaultQueue).get_device().get_info<sycl::info::device::max_compute_units>();
+  _numberOfThreads = getSYCLQueue(tarch::multicore::Core::HostDevice).get_device().get_info<sycl::info::device::max_compute_units>();
 }
 
 
@@ -58,10 +58,12 @@ void tarch::multicore::Core::configure( int numberOfThreads, const std::set<int>
   _devicesToUse = devicesToUse;
 
   if ( numberOfThreads!=_numberOfThreads) {
-    logWarning( "configure(int)", "can not reconfigure number of threads with SYCL atm" );
+    logWarning( "configure(int)", "can not reconfigure number of threads within SYCL queue. Will work with " << numberOfThreads << " logical threads within host queue having " << _numberOfThreads << " threads" );
+    _numberOfThreads = numberOfThreads;
   }
 
   initSYCLQueues( _devicesToUse );
+  _numberOfDevices = getNumberOfSYCLQueues();
 }
 
 
@@ -96,11 +98,6 @@ int tarch::multicore::Core::getCoreNumber() const {
 
 int tarch::multicore::Core::getThreadNumber() const {
   return -1;
-}
-
-
-bool tarch::multicore::Core::isDeviceAvailable(int number) const {
-  return _devicesToUse.empty() or _devicesToUse.count(number)>0;
 }
 
 

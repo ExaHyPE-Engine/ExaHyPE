@@ -25,6 +25,9 @@ triggered by
     
      rm Abstract* Readme* Makefile Constants.h
      rm -rf celldata facedata observers repositories tasks
+     rm *.o
+     
+     
      
 ## Runs
 
@@ -40,10 +43,15 @@ of them play no role here, but the thread count and the gpu filters do, i.e. you
 can ensure that we use a certain thread count only, and you can pick the GPUs 
 that the benchmark should assess. 
 
+I typically run the 
 
-The latter remark is wrong for SYCL: Here, you explicitly have to specify which 
-GPUs you want to use. OpenMP in contrast uses all the devices that are available
-by default. If you want SYCL to assess all queues, you can still pass in all.
+
+
+Note the slightly different semantics of the GPU setting for SYCL and OpenMP: 
+For SYCL, you explicitly have to specify which GPUs you want to use. You can 
+pass all as argument, but you have to pass something. Otherwise, ExaHyPE will
+only use the host. OpenMP in contrast uses all the devices that are available
+by default. 
 
 
 ## Visualiation of results

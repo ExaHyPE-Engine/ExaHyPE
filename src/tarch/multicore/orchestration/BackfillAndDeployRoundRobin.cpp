@@ -18,21 +18,8 @@ void tarch::multicore::orchestration::BackfillAndDeployRoundRobin::toggleDevice(
     _nextDeviceToUse = Task::Host;
   }
   else {
-    int newNextDeviceToUse = _nextDeviceToUse;
-    int toggles            = 0;
-    do {
-      newNextDeviceToUse++;
-      toggles++;
-      newNextDeviceToUse = newNextDeviceToUse % tarch::multicore::Core::getInstance().getNumberOfGPUs();
-    }
-    while (toggles<tarch::multicore::Core::getInstance().getNumberOfGPUs() and not tarch::multicore::Core::getInstance().isDeviceAvailable(newNextDeviceToUse) );
-
-    if (tarch::multicore::Core::getInstance().isDeviceAvailable(newNextDeviceToUse)) {
-      _nextDeviceToUse = newNextDeviceToUse;
-    }
-    else {
-      _nextDeviceToUse = Task::Host;
-    }
+    _nextDeviceToUse++;
+    _nextDeviceToUse = _nextDeviceToUse % tarch::multicore::Core::getInstance().getNumberOfGPUs();
   }
 }
 

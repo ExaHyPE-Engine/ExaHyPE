@@ -115,7 +115,7 @@ int tarch::multicore::Core::getThreadNumber() const {
 
 
 bool tarch::multicore::Core::isDeviceAvailable(int number) const {
-  return _devicesToUse.empty() or _devicesToUse.count(number)>0;
+  return number==HostDevice or _devicesToUse.empty() or _devicesToUse.count(number)>0;
 }
 
 

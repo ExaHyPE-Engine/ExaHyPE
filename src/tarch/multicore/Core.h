@@ -62,6 +62,13 @@ class tarch::multicore::Core {
     static constexpr int UseDefaultNumberOfThreads         = 0;
 
     /**
+     * Accelerator devices (GPUs) are enumerated starting from 0. If you argue
+     * where to offload tasks and want to pick the host, then pass in this
+     * constant instead.
+     */
+    static constexpr int HostDevice = -1;
+
+    /**
      * Destructor
      */
     ~Core();
@@ -72,12 +79,34 @@ class tarch::multicore::Core {
     static Core& getInstance();
 
     /**
-     * Configure the whole thing. If numberOfThreads equals the default, the
-     * routine will use the hardware concurrency to determine the number of
-     * threads that should be used. On SLURM-based HPC platforms, this will
-     * be wrong if multiple MPI ranks are placed on one node. It is also a
-     * bad choice if hyperthreading should not/can not be used. Use the helper
-     * function getNumberOfUnmaskedThreads().
+     * Configure the whole node, i.e. all cores available on a node. If
+     * numberOfThreads equals the default, the routine will use the hardware
+     * concurrency to determine the number of threads that should be used.
+     * On SLURM-based HPC platforms, this will be wrong if multiple MPI ranks
+     * are placed on one node. It is also a bad choice if hyperthreading
+     * should not/can not be used. Use the helper function
+     * getNumberOfUnmaskedThreads().
+     *
+     * ## TBB
+     *
+     * In the TBB context, the GPU setting are ignored. If you however combine
+     * TBB with SYCL, then the SYCL policies (see below) hold.
+     *
+     * ## OpenMP
+     *
+     * By default, OpenMP makes all devices visible to the user.
+     *
+     * ## SYCL
+     *
+     * In SYCL, you cannot alter the core count atm on the node. Obviously,
+     * we could split the queue on the host according to this spec, but then
+     * we'd end up with some cores idling. So we do not support resetting the
+     * thread count on the host with SYCL.
+     *
+     * By default, SYCL makes no device visible to the user. You have to call
+     * configure() manually to make GPUs available to Peano.
+     *
+     *
      *
      * @param numberOfThreads Number of threads that shall be used. This
      *        parameter either is greater than zero (which defines the number
@@ -104,6 +133,14 @@ class tarch::multicore::Core {
      * @return Number of threads available.
      */
     int getNumberOfThreads() const;
+
+    /**
+     * Return the number of GPUs that are available. It is then Peano's policy
+     * that you access these GPUs with numbers from 0 to ... We work with
+     * logical GPU numbers, i.e. they might be mapped onto different numbers
+     * internally. How this mapping is realised however is strongly depending
+     * on the used GPU backend.
+     */
     int getNumberOfGPUs() const;
 
     /**
@@ -115,11 +152,6 @@ class tarch::multicore::Core {
      * @return Logical thread number
      */
     int getThreadNumber() const;
-
-    /**
-     * Query if a particular device is available for offloading.
-     */
-    bool isDeviceAvailable(int number) const;
 };
 
 

@@ -65,11 +65,6 @@ void tarch::multicore::Core::shutdown() {
 }
 
 
-bool tarch::multicore::Core::isDeviceAvailable(int number) const {
-  return true;
-}
-
-
 bool tarch::multicore::Core::isInitialised() const {
   return true;
 }

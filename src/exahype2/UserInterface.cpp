@@ -156,7 +156,6 @@ bool exahype2::parseCommandLineArguments(int argc, char** argv) {
 
     if ( select.compare( "--threads" ) ==0 ) {
       cores = std::atoi(argv[argument+1]);
-      tarch::multicore::Core::getInstance().configure( cores );
       logInfo( "parseCommandLineArguments(...)", "manually reset number of used cores to " << cores );
     }
     else if ( select.compare( "--gpus" ) ==0 ) {
