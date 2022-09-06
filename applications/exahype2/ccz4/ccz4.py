@@ -49,7 +49,7 @@ if __name__ == "__main__":
     parser.add_argument("-m",    "--mode",            dest="mode",            default="release",  help="|".join(modes.keys()) )
     parser.add_argument( "--gpu",            dest="GPU",            default=False, action="store_true",  help="Run with accelerator support" )
     parser.add_argument("-ext",  "--extension",       dest="extension",       choices=["none", "gradient", "AMRadm", "Full"],   default="none",  help="Pick extension, i.e. what should be plotted on top. Default is none" )
-    parser.add_argument("-impl", "--implementation",  dest="implementation",  choices=["fv-global-fixed", "fv-global-adaptive", "fv-global-fixed-enclave", "fv-global-adaptive-enclave","fv-subcyling-adaptive-enclave","fv-local-enclave", "fv-musclhancock", "fd4-rk1-adaptive", "fd4-rk1-fixed", "fd4-rk4-adaptive", "fd4-rk4-fixed", "fv-fd4"], required="True",  help="Pick solver type" )
+    parser.add_argument("-impl", "--implementation",  dest="implementation",  choices=["fv-global-fixed", "fv-global-adaptive", "fv-global-fixed-enclave", "fv-global-adaptive-enclave","fv-subcyling-adaptive-enclave","fv-local-enclave", "fv-musclhancock", "fd4-rk1-adaptive", "fd4-rk1-fixed", "fd4-rk4-adaptive", "fd4-rk4-fixed", "RKDG"], required="True",  help="Pick solver type" )
     parser.add_argument("-no-pbc",  "--no-periodic-boundary-conditions",      dest="periodic_bc", action="store_false", default="True",  help="switch on or off the periodic BC" )
     parser.add_argument("-AMRMarker",  "--AMR-marker",      dest="marker", choices=["none", "poisson"],   default="none",  help="switch on or off the AMR boundary marker" )
     parser.add_argument("-et",   "--end-time",        dest="end_time",        type=float, default=1.0, help="End (terminal) time" )
@@ -92,8 +92,8 @@ if __name__ == "__main__":
        SuperClass = exahype2.solvers.rkfd.fd4.GlobalAdaptiveTimeStep
     if args.implementation=="fd4-rk1-fixed" or args.implementation=="fd4-rk4-fixed":
        SuperClass = exahype2.solvers.rkfd.fd4.GlobalFixedTimeStep
-    if args.implementation=="fv-fd4":
-       SuperClass = exahype2.solvers.fv.fd4.GlobalAdaptiveTimeStep
+    if args.implementation=="RKDG":
+       SuperClass = exahype2.solvers.rkdg.rusanov.GlobalAdaptiveTimeStep
 
 
     class CCZ4Solver( SuperClass ):
@@ -181,15 +181,16 @@ if __name__ == "__main__":
             normalised_time_step_size=0.01,
             KOSigma=KOSig
           )
-        elif SuperClass==exahype2.solvers.fv.fd4.GlobalAdaptiveTimeStep:
+        elif SuperClass == exahype2.solvers.rkdg.rusanov.GlobalAdaptiveTimeStep:
           SuperClass.__init__(
             self,
-            name=name, patch_size=patch_size,
+            name=name,
+            rk_order     = 1,
+            polynomials  = exahype2.solvers.GaussLegendreBasis(3),
             unknowns=number_of_unknowns,
             auxiliary_variables=0,
-            min_volume_h=min_volume_h, max_volume_h=max_volume_h,
-            time_step_relaxation=cfl,
-            KOSigma=KOSig
+            min_cell_h=min_volume_h, max_cell_h=max_volume_h, #not a good name, but use for now.
+            time_step_relaxation=cfl
           )
         else:
           SuperClass.__init__(
@@ -229,6 +230,10 @@ if __name__ == "__main__":
     constexpr int itmax = {{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}} * {{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}} * {{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}};
     #endif
 """
+        elif SuperClass == exahype2.solvers.rkdg.rusanov.GlobalAdaptiveTimeStep:
+          self.postprocess_updated_patch = """
+    constexpr int itmax = ({{ORDER}}+1) * ({{ORDER}}+1) * ({{ORDER}}+1); // only support 3d
+"""
         else:
           self.postprocess_updated_patch += """
     #if Dimensions==2
@@ -254,7 +259,10 @@ if __name__ == "__main__":
       def create_action_sets(self):
         SuperClass.create_action_sets(self)
 
-        self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement.additional_includes += """ 
+        if SuperClass == exahype2.solvers.rkdg.rusanov.GlobalAdaptiveTimeStep:
+          pass
+        else:
+          self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement.additional_includes += """ 
 #include "../CCZ4Kernels.h"
             """
 
@@ -613,8 +621,19 @@ if __name__ == "__main__":
         #print(msg)
         #userinfo.append((msg,e))
 
+    try:
+      if SuperClass==exahype2.solvers.rkdg.rusanov.GlobalAdaptiveTimeStep:
+        is_rkdg = True
+    except Exception as e:
+        pass
+        msg = "Warning: RKDG no supported on this machine"
+        print(msg)
+        userinfo.append((msg,e))
+
     if is_aderdg:
       solver_name    = "ADERDG" + solver_name
+    elif is_rkdg:
+      solver_name    = "RKDG" + solver_name
     else:
       solver_name    = "FiniteVolume" + solver_name
 
