@@ -70,6 +70,11 @@ class UpdateFaceLabel(ActionSet):
     isBoundary |= tarch::la::equals( marker.x()(d), offset(d) + size(d) );
   }}
   fineGridFace""" + UpdateFaceLabel.get_attribute_name(self._solver_name) + """.setBoundary( isBoundary );
+
+  fineGridFace""" + UpdateFaceLabel.get_attribute_name(self._solver_name) + """.setUpdatedTimeStamp( 0.0 );
+  fineGridFace""" + UpdateFaceLabel.get_attribute_name(self._solver_name) + """.setNewTimeStamp( 0.0 );
+  fineGridFace""" + UpdateFaceLabel.get_attribute_name(self._solver_name) + """.setOldTimeStamp( 0.0 );
+
   logTraceOutWith1Argument( "createPersistent/HangingFace(...)", fineGridFace""" + UpdateFaceLabel.get_attribute_name(self._solver_name) + """.toString() );
 """
     if operation_name==ActionSet.OPERATION_TOUCH_FACE_FIRST_TIME:
