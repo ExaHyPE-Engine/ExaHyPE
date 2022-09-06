@@ -54,6 +54,9 @@
 #pragma pop_macro("assertion")
 
 
+#include <set>
+
+
 namespace tarch {
   namespace multicore {
     /**
@@ -63,6 +66,11 @@ namespace tarch {
      * singleton for the total number of (logical) devices. Per device,
      * we hold one SYCL queue persistently. You can gain access to this
      * one queue via this getter.
+     *
+     * number is a logical number, i.e. it is a number from 0 to
+     * getNumberOfSYCLQueues(). The actual device number might be totally
+     * different. You can also pass in Core::HostDevice to access the queue
+     * on the host. This is a feature that is not available in OpenMP.
      */
     sycl::queue& getSYCLQueue( int number );
 
@@ -70,13 +78,33 @@ namespace tarch {
      * Return number of SYCL queues
      *
      * The default host queue is not counted here, so you won't get the queue
-     * labelled by HostDefaultQueue.
+     * labelled by HostDefaultQueue. The number of SYCL queues refers to the
+     * logical number: As we pack one queue on each device, it effectively
+     * tells you how many devices we are allowed to use minus one (for the
+     * host).
+     *
+     * @see initSYCLQueues() on the blacklisting and initialisation mechanism.
      */
     int getNumberOfSYCLQueues();
 
-    void initSYCLQueues();
+    /**
+     * This routine creates one SYCL queue per enabled device. The routine
+     * works incrementally, i.e. you can call it multiple times and it will
+     * shut down or create additional queues as the number of available
+     * devices changes.
+     *
+     * @param deviceList List of devices to initialise. Can be empty if you
+     *   want all of them to be filled with a SYCL queue. These numbers are
+     *   physical device numbers as they are plotted by listSYCLQueues().
+     */
+    void initSYCLQueues(const std::set<int>& deviceList);
 
-    constexpr int HostDefaultQueue = -1;
+    /**
+     * Write available queues to cout. The logging interface is not used, as
+     * the logging might not be up when you invoke this routine for the first
+     * time.
+     */
+    void listSYCLQueues();
   }
 }
 

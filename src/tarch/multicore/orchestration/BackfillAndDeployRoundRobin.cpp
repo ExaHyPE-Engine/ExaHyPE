@@ -8,18 +8,17 @@ tarch::multicore::orchestration::BackfillAndDeployRoundRobin::BackfillAndDeployR
   int  minTasksToFuse
 ):
   _minTasksToFuse(minTasksToFuse),
-  _nextDeviceToUse(-1),
+  _nextDeviceToUse(Task::Host),
   _inBSPSection(false) {
-  toggleDevice();
 }
 
 
 void tarch::multicore::orchestration::BackfillAndDeployRoundRobin::toggleDevice() {
-  _nextDeviceToUse++;
   if ( tarch::multicore::Core::getInstance().getNumberOfGPUs()==0 ) {
     _nextDeviceToUse = Task::Host;
   }
   else {
+    _nextDeviceToUse++;
     _nextDeviceToUse = _nextDeviceToUse % tarch::multicore::Core::getInstance().getNumberOfGPUs();
   }
 }

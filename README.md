@@ -84,18 +84,27 @@ Some exemplary configure commands are given below. For detailed information plea
 
 * Intel
 ```shell
-./configure --with-multithreading=omp --enable-exahype --enable-loadbalancing --enable-blockstructured --enable-fenv CC=icx CXX=icpx CXXFLAGS="-O3 -std=c++20 -fiopenmp" LDFLAGS="-fiopenmp"
-./configure --with-multithreading=omp --with-gpu=omp --enable-exahype --enable-loadbalancing --enable-blockstructured --enable-fenv CC=icx CXX=icpx CXXFLAGS="-O3 -std=c++20 -fiopenmp -fopenmp-targets=spir64" LDFLAGS="-fiopenmp"
+./configure --with-multithreading=omp --enable-exahype --enable-loadbalancing --enable-blockstructured CC=icx CXX=icpx CXXFLAGS="-O3 -std=c++20 -fiopenmp" LDFLAGS="-fiopenmp"
 ```
 
-* LLVM
+* Intel with OpenMP GPU
 ```shell
-./configure --with-multithreading=omp --with-gpu=omp --enable-exahype --enable-loadbalancing --enable-blockstructured --enable-fenv CC=clang CXX=clang++ CXXFLAGS="-O3 -std=c++17 -fopenmp -fopenmp-targets=nvptx64-nvidia-cuda -Xopenmp-target -march=sm_86"
+./configure --with-multithreading=omp --with-gpu=omp --enable-exahype --enable-loadbalancing --enable-blockstructured CC=icx CXX=icpx CXXFLAGS="-O3 -std=c++20 -fiopenmp -fopenmp-targets=spir64" LDFLAGS="-fiopenmp"
 ```
 
-* NVHPC
+* LLVM with OpenMP GPU
 ```shell
-./configure --with-multithreading=omp --with-gpu=omp --enable-exahype --enable-loadbalancing --enable-blockstructured --enable-fenv CC=nvc++ CXX=nvc++ CXXFLAGS="-O4 -std=c++20 -mp=gpu -gpu=cc86" LDFLAGS="-mp=gpu -gpu=cc86"
+./configure --with-multithreading=omp --with-gpu=omp --enable-exahype --enable-loadbalancing --enable-blockstructured CC=clang CXX=clang++ CXXFLAGS="-O3 -std=c++17 -fopenmp -fopenmp-targets=nvptx64-nvidia-cuda -Xopenmp-target -march=sm_86"
+```
+
+* NVHPC with OpenMP GPU
+```shell
+./configure --with-multithreading=omp --with-gpu=omp --enable-exahype --enable-loadbalancing --enable-blockstructured CC=nvc++ CXX=nvc++ CXXFLAGS="-O4 -std=c++20 -mp=gpu -gpu=cc86" LDFLAGS="-mp=gpu -gpu=cc86"
+```
+
+* NVHPC with C++ GPU
+```shell
+./configure --with-multithreading=cpp --with-gpu=cpp --enable-exahype --enable-loadbalancing --enable-blockstructured CC=nvc++ CXX=nvc++ CXXFLAGS="-O4 -std=c++20 -mp=gpu -gpu=cc86" LDFLAGS="-gpu=cc86"
 ```
 
 ### Compilation

@@ -48,7 +48,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::applyKernelToCell(
   const ::peano4::datamanagement::CellMarker& marker,
   double                                      timeStamp,
   double                                      timeStepSize,
-  double* __restrict__                        QIn,
+  const double* __restrict__                  QIn,
   double* __restrict__                        QOut
 ) {
   ::exahype2::CellData cellData(
@@ -70,18 +70,19 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::applyKernelToCell(
   const ::peano4::datamanagement::CellMarker& marker,
   double                                      t,
   double                                      dt,
-  double* __restrict__                        copyOfLinearCombinationOfPreviousShots
+  const double* __restrict__                  copyOfLinearCombinationOfPreviousShots
 ):
   ::exahype2::EnclaveTask(
     _enclaveTaskTypeId,
     marker,
     t,
     dt,
-    nullptr, // input data not ready at this point
     #if Dimensions==2
+    allocateMemory({{NUMBER_OF_DOFS_PER_CELL_2D}}*({{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}), tarch::MemoryLocation::Heap),
     {{NUMBER_OF_DOFS_PER_CELL_2D}}*({{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}),
     {{NUMBER_OF_DOFS_PER_CELL_2D}}* {{NUMBER_OF_UNKNOWNS}},
     #else
+    allocateMemory({{NUMBER_OF_DOFS_PER_CELL_3D}}*({{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}), tarch::MemoryLocation::Heap),
     {{NUMBER_OF_DOFS_PER_CELL_3D}}*({{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}),
     {{NUMBER_OF_DOFS_PER_CELL_3D}}* {{NUMBER_OF_UNKNOWNS}},
     #endif
@@ -101,7 +102,6 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::applyKernelToCell(
   , smartmpi::Task(_enclaveTaskTypeId)
   #endif
 {
-  _inputValues = allocateMemory(_numberOfInputValues, tarch::MemoryLocation::Heap);
   std::copy_n( copyOfLinearCombinationOfPreviousShots, _numberOfInputValues, _inputValues );
 }
 

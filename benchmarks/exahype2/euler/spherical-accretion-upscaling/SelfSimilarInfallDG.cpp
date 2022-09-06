@@ -57,7 +57,10 @@ void benchmarks::exahype2::euler::sphericalaccretionupscaling::SelfSimilarInfall
   );
 */
 
-  applications::exahype2::euler::sphericalaccretion::initialiseOverdensity_hyperbolicSecant(
+//  applications::exahype2::euler::sphericalaccretion::initialiseOverdensity_hyperbolicSecant(
+
+
+  applications::exahype2::euler::sphericalaccretion::initialiseOverdensity_Gaussian(
     Q,
     x,
     InitialTopHatRadius,

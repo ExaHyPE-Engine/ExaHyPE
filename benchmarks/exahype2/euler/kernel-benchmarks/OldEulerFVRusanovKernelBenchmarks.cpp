@@ -1,15 +1,15 @@
-#include "EulerFVRusanovKernelBenchmarks-main.h"
 #include "Constants.h"
+#include "EulerFVRusanovKernelBenchmarks-main.h"
 #include "observers/CreateGrid.h"
-#include "observers/CreateGridButPostponeRefinement.h"
 #include "observers/CreateGridAndConvergeLoadBalancing.h"
+#include "observers/CreateGridButPostponeRefinement.h"
 #include "observers/InitGrid.h"
 #include "observers/PlotSolution.h"
 #include "observers/TimeStep.h"
 #include "repositories/DataRepository.h"
-#include "repositories/StepRepository.h"
 #include "repositories/SolverRepository.h"
-
+#include "repositories/StepRepository.h"
+#include "tasks/EulerFVRusanovEnclaveTask.h"
 #include "tarch/logging/Log.h"
 #include "tarch/logging/Statistics.h"
 #include "tarch/logging/LogFilter.h"
@@ -24,8 +24,6 @@
 
 #include "exahype2/NonCriticalAssertions.h"
 #include "exahype2/UserInterface.h"
-
-#include "tasks/EulerFVRusanovEnclaveTask.h"
 
 #include "config.h"
 
@@ -91,9 +89,11 @@ void storeOutcome( const double* Q, const double maxEigenvalue) {
   validMaxEigenvalue = maxEigenvalue;
 }
 
+
 /**
- * Works if and only if storeOutcome has been performed
- * before.
+ * Works if and only if storeOutcome has been performed before.
+ *
+ * @return Tuple of maximum difference and total number of errors.
  */
 std::tuple<double, int> validateOutcome( double* Q, int patchIndex , const double maxEigenvalue) {
   int index = 0;
@@ -110,15 +110,18 @@ std::tuple<double, int> validateOutcome( double* Q, int patchIndex , const doubl
   }
   if (not tarch::la::equals( maxEigenvalue, validMaxEigenvalue, Accuracy)) {
     std::cout << std::fixed << " maxEigenvalue[" << patchIndex << "]!=validMaxEigenvalue[" << patchIndex << "]: " << maxEigenvalue << "!=" << validMaxEigenvalue << std::endl;
+    exit(-1);
   }
 
   return { maxDifference, errors };
 }
 
+
 static constexpr double TimeStamp    = 0.5;
 static constexpr double TimeStepSize = 1e-6;
 static constexpr double CellSize     = 0.1;
 static constexpr double CellOffset   = 4.0;
+
 
 #if defined(GPUOffloadingOMP)
 // TODO: Should be placed in a "RusanovMemoryManager" later on

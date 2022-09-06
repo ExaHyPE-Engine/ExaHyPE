@@ -36,6 +36,14 @@ class tarch::multicore::orchestration::BackfillAndDeployRoundRobin: public tarch
 
     void toggleDevice();
   public:
+    /**
+     * Set up orchestration
+     *
+     * By default, the first device the code will use is the host. After that,
+     * it will start to deploy tasks in a round robin fashion. It is important
+     * at this point that we do not ask the core object something, as the
+     * Core singleton might not be configured yet.
+     */
     BackfillAndDeployRoundRobin(
       int  minTasksToFuse
     );
