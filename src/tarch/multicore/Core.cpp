@@ -9,6 +9,29 @@
 #endif
 
 
+std::string tarch::multicore::printUnmaskedThreads() {
+  std::stringstream out;
+  out << "(";
+  #ifdef CompilerHasSysinfo
+  cpu_set_t mask;
+  sched_getaffinity(0, sizeof(cpu_set_t), &mask);
+
+  for (int i = 0; i < std::thread::hardware_concurrency(); i++) {
+    if ( CPU_ISSET(i, &mask)!=0 ) {
+      out << "x";
+    }
+    else {
+      out << "o";
+    }
+  }
+  #else
+  out << " -- not available -- ";
+  #endif
+  out << ")";
+  return out.str();
+}
+
+
 int tarch::multicore::getNumberOfUnmaskedThreads() {
   #ifdef CompilerHasSysinfo
   cpu_set_t mask;
