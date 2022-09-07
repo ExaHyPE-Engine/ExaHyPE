@@ -543,6 +543,20 @@ AM_CONDITIONAL([UseExaHyPE],[test "x$toolbox_exahype" = xtrue])
 
 
 #
+# SWIFT2
+#
+AC_ARG_ENABLE(swift,
+  AS_HELP_STRING([--enable-swift],[enable SWIFT2 [default=false]]),
+  [ AC_MSG_CHECKING(for swift)
+    case "${withval}" in
+      no)    AC_MSG_RESULT(no);    toolbox_swift=false ;;
+      *)     AC_MSG_RESULT(yes);   toolbox_swift=true  ;;
+    esac ],
+  [ AC_MSG_CHECKING(for swift); AC_MSG_RESULT(no); toolbox_swift=false ])
+AM_CONDITIONAL([UseSWIFT],[test "x$toolbox_swift" = xtrue])
+
+
+#
 # Blockstructured
 #
 AC_ARG_ENABLE(blockstructured,
@@ -758,6 +772,39 @@ if test "$toolbox_exahype" != false; then
 fi
 
 
+
+
+#
+# SWIFT2
+#
+if test "$toolbox_swift" != false; then
+  AC_DEFINE([UseSWIFT], [1], [UseSWIFT])
+  if test "$toolbox_loadbalancing" == false; then
+    AC_MSG_ERROR([SWIFT2 requires the load balancing toolbox (run with --help to see the correct enable statement)])
+  fi
+  if test "$toolbox_particles" == false; then
+    AC_MSG_ERROR([SWIFT2 requires the particles toolbox (run with --help to see the correct enable statement)])
+  fi
+  LDADD_PEANO_2D_RELEASE=" -lSWIFT2Core2d         $LDADD_PEANO_2D_RELEASE "
+  LDADD_PEANO_2D_STATS="   -lSWIFT2Core2d_stats   $LDADD_PEANO_2D_STATS "
+  LDADD_PEANO_2D_ASSERTS=" -lSWIFT2Core2d_asserts $LDADD_PEANO_2D_ASSERTS " 
+  LDADD_PEANO_2D_TRACE="   -lSWIFT2Core2d_trace   $LDADD_PEANO_2D_TRACE "
+  LDADD_PEANO_2D_DEBUG="   -lSWIFT2Core2d_debug   $LDADD_PEANO_2D_DEBUG "
+
+  LDADD_PEANO_3D_RELEASE=" -lSWIFT2Core3d         $LDADD_PEANO_3D_RELEASE "
+  LDADD_PEANO_3D_STATS="   -lSWIFT2Core3d_stats   $LDADD_PEANO_3D_STATS "
+  LDADD_PEANO_3D_ASSERTS=" -lSWIFT2Core3d_asserts $LDADD_PEANO_3D_ASSERTS " 
+  LDADD_PEANO_3D_TRACE="   -lSWIFT2Core3d_trace   $LDADD_PEANO_3D_TRACE "
+  LDADD_PEANO_3D_DEBUG="   -lSWIFT2Core3d_debug   $LDADD_PEANO_3D_DEBUG "
+
+  LDFLAGS_PEANO_RELEASE+=" -L$srcdir_full_path/src/swift2 "
+  LDFLAGS_PEANO_STATS+="   -L$srcdir_full_path/src/swift2 "
+  LDFLAGS_PEANO_ASSERTS+=" -L$srcdir_full_path/src/swift2 "
+  LDFLAGS_PEANO_TRACE+="   -L$srcdir_full_path/src/swift2 "
+  LDFLAGS_PEANO_DEBUG+="   -L$srcdir_full_path/src/swift2 "
+fi
+
+
 #
 # SmartMPI
 #
@@ -825,7 +872,7 @@ AC_CONFIG_FILES([Makefile
   src/toolbox/blockstructured/Makefile src/toolbox/multiprecision/Makefile src/toolbox/finiteelements/Makefile src/toolbox/loadbalancing/Makefile src/toolbox/particles/Makefile
   examples/grid/Makefile examples/regulargridupscaling/Makefile 
   src/convert/Makefile
-  src/exahype2/Makefile
+  src/exahype2/Makefile src/swift2/Makefile
   src/unittests/Makefile
 ])
 AC_OUTPUT

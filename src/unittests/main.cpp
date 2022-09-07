@@ -42,6 +42,13 @@ void runTests() {
   delete tests;
   #endif
 
+  #ifdef UseSWIFT
+  tests = swift2::getUnitTests();
+  tests->run();
+  unitTestsErrors += tests->getNumberOfErrors();
+  delete tests;
+  #endif
+
   if (unitTestsErrors != 0) {
     logError("main()", "unit tests failed. Quit.");
     exit(-2);
