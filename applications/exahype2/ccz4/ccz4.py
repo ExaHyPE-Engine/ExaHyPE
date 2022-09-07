@@ -608,6 +608,7 @@ if __name__ == "__main__":
 #Pick solver
 ########################################################################################
     is_aderdg = False
+    is_rkdg   = False
     solver_name = "CCZ4"
     try:
       if SuperClass==exahype2.solvers.aderdg.NonFusedGenericRusanovFixedTimeStepSize:
