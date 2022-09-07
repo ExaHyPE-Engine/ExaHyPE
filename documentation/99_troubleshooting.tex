@@ -2,6 +2,32 @@
 \label{chapter:troubleshooting}
 
 
+\section{Autotools (\texttt{configure})}
+
+\begin{itemize}
+  \item \textbf{\texttt{configure} fails with \ldots}. Before you start
+  any further investigation, update to the latest version of the autotools,
+  ensure your configure script suits this version, and rerun the build system
+  configuration:
+  \begin{bash}
+autoreconf --install
+libtoolize; aclocal; autoconf; autoheader; cp src/config.h.in .; automake --add-missing
+  \end{bash}
+  \item \textbf{checking host system type... Invalid configuration
+  `./configure': machine `./configure-unknown' not recognized}. We got this
+  recently on a number of new Linux installations. In this case, adding 
+\begin{code}
+--build=x86_64 --host=x86_64
+\end{code}
+  to your \texttt{configure} call seems to be necessary.
+%   \item \textbf{No unit tests seem to run.} Peano4 builds a set of libraries that are linked into 
+%     the actual application. It seems that some linkers consider the unit tests to be dead code,
+%     as the actual test routines indeed are never called (by the library). See the documentation in 
+%     \texttt{tarch/tests/TestCase.h} for some details. 
+  \item To be continued \dots
+\end{itemize}
+
+
 \section{Python API}
 
 \begin{itemize}
