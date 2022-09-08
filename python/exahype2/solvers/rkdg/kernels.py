@@ -850,7 +850,9 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::sourceTerm(
   return Template.render(**d)
 
 
-def get_face_overlap_merge_implementation(patch_overlap):
+def get_face_merge_implementation(patch_overlap):
+  assert False, "I don't think this one is used anymore. @todo Remove"
+  
   d = {
     "OVERLAP": patch_overlap.dim[0]/2, #assumed to always be two, but present here anyway
     "DOFS_PER_AXIS": patch_overlap.dim[1],

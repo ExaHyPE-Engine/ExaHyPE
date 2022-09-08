@@ -104,9 +104,34 @@ MPI_Datatype tarch::mpi::IntegerMessage::Datatype;
 
 
 [[clang::map_mpi_datatype]]
-MPI_Datatype tarch::mpi::IntegerMessage::getDatatype() {
+MPI_Datatype tarch::mpi::IntegerMessage::getForkDatatype() {
   return Datatype;
 }
+
+
+[[clang::map_mpi_datatype]]
+MPI_Datatype tarch::mpi::IntegerMessage::getGlobalCommunciationDatatype() {
+  return Datatype;
+}
+
+
+[[clang::map_mpi_datatype]]
+MPI_Datatype tarch::mpi::IntegerMessage::getJoinDatatype() {
+  return Datatype;
+}
+
+
+[[clang::map_mpi_datatype]]
+MPI_Datatype tarch::mpi::IntegerMessage::getBoundaryExchangeDatatype() {
+  return Datatype;
+}
+
+
+[[clang::map_mpi_datatype]]
+MPI_Datatype tarch::mpi::IntegerMessage::getMultiscaleDataExchangeDatatype() {
+  return Datatype;
+}
+
 
 int tarch::mpi::IntegerMessage::getSenderRank() const {
   return _senderDestinationRank;
@@ -158,14 +183,32 @@ void tarch::mpi::IntegerMessage::initDatatype() {
 
   #else
   // invoke routine once to trigger lazy initialisation
-  getDatatype();
+  getForkDatatype();
+  getJoinDatatype();
+  getBoundaryExchangeDatatype();
+  getMultiscaleDataExchangeDatatype();
+  getGlobalCommunciationDatatype();
   #endif
 }
 
 
 void tarch::mpi::IntegerMessage::shutdownDatatype() {
-  MPI_Datatype type = getDatatype();
+  #if !defined(__MPI_ATTRIBUTES_LANGUAGE_EXTENSION__)
+  MPI_Datatype type;
+  type = getForkDatatype();
   MPI_Type_free( &type );
+  type = getJoinDatatype();
+  MPI_Type_free( &type );
+  type = getBoundaryExchangeDatatype();
+  MPI_Type_free( &type );
+  type = getMultiscaleDataExchangeDatatype();
+  MPI_Type_free( &type );
+  type = getGlobalCommunciationDatatype();
+  MPI_Type_free( &type );
+  #else
+  MPI_Datatype type = Datatype;
+  MPI_Type_free( &type );
+  #endif
 }
 
 
@@ -205,5 +248,4 @@ void tarch::mpi::IntegerMessage::receive(tarch::mpi::IntegerMessage& buffer, int
   }
   buffer._senderDestinationRank = status.MPI_SOURCE;
 }
-
 #endif

@@ -1195,8 +1195,14 @@ void {FULL_QUALIFIED_CLASSNAME}::sendVertex(int position, int toStack, ::peano4:
     if (
       {full_qualified_type}::storePersistently(marker) 
       and
-      (context==::peano4::grid::TraversalObserver::SendReceiveContext::Rebalancing or {full_qualified_type}::send(marker))
-     ) {{
+      (
+        context==::peano4::grid::TraversalObserver::SendReceiveContext::ForkDomain 
+        or 
+        context==::peano4::grid::TraversalObserver::SendReceiveContext::JoinDomain 
+        or 
+        {full_qualified_type}::send(marker)
+      )
+    ) {{
       {full_qualified_type} data = repositories::DataRepository::_{logical_type_name}Stack.getForPop( 
         repositories::DataRepository::DataKey(_spacetreeId,peano4::grid::PeanoCurve::CallStack)
       )->top(TwoPowerD-1-position);
@@ -1228,8 +1234,14 @@ void {FULL_QUALIFIED_CLASSNAME}::sendFace(int position, int toStack, ::peano4::g
     if (
       {full_qualified_type}::storePersistently(marker) 
       and
-      (context==::peano4::grid::TraversalObserver::SendReceiveContext::Rebalancing or {full_qualified_type}::send(marker))
-     ) {{
+      (
+        context==::peano4::grid::TraversalObserver::SendReceiveContext::ForkDomain 
+        or 
+        context==::peano4::grid::TraversalObserver::SendReceiveContext::JoinDomain 
+        or 
+        {full_qualified_type}::send(marker)
+      )
+    ) {{
       {full_qualified_type} data = repositories::DataRepository::_{logical_type_name}Stack.getForPop( 
         repositories::DataRepository::DataKey(_spacetreeId,peano4::grid::PeanoCurve::CallStack)
       )->top(TwoTimesD-1-position);
@@ -1262,8 +1274,14 @@ void {FULL_QUALIFIED_CLASSNAME}::sendCell(int toStack, ::peano4::grid::Traversal
     if (
       {full_qualified_type}::storePersistently(marker) 
       and
-      (context==::peano4::grid::TraversalObserver::SendReceiveContext::Rebalancing or {full_qualified_type}::send(marker))
-     ) {{
+      (
+        context==::peano4::grid::TraversalObserver::SendReceiveContext::ForkDomain 
+        or 
+        context==::peano4::grid::TraversalObserver::SendReceiveContext::JoinDomain 
+        or 
+        {full_qualified_type}::send(marker)
+      )
+    ) {{
       {full_qualified_type} data = repositories::DataRepository::_{logical_type_name}Stack.getForPop( repositories::DataRepository::DataKey(_spacetreeId,peano4::grid::PeanoCurve::CallStack))->top();
     
       logDebug( "sendCell(...)", "send out " << data.toString() << " to stack " << toStack << " on tree " << _spacetreeId );
@@ -1283,7 +1301,7 @@ void {FULL_QUALIFIED_CLASSNAME}::sendCell(int toStack, ::peano4::grid::Traversal
 
 
   TemplateReceiveAndMergeCell_Prologue = """
-void {FULL_QUALIFIED_CLASSNAME}::receiveAndMergeCell(int fromStack, SendReceiveContext context, const peano4::grid::GridTraversalEvent& event ) {{
+void {FULL_QUALIFIED_CLASSNAME}::receiveAndMergeCell(int fromStack, peano4::grid::TraversalObserver::SendReceiveContext context, const peano4::grid::GridTraversalEvent& event ) {{
   logTraceInWith3Arguments( "receiveAndMergeCell(...)", fromStack, event.toString(), _spacetreeId );
 """
 
@@ -1295,7 +1313,7 @@ void {FULL_QUALIFIED_CLASSNAME}::receiveAndMergeCell(int fromStack, SendReceiveC
 
 
   TemplateReceiveAndMergeVertex_Prologue = """
-void {FULL_QUALIFIED_CLASSNAME}::receiveAndMergeVertex(int position, int fromStack, SendReceiveContext context, const peano4::grid::GridTraversalEvent& event) {{
+void {FULL_QUALIFIED_CLASSNAME}::receiveAndMergeVertex(int position, int fromStack, peano4::grid::TraversalObserver::SendReceiveContext context, const peano4::grid::GridTraversalEvent& event) {{
   logTraceInWith4Arguments( "receiveAndMergeVertex(...)", position, fromStack, event.toString(), _spacetreeId );
 """
 
@@ -1313,7 +1331,7 @@ void {FULL_QUALIFIED_CLASSNAME}::receiveAndMergeVertex(int position, int fromSta
 
 
   TemplateReceiveAndMergeFace_Prologue = """
-void {FULL_QUALIFIED_CLASSNAME}::receiveAndMergeFace(int position, int fromStack, SendReceiveContext context, const peano4::grid::GridTraversalEvent& event) {{
+void {FULL_QUALIFIED_CLASSNAME}::receiveAndMergeFace(int position, int fromStack, peano4::grid::TraversalObserver::SendReceiveContext context, const peano4::grid::GridTraversalEvent& event) {{
   logTraceInWith4Arguments( "receiveAndMergeFace(...)", position, fromStack, event.toString(), _spacetreeId );
 """
 
@@ -1325,7 +1343,13 @@ void {FULL_QUALIFIED_CLASSNAME}::receiveAndMergeFace(int position, int fromStack
     if ( 
       {full_qualified_type}::loadPersistently(marker) 
       and
-      (context==::peano4::grid::TraversalObserver::SendReceiveContext::Rebalancing or {full_qualified_type}::receiveAndMerge(marker))
+      (
+        context==::peano4::grid::TraversalObserver::SendReceiveContext::ForkDomain 
+        or 
+        context==::peano4::grid::TraversalObserver::SendReceiveContext::JoinDomain 
+        or 
+        {full_qualified_type}::receiveAndMerge(marker)
+      )
      ) {{
       assertion5(
         not repositories::DataRepository::_{logical_type_name}Stack.getForPop(_spacetreeId, fromStack)->empty(),
@@ -1363,7 +1387,7 @@ void {FULL_QUALIFIED_CLASSNAME}::receiveAndMergeFace(int position, int fromStack
           data.getDebugX(), incomingData.getDebugX(), fromStack, event.toString(), marker.toString(), _spacetreeId );
       }}
 
-      data.merge(incomingData, marker);
+      data.merge(context,incomingData, marker);
     }}
   }}
 """
@@ -1377,8 +1401,14 @@ void {FULL_QUALIFIED_CLASSNAME}::receiveAndMergeFace(int position, int fromStack
     if ( 
       {full_qualified_type}::loadPersistently(marker) 
       and
-      (context==::peano4::grid::TraversalObserver::SendReceiveContext::Rebalancing or {full_qualified_type}::receiveAndMerge(marker))
-     ) {{
+      (
+        context==::peano4::grid::TraversalObserver::SendReceiveContext::ForkDomain 
+        or 
+        context==::peano4::grid::TraversalObserver::SendReceiveContext::JoinDomain 
+        or 
+        {full_qualified_type}::receiveAndMerge(marker)
+      )
+    ) {{
       auto   incomingData = repositories::DataRepository::_{logical_type_name}Stack.getForPop(
         _spacetreeId, fromStack
       )->pop();
@@ -1408,7 +1438,7 @@ void {FULL_QUALIFIED_CLASSNAME}::receiveAndMergeFace(int position, int fromStack
           data.getDebugX(), incomingData.getDebugX(), fromStack, event.toString(), marker.toString(), _spacetreeId );
       }}
 
-      data.merge(incomingData, marker);
+      data.merge(context,incomingData, marker);
     }}
   }}
 """
@@ -1421,8 +1451,14 @@ void {FULL_QUALIFIED_CLASSNAME}::receiveAndMergeFace(int position, int fromStack
     if ( 
       {full_qualified_type}::loadPersistently(marker) 
       and
-      (context==::peano4::grid::TraversalObserver::SendReceiveContext::Rebalancing or {full_qualified_type}::receiveAndMerge(marker))
-     ) {{
+      (
+        context==::peano4::grid::TraversalObserver::SendReceiveContext::ForkDomain 
+        or 
+        context==::peano4::grid::TraversalObserver::SendReceiveContext::JoinDomain 
+        or 
+        {full_qualified_type}::receiveAndMerge(marker)
+      )
+    ) {{
       auto   incomingData = repositories::DataRepository::_{logical_type_name}Stack.getForPop(
         _spacetreeId, fromStack
       )->pop();
@@ -1452,7 +1488,7 @@ void {FULL_QUALIFIED_CLASSNAME}::receiveAndMergeFace(int position, int fromStack
           data.getDebugX(), incomingData.getDebugX(), fromStack, event.toString(), marker.toString(), _spacetreeId );
       }}
 
-      data.merge(incomingData, marker);
+      data.merge(context,incomingData, marker);
     }}
   }}
 """

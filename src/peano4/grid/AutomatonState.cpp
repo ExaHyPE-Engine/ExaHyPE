@@ -255,9 +255,34 @@ MPI_Datatype peano4::grid::AutomatonState::Datatype;
 
 
 [[clang::map_mpi_datatype]]
-MPI_Datatype peano4::grid::AutomatonState::getDatatype() {
+MPI_Datatype peano4::grid::AutomatonState::getForkDatatype() {
   return Datatype;
 }
+
+
+[[clang::map_mpi_datatype]]
+MPI_Datatype peano4::grid::AutomatonState::getGlobalCommunciationDatatype() {
+  return Datatype;
+}
+
+
+[[clang::map_mpi_datatype]]
+MPI_Datatype peano4::grid::AutomatonState::getJoinDatatype() {
+  return Datatype;
+}
+
+
+[[clang::map_mpi_datatype]]
+MPI_Datatype peano4::grid::AutomatonState::getBoundaryExchangeDatatype() {
+  return Datatype;
+}
+
+
+[[clang::map_mpi_datatype]]
+MPI_Datatype peano4::grid::AutomatonState::getMultiscaleDataExchangeDatatype() {
+  return Datatype;
+}
+
 
 int peano4::grid::AutomatonState::getSenderRank() const {
   return _senderDestinationRank;
@@ -339,14 +364,32 @@ void peano4::grid::AutomatonState::initDatatype() {
 
   #else
   // invoke routine once to trigger lazy initialisation
-  getDatatype();
+  getForkDatatype();
+  getJoinDatatype();
+  getBoundaryExchangeDatatype();
+  getMultiscaleDataExchangeDatatype();
+  getGlobalCommunciationDatatype();
   #endif
 }
 
 
 void peano4::grid::AutomatonState::shutdownDatatype() {
-  MPI_Datatype type = getDatatype();
+  #if !defined(__MPI_ATTRIBUTES_LANGUAGE_EXTENSION__)
+  MPI_Datatype type;
+  type = getForkDatatype();
   MPI_Type_free( &type );
+  type = getJoinDatatype();
+  MPI_Type_free( &type );
+  type = getBoundaryExchangeDatatype();
+  MPI_Type_free( &type );
+  type = getMultiscaleDataExchangeDatatype();
+  MPI_Type_free( &type );
+  type = getGlobalCommunciationDatatype();
+  MPI_Type_free( &type );
+  #else
+  MPI_Datatype type = Datatype;
+  MPI_Type_free( &type );
+  #endif
 }
 
 
@@ -386,5 +429,4 @@ void peano4::grid::AutomatonState::receive(peano4::grid::AutomatonState& buffer,
   }
   buffer._senderDestinationRank = status.MPI_SOURCE;
 }
-
 #endif

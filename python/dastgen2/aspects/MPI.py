@@ -52,7 +52,19 @@ class MPI(object):
      * the lazy initialisation is done and the datatype is also cached.
      */
     [[clang::map_mpi_datatype]]
-    static MPI_Datatype  getDatatype();
+    static MPI_Datatype  getForkDatatype();
+
+    [[clang::map_mpi_datatype]]
+    static MPI_Datatype  getJoinDatatype();
+
+    [[clang::map_mpi_datatype]]
+    static MPI_Datatype  getBoundaryExchangeDatatype();
+
+    [[clang::map_mpi_datatype]]
+    static MPI_Datatype  getMultiscaleDataExchangeDatatype();
+
+    [[clang::map_mpi_datatype]]
+    static MPI_Datatype  getGlobalCommunciationDatatype();
     
     
     /**
@@ -71,7 +83,7 @@ class MPI(object):
      * Free the underlying MPI datatype.
      */
     static void shutdownDatatype();
-            
+    
     /**
      * In DaStGen (the first version), I had a non-static version of the send
      * as well as the receive. However, this did not work with newer C++11 
@@ -105,9 +117,34 @@ MPI_Datatype """ + full_qualified_name + """::Datatype;
 
 
 [[clang::map_mpi_datatype]]
-MPI_Datatype """ + full_qualified_name + """::getDatatype() {
+MPI_Datatype """ + full_qualified_name + """::getForkDatatype() {
   return Datatype;
 }
+
+
+[[clang::map_mpi_datatype]]
+MPI_Datatype """ + full_qualified_name + """::getGlobalCommunciationDatatype() {
+  return Datatype;
+}
+
+
+[[clang::map_mpi_datatype]]
+MPI_Datatype """ + full_qualified_name + """::getJoinDatatype() {
+  return Datatype;
+}
+
+
+[[clang::map_mpi_datatype]]
+MPI_Datatype """ + full_qualified_name + """::getBoundaryExchangeDatatype() {
+  return Datatype;
+}
+
+
+[[clang::map_mpi_datatype]]
+MPI_Datatype """ + full_qualified_name + """::getMultiscaleDataExchangeDatatype() {
+  return Datatype;
+}
+
 
 int """ + full_qualified_name + """::getSenderRank() const {
   return _senderDestinationRank;
@@ -188,14 +225,32 @@ void """ + full_qualified_name + """::initDatatype() {
 
   #else
   // invoke routine once to trigger lazy initialisation
-  getDatatype();
+  getForkDatatype();
+  getJoinDatatype();
+  getBoundaryExchangeDatatype();
+  getMultiscaleDataExchangeDatatype();
+  getGlobalCommunciationDatatype();
   #endif
 }
 
 
 void """ + full_qualified_name + """::shutdownDatatype() {
-  MPI_Datatype type = getDatatype();
+  #if !defined(__MPI_ATTRIBUTES_LANGUAGE_EXTENSION__)
+  MPI_Datatype type;
+  type = getForkDatatype();
   MPI_Type_free( &type );
+  type = getJoinDatatype();
+  MPI_Type_free( &type );
+  type = getBoundaryExchangeDatatype();
+  MPI_Type_free( &type );
+  type = getMultiscaleDataExchangeDatatype();
+  MPI_Type_free( &type );
+  type = getGlobalCommunciationDatatype();
+  MPI_Type_free( &type );
+  #else
+  MPI_Datatype type = Datatype;
+  MPI_Type_free( &type );
+  #endif
 }
 
 
@@ -235,9 +290,9 @@ void """ + full_qualified_name + """::receive(""" + full_qualified_name + """& b
   }
   buffer._senderDestinationRank = status.MPI_SOURCE;
 }
-
 #endif
 """ 
+
     return result;    
 
 

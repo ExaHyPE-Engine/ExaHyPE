@@ -104,9 +104,34 @@ MPI_Datatype peano4::parallel::StartTraversalMessage::Datatype;
 
 
 [[clang::map_mpi_datatype]]
-MPI_Datatype peano4::parallel::StartTraversalMessage::getDatatype() {
+MPI_Datatype peano4::parallel::StartTraversalMessage::getForkDatatype() {
   return Datatype;
 }
+
+
+[[clang::map_mpi_datatype]]
+MPI_Datatype peano4::parallel::StartTraversalMessage::getGlobalCommunciationDatatype() {
+  return Datatype;
+}
+
+
+[[clang::map_mpi_datatype]]
+MPI_Datatype peano4::parallel::StartTraversalMessage::getJoinDatatype() {
+  return Datatype;
+}
+
+
+[[clang::map_mpi_datatype]]
+MPI_Datatype peano4::parallel::StartTraversalMessage::getBoundaryExchangeDatatype() {
+  return Datatype;
+}
+
+
+[[clang::map_mpi_datatype]]
+MPI_Datatype peano4::parallel::StartTraversalMessage::getMultiscaleDataExchangeDatatype() {
+  return Datatype;
+}
+
 
 int peano4::parallel::StartTraversalMessage::getSenderRank() const {
   return _senderDestinationRank;
@@ -158,14 +183,32 @@ void peano4::parallel::StartTraversalMessage::initDatatype() {
 
   #else
   // invoke routine once to trigger lazy initialisation
-  getDatatype();
+  getForkDatatype();
+  getJoinDatatype();
+  getBoundaryExchangeDatatype();
+  getMultiscaleDataExchangeDatatype();
+  getGlobalCommunciationDatatype();
   #endif
 }
 
 
 void peano4::parallel::StartTraversalMessage::shutdownDatatype() {
-  MPI_Datatype type = getDatatype();
+  #if !defined(__MPI_ATTRIBUTES_LANGUAGE_EXTENSION__)
+  MPI_Datatype type;
+  type = getForkDatatype();
   MPI_Type_free( &type );
+  type = getJoinDatatype();
+  MPI_Type_free( &type );
+  type = getBoundaryExchangeDatatype();
+  MPI_Type_free( &type );
+  type = getMultiscaleDataExchangeDatatype();
+  MPI_Type_free( &type );
+  type = getGlobalCommunciationDatatype();
+  MPI_Type_free( &type );
+  #else
+  MPI_Datatype type = Datatype;
+  MPI_Type_free( &type );
+  #endif
 }
 
 
@@ -205,5 +248,4 @@ void peano4::parallel::StartTraversalMessage::receive(peano4::parallel::StartTra
   }
   buffer._senderDestinationRank = status.MPI_SOURCE;
 }
-
 #endif

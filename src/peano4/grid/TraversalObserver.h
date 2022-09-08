@@ -209,7 +209,8 @@ std::vector< peano4::grid::GridControlEvent > applications4::grid::MyObserver::g
     enum class SendReceiveContext {
       BoundaryExchange,
       MultiscaleExchange,
-      Rebalancing,
+      ForkDomain,
+      JoinDomain,
       PeriodicBoundaryDataSwap
     };
 

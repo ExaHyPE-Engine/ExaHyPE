@@ -318,9 +318,10 @@ The finest mesh width of """ + str(self.get_finest_volume_size(domain_size)) + "
     self._patch_overlap_new    = peano4.datamodel.Patch( (2*self._overlap,self._patch_size,self._patch_size),  self._unknowns+self._auxiliary_variables, self._unknown_identifier() + "New" )
     self._patch_overlap_update = peano4.datamodel.Patch( (2*self._overlap,self._patch_size,self._patch_size),  self._unknowns+self._auxiliary_variables, self._unknown_identifier() + "Update" )
     
-    self._patch_overlap_old.generator.merge_method_definition = peano4.toolbox.blockstructured.get_face_overlap_merge_implementation(self._patch_overlap_old)
-    self._patch_overlap_new.generator.merge_method_definition = peano4.toolbox.blockstructured.get_face_overlap_merge_implementation(self._patch_overlap_new)
-    
+    self._patch_overlap_old.generator.merge_method_definition = peano4.toolbox.blockstructured.get_face_merge_implementation(self._patch_overlap_old)
+    self._patch_overlap_new.generator.merge_method_definition = peano4.toolbox.blockstructured.get_face_merge_implementation(self._patch_overlap_new)
+    self._patch.generator.merge_method_definition             = peano4.toolbox.blockstructured.get_cell_merge_implementation(self._patch)
+
     self._patch_overlap_old.generator.includes     += """
 #include "peano4/utils/Loop.h"
 #include "repositories/SolverRepository.h" 

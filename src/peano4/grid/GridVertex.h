@@ -16,6 +16,7 @@
 #include "tarch/mpi/Rank.h"
 #include "tarch/services/ServiceRepository.h"
 #include "peano4/utils/Globals.h"
+#include "peano4/grid/TraversalObserver.h"
 
 
 #ifdef Parallel
@@ -85,7 +86,19 @@ struct peano4::grid::GridVertex {
      * the lazy initialisation is done and the datatype is also cached.
      */
     [[clang::map_mpi_datatype]]
-    static MPI_Datatype  getDatatype();
+    static MPI_Datatype  getForkDatatype();
+
+    [[clang::map_mpi_datatype]]
+    static MPI_Datatype  getJoinDatatype();
+
+    [[clang::map_mpi_datatype]]
+    static MPI_Datatype  getBoundaryExchangeDatatype();
+
+    [[clang::map_mpi_datatype]]
+    static MPI_Datatype  getMultiscaleDataExchangeDatatype();
+
+    [[clang::map_mpi_datatype]]
+    static MPI_Datatype  getGlobalCommunciationDatatype();
     
     
     /**
@@ -104,7 +117,7 @@ struct peano4::grid::GridVertex {
      * Free the underlying MPI datatype.
      */
     static void shutdownDatatype();
-            
+    
     /**
      * In DaStGen (the first version), I had a non-static version of the send
      * as well as the receive. However, this did not work with newer C++11 

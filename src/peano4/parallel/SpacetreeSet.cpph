@@ -101,6 +101,7 @@ void peano4::parallel::SpacetreeSet::streamDataFromSplittingTreeToNewTree(
 
     if (messageSize>0) {
       stackContainer.getForPush(master,sourceStack)->startSend(
+        ::peano4::grid::TraversalObserver::SendReceiveContext::ForkDomain,
         destinationRank, meta.first, meta.second
       );
     }
@@ -121,6 +122,7 @@ void peano4::parallel::SpacetreeSet::streamDataFromSplittingTreeToNewTree(
     );
     if (message.getValue()>0) {
       stackContainer.getForPush(worker,destinationStack)->startReceive(
+        ::peano4::grid::TraversalObserver::SendReceiveContext::ForkDomain,
         sourceRank, metaInfo.first, metaInfo.second, message.getValue()
       );
     }
@@ -168,7 +170,9 @@ void peano4::parallel::SpacetreeSet::exchangeAllHorizontalDataExchangeStacks( Co
       Node::GridDataExchangeMetaInformation sendMetaInfo = Node::getInstance().getGridDataExchangeMetaInformation( spacetreeId, targetId, Node::ExchangeMode::HorizontalData );
       logDebug( "exchangeAllHorizontalDataExchangeStacks(...)", "send stack " << sourceStackKey.second << " of tree " << sourceStackKey.first << " to rank " << rank << " with tag " << sendMetaInfo.first << ": " << count << " element(s)");
 
-      stackContainer.getForPush(sourceStackKey)->startSend(rank,sendMetaInfo.first,sendMetaInfo.second);
+      stackContainer.getForPush(sourceStackKey)->startSend(
+        ::peano4::grid::TraversalObserver::SendReceiveContext::BoundaryExchange,
+        rank,sendMetaInfo.first,sendMetaInfo.second);
 
       Node::GridDataExchangeMetaInformation receiveMetaInfo = Node::getInstance().getGridDataExchangeMetaInformation( targetId, spacetreeId, Node::ExchangeMode::HorizontalData );
 
@@ -177,7 +181,11 @@ void peano4::parallel::SpacetreeSet::exchangeAllHorizontalDataExchangeStacks( Co
       // This one likely creates new entries in the stackContainer. At this
       // point, we have already copied the set of keys, i.e. we are fine as
       // we have a valid overview.
-      stackContainer.getForPush(spacetreeId,inStack)->startReceive(rank,receiveMetaInfo.first,receiveMetaInfo.second,count);
+      stackContainer.getForPush(spacetreeId,inStack)->startReceive(
+        ::peano4::grid::TraversalObserver::SendReceiveContext::BoundaryExchange,
+        rank,
+        receiveMetaInfo.first,
+        receiveMetaInfo.second,count);
     }
   }
 
