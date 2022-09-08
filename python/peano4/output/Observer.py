@@ -1195,13 +1195,7 @@ void {FULL_QUALIFIED_CLASSNAME}::sendVertex(int position, int toStack, ::peano4:
     if (
       {full_qualified_type}::storePersistently(marker) 
       and
-      (
-        context==::peano4::grid::TraversalObserver::SendReceiveContext::ForkDomain 
-        or 
-        context==::peano4::grid::TraversalObserver::SendReceiveContext::JoinDomain 
-        or 
-        {full_qualified_type}::send(marker)
-      )
+      {full_qualified_type}::send(marker)
     ) {{
       {full_qualified_type} data = repositories::DataRepository::_{logical_type_name}Stack.getForPop( 
         repositories::DataRepository::DataKey(_spacetreeId,peano4::grid::PeanoCurve::CallStack)
@@ -1234,13 +1228,7 @@ void {FULL_QUALIFIED_CLASSNAME}::sendFace(int position, int toStack, ::peano4::g
     if (
       {full_qualified_type}::storePersistently(marker) 
       and
-      (
-        context==::peano4::grid::TraversalObserver::SendReceiveContext::ForkDomain 
-        or 
-        context==::peano4::grid::TraversalObserver::SendReceiveContext::JoinDomain 
-        or 
-        {full_qualified_type}::send(marker)
-      )
+      {full_qualified_type}::send(marker)
     ) {{
       {full_qualified_type} data = repositories::DataRepository::_{logical_type_name}Stack.getForPop( 
         repositories::DataRepository::DataKey(_spacetreeId,peano4::grid::PeanoCurve::CallStack)
@@ -1274,13 +1262,7 @@ void {FULL_QUALIFIED_CLASSNAME}::sendCell(int toStack, ::peano4::grid::Traversal
     if (
       {full_qualified_type}::storePersistently(marker) 
       and
-      (
-        context==::peano4::grid::TraversalObserver::SendReceiveContext::ForkDomain 
-        or 
-        context==::peano4::grid::TraversalObserver::SendReceiveContext::JoinDomain 
-        or 
-        {full_qualified_type}::send(marker)
-      )
+      {full_qualified_type}::send(marker)
     ) {{
       {full_qualified_type} data = repositories::DataRepository::_{logical_type_name}Stack.getForPop( repositories::DataRepository::DataKey(_spacetreeId,peano4::grid::PeanoCurve::CallStack))->top();
     
@@ -1343,14 +1325,8 @@ void {FULL_QUALIFIED_CLASSNAME}::receiveAndMergeFace(int position, int fromStack
     if ( 
       {full_qualified_type}::loadPersistently(marker) 
       and
-      (
-        context==::peano4::grid::TraversalObserver::SendReceiveContext::ForkDomain 
-        or 
-        context==::peano4::grid::TraversalObserver::SendReceiveContext::JoinDomain 
-        or 
-        {full_qualified_type}::receiveAndMerge(marker)
-      )
-     ) {{
+      {full_qualified_type}::receiveAndMerge(marker)
+    ) {{
       assertion5(
         not repositories::DataRepository::_{logical_type_name}Stack.getForPop(_spacetreeId, fromStack)->empty(),
         _spacetreeId, fromStack, event.toString(), position, marker.toString()
@@ -1401,13 +1377,7 @@ void {FULL_QUALIFIED_CLASSNAME}::receiveAndMergeFace(int position, int fromStack
     if ( 
       {full_qualified_type}::loadPersistently(marker) 
       and
-      (
-        context==::peano4::grid::TraversalObserver::SendReceiveContext::ForkDomain 
-        or 
-        context==::peano4::grid::TraversalObserver::SendReceiveContext::JoinDomain 
-        or 
-        {full_qualified_type}::receiveAndMerge(marker)
-      )
+      {full_qualified_type}::receiveAndMerge(marker)
     ) {{
       auto   incomingData = repositories::DataRepository::_{logical_type_name}Stack.getForPop(
         _spacetreeId, fromStack
@@ -1451,13 +1421,7 @@ void {FULL_QUALIFIED_CLASSNAME}::receiveAndMergeFace(int position, int fromStack
     if ( 
       {full_qualified_type}::loadPersistently(marker) 
       and
-      (
-        context==::peano4::grid::TraversalObserver::SendReceiveContext::ForkDomain 
-        or 
-        context==::peano4::grid::TraversalObserver::SendReceiveContext::JoinDomain 
-        or 
-        {full_qualified_type}::receiveAndMerge(marker)
-      )
+      {full_qualified_type}::receiveAndMerge(marker)
     ) {{
       auto   incomingData = repositories::DataRepository::_{logical_type_name}Stack.getForPop(
         _spacetreeId, fromStack
