@@ -65,14 +65,6 @@ def get_face_merge_implementation(patch_overlap):
       assertionMsg( false, "not implemented yet" );
       break;
 
-    case ::peano4::grid::TraversalObserver::SendReceiveContext::ForkDomain:
-      *this = neighbour;
-      break;
-
-    case ::peano4::grid::TraversalObserver::SendReceiveContext::JoinDomain:
-      assertionMsg( false, "not implemented yet" );
-      break;
-
     case ::peano4::grid::TraversalObserver::SendReceiveContext::PeriodicBoundaryDataSwap:
       assertionMsg( false, "should never be called" );
       break;
@@ -97,14 +89,6 @@ def get_cell_merge_implementation(patch_overlap):
       
     case ::peano4::grid::TraversalObserver::SendReceiveContext::MultiscaleExchange:
       assertionMsg( false, "not implemented yet" );
-      break;
-
-    case ::peano4::grid::TraversalObserver::SendReceiveContext::ForkDomain:
-      *this = neighbour;
-      break;
-
-    case ::peano4::grid::TraversalObserver::SendReceiveContext::JoinDomain:
-      assertionMsg( false, "not implemented yet, but should be plain copy" );
       break;
 
     case ::peano4::grid::TraversalObserver::SendReceiveContext::PeriodicBoundaryDataSwap:
