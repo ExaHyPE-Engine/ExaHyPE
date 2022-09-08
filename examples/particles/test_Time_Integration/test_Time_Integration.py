@@ -12,6 +12,9 @@ import peano4.toolbox.particles
 import dastgen2
 import numpy as np
 
+# SPH compute kernels library
+import peano4.toolbox.particles.sph.computeKernels
+
 # To execute shell commands via python
 import subprocess
 import argparse
@@ -24,7 +27,7 @@ modes = {
   "debug":   peano4.output.CompileMode.Debug,
 }
 
-parser = argparse.ArgumentParser(description='ExaHyPE 2 - Euler benchmarking script')
+parser = argparse.ArgumentParser(description='SPH benchmarking script')
 parser.add_argument("-m",     "--mode",               dest="mode",                         default="release",           help="|".join(modes.keys()) )
 parser.add_argument("-c",     "--clean",              dest="clean_temporary_directories",  action="store_true",         help="Remove temporary directories before script starts" )
 parser.add_argument("-p",     "--plot",               dest="plot",                         action="store_true",        help="Plot result" )
@@ -55,21 +58,12 @@ build_mode = modes[args.mode]
 project.output.makefile.parse_configure_script_outcome( "../../.." )
 project.output.makefile.set_mode( build_mode )
 
-# ## Model the particle
-# 
-# - Velocity array ${\bf v}\equiv{\rm d}{\bf x}/{\rm d}t$
-# - Acceleration array ${\bf a}\equiv{\rm d}{\bf v}/{\rm d}t$
-# - Velocity array ${\bf v}_{\rm full}$ (not accessed by SPH kernels)
-
-# Extras
-# - ${\rm has\ been\ kicked}$
-# 
-
+# Define particle and its properties
 particle = peano4.toolbox.particles.Particle("Particle")
 
 # Define properties
-v_attr = peano4.dastgen2.Peano4DoubleArray("v","Dimensions")
-a_attr = peano4.dastgen2.Peano4DoubleArray("a","Dimensions")
+v_attr      = peano4.dastgen2.Peano4DoubleArray("v","Dimensions")
+a_attr      = peano4.dastgen2.Peano4DoubleArray("a","Dimensions")
 v_full_attr = peano4.dastgen2.Peano4DoubleArray("v_full","Dimensions")
 
 has_been_kicked_attr = dastgen2.attributes.Boolean("hasBeenKicked")
@@ -77,7 +71,27 @@ energy_kin_attr = dastgen2.attributes.Double("energyKin")
 energy_pot_attr = dastgen2.attributes.Double("energyPot")
 energy_tot_attr = dastgen2.attributes.Double("energyTot")
 
-# Add particle properties
+# Dummy properties (not relevant)
+density_attr         = dastgen2.attributes.Double("density")
+pressure_attr        = dastgen2.attributes.Double("pressure")
+is_boundary_part_attr= dastgen2.attributes.Boolean("isBoundaryParticle")
+u_attr               = dastgen2.attributes.Double("u")
+v_sig_AV_attr        = dastgen2.attributes.Double("v_sig_AV")
+uDot_attr            = dastgen2.attributes.Double("uDot")
+u_full_attr          = dastgen2.attributes.Double("u_full")
+smoothL_attr         = dastgen2.attributes.Double("smoothingLength")
+smoothL_prev_attr    = dastgen2.attributes.Double("smoothingLengthPrevious")
+hleft_attr           = dastgen2.attributes.Double("hLeft")
+hright_attr          = dastgen2.attributes.Double("hRight")
+iteration_count_attr = dastgen2.attributes.Integer("iterCount")
+has_converged_attr   = dastgen2.attributes.Boolean("hasConverged")
+soundSpeed_attr      = dastgen2.attributes.Double ("soundSpeed")
+a_prev_step_attr     = peano4.dastgen2.Peano4DoubleArray("a_prev_step","Dimensions") 
+
+# Move state flags ------------------------------------------------------------
+particle.data.add_attribute( dastgen2.attributes.Enumeration("MoveState",["New","NotMovedYet","Moved"]) )
+
+# Add particle properties to data model
 particle.data.add_attribute(v_attr)
 particle.data.add_attribute(a_attr)
 particle.data.add_attribute(v_full_attr)
@@ -86,12 +100,25 @@ particle.data.add_attribute(energy_kin_attr)
 particle.data.add_attribute(energy_pot_attr)
 particle.data.add_attribute(energy_tot_attr)
 
-particle.data.add_attribute( dastgen2.attributes.Enumeration("MoveState",["New","NotMovedYet","Moved"]) )
+# Dummy attrs
+particle.data.add_attribute(density_attr)
+particle.data.add_attribute(pressure_attr)
+particle.data.add_attribute(is_boundary_part_attr)
+particle.data.add_attribute(a_prev_step_attr)
+particle.data.add_attribute(u_attr)
+particle.data.add_attribute(uDot_attr)
+particle.data.add_attribute(u_full_attr)
+particle.data.add_attribute(v_sig_AV_attr)
+particle.data.add_attribute(smoothL_attr)
+particle.data.add_attribute(smoothL_prev_attr)
+particle.data.add_attribute(hleft_attr)
+particle.data.add_attribute(hright_attr)
+particle.data.add_attribute(has_converged_attr)
+particle.data.add_attribute(iteration_count_attr)
+particle.data.add_attribute(soundSpeed_attr)
 
+# Add particle to project.
 particles = peano4.toolbox.particles.ParticleSet(particle)
-
-# This particle has to be added to the project. This way the project knows that we are working with this guy. We associate the particle with the vertices, as we work with the pidt (particle in dual tree) algorithm. 
-
 project.datamodel.add_global_object(particle)
 project.datamodel.add_vertex       (particles)
 
@@ -103,7 +130,6 @@ project.output.makefile.set_dimension(Dimensions)
 # T: Period of orbit [s]
 # L=4*R_MAX: 4 * maximum distance
 # M_SUN: Sun mass [kg]
-
 
 # Orbital parameters
 N_orbits= 8;          # Number of orbits
@@ -118,7 +144,7 @@ V_MAX = 30287.0;       # [m/s]
 LENGTH_UNIT = 4.0 * R_MAX
 SUN_X_COORD = str(0.5)
 SUN_Y_COORD = str(0.55)
-EARTH_X_INI = str(float(SUN_X_COORD) + R_MAX / LENGTH_UNIT)
+EARTH_X_INI = str( float(SUN_X_COORD) + R_MAX / LENGTH_UNIT )
 EARTH_Y_INI = SUN_Y_COORD
 
 # Derived quantities 
@@ -130,7 +156,8 @@ T = np.sqrt( 4.0 * np.pi * np.pi * a * a * a /
                   (G_NEWTON * (M_SUN + M_EARTH)) ); # Period [s] */
 
 # Time-step size 
-dt = float(args.cut_off_radius)/8.0; # [s]
+dt = 1e-3 * T; # [s]
+dt/= T;
 N = N_orbits / dt;
 GLOBAL_TIME_STEP_SIZE = str(dt)
 
@@ -156,6 +183,14 @@ if args.plot:
   project.constants.export_const_with_type("PLOT", "true", "bool")
 else:
   project.constants.export_const_with_type("PLOT", "false", "bool")
+
+# Dummy 
+GAMMA = str( 5./3. )
+HYDRO_h_MAX = str( 1.0 / 3.0 / float(2.0) ) 
+HYDRO_h_MIN = "1e-6"
+project.constants.export_const_with_type("GAMMA"        , GAMMA       , "double")
+project.constants.export_const_with_type("HYDRO_h_MAX"  , HYDRO_h_MAX , "double")
+project.constants.export_const_with_type("HYDRO_h_MIN"  , HYDRO_h_MIN , "double")
 
 ################################################################################################
 ###############################  Model the setup phases  #######################################
@@ -193,8 +228,8 @@ initialisation_snippet = """
   if( particle->getX(0) > 0.55 ){
     particle->setX(0, EARTH_X_INI );
     particle->setX(1, EARTH_Y_INI );
-  particle->setV(0, EARTH_V_INI_X) ;
-  particle->setV(1, EARTH_V_INI_Y) ;
+    particle->setV(0, EARTH_V_INI_X) ;
+    particle->setV(1, EARTH_V_INI_Y) ;
   } else {
     particle->setX(0, SUN_X_COORD);
     particle->setX(1, SUN_Y_COORD);
@@ -205,7 +240,7 @@ initialisation_snippet = """
   particle->setA(0,0);
   particle->setA(1,0);
 
-  particle->setHasBeenKicked(false);
+  particle->setHasBeenKicked( false );
   
   /* Set initial energy */
   /* G_NEWTON in internal units */
@@ -224,6 +259,24 @@ initialisation_snippet = """
 
   /* Initialise the "extended" arrays */
   particle->setV_full(particle->getV());
+
+  /* Initialise other dummy properties */
+  particle->setDensity(1.0);
+  particle->setPressure(1e-6);
+  particle->setIsBoundaryParticle( false );
+  particle->setA_prev_step(0.0);
+  particle->setU(1e-6);
+  particle->setUDot(0.0);
+  particle->setU_full(0.0);
+  particle->setV_sig_AV(0.0);
+  particle->setSmoothingLength(0.0);
+  particle->setSmoothingLengthPrevious(0.0);
+  particle->setHLeft (0.0);
+  particle->setHRight(0.0);
+  particle->setIterCount(0);
+  particle->setHasConverged( false );
+  particle->setSoundSpeed(1e-6);
+
 
 """
 
@@ -289,14 +342,12 @@ force_gravity_particles.add_action_set( peano4.toolbox.particles.ParticleParticl
 
   touch_vertex_first_time_compute_particle_update_kernel="""
 
-  if(localParticle->getParallelState()==globaldata::Particle::ParallelState::Local){
-
-  }
+  // No action here
 
 """,
   touch_vertex_last_time_compute_particle_update_kernel="""
 
-   if(localParticle->getParallelState()==globaldata::Particle::ParallelState::Local){
+   if(localParticle->getParallelState() == globaldata::Particle::ParallelState::Local){
 
     /* Here we only consider the Earth. The Sun particle is not used */
 
@@ -330,6 +381,13 @@ force_gravity_particles.add_action_set( peano4.toolbox.particles.ParticleParticl
     const double E_pot = - GN * r_inv;
     localParticle->setEnergyPot( E_pot );
 
+    /* Update potential Energy */
+    const double E_kin = 0.5 * tarch::la::norm2( localParticle->getV() );
+    localParticle->setEnergyKin( E_kin);
+
+    /* Update total energy (overall minus sign) */
+    localParticle->setEnergyTot( - ( E_kin + localParticle->getEnergyPot() ) );
+
     assertion1(  std::isfinite(localParticle->getA(0)), localParticle->toString() );
     assertion1(  std::isfinite(localParticle->getA(1)), localParticle->toString() );
 
@@ -341,347 +399,175 @@ force_gravity_particles.add_action_set( peano4.toolbox.particles.ParticleParticl
 #include <cmath>
 """
   ))
-#force_gravity_particles.add_action_set( peano4.toolbox.particles.ParticleAMR(particles,particle_tree_analysis,min_particles_per_cell=10) )
 force_gravity_particles.add_action_set( particle_tree_analysis )
 force_gravity_particles.add_action_set( peano4.toolbox.particles.UpdateParticleGridAssociation(particles) )
 force_gravity_particles.add_action_set( peano4.toolbox.particles.UpdateParallelState(particles) )
 project.solversteps.add_step(force_gravity_particles)
 
 
-# ## KDK/leapfrog steps
-# 
-# In the KDK (leapfrog) scheme, we update positions and velocities according to
-# 
-# \begin{align}
-# {\bf v}^{n+\frac{1}{2}} &= {\bf v}^{n} + {\bf a}^{n}\frac{\Delta t}{2}\\
-# {\bf x}^{n+1} &= {\bf x}^{n} + {\bf v}^{n+\frac{1}{2}}{\Delta t}\\
-# {\bf v}^{n+1} &= {\bf v}^{n+\frac{1}{2}} + {\bf a}^{n+1}\frac{\Delta t}{2}\\
-# \end{align}
-#  
-# Notice that the last kick in this sequence is implicit if ${\bf a}$ depends on ${\bf v}$, which requires extra treatments (see Price et al.).
-# 
+# -----------------------------------------------------------------------------
+# Time integration steps (leapfrog)
+# -----------------------------------------------------------------------------
 
-# ## Kick 1
-
+# -----------------------------------------------------------------------------
+# Kick 1
+# -----------------------------------------------------------------------------
 kick1_particles = peano4.solversteps.Step( "Kick1", add_user_defined_actions=False )
 kick1_particles.use_vertex(particles)
 kick1_particles.use_cell(particle_tree_analysis.cell_marker)
+
+# Kick 1 step from SPH library
+Kick1 = peano4.toolbox.particles.sph.computeKernels.LeapfrogKick( kickNumber=1 )
+
+particle_particle_compute_kernel = Kick1.particle_particle_compute_kernel
+touch_particle_first_time_compute_kernel= Kick1.touch_particle_first_time_compute_kernel
+touch_particle_last_time_compute_kernel = Kick1.touch_particle_last_time_compute_kernel
+
+# Add step to project
 kick1_particles.add_action_set( peano4.toolbox.particles.ParticleParticleInteraction(
-  particle_set=particles,
-  particle_particle_interaction_kernel="""
-
-  /* We do not excecute any specific action here */
-
-""",
-  touch_vertex_first_time_compute_particle_update_kernel="""
-
-    if(localParticle->getParallelState()==globaldata::Particle::ParallelState::Local){
-
-      /* Prepare the particle for kick */
-      localParticle->setHasBeenKicked(false);
-
-    }
-
-""",
-  touch_vertex_last_time_compute_particle_update_kernel="""
-
-  const double dt_kick_hydro = 0.5 * GLOBAL_TIME_STEP_SIZE;
-
-  if(
-      not localParticle->getHasBeenKicked()
-      and
-      localParticle->getParallelState()==globaldata::Particle::ParallelState::Local
-    ){
-
-    /* Kick the particle */
-    localParticle->setV_full( localParticle->getV_full() + dt_kick_hydro * localParticle->getA() );
-
-    assertion1(  std::isfinite(localParticle->getV(0)), localParticle->toString() );
-    assertion1(  std::isfinite(localParticle->getV(1)), localParticle->toString() );
-
-    localParticle->setHasBeenKicked(true);
-
-    }
-
-""",
-  additional_includes="""
+  particle_set = particles,
+  particle_particle_interaction_kernel = particle_particle_compute_kernel,
+  touch_vertex_first_time_compute_particle_update_kernel= touch_particle_first_time_compute_kernel,
+  touch_vertex_last_time_compute_particle_update_kernel = touch_particle_last_time_compute_kernel,
+  additional_includes = """
 #include "Constants.h"
 #include <cmath>
 """
   ))
-#kick_particles.add_action_set( peano4.toolbox.particles.ParticleAMR(particles,particle_tree_analysis,min_particles_per_cell=10) )
 kick1_particles.add_action_set( particle_tree_analysis )
 kick1_particles.add_action_set( peano4.toolbox.particles.UpdateParticleGridAssociation(particles) )
 kick1_particles.add_action_set( peano4.toolbox.particles.UpdateParallelState(particles) )
 project.solversteps.add_step(kick1_particles)
 
 
-# ## Kick 2
-# 
-# Same as kick 1 but does not update the accelation array of previous time step
-
+# -----------------------------------------------------------------------------
+# Kick 2
+# -----------------------------------------------------------------------------
 kick2_particles = peano4.solversteps.Step( "Kick2", add_user_defined_actions=False )
 kick2_particles.use_vertex(particles)
 kick2_particles.use_cell(particle_tree_analysis.cell_marker)
+
+# Kick 2 step from SPH library
+Kick2 = peano4.toolbox.particles.sph.computeKernels.LeapfrogKick( kickNumber=2 )
+
+particle_particle_compute_kernel = Kick2.particle_particle_compute_kernel
+touch_particle_first_time_compute_kernel= Kick2.touch_particle_first_time_compute_kernel
+touch_particle_last_time_compute_kernel = Kick2.touch_particle_last_time_compute_kernel
+
+# Add step to project
 kick2_particles.add_action_set( peano4.toolbox.particles.ParticleParticleInteraction(
-  particle_set=particles,
-  particle_particle_interaction_kernel="""
-
-  /* We do not excecute any specific action here */
-
-""",
-  touch_vertex_first_time_compute_particle_update_kernel="""
-
-    if(localParticle->getParallelState()==globaldata::Particle::ParallelState::Local){
-
-      /* Prepare the particle for kick */
-      localParticle->setHasBeenKicked(false);
-    }
-
-""",
-  touch_vertex_last_time_compute_particle_update_kernel="""
-
-  const double dt_kick_hydro = 0.5 * GLOBAL_TIME_STEP_SIZE;
-
-  if (not localParticle->getHasBeenKicked()
-      and
-      localParticle->getParallelState()==globaldata::Particle::ParallelState::Local){
-
-    /* Kick the particle */
-    localParticle->setV_full( localParticle->getV_full() + dt_kick_hydro * localParticle->getA() );
-
-    assertion1(  std::isfinite(localParticle->getV(0)), localParticle->toString() );
-    assertion1(  std::isfinite(localParticle->getV(1)), localParticle->toString() );
-
-    localParticle->setHasBeenKicked(true);
-
-    /*
-     * Reset predicted values for next Drift step 
-     * Done by "hydro_reset_predicted_values" in SWIFT
-     */
-
-    /* Re-set the predicted velocities */
-    localParticle->setV( localParticle->getV_full() );
-
-    /* Update potential Energy */
-    const double E_kin = 0.5 * tarch::la::norm2( localParticle->getV() );
-    localParticle->setEnergyKin( E_kin);
-
-    /* Update total energy (overall minus sign) */
-    localParticle->setEnergyTot( - ( E_kin + localParticle->getEnergyPot() ) );
-
-  }
-
-""",
+  particle_set = particles,
+  particle_particle_interaction_kernel = particle_particle_compute_kernel,
+  touch_vertex_first_time_compute_particle_update_kernel= touch_particle_first_time_compute_kernel,
+  touch_vertex_last_time_compute_particle_update_kernel = touch_particle_last_time_compute_kernel,
   additional_includes="""
 #include "Constants.h"
+#include "equation_of_state.h"
 #include <cmath>
 """
   ))
-#kick2_particles.add_action_set( peano4.toolbox.particles.ParticleAMR(particles,particle_tree_analysis,min_particles_per_cell=10) )
 kick2_particles.add_action_set( particle_tree_analysis )
 kick2_particles.add_action_set( peano4.toolbox.particles.UpdateParticleGridAssociation(particles) )
 kick2_particles.add_action_set( peano4.toolbox.particles.UpdateParallelState(particles) )
 project.solversteps.add_step(kick2_particles)
 
 
-# ## Drift step (+prediction)
-# 
-# In this step, we update the particle's position via
-# 
-# \begin{align}
-# {\bf x}^{n+1} = {\bf x}^{n} + {\bf v}^{n+1/2}{\Delta t}
-# \end{align}
-# 
-# We also need to get predicted values of some quantities.
-
+# -----------------------------------------------------------------------------
+# Drift step (+prediction)
+# -----------------------------------------------------------------------------
 drift_particles = peano4.solversteps.Step( "Drift", add_user_defined_actions=False )
 drift_particles.use_vertex(particles)
 drift_particles.use_cell(particle_tree_analysis.cell_marker)
-drift_particles.add_action_set( peano4.toolbox.particles.ParticleParticleInteraction(
-  particle_set=particles,
-  particle_particle_interaction_kernel="""
-    
-  /* We do not excecute any specific action here */
-  
-""",
-  touch_vertex_last_time_compute_particle_update_kernel = """
-  const double timeStepSize = GLOBAL_TIME_STEP_SIZE;
-  
-  if (
-    localParticle->getMoveState()!=globaldata::Particle::MoveState::Moved
-    and
-    localParticle->getParallelState()==globaldata::Particle::ParallelState::Local
-    ){
-  
-    // Drift the particle (update position for a full time-step) 
-    localParticle->setX( localParticle->getX() + timeStepSize * localParticle->getV_full() );
-    
-    localParticle->setMoveState( globaldata::Particle::MoveState::Moved );
 
-    }
-""",
-  additional_includes="""
+# Drift step from SPH library
+Drift = peano4.toolbox.particles.sph.computeKernels.LeapfrogDrift()
+
+particle_particle_compute_kernel = Drift.particle_particle_compute_kernel
+touch_particle_first_time_compute_kernel= Drift.touch_particle_first_time_compute_kernel
+touch_particle_last_time_compute_kernel = Drift.touch_particle_last_time_compute_kernel
+
+# Add step to project
+drift_particles.add_action_set( peano4.toolbox.particles.ParticleParticleInteraction(
+  particle_set = particles,
+  particle_particle_interaction_kernel = particle_particle_compute_kernel,
+  touch_vertex_first_time_compute_particle_update_kernel= touch_particle_first_time_compute_kernel,
+  touch_vertex_last_time_compute_particle_update_kernel = touch_particle_last_time_compute_kernel,
+  additional_includes = """
 #include "Constants.h"
+#include "equation_of_state.h"
 #include <cmath>
 """
   ))
-#drift_particles.add_action_set( peano4.toolbox.particles.ParticleAMR(particles,particle_tree_analysis,min_particles_per_cell=10) )
 drift_particles.add_action_set( particle_tree_analysis )
 drift_particles.add_action_set( peano4.toolbox.particles.UpdateParticleGridAssociation(particles) )
 drift_particles.add_action_set( peano4.toolbox.particles.UpdateParallelState(particles) )
 project.solversteps.add_step(drift_particles)
 
 
-# ## Initialize some variables for the current time-step
-
+# -----------------------------------------------------------------------------
+# Initialize some variables for the current time-step
+# -----------------------------------------------------------------------------
 init_time_step = peano4.solversteps.Step( "InitTimeStep", add_user_defined_actions=False )
 init_time_step.use_vertex(particles)
 init_time_step.use_cell(particle_tree_analysis.cell_marker)
+
+# InitTimeStep step from SPH library
+InitTimeStep = peano4.toolbox.particles.sph.computeKernels.InitializeTimeStep()
+
+particle_particle_compute_kernel = InitTimeStep.particle_particle_compute_kernel
+touch_particle_first_time_compute_kernel= InitTimeStep.touch_particle_first_time_compute_kernel
+touch_particle_last_time_compute_kernel = InitTimeStep.touch_particle_last_time_compute_kernel
+
+# Add action to project
 init_time_step.add_action_set( peano4.toolbox.particles.ParticleParticleInteraction(
   particle_set=particles,
-  particle_particle_interaction_kernel="""
-
-  /* We do not excecute any specific action here */
-
-""",
-  touch_vertex_first_time_compute_particle_update_kernel="""
-
-  /* We do not excecute any specific action here */
-
-""",
-  touch_vertex_last_time_compute_particle_update_kernel="""
-
-  if( localParticle->getParallelState()==globaldata::Particle::ParallelState::Local ){
-
-    /* Also prepare particle for Drift step */
-    localParticle->setMoveState( globaldata::Particle::MoveState::NotMovedYet );
-
-  }
-
-""",
+  particle_particle_interaction_kernel = particle_particle_compute_kernel,
+  touch_vertex_first_time_compute_particle_update_kernel= touch_particle_first_time_compute_kernel,
+  touch_vertex_last_time_compute_particle_update_kernel = touch_particle_last_time_compute_kernel,
   additional_includes="""
 #include "Constants.h"
 #include <cmath>
 """
   ))
-#init_time_step.add_action_set( peano4.toolbox.particles.ParticleAMR(particles,particle_tree_analysis,min_particles_per_cell=10) )
 init_time_step.add_action_set( particle_tree_analysis )
 init_time_step.add_action_set( peano4.toolbox.particles.UpdateParticleGridAssociation(particles) )
 init_time_step.add_action_set( peano4.toolbox.particles.UpdateParallelState(particles) )
 project.solversteps.add_step(init_time_step)
 
-
-# ## Impose Boundary Conditions
-# After the final velocity has been calculated (and the particle already been drifted), we need to impose the boundary conditions. In this case we use reflecting ones.
-
+# -----------------------------------------------------------------------------
+#  Impose Boundary Conditions
+# -----------------------------------------------------------------------------
 impose_BC_particles = peano4.solversteps.Step( "ImposeBC", add_user_defined_actions=False )
 impose_BC_particles.use_vertex(particles)
 impose_BC_particles.use_cell(particle_tree_analysis.cell_marker)
+
+# Impose BC step from SPH library
+ImposeBC = peano4.toolbox.particles.sph.computeKernels.ImposeBoundaryConditions()
+
+particle_particle_compute_kernel = ImposeBC.particle_particle_compute_kernel
+touch_particle_first_time_compute_kernel= ImposeBC.touch_particle_first_time_compute_kernel
+touch_particle_last_time_compute_kernel = ImposeBC.touch_particle_last_time_compute_kernel
+
+# Add action to project
 impose_BC_particles.add_action_set( peano4.toolbox.particles.ParticleParticleInteraction(
   particle_set=particles,
-  particle_particle_interaction_kernel="""
-    
-  /* We do not excecute any specific action here */
-  
-""",
-  touch_vertex_first_time_compute_particle_update_kernel="""
-  
-   if(localParticle->getParallelState()==globaldata::Particle::ParallelState::Local){
-     localParticle->setMoveState( globaldata::Particle::MoveState::NotMovedYet );
-   }
-
-""",
-  touch_vertex_last_time_compute_particle_update_kernel="""
-    
-  if (
-  localParticle->getMoveState()!=globaldata::Particle::MoveState::Moved
-  and
-  localParticle->getParallelState()==globaldata::Particle::ParallelState::Local
-  ){
-  
-    for (int d=0; d<Dimensions; d++) {
-      if ( localParticle->getX()(d)<0.0 ) {
-
-        /* Reflecting BC */   
-        localParticle->setX     ( d, std::abs(localParticle->getX     ()(d)) );
-        localParticle->setV     ( d, std::abs(localParticle->getV_full()(d)) );
-        localParticle->setV_full( d, std::abs(localParticle->getV_full()(d)) );
-
-      }
-      if ( localParticle->getX()(d)>1.0 ) {
-
-        /* Reflecting BC */   
-        localParticle->setX     ( d,    2.0 - localParticle->getX     ()(d)  );
-        localParticle->setV     ( d,-std::abs(localParticle->getV     ()(d)) );
-        localParticle->setV_full( d,-std::abs(localParticle->getV_full()(d)) );
-
-      }
-    
-      localParticle->setMoveState( globaldata::Particle::MoveState::Moved );
-      
-      } /* End for dimensions */
-      
-    }
-    
-""",
+  particle_particle_interaction_kernel = particle_particle_compute_kernel,
+  touch_vertex_first_time_compute_particle_update_kernel= touch_particle_first_time_compute_kernel,
+  touch_vertex_last_time_compute_particle_update_kernel = touch_particle_last_time_compute_kernel,
   additional_includes="""
 #include "Constants.h"
 #include <cmath>
 """
   ))
-impose_BC_particles.add_action_set( peano4.toolbox.particles.ParticleAMR(particles,particle_tree_analysis,min_particles_per_cell=0,max_particles_per_cell=1) )
+impose_BC_particles.add_action_set( peano4.toolbox.particles.ParticleAMR(particles,particle_tree_analysis,min_particles_per_cell=10) )
 impose_BC_particles.add_action_set( particle_tree_analysis )
 impose_BC_particles.add_action_set( peano4.toolbox.particles.UpdateParticleGridAssociation(particles) )
 impose_BC_particles.add_action_set( peano4.toolbox.particles.UpdateParallelState(particles) )
 project.solversteps.add_step(impose_BC_particles)
 
-# ## For Debugging: collapse problem into 1D
-# 
-# This is an initial, extra step to move particles into a straight line when the simulation starts.
-
-rearrange_particles = peano4.solversteps.Step( "RearrangeAtStart", add_user_defined_actions=False )
-rearrange_particles.use_vertex(particles)
-rearrange_particles.use_cell(particle_tree_analysis.cell_marker)
-rearrange_particles.add_action_set( peano4.toolbox.particles.ParticleParticleInteraction(
-  particle_set=particles,
-  particle_particle_interaction_kernel="""
-
-  /* We do not excecute any specific action here */
-
-""",
-  touch_vertex_first_time_compute_particle_update_kernel="""
-
-  /* We do not excecute any specific action here */
-
-""",
-  touch_vertex_last_time_compute_particle_update_kernel="""
-
-  /* Select the initialized particle (Earth)
-   * and put this close to the box center.
-   */
-
-  if( localParticle->getX(0) < 1e-2 and localParticle->getX(1) < 1e-2){
-    localParticle->setX(0, EARTH_X_INI );
-    localParticle->setX(1, EARTH_Y_INI );
-  }
-
-
-""",
-  additional_includes="""
-#include "Constants.h"
-#include <cmath>
-"""
-  ))
-rearrange_particles.add_action_set( peano4.toolbox.particles.UpdateParticleGridAssociation(particles) )
-rearrange_particles.add_action_set( peano4.toolbox.particles.UpdateParallelState(particles) )
-#rearrange_particles.add_action_set( peano4.toolbox.particles.ParticleAMR(particles,particle_tree_analysis,min_particles_per_cell=10) )
-rearrange_particles.add_action_set( particle_tree_analysis )
-project.solversteps.add_step(rearrange_particles)
-
-# ### Plots setup
-# 
-# I will have to plot the outcome (or any snapshot). With particles, each of my dumps produces two types of files: particle data and mesh data. For the mesh, I rely on the toolbox's grid plotting. The plot is the step where we don't need the AMR criterion - the particles don't move here after all. We however run the tree analysis, so it is up-to-date for the next step.
+# ------------------------------------------------------------------------------
+# Plot setup 
+# ------------------------------------------------------------------------------
 
 # Particle plotter
 particle_plotter = peano4.toolbox.particles.PlotParticlesInVTKFormat( "particles", particles, time_stamp_evaluation=peano4.toolbox.particles.PlotParticlesInVTKFormat.CountTimeSteps )
