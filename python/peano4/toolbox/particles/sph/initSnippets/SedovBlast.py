@@ -24,11 +24,13 @@ class SedovBlastIC:
        * See, e.g., Springel and Hernquist, Mon. Not. R. Astron. Soc. 333, 649–664 (2002).
        *
        */
+
+      // Internal cutoff radius used by Peano and with max value R = grid_size/2
+      tarch::la::Vector<Dimensions,double> GridSize = marker.h();
+      const double GridSize_x = GridSize(0); 
+
+      particle->setCutOffRadius( GridSize_x / 2.0);
        
-      // Internal cutoff radious used by Peano and with max value R = grid_size/2
-      /* For grid_size = 1/3 */
-      particle->setCutOffRadius(1.0 / 3.0 / 2.0);
-      
       /* Constant density field */
       particle->setDensity ( 1.0 );        
       particle->setMass( particle->getDensity() / std::pow(HYDRO_PART_NUMBER, HYDRO_DIMENSIONS) );
