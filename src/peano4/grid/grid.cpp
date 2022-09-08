@@ -364,7 +364,7 @@ void peano4::grid::reduceGridControlEvents( std::vector<GridControlEvent>& event
 
     if (sizes[i]>0) {
       MPI_Bcast(
-        events.data() + offset, sizes[i], GridControlEvent::getDatatype(), i, tarch::mpi::Rank::getInstance().getCommunicator()
+        events.data() + offset, sizes[i], GridControlEvent::getGlobalCommunciationDatatype(), i, tarch::mpi::Rank::getInstance().getCommunicator()
       );
       offset += sizes[i];
     }

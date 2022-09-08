@@ -15,7 +15,6 @@ from peano4.solversteps.ActionSet import ActionSet
 from exahype2.solvers.ButcherTableau              import RungeKutta_steps
 
 from .PDETerms                    import PDETerms
-from .kernels                     import get_face_overlap_merge_implementation
 
 import jinja2
 import math
@@ -455,7 +454,9 @@ We use RK(""" + str(self._rk_order) + """) for the time stepping.
     self._estimate_projection       = peano4.datamodel.Patch( (2,self._number_of_face_projections*(self._basis.dofs_per_axis),self._basis.dofs_per_axis),  self._unknowns+self._auxiliary_variables, self._unknown_identifier() + "EstimateProjection" )
     self._Riemann_solution                  = peano4.datamodel.Patch( (2,self._basis.dofs_per_axis,self._basis.dofs_per_axis),  self._unknowns, self._unknown_identifier() + "RiemannSolution" )
            
-    self._estimate_projection.generator.merge_method_definition = peano4.toolbox.blockstructured.get_face_overlap_merge_implementation(self._estimate_projection)
+    self._estimate_projection.generator.merge_method_definition = peano4.toolbox.blockstructured.get_face_merge_implementation(self._estimate_projection)
+    self._current_time_step.generator.merge_method_definition   = peano4.toolbox.blockstructured.get_cell_merge_implementation(self._current_time_step)
+
       #get_face_overlap_merge_implementation(self._estimate_projection)
     self._estimate_projection.generator.includes     += """
 #include "peano4/utils/Loop.h"

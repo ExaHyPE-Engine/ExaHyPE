@@ -74,7 +74,7 @@ tarch::la::Vector<Dimensions,{{FLOAT_TYPE}}> {{NAMESPACE | join("::")}}::{{CLASS
 
 
 {% if DATA_ASSOCIATION == 1 -%}
-void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::merge(const {{CLASSNAME}}& neighbour, const peano4::datamanagement::VertexMarker& marker) {
+void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::merge(peano4::grid::TraversalObserver::SendReceiveContext context, const {{CLASSNAME}}& neighbour, const peano4::datamanagement::VertexMarker& marker) {
   {{MERGE_METHOD_DEFINITION}}
 }
 
@@ -101,7 +101,7 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::loadPersistently(const peano4::d
 
 
 {% if DATA_ASSOCIATION == 2 -%}
-void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::merge(const {{CLASSNAME}}& neighbour, const peano4::datamanagement::FaceMarker& marker) {
+void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::merge(peano4::grid::TraversalObserver::SendReceiveContext context, const {{CLASSNAME}}& neighbour, const peano4::datamanagement::FaceMarker& marker) {
   {{MERGE_METHOD_DEFINITION}}
 }
 
@@ -128,7 +128,7 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::loadPersistently(const peano4::d
 
 
 {% if DATA_ASSOCIATION == 3 -%}
-void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::merge(const {{CLASSNAME}}& neighbour, const peano4::datamanagement::CellMarker& marker) {
+void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::merge(peano4::grid::TraversalObserver::SendReceiveContext context, const {{CLASSNAME}}& neighbour, const peano4::datamanagement::CellMarker& marker) {
   {{MERGE_METHOD_DEFINITION}}
 }
 
@@ -220,7 +220,28 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::shutdownDatatype() {
 MPI_Datatype   {{NAMESPACE | join("::")}}::{{CLASSNAME}}::Datatype;
 
 
-MPI_Datatype   {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getDatatype() {
+MPI_Datatype  {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getForkDatatype() {
   return Datatype;
 }
+
+
+MPI_Datatype  {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getJoinDatatype() {
+  return Datatype;
+}
+
+
+MPI_Datatype  {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getBoundaryExchangeDatatype() {
+  return Datatype;
+}
+
+
+MPI_Datatype  {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMultiscaleDataExchangeDatatype() {
+  return Datatype;
+}
+
+
+MPI_Datatype  {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getGlobalCommunciationDatatype() {
+  return Datatype;
+}
+
 #endif

@@ -2,37 +2,6 @@
 #include "exahype2/NonCriticalAssertions.h"
 
 
-/*
-void examples::exahype2::euler::EulerFV::initialCondition(
-  double * __restrict__ Q,
-  const tarch::la::Vector<Dimensions,double>&  volumeCentre,
-  const tarch::la::Vector<Dimensions,double>&  volumeH,
-  bool                                         gridIsConstructred
-) {
-  logTraceInWith3Arguments( "initialCondition(...)", volumeCentre, volumeH, gridIsConstructred );
-
-  for (int i=0; i<NumberOfUnknowns+NumberOfAuxiliaryVariables; i++) {
-    Q[i] = 0.0;
-  }
-
-  #if Dimensions==3
-  tarch::la::Vector<Dimensions,double> circleCentre = {0.18,0.3,0.6};
-  #else
-  tarch::la::Vector<Dimensions,double> circleCentre = {0.5,0.3};
-  #endif
-
-  const double peakDeviation = MaxAdmissibleCellH;
-  double distance = tarch::la::norm2( volumeCentre-circleCentre );
-  double exponent = - (distance * distance) / 2.0 / peakDeviation / peakDeviation;
-
-  Q[0]            = 0.1;                  // rho
-  Q[1+Dimensions] = std::exp( exponent ); // inner energy
-
-  logTraceOut( "initialCondition(...)" );
-}
-*/
-
-
 void applications::exahype2::euler::NeumannBoundaryConditions(
   const double * __restrict__                  Qinside, // Qinside[5+0]
   double * __restrict__                        Qoutside, // Qoutside[5+0]

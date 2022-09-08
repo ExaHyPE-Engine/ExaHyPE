@@ -70,11 +70,11 @@ void exahype2::RefinementControl::receiveDanglingMessages() {
       MPI_Iprobe(rank, _reductionTag, tarch::mpi::Rank::getInstance().getCommunicator(), &flag, &status);
       if (flag) {
         int numberOfMessages;
-        MPI_Get_count( &status, peano4::grid::GridControlEvent::getDatatype(), &numberOfMessages );
+        MPI_Get_count( &status, peano4::grid::GridControlEvent::getGlobalCommunciationDatatype(), &numberOfMessages );
         logInfo( "finishStep()", "got " << numberOfMessages << " event(s) from rank " << rank );
         std::vector< peano4::grid::GridControlEvent > receiveBuffer;
         receiveBuffer.resize( numberOfMessages );
-        MPI_Recv( receiveBuffer.data(), numberOfMessages, peano4::grid::GridControlEvent::getDatatype(), rank, _reductionTag, tarch::mpi::Rank::getInstance().getCommunicator(), MPI_STATUS_IGNORE );
+        MPI_Recv( receiveBuffer.data(), numberOfMessages, peano4::grid::GridControlEvent::getGlobalCommunciationDatatype(), rank, _reductionTag, tarch::mpi::Rank::getInstance().getCommunicator(), MPI_STATUS_IGNORE );
 
         tarch::multicore::Lock lock( _semaphore );
         for (auto p: receiveBuffer) {
@@ -186,7 +186,7 @@ void exahype2::RefinementControl::triggerSendOfCopyOfCommittedEvents() {
     for (int rank=0; rank<tarch::mpi::Rank::getInstance().getNumberOfRanks(); rank++) {
       if (rank!=tarch::mpi::Rank::getInstance().getRank()) {
         _sendRequests[rank] = new MPI_Request;
-        MPI_Isend( _copyOfCommittedEvents.data(), _copyOfCommittedEvents.size(), peano4::grid::GridControlEvent::getDatatype(), rank, _reductionTag, tarch::mpi::Rank::getInstance().getCommunicator(), _sendRequests[rank] );
+        MPI_Isend( _copyOfCommittedEvents.data(), _copyOfCommittedEvents.size(), peano4::grid::GridControlEvent::getGlobalCommunciationDatatype(), rank, _reductionTag, tarch::mpi::Rank::getInstance().getCommunicator(), _sendRequests[rank] );
       }
     }
   }
