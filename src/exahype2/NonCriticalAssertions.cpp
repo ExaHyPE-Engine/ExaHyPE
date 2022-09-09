@@ -3,6 +3,7 @@
 #include "tarch/multicore/BooleanSemaphore.h"
 #include "tarch/multicore/Lock.h"
 #include "tarch/mpi/Rank.h"
+#include "tarch/mpi/IntegerMessage.h"
 #include "tarch/Assertions.h"
 
 
@@ -10,12 +11,27 @@
 
 
 namespace {
-  int                                  rankWhichHasSetNonCriticalAssertion = -1;
-  tarch::multicore::BooleanSemaphore   _assertionSemaphore;
-  #if defined(Parallel) and defined(MPISupportsSingleSidedCommunication)
-  MPI_Win assertionWindow;
+  /**
+   * This is the rank-local variable to store the number of the
+   * failing rank.
+   */
+  int  rankWhichHasSetNonCriticalAssertion = -1;
+
+  /**
+   * There's only one variable per rank, so we have to protect
+   * access through many threads.
+   */
+  tarch::multicore::BooleanSemaphore   assertionSemaphore;
+
+  #if defined(Parallel)
+  /**
+   * An assertion is triggered just by sending a message to
+   * rank 0 on an error tag.
+   */
+  int   assertionExchangeTag;
   #endif
-  bool                                 useNonCriticalAssertions = true;
+
+  bool  useNonCriticalAssertions = true;
 }
 
 
@@ -25,15 +41,15 @@ void exahype2::enableNonCriticalAssertions(bool value) {
 
 
 void exahype2::shutdownNonCritialAssertionEnvironment() {
-  #if defined(Parallel) and defined(MPISupportsSingleSidedCommunication)
-  MPI_Win_free( &assertionWindow );
+  #if defined(Parallel)
+  tarch::mpi::Rank::releaseTag( assertionExchangeTag );
   #endif
 }
 
 
 void exahype2::initNonCritialAssertionEnvironment() {
-  #if defined(Parallel) and defined(MPISupportsSingleSidedCommunication)
-  MPI_Win_create( &rankWhichHasSetNonCriticalAssertion, sizeof(int), sizeof(int), MPI_INFO_NULL, MPI_COMM_WORLD, &assertionWindow );
+  #if defined(Parallel)
+  assertionExchangeTag = tarch::mpi::Rank::reserveFreeTag( "mpi::noncriticalassertion" );
   #endif
 }
 
@@ -41,11 +57,11 @@ void exahype2::initNonCritialAssertionEnvironment() {
 void exahype2::triggerNonCriticalAssertion( std::string file, int line, std::string expression, std::string parameterValuePairs ) {
   static tarch::logging::Log _log( "exahype2" );
 
-  tarch::multicore::Lock lock( _assertionSemaphore );
+  tarch::multicore::Lock lock( assertionSemaphore );
 
   if (rankWhichHasSetNonCriticalAssertion>=0 and useNonCriticalAssertions) {
     logError( "triggerNonCriticalAssertion(...)", "noncritical assertion " << expression << " failed in (" << file << ":" << line << ")" );
-    logError( "triggerNonCriticalAssertion(...)", parameterValuePairs );
+    //logError( "triggerNonCriticalAssertion(...)", parameterValuePairs );
     logError( "triggerNonCriticalAssertion(...)", "there has been a non-critical assertion before, so node should already be in shutdown mode" );
   }
   if (rankWhichHasSetNonCriticalAssertion<0 and useNonCriticalAssertions) {
@@ -56,28 +72,15 @@ void exahype2::triggerNonCriticalAssertion( std::string file, int line, std::str
     rankWhichHasSetNonCriticalAssertion = tarch::mpi::Rank::getInstance().getRank();
 
     if (not tarch::mpi::Rank::getInstance().isGlobalMaster()) {
-      #if defined(Parallel) and defined(MPISupportsSingleSidedCommunication)
+      #if defined(Parallel)
       int rank = tarch::mpi::Rank::getInstance().getRank();
-
-      /**
-
-From Joachim Protze:
-
-
-
-From the mpi_win_free man page:
-> It can be invoked by a process only after it has completed its involvement in RMA communications on window win, that is, the process has called MPI_Win_fence, or called MPI_Win_unlock to match a previous call to MPI_Win_lock. When the call returns, the window memory can be freed.
-The recommendation from my colleague:
-Start a communication epoch with mpi_win_lock,
-write the data with mpi_put,
-complete the communication on origin and target with mpi_win_flush, and
-close the epoch with mpi_win_unlock.Although the flush ensures completion on the target process, the c/c++ semantics don't guarantee that you will see the changed value. Making the value respectively the pointer volatile should solve this.The flush is a blocking call, so the process will be blocked until the target process has received the data. As I understand the use case, this call is not on the critical path, so nothing to worry performance-wise.To communicate with all other processes, you can use win_lock_all and win_flush_all instead of the P2P version.
-
-
-       */
-      MPI_Put( &rank, 1, MPI_INT, 0, 0, 1, MPI_INT, assertionWindow );
-      #elif defined(Parallel)
-      assertionMsg( false, "Noncritical assertion triggered, but system does not support single-sided communication so program will shut down immediately");
+      tarch::mpi::IntegerMessage message( rank );
+      tarch::mpi::IntegerMessage::send(
+        message,
+        tarch::mpi::Rank::getGlobalMasterRank(),
+        assertionExchangeTag,
+        tarch::mpi::Rank::getInstance().getCommunicator()
+      );
       #endif
     }
   }
@@ -85,5 +88,26 @@ close the epoch with mpi_win_unlock.Although the flush ensures completion on the
 
 
 bool exahype2::hasNonCriticalAssertionBeenViolated() {
+  #if defined(Parallel)
+  static tarch::logging::Log _log( "exahype2" );
+
+  if (rankWhichHasSetNonCriticalAssertion<0) {
+    int         flag = 0;
+    MPI_Status  status;
+    MPI_Iprobe(MPI_ANY_SOURCE, assertionExchangeTag, tarch::mpi::Rank::getInstance().getCommunicator(), &flag, &status );
+    if (flag) {
+      tarch::mpi::IntegerMessage message;
+      tarch::mpi::IntegerMessage::receive(
+        message,
+        status.MPI_SOURCE,
+        assertionExchangeTag,
+        tarch::mpi::Rank::getInstance().getCommunicator()
+      );
+      rankWhichHasSetNonCriticalAssertion = message.getValue();
+      logError( "triggerNonCriticalAssertion(...)", "received non-critical assertion from rank " << status.MPI_SOURCE );
+    }
+  }
+  #endif
+
   return rankWhichHasSetNonCriticalAssertion>=0;
 }

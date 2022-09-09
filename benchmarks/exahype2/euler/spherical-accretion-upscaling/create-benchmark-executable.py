@@ -26,7 +26,7 @@ parser.add_argument("-j",   "--parallel-builds",    dest="j",              type=
 parser.add_argument("-pd",  "--peano-dir",          dest="peanodir",       default="../../../../", help="Peano4 directory" )
 parser.add_argument("-v",   "--verbose",            dest="verbose",        action="store_true", default=False, help="Verbose")
 parser.add_argument("-m",   "--mode",               dest="mode",           choices=["release","stats","asserts"], required=True, help="Pick build type" )
-parser.add_argument("-t",   "--type",               dest="type",           choices=["plot","reg-0"], required=True, help="Pick scenario" )
+parser.add_argument("-t",   "--type",               dest="type",           choices=["plot-0","plot-1","reg-0"], required=True, help="Pick scenario" )
 parser.add_argument(        "--optimise-stateless", dest="optimise_stateless",            action="store_true", default=False, help="Optimise stateless/side-effect free cells (required for GPU offloading)")
 parser.add_argument("-s",   "--solver",             dest="solver",         choices=["fv-4", "fv-6", "fv-8", "dg1-rk1", "dg2-rk2", "dg3-rk3", "dg4-rk4"], required=True, help="Pick solver type. For the Finite Volume (fv) solvers, the second index is the patch/block size. For DG, you can pick different Runge-Kutta time integration orders" )
 args = parser.parse_args()
@@ -47,9 +47,12 @@ unknowns    = {
 }
 number_of_unknowns  = sum(unknowns.values())
 
-if args.type=="plot":
+if args.type=="plot-0":
   baseline_max_h               = 0.2
   baseline_min_h               = 0.2
+if args.type=="plot-1":
+  baseline_max_h               = 0.05
+  baseline_min_h               = 0.05
 elif args.type=="reg-0":
   baseline_max_h               = 0.008
   baseline_min_h               = 0.008
