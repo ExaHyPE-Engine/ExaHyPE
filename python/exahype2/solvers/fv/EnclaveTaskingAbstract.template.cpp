@@ -362,6 +362,8 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startPlottingStep(
     _solverState = SolverState::PlottingInitialCondition;
   }
   else {
+    assertion( mayPlot()  or ::exahype2::hasNonCriticalAssertionBeenViolated() );
+
     _solverState = SolverState::Plotting;
   }
 }
