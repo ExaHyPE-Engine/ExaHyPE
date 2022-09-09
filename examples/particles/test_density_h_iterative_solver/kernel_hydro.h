@@ -61,14 +61,15 @@ __attribute__((always_inline)) inline static void kernel_deval(
 
 /*****************************************************************************/
 /*****************************************************************************/
-/* M4 KERNEL FROM SWIFT */
+/* M5 KERNEL FROM SWIFT */
 
 /* Coefficients for the kernel. */
-#define kernel_degree 3 /*!< Degree of the polynomial */
-#define kernel_ivals 2  /*!< Number of branches */
+#define kernel_degree 4 /* Degree of the polynomial */
+#define kernel_ivals 5  /* Number of branches */
+
 /* 1D */
-#define kernel_gamma ((float)(1.732051))
-#define kernel_constant ((float)(8. / 3.))
+#define kernel_gamma ((float)(1.936492))
+#define kernel_constant ((float)(3125. / 768.))
 
 /* First some powers of gamma = H/h */
 #define kernel_gamma_inv ((float)(1. / kernel_gamma))
@@ -83,10 +84,19 @@ __attribute__((always_inline)) inline static void kernel_deval(
 /* The number of branches (floating point conversion) */
 #define kernel_ivals_f ((float)(kernel_ivals))
 
+/* Kernel self contribution (i.e. W(0,h)) */
+#define kernel_root                                          \
+  ((float)(kernel_coeffs[kernel_degree]) * kernel_constant * \
+   kernel_gamma_inv_dim)
+
 static const double kernel_coeffs[(kernel_degree + 1) * (kernel_ivals + 1)]
-    __attribute__((aligned(16))) = {3.f,  -3.f, 0.f,  0.5f, /* 0 < u < 0.5 */
-                                    -1.f, 3.f,  -3.f, 1.f,  /* 0.5 < u < 1 */
-                                    0.f,  0.f,  0.f,  0.f}; /* 1 < u */
+    __attribute__((aligned(16))) = {
+        6.0,  0.0,  -2.4, 0.0,  0.368, /* 0 < u < 0.2 */
+        -4.0, 8.0,  -4.8, 0.32, 0.352, /* 0.2 < u < 0.4 */
+        -4.0, 8.0,  -4.8, 0.32, 0.352, /* 0.4 < u < 0.6 */
+        1.0,  -4.0, 6.0,   -4.0,  1.0, /* 0.6 < u < 0.8 */
+        1.0,  -4.0, 6.0,   -4.0,  1.0, /* 0.8 < u < 1 */
+        0.0,  0.0,  0.0,   0.0,   0.0};/* 1 < u */
 
 /**
  * @brief Computes the kernel function.
@@ -122,6 +132,46 @@ __attribute__((always_inline)) inline static void kernel_eval(
   W = w * kernel_constant * kernel_gamma_inv_dim;
 }
 
+/**
+ * @brief Computes the kernel function and its derivative.
+ *
+ * The kernel function needs to be mutliplied by \f$h^{-d}\f$ and the gradient
+ * by \f$h^{-(d+1)}\f$, where \f$d\f$ is the dimensionality of the problem.
+ *
+ * Returns 0 if \f$u > \gamma = H/h\f$.
+ *
+ * @param u The ratio of the distance to the smoothing length \f$u = x/h\f$.
+ * @param W (return) The value of the kernel function \f$W(x,h)\f$.
+ * @param dW_dx (return) The norm of the gradient of \f$|\nabla W(x,h)|\f$.
+ */
+__attribute__((always_inline)) inline static void kernel_deval_SWIFT(
+    double u, double &W, double &dW_dx) {
+
+  /* Go to the range [0,1[ from [0,H[ */
+  const double x = u * kernel_gamma_inv;
+
+  /* Pick the correct branch of the kernel */
+  const int temp = (int)(x * kernel_ivals_f);
+  const int ind = temp > kernel_ivals ? kernel_ivals : temp;
+  const double *const coeffs = &kernel_coeffs[ind * (kernel_degree + 1)];
+
+  /* First two terms of the polynomial ... */
+  double w = coeffs[0] * x + coeffs[1];
+  double dw_dx = coeffs[0];
+
+  /* ... and the rest of them */
+  for (int k = 2; k <= kernel_degree; k++) {
+    dw_dx = dw_dx * x + w;
+    w = x * w + coeffs[k];
+  }
+
+  w = std::max(w, 0.0);
+  dw_dx = std::min(dw_dx, 0.0);
+
+  /* Return everything */
+  W = w * kernel_constant * kernel_gamma_inv_dim;
+  dW_dx = dw_dx * kernel_constant * kernel_gamma_inv_dim_plus_one;
+}
 
 
 
