@@ -52,7 +52,7 @@ class tarch::logging::Statistics {
     void inc( const std::string& identifier, double value = 1.0, bool disableSampling = false );
     #else
     void log( const std::string& identifier, double value, bool disableSampling = false ) {}
-    void log( const std::string& identifier, const std::string& value );
+    void log( const std::string& identifier, const std::string& value ) {}
     void inc( const std::string& identifier, double value = 1.0, bool disableSampling = false ) {}
     #endif
 
