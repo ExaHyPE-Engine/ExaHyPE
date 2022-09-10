@@ -154,7 +154,7 @@ void tarch::logging::Statistics::inc( const std::string& identifier, double valu
 
 
 void tarch::logging::Statistics::writeToCSV( std::string filename ) {
-  #ifdef TrackStatistics
+#ifdef TrackStatistics
   logDebug( "writeToCSV(string)", "start to dump statistics into file " << filename );
 
   if (tarch::mpi::Rank::getInstance().getNumberOfRanks()>0 ) {
@@ -189,7 +189,7 @@ void tarch::logging::Statistics::writeToCSV( std::string filename ) {
       }
     }
 
-    // No plots data
+    // plot data. If an entry is a fit, remove it from sequence
     if (t<std::numeric_limits<double>::max()) {
       file << t; 
       for (auto& p: _dataSetMap) {
@@ -209,14 +209,15 @@ void tarch::logging::Statistics::writeToCSV( std::string filename ) {
           file << ", ";
         }
       }
-      for (auto& p: _logMessageMap) {
+      for (auto& pp: _logMessageMap) {
         if (
-          not p.second._data.empty()
+          not pp.second._data.empty()
           and
-          std::get<0>(p.second._data.front()) < t + _maxTimeInBetweenTwoMeasurements
+          std::get<0>(pp.second._data.front()) < t + _maxTimeInBetweenTwoMeasurements
         ) {
-          file << ", \"" << std::get<1>(p.second._data.front()) << "\" ";
-          p.second._data.erase(p.second._data.begin());
+          file << ", \"" << std::get<1>(pp.second._data.front()) << "\" ";
+          pp.second._data.erase(pp.second._data.begin());
+	  file << ", ";
         }
         else {
           file << ", ";
@@ -226,6 +227,11 @@ void tarch::logging::Statistics::writeToCSV( std::string filename ) {
     file << std::endl;
   }
 
+  // clear maps. Within this clear, I get seg faults on some computers when the program terminates
+  _dataSetMap.clear();
+  _logMessageMap.clear();
+
+  // close output file
   file.close();
   logInfo( "writeToCSV(string)", "wrote statistics to file " << filename );
   #else
