@@ -175,15 +175,21 @@ void tarch::logging::Statistics::writeToCSV( std::string filename ) {
 
   double t = 0.0;
   while (t<std::numeric_limits<double>::max()) {
+
+    // find minimum time stamp over both types of logs
     t = std::numeric_limits<double>::max();
     for (auto& p: _dataSetMap) {
       if (not p.second._data.empty()) {
-        t = std::min(
-          t,
-          std::get<0>(p.second._data.front())
-        );
+        t = std::min( t, std::get<0>(p.second._data.front()) );
       }
     } 
+    for (auto& p: _logMessageMap) {
+      if ( not p.second._data.empty() {
+        t = std::min( t, std::get<0>(p.second._data.front()) );
+      }
+    }
+
+    // No plots data
     if (t<std::numeric_limits<double>::max()) {
       file << t; 
       for (auto& p: _dataSetMap) {
