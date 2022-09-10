@@ -4,7 +4,7 @@
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=1
 #SBATCH --cpus-per-task=128
-#SBATCH --time=04:00:00
+#SBATCH --time=00:30:00
 #SBATCH --mail-type=END
 #SBATCH --mail-user=tobias.weinzierl@durham.ac.uk
 #SBATCH --qos=shortwide
@@ -18,9 +18,11 @@ module load gcc
 module load intelmpi
 
 
-export OMP_PROC_BIND=close
+# @todo wieder rein
+#export OMP_PROC_BIND=close
 #$SLURM_JOB_NUM_NODES
 
+numactl --show
 
 for type in reg-0
 do

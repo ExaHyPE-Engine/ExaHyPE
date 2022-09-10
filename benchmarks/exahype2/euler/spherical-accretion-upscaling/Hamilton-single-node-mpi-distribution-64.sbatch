@@ -1,10 +1,10 @@
 #!/bin/bash
-#SBATCH --job-name=mpi-dist-32
+#SBATCH --job-name=mpi-dist-64
 #SBATCH -p multi
 #SBATCH --nodes=1
-#SBATCH --ntasks-per-node=32
-#SBATCH --cpus-per-task=4
-#SBATCH --time=04:00:00
+#SBATCH --ntasks-per-node=64
+#SBATCH --cpus-per-task=2
+#SBATCH --time=00:30:00
 #SBATCH --mail-type=END
 #SBATCH --mail-user=tobias.weinzierl@durham.ac.uk
 #SBATCH --qos=shortwide
@@ -21,6 +21,7 @@ module load intelmpi
 export OMP_PROC_BIND=close
 #$SLURM_JOB_NUM_NODES
 
+numactl --show
 
 for type in reg-0
 do
