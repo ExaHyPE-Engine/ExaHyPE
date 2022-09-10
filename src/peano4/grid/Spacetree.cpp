@@ -16,6 +16,7 @@
 
 #include "tarch/mpi/Rank.h"
 #include "tarch/multicore/Lock.h"
+#include "tarch/logging/Statistics.h"
 
 
 tarch::logging::Log  peano4::grid::Spacetree::_log( "peano4::grid::Spacetree" );
@@ -173,15 +174,10 @@ void peano4::grid::Spacetree::traverse(TraversalObserver& observer, bool calledF
     if (_gridControlEvents.size()==1) {
       logInfo( "traverse(...)", "got one grid control event: " << _gridControlEvents[0].toString() );
     }
-    else if (_gridControlEvents.size()==2) {
-      logInfo( "traverse(...)", "got two grid control events: " << _gridControlEvents[0].toString() << " and " << _gridControlEvents[1].toString() );
-    }
-    else if (_gridControlEvents.size()==3) {
-      logInfo( "traverse(...)", "got three grid control events: " << _gridControlEvents[0].toString() << ", " << _gridControlEvents[1].toString() << " and " << _gridControlEvents[2].toString() );
-    }
     else if (not _gridControlEvents.empty()) {
       logInfo( "traverse(...)", "got " << _gridControlEvents.size() << " grid control events"  );
     }
+    tarch::logging::Statistics::getInstance().log( "grid-control-events", ::peano4::grid::toString(_gridControlEvents) );
   }
 
   _splittedCells.clear();

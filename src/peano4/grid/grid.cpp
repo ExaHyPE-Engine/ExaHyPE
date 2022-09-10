@@ -59,6 +59,19 @@ peano4::grid::GridVertex peano4::grid::createVertex(
   return result;
 }
 
+std::string peano4::grid::toString( const std::vector<GridControlEvent>& events ) {
+  std::ostringstream msg;
+  msg << "(";
+  for (int i=0; i<static_cast<int>(events.size());i++) {
+    if (i>0) {
+      msg << ",";
+    }
+    msg << events[i].toString();
+  }
+  msg << ")";
+  return msg.str();
+}
+
 
 std::vector< peano4::grid::GridControlEvent > peano4::grid::merge( std::vector< GridControlEvent >   events, const double Tolerance ) {
   logTraceInWith1Argument( "merge(...)", events.size() );
