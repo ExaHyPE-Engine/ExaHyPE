@@ -184,7 +184,7 @@ void tarch::logging::Statistics::writeToCSV( std::string filename ) {
       }
     } 
     for (auto& p: _logMessageMap) {
-      if ( not p.second._data.empty() {
+      if (not p.second._data.empty()) {
         t = std::min( t, std::get<0>(p.second._data.front()) );
       }
     }

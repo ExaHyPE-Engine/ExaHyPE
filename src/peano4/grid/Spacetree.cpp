@@ -171,13 +171,17 @@ void peano4::grid::Spacetree::traverse(TraversalObserver& observer, bool calledF
   }
   else {
     _gridControlEvents = merge( observer.getGridControlEvents() );
+
     if (_gridControlEvents.size()==1) {
       logInfo( "traverse(...)", "got one grid control event: " << _gridControlEvents[0].toString() );
     }
     else if (not _gridControlEvents.empty()) {
       logInfo( "traverse(...)", "got " << _gridControlEvents.size() << " grid control events"  );
     }
-    tarch::logging::Statistics::getInstance().log( "grid-control-events", ::peano4::grid::toString(_gridControlEvents) );
+
+    if (not _gridControlEvents.empty()) {
+      tarch::logging::Statistics::getInstance().log( "grid-control-events", ::peano4::grid::toString(_gridControlEvents) );
+    }
   }
 
   _splittedCells.clear();
