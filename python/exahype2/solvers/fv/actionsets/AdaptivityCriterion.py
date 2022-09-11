@@ -184,8 +184,14 @@ class AdaptivityCriterion(AbstractFVActionSet):
 
     return result
 
+
+  @property
+  def event_lifetime(self):
+    return self._event_lifetime
+
   
-  def set_event_lifetime(self,value):
+  @event_lifetime.setter
+  def event_lifetime(self,value):
     """
     
      By default, a refinement/coarsening event is only alive for one grid sweep. 
@@ -196,6 +202,7 @@ class AdaptivityCriterion(AbstractFVActionSet):
      
     """
     self._event_lifetime = value
+
 
   def get_attributes(self):
     return """
