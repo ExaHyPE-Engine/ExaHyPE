@@ -214,7 +214,6 @@ void exahype2::RefinementControl::finishStep() {
         p++;
       }
     }
-    _newEvents.clear();
   }
 
   #ifdef Parallel
