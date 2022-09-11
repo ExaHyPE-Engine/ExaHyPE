@@ -136,8 +136,6 @@ void startGridConstructionStep() {
   {% for item in SOLVERS -%}
   {{ item[1] }}.startGridConstructionStep();
   {%- endfor %}
-
-  refinementControl.clear();
 }
 
 
@@ -157,8 +155,6 @@ void startTimeStep(
   {% for item in SOLVERS -%}
   {{ item[1] }}.startTimeStep(minTimeStamp,maxTimeStamp,minTimeStepSize,maxTimeStepSize);
   {%- endfor %}
-
-  refinementControl.clear();
 }
 
 

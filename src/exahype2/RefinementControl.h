@@ -112,6 +112,14 @@ class exahype2::RefinementControl: public tarch::services::Service {
     void receiveDanglingMessages() override;
     void shutdown() override;
 
+    /**
+     * Clears the new events
+     *
+     * Has no affect for the committed events. This routine should only ever be
+     * called by the action sets on their local refinement control assembly.
+     * The global one is persistent and should not be cleared by the user, as
+     * you would loose all those events that should remain alive.
+     */
     void clear();
 
     /**
