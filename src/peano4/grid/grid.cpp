@@ -73,6 +73,17 @@ std::string peano4::grid::toString( const std::vector<GridControlEvent>& events 
 }
 
 
+std::string peano4::grid::toString( const std::list<GridControlEvent>& events ) {
+  std::ostringstream msg;
+  msg << "[";
+  for (auto p: events) {
+    msg << p.toString();
+  }
+  msg << "]";
+  return msg.str();
+}
+
+
 std::vector< peano4::grid::GridControlEvent > peano4::grid::merge( std::vector< GridControlEvent >   events, const double Tolerance ) {
   logTraceInWith1Argument( "merge(...)", events.size() );
 
@@ -128,9 +139,11 @@ void peano4::grid::internal::sort( std::list< peano4::grid::GridControlEvent >& 
         allComponentsStudiedSoFarAreEqual &= tarch::la::equals(leftP->getOffset(d), rightP->getOffset(d));
       }
       if (leftOneIsBigger) {
+        logDebug( "sort(...)", "swap left=" << leftP->toString() << " with right=" << rightP->toString() );
         peano4::grid::GridControlEvent tmp = *rightP;
         *rightP = *leftP;
         *leftP  = tmp;
+        hasChanged = true;
       }
 
       rightP++;

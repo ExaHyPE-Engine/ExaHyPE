@@ -100,7 +100,7 @@ peano4::grid::merge(...)  merge two adjacent events ((refinementControl=Refine,o
      * (refinementControl=Refine,offset=[0.272222,-0.505556,0.272222],width=[0.233333,0.455556,0.233333],h=[0.037037,0.037037,0.037037]))
      *
      */
-    void testMerge4();
+    void testSortWithinMerge();
   public:
     GridControlEventTest();
     void run() override;

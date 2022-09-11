@@ -78,9 +78,9 @@ void peano4::grid::tests::GridControlEventTest::testMerge3() {
 //Der erste Fehler ist, dass der Merge in 3d net geht
 //Der zweite Fehler ist, dass offensichtlich Merge Events nicht ausgetauscht werden oder nicht lange genug ueberleben
 
-void peano4::grid::tests::GridControlEventTest::testMerge4() {
+void peano4::grid::tests::GridControlEventTest::testSortWithinMerge() {
   #if Dimensions==3
-  std::vector< GridControlEvent > events;
+  std::list< GridControlEvent > events;
 
 
   events.push_back( GridControlEvent( GridControlEvent::RefinementControl::Refine, {-0.0611111,0.05,0.272222},       {0.122222,0.122222,0.122222}, {0.037037,0.037037,0.037037} ));
@@ -94,10 +94,14 @@ void peano4::grid::tests::GridControlEventTest::testMerge4() {
   events.push_back( GridControlEvent( GridControlEvent::RefinementControl::Refine, {-0.505556,-0.0611111,0.272222},  {0.344444,0.455556,0.233333}, {0.037037,0.037037,0.037037} ));
   events.push_back( GridControlEvent( GridControlEvent::RefinementControl::Refine, {0.272222,-0.505556,0.272222},    {0.233333,0.455556,0.233333}, {0.037037,0.037037,0.037037} ));
 
-  events = peano4::grid::merge( events, 0.1 );
+  peano4::grid::internal::sort( events );
 
-  validateEquals( events.size(), 2 );
-  validateEquals( events.size(), 3 );
+  validateEqualsWithParams1( events.size(), 10, peano4::grid::toString(events) );
+
+  std::list< GridControlEvent >::const_iterator p = events.begin();
+  validateNumericalEqualsWithParams1( p->getOffset(0), -0.505556, peano4::grid::toString(events) );
+  p++;
+  validateNumericalEqualsWithParams1( p->getOffset(0), -0.505556, peano4::grid::toString(events) );
   #endif
 }
 
@@ -106,7 +110,7 @@ void peano4::grid::tests::GridControlEventTest::run() {
   testMethod( testMerge1 );
   testMethod( testMerge2 );
   testMethod( testMerge3 );
-  testMethod( testMerge4 );
+  testMethod( testSortWithinMerge );
 }
 
 

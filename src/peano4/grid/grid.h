@@ -311,6 +311,7 @@ namespace peano4 {
     void reduceGridControlEvents( std::vector<GridControlEvent>& events );
 
     std::string toString( const std::vector<GridControlEvent>& events );
+    std::string toString( const std::list<GridControlEvent>& events );
 
     namespace internal {
       /**
