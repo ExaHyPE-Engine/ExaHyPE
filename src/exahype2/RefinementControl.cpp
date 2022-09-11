@@ -88,8 +88,6 @@ void exahype2::RefinementControl::receiveDanglingMessages() {
 
 
 void exahype2::RefinementControl::clear() {
-  tarch::multicore::Lock lock( _semaphore );
-  logDebug( "clear()", "clear list of control events" );
   _newEvents.clear();
 }
 
@@ -199,21 +197,28 @@ void exahype2::RefinementControl::finishStep() {
     logInfo( "finishStep()", "activate " << _newEvents.size() << " refinement/erase instructions (can be taken into account in next grid sweep)" );
   }
 
-  {
-    tarch::multicore::Lock lock( _semaphore );
-    _committedEvents.clear();
+  _committedEvents.clear();
 
-    NewEvents::iterator p = _newEvents.begin();
-    while (p!=_newEvents.end()) {
-      _committedEvents.push_back( p->first );
-      p->second--;
-      if (p->second<=0) {
-        p = _newEvents.erase(p);
-      }
-      else {
-        p++;
-      }
+  int maxLifetime = 0;
+  NewEvents::iterator p = _newEvents.begin();
+  while (p!=_newEvents.end()) {
+    _committedEvents.push_back( p->first );
+    p->second--;
+    if (p->second<=0) {
+      p = _newEvents.erase(p);
     }
+    else {
+      maxLifetime = std::max( maxLifetime, p->second );
+      p++;
+    }
+  }
+
+  if (not _committedEvents.empty()) {
+    logInfo(
+      "finishStep()",
+      "activate " << _committedEvents.size() << " refinement/erase instructions (can be taken into account in next grid sweep). Keep " <<
+      _newEvents.size() << " event(s) to be re-delivered later (max lifetime " << maxLifetime << ")"
+    );
   }
 
   #ifdef Parallel
