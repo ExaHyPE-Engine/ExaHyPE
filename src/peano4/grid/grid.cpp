@@ -91,6 +91,9 @@ std::vector< peano4::grid::GridControlEvent > peano4::grid::merge( std::vector< 
   internal::removeEraseEventsThatAreCancelledByRefineEvents( refineEvents, eraseEvents );
   logDebug( "merge(...)", "reduced to " << eraseEvents.size() << " erase event(s) by eliminating erase events that overlap with refinement");
 
+  internal::sort( refineEvents );
+  internal::sort( eraseEvents );
+
   //internal::generateEraseEventPowersetOfSquareEvents( eraseEvents );
   //logInfo( "merge(...)", "power set of erase events hosts " << eraseEvents.size() << " event(s)");
 
@@ -103,6 +106,36 @@ std::vector< peano4::grid::GridControlEvent > peano4::grid::merge( std::vector< 
   result.insert( result.begin(), eraseEvents.begin(),  eraseEvents.end() );
   logTraceOutWith1Argument( "merge(...)", result.size() );
   return result;
+}
+
+
+void peano4::grid::internal::sort( std::list< peano4::grid::GridControlEvent >& events ) {
+  if (events.size()<2) return;
+
+  bool hasChanged = true;
+  while (hasChanged) {
+    hasChanged = false;
+    std::list< peano4::grid::GridControlEvent >::iterator rightP = events.begin();
+    rightP++;
+    while (rightP!=events.end()) {
+      std::list< peano4::grid::GridControlEvent >::iterator leftP = rightP;
+      leftP--;
+
+      bool leftOneIsBigger                   = false;
+      bool allComponentsStudiedSoFarAreEqual = true;
+      for (int d=0; d<Dimensions; d++) {
+        leftOneIsBigger |= (allComponentsStudiedSoFarAreEqual and tarch::la::greater(leftP->getOffset(d), rightP->getOffset(d)));
+        allComponentsStudiedSoFarAreEqual &= tarch::la::equals(leftP->getOffset(d), rightP->getOffset(d));
+      }
+      if (leftOneIsBigger) {
+        peano4::grid::GridControlEvent tmp = *rightP;
+        *rightP = *leftP;
+        *leftP  = tmp;
+      }
+
+      rightP++;
+    }
+  }
 }
 
 

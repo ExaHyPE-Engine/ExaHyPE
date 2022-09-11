@@ -70,6 +70,7 @@ namespace peano4 {
      *   of them hosts a cell, while the merger of the two of them does
      *   host one.
      *
+     *
      * ## Algorithm
      *
      * The algorithm works in multiple steps:
@@ -78,12 +79,39 @@ namespace peano4 {
      * - We remove those erase events which are overwritten by refinement
      *   events. As we work conservatively, refinement events are always
      *   more important than coarsening ones.
+     * - Sort the events
      * - Create the erase power set.
      * - The code is asked to fuse multiple adjacent refinement events into
      *   fewer large ones, and to fuse multiple coarsening events as well.
      *   This reduces the event count, and gives the coarsening more
      *   flexibility (see discussion above).
      * - We join the remaining erase and refinement lists.
+     *
+     *
+     * ## Sorting
+     *
+     * We sort the respective events along x,y,z offset. In 2d, this doesn't
+     * make that much of a difference, for d>2 it is important: The merger of
+     * multiple events works in a greedy fashion. Otherwise, it would be too
+     * slow. Due to this greediness, we now might run into situations where we
+     * are stuck. Consider a 2x2x2 cube of refinement operations which all have
+     * the same target resolution. It should be possible to merge this cube
+     * into one single large cube. However, we might end up with
+     *
+     *        (r_111,r_211), (r_121,r_122), (r_212,r_222), r_112, r221)
+     *
+     * These six events now can't be merged greedily anymore.
+     *
+     * Once we sort the events by x,y,z, the original input sequence implicitly
+     * ensures that we first merge along the z direction, then along y, and
+     * finally along x:
+     *
+     *        (r_111,r1_112,r_121,r_122,r_211,r1_212,r_221,r_222)
+     *
+     * Due to the SFC that we employ for the mesh traversal, it is reasonable
+     * to assume that the refinement events already align in a localised order.
+     * Therefore, I apply a simple bubble sort.
+     *
      *
      *
      * ##  Erasing the mesh (again)
@@ -107,6 +135,12 @@ namespace peano4 {
      *
      * Remark: I had to remove this power set step, as it turned out to be too
      * time consuming.
+     *
+     *
+     * ## Properties
+     *
+     * The algorithm has to be idempotent, i.e. if we invoke it multiple times
+     * over the input set, the outcome should always remain the same.
      */
     std::vector< GridControlEvent > merge( std::vector< GridControlEvent>  events, const double Tolerance = 0.1 );
 
@@ -332,6 +366,13 @@ namespace peano4 {
        * adjacent events of the same size.
        */
       bool twoEventsAreAdjacent( const peano4::grid::GridControlEvent& lhs, const peano4::grid::GridControlEvent& rhs );
+
+      /**
+       * In-situ sort (bubble sort)
+       *
+       * @see merge() for a discussion
+       */
+      void sort( std::list< peano4::grid::GridControlEvent >& events );
 
       peano4::grid::GridControlEvent createBoundingBoxEvent( const peano4::grid::GridControlEvent& lhs, const peano4::grid::GridControlEvent& rhs );
     }

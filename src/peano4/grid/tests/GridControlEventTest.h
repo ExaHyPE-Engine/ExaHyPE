@@ -83,6 +83,24 @@ class peano4::grid::tests::GridControlEventTest: public tarch::tests::TestCase {
 peano4::grid::merge(...)  merge two adjacent events ((refinementControl=Refine,offset=[0.65,0.65],width=[0.366667,0.366667],h=[0.111111,0.111111]) and (refinementControl=Refine,offset=[0.883333,0.883333],width=[0.122222,0.122222],h=[0.037037,0.037037])) into (refinementControl=Refine,offset=[0.65,0.65],width=[0.366667,0.366667],h=[0.111111,0.111111])
      */
     void testMerge3();
+
+    /**
+     * For this 3d test, I use the following setup which arises from our infall tests:
+     *
+     *
+     * (refinementControl=Refine,offset=[-0.0611111,0.05,0.272222],width=[0.122222,0.122222,0.122222],h=[0.037037,0.037037,0.037037])
+     * (refinementControl=Refine,offset=[-0.172222,-0.0611111,0.272222],width=[0.122222,0.233333,0.122222],h=[0.037037,0.037037,0.037037])
+     * (refinementControl=Refine,offset=[-0.505556,0.383333,0.383333],width=[0.455556,0.122222,0.122222],h=[0.037037,0.037037,0.037037])
+     * (refinementControl=Refine,offset=[-0.0611111,0.05,0.383333],width=[0.122222,0.455556,0.122222],h=[0.037037,0.037037,0.037037])
+     * (refinementControl=Refine,offset=[-0.172222,-0.0611111,0.383333],width=[0.122222,0.455556,0.122222],h=[0.037037,0.037037,0.037037])
+     * (refinementControl=Refine,offset=[-0.505556,0.383333,0.272222],width=[0.566667,0.122222,0.122222],h=[0.037037,0.037037,0.037037])
+     * (refinementControl=Refine,offset=[-0.172222,0.161111,0.272222],width=[0.233333,0.233333,0.122222],h=[0.037037,0.037037,0.037037])
+     * (refinementControl=Refine,offset=[-0.0611111,-0.0611111,0.272222],width=[0.566667,0.122222,0.233333],h=[0.037037,0.037037,0.037037])
+     * (refinementControl=Refine,offset=[-0.505556,-0.0611111,0.272222],width=[0.344444,0.455556,0.233333],h=[0.037037,0.037037,0.037037])
+     * (refinementControl=Refine,offset=[0.272222,-0.505556,0.272222],width=[0.233333,0.455556,0.233333],h=[0.037037,0.037037,0.037037]))
+     *
+     */
+    void testMerge4();
   public:
     GridControlEventTest();
     void run() override;
