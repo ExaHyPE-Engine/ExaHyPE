@@ -79,8 +79,15 @@ double ::examples::exahype2::euler::EulerDG::maxEigenvalue(
   const double p = (gamma-1) * (Q[3] - 0.5*irho*(Q[1]*Q[1]+Q[2]*Q[2]));
   #endif
 
-  nonCriticalAssertion9( p>=0.0, Q[0], Q[1], Q[2], Q[3], Q[4], x, t, dt, normal );
-  const double c   = std::sqrt(gamma * p * irho);
+  //
+  // It turns out that RKDG can be pretty nasty when it comes to stability
+  // and yield small negative pressures. I therefore relax the assertion
+  // (test with a certain epsilon) and use the absolute value around the
+  // pressure.
+  //
+
+  nonCriticalAssertion5( tarch::la::greaterEquals(p,0.0,1e-6), Q[0], x, t, dt, normal );
+  const double c   = std::sqrt(gamma * std::abs(p) * irho);
 
   const double u_n = Q[normal + 1] * irho;
   double result = std::max( std::abs(u_n - c), std::abs(u_n + c) );

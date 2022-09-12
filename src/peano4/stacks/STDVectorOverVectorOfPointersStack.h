@@ -22,6 +22,7 @@
 #include "tarch/mpi/IntegerMessage.h"
 #include "tarch/multicore/Tasks.h"
 
+#include "peano4/grid/TraversalObserver.h"
 
 
 
@@ -236,13 +237,13 @@ class peano4::stacks::STDVectorOverVectorOfPointersStack: public peano4::stacks:
     /**
      * See class documentation.
      */
-    void startSend(int rank, int tag, MPI_Comm comm);
+    void startSend(peano4::grid::TraversalObserver::SendReceiveContext, int rank, int tag, MPI_Comm comm);
 
 
     /**
      * See class documentation.
      */
-    void startReceive(int rank, int tag, MPI_Comm comm, int numberOfElements);
+    void startReceive(peano4::grid::TraversalObserver::SendReceiveContext, int rank, int tag, MPI_Comm comm, int numberOfElements);
 
 
     /**

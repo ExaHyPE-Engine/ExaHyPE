@@ -16,6 +16,7 @@
 
 #include "tarch/mpi/Rank.h"
 #include "tarch/multicore/Lock.h"
+#include "tarch/logging/Statistics.h"
 
 
 tarch::logging::Log  peano4::grid::Spacetree::_log( "peano4::grid::Spacetree" );
@@ -48,8 +49,7 @@ peano4::grid::Spacetree::Spacetree(
   _statistics.setStationarySweeps(0);
   clear( _statistics, _id==0 );
 
-  // @debug
-  logWarning( "Spacetree(...)", "create spacetree with " << offset << "x" << width << " and periodic BCs=" << _periodicBC );
+  logDebug( "Spacetree(...)", "create spacetree with " << offset << "x" << width << " and periodic BCs=" << _periodicBC );
 }
 
 
@@ -171,17 +171,16 @@ void peano4::grid::Spacetree::traverse(TraversalObserver& observer, bool calledF
   }
   else {
     _gridControlEvents = merge( observer.getGridControlEvents() );
+
     if (_gridControlEvents.size()==1) {
       logInfo( "traverse(...)", "got one grid control event: " << _gridControlEvents[0].toString() );
     }
-    else if (_gridControlEvents.size()==2) {
-      logInfo( "traverse(...)", "got two grid control events: " << _gridControlEvents[0].toString() << " and " << _gridControlEvents[1].toString() );
-    }
-    else if (_gridControlEvents.size()==3) {
-      logInfo( "traverse(...)", "got three grid control events: " << _gridControlEvents[0].toString() << ", " << _gridControlEvents[1].toString() << " and " << _gridControlEvents[2].toString() );
-    }
     else if (not _gridControlEvents.empty()) {
       logInfo( "traverse(...)", "got " << _gridControlEvents.size() << " grid control events"  );
+    }
+
+    if (not _gridControlEvents.empty()) {
+      tarch::logging::Statistics::getInstance().log( "grid-control-events", ::peano4::grid::toString(_gridControlEvents) );
     }
   }
 
@@ -1520,7 +1519,7 @@ void peano4::grid::Spacetree::sendUserData(const AutomatonState& state, Traversa
           observer.sendVertex(
             outVertexPositionWithinCell,
             toStack,
-            TraversalObserver::SendReceiveContext::Rebalancing,
+            TraversalObserver::SendReceiveContext::ForkDomain,
             leaveCellTraversalEvent
           );
         }
@@ -1592,7 +1591,7 @@ void peano4::grid::Spacetree::sendUserData(const AutomatonState& state, Traversa
           observer.sendFace(
             outFacePositionWithinCell,
             toStack,
-            TraversalObserver::SendReceiveContext::Rebalancing,
+            TraversalObserver::SendReceiveContext::ForkDomain,
             leaveCellTraversalEvent
           );
         }
@@ -1612,7 +1611,7 @@ void peano4::grid::Spacetree::sendUserData(const AutomatonState& state, Traversa
       const int toStack   = peano4::parallel::Node::getOutputStackNumberForVerticalDataExchange( p );
       observer.sendCell(
         toStack,
-        TraversalObserver::SendReceiveContext::Rebalancing,
+        TraversalObserver::SendReceiveContext::ForkDomain,
         leaveCellTraversalEvent
       );
     }

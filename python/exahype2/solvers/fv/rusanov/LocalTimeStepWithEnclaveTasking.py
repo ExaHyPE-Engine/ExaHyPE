@@ -65,7 +65,16 @@ class LocalTimeStepWithEnclaveTasking( EnclaveTasking ):
     """
     self._interpolate_linearly_in_time        = interpolate_linearly_in_time
     
-    super(LocalTimeStepWithEnclaveTasking,self).__init__(name, patch_size, overlap, unknowns, auxiliary_variables, min_volume_h, max_volume_h, plot_grid_properties,pde_terms_without_state) 
+    super(LocalTimeStepWithEnclaveTasking,self).__init__(name, 
+                                                         patch_size, 
+                                                         overlap, 
+                                                         unknowns, 
+                                                         auxiliary_variables, 
+                                                         min_volume_h, 
+                                                         max_volume_h, 
+                                                         plot_grid_properties,
+                                                         pde_terms_without_state,
+                                                         kernel_namespace="rusanov") 
     
     self._time_step_relaxation = time_step_relaxation
 
@@ -171,7 +180,7 @@ class LocalTimeStepWithEnclaveTasking( EnclaveTasking ):
     if self._interpolate_linearly_in_time:
       self._action_set_update_cell._Template_TouchCellFirstTime_Fill_Halos = create_halo_layer_construction_with_interpolation_for_reconstructed_patch(self._name)
       
-    self._action_set_AMR.set_event_lifetime( 2*3*int(self._max_volume_h/self._min_volume_h+1) )
+    self._action_set_AMR.event_lifetime = 2*3*int(self._max_volume_h/self._min_volume_h+1)
     
 
   @property

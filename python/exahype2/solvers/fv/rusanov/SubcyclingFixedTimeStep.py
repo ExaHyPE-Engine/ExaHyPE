@@ -44,7 +44,15 @@ class SubcyclingFixedTimeStep( SingleSweep ):
     """
     self._interpolate_linearly_in_time        = interpolate_linearly_in_time
     
-    super(SubcyclingFixedTimeStep,self).__init__(name, patch_size, overlap, unknowns, auxiliary_variables, min_volume_h, max_volume_h, plot_grid_properties) 
+    super(SubcyclingFixedTimeStep,self).__init__(name, 
+                                                 patch_size, 
+                                                 overlap, 
+                                                 unknowns, 
+                                                 auxiliary_variables, 
+                                                 min_volume_h, 
+                                                 max_volume_h, 
+                                                 plot_grid_properties,
+                                                 kernel_namespace="rusanov") 
     
     self._time_step_size = time_step_size
 
@@ -150,7 +158,7 @@ class SubcyclingFixedTimeStep( SingleSweep ):
     if self._interpolate_linearly_in_time:
       self._action_set_update_cell._Template_TouchCellFirstTime_Fill_Halos = create_halo_layer_construction_with_interpolation_for_reconstructed_patch(self._name)
     
-    self._action_set_AMR.set_event_lifetime( int(self._max_volume_h/self._min_volume_h+1) )
+    self._action_set_AMR.event_lifetime =  int(self._max_volume_h/self._min_volume_h+1)
 
 
 

@@ -6,6 +6,12 @@
 
 """
 
+print("""
+
+ExaHyPE 2 - Euler Finite Volume Rusanov Application
+
+""")
+
 
 #
 # We import Peano4 as project. If this step fails, ensure that your environment

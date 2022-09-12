@@ -4,6 +4,19 @@
 #include "tarch/la/la.h"
 
 
+double  exahype2::dg::getQuadratureWeight(
+  const tarch::la::Vector<3,double>&  cellSize,
+  const tarch::la::Vector<3,int>&     index,
+  const double* __restrict__          quadratureWeights
+) {
+  double result = 1.0;
+  for (int d=0; d<Dimensions; d++) {
+    result *= cellSize(d) * quadratureWeights[d];
+  }
+  return result;
+}
+
+
 tarch::la::Vector<2,double>  exahype2::dg::getQuadraturePoint(
   const tarch::la::Vector<2,double>&  cellCentre,
   const tarch::la::Vector<2,double>&  cellSize,
@@ -145,8 +158,7 @@ void exahype2::dg::subtractCell(
     const int                   order,
     const int                   unknowns,
     const int                   auxiliaryVariables
-    ){
-
+) {
   const int nodesPerAxis = order+1;
   const int nodesPerCell = getNodesPerCell(nodesPerAxis);
   const int strideQ = unknowns+auxiliaryVariables;
@@ -156,17 +168,15 @@ void exahype2::dg::subtractCell(
       QOut[node*strideQ+var] -= Qsubstract[node*strideQ+var];
     }
   }
-
 }
 
 
-std::string exahype2::dg::plotPatch(
-        const double* __restrict__ Q,
-        const int order,
-        const int unknowns,
-        const int auxiliaryVariables
-        ){
-
+std::string exahype2::dg::plotCell(
+  const double* __restrict__ Q,
+  const int order,
+  const int unknowns,
+  const int auxiliaryVariables
+) {
   const int nodesPerCell = getNodesPerCell(order+1);
   const int strideQ = unknowns+auxiliaryVariables;
 
@@ -185,13 +195,13 @@ std::string exahype2::dg::plotPatch(
   return result.str();
 }
 
-std::string exahype2::dg::plotFace(
-        const double* __restrict__ Q,
-        const int order,
-        const int unknowns,
-        const int auxiliaryVariables
-        ){
 
+std::string exahype2::dg::plotFace(
+  const double* __restrict__ Q,
+  const int order,
+  const int unknowns,
+  const int auxiliaryVariables
+) {
   const int nodesPerFace = getNodesPerCell(order+1)/(order+1);
   const int strideQ = unknowns+auxiliaryVariables;
 

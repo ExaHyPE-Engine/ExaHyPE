@@ -815,6 +815,7 @@ The following features and techniques hold for all \ExaHyPE\ applications and
 are always used in the same way:
 
 \subsection{IO, logging and initialisation}
+\label{exahype:io-logging-initialisation}
 
 
 \ExaHyPE\ codes by default yield snapshots in \Peano's block format. 
@@ -2337,7 +2338,103 @@ through the Python API.
 
 % \section{Datamodel and -semantics}
 
+\section{Postprocessing}
+
+\subsection{IO}
+
+\ExaHyPE\ relies on \Peano's standard output routines to write file dumps. 
+As the files can be rather large, the simulation configuration allows you to
+specify exactly how often you want to see file dumps, and you can also add
+spatial filters.
+The latter help you to visualise only subdomains.
+As we rely on \Peano's infrastructure, you can use the \texttt{render} script in
+\texttt{python/peano4/visualisation} to convert the output files into vtu files.
+Consult also Chapter \ref{chapter:postprocessing} for a discussion of various
+visualisation pathways.
+
+
+If you use \ExaHyPE's Discontinuous Galerkin solvers with non-Lobatto nodes, 
+the file dumps will look pretty ragged.
+This is due to the fact that the DG quadrature points are not placed on the cell
+faces.
+This might be unsatisfying and make some postprocessing (isolines, e.g.)
+difficult, but we found it important to display the actual spatial arrangement
+of the unknowns.
+The standard postprocessing scripts allow you to rescale individual cells and
+you can also do stuff like averaging over cells and display only the average. 
+Consult the script's help.
+Alternatively, you can use \Peano's default visualisation scripts, use its
+parsers and data filters, and write your own postprocessing/visualisation on top
+of it.
+
+
+\subsection{Tracers}
+
+\ExaHyPE's tracers reply on \Peano's particle and particle-in-dual-tree
+mechanism.
+They are not genuine \ExaHyPE\ plugin, but rather connect to a completely
+different toolbox of \Peano, which has nothing to do with the core \ExaHyPE.
+
+
+\Peano's particle handling comes along with a set of standard postprocessing
+scripts.
+As we rely on this toolbox, you can use those scripts straightaway.
+They can be found in
+\linebreak 
+\texttt{python/peano4/toolbox/particles/postprocessing}.
+
+
+
+\subsection{Statistics}
  
+If you build \ExaHyPE\ in the statistics mode, you switch on \Peano's underlying
+statistics back-end.
+You also enable all the statistics tracking within \Peano's core.
+
+
+There is a discussion how to use \Peano's statistics tools for your own,
+user-defined statistics (cmp.~Section \ref{section:logging:statistics}).
+Once again, \Peano's default statistics postprocessing scripts all are
+compatible with \ExaHyPE\ output.
+
+
+\subsection{Generic \ExaHyPE\ terminal output}
+
+Unless you have used the log filters (cmp.~Section
+\ref{exahype:io-logging-initialisation}) to get rid of information, \ExaHyPE\ is
+relatively verbose once it heads off.
+A lot of information is piped to the terminal.
+As long as you use \Peano's logging backend for your own terminal outputs
+(cmp.~Chapter \ref{section:logging}), you can be sure that any data that you
+dump onto the terminal integrates nicely with the generic \ExaHyPE\ output.
+
+
+Since \ExaHyPE\ writes so much generic information, it is reasonable to offer a
+few ``standard'' Python scripts, which you can use to quickly visualise some key
+information that's always dumped.
+For this, \ExaHyPE\ provides some Python scripts within \Peano's
+\texttt{python/exahype2/postprocessing} directory.
+You pipe the terminal output into a file and use them to explore properties such
+as 
+
+\begin{itemize}
+  \item Runtime information such as time per time step over the simulation time;
+  \item Distribution of cells over ranks;
+  \item Throughput over simulation time;
+  \item \ldots
+\end{itemize}
+
+\noindent
+\ExaHyPE\ is one of \Peano's most extensive toolboxes or add-on. 
+However, it itself is based upon a set of further (lower level) toolboxes.
+For example, it uses \Peano's load balancing toolbox---unless you inject your
+own, bespoke load balancing.
+This means that it makes sense to browse through the Python directories of these
+toolboxes as well.
+Some of them (compare the discussion above about the tracing API) offer more
+postprocessing scripts that you can use straightaway to visualise the code
+behaviour and outcomes.
+
 
 
 \section*{Links and further reading}

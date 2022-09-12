@@ -87,13 +87,23 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::EnclaveTask
     static int getEnclaveTaskTypeId();
 
     /**
+     * Simple call to compute kernels.
+     *
+     * The finite volume solver assumes that _inputValues are reconstructed
+     * values, i.e. a temporary data field on the heap. So we don't have to
+     * allocate anything but we have to free stuff after the run. This is
+     * done here in the Finite Volume solver.
+     *
+     * The routine also frees the memory reconstructedPatch points to.
+     * Therefore, the argument is not const.
+     *
      * @return Max eigenvalue over cell
      */
     static double applyKernelToCell(
       const ::peano4::datamanagement::CellMarker& marker, 
       double                                      t,
       double                                      dt,
-      double* __restrict__                        reconstructedPatch, 
+      double* __restrict__                        reconstructedPatch,
       double* __restrict__                        targetPatch
     );
     

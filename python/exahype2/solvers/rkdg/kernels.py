@@ -3,9 +3,24 @@
 from exahype2.solvers.fv.PDETerms  import PDETerms
 
 import jinja2
+import exahype2
 
 
-def create_abstract_solver_declarations(flux_implementation, ncp_implementation, eigenvalues_implementation, source_term_implementation, point_source_implementation, pde_terms_without_state):
+from enum import Enum
+
+
+class SolverVariant(Enum):
+  WithVirtualFunctions = 0,
+  Stateless            = 1,
+  Accelerator          = 2
+
+
+def create_abstract_solver_declarations(flux_implementation, 
+                                        ncp_implementation, 
+                                        eigenvalues_implementation, 
+                                        source_term_implementation, 
+                                        point_source_implementation, 
+                                        pde_terms_without_state):
   Template = jinja2.Template( """
   public:
     {% if EIGENVALUES_IMPLEMENTATION=="<none>" %}
@@ -163,7 +178,6 @@ def create_abstract_solver_declarations(flux_implementation, ncp_implementation,
     #if defined(OpenMPGPUOffloading)
     #pragma omp declare target
     #endif
-    #error point source not implemented yet
     void pointSource(
       const double * __restrict__ Q,
       const tarch::la::Vector<Dimensions,double>&  x,
@@ -178,7 +192,6 @@ def create_abstract_solver_declarations(flux_implementation, ncp_implementation,
     {% endif %}
     
     {% if POINT_SOURCE_IMPLEMENTATION!="<none>" %}
-    #error point source not implemented yet
     virtual void pointSource(
       const double * __restrict__ Q,
       const tarch::la::Vector<Dimensions,double>&  x,
@@ -262,15 +275,15 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::sourceTerm(
 
 {% if POINT_SOURCE_IMPLEMENTATION!="<user-defined>" and POINT_SOURCE_IMPLEMENTATION!="<none>" %}
 #error Point sources not yet implemented
-void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::sourceTerm(
+void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::pointSource(
   const double * __restrict__                  Q,
   const tarch::la::Vector<Dimensions,double>&  x,
   double                                       t,
   double                                       dt,
   double * __restrict__                        S
 ) {
-  {% if SOURCE_TERM_IMPLEMENTATION!="<empty>" %}
-  {{SOURCE_TERM_IMPLEMENTATION}}
+  {% if POINT_SOURCE_IMPLEMENTATION!="<empty>" %}
+  {{POINT_SOURCE_IMPLEMENTATION}}
   {% else %}
   std::fill_n(S,{{NUMBER_OF_UNKNOWNS}},0.0);
   {% endif %}
@@ -377,8 +390,7 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::sourceTerm(
 #if defined(OpenMPGPUOffloading)
 #pragma omp declare target
 #endif
-#error point sources not yet implemented
-void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::sourceTerm(
+void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::pointSource(
       const double * __restrict__ Q,
       const tarch::la::Vector<Dimensions,double>&  x,
       double                                       t,
@@ -386,10 +398,11 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::sourceTerm(
       double * __restrict__ S,
       Offloadable
 ) {
-  {% if SOURCE_TERM_IMPLEMENTATION=="<none>" %}
+  assertionMsg( false, "point sources not implemented yet" );
+  {% if POINT_SOURCE_IMPLEMENTATION=="<none>" %}
   abort();
   {% else %}
-  {{SOURCE_TERM_IMPLEMENTATION}}
+  {{POINT_SOURCE_IMPLEMENTATION}}
   {% endif %}
 }
 #if defined(OpenMPGPUOffloading)
@@ -423,7 +436,7 @@ def create_solver_declarations(flux_implementation, ncp_implementation, eigenval
 
     {% if POINT_SOURCE_IMPLEMENTATION=="<user-defined>" %}
     #error point sources not defined yet
-    void sourceTerm(
+    void pointSource(
       const double * __restrict__ Q,
       const tarch::la::Vector<Dimensions,double>&  x,
       double                                       t,
@@ -514,7 +527,7 @@ def create_solver_declarations(flux_implementation, ncp_implementation, eigenval
      * this signature and to copy the implementation into the header. So it would
      * read 
      *
-     * static inline void sourceTerm( ... ) {
+     * static inline void pointSource( ... ) {
      *  code here
      * }
      *
@@ -527,7 +540,7 @@ def create_solver_declarations(flux_implementation, ncp_implementation, eigenval
     #if defined(OpenMPGPUOffloading)
     #pragma omp declare target
     #endif
-     static void sourceTerm(
+     static void pointSource(
        const double * __restrict__ Q,
        const tarch::la::Vector<Dimensions,double>&  volumeCentre,
        const tarch::la::Vector<Dimensions,double>&  volumeH,
@@ -705,10 +718,15 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::sourceTerm(
   const tarch::la::Vector<Dimensions,double>&  x,
   double                                       t,
   double                                       dt,
-  double * __restrict__                        S  // S[{{NUMBER_OF_UNKNOWNS}}
+  double * __restrict__                        S  // S[{{NUMBER_OF_UNKNOWNS}}]
 ) {
   logTraceInWith3Arguments( "sourceTerm(...)", x, t, dt );
-  // @todo implement
+
+  // @todo implement and ensure that all entries of S are properly set
+  for (int i=0; i<NumberOfUnknowns; i++) {
+    S[i] = 0.0;
+  }
+  
   logTraceOut( "sourceTerm(...)" );
 }
 {% endif %}
@@ -832,7 +850,9 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::sourceTerm(
   return Template.render(**d)
 
 
-def get_face_overlap_merge_implementation(patch_overlap):
+def get_face_merge_implementation(patch_overlap):
+  assert False, "I don't think this one is used anymore. @todo Remove"
+  
   d = {
     "OVERLAP": patch_overlap.dim[0]/2, #assumed to always be two, but present here anyway
     "DOFS_PER_AXIS": patch_overlap.dim[1],
@@ -889,4 +909,159 @@ def create_start_time_step_implementation_for_fixed_time_stepping(normalised_tim
 """
   
   
+def create_volumetric_solver_call(polynomial_basis, solver_variant):
+  """
   
+  A set of default volumetric kernel calls. You might want to use different
+  solver calls in your code depending on the context.
+  
+  
+  ## Difference to Finite Volume (FV) implementation
+  
+  In the FV code base, I need the implementation routines as argument: As we work
+  with FV, the generic FV class does not know which implementations are around. If
+  you work with a domain-specific Rusanov solver, e.g., then there is no such 
+  thing as an ncp. 
+  
+  For the DG schemes, things are different: Every DG solver in ExaHyPE 2 in principle
+  supports the ncp. So the base Python class already instantiates the corresponding
+  dictionary entries, and we can use them straightaway.
+  
+  
+  ## Arguments
+  
+  solver_variant: SolverVariant
+    Picks different implementation variants
+  
+  """
+  if isinstance( polynomial_basis, exahype2.solvers.GaussLegendreBasis) and solver_variant==SolverVariant.WithVirtualFunctions:
+    return """cellIntegral_patchwise_in_situ_GaussLegendre_functors(
+      cellData,
+      {{ORDER}},                                                   
+      {{NUMBER_OF_UNKNOWNS}},
+      {{NUMBER_OF_AUXILIARY_VARIABLES}},
+      [&](
+        const double * __restrict__                  Q,
+        const tarch::la::Vector<Dimensions,double>&  x,
+        double                                       t,
+        double                                       dt,
+        int                                          normal,
+        double * __restrict__                        F
+      )->void {
+        {% if FLUX_IMPLEMENTATION!="<none>" %}
+        repositories::{{SOLVER_INSTANCE}}.flux(Q,x,t,dt,normal,F);
+        {% endif %}
+      }, //flux
+      [&](
+          const double * __restrict__                  Q,
+          const double * __restrict__                  dQdx,
+          const tarch::la::Vector<Dimensions,double>&  x,
+          double                                       t,
+          double                                       dt,
+          int                                          normal,
+          double * __restrict__                        F
+        ) -> void {
+          {% if NCP_IMPLEMENTATION!="<none>" %}
+          repositories::{{SOLVER_INSTANCE}}.nonconservativeProduct(Q, dQdx, x, t, dt, normal, F);
+          {% endif %}          
+        }, //ncp
+      [&](
+        const double * __restrict__                  Q,
+        const tarch::la::Vector<Dimensions,double>&  x,
+        double                                       t,
+        double                                       dt,
+        double * __restrict__                        S
+      ) -> void {
+        {% if SOURCE_TERM_IMPLEMENTATION!="<none>" %}
+        repositories::{{SOLVER_INSTANCE}}.sourceTerm(Q,x,t,dt,S);
+        {% endif %}
+      }, //source
+      [&](
+        const double * __restrict__                  Q,
+        const tarch::la::Vector<Dimensions,double>&  cellCentre,
+        const tarch::la::Vector<Dimensions,double>&  cellH,
+        double                                       t,
+        double                                       dt
+      ) -> std::vector<::exahype2::dg::PointSource> {
+        {% if POINT_SOURCES_IMPLEMENTATION!="<none>" %}
+        return repositories::{{SOLVER_INSTANCE}}.pointSources(Q,cellCentre,cellH,t,dt);
+        {% else %}
+        return std::vector<::exahype2::dg::PointSource>();
+        {% endif %}
+      }, //source
+      repositories::{{SOLVER_INSTANCE}}.QuadraturePoints1d,
+      repositories::{{SOLVER_INSTANCE}}.MassMatrixDiagonal1d,
+      repositories::{{SOLVER_INSTANCE}}.StiffnessOperator1d,
+      repositories::{{SOLVER_INSTANCE}}.DerivativeOperator1d,
+      {{ "true" if FLUX_IMPLEMENTATION!="<none>" else "false" }}, //useFlux
+      {{ "true" if NCP_IMPLEMENTATION!="<none>" else "false" }}, //useNCP
+      {{ "true" if SOURCE_TERM_IMPLEMENTATION!="<none>" else "false" }}, //useSource
+      {{ "true" if POINT_SOURCES_IMPLEMENTATION!="<none>" else "false" }} //useSource
+    );
+"""
+  elif isinstance( polynomial_basis, exahype2.solvers.GaussLegendreBasis) and solver_variant==SolverVariant.Stateless:
+    return """cellIntegral_patchwise_in_situ_GaussLegendre<{{SOLVER_NAME}},{{ORDER}},{{NUMBER_OF_UNKNOWNS}},{{NUMBER_OF_AUXILIARY_VARIABLES}}>(
+      cellData,
+      {{ "true" if FLUX_IMPLEMENTATION!="<none>" else "false" }},          //useFlux
+      {{ "true" if NCP_IMPLEMENTATION!="<none>" else "false" }},           //useNCP
+      {{ "true" if SOURCE_TERM_IMPLEMENTATION!="<none>" else "false" }},   //useSource
+      {{ "true" if POINT_SOURCES_IMPLEMENTATION!="<none>" else "false" }}  //useSource
+    );
+"""
+  elif isinstance( polynomial_basis, exahype2.solvers.GaussLegendreBasis) and solver_variant==SolverVariant.Accelerator:
+    return """cellIntegral_patchwise_in_situ_GaussLegendre<{{SOLVER_NAME}},{{ORDER}},{{NUMBER_OF_UNKNOWNS}},{{NUMBER_OF_AUXILIARY_VARIABLES}}>(
+      targetDevice,
+      cellData,
+      {{ "true" if FLUX_IMPLEMENTATION!="<none>" else "false" }},          //useFlux
+      {{ "true" if NCP_IMPLEMENTATION!="<none>" else "false" }},           //useNCP
+      {{ "true" if SOURCE_TERM_IMPLEMENTATION!="<none>" else "false" }},   //useSource
+      {{ "true" if POINT_SOURCES_IMPLEMENTATION!="<none>" else "false" }}  //useSource
+    );
+"""
+  else:
+    return "#solver variant not implemented yet"
+
+
+def create_add_solver_contributions_call(polynomial_basis):
+  if isinstance( polynomial_basis, exahype2.solvers.GaussLegendreBasis):
+    return """integrateOverRiemannSolutionsAndAddToVolume_GaussLegendre(
+    #if Dimensions==2
+      fineGridFaces{{UNKNOWN_IDENTIFIER}}RiemannSolution(0).value, //left
+      fineGridFaces{{UNKNOWN_IDENTIFIER}}RiemannSolution(2).value, //right
+      fineGridFaces{{UNKNOWN_IDENTIFIER}}RiemannSolution(1).value, //down
+      fineGridFaces{{UNKNOWN_IDENTIFIER}}RiemannSolution(3).value, //up
+    #else
+      fineGridFaces{{UNKNOWN_IDENTIFIER}}RiemannSolution(0).value, //left
+      fineGridFaces{{UNKNOWN_IDENTIFIER}}RiemannSolution(3).value, //right
+      fineGridFaces{{UNKNOWN_IDENTIFIER}}RiemannSolution(1).value, //down
+      fineGridFaces{{UNKNOWN_IDENTIFIER}}RiemannSolution(4).value, //up
+      fineGridFaces{{UNKNOWN_IDENTIFIER}}RiemannSolution(2).value, //front
+      fineGridFaces{{UNKNOWN_IDENTIFIER}}RiemannSolution(5).value, //back
+    #endif
+      {{ORDER}},                                                   
+      {{NUMBER_OF_UNKNOWNS}},
+      {{NUMBER_OF_AUXILIARY_VARIABLES}},
+      marker.h(),
+      repositories::{{SOLVER_INSTANCE}}.BasisFunctionValuesLeft1d,
+      repositories::{{SOLVER_INSTANCE}}.MassMatrixDiagonal1d,
+      QOut
+    );
+"""
+  else:
+    return "#error Not supported yet"
+
+
+def create_multiply_with_inverted_mass_matrix_call( polynomial_basis):
+  if isinstance( polynomial_basis, exahype2.solvers.GaussLegendreBasis):
+    return """multiplyWithInvertedMassMatrix_GaussLegendre(
+      cellData,
+      {{ORDER}},                                                   
+      {{NUMBER_OF_UNKNOWNS}},
+      {{NUMBER_OF_AUXILIARY_VARIABLES}},
+      repositories::{{SOLVER_INSTANCE}}.MassMatrixDiagonal1d
+    );
+"""
+  else:
+    return "#error Not supported yet"
+
+

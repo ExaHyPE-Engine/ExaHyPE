@@ -45,7 +45,7 @@ class LinearCombinationOfEstimates(AbstractRungeKuttaDGActionSet):
         {% if BUTCHER_TABLEAU_WEIGHTS[PREDICATE_NO][WEIGHT_NO]!=0 %}
         fineGridCell{{UNKNOWN_IDENTIFIER}}LinearCombination.value[ enumeratorWithAuxiliaryVariables(0,dof,unknown) ] += 
           {{BUTCHER_TABLEAU_RELATIVE_TIME_STEP_SIZES[PREDICATE_NO]}} * timeStepSize * {{BUTCHER_TABLEAU_WEIGHTS[PREDICATE_NO][WEIGHT_NO]}} * 
-          fineGridCell{{UNKNOWN_IDENTIFIER}}RhsEstimates.value[ enumeratorWithoutAuxiliaryVariables({{PREDICATE_NO}},dof,unknown) ];
+          fineGridCell{{UNKNOWN_IDENTIFIER}}RhsEstimates.value[ enumeratorWithoutAuxiliaryVariables({{WEIGHT_NO}},dof,unknown) ];
         {% endif %}
         {% endfor %}
       }      
@@ -54,6 +54,10 @@ class LinearCombinationOfEstimates(AbstractRungeKuttaDGActionSet):
           fineGridCell{{UNKNOWN_IDENTIFIER}}.value[ enumeratorWithAuxiliaryVariables(0,dof,unknown) ];      
       }
     }
+      
+    {% if PREDICATE_NO==0 %}
+    {{PREPROCESS_UPDATED_CELL}}
+    {% endif %}
   }
   {% endfor %} 
 """

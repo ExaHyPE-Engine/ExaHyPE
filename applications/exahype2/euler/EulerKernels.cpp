@@ -2,37 +2,6 @@
 #include "exahype2/NonCriticalAssertions.h"
 
 
-/*
-void examples::exahype2::euler::EulerFV::initialCondition(
-  double * __restrict__ Q,
-  const tarch::la::Vector<Dimensions,double>&  volumeCentre,
-  const tarch::la::Vector<Dimensions,double>&  volumeH,
-  bool                                         gridIsConstructred
-) {
-  logTraceInWith3Arguments( "initialCondition(...)", volumeCentre, volumeH, gridIsConstructred );
-
-  for (int i=0; i<NumberOfUnknowns+NumberOfAuxiliaryVariables; i++) {
-    Q[i] = 0.0;
-  }
-
-  #if Dimensions==3
-  tarch::la::Vector<Dimensions,double> circleCentre = {0.18,0.3,0.6};
-  #else
-  tarch::la::Vector<Dimensions,double> circleCentre = {0.5,0.3};
-  #endif
-
-  const double peakDeviation = MaxAdmissibleCellH;
-  double distance = tarch::la::norm2( volumeCentre-circleCentre );
-  double exponent = - (distance * distance) / 2.0 / peakDeviation / peakDeviation;
-
-  Q[0]            = 0.1;                  // rho
-  Q[1+Dimensions] = std::exp( exponent ); // inner energy
-
-  logTraceOut( "initialCondition(...)" );
-}
-*/
-
-
 void applications::exahype2::euler::NeumannBoundaryConditions(
   const double * __restrict__                  Qinside, // Qinside[5+0]
   double * __restrict__                        Qoutside, // Qoutside[5+0]
@@ -44,7 +13,6 @@ void applications::exahype2::euler::NeumannBoundaryConditions(
   int                                          numberOfAuxiliaryVariables
 ) {
   nonCriticalAssertion5( Qinside[0]>1e-12, faceCentre, volumeH, t, normal, Qinside[0] );
-  assertion5( Qinside[0]>1e-12, faceCentre, volumeH, t, normal, Qinside[0] );
 
   for (int i=0; i<numberOfUnknowns+numberOfAuxiliaryVariables; i++) {
     Qoutside[i] = Qinside[i];
@@ -60,16 +28,16 @@ double ::applications::exahype2::euler::maxEigenvalue(
   double                                       dt,
   int                                          normal,
   int                                          numberOfUnknowns,
-  int                                          numberOfAuxiliaryVariables
+  int                                          numberOfAuxiliaryVariables,
+  double                                       gamma
 )  {
   assertion(normal>=0);
   assertion(normal<Dimensions);
 
   if (Q[0]<=0.0 or Q[0]!=Q[0]) {
-    ::exahype2::triggerNonCriticalAssertion( __FILE__, __LINE__, "Q[0]>0", "density negative" );
+    ::exahype2::triggerNonCriticalAssertion( __FILE__, __LINE__, "Q[0]>0", "density negative (Q[0]=" + std::to_string( Q[0] ) + ") at x=" + toString(faceCentre) );
   }
 
-  constexpr double gamma = 1.4;
   const double irho = 1./Q[0];
   #if Dimensions==3
   const double p = (gamma-1) * (Q[4] - 0.5*irho*(Q[1]*Q[1]+Q[2]*Q[2]+Q[3]*Q[3]));
@@ -97,12 +65,12 @@ void ::applications::exahype2::euler::flux(
   int                                          normal,
   int                                          numberOfUnknowns,
   int                                          numberOfAuxiliaryVariables,
-  double * __restrict__                        F
+  double * __restrict__                        F,
+  double                                       gamma
 )  {
   assertion4( normal>=0, faceCentre, volumeH, t, normal );
   assertion4( normal<Dimensions, faceCentre, volumeH, t, normal);
 
-  constexpr double gamma = 1.4;
   const double irho = 1./Q[0];
   #if Dimensions==3
   const double p = (gamma-1) * (Q[4] - 0.5*irho*(Q[1]*Q[1]+Q[2]*Q[2]+Q[3]*Q[3]));

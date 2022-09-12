@@ -19,6 +19,7 @@
 #include "peano4/datamanagement/CellMarker.h"
 #include "peano4/datamanagement/FaceMarker.h"
 #include "peano4/datamanagement/VertexMarker.h"
+#include "peano4/grid/TraversalObserver.h"
 
 
 {% for item in NAMESPACE -%}
@@ -41,21 +42,21 @@ struct {{NAMESPACE | join("::")}}::{{CLASSNAME}} {
   #endif
   #if PeanoDebug>=1
   private:
-    tarch::la::Vector<Dimensions,double> _debugX;
-    tarch::la::Vector<Dimensions,double> _debugH;
+    tarch::la::Vector<Dimensions,{{FLOAT_TYPE}}> _debugX;
+    tarch::la::Vector<Dimensions,{{FLOAT_TYPE}}> _debugH;
 
 
   public:
-    void setDebugX( const tarch::la::Vector<Dimensions,double>& data );
-    void setDebugH( const tarch::la::Vector<Dimensions,double>& data );
-    tarch::la::Vector<Dimensions,double> getDebugX() const;
-    tarch::la::Vector<Dimensions,double> getDebugH() const;
+    void setDebugX( const tarch::la::Vector<Dimensions,{{FLOAT_TYPE}}>& data );
+    void setDebugH( const tarch::la::Vector<Dimensions,{{FLOAT_TYPE}}>& data );
+    tarch::la::Vector<Dimensions,{{FLOAT_TYPE}}> getDebugX() const;
+    tarch::la::Vector<Dimensions,{{FLOAT_TYPE}}> getDebugH() const;
   #endif
 
   #if Dimensions==2
-  double                                 value[{{CARDINALITY_2D}}];
+  {{FLOAT_TYPE}}                                 value[{{CARDINALITY_2D}}];
   #else
-  double                                 value[{{CARDINALITY_3D}}];
+  {{FLOAT_TYPE}}                                 value[{{CARDINALITY_3D}}];
   #endif
   
   {{CLASSNAME}}();
@@ -65,7 +66,7 @@ struct {{NAMESPACE | join("::")}}::{{CLASSNAME}} {
   std::string toString() const;
   
   {% if DATA_ASSOCIATION == 1 -%}
-  void merge(const {{CLASSNAME}}& neighbour, const peano4::datamanagement::VertexMarker& marker);
+  void merge(peano4::grid::TraversalObserver::SendReceiveContext context, const {{CLASSNAME}}& neighbour, const peano4::datamanagement::VertexMarker& marker);
   static bool send(const peano4::datamanagement::VertexMarker& marker);
   static bool receiveAndMerge(const peano4::datamanagement::VertexMarker& marker);
   static bool storePersistently(const peano4::datamanagement::VertexMarker& marker);
@@ -73,7 +74,7 @@ struct {{NAMESPACE | join("::")}}::{{CLASSNAME}} {
   {% endif -%}
 
   {% if DATA_ASSOCIATION == 2 -%}
-  void merge(const {{CLASSNAME}}& neighbour, const peano4::datamanagement::FaceMarker& marker);
+  void merge(peano4::grid::TraversalObserver::SendReceiveContext context, const {{CLASSNAME}}& neighbour, const peano4::datamanagement::FaceMarker& marker);
   static bool send(const peano4::datamanagement::FaceMarker& marker);
   static bool receiveAndMerge(const peano4::datamanagement::FaceMarker& marker);
   static bool storePersistently(const peano4::datamanagement::FaceMarker& marker);
@@ -81,7 +82,7 @@ struct {{NAMESPACE | join("::")}}::{{CLASSNAME}} {
   {% endif -%}
 
   {% if DATA_ASSOCIATION == 3 -%}
-  void merge(const {{CLASSNAME}}& neighbour, const peano4::datamanagement::CellMarker& marker);
+  void merge(peano4::grid::TraversalObserver::SendReceiveContext context, const {{CLASSNAME}}& neighbour, const peano4::datamanagement::CellMarker& marker);
   static bool send(const peano4::datamanagement::CellMarker& marker);
   static bool receiveAndMerge(const peano4::datamanagement::CellMarker& marker);
   static bool storePersistently(const peano4::datamanagement::CellMarker& marker);
@@ -108,7 +109,11 @@ struct {{NAMESPACE | join("::")}}::{{CLASSNAME}} {
    * debug mode. In release mode, it is the plain data only, i.e.
    * one sequence of doubles.
    */
-  static MPI_Datatype   getDatatype();
+  static MPI_Datatype  getForkDatatype();
+  static MPI_Datatype  getJoinDatatype();
+  static MPI_Datatype  getBoundaryExchangeDatatype();
+  static MPI_Datatype  getMultiscaleDataExchangeDatatype();
+  static MPI_Datatype  getGlobalCommunciationDatatype();
   #endif
 };
 

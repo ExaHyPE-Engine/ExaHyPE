@@ -126,6 +126,7 @@ Tarch_SOURCES= tarch/tarch.cpp \
  tarch/multicore/sycl/RecursiveSemaphore.cpp \
  tarch/multicore/sycl/Tasks.cpp \
  tarch/multicore/orchestration/AllOnGPU.cpp \
+ tarch/multicore/orchestration/BackfillAndDeployRoundRobin.cpp \
  tarch/multicore/orchestration/Hardcoded.cpp \
  tarch/multicore/orchestration/StrategyFactory.cpp \
  tarch/tests/TestCaseCollection.cpp \

@@ -58,6 +58,15 @@ namespace exahype2 {
       const double* __restrict__          quadraturePoints
     );
 
+    /**
+     * Compute integral over shape function over cell defined by index
+     */
+    double  getQuadratureWeight(
+      const tarch::la::Vector<3,double>&  cellSize,
+      const tarch::la::Vector<3,int>&     index,
+      const double* __restrict__          quadratureWeights
+    );
+
 
     /**
      * The number of nodes in a cell is basically the input to the
@@ -178,7 +187,7 @@ namespace exahype2 {
      * usually used for debugging
      */
 
-    std::string plotPatch(
+    std::string plotCell(
         const double* __restrict__ Q,
         const int order,
         const int unknowns,

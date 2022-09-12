@@ -38,7 +38,15 @@ class GlobalFixedTimeStep( SingleSweep ):
       to max_volume_h.
   
     """
-    super(GlobalFixedTimeStep,self).__init__(name, patch_size, overlap, unknowns, auxiliary_variables, min_volume_h, max_volume_h, plot_grid_properties) 
+    super(GlobalFixedTimeStep,self).__init__(name, 
+                                             patch_size, 
+                                             overlap, 
+                                             unknowns, 
+                                             auxiliary_variables, 
+                                             min_volume_h, 
+                                             max_volume_h, 
+                                             plot_grid_properties,
+                                             kernel_namespace="rusanov") 
     
     self._normalised_time_step_size = normalised_time_step_size
 

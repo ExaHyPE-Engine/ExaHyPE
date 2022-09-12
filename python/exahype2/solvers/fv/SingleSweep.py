@@ -141,13 +141,30 @@ class SingleSweep( FV ):
   """
 
 
-  def __init__(self, name, patch_size, overlap, unknowns, auxiliary_variables, min_volume_h, max_volume_h, plot_grid_properties, kernel_namespace="rusanov"):
+  def __init__(self, 
+               name, 
+               patch_size, 
+               overlap, 
+               unknowns, 
+               auxiliary_variables, 
+               min_volume_h, 
+               max_volume_h, 
+               plot_grid_properties: bool, 
+               kernel_namespace):
     """
 
       Instantiate a generic FV scheme with an overlap of 1.
 
     """
-    super(SingleSweep, self).__init__(name, patch_size, overlap, unknowns, auxiliary_variables, min_volume_h, max_volume_h, plot_grid_properties, kernel_namespace)
+    super(SingleSweep, self).__init__(name, 
+                                      patch_size, 
+                                      overlap, 
+                                      unknowns, 
+                                      auxiliary_variables, 
+                                      min_volume_h, 
+                                      max_volume_h, 
+                                      plot_grid_properties, 
+                                      kernel_namespace)
 
     self._solver_template_file_class_name     = "SingleSweep"
 
@@ -249,53 +266,3 @@ class SingleSweep( FV ):
     """
     pass
 
-
-  #def set_preprocess_reconstructed_patch_kernel(self,kernel):
-    """
-  
-    Most subclasses will redefine/overwrite this operation as they have
-    to incorporate the kernel into their generated stuff
-  
-    """
-  #  self._preprocess_reconstructed_patch += kernel
-  #  self.create_data_structures()
-  #  self.create_action_sets()
-
-
-  #def set_postprocess_updated_patch_kernel(self, kernel):
-    """
-
-    Define a postprocessing routine over the data
-
-    The postprocessing kernel often looks similar to the following code:
-
-  {
-    int index = 0;
-    dfor( volume, {{NUMBER_OF_VOLUMES_PER_AXIS}} ) {
-      enforceCCZ4constraints( targetPatch+index );
-      index += {{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}};
-    }
-  }
-
-
-    Within this kernel, you have at least the following variables available:
-
-    - targetPatch This is a pointer to the whole data structure (one large
-        array).
-        The patch is not supplemented by a halo layer.
-    - reconstructedPatch This is a pointer to the data snapshot before the
-        actual update. This data is combined with the halo layer, i.e. if you
-        work with 7x7 patches and a halo of 2, the pointer points to a 11x11
-        patch.
-    - marker
-
-    Furthermore, you can use all the symbols (via Jinja2 syntax) from
-    _init_dictionary_with_default_parameters().
-
-    kernel: String
-      C++ code that holds the postprocessing kernel
-
-    """
-    #self._postprocess_updated_patch += kernel
-    #self.create_data_structures()
-    #self.create_action_sets()

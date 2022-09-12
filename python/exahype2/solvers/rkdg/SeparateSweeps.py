@@ -19,6 +19,9 @@ class SeparateSweeps( RungeKuttaDG ):
     we compute the linear reconstruction, project this one onto the faces
     and also compute the volumetric prediction. In the second step, we 
     solve the Riemann problem and add it to the prediction.
+    
+    In the attribute terminology, I call the two runs over the grid sweeps,
+    i.e. I work with two grid sweeps per Runge Kutta step.
 
   """
 
@@ -30,8 +33,32 @@ class SeparateSweeps( RungeKuttaDG ):
                unknowns, auxiliary_variables, min_cell_h, max_cell_h, plot_grid_properties):
     """
 
+    The super call invokes the creation of the data sets, where the guards have
+    to be known already. So I bring those guys forward and then call the superclass
+    constructor.
 
     """
+    self._name     = name
+    self._rk_order = rk_order
+    
+    self._initialisation_sweep_guard = "(" + \
+      "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::GridInitialisation" + \
+      ")"
+    self._first_iteration_after_initialisation_guard = "(" + \
+      "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::TimeStepAfterGridInitialisation or " + \
+      "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::PlottingAfterGridInitialisation" + \
+    ")"
+    
+    self._primary_sweeps_of_Runge_Kutta_step = [
+      "{} and repositories::{}.getSolverState()=={}::SolverState::ProjectOnFacesAndComputeVolumeIntegralOfStep{}".format(self._store_cell_data_default_guard(),self.get_name_of_global_instance(),self._name,step) for step in range(0,self.number_of_Runge_Kutta_steps())
+    ]
+    self._secondary_sweeps_of_Runge_Kutta_step = [
+      "{} and repositories::{}.getSolverState()=={}::SolverState::SolveRiemannProblemAndAddToVolumeIntegralOfStep{}".format(self._store_cell_data_default_guard(),self.get_name_of_global_instance(),self._name,step) for step in range(0,self.number_of_Runge_Kutta_steps())
+    ]
+    
+    self._any_primary_sweep_of_a_Runge_Kutta_step   = " or ".join( self._primary_sweeps_of_Runge_Kutta_step )
+    self._any_secondary_sweep_of_a_Runge_Kutta_step = " or ".join( self._secondary_sweeps_of_Runge_Kutta_step )
+        
     super(SeparateSweeps, self).__init__(name, 
                                          rk_order, 
                                          polynomial_basis, 
@@ -41,13 +68,6 @@ class SeparateSweeps( RungeKuttaDG ):
     self._solver_template_file_class_name     = "SeparateSweeps"
 
 
-    self._initialisation_sweep_guard = "(" + \
-      "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::GridInitialisation" + \
-      ")"
-    self._first_iteration_after_initialisation_guard = "(" + \
-      "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::TimeStepAfterGridInitialisation or " + \
-      "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::PlottingAfterGridInitialisation" + \
-    ")"
     
     #self._first_grid_sweep_within_RK_step = "( false "
     #for step in range(0,self.number_of_Runge_Kutta_steps()):
@@ -78,27 +98,44 @@ class SeparateSweeps( RungeKuttaDG ):
     """
     super(SeparateSweeps, self).create_data_structures()
 
-    self._current_estimate_projection.generator.send_condition               = "true"
-    self._current_estimate_projection.generator.receive_and_merge_condition  = "true"
+    self._estimate_projection.generator.send_condition               = self._any_primary_sweep_of_a_Runge_Kutta_step
+    self._estimate_projection.generator.receive_and_merge_condition  = self._any_secondary_sweep_of_a_Runge_Kutta_step
 
     self._Riemann_solution.generator.send_condition               = "false"
     self._Riemann_solution.generator.receive_and_merge_condition  = "false"
     
-    #self._patch_overlap_new.generator.send_condition               = "true"
-    #self._patch_overlap_new.generator.receive_and_merge_condition  = "true"
-
-    #self._patch_overlap_old.generator.send_condition               = initialisation_sweep_guard
-    #self._patch_overlap_old.generator.receive_and_merge_condition  = first_iteration_after_initialisation_guard
-
             
   def create_action_sets(self):
     """
 
-      Call superclass routine and then reconfigure the update cell call.
-      Only the UpdateCell action set is specific to a single sweep.
+      We invoke the superclass which creates all the action sets, and then we
+      set the appropriate guards.
       
-      This operation is implicity called via the superconstructor.
+        - _action_set_update_face_label - can be done always
+        - _action_set_update_cell_label - can be done always
+        - _action_set_linear_combination_of_estimates - primary sweeps only, as
+          these kick off the Runge-Kutta step.
+        - _action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement - 
+          primary only, as the secondary step is a sole clean-up
+        - _action_set_project_linear_combination_onto_faces - only required in 
+          primary sweep. In the secondary, we collect the results together, i.e. we 
+          don't immediately need the boundary data anymore.
+        - _action_set_solve_volume_integral - only done in the primary sweep.
+        - _action_set_handle_boundary - only in secondary sweep, as we now have
+          access to the left and right face data and hence can invoke the 
+          Riemann solver.
+        - _action_set_solve_Riemann_problem - secondary sweep. See discussion of
+          previous item.
+        - _action_set_add_volume_and_face_solution - secondary sweep. The 
+          Riemann solve plugs into the first touch of a face in the secondary
+          sweep, so now we can sum up the solutions.
+        - _action_set_compute_final_linear_combination_and_project_solution_onto_faces -
+          very last secondary sweep.
+        - _action_set_AMR - very last secondary sweep, i.e. after we have 
+          the final solution.
+        - _action_set_postprocess_solution - same as for item above.
       
+            
       :: Guards around linear combination of estimates
       
       We rely on the action set LinearCombination as it is initialised in the 
@@ -111,82 +148,16 @@ class SeparateSweeps( RungeKuttaDG ):
       
     """
     super(SeparateSweeps, self).create_action_sets()
-    self._action_set_linear_combination_of_estimates.guards = [
-      "{} and repositories::{}.getSolverState()=={}::SolverState::ProjectOnFacesAndComputeVolumeIntegralOfStep{}".format(self._store_cell_data_default_guard(),self.get_name_of_global_instance(),self._name,step) for step in range(0,self.number_of_Runge_Kutta_steps())
-    ]
-#    self._action_set_project_linear_combination_onto_faces.guard = self._store_cell_data_default_guard() + " and " + self._first_grid_sweep_within_RK_step
-
-    self._action_set_project_linear_combination_onto_faces.guards = [
-      "{} and repositories::{}.getSolverState()=={}::SolverState::ProjectOnFacesAndComputeVolumeIntegralOfStep{}".format(self._store_cell_data_default_guard(),self.get_name_of_global_instance(),self._name,step) for step in range(0,self.number_of_Runge_Kutta_steps())
-    ]
-
-    self._action_set_solve_volume_integral.guards = [
-      "{} and repositories::{}.getSolverState()=={}::SolverState::ProjectOnFacesAndComputeVolumeIntegralOfStep{}".format(self._store_cell_data_default_guard(),self.get_name_of_global_instance(),self._name,step) for step in range(0,self.number_of_Runge_Kutta_steps())
-    ]
+    
+    self._action_set_linear_combination_of_estimates.guards       = self._primary_sweeps_of_Runge_Kutta_step
+    self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement.guards = self._primary_sweeps_of_Runge_Kutta_step
+    self._action_set_project_linear_combination_onto_faces.guards = self._primary_sweeps_of_Runge_Kutta_step
+    self._action_set_solve_volume_integral.guards                 = self._primary_sweeps_of_Runge_Kutta_step
         
-    self._action_set_add_volume_and_face_solution.guards = [
-      "{} and repositories::{}.getSolverState()=={}::SolverState::SolveRiemannProblemAndAddToVolumeIntegralOfStep{}".format(self._store_cell_data_default_guard(),self.get_name_of_global_instance(),self._name,step) for step in range(0,self.number_of_Runge_Kutta_steps())
-    ]
+    self._action_set_add_volume_and_face_solution.guards = self._secondary_sweeps_of_Runge_Kutta_step
+    self._action_set_solve_Riemann_problem.guards        = self._secondary_sweeps_of_Runge_Kutta_step
+    self._action_set_handle_boundary.guards              = self._secondary_sweeps_of_Runge_Kutta_step
 
     self._action_set_compute_final_linear_combination_and_project_solution_onto_faces.guard = self._store_cell_data_default_guard() + " and repositories::{}.getSolverState()=={}::SolverState::SolveRiemannProblemAndAddToVolumeIntegralOfStep{}".format(self.get_name_of_global_instance(),self._name,self.number_of_Runge_Kutta_steps()-1)
-
-    self._action_set_solve_Riemann_problem.guards = [
-      "{} and repositories::{}.getSolverState()=={}::SolverState::SolveRiemannProblemAndAddToVolumeIntegralOfStep{}".format(self._store_cell_data_default_guard(),self.get_name_of_global_instance(),self._name,step) for step in range(0,self.number_of_Runge_Kutta_steps())
-    ]
     
-    self._action_set_handle_boundary.guards = [
-      "{} and repositories::{}.getSolverState()=={}::SolverState::SolveRiemannProblemAndAddToVolumeIntegralOfStep{}".format(self._store_cell_data_default_guard(),self.get_name_of_global_instance(),self._name,step) for step in range(0,self.number_of_Runge_Kutta_steps())
-    ]
 
-
-  ## @todo raus
-  def set_preprocess_reconstructed_patch_kernel(self,kernel):
-    """
-  
-    Most subclasses will redefine/overwrite this operation as they have
-    to incorporate the kernel into their generated stuff
-  
-    """
-    self._preprocess_reconstructed_patch += kernel
-    self.create_data_structures()
-    self.create_action_sets()
-
-
-  ## @todo raus
-  def set_postprocess_updated_patch_kernel(self, kernel):
-    """
-
-    Define a postprocessing routine over the data
-
-    The postprocessing kernel often looks similar to the following code:
-
-  {
-    int index = 0;
-    dfor( volume, {{NUMBER_OF_VOLUMES_PER_AXIS}} ) {
-      enforceCCZ4constraints( targetPatch+index );
-      index += {{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}};
-    }
-  }
-
-
-    Within this kernel, you have at least the following variables available:
-
-    - targetPatch This is a pointer to the whole data structure (one large
-        array).
-        The patch is not supplemented by a halo layer.
-    - reconstructedPatch This is a pointer to the data snapshot before the
-        actual update. This data is combined with the halo layer, i.e. if you
-        work with 7x7 patches and a halo of 2, the pointer points to a 11x11
-        patch.
-    - marker
-
-    Furthermore, you can use all the symbols (via Jinja2 syntax) from
-    _init_dictionary_with_default_parameters().
-
-    kernel: String
-      C++ code that holds the postprocessing kernel
-
-    """
-    self._postprocess_updated_patch += kernel
-    self.create_data_structures()
-    self.create_action_sets()

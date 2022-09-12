@@ -14,6 +14,31 @@ class UpdateFaceLabel(ActionSet):
   
    SetLabels is an action set which is automatically merged into all ExaHyPE2
    steps by the project. There's nothing for the user solvers to be done here.
+   
+   There are four different fields per face:
+   
+   - Updated: Boolean[2]
+     Shows if the corresponding adjacent cell (left vs right) has performed a
+     time step.
+   - UpdatedTimeStamp: Double[2]
+     Used only by the Finite Volumes solver so far to store a new time stamp
+     temporarily which is later on rolled over into the real time stamp.
+   - NewTimeStamp: Double[2]
+     New (and also current time stamp). This time stamp determines for example
+     if you want to do a local time step or not.
+   - OldTimeStamp: Double[2]
+     Time stamp of previous time step. The old time stamp is required for the
+     in-time interpolation, e.g.
+     
+   ## Initialisation
+   
+   The initialisation sets the boundary flag if the face is on the boundary.
+   It also sets the time stamps all to zero. This is actually a tricky thing
+   to do, so I'm not sure if it is a good idea: the DG solvers for example
+   require the face time stamps to be set properly. The Finite Volumes solver
+   in return benefits if it is not (properly) initialised, as it then is 
+   simpler to spot inconsistencies and missing data updates.
+   
   
   """
   def __init__(self, solver_name):
@@ -55,6 +80,11 @@ class UpdateFaceLabel(ActionSet):
     isBoundary |= tarch::la::equals( marker.x()(d), offset(d) + size(d) );
   }}
   fineGridFace""" + UpdateFaceLabel.get_attribute_name(self._solver_name) + """.setBoundary( isBoundary );
+
+  fineGridFace""" + UpdateFaceLabel.get_attribute_name(self._solver_name) + """.setUpdatedTimeStamp( 0.0 );
+  fineGridFace""" + UpdateFaceLabel.get_attribute_name(self._solver_name) + """.setNewTimeStamp( 0.0 );
+  fineGridFace""" + UpdateFaceLabel.get_attribute_name(self._solver_name) + """.setOldTimeStamp( 0.0 );
+
   logTraceOutWith1Argument( "createPersistent/HangingFace(...)", fineGridFace""" + UpdateFaceLabel.get_attribute_name(self._solver_name) + """.toString() );
 """
     if operation_name==ActionSet.OPERATION_TOUCH_FACE_FIRST_TIME:
@@ -94,16 +124,26 @@ def create_face_label(solver_name):
   result.data.add_attribute( peano4.dastgen2.Peano4DoubleArray("OldTimeStamp","2") )
   
   result._peano4_aspect.merge_implementation = """
-  _Boundary = _Boundary or neighbour._Boundary;
+  switch (context) {
+    case ::peano4::grid::TraversalObserver::SendReceiveContext::BoundaryExchange:
+      {
+        _Boundary = _Boundary or neighbour._Boundary;
   
-  const int normal         = marker.getSelectedFaceNumber() % Dimensions;
-  const int neighbourEntry = marker.outerNormal()(normal)<0.0 ? 0 : 1;
+        const int normal         = marker.getSelectedFaceNumber() % Dimensions;
+        const int neighbourEntry = marker.outerNormal()(normal)<0.0 ? 0 : 1;
   
-  _Updated[ neighbourEntry ]          = neighbour._Updated[ neighbourEntry ];
-  _UpdatedTimeStamp( neighbourEntry ) = neighbour._UpdatedTimeStamp( neighbourEntry );
-  _NewTimeStamp( neighbourEntry )     = neighbour._NewTimeStamp( neighbourEntry );
-  _OldTimeStamp( neighbourEntry )     = neighbour._OldTimeStamp( neighbourEntry );
-  
+        _Updated[ neighbourEntry ]          = neighbour._Updated[ neighbourEntry ];
+        _UpdatedTimeStamp( neighbourEntry ) = neighbour._UpdatedTimeStamp( neighbourEntry );
+        _NewTimeStamp( neighbourEntry )     = neighbour._NewTimeStamp( neighbourEntry );
+        _OldTimeStamp( neighbourEntry )     = neighbour._OldTimeStamp( neighbourEntry );
+      }
+      break;
+    case ::peano4::grid::TraversalObserver::SendReceiveContext::ForkDomain:
+      *this = neighbour;
+      break;
+    default:
+      assertionMsg( false, "not implemented yet" );
+  }
 """
 
   return result

@@ -52,29 +52,29 @@ std::string {{NAMESPACE | join("::")}}::{{CLASSNAME}}::toString() const {
 
 #if PeanoDebug>=1
 
-void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::setDebugX( const tarch::la::Vector<Dimensions,double>& data ) {
+void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::setDebugX( const tarch::la::Vector<Dimensions,{{FLOAT_TYPE}}>& data ) {
   _debugX = data;
 }
 
 
-void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::setDebugH( const tarch::la::Vector<Dimensions,double>& data ) {
+void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::setDebugH( const tarch::la::Vector<Dimensions,{{FLOAT_TYPE}}>& data ) {
   _debugH = data;
 }
 
 
-tarch::la::Vector<Dimensions,double> {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getDebugX() const {
+tarch::la::Vector<Dimensions,{{FLOAT_TYPE}}> {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getDebugX() const {
   return _debugX;
 }
 
 
-tarch::la::Vector<Dimensions,double> {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getDebugH() const {
+tarch::la::Vector<Dimensions,{{FLOAT_TYPE}}> {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getDebugH() const {
   return _debugH;
 }
 #endif
 
 
 {% if DATA_ASSOCIATION == 1 -%}
-void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::merge(const {{CLASSNAME}}& neighbour, const peano4::datamanagement::VertexMarker& marker) {
+void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::merge(peano4::grid::TraversalObserver::SendReceiveContext context, const {{CLASSNAME}}& neighbour, const peano4::datamanagement::VertexMarker& marker) {
   {{MERGE_METHOD_DEFINITION}}
 }
 
@@ -101,7 +101,7 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::loadPersistently(const peano4::d
 
 
 {% if DATA_ASSOCIATION == 2 -%}
-void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::merge(const {{CLASSNAME}}& neighbour, const peano4::datamanagement::FaceMarker& marker) {
+void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::merge(peano4::grid::TraversalObserver::SendReceiveContext context, const {{CLASSNAME}}& neighbour, const peano4::datamanagement::FaceMarker& marker) {
   {{MERGE_METHOD_DEFINITION}}
 }
 
@@ -128,7 +128,7 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::loadPersistently(const peano4::d
 
 
 {% if DATA_ASSOCIATION == 3 -%}
-void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::merge(const {{CLASSNAME}}& neighbour, const peano4::datamanagement::CellMarker& marker) {
+void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::merge(peano4::grid::TraversalObserver::SendReceiveContext context, const {{CLASSNAME}}& neighbour, const peano4::datamanagement::CellMarker& marker) {
   {{MERGE_METHOD_DEFINITION}}
 }
 
@@ -160,7 +160,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::initDatatype() {
   {{NAMESPACE | join("::")}}::{{CLASSNAME}}  instances[2];
  
   #if PeanoDebug>=1
-    MPI_Datatype subtypes[] = { MPI_DOUBLE, MPI_DOUBLE, MPI_DOUBLE };
+    MPI_Datatype subtypes[] = { {{MPI_FLOAT_TYPE}}, {{MPI_FLOAT_TYPE}}, {{MPI_FLOAT_TYPE}} };
 
     #if Dimensions==2
     int blocklen[] = { Dimensions, Dimensions, {{CARDINALITY_2D}} };
@@ -170,7 +170,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::initDatatype() {
 
     const int NumberOfAttributes = 3;
   #else   
-    MPI_Datatype subtypes[] = { MPI_DOUBLE };
+    MPI_Datatype subtypes[] = { {{MPI_FLOAT_TYPE}} };
     
     #if Dimensions==2
     int blocklen[] = { {{CARDINALITY_2D}} };
@@ -220,7 +220,28 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::shutdownDatatype() {
 MPI_Datatype   {{NAMESPACE | join("::")}}::{{CLASSNAME}}::Datatype;
 
 
-MPI_Datatype   {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getDatatype() {
+MPI_Datatype  {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getForkDatatype() {
   return Datatype;
 }
+
+
+MPI_Datatype  {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getJoinDatatype() {
+  return Datatype;
+}
+
+
+MPI_Datatype  {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getBoundaryExchangeDatatype() {
+  return Datatype;
+}
+
+
+MPI_Datatype  {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMultiscaleDataExchangeDatatype() {
+  return Datatype;
+}
+
+
+MPI_Datatype  {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getGlobalCommunciationDatatype() {
+  return Datatype;
+}
+
 #endif

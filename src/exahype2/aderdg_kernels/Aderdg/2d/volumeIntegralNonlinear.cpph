@@ -31,8 +31,8 @@ namespace c {
  * Depending on the template parameter noTimeAveraging, lFi
  * is either a space-time volume flux (false) or a time-averaged flux (true). 
  */
-template <typename SolverType, bool useSourceOrNCP, bool useFlux, bool noTimeAveraging, const int numberOfVariables, int basisSize>
-void volumeIntegralNonlinear(double* lduh, const double* const lFi,
+template <typename SolverType, typename pType, bool useSourceOrNCP, bool useFlux, bool noTimeAveraging, const int numberOfVariables, int basisSize>
+void volumeIntegralNonlinear(pType* lduh, const pType* const lFi,
                              const tarch::la::Vector<Dimensions, double>& dx) {
   const int order = basisSize - 1;
   const int basisSize2 = basisSize  * basisSize;

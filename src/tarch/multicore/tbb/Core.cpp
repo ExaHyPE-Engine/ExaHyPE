@@ -57,7 +57,9 @@ tarch::multicore::Core& tarch::multicore::Core::getInstance() {
 }
 
 
-void tarch::multicore::Core::configure( int numberOfThreads ) {
+void tarch::multicore::Core::configure( int numberOfThreads, const std::set<int>& devicesToUse ) {
+  _devicesToUse = devicesToUse;
+
   if (globalControl!=nullptr) delete globalControl;
   globalControl = nullptr;
   if (numberOfThreads != UseDefaultNumberOfThreads) {
@@ -70,6 +72,7 @@ void tarch::multicore::Core::configure( int numberOfThreads ) {
 
   if (_numberOfThreads>getNumberOfUnmaskedThreads()) {
     logWarning( "configure(int)", "number of configured threads (" << numberOfThreads << ") is bigger than available unmasked threads (" << getNumberOfUnmaskedThreads() << ")" );
+    logWarning( "configure(int)", "unmasked threads: " << printUnmaskedThreads() );
   }
 
   internal::configureInternalTaskQueues(_numberOfThreads);
@@ -109,6 +112,11 @@ int tarch::multicore::Core::getCoreNumber() const {
 
 int tarch::multicore::Core::getThreadNumber() const {
   return tbb::this_task_arena::current_thread_index();
+}
+
+
+bool tarch::multicore::Core::isDeviceAvailable(int number) const {
+  return number==HostDevice or _devicesToUse.empty() or _devicesToUse.count(number)>0;
 }
 
 

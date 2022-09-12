@@ -315,7 +315,8 @@ void spaceTimePredictorLinear(SolverType& solver,
             G[0]      = gradQ + idx_gradQ(j, k, l, 0, 0);
             G[1]      = gradQ + idx_gradQ(j, k, l, 1, 0);
             G[2]      = gradQ + idx_gradQ(j, k, l, 2, 0);
-            solver.nonConservativeProduct(&lQi[idx_lQi(i, j, k, l, 0)], G, ncpResult);
+//            solver.nonConservativeProduct(&lQi[idx_lQi(i, j, k, l, 0)], G, ncpResult);
+            solver.nonConservativeProduct(&lQi[idx_lQi(i, j, k, l, 0)], G[0], ncpResult_vec);
             for(int d = 0; d < Dimensions; d++) {
               for (int n = 0; n < numberOfVariables; n++) {
                 lFi[idx_lFi(i, j, k, l, d, n)] += ncpResult[d][n];

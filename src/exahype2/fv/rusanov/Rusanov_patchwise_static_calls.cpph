@@ -134,7 +134,6 @@ namespace exahype2 { namespace fv{ namespace rusanov{ namespace internal{
         otterLoopEnd();
       }
 
-
       if (Dimensions==2) {
         otterLoopBegin();
         for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
@@ -178,7 +177,6 @@ namespace exahype2 { namespace fv{ namespace rusanov{ namespace internal{
           otterLoopIterationEnd();
         }
         otterLoopEnd();
-
 
         otterLoopBegin();
         for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
@@ -281,7 +279,6 @@ namespace exahype2 { namespace fv{ namespace rusanov{ namespace internal{
         }
         otterLoopEnd();
 
-
         otterLoopBegin();
         for (int z = 0; z < numberOfVolumesPerAxisInPatch; z++)
         for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
@@ -320,7 +317,7 @@ namespace exahype2 { namespace fv{ namespace rusanov{ namespace internal{
         #endif
         for (int x = -solversHaloSize; x < numberOfVolumesPerAxisInPatch+solversHaloSize; x++) {
           otterLoopIterationBegin();
-          internal::computeFlux_LoopBody<Solver>(
+          internal::computeFlux_LoopBody<Solver, unknowns, auxiliaryVariables>(
             patchData.QIn[patchIndex],
             QInEnumerator,
             patchData.cellCentre[patchIndex],
@@ -344,7 +341,7 @@ namespace exahype2 { namespace fv{ namespace rusanov{ namespace internal{
         #endif
         for (int x =         0; x < numberOfVolumesPerAxisInPatch;           x++) {
           otterLoopIterationBegin();
-          internal::computeFlux_LoopBody<Solver>(
+          internal::computeFlux_LoopBody<Solver, unknowns, auxiliaryVariables>(
             patchData.QIn[patchIndex],
             QInEnumerator,
             patchData.cellCentre[patchIndex],
@@ -394,7 +391,7 @@ namespace exahype2 { namespace fv{ namespace rusanov{ namespace internal{
         #endif
         for (int x = -solversHaloSize; x < numberOfVolumesPerAxisInPatch+solversHaloSize; x++) {
           otterLoopIterationBegin();
-          internal::computeFlux_LoopBody<Solver>(
+          internal::computeFlux_LoopBody<Solver, unknowns, auxiliaryVariables>(
             patchData.QIn[patchIndex],
             QInEnumerator,
             patchData.cellCentre[patchIndex],
@@ -419,7 +416,7 @@ namespace exahype2 { namespace fv{ namespace rusanov{ namespace internal{
         #endif
         for (int x =         0; x < numberOfVolumesPerAxisInPatch;           x++) {
           otterLoopIterationBegin();
-          internal::computeFlux_LoopBody<Solver>(
+          internal::computeFlux_LoopBody<Solver, unknowns, auxiliaryVariables>(
             patchData.QIn[patchIndex],
             QInEnumerator,
             patchData.cellCentre[patchIndex],
@@ -444,7 +441,7 @@ namespace exahype2 { namespace fv{ namespace rusanov{ namespace internal{
         #endif
         for (int x =         0; x < numberOfVolumesPerAxisInPatch;           x++) {
           otterLoopIterationBegin();
-          internal::computeFlux_LoopBody<Solver>(
+          internal::computeFlux_LoopBody<Solver, unknowns, auxiliaryVariables>(
             patchData.QIn[patchIndex],
             QInEnumerator,
             patchData.cellCentre[patchIndex],
@@ -486,7 +483,6 @@ namespace exahype2 { namespace fv{ namespace rusanov{ namespace internal{
         }
         otterLoopEnd();
       }
-
 
       if (evaluateNonconservativeProduct and Dimensions==2) {
         otterLoopBegin();
@@ -722,7 +718,6 @@ namespace exahype2 { namespace fv{ namespace rusanov{ namespace internal{
   }
 }}}}
 
-
 template <
   typename Solver,
   int      numberOfVolumesPerAxisInPatch,
@@ -782,9 +777,6 @@ void exahype2::fv::rusanov::timeStepWithRusanov_patchwise_call_stack_static_call
     tempEigenvalueZ
   );
 }
-
-
-
 
 template <
   typename Solver,

@@ -341,7 +341,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startPlottingStep(
   double globalMinTimeStepSize,
   double globalMaxTimeStepSize
 ) {
-  assertion( mayPlot() );
+  assertion( mayPlot()  or ::exahype2::hasNonCriticalAssertionBeenViolated() );
   _solverState = SolverState::Plotting;
 }
 
@@ -395,6 +395,17 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startSimulation() {
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishSimulation() {
 
 }
+
+
+bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::cellCanUseStatelessPDETerms(
+  const tarch::la::Vector<Dimensions,double>&  cellCentre,
+  const tarch::la::Vector<Dimensions,double>&  cellH,
+  double                                       t,
+  double                                       dt
+) const {
+  return true;
+}
+
 
 
 {{ABSTRACT_SOLVER_USER_DEFINITIONS}}

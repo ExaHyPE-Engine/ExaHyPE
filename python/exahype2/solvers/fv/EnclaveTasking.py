@@ -180,7 +180,17 @@ class MergeEnclaveTaskOutcome(AbstractFVActionSet):
 
 
 class EnclaveTasking( FV ):
-  def __init__(self, name, patch_size, overlap, unknowns, auxiliary_variables, min_volume_h, max_volume_h, plot_grid_properties, pde_terms_without_state: bool):
+  def __init__(self, 
+               name, 
+               patch_size, 
+               overlap, 
+               unknowns, 
+               auxiliary_variables, 
+               min_volume_h, 
+               max_volume_h, 
+               plot_grid_properties, 
+               pde_terms_without_state: bool,
+               kernel_namespace):
     """
     
      Not so nice. I have to store this field as I later rely on get_name_of_global_instance()
@@ -248,7 +258,15 @@ class EnclaveTasking( FV ):
       "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::Plotting " + \
       ")"
  
-    super(EnclaveTasking, self).__init__(name, patch_size, overlap, unknowns, auxiliary_variables, min_volume_h, max_volume_h, plot_grid_properties)
+    super(EnclaveTasking, self).__init__(name, 
+                                         patch_size, 
+                                         overlap, 
+                                         unknowns, 
+                                         auxiliary_variables, 
+                                         min_volume_h, 
+                                         max_volume_h, 
+                                         plot_grid_properties,
+                                         kernel_namespace)
      
     self._solver_template_file_class_name     = "EnclaveTasking"
       

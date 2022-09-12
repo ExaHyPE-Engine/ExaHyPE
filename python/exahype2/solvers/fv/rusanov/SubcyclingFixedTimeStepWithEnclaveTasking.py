@@ -48,7 +48,16 @@ class SubcyclingFixedTimeStepWithEnclaveTasking( EnclaveTasking ):
     """
     self._interpolate_linearly_in_time        = interpolate_linearly_in_time
     
-    super(SubcyclingFixedTimeStepWithEnclaveTasking,self).__init__(name, patch_size, overlap, unknowns, auxiliary_variables, min_volume_h, max_volume_h, plot_grid_properties,pde_terms_without_state) 
+    super(SubcyclingFixedTimeStepWithEnclaveTasking,self).__init__(name, 
+                                                                   patch_size, 
+                                                                   overlap, 
+                                                                   unknowns, 
+                                                                   auxiliary_variables, 
+                                                                   min_volume_h, 
+                                                                   max_volume_h, 
+                                                                   plot_grid_properties,
+                                                                   pde_terms_without_state,
+                                                                   kernel_namespace="rusanov") 
     
     self._time_step_size = time_step_size
 
@@ -59,6 +68,8 @@ class SubcyclingFixedTimeStepWithEnclaveTasking( EnclaveTasking ):
     
     self._compute_time_step_size              = create_compute_time_step_size_for_fixed_time_stepping_with_subcycling( time_step_size, name )
     self._compute_new_time_step_size          = "const double newTimeStepSize = dt;"
+
+    self._Riemann_solver_namespace            = "rusanov"
     
     self.set_implementation(flux=flux, 
       ncp=ncp, 
@@ -150,7 +161,7 @@ class SubcyclingFixedTimeStepWithEnclaveTasking( EnclaveTasking ):
     if self._interpolate_linearly_in_time:
       self._action_set_update_cell._Template_TouchCellFirstTime_Fill_Halos = create_halo_layer_construction_with_interpolation_for_reconstructed_patch(self._name)
 
-    self._action_set_AMR.set_event_lifetime( 2*int(self._max_volume_h/self._min_volume_h+1) )
+    self._action_set_AMR.event_lifetime = 2*int(self._max_volume_h/self._min_volume_h+1)
      
 
   @property

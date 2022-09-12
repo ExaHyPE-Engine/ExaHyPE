@@ -8,9 +8,6 @@
 #include "tarch/services/ServiceRepository.h"
 #include "tarch/mpi/Rank.h"
 
-#include "tarch/logging/Statistics.h"
-
-
 
 #if defined(SharedSYCL)
 #include <tbb/task_group.h>
@@ -23,9 +20,6 @@ namespace {
    * Seems that there is no atomic in tbb. So I use the standard one.
    */
   std::atomic<int> nonblockingTasksCounter          = 0;
-
-  const std::string BSPTasksStatisticsIdentifier( "tarch::multicore::bsp-tasks");
-  const std::string BackfillWhileWaitingForBSPTasks( "tarch::multicore::backfill");
 
   /**
    * Native mapping of a task loop onto a SYCL loop
@@ -40,15 +34,13 @@ namespace {
     assertion( not tasks.empty() );
 
     for (auto& p: tasks) {
-      tarch::multicore::getSYCLQueue(tarch::multicore::HostDefaultQueue).submit([&](auto &h) {
-        ::tarch::logging::Statistics::getInstance().inc( BSPTasksStatisticsIdentifier, 1.0, true );
+      tarch::multicore::getSYCLQueue(tarch::multicore::Core::HostDevice).submit([&](auto &h) {
         while (p->run()) {}
         delete p;
-        ::tarch::logging::Statistics::getInstance().inc( BSPTasksStatisticsIdentifier, -1.0, true );
       });
     }
 
-    tarch::multicore::getSYCLQueue(tarch::multicore::HostDefaultQueue).wait();
+    tarch::multicore::getSYCLQueue(tarch::multicore::Core::HostDevice).wait();
   }
 
 
@@ -73,13 +65,12 @@ namespace {
     std::atomic<int>       spawnedTasks  = 0;
 
     for (auto& p: tasks) {
-      tarch::multicore::getSYCLQueue(tarch::multicore::HostDefaultQueue).submit([&,p](auto &h) {
+      tarch::multicore::getSYCLQueue(tarch::multicore::Core::HostDevice).submit([&,p](auto &h) {
+        h.host_task([&]() {
           spawnedTasks++;
 
-          ::tarch::logging::Statistics::getInstance().inc( BSPTasksStatisticsIdentifier, 1.0, true );
           while (p->run()) {}
           delete p;
-          ::tarch::logging::Statistics::getInstance().inc( BSPTasksStatisticsIdentifier, -1.0, true );
   
           pendingTasks--;
 
@@ -101,6 +92,7 @@ namespace {
 
             bool processedSomeTasks = false;
             if (numberOfPendingTasks>=fusion.minTasks) {
+              tarch::multicore::internal::copyInternalTaskQueuesOverIntoGlobalQueue(threadNumber);
               processedSomeTasks = tarch::multicore::internal::fusePendingTasks(fusion);
             }
             else if (numberOfPendingTasks>0) {
@@ -109,14 +101,16 @@ namespace {
             else { // no local tasks left over
               tarch::multicore::internal::copyInternalTaskQueuesOverIntoGlobalQueue(threadNumber);
               const int numberOfTasksToProcess = std::max(1,tarch::multicore::getNumberOfPendingTasks(-1)/2);
-              ::tarch::logging::Statistics::getInstance().log( BackfillWhileWaitingForBSPTasks, numberOfTasksToProcess );
               processedSomeTasks = tarch::multicore::processPendingTasks( numberOfTasksToProcess );
             }
           }
+        });
       });
     }
 
-    tarch::multicore::getSYCLQueue(tarch::multicore::HostDefaultQueue).wait();
+    // @todo This is not nice. I don't want to wait for all events. I would like
+    // to wait for BSP events only
+    tarch::multicore::getSYCLQueue(tarch::multicore::Core::HostDevice).wait();
   }
 }
 
@@ -142,7 +136,7 @@ namespace {
 void tarch::multicore::native::spawnTask(Task*  job) {
   nonblockingTasksCounter++;
 
-  sycl::event e = tarch::multicore::getSYCLQueue(tarch::multicore::HostDefaultQueue).submit([&](auto &h) {
+  sycl::event e = tarch::multicore::getSYCLQueue(tarch::multicore::Core::HostDevice).submit([&](auto &h) {
 //    h.single_task([=]() {
     h.host_task([=]() {
       while (job->run()) {}
@@ -205,7 +199,7 @@ void tarch::multicore::native::processFusedTask(Task*  myTask, const std::list< 
 
 
 void tarch::multicore::native::deferRunningThreadAndContinueWithOtherTasks() {
-  tarch::multicore::getSYCLQueue(tarch::multicore::HostDefaultQueue).wait();
+  tarch::multicore::getSYCLQueue(tarch::multicore::Core::HostDevice).wait();
 }
 
 

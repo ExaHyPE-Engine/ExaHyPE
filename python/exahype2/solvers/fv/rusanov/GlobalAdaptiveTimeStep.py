@@ -29,7 +29,15 @@ class GlobalAdaptiveTimeStep( SingleSweep ):
     source_term=PDETerms.None_Implementation,
     plot_grid_properties=False, overlap=1
   ):
-    super(GlobalAdaptiveTimeStep,self).__init__(name, patch_size, overlap, unknowns, auxiliary_variables, min_volume_h, max_volume_h, plot_grid_properties) 
+    super(GlobalAdaptiveTimeStep,self).__init__(name, 
+                                                patch_size, 
+                                                overlap, 
+                                                unknowns, 
+                                                auxiliary_variables, 
+                                                min_volume_h, 
+                                                max_volume_h, 
+                                                plot_grid_properties,
+                                                kernel_namespace="rusanov") 
     
     self._time_step_relaxation = time_step_relaxation
 

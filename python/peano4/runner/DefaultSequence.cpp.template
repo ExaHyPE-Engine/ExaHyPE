@@ -15,22 +15,15 @@
 #include "peano4/UnitTests.h"
 #include "tarch/UnitTests.h"
 
-#ifdef UseFEExcept
-#include <fenv.h>
-#pragma float_control(precise, on)
-#pragma STDC FENV_ACCESS ON
-#endif
+//#ifdef UseFenv
+//#include "tarch/FenvWrapper.h"
+//#endif
 
 tarch::logging::Log _log("::");
-
 
 int main(int argc, char** argv) {{
   const int ExitCodeSuccess         = 0;
   const int ExitCodeUnitTestsFailed = 1;
-
-#ifdef UseFEExcept
-  feenableexcept(FE_DIVBYZERO | FE_INVALID | FE_OVERFLOW);
-#endif
 
   tarch::logging::LogFilter::getInstance().addFilterListEntry( tarch::logging::LogFilter::FilterListEntry(
     tarch::logging::LogFilter::FilterListEntry::TargetDebug, 
@@ -106,7 +99,6 @@ int main(int argc, char** argv) {{
   auto DomainSize   = {{1.0, 1.0, 1.0}};
   #endif
 
-
   peano4::initParallelEnvironment(&argc,&argv);
   peano4::fillLookupTables();
   {FULL_NAMESPACE}::repositories::DataRepository::initDatatypes();
@@ -115,7 +107,11 @@ int main(int argc, char** argv) {{
     DomainSize,
     0
   );
-  
+
+//#ifdef UseFenv
+  //tarch::feenableexcept(FE_DIVBYZERO | FE_INVALID | FE_OVERFLOW);
+//#endif
+
   #if PeanoDebug>=2
   tarch::tests::TestCase* peanoCoreTests = peano4::getUnitTests();
   peanoCoreTests->run();

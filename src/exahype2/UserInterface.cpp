@@ -119,6 +119,12 @@ Options: \n\
                              translated with shared memory support. Not all \n\
                              runtimes allow you to set the thread count via the \n\
                              code. \n\
+  --gpus <no,no>             Specify which GPUs to use. Option has no meaning \n\
+                             if code base has not been translated with gpu \n\
+                             support. Pass in comma-separated list (3,4,9) to \n\
+                             select which GPUs to use. If argument is empty, ExaHyPE \n\
+                             may use all GPUs. If you want to use all GPUs, hand \n\
+                             in all as argument. \n\
   --log-filter-file <file>   Specify which log filter file to use. Default file \n\
                              is exahype.log-filter \n\
   --timeout <t>              Set timeout. t is given in seconds and can be 0 to \n\
@@ -141,16 +147,40 @@ bool exahype2::parseCommandLineArguments(int argc, char** argv) {
     return false;
   }}
 
-  std::string logFilterFile = "exahype.log-filter";
-  int         cores         = tarch::multicore::Core::UseDefaultNumberOfThreads;
+  std::string   logFilterFile = "exahype.log-filter";
+  int           cores         = tarch::multicore::Core::UseDefaultNumberOfThreads;
+  std::set<int> gpuDevices;
 
   for (int argument=1; argument<argc; argument+=2) {
     std::string select = argv[argument];
 
     if ( select.compare( "--threads" ) ==0 ) {
       cores = std::atoi(argv[argument+1]);
-      tarch::multicore::Core::getInstance().configure( cores );
       logInfo( "parseCommandLineArguments(...)", "manually reset number of used cores to " << cores );
+    }
+    else if ( select.compare( "--gpus" ) ==0 ) {
+      std::string specifier = argv[argument+1];
+      std::string delimiter = ",";
+      if ( specifier.compare( "all" ) ==0 ) {
+        logInfo( "parseCommandLineArguments(...)", "enable all devices" );
+      }
+      else if (specifier.find( delimiter ) == std::string::npos) {
+        int gpu = std::atoi(specifier.c_str());
+        gpuDevices.insert(gpu);
+        logInfo( "parseCommandLineArguments(...)", "enable only GPU " << gpu );
+      }
+      else {
+        size_t pos = 0;
+        std::string token;
+        while ((pos = specifier.find(delimiter)) != std::string::npos) {
+          token = specifier.substr(0, pos);
+          int gpu = std::atoi(token.c_str());
+          gpuDevices.insert(gpu);
+          specifier.erase(0, pos + delimiter.length());
+        }
+
+        logInfo( "parseCommandLineArguments(...)", "manually set GPU filter with " << gpuDevices.size() << " devices enabled" );
+      }
     }
     else if ( select.compare( "--log-filter-file" ) == 0 ) {
       logFilterFile = argv[argument+1];
@@ -175,6 +205,8 @@ bool exahype2::parseCommandLineArguments(int argc, char** argv) {
       return false;
     }
   }
+
+  tarch::multicore::Core::getInstance().configure( cores, gpuDevices );
 
   if ( not tarch::logging::LogFilterFileReader::parsePlainTextFile( logFilterFile ) ) {
     logWarning( "main()", "no exahype.log-filter file found or file has been corrupted. Use default logging configuration" );

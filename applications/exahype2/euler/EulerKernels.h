@@ -42,7 +42,8 @@ namespace applications {
         double                                       dt,
         int                                          normal,
         int                                          numberOfUnknowns,
-        int                                          numberOfAuxiliaryVariables
+        int                                          numberOfAuxiliaryVariables,
+        double                                       gamma = 1.4
       ) InlineMethod;
 
 
@@ -64,9 +65,9 @@ namespace applications {
         double                                       dt,
         int                                          normal,
         int                                          numberOfUnknowns,
-        int                                          numberOfAuxiliaryVariables
+        int                                          numberOfAuxiliaryVariables,
+        double                                       gamma = 1.4
       ) InlineMethod {
-        constexpr double gamma = 1.4;
         const double irho = 1./Q[0];
         #if Dimensions==3
         const double p = (gamma-1) * (Q[4] - 0.5*irho*(Q[1]*Q[1]+Q[2]*Q[2]+Q[3]*Q[3]));
@@ -98,7 +99,8 @@ namespace applications {
         int                                          normal,
         int                                          numberOfUnknowns,
         int                                          numberOfAuxiliaryVariables,
-        double * __restrict__                        F
+        double * __restrict__                        F,
+        double                                       gamma = 1.4
       ) InlineMethod;
 
 
@@ -121,9 +123,9 @@ namespace applications {
         int                                          normal,
         int                                          numberOfUnknowns,
         int                                          numberOfAuxiliaryVariables,
-        double * __restrict__                        F
+        double * __restrict__                        F,
+        double                                       gamma = 1.4
       ) InlineMethod {
-        constexpr double gamma = 1.4;
         const double irho = 1./Q[0];
         #if Dimensions==3
         const double p = (gamma-1) * (Q[4] - 0.5*irho*(Q[1]*Q[1]+Q[2]*Q[2]+Q[3]*Q[3]));

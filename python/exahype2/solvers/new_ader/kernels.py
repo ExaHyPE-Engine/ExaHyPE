@@ -5,599 +5,227 @@ from exahype2.solvers.fv.PDETerms  import PDETerms
 import jinja2
 
 
-def create_abstract_solver_declarations(flux_implementation, ncp_implementation, eigenvalues_implementation, source_term_implementation, point_source_implementation, pde_terms_without_state):
+def create_abstract_solver_declarations(flux_implementation, ncp_implementation, eigenvalues_implementation, source_term_implementation, point_source_implementation, computation_precisions, pde_terms_without_state):
   Template = jinja2.Template( """
   public:
-    {% if EIGENVALUES_IMPLEMENTATION=="<none>" %}
-    #error eigenvalue implementation cannot be none
-    {% endif %}
-    
-    {% if EIGENVALUES_IMPLEMENTATION!="<user-defined>" and STATELESS_PDE_TERMS %}
-    /**
-     * Depending on the implementation, this variant might be slow as it 
-     * lacks an inline define. Also, if you don't want to use ipo aggressively,
-     * it might be clever to put the implementation into the header.
-     */
-    #if defined(OpenMPGPUOffloading)
-    #pragma omp declare target
-    #endif
-    static void eigenvalues(
-      const double* const Q,
-      const int direction,
-      double* const lambda
-      normal,
-      Offloadable
-    );
-    #if defined(OpenMPGPUOffloading)
-    #pragma omp end declare target
-    #endif
-    {% endif %}
-    
-    /**
-     * Determine max eigenvalue over Jacobian in a given point with solution values
-     * (states) Q. All parameters are in.
-     *
-     * @return Max eigenvalue. Result has to be positive, so we are actually speaking
-     *   about the maximum absolute eigenvalue.
-     */
-    virtual void eigenvalues(
-      const double* const Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
-      const int direction,
-      double* const lambda
-    ){% if EIGENVALUES_IMPLEMENTATION=="<user-defined>" %}= 0{% else %} final{% endif %};
+
+{% for PRECISION_NUM in range(0,COMPUTATION_PRECISIONS|length) %}
+
+{% if EIGENVALUES_IMPLEMENTATION=="<none>" or EIGENVALUES_IMPLEMENTATION=="<empty>" %}
+  #error eigenvalue implementation cannot be none or empty
+{% elif EIGENVALUES_IMPLEMENTATION=="<user-defined>" %}
+    virtual void eigenvalues(const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const Q, const int direction, {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const lambda) = 0;
+{% else %}
+    void eigenvalues(const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const Q, const int direction, {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const lambda);
+{% endif %}
+{% if FLUX_IMPLEMENTATION!="<user-defined>" %}
+    void flux(const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const Q, {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}** const F);
+{% else %}
+    virtual void flux(const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const Q, {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}** const F) = 0;
+{% endif %}
+{% if NCP_IMPLEMENTATION!="<user-defined>" %}
+    void nonConservativeProduct(const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const Q, const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const gradQ, {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const BgradQ);
+{% else %}
+    virtual void nonConservativeProduct(const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const Q, const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const gradQ, {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const BgradQ) = 0;
+{% endif %}
+{% if SOURCE_TERM_IMPLEMENTATION!="<user-defined>" %}
+    void algebraicSource(const tarch::la::Vector<Dimensions, double>& x, double t, const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}} *const Q, {{COMPUTATION_PRECISIONS[PRECISION_NUM]}} *S);
+{% else %}
+    virtual void algebraicSource(const tarch::la::Vector<Dimensions, double>& x, double t, const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}} *const Q, {{COMPUTATION_PRECISIONS[PRECISION_NUM]}} *S) = 0;
+{% endif %}
+{% if POINT_SOURCE_IMPLEMENTATION!="<user-defined>" %}
+    void pointSource(const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const Q, const double* const x, const double t, const double dt, {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const forceVector, int n);
+{% else %}
+    virtual void pointSource(const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const Q, const double* const x, const double t, const double dt, {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const forceVector, int n) = 0;
+{% endif %}
+
+{% endfor %}
 
 
-    {% if FLUX_IMPLEMENTATION!="<user-defined>" and STATELESS_PDE_TERMS %}
-    /**
-     * Depending on the implementation, this variant might be slow as it 
-     * lacks an inline define. Also, if you don't want to use ipo aggressively,
-     * it might be clever to put the implementation into the header.
-     */
-     /*
-    #if defined(OpenMPGPUOffloading)
-    #pragma omp declare target
-    #endif
-    static void flux(
-      const double* const Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
-      double** const F, // F[Dimensions*{{NUMBER_OF_UNKNOWNS}}],)
-      Offloadable
-    );
-    #if defined(OpenMPGPUOffloading)
-    #pragma omp end declare target
-    #endif
-    */
-    {% endif %}
-    
-    {% if FLUX_IMPLEMENTATION!="<none>" %}
-    /*
-    virtual void flux(
-      const double* const Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
-      double** const F // F[Dimensions*{{NUMBER_OF_UNKNOWNS}}]
-    ) {% if FLUX_IMPLEMENTATION=="<user-defined>" %}=0{% else %} final {% endif %};
-    */
-    {% endif %}
-
-
-    {% if NCP_IMPLEMENTATION!="<user-defined>" and STATELESS_PDE_TERMS %}
-    /**
-     * Depending on the implementation, this variant might be slow as it 
-     * lacks an inline define. Also, if you don't want to use ipo aggressively,
-     * it might be clever to put the implementation into the header.
-     */
-    /*
-    #if defined(OpenMPGPUOffloading)
-    #pragma omp declare target
-    #endif
-    static void nonConservativeProduct(
-        const double* const Q,      //Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
-        const double* const gradQ,  //Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
-        double* const BgradQ,       //BgradQ[{{NUMBER_OF_UNKNOWNS}}]
-        Offloadable
-        );
-    #if defined(OpenMPGPUOffloading)
-    #pragma omp end declare target
-    #endif
-    */
-    {% endif %}
-    
-    {% if NCP_IMPLEMENTATION!="<none>" %}
-    /*
-    virtual void nonConservativeProduct(
-        const double* const Q,      //Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
-        const double* const gradQ,  //Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
-        double* const BgradQ       //BgradQ[{{NUMBER_OF_UNKNOWNS}}]
-      ) {% if NCP_IMPLEMENTATION=="<user-defined>" %}=0{% endif %};
-    */
-    {% endif %}
-    
-
-    {% if SOURCE_TERM_IMPLEMENTATION!="<user-defined>" and STATELESS_PDE_TERMS %}
-    /**
-     * Depending on the implementation, this variant might be slow as it 
-     * lacks an inline define. Also, if you don't want to use ipo aggressively,
-     * it might be clever to put the implementation into the header.
-     */
-    #if defined(OpenMPGPUOffloading)
-    #pragma omp declare target
-    #endif
-    /*
-    static void algebraicSource(
-      const tarch::la::Vector<Dimensions, double>& x, 
-      double t, 
-      const double *const Q, 
-      double *S,
-      Offloadable
-    );
-    */
-    #if defined(OpenMPGPUOffloading)
-    #pragma omp end declare target
-    #endif
-    {% endif %}
-    
-    {% if SOURCE_TERM_IMPLEMENTATION!="<none>" %}
-    /*
-    virtual void algebraicSource(
-      const tarch::la::Vector<Dimensions, double>& x, 
-      double t, 
-      const double *const Q, 
-      double *S) {% if SOURCE_TERM_IMPLEMENTATION=="<user-defined>" %}= 0{% else %} final {% endif %};
-    */
-    {% endif %}
-
-    {% if POINT_SOURCE_IMPLEMENTATION!="<user-defined>" and STATELESS_PDE_TERMS %}
-    /**
-     * Depending on the implementation, this variant might be slow as it 
-     * lacks an inline define. Also, if you don't want to use ipo aggressively,
-     * it might be clever to put the implementation into the header.
-     */
-    #if defined(OpenMPGPUOffloading)
-    #pragma omp declare target
-    #endif
-    #error point source not implemented yet
-    void pointSource(
-      const double* const Q,
-      const double* const x,
-      const double t,
-      const double dt,
-      double* const forceVector,
-      int n,
-      Offloadable
-    );
-    #if defined(OpenMPGPUOffloading)
-    #pragma omp end declare target
-    #endif
-    {% endif %}
-    
-    {% if POINT_SOURCE_IMPLEMENTATION!="<none>" %}
-    #error point source not implemented yet
-    virtual void pointSource(
-      const double* const Q,
-      const double* const x,
-      const double t,
-      const double dt, 
-      double* const forceVector,
-      int n) {% if SOURCE_TERM_IMPLEMENTATION=="<user-defined>" %}= 0{% else %} final {% endif %};
-    {% endif %}
 """, undefined=jinja2.DebugUndefined)
 
   d= {}
-  d[ "FLUX_IMPLEMENTATION"]                 = flux_implementation
-  d[ "NCP_IMPLEMENTATION"]                  = ncp_implementation
-  d[ "EIGENVALUES_IMPLEMENTATION"]          = eigenvalues_implementation
-  d[ "SOURCE_TERM_IMPLEMENTATION"]          = source_term_implementation
-  d[ "POINT_SOURCE_IMPLEMENTATION"]         = point_source_implementation
-  d[ "STATELESS_PDE_TERMS"]                 = pde_terms_without_state
+  d[ "FLUX_IMPLEMENTATION" ]          = flux_implementation
+  d[ "NCP_IMPLEMENTATION" ]           = ncp_implementation
+  d[ "EIGENVALUES_IMPLEMENTATION" ]   = eigenvalues_implementation
+  d[ "SOURCE_TERM_IMPLEMENTATION" ]   = source_term_implementation
+  d[ "POINT_SOURCE_IMPLEMENTATION" ]  = point_source_implementation
+  d[ "COMPUTATION_PRECISIONS" ]       = computation_precisions
+  d[ "STATELESS_PDE_TERMS"]           = pde_terms_without_state
   return Template.render(**d)
 
 
-def create_abstract_solver_definitions(flux_implementation, ncp_implementation, eigenvalues_implementation, source_term_implementation, point_source_implementation, pde_terms_without_state):
+def create_abstract_solver_definitions(flux_implementation, ncp_implementation, eigenvalues_implementation, source_term_implementation, point_source_implementation, computation_precisions, pde_terms_without_state):
   Template = jinja2.Template( """
-{% if EIGENVALUES_IMPLEMENTATION!="<user-defined>" and EIGENVALUES_IMPLEMENTATION!="<none>" %}
-void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::eigenvalues(
-    const double* const Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
-    const int direction,
-    double* const lambda
-  ) {
+{% for PRECISION_NUM in range(0,COMPUTATION_PRECISIONS|length) %}
+
+{% if EIGENVALUES_IMPLEMENTATION!="<empty>" and EIGENVALUES_IMPLEMENTATION!="<user-defined>" and EIGENVALUES_IMPLEMENTATION!="<none>" %}
+void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::eigenvalues(const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const Q, const int direction, {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const lambda){
   {{EIGENVALUES_IMPLEMENTATION}}
 }
 {% endif %}
 
-
-{% if FLUX_IMPLEMENTATION!="<none>" and FLUX_IMPLEMENTATION!="<user-defined>" %}
-void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::flux(
-  const double* const Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
-  double** const F // F[Dimensions*{{NUMBER_OF_UNKNOWNS}}]
-) {
+{% if FLUX_IMPLEMENTATION=="<none>" %}
+void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::flux(const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const Q, {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}** const F) {
+  // should not be called
+  exit(1);
+}
+{% elif FLUX_IMPLEMENTATION!="<empty>" and FLUX_IMPLEMENTATION!="<user-defined>"%}
+void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::flux(const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const Q, {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}** const F) {
   {{FLUX_IMPLEMENTATION}}
 }
 {% endif %}
 
-
-{% if NCP_IMPLEMENTATION!="<none>" and NCP_IMPLEMENTATION!="<user-defined>" %}
-void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::nonConservativeProduct(
-  const double* const Q,      //Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
-  const double* const gradQ,  //Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
-  double* const BgradQ       //BgradQ[{{NUMBER_OF_UNKNOWNS}}]
-) {
-  {{NCP_IMPLEMENTATION}}
+{% if NCP_IMPLEMENTATION=="<none>" %}
+void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::nonConservativeProduct(const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const Q, const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const gradQ, {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const BgradQ) {
+  // should not be called
+  exit(1);
+}
+{% elif NCP_IMPLEMENTATION!="<empty>" and NCP_IMPLEMENTATION!="<user-defined>"%}
+void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::nonConservativeProduct(const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const Q, const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const gradQ, {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const BgradQ) {
+    {{NCP_IMPLEMENTATION}}
 }
 {% endif %}
 
 
-{% if SOURCE_TERM_IMPLEMENTATION!="<user-defined>" and SOURCE_TERM_IMPLEMENTATION!="<none>" %}
-void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::algebraicSource(
-  const tarch::la::Vector<Dimensions, 
-  double>& x, 
-  double t, 
-  const double *const Q, 
-  double *S
-  ) {
-  {% if SOURCE_TERM_IMPLEMENTATION!="<empty>" %}
+{% if SOURCE_TERM_IMPLEMENTATION=="<none>" %}
+void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::algebraicSource(const tarch::la::Vector<Dimensions, double>& x, double t, const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}} *const Q, {{COMPUTATION_PRECISIONS[PRECISION_NUM]}} *S) {
+  // should not be called
+  exit(1);
+}
+{% elif SOURCE_TERM_IMPLEMENTATION!="<empty>" and SOURCE_TERM_IMPLEMENTATION!="<user-defined>"%}
+void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::algebraicSource(const tarch::la::Vector<Dimensions, double>& x, double t, const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}} *const Q, {{COMPUTATION_PRECISIONS[PRECISION_NUM]}} *S) {
   {{SOURCE_TERM_IMPLEMENTATION}}
-  {% else %}
-  std::fill_n(S,{{NUMBER_OF_UNKNOWNS}},0.0);
-  {% endif %}
-}
+}  
 {% endif %}
 
 
-{% if POINT_SOURCE_IMPLEMENTATION!="<user-defined>" and POINT_SOURCE_IMPLEMENTATION!="<none>" %}
-#error Point sources not yet implemented
-void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::algebraicSource(
-  const tarch::la::Vector<Dimensions, double>& x, 
-  double t, 
-  const double *const Q, 
-  double *S
-  ) {
-  {% if SOURCE_TERM_IMPLEMENTATION!="<empty>" %}
-  {{SOURCE_TERM_IMPLEMENTATION}}
-  {% else %}
-  std::fill_n(S,{{NUMBER_OF_UNKNOWNS}},0.0);
-  {% endif %}
+{% if POINT_SOURCE_IMPLEMENTATION=="<none>" %}
+void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::pointSource(const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const Q, const double* const x, const double t, const double dt, {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const forceVector,int n) {
+  // should not be called
+  exit(1);
+
+}
+{% elif POINT_SOURCE_IMPLEMENTATION!="<empty>" and POINT_SOURCE_IMPLEMENTATION!="<user-defined>"%}
+void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::pointSource(const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const Q, const double* const x, const double t, const double dt, {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const forceVector,int n) {
+    {{POINT_SOURCE_IMPLEMENTATION}}
 }
 {% endif %}
 
-
-{% if EIGENVALUES_IMPLEMENTATION!="<user-defined>" and STATELESS_PDE_TERMS %}
-#if defined(OpenMPGPUOffloading)
-#pragma omp declare target
-#endif
-void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::eigenvalues(
-      const double* const Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
-      const int direction,
-      double* const lambda,
-      Offloadable
-    ){
-  {{EIGENVALUES_IMPLEMENTATION}};
-}
-#if defined(OpenMPGPUOffloading)
-#pragma omp end declare target
-#endif
-{% endif %}
-
-
-{% if FLUX_IMPLEMENTATION!="<user-defined>" and STATELESS_PDE_TERMS %}
-#if defined(OpenMPGPUOffloading)
-#pragma omp declare target
-#endif
-void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::flux(
-  const double* const Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
-  double** const F, // F[Dimensions*{{NUMBER_OF_UNKNOWNS}}],
-  Offloadable
-) {
-  {% if FLUX_IMPLEMENTATION=="<none>" %}
-  abort();
-  {% else %}
-  {{FLUX_IMPLEMENTATION}}
-  {% endif %}
-}
-#if defined(OpenMPGPUOffloading)
-#pragma omp end declare target
-#endif
-{% endif %}
-
-
-{% if NCP_IMPLEMENTATION!="<user-defined>" and STATELESS_PDE_TERMS %}
-#if defined(OpenMPGPUOffloading)
-#pragma omp declare target
-#endif
-void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::nonConservativeProduct(
-  const double* const Q,      //Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
-  const double* const gradQ,  //Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
-  double* const BgradQ,       //BgradQ[{{NUMBER_OF_UNKNOWNS}}]
-  Offloadable
-) {
-  {% if NCP_IMPLEMENTATION=="<none>" %}
-  abort();
-  {% else %}
-  {{NCP_IMPLEMENTATION}}
-  {% endif %}
-}
-#if defined(OpenMPGPUOffloading)
-#pragma omp end declare target
-#endif
-{% endif %}
-
-
-{% if SOURCE_TERM_IMPLEMENTATION!="<user-defined>" and STATELESS_PDE_TERMS %}
-#if defined(OpenMPGPUOffloading)
-#pragma omp declare target
-#endif
-void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::algebraicSource(
-  const tarch::la::Vector<Dimensions, double>& x, 
-  double t, 
-  const double *const Q, 
-  double *S,
-  Offloadable
-) {
-  {% if SOURCE_TERM_IMPLEMENTATION=="<none>" %}
-  abort();
-  {% else %}
-  {{SOURCE_TERM_IMPLEMENTATION}}
-  {% endif %}
-}
-#if defined(OpenMPGPUOffloading)
-#pragma omp end declare target
-#endif
-{% endif %}
-
-
-{% if POINT_SOURCE_IMPLEMENTATION!="<user-defined>" and STATELESS_PDE_TERMS %}
-#if defined(OpenMPGPUOffloading)
-#pragma omp declare target
-#endif
-#error point sources not yet implemented
-void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::algebraicSource(
-  const tarch::la::Vector<Dimensions, double>& x,
-  double t,
-  const double *const Q,
-  double *S,
-  Offloadable
-) {
-  {% if SOURCE_TERM_IMPLEMENTATION=="<none>" %}
-  abort();
-  {% else %}
-  {{SOURCE_TERM_IMPLEMENTATION}}
-  {% endif %}
-}
-#if defined(OpenMPGPUOffloading)
-#pragma omp end declare target
-#endif
-{% endif %}
+{% endfor %}
 """, undefined=jinja2.DebugUndefined)
 
   d= {}
-  d[ "FLUX_IMPLEMENTATION"]                 = flux_implementation
-  d[ "NCP_IMPLEMENTATION"]                  = ncp_implementation
-  d[ "EIGENVALUES_IMPLEMENTATION"]          = eigenvalues_implementation
-  d[ "SOURCE_TERM_IMPLEMENTATION"]          = source_term_implementation
-  d[ "POINT_SOURCE_IMPLEMENTATION"]         = point_source_implementation
-  d[ "STATELESS_PDE_TERMS"]                             = pde_terms_without_state  
+  d[ "FLUX_IMPLEMENTATION" ]          = flux_implementation
+  d[ "NCP_IMPLEMENTATION" ]           = ncp_implementation
+  d[ "EIGENVALUES_IMPLEMENTATION" ]   = eigenvalues_implementation
+  d[ "SOURCE_TERM_IMPLEMENTATION" ]   = source_term_implementation
+  d[ "POINT_SOURCE_IMPLEMENTATION" ]  = point_source_implementation
+  d[ "COMPUTATION_PRECISIONS" ]       = computation_precisions
+  d[ "STATELESS_PDE_TERMS"]           = pde_terms_without_state
   return Template.render(**d)
 
 
-def create_solver_declarations(flux_implementation, ncp_implementation, eigenvalues_implementation, source_term_implementation, point_source_implementation, pde_terms_without_state):
-  Template = jinja2.Template( """
+def create_solver_declarations(flux_implementation, ncp_implementation, eigenvalues_implementation, source_term_implementation, point_source_implementation, computation_precisions, pde_terms_without_state):
+  
+  TemplateSinglePrecisions = jinja2.Template( """
+  
+  {% if EIGENVALUES_IMPLEMENTATION=="<user-defined>" %}
+    void eigenvalues(const {{COMPUTATION_PRECISIONS[0]}}* const Q, const int direction, {{COMPUTATION_PRECISIONS[0]}}* const lambda) override;
+{% endif %}
+{% if FLUX_IMPLEMENTATION=="<user-defined>" %}
+    void flux(const {{COMPUTATION_PRECISIONS[0]}}* const Q, {{COMPUTATION_PRECISIONS[0]}}** const F) override;
+{% endif %}
+{% if NCP_IMPLEMENTATION=="<user-defined>" %}
+    void nonConservativeProduct(const {{COMPUTATION_PRECISIONS[0]}}* const Q, const {{COMPUTATION_PRECISIONS[0]}}* const gradQ, {{COMPUTATION_PRECISIONS[0]}}* const BgradQ) override;
+{% endif %}
+{% if SOURCE_TERM_IMPLEMENTATION=="<user-defined>" %}
+    void algebraicSource(const tarch::la::Vector<Dimensions, double>& x, double t, const {{COMPUTATION_PRECISIONS[0]}} *const Q, {{COMPUTATION_PRECISIONS[0]}} *S) override;
+{% endif %}
+{% if POINT_SOURCE_IMPLEMENTATION=="<user-defined>" %}
+    void pointSource(const {{COMPUTATION_PRECISIONS[0]}}* const Q, const double* const x, const double t, const double dt, {{COMPUTATION_PRECISIONS[0]}}* const forceVector, int n) override;
+{% endif %}
+  
+  """, undefined=jinja2.DebugUndefined) 
+  
+  TemplateMultiplePrecisions = jinja2.Template( """
   public:
-    {% if SOURCE_TERM_IMPLEMENTATION=="<user-defined>" %}
-    void algebraicSource(
-      const tarch::la::Vector<Dimensions, double>& x,
-      double t,
-      const double *const Q,
-      double *S
-      ) override;
-    {% endif %}
+{% if EIGENVALUES_IMPLEMENTATION=="<user-defined>" %}
+    template<typename T>
+    void eigenvalues(const T* const Q, const int direction, T* const lambda);
+{% endif %}
+{% if FLUX_IMPLEMENTATION=="<user-defined>" %}
+    template<typename T>
+    void flux(const T* const Q, T** const F);
+{% endif %}
+{% if NCP_IMPLEMENTATION=="<user-defined>" %}
+    template<typename T>
+    void nonConservativeProduct(const T* const Q, const T* const gradQ, T* const BgradQ);
+{% endif %}
+{% if SOURCE_TERM_IMPLEMENTATION=="<user-defined>" %}
+    template<typename T>
+    void algebraicSource(const tarch::la::Vector<Dimensions, double>& x, double t, const T *const Q, T *S);
+{% endif %}
+{% if POINT_SOURCE_IMPLEMENTATION=="<user-defined>" %}
+    template<typename T>
+    void pointSource(const T* const Q, const double* const x, const double t, const double dt, T* const forceVector, int n);
+{% endif %}
+  
+  
+{% for PRECISION_NUM in range(0,COMPUTATION_PRECISIONS|length) %}
 
-    {% if POINT_SOURCE_IMPLEMENTATION=="<user-defined>" %}
-    #error point sources not defined yet
-    void algebraicSource(
-      const tarch::la::Vector<Dimensions, double>& x,
-      double t,
-      const double *const Q,
-      double *S
-      ) override;
-    {% endif %}
-
-    {% if EIGENVALUES_IMPLEMENTATION=="<user-defined>" %}
-    /**
-     * Determine max eigenvalue over Jacobian in a given point with solution values
-     * (states) Q. All parameters are in.
-     *
-     * @return Max eigenvalue. Result has to be positive, so we are actually speaking
-     *   about the maximum absolute eigenvalue.
-     */
-    virtual void eigenvalues(
-      const double* const Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
-      const int direction,
-      double* const lambda
-    ) override;
-    {% endif %}
-
-
-    {% if FLUX_IMPLEMENTATION=="<user-defined>" %}
-    virtual void flux(
-      const double* const Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
-      double** const F // F[Dimensions*{{NUMBER_OF_UNKNOWNS}}]
-    ) override;
-    {% endif %}
-     
-     
-    {% if NCP_IMPLEMENTATION=="<user-defined>" %}
-    virtual void nonConservativeProduct(
-      const double* const Q,      //Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
-      const double* const gradQ,  //Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
-      double* const BgradQ       //BgradQ[{{NUMBER_OF_UNKNOWNS}}]
-    ) override;
-    {% endif %}
-    
-   
-    {% if STATELESS_PDE_TERMS  and SOURCE_TERM_IMPLEMENTATION=="<user-defined>" %}
-    /**
-     * To obtain the best performance, I recommend to man inline command to 
-     * this signature and to copy the implementation into the header. So it would
-     * read 
-     *
-     * static inline void algebraicSource( ... ) {
-     *  code here
-     * }
-     *
-     * The GPU offloading requires static functions. As we cannot overload the
-     * original (virtual) function with a static alternative, we do the
-     * TBB trick and overload by adding an additional enum. It has no semantics
-     * but helps the compiler to distinguish the different function variants.
-     */
-    #if defined(OpenMPGPUOffloading)
-    #pragma omp declare target
-    #endif
-     static void algebraicSource(
-      const tarch::la::Vector<Dimensions, double>& x,
-      double t,
-      const double *const Q,
-      double *S,
-      Offloadable
-     );
-    #if defined(OpenMPGPUOffloading)
-    #pragma omp end declare target
-    #endif
-    {% endif %}
-
-   
-    {% if STATELESS_PDE_TERMS  and POINT_SOURCE_IMPLEMENTATION=="<user-defined>" %}
-    /**
-     * To obtain the best performance, I recommend to man inline command to 
-     * this signature and to copy the implementation into the header. So it would
-     * read 
-     *
-     * static inline void algebraicSource( ... ) {
-     *  code here
-     * }
-     *
-     * The GPU offloading requires static functions. As we cannot overload the
-     * original (virtual) function with a static alternative, we do the
-     * TBB trick and overload by adding an additional enum. It has no semantics
-     * but helps the compiler to distinguish the different function variants.
-     */
-     #error point sources not implemented yet
-    #if defined(OpenMPGPUOffloading)
-    #pragma omp declare target
-    #endif
-     static void algebraicSource(
-      const tarch::la::Vector<Dimensions, double>& x,
-      double t,
-      const double *const Q,
-      double *S,
-      Offloadable
-     );
-    #if defined(OpenMPGPUOffloading)
-    #pragma omp end declare target
-    #endif
-    {% endif %}
-
-    {% if EIGENVALUES_IMPLEMENTATION=="<user-defined>" and STATELESS_PDE_TERMS %}
-    /**
-     * To obtain the best performance, I recommend to man inline command to 
-     * this signature and to copy the implementation into the header. So it would
-     * read 
-     *
-     * static inline double eigenvalue( ... ) {
-     *  code here
-     * }
-     *
-     * The GPU offloading requires static functions. As we cannot overload the
-     * original (virtual) function with a static alternative, we do the
-     * TBB trick and overload by adding an additional enum. It has no semantics
-     * but helps the compiler to distinguish the different function variants.
-     */
-    #if defined(OpenMPGPUOffloading)
-    #pragma omp declare target
-    #endif
-    static void eigenvalues(
-      const double* const Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
-      const int direction,
-      double* const lambda,
-      Offloadable
-    );
-    #if defined(OpenMPGPUOffloading)
-    #pragma omp end declare target
-    #endif
-    {% endif %}
-
-
-    {% if STATELESS_PDE_TERMS  and FLUX_IMPLEMENTATION=="<user-defined>" %}
-    /**
-     * To obtain the best performance, I recommend to man inline command to 
-     * this signature and to copy the implementation into the header. So it would
-     * read 
-     *
-     * static inline void flux( ... ) {
-     *  code here
-     * }
-     *
-     * The GPU offloading requires static functions. As we cannot overload the
-     * original (virtual) function with a static alternative, we do the
-     * TBB trick and overload by adding an additional enum. It has no semantics
-     * but helps the compiler to distinguish the different function variants.
-     */
-    #if defined(OpenMPGPUOffloading)
-    #pragma omp declare target
-    #endif
-    static void flux(
-      const double* const Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
-      double** const F, // F[Dimensions*{{NUMBER_OF_UNKNOWNS}}]
-      Offloadable
-    );
-    #if defined(OpenMPGPUOffloading)
-    #pragma omp end declare target
-    #endif
-    {% endif %}
-     
-   
-    {% if STATELESS_PDE_TERMS  and NCP_IMPLEMENTATION=="<user-defined>" %}
-    /**
-     * To obtain the best performance, I recommend to man inline command to 
-     * this signature and to copy the implementation into the header. So it would
-     * read 
-     *
-     * static inline void nonConservativeProduct( ... ) {
-     *  code here
-     * }
-     *
-     * The GPU offloading requires static functions. As we cannot overload the
-     * original (virtual) function with a static alternative, we do the
-     * TBB trick and overload by adding an additional enum. It has no semantics
-     * but helps the compiler to distinguish the different function variants.
-     */
-    #if defined(OpenMPGPUOffloading)
-    #pragma omp declare target
-    #endif
-    static void nonConservativeProduct(
-        const double* const Q,      //Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
-        const double* const gradQ,  //Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
-        double* const BgradQ,       //BgradQ[{{NUMBER_OF_UNKNOWNS}}]
-        Offloadable
-      );
-    #if defined(OpenMPGPUOffloading)
-    #pragma omp end declare target
-    #endif
-    {% endif %}    
-""", undefined=jinja2.DebugUndefined)
+{% if EIGENVALUES_IMPLEMENTATION=="<user-defined>" %}
+    void eigenvalues(const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const Q, const int direction, {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const lambda) override {
+      eigenvalues<{{COMPUTATION_PRECISIONS[PRECISION_NUM]}}>(Q, direction, lambda);
+    }
+{% endif %}
+{% if FLUX_IMPLEMENTATION=="<user-defined>" %}
+    void flux(const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const Q, {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}** const F) override {
+      flux<{{COMPUTATION_PRECISIONS[PRECISION_NUM]}}>(Q, F);
+    }
+{% endif %}
+{% if NCP_IMPLEMENTATION=="<user-defined>" %}
+    void nonConservativeProduct(const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const Q, const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const gradQ, {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const BgradQ) override {
+      nonConservativeProduct<{{COMPUTATION_PRECISIONS[PRECISION_NUM]}}>(Q, gradQ, BgradQ);
+    }
+{% endif %}
+{% if SOURCE_TERM_IMPLEMENTATION=="<user-defined>" %}
+    void algebraicSource(const tarch::la::Vector<Dimensions, double>& x, double t, const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}} *const Q, {{COMPUTATION_PRECISIONS[PRECISION_NUM]}} *S) override {
+      algebraicSource<{{COMPUTATION_PRECISIONS[PRECISION_NUM]}}>(x, t, Q, S);
+    }
+{% endif %}
+{% if POINT_SOURCE_IMPLEMENTATION=="<user-defined>" %}
+    void pointSource(const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const Q, const double* const x, const double t, const double dt, {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const forceVector, int n) override {
+      pointSource<{{COMPUTATION_PRECISIONS[PRECISION_NUM]}}>(Q, x, t, dt, forceVector, n);
+    }
+{% endif %}
+  
+{% endfor %}
+""", undefined=jinja2.DebugUndefined) 
   d= {}
-  d[ "FLUX_IMPLEMENTATION"]                 = flux_implementation
-  d[ "NCP_IMPLEMENTATION"]                  = ncp_implementation
-  d[ "EIGENVALUES_IMPLEMENTATION"]          = eigenvalues_implementation
-  d[ "SOURCE_TERM_IMPLEMENTATION"]          = source_term_implementation
-  d[ "POINT_SOURCE_IMPLEMENTATION"]         = point_source_implementation
-  d[ "STATELESS_PDE_TERMS"]                 = pde_terms_without_state  
-  return Template.render(**d)
+  d[ "FLUX_IMPLEMENTATION" ]          = flux_implementation
+  d[ "NCP_IMPLEMENTATION" ]           = ncp_implementation
+  d[ "EIGENVALUES_IMPLEMENTATION" ]   = eigenvalues_implementation
+  d[ "SOURCE_TERM_IMPLEMENTATION" ]   = source_term_implementation
+  d[ "POINT_SOURCE_IMPLEMENTATION" ]  = point_source_implementation
+  d[ "COMPUTATION_PRECISIONS" ]       = computation_precisions
+  d[ "STATELESS_PDE_TERMS"]           = pde_terms_without_state
+
+  if(len(computation_precisions)>1):
+    return TemplateMultiplePrecisions.render(**d)
+  else:
+    return TemplateSinglePrecisions.render(**d)
 
 
-def create_solver_definitions(flux_implementation, ncp_implementation, eigenvalues_implementation, source_term_implementation, point_source_implementation, pde_terms_without_state):
-  Template = jinja2.Template( """
+def create_solver_definitions(flux_implementation, ncp_implementation, eigenvalues_implementation, source_term_implementation, point_source_implementation, computation_precisions, pde_terms_without_state):
+  
+  TemplateSinglePrecisions = jinja2.Template( """
+  
 {% if EIGENVALUES_IMPLEMENTATION=="<user-defined>" %}
 void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::eigenvalues(
-    const double* const Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+    const {{COMPUTATION_PRECISIONS[0]}}* const Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
     const int direction,
-    double* const lambda
+    {{COMPUTATION_PRECISIONS[0]}}* const lambda
   )  {
   logTraceInWith3Arguments( "eigenvalue(...)", x, t, normal );
   // @todo implement
@@ -608,8 +236,8 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::eigenvalues(
 
 {% if FLUX_IMPLEMENTATION=="<user-defined>" %}
 void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::flux(
-  const double* const Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
-  double** const F // F[Dimensions*{{NUMBER_OF_UNKNOWNS}}]
+  const {{COMPUTATION_PRECISIONS[0]}}* const Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+  {{COMPUTATION_PRECISIONS[0]}}** const F // F[Dimensions*{{NUMBER_OF_UNKNOWNS}}]
 )  {
   logTraceIn( "flux(...)");
   // @todo implement
@@ -620,9 +248,9 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::flux(
 
 {% if NCP_IMPLEMENTATION=="<user-defined>" %}
 void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::nonConservativeProduct(
-  const double* const Q,      //Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
-  const double* const gradQ,  //Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
-  double* const BgradQ       //BgradQ[{{NUMBER_OF_UNKNOWNS}}]
+  const {{COMPUTATION_PRECISIONS[0]}}* const Q,      //Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+  const {{COMPUTATION_PRECISIONS[0]}}* const gradQ,  //Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+  {{COMPUTATION_PRECISIONS[0]}}* const BgradQ       //BgradQ[{{NUMBER_OF_UNKNOWNS}}]
 )  {
   logTraceInWith3Arguments( "nonConservativeProduct(...)", x, t, normal );
   // @todo implement
@@ -635,8 +263,8 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::nonConservativeProduct(
 void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::algebraicSource(
   const tarch::la::Vector<Dimensions, double>& x,
   double t,
-  const double *const Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
-  double *S
+  const {{COMPUTATION_PRECISIONS[0]}} *const Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+  {{COMPUTATION_PRECISIONS[0]}} *S
 ) {
   logTraceInWith3Arguments( "algebraicSource(...)", x, t, dt );
   // @todo implement
@@ -644,114 +272,106 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::algebraicSource(
 }
 {% endif %}
 
+{% if POINT_SOURCE_IMPLEMENTATION=="<user-defined>" %}
+void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::pointSource(
+  const {{COMPUTATION_PRECISIONS[0]}}* const Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+  const double* const x, 
+  const double t, 
+  const double dt, 
+  {{COMPUTATION_PRECISIONS[0]}}* const forceVector, // Q[{{NUMBER_OF_UNKNOWNS}}
+  int n) {
+  // @todo implement
+}
+{% endif %}
 
-
-
-
-{% if EIGENVALUES_IMPLEMENTATION=="<user-defined>" and STATELESS_PDE_TERMS %}
-    #if defined(OpenMPGPUOffloading)
-    #pragma omp declare target
-    #endif
+""", undefined=jinja2.DebugUndefined)
+  
+  TemplateMultiplePrecisions = jinja2.Template( """
+  
+{% if EIGENVALUES_IMPLEMENTATION=="<user-defined>" %}
+template<typename T>
 void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::eigenvalues(
-      const double* const Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
-      const int direction,
-      double* const lambda,
-      Offloadable
-    ){
+    const T* const Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+    const int direction,
+    T* const lambda
+  )  {
+  logTraceInWith3Arguments( "eigenvalue(...)", x, t, normal );
   // @todo implement
+  logTraceOut( "eigenvalue(...)" );
 }
-    #if defined(OpenMPGPUOffloading)
-    #pragma omp end declare target
-    #endif
 {% endif %}
 
 
-{% if FLUX_IMPLEMENTATION=="<user-defined>" and STATELESS_PDE_TERMS %}
-    #if defined(OpenMPGPUOffloading)
-    #pragma omp declare target
-    #endif
+{% if FLUX_IMPLEMENTATION=="<user-defined>" %}
+template<typename T>
 void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::flux(
-  const double * __restrict__ Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
-  const tarch::la::Vector<Dimensions,double>&  x,
-  double                                       t,
-  int                                          normal,
-  double * __restrict__ F,
-  Offloadable
+  const T* const Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+  T** const F // F[Dimensions*{{NUMBER_OF_UNKNOWNS}}]
 )  {
+  logTraceIn( "flux(...)");
   // @todo implement
+  logTraceOut( "flux(...)" );
 }
-    #if defined(OpenMPGPUOffloading)
-    #pragma omp end declare target
-    #endif
 {% endif %}
 
 
-{% if NCP_IMPLEMENTATION=="<user-defined>" and STATELESS_PDE_TERMS %}
-    #if defined(OpenMPGPUOffloading)
-    #pragma omp declare target
-    #endif
+{% if NCP_IMPLEMENTATION=="<user-defined>" %}
+template<typename T>
 void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::nonConservativeProduct(
-  const double* const Q,      //Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
-  const double* const gradQ,  //Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
-  double* const BgradQ,       //BgradQ[{{NUMBER_OF_UNKNOWNS}}]
-  Offloadable
+  const T* const Q,      //Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+  const T* const gradQ,  //Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+  T* const BgradQ       //BgradQ[{{NUMBER_OF_UNKNOWNS}}]
 )  {
+  logTraceInWith3Arguments( "nonConservativeProduct(...)", x, t, normal );
   // @todo implement
+  logTraceOut( "nonConservativeProduct(...)" );
 }
-    #if defined(OpenMPGPUOffloading)
-    #pragma omp end declare target
-    #endif
 {% endif %}
 
 
-{% if SOURCE_TERM_IMPLEMENTATION=="<user-defined>" and STATELESS_PDE_TERMS %}
-    #if defined(OpenMPGPUOffloading)
-    #pragma omp declare target
-    #endif
+{% if SOURCE_TERM_IMPLEMENTATION=="<user-defined>" %}
+template<typename T>
 void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::algebraicSource(
   const tarch::la::Vector<Dimensions, double>& x,
   double t,
-  const double *const Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
-  double *S,
-  Offloadable
+  const T *const Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+  T *S
 ) {
+  logTraceInWith3Arguments( "algebraicSource(...)", x, t, dt );
   // @todo implement
+  logTraceOut( "algebraicSource(...)" );
 }
-    #if defined(OpenMPGPUOffloading)
-    #pragma omp end declare target
-    #endif
 {% endif %}
 
-
-{% if POINT_SOURCE_IMPLEMENTATION=="<user-defined>" and STATELESS_PDE_TERMS %}
-    #if defined(OpenMPGPUOffloading)
-    #pragma omp declare target
-    #endif
-#error  point sources not implemented yet
-void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::algebraicSource(
-  const tarch::la::Vector<Dimensions, double>& x,
-  double t,
-  const double *const Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
-  double *S,
-  Offloadable
-) {
+{% if POINT_SOURCE_IMPLEMENTATION=="<user-defined>" %}
+template<typename T>
+void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::pointSource(
+  const T* const Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+  const double* const x, 
+  const double t, 
+  const double dt, 
+  T* const forceVector, // Q[{{NUMBER_OF_UNKNOWNS}}
+  int n) {
   // @todo implement
 }
-    #if defined(OpenMPGPUOffloading)
-    #pragma omp end declare target
-    #endif
 {% endif %}
 
 
 """, undefined=jinja2.DebugUndefined)
   d= {}
-  d[ "FLUX_IMPLEMENTATION"]                 = flux_implementation
-  d[ "NCP_IMPLEMENTATION"]                  = ncp_implementation
-  d[ "EIGENVALUES_IMPLEMENTATION"]          = eigenvalues_implementation
-  d[ "SOURCE_TERM_IMPLEMENTATION"]          = source_term_implementation
-  d[ "POINT_SOURCE_IMPLEMENTATION"]         = point_source_implementation
-  d[ "STATELESS_PDE_TERMS"]                 = pde_terms_without_state  
-  return Template.render(**d)
+  d[ "FLUX_IMPLEMENTATION" ]          = flux_implementation
+  d[ "NCP_IMPLEMENTATION" ]           = ncp_implementation
+  d[ "EIGENVALUES_IMPLEMENTATION" ]   = eigenvalues_implementation
+  d[ "SOURCE_TERM_IMPLEMENTATION" ]   = source_term_implementation
+  d[ "POINT_SOURCE_IMPLEMENTATION" ]  = point_source_implementation
+  d[ "COMPUTATION_PRECISIONS" ]       = computation_precisions
+  d[ "STATELESS_PDE_TERMS"]           = pde_terms_without_state
+  
+  if(len(computation_precisions)>1):
+    return TemplateMultiplePrecisions.render(**d)
+  else:
+    return TemplateSinglePrecisions.render(**d)
+    
 
 def create_compute_time_step_size_for_fixed_time_stepping():
   """
@@ -846,3 +466,26 @@ def get_face_overlap_merge_implementation(patch_overlap):
 """
 
   return template.format(**d)
+
+# function which fills an array of one type with elements of a different array, converting them via explicit conversion 
+def convert_array_from_type(from_name, to_name, type_to, array_size):
+  
+  template = """  
+      for(int i=0; i<""" + array_size + """; i++){
+      """ + to_name + """[i] = ( """ + type_to + """ ) """ + from_name + """[i];
+      }  
+  """
+  return template
+
+#creates an array toName with array_size elements of type typeTo, then fills then with values from array fromName
+def create_array_and_convert_from_type(from_name, to_name, type_to, array_size):
+  
+  template = """
+      """ + type_to + " " + to_name + "[" + array_size + "];" + """
+      for(int i=0; i<""" + array_size + """; i++){
+        """ + to_name + """[i] = ( """ + type_to + """ ) """ + from_name + """[i];
+      }  
+  """
+  return template
+
+

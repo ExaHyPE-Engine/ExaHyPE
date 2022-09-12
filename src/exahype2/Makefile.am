@@ -32,9 +32,12 @@ ExaHyPE2Sources = \
   dg/DGUtils.cpp \
   dg/CellIntegral.cpp \
   dg/Riemann.cpp \
-  dg/rusanov/Riemann.cpp \
-  dg/tests/DGTest.cpp \
-  dg/tests/testUtils.cpp \
+  dg/rusanov/Rusanov.cpp \
+  dg/tests/CellIntegralTest.cpp \
+  dg/tests/DGUtilsTest.cpp \
+  dg/tests/RiemannTest.cpp \
+  dg/tests/TestUtils.cpp \
+  dg/rusanov/tests/RiemannTest.cpp \
   enumerator/AoSLexicographicEnumerator.cpp \
   enumerator/SoALexicographicEnumerator.cpp \
   enumerator/SingleDoFEnumerator.cpp \
@@ -47,7 +50,11 @@ ExaHyPE2Sources = \
   fv/BoundaryConditions.cpp \
   fv/PatchUtils.cpp \
   fv/PatchAccess.cpp \
+  fv/PostprocessingKernels.cpp \
   fv/rusanov/sycl/GPUCellData.cpp \
+  fv/rusanov/omp/opt/Rusanov.cpp \
+  fv/rusanov/omp/opt/GPUCellData.cpp \
+  fv/rusanov/omp/opt/GPUScratchpadData.cpp \
   fv/rusanov/tests/CopyPatchTest.cpp \
   fv/rusanov/tests/ApplySplit1DRiemannToPatchTest.cpp
 
