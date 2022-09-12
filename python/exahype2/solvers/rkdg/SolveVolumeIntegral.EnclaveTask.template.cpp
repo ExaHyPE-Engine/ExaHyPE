@@ -48,7 +48,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::applyKernelToCell(
   const ::peano4::datamanagement::CellMarker& marker,
   double                                      timeStamp,
   double                                      timeStepSize,
-  const double* __restrict__                  QIn,
+  double* __restrict__                        QIn,
   double* __restrict__                        QOut
 ) {
   ::exahype2::CellData cellData(

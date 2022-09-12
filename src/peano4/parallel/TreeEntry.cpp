@@ -117,9 +117,34 @@ MPI_Datatype peano4::parallel::TreeEntry::Datatype;
 
 
 [[clang::map_mpi_datatype]]
-MPI_Datatype peano4::parallel::TreeEntry::getDatatype() {
+MPI_Datatype peano4::parallel::TreeEntry::getForkDatatype() {
   return Datatype;
 }
+
+
+[[clang::map_mpi_datatype]]
+MPI_Datatype peano4::parallel::TreeEntry::getGlobalCommunciationDatatype() {
+  return Datatype;
+}
+
+
+[[clang::map_mpi_datatype]]
+MPI_Datatype peano4::parallel::TreeEntry::getJoinDatatype() {
+  return Datatype;
+}
+
+
+[[clang::map_mpi_datatype]]
+MPI_Datatype peano4::parallel::TreeEntry::getBoundaryExchangeDatatype() {
+  return Datatype;
+}
+
+
+[[clang::map_mpi_datatype]]
+MPI_Datatype peano4::parallel::TreeEntry::getMultiscaleDataExchangeDatatype() {
+  return Datatype;
+}
+
 
 int peano4::parallel::TreeEntry::getSenderRank() const {
   return _senderDestinationRank;
@@ -177,14 +202,32 @@ void peano4::parallel::TreeEntry::initDatatype() {
 
   #else
   // invoke routine once to trigger lazy initialisation
-  getDatatype();
+  getForkDatatype();
+  getJoinDatatype();
+  getBoundaryExchangeDatatype();
+  getMultiscaleDataExchangeDatatype();
+  getGlobalCommunciationDatatype();
   #endif
 }
 
 
 void peano4::parallel::TreeEntry::shutdownDatatype() {
-  MPI_Datatype type = getDatatype();
+  #if !defined(__MPI_ATTRIBUTES_LANGUAGE_EXTENSION__)
+  MPI_Datatype type;
+  type = getForkDatatype();
   MPI_Type_free( &type );
+  type = getJoinDatatype();
+  MPI_Type_free( &type );
+  type = getBoundaryExchangeDatatype();
+  MPI_Type_free( &type );
+  type = getMultiscaleDataExchangeDatatype();
+  MPI_Type_free( &type );
+  type = getGlobalCommunciationDatatype();
+  MPI_Type_free( &type );
+  #else
+  MPI_Datatype type = Datatype;
+  MPI_Type_free( &type );
+  #endif
 }
 
 
@@ -224,5 +267,4 @@ void peano4::parallel::TreeEntry::receive(peano4::parallel::TreeEntry& buffer, i
   }
   buffer._senderDestinationRank = status.MPI_SOURCE;
 }
-
 #endif

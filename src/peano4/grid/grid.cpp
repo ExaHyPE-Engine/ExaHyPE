@@ -59,6 +59,30 @@ peano4::grid::GridVertex peano4::grid::createVertex(
   return result;
 }
 
+std::string peano4::grid::toString( const std::vector<GridControlEvent>& events ) {
+  std::ostringstream msg;
+  msg << "(";
+  for (int i=0; i<static_cast<int>(events.size());i++) {
+    if (i>0) {
+      msg << ",";
+    }
+    msg << events[i].toString();
+  }
+  msg << ")";
+  return msg.str();
+}
+
+
+std::string peano4::grid::toString( const std::list<GridControlEvent>& events ) {
+  std::ostringstream msg;
+  msg << "[";
+  for (auto p: events) {
+    msg << p.toString();
+  }
+  msg << "]";
+  return msg.str();
+}
+
 
 std::vector< peano4::grid::GridControlEvent > peano4::grid::merge( std::vector< GridControlEvent >   events, const double Tolerance ) {
   logTraceInWith1Argument( "merge(...)", events.size() );
@@ -78,6 +102,9 @@ std::vector< peano4::grid::GridControlEvent > peano4::grid::merge( std::vector< 
   internal::removeEraseEventsThatAreCancelledByRefineEvents( refineEvents, eraseEvents );
   logDebug( "merge(...)", "reduced to " << eraseEvents.size() << " erase event(s) by eliminating erase events that overlap with refinement");
 
+  internal::sort( refineEvents );
+  internal::sort( eraseEvents );
+
   //internal::generateEraseEventPowersetOfSquareEvents( eraseEvents );
   //logInfo( "merge(...)", "power set of erase events hosts " << eraseEvents.size() << " event(s)");
 
@@ -90,6 +117,38 @@ std::vector< peano4::grid::GridControlEvent > peano4::grid::merge( std::vector< 
   result.insert( result.begin(), eraseEvents.begin(),  eraseEvents.end() );
   logTraceOutWith1Argument( "merge(...)", result.size() );
   return result;
+}
+
+
+void peano4::grid::internal::sort( std::list< peano4::grid::GridControlEvent >& events ) {
+  if (events.size()<2) return;
+
+  bool hasChanged = true;
+  while (hasChanged) {
+    hasChanged = false;
+    std::list< peano4::grid::GridControlEvent >::iterator rightP = events.begin();
+    rightP++;
+    while (rightP!=events.end()) {
+      std::list< peano4::grid::GridControlEvent >::iterator leftP = rightP;
+      leftP--;
+
+      bool leftOneIsBigger                   = false;
+      bool allComponentsStudiedSoFarAreEqual = true;
+      for (int d=0; d<Dimensions; d++) {
+        leftOneIsBigger |= (allComponentsStudiedSoFarAreEqual and tarch::la::greater(leftP->getOffset(d), rightP->getOffset(d)));
+        allComponentsStudiedSoFarAreEqual &= tarch::la::equals(leftP->getOffset(d), rightP->getOffset(d));
+      }
+      if (leftOneIsBigger) {
+        logDebug( "sort(...)", "swap left=" << leftP->toString() << " with right=" << rightP->toString() );
+        peano4::grid::GridControlEvent tmp = *rightP;
+        *rightP = *leftP;
+        *leftP  = tmp;
+        hasChanged = true;
+      }
+
+      rightP++;
+    }
+  }
 }
 
 
@@ -364,7 +423,7 @@ void peano4::grid::reduceGridControlEvents( std::vector<GridControlEvent>& event
 
     if (sizes[i]>0) {
       MPI_Bcast(
-        events.data() + offset, sizes[i], GridControlEvent::getDatatype(), i, tarch::mpi::Rank::getInstance().getCommunicator()
+        events.data() + offset, sizes[i], GridControlEvent::getGlobalCommunciationDatatype(), i, tarch::mpi::Rank::getInstance().getCommunicator()
       );
       offset += sizes[i];
     }

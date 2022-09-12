@@ -100,7 +100,7 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::EnclaveTask
       const ::peano4::datamanagement::CellMarker& marker, 
       double                                      timeStamp,
       double                                      timeStepSize,
-      const double* __restrict__                  QIn,
+      double* __restrict__                        QIn,
       double* __restrict__                        QOut
     );
     

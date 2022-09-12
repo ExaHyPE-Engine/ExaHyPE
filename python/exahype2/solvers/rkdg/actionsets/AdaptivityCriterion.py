@@ -175,7 +175,13 @@ class AdaptivityCriterion(AbstractRungeKuttaDGActionSet):
     return result
 
   
-  def set_event_lifetime(self,value):
+  @property
+  def event_lifetime(self):
+    return self._event_lifetime
+
+
+  @event_lifetime.setter
+  def event_lifetime(self,value):
     """
     
      By default, a refinement/coarsening event is only alive for one grid sweep. 
@@ -185,7 +191,8 @@ class AdaptivityCriterion(AbstractRungeKuttaDGActionSet):
      invoke this setter.
      
     """
-    self._event_lifetime = value
+    self._event_lifetime = value * self._solver._rk_order
+
 
   def get_attributes(self):
     return """

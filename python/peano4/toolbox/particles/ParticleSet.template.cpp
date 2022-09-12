@@ -42,36 +42,58 @@ tarch::la::Vector<Dimensions,double> {{NAMESPACE | join("::")}}::{{CLASSNAME}}::
 #endif
 
 
-void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::merge(const {{CLASSNAME}}& neighbour, const peano4::datamanagement::VertexMarker& marker) {
-  for (auto p: neighbour) {
-    if (
-      p->getParallelState()==DoFType::ParallelState::Local
-    ) {
-      logDebug( "merge(...)", "assume incoming particle " << p->toString() << " is local on other rank and will be virtual here" );
-      p->setParallelState( DoFType::ParallelState::Virtual );
-      this->push_back(p);
-    }
-    else if (
-      p->getParallelState()==DoFType::ParallelState::Virtual
-    ) {
-      logDebug(
-        "merge(...)",
-        "incoming particle " << p->toString() << " is virtual on neighbour, yet was not deleted there. " <<
-        "Assume it had just switched from local to virtual there, as it had moved. " <<
-        "We should have got the virtual copy in the step before which we have switched to local here already if it fits into our domain. " <<
-        "Hence, ignore this incoming copy."
-      );
-    }
-    else {
-      assertion1(false,p->toString());
-    }
-  }
+void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::merge(::peano4::grid::TraversalObserver::SendReceiveContext context, const {{CLASSNAME}}& neighbour, const peano4::datamanagement::VertexMarker& marker) {
+  switch (context) {
+    case ::peano4::grid::TraversalObserver::SendReceiveContext::BoundaryExchange:
+      {
+        for (auto p: neighbour) {
+          if (
+            p->getParallelState()==DoFType::ParallelState::Local
+          ) {
+            logDebug( "merge(...)", "assume incoming particle " << p->toString() << " is local on other rank and will be virtual here" );
+            p->setParallelState( DoFType::ParallelState::Virtual );
+            this->push_back(p);
+          }
+          else if (
+            p->getParallelState()==DoFType::ParallelState::Virtual
+          ) {
+            logDebug(
+              "merge(...)",
+              "incoming particle " << p->toString() << " is virtual on neighbour, yet was not deleted there. " <<
+              "Assume it had just switched from local to virtual there, as it had moved. " <<
+              "We should have got the virtual copy in the step before which we have switched to local here already if it fits into our domain. " <<
+              "Hence, ignore this incoming copy."
+            );
+          }
+          else {
+            assertion1(false,p->toString());
+          }
+        }
 
-  eliminateSpatialDuplicates( true, 1.0 + 1e-6 );
+        eliminateSpatialDuplicates( true, 1.0 + 1e-6 );
 
-  logDebug( "merge(...)", "merged incoming set of " << neighbour.size() << " particle(s) into local set of vertex " << marker.x() << " which now hosts " << this->size() << " particle(s):" );
-  for (auto& p: *this) {
-    logDebug( "merge(...)", " - " << p->toString() );
+        logDebug( "merge(...)", "merged incoming set of " << neighbour.size() << " particle(s) into local set of vertex " << marker.x() << " which now hosts " << this->size() << " particle(s):" );
+        for (auto& p: *this) {
+          logDebug( "merge(...)", " - " << p->toString() );
+        }
+      }
+      break;
+
+    case ::peano4::grid::TraversalObserver::SendReceiveContext::MultiscaleExchange:
+      assertionMsg( false, "not implemented yet" );
+      break;
+
+    case ::peano4::grid::TraversalObserver::SendReceiveContext::ForkDomain:
+      *this = neighbour;
+      break;
+
+    case ::peano4::grid::TraversalObserver::SendReceiveContext::JoinDomain:
+      assertionMsg( false, "not implemented yet, but should be plain copy" );
+      break;
+
+    case ::peano4::grid::TraversalObserver::SendReceiveContext::PeriodicBoundaryDataSwap:
+      assertionMsg( false, "should never be called" );
+      break;
   }
 }
 

@@ -6,6 +6,7 @@
 
 #include <thread>
 #include <set>
+#include <string>
 
 #include "tarch/logging/Log.h"
 
@@ -21,6 +22,17 @@ namespace tarch {
      * to access the same number of cores exclusively.
      */
     int getNumberOfUnmaskedThreads();
+
+    /**
+     * Creates a string representation of those threads which are available
+     * to the processes. You get a string similar to
+     *
+     *       0000xxxx0000xxxx00000000000000
+     *
+     * The example above means that cores 4-7 and 12-15 are available to the
+     * process, the other cores are not.
+     */
+    std::string printUnmaskedThreads();
   }
 }
 
