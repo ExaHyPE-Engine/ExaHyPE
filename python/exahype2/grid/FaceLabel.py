@@ -126,6 +126,7 @@ def create_face_label(solver_name):
   result._peano4_aspect.merge_implementation = """
   switch (context) {
     case ::peano4::grid::TraversalObserver::SendReceiveContext::BoundaryExchange:
+    case ::peano4::grid::TraversalObserver::SendReceiveContext::PeriodicBoundaryDataSwap:
       {
         _Boundary = _Boundary or neighbour._Boundary;
   
@@ -137,9 +138,6 @@ def create_face_label(solver_name):
         _NewTimeStamp( neighbourEntry )     = neighbour._NewTimeStamp( neighbourEntry );
         _OldTimeStamp( neighbourEntry )     = neighbour._OldTimeStamp( neighbourEntry );
       }
-      break;
-    case ::peano4::grid::TraversalObserver::SendReceiveContext::ForkDomain:
-      *this = neighbour;
       break;
     default:
       assertionMsg( false, "not implemented yet" );
