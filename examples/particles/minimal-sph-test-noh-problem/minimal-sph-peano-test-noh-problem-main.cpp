@@ -30,9 +30,6 @@
 #include "observers/CreateGrid.h"
 #include "observers/Init.h"
 #include "observers/Plot.h"
-//#include "observers/DensityNonSym.h"
-//#include "observers/HydroPrepareForce.h"
-//#include "observers/NewtonRaphsonSmoothingLength.h"
 #include "observers/ComputeDensityAndUpdateSmoothingLength.h"
 #include "observers/ForceNonSym.h"
 #include "observers/Drift.h"
@@ -42,7 +39,6 @@
 #include "observers/KickCorrector.h"
 #include "observers/KickCorrectorExtra.h"
 #include "observers/HydroKickExtra.h"
-#include "observers/RearrangeAtStart.h"
 #include "observers/ResetHasConverged.h"
 #include "observers/InitTimeStep.h"
 #include "observers/ImposeBC.h"
@@ -139,10 +135,6 @@ int main(int argc, char** argv) {
     examples::particles::vertexdata::ParticleSet::finishedTraversal();
     logInfo( "main()", "dumped initial condition" )
 
-
-//    /* Initial step (e.g., re-arrange the particles into a particular configuration) */
-//    examples::particles::observers::RearrangeAtStart rearrangeObserver;
-//    peano4::parallel::SpacetreeSet::getInstance().traverse(rearrangeObserver);
 
     /* Main loop */
     for (int i=0; i<500; i++) {

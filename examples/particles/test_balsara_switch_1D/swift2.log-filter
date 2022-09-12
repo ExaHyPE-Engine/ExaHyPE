@@ -10,7 +10,6 @@ debug  examples                            -1     black always-on
 debug  examples                            -1     white init-grid
 debug  examples                            -1     white plot-solution
 debug  examples                            -1     white time-step
-debug  examples::exahype2::euler::Euler    -1     white always-on
 debug  exahype2                            -1     black always-on
 debug  toolbox                             -1     white always-on
 

@@ -84,7 +84,7 @@ if (
   and 
   fineGridCell{{SOLVER_NAME}}CellLabel.getHasUpdated() 
 ) {
-  for (auto& p: localParticles) {
+  for (auto* p: localParticles) {
     if ( 
       p->getMoveState()==globaldata::{{PARTICLE}}::MoveState::NotMovedYet
     ) {
@@ -156,7 +156,7 @@ if (
 """
 
     touch_vertex_first_time_compute_kernel = """
-  for (auto& p: localParticles) {
+  for (auto* p: localParticles) {
     p->setMoveState(globaldata::{{PARTICLE}}::MoveState::NotMovedYet);
   }
 """

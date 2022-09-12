@@ -42,11 +42,9 @@
 #include "observers/KickCorrector.h"
 #include "observers/KickCorrectorExtra.h"
 #include "observers/HydroKickExtra.h"
-#include "observers/RearrangeAtStart.h"
 #include "observers/ResetHasConverged.h"
 #include "observers/InitTimeStep.h"
 #include "observers/ImposeBC.h"
-#include "observers/TimeStep.h"
 #include "observers/EndTimeStep.h"
 
 tarch::logging::Log _log("::");
@@ -137,10 +135,6 @@ int main(int argc, char** argv) {
     peano4::parallel::SpacetreeSet::getInstance().traverse(plotObserver);
     logInfo( "main()", "dumped initial condition" )
         
-//    /* Initial step (e.g., re-arrange the particles into a particular configuration) */
-//    examples::particles::observers::RearrangeAtStart rearrangeObserver;
-//    peano4::parallel::SpacetreeSet::getInstance().traverse(rearrangeObserver);
-
     /* Main loop */
     for (int i=0; i<500; i++) {
       for (int j=0; j<10; j++) { /* Numbers of time-steps between two output snapshots */
@@ -168,8 +162,7 @@ int main(int argc, char** argv) {
         examples::particles::observers::HydroKickExtra kickExtra;
         examples::particles::observers::PredictHydro predictHydroPart;
         examples::particles::observers::ImposeBC ImposeBCpart;
-        examples::particles::observers::TimeStep timeStep;
-//        examples::particles::observers::EndTimeStep endTimeStep;
+        examples::particles::observers::EndTimeStep endTimeStep;
 
         /* "Initialize time-step" */
         peano4::parallel::SpacetreeSet::getInstance().traverse(initTimeStep);
@@ -221,10 +214,6 @@ int main(int argc, char** argv) {
         peano4::parallel::SpacetreeSet::getInstance().traverse(kick2part);
         examples::particles::vertexdata::ParticleSet::finishedTraversal();
 
-        /* "Timestep" */
-        peano4::parallel::SpacetreeSet::getInstance().traverse(timeStep);
-        examples::particles::vertexdata::ParticleSet::finishedTraversal();
-
         /* "Kick1" */
         peano4::parallel::SpacetreeSet::getInstance().traverse(kick1part);
         examples::particles::vertexdata::ParticleSet::finishedTraversal();
@@ -236,9 +225,9 @@ int main(int argc, char** argv) {
         peano4::parallel::SpacetreeSet::getInstance().traverse(ImposeBCpart);
         examples::particles::vertexdata::ParticleSet::finishedTraversal();
 
-//        /* "End time-step" */
-//        peano4::parallel::SpacetreeSet::getInstance().traverse(endTimeStep);
-//        examples::particles::vertexdata::ParticleSet::finishedTraversal();
+        /* "End time-step" */
+        peano4::parallel::SpacetreeSet::getInstance().traverse(endTimeStep);
+        examples::particles::vertexdata::ParticleSet::finishedTraversal();
 
       }
 

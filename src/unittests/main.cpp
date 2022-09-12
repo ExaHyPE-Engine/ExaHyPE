@@ -18,7 +18,14 @@ tarch::logging::Log _log("examples::unittests");
 
 #include "peano4/UnitTests.h"
 #include "tarch/UnitTests.h"
+
+#ifdef UseExaHyPE
 #include "exahype2/UnitTests.h"
+#endif
+
+#ifdef UseSWIFT
+#include "swift2/UnitTests.h"
+#endif
 
 
 void runTests() {
@@ -37,6 +44,13 @@ void runTests() {
   
   #ifdef UseExaHyPE
   tests = exahype2::getUnitTests();
+  tests->run();
+  unitTestsErrors += tests->getNumberOfErrors();
+  delete tests;
+  #endif
+
+  #ifdef UseSWIFT
+  tests = swift2::getUnitTests();
   tests->run();
   unitTestsErrors += tests->getNumberOfErrors();
   delete tests;
