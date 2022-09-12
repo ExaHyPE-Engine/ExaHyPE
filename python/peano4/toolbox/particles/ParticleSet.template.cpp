@@ -45,6 +45,7 @@ tarch::la::Vector<Dimensions,double> {{NAMESPACE | join("::")}}::{{CLASSNAME}}::
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::merge(::peano4::grid::TraversalObserver::SendReceiveContext context, const {{CLASSNAME}}& neighbour, const peano4::datamanagement::VertexMarker& marker) {
   switch (context) {
     case ::peano4::grid::TraversalObserver::SendReceiveContext::BoundaryExchange:
+    case ::peano4::grid::TraversalObserver::SendReceiveContext::PeriodicBoundaryDataSwap:
       {
         for (auto p: neighbour) {
           if (
@@ -91,9 +92,6 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::merge(::peano4::grid::TraversalO
       assertionMsg( false, "not implemented yet, but should be plain copy" );
       break;
 
-    case ::peano4::grid::TraversalObserver::SendReceiveContext::PeriodicBoundaryDataSwap:
-      assertionMsg( false, "should never be called" );
-      break;
   }
 }
 
