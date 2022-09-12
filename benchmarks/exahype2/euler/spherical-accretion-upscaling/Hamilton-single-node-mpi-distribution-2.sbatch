@@ -4,7 +4,7 @@
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=2
 #SBATCH --cpus-per-task=64
-#SBATCH --time=04:00:00
+#SBATCH --time=00:30:00
 #SBATCH --mail-type=END
 #SBATCH --mail-user=tobias.weinzierl@durham.ac.uk
 #SBATCH --qos=shortwide
@@ -21,6 +21,7 @@ module load intelmpi
 export OMP_PROC_BIND=close
 #$SLURM_JOB_NUM_NODES
 
+numactl --show
 
 for type in reg-0
 do

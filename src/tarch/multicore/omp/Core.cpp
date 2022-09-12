@@ -93,6 +93,7 @@ void tarch::multicore::Core::configure( int numberOfThreads, const std::set<int>
 
   if (_numberOfThreads>getNumberOfUnmaskedThreads()) {
     logWarning( "configure(int)", "number of configured threads (" << _numberOfThreads << ") is bigger than available unmasked threads (" << getNumberOfUnmaskedThreads() << ")" );
+    logWarning( "configure(int)", "unmasked threads: " << printUnmaskedThreads() );
   }
 
   internal::configureInternalTaskQueues(_numberOfThreads);

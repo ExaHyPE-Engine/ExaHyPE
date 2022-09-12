@@ -48,9 +48,11 @@ class tarch::logging::Statistics {
      */
     #ifdef TrackStatistics
     void log( const std::string& identifier, double value, bool disableSampling = false );
+    void log( const std::string& identifier, const std::string& value );
     void inc( const std::string& identifier, double value = 1.0, bool disableSampling = false );
     #else
     void log( const std::string& identifier, double value, bool disableSampling = false ) {}
+    void log( const std::string& identifier, const std::string& value ) {}
     void inc( const std::string& identifier, double value = 1.0, bool disableSampling = false ) {}
     #endif
 
@@ -98,7 +100,13 @@ class tarch::logging::Statistics {
       void createNewSnapshot(double t);
     };
 
-    std::map< std::string, DataSet >  _map;
+    struct LogMessage {
+      std::vector< std::tuple<double,std::string> >   _data;
+      LogMessage() = default;
+    };
+
+    std::map< std::string, DataSet >     _dataSetMap;
+    std::map< std::string, LogMessage >  _logMessageMap;
 
     Statistics();
 

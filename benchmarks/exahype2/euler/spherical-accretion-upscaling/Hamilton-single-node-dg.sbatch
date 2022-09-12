@@ -3,11 +3,11 @@
 #SBATCH -p multi
 #SBATCH --nodes=1
 #SBATCH -c 128
-#SBATCH --time=08:30:00
+#SBATCH --time=24:00:00
 #SBATCH --mail-type=END
 #SBATCH --mail-user=tobias.weinzierl@durham.ac.uk
 #SBATCH --array 1,2,3,4,6,8,10,12,14,16,20,24,28,32,36,40,44,48,52,56,64,72,80,88,96,104,112,120,128
-#SBATCH --qos=shortwide
+##SBATCH --qos=shortwide
 
 source /etc/profile.d/modules.sh
 
