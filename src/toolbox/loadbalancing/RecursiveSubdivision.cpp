@@ -457,6 +457,7 @@ toolbox::loadbalancing::RecursiveSubdivision::StrategyStep toolbox::loadbalancin
   // =================================
   // A posteriori intra-rank balancing
   // =================================
+  // Need at least two local trees to be able to compare max and min
   if (
     peano4::parallel::SpacetreeSet::getInstance().getLocalSpacetrees().size()>1
     and
@@ -509,19 +510,26 @@ bool toolbox::loadbalancing::RecursiveSubdivision::isLocalBalancingBad() const {
 
   for (auto p: peano4::parallel::SpacetreeSet::getInstance().getLocalSpacetrees() ) {
     maxCells = std::max( maxCells, peano4::parallel::SpacetreeSet::getInstance().getGridStatistics(p).getNumberOfLocalUnrefinedCells() );
-    if ( 
-      peano4::parallel::SpacetreeSet::getInstance().getGridStatistics(p).getNumberOfLocalUnrefinedCells()
-      >
-      peano4::parallel::SpacetreeSet::getInstance().getGridStatistics(p).getNumberOfRemoteUnrefinedCells() 
-      +
-      peano4::parallel::SpacetreeSet::getInstance().getGridStatistics(p).getNumberOfRemoteRefinedCells()
-    ) {
-      minCells = std::min( minCells, peano4::parallel::SpacetreeSet::getInstance().getGridStatistics(p).getNumberOfLocalUnrefinedCells() );
-    }
+    minCells = std::min( minCells, peano4::parallel::SpacetreeSet::getInstance().getGridStatistics(p).getNumberOfLocalUnrefinedCells() );
   }
 
-  bool result = minCells < maxCells
-            and ( 1.0*minCells/maxCells ) < _configuration->getWorstCaseBalancingRatio(Configuration::Phase::APosterioriBalancingPerRank);
+  bool result = false;
+
+  if (maxCells>0 and minCells>0) {
+    double relativeWeightSmalltestTree = static_cast<double>(minCells) / static_cast<double>(maxCells);
+    double balanceThreshold            = _configuration->getWorstCaseBalancingRatio(Configuration::Phase::APosterioriBalancingPerRank);
+
+    result = relativeWeightSmalltestTree < balanceThreshold;
+
+    logDebug(
+      "isLocalBalancingBad()",
+      "local trees are ill-balanced=" << result <<
+      ", rel-weight=" << relativeWeightSmalltestTree <<
+      ", threshold=" << balanceThreshold <<
+      ", #min-cells=" << minCells <<
+      ", #max-cells=" << maxCells
+    );
+  }
 
   return result;
 }
@@ -610,13 +618,16 @@ void toolbox::loadbalancing::RecursiveSubdivision::finishStep() {
   auto step = getStrategyStep();
 
   #if PeanoDebug>0
+  logInfo( "finishStep()", "load balancing is in state " << toString(step) << " with internal state" << toString() );
   #else
-  if ( step!=StrategyStep::Wait ) 
+  if ( step!=StrategyStep::Wait ) {
+    logInfo( "finishStep()", "load balancing is in state " << toString(step) << " with internal state" << toString() );
+  }
   #endif
-  //logInfo( "finishStep()", toString( step ) << " in state " << toString() );
 
   switch ( step ) {
     case StrategyStep::Wait:
+      logInfo( "finishStep()", "load balancing is in state " << toString(step) );
       break;
     case StrategyStep::SpreadEquallyOverAllRanks:
       {
