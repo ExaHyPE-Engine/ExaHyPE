@@ -372,13 +372,13 @@ void applications::exahype2::ccz4::source(double* S, const double* const Q,
     for (int i = 0; i < 3; i++) S[20+i] = dtbb[i];
     for (int i = 0; i < 3; i++) S[23+i] = dtA[i];
     S[26] = dtB[0][0];
-    S[27] = dtB[1][0];
-    S[28] = dtB[2][0];
-    S[29] = dtB[0][1];
+    S[27] = dtB[0][1];
+    S[28] = dtB[0][2];
+    S[29] = dtB[1][0];
     S[30] = dtB[1][1];
-    S[31] = dtB[2][1];
-    S[32] = dtB[0][2];
-    S[33] = dtB[1][2];
+    S[31] = dtB[1][2];
+    S[32] = dtB[2][0];
+    S[33] = dtB[2][1];
     S[34] = dtB[2][2];
     S[35] = dtD[0][0][0];
     S[36] = dtD[0][0][1];
@@ -838,13 +838,13 @@ void applications::exahype2::ccz4::ncp(double* BgradQ, const double* const Q, co
     for (int i = 0; i < 3; i++) BgradQ[20+i] = -dtbb[i];
     for (int i = 0; i < 3; i++) BgradQ[23+i] = -dtA[i];
     BgradQ[26] = -dtB[0][0]; // note: thes are all 0 for default CCZ4sk=0
-    BgradQ[27] = -dtB[1][0];
-    BgradQ[28] = -dtB[2][0];
-    BgradQ[29] = -dtB[0][1];
+    BgradQ[27] = -dtB[0][1];
+    BgradQ[28] = -dtB[0][2];
+    BgradQ[29] = -dtB[1][0];
     BgradQ[30] = -dtB[1][1];
-    BgradQ[31] = -dtB[2][1];
-    BgradQ[32] = -dtB[0][2];
-    BgradQ[33] = -dtB[1][2];
+    BgradQ[31] = -dtB[1][2];
+    BgradQ[32] = -dtB[2][0];
+    BgradQ[33] = -dtB[2][1];
     BgradQ[34] = -dtB[2][2];
 
     BgradQ[35] = -dtD[0][0][0];
