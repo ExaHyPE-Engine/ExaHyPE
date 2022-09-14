@@ -76,7 +76,7 @@ if "fd4-rk" in args.solver:
 if "rk" in args.solver and "dg" in args.solver:
   space_order = int(args.solver[2])
   time_order  = int(args.solver[6])
-  my_solver = exahype2.solvers.rkdg.rusanov.GlobalAdaptiveTimeStep(name             = "CCZ4DG"  + str(space_order) + "RK" + str(time_order),
+  my_solver = exahype2.solvers.rkdg.rusanov.GlobalAdaptiveTimeStepWithEnclaveTasking(name             = "CCZ4DG"  + str(space_order) + "RK" + str(time_order),
                                                                rk_order             = time_order,
                                                                polynomials          = exahype2.solvers.GaussLegendreBasis(space_order),
                                                                unknowns             = sum(unknowns.values()),
@@ -157,7 +157,7 @@ if ("rk" in args.solver and "dg" in args.solver):
 
     dQdxSerialised[i+normal*NumberOfUnknowns] = dQdx[i];
   }
-  ::applications::exahype2::ccz4::ncp(BgradQ, Q, dQdxSerialised, normal, CCZ4LapseType, CCZ4ds, CCZ4c, CCZ4e, CCZ4f, CCZ4bs, CCZ4sk, CCZ4xi, CCZ4mu);
+  ::applications::exahype2::ccz4::ncp(BgradQ, Q, dQdxSerialised, normal%Dimensions, CCZ4LapseType, CCZ4ds, CCZ4c, CCZ4e, CCZ4f, CCZ4bs, CCZ4sk, CCZ4xi, CCZ4mu);
 """,
           flux                 = exahype2.solvers.fv.PDETerms.None_Implementation,
           source_term          = """
@@ -166,7 +166,7 @@ if ("rk" in args.solver and "dg" in args.solver):
 """,
           refinement_criterion = exahype2.solvers.fv.PDETerms.Empty_Implementation,
           eigenvalues          = """
-  return ::applications::exahype2::ccz4::maxEigenvalue(Q, normal, CCZ4e, CCZ4ds, CCZ4GLMc, CCZ4GLMd );
+  return ::applications::exahype2::ccz4::maxEigenvalue(Q, normal%Dimensions, CCZ4e, CCZ4ds, CCZ4GLMc, CCZ4GLMd );
 """          ,
           initial_conditions   = """
   for (int i=0; i<NumberOfUnknowns+NumberOfAuxiliaryVariables; i++) Q[i] = 0.0; 
@@ -185,7 +185,7 @@ else:
 
     deltaQSerialised[i+normal*NumberOfUnknowns] = deltaQ[i];
   }
-  ::applications::exahype2::ccz4::ncp(BTimesDeltaQ, Q, deltaQSerialised, normal, CCZ4LapseType, CCZ4ds, CCZ4c, CCZ4e, CCZ4f, CCZ4bs, CCZ4sk, CCZ4xi, CCZ4mu);
+  ::applications::exahype2::ccz4::ncp(BTimesDeltaQ, Q, deltaQSerialised, normal%Dimensions, CCZ4LapseType, CCZ4ds, CCZ4c, CCZ4e, CCZ4f, CCZ4bs, CCZ4sk, CCZ4xi, CCZ4mu);
 """,
           flux                 = exahype2.solvers.fv.PDETerms.None_Implementation,
           source_term          = """
@@ -194,7 +194,7 @@ else:
 """,
           refinement_criterion = exahype2.solvers.fv.PDETerms.Empty_Implementation,
           eigenvalues          = """
-  return ::applications::exahype2::ccz4::maxEigenvalue(Q, normal, CCZ4e, CCZ4ds, CCZ4GLMc, CCZ4GLMd );
+  return ::applications::exahype2::ccz4::maxEigenvalue(Q, normal%Dimensions, CCZ4e, CCZ4ds, CCZ4GLMc, CCZ4GLMd );
 """          ,
           initial_conditions   = """
 for (int i=0; i<NumberOfUnknowns+NumberOfAuxiliaryVariables; i++) Q[i] = 0.0; 

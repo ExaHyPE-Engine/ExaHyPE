@@ -50,6 +50,16 @@ peano4_project.output.makefile.add_library(
 %     the actual application. It seems that some linkers consider the unit tests to be dead code,
 %     as the actual test routines indeed are never called (by the library). See the documentation in 
 %     \texttt{tarch/tests/TestCase.h} for some details. 
+  \item My installation or paraview complains about \textbf{ModuleNotFoundError:
+    No module named 'numpy'}.
+    For most parts of \Peano, you need the package \texttt{numpy}, though major
+    parts of \Peano\ can operate without it. If you don't have numpy on your
+    system install it with either of the following commands:
+  \begin{bash}
+pip4 install --user numpy
+python3 -m pip install --user --update pip
+  \end{bash}
+    Similar arguments hold for \texttt{jinja2}.
   \item To be continued \dots
 \end{itemize}
 

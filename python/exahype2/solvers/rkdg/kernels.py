@@ -996,7 +996,7 @@ def create_volumetric_solver_call(polynomial_basis, solver_variant):
       {{ "true" if FLUX_IMPLEMENTATION!="<none>" else "false" }}, //useFlux
       {{ "true" if NCP_IMPLEMENTATION!="<none>" else "false" }}, //useNCP
       {{ "true" if SOURCE_TERM_IMPLEMENTATION!="<none>" else "false" }}, //useSource
-      {{ "true" if POINT_SOURCES_IMPLEMENTATION!="<none>" else "false" }} //useSource
+      {{ "true" if POINT_SOURCES_IMPLEMENTATION!="<none>" else "false" }} //usePointSource
     );
 """
   elif isinstance( polynomial_basis, exahype2.solvers.GaussLegendreBasis) and solver_variant==SolverVariant.Stateless:
@@ -1005,7 +1005,7 @@ def create_volumetric_solver_call(polynomial_basis, solver_variant):
       {{ "true" if FLUX_IMPLEMENTATION!="<none>" else "false" }},          //useFlux
       {{ "true" if NCP_IMPLEMENTATION!="<none>" else "false" }},           //useNCP
       {{ "true" if SOURCE_TERM_IMPLEMENTATION!="<none>" else "false" }},   //useSource
-      {{ "true" if POINT_SOURCES_IMPLEMENTATION!="<none>" else "false" }}  //useSource
+      {{ "true" if POINT_SOURCES_IMPLEMENTATION!="<none>" else "false" }}  //usePointSource
     );
 """
   elif isinstance( polynomial_basis, exahype2.solvers.GaussLegendreBasis) and solver_variant==SolverVariant.Accelerator:
@@ -1015,7 +1015,7 @@ def create_volumetric_solver_call(polynomial_basis, solver_variant):
       {{ "true" if FLUX_IMPLEMENTATION!="<none>" else "false" }},          //useFlux
       {{ "true" if NCP_IMPLEMENTATION!="<none>" else "false" }},           //useNCP
       {{ "true" if SOURCE_TERM_IMPLEMENTATION!="<none>" else "false" }},   //useSource
-      {{ "true" if POINT_SOURCES_IMPLEMENTATION!="<none>" else "false" }}  //useSource
+      {{ "true" if POINT_SOURCES_IMPLEMENTATION!="<none>" else "false" }}  //usePointSource
     );
 """
   else:

@@ -30,6 +30,7 @@ def get_face_merge_implementation(patch_overlap):
   
   
   switch (context) {{
+    case ::peano4::grid::TraversalObserver::SendReceiveContext::PeriodicBoundaryDataSwap:
     case ::peano4::grid::TraversalObserver::SendReceiveContext::BoundaryExchange:
       {{
         const int faceNormal = marker.getSelectedFaceNumber() % Dimensions;
@@ -65,9 +66,6 @@ def get_face_merge_implementation(patch_overlap):
       assertionMsg( false, "not implemented yet" );
       break;
 
-    case ::peano4::grid::TraversalObserver::SendReceiveContext::PeriodicBoundaryDataSwap:
-      assertionMsg( false, "should never be called" );
-      break;
   }}
 """
 
