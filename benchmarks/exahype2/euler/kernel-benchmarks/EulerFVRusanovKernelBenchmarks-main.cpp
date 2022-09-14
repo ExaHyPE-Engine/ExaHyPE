@@ -603,7 +603,12 @@ int main(int argc, char** argv) {
 
     runBenchmarksOnHost(patches);
 
+    // Only with SYCL, we might run task assemblies on the host, too
+    #if defined(GPUOffloadingSYCL)
     for (int device=tarch::multicore::Core::HostDevice; device<tarch::multicore::Core::getInstance().getNumberOfGPUs(); device++) {
+    #else
+    for (int device=0; device<tarch::multicore::Core::getInstance().getNumberOfGPUs(); device++) {
+    #endif
       std::stringstream msg;
       msg << "benchmark-" << patches << "-" << device;
 
