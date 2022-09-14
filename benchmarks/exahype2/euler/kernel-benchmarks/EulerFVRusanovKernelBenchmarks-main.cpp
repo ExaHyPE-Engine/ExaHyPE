@@ -181,10 +181,11 @@ void runBenchmarks(int patches, int device) {
   };
 
   auto testStatelessVariant = [&]( std::function<void(
-    exahype2::CellData&     patchData,
-    bool                    evaluateFlux,
-    bool                    evaluateNonconservativeProduct,
-    bool                    evaluateSource
+    exahype2::CellData&     patchData,                      // have to stick to kernel signature
+    bool                    evaluateFlux,                   // even thought these bools are all
+    bool                    evaluateNonconservativeProduct, // hard-coded.
+    bool                    evaluateSource,
+    bool                    evaluateCFLCondition
     )> kernel,
     std::string markerName
   ) {
@@ -202,9 +203,10 @@ void runBenchmarks(int patches, int device) {
     tarch::timing::Watch watch( "::", "main()", false );
     kernel(
       patchData,
-      true ,
-      false ,
-      false 
+      true,
+      false,
+      false,
+      true
     );
     watch.stop();
 
@@ -272,13 +274,13 @@ void runBenchmarks(int patches, int device) {
   #else
   if (patches<=4) {
   #endif
-    testFusedVariant(
+    testStatelessVariant(
       ::exahype2::fv::rusanov::timeStepWithRusanov_patchwise_call_stack_static_calls<EulerFVRusanov,EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch, 1, EulerFVRusanov::NumberOfUnknowns, EulerFVRusanov::NumberOfAuxiliaryVariables,exahype2::enumerator::AoSLexicographicEnumerator>,
-      "call stack, patch-wise, AoS", true
+      "call stack, patch-wise, AoS"
     );
-    testFusedVariant(
+    testStatelessVariant(
       ::exahype2::fv::rusanov::timeStepWithRusanov_batched_call_stack_static_calls<EulerFVRusanov,EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch, 1, EulerFVRusanov::NumberOfUnknowns, EulerFVRusanov::NumberOfAuxiliaryVariables,exahype2::enumerator::AoSLexicographicEnumerator>,
-      "call stack, batched, AoS", true
+      "call stack, batched, AoS"
     );
   }
 
