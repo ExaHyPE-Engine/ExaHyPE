@@ -178,14 +178,13 @@ void runBenchmarks(int patches, int device) {
     if (errors > 0) {
       logError("main()", "max difference of outcome for all patches is " << maxDifference << " (admissible accuracy=" << Accuracy << ")" << " for " << errors << " entries");
     }
-  }
+  };
 
   auto testStatelessVariant = [&]( std::function<void(
     exahype2::CellData&     patchData,
     bool                    evaluateFlux,
     bool                    evaluateNonconservativeProduct,
-    bool                    evaluateSource,
-    bool                    evaluateMaximumEigenvalueAfterTimeStep
+    bool                    evaluateSource
     )> kernel,
     std::string markerName
   ) {
@@ -205,8 +204,7 @@ void runBenchmarks(int patches, int device) {
       patchData,
       true ,
       false ,
-      false ,
-      computeCFL
+      false 
     );
     watch.stop();
 
