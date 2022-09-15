@@ -10,6 +10,11 @@
 #include "tarch/logging/Log.h"
 
 
+#include <map>
+#include <list>
+#include <vector>
+
+
 namespace tarch {
   namespace multicore {
     namespace omp {
@@ -39,23 +44,34 @@ class tarch::multicore::omp::GPUMemoryManager {
 
     GPUMemoryManager() = default;
 
-    struct MemoryBlock {
-      /**
-       * Pointer to some device data. The pointer is not to be used on the
-       * host.
-       */
-      void*    data;
+    /**
+     * Map of pages (memory blocks) per size.
+     */
+    typedef std::map< int, std::vector<void*> >  FreePages;
 
-      /**
-       * Size in bytes.
-       */
-      int      size;
+    /**
+     * Counterpart of FreePages, i.e. map of memory blocks (addresses) onto
+     * sizes.
+     */
+    typedef std::map< void*, int >               UsedPages;
 
-      int      device;
+    struct DeviceMemory {
+      FreePages   freePages;
+      UsedPages   usedPages;
     };
+
+    /**
+     * Map from device number onto memory
+     */
+    std::map<int, DeviceMemory>  _deviceMemory;
+
   public:
     GPUMemoryManager( const GPUMemoryManager& copy ) = delete;
-    virtual ~GPUMemoryManager() = default;
+
+    /**
+     * Invoke clear().
+     */
+    virtual ~GPUMemoryManager();
 
     static GPUMemoryManager& getInstance();
 
@@ -66,13 +82,58 @@ class tarch::multicore::omp::GPUMemoryManager {
      *   host.
      */
     template< typename T >
-    T* allocate( int size ) {
-      return reinterpret_cast<T*>( allocateRawData(size * static_cast<int>(sizeof(T))) );
+    T* allocate( int size, int device ) {
+      return reinterpret_cast<T*>( allocateRawData(size * static_cast<int>(sizeof(T)), device ) );
     }
 
-    void*   allocateRawData( int size );
+    /**
+     * Return a pointer to new device data of size size bytes on device.
+     *
+     * This operation is thread-safe. If tries to recycle data that has been
+     * allocated before. If this is not successful, it acquires new data on
+     * device and then hands out this new data.
+     *
+     * Before we return the address of the new data, we memorise it as booked
+     * data and store the size corresponding to this device. This is important:
+     * When we return the data through free(), we have to look up what the
+     * underlying size is and bucket sort the pointer for reusage
+     * appropriately.
+     *
+     * The routine could, in theory, hand out a pointer to a memory block which
+     * points to a chunk of memory that is bigger than size. In the context of
+     * Peano this would however be stupid: Most Peano codes work with rather
+     * regular chunks of data and if we use big chunks to host smaller data
+     * footprint, we actually run risk to fragment the device memory.
+     *
+     * To make the allocation efficient, i.e. to avoid too many allocations,
+     * we do not acquire one more entry per request, but we immediately
+     * acquire several entries. The number of entries that we grab in one
+     * rush is given by growth. Many codes acquire data that depends on the
+     * Dimensions. Therefore, I use this magic default here.
+     *
+     * @param growth Number greater than zero which tells code how many entries
+     *   (pages) to book whenever it runs out of memory.
+     */
+    void*   allocateRawData( int size, int device, int growth=Dimensions*4 );
 
-    void free(void* devicePointer);
+    /**
+     * Free does not actually free data, but instead hands the memory block
+     * back to the singleton, such that the next allocateRawData() call can
+     * reuse the memory region.
+     *
+     */
+    void free(void* devicePointer, int device);
+
+    /**
+     * Idempotent function
+     *
+     * Run over _deviceMemory, i.e. handle device by device. If a device still
+     * has used pages, the user code has not properly freed data. We issue an
+     * error.
+     *
+     * This operation is thread-safe.
+     */
+    void clear();
 };
 
 

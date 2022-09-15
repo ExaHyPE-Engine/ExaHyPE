@@ -27,38 +27,25 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanov_batched_managed_static_call
   TempDataEnumerator ncpHostEnumerator       (hostPatchData.numberOfCells, numberOfVolumesPerAxisInPatch+1, solversHaloSize, unknowns, 0);
   TempDataEnumerator eigenvalueHostEnumerator(hostPatchData.numberOfCells, numberOfVolumesPerAxisInPatch,   solversHaloSize,        1, 0);
 
-  double* tempFluxX = new double[fluxHostEnumerator.size()];
-  double* tempFluxY = new double[fluxHostEnumerator.size()];
-  double* tempFluxZ = new double[fluxHostEnumerator.size()];
-  double* tempNonconservativeProductX = new double[ncpHostEnumerator.size()];
-  double* tempNonconservativeProductY = new double[ncpHostEnumerator.size()];
-  double* tempNonconservativeProductZ = new double[ncpHostEnumerator.size()];
-  double* tempEigenvalueX = new double[eigenvalueHostEnumerator.size()];
-  double* tempEigenvalueY = new double[eigenvalueHostEnumerator.size()];
-  double* tempEigenvalueZ = new double[eigenvalueHostEnumerator.size()];
-
-  #pragma omp target enter data map(alloc:tempFluxX[0:fluxHostEnumerator.size()] ) device(targetDevice)
-  #pragma omp target enter data map(alloc:tempFluxY[0:fluxHostEnumerator.size()] ) device(targetDevice)
-  #pragma omp target enter data map(alloc:tempFluxZ[0:fluxHostEnumerator.size()] ) device(targetDevice)
-  #pragma omp target enter data map(alloc:tempNonconservativeProductX[0:ncpHostEnumerator.size()] ) device(targetDevice)
-  #pragma omp target enter data map(alloc:tempNonconservativeProductY[0:ncpHostEnumerator.size()] ) device(targetDevice)
-  #pragma omp target enter data map(alloc:tempNonconservativeProductZ[0:ncpHostEnumerator.size()] ) device(targetDevice)
-  #pragma omp target enter data map(alloc:tempEigenvalueX[0:eigenvalueHostEnumerator.size()] ) device(targetDevice)
-  #pragma omp target enter data map(alloc:tempEigenvalueY[0:eigenvalueHostEnumerator.size()] ) device(targetDevice)
-  #pragma omp target enter data map(alloc:tempEigenvalueZ[0:eigenvalueHostEnumerator.size()] ) device(targetDevice)
+  double* tempFluxX = tarch::multicore::omp::GPUMemoryManager::getInstance().allocate<double>( fluxHostEnumerator.size(), targetDevice );
+  double* tempFluxY = tarch::multicore::omp::GPUMemoryManager::getInstance().allocate<double>( fluxHostEnumerator.size(), targetDevice );
+  double* tempFluxZ = tarch::multicore::omp::GPUMemoryManager::getInstance().allocate<double>( Dimensions==3 ? fluxHostEnumerator.size() : 1, targetDevice );
+  double* tempNonconservativeProductX = tarch::multicore::omp::GPUMemoryManager::getInstance().allocate<double>( ncpHostEnumerator.size(), targetDevice );
+  double* tempNonconservativeProductY = tarch::multicore::omp::GPUMemoryManager::getInstance().allocate<double>( ncpHostEnumerator.size(), targetDevice );
+  double* tempNonconservativeProductZ = tarch::multicore::omp::GPUMemoryManager::getInstance().allocate<double>( Dimensions==3 ? ncpHostEnumerator.size() : 1, targetDevice );
+  double* tempEigenvalueX = tarch::multicore::omp::GPUMemoryManager::getInstance().allocate<double>( eigenvalueHostEnumerator.size(), targetDevice );
+  double* tempEigenvalueY = tarch::multicore::omp::GPUMemoryManager::getInstance().allocate<double>( eigenvalueHostEnumerator.size(), targetDevice );
+  double* tempEigenvalueZ = tarch::multicore::omp::GPUMemoryManager::getInstance().allocate<double>( Dimensions==3 ? eigenvalueHostEnumerator.size() : 1, targetDevice );
 
   double**  mappedPointersToQIn  = new double*[ hostPatchData.numberOfCells ];
   double**  mappedPointersToQOut = new double*[ hostPatchData.numberOfCells ];
 
   for (int patchIndex=0; patchIndex<hostPatchData.numberOfCells; patchIndex++) {
-    const double* currentQIn  = hostPatchData.QIn[patchIndex];
-    double*       currentQOut = hostPatchData.QOut[patchIndex];
+    mappedPointersToQIn[patchIndex]  = tarch::multicore::omp::GPUMemoryManager::getInstance().allocate<double>( QInHostEnumerator.size(), targetDevice );
+    mappedPointersToQOut[patchIndex] = tarch::multicore::omp::GPUMemoryManager::getInstance().allocate<double>( QOutHostEnumerator.size(), targetDevice );
 
-    #pragma omp target enter data map(to:currentQIn[0:QInHostEnumerator.size()] ) device(targetDevice)
-    #pragma omp target enter data map(alloc:currentQOut[0:QOutHostEnumerator.size()] ) device(targetDevice)
-
-    mappedPointersToQIn[patchIndex]  = (double*) omp_get_mapped_ptr( currentQIn,  targetDevice );
-    mappedPointersToQOut[patchIndex] = (double*) omp_get_mapped_ptr( currentQOut, targetDevice );
+    auto hostId = omp_get_initial_device();
+    omp_target_memcpy(mappedPointersToQIn[patchIndex], hostPatchData.QIn[patchIndex], QInHostEnumerator.size() * sizeof(double), 0, 0, targetDevice, hostId);
   }
 
   const int numberOfCells            = hostPatchData.numberOfCells;
@@ -68,14 +55,20 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanov_batched_managed_static_call
   double*   dt                       = hostPatchData.dt;
   double*   maxEigenvalue            = hostPatchData.maxEigenvalue;
 
-  #pragma omp target enter data map(to:rawPointerToCellCentres[0:hostPatchData.numberOfCells*Dimensions]) device(targetDevice)
-  #pragma omp target enter data map(to:rawPointerToCellSizes[0:hostPatchData.numberOfCells*Dimensions]) device(targetDevice)
-  #pragma omp target enter data map(to:mappedPointersToQIn[0:hostPatchData.numberOfCells]) device(targetDevice)
-  #pragma omp target enter data map(to:mappedPointersToQOut[0:hostPatchData.numberOfCells]) device(targetDevice)
-  #pragma omp target enter data map(to:t[0:hostPatchData.numberOfCells]) device(targetDevice)
-  #pragma omp target enter data map(to:dt[0:hostPatchData.numberOfCells]) device(targetDevice)
-  #pragma omp target enter data map(alloc:maxEigenvalue[0:hostPatchData.numberOfCells]) device(targetDevice)
-
+  // @todo Mario, also the other fields should go away. There's functions in the manager to get the data
+/*
+  #pragma omp target teams distribute device(targetDevice) \
+    map(to:rawPointerToCellCentres[0:hostPatchData.numberOfCells*Dimensions]) \
+    map(to:rawPointerToCellSizes[0:hostPatchData.numberOfCells*Dimensions]) \
+    map(to:mappedPointersToQIn[0:hostPatchData.numberOfCells]) \
+    map(to:mappedPointersToQOut[0:hostPatchData.numberOfCells]) \
+    map(to:t[0:hostPatchData.numberOfCells]) \
+    map(to:dt[0:hostPatchData.numberOfCells]) \
+    map(from:maxEigenvalue[0:hostPatchData.numberOfCells]) \
+    is_device_ptr(tempFluxX, tempFluxY, tempFluxZ, \
+                  tempNonconservativeProductX, tempNonconservativeProductY, tempNonconservativeProductZ, \
+                  tempEigenvalueX, tempEigenvalueY, tempEigenvalueZ)
+*/
   if (Dimensions==2 and evaluateSource) {
     #pragma omp target teams distribute parallel for simd collapse(3) device(targetDevice)
     for (int patchIndex=0; patchIndex<numberOfCells; patchIndex++)
@@ -1054,44 +1047,26 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanov_batched_managed_static_call
     }
   }
 
-  #pragma omp target exit data map(delete:rawPointerToCellCentres[0:hostPatchData.numberOfCells*Dimensions]) device(targetDevice)
-  #pragma omp target exit data map(delete:rawPointerToCellSizes[0:hostPatchData.numberOfCells*Dimensions]) device(targetDevice)
-  #pragma omp target exit data map(delete:mappedPointersToQIn[0:hostPatchData.numberOfCells]) device(targetDevice)
-  #pragma omp target exit data map(delete:mappedPointersToQOut[0:hostPatchData.numberOfCells]) device(targetDevice)
-  #pragma omp target exit data map(delete:t[0:hostPatchData.numberOfCells]) device(targetDevice)
-  #pragma omp target exit data map(delete:dt[0:hostPatchData.numberOfCells]) device(targetDevice)
-  #pragma omp target exit data map(from:maxEigenvalue[0:hostPatchData.numberOfCells]) device(targetDevice)
-
-  #pragma omp target exit data map(delete:tempFluxX[0:fluxHostEnumerator.size()] ) device(targetDevice)
-  #pragma omp target exit data map(delete:tempFluxY[0:fluxHostEnumerator.size()] ) device(targetDevice)
-  #pragma omp target exit data map(delete:tempFluxZ[0:fluxHostEnumerator.size()] ) device(targetDevice)
-  #pragma omp target exit data map(delete:tempNonconservativeProductX[0:ncpHostEnumerator.size()] ) device(targetDevice)
-  #pragma omp target exit data map(delete:tempNonconservativeProductY[0:ncpHostEnumerator.size()] ) device(targetDevice)
-  #pragma omp target exit data map(delete:tempNonconservativeProductZ[0:ncpHostEnumerator.size()] ) device(targetDevice)
-  #pragma omp target exit data map(delete:tempEigenvalueX[0:eigenvalueHostEnumerator.size()] ) device(targetDevice)
-  #pragma omp target exit data map(delete:tempEigenvalueY[0:eigenvalueHostEnumerator.size()] ) device(targetDevice)
-  #pragma omp target exit data map(delete:tempEigenvalueZ[0:eigenvalueHostEnumerator.size()] ) device(targetDevice)
-
   for (int patchIndex=0; patchIndex<hostPatchData.numberOfCells; patchIndex++) {
-    [[maybe_unused]] const double* currentQIn  = hostPatchData.QIn[patchIndex];
-    [[maybe_unused]] double*       currentQOut = hostPatchData.QOut[patchIndex];
-    #pragma omp target exit data map(delete:currentQIn[0:QInHostEnumerator.size()] ) device(targetDevice)
-    #pragma omp target exit data map(from:currentQOut[0:QOutHostEnumerator.size()] ) device(targetDevice)
+    auto hostId = omp_get_initial_device();
+    omp_target_memcpy(hostPatchData.QOut[patchIndex], mappedPointersToQOut[patchIndex], QOutHostEnumerator.size() * sizeof(double), 0, 0, hostId, targetDevice);
+
+    tarch::multicore::omp::GPUMemoryManager::getInstance().free( mappedPointersToQIn[patchIndex], targetDevice );
+    tarch::multicore::omp::GPUMemoryManager::getInstance().free( mappedPointersToQOut[patchIndex], targetDevice );
   }
 
   delete[] mappedPointersToQIn;
   delete[] mappedPointersToQOut;
 
-  if (tempFluxX!=nullptr) delete[] tempFluxX;
-  if (tempFluxY!=nullptr) delete[] tempFluxY;
-  if (tempFluxZ!=nullptr) delete[] tempFluxZ;
-  if (tempNonconservativeProductX!=nullptr) delete[] tempNonconservativeProductX;
-  if (tempNonconservativeProductY!=nullptr) delete[] tempNonconservativeProductY;
-  if (tempNonconservativeProductZ!=nullptr) delete[] tempNonconservativeProductZ;
-  if (tempEigenvalueX!=nullptr) delete[] tempEigenvalueX;
-  if (tempEigenvalueY!=nullptr) delete[] tempEigenvalueY;
-  if (tempEigenvalueZ!=nullptr) delete[] tempEigenvalueZ;
-
+  tarch::multicore::omp::GPUMemoryManager::getInstance().free( tempFluxX, targetDevice );
+  tarch::multicore::omp::GPUMemoryManager::getInstance().free( tempFluxY, targetDevice );
+  tarch::multicore::omp::GPUMemoryManager::getInstance().free( tempFluxZ, targetDevice );
+  tarch::multicore::omp::GPUMemoryManager::getInstance().free( tempNonconservativeProductX, targetDevice );
+  tarch::multicore::omp::GPUMemoryManager::getInstance().free( tempNonconservativeProductY, targetDevice );
+  tarch::multicore::omp::GPUMemoryManager::getInstance().free( tempNonconservativeProductZ, targetDevice );
+  tarch::multicore::omp::GPUMemoryManager::getInstance().free( tempEigenvalueX, targetDevice );
+  tarch::multicore::omp::GPUMemoryManager::getInstance().free( tempEigenvalueY, targetDevice );
+  tarch::multicore::omp::GPUMemoryManager::getInstance().free( tempEigenvalueZ, targetDevice );
   #else
   assertionMsg(false, "this routine should only be used in combination with OpenMP offloading, as it has a device parameter" );
   #endif
