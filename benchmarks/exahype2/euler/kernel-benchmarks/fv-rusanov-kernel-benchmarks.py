@@ -1,6 +1,6 @@
 import os, sys
 import argparse
-import numpy
+
 
 import peano4
 import exahype2
