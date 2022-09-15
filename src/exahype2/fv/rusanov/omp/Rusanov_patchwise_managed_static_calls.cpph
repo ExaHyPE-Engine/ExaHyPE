@@ -10,7 +10,7 @@ template <
   int      auxiliaryVariables,
   typename TempDataEnumerator
 >
-void exahype2::fv::rusanov::omp::timeStepWithRusanov_patchwise_heap_static_calls(
+void exahype2::fv::rusanov::omp::timeStepWithRusanov_patchwise_managed_static_calls(
   int                     targetDevice,
   ::exahype2::CellData&   hostPatchData,
   bool                    evaluateFlux,
