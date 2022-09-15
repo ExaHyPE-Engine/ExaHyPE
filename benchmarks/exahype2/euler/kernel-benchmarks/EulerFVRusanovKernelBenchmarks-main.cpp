@@ -409,15 +409,15 @@ void runBenchmarksOnDevice(int patches, int device) {
       );
 
       testStatelessVariantOnDevice(
-        ::exahype2::fv::rusanov::omp::timeStepWithRusanov_patchwise_user_managed_static_calls<EulerFVRusanov,EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch, 1, EulerFVRusanov::NumberOfUnknowns, EulerFVRusanov::NumberOfAuxiliaryVariables,exahype2::enumerator::AoSLexicographicEnumerator>,
+        ::exahype2::fv::rusanov::omp::timeStepWithRusanov_patchwise_managed_static_calls<EulerFVRusanov,EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch, 1, EulerFVRusanov::NumberOfUnknowns, EulerFVRusanov::NumberOfAuxiliaryVariables,exahype2::enumerator::AoSLexicographicEnumerator>,
         "omp, patch-wise, AoS, user-managed-memory", thread
       );
       testStatelessVariantOnDevice(
-        ::exahype2::fv::rusanov::omp::timeStepWithRusanov_patchwise_user_managed_static_calls<EulerFVRusanov,EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch, 1, EulerFVRusanov::NumberOfUnknowns, EulerFVRusanov::NumberOfAuxiliaryVariables,exahype2::enumerator::AoSoALexicographicEnumerator>,
+        ::exahype2::fv::rusanov::omp::timeStepWithRusanov_patchwise_managed_static_calls<EulerFVRusanov,EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch, 1, EulerFVRusanov::NumberOfUnknowns, EulerFVRusanov::NumberOfAuxiliaryVariables,exahype2::enumerator::AoSoALexicographicEnumerator>,
         "omp, patch-wise, AoSoA, user-managed-memory", thread
       );
       testStatelessVariantOnDevice(
-        ::exahype2::fv::rusanov::omp::timeStepWithRusanov_patchwise_user_managed_static_calls<EulerFVRusanov,EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch, 1, EulerFVRusanov::NumberOfUnknowns, EulerFVRusanov::NumberOfAuxiliaryVariables,exahype2::enumerator::SoALexicographicEnumerator>,
+        ::exahype2::fv::rusanov::omp::timeStepWithRusanov_patchwise_managed_static_calls<EulerFVRusanov,EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch, 1, EulerFVRusanov::NumberOfUnknowns, EulerFVRusanov::NumberOfAuxiliaryVariables,exahype2::enumerator::SoALexicographicEnumerator>,
         "omp, patch-wise, SoA, user-managed-memory", thread
       );
 
@@ -435,15 +435,15 @@ void runBenchmarksOnDevice(int patches, int device) {
       );
 
       testStatelessVariantOnDevice(
-        ::exahype2::fv::rusanov::omp::timeStepWithRusanov_batched_user_managed_static_calls<EulerFVRusanov,EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch, 1, EulerFVRusanov::NumberOfUnknowns, EulerFVRusanov::NumberOfAuxiliaryVariables,exahype2::enumerator::AoSLexicographicEnumerator>,
+        ::exahype2::fv::rusanov::omp::timeStepWithRusanov_batched_managed_static_calls<EulerFVRusanov,EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch, 1, EulerFVRusanov::NumberOfUnknowns, EulerFVRusanov::NumberOfAuxiliaryVariables,exahype2::enumerator::AoSLexicographicEnumerator>,
         "omp, batched, AoS, map, user-managed-memory", thread
       );
       testStatelessVariantOnDevice(
-        ::exahype2::fv::rusanov::omp::timeStepWithRusanov_batched_user_managed_static_calls<EulerFVRusanov,EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch, 1, EulerFVRusanov::NumberOfUnknowns, EulerFVRusanov::NumberOfAuxiliaryVariables,exahype2::enumerator::AoSoALexicographicEnumerator>,
+        ::exahype2::fv::rusanov::omp::timeStepWithRusanov_batched_managed_static_calls<EulerFVRusanov,EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch, 1, EulerFVRusanov::NumberOfUnknowns, EulerFVRusanov::NumberOfAuxiliaryVariables,exahype2::enumerator::AoSoALexicographicEnumerator>,
         "omp, batched, AoSoA, map, user-managed-memory", thread
       );
       testStatelessVariantOnDevice(
-        ::exahype2::fv::rusanov::omp::timeStepWithRusanov_batched_user_managed_static_calls<EulerFVRusanov,EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch, 1, EulerFVRusanov::NumberOfUnknowns, EulerFVRusanov::NumberOfAuxiliaryVariables,exahype2::enumerator::SoALexicographicEnumerator>,
+        ::exahype2::fv::rusanov::omp::timeStepWithRusanov_batched_managed_static_calls<EulerFVRusanov,EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch, 1, EulerFVRusanov::NumberOfUnknowns, EulerFVRusanov::NumberOfAuxiliaryVariables,exahype2::enumerator::SoALexicographicEnumerator>,
         "omp, batched, SoA, map, user-managed-memory", thread
       );
     }
