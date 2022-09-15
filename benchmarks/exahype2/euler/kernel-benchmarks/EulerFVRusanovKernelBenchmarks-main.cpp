@@ -408,6 +408,7 @@ void runBenchmarksOnDevice(int patches, int device) {
         "omp, patch-wise, SoA, map", thread
       );
 
+      /*
       testStatelessVariantOnDevice(
         ::exahype2::fv::rusanov::omp::timeStepWithRusanov_patchwise_managed_static_calls<EulerFVRusanov,EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch, 1, EulerFVRusanov::NumberOfUnknowns, EulerFVRusanov::NumberOfAuxiliaryVariables,exahype2::enumerator::AoSLexicographicEnumerator>,
         "omp, patch-wise, AoS, user-managed-memory", thread
@@ -420,6 +421,7 @@ void runBenchmarksOnDevice(int patches, int device) {
         ::exahype2::fv::rusanov::omp::timeStepWithRusanov_patchwise_managed_static_calls<EulerFVRusanov,EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch, 1, EulerFVRusanov::NumberOfUnknowns, EulerFVRusanov::NumberOfAuxiliaryVariables,exahype2::enumerator::SoALexicographicEnumerator>,
         "omp, patch-wise, SoA, user-managed-memory", thread
       );
+      */
 
       testStatelessVariantOnDevice(
         ::exahype2::fv::rusanov::omp::timeStepWithRusanov_batched_map_static_calls<EulerFVRusanov,EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch, 1, EulerFVRusanov::NumberOfUnknowns, EulerFVRusanov::NumberOfAuxiliaryVariables,exahype2::enumerator::AoSLexicographicEnumerator>,
@@ -434,6 +436,7 @@ void runBenchmarksOnDevice(int patches, int device) {
         "omp, batched, SoA, map", thread
       );
 
+      /*
       testStatelessVariantOnDevice(
         ::exahype2::fv::rusanov::omp::timeStepWithRusanov_batched_managed_static_calls<EulerFVRusanov,EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch, 1, EulerFVRusanov::NumberOfUnknowns, EulerFVRusanov::NumberOfAuxiliaryVariables,exahype2::enumerator::AoSLexicographicEnumerator>,
         "omp, batched, AoS, map, user-managed-memory", thread
@@ -446,6 +449,7 @@ void runBenchmarksOnDevice(int patches, int device) {
         ::exahype2::fv::rusanov::omp::timeStepWithRusanov_batched_managed_static_calls<EulerFVRusanov,EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch, 1, EulerFVRusanov::NumberOfUnknowns, EulerFVRusanov::NumberOfAuxiliaryVariables,exahype2::enumerator::SoALexicographicEnumerator>,
         "omp, batched, SoA, map, user-managed-memory", thread
       );
+      */
     }
   #elif SharedTBB and GPUOffloadingSYCL
     ::tbb::task_group taskGroup;
