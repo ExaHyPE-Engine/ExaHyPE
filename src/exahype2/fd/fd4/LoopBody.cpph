@@ -138,6 +138,10 @@ void exahype2::fd::fd4::internal::computeDifferentialSourceTerm_LoopBody(
     QDifferentialSourceTermGathered
   );
 
+  //here we try to add lopsided advection term by hand:
+  //if a variable need a advection, we add something like beta[normal]*deltaQ[normal], where deltaQ is lopsided...
+
+
   if (pick==PickAllEntriesFromOutputVector) {
     // scatter
     for (int unknown=0; unknown<QDiffSrcEnumerator._unknowns; unknown++) {
