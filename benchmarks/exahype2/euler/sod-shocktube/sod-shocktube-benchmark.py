@@ -39,7 +39,7 @@ project.set_global_simulation_parameters(
   periodic_BC           = [False, False, False]
 )
 project.set_load_balancing( "toolbox::loadbalancing::RecursiveSubdivision", "new ::exahype2::LoadBalancingConfiguration()" )
-project.set_Peano4_installation( "../../../../../", build_mode )
+project.set_Peano4_installation( "../../../../.", build_mode )
 
 peano4_project = project.generate_Peano4_project(False)
 peano4_project.constants.export_const_with_type( "Accuracy", str(accuracy), "double" )

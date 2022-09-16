@@ -1,4 +1,4 @@
-#include "euler_sod.h"
+#include "euler_fv_sod.h"
 #include "exahype2/RefinementControl.h"
 
 

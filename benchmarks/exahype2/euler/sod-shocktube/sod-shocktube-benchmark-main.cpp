@@ -2,7 +2,7 @@
 #include <fstream>
 #include <string>
 
-#include "fv-kernel-benchmarks-main.h"
+#include "sod-shocktube-benchmark-main.h"
 #include "Constants.h"
 
 #include "tarch/logging/Log.h"
@@ -130,12 +130,11 @@ void validateOutcome( const double* Q, int patchIndex ) {
   file<<"Analytical,Exahype\n";
 
   for (int i=0; i<NumberOfOutputEntries; i++) {
-    if (not tarch::la::equals( Q[i], validOutcome[i], examples::exahype2::test::euler_fv_sod::benchmark::Accuracy) ) {
+    if (not tarch::la::equals( Q[i], validOutcome[i], benchmarks::exahype2::euler::sod_shocktube::Accuracy) ) {
       errors++;
     }
     maxDifference = std::max(maxDifference, std::abs(Q[i]-validOutcome[i]) );
-    std::cout<<Q[i]<<","<<validOutcome[i]<<"\n";
-
+    //std::cout<<Q[i]<<","<<validOutcome[i]<<"\n";
     file.close();
   }
   
