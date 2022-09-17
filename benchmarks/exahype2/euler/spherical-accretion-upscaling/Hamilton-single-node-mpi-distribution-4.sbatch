@@ -29,8 +29,7 @@ do
  do 
   executable=benchmark-$type-opt-$solver
   echo $executable
-  #mpirun
-  srun ./$executable > single-node-$executable-$SLURM_NTASKS_PER_NODE-mpi-tasks-on-node.data
+  mpirun ./$executable > single-node-$executable-$SLURM_NTASKS_PER_NODE-mpi-tasks-on-node.data
  done
 done
  
