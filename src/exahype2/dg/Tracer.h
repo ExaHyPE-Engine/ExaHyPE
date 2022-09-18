@@ -43,6 +43,19 @@ namespace exahype2 {
       const double* __restrict__                   Q,
       Particle&                                    particle
     );
+
+
+    namespace internal {
+      double projectValueOntoParticle(
+        const peano4::datamanagement::CellMarker&    marker,
+        int                                          order,
+        const double* __restrict__                   QuadratureNodes1d,
+        int                                          unknownsPerDoF,
+        const double* __restrict__                   Q,
+        const tarch::la::Vector<Dimensions,double>&  particleX,
+        int                                          unknown
+      );
+    }
   }
 }
 
