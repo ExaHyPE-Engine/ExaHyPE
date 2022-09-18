@@ -118,6 +118,10 @@ class UpdateParticleGridAssociation(ActionSet):
    lifts are basically the last thing you do. This is particular imporant if
    your user code alters particle positions in touchVertexLastTime().
    
+   Your main code has to call finishedTraversal() on the tracer set after each
+   sweep on each rank. This important to roll those particles over that have 
+   been sieved or have been lifted.
+   
       
    ## Parameters
    
@@ -362,7 +366,12 @@ class UpdateParticleGridAssociation(ActionSet):
         // the flag to local manually. 
         //
         {% if WARN_IF_PARTICLES_TUNNEL %}
-        logWarning( "touchVertexLastTime(...)" ,"particle " << (*p)->toString() << " from " << marker.toString() << " has tunnelled" );
+        logWarning( 
+          "touchVertexLastTime(...)" ,
+          "particle " << (*p)->toString() << " from " << marker.toString() << " associated to vertex at " <<
+          marker.x() << " has tunnelled. Max distance=" <<
+          maxDistance << " while h_min=" << tarch::la::min( marker.h() ) << ". Lift particle" 
+        );
         {% endif %}
         (*p)->setNewParallelState( globaldata::{{PARTICLE}}::NewParallelState::Local );
       }
