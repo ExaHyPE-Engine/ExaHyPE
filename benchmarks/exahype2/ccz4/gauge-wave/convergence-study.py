@@ -289,7 +289,7 @@ if args.tracer:
       project.add_action_set_to_timestepping(exahype2.tracer.FiniteVolumesTracing(tracer_particles,
                                                                                   my_solver,
                                                                                   time_stepping_kernel="toolbox::particles::staticPosition",
-                                                                                  project_on_tracer_properties_kernel="::exahype2::fv::projectAllValuesOntoParticle_piecewiseConstant"))
+                                                                                  project_on_tracer_properties_kernel="::exahype2::fv::projectAllValuesOntoParticle_piecewiseLinear"))
     
     if "rk" in args.solver and "dg" in args.solver:
       project.add_action_set_to_timestepping(exahype2.tracer.DiscontinuousGalerkinTracing(tracer_particles,
@@ -355,5 +355,4 @@ Start the application and postprocess the outcome via
 python3 Peano/python/peano4/toolbox/particles/postprocessing/convert.py -d 3 -v 13 -t seismogram Tracer-fv-0.3-rank-0-snapshot-0.csv
 
 with appropriate pathes and filenames set.
-
 """)
