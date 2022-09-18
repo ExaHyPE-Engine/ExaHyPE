@@ -27,7 +27,14 @@ class DiscontinuousGalerkinTracing(peano4.toolbox.particles.ParticleParticleInte
   """
   
   
-  def __init__(self,particle_set, solver, velocity_indices, data_indices, scaling_of_velocities, time_stepping_kernel="toolbox::particles::explicitEulerWithoutInterpolation", observer_kernel=" "):
+  def __init__(self,
+               particle_set, 
+               solver, 
+               velocity_indices, 
+               data_indices, 
+               scaling_of_velocities, 
+               time_stepping_kernel="toolbox::particles::explicitEulerWithoutInterpolation", 
+               observer_kernel=" "):
     """
 
     Very simple particle seed which inserts particles into every unrefined
