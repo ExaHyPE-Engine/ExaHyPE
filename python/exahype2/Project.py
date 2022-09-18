@@ -51,6 +51,7 @@ class Project(object):
     self._plot_filters  = []
     self._output_path   = "./"
     self._plotter_precision = 5
+    self._tracer_particles = []
 
     self.create_grid                         = peano4.solversteps.Step( "CreateGrid", False )
     self.init_grid                           = peano4.solversteps.Step( "InitGrid",   False )
@@ -278,11 +279,18 @@ thus appreciate any citation of the original release paper
     
     
   def __generate_solver_repository(self):
+    """
+    
+    I have to call finishedTraversal() for each tracer set. As tracers
+    are a subclass of DoF, they have a name property.
+    
+    """
     solverRepositoryDictionary = {
       "SOLVERS" : [],
       "LOAD_BALANCER" : self._load_balancer_name,
       "LOAD_BALANCER_ARGUMENTS" : self._load_balancer_arguments,
-      "PLOT_FILTER": self._plot_filters
+      "PLOT_FILTER": self._plot_filters,
+      "TRACERS": [x.name for x in self._tracer_particles]
     }
 
     for solver in self._solvers:
@@ -426,6 +434,8 @@ thus appreciate any citation of the original release paper
       self.plot_solution.add_action_set( particle_plotter ) 
       
     self.plot_solution.add_action_set(peano4.toolbox.particles.UpdateParticleGridAssociation(particles),False)
+    
+    self._tracer_particles.append(particles)
 
     return particles
 
