@@ -349,3 +349,11 @@ peano4_project.output.makefile.add_header_search_path( "../../../../applications
 peano4_project.generate( throw_away_data_after_generation=False )
 peano4_project.build( make_clean_first = True, number_of_parallel_builds=args.j )
 
+print( """
+Start the application and postprocess the outcome via
+
+python3 Peano/python/peano4/toolbox/particles/postprocessing/convert.py -d 3 -v 13 -t seismogram Tracer-fv-0.3-rank-0-snapshot-0.csv
+
+with appropriate pathes and filenames set.
+
+""")
