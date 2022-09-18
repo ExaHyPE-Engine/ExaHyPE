@@ -294,10 +294,8 @@ if args.tracer:
     if "rk" in args.solver and "dg" in args.solver:
       project.add_action_set_to_timestepping(exahype2.tracer.DiscontinuousGalerkinTracing(tracer_particles,
                                                                                           my_solver,
-                                                                                          [],        # velocity indices: don't move them [17,18,19]
-                                                                                          range(59), # data indices
-                                                                                          0,         # scaling of velocities
-                                                                                          time_stepping_kernel="toolbox::particles::StaticPosition"))
+                                                                                          time_stepping_kernel="toolbox::particles::staticPosition",
+                                                                                          project_on_tracer_properties_kernel="::exahype2::dg::projectAllValuesOntoParticle"))
     
     
     project.add_action_set_to_timestepping(exahype2.tracer.DumpTrajectoryIntoDatabase(
@@ -348,11 +346,3 @@ peano4_project.output.makefile.add_header_search_path( "../../../../applications
 
 peano4_project.generate( throw_away_data_after_generation=False )
 peano4_project.build( make_clean_first = True, number_of_parallel_builds=args.j )
-
-print( """
-Start the application and postprocess the outcome via
-
-python3 Peano/python/peano4/toolbox/particles/postprocessing/convert.py -d 3 -v 13 -t seismogram Tracer-fv-0.3-rank-0-snapshot-0.csv
-
-with appropriate pathes and filenames set.
-""")
