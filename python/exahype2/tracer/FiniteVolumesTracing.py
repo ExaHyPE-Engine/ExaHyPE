@@ -19,9 +19,13 @@ class FiniteVolumesTracing(peano4.toolbox.particles.ParticleParticleInteraction)
   ## Update plug-in points
   
   We only update cells which are marked with getHasUpdated(). For enclave solvers,
-  we assume that this flag is only set after a cell has updated. For Runge-Kutta
-  type solvers, I assume that this flag is set by the computation of the final 
-  linear combination of estimates.
+  we assume that this flag is only set after a cell has updated.
+  
+  The class supports different ways how the data is projected onto tracer 
+  attributes (both which data entries and how they are interpolated), as 
+  well as various time integratiors. The only important detail here is 
+  that the integration happens patch-wisely, i.e. you cannot access any 
+  neighbouring patches or intermediate data from the time stepping calculations.
   
   """
   
@@ -33,9 +37,11 @@ class FiniteVolumesTracing(peano4.toolbox.particles.ParticleParticleInteraction)
                project_on_tracer_properties_kernel):
     """
 
-    Very simple particle seed which inserts particles into every unrefined
-    cell. Logically, the particles align along a Cartesian mesh with mesh 
-    size h even though I insert at least one particle per cell.
+    Set up projection
+    
+    Setting up the projection first and foremost means that we have to couple
+    the tracer particle set with the solver, and then we have to specify which 
+    projection kernels and which time integrator we want to use.
     
     
     ## Popular projection kernels in ExaHyPE
