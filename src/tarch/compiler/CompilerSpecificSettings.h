@@ -3,7 +3,6 @@
 #ifndef _TARCH_COMPILER_COMPILER_SPECIFIC_SETTINGS
 #define _TARCH_COMPILER_COMPILER_SPECIFIC_SETTINGS
 
-
   #if defined(__INTEL_COMPILER) && defined(__WIN32__)
     #include "tarch/compiler/WindowsIntelLegacy.h"
   #elif defined(__GNUC__) && defined(__WIN32__)
@@ -20,10 +19,12 @@
   /**
    * The icpx compiler defined __GNUC__ as well, so it has to come last
    */
+  #elif defined(__clang__) && defined(__linux)
+    #include "tarch/compiler/LinuxClang.h"
   #elif defined(__GNUC__) && defined(__linux)
     #include "tarch/compiler/LinuxGCC.h"
   #elif defined(__clang__) && defined(__APPLE__)
-    #include "tarch/compiler/MacOSGCC.h"
+    #include "tarch/compiler/MacOSClang.h"
   #elif defined(__GNUC__) && defined(__APPLE__)
     #include "tarch/compiler/MacOSGCC.h"
   #elif defined(__APPLE__)

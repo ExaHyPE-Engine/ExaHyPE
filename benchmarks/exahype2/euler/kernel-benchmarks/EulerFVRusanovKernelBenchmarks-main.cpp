@@ -265,6 +265,8 @@ void runBenchmarksOnHost(int patches) {
   for (int thread=0; thread<tarch::multicore::Core::getInstance().getNumberOfThreads(); thread++) {
     tarch::multicore::getSYCLQueue(tarch::multicore::Core::HostDevice).submit([&](auto &h) {
       h.host_task([=]() {
+  #else
+    int thread = 0;
   #endif
 
         testCPUVariant(thread);
