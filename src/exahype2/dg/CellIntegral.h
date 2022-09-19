@@ -107,6 +107,31 @@ namespace exahype2 {
      * again from the same space as @f$ \phi @f$.
      *
      *
+     * ## Signs in front of the individual terms
+     *
+     * We rely on the formulation as discussed on the page Discontinuous
+     * Galerkin. See dg.h or the doxygen html pages for details. One important
+     * fact to keep in mind is that this routine computes $\partial _t Q$.
+     * However, all PDE terms besides the source arise on the left-hand side of
+     * the PDE, i.e. on the same side as the time derivative. We therefore have
+     * to bring these terms to the right which gives us an additional minus
+     * sign.
+     *
+     * Here's the rationale behind the volumetric terms:
+     *
+     * - The source term is already on the right-hand side in our PDE
+     *   formulation. Therefore, we can simply add it.
+     * - The flux is on the left-hand side of the PDE formulation where we find
+     *   a term @f$ div F(Q) @f$. We bring the derivative
+     *   over to the test function and then bring the whole term to the
+     *   right-hand side Both steps yield a minus sign, which means that the
+     *   minus signs cancel out.
+     * - The ncp enters the volumetric term as it is. No partial derivative is
+     *   exploited. It hence enters the solution with its original sign.
+     *   However, we have to bring it to the right-hand side for the time
+     *   derivatives. Therefore, we need a minus sign here.
+     *
+     *
      * ## Arguments
      *
      * @param cellData The routine computes the DG cell contributions over

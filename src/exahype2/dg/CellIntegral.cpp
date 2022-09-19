@@ -93,7 +93,7 @@ void exahype2::dg::cellIntegral_patchwise_in_situ_GaussLegendre_functors(
           }
 
           for(int var=0; var<unknowns; var++){
-            cellQout[enumeratorOut(currentCell, dof, var)] -= coeff * fluxValues[var];
+            cellQout[enumeratorOut(currentCell, dof, var)] += coeff * fluxValues[var];
           } //var
         } // dim/i combination
       }//if useFlux
