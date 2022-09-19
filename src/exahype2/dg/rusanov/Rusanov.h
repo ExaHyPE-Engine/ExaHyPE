@@ -33,8 +33,9 @@ namespace exahype2 {
        * Solve Riemann problem on face
        *
        * This routine solves the Riemann problem on one face through a Rusanov
-       * solver. It is the simplest version of a Riemann solver that you can
-       * think of:
+       * solver. It takes the average of the flux left and right, reduces it by
+       * the jump subject to a scaling with the maximum eigenvalue, and finally
+       * adds/substracts the ncp terms.
        *
        * The implementation is purely point-wise, i.e. we run over the quadrature
        * points and use Rusanov per point. It is not clear if this is reasonable

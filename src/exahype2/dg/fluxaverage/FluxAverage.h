@@ -1,7 +1,7 @@
 // This file is part of the ExaHyPE2 project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
-#ifndef _EXAHYPE2_DG_RUSANOV_RUSANOV_H_
-#define _EXAHYPE2_DG_RUSANOV_RUSANOV_H_
+#ifndef _EXAHYPE2_DG_RUSANOV_AVERAGING_H_
+#define _EXAHYPE2_DG_RUSANOV_AVERAGING_H_
 
 
 #include <vector>
@@ -28,13 +28,14 @@
 
 namespace exahype2 {
   namespace dg {
-    namespace rusanov {
+    namespace fluxaverage {
       /**
        * Solve Riemann problem on face
        *
-       * This routine solves the Riemann problem on one face through a Rusanov
-       * solver. It is the simplest version of a Riemann solver that you can
-       * think of:
+       * This routine solves the Riemann problem on one face through simple
+       * averaging of the left and the right flux. Compared to solution
+       * averaging (cmp average subdirectory), this is twice as expensive.
+       *
        *
        * The implementation is purely point-wise, i.e. we run over the quadrature
        * points and use Rusanov per point. It is not clear if this is reasonable
@@ -60,39 +61,13 @@ namespace exahype2 {
        *
        * ## Sign discussion
        *
-       * We rely on the formulation as discussed on the page Discontinuous Galerkin.
-       * See dg.h or the doxygen html pages for details. I also recommend to read
-       * through the documentation of cellIntegral_patchwise_in_situ_GaussLegendre_functors()
-       * before we dive into the discussion. After reading the statements there,
-       * the following rationale should make sense and can be compared to the
-       * volumetric statements:
-       *
-       * - There is no source term.
-       * - We have an artificial damping parameter depending on the maximum
-       *   eigenvalue. This term enters the Rusanov equation with a minus.
-       *   However, it is multiplied with the normal and then we finally have
-       *   to bring is to the right-hand side of the equation where the source
-       *   term can be found. Different to other solvers, this routine solves
-       *   the Riemann problem for the left and right adjacent cell in one go.
-       *   The flux always is aligned with the coordinate axis.
-       *   So the solution enters the left cell with a minus from damping, and a
-       *   minus from bringing it to the right-hand side. So for the left side,
-       *   we get a plus. For the right side, we get an additional minus, as we
-       *   have an inflow in the opposite direction to the right adjacent
-       *   cell's normal.
-       * - The flux term discussion follows the discussion of the damping.
-       *   Hoewer, the flux term does not have a minus in the original
-       *   formulation. It is a simple average. Therefore the signs are exactly
-       *   swapped compared to the eigenvalues.
-       * - The ncp is nasty. Please consult the generic DG documentation and
-       *   maybe also the write-up of the Finite Volume discretisation. Anyway,
-       *   it is important to note that the ncp yields non-symmetric terms,
-       *   i.e. the flow into the left cell is minus the flow into the right
-       *   cell. However, these two terms are still subject to the
-       *   multiplication with the normal and we thus have the same ncp
-       *   contribution to both left and right result.
-       *
-       *
+       * We rely on the formulation as discussed on the page Discontinuous
+       * Galerkin. See dg.h or the doxygen html pages for details. As we bring
+       * the terms to the right-hand side, they all get an additional minus
+       * sign. At the same time, the flux left and right is multiplied with
+       * the normal. So while we use simple averaging, this average enters
+       * the left cell with -1 (outflow) and the right one with + (inflow).
+       * This results from the fact that all fluxes are axis-aligned.
        */
       void solveRiemannProblem_pointwise_in_situ(
         ::exahype2::dg::Flux                         flux,

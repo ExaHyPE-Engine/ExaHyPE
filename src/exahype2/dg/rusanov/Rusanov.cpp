@@ -62,14 +62,14 @@ void exahype2::dg::rusanov::solveRiemannProblem_pointwise_in_situ(
 
     double leftEigenvalue = maxEigenvalue(
                     projectedValues + inputEnumerator(leftDoF,0),
-                    x, //TODO: add positioning
+                    x,
                     t,
                     dt,
                     faceNumber%Dimensions );
 
     double rightEigenvalue = maxEigenvalue(
                     projectedValues + inputEnumerator(rightDoF,0),
-                    x, //TODO: add positioning
+                    x,
                     t,
                     dt,
                     faceNumber%Dimensions );
@@ -112,11 +112,8 @@ void exahype2::dg::rusanov::solveRiemannProblem_pointwise_in_situ(
           ncpValues);
 
       for(int var=0; var<unknowns; var++){
-          // ++ and -- make no difference both yield reflections after a while
-        //solution[ outputEnumerator(leftDoF,var)  ] += 0.5 * deltaQ[var] * ncpValues[var];
-        //solution[ outputEnumerator(rightDoF,var) ] += 0.5 * deltaQ[var] * ncpValues[var];
         solution[ outputEnumerator(leftDoF,var)  ] += 0.5 * deltaQ[var] * ncpValues[var];
-        solution[ outputEnumerator(rightDoF,var) ] -= 0.5 * deltaQ[var] * ncpValues[var];
+        solution[ outputEnumerator(rightDoF,var) ] += 0.5 * deltaQ[var] * ncpValues[var];
       }
     }
 

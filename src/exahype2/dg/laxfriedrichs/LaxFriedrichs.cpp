@@ -4,10 +4,9 @@
 #include "peano4/utils/Loop.h"
 
 
-void exahype2::dg::rusanov::solveRiemannProblem_pointwise_in_situ(
+void exahype2::dg::laxfriedrichs::solveRiemannProblem_pointwise_in_situ(
   ::exahype2::dg::Flux                         flux,
   ::exahype2::dg::NonConservativeProduct       nonConservativeProduct,
-  ::exahype2::dg::MaxEigenvalue                maxEigenvalue,
   const tarch::la::Vector<Dimensions,double>&  faceCentre,
   const tarch::la::Vector<Dimensions,double>&  cellSize,
   double                                       t,
@@ -22,8 +21,9 @@ void exahype2::dg::rusanov::solveRiemannProblem_pointwise_in_situ(
   const double* __restrict__                   projectedValues,
   double* __restrict__                         solution
 ) {
+  int normal = faceNumber%Dimensions;
   tarch::la::Vector<Dimensions,double> faceOffset = faceCentre - 0.5 * cellSize;
-  faceOffset(faceNumber%Dimensions) += 0.5 * cellSize(faceNumber%Dimensions);
+  faceOffset(normal) += 0.5 * cellSize(normal);
 
   exahype2::enumerator::FaceAoSLexicographicEnumerator inputEnumerator (faceNumber,order+1,1,unknowns,auxiliaryVariables);
   exahype2::enumerator::FaceAoSLexicographicEnumerator outputEnumerator(faceNumber,order+1,1,unknowns,0);
@@ -60,25 +60,9 @@ void exahype2::dg::rusanov::solveRiemannProblem_pointwise_in_situ(
                       + 0.5 * projectedValues[ inputEnumerator(leftDoF,var) ];
     }
 
-    double leftEigenvalue = maxEigenvalue(
-                    projectedValues + inputEnumerator(leftDoF,0),
-                    x, //TODO: add positioning
-                    t,
-                    dt,
-                    faceNumber%Dimensions );
-
-    double rightEigenvalue = maxEigenvalue(
-                    projectedValues + inputEnumerator(rightDoF,0),
-                    x, //TODO: add positioning
-                    t,
-                    dt,
-                    faceNumber%Dimensions );
-
-    double maxEigenvalue = std::max(leftEigenvalue,rightEigenvalue);
-
     for(int var=0; var<unknowns; var++){
-      solution[ outputEnumerator(leftDoF,var)  ] = + 0.5 * maxEigenvalue * deltaQ[var];
-      solution[ outputEnumerator(rightDoF,var) ] = - 0.5 * maxEigenvalue * deltaQ[var];
+      solution[ outputEnumerator(leftDoF,var)  ] = + cellSize(normal)/2.0/dt * deltaQ[var];
+      solution[ outputEnumerator(rightDoF,var) ] = - cellSize(normal)/2.0/dt * deltaQ[var];
     }
 
     if(useFlux){
@@ -112,11 +96,8 @@ void exahype2::dg::rusanov::solveRiemannProblem_pointwise_in_situ(
           ncpValues);
 
       for(int var=0; var<unknowns; var++){
-          // ++ and -- make no difference both yield reflections after a while
-        //solution[ outputEnumerator(leftDoF,var)  ] += 0.5 * deltaQ[var] * ncpValues[var];
-        //solution[ outputEnumerator(rightDoF,var) ] += 0.5 * deltaQ[var] * ncpValues[var];
         solution[ outputEnumerator(leftDoF,var)  ] += 0.5 * deltaQ[var] * ncpValues[var];
-        solution[ outputEnumerator(rightDoF,var) ] -= 0.5 * deltaQ[var] * ncpValues[var];
+        solution[ outputEnumerator(rightDoF,var) ] += 0.5 * deltaQ[var] * ncpValues[var];
       }
     }
 

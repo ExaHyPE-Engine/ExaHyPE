@@ -33,6 +33,9 @@ ExaHyPE2Sources = \
   dg/CellIntegral.cpp \
   dg/Riemann.cpp \
   dg/Tracer.cpp \
+  dg/average/Average.cpp \
+  dg/fluxaverage/FluxAverage.cpp \
+  dg/laxfriedrichs/LaxFriedrichs.cpp \
   dg/rusanov/Rusanov.cpp \
   dg/tests/CellIntegralTest.cpp \
   dg/tests/DGUtilsTest.cpp \

@@ -1,10 +1,9 @@
-#include "Averaging.h"
-
 #include "exahype2/enumerator/FaceAoSLexicographicEnumerator.h"
+#include "FluxAverage.h"
 #include "peano4/utils/Loop.h"
 
 
-void exahype2::dg::rusanov::solveRiemannProblem_pointwise_in_situ(
+void exahype2::dg::fluxaverage::solveRiemannProblem_pointwise_in_situ(
   ::exahype2::dg::Flux                         flux,
   ::exahype2::dg::NonConservativeProduct       nonConservativeProduct,
   ::exahype2::dg::MaxEigenvalue                maxEigenvalue,

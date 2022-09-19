@@ -1,7 +1,7 @@
 // This file is part of the ExaHyPE2 project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
-#ifndef _EXAHYPE2_DG_RUSANOV_RUSANOV_H_
-#define _EXAHYPE2_DG_RUSANOV_RUSANOV_H_
+#ifndef _EXAHYPE2_DG_RUSANOV_LAX_FRIEDRICHS_H_
+#define _EXAHYPE2_DG_RUSANOV_LAX_FRIEDRICHS_H_
 
 
 #include <vector>
@@ -28,13 +28,20 @@
 
 namespace exahype2 {
   namespace dg {
-    namespace rusanov {
+    namespace laxfriedrichs {
       /**
        * Solve Riemann problem on face
        *
-       * This routine solves the Riemann problem on one face through a Rusanov
-       * solver. It is the simplest version of a Riemann solver that you can
-       * think of:
+       * This routine solves the Riemann problem on one face employing the
+       * Lax-Friedrichs flux:
+       *
+       * @f$ F(Q) \approx \frac{1}{2}\Big( F(Q^-) + F(Q^+) \Big) - \frac{h}{2 \Delta T} \Big( Q^+ - Q^- \Big) @f$
+       *
+       * where the h is the size of the adjacent cells.
+       *
+       * Please consult the Rusanov Riemann solver as well. Rusanov is basically
+       * a Lax-Friedrichs flux, where the damping is controlled by the maximum
+       * eigenvalue and thus adopts to the problem characteristics.
        *
        * The implementation is purely point-wise, i.e. we run over the quadrature
        * points and use Rusanov per point. It is not clear if this is reasonable
@@ -97,7 +104,6 @@ namespace exahype2 {
       void solveRiemannProblem_pointwise_in_situ(
         ::exahype2::dg::Flux                         flux,
         ::exahype2::dg::NonConservativeProduct       ncp,
-        ::exahype2::dg::MaxEigenvalue                maxEigenvalue,
         const tarch::la::Vector<Dimensions,double>&  faceCentre,
         const tarch::la::Vector<Dimensions,double>&  cellSize,
         double                                       t,
