@@ -34,6 +34,12 @@ namespace exahype2 {
     );
 
 
+    /**
+     * Take all values of the unknown field Q and project them onto the
+     * particle. In this context, we assume that the tracer's number of
+     * entries and the unknowns plus the auxiliary variables have the
+     * same total count.
+     */
     template <typename Particle>
     void projectAllValuesOntoParticle(
       const peano4::datamanagement::CellMarker&    marker,
@@ -43,19 +49,6 @@ namespace exahype2 {
       const double* __restrict__                   Q,
       Particle&                                    particle
     );
-
-
-    namespace internal {
-      double projectValueOntoParticle(
-        const peano4::datamanagement::CellMarker&    marker,
-        int                                          order,
-        const double* __restrict__                   QuadratureNodes1d,
-        int                                          unknownsPerDoF,
-        const double* __restrict__                   Q,
-        const tarch::la::Vector<Dimensions,double>&  particleX,
-        int                                          unknown
-      );
-    }
   }
 }
 

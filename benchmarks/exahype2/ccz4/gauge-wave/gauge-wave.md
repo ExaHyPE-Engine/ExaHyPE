@@ -48,9 +48,12 @@ To get rid of the output files, type in
 
 The setup as defined in the Python script writes 20 snapshots of the solution
 as Peano patch files. You can convert them into vtk for example and visualise
-them via Paraview. Besides these snapshots, the code also injects three tracers
-at the positions (-0.4251,0,0), (0,0,0) and (0.4251,0,0).
+them via Paraview. 
 
+     pvpython ../../../../python/peano4/visualisation/render.py --filter-fine-grid solution-CCZ4DG2RK2.peano-patch-file
+
+Besides these snapshots, the code also injects three tracers
+at the positions (-0.4251,0,0), (0,0,0) and (0.4251,0,0).
 As the tracers do not move, they should yield perfect oscillations (if there 
 were no numerical artifacts). As the wave travels from left to right, the 
 symmetric arrangement of the probes (tracers) does not yield symmetric or 

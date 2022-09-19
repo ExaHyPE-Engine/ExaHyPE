@@ -1,3 +1,6 @@
+#include "DGUtils.h"
+
+
 template <typename Particle, int SourceIndex, int DestIndex>
 void exahype2::dg::projectValueOntoParticle(
   const peano4::datamanagement::CellMarker&    marker,
@@ -8,7 +11,7 @@ void exahype2::dg::projectValueOntoParticle(
   Particle&                                    particle
 ) {
   particle.setData(DestIndex) =
-    ::exahype2::dg::internal::projectValueOntoParticle(
+    ::exahype2::dg::evaluatePolynomial(
       marker,
       order,
       QuadratureNodes1d,
@@ -30,7 +33,7 @@ void exahype2::dg::projectAllValuesOntoParticle(
   Particle&                                    particle
 ) {
   for (int unknown=0; unknown<unknownsPerDoF; unknown++) {
-    double value =       ::exahype2::dg::internal::projectValueOntoParticle(
+    double value = ::exahype2::dg::evaluatePolynomial(
         marker,
         order,
         QuadratureNodes1d,
