@@ -185,7 +185,7 @@ void runBenchmarksOnHost(int patches) {
     }
 
     if (currentThread==0) {
-      logInfo("main()", "completed measurements for baseline: "       << watch.getCalendarTime() << " / " << (watch.getCalendarTime()/patches/EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch/EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch/EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch) );
+      logInfo("main()", "baseline: "       << watch.getCalendarTime() << " / " << (watch.getCalendarTime()/patches/EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch/EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch/EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch) );
     }
     if (errors > 0) {
       logError("main()", "max difference of outcome for all patches is " << maxDifference << " (admissible accuracy=" << Accuracy << ")" << " for " << errors << " entries");
@@ -241,7 +241,7 @@ void runBenchmarksOnHost(int patches) {
     }
 
     if (currentThread==0) {
-      logInfo("main()", "completed measurements for stateless kernels on host with " << markerName << ": " << watch.getCalendarTime() << " / " << (watch.getCalendarTime()/patches/EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch/EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch/EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch) );
+      logInfo("main()", "stateless kernels on host with " << markerName << ": " << watch.getCalendarTime() << " / " << (watch.getCalendarTime()/patches/EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch/EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch/EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch) );
     }
     if (errors > 0) {
       logError("main()", "max difference of outcome for all patches is " << maxDifference << " (admissible accuracy=" << Accuracy << ")" << " for " << errors << " entries");
@@ -380,7 +380,7 @@ void runBenchmarksOnDevice(int patches, int device) {
     }
 
     if (currentThread==0) {
-      logInfo("main()", "completed measurements for stateless kernels on device " << device << " with " << markerName << ": " << watch.getCalendarTime() << " / " << (watch.getCalendarTime()/patches/EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch/EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch/EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch) );
+      logInfo("main()", "stateless kernels on device " << device << " with " << markerName << ": " << watch.getCalendarTime() << " / " << (watch.getCalendarTime()/patches/EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch/EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch/EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch) );
     }
     if (errors > 0) {
       logError("main()", "max difference of outcome for all patches is " << maxDifference << " (admissible accuracy=" << Accuracy << ")" << " for " << errors << " entries");

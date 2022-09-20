@@ -45,6 +45,9 @@ document.
   \item Clone the repository (cmp.~page
   \pageref{page::installation::git-clone}). Skip this step if you already have a
   \Peano\ checkout, i.e.~if you have completed this step once.
+  \begin{bash}
+git clone -b p4 https://gitlab.lrz.de/hpcsoftware/Peano.git
+  \end{bash}
   \item Create the build system (cmp.~page
   \pageref{page::installation::configure}). Skip this step if you already have a
   working configure, i.e.~if you have completed this step once.
@@ -56,10 +59,12 @@ libtoolize; aclocal; autoconf; autoheader; cp src/config.h.in .; automake --add-
   \begin{bash}
 ./configure --enable-exahype --enable-loadbalancing --enable-blockstructured
   \end{bash}
-   These are the mandatory extensions. You might want to add further options.
-   You will have to add additional flags on particular system. In particular the
-   flags \texttt{CXX}, \text{CXXFLAGS} and \texttt{LDFLAGS} to pick your
-   compiler, you compiler settings and your linker parameters. Chapter
+   These are the mandatory extensions (toolboxes). You might want to add further
+   options.
+   You also will have to add additional flags on
+   particular system.
+   In particular the flags \texttt{CXX}, \text{CXXFLAGS} and \texttt{LDFLAGS} to pick your
+   compiler, your compiler settings and your linker parameters. Chapter
    \ref{chapter:selected-HPC-platforms} discusses some popular choices. Skip
    this step if you have already completed it once.
   \item Recompile your \Peano\ code by typing in
@@ -67,7 +72,7 @@ libtoolize; aclocal; autoconf; autoheader; cp src/config.h.in .; automake --add-
 make
   \end{bash}
    This should give you a couple
-  of \texttt{ExaHyPE2Core} libraries in the respective subdirectories. Skip this
+  of static libraries in the respective subdirectories. Skip this
   step if you have already completed it once.
   \item Ensure that \texttt{python} subdirectory is in your Python search path
   and
@@ -216,9 +221,9 @@ peano4_project.generate( throw_away_data_after_generation=False )
 
 
 \begin{framed}
-\paragraph*{Finite Volume Euler kernel benchmark}
+\paragraph*{Kernel benchmark}
 
-\ExaHyPE's implementation of the Euler equations with Finite Volumes is shipped
+\ExaHyPE's implementation of the Euler equations is shipped
 with a benchmark to assess the speed of the compute kernels.
 The benchmark solely computes the throughput on one core or one GPU and thus
 provides key information how efficient these core kernels perform on your
@@ -233,6 +238,9 @@ To run the benchmark, follow the following steps:
   \item Clone the repository (cmp.~page
   \pageref{page::installation::git-clone}). Skip this step if you already have a
   \Peano\ checkout, i.e.~if you have completed this step once.
+  \begin{bash}
+git clone -b p4 https://gitlab.lrz.de/hpcsoftware/Peano.git
+  \end{bash}
   \item Create the build system (cmp.~page
   \pageref{page::installation::configure}). Skip this step if you already have a
   working configure, i.e.~if you have completed this step once.
@@ -244,11 +252,18 @@ libtoolize; aclocal; autoconf; autoheader; cp src/config.h.in .; automake --add-
   \begin{bash}
 ./configure --enable-exahype --enable-loadbalancing --enable-blockstructured
   \end{bash}
-   These are the extensions. 
-   If you want to benchmark the kernels on your GPU, too, you have to add add
-   \texttt{--with-gpu=xxx}.
-   The \texttt{xxx} clarifies which GPU backend to use. Type in \texttt{--help}
-   for additional information. You will furthermore have to add additional flags
+   These are the core extensions (toolboxes) required for the benchmark. 
+   If you want to test your system with OpenMP offloading, e.g., you will need
+   an additional
+   \texttt{--with-gpu=omp}.
+   Though the benchmarks in principle assess only the core performance of the
+   compute kernels, they can mimick the concurrent offloading from multiple
+   threads.
+   To enable this feature, you have to activate multithreading, too (add
+   \texttt{--with-multithreading=omp} for example).
+   Run \texttt{./configure --help} for various combinations of GPU and
+   multithreading back-ends.
+   Finally, you will have to add additional flags
    on particular system.
    In particular the flags \texttt{CXX}, \text{CXXFLAGS} and \texttt{LDFLAGS} to pick your
    compiler, you compiler settings and your linker parameters. Chapter
@@ -261,67 +276,61 @@ make
   \item Set the \texttt{PYTHONPATH} and run the benchmark script within the
   Euler example directory:
   \begin{bash}
-  cd exahype2/examples/euler
-  export PYTHONPATH=../../../python
-  python3 example-scripts/kernel-benchmarks.py
+  cd benchmarks/exahype2/euler/kernel-benchmarks
+  export PYTHONPATH=../../../../python
+  python3 fv-rusanov-kernel-benchmarks.py
   \end{bash}
-  This default builds the benchmarks for 2d with $4 \times 4$ patches. You can
-  type in \texttt{--help} for additional information.
-  \item Run the actual benchmark
+  This builds a default benchmarks for 2d with $17 \times 17$ patches. 
+  \item Run the benchmark
   \begin{bash}
-./kernel-benchmark
+./kernel-benchmark-fv-2d-patch-size-17 --threads 1 --gpus all
   \end{bash}
+  which should give you an output similar to
+  \begin{terminalOutput}
+========================================
+  Number of patches fused: 1
+ ========================================
+ baseline: 0.000141742 / 2.88504e-08
+ stateless kernels on host with heap, patch-wise, AoS: 0.000156606 / 3.18758e-08
+ stateless kernels on host with heap, patch-wise, AoSoA: 0.000114747 / 2.33558e-08
+ stateless kernels on host with heap, patch-wise, SoA: 0.000114582 / 2.33222e-08
+ stateless kernels on host with heap, patch-wise, in-situ: 3.5338e-05 / 7.19275e-09
+ stateless kernels on host with heap, batched, AoS: 0.000116653 / 2.37437e-08
+ stateless kernels on host with heap, batched, AoSoA: 0.000115959 / 2.36025e-08
+ stateless kernels on host with heap, batched, SoA: 0.000114284 / 2.32616e-08
+ stateless kernels on host with heap, batched, in-situ:  \end{terminal}
+  \end{terminalOutput}
+  \item The Python script generating and the benchmark supports different options 
+  and benchmark settings.   
+  Type in \texttt{--help} for additional information.
+  The statement above assesses the kernel performance if only one thread is used. 
+  Offloading to the GPUs from multiple threads is notoriously tricky, while running a 
+  kernel benchmark on multiple cores stresses the interconnect. I therefore always
+  recommend to start with the single core measurements. Finally, there's a
+  \texttt{kernel-benchmark.md} markup file which describes further settings and 
+  also discusses built-in postprocessing options. 
 \end{enumerate}
 
 \noindent
-The benchmark gives you the cost per Finite Volume update (throughput) for
-various patch sizes, for patches which exploit stateless operations, i.e.~Finite
-Volume updates which alter only the Finite Volume solution using PDE terms and
-global, constant values, and it also computes the throughput on GPUs including
-the offloading time.
-Here is what you can expect:
+The benchmark gives you the total runtime and cost per degree of freedom update (throughput) 
+on one core or GPU, respectively.
+Data is provided 
+for
+various patch sizes batched (fused) into one large patch assembly, for patches 
+which exploit stateless operations, and different kernel realisations.
 
-\begin{terminalOutput}
-========================================
-  Number of patches fused: 1
-========================================
-completed baseline measurements: 0.000270283 / 5.50138e-08
-completed optimisation measurements no side effects, patch-wise, heap, AoS: 0.000179448 / 3.65251e-08
-completed optimisation measurements no side effects, batched, heap, AoS: 0.000119682 / 2.43603e-08
-completed optimisation measurements no side effects, patch-wise, heap, AoSoA: 0.000119399 / 2.43027e-08
-completed optimisation measurements no side effects, batched, heap, AoSoA: 0.000117449 / 2.39058e-08
-completed optimisation measurements no side effects, patch-wise, heap, SoA: 0.000119457 / 2.43145e-08
-completed optimisation measurements no side effects, batched, heap, SoA: 0.000119485 / 2.43202e-08
-no device found
-\end{terminalOutput}
-
-\begin{enumerate}
-  \item Baseline is the throughput for a normal Finite Volume patch. This number
-  will go down for more patches (fused) due to ammortisation effects, but it
-  will not change dramatically. This is indeed the baseline throughput that you
-  can expect for \ExaHyPE.
-  \item No side effects studies variants of compute kernels which exploit
-  state-free PDE operators (see literature). Here, the compiler can aggressively
-  inline and vectorise. Depending on your architecture, you should see an
-  increase of the throughput by a factor of X where X is your vectorisation
-  width. This effect becomes visible only for a certain patch count.
-  \item For too high patch counts, the performance will deteriorate due to cache
-  effects.
-  \item We found in-situ to give the best performance on CPUs for such a
-  bandwidth-bound problem. in-situ recomputes some terms redundantly but in
-  return operates without any additional temporary variables.
-  \item There are kernel variants which store data on the heap and some which
-  store data on the call stack. The latter are typically faster yet are not
-  supported by all compilers.
-  \item The GPU data comprises all data transfer. Offloading to GPUs thus pays
-  only off for certain problem sizes aka patch counts.
-\end{enumerate}
-
-
+Baseline is what you get with \ExaHyPE's most basic configuration and its flexible
+architecture, where users can tailor each PDE term towards their needs.
+The other variants exploit hints how to tune these computations and try out various optimisations,
+algorithmic reformulations and internal data formats for temporary data.
+Please note that we assess only the Euler equations here, i.e.~we are extremely
+bandwidth-bound and induce almost no load.
+All GPU data comprise all data transfer and memory allocations on the GPU.
+They provide fair measurements and not raw compute figures.
 \end{framed}
 
 
-\section{Case study: A Finite Volumes code coupling two solvers (hyperbolic+elliptic)}
+\section{Case study: A Finite Volumes code coupling two solvers  (hyperbolic+elliptic)}
 \label{section:exahype:fv:coupling}
 
 If you want to solve systems of PDEs where some PDEs advance on different time
