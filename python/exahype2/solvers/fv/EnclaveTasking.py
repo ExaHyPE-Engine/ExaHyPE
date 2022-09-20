@@ -460,7 +460,7 @@ class EnclaveTasking( FV ):
  
     """
     super(EnclaveTasking, self).add_actions_to_perform_time_step(step)
-    step.add_action_set( self._action_set_merge_enclave_task_outcome )
+    step.add_action_set( self._action_set_merge_enclave_task_outcome, False )
  
 
   def add_implementation_files_to_project(self,namespace,output):

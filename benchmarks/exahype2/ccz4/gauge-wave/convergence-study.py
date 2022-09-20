@@ -288,19 +288,14 @@ if args.tracer:
     if args.solver=="fv" or "fd4-rk" in args.solver:
       project.add_action_set_to_timestepping(exahype2.tracer.FiniteVolumesTracing(tracer_particles,
                                                                                   my_solver,
-                                                                                  [],        # velocity indices: don't move them [17,18,19]
-                                                                                  range(59), # data indices
-                                                                                  0,         # scaling of velocities
-                                                                                  time_stepping_kernel="toolbox::particles::StaticPosition"))
+                                                                                  time_stepping_kernel="toolbox::particles::staticPosition",
+                                                                                  project_on_tracer_properties_kernel="::exahype2::fv::projectAllValuesOntoParticle_piecewiseLinear"))
     
     if "rk" in args.solver and "dg" in args.solver:
-      print( "WARNING: Haven't written the tracer yet")
-    #  project.add_action_set_to_timestepping(exahype2.tracer.DiscontinuousGalerkinTracing(tracer_particles,
-    #                                                                                      my_solver,
-    #                                                                                      [],        # velocity indices: don't move them [17,18,19]
-    #                                                                                      range(59), # data indices
-    #                                                                                      0,         # scaling of velocities
-    #                                                                                      time_stepping_kernel="toolbox::particles::StaticPosition"))
+      project.add_action_set_to_timestepping(exahype2.tracer.DiscontinuousGalerkinTracing(tracer_particles,
+                                                                                          my_solver,
+                                                                                          time_stepping_kernel="toolbox::particles::staticPosition",
+                                                                                          project_on_tracer_properties_kernel="::exahype2::dg::projectAllValuesOntoParticle"))
     
     
     project.add_action_set_to_timestepping(exahype2.tracer.DumpTrajectoryIntoDatabase(
@@ -322,7 +317,7 @@ else:
   build_mode = peano4.output.CompileMode.Release
     
 dimensions  = 3
-offset      = [-0.5, -0.5, -0,5] 
+offset      = [-0.5, -0.5, -0.5] 
 domain_size = [   1,    1,    1]
 periodic_boundary_conditions = [True,True,True]          # Periodic BC
 
@@ -351,4 +346,3 @@ peano4_project.output.makefile.add_header_search_path( "../../../../applications
 
 peano4_project.generate( throw_away_data_after_generation=False )
 peano4_project.build( make_clean_first = True, number_of_parallel_builds=args.j )
-

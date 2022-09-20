@@ -3,6 +3,10 @@
 #include "tarch/Assertions.h"
 #include "tarch/la/la.h"
 
+#include "peano4/utils/Loop.h"
+
+#include "peano4/datamanagement/CellMarker.h"
+
 
 double  exahype2::dg::getQuadratureWeight(
   const tarch::la::Vector<3,double>&  cellSize,
@@ -219,4 +223,36 @@ std::string exahype2::dg::plotFace(
 
   return result.str();
 }
+
+
+double exahype2::dg::evaluatePolynomial(
+  const peano4::datamanagement::CellMarker&    marker,
+  int                                          order,
+  const double* __restrict__                   QuadratureNodes1d,
+  int                                          unknownsPerDoF,
+  const double* __restrict__                   Q,
+  const tarch::la::Vector<Dimensions,double>&  x,
+  int                                          unknown
+) {
+  double result = 0.0;
+  dfor(currentDoF,order+1) {
+    double denominator = 1.0;
+    double enumerator  = 1.0;
+    dfor(quadraturePoint,order+1) {
+      for (int d=0; d<Dimensions; d++) {
+        if (quadraturePoint(d)!=currentDoF(d)) {
+          double normalisedQuadratePointDistance = QuadratureNodes1d[currentDoF(d)]-QuadratureNodes1d[quadraturePoint(d)];
+          double distanceToQuadraturePoint1d     = x(d)-( QuadratureNodes1d[quadraturePoint(d)]*marker.h()(d)+marker.getOffset()(d) );
+          denominator *= normalisedQuadratePointDistance * marker.h()(d);
+          enumerator  *= distanceToQuadraturePoint1d;
+        }
+      }
+    }
+    int dofLinearised = peano4::utils::dLinearised(currentDoF,order+1);
+    result += enumerator/denominator * Q[ dofLinearised * unknownsPerDoF + unknown ];
+  }
+  return result;
+}
+
+
 

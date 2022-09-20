@@ -18,8 +18,7 @@ module load gcc
 module load intelmpi
 
 
-# @todo wieder rein
-#export OMP_PROC_BIND=close
+export OMP_PROC_BIND=close
 #$SLURM_JOB_NUM_NODES
 
 numactl --show

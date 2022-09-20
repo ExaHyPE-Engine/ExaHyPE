@@ -1,0 +1,91 @@
+#include "peano4/utils/Loop.h"
+
+
+template <typename Particle, int SourceIndex, int DestIndex>
+void exahype2::fv::projectValueOntoParticle_piecewiseConstant(
+  const peano4::datamanagement::CellMarker&    marker,
+  int                                          voxelsPerAxis,
+  int                                          unknownsPerVoxel,
+  const double* __restrict__                   Q,
+  Particle&                                    particle
+) {
+  particle.setData(DestIndex) =
+    ::exahype2::fv::internal::projectValueOntoParticle_piecewiseConstant(
+      marker,
+      voxelsPerAxis,
+      unknownsPerVoxel,
+      Q,
+      particle.getX(),
+      SourceIndex
+    );
+}
+
+
+template <typename Particle>
+void exahype2::fv::projectAllValuesOntoParticle_piecewiseConstant(
+  const peano4::datamanagement::CellMarker&    marker,
+  int                                          voxelsPerAxis,
+  int                                          unknownsPerVoxel,
+  const double* __restrict__                   Q,
+  Particle&                                    particle
+) {
+  for (int unknown=0; unknown<unknownsPerVoxel; unknown++) {
+    particle.setData(
+      unknown,
+      ::exahype2::fv::internal::projectValueOntoParticle_piecewiseConstant(
+        marker,
+        voxelsPerAxis,
+        unknownsPerVoxel,
+        Q,
+        particle.getX(),
+        unknown
+      )
+    );
+  }
+}
+
+
+template <typename Particle, int SourceIndex, int DestIndex>
+void exahype2::fv::projectValueOntoParticle_piecewiseLinear(
+  const peano4::datamanagement::CellMarker&    marker,
+  int                                          voxelsPerAxis,
+  int                                          unknownsPerVoxel,
+  const double* __restrict__                   Q,
+  Particle&                                    particle
+) {
+  particle.setData(DestIndex) =
+    ::exahype2::fv::internal::projectValueOntoParticle_piecewiseLinear(
+      marker,
+      voxelsPerAxis,
+      unknownsPerVoxel,
+      Q,
+      particle.getX(),
+      SourceIndex
+    );
+}
+
+
+template <typename Particle>
+void exahype2::fv::projectAllValuesOntoParticle_piecewiseLinear(
+  const peano4::datamanagement::CellMarker&    marker,
+  int                                          voxelsPerAxis,
+  int                                          unknownsPerVoxel,
+  const double* __restrict__                   Q,
+  Particle&                                    particle
+) {
+  for (int unknown=0; unknown<unknownsPerVoxel; unknown++) {
+    double value =       ::exahype2::fv::internal::projectValueOntoParticle_piecewiseLinear(
+        marker,
+        voxelsPerAxis,
+        unknownsPerVoxel,
+        Q,
+        particle.getX(),
+        unknown
+      );
+
+    assertion(value==value);
+    particle.setData(
+      unknown, value
+    );
+  }
+}

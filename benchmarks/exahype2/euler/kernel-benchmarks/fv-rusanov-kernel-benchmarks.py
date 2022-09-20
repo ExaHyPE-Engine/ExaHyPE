@@ -1,6 +1,6 @@
 import os, sys
 import argparse
-import numpy
+
 
 import peano4
 import exahype2
@@ -82,7 +82,6 @@ peano4_project.output.makefile.add_header_search_path( "../../../../applications
 peano4_project.generate()
 benchmark_main_file = os.path.dirname(os.path.realpath(__file__)) + "/EulerFVRusanovKernelBenchmarks.cpp"
 print( "Replace generated main with benchmark main file {}".format(benchmark_main_file) )
-os.system( "cp {} EulerFVRusanovKernelBenchmarks-main.cpp".format(benchmark_main_file) )
 os.system( "make clean" )
 if args.j>0:
   os.system( "make -j{}".format(args.j) )

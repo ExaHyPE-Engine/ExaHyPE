@@ -11,11 +11,10 @@ import jinja2
 class DiscontinuousGalerkinTracing(peano4.toolbox.particles.ParticleParticleInteraction):
   """
   
-  Particle tracing for the Discontinuous Galerkin solvers. 
+  Particle tracing over the DG solver. 
 
-  The action set works for cell-centered ADER-DG, too, as we apply it solely
-  on a "finished" time step.
-  
+  Please consult the class FiniteVolumesTracing for details on the semantics
+  of this type. It is an exact analogon for DG.
   
   ## Update plug-in points
   
@@ -24,36 +23,19 @@ class DiscontinuousGalerkinTracing(peano4.toolbox.particles.ParticleParticleInte
   type solvers, I assume that this flag is set by the computation of the final 
   linear combination of estimates.
   
+  
+  
   """
   
   
-  def __init__(self,particle_set, solver, velocity_indices, data_indices, scaling_of_velocities, time_stepping_kernel="toolbox::particles::explicitEulerWithoutInterpolation", observer_kernel=" "):
+  def __init__(self,
+               particle_set, 
+               solver, 
+               time_stepping_kernel, 
+               project_on_tracer_properties_kernel):
     """
 
-    Very simple particle seed which inserts particles into every unrefined
-    cell. Logically, the particles align along a Cartesian mesh with mesh 
-    size h even though I insert at least one particle per cell.
-
-    particle_set: ParticleSet
- 
-    velocity_indices: [Int]
-     Indices within voxel field that denote velocity. So if the entries 4,6,8
-     from a field define the velocities (we start counting with 0), then you 
-     have to pass [4,6,8]. Hand in the empty set if you tracer particles shall
-     not move.
-     
-    data_indices: [Int]
-     Similar to velocity indices. Cardinality of index set has to match the 
-     tracer's data cardinality, i.e. the number of unknowns the tracer shall
-     track.
-     
-    scaling_of_velocities: Float
-     Can we set 0 if you don't want the particles to move.
-
-    time_stepping_kernel: string
-     Function call which does projection onto the particles and the actual 
-     position update. Hand in "toolbox::particles::StaticPosition" if you 
-     don't want the particles' to move.
+    @see FiniteVolumesTracing.__init()__.
      
     """
     
@@ -66,90 +48,41 @@ class DiscontinuousGalerkinTracing(peano4.toolbox.particles.ParticleParticleInte
     self.tracerDict[ "ORDER" ]                    = solver._basis.order
     self.tracerDict[ "NUMBER_OF_UNKNOWNS" ]             = solver._unknowns
     self.tracerDict[ "NUMBER_OF_AUXILIARY_VARIABLES" ]  = solver._auxiliary_variables
-    self.tracerDict[ "VELOCITY_INDICES" ]               = velocity_indices
-    self.tracerDict[ "DATA_INDICES" ]                   = data_indices
-    self.tracerDict[ "SCALE_VELOCITIES" ]               = scaling_of_velocities
     self.tracerDict[ "TIME_STEPPING_KERNEL" ]           = time_stepping_kernel
-    self.tracerDict[ "OBSERVER_KERNEL" ]           = observer_kernel   
-    
-    # There should be a check whether the list lenght and the no of 
-    # data points does match. But I don't know how to get this data
-    # easily.
-    #if len(data_indices)!=particle_set.particle_model.
-    
+    self.tracerDict[ "PROJECTION_KERNEL" ]              = project_on_tracer_properties_kernel   
+        
     cell_compute_kernel = """
-//Run over local set
 if ( 
   not marker.willBeRefined() 
   and 
   fineGridCell{{SOLVER_NAME}}CellLabel.getHasUpdated() 
+  and
+  repositories::{{SOLVER_INSTANCE}}.isLastGridSweepOfTimeStep()
 ) {
+  const double timeStepSize = fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStepSize();
   for (auto* p: localParticles) {
     if ( 
       p->getMoveState()==globaldata::{{PARTICLE}}::MoveState::NotMovedYet
     ) {
       p->getMoveState()==globaldata::{{PARTICLE}}::MoveState::Moved;
-"""      
 
-    if velocity_indices != []:
-      cell_compute_kernel += """
-      #if Dimensions==2
-      tarch::la::Vector<Dimensions,double> x = {{TIME_STEPPING_KERNEL}}(
+      {% if PROJECTION_KERNEL!=None %}
+      {{PROJECTION_KERNEL}}(
         marker,
         {{ORDER}},
-        {{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}},
-        { {{VELOCITY_INDICES[0]}},{{VELOCITY_INDICES[1]}} },
-        _timeStepSize * {{SCALE_VELOCITIES}},
+        repositories::{{SOLVER_INSTANCE}}.QuadraturePoints1d,
+        {{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}},
         fineGridCell{{SOLVER_NAME}}Q.value,
-        p->getX()
+        *p
       );
-      #else
-      tarch::la::Vector<Dimensions,double> x = {{TIME_STEPPING_KERNEL}}(
-        marker,
-        {{ORDER}},
-        {{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}},
-        { {{VELOCITY_INDICES[0]}},{{VELOCITY_INDICES[1]}},{{VELOCITY_INDICES[2]}} },
-        _timeStepSize * {{SCALE_VELOCITIES}},
-        fineGridCell{{SOLVER_NAME}}Q.value,
-        p->getX()
+      {% endif %}
+
+      {% if TIME_STEPPING_KERNEL!=None %}
+      {{TIME_STEPPING_KERNEL}}(
+        *p,
+        timeStepSize
       );
-      #endif
-      p->setX( x );
-"""
-
-      
-    if data_indices!=[]:
-      cell_compute_kernel += """
-      tarch::la::Vector<Dimensions,int> voxel = toolbox::particles::mapParticleOntoDGPolynomial(marker,{{PATCH_SIZE}},p->getX());
-      int voxelIndex = peano4::utils::dLinearised(voxel,{{PATCH_SIZE}});
-      double* Q      = fineGridCell{{SOLVER_NAME}}Q.value + voxelIndex * ({{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}});
-      tarch::la::Vector<""" + str(len(data_indices)) + """,double> data;
-"""
-      data_counter = 0
-      for i in data_indices:
-        if observer_kernel=="toolbox::particles::ObLinearInterp":
-          cell_compute_kernel += """
-        data(""" + str(data_counter) + """) = {{OBSERVER_KERNEL}}(
-          marker,
-          {{PATCH_SIZE}},
-          {{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}},
-          """ + str(i) + """,
-          fineGridCell{{SOLVER_NAME}}Q.value,
-          p->getX()
-        );        
-"""
-        else:
-          cell_compute_kernel += """
-        data(""" + str(data_counter) + """) = Q["""+ str(i) +"""];     
-"""
-        data_counter += 1
-    
-      cell_compute_kernel += """
-      p->setData(data);
-"""
-
-    
-    cell_compute_kernel += """
+      {% endif %}
     }
   }
 }
@@ -168,17 +101,11 @@ if (
     )
 
 
- 
-  __Template_BeginIteration = jinja2.Template("""
-  _timeStepSize = repositories::{{SOLVER_INSTANCE}}.getMaxTimeStepSize();
-""")
-
-
-  def get_body_of_operation(self,operation_name):
-    result = peano4.toolbox.particles.ParticleParticleInteraction.get_body_of_operation(self,operation_name)
-    if operation_name==ActionSet.OPERATION_BEGIN_TRAVERSAL:
-      result = self.__Template_BeginIteration.render(**self.tracerDict)
-    return result
+  #def get_body_of_operation(self,operation_name):
+  #  result = peano4.toolbox.particles.ParticleParticleInteraction.get_body_of_operation(self,operation_name)
+  #  if operation_name==ActionSet.OPERATION_BEGIN_TRAVERSAL:
+  #    result = self.__Template_BeginIteration.render(**self.tracerDict)
+  #  return result
 
 
   def get_action_set_name(self):
@@ -197,6 +124,7 @@ if (
 #include "globaldata/{{PARTICLE}}.h"
 #include "toolbox/particles/Tracer.h"
 #include "repositories/SolverRepository.h"
+#include "exahype2/dg/Tracer.h"
 """ )
     return peano4.toolbox.particles.ParticleParticleInteraction.get_includes(self) + "\n" + result.render(**self.tracerDict)
 

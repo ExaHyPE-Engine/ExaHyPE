@@ -62,14 +62,14 @@ void exahype2::dg::rusanov::solveRiemannProblem_pointwise_in_situ(
 
     double leftEigenvalue = maxEigenvalue(
                     projectedValues + inputEnumerator(leftDoF,0),
-                    x, //TODO: add positioning
+                    x,
                     t,
                     dt,
                     faceNumber%Dimensions );
 
     double rightEigenvalue = maxEigenvalue(
                     projectedValues + inputEnumerator(rightDoF,0),
-                    x, //TODO: add positioning
+                    x,
                     t,
                     dt,
                     faceNumber%Dimensions );
@@ -77,26 +77,26 @@ void exahype2::dg::rusanov::solveRiemannProblem_pointwise_in_situ(
     double maxEigenvalue = std::max(leftEigenvalue,rightEigenvalue);
 
     for(int var=0; var<unknowns; var++){
-      solution[ outputEnumerator(leftDoF,var)  ] = - 0.5 * maxEigenvalue * deltaQ[var];
+      solution[ outputEnumerator(leftDoF,var)  ] = + 0.5 * maxEigenvalue * deltaQ[var];
       solution[ outputEnumerator(rightDoF,var) ] = - 0.5 * maxEigenvalue * deltaQ[var];
     }
 
     if(useFlux){
       flux( projectedValues + inputEnumerator( leftDoF, 0 ),
-            x, //TODO: add positioning
+            x,
             t,
             dt,
             faceNumber%Dimensions, //normal
             fluxValuesLeft);
       flux( projectedValues + inputEnumerator (rightDoF, 0),
-            x, //TODO: add positioning
+            x,
             t,
             dt,
             faceNumber%Dimensions, //normal
             fluxValuesRight);
 
       for(int var=0; var<unknowns; var++){
-        solution[ outputEnumerator(leftDoF,var)  ] += 0.5 * (fluxValuesLeft[var]+fluxValuesRight[var]);
+        solution[ outputEnumerator(leftDoF,var)  ] -= 0.5 * (fluxValuesLeft[var]+fluxValuesRight[var]);
         solution[ outputEnumerator(rightDoF,var) ] += 0.5 * (fluxValuesLeft[var]+fluxValuesRight[var]);
       }
     }
@@ -113,7 +113,7 @@ void exahype2::dg::rusanov::solveRiemannProblem_pointwise_in_situ(
 
       for(int var=0; var<unknowns; var++){
         solution[ outputEnumerator(leftDoF,var)  ] += 0.5 * deltaQ[var] * ncpValues[var];
-        solution[ outputEnumerator(rightDoF,var) ] -= 0.5 * deltaQ[var] * ncpValues[var];
+        solution[ outputEnumerator(rightDoF,var) ] += 0.5 * deltaQ[var] * ncpValues[var];
       }
     }
 
