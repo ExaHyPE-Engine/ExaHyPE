@@ -42,8 +42,6 @@ class tarch::multicore::omp::GPUMemoryManager {
 
     tarch::multicore::BooleanSemaphore  _semaphore;
 
-    GPUMemoryManager() = default;
-
     /**
      * Map of pages (memory blocks) per size.
      */
@@ -64,6 +62,8 @@ class tarch::multicore::omp::GPUMemoryManager {
      * Map from device number onto memory
      */
     std::map<int, DeviceMemory>  _deviceMemory;
+
+    GPUMemoryManager() = default;
 
   public:
     GPUMemoryManager( const GPUMemoryManager& copy ) = delete;
@@ -114,13 +114,12 @@ class tarch::multicore::omp::GPUMemoryManager {
      * @param growth Number greater than zero which tells code how many entries
      *   (pages) to book whenever it runs out of memory.
      */
-    void*   allocateRawData( int size, int device, int growth=Dimensions*4 );
+    void* allocateRawData( int size, int device, int growth=Dimensions*4 );
 
     /**
      * Free does not actually free data, but instead hands the memory block
      * back to the singleton, such that the next allocateRawData() call can
      * reuse the memory region.
-     *
      */
     void free(void* devicePointer, int device);
 

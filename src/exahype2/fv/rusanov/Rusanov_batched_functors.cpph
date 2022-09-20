@@ -600,7 +600,7 @@ namespace exahype2{ namespace fv{ namespace rusanov{ namespace internal{
             patchData.t[patchIndex],
             patchData.dt[patchIndex],
             2, // normal
-            tempNonconservativeProductY,
+            tempNonconservativeProductZ,
             ncpEnumerator
           );
           otterLoopIterationEnd();

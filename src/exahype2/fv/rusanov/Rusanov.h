@@ -601,7 +601,6 @@ namespace exahype2 {
 
 #if defined(GPUOffloadingOMP)
 #include "exahype2/fv/rusanov/omp/Rusanov.h"
-#include "exahype2/fv/rusanov/omp/opt/Rusanov.h"
 #endif
 
 #if defined(GPUOffloadingCPP)

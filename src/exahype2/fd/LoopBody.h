@@ -3,8 +3,6 @@
 #ifndef _EXAHYPE2_FD_LOOP_BODY_H_
 #define _EXAHYPE2_FD_LOOP_BODY_H_
 
-
-
 #include "Functors.h"
 
 #include "exahype2/CellData.h"
@@ -14,7 +12,6 @@
 #include "exahype2/enumerator/AoSoALexicographicEnumerator.h"
 
 #include "tarch/multicore/multicore.h"
-
 
 namespace exahype2 {
   namespace fd {
@@ -36,7 +33,7 @@ namespace exahype2 {
 
 
       namespace internal {
-        #if defined(SharedOMP) and (!defined(__INTEL_LLVM_COMPILER) or !defined(GPUOffloadingOMP))
+        #if defined(SharedOMP) and ((!defined(__INTEL_LLVM_COMPILER) and !defined(__clang__)) or !defined(GPUOffloadingOMP))
         #pragma omp declare simd
         #endif
         #if defined(GPUOffloadingOMP)
@@ -60,7 +57,7 @@ namespace exahype2 {
         /**
          * The complicated way to write =0.
          */
-        #if defined(SharedOMP) and (!defined(__INTEL_LLVM_COMPILER) or !defined(GPUOffloadingOMP))
+        #if defined(SharedOMP) and ((!defined(__INTEL_LLVM_COMPILER) and !defined(__clang__)) or !defined(GPUOffloadingOMP))
         #pragma omp declare simd
         #endif
         #if defined(GPUOffloadingOMP)
