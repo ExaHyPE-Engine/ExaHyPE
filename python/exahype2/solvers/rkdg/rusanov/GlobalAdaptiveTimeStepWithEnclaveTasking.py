@@ -24,6 +24,7 @@ class GlobalAdaptiveTimeStepWithEnclaveTasking( SeparateSweepsWithEnclaveTasking
     name, 
     rk_order,
     polynomials,
+    number_of_face_projections,
     unknowns, auxiliary_variables, min_cell_h, max_cell_h, time_step_relaxation,
     flux=PDETerms.User_Defined_Implementation, 
     eigenvalues=PDETerms.User_Defined_Implementation, 
@@ -39,6 +40,7 @@ class GlobalAdaptiveTimeStepWithEnclaveTasking( SeparateSweepsWithEnclaveTasking
     super(GlobalAdaptiveTimeStepWithEnclaveTasking,self).__init__(name, 
                                                 rk_order, 
                                                 polynomials, 
+                                                number_of_face_projections,
                                                 unknowns, 
                                                 auxiliary_variables, 
                                                 min_cell_h, 
@@ -53,7 +55,7 @@ class GlobalAdaptiveTimeStepWithEnclaveTasking( SeparateSweepsWithEnclaveTasking
     self._volumetric_solver_call        = create_volumetric_solver_call( self._basis, SolverVariant.WithVirtualFunctions ) 
     self._fused_volumetric_kernel_call_cpu = create_volumetric_solver_call( self._basis, SolverVariant.Stateless ) 
     self._fused_volumetric_kernel_call_gpu = create_volumetric_solver_call( self._basis, SolverVariant.Accelerator ) 
-    self._Riemann_solver_call           = create_Riemann_solver_call( self._basis )
+    self._Riemann_solver_call           = create_Riemann_solver_call( self._basis, number_of_face_projections )
     self._add_solver_contributions_call = create_add_solver_contributions_call( self._basis )
     self._multiply_with_inverted_mass_matrix_call = create_multiply_with_inverted_mass_matrix_call( self._basis )
 

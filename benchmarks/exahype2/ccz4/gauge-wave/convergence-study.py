@@ -22,7 +22,6 @@ args = parser.parse_args()
 
 
 
-
 #
 # This part si only for convenience. We could use these symbols to augment
 # the output files, but I don't use this feature here.
@@ -79,10 +78,11 @@ if "rk" in args.solver and "dg" in args.solver:
   my_solver = exahype2.solvers.rkdg.rusanov.GlobalAdaptiveTimeStepWithEnclaveTasking(name             = "CCZ4DG"  + str(space_order) + "RK" + str(time_order),
                                                                rk_order             = time_order,
                                                                polynomials          = exahype2.solvers.GaussLegendreBasis(space_order),
+                                                               number_of_face_projections = 2,
                                                                unknowns             = sum(unknowns.values()),
                                                                auxiliary_variables  = 0,
-                                                               min_cell_h       = args.cell_size, 
-                                                               max_cell_h       = args.cell_size,
+                                                               min_cell_h           = args.cell_size, 
+                                                               max_cell_h           = args.cell_size,
                                                                time_step_relaxation = 0.1)
 
 #
@@ -313,8 +313,10 @@ if args.tracer:
 
 if args.asserts:
   build_mode = peano4.output.CompileMode.Asserts
+  delta_plot = args.end_time/100 
 else:
   build_mode = peano4.output.CompileMode.Release
+  delta_plot = args.end_time/20 
     
 dimensions  = 3
 offset      = [-0.5, -0.5, -0.5] 
@@ -326,7 +328,7 @@ project.set_global_simulation_parameters(
   offset,  domain_size,
   args.end_time,
   0.0, 
-  args.end_time/20,                      #args.plot_step_size,   # snapshots
+  delta_plot,
   periodic_boundary_conditions,
   8  # plotter precision
 )

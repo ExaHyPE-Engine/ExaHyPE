@@ -86,6 +86,7 @@ namespace exahype2 {
     double* const __restrict__          faceQUp
   );
 
+
   /**
    * 3d counterpart to other projectVolumetricDataOntoFaces() variant.
    */
@@ -103,6 +104,36 @@ namespace exahype2 {
     double* const __restrict__          faceQBack
   );
 
+
+  void projectVolumetricDataAndGradientOntoFaces(
+    const double* __restrict__          cellQ,
+    int                                 order,
+    int                                 unknowns,
+    int                                 auxiliaryVariables,
+    const double* const __restrict__    BasisFunctionValuesLeft,
+    double* const __restrict__          faceQLeft,
+    double* const __restrict__          faceQRight,
+    double* const __restrict__          faceQBottom,
+    double* const __restrict__          faceQUp
+  );
+
+
+  /**
+   * 3d counterpart to other projectVolumetricDataOntoFaces() variant.
+   */
+  void projectVolumetricDataAndGradientOntoFaces(
+    const double* __restrict__          cellQ,
+    int                                 order,
+    int                                 unknowns,
+    int                                 auxiliaryVariables,
+    const double* const __restrict__    BasisFunctionValuesLeft,
+    double* const __restrict__          faceQLeft,
+    double* const __restrict__          faceQRight,
+    double* const __restrict__          faceQBottom,
+    double* const __restrict__          faceQUp,
+    double* const __restrict__          faceQFront,
+    double* const __restrict__          faceQBack
+  );
 
 
   /*

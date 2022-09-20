@@ -116,6 +116,124 @@ void exahype2::dg::projectVolumetricDataOntoFaces(
 }
 
 
+
+
+void exahype2::dg::projectVolumetricDataAndGradientOntoFaces(
+  const double* __restrict__          cellQ,
+  int                                 order,
+  int                                 unknowns,
+  int                                 auxiliaryVariables,
+  const double* const __restrict__    BasisFunctionValuesLeft,
+  double* const __restrict__          faceQLeft,
+  double* const __restrict__          faceQRight,
+  double* const __restrict__          faceQBottom,
+  double* const __restrict__          faceQUp
+) {
+  exahype2::enumerator::AoSLexicographicEnumerator     cellEnumerator(1,order+1,0,unknowns,auxiliaryVariables);
+  exahype2::enumerator::FaceAoSLexicographicEnumerator leftRightFaceEnumerator(0,order+1,2,unknowns,auxiliaryVariables);
+  exahype2::enumerator::FaceAoSLexicographicEnumerator bottomTopFaceEnumerator(1,order+1,2,unknowns,auxiliaryVariables);
+
+  // project left/right
+  for (int y=0; y<order+1; y++)
+  for (int unknown=0; unknown<unknowns+auxiliaryVariables; unknown++) {
+    faceQLeft [ leftRightFaceEnumerator({2,y},unknown) ] = 0.0;
+    faceQLeft [ leftRightFaceEnumerator({3,y},unknown) ] = 0.0;
+    faceQRight[ leftRightFaceEnumerator({0,y},unknown) ] = 0.0;
+    faceQRight[ leftRightFaceEnumerator({1,y},unknown) ] = 0.0;
+  }
+
+  for (int y=0; y<order+1; y++)
+  for (int x=0; x<order+1; x++)
+  for (int unknown=0; unknown<unknowns+auxiliaryVariables; unknown++) {
+    faceQLeft [ leftRightFaceEnumerator({2,y},unknown) ] += BasisFunctionValuesLeft[x]       * cellQ[ cellEnumerator(0,{x,y},unknown) ];
+    faceQRight[ leftRightFaceEnumerator({1,y},unknown) ] += BasisFunctionValuesLeft[order-x] * cellQ[ cellEnumerator(0,{x,y},unknown) ];
+  }
+
+  // project up/down
+  for (int x=0; x<order+1; x++)
+  for (int unknown=0; unknown<unknowns+auxiliaryVariables; unknown++) {
+    faceQBottom [ bottomTopFaceEnumerator({x,2},unknown) ] = 0.0;
+    faceQUp     [ bottomTopFaceEnumerator({x,1},unknown) ] = 0.0;
+  }
+
+  for (int y=0; y<order+1; y++)
+  for (int x=0; x<order+1; x++)
+  for (int unknown=0; unknown<unknowns+auxiliaryVariables; unknown++) {
+    faceQBottom [ bottomTopFaceEnumerator({x,2},unknown) ] += BasisFunctionValuesLeft[y]       * cellQ[ cellEnumerator(0,{x,y},unknown) ];
+    faceQUp     [ bottomTopFaceEnumerator({x,1},unknown) ] += BasisFunctionValuesLeft[order-y] * cellQ[ cellEnumerator(0,{x,y},unknown) ];
+  }
+}
+
+
+void exahype2::dg::projectVolumetricDataAndGradientOntoFaces(
+  const double* __restrict__          cellQ,
+  int                                 order,
+  int                                 unknowns,
+  int                                 auxiliaryVariables,
+  const double* const __restrict__    BasisFunctionValuesLeft,
+  double* const __restrict__          faceQLeft,
+  double* const __restrict__          faceQRight,
+  double* const __restrict__          faceQBottom,
+  double* const __restrict__          faceQUp,
+  double* const __restrict__          faceQFront,
+  double* const __restrict__          faceQBack
+) {
+  exahype2::enumerator::AoSLexicographicEnumerator     cellEnumerator(1,order+1,0,unknowns,auxiliaryVariables);
+  exahype2::enumerator::FaceAoSLexicographicEnumerator leftRightFaceEnumerator(0,order+1,2,unknowns,auxiliaryVariables);
+  exahype2::enumerator::FaceAoSLexicographicEnumerator bottomTopFaceEnumerator(1,order+1,2,unknowns,auxiliaryVariables);
+  exahype2::enumerator::FaceAoSLexicographicEnumerator frontBackFaceEnumerator(2,order+1,2,unknowns,auxiliaryVariables);
+
+  // project left/right
+  for (int y=0; y<order+1; y++)
+  for (int z=0; z<order+1; z++)
+  for (int unknown=0; unknown<unknowns+auxiliaryVariables; unknown++) {
+    faceQLeft   [ leftRightFaceEnumerator({2,y,z},unknown) ] = 0.0;
+    faceQLeft   [ leftRightFaceEnumerator({3,y,z},unknown) ] = 0.0;
+    faceQRight  [ leftRightFaceEnumerator({0,y,z},unknown) ] = 0.0;
+    faceQRight  [ leftRightFaceEnumerator({1,y,z},unknown) ] = 0.0;
+  }
+
+  for (int x=0; x<order+1; x++)
+  for (int y=0; y<order+1; y++)
+  for (int z=0; z<order+1; z++)
+  for (int unknown=0; unknown<unknowns+auxiliaryVariables; unknown++) {
+    faceQLeft   [ leftRightFaceEnumerator({2,y,z},unknown) ] += BasisFunctionValuesLeft[x]       * cellQ[ cellEnumerator(0,{x,y,z},unknown) ];
+    faceQRight  [ leftRightFaceEnumerator({1,y,z},unknown) ] += BasisFunctionValuesLeft[order-x] * cellQ[ cellEnumerator(0,{x,y,z},unknown) ];
+  }
+
+  // project down/up
+  for (int x=0; x<order+1; x++)
+  for (int z=0; z<order+1; z++)
+  for (int unknown=0; unknown<unknowns+auxiliaryVariables; unknown++) {
+    faceQBottom [ bottomTopFaceEnumerator({x,2,z},unknown) ] = 0.0;
+    faceQUp     [ bottomTopFaceEnumerator({x,1,z},unknown) ] = 0.0;
+  }
+
+  for (int x=0; x<order+1; x++)
+  for (int y=0; y<order+1; y++)
+  for (int z=0; z<order+1; z++)
+  for (int unknown=0; unknown<unknowns+auxiliaryVariables; unknown++) {
+    faceQBottom [ bottomTopFaceEnumerator({x,2,z},unknown) ] += BasisFunctionValuesLeft[y]       * cellQ[ cellEnumerator(0,{x,y,z},unknown) ];
+    faceQUp     [ bottomTopFaceEnumerator({x,1,z},unknown) ] += BasisFunctionValuesLeft[order-y] * cellQ[ cellEnumerator(0,{x,y,z},unknown) ];
+  }
+
+  // project front/back
+  for (int x=0; x<order+1; x++)
+  for (int y=0; y<order+1; y++)
+  for (int unknown=0; unknown<unknowns+auxiliaryVariables; unknown++) {
+    faceQFront [ frontBackFaceEnumerator({x,y,2},unknown) ] = 0.0;
+    faceQBack  [ frontBackFaceEnumerator({x,y,1},unknown) ] = 0.0;
+  }
+  for (int x=0; x<order+1; x++)
+  for (int y=0; y<order+1; y++)
+  for (int z=0; z<order+1; z++)
+  for (int unknown=0; unknown<unknowns+auxiliaryVariables; unknown++) {
+    faceQFront [ frontBackFaceEnumerator({x,y,2},unknown) ] += BasisFunctionValuesLeft[z]       * cellQ[ cellEnumerator(0,{x,y,z},unknown) ];
+    faceQBack  [ frontBackFaceEnumerator({x,y,1},unknown) ] += BasisFunctionValuesLeft[order-z] * cellQ[ cellEnumerator(0,{x,y,z},unknown) ];
+  }
+}
+
+
 void exahype2::dg::integrateOverRiemannSolutionsAndAddToVolume_GaussLegendre(
   const double* const __restrict__    faceQLeft,
   const double* const __restrict__    faceQRight,

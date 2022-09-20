@@ -134,12 +134,7 @@ class RungeKuttaDG(object):
       size for a cell.
       
     self._compute_new_time_step_size          = "const double newTimeStepSize = timeStepSize;"
-             
-    # Attributes
-    
-    polynomial_basis: solvers.LagrangeBasis
-      Any proper polynomial basis such as solvers.GaussLegendreBasis             
-      
+                   
   """
   
       
@@ -217,6 +212,9 @@ class RungeKuttaDG(object):
       
       So you may implicitly assume that these guys do exist always.
     """
+    assert rk_order>=1, "Runge-Kutta order has to be greater or equal to one"
+    assert number_of_face_projections>=1, "No of face projections has to be greater or equal to one"
+    
     self._name              = name
     
     self._rk_order                   = rk_order
@@ -448,11 +446,31 @@ We use RK(""" + str(self._rk_order) + """) for the time stepping.
          
        
     """
-    self._current_time_step                 = peano4.datamodel.Patch( (self._basis.dofs_per_axis,self._basis.dofs_per_axis,self._basis.dofs_per_axis),                      self._unknowns+self._auxiliary_variables, self._unknown_identifier() )
-    self._rhs_estimates                     = peano4.datamodel.Patch( (self.number_of_Runge_Kutta_steps()*(self._basis.dofs_per_axis),self._basis.dofs_per_axis,self._basis.dofs_per_axis),     self._unknowns, self._unknown_identifier() + "RhsEstimates" )
-    self._linear_combination_of_estimates   = peano4.datamodel.Patch( (self._basis.dofs_per_axis,self._basis.dofs_per_axis,self._basis.dofs_per_axis),                      self._unknowns+self._auxiliary_variables, self._unknown_identifier() + "LinearCombination")
-    self._estimate_projection       = peano4.datamodel.Patch( (2,self._number_of_face_projections*(self._basis.dofs_per_axis),self._basis.dofs_per_axis),  self._unknowns+self._auxiliary_variables, self._unknown_identifier() + "EstimateProjection" )
-    self._Riemann_solution                  = peano4.datamodel.Patch( (2,self._basis.dofs_per_axis,self._basis.dofs_per_axis),  self._unknowns, self._unknown_identifier() + "RiemannSolution" )
+    self._current_time_step                 = peano4.datamodel.Patch( (self._basis.dofs_per_axis,                                      
+                                                                       self._basis.dofs_per_axis,
+                                                                       self._basis.dofs_per_axis),                      
+                                                                       self._unknowns+self._auxiliary_variables, 
+                                                                       self._unknown_identifier() )
+    self._rhs_estimates                     = peano4.datamodel.Patch( (self.number_of_Runge_Kutta_steps()*(self._basis.dofs_per_axis),
+                                                                       self._basis.dofs_per_axis,
+                                                                       self._basis.dofs_per_axis),     
+                                                                       self._unknowns, 
+                                                                       self._unknown_identifier() + "RhsEstimates" )
+    self._linear_combination_of_estimates   = peano4.datamodel.Patch( (self._basis.dofs_per_axis,
+                                                                       self._basis.dofs_per_axis,
+                                                                       self._basis.dofs_per_axis),                      
+                                                                       self._unknowns+self._auxiliary_variables, 
+                                                                       self._unknown_identifier() + "LinearCombination")
+    self._estimate_projection               = peano4.datamodel.Patch( (self._number_of_face_projections*2,
+                                                                       self._basis.dofs_per_axis,
+                                                                       self._basis.dofs_per_axis),  
+                                                                       self._unknowns+self._auxiliary_variables, 
+                                                                       self._unknown_identifier() + "EstimateProjection" )
+    self._Riemann_solution                  = peano4.datamodel.Patch( (2,
+                                                                       self._basis.dofs_per_axis,
+                                                                       self._basis.dofs_per_axis),  
+                                                                       self._unknowns, 
+                                                                       self._unknown_identifier() + "RiemannSolution" )
            
     self._estimate_projection.generator.merge_method_definition = peano4.toolbox.blockstructured.get_face_merge_implementation(self._estimate_projection)
     self._current_time_step.generator.merge_method_definition   = peano4.toolbox.blockstructured.get_cell_merge_implementation(self._current_time_step)
@@ -526,7 +544,7 @@ We use RK(""" + str(self._rk_order) + """) for the time stepping.
     self._action_set_AMR_commit_without_further_analysis                              = exahype2.solvers.rkdg.actionsets.AdaptivityCriterion(solver=self, guard=self._store_cell_data_default_guard(), build_up_new_refinement_instructions=False, implement_previous_refinement_instructions=True )
     self._action_set_linear_combination_of_estimates                                  = exahype2.solvers.rkdg.actionsets.LinearCombinationOfEstimates(self)
     # @todo TW The following two action sets should run in parallel I guess 
-    self._action_set_project_linear_combination_onto_faces                            = exahype2.solvers.rkdg.actionsets.ProjectLinearCombinationOfEstimatesOntoFaces(solver=self)
+    self._action_set_project_linear_combination_onto_faces                            = exahype2.solvers.rkdg.actionsets.ProjectLinearCombinationOfEstimatesOntoFaces(solver=self,number_of_face_projections=self._number_of_face_projections)
     self._action_set_solve_volume_integral                                            = exahype2.solvers.rkdg.actionsets.SolveVolumeIntegral(self)
     self._action_set_handle_boundary                                                  = exahype2.solvers.rkdg.actionsets.HandleBoundary(self, self._store_face_data_default_guard())
     self._action_set_solve_Riemann_problem                                            = exahype2.solvers.rkdg.actionsets.SolveRiemannProblem(self)

@@ -116,6 +116,30 @@ namespace exahype2 {
 
 
       /**
+       *
+       * @see solveRiemannProblem_pointwise_in_situ()
+       */
+      void solveRiemannProblem_pointwise_in_situ_with_gradient_projection(
+        ::exahype2::dg::Flux                         flux,
+        ::exahype2::dg::NonConservativeProduct       ncp,
+        ::exahype2::dg::MaxEigenvalue                maxEigenvalue,
+        const tarch::la::Vector<Dimensions,double>&  faceCentre,
+        const tarch::la::Vector<Dimensions,double>&  cellSize,
+        double                                       t,
+        double                                       dt,
+        int                                          order,
+        int                                          unknowns,
+        int                                          auxiliaryVariables,
+        int                                          faceNumber,
+        const double* __restrict__                   quadraturePoints,
+        bool                                         useFlux,
+        bool                                         useNcp,
+        const double* __restrict__                   projectedValues,
+        double* __restrict__                         solution
+      );
+
+
+      /**
        * Delegate to generic implementation in parent directory.
        *
        * static keyword required to avoid multiple definition linker errors.
