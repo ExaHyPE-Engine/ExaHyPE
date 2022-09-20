@@ -61,7 +61,7 @@ class InsertParticlesAlongCartesianLayoutIntoUnrefinedCells(ActionSet):
       domainOffset,
       {{NOISE}}
     );
-    for (auto& particle: newParticles) {
+    for (auto* particle: newParticles) {
       {{INITIALISATION_CALL}}
       if ( {{GUARD}} ) {
         toolbox::particles::insertParticleIntoCell(

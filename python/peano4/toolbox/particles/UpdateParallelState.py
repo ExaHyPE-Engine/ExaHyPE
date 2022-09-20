@@ -110,7 +110,7 @@ class UpdateParallelState(ActionSet):
   __Template_TouchCell = jinja2.Template("""
 // run over all adjacent vertices
 for (int i=0; i<TwoPowerD; i++) {
-  for (auto& p: fineGridVertices{{PARTICLES_CONTAINER}}(i) ) {
+  for (auto* p: fineGridVertices{{PARTICLES_CONTAINER}}(i) ) {
     if ( marker.isContained(p->getX()) ) {
       p->setNewParallelState( globaldata::{{PARTICLE}}::NewParallelState::Local );
     }
@@ -121,7 +121,7 @@ for (int i=0; i<TwoPowerD; i++) {
 
   
   __Template_InitialiseParallelStatus = jinja2.Template("""
-  for (auto& p: fineGridVertex{{PARTICLES_CONTAINER}} ) {
+  for (auto* p: fineGridVertex{{PARTICLES_CONTAINER}} ) {
     p->setNewParallelState( globaldata::{{PARTICLE}}::NewParallelState::Virtual );
   }
 """)
@@ -175,7 +175,7 @@ for (int i=0; i<TwoPowerD; i++) {
         p++;
       }
     }
-    for (auto& p: fineGridVertex{{PARTICLES_CONTAINER}}) {
+    for (auto* p: fineGridVertex{{PARTICLES_CONTAINER}}) {
       assertion3(
         not (p->getParallelState()==globaldata::{{PARTICLE}}::ParallelState::Virtual and p->getNewParallelState()==globaldata::{{PARTICLE}}::NewParallelState::Local),
         p->toString(),

@@ -32,7 +32,6 @@
 #include "observers/Kick1.h"
 #include "observers/Kick2.h"
 #include "observers/Drift.h"
-#include "observers/RearrangeAtStart.h"
 #include "observers/InitTimeStep.h"
 #include "observers/ImposeBC.h"
 
@@ -122,11 +121,6 @@ int main(int argc, char** argv) {
     examples::particles::vertexdata::ParticleSet::finishedTraversal();
     logInfo( "main()", "added particles" )
 
-    /* Initial step (e.g., re-arrange the particles into a particular configuration) */
-//    examples::particles::observers::RearrangeAtStart rearrangeObserver;
-//    peano4::parallel::SpacetreeSet::getInstance().traverse(rearrangeObserver);
-//    logInfo( "main()", "Particles have been re-arranged at t=0" )
-
     examples::particles::observers::Plot plotObserver;
     peano4::parallel::SpacetreeSet::getInstance().traverse(plotObserver);
     examples::particles::vertexdata::ParticleSet::finishedTraversal();
@@ -136,24 +130,23 @@ int main(int argc, char** argv) {
 
     const int TimeStepsInBetweenTwoSnapshots = std::max(
       10,
-      static_cast<int>( std::round( 1.0/examples::particles::GLOBAL_TIME_STEP_SIZE )) / 100
+      static_cast<int>( std::round( 1.0/examples::particles::GLOBAL_TIME_STEP_SIZE )) / 20
     );
     logInfo( "main()", "steps between two snapshots=" << TimeStepsInBetweenTwoSnapshots );
 
+    /* 
+     * Name the steps that will be used 
+     */
+    examples::particles::observers::InitTimeStep initTimeStep;
+    examples::particles::observers::ForceGravity forcespart;
+    examples::particles::observers::Kick1 kick1part;
+    examples::particles::observers::Kick2 kick2part;
+    examples::particles::observers::Drift driftpart;
+    examples::particles::observers::ImposeBC ImposeBCpart;
 
-    for (int i=0; i<50; i++) {
+    for (int i=0; i<500; i++) {
       for (int j=0; j<TimeStepsInBetweenTwoSnapshots; j++) { /* Numbers of time-steps between two output snapshots */
         logInfo( "main()", "run timestep: " << peano4::parallel::SpacetreeSet::getInstance().getGridStatistics().toString() );
-
-        /* 
-         * Name the steps that will be used 
-         */
-        examples::particles::observers::InitTimeStep initTimeStep;
-        examples::particles::observers::ForceGravity forcespart;
-        examples::particles::observers::Kick1 kick1part;
-        examples::particles::observers::Kick2 kick2part;
-        examples::particles::observers::Drift driftpart;
-        examples::particles::observers::ImposeBC ImposeBCpart;
 
         /* "Initialize time-step" */
         peano4::parallel::SpacetreeSet::getInstance().traverse(initTimeStep);
@@ -167,7 +160,7 @@ int main(int argc, char** argv) {
           examples::particles::vertexdata::ParticleSet::finishedTraversal();
 
           /* "Kick1" */
-          peano4::parallel::SpacetreeSet::getInstance().traverse(kick1part);
+          peano4::parallel::SpacetreeSet::getInstance().traverse(kick2part);
           examples::particles::vertexdata::ParticleSet::finishedTraversal();
         } /* Finish the "0th" time-step */
 

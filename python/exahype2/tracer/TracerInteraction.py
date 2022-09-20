@@ -21,10 +21,10 @@ project.add_action_set_to_timestepping( peano4.toolbox.particles.ParticleParticl
   """
   return """
 //Run over local set
-for (auto& p: localParticles) {
+for (auto* p: localParticles) {
   if ( marker.isContained( p->getX() ) ) {
     tarch::la::Vector<Dimensions,double> updatedX = p->getX();
-    for (auto& pp: activeParticles) {
+    for (auto* pp: activeParticles) {
       if (p->getNumber()!=pp->getNumber()) {
         updatedX += repositories::""" + solver.get_name_of_global_instance() + """ benutze den Time Stamp vom Cell Marker hier!.getMaxTimeStepSize()
                   * toolbox::particles::potentials::springPotential(p->getX(), pp->getX(), """ + str(particle_spacing) + """ );

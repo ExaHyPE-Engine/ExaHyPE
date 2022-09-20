@@ -2,6 +2,32 @@
 \label{chapter:troubleshooting}
 
 
+\section{Autotools (\texttt{configure})}
+
+\begin{itemize}
+  \item \textbf{\texttt{configure} fails with \ldots}. Before you start
+  any further investigation, update to the latest version of the autotools,
+  ensure your configure script suits this version, and rerun the build system
+  configuration:
+  \begin{bash}
+autoreconf --install
+libtoolize; aclocal; autoconf; autoheader; cp src/config.h.in .; automake --add-missing
+  \end{bash}
+  \item \textbf{checking host system type... Invalid configuration
+  `./configure': machine `./configure-unknown' not recognized}. We got this
+  recently on a number of new Linux installations. In this case, adding 
+\begin{code}
+--build=x86_64 --host=x86_64
+\end{code}
+  to your \texttt{configure} call seems to be necessary.
+%   \item \textbf{No unit tests seem to run.} Peano4 builds a set of libraries that are linked into 
+%     the actual application. It seems that some linkers consider the unit tests to be dead code,
+%     as the actual test routines indeed are never called (by the library). See the documentation in 
+%     \texttt{tarch/tests/TestCase.h} for some details. 
+  \item To be continued \dots
+\end{itemize}
+
+
 \section{Python API}
 
 \begin{itemize}
@@ -24,6 +50,16 @@ peano4_project.output.makefile.add_library(
 %     the actual application. It seems that some linkers consider the unit tests to be dead code,
 %     as the actual test routines indeed are never called (by the library). See the documentation in 
 %     \texttt{tarch/tests/TestCase.h} for some details. 
+  \item My installation or paraview complains about \textbf{ModuleNotFoundError:
+    No module named 'numpy'}.
+    For most parts of \Peano, you need the package \texttt{numpy}, though major
+    parts of \Peano\ can operate without it. If you don't have numpy on your
+    system install it with either of the following commands:
+  \begin{bash}
+pip4 install --user numpy
+python3 -m pip install --user --update pip
+  \end{bash}
+    Similar arguments hold for \texttt{jinja2}.
   \item To be continued \dots
 \end{itemize}
 
@@ -39,11 +75,12 @@ peano4_project.output.makefile.add_library(
   \item \textbf{My compiler yields warnings of the type}
   \begin{terminalOutput} 
 ./peano4/grid/GridTraversalEvent.h:161:7: warning: unknown attribute 'compress' ignored [-Wunknown-attributes]
- [[clang::compress]]  std::bitset<TwoPowerD>   _hasBeenRefined;
+ [[clang::pack]]  std::bitset<TwoPowerD>   _hasBeenRefined;
   \end{terminalOutput}     
   \textbf{How can I disable them?}
   Please consult your compiler options. Usually re-configuring with the flag
-  \texttt{CXXFLAGS="... -Wno-unknown-attributes "} eliminates the warnings.
+  \texttt{CXXFLAGS="... -Wno-unknown-attributes"} or \texttt{CXXFLAGS="...
+  -Wno-attributes=clang::"} eliminates the warnings.
   \item \textbf{My compiler reports something like} 
 \begin{terminalOutput}
 tarch/multicore/multicore.cpp:13:19: error: `align_val_t` is not a member of `std` 

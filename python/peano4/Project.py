@@ -232,4 +232,20 @@ class Project (object):
     return success
       
       
-      
+  def set_sph_sequence(self, hydroScheme = 'minimal'):    
+    """
+    Change the DefaultSequence used to generate the main file template, to the
+    class that generates the main file of an SPH simulation. The effect will
+    take place when calling the generate method.
+    In the future, this might not be needed if we implement an ifdefSPH
+    directive into the default template, and encapsulate the SPH-specific steps
+    there.
+
+    """
+    self.main = peano4.runner.SPHSequence(self) 
+    if hydroScheme != 'minimal': 
+      warning_msg = """
+      This is not the minimal SPH scheme. Please double check that the
+      algorithmic steps in the main file are valid for your hydro scheme.
+      """ 
+      print( warning_msg )

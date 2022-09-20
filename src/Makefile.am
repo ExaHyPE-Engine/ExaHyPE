@@ -13,6 +13,7 @@ SUBDIRS = . \
   toolbox/multiprecision \
   toolbox/particles \
   exahype2 \
+  swift2 \
   unittests convert
 
 #

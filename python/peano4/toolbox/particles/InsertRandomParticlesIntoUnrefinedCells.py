@@ -57,7 +57,7 @@ class InsertRandomParticlesIntoUnrefinedCells(ActionSet):
       {{ROUND_DOWN}},
       {{NOISE}}
     );
-    for (auto& particle: newParticles) {
+    for (auto* particle: newParticles) {
       {{INITIALISATION_CALL}}
     }
     toolbox::particles::insertParticlesIntoCell(

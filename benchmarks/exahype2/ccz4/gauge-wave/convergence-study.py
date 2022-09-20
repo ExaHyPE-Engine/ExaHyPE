@@ -15,8 +15,9 @@ parser.add_argument("-pd",  "--peano-dir",         dest="peanodir",       defaul
 parser.add_argument("-v",   "--verbose",           dest="verbose",        action="store_true", default=False, help="Verbose")
 parser.add_argument("-s",   "--solver",            dest="solver",         choices=["fv", "fd4-rk1", "fd4-rk2", "fd4-rk3", "fd4-rk4", "dg1-rk1", "dg2-rk2", "dg3-rk3", "dg4-rk4", "dg4-rk1", "dg4-rk2", "dg4-rk3"], required=True, help="Pick solver type" )
 parser.add_argument("-et",  "--end-time",          dest="end_time",       type=float, default=1.0, help="End of simulation" )
-parser.add_argument("-cs",  "--cell-size",         dest="cell_size",      type=float, default=0.3, help="Cell size" )
+parser.add_argument("-cs",  "--cell-size",         dest="cell_size",      type=float, default=0.3, help="Cell size (default 0.3)" )
 parser.add_argument("-asserts",  "--asserts",      dest="asserts",        action="store_true", default=False, help="Switch on assertions" )
+parser.add_argument("-tracer",   "--tracer",       dest="tracer",         action="store_true", default=False, help="Activate tracer" )
 args = parser.parse_args()
 
 
@@ -75,7 +76,7 @@ if "fd4-rk" in args.solver:
 if "rk" in args.solver and "dg" in args.solver:
   space_order = int(args.solver[2])
   time_order  = int(args.solver[6])
-  my_solver = exahype2.solvers.rkdg.rusanov.GlobalAdaptiveTimeStep(name             = "CCZ4DG"  + str(space_order) + "RK" + str(time_order),
+  my_solver = exahype2.solvers.rkdg.rusanov.GlobalAdaptiveTimeStepWithEnclaveTasking(name             = "CCZ4DG"  + str(space_order) + "RK" + str(time_order),
                                                                rk_order             = time_order,
                                                                polynomials          = exahype2.solvers.GaussLegendreBasis(space_order),
                                                                unknowns             = sum(unknowns.values()),
@@ -156,7 +157,7 @@ if ("rk" in args.solver and "dg" in args.solver):
 
     dQdxSerialised[i+normal*NumberOfUnknowns] = dQdx[i];
   }
-  ::applications::exahype2::ccz4::ncp(BgradQ, Q, dQdxSerialised, normal, CCZ4LapseType, CCZ4ds, CCZ4c, CCZ4e, CCZ4f, CCZ4bs, CCZ4sk, CCZ4xi, CCZ4mu);
+  ::applications::exahype2::ccz4::ncp(BgradQ, Q, dQdxSerialised, normal%Dimensions, CCZ4LapseType, CCZ4ds, CCZ4c, CCZ4e, CCZ4f, CCZ4bs, CCZ4sk, CCZ4xi, CCZ4mu);
 """,
           flux                 = exahype2.solvers.fv.PDETerms.None_Implementation,
           source_term          = """
@@ -165,7 +166,7 @@ if ("rk" in args.solver and "dg" in args.solver):
 """,
           refinement_criterion = exahype2.solvers.fv.PDETerms.Empty_Implementation,
           eigenvalues          = """
-  return ::applications::exahype2::ccz4::maxEigenvalue(Q, normal, CCZ4e, CCZ4ds, CCZ4GLMc, CCZ4GLMd );
+  return ::applications::exahype2::ccz4::maxEigenvalue(Q, normal%Dimensions, CCZ4e, CCZ4ds, CCZ4GLMc, CCZ4GLMd );
 """          ,
           initial_conditions   = """
   for (int i=0; i<NumberOfUnknowns+NumberOfAuxiliaryVariables; i++) Q[i] = 0.0; 
@@ -184,7 +185,7 @@ else:
 
     deltaQSerialised[i+normal*NumberOfUnknowns] = deltaQ[i];
   }
-  ::applications::exahype2::ccz4::ncp(BTimesDeltaQ, Q, deltaQSerialised, normal, CCZ4LapseType, CCZ4ds, CCZ4c, CCZ4e, CCZ4f, CCZ4bs, CCZ4sk, CCZ4xi, CCZ4mu);
+  ::applications::exahype2::ccz4::ncp(BTimesDeltaQ, Q, deltaQSerialised, normal%Dimensions, CCZ4LapseType, CCZ4ds, CCZ4c, CCZ4e, CCZ4f, CCZ4bs, CCZ4sk, CCZ4xi, CCZ4mu);
 """,
           flux                 = exahype2.solvers.fv.PDETerms.None_Implementation,
           source_term          = """
@@ -193,7 +194,7 @@ else:
 """,
           refinement_criterion = exahype2.solvers.fv.PDETerms.Empty_Implementation,
           eigenvalues          = """
-  return ::applications::exahype2::ccz4::maxEigenvalue(Q, normal, CCZ4e, CCZ4ds, CCZ4GLMc, CCZ4GLMd );
+  return ::applications::exahype2::ccz4::maxEigenvalue(Q, normal%Dimensions, CCZ4e, CCZ4ds, CCZ4GLMc, CCZ4GLMd );
 """          ,
           initial_conditions   = """
 for (int i=0; i<NumberOfUnknowns+NumberOfAuxiliaryVariables; i++) Q[i] = 0.0; 
@@ -273,41 +274,42 @@ project.add_solver(my_solver)
 ########################################################################################
 #Tracer setting 
 ########################################################################################
-tracer_particles = project.add_tracer( name="Tracer",attribute_count=59 )
-project.add_action_set_to_initialisation( 
-  exahype2.tracer.InsertParticlesbyCoordinates( 
-    particle_set=tracer_particles, coordinates=[[-0.4251,0,0],[0,0,0],[0.4251,0,0]]))
-project.add_action_set_to_timestepping(
-  peano4.toolbox.particles.UpdateParallelState(
-    particle_set=tracer_particles
-  )
-)
+if args.tracer:
+    tracer_particles = project.add_tracer( name="Tracer",attribute_count=59 )
+    project.add_action_set_to_initialisation( 
+      exahype2.tracer.InsertParticlesbyCoordinates( 
+        particle_set=tracer_particles, coordinates=[[-0.4251,0,0],[0,0,0],[0.4251,0,0]]))
+    project.add_action_set_to_timestepping(
+      peano4.toolbox.particles.UpdateParallelState(
+        particle_set=tracer_particles
+      )
+    )
 
-if args.solver=="fv" or "fd4-rk" in args.solver:
-  project.add_action_set_to_timestepping(exahype2.tracer.FiniteVolumesTracing(tracer_particles,
-                                                                              my_solver,
-                                                                              [],        # velocity indices: don't move them [17,18,19]
-                                                                              range(59), # data indices
-                                                                              0,         # scaling of velocities
-                                                                              time_stepping_kernel="toolbox::particles::StaticPosition"))
-
-if "rk" in args.solver and "dg" in args.solver:
-  print( "WARNING: Haven't written the tracer yet")
-#  project.add_action_set_to_timestepping(exahype2.tracer.DiscontinuousGalerkinTracing(tracer_particles,
-#                                                                                      my_solver,
-#                                                                                      [],        # velocity indices: don't move them [17,18,19]
-#                                                                                      range(59), # data indices
-#                                                                                      0,         # scaling of velocities
-#                                                                                      time_stepping_kernel="toolbox::particles::StaticPosition"))
-
-
-project.add_action_set_to_timestepping(exahype2.tracer.DumpTrajectoryIntoDatabase(
-  particle_set=tracer_particles,
-  solver=my_solver,
-  filename="Tracer-" + args.solver + "-" + str(args.cell_size),
-  data_delta_between_two_snapsots=1e16,
-  time_delta_between_two_snapsots=0.0001
-  ))
+    if args.solver=="fv" or "fd4-rk" in args.solver:
+      project.add_action_set_to_timestepping(exahype2.tracer.FiniteVolumesTracing(tracer_particles,
+                                                                                  my_solver,
+                                                                                  [],        # velocity indices: don't move them [17,18,19]
+                                                                                  range(59), # data indices
+                                                                                  0,         # scaling of velocities
+                                                                                  time_stepping_kernel="toolbox::particles::StaticPosition"))
+    
+    if "rk" in args.solver and "dg" in args.solver:
+      print( "WARNING: Haven't written the tracer yet")
+    #  project.add_action_set_to_timestepping(exahype2.tracer.DiscontinuousGalerkinTracing(tracer_particles,
+    #                                                                                      my_solver,
+    #                                                                                      [],        # velocity indices: don't move them [17,18,19]
+    #                                                                                      range(59), # data indices
+    #                                                                                      0,         # scaling of velocities
+    #                                                                                      time_stepping_kernel="toolbox::particles::StaticPosition"))
+    
+    
+    project.add_action_set_to_timestepping(exahype2.tracer.DumpTrajectoryIntoDatabase(
+      particle_set=tracer_particles,
+      solver=my_solver,
+      filename="Tracer-" + args.solver + "-" + str(args.cell_size),
+      data_delta_between_two_snapsots=1e16,
+      time_delta_between_two_snapsots=0.0001
+      ))
 
 
 ########################################################################################
