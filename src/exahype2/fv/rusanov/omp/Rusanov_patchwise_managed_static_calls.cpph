@@ -3,6 +3,8 @@
 #include "tarch/multicore/omp/GPUMemoryManager.h"
 #include "exahype2/fv/rusanov/LoopBody.h"
 
+#include <cstring>
+
 template <
   typename Solver,
   int      numberOfVolumesPerAxisInPatch,
@@ -20,11 +22,23 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanov_patchwise_managed_static_ca
   bool                    evaluateMaximumEigenvalueAfterTimeStep
 ) {
   #if defined(GPUOffloadingOMP)
-  /**
-   * The halo size passed in by the user might differ from the one that we have to evaluate/
-   * take into account from the solver's perspective.
-   */
   constexpr int solversHaloSize = 1;
+  // The following parameter is a magic number chosen in such a way that it works with our kernel benchmarks.
+  // This parameter should be provided by an autotuner rather than being a magic number.
+  #if Dimensions==2
+  static constexpr int MaxNumberOfPossiblePatchEntries = 1024*2*2*2*2;
+  #else
+  static constexpr int MaxNumberOfPossiblePatchEntries = 1024*2;
+  #endif
+  static const TempDataEnumerator FluxHostEnumerator      (MaxNumberOfPossiblePatchEntries, numberOfVolumesPerAxisInPatch,   solversHaloSize, unknowns, 0);
+  static const TempDataEnumerator NcpHostEnumerator       (MaxNumberOfPossiblePatchEntries, numberOfVolumesPerAxisInPatch+1, solversHaloSize, unknowns, 0);
+  static const TempDataEnumerator EigenvalueHostEnumerator(MaxNumberOfPossiblePatchEntries, numberOfVolumesPerAxisInPatch,   solversHaloSize,        1, 0);
+  static int currentOffloadedPatches = 0;
+  // A + |P| <= |P|_max
+  if (currentOffloadedPatches + hostPatchData.numberOfCells <= MaxNumberOfPossiblePatchEntries) {
+    #pragma omp atomic
+    currentOffloadedPatches += hostPatchData.numberOfCells;
+  } else while(currentOffloadedPatches + hostPatchData.numberOfCells > MaxNumberOfPossiblePatchEntries) { /* Suspend until other threads are finished */ };
 
   exahype2::enumerator::AoSLexicographicEnumerator QInHostEnumerator       (                        1, numberOfVolumesPerAxisInPatch, haloSize, unknowns, auxiliaryVariables);
   exahype2::enumerator::AoSLexicographicEnumerator QOutHostEnumerator      (                        1, numberOfVolumesPerAxisInPatch,        0, unknowns, auxiliaryVariables);
@@ -32,77 +46,74 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanov_patchwise_managed_static_ca
   TempDataEnumerator ncpHostEnumerator       (hostPatchData.numberOfCells, numberOfVolumesPerAxisInPatch+1, solversHaloSize, unknowns, 0);
   TempDataEnumerator eigenvalueHostEnumerator(hostPatchData.numberOfCells, numberOfVolumesPerAxisInPatch,   solversHaloSize,        1, 0);
 
-  double* tempFluxX = tarch::multicore::omp::GPUMemoryManager::getInstance().allocate<double>( fluxHostEnumerator.size(), targetDevice );
-  double* tempFluxY = tarch::multicore::omp::GPUMemoryManager::getInstance().allocate<double>( fluxHostEnumerator.size(), targetDevice );
-  double* tempFluxZ = tarch::multicore::omp::GPUMemoryManager::getInstance().allocate<double>( Dimensions==3 ? fluxHostEnumerator.size() : 1, targetDevice );
-  double* tempNonconservativeProductX = tarch::multicore::omp::GPUMemoryManager::getInstance().allocate<double>( ncpHostEnumerator.size(), targetDevice );
-  double* tempNonconservativeProductY = tarch::multicore::omp::GPUMemoryManager::getInstance().allocate<double>( ncpHostEnumerator.size(), targetDevice );
-  double* tempNonconservativeProductZ = tarch::multicore::omp::GPUMemoryManager::getInstance().allocate<double>( Dimensions==3 ? ncpHostEnumerator.size() : 1, targetDevice );
-  double* tempEigenvalueX = tarch::multicore::omp::GPUMemoryManager::getInstance().allocate<double>( eigenvalueHostEnumerator.size(), targetDevice );
-  double* tempEigenvalueY = tarch::multicore::omp::GPUMemoryManager::getInstance().allocate<double>( eigenvalueHostEnumerator.size(), targetDevice );
-  double* tempEigenvalueZ = tarch::multicore::omp::GPUMemoryManager::getInstance().allocate<double>( Dimensions==3 ? eigenvalueHostEnumerator.size() : 1, targetDevice );
+  double* tempFluxX = tarch::multicore::omp::GPUMemoryManager::getInstance().allocate<double>( FluxHostEnumerator.size(), targetDevice );
+  double* tempFluxY = tarch::multicore::omp::GPUMemoryManager::getInstance().allocate<double>( FluxHostEnumerator.size(), targetDevice );
+  double* tempFluxZ = tarch::multicore::omp::GPUMemoryManager::getInstance().allocate<double>( Dimensions==3 ? FluxHostEnumerator.size() : 1, targetDevice );
+  double* tempNonconservativeProductX = tarch::multicore::omp::GPUMemoryManager::getInstance().allocate<double>( NcpHostEnumerator.size(), targetDevice );
+  double* tempNonconservativeProductY = tarch::multicore::omp::GPUMemoryManager::getInstance().allocate<double>( NcpHostEnumerator.size(), targetDevice );
+  double* tempNonconservativeProductZ = tarch::multicore::omp::GPUMemoryManager::getInstance().allocate<double>( Dimensions==3 ? NcpHostEnumerator.size() : 1, targetDevice );
+  double* tempEigenvalueX = tarch::multicore::omp::GPUMemoryManager::getInstance().allocate<double>( EigenvalueHostEnumerator.size(), targetDevice );
+  double* tempEigenvalueY = tarch::multicore::omp::GPUMemoryManager::getInstance().allocate<double>( EigenvalueHostEnumerator.size(), targetDevice );
+  double* tempEigenvalueZ = tarch::multicore::omp::GPUMemoryManager::getInstance().allocate<double>( Dimensions==3 ? EigenvalueHostEnumerator.size() : 1, targetDevice );
 
-  double**  mappedPointersToQIn  = new double*[ hostPatchData.numberOfCells ];
-  double**  mappedPointersToQOut = new double*[ hostPatchData.numberOfCells ];
+  double* mappedPointersToQIns = tarch::multicore::omp::GPUMemoryManager::getInstance().allocate<double>(MaxNumberOfPossiblePatchEntries * QInHostEnumerator.size(), targetDevice );
+  double* mappedPointersToQOuts = tarch::multicore::omp::GPUMemoryManager::getInstance().allocate<double>(MaxNumberOfPossiblePatchEntries * QOutHostEnumerator.size(), targetDevice );
+  double* rawPointerToCellCentres = tarch::multicore::omp::GPUMemoryManager::getInstance().allocate<double>(MaxNumberOfPossiblePatchEntries * Dimensions, targetDevice );
+  double* rawPointerToCellSizes = tarch::multicore::omp::GPUMemoryManager::getInstance().allocate<double>(MaxNumberOfPossiblePatchEntries * Dimensions, targetDevice );
+  double* ts = tarch::multicore::omp::GPUMemoryManager::getInstance().allocate<double>(MaxNumberOfPossiblePatchEntries, targetDevice );
+  double* dts = tarch::multicore::omp::GPUMemoryManager::getInstance().allocate<double>(MaxNumberOfPossiblePatchEntries, targetDevice );
+  double* maxEigenvalues = tarch::multicore::omp::GPUMemoryManager::getInstance().allocate<double>(MaxNumberOfPossiblePatchEntries, targetDevice );
 
+  std::vector<double> tmpQIn(hostPatchData.numberOfCells * QInHostEnumerator.size());
   for (int patchIndex=0; patchIndex<hostPatchData.numberOfCells; patchIndex++) {
-    mappedPointersToQIn[patchIndex]  = tarch::multicore::omp::GPUMemoryManager::getInstance().allocate<double>( QInHostEnumerator.size(), targetDevice );
-    mappedPointersToQOut[patchIndex] = tarch::multicore::omp::GPUMemoryManager::getInstance().allocate<double>( QOutHostEnumerator.size(), targetDevice );
-
-    auto hostId = omp_get_initial_device();
-    omp_target_memcpy(mappedPointersToQIn[patchIndex], hostPatchData.QIn[patchIndex], QInHostEnumerator.size() * sizeof(double), 0, 0, targetDevice, hostId);
+    std::memcpy(&tmpQIn[patchIndex * QInHostEnumerator.size()], hostPatchData.QIn[patchIndex], QInHostEnumerator.size() * sizeof(double));
   }
 
-  const int numberOfCells            = hostPatchData.numberOfCells;
-  double*   rawPointerToCellCentres  = hostPatchData.cellCentre[0].data();
-  double*   rawPointerToCellSizes    = hostPatchData.cellSize[0].data();
-  double*   t                        = hostPatchData.t;
-  double*   dt                       = hostPatchData.dt;
-  double*   maxEigenvalue            = hostPatchData.maxEigenvalue;
+  auto hostId = omp_get_initial_device();
 
-  // @todo Mario, also the other fields should go away. There's functions in the manager to get the data
+  omp_target_memcpy(mappedPointersToQIns, &tmpQIn[0], hostPatchData.numberOfCells * QInHostEnumerator.size() * sizeof(double), 0, 0, targetDevice, hostId);
+  omp_target_memcpy(rawPointerToCellCentres, &hostPatchData.cellCentre[0], hostPatchData.numberOfCells * Dimensions * sizeof(double), 0, 0, targetDevice, hostId);
+  omp_target_memcpy(rawPointerToCellSizes, &hostPatchData.cellSize[0], hostPatchData.numberOfCells * Dimensions * sizeof(double), 0, 0, targetDevice, hostId);
+  omp_target_memcpy(ts, hostPatchData.t, hostPatchData.numberOfCells * sizeof(double), 0, 0, targetDevice, hostId);
+  omp_target_memcpy(dts, hostPatchData.dt, hostPatchData.numberOfCells * sizeof(double), 0, 0, targetDevice, hostId);
+
+  const int numberOfCells = hostPatchData.numberOfCells;
+
   #pragma omp target teams distribute device(targetDevice) \
-    map(to:rawPointerToCellCentres[0:hostPatchData.numberOfCells*Dimensions]) \
-    map(to:rawPointerToCellSizes[0:hostPatchData.numberOfCells*Dimensions]) \
-    map(to:mappedPointersToQIn[0:hostPatchData.numberOfCells]) \
-    map(to:mappedPointersToQOut[0:hostPatchData.numberOfCells]) \
-    map(to:t[0:hostPatchData.numberOfCells]) \
-    map(to:dt[0:hostPatchData.numberOfCells]) \
-    map(from:maxEigenvalue[0:hostPatchData.numberOfCells]) \
     is_device_ptr(tempFluxX, tempFluxY, tempFluxZ, \
                   tempNonconservativeProductX, tempNonconservativeProductY, tempNonconservativeProductZ, \
-                  tempEigenvalueX, tempEigenvalueY, tempEigenvalueZ)
+                  tempEigenvalueX, tempEigenvalueY, tempEigenvalueZ, \
+                  mappedPointersToQIns, mappedPointersToQOuts, \
+                  rawPointerToCellCentres, rawPointerToCellSizes, \
+                  ts, dts, maxEigenvalues)
   for (int patchIndex=0; patchIndex<numberOfCells; patchIndex++) {
-    GPUCellData patchData;
-    patchData.numberOfCells = numberOfCells;
-    patchData.cellCentre   = (tarch::la::Vector<Dimensions,double>*)(rawPointerToCellCentres);
-    patchData.cellSize     = (tarch::la::Vector<Dimensions,double>*)(rawPointerToCellSizes);
-    patchData.QIn           = mappedPointersToQIn;
-    patchData.QOut          = mappedPointersToQOut;
-    patchData.t             = t;
-    patchData.dt            = dt;
-    patchData.maxEigenvalue = maxEigenvalue;
-
     exahype2::enumerator::AoSLexicographicEnumerator QInEnumerator       (                        1, numberOfVolumesPerAxisInPatch,haloSize,unknowns,auxiliaryVariables);
     exahype2::enumerator::AoSLexicographicEnumerator QOutEnumerator      (                        1, numberOfVolumesPerAxisInPatch,       0,unknowns,auxiliaryVariables);
-    TempDataEnumerator fluxEnumerator      (patchData.numberOfCells, numberOfVolumesPerAxisInPatch,haloSize,unknowns,0);
-    TempDataEnumerator ncpEnumerator       (patchData.numberOfCells, numberOfVolumesPerAxisInPatch+1,haloSize,unknowns,0);
-    TempDataEnumerator eigenvalueEnumerator(patchData.numberOfCells, numberOfVolumesPerAxisInPatch,haloSize,1,0);
+    TempDataEnumerator fluxEnumerator      (numberOfCells, numberOfVolumesPerAxisInPatch,haloSize,unknowns,0);
+    TempDataEnumerator ncpEnumerator       (numberOfCells, numberOfVolumesPerAxisInPatch+1,haloSize,unknowns,0);
+    TempDataEnumerator eigenvalueEnumerator(numberOfCells, numberOfVolumesPerAxisInPatch,haloSize,1,0);
+
+    double* QIn = &mappedPointersToQIns[patchIndex * QInEnumerator.size()];
+    double* QOut = &mappedPointersToQOuts[patchIndex * QOutEnumerator.size()];
+    const tarch::la::Vector<Dimensions,double> patchCentre = rawPointerToCellCentres[patchIndex];
+    const tarch::la::Vector<Dimensions,double> patchSize = rawPointerToCellSizes[patchIndex];
+    const double t = ts[patchIndex];
+    const double dt = dts[patchIndex];
 
     if (Dimensions==2 and evaluateSource) {
       #pragma omp parallel for simd collapse(2)
       for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
       for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++) {
         internal::copySolutionAndAddSourceTerm_LoopBody<Solver>(
-          patchData.QIn[patchIndex],
+          QIn,
           QInEnumerator,
-          patchData.cellCentre[patchIndex],
-          patchData.cellSize[patchIndex],
+          patchCentre,
+          patchSize,
           patchIndex,
           volumeIndex2d(x,y),
-          patchData.t[patchIndex],
-          patchData.dt[patchIndex],
-          patchData.QOut[patchIndex],
+          t,
+          dt,
+          QOut,
           QOutEnumerator
         );
       }
@@ -113,15 +124,15 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanov_patchwise_managed_static_ca
       for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
       for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++) {
         internal::copySolutionAndAddSourceTerm_LoopBody<Solver>(
-          patchData.QIn[patchIndex],
+          QIn,
           QInEnumerator,
-          patchData.cellCentre[patchIndex],
-          patchData.cellSize[patchIndex],
+          patchCentre,
+          patchSize,
           patchIndex,
           volumeIndex3d(x,y,z),
-          patchData.t[patchIndex],
-          patchData.dt[patchIndex],
-          patchData.QOut[patchIndex],
+          t,
+          dt,
+          QOut,
           QOutEnumerator
         );
       }
@@ -132,12 +143,12 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanov_patchwise_managed_static_ca
       for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++)
       for (int unknown=0; unknown<unknowns+auxiliaryVariables; unknown++) {
         internal::copySolution_LoopBody(
-          patchData.QIn[patchIndex],
+          QIn,
           QInEnumerator,
           patchIndex,
           volumeIndex2d(x,y),
           unknown,
-          patchData.QOut[patchIndex],
+          QOut,
           QOutEnumerator
         );
       }
@@ -149,12 +160,12 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanov_patchwise_managed_static_ca
       for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++)
       for (int unknown=0; unknown<unknowns+auxiliaryVariables; unknown++) {
         internal::copySolution_LoopBody(
-          patchData.QIn[patchIndex],
+          QIn,
           QInEnumerator,
           patchIndex,
           volumeIndex3d(x,y,z),
           unknown,
-          patchData.QOut[patchIndex],
+          QOut,
           QOutEnumerator
         );
       }
@@ -165,13 +176,14 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanov_patchwise_managed_static_ca
       for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
       for (int x = 0; x < numberOfVolumesPerAxisInPatch+2*solversHaloSize; x++) {
         internal::computeMaxEigenvalue_LoopBody<Solver>(
-            patchData.QIn[patchIndex],
+            QIn,
             QInEnumerator,
-            patchData.cellCentre[patchIndex],
-            patchData.cellSize[patchIndex],
+            patchCentre,
+            patchSize,
             patchIndex,
             volumeIndex2d(x-solversHaloSize,y),
-            patchData.t[patchIndex], patchData.dt[patchIndex],
+            t,
+            dt,
             0,
             tempEigenvalueX,
             eigenvalueEnumerator
@@ -182,13 +194,14 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanov_patchwise_managed_static_ca
       for (int y = 0; y < numberOfVolumesPerAxisInPatch+2*solversHaloSize; y++)
       for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++) {
         internal::computeMaxEigenvalue_LoopBody<Solver>(
-            patchData.QIn[patchIndex],
+            QIn,
             QInEnumerator,
-            patchData.cellCentre[patchIndex],
-            patchData.cellSize[patchIndex],
+            patchCentre,
+            patchSize,
             patchIndex,
             volumeIndex2d(x,y-solversHaloSize),
-            patchData.t[patchIndex], patchData.dt[patchIndex],
+            t,
+            dt,
             1,
             tempEigenvalueY,
             eigenvalueEnumerator
@@ -200,19 +213,19 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanov_patchwise_managed_static_ca
       for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++)
       for (int unknown = 0; unknown < unknowns; unknown++) {
         internal::updateSolutionWithEigenvalueDamping_LoopBody(
-          patchData.QIn[patchIndex],
+          QIn,
           QInEnumerator,
           tempEigenvalueX,
           tempEigenvalueY,
           tempEigenvalueZ,
           eigenvalueEnumerator,
-          patchData.cellCentre[patchIndex],
-          patchData.cellSize[patchIndex],
+          patchCentre,
+          patchSize,
           patchIndex,
           volumeIndex2d(x,y),
           unknown,
-          patchData.dt[patchIndex],
-          patchData.QOut[patchIndex],
+          dt,
+          QOut,
           QOutEnumerator
         );
       }
@@ -223,13 +236,14 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanov_patchwise_managed_static_ca
       for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
       for (int x = 0; x < numberOfVolumesPerAxisInPatch+2*solversHaloSize; x++) {
         internal::computeMaxEigenvalue_LoopBody<Solver>(
-          patchData.QIn[patchIndex],
+          QIn,
           QInEnumerator,
-          patchData.cellCentre[patchIndex],
-          patchData.cellSize[patchIndex],
+          patchCentre,
+          patchSize,
           patchIndex,
           volumeIndex3d(x-solversHaloSize,y,z),
-          patchData.t[patchIndex], patchData.dt[patchIndex],
+          t,
+          dt,
           0,
           tempEigenvalueX,
           eigenvalueEnumerator
@@ -241,13 +255,14 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanov_patchwise_managed_static_ca
       for (int y = 0; y < numberOfVolumesPerAxisInPatch+2*solversHaloSize; y++)
       for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++) {
         internal::computeMaxEigenvalue_LoopBody<Solver>(
-              patchData.QIn[patchIndex],
+              QIn,
               QInEnumerator,
-              patchData.cellCentre[patchIndex],
-              patchData.cellSize[patchIndex],
+              patchCentre,
+              patchSize,
               patchIndex,
               volumeIndex3d(x,y-solversHaloSize,z),
-              patchData.t[patchIndex], patchData.dt[patchIndex],
+              t,
+              dt,
               1,
               tempEigenvalueY,
               eigenvalueEnumerator
@@ -259,13 +274,14 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanov_patchwise_managed_static_ca
       for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
       for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++) {
         internal::computeMaxEigenvalue_LoopBody<Solver>(
-              patchData.QIn[patchIndex],
+              QIn,
               QInEnumerator,
-              patchData.cellCentre[patchIndex],
-              patchData.cellSize[patchIndex],
+              patchCentre,
+              patchSize,
               patchIndex,
               volumeIndex3d(x,y,z-solversHaloSize),
-              patchData.t[patchIndex], patchData.dt[patchIndex],
+              t,
+              dt,
               2,
               tempEigenvalueZ,
               eigenvalueEnumerator
@@ -278,19 +294,19 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanov_patchwise_managed_static_ca
       for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++)
       for (int unknown = 0; unknown < unknowns; unknown++) {
         internal::updateSolutionWithEigenvalueDamping_LoopBody(
-          patchData.QIn[patchIndex],
+          QIn,
           QInEnumerator,
           tempEigenvalueX,
           tempEigenvalueY,
           tempEigenvalueZ,
           eigenvalueEnumerator,
-          patchData.cellCentre[patchIndex],
-          patchData.cellSize[patchIndex],
+          patchCentre,
+          patchSize,
           patchIndex,
           volumeIndex3d(x,y,z),
           unknown,
-          patchData.dt[patchIndex],
-          patchData.QOut[patchIndex],
+          dt,
+          QOut,
           QOutEnumerator
         );
       }
@@ -301,14 +317,14 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanov_patchwise_managed_static_ca
       for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
       for (int x = 0; x < numberOfVolumesPerAxisInPatch+2*solversHaloSize; x++) {
         internal::computeFlux_LoopBody<Solver, unknowns, auxiliaryVariables>(
-          patchData.QIn[patchIndex],
+          QIn,
           QInEnumerator,
-          patchData.cellCentre[patchIndex],
-          patchData.cellSize[patchIndex],
+          patchCentre,
+          patchSize,
           patchIndex,
           volumeIndex2d(x-solversHaloSize,y),
-          patchData.t[patchIndex],
-          patchData.dt[patchIndex],
+          t,
+          dt,
           0, // normal
           tempFluxX,
           fluxEnumerator
@@ -319,14 +335,14 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanov_patchwise_managed_static_ca
       for (int y = 0; y < numberOfVolumesPerAxisInPatch+2*solversHaloSize; y++)
       for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++) {
         internal::computeFlux_LoopBody<Solver, unknowns, auxiliaryVariables>(
-          patchData.QIn[patchIndex],
+          QIn,
           QInEnumerator,
-          patchData.cellCentre[patchIndex],
-          patchData.cellSize[patchIndex],
+          patchCentre,
+          patchSize,
           patchIndex,
           volumeIndex2d(x,y-solversHaloSize),
-          patchData.t[patchIndex],
-          patchData.dt[patchIndex],
+          t,
+          dt,
           1, // normal
           tempFluxY,
           fluxEnumerator
@@ -340,13 +356,13 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanov_patchwise_managed_static_ca
         internal::updateSolutionWithFlux_LoopBody(
           tempFluxX, tempFluxY, tempFluxZ,
           fluxEnumerator,
-          patchData.cellCentre[patchIndex],
-          patchData.cellSize[patchIndex],
+          patchCentre,
+          patchSize,
           patchIndex,
           volumeIndex2d(x,y),
           unknown,
-          patchData.dt[patchIndex],
-          *(patchData.QOut + patchIndex),
+          dt,
+          QOut,
           QOutEnumerator
         );
       }
@@ -357,14 +373,14 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanov_patchwise_managed_static_ca
       for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
       for (int x = 0; x < numberOfVolumesPerAxisInPatch+2*solversHaloSize; x++) {
         internal::computeFlux_LoopBody<Solver, unknowns, auxiliaryVariables>(
-          patchData.QIn[patchIndex],
+          QIn,
           QInEnumerator,
-          patchData.cellCentre[patchIndex],
-          patchData.cellSize[patchIndex],
+          patchCentre,
+          patchSize,
           patchIndex,
           volumeIndex3d(x-solversHaloSize,y,z),
-          patchData.t[patchIndex],
-          patchData.dt[patchIndex],
+          t,
+          dt,
           0, // normal
           tempFluxX,
           fluxEnumerator
@@ -376,14 +392,14 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanov_patchwise_managed_static_ca
       for (int y = 0; y < numberOfVolumesPerAxisInPatch+2*solversHaloSize; y++)
       for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++) {
         internal::computeFlux_LoopBody<Solver, unknowns, auxiliaryVariables>(
-          patchData.QIn[patchIndex],
+          QIn,
           QInEnumerator,
-          patchData.cellCentre[patchIndex],
-          patchData.cellSize[patchIndex],
+          patchCentre,
+          patchSize,
           patchIndex,
           volumeIndex3d(x,y-solversHaloSize,z),
-          patchData.t[patchIndex],
-          patchData.dt[patchIndex],
+          t,
+          dt,
           1, // normal
           tempFluxY,
           fluxEnumerator
@@ -395,14 +411,14 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanov_patchwise_managed_static_ca
       for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
       for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++) {
         internal::computeFlux_LoopBody<Solver, unknowns, auxiliaryVariables>(
-          patchData.QIn[patchIndex],
+          QIn,
           QInEnumerator,
-          patchData.cellCentre[patchIndex],
-          patchData.cellSize[patchIndex],
+          patchCentre,
+          patchSize,
           patchIndex,
           volumeIndex3d(x,y,z-solversHaloSize),
-          patchData.t[patchIndex],
-          patchData.dt[patchIndex],
+          t,
+          dt,
           2, // normal
           tempFluxZ,
           fluxEnumerator
@@ -417,13 +433,13 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanov_patchwise_managed_static_ca
         internal::updateSolutionWithFlux_LoopBody(
           tempFluxX, tempFluxY, tempFluxZ,
           fluxEnumerator,
-          patchData.cellCentre[patchIndex],
-          patchData.cellSize[patchIndex],
+          patchCentre,
+          patchSize,
           patchIndex,
           volumeIndex3d(x,y,z),
           unknown,
-          patchData.dt[patchIndex],
-          *(patchData.QOut + patchIndex),
+          dt,
+          QOut,
           QOutEnumerator
         );
       }
@@ -434,14 +450,14 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanov_patchwise_managed_static_ca
       for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
       for (int x = 0; x < numberOfVolumesPerAxisInPatch+2*solversHaloSize-1; x++) {
         internal::computeNonconservativeFlux_LoopBody<Solver,unknowns,auxiliaryVariables>(
-          patchData.QIn[patchIndex],
+          QIn,
           QInEnumerator,
-          patchData.cellCentre[patchIndex],
-          patchData.cellSize[patchIndex],
+          patchCentre,
+          patchSize,
           patchIndex,
           volumeIndex2d(x-solversHaloSize,y),
-          patchData.t[patchIndex],
-          patchData.dt[patchIndex],
+          t,
+          dt,
           0, // normal
           tempNonconservativeProductX,
           ncpEnumerator
@@ -452,14 +468,14 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanov_patchwise_managed_static_ca
       for (int y = 0; y < numberOfVolumesPerAxisInPatch+2*solversHaloSize-1; y++)
       for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++) {
         internal::computeNonconservativeFlux_LoopBody<Solver,unknowns,auxiliaryVariables>(
-          patchData.QIn[patchIndex],
+          QIn,
           QInEnumerator,
-          patchData.cellCentre[patchIndex],
-          patchData.cellSize[patchIndex],
+          patchCentre,
+          patchSize,
           patchIndex,
           volumeIndex2d(x,y-solversHaloSize),
-          patchData.t[patchIndex],
-          patchData.dt[patchIndex],
+          t,
+          dt,
           1, // normal
           tempNonconservativeProductY,
           ncpEnumerator
@@ -473,13 +489,13 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanov_patchwise_managed_static_ca
         internal::updateSolutionWithNonconservativeFlux_LoopBody(
           tempNonconservativeProductX, tempNonconservativeProductY, tempNonconservativeProductZ,
           ncpEnumerator,
-          patchData.cellCentre[patchIndex],
-          patchData.cellSize[patchIndex],
+          patchCentre,
+          patchSize,
           patchIndex,
           volumeIndex2d(x,y),
           unknown,
-          patchData.dt[patchIndex],
-          *(patchData.QOut + patchIndex),
+          dt,
+          QOut,
           QOutEnumerator
         );
       }
@@ -490,14 +506,14 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanov_patchwise_managed_static_ca
         for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
         for (int x = 0; x < numberOfVolumesPerAxisInPatch+2*solversHaloSize-1; x++) {
           internal::computeNonconservativeFlux_LoopBody<Solver,unknowns,auxiliaryVariables>(
-            patchData.QIn[patchIndex],
+            QIn,
             QInEnumerator,
-            patchData.cellCentre[patchIndex],
-            patchData.cellSize[patchIndex],
+            patchCentre,
+            patchSize,
             patchIndex,
             volumeIndex3d(x-solversHaloSize,y,z),
-            patchData.t[patchIndex],
-            patchData.dt[patchIndex],
+            t,
+            dt,
             0, // normal
             tempNonconservativeProductX,
             ncpEnumerator
@@ -509,14 +525,14 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanov_patchwise_managed_static_ca
         for (int y = 0; y < numberOfVolumesPerAxisInPatch+2*solversHaloSize-1; y++)
         for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++) {
           internal::computeNonconservativeFlux_LoopBody<Solver,unknowns,auxiliaryVariables>(
-            patchData.QIn[patchIndex],
+            QIn,
             QInEnumerator,
-            patchData.cellCentre[patchIndex],
-            patchData.cellSize[patchIndex],
+            patchCentre,
+            patchSize,
             patchIndex,
             volumeIndex3d(x,y-solversHaloSize,z),
-            patchData.t[patchIndex],
-            patchData.dt[patchIndex],
+            t,
+            dt,
             1, // normal
             tempNonconservativeProductY,
             ncpEnumerator
@@ -528,14 +544,14 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanov_patchwise_managed_static_ca
         for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
         for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++) {
           internal::computeNonconservativeFlux_LoopBody<Solver,unknowns,auxiliaryVariables>(
-            patchData.QIn[patchIndex],
+            QIn,
             QInEnumerator,
-            patchData.cellCentre[patchIndex],
-            patchData.cellSize[patchIndex],
+            patchCentre,
+            patchSize,
             patchIndex,
             volumeIndex3d(x,y,z-solversHaloSize),
-            patchData.t[patchIndex],
-            patchData.dt[patchIndex],
+            t,
+            dt,
             2, // normal
             tempNonconservativeProductZ,
             ncpEnumerator
@@ -550,13 +566,13 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanov_patchwise_managed_static_ca
           internal::updateSolutionWithNonconservativeFlux_LoopBody(
             tempNonconservativeProductX, tempNonconservativeProductY, tempNonconservativeProductZ,
             ncpEnumerator,
-            patchData.cellCentre[patchIndex],
-            patchData.cellSize[patchIndex],
+            patchCentre,
+            patchSize,
             patchIndex,
             volumeIndex3d(x,y,z),
             unknown,
-            patchData.dt[patchIndex],
-            *(patchData.QOut + patchIndex),
+            dt,
+            QOut,
             QOutEnumerator
           );
         }
@@ -569,18 +585,18 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanov_patchwise_managed_static_ca
         newMaxEigenvalue = std::max(
           newMaxEigenvalue,
           internal::reduceMaxEigenvalue_LoopBody<Solver>(
-            *(patchData.QOut + patchIndex),
+            QOut,
             QOutEnumerator,
-            patchData.cellCentre[patchIndex],
-            patchData.cellSize[patchIndex],
+            patchCentre,
+            patchSize,
             patchIndex,
             volumeIndex2d(x,y),
-            patchData.t[patchIndex],
-            patchData.dt[patchIndex]
+            t,
+            dt
           )
         );
       }
-      patchData.maxEigenvalue[patchIndex] = newMaxEigenvalue;
+      maxEigenvalues[patchIndex] = newMaxEigenvalue;
     }
     else if (evaluateMaximumEigenvalueAfterTimeStep) {
       double newMaxEigenvalue = 0.0;
@@ -591,31 +607,28 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanov_patchwise_managed_static_ca
         newMaxEigenvalue = std::max(
           newMaxEigenvalue,
           internal::reduceMaxEigenvalue_LoopBody<Solver>(
-            *(patchData.QOut + patchIndex),
+            QOut,
             QOutEnumerator,
-            patchData.cellCentre[patchIndex],
-            patchData.cellSize[patchIndex],
+            patchCentre,
+            patchSize,
             patchIndex,
             volumeIndex3d(x,y,z),
-            patchData.t[patchIndex],
-            patchData.dt[patchIndex]
+            t,
+            dt
           )
         );
       }
-      patchData.maxEigenvalue[patchIndex] = newMaxEigenvalue;
+      maxEigenvalues[patchIndex] = newMaxEigenvalue;
     }
   } // This is the end of the target offloading block
 
+  std::vector<double> tmpQOut(hostPatchData.numberOfCells * QOutHostEnumerator.size());
+  omp_target_memcpy(&tmpQOut[0], mappedPointersToQOuts, hostPatchData.numberOfCells * QOutHostEnumerator.size() * sizeof(double), 0, 0, hostId, targetDevice);
   for (int patchIndex=0; patchIndex<hostPatchData.numberOfCells; patchIndex++) {
-    auto hostId = omp_get_initial_device();
-    omp_target_memcpy(hostPatchData.QOut[patchIndex], mappedPointersToQOut[patchIndex], QOutHostEnumerator.size() * sizeof(double), 0, 0, hostId, targetDevice);
-
-    tarch::multicore::omp::GPUMemoryManager::getInstance().free( mappedPointersToQIn[patchIndex], targetDevice );
-    tarch::multicore::omp::GPUMemoryManager::getInstance().free( mappedPointersToQOut[patchIndex], targetDevice );
+    std::memcpy(hostPatchData.QOut[patchIndex], &tmpQOut[patchIndex * QOutHostEnumerator.size()], QOutHostEnumerator.size() * sizeof(double));
   }
 
-  delete[] mappedPointersToQIn;
-  delete[] mappedPointersToQOut;
+  omp_target_memcpy(hostPatchData.maxEigenvalue, maxEigenvalues, hostPatchData.numberOfCells * sizeof(double), 0, 0, hostId, targetDevice);
 
   tarch::multicore::omp::GPUMemoryManager::getInstance().free( tempFluxX, targetDevice );
   tarch::multicore::omp::GPUMemoryManager::getInstance().free( tempFluxY, targetDevice );
@@ -626,6 +639,17 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanov_patchwise_managed_static_ca
   tarch::multicore::omp::GPUMemoryManager::getInstance().free( tempEigenvalueX, targetDevice );
   tarch::multicore::omp::GPUMemoryManager::getInstance().free( tempEigenvalueY, targetDevice );
   tarch::multicore::omp::GPUMemoryManager::getInstance().free( tempEigenvalueZ, targetDevice );
+
+  tarch::multicore::omp::GPUMemoryManager::getInstance().free( mappedPointersToQIns, targetDevice );
+  tarch::multicore::omp::GPUMemoryManager::getInstance().free( mappedPointersToQOuts, targetDevice );
+  tarch::multicore::omp::GPUMemoryManager::getInstance().free( rawPointerToCellCentres, targetDevice );
+  tarch::multicore::omp::GPUMemoryManager::getInstance().free( rawPointerToCellSizes, targetDevice );
+  tarch::multicore::omp::GPUMemoryManager::getInstance().free( ts, targetDevice );
+  tarch::multicore::omp::GPUMemoryManager::getInstance().free( dts, targetDevice );
+  tarch::multicore::omp::GPUMemoryManager::getInstance().free( maxEigenvalues, targetDevice );
+
+  #pragma omp atomic
+  currentOffloadedPatches -= hostPatchData.numberOfCells;
 
   #else
   assertionMsg(false, "this routine should only be used in combination with OpenMP offloading" );

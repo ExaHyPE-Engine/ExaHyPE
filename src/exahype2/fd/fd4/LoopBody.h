@@ -54,7 +54,7 @@ namespace exahype2 {
 	 * QDiffSrcEnumerator, which is identical to QOutEnumerator, is aware that we
          * work with volume centres.
          */
-        #if defined(SharedOMP) and (!defined(__INTEL_LLVM_COMPILER) or !defined(GPUOffloadingOMP))
+        #if defined(SharedOMP) and ((!defined(__INTEL_LLVM_COMPILER) and !defined(__clang__)) or !defined(GPUOffloadingOMP))
         #pragma omp declare simd
         #endif
         #if defined(GPUOffloadingOMP)
@@ -113,7 +113,7 @@ namespace exahype2 {
 	 * QKODspEnumerator, which is identical to QOutEnumerator, is aware that we
          * work with volume centres.
          */
-        #if defined(SharedOMP) and (!defined(__INTEL_LLVM_COMPILER) or !defined(GPUOffloadingOMP))
+        #if defined(SharedOMP) and ((!defined(__INTEL_LLVM_COMPILER) and !defined(__clang__)) or !defined(GPUOffloadingOMP))
         #pragma omp declare simd
         #endif
         #if defined(GPUOffloadingOMP)
@@ -179,7 +179,7 @@ namespace exahype2 {
          * We therefore simply can take these flux components, scale them
          * with dt, and add them to the solution.
          */
-        #if defined(SharedOMP) and (!defined(__INTEL_LLVM_COMPILER) or !defined(GPUOffloadingOMP))
+        #if defined(SharedOMP) and ((!defined(__INTEL_LLVM_COMPILER) and !defined(__clang__)) or !defined(GPUOffloadingOMP))
         #pragma omp declare simd
         #endif
         #if defined(GPUOffloadingOMP)
