@@ -192,7 +192,7 @@ namespace exahype2 {
         const int order,
         const int unknowns,
         const int auxiliaryVariables
-        );
+    );
 
     /*
      * Plot Face
@@ -205,11 +205,13 @@ namespace exahype2 {
      * See the discussion around ExaHyPE's lexicographic ordering.
      */
     std::string plotFace(
-        const double* __restrict__ Q,
-        const int order,
-        const int unknowns,
-        const int auxiliaryVariables
-        );
+      const double* __restrict__ Q,
+      const int order,
+      const int unknowns,
+      const int auxiliaryVariables,
+      int       normal,
+      int       numberOfQuantitiesProjectedOntoFace
+    );
 
     /**
      * Evaluate the DG polynomial
