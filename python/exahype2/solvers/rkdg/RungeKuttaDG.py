@@ -24,6 +24,10 @@ from abc import abstractmethod
 import exahype2
 import exahype2.solvers.rkdg.actionsets
 
+from exahype2.solvers.rkdg.actionsets.ProjectLinearCombinationOfEstimatesOntoFaces import FaceProjections
+from exahype2.solvers.rkdg.actionsets.ProjectLinearCombinationOfEstimatesOntoFaces import compute_number_of_face_projection_quantities
+
+
 
 class RungeKuttaDG(object):
   """ 
@@ -142,7 +146,8 @@ class RungeKuttaDG(object):
                name, 
                rk_order, 
                polynomial_basis, 
-               number_of_face_projections, unknowns, auxiliary_variables, min_cell_h, max_cell_h, plot_grid_properties):
+               face_projections: FaceProjections, 
+               unknowns, auxiliary_variables, min_cell_h, max_cell_h, plot_grid_properties):
     """
     
   Constructor of the Runge-Kutta Discontinuous Galerkin solver
@@ -163,11 +168,13 @@ class RungeKuttaDG(object):
   polynomials: Polynomials
      Picks which kind of polynomial to use.
      
-  number_of_face_projections: Integer
+  face_projections: Integer
      How many projections do we need per face. If you are only
      interested in the left and right solution along a face, pass in 1. If you
      want to have the fluxes or derivatives as well, pass in 2. The latter version
      is the type of data structure you need for Rusanov, e.g.
+     
+     There are a couple of pre-defined values for this guy. 
      
   unknowns: int
      Number of unknowns per Finite Volume voxel.
@@ -213,13 +220,12 @@ class RungeKuttaDG(object):
       So you may implicitly assume that these guys do exist always.
     """
     assert rk_order>=1, "Runge-Kutta order has to be greater or equal to one"
-    assert number_of_face_projections>=1, "No of face projections has to be greater or equal to one"
     
     self._name              = name
     
     self._rk_order                   = rk_order
     self._basis                      = polynomial_basis
-    self._number_of_face_projections = number_of_face_projections
+    self._face_projections = face_projections
     
     self._volumetric_solver_call         = "#error Please set the solver property _volumetric_kernel in the Python class"
     self._Riemann_solver_call            = "#error Please set the solver property _Riemann_solver in the Python class"
@@ -421,13 +427,13 @@ We use RK(""" + str(self._rk_order) + """) for the time stepping.
      _linear_combination_of_estimates: Patch ( (_dg_order+1)x(_dg_order+1)x(_dg_order+1) )
        Non-persistent helper data structure.
 
-     _current_time_step_projection: Patch ( 2xnumber_of_face_projectionsx(_dg_order+1)x(_dg_order+1) )
+     _current_time_step_projection: Patch ( 2xface_projectionsx(_dg_order+1)x(_dg_order+1) )
        This is the projection of the polynomial data of the current guess onto the 
        faces. It is important that the first dimension is only a 2. This way, we can
        (logically) handle the projected data again as an overlap of two patches with 
        the width 1.  
 
-     _estimates_projection: Patch ( 2xnumber_of_face_projectionsx(_dg_order+1)x(_dg_order+1) )
+     _estimates_projection: Patch ( 2xface_projectionsx(_dg_order+1)x(_dg_order+1) )
 
      _face_label: FaceLabel
        See class description. General information such as "is boundary". 
@@ -461,7 +467,7 @@ We use RK(""" + str(self._rk_order) + """) for the time stepping.
                                                                        self._basis.dofs_per_axis),                      
                                                                        self._unknowns+self._auxiliary_variables, 
                                                                        self._unknown_identifier() + "LinearCombination")
-    self._estimate_projection               = peano4.datamodel.Patch( (self._number_of_face_projections*2,
+    self._estimate_projection               = peano4.datamodel.Patch( (compute_number_of_face_projection_quantities(self._face_projections)*2,
                                                                        self._basis.dofs_per_axis,
                                                                        self._basis.dofs_per_axis),  
                                                                        self._unknowns+self._auxiliary_variables, 
@@ -544,7 +550,7 @@ We use RK(""" + str(self._rk_order) + """) for the time stepping.
     self._action_set_AMR_commit_without_further_analysis                              = exahype2.solvers.rkdg.actionsets.AdaptivityCriterion(solver=self, guard=self._store_cell_data_default_guard(), build_up_new_refinement_instructions=False, implement_previous_refinement_instructions=True )
     self._action_set_linear_combination_of_estimates                                  = exahype2.solvers.rkdg.actionsets.LinearCombinationOfEstimates(self)
     # @todo TW The following two action sets should run in parallel I guess 
-    self._action_set_project_linear_combination_onto_faces                            = exahype2.solvers.rkdg.actionsets.ProjectLinearCombinationOfEstimatesOntoFaces(solver=self,number_of_face_projections=self._number_of_face_projections)
+    self._action_set_project_linear_combination_onto_faces                            = exahype2.solvers.rkdg.actionsets.ProjectLinearCombinationOfEstimatesOntoFaces(solver=self,face_projections=self._face_projections)
     self._action_set_solve_volume_integral                                            = exahype2.solvers.rkdg.actionsets.SolveVolumeIntegral(self)
     self._action_set_handle_boundary                                                  = exahype2.solvers.rkdg.actionsets.HandleBoundary(self, self._store_face_data_default_guard())
     self._action_set_solve_Riemann_problem                                            = exahype2.solvers.rkdg.actionsets.SolveRiemannProblem(self)

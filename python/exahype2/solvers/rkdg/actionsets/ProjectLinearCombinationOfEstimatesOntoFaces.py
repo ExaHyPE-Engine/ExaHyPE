@@ -6,6 +6,45 @@ from .AbstractRungeKuttaDGActionSet import AbstractRungeKuttaDGActionSet
 import peano4
 import jinja2
 
+
+from enum import Enum
+
+
+class FaceProjections(Enum):
+  """
+  
+  Different data can be projected onto the faces. In the simplest variant,
+  only the solution is projected on the faces and the Riemann solver then
+  reconstructs the flux from the arising jump, i.e. the solution left and 
+  right of the face. There are more sophsticiated variants however which 
+  exploit the solution left and right plus additional data such as the 
+  gradient along the normal. 
+  
+  """
+  Solution = 1,
+  SolutionAndGradient = 2,
+  SolutionAndFluxExtrapolation = 3
+  
+
+def compute_number_of_face_projection_quantities( face_projections: FaceProjections ):
+  """
+  
+  Translate the information what is projected onto the faces into a number
+  how many quantities are to be held per face.
+  
+  """
+  if face_projections   == FaceProjections.Solution:
+    return 1
+  elif face_projections == FaceProjections.SolutionAndGradient:
+    return 2
+  elif face_projections == FaceProjections.SolutionAndFluxExtrapolation:
+    return 2
+  else: 
+    assert False, "variant {} not handled".format( face_projections )
+    return -1
+
+
+
 class ProjectLinearCombinationOfEstimatesOntoFaces(AbstractRungeKuttaDGActionSet):
   """
   
@@ -33,7 +72,7 @@ class ProjectLinearCombinationOfEstimatesOntoFaces(AbstractRungeKuttaDGActionSet
   """
  
   
-  TemplateProjectLinearCombination = """
+  TemplateProjectLinearCombinationSolution = """
   {% for PREDICATE_NO in range(0,PREDICATES|length) %}
   if ({{PREDICATES[PREDICATE_NO]}}) {
 
@@ -134,14 +173,14 @@ class ProjectLinearCombinationOfEstimatesOntoFaces(AbstractRungeKuttaDGActionSet
   
   def __init__(self,
                solver,
-               number_of_face_projections):
+               face_projections: FaceProjections):
     """
     
     
     """
     super(ProjectLinearCombinationOfEstimatesOntoFaces,self).__init__(solver)
     self.guards            = []
-    self.number_of_face_projections = number_of_face_projections
+    self.face_projections  = face_projections
 
 
   @property
@@ -166,10 +205,12 @@ class ProjectLinearCombinationOfEstimatesOntoFaces(AbstractRungeKuttaDGActionSet
     d[ "PREDICATES" ]                               = self.guards
     d[ "FACE_METADATA_ACCESSOR" ]     = "fineGridFaces"  + self._solver._face_label.name
     d[ "CELL_METADATA_ACCESSOR" ]     = "fineGridCell""" + self._solver._cell_label.name
-    d[ "NUMBER_OF_FACE_PROJECTIONS" ] = self.number_of_face_projections
-    if operation_name==peano4.solversteps.ActionSet.OPERATION_TOUCH_CELL_FIRST_TIME:
-      result = jinja2.Template(self.TemplateProjectLinearCombination).render(**d)
+    if operation_name==peano4.solversteps.ActionSet.OPERATION_TOUCH_CELL_FIRST_TIME and self.face_projections==FaceProjections.Solution:
+      result = jinja2.Template(self.TemplateProjectLinearCombinationSolution).render(**d)
       pass 
+    elif operation_name==peano4.solversteps.ActionSet.OPERATION_TOUCH_CELL_FIRST_TIME:
+      assert False, "face projection variant {} not supported yet ".format( self.face_projections)
+      
     if operation_name==peano4.solversteps.ActionSet.OPERATION_TOUCH_CELL_LAST_TIME:
       result = jinja2.Template(self.TemplateProjectAsEpilogue).render(**d)
       pass 

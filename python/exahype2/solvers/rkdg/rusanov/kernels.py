@@ -1,13 +1,14 @@
 # This file is part of the ExaHyPE2 project. For conditions of distribution and 
 # use, please see the copyright notice at www.peano-framework.org
-
-
 import exahype2
+
+from exahype2.solvers.rkdg.actionsets.ProjectLinearCombinationOfEstimatesOntoFaces import FaceProjections
+from exahype2.solvers.rkdg.actionsets.ProjectLinearCombinationOfEstimatesOntoFaces import compute_number_of_face_projection_quantities
 
 
 
 def create_Riemann_solver_call(polynomial_basis, 
-                               number_of_face_projections):
+                               face_projections: FaceProjections):
   """
   
   number_of_face_projections: Integer
@@ -17,9 +18,7 @@ def create_Riemann_solver_call(polynomial_basis,
     derivative along the normal per face.
     
   """
-  assert number_of_face_projections>=1, "No of face projections has to be greater or equal to one"
-  
-  if isinstance( polynomial_basis, exahype2.solvers.GaussLegendreBasis) and number_of_face_projections==1:
+  if isinstance( polynomial_basis, exahype2.solvers.GaussLegendreBasis) and face_projections==FaceProjections.Solution:
     return """solveRiemannProblem_pointwise_in_situ(
       [&](
         const double * __restrict__                  Q,

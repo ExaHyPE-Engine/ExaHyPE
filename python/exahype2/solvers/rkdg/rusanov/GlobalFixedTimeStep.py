@@ -24,7 +24,7 @@ class GlobalFixedTimeStep( SeparateSweeps ):
     name, 
     rk_order,
     polynomials,
-    number_of_face_projections,
+    face_projections,
     unknowns, auxiliary_variables, min_cell_h, max_cell_h, time_step_size,
     flux=PDETerms.User_Defined_Implementation, 
     eigenvalues=PDETerms.None_Implementation, 
@@ -36,13 +36,13 @@ class GlobalFixedTimeStep( SeparateSweeps ):
     source_term=PDETerms.None_Implementation,
     plot_grid_properties=False
   ):
-    super(GlobalFixedTimeStep,self).__init__(name, rk_order, polynomials, number_of_face_projections, unknowns, auxiliary_variables, min_cell_h, max_cell_h, plot_grid_properties) 
+    super(GlobalFixedTimeStep,self).__init__(name, rk_order, polynomials, face_projections, unknowns, auxiliary_variables, min_cell_h, max_cell_h, plot_grid_properties) 
    
     self._normalised_time_step_size = time_step_size
 
     self._kernel_namespace              = "rusanov"
     self._volumetric_solver_call        = create_volumetric_solver_call( self._basis, SolverVariant.WithVirtualFunctions )
-    self._Riemann_solver_call           = create_Riemann_solver_call( self._basis, number_of_face_projections )
+    self._Riemann_solver_call           = create_Riemann_solver_call( self._basis, face_projections )
     self._add_solver_contributions_call = create_add_solver_contributions_call( self._basis )
     self._multiply_with_inverted_mass_matrix_call = create_multiply_with_inverted_mass_matrix_call( self._basis )
     
