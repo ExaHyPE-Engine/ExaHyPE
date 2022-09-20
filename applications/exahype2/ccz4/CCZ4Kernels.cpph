@@ -383,7 +383,8 @@ void applications::exahype2::ccz4::source(double* S, const double* const Q,
     S[9]  = dtK[1][1];
     S[10] = dtK[1][2];
     S[11] = dtK[2][2];
-    S[12] = dtTheta;
+    S[12] = 0.0;
+    //S[12] = dtTheta;
     for (int i = 0; i < 3; i++) S[13+i] = dtGhat[i];
     S[16] = dtalpha;
     for (int i = 0; i < 3; i++) S[17+i] = dtbeta[i];
@@ -853,7 +854,8 @@ void applications::exahype2::ccz4::ncp(double* BgradQ, const double* const Q, co
     BgradQ[9]  = -dtK[1][1];
     BgradQ[10] = -dtK[1][2];
     BgradQ[11] = -dtK[2][2]; // ok
-    BgradQ[12] = -dtTheta;   // ok
+    BgradQ[12] = 0.0;   
+    //BgradQ[12] = -dtTheta;   // ok
     for (int i = 0; i < 3; i++) BgradQ[13+i] = -dtGhat[i]; // buggy
     BgradQ[16] = -dtalpha;
     for (int i = 0; i < 3; i++) BgradQ[17+i] = -dtbeta[i];
