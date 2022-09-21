@@ -57,9 +57,6 @@ ExaHyPE2Sources = \
   fv/Tracer.cpp \
   fd/fd4/FD4_patchwise_functors.cpp \
   fv/rusanov/sycl/GPUCellData.cpp \
-  fv/rusanov/omp/opt/Rusanov.cpp \
-  fv/rusanov/omp/opt/GPUCellData.cpp \
-  fv/rusanov/omp/opt/GPUScratchpadData.cpp \
   fv/rusanov/tests/CopyPatchTest.cpp \
   fv/rusanov/tests/ApplySplit1DRiemannToPatchTest.cpp
 

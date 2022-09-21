@@ -1,5 +1,5 @@
-#include "Constants.h"
 #include "EulerFVRusanovKernelBenchmarks-main.h"
+#include "Constants.h"
 #include "observers/CreateGrid.h"
 #include "observers/CreateGridAndConvergeLoadBalancing.h"
 #include "observers/CreateGridButPostponeRefinement.h"
@@ -27,6 +27,9 @@
 
 #include "config.h"
 
+//#ifdef UseFenv
+//#include "tarch/FenvWrapper.h"
+//#endif
 
 #if defined(SharedTBB)
 #include <tbb/task_group.h>
@@ -86,7 +89,6 @@ void storeOutcome( const double* Q, const double maxEigenvalue) {
   validMaxEigenvalue = maxEigenvalue;
 }
 
-
 /**
  * Works if and only if storeOutcome has been performed before.
  *
@@ -107,19 +109,16 @@ std::tuple<double, int> validateOutcome( double* Q, int patchIndex , const doubl
   }
   if (not tarch::la::equals( maxEigenvalue, validMaxEigenvalue, Accuracy)) {
     std::cout << std::fixed << " maxEigenvalue[" << patchIndex << "]!=validMaxEigenvalue[" << patchIndex << "]: " << maxEigenvalue << "!=" << validMaxEigenvalue << std::endl;
-    exit(-1);
+    errors++;
   }
 
   return { maxDifference, errors };
 }
 
-
 static constexpr double TimeStamp    = 0.5;
 static constexpr double TimeStepSize = 1e-6;
 static constexpr double CellSize     = 0.1;
 static constexpr double CellOffset   = 4.0;
-
-
 
 /**
  * Run the benchmark for one particular number of patches
@@ -160,7 +159,7 @@ void runBenchmarksOnHost(int patches) {
       initInputData( inputData[i] );
     }
 
-    tarch::timing::Watch watch( "::runBenchmarks", "testCPUVariant(...)", false );
+    tarch::timing::Watch watch( "::runBenchmarksOnHost", "testCPUVariant(...)", false );
     double outputMaxEigenvalue = 0;
     for (int i=0; i<patches; i++) {
       outputMaxEigenvalue = tasks::EulerFVRusanovEnclaveTask::applyKernelToCell(
@@ -186,7 +185,7 @@ void runBenchmarksOnHost(int patches) {
     }
 
     if (currentThread==0) {
-      logInfo("main()", "completed measurements for baseline: "       << watch.getCalendarTime() << " / " << (watch.getCalendarTime()/patches/EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch/EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch/EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch) );
+      logInfo("main()", "baseline: "       << watch.getCalendarTime() << " / " << (watch.getCalendarTime()/patches/EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch/EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch/EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch) );
     }
     if (errors > 0) {
       logError("main()", "max difference of outcome for all patches is " << maxDifference << " (admissible accuracy=" << Accuracy << ")" << " for " << errors << " entries");
@@ -218,7 +217,7 @@ void runBenchmarksOnHost(int patches) {
       initInputData( patchData.QIn[i] );
     }
 
-    tarch::timing::Watch watch( "::runBenchmarks", "testStatelessVariantOnHost(...)", false );
+    tarch::timing::Watch watch( "::runBenchmarksOnHost", "testStatelessVariantOnHost(...)", false );
     kernel(
       patchData,
       true ,
@@ -242,7 +241,7 @@ void runBenchmarksOnHost(int patches) {
     }
 
     if (currentThread==0) {
-      logInfo("main()", "completed measurements for stateless kernels on host with " << markerName << ": " << watch.getCalendarTime() << " / " << (watch.getCalendarTime()/patches/EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch/EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch/EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch) );
+      logInfo("main()", "stateless kernels on host with " << markerName << ": " << watch.getCalendarTime() << " / " << (watch.getCalendarTime()/patches/EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch/EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch/EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch) );
     }
     if (errors > 0) {
       logError("main()", "max difference of outcome for all patches is " << maxDifference << " (admissible accuracy=" << Accuracy << ")" << " for " << errors << " entries");
@@ -250,23 +249,23 @@ void runBenchmarksOnHost(int patches) {
     }
   };
 
-
-  #if SharedOMP
-    #pragma omp parallel for
-    for (int thread=0; thread<tarch::multicore::Core::getInstance().getNumberOfThreads(); thread++) {
-  #elif SharedTBB
-    ::tbb::task_group taskGroup;
-    for (int hostTask=1; hostTask<MaxHostTasks; hostTask++) {
-      taskGroup.run(
-        [&]() -> void {
-  #elif SharedCPP
-#error Not implemented yet
-  #elif SharedSYCL
+#if defined(SharedOMP)
+  #pragma omp parallel for
+  for (int thread=0; thread<tarch::multicore::Core::getInstance().getNumberOfThreads(); thread++) {
+#elif defined(SharedTBB)
+  ::tbb::task_group taskGroup;
+  for (int hostTask=1; hostTask<MaxHostTasks; hostTask++) {
+    taskGroup.run(
+      [&]() -> void {
+#elif defined(SharedCPP)
+  #error Not implemented yet
+#elif defined(SharedSYCL)
   for (int thread=0; thread<tarch::multicore::Core::getInstance().getNumberOfThreads(); thread++) {
     tarch::multicore::getSYCLQueue(tarch::multicore::Core::HostDevice).submit([&](auto &h) {
       h.host_task([=]() {
-  #endif
-
+#else
+  int thread = 0;
+#endif
         testCPUVariant(thread);
 
         testStatelessVariantOnHost(
@@ -303,23 +302,21 @@ void runBenchmarksOnHost(int patches) {
           "heap, batched, in-situ", thread
         );
 
-  #if SharedOMP
-      }
-  #elif SharedTBB
-        });
+#if defined(SharedOMP)
+  }
+#elif defined(SharedTBB)
+      });
     });
   }
   taskGroup.wait();
-  #elif SharedSYCL
+#elif defined(SharedSYCL)
       });
     });
   }
   tarch::multicore::getSYCLQueue(tarch::multicore::Core::HostDevice).wait();
-  #else
-  #endif
+#else
+#endif
 }
-
-
 
 /**
  * This is the heart of the overall benchmark. We first of all invoke
@@ -358,7 +355,7 @@ void runBenchmarksOnDevice(int patches, int device) {
       initInputData( patchData.QIn[i] );
     }
 
-    tarch::timing::Watch watch( "::runBenchmarks", "testStatelessVariantOnDevice(...)", false );
+    tarch::timing::Watch watch( "::runBenchmarksOnDevice", "testStatelessVariantOnDevice(...)", false );
     kernel(
       device,
       patchData,
@@ -383,7 +380,7 @@ void runBenchmarksOnDevice(int patches, int device) {
     }
 
     if (currentThread==0) {
-      logInfo("main()", "completed measurements for stateless kernels on device " << device << " with " << markerName << ": " << watch.getCalendarTime() << " / " << (watch.getCalendarTime()/patches/EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch/EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch/EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch) );
+      logInfo("main()", "stateless kernels on device " << device << " with " << markerName << ": " << watch.getCalendarTime() << " / " << (watch.getCalendarTime()/patches/EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch/EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch/EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch) );
     }
     if (errors > 0) {
       logError("main()", "max difference of outcome for all patches is " << maxDifference << " (admissible accuracy=" << Accuracy << ")" << " for " << errors << " entries");
@@ -391,74 +388,69 @@ void runBenchmarksOnDevice(int patches, int device) {
     }
   };
 
+#if defined(SharedOMP) and defined(GPUOffloadingOMP)
+  #pragma omp parallel for
+  for (int thread=0; thread<tarch::multicore::Core::getInstance().getNumberOfThreads(); thread++) {
+    testStatelessVariantOnDevice(
+      ::exahype2::fv::rusanov::omp::timeStepWithRusanov_patchwise_map_static_calls<EulerFVRusanov,EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch, 1, EulerFVRusanov::NumberOfUnknowns, EulerFVRusanov::NumberOfAuxiliaryVariables,exahype2::enumerator::AoSLexicographicEnumerator>,
+      "omp, patch-wise, AoS, map", thread
+    );
+    testStatelessVariantOnDevice(
+      ::exahype2::fv::rusanov::omp::timeStepWithRusanov_patchwise_map_static_calls<EulerFVRusanov,EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch, 1, EulerFVRusanov::NumberOfUnknowns, EulerFVRusanov::NumberOfAuxiliaryVariables,exahype2::enumerator::AoSoALexicographicEnumerator>,
+      "omp, patch-wise, AoSoA, map", thread
+    );
+    testStatelessVariantOnDevice(
+      ::exahype2::fv::rusanov::omp::timeStepWithRusanov_patchwise_map_static_calls<EulerFVRusanov,EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch, 1, EulerFVRusanov::NumberOfUnknowns, EulerFVRusanov::NumberOfAuxiliaryVariables,exahype2::enumerator::SoALexicographicEnumerator>,
+      "omp, patch-wise, SoA, map", thread
+    );
 
-  #if SharedOMP and GPUOffloadingOMP
-    #pragma omp parallel for
-    for (int thread=0; thread<tarch::multicore::Core::getInstance().getNumberOfThreads(); thread++) {
-      testStatelessVariantOnDevice(
-        ::exahype2::fv::rusanov::omp::timeStepWithRusanov_patchwise_map_static_calls<EulerFVRusanov,EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch, 1, EulerFVRusanov::NumberOfUnknowns, EulerFVRusanov::NumberOfAuxiliaryVariables,exahype2::enumerator::AoSLexicographicEnumerator>,
-        "omp, patch-wise, AoS, map", thread
-      );
-      testStatelessVariantOnDevice(
-        ::exahype2::fv::rusanov::omp::timeStepWithRusanov_patchwise_map_static_calls<EulerFVRusanov,EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch, 1, EulerFVRusanov::NumberOfUnknowns, EulerFVRusanov::NumberOfAuxiliaryVariables,exahype2::enumerator::AoSoALexicographicEnumerator>,
-        "omp, patch-wise, AoSoA, map", thread
-      );
-      testStatelessVariantOnDevice(
-        ::exahype2::fv::rusanov::omp::timeStepWithRusanov_patchwise_map_static_calls<EulerFVRusanov,EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch, 1, EulerFVRusanov::NumberOfUnknowns, EulerFVRusanov::NumberOfAuxiliaryVariables,exahype2::enumerator::SoALexicographicEnumerator>,
-        "omp, patch-wise, SoA, map", thread
-      );
+    testStatelessVariantOnDevice(
+      ::exahype2::fv::rusanov::omp::timeStepWithRusanov_patchwise_managed_static_calls<EulerFVRusanov,EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch, 1, EulerFVRusanov::NumberOfUnknowns, EulerFVRusanov::NumberOfAuxiliaryVariables,exahype2::enumerator::AoSLexicographicEnumerator>,
+      "omp, patch-wise, AoS, user-managed-memory", thread
+    );
+    testStatelessVariantOnDevice(
+      ::exahype2::fv::rusanov::omp::timeStepWithRusanov_patchwise_managed_static_calls<EulerFVRusanov,EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch, 1, EulerFVRusanov::NumberOfUnknowns, EulerFVRusanov::NumberOfAuxiliaryVariables,exahype2::enumerator::AoSoALexicographicEnumerator>,
+      "omp, patch-wise, AoSoA, user-managed-memory", thread
+    );
+    testStatelessVariantOnDevice(
+      ::exahype2::fv::rusanov::omp::timeStepWithRusanov_patchwise_managed_static_calls<EulerFVRusanov,EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch, 1, EulerFVRusanov::NumberOfUnknowns, EulerFVRusanov::NumberOfAuxiliaryVariables,exahype2::enumerator::SoALexicographicEnumerator>,
+      "omp, patch-wise, SoA, user-managed-memory", thread
+    );
 
-      /*
-      testStatelessVariantOnDevice(
-        ::exahype2::fv::rusanov::omp::timeStepWithRusanov_patchwise_managed_static_calls<EulerFVRusanov,EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch, 1, EulerFVRusanov::NumberOfUnknowns, EulerFVRusanov::NumberOfAuxiliaryVariables,exahype2::enumerator::AoSLexicographicEnumerator>,
-        "omp, patch-wise, AoS, user-managed-memory", thread
-      );
-      testStatelessVariantOnDevice(
-        ::exahype2::fv::rusanov::omp::timeStepWithRusanov_patchwise_managed_static_calls<EulerFVRusanov,EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch, 1, EulerFVRusanov::NumberOfUnknowns, EulerFVRusanov::NumberOfAuxiliaryVariables,exahype2::enumerator::AoSoALexicographicEnumerator>,
-        "omp, patch-wise, AoSoA, user-managed-memory", thread
-      );
-      testStatelessVariantOnDevice(
-        ::exahype2::fv::rusanov::omp::timeStepWithRusanov_patchwise_managed_static_calls<EulerFVRusanov,EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch, 1, EulerFVRusanov::NumberOfUnknowns, EulerFVRusanov::NumberOfAuxiliaryVariables,exahype2::enumerator::SoALexicographicEnumerator>,
-        "omp, patch-wise, SoA, user-managed-memory", thread
-      );
-      */
+    testStatelessVariantOnDevice(
+      ::exahype2::fv::rusanov::omp::timeStepWithRusanov_batched_map_static_calls<EulerFVRusanov,EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch, 1, EulerFVRusanov::NumberOfUnknowns, EulerFVRusanov::NumberOfAuxiliaryVariables,exahype2::enumerator::AoSLexicographicEnumerator>,
+      "omp, batched, AoS, map", thread
+    );
+    testStatelessVariantOnDevice(
+      ::exahype2::fv::rusanov::omp::timeStepWithRusanov_batched_map_static_calls<EulerFVRusanov,EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch, 1, EulerFVRusanov::NumberOfUnknowns, EulerFVRusanov::NumberOfAuxiliaryVariables,exahype2::enumerator::AoSoALexicographicEnumerator>,
+      "omp, batched, AoSoA, map", thread
+    );
+    testStatelessVariantOnDevice(
+      ::exahype2::fv::rusanov::omp::timeStepWithRusanov_batched_map_static_calls<EulerFVRusanov,EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch, 1, EulerFVRusanov::NumberOfUnknowns, EulerFVRusanov::NumberOfAuxiliaryVariables,exahype2::enumerator::SoALexicographicEnumerator>,
+      "omp, batched, SoA, map", thread
+    );
 
-      testStatelessVariantOnDevice(
-        ::exahype2::fv::rusanov::omp::timeStepWithRusanov_batched_map_static_calls<EulerFVRusanov,EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch, 1, EulerFVRusanov::NumberOfUnknowns, EulerFVRusanov::NumberOfAuxiliaryVariables,exahype2::enumerator::AoSLexicographicEnumerator>,
-        "omp, batched, AoS, map", thread
-      );
-      testStatelessVariantOnDevice(
-        ::exahype2::fv::rusanov::omp::timeStepWithRusanov_batched_map_static_calls<EulerFVRusanov,EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch, 1, EulerFVRusanov::NumberOfUnknowns, EulerFVRusanov::NumberOfAuxiliaryVariables,exahype2::enumerator::AoSoALexicographicEnumerator>,
-        "omp, batched, AoSoA, map", thread
-      );
-      testStatelessVariantOnDevice(
-        ::exahype2::fv::rusanov::omp::timeStepWithRusanov_batched_map_static_calls<EulerFVRusanov,EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch, 1, EulerFVRusanov::NumberOfUnknowns, EulerFVRusanov::NumberOfAuxiliaryVariables,exahype2::enumerator::SoALexicographicEnumerator>,
-        "omp, batched, SoA, map", thread
-      );
-
-      /*
-      testStatelessVariantOnDevice(
-        ::exahype2::fv::rusanov::omp::timeStepWithRusanov_batched_managed_static_calls<EulerFVRusanov,EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch, 1, EulerFVRusanov::NumberOfUnknowns, EulerFVRusanov::NumberOfAuxiliaryVariables,exahype2::enumerator::AoSLexicographicEnumerator>,
-        "omp, batched, AoS, map, user-managed-memory", thread
-      );
-      testStatelessVariantOnDevice(
-        ::exahype2::fv::rusanov::omp::timeStepWithRusanov_batched_managed_static_calls<EulerFVRusanov,EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch, 1, EulerFVRusanov::NumberOfUnknowns, EulerFVRusanov::NumberOfAuxiliaryVariables,exahype2::enumerator::AoSoALexicographicEnumerator>,
-        "omp, batched, AoSoA, map, user-managed-memory", thread
-      );
-      testStatelessVariantOnDevice(
-        ::exahype2::fv::rusanov::omp::timeStepWithRusanov_batched_managed_static_calls<EulerFVRusanov,EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch, 1, EulerFVRusanov::NumberOfUnknowns, EulerFVRusanov::NumberOfAuxiliaryVariables,exahype2::enumerator::SoALexicographicEnumerator>,
-        "omp, batched, SoA, map, user-managed-memory", thread
-      );
-      */
-    }
-  #elif SharedTBB and GPUOffloadingSYCL
-    ::tbb::task_group taskGroup;
-    for (int hostTask=1; hostTask<MaxHostTasks; hostTask++) {
-      taskGroup.run(
-        [&]() -> void {
-  #elif SharedCPP
-    #error Not implemented yet
-  #elif SharedSYCL and GPUOffloadingSYCL
+    testStatelessVariantOnDevice(
+      ::exahype2::fv::rusanov::omp::timeStepWithRusanov_batched_managed_static_calls<EulerFVRusanov,EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch, 1, EulerFVRusanov::NumberOfUnknowns, EulerFVRusanov::NumberOfAuxiliaryVariables,exahype2::enumerator::AoSLexicographicEnumerator>,
+      "omp, batched, AoS, user-managed-memory", thread
+    );
+    testStatelessVariantOnDevice(
+      ::exahype2::fv::rusanov::omp::timeStepWithRusanov_batched_managed_static_calls<EulerFVRusanov,EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch, 1, EulerFVRusanov::NumberOfUnknowns, EulerFVRusanov::NumberOfAuxiliaryVariables,exahype2::enumerator::AoSoALexicographicEnumerator>,
+      "omp, batched, AoSoA, user-managed-memory", thread
+    );
+    testStatelessVariantOnDevice(
+      ::exahype2::fv::rusanov::omp::timeStepWithRusanov_batched_managed_static_calls<EulerFVRusanov,EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch, 1, EulerFVRusanov::NumberOfUnknowns, EulerFVRusanov::NumberOfAuxiliaryVariables,exahype2::enumerator::SoALexicographicEnumerator>,
+      "omp, batched, SoA, user-managed-memory", thread
+    );
+  }
+#elif defined(SharedTBB) and defined(GPUOffloadingSYCL)
+  ::tbb::task_group taskGroup;
+  for (int hostTask=1; hostTask<MaxHostTasks; hostTask++) {
+    taskGroup.run(
+      [&]() -> void {
+#elif defined(SharedCPP)
+  #error Not implemented yet
+#elif defined(SharedSYCL) and defined(GPUOffloadingSYCL)
   for (int thread=0; thread<tarch::multicore::Core::getInstance().getNumberOfThreads(); thread++) {
     tarch::multicore::getSYCLQueue(tarch::multicore::Core::HostDevice).submit([&](auto &h) {
       h.host_task([=]() {
@@ -490,7 +482,7 @@ void runBenchmarksOnDevice(int patches, int device) {
     });
   }
   tarch::multicore::getSYCLQueue(tarch::multicore::Core::HostDevice).wait();
-  #endif
+#endif
 
   /*
   }
@@ -545,7 +537,6 @@ void runBenchmarksOnDevice(int patches, int device) {
   #endif
 */
 }
-
 
 int main(int argc, char** argv) {
   const int ExitCodeSuccess          = 0;

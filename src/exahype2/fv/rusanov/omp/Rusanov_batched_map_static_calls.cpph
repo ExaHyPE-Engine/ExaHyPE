@@ -932,7 +932,7 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanov_batched_map_static_calls(
             patchData.t[patchIndex],
             patchData.dt[patchIndex],
             2, // normal
-            tempNonconservativeProductY,
+            tempNonconservativeProductZ,
             ncpEnumerator
         );
     }

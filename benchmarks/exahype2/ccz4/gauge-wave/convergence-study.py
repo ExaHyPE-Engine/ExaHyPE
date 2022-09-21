@@ -13,13 +13,12 @@ parser = argparse.ArgumentParser(description='ExaHyPE 2 - CCZ4-GaugeWave benchma
 parser.add_argument("-j",   "--parallel-builds",   dest="j",              type=int, default=-1, help="Parallel builds" )
 parser.add_argument("-pd",  "--peano-dir",         dest="peanodir",       default="../../../../", help="Peano4 directory" )
 parser.add_argument("-v",   "--verbose",           dest="verbose",        action="store_true", default=False, help="Verbose")
-parser.add_argument("-s",   "--solver",            dest="solver",         choices=["fv", "fd4-rk1", "fd4-rk2", "fd4-rk3", "fd4-rk4", "dg1-rk1", "dg2-rk2", "dg3-rk1", "dg3-rk3", "dg4-rk4", "dg4-rk1", "dg4-rk2", "dg4-rk3"], required=True, help="Pick solver type" )
+parser.add_argument("-s",   "--solver",            dest="solver",         choices=["fv", "fd4-rk1", "fd4-rk2", "fd4-rk3", "fd4-rk4", "dg0-rk1", "dg1-rk1", "dg2-rk2", "dg3-rk1", "dg3-rk3", "dg4-rk4", "dg4-rk1", "dg4-rk2", "dg4-rk3"], required=True, help="Pick solver type" )
 parser.add_argument("-et",  "--end-time",          dest="end_time",       type=float, default=1.0, help="End of simulation" )
 parser.add_argument("-cs",  "--cell-size",         dest="cell_size",      type=float, default=0.3, help="Cell size (default 0.3)" )
 parser.add_argument("-asserts",  "--asserts",      dest="asserts",        action="store_true", default=False, help="Switch on assertions" )
 parser.add_argument("-tracer",   "--tracer",       dest="tracer",         action="store_true", default=False, help="Activate tracer" )
 args = parser.parse_args()
-
 
 
 
@@ -76,13 +75,14 @@ if "fd4-rk" in args.solver:
 if "rk" in args.solver and "dg" in args.solver:
   space_order = int(args.solver[2])
   time_order  = int(args.solver[6])
-  my_solver = exahype2.solvers.rkdg.rusanov.GlobalAdaptiveTimeStepWithEnclaveTasking(name             = "CCZ4DG"  + str(space_order) + "RK" + str(time_order),
+  my_solver   = exahype2.solvers.rkdg.rusanov.GlobalAdaptiveTimeStepWithEnclaveTasking(name             = "CCZ4DG"  + str(space_order) + "RK" + str(time_order),
                                                                rk_order             = time_order,
                                                                polynomials          = exahype2.solvers.GaussLegendreBasis(space_order),
+                                                               face_projections     = exahype2.solvers.rkdg.FaceProjections.Solution,
                                                                unknowns             = sum(unknowns.values()),
                                                                auxiliary_variables  = 0,
-                                                               min_cell_h       = args.cell_size, 
-                                                               max_cell_h       = args.cell_size,
+                                                               min_cell_h           = args.cell_size, 
+                                                               max_cell_h           = args.cell_size,
                                                                time_step_relaxation = 0.1)
 
 #
@@ -313,8 +313,10 @@ if args.tracer:
 
 if args.asserts:
   build_mode = peano4.output.CompileMode.Asserts
+  delta_plot = args.end_time/100 
 else:
   build_mode = peano4.output.CompileMode.Release
+  delta_plot = args.end_time/20 
     
 dimensions  = 3
 offset      = [-0.5, -0.5, -0.5] 
@@ -326,7 +328,7 @@ project.set_global_simulation_parameters(
   offset,  domain_size,
   args.end_time,
   0.0, 
-  args.end_time/20,                      #args.plot_step_size,   # snapshots
+  delta_plot,
   periodic_boundary_conditions,
   8  # plotter precision
 )
