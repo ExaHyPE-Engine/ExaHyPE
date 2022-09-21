@@ -165,7 +165,6 @@ void exahype2::dg::integrateOverRiemannSolutionsAndAddToVolume_GaussLegendre(
   const double* __restrict__          MassMatrixDiagonal1d,
   double* __restrict__                cellQ
 ){
-
   const int nPA = order+1; //nodes per axis
   const int strideQ = unknowns+auxiliaryVariables;
 
@@ -183,12 +182,11 @@ void exahype2::dg::integrateOverRiemannSolutionsAndAddToVolume_GaussLegendre(
   exahype2::enumerator::FaceAoSLexicographicEnumerator upperFaceEnumerator(3,nPA,1,unknowns,0);
 
   dfor( dof, order+1 ) {
+    const double coeffLeft    = MassMatrixDiagonal1d[dof[1]]*BasisFunctionValuesLeft[dof[0]]       * cellSize(1);
+    const double coeffRight   = MassMatrixDiagonal1d[dof[1]]*BasisFunctionValuesLeft[order-dof[0]] * cellSize(1);
 
-    const double coeffLeft    = MassMatrixDiagonal1d[dof[1]]*BasisFunctionValuesLeft[dof[0]];
-    const double coeffRight   = MassMatrixDiagonal1d[dof[1]]*BasisFunctionValuesLeft[order-dof[0]];
-
-    const double coeffBottom  = MassMatrixDiagonal1d[dof[0]]*BasisFunctionValuesLeft[dof[1]];
-    const double coeffUp      = MassMatrixDiagonal1d[dof[0]]*BasisFunctionValuesLeft[order-dof[1]];
+    const double coeffBottom  = MassMatrixDiagonal1d[dof[0]]*BasisFunctionValuesLeft[dof[1]]       * cellSize(0);
+    const double coeffUp      = MassMatrixDiagonal1d[dof[0]]*BasisFunctionValuesLeft[order-dof[1]] * cellSize(0);
 
     tarch::la::Vector<Dimensions,int>    leftDoF    = dof;
     tarch::la::Vector<Dimensions,int>    rightDoF   = dof;
@@ -246,16 +244,15 @@ void exahype2::dg::integrateOverRiemannSolutionsAndAddToVolume_GaussLegendre(
   exahype2::enumerator::FaceAoSLexicographicEnumerator upperFaceEnumerator(5,nPA,1,unknowns,0);
 
   dfor( dof, order+1 ) {
-
     //coefficients of faces in x direction
-    const double coeffLeft  = MassMatrixDiagonal1d[dof[1]]*MassMatrixDiagonal1d[dof[2]]*BasisFunctionValuesLeft[dof[0]];
-    const double coeffRight = MassMatrixDiagonal1d[dof[1]]*MassMatrixDiagonal1d[dof[2]]*BasisFunctionValuesLeft[order-dof[0]];
+    const double coeffLeft  = MassMatrixDiagonal1d[dof[1]]*MassMatrixDiagonal1d[dof[2]]*BasisFunctionValuesLeft[dof[0]]         * cellSize(1) * cellSize(2);
+    const double coeffRight = MassMatrixDiagonal1d[dof[1]]*MassMatrixDiagonal1d[dof[2]]*BasisFunctionValuesLeft[order-dof[0]]   * cellSize(1) * cellSize(2);
     //coefficients of faces in y direction
-    const double coeffFront = MassMatrixDiagonal1d[dof[0]]*MassMatrixDiagonal1d[dof[2]]*BasisFunctionValuesLeft[dof[1]];
-    const double coeffBack  = MassMatrixDiagonal1d[dof[0]]*MassMatrixDiagonal1d[dof[2]]*BasisFunctionValuesLeft[order-dof[1]];
+    const double coeffFront = MassMatrixDiagonal1d[dof[0]]*MassMatrixDiagonal1d[dof[2]]*BasisFunctionValuesLeft[dof[1]]         * cellSize(0) * cellSize(2);
+    const double coeffBack  = MassMatrixDiagonal1d[dof[0]]*MassMatrixDiagonal1d[dof[2]]*BasisFunctionValuesLeft[order-dof[1]]   * cellSize(0) * cellSize(2);
     //coefficients of faces in z direction
-    const double coeffBottom  = MassMatrixDiagonal1d[dof[0]]*MassMatrixDiagonal1d[dof[1]]*BasisFunctionValuesLeft[dof[2]];
-    const double coeffUp      = MassMatrixDiagonal1d[dof[0]]*MassMatrixDiagonal1d[dof[1]]*BasisFunctionValuesLeft[order-dof[2]];
+    const double coeffBottom  = MassMatrixDiagonal1d[dof[0]]*MassMatrixDiagonal1d[dof[1]]*BasisFunctionValuesLeft[dof[2]]       * cellSize(0) * cellSize(1);
+    const double coeffUp      = MassMatrixDiagonal1d[dof[0]]*MassMatrixDiagonal1d[dof[1]]*BasisFunctionValuesLeft[order-dof[2]] * cellSize(0) * cellSize(1);
 
     tarch::la::Vector<Dimensions,int> leftDoF      = dof;
     tarch::la::Vector<Dimensions,int> rightDoF     = dof;
