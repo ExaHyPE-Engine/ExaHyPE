@@ -4,7 +4,7 @@
 
 \section{Clang toolchain}
 
- Both NVC++ and Intel's OneAPI compilers build upon Clang. However, they modify
+ The NVC++, Intel's OneAPI and AMD compilers build upon Clang. However, they modify
  the baseline compiler. Therefore, they have separated sections in this chapter
  (below).
  The present section focuses on the baseline Clang compiler suite:
@@ -336,8 +336,35 @@ if you run the kernel benchmark from page \pageref{page:exahype:kernel-benchmark
 % %  CXXFLAGS="-target x86_64-pc-linux-gnu -fopenmp -fopenmp-targets=amdgcn-amd-amdhsa -Xopenmp-target=amdgcn-amd-amdhsa -march=gfx906 --hip-device-lib-path=/opt/rocm-3.5.1/lib" \
 % %  LDFLAGS="-lm -fopenmp"
 
+\section{AMD toolchain}
+For the AMD toolchain we need to load either ROCm or AOMP.
+Both modules should have AMD's version of Clang.
+With the AMD toolchain we use AMD's modified Clang. We again need to point \texttt{CXX}
+and \texttt{CC} to the Clang compiler.
 
+\paragraph{OpenMP}
+\begin{remark}
+  The Clang compiler does not support \texttt{omp\_get\_mapped\_ptr} at the moment.
+  We have implemented a workaround \texttt{mk\_omp\_get\_mapped\_ptr} in \texttt{src/tarch/multicore/omp/MkUtils.h}
+  which does the same trick.
+ \end{remark}
 
+For the configuration with OpenMP GPU offloading, we again specify \texttt{--with-gpu=omp} to make Peano GPU aware.
+Furthermore, we need to add AMD specific offloading instructions:
+
+\begin{bash}
+  ./configure \
+  --enable-exahype \
+  --enable-loadbalancing \
+  --enable-blockstructured \
+  --with-gpu=omp \
+  --with-multithreading=omp \
+  CC=clang CXX=clang++ \
+  CXXFLAGS="-O3 -std=c++20 -fopenmp -O3 -std=c++20 --offload-arch=<gpu-arch>" \
+  LDFLAGS="-fopenmp --offload-arch=<gpu-arch> -lstdc++fs"
+\end{bash}
+
+where \texttt{<gpu-arch>} is either \texttt{gfx906} (MI 50), \texttt{gfx908} (MI 100), or \texttt{gfx90a} (MI 200 series).
 
 \section{Some particular supercomputer testbeds}
 
