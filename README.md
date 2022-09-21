@@ -10,14 +10,14 @@
 - [<u>Dependencies and Prerequisites</u>](#udependencies-and-prerequisitesu)
 - [<u>How to Build and Run (using GNU autotools)</u>](#uhow-to-build-and-run-using-gnu-autotoolsu)
   - [Setup your build environment](#setup-your-build-environment)
-  - [Configure your build](#configure-your-build)
-    - [Intel](#intel)
-    - [Intel with OpenMP GPU](#intel-with-openmp-gpu)
-    - [ROCm with OpenMP GPU (AMD)](#rocm-with-openmp-gpu-amd)
-    - [Clang](#clang)
-    - [Clang with OpenMP GPU (NVIDIA)](#clang-with-openmp-gpu-nvidia)
-    - [NVHPC with OpenMP GPU](#nvhpc-with-openmp-gpu)
-    - [NVHPC with C++ GPU](#nvhpc-with-c-gpu)
+  - [Configure your build using a toolchain](#configure-your-build-using-a-toolchain)
+    - [Intel OneAPI toolchain](#intel-oneapi-toolchain)
+    - [Intel OneAPI toolchain with OpenMP GPU](#intel-oneapi-toolchain-with-openmp-gpu)
+    - [Clang toolchain](#clang-toolchain)
+    - [Clang toolchain with OpenMP GPU](#clang-toolchain-with-openmp-gpu)
+    - [NVIDIA NVC++ toolchain with OpenMP GPU](#nvidia-nvc-toolchain-with-openmp-gpu)
+    - [NVIDIA NVC++ toolchain with C++ GPU](#nvidia-nvc-toolchain-with-c-gpu)
+    - [AMD toolchain with OpenMP GPU](#amd-toolchain-with-openmp-gpu)
   - [Compilation](#compilation)
   - [Running a Simulation](#running-a-simulation)
   - [Cleanup](#cleanup)
@@ -78,18 +78,18 @@ If you work against the Peano repository, you however have to run these steps:
 libtoolize && aclocal && autoconf && autoheader && cp src/config.h.in . && automake --add-missing
 ```
 
-## Configure your build
-We rely on configure to set up the build system.
-Use configure's help to find out which options you want to use.
+## Configure your build using a toolchain
+We rely on `configure` to set up the build system.
+Use `configure`'s help to find out which options you want to use.
 
 ```shell
 ./configure --help
 ./configure --my-options
 ```
 
-Some exemplary configure commands are given below. For detailed information please refer to the guidebook.
+Some quickstart configure commands for different toolchains are given below. For detailed information please refer to the guidebook in the documentation.
 
-### Intel
+### Intel OneAPI toolchain
 ```shell
 ./configure \
   --enable-exahype \
@@ -101,7 +101,7 @@ Some exemplary configure commands are given below. For detailed information plea
   LDFLAGS="-fiopenmp"
 ```
 
-### Intel with OpenMP GPU
+### Intel OneAPI toolchain with OpenMP GPU
 ```shell
 ./configure \
   --enable-exahype \
@@ -114,21 +114,7 @@ Some exemplary configure commands are given below. For detailed information plea
   LDFLAGS="-fiopenmp"
 ```
 
-### ROCm with OpenMP GPU (AMD)
-```shell
-export LD=ld &&
-export AOMP=/opt/rocm/llvm &&
-./configure \
-  --enable-exahype \
-  --enable-loadbalancing \
-  --enable-blockstructured \
-  --with-gpu=omp \
-  --with-multithreading=omp \
-  CC=aompcc CXX=aompcc \
-  CXXFLAGS="-O3 -std=c++20 -fopenmp -fopenmp-targets=amdgcn-amd-amdhsa -Xopenmp-target=amdgcn-amd-amdhsa -march=gfx908" \
-  LDFLAGS="-fopenmp -fopenmp-targets=amdgcn-amd-amdhsa -Xopenmp-target=amdgcn-amd-amdhsa -march=gfx908"
-```
-### Clang
+### Clang toolchain
 ```shell
 ./configure \
   --enable-exahype \
@@ -139,7 +125,7 @@ export AOMP=/opt/rocm/llvm &&
   CXXFLAGS="-O3 -std=c++17 -fopenmp"
 ```
 
-### Clang with OpenMP GPU (NVIDIA)
+### Clang toolchain with OpenMP GPU
 ```shell
 ./configure \
   --enable-exahype \
@@ -151,7 +137,7 @@ export AOMP=/opt/rocm/llvm &&
   CXXFLAGS="-O3 -std=c++17 -fopenmp -fopenmp-targets=nvptx64-nvidia-cuda -Xopenmp-target -march=sm_86"
 ```
 
-### NVHPC with OpenMP GPU
+### NVIDIA NVC++ toolchain with OpenMP GPU
 ```shell
 ./configure \
   --enable-exahype \
@@ -164,7 +150,7 @@ export AOMP=/opt/rocm/llvm &&
   LDFLAGS="-mp=gpu -gpu=cc86"
 ```
 
-### NVHPC with C++ GPU
+### NVIDIA NVC++ toolchain with C++ GPU
 ```shell
 ./configure \
   --enable-exahype \
@@ -174,8 +160,23 @@ export AOMP=/opt/rocm/llvm &&
   --with-multithreading=cpp \
   CC=nvc++ CXX=nvc++ \
   CXXFLAG="-O4 -std=c++20 -mp=gpu -gpu=cc86" \
-  LDFLAGS="-gpu=cc86"
+  LDFLAGS="-mp=gpu -gpu=cc86"
 ```
+
+### AMD toolchain with OpenMP GPU
+```shell
+./configure \
+  --enable-exahype \
+  --enable-loadbalancing \
+  --enable-blockstructured \
+  --with-gpu=omp \
+  --with-multithreading=omp \
+  CC=clang CXX=clang++ \
+  CXXFLAGS="-O3 -std=c++20 -fopenmp -O3 -std=c++20 --offload-arch=<gpu-arch>" \
+  LDFLAGS="-fopenmp --offload-arch=<gpu-arch> -lstdc++fs"
+```
+
+where `<gpu-arch>` is either `gfx906` (MI 50), `gfx908` (MI 100), or `gfx90a` (MI 200 series).
 
 ## Compilation
 ```shell
