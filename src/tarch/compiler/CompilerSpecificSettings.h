@@ -19,6 +19,8 @@
   /**
    * The icpx compiler defined __GNUC__ as well, so it has to come last
    */
+  #elif defined(__AMDGPU__) && defined(__linux)
+    #include "tarch/compiler/LinuxAMD.h"
   #elif defined(__clang__) && defined(__linux)
     #include "tarch/compiler/LinuxClang.h"
   #elif defined(__GNUC__) && defined(__linux)
