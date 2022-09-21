@@ -436,6 +436,8 @@ void applications::exahype2::ccz4::ncp(double* BgradQ, const double* const Q, co
       const double CCZ4mu
       )
 {
+    // Han 09-2022: add a parameter to switch off or on the advection here
+    const double advec=0.0;
     // Baojiu-01-08-22: changed the line below to make sure alpha>0.0001
     //const double alpha = std::exp(std::fmax(-20., std::fmin(20.,Q[16])));
     const double alpha = std::fmax(1e-4,Q[16]);
@@ -687,12 +689,12 @@ void applications::exahype2::ccz4::ncp(double* BgradQ, const double* const Q, co
     double dtK[3][3];
     // Baojiu-01-08-22: suppressed the advection term here to be added elsewhere using lopsided derivative
     for (int i = 0; i < 3; i++)
-    for (int j = 0; j < 3; j++)  dtK[i][j] = phi2*SecondOrderTermsNCP[i][j] + (beta[0] * dAex[0][i][j] + beta[1] * dAex[1][i][j] + beta[2] * dAex[2][i][j]); // extrinsic curvature
+    for (int j = 0; j < 3; j++)  dtK[i][j] = phi2*SecondOrderTermsNCP[i][j] + advec*(beta[0] * dAex[0][i][j] + beta[1] * dAex[1][i][j] + beta[2] * dAex[2][i][j]); // extrinsic curvature
 
     const double dtraceK[3] = {gradQin[53][0], gradQin[53][1], gradQin[53][2]};
 
     // Baojiu-01-08-22: suppressed the advection term here to be added elsewhere using lopsided derivative
-    double dtTraceK = -nablanablaalphaNCP + alpha*RPlusTwoNablaZNCP + (beta[0]*dtraceK[0] + beta[1]*dtraceK[1] + beta[2]*dtraceK[2]);
+    double dtTraceK = -nablanablaalphaNCP + alpha*RPlusTwoNablaZNCP + advec*(beta[0]*dtraceK[0] + beta[1]*dtraceK[1] + beta[2]*dtraceK[2]);
 
     const double BB[3][3] = {
         {Q[26], Q[27], Q[28]}, {Q[29], Q[30], Q[31]}, {Q[32], Q[33], Q[34]}
@@ -706,7 +708,7 @@ void applications::exahype2::ccz4::ncp(double* BgradQ, const double* const Q, co
 
     const double dTheta[3] = {gradQin[12][0],gradQin[12][1],gradQin[12][2]};
     // Baojiu-01-08-22: suppressed the advection term here to be added elsewhere using lopsided derivative
-    double dtTheta = 0.5*alpha*CCZ4e*CCZ4e*( RPlusTwoNablaZNCP ) + (beta[0]*dTheta[0] + beta[1]*dTheta[1] + beta[2]*dTheta[2]); // *** original cleaning ***
+    double dtTheta = 0.5*alpha*CCZ4e*CCZ4e*( RPlusTwoNablaZNCP ) + advec*(beta[0]*dTheta[0] + beta[1]*dTheta[1] + beta[2]*dTheta[2]); // *** original cleaning ***
 
     //double divAupNCP[3] = {0,0,0};
 
@@ -738,7 +740,7 @@ void applications::exahype2::ccz4::ncp(double* BgradQ, const double* const Q, co
             temp2 +=g_contr[j][i]*dTheta[j];
         }
         // Baojiu-01-08-22: suppressed the advection term here to be added elsewhere using lopsided derivative
-        dtGhat[i] = -4./3.*alpha*temp + 2*alpha*temp2 + (beta[0]*dGhat[0][i] + beta[1]*dGhat[1][i] + beta[2]*dGhat[2][i]);
+        dtGhat[i] = -4./3.*alpha*temp + 2*alpha*temp2 + advec*(beta[0]*dGhat[0][i] + beta[1]*dGhat[1][i] + beta[2]*dGhat[2][i]);
         for (int l = 0; l < 3; l++)
         for (int k = 0; k < 3; k++) dtGhat[i] += g_contr[k][l]*0.5*(dBB[k][l][i] + dBB[l][k][i]) + 1./3.*g_contr[i][k]*0.5*(dBB[k][l][l] + dBB[l][k][l]);
     }
@@ -759,7 +761,7 @@ void applications::exahype2::ccz4::ncp(double* BgradQ, const double* const Q, co
     for (int i = 0; i < 3; i++)
     {
         // Baojiu-01-08-22: suppressed the advection term here to be added elsewhere using lopsided derivative
-        dtbb[i] = CCZ4xi*dtGhat[i] + CCZ4bs * ( beta[0]*gradQin[20+i][0] + beta[1]*gradQin[20+i][1] + beta[2]*gradQin[20+i][2] - beta[0]*gradQin[13+i][0] - beta[1]*gradQin[13+i][1] - beta[2]*gradQin[13+i][2]);
+        dtbb[i] = CCZ4xi*dtGhat[i] + CCZ4bs * advec*( beta[0]*gradQin[20+i][0] + beta[1]*gradQin[20+i][1] + beta[2]*gradQin[20+i][2] - beta[0]*gradQin[13+i][0] - beta[1]*gradQin[13+i][1] - beta[2]*gradQin[13+i][2]);
         dtbb[i] *= CCZ4sk;
     }
 
@@ -770,7 +772,7 @@ void applications::exahype2::ccz4::ncp(double* BgradQ, const double* const Q, co
     {
         // Baojiu-01-08-22: alpha*fa -> alpha^2*fa
         // Baojiu-01-08-22: suppressed the advection term here to be added elsewhere using lopsided derivative
-        dtA[i] = -alpha*alpha*fa*(dtraceK[i] - dK0[i] - CCZ4c*2*dTheta[i]) + (beta[0]*dAA[0][i] + beta[1]*dAA[1][i] + beta[2]*dAA[2][i]);
+        dtA[i] = -alpha*alpha*fa*(dtraceK[i] - dK0[i] - CCZ4c*2*dTheta[i]) + advec*(beta[0]*dAA[0][i] + beta[1]*dAA[1][i] + beta[2]*dAA[2][i]);
     }
     for (int k = 0; k < 3; k++)
     {
@@ -799,7 +801,7 @@ void applications::exahype2::ccz4::ncp(double* BgradQ, const double* const Q, co
 
     // Baojiu-01-08-22: suppressed the advection term here to be added elsewhere using lopsided derivative
     for (int i = 0; i < 3; i++)
-    for (int j = 0; j < 3; j++) dtB[i][j] += CCZ4bs*(beta[0]*dBB[0][i][j] + beta[1]*dBB[1][i][j] + beta[2]*dBB[2][i][j]);
+    for (int j = 0; j < 3; j++) dtB[i][j] += CCZ4bs*advec*(beta[0]*dBB[0][i][j] + beta[1]*dBB[1][i][j] + beta[2]*dBB[2][i][j]);
 
     // NOTE 0 value param
     for (int i = 0; i < 3; i++)
@@ -823,11 +825,11 @@ void applications::exahype2::ccz4::ncp(double* BgradQ, const double* const Q, co
     // Baojiu-01-08-22: suppressed the advection term here to be added elsewhere using lopsided derivative
     for (int i = 0; i < 3; i++)
     for (int j = 0; j < 3; j++)
-    for (int k = 0; k < 3; k++) dtD[i][j][k] += (beta[0]*dDD[0][i][j][k] + beta[1]*dDD[1][i][j][k] + beta[2]*dDD[2][i][j][k]);
+    for (int k = 0; k < 3; k++) dtD[i][j][k] += advec*(beta[0]*dDD[0][i][j][k] + beta[1]*dDD[1][i][j][k] + beta[2]*dDD[2][i][j][k]);
 
     // Baojiu-01-08-22: suppressed the advection term here to be added elsewhere using lopsided derivative
     double dtP[3] = {0,0,0};
-    for (int i = 0; i < 3; i++) dtP[i] = (beta[0]*dPP[0][i] + beta[1]*dPP[1][i] + beta[2]*dPP[2][i]);
+    for (int i = 0; i < 3; i++) dtP[i] = advec*(beta[0]*dPP[0][i] + beta[1]*dPP[1][i] + beta[2]*dPP[2][i]);
     for (int k = 0; k < 3; k++)
     {
         double temp=0;
