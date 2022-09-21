@@ -2,6 +2,7 @@
 #include "exahype2/Solver.h"
 #include "exahype2/fd/PatchUtils.h"
 #include <algorithm>    // std::find
+#include <vector>
 //this is the original version
 
 
@@ -24,6 +25,7 @@ void exahype2::fd::fd4::internal::computeDifferentialSourceTerm_LoopBody(
 ) {
   double*                        CentralQ = new double[QInEnumerator._unknowns+QInEnumerator._numberOfAuxiliaryVariables];
   double*                          DeltaQ = new double[QInEnumerator._unknowns+QInEnumerator._numberOfAuxiliaryVariables];
+  double*                 AdvectionDeltaQ = new double[QInEnumerator._unknowns+QInEnumerator._numberOfAuxiliaryVariables];
   double* QDifferentialSourceTermGathered = new double[QInEnumerator._unknowns+QInEnumerator._numberOfAuxiliaryVariables];
 
   tarch::la::Vector<Dimensions,int>       centralVolume  = volumeIndex;
@@ -142,9 +144,9 @@ void exahype2::fd::fd4::internal::computeDifferentialSourceTerm_LoopBody(
   //here we try to add lopsided advection term by hand:
   //if a variable need a advection, we add something like beta[normal]*deltaQ[normal], where deltaQ is lopsided...
   if (true) {
-    int QwithoutAdvection={0,1,2,3,4,5,16,17,18,19,54}; //these are quantities that do not need advection
+    int QwithoutAdvection[11]={0,1,2,3,4,5,16,17,18,19,54}; //these are quantities that do not need advection
     for (int unknown=0; unknown<QInEnumerator._unknowns; unknown++) {
-      bool NeedAdvection = (std::find(std::begin(QwithoutAdvection), std::end(QwithoutAdvection), unknown) = std::end(QwithoutAdvection)); 
+      bool NeedAdvection = (std::find(std::begin(QwithoutAdvection), std::end(QwithoutAdvection), unknown) == std::end(QwithoutAdvection)); 
       //if the unknown index is not in the list above, it needs an advection.
       if (NeedAdvection) {
          if (QIn[QInEnumerator(patchIndex, centralVolume, 17+normal)]>0){
@@ -162,7 +164,7 @@ void exahype2::fd::fd4::internal::computeDifferentialSourceTerm_LoopBody(
                                (  6.0/12.0) * QIn[ QInEnumerator(patchIndex,  leftAdjacentVolume2,unknown) ] +
                                ( -1.0/12.0) * QIn[ QInEnumerator(patchIndex,  leftAdjacentVolume3,unknown) ]; 
          }
-         QDifferentialSourceTermGathered[unknown]-=QIn[QInEnumerator(patchIndex, centralVolume, 17+normal)]*AdvectionDeltaQ;
+         QDifferentialSourceTermGathered[unknown]-=QIn[QInEnumerator(patchIndex, centralVolume, 17+normal)]*AdvectionDeltaQ[unknown];
       }
     }
   }
