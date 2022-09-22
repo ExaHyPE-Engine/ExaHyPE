@@ -134,8 +134,9 @@ Some quickstart configure commands for different toolchains are given below. For
   --with-gpu=omp \
   --with-multithreading=omp \
   CC=clang CXX=clang++ \
-  CXXFLAGS="-O3 -std=c++17 -fopenmp -fopenmp-targets=nvptx64-nvidia-cuda -Xopenmp-target -march=sm_86"
+  CXXFLAGS="-O3 -std=c++17 -fopenmp -fopenmp-targets=nvptx64-nvidia-cuda -Xopenmp-target -march=<gpu-arch>"
 ```
+where `<gpu-arch>` is either `cc50`, `cc52`, `cc53`, `cc60`, `cc61`, `cc62`, `cc70`, `cc72`, `cc75`, `cc80`, `cc86` or `cc90`.
 
 ### NVIDIA NVC++ toolchain with OpenMP GPU
 ```shell
@@ -146,9 +147,10 @@ Some quickstart configure commands for different toolchains are given below. For
   --with-gpu=omp \
   --with-multithreading=omp \
   CC=nvc++ CXX=nvc++ \
-  CXXFLAGS="-O4 -std=c++20 -mp=gpu -gpu=cc86" \
-  LDFLAGS="-mp=gpu -gpu=cc86"
+  CXXFLAGS="-O4 -std=c++20 -mp=gpu -gpu=<gpu-arch>" \
+  LDFLAGS="-mp=gpu -gpu=<gpu-arch>"
 ```
+where `<gpu-arch>` is either `cc70`, `cc72`, `cc75`, `cc80`, `cc86` or `cc90`.
 
 ### NVIDIA NVC++ toolchain with C++ GPU
 ```shell
@@ -159,9 +161,10 @@ Some quickstart configure commands for different toolchains are given below. For
   --with-gpu=cpp \
   --with-multithreading=cpp \
   CC=nvc++ CXX=nvc++ \
-  CXXFLAG="-O4 -std=c++20 -mp=gpu -gpu=cc86" \
-  LDFLAGS="-mp=gpu -gpu=cc86"
+  CXXFLAG="-O4 -std=c++20 -mp=gpu -gpu=<gpu-arch>" \
+  LDFLAGS="-mp=gpu -gpu=<gpu-arch>"
 ```
+where `<gpu-arch>` is either `cc70`, `cc72`, `cc75`, `cc80`, `cc86` or `cc90`.
 
 ### AMD toolchain with OpenMP GPU
 ```shell
@@ -175,7 +178,6 @@ Some quickstart configure commands for different toolchains are given below. For
   CXXFLAGS="-O3 -std=c++20 -fopenmp -O3 -std=c++20 --offload-arch=<gpu-arch>" \
   LDFLAGS="-fopenmp --offload-arch=<gpu-arch> -lstdc++fs"
 ```
-
 where `<gpu-arch>` is either `gfx906` (MI 50), `gfx908` (MI 100), or `gfx90a` (MI 200 series).
 
 ## Compilation
