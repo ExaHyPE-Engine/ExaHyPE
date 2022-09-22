@@ -1,6 +1,5 @@
 import os, sys
 import argparse
-import numpy
 
 import peano4
 import exahype2
@@ -19,15 +18,13 @@ parser.add_argument("-d",   "--dim",               dest="dim",            type=i
 parser.add_argument("-pd",  "--peano-dir",         dest="peanodir",       default="../../../../", help="Peano4 directory")
 parser.add_argument("-v",   "--verbose",           dest="verbose",        action="store_true", default=False, help="Verbose")
 parser.add_argument(        "--debug",             dest="debug"  ,        action="store_true", default=False, help="Verbose")
-parser.add_argument("-ps",  "--patch-size",        dest="patch_size",     type=int, default=17, help="Number of finite volumes per axis (dimension) per patch.")
+parser.add_argument("-ps",  "--patch-size",        dest="patch_size",     type=int, default=17, help="Number of finite volumes per axis (dimension) per patch")
 parser.add_argument("-a",   "--accuracy",          dest="accuracy",       type=float, default=0.0, help="Floating point accuracy to which the different kernel variants have to match (absolute). Pass in 0 to disable correctness check.")
-parser.add_argument("-f",   "--file",              dest="file",           default="", help="Specify to convert an output file into a bar plot. If you omit this flag, the script will actually build the benchmark.")
 args = parser.parse_args()
 
 if args.dim not in [2,3]:
     print("Number of dimensions must be 2 or 3, but you supplied {}".format(args.dim))
     sys.exit(1)
-
 
 dimensions = args.dim
 project = exahype2.Project( ["benchmarks", "exahype2", "euler"], "EulerFVRusanovKernelBenchmarks", ".", executable="kernel-benchmark-fv-" + str(args.dim) + "d-patch-size-"+ str(args.patch_size) )
@@ -72,20 +69,13 @@ project.set_global_simulation_parameters(
 project.set_load_balancing( "toolbox::loadbalancing::RecursiveSubdivision", "new ::exahype2::LoadBalancingConfiguration()" )
 project.set_Peano4_installation( args.peanodir, build_mode )
 
-#
-# Generate code and then copy cpp file over main
-#
 peano4_project = project.generate_Peano4_project(args.verbose)
 peano4_project.constants.export_const_with_type( "Accuracy", str(args.accuracy), "double" )
 peano4_project.output.makefile.add_cpp_file( "../../../../applications/exahype2/euler/EulerKernels.cpp" )
 peano4_project.output.makefile.add_header_search_path( "../../../../applications/exahype2/euler" )
 peano4_project.generate()
-benchmark_main_file = os.path.dirname(os.path.realpath(__file__)) + "/EulerFVRusanovKernelBenchmarks.cpp"
-print( "Replace generated main with benchmark main file {}".format(benchmark_main_file) )
-os.system( "cp {} EulerFVRusanovKernelBenchmarks-main.cpp".format(benchmark_main_file) )
 os.system( "make clean" )
 if args.j>0:
   os.system( "make -j{}".format(args.j) )
 else:
   os.system( "make -j" )
-

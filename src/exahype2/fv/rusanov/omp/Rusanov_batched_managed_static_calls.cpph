@@ -1,9 +1,6 @@
 #include "Rusanov.h"
 #include "tarch/compiler/CompilerSpecificSettings.h"
 #include "exahype2/fv/rusanov/LoopBody.h"
-#include "exahype2/fv/rusanov/Rusanov_Helper.cpph"
-
-#include <cstring>
 
 template <
   typename Solver,
@@ -13,22 +10,32 @@ template <
   int      auxiliaryVariables,
   typename TempDataEnumerator
 >
-void exahype2::fv::rusanov::omp::opt::timeStepWithRusanov_batched_heap_static_calls(
+void exahype2::fv::rusanov::omp::timeStepWithRusanov_batched_managed_static_calls(
   int                     targetDevice,
   ::exahype2::CellData&   hostPatchData,
-  GPUCellData&            devicePatchData,
-  GPUScratchpadData&      deviceScratchpadData,
   bool                    evaluateFlux,
   bool                    evaluateNonconservativeProduct,
   bool                    evaluateSource,
   bool                    evaluateMaximumEigenvalueAfterTimeStep
 ) {
   #if defined(GPUOffloadingOMP)
-  while (not canOffloadIntoPreallocatedMemory(hostPatchData.numberOfCells)) {
-    printf("Cannot offload to GPU -> suspending for now\n");
-  }
-
   constexpr int solversHaloSize = 1;
+  // The following parameter is a magic number chosen in such a way that it works with our kernel benchmarks.
+  // This parameter should be provided by an autotuner rather than being a magic number.
+  #if Dimensions==2
+  static constexpr int MaxNumberOfPossiblePatchEntries = 1024*2*2*2*2;
+  #else
+  static constexpr int MaxNumberOfPossiblePatchEntries = 1024*2;
+  #endif
+  static const TempDataEnumerator FluxHostEnumerator      (MaxNumberOfPossiblePatchEntries, numberOfVolumesPerAxisInPatch,   solversHaloSize, unknowns, 0);
+  static const TempDataEnumerator NcpHostEnumerator       (MaxNumberOfPossiblePatchEntries, numberOfVolumesPerAxisInPatch+1, solversHaloSize, unknowns, 0);
+  static const TempDataEnumerator EigenvalueHostEnumerator(MaxNumberOfPossiblePatchEntries, numberOfVolumesPerAxisInPatch,   solversHaloSize,        1, 0);
+  static int currentOffloadedPatches = 0;
+  // A + |P| <= |P|_max
+  if (currentOffloadedPatches + hostPatchData.numberOfCells <= MaxNumberOfPossiblePatchEntries) {
+    #pragma omp atomic
+    currentOffloadedPatches += hostPatchData.numberOfCells;
+  } else while(currentOffloadedPatches + hostPatchData.numberOfCells > MaxNumberOfPossiblePatchEntries) { /* Suspend until other threads are finished */ };
 
   exahype2::enumerator::AoSLexicographicEnumerator QInHostEnumerator       (                        1, numberOfVolumesPerAxisInPatch, haloSize, unknowns, auxiliaryVariables);
   exahype2::enumerator::AoSLexicographicEnumerator QOutHostEnumerator      (                        1, numberOfVolumesPerAxisInPatch,        0, unknowns, auxiliaryVariables);
@@ -36,29 +43,23 @@ void exahype2::fv::rusanov::omp::opt::timeStepWithRusanov_batched_heap_static_ca
   TempDataEnumerator ncpHostEnumerator       (hostPatchData.numberOfCells, numberOfVolumesPerAxisInPatch+1, solversHaloSize, unknowns, 0);
   TempDataEnumerator eigenvalueHostEnumerator(hostPatchData.numberOfCells, numberOfVolumesPerAxisInPatch,   solversHaloSize,        1, 0);
 
-  static TempDataEnumerator fluxHostEnumeratorMax      (MaxNumberOfPossiblePatchEntries, numberOfVolumesPerAxisInPatch,   solversHaloSize, unknowns, 0);
-  static TempDataEnumerator ncpHostEnumeratorMax       (MaxNumberOfPossiblePatchEntries, numberOfVolumesPerAxisInPatch+1, solversHaloSize, unknowns, 0);
-  static TempDataEnumerator eigenvalueHostEnumeratorMax(MaxNumberOfPossiblePatchEntries, numberOfVolumesPerAxisInPatch,   solversHaloSize,        1, 0);
+  double* tempFluxX = tarch::multicore::omp::GPUMemoryManager::getInstance().allocate<double>( FluxHostEnumerator.size(), targetDevice );
+  double* tempFluxY = tarch::multicore::omp::GPUMemoryManager::getInstance().allocate<double>( FluxHostEnumerator.size(), targetDevice );
+  double* tempFluxZ = tarch::multicore::omp::GPUMemoryManager::getInstance().allocate<double>( Dimensions==3 ? FluxHostEnumerator.size() : 1, targetDevice );
+  double* tempNonconservativeProductX = tarch::multicore::omp::GPUMemoryManager::getInstance().allocate<double>( NcpHostEnumerator.size(), targetDevice );
+  double* tempNonconservativeProductY = tarch::multicore::omp::GPUMemoryManager::getInstance().allocate<double>( NcpHostEnumerator.size(), targetDevice );
+  double* tempNonconservativeProductZ = tarch::multicore::omp::GPUMemoryManager::getInstance().allocate<double>( Dimensions==3 ? NcpHostEnumerator.size() : 1, targetDevice );
+  double* tempEigenvalueX = tarch::multicore::omp::GPUMemoryManager::getInstance().allocate<double>( EigenvalueHostEnumerator.size(), targetDevice );
+  double* tempEigenvalueY = tarch::multicore::omp::GPUMemoryManager::getInstance().allocate<double>( EigenvalueHostEnumerator.size(), targetDevice );
+  double* tempEigenvalueZ = tarch::multicore::omp::GPUMemoryManager::getInstance().allocate<double>( Dimensions==3 ? EigenvalueHostEnumerator.size() : 1, targetDevice );
 
-  deviceScratchpadData.allocate(targetDevice, fluxHostEnumeratorMax.size(), ncpHostEnumeratorMax.size(), eigenvalueHostEnumeratorMax.size());
-  double* tempFluxX                   = deviceScratchpadData.tempFluxX;
-  double* tempFluxY                   = deviceScratchpadData.tempFluxY;
-  double* tempFluxZ                   = deviceScratchpadData.tempFluxZ;
-  double* tempNonconservativeProductX = deviceScratchpadData.tempNonconservativeProductX;
-  double* tempNonconservativeProductY = deviceScratchpadData.tempNonconservativeProductY;
-  double* tempNonconservativeProductZ = deviceScratchpadData.tempNonconservativeProductZ;
-  double* tempEigenvalueX             = deviceScratchpadData.tempEigenvalueX;
-  double* tempEigenvalueY             = deviceScratchpadData.tempEigenvalueY;
-  double* tempEigenvalueZ             = deviceScratchpadData.tempEigenvalueZ;
-
-  devicePatchData.allocate(targetDevice, QInHostEnumerator.size(), QOutHostEnumerator.size());
-  double* mappedPointersToQIns        = devicePatchData.QIn;
-  double* mappedPointersToQOuts       = devicePatchData.QOut;
-  double* rawPointerToCellCentres     = devicePatchData.cellCentre;
-  double* rawPointerToCellSizes       = devicePatchData.cellSize;
-  double* ts                          = devicePatchData.t;
-  double* dts                         = devicePatchData.dt;
-  double* maxEigenvalues              = devicePatchData.maxEigenvalue;
+  double* mappedPointersToQIns = tarch::multicore::omp::GPUMemoryManager::getInstance().allocate<double>(MaxNumberOfPossiblePatchEntries * QInHostEnumerator.size(), targetDevice );
+  double* mappedPointersToQOuts = tarch::multicore::omp::GPUMemoryManager::getInstance().allocate<double>(MaxNumberOfPossiblePatchEntries * QOutHostEnumerator.size(), targetDevice );
+  double* rawPointerToCellCentres = tarch::multicore::omp::GPUMemoryManager::getInstance().allocate<double>(MaxNumberOfPossiblePatchEntries * Dimensions, targetDevice );
+  double* rawPointerToCellSizes = tarch::multicore::omp::GPUMemoryManager::getInstance().allocate<double>(MaxNumberOfPossiblePatchEntries * Dimensions, targetDevice );
+  double* ts = tarch::multicore::omp::GPUMemoryManager::getInstance().allocate<double>(MaxNumberOfPossiblePatchEntries, targetDevice );
+  double* dts = tarch::multicore::omp::GPUMemoryManager::getInstance().allocate<double>(MaxNumberOfPossiblePatchEntries, targetDevice );
+  double* maxEigenvalues = tarch::multicore::omp::GPUMemoryManager::getInstance().allocate<double>(MaxNumberOfPossiblePatchEntries, targetDevice );
 
   std::vector<double> tmpQIn(hostPatchData.numberOfCells * QInHostEnumerator.size());
   for (int patchIndex=0; patchIndex<hostPatchData.numberOfCells; patchIndex++) {
@@ -504,7 +505,7 @@ void exahype2::fv::rusanov::omp::opt::timeStepWithRusanov_batched_heap_static_ca
         rawPointerToCellCentres, rawPointerToCellSizes, \
         ts, dts)
     for (int patchIndex=0; patchIndex<numberOfCells; patchIndex++)
-    for (int y = 0; y < numberOfVolumesPerAxisInPatch+2*solversHaloSize; y++)
+    for (int y = 0; y < numberOfVolumesPerAxisInPatch+2*solversHaloSize;  y++)
     for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++) {
       exahype2::enumerator::AoSLexicographicEnumerator QInEnumerator       (                        1, numberOfVolumesPerAxisInPatch,haloSize,unknowns,auxiliaryVariables);
       exahype2::enumerator::AoSLexicographicEnumerator QOutEnumerator      (                        1, numberOfVolumesPerAxisInPatch,       0,unknowns,auxiliaryVariables);
@@ -712,7 +713,6 @@ void exahype2::fv::rusanov::omp::opt::timeStepWithRusanov_batched_heap_static_ca
     }
   }
 
-
   if (evaluateNonconservativeProduct and Dimensions==2) {
     #pragma omp target teams distribute parallel for simd collapse(3) device(targetDevice) \
       is_device_ptr(tempNonconservativeProductX, \
@@ -914,7 +914,7 @@ void exahype2::fv::rusanov::omp::opt::timeStepWithRusanov_batched_heap_static_ca
       const double t = ts[patchIndex];
       const double dt = dts[patchIndex];
 
-        internal::computeNonconservativeFlux_LoopBody<Solver,unknowns,auxiliaryVariables>(
+      internal::computeNonconservativeFlux_LoopBody<Solver,unknowns,auxiliaryVariables>(
             QIn,
             QInEnumerator,
             patchCentre,
@@ -924,9 +924,9 @@ void exahype2::fv::rusanov::omp::opt::timeStepWithRusanov_batched_heap_static_ca
             t,
             dt,
             2, // normal
-            tempNonconservativeProductY,
+            tempNonconservativeProductZ,
             ncpEnumerator
-        );
+      );
     }
 
     #pragma omp target teams distribute parallel for simd collapse(5) device(targetDevice) \
@@ -1050,9 +1050,29 @@ void exahype2::fv::rusanov::omp::opt::timeStepWithRusanov_batched_heap_static_ca
   for (int patchIndex=0; patchIndex<hostPatchData.numberOfCells; patchIndex++) {
     std::memcpy(hostPatchData.QOut[patchIndex], &tmpQOut[patchIndex * QOutHostEnumerator.size()], QOutHostEnumerator.size() * sizeof(double));
   }
+
   omp_target_memcpy(hostPatchData.maxEigenvalue, maxEigenvalues, hostPatchData.numberOfCells * sizeof(double), 0, 0, hostId, targetDevice);
 
-  leavePreallocatedMemoryFromOffloading(hostPatchData.numberOfCells);
+  tarch::multicore::omp::GPUMemoryManager::getInstance().free( tempFluxX, targetDevice );
+  tarch::multicore::omp::GPUMemoryManager::getInstance().free( tempFluxY, targetDevice );
+  tarch::multicore::omp::GPUMemoryManager::getInstance().free( tempFluxZ, targetDevice );
+  tarch::multicore::omp::GPUMemoryManager::getInstance().free( tempNonconservativeProductX, targetDevice );
+  tarch::multicore::omp::GPUMemoryManager::getInstance().free( tempNonconservativeProductY, targetDevice );
+  tarch::multicore::omp::GPUMemoryManager::getInstance().free( tempNonconservativeProductZ, targetDevice );
+  tarch::multicore::omp::GPUMemoryManager::getInstance().free( tempEigenvalueX, targetDevice );
+  tarch::multicore::omp::GPUMemoryManager::getInstance().free( tempEigenvalueY, targetDevice );
+  tarch::multicore::omp::GPUMemoryManager::getInstance().free( tempEigenvalueZ, targetDevice );
+
+  tarch::multicore::omp::GPUMemoryManager::getInstance().free( mappedPointersToQIns, targetDevice );
+  tarch::multicore::omp::GPUMemoryManager::getInstance().free( mappedPointersToQOuts, targetDevice );
+  tarch::multicore::omp::GPUMemoryManager::getInstance().free( rawPointerToCellCentres, targetDevice );
+  tarch::multicore::omp::GPUMemoryManager::getInstance().free( rawPointerToCellSizes, targetDevice );
+  tarch::multicore::omp::GPUMemoryManager::getInstance().free( ts, targetDevice );
+  tarch::multicore::omp::GPUMemoryManager::getInstance().free( dts, targetDevice );
+  tarch::multicore::omp::GPUMemoryManager::getInstance().free( maxEigenvalues, targetDevice );
+
+  #pragma omp atomic
+  currentOffloadedPatches -= hostPatchData.numberOfCells;
 
   #else
   assertionMsg(false, "this routine should only be used in combination with OpenMP offloading, as it has a device parameter" );

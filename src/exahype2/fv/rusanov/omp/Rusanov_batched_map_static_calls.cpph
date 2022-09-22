@@ -10,7 +10,7 @@ template <
   int      auxiliaryVariables,
   typename TempDataEnumerator
 >
-void exahype2::fv::rusanov::omp::timeStepWithRusanov_batched_heap_static_calls(
+void exahype2::fv::rusanov::omp::timeStepWithRusanov_batched_map_static_calls(
   int                     targetDevice,
   ::exahype2::CellData&   hostPatchData,
   bool                    evaluateFlux,
@@ -932,7 +932,7 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanov_batched_heap_static_calls(
             patchData.t[patchIndex],
             patchData.dt[patchIndex],
             2, // normal
-            tempNonconservativeProductY,
+            tempNonconservativeProductZ,
             ncpEnumerator
         );
     }

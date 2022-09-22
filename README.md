@@ -13,7 +13,8 @@
   - [Configure your build](#configure-your-build)
     - [Intel](#intel)
     - [Intel with OpenMP GPU](#intel-with-openmp-gpu)
-    - [Intel with OpenMP GPU (AMD)](#intel-with-openmp-gpu-amd)
+    - [ROCm with OpenMP GPU (AMD)](#rocm-with-openmp-gpu-amd)
+    - [Clang](#clang)
     - [Clang with OpenMP GPU (NVIDIA)](#clang-with-openmp-gpu-nvidia)
     - [NVHPC with OpenMP GPU](#nvhpc-with-openmp-gpu)
     - [NVHPC with C++ GPU](#nvhpc-with-c-gpu)
@@ -113,17 +114,29 @@ Some exemplary configure commands are given below. For detailed information plea
   LDFLAGS="-fiopenmp"
 ```
 
-### Intel with OpenMP GPU (AMD)
+### ROCm with OpenMP GPU (AMD)
 ```shell
+export LD=ld &&
+export AOMP=/opt/rocm/llvm &&
 ./configure \
   --enable-exahype \
   --enable-loadbalancing \
   --enable-blockstructured \
   --with-gpu=omp \
   --with-multithreading=omp \
-  CC=icx CXX=icpx \
-  CXXFLAGS="-O3 -std=c++20 -fiopenmp -fopenmp-targets=amdgcn-amd-amdhsa -Xopenmp-target=amdgcn-amd-amdhsa" \
-  LDFLAGS="-fiopenmp"
+  CC=aompcc CXX=aompcc \
+  CXXFLAGS="-O3 -std=c++20 -fopenmp -fopenmp-targets=amdgcn-amd-amdhsa -Xopenmp-target=amdgcn-amd-amdhsa -march=gfx908" \
+  LDFLAGS="-fopenmp -fopenmp-targets=amdgcn-amd-amdhsa -Xopenmp-target=amdgcn-amd-amdhsa -march=gfx908"
+```
+### Clang
+```shell
+./configure \
+  --enable-exahype \
+  --enable-loadbalancing \
+  --enable-blockstructured \
+  --with-multithreading=omp \
+  CC=clang CXX=clang++ \
+  CXXFLAGS="-O3 -std=c++17 -fopenmp"
 ```
 
 ### Clang with OpenMP GPU (NVIDIA)

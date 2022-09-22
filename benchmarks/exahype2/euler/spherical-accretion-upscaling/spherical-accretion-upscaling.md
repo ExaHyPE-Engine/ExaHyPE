@@ -18,10 +18,12 @@ Besides that and the different solver flavours, we have different scenarios:
         ------------------------------------------------------------------
         | scenario | description
         ------------------------------------------------------------------
-        | plot     | Very simple regular grid setup, which just helps you 
+        | plot-0   | Very simple regular grid setup, which just helps you 
         |          | to visualise the setup and problem challenge. Coarse 
         |          | mesh and early termination criterion, i.e. not really
         |          | anything interesting here to see.
+        ------------------------------------------------------------------
+        | plot-1   | Finer regular grid. 
         ------------------------------------------------------------------
         | reg-0    | Simple regular grid over the unit interval. This is 
         |          | by far the smallest setup. Well-suited for a single 
@@ -209,6 +211,7 @@ versions with each other.
 
 
 <img src="example-output/single-node-FV-solver-types-reg-0-opt.png" />
+<img src="example-output/single-node-RKDG-solver-types-reg-0-no-opt.png" />
 
 
 
@@ -241,3 +244,12 @@ something fancier, custom-made for your own plots in this case:
        python3 ../../../../python/exahype2/postprocessing/plot-scaling.py --log-x --log-y --output single-node-different-mpi-tasks-on-node-$type --labels FV-8,RK4DG4 single-node-benchmark-$type-FV-8-different-mpi-tasks-on-node.tar.gz single-node-benchmark-$type-RK4DG4-different-mpi-tasks-on-node.tar.gz
       done
       
+      
+The resulting graph will provide some estimates how many MPI ranks you should
+use on a node. I have not done an exhaustive study, but it seems that one rank
+per NUMA domain yields the best performance. There are some cases, where more
+ranks seem to be even faster (32 on 8 NUMA domains, e.g.) but I don't see any
+systematic runtime behaviour. Also, 32 ranks might be slightly faster than 8
+(this is our 128 EPYC node) but this seems to hold only on a regular grid. So 
+we are fine here and should likely stick to the 8-rank setup.
+
