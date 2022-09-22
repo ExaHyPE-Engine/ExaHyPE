@@ -185,6 +185,42 @@ void applications::exahype2::ccz4::source(double* S, const double* const Q,
     for (int i = 0; i < 3; i++)
     for (int j = 0; j < 3; j++) RicciPlusNablaZSrc[i][j] = RicciSrc[i][j] + nablaZSrc[i][j] + nablaZSrc[j][i];
 
+    // ================================
+    // Baojiu-21-09-22 START OF CHANGES
+    // --------------------------------
+    double Christoffel_tilde_down[3][3][3] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
+    for (int i = 0; i < 3; i++)
+    for (int j = 0; j < 3; j++)
+    for (int k = 0; k < 3; k++)
+    for (int l = 0; l < 3; l++) Christoffel_tilde_down[i][j][k] += g_cov[i][l]*Christoffel_tilde[j][k][l];
+
+    // double RicciPlusNablaZSrc[3][3] = {0,0,0,0,0,0,0,0,0}; // Use this line later when we comment out the lines above
+    RicciPlusNablaZSrc[3][3] = {0,0,0,0,0,0,0,0,0};
+    for (int i = 0; i < 3; i++)
+    for (int j = 0; j < 3; j++)
+    {
+       for (int k = 0; k < 3; k++)
+       {
+          RicciPlusNablaZSrc[i][j] += Ghat[k]*DD[k][i][j];
+          RicciPlusNablaZSrc[i][j] -= PP[k]*Christoffel_tilde[i][j][k]/phi;
+          RicciPlusNablaZSrc[i][j] += 2.0*Zup[k]/(phi*phi2)*( g_cov[i][k]*PP[j] + g_cov[j][k]*PP[i] - g_cov[i][j]*PP[k] );
+          for (int l = 0; l < 3; l++)
+          {  
+             RicciPlusNablaZSrc[i][j] -= 2.0*g_cov[i][j]*g_contr[k][l]*PP[k]*PP[l]/phi2;
+             for (int m = 0; m < 3; m++)
+             {
+                RicciPlusNablaZSrc[i][j] += g_contr[l][m]*( Christoffel_tilde[l][i][k] * Christoffel_tilde_down[j][k][m] + 
+                                                            Christoffel_tilde[l][j][k] * Christoffel_tilde_down[i][k][m] + 
+                                                            Christoffel_tilde[i][m][k] * Christoffel_tilde_down[k][l][j] );
+                RicciPlusNablaZSrc[i][j] -= g_cov[i][j]*g_contr[l][m]*Christoffel_tilde[l][m][k]*PP[k]/phi;
+             }
+          }
+       }
+    }
+    // --------------------------------
+    // Baojiu-21-09-22 END OF CHANGES
+    // ================================
+
     double RPlusTwoNablaZSrc = 0;
     for (int i = 0; i < 3; i++)
     for (int j = 0; j < 3; j++) RPlusTwoNablaZSrc += g_contr[i][j]*RicciPlusNablaZSrc[i][j]; // TODO fuse these steps
@@ -193,20 +229,45 @@ void applications::exahype2::ccz4::source(double* S, const double* const Q,
 
     const double AA[3] = {Q[23], Q[24], Q[25]};
 
-    double nablaijalphaSrc[3][3]= {0,0,0,0,0,0,0,0,0};
+    double nablaijalphaSrc[3][3] = {0,0,0,0,0,0,0,0,0};
     for (int j = 0; j < 3; j++)
     for (int i = 0; i < 3; i++)
     {
-      // Baojiu-01-08-22: the following two lines are commented/modified
-      //nablaijalphaSrc[i][j] = alpha*AA[j]*AA[i];
-      //for (int k = 0; k < 3; k++) nablaijalphaSrc[i][j] -= alpha*Christoffel[i][j][k]*AA[k];
-      for (int k = 0; k < 3; k++) nablaijalphaSrc[i][j] -= Christoffel[i][j][k]*AA[k];
+       // ================================
+       // Baojiu-21-09-22 START OF CHANGES
+       // --------------------------------
+       // for (int k = 0; k < 3; k++) nablaijalphaSrc[i][j] -= Christoffel[i][j][k]*AA[k]; // This is the original line; all other lines are new
+       nablaijalphaSrc[i][j] += ( PP[i]*AA[j] + PP[j]*AA[i] )/phi;
+       for (int k = 0; k < 3; k++) 
+       {
+          nablaijalphaSrc[i][j] -= Christoffel_tilde[i][j][k]*AA[k];
+          for (int l = 0; l < 3; l++)
+          {
+             nablaijalphaSrc[i][j] -= g_cov[i][j]*g_contr[k][l]*PP[k]*AA[l]/phi;
+          }
+       }
+       // --------------------------------
+       // Baojiu-21-09-22 END OF CHANGES
+       // ================================
     }
 
     double nablanablaalphaSrc=0;
     for (int i = 0; i < 3; i++)
     for (int j = 0; j < 3; j++) nablanablaalphaSrc += g_contr[i][j]*nablaijalphaSrc[i][j];
     nablanablaalphaSrc *= phi2;
+
+    // ================================
+    // Baojiu-21-09-22 START OF CHANGES
+    // --------------------------------
+    // Note: I suspect that these lines won't make a difference
+    nablanablaalphaSrc = 0.0;
+    for (int i = 0; i < 3; i++)
+    {
+       nablanablaalphaSrc -= phi2*Gtilde[i]*AA[i];
+       for (int j = 0; j < 3; j++) nablanablaalphaSrc -= phi*g_contr[i][j]*PP[i]*AA[j];
+    // --------------------------------
+    // Baojiu-21-09-22 END OF CHANGES
+    // ================================
 
     double SecondOrderTermsSrc[3][3];
     for (int i = 0; i < 3; i++)
@@ -303,8 +364,8 @@ void applications::exahype2::ccz4::source(double* S, const double* const Q,
 
     // matrix vector multiplication in a loop and add result to existing vector
     // 09-08-22: remove this constraint
-    //for (int i = 0; i < 3; i++)
-    //for (int j = 0; j < 3; j++) dtGhat[i] += CCZ4sk*g_contr[i][j]*ov[j];
+    for (int i = 0; i < 3; i++)
+    for (int j = 0; j < 3; j++) dtGhat[i] += CCZ4sk*g_contr[i][j]*ov[j];
 
     const double myb[3] = {Q[20], Q[21], Q[22]};
 
@@ -649,6 +710,29 @@ void applications::exahype2::ccz4::ncp(double* BgradQ, const double* const Q, co
     for (int i = 0; i < 3; i++)
     for (int j = 0; j < 3; j++) RicciPlusNablaZNCP[i][j] = RicciNCP[i][j] + dZNCP[i][j] + dZNCP[j][i];
 
+    // ================================
+    // Baojiu-21-09-22 START OF CHANGES
+    // --------------------------------
+    // double RicciPlusNablaZNCP[3][3] = {0,0,0,0,0,0,0,0,0}; // Use this line later when we comment out lines above
+    RicciPlusNablaZNCP[3][3] = {0,0,0,0,0,0,0,0,0};
+    for (int i = 0; i < 3; i++)
+    for (int j = 0; j < 3; j++) 
+    {
+       RicciPlusNablaZNCP[i][j] += 0.5*( dPP[i][j] + dPP[j][i] )/phi; // explicit symmetrisation, shouldn't make a difference though
+       for (int k = 0; k < 3; k++)
+       {
+          RicciPlusNablaZNCP[i][j] += 0.5*( g_cov[k][i]*dGhat[j][k] + g_cov[k][j]*dGhat[i][k] );
+          for (int l = 0; l < 3; l++)
+          {
+             RicciPlusNablaZNCP[i][j] -= 0.5*g_contr[k][l]*( dDD[k][l][i][j] + dDD[l][k][i][j] ); // explicit symmetrisation, shouldn't make a difference
+             RicciPlusNablaZNCP[i][j] += 0.5*g_cov[i][j]*g_contr[k][l]*( dPP[k][l] + dPP[l][k] )/phi; // explicit symmetrisation, shouldn't make a difference
+          }
+       }
+    }
+    // --------------------------------
+    // Baojiu-21-09-22 END OF CHANGES
+    // ================================
+
     double RPlusTwoNablaZNCP = 0;
     for (int i = 0; i < 3; i++)
     for (int j = 0; j < 3; j++) RPlusTwoNablaZNCP += g_contr[i][j]*RicciPlusNablaZNCP[i][j]; // TODO fuse these steps
@@ -746,7 +830,7 @@ void applications::exahype2::ccz4::ncp(double* BgradQ, const double* const Q, co
     }
 
     //09-08-22: remove this constraint
-    /*double ov[3];
+    double ov[3];
     for (int k = 0; k < 3; k++)
     {
         double temp=0;
@@ -755,7 +839,7 @@ void applications::exahype2::ccz4::ncp(double* BgradQ, const double* const Q, co
         ov[k] = 2*alpha*temp;
     }
     for (int i = 0; i < 3; i++)
-    for (int j = 0; j < 3; j++) dtGhat[i] += CCZ4sk*g_contr[i][j]*ov[j];*/
+    for (int j = 0; j < 3; j++) dtGhat[i] += CCZ4sk*g_contr[i][j]*ov[j];
 
     double dtbb[3];
     for (int i = 0; i < 3; i++)
