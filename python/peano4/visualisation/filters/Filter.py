@@ -29,7 +29,7 @@ class Filter(object):
     return "Filter: " + self.__class__.__name__ + ", run on individual pieces of data=" + str(self.run_on_individual_pieces_of_data) + ", run on concatenated data=" + str(self.run_on_concatenated_data) + ", verbose=" + str(self.verbose)  
 
   
-  def render(self, cell_data, dof, dimension, unknowns, description, mapping):
+  def render(self, cell_data, dof, dimension, unknowns, is_data_associated_to_cell, description, mapping):
     """
     
       Overwrite this one for the particular filter. 
@@ -37,5 +37,5 @@ class Filter(object):
       cell_data: [Patch]
       
     """
-    return cell_data, dof, dimension, unknowns, description, mapping
+    return cell_data, dof, dimension, unknowns, is_data_associated_to_cell, description, mapping
 

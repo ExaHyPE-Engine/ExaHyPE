@@ -18,7 +18,7 @@ class AverageOverCell( Filter ):
     pass
 
  
-  def render(self, cell_data, dof, dimension, unknowns, description, mapping):
+  def render(self, cell_data, dof, dimension, unknowns, is_data_associated_to_cell, description, mapping):
     """
     
       Overwrite this one for the particular filter. 
@@ -30,6 +30,9 @@ class AverageOverCell( Filter ):
     ratio_for_print = 0
     if len(cell_data)>10000:
       delta_for_print = 1
+      
+    if dimension==2:
+      vertices_per_
 
     for patch in cell_data:
       average_values = [0] * unknowns
@@ -40,7 +43,7 @@ class AverageOverCell( Filter ):
         for j in range(0,unknowns):
           average_values[j] = average_values[j] + patch.values[i*unknowns+j]
       for j in range(0,unknowns):
-        average_values[j] = average_values[j]/unknowns
+        average_values[j] = average_values[j]/entries_per_cell
 
       new_patch = Patch(patch.offset, patch.size, average_values, patch.subdomain_number)
       result_cell_data.append( new_patch )
@@ -66,5 +69,5 @@ class AverageOverCell( Filter ):
                  0.0, 1.0, 1.0,
                  1.0, 1.0, 1.0
                 ]
-    return result_cell_data, 1, dimension, unknowns, description, mapping
+    return result_cell_data, 1, dimension, unknowns, True, description, mapping
 

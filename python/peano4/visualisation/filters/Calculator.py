@@ -22,7 +22,7 @@ class Calculator( Filter ):
     pass
     
 
-  def render(self, cell_data, dof, dimensions, unknowns, description, mapping):
+  def render(self, cell_data, dof, dimensions, unknowns, is_data_associated_to_cell, description, mapping):
     """
     
       Overwrite this one for the particular filter. 
@@ -62,5 +62,5 @@ class Calculator( Filter ):
       new_patch = Patch(p.offset, p.size, new_cell_values, p.subdomain_number)
       result_cell_data.append( new_patch )
 
-    return result_cell_data, dof, dimensions, self._output_cardinality, description, mapping
+    return result_cell_data, dof, dimensions, self._output_cardinality, is_data_associated_to_cell, description, mapping
   
