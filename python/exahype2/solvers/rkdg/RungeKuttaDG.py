@@ -28,7 +28,6 @@ from exahype2.solvers.rkdg.actionsets.ProjectLinearCombinationOfEstimatesOntoFac
 from exahype2.solvers.rkdg.actionsets.ProjectLinearCombinationOfEstimatesOntoFaces import compute_number_of_face_projection_quantities
 
 
-
 class RungeKuttaDG(object):
   """ 
   
@@ -259,7 +258,8 @@ class RungeKuttaDG(object):
     self._compute_new_time_step_size          = None
     
     self._preprocess_cell                     = ""
-    self._postprocess_updated_cell            = ""
+    self._postprocess_updated_cell_after_Runge_Kutta_step         = ""
+    self._postprocess_updated_cell_after_final_linear_combination = ""
 
     self._flux_implementation                 = None
     self._ncp_implementation                  = None
@@ -935,7 +935,8 @@ We use RK(""" + str(self._rk_order) + """) for the time stepping.
     #d[ "SOURCE_TERM_CALL"]                    = jinja2.Template(self._source_term_call, undefined=jinja2.DebugUndefined).render( **d )
     #d[ "RIEMANN_SOLVER_CALL"]                 = jinja2.Template(self._Riemann_solver_call, undefined=jinja2.DebugUndefined).render( **d )
     d[ "PREPROCESS_RECONSTRUCTED_CELL" ]      = jinja2.Template(self._preprocess_cell, undefined=jinja2.DebugUndefined).render( **d )
-    d[ "POSTPROCESS_UPDATED_CELL" ]           = jinja2.Template(self._postprocess_updated_cell, undefined=jinja2.DebugUndefined).render( **d )
+    d[ "POSTPROCESS_UPDATED_CELL_AFTER_RUNGE_KUTTA_STEP" ]           = jinja2.Template(self._postprocess_updated_cell_after_Runge_Kutta_step,         undefined=jinja2.DebugUndefined).render( **d )
+    d[ "POSTPROCESS_UPDATED_CELL_AFTER_FINAL_LINEAR_COMBINATION" ]   = jinja2.Template(self._postprocess_updated_cell_after_final_linear_combination, undefined=jinja2.DebugUndefined).render( **d )
     d[ "BOUNDARY_CONDITIONS_IMPLEMENTATION"]  = self._boundary_conditions_implementation
     d[ "REFINEMENT_CRITERION_IMPLEMENTATION"] = self._refinement_criterion_implementation
     d[ "INITIAL_CONDITIONS_IMPLEMENTATION"]   = self._initial_conditions_implementation
@@ -1049,4 +1050,115 @@ We use RK(""" + str(self._rk_order) + """) for the time stepping.
     self.create_data_structures()
     self.create_action_sets()
 
+  
+  @property
+  def postprocess_updated_cell_after_Runge_Kutta_step(self):
+    return self._postprocess_updated_cell
+
+
+  @property
+  def postprocess_updated_cell_after_final_linear_combination(self):
+    return self._postprocess_updated_cell
+
+
+  @postprocess_updated_cell_after_Runge_Kutta_step.setter
+  def postprocess_updated_cell_after_Runge_Kutta_step(self, kernel):
+    """
+
+    Define a postprocessing routine over the data
+    
+    This routine allows you to update the patch data immediately after the 
+    patch update. The routine provides the whole patch, and therefore you 
+    can write stuff similar to 
+    
+         my_solver.postprocess_updated_cell = " ""
+         {
+           constexpr int itmax = ({{DG_ORDER}}+1) * ({{DG_ORDER}}+1) * ({{DG_ORDER}}+1);
+           int index = 0;
+           for (int i=0;i<itmax;i++) {
+             applications::exahype2::ccz4::enforceCCZ4constraints( dQdt+index );
+             index += {{NUMBER_OF_UNKNOWNS}};
+           }
+         }
+         
+         
+    ## Difference to Finite Volume solvers
+    
+    Different to the Finite Volume solvers, you don't have the auxiliary
+    variables in this routine. You also don't have the new solution, but the
+    time derivative instead.
+    
+    
+    ## Available constants
+
+    This list is not complete. You might want to consult the generated code to 
+    spot more variables that are on offer. Whenever I use the brackets below,
+    these are symbolic constants which will be befilled with the proper constants
+    when the postprocessing code snippet is inserted into the generated code.
+    The other variables are directly available, i.e. no text replacement is done
+    here.
+    
+    - {{DG_ORDER}}  Spatial discretisation order.
+    - timeStamp
+    - timeStepSize
+    - dQdt
+
+    ## Runge-Kutta steps
+    
+    This postprocessing is called after each and every Runge-Kutta step.
+
+    """
+    self._postprocess_updated_cell_after_Runge_Kutta_step = kernel
+    self.create_data_structures()
+    self.create_action_sets()
+
+
+  @postprocess_updated_cell_after_final_linear_combination.setter
+  def postprocess_updated_cell_after_final_linear_combination(self, kernel):
+    """
+
+    Define a postprocessing routine over the data
+    
+    This routine allows you to update the patch data immediately after the 
+    patch update. The routine provides the whole patch, and therefore you 
+    can write stuff similar to 
+    
+         my_solver.postprocess_updated_cell = " ""
+         {
+           constexpr int itmax = ({{DG_ORDER}}+1) * ({{DG_ORDER}}+1) * ({{DG_ORDER}}+1);
+           int index = 0;
+           for (int i=0;i<itmax;i++) {
+             applications::exahype2::ccz4::enforceCCZ4constraints( dQdt+index );
+             index += {{NUMBER_OF_UNKNOWNS}};
+           }
+         }
+         
+         
+    ## Difference to Finite Volume solvers
+    
+    Different to the Finite Volume solvers, you don't have the auxiliary
+    variables in this routine. You also don't have the new solution, but the
+    time derivative instead.
+    
+    
+    ## Available constants
+
+    This list is not complete. You might want to consult the generated code to 
+    spot more variables that are on offer. Whenever I use the brackets below,
+    these are symbolic constants which will be befilled with the proper constants
+    when the postprocessing code snippet is inserted into the generated code.
+    The other variables are directly available, i.e. no text replacement is done
+    here.
+    
+    - {{DG_ORDER}}  Spatial discretisation order.
+    
+
+    ## Runge-Kutta steps
+    
+    This postprocessing is called after each and every Runge-Kutta step.
+
+    """
+    self._postprocess_updated_cell_after_final_linear_combination = kernel
+    self.create_data_structures()
+    self.create_action_sets()
 

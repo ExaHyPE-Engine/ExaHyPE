@@ -165,7 +165,7 @@ if __name__ == "__main__":
             const int leftCellSerialised  = peano4::utils::dLinearised(leftCell, patchSize + 2*1);
             const int rightCellSerialised = peano4::utils::dLinearised(rightCell,patchSize + 2*1);
             for(int i=0; i<64; i++) {
-              gradQ[d*64+i] = ( reconstructedPatch[rightCellSerialised*(64+n_a_v)+i] - reconstructedPatch[leftCellSerialised*(64+n_a_v)+i] ) / 2.0 / volumeH;
+              gradQ[d*64+i] = ( oldQWithHalo[rightCellSerialised*(64+n_a_v)+i] - oldQWithHalo[leftCellSerialised*(64+n_a_v)+i] ) / 2.0 / volumeH;
             }
           }
 
@@ -176,10 +176,10 @@ if __name__ == "__main__":
           // Central cell
           const int cellSerialised  = peano4::utils::dLinearised(currentCell, patchSize + 2*1);
 
-          admconstraints(constraints,reconstructedPatch+cellSerialised*(64+n_a_v),gradQ);
+          admconstraints(constraints,oldQWithHalo+cellSerialised*(64+n_a_v),gradQ);
 
           for(int i=0;i<n_a_v;i++){
-            reconstructedPatch[cellSerialised*(64+n_a_v)+64+i] = constraints[i];
+            oldQWithHalo[cellSerialised*(64+n_a_v)+64+i] = constraints[i];
           }
         }
     """)
@@ -223,8 +223,8 @@ if __name__ == "__main__":
             const int leftCellSerialised  = peano4::utils::dLinearised(leftCell, patchSize + 2*1);
             const int rightCellSerialised = peano4::utils::dLinearised(rightCell,patchSize + 2*1);
             for (int i=0; i<64; i++) {
-              reconstructedPatch[cellSerialised*(64*4)+64+i*3+d] =
-                ( reconstructedPatch[rightCellSerialised*(64*4)+i] - reconstructedPatch[leftCellSerialised*(64*4)+i] ) / 2.0 / volumeH;
+              oldQWithHalo[cellSerialised*(64*4)+64+i*3+d] =
+                ( oldQWithHalo[rightCellSerialised*(64*4)+i] - oldQWithHalo[leftCellSerialised*(64*4)+i] ) / 2.0 / volumeH;
             }
           }
         }
