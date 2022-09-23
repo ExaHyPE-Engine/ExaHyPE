@@ -1,4 +1,5 @@
-#include "../dg/DGUtils.h"
+#include "exahype2/dg/DGUtils.h"
+#include "exahype2/fv/PatchUtils.h"
 
 #include "tarch/Assertions.h"
 #include "tarch/la/la.h"
@@ -6,6 +7,7 @@
 #include "peano4/utils/Loop.h"
 
 #include "peano4/datamanagement/CellMarker.h"
+
 
 
 double  exahype2::dg::getQuadratureWeight(
@@ -181,47 +183,33 @@ std::string exahype2::dg::plotCell(
   const int unknowns,
   const int auxiliaryVariables
 ) {
-  const int nodesPerCell = getNodesPerCell(order+1);
-  const int strideQ = unknowns+auxiliaryVariables;
-
-  std::ostringstream result;
-
-  result << "(" << std::endl;
-  for(int node=0; node<nodesPerCell; node++){
-    result << "node " << std::to_string(node) << "[";
-    for(int var=0; var<strideQ-1; var++){
-        result << std::to_string(Q[node*strideQ+var]) << ", ";
-    }
-    result << std::to_string(Q[node*strideQ+strideQ-1]) << "]" << std::endl;
-  }
-  result << ")" << std::endl;
-
-  return result.str();
+  return ::exahype2::fv::plotPatch(
+    Q,
+    order+1,
+    unknowns,
+    auxiliaryVariables,
+    Dimensions==2
+  );
 }
 
 
 std::string exahype2::dg::plotFace(
-  const double* __restrict__ Q,
-  const int order,
-  const int unknowns,
-  const int auxiliaryVariables
+  const double* __restrict__  Q,
+  const int                   order,
+  const int                   unknowns,
+  const int                   auxiliaryVariables,
+  int                         normal,
+  int                         numberOfQuantitiesProjectedOntoFace
 ) {
-  const int nodesPerFace = getNodesPerCell(order+1)/(order+1);
-  const int strideQ = unknowns+auxiliaryVariables;
-
-  std::ostringstream result;
-
-  result << "(" << std::endl;
-  for(int node=0; node<2*nodesPerFace; node++){
-    result << "node " << std::to_string(node) << "[";
-    for(int var=0; var<strideQ-1; var++){
-        result << std::to_string(Q[node*strideQ+var]) << ", ";
-    }
-    result << std::to_string(Q[node*strideQ+strideQ-1]) << "]" << std::endl;
-  }
-  result << ")" << std::endl;
-
-  return result.str();
+  return ::exahype2::fv::plotPatchOverlap(
+    Q,
+    unknowns,
+    auxiliaryVariables,
+    order+1,
+    numberOfQuantitiesProjectedOntoFace,
+    normal,
+    Dimensions==2
+  );
 }
 
 

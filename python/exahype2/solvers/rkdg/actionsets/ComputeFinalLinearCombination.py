@@ -50,9 +50,9 @@ class ComputeFinalLinearCombination(AbstractRungeKuttaDGActionSet):
 
     const double timeStamp = fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStamp();
 
-    double* targetPatch = fineGridCell{{UNKNOWN_IDENTIFIER}}.value;
+    double* newQ = fineGridCell{{UNKNOWN_IDENTIFIER}}.value;
     
-    {{POSTPROCESS_UPDATED_CELL}}
+    {{POSTPROCESS_UPDATED_CELL_AFTER_FINAL_LINEAR_COMBINATION}}
 
     {% if COMPUTE_MAX_EIGENVALUE %}
     ::exahype2::CellData  cellData( nullptr, marker.x(), marker.h(), timeStamp, timeStepSize, fineGridCell{{UNKNOWN_IDENTIFIER}}.value );

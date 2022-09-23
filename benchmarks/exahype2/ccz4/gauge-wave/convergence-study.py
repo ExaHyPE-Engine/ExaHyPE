@@ -213,7 +213,7 @@ if args.solver=="fv":
     int index = 0;
     for (int i=0;i<itmax;i++)
     {
-      applications::exahype2::ccz4::enforceCCZ4constraints( targetPatch+index );
+      applications::exahype2::ccz4::enforceCCZ4constraints( newQ+index );
       index += {{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}};
     }
   }
@@ -225,19 +225,30 @@ if "fd4-rk" in args.solver:
     int index = 0;
     for (int i=0;i<itmax;i++)
     {
-      applications::exahype2::ccz4::enforceCCZ4constraints( targetPatch+index );
+      applications::exahype2::ccz4::enforceCCZ4constraints( newQ+index );
       index += {{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}};
     }
   }
 """
 if "rk" in args.solver and "dg" in args.solver:
-  my_solver.postprocess_updated_patch = """
+#  my_solver.postprocess_updated_cell_after_Runge_Kutta_step = """
+#{
+#    constexpr int itmax = ({{DG_ORDER}}+1) * ({{DG_ORDER}}+1) * ({{DG_ORDER}}+1);
+#    int index = 0;
+#    for (int i=0;i<itmax;i++)
+#    {
+#      applications::exahype2::ccz4::enforceCCZ4constraints( oldQ+index, dQdt+index, timeStepSize );
+#      index += {{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}};
+#    }
+#  }
+#"""
+  my_solver.postprocess_updated_cell_after_final_linear_combination = """
 {
-    constexpr int itmax = ({{ORDER}}+1) * ({{ORDER}}+1) * ({{ORDER}}+1);
+    constexpr int itmax = ({{DG_ORDER}}+1) * ({{DG_ORDER}}+1) * ({{DG_ORDER}}+1);
     int index = 0;
     for (int i=0;i<itmax;i++)
     {
-      applications::exahype2::ccz4::enforceCCZ4constraints( targetPatch+index );
+      applications::exahype2::ccz4::enforceCCZ4constraints( newQ+index );
       index += {{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}};
     }
   }
@@ -313,10 +324,10 @@ if args.tracer:
 
 if args.asserts:
   build_mode = peano4.output.CompileMode.Asserts
-  delta_plot = args.end_time/100 
+  delta_plot = 1.0/100 
 else:
   build_mode = peano4.output.CompileMode.Release
-  delta_plot = args.end_time/20 
+  delta_plot = 1.0/20 
     
 dimensions  = 3
 offset      = [-0.5, -0.5, -0.5] 

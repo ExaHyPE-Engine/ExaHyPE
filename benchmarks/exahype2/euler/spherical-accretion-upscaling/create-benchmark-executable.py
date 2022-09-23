@@ -148,21 +148,6 @@ not repositories::{{SOLVER_INSTANCE}}.cellCanUseStatelessPDETerms(marker.x(), ma
   """     )
 
 
-#thesolver.auxiliary_variables=1
-#thesolver.add_user_action_set_includes( """
-##include "exahype2/fv/PostprocessingKernels.h"
-#""")
-#thesolver.postprocess_updated_patch = """
-#::exahype2::fv::mapInnerNeighbourVoxelAlongBoundayOntoAuxiliaryVariable(
-# targetPatch,
-# {{NUMBER_OF_VOLUMES_PER_AXIS}},
-# {{NUMBER_OF_UNKNOWNS}},
-# {{NUMBER_OF_AUXILIARY_VARIABLES}},
-# 0,
-# {{NUMBER_OF_UNKNOWNS}}
-#);
-#"""
-
 thesolver.plot_description = "rho,j_x,j_y,j_z,E,aux"
         
 #

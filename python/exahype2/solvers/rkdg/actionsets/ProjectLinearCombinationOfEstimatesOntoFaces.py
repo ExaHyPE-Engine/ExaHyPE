@@ -78,7 +78,6 @@ class ProjectLinearCombinationOfEstimatesOntoFaces(AbstractRungeKuttaDGActionSet
 
     double* QIn  = fineGridCell{{UNKNOWN_IDENTIFIER}}LinearCombination.value;
     
-    {% if NUMBER_OF_FACE_PROJECTIONS==1 %}
     #if Dimensions==2
     ::exahype2::dg::projectVolumetricDataOntoFaces(
       QIn,
@@ -106,37 +105,6 @@ class ProjectLinearCombinationOfEstimatesOntoFaces(AbstractRungeKuttaDGActionSet
       fineGridFaces{{UNKNOWN_IDENTIFIER}}EstimateProjection(5).value  //back
     );
     #endif
-    {% endif %}
-
-    {% if NUMBER_OF_FACE_PROJECTIONS==2 %}
-    #if Dimensions==2
-    ::exahype2::dg::projectVolumetricDataAndGradientOntoFaces(
-      QIn,
-      {{ORDER}},
-      {{NUMBER_OF_UNKNOWNS}},
-      {{NUMBER_OF_AUXILIARY_VARIABLES}},
-      repositories::{{SOLVER_INSTANCE}}.BasisFunctionValuesLeft1d,
-      fineGridFaces{{UNKNOWN_IDENTIFIER}}EstimateProjection(0).value, //left
-      fineGridFaces{{UNKNOWN_IDENTIFIER}}EstimateProjection(2).value, //right
-      fineGridFaces{{UNKNOWN_IDENTIFIER}}EstimateProjection(1).value, //down
-      fineGridFaces{{UNKNOWN_IDENTIFIER}}EstimateProjection(3).value  //up
-    );
-    #elif Dimensions==3
-    ::exahype2::dg::projectVolumetricDataAndGradientOntoFaces(
-      QIn,
-      {{ORDER}},
-      {{NUMBER_OF_UNKNOWNS}},
-      {{NUMBER_OF_AUXILIARY_VARIABLES}},
-      repositories::{{SOLVER_INSTANCE}}.BasisFunctionValuesLeft1d,
-      fineGridFaces{{UNKNOWN_IDENTIFIER}}EstimateProjection(0).value, //left
-      fineGridFaces{{UNKNOWN_IDENTIFIER}}EstimateProjection(3).value, //right
-      fineGridFaces{{UNKNOWN_IDENTIFIER}}EstimateProjection(1).value, //down
-      fineGridFaces{{UNKNOWN_IDENTIFIER}}EstimateProjection(4).value, //up
-      fineGridFaces{{UNKNOWN_IDENTIFIER}}EstimateProjection(2).value, //front
-      fineGridFaces{{UNKNOWN_IDENTIFIER}}EstimateProjection(5).value  //back
-    );
-    #endif
-    {% endif %}
 
     for (int d=0; d<Dimensions; d++) {
       {{FACE_METADATA_ACCESSOR}}(d).setUpdated(1,true);

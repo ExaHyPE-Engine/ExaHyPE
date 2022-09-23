@@ -8,6 +8,23 @@
 
 #include "CCZ4Kernels.h"
 
+
+void applications::exahype2::ccz4::enforceCCZ4constraints(
+  const double* __restrict__  oldQ,
+  double* __restrict__        dQdt,
+  double                      timeStepSize
+) {
+  double newQ[59];
+  for (int i=0; i<59; i++) {
+    newQ[i] = oldQ[i] + timeStepSize * dQdt[i];
+  }
+  enforceCCZ4constraints(newQ);
+  for (int i=0; i<59; i++) {
+    dQdt[i] = (newQ[i] - oldQ[i]) / timeStepSize;
+  }
+}
+
+
 #if defined(GPUOffloadingOMP)
 #pragma omp declare target
 #endif
