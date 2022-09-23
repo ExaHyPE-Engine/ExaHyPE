@@ -181,9 +181,9 @@ void applications::exahype2::ccz4::source(double* S, const double* const Q,
       for (int k = 0; k < 3; k++) nablaZSrc[i][j] -= Christoffel[i][j][k]*Z[k];
     }
 
-    double RicciPlusNablaZSrc[3][3];
-    for (int i = 0; i < 3; i++)
-    for (int j = 0; j < 3; j++) RicciPlusNablaZSrc[i][j] = RicciSrc[i][j] + nablaZSrc[i][j] + nablaZSrc[j][i];
+    //double RicciPlusNablaZSrc[3][3];
+    //for (int i = 0; i < 3; i++)
+    //for (int j = 0; j < 3; j++) RicciPlusNablaZSrc[i][j] = RicciSrc[i][j] + nablaZSrc[i][j] + nablaZSrc[j][i];
 
     // ================================
     // Baojiu-21-09-22 START OF CHANGES
@@ -194,8 +194,8 @@ void applications::exahype2::ccz4::source(double* S, const double* const Q,
     for (int k = 0; k < 3; k++)
     for (int l = 0; l < 3; l++) Christoffel_tilde_down[i][j][k] += g_cov[i][l]*Christoffel_tilde[j][k][l];
 
-    // double RicciPlusNablaZSrc[3][3] = {0,0,0,0,0,0,0,0,0}; // Use this line later when we comment out the lines above
-    RicciPlusNablaZSrc[3][3] = {0,0,0,0,0,0,0,0,0};
+    double RicciPlusNablaZSrc[3][3] = {0,0,0,0,0,0,0,0,0}; // Use this line later when we comment out the lines above
+    //RicciPlusNablaZSrc[3][3] = {0,0,0,0,0,0,0,0,0};
     for (int i = 0; i < 3; i++)
     for (int j = 0; j < 3; j++)
     {
@@ -265,6 +265,7 @@ void applications::exahype2::ccz4::source(double* S, const double* const Q,
     {
        nablanablaalphaSrc -= phi2*Gtilde[i]*AA[i];
        for (int j = 0; j < 3; j++) nablanablaalphaSrc -= phi*g_contr[i][j]*PP[i]*AA[j];
+    }
     // --------------------------------
     // Baojiu-21-09-22 END OF CHANGES
     // ================================
@@ -706,15 +707,15 @@ void applications::exahype2::ccz4::ncp(double* BgradQ, const double* const Q, co
     for (int k = 0; k < 3; k++) dZNCP[k][i] += CCZ4ds*0.5*g_cov[i][j]*(dGhat[k][j]-dGtildeNCP[k][j]);
 
 
-    double RicciPlusNablaZNCP[3][3];
-    for (int i = 0; i < 3; i++)
-    for (int j = 0; j < 3; j++) RicciPlusNablaZNCP[i][j] = RicciNCP[i][j] + dZNCP[i][j] + dZNCP[j][i];
+    //double RicciPlusNablaZNCP[3][3];
+    //for (int i = 0; i < 3; i++)
+    //for (int j = 0; j < 3; j++) RicciPlusNablaZNCP[i][j] = RicciNCP[i][j] + dZNCP[i][j] + dZNCP[j][i];
 
     // ================================
     // Baojiu-21-09-22 START OF CHANGES
     // --------------------------------
-    // double RicciPlusNablaZNCP[3][3] = {0,0,0,0,0,0,0,0,0}; // Use this line later when we comment out lines above
-    RicciPlusNablaZNCP[3][3] = {0,0,0,0,0,0,0,0,0};
+    double RicciPlusNablaZNCP[3][3] = {0,0,0,0,0,0,0,0,0}; // Use this line later when we comment out lines above
+    //RicciPlusNablaZNCP[3][3] = {0,0,0,0,0,0,0,0,0};
     for (int i = 0; i < 3; i++)
     for (int j = 0; j < 3; j++) 
     {
