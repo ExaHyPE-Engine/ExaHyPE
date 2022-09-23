@@ -152,6 +152,8 @@ where `<gpu-arch>` is either `cc50`, `cc52`, `cc53`, `cc60`, `cc61`, `cc62`, `cc
 ```
 where `<gpu-arch>` is either `cc70`, `cc72`, `cc75`, `cc80`, `cc86` or `cc90`.
 
+If you want to use CUDA, you will need to configure with the additional configuration flag `--with-toolchain=nvidia` and add `-cuda` to the `CXXFLAGS` and the `LDFLAGS`.
+
 ### NVIDIA NVC++ toolchain with C++ GPU
 ```shell
 ./configure \
