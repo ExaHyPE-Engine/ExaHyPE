@@ -48,38 +48,5 @@ class benchmarks::exahype2::euler::sod_shocktube::euler_fv_sod: public benchmark
       int                                          normal,
       double * __restrict__ F 
     ) override;
-
-    #if defined(GPUOffloadingOMP)
-    #pragma omp declare target
-    #endif
-    static GPUCallableMethod double maxEigenvalue(
-      const double * __restrict__ Q,
-      const tarch::la::Vector<Dimensions,double>&  faceCentre,
-      const tarch::la::Vector<Dimensions,double>&  volumeH,
-      double                                       t,
-      double                                       dt,
-      int                                          normal,
-      Offloadable
-    );
-    #if defined(GPUOffloadingOMP)
-    #pragma omp end declare target
-    #endif
-
-    #if defined(GPUOffloadingOMP)
-    #pragma omp declare target
-    #endif
-    static GPUCallableMethod void flux(
-      const double * __restrict__ Q, // Q[4+0],
-      const tarch::la::Vector<Dimensions,double>&  faceCentre,
-      const tarch::la::Vector<Dimensions,double>&  volumeH,
-      double                                       t,
-      double                                       dt,
-      int                                          normal,
-      double * __restrict__                        F, // F[4]
-      Offloadable
-    );
-    #if defined(GPUOffloadingOMP)
-    #pragma omp end declare target
-    #endif     
 };
 #endif
