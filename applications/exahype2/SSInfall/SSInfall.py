@@ -183,15 +183,15 @@ if __name__ == "__main__":
           tarch::la::Vector<Dimensions,int> currentCell = cell + tarch::la::Vector<Dimensions,int>(1);
           const int cellSerialised  = peano4::utils::dLinearised(currentCell, patchSize + 2*1);
           
-          double rho =  reconstructedPatch[cellSerialised*(5+aux_var)+0];      
-          double m1  =  reconstructedPatch[cellSerialised*(5+aux_var)+1];
-          double m2  =  reconstructedPatch[cellSerialised*(5+aux_var)+2];
-          double m3  =  reconstructedPatch[cellSerialised*(5+aux_var)+3];
-          double e   =  reconstructedPatch[cellSerialised*(5+aux_var)+4];
+          double rho =  oldQWithHalo[cellSerialised*(5+aux_var)+0];      
+          double m1  =  oldQWithHalo[cellSerialised*(5+aux_var)+1];
+          double m2  =  oldQWithHalo[cellSerialised*(5+aux_var)+2];
+          double m3  =  oldQWithHalo[cellSerialised*(5+aux_var)+3];
+          double e   =  oldQWithHalo[cellSerialised*(5+aux_var)+4];
           
           double p   =  (5.0/3.0-1)*(e-0.5*(m1*m1+m2*m2+m3*m3)/rho);
           if (p<0) {
-            reconstructedPatch[cellSerialised*(real_var+aux_var)+4]=0.5*(m1*m1+m2*m2+m3*m3)/rho+1e-14; 
+            oldQWithHalo[cellSerialised*(real_var+aux_var)+4]=0.5*(m1*m1+m2*m2+m3*m3)/rho+1e-14; 
           }
           
           for (int d=0; d<3; d++) {
@@ -202,9 +202,9 @@ if __name__ == "__main__":
             const int leftCellSerialised  = peano4::utils::dLinearised(leftCell, patchSize + 2*1);
             const int rightCellSerialised = peano4::utils::dLinearised(rightCell,patchSize + 2*1);
             for (int i=0; i<real_var; i++){
-              double rightgradient=reconstructedPatch[rightCellSerialised*(real_var+aux_var)+i] - reconstructedPatch[cellSerialised*(real_var+aux_var)+i];
-              double leftgradient=reconstructedPatch[cellSerialised*(real_var+aux_var)+i] - reconstructedPatch[leftCellSerialised*(real_var+aux_var)+i];
-              reconstructedPatch[cellSerialised*(real_var+aux_var)+real_var+d*real_var+i] = rightgradient < leftgradient ? rightgradient: leftgradient;
+              double rightgradient=oldQWithHalo[rightCellSerialised*(real_var+aux_var)+i] - oldQWithHalo[cellSerialised*(real_var+aux_var)+i];
+              double leftgradient=oldQWithHalo[cellSerialised*(real_var+aux_var)+i] - oldQWithHalo[leftCellSerialised*(real_var+aux_var)+i];
+              oldQWithHalo[cellSerialised*(real_var+aux_var)+real_var+d*real_var+i] = rightgradient < leftgradient ? rightgradient: leftgradient;
             }
           }
         }        
@@ -230,7 +230,7 @@ if __name__ == "__main__":
         if ( marker.isContained((0,0,0)) ){
           tarch::la::Vector<Dimensions,int> centerCell = tarch::la::Vector<Dimensions,int>(1+patchSize/2);
           const int cellSerialised  = peano4::utils::dLinearised(centerCell, patchSize + 2*1);
-          repositories::{{SOLVER_INSTANCE}}.rho_0=reconstructedPatch[cellSerialised*(5+aux_var)+0];
+          repositories::{{SOLVER_INSTANCE}}.rho_0=oldQWithHalo[cellSerialised*(5+aux_var)+0];
         }
         for (int i=0;i<sample;i++){
           tarch::la::Vector<Dimensions,double> coor; coor(0)=repositories::{{SOLVER_INSTANCE}}.r_s[i];
@@ -239,15 +239,15 @@ if __name__ == "__main__":
               if ( (marker.getOffset()(0)+(xindex-1)*volumeH)<repositories::{{SOLVER_INSTANCE}}.r_s[i] and (marker.getOffset()(0)+(xindex-0.5)*volumeH)>repositories::{{SOLVER_INSTANCE}}.r_s[i] ){
                 tarch::la::Vector<Dimensions,int> cell1=tarch::la::Vector<Dimensions,int>(1+patchSize/2); cell1(0)=xindex;
                 tarch::la::Vector<Dimensions,int> cell2=tarch::la::Vector<Dimensions,int>(1+patchSize/2); cell2(0)=xindex-1;
-                double rho1=reconstructedPatch[peano4::utils::dLinearised(cell1, patchSize + 2*1)*(5+aux_var)+0], x1=marker.getOffset()(0)+(xindex-0.5)*volumeH;
-                double rho2=reconstructedPatch[peano4::utils::dLinearised(cell1, patchSize + 2*1)*(5+aux_var)+0], x2=marker.getOffset()(0)+(xindex-1.5)*volumeH;
+                double rho1=oldQWithHalo[peano4::utils::dLinearised(cell1, patchSize + 2*1)*(5+aux_var)+0], x1=marker.getOffset()(0)+(xindex-0.5)*volumeH;
+                double rho2=oldQWithHalo[peano4::utils::dLinearised(cell1, patchSize + 2*1)*(5+aux_var)+0], x2=marker.getOffset()(0)+(xindex-1.5)*volumeH;
                 repositories::{{SOLVER_INSTANCE}}.rho_x[i]=rho1*(x2-repositories::{{SOLVER_INSTANCE}}.r_s[i])/(x2-x1)+rho2*(repositories::{{SOLVER_INSTANCE}}.r_s[i]-x1)/(x2-x1);
               }
               else if ( (marker.getOffset()(0)+(xindex-0.5)*volumeH)<repositories::{{SOLVER_INSTANCE}}.r_s[i] and (marker.getOffset()(0)+(xindex)*volumeH)>repositories::{{SOLVER_INSTANCE}}.r_s[i] ){
                 tarch::la::Vector<Dimensions,int> cell1=tarch::la::Vector<Dimensions,int>(1+patchSize/2); cell1(0)=xindex;
                 tarch::la::Vector<Dimensions,int> cell2=tarch::la::Vector<Dimensions,int>(1+patchSize/2); cell2(0)=xindex+1;
-                double rho1=reconstructedPatch[peano4::utils::dLinearised(cell1, patchSize + 2*1)*(5+aux_var)+0], x1=marker.getOffset()(0)+(xindex-0.5)*volumeH;
-                double rho2=reconstructedPatch[peano4::utils::dLinearised(cell1, patchSize + 2*1)*(5+aux_var)+0], x2=marker.getOffset()(0)+(xindex+0.5)*volumeH;
+                double rho1=oldQWithHalo[peano4::utils::dLinearised(cell1, patchSize + 2*1)*(5+aux_var)+0], x1=marker.getOffset()(0)+(xindex-0.5)*volumeH;
+                double rho2=oldQWithHalo[peano4::utils::dLinearised(cell1, patchSize + 2*1)*(5+aux_var)+0], x2=marker.getOffset()(0)+(xindex+0.5)*volumeH;
                 repositories::{{SOLVER_INSTANCE}}.rho_x[i]=rho1*(x2-repositories::{{SOLVER_INSTANCE}}.r_s[i])/(x2-x1)+rho2*(repositories::{{SOLVER_INSTANCE}}.r_s[i]-x1)/(x2-x1);
               }
             }

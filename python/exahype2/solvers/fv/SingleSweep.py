@@ -25,7 +25,7 @@ class UpdateCell(ReconstructPatchAndApplyFunctor):
       assertion2( tarch::la::greaterEquals( timeStepSize, 0.0 ), timeStamp, timeStepSize );
 
       ::exahype2::fv::validatePatch(
-        reconstructedPatch,
+        oldQWithHalo,
         {{NUMBER_OF_UNKNOWNS}},
         {{NUMBER_OF_AUXILIARY_VARIABLES}},
         {{NUMBER_OF_VOLUMES_PER_AXIS}},
@@ -33,14 +33,14 @@ class UpdateCell(ReconstructPatchAndApplyFunctor):
         std::string(__FILE__) + "(" + std::to_string(__LINE__) + "): " + marker.toString()
       ); // previous time step has to be valid
   
-      ::exahype2::CellData  patchData( reconstructedPatch, marker.x(), marker.h(), timeStamp, timeStepSize, targetPatch );
+      ::exahype2::CellData  patchData( oldQWithHalo, marker.x(), marker.h(), timeStamp, timeStepSize, newQ );
            
       ::exahype2::fv::{{KERNEL_NAMESPACE}}::{{COMPUTE_KERNEL_CALL}} 
 
       {{POSTPROCESS_UPDATED_PATCH}}
 
       ::exahype2::fv::validatePatch(
-        targetPatch,
+        newQ,
         {{NUMBER_OF_UNKNOWNS}},
         {{NUMBER_OF_AUXILIARY_VARIABLES}},
         {{NUMBER_OF_VOLUMES_PER_AXIS}},
