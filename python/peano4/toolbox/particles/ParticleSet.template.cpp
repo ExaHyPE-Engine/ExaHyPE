@@ -333,7 +333,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishedTraversal() {
 
 {{NAMESPACE | join("::")}}::{{CLASSNAME}} {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getSievedParticlesForNextGridTraversal() {
   {{NAMESPACE | join("::")}}::{{CLASSNAME}} result;
-  for (auto& p: _particlesThatHaveToBeSieved) {
+  for (auto *p: _particlesThatHaveToBeSieved) {
     globaldata::{{PARTICLE_TYPE}}* copyOfParticle = new globaldata::{{PARTICLE_TYPE}}(*p);
     copyOfParticle->setParallelState( globaldata::{{PARTICLE_TYPE}}::ParallelState::Virtual );
     result.push_back( copyOfParticle );
