@@ -165,21 +165,20 @@ void exahype2::dg::integrateOverRiemannSolutionsAndAddToVolume_GaussLegendre(
   const double* __restrict__          MassMatrixDiagonal1d,
   double* __restrict__                cellQ
 ){
-  const int nPA = order+1; //nodes per axis
   const int strideQ = unknowns+auxiliaryVariables;
 
   exahype2::enumerator::AoSLexicographicEnumerator QEnumerator(
     1,           // number of cells in one memory chunk
-    nPA,     // numberOfDoFsPerAxisInCell
+    order+1,     // numberOfDoFsPerAxisInCell
     0,           // no halo
     unknowns,
     0            // no auxiliary variables here
   );
 
-  exahype2::enumerator::FaceAoSLexicographicEnumerator leftFaceEnumerator(0,nPA,1,unknowns,0);
-  exahype2::enumerator::FaceAoSLexicographicEnumerator rightFaceEnumerator(2,nPA,1,unknowns,0);
-  exahype2::enumerator::FaceAoSLexicographicEnumerator bottomFaceEnumerator(1,nPA,1,unknowns,0);
-  exahype2::enumerator::FaceAoSLexicographicEnumerator upperFaceEnumerator(3,nPA,1,unknowns,0);
+  exahype2::enumerator::FaceAoSLexicographicEnumerator leftFaceEnumerator  (0,            order+1, 1, unknowns, 0);
+  exahype2::enumerator::FaceAoSLexicographicEnumerator rightFaceEnumerator (0+Dimensions, order+1, 1, unknowns, 0);
+  exahype2::enumerator::FaceAoSLexicographicEnumerator bottomFaceEnumerator(1,            order+1, 1, unknowns, 0);
+  exahype2::enumerator::FaceAoSLexicographicEnumerator upperFaceEnumerator (1+Dimensions, order+1, 1, unknowns, 0);
 
   dfor( dof, order+1 ) {
     const double coeffLeft    = MassMatrixDiagonal1d[dof[1]]*BasisFunctionValuesLeft[dof[0]]       * cellSize(1);
@@ -200,10 +199,10 @@ void exahype2::dg::integrateOverRiemannSolutionsAndAddToVolume_GaussLegendre(
 
     for(int var=0; var<unknowns; var++) {
       cellQ[ QEnumerator(0,dof,var) ] +=
-          coeffLeft   * faceQLeft   [leftFaceEnumerator(leftDoF,var)]
-        - coeffRight  * faceQRight  [rightFaceEnumerator(rightDoF,var)]
+          coeffLeft   * faceQLeft   [leftFaceEnumerator(  leftDoF,  var)]
+        - coeffRight  * faceQRight  [rightFaceEnumerator( rightDoF, var)]
         + coeffBottom * faceQBottom [bottomFaceEnumerator(bottomDoF,var)]
-        - coeffUp     * faceQUp     [upperFaceEnumerator(upperDoF,var)];
+        - coeffUp     * faceQUp     [upperFaceEnumerator( upperDoF, var)];
     }
   }
 }
@@ -213,10 +212,10 @@ void exahype2::dg::integrateOverRiemannSolutionsAndAddToVolume_GaussLegendre(
 void exahype2::dg::integrateOverRiemannSolutionsAndAddToVolume_GaussLegendre(
   const double* const __restrict__    faceQLeft,
   const double* const __restrict__    faceQRight,
-  const double* const __restrict__    faceQFront,
-  const double* const __restrict__    faceQBack,
   const double* const __restrict__    faceQBottom,
   const double* const __restrict__    faceQUp,
+  const double* const __restrict__    faceQFront,
+  const double* const __restrict__    faceQBack,
   int                                 order,
   int                                 unknowns,
   const int                           auxiliaryVariables,
@@ -225,34 +224,31 @@ void exahype2::dg::integrateOverRiemannSolutionsAndAddToVolume_GaussLegendre(
   const double* __restrict__          MassMatrixDiagonal1d,
   double* __restrict__                cellQ
   ){
-  const int nPA = order+1; //nodes per axis
-  const int nodesPerFace = getNodesPerCell(nPA)/nPA;
-
   exahype2::enumerator::AoSLexicographicEnumerator QEnumerator(
     1,           // number of cells in one memory chunk
-    nPA,     // numberOfDoFsPerAxisInCell
+    order+1,     // numberOfDoFsPerAxisInCell
     0,           // no halo
     unknowns,
     0            // no auxiliary variables here
   );
 
-  exahype2::enumerator::FaceAoSLexicographicEnumerator leftFaceEnumerator(0,nPA,1,unknowns,0);
-  exahype2::enumerator::FaceAoSLexicographicEnumerator rightFaceEnumerator(3,nPA,1,unknowns,0);
-  exahype2::enumerator::FaceAoSLexicographicEnumerator frontFaceEnumerator(1,nPA,1,unknowns,0);
-  exahype2::enumerator::FaceAoSLexicographicEnumerator backFaceEnumerator(4,nPA,1,unknowns,0);
-  exahype2::enumerator::FaceAoSLexicographicEnumerator bottomFaceEnumerator(2,nPA,1,unknowns,0);
-  exahype2::enumerator::FaceAoSLexicographicEnumerator upperFaceEnumerator(5,nPA,1,unknowns,0);
+  exahype2::enumerator::FaceAoSLexicographicEnumerator leftFaceEnumerator  (0,            order+1, 1, unknowns, 0);
+  exahype2::enumerator::FaceAoSLexicographicEnumerator rightFaceEnumerator (0+Dimensions, order+1, 1, unknowns, 0);
+  exahype2::enumerator::FaceAoSLexicographicEnumerator bottomFaceEnumerator(1,            order+1, 1, unknowns, 0);
+  exahype2::enumerator::FaceAoSLexicographicEnumerator upperFaceEnumerator( 1+Dimensions, order+1, 1, unknowns, 0);
+  exahype2::enumerator::FaceAoSLexicographicEnumerator frontFaceEnumerator( 2,            order+1, 1, unknowns, 0);
+  exahype2::enumerator::FaceAoSLexicographicEnumerator backFaceEnumerator(  2+Dimensions, order+1, 1, unknowns, 0);
 
   dfor( dof, order+1 ) {
     //coefficients of faces in x direction
-    const double coeffLeft  = MassMatrixDiagonal1d[dof[1]]*MassMatrixDiagonal1d[dof[2]]*BasisFunctionValuesLeft[dof[0]]         * cellSize(1) * cellSize(2);
-    const double coeffRight = MassMatrixDiagonal1d[dof[1]]*MassMatrixDiagonal1d[dof[2]]*BasisFunctionValuesLeft[order-dof[0]]   * cellSize(1) * cellSize(2);
+    const double coeffLeft    = BasisFunctionValuesLeft[dof[0]]       * MassMatrixDiagonal1d[dof[1]]          * MassMatrixDiagonal1d[dof[2]]          * cellSize(1) * cellSize(2);
+    const double coeffRight   = BasisFunctionValuesLeft[order-dof[0]] * MassMatrixDiagonal1d[dof[1]]          * MassMatrixDiagonal1d[dof[2]]          * cellSize(1) * cellSize(2);
     //coefficients of faces in y direction
-    const double coeffFront = MassMatrixDiagonal1d[dof[0]]*MassMatrixDiagonal1d[dof[2]]*BasisFunctionValuesLeft[dof[1]]         * cellSize(0) * cellSize(2);
-    const double coeffBack  = MassMatrixDiagonal1d[dof[0]]*MassMatrixDiagonal1d[dof[2]]*BasisFunctionValuesLeft[order-dof[1]]   * cellSize(0) * cellSize(2);
+    const double coeffBottom  = MassMatrixDiagonal1d[dof[0]]          * BasisFunctionValuesLeft[dof[1]]       * MassMatrixDiagonal1d[dof[2]]          * cellSize(0) * cellSize(2);
+    const double coeffUp      = MassMatrixDiagonal1d[dof[0]]          * BasisFunctionValuesLeft[order-dof[1]] * MassMatrixDiagonal1d[dof[2]]          * cellSize(0) * cellSize(2);
     //coefficients of faces in z direction
-    const double coeffBottom  = MassMatrixDiagonal1d[dof[0]]*MassMatrixDiagonal1d[dof[1]]*BasisFunctionValuesLeft[dof[2]]       * cellSize(0) * cellSize(1);
-    const double coeffUp      = MassMatrixDiagonal1d[dof[0]]*MassMatrixDiagonal1d[dof[1]]*BasisFunctionValuesLeft[order-dof[2]] * cellSize(0) * cellSize(1);
+    const double coeffFront   = MassMatrixDiagonal1d[dof[0]]          * MassMatrixDiagonal1d[dof[1]]          * BasisFunctionValuesLeft[dof[2]]       * cellSize(0) * cellSize(1);
+    const double coeffBack    = MassMatrixDiagonal1d[dof[0]]          * MassMatrixDiagonal1d[dof[1]]          * BasisFunctionValuesLeft[order-dof[2]] * cellSize(0) * cellSize(1);
 
     tarch::la::Vector<Dimensions,int> leftDoF      = dof;
     tarch::la::Vector<Dimensions,int> rightDoF     = dof;
@@ -263,19 +259,19 @@ void exahype2::dg::integrateOverRiemannSolutionsAndAddToVolume_GaussLegendre(
 
     leftDoF(0)    = 1;
     rightDoF(0)   = 0;
-    frontDoF(1)   = 1;
-    backDoF(1)    = 0;
-    bottomDoF(2)  = 1;
-    upperDoF(2)   = 0;
+    bottomDoF(1)  = 1;
+    upperDoF(1)   = 0;
+    frontDoF(2)   = 1;
+    backDoF(2)    = 0;
 
     for(int var=0; var<unknowns; var++) {
       cellQ[ QEnumerator(0,dof,var) ] +=
-          coeffLeft   * faceQLeft   [leftFaceEnumerator(leftDoF,var)]
-        - coeffRight  * faceQRight  [rightFaceEnumerator(rightDoF,var)]
-        + coeffFront  * faceQFront  [frontFaceEnumerator(frontDoF,var)]
-        - coeffBack   * faceQBack   [backFaceEnumerator(frontDoF,var)]
+        + coeffLeft   * faceQLeft   [leftFaceEnumerator  (leftDoF,  var)]
+        - coeffRight  * faceQRight  [rightFaceEnumerator (rightDoF, var)]
         + coeffBottom * faceQBottom [bottomFaceEnumerator(bottomDoF,var)]
-        - coeffUp     * faceQUp     [upperFaceEnumerator(upperDoF,var)];
+        - coeffUp     * faceQUp     [upperFaceEnumerator (upperDoF, var)]
+        + coeffFront  * faceQFront  [frontFaceEnumerator (frontDoF, var)]
+        - coeffBack   * faceQBack   [backFaceEnumerator  (backDoF,  var)];
     }
   }
 }
