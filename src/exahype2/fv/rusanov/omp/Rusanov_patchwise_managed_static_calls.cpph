@@ -21,8 +21,34 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanov_patchwise_managed_static_ca
   bool                    evaluateSource,
   bool                    evaluateMaximumEigenvalueAfterTimeStep
 ) {
-  #if defined(GPUOffloadingOMP)
+#if defined(GPUOffloadingOMP)
   constexpr int solversHaloSize = 1;
+
+  exahype2::enumerator::AoSLexicographicEnumerator QInHostEnumerator       (                        1, numberOfVolumesPerAxisInPatch, haloSize, unknowns, auxiliaryVariables);
+  exahype2::enumerator::AoSLexicographicEnumerator QOutHostEnumerator      (                        1, numberOfVolumesPerAxisInPatch,        0, unknowns, auxiliaryVariables);
+  TempDataEnumerator fluxHostEnumerator      (hostPatchData.numberOfCells, numberOfVolumesPerAxisInPatch,   solversHaloSize, unknowns, 0);
+  TempDataEnumerator ncpHostEnumerator       (hostPatchData.numberOfCells, numberOfVolumesPerAxisInPatch+1, solversHaloSize, unknowns, 0);
+  TempDataEnumerator eigenvalueHostEnumerator(hostPatchData.numberOfCells, numberOfVolumesPerAxisInPatch,   solversHaloSize,        1, 0);
+
+#ifdef UseNVIDIA // Use CUDA managed memory
+  double* tempFluxX = tarch::allocateMemory( fluxHostEnumerator.size(), tarch::MemoryLocation::ManagedAcceleratorMemory );
+  double* tempFluxY = tarch::allocateMemory( fluxHostEnumerator.size(), tarch::MemoryLocation::ManagedAcceleratorMemory );
+  double* tempFluxZ = tarch::allocateMemory( Dimensions==3 ? fluxHostEnumerator.size() : 1, tarch::MemoryLocation::ManagedAcceleratorMemory );
+  double* tempNonconservativeProductX = tarch::allocateMemory( ncpHostEnumerator.size(), tarch::MemoryLocation::ManagedAcceleratorMemory );
+  double* tempNonconservativeProductY = tarch::allocateMemory( ncpHostEnumerator.size(), tarch::MemoryLocation::ManagedAcceleratorMemory );
+  double* tempNonconservativeProductZ = tarch::allocateMemory( Dimensions==3 ? ncpHostEnumerator.size() : 1, tarch::MemoryLocation::ManagedAcceleratorMemory );
+  double* tempEigenvalueX = tarch::allocateMemory( eigenvalueHostEnumerator.size(), tarch::MemoryLocation::ManagedAcceleratorMemory );
+  double* tempEigenvalueY = tarch::allocateMemory( eigenvalueHostEnumerator.size(), tarch::MemoryLocation::ManagedAcceleratorMemory );
+  double* tempEigenvalueZ = tarch::allocateMemory( Dimensions==3 ? eigenvalueHostEnumerator.size() : 1, tarch::MemoryLocation::ManagedAcceleratorMemory );
+
+  double* mappedPointersToQIns = tarch::allocateMemory(hostPatchData.numberOfCells * QInHostEnumerator.size(), tarch::MemoryLocation::ManagedAcceleratorMemory );
+  double* mappedPointersToQOuts = tarch::allocateMemory(hostPatchData.numberOfCells * QOutHostEnumerator.size(), tarch::MemoryLocation::ManagedAcceleratorMemory );
+  double* rawPointerToCellCentres = tarch::allocateMemory(hostPatchData.numberOfCells * Dimensions, tarch::MemoryLocation::ManagedAcceleratorMemory );
+  double* rawPointerToCellSizes = tarch::allocateMemory(hostPatchData.numberOfCells * Dimensions, tarch::MemoryLocation::ManagedAcceleratorMemory );
+  double* ts = tarch::allocateMemory(hostPatchData.numberOfCells, tarch::MemoryLocation::ManagedAcceleratorMemory );
+  double* dts = tarch::allocateMemory(hostPatchData.numberOfCells, tarch::MemoryLocation::ManagedAcceleratorMemory );
+  double* maxEigenvalues = tarch::allocateMemory(hostPatchData.numberOfCells, tarch::MemoryLocation::ManagedAcceleratorMemory );
+#else
   // The following parameter is a magic number chosen in such a way that it works with our kernel benchmarks.
   // This parameter should be provided by an autotuner rather than being a magic number.
   #if Dimensions==2
@@ -39,12 +65,6 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanov_patchwise_managed_static_ca
     #pragma omp atomic
     currentOffloadedPatches += hostPatchData.numberOfCells;
   } else while(currentOffloadedPatches + hostPatchData.numberOfCells > MaxNumberOfPossiblePatchEntries) { /* Suspend until other threads are finished */ };
-
-  exahype2::enumerator::AoSLexicographicEnumerator QInHostEnumerator       (                        1, numberOfVolumesPerAxisInPatch, haloSize, unknowns, auxiliaryVariables);
-  exahype2::enumerator::AoSLexicographicEnumerator QOutHostEnumerator      (                        1, numberOfVolumesPerAxisInPatch,        0, unknowns, auxiliaryVariables);
-  TempDataEnumerator fluxHostEnumerator      (hostPatchData.numberOfCells, numberOfVolumesPerAxisInPatch,   solversHaloSize, unknowns, 0);
-  TempDataEnumerator ncpHostEnumerator       (hostPatchData.numberOfCells, numberOfVolumesPerAxisInPatch+1, solversHaloSize, unknowns, 0);
-  TempDataEnumerator eigenvalueHostEnumerator(hostPatchData.numberOfCells, numberOfVolumesPerAxisInPatch,   solversHaloSize,        1, 0);
 
   double* tempFluxX = tarch::multicore::omp::GPUMemoryManager::getInstance().allocate<double>( FluxHostEnumerator.size(), targetDevice );
   double* tempFluxY = tarch::multicore::omp::GPUMemoryManager::getInstance().allocate<double>( FluxHostEnumerator.size(), targetDevice );
@@ -63,22 +83,29 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanov_patchwise_managed_static_ca
   double* ts = tarch::multicore::omp::GPUMemoryManager::getInstance().allocate<double>(MaxNumberOfPossiblePatchEntries, targetDevice );
   double* dts = tarch::multicore::omp::GPUMemoryManager::getInstance().allocate<double>(MaxNumberOfPossiblePatchEntries, targetDevice );
   double* maxEigenvalues = tarch::multicore::omp::GPUMemoryManager::getInstance().allocate<double>(MaxNumberOfPossiblePatchEntries, targetDevice );
+#endif
 
   std::vector<double> tmpQIn(hostPatchData.numberOfCells * QInHostEnumerator.size());
   for (int patchIndex=0; patchIndex<hostPatchData.numberOfCells; patchIndex++) {
     std::memcpy(&tmpQIn[patchIndex * QInHostEnumerator.size()], hostPatchData.QIn[patchIndex], QInHostEnumerator.size() * sizeof(double));
   }
 
+#ifdef UseNVIDIA
+  std::memcpy(mappedPointersToQIns, &tmpQIn[0], hostPatchData.numberOfCells * QInHostEnumerator.size() * sizeof(double));
+  std::memcpy(rawPointerToCellCentres, &hostPatchData.cellCentre[0], hostPatchData.numberOfCells * Dimensions * sizeof(double));
+  std::memcpy(rawPointerToCellSizes, &hostPatchData.cellSize[0], hostPatchData.numberOfCells * Dimensions * sizeof(double));
+  std::memcpy(ts, hostPatchData.t, hostPatchData.numberOfCells * sizeof(double));
+  std::memcpy(dts, hostPatchData.dt, hostPatchData.numberOfCells * sizeof(double));
+#else
   auto hostId = omp_get_initial_device();
-
   omp_target_memcpy(mappedPointersToQIns, &tmpQIn[0], hostPatchData.numberOfCells * QInHostEnumerator.size() * sizeof(double), 0, 0, targetDevice, hostId);
   omp_target_memcpy(rawPointerToCellCentres, &hostPatchData.cellCentre[0], hostPatchData.numberOfCells * Dimensions * sizeof(double), 0, 0, targetDevice, hostId);
   omp_target_memcpy(rawPointerToCellSizes, &hostPatchData.cellSize[0], hostPatchData.numberOfCells * Dimensions * sizeof(double), 0, 0, targetDevice, hostId);
   omp_target_memcpy(ts, hostPatchData.t, hostPatchData.numberOfCells * sizeof(double), 0, 0, targetDevice, hostId);
   omp_target_memcpy(dts, hostPatchData.dt, hostPatchData.numberOfCells * sizeof(double), 0, 0, targetDevice, hostId);
+#endif
 
   const int numberOfCells = hostPatchData.numberOfCells;
-
   #pragma omp target teams distribute device(targetDevice) \
     is_device_ptr(tempFluxX, tempFluxY, tempFluxZ, \
                   tempNonconservativeProductX, tempNonconservativeProductY, tempNonconservativeProductZ, \
@@ -623,11 +650,30 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanov_patchwise_managed_static_ca
   } // This is the end of the target offloading block
 
   std::vector<double> tmpQOut(hostPatchData.numberOfCells * QOutHostEnumerator.size());
-  omp_target_memcpy(&tmpQOut[0], mappedPointersToQOuts, hostPatchData.numberOfCells * QOutHostEnumerator.size() * sizeof(double), 0, 0, hostId, targetDevice);
-  for (int patchIndex=0; patchIndex<hostPatchData.numberOfCells; patchIndex++) {
-    std::memcpy(hostPatchData.QOut[patchIndex], &tmpQOut[patchIndex * QOutHostEnumerator.size()], QOutHostEnumerator.size() * sizeof(double));
-  }
 
+#ifdef UseNVIDIA
+  std::memcpy(&tmpQOut[0], mappedPointersToQOuts, hostPatchData.numberOfCells * QOutHostEnumerator.size() * sizeof(double));
+  std::memcpy(hostPatchData.maxEigenvalue, maxEigenvalues, hostPatchData.numberOfCells * sizeof(double));
+
+  tarch::freeMemory( tempFluxX, tarch::MemoryLocation::ManagedAcceleratorMemory );
+  tarch::freeMemory( tempFluxY, tarch::MemoryLocation::ManagedAcceleratorMemory );
+  tarch::freeMemory( tempFluxZ, tarch::MemoryLocation::ManagedAcceleratorMemory );
+  tarch::freeMemory( tempNonconservativeProductX, tarch::MemoryLocation::ManagedAcceleratorMemory );
+  tarch::freeMemory( tempNonconservativeProductY, tarch::MemoryLocation::ManagedAcceleratorMemory );
+  tarch::freeMemory( tempNonconservativeProductZ, tarch::MemoryLocation::ManagedAcceleratorMemory );
+  tarch::freeMemory( tempEigenvalueX, tarch::MemoryLocation::ManagedAcceleratorMemory );
+  tarch::freeMemory( tempEigenvalueY, tarch::MemoryLocation::ManagedAcceleratorMemory );
+  tarch::freeMemory( tempEigenvalueZ, tarch::MemoryLocation::ManagedAcceleratorMemory );
+
+  tarch::freeMemory( mappedPointersToQIns, tarch::MemoryLocation::ManagedAcceleratorMemory );
+  tarch::freeMemory( mappedPointersToQOuts, tarch::MemoryLocation::ManagedAcceleratorMemory );
+  tarch::freeMemory( rawPointerToCellCentres, tarch::MemoryLocation::ManagedAcceleratorMemory );
+  tarch::freeMemory( rawPointerToCellSizes, tarch::MemoryLocation::ManagedAcceleratorMemory );
+  tarch::freeMemory( ts, tarch::MemoryLocation::ManagedAcceleratorMemory );
+  tarch::freeMemory( dts, tarch::MemoryLocation::ManagedAcceleratorMemory );
+  tarch::freeMemory( maxEigenvalues, tarch::MemoryLocation::ManagedAcceleratorMemory );
+#else
+  omp_target_memcpy(&tmpQOut[0], mappedPointersToQOuts, hostPatchData.numberOfCells * QOutHostEnumerator.size() * sizeof(double), 0, 0, hostId, targetDevice);
   omp_target_memcpy(hostPatchData.maxEigenvalue, maxEigenvalues, hostPatchData.numberOfCells * sizeof(double), 0, 0, hostId, targetDevice);
 
   tarch::multicore::omp::GPUMemoryManager::getInstance().free( tempFluxX, targetDevice );
@@ -650,8 +696,13 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanov_patchwise_managed_static_ca
 
   #pragma omp atomic
   currentOffloadedPatches -= hostPatchData.numberOfCells;
+#endif
 
-  #else
+  for (int patchIndex=0; patchIndex<hostPatchData.numberOfCells; patchIndex++) {
+    std::memcpy(hostPatchData.QOut[patchIndex], &tmpQOut[patchIndex * QOutHostEnumerator.size()], QOutHostEnumerator.size() * sizeof(double));
+  }
+
+#else
   assertionMsg(false, "this routine should only be used in combination with OpenMP offloading" );
-  #endif
+#endif
 }

@@ -5,15 +5,12 @@
 #if !defined( _TARCH_MULTICORE_OMP_GPU_MEMORY_MANAGER_H_) && defined(GPUOffloadingOMP)
 #define _TARCH_MULTICORE_OMP_GPU_MEMORY_MANAGER_H_
 
-
 #include "tarch/multicore/BooleanSemaphore.h"
 #include "tarch/logging/Log.h"
-
 
 #include <map>
 #include <list>
 #include <vector>
-
 
 namespace tarch {
   namespace multicore {
@@ -22,8 +19,6 @@ namespace tarch {
     }
   }
 }
-
-
 
 /**
  * Singleton that manages persistent memory on the GPUs

@@ -1,6 +1,18 @@
 #include "tarch/multicore/multicore.h"
+#include "tarch/Assertions.h"
 
 #if defined(SharedOMP)
+
+#if defined(GPUOffloadingOMP) and defined(UseNVIDIA)
+#include <cuda_runtime.h>
+#define CHECK_CUDA_ERROR(ans) { cudaAssertion((ans), __FILE__, __LINE__); }
+void cudaAssertion(cudaError_t code, const char *file, int line) {
+   if (code != cudaSuccess) {
+      fprintf(stderr,"CUDA assertion: %s %s %d\n", cudaGetErrorString(code), file, line);
+   }
+   assertion(code == cudaSuccess);
+}
+#endif
 
 double* tarch::allocateMemory(int size, MemoryLocation location) {
   double* result = nullptr;
@@ -10,7 +22,7 @@ double* tarch::allocateMemory(int size, MemoryLocation location) {
       break;
     case MemoryLocation::ManagedAcceleratorMemory:
 #if defined(GPUOffloadingOMP) and defined(UseNVIDIA)
-      cudaMallocManaged((void**)&result, size*sizeof(double), cudaMemAttachGlobal);
+      CHECK_CUDA_ERROR(cudaMallocManaged((void**)&result, size*sizeof(double)));
 #else
       result = new (std::align_val_t(AlignmentOnHeap)) double[size];
 #endif
@@ -26,7 +38,7 @@ void tarch::freeMemory(double* data, MemoryLocation location) {
       break;
     case MemoryLocation::ManagedAcceleratorMemory:
 #if defined(GPUOffloadingOMP) and defined(UseNVIDIA)
-      cudaFree(data);
+      CHECK_CUDA_ERROR(cudaFree(data));
 #elif defined(GPUOffloadingOMP) and defined(UseAMD)
       hipFree(data);
 #else
