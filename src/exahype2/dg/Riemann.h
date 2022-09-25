@@ -183,8 +183,16 @@ namespace exahype2 {
 
 
     /**
-     * 3d counterpart of other integrateOverRiemannSolutionsAndAddToVolume_GaussLegendre()
-     * routine.
+     * 3d counterpart of integrateOverRiemannSolutionsAndAddToVolume_GaussLegendre()
+     *
+     * The routine relies on a left-handed coordinate system. So we have a cube
+     * with a left and a right face. Those are the faxes 0 and 3
+     * (=0+Dimensions). Their normal points along the x axis. Next, we have
+     * bottom and top face, as they have a normal along the y axis and y is the
+     * second coordinate axis. Finally, we handle the front and the back face.
+     * They are the faces 2 and 2+Dimensions=5. The front face comes first, as
+     * we work with a left-handed coordinate system, i.e. the normal points
+     * into the screen.
      */
     void integrateOverRiemannSolutionsAndAddToVolume_GaussLegendre(
       const double* const __restrict__    faceQLeft,
