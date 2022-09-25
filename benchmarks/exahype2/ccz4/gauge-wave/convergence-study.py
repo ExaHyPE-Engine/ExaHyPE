@@ -54,9 +54,13 @@ unknowns = {
 my_solver = None
 
 
+#
+# I pick patches of 9x9x9 here, as I then can match stuff exactly with the DG solver of
+# DG order 0. This helps me to debug stuff.
+#
 if args.solver=="fv":
   my_solver = exahype2.solvers.fv.rusanov.GlobalAdaptiveTimeStepWithEnclaveTasking(name                 = "CCZ4FV", 
-                                                                                   patch_size           = 5,
+                                                                                   patch_size           = 9,
                                                                                    unknowns             = sum(unknowns.values()),
                                                                                    auxiliary_variables  = 0,
                                                                                    min_volume_h         = args.cell_size / 5, 
