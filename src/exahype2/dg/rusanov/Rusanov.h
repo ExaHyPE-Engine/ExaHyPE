@@ -54,9 +54,28 @@ namespace exahype2 {
        *         2 3
        *         0 1
        *
-       * The lrEnumerator is used for quantities that we evaluate right and left of
-       * the face. The faceEnumerator is for data that we evalutate directly on the
-       * face.
+       * The lrEnumerator is used for quantities that we evaluate right and
+       * left of the face. The faceEnumerator is for data that we evaluate
+       * directly on the face.
+       *
+       * ## Linearity in h
+       *
+       * The ncp - as so often - deserves special attention: As we have a
+       * non-conservative term here, we don't write the same flux to the left
+       * and the right face. Indeed, they carry exactly switched signs. We
+       * furthermore note that the original PDE formulation speaks of a
+       * term @f$ B(Q) \nabla B @f$ whereas the Finite Volume formulation's
+       * Rusanov solver uses a $f@ 0.5 B( 0.5(Q^++Q^-) ) (Q^+-Q^-) @f$ term.
+       * Therefore, we need an additional factor of 0.5. However, we do not
+       * need any additional calibration, as we simply pass in the Q
+       * differences into the DG ncp term which expects the gradient. Whatever
+       * comes out of it, should be by a factor of h too big already, i.e.
+       * have the right cardinality of the FV expression.
+       *
+       * In theory, it might be that B is not linear in the vector, i.e. not
+       * linear in an h scaling. However, we always can assume that the B that
+       * is passed in here is a linearisation along the face. Therefore, we can
+       * assume that the scaling is by definition fine with our observation.
        *
        *
        * ## Sign discussion
@@ -64,36 +83,20 @@ namespace exahype2 {
        * We rely on the formulation as discussed on the page Discontinuous Galerkin.
        * See dg.h or the doxygen html pages for details. I also recommend to read
        * through the documentation of cellIntegral_patchwise_in_situ_GaussLegendre_functors()
-       * before we dive into the discussion. After reading the statements there,
-       * the following rationale should make sense and can be compared to the
-       * volumetric statements:
+       * before we dive into the discussion.
        *
-       * - There is no source term.
-       * - We have an artificial damping parameter depending on the maximum
-       *   eigenvalue. This term enters the Rusanov equation with a minus.
-       *   However, it is multiplied with the normal and then we finally have
-       *   to bring is to the right-hand side of the equation where the source
-       *   term can be found. Different to other solvers, this routine solves
-       *   the Riemann problem for the left and right adjacent cell in one go.
-       *   The flux always is aligned with the coordinate axis.
-       *   So the solution enters the left cell with a minus from damping, and a
-       *   minus from bringing it to the right-hand side. So for the left side,
-       *   we get a plus. For the right side, we get an additional minus, as we
-       *   have an inflow in the opposite direction to the right adjacent
-       *   cell's normal.
-       * - The flux term discussion follows the discussion of the damping.
-       *   Hoewer, the flux term does not have a minus in the original
-       *   formulation. It is a simple average. Therefore the signs are exactly
-       *   swapped compared to the eigenvalues.
-       * - The ncp is nasty. Please consult the generic DG documentation and
-       *   maybe also the write-up of the Finite Volume discretisation. Anyway,
-       *   it is important to note that the ncp yields non-symmetric terms,
-       *   i.e. the flow into the left cell is minus the flow into the right
-       *   cell. However, these two terms are still subject to the
-       *   multiplication with the normal and we thus have the same ncp
-       *   contribution to both left and right result.
+       * All the comments below assume that both the left and the right side of
+       * the flux compute the flux in the normal direction. It is then the
+       * backpropagation of the Riemann solution which takes into the account
+       * that the ``right'' faces denote an outflow, while the ``left'' faces
+       * encode an inflow.
        *
+       * @see integrateOverRiemannSolutionsAndAddToVolume_GaussLegendre()
        *
+       * Bringing all these facts together, we conclude that we end up with a
+       * 1:1 translation of Finite Volumes into the DG world.
+       *
+       * @see exahype2/fv/rusanov/LoopBody.cpph for further information.
        */
       void solveRiemannProblem_pointwise_in_situ(
         ::exahype2::dg::Flux                         flux,
