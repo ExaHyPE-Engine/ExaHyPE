@@ -608,6 +608,12 @@ int main(int argc, char** argv) {
     }
   }
 
+  if (Accuracy>0.0) {
+    logInfo("main()", "all kernels yield the same outcome up to a accuracy of " << Accuracy);
+  } else {
+    logInfo("main()", "no accuracy checks were performed");
+  }
+
   otterTraceFinalise();
 
   delete validOutcome;
