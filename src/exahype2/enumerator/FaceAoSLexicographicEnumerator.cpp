@@ -40,9 +40,23 @@ int exahype2::enumerator::FaceAoSLexicographicEnumerator::operator()(
   for (int d=0; d<Dimensions; d++) {
     result += dofIndex(d) * base;
     if (d==_faceNumber % Dimensions) {
+      #if defined(GPUOffloadingOMP)
+      assertion1(dofIndex(d)>=0,dofIndex);
+      assertion1(dofIndex(d)<2*_haloSize,dofIndex);
+      #else
+      assertion2(dofIndex(d)>=0,toString(),dofIndex);
+      assertion2(dofIndex(d)<2*_haloSize,toString(),dofIndex);
+      #endif
       base *= (2*_haloSize);
     }
     else {
+      #if defined(GPUOffloadingOMP)
+      assertion1(dofIndex(d)>=0,dofIndex);
+      assertion1(dofIndex(d)<_numberOfDoFsPerAxisInPatch,dofIndex);
+      #else
+      assertion2(dofIndex(d)>=0,toString(),dofIndex);
+      assertion2(dofIndex(d)<_numberOfDoFsPerAxisInPatch,toString(),dofIndex);
+      #endif
       base *= _numberOfDoFsPerAxisInPatch;
     }
   }
