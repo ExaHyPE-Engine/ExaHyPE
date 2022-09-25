@@ -200,7 +200,7 @@ class applications::exahype2::ccz4::FiniteVolumeCCZ4: public AbstractFiniteVolum
     ) {
       #if defined(CCZ4EINSTEIN)
       const double qmin = std::min({Q[0],Q[3],Q[5]});
-      const double alpha = std::max({1.0, std::exp(Q[16])}) * std::max({1.0, std::exp(Q[54])}) / std::sqrt(qmin);
+      const double alpha = std::max({1.0, Q[16]}) * std::max({1.0, Q[54]}) / std::sqrt(qmin);
       #else
       const double alpha = 1.0;
       #endif

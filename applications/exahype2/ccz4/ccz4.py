@@ -49,7 +49,7 @@ if __name__ == "__main__":
     parser.add_argument("-m",    "--mode",            dest="mode",            default="release",  help="|".join(modes.keys()) )
     parser.add_argument( "--gpu",            dest="GPU",            default=False, action="store_true",  help="Run with accelerator support" )
     parser.add_argument("-ext",  "--extension",       dest="extension",       choices=["none", "gradient", "AMRadm", "Full"],   default="none",  help="Pick extension, i.e. what should be plotted on top. Default is none" )
-    parser.add_argument("-impl", "--implementation",  dest="implementation",  choices=["fv-global-fixed", "fv-global-adaptive", "fv-global-fixed-enclave", "fv-global-adaptive-enclave","fv-subcyling-adaptive-enclave","fv-local-enclave", "fv-musclhancock", "fd4-rk1-adaptive", "fd4-rk1-fixed", "fd4-rk4-adaptive", "fd4-rk4-fixed", "fv-fd4"], required="True",  help="Pick solver type" )
+    parser.add_argument("-impl", "--implementation",  dest="implementation",  choices=["fv-global-fixed", "fv-global-adaptive", "fv-global-fixed-enclave", "fv-global-adaptive-enclave","fv-subcyling-adaptive-enclave","fv-local-enclave", "fv-musclhancock", "fd4-rk1-adaptive", "fd4-rk1-fixed", "fd4-rk4-adaptive", "fd4-rk4-fixed", "RKDG"], required="True",  help="Pick solver type" )
     parser.add_argument("-no-pbc",  "--no-periodic-boundary-conditions",      dest="periodic_bc", action="store_false", default="True",  help="switch on or off the periodic BC" )
     parser.add_argument("-AMRMarker",  "--AMR-marker",      dest="marker", choices=["none", "poisson"],   default="none",  help="switch on or off the AMR boundary marker" )
     parser.add_argument("-et",   "--end-time",        dest="end_time",        type=float, default=1.0, help="End (terminal) time" )
@@ -92,8 +92,8 @@ if __name__ == "__main__":
        SuperClass = exahype2.solvers.rkfd.fd4.GlobalAdaptiveTimeStep
     if args.implementation=="fd4-rk1-fixed" or args.implementation=="fd4-rk4-fixed":
        SuperClass = exahype2.solvers.rkfd.fd4.GlobalFixedTimeStep
-    if args.implementation=="fv-fd4":
-       SuperClass = exahype2.solvers.fv.fd4.GlobalAdaptiveTimeStep
+    if args.implementation=="RKDG":
+       SuperClass = exahype2.solvers.rkdg.rusanov.GlobalAdaptiveTimeStep
 
 
     class CCZ4Solver( SuperClass ):
@@ -181,15 +181,16 @@ if __name__ == "__main__":
             normalised_time_step_size=0.01,
             KOSigma=KOSig
           )
-        elif SuperClass==exahype2.solvers.fv.fd4.GlobalAdaptiveTimeStep:
+        elif SuperClass == exahype2.solvers.rkdg.rusanov.GlobalAdaptiveTimeStep:
           SuperClass.__init__(
             self,
-            name=name, patch_size=patch_size,
+            name=name,
+            rk_order     = 1,
+            polynomials  = exahype2.solvers.GaussLegendreBasis(3),
             unknowns=number_of_unknowns,
             auxiliary_variables=0,
-            min_volume_h=min_volume_h, max_volume_h=max_volume_h,
-            time_step_relaxation=cfl,
-            KOSigma=KOSig
+            min_cell_h=min_volume_h, max_cell_h=max_volume_h, #not a good name, but use for now.
+            time_step_relaxation=cfl
           )
         else:
           SuperClass.__init__(
@@ -229,6 +230,10 @@ if __name__ == "__main__":
     constexpr int itmax = {{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}} * {{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}} * {{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}};
     #endif
 """
+        elif SuperClass == exahype2.solvers.rkdg.rusanov.GlobalAdaptiveTimeStep:
+          self.postprocess_updated_patch = """
+    constexpr int itmax = ({{ORDER}}+1) * ({{ORDER}}+1) * ({{ORDER}}+1); // only support 3d
+"""
         else:
           self.postprocess_updated_patch += """
     #if Dimensions==2
@@ -244,7 +249,7 @@ if __name__ == "__main__":
     int index = 0;
     for (int i=0;i<itmax;i++)
     {
-      applications::exahype2::ccz4::enforceCCZ4constraints( targetPatch+index );
+      applications::exahype2::ccz4::enforceCCZ4constraints( newQ+index );
       index += {{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}};
     }
   }
@@ -254,7 +259,10 @@ if __name__ == "__main__":
       def create_action_sets(self):
         SuperClass.create_action_sets(self)
 
-        self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement.additional_includes += """ 
+        if SuperClass == exahype2.solvers.rkdg.rusanov.GlobalAdaptiveTimeStep:
+          pass
+        else:
+          self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement.additional_includes += """ 
 #include "../CCZ4Kernels.h"
             """
 
@@ -319,11 +327,11 @@ if __name__ == "__main__":
             const int rightCellSerialised = peano4::utils::dLinearised(rightCell,patchSize + 2*1);
             const int currentCellSerialised = peano4::utils::dLinearised(currentCell,patchSize + 2*1);
             for(int i=0; i<59; i++) {
-              gradQ[d*59+i] = ( reconstructedPatch[rightCellSerialised*(59+n_a_v)+i] - reconstructedPatch[leftCellSerialised*(59+n_a_v)+i] ) / 2.0 / volumeH;
-              faceQ[2*d*59+i]= (reconstructedPatch[currentCellSerialised*(59+n_a_v)+i] + reconstructedPatch[leftCellSerialised*(59+n_a_v)+i]) / 2.0;
-              faceDeltaQ[2*d*59+i]= (reconstructedPatch[currentCellSerialised*(59+n_a_v)+i] - reconstructedPatch[leftCellSerialised*(59+n_a_v)+i]);
-              faceQ[2*d*59+59+i]= (reconstructedPatch[currentCellSerialised*(59+n_a_v)+i] + reconstructedPatch[rightCellSerialised*(59+n_a_v)+i]) / 2.0;
-              faceDeltaQ[2*d*59+59+i]= (-reconstructedPatch[currentCellSerialised*(59+n_a_v)+i] + reconstructedPatch[rightCellSerialised*(59+n_a_v)+i]);         
+              gradQ[d*59+i] = ( oldQWithHalo[rightCellSerialised*(59+n_a_v)+i] - oldQWithHalo[leftCellSerialised*(59+n_a_v)+i] ) / 2.0 / volumeH;
+              faceQ[2*d*59+i]= (oldQWithHalo[currentCellSerialised*(59+n_a_v)+i] + oldQWithHalo[leftCellSerialised*(59+n_a_v)+i]) / 2.0;
+              faceDeltaQ[2*d*59+i]= (oldQWithHalo[currentCellSerialised*(59+n_a_v)+i] - oldQWithHalo[leftCellSerialised*(59+n_a_v)+i]);
+              faceQ[2*d*59+59+i]= (oldQWithHalo[currentCellSerialised*(59+n_a_v)+i] + oldQWithHalo[rightCellSerialised*(59+n_a_v)+i]) / 2.0;
+              faceDeltaQ[2*d*59+59+i]= (-oldQWithHalo[currentCellSerialised*(59+n_a_v)+i] + oldQWithHalo[rightCellSerialised*(59+n_a_v)+i]);         
             }
           }
 
@@ -333,10 +341,10 @@ if __name__ == "__main__":
           // Central cell
           const int cellSerialised  = peano4::utils::dLinearised(currentCell, patchSize + 2*1);
 
-          admconstraints(constraints,reconstructedPatch+cellSerialised*(59+n_a_v),gradQ);
+          admconstraints(constraints,oldQWithHalo+cellSerialised*(59+n_a_v),gradQ);
           
           for(int i=0;i<6;i++){
-            reconstructedPatch[cellSerialised*(59+n_a_v)+59+i] = constraints[i];
+            oldQWithHalo[cellSerialised*(59+n_a_v)+59+i] = constraints[i];
           }
           
           double ncpsum=0, ncp[1]={0};
@@ -348,34 +356,34 @@ if __name__ == "__main__":
             ThetaOutputNCP(ncp,faceQ+2*d*59+59,faceDeltaQ+2*d*59+59,d);
             ncpsum+=ncp[0];
           }
-          TestingOutput(output,reconstructedPatch+cellSerialised*(59+n_a_v),gradQ);
-          reconstructedPatch[cellSerialised*(59+n_a_v)+59+6] = ncpsum / 2.0 / volumeH;
-          reconstructedPatch[cellSerialised*(59+n_a_v)+59+7] = output[0]; //RPlusTwoNablaZSrc
-          reconstructedPatch[cellSerialised*(59+n_a_v)+59+8] = output[1]; //pure src
+          TestingOutput(output,oldQWithHalo+cellSerialised*(59+n_a_v),gradQ);
+          oldQWithHalo[cellSerialised*(59+n_a_v)+59+6] = ncpsum / 2.0 / volumeH;
+          oldQWithHalo[cellSerialised*(59+n_a_v)+59+7] = output[0]; //RPlusTwoNablaZSrc
+          oldQWithHalo[cellSerialised*(59+n_a_v)+59+8] = output[1]; //pure src
           for(int i=0;i<9;i++){
-            reconstructedPatch[cellSerialised*(59+n_a_v)+59+9+i] = output[2+i];
+            oldQWithHalo[cellSerialised*(59+n_a_v)+59+9+i] = output[2+i];
           }
           
           //NaN detector here/////////////////////////////////
           /*for(int i=0;i<59;i++){
-            if ( std::isnan(reconstructedPatch[cellSerialised*(59+n_a_v)+i]) ) {
+            if ( std::isnan(oldQWithHalo[cellSerialised*(59+n_a_v)+i]) ) {
               ::exahype2::triggerNonCriticalAssertion( __FILE__, __LINE__, "[Quantity should no be NaN]", "NaN detected at t=" + std::to_string(t) + " for quantity "+std::to_string(i)+" at position ["+std::to_string(currentPosition[0])+", "+std::to_string(currentPosition[1])+", "+std::to_string(currentPosition[2])+"]");}
           }*/
           ///////////////////////////////////////////////////
 
           /*
           //here we calculate the norm of conformal factor phi as the refinement condition
-          double Phi = std::exp(reconstructedPatch[cellSerialised*(59+n_a_v)+54]);
-          double P1  = reconstructedPatch[cellSerialised*(59+n_a_v)+55]*Phi;
-          double P2  = reconstructedPatch[cellSerialised*(59+n_a_v)+56]*Phi;
-          double P3  = reconstructedPatch[cellSerialised*(59+n_a_v)+57]*Phi;
+          double Phi = std::exp(oldQWithHalo[cellSerialised*(59+n_a_v)+54]);
+          double P1  = oldQWithHalo[cellSerialised*(59+n_a_v)+55]*Phi;
+          double P2  = oldQWithHalo[cellSerialised*(59+n_a_v)+56]*Phi;
+          double P3  = oldQWithHalo[cellSerialised*(59+n_a_v)+57]*Phi;
           
-          reconstructedPatch[cellSerialised*(59+n_a_v)+59+6]=pow((P1*P1+P2*P2+P3*P3),0.5);//gradient of phi
+          oldQWithHalo[cellSerialised*(59+n_a_v)+59+6]=pow((P1*P1+P2*P2+P3*P3),0.5);//gradient of phi
           
           double Psi4[2]={0,0};
-          Psi4Calc(Psi4, reconstructedPatch+cellSerialised*(59+n_a_v), gradQ, currentPosition);
-          reconstructedPatch[cellSerialised*(59+n_a_v)+59+7]=Psi4[0];//re part of psi4
-		      reconstructedPatch[cellSerialised*(59+n_a_v)+59+8]=Psi4[1];//im part of psi4
+          Psi4Calc(Psi4, oldQWithHalo+cellSerialised*(59+n_a_v), gradQ, currentPosition);
+          oldQWithHalo[cellSerialised*(59+n_a_v)+59+7]=Psi4[0];//re part of psi4
+		      oldQWithHalo[cellSerialised*(59+n_a_v)+59+8]=Psi4[1];//im part of psi4
 		      */
         }
     """
@@ -421,9 +429,9 @@ if __name__ == "__main__":
             const int leftCellSerialised  = peano4::utils::dLinearised(leftCell, patchSize + 2*1);
             const int rightCellSerialised = peano4::utils::dLinearised(rightCell,patchSize + 2*1);
             for (int i=0; i<real_var; i++) {
-              double rightgradient=reconstructedPatch[rightCellSerialised*(real_var+aux_var)+i] - reconstructedPatch[cellSerialised*(real_var+aux_var)+i];
-              double leftgradient=reconstructedPatch[cellSerialised*(real_var+aux_var)+i] - reconstructedPatch[leftCellSerialised*(real_var+aux_var)+i];
-              reconstructedPatch[cellSerialised*(real_var+aux_var)+real_var+d*real_var+i] = rightgradient < leftgradient ? rightgradient: leftgradient;
+              double rightgradient=oldQWithHalo[rightCellSerialised*(real_var+aux_var)+i] - oldQWithHalo[cellSerialised*(real_var+aux_var)+i];
+              double leftgradient=oldQWithHalo[cellSerialised*(real_var+aux_var)+i] - oldQWithHalo[leftCellSerialised*(real_var+aux_var)+i];
+              oldQWithHalo[cellSerialised*(real_var+aux_var)+real_var+d*real_var+i] = rightgradient < leftgradient ? rightgradient: leftgradient;
             }
           }
         }
@@ -482,8 +490,8 @@ if __name__ == "__main__":
 				double raw[8*inter_number];
 				for (int i=0;i<8;i++){
 					int Lindex=peano4::utils::dLinearised(IndexForInterpolate[i], patchSize + 2*1);
-					for (int j=0;j<Dimensions;j++) {raw[i*inter_number+j]=reconstructedPatch[Lindex*(59+n_a_v)+17+j];} //read in corresponding beta
-					raw[i*inter_number+3]=reconstructedPatch[Lindex*(59+n_a_v)+16];
+					for (int j=0;j<Dimensions;j++) {raw[i*inter_number+j]=oldQWithHalo[Lindex*(59+n_a_v)+17+j];} //read in corresponding beta
+					raw[i*inter_number+3]=oldQWithHalo[Lindex*(59+n_a_v)+16];
 				}
 				double result[inter_number];
 				Interpolation(result,IndexForInterpolate,raw,coor1,marker.getOffset(),volumeH,patchSize);
@@ -510,8 +518,8 @@ if __name__ == "__main__":
 				double raw[8*inter_number];
 				for (int i=0;i<8;i++){
 					int Lindex=peano4::utils::dLinearised(IndexForInterpolate[i], patchSize + 2*1);
-					for (int j=0;j<Dimensions;j++) {raw[i*inter_number+j]=reconstructedPatch[Lindex*(59+n_a_v)+17+j];}
-					raw[i*inter_number+3]=reconstructedPatch[Lindex*(59+n_a_v)+16];
+					for (int j=0;j<Dimensions;j++) {raw[i*inter_number+j]=oldQWithHalo[Lindex*(59+n_a_v)+17+j];}
+					raw[i*inter_number+3]=oldQWithHalo[Lindex*(59+n_a_v)+16];
 				}
 				double result[inter_number];
 				Interpolation(result,IndexForInterpolate,raw,coor2,marker.getOffset(),volumeH,patchSize);
@@ -539,32 +547,32 @@ if __name__ == "__main__":
 				const int leftCellSerialised  = peano4::utils::dLinearised(leftCell, patchSize + 2*1);
 				const int rightCellSerialised = peano4::utils::dLinearised(rightCell,patchSize + 2*1);
 				for(int i=0; i<59; i++) {
-					gradQ[d*59+i] = ( reconstructedPatch[rightCellSerialised*(59+n_a_v)+i] - reconstructedPatch[leftCellSerialised*(59+n_a_v)+i] ) / 2.0 / volumeH;
+					gradQ[d*59+i] = ( oldQWithHalo[rightCellSerialised*(59+n_a_v)+i] - oldQWithHalo[leftCellSerialised*(59+n_a_v)+i] ) / 2.0 / volumeH;
 				}
 			}
 			double constraints[n_a_v-1]={ 0 };
 			const int cellSerialised  = peano4::utils::dLinearised(currentCell, patchSize + 2*1);
 
-			admconstraints(constraints,reconstructedPatch+cellSerialised*(59+n_a_v),gradQ);
+			admconstraints(constraints,oldQWithHalo+cellSerialised*(59+n_a_v),gradQ);
 
 			for(int i=0;i<6;i++){
-				reconstructedPatch[cellSerialised*(59+n_a_v)+59+i] = constraints[i];
+				oldQWithHalo[cellSerialised*(59+n_a_v)+59+i] = constraints[i];
 				cons[i]+=constraints[i]*constraints[i];
 			}
       //here we calculate the norm of conformal factor phi as the refinement condition
-      double Phi = std::exp(reconstructedPatch[cellSerialised*(59+n_a_v)+54]);
-      double P1  = reconstructedPatch[cellSerialised*(59+n_a_v)+55]*Phi;
-      double P2  = reconstructedPatch[cellSerialised*(59+n_a_v)+56]*Phi;
-      double P3  = reconstructedPatch[cellSerialised*(59+n_a_v)+57]*Phi;
+      double Phi = std::exp(oldQWithHalo[cellSerialised*(59+n_a_v)+54]);
+      double P1  = oldQWithHalo[cellSerialised*(59+n_a_v)+55]*Phi;
+      double P2  = oldQWithHalo[cellSerialised*(59+n_a_v)+56]*Phi;
+      double P3  = oldQWithHalo[cellSerialised*(59+n_a_v)+57]*Phi;
           
-      reconstructedPatch[cellSerialised*(59+n_a_v)+59+6]=pow((P1*P1+P2*P2+P3*P3),0.5);
+      oldQWithHalo[cellSerialised*(59+n_a_v)+59+6]=pow((P1*P1+P2*P2+P3*P3),0.5);
       
       double Psi4[2]={0,0};
       double currentPosition[3]; 
       for (int d=0; d<3; d++) currentPosition[d]=marker.getOffset()(d)+(cell(d)+0.5)*volumeH;
-      Psi4Calc(Psi4, reconstructedPatch+cellSerialised*(59+n_a_v), gradQ, currentPosition);
-      reconstructedPatch[cellSerialised*(59+n_a_v)+59+7]=Psi4[0];//re part of psi4
-		  reconstructedPatch[cellSerialised*(59+n_a_v)+59+8]=Psi4[1];//im part of psi4
+      Psi4Calc(Psi4, oldQWithHalo+cellSerialised*(59+n_a_v), gradQ, currentPosition);
+      oldQWithHalo[cellSerialised*(59+n_a_v)+59+7]=Psi4[0];//re part of psi4
+		  oldQWithHalo[cellSerialised*(59+n_a_v)+59+8]=Psi4[1];//im part of psi4
 		}		
     """
 
@@ -600,6 +608,7 @@ if __name__ == "__main__":
 #Pick solver
 ########################################################################################
     is_aderdg = False
+    is_rkdg   = False
     solver_name = "CCZ4"
     try:
       if SuperClass==exahype2.solvers.aderdg.NonFusedGenericRusanovFixedTimeStepSize:
@@ -613,8 +622,19 @@ if __name__ == "__main__":
         #print(msg)
         #userinfo.append((msg,e))
 
+    try:
+      if SuperClass==exahype2.solvers.rkdg.rusanov.GlobalAdaptiveTimeStep:
+        is_rkdg = True
+    except Exception as e:
+        pass
+        msg = "Warning: RKDG no supported on this machine"
+        print(msg)
+        userinfo.append((msg,e))
+
     if is_aderdg:
       solver_name    = "ADERDG" + solver_name
+    elif is_rkdg:
+      solver_name    = "RKDG" + solver_name
     else:
       solver_name    = "FiniteVolume" + solver_name
 

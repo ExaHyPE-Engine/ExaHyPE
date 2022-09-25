@@ -888,7 +888,7 @@ std::set<int>  peano4::grid::Spacetree::getNeighbourTrees( const GridVertex& ver
       isVertexAdjacentToLocalSpacetree(vertex,false,true);
 
   if (isLocalVertex) {
-    auto adjacentRanks = vertex.getAdjacentRanks();
+    auto adjacentRanks = calledByReceivingProcess ? vertex.getBackupOfAdjacentRanks() : vertex.getAdjacentRanks();
 
     for (int i=0; i<TwoPowerD; i++) {
       if (doesRankIndexIdentifyHorizontalDataExchange(adjacentRanks(i),calledByReceivingProcess)) {
@@ -1371,6 +1371,7 @@ void peano4::grid::Spacetree::receiveAndMergeUserData(
       if (enterCellTraversalEvent.getIsVertexLocal(inVertexPositionWithinCell)) {
         std::set<int> neighbours = getNeighbourTrees(fineGridVertices[inVertexPositionWithinCell], true);
         for (auto p: neighbours) {
+          logDebug( "receiveAndMergeUserData(...)", "receive neighbour data from neighbour " << p << " for vertex " << fineGridVertices[inVertexPositionWithinCell].toString() );
           const int fromStack   = peano4::parallel::Node::getInputStackNumberForHorizontalDataExchange( p );
           observer.receiveAndMergeVertex(
             inVertexPositionWithinCell,

@@ -134,8 +134,8 @@ thesolver.set_preprocess_reconstructed_patch_kernel( """
     tarch::la::Vector<Dimensions,int> currentCell = cell + tarch::la::Vector<Dimensions,int>(1);
       
     const int cellSerialised  = peano4::utils::dLinearised(currentCell, patchSize + 2*1);
-    reconstructedPatch[cellSerialised*(5+3)+5] = 1.0 / volumeH / 2.0 * (reconstructedPatch[ (cellSerialised+1)*(5+3)+analysedVariable] - reconstructedPatch[ (cellSerialised-1)*(5+3)+analysedVariable]);
-    reconstructedPatch[cellSerialised*(5+3)+6] = 1.0 / volumeH / 2.0 * (reconstructedPatch[ (cellSerialised+patchSize+2)*(5+3)+analysedVariable] - reconstructedPatch[ (cellSerialised-patchSize-2)*(5+3)+analysedVariable]);
+    oldQWithHalo[cellSerialised*(5+3)+5] = 1.0 / volumeH / 2.0 * (oldQWithHalo[ (cellSerialised+1)*(5+3)+analysedVariable] - oldQWithHalo[ (cellSerialised-1)*(5+3)+analysedVariable]);
+    oldQWithHalo[cellSerialised*(5+3)+6] = 1.0 / volumeH / 2.0 * (oldQWithHalo[ (cellSerialised+patchSize+2)*(5+3)+analysedVariable] - oldQWithHalo[ (cellSerialised-patchSize-2)*(5+3)+analysedVariable]);
     #if Dimensions==3
     #endif
   }

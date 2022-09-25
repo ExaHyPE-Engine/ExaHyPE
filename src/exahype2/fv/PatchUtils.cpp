@@ -38,6 +38,47 @@ std::string exahype2::fv::plotVolume(
 }
 
 
+namespace {
+  /**
+   * Helper for the patch plots. Truncates many entries and also
+   * inserts the commas. The plotter is not thread-safe and not
+   * particularly sophisticated.
+   */
+  std::string prettyFormat( double value, bool isFirst ) {
+    static int previousZeroDataEntries = 0;
+
+    // first entry equals zero
+    if ( tarch::la::equals(value,0.0,1e-8) and isFirst ) {
+      previousZeroDataEntries = 1;
+      return "0";
+    }
+    // first entry does not equal zero
+    else if ( isFirst ) {
+      previousZeroDataEntries = 0;
+      return std::to_string(value);
+    }
+    #if PeanoDebug>0
+    else {
+      return "," + std::to_string(value);
+    }
+    #else
+    else if ( not tarch::la::equals(value,0.0,1e-8) ) {
+      previousZeroDataEntries = 0;
+      return "," + std::to_string(value);
+    }
+    else if ( tarch::la::equals(value,0.0,1e-8) and previousZeroDataEntries==1 ) {
+      previousZeroDataEntries += 1;
+      return ",...";
+    }
+    else {
+      assertion(false);
+    }
+    #endif
+    return "<undef>";
+  }
+}
+
+
 std::string exahype2::fv::plotPatch(
   const double* __restrict__ Q,
   int    unknowns,
@@ -69,11 +110,8 @@ std::string exahype2::fv::plotPatch(
       for (int i=0; i<unknowns+auxiliaryVariables; i++) {
         const int entry = index+i;
 
-        if (i!=0)
-          result << ",";
-
         if (not isDiagonal)
-          result << Q[entry];
+          result << prettyFormat( Q[entry], i==0);
         else
           result << "x";
       }
@@ -94,10 +132,7 @@ std::string exahype2::fv::plotPatch(
     for (int i=0; i<unknowns+auxiliaryVariables; i++) {
       const int entry = index+i;
 
-      if (i==0)
-        result << "d[" << entry << "]=";
-      else
-        result << ",d[" << entry << "]=";
+      if (i!=0) result << ",";
 
       if (haloSize==0 or not isDiagonal)
         result << Q[entry];
@@ -128,38 +163,72 @@ std::string exahype2::fv::plotPatchOverlap(
   assertion(normal<Dimensions);
 
   std::ostringstream result;
+  if (prettyPrint) {
+    result << std::endl;
 
-  if (prettyPrint) result << std::endl;
-
-  #if Dimensions==2
-  if (normal==0) {
-    for (int y=0; y<numberOfVolumesPerAxisInPatch; y++) {
-      for (int x=0; x<2*haloSize; x++) {
-        int index = (y*numberOfVolumesPerAxisInPatch+x) * (unknowns+auxiliaryVariables);
-        result << "(";
-        for (int i=0; i<unknowns+auxiliaryVariables; i++) {
-          const int entry = index+i;
-
-          if (i!=0)
-            result << ",";
-
-          result << Q[entry];
+    #if Dimensions==2
+    if (normal==0) {
+      for (int y=0; y<numberOfVolumesPerAxisInPatch; y++) {
+        for (int x=0; x<2*haloSize; x++) {
+          int index = (y*numberOfVolumesPerAxisInPatch+x) * (unknowns+auxiliaryVariables);
+          result << "(";
+          for (int i=0; i<unknowns+auxiliaryVariables; i++) {
+            const int entry = index+i;
+            result << prettyFormat( Q[entry],i==0 );
+          }
+          result << ")";
+          if (x==haloSize-1)
+            result << " | ";
         }
-        result << ")";
-        if (x==haloSize-1)
-          result << " | ";
+        result << std::endl;
       }
-      result << std::endl;
     }
+    else {
+      for (int y=0; y<2*haloSize; y++) {
+        for (int x=0; x<numberOfVolumesPerAxisInPatch; x++) {
+          int index = (y*numberOfVolumesPerAxisInPatch+x) * (unknowns+auxiliaryVariables);
+          result << "(";
+          for (int i=0; i<unknowns+auxiliaryVariables; i++) {
+            const int entry = index+i;
+            result << prettyFormat( Q[entry],i==0 );
+          }
+          result << ")";
+        }
+        result << std::endl;
+
+        if (y==haloSize-1) {
+          for (int x=0; x<numberOfVolumesPerAxisInPatch; x++) {
+            result << " --- ";
+          }
+        }
+      }
+    }
+    #else
+    result << "<not implemented yet>";
+    #endif
+    result << std::endl;
   }
   else {
-    result << "<not implemented yet>";
+    int entry = 0;
+    for (int overlap=0; overlap<2*haloSize; overlap++)
+    #if Dimensions==3
+    for (int i=0; i<numberOfVolumesPerAxisInPatch; i++)
+    #endif
+    for (int ii=0; ii<numberOfVolumesPerAxisInPatch; ii++)
+    {
+      if (ii==0) {
+        result << "(";
+      }
+      else {
+        result << ",(";
+      }
+      for (int iii=0; iii<unknowns+auxiliaryVariables; iii++) {
+        result << prettyFormat( Q[entry],iii==0 );
+        entry++;
+      }
+      result << ")";
+    }
   }
-  #else
-  result << "<not implemented yet>";
-  #endif
-
-  if (prettyPrint) result << std::endl;
 
   return result.str();
 }

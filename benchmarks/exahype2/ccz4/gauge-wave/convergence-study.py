@@ -9,17 +9,16 @@ import peano4.toolbox.particles
 
 
 
-parser = argparse.ArgumentParser(description='ExaHyPE 2 - Euler benchmarking script')
+parser = argparse.ArgumentParser(description='ExaHyPE 2 - CCZ4-GaugeWave benchmarking script')
 parser.add_argument("-j",   "--parallel-builds",   dest="j",              type=int, default=-1, help="Parallel builds" )
 parser.add_argument("-pd",  "--peano-dir",         dest="peanodir",       default="../../../../", help="Peano4 directory" )
 parser.add_argument("-v",   "--verbose",           dest="verbose",        action="store_true", default=False, help="Verbose")
-parser.add_argument("-s",   "--solver",            dest="solver",         choices=["fv", "fd4-rk1", "fd4-rk2", "fd4-rk3", "fd4-rk4", "dg1-rk1", "dg2-rk2", "dg3-rk3", "dg4-rk4", "dg4-rk1", "dg4-rk2", "dg4-rk3"], required=True, help="Pick solver type" )
+parser.add_argument("-s",   "--solver",            dest="solver",         choices=["fv", "fd4-rk1", "fd4-rk2", "fd4-rk3", "fd4-rk4", "dg0-rk1", "dg1-rk1", "dg2-rk2", "dg3-rk1", "dg3-rk3", "dg4-rk4", "dg4-rk1", "dg4-rk2", "dg4-rk3"], required=True, help="Pick solver type" )
 parser.add_argument("-et",  "--end-time",          dest="end_time",       type=float, default=1.0, help="End of simulation" )
 parser.add_argument("-cs",  "--cell-size",         dest="cell_size",      type=float, default=0.3, help="Cell size (default 0.3)" )
 parser.add_argument("-asserts",  "--asserts",      dest="asserts",        action="store_true", default=False, help="Switch on assertions" )
 parser.add_argument("-tracer",   "--tracer",       dest="tracer",         action="store_true", default=False, help="Activate tracer" )
 args = parser.parse_args()
-
 
 
 
@@ -55,9 +54,13 @@ unknowns = {
 my_solver = None
 
 
+#
+# I pick patches of 9x9x9 here, as I then can match stuff exactly with the DG solver of
+# DG order 0. This helps me to debug stuff.
+#
 if args.solver=="fv":
   my_solver = exahype2.solvers.fv.rusanov.GlobalAdaptiveTimeStepWithEnclaveTasking(name                 = "CCZ4FV", 
-                                                                                   patch_size           = 5,
+                                                                                   patch_size           = 9,
                                                                                    unknowns             = sum(unknowns.values()),
                                                                                    auxiliary_variables  = 0,
                                                                                    min_volume_h         = args.cell_size / 5, 
@@ -76,13 +79,14 @@ if "fd4-rk" in args.solver:
 if "rk" in args.solver and "dg" in args.solver:
   space_order = int(args.solver[2])
   time_order  = int(args.solver[6])
-  my_solver = exahype2.solvers.rkdg.rusanov.GlobalAdaptiveTimeStepWithEnclaveTasking(name             = "CCZ4DG"  + str(space_order) + "RK" + str(time_order),
+  my_solver   = exahype2.solvers.rkdg.rusanov.GlobalAdaptiveTimeStepWithEnclaveTasking(name             = "CCZ4DG"  + str(space_order) + "RK" + str(time_order),
                                                                rk_order             = time_order,
                                                                polynomials          = exahype2.solvers.GaussLegendreBasis(space_order),
+                                                               face_projections     = exahype2.solvers.rkdg.FaceProjections.Solution,
                                                                unknowns             = sum(unknowns.values()),
                                                                auxiliary_variables  = 0,
-                                                               min_cell_h       = args.cell_size, 
-                                                               max_cell_h       = args.cell_size,
+                                                               min_cell_h           = args.cell_size, 
+                                                               max_cell_h           = args.cell_size,
                                                                time_step_relaxation = 0.1)
 
 #
@@ -213,7 +217,7 @@ if args.solver=="fv":
     int index = 0;
     for (int i=0;i<itmax;i++)
     {
-      applications::exahype2::ccz4::enforceCCZ4constraints( targetPatch+index );
+      applications::exahype2::ccz4::enforceCCZ4constraints( newQ+index );
       index += {{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}};
     }
   }
@@ -225,19 +229,30 @@ if "fd4-rk" in args.solver:
     int index = 0;
     for (int i=0;i<itmax;i++)
     {
-      applications::exahype2::ccz4::enforceCCZ4constraints( targetPatch+index );
+      applications::exahype2::ccz4::enforceCCZ4constraints( newQ+index );
       index += {{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}};
     }
   }
 """
 if "rk" in args.solver and "dg" in args.solver:
-  my_solver.postprocess_updated_patch = """
+#  my_solver.postprocess_updated_cell_after_Runge_Kutta_step = """
+#{
+#    constexpr int itmax = ({{DG_ORDER}}+1) * ({{DG_ORDER}}+1) * ({{DG_ORDER}}+1);
+#    int index = 0;
+#    for (int i=0;i<itmax;i++)
+#    {
+#      applications::exahype2::ccz4::enforceCCZ4constraints( oldQ+index, dQdt+index, timeStepSize );
+#      index += {{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}};
+#    }
+#  }
+#"""
+  my_solver.postprocess_updated_cell_after_final_linear_combination = """
 {
-    constexpr int itmax = ({{ORDER}}+1) * ({{ORDER}}+1) * ({{ORDER}}+1);
+    constexpr int itmax = ({{DG_ORDER}}+1) * ({{DG_ORDER}}+1) * ({{DG_ORDER}}+1);
     int index = 0;
     for (int i=0;i<itmax;i++)
     {
-      applications::exahype2::ccz4::enforceCCZ4constraints( targetPatch+index );
+      applications::exahype2::ccz4::enforceCCZ4constraints( newQ+index );
       index += {{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}};
     }
   }
@@ -288,19 +303,14 @@ if args.tracer:
     if args.solver=="fv" or "fd4-rk" in args.solver:
       project.add_action_set_to_timestepping(exahype2.tracer.FiniteVolumesTracing(tracer_particles,
                                                                                   my_solver,
-                                                                                  [],        # velocity indices: don't move them [17,18,19]
-                                                                                  range(59), # data indices
-                                                                                  0,         # scaling of velocities
-                                                                                  time_stepping_kernel="toolbox::particles::StaticPosition"))
+                                                                                  time_stepping_kernel="toolbox::particles::staticPosition",
+                                                                                  project_on_tracer_properties_kernel="::exahype2::fv::projectAllValuesOntoParticle_piecewiseLinear"))
     
     if "rk" in args.solver and "dg" in args.solver:
-      print( "WARNING: Haven't written the tracer yet")
-    #  project.add_action_set_to_timestepping(exahype2.tracer.DiscontinuousGalerkinTracing(tracer_particles,
-    #                                                                                      my_solver,
-    #                                                                                      [],        # velocity indices: don't move them [17,18,19]
-    #                                                                                      range(59), # data indices
-    #                                                                                      0,         # scaling of velocities
-    #                                                                                      time_stepping_kernel="toolbox::particles::StaticPosition"))
+      project.add_action_set_to_timestepping(exahype2.tracer.DiscontinuousGalerkinTracing(tracer_particles,
+                                                                                          my_solver,
+                                                                                          time_stepping_kernel="toolbox::particles::staticPosition",
+                                                                                          project_on_tracer_properties_kernel="::exahype2::dg::projectAllValuesOntoParticle"))
     
     
     project.add_action_set_to_timestepping(exahype2.tracer.DumpTrajectoryIntoDatabase(
@@ -318,11 +328,13 @@ if args.tracer:
 
 if args.asserts:
   build_mode = peano4.output.CompileMode.Asserts
+  delta_plot = 1.0/100 
 else:
   build_mode = peano4.output.CompileMode.Release
+  delta_plot = 1.0/20 
     
 dimensions  = 3
-offset      = [-0.5, -0.5, -0,5] 
+offset      = [-0.5, -0.5, -0.5] 
 domain_size = [   1,    1,    1]
 periodic_boundary_conditions = [True,True,True]          # Periodic BC
 
@@ -331,7 +343,7 @@ project.set_global_simulation_parameters(
   offset,  domain_size,
   args.end_time,
   0.0, 
-  args.end_time/20,                      #args.plot_step_size,   # snapshots
+  delta_plot,
   periodic_boundary_conditions,
   8  # plotter precision
 )
@@ -351,4 +363,3 @@ peano4_project.output.makefile.add_header_search_path( "../../../../applications
 
 peano4_project.generate( throw_away_data_after_generation=False )
 peano4_project.build( make_clean_first = True, number_of_parallel_builds=args.j )
-

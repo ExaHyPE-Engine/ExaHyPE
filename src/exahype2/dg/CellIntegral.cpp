@@ -22,7 +22,6 @@ void exahype2::dg::cellIntegral_patchwise_in_situ_GaussLegendre_functors(
   bool                                           evaluateSource,
   bool                                           evaluatePointSources
 ) {
-
   exahype2::enumerator::AoSLexicographicEnumerator enumeratorIn(
     1,           // number of cells in one memory chunk
     order+1,     // numberOfDoFsPerAxisInCell
@@ -39,18 +38,16 @@ void exahype2::dg::cellIntegral_patchwise_in_situ_GaussLegendre_functors(
     0            // no auxiliary variables
   );
 
-  double* fluxValues      = evaluateFlux   ? new double[unknowns] : nullptr;
-  double* sourceValues    = evaluateSource ? new double[unknowns] : nullptr;
-  double* gradientValues  = evaluateNonconservativeProduct    ? new double[(unknowns+auxiliaryVariables)] : nullptr;
-  double* ncpValues       = evaluateNonconservativeProduct    ? new double[unknowns] : nullptr;
-
+  double* fluxValues      = evaluateFlux                   ? new double[unknowns]                      : nullptr;
+  double* sourceValues    = evaluateSource                 ? new double[unknowns]                      : nullptr;
+  double* gradientValues  = evaluateNonconservativeProduct ? new double[(unknowns+auxiliaryVariables)] : nullptr;
+  double* ncpValues       = evaluateNonconservativeProduct ? new double[unknowns]                      : nullptr;
 
   for (int currentCell=0; currentCell<cellData.numberOfCells; currentCell++) {
-
     const double* __restrict__                  cellQin  = cellData.QIn[currentCell];
     double* __restrict__                        cellQout = cellData.QOut[currentCell];
     const tarch::la::Vector<Dimensions,double>  x        = cellData.cellCentre[currentCell];
-    const double                                dx       = (cellData.cellSize[currentCell])(0);
+    const tarch::la::Vector<Dimensions,double>  h        = cellData.cellSize[currentCell];
     const double                                t        = cellData.t[currentCell];
     const double                                dt       = cellData.dt[currentCell];
 
@@ -59,7 +56,6 @@ void exahype2::dg::cellIntegral_patchwise_in_situ_GaussLegendre_functors(
     const int nodesPerCell = getNodesPerCell(nodesPerAxis);
 
     dfor( dof, order+1 ) {
-
       for(int var=0; var<unknowns; var++){
         cellQout[enumeratorOut(currentCell,dof,var)] = 0.0;
       }
@@ -69,12 +65,11 @@ void exahype2::dg::cellIntegral_patchwise_in_situ_GaussLegendre_functors(
         for(int dim=0; dim<Dimensions; dim++)
         for(int i=0; i<nodesPerAxis; i++){
           // compute contributing node real position
-//          const int neighbourNode = node + (i - index[dim])*strides[dim];
           tarch::la::Vector<Dimensions,int> contributingNodeIndex = dof;
           contributingNodeIndex[dim] = i;
           tarch::la::Vector<Dimensions,double> position = getQuadraturePoint(
               x,
-              dx,
+              h,
               contributingNodeIndex,
               order,
               quadratureNodes);
@@ -86,10 +81,14 @@ void exahype2::dg::cellIntegral_patchwise_in_situ_GaussLegendre_functors(
                 dim, //normal
                 fluxValues);
 
-          // Coefficient within matrix is tensor product over dimensions, too
+          // Coefficient within matrix is tensor product over dimensions, too.
+          // So we take the stiffness matrix in the direction that we are
+          // evaluating and multiply it for the d-1 remaining directions with
+          // the mass matrix. We integrate over the whole cell, but the h-terms
+          // are eliminated along the derivative direction.
           double coeff = stiffnessMatrix[i+dof(dim)*nodesPerAxis];
           for (int dd=0; dd<Dimensions; dd++) {
-            coeff *= (dd==dim) ? 1.0 : massMatrixDiagonal[ dof(dd) ];
+            coeff *= (dd==dim) ? 1.0 : massMatrixDiagonal[ dof(dd) ] * h(dd);
           }
 
           for(int var=0; var<unknowns; var++){
@@ -102,22 +101,25 @@ void exahype2::dg::cellIntegral_patchwise_in_situ_GaussLegendre_functors(
         //compute real node position
         tarch::la::Vector<Dimensions,double> position = getQuadraturePoint(
           x,
-          dx,
+          h,
           dof,
           order,
-          quadratureNodes);
+          quadratureNodes
+        );
 
         //compute source term contributions
-        source( &cellQin[enumeratorIn(currentCell, dof, 0)],
-              position,
-              t,
-              dt,
-              sourceValues);
+        source(
+          &cellQin[enumeratorIn(currentCell, dof, 0)],
+          position,
+          t,
+          dt,
+          sourceValues
+        );
 
         #if Dimensions==2
-        double coeff = massMatrixDiagonal[ dof(0) ] * massMatrixDiagonal[ dof(1) ];
+        double coeff = massMatrixDiagonal[ dof(0) ] * massMatrixDiagonal[ dof(1) ] * tarch::la::volume(h);
         #else
-        double coeff = massMatrixDiagonal[ dof(0) ] * massMatrixDiagonal[ dof(1) ] * massMatrixDiagonal[ dof(2) ];
+        double coeff = massMatrixDiagonal[ dof(0) ] * massMatrixDiagonal[ dof(1) ] * massMatrixDiagonal[ dof(2) ] * tarch::la::volume(h);
         #endif
 
         for(int var=0; var<unknowns; var++){
@@ -128,25 +130,26 @@ void exahype2::dg::cellIntegral_patchwise_in_situ_GaussLegendre_functors(
       // @todo Point Source missing
 
       if (evaluateNonconservativeProduct) {
-
         //compute real node position
-        tarch::la::Vector<Dimensions,double> position = getQuadraturePoint( x,
-          dx,
+        tarch::la::Vector<Dimensions,double> position = getQuadraturePoint(
+          x,
+          h,
           dof,
           order,
-          quadratureNodes);
+          quadratureNodes
+        );
 
+        // Mass matrix.
         double coeff = 1.0;
         for (int dd=0; dd<Dimensions; dd++) {
-          coeff *= massMatrixDiagonal[ dof(dd) ];
+          coeff *= massMatrixDiagonal[ dof(dd) ] * h(dd);
         }
 
         for(int dim=0; dim<Dimensions; dim++) {
-
           //computes gradient values in all directions for the given node
           std::fill(gradientValues, &gradientValues[strideQ-1], 0.0);
 
-          const int invDx = 1 / dx;
+          const int invDx = 1 / h(dim);
 
           // computing gradients in direction dim
           for(int node=0; node<nodesPerAxis; node++){
@@ -158,9 +161,7 @@ void exahype2::dg::cellIntegral_patchwise_in_situ_GaussLegendre_functors(
               gradientValues[var] += coeffDerivative * cellQin[enumeratorIn(currentCell, contributingNodeIndex, var)];
               assertion(gradientValues[var]==gradientValues[var]);
             } // var
-
           } //node
-
 
           nonconservativeProduct(
             &cellQin[enumeratorIn(currentCell, dof, 0)],
@@ -173,18 +174,12 @@ void exahype2::dg::cellIntegral_patchwise_in_situ_GaussLegendre_functors(
 
           for(int var=0; var<unknowns; var++){
             assertion(ncpValues[var]==ncpValues[var]);
-            cellQout[enumeratorOut(currentCell, dof, var)] += coeff * ncpValues[var];
+            cellQout[enumeratorOut(currentCell, dof, var)] -= coeff * ncpValues[var];
           } //var
         } //dim
-
       } //if useNCP
-
-
     } // dof
-
   } //currentCell
-
-
 
   if (evaluateFlux) {
     delete [] fluxValues;
@@ -245,42 +240,6 @@ void exahype2::dg::reduceMaxEigenvalue_patchwise_functors(
 }
 
 
-/*
-double exahype2::dg::getMaxEigenvalue(
-  MaxEigenvalue                                  maxEigenvalue,
-  const double* __restrict__                     Q,
-  const int                                      order,
-  const int                                      strideQ,
-  const tarch::la::Vector<Dimensions,double>&    x,
-  const double                                   t,
-  const double                                   dt
-  ){
-
-  const int nodesPerAxis = order+1;
-  const int nodesPerCell = getNodesPerCell(nodesPerAxis);
-  double maxEigenvalueCell = std::numeric_limits<double>::min();
-
-  //for each node in the cell
-  for(int node=0; node<nodesPerCell; node++){
-    //for each direction
-    for(int direction=0; direction<Dimensions; direction++){
-      double maxEigenvalueNode = maxEigenvalue(
-        &Q[node*strideQ],
-        x,
-        t,
-        dt,
-        direction
-      );
-
-      maxEigenvalueCell = std::max(maxEigenvalueCell, std::abs(maxEigenvalueNode));
-    }
-  }
-
-  return maxEigenvalueCell;
-}
-*/
-
-
 void exahype2::dg::internal::copySolution(
   const double* __restrict__                    cellQin,
   const int                                     order,
@@ -316,9 +275,14 @@ void exahype2::dg::multiplyWithInvertedMassMatrix_GaussLegendre(
       double* __restrict__  cellQInOut = cellData.QOut[currentCell];
 
       #if Dimensions==2
-      double diagonal = massMatrixDiagonal1d[ dof(0) ] * massMatrixDiagonal1d[ dof(1) ];
+      double diagonal = massMatrixDiagonal1d[ dof(0) ] * massMatrixDiagonal1d[ dof(1) ] * (cellData.cellSize[currentCell])(0) * (cellData.cellSize[currentCell])(1);
       #else
-      double diagonal = massMatrixDiagonal1d[ dof(0) ] * massMatrixDiagonal1d[ dof(1) ] * massMatrixDiagonal1d[ dof(2) ];
+      double diagonal = massMatrixDiagonal1d[ dof(0) ]
+                      * massMatrixDiagonal1d[ dof(1) ]
+                      * massMatrixDiagonal1d[ dof(2) ]
+                      * (cellData.cellSize[currentCell])(0)
+                      * (cellData.cellSize[currentCell])(1)
+                      * (cellData.cellSize[currentCell])(2);
       #endif
 
       assertion( diagonal>0.0 );

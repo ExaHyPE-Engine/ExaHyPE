@@ -34,7 +34,8 @@ namespace TP_bindding {
 			Q[i+6]=	phisq*Q[i+6]-1./3. * traceK * Q[i]; //\tilde{A}_ij
 		}
 		
-		Q[53]=traceK; Q[54]=std::log(phi); Q[16]=std::log(Q[16]);
+		//Q[53]=traceK; Q[54]=std::log(phi); Q[16]=std::log(Q[16]);
+		Q[53]=traceK; Q[54]=phi;
 	}
 
 	//use this to calculate the gradient

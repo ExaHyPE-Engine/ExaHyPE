@@ -17,8 +17,8 @@ void exahype2::dg::rusanov::solveRiemannProblem_pointwise_in_situ(
   int                                          auxiliaryVariables,
   int                                          faceNumber,
   const double* __restrict__                   quadraturePoints,
-  bool                                         useFlux,
-  bool                                         useNcp,
+  bool                                         evaluateFlux,
+  bool                                         evaluateNonconservativeProduct,
   const double* __restrict__                   projectedValues,
   double* __restrict__                         solution
 ) {
@@ -62,14 +62,14 @@ void exahype2::dg::rusanov::solveRiemannProblem_pointwise_in_situ(
 
     double leftEigenvalue = maxEigenvalue(
                     projectedValues + inputEnumerator(leftDoF,0),
-                    x, //TODO: add positioning
+                    x,
                     t,
                     dt,
                     faceNumber%Dimensions );
 
     double rightEigenvalue = maxEigenvalue(
                     projectedValues + inputEnumerator(rightDoF,0),
-                    x, //TODO: add positioning
+                    x,
                     t,
                     dt,
                     faceNumber%Dimensions );
@@ -77,19 +77,19 @@ void exahype2::dg::rusanov::solveRiemannProblem_pointwise_in_situ(
     double maxEigenvalue = std::max(leftEigenvalue,rightEigenvalue);
 
     for(int var=0; var<unknowns; var++){
-      solution[ outputEnumerator(leftDoF,var)  ] = - 0.5 * maxEigenvalue * deltaQ[var];
-      solution[ outputEnumerator(rightDoF,var) ] = - 0.5 * maxEigenvalue * deltaQ[var];
+      solution[ outputEnumerator(leftDoF,var)  ] -= 0.5 * maxEigenvalue * deltaQ[var];
+      solution[ outputEnumerator(rightDoF,var) ] -= 0.5 * maxEigenvalue * deltaQ[var];
     }
 
-    if(useFlux){
+    if(evaluateFlux){
       flux( projectedValues + inputEnumerator( leftDoF, 0 ),
-            x, //TODO: add positioning
+            x,
             t,
             dt,
             faceNumber%Dimensions, //normal
             fluxValuesLeft);
       flux( projectedValues + inputEnumerator (rightDoF, 0),
-            x, //TODO: add positioning
+            x,
             t,
             dt,
             faceNumber%Dimensions, //normal
@@ -101,23 +101,21 @@ void exahype2::dg::rusanov::solveRiemannProblem_pointwise_in_situ(
       }
     }
 
-    if(useNcp){
+    if(evaluateNonconservativeProduct){
       nonConservativeProduct(
           averageQ,
           deltaQ,
-          x, //TODO: add positioning
+          x,
           t,
           dt,
           faceNumber%Dimensions, //normal
           ncpValues);
 
-      for(int var=0; var<unknowns; var++){
-        solution[ outputEnumerator(leftDoF,var)  ] += 0.5 * deltaQ[var] * ncpValues[var];
-        solution[ outputEnumerator(rightDoF,var) ] -= 0.5 * deltaQ[var] * ncpValues[var];
+      for (int var=0; var<unknowns; var++) {
+        solution[ outputEnumerator(leftDoF,var)  ] += 0.5 * ncpValues[var];
+        solution[ outputEnumerator(rightDoF,var) ] -= 0.5 * ncpValues[var];
       }
     }
-
-
   }
 
   delete[] deltaQ;
@@ -125,4 +123,26 @@ void exahype2::dg::rusanov::solveRiemannProblem_pointwise_in_situ(
   delete[] fluxValuesLeft;
   delete[] fluxValuesRight;
   delete[] ncpValues;
+}
+
+
+void exahype2::dg::rusanov::solveRiemannProblem_pointwise_in_situ_with_gradient_projection(
+  ::exahype2::dg::Flux                         flux,
+  ::exahype2::dg::NonConservativeProduct       nonConservativeProduct,
+  ::exahype2::dg::MaxEigenvalue                maxEigenvalue,
+  const tarch::la::Vector<Dimensions,double>&  faceCentre,
+  const tarch::la::Vector<Dimensions,double>&  cellSize,
+  double                                       t,
+  double                                       dt,
+  int                                          order,
+  int                                          unknowns,
+  int                                          auxiliaryVariables,
+  int                                          faceNumber,
+  const double* __restrict__                   quadraturePoints,
+  bool                                         evaluateFlux,
+  bool                                         evaluateNonconservativeProduct,
+  const double* __restrict__                   projectedValues,
+  double* __restrict__                         solution
+) {
+  assertionMsg(false, "not implemented yet");
 }

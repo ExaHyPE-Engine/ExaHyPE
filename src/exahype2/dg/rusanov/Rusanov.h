@@ -33,12 +33,9 @@ namespace exahype2 {
        * Solve Riemann problem on face
        *
        * This routine solves the Riemann problem on one face through a Rusanov
-       * solver. It is the simplest version of a Riemann solver that you can
-       * think of:
-       *
-       * -
-       * -
-       * -
+       * solver. It takes the average of the flux left and right, reduces it by
+       * the jump subject to a scaling with the maximum eigenvalue, and finally
+       * adds/substracts the ncp terms.
        *
        * The implementation is purely point-wise, i.e. we run over the quadrature
        * points and use Rusanov per point. It is not clear if this is reasonable
@@ -57,11 +54,75 @@ namespace exahype2 {
        *         2 3
        *         0 1
        *
-       * The lrEnumerator is used for quantities that we evaluate right and left of
-       * the face. The faceEnumerator is for data that we evalutate directly on the
-       * face.
+       * The lrEnumerator is used for quantities that we evaluate right and
+       * left of the face. The faceEnumerator is for data that we evaluate
+       * directly on the face.
+       *
+       * ## Linearity in h
+       *
+       * The ncp - as so often - deserves special attention: As we have a
+       * non-conservative term here, we don't write the same flux to the left
+       * and the right face. Indeed, they carry exactly switched signs. We
+       * furthermore note that the original PDE formulation speaks of a
+       * term @f$ B(Q) \nabla B @f$ whereas the Finite Volume formulation's
+       * Rusanov solver uses a $f@ 0.5 B( 0.5(Q^++Q^-) ) (Q^+-Q^-) @f$ term.
+       * Therefore, we need an additional factor of 0.5. However, we do not
+       * need any additional calibration, as we simply pass in the Q
+       * differences into the DG ncp term which expects the gradient. Whatever
+       * comes out of it, should be by a factor of h too big already, i.e.
+       * have the right cardinality of the FV expression.
+       *
+       * In theory, it might be that B is not linear in the vector, i.e. not
+       * linear in an h scaling. However, we always can assume that the B that
+       * is passed in here is a linearisation along the face. Therefore, we can
+       * assume that the scaling is by definition fine with our observation.
+       *
+       *
+       * ## Sign discussion
+       *
+       * We rely on the formulation as discussed on the page Discontinuous Galerkin.
+       * See dg.h or the doxygen html pages for details. I also recommend to read
+       * through the documentation of cellIntegral_patchwise_in_situ_GaussLegendre_functors()
+       * before we dive into the discussion.
+       *
+       * All the comments below assume that both the left and the right side of
+       * the flux compute the flux in the normal direction. It is then the
+       * backpropagation of the Riemann solution which takes into the account
+       * that the ``right'' faces denote an outflow, while the ``left'' faces
+       * encode an inflow.
+       *
+       * @see integrateOverRiemannSolutionsAndAddToVolume_GaussLegendre()
+       *
+       * Bringing all these facts together, we conclude that we end up with a
+       * 1:1 translation of Finite Volumes into the DG world.
+       *
+       * @see exahype2/fv/rusanov/LoopBody.cpph for further information.
        */
       void solveRiemannProblem_pointwise_in_situ(
+        ::exahype2::dg::Flux                         flux,
+        ::exahype2::dg::NonConservativeProduct       ncp,
+        ::exahype2::dg::MaxEigenvalue                maxEigenvalue,
+        const tarch::la::Vector<Dimensions,double>&  faceCentre,
+        const tarch::la::Vector<Dimensions,double>&  cellSize,
+        double                                       t,
+        double                                       dt,
+        int                                          order,
+        int                                          unknowns,
+        int                                          auxiliaryVariables,
+        int                                          faceNumber,
+        const double* __restrict__                   quadraturePoints,
+        bool                                         useFlux,
+        bool                                         useNcp,
+        const double* __restrict__                   projectedValues,
+        double* __restrict__                         solution
+      );
+
+
+      /**
+       *
+       * @see solveRiemannProblem_pointwise_in_situ()
+       */
+      void solveRiemannProblem_pointwise_in_situ_with_gradient_projection(
         ::exahype2::dg::Flux                         flux,
         ::exahype2::dg::NonConservativeProduct       ncp,
         ::exahype2::dg::MaxEigenvalue                maxEigenvalue,

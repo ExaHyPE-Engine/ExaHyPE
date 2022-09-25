@@ -64,6 +64,9 @@ elif args.type=="reg-0":
 # the cells coarser with increasing order (to fit into memory and
 # to remain reasonable by means of accuracy).
 #
+if "dg1-" in args.solver:
+  max_h = baseline_max_h
+  min_h = baseline_max_h
 if "dg2-" in args.solver:
   max_h = baseline_max_h * 3
   min_h = baseline_max_h * 3
@@ -125,6 +128,7 @@ if "rk" in args.solver and "dg" in args.solver:
   thesolver = exahype2.solvers.rkdg.rusanov.GlobalAdaptiveTimeStepWithEnclaveTasking(name                 = solver_name + "DG",
                                                                    rk_order             = time_order,
                                                                    polynomials          = exahype2.solvers.GaussLegendreBasis(space_order),
+                                                                   face_projections     = exahype2.solvers.rkdg.FaceProjections.Solution,
                                                                    unknowns             = number_of_unknowns,
                                                                    auxiliary_variables  = auxiliary_variables,
                                                                    min_cell_h           = max_h, 
@@ -147,21 +151,6 @@ not repositories::{{SOLVER_INSTANCE}}.cellCanUseStatelessPDETerms(marker.x(), ma
     repositories::{{SOLVER_INSTANCE}}.addDensity(x, marker.h(), index, values[0]);  
   """     )
 
-
-#thesolver.auxiliary_variables=1
-#thesolver.add_user_action_set_includes( """
-##include "exahype2/fv/PostprocessingKernels.h"
-#""")
-#thesolver.postprocess_updated_patch = """
-#::exahype2::fv::mapInnerNeighbourVoxelAlongBoundayOntoAuxiliaryVariable(
-# targetPatch,
-# {{NUMBER_OF_VOLUMES_PER_AXIS}},
-# {{NUMBER_OF_UNKNOWNS}},
-# {{NUMBER_OF_AUXILIARY_VARIABLES}},
-# 0,
-# {{NUMBER_OF_UNKNOWNS}}
-#);
-#"""
 
 thesolver.plot_description = "rho,j_x,j_y,j_z,E,aux"
         
