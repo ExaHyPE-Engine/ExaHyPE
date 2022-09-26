@@ -1,10 +1,10 @@
-#include "euler_fv_sod.h"
+#include "EulerFVSod.h"
 #include "exahype2/RefinementControl.h"
 
 
-tarch::logging::Log benchmarks::exahype2::euler::sod_shocktube::euler_fv_sod::_log( "examples::exahype2::test::euler_sod::benchmark::euler_sod" );
+tarch::logging::Log benchmarks::exahype2::euler::sod_shocktube::EulerFVSod::_log( "examples::exahype2::test::euler_sod::benchmark::euler_sod" );
 
-void benchmarks::exahype2::euler::sod_shocktube::euler_fv_sod::initialCondition(
+void benchmarks::exahype2::euler::sod_shocktube::EulerFVSod::initialCondition(
   double * __restrict__ Q,
   const tarch::la::Vector<Dimensions,double>&  volumeCentre,
   const tarch::la::Vector<Dimensions,double>&  volumeH,
@@ -39,7 +39,7 @@ void benchmarks::exahype2::euler::sod_shocktube::euler_fv_sod::initialCondition(
   logTraceOut( "initialCondition(...)" );
 }
 
-void benchmarks::exahype2::euler::sod_shocktube::euler_fv_sod::boundaryConditions(
+void benchmarks::exahype2::euler::sod_shocktube::EulerFVSod::boundaryConditions(
   const double * __restrict__                  Qinside, // Qinside[4+0]
   double * __restrict__                        Qoutside, // Qoutside[4+0]
   const tarch::la::Vector<Dimensions,double>&  faceCentre,
@@ -55,7 +55,7 @@ void benchmarks::exahype2::euler::sod_shocktube::euler_fv_sod::boundaryCondition
   logTraceOut( "boundaryConditions(...)" );
 }
 
-double ::benchmarks::exahype2::euler::sod_shocktube::euler_fv_sod::maxEigenvalue(
+double ::benchmarks::exahype2::euler::sod_shocktube::EulerFVSod::maxEigenvalue(
   const double * __restrict__ Q, // Q[4+0],
   const tarch::la::Vector<Dimensions,double>&  faceCentre,
   const tarch::la::Vector<Dimensions,double>&  volumeH,
@@ -83,7 +83,7 @@ double ::benchmarks::exahype2::euler::sod_shocktube::euler_fv_sod::maxEigenvalue
   return result;
 }
 
-void ::benchmarks::exahype2::euler::sod_shocktube::euler_fv_sod::flux(
+void ::benchmarks::exahype2::euler::sod_shocktube::EulerFVSod::flux(
   const double * __restrict__ Q, // Q[4+0],
   const tarch::la::Vector<Dimensions,double>&  faceCentre,
   const tarch::la::Vector<Dimensions,double>&  volumeH,

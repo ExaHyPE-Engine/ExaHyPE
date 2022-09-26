@@ -1,18 +1,18 @@
-#ifndef _benchmarks_exahype2_euler_sod_shocktube_euler_fv_sod_H_
-#define _benchmarks_exahype2_euler_sod_shocktube_euler_fv_sod_H_
+#ifndef _benchmarks_exahype2_euler_sod_shocktube_EulerFVSod_H_
+#define _benchmarks_exahype2_euler_sod_shocktube_EulerFVSod_H_
 
-#include "Abstracteuler_fv_sod.h"
+#include "AbstractEulerFVSod.h"
 #include "tarch/logging/Log.h"
 
 namespace benchmarks {namespace exahype2 {namespace euler {namespace sod_shocktube {
-  class euler_fv_sod;
+  class EulerFVSod;
 }}}}
 
-class benchmarks::exahype2::euler::sod_shocktube::euler_fv_sod: public benchmarks::exahype2::euler::sod_shocktube::Abstracteuler_fv_sod {
+class benchmarks::exahype2::euler::sod_shocktube::EulerFVSod: public benchmarks::exahype2::euler::sod_shocktube::AbstractEulerFVSod {
   private:
     static tarch::logging::Log   _log;
 
-  public:
+  public: 
     void initialCondition(
       double * __restrict__ Q,
       const tarch::la::Vector<Dimensions,double>&  volumeCentre,
@@ -28,9 +28,9 @@ class benchmarks::exahype2::euler::sod_shocktube::euler_fv_sod: public benchmark
       double                                       t,
       int                                          normal
     )  override;
-
+  
   public:
-     virtual double maxEigenvalue(
+    virtual double maxEigenvalue(
       const double * __restrict__ Q, // Q[4+0],
       const tarch::la::Vector<Dimensions,double>&  faceCentre,
       const tarch::la::Vector<Dimensions,double>&  volumeH,
@@ -38,15 +38,15 @@ class benchmarks::exahype2::euler::sod_shocktube::euler_fv_sod: public benchmark
       double                                       dt,
       int                                          normal
     ) override;
-        
+    
     virtual void flux(
-      const double * __restrict__ Q, 
+      const double * __restrict__ Q, // Q[4+0],
       const tarch::la::Vector<Dimensions,double>&  faceCentre,
       const tarch::la::Vector<Dimensions,double>&  volumeH,
       double                                       t,
       double                                       dt,
       int                                          normal,
-      double * __restrict__ F 
+      double * __restrict__ F // F[4]
     ) override;
 };
 #endif
