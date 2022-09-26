@@ -4,7 +4,7 @@ import exahype2
 
 project = exahype2.Project( ["benchmarks", "exahype2", "euler", "sod_shocktube"], "sod-shocktube-validation", ".", executable="sod-shocktube-validation" )
 
-solver_name = "euler_fv_sod"
+solver_name = "EulerFVSod"
 unknowns    = 4
 auxiliary_variables = 0
 mesh_size   = 0.01
