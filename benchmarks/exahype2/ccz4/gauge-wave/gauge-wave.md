@@ -68,6 +68,9 @@ solution's behaviour. The call to the script is similar to
 
 with appropriate pathes and filenames set.
 
+
+## Some results
+
 You should obtain pdfs and pngs that resemble the following graphs for Finite
 Volumes:
 
@@ -75,11 +78,19 @@ Volumes:
 <img src="example-output/Tracer-fv-0.3-rank-0-snapshot-0.piecewise-linear.csv.png" />
 
 The above graphs are produced for the experiment's default settings i.e. a mesh size
-of 0.3. They study piecewise constant interpolation onto the tracer (left) vs. piecewise
-linear. Despite the relatively coarse resolution, the graphs are basically identical, 
-i.e. the default resolution is already sufficient to study the long-term behaviour
-of the solution.
+of 0.3. 
 Though these graphs simulate only a very brief total time (up to end time 1.0), we 
 already see a strong damping of the amplitudes.
 This is a characteristic property of first-order Finite Volume schemes.
 
+
+In the Python script, we played around with piecewise constant interpolation onto the tracer vs. piecewise
+linear. Despite the relatively coarse resolution, the graphs were all basically identical, 
+i.e. the default resolution is already sufficient to study the long-term behaviour
+of the solution.
+
+
+<img src="example-output/Tracer-dg0-rk1-0.1-rank-0-snapshot-0.csv.png" />
+
+The DG0 scheme (above is Runge-Kutta 1) gives exactly the same damping behaviour.
+All data above stem from different grid resolutions, soit si 
