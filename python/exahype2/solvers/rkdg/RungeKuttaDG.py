@@ -24,6 +24,9 @@ from abc import abstractmethod
 import exahype2
 import exahype2.solvers.rkdg.actionsets
 
+from exahype2.solvers.rkdg.actionsets.ProjectLinearCombinationOfEstimatesOntoFaces import FaceProjections
+from exahype2.solvers.rkdg.actionsets.ProjectLinearCombinationOfEstimatesOntoFaces import compute_number_of_face_projection_quantities
+
 
 class RungeKuttaDG(object):
   """ 
@@ -134,12 +137,7 @@ class RungeKuttaDG(object):
       size for a cell.
       
     self._compute_new_time_step_size          = "const double newTimeStepSize = timeStepSize;"
-             
-    # Attributes
-    
-    polynomial_basis: solvers.LagrangeBasis
-      Any proper polynomial basis such as solvers.GaussLegendreBasis             
-      
+                   
   """
   
       
@@ -147,7 +145,8 @@ class RungeKuttaDG(object):
                name, 
                rk_order, 
                polynomial_basis, 
-               number_of_face_projections, unknowns, auxiliary_variables, min_cell_h, max_cell_h, plot_grid_properties):
+               face_projections: FaceProjections, 
+               unknowns, auxiliary_variables, min_cell_h, max_cell_h, plot_grid_properties):
     """
     
   Constructor of the Runge-Kutta Discontinuous Galerkin solver
@@ -168,11 +167,13 @@ class RungeKuttaDG(object):
   polynomials: Polynomials
      Picks which kind of polynomial to use.
      
-  number_of_face_projections: Integer
+  face_projections: Integer
      How many projections do we need per face. If you are only
      interested in the left and right solution along a face, pass in 1. If you
      want to have the fluxes or derivatives as well, pass in 2. The latter version
      is the type of data structure you need for Rusanov, e.g.
+     
+     There are a couple of pre-defined values for this guy. 
      
   unknowns: int
      Number of unknowns per Finite Volume voxel.
@@ -217,11 +218,13 @@ class RungeKuttaDG(object):
       
       So you may implicitly assume that these guys do exist always.
     """
+    assert rk_order>=1, "Runge-Kutta order has to be greater or equal to one"
+    
     self._name              = name
     
     self._rk_order                   = rk_order
     self._basis                      = polynomial_basis
-    self._number_of_face_projections = number_of_face_projections
+    self._face_projections = face_projections
     
     self._volumetric_solver_call         = "#error Please set the solver property _volumetric_kernel in the Python class"
     self._Riemann_solver_call            = "#error Please set the solver property _Riemann_solver in the Python class"
@@ -255,7 +258,8 @@ class RungeKuttaDG(object):
     self._compute_new_time_step_size          = None
     
     self._preprocess_cell                     = ""
-    self._postprocess_updated_cell            = ""
+    self._postprocess_updated_cell_after_Runge_Kutta_step         = ""
+    self._postprocess_updated_cell_after_final_linear_combination = ""
 
     self._flux_implementation                 = None
     self._ncp_implementation                  = None
@@ -423,13 +427,13 @@ We use RK(""" + str(self._rk_order) + """) for the time stepping.
      _linear_combination_of_estimates: Patch ( (_dg_order+1)x(_dg_order+1)x(_dg_order+1) )
        Non-persistent helper data structure.
 
-     _current_time_step_projection: Patch ( 2xnumber_of_face_projectionsx(_dg_order+1)x(_dg_order+1) )
+     _current_time_step_projection: Patch ( 2xface_projectionsx(_dg_order+1)x(_dg_order+1) )
        This is the projection of the polynomial data of the current guess onto the 
        faces. It is important that the first dimension is only a 2. This way, we can
        (logically) handle the projected data again as an overlap of two patches with 
        the width 1.  
 
-     _estimates_projection: Patch ( 2xnumber_of_face_projectionsx(_dg_order+1)x(_dg_order+1) )
+     _estimates_projection: Patch ( 2xface_projectionsx(_dg_order+1)x(_dg_order+1) )
 
      _face_label: FaceLabel
        See class description. General information such as "is boundary". 
@@ -448,11 +452,31 @@ We use RK(""" + str(self._rk_order) + """) for the time stepping.
          
        
     """
-    self._current_time_step                 = peano4.datamodel.Patch( (self._basis.dofs_per_axis,self._basis.dofs_per_axis,self._basis.dofs_per_axis),                      self._unknowns+self._auxiliary_variables, self._unknown_identifier() )
-    self._rhs_estimates                     = peano4.datamodel.Patch( (self.number_of_Runge_Kutta_steps()*(self._basis.dofs_per_axis),self._basis.dofs_per_axis,self._basis.dofs_per_axis),     self._unknowns, self._unknown_identifier() + "RhsEstimates" )
-    self._linear_combination_of_estimates   = peano4.datamodel.Patch( (self._basis.dofs_per_axis,self._basis.dofs_per_axis,self._basis.dofs_per_axis),                      self._unknowns+self._auxiliary_variables, self._unknown_identifier() + "LinearCombination")
-    self._estimate_projection       = peano4.datamodel.Patch( (2,self._number_of_face_projections*(self._basis.dofs_per_axis),self._basis.dofs_per_axis),  self._unknowns+self._auxiliary_variables, self._unknown_identifier() + "EstimateProjection" )
-    self._Riemann_solution                  = peano4.datamodel.Patch( (2,self._basis.dofs_per_axis,self._basis.dofs_per_axis),  self._unknowns, self._unknown_identifier() + "RiemannSolution" )
+    self._current_time_step                 = peano4.datamodel.Patch( (self._basis.dofs_per_axis,                                      
+                                                                       self._basis.dofs_per_axis,
+                                                                       self._basis.dofs_per_axis),                      
+                                                                       self._unknowns+self._auxiliary_variables, 
+                                                                       self._unknown_identifier() )
+    self._rhs_estimates                     = peano4.datamodel.Patch( (self.number_of_Runge_Kutta_steps()*(self._basis.dofs_per_axis),
+                                                                       self._basis.dofs_per_axis,
+                                                                       self._basis.dofs_per_axis),     
+                                                                       self._unknowns, 
+                                                                       self._unknown_identifier() + "RhsEstimates" )
+    self._linear_combination_of_estimates   = peano4.datamodel.Patch( (self._basis.dofs_per_axis,
+                                                                       self._basis.dofs_per_axis,
+                                                                       self._basis.dofs_per_axis),                      
+                                                                       self._unknowns+self._auxiliary_variables, 
+                                                                       self._unknown_identifier() + "LinearCombination")
+    self._estimate_projection               = peano4.datamodel.Patch( (compute_number_of_face_projection_quantities(self._face_projections)*2,
+                                                                       self._basis.dofs_per_axis,
+                                                                       self._basis.dofs_per_axis),  
+                                                                       self._unknowns+self._auxiliary_variables, 
+                                                                       self._unknown_identifier() + "EstimateProjection" )
+    self._Riemann_solution                  = peano4.datamodel.Patch( (2,
+                                                                       self._basis.dofs_per_axis,
+                                                                       self._basis.dofs_per_axis),  
+                                                                       self._unknowns, 
+                                                                       self._unknown_identifier() + "RiemannSolution" )
            
     self._estimate_projection.generator.merge_method_definition = peano4.toolbox.blockstructured.get_face_merge_implementation(self._estimate_projection)
     self._current_time_step.generator.merge_method_definition   = peano4.toolbox.blockstructured.get_cell_merge_implementation(self._current_time_step)
@@ -526,7 +550,7 @@ We use RK(""" + str(self._rk_order) + """) for the time stepping.
     self._action_set_AMR_commit_without_further_analysis                              = exahype2.solvers.rkdg.actionsets.AdaptivityCriterion(solver=self, guard=self._store_cell_data_default_guard(), build_up_new_refinement_instructions=False, implement_previous_refinement_instructions=True )
     self._action_set_linear_combination_of_estimates                                  = exahype2.solvers.rkdg.actionsets.LinearCombinationOfEstimates(self)
     # @todo TW The following two action sets should run in parallel I guess 
-    self._action_set_project_linear_combination_onto_faces                            = exahype2.solvers.rkdg.actionsets.ProjectLinearCombinationOfEstimatesOntoFaces(solver=self)
+    self._action_set_project_linear_combination_onto_faces                            = exahype2.solvers.rkdg.actionsets.ProjectLinearCombinationOfEstimatesOntoFaces(solver=self,face_projections=self._face_projections)
     self._action_set_solve_volume_integral                                            = exahype2.solvers.rkdg.actionsets.SolveVolumeIntegral(self)
     self._action_set_handle_boundary                                                  = exahype2.solvers.rkdg.actionsets.HandleBoundary(self, self._store_face_data_default_guard())
     self._action_set_solve_Riemann_problem                                            = exahype2.solvers.rkdg.actionsets.SolveRiemannProblem(self)
@@ -911,7 +935,8 @@ We use RK(""" + str(self._rk_order) + """) for the time stepping.
     #d[ "SOURCE_TERM_CALL"]                    = jinja2.Template(self._source_term_call, undefined=jinja2.DebugUndefined).render( **d )
     #d[ "RIEMANN_SOLVER_CALL"]                 = jinja2.Template(self._Riemann_solver_call, undefined=jinja2.DebugUndefined).render( **d )
     d[ "PREPROCESS_RECONSTRUCTED_CELL" ]      = jinja2.Template(self._preprocess_cell, undefined=jinja2.DebugUndefined).render( **d )
-    d[ "POSTPROCESS_UPDATED_CELL" ]           = jinja2.Template(self._postprocess_updated_cell, undefined=jinja2.DebugUndefined).render( **d )
+    d[ "POSTPROCESS_UPDATED_CELL_AFTER_RUNGE_KUTTA_STEP" ]           = jinja2.Template(self._postprocess_updated_cell_after_Runge_Kutta_step,         undefined=jinja2.DebugUndefined).render( **d )
+    d[ "POSTPROCESS_UPDATED_CELL_AFTER_FINAL_LINEAR_COMBINATION" ]   = jinja2.Template(self._postprocess_updated_cell_after_final_linear_combination, undefined=jinja2.DebugUndefined).render( **d )
     d[ "BOUNDARY_CONDITIONS_IMPLEMENTATION"]  = self._boundary_conditions_implementation
     d[ "REFINEMENT_CRITERION_IMPLEMENTATION"] = self._refinement_criterion_implementation
     d[ "INITIAL_CONDITIONS_IMPLEMENTATION"]   = self._initial_conditions_implementation
@@ -1025,4 +1050,115 @@ We use RK(""" + str(self._rk_order) + """) for the time stepping.
     self.create_data_structures()
     self.create_action_sets()
 
+  
+  @property
+  def postprocess_updated_cell_after_Runge_Kutta_step(self):
+    return self._postprocess_updated_cell
+
+
+  @property
+  def postprocess_updated_cell_after_final_linear_combination(self):
+    return self._postprocess_updated_cell
+
+
+  @postprocess_updated_cell_after_Runge_Kutta_step.setter
+  def postprocess_updated_cell_after_Runge_Kutta_step(self, kernel):
+    """
+
+    Define a postprocessing routine over the data
+    
+    This routine allows you to update the patch data immediately after the 
+    patch update. The routine provides the whole patch, and therefore you 
+    can write stuff similar to 
+    
+         my_solver.postprocess_updated_cell = " ""
+         {
+           constexpr int itmax = ({{DG_ORDER}}+1) * ({{DG_ORDER}}+1) * ({{DG_ORDER}}+1);
+           int index = 0;
+           for (int i=0;i<itmax;i++) {
+             applications::exahype2::ccz4::enforceCCZ4constraints( dQdt+index );
+             index += {{NUMBER_OF_UNKNOWNS}};
+           }
+         }
+         
+         
+    ## Difference to Finite Volume solvers
+    
+    Different to the Finite Volume solvers, you don't have the auxiliary
+    variables in this routine. You also don't have the new solution, but the
+    time derivative instead.
+    
+    
+    ## Available constants
+
+    This list is not complete. You might want to consult the generated code to 
+    spot more variables that are on offer. Whenever I use the brackets below,
+    these are symbolic constants which will be befilled with the proper constants
+    when the postprocessing code snippet is inserted into the generated code.
+    The other variables are directly available, i.e. no text replacement is done
+    here.
+    
+    - {{DG_ORDER}}  Spatial discretisation order.
+    - timeStamp
+    - timeStepSize
+    - dQdt
+
+    ## Runge-Kutta steps
+    
+    This postprocessing is called after each and every Runge-Kutta step.
+
+    """
+    self._postprocess_updated_cell_after_Runge_Kutta_step = kernel
+    self.create_data_structures()
+    self.create_action_sets()
+
+
+  @postprocess_updated_cell_after_final_linear_combination.setter
+  def postprocess_updated_cell_after_final_linear_combination(self, kernel):
+    """
+
+    Define a postprocessing routine over the data
+    
+    This routine allows you to update the patch data immediately after the 
+    patch update. The routine provides the whole patch, and therefore you 
+    can write stuff similar to 
+    
+         my_solver.postprocess_updated_cell = " ""
+         {
+           constexpr int itmax = ({{DG_ORDER}}+1) * ({{DG_ORDER}}+1) * ({{DG_ORDER}}+1);
+           int index = 0;
+           for (int i=0;i<itmax;i++) {
+             applications::exahype2::ccz4::enforceCCZ4constraints( dQdt+index );
+             index += {{NUMBER_OF_UNKNOWNS}};
+           }
+         }
+         
+         
+    ## Difference to Finite Volume solvers
+    
+    Different to the Finite Volume solvers, you don't have the auxiliary
+    variables in this routine. You also don't have the new solution, but the
+    time derivative instead.
+    
+    
+    ## Available constants
+
+    This list is not complete. You might want to consult the generated code to 
+    spot more variables that are on offer. Whenever I use the brackets below,
+    these are symbolic constants which will be befilled with the proper constants
+    when the postprocessing code snippet is inserted into the generated code.
+    The other variables are directly available, i.e. no text replacement is done
+    here.
+    
+    - {{DG_ORDER}}  Spatial discretisation order.
+    
+
+    ## Runge-Kutta steps
+    
+    This postprocessing is called after each and every Runge-Kutta step.
+
+    """
+    self._postprocess_updated_cell_after_final_linear_combination = kernel
+    self.create_data_structures()
+    self.create_action_sets()
 

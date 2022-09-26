@@ -69,8 +69,8 @@ class ReconstructPatchAndApplyFunctor(ActionSet):
     the template system otherwise gets confused.
   - The following C++ variables are defined:
   
-    reconstructedPatch 
-    targetPatch
+    oldQWithHalo 
+    newQ
     
     Both are plain double pointers.
   
@@ -135,35 +135,35 @@ class ReconstructPatchAndApplyFunctor(ActionSet):
     if self.reconstructed_array_memory_location==ReconstructedArrayMemoryLocation.Heap or self.reconstructed_array_memory_location==ReconstructedArrayMemoryLocation.HeapWithoutDelete:
       d[ "CREATE_RECONSTRUCTED_PATCH" ] = """
     #if Dimensions==2
-    double* reconstructedPatch = new double[""" + d[ "NUMBER_OF_DOUBLE_VALUES_IN_RECONSTRUCTED_PATCH_2D" ] + """];
+    double* oldQWithHalo = new double[""" + d[ "NUMBER_OF_DOUBLE_VALUES_IN_RECONSTRUCTED_PATCH_2D" ] + """];
     #elif Dimensions==3
-    double* reconstructedPatch = new double[""" + d[ "NUMBER_OF_DOUBLE_VALUES_IN_RECONSTRUCTED_PATCH_3D" ] + """];
+    double* oldQWithHalo = new double[""" + d[ "NUMBER_OF_DOUBLE_VALUES_IN_RECONSTRUCTED_PATCH_3D" ] + """];
     #endif
 """    
     elif self.reconstructed_array_memory_location==ReconstructedArrayMemoryLocation.CallStack:
       d[ "CREATE_RECONSTRUCTED_PATCH" ] = """
     #if Dimensions==2
-    double reconstructedPatch[""" + d[ "NUMBER_OF_DOUBLE_VALUES_IN_RECONSTRUCTED_PATCH_2D" ] + """];
+    double oldQWithHalo[""" + d[ "NUMBER_OF_DOUBLE_VALUES_IN_RECONSTRUCTED_PATCH_2D" ] + """];
     #elif Dimensions==3
-    double reconstructedPatch[""" + d[ "NUMBER_OF_DOUBLE_VALUES_IN_RECONSTRUCTED_PATCH_3D" ] + """];
+    double oldQWithHalo[""" + d[ "NUMBER_OF_DOUBLE_VALUES_IN_RECONSTRUCTED_PATCH_3D" ] + """];
     #endif
 """    
     elif self.reconstructed_array_memory_location==ReconstructedArrayMemoryLocation.HeapThroughTarch or self.reconstructed_array_memory_location==ReconstructedArrayMemoryLocation.HeapThroughTarchWithoutDelete:
       d[ "CREATE_RECONSTRUCTED_PATCH" ] = """
-    double* reconstructedPatch;
+    double* oldQWithHalo;
     #if Dimensions==2
-    reconstructedPatch = ::tarch::allocateMemory(""" + d[ "NUMBER_OF_DOUBLE_VALUES_IN_RECONSTRUCTED_PATCH_2D" ] + """, ::tarch::MemoryLocation::Heap);
+    oldQWithHalo = ::tarch::allocateMemory(""" + d[ "NUMBER_OF_DOUBLE_VALUES_IN_RECONSTRUCTED_PATCH_2D" ] + """, ::tarch::MemoryLocation::Heap);
     #elif Dimensions==3
-    reconstructedPatch = ::tarch::allocateMemory(""" + d[ "NUMBER_OF_DOUBLE_VALUES_IN_RECONSTRUCTED_PATCH_3D" ] + """, ::tarch::MemoryLocation::Heap);
+    oldQWithHalo = ::tarch::allocateMemory(""" + d[ "NUMBER_OF_DOUBLE_VALUES_IN_RECONSTRUCTED_PATCH_3D" ] + """, ::tarch::MemoryLocation::Heap);
     #endif
 """    
     elif self.reconstructed_array_memory_location==ReconstructedArrayMemoryLocation.Accelerator or self.reconstructed_array_memory_location==ReconstructedArrayMemoryLocation.AcceleratorWithoutDelete:
       d[ "CREATE_RECONSTRUCTED_PATCH" ] = """
-    double* reconstructedPatch;
+    double* oldQWithHalo;
     #if Dimensions==2
-    reconstructedPatch = ::tarch::allocateMemory(""" + d[ "NUMBER_OF_DOUBLE_VALUES_IN_RECONSTRUCTED_PATCH_2D" ] + """, ::tarch::MemoryLocation::ManagedAcceleratorMemory);
+    oldQWithHalo = ::tarch::allocateMemory(""" + d[ "NUMBER_OF_DOUBLE_VALUES_IN_RECONSTRUCTED_PATCH_2D" ] + """, ::tarch::MemoryLocation::ManagedAcceleratorMemory);
     #elif Dimensions==3
-    reconstructedPatch = ::tarch::allocateMemory(""" + d[ "NUMBER_OF_DOUBLE_VALUES_IN_RECONSTRUCTED_PATCH_3D" ] + """, ::tarch::MemoryLocation::ManagedAcceleratorMemory);
+    oldQWithHalo = ::tarch::allocateMemory(""" + d[ "NUMBER_OF_DOUBLE_VALUES_IN_RECONSTRUCTED_PATCH_3D" ] + """, ::tarch::MemoryLocation::ManagedAcceleratorMemory);
     #endif
 """    
     else:  
@@ -172,15 +172,15 @@ class ReconstructPatchAndApplyFunctor(ActionSet):
 
     if self.reconstructed_array_memory_location==ReconstructedArrayMemoryLocation.Heap:
       d[ "DESTROY_RECONSTRUCTED_PATCH" ] = """
-    delete[] reconstructedPatch;
+    delete[] oldQWithHalo;
 """    
     elif self.reconstructed_array_memory_location==ReconstructedArrayMemoryLocation.HeapThroughTarch:
       d[ "DESTROY_RECONSTRUCTED_PATCH" ] = """
-    ::tarch::freeMemory(reconstructedPatch, tarch::MemoryLocation::Heap );
+    ::tarch::freeMemory(oldQWithHalo, tarch::MemoryLocation::Heap );
 """    
     elif self.reconstructed_array_memory_location==ReconstructedArrayMemoryLocation.Accelerator:
       d[ "DESTROY_RECONSTRUCTED_PATCH" ] = """
-    ::tarch::freeMemory(reconstructedPatch, tarch::MemoryLocation::ManagedAcceleratorMemory );
+    ::tarch::freeMemory(oldQWithHalo, tarch::MemoryLocation::ManagedAcceleratorMemory );
 """    
     else:
       d[ "DESTROY_RECONSTRUCTED_PATCH" ] = ""
@@ -231,8 +231,8 @@ class ReconstructPatchAndApplyFunctor(ActionSet):
       int sourceCellSerialised       = peano4::utils::dLinearised(sourceCell,{DOFS_PER_AXIS});
       int destinationCellSerialised  = peano4::utils::dLinearised(destinationCell,{DOFS_PER_AXIS} + 2*{OVERLAP});
       for (int j=0; j<{UNKNOWNS}; j++) {{
-        reconstructedPatch[destinationCellSerialised*{UNKNOWNS}+j] = {CELL_ACCESSOR}.value[ sourceCellSerialised*{UNKNOWNS}+j ];
-        {ASSERTION_WITH_4_ARGUMENTS}( reconstructedPatch[destinationCellSerialised*{UNKNOWNS}+j]==reconstructedPatch[destinationCellSerialised*{UNKNOWNS}+j], sourceCell, j, _treeNumber, marker.toString() );
+        oldQWithHalo[destinationCellSerialised*{UNKNOWNS}+j] = {CELL_ACCESSOR}.value[ sourceCellSerialised*{UNKNOWNS}+j ];
+        {ASSERTION_WITH_4_ARGUMENTS}( oldQWithHalo[destinationCellSerialised*{UNKNOWNS}+j]==oldQWithHalo[destinationCellSerialised*{UNKNOWNS}+j], sourceCell, j, _treeNumber, marker.toString() );
       }}
     }}
 """
@@ -260,10 +260,10 @@ class ReconstructPatchAndApplyFunctor(ActionSet):
           int sourceCellSerialised        = serialisePatchIndex(sourceCell,d);
 
           for (int j=0; j<{UNKNOWNS}; j++) {{
-            reconstructedPatch[ destinationCellSerialised*{UNKNOWNS}+j ] = {FACES_ACCESSOR}(d).value[ sourceCellSerialised*{UNKNOWNS}+j ];
+            oldQWithHalo[ destinationCellSerialised*{UNKNOWNS}+j ] = {FACES_ACCESSOR}(d).value[ sourceCellSerialised*{UNKNOWNS}+j ];
             {ASSERTION_WITH_7_ARGUMENTS}( 
               {ASSERTION_PREFIX_FOR_HALO} or 
-              reconstructedPatch[ destinationCellSerialised*{UNKNOWNS}+j ]==reconstructedPatch[ destinationCellSerialised*{UNKNOWNS}+j ], 
+              oldQWithHalo[ destinationCellSerialised*{UNKNOWNS}+j ]==oldQWithHalo[ destinationCellSerialised*{UNKNOWNS}+j ], 
               sourceCell, destinationCell, j, d, marker.toString(), _treeNumber, marker.toString()
             );
           }}
@@ -274,10 +274,10 @@ class ReconstructPatchAndApplyFunctor(ActionSet):
           destinationCellSerialised   = peano4::utils::dLinearised(destinationCell,{DOFS_PER_AXIS} + 2*{OVERLAP});
           sourceCellSerialised        = serialisePatchIndex(sourceCell,d);
           for (int j=0; j<{UNKNOWNS}; j++) {{
-            reconstructedPatch[ destinationCellSerialised*{UNKNOWNS}+j ] = {FACES_ACCESSOR}(d+Dimensions).value[ sourceCellSerialised*{UNKNOWNS}+j ];
+            oldQWithHalo[ destinationCellSerialised*{UNKNOWNS}+j ] = {FACES_ACCESSOR}(d+Dimensions).value[ sourceCellSerialised*{UNKNOWNS}+j ];
             {ASSERTION_WITH_7_ARGUMENTS}( 
               {ASSERTION_PREFIX_FOR_HALO} or 
-              reconstructedPatch[ destinationCellSerialised*{UNKNOWNS}+j ]==reconstructedPatch[ destinationCellSerialised*{UNKNOWNS}+j ], 
+              oldQWithHalo[ destinationCellSerialised*{UNKNOWNS}+j ]==oldQWithHalo[ destinationCellSerialised*{UNKNOWNS}+j ], 
               sourceCell, destinationCell, j, d, marker.toString(), _treeNumber, marker.toString()
             );
           }}
@@ -289,7 +289,7 @@ class ReconstructPatchAndApplyFunctor(ActionSet):
 
 
   _Template_TouchCellFirstTime_Core = """
-    double* targetPatch = {CELL_ACCESSOR}.value;
+    double* newQ = {CELL_ACCESSOR}.value;
     {CELL_FUNCTOR_IMPLEMENTATION}
     
     {DESTROY_RECONSTRUCTED_PATCH}

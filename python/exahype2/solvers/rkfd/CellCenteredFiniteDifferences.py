@@ -890,7 +890,7 @@ The finest mesh width of """ + str(self.get_finest_volume_size(domain_size)) + "
   {
     int index = 0;
     dfor( volume, {{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}} ) {
-      enforceCCZ4constraints( targetPatch+index );
+      enforceCCZ4constraints( newQ+index );
       index += {{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}};
     }
   }
@@ -898,10 +898,10 @@ The finest mesh width of """ + str(self.get_finest_volume_size(domain_size)) + "
 
     Within this kernel, you have at least the following variables available:
 
-    - targetPatch This is a pointer to the whole data structure (one large
+    - newQ This is a pointer to the whole data structure (one large
         array).
         The patch is not supplemented by a halo layer.
-    - reconstructedPatch This is a pointer to the data snapshot before the
+    - oldQWithHalo This is a pointer to the data snapshot before the
         actual update. This data is combined with the halo layer, i.e. if you
         work with 7x7 patches and a halo of 2, the pointer points to a 11x11
         patch.

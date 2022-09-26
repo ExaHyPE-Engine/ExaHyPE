@@ -986,7 +986,7 @@ The finest mesh width of """ + str(self.get_finest_volume_size(domain_size)) + "
          {
            int index = 0;
            dfor( volume, {{NUMBER_OF_VOLUMES_PER_AXIS}} ) {
-             enforceCCZ4constraints( targetPatch+index );
+             enforceCCZ4constraints( newQ+index );
              index += {{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}};
            }
          }
@@ -995,7 +995,7 @@ The finest mesh width of """ + str(self.get_finest_volume_size(domain_size)) + "
      for postprocessing:
      
          ::exahype2::fv::mapInnerNeighbourVoxelAlongBoundayOntoAuxiliaryVariable(
-           targetPatch,
+           newQ,
            {{NUMBER_OF_VOLUMES_PER_AXIS}},
            {{NUMBER_OF_UNKNOWNS}},
            {{NUMBER_OF_AUXILIARY_VARIABLES}}
@@ -1006,7 +1006,7 @@ The finest mesh width of """ + str(self.get_finest_volume_size(domain_size)) + "
     within your injected code. Furthermore, you have the following two variables
     available:
 
-    - targetPatch This is a pointer to the whole data structure (one large
+    - newQ This is a pointer to the whole data structure (one large
         array). The patch is not supplemented by a halo layer.
     - marker An instance of the CellMarker which identifies the cell.
 

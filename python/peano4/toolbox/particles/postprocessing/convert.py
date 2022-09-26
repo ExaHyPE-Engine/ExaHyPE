@@ -18,7 +18,7 @@ parser.add_argument('files', metavar='files', nargs='+', help='Input files. If t
 parser.add_argument("-d",  "--dim",           dest="dimensions",  type=int, required=True, help="Dimensions of underlying simulation, i.e. 2 or 3" )
 parser.add_argument("-o",  "--output",        dest="output",      help="Output name. An appropritae filename extension is added automatically depending on the output format" )
 parser.add_argument("-t",  "--target",        dest="target",      choices=["seismogram","initial-tracer-location"],   help="Pick output type" )
-parser.add_argument("-v",  "--value",         dest="value",       help="Pick value to go with target" )
+parser.add_argument("-v",  "--value",         dest="value",       required=True, help="Pick value to go with target (quantity of interest of Q data projected onto tracer)" )
 parser.add_argument("-p",  "--pick",          dest="pick",        default="", help="Pick particles. Empty means all particles, otherwise you specify the particles through '(1,4)(7,8)'" )
 parser.add_argument("-l",  "--legend",        dest="legend",      default=None, help="Legend (comma-separated)" )
 args = parser.parse_args()
@@ -34,7 +34,7 @@ Type in --help to find out about the arguments.
 
 """)
 
-dataset = []
+datasets = []
 for file in args.files:
   if not ".csv" in file:
     print( "filename " + file + " is not complete. Search for files " + file + "*.csv")
@@ -62,10 +62,16 @@ if args.pick!="":
 if args.target=="seismogram":
   column = int( args.value )
   plt.clf()
-  peano4.toolbox.particles.postprocessing.seismogram( flattened_dataset, column, args.legend )
+  labels = None
+  if args.legend!=None:
+    labels = args.legend.split(",")
+  peano4.toolbox.particles.postprocessing.seismogram( flattened_dataset, column, labels )
   plt.legend()
-  plt.savefig( args.output + ".pdf" )
-  plt.savefig( args.output + ".png" )
+  output = args.output
+  if output==None:
+    output = args.files[0]
+  plt.savefig( output + ".pdf" )
+  plt.savefig( output + ".png" )
 elif args.target=="initial-tracer-location" and args.dimensions==2:
   keys = flattened_dataset.extract_particle_keys()
   for particle in keys:

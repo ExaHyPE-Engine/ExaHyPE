@@ -729,6 +729,68 @@ This approach quickly becomes computationally infeasible.
 We need an approach that switches gears once we are stationary.
 
 
+\begin{table}
+ \caption{
+  Some frequently used pre-defined variables or pointers within \ExaHyPE\ code
+  snippets:
+ }
+ \begin{center}
+  \begin{tabular}{l|p{9cm}|p{2cm}}
+   Name & Description & Type \\
+   \hline
+   \texttt{marker} 
+     & Cell marker which represents the hole cell (or patch in a FV context). Use
+     the markers getters to access the cell size or position. 
+     & \texttt{CellMarker} 
+     \\
+   \texttt{newQ} 
+     & Pointer to solution at new time step, i.e.~to the new solution within a
+     cell.
+     The the routines exposed to the user, data is always organised as a lexicographically ordered array (left to right, bottom to
+     top, front to back) similar to a regular grid, and the unknowns are ordered
+     AoS. The field always comprises both the unknowns and auxiliary values. In
+     a Finite Volume context, the field never holds halo data.
+     & \texttt{double*}
+     \\
+   \texttt{oldQ} 
+     & Pointer to solution at the old (current) time step. In
+     a Finite Volume context, the field never holds halo data.
+     & \texttt{double*}
+     \\
+   \texttt{deltaQ} 
+     & Pointer to difference between \texttt{newQ} and \texttt{oldQ}, i.e.
+     $Q^{(new)}-Q^{(old)}$. As \ExaHyPE\ never evolves auxiliary variables, this
+     field does only store the unknowns of the PDE as AoS. 
+     & \texttt{double*}
+     \\
+   \texttt{dQdt} 
+     & Pointer to derivative of the unknown. As \ExaHyPE\ never evolves
+     auxiliary variables, this field does only store the unknowns of the PDE as
+     AoS. I'm aware that the name is inconsistent with the naming below, but
+     \texttt{dQdtimeStepSize} would be weird. & \texttt{double*}
+     \\
+   \texttt{oldQWithHalo} 
+     & Exists only in a Finite Volume context. Different to \texttt{oldQ}, this
+     field holds halo data.
+     & \texttt{double*}
+     \\
+   \texttt{Q} 
+     & See discussion around \texttt{newQ} and \texttt{oldQ}. I use a plain
+     \texttt{Q} if there is no old or new data, or if it is implicitly clear
+     that we evaluate the solution at a certain (old) point and plan to step
+     into the future. 
+     & \texttt{double*} \\
+   \texttt{timeStamp} 
+     & I decided to stick to this (long) identifier rather than a plain
+     \texttt{t} as you find it in math papers. & \texttt{double} \\
+   \texttt{timeStepSize} 
+     & I decided to stick to this (long) identifier rather than a plain
+     \texttt{dt} ($\Delta t$) as you find it in math papers. & \texttt{double}
+     \\
+  \end{tabular}
+ \end{center}
+\end{table}
+
 To determine if the solver is (close to) stationary, we evaluate the difference 
 between the gradient of $\phi$ after each Poisson step.
 For this, we tweak the coupling term: 
@@ -1961,33 +2023,19 @@ with each snapshot, but obviously you haven't inserted any tracers yet.
 There are different inserters shipped with \ExaHyPE. 
 Alternatively, you might want to write your own, bespoke particle seed (see
 below).
-The snippet below inserts particles into your grid along a Cartesian topology
-and adds some random noise:
+The snippet below inserts three particles into your grid:
 
 
 \begin{code}
 project.add_action_set_to_initialisation( 
- exahype2.tracer.InsertParticlesAlongCartesianMesh( 
-  particle_set=tracer_particles,
-  h=args.h/8.0, noise=True 
-))
-project.add_action_set_to_timestepping(
-  peano4.toolbox.particles.UpdateParallelState(
-    particle_set=tracer_particles
-  )
-)
+  exahype2.tracer.InsertParticlesbyCoordinates( 
+    particle_set=tracer_particles, coordinates=[[-0.4251,0,0],[0,0,0],[0.4251,0,0]]))
 \end{code}
 
-
-\begin{definition}
- All of \Peano's particle toolbox routines are written for large-scale
- parallel (MPI) runs.
- Therefore, you have to add \texttt{UpdateParallelState} to the time stepping
- always.
-\end{definition}
-
 \noindent
-With this additional seed and the update of the particle state, you can run your
+There are other seeds which insert tracers along a Cartesian
+topology, adds some random noise, or read tracer positions from a file.
+Once inserted, you can run your
 code and visualise the particles.
 However, these particles do not move at all yet or track the actual data of
 interest.
@@ -2003,12 +2051,18 @@ solver:
 project.add_action_set_to_timestepping(
   exahype2.tracer.FiniteVolumesTracing(
     tracer_particles,
-    thesolver,
-    [],        # velocity indices
-    range(59), # data indices
-    0,         # scaling of velocities
-    time_stepping_kernel="toolbox::particles::StaticPosition"))
+    my_solver,
+    time_stepping_kernel="toolbox::particles::staticPosition",
+    project_on_tracer_properties_kernel="::exahype2::fv::projectAllValuesOntoParticle_piecewiseConstant"))
 \end{code}
+
+\noindent
+Again, there are different interpolation schemes shipped with \ExaHyPE.
+Please note that you will have to pick an interpolation that fits to your
+solver.
+In the snippet above, we use a Finite Volume solver and therefore pick a
+projection from the \texttt{exahype2::fv} namespace.
+Other discretisations will require other interpolation schemes.
 
 
 \subsection{Dump tracer data into CSV database}
@@ -2019,7 +2073,11 @@ the fact that particles can dump their solution into a database:
 \begin{code}
 project.add_action_set_to_timestepping( 
  exahype2.tracer.DumpTrajectoryIntoDatabase(
-  tracer_particles,thesolver,particle_spacing/10.0,"TracerDB"
+  particle_set=tracer_particles,
+  solver=my_solver,
+  filename="MyTracerDB",
+  data_delta_between_two_snapsots=1e16,
+  time_delta_between_two_snapsots=0.0001
 ))
 \end{code}
 
@@ -2032,82 +2090,29 @@ particle actually moves.
 The \texttt{DumpTrajectoryIntoDatabase} documentation provides more detail.
 
 
-\subsection{Write your own particle seed}
+The data format within the csv file is rather self-explaining.
 
-If you want to write your own particle seed, I recommend that you copy over an
-existing one and adopt it to your need.
-Switch to \texttt{python/exahype2/tracer} and copy the class \linebreak
-\texttt{InsertParticlesAlongCartesianMesh} over to modify it.
-The invocation within your Python application script then has to be altered,
-too:
-
-\begin{code}
-project.add_action_set_to_initialisation( MyFancySeed(. ..) ))
-\end{code}
-
-
-\noindent
-The core ingredients in the seed is the code snippet that decides what happens
-if you touch a vertex for the first time:
-\begin{code}
-  __Template_TouchVertexFirstTime = jinja2.Template("""
-  if ( not marker.isRefined() ) {
-    auto newParticles =
-    toolbox::particles::createEquallySpacedParticles<globaldata::{{PARTICLE}}>...
-    for (auto& p: newParticles) {
-      p->setNumber(0,_spacetreeId);
-      p->setNumber(1,_particleNumberOnThisTree);
-      _particleNumberOnThisTree++;
-    }
-    fineGridVertex{{PARTICLES_CONTAINER}}.insert( 
-      fineGridVertex{{PARTICLES_CONTAINER}}.end(), newParticles.begin(),
-      newParticles.end() 
-    ); 
-  }
-""")
-\end{code}
-
-\noindent
-The routine only triggers some activities for unrefined vertices. 
-If a vertex is not refined further, it invokes the routine 
-\texttt{createEquallySpacedParticles} from the particle toolbox which
-returns a container over particles, and then takes these particles and 
-inserts them into the domain.
-While you can alter this mechanism obviously, a modified, simpler seed can look
-like this:
-
-\begin{code}
-  __Template_TouchVertexFirstTime = jinja2.Template("""
-  if ( 
-    not marker.isRefined() 
-    and
-    marker.x(0)==...      // check where the centre of this vertex is
-    and
-    marker.x(1)==...      // check where the centre of this vertex is
-    and
-    marker.x(1)==...      // check where the centre of this vertex is
-    and
-    marker.h(0)==...      // check how big the area around this vertex is
-    and
-    ...
-  ) {
-    globaldata::{{PARTICLE}}* p = new globaldata::{{PARTICLE}}( ... ); 
-    p->setNumber(0,_spacetreeId);
-    p->setNumber(1,_particleNumberOnThisTree);
-    p->setX(0, ... );     // x coordinate
-    p->setX(1, ... );     // y coordinate
-    p->setX(2, ... );     // z coordinate
-    p->setCutOffRadius(0.0); // you can force particles to certain resolution 
-                             // levels. Not used here.
-    _particleNumberOnThisTree++;
-    fineGridVertex{{PARTICLES_CONTAINER}}.push_back( p ); 
-  }
-""")
-\end{code}
+\begin{itemize}
+  \item Each particle has a unique two-tuple of indices. We do not enumerate the
+  particles globally, but instead give them two numbers. The first one is the
+  tree that has originally generated a particle, and the second number then is a
+  continuous number, i.e.~counts the particles per tree. As we have two numbers,
+  we don't have to synchronise any global particle generation. Note that the
+  two-tuple stays invariant per particle. Therefore, a particle might be the
+  12th that's generated on tree 7, and hence carry the index (7,11). If it moves
+  around, it might as well end up on three 4.
+  \item Each particle entry is equipped with a time stamp.
+  \item Each particle entry is equipped with the coordinates of the particle per
+  particle dump. If particles do not move, this is redundant information.
+  \item Each particle entry then enlists all the particle's data values at the
+  time when we dump.
+\end{itemize}
 
 
-
-
+\begin{remark}
+ There are postprocessing scripts for particle data in the directory
+ \texttt{python/peano4/toolbox/particles/postprocessing}. It is worth 
+\end{remark}
 
 \subsection{Encourage particles to spread out evenly}
 
