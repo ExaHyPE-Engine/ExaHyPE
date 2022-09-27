@@ -71,17 +71,22 @@ with appropriate pathes and filenames set.
 
 ## Some results
 
-You should obtain pdfs and pngs that resemble the following graphs for Finite
-Volumes:
+You should obtain pdfs and pngs that resemble the following graphs:
 
-<img src="example-output/Tracer-fv-0.3-rank-0-snapshot-0.piecewise-constant.csv.png" />
-<img src="example-output/Tracer-fv-0.3-rank-0-snapshot-0.piecewise-linear.csv.png" />
+<img src="example-output/Tracer-fv-0.5-rank-0-snapshot-0.csv.png" />
+<img src="example-output/Tracer-dg0-rk1-0.1-rank-0-snapshot-0.csv.png" />
 
-The above graphs are produced for the experiment's default settings i.e. a mesh size
-of 0.3. 
-Though these graphs simulate only a very brief total time (up to end time 1.0), we 
+The above graphs compare the outcomes of a finite volume code (left) to the
+outcomes of a DG0-RK1 code (rigth). The mesh is chosen as 0.5 (FV) vs 0.1 
+(DG) with the default patch size of 9x9x9. Consequently, the two simulations
+work on exactly the same spatial discretisation.
+As DG0-RK1 degenerates to a plain Finite Volume scheme, the graphs should be
+exactly the same, and we observe that this is indeed the case.
+
+
+Though the graphs simulate only a very brief total time (up to end time 1.0), we 
 already see a strong damping of the amplitudes.
-This is a characteristic property of first-order Finite Volume schemes.
+This is a characteristic property of first-order (Finite Volume) schemes.
 
 
 In the Python script, we played around with piecewise constant interpolation onto the tracer vs. piecewise
@@ -91,6 +96,15 @@ of the solution.
 
 
 <img src="example-output/Tracer-dg0-rk1-0.1-rank-0-snapshot-0.csv.png" />
+<img src="example-output/Tracer-dg0-rk2-0.1-rank-0-snapshot-0.csv.png" />
+<img src="example-output/Tracer-dg0-rk4-0.1-rank-0-snapshot-0.csv.png" />
 
-The DG0 scheme (above is Runge-Kutta 1) gives exactly the same damping behaviour.
-All data above stem from different grid resolutions, soit si 
+The script also allows you to compare different temporal orders.
+All the plots above are for different time integration orders (1,2,4) and it is
+close to impossiblet to spot a difference between those sketches.
+We we may conclude that the temporal discretisation error is not the (solve) dominating
+issue here. 
+
+
+
+
