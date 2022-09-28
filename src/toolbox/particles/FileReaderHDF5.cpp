@@ -11,9 +11,6 @@ tarch::logging::Log  toolbox::particles::FileReaderHDF5::_log( "toolbox::particl
 
 void toolbox::particles::FileReaderHDF5::readHDF5File( const std::string& filename ) {
 
-  /* initialize the index for vector containers */
-  _index = 0; 
-
 #ifdef UseHDF5
 
   logInfo( "readHDF5File()", "Entering filereader..." );
@@ -511,6 +508,8 @@ std::list< tarch::la::Vector<Dimensions,double> > toolbox::particles::FileReader
 
   std::list< tarch::la::Vector<Dimensions,double> >::iterator p = _Coordinates.begin();
 
+  _index = 0; 
+
   while ( p!=_Coordinates.end() ) {
 
     bool overlaps = true;
@@ -523,7 +522,7 @@ std::list< tarch::la::Vector<Dimensions,double> > toolbox::particles::FileReader
     if (overlaps) {
       /* Store coordinates */
       result.push_back(*p);
-      
+
       /* Also store other fields.
        * This current version will make Voxel arrays grow in size beyond the
        * size of the returned result (coordinates). @TODO Improve this so these
@@ -541,8 +540,6 @@ std::list< tarch::la::Vector<Dimensions,double> > toolbox::particles::FileReader
       logDebug( "getParticlesWithinVoxel()", "_InternalEnergyWithinVoxel:  " << _InternalEnergyWithinVoxel[_index] );
       logDebug( "getParticlesWithinVoxel()", "_ParticleIDsWithinVoxel:     " << _ParticleIDsWithinVoxel[_index] );
 
-      _index++;
-      
       if (remove) {
         p = _Coordinates.erase(p);
       }
@@ -554,6 +551,7 @@ std::list< tarch::la::Vector<Dimensions,double> > toolbox::particles::FileReader
       p++;
     }
     
+    _index++;
   }
 
   return result;
