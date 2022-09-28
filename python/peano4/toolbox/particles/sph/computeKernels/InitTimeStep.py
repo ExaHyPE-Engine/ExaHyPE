@@ -55,7 +55,7 @@ class InitializeTimeStep:
       
       /* Flag if particle is at boundary of the simulation box */
       localParticle->setIsBoundaryParticle(false);
-      const double max_dist_boundary = 0.05;
+      const double max_dist_boundary = 5 * (1.0 /HYDRO_PART_NUMBER); 
 
       for (int d=0; d<Dimensions; d++) {
         if ( localParticle->getX()(d) < max_dist_boundary || 
