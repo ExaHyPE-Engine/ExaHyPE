@@ -129,33 +129,40 @@ int main(int argc, char** argv) {
 
     examples::particles::observers::Init initObserver;
     peano4::parallel::SpacetreeSet::getInstance().traverse(initObserver);
+    examples::particles::vertexdata::ParticleSet::finishedTraversal();
     logInfo( "main()", "added particles" )
+
+    examples::particles::observers::InitTimeStep initTimeStep;
+
+    /* Run any action to re-assign particles to vertices */
+    peano4::parallel::SpacetreeSet::getInstance().traverse(initTimeStep);
+    examples::particles::vertexdata::ParticleSet::finishedTraversal();
 
     examples::particles::observers::Plot plotObserver;
     peano4::parallel::SpacetreeSet::getInstance().traverse(plotObserver);
+    examples::particles::vertexdata::ParticleSet::finishedTraversal();
     logInfo( "main()", "dumped initial condition" )
 
+    /* 
+     * Name the steps that will be used 
+     * */
+
+    examples::particles::observers::ForceNonSym forcespart;
+    examples::particles::observers::ComputeDensityAndUpdateSmoothingLength computeDensityAndUpdateSmoothingLength;
+    examples::particles::observers::ResetHasConverged ResetHasConvergedNR;
+    examples::particles::observers::Drift driftpart;
+    examples::particles::observers::Kick1 kick1part;
+    examples::particles::observers::Kick2 kick2part;
+    examples::particles::observers::HydroKickExtra kickExtra;
+    examples::particles::observers::PredictHydro predictHydroPart;
+    examples::particles::observers::ImposeBC ImposeBCpart;
+    examples::particles::observers::EndTimeStep endTimeStep;
 
     /* Main loop */
     for (int i=0; i<500; i++) {
       for (int j=0; j<10; j++) { /* Numbers of time-steps between two output snapshots */
         logInfo( "main()", "run timestep" )
 
-        /* 
-         * Name the steps that will be used 
-         * */
-
-        examples::particles::observers::InitTimeStep initTimeStep;
-        examples::particles::observers::ForceNonSym forcespart;
-        examples::particles::observers::ComputeDensityAndUpdateSmoothingLength computeDensityAndUpdateSmoothingLength;
-        examples::particles::observers::ResetHasConverged ResetHasConvergedNR;
-        examples::particles::observers::Drift driftpart;
-        examples::particles::observers::Kick1 kick1part;
-        examples::particles::observers::Kick2 kick2part;
-        examples::particles::observers::HydroKickExtra kickExtra;
-        examples::particles::observers::PredictHydro predictHydroPart;
-        examples::particles::observers::ImposeBC ImposeBCpart;
-        examples::particles::observers::EndTimeStep endTimeStep;
 
         /* "Initialize time-step" */
         peano4::parallel::SpacetreeSet::getInstance().traverse(initTimeStep);
