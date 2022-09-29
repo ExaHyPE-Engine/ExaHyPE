@@ -2,6 +2,9 @@
 #include "TestUtils.h"
 #include "../DGUtils.h"
 
+#include "peano4/datamanagement/CellMarker.h"
+
+
 /*
  * We use precomputed values for lagrange polynomials as basis function
  *  on Gauss-Legendre nodes
@@ -14,6 +17,60 @@ exahype2::dg::tests::DGUtilsTest::DGUtilsTest():
 void exahype2::dg::tests::DGUtilsTest::run(){
   testMethod( testGetIndex );
   testMethod( testComputeGradientOnConstantSolution );
+  testMethod( testEvaluatePolynomialOrder1 );
+}
+
+
+void exahype2::dg::tests::DGUtilsTest::testEvaluatePolynomialOrder1() {
+  const int order = 1;
+  double QuadratureNodes1d[] = { 0.21132486540518713,0.7886751345948129 };
+
+  peano4::grid::GridTraversalEvent    dummyEvent;
+
+  #if Dimensions==2
+  dummyEvent.setX( {0.4,0.6} );
+  dummyEvent.setH( {0.2,0.2} );
+  double Q0[] = {1.2,1.2,1.2,1.2};
+  tarch::la::Vector<Dimensions,double>  x = {0.5,0.7};
+  #else
+  dummyEvent.setX( {0.4,0.6,0.8} );
+  dummyEvent.setH( {0.2,0.2,0.2} );
+  double Q0[] = {1.2,1.2,1.2,1.2,1.2,1.2,1.2,1.2};
+  tarch::la::Vector<Dimensions,double>  x = {0.5,0.7,0.9};
+  #endif
+
+  peano4::datamanagement::CellMarker  cellMarker(dummyEvent);
+
+  double result;
+  result = exahype2::dg::evaluatePolynomial(
+    cellMarker,
+    order,
+    QuadratureNodes1dP1,
+    1,
+    Q0,
+    x,
+    0
+  );
+
+  validateNumericalEquals( result, 1.2 );
+
+  #if Dimensions==2
+  double Q1[] = {1.0,1.2,1.2,1.4};
+  #else
+  double Q1[] = {1.0,1.2,1.2,1.2,1.2,1.2,1.2,1.4};
+  #endif
+
+  result = exahype2::dg::evaluatePolynomial(
+    cellMarker,
+    order,
+    QuadratureNodes1dP1,
+    1,
+    Q1,
+    x,
+    0
+  );
+
+  validateNumericalEquals( result, 1.2 );
 }
 
 
