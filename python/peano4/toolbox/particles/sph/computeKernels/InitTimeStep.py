@@ -67,15 +67,17 @@ class InitializeTimeStep:
         }
       }
 
-      // Fix right boundary of the Sod shock, which as fewer particles
-      const double max_dist_boundary_right = 8 * max_dist_boundary;
-      for (int d=0; d<Dimensions; d++) {
-        if ( localParticle->getX()(d) > 0.5 &&
-             localParticle->getX()(d) > (1.0 - max_dist_boundary_right) ) 
-        {
-          localParticle->setIsBoundaryParticle(true);
-        }
-      }
+//      // Fix right boundary of the Sod shock, which as fewer particles
+//      const double max_dist_boundary_right = 8 * max_dist_boundary;
+//      for (int d=0; d<Dimensions; d++) {
+//        if ( localParticle->getX()(d) > 0.5 &&
+//             localParticle->getX()(d) > (1.0 - max_dist_boundary_right) ) 
+//        {
+//          localParticle->setIsBoundaryParticle(true);
+//          localParticle->setDensity(0.125);
+//          localParticle->setPressure(0.1);
+//        }
+//      }
 
 
       /* Also prepare particle for Drift step */
