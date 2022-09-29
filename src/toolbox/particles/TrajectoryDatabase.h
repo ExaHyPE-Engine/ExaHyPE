@@ -66,7 +66,14 @@ class toolbox::particles::TrajectoryDatabase {
       tarch::la::Vector<Dimensions,double>  x;
       double                                timestamp;
       double*                               data;
+      /**
+       * Have to memorise this guy to be able to write a proper copy
+       * constructor.
+       */
+      const int                             numberOfDataEntries;
 
+      Entry( const Entry& );
+      ~Entry();
       Entry( const TrajectoryDatabase& database, const tarch::la::Vector<Dimensions,double>&  x_, double  timestamp_ );
     };
 
