@@ -70,6 +70,9 @@ if args.target=="seismogram":
   output = args.output
   if output==None:
     output = args.files[0]
+    plt.title( output )
+  plt.xlabel( "Simulation time $t$" )
+  plt.ylabel( "$Q_{" + str(column) + "}(t)$" )
   plt.savefig( output + ".pdf" )
   plt.savefig( output + ".png" )
 elif args.target=="initial-tracer-location" and args.dimensions==2:
