@@ -55,7 +55,7 @@ class InitializeTimeStep:
       
       /* Flag if particle is at boundary of the simulation box */
       localParticle->setIsBoundaryParticle(false);
-      const double max_dist_boundary = 5 * (1.0 /HYDRO_PART_NUMBER); 
+      const double max_dist_boundary = 3 * (1.0 /HYDRO_PART_NUMBER); 
 
       for (int d=0; d<Dimensions; d++) {
         if ( localParticle->getX()(d) < max_dist_boundary || 
@@ -66,6 +66,17 @@ class InitializeTimeStep:
 
         }
       }
+
+      // Fix right boundary of the Sod shock, which as fewer particles
+      const double max_dist_boundary_right = 8 * max_dist_boundary;
+      for (int d=0; d<Dimensions; d++) {
+        if ( localParticle->getX()(d) > 0.5 &&
+             localParticle->getX()(d) > (1.0 - max_dist_boundary_right) ) 
+        {
+          localParticle->setIsBoundaryParticle(true);
+        }
+      }
+
 
       /* Also prepare particle for Drift step */
       localParticle->setMoveState( globaldata::Particle::MoveState::NotMovedYet );    
