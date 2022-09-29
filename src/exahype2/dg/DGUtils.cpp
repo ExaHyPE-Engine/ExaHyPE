@@ -226,11 +226,11 @@ double exahype2::dg::evaluatePolynomial(
   dfor(currentDoF,order+1) {
     double denominator = 1.0;
     double enumerator  = 1.0;
-    dfor(quadraturePoint,order+1) {
-      for (int d=0; d<Dimensions; d++) {
-        if (quadraturePoint(d)!=currentDoF(d)) {
-          double normalisedQuadratePointDistance = QuadratureNodes1d[currentDoF(d)]-QuadratureNodes1d[quadraturePoint(d)];
-          double distanceToQuadraturePoint1d     = x(d)-( QuadratureNodes1d[quadraturePoint(d)]*marker.h()(d)+marker.getOffset()(d) );
+    for (int d=0; d<Dimensions; d++) {
+      for (int i=0; i<order+1; i++) {
+        if ( i!=currentDoF(d) ) {
+          double normalisedQuadratePointDistance = QuadratureNodes1d[currentDoF(d)]-QuadratureNodes1d[i];
+          double distanceToQuadraturePoint1d     = x(d)-( QuadratureNodes1d[i]*marker.h()(d)+marker.getOffset()(d) );
           denominator *= normalisedQuadratePointDistance * marker.h()(d);
           enumerator  *= distanceToQuadraturePoint1d;
         }

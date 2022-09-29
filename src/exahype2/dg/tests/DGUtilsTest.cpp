@@ -31,12 +31,14 @@ void exahype2::dg::tests::DGUtilsTest::testEvaluatePolynomialOrder1() {
   dummyEvent.setX( {0.4,0.6} );
   dummyEvent.setH( {0.2,0.2} );
   double Q0[] = {1.2,1.2,1.2,1.2};
-  tarch::la::Vector<Dimensions,double>  x = {0.5,0.7};
+  tarch::la::Vector<Dimensions,double>  xCentre     = {0.5,0.7};
+  tarch::la::Vector<Dimensions,double>  xLeftBottom = {0.4+0.2*QuadratureNodes1dP1[0],0.6+0.2*QuadratureNodes1dP1[0]};
   #else
   dummyEvent.setX( {0.4,0.6,0.8} );
   dummyEvent.setH( {0.2,0.2,0.2} );
   double Q0[] = {1.2,1.2,1.2,1.2,1.2,1.2,1.2,1.2};
-  tarch::la::Vector<Dimensions,double>  x = {0.5,0.7,0.9};
+  tarch::la::Vector<Dimensions,double>  xCentre = {0.5,0.7,0.9};
+  tarch::la::Vector<Dimensions,double>  xLeftBottom = {0.4+0.2*QuadratureNodes1dP1[0],0.6+0.2*QuadratureNodes1dP1[0],0.8+0.2*QuadratureNodes1dP1[0]};
   #endif
 
   peano4::datamanagement::CellMarker  cellMarker(dummyEvent);
@@ -48,29 +50,21 @@ void exahype2::dg::tests::DGUtilsTest::testEvaluatePolynomialOrder1() {
     QuadratureNodes1dP1,
     1,
     Q0,
-    x,
+    xLeftBottom,
     0
   );
-
-  validateNumericalEquals( result, 1.2 );
-
-  #if Dimensions==2
-  double Q1[] = {1.0,1.2,1.2,1.4};
-  #else
-  double Q1[] = {1.0,1.2,1.2,1.2,1.2,1.2,1.2,1.4};
-  #endif
+  validateNumericalEqualsWithParams1( result, 1.2, cellMarker.toString() );
 
   result = exahype2::dg::evaluatePolynomial(
     cellMarker,
     order,
     QuadratureNodes1dP1,
     1,
-    Q1,
-    x,
+    Q0,
+    xCentre,
     0
   );
-
-  validateNumericalEquals( result, 1.2 );
+  validateNumericalEqualsWithParams1( result, 1.2, cellMarker.toString() );
 }
 
 
