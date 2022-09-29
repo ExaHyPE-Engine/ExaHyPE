@@ -26,7 +26,7 @@ files = glob.glob(snapshot_dir + "particles-*.vtu")
 files = Tcl().call('lsort', '-dict', files)
 
 # Simulation parameters
-E_ini = 1.5622
+E_ini = 1.11362
 time_step_sim = 1e-3
 snapshot_rate = 10
 SUN_X = 0.5
@@ -82,7 +82,7 @@ plt.margins(0.05, 0.1)
 plt.tick_params(direction='in', top=True, right=True)
 plt.axhline(0, c='gray', ls=':', lw=1.2, zorder=-49 )
 plt.xlim(0, t_all.max())
-plt.ylim(-0.2, 0.1 )
+plt.ylim(-0.005, 0.005 )
 
 #plt.show()
 fig.savefig('energy_conservation_profile.pdf')
