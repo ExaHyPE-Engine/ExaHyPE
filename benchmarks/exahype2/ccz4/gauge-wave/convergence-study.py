@@ -13,7 +13,7 @@ parser = argparse.ArgumentParser(description='ExaHyPE 2 - CCZ4-GaugeWave benchma
 parser.add_argument("-j",   "--parallel-builds",   dest="j",              type=int, default=-1, help="Parallel builds" )
 parser.add_argument("-pd",  "--peano-dir",         dest="peanodir",       default="../../../../", help="Peano4 directory" )
 parser.add_argument("-v",   "--verbose",           dest="verbose",        action="store_true", default=False, help="Verbose")
-parser.add_argument("-s",   "--solver",            dest="solver",         choices=["fv", "fd4-rk1", "fd4-rk2", "fd4-rk3", "fd4-rk4", "dg0-rk1",  "dg0-rk2",  "dg0-rk3",  "dg0-rk4", "dg1-rk1", "dg2-rk2", "dg3-rk1", "dg3-rk3", "dg4-rk4", "dg4-rk1", "dg4-rk2", "dg4-rk3"], required=True, help="Pick solver type" )
+parser.add_argument("-s",   "--solver",            dest="solver",         choices=["fv", "fd4-rk1", "fd4-rk2", "fd4-rk3", "fd4-rk4", "dg0-rk1",  "dg0-rk2",  "dg0-rk3",  "dg0-rk4", "dg1-rk1", "dg2-rk1", "dg2-rk2", "dg3-rk1", "dg3-rk3", "dg4-rk4", "dg4-rk1", "dg4-rk2", "dg4-rk3"], required=True, help="Pick solver type" )
 parser.add_argument("-et",  "--end-time",          dest="end_time",       type=float, default=1.0, help="End of simulation" )
 parser.add_argument("-cs",  "--cell-size",         dest="cell_size",      type=float, default=0.3, help="Cell size (default 0.3)" )
 parser.add_argument("-asserts",  "--asserts",      dest="asserts",        action="store_true", default=False, help="Switch on assertions" )
