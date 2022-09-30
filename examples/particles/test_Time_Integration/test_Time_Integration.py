@@ -385,6 +385,7 @@ force_gravity_particles.add_action_set( peano4.toolbox.particles.ParticleParticl
     const double r = tarch::la::norm2(dx);
     const double r_inv = r ? 1.0 / r : 0.0;     
 
+    /* Only apply force on orbiting particle */
     if( tarch::la::greaterEquals( r, 0.5 * R_MIN / LENGTH_UNIT ) ) {
 
       /* Gravitational acceleration */
@@ -393,7 +394,7 @@ force_gravity_particles.add_action_set( peano4.toolbox.particles.ParticleParticl
     }
 
     /* Update Energy */
-    const double vel = tarch::la::norm2( localParticle->getV() );
+    const double vel = tarch::la::norm2( localParticle->getV_full() );
 //    const double E_kin = 0.5 * vel;
     const double E_kin = 0.5 * vel * vel;
 
@@ -559,36 +560,6 @@ init_time_step.add_action_set( peano4.toolbox.particles.UpdateParticleGridAssoci
 init_time_step.add_action_set( peano4.toolbox.particles.UpdateParallelState(particles) )
 project.solversteps.add_step(init_time_step)
 
-# -----------------------------------------------------------------------------
-#  Impose Boundary Conditions
-# -----------------------------------------------------------------------------
-impose_BC_particles = peano4.solversteps.Step( "ImposeBC", add_user_defined_actions=False )
-impose_BC_particles.use_vertex(particles)
-impose_BC_particles.use_cell(particle_tree_analysis.cell_marker)
-
-# Impose BC step from SPH library
-ImposeBC = peano4.toolbox.particles.sph.computeKernels.ImposeBoundaryConditions()
-
-particle_particle_compute_kernel = ImposeBC.particle_particle_compute_kernel
-touch_particle_first_time_compute_kernel= ImposeBC.touch_particle_first_time_compute_kernel
-touch_particle_last_time_compute_kernel = ImposeBC.touch_particle_last_time_compute_kernel
-
-# Add action to project
-impose_BC_particles.add_action_set( peano4.toolbox.particles.ParticleParticleInteraction(
-  particle_set=particles,
-  particle_particle_interaction_kernel = particle_particle_compute_kernel,
-  touch_vertex_first_time_compute_particle_update_kernel= touch_particle_first_time_compute_kernel,
-  touch_vertex_last_time_compute_particle_update_kernel = touch_particle_last_time_compute_kernel,
-  additional_includes="""
-#include "Constants.h"
-#include <cmath>
-"""
-  ))
-impose_BC_particles.add_action_set( peano4.toolbox.particles.ParticleAMR(particles,particle_tree_analysis,min_particles_per_cell=10) )
-impose_BC_particles.add_action_set( particle_tree_analysis )
-impose_BC_particles.add_action_set( peano4.toolbox.particles.UpdateParticleGridAssociation(particles) )
-impose_BC_particles.add_action_set( peano4.toolbox.particles.UpdateParallelState(particles) )
-project.solversteps.add_step(impose_BC_particles)
 
 # ------------------------------------------------------------------------------
 # Plot setup 

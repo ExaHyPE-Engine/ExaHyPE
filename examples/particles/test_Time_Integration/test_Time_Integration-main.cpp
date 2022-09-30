@@ -33,7 +33,6 @@
 #include "observers/Kick2.h"
 #include "observers/Drift.h"
 #include "observers/InitTimeStep.h"
-#include "observers/ImposeBC.h"
 
 tarch::logging::Log _log("::");
 
@@ -104,36 +103,6 @@ int main(int argc, char** argv) {
     // =================
     //
 
-    int gridConstructionSteps = 0;
-    while (peano4::parallel::SpacetreeSet::getInstance().getGridStatistics().getStationarySweeps()<5) {
-      logInfo( "main()", "run a grid construction step and insert particles" );
-      examples::particles::observers::CreateGrid createObserver;
-      peano4::parallel::SpacetreeSet::getInstance().traverse(createObserver);
-      examples::particles::vertexdata::ParticleSet::finishedTraversal();
-      gridConstructionSteps++;
-      loadBalancer.finishStep();
-    }
-
-    logInfo( "main()", "finished grid construction after " << gridConstructionSteps << " steps, start to add particles" )
-
-    examples::particles::observers::Init initObserver;
-    peano4::parallel::SpacetreeSet::getInstance().traverse(initObserver);
-    examples::particles::vertexdata::ParticleSet::finishedTraversal();
-    logInfo( "main()", "added particles" )
-
-    examples::particles::observers::Plot plotObserver;
-    peano4::parallel::SpacetreeSet::getInstance().traverse(plotObserver);
-    examples::particles::vertexdata::ParticleSet::finishedTraversal();
-    logInfo( "main()", "dumped initial condition" )
-        
-    /* Main loop */
-
-    const int TimeStepsInBetweenTwoSnapshots = std::max(
-      10,
-      static_cast<int>( std::round( 1.0/examples::particles::GLOBAL_TIME_STEP_SIZE )) / 20
-    );
-    logInfo( "main()", "steps between two snapshots=" << TimeStepsInBetweenTwoSnapshots );
-
     /* 
      * Name the steps that will be used 
      */
@@ -142,27 +111,84 @@ int main(int argc, char** argv) {
     examples::particles::observers::Kick1 kick1part;
     examples::particles::observers::Kick2 kick2part;
     examples::particles::observers::Drift driftpart;
-    examples::particles::observers::ImposeBC ImposeBCpart;
+    examples::particles::observers::CreateGrid createObserver;
+    examples::particles::observers::Init initObserver;
+    examples::particles::observers::Plot plotObserver;
+
+    int gridConstructionSteps = 0;
+    while (peano4::parallel::SpacetreeSet::getInstance().getGridStatistics().getStationarySweeps()<5) {
+      logInfo( "main()", "run a grid construction step and insert particles" );
+      peano4::parallel::SpacetreeSet::getInstance().traverse(createObserver);
+      examples::particles::vertexdata::ParticleSet::finishedTraversal();
+      gridConstructionSteps++;
+      loadBalancer.finishStep();
+    }
+
+    logInfo( "main()", "finished grid construction after " << gridConstructionSteps << " steps, start to add particles" )
+
+    peano4::parallel::SpacetreeSet::getInstance().traverse(initObserver);
+    examples::particles::vertexdata::ParticleSet::finishedTraversal();
+    logInfo( "main()", "added particles" )
+
+    peano4::parallel::SpacetreeSet::getInstance().traverse(plotObserver);
+    examples::particles::vertexdata::ParticleSet::finishedTraversal();
+    logInfo( "main()", "dumped initial condition" )
+        
+    /* Main loop */
+
+    const int TimeStepsInBetweenTwoSnapshots = std::max(
+      10,
+      static_cast<int>( std::round( 1.0/examples::particles::GLOBAL_TIME_STEP_SIZE )) / 50
+    );
+    logInfo( "main()", "steps between two snapshots=" << TimeStepsInBetweenTwoSnapshots );
 
     for (int i=0; i<500; i++) {
-      for (int j=0; j<TimeStepsInBetweenTwoSnapshots; j++) { /* Numbers of time-steps between two output snapshots */
+      for (int j=0; j<TimeStepsInBetweenTwoSnapshots; j++) 
+      { 
         logInfo( "main()", "run timestep: " << peano4::parallel::SpacetreeSet::getInstance().getGridStatistics().toString() );
 
         /* "Initialize time-step" */
         peano4::parallel::SpacetreeSet::getInstance().traverse(initTimeStep);
         examples::particles::vertexdata::ParticleSet::finishedTraversal();
 
-        /* For first time-step, we need to pre-compute some quantities before drifting */
-        /* This is because we must start the simulation with a "K1" step */
-        if(i==0 and j==0){ 
-          /* Force Calculation */
-          peano4::parallel::SpacetreeSet::getInstance().traverse(forcespart);
-          examples::particles::vertexdata::ParticleSet::finishedTraversal();
+//        /* For first time-step, we need to pre-compute some quantities before drifting */
+//        /* This is because we must start the simulation with a "K1" step */
+//        if (i==0 and j==0) 
+//        { 
+//          /* Force Calculation */
+//          peano4::parallel::SpacetreeSet::getInstance().traverse(forcespart);
+//          examples::particles::vertexdata::ParticleSet::finishedTraversal();
+//
+//          /* "Kick1" */
+////          peano4::parallel::SpacetreeSet::getInstance().traverse(kick2part);
+//          peano4::parallel::SpacetreeSet::getInstance().traverse(kick2part);
+//          examples::particles::vertexdata::ParticleSet::finishedTraversal();
+//        } /* Finish the "0th" time-step */
+//
+//        /* Now the time-step in the actual "D-K2-K1" form begins */
+//        /* "Drift". Drift also predicts v, u, ... */
+//        peano4::parallel::SpacetreeSet::getInstance().traverse(driftpart);
+//        examples::particles::vertexdata::ParticleSet::finishedTraversal();
+//
+//        /* Force Calculation */
+//        peano4::parallel::SpacetreeSet::getInstance().traverse(forcespart);
+//        examples::particles::vertexdata::ParticleSet::finishedTraversal();
+//
+//        /* "Kick2". kick2part also reset predictions for next Drift */
+//        peano4::parallel::SpacetreeSet::getInstance().traverse(kick2part);
+//        examples::particles::vertexdata::ParticleSet::finishedTraversal();
+//
+//        /* "Kick1" */
+//        peano4::parallel::SpacetreeSet::getInstance().traverse(kick1part);
+//        examples::particles::vertexdata::ParticleSet::finishedTraversal();
 
-          /* "Kick1" */
-          peano4::parallel::SpacetreeSet::getInstance().traverse(kick2part);
-          examples::particles::vertexdata::ParticleSet::finishedTraversal();
-        } /* Finish the "0th" time-step */
+        /* Force Calculation */
+        peano4::parallel::SpacetreeSet::getInstance().traverse(forcespart);
+        examples::particles::vertexdata::ParticleSet::finishedTraversal();
+
+        /* "Kick1" */
+        peano4::parallel::SpacetreeSet::getInstance().traverse(kick1part);
+        examples::particles::vertexdata::ParticleSet::finishedTraversal();
 
         /* Now the time-step in the actual "D-K2-K1" form begins */
         /* "Drift". Drift also predicts v, u, ... */
@@ -177,20 +203,12 @@ int main(int argc, char** argv) {
         peano4::parallel::SpacetreeSet::getInstance().traverse(kick2part);
         examples::particles::vertexdata::ParticleSet::finishedTraversal();
 
-        /* "Kick1" */
-        peano4::parallel::SpacetreeSet::getInstance().traverse(kick1part);
-        examples::particles::vertexdata::ParticleSet::finishedTraversal();
-
-        /* "Impose BC" */
-        peano4::parallel::SpacetreeSet::getInstance().traverse(ImposeBCpart);
-        examples::particles::vertexdata::ParticleSet::finishedTraversal();
       }
 
       if (examples::particles::PLOT) {
         /* Dump a snapshot after the number of time-steps done above */
         logInfo( "main()", "plot" );
-        examples::particles::observers::Plot plotTimeStepObserver;
-        peano4::parallel::SpacetreeSet::getInstance().traverse(plotTimeStepObserver);
+        peano4::parallel::SpacetreeSet::getInstance().traverse(plotObserver);
         examples::particles::vertexdata::ParticleSet::finishedTraversal();
       }
     }
