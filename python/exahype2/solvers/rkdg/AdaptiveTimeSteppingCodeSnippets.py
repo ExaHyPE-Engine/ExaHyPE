@@ -51,7 +51,7 @@ class AdaptiveTimeSteppingCodeSnippets( exahype2.solvers.AdaptiveTimeSteppingCod
     tarch::la::greater(_maxEigenvalue, 0.0 ) 
   ) {
     const     double waveSpeedDamping   = 1.0 / _maxEigenvalue;
-    constexpr double CockburnShuDamping = 1.0 / (2.0*{{RK_ORDER}}+1.0);
+    constexpr double CockburnShuDamping = 1.0 / (2.0*{{RK_ORDER}}-1.0);
     constexpr double meshDamping        = 1.0 / ({{DG_ORDER}} * {{DG_ORDER}});
     _admissibleTimeStepSize = """ + str(self._time_step_relaxation) + """ * _minCellHThisTimeStep * waveSpeedDamping * CockburnShuDamping * meshDamping;
     if ( std::isnan(_admissibleTimeStepSize) or std::isinf(_admissibleTimeStepSize) ) {
