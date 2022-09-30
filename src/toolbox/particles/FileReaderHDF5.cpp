@@ -355,7 +355,7 @@ std::list< tarch::la::Vector<Dimensions,double> > toolbox::particles::FileReader
     /* Now append this row to the final list */
     result.push_back( tmpDataArray );
 
-    logDebug( "readHDF5File()", "tmpDataArray " << tmpDataArray);
+    logDebug( "readDoubleArray()", "tmpDataArray " << tmpDataArray << ", i = " << i );
   }
 
   logInfo( "readHDF5File()", "read " << result.size() << " entries. " );
@@ -489,7 +489,7 @@ std::vector< tarch::la::Vector<Dimensions,double> > toolbox::particles::FileRead
     /* Now append this row to the final list */
     result.push_back( tmpDataArray );
 
-    logDebug( "readHDF5File()", "tmpDataArray " << tmpDataArray);
+    logDebug( "readFloatArray()", "tmpDataArray " << tmpDataArray << ", i = " << i );
   }
 
   logInfo( "readHDF5File()", "read " << result.size() << " entries. " );
