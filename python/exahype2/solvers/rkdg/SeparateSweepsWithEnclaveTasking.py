@@ -83,6 +83,7 @@ class SeparateSweepsWithEnclaveTasking( SeparateSweeps ):
                name, 
                rk_order, 
                polynomial_basis, 
+               number_of_face_projections,
                unknowns, 
                auxiliary_variables, 
                min_cell_h, 
@@ -100,6 +101,7 @@ class SeparateSweepsWithEnclaveTasking( SeparateSweeps ):
     super(SeparateSweepsWithEnclaveTasking, self).__init__(name, 
                                                            rk_order, 
                                                            polynomial_basis, 
+                                                           number_of_face_projections,
                                                            unknowns, 
                                                            auxiliary_variables, 
                                                            min_cell_h, 
@@ -203,8 +205,8 @@ class SeparateSweepsWithEnclaveTasking( SeparateSweeps ):
       volumetric solution and the Riemann solution. 
        
     """
-    step.add_action_set( self._action_set_merge_enclave_task_outcome )
     super(SeparateSweepsWithEnclaveTasking, self).add_actions_to_perform_time_step(step)
+    step.add_action_set( self._action_set_merge_enclave_task_outcome, False )
 
 
   def add_entries_to_text_replacement_dictionary(self,d):

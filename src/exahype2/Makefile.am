@@ -17,6 +17,7 @@ ExaHyPE2Sources = \
   RefinementControl.cpp \
   TimeStepping.cpp \
   UserInterface.cpp \
+  UnitTests.cpp \
   aderdg/CorrectorAoS.cpp \
   aderdg/Generic.cpp \
   aderdg/KernelUtils.cpp \

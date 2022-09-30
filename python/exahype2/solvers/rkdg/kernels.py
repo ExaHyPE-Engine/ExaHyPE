@@ -1044,7 +1044,7 @@ def create_add_solver_contributions_call(polynomial_basis):
       marker.h(),
       repositories::{{SOLVER_INSTANCE}}.BasisFunctionValuesLeft1d,
       repositories::{{SOLVER_INSTANCE}}.MassMatrixDiagonal1d,
-      QOut
+      dQdt
     );
 """
   else:

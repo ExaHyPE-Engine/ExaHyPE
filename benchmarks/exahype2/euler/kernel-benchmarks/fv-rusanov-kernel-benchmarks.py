@@ -55,10 +55,17 @@ if args.debug:
 else:
   build_mode = peano4.output.CompileMode.Release
 
+if args.dim==2:
+  offset = [0.0,0.0]
+  size = [1.0,1.0]
+else:
+  offset = [0.0,0.0,0.0]
+  size = [1.0,1.0,1.0]
+  
 project.set_global_simulation_parameters(
-  dimensions = dimensions,
-  offset = [0.0,0.0,0.0],
-  size = [1.0,1.0,1.0],
+  dimensions   = dimensions,
+  offset       = offset,
+  size         = size,
   min_end_time = 1.0,
   max_end_time = 1.0,
   first_plot_time_stamp = 0.0,

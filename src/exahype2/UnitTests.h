@@ -19,20 +19,7 @@ namespace exahype2 {
   /**
    * Please destroy after usage
    */
-  static inline
-  tarch::tests::TestCase* getUnitTests() {
-    tarch::tests::TreeTestCaseCollection* result = new tarch::tests::TreeTestCaseCollection( "exahype2" );
-
-    result->addTestCase( new exahype2::dg::tests::CellIntegralTest() );
-    result->addTestCase( new exahype2::dg::tests::DGUtilsTest() );
-    result->addTestCase( new exahype2::dg::tests::RiemannTest() );
-    result->addTestCase( new exahype2::dg::rusanov::tests::RiemannTest() );
-    result->addTestCase( new exahype2::fv::rusanov::tests::CopyPatchTest() );
-    result->addTestCase( new exahype2::fv::rusanov::tests::ApplySplit1DRiemannToPatchTest() );
-    result->addTestCase( new exahype2::aderdg::tests::ADERDGTest() );
-
-    return result;
-  }
+  tarch::tests::TestCase* getUnitTests();
 }
 
 #endif

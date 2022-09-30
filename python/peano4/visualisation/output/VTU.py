@@ -260,7 +260,7 @@ def render_single_file(filename, identifier, display_as_tree = True, filter=None
   
   if filter!=None:
     for p in filter:
-      cell_data, dof, dimensions, unknowns = p.render(cell_data, dof, dimensions, unknowns)
+      cell_data, dof, dimensions, unknowns, is_data_associated_to_cell, is_data_associated_to_cell = p.render(cell_data, dof, dimensions, unknowns, is_data_associated_to_cell)
 
   if dimensions == 2 and display_as_tree:
     grid = prepare2Dpatches(cell_data, dof, unknowns, 1.0, description, is_data_associated_to_cell, mapping, verbose) 

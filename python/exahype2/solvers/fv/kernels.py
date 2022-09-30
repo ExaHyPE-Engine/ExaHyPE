@@ -42,12 +42,12 @@ def create_halo_layer_construction_with_interpolation_for_reconstructed_patch(so
           int sourceCellSerialised        = serialisePatchIndex(sourceCell,d);
 
           for (int unknown=0; unknown<{NUMBER_OF_UNKNOWNS}; unknown++) {{
-            reconstructedPatch[ destinationCellSerialised*{NUMBER_OF_UNKNOWNS}+unknown ] 
+            oldQWithHalo[ destinationCellSerialised*{NUMBER_OF_UNKNOWNS}+unknown ] 
               = oldNewWeightsLeft.first  * fineGridFaces""" + solver + """QOld(d).value[ sourceCellSerialised*{NUMBER_OF_UNKNOWNS}+unknown ]
               + oldNewWeightsLeft.second * fineGridFaces""" + solver + """QNew(d).value[ sourceCellSerialised*{NUMBER_OF_UNKNOWNS}+unknown ];
             {ASSERTION_WITH_7_ARGUMENTS}( 
               {ASSERTION_PREFIX_FOR_HALO} or 
-              reconstructedPatch[ destinationCellSerialised*{NUMBER_OF_UNKNOWNS}+unknown ]==reconstructedPatch[ destinationCellSerialised*{NUMBER_OF_UNKNOWNS}+unknown ], 
+              oldQWithHalo[ destinationCellSerialised*{NUMBER_OF_UNKNOWNS}+unknown ]==oldQWithHalo[ destinationCellSerialised*{NUMBER_OF_UNKNOWNS}+unknown ], 
               sourceCell, destinationCell, unknown, d, marker.toString(), _treeNumber, marker.toString()
             );
           }}
@@ -58,12 +58,12 @@ def create_halo_layer_construction_with_interpolation_for_reconstructed_patch(so
           destinationCellSerialised   = peano4::utils::dLinearised(destinationCell,{DOFS_PER_AXIS} + 2*{OVERLAP});
           sourceCellSerialised        = serialisePatchIndex(sourceCell,d);
           for (int unknown=0; unknown<{NUMBER_OF_UNKNOWNS}; unknown++) {{
-            reconstructedPatch[ destinationCellSerialised*{NUMBER_OF_UNKNOWNS}+unknown ] 
+            oldQWithHalo[ destinationCellSerialised*{NUMBER_OF_UNKNOWNS}+unknown ] 
               = oldNewWeightsLeft.first  * fineGridFaces""" + solver + """QOld(d+Dimensions).value[ sourceCellSerialised*{NUMBER_OF_UNKNOWNS}+unknown ]
               + oldNewWeightsLeft.second * fineGridFaces""" + solver + """QNew(d+Dimensions).value[ sourceCellSerialised*{NUMBER_OF_UNKNOWNS}+unknown ];
             {ASSERTION_WITH_7_ARGUMENTS}( 
               {ASSERTION_PREFIX_FOR_HALO} or 
-              reconstructedPatch[ destinationCellSerialised*{NUMBER_OF_UNKNOWNS}+unknown ]==reconstructedPatch[ destinationCellSerialised*{NUMBER_OF_UNKNOWNS}+unknown ], 
+              oldQWithHalo[ destinationCellSerialised*{NUMBER_OF_UNKNOWNS}+unknown ]==oldQWithHalo[ destinationCellSerialised*{NUMBER_OF_UNKNOWNS}+unknown ], 
               sourceCell, destinationCell, unknown, d, marker.toString(), _treeNumber, marker.toString()
             );
           }}

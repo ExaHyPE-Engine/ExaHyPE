@@ -3,3 +3,6 @@
 from .PDETerms                                       import PDETerms
 
 import exahype2.solvers.rkdg.rusanov
+
+from exahype2.solvers.rkdg.actionsets.ProjectLinearCombinationOfEstimatesOntoFaces import FaceProjections
+from exahype2.solvers.rkdg.actionsets.ProjectLinearCombinationOfEstimatesOntoFaces import compute_number_of_face_projection_quantities
