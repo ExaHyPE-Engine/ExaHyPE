@@ -105,6 +105,28 @@ close to impossiblet to spot a difference between those sketches.
 We we may conclude that the temporal discretisation error is not the (solve) dominating
 issue here. 
 
+If we compare runs with different spatial orders we see a stronger variation.
+This time, we compare dg0-rk1, dg1-rk1, dg2-rk1 and dg3-rk1 and set the underlying
+mesh size to 0.1, 0.1, 0.3, 0.3, 0.5.
+
+<img src="example-output/Tracer-dg0-rk1-0.1-rank-0-snapshot-0.csv.png" />
+<img src="example-output/Tracer-dg1-rk1-0.1-rank-0-snapshot-0.csv.png" />
+<img src="example-output/Tracer-dg2-rk1-0.3-rank-0-snapshot-0.csv.png" />
+<img src="example-output/Tracer-dg3-rk1-0.3-rank-0-snapshot-0.csv.png" />
+<img src="example-output/Tracer-dg4-rk1-0.5-rank-0-snapshot-0.csv.png" />
+
+Obviously, these comparisons are not fair, and would require a more involved
+convergence study.
+
+We finally increase the time stepping accuracy with the spatial accuracy,
+i.e. study DG1-RK1, DG2-RK2, DG3-RK3 and DG4-RK4. Again, we stick to the 
+mesh sizes from above.
+
+<img src="example-output/Tracer-dg0-rk1-0.1-rank-0-snapshot-0.csv.png" />
+<img src="example-output/Tracer-dg1-rk1-0.1-rank-0-snapshot-0.csv.png" />
+<img src="example-output/Tracer-dg2-rk2-0.3-rank-0-snapshot-0.csv.png" />
+<img src="example-output/Tracer-dg3-rk3-0.3-rank-0-snapshot-0.csv.png" />
+<img src="example-output/Tracer-dg4-rk4-0.5-rank-0-snapshot-0.csv.png" />
 
 
 

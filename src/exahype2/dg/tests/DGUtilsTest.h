@@ -21,6 +21,7 @@ class exahype2::dg::tests::DGUtilsTest : public tarch::tests::TestCase {
     void testGetIndex();
     void testComputeGradientOnConstantSolution();
     void testEvaluatePolynomialOrder1();
+    void testEvaluatePolynomialOrder2();
 
   public:
     DGUtilsTest();

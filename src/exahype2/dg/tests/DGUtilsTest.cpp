@@ -18,12 +18,12 @@ void exahype2::dg::tests::DGUtilsTest::run(){
   testMethod( testGetIndex );
   testMethod( testComputeGradientOnConstantSolution );
   testMethod( testEvaluatePolynomialOrder1 );
+  testMethod( testEvaluatePolynomialOrder2 );
 }
 
 
 void exahype2::dg::tests::DGUtilsTest::testEvaluatePolynomialOrder1() {
   const int order = 1;
-  double QuadratureNodes1d[] = { 0.21132486540518713,0.7886751345948129 };
 
   peano4::grid::GridTraversalEvent    dummyEvent;
 
@@ -59,6 +59,62 @@ void exahype2::dg::tests::DGUtilsTest::testEvaluatePolynomialOrder1() {
     cellMarker,
     order,
     QuadratureNodes1dP1,
+    1,
+    Q0,
+    xCentre,
+    0
+  );
+  validateNumericalEqualsWithParams1( result, 1.2, cellMarker.toString() );
+}
+
+
+void exahype2::dg::tests::DGUtilsTest::testEvaluatePolynomialOrder2() {
+  const int order = 2;
+
+  peano4::grid::GridTraversalEvent    dummyEvent;
+
+  #if Dimensions==2
+  dummyEvent.setX( {0.4,0.6} );
+  dummyEvent.setH( {0.2,0.2} );
+  double Q0[] = { 1.2, 1.2, 1.2,
+                  1.2, 1.2, 1.2,
+                  1.2, 1.2, 1.2 };
+  tarch::la::Vector<Dimensions,double>  xCentre     = {0.5,0.7};
+  tarch::la::Vector<Dimensions,double>  xLeftBottom = {0.4+0.2*QuadratureNodes1dP2[0],0.6+0.2*QuadratureNodes1dP2[0]};
+  #else
+  dummyEvent.setX( {0.4,0.6,0.8} );
+  dummyEvent.setH( {0.2,0.2,0.2} );
+  double Q0[] = { 1.2, 1.2, 1.2,
+                  1.2, 1.2, 1.2,
+                  1.2, 1.2, 1.2,
+                  1.2, 1.2, 1.2,
+                  1.2, 1.2, 1.2,
+                  1.2, 1.2, 1.2,
+                  1.2, 1.2, 1.2,
+                  1.2, 1.2, 1.2,
+                  1.2, 1.2, 1.2 };
+  tarch::la::Vector<Dimensions,double>  xCentre = {0.5,0.7,0.9};
+  tarch::la::Vector<Dimensions,double>  xLeftBottom = {0.4+0.2*QuadratureNodes1dP1[0],0.6+0.2*QuadratureNodes1dP1[0],0.8+0.2*QuadratureNodes1dP1[0]};
+  #endif
+
+  peano4::datamanagement::CellMarker  cellMarker(dummyEvent);
+
+  double result;
+  result = exahype2::dg::evaluatePolynomial(
+    cellMarker,
+    order,
+    QuadratureNodes1dP2,
+    1,
+    Q0,
+    xLeftBottom,
+    0
+  );
+  validateNumericalEqualsWithParams1( result, 1.2, cellMarker.toString() );
+
+  result = exahype2::dg::evaluatePolynomial(
+    cellMarker,
+    order,
+    QuadratureNodes1dP2,
     1,
     Q0,
     xCentre,
