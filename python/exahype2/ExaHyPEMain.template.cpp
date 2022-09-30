@@ -449,7 +449,7 @@ int main(int argc, char** argv) {{
 //#endif
 
   #if PeanoDebug>=2
-  tarch::tests::TreeTestCaseCollection* unitTests = new tarch::tests::TreeTestCaseCollection("");
+  tarch::tests::TreeTestCaseCollection* unitTests = new tarch::tests::TreeTestCaseCollection();
   unitTests->addTestCase( peano4::getUnitTests() );
   unitTests->addTestCase( tarch::getUnitTests() );
   unitTests->addTestCase( toolbox::blockstructured::getUnitTests() );

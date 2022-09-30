@@ -13,7 +13,7 @@
 
 
 tarch::tests::TestCase* exahype2::getUnitTests() {
-  tarch::tests::TreeTestCaseCollection* result = new tarch::tests::TreeTestCaseCollection( "exahype2" );
+  tarch::tests::TreeTestCaseCollection* result = new tarch::tests::TreeTestCaseCollection();
 
   result->addTestCase( new exahype2::dg::tests::CellIntegralTest() );
   result->addTestCase( new exahype2::dg::tests::DGUtilsTest() );
