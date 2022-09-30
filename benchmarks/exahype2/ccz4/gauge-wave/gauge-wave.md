@@ -68,18 +68,65 @@ solution's behaviour. The call to the script is similar to
 
 with appropriate pathes and filenames set.
 
-You should obtain pdfs and pngs that resemble the following graphs for Finite
-Volumes:
 
-<img src="example-output/Tracer-fv-0.3-rank-0-snapshot-0.piecewise-constant.csv.png" />
-<img src="example-output/Tracer-fv-0.3-rank-0-snapshot-0.piecewise-linear.csv.png" />
+## Some results
 
-The above graphs are produced for the experiment's default settings i.e. a mesh size
-of 0.3. They study piecewise constant interpolation onto the tracer (left) vs. piecewise
-linear. Despite the relatively coarse resolution, the graphs are basically identical, 
+You should obtain pdfs and pngs that resemble the following graphs:
+
+<img src="example-output/Tracer-fv-0.5-rank-0-snapshot-0.csv.png" />
+<img src="example-output/Tracer-dg0-rk1-0.1-rank-0-snapshot-0.csv.png" />
+
+The above graphs compare the outcomes of a finite volume code (left) to the
+outcomes of a DG0-RK1 code (rigth). The mesh is chosen as 0.5 (FV) vs 0.1 
+(DG) with the default patch size of 9x9x9. Consequently, the two simulations
+work on exactly the same spatial discretisation.
+As DG0-RK1 degenerates to a plain Finite Volume scheme, the graphs should be
+exactly the same, and we observe that this is indeed the case.
+
+
+Though the graphs simulate only a very brief total time (up to end time 1.0), we 
+already see a strong damping of the amplitudes.
+This is a characteristic property of first-order (Finite Volume) schemes.
+
+
+In the Python script, we played around with piecewise constant interpolation onto the tracer vs. piecewise
+linear. Despite the relatively coarse resolution, the graphs were all basically identical, 
 i.e. the default resolution is already sufficient to study the long-term behaviour
 of the solution.
-Though these graphs simulate only a very brief total time (up to end time 1.0), we 
-already see a strong damping of the amplitudes.
-This is a characteristic property of first-order Finite Volume schemes.
+
+
+<img src="example-output/Tracer-dg0-rk1-0.1-rank-0-snapshot-0.csv.png" />
+<img src="example-output/Tracer-dg0-rk2-0.1-rank-0-snapshot-0.csv.png" />
+<img src="example-output/Tracer-dg0-rk4-0.1-rank-0-snapshot-0.csv.png" />
+
+The script also allows you to compare different temporal orders.
+All the plots above are for different time integration orders (1,2,4) and it is
+close to impossiblet to spot a difference between those sketches.
+We we may conclude that the temporal discretisation error is not the (solve) dominating
+issue here. 
+
+If we compare runs with different spatial orders we see a stronger variation.
+This time, we compare dg0-rk1, dg1-rk1, dg2-rk1 and dg3-rk1 and set the underlying
+mesh size to 0.1, 0.1, 0.3, 0.3, 0.5.
+
+<img src="example-output/Tracer-dg0-rk1-0.1-rank-0-snapshot-0.csv.png" />
+<img src="example-output/Tracer-dg1-rk1-0.1-rank-0-snapshot-0.csv.png" />
+<img src="example-output/Tracer-dg2-rk1-0.3-rank-0-snapshot-0.csv.png" />
+<img src="example-output/Tracer-dg3-rk1-0.3-rank-0-snapshot-0.csv.png" />
+<img src="example-output/Tracer-dg4-rk1-0.5-rank-0-snapshot-0.csv.png" />
+
+Obviously, these comparisons are not fair, and would require a more involved
+convergence study.
+
+We finally increase the time stepping accuracy with the spatial accuracy,
+i.e. study DG1-RK1, DG2-RK2, DG3-RK3 and DG4-RK4. Again, we stick to the 
+mesh sizes from above.
+
+<img src="example-output/Tracer-dg0-rk1-0.1-rank-0-snapshot-0.csv.png" />
+<img src="example-output/Tracer-dg1-rk1-0.1-rank-0-snapshot-0.csv.png" />
+<img src="example-output/Tracer-dg2-rk2-0.3-rank-0-snapshot-0.csv.png" />
+<img src="example-output/Tracer-dg3-rk3-0.3-rank-0-snapshot-0.csv.png" />
+<img src="example-output/Tracer-dg4-rk4-0.5-rank-0-snapshot-0.csv.png" />
+
+
 

@@ -16,7 +16,7 @@
 
 
 tarch::tests::TestCase* tarch::getUnitTests() {
-  tarch::tests::TreeTestCaseCollection* result = new tarch::tests::TreeTestCaseCollection("tarch");
+  tarch::tests::TreeTestCaseCollection* result = new tarch::tests::TreeTestCaseCollection();
 
   result->addTestCase( new tarch::la::tests::GramSchmidtTest() );
   result->addTestCase( new tarch::la::tests::LUDecompositionTest() );
