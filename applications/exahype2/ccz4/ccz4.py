@@ -677,6 +677,7 @@ if __name__ == "__main__":
 
     if args.implementation=="fd-fourth-order" or args.implementation=="fd-fourth-order-fixed" or args.implementation=="fv-fd4":
       my_solver.overlap=3
+    #for rkfd the overlap is automatically assigned in solver class
 
     my_solver.restriction = "averaging" # "linear"
 
