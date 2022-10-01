@@ -52,7 +52,7 @@ class AdaptiveTimeSteppingCodeSnippets( exahype2.solvers.AdaptiveTimeSteppingCod
   ) {
     const     double waveSpeedDamping   = 1.0 / _maxEigenvalue;
     constexpr double CockburnShuDamping = 1.0 / (2.0*{{RK_ORDER}}-1.0);
-    constexpr double meshDamping        = 1.0 / ({{DG_ORDER}} * {{DG_ORDER}});
+    constexpr double meshDamping        = {{DG_ORDER}}==0 ? 1.0 : 1.0 / ({{DG_ORDER}} * {{DG_ORDER}});
     _admissibleTimeStepSize = """ + str(self._time_step_relaxation) + """ * _minCellHThisTimeStep * waveSpeedDamping * CockburnShuDamping * meshDamping;
     if ( std::isnan(_admissibleTimeStepSize) or std::isinf(_admissibleTimeStepSize) ) {
       ::exahype2::triggerNonCriticalAssertion( __FILE__, __LINE__, "_admissibleTimeStepSize>0", "invalid (NaN of inf) time step size: " + std::to_string(_admissibleTimeStepSize) );
