@@ -29,7 +29,11 @@ void*  tarch::multicore::omp::GPUMemoryManager::allocateRawData( int size, int d
   if ( _deviceMemory.at(device).freePages[size].empty() ) {
     for (int i=0; i<growth; i++) {
       _deviceMemory.at(device).freePages[size].push_back(
+#ifdef UseNVIDIA // Use CUDA managed memory
+        allocateMemory(size / sizeof(double), MemoryLocation::ManagedAcceleratorMemory)
+#else
         omp_target_alloc(size, device)
+#endif
       );
     }
   }
@@ -79,7 +83,11 @@ void tarch::multicore::omp::GPUMemoryManager::clear() {
 
     for (auto& p: deviceMemory.second.freePages)
     for (auto& pp: p.second) {
+#ifdef UseNVIDIA // Use CUDA managed memory
+      freeMemory(static_cast<double *>(pp), MemoryLocation::ManagedAcceleratorMemory);
+#else
       omp_target_free(pp, device);
+#endif
     }
   }
 

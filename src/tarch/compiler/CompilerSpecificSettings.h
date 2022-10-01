@@ -23,6 +23,8 @@
     #include "tarch/compiler/LinuxAMD.h"
   #elif defined(__clang__) && defined(__linux)
     #include "tarch/compiler/LinuxClang.h"
+  #elif defined(__NVCOMPILER) && defined(__linux)
+    #include "tarch/compiler/LinuxNVIDIA.h"
   #elif defined(__GNUC__) && defined(__linux)
     #include "tarch/compiler/LinuxGCC.h"
   #elif defined(__clang__) && defined(__APPLE__)
