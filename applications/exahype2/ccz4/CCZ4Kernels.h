@@ -115,7 +115,17 @@ namespace applications {
        * area of the CCZ4 constraints. This is a local operation that we can
        * invoke after each time step per volume.
        */
-      void enforceCCZ4constraints(double * luh);
+      void enforceCCZ4constraints(double* __restrict__  newQ);
+
+      /**
+       * Anticipate Euler step and correct dQdt such that outcome does fulfill
+       * constraints.
+       */
+      void enforceCCZ4constraints(
+        const double* __restrict__  oldQ,
+        double* __restrict__        dQdt,
+        double                      timeStepSize
+      );
     }
   }
 }

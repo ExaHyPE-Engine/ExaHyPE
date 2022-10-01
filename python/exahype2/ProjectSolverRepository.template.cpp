@@ -7,6 +7,12 @@
 #include "exahype2/LoadBalancingConfiguration.h"
 
 
+{% for item in TRACERS -%}
+#include "vertexdata/{{ item }}.h"
+{%- endfor %}
+
+
+
 {% for item in NAMESPACE -%}
   namespace {{ item }} {
 {%- endfor %}
@@ -175,6 +181,10 @@ void finishTimeStep() {
   {{ item[1] }}.finishTimeStep();
   {%- endfor %}
 
+  {% for item in TRACERS -%}
+  vertexdata::{{ item }}::finishedTraversal();
+  {%- endfor %}
+
   refinementControl.finishStep();
   loadBalancer.finishStep();
 
@@ -187,6 +197,10 @@ void finishTimeStep() {
 void finishGridConstructionStep() {
   {% for item in SOLVERS -%}
   {{ item[1] }}.finishGridConstructionStep();
+  {%- endfor %}
+
+  {% for item in TRACERS -%}
+  vertexdata::{{ item }}::finishedTraversal();
   {%- endfor %}
 
   refinementControl.finishStep();
@@ -233,6 +247,10 @@ void finishGridInitialisationStep() {
   {{ item[1] }}.finishGridInitialisationStep();
   {%- endfor %}
 
+  {% for item in TRACERS -%}
+  vertexdata::{{ item }}::finishedTraversal();
+  {%- endfor %}
+
   loadBalancer.finishStep();
 }
 
@@ -240,6 +258,10 @@ void finishGridInitialisationStep() {
 void finishPlottingStep() {
   {% for item in SOLVERS -%}
   {{ item[1] }}.finishPlottingStep();
+  {%- endfor %}
+
+  {% for item in TRACERS -%}
+  vertexdata::{{ item }}::finishedTraversal();
   {%- endfor %}
 
   plotFilter.finishPlottingStep();

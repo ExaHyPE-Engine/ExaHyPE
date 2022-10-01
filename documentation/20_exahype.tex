@@ -45,6 +45,9 @@ document.
   \item Clone the repository (cmp.~page
   \pageref{page::installation::git-clone}). Skip this step if you already have a
   \Peano\ checkout, i.e.~if you have completed this step once.
+  \begin{bash}
+git clone -b p4 https://gitlab.lrz.de/hpcsoftware/Peano.git
+  \end{bash}
   \item Create the build system (cmp.~page
   \pageref{page::installation::configure}). Skip this step if you already have a
   working configure, i.e.~if you have completed this step once.
@@ -56,10 +59,12 @@ libtoolize; aclocal; autoconf; autoheader; cp src/config.h.in .; automake --add-
   \begin{bash}
 ./configure --enable-exahype --enable-loadbalancing --enable-blockstructured
   \end{bash}
-   These are the mandatory extensions. You might want to add further options.
-   You will have to add additional flags on particular system. In particular the
-   flags \texttt{CXX}, \text{CXXFLAGS} and \texttt{LDFLAGS} to pick your
-   compiler, you compiler settings and your linker parameters. Chapter
+   These are the mandatory extensions (toolboxes). You might want to add further
+   options.
+   You also will have to add additional flags on
+   particular system.
+   In particular the flags \texttt{CXX}, \text{CXXFLAGS} and \texttt{LDFLAGS} to pick your
+   compiler, your compiler settings and your linker parameters. Chapter
    \ref{chapter:selected-HPC-platforms} discusses some popular choices. Skip
    this step if you have already completed it once.
   \item Recompile your \Peano\ code by typing in
@@ -67,7 +72,7 @@ libtoolize; aclocal; autoconf; autoheader; cp src/config.h.in .; automake --add-
 make
   \end{bash}
    This should give you a couple
-  of \texttt{ExaHyPE2Core} libraries in the respective subdirectories. Skip this
+  of static libraries in the respective subdirectories. Skip this
   step if you have already completed it once.
   \item Ensure that \texttt{python} subdirectory is in your Python search path
   and
@@ -216,9 +221,9 @@ peano4_project.generate( throw_away_data_after_generation=False )
 
 
 \begin{framed}
-\paragraph*{Finite Volume Euler kernel benchmark}
+\paragraph*{Kernel benchmark}
 
-\ExaHyPE's implementation of the Euler equations with Finite Volumes is shipped
+\ExaHyPE's implementation of the Euler equations is shipped
 with a benchmark to assess the speed of the compute kernels.
 The benchmark solely computes the throughput on one core or one GPU and thus
 provides key information how efficient these core kernels perform on your
@@ -233,6 +238,9 @@ To run the benchmark, follow the following steps:
   \item Clone the repository (cmp.~page
   \pageref{page::installation::git-clone}). Skip this step if you already have a
   \Peano\ checkout, i.e.~if you have completed this step once.
+  \begin{bash}
+git clone -b p4 https://gitlab.lrz.de/hpcsoftware/Peano.git
+  \end{bash}
   \item Create the build system (cmp.~page
   \pageref{page::installation::configure}). Skip this step if you already have a
   working configure, i.e.~if you have completed this step once.
@@ -244,11 +252,18 @@ libtoolize; aclocal; autoconf; autoheader; cp src/config.h.in .; automake --add-
   \begin{bash}
 ./configure --enable-exahype --enable-loadbalancing --enable-blockstructured
   \end{bash}
-   These are the extensions. 
-   If you want to benchmark the kernels on your GPU, too, you have to add add
-   \texttt{--with-gpu=xxx}.
-   The \texttt{xxx} clarifies which GPU backend to use. Type in \texttt{--help}
-   for additional information. You will furthermore have to add additional flags
+   These are the core extensions (toolboxes) required for the benchmark. 
+   If you want to test your system with OpenMP offloading, e.g., you will need
+   an additional
+   \texttt{--with-gpu=omp}.
+   Though the benchmarks in principle assess only the core performance of the
+   compute kernels, they can mimick the concurrent offloading from multiple
+   threads.
+   To enable this feature, you have to activate multithreading, too (add
+   \texttt{--with-multithreading=omp} for example).
+   Run \texttt{./configure --help} for various combinations of GPU and
+   multithreading back-ends.
+   Finally, you will have to add additional flags
    on particular system.
    In particular the flags \texttt{CXX}, \text{CXXFLAGS} and \texttt{LDFLAGS} to pick your
    compiler, you compiler settings and your linker parameters. Chapter
@@ -261,67 +276,61 @@ make
   \item Set the \texttt{PYTHONPATH} and run the benchmark script within the
   Euler example directory:
   \begin{bash}
-  cd exahype2/examples/euler
-  export PYTHONPATH=../../../python
-  python3 example-scripts/kernel-benchmarks.py
+  cd benchmarks/exahype2/euler/kernel-benchmarks
+  export PYTHONPATH=../../../../python
+  python3 fv-rusanov-kernel-benchmarks.py
   \end{bash}
-  This default builds the benchmarks for 2d with $4 \times 4$ patches. You can
-  type in \texttt{--help} for additional information.
-  \item Run the actual benchmark
+  This builds a default benchmarks for 2d with $17 \times 17$ patches. 
+  \item Run the benchmark
   \begin{bash}
-./kernel-benchmark
+./kernel-benchmark-fv-2d-patch-size-17 --threads 1 --gpus all
   \end{bash}
+  which should give you an output similar to
+  \begin{terminalOutput}
+========================================
+  Number of patches fused: 1
+ ========================================
+ baseline: 0.000141742 / 2.88504e-08
+ stateless kernels on host with heap, patch-wise, AoS: 0.000156606 / 3.18758e-08
+ stateless kernels on host with heap, patch-wise, AoSoA: 0.000114747 / 2.33558e-08
+ stateless kernels on host with heap, patch-wise, SoA: 0.000114582 / 2.33222e-08
+ stateless kernels on host with heap, patch-wise, in-situ: 3.5338e-05 / 7.19275e-09
+ stateless kernels on host with heap, batched, AoS: 0.000116653 / 2.37437e-08
+ stateless kernels on host with heap, batched, AoSoA: 0.000115959 / 2.36025e-08
+ stateless kernels on host with heap, batched, SoA: 0.000114284 / 2.32616e-08
+ stateless kernels on host with heap, batched, in-situ:  \end{terminal}
+  \end{terminalOutput}
+  \item The Python script generating and the benchmark supports different options 
+  and benchmark settings.   
+  Type in \texttt{--help} for additional information.
+  The statement above assesses the kernel performance if only one thread is used. 
+  Offloading to the GPUs from multiple threads is notoriously tricky, while running a 
+  kernel benchmark on multiple cores stresses the interconnect. I therefore always
+  recommend to start with the single core measurements. Finally, there's a
+  \texttt{kernel-benchmark.md} markup file which describes further settings and 
+  also discusses built-in postprocessing options. 
 \end{enumerate}
 
 \noindent
-The benchmark gives you the cost per Finite Volume update (throughput) for
-various patch sizes, for patches which exploit stateless operations, i.e.~Finite
-Volume updates which alter only the Finite Volume solution using PDE terms and
-global, constant values, and it also computes the throughput on GPUs including
-the offloading time.
-Here is what you can expect:
+The benchmark gives you the total runtime and cost per degree of freedom update (throughput) 
+on one core or GPU, respectively.
+Data is provided 
+for
+various patch sizes batched (fused) into one large patch assembly, for patches 
+which exploit stateless operations, and different kernel realisations.
 
-\begin{terminalOutput}
-========================================
-  Number of patches fused: 1
-========================================
-completed baseline measurements: 0.000270283 / 5.50138e-08
-completed optimisation measurements no side effects, patch-wise, heap, AoS: 0.000179448 / 3.65251e-08
-completed optimisation measurements no side effects, batched, heap, AoS: 0.000119682 / 2.43603e-08
-completed optimisation measurements no side effects, patch-wise, heap, AoSoA: 0.000119399 / 2.43027e-08
-completed optimisation measurements no side effects, batched, heap, AoSoA: 0.000117449 / 2.39058e-08
-completed optimisation measurements no side effects, patch-wise, heap, SoA: 0.000119457 / 2.43145e-08
-completed optimisation measurements no side effects, batched, heap, SoA: 0.000119485 / 2.43202e-08
-no device found
-\end{terminalOutput}
-
-\begin{enumerate}
-  \item Baseline is the throughput for a normal Finite Volume patch. This number
-  will go down for more patches (fused) due to ammortisation effects, but it
-  will not change dramatically. This is indeed the baseline throughput that you
-  can expect for \ExaHyPE.
-  \item No side effects studies variants of compute kernels which exploit
-  state-free PDE operators (see literature). Here, the compiler can aggressively
-  inline and vectorise. Depending on your architecture, you should see an
-  increase of the throughput by a factor of X where X is your vectorisation
-  width. This effect becomes visible only for a certain patch count.
-  \item For too high patch counts, the performance will deteriorate due to cache
-  effects.
-  \item We found in-situ to give the best performance on CPUs for such a
-  bandwidth-bound problem. in-situ recomputes some terms redundantly but in
-  return operates without any additional temporary variables.
-  \item There are kernel variants which store data on the heap and some which
-  store data on the call stack. The latter are typically faster yet are not
-  supported by all compilers.
-  \item The GPU data comprises all data transfer. Offloading to GPUs thus pays
-  only off for certain problem sizes aka patch counts.
-\end{enumerate}
-
-
+Baseline is what you get with \ExaHyPE's most basic configuration and its flexible
+architecture, where users can tailor each PDE term towards their needs.
+The other variants exploit hints how to tune these computations and try out various optimisations,
+algorithmic reformulations and internal data formats for temporary data.
+Please note that we assess only the Euler equations here, i.e.~we are extremely
+bandwidth-bound and induce almost no load.
+All GPU data comprise all data transfer and memory allocations on the GPU.
+They provide fair measurements and not raw compute figures.
 \end{framed}
 
 
-\section{Case study: A Finite Volumes code coupling two solvers (hyperbolic+elliptic)}
+\section{Case study: A Finite Volumes code coupling two solvers  (hyperbolic+elliptic)}
 \label{section:exahype:fv:coupling}
 
 If you want to solve systems of PDEs where some PDEs advance on different time
@@ -719,6 +728,68 @@ almost stationary solution just before Euler hops in time once again.
 This approach quickly becomes computationally infeasible.
 We need an approach that switches gears once we are stationary.
 
+
+\begin{table}
+ \caption{
+  Some frequently used pre-defined variables or pointers within \ExaHyPE\ code
+  snippets:
+ }
+ \begin{center}
+  \begin{tabular}{l|p{9cm}|p{2cm}}
+   Name & Description & Type \\
+   \hline
+   \texttt{marker} 
+     & Cell marker which represents the hole cell (or patch in a FV context). Use
+     the markers getters to access the cell size or position. 
+     & \texttt{CellMarker} 
+     \\
+   \texttt{newQ} 
+     & Pointer to solution at new time step, i.e.~to the new solution within a
+     cell.
+     The the routines exposed to the user, data is always organised as a lexicographically ordered array (left to right, bottom to
+     top, front to back) similar to a regular grid, and the unknowns are ordered
+     AoS. The field always comprises both the unknowns and auxiliary values. In
+     a Finite Volume context, the field never holds halo data.
+     & \texttt{double*}
+     \\
+   \texttt{oldQ} 
+     & Pointer to solution at the old (current) time step. In
+     a Finite Volume context, the field never holds halo data.
+     & \texttt{double*}
+     \\
+   \texttt{deltaQ} 
+     & Pointer to difference between \texttt{newQ} and \texttt{oldQ}, i.e.
+     $Q^{(new)}-Q^{(old)}$. As \ExaHyPE\ never evolves auxiliary variables, this
+     field does only store the unknowns of the PDE as AoS. 
+     & \texttt{double*}
+     \\
+   \texttt{dQdt} 
+     & Pointer to derivative of the unknown. As \ExaHyPE\ never evolves
+     auxiliary variables, this field does only store the unknowns of the PDE as
+     AoS. I'm aware that the name is inconsistent with the naming below, but
+     \texttt{dQdtimeStepSize} would be weird. & \texttt{double*}
+     \\
+   \texttt{oldQWithHalo} 
+     & Exists only in a Finite Volume context. Different to \texttt{oldQ}, this
+     field holds halo data.
+     & \texttt{double*}
+     \\
+   \texttt{Q} 
+     & See discussion around \texttt{newQ} and \texttt{oldQ}. I use a plain
+     \texttt{Q} if there is no old or new data, or if it is implicitly clear
+     that we evaluate the solution at a certain (old) point and plan to step
+     into the future. 
+     & \texttt{double*} \\
+   \texttt{timeStamp} 
+     & I decided to stick to this (long) identifier rather than a plain
+     \texttt{t} as you find it in math papers. & \texttt{double} \\
+   \texttt{timeStepSize} 
+     & I decided to stick to this (long) identifier rather than a plain
+     \texttt{dt} ($\Delta t$) as you find it in math papers. & \texttt{double}
+     \\
+  \end{tabular}
+ \end{center}
+\end{table}
 
 To determine if the solver is (close to) stationary, we evaluate the difference 
 between the gradient of $\phi$ after each Poisson step.
@@ -1952,33 +2023,19 @@ with each snapshot, but obviously you haven't inserted any tracers yet.
 There are different inserters shipped with \ExaHyPE. 
 Alternatively, you might want to write your own, bespoke particle seed (see
 below).
-The snippet below inserts particles into your grid along a Cartesian topology
-and adds some random noise:
+The snippet below inserts three particles into your grid:
 
 
 \begin{code}
 project.add_action_set_to_initialisation( 
- exahype2.tracer.InsertParticlesAlongCartesianMesh( 
-  particle_set=tracer_particles,
-  h=args.h/8.0, noise=True 
-))
-project.add_action_set_to_timestepping(
-  peano4.toolbox.particles.UpdateParallelState(
-    particle_set=tracer_particles
-  )
-)
+  exahype2.tracer.InsertParticlesbyCoordinates( 
+    particle_set=tracer_particles, coordinates=[[-0.4251,0,0],[0,0,0],[0.4251,0,0]]))
 \end{code}
 
-
-\begin{definition}
- All of \Peano's particle toolbox routines are written for large-scale
- parallel (MPI) runs.
- Therefore, you have to add \texttt{UpdateParallelState} to the time stepping
- always.
-\end{definition}
-
 \noindent
-With this additional seed and the update of the particle state, you can run your
+There are other seeds which insert tracers along a Cartesian
+topology, adds some random noise, or read tracer positions from a file.
+Once inserted, you can run your
 code and visualise the particles.
 However, these particles do not move at all yet or track the actual data of
 interest.
@@ -1994,12 +2051,18 @@ solver:
 project.add_action_set_to_timestepping(
   exahype2.tracer.FiniteVolumesTracing(
     tracer_particles,
-    thesolver,
-    [],        # velocity indices
-    range(59), # data indices
-    0,         # scaling of velocities
-    time_stepping_kernel="toolbox::particles::StaticPosition"))
+    my_solver,
+    time_stepping_kernel="toolbox::particles::staticPosition",
+    project_on_tracer_properties_kernel="::exahype2::fv::projectAllValuesOntoParticle_piecewiseConstant"))
 \end{code}
+
+\noindent
+Again, there are different interpolation schemes shipped with \ExaHyPE.
+Please note that you will have to pick an interpolation that fits to your
+solver.
+In the snippet above, we use a Finite Volume solver and therefore pick a
+projection from the \texttt{exahype2::fv} namespace.
+Other discretisations will require other interpolation schemes.
 
 
 \subsection{Dump tracer data into CSV database}
@@ -2010,7 +2073,11 @@ the fact that particles can dump their solution into a database:
 \begin{code}
 project.add_action_set_to_timestepping( 
  exahype2.tracer.DumpTrajectoryIntoDatabase(
-  tracer_particles,thesolver,particle_spacing/10.0,"TracerDB"
+  particle_set=tracer_particles,
+  solver=my_solver,
+  filename="MyTracerDB",
+  data_delta_between_two_snapsots=1e16,
+  time_delta_between_two_snapsots=0.0001
 ))
 \end{code}
 
@@ -2023,82 +2090,29 @@ particle actually moves.
 The \texttt{DumpTrajectoryIntoDatabase} documentation provides more detail.
 
 
-\subsection{Write your own particle seed}
+The data format within the csv file is rather self-explaining.
 
-If you want to write your own particle seed, I recommend that you copy over an
-existing one and adopt it to your need.
-Switch to \texttt{python/exahype2/tracer} and copy the class \linebreak
-\texttt{InsertParticlesAlongCartesianMesh} over to modify it.
-The invocation within your Python application script then has to be altered,
-too:
-
-\begin{code}
-project.add_action_set_to_initialisation( MyFancySeed(. ..) ))
-\end{code}
-
-
-\noindent
-The core ingredients in the seed is the code snippet that decides what happens
-if you touch a vertex for the first time:
-\begin{code}
-  __Template_TouchVertexFirstTime = jinja2.Template("""
-  if ( not marker.isRefined() ) {
-    auto newParticles =
-    toolbox::particles::createEquallySpacedParticles<globaldata::{{PARTICLE}}>...
-    for (auto& p: newParticles) {
-      p->setNumber(0,_spacetreeId);
-      p->setNumber(1,_particleNumberOnThisTree);
-      _particleNumberOnThisTree++;
-    }
-    fineGridVertex{{PARTICLES_CONTAINER}}.insert( 
-      fineGridVertex{{PARTICLES_CONTAINER}}.end(), newParticles.begin(),
-      newParticles.end() 
-    ); 
-  }
-""")
-\end{code}
-
-\noindent
-The routine only triggers some activities for unrefined vertices. 
-If a vertex is not refined further, it invokes the routine 
-\texttt{createEquallySpacedParticles} from the particle toolbox which
-returns a container over particles, and then takes these particles and 
-inserts them into the domain.
-While you can alter this mechanism obviously, a modified, simpler seed can look
-like this:
-
-\begin{code}
-  __Template_TouchVertexFirstTime = jinja2.Template("""
-  if ( 
-    not marker.isRefined() 
-    and
-    marker.x(0)==...      // check where the centre of this vertex is
-    and
-    marker.x(1)==...      // check where the centre of this vertex is
-    and
-    marker.x(1)==...      // check where the centre of this vertex is
-    and
-    marker.h(0)==...      // check how big the area around this vertex is
-    and
-    ...
-  ) {
-    globaldata::{{PARTICLE}}* p = new globaldata::{{PARTICLE}}( ... ); 
-    p->setNumber(0,_spacetreeId);
-    p->setNumber(1,_particleNumberOnThisTree);
-    p->setX(0, ... );     // x coordinate
-    p->setX(1, ... );     // y coordinate
-    p->setX(2, ... );     // z coordinate
-    p->setCutOffRadius(0.0); // you can force particles to certain resolution 
-                             // levels. Not used here.
-    _particleNumberOnThisTree++;
-    fineGridVertex{{PARTICLES_CONTAINER}}.push_back( p ); 
-  }
-""")
-\end{code}
+\begin{itemize}
+  \item Each particle has a unique two-tuple of indices. We do not enumerate the
+  particles globally, but instead give them two numbers. The first one is the
+  tree that has originally generated a particle, and the second number then is a
+  continuous number, i.e.~counts the particles per tree. As we have two numbers,
+  we don't have to synchronise any global particle generation. Note that the
+  two-tuple stays invariant per particle. Therefore, a particle might be the
+  12th that's generated on tree 7, and hence carry the index (7,11). If it moves
+  around, it might as well end up on three 4.
+  \item Each particle entry is equipped with a time stamp.
+  \item Each particle entry is equipped with the coordinates of the particle per
+  particle dump. If particles do not move, this is redundant information.
+  \item Each particle entry then enlists all the particle's data values at the
+  time when we dump.
+\end{itemize}
 
 
-
-
+\begin{remark}
+ There are postprocessing scripts for particle data in the directory
+ \texttt{python/peano4/toolbox/particles/postprocessing}. It is worth 
+\end{remark}
 
 \subsection{Encourage particles to spread out evenly}
 
@@ -2353,6 +2367,45 @@ Consult also Chapter \ref{chapter:postprocessing} for a discussion of various
 visualisation pathways.
 
 
+\paragraph{Multiscale data}
+
+All \Peano\ output files dump various resolutions of the data. 
+\ExaHyPE\ atm however does only use the finest mesh resolution to compute
+something.
+The coarser levels hence hold garbage. 
+I therefore strongly recommend that you always run the render script with the
+option \texttt{-filter-fine-grid}.
+This makes the script throw away all coarser resolutions.
+
+
+\paragraph{Reduce output size}
+
+By default, \ExaHyPE\ maps each Finite Volumne and each DG quadrature point onto
+a vertex in the output file. 
+This can result in large meshes.
+\Peano's render script provides a filter such that you see only the patch or
+cell average.
+
+
+Further to that, consult the documentation of your project's
+\texttt{set\_global\_simulation\_parameters}. 
+You can spatially filter right within \ExaHyPE, i.e.~ask the code that only
+subfragments of the overall mesh are dumped into the file in the first place.
+
+
+\paragraph{Finite Volumes}
+
+If you dump Finite Volume data, it becomes difficult to spot how the resulting
+Finite Volumes are organised in patches:
+The organisation in patches is not visible unless you study AMR resolution
+boundaries.
+If you are interested in seeing the patch boundaries, use the
+\texttt{--shrink-cells} option and pass in a value that is smaller than one. 
+You then will see gaps (voids) between the individual patches.
+
+
+\paragraph{Discontinuous Galerkin}
+
 If you use \ExaHyPE's Discontinuous Galerkin solvers with non-Lobatto nodes, 
 the file dumps will look pretty ragged.
 This is due to the fact that the DG quadrature points are not placed on the cell
@@ -2360,12 +2413,17 @@ faces.
 This might be unsatisfying and make some postprocessing (isolines, e.g.)
 difficult, but we found it important to display the actual spatial arrangement
 of the unknowns.
-The standard postprocessing scripts allow you to rescale individual cells and
-you can also do stuff like averaging over cells and display only the average. 
+
+
+The standard postprocessing scripts allow you to rescale individual cells.
+Use \texttt{--shrink-cells} with a value slightly bigger than one to spread out
+the quadrature points.
+It is important to note that the shrinking distorts the actual physical layout
+of the quadrature points, i.e.~the output will not really reflect the solution
+anymore.
+Alternatively, 
+you can averaging over cells and display only the average.
 Consult the script's help.
-Alternatively, you can use \Peano's default visualisation scripts, use its
-parsers and data filters, and write your own postprocessing/visualisation on top
-of it.
 
 
 \subsection{Tracers}

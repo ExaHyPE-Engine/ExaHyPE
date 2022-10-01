@@ -5,6 +5,18 @@ from peano4.solversteps.ActionSet import ActionSet
 
 
 def get_face_merge_implementation(patch_overlap):
+  """
+  
+  Generic exchange of block-structured halo layers
+  
+  This routine realises a halo exchange via plain copies. It assumes that the 
+  overhead itself is modelled as a patch, where the first dimension of the 
+  patch_overlap is actually the "short" dimension, i.e. the direction which 
+  indeed overlaps with the two adjacent patches. It has to be a multiple of 2.
+  The other remaining dimensions are plain Cartesian overlaps and match the 
+  size of the adjacent blocks.
+  
+  """
   d = {
     "OVERLAP":       int(patch_overlap.dim[0]/2),
     "DOFS_PER_AXIS": int(patch_overlap.dim[1]),

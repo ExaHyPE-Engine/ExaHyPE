@@ -14,7 +14,6 @@ from .kernels import create_solver_definitions
 from exahype2.solvers.fv.AdaptiveTimeSteppingCodeSnippets import AdaptiveTimeSteppingCodeSnippets
 
 from .kernels import SolverVariant
-from .kernels import RiemannKernelVariant
 
 
 class GlobalAdaptiveTimeStep( SingleSweep ):
@@ -86,8 +85,8 @@ class GlobalAdaptiveTimeStep( SingleSweep ):
     self._compute_kernel_call = create_compute_Riemann_kernel_for_Rusanov(
       self._flux_implementation, self._ncp_implementation, self._source_term_implementation, 
       compute_max_eigenvalue_of_next_time_step=True,
-      solver_variant = SolverVariant.WithVirtualFunctions,
-      riemann_kernel_variant = RiemannKernelVariant.PatchWiseAoSHeap
+      solver_variant         = SolverVariant.WithVirtualFunctions,
+      kernel_name    = "timeStepWithRusanov_patchwise_heap_functors"
     )
 
     solver_code_snippets = AdaptiveTimeSteppingCodeSnippets(self._time_step_relaxation)

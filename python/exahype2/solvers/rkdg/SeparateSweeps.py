@@ -30,6 +30,7 @@ class SeparateSweeps( RungeKuttaDG ):
                name, 
                rk_order, 
                polynomial_basis, 
+               number_of_face_projections,
                unknowns, auxiliary_variables, min_cell_h, max_cell_h, plot_grid_properties):
     """
 
@@ -62,7 +63,7 @@ class SeparateSweeps( RungeKuttaDG ):
     super(SeparateSweeps, self).__init__(name, 
                                          rk_order, 
                                          polynomial_basis, 
-                                         1,     # number of face projections
+                                         number_of_face_projections,
                                          unknowns, auxiliary_variables, min_cell_h, max_cell_h, plot_grid_properties)
     
     self._solver_template_file_class_name     = "SeparateSweeps"

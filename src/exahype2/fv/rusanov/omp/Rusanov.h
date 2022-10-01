@@ -3,7 +3,6 @@
 #ifndef _EXAHYPE2_FV_RUSANOV_OMP_RUSANOV_H_
 #define _EXAHYPE2_FV_RUSANOV_OMP_RUSANOV_H_
 
-
 namespace exahype2 {
   namespace fv {
     namespace rusanov {
@@ -15,19 +14,20 @@ namespace exahype2 {
        * each other. Therefore, we can deploy this sequence of patch
        * updates to a distributed for over the team.
        *
-       * ## Memory management (goal)
+       * ## Memory management
        *
-       * If you run this routine without GPU offloading, we place all temporary data on the heap.
-       * If GPUs are to be used, then we create pointer for the temporary data, but we assign
-       * them all null, as the actual temporary data is to be create on the GPU. This
-       * 'create a pointer which is a nullptr' ensures that the code still compiles on the host
-       * even though it is semantically broken as the temporary data is not acquired. However, we
-       * want to run on the GPU, so we use the pragma omp enter data instruction to allocate the
-       * data directly on the device.
+       * If you run this routine without GPU offloading, we place all
+       * temporary data on the heap. If GPUs are to be used, then we create
+       * pointers to the heap, but we map the data explicitly to GPU memory.
+       * As we use explicit allocs and frees, the map clauses basically
+       * replicate the heap behaviour on the accelerator.
        *
-       * ## Memory management (as it is)
+       * I'd like to assign the host pointers null, as the actual temporary data
+       * is to be create on the GPU. Such a 'create a pointer which is a
+       * nullptr' ensures that the code still compiles on the host even though
+       * it is semantically broken as the temporary data is not allocated.
        *
-       * At the moment, we have to create the right buffer size on the host,
+       * However, we have to create the right buffer size on the host,
        * as the NVIDIA tools otherwise complain. On the long term, this should
        * not be necessary.
        *
@@ -54,6 +54,7 @@ namespace exahype2 {
        * region has been mapped to. We store this data in mappedPointersToQIn. We
        * transfer mappedPointersToQIn to the GPU and then reconstruct there the
        * pointer-to-pointer map that we need within the kernels.
+       *
        */
       namespace omp {
         template <
@@ -64,7 +65,7 @@ namespace exahype2 {
           int      auxiliaryVariables,
           typename TempDataEnumerator
         >
-        static void timeStepWithRusanov_patchwise_heap_static_calls(
+        static void timeStepWithRusanov_patchwise_map_static_calls(
           int                     targetDevice,
           ::exahype2::CellData&   patchData,
           bool                    evaluateFlux,
@@ -77,6 +78,29 @@ namespace exahype2 {
         #endif
         ;
 
+        /**
+         * @see timeStepWithRusanov_patchwise_map_static_calls()
+         */
+        template <
+          typename Solver,
+          int      numberOfVolumesPerAxisInPatch,
+          int      haloSize,
+          int      unknowns,
+          int      auxiliaryVariables,
+          typename TempDataEnumerator
+        >
+        static void timeStepWithRusanov_batched_map_static_calls(
+          int                     targetDevice,
+          ::exahype2::CellData&   patchData,
+          bool                    evaluateFlux,
+          bool                    evaluateNonconservativeProduct,
+          bool                    evaluateSource,
+          bool                    evaluateMaximumEigenvalueAfterTimeStep
+        )
+        #if defined(UseManualInlining)
+        __attribute__((always_inline))
+        #endif
+        ;
 
         template <
           typename Solver,
@@ -86,7 +110,7 @@ namespace exahype2 {
           int      auxiliaryVariables,
           typename TempDataEnumerator
         >
-        static void timeStepWithRusanov_batched_heap_static_calls(
+        static void timeStepWithRusanov_patchwise_managed_static_calls(
           int                     targetDevice,
           ::exahype2::CellData&   patchData,
           bool                    evaluateFlux,
@@ -99,7 +123,31 @@ namespace exahype2 {
         #endif
         ;
 
-        #if defined(GPUOffloadingOMP)
+        /**
+         * @see timeStepWithRusanov_patchwise_map_static_calls()
+         */
+        template <
+          typename Solver,
+          int      numberOfVolumesPerAxisInPatch,
+          int      haloSize,
+          int      unknowns,
+          int      auxiliaryVariables,
+          typename TempDataEnumerator
+        >
+        static void timeStepWithRusanov_batched_managed_static_calls(
+          int                     targetDevice,
+          ::exahype2::CellData&   patchData,
+          bool                    evaluateFlux,
+          bool                    evaluateNonconservativeProduct,
+          bool                    evaluateSource,
+          bool                    evaluateMaximumEigenvalueAfterTimeStep
+        )
+        #if defined(UseManualInlining)
+        __attribute__((always_inline))
+        #endif
+        ;
+
+#if defined(GPUOffloadingOMP)
         /**
          * On the GPU, we don't need any of exahype2::CellData's fancy routines or
          * dynamic data management. We simply have to be able to create a struct
@@ -122,14 +170,15 @@ namespace exahype2 {
           double*    maxEigenvalue;
         };
         #pragma omp end declare target
-        #endif
+#endif
       }
     }
   }
 }
 
-
-#include "Rusanov_patchwise_heap_static_calls.cpph"
-#include "Rusanov_batched_heap_static_calls.cpph"
+#include "Rusanov_patchwise_map_static_calls.cpph"
+#include "Rusanov_batched_map_static_calls.cpph"
+#include "Rusanov_patchwise_managed_static_calls.cpph"
+#include "Rusanov_batched_managed_static_calls.cpph"
 
 #endif

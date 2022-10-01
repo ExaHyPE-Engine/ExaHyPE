@@ -28,6 +28,49 @@ This is information about the general runtime or load balancing distribution,
 e.g.
 
 
+
+\section{Offline/command line conversion with Python/Paraview}
+\label{label:postprocessing:convert-with-paraview}
+
+\begin{remark}
+ This is my favourite starting point for data if I'm interested in whole movies
+ and not only particular snapshots. It is inconvenient for large datasets, as 
+ it is too slow. For large datasets, you might have to move on to a conversion
+ via the precompiled scripts (Section
+ \ref{section:postprocessing:command-line}).
+\end{remark}
+
+
+\noindent
+The command line, Python-based conversion of \Peano\ works if and only if you
+have Paraview plus Python installed.
+First, ensure \Peano's visulisation component is in your Python path:
+\begin{code}
+export PYTHONPATH=.../Peano/python  
+\end{code}
+
+\noindent
+or
+
+\begin{code}
+export PYTHONPATH=.../Peano/python:/usr/lib/python3/dist-packages  
+\end{code}
+
+
+\noindent
+After that, use the conversion script there to translate your
+\texttt{peano-patch-file}. It is important that you interpret this script
+through \texttt{pvpython}:
+
+\begin{code}
+pvpython .../Peano/python/peano4/visualisation/render.py 
+\end{code}
+
+\noindent
+You should see a usage message now. 
+
+
+
 \section{Displaying \Peano\ files directly within Paraview}
 \label{label:postprocessing:display-in-paraview}
 
@@ -189,48 +232,6 @@ There are more filters or you can write your own custom filters.
 Study the source code for further details.
 
 
-
-\section{Offline/command line conversion with Python/Paraview}
-\label{label:postprocessing:convert-with-paraview}
-
-\begin{remark}
- This is my favourite starting point for data if I'm interested in whole movies
- and not only particular snapshots. It is inconvenient for large datasets, as 
- it is too slow. For large datasets, you might have to move on to a conversion
- via the precompiled scripts (Section
- \ref{section:postprocessing:command-line}).
-\end{remark}
-
-
-\noindent
-The command line, Python-based conversion of \Peano\ works if and only if you
-have Paraview plus Python installed.
-First, ensure \Peano's visulisation component is in your Python path:
-\begin{code}
-export PYTHONPATH=.../Peano/python  
-\end{code}
-
-\noindent
-or
-
-\begin{code}
-export PYTHONPATH=.../Peano/python:/usr/lib/python3/dist-packages  
-\end{code}
-
-
-\noindent
-After that, use the conversion script there to translate your
-\texttt{peano-patch-file}. It is important that you interpret this script
-through \texttt{pvpython}:
-
-\begin{code}
-pvpython .../Peano/python/peano4/visualisation/render.py 
-\end{code}
-
-\noindent
-You should see a usage message now. 
-
-
 \section{Offline/command-line conversion (executable)}
 \label{section:postprocessing:command-line}
 
@@ -331,7 +332,7 @@ A standard postprocessing workflow on the command line reads as follows:
  missing here.
 \end{remark}
 
-\section{Writing Legacy VTK files}
+\section{Writing Legacy VTK files without \texttt{pvpython}}
 \label{section:postprocessing:legacy-vtk}
 
 Here we describe a method of translating native Peano patch files into Legacy VTK files that can be visualised within Paraview. The advantage of this method of translating patch files is that it does not require an installation of Paraview/pvpython (as is the case in section \ref{section:postprocessing:command-line}) and therefore might be of particular use to those who work with very large datasets on clusters that do not have Paraview installed.

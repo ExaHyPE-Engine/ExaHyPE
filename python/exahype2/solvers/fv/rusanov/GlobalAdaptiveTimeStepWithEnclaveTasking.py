@@ -15,7 +15,6 @@ from .kernels import create_solver_definitions
 from exahype2.solvers.fv.AdaptiveTimeSteppingCodeSnippets import AdaptiveTimeSteppingCodeSnippets
 
 from .kernels import SolverVariant
-from .kernels import RiemannKernelVariant
 
 
 class GlobalAdaptiveTimeStepWithEnclaveTasking( EnclaveTasking ):
@@ -90,21 +89,21 @@ class GlobalAdaptiveTimeStepWithEnclaveTasking( EnclaveTasking ):
       self._flux_implementation, self._ncp_implementation, self._source_term_implementation, 
       compute_max_eigenvalue_of_next_time_step=True, 
       solver_variant = SolverVariant.WithVirtualFunctions,
-      riemann_kernel_variant = RiemannKernelVariant.PatchWiseAoSHeap
+      kernel_name    = "timeStepWithRusanov_patchwise_heap_functors"
     )
     
     self._fused_compute_kernel_call_cpu  = create_compute_Riemann_kernel_for_Rusanov(
       self._flux_implementation, self._ncp_implementation, self._source_term_implementation, 
       compute_max_eigenvalue_of_next_time_step=True, 
       solver_variant = SolverVariant.Stateless,
-      riemann_kernel_variant = RiemannKernelVariant.PatchWiseInSitu
+      kernel_name    = "timeStepWithRusanov_batched_heap_static_calls<{{SOLVER_NAME}},{{NUMBER_OF_VOLUMES_PER_AXIS}},{{HALO_SIZE}}, {{NUMBER_OF_UNKNOWNS}}, {{NUMBER_OF_AUXILIARY_VARIABLES}}, ::exahype2::enumerator::AoSLexicographicEnumerator>"
     )
 
     self._fused_compute_kernel_call_gpu  = create_compute_Riemann_kernel_for_Rusanov(
       self._flux_implementation, self._ncp_implementation, self._source_term_implementation, 
       compute_max_eigenvalue_of_next_time_step=True, 
-      solver_variant = SolverVariant.Accelerator,
-      riemann_kernel_variant = RiemannKernelVariant.BatchedAoSoAHeap
+      solver_variant         = SolverVariant.Accelerator,
+      kernel_name    = "timeStepWithRusanov_batched_map_static_calls<{{SOLVER_NAME}},{{NUMBER_OF_VOLUMES_PER_AXIS}},{{HALO_SIZE}}, {{NUMBER_OF_UNKNOWNS}}, {{NUMBER_OF_AUXILIARY_VARIABLES}}, ::exahype2::enumerator::AoSLexicographicEnumerator>"
     )
 
     solver_code_snippets = AdaptiveTimeSteppingCodeSnippets(self._time_step_relaxation)

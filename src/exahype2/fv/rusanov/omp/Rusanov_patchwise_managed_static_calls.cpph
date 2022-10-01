@@ -1,0 +1,657 @@
+#include "Rusanov.h"
+#include "tarch/compiler/CompilerSpecificSettings.h"
+#include "tarch/multicore/omp/GPUMemoryManager.h"
+#include "exahype2/fv/rusanov/LoopBody.h"
+
+#include <cstring>
+
+template <
+  typename Solver,
+  int      numberOfVolumesPerAxisInPatch,
+  int      haloSize,
+  int      unknowns,
+  int      auxiliaryVariables,
+  typename TempDataEnumerator
+>
+void exahype2::fv::rusanov::omp::timeStepWithRusanov_patchwise_managed_static_calls(
+  int                     targetDevice,
+  ::exahype2::CellData&   hostPatchData,
+  bool                    evaluateFlux,
+  bool                    evaluateNonconservativeProduct,
+  bool                    evaluateSource,
+  bool                    evaluateMaximumEigenvalueAfterTimeStep
+) {
+  #if defined(GPUOffloadingOMP)
+  constexpr int solversHaloSize = 1;
+  // The following parameter is a magic number chosen in such a way that it works with our kernel benchmarks.
+  // This parameter should be provided by an autotuner rather than being a magic number.
+  #if Dimensions==2
+  static constexpr int MaxNumberOfPossiblePatchEntries = 1024*2*2*2*2;
+  #else
+  static constexpr int MaxNumberOfPossiblePatchEntries = 1024*2;
+  #endif
+  static const TempDataEnumerator FluxHostEnumerator      (MaxNumberOfPossiblePatchEntries, numberOfVolumesPerAxisInPatch,   solversHaloSize, unknowns, 0);
+  static const TempDataEnumerator NcpHostEnumerator       (MaxNumberOfPossiblePatchEntries, numberOfVolumesPerAxisInPatch+1, solversHaloSize, unknowns, 0);
+  static const TempDataEnumerator EigenvalueHostEnumerator(MaxNumberOfPossiblePatchEntries, numberOfVolumesPerAxisInPatch,   solversHaloSize,        1, 0);
+  static int currentOffloadedPatches = 0;
+  // A + |P| <= |P|_max
+  if (currentOffloadedPatches + hostPatchData.numberOfCells <= MaxNumberOfPossiblePatchEntries) {
+    #pragma omp atomic
+    currentOffloadedPatches += hostPatchData.numberOfCells;
+  } else while(currentOffloadedPatches + hostPatchData.numberOfCells > MaxNumberOfPossiblePatchEntries) { /* Suspend until other threads are finished */ };
+
+  exahype2::enumerator::AoSLexicographicEnumerator QInHostEnumerator       (                        1, numberOfVolumesPerAxisInPatch, haloSize, unknowns, auxiliaryVariables);
+  exahype2::enumerator::AoSLexicographicEnumerator QOutHostEnumerator      (                        1, numberOfVolumesPerAxisInPatch,        0, unknowns, auxiliaryVariables);
+  TempDataEnumerator fluxHostEnumerator      (hostPatchData.numberOfCells, numberOfVolumesPerAxisInPatch,   solversHaloSize, unknowns, 0);
+  TempDataEnumerator ncpHostEnumerator       (hostPatchData.numberOfCells, numberOfVolumesPerAxisInPatch+1, solversHaloSize, unknowns, 0);
+  TempDataEnumerator eigenvalueHostEnumerator(hostPatchData.numberOfCells, numberOfVolumesPerAxisInPatch,   solversHaloSize,        1, 0);
+
+  double* tempFluxX = tarch::multicore::omp::GPUMemoryManager::getInstance().allocate<double>( FluxHostEnumerator.size(), targetDevice );
+  double* tempFluxY = tarch::multicore::omp::GPUMemoryManager::getInstance().allocate<double>( FluxHostEnumerator.size(), targetDevice );
+  double* tempFluxZ = tarch::multicore::omp::GPUMemoryManager::getInstance().allocate<double>( Dimensions==3 ? FluxHostEnumerator.size() : 1, targetDevice );
+  double* tempNonconservativeProductX = tarch::multicore::omp::GPUMemoryManager::getInstance().allocate<double>( NcpHostEnumerator.size(), targetDevice );
+  double* tempNonconservativeProductY = tarch::multicore::omp::GPUMemoryManager::getInstance().allocate<double>( NcpHostEnumerator.size(), targetDevice );
+  double* tempNonconservativeProductZ = tarch::multicore::omp::GPUMemoryManager::getInstance().allocate<double>( Dimensions==3 ? NcpHostEnumerator.size() : 1, targetDevice );
+  double* tempEigenvalueX = tarch::multicore::omp::GPUMemoryManager::getInstance().allocate<double>( EigenvalueHostEnumerator.size(), targetDevice );
+  double* tempEigenvalueY = tarch::multicore::omp::GPUMemoryManager::getInstance().allocate<double>( EigenvalueHostEnumerator.size(), targetDevice );
+  double* tempEigenvalueZ = tarch::multicore::omp::GPUMemoryManager::getInstance().allocate<double>( Dimensions==3 ? EigenvalueHostEnumerator.size() : 1, targetDevice );
+
+  double* mappedPointersToQIns = tarch::multicore::omp::GPUMemoryManager::getInstance().allocate<double>(MaxNumberOfPossiblePatchEntries * QInHostEnumerator.size(), targetDevice );
+  double* mappedPointersToQOuts = tarch::multicore::omp::GPUMemoryManager::getInstance().allocate<double>(MaxNumberOfPossiblePatchEntries * QOutHostEnumerator.size(), targetDevice );
+  double* rawPointerToCellCentres = tarch::multicore::omp::GPUMemoryManager::getInstance().allocate<double>(MaxNumberOfPossiblePatchEntries * Dimensions, targetDevice );
+  double* rawPointerToCellSizes = tarch::multicore::omp::GPUMemoryManager::getInstance().allocate<double>(MaxNumberOfPossiblePatchEntries * Dimensions, targetDevice );
+  double* ts = tarch::multicore::omp::GPUMemoryManager::getInstance().allocate<double>(MaxNumberOfPossiblePatchEntries, targetDevice );
+  double* dts = tarch::multicore::omp::GPUMemoryManager::getInstance().allocate<double>(MaxNumberOfPossiblePatchEntries, targetDevice );
+  double* maxEigenvalues = tarch::multicore::omp::GPUMemoryManager::getInstance().allocate<double>(MaxNumberOfPossiblePatchEntries, targetDevice );
+
+  std::vector<double> tmpQIn(hostPatchData.numberOfCells * QInHostEnumerator.size());
+  for (int patchIndex=0; patchIndex<hostPatchData.numberOfCells; patchIndex++) {
+    std::memcpy(&tmpQIn[patchIndex * QInHostEnumerator.size()], hostPatchData.QIn[patchIndex], QInHostEnumerator.size() * sizeof(double));
+  }
+
+  auto hostId = omp_get_initial_device();
+
+  omp_target_memcpy(mappedPointersToQIns, &tmpQIn[0], hostPatchData.numberOfCells * QInHostEnumerator.size() * sizeof(double), 0, 0, targetDevice, hostId);
+  omp_target_memcpy(rawPointerToCellCentres, &hostPatchData.cellCentre[0], hostPatchData.numberOfCells * Dimensions * sizeof(double), 0, 0, targetDevice, hostId);
+  omp_target_memcpy(rawPointerToCellSizes, &hostPatchData.cellSize[0], hostPatchData.numberOfCells * Dimensions * sizeof(double), 0, 0, targetDevice, hostId);
+  omp_target_memcpy(ts, hostPatchData.t, hostPatchData.numberOfCells * sizeof(double), 0, 0, targetDevice, hostId);
+  omp_target_memcpy(dts, hostPatchData.dt, hostPatchData.numberOfCells * sizeof(double), 0, 0, targetDevice, hostId);
+
+  const int numberOfCells = hostPatchData.numberOfCells;
+
+  #pragma omp target teams distribute device(targetDevice) \
+    is_device_ptr(tempFluxX, tempFluxY, tempFluxZ, \
+                  tempNonconservativeProductX, tempNonconservativeProductY, tempNonconservativeProductZ, \
+                  tempEigenvalueX, tempEigenvalueY, tempEigenvalueZ, \
+                  mappedPointersToQIns, mappedPointersToQOuts, \
+                  rawPointerToCellCentres, rawPointerToCellSizes, \
+                  ts, dts, maxEigenvalues)
+  for (int patchIndex=0; patchIndex<numberOfCells; patchIndex++) {
+    exahype2::enumerator::AoSLexicographicEnumerator QInEnumerator       (                        1, numberOfVolumesPerAxisInPatch,haloSize,unknowns,auxiliaryVariables);
+    exahype2::enumerator::AoSLexicographicEnumerator QOutEnumerator      (                        1, numberOfVolumesPerAxisInPatch,       0,unknowns,auxiliaryVariables);
+    TempDataEnumerator fluxEnumerator      (numberOfCells, numberOfVolumesPerAxisInPatch,haloSize,unknowns,0);
+    TempDataEnumerator ncpEnumerator       (numberOfCells, numberOfVolumesPerAxisInPatch+1,haloSize,unknowns,0);
+    TempDataEnumerator eigenvalueEnumerator(numberOfCells, numberOfVolumesPerAxisInPatch,haloSize,1,0);
+
+    double* QIn = &mappedPointersToQIns[patchIndex * QInEnumerator.size()];
+    double* QOut = &mappedPointersToQOuts[patchIndex * QOutEnumerator.size()];
+    const tarch::la::Vector<Dimensions,double> patchCentre = rawPointerToCellCentres[patchIndex];
+    const tarch::la::Vector<Dimensions,double> patchSize = rawPointerToCellSizes[patchIndex];
+    const double t = ts[patchIndex];
+    const double dt = dts[patchIndex];
+
+    if (Dimensions==2 and evaluateSource) {
+      #pragma omp parallel for simd collapse(2)
+      for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
+      for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++) {
+        internal::copySolutionAndAddSourceTerm_LoopBody<Solver>(
+          QIn,
+          QInEnumerator,
+          patchCentre,
+          patchSize,
+          patchIndex,
+          volumeIndex2d(x,y),
+          t,
+          dt,
+          QOut,
+          QOutEnumerator
+        );
+      }
+    }
+    else if (Dimensions==3 and evaluateSource) {
+      #pragma omp parallel for simd collapse(3)
+      for (int z = 0; z < numberOfVolumesPerAxisInPatch; z++)
+      for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
+      for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++) {
+        internal::copySolutionAndAddSourceTerm_LoopBody<Solver>(
+          QIn,
+          QInEnumerator,
+          patchCentre,
+          patchSize,
+          patchIndex,
+          volumeIndex3d(x,y,z),
+          t,
+          dt,
+          QOut,
+          QOutEnumerator
+        );
+      }
+    } 
+    else if (Dimensions==2) {
+      #pragma omp parallel for simd collapse(3)
+      for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
+      for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++)
+      for (int unknown=0; unknown<unknowns+auxiliaryVariables; unknown++) {
+        internal::copySolution_LoopBody(
+          QIn,
+          QInEnumerator,
+          patchIndex,
+          volumeIndex2d(x,y),
+          unknown,
+          QOut,
+          QOutEnumerator
+        );
+      }
+    }
+    else {
+      #pragma omp parallel for simd collapse(4)
+      for (int z = 0; z < numberOfVolumesPerAxisInPatch; z++)
+      for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
+      for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++)
+      for (int unknown=0; unknown<unknowns+auxiliaryVariables; unknown++) {
+        internal::copySolution_LoopBody(
+          QIn,
+          QInEnumerator,
+          patchIndex,
+          volumeIndex3d(x,y,z),
+          unknown,
+          QOut,
+          QOutEnumerator
+        );
+      }
+    }
+
+    if (Dimensions==2) {
+      #pragma omp parallel for collapse(2)
+      for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
+      for (int x = 0; x < numberOfVolumesPerAxisInPatch+2*solversHaloSize; x++) {
+        internal::computeMaxEigenvalue_LoopBody<Solver>(
+            QIn,
+            QInEnumerator,
+            patchCentre,
+            patchSize,
+            patchIndex,
+            volumeIndex2d(x-solversHaloSize,y),
+            t,
+            dt,
+            0,
+            tempEigenvalueX,
+            eigenvalueEnumerator
+        );
+      }
+
+      #pragma omp parallel for collapse(2)
+      for (int y = 0; y < numberOfVolumesPerAxisInPatch+2*solversHaloSize; y++)
+      for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++) {
+        internal::computeMaxEigenvalue_LoopBody<Solver>(
+            QIn,
+            QInEnumerator,
+            patchCentre,
+            patchSize,
+            patchIndex,
+            volumeIndex2d(x,y-solversHaloSize),
+            t,
+            dt,
+            1,
+            tempEigenvalueY,
+            eigenvalueEnumerator
+        );
+      }
+
+      #pragma omp parallel for collapse(3)
+      for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
+      for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++)
+      for (int unknown = 0; unknown < unknowns; unknown++) {
+        internal::updateSolutionWithEigenvalueDamping_LoopBody(
+          QIn,
+          QInEnumerator,
+          tempEigenvalueX,
+          tempEigenvalueY,
+          tempEigenvalueZ,
+          eigenvalueEnumerator,
+          patchCentre,
+          patchSize,
+          patchIndex,
+          volumeIndex2d(x,y),
+          unknown,
+          dt,
+          QOut,
+          QOutEnumerator
+        );
+      }
+    }
+    else {
+      #pragma omp parallel for collapse(3)
+      for (int z = 0; z < numberOfVolumesPerAxisInPatch; z++)
+      for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
+      for (int x = 0; x < numberOfVolumesPerAxisInPatch+2*solversHaloSize; x++) {
+        internal::computeMaxEigenvalue_LoopBody<Solver>(
+          QIn,
+          QInEnumerator,
+          patchCentre,
+          patchSize,
+          patchIndex,
+          volumeIndex3d(x-solversHaloSize,y,z),
+          t,
+          dt,
+          0,
+          tempEigenvalueX,
+          eigenvalueEnumerator
+        );
+      }
+
+      #pragma omp parallel for collapse(3)
+      for (int z = 0; z < numberOfVolumesPerAxisInPatch; z++)
+      for (int y = 0; y < numberOfVolumesPerAxisInPatch+2*solversHaloSize; y++)
+      for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++) {
+        internal::computeMaxEigenvalue_LoopBody<Solver>(
+              QIn,
+              QInEnumerator,
+              patchCentre,
+              patchSize,
+              patchIndex,
+              volumeIndex3d(x,y-solversHaloSize,z),
+              t,
+              dt,
+              1,
+              tempEigenvalueY,
+              eigenvalueEnumerator
+        );
+      }
+
+      #pragma omp parallel for collapse(3)
+      for (int z = 0; z < numberOfVolumesPerAxisInPatch+2*solversHaloSize; z++)
+      for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
+      for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++) {
+        internal::computeMaxEigenvalue_LoopBody<Solver>(
+              QIn,
+              QInEnumerator,
+              patchCentre,
+              patchSize,
+              patchIndex,
+              volumeIndex3d(x,y,z-solversHaloSize),
+              t,
+              dt,
+              2,
+              tempEigenvalueZ,
+              eigenvalueEnumerator
+        );
+      }
+
+      #pragma omp parallel for collapse(4)
+      for (int z = 0; z < numberOfVolumesPerAxisInPatch; z++)
+      for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
+      for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++)
+      for (int unknown = 0; unknown < unknowns; unknown++) {
+        internal::updateSolutionWithEigenvalueDamping_LoopBody(
+          QIn,
+          QInEnumerator,
+          tempEigenvalueX,
+          tempEigenvalueY,
+          tempEigenvalueZ,
+          eigenvalueEnumerator,
+          patchCentre,
+          patchSize,
+          patchIndex,
+          volumeIndex3d(x,y,z),
+          unknown,
+          dt,
+          QOut,
+          QOutEnumerator
+        );
+      }
+    }
+
+    if (evaluateFlux and Dimensions==2) {
+      #pragma omp parallel for collapse(2)
+      for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
+      for (int x = 0; x < numberOfVolumesPerAxisInPatch+2*solversHaloSize; x++) {
+        internal::computeFlux_LoopBody<Solver, unknowns, auxiliaryVariables>(
+          QIn,
+          QInEnumerator,
+          patchCentre,
+          patchSize,
+          patchIndex,
+          volumeIndex2d(x-solversHaloSize,y),
+          t,
+          dt,
+          0, // normal
+          tempFluxX,
+          fluxEnumerator
+        );
+      }
+
+      #pragma omp parallel for collapse(2)
+      for (int y = 0; y < numberOfVolumesPerAxisInPatch+2*solversHaloSize; y++)
+      for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++) {
+        internal::computeFlux_LoopBody<Solver, unknowns, auxiliaryVariables>(
+          QIn,
+          QInEnumerator,
+          patchCentre,
+          patchSize,
+          patchIndex,
+          volumeIndex2d(x,y-solversHaloSize),
+          t,
+          dt,
+          1, // normal
+          tempFluxY,
+          fluxEnumerator
+        );
+      }
+
+      #pragma omp parallel for collapse(3)
+      for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
+      for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++)
+      for (int unknown=0; unknown<unknowns; unknown++) {
+        internal::updateSolutionWithFlux_LoopBody(
+          tempFluxX, tempFluxY, tempFluxZ,
+          fluxEnumerator,
+          patchCentre,
+          patchSize,
+          patchIndex,
+          volumeIndex2d(x,y),
+          unknown,
+          dt,
+          QOut,
+          QOutEnumerator
+        );
+      }
+    }
+    else if (evaluateFlux and Dimensions==3) {
+      #pragma omp parallel for collapse(3)
+      for (int z = 0; z < numberOfVolumesPerAxisInPatch; z++)
+      for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
+      for (int x = 0; x < numberOfVolumesPerAxisInPatch+2*solversHaloSize; x++) {
+        internal::computeFlux_LoopBody<Solver, unknowns, auxiliaryVariables>(
+          QIn,
+          QInEnumerator,
+          patchCentre,
+          patchSize,
+          patchIndex,
+          volumeIndex3d(x-solversHaloSize,y,z),
+          t,
+          dt,
+          0, // normal
+          tempFluxX,
+          fluxEnumerator
+        );
+      }
+
+      #pragma omp parallel for collapse(3)
+      for (int z = 0; z < numberOfVolumesPerAxisInPatch; z++)
+      for (int y = 0; y < numberOfVolumesPerAxisInPatch+2*solversHaloSize; y++)
+      for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++) {
+        internal::computeFlux_LoopBody<Solver, unknowns, auxiliaryVariables>(
+          QIn,
+          QInEnumerator,
+          patchCentre,
+          patchSize,
+          patchIndex,
+          volumeIndex3d(x,y-solversHaloSize,z),
+          t,
+          dt,
+          1, // normal
+          tempFluxY,
+          fluxEnumerator
+        );
+      }
+
+      #pragma omp parallel for collapse(3)
+      for (int z = 0; z < numberOfVolumesPerAxisInPatch+2*solversHaloSize; z++)
+      for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
+      for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++) {
+        internal::computeFlux_LoopBody<Solver, unknowns, auxiliaryVariables>(
+          QIn,
+          QInEnumerator,
+          patchCentre,
+          patchSize,
+          patchIndex,
+          volumeIndex3d(x,y,z-solversHaloSize),
+          t,
+          dt,
+          2, // normal
+          tempFluxZ,
+          fluxEnumerator
+        );
+      }
+
+      #pragma omp parallel for collapse(4)
+      for (int z = 0; z < numberOfVolumesPerAxisInPatch; z++)
+      for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
+      for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++)
+      for (int unknown=0; unknown<unknowns; unknown++) {
+        internal::updateSolutionWithFlux_LoopBody(
+          tempFluxX, tempFluxY, tempFluxZ,
+          fluxEnumerator,
+          patchCentre,
+          patchSize,
+          patchIndex,
+          volumeIndex3d(x,y,z),
+          unknown,
+          dt,
+          QOut,
+          QOutEnumerator
+        );
+      }
+    }
+
+    if (evaluateNonconservativeProduct and Dimensions==2) {
+      #pragma omp parallel for collapse(2)
+      for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
+      for (int x = 0; x < numberOfVolumesPerAxisInPatch+2*solversHaloSize-1; x++) {
+        internal::computeNonconservativeFlux_LoopBody<Solver,unknowns,auxiliaryVariables>(
+          QIn,
+          QInEnumerator,
+          patchCentre,
+          patchSize,
+          patchIndex,
+          volumeIndex2d(x-solversHaloSize,y),
+          t,
+          dt,
+          0, // normal
+          tempNonconservativeProductX,
+          ncpEnumerator
+        );
+      }
+
+      #pragma omp parallel for collapse(2)
+      for (int y = 0; y < numberOfVolumesPerAxisInPatch+2*solversHaloSize-1; y++)
+      for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++) {
+        internal::computeNonconservativeFlux_LoopBody<Solver,unknowns,auxiliaryVariables>(
+          QIn,
+          QInEnumerator,
+          patchCentre,
+          patchSize,
+          patchIndex,
+          volumeIndex2d(x,y-solversHaloSize),
+          t,
+          dt,
+          1, // normal
+          tempNonconservativeProductY,
+          ncpEnumerator
+        );
+      }
+
+      #pragma omp parallel for collapse(3)
+      for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
+      for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++)
+      for (int unknown=0; unknown<unknowns; unknown++) {
+        internal::updateSolutionWithNonconservativeFlux_LoopBody(
+          tempNonconservativeProductX, tempNonconservativeProductY, tempNonconservativeProductZ,
+          ncpEnumerator,
+          patchCentre,
+          patchSize,
+          patchIndex,
+          volumeIndex2d(x,y),
+          unknown,
+          dt,
+          QOut,
+          QOutEnumerator
+        );
+      }
+    }
+    else if (evaluateNonconservativeProduct and Dimensions==3) {
+        #pragma omp parallel for collapse(3)
+        for (int z = 0; z < numberOfVolumesPerAxisInPatch; z++)
+        for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
+        for (int x = 0; x < numberOfVolumesPerAxisInPatch+2*solversHaloSize-1; x++) {
+          internal::computeNonconservativeFlux_LoopBody<Solver,unknowns,auxiliaryVariables>(
+            QIn,
+            QInEnumerator,
+            patchCentre,
+            patchSize,
+            patchIndex,
+            volumeIndex3d(x-solversHaloSize,y,z),
+            t,
+            dt,
+            0, // normal
+            tempNonconservativeProductX,
+            ncpEnumerator
+          );
+        }
+
+        #pragma omp parallel for collapse(3)
+        for (int z = 0; z < numberOfVolumesPerAxisInPatch; z++)
+        for (int y = 0; y < numberOfVolumesPerAxisInPatch+2*solversHaloSize-1; y++)
+        for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++) {
+          internal::computeNonconservativeFlux_LoopBody<Solver,unknowns,auxiliaryVariables>(
+            QIn,
+            QInEnumerator,
+            patchCentre,
+            patchSize,
+            patchIndex,
+            volumeIndex3d(x,y-solversHaloSize,z),
+            t,
+            dt,
+            1, // normal
+            tempNonconservativeProductY,
+            ncpEnumerator
+          );
+        }
+
+        #pragma omp parallel for collapse(3)
+        for (int z = 0; z < numberOfVolumesPerAxisInPatch+2*solversHaloSize-1; z++)
+        for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
+        for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++) {
+          internal::computeNonconservativeFlux_LoopBody<Solver,unknowns,auxiliaryVariables>(
+            QIn,
+            QInEnumerator,
+            patchCentre,
+            patchSize,
+            patchIndex,
+            volumeIndex3d(x,y,z-solversHaloSize),
+            t,
+            dt,
+            2, // normal
+            tempNonconservativeProductZ,
+            ncpEnumerator
+          );
+        }
+
+        #pragma omp parallel for collapse(4)
+        for (int z = 0; z < numberOfVolumesPerAxisInPatch; z++)
+        for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
+        for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++)
+        for (int unknown=0; unknown<unknowns; unknown++) {
+          internal::updateSolutionWithNonconservativeFlux_LoopBody(
+            tempNonconservativeProductX, tempNonconservativeProductY, tempNonconservativeProductZ,
+            ncpEnumerator,
+            patchCentre,
+            patchSize,
+            patchIndex,
+            volumeIndex3d(x,y,z),
+            unknown,
+            dt,
+            QOut,
+            QOutEnumerator
+          );
+        }
+    }
+    if (evaluateMaximumEigenvalueAfterTimeStep and Dimensions==2) {
+      double newMaxEigenvalue = 0.0;
+      #pragma omp parallel for collapse(2) reduction(max:newMaxEigenvalue)
+      for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
+      for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++) {
+        newMaxEigenvalue = std::max(
+          newMaxEigenvalue,
+          internal::reduceMaxEigenvalue_LoopBody<Solver>(
+            QOut,
+            QOutEnumerator,
+            patchCentre,
+            patchSize,
+            patchIndex,
+            volumeIndex2d(x,y),
+            t,
+            dt
+          )
+        );
+      }
+      maxEigenvalues[patchIndex] = newMaxEigenvalue;
+    }
+    else if (evaluateMaximumEigenvalueAfterTimeStep) {
+      double newMaxEigenvalue = 0.0;
+      #pragma omp parallel for collapse(3) reduction(max:newMaxEigenvalue)
+      for (int z = 0; z < numberOfVolumesPerAxisInPatch; z++)
+      for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
+      for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++) {
+        newMaxEigenvalue = std::max(
+          newMaxEigenvalue,
+          internal::reduceMaxEigenvalue_LoopBody<Solver>(
+            QOut,
+            QOutEnumerator,
+            patchCentre,
+            patchSize,
+            patchIndex,
+            volumeIndex3d(x,y,z),
+            t,
+            dt
+          )
+        );
+      }
+      maxEigenvalues[patchIndex] = newMaxEigenvalue;
+    }
+  } // This is the end of the target offloading block
+
+  std::vector<double> tmpQOut(hostPatchData.numberOfCells * QOutHostEnumerator.size());
+  omp_target_memcpy(&tmpQOut[0], mappedPointersToQOuts, hostPatchData.numberOfCells * QOutHostEnumerator.size() * sizeof(double), 0, 0, hostId, targetDevice);
+  for (int patchIndex=0; patchIndex<hostPatchData.numberOfCells; patchIndex++) {
+    std::memcpy(hostPatchData.QOut[patchIndex], &tmpQOut[patchIndex * QOutHostEnumerator.size()], QOutHostEnumerator.size() * sizeof(double));
+  }
+
+  omp_target_memcpy(hostPatchData.maxEigenvalue, maxEigenvalues, hostPatchData.numberOfCells * sizeof(double), 0, 0, hostId, targetDevice);
+
+  tarch::multicore::omp::GPUMemoryManager::getInstance().free( tempFluxX, targetDevice );
+  tarch::multicore::omp::GPUMemoryManager::getInstance().free( tempFluxY, targetDevice );
+  tarch::multicore::omp::GPUMemoryManager::getInstance().free( tempFluxZ, targetDevice );
+  tarch::multicore::omp::GPUMemoryManager::getInstance().free( tempNonconservativeProductX, targetDevice );
+  tarch::multicore::omp::GPUMemoryManager::getInstance().free( tempNonconservativeProductY, targetDevice );
+  tarch::multicore::omp::GPUMemoryManager::getInstance().free( tempNonconservativeProductZ, targetDevice );
+  tarch::multicore::omp::GPUMemoryManager::getInstance().free( tempEigenvalueX, targetDevice );
+  tarch::multicore::omp::GPUMemoryManager::getInstance().free( tempEigenvalueY, targetDevice );
+  tarch::multicore::omp::GPUMemoryManager::getInstance().free( tempEigenvalueZ, targetDevice );
+
+  tarch::multicore::omp::GPUMemoryManager::getInstance().free( mappedPointersToQIns, targetDevice );
+  tarch::multicore::omp::GPUMemoryManager::getInstance().free( mappedPointersToQOuts, targetDevice );
+  tarch::multicore::omp::GPUMemoryManager::getInstance().free( rawPointerToCellCentres, targetDevice );
+  tarch::multicore::omp::GPUMemoryManager::getInstance().free( rawPointerToCellSizes, targetDevice );
+  tarch::multicore::omp::GPUMemoryManager::getInstance().free( ts, targetDevice );
+  tarch::multicore::omp::GPUMemoryManager::getInstance().free( dts, targetDevice );
+  tarch::multicore::omp::GPUMemoryManager::getInstance().free( maxEigenvalues, targetDevice );
+
+  #pragma omp atomic
+  currentOffloadedPatches -= hostPatchData.numberOfCells;
+
+  #else
+  assertionMsg(false, "this routine should only be used in combination with OpenMP offloading" );
+  #endif
+}

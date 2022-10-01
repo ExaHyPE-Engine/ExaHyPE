@@ -155,7 +155,7 @@ class GlobalFixedTimeStep( SingleSweep ):
     """
     code  = "int postProcessingIndex = 0;\n"
     code += "dfor(volume, %i) "%self._patch_size;
-    code += "{\n  double* Q = targetPatch + postProcessingIndex;\n"
+    code += "{\n  double* Q = newQ + postProcessingIndex;\n"
     code += kernel
     code += "  postProcessingIndex += {};\n}}\n".format(self._unknowns + self._auxiliary_variables);
     self.set_postprocess_updated_patch_kernel( code )

@@ -49,12 +49,12 @@ class ComputeFinalLinearCombination(AbstractRKFDActionSet):
 
     const double timeStamp = fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStamp();
 
-    double* targetPatch = fineGridCell{{UNKNOWN_IDENTIFIER}}.value;
+    double* newQ = fineGridCell{{UNKNOWN_IDENTIFIER}}.value;
     
     {{POSTPROCESS_UPDATED_PATCH}}
 
     ::exahype2::fd::validatePatch(
-      targetPatch,
+      newQ,
       {{NUMBER_OF_UNKNOWNS}},
       {{NUMBER_OF_AUXILIARY_VARIABLES}},
       {{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}},

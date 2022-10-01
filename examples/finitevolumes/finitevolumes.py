@@ -223,8 +223,8 @@ functor = """
       assertion(neighbourVoxel(d)>=0);
 
       splitRiemann1d( 
-        reconstructedPatch + neighbourVoxelSerialised*5,
-        reconstructedPatch + currentVoxelSerialised*5,
+        oldQWithHalo + neighbourVoxelSerialised*5,
+        oldQWithHalo + currentVoxelSerialised*5,
         x, dx, dt, d,
         numericalFlux
       );
@@ -240,8 +240,8 @@ functor = """
       x(d) += 1.0 * dx;
       
       splitRiemann1d( 
-        reconstructedPatch + currentVoxelSerialised*5,
-        reconstructedPatch + neighbourVoxelSerialised*5,
+        oldQWithHalo + currentVoxelSerialised*5,
+        oldQWithHalo + neighbourVoxelSerialised*5,
         x, dx, dt, d,
         numericalFlux
       );
