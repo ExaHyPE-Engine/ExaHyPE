@@ -48,14 +48,14 @@ unknowns    = {
 number_of_unknowns  = sum(unknowns.values())
 
 if args.type=="plot-0":
-  baseline_max_h               = 0.2
-  baseline_min_h               = 0.2
-if args.type=="plot-1":
   baseline_max_h               = 0.05
   baseline_min_h               = 0.05
+if args.type=="plot-1":
+  baseline_max_h               = 0.005
+  baseline_min_h               = 0.005
 if args.type=="plot-2":
-  baseline_max_h               = 0.2
-  baseline_min_h               = 0.05
+  baseline_max_h               = 0.05
+  baseline_min_h               = 0.005
 elif args.type=="reg-0":
   baseline_max_h               = 0.008
   baseline_min_h               = 0.008
@@ -106,7 +106,7 @@ if "fv" in args.solver:
                                                                                    patch_size           = patch_size,
                                                                                    unknowns             = number_of_unknowns,
                                                                                    auxiliary_variables  = auxiliary_variables,
-                                                                                   min_volume_h         = max_h, 
+                                                                                   min_volume_h         = min_h, 
                                                                                    max_volume_h         = max_h,
                                                                                    time_step_relaxation = 0.1,
                                                                                    flux                 = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
@@ -135,8 +135,8 @@ if "rk" in args.solver and "dg" in args.solver:
                                                                    face_projections     = exahype2.solvers.rkdg.FaceProjections.Solution,
                                                                    unknowns             = number_of_unknowns,
                                                                    auxiliary_variables  = auxiliary_variables,
-                                                                   min_cell_h           = max_h, 
-                                                                   max_cell_h           = min_h,
+                                                                   min_cell_h           = min_h, 
+                                                                   max_cell_h           = max_h,
                                                                    time_step_relaxation = 0.1,
                                                                    flux                 = exahype2.solvers.rkdg.PDETerms.User_Defined_Implementation,
                                                                    eigenvalues          = exahype2.solvers.rkdg.PDETerms.User_Defined_Implementation,
