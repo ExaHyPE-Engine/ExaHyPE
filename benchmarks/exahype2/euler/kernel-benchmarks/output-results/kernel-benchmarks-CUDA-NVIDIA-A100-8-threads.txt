@@ -1,0 +1,545 @@
+Peano 4 (C) www.peano-framework.org 
+build: 2d, no mpi, omp (8 threads), omp offloading (4 gpus)
+00:00:00	rank:0	::::main()	info	========================================
+00:00:00	rank:0	::::main()	info	  Number of patches fused: 1
+00:00:00	rank:0	::::main()	info	========================================
+00:00:00	rank:0	::::main()	info	baseline: 0.00012229 / 2.48911e-08
+00:00:00	rank:0	::::main()	info	stateless kernels on host with heap, patch-wise, AoS: 8.159e-05 / 1.6607e-08
+00:00:00	rank:0	::::main()	info	stateless kernels on host with heap, patch-wise, AoSoA: 7.996e-05 / 1.62752e-08
+00:00:00	rank:0	::::main()	info	stateless kernels on host with heap, patch-wise, SoA: 8.148e-05 / 1.65846e-08
+00:00:00	rank:0	::::main()	info	stateless kernels on host with heap, patch-wise, in-situ: 5.435e-05 / 1.10625e-08
+00:00:00	rank:0	::::main()	info	stateless kernels on host with heap, batched, AoS: 7.612e-05 / 1.54936e-08
+00:00:00	rank:0	::::main()	info	stateless kernels on host with heap, batched, AoSoA: 8.3661e-05 / 1.70285e-08
+00:00:00	rank:0	::::main()	info	stateless kernels on host with heap, batched, SoA: 7.334e-05 / 1.49277e-08
+00:00:00	rank:0	::::main()	info	stateless kernels on host with heap, batched, in-situ: 4.521e-05 / 9.20212e-09
+00:00:01	rank:0	::::main()	info	stateless kernels on device 0 with omp, patch-wise, AoS, user-managed-memory: 0.209364 / 4.26144e-05
+00:00:01	rank:0	::::main()	info	stateless kernels on device 0 with omp, patch-wise, AoSoA, user-managed-memory: 5.1721e-05 / 1.05274e-08
+00:00:01	rank:0	::::main()	info	stateless kernels on device 0 with omp, patch-wise, SoA, user-managed-memory: 3.193e-05 / 6.49908e-09
+00:00:01	rank:0	::::main()	info	stateless kernels on device 0 with omp, batched, AoS, user-managed-memory: 3.146e-05 / 6.40342e-09
+00:00:01	rank:0	::::main()	info	stateless kernels on device 0 with omp, batched, AoSoA, user-managed-memory: 4.3691e-05 / 8.89294e-09
+00:00:01	rank:0	::::main()	info	stateless kernels on device 0 with omp, batched, SoA, user-managed-memory: 2.873e-05 / 5.84775e-09
+00:00:01	rank:0	::::main()	info	stateless kernels on device 1 with omp, patch-wise, AoS, user-managed-memory: 0.000712944 / 1.45114e-07
+00:00:01	rank:0	::::main()	info	stateless kernels on device 1 with omp, patch-wise, AoSoA, user-managed-memory: 3.652e-05 / 7.43334e-09
+00:00:01	rank:0	::::main()	info	stateless kernels on device 1 with omp, patch-wise, SoA, user-managed-memory: 3.0441e-05 / 6.19601e-09
+00:00:01	rank:0	::::main()	info	stateless kernels on device 1 with omp, batched, AoS, user-managed-memory: 2.431e-05 / 4.9481e-09
+00:00:01	rank:0	::::main()	info	stateless kernels on device 1 with omp, batched, AoSoA, user-managed-memory: 3.617e-05 / 7.3621e-09
+00:00:01	rank:0	::::main()	info	stateless kernels on device 1 with omp, batched, SoA, user-managed-memory: 2.439e-05 / 4.96438e-09
+00:00:01	rank:0	::::main()	info	stateless kernels on device 2 with omp, patch-wise, AoS, user-managed-memory: 0.000742024 / 1.51033e-07
+00:00:01	rank:0	::::main()	info	stateless kernels on device 2 with omp, patch-wise, AoSoA, user-managed-memory: 3.684e-05 / 7.49847e-09
+00:00:01	rank:0	::::main()	info	stateless kernels on device 2 with omp, patch-wise, SoA, user-managed-memory: 2.402e-05 / 4.88907e-09
+00:00:01	rank:0	::::main()	info	stateless kernels on device 2 with omp, batched, AoS, user-managed-memory: 3.1981e-05 / 6.50946e-09
+00:00:01	rank:0	::::main()	info	stateless kernels on device 2 with omp, batched, AoSoA, user-managed-memory: 3.674e-05 / 7.47812e-09
+00:00:01	rank:0	::::main()	info	stateless kernels on device 2 with omp, batched, SoA, user-managed-memory: 2.363e-05 / 4.80969e-09
+00:00:01	rank:0	::::main()	info	stateless kernels on device 3 with omp, patch-wise, AoS, user-managed-memory: 0.000765754 / 1.55863e-07
+00:00:01	rank:0	::::main()	info	stateless kernels on device 3 with omp, patch-wise, AoSoA, user-managed-memory: 3.8e-05 / 7.73458e-09
+00:00:01	rank:0	::::main()	info	stateless kernels on device 3 with omp, patch-wise, SoA, user-managed-memory: 2.472e-05 / 5.03155e-09
+00:00:01	rank:0	::::main()	info	stateless kernels on device 3 with omp, batched, AoS, user-managed-memory: 2.348e-05 / 4.77916e-09
+00:00:01	rank:0	::::main()	info	stateless kernels on device 3 with omp, batched, AoSoA, user-managed-memory: 4.2901e-05 / 8.73214e-09
+00:00:01	rank:0	::::main()	info	stateless kernels on device 3 with omp, batched, SoA, user-managed-memory: 2.483e-05 / 5.05394e-09
+00:00:01	rank:0	::::main()	info	========================================
+00:00:01	rank:0	::::main()	info	  Number of patches fused: 2
+00:00:01	rank:0	::::main()	info	========================================
+00:00:01	rank:0	::::main()	info	baseline: 0.000148691 / 1.51324e-08
+00:00:01	rank:0	::::main()	info	stateless kernels on host with heap, patch-wise, AoS: 0.000150241 / 1.52901e-08
+00:00:01	rank:0	::::main()	info	stateless kernels on host with heap, patch-wise, AoSoA: 0.000145991 / 1.48576e-08
+00:00:01	rank:0	::::main()	info	stateless kernels on host with heap, patch-wise, SoA: 0.000144571 / 1.47131e-08
+00:00:01	rank:0	::::main()	info	stateless kernels on host with heap, patch-wise, in-situ: 8.8051e-05 / 8.96102e-09
+00:00:01	rank:0	::::main()	info	stateless kernels on host with heap, batched, AoS: 0.000154381 / 1.57115e-08
+00:00:01	rank:0	::::main()	info	stateless kernels on host with heap, batched, AoSoA: 0.000138461 / 1.40913e-08
+00:00:01	rank:0	::::main()	info	stateless kernels on host with heap, batched, SoA: 0.000135111 / 1.37504e-08
+00:00:01	rank:0	::::main()	info	stateless kernels on host with heap, batched, in-situ: 8.9981e-05 / 9.15744e-09
+00:00:01	rank:0	::::main()	info	stateless kernels on device 0 with omp, patch-wise, AoS, user-managed-memory: 5.053e-05 / 5.14248e-09
+00:00:01	rank:0	::::main()	info	stateless kernels on device 0 with omp, patch-wise, AoSoA, user-managed-memory: 6.8731e-05 / 6.99481e-09
+00:00:01	rank:0	::::main()	info	stateless kernels on device 0 with omp, patch-wise, SoA, user-managed-memory: 4.228e-05 / 4.30287e-09
+00:00:01	rank:0	::::main()	info	stateless kernels on device 0 with omp, batched, AoS, user-managed-memory: 4.471e-05 / 4.55017e-09
+00:00:01	rank:0	::::main()	info	stateless kernels on device 0 with omp, batched, AoSoA, user-managed-memory: 6.804e-05 / 6.92449e-09
+00:00:01	rank:0	::::main()	info	stateless kernels on device 0 with omp, batched, SoA, user-managed-memory: 4.374e-05 / 4.45146e-09
+00:00:01	rank:0	::::main()	info	stateless kernels on device 1 with omp, patch-wise, AoS, user-managed-memory: 4.527e-05 / 4.60716e-09
+00:00:01	rank:0	::::main()	info	stateless kernels on device 1 with omp, patch-wise, AoSoA, user-managed-memory: 6.61e-05 / 6.72705e-09
+00:00:01	rank:0	::::main()	info	stateless kernels on device 1 with omp, patch-wise, SoA, user-managed-memory: 4.503e-05 / 4.58274e-09
+00:00:01	rank:0	::::main()	info	stateless kernels on device 1 with omp, batched, AoS, user-managed-memory: 4.483e-05 / 4.56239e-09
+00:00:01	rank:0	::::main()	info	stateless kernels on device 1 with omp, batched, AoSoA, user-managed-memory: 6.639e-05 / 6.75656e-09
+00:00:01	rank:0	::::main()	info	stateless kernels on device 1 with omp, batched, SoA, user-managed-memory: 4.297e-05 / 4.37309e-09
+00:00:01	rank:0	::::main()	info	stateless kernels on device 2 with omp, patch-wise, AoS, user-managed-memory: 4.7051e-05 / 4.78842e-09
+00:00:01	rank:0	::::main()	info	stateless kernels on device 2 with omp, patch-wise, AoSoA, user-managed-memory: 6.522e-05 / 6.63749e-09
+00:00:01	rank:0	::::main()	info	stateless kernels on device 2 with omp, patch-wise, SoA, user-managed-memory: 4.3231e-05 / 4.39965e-09
+00:00:01	rank:0	::::main()	info	stateless kernels on device 2 with omp, batched, AoS, user-managed-memory: 4.367e-05 / 4.44433e-09
+00:00:01	rank:0	::::main()	info	stateless kernels on device 2 with omp, batched, AoSoA, user-managed-memory: 6.7431e-05 / 6.86251e-09
+00:00:01	rank:0	::::main()	info	stateless kernels on device 2 with omp, batched, SoA, user-managed-memory: 4.244e-05 / 4.31915e-09
+00:00:01	rank:0	::::main()	info	stateless kernels on device 3 with omp, patch-wise, AoS, user-managed-memory: 4.876e-05 / 4.96234e-09
+00:00:01	rank:0	::::main()	info	stateless kernels on device 3 with omp, patch-wise, AoSoA, user-managed-memory: 6.475e-05 / 6.58966e-09
+00:00:01	rank:0	::::main()	info	stateless kernels on device 3 with omp, patch-wise, SoA, user-managed-memory: 4.5451e-05 / 4.62559e-09
+00:00:01	rank:0	::::main()	info	stateless kernels on device 3 with omp, batched, AoS, user-managed-memory: 4.306e-05 / 4.38225e-09
+00:00:01	rank:0	::::main()	info	stateless kernels on device 3 with omp, batched, AoSoA, user-managed-memory: 6.7741e-05 / 6.89406e-09
+00:00:01	rank:0	::::main()	info	stateless kernels on device 3 with omp, batched, SoA, user-managed-memory: 4.664e-05 / 4.74659e-09
+00:00:01	rank:0	::::main()	info	========================================
+00:00:01	rank:0	::::main()	info	  Number of patches fused: 4
+00:00:01	rank:0	::::main()	info	========================================
+00:00:01	rank:0	::::main()	info	baseline: 0.000278752 / 1.41844e-08
+00:00:01	rank:0	::::main()	info	stateless kernels on host with heap, patch-wise, AoS: 0.000306702 / 1.56067e-08
+00:00:01	rank:0	::::main()	info	stateless kernels on host with heap, patch-wise, AoSoA: 0.000289432 / 1.47279e-08
+00:00:01	rank:0	::::main()	info	stateless kernels on host with heap, patch-wise, SoA: 0.000287332 / 1.4621e-08
+00:00:01	rank:0	::::main()	info	stateless kernels on host with heap, patch-wise, in-situ: 0.000174661 / 8.8877e-09
+00:00:01	rank:0	::::main()	info	stateless kernels on host with heap, batched, AoS: 0.000294742 / 1.49981e-08
+00:00:01	rank:0	::::main()	info	stateless kernels on host with heap, batched, AoSoA: 0.000280752 / 1.42862e-08
+00:00:01	rank:0	::::main()	info	stateless kernels on host with heap, batched, SoA: 0.000268822 / 1.36791e-08
+00:00:01	rank:0	::::main()	info	stateless kernels on host with heap, batched, in-situ: 0.000176891 / 9.00117e-09
+00:00:01	rank:0	::::main()	info	stateless kernels on device 0 with omp, patch-wise, AoS, user-managed-memory: 9.676e-05 / 4.92367e-09
+00:00:01	rank:0	::::main()	info	stateless kernels on device 0 with omp, patch-wise, AoSoA, user-managed-memory: 0.00012805 / 6.51588e-09
+00:00:01	rank:0	::::main()	info	stateless kernels on device 0 with omp, patch-wise, SoA, user-managed-memory: 8.054e-05 / 4.09831e-09
+00:00:01	rank:0	::::main()	info	stateless kernels on device 0 with omp, batched, AoS, user-managed-memory: 8.1891e-05 / 4.16706e-09
+00:00:01	rank:0	::::main()	info	stateless kernels on device 0 with omp, batched, AoSoA, user-managed-memory: 0.000129191 / 6.57394e-09
+00:00:01	rank:0	::::main()	info	stateless kernels on device 0 with omp, batched, SoA, user-managed-memory: 7.8791e-05 / 4.00931e-09
+00:00:01	rank:0	::::main()	info	stateless kernels on device 1 with omp, patch-wise, AoS, user-managed-memory: 8.8521e-05 / 4.50443e-09
+00:00:01	rank:0	::::main()	info	stateless kernels on device 1 with omp, patch-wise, AoSoA, user-managed-memory: 0.000128341 / 6.53068e-09
+00:00:01	rank:0	::::main()	info	stateless kernels on device 1 with omp, patch-wise, SoA, user-managed-memory: 8.0671e-05 / 4.10498e-09
+00:00:01	rank:0	::::main()	info	stateless kernels on device 1 with omp, batched, AoS, user-managed-memory: 8.0661e-05 / 4.10447e-09
+00:00:01	rank:0	::::main()	info	stateless kernels on device 1 with omp, batched, AoSoA, user-managed-memory: 0.000128011 / 6.51389e-09
+00:00:01	rank:0	::::main()	info	stateless kernels on device 1 with omp, batched, SoA, user-managed-memory: 8.0741e-05 / 4.10854e-09
+00:00:01	rank:0	::::main()	info	stateless kernels on device 2 with omp, patch-wise, AoS, user-managed-memory: 8.9921e-05 / 4.57567e-09
+00:00:01	rank:0	::::main()	info	stateless kernels on device 2 with omp, patch-wise, AoSoA, user-managed-memory: 0.000127791 / 6.5027e-09
+00:00:01	rank:0	::::main()	info	stateless kernels on device 2 with omp, patch-wise, SoA, user-managed-memory: 8.0011e-05 / 4.07139e-09
+00:00:01	rank:0	::::main()	info	stateless kernels on device 2 with omp, batched, AoS, user-managed-memory: 8.0771e-05 / 4.11007e-09
+00:00:01	rank:0	::::main()	info	stateless kernels on device 2 with omp, batched, AoSoA, user-managed-memory: 0.000128261 / 6.52661e-09
+00:00:01	rank:0	::::main()	info	stateless kernels on device 2 with omp, batched, SoA, user-managed-memory: 7.954e-05 / 4.04743e-09
+00:00:01	rank:0	::::main()	info	stateless kernels on device 3 with omp, patch-wise, AoS, user-managed-memory: 8.9101e-05 / 4.53394e-09
+00:00:01	rank:0	::::main()	info	stateless kernels on device 3 with omp, patch-wise, AoSoA, user-managed-memory: 0.000128881 / 6.55816e-09
+00:00:01	rank:0	::::main()	info	stateless kernels on device 3 with omp, patch-wise, SoA, user-managed-memory: 8.0511e-05 / 4.09683e-09
+00:00:01	rank:0	::::main()	info	stateless kernels on device 3 with omp, batched, AoS, user-managed-memory: 8.1e-05 / 4.12172e-09
+00:00:01	rank:0	::::main()	info	stateless kernels on device 3 with omp, batched, AoSoA, user-managed-memory: 0.000128251 / 6.5261e-09
+00:00:01	rank:0	::::main()	info	stateless kernels on device 3 with omp, batched, SoA, user-managed-memory: 8.079e-05 / 4.11103e-09
+00:00:01	rank:0	::::main()	info	========================================
+00:00:01	rank:0	::::main()	info	  Number of patches fused: 8
+00:00:01	rank:0	::::main()	info	========================================
+00:00:01	rank:0	::::main()	info	baseline: 0.000550133 / 1.39969e-08
+00:00:01	rank:0	::::main()	info	stateless kernels on host with heap, patch-wise, AoS: 0.000624934 / 1.59e-08
+00:00:01	rank:0	::::main()	info	stateless kernels on host with heap, patch-wise, AoSoA: 0.000582923 / 1.48311e-08
+00:00:01	rank:0	::::main()	info	stateless kernels on host with heap, patch-wise, SoA: 0.000582033 / 1.48085e-08
+00:00:01	rank:0	::::main()	info	stateless kernels on host with heap, patch-wise, in-situ: 0.000356802 / 9.07801e-09
+00:00:01	rank:0	::::main()	info	stateless kernels on host with heap, batched, AoS: 0.000588743 / 1.49792e-08
+00:00:01	rank:0	::::main()	info	stateless kernels on host with heap, batched, AoSoA: 0.000556963 / 1.41706e-08
+00:00:01	rank:0	::::main()	info	stateless kernels on host with heap, batched, SoA: 0.000542683 / 1.38073e-08
+00:00:01	rank:0	::::main()	info	stateless kernels on host with heap, batched, in-situ: 0.000355122 / 9.03526e-09
+00:00:01	rank:0	::::main()	info	stateless kernels on device 0 with omp, patch-wise, AoS, user-managed-memory: 0.000266482 / 6.78002e-09
+00:00:01	rank:0	::::main()	info	stateless kernels on device 0 with omp, patch-wise, AoSoA, user-managed-memory: 0.000250541 / 6.37444e-09
+00:00:01	rank:0	::::main()	info	stateless kernels on device 0 with omp, patch-wise, SoA, user-managed-memory: 0.00015818 / 4.02453e-09
+00:00:01	rank:0	::::main()	info	stateless kernels on device 0 with omp, batched, AoS, user-managed-memory: 0.000158601 / 4.03524e-09
+00:00:01	rank:0	::::main()	info	stateless kernels on device 0 with omp, batched, AoSoA, user-managed-memory: 0.000258691 / 6.5818e-09
+00:00:01	rank:0	::::main()	info	stateless kernels on device 0 with omp, batched, SoA, user-managed-memory: 0.000161441 / 4.1075e-09
+00:00:01	rank:0	::::main()	info	stateless kernels on device 1 with omp, patch-wise, AoS, user-managed-memory: 0.000245541 / 6.24723e-09
+00:00:01	rank:0	::::main()	info	stateless kernels on device 1 with omp, patch-wise, AoSoA, user-managed-memory: 0.000247951 / 6.30854e-09
+00:00:01	rank:0	::::main()	info	stateless kernels on device 1 with omp, patch-wise, SoA, user-managed-memory: 0.000156021 / 3.9696e-09
+00:00:01	rank:0	::::main()	info	stateless kernels on device 1 with omp, batched, AoS, user-managed-memory: 0.000158111 / 4.02277e-09
+00:00:01	rank:0	::::main()	info	stateless kernels on device 1 with omp, batched, AoSoA, user-managed-memory: 0.000253191 / 6.44186e-09
+00:00:01	rank:0	::::main()	info	stateless kernels on device 1 with omp, batched, SoA, user-managed-memory: 0.000157811 / 4.01514e-09
+00:00:01	rank:0	::::main()	info	stateless kernels on device 2 with omp, patch-wise, AoS, user-managed-memory: 0.000245411 / 6.24392e-09
+00:00:01	rank:0	::::main()	info	stateless kernels on device 2 with omp, patch-wise, AoSoA, user-managed-memory: 0.000247991 / 6.30956e-09
+00:00:01	rank:0	::::main()	info	stateless kernels on device 2 with omp, patch-wise, SoA, user-managed-memory: 0.000154731 / 3.93677e-09
+00:00:01	rank:0	::::main()	info	stateless kernels on device 2 with omp, batched, AoS, user-managed-memory: 0.000157061 / 3.99606e-09
+00:00:01	rank:0	::::main()	info	stateless kernels on device 2 with omp, batched, AoSoA, user-managed-memory: 0.000254112 / 6.4653e-09
+00:00:01	rank:0	::::main()	info	stateless kernels on device 2 with omp, batched, SoA, user-managed-memory: 0.000159871 / 4.06755e-09
+00:00:01	rank:0	::::main()	info	stateless kernels on device 3 with omp, patch-wise, AoS, user-managed-memory: 0.000251511 / 6.39912e-09
+00:00:01	rank:0	::::main()	info	stateless kernels on device 3 with omp, patch-wise, AoSoA, user-managed-memory: 0.000250151 / 6.36452e-09
+00:00:01	rank:0	::::main()	info	stateless kernels on device 3 with omp, patch-wise, SoA, user-managed-memory: 0.000152661 / 3.88411e-09
+00:00:01	rank:0	::::main()	info	stateless kernels on device 3 with omp, batched, AoS, user-managed-memory: 0.000164271 / 4.1795e-09
+00:00:01	rank:0	::::main()	info	stateless kernels on device 3 with omp, batched, AoSoA, user-managed-memory: 0.000254522 / 6.47573e-09
+00:00:01	rank:0	::::main()	info	stateless kernels on device 3 with omp, batched, SoA, user-managed-memory: 0.00015619 / 3.9739e-09
+00:00:01	rank:0	::::main()	info	========================================
+00:00:01	rank:0	::::main()	info	  Number of patches fused: 16
+00:00:01	rank:0	::::main()	info	========================================
+00:00:01	rank:0	::::main()	info	baseline: 0.00109606 / 1.39433e-08
+00:00:01	rank:0	::::main()	info	stateless kernels on host with heap, patch-wise, AoS: 0.00124673 / 1.586e-08
+00:00:01	rank:0	::::main()	info	stateless kernels on host with heap, patch-wise, AoSoA: 0.00118469 / 1.50708e-08
+00:00:01	rank:0	::::main()	info	stateless kernels on host with heap, patch-wise, SoA: 0.00117271 / 1.49184e-08
+00:00:01	rank:0	::::main()	info	stateless kernels on host with heap, patch-wise, in-situ: 0.000703573 / 8.9504e-09
+00:00:01	rank:0	::::main()	info	stateless kernels on host with heap, batched, AoS: 0.00119301 / 1.51766e-08
+00:00:01	rank:0	::::main()	info	stateless kernels on host with heap, batched, AoSoA: 0.00112416 / 1.43008e-08
+00:00:01	rank:0	::::main()	info	stateless kernels on host with heap, batched, SoA: 0.00109464 / 1.39254e-08
+00:00:01	rank:0	::::main()	info	stateless kernels on host with heap, batched, in-situ: 0.000716644 / 9.11668e-09
+00:00:01	rank:0	::::main()	info	stateless kernels on device 0 with omp, patch-wise, AoS, user-managed-memory: 0.000493353 / 6.27612e-09
+00:00:01	rank:0	::::main()	info	stateless kernels on device 0 with omp, patch-wise, AoSoA, user-managed-memory: 0.000495383 / 6.30194e-09
+00:00:01	rank:0	::::main()	info	stateless kernels on device 0 with omp, patch-wise, SoA, user-managed-memory: 0.000305972 / 3.89238e-09
+00:00:01	rank:0	::::main()	info	stateless kernels on device 0 with omp, batched, AoS, user-managed-memory: 0.000312861 / 3.98001e-09
+00:00:01	rank:0	::::main()	info	stateless kernels on device 0 with omp, batched, AoSoA, user-managed-memory: 0.000514933 / 6.55064e-09
+00:00:01	rank:0	::::main()	info	stateless kernels on device 0 with omp, batched, SoA, user-managed-memory: 0.000308742 / 3.92762e-09
+00:00:01	rank:0	::::main()	info	stateless kernels on device 1 with omp, patch-wise, AoS, user-managed-memory: 0.000475773 / 6.05248e-09
+00:00:01	rank:0	::::main()	info	stateless kernels on device 1 with omp, patch-wise, AoSoA, user-managed-memory: 0.000487292 / 6.19901e-09
+00:00:01	rank:0	::::main()	info	stateless kernels on device 1 with omp, patch-wise, SoA, user-managed-memory: 0.000300061 / 3.81718e-09
+00:00:01	rank:0	::::main()	info	stateless kernels on device 1 with omp, batched, AoS, user-managed-memory: 0.000314532 / 4.00127e-09
+00:00:01	rank:0	::::main()	info	stateless kernels on device 1 with omp, batched, AoSoA, user-managed-memory: 0.000500773 / 6.37051e-09
+00:00:01	rank:0	::::main()	info	stateless kernels on device 1 with omp, batched, SoA, user-managed-memory: 0.000308542 / 3.92507e-09
+00:00:01	rank:0	::::main()	info	stateless kernels on device 2 with omp, patch-wise, AoS, user-managed-memory: 0.000470993 / 5.99167e-09
+00:00:01	rank:0	::::main()	info	stateless kernels on device 2 with omp, patch-wise, AoSoA, user-managed-memory: 0.000490653 / 6.24177e-09
+00:00:01	rank:0	::::main()	info	stateless kernels on device 2 with omp, patch-wise, SoA, user-managed-memory: 0.000297482 / 3.78437e-09
+00:00:01	rank:0	::::main()	info	stateless kernels on device 2 with omp, batched, AoS, user-managed-memory: 0.000309992 / 3.94352e-09
+00:00:01	rank:0	::::main()	info	stateless kernels on device 2 with omp, batched, AoSoA, user-managed-memory: 0.000502052 / 6.38678e-09
+00:00:01	rank:0	::::main()	info	stateless kernels on device 2 with omp, batched, SoA, user-managed-memory: 0.000304371 / 3.87201e-09
+00:00:01	rank:0	::::main()	info	stateless kernels on device 3 with omp, patch-wise, AoS, user-managed-memory: 0.000466363 / 5.93277e-09
+00:00:01	rank:0	::::main()	info	stateless kernels on device 3 with omp, patch-wise, AoSoA, user-managed-memory: 0.000490903 / 6.24495e-09
+00:00:01	rank:0	::::main()	info	stateless kernels on device 3 with omp, patch-wise, SoA, user-managed-memory: 0.000305142 / 3.88182e-09
+00:00:01	rank:0	::::main()	info	stateless kernels on device 3 with omp, batched, AoS, user-managed-memory: 0.000309892 / 3.94225e-09
+00:00:01	rank:0	::::main()	info	stateless kernels on device 3 with omp, batched, AoSoA, user-managed-memory: 0.000506502 / 6.44339e-09
+00:00:01	rank:0	::::main()	info	stateless kernels on device 3 with omp, batched, SoA, user-managed-memory: 0.000303831 / 3.86514e-09
+00:00:01	rank:0	::::main()	info	========================================
+00:00:01	rank:0	::::main()	info	  Number of patches fused: 32
+00:00:01	rank:0	::::main()	info	========================================
+00:00:01	rank:0	::::main()	info	baseline: 0.00217361 / 1.38256e-08
+00:00:01	rank:0	::::main()	info	stateless kernels on host with heap, patch-wise, AoS: 0.00250402 / 1.59273e-08
+00:00:01	rank:0	::::main()	info	stateless kernels on host with heap, patch-wise, AoSoA: 0.00237824 / 1.51272e-08
+00:00:01	rank:0	::::main()	info	stateless kernels on host with heap, patch-wise, SoA: 0.00237735 / 1.51216e-08
+00:00:01	rank:0	::::main()	info	stateless kernels on host with heap, patch-wise, in-situ: 0.00140764 / 8.95353e-09
+00:00:01	rank:0	::::main()	info	stateless kernels on host with heap, batched, AoS: 0.00241032 / 1.53313e-08
+00:00:01	rank:0	::::main()	info	stateless kernels on host with heap, batched, AoSoA: 0.00229289 / 1.45843e-08
+00:00:01	rank:0	::::main()	info	stateless kernels on host with heap, batched, SoA: 0.00222634 / 1.4161e-08
+00:00:01	rank:0	::::main()	info	stateless kernels on host with heap, batched, in-situ: 0.00152499 / 9.69996e-09
+00:00:01	rank:0	::::main()	info	stateless kernels on device 0 with omp, patch-wise, AoS, user-managed-memory: 0.000959605 / 6.10374e-09
+00:00:01	rank:0	::::main()	info	stateless kernels on device 0 with omp, patch-wise, AoSoA, user-managed-memory: 0.000988065 / 6.28476e-09
+00:00:01	rank:0	::::main()	info	stateless kernels on device 0 with omp, patch-wise, SoA, user-managed-memory: 0.000598593 / 3.80746e-09
+00:00:01	rank:0	::::main()	info	stateless kernels on device 0 with omp, batched, AoS, user-managed-memory: 0.000613924 / 3.90497e-09
+00:00:01	rank:0	::::main()	info	stateless kernels on device 0 with omp, batched, AoSoA, user-managed-memory: 0.00100935 / 6.42012e-09
+00:00:01	rank:0	::::main()	info	stateless kernels on device 0 with omp, batched, SoA, user-managed-memory: 0.000609093 / 3.87424e-09
+00:00:01	rank:0	::::main()	info	stateless kernels on device 1 with omp, patch-wise, AoS, user-managed-memory: 0.000934805 / 5.94599e-09
+00:00:01	rank:0	::::main()	info	stateless kernels on device 1 with omp, patch-wise, AoSoA, user-managed-memory: 0.000986475 / 6.27465e-09
+00:00:01	rank:0	::::main()	info	stateless kernels on device 1 with omp, patch-wise, SoA, user-managed-memory: 0.000599323 / 3.8121e-09
+00:00:01	rank:0	::::main()	info	stateless kernels on device 1 with omp, batched, AoS, user-managed-memory: 0.000624674 / 3.97335e-09
+00:00:01	rank:0	::::main()	info	stateless kernels on device 1 with omp, batched, AoSoA, user-managed-memory: 0.00100686 / 6.40428e-09
+00:00:01	rank:0	::::main()	info	stateless kernels on device 1 with omp, batched, SoA, user-managed-memory: 0.000610013 / 3.88009e-09
+00:00:01	rank:0	::::main()	info	stateless kernels on device 2 with omp, patch-wise, AoS, user-managed-memory: 0.000927885 / 5.90198e-09
+00:00:01	rank:0	::::main()	info	stateless kernels on device 2 with omp, patch-wise, AoSoA, user-managed-memory: 0.000974335 / 6.19743e-09
+00:00:01	rank:0	::::main()	info	stateless kernels on device 2 with omp, patch-wise, SoA, user-managed-memory: 0.000589813 / 3.75161e-09
+00:00:01	rank:0	::::main()	info	stateless kernels on device 2 with omp, batched, AoS, user-managed-memory: 0.000611484 / 3.88945e-09
+00:00:01	rank:0	::::main()	info	stateless kernels on device 2 with omp, batched, AoSoA, user-managed-memory: 0.00100924 / 6.41942e-09
+00:00:01	rank:0	::::main()	info	stateless kernels on device 2 with omp, batched, SoA, user-managed-memory: 0.000596243 / 3.79251e-09
+00:00:01	rank:0	::::main()	info	stateless kernels on device 3 with omp, patch-wise, AoS, user-managed-memory: 0.000947095 / 6.02416e-09
+00:00:01	rank:0	::::main()	info	stateless kernels on device 3 with omp, patch-wise, AoSoA, user-managed-memory: 0.000977205 / 6.21568e-09
+00:00:01	rank:0	::::main()	info	stateless kernels on device 3 with omp, patch-wise, SoA, user-managed-memory: 0.000598883 / 3.8093e-09
+00:00:01	rank:0	::::main()	info	stateless kernels on device 3 with omp, batched, AoS, user-managed-memory: 0.000619144 / 3.93817e-09
+00:00:01	rank:0	::::main()	info	stateless kernels on device 3 with omp, batched, AoSoA, user-managed-memory: 0.00100223 / 6.37483e-09
+00:00:01	rank:0	::::main()	info	stateless kernels on device 3 with omp, batched, SoA, user-managed-memory: 0.000598893 / 3.80936e-09
+00:00:02	rank:0	::::main()	info	========================================
+00:00:02	rank:0	::::main()	info	  Number of patches fused: 64
+00:00:02	rank:0	::::main()	info	========================================
+00:00:02	rank:0	::::main()	info	baseline: 0.00431792 / 1.37325e-08
+00:00:02	rank:0	::::main()	info	stateless kernels on host with heap, patch-wise, AoS: 0.00504656 / 1.60498e-08
+00:00:02	rank:0	::::main()	info	stateless kernels on host with heap, patch-wise, AoSoA: 0.00482027 / 1.53301e-08
+00:00:02	rank:0	::::main()	info	stateless kernels on host with heap, patch-wise, SoA: 0.00481722 / 1.53204e-08
+00:00:02	rank:0	::::main()	info	stateless kernels on host with heap, patch-wise, in-situ: 0.00282522 / 8.98517e-09
+00:00:02	rank:0	::::main()	info	stateless kernels on host with heap, batched, AoS: 0.0048629 / 1.54657e-08
+00:00:02	rank:0	::::main()	info	stateless kernels on host with heap, batched, AoSoA: 0.00463601 / 1.47441e-08
+00:00:02	rank:0	::::main()	info	stateless kernels on host with heap, batched, SoA: 0.00451047 / 1.43448e-08
+00:00:02	rank:0	::::main()	info	stateless kernels on host with heap, batched, in-situ: 0.0031279 / 9.94777e-09
+00:00:02	rank:0	::::main()	info	stateless kernels on device 0 with omp, patch-wise, AoS, user-managed-memory: 0.00189642 / 6.03126e-09
+00:00:02	rank:0	::::main()	info	stateless kernels on device 0 with omp, patch-wise, AoSoA, user-managed-memory: 0.00197889 / 6.29354e-09
+00:00:02	rank:0	::::main()	info	stateless kernels on device 0 with omp, patch-wise, SoA, user-managed-memory: 0.00119643 / 3.80504e-09
+00:00:02	rank:0	::::main()	info	stateless kernels on device 0 with omp, batched, AoS, user-managed-memory: 0.00123253 / 3.91985e-09
+00:00:02	rank:0	::::main()	info	stateless kernels on device 0 with omp, batched, AoSoA, user-managed-memory: 0.00202545 / 6.44162e-09
+00:00:02	rank:0	::::main()	info	stateless kernels on device 0 with omp, batched, SoA, user-managed-memory: 0.00121307 / 3.85796e-09
+00:00:02	rank:0	::::main()	info	stateless kernels on device 1 with omp, patch-wise, AoS, user-managed-memory: 0.00185144 / 5.8882e-09
+00:00:02	rank:0	::::main()	info	stateless kernels on device 1 with omp, patch-wise, AoSoA, user-managed-memory: 0.00198165 / 6.30232e-09
+00:00:02	rank:0	::::main()	info	stateless kernels on device 1 with omp, patch-wise, SoA, user-managed-memory: 0.00118558 / 3.77054e-09
+00:00:02	rank:0	::::main()	info	stateless kernels on device 1 with omp, batched, AoS, user-managed-memory: 0.00122768 / 3.90442e-09
+00:00:02	rank:0	::::main()	info	stateless kernels on device 1 with omp, batched, AoSoA, user-managed-memory: 0.00201484 / 6.40788e-09
+00:00:02	rank:0	::::main()	info	stateless kernels on device 1 with omp, batched, SoA, user-managed-memory: 0.00120581 / 3.83487e-09
+00:00:02	rank:0	::::main()	info	stateless kernels on device 2 with omp, patch-wise, AoS, user-managed-memory: 0.00184954 / 5.88216e-09
+00:00:02	rank:0	::::main()	info	stateless kernels on device 2 with omp, patch-wise, AoSoA, user-managed-memory: 0.00197263 / 6.27363e-09
+00:00:02	rank:0	::::main()	info	stateless kernels on device 2 with omp, patch-wise, SoA, user-managed-memory: 0.00119631 / 3.80466e-09
+00:00:02	rank:0	::::main()	info	stateless kernels on device 2 with omp, batched, AoS, user-managed-memory: 0.00123018 / 3.91238e-09
+00:00:02	rank:0	::::main()	info	stateless kernels on device 2 with omp, batched, AoSoA, user-managed-memory: 0.00202419 / 6.43761e-09
+00:00:02	rank:0	::::main()	info	stateless kernels on device 2 with omp, batched, SoA, user-managed-memory: 0.00121852 / 3.87529e-09
+00:00:02	rank:0	::::main()	info	stateless kernels on device 3 with omp, patch-wise, AoS, user-managed-memory: 0.00184197 / 5.85809e-09
+00:00:02	rank:0	::::main()	info	stateless kernels on device 3 with omp, patch-wise, AoSoA, user-managed-memory: 0.00197893 / 6.29367e-09
+00:00:02	rank:0	::::main()	info	stateless kernels on device 3 with omp, patch-wise, SoA, user-managed-memory: 0.00118645 / 3.7733e-09
+00:00:02	rank:0	::::main()	info	stateless kernels on device 3 with omp, batched, AoS, user-managed-memory: 0.00122206 / 3.88655e-09
+00:00:02	rank:0	::::main()	info	stateless kernels on device 3 with omp, batched, AoSoA, user-managed-memory: 0.00201852 / 6.41958e-09
+00:00:02	rank:0	::::main()	info	stateless kernels on device 3 with omp, batched, SoA, user-managed-memory: 0.00120777 / 3.8411e-09
+00:00:02	rank:0	::::main()	info	========================================
+00:00:02	rank:0	::::main()	info	  Number of patches fused: 128
+00:00:02	rank:0	::::main()	info	========================================
+00:00:02	rank:0	::::main()	info	baseline: 0.00880008 / 1.39936e-08
+00:00:02	rank:0	::::main()	info	stateless kernels on host with heap, patch-wise, AoS: 0.0102187 / 1.62495e-08
+00:00:02	rank:0	::::main()	info	stateless kernels on host with heap, patch-wise, AoSoA: 0.00977775 / 1.55483e-08
+00:00:02	rank:0	::::main()	info	stateless kernels on host with heap, patch-wise, SoA: 0.00978069 / 1.5553e-08
+00:00:02	rank:0	::::main()	info	stateless kernels on host with heap, patch-wise, in-situ: 0.00567404 / 9.02268e-09
+00:00:03	rank:0	::::main()	info	stateless kernels on host with heap, batched, AoS: 0.00992901 / 1.57888e-08
+00:00:03	rank:0	::::main()	info	stateless kernels on host with heap, batched, AoSoA: 0.00943882 / 1.50093e-08
+00:00:03	rank:0	::::main()	info	stateless kernels on host with heap, batched, SoA: 0.00923499 / 1.46852e-08
+00:00:03	rank:0	::::main()	info	stateless kernels on host with heap, batched, in-situ: 0.00645103 / 1.02582e-08
+00:00:03	rank:0	::::main()	info	stateless kernels on device 0 with omp, patch-wise, AoS, user-managed-memory: 0.0037363 / 5.94135e-09
+00:00:03	rank:0	::::main()	info	stateless kernels on device 0 with omp, patch-wise, AoSoA, user-managed-memory: 0.00400022 / 6.36103e-09
+00:00:03	rank:0	::::main()	info	stateless kernels on device 0 with omp, patch-wise, SoA, user-managed-memory: 0.00239569 / 3.80956e-09
+00:00:03	rank:0	::::main()	info	stateless kernels on device 0 with omp, batched, AoS, user-managed-memory: 0.00249647 / 3.96981e-09
+00:00:03	rank:0	::::main()	info	stateless kernels on device 0 with omp, batched, AoSoA, user-managed-memory: 0.00408882 / 6.50192e-09
+00:00:03	rank:0	::::main()	info	stateless kernels on device 0 with omp, batched, SoA, user-managed-memory: 0.00244753 / 3.89199e-09
+00:00:03	rank:0	::::main()	info	stateless kernels on device 1 with omp, patch-wise, AoS, user-managed-memory: 0.00364305 / 5.79306e-09
+00:00:04	rank:0	::::main()	info	stateless kernels on device 1 with omp, patch-wise, AoSoA, user-managed-memory: 0.00399921 / 6.35942e-09
+00:00:04	rank:0	::::main()	info	stateless kernels on device 1 with omp, patch-wise, SoA, user-managed-memory: 0.00239795 / 3.81315e-09
+00:00:04	rank:0	::::main()	info	stateless kernels on device 1 with omp, batched, AoS, user-managed-memory: 0.00250928 / 3.99018e-09
+00:00:04	rank:0	::::main()	info	stateless kernels on device 1 with omp, batched, AoSoA, user-managed-memory: 0.00407054 / 6.47285e-09
+00:00:04	rank:0	::::main()	info	stateless kernels on device 1 with omp, batched, SoA, user-managed-memory: 0.00244194 / 3.8831e-09
+00:00:04	rank:0	::::main()	info	stateless kernels on device 2 with omp, patch-wise, AoS, user-managed-memory: 0.00367109 / 5.83765e-09
+00:00:04	rank:0	::::main()	info	stateless kernels on device 2 with omp, patch-wise, AoSoA, user-managed-memory: 0.00398473 / 6.3364e-09
+00:00:04	rank:0	::::main()	info	stateless kernels on device 2 with omp, patch-wise, SoA, user-managed-memory: 0.00237979 / 3.78427e-09
+00:00:04	rank:0	::::main()	info	stateless kernels on device 2 with omp, batched, AoS, user-managed-memory: 0.00247421 / 3.93442e-09
+00:00:04	rank:0	::::main()	info	stateless kernels on device 2 with omp, batched, AoSoA, user-managed-memory: 0.00410673 / 6.5304e-09
+00:00:04	rank:0	::::main()	info	stateless kernels on device 2 with omp, batched, SoA, user-managed-memory: 0.00245546 / 3.9046e-09
+00:00:04	rank:0	::::main()	info	stateless kernels on device 3 with omp, patch-wise, AoS, user-managed-memory: 0.00365196 / 5.80723e-09
+00:00:04	rank:0	::::main()	info	stateless kernels on device 3 with omp, patch-wise, AoSoA, user-managed-memory: 0.0039828 / 6.33333e-09
+00:00:04	rank:0	::::main()	info	stateless kernels on device 3 with omp, patch-wise, SoA, user-managed-memory: 0.00238797 / 3.79728e-09
+00:00:04	rank:0	::::main()	info	stateless kernels on device 3 with omp, batched, AoS, user-managed-memory: 0.0024709 / 3.92915e-09
+00:00:04	rank:0	::::main()	info	stateless kernels on device 3 with omp, batched, AoSoA, user-managed-memory: 0.00408304 / 6.49273e-09
+00:00:04	rank:0	::::main()	info	stateless kernels on device 3 with omp, batched, SoA, user-managed-memory: 0.00242143 / 3.85049e-09
+00:00:04	rank:0	::::main()	info	========================================
+00:00:04	rank:0	::::main()	info	  Number of patches fused: 256
+00:00:04	rank:0	::::main()	info	========================================
+00:00:04	rank:0	::::main()	info	baseline: 0.0172716 / 1.37324e-08
+00:00:04	rank:0	::::main()	info	stateless kernels on host with heap, patch-wise, AoS: 0.0205756 / 1.63593e-08
+00:00:04	rank:0	::::main()	info	stateless kernels on host with heap, patch-wise, AoSoA: 0.0205343 / 1.63265e-08
+00:00:04	rank:0	::::main()	info	stateless kernels on host with heap, patch-wise, SoA: 0.019819 / 1.57578e-08
+00:00:04	rank:0	::::main()	info	stateless kernels on host with heap, patch-wise, in-situ: 0.0116078 / 9.2292e-09
+00:00:04	rank:0	::::main()	info	stateless kernels on host with heap, batched, AoS: 0.0200734 / 1.596e-08
+00:00:04	rank:0	::::main()	info	stateless kernels on host with heap, batched, AoSoA: 0.0196133 / 1.55942e-08
+00:00:04	rank:0	::::main()	info	stateless kernels on host with heap, batched, SoA: 0.019219 / 1.52807e-08
+00:00:04	rank:0	::::main()	info	stateless kernels on host with heap, batched, in-situ: 0.0132671 / 1.05485e-08
+00:00:06	rank:0	::::main()	info	stateless kernels on device 0 with omp, patch-wise, AoS, user-managed-memory: 0.00706969 / 5.621e-09
+00:00:06	rank:0	::::main()	info	stateless kernels on device 0 with omp, patch-wise, AoSoA, user-managed-memory: 0.00841998 / 6.6946e-09
+00:00:06	rank:0	::::main()	info	stateless kernels on device 0 with omp, patch-wise, SoA, user-managed-memory: 0.00553204 / 4.39844e-09
+00:00:06	rank:0	::::main()	info	stateless kernels on device 0 with omp, batched, AoS, user-managed-memory: 0.00541536 / 4.30567e-09
+00:00:06	rank:0	::::main()	info	stateless kernels on device 0 with omp, batched, AoSoA, user-managed-memory: 0.00891659 / 7.08944e-09
+00:00:06	rank:0	::::main()	info	stateless kernels on device 0 with omp, batched, SoA, user-managed-memory: 0.00523683 / 4.16372e-09
+00:00:06	rank:0	::::main()	info	stateless kernels on device 1 with omp, patch-wise, AoS, user-managed-memory: 0.00684162 / 5.43966e-09
+00:00:06	rank:0	::::main()	info	stateless kernels on device 1 with omp, patch-wise, AoSoA, user-managed-memory: 0.00852325 / 6.7767e-09
+00:00:06	rank:0	::::main()	info	stateless kernels on device 1 with omp, patch-wise, SoA, user-managed-memory: 0.00555181 / 4.41416e-09
+00:00:06	rank:0	::::main()	info	stateless kernels on device 1 with omp, batched, AoS, user-managed-memory: 0.00542854 / 4.31615e-09
+00:00:07	rank:0	::::main()	info	stateless kernels on device 1 with omp, batched, AoSoA, user-managed-memory: 0.00892895 / 7.09927e-09
+00:00:07	rank:0	::::main()	info	stateless kernels on device 1 with omp, batched, SoA, user-managed-memory: 0.00523531 / 4.16251e-09
+00:00:07	rank:0	::::main()	info	stateless kernels on device 2 with omp, patch-wise, AoS, user-managed-memory: 0.00683062 / 5.43092e-09
+00:00:07	rank:0	::::main()	info	stateless kernels on device 2 with omp, patch-wise, AoSoA, user-managed-memory: 0.00893396 / 7.10325e-09
+00:00:07	rank:0	::::main()	info	stateless kernels on device 2 with omp, patch-wise, SoA, user-managed-memory: 0.00553723 / 4.40257e-09
+00:00:07	rank:0	::::main()	info	stateless kernels on device 2 with omp, batched, AoS, user-managed-memory: 0.00540748 / 4.2994e-09
+00:00:07	rank:0	::::main()	info	stateless kernels on device 2 with omp, batched, AoSoA, user-managed-memory: 0.00869596 / 6.91402e-09
+00:00:07	rank:0	::::main()	info	stateless kernels on device 2 with omp, batched, SoA, user-managed-memory: 0.00517479 / 4.11439e-09
+00:00:08	rank:0	::::main()	info	stateless kernels on device 3 with omp, patch-wise, AoS, user-managed-memory: 0.00683783 / 5.43665e-09
+00:00:08	rank:0	::::main()	info	stateless kernels on device 3 with omp, patch-wise, AoSoA, user-managed-memory: 0.00847044 / 6.73471e-09
+00:00:08	rank:0	::::main()	info	stateless kernels on device 3 with omp, patch-wise, SoA, user-managed-memory: 0.00554245 / 4.40672e-09
+00:00:08	rank:0	::::main()	info	stateless kernels on device 3 with omp, batched, AoS, user-managed-memory: 0.00543203 / 4.31892e-09
+00:00:08	rank:0	::::main()	info	stateless kernels on device 3 with omp, batched, AoSoA, user-managed-memory: 0.00871027 / 6.9254e-09
+00:00:08	rank:0	::::main()	info	stateless kernels on device 3 with omp, batched, SoA, user-managed-memory: 0.00551084 / 4.38158e-09
+00:00:08	rank:0	::::main()	info	========================================
+00:00:08	rank:0	::::main()	info	  Number of patches fused: 512
+00:00:08	rank:0	::::main()	info	========================================
+00:00:08	rank:0	::::main()	info	baseline: 0.034586 / 1.37494e-08
+00:00:08	rank:0	::::main()	info	stateless kernels on host with heap, patch-wise, AoS: 0.041323 / 1.64276e-08
+00:00:08	rank:0	::::main()	info	stateless kernels on host with heap, patch-wise, AoSoA: 0.040513 / 1.61056e-08
+00:00:08	rank:0	::::main()	info	stateless kernels on host with heap, patch-wise, SoA: 0.0405087 / 1.61039e-08
+00:00:08	rank:0	::::main()	info	stateless kernels on host with heap, patch-wise, in-situ: 0.0233081 / 9.26595e-09
+00:00:08	rank:0	::::main()	info	stateless kernels on host with heap, batched, AoS: 0.0406155 / 1.61464e-08
+00:00:08	rank:0	::::main()	info	stateless kernels on host with heap, batched, AoSoA: 0.0407021 / 1.61808e-08
+00:00:08	rank:0	::::main()	info	stateless kernels on host with heap, batched, SoA: 0.0395109 / 1.57072e-08
+00:00:08	rank:0	::::main()	info	stateless kernels on host with heap, batched, in-situ: 0.0275911 / 1.09686e-08
+00:00:11	rank:0	::::main()	info	stateless kernels on device 0 with omp, patch-wise, AoS, user-managed-memory: 0.0144492 / 5.74418e-09
+00:00:11	rank:0	::::main()	info	stateless kernels on device 0 with omp, patch-wise, AoSoA, user-managed-memory: 0.0174763 / 6.94755e-09
+00:00:11	rank:0	::::main()	info	stateless kernels on device 0 with omp, patch-wise, SoA, user-managed-memory: 0.0108315 / 4.30599e-09
+00:00:12	rank:0	::::main()	info	stateless kernels on device 0 with omp, batched, AoS, user-managed-memory: 0.0116647 / 4.63721e-09
+00:00:12	rank:0	::::main()	info	stateless kernels on device 0 with omp, batched, AoSoA, user-managed-memory: 0.01822 / 7.24323e-09
+00:00:12	rank:0	::::main()	info	stateless kernels on device 0 with omp, batched, SoA, user-managed-memory: 0.0112121 / 4.45728e-09
+00:00:13	rank:0	::::main()	info	stateless kernels on device 1 with omp, patch-wise, AoS, user-managed-memory: 0.0137009 / 5.44667e-09
+00:00:13	rank:0	::::main()	info	stateless kernels on device 1 with omp, patch-wise, AoSoA, user-managed-memory: 0.0171535 / 6.81923e-09
+00:00:13	rank:0	::::main()	info	stateless kernels on device 1 with omp, patch-wise, SoA, user-managed-memory: 0.0111228 / 4.4218e-09
+00:00:13	rank:0	::::main()	info	stateless kernels on device 1 with omp, batched, AoS, user-managed-memory: 0.0113689 / 4.51962e-09
+00:00:13	rank:0	::::main()	info	stateless kernels on device 1 with omp, batched, AoSoA, user-managed-memory: 0.0182054 / 7.23741e-09
+00:00:13	rank:0	::::main()	info	stateless kernels on device 1 with omp, batched, SoA, user-managed-memory: 0.0112643 / 4.47803e-09
+00:00:14	rank:0	::::main()	info	stateless kernels on device 2 with omp, patch-wise, AoS, user-managed-memory: 0.0139693 / 5.55338e-09
+00:00:14	rank:0	::::main()	info	stateless kernels on device 2 with omp, patch-wise, AoSoA, user-managed-memory: 0.0174624 / 6.94202e-09
+00:00:14	rank:0	::::main()	info	stateless kernels on device 2 with omp, patch-wise, SoA, user-managed-memory: 0.0108089 / 4.29701e-09
+00:00:14	rank:0	::::main()	info	stateless kernels on device 2 with omp, batched, AoS, user-managed-memory: 0.0116505 / 4.63157e-09
+00:00:14	rank:0	::::main()	info	stateless kernels on device 2 with omp, batched, AoSoA, user-managed-memory: 0.018212 / 7.24005e-09
+00:00:14	rank:0	::::main()	info	stateless kernels on device 2 with omp, batched, SoA, user-managed-memory: 0.0111924 / 4.44944e-09
+00:00:15	rank:0	::::main()	info	stateless kernels on device 3 with omp, patch-wise, AoS, user-managed-memory: 0.0136685 / 5.4338e-09
+00:00:15	rank:0	::::main()	info	stateless kernels on device 3 with omp, patch-wise, AoSoA, user-managed-memory: 0.0175642 / 6.98251e-09
+00:00:15	rank:0	::::main()	info	stateless kernels on device 3 with omp, patch-wise, SoA, user-managed-memory: 0.0111498 / 4.43251e-09
+00:00:15	rank:0	::::main()	info	stateless kernels on device 3 with omp, batched, AoS, user-managed-memory: 0.0116833 / 4.64461e-09
+00:00:15	rank:0	::::main()	info	stateless kernels on device 3 with omp, batched, AoSoA, user-managed-memory: 0.0182151 / 7.24125e-09
+00:00:15	rank:0	::::main()	info	stateless kernels on device 3 with omp, batched, SoA, user-managed-memory: 0.0112323 / 4.46533e-09
+00:00:16	rank:0	::::main()	info	========================================
+00:00:16	rank:0	::::main()	info	  Number of patches fused: 1024
+00:00:16	rank:0	::::main()	info	========================================
+00:00:16	rank:0	::::main()	info	baseline: 0.0706672 / 1.40466e-08
+00:00:16	rank:0	::::main()	info	stateless kernels on host with heap, patch-wise, AoS: 0.0822997 / 1.63588e-08
+00:00:16	rank:0	::::main()	info	stateless kernels on host with heap, patch-wise, AoSoA: 0.0812909 / 1.61583e-08
+00:00:16	rank:0	::::main()	info	stateless kernels on host with heap, patch-wise, SoA: 0.08189 / 1.62774e-08
+00:00:16	rank:0	::::main()	info	stateless kernels on host with heap, patch-wise, in-situ: 0.0469691 / 9.33609e-09
+00:00:16	rank:0	::::main()	info	stateless kernels on host with heap, batched, AoS: 0.0828344 / 1.64651e-08
+00:00:16	rank:0	::::main()	info	stateless kernels on host with heap, batched, AoSoA: 0.0844285 / 1.6782e-08
+00:00:17	rank:0	::::main()	info	stateless kernels on host with heap, batched, SoA: 0.0819201 / 1.62834e-08
+00:00:17	rank:0	::::main()	info	stateless kernels on host with heap, batched, in-situ: 0.109415 / 2.17486e-08
+00:00:23	rank:0	::::main()	info	stateless kernels on device 0 with omp, patch-wise, AoS, user-managed-memory: 0.0284081 / 5.64672e-09
+00:00:23	rank:0	::::main()	info	stateless kernels on device 0 with omp, patch-wise, AoSoA, user-managed-memory: 0.035253 / 7.00729e-09
+00:00:23	rank:0	::::main()	info	stateless kernels on device 0 with omp, patch-wise, SoA, user-managed-memory: 0.0224291 / 4.45826e-09
+00:00:23	rank:0	::::main()	info	stateless kernels on device 0 with omp, batched, AoS, user-managed-memory: 0.0247056 / 4.91075e-09
+00:00:23	rank:0	::::main()	info	stateless kernels on device 0 with omp, batched, AoSoA, user-managed-memory: 0.0376767 / 7.48904e-09
+00:00:23	rank:0	::::main()	info	stateless kernels on device 0 with omp, batched, SoA, user-managed-memory: 0.0235596 / 4.68296e-09
+00:00:25	rank:0	::::main()	info	stateless kernels on device 1 with omp, patch-wise, AoS, user-managed-memory: 0.0275226 / 5.47069e-09
+00:00:25	rank:0	::::main()	info	stateless kernels on device 1 with omp, patch-wise, AoSoA, user-managed-memory: 0.0350914 / 6.97515e-09
+00:00:25	rank:0	::::main()	info	stateless kernels on device 1 with omp, patch-wise, SoA, user-managed-memory: 0.0223422 / 4.44098e-09
+00:00:25	rank:0	::::main()	info	stateless kernels on device 1 with omp, batched, AoS, user-managed-memory: 0.0244465 / 4.85927e-09
+00:00:25	rank:0	::::main()	info	stateless kernels on device 1 with omp, batched, AoSoA, user-managed-memory: 0.0375464 / 7.46314e-09
+00:00:26	rank:0	::::main()	info	stateless kernels on device 1 with omp, batched, SoA, user-managed-memory: 0.0239057 / 4.75176e-09
+00:00:27	rank:0	::::main()	info	stateless kernels on device 2 with omp, patch-wise, AoS, user-managed-memory: 0.0274941 / 5.46504e-09
+00:00:28	rank:0	::::main()	info	stateless kernels on device 2 with omp, patch-wise, AoSoA, user-managed-memory: 0.0351971 / 6.99616e-09
+00:00:28	rank:0	::::main()	info	stateless kernels on device 2 with omp, patch-wise, SoA, user-managed-memory: 0.022038 / 4.38053e-09
+00:00:28	rank:0	::::main()	info	stateless kernels on device 2 with omp, batched, AoS, user-managed-memory: 0.0246273 / 4.8952e-09
+00:00:28	rank:0	::::main()	info	stateless kernels on device 2 with omp, batched, AoSoA, user-managed-memory: 0.037622 / 7.47817e-09
+00:00:28	rank:0	::::main()	info	stateless kernels on device 2 with omp, batched, SoA, user-managed-memory: 0.0238875 / 4.74814e-09
+00:00:30	rank:0	::::main()	info	stateless kernels on device 3 with omp, patch-wise, AoS, user-managed-memory: 0.0275127 / 5.46874e-09
+00:00:30	rank:0	::::main()	info	stateless kernels on device 3 with omp, patch-wise, AoSoA, user-managed-memory: 0.0352751 / 7.01167e-09
+00:00:30	rank:0	::::main()	info	stateless kernels on device 3 with omp, patch-wise, SoA, user-managed-memory: 0.0220226 / 4.37746e-09
+00:00:30	rank:0	::::main()	info	stateless kernels on device 3 with omp, batched, AoS, user-managed-memory: 0.0245313 / 4.87612e-09
+00:00:30	rank:0	::::main()	info	stateless kernels on device 3 with omp, batched, AoSoA, user-managed-memory: 0.0377234 / 7.49831e-09
+00:00:30	rank:0	::::main()	info	stateless kernels on device 3 with omp, batched, SoA, user-managed-memory: 0.0235529 / 4.68164e-09
+00:00:32	rank:0	::::main()	info	========================================
+00:00:32	rank:0	::::main()	info	  Number of patches fused: 2048
+00:00:32	rank:0	::::main()	info	========================================
+00:00:32	rank:0	::::main()	info	baseline: 0.142055 / 1.41183e-08
+00:00:32	rank:0	::::main()	info	stateless kernels on host with heap, patch-wise, AoS: 0.166284 / 1.65262e-08
+00:00:32	rank:0	::::main()	info	stateless kernels on host with heap, patch-wise, AoSoA: 0.16388 / 1.62873e-08
+00:00:33	rank:0	::::main()	info	stateless kernels on host with heap, patch-wise, SoA: 0.160557 / 1.5957e-08
+00:00:33	rank:0	::::main()	info	stateless kernels on host with heap, patch-wise, in-situ: 0.0920067 / 9.14414e-09
+00:00:33	rank:0	::::main()	info	stateless kernels on host with heap, batched, AoS: 0.173241 / 1.72177e-08
+00:00:33	rank:0	::::main()	info	stateless kernels on host with heap, batched, AoSoA: 0.17625 / 1.75167e-08
+00:00:33	rank:0	::::main()	info	stateless kernels on host with heap, batched, SoA: 0.172148 / 1.7109e-08
+00:00:34	rank:0	::::main()	info	stateless kernels on host with heap, batched, in-situ: 0.241054 / 2.39573e-08
+00:00:47	rank:0	::::main()	info	stateless kernels on device 0 with omp, patch-wise, AoS, user-managed-memory: 0.0536604 / 5.33307e-09
+00:00:47	rank:0	::::main()	info	stateless kernels on device 0 with omp, patch-wise, AoSoA, user-managed-memory: 0.068774 / 6.83514e-09
+00:00:47	rank:0	::::main()	info	stateless kernels on device 0 with omp, patch-wise, SoA, user-managed-memory: 0.0424487 / 4.21879e-09
+00:00:47	rank:0	::::main()	info	stateless kernels on device 0 with omp, batched, AoS, user-managed-memory: 0.0482659 / 4.79694e-09
+00:00:47	rank:0	::::main()	info	stateless kernels on device 0 with omp, batched, AoSoA, user-managed-memory: 0.0746427 / 7.4184e-09
+00:00:47	rank:0	::::main()	info	stateless kernels on device 0 with omp, batched, SoA, user-managed-memory: 0.0470912 / 4.68019e-09
+00:00:51	rank:0	::::main()	info	stateless kernels on device 1 with omp, patch-wise, AoS, user-managed-memory: 0.0522139 / 5.18931e-09
+00:00:51	rank:0	::::main()	info	stateless kernels on device 1 with omp, patch-wise, AoSoA, user-managed-memory: 0.068583 / 6.81616e-09
+00:00:51	rank:0	::::main()	info	stateless kernels on device 1 with omp, patch-wise, SoA, user-managed-memory: 0.042466 / 4.22051e-09
+00:00:51	rank:0	::::main()	info	stateless kernels on device 1 with omp, batched, AoS, user-managed-memory: 0.048087 / 4.77916e-09
+00:00:51	rank:0	::::main()	info	stateless kernels on device 1 with omp, batched, AoSoA, user-managed-memory: 0.0749775 / 7.45168e-09
+00:00:51	rank:0	::::main()	info	stateless kernels on device 1 with omp, batched, SoA, user-managed-memory: 0.0470679 / 4.67786e-09
+00:00:55	rank:0	::::main()	info	stateless kernels on device 2 with omp, patch-wise, AoS, user-managed-memory: 0.0522683 / 5.19472e-09
+00:00:55	rank:0	::::main()	info	stateless kernels on device 2 with omp, patch-wise, AoSoA, user-managed-memory: 0.0682377 / 6.78184e-09
+00:00:55	rank:0	::::main()	info	stateless kernels on device 2 with omp, patch-wise, SoA, user-managed-memory: 0.0427797 / 4.25168e-09
+00:00:56	rank:0	::::main()	info	stateless kernels on device 2 with omp, batched, AoS, user-managed-memory: 0.0482256 / 4.79293e-09
+00:00:56	rank:0	::::main()	info	stateless kernels on device 2 with omp, batched, AoSoA, user-managed-memory: 0.074489 / 7.40313e-09
+00:00:56	rank:0	::::main()	info	stateless kernels on device 2 with omp, batched, SoA, user-managed-memory: 0.0472253 / 4.69351e-09
+00:01:00	rank:0	::::main()	info	stateless kernels on device 3 with omp, patch-wise, AoS, user-managed-memory: 0.0522085 / 5.18877e-09
+00:01:00	rank:0	::::main()	info	stateless kernels on device 3 with omp, patch-wise, AoSoA, user-managed-memory: 0.0683897 / 6.79695e-09
+00:01:00	rank:0	::::main()	info	stateless kernels on device 3 with omp, patch-wise, SoA, user-managed-memory: 0.0427643 / 4.25015e-09
+00:01:00	rank:0	::::main()	info	stateless kernels on device 3 with omp, batched, AoS, user-managed-memory: 0.0480347 / 4.77396e-09
+00:01:00	rank:0	::::main()	info	stateless kernels on device 3 with omp, batched, AoSoA, user-managed-memory: 0.0748088 / 7.43492e-09
+00:01:00	rank:0	::::main()	info	stateless kernels on device 3 with omp, batched, SoA, user-managed-memory: 0.0471253 / 4.68357e-09
+00:01:04	rank:0	::::main()	info	========================================
+00:01:04	rank:0	::::main()	info	  Number of patches fused: 4096
+00:01:04	rank:0	::::main()	info	========================================
+00:01:04	rank:0	::::main()	info	baseline: 0.285918 / 1.42081e-08
+00:01:05	rank:0	::::main()	info	stateless kernels on host with heap, patch-wise, AoS: 0.334149 / 1.66048e-08
+00:01:05	rank:0	::::main()	info	stateless kernels on host with heap, patch-wise, AoSoA: 0.329735 / 1.63854e-08
+00:01:05	rank:0	::::main()	info	stateless kernels on host with heap, patch-wise, SoA: 0.328761 / 1.63371e-08
+00:01:06	rank:0	::::main()	info	stateless kernels on host with heap, patch-wise, in-situ: 0.188302 / 9.35725e-09
+00:01:06	rank:0	::::main()	info	stateless kernels on host with heap, batched, AoS: 0.407519 / 2.02508e-08
+00:01:07	rank:0	::::main()	info	stateless kernels on host with heap, batched, AoSoA: 0.42392 / 2.10658e-08
+00:01:07	rank:0	::::main()	info	stateless kernels on host with heap, batched, SoA: 0.411474 / 2.04473e-08
+00:01:08	rank:0	::::main()	info	stateless kernels on host with heap, batched, in-situ: 0.565965 / 2.81244e-08
+00:01:36	rank:0	::::main()	info	stateless kernels on device 0 with omp, patch-wise, AoS, user-managed-memory: 0.106444 / 5.28947e-09
+00:01:36	rank:0	::::main()	info	stateless kernels on device 0 with omp, patch-wise, AoSoA, user-managed-memory: 0.139036 / 6.90908e-09
+00:01:36	rank:0	::::main()	info	stateless kernels on device 0 with omp, patch-wise, SoA, user-managed-memory: 0.0873166 / 4.339e-09
+00:01:37	rank:0	::::main()	info	stateless kernels on device 0 with omp, batched, AoS, user-managed-memory: 0.0986634 / 4.90286e-09
+00:01:37	rank:0	::::main()	info	stateless kernels on device 0 with omp, batched, AoSoA, user-managed-memory: 0.152351 / 7.57073e-09
+00:01:37	rank:0	::::main()	info	stateless kernels on device 0 with omp, batched, SoA, user-managed-memory: 0.0963246 / 4.78664e-09
+00:01:45	rank:0	::::main()	info	stateless kernels on device 1 with omp, patch-wise, AoS, user-managed-memory: 0.106287 / 5.2817e-09
+00:01:46	rank:0	::::main()	info	stateless kernels on device 1 with omp, patch-wise, AoSoA, user-managed-memory: 0.139106 / 6.91256e-09
+00:01:46	rank:0	::::main()	info	stateless kernels on device 1 with omp, patch-wise, SoA, user-managed-memory: 0.0873682 / 4.34157e-09
+00:01:46	rank:0	::::main()	info	stateless kernels on device 1 with omp, batched, AoS, user-managed-memory: 0.100104 / 4.97443e-09
+00:01:46	rank:0	::::main()	info	stateless kernels on device 1 with omp, batched, AoSoA, user-managed-memory: 0.152198 / 7.56312e-09
+00:01:46	rank:0	::::main()	info	stateless kernels on device 1 with omp, batched, SoA, user-managed-memory: 0.0965336 / 4.79702e-09
+00:01:55	rank:0	::::main()	info	stateless kernels on device 2 with omp, patch-wise, AoS, user-managed-memory: 0.105157 / 5.22556e-09
+00:01:55	rank:0	::::main()	info	stateless kernels on device 2 with omp, patch-wise, AoSoA, user-managed-memory: 0.139268 / 6.92063e-09
+00:01:55	rank:0	::::main()	info	stateless kernels on device 2 with omp, patch-wise, SoA, user-managed-memory: 0.0874484 / 4.34556e-09
+00:01:55	rank:0	::::main()	info	stateless kernels on device 2 with omp, batched, AoS, user-managed-memory: 0.100353 / 4.98684e-09
+00:01:56	rank:0	::::main()	info	stateless kernels on device 2 with omp, batched, AoSoA, user-managed-memory: 0.152279 / 7.56717e-09
+00:01:56	rank:0	::::main()	info	stateless kernels on device 2 with omp, batched, SoA, user-managed-memory: 0.096519 / 4.7963e-09
+00:02:04	rank:0	::::main()	info	stateless kernels on device 3 with omp, patch-wise, AoS, user-managed-memory: 0.103891 / 5.16263e-09
+00:02:04	rank:0	::::main()	info	stateless kernels on device 3 with omp, patch-wise, AoSoA, user-managed-memory: 0.138799 / 6.89731e-09
+00:02:04	rank:0	::::main()	info	stateless kernels on device 3 with omp, patch-wise, SoA, user-managed-memory: 0.0873207 / 4.33921e-09
+00:02:05	rank:0	::::main()	info	stateless kernels on device 3 with omp, batched, AoS, user-managed-memory: 0.0989026 / 4.91474e-09
+00:02:05	rank:0	::::main()	info	stateless kernels on device 3 with omp, batched, AoSoA, user-managed-memory: 0.15255 / 7.58065e-09
+00:02:05	rank:0	::::main()	info	stateless kernels on device 3 with omp, batched, SoA, user-managed-memory: 0.0961738 / 4.77914e-09
+00:02:13	rank:0	::::main()	info	========================================
+00:02:13	rank:0	::::main()	info	  Number of patches fused: 8192
+00:02:13	rank:0	::::main()	info	========================================
+00:02:14	rank:0	::::main()	info	baseline: 0.575436 / 1.42975e-08
+00:02:15	rank:0	::::main()	info	stateless kernels on host with heap, patch-wise, AoS: 0.683959 / 1.69939e-08
+00:02:16	rank:0	::::main()	info	stateless kernels on host with heap, patch-wise, AoSoA: 0.673278 / 1.67285e-08
+00:02:16	rank:0	::::main()	info	stateless kernels on host with heap, patch-wise, SoA: 0.670354 / 1.66559e-08
+00:02:17	rank:0	::::main()	info	stateless kernels on host with heap, patch-wise, in-situ: 0.378568 / 9.40605e-09
+00:02:18	rank:0	::::main()	info	stateless kernels on host with heap, batched, AoS: 0.874852 / 2.17369e-08
+00:02:19	rank:0	::::main()	info	stateless kernels on host with heap, batched, AoSoA: 0.899987 / 2.23614e-08
+00:02:20	rank:0	::::main()	info	stateless kernels on host with heap, batched, SoA: 0.885193 / 2.19939e-08
+00:02:22	rank:0	::::main()	info	stateless kernels on host with heap, batched, in-situ: 1.18457 / 2.94322e-08
+00:03:20	rank:0	::::main()	info	stateless kernels on device 0 with omp, patch-wise, AoS, user-managed-memory: 0.208544 / 5.18157e-09
+00:03:20	rank:0	::::main()	info	stateless kernels on device 0 with omp, patch-wise, AoSoA, user-managed-memory: 0.278843 / 6.92824e-09
+00:03:21	rank:0	::::main()	info	stateless kernels on device 0 with omp, patch-wise, SoA, user-managed-memory: 0.174205 / 4.32836e-09
+00:03:21	rank:0	::::main()	info	stateless kernels on device 0 with omp, batched, AoS, user-managed-memory: 0.198522 / 4.93255e-09
+00:03:22	rank:0	::::main()	info	stateless kernels on device 0 with omp, batched, AoSoA, user-managed-memory: 0.307581 / 7.64228e-09
+00:03:22	rank:0	::::main()	info	stateless kernels on device 0 with omp, batched, SoA, user-managed-memory: 0.193094 / 4.79769e-09
+00:03:39	rank:0	::::main()	info	stateless kernels on device 1 with omp, patch-wise, AoS, user-managed-memory: 0.232644 / 5.78037e-09
+00:03:39	rank:0	::::main()	info	stateless kernels on device 1 with omp, patch-wise, AoSoA, user-managed-memory: 0.299695 / 7.44634e-09
+00:03:40	rank:0	::::main()	info	stateless kernels on device 1 with omp, patch-wise, SoA, user-managed-memory: 0.193151 / 4.7991e-09
+00:03:40	rank:0	::::main()	info	stateless kernels on device 1 with omp, batched, AoS, user-managed-memory: 0.219602 / 5.45632e-09
+00:03:41	rank:0	::::main()	info	stateless kernels on device 1 with omp, batched, AoSoA, user-managed-memory: 0.32982 / 8.19484e-09
+00:03:41	rank:0	::::main()	info	stateless kernels on device 1 with omp, batched, SoA, user-managed-memory: 0.210465 / 5.22931e-09
+00:03:59	rank:0	::::main()	info	stateless kernels on device 2 with omp, patch-wise, AoS, user-managed-memory: 0.22879 / 5.68461e-09
+00:03:59	rank:0	::::main()	info	stateless kernels on device 2 with omp, patch-wise, AoSoA, user-managed-memory: 0.299505 / 7.44161e-09
+00:04:00	rank:0	::::main()	info	stateless kernels on device 2 with omp, patch-wise, SoA, user-managed-memory: 0.192555 / 4.78431e-09
+00:04:00	rank:0	::::main()	info	stateless kernels on device 2 with omp, batched, AoS, user-managed-memory: 0.219492 / 5.45357e-09
+00:04:00	rank:0	::::main()	info	stateless kernels on device 2 with omp, batched, AoSoA, user-managed-memory: 0.329418 / 8.18484e-09
+00:04:01	rank:0	::::main()	info	stateless kernels on device 2 with omp, batched, SoA, user-managed-memory: 0.212452 / 5.27867e-09
+00:04:19	rank:0	::::main()	info	stateless kernels on device 3 with omp, patch-wise, AoS, user-managed-memory: 0.228426 / 5.67556e-09
+00:04:19	rank:0	::::main()	info	stateless kernels on device 3 with omp, patch-wise, AoSoA, user-managed-memory: 0.300877 / 7.4757e-09
+00:04:19	rank:0	::::main()	info	stateless kernels on device 3 with omp, patch-wise, SoA, user-managed-memory: 0.193945 / 4.81883e-09
+00:04:20	rank:0	::::main()	info	stateless kernels on device 3 with omp, batched, AoS, user-managed-memory: 0.220189 / 5.47091e-09
+00:04:20	rank:0	::::main()	info	stateless kernels on device 3 with omp, batched, AoSoA, user-managed-memory: 0.328283 / 8.15665e-09
+00:04:21	rank:0	::::main()	info	stateless kernels on device 3 with omp, batched, SoA, user-managed-memory: 0.212193 / 5.27223e-09
+00:04:38	rank:0	::::main()	info	========================================
+00:04:38	rank:0	::::main()	info	  Number of patches fused: 16384
+00:04:38	rank:0	::::main()	info	========================================
+00:04:39	rank:0	::::main()	info	baseline: 1.16578 / 1.44827e-08
+00:04:41	rank:0	::::main()	info	stateless kernels on host with heap, patch-wise, AoS: 1.42924 / 1.77557e-08
+00:04:43	rank:0	::::main()	info	stateless kernels on host with heap, patch-wise, AoSoA: 1.42501 / 1.77031e-08
+00:04:45	rank:0	::::main()	info	stateless kernels on host with heap, patch-wise, SoA: 1.42612 / 1.77169e-08
+00:04:46	rank:0	::::main()	info	stateless kernels on host with heap, patch-wise, in-situ: 0.765952 / 9.51557e-09
+00:04:48	rank:0	::::main()	info	stateless kernels on host with heap, batched, AoS: 1.93521 / 2.40415e-08
+00:04:51	rank:0	::::main()	info	stateless kernels on host with heap, batched, AoSoA: 2.10536 / 2.61553e-08
+00:04:53	rank:0	::::main()	info	stateless kernels on host with heap, batched, SoA: 1.98723 / 2.46878e-08
+00:04:56	rank:0	::::main()	info	stateless kernels on host with heap, batched, in-situ: 2.74828 / 3.41425e-08
+00:07:03	rank:0	::::main()	info	stateless kernels on device 0 with omp, patch-wise, AoS, user-managed-memory: 0.474098 / 5.88982e-09
+00:07:04	rank:0	::::main()	info	stateless kernels on device 0 with omp, patch-wise, AoSoA, user-managed-memory: 0.614088 / 7.62893e-09
+00:07:05	rank:0	::::main()	info	stateless kernels on device 0 with omp, patch-wise, SoA, user-managed-memory: 0.401277 / 4.98515e-09
+00:07:06	rank:0	::::main()	info	stateless kernels on device 0 with omp, batched, AoS, user-managed-memory: 0.455719 / 5.66148e-09
+00:07:07	rank:0	::::main()	info	stateless kernels on device 0 with omp, batched, AoSoA, user-managed-memory: 0.676953 / 8.40992e-09
+00:07:08	rank:0	::::main()	info	stateless kernels on device 0 with omp, batched, SoA, user-managed-memory: 0.439531 / 5.46038e-09
+00:07:44	rank:0	::::main()	info	stateless kernels on device 1 with omp, patch-wise, AoS, user-managed-memory: 0.480348 / 5.96746e-09
+00:07:45	rank:0	::::main()	info	stateless kernels on device 1 with omp, patch-wise, AoSoA, user-managed-memory: 0.617992 / 7.67743e-09
+00:07:45	rank:0	::::main()	info	stateless kernels on device 1 with omp, patch-wise, SoA, user-managed-memory: 0.40334 / 5.01078e-09
+00:07:46	rank:0	::::main()	info	stateless kernels on device 1 with omp, batched, AoS, user-managed-memory: 0.458458 / 5.69551e-09
+00:07:47	rank:0	::::main()	info	stateless kernels on device 1 with omp, batched, AoSoA, user-managed-memory: 0.677829 / 8.4208e-09
+00:07:48	rank:0	::::main()	info	stateless kernels on device 1 with omp, batched, SoA, user-managed-memory: 0.440006 / 5.46627e-09
+00:08:24	rank:0	::::main()	info	stateless kernels on device 2 with omp, patch-wise, AoS, user-managed-memory: 0.476771 / 5.92302e-09
+00:08:25	rank:0	::::main()	info	stateless kernels on device 2 with omp, patch-wise, AoSoA, user-managed-memory: 0.619037 / 7.69042e-09
+00:08:26	rank:0	::::main()	info	stateless kernels on device 2 with omp, patch-wise, SoA, user-managed-memory: 0.401784 / 4.99144e-09
+00:08:27	rank:0	::::main()	info	stateless kernels on device 2 with omp, batched, AoS, user-managed-memory: 0.45947 / 5.70808e-09
+00:08:28	rank:0	::::main()	info	stateless kernels on device 2 with omp, batched, AoSoA, user-managed-memory: 0.676456 / 8.40374e-09
+00:08:29	rank:0	::::main()	info	stateless kernels on device 2 with omp, batched, SoA, user-managed-memory: 0.438598 / 5.44879e-09
+00:09:05	rank:0	::::main()	info	stateless kernels on device 3 with omp, patch-wise, AoS, user-managed-memory: 0.478169 / 5.94039e-09
+00:09:06	rank:0	::::main()	info	stateless kernels on device 3 with omp, patch-wise, AoSoA, user-managed-memory: 0.61364 / 7.62337e-09
+00:09:07	rank:0	::::main()	info	stateless kernels on device 3 with omp, patch-wise, SoA, user-managed-memory: 0.405725 / 5.0404e-09
+00:09:07	rank:0	::::main()	info	stateless kernels on device 3 with omp, batched, AoS, user-managed-memory: 0.457886 / 5.6884e-09
+00:09:08	rank:0	::::main()	info	stateless kernels on device 3 with omp, batched, AoSoA, user-managed-memory: 0.679382 / 8.4401e-09
+00:09:09	rank:0	::::main()	info	stateless kernels on device 3 with omp, batched, SoA, user-managed-memory: 0.439876 / 5.46466e-09
+00:09:45	rank:0	::::main()	info	no accuracy checks were performed
+00:09:45	rank:0	toolbox::loadbalancing::RecursiveSubdivision::finishStep()	info	load balancing is in state wait
+00:09:45	rank:0	toolbox::loadbalancing::dumpStatistics()	info	0 tree(s): no trees hosted on this node - therefore no load

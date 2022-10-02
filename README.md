@@ -97,7 +97,7 @@ Some quickstart configure commands for different toolchains are given below. For
   --enable-blockstructured \
   --with-multithreading=omp \
   CC=icx CXX=icpx \
-  CXXFLAGS="-O3 -std=c++20 -fiopenmp" \
+  CXXFLAGS="-O3 -std=c++20 -W -Wall -Wextra -Wno-unknown-attributes -fiopenmp" \
   LDFLAGS="-fiopenmp"
 ```
 
@@ -110,7 +110,7 @@ Some quickstart configure commands for different toolchains are given below. For
   --with-gpu=omp \
   --with-multithreading=omp \
   CC=icx CXX=icpx \
-  CXXFLAGS="-O3 -std=c++20 -fiopenmp -fopenmp-targets=spir64" \
+  CXXFLAGS="-O3 -std=c++20 -W -Wall -Wextra -Wno-unknown-attributes -fiopenmp -fopenmp-targets=spir64" \
   LDFLAGS="-fiopenmp"
 ```
 
@@ -122,7 +122,7 @@ Some quickstart configure commands for different toolchains are given below. For
   --enable-blockstructured \
   --with-multithreading=omp \
   CC=clang CXX=clang++ \
-  CXXFLAGS="-O3 -std=c++17 -fopenmp"
+  CXXFLAGS="-O3 -std=c++17 -W -Wall -Wextra -Wno-unknown-attributes -fopenmp"
 ```
 
 ### Clang toolchain with OpenMP GPU
@@ -134,7 +134,7 @@ Some quickstart configure commands for different toolchains are given below. For
   --with-gpu=omp \
   --with-multithreading=omp \
   CC=clang CXX=clang++ \
-  CXXFLAGS="-O3 -std=c++17 -fopenmp -fopenmp-targets=nvptx64-nvidia-cuda -Xopenmp-target -march=<gpu-arch>"
+  CXXFLAGS="-O3 -std=c++17 -W -Wall -Wextra -Wno-unknown-attributes -fopenmp -fopenmp-targets=nvptx64-nvidia-cuda -Xopenmp-target -march=<gpu-arch>"
 ```
 where `<gpu-arch>` is either `cc50`, `cc52`, `cc53`, `cc60`, `cc61`, `cc62`, `cc70`, `cc72`, `cc75`, `cc80`, `cc86` or `cc90`.
 
@@ -147,12 +147,12 @@ where `<gpu-arch>` is either `cc50`, `cc52`, `cc53`, `cc60`, `cc61`, `cc62`, `cc
   --with-gpu=omp \
   --with-multithreading=omp \
   CC=nvc++ CXX=nvc++ \
-  CXXFLAGS="-O4 -std=c++20 -mp=gpu -gpu=<gpu-arch>" \
+  CXXFLAGS="-O4 -std=c++20 -W -Wall -Wextra -mp=gpu -gpu=<gpu-arch>" \
   LDFLAGS="-mp=gpu -gpu=<gpu-arch>"
 ```
 where `<gpu-arch>` is either `cc70`, `cc72`, `cc75`, `cc80`, `cc86` or `cc90`.
 
-If you want to use the CUDA API you will need to add `-cuda` to the `CXXFLAGS` and the `LDFLAGS`. Additionally, if you configure with `--with-toolchain=nvidia`, unified memory is automatically used.
+If you want to use the CUDA API you will need to add `-cuda` to the `CXXFLAGS` and the `LDFLAGS`. Unified memory is then automatically used.
 
 ### NVIDIA NVC++ toolchain with C++ GPU
 ```shell
@@ -163,7 +163,7 @@ If you want to use the CUDA API you will need to add `-cuda` to the `CXXFLAGS` a
   --with-gpu=cpp \
   --with-multithreading=cpp \
   CC=nvc++ CXX=nvc++ \
-  CXXFLAG="-O4 -std=c++20 -mp=gpu -gpu=<gpu-arch>" \
+  CXXFLAG="-O4 -std=c++20 -W -Wall -Wextra -mp=gpu -gpu=<gpu-arch>" \
   LDFLAGS="-mp=gpu -gpu=<gpu-arch>"
 ```
 where `<gpu-arch>` is either `cc70`, `cc72`, `cc75`, `cc80`, `cc86` or `cc90`.
@@ -177,7 +177,7 @@ where `<gpu-arch>` is either `cc70`, `cc72`, `cc75`, `cc80`, `cc86` or `cc90`.
   --with-gpu=omp \
   --with-multithreading=omp \
   CC=clang CXX=clang++ \
-  CXXFLAGS="-O3 -std=c++20 -fopenmp -O3 -std=c++20 --offload-arch=<gpu-arch>" \
+  CXXFLAGS="-O3 -std=c++20 -W -Wall -Wextra -Wno-unknown-attributes -fopenmp -O3 -std=c++20 --offload-arch=<gpu-arch>" \
   LDFLAGS="-fopenmp --offload-arch=<gpu-arch> -lstdc++fs"
 ```
 where `<gpu-arch>` is either `gfx906` (MI 50), `gfx908` (MI 100), or `gfx90a` (MI 200 series).

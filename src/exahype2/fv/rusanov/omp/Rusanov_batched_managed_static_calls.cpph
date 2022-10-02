@@ -67,7 +67,7 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanov_batched_managed_static_call
     std::memcpy(&tmpQIn[patchIndex * QInHostEnumerator.size()], hostPatchData.QIn[patchIndex], QInHostEnumerator.size() * sizeof(double));
   }
 
-#ifdef UseNVIDIA
+#ifdef __NVCOMPILER_CUDA__ // Use CUDA managed memory -> We only need to consider host copies
   std::memcpy(mappedPointersToQIns, &tmpQIn[0], hostPatchData.numberOfCells * QInHostEnumerator.size() * sizeof(double));
   std::memcpy(rawPointerToCellCentres, &hostPatchData.cellCentre[0], hostPatchData.numberOfCells * Dimensions * sizeof(double));
   std::memcpy(rawPointerToCellSizes, &hostPatchData.cellSize[0], hostPatchData.numberOfCells * Dimensions * sizeof(double));
@@ -1054,7 +1054,7 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanov_batched_managed_static_call
 
   std::vector<double> tmpQOut(hostPatchData.numberOfCells * QOutHostEnumerator.size());
 
-#ifdef UseNVIDIA
+#ifdef __NVCOMPILER_CUDA__
   std::memcpy(&tmpQOut[0], mappedPointersToQOuts, hostPatchData.numberOfCells * QOutHostEnumerator.size() * sizeof(double));
   std::memcpy(hostPatchData.maxEigenvalue, maxEigenvalues, hostPatchData.numberOfCells * sizeof(double));
 #else
