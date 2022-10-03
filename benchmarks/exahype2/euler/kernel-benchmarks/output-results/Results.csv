@@ -1,0 +1,12 @@
+;Vendor;NVIDIA OpenMP Map;NVIDIA OpenMP User Managed;NVIDIA OpenMP CUDA Managed;AMD OpenMP Map;AMD OpenMP User Managed;LLVM OpenMP Map;LLVM OpenMP User Managed;Intel Map;Intel User Managed
+Threads;;;;;;;;;;
+1;;Should work (segfault);Should work (segfault);Works;Works;Works;Conditional (slow);Conditional (slow);?;?
+2;;Should work (segfault);Should work (segfault);Works;Should work (nodes are offline);Should work (nodes are offline);Conditional (slow);Conditional (slow);?;?
+4;;Should work (segfault);Should work (segfault);Works;Should work (nodes are offline);Should work (nodes are offline);Conditional (slow);Conditional (slow);?;?
+8;;Should work (segfault);Should work (segfault);Works;Should work (nodes are offline);Should work (nodes are offline);Conditional (slow);Conditional (slow);?;?
+16;;Should work (segfault);Should work (segfault);Works;Should work (nodes are offline);Should work (nodes are offline);Conditional (slow);Conditional (slow);?;?
+;;;;;;;;;;
+Works;"Works as expected on the JSC testbeds; results are provided";;;;;;;;;
+Should work;"Works on local workstation, but still needs to be further tested on JSC; results have not yet been provided";;;;;;;;;
+Conditional;"It either crashes or is not comparable to the other vendors in terms of performance; results have not been provided";;;;;;;;;
+?;Still needs to tested;;;;;;;;;
