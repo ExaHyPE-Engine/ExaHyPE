@@ -185,8 +185,9 @@ if __name__ == "__main__":
           SuperClass.__init__(
             self,
             name=name,
-            rk_order     = 1,
-            polynomials  = exahype2.solvers.GaussLegendreBasis(3),
+            rk_order     = 2,
+            polynomials  = exahype2.solvers.GaussLegendreBasis(2),
+            face_projections   = exahype2.solvers.rkdg.FaceProjections.Solution,
             unknowns=number_of_unknowns,
             auxiliary_variables=0,
             min_cell_h=min_volume_h, max_cell_h=max_volume_h, #not a good name, but use for now.
