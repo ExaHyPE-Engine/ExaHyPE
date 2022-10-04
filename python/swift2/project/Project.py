@@ -10,12 +10,13 @@ import sys
 import swift2
 
 
+from abc import abstractmethod
 
 
 class Project(object):
   """
    
-  Represents a SWIFT 2 project. An SWIFT 2 project is a Peano 4 
+  Represents an abstract SWIFT 2 project. An SWIFT 2 project is a Peano 4 
   project with a particular set of actions (algorithmic phases) 
   that you can choose from and with particular solver types. It 
   realises a builder mechanism, i.e. you build up your SWIFT 2
@@ -23,10 +24,12 @@ class Project(object):
   project". From hereon, you can use this Peano 4 project to actually
   set up the Peano 4 application.
   
+  Please do not use this class directly. Use one of its subclasses.
+  
   @see generate_Peano4_project()
   
   """
-  def __init__(self, namespace, project_name, directory = ".", executable="swift2"):
+  def __init__(self, namespace, project_name, directory, executable):
     self._project = peano4.Project(namespace, project_name, directory)
     
     self._domain_offset = [0.0, 0.0, 0.0]
@@ -48,12 +51,9 @@ class Project(object):
 
     #self._particle_species = []
  
-    self.create_grid                         = peano4.solversteps.Step( "CreateGrid", False )
-    self.init_grid                           = peano4.solversteps.Step( "InitGrid",   False )
-    self.create_grid_but_postpone_refinement = peano4.solversteps.Step( "CreateGridButPostponeRefinement", False )
-    self.create_grid_and_converge_lb         = peano4.solversteps.Step( "CreateGridAndConvergeLoadBalancing", False )
-    self.plot_solution                       = peano4.solversteps.Step( "PlotSolution", False )
-    self.perform_time_step                   = peano4.solversteps.Step( "TimeStep",     False )
+    self._algorithm_step_create_grid    = peano4.solversteps.Step( "CreateGrid", False )
+    self._algorithm_step_init           = peano4.solversteps.Step( "Init",       False )
+    self._algorithm_step_plot           = peano4.solversteps.Step( "Plot",       False )
         
     
   def  set_load_balancing(self, load_balancer_name, load_balancer_arguments = ""):
@@ -278,7 +278,7 @@ citation of the original SWIFT paper
 
 
   def add_action_set_to_initialisation(self, action_set):
-    self.init_grid.add_action_set( action_set )
+    self._algorithm_step_init.add_action_set( action_set )
 
         
   def generate_Peano4_project(self, verbose=False):
@@ -295,43 +295,13 @@ citation of the original SWIFT paper
      Peano setup.
      
     """
-    #self._project.cleanup()
-            
-    self._project.solversteps.add_step(self.create_grid)
-    self._project.solversteps.add_step(self.init_grid)
-    self._project.solversteps.add_step(self.create_grid_but_postpone_refinement)
-    self._project.solversteps.add_step(self.create_grid_and_converge_lb)
-    self._project.solversteps.add_step(self.plot_solution)
-    self._project.solversteps.add_step(self.perform_time_step)
+    self._project.solversteps.add_step(self._algorithm_step_create_grid)
+    self._project.solversteps.add_step(self._algorithm_step_init)
+    self._project.solversteps.add_step(self._algorithm_step_plot)
    
-    #for solver in self._solvers:
-    #  print( "---------------------------------------")
-    #  print( "Create data for solver " +solver._name  )
-    #  print( "---------------------------------------")
-    #  print( str(solver) )
-      
-    #  solver.add_to_Peano4_datamodel( self._project.datamodel, verbose )
-      
-    #  solver.add_use_data_statements_to_Peano4_solver_step( self.create_grid )
-    #  solver.add_use_data_statements_to_Peano4_solver_step( self.plot_solution )
-    #  solver.add_use_data_statements_to_Peano4_solver_step( self.perform_time_step )
-    #  solver.add_use_data_statements_to_Peano4_solver_step( self.init_grid )
-    #  solver.add_use_data_statements_to_Peano4_solver_step( self.create_grid_but_postpone_refinement )
-    #  solver.add_use_data_statements_to_Peano4_solver_step( self.create_grid_and_converge_lb )
-      
-    #  solver.add_actions_to_create_grid( self.create_grid,                         evaluate_refinement_criterion=True  )
-    #  solver.add_actions_to_init_grid( self.init_grid )
-    #  solver.add_actions_to_create_grid( self.create_grid_but_postpone_refinement, evaluate_refinement_criterion=False )
-    #  solver.add_actions_to_create_grid( self.create_grid_and_converge_lb,         evaluate_refinement_criterion=False )
-    #  solver.add_actions_to_plot_solution( self.plot_solution, self._output_path )
-    #  solver.add_actions_to_perform_time_step( self.perform_time_step )
-      
-    #  solver.add_implementation_files_to_project( self._project.namespace, self._project.output )
-    
-
     self.__generate_solver_repository();
     
-    self._project.main = swift2.SWIFTMain(self._project)
+    self._project.main = swift2.project.SWIFTMain(self._project, self.main_file_template() )
 
     self.__configure_makefile()
     self._project.output.makefile.parse_configure_script_outcome( self._Peano_src_directory )
@@ -342,3 +312,7 @@ citation of the original SWIFT paper
     return self._project
 
     
+  @abstractmethod
+  def main_file_template(self):
+    assert False, "should be implemented by subclass"
+    pass

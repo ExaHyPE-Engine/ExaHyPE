@@ -115,6 +115,22 @@ class benchmarks::exahype2::euler::sphericalaccretionupscaling::SelfSimilarInfal
     
      
     /**
+     * Evaluate refinement criterion over cell
+     *
+     * @param Q Vector of unknowns
+     * @param x Centre of underlying cell
+     * @param h Size of underlying cell
+     * @param t Time
+     */
+    ::exahype2::RefinementCommand refinementCriterion(
+      const double * __restrict__                  Q,    // Q[5+0]
+      const tarch::la::Vector<Dimensions,double>&  x,
+      const tarch::la::Vector<Dimensions,double>&  h,
+      double                                       t
+    ) override;
+
+
+    /**
      * According to the docu, I always call the superclass routine. After that,
      * I check whether this has been the last sweep of the current time step.
      * If so, we let the mass accummulation know.

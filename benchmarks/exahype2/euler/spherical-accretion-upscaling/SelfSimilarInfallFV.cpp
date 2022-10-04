@@ -36,12 +36,23 @@ void benchmarks::exahype2::euler::sphericalaccretionupscaling::SelfSimilarInfall
   double                                       t
 ) {
   if (
-    tarch::la::norm2(volumeCentre) <= InitialTopHatRadius * NumberOfFiniteVolumesPerAxisPerPatch
-    or
+    tarch::la::equals(t,0.0)
+    and
+    tarch::la::norm2(volumeCentre) <= InitialTopHatRadius + volumeH(0) * NumberOfFiniteVolumesPerAxisPerPatch
+  ) {
+    return ::exahype2::RefinementCommand::Refine;
+  }
+  else if (
+    DynamicAMR
+    and
     ( Q[4]>1.1*BaseDensity )
   ) {
-    std::cout << std::endl << "- REFINE -" << std::endl;
     return ::exahype2::RefinementCommand::Refine;
+  }
+  else if (
+    DynamicAMR
+  ) {
+    return ::exahype2::RefinementCommand::Erase;
   }
   else {
     return ::exahype2::RefinementCommand::Keep;

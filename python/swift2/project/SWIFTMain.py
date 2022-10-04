@@ -5,22 +5,21 @@ import os
 
 
 class SWIFTMain(peano4.runner.DefaultSequence):
-  def __init__(self,project):
+  def __init__(self,project,template_file):
     """
     
-     project: swift2.Project
+     project: swift2.project.Project
      
     """
     super(SWIFTMain,self).__init__(project)
-    self.overwrite = False
+    self.overwrite     = False
+    self.template_file = template_file
 
 
   def _get_header_file_template(self):
-    templatefile_prefix = os.path.realpath(__file__).replace( ".pyc", "" ).replace( ".py", "" )    
-    return templatefile_prefix+".template.h"
+    return self.template_file+".h"
     
     
   def _get_implementation_file_template(self):
-    templatefile_prefix = os.path.realpath(__file__).replace( ".pyc", "" ).replace( ".py", "" )    
-    return templatefile_prefix+".template.cpp"
+    return self.template_file+".cpp"
 

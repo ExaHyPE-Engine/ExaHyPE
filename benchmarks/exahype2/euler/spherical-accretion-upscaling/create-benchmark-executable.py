@@ -26,9 +26,9 @@ parser.add_argument("-j",   "--parallel-builds",    dest="j",              type=
 parser.add_argument("-pd",  "--peano-dir",          dest="peanodir",       default="../../../../", help="Peano4 directory" )
 parser.add_argument("-v",   "--verbose",            dest="verbose",        action="store_true", default=False, help="Verbose")
 parser.add_argument("-m",   "--mode",               dest="mode",           choices=["release","stats","asserts"], required=True, help="Pick build type" )
-parser.add_argument("-t",   "--type",               dest="type",           choices=["plot-0","plot-1","plot-2","reg-0"], required=True, help="Pick scenario" )
+parser.add_argument("-t",   "--type",               dest="type",           choices=["plot-0","plot-1","plot-2","plot-3","reg-0"], required=True, help="Pick scenario" )
 parser.add_argument(        "--optimise-stateless", dest="optimise_stateless",            action="store_true", default=False, help="Optimise stateless/side-effect free cells (required for GPU offloading)")
-parser.add_argument("-s",   "--solver",             dest="solver",         choices=["fv-4", "fv-6", "fv-8", "dg1-rk1", "dg2-rk2", "dg3-rk3", "dg4-rk4"], required=True, help="Pick solver type. For the Finite Volume (fv) solvers, the second index is the patch/block size. For DG, you can pick different Runge-Kutta time integration orders" )
+parser.add_argument("-s",   "--solver",             dest="solver",         choices=["fv-4", "fv-6", "fv-8", "dg0-rk1", "dg1-rk1", "dg2-rk2", "dg3-rk3", "dg4-rk4"], required=True, help="Pick solver type. For the Finite Volume (fv) solvers, the second index is the patch/block size. For DG, you can pick different Runge-Kutta time integration orders" )
 args = parser.parse_args()
 
 
@@ -54,8 +54,11 @@ if args.type=="plot-1":
   baseline_max_h               = 0.005
   baseline_min_h               = 0.005
 if args.type=="plot-2":
-  baseline_max_h               = 0.05
-  baseline_min_h               = 0.005
+  baseline_max_h               = 0.5
+  baseline_min_h               = 0.1
+if args.type=="plot-3":
+  baseline_max_h               = 0.5
+  baseline_min_h               = 0.008
 elif args.type=="reg-0":
   baseline_max_h               = 0.008
   baseline_min_h               = 0.008
@@ -67,6 +70,9 @@ elif args.type=="reg-0":
 # the cells coarser with increasing order (to fit into memory and
 # to remain reasonable by means of accuracy).
 #
+if "dg0-" in args.solver:
+  max_h = baseline_max_h
+  min_h = baseline_min_h
 if "dg1-" in args.solver:
   max_h = baseline_max_h
   min_h = baseline_min_h
@@ -157,7 +163,15 @@ not repositories::{{SOLVER_INSTANCE}}.cellCanUseStatelessPDETerms(marker.x(), ma
   """     )
 
 
+#
+# Configure plots and enable or disable dynamic AMR
+#
 thesolver.plot_description = "rho,j_x,j_y,j_z,E,aux"
+if "dyn" in args.type:
+  thesolver.add_solver_constants("static constexpr bool DynamicAMR = true;" )
+else:
+  thesolver.add_solver_constants("static constexpr bool DynamicAMR = false;" )
+  
         
 #
 # Create a project and configure it to end up in a subnamespace (and thus
@@ -177,7 +191,7 @@ if args.mode=="stats":
 if args.mode=="asserts":
   build_mode = peano4.output.CompileMode.Asserts
 
-if args.type=="plot":
+if "plot" in args.type:
   plot_interval = 0.1
 else:  
   plot_interval = 0.0

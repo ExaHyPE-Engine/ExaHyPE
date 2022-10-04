@@ -29,9 +29,9 @@ args = parser.parse_args()
 # Generate plain SWIFT project
 ########################################################################################
 
-project = swift2.Project( namespace=["benchmarks", "swift2", "planetorbit"], 
-                          project_name="planetorbit", 
-                          executable="orbit-" + str(args.cell_size) )
+project = swift2.project.ExplicitEuler( namespace=["benchmarks", "swift2", "planetorbit"], 
+                                        project_name="planetorbit", 
+                                        executable="orbit-" + str(args.cell_size) )
 
 
 

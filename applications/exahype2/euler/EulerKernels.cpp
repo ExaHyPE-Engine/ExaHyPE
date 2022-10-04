@@ -36,6 +36,7 @@ double ::applications::exahype2::euler::maxEigenvalue(
 
   if (Q[0]<=0.0 or Q[0]!=Q[0]) {
     ::exahype2::triggerNonCriticalAssertion( __FILE__, __LINE__, "Q[0]>0", "density negative (Q[0]=" + std::to_string( Q[0] ) + ") at x=" + toString(faceCentre) );
+    assertion(false);
   }
 
   const double irho = 1./Q[0];

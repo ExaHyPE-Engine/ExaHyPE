@@ -556,7 +556,7 @@ We use RK(""" + str(self._rk_order) + """) for the time stepping.
     self._action_set_solve_Riemann_problem                                            = exahype2.solvers.rkdg.actionsets.SolveRiemannProblem(self)
     self._action_set_add_volume_and_face_solution                                     = exahype2.solvers.rkdg.actionsets.AddVolumeAndFaceSolution(self)
     self._action_set_compute_final_linear_combination_and_project_solution_onto_faces = exahype2.solvers.rkdg.actionsets.ComputeFinalLinearCombination(solver=self,guard=self._store_cell_data_default_guard())
-    self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement = exahype2.solvers.rkdg.actionsets.DynamicAMR(solver=self,guard=self._store_cell_data_default_guard())
+    self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement = exahype2.solvers.rkdg.actionsets.DynamicAMR(solver=self,face_projections=self._face_projections)
     
     if self._action_set_postprocess_solution==None:
       self._action_set_postprocess_solution                                             = exahype2.solvers.rkdg.actionsets.EmptyPostprocessSolution(solver=self)

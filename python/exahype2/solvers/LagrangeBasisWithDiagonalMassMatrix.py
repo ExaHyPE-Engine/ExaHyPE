@@ -56,6 +56,8 @@ class LagrangeBasisWithDiagonalMassMatrix(LagrangeBasis):
   - QuadraturePoints1d
   - MassMatrixDiagonal1d
   - StiffnessOperator
+  - RestrictionMatrix1d
+  - InterpolationMatrix1d
 
   
   ## Realisation
@@ -194,7 +196,20 @@ class LagrangeBasisWithDiagonalMassMatrix(LagrangeBasis):
     integral et al. Furthermore, it is exact given a certain Lagrange 
     polynomial. 
 """    
-    
+
+  InterpolationMatrix1dDocumentation = """
+    This is essentially a @f$ 3 \cdot (order+1)^d-1 @f$ matrix split up 
+    into a three-dimensional tensor. The documentation/content of this
+    tensor can be found on the page about DG AMR which is held in exahype
+    within the file exahype2/dg/Riemann.h.
+"""      
+
+  RestrictionMatrix1dDocumentation = """
+    This is essentially a @f$ 3 \cdot (order+1)^d-1 @f$ matrix split up 
+    into a three-dimensional tensor. The documentation/content of this
+    tensor can be found on the page about DG AMR which is held in exahype
+    within the file exahype2/dg/Riemann.h.
+"""      
     
   def __compute_barycentric_weights(self):
     """
@@ -364,6 +379,21 @@ class LagrangeBasisWithDiagonalMassMatrix(LagrangeBasis):
     return equidistantGridProjector
   
   
+  def __compute_restriction_matrix(self):
+    #assert self._polynomial_order==0
+    return [[[1.0/3.0]],[[1.0/3.0]],[[1.0/3.0]]]
+  
+  
+  def __compute_interpolation_matrix(self):
+    """
+    
+    There is alrady a projection operation. Maybe we can use this one
+    
+    """
+    #assert self._polynomial_order==0
+    return [[[1.0]],[[1.0]],[[1.0]]]
+  
+  
   def init_dictionary_with_default_parameters(self,dictionary,use_multidimensional_arrays):
     def snake_to_camel(word):
       return ''.join(x.capitalize() or '_' for x in word.lower().split('_'))
@@ -411,21 +441,31 @@ class LagrangeBasisWithDiagonalMassMatrix(LagrangeBasis):
     dictionary["BASIS_DECLARATIONS"] += "/**\n"
     dictionary["BASIS_DECLARATIONS"] += self.BasisFunctionValuesLeft1dDocumentation
     dictionary["BASIS_DECLARATIONS"] += "*/\n"
-    #dictionary["BASIS_DECLARATIONS"] += "const double BasisFunctionValuesLeft1d[DGOrder+1];\n\n"
-    #dictionary["BASIS_INITIALIZERS"] += "             BasisFunctionValuesLeft1d{},\n".format( self._render_tensor_1(self.__compute_basis_function_values_left()) )
     dictionary["BASIS_DECLARATIONS"] += "static constexpr double BasisFunctionValuesLeft1d[] = {};\n\n".format( self._render_tensor_1(self.__compute_basis_function_values_left()) )
 
     dictionary["BASIS_DECLARATIONS"] += "/**\n"
     dictionary["BASIS_DECLARATIONS"] += self.DerivativeOperator1dDocumentation
     dictionary["BASIS_DECLARATIONS"] += "*/\n"
     if use_multidimensional_arrays:        
-      #dictionary["BASIS_DECLARATIONS"] += "const double DerivativeOperator1d[DGOrder+1][DGOrder+1];\n\n"
-      #dictionary["BASIS_INITIALIZERS"] += "             DerivativeOperator1d{},\n".format( self._render_tensor_2(self.__compute_derivative_operator(),use_multidimensional_arrays) )
       dictionary["BASIS_DECLARATIONS"] += "static constexpr double DerivativeOperator1d[][] = {};\n\n".format( self._render_tensor_2(self.__compute_derivative_operator(),use_multidimensional_arrays) )
     else:
-      #dictionary["BASIS_DECLARATIONS"] += "const double DerivativeOperator1d[(DGOrder+1)*(DGOrder+1)];\n\n"
-      #dictionary["BASIS_INITIALIZERS"] += "             DerivativeOperator1d{},\n".format( self._render_tensor_2(self.__compute_derivative_operator(),use_multidimensional_arrays) )
       dictionary["BASIS_DECLARATIONS"] += "static constexpr double DerivativeOperator1d[] = {};\n\n".format( self._render_tensor_2(self.__compute_derivative_operator(),use_multidimensional_arrays) )
+
+    dictionary["BASIS_DECLARATIONS"] += "/**\n"
+    dictionary["BASIS_DECLARATIONS"] += self.RestrictionMatrix1dDocumentation
+    dictionary["BASIS_DECLARATIONS"] += "*/\n"
+    if use_multidimensional_arrays:        
+      dictionary["BASIS_DECLARATIONS"] += "static constexpr double RestrictionMatrix1d[][][] = {};\n\n".format( self._render_tensor_3(self.__compute_restriction_matrix(),use_multidimensional_arrays) )
+    else:
+      dictionary["BASIS_DECLARATIONS"] += "static constexpr double RestrictionMatrix1d[] = {};\n\n".format( self._render_tensor_3(self.__compute_restriction_matrix(),use_multidimensional_arrays) )
+
+    dictionary["BASIS_DECLARATIONS"] += "/**\n"
+    dictionary["BASIS_DECLARATIONS"] += self.InterpolationMatrix1dDocumentation
+    dictionary["BASIS_DECLARATIONS"] += "*/\n"
+    if use_multidimensional_arrays:        
+      dictionary["BASIS_DECLARATIONS"] += "static constexpr double InterpolationMatrix1d[][][] = {};\n\n".format( self._render_tensor_3(self.__compute_interpolation_matrix(),use_multidimensional_arrays) )
+    else:
+      dictionary["BASIS_DECLARATIONS"] += "static constexpr double InterpolationMatrix1d[] = {};\n\n".format( self._render_tensor_3(self.__compute_interpolation_matrix(),use_multidimensional_arrays) )
 
 
   @property
