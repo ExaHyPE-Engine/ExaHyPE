@@ -17,9 +17,9 @@ class SWIFTMain(peano4.runner.DefaultSequence):
 
 
   def _get_header_file_template(self):
-    return self.template_file+".h"
+    return os.path.dirname(__file__) + "/" + self.template_file+".h"
     
     
   def _get_implementation_file_template(self):
-    return self.template_file+".cpp"
+    return os.path.dirname(__file__) + "/" + self.template_file+".cpp"
 

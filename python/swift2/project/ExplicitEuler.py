@@ -2,6 +2,10 @@
 # use, please see the copyright notice at www.peano-framework.org
 from .Project                import Project
 
+
+import peano4
+
+
 class ExplicitEuler(Project):
   """
    
@@ -21,7 +25,18 @@ class ExplicitEuler(Project):
   def __init__(self, namespace, project_name, directory = ".", executable="swift2"):
     super( ExplicitEuler,self ).__init__(namespace, project_name, directory, executable)
     
+    self._algorithm_step_force_calculation  = peano4.solversteps.Step( "CalculateForce", False )
+    self._algorithm_step_time_step          = peano4.solversteps.Step( "TimeStep",       False )
+    
     
   def main_file_template(self):
     return "ExplicitEulerMain.template"
+    
+
+  def generate_Peano4_project(self, verbose=False):
+    self._project.solversteps.add_step(self._algorithm_step_force_calculation)
+    self._project.solversteps.add_step(self._algorithm_step_time_step)
+    
+    return super( ExplicitEuler, self ).generate_Peano4_project(verbose)
+    
     

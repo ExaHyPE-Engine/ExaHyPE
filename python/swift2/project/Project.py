@@ -29,7 +29,11 @@ class Project(object):
   @see generate_Peano4_project()
   
   """
-  def __init__(self, namespace, project_name, directory, executable):
+  def __init__(self, 
+               namespace, 
+               project_name, 
+               directory, 
+               executable):
     self._project = peano4.Project(namespace, project_name, directory)
     
     self._domain_offset = [0.0, 0.0, 0.0]
@@ -48,6 +52,8 @@ class Project(object):
     self._plot_filters  = []
     self._output_path   = "./"
     self._plotter_precision = 5
+    self._min_h         = 0.01
+    self._max_h         = 0.1
 
     #self._particle_species = []
  
@@ -165,6 +171,9 @@ class Project(object):
     self._project.constants.export( "TimeInBetweenPlots", str(self._time_in_between_plots) )
     self._project.constants.export( "PlotterPrecision", str(self._plotter_precision) )
     self._project.constants.export_boolean_sequence( "PeriodicBC", self._periodic_BC )
+    
+    self._project.constants.export( "MaxH", str(self._max_h) )
+    self._project.constants.export( "MinH", str(self._min_h) )
 
     build_string = "python3 "
     for i in sys.argv:
@@ -201,6 +210,7 @@ citation of the original SWIFT paper
   def set_global_simulation_parameters(self,
                                        dimensions,
                                        offset,size,
+                                       max_h,min_h,
                                        min_end_time,
                                        first_plot_time_stamp,
                                        time_in_between_plots, 
@@ -225,6 +235,9 @@ citation of the original SWIFT paper
         most advanced cell exceeds this threshold.
       
     """
+    assert max_h>=min_h
+    self._max_h         = max_h
+    self._min_h         = min_h
     self._domain_offset = offset
     self._domain_size   = size
     self._dimensions    = dimensions
