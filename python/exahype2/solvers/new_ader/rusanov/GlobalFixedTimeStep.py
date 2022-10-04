@@ -22,7 +22,6 @@ class GlobalFixedTimeStep( SingleSweep ):
   def __init__(self, 
     name, 
     order,
-    polynomials,
     unknowns, auxiliary_variables, min_cell_h, max_cell_h, 
     time_step_size,
     flux=PDETerms.User_Defined_Implementation, 
@@ -32,12 +31,11 @@ class GlobalFixedTimeStep( SingleSweep ):
     refinement_criterion=PDETerms.None_Implementation,
     initial_conditions=PDETerms.User_Defined_Implementation,
     source_term=PDETerms.None_Implementation,
-    is_linear=False,
     plot_grid_properties=False,
     predictor_persistent_storage_precision=PrecisionType.double,
     predictor_computation_precision=PrecisionType.double
   ):
-    super(GlobalFixedTimeStep,self).__init__(name, order, polynomials, unknowns, auxiliary_variables, min_cell_h, max_cell_h, is_linear, plot_grid_properties, predictor_persistent_storage_precision, predictor_computation_precision) 
+    super(GlobalFixedTimeStep,self).__init__(name, order, unknowns, auxiliary_variables, min_cell_h, max_cell_h, plot_grid_properties, predictor_persistent_storage_precision, predictor_computation_precision) 
    
     self._time_step_size = time_step_size
 

@@ -42,7 +42,24 @@ kernels::UnivariateFunction** {{NAMESPACE | join("::")}}::{{CLASSNAME}}::basisFu
   _minTimeStepSizeThisTimeStep(std::numeric_limits<double>::max()),
   _maxTimeStepSizeThisTimeStep(0.0),
   _cellUpdates(0) {
+
   {{CONSTRUCTOR_IMPLEMENTATION}}
+
+  {% if USE_KERNEL_GENERATOR==True %}
+  //initialise nodes, weights and matrices for use of the kernels
+  generated::kernels::AderDG::{{LINEARITY}}::initQuadratureNodesAndWeights();
+  generated::kernels::AderDG::{{LINEARITY}}::initDGMatrices();
+  {% endif %}
+
+}
+
+{{NAMESPACE | join("::")}}::{{CLASSNAME}}::~{{CLASSNAME}}(){
+
+  {% if USE_KERNEL_GENERATOR==True %}
+  //free the generated nodes, weights and matrices
+  generated::kernels::AderDG::{{LINEARITY}}::freeQuadratureNodesAndWeights();
+  generated::kernels::AderDG::{{LINEARITY}}::freeDGMatrices();
+  {% endif %}
 }
 
 

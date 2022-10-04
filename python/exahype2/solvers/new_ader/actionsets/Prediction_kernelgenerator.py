@@ -8,7 +8,7 @@ from ..kernels import create_array_and_convert_from_type
 import peano4.solversteps
 import jinja2
 
-class Prediction(AbstractAderDGActionSet):
+class Prediction_kernelgenerator(AbstractAderDGActionSet):
   """
   
   The extrapolated solution from the space-time predictor has to be projected onto
@@ -47,8 +47,11 @@ class Prediction(AbstractAderDGActionSet):
     constexpr int sizeLQhi = (NumberOfVariables+NumberOfParameters)*spaceBasisSize;
     constexpr int sizeLFhi = (Dimensions + 1)*NumberOfVariables*spaceBasisSize;
     
+    const int sizeLSi = spaceTimeBasisSize * (NumberOfVariables);
+    const int sizeLShi = spaceBasisSize * (NumberOfVariables);
+    
     constexpr int totalSize = sizeLQi + sizeRhs + sizeLFi + sizeGradQ +
-                          sizeLQhi + sizeLFhi + sizeLQhi;
+                          sizeLQhi + sizeLFhi + sizeLQhi + sizeLSi + sizeLShi;
   
     {{PREDICTOR_COMPUTATION_PRECISION}} block[totalSize];
     {{PREDICTOR_COMPUTATION_PRECISION}}* memory = block;
@@ -58,117 +61,78 @@ class Prediction(AbstractAderDGActionSet):
     {{PREDICTOR_COMPUTATION_PRECISION}}* lFi   = memory; memory+=sizeLFi;
     {{PREDICTOR_COMPUTATION_PRECISION}}* gradQ = memory; memory+=sizeGradQ;
     
-    {{PREDICTOR_COMPUTATION_PRECISION}}* lQhi = memory; memory+=sizeLQhi;
-    {{PREDICTOR_COMPUTATION_PRECISION}}* lFhi = memory; memory+=sizeLFhi;
-    {{PREDICTOR_COMPUTATION_PRECISION}}* lduh = memory; memory+=sizeLQhi;
+    {{PREDICTOR_COMPUTATION_PRECISION}}* lQhi  = memory; memory+=sizeLQhi;
+    {{PREDICTOR_COMPUTATION_PRECISION}}* lFhi  = memory; memory+=sizeLFhi;
+    {{PREDICTOR_COMPUTATION_PRECISION}}* lduh  = memory; memory+=sizeLQhi;
+    
+    {{PREDICTOR_COMPUTATION_PRECISION}}* lSi   = memory; memory+=sizeLSi;
+    {{PREDICTOR_COMPUTATION_PRECISION}}* lShi  = memory; 
+    
     
     {{PREDICTOR_STORAGE_PRECISION}} lQhbnd[2*Dimensions*spaceFaceSize*(NumberOfVariables+NumberOfParameters)]{0.0};
     {{PREDICTOR_STORAGE_PRECISION}} lFhbnd[2*Dimensions*spaceFaceSize*NumberOfVariables]{0.0};
     //{{PREDICTOR_STORAGE_PRECISION}} lGradQhbnd[2*Dimensions*Dimensions*spaceFaceSize*(NumberOfVariables+NumberOfParameters)]{0.0};
-
+    
 
     {% if IS_LINEAR is sameas True %}  
-    //template <bool usePointSource, bool useSource, bool useFlux, bool useNCP, bool useMM,typename SolverType>
-  
-    kernels::aderdg::generic::c::spaceTimePredictorLinear<
-      false, //usePointSource
-      {{ "true" if USE_SOURCE!="<none>" else "false" }}, //source
-      {{ "true" if USE_FLUX!="<none>" else "false" }}, //useFlux
-      {{ "true" if USE_NCP!="<none>" else "false" }}, //useNCP
-      false, //useMM
-      {{SOLVER_NAME}},
-      {{PREDICTOR_COMPUTATION_PRECISION}}, //predictor_computation_precision
-      {{PREDICTOR_STORAGE_PRECISION}} //predictor_storage_precision
-      >(
-  
-        repositories::{{SOLVER_INSTANCE}},
-        lQhbnd,
-        lFhbnd,
-        lQi,
-        lFi,
-        gradQ,
-        nullptr, //PSi
-        nullptr, //PSderivatives
-        nullptr, //tmp_PSderivatives
-        lQhi,
-        lFhi,
-        luh,
-        marker.x(), //cellCentre
-        tarch::la::invertEntries(marker.h()), //cellSize
-        timeStamp,
-        timeStepSize
-        );
-      int numberOfIterations = 1;
+#if Dimensions==2
+  double centre[Dimensions] = {marker.x()[0], marker.x()[1]};
+#else
+  double centre[Dimensions] = {marker.x()[0], marker.x()[1], marker.x()[2]};  
+#endif
+
+    int numberOfIterations = generated::kernels::AderDG::linear::fusedSpaceTimePredictorVolumeIntegral(
+      repositories::{{SOLVER_INSTANCE}},
+      lduh,
+      lQhbnd,
+      lFhbnd,
+      lQi,
+      lFi,
+      lSi,   // for NCP or Source
+      lQhi,
+      lFhi,
+      lShi,  // for NCP or Source
+      gradQ, // for NCP or Source
+      nullptr, // PSi, for pointSource
+      nullptr, // PSderivatives, for pointSource
+      luh,
+      centre,
+      marker.h()[0], // Assume dx[0] == dx[1] == dx[2]
+      t, // tStep, doesn't seem to ever get used
+      timeStepSize,
+      &pointSources // will be deleted in the end if set
+    );  
+
     {% else %}
-    //template <bool useSource, bool useFlux, bool useViscousFlux, bool useNCP, typename SolverType>
-    int numberOfIterations = kernels::aderdg::generic::c::spaceTimePredictorNonlinear<
-      {{ "true" if USE_SOURCE!="<none>" else "false" }}, //source
-      {{ "true" if USE_FLUX!="<none>" else "false" }}, //useFlux
-      false, //viscousFlux
-      {{ "true" if USE_NCP!="<none>" else "false" }}, //useNCP
-      false, //noTimeAveraging
-      {{SOLVER_NAME}},
-      {{PREDICTOR_COMPUTATION_PRECISION}}, //predictor_computation_precision
-      {{PREDICTOR_STORAGE_PRECISION}} //predictor_storage_precision
-      >(
+
+    int numberOfIterations = generated::kernels::AderDG::nonlinear::fusedSpaceTimePredictorVolumeIntegral(
         repositories::{{SOLVER_INSTANCE}},
+        lduh,
         lQhbnd,
-        nullptr,
+        nullptr, //lGradQhbnd,
         lFhbnd,
         lQi,
         rhs,
         lFi,
-        gradQ,
+        lSi,   // for NCP or Source
         lQhi,
         lFhi,
+        lShi,  // for NCP or Source
+        gradQ, // for NCP or Source or viscousFlux
+        nullptr, //gradQVg, // for viscousFlux
         luh,
-        marker.x(), //cellCentre
-        tarch::la::invertEntries(marker.h()), //cellSize
-        timeStamp,
+        1/(marker.h()[0]), //inverseDx, assume dx[0] == dx[1] == dx[2]
         timeStepSize
-        );
-    {% endif %}
-    
-    
-    {% if IS_LINEAR is sameas True %}
-    //template <typename SolverType,bool useSource, bool useFlux, int numberOfVariables, int basisSize>
-    kernels::aderdg::generic::c::volumeIntegralLinear<
-      {{SOLVER_NAME}},
-      {{PREDICTOR_COMPUTATION_PRECISION}}, //predictor_computation_precision
-      {{ "true" if USE_SOURCE!="<none>" else "false" }}, //useSource
-      {{ "true" if USE_FLUX!="<none>" else "false" }}, //useFlux
-      {{NUMBER_OF_UNKNOWNS}},
-      {{ORDER}}+1>(
-        lduh,
-        lFhi,
-        marker.h() //cellSize
-        );
-    {% else %}
-    //template <typename SolverType, bool useSourceOrNCP, bool useFlux, bool noTimeAveraging, const int numberOfVariables, int basisSize>
-    kernels::aderdg::generic::c::volumeIntegralNonlinear<
-      {{SOLVER_NAME}},
-      {{PREDICTOR_COMPUTATION_PRECISION}}, //predictor_computation_precision
-      {{ "true" if USE_NCP!="<none>" or USE_SOURCE!="<none>" else "false" }}, //useSourceOrNCP
-      {{ "true" if USE_FLUX!="<none>" else "false" }}, //useFlux
-      false, //noTimeAveraging
-      {{NUMBER_OF_UNKNOWNS}},
-      {{ORDER}}+1>(
-        lduh,
-        lFhi,
-        marker.h() //cellSize
-        );
-    {% endif %}
-    
-    kernels::aderdg::generic::c::solutionUpdate<
-    {{SOLVER_NAME}},
-    {{PREDICTOR_COMPUTATION_PRECISION}} //predictor_computation_precision
-      >(
-      repositories::{{SOLVER_INSTANCE}},
-      luh,
-      luh,
-      lduh,
-      timeStepSize
       );
+
+    {% endif %}
+
+    generated::kernels::AderDG::{{LINEARITY}}::solutionUpdate( 
+      luh,
+      luh, 
+      lduh, 
+      timeStepSize
+    );
       
     /*
     Copy the estimates into the face data containers. Note that peano uses a different ordering of
@@ -211,7 +175,7 @@ class Prediction(AbstractAderDGActionSet):
       the old solution and the time step should also be moved over
     
     """
-    super(Prediction,self).__init__(solver)
+    super(Prediction_kernelgenerator,self).__init__(solver)
     self.guard            = guard
     
 
@@ -231,5 +195,8 @@ class Prediction(AbstractAderDGActionSet):
     return __name__.replace(".py", "").replace(".", "_")
 
   def get_includes(self):
-    return super(Prediction,self).get_includes() + """
+    
+    linearity = ( "linear" if self._solver._is_linear else "nonlinear" )
+    return super(Prediction_kernelgenerator,self).get_includes() + """
+#include "../generated/kernels/aderdg/""" + linearity + """/Kernels.h"
       """

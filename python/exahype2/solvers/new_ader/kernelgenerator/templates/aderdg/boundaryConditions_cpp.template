@@ -25,7 +25,7 @@ void {{codeNamespace}}::boundaryConditions(
                         double* stateOut,
                         const double* const fluxIn,
                         const double* const stateIn,
-			const double* const gradStateIn,
+                        const double* const gradStateIn,
                         const double* const cellCentre,
                         const double* const cellSize,
                         const double t,const double dt,

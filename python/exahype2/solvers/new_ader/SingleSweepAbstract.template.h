@@ -23,7 +23,10 @@
 #include "Constants.h"
 
 #include "exahype2/aderdg_kernels/Kernels.h"
-
+{% if USE_KERNEL_GENERATOR==True %}
+#include "generated/kernels/aderdg/{{LINEARITY}}/Quadrature.h"
+#include "generated/kernels/aderdg/{{LINEARITY}}/DGMatrices.h"
+{% endif %}
 
 {% for item in NAMESPACE -%}
   namespace {{ item }} {
@@ -120,6 +123,7 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
     {{BASIS_DECLARATIONS | indent(4,True) }}
 
     {{CLASSNAME}}();
+    ~{{CLASSNAME}}();
 
     /**
      * Alias for periodic boundary conditions.

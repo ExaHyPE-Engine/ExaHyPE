@@ -7,17 +7,15 @@ from .PDETerms import PDETerms
 import jinja2
 
 class SingleSweep( ADERDG ):
-  def __init__(self, name, order, polynomials, unknowns, auxiliary_variables, min_cell_h, max_cell_h, is_linear, plot_grid_properties=False, predictor_persistent_storage_precision=PrecisionType.double, predictor_computation_precision=PrecisionType.double):
+  def __init__(self, name, order, unknowns, auxiliary_variables, min_cell_h, max_cell_h, plot_grid_properties=False, predictor_persistent_storage_precision=PrecisionType.double, predictor_computation_precision=PrecisionType.double):
 
     super(SingleSweep, self).__init__(
       name,
       order,
-      polynomials,
       unknowns,
       auxiliary_variables,
       min_cell_h,
       max_cell_h,
-      is_linear,
       plot_grid_properties,
       predictor_persistent_storage_precision,
       predictor_computation_precision)

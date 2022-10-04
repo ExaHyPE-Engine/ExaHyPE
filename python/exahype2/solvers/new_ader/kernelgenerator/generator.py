@@ -39,7 +39,11 @@ def generate_aderdg_kernels(
     usePointSources=False, 
     useMaterialParam=False, useMaterialParamVect=False,
     useGaussLobatto=False,
-    useVectPDE=False
+    useVectPDE=False,
+    architecture="noarch",
+    useCERKGuess=False,
+    useSplitCK=False,
+    predictorRecompute=False
     ):
   
   InputConfig = {
@@ -49,7 +53,7 @@ def generate_aderdg_kernels(
     "pathToOutputDirectory" : "generated/kernels/aderdg/" + numerics,
     "solverName" : solverName,
     "namespace" : "generated::kernels::AderDG::" + numerics,
-    "architecture" : "noarch",
+    "architecture" : architecture,
     }
   
   InputConfig.update({
@@ -68,14 +72,14 @@ def generate_aderdg_kernels(
     "useFusedSource"        : "",
     "useFusedSourceVect"    : "",
     "nPointSources"         : usePointSources,
-    "usePointSources"       : usePointSources >= 0,
+    "usePointSources"       : usePointSources > 0,
     "useMaterialParam"      : useMaterialParam or useMaterialParamVect,
     "useMaterialParamVect"  : useMaterialParamVect,
     "quadratureType"        : ("Gauss-Lobatto" if useGaussLobatto==True else "Gauss-Legendre"),
-    "useCERKGuess"          : "",
-    "useSplitCK"            : "",
+    "useCERKGuess"          : useCERKGuess,
+    "useSplitCK"            : useSplitCK,
     "useVectPDE"            : useVectPDE,
-    "predictorRecompute"    : "",
+    "predictorRecompute"    : predictorRecompute,
     "initialGuess"          : "mixedPicard"
   })
 

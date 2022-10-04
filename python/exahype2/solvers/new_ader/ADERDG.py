@@ -18,8 +18,10 @@ from abc import abstractmethod
 
 from enum import IntEnum
 import jinja2
-from exahype2.solvers.new_ader.actionsets.Prediction import Prediction
-from exahype2.solvers.new_ader.actionsets.Correction import Correction
+from exahype2.solvers.new_ader.actionsets.Prediction_generic import Prediction_generic
+from exahype2.solvers.new_ader.actionsets.Prediction_kernelgenerator import Prediction_kernelgenerator
+from exahype2.solvers.new_ader.actionsets.Correction_generic import Correction_generic
+from exahype2.solvers.new_ader.actionsets.Correction_kernelgenerator import Correction_kernelgenerator
 
 
 class Polynomials(IntEnum):
@@ -32,12 +34,12 @@ class PrecisionType():
   long_double = "long double"
 
 class ADERDG( object ):
-  def __init__(self, name, order, polynomials, unknowns, auxiliary_variables, min_cell_h, max_cell_h, is_linear, plot_grid_properties=False, predictor_persistent_storage_precision=PrecisionType.double, predictor_computation_precision=PrecisionType.double):
+  def __init__(self, name, order, unknowns, auxiliary_variables, min_cell_h, max_cell_h, plot_grid_properties=False, predictor_persistent_storage_precision=PrecisionType.double, predictor_computation_precision=PrecisionType.double):
 
     self._name = name
     
     self._order = order
-    self._polynomials = polynomials
+
     self._unknowns = unknowns
     self._auxiliary_variables = auxiliary_variables
 
@@ -46,9 +48,17 @@ class ADERDG( object ):
     if min_cell_h>max_cell_h:
       raise Exception( "Error: min_cell_h (" + str(min_cell_h) + ") is bigger than max_cell_h (" + str(max_cell_h) + ")" )
     
-    self._is_linear = is_linear
-#    if is_linear==True: self._is_linear="true"
-#    else: self._is_linear=="false"
+    #for kernel optimizations
+    self._is_linear = False
+    self._polynomials = Polynomials.Gauss_Legendre
+    self._basis = GaussLegendreBasis(order+1)
+    self._use_kernel_generator = False
+    self._use_vectorized_PDE = False
+    self._architecture = "noarch"
+    self._use_CERK_Guess = False
+    self._use_split_CK = False
+    self._predictor_recompute = False
+
 
     self._plot_grid_properties = plot_grid_properties
 
@@ -65,12 +75,7 @@ class ADERDG( object ):
     self._compute_time_step_size              = None
     self._compute_new_time_step_size          = None
     
-    if polynomials is Polynomials.Gauss_Legendre:
-      self._basis = GaussLegendreBasis(order+1)
-    elif polynomials is Polynomials.Gauss_Lobatto:
-      self._basis = GaussLobattoBasis(order+1)
-    else:
-      raise Exception( "No proper basis chosen: {}".format(polynomials) )
+
 
     self._flux_implementation                 = PDETerms.None_Implementation
     self._ncp_implementation                  = PDETerms.None_Implementation
@@ -197,9 +202,12 @@ class ADERDG( object ):
     #   extrapolated solution to the faces.
     # correction uses the extrapolated face solutions from the predictor and the neighboring
     #   cells to compute a solution at the next timestep
-    self._action_set_prediction = Prediction(self, self._store_cell_data_default_guard())
-    self._action_set_correction = Correction(self, self._store_cell_data_default_guard())
-
+    if(self._use_kernel_generator):
+      self._action_set_prediction = Prediction_kernelgenerator(self, self._store_cell_data_default_guard())
+      self._action_set_correction = Correction_kernelgenerator(self, self._store_cell_data_default_guard())
+    else:
+      self._action_set_prediction = Prediction_generic(self, self._store_cell_data_default_guard())
+      self._action_set_correction = Correction_generic(self, self._store_cell_data_default_guard())
 
 
   def create_readme_descriptor(self, domain_offset, domain_size):
@@ -379,7 +387,11 @@ class ADERDG( object ):
         useMaterialParam      = False,
         useMaterialParamVect  = False,
         useGaussLobatto       = (True if self._polynomials is Polynomials.Gauss_Lobatto else False),
-        useVectPDE            = False
+        useVectPDE            = self._use_vectorized_PDE,
+        architecture=self._architecture,
+        useCERKGuess=self._use_CERK_Guess,
+        useSplitCK=self._use_split_CK,
+        predictorRecompute=self._predictor_recompute
       )
     
     output.makefile.add_cpp_file("generated/kernels/aderdg/" + is_linear + "/Quadrature.cpp")
@@ -389,6 +401,8 @@ class ADERDG( object ):
     output.makefile.add_cpp_file("generated/kernels/aderdg/" + is_linear + "/riemannSolver.cpp")
     output.makefile.add_cpp_file("generated/kernels/aderdg/" + is_linear + "/faceIntegral.cpp")
     output.makefile.add_cpp_file("generated/kernels/aderdg/" + is_linear + "/solutionUpdate.cpp")
+    output.makefile.add_cpp_file("generated/kernels/aderdg/" + is_linear + "/boundaryConditions.cpp")
+
 
   def add_implementation_files_to_project(self,namespace,output, dimensions):
     """
@@ -439,7 +453,8 @@ class ADERDG( object ):
     output.makefile.add_cpp_file( "Abstract" + self._name + ".cpp" )
     output.makefile.add_cpp_file( self._name + ".cpp" )
     
-    self.generate_kernels(namespace, output, dimensions)
+    if self._use_kernel_generator:
+      self.generate_kernels(namespace, output, dimensions)
 
   def set_solver_constants(self, datastring): self._solver_constants = datastring
 
@@ -501,6 +516,7 @@ class ADERDG( object ):
     d[ "NUMBER_OF_DOFS_PER_CELL_2D" ] = (self._order+1) * (self._order+1);
     d[ "NUMBER_OF_DOFS_PER_CELL_3D" ] = (self._order+1) * (self._order+1) * (self._order+1);
 
+    d["USE_KERNEL_GENERATOR"] = self._use_kernel_generator #("True" if self._use_kernel_generator else "False")
     d["USE_GAUSS_LOBATTO"] = ("true" if self._polynomials is Polynomials.Gauss_Lobatto else "false")
     d["POLYNOMIAL_TYPE"] = ("lobatto" if self._polynomials is Polynomials.Gauss_Lobatto else "legendre")
 
@@ -520,6 +536,7 @@ class ADERDG( object ):
     d[ "ASSERTION_WITH_6_ARGUMENTS" ] = "nonCriticalAssertion6"
     
     d["IS_LINEAR"] = self._is_linear
+    d["LINEARITY"] = ("linear" if self._is_linear else "nonlinear")
 
     if (self._min_cell_h > self._max_cell_h ):
       raise Exception( "min/max h are inconsistent" )
@@ -583,11 +600,38 @@ class ADERDG( object ):
     self.create_data_structures()
     self.create_action_sets()
     
+  def add_kernel_optimizations(self,
+    is_linear=False,
+    polynomials=Polynomials.Gauss_Legendre,
+    use_kernel_generator=False,
+    use_vectorized_PDE = False,
+    architecture = "noarch",
+    use_CERK_guess=False,
+    use_split_CK=False,
+    predictor_recompute = False
+  ):
     
+    if polynomials is Polynomials.Gauss_Legendre:
+      self._basis = GaussLegendreBasis(self._order+1)
+    elif polynomials is Polynomials.Gauss_Lobatto:
+      self._basis = GaussLobattoBasis(self._order+1)
+    else:
+      raise Exception( "No proper basis chosen: {}".format(polynomials) )
+
+    self._is_linear           = is_linear    
+    self._polynomials         = polynomials
+
+    self._use_kernel_generator = use_kernel_generator
     
+    if(use_CERK_guess or use_split_CK or use_vectorized_PDE or predictor_recompute or architecture!="noarch"):
+      raise Exception("The option you have chosen has not yet been implemented, it currently only exists in the code as a placeholder for future expansion")
     
+    self._use_vectorized_PDE  = use_vectorized_PDE
+    self._architecture        = architecture    
+    self._use_CERK_Guess      = use_CERK_guess
+    self._use_split_CK        = use_split_CK
+    self._predictor_recompute = predictor_recompute
+
     
-    
-    
-    
-      
+    self.create_data_structures()
+    self.create_action_sets()

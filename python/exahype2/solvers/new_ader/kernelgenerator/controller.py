@@ -90,7 +90,7 @@ class Controller:
                 "useFusedSource"        : (args["useFusedSource"] or args["useFusedSourceVect"]),
                 "useFusedSourceVect"    : args["useFusedSourceVect"],
                 "nPointSources"         : args["usePointSources"],
-                "usePointSources"       : args["usePointSources"] >= 0,
+                "usePointSources"       : args["usePointSources"] > 0,
                 "useMaterialParam"      : (args["useMaterialParam"] or args["useMaterialParamVect"]),
                 "useMaterialParamVect"  : args["useMaterialParamVect"],
                 "quadratureType"        : ("Gauss-Lobatto" if args["useGaussLobatto"] else "Gauss-Legendre"),

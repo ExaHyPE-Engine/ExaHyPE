@@ -7,7 +7,7 @@ from .AbstractAderDGActionSet import AbstractAderDGActionSet
 import peano4.solversteps
 import jinja2
 
-class Correction(AbstractAderDGActionSet):
+class Correction_kernelgenerator(AbstractAderDGActionSet):
   """
   
   The linear combination of the Runge Kutta trials has to be projected onto
@@ -47,6 +47,14 @@ class Correction(AbstractAderDGActionSet):
     {{CORRECTOR_COMPUTATION_PRECISION}} FL[fluxElementsByFace];
     {{CORRECTOR_COMPUTATION_PRECISION}} FR[fluxElementsByFace];
     
+#if Dimensions==2
+    double cellCentre[Dimensions] = {marker.x()[0], marker.x()[1]};
+    double cellSize[Dimensions]   = {marker.h()[0], marker.h()[1]};
+#else
+    double cellCentre[Dimensions] = {marker.x()[0], marker.x()[1], marker.x()[2]};  
+    double cellSize[Dimensions]   = {marker.h()[0], marker.h()[1], marker.h()[2]};
+#endif
+    
     /*
     2d: 0,1,2,3 -> 0,2,1,3
     3d: 0,1,2,3,4,5 -> 0,3,1,4,2,5
@@ -66,90 +74,55 @@ class Correction(AbstractAderDGActionSet):
       std::copy_n(fineGridFaces{{UNKNOWN_IDENTIFIER}}FluxEstimates(d).value, fluxElementsByFace, FL);
       std::copy_n(fineGridFaces{{UNKNOWN_IDENTIFIER}}FluxEstimates(d).value+fluxElementsByFace, fluxElementsByFace, FR);
       
+      const double inverseDxDirection = 1/marker.h()[d];
+      
       bool atBoundary = fineGridFaces{{SOLVER_NAME}}FaceLabel(d).getBoundary() and
            not repositories::{{SOLVER_INSTANCE}}.PeriodicBC[d];
+
       if(atBoundary){
         /*
          since this is the negative face, the "right" side of the negative face is on the "inside"
          towards the cell
         */
         
-        kernels::aderdg::generic::c::boundaryConditions<
-          false, //useGradientFlux, essentially useViscousFlux
-          {{SOLVER_NAME}}>(
-            repositories::{{SOLVER_INSTANCE}},
-            FL,
-            QL,
-            FR,
-            QR,
-            nullptr, //gradQ
-            marker.x(),
-            marker.h(),
-            timeStamp,
-            timeStepSize,
-            2*d, //faceIndex
-            d //normalNonZero
-            );
+        generated::kernels::AderDG::{{LINEARITY}}::boundaryConditions(
+          repositories::{{SOLVER_INSTANCE}},
+          FL,
+          QL,
+          FR,
+          QR,
+          nullptr, //gradQ
+          cellCentre,
+          cellSize,
+          timeStamp,
+          timeStepSize,
+          2*d, //faceIndex
+          d //normalNonZero
+        );
         
         }
       
-      {% if IS_LINEAR is sameas True %}
-      //template <bool useFlux, bool useNCP, bool useMM, typename SolverType>
-      kernels::aderdg::generic::c::riemannSolverLinear<
-        {{ "true" if USE_FLUX!="<none>" else "false" }}, //useFlux
-        {{ "true" if USE_NCP!="<none>" else "false" }}, //useNCP
-        false, //useMM
-        {{SOLVER_NAME}}>(
-          repositories::{{SOLVER_INSTANCE}},
-          FL,
-          FR,
-          QL,
-          QR,
-          timeStamp,
-          timeStepSize,
-          d //direction
-          );
-      {% else %}
-      //template <bool useNCP, bool useViscousFlux, typename SolverType>
-      kernels::aderdg::generic::c::riemannSolverNonlinear<
-        {{ "true" if USE_NCP!="<none>" else "false" }}, //useNCP
-        false, //useViscousFlux
-        {{SOLVER_NAME}}>(
-          repositories::{{SOLVER_INSTANCE}},
-          FL,
-          FR,
-          QL,
-          QR,
-          timeStamp,
-          timeStepSize,
-          marker.h(),
-          d //direction
-          );
-      {% endif %}    
 
-      {% if IS_LINEAR is sameas True %}
-      kernels::aderdg::generic::c::faceIntegralLinear<
-        {{SOLVER_NAME}},
-        {{NUMBER_OF_UNKNOWNS}},
-        {{ORDER}}+1>(
-          lduh,
-          FR,
-          d, //direction
-          0, //orientation
-          marker.h()
-          );
-      {% else %}
-      kernels::aderdg::generic::c::faceIntegralNonlinear<
-        {{SOLVER_NAME}},
-        {{NUMBER_OF_UNKNOWNS}},
-        {{ORDER}}+1>(
-          lduh,
-          FR,
-          d, //direction
-          0, //orientation
-          marker.h()
-          );
-      {% endif %}
+      generated::kernels::AderDG::{{LINEARITY}}::riemannSolver(
+        repositories::{{SOLVER_INSTANCE}},
+        FL,
+        FR,
+        QL,
+        QR,
+        timeStamp,
+        timeStepSize,
+        marker.h()[d],
+        d //direction
+      );
+
+
+      generated::kernels::AderDG::{{LINEARITY}}::faceIntegral(
+        lduh,
+        FR,
+        d, //direction
+        0, //orientation
+        inverseDxDirection
+      );
 
 
       //positive face
@@ -167,97 +140,55 @@ class Correction(AbstractAderDGActionSet):
          towards the cell
         */
 
-        kernels::aderdg::generic::c::boundaryConditions<
-          false, //useGradientFlux, essentially useViscousFlux
-          {{SOLVER_NAME}}>(
-            repositories::{{SOLVER_INSTANCE}},
-            FR,
-            QR,
-            FL,
-            QL,
-            nullptr, //gradQ
-            marker.x(),
-            marker.h(),
-            timeStamp,
-            timeStepSize,
-            2*d+1, //faceIndex
-            d //normalNonZero
-            );
+        generated::kernels::AderDG::{{LINEARITY}}::boundaryConditions(
+          repositories::{{SOLVER_INSTANCE}},
+          FR,
+          QR,
+          FL,
+          QL,
+          nullptr, //gradQ
+          cellCentre,
+          cellSize,
+          timeStamp,
+          timeStepSize,
+          2*d+1, //faceIndex
+          d //normalNonZero
+        );
             
       }
       
       
-      {% if IS_LINEAR is sameas True %}
-      //template <bool useFlux, bool useNCP, bool useMM, typename SolverType>
-      kernels::aderdg::generic::c::riemannSolverLinear<
-        {{ "true" if USE_FLUX!="<none>" else "false" }}, //useFlux
-        {{ "true" if USE_NCP!="<none>" else "false" }}, //useNCP
-        false, //useMM
-        {{SOLVER_NAME}}>(
-          repositories::{{SOLVER_INSTANCE}},
-          FL,
-          FR,
-          QL,
-          QR,
-          timeStamp,
-          timeStepSize,
-          d //direction
-          );
-      {% else %}
-      //template <bool useNCP, bool useViscousFlux, typename SolverType>
-      kernels::aderdg::generic::c::riemannSolverNonlinear<
-        {{ "true" if USE_NCP!="<none>" else "false" }}, //useNCP
-        false, //useViscousFlux
-        {{SOLVER_NAME}}>(
-          repositories::{{SOLVER_INSTANCE}},
-          FL,
-          FR,
-          QL,
-          QR,
-          timeStamp,
-          timeStepSize,
-          marker.h(),
-          d //direction
-          );
-      {% endif %}    
+      generated::kernels::AderDG::nonlinear::riemannSolver(
+        repositories::{{SOLVER_INSTANCE}},
+        FL,
+        FR,
+        QL,
+        QR,
+        timeStamp,
+        timeStepSize,
+        marker.h()[d],
+        d //direction
+      );
 
-      {% if IS_LINEAR is sameas True %}
-      kernels::aderdg::generic::c::faceIntegralLinear<
-        {{SOLVER_NAME}},
-        {{NUMBER_OF_UNKNOWNS}},
-        {{ORDER}}+1>(
-          lduh,
-          FL,
-          d, //direction
-          1, //orientation
-          marker.h()
-          );
-      {% else %}
-      kernels::aderdg::generic::c::faceIntegralNonlinear<
-        {{SOLVER_NAME}},
-        {{NUMBER_OF_UNKNOWNS}},
-        {{ORDER}}+1>(
-          lduh,
-          FL,
-          d, //direction
-          1, //orientation
-          marker.h()
-          );
-      {% endif %}
+
+      generated::kernels::AderDG::nonlinear::faceIntegral(
+        lduh,
+        FL,
+        d, //direction
+        1, //orientation
+        inverseDxDirection
+      );
+
       
     }// for d    
     
 
-    kernels::aderdg::generic::c::solutionUpdate<
-      {{SOLVER_NAME}},
-      {{CORRECTOR_COMPUTATION_PRECISION}}
-        >(
-        repositories::{{SOLVER_INSTANCE}},
-        luh,
-        luh,
-        lduh,
-        timeStepSize
-      );
+    generated::kernels::AderDG::{{LINEARITY}}::solutionUpdate( 
+      luh,
+      luh, 
+      lduh, 
+      timeStepSize
+    );
 
 
     {{COMPUTE_NEW_TIME_STEP_SIZE}}
@@ -282,7 +213,7 @@ class Correction(AbstractAderDGActionSet):
       the old solution and the time step should also be moved over
     
     """
-    super(Correction,self).__init__(solver)
+    super(Correction_kernelgenerator,self).__init__(solver)
     self.guard            = guard
     
 
@@ -302,6 +233,7 @@ class Correction(AbstractAderDGActionSet):
     return __name__.replace(".py", "").replace(".", "_")
 
   def get_includes(self):
-    return super(Correction,self).get_includes() + """
-#include "exahype2/aderdg_kernels/Kernels.h"
+    linearity = ( "linear" if self._solver._is_linear else "nonlinear" )
+    return super(Correction_kernelgenerator,self).get_includes() + """
+#include "../generated/kernels/aderdg/""" + linearity + """/Kernels.h"
       """
