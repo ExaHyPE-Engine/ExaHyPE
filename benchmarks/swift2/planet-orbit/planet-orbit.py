@@ -53,6 +53,7 @@ periodic_boundary_conditions = [True,True,True]          # Periodic BC
 project.set_global_simulation_parameters(
   dimensions,               # dimensions
   offset,  domain_size,
+  0.1,     0.001,
   args.end_time,
   0.0, 
   args.end_time/20,                      #args.plot_step_size,   # snapshots

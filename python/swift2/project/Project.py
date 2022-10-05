@@ -60,7 +60,10 @@ class Project(object):
     self._algorithm_step_create_grid    = peano4.solversteps.Step( "CreateGrid", False )
     self._algorithm_step_init           = peano4.solversteps.Step( "Init",       False )
     self._algorithm_step_plot           = peano4.solversteps.Step( "Plot",       False )
-        
+                
+                # @todo net count time steps, sondern minTimeStamp -> dann doch auslagern oder zumindest im header deklararieren
+    self._algorithm_step_plot.add_action_set( peano4.toolbox.PlotGridInPeanoBlockFormat( filename="grid", time_stamp_evaluation=peano4.toolbox.PlotGridInPeanoBlockFormat.CountTimeSteps ) )
+
     
   def  set_load_balancing(self, load_balancer_name, load_balancer_arguments = ""):
     """
@@ -259,7 +262,7 @@ citation of the original SWIFT paper
       self._output_path += "/"
     
     
-  def __generate_solver_repository(self):
+  def __generate_global_state_files(self):
     solverRepositoryDictionary = {
       "SOLVERS" : [],
       "LOAD_BALANCER" : self._load_balancer_name,
@@ -271,18 +274,18 @@ citation of the original SWIFT paper
     #  solverRepositoryDictionary[ "SOLVERS" ].append( (solver._name,solver.get_name_of_global_instance()) )
       
 
-    #templatefile_prefix = os.path.realpath(__file__).replace( ".pyc", "" ).replace( ".py", "" )
-    #generated_solver_files = peano4.output.Jinja2TemplatedHeaderImplementationFilePair(
-    #  templatefile_prefix + "SolverRepository.template.h",
-    #  templatefile_prefix + "SolverRepository.template.cpp",
-    #  "SolverRepository", 
-    #  self._project.namespace + ["repositories"],
-    #  "repositories", 
-    #  solverRepositoryDictionary,
-    #  True)
+    templatefile_prefix = os.path.dirname(__file__)
+    generated_solver_files = peano4.output.Jinja2TemplatedHeaderImplementationFilePair(
+      templatefile_prefix + "/GlobalState.template.h",
+      templatefile_prefix + "/GlobalState.template.cpp",
+      "GlobalState", 
+      self._project.namespace + ["repositories"],
+      "repositories", 
+      solverRepositoryDictionary,
+      True)
 
-    #self._project.output.add( generated_solver_files )
-    #self._project.output.makefile.add_cpp_file( "repositories/SolverRepository.cpp" )
+    self._project.output.add( generated_solver_files )
+    self._project.output.makefile.add_cpp_file( "repositories/GlobalState.cpp" )
    
 
 
@@ -312,7 +315,7 @@ citation of the original SWIFT paper
     self._project.solversteps.add_step(self._algorithm_step_init)
     self._project.solversteps.add_step(self._algorithm_step_plot)
    
-    self.__generate_solver_repository();
+    self.__generate_global_state_files();
     
     self._project.main = swift2.project.SWIFTMain(self._project, self.main_file_template() )
 
