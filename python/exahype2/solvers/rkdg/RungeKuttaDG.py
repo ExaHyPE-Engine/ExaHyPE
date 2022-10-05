@@ -222,9 +222,9 @@ class RungeKuttaDG(object):
     
     self._name              = name
     
-    self._rk_order                   = rk_order
-    self._basis                      = polynomial_basis
-    self._face_projections = face_projections
+    self._rk_order          = rk_order
+    self._basis             = polynomial_basis
+    self._face_projections  = face_projections
     
     self._volumetric_solver_call         = "#error Please set the solver property _volumetric_kernel in the Python class"
     self._Riemann_solver_call            = "#error Please set the solver property _Riemann_solver in the Python class"
