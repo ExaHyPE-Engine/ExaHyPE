@@ -90,19 +90,17 @@ class ComputeDensityAndUpdateSmoothingLength:
         tarch::la::Vector<Dimensions,double> dv_ab;
         tarch::la::Vector<Dimensions,double> curlvr(0.0);
 
-        // Retrieve basic properties of local and active particles
-        const double rho_b = activeParticle->getDensity();
+        /* Retrieve basic properties of local and active particles */
+        const double h_a = localParticle->getSmoothingLength();
 
         const double m_a = localParticle ->getMass();  
         const double m_b = activeParticle->getMass();  
 
-        const double h_a = localParticle->getSmoothingLength();
-
         // Normalized distance to evaluate kernel
         const double q_a = r / h_a;
         
-        // Get actual interaction radius
-        const double cutoffR = KERNEL_SUPPORT_RAD*h_a;
+        /* Compute the actual interaction radius */
+        const double cutoffR = KERNEL_SUPPORT_RAD * h_a;
 
         if(
           tarch::la::smaller( r, cutoffR ) 
@@ -114,17 +112,6 @@ class ComputeDensityAndUpdateSmoothingLength:
           {  
 
           // Evaluate kernel and its derivative
-
-/*
-          // PHANTOM code version
-          double w_a, dw_a_dq;
-          kernel_deval(q_a, w_a, dw_a_dq);
-
-          // Normalization factors 
-          double W_a, dW_a_dh;
-          W_a = w_a / std::pow( h_a, HYDRO_DIMENSIONS );
-          dW_a_dh = - ( HYDRO_DIMENSIONS * w_a + q_a * dw_a_dq ) / std::pow( h_a, HYDRO_DIMENSIONS +1 );
-*/
 
           /* SWIFT KERNEL */
           double W_a, dW_a_dh;
@@ -202,7 +189,6 @@ class ComputeDensityAndUpdateSmoothingLength:
         const double h_inv = 1.0 / h_a;
         const double h_inv_dim = std::pow( h_inv, HYDRO_DIMENSIONS );
         const double h_inv_dim_plus_one = h_inv_dim * h_inv;
-
 
         /* SWIFT KERNEL */
         double W_a, w, dw_dh;
@@ -282,9 +268,7 @@ class ComputeDensityAndUpdateSmoothingLength:
             logInfo( "touchVertexLastTime()", "Setting grad_h_term=0 for part:  " << localParticle->toString() );
 
           } else {
-
             grad_h_term = common_factor * localParticle->getRho_dh()/(1.0 + grad_W_term);
-
           }
         
           /* Compute the Balsara Switch */
@@ -302,14 +286,15 @@ class ComputeDensityAndUpdateSmoothingLength:
           
           /* Price: finish calculation of Omega */
           localParticle->setOmega( 1.0 - dh_drho_a * localParticle->getOmega() ); 
+
           /* Re-set if gone ill */
           if( tarch::la::smallerEquals( localParticle->getOmega(), 0.0) ){
             localParticle->setOmega(1.0);
           }
 
-          localParticle->setPressure(P_a);
-          localParticle->setSoundSpeed(soundspeed);
-          localParticle->setBalsara(balsara);
+          localParticle->setPressure( P_a );
+          localParticle->setSoundSpeed( soundspeed );
+          localParticle->setBalsara( balsara );
 
         } /* End hydro_prepare_force */
         
