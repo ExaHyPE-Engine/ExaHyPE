@@ -83,7 +83,7 @@ class DynamicAMR( AbstractRungeKuttaDGActionSet ):
     {{ORDER}},
     {{NUMBER_OF_PROJECTED_QUANTITIES}},
     {{NUMBER_OF_UNKNOWNS}},
-    {{NUMBER_OF_PROJECTED_QUANTITIES}},
+    {{NUMBER_OF_AUXILIARY_VARIABLES}},
     repositories::{{SOLVER_INSTANCE}}.RestrictionMatrix1d,
     fineGridFace{{UNKNOWN_IDENTIFIER}}EstimateProjection.value,
     coarseGridFaces{{UNKNOWN_IDENTIFIER}}EstimateProjection(marker.getSelectedFaceNumber()).value
