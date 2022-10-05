@@ -167,8 +167,24 @@ namespace exahype2 {
      * over the interpolation matrix. For 2d, this degenerates to a simple
      * lookup.
      *
-     * I run over the d-1-dimensional field of the matrix with a dfore,
-     * which is a macro from Peano's utils. Before that, I
+     *
+     * ## Evaluation of interpolation/restriction matrix
+     *
+     * We run over the d-1-dimensional dofs of both coarse and fine grid face.
+     * For a 2d simulation, we hence run over a one-dimensional thing. The
+     * interpolation and restriction matrices in ExaHyPE are written down as
+     * 1d operators, as any dimension then results from a tensor-product
+     * approach.
+     *
+     * So in 2d, we can only count which index in the coarse and fine grid
+     * face we are currently handling and thus effectively run through the
+     * interpolation matrix row by row and column by column. In 3d, where
+     * the face is actually a 2d object, this does not work. Here, the row
+     * and column indices are defined by the entry along one direction and
+     * d-1 entries have to be multiplied (tensor product). So effectively,
+     * we have to map the dof counter for coarse and fine first to the
+     * indices of a 1d projection operator.
+     *
      *
      * @param numberOfProjectedQuantities This is one if we only project the
      *   solution. It is two if we project the solution and the F-value or
@@ -200,6 +216,21 @@ namespace exahype2 {
      * of RestrictionMatrix1d, compute the c1, c2, c3 and c4 values and then
      * add them to the coarse representation. The interpolation can overwrite.
      *
+     * ## Differences to interpolateRiemannSolution()
+     *
+     * - In the final accummulation, we write to the coarse grid while the
+     *   interpolation writes to the fine grid. Consequently, coarse grid
+     *   and fine grid data are permuted in the signature.
+     * - The restriction works on the solution that is extrapolated to the
+     *   faces. Consequently, these data hold auxiliary variables. The
+     *   Riemann solution instead does not hold any auxiliary variables.
+     * - The restriction does not clear the target field, i.e. write zeros
+     *   to it. That has to be done earlier by the mesh traversal, as
+     *   multiple restriction calls accummulate in one variable, i.e. if
+     *   we clear we loose all the data from previous restrictions.
+     * - Row and column indices are permuted in the matrix access, i.e. the
+     *   coarse grid dof determines the target (image) and hence defines the
+     *   row.
      */
     void restrictAndAccumulateProjectedFacePolynomial(
       const peano4::datamanagement::FaceMarker&  marker,

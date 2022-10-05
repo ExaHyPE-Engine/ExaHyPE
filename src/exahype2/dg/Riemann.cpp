@@ -31,9 +31,6 @@ void exahype2::dg::interpolateRiemannSolution(
   std::fill_n( fineGridFaceQ, totalNumberOfValues, 0.0 );
 
   const int normal = marker.getSelectedFaceNumber()%Dimensions;
-  int linearisedFineGridDoF = 0;
-  int linearisedCoarseGridDoF  = 0;
-
   dfore(fineGridDoF,order+1,normal,0) {
     dfore(coarseGridDoF,order+1,normal,0) {
       double tensorProductWeight = 1.0;
@@ -42,11 +39,15 @@ void exahype2::dg::interpolateRiemannSolution(
           int subMatrix = marker.getRelativePositionWithinFatherCell()(d);
           assertion(subMatrix>=0);
           assertion(subMatrix<=2);
-          tensorProductWeight *= InterpolationMatrix1d[
-            subMatrix * InterpolationMatrixDimensions * InterpolationMatrixDimensions +
-            linearisedFineGridDoF * InterpolationMatrixDimensions +
-            linearisedCoarseGridDoF
-          ];
+
+          int col = fineGridDoF(d);
+          int row = coarseGridDoF(d);
+          int linearisedMatrixIndex = subMatrix * InterpolationMatrixDimensions * InterpolationMatrixDimensions
+                                    + row       * InterpolationMatrixDimensions
+                                    + col;
+          assertion(linearisedMatrixIndex>=0);
+          assertion2(linearisedMatrixIndex<3, linearisedMatrixIndex, InterpolationMatrixDimensions);
+          tensorProductWeight *= InterpolationMatrix1d[linearisedMatrixIndex];
         }
       }
 
@@ -59,10 +60,7 @@ void exahype2::dg::interpolateRiemannSolution(
 
         fineGridFaceQ[ faceEnumerator(shiftedFineGridDoF,unknown) ] += tensorProductWeight * coarseGridFaceQ[ faceEnumerator(shiftedCoarseGridDoF,unknown) ];
       }
-
-      linearisedCoarseGridDoF++;
     }
-    linearisedFineGridDoF++;
   }
 }
 
@@ -98,9 +96,6 @@ void exahype2::dg::restrictAndAccumulateProjectedFacePolynomial(
   #endif
 
   const int normal = marker.getSelectedFaceNumber()%Dimensions;
-  int linearisedFineGridDoF = 0;
-  int linearisedCoarseGridDoF  = 0;
-
   dfore(fineGridDoF,order+1,normal,0) {
     dfore(coarseGridDoF,order+1,normal,0) {
       double tensorProductWeight = 1.0;
@@ -109,27 +104,31 @@ void exahype2::dg::restrictAndAccumulateProjectedFacePolynomial(
           int subMatrix = marker.getRelativePositionWithinFatherCell()(d);
           assertion(subMatrix>=0);
           assertion(subMatrix<=2);
-          tensorProductWeight *= RestrictionMatrix1d[
-            subMatrix * RestrictionMatrixDimensions * RestrictionMatrixDimensions +
-            linearisedFineGridDoF * RestrictionMatrixDimensions +
-            linearisedCoarseGridDoF
-          ];
+
+          int row = fineGridDoF(d);
+          int col = coarseGridDoF(d);
+          int linearisedMatrixIndex = subMatrix * RestrictionMatrixDimensions * RestrictionMatrixDimensions
+                                    + row       * RestrictionMatrixDimensions
+                                    + col;
+          assertion(linearisedMatrixIndex>=0);
+          assertion2(linearisedMatrixIndex<3, linearisedMatrixIndex, RestrictionMatrixDimensions);
+          tensorProductWeight *= RestrictionMatrix1d[linearisedMatrixIndex];
         }
       }
 
-      tarch::la::Vector<Dimensions,int> shiftedFineGridDoF = fineGridDoF;
+      tarch::la::Vector<Dimensions,int> shiftedFineGridDoF    = fineGridDoF;
       tarch::la::Vector<Dimensions,int> shiftedCoarseGridDoF  = coarseGridDoF;
       for (int leftRight=0; leftRight<2*numberOfProjectedQuantities; leftRight++)
       for (int unknown=0; unknown<unknowns+auxiliaryVariables; unknown++) {
-        shiftedFineGridDoF(normal) = leftRight;
+        shiftedFineGridDoF(normal)    = leftRight;
         shiftedCoarseGridDoF(normal)  = leftRight;
 
-        coarseGridFaceQ[ faceEnumerator(shiftedFineGridDoF,unknown) ] += tensorProductWeight * fineGridFaceQ[ faceEnumerator(shiftedCoarseGridDoF,unknown) ];
-      }
+        assertion( faceEnumerator(shiftedCoarseGridDoF,unknown)>=0 );
+        assertion( faceEnumerator(shiftedFineGridDoF,unknown)>=0 );
 
-      linearisedCoarseGridDoF++;
+        coarseGridFaceQ[ faceEnumerator(shiftedCoarseGridDoF,unknown) ] += tensorProductWeight * fineGridFaceQ[ faceEnumerator(shiftedFineGridDoF,unknown) ];
+      }
     }
-    linearisedFineGridDoF++;
   }
 }
 
