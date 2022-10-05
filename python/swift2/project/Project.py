@@ -49,9 +49,7 @@ class Project(object):
     self._build_mode          = peano4.output.CompileMode.Asserts
     self._executable_name = executable
     self._periodic_BC   = [False, False, False]
-    self._plot_filters  = []
     self._output_path   = "./"
-    self._plotter_precision = 5
     self._min_h         = 0.01
     self._max_h         = 0.1
 
@@ -65,7 +63,7 @@ class Project(object):
     self._algorithm_step_plot.add_action_set( peano4.toolbox.PlotGridInPeanoBlockFormat( filename="grid", time_stamp_evaluation=peano4.toolbox.PlotGridInPeanoBlockFormat.CountTimeSteps ) )
 
     
-  def  set_load_balancing(self, load_balancer_name, load_balancer_arguments = ""):
+  def  set_load_balancing(self, load_balancer_name, load_balancer_arguments):
     """
     
       load_balancer_name: string
@@ -109,38 +107,6 @@ class Project(object):
 
   #def add_solver(self,solver):
   #  self._solvers.append( solver )
-
-
-  def add_plot_filter(self,offset,size,frequency=1):
-    """
-    
-    Add a new filter to Peano/ExaHyPE
-    
-    offset: (float,float,float)
-    
-    size: (float,float,float)
-    
-    frequency: int
-      A positive value. Peano makes snapshots every dt simulation
-      units. This is something you specify once per simulation. But
-      you might decide only to splot every k of these snapshots.
-    
-    """  
-    new_entry = "{{"
-    new_entry += str(offset[0])
-    for i in offset[1:]:
-      new_entry += ","
-      new_entry += str(i)
-    new_entry += "},{"
-    new_entry += str(size[0])
-    for i in size[1:]:
-      new_entry += ","
-      new_entry += str(i)
-    new_entry += "},"
-    new_entry += str(frequency)
-    new_entry += "}"
-    
-    self._plot_filters.append( new_entry )
 
   
   def __export_constants(self):
@@ -264,14 +230,13 @@ citation of the original SWIFT paper
     
   def __generate_global_state_files(self):
     solverRepositoryDictionary = {
-      "SOLVERS" : [],
+      "PARTICLE_SPECIES" : [],
       "LOAD_BALANCER" : self._load_balancer_name,
       "LOAD_BALANCER_ARGUMENTS" : self._load_balancer_arguments,
-      "PLOT_FILTER": self._plot_filters
     }
 
     #for solver in self._solvers:
-    #  solverRepositoryDictionary[ "SOLVERS" ].append( (solver._name,solver.get_name_of_global_instance()) )
+    #  solverRepositoryDictionary[ "PARTICLE_SPECIES" ].append( (solver._name,solver.get_name_of_global_instance()) )
       
 
     templatefile_prefix = os.path.dirname(__file__)

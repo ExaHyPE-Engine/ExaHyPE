@@ -12,6 +12,7 @@
 
 #include "repositories/DataRepository.h"
 #include "repositories/StepRepository.h"
+#include "repositories/GlobalState.h"
 
 #include "peano4/UnitTests.h"
 #include "tarch/UnitTests.h"
@@ -53,16 +54,6 @@ tarch::timing::Measurement   calculateForceMeasurement;
 using namespace {FULL_NAMESPACE};
 
 
-double getMinTimeStamp() {{
-  return 10.0;
-}}
-
-
-double getMaxTimeStamp() {{
-  return 10.0;
-}}
-
-
 bool selectNextAlgorithmicStep() {{
   static bool   gridConstructed                             = false;
   static bool   gridInitialised                             = false;
@@ -101,32 +92,32 @@ bool selectNextAlgorithmicStep() {{
   }}
   else {{
     if (
-      TimeInBetweenPlots>0.0 and getMinTimeStamp()<MinTerminalTime and getMaxTimeStamp()<MaxTerminalTime
+      TimeInBetweenPlots>0.0 and repositories::getMinTimeStamp()<MinTerminalTime and repositories::getMaxTimeStamp()<MaxTerminalTime
       and
-      getMinTimeStamp()>=nextMinPlotTimeStamp or getMaxTimeStamp()>=nextMaxPlotTimeStamp
+      repositories::getMinTimeStamp()>=nextMinPlotTimeStamp or repositories::getMaxTimeStamp()>=nextMaxPlotTimeStamp
     ) {{
-      if (getMinTimeStamp()>=nextMinPlotTimeStamp) {{
+      if (repositories::getMinTimeStamp()>=nextMinPlotTimeStamp) {{
         nextMinPlotTimeStamp += TimeInBetweenPlots;
       }}
-      if (getMaxTimeStamp()>=nextMaxPlotTimeStamp) {{
+      if (repositories::getMaxTimeStamp()>=nextMaxPlotTimeStamp) {{
         nextMaxPlotTimeStamp += TimeInBetweenPlots;
       }}
 
-      if ( nextMinPlotTimeStamp < getMinTimeStamp() ) {{
+      if ( nextMinPlotTimeStamp < repositories::getMinTimeStamp() ) {{
         logWarning(
           "selectNextAlgorithmicStep()",
           "code is asked to plot every dt=" << TimeInBetweenPlots << ", but this seems to be less than the time step size of the solvers. " <<
-          "So postpone next plot to t=" << (getMinTimeStamp() + TimeInBetweenPlots)
+          "So postpone next plot to t=" << (repositories::getMinTimeStamp() + TimeInBetweenPlots)
         );
-        nextMinPlotTimeStamp = getMinTimeStamp() + TimeInBetweenPlots;
+        nextMinPlotTimeStamp = repositories::getMinTimeStamp() + TimeInBetweenPlots;
       }}
-      else if ( nextMaxPlotTimeStamp < getMaxTimeStamp() ) {{
+      else if ( nextMaxPlotTimeStamp < repositories::getMaxTimeStamp() ) {{
         logWarning(
           "selectNextAlgorithmicStep()",
           "code is asked to plot every dt=" << TimeInBetweenPlots << ", but this seems to be less than the time step size of the solvers. " <<
-          "So postpone next plot to t=" << (getMaxTimeStamp() + TimeInBetweenPlots)
+          "So postpone next plot to t=" << (repositories::getMaxTimeStamp() + TimeInBetweenPlots)
         );
-        nextMaxPlotTimeStamp = getMaxTimeStamp() + TimeInBetweenPlots;
+        nextMaxPlotTimeStamp = repositories::getMaxTimeStamp() + TimeInBetweenPlots;
       }}
 
       nextMaxPlotTimeStamp = std::max(nextMaxPlotTimeStamp,nextMinPlotTimeStamp);
@@ -137,7 +128,7 @@ bool selectNextAlgorithmicStep() {{
       haveJustWrittenSnapshot = true;
       continueToSolve         = true;
     }}
-    else if ( getMinTimeStamp()<MinTerminalTime and getMaxTimeStamp()<MaxTerminalTime ) {{
+    else if ( repositories::getMinTimeStamp()<MinTerminalTime and repositories::getMaxTimeStamp()<MaxTerminalTime ) {{
       peano4::parallel::Node::getInstance().setNextProgramStep(
         repositories::StepRepository::toProgramStep( repositories::StepRepository::Steps::CalculateForce )
       );
@@ -182,7 +173,9 @@ void step() {{
       {{
         tarch::logging::LogFilter::getInstance().switchProgramPhase( "create-grid" );
         observers::CreateGrid  observer;
+        repositories::startGridConstructionStep();
         peano4::parallel::SpacetreeSet::getInstance().traverse(observer);
+        repositories::finishGridConstructionStep();
         watch.stop();
         createGridMeasurement.setValue( watch.getCalendarTime() );
       }}
@@ -192,7 +185,9 @@ void step() {{
         tarch::logging::LogFilter::getInstance().switchProgramPhase( "init" );
         otterPhaseBegin( "init" );
         observers::Init  observer;
+        repositories::startInitialisationStep();
         peano4::parallel::SpacetreeSet::getInstance().traverse(observer);
+        repositories::finishInitialisationStep();
         watch.stop();
         initMeasurement.setValue( watch.getCalendarTime() );
       }}
@@ -200,12 +195,11 @@ void step() {{
     case repositories::StepRepository::Steps::Plot:
       {{
         tarch::logging::LogFilter::getInstance().switchProgramPhase( "plot" );
-        const double minTimeStamp    = getMinTimeStamp();
-        const double maxTimeStamp    = getMaxTimeStamp();
-
         otterPhaseSwitch( "plot" );
         observers::Plot  observer;
+        repositories::startPlotStep();
         peano4::parallel::SpacetreeSet::getInstance().traverse(observer);
+        repositories::finishPlotStep();
         watch.stop();
         plotMeasurement.setValue( watch.getCalendarTime() );
       }}
@@ -213,16 +207,10 @@ void step() {{
     case repositories::StepRepository::Steps::TimeStep:
       {{
         tarch::logging::LogFilter::getInstance().switchProgramPhase( "time-step" );
-/*
-        if (repositories::loadBalancer.isEnabled(false)) {{
-          logInfo( "step()", "disable load balancing throughout initialisation (to be removed in later releases)" );
-          repositories::loadBalancer.enable(false);
-        }}
-*/
-
         otterPhaseSwitch( "time-step" );
         observers::TimeStep  observer;
         peano4::parallel::SpacetreeSet::getInstance().traverse(observer);
+        repositories::finishTimeStep();
         watch.stop();
         timeStepMeasurement.setValue( watch.getCalendarTime() );
       }}
@@ -230,15 +218,9 @@ void step() {{
     case repositories::StepRepository::Steps::CalculateForce:
       {{
         tarch::logging::LogFilter::getInstance().switchProgramPhase( "calculate-force" );
-/*
-        if (repositories::loadBalancer.isEnabled(false)) {{
-          logInfo( "step()", "disable load balancing throughout initialisation (to be removed in later releases)" );
-          repositories::loadBalancer.enable(false);
-        }}
-*/
-
         otterPhaseSwitch( "calculate-force" );
         observers::CalculateForce  observer;
+        repositories::startTimeStep();
         peano4::parallel::SpacetreeSet::getInstance().traverse(observer);
         watch.stop();
         calculateForceMeasurement.setValue( watch.getCalendarTime() );
@@ -310,9 +292,6 @@ int main(int argc, char** argv) {{
   }}
   delete swiftTests;
   #endif
-
-
-  toolbox::loadbalancing::RecursiveSubdivision              loadBalancer;
 
   tarch::logging::Statistics::getInstance().clear();
 
