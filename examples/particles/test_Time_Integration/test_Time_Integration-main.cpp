@@ -138,11 +138,11 @@ int main(int argc, char** argv) {
 
     const int TimeStepsInBetweenTwoSnapshots = std::max(
       10,
-      static_cast<int>( std::round( 1.0/examples::particles::GLOBAL_TIME_STEP_SIZE )) / 50
+      static_cast<int>( std::round( 1.0/examples::particles::GLOBAL_TIME_STEP_SIZE )) / 20
     );
     logInfo( "main()", "steps between two snapshots=" << TimeStepsInBetweenTwoSnapshots );
 
-    for (int i=0; i<500; i++) {
+    for (int i=0; i<1000; i++) {
       for (int j=0; j<TimeStepsInBetweenTwoSnapshots; j++) 
       { 
         logInfo( "main()", "run timestep: " << peano4::parallel::SpacetreeSet::getInstance().getGridStatistics().toString() );
@@ -151,44 +151,18 @@ int main(int argc, char** argv) {
         peano4::parallel::SpacetreeSet::getInstance().traverse(initTimeStep);
         examples::particles::vertexdata::ParticleSet::finishedTraversal();
 
-//        /* For first time-step, we need to pre-compute some quantities before drifting */
-//        /* This is because we must start the simulation with a "K1" step */
-//        if (i==0 and j==0) 
-//        { 
-//          /* Force Calculation */
-//          peano4::parallel::SpacetreeSet::getInstance().traverse(forcespart);
-//          examples::particles::vertexdata::ParticleSet::finishedTraversal();
-//
-//          /* "Kick1" */
-////          peano4::parallel::SpacetreeSet::getInstance().traverse(kick2part);
-//          peano4::parallel::SpacetreeSet::getInstance().traverse(kick2part);
-//          examples::particles::vertexdata::ParticleSet::finishedTraversal();
-//        } /* Finish the "0th" time-step */
-//
-//        /* Now the time-step in the actual "D-K2-K1" form begins */
-//        /* "Drift". Drift also predicts v, u, ... */
-//        peano4::parallel::SpacetreeSet::getInstance().traverse(driftpart);
-//        examples::particles::vertexdata::ParticleSet::finishedTraversal();
-//
-//        /* Force Calculation */
-//        peano4::parallel::SpacetreeSet::getInstance().traverse(forcespart);
-//        examples::particles::vertexdata::ParticleSet::finishedTraversal();
-//
-//        /* "Kick2". kick2part also reset predictions for next Drift */
-//        peano4::parallel::SpacetreeSet::getInstance().traverse(kick2part);
-//        examples::particles::vertexdata::ParticleSet::finishedTraversal();
-//
-//        /* "Kick1" */
-//        peano4::parallel::SpacetreeSet::getInstance().traverse(kick1part);
-//        examples::particles::vertexdata::ParticleSet::finishedTraversal();
+        /* For first time-step, we need to pre-compute some quantities before drifting */
+        /* This is because we must start the simulation with a "K1" step */
+        if (i==0 and j==0) 
+        { 
+          /* Force Calculation */
+          peano4::parallel::SpacetreeSet::getInstance().traverse(forcespart);
+          examples::particles::vertexdata::ParticleSet::finishedTraversal();
 
-        /* Force Calculation */
-        peano4::parallel::SpacetreeSet::getInstance().traverse(forcespart);
-        examples::particles::vertexdata::ParticleSet::finishedTraversal();
-
-        /* "Kick1" */
-        peano4::parallel::SpacetreeSet::getInstance().traverse(kick1part);
-        examples::particles::vertexdata::ParticleSet::finishedTraversal();
+          /* "Kick1" */
+          peano4::parallel::SpacetreeSet::getInstance().traverse(kick1part);
+          examples::particles::vertexdata::ParticleSet::finishedTraversal();
+        } /* Finish the "0th" time-step */
 
         /* Now the time-step in the actual "D-K2-K1" form begins */
         /* "Drift". Drift also predicts v, u, ... */
@@ -201,6 +175,10 @@ int main(int argc, char** argv) {
 
         /* "Kick2". kick2part also reset predictions for next Drift */
         peano4::parallel::SpacetreeSet::getInstance().traverse(kick2part);
+        examples::particles::vertexdata::ParticleSet::finishedTraversal();
+
+        /* "Kick1" */
+        peano4::parallel::SpacetreeSet::getInstance().traverse(kick1part);
         examples::particles::vertexdata::ParticleSet::finishedTraversal();
 
       }
