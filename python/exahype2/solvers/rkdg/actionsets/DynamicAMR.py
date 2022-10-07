@@ -99,20 +99,6 @@ class DynamicAMR( AbstractRungeKuttaDGActionSet ):
         fineGridFace{{FACE_LABEL}}.getUpdatedTimeStamp( isLeftEntryOnCoarseFaceLabel ? 0 : 1 )
       )
     );
-    coarseGridFaces{{FACE_LABEL}}(marker.getSelectedFaceNumber()).setNewTimeStamp( 
-      isLeftEntryOnCoarseFaceLabel ? 0 : 1,
-      std::max( 
-        coarseGridFaces{{FACE_LABEL}}(marker.getSelectedFaceNumber()).getNewTimeStamp( isLeftEntryOnCoarseFaceLabel ? 0 : 1 ), 
-        fineGridFace{{FACE_LABEL}}.getNewTimeStamp( isLeftEntryOnCoarseFaceLabel ? 0 : 1 )
-      )
-    );
-    coarseGridFaces{{FACE_LABEL}}(marker.getSelectedFaceNumber()).setOldTimeStamp( 
-      isLeftEntryOnCoarseFaceLabel ? 0 : 1,
-      std::max( 
-        coarseGridFaces{{FACE_LABEL}}(marker.getSelectedFaceNumber()).getOldTimeStamp( isLeftEntryOnCoarseFaceLabel ? 0 : 1 ), 
-        fineGridFace{{FACE_LABEL}}.getOldTimeStamp( isLeftEntryOnCoarseFaceLabel ? 0 : 1 )
-      )
-    );
   }
 """
 

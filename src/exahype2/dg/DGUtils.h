@@ -259,6 +259,19 @@ namespace exahype2 {
       const tarch::la::Vector<Dimensions,double>&  x,
       int                                          unknown
     );
+
+    /**
+     * Delegate to PatchUtils of the Finite Volume scheme
+     */
+    void copyOneSideOfFaceProjection(
+      int    unknownsPlusAuxiliaryVariables,
+      int    order,
+      int    numberOfProjectedQuantities,
+      int    normal,
+      int    isRightFaceHalf,
+      const double* __restrict__   srcQ,
+      double* __restrict__         destQ
+    );
   }
 }
 
