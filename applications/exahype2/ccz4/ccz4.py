@@ -185,8 +185,8 @@ if __name__ == "__main__":
           SuperClass.__init__(
             self,
             name=name,
-            rk_order     = 2,
-            polynomials  = exahype2.solvers.GaussLegendreBasis(2),
+            rk_order     = 1,
+            polynomials  = exahype2.solvers.GaussLegendreBasis(1),
             face_projections   = exahype2.solvers.rkdg.FaceProjections.Solution,
             unknowns=number_of_unknowns,
             auxiliary_variables=0,
@@ -832,7 +832,34 @@ if __name__ == "__main__":
 ########################################################################################
 #Tracer setting 
 ########################################################################################
-    if not args.add_tracer==0:
+    if args.add_tracer==5:
+        tracer_particles = project.add_tracer( name="Tracer",attribute_count=59 )
+        project.add_action_set_to_initialisation( 
+          exahype2.tracer.InsertParticlesbyCoordinates( 
+            particle_set=tracer_particles, coordinates=[[0,0,0],[0.5,0,0],[1.0,0,0],[1.5,0,0],[2.0,0,0]]))
+        project.add_action_set_to_timestepping(
+          peano4.toolbox.particles.UpdateParallelState(
+            particle_set=tracer_particles
+          )
+        )
+        
+        project.add_action_set_to_timestepping(exahype2.tracer.DiscontinuousGalerkinTracing(tracer_particles,
+                                                                                              my_solver,
+                                                                                              time_stepping_kernel="toolbox::particles::staticPosition",
+                                                                                              project_on_tracer_properties_kernel="::exahype2::dg::projectAllValuesOntoParticle"))
+        
+        
+        project.add_action_set_to_timestepping(exahype2.tracer.DumpTrajectoryIntoDatabase(
+          particle_set=tracer_particles,
+          solver=my_solver,
+          filename=args.path+"Tracer-dgtest",
+          data_delta_between_two_snapsots=1e16,
+          time_delta_between_two_snapsots=0.0001
+          ))
+
+
+    #if not args.add_tracer==0:
+    if 0:
       tracer_name = {1:"line", 2:"slide", 3:"volume", 6:"Gauss_Legendre_quadrature", 7:"t-design"}
       tracer_particles = project.add_tracer( name="MyTracer",attribute_count=65 )
        #project.add_action_set_to_timestepping(exahype2.tracer.FiniteVolumesTracing(tracer_particles,my_solver,[17,18,19],[16],-1,time_stepping_kernel="toolbox::particles::explicitEulerWithoutInterpolation"))

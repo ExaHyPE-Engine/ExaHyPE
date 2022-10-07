@@ -752,7 +752,7 @@ We use RK(""" + str(self._rk_order) + """) for the time stepping.
           
     step.add_action_set( peano4.toolbox.blockstructured.PlotPatchesInPeanoBlockFormat( 
       filename=output_path + "solution-" + self._name, 
-      patch=self._current_time_step, 
+      patch=self._current_time_step,
       dataset_name=self._unknown_identifier(), 
       description=self.plot_description,
       mapping=mapping,
