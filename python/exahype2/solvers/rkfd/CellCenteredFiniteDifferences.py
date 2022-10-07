@@ -651,7 +651,7 @@ The finest mesh width of """ + str(self.get_finest_volume_size(domain_size)) + "
       step.add_action_set( peano4.toolbox.PlotGridInPeanoBlockFormat( 
         filename = output_path + "grid-" + self._name,
         cell_unknown=None,
-        guard_guard="repositories::plotFilter.plotPatch(marker) and " + self._load_cell_data_default_guard(),
+        guard="repositories::plotFilter.plotPatch(marker) and " + self._load_cell_data_default_guard(),
         additional_includes="""
 #include "exahype2/PlotFilter.h"
 #include "../repositories/SolverRepository.h"
