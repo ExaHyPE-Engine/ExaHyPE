@@ -26,6 +26,7 @@ void benchmarks::exahype2::euler::sphericalaccretionupscaling::SelfSimilarInfall
   double overDensity = density - BaseDensity;
   double radius = tarch::la::norm2( x );
 
+  assertion(::exahype2::dg::getQuadratureWeight(cellSize,index,QuadratureWeights1d)>0.0);
   double mass = overDensity * ::exahype2::dg::getQuadratureWeight(cellSize,index,QuadratureWeights1d);
 
   _accumulator.addMass(mass,radius);
