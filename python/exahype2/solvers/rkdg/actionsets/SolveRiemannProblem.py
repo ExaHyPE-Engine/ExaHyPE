@@ -23,11 +23,16 @@ class SolveRiemannProblem(AbstractRungeKuttaDGActionSet):
   {% for PREDICATE_NO in range(0,PREDICATES|length) %}
   if ({{PREDICATES[PREDICATE_NO]}}) {
     // no support for local time stepping or subcycling 
-    assertionNumericalEquals1(
-      {{FACE_METADATA_ACCESSOR}}.getNewTimeStamp(0),
-      {{FACE_METADATA_ACCESSOR}}.getNewTimeStamp(1),
-      {{FACE_METADATA_ACCESSOR}}.toString()
+    /*
+    assertionNumericalEquals2(
+      {{FACE_METADATA_ACCESSOR}}.getOldTimeStamp(0),
+      {{FACE_METADATA_ACCESSOR}}.getOldTimeStamp(1),
+      {{FACE_METADATA_ACCESSOR}}.toString(),
+      marker.toString()
     );
+    */
+    
+    
     // Doesn't make a difference if we pick left or right
     const double timeStampOldSolution = {{FACE_METADATA_ACCESSOR}}.getOldTimeStamp(0);
   

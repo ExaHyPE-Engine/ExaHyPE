@@ -118,9 +118,7 @@ class ProjectLinearCombinationOfEstimatesOntoFaces(AbstractRungeKuttaDGActionSet
   
 
   TemplateProjectAsEpilogue = """
-  if (
-    repositories::{{SOLVER_INSTANCE}}.isLastGridSweepOfTimeStep()
-  ) {
+  if ( repositories::{{SOLVER_INSTANCE}}.isLastGridSweepOfTimeStep() ) {
     for (int d=0; d<Dimensions; d++) {
       {{FACE_METADATA_ACCESSOR}}(d).setUpdated(1,true);
       {{FACE_METADATA_ACCESSOR}}(d).setUpdatedTimeStamp(1,{{CELL_METADATA_ACCESSOR}}.getTimeStamp());

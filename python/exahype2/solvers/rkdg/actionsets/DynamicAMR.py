@@ -88,10 +88,32 @@ class DynamicAMR( AbstractRungeKuttaDGActionSet ):
     fineGridFace{{UNKNOWN_IDENTIFIER}}EstimateProjection.value,
     coarseGridFaces{{UNKNOWN_IDENTIFIER}}EstimateProjection(marker.getSelectedFaceNumber()).value
   );
-  bool isLeftEntryOnCoarseFaceLabel = marker.getSelectedFaceNumber() >= Dimensions;
-  double newTimeStamp = std::max( coarseGridFaces{{FACE_LABEL}}(marker.getSelectedFaceNumber()).getUpdatedTimeStamp( isLeftEntryOnCoarseFaceLabel ? 0 : 1 ), fineGridFace{{FACE_LABEL}}.getUpdatedTimeStamp( isLeftEntryOnCoarseFaceLabel ? 0 : 1 ));
-  coarseGridFaces{{FACE_LABEL}}(marker.getSelectedFaceNumber()).setUpdated( isLeftEntryOnCoarseFaceLabel ? 0 : 1,true);
-  coarseGridFaces{{FACE_LABEL}}(marker.getSelectedFaceNumber()).setUpdatedTimeStamp( isLeftEntryOnCoarseFaceLabel ? 0 : 1,newTimeStamp);
+  
+  if (repositories::{{SOLVER_INSTANCE}}.isLastGridSweepOfTimeStep()) {
+    bool isLeftEntryOnCoarseFaceLabel = marker.getSelectedFaceNumber() >= Dimensions;
+    coarseGridFaces{{FACE_LABEL}}(marker.getSelectedFaceNumber()).setUpdated( isLeftEntryOnCoarseFaceLabel ? 0 : 1,true);
+    coarseGridFaces{{FACE_LABEL}}(marker.getSelectedFaceNumber()).setUpdatedTimeStamp( 
+      isLeftEntryOnCoarseFaceLabel ? 0 : 1,
+      std::max( 
+        coarseGridFaces{{FACE_LABEL}}(marker.getSelectedFaceNumber()).getUpdatedTimeStamp( isLeftEntryOnCoarseFaceLabel ? 0 : 1 ), 
+        fineGridFace{{FACE_LABEL}}.getUpdatedTimeStamp( isLeftEntryOnCoarseFaceLabel ? 0 : 1 )
+      )
+    );
+    coarseGridFaces{{FACE_LABEL}}(marker.getSelectedFaceNumber()).setNewTimeStamp( 
+      isLeftEntryOnCoarseFaceLabel ? 0 : 1,
+      std::max( 
+        coarseGridFaces{{FACE_LABEL}}(marker.getSelectedFaceNumber()).getNewTimeStamp( isLeftEntryOnCoarseFaceLabel ? 0 : 1 ), 
+        fineGridFace{{FACE_LABEL}}.getNewTimeStamp( isLeftEntryOnCoarseFaceLabel ? 0 : 1 )
+      )
+    );
+    coarseGridFaces{{FACE_LABEL}}(marker.getSelectedFaceNumber()).setOldTimeStamp( 
+      isLeftEntryOnCoarseFaceLabel ? 0 : 1,
+      std::max( 
+        coarseGridFaces{{FACE_LABEL}}(marker.getSelectedFaceNumber()).getOldTimeStamp( isLeftEntryOnCoarseFaceLabel ? 0 : 1 ), 
+        fineGridFace{{FACE_LABEL}}.getOldTimeStamp( isLeftEntryOnCoarseFaceLabel ? 0 : 1 )
+      )
+    );
+  }
 """
 
 
