@@ -55,7 +55,7 @@ class RungeKuttaDG(object):
     code, read the Discontinous Galerkin page in dg.h.
     
     
-    # Data structures
+    ## Data structures
 
     Each cell hosts a DG polynomial of order _dg_order. Technically, we store this polynomial
     in a regular array (blockstructured data) with (_dg_order+1)^d entries. On top of this 
@@ -76,7 +76,7 @@ class RungeKuttaDG(object):
     More details are provided in create_data_structures().
 
     
-    :: Control flow between this class and subclasses
+    ## Control flow between this class and subclasses
     
     There are three key routines: the constructor, create_data_structures() and 
     create_action_sets(). The constructor sets/memorises some solver variables (such as the 
@@ -95,7 +95,8 @@ class RungeKuttaDG(object):
     create_action_sets() of the superclass first, before you do fancy stuff. This 
     way, all the important action sets are in place.
     
-    :: General control flow and realisation of solver steps
+    
+    ## General control flow and realisation of solver steps
     
     A proper numerical time step is mapped onto a cascade of time step sweeps. Per sweep, 
     we realise the following steps (so step in a computational sense), though their exact
@@ -122,7 +123,7 @@ class RungeKuttaDG(object):
       thing, so will be destroyed immediately once we leave a cell.  
          
          
-    :: Mandatory step of subclasses
+    ## Mandatory step of subclasses
     
     There are different nuances of subclasses/algorithmic realisations, i.e. few solvers inherit
     directly from RungeKuttaDG. However, even those subclasses still require you do provide some
@@ -137,7 +138,23 @@ class RungeKuttaDG(object):
       size for a cell.
       
     self._compute_new_time_step_size          = "const double newTimeStepSize = timeStepSize;"
-                   
+      
+        
+    ## Semantics of FaceLabel
+    
+    - The update time stamp is the one we udpate in each and every 
+      Runge-Kutta step.
+    
+    - The new time stamp is the valid one, i.e. the one that 
+      corresponds to the face's EstimateProjection after a time step.
+      
+    - The old time stamp is the one that corresponds to the (old)
+      face projection. 
+      
+    - We set the updated flag if and only if we have finished the
+      last Runge-Kutta step. 
+    
+    
   """
   
       
@@ -416,9 +433,9 @@ We use RK(""" + str(self._rk_order) + """) for the time stepping.
 
      _rhs_estimates: Patch ( (_dg_order+1)x(_dg_order+1)x(_dg_order+1)xno of RK steps )
        These are the Runge-Kutta extrapolations. It is important that the
-       rk_order is mixed into the first argument, as the triple is automatically
-       truncated to a tuple if the code is translated with 2d. Please note that the 
-       term rhs refers to the right-hand side of an ODE
+       rk_order is mixed into the first argument, as the triple is 
+       automatically truncated to a tuple if the code is translated with 2d. 
+       Please note that the term rhs refers to the right-hand side of an ODE
        
        @f$ \partial Q = F(Q) @f$
        
@@ -428,12 +445,28 @@ We use RK(""" + str(self._rk_order) + """) for the time stepping.
        Non-persistent helper data structure.
 
      _current_time_step_projection: Patch ( 2xface_projectionsx(_dg_order+1)x(_dg_order+1) )
-       This is the projection of the polynomial data of the current guess onto the 
-       faces. It is important that the first dimension is only a 2. This way, we can
-       (logically) handle the projected data again as an overlap of two patches with 
-       the width 1.  
+       This is the projection of the polynomial data of the current guess onto 
+       the faces. It is important that the first dimension is only a 2. This 
+       way, we can (logically) handle the projected data again as an overlap 
+       of two patches with the width 1.  
 
-     _estimates_projection: Patch ( 2xface_projectionsx(_dg_order+1)x(_dg_order+1) )
+     _estimate_projection: Patch ( Nxface_projectionsx(_dg_order+1)x(_dg_order+1) )
+       The N is usually 2. Usually this estimate projection holds the data 
+       from the latest Runge-Kutta step. This implies that it never ever holds
+       the projection of the solution unless after the very first Runge-Kutta 
+       step. After that, it is always a linear combination of estimates.
+       
+       To avoid this plain behaviour, I make the last and final linear 
+       combination project the solution again onto the faces, i.e. after
+       the very last step of the Runge-Kutta scheme, there will be a valid
+       representation of the solution _estimate_projection. Consult the 
+       documentation of exahype2.solvers.rkdg.actionsets.ComputeFinalLinearCombination
+       for some further information. Also consult the semantics of the FaceLabel
+       in this context.
+       
+     _old_solution_projection: Same as _estimate_projection
+       This is a backup of the final solution stored in _estimate_projection.
+       It correlates to 
 
      _face_label: FaceLabel
        See class description. General information such as "is boundary". 
@@ -472,6 +505,11 @@ We use RK(""" + str(self._rk_order) + """) for the time stepping.
                                                                        self._basis.dofs_per_axis),  
                                                                        self._unknowns+self._auxiliary_variables, 
                                                                        self._unknown_identifier() + "EstimateProjection" )
+    self._old_solution_projection           = peano4.datamodel.Patch( (compute_number_of_face_projection_quantities(self._face_projections)*2,
+                                                                       self._basis.dofs_per_axis,
+                                                                       self._basis.dofs_per_axis),  
+                                                                       self._unknowns+self._auxiliary_variables, 
+                                                                       self._unknown_identifier() + "OldSolutionProjection" )
     self._Riemann_solution                  = peano4.datamodel.Patch( (2,
                                                                        self._basis.dofs_per_axis,
                                                                        self._basis.dofs_per_axis),  
@@ -481,20 +519,30 @@ We use RK(""" + str(self._rk_order) + """) for the time stepping.
     self._estimate_projection.generator.merge_method_definition = peano4.toolbox.blockstructured.get_face_merge_implementation(self._estimate_projection)
     self._current_time_step.generator.merge_method_definition   = peano4.toolbox.blockstructured.get_cell_merge_implementation(self._current_time_step)
 
-      #get_face_overlap_merge_implementation(self._estimate_projection)
     self._estimate_projection.generator.includes     += """
+#include "peano4/utils/Loop.h"
+#include "repositories/SolverRepository.h" 
+"""
+
+    self._old_solution_projection.generator.includes     += """
 #include "peano4/utils/Loop.h"
 #include "repositories/SolverRepository.h" 
 """
 
     self._estimate_projection.generator.store_persistent_condition = self._store_cell_data_default_guard()
     self._estimate_projection.generator.load_persistent_condition  = self._load_cell_data_default_guard()
+    
+    self._old_solution_projection.generator.store_persistent_condition = self._store_cell_data_default_guard()
+    self._old_solution_projection.generator.load_persistent_condition  = self._load_cell_data_default_guard()
 
     self._linear_combination_of_estimates.store_persistent_condition = "false"
     self._linear_combination_of_estimates.load_persistent_condition = "false"
 
     self._estimate_projection.generator.send_condition               = "false"
     self._estimate_projection.generator.receive_and_merge_condition  = "false"
+    
+    self._old_solution_projection.generator.send_condition               = "false"
+    self._old_solution_projection.generator.receive_and_merge_condition  = "false"
 
     self._Riemann_solution.generator.store_persistent_condition = self._store_face_data_default_guard()
     self._Riemann_solution.generator.load_persistent_condition  = self._load_face_data_default_guard()
@@ -618,6 +666,7 @@ We use RK(""" + str(self._rk_order) + """) for the time stepping.
     datamodel.add_cell(self._linear_combination_of_estimates)
     datamodel.add_face(self._face_label)
     datamodel.add_face(self._estimate_projection)
+    datamodel.add_face(self._old_solution_projection)
     datamodel.add_face(self._Riemann_solution)
 
  
@@ -636,6 +685,7 @@ We use RK(""" + str(self._rk_order) + """) for the time stepping.
     step.use_cell(self._linear_combination_of_estimates)
     step.use_face(self._face_label)
     step.use_face(self._estimate_projection)
+    step.use_face(self._old_solution_projection)
     step.use_face(self._Riemann_solution)
     
   
