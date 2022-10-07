@@ -37,7 +37,7 @@ double  exahype2::dg::getQuadratureWeight(
 ) {
   double result = 1.0;
   for (int d=0; d<Dimensions; d++) {
-    result *= cellSize(d) * quadratureWeights[d];
+    result *= cellSize(d) * quadratureWeights[ index(d) ];
   }
   return result;
 }
