@@ -380,6 +380,12 @@ class LagrangeBasisWithDiagonalMassMatrix(LagrangeBasis):
   
   
   def __compute_restriction_matrix(self):
+    """
+    
+    Only variant is implemented atm. See __compute_interpolation_matrix() which 
+    also does not yet support higher orders.
+    
+    """
     #assert self._polynomial_order==0
     return [[[1.0/3.0]],[[1.0/3.0]],[[1.0/3.0]]]
   
@@ -387,7 +393,12 @@ class LagrangeBasisWithDiagonalMassMatrix(LagrangeBasis):
   def __compute_interpolation_matrix(self):
     """
     
-    There is alrady a projection operation. Maybe we can use this one
+    There is alrady a projection operation. It is called __compute_fine_grid_projector. 
+    Maybe we can use this one (it is currently not used at all). If we don't use it,
+    we should remove it from the source code. This routine returns three matrices of 
+    size (p+1) x (p+1). Please consult the discussion around Discontinuous Galerkin
+    AMR in the C++ file exahype2/dg/Riemann.h. I explain there what this operator 
+    looks like and how it is used.
     
     """
     #assert self._polynomial_order==0
