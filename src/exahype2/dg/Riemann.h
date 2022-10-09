@@ -216,6 +216,15 @@ namespace exahype2 {
      * of RestrictionMatrix1d, compute the c1, c2, c3 and c4 values and then
      * add them to the coarse representation. The interpolation can overwrite.
      *
+     * Different to the interpolation, we only restrict one half of the face
+     * and not both. The interpolation can set both sides, as it overwrites
+     * a hanging face (or a new one). When we restrict, we know that a
+     * persistent coarse grid face might already hold some projected solution.
+     * We are interested in the other half. If we accumulate both, we'd add
+     * the interpolated value (or any other rubbish) again to the one face
+     * part which had been valid before.
+     *
+     *
      * ## Differences to interpolateRiemannSolution()
      *
      * - In the final accummulation, we write to the coarse grid while the

@@ -95,7 +95,8 @@ void exahype2::dg::restrictAndAccumulateProjectedFacePolynomial(
   const int RestrictionMatrixDimensions = (order+1)*(order+1);
   #endif
 
-  const int normal = marker.getSelectedFaceNumber()%Dimensions;
+  const int normal        = marker.getSelectedFaceNumber()%Dimensions;
+  const int leftRightFace = marker.getSelectedFaceNumber() < Dimensions ? 1 : 0;
   dfore(fineGridDoF,order+1,normal,0) {
     dfore(coarseGridDoF,order+1,normal,0) {
       double tensorProductWeight = 1.0;
@@ -118,7 +119,7 @@ void exahype2::dg::restrictAndAccumulateProjectedFacePolynomial(
 
       tarch::la::Vector<Dimensions,int> shiftedFineGridDoF    = fineGridDoF;
       tarch::la::Vector<Dimensions,int> shiftedCoarseGridDoF  = coarseGridDoF;
-      for (int leftRight=0; leftRight<2*numberOfProjectedQuantities; leftRight++)
+      for (int leftRight=leftRightFace * numberOfProjectedQuantities; leftRight<(leftRightFace+1)*numberOfProjectedQuantities; leftRight++)
       for (int unknown=0; unknown<unknowns+auxiliaryVariables; unknown++) {
         shiftedFineGridDoF(normal)    = leftRight;
         shiftedCoarseGridDoF(normal)  = leftRight;
