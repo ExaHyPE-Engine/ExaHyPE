@@ -50,18 +50,23 @@ number_of_unknowns  = sum(unknowns.values())
 if args.type=="plot-0":
   baseline_max_h               = 0.05
   baseline_min_h               = 0.05
+  end_time                     = 4.0
 if args.type=="plot-1":
   baseline_max_h               = 0.005
   baseline_min_h               = 0.005
+  end_time                     = 4.0
 if args.type=="plot-2":
   baseline_max_h               = 0.5
   baseline_min_h               = 0.1
+  end_time                     = 64.0
 if args.type=="plot-3":
   baseline_max_h               = 0.5
   baseline_min_h               = 0.008
+  end_time                     = 4.0
 elif args.type=="reg-0":
   baseline_max_h               = 0.008
   baseline_min_h               = 0.008
+  end_time                     = 4.0
 
 #
 # For Finite Volumes, we use the same mesh size, as the mesh size
@@ -192,7 +197,7 @@ if args.mode=="asserts":
   build_mode = peano4.output.CompileMode.Asserts
 
 if "plot" in args.type:
-  plot_interval = 0.1
+  plot_interval = end_time / 20.0
 else:  
   plot_interval = 0.0
   
@@ -201,8 +206,8 @@ project.set_global_simulation_parameters(
   dimensions            = dimensions,
   offset                = [-cube_size/2.0, -cube_size/2.0, -cube_size/2.0],
   size                  = [ cube_size, cube_size, cube_size],
-  min_end_time          = 4.0,
-  max_end_time          = 4.0,
+  min_end_time          = end_time,
+  max_end_time          = end_time,
   first_plot_time_stamp = 0.0,
   time_in_between_plots = plot_interval,
   periodic_BC           = [False, False, False]
