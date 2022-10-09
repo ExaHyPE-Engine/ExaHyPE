@@ -757,6 +757,49 @@ if test "$toolbox_exahype" != false; then
 fi
 
 
+  #Libxsmm
+  echo "Installing or updating libxsmm"
+  if [ ! -d Submodules/libxsmm ]; then
+    mkdir Submodules/libxsmm
+  fi
+  if [ ! -f libxsmm/.git ]; then
+    echo "Initialize libxsmm submodule"
+    git submodule update --init Submodules/libxsmm
+    #Clean documentation to save space
+    cd Submodules/libxsmm
+    rm -rf samples/ #over 100M of not needed stuff
+    rm -rf documentation/ #around 10M of documentation
+    cd ../..
+  else
+    echo "Update libxsmm submodule"
+    cd Submodules/libxsmm
+    LIBXSMM_DIFF_COUNT=$(git rev-list HEAD...origin/release --count)
+    if [ $LIBXSMM_DIFF_COUNT -eq 0 ]; then
+      echo "Up-to-date"
+    else
+      REBUILD_LIBXSMM=true
+      git checkout -- samples/       #restore samples to avoid conflict
+      git checkout -- documentation/ #restore documentation to avoid conflict
+      git pull origin release
+      rm -rf samples/       #delete again
+      rm -rf documentation/ #delete again
+    fi
+    cd ..
+  fi
+  
+  # build libxsmm
+  if [ ! -d Submodules/libxsmm/bin ] || [ ! -e Submodules/libxsmm/bin/libxsmm_gemm_generator ]; then
+    REBUILD_LIBXSMM=true
+  fi
+  if [ "$REBUILD_LIBXSMM" = true ]; then
+    echo "Build libxsmm gemm generator"
+    cd Submodules/libxsmm
+    make realclean --silent
+    make generator --silent
+    cd ../..
+  fi
+
+
 #
 # SmartMPI
 #
