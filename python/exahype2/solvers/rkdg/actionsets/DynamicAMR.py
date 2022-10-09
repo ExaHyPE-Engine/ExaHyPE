@@ -78,18 +78,19 @@ class DynamicAMR( AbstractRungeKuttaDGActionSet ):
 
 
   __Template_DestroyHangingFace = """
-  ::exahype2::dg::restrictAndAccumulateProjectedFacePolynomial(
-    marker,
-    {{ORDER}},
-    {{NUMBER_OF_PROJECTED_QUANTITIES}},
-    {{NUMBER_OF_UNKNOWNS}},
-    {{NUMBER_OF_AUXILIARY_VARIABLES}},
-    repositories::{{SOLVER_INSTANCE}}.RestrictionMatrix1d,
-    fineGridFace{{UNKNOWN_IDENTIFIER}}EstimateProjection.value,
-    coarseGridFaces{{UNKNOWN_IDENTIFIER}}EstimateProjection(marker.getSelectedFaceNumber()).value
-  );
+  {% for PREDICATE_NO in range(0,PREDICATES|length) %}
+  if ( {{PREDICATES[PREDICATE_NO]}} ) {
+    ::exahype2::dg::restrictAndAccumulateProjectedFacePolynomial(
+      marker,
+      {{ORDER}},
+      {{NUMBER_OF_PROJECTED_QUANTITIES}},
+      {{NUMBER_OF_UNKNOWNS}},
+      {{NUMBER_OF_AUXILIARY_VARIABLES}},
+      repositories::{{SOLVER_INSTANCE}}.RestrictionMatrix1d,
+      fineGridFace{{UNKNOWN_IDENTIFIER}}EstimateProjection.value,
+      coarseGridFaces{{UNKNOWN_IDENTIFIER}}EstimateProjection(marker.getSelectedFaceNumber()).value
+    );
   
-  if (repositories::{{SOLVER_INSTANCE}}.isLastGridSweepOfTimeStep()) {
     bool isLeftEntryOnCoarseFaceLabel = marker.getSelectedFaceNumber() >= Dimensions;
     coarseGridFaces{{FACE_LABEL}}(marker.getSelectedFaceNumber()).setUpdated( isLeftEntryOnCoarseFaceLabel ? 0 : 1,true);
     coarseGridFaces{{FACE_LABEL}}(marker.getSelectedFaceNumber()).setUpdatedTimeStamp( 
@@ -100,6 +101,7 @@ class DynamicAMR( AbstractRungeKuttaDGActionSet ):
       )
     );
   }
+  {% endfor %}
 """
 
 

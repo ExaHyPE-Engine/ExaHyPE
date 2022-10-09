@@ -7,6 +7,10 @@ import peano4
 import jinja2
 
 
+from exahype2.solvers.ButcherTableau                import ButcherTableau
+
+
+
 from enum import Enum
 
 
@@ -105,9 +109,20 @@ class ProjectLinearCombinationOfEstimatesOntoFaces(AbstractRungeKuttaDGActionSet
     );
     #endif
 
+      
+    // Set the variable
+    // double timeStepSize
+    const double timeStampOldSolution    = fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStamp();
+    {{COMPUTE_TIME_STEP_SIZE}}    
+    const double timeStamp = timeStampOldSolution + {{BUTCHER_TABLEAU_RELATIVE_TIME_STEP_SIZES[PREDICATE_NO]}} * timeStepSize;
+    
     for (int d=0; d<Dimensions; d++) {
-      {{FACE_METADATA_ACCESSOR}}(d).setUpdated(1,true);
+      {{FACE_METADATA_ACCESSOR}}(d).setUpdated(           1,true);
       {{FACE_METADATA_ACCESSOR}}(d+Dimensions).setUpdated(0,true);
+
+      {{FACE_METADATA_ACCESSOR}}(d).setUpdatedTimeStamp(           1, timeStamp );
+      {{FACE_METADATA_ACCESSOR}}(d+Dimensions).setUpdatedTimeStamp(0, timeStamp );
+
       logDebug( "touchCellLastTime(...)", "update {{FACE_METADATA_ACCESSOR}}(" << d << ")(1)" );
       logDebug( "touchCellLastTime(...)", "update {{FACE_METADATA_ACCESSOR}}(" << (d+Dimensions) << ")(0)" );
     }
@@ -126,6 +141,7 @@ class ProjectLinearCombinationOfEstimatesOntoFaces(AbstractRungeKuttaDGActionSet
     super(ProjectLinearCombinationOfEstimatesOntoFaces,self).__init__(solver)
     self.guards            = []
     self.face_projections  = face_projections
+    self._butcher_tableau = ButcherTableau(self._solver._rk_order)
 
 
   @property
@@ -148,8 +164,10 @@ class ProjectLinearCombinationOfEstimatesOntoFaces(AbstractRungeKuttaDGActionSet
     self._solver._init_dictionary_with_default_parameters(d)
     self._solver.add_entries_to_text_replacement_dictionary(d)
     d[ "PREDICATES" ]                               = self.guards
-    d[ "FACE_METADATA_ACCESSOR" ]     = "fineGridFaces"  + self._solver._face_label.name
-    d[ "CELL_METADATA_ACCESSOR" ]     = "fineGridCell""" + self._solver._cell_label.name
+    d[ "FACE_METADATA_ACCESSOR" ]   = "fineGridFaces"  + self._solver._face_label.name
+    d[ "CELL_METADATA_ACCESSOR" ]   = "fineGridCell""" + self._solver._cell_label.name
+    d[ "WEIGHTS" ]                  = self._butcher_tableau.final_estimate_weights()
+    d[ "BUTCHER_TABLEAU_RELATIVE_TIME_STEP_SIZES" ] = self._butcher_tableau.time_step_sizes()
     if operation_name==peano4.solversteps.ActionSet.OPERATION_TOUCH_CELL_FIRST_TIME and self.face_projections==FaceProjections.Solution:
       result = jinja2.Template(self.TemplateProjectLinearCombinationSolution).render(**d)
       pass 
