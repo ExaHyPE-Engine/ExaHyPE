@@ -13,7 +13,8 @@
 {{SOLVER_INCLUDES}}
 
 #include "exahype2/RefinementControl.h"
-#include "exahype2/Solver.h"
+
+#include "exahype2/aderdg/solvers/ADERDGSolver.h"
 
 #include "tarch/la/Vector.h"
 #include "tarch/multicore/BooleanSemaphore.h"
@@ -22,7 +23,7 @@
 
 #include "Constants.h"
 
-#include "exahype2/aderdg_kernels/Kernels.h"
+#include "exahype2/aderdg/kernels/Kernels.h"
 {% if USE_KERNEL_GENERATOR==True %}
 #include "generated/kernels/aderdg/{{LINEARITY}}/Quadrature.h"
 #include "generated/kernels/aderdg/{{LINEARITY}}/DGMatrices.h"
@@ -40,7 +41,7 @@
 
 
 
-class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
+class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::solvers::aderdg::ADERDGSolver {
   public:
     /**
      * This is a "fake" enum, i.e. we do not use it to distinguish different
@@ -73,32 +74,19 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
 
     static std::string toString(SolverState);
 
-    static constexpr int  Order = {{ORDER}};
-    static constexpr int NumberOfVariables = {{NUMBER_OF_UNKNOWNS}};
-    static constexpr int NumberOfParameters = {{NUMBER_OF_AUXILIARY_VARIABLES}};
-    static constexpr int MaxPicardIterations = {{ORDER}}+1;
-    static constexpr bool UseMaxPicardIterations = true;
-    static constexpr double CFL                    = {{CFL_SAFETY_FACTOR}};
-    static constexpr double PNPM                   = {{CFL_ADER}};
-
-    // quadrature weights and operators
-    static constexpr bool UseLobattoBasis = {{USE_GAUSS_LOBATTO}};
-    // [order][node i]
-    static double** weights;
-    static double** nodes;
-    // [order][node i][node j]
-    static double*** Kxi;
-    static double*** dudx;
-    static double*** iK1;
-    static double*** equidistantGridProjector;
-    // [order][ 0("left") or 1("right") ][node i]
-    static double*** FCoeff;
-    // [order][ subinterval ][fine grid node i][coarse grid node j]
-    static double**** fineGridProjector;
-    // [order][node i]
-    static kernels::UnivariateFunction** basisFunction;
-    static kernels::UnivariateFunction** basisFunctionFirstDerivative;
-    static kernels::UnivariateFunction** basisFunctionSecondDerivative;
+    static constexpr int  Order                   = {{ORDER}};
+    static constexpr int NumberOfVariables        = {{NUMBER_OF_UNKNOWNS}};
+    static constexpr int NumberOfParameters       = {{NUMBER_OF_AUXILIARY_VARIABLES}};
+    static constexpr int MaxPicardIterations      = {{ORDER}}+1;
+    static constexpr bool UseMaxPicardIterations  = true;
+    static constexpr bool UseLobattoBasis         = {{USE_GAUSS_LOBATTO}};
+    static constexpr double CFL                   = {{CFL_SAFETY_FACTOR}};
+    static constexpr double PNPM                  = {{CFL_ADER}};
+    
+    {% if USE_POINT_SOURCE!="<none>" %}
+    static constexpr int NumberOfPointSources     = {{NUMBER_OF_POINT_SOURCES}};
+    double pointSourceLocation[NumberOfPointSources][Dimensions];
+    {% endif %}
 
     /**
      * Maximum mesh size that this solver wants/is allowed to support. Peano 4
@@ -360,26 +348,6 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
     int        _cellUpdates;
 
     tarch::multicore::BooleanSemaphore  _semaphore;
-
-    /**
-     * Compute the flux with diffusive component.
-     * These are not currently available for use, but are defined nonetheless because the kernels,
-     * which are written generically, need them to compile
-     *
-     * \param[in]  Q the conserved variabels (and parameters) associated with a
-     *               quadrature point as C array.
-     *             gradQ the gradient of the conserved variabels (and parameters) associated
-     *                   with a quadrature point as C array.
-     * \param[inout] F a C array with shape [nDim][nVars]. That is, this is an C list
-     *               holding pointers to actual lists. Thus, the storage may be noncontinous.
-     *               In any case, the storage has already been allocated.
-     */
-public:
-{% for PRECISION_NUM in range(0,COMPUTATION_PRECISIONS|length) %}
-    void viscousFlux(const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const Q, const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const gradQ, {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}** const F);
-    void viscousEigenvalues(const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const Q, const int direction, {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const lambda);
-    void multiplyMaterialParameterMatrix(const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const Q, {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}** const rhs);
-{% endfor %}
 
 
   {{ABSTRACT_SOLVER_USER_DECLARATIONS}}

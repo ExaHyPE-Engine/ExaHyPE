@@ -39,6 +39,8 @@ class Prediction_kernelgenerator(AbstractAderDGActionSet):
     #endif
     
     constexpr int spaceTimeBasisSize = spaceBasisSize*(Order+1);
+    
+    /*
     constexpr int sizeLQi   = (NumberOfVariables+NumberOfParameters)*spaceTimeBasisSize;
     constexpr int sizeRhs   = sizeLQi;
     constexpr int sizeLFi   = (Dimensions + 1)*NumberOfVariables*spaceTimeBasisSize;
@@ -47,16 +49,16 @@ class Prediction_kernelgenerator(AbstractAderDGActionSet):
     constexpr int sizeLQhi = (NumberOfVariables+NumberOfParameters)*spaceBasisSize;
     constexpr int sizeLFhi = (Dimensions + 1)*NumberOfVariables*spaceBasisSize;
     
-    const int sizeLSi = spaceTimeBasisSize * (NumberOfVariables);
+    const int sizeLSi  = spaceTimeBasisSize * (NumberOfVariables);
     const int sizeLShi = spaceBasisSize * (NumberOfVariables);
     
     constexpr int totalSize = sizeLQi + sizeRhs + sizeLFi + sizeGradQ +
                           sizeLQhi + sizeLFhi + sizeLQhi + sizeLSi + sizeLShi;
-  
-    {{PREDICTOR_COMPUTATION_PRECISION}} block[totalSize];
+                          
+    {{PREDICTOR_COMPUTATION_PRECISION}} block [totalSize] __attribute__((aligned({{ARCHITECTURE_ALIGNMENT}})));
     {{PREDICTOR_COMPUTATION_PRECISION}}* memory = block;
-        
-    {{PREDICTOR_COMPUTATION_PRECISION}}* lQi   = memory; memory+=sizeLQi;
+                          
+    {{PREDICTOR_COMPUTATION_PRECISION}}* lQi   = memory + generated::kernels::AderDG::{{LINEARITY}}::getLQiShift();
     {{PREDICTOR_COMPUTATION_PRECISION}}* rhs   = memory; memory+=sizeRhs;
     {{PREDICTOR_COMPUTATION_PRECISION}}* lFi   = memory; memory+=sizeLFi;
     {{PREDICTOR_COMPUTATION_PRECISION}}* gradQ = memory; memory+=sizeGradQ;
@@ -67,20 +69,121 @@ class Prediction_kernelgenerator(AbstractAderDGActionSet):
     
     {{PREDICTOR_COMPUTATION_PRECISION}}* lSi   = memory; memory+=sizeLSi;
     {{PREDICTOR_COMPUTATION_PRECISION}}* lShi  = memory; 
+
+    */
     
+    constexpr int totalSize = generated::kernels::AderDG::{{LINEARITY}}::getFusedSTPVISize();  
     
+    {{PREDICTOR_COMPUTATION_PRECISION}} memory[totalSize] __attribute__((aligned({{ARCHITECTURE_ALIGNMENT}})));
+        
+    {{PREDICTOR_COMPUTATION_PRECISION}}* lQi           = memory + generated::kernels::AderDG::{{LINEARITY}}::getlQiShift();
+    {{PREDICTOR_COMPUTATION_PRECISION}}* lQhi          = memory + generated::kernels::AderDG::{{LINEARITY}}::getlQhiShift();
+
+    {% if USE_LFI is sameas True %}
+    {{PREDICTOR_COMPUTATION_PRECISION}}* lFi           = memory + generated::kernels::AderDG::{{LINEARITY}}::getlFiShift();
+    {{PREDICTOR_COMPUTATION_PRECISION}}* lFhi          = memory + generated::kernels::AderDG::{{LINEARITY}}::getlFhiShift();
+    {% else %}
+    {{PREDICTOR_COMPUTATION_PRECISION}}* lFi           = nullptr;
+    {{PREDICTOR_COMPUTATION_PRECISION}}* lFhi          = nullptr;
+    {% endif %}    
+
+    {% if USE_LSI is sameas True %}
+    {{PREDICTOR_COMPUTATION_PRECISION}}* lSi           = memory + generated::kernels::AderDG::{{LINEARITY}}::getlSiShift();
+    {{PREDICTOR_COMPUTATION_PRECISION}}* lShi          = memory + generated::kernels::AderDG::{{LINEARITY}}::getlShiShift();
+    {% else %}
+    {{PREDICTOR_COMPUTATION_PRECISION}}* lSi           = nullptr;
+    {{PREDICTOR_COMPUTATION_PRECISION}}* lShi          = nullptr;
+    {% endif %}
+    
+    {% if USE_GRADQ is sameas True %}
+    {{PREDICTOR_COMPUTATION_PRECISION}}* gradQ         = memory + generated::kernels::AderDG::{{LINEARITY}}::getgradQShift(); 
+    {% else %}
+    {{PREDICTOR_COMPUTATION_PRECISION}}* gradQ         = nullptr;
+    {% endif %}
+    
+    {% if USE_PSI is sameas True %}    
+    {{PREDICTOR_COMPUTATION_PRECISION}}* PSi           = memory + generated::kernels::AderDG::{{LINEARITY}}::getPSiShift();
+    {{PREDICTOR_COMPUTATION_PRECISION}}* PSderivatives = memory + generated::kernels::AderDG::{{LINEARITY}}::getPSderivativesShift();
+    {% else %}
+    {{PREDICTOR_COMPUTATION_PRECISION}}* PSi           = nullptr;
+    {{PREDICTOR_COMPUTATION_PRECISION}}* PSderivatives = nullptr;
+    {% endif %}
+        
+    {{PREDICTOR_COMPUTATION_PRECISION}} lduh[generated::kernels::AderDG::{{LINEARITY}}::getUpdateSize()];
+        
     {{PREDICTOR_STORAGE_PRECISION}} lQhbnd[2*Dimensions*spaceFaceSize*(NumberOfVariables+NumberOfParameters)]{0.0};
     {{PREDICTOR_STORAGE_PRECISION}} lFhbnd[2*Dimensions*spaceFaceSize*NumberOfVariables]{0.0};
     //{{PREDICTOR_STORAGE_PRECISION}} lGradQhbnd[2*Dimensions*Dimensions*spaceFaceSize*(NumberOfVariables+NumberOfParameters)]{0.0};
     
 
-    {% if IS_LINEAR is sameas True %}  
+    {% if IS_LINEAR is sameas True %}
 #if Dimensions==2
   double centre[Dimensions] = {marker.x()[0], marker.x()[1]};
 #else
   double centre[Dimensions] = {marker.x()[0], marker.x()[1], marker.x()[2]};  
 #endif
 
+    {% if USE_POINT_SOURCE!="<none>" %}
+    
+    std::vector<int>* pointSources = generated::kernels::AderDG::linear::getPointSources(
+      repositories::{{SOLVER_INSTANCE}},
+      centre,
+      marker.h()[0]
+    );
+    
+    int numberOfIterations = 0;
+    
+    if(pointSources != nullptr) {
+        // perform pointsource
+        numberOfIterations = generated::kernels::AderDG::linear::fusedSpaceTimePredictorVolumeIntegral(
+          repositories::{{SOLVER_INSTANCE}},
+          lduh,
+          lQhbnd,
+          lFhbnd,
+          lQi,
+          lFi,
+          lSi,            // for NCP or Source
+          lQhi,
+          lFhi,
+          lShi,           // for NCP or Source
+          gradQ,          // for NCP or Source
+          PSi,            // for pointSource
+          PSderivatives,  // for pointSource
+          luh,
+          centre,
+          marker.h()[0], // Assume dx[0] == dx[1] == dx[2]
+          timeStamp, // tStep, doesn't seem to ever get used
+          timeStepSize,
+          pointSources // will be deleted in the end if set
+        );    
+    } else {
+        numberOfIterations = generated::kernels::AderDG::linear::fusedSpaceTimePredictorVolumeIntegral_WithoutPS(
+          repositories::{{SOLVER_INSTANCE}},
+          lduh,
+          lQhbnd,
+          lFhbnd,
+          lQi,
+          lFi,
+          lSi,   // for NCP or Source
+          lQhi,
+          lFhi,
+          lShi,  // for NCP or Source
+          gradQ, // for NCP or Source
+          nullptr, // PSi, for pointSource
+          nullptr, // PSderivatives, for pointSource
+          luh,
+          centre,
+          marker.h()[0], // Assume dx[0] == dx[1] == dx[2]
+          timeStamp, // tStep, doesn't seem to ever get used
+          timeStepSize,
+          pointSources // will be deleted in the end if set
+        );
+    }
+    
+    
+    {% else %}
+    
+    //linear, no pointSources
     int numberOfIterations = generated::kernels::AderDG::linear::fusedSpaceTimePredictorVolumeIntegral(
       repositories::{{SOLVER_INSTANCE}},
       lduh,
@@ -98,13 +201,18 @@ class Prediction_kernelgenerator(AbstractAderDGActionSet):
       luh,
       centre,
       marker.h()[0], // Assume dx[0] == dx[1] == dx[2]
-      t, // tStep, doesn't seem to ever get used
+      timeStamp, // tStep, doesn't seem to ever get used
       timeStepSize,
-      &pointSources // will be deleted in the end if set
-    );  
+      nullptr // will be deleted in the end if set
+    );    
+    {% endif %}
+
 
     {% else %}
+    
+    {{PREDICTOR_COMPUTATION_PRECISION}} rhs[(NumberOfVariables+NumberOfParameters)*spaceTimeBasisSize];
 
+    //nonlinear
     int numberOfIterations = generated::kernels::AderDG::nonlinear::fusedSpaceTimePredictorVolumeIntegral(
         repositories::{{SOLVER_INSTANCE}},
         lduh,
@@ -176,8 +284,11 @@ class Prediction_kernelgenerator(AbstractAderDGActionSet):
     
     """
     super(Prediction_kernelgenerator,self).__init__(solver)
-    self.guard            = guard
-    
+    self.guard      = guard
+    self._use_lfi   = solver._is_linear or solver._flux_implementation!="<none>"
+    self._use_lsi   = solver._source_term_implementation!="<none>"
+    self._use_gradQ = solver._ncp_implementation!="<none>"
+    self._use_psi   = solver._is_linear and solver._point_sources_implementation!="<none>"
 
   def get_body_of_operation(self,operation_name):
     result = ""
@@ -185,7 +296,12 @@ class Prediction_kernelgenerator(AbstractAderDGActionSet):
       d = {}
       self._solver._init_dictionary_with_default_parameters(d)
       self._solver.add_entries_to_text_replacement_dictionary(d)
-      d[ "PREDICATE" ]                  = self.guard
+      d[ "PREDICATE" ]  = self.guard
+      d[ "USE_LFI" ]    = self._use_lfi
+      d[ "USE_LSI" ]    = self._use_lsi
+      d[ "USE_GRADQ" ]  = self._use_gradQ
+      d[ "USE_PSI" ]    = self._use_psi
+      
       result = jinja2.Template(self.TemplateProject).render(**d)
       pass 
     return result

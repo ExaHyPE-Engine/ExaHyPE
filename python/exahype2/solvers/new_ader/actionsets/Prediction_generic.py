@@ -41,7 +41,7 @@ class Prediction_generic(AbstractAderDGActionSet):
     constexpr int spaceTimeBasisSize = spaceBasisSize*(Order+1);
     constexpr int sizeLQi   = (NumberOfVariables+NumberOfParameters)*spaceTimeBasisSize;
     constexpr int sizeRhs   = sizeLQi;
-    constexpr int sizeLFi   = (Dimensions + 1)*NumberOfVariables*spaceTimeBasisSize;
+    constexpr int sizeLFi   = (Dimensions + 1)*NumberOfVariables*spaceTimeBasisSize; //Dimensions+1 because this is also used for lShi, which contains source terms. Don't ask me why that isn't it's own variable
     constexpr int sizeGradQ = Dimensions*NumberOfVariables*spaceBasisSize;
     
     constexpr int sizeLQhi = (NumberOfVariables+NumberOfParameters)*spaceBasisSize;

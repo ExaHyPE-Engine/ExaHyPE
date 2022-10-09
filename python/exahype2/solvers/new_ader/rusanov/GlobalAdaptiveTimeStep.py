@@ -29,11 +29,12 @@ class GlobalAdaptiveTimeStep( SingleSweep ):
     time_step_relaxation,
     flux=PDETerms.User_Defined_Implementation, 
     ncp=PDETerms.None_Implementation, 
-    point_source=PDETerms.None_Implementation,
+    point_source=0,
     boundary_conditions=PDETerms.User_Defined_Implementation,
     refinement_criterion=PDETerms.None_Implementation,
     initial_conditions=PDETerms.User_Defined_Implementation,
     source_term=PDETerms.None_Implementation,
+    material_parameters=PDETerms.None_Implementation,
     plot_grid_properties=False,
     predictor_persistent_storage_precision=PrecisionType.double,
     predictor_computation_precision=PrecisionType.double
@@ -50,6 +51,7 @@ class GlobalAdaptiveTimeStep( SingleSweep ):
                             flux=flux,
                             ncp=ncp,
                             source_term=source_term,
+                            material_parameters=material_parameters,
                             point_source=point_source
                             )
 
@@ -61,7 +63,8 @@ class GlobalAdaptiveTimeStep( SingleSweep ):
     refinement_criterion=None,
     initial_conditions=None,
     source_term=None,
-    point_source=None,
+    material_parameters=None,
+    point_source=None,    
     additional_action_set_includes = "",
     additional_user_includes       = ""
   ):
@@ -74,6 +77,7 @@ class GlobalAdaptiveTimeStep( SingleSweep ):
                                                        ncp=ncp,
                                                        eigenvalues=PDETerms.User_Defined_Implementation,
                                                        source_term=source_term,
+                                                       material_parameters=material_parameters,
                                                        point_source=point_source
                                                        )
 

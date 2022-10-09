@@ -13,17 +13,17 @@ tarch::logging::Log   {{NAMESPACE | join("::")}}::{{CLASSNAME}}::{{CLASSNAME}}::
 
 std::bitset<Dimensions> {{NAMESPACE | join("::")}}::{{CLASSNAME}}::{{CLASSNAME}}::PeriodicBC = {{NAMESPACE | join("::")}}::PeriodicBC;
 
-double**   {{NAMESPACE | join("::")}}::{{CLASSNAME}}::weights                                 = kernels::{{POLYNOMIAL_TYPE}}::weights;
-double**   {{NAMESPACE | join("::")}}::{{CLASSNAME}}::nodes                                   = kernels::{{POLYNOMIAL_TYPE}}::nodes;
-double***  {{NAMESPACE | join("::")}}::{{CLASSNAME}}::Kxi                                     = kernels::{{POLYNOMIAL_TYPE}}::Kxi;
-double***  {{NAMESPACE | join("::")}}::{{CLASSNAME}}::dudx                                    = kernels::{{POLYNOMIAL_TYPE}}::dudx;
-double***  {{NAMESPACE | join("::")}}::{{CLASSNAME}}::iK1                                     = kernels::{{POLYNOMIAL_TYPE}}::iK1;
-double***  {{NAMESPACE | join("::")}}::{{CLASSNAME}}::equidistantGridProjector                = kernels::{{POLYNOMIAL_TYPE}}::equidistantGridProjector;
-double***  {{NAMESPACE | join("::")}}::{{CLASSNAME}}::FCoeff                                  = kernels::{{POLYNOMIAL_TYPE}}::FCoeff;
-double**** {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fineGridProjector                       = kernels::{{POLYNOMIAL_TYPE}}::fineGridProjector;
-kernels::UnivariateFunction** {{NAMESPACE | join("::")}}::{{CLASSNAME}}::basisFunction                 = kernels::{{POLYNOMIAL_TYPE}}::basisFunction;
-kernels::UnivariateFunction** {{NAMESPACE | join("::")}}::{{CLASSNAME}}::basisFunctionFirstDerivative  = kernels::{{POLYNOMIAL_TYPE}}::basisFunctionFirstDerivative;
-kernels::UnivariateFunction** {{NAMESPACE | join("::")}}::{{CLASSNAME}}::basisFunctionSecondDerivative = kernels::{{POLYNOMIAL_TYPE}}::basisFunctionSecondDerivative;
+double**   exahype2::solvers::aderdg::ADERDGSolver::weights                                 = kernels::{{POLYNOMIAL_TYPE}}::weights;
+double**   exahype2::solvers::aderdg::ADERDGSolver::nodes                                   = kernels::{{POLYNOMIAL_TYPE}}::nodes;
+double***  exahype2::solvers::aderdg::ADERDGSolver::Kxi                                     = kernels::{{POLYNOMIAL_TYPE}}::Kxi;
+double***  exahype2::solvers::aderdg::ADERDGSolver::dudx                                    = kernels::{{POLYNOMIAL_TYPE}}::dudx;
+double***  exahype2::solvers::aderdg::ADERDGSolver::iK1                                     = kernels::{{POLYNOMIAL_TYPE}}::iK1;
+double***  exahype2::solvers::aderdg::ADERDGSolver::equidistantGridProjector                = kernels::{{POLYNOMIAL_TYPE}}::equidistantGridProjector;
+double***  exahype2::solvers::aderdg::ADERDGSolver::FCoeff                                  = kernels::{{POLYNOMIAL_TYPE}}::FCoeff;
+double**** exahype2::solvers::aderdg::ADERDGSolver::fineGridProjector                       = kernels::{{POLYNOMIAL_TYPE}}::fineGridProjector;
+kernels::UnivariateFunction** exahype2::solvers::aderdg::ADERDGSolver::basisFunction                 = kernels::{{POLYNOMIAL_TYPE}}::basisFunction;
+kernels::UnivariateFunction** exahype2::solvers::aderdg::ADERDGSolver::basisFunctionFirstDerivative  = kernels::{{POLYNOMIAL_TYPE}}::basisFunctionFirstDerivative;
+kernels::UnivariateFunction** exahype2::solvers::aderdg::ADERDGSolver::basisFunctionSecondDerivative = kernels::{{POLYNOMIAL_TYPE}}::basisFunctionSecondDerivative;
 
 
 {{NAMESPACE | join("::")}}::{{CLASSNAME}}::{{CLASSNAME}}():
@@ -412,28 +412,6 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startSimulation() {
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishSimulation() {
 
 }
-
-
-
-{% for PRECISION_NUM in range(0,COMPUTATION_PRECISIONS|length) %}
-
-void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::viscousFlux(const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const Q, const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const gradQ, {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}** const F) {
-  // should not be called
-  exit(1);
-}
-
-
-void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::viscousEigenvalues(const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const Q, const int direction, {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const lambda) {
-  //should not be called
-  exit(1);
-}
-
-
-void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::multiplyMaterialParameterMatrix(const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const Q, {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}** const rhs){
-  //should not be called
-  exit(1);
-}
-{% endfor %}
 
 
 {{ABSTRACT_SOLVER_USER_DEFINITIONS}}

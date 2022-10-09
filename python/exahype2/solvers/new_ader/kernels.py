@@ -5,7 +5,7 @@ from exahype2.solvers.fv.PDETerms  import PDETerms
 import jinja2
 
 
-def create_abstract_solver_declarations(flux_implementation, ncp_implementation, eigenvalues_implementation, source_term_implementation, point_source_implementation, computation_precisions, pde_terms_without_state):
+def create_abstract_solver_declarations(flux_implementation, ncp_implementation, eigenvalues_implementation, source_term_implementation, material_param_implementation, point_source_implementation, computation_precisions, pde_terms_without_state):
   Template = jinja2.Template( """
   public:
 
@@ -18,44 +18,49 @@ def create_abstract_solver_declarations(flux_implementation, ncp_implementation,
 {% else %}
     void eigenvalues(const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const Q, const int direction, {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const lambda);
 {% endif %}
-{% if FLUX_IMPLEMENTATION!="<user-defined>" %}
-    void flux(const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const Q, {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}** const F);
-{% else %}
+
+{% if FLUX_IMPLEMENTATION=="<user-defined>" %}
     virtual void flux(const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const Q, {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}** const F) = 0;
 {% endif %}
-{% if NCP_IMPLEMENTATION!="<user-defined>" %}
-    void nonConservativeProduct(const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const Q, const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const gradQ, {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const BgradQ);
-{% else %}
+
+{% if NCP_IMPLEMENTATION=="<user-defined>" %}
     virtual void nonConservativeProduct(const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const Q, const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const gradQ, {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const BgradQ) = 0;
 {% endif %}
-{% if SOURCE_TERM_IMPLEMENTATION!="<user-defined>" %}
-    void algebraicSource(const tarch::la::Vector<Dimensions, double>& x, double t, const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}} *const Q, {{COMPUTATION_PRECISIONS[PRECISION_NUM]}} *S);
-{% else %}
+
+{% if SOURCE_TERM_IMPLEMENTATION=="<user-defined>" %}
     virtual void algebraicSource(const tarch::la::Vector<Dimensions, double>& x, double t, const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}} *const Q, {{COMPUTATION_PRECISIONS[PRECISION_NUM]}} *S) = 0;
 {% endif %}
-{% if POINT_SOURCE_IMPLEMENTATION!="<user-defined>" %}
-    void pointSource(const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const Q, const double* const x, const double t, const double dt, {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const forceVector, int n);
-{% else %}
+
+{% if MATERIAL_PARAMETER_IMPLEMENTATION=="<user-defined>" %}
+    virtual void multiplyMaterialParameterMatrix(const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const Q, {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}** const rhs) = 0;
+{% endif %}
+
+{% if POINT_SOURCE_IMPLEMENTATION=="<user-defined>" %}
     virtual void pointSource(const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const Q, const double* const x, const double t, const double dt, {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const forceVector, int n) = 0;
 {% endif %}
 
 {% endfor %}
 
+{% if POINT_SOURCE_IMPLEMENTATION!="<none>" %}
+    virtual void initPointSourceLocations(double sourceLocation[NumberOfPointSources][Dimensions]) = 0;
+{% endif %}
+
 
 """, undefined=jinja2.DebugUndefined)
 
   d= {}
-  d[ "FLUX_IMPLEMENTATION" ]          = flux_implementation
-  d[ "NCP_IMPLEMENTATION" ]           = ncp_implementation
-  d[ "EIGENVALUES_IMPLEMENTATION" ]   = eigenvalues_implementation
-  d[ "SOURCE_TERM_IMPLEMENTATION" ]   = source_term_implementation
-  d[ "POINT_SOURCE_IMPLEMENTATION" ]  = point_source_implementation
-  d[ "COMPUTATION_PRECISIONS" ]       = computation_precisions
-  d[ "STATELESS_PDE_TERMS"]           = pde_terms_without_state
+  d[ "FLUX_IMPLEMENTATION" ]                = flux_implementation
+  d[ "NCP_IMPLEMENTATION" ]                 = ncp_implementation
+  d[ "EIGENVALUES_IMPLEMENTATION" ]         = eigenvalues_implementation
+  d[ "SOURCE_TERM_IMPLEMENTATION" ]         = source_term_implementation
+  d["MATERIAL_PARAMETER_IMPLEMENTATION"]    = material_param_implementation
+  d[ "POINT_SOURCE_IMPLEMENTATION" ]        = point_source_implementation
+  d[ "COMPUTATION_PRECISIONS" ]             = computation_precisions
+  d[ "STATELESS_PDE_TERMS"]                 = pde_terms_without_state
   return Template.render(**d)
 
 
-def create_abstract_solver_definitions(flux_implementation, ncp_implementation, eigenvalues_implementation, source_term_implementation, point_source_implementation, computation_precisions, pde_terms_without_state):
+def create_abstract_solver_definitions(flux_implementation, ncp_implementation, eigenvalues_implementation, source_term_implementation, material_param_implementation, point_source_implementation, computation_precisions, pde_terms_without_state):
   Template = jinja2.Template( """
 {% for PRECISION_NUM in range(0,COMPUTATION_PRECISIONS|length) %}
 
@@ -65,49 +70,33 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::eigenvalues(const {{COMPUTATIO
 }
 {% endif %}
 
-{% if FLUX_IMPLEMENTATION=="<none>" %}
-void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::flux(const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const Q, {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}** const F) {
-  // should not be called
-  exit(1);
-}
-{% elif FLUX_IMPLEMENTATION!="<empty>" and FLUX_IMPLEMENTATION!="<user-defined>"%}
+{% if FLUX_IMPLEMENTATION!="<empty>" and FLUX_IMPLEMENTATION!="<user-defined>" and FLUX_IMPLEMENTATION!="<none>"%}
 void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::flux(const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const Q, {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}** const F) {
   {{FLUX_IMPLEMENTATION}}
 }
 {% endif %}
 
-{% if NCP_IMPLEMENTATION=="<none>" %}
-void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::nonConservativeProduct(const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const Q, const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const gradQ, {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const BgradQ) {
-  // should not be called
-  exit(1);
-}
-{% elif NCP_IMPLEMENTATION!="<empty>" and NCP_IMPLEMENTATION!="<user-defined>"%}
+{% if NCP_IMPLEMENTATION!="<empty>" and NCP_IMPLEMENTATION!="<user-defined>" and NCP_IMPLEMENTATION!="<none>"%}
 void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::nonConservativeProduct(const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const Q, const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const gradQ, {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const BgradQ) {
     {{NCP_IMPLEMENTATION}}
 }
 {% endif %}
 
 
-{% if SOURCE_TERM_IMPLEMENTATION=="<none>" %}
-void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::algebraicSource(const tarch::la::Vector<Dimensions, double>& x, double t, const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}} *const Q, {{COMPUTATION_PRECISIONS[PRECISION_NUM]}} *S) {
-  // should not be called
-  exit(1);
-}
-{% elif SOURCE_TERM_IMPLEMENTATION!="<empty>" and SOURCE_TERM_IMPLEMENTATION!="<user-defined>"%}
+{% if SOURCE_TERM_IMPLEMENTATION!="<empty>" and SOURCE_TERM_IMPLEMENTATION!="<user-defined>" and SOURCE_TERM_IMPLEMENTATION!="<none>"%}
 void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::algebraicSource(const tarch::la::Vector<Dimensions, double>& x, double t, const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}} *const Q, {{COMPUTATION_PRECISIONS[PRECISION_NUM]}} *S) {
   {{SOURCE_TERM_IMPLEMENTATION}}
 }  
 {% endif %}
 
-
-{% if POINT_SOURCE_IMPLEMENTATION=="<none>" %}
-void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::pointSource(const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const Q, const double* const x, const double t, const double dt, {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const forceVector,int n) {
-  // should not be called
-  exit(1);
-
+{% if MATERIAL_PARAM_IMPLEMENTATION!="<empty>" and MATERIAL_PARAM_IMPLEMENTATION!="<user-defined>" and MATERIAL_PARAM_IMPLEMENTATION!="<none>"%}
+void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::multiplyMaterialParameterMatrix(const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const Q, {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}** const rhs){
+  {{MATERIAL_PARAM_IMPLEMENTATION}}
 }
-{% elif POINT_SOURCE_IMPLEMENTATION!="<empty>" and POINT_SOURCE_IMPLEMENTATION!="<user-defined>"%}
-void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::pointSource(const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const Q, const double* const x, const double t, const double dt, {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const forceVector,int n) {
+{% endif %}
+
+{% if POINT_SOURCE_IMPLEMENTATION!="<empty>" and POINT_SOURCE_IMPLEMENTATION!="<user-defined>" and POINT_SOURCE_IMPLEMENTATION!="<none>"%}
+    void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::pointSource(const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const Q, const double* const x, const double t, const double dt, {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const forceVector,int n) {
     {{POINT_SOURCE_IMPLEMENTATION}}
 }
 {% endif %}
@@ -115,18 +104,20 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::pointSource(const {{COMPUTATIO
 {% endfor %}
 """, undefined=jinja2.DebugUndefined)
 
+  Exception("finish")
   d= {}
-  d[ "FLUX_IMPLEMENTATION" ]          = flux_implementation
-  d[ "NCP_IMPLEMENTATION" ]           = ncp_implementation
-  d[ "EIGENVALUES_IMPLEMENTATION" ]   = eigenvalues_implementation
-  d[ "SOURCE_TERM_IMPLEMENTATION" ]   = source_term_implementation
-  d[ "POINT_SOURCE_IMPLEMENTATION" ]  = point_source_implementation
-  d[ "COMPUTATION_PRECISIONS" ]       = computation_precisions
-  d[ "STATELESS_PDE_TERMS"]           = pde_terms_without_state
+  d[ "FLUX_IMPLEMENTATION" ]            = flux_implementation
+  d[ "NCP_IMPLEMENTATION" ]             = ncp_implementation
+  d[ "EIGENVALUES_IMPLEMENTATION" ]     = eigenvalues_implementation
+  d[ "SOURCE_TERM_IMPLEMENTATION" ]     = source_term_implementation
+  d[ "MATERIAL_PARAM_IMPLEMENTATION" ]  = material_param_implementation
+  d[ "POINT_SOURCE_IMPLEMENTATION" ]    = point_source_implementation
+  d[ "COMPUTATION_PRECISIONS" ]         = computation_precisions
+  d[ "STATELESS_PDE_TERMS"]             = pde_terms_without_state
   return Template.render(**d)
 
 
-def create_solver_declarations(flux_implementation, ncp_implementation, eigenvalues_implementation, source_term_implementation, point_source_implementation, computation_precisions, pde_terms_without_state):
+def create_solver_declarations(flux_implementation, ncp_implementation, eigenvalues_implementation, source_term_implementation, material_param_implementation, point_source_implementation, computation_precisions, pde_terms_without_state):
   
   TemplateSinglePrecisions = jinja2.Template( """
   
@@ -142,10 +133,15 @@ def create_solver_declarations(flux_implementation, ncp_implementation, eigenval
 {% if SOURCE_TERM_IMPLEMENTATION=="<user-defined>" %}
     void algebraicSource(const tarch::la::Vector<Dimensions, double>& x, double t, const {{COMPUTATION_PRECISIONS[0]}} *const Q, {{COMPUTATION_PRECISIONS[0]}} *S) override;
 {% endif %}
+{% if MATERIAL_PARAM_IMPLEMENTATION=="<user-defined>" %}
+    void multiplyMaterialParameterMatrix(const {{COMPUTATION_PRECISIONS[0]}}* const Q, {{COMPUTATION_PRECISIONS[0]}}** const rhs) override;
+{% endif %}
 {% if POINT_SOURCE_IMPLEMENTATION=="<user-defined>" %}
     void pointSource(const {{COMPUTATION_PRECISIONS[0]}}* const Q, const double* const x, const double t, const double dt, {{COMPUTATION_PRECISIONS[0]}}* const forceVector, int n) override;
 {% endif %}
-  
+{% if POINT_SOURCE_IMPLEMENTATION!="<none>" %}
+    void initPointSourceLocations(double sourceLocation[NumberOfPointSources][Dimensions]) override;
+{% endif %}
   """, undefined=jinja2.DebugUndefined) 
   
   TemplateMultiplePrecisions = jinja2.Template( """
@@ -166,9 +162,16 @@ def create_solver_declarations(flux_implementation, ncp_implementation, eigenval
     template<typename T>
     void algebraicSource(const tarch::la::Vector<Dimensions, double>& x, double t, const T *const Q, T *S);
 {% endif %}
+{% if MATERIAL_PARAM_IMPLEMENTATION=="<user-defined>" %}
+    template<typename T>
+    void multiplyMaterialParameterMatrix(const T* const Q, T** const rhs);
+{% endif %}
 {% if POINT_SOURCE_IMPLEMENTATION=="<user-defined>" %}
     template<typename T>
     void pointSource(const T* const Q, const double* const x, const double t, const double dt, T* const forceVector, int n);
+{% endif %}
+{% if POINT_SOURCE_IMPLEMENTATION!="<none>" %}
+    void initPointSourceLocations(double sourceLocation[NumberOfPointSources][Dimensions]) override;
 {% endif %}
   
   
@@ -194,6 +197,11 @@ def create_solver_declarations(flux_implementation, ncp_implementation, eigenval
       algebraicSource<{{COMPUTATION_PRECISIONS[PRECISION_NUM]}}>(x, t, Q, S);
     }
 {% endif %}
+{% if MATERIAL_PARAM_IMPLEMENTATION=="<user-defined>" %}
+    void multiplyMaterialParameterMatrix(const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const Q, {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}** const rhs) override {
+      multiplyMaterialParameterMatrix<{{COMPUTATION_PRECISIONS[PRECISION_NUM]}}>(Q, rhs);
+    }
+{% endif %}
 {% if POINT_SOURCE_IMPLEMENTATION=="<user-defined>" %}
     void pointSource(const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const Q, const double* const x, const double t, const double dt, {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const forceVector, int n) override {
       pointSource<{{COMPUTATION_PRECISIONS[PRECISION_NUM]}}>(Q, x, t, dt, forceVector, n);
@@ -203,13 +211,14 @@ def create_solver_declarations(flux_implementation, ncp_implementation, eigenval
 {% endfor %}
 """, undefined=jinja2.DebugUndefined) 
   d= {}
-  d[ "FLUX_IMPLEMENTATION" ]          = flux_implementation
-  d[ "NCP_IMPLEMENTATION" ]           = ncp_implementation
-  d[ "EIGENVALUES_IMPLEMENTATION" ]   = eigenvalues_implementation
-  d[ "SOURCE_TERM_IMPLEMENTATION" ]   = source_term_implementation
-  d[ "POINT_SOURCE_IMPLEMENTATION" ]  = point_source_implementation
-  d[ "COMPUTATION_PRECISIONS" ]       = computation_precisions
-  d[ "STATELESS_PDE_TERMS"]           = pde_terms_without_state
+  d[ "FLUX_IMPLEMENTATION" ]            = flux_implementation
+  d[ "NCP_IMPLEMENTATION" ]             = ncp_implementation
+  d[ "EIGENVALUES_IMPLEMENTATION" ]     = eigenvalues_implementation
+  d[ "SOURCE_TERM_IMPLEMENTATION" ]     = source_term_implementation
+  d[ "MATERIAL_PARAM_IMPLEMENTATION" ]  = material_param_implementation
+  d[ "POINT_SOURCE_IMPLEMENTATION" ]    = point_source_implementation
+  d[ "COMPUTATION_PRECISIONS" ]         = computation_precisions
+  d[ "STATELESS_PDE_TERMS"]             = pde_terms_without_state
 
   if(len(computation_precisions)>1):
     return TemplateMultiplePrecisions.render(**d)
@@ -217,7 +226,7 @@ def create_solver_declarations(flux_implementation, ncp_implementation, eigenval
     return TemplateSinglePrecisions.render(**d)
 
 
-def create_solver_definitions(flux_implementation, ncp_implementation, eigenvalues_implementation, source_term_implementation, point_source_implementation, computation_precisions, pde_terms_without_state):
+def create_solver_definitions(flux_implementation, ncp_implementation, eigenvalues_implementation, source_term_implementation, material_param_implementation, point_source_implementation, computation_precisions, pde_terms_without_state):
   
   TemplateSinglePrecisions = jinja2.Template( """
   
@@ -269,6 +278,25 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::algebraicSource(
   logTraceInWith3Arguments( "algebraicSource(...)", x, t, dt );
   // @todo implement
   logTraceOut( "algebraicSource(...)" );
+}
+{% endif %}
+
+{% if MATERIAL_PARAM_IMPLEMENTATION=="<user-defined>" %}
+void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::multiplyMaterialParameterMatrix(
+  const {{COMPUTATION_PRECISIONS[0]}}* const Q,
+  {{COMPUTATION_PRECISIONS[0]}}** const rhs
+) {
+  
+    // @todo implement
+  
+}
+{% endif %}
+
+{% if POINT_SOURCE_IMPLEMENTATION!="<none>" %}
+void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::initPointSourceLocations(double sourceLocation[NumberOfPointSources][Dimensions]){
+//    sourceLocation[NumberOfPointSources][Dimensions] = 0.0;
+
+    // @todo implement
 }
 {% endif %}
 
@@ -343,6 +371,26 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::algebraicSource(
 }
 {% endif %}
 
+{% if MATERIAL_PARAM_IMPLEMENTATION=="<user-defined>" %}
+template<typename T>
+void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::multiplyMaterialParameterMatrix(
+  const T* const Q,
+  T** const rhs
+) {
+  
+    // @todo implement
+  
+}
+{% endif %}
+
+{% if POINT_SOURCE_IMPLEMENTATION!="<none>" %}
+void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::initPointSourceLocations(double sourceLocation[NumberOfPointSources][Dimensions]){
+//    sourceLocation[NumberOfPointSources][Dimensions] = 0.0;
+
+    // @todo implement
+}
+{% endif %}
+
 {% if POINT_SOURCE_IMPLEMENTATION=="<user-defined>" %}
 template<typename T>
 void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::pointSource(
@@ -359,13 +407,14 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::pointSource(
 
 """, undefined=jinja2.DebugUndefined)
   d= {}
-  d[ "FLUX_IMPLEMENTATION" ]          = flux_implementation
-  d[ "NCP_IMPLEMENTATION" ]           = ncp_implementation
-  d[ "EIGENVALUES_IMPLEMENTATION" ]   = eigenvalues_implementation
-  d[ "SOURCE_TERM_IMPLEMENTATION" ]   = source_term_implementation
-  d[ "POINT_SOURCE_IMPLEMENTATION" ]  = point_source_implementation
-  d[ "COMPUTATION_PRECISIONS" ]       = computation_precisions
-  d[ "STATELESS_PDE_TERMS"]           = pde_terms_without_state
+  d[ "FLUX_IMPLEMENTATION" ]            = flux_implementation
+  d[ "NCP_IMPLEMENTATION" ]             = ncp_implementation
+  d[ "EIGENVALUES_IMPLEMENTATION" ]     = eigenvalues_implementation
+  d[ "SOURCE_TERM_IMPLEMENTATION" ]     = source_term_implementation
+  d[ "MATERIAL_PARAM_IMPLEMENTATION" ]  = material_param_implementation
+  d[ "POINT_SOURCE_IMPLEMENTATION" ]    = point_source_implementation
+  d[ "COMPUTATION_PRECISIONS" ]         = computation_precisions
+  d[ "STATELESS_PDE_TERMS"]             = pde_terms_without_state
   
   if(len(computation_precisions)>1):
     return TemplateMultiplePrecisions.render(**d)

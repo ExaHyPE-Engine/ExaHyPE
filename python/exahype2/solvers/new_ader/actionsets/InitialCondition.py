@@ -11,6 +11,10 @@ class InitialCondition(AbstractAderDGActionSet):
     logTraceIn( "touchCellFirstTime(...)---InitialCondition" );
     int linearisedIndex = 0;
     
+    {% if USE_POINT_SOURCE!="<none>" %}
+    repositories::{{SOLVER_INSTANCE}}.initPointSourceLocations(repositories::{{SOLVER_INSTANCE}}.pointSourceLocation);
+    {% endif %}
+    
     dfor( index, {{ORDER}}+1 ) {
       repositories::{{SOLVER_INSTANCE}}.initialCondition(
         fineGridCell{{UNKNOWN_IDENTIFIER}}.value + linearisedIndex,

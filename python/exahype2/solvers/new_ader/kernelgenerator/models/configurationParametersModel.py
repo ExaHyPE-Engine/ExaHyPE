@@ -137,7 +137,7 @@ class ConfigurationParametersModel(AbstractModelBaseClass):
             self.context["BndFaceSize"]      = nDataPad*(nDof*nDof3D)
             self.context["BndFaceTotalSize"] = 2*nDim*self.context["BndFaceSize"]
             self.context["BndFluxSize"]      = nVarPad*(nDof*nDof3D)
-            self.context["BndFluxTotalSize"] = 2*nDim*nVarPad*self.context["BndFluxSize"]
+            self.context["BndFluxTotalSize"] = 2*nDim*self.context["BndFluxSize"]
         
         elif self.context["kernelType"] == "fv":
             # shortcut

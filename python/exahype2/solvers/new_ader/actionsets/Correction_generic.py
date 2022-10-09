@@ -303,5 +303,5 @@ class Correction_generic(AbstractAderDGActionSet):
 
   def get_includes(self):
     return super(Correction_generic,self).get_includes() + """
-#include "exahype2/aderdg_kernels/Kernels.h"
+#include "exahype2/aderdg/kernels/Kernels.h"
       """

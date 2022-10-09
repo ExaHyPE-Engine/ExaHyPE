@@ -11,7 +11,7 @@ import exahype2.solvers.new_ader.actionsets
 from exahype2.solvers.new_ader.LagrangeBasis import GaussLegendreBasis, GaussLobattoBasis
 from .PDETerms import PDETerms
 from .kernels import get_face_overlap_merge_implementation
-from .kernelgenerator import generate_aderdg_kernels
+from .kernelgenerator import generate_aderdg_kernels, Configuration 
 
 import os
 from abc import abstractmethod
@@ -82,9 +82,11 @@ class ADERDG( object ):
     self._eigenvalues_implementation          = PDETerms.None_Implementation
     self._source_term_implementation          = PDETerms.None_Implementation
     self._point_sources_implementation        = PDETerms.None_Implementation
+    self._number_of_point_sources             = 0
     self._boundary_conditions_implementation  = PDETerms.None_Implementation
     self._refinement_criterion_implementation = PDETerms.None_Implementation
     self._initial_conditions_implementation   = PDETerms.None_Implementation
+    self._material_param_implementation       = PDETerms.None_Implementation
 
     self._compute_time_step_size              = "#error Not yet defined"
     
@@ -366,13 +368,17 @@ class ADERDG( object ):
 
 
   def generate_kernels(self, namespace, output, dimensions):
-    print("a")
+      
+    if (not self._is_linear) and (self._material_param_implementation!=PDETerms.None_Implementation or self._point_sources_implementation!=PDETerms.None_Implementation):
+        raise Exception("Material parameters and point sources are currently only available for linear generated kernels.")
+        
     full_qualified_namespace = ""
     for i in namespace:
       full_qualified_namespace += i + "::"
     full_qualified_namespace += self._name
         
     is_linear = ("linear" if self._is_linear else "nonlinear")
+    
     generate_aderdg_kernels(
         full_qualified_namespace, is_linear,
         self._unknowns, self._auxiliary_variables,
@@ -383,8 +389,8 @@ class ADERDG( object ):
         useNCPVect            = False,
         useSource             = (True if self._source_term_implementation != PDETerms.None_Implementation else False),
         useSourceVect         = False,
-        usePointSources       = (True if self._point_sources_implementation != PDETerms.None_Implementation else False), 
-        useMaterialParam      = False,
+        usePointSources       = (self._number_of_point_sources if self._point_sources_implementation != PDETerms.None_Implementation else False), 
+        useMaterialParam      = (True if self._material_param_implementation != PDETerms.None_Implementation else False),
         useMaterialParamVect  = False,
         useGaussLobatto       = (True if self._polynomials is Polynomials.Gauss_Lobatto else False),
         useVectPDE            = self._use_vectorized_PDE,
@@ -398,6 +404,9 @@ class ADERDG( object ):
     output.makefile.add_cpp_file("generated/kernels/aderdg/" + is_linear + "/gemmsCPP.cpp")
     output.makefile.add_cpp_file("generated/kernels/aderdg/" + is_linear + "/DGMatrices.cpp")
     output.makefile.add_cpp_file("generated/kernels/aderdg/" + is_linear + "/fusedSpaceTimePredictorVolumeIntegral.cpp")
+    if self._point_sources_implementation!=PDETerms.None_Implementation:
+        output.makefile.add_cpp_file("generated/kernels/aderdg/" + is_linear + "/fusedSpaceTimePredictorVolumeIntegral_WithoutPS.cpp")
+        output.makefile.add_cpp_file("generated/kernels/aderdg/" + is_linear + "/deltaDistribution.cpp")
     output.makefile.add_cpp_file("generated/kernels/aderdg/" + is_linear + "/riemannSolver.cpp")
     output.makefile.add_cpp_file("generated/kernels/aderdg/" + is_linear + "/faceIntegral.cpp")
     output.makefile.add_cpp_file("generated/kernels/aderdg/" + is_linear + "/solutionUpdate.cpp")
@@ -455,6 +464,8 @@ class ADERDG( object ):
     
     if self._use_kernel_generator:
       self.generate_kernels(namespace, output, dimensions)
+    elif (self._material_param_implementation!=PDETerms.None_Implementation or self._point_sources_implementation!=PDETerms.None_Implementation):
+      Exception("Material parameters and point sources are only available with linear generated kernels.")
 
   def set_solver_constants(self, datastring): self._solver_constants = datastring
 
@@ -558,11 +569,16 @@ class ADERDG( object ):
     d[ "CONSTRUCTOR_IMPLEMENTATION"]          = jinja2.Template(self._constructor_implementation, undefined=jinja2.DebugUndefined).render( **d )
     d[ "COMPUTE_TIME_STEP_SIZE" ]             = jinja2.Template(self._compute_time_step_size, undefined=jinja2.DebugUndefined).render( **d )    
     d[ "COMPUTE_NEW_TIME_STEP_SIZE" ]         = jinja2.Template(self._compute_new_time_step_size, undefined=jinja2.DebugUndefined).render( **d )
+    d[ "ARCHITECTURE_ALIGNMENT"] = Configuration.alignmentPerArchitectures[self._architecture]
     
-    d["USE_FLUX"] = self._flux_implementation
-    d["USE_NCP"]  = self._ncp_implementation
-    d["USE_SOURCE"] = self._source_term_implementation
-        
+    
+    d["USE_FLUX"]                   = self._flux_implementation
+    d["USE_NCP"]                    = self._ncp_implementation
+    d["USE_SOURCE"]                 = self._source_term_implementation
+    d["USE_MATERIAL_PARAMETERS"]    = self._material_param_implementation
+    d["USE_POINT_SOURCE"]           = self._point_sources_implementation
+    d["NUMBER_OF_POINT_SOURCES"]    = self._number_of_point_sources
+    
     self._basis.init_dictionary_with_default_parameters(d)
     
   def set_implementation(self,
@@ -573,7 +589,8 @@ class ADERDG( object ):
     refinement_criterion=None,
     initial_conditions=None,
     source_term=None,
-    point_source=None,
+    material_parameters=None,
+    point_source=0,
     additional_action_set_includes = "",
     additional_user_includes       = ""
   ):
@@ -592,7 +609,15 @@ class ADERDG( object ):
     if ncp                  is not None:  self._ncp_implementation                        = ncp
     if eigenvalues          is not None:  self._eigenvalues_implementation                = eigenvalues
     if source_term          is not None:  self._source_term_implementation                = source_term
-    if point_source         is not None:  self._point_sources_implementation              = source_term
+    if material_parameters  is not None:  self._material_param_implementation             = material_parameters
+    
+    if type(point_source)!=int:
+        raise Exception( "point_source needs to be an integer, this determines the number of point sources that will be used." )
+
+    if point_source         > 0:
+        self._point_sources_implementation              = PDETerms.User_Defined_Implementation
+        self._number_of_point_sources                   = point_source        
+        
     
     self.user_action_set_includes += additional_action_set_includes
     self.user_solver_includes     += additional_user_includes
@@ -622,8 +647,8 @@ class ADERDG( object ):
     self._polynomials         = polynomials
 
     self._use_kernel_generator = use_kernel_generator
-    
-    if(use_CERK_guess or use_split_CK or use_vectorized_PDE or predictor_recompute or architecture!="noarch"):
+
+    if(use_CERK_guess or use_split_CK or use_vectorized_PDE or predictor_recompute):
       raise Exception("The option you have chosen has not yet been implemented, it currently only exists in the code as a placeholder for future expansion")
     
     self._use_vectorized_PDE  = use_vectorized_PDE

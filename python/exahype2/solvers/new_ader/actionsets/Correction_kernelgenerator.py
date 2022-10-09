@@ -42,7 +42,7 @@ class Correction_kernelgenerator(AbstractAderDGActionSet):
     {{CORRECTOR_COMPUTATION_PRECISION}} lduh[spaceBasisSize*NumberOfVariables]{0.0};
 
     const int basisElementsByFace = spaceFaceSize*(NumberOfVariables+NumberOfParameters);
-    const int fluxElementsByFace = spaceFaceSize*NumberOfVariables;
+    const int fluxElementsByFace  = spaceFaceSize*NumberOfVariables;
     
     {{CORRECTOR_COMPUTATION_PRECISION}} FL[fluxElementsByFace];
     {{CORRECTOR_COMPUTATION_PRECISION}} FR[fluxElementsByFace];
@@ -158,7 +158,7 @@ class Correction_kernelgenerator(AbstractAderDGActionSet):
       }
       
       
-      generated::kernels::AderDG::nonlinear::riemannSolver(
+      generated::kernels::AderDG::{{LINEARITY}}::riemannSolver(
         repositories::{{SOLVER_INSTANCE}},
         FL,
         FR,
@@ -171,7 +171,7 @@ class Correction_kernelgenerator(AbstractAderDGActionSet):
       );
 
 
-      generated::kernels::AderDG::nonlinear::faceIntegral(
+      generated::kernels::AderDG::{{LINEARITY}}::faceIntegral(
         lduh,
         FL,
         d, //direction

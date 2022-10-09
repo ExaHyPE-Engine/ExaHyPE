@@ -72,7 +72,7 @@ def generate_aderdg_kernels(
     "useFusedSource"        : "",
     "useFusedSourceVect"    : "",
     "nPointSources"         : usePointSources,
-    "usePointSources"       : usePointSources > 0,
+    "usePointSources"       : usePointSources,
     "useMaterialParam"      : useMaterialParam or useMaterialParamVect,
     "useMaterialParamVect"  : useMaterialParamVect,
     "quadratureType"        : ("Gauss-Lobatto" if useGaussLobatto==True else "Gauss-Legendre"),
@@ -82,7 +82,7 @@ def generate_aderdg_kernels(
     "predictorRecompute"    : predictorRecompute,
     "initialGuess"          : "mixedPicard"
   })
-
+  
   control = Controller(InputConfig)
   control.generateCode()
       
