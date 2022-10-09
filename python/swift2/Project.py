@@ -7,7 +7,9 @@ import dastgen2
 
 import os
 import sys
-import swift2
+
+from swift2.particle.Particle   import Particle
+from swift2.strategy.Sequential import translate_particle_steps_into_sequence_of_grid_traversals
 
 
 from abc import abstractmethod
@@ -32,8 +34,8 @@ class Project(object):
   def __init__(self, 
                namespace, 
                project_name, 
-               directory, 
-               executable):
+               directory  = ".", 
+               executable = "swift2"):
     self._project = peano4.Project(namespace, project_name, directory)
     
     self._domain_offset = [0.0, 0.0, 0.0]
@@ -53,14 +55,22 @@ class Project(object):
     self._min_h         = 0.01
     self._max_h         = 0.1
 
-    #self._particle_species = []
+    self._particle_species = []
  
     self._algorithm_step_create_grid    = peano4.solversteps.Step( "CreateGrid", False )
     self._algorithm_step_init           = peano4.solversteps.Step( "Init",       False )
     self._algorithm_step_plot           = peano4.solversteps.Step( "Plot",       False )
                 
-                # @todo net count time steps, sondern minTimeStamp -> dann doch auslagern oder zumindest im header deklararieren
-    self._algorithm_step_plot.add_action_set( peano4.toolbox.PlotGridInPeanoBlockFormat( filename="grid", time_stamp_evaluation=peano4.toolbox.PlotGridInPeanoBlockFormat.CountTimeSteps ) )
+    self._algorithm_step_plot.add_action_set( peano4.toolbox.PlotGridInPeanoBlockFormat( 
+      filename              = "grid", 
+      time_stamp_evaluation = "repositories::getMinTimeStamp()",
+      additional_includes   = """
+#include "repositories/GlobalState.h"
+"""      
+    ))
+    
+    self.translator = translate_particle_steps_into_sequence_of_grid_traversals
+
 
     
   def  set_load_balancing(self, load_balancer_name, load_balancer_arguments):
@@ -105,10 +115,6 @@ class Project(object):
     self._build_mode          = mode
 
 
-  #def add_solver(self,solver):
-  #  self._solvers.append( solver )
-
-  
   def __export_constants(self):
     """
     
@@ -166,9 +172,6 @@ citation of the original SWIFT paper
 
 
 """ )
-
-    #for i in self._solvers:
-    #  self._project.output.readme.add_entry( i.create_readme_descriptor(self._domain_offset[0],self._domain_size[0]) ) 
 
 
   def __configure_makefile(self):
@@ -235,14 +238,10 @@ citation of the original SWIFT paper
       "LOAD_BALANCER_ARGUMENTS" : self._load_balancer_arguments,
     }
 
-    #for solver in self._solvers:
-    #  solverRepositoryDictionary[ "PARTICLE_SPECIES" ].append( (solver._name,solver.get_name_of_global_instance()) )
-      
-
     templatefile_prefix = os.path.dirname(__file__)
     generated_solver_files = peano4.output.Jinja2TemplatedHeaderImplementationFilePair(
-      templatefile_prefix + "/GlobalState.template.h",
-      templatefile_prefix + "/GlobalState.template.cpp",
+      templatefile_prefix + "/output/GlobalState.template.h",
+      templatefile_prefix + "/output/GlobalState.template.cpp",
       "GlobalState", 
       self._project.namespace + ["repositories"],
       "repositories", 
@@ -253,14 +252,10 @@ citation of the original SWIFT paper
     self._project.output.makefile.add_cpp_file( "repositories/GlobalState.cpp" )
    
 
-
-  #def add_action_set_to_timestepping(self, action_set):
-  #  self.perform_time_step.add_action_set( action_set )
-
-
-  def add_action_set_to_initialisation(self, action_set):
-    self._algorithm_step_init.add_action_set( action_set )
-
+  def add_particle_species(self, particle: Particle ):
+    self._particle_species.append( particle )
+    pass
+      
         
   def generate_Peano4_project(self, verbose=False):
     """
@@ -282,7 +277,7 @@ citation of the original SWIFT paper
    
     self.__generate_global_state_files();
     
-    self._project.main = swift2.project.SWIFTMain(self._project, self.main_file_template() )
+    #self._project.main = swift2.project.SWIFTMain(self._project, self.main_file_template() )
 
     self.__configure_makefile()
     self._project.output.makefile.parse_configure_script_outcome( self._Peano_src_directory )

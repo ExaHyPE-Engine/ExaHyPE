@@ -29,11 +29,16 @@ args = parser.parse_args()
 # Generate plain SWIFT project
 ########################################################################################
 
-project = swift2.project.ExplicitEuler( namespace=["benchmarks", "swift2", "planetorbit"], 
-                                        project_name="planetorbit", 
-                                        executable="orbit-" + str(args.cell_size) )
+project = swift2.Project( namespace=["benchmarks", "swift2", "planetorbit"], 
+                          project_name="planetorbit", 
+                          executable="orbit-" + str(args.cell_size) )
 
 
+particle   = swift2.particle.ExplicitEulerFixedInteractionRadius( "Planet" )
+particle.data.add_attribute( peano4.dastgen2.Peano4DoubleArray("v","Dimensions") )
+particle.data.add_attribute( peano4.dastgen2.Peano4DoubleArray("a","Dimensions") )
+
+project.add_particle_species( particle )
 
 
 ########################################################################################
