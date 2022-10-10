@@ -42,6 +42,9 @@ namespace tarch {
     template<int Size, typename Scalar>
     Scalar norm2 (const Vector<Size,Scalar>& vector);
 
+    template<int Size, typename Scalar>
+    Scalar norm2Squared (const Vector<Size,Scalar>& vector);
+
     /**
      * Specialisation that is different to standard definition. Works as result
      * type is not part of the signature
@@ -49,6 +52,8 @@ namespace tarch {
     template<int Size>
     double norm2 (const Vector<Size,std::complex<double> >& vector);
 
+    template<int Size>
+    double norm2Squared (const Vector<Size,std::complex<double> >& vector);
 
     /**
      * Computes the max-norm of the vector.
