@@ -29,6 +29,17 @@ void benchmarks::exahype2::euler::sphericalaccretionupscaling::SelfSimilarInfall
 }
 
 
+::exahype2::RefinementCommand benchmarks::exahype2::euler::sphericalaccretionupscaling::SelfSimilarInfallFV::refinementCriterion(
+  const double * __restrict__ Q, // Q[5+0],
+  const tarch::la::Vector<Dimensions,double>&  volumeCentre,
+  const tarch::la::Vector<Dimensions,double>&  volumeH,
+  double                                       t
+) {
+  return ::exahype2::RefinementCommand::Keep;
+}
+
+
+
 void benchmarks::exahype2::euler::sphericalaccretionupscaling::SelfSimilarInfallFV::initialCondition(
   double * __restrict__                        Q,
   const tarch::la::Vector<Dimensions,double>&  volumeX,

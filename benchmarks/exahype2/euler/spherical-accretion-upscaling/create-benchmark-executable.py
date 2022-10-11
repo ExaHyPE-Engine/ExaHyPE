@@ -26,7 +26,7 @@ parser.add_argument("-j",   "--parallel-builds",    dest="j",              type=
 parser.add_argument("-pd",  "--peano-dir",          dest="peanodir",       default="../../../../", help="Peano4 directory" )
 parser.add_argument("-v",   "--verbose",            dest="verbose",        action="store_true", default=False, help="Verbose")
 parser.add_argument("-m",   "--mode",               dest="mode",           choices=["release","stats","asserts"], required=True, help="Pick build type" )
-parser.add_argument("-t",   "--type",               dest="type",           choices=["plot-0","plot-1","reg-0"], required=True, help="Pick scenario" )
+parser.add_argument("-t",   "--type",               dest="type",           choices=["plot-0","plot-1","plot-2","reg-0"], required=True, help="Pick scenario" )
 parser.add_argument(        "--optimise-stateless", dest="optimise_stateless",            action="store_true", default=False, help="Optimise stateless/side-effect free cells (required for GPU offloading)")
 parser.add_argument("-s",   "--solver",             dest="solver",         choices=["fv-4", "fv-6", "fv-8", "dg1-rk1", "dg2-rk2", "dg3-rk3", "dg4-rk4"], required=True, help="Pick solver type. For the Finite Volume (fv) solvers, the second index is the patch/block size. For DG, you can pick different Runge-Kutta time integration orders" )
 args = parser.parse_args()
@@ -53,6 +53,9 @@ if args.type=="plot-0":
 if args.type=="plot-1":
   baseline_max_h               = 0.05
   baseline_min_h               = 0.05
+if args.type=="plot-2":
+  baseline_max_h               = 0.2
+  baseline_min_h               = 0.05
 elif args.type=="reg-0":
   baseline_max_h               = 0.008
   baseline_min_h               = 0.008
@@ -66,19 +69,19 @@ elif args.type=="reg-0":
 #
 if "dg1-" in args.solver:
   max_h = baseline_max_h
-  min_h = baseline_max_h
+  min_h = baseline_min_h
 if "dg2-" in args.solver:
   max_h = baseline_max_h * 3
-  min_h = baseline_max_h * 3
+  min_h = baseline_min_h * 3
 elif "dg3-" in args.solver:
   max_h = baseline_max_h * 4
-  min_h = baseline_max_h * 4 
+  min_h = baseline_min_h * 4 
 elif "dg4-" in args.solver:
   max_h = baseline_max_h * 5
-  min_h = baseline_max_h * 5
+  min_h = baseline_min_h * 5
 elif "fv-" in args.solver:
   max_h = baseline_max_h 
-  min_h = baseline_max_h 
+  min_h = baseline_min_h 
 
 
 
@@ -109,6 +112,7 @@ if "fv" in args.solver:
                                                                                    flux                 = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
                                                                                    eigenvalues          = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
                                                                                    source_term          = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
+                                                                                   refinement_criterion = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
                                                                                    pde_terms_without_state = args.optimise_stateless
                                                                                   )
   executable_name = executable_name + "-FV-" + str(patch_size)
@@ -134,9 +138,10 @@ if "rk" in args.solver and "dg" in args.solver:
                                                                    min_cell_h           = max_h, 
                                                                    max_cell_h           = min_h,
                                                                    time_step_relaxation = 0.1,
-                                                                   flux                 = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
-                                                                   eigenvalues          = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
-                                                                   source_term          = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
+                                                                   flux                 = exahype2.solvers.rkdg.PDETerms.User_Defined_Implementation,
+                                                                   eigenvalues          = exahype2.solvers.rkdg.PDETerms.User_Defined_Implementation,
+                                                                   source_term          = exahype2.solvers.rkdg.PDETerms.User_Defined_Implementation,
+                                                                   refinement_criterion = exahype2.solvers.rkdg.PDETerms.User_Defined_Implementation,
                                                                    pde_terms_without_state = args.optimise_stateless
                                                                    )
   executable_name = executable_name + "-RK" + str(time_order) + "DG" + str(space_order)
