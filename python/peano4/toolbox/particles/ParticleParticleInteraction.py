@@ -84,7 +84,12 @@ class ParticleParticleInteraction(ActionSet):
       This C++ code can access three different types of variables: There's
       a list of particles called activeParticles, there's a list of particles
       called localParticles, and there's the cell marker. See the guidebook
-      for further info.
+      for further info. A typical kernel resembles
+
+          for (auto* localParticle: localParticles )
+          for (auto* activeParticle: activeParticles ) {
+            localParticle->doSomethingFancy( activeParticle );
+          }
       
     active_particle_set: ParticleSet or None
       You can compare different particles species with this argument. It
@@ -96,7 +101,9 @@ class ParticleParticleInteraction(ActionSet):
       Can be empty, but if you wanna move particles, then a minimal example
       string passed equals
         
-          localParticle->setMoveState( globaldata::Particle::MoveState::NotMovedYet );
+          for (auto* localParticle: localParticles ) {
+            localParticle->setMoveState( globaldata::Particle::MoveState::NotMovedYet );
+          }
    
       i.e. you will have a variable localParticle available in this kernel
       and it is a pointer.
@@ -130,17 +137,13 @@ class ParticleParticleInteraction(ActionSet):
 
   __Template_TouchVertexFirstTime = jinja2.Template("""
   auto& localParticles = fineGridVertex{{LOCAL_PARTICLES_CONTAINER}};
-  for (auto* localParticle: localParticles ) {
-    {{TOUCH_VERTEX_FIRST_COMPUTE_KERNEL}}
-  }
+  {{TOUCH_VERTEX_FIRST_COMPUTE_KERNEL}}
 """)
 
 
   __Template_TouchVertexLastTime = jinja2.Template("""
   auto& localParticles = fineGridVertex{{LOCAL_PARTICLES_CONTAINER}};
-  for (auto* localParticle: localParticles ) {
-    {{TOUCH_VERTEX_LAST_COMPUTE_KERNEL}}
-  }
+  {{TOUCH_VERTEX_LAST_COMPUTE_KERNEL}}
 """)
 
 
@@ -166,10 +169,7 @@ class ParticleParticleInteraction(ActionSet):
     }
 
     std::list< globaldata::{{ACTIVE_PARTICLE}}* >&  activeParticles = _activeParticles;
-    for (auto* localParticle: localParticles )
-    for (auto* activeParticle: activeParticles ) {
-      {{PARTICLE_PARTICLE_INTERACTION_KERNEL}}
-    }
+    {{PARTICLE_PARTICLE_INTERACTION_KERNEL}}
   }
 """)
 

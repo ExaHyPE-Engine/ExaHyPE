@@ -6,6 +6,7 @@ from .ParticleSet                   import ParticleSet
 from .PlotParticlesInVTKFormat      import PlotParticlesInVTKFormat
 from .ParticleAMR                   import ParticleAMR
 from .ParticleParticleInteraction   import ParticleParticleInteraction
+from .ParticlePerCellUpdate         import ParticlePerCellUpdate
 from .ParticleTreeAnalysis          import ParticleTreeAnalysis
 from .UpdateParticleGridAssociation import UpdateParticleGridAssociation
 from .UpdateParallelState           import UpdateParallelState
