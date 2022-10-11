@@ -5,15 +5,15 @@
 // This is generated. Be careful with adding your own stuff, i.e. ensure first
 // whether file is maybe overwritten by Python generator/API.
 //
-#ifndef _{INCLUDE_GUARD}_
-#define _{INCLUDE_GUARD}_
+#ifndef _{{INCLUDE_GUARD}}_
+#define _{{INCLUDE_GUARD}}_
 
 
 #include <string>
 
 
-{OPEN_NAMESPACE}
+{{OPEN_NAMESPACE}}
   int main(int argc, char** argv);
-{CLOSE_NAMESPACE}
+{{CLOSE_NAMESPACE}}
 
 #endif
