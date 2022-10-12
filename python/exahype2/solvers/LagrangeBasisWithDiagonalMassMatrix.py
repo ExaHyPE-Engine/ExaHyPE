@@ -249,6 +249,143 @@ class LagrangeBasisWithDiagonalMassMatrix(LagrangeBasis):
     return stiffness_matrix
   
 
+  def __compute_interpolation_matrix(self):
+    """
+
+    compute the interpolation matrix, which used to prepare halo layer data for fine cells at the refinement boundary.
+    the matrix formulation depends on the interpolation scheme.
+
+    The matrix is only 1d mapping, i.e. used for "surface" of a 2D domain and have a size of 3Dof \times Dof. say, the matrix is P_ij and u^f_i and u^c_j
+    are solution at fine and coarse level, respectively. we have 
+
+    u^f_i = P_ij u^c_j
+
+    The interpolation routine for surface of 3D domain can be found in a tensor-manner
+
+    u^f_ij = P_ik P_jl u^c_kl
+
+    We can also use the same matrix to interpolate along the normal direction.
+
+    constant: constant interpolation in both surface direction and normal direction
+
+    1  0  0  0  0  0 ...
+    1  0  0  0  0  0 ...
+    1  0  0  0  0  0 ...
+    0  1  0  0  0  0 ...
+    0  1  0  0  0  0 ...
+    0  1  0  0  0  0 ...
+    ...    
+
+    linear_interpolation_boundary_constant:
+        linear interpolation within the patch and constant (use the value of the father coarse directly) at the boundary of the surface
+
+    1    0     0    0  0  0 ...
+    1    0     0    0  0  0 ...
+    2/3  1/3   0    0  0  0 ...
+    1/3  2/3   0    0  0  0 ...
+    0    1     0    0  0  0 ...
+    0    2/3   1/3  0  0  0 ...
+    ...    
+
+    linear_interpolation_boundary_extrapolation:
+        linear interpolation within the patch and extrapolated at the boundary of the surface
+
+    4/3  -1/3  0    0  0  0 ...
+    1    0     0    0  0  0 ...
+    2/3  1/3   0    0  0  0 ...
+    1/3  2/3   0    0  0  0 ...
+    0    1     0    0  0  0 ...
+    0    2/3   1/3  0  0  0 ...
+    ...    
+
+    """
+    interpolation_scheme="constant" #linear_interpolation_boundary_constant, linear_interpolation_boundary_extrapolation
+    interp_matrix= [ [0.0 for _ in range(0,self.dofs_per_axis)] for _ in range(0,3*self.dofs_per_axis) ]
+    if interpolation_scheme=="constant":
+      for col in range(0,self.dofs_per_axis):
+        for index in range(0,2):
+          interp_matrix[col*3+index][col]=1.0    
+    elif interpolation_scheme=="linear_interpolation_boundary_constant":
+      if self.dofs_per_axis<2:
+        sys.exit("Can not interpolate because the patch is too small")
+      else:
+        interp_matrix[0][0]=1.0
+        interp_matrix[1][0]=1.0
+        interp_matrix[2][0]=2.0/3.0; interp_matrix[2][1]= 1.0/3.0
+        interp_matrix[-1][-1]=1.0
+        interp_matrix[-2][-1]=1.0
+        interp_matrix[-3][-1]=2.0/3.0; interp_matrix[-3][-2]= 1.0/3.0
+        for index in range(0,self.dofs_per_axis-2):
+          interp_matrix[(1+index)*3  ][index  ]=1.0/3.0; interp_matrix[(1+index)*3  ][index+1]=2.0/3.0;
+          interp_matrix[(1+index)*3+1][index+1]=1.0;       
+          interp_matrix[(1+index)*3+2][index+1]=2.0/3.0; interp_matrix[(1+index)*3+2][index+2]=1.0/3.0;        
+    elif interpolation_scheme=="linear_interpolation_boundary_extrapolation":
+      if self.dofs_per_axis<2:
+        sys.exit("Can not interpolate because the patch is too small")
+      else:
+        interp_matrix[0][0]=4.0/3.0; interp_matrix[0][1]=-1.0/3.0
+        interp_matrix[1][0]=1.0
+        interp_matrix[2][0]=2.0/3.0; interp_matrix[2][1]= 1.0/3.0
+        interp_matrix[-1][-1]=4.0/3.0; interp_matrix[-1][-2]=-1.0/3.0
+        interp_matrix[-2][-1]=1.0
+        interp_matrix[-3][-1]=2.0/3.0; interp_matrix[-3][-2]= 1.0/3.0
+        for index in range(0,self.dofs_per_axis-2):
+          interp_matrix[(1+index)*3  ][index  ]=1.0/3.0; interp_matrix[(1+index)*3  ][index+1]=2.0/3.0;
+          interp_matrix[(1+index)*3+1][index+1]=1.0;       
+          interp_matrix[(1+index)*3+2][index+1]=2.0/3.0; interp_matrix[(1+index)*3+2][index+2]=1.0/3.0;      
+
+    return interp_matrix 
+
+
+  def __compute_restriction_matrix(self):
+    """
+
+    compute the restriction matrix, which used to prepare halo layer data for coarse cells at the refinement boundary.
+    the matrix formulation depends on the interpolation scheme.
+
+    The matrix is only 1d mapping, i.e. used for "surface" of a 2D domain and have a size of Dof \times 3Dof. say, the matrix is Q_ij and u^f_i and u^c_j
+    are solution at fine and coarse level, respectively. we have 
+
+    u^c_i = Q_ij u^f_j
+
+    The interpolation routine for surface of 3D domain can be found in a tensor-manner
+
+    u^c_ij = Q_ik Q_jl u^f_kl
+
+    We can also use the same matrix to interpolate along the normal direction.
+
+    injection: directly use the central-surface fine cell to assign the coarse cell.
+
+    0  1  0  0  0  0  0  0  0  0  0  0...
+    0  0  0  0  1  0  0  0  0  0  0  0...
+    0  0  0  0  0  0  0  0  0  0  0  0...
+    0  0  0  0  0  0  0  1  0  0  0  0...
+    ...    
+
+    average:
+        average value in all fine cells
+
+    1/3  1/3  1/3  0    0    0    0    0    0    0    0    0...
+    0    0    0    1/3  1/3  1/3  0    0    0    0    0    0...
+    0    0    0    0    0    0    1/3  1/3  1/3  0    0    0...
+    0    0    0    0    0    0    0    0    0    1/3  1/3  1/3...
+    ...    
+
+    """
+    restriction_scheme="injection" #surface_average
+    restriction_matrix= [ [0.0 for _ in range(0,3*self.dofs_per_axis)] for _ in range(0,self.dofs_per_axis) ]
+    if restriction_scheme=="injection":
+      for index in range(0,self.dofs_per_axis):
+        restriction_matrix[index][3*index+1]=1.0        
+    elif restriction_scheme=="surface_average":
+      for index in range(0,self.dofs_per_axis):
+        restriction_matrix[index][3*index  ]=1.0/3.0  
+        restriction_matrix[index][3*index+1]=1.0/3.0 
+        restriction_matrix[index][3*index+2]=1.0/3.0 
+
+    return restriction_matrix   
+
+
   def __compute_K1(self):
     """
     
