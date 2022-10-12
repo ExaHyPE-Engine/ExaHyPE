@@ -4,21 +4,21 @@ template <typename Particle>
 void swift2::computeExplicitEulerWithGlobalTimeStepSizeAndReduceNewMaximalVelocity(
   const std::list< Particle* >&  localParticles
 ) {
-  double timeStepSize = Particle::getTimeStepSize();
+  double timeStepSize = Particle::getSpecies().getMinTimeStepSize();
   for (auto& particle: localParticles) {
-    if ( particle->getMoveState()==Particle::NotMovedYet ) {
+    if ( particle->getMoveState()==Particle::MoveState::NotMovedYet ) {
       particle->setX( particle->getX() + timeStepSize * particle->getV() );
     }
   }
   double maxVSquared = 0.0;
   for (auto& particle: localParticles) {
-    if ( particle->getMoveState()==Particle::NotMovedYet ) {
-      particle->setMoveState( Particle::Moved );
-      particle->setV( particle->getV() + timeStepSize * particle->getAcceleration() );
+    if ( particle->getMoveState()==Particle::MoveState::NotMovedYet ) {
+      particle->setMoveState( Particle::MoveState::Moved );
+      particle->setV( particle->getV() + timeStepSize * particle->getA() );
       maxVSquared = std::max( maxVSquared, tarch::la::norm2Squared(particle->getV()) );
     }
   }
-  Particle::setMaxVelocity( std::sqrt(maxVSquared) );
+  Particle::getSpecies().setMaxVelocity( std::sqrt(maxVSquared) );
 }
 
 
@@ -27,7 +27,7 @@ void swift2::resetParticleMarker(
   const std::vector< Particle* >&  localParticles
 ) {
   for (auto& particle: localParticles) {
-    particle->setMoveState( Particle::NotMovedYet );
+    particle->setMoveState( Particle::MoveState::NotMovedYet );
   }
 }
 

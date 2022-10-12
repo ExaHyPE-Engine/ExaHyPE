@@ -29,6 +29,10 @@ namespace toolbox {
     /**
      * Shallow copy, i.e. you can remove the input container newParticles, but
      * you may not delete the particles it is pointing to.
+     *
+     * This routine basically runs through the vector passed and calls the
+     * other insertParticleIntoCell() operation per particle.
+     *
      */
     template <typename Particle, typename ParticleSet >
     void insertParticlesIntoCell(
@@ -37,6 +41,18 @@ namespace toolbox {
       peano4::datamanagement::VertexEnumerator< ParticleSet >&  fineGridVertices
     );
 
+    /**
+     * Insert particle into cell
+     *
+     * This routine assumes that the particle indeed fits into a cell.
+     * Otherwise, I cannot assign in properly. If it falls into a cell,
+     * then I can in return rightfully assume that the particle is local.
+     * Setting the flag to local is important, as the locality analysis
+     * of Peano usually sets particles to local in touchCellFirstTime().
+     * You don't know if the particle insertion is called before or after
+     * this analysis step, so we might just have missed the local insertion
+     * and therefore miss out on particles.
+     */
     template <typename Particle, typename ParticleSet >
     void insertParticleIntoCell(
       const peano4::datamanagement::CellMarker&                 marker,

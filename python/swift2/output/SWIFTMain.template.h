@@ -5,17 +5,31 @@
 // This is generated. Be careful with adding your own stuff, i.e. ensure first
 // whether file is maybe overwritten by Python generator/API.
 //
-#ifndef _{INCLUDE_GUARD}_
-#define _{INCLUDE_GUARD}_
+#pragma once
 
 
 #include <string>
 
-// GENERATED FOR THE SPH SIMULATION
+
+/**
+ * Main routine of the SPH code
+ */
+int main(int argc, char** argv);
 
 
-{OPEN_NAMESPACE}
-  int main(int argc, char** argv);
-{CLOSE_NAMESPACE}
+{% for item in NAMESPACE -%}
+  namespace {{ item }} {
+{%- endfor %}
+  /**
+   * Only executed on global master, i.e. rank 0.
+   */
+  bool selectNextAlgorithmicStep();
 
-#endif
+  /**
+   * Run one global step on rank. Called on each and every rank.
+   */
+  void step();
+{% for item in NAMESPACE -%}
+  }
+{%- endfor %}
+

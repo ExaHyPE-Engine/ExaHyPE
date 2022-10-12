@@ -9,7 +9,8 @@ import os
 import sys
 
 from swift2.particle.Particle   import Particle
-from swift2.strategy.Sequential import translate_particle_steps_into_sequence_of_grid_traversals
+from swift2.strategy.Sequential import serialise_and_map_onto_separate_mesh_traversals
+from swift2.output.SWIFTMain    import SWIFTMain
 
 
 from abc import abstractmethod
@@ -55,13 +56,14 @@ class Project(object):
     self._min_h         = 0.01
     self._max_h         = 0.1
 
-    self._particle_species = []
+    self._particle_species     = []
+    self._particle_species_set = []
  
     self._algorithm_step_create_grid    = peano4.solversteps.Step( "CreateGrid", False )
-    self._algorithm_step_init           = peano4.solversteps.Step( "Init",       False )
-    self._algorithm_step_plot           = peano4.solversteps.Step( "Plot",       False )
+    self.algorithm_step_init           = peano4.solversteps.Step( "Init",       False )
+    self.algorithm_step_plot           = peano4.solversteps.Step( "Plot",       False )
                 
-    self._algorithm_step_plot.add_action_set( peano4.toolbox.PlotGridInPeanoBlockFormat( 
+    self.algorithm_step_plot.add_action_set( peano4.toolbox.PlotGridInPeanoBlockFormat( 
       filename              = "grid", 
       time_stamp_evaluation = "repositories::getMinTimeStamp()",
       additional_includes   = """
@@ -69,7 +71,7 @@ class Project(object):
 """      
     ))
     
-    self.translator = translate_particle_steps_into_sequence_of_grid_traversals
+    self.task_graph_compiler = serialise_and_map_onto_separate_mesh_traversals
 
 
     
@@ -233,7 +235,7 @@ citation of the original SWIFT paper
     
   def __generate_global_state_files(self):
     solverRepositoryDictionary = {
-      "PARTICLE_SPECIES" : [],
+      "PARTICLE_SPECIES" : [x.name for x in self._particle_species],
       "LOAD_BALANCER" : self._load_balancer_name,
       "LOAD_BALANCER_ARGUMENTS" : self._load_balancer_arguments,
     }
@@ -253,8 +255,16 @@ citation of the original SWIFT paper
    
 
   def add_particle_species(self, particle: Particle ):
+    """
+    
+    Add a new particle species (type) to the project. You get the container
+    back in which the particles are handled on the rank. Use this one where
+    another action set requires a particle set.
+    
+    """
     self._particle_species.append( particle )
-    pass
+    self._particle_species_set.append( peano4.toolbox.particles.ParticleSet(particle) )    
+    return self._particle_species_set[-1]
       
         
   def generate_Peano4_project(self, verbose=False):
@@ -270,14 +280,66 @@ citation of the original SWIFT paper
      generate_Peano4_project() again to get a new snapshot/version of the
      Peano setup.
      
+     
+     ## Task graph compiler
+     
+     The core contribution of the generation is the task graph compiler which 
+     really is a mapping of algorithm steps per particle species onto grid 
+     sweeps. The actual mapping is outsourced into the function represented
+     by self.task_graph_compiler. This way, users can switch the translator's
+     behaviour. This function returns a sequence of mesh traversals. On top 
+     of that, we have the default traversals to create a grid, to plot it, and
+     to initialise the setup.
+     
+     Once we have our three default steps plus a sequence of algorithmic steps
+     per time step, we run through the following steps:
+     
+     - Create a particle set around each species and add it to the project as
+       global variable. This is the global container administering these guys.
+     - Tell each algorithmic step to use this particle set. An exception could be
+       the grid creation. At this point, we don't have particles yet. We add
+       the data structure nevertheless. It ensures that we have all the data
+       in place, and it we also then can be sure that everything is properly
+       initialised. The actual particle set will be empty at this point of the
+       simulation.
+     - Ensure that plotting and initialisation use the update particle-grid
+       association properly. The plot has to update it, as previous steps 
+       might have started a resort yet might not have finished it.
+     - Add all the algorithmic steps, including the three default ones, to
+       the project.
+     
     """
-    self._project.solversteps.add_step(self._algorithm_step_create_grid)
-    self._project.solversteps.add_step(self._algorithm_step_init)
-    self._project.solversteps.add_step(self._algorithm_step_plot)
-   
     self.__generate_global_state_files();
+
+    ## Make pre-defined mesh traversals resort the particles. For this, they need 
+    ## species set into
+    for current_species_set in self._particle_species_set:
+      self.algorithm_step_plot.add_action_set(peano4.toolbox.particles.UpdateParticleGridAssociation(current_species_set),False)
+      self.algorithm_step_init.add_action_set(peano4.toolbox.particles.UpdateParticleGridAssociation(current_species_set),False)
+      self.algorithm_step_plot.add_action_set(peano4.toolbox.particles.UpdateParallelState(current_species_set),False)
+      self.algorithm_step_init.add_action_set(peano4.toolbox.particles.UpdateParallelState(current_species_set),False)
+
+    ## Create mesh traversals aka solver steps
+    solversteps = self.task_graph_compiler(self._particle_species_set)
+
+    ## Make each solver step (incl predefined ones) use the particles and particle sets
+    for current_species_set in self._particle_species_set:
+      self._project.datamodel.add_global_object(current_species_set.particle_model)
+      self._project.datamodel.add_vertex(current_species_set)
+
+      self._algorithm_step_create_grid.use_vertex(current_species_set)
+      self.algorithm_step_init.use_vertex(current_species_set)
+      self.algorithm_step_plot.use_vertex(current_species_set)
+      for solverstep in solversteps:
+        solverstep.use_vertex(current_species_set)
+     
+    self._project.solversteps.add_step(self._algorithm_step_create_grid)
+    self._project.solversteps.add_step(self.algorithm_step_init)
+    self._project.solversteps.add_step(self.algorithm_step_plot)
+    for solverstep in solversteps:
+      self._project.solversteps.add_step(solverstep)
     
-    #self._project.main = swift2.project.SWIFTMain(self._project, self.main_file_template() )
+    self._project.main = SWIFTMain( self._project, solversteps )
 
     self.__configure_makefile()
     self._project.output.makefile.parse_configure_script_outcome( self._Peano_src_directory )

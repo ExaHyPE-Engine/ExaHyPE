@@ -22,6 +22,7 @@ args = parser.parse_args()
 
 
 
+dimensions  = 3
 
 
 
@@ -35,10 +36,47 @@ project = swift2.Project( namespace=["benchmarks", "swift2", "planetorbit"],
 
 
 particle   = swift2.particle.ExplicitEulerFixedInteractionRadius( "Planet" )
-particle.data.add_attribute( peano4.dastgen2.Peano4DoubleArray("v","Dimensions") )
-particle.data.add_attribute( peano4.dastgen2.Peano4DoubleArray("a","Dimensions") )
 
-project.add_particle_species( particle )
+particle_set = project.add_particle_species( particle )
+
+cut_off_radius = 0.1
+initialisation_snippet = """
+
+  /*
+   * In this problem we will initialize just a single particle (Earth)
+   * This will orbit around a point where the hypothetical Sun is (no particle needed here)
+   */
+
+  /* Internal cutoff radious used by Peano. 
+   * Should always be larger than actual SPH cutoff radious (2h). 
+   * But no really used here. */
+  particle->setCutOffRadius(""" + str(cut_off_radius) + """);
+  // particle->setX( {0.0, 0.0, 0.0} ); is set by injection
+  particle->setV( {0.0, 0.0, 0.0} );
+  particle->setA( {0.1, 0.0, 0.0} );
+
+"""
+
+
+project.algorithm_step_init.add_action_set( peano4.toolbox.particles.InsertParticlesAlongCartesianLayoutIntoUnrefinedCells(
+  particle_set                = particle_set,
+  distance_between_particles  = 0.45,               # this will initialize just one particle in the domain at (0,0)
+  initialisation_call         = initialisation_snippet,
+  noise                       = False,
+#  additional_includes="""
+#    #include "Constants.h"
+#    """,
+  computational_domain_offset = [0.5, 0.55])
+  )
+
+
+particle_plotter = peano4.toolbox.particles.PlotParticlesInVTKFormat( "particles", particle_set, time_stamp_evaluation=peano4.toolbox.particles.PlotParticlesInVTKFormat.CountTimeSteps )
+particle_plotter.add_attribute_to_plot(particle.velocity, dimensions)
+#particle_plotter.add_attribute_to_plot(a_attr       , Dimensions)
+#particle_plotter.add_attribute_to_plot(energy_kin_attr  , 1)
+#particle_plotter.add_attribute_to_plot(energy_pot_attr  , 1)
+#particle_plotter.add_attribute_to_plot(energy_tot_attr  , 1)
+project.algorithm_step_plot.add_action_set( particle_plotter )
 
 
 ########################################################################################
@@ -50,10 +88,10 @@ if args.asserts:
 else:
   build_mode = peano4.output.CompileMode.Release
     
-dimensions  = 3
-offset      = [-0.5, -0.5, -0,5] 
-domain_size = [   1,    1,    1]
-periodic_boundary_conditions = [True,True,True]          # Periodic BC
+#offset      = [-0.5, -0.5, -0,5] 
+offset      = [ 0, 0, 0 ] 
+domain_size = [ 1, 1, 1 ]
+periodic_boundary_conditions = [False,False,False]          # Periodic BC
 
 project.set_global_simulation_parameters(
   dimensions,               # dimensions
