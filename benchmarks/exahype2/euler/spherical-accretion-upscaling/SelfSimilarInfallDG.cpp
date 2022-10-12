@@ -26,10 +26,46 @@ void benchmarks::exahype2::euler::sphericalaccretionupscaling::SelfSimilarInfall
   double overDensity = density - BaseDensity;
   double radius = tarch::la::norm2( x );
 
+  assertion3(
+    ::exahype2::dg::getQuadratureWeight(cellSize,index,QuadratureWeights1d)>0.0,
+    cellSize, index, QuadratureWeights1d[0]
+  );
   double mass = overDensity * ::exahype2::dg::getQuadratureWeight(cellSize,index,QuadratureWeights1d);
 
   _accumulator.addMass(mass,radius);
 }
+
+
+::exahype2::RefinementCommand benchmarks::exahype2::euler::sphericalaccretionupscaling::SelfSimilarInfallDG::refinementCriterion(
+  const double * __restrict__                  Q,    // Q[5+0]
+  const tarch::la::Vector<Dimensions,double>&  x,
+  const tarch::la::Vector<Dimensions,double>&  h,
+  double                                       t
+) {
+  if (
+    tarch::la::equals(t,0.0)
+    and
+    tarch::la::norm2(x) <= InitialTopHatRadius + h(0)
+  ) {
+    return ::exahype2::RefinementCommand::Refine;
+  }
+  else if (
+    DynamicAMR
+    and
+    ( Q[4]>1.1*BaseDensity )
+  ) {
+    return ::exahype2::RefinementCommand::Refine;
+  }
+  else if (
+    DynamicAMR
+  ) {
+    return ::exahype2::RefinementCommand::Erase;
+  }
+  else {
+    return ::exahype2::RefinementCommand::Keep;
+  }
+}
+
 
 
 void benchmarks::exahype2::euler::sphericalaccretionupscaling::SelfSimilarInfallDG::initialCondition(

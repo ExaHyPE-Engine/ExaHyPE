@@ -1,8 +1,5 @@
 # This file is part of the ExaHyPE2 project. For conditions of distribution and 
 # use, please see the copyright notice at www.peano-framework.org
-
-# This file is part of the ExaHyPE2 project. For conditions of distribution and 
-# use, please see the copyright notice at www.peano-framework.org
 import peano4
 import exahype2
 import jinja2
