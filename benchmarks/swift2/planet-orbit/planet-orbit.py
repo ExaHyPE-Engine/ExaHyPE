@@ -39,6 +39,29 @@ particle   = swift2.particle.ExplicitEulerFixedInteractionRadius( name          
                                                                   cfl_factor             = 0.01, 
                                                                   initial_time_step_size = 1e-5 )
 
+particle_force = """
+  assertion(activeParticles.size()<=1);
+  
+  /* Sun location */
+  tarch::la::Vector<Dimensions,double> pos_sun(0.0);
+  //pos_sun[0] = SUN_X_COORD;
+  //pos_sun[1] = SUN_Y_COORD;
+
+  //  /* G_NEWTON in internal units */
+  //  double const L3 = LENGTH_UNIT * LENGTH_UNIT * LENGTH_UNIT;
+  // double const T2 = PERIOD * PERIOD;
+  //  double const GN = G_NEWTON * M_SUN * T2 / L3;
+  double GN = 1.0;
+
+  /* Sun-Earth distance */
+  tarch::la::Vector<Dimensions,double> dx = localParticle->getX() - pos_sun;
+  const double r = tarch::la::norm2(dx);
+  const double r_inv = r ? 1.0 / r : 0.0;     
+  localParticle->setA( - GN * dx * (r_inv * r_inv * r_inv) );
+"""
+particle.particle_acceleration = particle_force
+
+
 particle_set = project.add_particle_species( particle )
 
 cut_off_radius = 0.1
@@ -64,9 +87,6 @@ project.algorithm_step_init.add_action_set( peano4.toolbox.particles.InsertParti
   distance_between_particles  = 0.45,               # this will initialize just one particle in the domain at (0,0)
   initialisation_call         = initialisation_snippet,
   noise                       = False,
-#  additional_includes="""
-#    #include "Constants.h"
-#    """,
   computational_domain_offset = [0.5, 0.55])
   )
 

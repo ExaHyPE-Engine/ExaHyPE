@@ -295,7 +295,10 @@ namespace peano4 {
     bool overlaps( const AutomatonState& x, const GridControlEvent& event );
 
     /**
-     * @return x is completely embeddd into event. x is subject to a re-calibration.
+     * isContained() is defined over the closed interval, i.e. we look if x is
+     * contained within the cube spanned by x including its faces.
+     *
+     * @return x is completely embedded into event. x is subject to a re-calibration.
      */
     bool isContained( const AutomatonState& x, const GridControlEvent& event, double upscaleAutomatonState=1.0 );
 

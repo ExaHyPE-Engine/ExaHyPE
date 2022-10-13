@@ -19,9 +19,7 @@ class ParticleParticleInteraction(ActionSet):
                prepare_traversal_kernel="",
                unprepare_traversal_kernel="", 
                additional_includes="", 
-               guard="true", 
-               active_particle_set=None,
-               use_biased_locality_check=True ):
+               active_particle_set=None ):
     """
 
     This code snippet creates a tree walker, i.e. an action set that runs
@@ -133,48 +131,50 @@ class ParticleParticleInteraction(ActionSet):
     self.d[ "TOUCH_VERTEX_FIRST_COMPUTE_KERNEL" ] = touch_vertex_first_time_compute_particle_update_kernel
     self.d[ "TOUCH_VERTEX_LAST_COMPUTE_KERNEL" ]  = touch_vertex_last_time_compute_particle_update_kernel
     self.d[ "ADDITIONAL_INCLUDES" ]               = additional_includes
-    self.d[ "GUARD" ]                             = guard
-    self.d[ "BIASED_LOCALITY_CHECK"]              = use_biased_locality_check
     self.d[ "PREPARE_TRAVERSAL_KERNEL" ]          = prepare_traversal_kernel
     self.d[ "UNPREPARE_TRAVERSAL_KERNEL" ]        = unprepare_traversal_kernel
     
 
   __Template_TouchVertexFirstTime = jinja2.Template("""
-  auto& localParticles = fineGridVertex{{LOCAL_PARTICLES_CONTAINER}};
+  {% if TOUCH_VERTEX_FIRST_COMPUTE_KERNEL!=None %}
+  auto& localParticles  = fineGridVertex{{LOCAL_PARTICLES_CONTAINER}};
+  auto& activeParticles = fineGridVertex{{ACTIVE_PARTICLES_CONTAINER}};
+
   {{TOUCH_VERTEX_FIRST_COMPUTE_KERNEL}}
+  {% endif %}
 """)
 
 
   __Template_TouchVertexLastTime = jinja2.Template("""
-  auto& localParticles = fineGridVertex{{LOCAL_PARTICLES_CONTAINER}};
+  {% if TOUCH_VERTEX_LAST_COMPUTE_KERNEL!=None %}
+  auto& localParticles  = fineGridVertex{{LOCAL_PARTICLES_CONTAINER}};
+  auto& activeParticles = fineGridVertex{{ACTIVE_PARTICLES_CONTAINER}};
+
   {{TOUCH_VERTEX_LAST_COMPUTE_KERNEL}}
+  {% endif %}
 """)
 
 
   __Template_TouchCellFirstTime = jinja2.Template("""
-  if ( {{GUARD}} ) {
-    std::list< globaldata::{{LOCAL_PARTICLE}}* >  localParticles;
-    _numberOfActiveParticlesAdded.push_back(0);
-    for (int i=0; i<TwoPowerD; i++) {
-      for (auto* p: fineGridVertices{{ACTIVE_PARTICLES_CONTAINER}}(i) ) {
-        _activeParticles.push_front( p );
-        _numberOfActiveParticlesAdded.back()++;
-      }
-      for (auto* p: fineGridVertices{{LOCAL_PARTICLES_CONTAINER}}(i) ) {
-        {% if BIASED_LOCALITY_CHECK %}
-        bool append = marker.isContainedWithBias( p->getX() );
-        {% else %}
-        bool append = marker.isContained( p->getX() );
-        {% endif %}
-        if (append) {
-          localParticles.push_front( p );
-        }
+  std::list< globaldata::{{LOCAL_PARTICLE}}* >  localParticles;
+  _numberOfActiveParticlesAdded.push_back(0);
+  for (int i=0; i<TwoPowerD; i++) {
+    for (auto* p: fineGridVertices{{ACTIVE_PARTICLES_CONTAINER}}(i) ) {
+      _activeParticles.push_front( p );
+      _numberOfActiveParticlesAdded.back()++;
+    }
+    for (auto* p: fineGridVertices{{LOCAL_PARTICLES_CONTAINER}}(i) ) {
+      bool append = marker.isContained( p->getX() );
+      if (append) {
+        localParticles.push_front( p );
       }
     }
-
-    std::list< globaldata::{{ACTIVE_PARTICLE}}* >&  activeParticles = _activeParticles;
-    {{PARTICLE_PARTICLE_INTERACTION_KERNEL}}
   }
+
+  {% if PARTICLE_CELL_UPDATE_KERNEL!=None %}
+  std::list< globaldata::{{ACTIVE_PARTICLE}}* >&  activeParticles = _activeParticles;
+  {{PARTICLE_PARTICLE_INTERACTION_KERNEL}}
+  {% endif %}
 """)
 
 
@@ -199,9 +199,9 @@ class ParticleParticleInteraction(ActionSet):
       result = self.__Template_TouchCellFirstTime.render(**self.d)
     if operation_name==ActionSet.OPERATION_TOUCH_CELL_LAST_TIME:
       result = self.__Template_TouchCellLastTime.render(**self.d)
-    if operation_name==ActionSet.OPERATION_TOUCH_VERTEX_FIRST_TIME and self.d[ "TOUCH_VERTEX_FIRST_COMPUTE_KERNEL" ]!=None:
+    if operation_name==ActionSet.OPERATION_TOUCH_VERTEX_FIRST_TIME:
       result = self.__Template_TouchVertexFirstTime.render(**self.d)
-    if operation_name==ActionSet.OPERATION_TOUCH_VERTEX_LAST_TIME and self.d[ "TOUCH_VERTEX_LAST_COMPUTE_KERNEL" ]!=None:
+    if operation_name==ActionSet.OPERATION_TOUCH_VERTEX_LAST_TIME:
       result = self.__Template_TouchVertexLastTime.render(**self.d)
     if operation_name==ActionSet.OPERATION_END_TRAVERSAL:
       result = self.__Template_EndTraversal.render(**self.d)

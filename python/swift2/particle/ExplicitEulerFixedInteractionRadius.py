@@ -24,8 +24,17 @@ class ExplicitEulerFixedInteractionRadius(Particle):
   in your code. Or you can create a subclass which adds additional fields 
   after it has called the baseline constructor.
   
+  
+  ## Force calculation
+  
+  particle_acceleration is a C++ string which defines a force.
+  
   """
-  def __init__(self, name, cfl_factor, initial_time_step_size):
+  def __init__(self, 
+               name, 
+               cfl_factor, 
+               initial_time_step_size,
+               particle_acceleration = ""):
     super( ExplicitEulerFixedInteractionRadius, self ).__init__( name )
     
     self.velocity    = peano4.dastgen2.Peano4DoubleArray("v","Dimensions")
@@ -33,8 +42,10 @@ class ExplicitEulerFixedInteractionRadius(Particle):
     self.data.add_attribute( self.velocity )
     self.data.add_attribute( self.accelerator )
     
-    self.cfl_factor             = cfl_factor
-    self.initial_time_step_size = initial_time_step_size
+    self.cfl_factor                = cfl_factor
+    self.initial_time_step_size    = initial_time_step_size
+    
+    self.particle_acceleration     = particle_acceleration
     pass
 
 
@@ -49,17 +60,23 @@ class ExplicitEulerFixedInteractionRadius(Particle):
     So we 
     
     """
-
-#In dieser Denkweise sollte es hier einen globalen Algorithmen-Schritt geben, der sich dann aber in das globale Event einklinkt.
-#Dazu macht es Sinn, pro Species eine Subklasse zu erzeugen.
-#Mir ist nicht klar, ob ich evtl komplett die _GLOBAL Varianten eliminieren kann    
-    
     return [ 
       AlgorithmStep( 
         name                           = "ForceCalculation",          
         dependencies                   = AlgorithmStep.Dependencies.NEIGHBOURS, 
         effect                         = AlgorithmStep.Effect.ALTER_LOCAL_STATE, 
-        cell_kernel                    = """""",
+        cell_kernel                    = """
+                                         ::swift2::kernels::genericInteraction<globaldata::{}>( 
+                                           localParticles, 
+                                           activeParticles,
+                                           [&] (globaldata::{}* localParticle, globaldata::{}* globalParticle) -> void {{
+                                             {}
+                                           }}
+                                         );
+                                         """.format(self.name, self.name, self.name, self.particle_acceleration),
+        includes                       = """
+                                         #include "swift2/kernels/ParticleParticleInteraction.h"
+                                         """,
       ),
       AlgorithmStep( 
         name                           = "UpdatePositionAndVelocity", 
