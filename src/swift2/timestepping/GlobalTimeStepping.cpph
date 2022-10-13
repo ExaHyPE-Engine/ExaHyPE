@@ -1,0 +1,18 @@
+#include "peano4/parallel/SpacetreeSet.h"
+
+
+template <typename Particle>
+void swift2::timestepping::computeAdmissibleTimeStepSizeFromGlobalMeshSizeAndMaximumVelocity( double cflFactor, double initialTimeStepSize ) {
+  const double minH = peano4::parallel::SpacetreeSet::getInstance().getGridStatistics().getMinH()(0);
+  const double maxV = Particle::getSpecies().getMaxVelocity();
+
+  if ( tarch::la::equals(maxV,0.0) ) {
+    Particle::getSpecies().setTimeStepSize(initialTimeStepSize);
+  }
+  else {
+    Particle::getSpecies().setTimeStepSize(
+      cflFactor * minH / maxV, false
+    );
+  }
+}
+

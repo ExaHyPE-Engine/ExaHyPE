@@ -36,7 +36,7 @@ project = swift2.Project( namespace=["benchmarks", "swift2", "planetorbit"],
 
 
 particle   = swift2.particle.ExplicitEulerFixedInteractionRadius( name                   = "Planet", 
-                                                                  cfl_factor             = 0.1, 
+                                                                  cfl_factor             = 0.01, 
                                                                   initial_time_step_size = 1e-5 )
 
 particle_set = project.add_particle_species( particle )

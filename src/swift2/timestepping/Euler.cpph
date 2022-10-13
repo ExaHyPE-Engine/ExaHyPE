@@ -1,0 +1,109 @@
+template <typename Particle>
+void swift2::timestepping::computeExplicitEulerWithGlobalTimeStepSize(
+  const std::list< Particle* >&  localParticles
+) {
+  double timeStepSize = Particle::getSpecies().getMinTimeStepSize();
+  for (auto& particle: localParticles) {
+    if ( particle->getMoveState()==Particle::MoveState::NotMovedYet ) {
+      particle->setX( particle->getX() + timeStepSize * particle->getV() );
+    }
+  }
+  for (auto& particle: localParticles) {
+    if ( particle->getMoveState()==Particle::MoveState::NotMovedYet ) {
+      particle->setMoveState( Particle::MoveState::Moved );
+      particle->setV( particle->getV() + timeStepSize * particle->getA() );
+    }
+  }
+}
+
+
+template <typename Particle>
+void swift2::timestepping::computeExplicitEulerCromerWithGlobalTimeStepSize(
+  const std::list< Particle* >&  localParticles
+) {
+  double timeStepSize = Particle::getSpecies().getMinTimeStepSize();
+  for (auto& particle: localParticles) {
+    if ( particle->getMoveState()==Particle::MoveState::NotMovedYet ) {
+      particle->setV( particle->getV() + timeStepSize * particle->getA() );
+    }
+  }
+  for (auto& particle: localParticles) {
+    if ( particle->getMoveState()==Particle::MoveState::NotMovedYet ) {
+      particle->setMoveState( Particle::MoveState::Moved );
+      particle->setX( particle->getX() + timeStepSize * particle->getV() );
+    }
+  }
+}
+
+
+/*
+template <typename Particle>
+void swift2::computeExplicitEulerWithGlobalTimeStepSizeAndReduceNewMaximalVelocity(
+  const std::list< Particle* >&  localParticles
+) {
+  double timeStepSize = Particle::getSpecies().getMinTimeStepSize();
+  for (auto& particle: localParticles) {
+    if ( particle->getMoveState()==Particle::MoveState::NotMovedYet ) {
+      particle->setX( particle->getX() + timeStepSize * particle->getV() );
+    }
+  }
+  double maxVSquared = 0.0;
+  for (auto& particle: localParticles) {
+    if ( particle->getMoveState()==Particle::MoveState::NotMovedYet ) {
+      particle->setMoveState( Particle::MoveState::Moved );
+      particle->setV( particle->getV() + timeStepSize * particle->getA() );
+      maxVSquared = std::max( maxVSquared, tarch::la::norm2Squared(particle->getV()) );
+    }
+  }
+  Particle::getSpecies().setMaxVelocity( std::sqrt(maxVSquared) );
+}
+
+
+template <typename Particle>
+void swift2::resetMovedParticleMarker(
+  const std::vector< Particle* >&  localParticles
+) {
+  for (auto& particle: localParticles) {
+    particle->setMoveState( Particle::MoveState::NotMovedYet );
+  }
+}
+
+
+template <typename Particle>
+void swift2::computeAdmissibleTimeStepSizeFromGlobalMeshSizeAndMaximumVelocity( double cflFactor, double initialTimeStepSize ) {
+  const double minH = peano4::parallel::SpacetreeSet::getInstance().getGridStatistics().getMinH()(0);
+  const double maxV = Particle::getSpecies().getMaxVelocity();
+
+  if ( tarch::la::equals(maxV,0.0) ) {
+    Particle::getSpecies().setTimeStepSize(initialTimeStepSize);
+  }
+  else {
+    Particle::getSpecies().setTimeStepSize(
+      cflFactor * minH / maxV, false
+    );
+  }
+}
+
+
+template <typename Particle>
+void swift2::reduceVelocityAndCutOffRadius(
+  const std::list< Particle* >&  localParticles
+) {
+  if (not localParticles.empty()) {
+    double vMin = std::numeric_limits<double>::max();
+    double vMax = 0.0;
+    double rMin = std::numeric_limits<double>::max();
+    double rMax = 0.0;
+    for (const auto& particle: localParticles) {
+      vMin = std::min( vMin, tarch::la::norm2( particle->getV() ) );
+      vMax = std::max( vMax, tarch::la::norm2( particle->getV() ) );
+      rMin = std::min( rMin, particle->getCutOffRadius() );
+      rMax = std::max( rMax, particle->getCutOffRadius() );
+    }
+    Particle::getSpecies().setVelocity(vMin,vMax,rMin,rMax);
+  }
+}
+*/
+
+
+

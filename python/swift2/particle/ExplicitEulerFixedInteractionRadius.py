@@ -59,48 +59,37 @@ class ExplicitEulerFixedInteractionRadius(Particle):
         name                           = "ForceCalculation",          
         dependencies                   = AlgorithmStep.Dependencies.NEIGHBOURS, 
         effect                         = AlgorithmStep.Effect.ALTER_LOCAL_STATE, 
-        prepare_traversal_kernel       = """globaldata::{}::startTimeStep();""".format(self.name),
+        cell_kernel                    = """""",
       ),
       AlgorithmStep( 
-        name         = "UpdatePositionAndVelocity", 
-        dependencies = AlgorithmStep.Dependencies.SELF,              
-        effect       = AlgorithmStep.Effect.CHANGE_POSITION_OR_INTERACTION_RADIUS,
-        touch_vertex_first_time_kernel = """::swift2::resetMovedParticleMarker(localParticles);""",        
-#        cell_kernel                    = """::swift2::computeExplicitEulerWithGlobalTimeStepSize( localParticles );""",
-        prepare_traversal_kernel       = """::swift2::computeAdmissibleTimeStepSizeFromGlobalMeshSizeAndMaximumVelocity<globaldata::{}>({},{});""".format(self.name, self.cfl_factor,self.initial_time_step_size),
-        includes = """
-#include "swift2/TimeStepping.h"
-"""              
-      ),
+        name                           = "UpdatePositionAndVelocity", 
+        dependencies                   = AlgorithmStep.Dependencies.SELF,              
+        effect                         = AlgorithmStep.Effect.CHANGE_POSITION_OR_INTERACTION_RADIUS,
+        touch_vertex_first_time_kernel = """::swift2::timestepping::resetMovedParticleMarker(localParticles);""",        
+        prepare_traversal_kernel       = """::swift2::timestepping::computeAdmissibleTimeStepSizeFromGlobalMeshSizeAndMaximumVelocity<globaldata::{}>({},{});""".format(self.name, self.cfl_factor,self.initial_time_step_size),
+        cell_kernel                    = """::swift2::timestepping::computeExplicitEulerWithGlobalTimeStepSize( localParticles );""",
+        includes                       = """
+                                         #include "swift2/timestepping/Euler.h"
+                                         #include "swift2/timestepping/GlobalTimeStepping.h"
+                                         #include "swift2/timestepping/TimeStepping.h"
+                                         """),
       AlgorithmStep( 
-        name         = "ReduceGlobalQuantities", 
-        dependencies = AlgorithmStep.Dependencies.SELF,              
-        effect       = AlgorithmStep.Effect.ALTER_GLOBAL_STATE,
-        #clear?
-        #touch_vertex_first_time_kernel = """::swift2::resetMovedParticleMarker(localParticles);""",        
-        cell_kernel                    = """::swift2::reduceVelocityAndCutOffRadius( localParticles );""",
-        prepare_traversal_kernel     = """
-globaldata::{PARTICLE}::getSpecies().clearCutOffRadius();
-globaldata::{PARTICLE}::getSpecies().clearVelocity();
-""".replace( "{PARTICLE}", self.name ),
+        name                           = "ReduceGlobalQuantities", 
+        dependencies                   = AlgorithmStep.Dependencies.SELF,              
+        effect                         = AlgorithmStep.Effect.ALTER_GLOBAL_STATE,
+        cell_kernel                    = """::swift2::statistics::reduceVelocityAndCutOffRadius( localParticles );""",
+        prepare_traversal_kernel       = """
+                                         globaldata::{PARTICLE}::getSpecies().clearCutOffRadius();
+                                         globaldata::{PARTICLE}::getSpecies().clearVelocity();
+                                         """.replace( "{PARTICLE}", self.name ),
         unprepare_traversal_kernel     = """
-globaldata::{PARTICLE}::getSpecies().setTimeStamp( globaldata::{PARTICLE}::getSpecies().getMinTimeStamp() + globaldata::{PARTICLE}::getSpecies().getMinTimeStepSize(), false );
-logInfo("finishTimeStep()", "{PARTICLE}: cut-off-radius_{min}=" << globaldata::{PARTICLE}::getSpecies().getMinCutOffRadius() );
-logInfo("finishTimeStep()", "{PARTICLE}: cut-off-radius_{max}=" << globaldata::{PARTICLE}::getSpecies().getMaxCutOffRadius() );
-logInfo("finishTimeStep()", "{PARTICLE}: v_{min}=" << globaldata::{PARTICLE}::getSpecies().getMinVelocity() );
-logInfo("finishTimeStep()", "{PARTICLE}: v_{max}=" << globaldata::{PARTICLE}::getSpecies().getMaxVelocity() );
-logInfo("finishTimeStep()", "{PARTICLE}: t=" << globaldata::{PARTICLE}::getSpecies().getMinTimeStamp() );
-logInfo("finishTimeStep()", "{PARTICLE}: dt=" << globaldata::{PARTICLE}::getSpecies().getMinTimeStepSize() );
-""".replace( "{PARTICLE}", self.name ),
-        includes = """
-#include "swift2/TimeStepping.h"
-#include "repositories/GlobalState.h"
-"""              
+                                         globaldata::{PARTICLE}::getSpecies().setTimeStamp( globaldata::{PARTICLE}::getSpecies().getMinTimeStamp() + globaldata::{PARTICLE}::getSpecies().getMinTimeStepSize(), false );
+                                         ::swift2::statistics::reportCutOffRadiusVTDt<globaldata::{PARTICLE}>( "{PARTICLE}" );
+                                         """.replace( "{PARTICLE}", self.name ),
+        includes                       = """
+                                         #include "swift2/statistics/Reports.h"
+                                         #include "swift2/statistics/Statistics.h"
+                                         """              
       ),
     ]
 
-#logInfo( "finishTimeStep()", "reportCutOffRadius();""".format( self.name ),
-#logInfo("finishTimeStep()", "{{PARTICLE}}: t_{min}=" << globaldata::{{PARTICLE}}::getSpecies().getMinTimeStamp() );
-#logInfo("finishTimeStep()", "{{PARTICLE}}: t_{max}=" << globaldata::{{PARTICLE}}::getSpecies().getMaxTimeStamp() );
-#logInfo("finishTimeStep()", "{{PARTICLE}}: dt_{min}=" << globaldata::{{PARTICLE}}::getSpecies().getMinTimeStepSize() );
-#logInfo("finishTimeStep()", "{{PARTICLE}}: dt_{max}=" << globaldata::{{PARTICLE}}::getSpecies().getMaxTimeStepSize() );

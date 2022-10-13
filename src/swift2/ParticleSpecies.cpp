@@ -105,6 +105,7 @@ void swift2::ParticleSpecies::setVelocity(double vMin, double vMax, double rMin,
   _maxVelocity     = std::max( _maxVelocity, vMax );
   _minCutOffRadius = std::min( _minCutOffRadius, rMin );
   _maxCutOffRadius = std::max( _maxCutOffRadius, rMax );
+  logDebug( "setVelocity()", vMin << "x" << vMax );
 }
 
 
