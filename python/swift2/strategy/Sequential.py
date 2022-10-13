@@ -16,21 +16,21 @@ def serialise_and_map_onto_separate_mesh_traversals(species_sets, verbose=True):
   outgoing dependencies which affect the global state. They are 
   implicitly handled.
   
+  We get a sequence of tuples back. Each tuple has the following structure:
+ 
+  - The first entry is a Peano mesh traversal (adapter) object which you can 
+    hand over directly to Peano. 
+  - The second entry is a string which should be called ahead of this step
+    per 
+  
   """
   mesh_traversals = []
   previous_step_has_altered_particle_positions = True
   
   for current_species_set in species_sets:
     for step in current_species_set.particle_model.algorithm_steps():
-      use_action_set_with_neighbours = False
-      use_action_set_alters_position = False
-      if step.dependencies==AlgorithmStep.Dependencies.NEIGHBOURS or step.dependencies==AlgorithmStep.Dependencies.NEIGHBOURS_GLOBAL:
-        use_action_set_with_neighbours = True
-      if step.effect==AlgorithmStep.Effect.POSITION or step.effect==AlgorithmStep.Effect.POSITION_GLOBAL:
-        use_action_set_alters_position = True
-
       new_step = peano4.solversteps.Step( "Step{}{}{}".format(current_species_set.particle_model.name,step.name,len(mesh_traversals)), False ) 
-      if use_action_set_with_neighbours and (use_action_set_alters_position or previous_step_has_altered_particle_positions):
+      if step.dependencies==AlgorithmStep.Dependencies.NEIGHBOURS and (step.effect==AlgorithmStep.Effect.CHANGE_POSITION_OR_INTERACTION_RADIUS or previous_step_has_altered_particle_positions):
         if verbose:
           print( "GRAPH COMPILER DEBUG: step {} on particle {} uses Neighbours+Resort".format( step.name, current_species_set.particle_model.name ) )
         new_step.add_action_set(peano4.toolbox.particles.UpdateParticleGridAssociation(current_species_set),False)
@@ -43,7 +43,7 @@ def serialise_and_map_onto_separate_mesh_traversals(species_sets, verbose=True):
         #    additional_includes                                    = step.includes,
         #    active_particle_set                                    = step.input_particles
         #  ),False)
-      elif use_action_set_with_neighbours:
+      elif step.dependencies==AlgorithmStep.Dependencies.NEIGHBOURS and step.effect==AlgorithmStep.Effect.ALTER_LOCAL_STATE:
         if verbose:
           print( "GRAPH COMPILER DEBUG: step {} on particle {} uses Neighbours".format( step.name, current_species_set.particle_model.name ) )
         #new_step.add_action_set(peano4.toolbox.particles.ParticleParticleInteraction(
@@ -54,7 +54,7 @@ def serialise_and_map_onto_separate_mesh_traversals(species_sets, verbose=True):
         #    additional_includes                                    = step.includes,
         #    active_particle_set                                    = step.input_particles
         #  ),False)
-      elif use_action_set_alters_position or previous_step_has_altered_particle_positions:
+      elif step.dependencies==AlgorithmStep.Dependencies.SELF and (step.effect==AlgorithmStep.Effect.CHANGE_POSITION_OR_INTERACTION_RADIUS or previous_step_has_altered_particle_positions):
         if verbose:
           print( "GRAPH COMPILER DEBUG: step {} on particle {} uses Cell-wise Access+Resort".format( step.name, current_species_set.particle_model.name ) )
         new_step.add_action_set(peano4.toolbox.particles.UpdateParticleGridAssociation(current_species_set),False)
@@ -64,10 +64,13 @@ def serialise_and_map_onto_separate_mesh_traversals(species_sets, verbose=True):
             particle_cell_update_kernel                            = step.cell_kernel,
             touch_vertex_first_time_compute_particle_update_kernel = step.touch_vertex_first_time_kernel,
             touch_vertex_last_time_compute_particle_update_kernel  = step.touch_vertex_last_time_kernel,
+            prepare_traversal_kernel                               = step.prepare_traversal_kernel,
+            unprepare_traversal_kernel                             = step.unprepare_traversal_kernel,
             additional_includes                                    = step.includes,
             active_particle_set                                    = step.input_particles
           ),False)
-      else:
+        # @todo Optimieren mit const falls nur global state
+      elif step.dependencies==AlgorithmStep.Dependencies.SELF and (step.effect==AlgorithmStep.Effect.ALTER_LOCAL_STATE or step.effect==AlgorithmStep.Effect.ALTER_GLOBAL_STATE):
         if verbose:
           print( "GRAPH COMPILER DEBUG: step {} on particle {} uses Cell-wise Access".format( step.name, current_species_set.particle_model.name ) )
         new_step.add_action_set(peano4.toolbox.particles.ParticlePerCellUpdate(
@@ -75,12 +78,16 @@ def serialise_and_map_onto_separate_mesh_traversals(species_sets, verbose=True):
             particle_cell_update_kernel                            = step.cell_kernel,
             touch_vertex_first_time_compute_particle_update_kernel = step.touch_vertex_first_time_kernel,
             touch_vertex_last_time_compute_particle_update_kernel  = step.touch_vertex_last_time_kernel,
+            prepare_traversal_kernel                               = step.prepare_traversal_kernel,
+            unprepare_traversal_kernel                             = step.unprepare_traversal_kernel,
             additional_includes                                    = step.includes,
             active_particle_set                                    = step.input_particles
           ),False)
+      else:
+        assert False, "variant for step {} not handled".format( step )
       mesh_traversals.append( new_step )
           
-      previous_step_has_altered_particle_positions = use_action_set_alters_position
+      previous_step_has_altered_particle_positions = step.effect==AlgorithmStep.Effect.CHANGE_POSITION_OR_INTERACTION_RADIUS
   return mesh_traversals
   
   

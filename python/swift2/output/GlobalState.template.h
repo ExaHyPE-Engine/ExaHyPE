@@ -47,12 +47,22 @@
 
   void startGridConstructionStep();
   void startInitialisationStep();
+
+  /**
+   * @see ParticleSpecies::startTimeStep()
+   */
   void startTimeStep();
   void startPlotStep();
   void startIntermediateStep();
 
   void finishGridConstructionStep();
   void finishInitialisationStep();
+
+  /**
+   * Call finishTimeStep() on each individual species and then dump some
+   * global information. It is important to call finishTimeStep() first,
+   * as it triggers some global reduction.
+   */
   void finishTimeStep();
   void finishPlotStep();
   void finishIntermediateStep();

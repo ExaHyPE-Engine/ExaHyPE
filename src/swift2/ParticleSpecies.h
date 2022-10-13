@@ -4,6 +4,7 @@
 
 
 #include "tarch/multicore/BooleanSemaphore.h"
+#include "tarch/logging/Log.h"
 
 
 namespace swift2 {
@@ -27,7 +28,8 @@ namespace swift2 {
  */
 class swift2::ParticleSpecies {
   private:
-    static tarch::multicore::BooleanSemaphore _semaphore;
+    static tarch::logging::Log                 _log;
+    static tarch::multicore::BooleanSemaphore  _semaphore;
 
     double _minTimeStepSize;
     double _maxTimeStepSize;
@@ -38,9 +40,18 @@ class swift2::ParticleSpecies {
     double _minCutOffRadius;
     double _maxCutOffRadius;
 
+    double _minVelocity;
     double _maxVelocity;
   public:
-    ParticleSpecies() = default;
+    /**
+     * Initialise all data with the data corresponding to a clear, i.e.
+     * from where they can be properly reduced. The only exception is
+     * the time stamp. Both the maximum and minimum time step are set
+     * to zero. If we set the max time stamp to inf, the code would
+     * immediately terminate, as it thinks at least one particle has
+     * reached the final time stamp.
+     */
+    ParticleSpecies();
     ParticleSpecies( const ParticleSpecies& copy ) = delete;
 
     double getMinTimeStepSize() const;
@@ -52,8 +63,40 @@ class swift2::ParticleSpecies {
     double getMinCutOffRadius() const;
     double getMaxCutOffRadius() const;
 
-    void setMaxVelocity(double value);
+    double getMinVelocity() const;
+    double getMaxVelocity() const;
 
+    /**
+     * Set both min and max time stamp.
+     */
+    void setTimeStamp( double t, bool reduceInsteadOfOverwrite=true );
+    void setTimeStamp( double tMin, double tMax, bool reduceInsteadOfOverwrite=true );
+    void setTimeStepSize( double dt, bool reduceInsteadOfOverwrite=true );
+    void setTimeStepSize( double dtMin, double dtMax, bool reduceInsteadOfOverwrite=true );
+
+    /**
+     * Set the maximum velocity that has been observed in a cell. This routine
+     * takes the maximum velocity as observed so far and updates it if value is
+     * bigger.
+     *
+     * The routine is thread-safe.
+     */
+    void setVelocity(double vMin, double vMax, double rMin, double rMax);
+
+    /**
+     * This routine is automatically called for each and every species by the
+     * GlobalState object.
+     */
     void startTimeStep();
+
+    /**
+     *
+     * This routine is automatically called for each and every species by the
+     * GlobalState object.
+     */
     void finishTimeStep();
+
+    void clearCutOffRadius();
+    void clearVelocity();
+    void clearTimeStampAndTimeStepSize();
 };

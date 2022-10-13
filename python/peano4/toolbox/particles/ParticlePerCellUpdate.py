@@ -12,6 +12,8 @@ class ParticlePerCellUpdate(ActionSet):
                particle_cell_update_kernel=None, 
                touch_vertex_first_time_compute_particle_update_kernel=None, 
                touch_vertex_last_time_compute_particle_update_kernel=None, 
+               prepare_traversal_kernel="",
+               unprepare_traversal_kernel="", 
                additional_includes="", 
                active_particle_set=None ):
     """
@@ -88,6 +90,8 @@ class ParticlePerCellUpdate(ActionSet):
     self.d[ "TOUCH_VERTEX_FIRST_COMPUTE_KERNEL" ] = touch_vertex_first_time_compute_particle_update_kernel
     self.d[ "TOUCH_VERTEX_LAST_COMPUTE_KERNEL" ]  = touch_vertex_last_time_compute_particle_update_kernel
     self.d[ "ADDITIONAL_INCLUDES" ]               = additional_includes
+    self.d[ "PREPARE_TRAVERSAL_KERNEL" ]          = prepare_traversal_kernel
+    self.d[ "UNPREPARE_TRAVERSAL_KERNEL" ]        = unprepare_traversal_kernel
     
 
   __Template_TouchVertexFirstTime = jinja2.Template("""
@@ -145,6 +149,14 @@ class ParticlePerCellUpdate(ActionSet):
 
   def get_body_of_getGridControlEvents(self):
     return "  return std::vector< peano4::grid::GridControlEvent >();\n"
+
+
+  def get_body_of_prepareTraversal(self):  
+    return self.d[ "PREPARE_TRAVERSAL_KERNEL" ]
+
+
+  def get_body_of_unprepareTraversal(self):
+    return self.d[ "UNPREPARE_TRAVERSAL_KERNEL" ]
 
 
   def get_action_set_name(self):

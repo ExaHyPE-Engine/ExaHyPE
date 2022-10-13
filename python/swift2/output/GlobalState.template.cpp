@@ -95,10 +95,6 @@ void startInitialisationStep() {
 void startTimeStep() {
   {% for PARTICLE in PARTICLE_SPECIES -%}
   globaldata::{{PARTICLE}}::getSpecies().startTimeStep();
-  logInfo("startTimeStep()", "{{PARTICLE}}: t_{min}=" << globaldata::{{PARTICLE}}::getSpecies().getMinTimeStamp() );
-  logInfo("startTimeStep()", "{{PARTICLE}}: t_{max}=" << globaldata::{{PARTICLE}}::getSpecies().getMaxTimeStamp() );
-  logInfo("startTimeStep()", "{{PARTICLE}}: dt_{min}=" << globaldata::{{PARTICLE}}::getSpecies().getMinTimeStepSize() );
-  logInfo("startTimeStep()", "{{PARTICLE}}: dt_{max}=" << globaldata::{{PARTICLE}}::getSpecies().getMaxTimeStepSize() );
   {%- endfor %}
 }
 
@@ -111,19 +107,17 @@ void finishTimeStep() {
   {% for PARTICLE in PARTICLE_SPECIES -%}
   globaldata::{{PARTICLE}}::getSpecies().finishTimeStep();
   vertexdata::{{PARTICLE}}Set::finishedTraversal();
-  logInfo("startTimeStep()", "{{PARTICLE}}: cut-off-radius_{min}=" << globaldata::{{PARTICLE}}::getSpecies().getMinCutOffRadius() );
-  logInfo("startTimeStep()", "{{PARTICLE}}: cut-off-radius_{max}=" << globaldata::{{PARTICLE}}::getSpecies().getMaxCutOffRadius() );
   {%- endfor %}
 
   loadBalancer.finishStep();
 
-  logInfo("startTimeStep()", "min mesh size=" << ::peano4::parallel::SpacetreeSet::getInstance().getGridStatistics().getMinH()(0) );
-  logInfo("startTimeStep()",
+  logInfo("finishTimeStep()", "min mesh size=" << ::peano4::parallel::SpacetreeSet::getInstance().getGridStatistics().getMinH()(0) );
+  logInfo("finishTimeStep()",
     "#local cells=(" << ::peano4::parallel::SpacetreeSet::getInstance().getGridStatistics().getNumberOfLocalUnrefinedCells() <<
     "/" << ::peano4::parallel::SpacetreeSet::getInstance().getGridStatistics().getNumberOfLocalRefinedCells() <<
     ")\t(unrefined/refined)"
    );
-  logInfo("startTimeStep()",
+  logInfo("finishTimeStep()",
     "#remote cells=(" << ::peano4::parallel::SpacetreeSet::getInstance().getGridStatistics().getNumberOfRemoteUnrefinedCells() <<
     "/" << ::peano4::parallel::SpacetreeSet::getInstance().getGridStatistics().getNumberOfRemoteRefinedCells() <<
     ")\t(unrefined/refined)"

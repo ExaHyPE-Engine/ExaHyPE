@@ -26,34 +26,44 @@ class AlgorithmStep( object ):
     - It can only depend on its own previous step (SELF);
     - It can depend on the neighbours within a particle's h-radius 
       (NEIGHBOURS);
-    - It can depend upon a global synchronisation of the previous step,
-      i.e. it can can require that the previous step has terminated on all the
-      particles of this kind;
       
     """
     SELF               = 0,
     NEIGHBOURS         = 1,
-    GLOBAL             = 2,
-    SELF_GLOBAL        = 20
-    NEIGHBOURS_GLOBAL  = 21,
     
     
   class Effect( Enum ):
-    SELF               = 0,
-    POSITION           = 1,
-    GLOBAL             = 2
-    POSITION_GLOBAL    = 21
+    """
     
+    What happens in this algorithmic step per particle:
+    
+    - ALTER_GLOBAL_STATE is the most generic baseline routine. No local data
+      are changed, but the code (might) alter some global properties. Typical
+      examples are the reduction of the global admissible time step size.
+    - ALTER_LOCAL_STATE implies that only the local state of a particle is
+      changed. The code might also modify the global state, but it may not
+      change a particle's position or its cut-off radius, i.e. the spatial
+      topology between particles.
+    - CHANGE_POSITION_OR_INTERACTION_RADIUS is the most general update which 
+      means that literally any global or local attribute might be modified.
+    
+    """
+    ALTER_GLOBAL_STATE                    = 0
+    ALTER_LOCAL_STATE                     = 1,
+    CHANGE_POSITION_OR_INTERACTION_RADIUS = 2,
+     
     
   def __init__(self, 
                name, 
                dependencies: Dependencies, 
                effect: Effect,
-               cell_kernel                    = None,
-               touch_vertex_first_time_kernel = None, 
-               touch_vertex_last_time_kernel  = None, 
-               input_particles                = None,
-               includes                       = ""
+               cell_kernel                      = None,
+               touch_vertex_first_time_kernel   = None, 
+               touch_vertex_last_time_kernel    = None, 
+               prepare_traversal_kernel         = "", 
+               unprepare_traversal_kernel       = "", 
+               input_particles                  = None,
+               includes                         = ""
                ):
     """
     
@@ -83,15 +93,19 @@ class AlgorithmStep( object ):
     includes: String
       Additional include statements
       
+               prepare_traversals_kernel        = None, 
+
     """
     self.name         = name
     self.dependencies = dependencies
     self.effect       = effect
     
-    self.cell_kernel                    = cell_kernel
-    self.touch_vertex_first_time_kernel = touch_vertex_first_time_kernel
-    self.touch_vertex_last_time_kernel  = touch_vertex_last_time_kernel 
-    
+    self.cell_kernel                      = cell_kernel
+    self.touch_vertex_first_time_kernel   = touch_vertex_first_time_kernel
+    self.touch_vertex_last_time_kernel    = touch_vertex_last_time_kernel 
+    self.prepare_traversal_kernel         = prepare_traversal_kernel 
+    self.unprepare_traversal_kernel       = unprepare_traversal_kernel 
+
     self.input_particles = input_particles
     self.includes        = includes
  

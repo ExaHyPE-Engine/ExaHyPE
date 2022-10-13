@@ -73,6 +73,13 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public peano4::grid::TraversalO
 
     std::vector< peano4::grid::GridControlEvent > getGridControlEvents() const override;
 
+    /**
+     * This routine is not called by the spacetree set or the spacetree. It is
+     * up to the user to invoke it.
+     */
+    static void prepareTraversal();
+    static void unprepareTraversal();
+
     void beginTraversal(
       const tarch::la::Vector<Dimensions,double>&  x,
       const tarch::la::Vector<Dimensions,double>&  h

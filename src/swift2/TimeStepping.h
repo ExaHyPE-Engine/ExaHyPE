@@ -45,15 +45,50 @@ namespace swift2 {
    */
   // das Typename sollte wohl ein concept sein
   template <typename Particle>
+  void computeExplicitEulerWithGlobalTimeStepSize(
+    const std::list< Particle* >&  localParticles
+  );
+
+/*
+  template <typename Particle>
   void computeExplicitEulerWithGlobalTimeStepSizeAndReduceNewMaximalVelocity(
     const std::list< Particle* >&  localParticles
+  );
+*/
+
+
+  /**
+   * Reset the marker of a particle from whatever it has been before to
+   * NotMoved. This routine should be called in any task graph before a
+   * particle's position is actually altered. The name is not brilliant,
+   * as you should also call this routine prior to a change of the interaction
+   * radius.
+   */
+  template <typename Particle>
+  void resetMovedParticleMarker(
+    const std::vector< Particle* >&  localParticles
   );
 
 
   template <typename Particle>
-  void resetParticleMarker(
-    const std::vector< Particle* >&  localParticles
+  void reduceVelocityAndCutOffRadius(
+    const std::list< Particle* >&  localParticles
   );
+
+
+  /**
+   * Determine a total admissible time step size which is determined through
+   * the maximum velocity within the mesh and the minimum cell size. It is
+   * also subject to a CFL constant obviously. While every species has an
+   * admissible time step size, not every species type (time integrator) might
+   * use this one.
+   *
+   * If the maximum velocity in the system is zero, I set the time step size
+   * to the initial or default time step size. This happens for example in the
+   * very first time step, where we don't know the maximum velocity yet.
+   */
+  template <typename Particle>
+  void computeAdmissibleTimeStepSizeFromGlobalMeshSizeAndMaximumVelocity( double cflFactor, double initialTimeStepSize );
 }
 
 

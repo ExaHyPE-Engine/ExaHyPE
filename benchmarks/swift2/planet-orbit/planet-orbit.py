@@ -35,7 +35,9 @@ project = swift2.Project( namespace=["benchmarks", "swift2", "planetorbit"],
                           executable="orbit-" + str(args.cell_size) )
 
 
-particle   = swift2.particle.ExplicitEulerFixedInteractionRadius( "Planet" )
+particle   = swift2.particle.ExplicitEulerFixedInteractionRadius( name                   = "Planet", 
+                                                                  cfl_factor             = 0.1, 
+                                                                  initial_time_step_size = 1e-5 )
 
 particle_set = project.add_particle_species( particle )
 
@@ -52,9 +54,8 @@ initialisation_snippet = """
    * But no really used here. */
   particle->setCutOffRadius(""" + str(cut_off_radius) + """);
   // particle->setX( {0.0, 0.0, 0.0} ); is set by injection
-  particle->setV( {0.0, 0.0, 0.0} );
-  particle->setA( {0.1, 0.0, 0.0} );
-
+  particle->setV( {0.0, 0.01, 0.0} );
+  particle->setA( {0.1, 0.0,  0.0} );
 """
 
 

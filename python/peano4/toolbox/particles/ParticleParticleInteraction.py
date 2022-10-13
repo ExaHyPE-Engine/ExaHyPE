@@ -15,7 +15,9 @@ class ParticleParticleInteraction(ActionSet):
                particle_set, 
                particle_particle_interaction_kernel, 
                touch_vertex_first_time_compute_particle_update_kernel=None, 
-               touch_vertex_last_time_compute_particle_update_kernel=None, 
+               touch_vertex_last_time_compute_particle_update_kernel=None,
+               prepare_traversal_kernel="",
+               unprepare_traversal_kernel="", 
                additional_includes="", 
                guard="true", 
                active_particle_set=None,
@@ -133,6 +135,8 @@ class ParticleParticleInteraction(ActionSet):
     self.d[ "ADDITIONAL_INCLUDES" ]               = additional_includes
     self.d[ "GUARD" ]                             = guard
     self.d[ "BIASED_LOCALITY_CHECK"]              = use_biased_locality_check
+    self.d[ "PREPARE_TRAVERSAL_KERNEL" ]          = prepare_traversal_kernel
+    self.d[ "UNPREPARE_TRAVERSAL_KERNEL" ]        = unprepare_traversal_kernel
     
 
   __Template_TouchVertexFirstTime = jinja2.Template("""
@@ -206,6 +210,14 @@ class ParticleParticleInteraction(ActionSet):
 
   def get_body_of_getGridControlEvents(self):
     return "  return std::vector< peano4::grid::GridControlEvent >();\n"
+
+
+  def get_body_of_prepareTraversal(self):
+    return self.d[ "PREPARE_TRAVERSAL_KERNEL" ]
+
+
+  def get_body_of_unprepareTraversal(self):
+    return self.d[ "UNPREPARE_TRAVERSAL_KERNEL" ]
 
 
   def get_action_set_name(self):
