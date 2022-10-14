@@ -22,7 +22,7 @@ args = parser.parse_args()
 
 
 
-dimensions  = 3
+dimensions  = 2
 
 
 
@@ -40,7 +40,7 @@ particle   = swift2.particle.ExplicitEulerFixedInteractionRadius( name          
                                                                   initial_time_step_size = 1e-5 )
 
 particle_force = """
-  assertion(activeParticles.size()<=1);
+//  assertion(activeParticles.size()<=1);
   
   /* Sun location */
   tarch::la::Vector<Dimensions,double> pos_sun(0.0);
@@ -66,7 +66,6 @@ particle_set = project.add_particle_species( particle )
 
 cut_off_radius = 0.1
 initialisation_snippet = """
-
   /*
    * In this problem we will initialize just a single particle (Earth)
    * This will orbit around a point where the hypothetical Sun is (no particle needed here)
@@ -81,13 +80,11 @@ initialisation_snippet = """
   particle->setA( {0.1, 0.0,  0.0} );
 """
 
-
-project.algorithm_step_init.add_action_set( peano4.toolbox.particles.InsertParticlesAlongCartesianLayoutIntoUnrefinedCells(
-  particle_set                = particle_set,
-  distance_between_particles  = 0.45,               # this will initialize just one particle in the domain at (0,0)
-  initialisation_call         = initialisation_snippet,
-  noise                       = False,
-  computational_domain_offset = [0.5, 0.55])
+project.algorithm_step_init.add_action_set( peano4.toolbox.particles.InsertParticlesbyCoordinates(
+  particle_set         = particle_set,
+  initialisation_call  = initialisation_snippet,
+  coordinates          = [ [0.5,0.5,0], [0.75,0.5,0] ] )
+#  coordinates          = [ [0.75,0.5,0] ] )
   )
 
 
@@ -109,10 +106,14 @@ if args.asserts:
 else:
   build_mode = peano4.output.CompileMode.Release
     
-#offset      = [-0.5, -0.5, -0,5] 
 offset      = [ 0, 0, 0 ] 
 domain_size = [ 1, 1, 1 ]
 periodic_boundary_conditions = [False,False,False]          # Periodic BC
+
+#GLOBAL_TIME_STEP_SIZE = str(0.0001)
+#project.constants.export_const_with_type("GLOBAL_TIME_STEP_SIZE", GLOBAL_TIME_STEP_SIZE, "double")
+
+
 
 project.set_global_simulation_parameters(
   dimensions,               # dimensions

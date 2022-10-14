@@ -11,9 +11,8 @@ import dastgen2.attributes.Integer
 
 
 class InsertParticlesbyCoordinates(ActionSet):
-  def __init__(self,particle_set,coordinates=[[0,0,0],[0,0,0]]):
+  def __init__(self,particle_set,initialisation_call,coordinates=[[0,0,0],[0,0,0]]):
     """
-=
 
     particle_set: ParticleSet
  
@@ -23,13 +22,18 @@ class InsertParticlesbyCoordinates(ActionSet):
       Coordinates for the particle. If you work in 2d, the third coordinate
       is simply ignored. But you always need three coordinates.
 
+    initialisation_call: String (C code)
+       Within this code snippet, you have a variable particle which is a pointer to 
+       your particle type. You can use it to set the particle attributes.
+
     """
 
     self.d = {}
     self.d[ "PARTICLE" ]                 = particle_set.particle_model.name
     self.d[ "PARTICLES_CONTAINER" ]      = particle_set.name
     self.d[ "N" ]                        = len(coordinates)
-    self._coordinates			             = coordinates
+    self._coordinates			               = coordinates
+    self.d[ "INITIALISATION_CALL" ]      = initialisation_call
     
 
   __Template_TouchCellFirstTime = jinja2.Template("""
@@ -49,16 +53,24 @@ class InsertParticlesbyCoordinates(ActionSet):
       #endif
     )
     {
-      globaldata::{{PARTICLE}}* newParticle = new globaldata::{{PARTICLE}}();
-      newParticle->setNumber(0, _spacetreeId);
-      newParticle->setNumber(1, _particleNumberOnThisTree);
-      toolbox::particles::init(*newParticle,{coordinates[i][0],coordinates[i][1],coordinates[i][2]},0.0);
+      globaldata::{{PARTICLE}}* particle = new globaldata::{{PARTICLE}}();
+
+//      particle->setNumber(0, _spacetreeId);
+//      particle->setNumber(1, _particleNumberOnThisTree);
+      toolbox::particles::init(*particle, {coordinates[i][0],coordinates[i][1],coordinates[i][2]}, 0.0);
       _particleNumberOnThisTree++;
-      logInfo( "touchVertexFirstTime(...)", "insert " << _particleNumberOnThisTree << "th particle at " << newParticle->toString() );
+
       // just insert them; will be re-assigned then anyway
-      fineGridVertices{{PARTICLES_CONTAINER}}(0).push_back( newParticle );
+      fineGridVertices{{PARTICLES_CONTAINER}}(0).push_back( particle );
+
+      /* Now use initialisation snippet with the particle pointer */
+      {{INITIALISATION_CALL}}
+
+      logInfo( "touchVertexFirstTime(...)", "insert " << _particleNumberOnThisTree << "th particle at " << particle->toString() );
     }
   }
+
+
 """)
 
   def get_body_of_operation(self,operation_name):
