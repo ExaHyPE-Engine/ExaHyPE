@@ -98,6 +98,8 @@ class InsertParticlesbyCoordinates(ActionSet):
 #include "vertexdata/{{PARTICLES_CONTAINER}}.h"
 #include "globaldata/{{PARTICLE}}.h"
 #include "toolbox/particles/ParticleFactory.h"
+
+#include "Constants.h"
 """ )
     return result.render(**self.d)
 
