@@ -25,7 +25,7 @@ namespace swift2 {
     void genericInteraction(
       const std::list< Particle* >&  localParticles,
       const std::list< Particle* >&  activeParticles,
-      std::function< void(Particle* localParticle, const Particle const * activeParticle) > interaction
+      std::function< void(Particle* localParticle, const Particle * const activeParticle) > interaction
     );
   }
 }

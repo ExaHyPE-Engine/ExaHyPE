@@ -69,7 +69,7 @@ class ExplicitEulerFixedInteractionRadius(Particle):
                                          ::swift2::kernels::genericInteraction<globaldata::{}>( 
                                            localParticles, 
                                            activeParticles,
-                                           [&] (globaldata::{}* localParticle, const globaldata::{} const * globalParticle) -> void {{
+                                           [&] (globaldata::{}* localParticle, const globaldata::{} * const globalParticle) -> void {{
                                              {}
                                            }}
                                          );

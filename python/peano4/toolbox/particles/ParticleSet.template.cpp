@@ -348,20 +348,17 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::deleteParticles() {
 }
 
 
+void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::particleCanNotBeLiftedLocally( globaldata::{{PARTICLE_TYPE}}* p ) {
+  assertion1( p->getParallelState()==globaldata::{{PARTICLE_TYPE}}::ParallelState::Local, p->toString() );
+  _particlesThatCanNotBeLiftedWithinTheirTree.push_back(p);
+  _numberOfAssignmentsToGlobalSieve++;
+}
+
+
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::particlesCanNotBeLiftedLocally() {
   for (auto *p: *this) {
-    assertion2( p->getParallelState()==globaldata::{{PARTICLE_TYPE}}::ParallelState::Local, p->toString(), toString() );
-    p->setNewParallelState( globaldata::{{PARTICLE_TYPE}}::NewParallelState::Virtual );
+    particleCanNotBeLiftedLocally(p);
   }
-
-  tarch::multicore::Lock lock( _semaphore );
-  for (auto *p: *this) {
-    logDebug( "particlesCanNotBeLiftedLocally()", "add particle " << p->toString() << " from " << toString() << " to global sieve list for next iteration" );
-    globaldata::{{PARTICLE_TYPE}}* copyOfParticle = new globaldata::{{PARTICLE_TYPE}}(*p);
-    _particlesThatCanNotBeLiftedWithinTheirTree.push_back(copyOfParticle);
-  }
-
-  _numberOfAssignmentsToGlobalSieve += size();
 }
 
 

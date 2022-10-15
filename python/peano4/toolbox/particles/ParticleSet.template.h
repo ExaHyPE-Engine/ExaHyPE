@@ -218,19 +218,13 @@
 
       /**
        * Mark whole particle set as set of particles which can't be lifted
-       *
-       * Contained particles always have to be local ones. Otherwise something
-       * went horribly wrong - after all, we only move local particles. As the
-       * particles are marked as ones that have to be lifted, we can safely
-       * mark them as virtual here.
-       *
-       * As we mark particles as virtual, we only insert copies of the local
-       * ones into the global list. After all, the node might decide to delete
-       * the local particle later on. So better to work with copies. The copies
-       * will eventually be deleted by finishTraversal() after they have been
-       * rolled over into the sieve list.
        */
       void particlesCanNotBeLiftedLocally();
+
+      /**
+       *
+       */
+      static void particleCanNotBeLiftedLocally( globaldata::{{PARTICLE_TYPE}}* particle );
 
       /**
        * Takes the current particle set and finds those particles which can be

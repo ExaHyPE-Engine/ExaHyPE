@@ -4,7 +4,7 @@ template <typename Particle>
 void swift2::kernels::genericInteraction(
   const std::list< Particle* >&  localParticles,
   const std::list< Particle* >&  activeParticles,
-  std::function< void(Particle* localParticle, const Particle const * activeParticle) > interaction
+  std::function< void(Particle* localParticle, const Particle * const activeParticle) > interaction
 ) {
   for (auto* localParticle: localParticles ) {
     if ( not localParticle->getCellHasUpdatedParticle() ) {
