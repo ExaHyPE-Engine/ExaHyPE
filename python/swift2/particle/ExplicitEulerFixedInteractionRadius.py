@@ -75,6 +75,7 @@ class ExplicitEulerFixedInteractionRadius(Particle):
                                          );
                                          """.format(self.name, self.name, self.name, self.particle_acceleration),
         includes                       = """
+                                         #include "Constants.h"
                                          #include "swift2/kernels/ParticleParticleInteraction.h"
                                          """,
       ),
@@ -86,6 +87,7 @@ class ExplicitEulerFixedInteractionRadius(Particle):
         prepare_traversal_kernel       = """::swift2::timestepping::computeAdmissibleTimeStepSizeFromGlobalMeshSizeAndMaximumVelocity<globaldata::{}>({},{});""".format(self.name, self.cfl_factor,self.initial_time_step_size),
         cell_kernel                    = """::swift2::timestepping::computeExplicitEulerWithGlobalTimeStepSize( localParticles );""",
         includes                       = """
+                                         #include "Constants.h"
                                          #include "swift2/timestepping/Euler.h"
                                          #include "swift2/timestepping/GlobalTimeStepping.h"
                                          #include "swift2/timestepping/TimeStepping.h"
@@ -104,6 +106,7 @@ class ExplicitEulerFixedInteractionRadius(Particle):
                                          ::swift2::statistics::reportCutOffRadiusVTDt<globaldata::{PARTICLE}>( "{PARTICLE}" );
                                          """.replace( "{PARTICLE}", self.name ),
         includes                       = """
+                                         #include "Constants.h"
                                          #include "swift2/statistics/Reports.h"
                                          #include "swift2/statistics/Statistics.h"
                                          """              

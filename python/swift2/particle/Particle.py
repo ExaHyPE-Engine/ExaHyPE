@@ -9,6 +9,20 @@ class Particle(peano4.toolbox.particles.Particle):
   """
   
   Base class for any particle in the project
+  
+  You usually do not initialise this base class, but you pick one of the 
+  subclasses which define which time stepping scheme is realised by a 
+  particle. The time stepping scheme defines through which phases or steps
+  each particle runs through per time step, while this generic base class
+  has no steps at all.
+  
+  The type is a specialisation of Peano's particle as it is provided via the 
+  toolbox. In line with the docu there, you can use this particle and add
+  further attributes via
+
+      my_particle.data.add_attribute( peano4.dastgen2.Peano4DoubleArray("v","Dimensions") )
+
+  
     
   """
   

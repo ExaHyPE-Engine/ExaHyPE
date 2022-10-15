@@ -19,15 +19,13 @@ class Particle(DaStGen2):
     ParticleSet and this one is used by the observers.
     
     You have to add the particle to your project though via 
-    
-    my_project.add_global_object
+      
+            my_project.add_global_object
 
     If you want to attributes to a particle, use the data subattribute.
     An all-time classic is the call
     
-    <pre>
-    add_attribute( peano4.dastgen2.Peano4DoubleArray("v","Dimensions") )
-    </pre>
+           add_attribute( peano4.dastgen2.Peano4DoubleArray("v","Dimensions") )
   
   """
   def __init__(self,name):
