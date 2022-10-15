@@ -315,7 +315,7 @@ citation of the original SWIFT paper
     ## species set into
     for current_species_set in self._particle_species_set:
       self.algorithm_step_plot.add_action_set(peano4.toolbox.particles.UpdateParticleGridAssociation(current_species_set),False)
-      self.algorithm_step_init.add_action_set(peano4.toolbox.particles.UpdateParticleGridAssociation(current_species_set),False)
+      #self.algorithm_step_init.add_action_set(peano4.toolbox.particles.UpdateParticleGridAssociation(current_species_set),False)
       self.algorithm_step_plot.add_action_set(peano4.toolbox.particles.UpdateParallelState(current_species_set),False)
       self.algorithm_step_init.add_action_set(peano4.toolbox.particles.UpdateParallelState(current_species_set),False)
 

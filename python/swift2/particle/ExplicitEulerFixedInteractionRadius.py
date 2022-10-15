@@ -83,10 +83,7 @@ class ExplicitEulerFixedInteractionRadius(Particle):
         name                           = "UpdatePositionAndVelocity", 
         dependencies                   = AlgorithmStep.Dependencies.SELF,              
         effect                         = AlgorithmStep.Effect.CHANGE_POSITION_OR_INTERACTION_RADIUS,
-        touch_vertex_first_time_kernel = """::swift2::timestepping::resetMovedParticleMarker(localParticles);""",       
-        #
-        # Machen wir das nicht im touchLast?
-        # 
+        touch_vertex_first_time_kernel = """::swift2::timestepping::resetMovedParticleMarker(localParticles);""",
         touch_vertex_last_time_kernel  = """::swift2::timestepping::computeExplicitEulerWithGlobalTimeStepSize( localParticles );""",
         prepare_traversal_kernel       = """::swift2::timestepping::computeAdmissibleTimeStepSizeFromGlobalMeshSizeAndMaximumVelocity<globaldata::{}>({},{});""".format(self.name, self.cfl_factor,self.initial_time_step_size),
         includes                       = """
