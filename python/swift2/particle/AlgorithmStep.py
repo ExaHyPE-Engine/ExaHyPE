@@ -46,6 +46,9 @@ class AlgorithmStep( object ):
       topology between particles.
     - CHANGE_POSITION_OR_INTERACTION_RADIUS is the most general update which 
       means that literally any global or local attribute might be modified.
+      
+    Please note that any update of a particle position should happen within
+    touch vertex last time. Otherwise, we'd destroy the particle topology.
     
     """
     ALTER_GLOBAL_STATE                    = 0

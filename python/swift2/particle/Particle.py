@@ -51,9 +51,7 @@ class Particle(peano4.toolbox.particles.Particle):
 
   
     def get_attributes(self):
-      return """
-//  static ::swift2::ParticleSpecies _species;
-"""
+      return ""
 
     
     def get_method_declarations(self,full_qualified_name):
@@ -72,8 +70,37 @@ class Particle(peano4.toolbox.particles.Particle):
     
     
   def __init__(self, name):
+    """
+    
+    Initialise the particle
+    
+    This is the baseclass for a particle, i.e. we only add the absolute minimum 
+    of information to a particle. As we inherit from the toolbox particle, we 
+    already have some attributes defined. These are the guys which are not 
+    explicitly visible from the code snippet below, i.e. they are introduced by 
+    the superclass constructor.
+    
+    Here's an overview of pre-defined attributes that each and every particle 
+    hosts:
+    
+    - A position which is a double vector with Dimension entries.
+    - A cut-off radius which describes the range with which other particles a 
+      particle might theoretically interact. The effective interaction might 
+      be smaller if a code decides to ignore potential interaction partners, 
+      i.e. this is an absolute maximum. The cut-off radius will decide on which 
+      resolution level within the tree a particle is held.
+    - A MoveState flag. This flag is essential. We use it later to label those 
+      particles that have been moved to avoid that we move particles multiple
+      times.
+    - A flag that indicates if a particle has been updated within a cell. 
+      Consult our code release papers: In short, a particle does not uniquely 
+      belong to one cell but can belong to many cells. We nevertheless want to
+      update them only once.
+    
+    """
     super( Particle, self ).__init__( name )
     self.data.add_attribute( dastgen2.attributes.Enumeration("MoveState",["New","NotMovedYet","Moved"]) )
+    self.data.add_attribute( dastgen2.attributes.Boolean("CellHasUpdatedParticle") )
     self.data.add_aspect( Particle.SpeciesAspect() )
     pass
 

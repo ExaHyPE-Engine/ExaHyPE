@@ -8,9 +8,9 @@ import dastgen2
 import os
 import sys
 
-from swift2.particle.Particle   import Particle
-from swift2.strategy.Sequential import serialise_and_map_onto_separate_mesh_traversals
-from swift2.output.SWIFTMain    import SWIFTMain
+from swift2.particle.Particle         import Particle
+from swift2.graphcompiler.Sequential  import serialise_and_map_onto_separate_mesh_traversals
+from swift2.output.SWIFTMain          import SWIFTMain
 
 
 from abc import abstractmethod

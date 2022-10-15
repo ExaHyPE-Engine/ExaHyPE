@@ -1,6 +1,6 @@
 template <typename Particle>
 void swift2::timestepping::computeExplicitEulerWithGlobalTimeStepSize(
-  const std::list< Particle* >&  localParticles
+  const std::vector< Particle* >&  localParticles
 ) {
   double timeStepSize = Particle::getSpecies().getMinTimeStepSize();
   for (auto& particle: localParticles) {
@@ -19,7 +19,7 @@ void swift2::timestepping::computeExplicitEulerWithGlobalTimeStepSize(
 
 template <typename Particle>
 void swift2::timestepping::computeExplicitEulerCromerWithGlobalTimeStepSize(
-  const std::list< Particle* >&  localParticles
+  const std::vector< Particle* >&  localParticles
 ) {
   double timeStepSize = Particle::getSpecies().getMinTimeStepSize();
   for (auto& particle: localParticles) {

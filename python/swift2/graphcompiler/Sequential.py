@@ -1,8 +1,11 @@
 # This file is part of the SWIFT2 project. For conditions of distribution and 
 # use, please see the copyright notice at www.peano-framework.org
-from swift2.particle.AlgorithmStep import AlgorithmStep
+from swift2.particle.AlgorithmStep            import AlgorithmStep
+from swift2.actionsets.UpdateParticleMarker   import UpdateParticleMarker
+
 
 import peano4
+import swift2
 
 
 def serialise_and_map_onto_separate_mesh_traversals(species_sets, verbose=True):
@@ -33,6 +36,7 @@ def serialise_and_map_onto_separate_mesh_traversals(species_sets, verbose=True):
       if step.dependencies==AlgorithmStep.Dependencies.NEIGHBOURS and (step.effect==AlgorithmStep.Effect.CHANGE_POSITION_OR_INTERACTION_RADIUS or previous_step_has_altered_particle_positions):
         if verbose:
           print( "GRAPH COMPILER DEBUG: step {} on particle {} uses Neighbours+Resort".format( step.name, current_species_set.particle_model.name ) )
+        new_step.add_action_set(UpdateParticleMarker(current_species_set),False)
         new_step.add_action_set(peano4.toolbox.particles.UpdateParticleGridAssociation(current_species_set),False)
         new_step.add_action_set(peano4.toolbox.particles.UpdateParallelState(current_species_set),False)
         new_step.add_action_set(peano4.toolbox.particles.ParticleParticleInteraction(
@@ -48,6 +52,7 @@ def serialise_and_map_onto_separate_mesh_traversals(species_sets, verbose=True):
       elif step.dependencies==AlgorithmStep.Dependencies.NEIGHBOURS and step.effect==AlgorithmStep.Effect.ALTER_LOCAL_STATE:
         if verbose:
           print( "GRAPH COMPILER DEBUG: step {} on particle {} uses Neighbours".format( step.name, current_species_set.particle_model.name ) )
+        new_step.add_action_set(UpdateParticleMarker(current_species_set),False)
         new_step.add_action_set(peano4.toolbox.particles.ParticleParticleInteraction(
             particle_set                                           = current_species_set,
             particle_particle_interaction_kernel                   = step.cell_kernel,
@@ -61,6 +66,7 @@ def serialise_and_map_onto_separate_mesh_traversals(species_sets, verbose=True):
       elif step.dependencies==AlgorithmStep.Dependencies.SELF and (step.effect==AlgorithmStep.Effect.CHANGE_POSITION_OR_INTERACTION_RADIUS or previous_step_has_altered_particle_positions):
         if verbose:
           print( "GRAPH COMPILER DEBUG: step {} on particle {} uses Cell-wise Access+Resort".format( step.name, current_species_set.particle_model.name ) )
+        new_step.add_action_set(UpdateParticleMarker(current_species_set),False)
         new_step.add_action_set(peano4.toolbox.particles.UpdateParticleGridAssociation(current_species_set),False)
         new_step.add_action_set(peano4.toolbox.particles.UpdateParallelState(current_species_set),False)
         new_step.add_action_set(peano4.toolbox.particles.ParticlePerCellUpdate(
@@ -77,6 +83,7 @@ def serialise_and_map_onto_separate_mesh_traversals(species_sets, verbose=True):
       elif step.dependencies==AlgorithmStep.Dependencies.SELF and (step.effect==AlgorithmStep.Effect.ALTER_LOCAL_STATE or step.effect==AlgorithmStep.Effect.ALTER_GLOBAL_STATE):
         if verbose:
           print( "GRAPH COMPILER DEBUG: step {} on particle {} uses Cell-wise Access".format( step.name, current_species_set.particle_model.name ) )
+        new_step.add_action_set(UpdateParticleMarker(current_species_set),False)
         new_step.add_action_set(peano4.toolbox.particles.ParticlePerCellUpdate(
             particle_set                                           = current_species_set,
             particle_cell_update_kernel                            = step.cell_kernel,
