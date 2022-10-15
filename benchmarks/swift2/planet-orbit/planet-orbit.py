@@ -18,6 +18,7 @@ parser.add_argument("-pd",  "--peano-dir",         dest="peanodir",       defaul
 parser.add_argument("-v",   "--verbose",           dest="verbose",        action="store_true", default=False, help="Verbose")
 parser.add_argument("-et",  "--end-time",          dest="end_time",       type=float, default=1.0, help="End of simulation" )
 parser.add_argument("-cs",  "--cell-size",         dest="cell_size",      type=float, default=0.3, help="Cell size (default 0.3)" )
+parser.add_argument("-d",   "--dimensions",        dest="dimensions",     type=int,   default=2,   help="Spatial dimensions (default 2)" )
 parser.add_argument("-asserts",  "--asserts",      dest="asserts",        action="store_true", default=False, help="Switch on assertions" )
 args = parser.parse_args()
 
@@ -26,7 +27,7 @@ args = parser.parse_args()
 # Generate SWIFT project
 ########################################################################################
 
-dimensions  = 2
+dimensions  = args.dimensions
 
 project = swift2.Project( namespace=["benchmarks", "swift2", "planetorbit"], 
                           project_name="planetorbit", 
@@ -107,6 +108,14 @@ project.set_Peano4_installation(args.peanodir, build_mode)
 project.set_load_balancing("toolbox::loadbalancing::RecursiveSubdivision", "new toolbox::loadbalancing::RecursiveSubdivision::DefaultConfiguration()")
 
 
+#
+# Constants don't work everywhere
+# 1 vs 2 particles
+# parallel does not work
+# Clear flag
+#
+
+
 ########################################################################################
 # Declare the force acting on the particle
 ########################################################################################
@@ -114,11 +123,13 @@ project.set_load_balancing("toolbox::loadbalancing::RecursiveSubdivision", "new 
 # @TODO include Constants.h in the generated code
 
 particle_force = """
-//  assertion(activeParticles.size()<=1);
-  
   /* Sun location */
+  #if Dimensions==2
 //  tarch::la::Vector<Dimensions,double> pos_sun = {SUN_X_COORD,SUN_Y_COORD,0};
-  tarch::la::Vector<Dimensions,double> pos_sun = {0.5,0.5,0};
+  tarch::la::Vector<Dimensions,double> pos_sun = {0.5,0.5};
+  #else
+  tarch::la::Vector<Dimensions,double> pos_sun = {0.5,0.5,0.0};
+  #endif
 
   //  /* G_NEWTON in internal units */
   //  double const L3 = LENGTH_UNIT * LENGTH_UNIT * LENGTH_UNIT;
@@ -155,7 +166,8 @@ initialisation_snippet = """
   particle->setV( {0, 0, 0} );
   particle->setA( {0, 0, 0} );
 
-  // Orbiting particle 
+  // Orbiting particle: We can also have a free moving sun, but by default, this
+  // one rests and the earth is actually orbiting.
   if( particle->getX(0) == EARTH_X_INI ){
     particle->setV(0, EARTH_V_INI_X) ;
     particle->setV(1, EARTH_V_INI_Y) ;
@@ -164,12 +176,14 @@ initialisation_snippet = """
 
 """
 
+#
+# I either insert sun and earth or only the earth
+#
 project.algorithm_step_init.add_action_set( peano4.toolbox.particles.InsertParticlesbyCoordinates(
   particle_set         = particle_set,
   initialisation_call  = initialisation_snippet,
-#  coordinates          = [ [0.5,0.5,0], [0.75,0.5,0] ] )
-  coordinates          = [ [EARTH_X_INI,EARTH_Y_INI,0], [SUN_X_COORD,SUN_Y_COORD,0] ] )
-#  coordinates          = [ [0.75,0.5,0] ] )  # SINGLE PARTICLE CRASHES
+  coordinates          = [ (EARTH_X_INI,EARTH_Y_INI,0) ] )
+  #coordinates          = [ (EARTH_X_INI,EARTH_Y_INI,0), (SUN_X_COORD,SUN_Y_COORD,0) ] )
   )
 
 ########################################################################################
