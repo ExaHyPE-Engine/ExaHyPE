@@ -227,8 +227,23 @@ project.algorithm_step_init.add_action_set( peano4.toolbox.particles.InsertParti
 # velocity when we play through a movie. But the explicit visualisation shows
 # how to handle attributes per particle.
 #
+# When we create the plotter, we have to inform it how to enumerate the 
+# individual snapshots. Obviously, we can just count through the snapshots.
+# In this case, you have to pass the constant peano4.toolbox.particles.PlotParticlesInVTKFormat.CountTimeSteps
+# into the field time_stamp_evaluation. You can also define your own time
+# stamp. For this, it is useful to know that each particle definition in the 
+# Python script will yield a particle class with the same name in the 
+# subnamespace globaldata. Every particle class in return has a class attribute
+#      
+#            getSpecies()
+#
+# which returns an object that holds global information about this particle 
+# type. 
 ###############################################################################
-particle_plotter = peano4.toolbox.particles.PlotParticlesInVTKFormat( "particles", particle_set, time_stamp_evaluation=peano4.toolbox.particles.PlotParticlesInVTKFormat.CountTimeSteps )
+#particle_plotter = peano4.toolbox.particles.PlotParticlesInVTKFormat( "particles", particle_set, time_stamp_evaluation=peano4.toolbox.particles.PlotParticlesInVTKFormat.CountTimeSteps )
+particle_plotter = peano4.toolbox.particles.PlotParticlesInVTKFormat( "particles", 
+                                                                      particle_set, 
+                                                                      "globaldata::{}::getSpecies().getMinTimeStamp()".format(particle.name) )
 particle_plotter.add_attribute_to_plot(particle.velocity, dimensions)
 #particle_plotter.add_attribute_to_plot(a_attr       , Dimensions)
 #particle_plotter.add_attribute_to_plot(energy_kin_attr  , 1)

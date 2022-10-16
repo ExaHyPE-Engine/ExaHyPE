@@ -179,78 +179,56 @@ class UpdateParticleGridAssociation(ActionSet):
   
   """
   __Template_ReassignAndLiftWithinCell = jinja2.Template("""
-  // move means particles that are actually to be associated with a new nearest vertex  
-  vertexdata::{{PARTICLES_CONTAINER}} particlesThatMoveOnSameLevel[TwoPowerD];
-  // particles that 'jumped' aka moved by more than half a mesh width
-  vertexdata::{{PARTICLES_CONTAINER}} liftParticles[TwoPowerD];
-
-  // run over all adjacent vertices, and find the bad guys, i.e. those 
-  // particles that are not associated to the correct nearest vertex
-  // anymore
   for (int i=0; i<TwoPowerD; i++) {
-    std::bitset<Dimensions> currentAssociation;
-    std::bitset<Dimensions> destAssociation;
-    bool                    remainsOnSameLevel;
-    
     vertexdata::{{PARTICLES_CONTAINER}}::iterator p = fineGridVertices{{PARTICLES_CONTAINER}}(i).begin(); 
     while ( p!=fineGridVertices{{PARTICLES_CONTAINER}}(i).end() ) {
-      switch ( toolbox::particles::getParticleReassociationInstructionWithinCellWithIntraCellReassignment(
-        marker,
-        i,
-        p
-      )) {
-        case toolbox::particles::ParticleReassociationInstruction::Keep:
-          break;
-      }
-      
-      // study only particles which are contained within the current cell
-      if ( marker.isContained((*p)->getX()) ) {
-        std::bitset<Dimensions>  currentAssociation = i;
-        bool                     remainsOnSameLevel = true;
-        // marker.x() gives me the centre of the cell
-        for (int d=0; d<Dimensions; d++) {
-          destAssociation[d]  = tarch::la::greaterEquals( (*p)->getX(d), marker.x()(d) );
-          remainsOnSameLevel &= tarch::la::smallerEquals( std::abs((*p)->getX(d) - marker.x()(d)), marker.h()(d));
-        }
-      
-        if (remainsOnSameLevel and currentAssociation==destAssociation) {
+      toolbox::particles::ParticleReassociationInstruction instruction = 
+        toolbox::particles::getParticleReassociationInstructionWithinCellWithIntraCellReassignment(
+          p, marker, i
+        );
+      switch ( instruction ) {
+        case toolbox::particles::ParticleReassociationInstruction_Keep:
           p++;
-        }
-        else if (remainsOnSameLevel) {
-          logDebug( "touchCellLastTime(...)", "reassign particle " << (*p)->toString() << " in tree " << _treeNumber << " within cell " << marker.toString() << " which had been associated with vertex " << i << " but belongs to " << destAssociation );
-          particlesThatMoveOnSameLevel[ destAssociation.to_ulong() ].push_back(*p);
+          break;
+        case toolbox::particles::ParticleReassociationInstruction_SieveGlobally:
+          fineGridVertex{{PARTICLES_CONTAINER}}.particleCanNotBeLiftedLocally(*p);    
+          p = fineGridVertex{{PARTICLES_CONTAINER}}.erase(p);
+          break;
+        case 0:
+        case 1:
+        case 2:
+        case 3:
+        #if Dimensions==3
+        case 4:
+        case 5:
+        case 6:
+        case 7:
+        #endif
+          fineGridVertices{{PARTICLES_CONTAINER}}(instruction).push_back(*p);
           p = fineGridVertices{{PARTICLES_CONTAINER}}(i).erase(p);
           _numberOfParticleReassignmentsOnCurrentLevel++;
-        }
-        else {
-          logDebug( "touchCellLastTime(...)", "lift particle " << (*p)->toString() << " in tree " << _treeNumber << " from cell " << marker.toString() << " as difference is " << ((*p)->getX() - marker.x()) );
-          liftParticles[ destAssociation.to_ulong() ].push_back(*p);
+          break;
+        case 0+TwoPowerD:
+        case 1+TwoPowerD:
+        case 2+TwoPowerD:
+        case 3+TwoPowerD:
+        #if Dimensions==3
+        case 4+TwoPowerD:
+        case 5+TwoPowerD:
+        case 6+TwoPowerD:
+        case 7+TwoPowerD:
+        #endif
+          coarseGridVertices{{PARTICLES_CONTAINER}}(instruction-TwoPowerD).push_back(*p);
           p = fineGridVertices{{PARTICLES_CONTAINER}}(i).erase(p);
-        }
-      }
-      else {
-        p++;
-      }
+          _numberOfLifts ++;
+          break;
+        default:
+          assertionMsg( false, "value not implemented" );
+          break;
+      }      
     }
   }
   
-  // we have now extracted all particles which are not associated with their 
-  // nearest vertex anymore and we have put them into the two local lists.
-  // Finally, we thus have to run through the two local lists particlesThatMoveOnSameLevel
-  // and liftParticles and have to append those into the respective vertices.
-  for (int i=0; i<TwoPowerD; i++) {
-    fineGridVertices{{PARTICLES_CONTAINER}}(i).insert(   fineGridVertices{{PARTICLES_CONTAINER}}(i).end(),   particlesThatMoveOnSameLevel[ i ].begin(), particlesThatMoveOnSameLevel[ i ].end() ); 
-  }
-
-  if (marker.isCellLocal()) {
-    for (int i=0; i<TwoPowerD; i++) {
-      coarseGridVertices{{PARTICLES_CONTAINER}}(i).insert( coarseGridVertices{{PARTICLES_CONTAINER}}(i).end(), liftParticles[ i ].begin(), liftParticles[ i ].end() ); 
-      _numberOfLifts += liftParticles[ i ].size();
-    }
-  }
-  else {
-    liftParticles[ i ].particlesCanNotBeLiftedLocally();
-  }
 """)
 
 
@@ -355,7 +333,8 @@ class UpdateParticleGridAssociation(ActionSet):
   __Template_LiftParticlesFurtherAway = jinja2.Template("""
   auto p = fineGridVertex{{PARTICLES_CONTAINER}}.begin();
   while (p!=fineGridVertex{{PARTICLES_CONTAINER}}.end()) {
-    switch ( toolbox::particles::liftParticleAssociatedWithVertex(**p, marker) ) {
+    toolbox::particles::ParticleReassociationInstruction instruction = toolbox::particles::liftParticleAssociatedWithVertex(**p, marker);
+    switch ( instruction ) {
       case toolbox::particles::ParticleReassociationInstruction_Keep:
         p++;
         break;
@@ -364,47 +343,19 @@ class UpdateParticleGridAssociation(ActionSet):
         p = fineGridVertex{{PARTICLES_CONTAINER}}.erase(p);
         break;
       case 0:
-        coarseGridVertices{{PARTICLES_CONTAINER}}( 0 ).push_back( *p );
-        _numberOfLifts ++;
-        p = fineGridVertex{{PARTICLES_CONTAINER}}.erase(p);
-        break;
       case 1:
-        coarseGridVertices{{PARTICLES_CONTAINER}}( 1 ).push_back( *p );
-        _numberOfLifts ++;
-        p = fineGridVertex{{PARTICLES_CONTAINER}}.erase(p);
-        break;
       case 2:
-        coarseGridVertices{{PARTICLES_CONTAINER}}( 2 ).push_back( *p );
-        _numberOfLifts ++;
-        p = fineGridVertex{{PARTICLES_CONTAINER}}.erase(p);
-        break;
       case 3:
-        coarseGridVertices{{PARTICLES_CONTAINER}}( 3 ).push_back( *p );
-        _numberOfLifts ++;
-        p = fineGridVertex{{PARTICLES_CONTAINER}}.erase(p);
-        break;
       #if Dimensions==3
       case 4:
-        coarseGridVertices{{PARTICLES_CONTAINER}}( 4 ).push_back( *p );
-        _numberOfLifts ++;
-        p = fineGridVertex{{PARTICLES_CONTAINER}}.erase(p);
-        break;
       case 5:
-        coarseGridVertices{{PARTICLES_CONTAINER}}( 5 ).push_back( *p );
-        _numberOfLifts ++;
-        p = fineGridVertex{{PARTICLES_CONTAINER}}.erase(p);
-        break;
       case 6:
-        coarseGridVertices{{PARTICLES_CONTAINER}}( 6 ).push_back( *p );
-        _numberOfLifts ++;
-        p = fineGridVertex{{PARTICLES_CONTAINER}}.erase(p);
-        break;
       case 7:
-        coarseGridVertices{{PARTICLES_CONTAINER}}( 7 ).push_back( *p );
+      #endif
+        coarseGridVertices{{PARTICLES_CONTAINER}}( instruction ).push_back( *p );
         _numberOfLifts ++;
         p = fineGridVertex{{PARTICLES_CONTAINER}}.erase(p);
         break;
-      #endif
       default:
         assertionMsg( false, "value not implemented" );
         break;

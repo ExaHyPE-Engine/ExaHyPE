@@ -19,8 +19,20 @@ namespace toolbox {
      * it is dumped into the set of particles that have to be sieved.
      * Therefore, you don't have to check any particle anymore in
      * touchVertexLastTime(). All should be in place.
+     *
+     * We return
+     *
+     * - ParticleReassociationInstruction_Keep if the particle should
+     *   remain where it is.
+     * - A value between 0 and 2^d-1 if we should assign it to another
+     *   vertex of this cell (on the same level).
+     *
      */
+    template <typename Particle>
     ParticleReassociationInstruction getParticleReassociationInstructionWithinCellWithIntraCellReassignment(
+      const Particle&                           p,
+      const peano4::datamanagement::CellMarker  marker,
+      int                                       numberOfVertexWithinCell
     );
 
 
@@ -46,14 +58,21 @@ namespace toolbox {
      * has a routine x() which returns the position of the associated of the
      * vertex plus a routine h() which returns the size of the adjacent cells.
      *
+     * If the particle is at the right place, we return ParticleReassociationInstruction_Keep.
+     * Nothing is to be done. Otherwise, we have to lift:
      *
-  // If the parent cell is local, then we can safely move the particles
-  // up the tree, as we know that all 2^d coarse grid vertices are
-  // adjacent to the local domain. If the parent is not local, we have
-  // to assume that we just did hit a vertical tree cut. In this case,
-  // we are on the safe side if we just add the particles to the global
-  // particle list.
+     * If the parent cell is local, then we can safely move the particles
+     * up the tree, as we know that all 2^d coarse grid vertices are
+     * adjacent to the local domain.
      *
+     * If the parent cell is not local, we have
+     * to assume that we just did hit a vertical tree cut. In this case,
+     * we are on the safe side if we just add the particles to the global
+     * sieve particle list. We return ParticleReassociationInstruction_SieveGlobally.
+     *
+     * All of these considerations apply if and only if a particle is local. If
+     * a particle is virtual, it is a copy from another rank. In this case, we
+     * should not change its position, and we should not change its association.
      */
     template <typename Particle>
     ParticleReassociationInstruction liftParticleAssociatedWithVertex(

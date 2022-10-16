@@ -2,14 +2,66 @@
 
 
 template <typename Particle>
+toolbox::particles::ParticleReassociationInstruction toolbox::particles::getParticleReassociationInstructionWithinCellWithIntraCellReassignment(
+  const Particle&                           particle,
+  const peano4::datamanagement::CellMarker  marker,
+  int                                       numberOfVertexWithinCell
+) {
+  if (
+    not marker.isContained(particle.getX())
+    or
+    particle.getParallelState()!=Particle::ParallelState::Local
+  ) {
+    return ParticleReassociationInstruction_Keep;
+  }
+  else {
+    std::bitset<Dimensions> currentAssociation = numberOfVertexWithinCell;
+    std::bitset<Dimensions> destAssociation;
+    bool                    remainsOnSameLevel = true;
+
+    // marker.x() gives me the centre of the cell
+    for (int d=0; d<Dimensions; d++) {
+      destAssociation[d]  = tarch::la::greaterEquals( particle.getX(d), marker.x()(d) );
+      remainsOnSameLevel &= tarch::la::smallerEquals( std::abs(particle.getX(d) - marker.x()(d)), marker.h()(d));
+    }
+
+    if (remainsOnSameLevel and currentAssociation==destAssociation) {
+      return ParticleReassociationInstruction_Keep;
+    }
+    else if (remainsOnSameLevel) {
+      logDebug( "touchCellLastTime(...)", "reassign particle " << (*p)->toString() << " in tree " << _treeNumber << " within cell " << marker.toString() << " which had been associated with vertex " << i << " but belongs to " << destAssociation );
+      return destAssociation.to_ulong();
+    }
+    else if ( not marker.isParentLocal() ) {
+      return ParticleReassociationInstruction_SieveGlobally;
+    }
+    else {
+      logDebug( "touchCellLastTime(...)", "lift particle " << (*p)->toString() << " in tree " << _treeNumber << " from cell " << marker.toString() << " as difference is " << ((*p)->getX() - marker.x()) );
+      return destAssociation.to_ulong() + TwoPowerD;
+    }
+  }
+  return -65536;
+}
+
+
+template <typename Particle>
 toolbox::particles::ParticleReassociationInstruction toolbox::particles::liftParticleAssociatedWithVertex(
   const Particle&                             particle,
   const peano4::datamanagement::VertexMarker  marker
 ) {
   double maxDistance = tarch::la::max( tarch::la::abs( particle.getX()-marker.x() ) );
 
-  if ( tarch::la::smallerEquals( maxDistance, tarch::la::min(marker.h())/2.0 ) ) {
-    assertion2(marker.isContainedInAdjacentCells(particle.getX(),0.5), marker.toString(), particle.toString() );
+  if (
+    tarch::la::smallerEquals( maxDistance, tarch::la::min(marker.h())/2.0 )
+    or
+    particle.getParallelState()!=Particle::ParallelState::Local
+  ) {
+    assertion2(
+      marker.isContainedInAdjacentCells(particle.getX(),0.5)
+      or
+      particle.getParallelState()!=Particle::ParallelState::Local,
+      marker.toString(), particle.toString()
+    );
     return ParticleReassociationInstruction_Keep;
   }
   else if ( not marker.isParentCellLocal() ) {

@@ -16,6 +16,11 @@ namespace swift2 {
      * should never change the particle position throughout the mesh traversal,
      * as it might introduce inconsistent particle data structure.
      *
+     * We do not update all particles but merely those which are labelled as
+     * local. Virtual particles are mere copies from another tree. We should
+     * not alter their states or positions. Any neighbour who is in charge
+     * of the particle should do this, and we then expect such a rank to send
+     * over a new copy.
      */
     template <typename Particle>
     void computeExplicitEulerWithGlobalTimeStepSize(
