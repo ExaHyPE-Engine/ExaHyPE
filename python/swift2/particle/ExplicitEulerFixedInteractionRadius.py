@@ -27,14 +27,39 @@ class ExplicitEulerFixedInteractionRadius(Particle):
   
   ## Force calculation
   
-  particle_acceleration is a C++ string which defines a force.
+  particle_particle_interaction_over_particle_sets_kernel is a C++ string which defines a force between two
+  particles. It has access to three important objects:
+  
+  - localParticles is a container (list) over pointers to local particles
+  - activeParticles is a container (list) over pointers to active particles
+  - marker is a cell marker which identifies the current cell.
+  
+  Please consult the guidebook for a definition of local and active particles
+  but take into account that the local particles always are a subset of the 
+  active particles.
+  
+  Besides the actual particle-to-particle calculation, i.e. a force 
+  calculation, users can also provide kernels that kick in when you touch 
+  particles for the first time before you actually compute any 
+  particle-particle interaction, and there is a plug-in point what you do 
+  just once the particle-particle interaction has terminated. The latter 
+  point is reached before we do the actual time stepping. In both plug-in
+  points, you have a vertex marker which gives you the position of the 
+  vertex to which a particular is associated, and you have the localParticles.
+  This is a vector of pointers in this particular case.
+  
+  @see peano4::datamanagement::CellMarker
+  @see peano4::datamanagement::VertexMarker
   
   """
   def __init__(self, 
                name, 
                cfl_factor, 
                initial_time_step_size,
-               particle_acceleration = ""):
+               particle_particle_interaction_over_particle_sets_kernel = "",
+               touch_particles_of_set_first_time_kernel = "",
+               touch_particles_of_set_last_time_kernel  = ""
+               ):
     super( ExplicitEulerFixedInteractionRadius, self ).__init__( name )
     
     self.velocity    = peano4.dastgen2.Peano4DoubleArray("v","Dimensions")
@@ -45,7 +70,10 @@ class ExplicitEulerFixedInteractionRadius(Particle):
     self.cfl_factor                = cfl_factor
     self.initial_time_step_size    = initial_time_step_size
     
-    self.particle_acceleration     = particle_acceleration
+    self.particle_particle_interaction_over_particle_sets_kernel = particle_particle_interaction_over_particle_sets_kernel
+    self.touch_particles_of_set_first_time_kernel                = touch_particles_of_set_first_time_kernel 
+    self.touch_particles_of_set_last_time_kernel                 = touch_particles_of_set_last_time_kernel
+
     pass
 
 
@@ -65,6 +93,7 @@ class ExplicitEulerFixedInteractionRadius(Particle):
         name                           = "ForceCalculation",          
         dependencies                   = AlgorithmStep.Dependencies.NEIGHBOURS, 
         effect                         = AlgorithmStep.Effect.ALTER_LOCAL_STATE, 
+        touch_vertex_first_time_kernel = self.touch_particles_of_set_first_time_kernel,
         cell_kernel                    = """
                                          ::swift2::kernels::genericInteraction<globaldata::{}>( 
                                            localParticles, 
@@ -73,7 +102,8 @@ class ExplicitEulerFixedInteractionRadius(Particle):
                                              {}
                                            }}
                                          );
-                                         """.format(self.name, self.name, self.name, self.particle_acceleration),
+                                         """.format(self.name, self.name, self.name, self.particle_particle_interaction_over_particle_sets_kernel),
+        touch_vertex_last_time_kernel  = self.touch_particles_of_set_last_time_kernel,
         includes                       = """
                                          #include "Constants.h"
                                          #include "swift2/kernels/ParticleParticleInteraction.h"
