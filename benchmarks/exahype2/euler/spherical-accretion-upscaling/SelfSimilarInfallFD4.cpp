@@ -37,7 +37,7 @@ void benchmarks::exahype2::euler::sphericalaccretionupscaling::SelfSimilarInfall
   if (
     tarch::la::equals(t,0.0)
     and
-    tarch::la::norm2(volumeX) <= InitialTopHatRadius + volumeH(0) * NumberOfFiniteVolumesPerAxisPerPatch
+    tarch::la::norm2(volumeX) <= InitialTopHatRadius + volumeH(0) * NumberOfGridCellsPerPatchPerAxis
   ) {
     return ::exahype2::RefinementCommand::Refine;
   }
@@ -75,7 +75,7 @@ void benchmarks::exahype2::euler::sphericalaccretionupscaling::SelfSimilarInfall
 
   applications::exahype2::euler::sphericalaccretion::initialiseOverdensity_topHat(
     Q,
-    volumeX,
+    volumeCentre,
     InitialTopHatRadius,
     AdditionalMass,
     BaseDensity,
@@ -131,7 +131,7 @@ double ::benchmarks::exahype2::euler::sphericalaccretionupscaling::SelfSimilarIn
   double result = ::applications::exahype2::euler::maxEigenvalue(
       Q,
       faceCentre,
-      volumeH,
+      gridCellH,
       t,
       dt,
       normal,
@@ -162,7 +162,7 @@ void ::benchmarks::exahype2::euler::sphericalaccretionupscaling::SelfSimilarInfa
   ::applications::exahype2::euler::flux(
     Q,
     faceCentre,
-    volumeH,
+    gridCellH,
     t,
     dt,
     normal,
@@ -195,11 +195,11 @@ void ::benchmarks::exahype2::euler::sphericalaccretionupscaling::SelfSimilarInfa
     S[i] = 0.0;
   }
 
-  double massInterpolated = _accumulator.getMass_linearInterpolation( tarch::la::norm2( volumeX ) );
+  double massInterpolated = _accumulator.getMass_linearInterpolation( tarch::la::norm2( gridCellX ) );
 
   applications::exahype2::euler::sphericalaccretion::addGravitationalSource_AlphaCDM(
     S,
-    volumeX,
+    gridCellX,
     Q,
     massInterpolated,
     aInitial,
@@ -211,7 +211,7 @@ void ::benchmarks::exahype2::euler::sphericalaccretionupscaling::SelfSimilarInfa
 
 
 void ::benchmarks::exahype2::euler::sphericalaccretionupscaling::SelfSimilarInfallFD4::finishTimeStep() {
-  AbstractSelfSimilarInfallFV::finishTimeStep();
+  AbstractSelfSimilarInfallFD4::finishTimeStep();
   if (isLastGridSweepOfTimeStep()) {
     _accumulator.finishAccumulation();
     TotalMassInPreviousTimeStep = _accumulator.getTotalMass();
