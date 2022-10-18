@@ -1060,3 +1060,92 @@ void toolbox::blockstructured::internal::interpolateCell_AoS_linear(
   );
 }
 
+
+void toolbox::blockstructured::interpolateHaloLayer_AoS_tensor_product(
+  const peano4::datamanagement::FaceMarker& marker,
+  int                                       numberOfDoFsPerAxisInPatch,
+  int                                       overlap,
+  int                                       unknowns,
+  const double* __restrict__                normalInterpolationMatrix1d,
+  const double* __restrict__                tangentialInterpolationMatrix1d,
+  const double* __restrict__                coarseGridFaceValues,
+  double* __restrict__                      fineGridFaceValues
+) {
+  logTraceInWith3Arguments( "interpolateHaloLayer_AoS_tensor_product(...)", marker.toString(), numberOfDoFsPerAxisInPatch, overlap );
+
+  const int    normal          = marker.getSelectedFaceNumber() % Dimensions;
+  const int    leftRightOffset = marker.getSelectedFaceNumber() < Dimensions ? 0 : overlap;
+
+  dfore(kFine,numberOfDoFsPerAxisInPatch,normal,0) {
+    for (int iFine=leftRightOffset;   iFine<leftRightOffset+overlap;   iFine++) {
+      tarch::la::Vector<Dimensions,int> dest = kFine;
+      dest(normal) = iFine;
+
+      int destLinearised = serialiseVoxelIndexInOverlap(
+        dest,
+        numberOfDoFsPerAxisInPatch, overlap, normal
+      );
+
+      for (int unknown=0; unknown<unknowns; unknown++) {
+        fineGridFaceValues[destLinearised*unknowns+unknown] = 0.0;
+      }
+
+      dfore(kCoarse,numberOfDoFsPerAxisInPatch,normal,0) {
+        for (int iCoarse=leftRightOffset;   iCoarse<leftRightOffset+overlap;   iCoarse++) {
+          tarch::la::Vector<Dimensions,int> src  = kCoarse;
+          src(normal)  = iCoarse;
+          int srcLinearised = serialiseVoxelIndexInOverlap(
+            src,
+            numberOfDoFsPerAxisInPatch, overlap, normal
+          );
+
+          double weight = 1.0;
+          for (int d=0; d<Dimensions; d++) {
+            if (d==normal) {
+              int index = marker.getSelectedFaceNumber() < Dimensions ? kCoarse(d) : 2*overlap - kCoarse(d) - 1;
+              weight *= normalInterpolationMatrix1d[ index ];
+            }
+            else {
+              int index = kCoarse(d) + marker.getRelativePositionWithinFatherCell()(d) * numberOfDoFsPerAxisInPatch;
+              weight *= normalInterpolationMatrix1d[ index ];
+            }
+          }
+
+          for (int unknown=0; unknown<unknowns; unknown++) {
+            fineGridFaceValues[destLinearised*unknowns+unknown] += weight * coarseGridFaceValues[srcLinearised*unknowns+unknown];
+          }
+        }
+      }
+    }
+  }
+
+  logTraceOut( "interpolateHaloLayer_AoS_tensor_product(...)" );
+}
+
+
+void toolbox::blockstructured::interpolateHaloLayer_AoS_tensor_product(
+      const peano4::datamanagement::FaceMarker& marker,
+      int                                       numberOfDoFsPerAxisInPatch,
+      int                                       overlap,
+      int                                       unknowns,
+      const double* __restrict__                normalInterpolationMatrix1d,
+      const double* __restrict__                tangentialInterpolationMatrix1d,
+      const double* __restrict__                coarseGridCellValues,
+      const double* __restrict__                coarseGridFaceValues,
+      double* __restrict__                      fineGridFaceValues
+) {
+  assertion(false);
+}
+
+
+void toolbox::blockstructured::interpolateCell_AoS_tensor_product(
+      const peano4::datamanagement::CellMarker& marker,
+      int                                       numberOfDoFsPerAxisInPatch,
+      int                                       unknowns,
+      const double* __restrict__                interpolationMatrix1d,
+      const double* __restrict__                coarseGridCellValues,
+      double* __restrict__                      fineGridCellValues
+) {
+  assertion(false);
+}
+

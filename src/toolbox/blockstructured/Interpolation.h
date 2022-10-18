@@ -196,50 +196,25 @@ namespace toolbox {
       int                                       overlap,
       int                                       unknowns,
       const double* __restrict__                normalInterpolationMatrix1d,
-      const double* __restrict__                orthogonalInterpolationMatrix1d,
+      const double* __restrict__                tangentialInterpolationMatrix1d,
       const double* __restrict__                coarseGridFaceValues,
       double* __restrict__                      fineGridFaceValues
     );
 
-    /**
-     * This is the routine for creating a new persistent face
-     *
-     * Normal hanging faces are always created along the boundary of a 3x3 or
-     * 3x3x3 patch, respectively. Therefore, we always take the coarse grid
-     * face data to initialise the face values. These face data hold the overlaps,
-     * so we can interpolate accordingly. Therefore, if marker.isInteriorFaceWithinPatch()
-     * does not hold, we can use the alternative interpolateHaloLayer() variant.
-     *
-     * If we create persistent faces within a 3x3x3 patch arrangement, we first
-     * create the interpolation of the left and right patch of the face of interest.
-     *
-     */
+
     void interpolateHaloLayer_AoS_tensor_product(
       const peano4::datamanagement::FaceMarker& marker,
       int                                       numberOfDoFsPerAxisInPatch,
       int                                       overlap,
       int                                       unknowns,
       const double* __restrict__                normalInterpolationMatrix1d,
-      const double* __restrict__                orthogonalInterpolationMatrix1d,
+      const double* __restrict__                tangentialInterpolationMatrix1d,
       const double* __restrict__                coarseGridCellValues,
       const double* __restrict__                coarseGridFaceValues,
       double* __restrict__                      fineGridFaceValues
     );
 
 
-    /**
-     * This routine is called if we create a new cell (dynamic AMR)
-     *
-     * The routine looks up if the interpolation matrix does exist already. If not,
-     * it creates it. Afterwards, it takes the interpolation matrix and multiplies
-     * it with the coarse matrix. Interpolation matrices are band matrices and hold
-     * all entries for all @f$ 3^d @f$ subpatches. We only need one subpatch, so we
-     * pick a subsegment of the matrix. In return, we use the same interpolation
-     * scheme for all unknowns, so we can rely on a batched matrix multiplication.
-     *
-     *
-     * @param interpolationMatrix1d Same as orthogonalInterpolationMatrix1d above.
-     */
     void interpolateCell_AoS_tensor_product(
       const peano4::datamanagement::CellMarker& marker,
       int                                       numberOfDoFsPerAxisInPatch,
@@ -419,7 +394,6 @@ namespace toolbox {
     );
 
     namespace internal {
-
       /**
        * The realisation relies on the following observations/follows these
        * steps:

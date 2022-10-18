@@ -265,6 +265,25 @@ class FV(object):
     self.create_data_structures()
     self.create_action_sets()
 
+    self._interpolation = "tensor_product< " + self._name + ">"
+    self.add_solver_constants(   "static constexpr double  NormalInterpolationMatrix1d[]     = {1.0};""" )
+    self.add_solver_constants( """static constexpr double  TangentialInterpolationMatrix1d[] = {
+    1.0,0.0,0.0,0.0,
+    1.0,0.0,0.0,0.0,
+    1.0,0.0,0.0,0.0,
+    0.0,1.0,0.0,0.0,
+       
+    0.0,1.0,0.0,0.0,
+    0.0,1.0,0.0,0.0,
+    0.0,0.0,1.0,0.0,
+    0.0,0.0,1.0,0.0,
+
+    0.0,0.0,1.0,0.0,
+    0.0,0.0,0.0,1.0,
+    0.0,0.0,0.0,1.0,
+    0.0,0.0,0.0,1.0
+    };""" )
+
 
   def __str__(self):
     result = """
@@ -846,7 +865,9 @@ The finest mesh width of """ + str(self.get_finest_volume_size(domain_size)) + "
     output.makefile.add_cpp_file( "Abstract" + self._name + ".cpp" )
     output.makefile.add_cpp_file( self._name + ".cpp" )
 
+
   def set_solver_constants(self, datastring): self._solver_constants = datastring
+
 
   def add_solver_constants(self, datastring): self._solver_constants += datastring + "\n"
 

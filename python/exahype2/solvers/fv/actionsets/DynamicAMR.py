@@ -242,4 +242,5 @@ class DynamicAMR( peano4.toolbox.blockstructured.DynamicAMR ):
     return super(DynamicAMR,self).get_includes() + """
 #include <cstring>
 #include "exahype2/fv/PatchUtils.h"
+#include "exahype2/fv/InterpolationRestriction.h"
 """    

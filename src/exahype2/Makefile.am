@@ -55,6 +55,7 @@ ExaHyPE2Sources = \
   fv/PatchAccess.cpp \
   fv/PostprocessingKernels.cpp \
   fv/Tracer.cpp \
+  fv/tests/InterpolationRestrictionTest.cpp \
   fd/fd4/FD4_patchwise_functors.cpp \
   fv/rusanov/sycl/GPUCellData.cpp \
   fv/rusanov/tests/CopyPatchTest.cpp \
