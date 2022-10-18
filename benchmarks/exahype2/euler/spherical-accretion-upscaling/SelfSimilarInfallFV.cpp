@@ -35,9 +35,29 @@ void benchmarks::exahype2::euler::sphericalaccretionupscaling::SelfSimilarInfall
   const tarch::la::Vector<Dimensions,double>&  volumeH,
   double                                       t
 ) {
-  return ::exahype2::RefinementCommand::Keep;
+  if (
+    tarch::la::equals(t,0.0)
+    and
+    tarch::la::norm2(volumeCentre) <= InitialTopHatRadius + volumeH(0) * NumberOfFiniteVolumesPerAxisPerPatch
+  ) {
+    return ::exahype2::RefinementCommand::Refine;
+  }
+  else if (
+    DynamicAMR
+    and
+    ( Q[4]>1.1*BaseDensity )
+  ) {
+    return ::exahype2::RefinementCommand::Refine;
+  }
+  else if (
+    DynamicAMR
+  ) {
+    return ::exahype2::RefinementCommand::Erase;
+  }
+  else {
+    return ::exahype2::RefinementCommand::Keep;
+  }
 }
-
 
 
 void benchmarks::exahype2::euler::sphericalaccretionupscaling::SelfSimilarInfallFV::initialCondition(

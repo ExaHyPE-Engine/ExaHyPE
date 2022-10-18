@@ -34,13 +34,28 @@ void benchmarks::exahype2::euler::sphericalaccretionupscaling::SelfSimilarInfall
   const tarch::la::Vector<Dimensions,double>&  volumeH,
   double                                       t
 ) {
-  logTraceInWith3Arguments( "refinementCriterion(...)", volumeX, volumeH, t );
-  ::exahype2::RefinementCommand result = ::exahype2::RefinementCommand::Keep;
-
-  // see comments in header file
-
-  logTraceOutWith1Argument( "refinementCriterion(...)", ::toString(result) );
-  return result;
+  if (
+    tarch::la::equals(t,0.0)
+    and
+    tarch::la::norm2(volumeX) <= InitialTopHatRadius + volumeH(0) * NumberOfFiniteVolumesPerAxisPerPatch
+  ) {
+    return ::exahype2::RefinementCommand::Refine;
+  }
+  else if (
+    DynamicAMR
+    and
+    ( Q[4]>1.1*BaseDensity )
+  ) {
+    return ::exahype2::RefinementCommand::Refine;
+  }
+  else if (
+    DynamicAMR
+  ) {
+    return ::exahype2::RefinementCommand::Erase;
+  }
+  else {
+    return ::exahype2::RefinementCommand::Keep;
+  }
 }
 
 

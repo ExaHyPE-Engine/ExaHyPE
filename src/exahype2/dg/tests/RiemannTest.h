@@ -61,7 +61,13 @@ class exahype2::dg::tests::RiemannTest : public tarch::tests::TestCase {
      * all 0. The remainig entries then exhibit the 1,-1 pattern.
      *
      */
-    void testProjectVolumetricDataOntoFacesForConstantSolution();
+    void testProjectVolumetricDataOntoFacesForConstantSolutionOrder3();
+
+    /**
+     * Projection that's used if DG degenerates to a Finite Volumes scheme
+     * for the Euler equation, i.e. for 5 unknowns.
+     */
+    void testProjectVolumetricDataOntoFacesForConstantSolutionOrder0();
 
   public:
     RiemannTest();

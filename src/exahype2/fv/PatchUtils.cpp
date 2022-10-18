@@ -7,6 +7,31 @@
 
 #include "exahype2/NonCriticalAssertions.h"
 
+#include "toolbox/blockstructured/Enumeration.h"
+
+
+
+void exahype2::fv::copyHalfOfHalo(
+  int    unknownsPlusAuxiliaryVariables,
+  int    numberOfGridCellsPerPatchPerAxis,
+  int    haloSize,  // same as overlap
+  int    normal,
+  bool   isRightLayer,
+  const double* __restrict__   srcQ,
+  double* __restrict__         destQ
+) {
+  dfore(k,numberOfGridCellsPerPatchPerAxis,normal,0) {
+    for (int i= (isRightLayer ? haloSize : 0); i< (isRightLayer ? 2*haloSize : haloSize); i++) {
+      tarch::la::Vector<Dimensions,int> overlapCell = k;
+      overlapCell(normal) = i;
+      const int index = toolbox::blockstructured::serialiseVoxelIndexInOverlap(overlapCell,numberOfGridCellsPerPatchPerAxis,haloSize,normal);
+      for (int j=0; j<unknownsPlusAuxiliaryVariables; j++) {
+        destQ[index*unknownsPlusAuxiliaryVariables+j] = srcQ[index*unknownsPlusAuxiliaryVariables+j];
+      }
+    }
+  }
+
+}
 
 
 double  exahype2::fv::getVolumeLength(

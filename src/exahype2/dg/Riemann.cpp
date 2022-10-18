@@ -1,6 +1,170 @@
 #include "Riemann.h"
 #include "exahype2/enumerator/AoSLexicographicEnumerator.h"
 #include "exahype2/enumerator/FaceAoSLexicographicEnumerator.h"
+#include "peano4/utils/Loop.h"
+#include "peano4/datamanagement/FaceMarker.h"
+
+
+void exahype2::dg::interpolateRiemannSolution(
+  const peano4::datamanagement::FaceMarker&  marker,
+  int                                        order,
+  int                                        unknowns,
+  const double* __restrict__                 InterpolationMatrix1d,
+  const double* __restrict__                 coarseGridFaceQ,
+  double* __restrict__                       fineGridFaceQ
+) {
+  exahype2::enumerator::FaceAoSLexicographicEnumerator faceEnumerator(
+    marker.getSelectedFaceNumber(),
+    order+1,
+    1,                     // overlap
+    unknowns,
+    0                      // auxiliaryVariables
+  );
+
+  #if Dimensions==2
+  const int totalNumberOfValues = (order+1) * 2 * unknowns;
+  const int InterpolationMatrixDimensions = (order+1);   // no of rows/cols
+  #else
+  const int totalNumberOfValues = (order+1) * (order+1) * 2 * unknowns;
+  const int InterpolationMatrixDimensions = (order+1)*(order+1);
+  #endif
+  std::fill_n( fineGridFaceQ, totalNumberOfValues, 0.0 );
+
+  const int normal = marker.getSelectedFaceNumber()%Dimensions;
+  dfore(fineGridDoF,order+1,normal,0) {
+    dfore(coarseGridDoF,order+1,normal,0) {
+      double tensorProductWeight = 1.0;
+      for (int d=0; d<Dimensions; d++) {
+        if (d!=normal) {
+          int subMatrix = marker.getRelativePositionWithinFatherCell()(d);
+          assertion(subMatrix>=0);
+          assertion(subMatrix<=2);
+
+          int col = fineGridDoF(d);
+          int row = coarseGridDoF(d);
+          int linearisedMatrixIndex = subMatrix * InterpolationMatrixDimensions * InterpolationMatrixDimensions
+                                    + row       * InterpolationMatrixDimensions
+                                    + col;
+          assertion(linearisedMatrixIndex>=0);
+          assertion2(linearisedMatrixIndex<3, linearisedMatrixIndex, InterpolationMatrixDimensions);
+          tensorProductWeight *= InterpolationMatrix1d[linearisedMatrixIndex];
+        }
+      }
+
+      tarch::la::Vector<Dimensions,int> shiftedFineGridDoF = fineGridDoF;
+      tarch::la::Vector<Dimensions,int> shiftedCoarseGridDoF  = coarseGridDoF;
+      for (int leftRight=0; leftRight<2; leftRight++)
+      for (int unknown=0; unknown<unknowns; unknown++) {
+        shiftedFineGridDoF(normal) = leftRight;
+        shiftedCoarseGridDoF(normal)  = leftRight;
+
+        fineGridFaceQ[ faceEnumerator(shiftedFineGridDoF,unknown) ] += tensorProductWeight * coarseGridFaceQ[ faceEnumerator(shiftedCoarseGridDoF,unknown) ];
+      }
+    }
+  }
+}
+
+
+void exahype2::dg::restrictAndAccumulateProjectedFacePolynomial(
+  const peano4::datamanagement::FaceMarker&  marker,
+  int                                        order,
+  int                                        numberOfProjectedQuantities,
+  int                                        unknowns,
+  int                                        auxiliaryVariables,
+  const double* __restrict__                 RestrictionMatrix1d,
+  const double* __restrict__                 fineGridFaceQ,
+  double* __restrict__                       coarseGridFaceQ
+) {
+  assertion(numberOfProjectedQuantities>=1);
+  // @todo Remove as it should work in principle for other values as well, but I haven't tested it
+  assertionEquals(numberOfProjectedQuantities,1);
+
+  exahype2::enumerator::FaceAoSLexicographicEnumerator faceEnumerator(
+    marker.getSelectedFaceNumber(),
+    order+1,
+    numberOfProjectedQuantities,
+    unknowns,
+    auxiliaryVariables
+  );
+
+  #if Dimensions==2
+  const int totalNumberOfValues = (order+1) * (numberOfProjectedQuantities*2) * (unknowns+auxiliaryVariables);
+  const int RestrictionMatrixDimensions = (order+1);   // no of rows/cols
+  #else
+  const int totalNumberOfValues = (order+1) * (order+1) * (numberOfProjectedQuantities*2) * (unknowns+auxiliaryVariables);
+  const int RestrictionMatrixDimensions = (order+1)*(order+1);
+  #endif
+
+  const int normal        = marker.getSelectedFaceNumber()%Dimensions;
+  const int leftRightFace = marker.getSelectedFaceNumber() < Dimensions ? 1 : 0;
+  dfore(fineGridDoF,order+1,normal,0) {
+    dfore(coarseGridDoF,order+1,normal,0) {
+      double tensorProductWeight = 1.0;
+      for (int d=0; d<Dimensions; d++) {
+        if (d!=normal) {
+          int subMatrix = marker.getRelativePositionWithinFatherCell()(d);
+          assertion(subMatrix>=0);
+          assertion(subMatrix<=2);
+
+          int row = fineGridDoF(d);
+          int col = coarseGridDoF(d);
+          int linearisedMatrixIndex = subMatrix * RestrictionMatrixDimensions * RestrictionMatrixDimensions
+                                    + row       * RestrictionMatrixDimensions
+                                    + col;
+          assertion(linearisedMatrixIndex>=0);
+          assertion2(linearisedMatrixIndex<3, linearisedMatrixIndex, RestrictionMatrixDimensions);
+          tensorProductWeight *= RestrictionMatrix1d[linearisedMatrixIndex];
+        }
+      }
+
+      tarch::la::Vector<Dimensions,int> shiftedFineGridDoF    = fineGridDoF;
+      tarch::la::Vector<Dimensions,int> shiftedCoarseGridDoF  = coarseGridDoF;
+      for (int leftRight=leftRightFace * numberOfProjectedQuantities; leftRight<(leftRightFace+1)*numberOfProjectedQuantities; leftRight++)
+      for (int unknown=0; unknown<unknowns+auxiliaryVariables; unknown++) {
+        shiftedFineGridDoF(normal)    = leftRight;
+        shiftedCoarseGridDoF(normal)  = leftRight;
+
+        assertion( faceEnumerator(shiftedCoarseGridDoF,unknown)>=0 );
+        assertion( faceEnumerator(shiftedFineGridDoF,unknown)>=0 );
+
+        coarseGridFaceQ[ faceEnumerator(shiftedCoarseGridDoF,unknown) ] += tensorProductWeight * fineGridFaceQ[ faceEnumerator(shiftedFineGridDoF,unknown) ];
+      }
+    }
+  }
+}
+
+
+
+void exahype2::dg::clearSolutionProjection(
+  int                           order,
+  int                           unknowns,
+  int                           auxiliaryVariables,
+  int                           numberOfProjectedQuantities,
+  double* __restrict__          faceQ
+) {
+  #if Dimensions==2
+  const int numberOfDoFs = (order+1);
+  #else
+  const int numberOfDoFs = (order+1) * (order+1);
+  #endif
+  const int numberOfDoubles = numberOfDoFs * (unknowns + auxiliaryVariables) * 2 * numberOfProjectedQuantities;
+  std::fill_n( faceQ, numberOfDoubles, 0.0 );
+}
+
+
+void exahype2::dg::clearRiemannResult(
+  int                           order,
+  int                           unknowns,
+  double* __restrict__          faceQ
+) {
+  clearSolutionProjection(
+    order,
+    unknowns,
+    0,          //    auxiliaryVariables,
+    1,          //    numberOfProjectedQuantities
+    faceQ
+  );
+}
 
 
 void exahype2::dg::projectVolumetricDataOntoFaces(

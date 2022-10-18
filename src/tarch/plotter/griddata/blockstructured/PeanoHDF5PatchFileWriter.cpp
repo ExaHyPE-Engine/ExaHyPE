@@ -313,7 +313,7 @@ bool tarch::plotter::griddata::blockstructured::PeanoHDF5PatchFileWriter::writeT
   hid_t metaDataAttribute = H5Screate(H5S_SCALAR);
   hid_t metaDataType      = H5Tcopy(H5T_C_S1);
 
-  H5Tset_size(metaDataType, filenamePrefix.size());
+ // H5Tset_size(metaDataType, filenamePrefix.size());
   H5Tset_strpad(metaDataType,H5T_STR_NULLTERM);
   hid_t attribute = H5Acreate2(
     _file,
@@ -323,7 +323,7 @@ bool tarch::plotter::griddata::blockstructured::PeanoHDF5PatchFileWriter::writeT
   /*
    * Write string attribute.
    */
-  H5Awrite(attribute, metaDataType, filenamePrefix.c_str());
+//  H5Awrite(attribute, metaDataType, filenamePrefix.c_str());
 
   /*
    * Close attribute and file dataspaces, and datatype.
