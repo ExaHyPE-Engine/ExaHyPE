@@ -137,6 +137,16 @@
  * - The storage format identifier is followed by another underscore.
  * - The next part of the string is the actual interpolation scheme.
  *
+ * We offer two types of interpolation: There's a few hard-coded interpolation schemes
+ * which are written in core C++ and realise the interpolation. There is also a generic
+ * verison of the interpolation which expects the user to pass in an interpolation
+ * matrix and then applies this matrix instead of a hard-coded operation.
+ *
+ * If you work with the generic implementation accepting matrices, then most codes
+ * pre-compute the required matrices manually (within a Python script, e.g.) and then
+ * pass in a pointer to a constant double field holding the matrix. Please consult
+ * toolbox::blockstructured::interpolateHaloLayer_AoS_generic() for details.
+ *
  * Technically, there are always two types of interpolation routines per face:
  * There is a version which is given the coarse cell face only. I use this one to interpolate
  * from a coarse level onto a face at the boundary of a finer @f$ 3 \times 3 @f$
@@ -149,7 +159,7 @@
  * with the idea that face data always holds copies from adjacent fine grid data.
  *
  *
- * ## Caching of inter-grid transfer operators
+ * ## Caching of inter-grid transfer operators (only for built-in C++ operators)
  *
  * Constructing the interpolation operators can be time consuming. I therefore cache
  * the operators.
@@ -177,6 +187,69 @@
 
 namespace toolbox {
   namespace blockstructured {
+    /**
+     * Take the coarse grid values and interpolate them onto the fine grid
+     */
+    void interpolateHaloLayer_AoS_tensor_product(
+      const peano4::datamanagement::FaceMarker& marker,
+      int                                       numberOfDoFsPerAxisInPatch,
+      int                                       overlap,
+      int                                       unknowns,
+      const double* __restrict__                normalInterpolationMatrix1d,
+      const double* __restrict__                orthogonalInterpolationMatrix1d,
+      const double* __restrict__                coarseGridFaceValues,
+      double* __restrict__                      fineGridFaceValues
+    );
+
+    /**
+     * This is the routine for creating a new persistent face
+     *
+     * Normal hanging faces are always created along the boundary of a 3x3 or
+     * 3x3x3 patch, respectively. Therefore, we always take the coarse grid
+     * face data to initialise the face values. These face data hold the overlaps,
+     * so we can interpolate accordingly. Therefore, if marker.isInteriorFaceWithinPatch()
+     * does not hold, we can use the alternative interpolateHaloLayer() variant.
+     *
+     * If we create persistent faces within a 3x3x3 patch arrangement, we first
+     * create the interpolation of the left and right patch of the face of interest.
+     *
+     */
+    void interpolateHaloLayer_AoS_tensor_product(
+      const peano4::datamanagement::FaceMarker& marker,
+      int                                       numberOfDoFsPerAxisInPatch,
+      int                                       overlap,
+      int                                       unknowns,
+      const double* __restrict__                normalInterpolationMatrix1d,
+      const double* __restrict__                orthogonalInterpolationMatrix1d,
+      const double* __restrict__                coarseGridCellValues,
+      const double* __restrict__                coarseGridFaceValues,
+      double* __restrict__                      fineGridFaceValues
+    );
+
+
+    /**
+     * This routine is called if we create a new cell (dynamic AMR)
+     *
+     * The routine looks up if the interpolation matrix does exist already. If not,
+     * it creates it. Afterwards, it takes the interpolation matrix and multiplies
+     * it with the coarse matrix. Interpolation matrices are band matrices and hold
+     * all entries for all @f$ 3^d @f$ subpatches. We only need one subpatch, so we
+     * pick a subsegment of the matrix. In return, we use the same interpolation
+     * scheme for all unknowns, so we can rely on a batched matrix multiplication.
+     *
+     *
+     * @param interpolationMatrix1d Same as orthogonalInterpolationMatrix1d above.
+     */
+    void interpolateCell_AoS_tensor_product(
+      const peano4::datamanagement::CellMarker& marker,
+      int                                       numberOfDoFsPerAxisInPatch,
+      int                                       unknowns,
+      const double* __restrict__                interpolationMatrix1d,
+      const double* __restrict__                coarseGridCellValues,
+      double* __restrict__                      fineGridCellValues
+    );
+
+
     /**
      * Take the coarse grid values and interpolate them onto the fine grid
      */
