@@ -35,7 +35,6 @@ class RollOverUpdatedFace(AbstractFVActionSet):
           {{DOFS_PER_AXIS}},
           {{OVERLAP}},
           normal,
-          0,
           false,    // it is the left layer, i.e. not right
           {{NEW_ACCESSOR}}.value,
           {{OLD_ACCESSOR}}.value
@@ -45,7 +44,6 @@ class RollOverUpdatedFace(AbstractFVActionSet):
           {{DOFS_PER_AXIS}},
           {{OVERLAP}},
           normal,
-          0,
           false,    // it is the left layer, i.e. not right
           {{UPDATE_ACCESSOR}}.value,
           {{NEW_ACCESSOR}}.value
@@ -91,7 +89,6 @@ class RollOverUpdatedFace(AbstractFVActionSet):
           {{DOFS_PER_AXIS}},
           {{OVERLAP}},
           normal,
-          0,
           true,    // it is the left layer, i.e. not right
           {{NEW_ACCESSOR}}.value,
           {{OLD_ACCESSOR}}.value
@@ -101,7 +98,6 @@ class RollOverUpdatedFace(AbstractFVActionSet):
           {{DOFS_PER_AXIS}},
           {{OVERLAP}},
           normal,
-          0,
           true,    // it is the left layer, i.e. not right
           {{UPDATE_ACCESSOR}}.value,
           {{NEW_ACCESSOR}}.value
