@@ -1,0 +1,78 @@
+template <typename Particle>
+void swift2::timestepping::computeLeapfrogDriftWithGlobalTimeStepSize(
+  const std::vector< Particle* >&  localParticles
+) {
+  double timeStepSize = Particle::getSpecies().getMinTimeStepSize();
+  for (auto& particle: localParticles) {
+    if (
+      particle->getMoveState()==Particle::MoveState::NotMovedYet
+      and
+      particle->getParallelState()==Particle::ParallelState::Local
+    ) {
+      /* Drift the particle (update position for a full time-step) */
+      particle->setX( particle->getX() + timeStepSize * particle->getV() );
+
+      /* Flag this particle as Moved */
+      particle->setMoveState( Particle::MoveState::Moved );
+    }
+  }
+}
+
+template <typename Particle>
+void swift2::timestepping::computeLeapfrogKickWithGlobalTimeStepSize(
+  const std::vector< Particle* >&  localParticles,
+  const int kickNumber
+) {
+  double timeStepSizeKick = 0.5 * Particle::getSpecies().getMinTimeStepSize();
+  for (auto& particle: localParticles) {
+    if (
+      particle->getMoveState()==Particle::MoveState::NotMovedYet
+      and
+      particle->getParallelState()==Particle::ParallelState::Local
+//      and
+//      not particle->getHasBeenKicked()
+    ) {
+      /* Kick the particle */
+//      localParticle->setV_full( localParticle->getV_full() + dt_kick_hydro * localParticle->getA() );
+      particle->setV( particle->getV() + timeStepSizeKick * particle->getA() );
+
+      /* Flag this particle as been kicked */
+//      particle->setHasBeenKicked(true);
+
+      assertion1(  std::isfinite(particle->getV(0)), particle->toString() );
+      assertion1(  std::isfinite(particle->getV(1)), particle->toString() );
+
+
+//      /* In SWIFT SPH, Kick 2 does some extra operations 
+//       * Not relevant for non-hydro systems
+//       */
+//      if( kickNumber == 2 ){
+//        /*
+//         * Reset predicted values for next Drift step 
+//         * Done by "hydro_reset_predicted_values" in SWIFT
+//         */
+//        
+//        /* Re-set the predicted velocities */
+//        localParticle->setV( localParticle->getV_full() );
+//        
+//        /* Re-set the entropy */
+//        localParticle->setU( localParticle->getU_full() );
+//
+//        /* Re-compute the pressure */
+//        const double pressure = 
+//          gas_pressure_from_internal_energy( localParticle->getDensity(), localParticle->getU() );
+//
+//        /* Compute the new sound speed */
+//        const double soundspeed = gas_soundspeed_from_internal_energy( localParticle->getU() );
+//     
+//        /* Update variables */
+//        localParticle->setPressure(pressure);
+//        localParticle->setSoundSpeed(soundspeed);
+//        localParticle->setV_sig_AV( std::max(localParticle->getV_sig_AV(), 2.0 * soundspeed) );
+//      } // End if Kick 2
+
+
+    }
+  }
+}
+
