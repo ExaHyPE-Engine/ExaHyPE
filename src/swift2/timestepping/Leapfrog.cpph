@@ -29,19 +29,15 @@ void swift2::timestepping::computeLeapfrogKickWithGlobalTimeStepSize(
       particle->getMoveState()==Particle::MoveState::NotMovedYet
       and
       particle->getParallelState()==Particle::ParallelState::Local
-//      and
-//      not particle->getHasBeenKicked()
+      and
+      not particle->getCellHasUpdatedParticle()
     ) {
       /* Kick the particle */
 //      localParticle->setV_full( localParticle->getV_full() + dt_kick_hydro * localParticle->getA() );
       particle->setV( particle->getV() + timeStepSizeKick * particle->getA() );
 
-      /* Flag this particle as been kicked */
-//      particle->setHasBeenKicked(true);
-
       assertion1(  std::isfinite(particle->getV(0)), particle->toString() );
       assertion1(  std::isfinite(particle->getV(1)), particle->toString() );
-
 
 //      /* In SWIFT SPH, Kick 2 does some extra operations 
 //       * Not relevant for non-hydro systems

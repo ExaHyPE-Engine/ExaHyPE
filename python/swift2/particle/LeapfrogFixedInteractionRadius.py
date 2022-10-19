@@ -67,10 +67,8 @@ class LeapfrogFixedInteractionRadius(Particle):
     
     self.velocity        = peano4.dastgen2.Peano4DoubleArray("v","Dimensions")
     self.accelerator     = peano4.dastgen2.Peano4DoubleArray("a","Dimensions")
-#    self.has_been_kicked = dastgen2.attributes.Boolean("hasBeenKicked")
     self.data.add_attribute( self.velocity )
     self.data.add_attribute( self.accelerator )
-#    self.data.add_attribute( self.has_been_kicked )
     
     self.cfl_factor                = cfl_factor
     self.initial_time_step_size    = initial_time_step_size
@@ -85,13 +83,12 @@ class LeapfrogFixedInteractionRadius(Particle):
   def algorithm_steps(self):
     """
     
-    The explicit Euler basically consists of two steps per particle. We first 
-    determine the force. For this, we need access to the neighbours. The step
-    solely alters the individual particle's state. In the next algorithm step,
-    we need this state, as well as global data (the admissible time step size)
-    to update position and velocity. We also determine the CFL condition here.
-    So we 
-    
+    Leapfrog consists basically of four steps per particle. We first 
+    determine the force. Then we update the velocity by half a timestep and move
+    the particle by a full timestep. Then the force is re-computed and the
+    second half of the velocity update is done.
+    Some variations of this KDK form re-arrange the steps executed per timestep
+    to avoid a second force loop.
     """
     return [ 
       AlgorithmStep( 
@@ -119,7 +116,6 @@ class LeapfrogFixedInteractionRadius(Particle):
         dependencies                   = AlgorithmStep.Dependencies.SELF,              
         effect                         = AlgorithmStep.Effect.ALTER_LOCAL_STATE,
         touch_vertex_first_time_kernel = """::swift2::timestepping::resetMovedParticleMarker(localParticles);""",
-                    #        touch_vertex_first_time_kernel = """particle->setHasBeenKicked(false);""",
         touch_vertex_last_time_kernel  =
                     """::swift2::timestepping::computeLeapfrogKickWithGlobalTimeStepSize(
                         localParticles, 1 );""",
@@ -137,7 +133,6 @@ class LeapfrogFixedInteractionRadius(Particle):
         effect                         = AlgorithmStep.Effect.CHANGE_POSITION_OR_INTERACTION_RADIUS,
         touch_vertex_first_time_kernel = """::swift2::timestepping::resetMovedParticleMarker(localParticles);""",
         touch_vertex_last_time_kernel  = """::swift2::timestepping::computeLeapfrogDriftWithGlobalTimeStepSize( localParticles );""",
-        prepare_traversal_kernel       = """::swift2::timestepping::computeAdmissibleTimeStepSizeFromGlobalMeshSizeAndMaximumVelocity<globaldata::{}>({},{});""".format(self.name, self.cfl_factor,self.initial_time_step_size),
         includes                       = """
                                          #include "Constants.h"
                                          #include "swift2/timestepping/Leapfrog.h"
@@ -170,11 +165,9 @@ class LeapfrogFixedInteractionRadius(Particle):
         dependencies                   = AlgorithmStep.Dependencies.SELF,              
         effect                         = AlgorithmStep.Effect.ALTER_LOCAL_STATE,
         touch_vertex_first_time_kernel = """::swift2::timestepping::resetMovedParticleMarker(localParticles);""",
-                    #        touch_vertex_first_time_kernel = """particle->setHasBeenKicked(false);""",
         touch_vertex_last_time_kernel  =
                     """::swift2::timestepping::computeLeapfrogKickWithGlobalTimeStepSize(
                         localParticles, 1 );""",
-        prepare_traversal_kernel       = """::swift2::timestepping::computeAdmissibleTimeStepSizeFromGlobalMeshSizeAndMaximumVelocity<globaldata::{}>({},{});""".format(self.name, self.cfl_factor,self.initial_time_step_size),
         includes                       = """
                                          #include "Constants.h"
                                          #include "swift2/timestepping/Leapfrog.h"
