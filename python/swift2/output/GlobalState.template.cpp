@@ -106,7 +106,7 @@ void startPlotStep() {
 void finishTimeStep() {
   {% for PARTICLE in PARTICLE_SPECIES -%}
   globaldata::{{PARTICLE}}::getSpecies().finishTimeStep();
-  vertexdata::{{PARTICLE}}Set::finishedTraversal();
+  vertexdata::{{PARTICLE}}Set::finishedTraversal(true);
   {%- endfor %}
 
   loadBalancer.finishStep();
@@ -131,7 +131,7 @@ void finishTimeStep() {
 
 void finishGridConstructionStep() {
   {% for PARTICLE in PARTICLE_SPECIES -%}
-  vertexdata::{{PARTICLE}}Set::finishedTraversal();
+  vertexdata::{{PARTICLE}}Set::finishedTraversal(PeanoDebug>0);
   {%- endfor %}
 
   loadBalancer.finishStep();
@@ -140,7 +140,7 @@ void finishGridConstructionStep() {
 
 void finishInitialisationStep() {
   {% for PARTICLE in PARTICLE_SPECIES -%}
-  vertexdata::{{PARTICLE}}Set::finishedTraversal();
+  vertexdata::{{PARTICLE}}Set::finishedTraversal(PeanoDebug>0);
   {%- endfor %}
 
   loadBalancer.finishStep();
@@ -149,14 +149,14 @@ void finishInitialisationStep() {
 
 void finishPlotStep() {
   {% for PARTICLE in PARTICLE_SPECIES -%}
-  vertexdata::{{PARTICLE}}Set::finishedTraversal();
+  vertexdata::{{PARTICLE}}Set::finishedTraversal(PeanoDebug>0);
   {%- endfor %}
 }
 
 
 void finishIntermediateStep() {
   {% for PARTICLE in PARTICLE_SPECIES -%}
-  vertexdata::{{PARTICLE}}Set::finishedTraversal();
+  vertexdata::{{PARTICLE}}Set::finishedTraversal(PeanoDebug>0);
   {%- endfor %}
 }
 

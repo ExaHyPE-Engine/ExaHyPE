@@ -214,7 +214,7 @@
        * - We roll over the globally lifted particles into the sieve set for the
        *   next mesh traversal.
        */
-      static void finishedTraversal();
+      static void finishedTraversal(bool updateStatistics);
 
       /**
        * Mark whole particle set as set of particles which can't be lifted

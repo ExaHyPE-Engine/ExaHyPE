@@ -217,6 +217,7 @@ void {{NAMESPACE | join("::")}}::step() {
         observers::{{SOLVERSTEP_NAMES[0]}}  observer;
         observers::{{SOLVERSTEP_NAMES[0]}}::prepareTraversal();
         repositories::startTimeStep();
+        repositories::finishIntermediateStep();
         peano4::parallel::SpacetreeSet::getInstance().traverse(observer);
         observers::{{SOLVERSTEP_NAMES[0]}}::unprepareTraversal();
       }
@@ -239,6 +240,7 @@ void {{NAMESPACE | join("::")}}::step() {
         otterPhaseSwitch( "{{SOLVERSTEP_NAMES[-1]}}" );
         observers::{{SOLVERSTEP_NAMES[-1]}}  observer;
         observers::{{SOLVERSTEP_NAMES[-1]}}::prepareTraversal();
+        repositories::startIntermediateStep();
         peano4::parallel::SpacetreeSet::getInstance().traverse(observer);
         repositories::finishTimeStep();
         observers::{{SOLVERSTEP_NAMES[-1]}}::unprepareTraversal();

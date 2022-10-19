@@ -42,16 +42,16 @@ def serialise_and_map_onto_separate_mesh_traversals(species_sets, verbose=True):
   for current_species_set in species_sets:
     previous_step_has_altered_particle_positions = current_species_set.particle_model.algorithm_steps()[-1].effect==AlgorithmStep.Effect.CHANGE_POSITION_OR_INTERACTION_RADIUS
     for step in current_species_set.particle_model.algorithm_steps():
-      new_step = peano4.solversteps.Step( "Step{}{}{}".format(current_species_set.particle_model.name,step.name,len(mesh_traversals)), False ) 
-      new_step.add_action_set(UpdateParticleMarker(current_species_set),False)
+      new_step = peano4.solversteps.Step( "Step{}{}{}".format(current_species_set.particle_model.name,step.name,len(mesh_traversals)), add_user_defined_actions=False ) 
+      new_step.add_action_set(UpdateParticleMarker(current_species_set), append_at_end=True)
       if step.effect==AlgorithmStep.Effect.CHANGE_POSITION_OR_INTERACTION_RADIUS or previous_step_has_altered_particle_positions:
         if verbose:
           print( "GRAPH COMPILER DEBUG: step {} on particle {} uses update-particle-grid-association (resort) action set".format( step.name, current_species_set.particle_model.name ) )
-        new_step.add_action_set(peano4.toolbox.particles.UpdateParticleGridAssociation(current_species_set),False)
+        new_step.add_action_set(peano4.toolbox.particles.UpdateParticleGridAssociation(current_species_set), append_at_end=True)
       if previous_step_has_altered_particle_positions:
         if verbose:
           print( "GRAPH COMPILER DEBUG: step {} on particle {} uses update-parallel-state action set".format( step.name, current_species_set.particle_model.name ) )
-        new_step.add_action_set(peano4.toolbox.particles.UpdateParallelState(current_species_set),False)
+        new_step.add_action_set(peano4.toolbox.particles.UpdateParallelState(current_species_set), append_at_end=True)
       if step.dependencies==AlgorithmStep.Dependencies.NEIGHBOURS:
         if verbose:
           print( "GRAPH COMPILER DEBUG: step {} on particle {} uses particle-particle-interaction action set".format( step.name, current_species_set.particle_model.name ) )
@@ -64,7 +64,7 @@ def serialise_and_map_onto_separate_mesh_traversals(species_sets, verbose=True):
             unprepare_traversal_kernel                             = step.unprepare_traversal_kernel,
             additional_includes                                    = step.includes,
             active_particle_set                                    = step.input_particles
-          ),False)
+          ), append_at_end=True)
       elif step.dependencies==AlgorithmStep.Dependencies.SELF:
         if verbose:
           print( "GRAPH COMPILER DEBUG: step {} on particle {} uses particle-per-cell-update action set".format( step.name, current_species_set.particle_model.name ) )
@@ -77,7 +77,7 @@ def serialise_and_map_onto_separate_mesh_traversals(species_sets, verbose=True):
             unprepare_traversal_kernel                             = step.unprepare_traversal_kernel,
             additional_includes                                    = step.includes,
             active_particle_set                                    = step.input_particles
-          ),False)
+          ), append_at_end=True)
 
       else:
         assert False, "step {} seems to have no action at all".format( step )
