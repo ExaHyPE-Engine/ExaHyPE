@@ -104,6 +104,20 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::solvers::ade
      * coarser MinH.
      */
     static constexpr double MinAdmissibleCellH  = {{MIN_CELL_H}};
+    
+    
+    /*
+     * Maximal mesh size that can actually be reached, this is the greatest size
+     * that can be reached by 3-subdivision of the domain size but is still lower
+     * than MaxAdmissibleCellH
+     * Minimal and maximal levels of the mesh, i.e upper and lower limits
+     * for how many times the mesh can be divided in order to keep it in
+     * between the maximal and minimal admissible cell sizes
+     */
+    double realCoarsestMeshSize;
+    double coarsestMeshLevel;
+    double maxAdaptiveMeshLevel;
+    
 
     /**
      * Quadrature points, derivative operators, and various projectors for (1D) unit interval.
@@ -148,7 +162,7 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::solvers::ade
      *              function is tied to the point. You just have to scale it with h. By
      *              translating the shape function's centre to x, you can reconstruct where
      *              the shape function is placed within the computational domain.
-     * @param gridIsConstructred Boolean holds if grid is completely constructed.
+     * @param gridIsConstructed Boolean holds if grid is completely constructed.
      *              initialCondition() is invoked both by the grid construction and the
      *              initialisation, and you might want to do different things depending on
      *              the context. For most applications, they initialise data if and only if
@@ -161,7 +175,7 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::solvers::ade
       const tarch::la::Vector<Dimensions,double>&  x,
 			const tarch::la::Vector<Dimensions,double>&  h,
 			const tarch::la::Vector<Dimensions,int>&     index,
-      bool                                         gridIsConstructred
+      bool                                         gridIsConstructed
     ) {% if INITIAL_CONDITIONS_IMPLEMENTATION=="<user-defined>" %}= 0{% else %} final {% endif %};
 
 
@@ -282,6 +296,18 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::solvers::ade
      */
     double getMaxMeshSize() const override final;
     double getMinMeshSize() const override final;
+    
+    /**
+     * Functions inherited from Solver.h in the aderdg context, these provide
+     * information to ExaSeis expansions
+     */    
+    tarch::la::Vector<Dimensions,double> getDomainSize()    const override final;
+    tarch::la::Vector<Dimensions,double> getDomainOffset()  const override final;
+    double getCoarsestMeshSize()                            const override final;
+    int getCoarsestMeshLevel()                              const override final;
+    int getMaximumAdaptiveMeshLevel()                       const override final;
+    int getMaximumAdaptiveMeshDepth()                       const override final;
+    
 
     /**
      * Update the global solver state, i.e. inform the solver about some

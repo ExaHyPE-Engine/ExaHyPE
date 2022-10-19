@@ -50,6 +50,40 @@ kernels::UnivariateFunction** exahype2::solvers::aderdg::ADERDGSolver::basisFunc
   generated::kernels::AderDG::{{LINEARITY}}::initQuadratureNodesAndWeights();
   generated::kernels::AderDG::{{LINEARITY}}::initDGMatrices();
   {% endif %}
+  
+  //setting coarsestMeshLevel and maxAdaptiveMeshLevel
+  double maxDSize = std::numeric_limits<double>::min();
+  double minDSize = std::numeric_limits<double>::max();
+  tarch::la::Vector<Dimensions, double> sizes = {{NAMESPACE | join("::")}}::DomainSize;
+  
+  for(int i=0; i<Dimensions; i++){
+    if(sizes[i]>maxDSize){
+      maxDSize = sizes[i];
+    }
+    if(sizes[i]<minDSize){
+      minDSize = sizes[i];
+    }    
+  }
+  
+  int depth = 0;
+  
+  //finding coarsest possible Mesh level
+  while(maxDSize>MaxAdmissibleCellH){
+    depth += 1;
+    maxDSize /= 3.0;
+  }
+  
+  realCoarsestMeshSize = maxDSize;
+  coarsestMeshLevel = depth;  
+  
+  depth = 0;
+  while(minDSize>MinAdmissibleCellH){
+    depth += 1;
+    minDSize /= 3.0;
+  }
+  
+  maxAdaptiveMeshLevel = depth;
+  
 
 }
 
@@ -70,6 +104,37 @@ double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMaxMeshSize() const {
 
 double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMinMeshSize() const {
   return getMinCellSize();
+}
+
+
+tarch::la::Vector<Dimensions,double> {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getDomainSize() const {
+  return {{NAMESPACE | join("::")}}::DomainSize;
+
+}
+
+
+tarch::la::Vector<Dimensions,double> {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getDomainOffset() const {
+  return {{NAMESPACE | join("::")}}::DomainOffset;
+}
+
+
+double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getCoarsestMeshSize() const {
+  return realCoarsestMeshSize;
+}
+
+
+int {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getCoarsestMeshLevel() const {
+  return coarsestMeshLevel;
+}
+
+
+int {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMaximumAdaptiveMeshLevel() const {
+  return maxAdaptiveMeshLevel;
+}
+
+
+int {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMaximumAdaptiveMeshDepth() const {
+  return (maxAdaptiveMeshLevel- coarsestMeshLevel);
 }
 
 
@@ -160,9 +225,9 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::update(double timeStepSize, doub
 
 {% if INITIAL_CONDITIONS_IMPLEMENTATION!="<user-defined>" %}
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::initialCondition(
-  double * __restrict__ Q,
+  double * __restrict__ Q, //Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
   const tarch::la::Vector<Dimensions,double>&  x,
-  bool                                         gridIsConstructred
+  bool                                         gridIsConstructed
 ) {
   {{INITIAL_CONDITIONS_IMPLEMENTATION}}
 }
