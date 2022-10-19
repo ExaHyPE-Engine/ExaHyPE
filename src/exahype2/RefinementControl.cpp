@@ -70,11 +70,11 @@ void exahype2::RefinementControl::receiveDanglingMessages() {
       MPI_Iprobe(rank, _reductionTag, tarch::mpi::Rank::getInstance().getCommunicator(), &flag, &status);
       if (flag) {
         int numberOfMessages;
-        MPI_Get_count( &status, peano4::grid::GridControlEvent::getDatatype(), &numberOfMessages );
+        MPI_Get_count( &status, peano4::grid::GridControlEvent::getGlobalCommunciationDatatype(), &numberOfMessages );
         logInfo( "finishStep()", "got " << numberOfMessages << " event(s) from rank " << rank );
         std::vector< peano4::grid::GridControlEvent > receiveBuffer;
         receiveBuffer.resize( numberOfMessages );
-        MPI_Recv( receiveBuffer.data(), numberOfMessages, peano4::grid::GridControlEvent::getDatatype(), rank, _reductionTag, tarch::mpi::Rank::getInstance().getCommunicator(), MPI_STATUS_IGNORE );
+        MPI_Recv( receiveBuffer.data(), numberOfMessages, peano4::grid::GridControlEvent::getGlobalCommunciationDatatype(), rank, _reductionTag, tarch::mpi::Rank::getInstance().getCommunicator(), MPI_STATUS_IGNORE );
 
         tarch::multicore::Lock lock( _semaphore );
         for (auto p: receiveBuffer) {
@@ -88,8 +88,6 @@ void exahype2::RefinementControl::receiveDanglingMessages() {
 
 
 void exahype2::RefinementControl::clear() {
-  tarch::multicore::Lock lock( _semaphore );
-  logDebug( "clear()", "clear list of control events" );
   _newEvents.clear();
 }
 
@@ -114,7 +112,7 @@ void exahype2::RefinementControl::addCommand(
       {
         tarch::la::Vector<Dimensions,double> expandedWidth   = (1.0+_Tolerance) * h;
         tarch::la::Vector<Dimensions,double> shift           = 0.5 * (expandedWidth - h);
-        tarch::la::Vector<Dimensions,double> refinedMeshSize = 1.0/3.0 * h;
+        tarch::la::Vector<Dimensions,double> refinedMeshSize = (1.0+_Tolerance) * 1.0/3.0 * h;
 
         peano4::grid::GridControlEvent newEvent(
           peano4::grid::GridControlEvent::RefinementControl::Refine,
@@ -186,7 +184,7 @@ void exahype2::RefinementControl::triggerSendOfCopyOfCommittedEvents() {
     for (int rank=0; rank<tarch::mpi::Rank::getInstance().getNumberOfRanks(); rank++) {
       if (rank!=tarch::mpi::Rank::getInstance().getRank()) {
         _sendRequests[rank] = new MPI_Request;
-        MPI_Isend( _copyOfCommittedEvents.data(), _copyOfCommittedEvents.size(), peano4::grid::GridControlEvent::getDatatype(), rank, _reductionTag, tarch::mpi::Rank::getInstance().getCommunicator(), _sendRequests[rank] );
+        MPI_Isend( _copyOfCommittedEvents.data(), _copyOfCommittedEvents.size(), peano4::grid::GridControlEvent::getGlobalCommunciationDatatype(), rank, _reductionTag, tarch::mpi::Rank::getInstance().getCommunicator(), _sendRequests[rank] );
       }
     }
   }
@@ -195,26 +193,28 @@ void exahype2::RefinementControl::triggerSendOfCopyOfCommittedEvents() {
 
 
 void exahype2::RefinementControl::finishStep() {
-  if (not _newEvents.empty()) {
-    logInfo( "finishStep()", "activate " << _newEvents.size() << " refinement/erase instructions (can be taken into account in next grid sweep)" );
+  _committedEvents.clear();
+
+  int maxLifetime = 0;
+  NewEvents::iterator p = _newEvents.begin();
+  while (p!=_newEvents.end()) {
+    _committedEvents.push_back( p->first );
+    p->second--;
+    if (p->second<=0) {
+      p = _newEvents.erase(p);
+    }
+    else {
+      maxLifetime = std::max( maxLifetime, p->second );
+      p++;
+    }
   }
 
-  {
-    tarch::multicore::Lock lock( _semaphore );
-    _committedEvents.clear();
-
-    NewEvents::iterator p = _newEvents.begin();
-    while (p!=_newEvents.end()) {
-      _committedEvents.push_back( p->first );
-      p->second--;
-      if (p->second<=0) {
-        p = _newEvents.erase(p);
-      }
-      else {
-        p++;
-      }
-    }
-    _newEvents.clear();
+  if (not _committedEvents.empty()) {
+    logInfo(
+      "finishStep()",
+      "activate " << _committedEvents.size() << " refinement/erase instructions (can be taken into account in next grid sweep). Keep " <<
+      _newEvents.size() << " event(s) to be re-delivered later (max lifetime " << maxLifetime << ")"
+    );
   }
 
   #ifdef Parallel

@@ -51,6 +51,7 @@ class Project(object):
     self._plot_filters  = []
     self._output_path   = "./"
     self._plotter_precision = 5
+    self._tracer_particles = []
 
     self.create_grid                         = peano4.solversteps.Step( "CreateGrid", False )
     self.init_grid                           = peano4.solversteps.Step( "InitGrid",   False )
@@ -255,6 +256,10 @@ thus appreciate any citation of the original release paper
     self._domain_offset = offset
     self._domain_size   = size
     self._dimensions    = dimensions
+    
+    assert len(self._domain_offset)==dimensions, "domain offset vector and dimensions don't match"
+    assert len(self._domain_size)==dimensions, "domain offset vector and dimensions don't match"
+    
     self._max_terminal_time = max_end_time
     self._min_terminal_time = min_end_time
     self._first_plot_time_stamp = first_plot_time_stamp
@@ -274,11 +279,18 @@ thus appreciate any citation of the original release paper
     
     
   def __generate_solver_repository(self):
+    """
+    
+    I have to call finishedTraversal() for each tracer set. As tracers
+    are a subclass of DoF, they have a name property.
+    
+    """
     solverRepositoryDictionary = {
       "SOLVERS" : [],
       "LOAD_BALANCER" : self._load_balancer_name,
       "LOAD_BALANCER_ARGUMENTS" : self._load_balancer_arguments,
-      "PLOT_FILTER": self._plot_filters
+      "PLOT_FILTER": self._plot_filters,
+      "TRACERS": [x.name for x in self._tracer_particles]
     }
 
     for solver in self._solvers:
@@ -317,9 +329,17 @@ thus appreciate any citation of the original release paper
     Besides those pre-defined attributes, we add one more vector field
     to each particle which we simply call data. Data stores, as one 
     large array, all the properties that we want to track per tracer.
-    We also need an additional enumeration which clarifies if a 
-    particle has moved already or not. This is important to ensure
-    that tracers can follow the fluid flow. Finally, we add each 
+
+    Tracers in ExaHyPE can move, though they do not have to move. Even if
+    they move, they never have a native velocity, i.e. their velocity will
+    always be a projection of an ExaHyPE solution. We are talking about 
+    tracers after all and not about a proper PIC approach. Due to this 
+    constraint, we do not need a velocity vector. However, we need an
+    additional enumeration which clarifies if a 
+    particle has moved already or not. This enumeration is needed by the
+    particle update routines.
+    
+    Finally, we add each 
     particle a number which is a tuple consisting of the tree number
     (on which tree has a particle been generationed plus what was the
     tree-local number of this particle at the time). Through this 
@@ -382,12 +402,12 @@ thus appreciate any citation of the original release paper
     #
     # Initialisation
     #
-    self.init_grid.add_action_set(peano4.toolbox.particles.UpdateParticleGridAssociation(particles))
+    self.init_grid.add_action_set(peano4.toolbox.particles.UpdateParticleGridAssociation(particles),False)
         
     #
     # Move particles
     #
-    self.perform_time_step.add_action_set(peano4.toolbox.particles.UpdateParticleGridAssociation(particles))
+    self.perform_time_step.add_action_set(peano4.toolbox.particles.UpdateParticleGridAssociation(particles),False)
     
     #
     # Plotter: The timestamp here is slightly wrong, as I use the min time stamp. It 
@@ -413,7 +433,9 @@ thus appreciate any citation of the original release paper
       
       self.plot_solution.add_action_set( particle_plotter ) 
       
-    self.plot_solution.add_action_set(peano4.toolbox.particles.UpdateParticleGridAssociation(particles))
+    self.plot_solution.add_action_set(peano4.toolbox.particles.UpdateParticleGridAssociation(particles),False)
+    
+    self._tracer_particles.append(particles)
 
     return particles
 

@@ -15,8 +15,8 @@
 #include "tarch/mpi/mpi.h"
 
 #include "peano4/utils/Globals.h"
-
 #include "peano4/datamanagement/VertexMarker.h"
+#include "peano4/grid/TraversalObserver.h"
 
 
 {% for item in NAMESPACE -%}
@@ -142,7 +142,7 @@
        * @see STDVectorOverVectorOfPointersStack::startReceive()
        * @see clone()
        */
-      void merge(const {{CLASSNAME}}& neighbour, const peano4::datamanagement::VertexMarker& marker);
+      void merge(::peano4::grid::TraversalObserver::SendReceiveContext context, const {{CLASSNAME}}& neighbour, const peano4::datamanagement::VertexMarker& marker);
       static bool send(const peano4::datamanagement::VertexMarker& marker);
       static bool receiveAndMerge(const peano4::datamanagement::VertexMarker& marker);
       static bool storePersistently(const peano4::datamanagement::VertexMarker& marker);

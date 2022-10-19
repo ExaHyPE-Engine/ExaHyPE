@@ -33,42 +33,12 @@ class AddVolumeAndFaceSolution(AbstractRungeKuttaDGActionSet):
     assertion3( tarch::la::greaterEquals( timeStamp, 0.0 ),     timeStamp, timeStepSize, timeStampOldSolution );
 
     #if Dimensions==2
-    double* QOut = fineGridCell{{UNKNOWN_IDENTIFIER}}RhsEstimates.value + {{PREDICATE_NO}} * {{NUMBER_OF_DOFS_PER_CELL_2D}} * {{NUMBER_OF_UNKNOWNS}};
+    double* dQdt = fineGridCell{{UNKNOWN_IDENTIFIER}}RhsEstimates.value + {{PREDICATE_NO}} * {{NUMBER_OF_DOFS_PER_CELL_2D}} * {{NUMBER_OF_UNKNOWNS}};
     #elif Dimensions==3
-    double* QOut = fineGridCell{{UNKNOWN_IDENTIFIER}}RhsEstimates.value + {{PREDICATE_NO}} * {{NUMBER_OF_DOFS_PER_CELL_3D}} * {{NUMBER_OF_UNKNOWNS}};
+    double* dQdt = fineGridCell{{UNKNOWN_IDENTIFIER}}RhsEstimates.value + {{PREDICATE_NO}} * {{NUMBER_OF_DOFS_PER_CELL_3D}} * {{NUMBER_OF_UNKNOWNS}};
     #endif
 
-    #if Dimensions==2
-    ::exahype2::dg::integrateOverRiemannSolutionsAndAddToVolume_GaussLegendre(
-      fineGridFaces{{UNKNOWN_IDENTIFIER}}RiemannSolution(0).value, //left
-      fineGridFaces{{UNKNOWN_IDENTIFIER}}RiemannSolution(2).value, //right
-      fineGridFaces{{UNKNOWN_IDENTIFIER}}RiemannSolution(1).value, //down
-      fineGridFaces{{UNKNOWN_IDENTIFIER}}RiemannSolution(3).value, //up
-      {{ORDER}},                                                   
-      {{NUMBER_OF_UNKNOWNS}},
-      {{NUMBER_OF_AUXILIARY_VARIABLES}},
-      marker.h(),
-      repositories::{{SOLVER_INSTANCE}}.BasisFunctionValuesLeft1d,
-      repositories::{{SOLVER_INSTANCE}}.MassMatrixDiagonal1d,
-      QOut
-    );
-    #elif Dimensions==3
-    ::exahype2::dg::integrateOverRiemannSolutionsAndAddToVolume_GaussLegendre(
-      fineGridFaces{{UNKNOWN_IDENTIFIER}}RiemannSolution(0).value, //left
-      fineGridFaces{{UNKNOWN_IDENTIFIER}}RiemannSolution(3).value, //right
-      fineGridFaces{{UNKNOWN_IDENTIFIER}}RiemannSolution(1).value, //down
-      fineGridFaces{{UNKNOWN_IDENTIFIER}}RiemannSolution(4).value, //up
-      fineGridFaces{{UNKNOWN_IDENTIFIER}}RiemannSolution(2).value, //front
-      fineGridFaces{{UNKNOWN_IDENTIFIER}}RiemannSolution(5).value, //back
-      {{ORDER}},                                                   
-      {{NUMBER_OF_UNKNOWNS}},
-      {{NUMBER_OF_AUXILIARY_VARIABLES}},
-      marker.h(),
-      repositories::{{SOLVER_INSTANCE}}.BasisFunctionValuesLeft1d,
-      repositories::{{SOLVER_INSTANCE}}.MassMatrixDiagonal1d,
-      QOut
-    );
-    #endif
+    ::exahype2::dg::{{KERNEL_NAMESPACE}}::{{ADD_SOLVER_CONTRIBUTIONS_CALL}}
 
     ::exahype2::CellData cellData(
       nullptr,
@@ -76,16 +46,14 @@ class AddVolumeAndFaceSolution(AbstractRungeKuttaDGActionSet):
       marker.h(),
       timeStamp,
       timeStepSize,
-      QOut
+      dQdt
     );
 
-    ::exahype2::dg::multiplyWithInvertedMassMatrix_GaussLegendre(
-      cellData,
-      {{ORDER}},                                                   
-      {{NUMBER_OF_UNKNOWNS}},
-      {{NUMBER_OF_AUXILIARY_VARIABLES}},
-      repositories::{{SOLVER_INSTANCE}}.MassMatrixDiagonal1d
-    );
+    ::exahype2::dg::{{KERNEL_NAMESPACE}}::{{MULTIPLY_WITH_INVERTED_MASS_MATRIX_CALL}}
+    
+    const double* oldQ = fineGridCell{{UNKNOWN_IDENTIFIER}}.value;
+    
+    {{POSTPROCESS_UPDATED_CELL_AFTER_RUNGE_KUTTA_STEP}}
   }
   {% endfor %}
 """

@@ -25,7 +25,11 @@ ExaHyPE2Sources = \
   dg/DGUtils.cpp \
   dg/CellIntegral.cpp \
   dg/Riemann.cpp \
-  dg/rusanov/Riemann.cpp \
+  dg/Tracer.cpp \
+  dg/average/Average.cpp \
+  dg/fluxaverage/FluxAverage.cpp \
+  dg/laxfriedrichs/LaxFriedrichs.cpp \
+  dg/rusanov/Rusanov.cpp \
   dg/tests/CellIntegralTest.cpp \
   dg/tests/DGUtilsTest.cpp \
   dg/tests/RiemannTest.cpp \
@@ -39,15 +43,14 @@ ExaHyPE2Sources = \
   fd/BoundaryConditions.cpp \
   fd/PatchUtils.cpp \
   fd/LoopBody.cpp \
-  fd/fd4/FD4_patchwise_functors.cpp \
   fv/BoundaryConditions.cpp \
   fv/PatchUtils.cpp \
   fv/PatchAccess.cpp \
   fv/PostprocessingKernels.cpp \
+  fv/Tracer.cpp \
+  fv/tests/InterpolationRestrictionTest.cpp \
+  fd/fd4/FD4_patchwise_functors.cpp \
   fv/rusanov/sycl/GPUCellData.cpp \
-  fv/rusanov/omp/opt/Rusanov.cpp \
-  fv/rusanov/omp/opt/GPUCellData.cpp \
-  fv/rusanov/omp/opt/GPUScratchpadData.cpp \
   fv/rusanov/tests/CopyPatchTest.cpp \
   fv/rusanov/tests/ApplySplit1DRiemannToPatchTest.cpp
 

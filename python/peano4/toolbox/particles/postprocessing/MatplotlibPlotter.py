@@ -14,7 +14,7 @@ def seismogram( dataset, column_number, labels, keys=None, marker_offset=0, tota
   the y-axis data is determined by column_number, i.e. that is the 
   data column used.
   
-  legend: [String]
+  labels: [String]
     Use None if you don't want a legend.
     
   alter_default_settings: Double (0,1)

@@ -96,7 +96,7 @@ class benchmarks::exahype2::euler::sphericalaccretionupscaling::SelfSimilarInfal
      *   about the maximum absolute eigenvalue.
      */
     virtual double maxEigenvalue(
-      const double * __restrict__ Q, // Q[5+0],
+      const double * __restrict__                  Q, // Q[5+0],
       const tarch::la::Vector<Dimensions,double>&  x,
       double                                       t,
       double                                       dt,
@@ -105,7 +105,7 @@ class benchmarks::exahype2::euler::sphericalaccretionupscaling::SelfSimilarInfal
     
     
     virtual void flux(
-      const double * __restrict__ Q, // Q[5+0],
+      const double * __restrict__                  Q, // Q[5+0],
       const tarch::la::Vector<Dimensions,double>&  x,
       double                                       t,
       double                                       dt,
@@ -115,11 +115,101 @@ class benchmarks::exahype2::euler::sphericalaccretionupscaling::SelfSimilarInfal
     
      
     /**
+     * Evaluate refinement criterion over cell
+     *
+     * @param Q Vector of unknowns
+     * @param x Centre of underlying cell
+     * @param h Size of underlying cell
+     * @param t Time
+     */
+    ::exahype2::RefinementCommand refinementCriterion(
+      const double * __restrict__                  Q,    // Q[5+0]
+      const tarch::la::Vector<Dimensions,double>&  x,
+      const tarch::la::Vector<Dimensions,double>&  h,
+      double                                       t
+    ) override;
+
+
+    /**
      * According to the docu, I always call the superclass routine. After that,
      * I check whether this has been the last sweep of the current time step.
      * If so, we let the mass accummulation know.
      */
     void finishTimeStep() override;
+
+    bool cellCanUseStatelessPDETerms(
+      const tarch::la::Vector<Dimensions,double>&  patchCentre,
+      const tarch::la::Vector<Dimensions,double>&  patchH,
+      double                                       t,
+      double                                       dt
+    ) const override;
+    
+    
+    /**
+     * Manually inlined version of the source term. As this variant is only called
+     * outside of the area of relevance, we know that the mass acting on the volume
+     * is the total mass.
+     */
+    #if defined(GPUOffloadingOMP)
+    #pragma omp declare target
+    #endif
+    static GPUCallableMethod void sourceTerm(
+       const double * __restrict__                  Q,
+       const tarch::la::Vector<Dimensions,double>&  x,
+       double                                       t,
+       double                                       dt,
+       double * __restrict__                        S,
+       Offloadable
+    ) {
+      for (int i=0; i<NumberOfUnknowns; i++) {
+        S[i] = 0.0;
+      }
+
+      applications::exahype2::euler::sphericalaccretion::addGravitationalSource_AlphaCDM(
+        S,
+        x,
+        Q,
+        TotalMassInPreviousTimeStep,
+        aInitial,
+        t
+      );
+    }
+    #if defined(GPUOffloadingOMP)
+    #pragma omp end declare target
+    #endif
+    
+    /**
+     * Manually inlined. Otherwise the same as the virtual function without
+     * the logging.
+     */
+    #if defined(GPUOffloadingOMP)
+    #pragma omp declare target
+    #endif
+    static GPUCallableMethod void flux(
+      const double * __restrict__ Q,               // Q[5+0],
+      const tarch::la::Vector<Dimensions,double>&  x,
+      double                                       t,
+      double                                       dt,
+      int                                          normal,
+      double * __restrict__                        F, // F[5]
+      Offloadable
+    ) {
+      ::applications::exahype2::euler::flux(
+        Q,
+        x,
+        0.0, // no volume, as point-wise
+        t,
+        dt,
+        normal,
+        NumberOfUnknowns,
+        NumberOfAuxiliaryVariables,
+        F,
+        Gamma
+      );
+    }
+    #if defined(GPUOffloadingOMP)
+    #pragma omp end declare target
+    #endif
 };
 
 

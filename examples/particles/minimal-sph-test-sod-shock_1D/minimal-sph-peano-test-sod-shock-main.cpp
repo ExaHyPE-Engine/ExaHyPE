@@ -30,9 +30,6 @@
 #include "observers/CreateGrid.h"
 #include "observers/Init.h"
 #include "observers/Plot.h"
-//#include "observers/DensityNonSym.h"
-//#include "observers/HydroPrepareForce.h"
-//#include "observers/NewtonRaphsonSmoothingLength.h"
 #include "observers/ComputeDensityAndUpdateSmoothingLength.h"
 #include "observers/ForceNonSym.h"
 #include "observers/Drift.h"
@@ -42,7 +39,6 @@
 #include "observers/KickCorrector.h"
 #include "observers/KickCorrectorExtra.h"
 #include "observers/HydroKickExtra.h"
-#include "observers/RearrangeAtStart.h"
 #include "observers/ResetHasConverged.h"
 #include "observers/InitTimeStep.h"
 #include "observers/ImposeBC.h"
@@ -117,10 +113,41 @@ int main(int argc, char** argv) {
     // =================
     //
 
+    /**
+     * ==================================================
+     * SPH simulation steps for minimal-SPH hydro scheme
+     * ==================================================
+     *
+     * Now comes the core algorithmic steps of the SPH simulation.
+     *
+     */
+
+    /**
+     * Name the steps that will be used in the simulation.
+     * Each of these steps consist in a sequence of touch particle first/last
+     * and particle-particle compute kernels. Their implementation can be found
+     * in the sph toolbox python library.
+     *
+     */
+
+    examples::particles::observers::ComputeDensityAndUpdateSmoothingLength computeDensityAndUpdateSmoothingLength;
+    examples::particles::observers::CreateGrid         createObserver;
+    examples::particles::observers::Init               initObserver;
+    examples::particles::observers::InitTimeStep       initTimeStep;
+    examples::particles::observers::ForceNonSym        forcespart;
+    examples::particles::observers::ResetHasConverged  resetHasConvergedNR;
+    examples::particles::observers::Drift              driftpart;
+    examples::particles::observers::Kick1              kick1part;
+    examples::particles::observers::Kick2              kick2part;
+    examples::particles::observers::HydroKickExtra     kickExtra;
+    examples::particles::observers::PredictHydro       predictHydroPart;
+    examples::particles::observers::ImposeBC           imposeBCpart;
+    examples::particles::observers::EndTimeStep        endTimeStep;
+    examples::particles::observers::Plot               plotObserver;
+
     int gridConstructionSteps = 0;
     while (peano4::parallel::SpacetreeSet::getInstance().getGridStatistics().getStationarySweeps()<5) {
       logInfo( "main()", "run a grid construction step and insert particles" );
-      examples::particles::observers::CreateGrid createObserver;
       peano4::parallel::SpacetreeSet::getInstance().traverse(createObserver);
       gridConstructionSteps++;
       loadBalancer.finishStep();
@@ -128,125 +155,116 @@ int main(int argc, char** argv) {
 
     logInfo( "main()", "finished grid construction after " << gridConstructionSteps << " steps, start to add particles" )
 
-    examples::particles::observers::Init initObserver;
     peano4::parallel::SpacetreeSet::getInstance().traverse(initObserver);
+    examples::particles::vertexdata::ParticleSet::finishedTraversal();
     logInfo( "main()", "added particles" )
 
-//    /* Initial step (e.g., re-arrange the particles into a particular configuration) */
-//    examples::particles::observers::RearrangeAtStart rearrangeObserver;
-//    peano4::parallel::SpacetreeSet::getInstance().traverse(rearrangeObserver);
-//    logInfo( "main()", "particles rearranged" )
+    /* Run any action to re-assign particles to vertices */
+    peano4::parallel::SpacetreeSet::getInstance().traverse(initTimeStep);
+    examples::particles::vertexdata::ParticleSet::finishedTraversal();
 
-    examples::particles::observers::Plot plotObserver;
     peano4::parallel::SpacetreeSet::getInstance().traverse(plotObserver);
+    examples::particles::vertexdata::ParticleSet::finishedTraversal();
     logInfo( "main()", "dumped initial condition" )
 
 
-    /* Main loop */
-    for (int i=0; i<500; i++) {
-      for (int j=0; j<10; j++) { /* Numbers of time-steps between two output snapshots */
-        logInfo( "main()", "run timestep" )
+    /** 
+     * Main time-step loop.
+     */
 
-        /* 
-         * Name the steps that will be used 
-         * */
+    const int TotalNumberOfTimeSteps = 2000;
 
-        examples::particles::observers::InitTimeStep initTimeStep;
-        examples::particles::observers::ForceNonSym forcespart;
-        examples::particles::observers::ComputeDensityAndUpdateSmoothingLength computeDensityAndUpdateSmoothingLength;
-        examples::particles::observers::ResetHasConverged ResetHasConvergedNR;
-        examples::particles::observers::Drift driftpart;
-        examples::particles::observers::Kick1 kick1part;
-        examples::particles::observers::Kick2 kick2part;
-        examples::particles::observers::HydroKickExtra kickExtra;
-        examples::particles::observers::PredictHydro predictHydroPart;
-        examples::particles::observers::ImposeBC ImposeBCpart;
-        examples::particles::observers::EndTimeStep endTimeStep;
+    // Frequency for output snapshots
+    const int DeltaSnapshots = 10;
 
-        /* "Initialize time-step" */
-        peano4::parallel::SpacetreeSet::getInstance().traverse(initTimeStep);
-        examples::particles::vertexdata::ParticleSet::finishedTraversal();
+    for (int i=1; i<=TotalNumberOfTimeSteps; i++) {
 
-        /* For first time-step, we need to pre-compute some quantities before drifting */
-        /* This is because we must start the simulation with a "K1" step */
-        if(i==0 and j==0){ 
-          for (int iter=0; iter<5; iter++){
-            peano4::parallel::SpacetreeSet::getInstance().traverse(computeDensityAndUpdateSmoothingLength);
-            examples::particles::vertexdata::ParticleSet::finishedTraversal();
-          }
+      logInfo( "main()", "run timestep " << i )
 
-        /* Reset NR convergence so we can update again */
-        peano4::parallel::SpacetreeSet::getInstance().traverse(ResetHasConvergedNR);
-        examples::particles::vertexdata::ParticleSet::finishedTraversal();
+      /* "Initialize time-step" */
+      peano4::parallel::SpacetreeSet::getInstance().traverse(initTimeStep);
+      examples::particles::vertexdata::ParticleSet::finishedTraversal();
 
-        /* Force loop */
-        /* Update vDot, uDot */
-        peano4::parallel::SpacetreeSet::getInstance().traverse(forcespart);
-        examples::particles::vertexdata::ParticleSet::finishedTraversal();
-
-        /* "Kick1" */
-        /* Update V_full and U_full. Pass them to U and V arrays */
-        peano4::parallel::SpacetreeSet::getInstance().traverse(kickExtra);
-        examples::particles::vertexdata::ParticleSet::finishedTraversal();
-        peano4::parallel::SpacetreeSet::getInstance().traverse(kick2part);
-        examples::particles::vertexdata::ParticleSet::finishedTraversal();
-//        peano4::parallel::SpacetreeSet::getInstance().traverse(kick1part);
-//        examples::particles::vertexdata::ParticleSet::finishedTraversal();
-//        peano4::parallel::SpacetreeSet::getInstance().traverse(kickExtra);
-//        examples::particles::vertexdata::ParticleSet::finishedTraversal();
-        } /* Finish the "0th" time-step */
-
-        /* Now the time-step in the actual "D-K2-K1" form begins */
-        /* "Drift" */
-        /* Update X */
-        peano4::parallel::SpacetreeSet::getInstance().traverse(driftpart);
-        examples::particles::vertexdata::ParticleSet::finishedTraversal();
-//        /* Predict  V, U, h, rho */
-        peano4::parallel::SpacetreeSet::getInstance().traverse(predictHydroPart);
-        examples::particles::vertexdata::ParticleSet::finishedTraversal();
-
-        for (int iter=0; iter<3; iter++){
+      /* For first time-step, we need to pre-compute some quantities before drifting */
+      /* This is because we must start the simulation with a "K1" step */
+      if (i == 0){ 
+        for (int iter=0; iter<5; iter++){
           peano4::parallel::SpacetreeSet::getInstance().traverse(computeDensityAndUpdateSmoothingLength);
           examples::particles::vertexdata::ParticleSet::finishedTraversal();
         }
 
-        /* Force loop */
-        peano4::parallel::SpacetreeSet::getInstance().traverse(forcespart);
-        examples::particles::vertexdata::ParticleSet::finishedTraversal();
+      /* Reset NR convergence so we can update again */
+      peano4::parallel::SpacetreeSet::getInstance().traverse(resetHasConvergedNR);
+      examples::particles::vertexdata::ParticleSet::finishedTraversal();
 
-        /* "Kick2"*/
-        /* Update V_full and U_full. Pass them to U and V arrays */
-        /* Now all values at n+1 are known */
-        peano4::parallel::SpacetreeSet::getInstance().traverse(kickExtra);
-        examples::particles::vertexdata::ParticleSet::finishedTraversal();
-        peano4::parallel::SpacetreeSet::getInstance().traverse(kick2part);
-        examples::particles::vertexdata::ParticleSet::finishedTraversal();
-//        peano4::parallel::SpacetreeSet::getInstance().traverse(kickExtra);
-//        examples::particles::vertexdata::ParticleSet::finishedTraversal();
+      /* Force loop */
+      /* Update vDot, uDot */
+      peano4::parallel::SpacetreeSet::getInstance().traverse(forcespart);
+      examples::particles::vertexdata::ParticleSet::finishedTraversal();
 
-        /* Move into next time-step with replacement n+1 -> n */
-        /* "Kick1" */
-        /* Update V_full and U_full */
-        peano4::parallel::SpacetreeSet::getInstance().traverse(kick1part);
-        examples::particles::vertexdata::ParticleSet::finishedTraversal();
-        peano4::parallel::SpacetreeSet::getInstance().traverse(kickExtra);
-        examples::particles::vertexdata::ParticleSet::finishedTraversal();
+      /* "Kick1" */
+      /* Update V_full and U_full. Pass them to U and V arrays */
+      peano4::parallel::SpacetreeSet::getInstance().traverse(kickExtra);
+      examples::particles::vertexdata::ParticleSet::finishedTraversal();
+      peano4::parallel::SpacetreeSet::getInstance().traverse(kick2part);
+      examples::particles::vertexdata::ParticleSet::finishedTraversal();
+//      peano4::parallel::SpacetreeSet::getInstance().traverse(kick1part);
+//      examples::particles::vertexdata::ParticleSet::finishedTraversal();
+//      peano4::parallel::SpacetreeSet::getInstance().traverse(kickExtra);
+//      examples::particles::vertexdata::ParticleSet::finishedTraversal();
+      } /* Finish the "0th" time-step */
 
-        /* "Impose BC" */
-        peano4::parallel::SpacetreeSet::getInstance().traverse(ImposeBCpart);
-        examples::particles::vertexdata::ParticleSet::finishedTraversal();
+      /* Now the time-step in the actual "D-K2-K1" form begins */
+      /* "Drift" */
+      /* Update position */
+      peano4::parallel::SpacetreeSet::getInstance().traverse(driftpart);
+      examples::particles::vertexdata::ParticleSet::finishedTraversal();
+//      /* Predict  V, U, h, rho */
+      peano4::parallel::SpacetreeSet::getInstance().traverse(predictHydroPart);
+      examples::particles::vertexdata::ParticleSet::finishedTraversal();
 
-        /* "End time-step" */
-        peano4::parallel::SpacetreeSet::getInstance().traverse(endTimeStep);
+      for (int iter=0; iter<3; iter++){
+        peano4::parallel::SpacetreeSet::getInstance().traverse(computeDensityAndUpdateSmoothingLength);
         examples::particles::vertexdata::ParticleSet::finishedTraversal();
-
       }
 
-      /* Dump a snapshot after the number of time-steps done above */
-      logInfo( "main()", "plot" );
-      examples::particles::observers::Plot plotTimeStepObserver;
-      peano4::parallel::SpacetreeSet::getInstance().traverse(plotTimeStepObserver);
+      /* Force loop */
+      peano4::parallel::SpacetreeSet::getInstance().traverse(forcespart);
       examples::particles::vertexdata::ParticleSet::finishedTraversal();
+
+      /* "Kick2"*/
+      /* Update V_full and U_full. Pass them to U and V arrays */
+      /* Now all values at n+1 are known */
+      peano4::parallel::SpacetreeSet::getInstance().traverse(kickExtra);
+      examples::particles::vertexdata::ParticleSet::finishedTraversal();
+      peano4::parallel::SpacetreeSet::getInstance().traverse(kick2part);
+      examples::particles::vertexdata::ParticleSet::finishedTraversal();
+//      peano4::parallel::SpacetreeSet::getInstance().traverse(kickExtra);
+//      examples::particles::vertexdata::ParticleSet::finishedTraversal();
+
+      /* Move into next time-step with replacement n+1 -> n */
+      /* "Kick1" */
+      /* Update V_full and U_full */
+      peano4::parallel::SpacetreeSet::getInstance().traverse(kick1part);
+      examples::particles::vertexdata::ParticleSet::finishedTraversal();
+      peano4::parallel::SpacetreeSet::getInstance().traverse(kickExtra);
+      examples::particles::vertexdata::ParticleSet::finishedTraversal();
+
+      /* "Impose BC" */
+      peano4::parallel::SpacetreeSet::getInstance().traverse(imposeBCpart);
+      examples::particles::vertexdata::ParticleSet::finishedTraversal();
+
+      /* "End time-step" */
+      peano4::parallel::SpacetreeSet::getInstance().traverse(endTimeStep);
+      examples::particles::vertexdata::ParticleSet::finishedTraversal();
+
+      /* Do we need to dump the snapshot? */
+      if (i % DeltaSnapshots == 0){
+        logInfo( "main()", "plot timestep " << i );
+        peano4::parallel::SpacetreeSet::getInstance().traverse(plotObserver);
+        examples::particles::vertexdata::ParticleSet::finishedTraversal();
+      }
+
     }
 
     logInfo( "main()", "terminated successfully" )

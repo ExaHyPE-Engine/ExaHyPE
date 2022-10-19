@@ -30,6 +30,7 @@
 #include "observers/Init.h"
 #include "observers/Plot.h"
 #include "observers/ComputeDensityAndUpdateSmoothingLength.h"
+#include "observers/DumpBalsara.h"
 
 tarch::logging::Log _log("::");
 
@@ -124,11 +125,15 @@ int main(int argc, char** argv) {
     logInfo( "main()", "run timestep" )
 
     examples::particles::observers::ComputeDensityAndUpdateSmoothingLength computeDensityAndUpdateSmoothingLength;
+    examples::particles::observers::DumpBalsara dumpBalsara;
     examples::particles::observers::Plot plotTimeStepObserver;
 
     for (int iter=0; iter<1; iter++){
       logInfo( "main()", "Iteration number:" << iter );
       peano4::parallel::SpacetreeSet::getInstance().traverse(computeDensityAndUpdateSmoothingLength);
+      examples::particles::vertexdata::ParticleSet::finishedTraversal();
+
+      peano4::parallel::SpacetreeSet::getInstance().traverse(dumpBalsara);
       examples::particles::vertexdata::ParticleSet::finishedTraversal();
 
     /* Dump a snapshot */

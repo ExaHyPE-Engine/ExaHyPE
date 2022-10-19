@@ -35,6 +35,25 @@ namespace exahype2 {
      * This second loop is for loop over node, and the d-dimensional index
      * of node if given by index.
      *
+     *
+     * ## Solver flavour
+     *
+     * We rely on Gauss-Legendre quadrature nodes on tensor product spaces, i.e.
+     * we exploit the fact that the mass matrix has diagonal form. Consequently,
+     * we can construct all involved cell-local operators on-the-fly by
+     * multiplying their 1d counterparts.
+     *
+     * We run over the patches on by one (patchwise). We do not exploit that we
+     * have to do the same operation for all dofs of all patches.
+     *
+     * We evaluate all operators in-situ, i.e. get their output and apply it
+     * immediately. See the discussion below that each dof's flux evaluation
+     * needs all the fluxes in that row of dofs. Consequently, we evaluate
+     * each flux p times if we have p quadrature points per axis. This is
+     * redundant work. In return, in-situ implies that we don't have to store
+     * data temporarily.
+     *
+     *
      * ## Flux evaluation
      *
      * This version of the volumetric kernel uses the Gauss Legendre property,
@@ -88,6 +107,31 @@ namespace exahype2 {
      * again from the same space as @f$ \phi @f$.
      *
      *
+     * ## Signs in front of the individual terms
+     *
+     * We rely on the formulation as discussed on the page Discontinuous
+     * Galerkin. See dg.h or the doxygen html pages for details. One important
+     * fact to keep in mind is that this routine computes $\partial _t Q$.
+     * However, all PDE terms besides the source arise on the left-hand side of
+     * the PDE, i.e. on the same side as the time derivative. We therefore have
+     * to bring these terms to the right which gives us an additional minus
+     * sign.
+     *
+     * Here's the rationale behind the volumetric terms:
+     *
+     * - The source term is already on the right-hand side in our PDE
+     *   formulation. Therefore, we can simply add it.
+     * - The flux is on the left-hand side of the PDE formulation where we find
+     *   a term @f$ div F(Q) @f$. We bring the derivative
+     *   over to the test function and then bring the whole term to the
+     *   right-hand side Both steps yield a minus sign, which means that the
+     *   minus signs cancel out.
+     * - The ncp enters the volumetric term as it is. No partial derivative is
+     *   exploited. It hence enters the solution with its original sign.
+     *   However, we have to bring it to the right-hand side for the time
+     *   derivatives. Therefore, we need a minus sign here.
+     *
+     *
      * ## Arguments
      *
      * @param cellData The routine computes the DG cell contributions over
@@ -118,48 +162,35 @@ namespace exahype2 {
      *   entry with y and z being independent of x. See getQuadraturePoint()
      *   for some documentation.
      *
-     *
-     *
-     *
-     *
-     *
-     *
-     *
-     *
-     *
-     *
-     *
-     *
-     *
-     *
-     *
-        const double* __restrict__                     quadWeights,
-     *
-     *
-     *    since we implicitly integrate by summing over these using their weights.
-     *
-     * @param: MassMatrix: MassMatrix contains the quadrature weights on the diagonal.
-     *
-     * @param: StiffnessMatrix contains the derivatives of the basis functions evaluated
-     *  at the quadrature nodes multiplied by the quadrature weight.
-     *
-     * @param: DerivativeOperator contains the derivative of the basis function evaluated
-     *  at the quadrature node.
-     *
      */
-    void cellIntegral_patchwise_GaussLegendre_functors(
+    void cellIntegral_patchwise_in_situ_GaussLegendre_functors(
       ::exahype2::CellData&                          cellData,
       const int                                      order,
       const int                                      unknowns,
       const int                                      auxiliaryVariables,
       Flux                                           flux,
-      NonConservativeProduct                         nonConservativeProduct,
+      NonConservativeProduct                         nonconservativeProduct,
       Source                                         source,
       PointSources                                   pointSources,
       const double* __restrict__                     QuadratureNodes1d,
       const double* __restrict__                     MassMatrixDiagonal1d,
       const double* __restrict__                     StiffnessMatrix1d,
       const double* __restrict__                     DerivativeOperator1d,
+      bool                                           evaluateFlux,
+      bool                                           evaluateNonconservativeProduct,
+      bool                                           evaluateSource,
+      bool                                           evaluatePointSources
+    );
+
+
+    template <
+      typename Solver,
+      int      order,
+      int      unknowns,
+      int      auxiliaryVariables
+    >
+    void cellIntegral_patchwise_in_situ_GaussLegendre(
+      ::exahype2::CellData&                          cellData,
       bool                                           evaluateFlux,
       bool                                           evaluateNonconservativeProduct,
       bool                                           evaluateSource,
@@ -202,27 +233,6 @@ namespace exahype2 {
     );
 
 
-    /*
-     * Computes the greatest eigenvalue over all nodes in a cell
-     * @param strideQ: number of elements per node per cell, usually number of
-     *    unknowns + number of auxiliary variables
-     * @param dt: timestep
-     *
-     * @deprecated due to reduceMaxEigenvalue_patchwise_functors()
-     */
-/*
-    double getMaxEigenvalue(
-        MaxEigenvalue                                  maxEigenvalue,
-        const double* __restrict__                     Q,
-        const int                                      order,
-        const int                                      strideQ,
-        const tarch::la::Vector<Dimensions,double>&    x,
-        const double                                   t,
-        const double                                   dt
-        );
-*/
-
-
     /**
      * Compute the maximum eigenvalues over a sequence of cells and store the
      * result in the respective CellData entry.
@@ -258,5 +268,9 @@ namespace exahype2 {
     }
   }
 }
+
+
+#include "CellIntegral.cpph"
+
 
 #endif

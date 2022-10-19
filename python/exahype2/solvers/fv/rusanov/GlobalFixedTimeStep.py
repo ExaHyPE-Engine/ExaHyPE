@@ -12,7 +12,6 @@ from .kernels import create_solver_declarations
 from .kernels import create_solver_definitions
 
 from .kernels import SolverVariant
-from .kernels import RiemannKernelVariant
 
 from exahype2.solvers.fv.FixedTimeSteppingCodeSnippets import FixedTimeSteppingCodeSnippets
 
@@ -38,7 +37,15 @@ class GlobalFixedTimeStep( SingleSweep ):
       to max_volume_h.
   
     """
-    super(GlobalFixedTimeStep,self).__init__(name, patch_size, overlap, unknowns, auxiliary_variables, min_volume_h, max_volume_h, plot_grid_properties) 
+    super(GlobalFixedTimeStep,self).__init__(name, 
+                                             patch_size, 
+                                             overlap, 
+                                             unknowns, 
+                                             auxiliary_variables, 
+                                             min_volume_h, 
+                                             max_volume_h, 
+                                             plot_grid_properties,
+                                             kernel_namespace="rusanov") 
     
     self._normalised_time_step_size = normalised_time_step_size
 
@@ -84,8 +91,8 @@ class GlobalFixedTimeStep( SingleSweep ):
     self._compute_kernel_call = create_compute_Riemann_kernel_for_Rusanov(
       self._flux_implementation, self._ncp_implementation, self._source_term_implementation, 
       compute_max_eigenvalue_of_next_time_step=False,
-      solver_variant = SolverVariant.WithVirtualFunctions,
-      riemann_kernel_variant = RiemannKernelVariant.PatchWiseAoSHeap
+      solver_variant         = SolverVariant.WithVirtualFunctions,
+      kernel_name    = "timeStepWithRusanov_patchwise_heap_functors"
     )
 
     solver_code_snippets = FixedTimeSteppingCodeSnippets(self._normalised_time_step_size,False)

@@ -6,10 +6,53 @@ from .AbstractRungeKuttaDGActionSet import AbstractRungeKuttaDGActionSet
 import peano4
 import jinja2
 
+
+from exahype2.solvers.ButcherTableau                import ButcherTableau
+
+
+
+from enum import Enum
+
+
+class FaceProjections(Enum):
+  """
+  
+  Different data can be projected onto the faces. In the simplest variant,
+  only the solution is projected on the faces and the Riemann solver then
+  reconstructs the flux from the arising jump, i.e. the solution left and 
+  right of the face. There are more sophsticiated variants however which 
+  exploit the solution left and right plus additional data such as the 
+  gradient along the normal. 
+  
+  """
+  Solution = 1,
+  SolutionAndGradient = 2,
+  SolutionAndFluxExtrapolation = 3
+  
+
+def compute_number_of_face_projection_quantities( face_projections: FaceProjections ):
+  """
+  
+  Translate the information what is projected onto the faces into a number
+  how many quantities are to be held per face.
+  
+  """
+  if face_projections   == FaceProjections.Solution:
+    return 1
+  elif face_projections == FaceProjections.SolutionAndGradient:
+    return 2
+  elif face_projections == FaceProjections.SolutionAndFluxExtrapolation:
+    return 2
+  else: 
+    assert False, "variant {} not handled".format( face_projections )
+    return -1
+
+
+
 class ProjectLinearCombinationOfEstimatesOntoFaces(AbstractRungeKuttaDGActionSet):
   """
   
-  The linear combination of the Runge Kutta trials has to be projected onto
+  The linear combination of the Runge-Kutta trials has to be projected onto
   the faces, so we can then solve the Riemann problems. So the projection 
   happens in one grid sweep, the corresponding Riemann solve in the next one.
   
@@ -18,22 +61,21 @@ class ProjectLinearCombinationOfEstimatesOntoFaces(AbstractRungeKuttaDGActionSet
   
   ## Time step sizes and time stamps
 
-  Besides the actual projection, I also set the fields
-    
-      {{FACE_METADATA_ACCESSOR}}(d).setUpdated(1,true);
-      {{FACE_METADATA_ACCESSOR}}(d).setUpdatedTimeStamp(1,{{CELL_METADATA_ACCESSOR}}.getTimeStamp());
-      {{FACE_METADATA_ACCESSOR}}(d+Dimensions).setUpdated(0,true);
-      {{FACE_METADATA_ACCESSOR}}(d+Dimensions).setUpdatedTimeStamp(0,{{CELL_METADATA_ACCESSOR}}.getTimeStamp());
+  Besides the actual projection, I also set the following fields on the 
+  face:
 
-  on the face label. So the face now has a copy of the time stamp of the cell
-  plus there's a marker that we are in the process of updating the adjacent
-  cell. With the flag, we can determine whether a neighbouring cell runs a 
-  Runge-Kutta step too or not.
+  - Updated    Is set after each projection.
+  
+  - UpdatedTimeStamp   Is set after each projection with the time stamp 
+               of the current Runge-Kutta trial. 
+               
+  We do not update the new and old time stamp on the face label. These
+  values are properly set in the ComputeFinalLinearCombination action set.                 
   
   """
  
   
-  TemplateProjectLinearCombination = """
+  TemplateProjectLinearCombinationSolution = """
   {% for PREDICATE_NO in range(0,PREDICATES|length) %}
   if ({{PREDICATES[PREDICATE_NO]}}) {
 
@@ -67,9 +109,20 @@ class ProjectLinearCombinationOfEstimatesOntoFaces(AbstractRungeKuttaDGActionSet
     );
     #endif
 
+      
+    // Set the variable
+    // double timeStepSize
+    const double timeStampOldSolution    = fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStamp();
+    {{COMPUTE_TIME_STEP_SIZE}}    
+    const double timeStamp = timeStampOldSolution + {{BUTCHER_TABLEAU_RELATIVE_TIME_STEP_SIZES[PREDICATE_NO]}} * timeStepSize;
+    
     for (int d=0; d<Dimensions; d++) {
-      {{FACE_METADATA_ACCESSOR}}(d).setUpdated(1,true);
+      {{FACE_METADATA_ACCESSOR}}(d).setUpdated(           1,true);
       {{FACE_METADATA_ACCESSOR}}(d+Dimensions).setUpdated(0,true);
+
+      {{FACE_METADATA_ACCESSOR}}(d).setUpdatedTimeStamp(           1, timeStamp );
+      {{FACE_METADATA_ACCESSOR}}(d+Dimensions).setUpdatedTimeStamp(0, timeStamp );
+
       logDebug( "touchCellLastTime(...)", "update {{FACE_METADATA_ACCESSOR}}(" << d << ")(1)" );
       logDebug( "touchCellLastTime(...)", "update {{FACE_METADATA_ACCESSOR}}(" << (d+Dimensions) << ")(0)" );
     }
@@ -78,41 +131,17 @@ class ProjectLinearCombinationOfEstimatesOntoFaces(AbstractRungeKuttaDGActionSet
 """
   
 
-  TemplateProjectAsEpilogue = """
-  if (
-    repositories::{{SOLVER_INSTANCE}}.isLastGridSweepOfTimeStep()
-  ) {
-    for (int d=0; d<Dimensions; d++) {
-      {{FACE_METADATA_ACCESSOR}}(d).setUpdated(1,true);
-      {{FACE_METADATA_ACCESSOR}}(d).setUpdatedTimeStamp(1,{{CELL_METADATA_ACCESSOR}}.getTimeStamp());
-      {{FACE_METADATA_ACCESSOR}}(d).setOldTimeStamp(    1,{{FACE_METADATA_ACCESSOR}}(d).getNewTimeStamp(1));
-      {{FACE_METADATA_ACCESSOR}}(d).setNewTimeStamp(    1,{{CELL_METADATA_ACCESSOR}}.getTimeStamp());
-
-      {{FACE_METADATA_ACCESSOR}}(d+Dimensions).setUpdated(0,true);
-      {{FACE_METADATA_ACCESSOR}}(d+Dimensions).setUpdatedTimeStamp(0,{{CELL_METADATA_ACCESSOR}}.getTimeStamp());
-      {{FACE_METADATA_ACCESSOR}}(d+Dimensions).setOldTimeStamp(    0,{{FACE_METADATA_ACCESSOR}}(d+Dimensions).getNewTimeStamp(0));
-      {{FACE_METADATA_ACCESSOR}}(d+Dimensions).setNewTimeStamp(    0,{{CELL_METADATA_ACCESSOR}}.getTimeStamp());
-
-      logDebug( "touchCellLastTime(...)", "update {{FACE_METADATA_ACCESSOR}}(" << d << ")(1)" );
-      logDebug( "touchCellLastTime(...)", "update {{FACE_METADATA_ACCESSOR}}(" << (d+Dimensions) << ")(0)" );
-    }
-  }
-"""
-
-  
-  def __init__(self,solver):
+  def __init__(self,
+               solver,
+               face_projections: FaceProjections):
     """
     
-    guard_project: String (C++ code)
-      Predicate which controls if the solution is actually projected
-      
-    guard_safe_old_time_step: String (C++ code)
-      Predicate which controls if the projection should be copied into
-      the old solution and the time step should also be moved over
     
     """
     super(ProjectLinearCombinationOfEstimatesOntoFaces,self).__init__(solver)
     self.guards            = []
+    self.face_projections  = face_projections
+    self._butcher_tableau = ButcherTableau(self._solver._rk_order)
 
 
   @property
@@ -135,14 +164,16 @@ class ProjectLinearCombinationOfEstimatesOntoFaces(AbstractRungeKuttaDGActionSet
     self._solver._init_dictionary_with_default_parameters(d)
     self._solver.add_entries_to_text_replacement_dictionary(d)
     d[ "PREDICATES" ]                               = self.guards
-    d[ "FACE_METADATA_ACCESSOR" ] = "fineGridFaces"  + self._solver._face_label.name
-    d[ "CELL_METADATA_ACCESSOR" ] = "fineGridCell""" + self._solver._cell_label.name
-    if operation_name==peano4.solversteps.ActionSet.OPERATION_TOUCH_CELL_FIRST_TIME:
-      result = jinja2.Template(self.TemplateProjectLinearCombination).render(**d)
+    d[ "FACE_METADATA_ACCESSOR" ]   = "fineGridFaces"  + self._solver._face_label.name
+    d[ "CELL_METADATA_ACCESSOR" ]   = "fineGridCell""" + self._solver._cell_label.name
+    d[ "WEIGHTS" ]                  = self._butcher_tableau.final_estimate_weights()
+    d[ "BUTCHER_TABLEAU_RELATIVE_TIME_STEP_SIZES" ] = self._butcher_tableau.time_step_sizes()
+    if operation_name==peano4.solversteps.ActionSet.OPERATION_TOUCH_CELL_FIRST_TIME and self.face_projections==FaceProjections.Solution:
+      result = jinja2.Template(self.TemplateProjectLinearCombinationSolution).render(**d)
       pass 
-    if operation_name==peano4.solversteps.ActionSet.OPERATION_TOUCH_CELL_LAST_TIME:
-      result = jinja2.Template(self.TemplateProjectAsEpilogue).render(**d)
-      pass 
+    elif operation_name==peano4.solversteps.ActionSet.OPERATION_TOUCH_CELL_FIRST_TIME:
+      assert False, "face projection variant {} not supported yet ".format( self.face_projections)
+      
     return result
 
 

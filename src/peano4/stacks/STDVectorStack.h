@@ -19,6 +19,7 @@
 
 
 #include "peano4/grid/GridVertex.h"
+#include "peano4/grid/TraversalObserver.h"
 
 
 namespace peano4 {
@@ -27,6 +28,11 @@ namespace peano4 {
     class STDVectorStack;
 
     typedef STDVectorStack< peano4::grid::GridVertex >   GridVertexStack;
+
+    #if defined(Parallel)
+    template <class T>
+    MPI_Datatype translateContextIntoDatatype( peano4::grid::TraversalObserver::SendReceiveContext context );
+    #endif
   }
 }
 
@@ -335,7 +341,7 @@ class peano4::stacks::STDVectorStack {
      * code still might insert additional elements, i.e. starting does not
      * mean all the data that is to be sent out is already in the container.
      */
-    void startSend(int rank, int tag, MPI_Comm comm) {
+    void startSend(peano4::grid::TraversalObserver::SendReceiveContext context, int rank, int tag, MPI_Comm comm) {
       #ifdef Parallel
       assertion( _ioMode==IOMode::None );
       assertion( _ioMPIRequest==nullptr );
@@ -346,7 +352,11 @@ class peano4::stacks::STDVectorStack {
       logDebug( "startSend(int,int,bool)", toString());
 
       _ioMPIRequest = new MPI_Request;
-      int result = MPI_Isend( _data.data(), _currentElement, T::getDatatype(), _ioRank, _ioTag, comm, _ioMPIRequest);
+      int result = MPI_Isend(
+        _data.data(),
+        _currentElement,
+        translateContextIntoDatatype<T>( context ),
+        _ioRank, _ioTag, comm, _ioMPIRequest);
       if  (result!=MPI_SUCCESS) {
         logError( "startSend(int,int,bool)", "was not able to send to node " << rank << " on tag " << tag
           << ": " << tarch::mpi::MPIReturnValueToString(result)
@@ -358,7 +368,7 @@ class peano4::stacks::STDVectorStack {
     /**
      * @see startSend()
      */
-    void startReceive(int rank, int tag, MPI_Comm comm, int numberOfElements) {
+    void startReceive(peano4::grid::TraversalObserver::SendReceiveContext context, int rank, int tag, MPI_Comm comm, int numberOfElements) {
       #ifdef Parallel
       assertion3( _ioMode==IOMode::None, rank, tag, numberOfElements );
       assertion3( numberOfElements>0, rank, tag, numberOfElements );
@@ -374,7 +384,11 @@ class peano4::stacks::STDVectorStack {
       assertion( _ioMPIRequest == nullptr );
       _ioMPIRequest = new MPI_Request;
 
-      int result = MPI_Irecv( _data.data(), _data.size(), T::getDatatype(), _ioRank, _ioTag, comm, _ioMPIRequest);
+      int result = MPI_Irecv(
+        _data.data(),
+        _data.size(),
+        translateContextIntoDatatype<T>( context ),
+        _ioRank, _ioTag, comm, _ioMPIRequest);
       if  (result!=MPI_SUCCESS) {
         logError( "startReceive(int,int,int)", "was not able to receive " << numberOfElements << " values from node " << rank << " on tag " << tag
            << ": " << tarch::mpi::MPIReturnValueToString(result)
@@ -467,11 +481,33 @@ tarch::logging::Log peano4::stacks::STDVectorStack<T>::_log( "peano4::stacks::ST
 
 
 template <>
-void peano4::stacks::STDVectorStack<double>::startSend(int rank, int tag, MPI_Comm comm);
+void peano4::stacks::STDVectorStack<double>::startSend(peano4::grid::TraversalObserver::SendReceiveContext, int rank, int tag, MPI_Comm comm);
 
 
 template <>
-void peano4::stacks::STDVectorStack<double>::startReceive(int rank, int tag, MPI_Comm comm, int numberOfElements);
+void peano4::stacks::STDVectorStack<double>::startReceive(peano4::grid::TraversalObserver::SendReceiveContext, int rank, int tag, MPI_Comm comm, int numberOfElements);
+
+
+#if defined(Parallel)
+template <class T>
+MPI_Datatype peano4::stacks::translateContextIntoDatatype( peano4::grid::TraversalObserver::SendReceiveContext context ) {
+   switch (context) {
+     case peano4::grid::TraversalObserver::SendReceiveContext::BoundaryExchange:
+       return T::getBoundaryExchangeDatatype();
+     case peano4::grid::TraversalObserver::SendReceiveContext::MultiscaleExchange:
+       return T::getMultiscaleDataExchangeDatatype();
+     case peano4::grid::TraversalObserver::SendReceiveContext::ForkDomain:
+       return T::getForkDatatype();
+     case peano4::grid::TraversalObserver::SendReceiveContext::JoinDomain:
+       return T::getJoinDatatype();
+     case peano4::grid::TraversalObserver::SendReceiveContext::PeriodicBoundaryDataSwap:
+       assertionMsg(false, "periodic boundary data is never exchanged via MPI" );
+       return T::getGlobalCommunciationDatatype();
+   }
+   assertionMsg(false, "no valid case statement found. This may not happen" );
+   return T::getGlobalCommunciationDatatype();
+}
+#endif
 
 
 #endif

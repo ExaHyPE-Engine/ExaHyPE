@@ -2,37 +2,6 @@
 #include "exahype2/NonCriticalAssertions.h"
 
 
-/*
-void examples::exahype2::euler::EulerFV::initialCondition(
-  double * __restrict__ Q,
-  const tarch::la::Vector<Dimensions,double>&  volumeCentre,
-  const tarch::la::Vector<Dimensions,double>&  volumeH,
-  bool                                         gridIsConstructred
-) {
-  logTraceInWith3Arguments( "initialCondition(...)", volumeCentre, volumeH, gridIsConstructred );
-
-  for (int i=0; i<NumberOfUnknowns+NumberOfAuxiliaryVariables; i++) {
-    Q[i] = 0.0;
-  }
-
-  #if Dimensions==3
-  tarch::la::Vector<Dimensions,double> circleCentre = {0.18,0.3,0.6};
-  #else
-  tarch::la::Vector<Dimensions,double> circleCentre = {0.5,0.3};
-  #endif
-
-  const double peakDeviation = MaxAdmissibleCellH;
-  double distance = tarch::la::norm2( volumeCentre-circleCentre );
-  double exponent = - (distance * distance) / 2.0 / peakDeviation / peakDeviation;
-
-  Q[0]            = 0.1;                  // rho
-  Q[1+Dimensions] = std::exp( exponent ); // inner energy
-
-  logTraceOut( "initialCondition(...)" );
-}
-*/
-
-
 void applications::exahype2::euler::NeumannBoundaryConditions(
   const double * __restrict__                  Qinside, // Qinside[5+0]
   double * __restrict__                        Qoutside, // Qoutside[5+0]
@@ -51,6 +20,8 @@ void applications::exahype2::euler::NeumannBoundaryConditions(
 }
 
 
+#include <iostream>
+
 double ::applications::exahype2::euler::maxEigenvalue(
   const double * __restrict__                  Q,
   const tarch::la::Vector<Dimensions,double>&  faceCentre,
@@ -66,10 +37,11 @@ double ::applications::exahype2::euler::maxEigenvalue(
   assertion(normal<Dimensions);
 
   if (Q[0]<=0.0 or Q[0]!=Q[0]) {
+    std::cout << faceCentre << " x " << normal << ": " << Q[0] << std::endl;
     ::exahype2::triggerNonCriticalAssertion( __FILE__, __LINE__, "Q[0]>0", "density negative (Q[0]=" + std::to_string( Q[0] ) + ") at x=" + toString(faceCentre) );
   }
 
-  const double irho = 1./Q[0];
+  const double irho = 1./ std::abs( Q[0] );
   #if Dimensions==3
   const double p = (gamma-1) * (Q[4] - 0.5*irho*(Q[1]*Q[1]+Q[2]*Q[2]+Q[3]*Q[3]));
   #else

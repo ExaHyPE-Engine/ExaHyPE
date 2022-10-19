@@ -70,6 +70,7 @@ class PerformanceData(object):
     self.parse(verbose)
     pass
 
+
   def __convert_machine_readable_timestamp_to_seconds(self,data):
     """
    
@@ -144,11 +145,16 @@ class PerformanceData(object):
           elif "tbb" in line or "omp" in line:
             self._threads = int( line.split( "threads" )[0].split( "(")[-1] )
             self._cores_per_node = self._threads
+            if verbose:
+              print( "file has been written with {} cores/threads per node".format(self._threads) )
+
             
           if "no mpi" in line:
             self._ranks = 1
           elif "mpi" in line:
             self._ranks = int( line.split( "ranks)" )[0].split( "(")[-1] )
+            if verbose:
+              print( "file has been written with {} ranks".format(self._ranks) )
 
         predicate = "rank:0" in line and "Abstract" + self._solver_name in line
 

@@ -65,7 +65,7 @@ class ExtractFineGrid( Filter ):
     return result
   
   
-  def render(self, cell_data, dof, dimensions, unknowns, description, mapping):
+  def render(self, cell_data, dof, dimensions, unknowns, is_data_associated_to_cell, description, mapping):
     """
     
       Overwrite this one for the particular filter. 
@@ -84,43 +84,52 @@ class ExtractFineGrid( Filter ):
       return patch.size[0]
   
     if self.verbose:
-      print( "Sort input data to optimise algorithmic efficiency" )
-    cell_data.sort(reverse=True, key=sort_key)
+      print( "Sort input data to optimise algorithmic efficiency. Small patches come first" )
+    cell_data.sort(reverse=False, key=sort_key)
     
-    new_num_patches = 0
     new_cell_data   = [None] * len(cell_data)
     
     if self.verbose:
       print( "Build up auxiliary data structures over " + str(len(cell_data)) + " entries" )
 
-    delta_for_print = 10    
-    ratio_for_print = 0
-    if len(cell_data)>10000:
-      delta_for_print = 1
+    new_cell_data[0] = cell_data[0]
+    current_index_in_cell_data     = 1
+    current_index_in_new_cell_data = 0
+    
+    # I memorise the min h and add a shortcut for the finest cell. This turned out
+    # to be absolutely essential for almost all data
+    min_size = cell_data[current_index_in_cell_data].size[0]
+    
+    ratio_of_last_progress_print = 10
 
-    for i in range(0, len(cell_data) ):
-      insert = True
-      
-      j = i+1
-      while j<len(cell_data) and insert:
-        is_not_blocked_by_element_to_the_right = not self.__patches_overlap(cell_data[i],cell_data[j],dimensions) or cell_data[i].size[0] < cell_data[j].size[0]
-        #if not is_not_blocked_by_element_to_the_right:
-        #  print( "patch " + str(cell_data[i]) + " does not enter result as there's also cell data " + str(cell_data[j]) )
-        insert = insert and is_not_blocked_by_element_to_the_right
-        j = j+1
+    while current_index_in_cell_data<len(cell_data):
+      assert cell_data[current_index_in_cell_data-1].size[0] <= cell_data[current_index_in_cell_data].size[0]
 
-      if insert:        
-        new_cell_data[new_num_patches] = cell_data[i]
-        new_num_patches += 1
+      if cell_data[current_index_in_cell_data].size[0]==min_size:
+        current_index_in_new_cell_data += 1
+        new_cell_data[current_index_in_new_cell_data] = cell_data[current_index_in_cell_data]
+        current_index_in_cell_data += 1
+      else:
+        overlaps = False
+        check_index = 0
+        while not overlaps and check_index < current_index_in_new_cell_data:
+          overlaps = overlaps or self.__patches_overlap(new_cell_data[check_index],cell_data[current_index_in_cell_data],dimensions)
+          check_index += 1
+        if overlaps:
+          current_index_in_cell_data    += 1
+        else:
+          current_index_in_new_cell_data += 1
+          new_cell_data[current_index_in_new_cell_data] = cell_data[current_index_in_cell_data]
+          current_index_in_cell_data += 1
 
-      if i>0.01*ratio_for_print*len(cell_data):
-        if self.verbose:
-          print( "... " + str(ratio_for_print) + "%" )
-        ratio_for_print += delta_for_print
+      if ( current_index_in_cell_data>ratio_of_last_progress_print/100*len(cell_data) ):
+        print( "... {}%".format(ratio_of_last_progress_print) )
+        ratio_of_last_progress_print += 10
 
+    current_index_in_new_cell_data += 1
     if self.verbose:
-      print( "extracted " + str( new_num_patches ) + " from the " + str( len(cell_data) ) + " patch(es)" )
-    new_cell_data = new_cell_data[0:new_num_patches]
+      print( "extracted " + str( current_index_in_new_cell_data ) + " from the " + str( len(cell_data) ) + " patch(es)" )
+    new_cell_data = new_cell_data[0:current_index_in_new_cell_data]
 
-    return new_cell_data, dof, dimensions, unknowns, description, mapping
+    return new_cell_data, dof, dimensions, unknowns, is_data_associated_to_cell, description, mapping
   

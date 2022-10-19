@@ -29,6 +29,30 @@ class RollOverUpdatedFace(AbstractFVActionSet):
       // Left half
       if ({{FACE_METADATA_ACCESSOR}}.getUpdated(0)) {
         logTraceInWith1Argument( "touchFaceLastTime(...)", "left half of face"  );
+        
+        ::exahype2::fv::copyHalfOfHalo(
+          {{UNKNOWNS}},
+          {{DOFS_PER_AXIS}},
+          {{OVERLAP}},
+          normal,
+          false,    // it is the left layer, i.e. not right
+          {{NEW_ACCESSOR}}.value,
+          {{OLD_ACCESSOR}}.value
+        );
+        ::exahype2::fv::copyHalfOfHalo(
+          {{UNKNOWNS}},
+          {{DOFS_PER_AXIS}},
+          {{OVERLAP}},
+          normal,
+          false,    // it is the left layer, i.e. not right
+          {{UPDATE_ACCESSOR}}.value,
+          {{NEW_ACCESSOR}}.value
+        );
+        
+        /*
+        
+        Is now done via a function
+        
         dfore(k,{{DOFS_PER_AXIS}},normal,0) {
           for (int i=0; i<{{OVERLAP}}; i++) {
             tarch::la::Vector<Dimensions,int> overlapCell = k;
@@ -44,6 +68,7 @@ class RollOverUpdatedFace(AbstractFVActionSet):
             }
           }
         }
+        */
         
         {{FACE_METADATA_ACCESSOR}}.setOldTimeStamp(0, {{FACE_METADATA_ACCESSOR}}.getNewTimeStamp(0) );
         {{FACE_METADATA_ACCESSOR}}.setNewTimeStamp(0, {{FACE_METADATA_ACCESSOR}}.getUpdatedTimeStamp(0) );
@@ -58,6 +83,28 @@ class RollOverUpdatedFace(AbstractFVActionSet):
       // Right half
       if ({{FACE_METADATA_ACCESSOR}}.getUpdated(1)) {
         logTraceInWith1Argument( "touchFaceLastTime(...)", "right half of face"  );
+        
+        ::exahype2::fv::copyHalfOfHalo(
+          {{UNKNOWNS}},
+          {{DOFS_PER_AXIS}},
+          {{OVERLAP}},
+          normal,
+          true,    // it is the left layer, i.e. not right
+          {{NEW_ACCESSOR}}.value,
+          {{OLD_ACCESSOR}}.value
+        );
+        ::exahype2::fv::copyHalfOfHalo(
+          {{UNKNOWNS}},
+          {{DOFS_PER_AXIS}},
+          {{OVERLAP}},
+          normal,
+          true,    // it is the left layer, i.e. not right
+          {{UPDATE_ACCESSOR}}.value,
+          {{NEW_ACCESSOR}}.value
+        );
+
+        /*
+          See above: Now done via function        
         dfore(k,{{DOFS_PER_AXIS}},normal,0) {
           for (int i={{OVERLAP}}; i<2*{{OVERLAP}}; i++) {
             tarch::la::Vector<Dimensions,int> overlapCell = k;
@@ -73,6 +120,7 @@ class RollOverUpdatedFace(AbstractFVActionSet):
             }
           }
         }
+        */
         
         {{FACE_METADATA_ACCESSOR}}.setOldTimeStamp(1, {{FACE_METADATA_ACCESSOR}}.getNewTimeStamp(1) );
         {{FACE_METADATA_ACCESSOR}}.setNewTimeStamp(1, {{FACE_METADATA_ACCESSOR}}.getUpdatedTimeStamp(1) );

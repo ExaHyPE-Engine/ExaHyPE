@@ -25,7 +25,7 @@ class UpdateCell(ReconstructPatchAndApplyFunctor):
       assertion2( tarch::la::greaterEquals( timeStepSize, 0.0 ), timeStamp, timeStepSize );
 
       ::exahype2::fv::validatePatch(
-        reconstructedPatch,
+        oldQWithHalo,
         {{NUMBER_OF_UNKNOWNS}},
         {{NUMBER_OF_AUXILIARY_VARIABLES}},
         {{NUMBER_OF_VOLUMES_PER_AXIS}},
@@ -33,14 +33,14 @@ class UpdateCell(ReconstructPatchAndApplyFunctor):
         std::string(__FILE__) + "(" + std::to_string(__LINE__) + "): " + marker.toString()
       ); // previous time step has to be valid
   
-      ::exahype2::CellData  patchData( reconstructedPatch, marker.x(), marker.h(), timeStamp, timeStepSize, targetPatch );
+      ::exahype2::CellData  patchData( oldQWithHalo, marker.x(), marker.h(), timeStamp, timeStepSize, newQ );
            
       ::exahype2::fv::{{KERNEL_NAMESPACE}}::{{COMPUTE_KERNEL_CALL}} 
 
       {{POSTPROCESS_UPDATED_PATCH}}
 
       ::exahype2::fv::validatePatch(
-        targetPatch,
+        newQ,
         {{NUMBER_OF_UNKNOWNS}},
         {{NUMBER_OF_AUXILIARY_VARIABLES}},
         {{NUMBER_OF_VOLUMES_PER_AXIS}},
@@ -141,13 +141,30 @@ class SingleSweep( FV ):
   """
 
 
-  def __init__(self, name, patch_size, overlap, unknowns, auxiliary_variables, min_volume_h, max_volume_h, plot_grid_properties, kernel_namespace="rusanov"):
+  def __init__(self, 
+               name, 
+               patch_size, 
+               overlap, 
+               unknowns, 
+               auxiliary_variables, 
+               min_volume_h, 
+               max_volume_h, 
+               plot_grid_properties: bool, 
+               kernel_namespace):
     """
 
       Instantiate a generic FV scheme with an overlap of 1.
 
     """
-    super(SingleSweep, self).__init__(name, patch_size, overlap, unknowns, auxiliary_variables, min_volume_h, max_volume_h, plot_grid_properties, kernel_namespace)
+    super(SingleSweep, self).__init__(name, 
+                                      patch_size, 
+                                      overlap, 
+                                      unknowns, 
+                                      auxiliary_variables, 
+                                      min_volume_h, 
+                                      max_volume_h, 
+                                      plot_grid_properties, 
+                                      kernel_namespace)
 
     self._solver_template_file_class_name     = "SingleSweep"
 

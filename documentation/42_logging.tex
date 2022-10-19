@@ -1,4 +1,4 @@
-\chapter{Logging, tracing and assertions}
+\chapter{Logging, tracing, statistics and assertions}
 \label{section:logging}
 
 
@@ -329,3 +329,46 @@ Furthermore, they provide a few convenient variations that
   \item support the logging of parameters, and
   \item support vector-valued comparisons.
 \end{enumerate}
+
+
+\section{Statistics}
+\label{section:logging:statistics}
+
+
+\Peano\ has a statistics backend, which you can activate by switching into the
+statistics mode.
+This implies that you link against the statistics builds of the libraries.
+The statistics tool is relatively simply to use:
+You identify an identifier for your metric (a simple string) and then you log
+values for this identifier.
+The values have to be scalar doubles, and you don't have to register your
+identifier or similar things.
+
+\begin{code}
+::tarch::logging::Statistics::getInstance().log( "mystats", 24 );
+\end{code}
+
+\noindent
+The statistics backend samples over these calls and eventually writes a csv file
+with the logged entries over time. 
+To trigger this write, you have to call
+
+\begin{code}
+tarch::logging::Statistics::getInstance().writeToCSV();
+\end{code}
+
+
+\noindent
+I usually invoke the write at the end of the main routine.
+
+\begin{remark}
+ If you activate the statistics, \Peano\ automatically writes some runtime
+ statistics into the stats file. 
+ These statistics give you, for example, and overview how many tasks are in
+ flight at any time, or how long \Peano's MPI routines had to wait for incoming
+ data.
+ The output format is plain csv and thus straightforward to parse.
+ \Peano's directory \texttt{python/peano4/postprocessing} also holds some
+ pre-manufactured scripts to visualise some standard metrics.
+\end{remark}
+

@@ -13,6 +13,7 @@ SUBDIRS = . \
   toolbox/multiprecision \
   toolbox/particles \
   exahype2 \
+  swift2 \
   unittests convert
 
 #
@@ -112,6 +113,7 @@ Tarch_SOURCES= tarch/tarch.cpp \
  tarch/multicore/omp/multicore.cpp \
  tarch/multicore/omp/BooleanSemaphore.cpp \
  tarch/multicore/omp/Core.cpp \
+ tarch/multicore/omp/GPUMemoryManager.cpp \
  tarch/multicore/omp/RecursiveSemaphore.cpp \
  tarch/multicore/omp/Tasks.cpp \
  tarch/multicore/tbb/multicore.cpp \

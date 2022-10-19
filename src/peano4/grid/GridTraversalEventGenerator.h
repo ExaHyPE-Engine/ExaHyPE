@@ -46,7 +46,9 @@ namespace peano4 {
  * - createHangingVertex: Can be called arbitrarily often per grid traversal for a
  *   hanging vertex. You don't know how often hanging vertices are created/destroyed,
  *   but you can be sure that this action is triggered before anything else gets
- *   access to a hanging vertex.
+ *   access to a hanging vertex. Please note that we call touchVertexFirstTime()
+ *   for any newly created vertex. However, we do not call touchVertexFirstTime()
+ *   for hanging vertices.
  * - destroyHangingVertex: Every createHangingVertex() pairs up with one of these
  *   guys. As hanging vertices are non-persistent, it is at least called once per
  *   traversal per hanging vertex. However, Peano might decide to create hanging

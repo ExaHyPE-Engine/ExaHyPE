@@ -19,9 +19,8 @@ tarch::logging::Statistics& tarch::logging::Statistics::getInstance() {
 
 
 tarch::logging::Statistics::Statistics():
-  _maxCountInBetweenTwoMeasurements(100),
-  _maxTimeInBetweenTwoMeasurements(2.0),
-  _relativeIntervalDifferenceThreshold(0.2),
+  _maxCountInBetweenTwoMeasurements(1000),
+  _maxTimeInBetweenTwoMeasurements(1.0),
   _globalWatch( "tarch::logging::Statistics", "Statistics", false) {
 }
 
@@ -36,7 +35,7 @@ tarch::logging::Statistics::DataSet::DataSet():
 tarch::logging::Statistics::DataSet::DataSet(double time):
   _watch("tarch::logging::Statistics", "Statistics", false),
   _counter(0) {
-  _data.push_back( std::make_tuple(time,0,0,0) );
+  _data.push_back( std::make_tuple(time,0.0,0.0,0.0,0) );
 }
 
 
@@ -46,19 +45,20 @@ void tarch::logging::Statistics::DataSet::createNewSnapshot(double time) {
     time,
     lastValueFromPreviousSnapshot,
     lastValueFromPreviousSnapshot,
-    lastValueFromPreviousSnapshot
+    lastValueFromPreviousSnapshot,
+    0
   ));
 }
 
 
 void tarch::logging::Statistics::clear() {
-  _map.clear();
+  _dataSetMap.clear();
 }
 
 
 bool tarch::logging::Statistics::acceptNewData(const std::string& identifier, bool disableSampling) {
-  _map[identifier]._counter++;
-  _map[identifier]._watch.stop();
+  _dataSetMap[identifier]._counter++;
+  _dataSetMap[identifier]._watch.stop();
 
   bool result = false;
 
@@ -68,33 +68,23 @@ bool tarch::logging::Statistics::acceptNewData(const std::string& identifier, bo
    result = true;
   }
   else if (
-    _map[identifier]._data.size()>1
+    _dataSetMap[identifier]._data.size()>1
     and
-    std::get<1>( _map[identifier]._data[_map[identifier]._data.size()-1] ) == std::get<1>( _map[identifier]._data[_map[identifier]._data.size()-2] )
+    std::get<1>( _dataSetMap[identifier]._data[_dataSetMap[identifier]._data.size()-1] ) == std::get<1>( _dataSetMap[identifier]._data[_dataSetMap[identifier]._data.size()-2] )
   ) {
     result = false;
   }
   else if (
-    _map[identifier]._counter>_maxCountInBetweenTwoMeasurements
+    _dataSetMap[identifier]._counter>=_maxCountInBetweenTwoMeasurements
     or
-    _map[identifier]._watch.getCalendarTime() > _maxTimeInBetweenTwoMeasurements
-  ) {
-    return true;
-  }
-  else if (
-    std::abs(std::get<1>( _map[identifier]._data.back() )) > 1.0
-    and
-    (std::get<1>( _map[identifier]._data.back() )>(1.0+_relativeIntervalDifferenceThreshold)*std::get<2>( _map[identifier]._data.back() ))
-    and
-    (std::get<1>( _map[identifier]._data.back() )<(1.0-_relativeIntervalDifferenceThreshold)*std::get<3>( _map[identifier]._data.back() ))
+    _dataSetMap[identifier]._watch.getCalendarTime() > _maxTimeInBetweenTwoMeasurements
   ) {
     result = true;
   }
 
-
   if (result) {
-    _map[identifier]._counter = 0;
-    _map[identifier]._watch.start();
+    _dataSetMap[identifier]._counter = 0;
+    _dataSetMap[identifier]._watch.start();
     return true;
   }
   else return false;
@@ -102,24 +92,38 @@ bool tarch::logging::Statistics::acceptNewData(const std::string& identifier, bo
 
 
 void tarch::logging::Statistics::initData(const std::string& identifier) {
-  if ( _map.count( identifier )==0 ) {
+  if ( _dataSetMap.count( identifier )==0 ) {
      _globalWatch.stop();
      double t = _globalWatch.getCalendarTime();
 
-    _map.insert( std::pair<std::string,DataSet>( identifier, DataSet(t) ));
+    _dataSetMap.insert( std::pair<std::string,DataSet>( identifier, DataSet(t) ));
   }
 }
 
 
 void tarch::logging::Statistics::updateDataSnapshot(const std::string& identifier, double value) {
-  assertion( _map.count( identifier )==1 );
-  std::get<1>( _map[identifier]._data.back() ) = value;
-  std::get<2>( _map[identifier]._data.back() ) = std::min(std::get<2>( _map[identifier]._data.back() ), value);
-  std::get<3>( _map[identifier]._data.back() ) = std::max(std::get<3>( _map[identifier]._data.back() ), value);
+  assertion( _dataSetMap.count( identifier )==1 );
+  std::get<1>( _dataSetMap[identifier]._data.back() ) = value;
+  std::get<2>( _dataSetMap[identifier]._data.back() ) = std::min(std::get<2>( _dataSetMap[identifier]._data.back() ), value);
+  std::get<3>( _dataSetMap[identifier]._data.back() ) = std::max(std::get<3>( _dataSetMap[identifier]._data.back() ), value);
+  std::get<4>( _dataSetMap[identifier]._data.back() ) = 1 + std::get<4>( _dataSetMap[identifier]._data.back() );
 }
 
 
 #ifdef TrackStatistics
+void tarch::logging::Statistics::log( const std::string& identifier, const std::string& value ) {
+  tarch::multicore::Lock lock(_semaphore);
+  if ( _logMessageMap.count( identifier )==0 ) {
+    _logMessageMap.insert( std::pair< std::string, LogMessage >( identifier, LogMessage() ) );
+  }
+
+  _globalWatch.stop();
+  double t = _globalWatch.getCalendarTime();
+
+  _logMessageMap[identifier]._data.push_back( std::tuple<double,std::string>(t,value) );
+}
+
+
 void tarch::logging::Statistics::log( const std::string& identifier, double value, bool disableSampling ) {
   tarch::multicore::Lock lock(_semaphore);
   initData(identifier);
@@ -128,7 +132,7 @@ void tarch::logging::Statistics::log( const std::string& identifier, double valu
     _globalWatch.stop();
     double t = _globalWatch.getCalendarTime();
     logDebug( "log(string,double)", identifier << "=" << value );
-    _map[identifier].createNewSnapshot(t);
+    _dataSetMap[identifier].createNewSnapshot(t);
   }
 }
 
@@ -137,20 +141,20 @@ void tarch::logging::Statistics::inc( const std::string& identifier, double valu
   tarch::multicore::Lock lock(_semaphore);
   initData( identifier );
 
-  double newValue = std::get<1>( _map[identifier]._data.back() ) + value;
+  double newValue = std::get<1>( _dataSetMap[identifier]._data.back() ) + value;
   updateDataSnapshot(identifier,newValue);
 
   if ( acceptNewData(identifier, disableSampling) ) {
     _globalWatch.stop();
     double t = _globalWatch.getCalendarTime();
-    _map[identifier].createNewSnapshot(t);
+    _dataSetMap[identifier].createNewSnapshot(t);
   }
 }
 #endif
 
 
 void tarch::logging::Statistics::writeToCSV( std::string filename ) {
-  #ifdef TrackStatistics
+#ifdef TrackStatistics
   logDebug( "writeToCSV(string)", "start to dump statistics into file " << filename );
 
   if (tarch::mpi::Rank::getInstance().getNumberOfRanks()>0 ) {
@@ -161,41 +165,73 @@ void tarch::logging::Statistics::writeToCSV( std::string filename ) {
 
   std::ofstream file( filename );
   file << "t";
-  for (auto& p: _map) {
+  for (auto& p: _dataSetMap) {
+    file << ", " << p.first;
+  }
+  for (auto& p: _logMessageMap) {
     file << ", " << p.first;
   }
   file << std::endl;
 
   double t = 0.0;
   while (t<std::numeric_limits<double>::max()) {
+
+    // find minimum time stamp over both types of logs
     t = std::numeric_limits<double>::max();
-    for (auto& p: _map) {
+    for (auto& p: _dataSetMap) {
       if (not p.second._data.empty()) {
-        t = std::min(
-          t,
-          std::get<0>(p.second._data.front())
-        );
+        t = std::min( t, std::get<0>(p.second._data.front()) );
       }
     } 
+    for (auto& p: _logMessageMap) {
+      if (not p.second._data.empty()) {
+        t = std::min( t, std::get<0>(p.second._data.front()) );
+      }
+    }
+
+    // plot data. If an entry is a fit, remove it from sequence
     if (t<std::numeric_limits<double>::max()) {
       file << t; 
-      for (auto& p: _map) {
+      for (auto& p: _dataSetMap) {
         if (
           not p.second._data.empty()
           and
           std::get<0>(p.second._data.front()) < t + _maxTimeInBetweenTwoMeasurements
         ) {
-          file << ", (" << std::get<1>(p.second._data.front()) << "/" << std::get<2>(p.second._data.front()) << "/" << std::get<3>(p.second._data.front()) << ")";
+          file << ", (" << std::get<1>(p.second._data.front())
+              << "/" << std::get<2>(p.second._data.front())
+              << "/" << std::get<3>(p.second._data.front())
+              << "/#" << std::get<4>(p.second._data.front())
+              << ")";
           p.second._data.erase(p.second._data.begin());
         }
         else {
-          file << ", (././.)";
+          file << ", ";
+        }
+      }
+      for (auto& pp: _logMessageMap) {
+        if (
+          not pp.second._data.empty()
+          and
+          std::get<0>(pp.second._data.front()) < t + _maxTimeInBetweenTwoMeasurements
+        ) {
+          file << ", \"" << std::get<1>(pp.second._data.front()) << "\" ";
+          pp.second._data.erase(pp.second._data.begin());
+	  file << ", ";
+        }
+        else {
+          file << ", ";
         }
       }
     }
     file << std::endl;
   }
 
+  // clear maps. Within this clear, I get seg faults on some computers when the program terminates
+  _dataSetMap.clear();
+  _logMessageMap.clear();
+
+  // close output file
   file.close();
   logInfo( "writeToCSV(string)", "wrote statistics to file " << filename );
   #else

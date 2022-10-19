@@ -1,7 +1,33 @@
-#include "../dg/DGUtils.h"
+#include "exahype2/dg/DGUtils.h"
+#include "exahype2/fv/PatchUtils.h"
 
 #include "tarch/Assertions.h"
 #include "tarch/la/la.h"
+
+#include "peano4/utils/Loop.h"
+
+#include "peano4/datamanagement/CellMarker.h"
+
+
+void exahype2::dg::copyOneSideOfFaceProjection(
+  int    unknownsPlusAuxiliaryVariables,
+  int    order,
+  int    numberOfProjectedQuantities,
+  int    normal,
+  int    isRightFaceHalf,
+  const double* __restrict__   srcQ,
+  double* __restrict__         destQ
+) {
+  ::exahype2::fv::copyHalfOfHalo(
+    unknownsPlusAuxiliaryVariables,
+    order+1,
+    numberOfProjectedQuantities,
+    normal,
+    isRightFaceHalf,
+    srcQ,
+    destQ
+  );
+}
 
 
 double  exahype2::dg::getQuadratureWeight(
@@ -11,7 +37,7 @@ double  exahype2::dg::getQuadratureWeight(
 ) {
   double result = 1.0;
   for (int d=0; d<Dimensions; d++) {
-    result *= cellSize(d) * quadratureWeights[d];
+    result *= cellSize(d) * quadratureWeights[ index(d) ];
   }
   return result;
 }
@@ -158,8 +184,7 @@ void exahype2::dg::subtractCell(
     const int                   order,
     const int                   unknowns,
     const int                   auxiliaryVariables
-    ){
-
+) {
   const int nodesPerAxis = order+1;
   const int nodesPerCell = getNodesPerCell(nodesPerAxis);
   const int strideQ = unknowns+auxiliaryVariables;
@@ -169,57 +194,73 @@ void exahype2::dg::subtractCell(
       QOut[node*strideQ+var] -= Qsubstract[node*strideQ+var];
     }
   }
-
 }
 
 
-std::string exahype2::dg::plotPatch(
-        const double* __restrict__ Q,
-        const int order,
-        const int unknowns,
-        const int auxiliaryVariables
-        ){
-
-  const int nodesPerCell = getNodesPerCell(order+1);
-  const int strideQ = unknowns+auxiliaryVariables;
-
-  std::ostringstream result;
-
-  result << "(" << std::endl;
-  for(int node=0; node<nodesPerCell; node++){
-    result << "node " << std::to_string(node) << "[";
-    for(int var=0; var<strideQ-1; var++){
-        result << std::to_string(Q[node*strideQ+var]) << ", ";
-    }
-    result << std::to_string(Q[node*strideQ+strideQ-1]) << "]" << std::endl;
-  }
-  result << ")" << std::endl;
-
-  return result.str();
+std::string exahype2::dg::plotCell(
+  const double* __restrict__ Q,
+  const int order,
+  const int unknowns,
+  const int auxiliaryVariables
+) {
+  return ::exahype2::fv::plotPatch(
+    Q,
+    order+1,
+    unknowns,
+    auxiliaryVariables,
+    Dimensions==2
+  );
 }
+
 
 std::string exahype2::dg::plotFace(
-        const double* __restrict__ Q,
-        const int order,
-        const int unknowns,
-        const int auxiliaryVariables
-        ){
-
-  const int nodesPerFace = getNodesPerCell(order+1)/(order+1);
-  const int strideQ = unknowns+auxiliaryVariables;
-
-  std::ostringstream result;
-
-  result << "(" << std::endl;
-  for(int node=0; node<2*nodesPerFace; node++){
-    result << "node " << std::to_string(node) << "[";
-    for(int var=0; var<strideQ-1; var++){
-        result << std::to_string(Q[node*strideQ+var]) << ", ";
-    }
-    result << std::to_string(Q[node*strideQ+strideQ-1]) << "]" << std::endl;
-  }
-  result << ")" << std::endl;
-
-  return result.str();
+  const double* __restrict__  Q,
+  const int                   order,
+  const int                   unknowns,
+  const int                   auxiliaryVariables,
+  int                         normal,
+  int                         numberOfQuantitiesProjectedOntoFace
+) {
+  return ::exahype2::fv::plotPatchOverlap(
+    Q,
+    unknowns,
+    auxiliaryVariables,
+    order+1,
+    numberOfQuantitiesProjectedOntoFace,
+    normal,
+    Dimensions==2
+  );
 }
+
+
+double exahype2::dg::evaluatePolynomial(
+  const peano4::datamanagement::CellMarker&    marker,
+  int                                          order,
+  const double* __restrict__                   QuadratureNodes1d,
+  int                                          unknownsPerDoF,
+  const double* __restrict__                   Q,
+  const tarch::la::Vector<Dimensions,double>&  x,
+  int                                          unknown
+) {
+  double result = 0.0;
+  dfor(currentDoF,order+1) {
+    double denominator = 1.0;
+    double enumerator  = 1.0;
+    for (int d=0; d<Dimensions; d++) {
+      for (int i=0; i<order+1; i++) {
+        if ( i!=currentDoF(d) ) {
+          double normalisedQuadratePointDistance = QuadratureNodes1d[currentDoF(d)]-QuadratureNodes1d[i];
+          double distanceToQuadraturePoint1d     = x(d)-( QuadratureNodes1d[i]*marker.h()(d)+marker.getOffset()(d) );
+          denominator *= normalisedQuadratePointDistance * marker.h()(d);
+          enumerator  *= distanceToQuadraturePoint1d;
+        }
+      }
+    }
+    int dofLinearised = peano4::utils::dLinearised(currentDoF,order+1);
+    result += enumerator/denominator * Q[ dofLinearised * unknownsPerDoF + unknown ];
+  }
+  return result;
+}
+
+
 

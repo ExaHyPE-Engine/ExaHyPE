@@ -37,21 +37,28 @@ std::string toString( exahype2::RefinementCommand value );
  * Manage refine/erase requests within ExaHyPE 2
  *
  * This class is a very simple container which collects a point set of
- * refinement and coarsening commands. It then constructs bounding boxes from
- * these guys and returns the bounding boxes to Peano 4.
+ * refinement and coarsening commands. It then constructs bounding boxes for
+ * each command and returns the bounding boxes to Peano 4.
+ *
+ * Note: Peano will internally decide to merge many many bounding boxes into
+ * fewer, larger ones.
+ *
+ * @see peano4::grid::merge()
  *
  *
- * <h2> Refinement process </h2>
+ * ## Refinement process
  *
- * We have a two stage refinement process in ExaHyPE. This is ExaHyPE-specific stages and
- * has nothing to do with the fact that we always trigger the refinement and then refine
- * in the subsequent grid sweep, i.e. it has nothing do do with the fact that ExaHyPE
- * needs two grid sweeps to realise (commit) adaptive mesh refinement:
+ * We have a two stage refinement process in ExaHyPE. These are
+ * ExaHyPE-specific stages and they have nothing to do with the fact that we
+ * always trigger the refinement and then refine in the subsequent grid sweep,
+ * i.e. it has nothing do do with the fact that ExaHyPE needs two grid sweeps
+ * to realise (commit) adaptive mesh refinement:
  *
- * ExaHyPE first collects all refinement requests within this class. After the sweep, we
- * roll over the refinement requests and deliver them to the grid traversal automaton.
- * finishStep() does the roll-over, the delivery happens once you call
- * getGridControlEvents() through the AMR observer.
+ * ExaHyPE first collects all refinement requests within this class. These
+ * events are called new events. After the sweep, we roll over the refinement
+ * requests. We commit them. These committed events then are delivered to the
+ * grid traversal automaton. finishStep() does the roll-over, the delivery
+ * happens once you call getGridControlEvents() through the AMR observer.
  *
  * Hence, the overall refinement spawns three grid traversals:
  *
@@ -62,13 +69,14 @@ std::string toString( exahype2::RefinementCommand value );
  *   Nothing is changed yet.
  * - In the third grid sweep, the mesh is refined actually.
  *
- * Due to the overall three-step mechanism, we make the bookkeeping persistent. There is
- * a list of new events and one we finish a traversal, we move the elements in there
- * over into a set of committed events. The latter is erased only when some other class
- * grabs it.
+ * Due to the overall three-step mechanism, we make the bookkeeping of the
+ * events persistent. Each event can potentially survive a couple of sets.
+ *
+ * @see _committedEvents
  *
  *
- * <h2> Multithreading </h2>
+ *
+ * ## Multithreading
  *
  * As we use the class within a multithreaded environment, things become a
  * little bit more complicated. Peano 4 creates an observer object per
@@ -104,6 +112,14 @@ class exahype2::RefinementControl: public tarch::services::Service {
     void receiveDanglingMessages() override;
     void shutdown() override;
 
+    /**
+     * Clears the new events
+     *
+     * Has no affect for the committed events. This routine should only ever be
+     * called by the action sets on their local refinement control assembly.
+     * The global one is persistent and should not be cleared by the user, as
+     * you would loose all those events that should remain alive.
+     */
     void clear();
 
     /**

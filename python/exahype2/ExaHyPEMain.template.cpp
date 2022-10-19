@@ -13,7 +13,6 @@
 
 #include "Constants.h"
 
-#include "tarch/FenvWrapper.h
 #include "tarch/logging/Log.h"
 #include "tarch/logging/Statistics.h"
 #include "tarch/logging/LogFilter.h"
@@ -37,6 +36,10 @@
 #include "exahype2/NonCriticalAssertions.h"
 #include "exahype2/UserInterface.h"
 #include "exahype2/UnitTests.h"
+
+//#ifdef UseFenv
+//#include "tarch/FenvWrapper.h"
+//#endif
 
 using namespace {FULL_NAMESPACE};
 
@@ -411,8 +414,7 @@ void step() {{
       break;
   }}
 }}
-  
-  
+
 int main(int argc, char** argv) {{
   const int ExitCodeSuccess          = 0;
   const int ExitCodeUnitTestsFailed  = 1;
@@ -423,13 +425,12 @@ int main(int argc, char** argv) {{
   exahype2::initNonCritialAssertionEnvironment();
   tarch::multicore::initSmartMPI();
   peano4::fillLookupTables();
+
   peano4::initSingletons(
     DomainOffset,
     DomainSize,
     PeriodicBC
   );
-
-  tarch::feenableexcept(FE_DIVBYZERO | FE_INVALID | FE_OVERFLOW);
 
   if ( tarch::mpi::Rank::getInstance().getNumberOfRanks()>1 and tarch::multicore::Core::getInstance().getNumberOfThreads()<=1 ) {{
     logError("main()", "MPI runs without multithreading are not supported currently.");
@@ -440,11 +441,15 @@ int main(int argc, char** argv) {{
     logError("main()", "Invalid command line arguments.");
     return ExitCodeInvalidArguments;
   }}
-  
+
   {FULL_NAMESPACE}::repositories::DataRepository::initDatatypes();
-  
+
+//#ifdef UseFenv
+  //tarch::feenableexcept(FE_DIVBYZERO | FE_INVALID | FE_OVERFLOW);
+//#endif
+
   #if PeanoDebug>=2
-  tarch::tests::TreeTestCaseCollection* unitTests = new tarch::tests::TreeTestCaseCollection("");
+  tarch::tests::TreeTestCaseCollection* unitTests = new tarch::tests::TreeTestCaseCollection();
   unitTests->addTestCase( peano4::getUnitTests() );
   unitTests->addTestCase( tarch::getUnitTests() );
   unitTests->addTestCase( toolbox::blockstructured::getUnitTests() );
@@ -469,8 +474,7 @@ int main(int argc, char** argv) {{
   #pragma omp master 
   {{
   #endif
-	  
-	  
+
   #if defined(UseSmartMPI)
   const bool isGlobalMaster     =     tarch::mpi::Rank::getInstance().isGlobalMaster() and smartmpi::isComputeRank();
   const bool isPeanoComputeNode = not tarch::mpi::Rank::getInstance().isGlobalMaster() and smartmpi::isComputeRank();
@@ -478,8 +482,7 @@ int main(int argc, char** argv) {{
   const bool isGlobalMaster     =     tarch::mpi::Rank::getInstance().isGlobalMaster();
   const bool isPeanoComputeNode = not tarch::mpi::Rank::getInstance().isGlobalMaster();
   #endif
-	  
-	  
+
   if ( isGlobalMaster ) {{
     while ( selectNextAlgorithmicStep() ) {{
       step();
@@ -502,7 +505,7 @@ int main(int argc, char** argv) {{
     }}
   }}
   #endif
-  
+
   #if defined(SharedOMP)
   }}
   }}

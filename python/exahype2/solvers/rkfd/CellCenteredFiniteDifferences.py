@@ -318,9 +318,10 @@ The finest mesh width of """ + str(self.get_finest_volume_size(domain_size)) + "
     self._patch_overlap_new    = peano4.datamodel.Patch( (2*self._overlap,self._patch_size,self._patch_size),  self._unknowns+self._auxiliary_variables, self._unknown_identifier() + "New" )
     self._patch_overlap_update = peano4.datamodel.Patch( (2*self._overlap,self._patch_size,self._patch_size),  self._unknowns+self._auxiliary_variables, self._unknown_identifier() + "Update" )
     
-    self._patch_overlap_old.generator.merge_method_definition = peano4.toolbox.blockstructured.get_face_overlap_merge_implementation(self._patch_overlap_old)
-    self._patch_overlap_new.generator.merge_method_definition = peano4.toolbox.blockstructured.get_face_overlap_merge_implementation(self._patch_overlap_new)
-    
+    self._patch_overlap_old.generator.merge_method_definition = peano4.toolbox.blockstructured.get_face_merge_implementation(self._patch_overlap_old)
+    self._patch_overlap_new.generator.merge_method_definition = peano4.toolbox.blockstructured.get_face_merge_implementation(self._patch_overlap_new)
+    self._patch.generator.merge_method_definition             = peano4.toolbox.blockstructured.get_cell_merge_implementation(self._patch)
+
     self._patch_overlap_old.generator.includes     += """
 #include "peano4/utils/Loop.h"
 #include "repositories/SolverRepository.h" 
@@ -554,11 +555,11 @@ The finest mesh width of """ + str(self.get_finest_volume_size(domain_size)) + "
     step.add_action_set( self._action_set_copy_new_faces_onto_old_faces )
     step.add_action_set( self._action_set_roll_over_update_of_faces )
     step.add_action_set( self._action_set_initial_conditions ) 
-    step.add_action_set( self._action_set_postprocess_solution )
     step.add_action_set( self._action_set_project_patch_onto_faces )
     step.add_action_set( self._action_set_update_face_label )
     step.add_action_set( self._action_set_update_cell_label )
     step.add_action_set( self._action_set_AMR )
+    step.add_action_set( self._action_set_postprocess_solution )
     
     
   def add_actions_to_create_grid(self, step, evaluate_refinement_criterion):
@@ -650,7 +651,7 @@ The finest mesh width of """ + str(self.get_finest_volume_size(domain_size)) + "
       step.add_action_set( peano4.toolbox.PlotGridInPeanoBlockFormat( 
         filename = output_path + "grid-" + self._name,
         cell_unknown=None,
-        guard_guard="repositories::plotFilter.plotPatch(marker) and " + self._load_cell_data_default_guard(),
+        guard="repositories::plotFilter.plotPatch(marker) and " + self._load_cell_data_default_guard(),
         additional_includes="""
 #include "exahype2/PlotFilter.h"
 #include "../repositories/SolverRepository.h"
@@ -681,8 +682,8 @@ The finest mesh width of """ + str(self.get_finest_volume_size(domain_size)) + "
     step.add_action_set( self._action_set_update_cell )
     step.add_action_set( self._action_set_project_patch_onto_faces )
     step.add_action_set( self._action_set_compute_final_linear_combination )
-    step.add_action_set( self._action_set_postprocess_solution )
     step.add_action_set( self._action_set_AMR )
+    step.add_action_set( self._action_set_postprocess_solution )
 
 
   @abstractmethod
@@ -889,7 +890,7 @@ The finest mesh width of """ + str(self.get_finest_volume_size(domain_size)) + "
   {
     int index = 0;
     dfor( volume, {{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}} ) {
-      enforceCCZ4constraints( targetPatch+index );
+      enforceCCZ4constraints( newQ+index );
       index += {{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}};
     }
   }
@@ -897,10 +898,10 @@ The finest mesh width of """ + str(self.get_finest_volume_size(domain_size)) + "
 
     Within this kernel, you have at least the following variables available:
 
-    - targetPatch This is a pointer to the whole data structure (one large
+    - newQ This is a pointer to the whole data structure (one large
         array).
         The patch is not supplemented by a halo layer.
-    - reconstructedPatch This is a pointer to the data snapshot before the
+    - oldQWithHalo This is a pointer to the data snapshot before the
         actual update. This data is combined with the halo layer, i.e. if you
         work with 7x7 patches and a halo of 2, the pointer points to a 11x11
         patch.

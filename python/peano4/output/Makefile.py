@@ -484,8 +484,12 @@ then this message can typically be ignored.
       template        = templateEnv.get_template( os.path.split(template_file)[1] )
 
 
-      # We first eliminate the precompiled variant, and then we get rid of the
-      # postfix in the case where it is a source file
-      with open( filename, "w" ) as output:
-        output.write( template.render(self.d) )
+      try:
+        # We first eliminate the precompiled variant, and then we get rid of the
+        # postfix in the case where it is a source file
+        with open( filename, "w" ) as output:
+          output.write( template.render(self.d) )
+      except Exception as e:
+        print( "ERROR: have not been able to write main file {} from template {}".format(filename,template_file) )
+        print( str(e) )
 

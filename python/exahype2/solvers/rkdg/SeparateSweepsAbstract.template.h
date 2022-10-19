@@ -284,6 +284,29 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
      */
     void finishSimulation() override;
 
+
+    {% if STATELESS_PDE_TERMS %}
+    /**
+     * By default each cell can use stateless PDE terms, i.e. the static
+     * versions of the operators. Therefore, each cell can go to the GPU
+     * or inline aggressively. You can disable this behaviour for selected
+     * cells via this callback.
+     */
+    {% else %}
+    /**
+     * Warning: This operation has no semantics, as you have disabled
+     * stateless PDE terms. The routine is here to allow you to write one
+     * code version for both a GPU-enabled solver and a solver without
+     * GPU support.
+     */
+    {% endif %}
+    virtual bool cellCanUseStatelessPDETerms(
+      const tarch::la::Vector<Dimensions,double>&  cellCentre,
+      const tarch::la::Vector<Dimensions,double>&  cellH,
+      double                                       t,
+      double                                       dt
+    ) const;
+
   protected:
     static tarch::logging::Log  _log;
 

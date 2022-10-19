@@ -77,6 +77,7 @@ class MPI(object):
 #include "tarch/mpi/Rank.h"
 #include "tarch/services/ServiceRepository.h"
 #include "peano4/utils/Globals.h"
+#include "peano4/grid/TraversalObserver.h"
 """
     if self.dof_association!=DoFAssociation.Generic:
       result += """
@@ -99,7 +100,7 @@ class MPI(object):
     
     if self.dof_association==DoFAssociation.Vertex:
       result += """
-    void merge(const """ + full_qualified_name + """& neighbour, const peano4::datamanagement::VertexMarker& marker);
+    void merge(peano4::grid::TraversalObserver::SendReceiveContext context, const """ + full_qualified_name + """& neighbour, const peano4::datamanagement::VertexMarker& marker);
     
     static bool receiveAndMerge(const peano4::datamanagement::VertexMarker& marker);
     static bool send(const peano4::datamanagement::VertexMarker& marker);
@@ -108,7 +109,7 @@ class MPI(object):
 """ 
     elif self.dof_association==DoFAssociation.Face:
       result += """
-    void merge(const """ + full_qualified_name + """& neighbour, const peano4::datamanagement::FaceMarker& marker);
+    void merge(peano4::grid::TraversalObserver::SendReceiveContext context, const """ + full_qualified_name + """& neighbour, const peano4::datamanagement::FaceMarker& marker);
 
     static bool receiveAndMerge(const peano4::datamanagement::FaceMarker& marker);
     static bool send(const peano4::datamanagement::FaceMarker& marker);
@@ -117,7 +118,7 @@ class MPI(object):
 """ 
     elif self.dof_association==DoFAssociation.Cell:
       result += """
-    void merge(const """ + full_qualified_name + """& neighbour, const peano4::datamanagement::CellMarker& marker);
+    void merge(peano4::grid::TraversalObserver::SendReceiveContext context, const """ + full_qualified_name + """& neighbour, const peano4::datamanagement::CellMarker& marker);
 
     static bool receiveAndMerge(const peano4::datamanagement::CellMarker& marker);
     static bool send(const peano4::datamanagement::CellMarker& marker);
@@ -196,7 +197,7 @@ void """ + full_qualified_name + """::receiveAndPollDanglingMessages(""" + full_
 
     if self.dof_association==DoFAssociation.Vertex:
       result += """
-void """ + full_qualified_name + "::merge(const """ + full_qualified_name + """& neighbour, const peano4::datamanagement::VertexMarker& marker) {
+void """ + full_qualified_name + "::merge(peano4::grid::TraversalObserver::SendReceiveContext context, const """ + full_qualified_name + """& neighbour, const peano4::datamanagement::VertexMarker& marker) {
 """ + self.merge_implementation + """
 }
 
@@ -224,7 +225,7 @@ bool """ + full_qualified_name + """::loadPersistently(const peano4::datamanagem
 """ 
     elif self.dof_association==DoFAssociation.Face:
       result += """
-void """ + full_qualified_name + "::merge(const """ + full_qualified_name + """& neighbour, const peano4::datamanagement::FaceMarker& marker) {
+void """ + full_qualified_name + "::merge(peano4::grid::TraversalObserver::SendReceiveContext context, const """ + full_qualified_name + """& neighbour, const peano4::datamanagement::FaceMarker& marker) {
 """ + self.merge_implementation + """
 }
 
@@ -250,7 +251,7 @@ bool """ + full_qualified_name + """::loadPersistently(const peano4::datamanagem
 """ 
     elif self.dof_association==DoFAssociation.Cell:
       result += """
-void """ + full_qualified_name + "::merge(const """ + full_qualified_name + """& neighbour, const peano4::datamanagement::CellMarker& marker) {
+void """ + full_qualified_name + "::merge(peano4::grid::TraversalObserver::SendReceiveContext context, const """ + full_qualified_name + """& neighbour, const peano4::datamanagement::CellMarker& marker) {
 """ + self.merge_implementation + """
 }
 

@@ -16,6 +16,7 @@
 #include "tarch/mpi/Rank.h"
 #include "tarch/services/ServiceRepository.h"
 #include "peano4/utils/Globals.h"
+#include "peano4/grid/TraversalObserver.h"
 
 
 #ifdef Parallel
@@ -79,7 +80,19 @@ struct peano4::grid::AutomatonState {
      * the lazy initialisation is done and the datatype is also cached.
      */
     [[clang::map_mpi_datatype]]
-    static MPI_Datatype  getDatatype();
+    static MPI_Datatype  getForkDatatype();
+
+    [[clang::map_mpi_datatype]]
+    static MPI_Datatype  getJoinDatatype();
+
+    [[clang::map_mpi_datatype]]
+    static MPI_Datatype  getBoundaryExchangeDatatype();
+
+    [[clang::map_mpi_datatype]]
+    static MPI_Datatype  getMultiscaleDataExchangeDatatype();
+
+    [[clang::map_mpi_datatype]]
+    static MPI_Datatype  getGlobalCommunciationDatatype();
     
     
     /**
@@ -98,7 +111,7 @@ struct peano4::grid::AutomatonState {
      * Free the underlying MPI datatype.
      */
     static void shutdownDatatype();
-            
+    
     /**
      * In DaStGen (the first version), I had a non-static version of the send
      * as well as the receive. However, this did not work with newer C++11 
@@ -126,13 +139,13 @@ struct peano4::grid::AutomatonState {
   private:
     [[clang::pack_range(0,63)]]  int   _level;
 #if defined(__PACKED_ATTRIBUTES_LANGUAGE_EXTENSION__)
-    [[clang::truncate_mantissa(4)]]  double   _x[Dimensions];
+    [[clang::truncate_mantissa(23)]]  double   _x[Dimensions];
 #endif
 #if !defined(__PACKED_ATTRIBUTES_LANGUAGE_EXTENSION__)
       tarch::la::Vector<Dimensions,double>   _x;
 #endif
 #if defined(__PACKED_ATTRIBUTES_LANGUAGE_EXTENSION__)
-    [[clang::truncate_mantissa(4)]]  double   _h[Dimensions];
+    [[clang::truncate_mantissa(23)]]  double   _h[Dimensions];
 #endif
 #if !defined(__PACKED_ATTRIBUTES_LANGUAGE_EXTENSION__)
       tarch::la::Vector<Dimensions,double>   _h;

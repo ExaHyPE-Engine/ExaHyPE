@@ -27,7 +27,7 @@ class UpdateCell(ReconstructPatchAndApplyFunctor):
   assertion2( tarch::la::greaterEquals( timeStamp, 0.0 ),    timeStepSize, timeStamp );
 
   ::exahype2::fv::validatePatch(
-      reconstructedPatch,
+      oldQWithHalo,
       {{NUMBER_OF_UNKNOWNS}},
       {{NUMBER_OF_AUXILIARY_VARIABLES}},
       {{NUMBER_OF_VOLUMES_PER_AXIS}},
@@ -40,8 +40,8 @@ class UpdateCell(ReconstructPatchAndApplyFunctor):
       marker,
       timeStamp,
       timeStepSize,
-      reconstructedPatch,
-      targetPatch
+      oldQWithHalo,
+      newQ
     );
     
     {{COMPUTE_NEW_TIME_STEP_SIZE}}
@@ -58,7 +58,7 @@ class UpdateCell(ReconstructPatchAndApplyFunctor):
       marker,
       timeStamp,
       timeStepSize,
-      reconstructedPatch
+      oldQWithHalo
     );
     fineGridCell{{SEMAPHORE_LABEL}}.setSemaphoreNumber( newEnclaveTask->getTaskId() );
     fineGridCell{{SOLVER_NAME}}CellLabel.setTimeStamp(timeStamp + timeStepSize);
@@ -137,7 +137,7 @@ class MergeEnclaveTaskOutcome(AbstractFVActionSet):
     }
     
     if ( fineGridCell{{SOLVER_NAME}}CellLabel.getHasUpdated() ) {
-      double*  targetPatch = fineGridCell{{UNKNOWN_IDENTIFIER}}.value;
+      double*  newQ = fineGridCell{{UNKNOWN_IDENTIFIER}}.value;
       
       {{POSTPROCESS_UPDATED_PATCH}}
 
@@ -180,7 +180,17 @@ class MergeEnclaveTaskOutcome(AbstractFVActionSet):
 
 
 class EnclaveTasking( FV ):
-  def __init__(self, name, patch_size, overlap, unknowns, auxiliary_variables, min_volume_h, max_volume_h, plot_grid_properties, pde_terms_without_state: bool):
+  def __init__(self, 
+               name, 
+               patch_size, 
+               overlap, 
+               unknowns, 
+               auxiliary_variables, 
+               min_volume_h, 
+               max_volume_h, 
+               plot_grid_properties, 
+               pde_terms_without_state: bool,
+               kernel_namespace):
     """
     
      Not so nice. I have to store this field as I later rely on get_name_of_global_instance()
@@ -248,7 +258,15 @@ class EnclaveTasking( FV ):
       "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::Plotting " + \
       ")"
  
-    super(EnclaveTasking, self).__init__(name, patch_size, overlap, unknowns, auxiliary_variables, min_volume_h, max_volume_h, plot_grid_properties)
+    super(EnclaveTasking, self).__init__(name, 
+                                         patch_size, 
+                                         overlap, 
+                                         unknowns, 
+                                         auxiliary_variables, 
+                                         min_volume_h, 
+                                         max_volume_h, 
+                                         plot_grid_properties,
+                                         kernel_namespace)
      
     self._solver_template_file_class_name     = "EnclaveTasking"
       
@@ -442,7 +460,7 @@ class EnclaveTasking( FV ):
  
     """
     super(EnclaveTasking, self).add_actions_to_perform_time_step(step)
-    step.add_action_set( self._action_set_merge_enclave_task_outcome )
+    step.add_action_set( self._action_set_merge_enclave_task_outcome, False )
  
 
   def add_implementation_files_to_project(self,namespace,output, dimensions):

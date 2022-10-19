@@ -137,53 +137,56 @@ class PlotPatchesInPeanoBlockFormat(ActionSet):
 
   __Template_TouchCellFirstTime_CellPlot = """ 
   if ( {GUARD_PREDICATE} ) {{
-  int vertexIndices[TwoPowerD];
+    int vertexIndices[TwoPowerD];
   
-  //const double PatchScaling = 0.95;
-  const double PatchScaling = 1.0;
+    //const double PatchScaling = 0.95;
+    const double PatchScaling = 1.0;
 
-  assertion( _writer!=nullptr );
-  assertion( _dataWriter!=nullptr );
+    assertion( _writer!=nullptr );
+    assertion( _dataWriter!=nullptr );
   
-  const int patchIndex = _writer->plotPatch(
-    marker.x() - marker.h() * PatchScaling * 0.5,
-    marker.h() * PatchScaling
-  );
+    const int patchIndex = _writer->plotPatch(
+      marker.x() - marker.h() * PatchScaling * 0.5,
+      marker.h() * PatchScaling
+    );
  
-  int cellIndex  = _dataWriter->getFirstCellWithinPatch(patchIndex);
-  int currentDoF = 0;
+    int cellIndex  = _dataWriter->getFirstCellWithinPatch(patchIndex);
+    int currentDoF = 0;
   
-  dfor(k,{DOFS_PER_AXIS}) {{
-    double* data = fineGridCell{NAME}.value + currentDoF;
-    _dataWriter->plotCell( cellIndex, data );
-    cellIndex++;
-    currentDoF += {UNKNOWNS};
-  }}
+    dfor(k,{DOFS_PER_AXIS}) {{
+      double* data = fineGridCell{NAME}.value + currentDoF;
+      _dataWriter->plotCell( cellIndex, data );
+      cellIndex++;
+      currentDoF += {UNKNOWNS};
+    }}
   }}
 """
 
 
   __Template_TouchCellFirstTime_VertexPlot = """ 
-  int vertexIndices[TwoPowerD];
+  if ( {GUARD_PREDICATE} ) {{
+    int vertexIndices[TwoPowerD];
   
-  const double PatchScaling = 0.95;
+    //const double PatchScaling = 0.95;
+    const double PatchScaling = 1.0;
 
-  assertion( _writer!=nullptr );
-  assertion( _dataWriter!=nullptr );
+    assertion( _writer!=nullptr );
+    assertion( _dataWriter!=nullptr );
   
-  const int patchIndex = _writer->plotPatch(
-    marker.x() - marker.h() * PatchScaling * 0.5,
-    marker.h() * PatchScaling
-  );
+    const int patchIndex = _writer->plotPatch(
+      marker.x() - marker.h() * PatchScaling * 0.5,
+      marker.h() * PatchScaling
+    );
  
-  int vertexIndex  = _dataWriter->getFirstVertexWithinPatch(patchIndex);
-  int currentDoF = 0;
+    int vertexIndex  = _dataWriter->getFirstVertexWithinPatch(patchIndex);
+    int currentDoF = 0;
   
-  dfor(k,{DOFS_PER_AXIS}) {{
-    double* data = fineGridCell{NAME}.value + currentDoF;
-    _dataWriter->plotVertex( vertexIndex, data );
-    vertexIndex++;
-    currentDoF += {UNKNOWNS};
+    dfor(k,{DOFS_PER_AXIS}) {{
+      double* data = fineGridCell{NAME}.value + currentDoF;
+      _dataWriter->plotVertex( vertexIndex, data );
+      vertexIndex++;
+      currentDoF += {UNKNOWNS};
+    }}
   }}
 """
 

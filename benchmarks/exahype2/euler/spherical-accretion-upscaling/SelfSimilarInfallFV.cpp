@@ -23,7 +23,40 @@ void benchmarks::exahype2::euler::sphericalaccretionupscaling::SelfSimilarInfall
 
   double mass = overDensity * tarch::la::volume( volumeH );
 
+  logDebug( "touchCellFirstTime(...)", "dump data of " << volumeCentre << ": " << density << " x " << volumeH << "->" << radius << " x " << mass );
+
   _accumulator.addMass(mass,radius);
+}
+
+
+::exahype2::RefinementCommand benchmarks::exahype2::euler::sphericalaccretionupscaling::SelfSimilarInfallFV::refinementCriterion(
+  const double * __restrict__ Q, // Q[5+0],
+  const tarch::la::Vector<Dimensions,double>&  volumeCentre,
+  const tarch::la::Vector<Dimensions,double>&  volumeH,
+  double                                       t
+) {
+  if (
+    tarch::la::equals(t,0.0)
+    and
+    tarch::la::norm2(volumeCentre) <= InitialTopHatRadius + volumeH(0) * NumberOfFiniteVolumesPerAxisPerPatch
+  ) {
+    return ::exahype2::RefinementCommand::Refine;
+  }
+  else if (
+    DynamicAMR
+    and
+    ( Q[4]>1.1*BaseDensity )
+  ) {
+    return ::exahype2::RefinementCommand::Refine;
+  }
+  else if (
+    DynamicAMR
+  ) {
+    return ::exahype2::RefinementCommand::Erase;
+  }
+  else {
+    return ::exahype2::RefinementCommand::Keep;
+  }
 }
 
 
@@ -48,6 +81,8 @@ void benchmarks::exahype2::euler::sphericalaccretionupscaling::SelfSimilarInfall
     pInitial,
     Gamma
   );
+
+  logDebug( "initialCondition(...)", volumeX << " (" << tarch::la::norm2(volumeX) << ") -> " << Q[0] );
 
 /*
   applications::exahype2::euler::sphericalaccretion::initialiseHomogeneousDensity(

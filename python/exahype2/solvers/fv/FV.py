@@ -155,7 +155,17 @@ class FV(object):
   """
   
       
-  def __init__(self, name, patch_size, overlap, unknowns, auxiliary_variables, min_volume_h, max_volume_h, plot_grid_properties, kernel_namespace="rusanov"):
+  def __init__(
+    self, 
+    name, 
+    patch_size, 
+    overlap, 
+    unknowns, 
+    auxiliary_variables, 
+    min_volume_h, 
+    max_volume_h, 
+    plot_grid_properties, 
+    kernel_namespace):
     """
   name: string
      A unique name for the solver. This one will be used for all generated 
@@ -254,6 +264,25 @@ class FV(object):
 
     self.create_data_structures()
     self.create_action_sets()
+
+    self._interpolation = "tensor_product< " + self._name + ">"
+    self.add_solver_constants(   "static constexpr double  NormalInterpolationMatrix1d[]     = {1.0};""" )
+    self.add_solver_constants( """static constexpr double  TangentialInterpolationMatrix1d[] = {
+    1.0,0.0,0.0,0.0,
+    1.0,0.0,0.0,0.0,
+    1.0,0.0,0.0,0.0,
+    0.0,1.0,0.0,0.0,
+       
+    0.0,1.0,0.0,0.0,
+    0.0,1.0,0.0,0.0,
+    0.0,0.0,1.0,0.0,
+    0.0,0.0,1.0,0.0,
+
+    0.0,0.0,1.0,0.0,
+    0.0,0.0,0.0,1.0,
+    0.0,0.0,0.0,1.0,
+    0.0,0.0,0.0,1.0
+    };""" )
 
 
   def __str__(self):
@@ -436,8 +465,9 @@ The finest mesh width of """ + str(self.get_finest_volume_size(domain_size)) + "
     self._patch_overlap_new    = peano4.datamodel.Patch( (2*self._overlap,self._patch_size,self._patch_size),  self._unknowns+self._auxiliary_variables, self._unknown_identifier() + "New" )
     self._patch_overlap_update = peano4.datamodel.Patch( (2*self._overlap,self._patch_size,self._patch_size),  self._unknowns+self._auxiliary_variables, self._unknown_identifier() + "Update" )
     
-    self._patch_overlap_old.generator.merge_method_definition = peano4.toolbox.blockstructured.get_face_overlap_merge_implementation(self._patch_overlap_old)
-    self._patch_overlap_new.generator.merge_method_definition = peano4.toolbox.blockstructured.get_face_overlap_merge_implementation(self._patch_overlap_new)
+    self._patch_overlap_old.generator.merge_method_definition = peano4.toolbox.blockstructured.get_face_merge_implementation(self._patch_overlap_old)
+    self._patch_overlap_new.generator.merge_method_definition = peano4.toolbox.blockstructured.get_face_merge_implementation(self._patch_overlap_new)
+    self._patch.generator.merge_method_definition             = peano4.toolbox.blockstructured.get_cell_merge_implementation(self._patch)
     
     self._patch_overlap_old.generator.includes     += """
 #include "peano4/utils/Loop.h"
@@ -658,11 +688,11 @@ The finest mesh width of """ + str(self.get_finest_volume_size(domain_size)) + "
     step.add_action_set( self._action_set_copy_new_faces_onto_old_faces )
     step.add_action_set( self._action_set_roll_over_update_of_faces )
     step.add_action_set( self._action_set_initial_conditions ) 
-    step.add_action_set( self._action_set_postprocess_solution )
     step.add_action_set( self._action_set_project_patch_onto_faces )
     step.add_action_set( self._action_set_update_face_label )
     step.add_action_set( self._action_set_update_cell_label )
     step.add_action_set( self._action_set_AMR )
+    step.add_action_set( self._action_set_postprocess_solution )
     
     
   def add_actions_to_create_grid(self, step, evaluate_refinement_criterion):
@@ -747,7 +777,7 @@ The finest mesh width of """ + str(self.get_finest_volume_size(domain_size)) + "
       step.add_action_set( peano4.toolbox.PlotGridInPeanoBlockFormat( 
         filename = output_path + "grid-" + self._name,
         cell_unknown=None,
-        guard_guard="repositories::plotFilter.plotPatch(marker) and " + self._load_cell_data_default_guard(),
+        guard="repositories::plotFilter.plotPatch(marker) and " + self._load_cell_data_default_guard(),
         additional_includes="""
 #include "exahype2/PlotFilter.h"
 #include "../repositories/SolverRepository.h"
@@ -776,9 +806,9 @@ The finest mesh width of """ + str(self.get_finest_volume_size(domain_size)) + "
     step.add_action_set( self._action_set_update_cell_label )
     step.add_action_set( self._action_set_handle_boundary )
     step.add_action_set( self._action_set_update_cell )
-    step.add_action_set( self._action_set_postprocess_solution )
     step.add_action_set( self._action_set_project_patch_onto_faces )
     step.add_action_set( self._action_set_AMR )
+    step.add_action_set( self._action_set_postprocess_solution )
 
 
   @abstractmethod
@@ -835,7 +865,9 @@ The finest mesh width of """ + str(self.get_finest_volume_size(domain_size)) + "
     output.makefile.add_cpp_file( "Abstract" + self._name + ".cpp" )
     output.makefile.add_cpp_file( self._name + ".cpp" )
 
+
   def set_solver_constants(self, datastring): self._solver_constants = datastring
+
 
   def add_solver_constants(self, datastring): self._solver_constants += datastring + "\n"
 
@@ -975,7 +1007,7 @@ The finest mesh width of """ + str(self.get_finest_volume_size(domain_size)) + "
          {
            int index = 0;
            dfor( volume, {{NUMBER_OF_VOLUMES_PER_AXIS}} ) {
-             enforceCCZ4constraints( targetPatch+index );
+             enforceCCZ4constraints( newQ+index );
              index += {{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}};
            }
          }
@@ -984,7 +1016,7 @@ The finest mesh width of """ + str(self.get_finest_volume_size(domain_size)) + "
      for postprocessing:
      
          ::exahype2::fv::mapInnerNeighbourVoxelAlongBoundayOntoAuxiliaryVariable(
-           targetPatch,
+           newQ,
            {{NUMBER_OF_VOLUMES_PER_AXIS}},
            {{NUMBER_OF_UNKNOWNS}},
            {{NUMBER_OF_AUXILIARY_VARIABLES}}
@@ -995,7 +1027,7 @@ The finest mesh width of """ + str(self.get_finest_volume_size(domain_size)) + "
     within your injected code. Furthermore, you have the following two variables
     available:
 
-    - targetPatch This is a pointer to the whole data structure (one large
+    - newQ This is a pointer to the whole data structure (one large
         array). The patch is not supplemented by a halo layer.
     - marker An instance of the CellMarker which identifies the cell.
 

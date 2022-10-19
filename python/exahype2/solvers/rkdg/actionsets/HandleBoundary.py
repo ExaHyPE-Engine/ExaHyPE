@@ -37,13 +37,17 @@ class HandleBoundary(AbstractRungeKuttaDGActionSet):
     if (marker.getSelectedFaceNumber()<Dimensions) {
       fineGridFace{{SOLVER_NAME}}FaceLabel.setUpdatedTimeStamp(0, fineGridFace{{SOLVER_NAME}}FaceLabel.getUpdatedTimeStamp(1) );
       fineGridFace{{SOLVER_NAME}}FaceLabel.setNewTimeStamp    (0, fineGridFace{{SOLVER_NAME}}FaceLabel.getNewTimeStamp(1) );
+      fineGridFace{{SOLVER_NAME}}FaceLabel.setOldTimeStamp    (0, fineGridFace{{SOLVER_NAME}}FaceLabel.getOldTimeStamp(1) );
+      fineGridFace{{SOLVER_NAME}}FaceLabel.setUpdatedTimeStamp(0, fineGridFace{{SOLVER_NAME}}FaceLabel.getUpdatedTimeStamp(1) );
     }
     else {
       fineGridFace{{SOLVER_NAME}}FaceLabel.setUpdatedTimeStamp(1, fineGridFace{{SOLVER_NAME}}FaceLabel.getUpdatedTimeStamp(0) );
       fineGridFace{{SOLVER_NAME}}FaceLabel.setNewTimeStamp(    1, fineGridFace{{SOLVER_NAME}}FaceLabel.getNewTimeStamp(0) );
+      fineGridFace{{SOLVER_NAME}}FaceLabel.setOldTimeStamp(    1, fineGridFace{{SOLVER_NAME}}FaceLabel.getOldTimeStamp(0) );
+      fineGridFace{{SOLVER_NAME}}FaceLabel.setUpdatedTimeStamp(1, fineGridFace{{SOLVER_NAME}}FaceLabel.getUpdatedTimeStamp(0) );
     }
       
-    const double timeStampOldSolution = fineGridFace{{SOLVER_NAME}}FaceLabel.getUpdatedTimeStamp()(0);
+    const double timeStampOldSolution = fineGridFace{{SOLVER_NAME}}FaceLabel.getOldTimeStamp()(0);
   
     // Set the variable
     // double timeStepSize
@@ -51,8 +55,8 @@ class HandleBoundary(AbstractRungeKuttaDGActionSet):
     
     const double timeStamp = timeStampOldSolution + {{BUTCHER_TABLEAU_RELATIVE_TIME_STEP_SIZES[PREDICATE_NO]}} * timeStepSize;
     
-    assertion3( tarch::la::greaterEquals( timeStepSize, 0.0 ),  timeStamp, timeStepSize, timeStampOldSolution );
-    assertion3( tarch::la::greaterEquals( timeStamp, 0.0 ),     timeStamp, timeStepSize, timeStampOldSolution );
+    assertion5( tarch::la::greaterEquals( timeStepSize, 0.0 ),  timeStamp, timeStepSize, timeStampOldSolution, marker.toString(), fineGridFace{{SOLVER_NAME}}FaceLabel.toString() );
+    assertion5( tarch::la::greaterEquals( timeStamp, 0.0 ),     timeStamp, timeStepSize, timeStampOldSolution, marker.toString(), fineGridFace{{SOLVER_NAME}}FaceLabel.toString() );
       
     ::exahype2::dg::applyBoundaryConditions(
       [&](

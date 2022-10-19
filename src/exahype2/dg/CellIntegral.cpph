@@ -1,0 +1,176 @@
+#include "peano4/utils/Loop.h"
+#include "exahype2/enumerator/AoSLexicographicEnumerator.h"
+
+
+template <
+  typename Solver,
+  int      order,
+  int      unknowns,
+  int      auxiliaryVariables
+>
+void exahype2::dg::cellIntegral_patchwise_in_situ_GaussLegendre(
+  ::exahype2::CellData&                          cellData,
+  bool                                           evaluateFlux,
+  bool                                           evaluateNonconservativeProduct,
+  bool                                           evaluateSource,
+  bool                                           evaluatePointSources
+) {
+  exahype2::enumerator::AoSLexicographicEnumerator enumeratorIn(
+    1,           // number of cells in one memory chunk
+    order+1,     // numberOfDoFsPerAxisInCell
+    0,           // no halo
+    unknowns,
+    auxiliaryVariables
+  );
+
+  exahype2::enumerator::AoSLexicographicEnumerator enumeratorOut(
+    1,           // number of cells in one memory chunk
+    order+1,     // numberOfDoFsPerAxisInCell
+    0,           // no halo
+    unknowns,
+    0            // no auxiliary variables
+  );
+
+  for (int currentCell=0; currentCell<cellData.numberOfCells; currentCell++) {
+    const double* __restrict__                  cellQin  = cellData.QIn[currentCell];
+    double* __restrict__                        cellQout = cellData.QOut[currentCell];
+    const tarch::la::Vector<Dimensions,double>  x        = cellData.cellCentre[currentCell];
+    const tarch::la::Vector<Dimensions,double>  h        = cellData.cellSize[currentCell];
+    const double                                t        = cellData.t[currentCell];
+    const double                                dt       = cellData.dt[currentCell];
+
+    const int nodesPerAxis = order+1;
+    const int strideQ=unknowns+auxiliaryVariables;
+    const int nodesPerCell = getNodesPerCell(nodesPerAxis);
+
+    dfor( dof, order+1 ) {
+      double fluxValues[unknowns];
+      double sourceValues[unknowns];
+      double gradientValues[(unknowns+auxiliaryVariables)];
+      double ncpValues[unknowns];
+
+      for(int var=0; var<unknowns; var++){
+        cellQout[enumeratorOut(currentCell,dof,var)] = 0.0;
+      }
+
+      if(evaluateFlux){
+        // direction in which flux contributions are being computed
+        for(int dim=0; dim<Dimensions; dim++)
+        for(int i=0; i<nodesPerAxis; i++){
+          // compute contributing node real position
+          tarch::la::Vector<Dimensions,int> contributingNodeIndex = dof;
+          contributingNodeIndex[dim] = i;
+          tarch::la::Vector<Dimensions,double> position = getQuadraturePoint(
+              x,
+              h,
+              contributingNodeIndex,
+              order,
+              Solver::QuadraturePoints1d);
+
+          Solver::flux(
+            &cellQin[enumeratorIn(currentCell, contributingNodeIndex, 0)],
+            position,
+            t,
+            dt,
+            dim, //normal
+            fluxValues,
+            Solver::Offloadable::Yes
+          );
+
+          // Coefficient within matrix is tensor product over dimensions, too
+          double coeff = Solver::StiffnessOperator1d[i+dof(dim)*nodesPerAxis];
+          for (int dd=0; dd<Dimensions; dd++) {
+            coeff *= (dd==dim) ? 1.0 : Solver::MassMatrixDiagonal1d[ dof(dd) ] * h(dd);
+          }
+
+          for(int var=0; var<unknowns; var++){
+            cellQout[enumeratorOut(currentCell, dof, var)] += coeff * fluxValues[var];
+          } //var
+        } // dim/i combination
+      }//if useFlux
+
+      if(evaluateSource){
+        //compute real node position
+        tarch::la::Vector<Dimensions,double> position = getQuadraturePoint(
+          x,
+          h,
+          dof,
+          order,
+          Solver::QuadraturePoints1d);
+
+        //compute source term contributions
+        Solver::sourceTerm(
+          &cellQin[enumeratorIn(currentCell, dof, 0)],
+          position,
+          t,
+          dt,
+          sourceValues,
+          Solver::Offloadable::Yes
+        );
+
+        #if Dimensions==2
+        double coeff = Solver::MassMatrixDiagonal1d[ dof(0) ] * Solver::MassMatrixDiagonal1d[ dof(1) ] * tarch::la::volume(h);
+        #else
+        double coeff = Solver::MassMatrixDiagonal1d[ dof(0) ] * Solver::MassMatrixDiagonal1d[ dof(1) ] * Solver::MassMatrixDiagonal1d[ dof(2) ] * tarch::la::volume(h);
+        #endif
+
+        for(int var=0; var<unknowns; var++){
+          cellQout[enumeratorOut(currentCell, dof, var)] += coeff * sourceValues[var];
+        } //var
+      } //if useSource
+
+      // @todo Point Source missing
+
+      if (evaluateNonconservativeProduct) {
+
+        //compute real node position
+        tarch::la::Vector<Dimensions,double> position = getQuadraturePoint( x,
+          h,
+          dof,
+          order,
+          Solver::QuadraturePoints1d);
+
+        double coeff = 1.0;
+        for (int dd=0; dd<Dimensions; dd++) {
+          coeff *= Solver::MassMatrixDiagonal1d[ dof(dd) ] * h(dd);
+        }
+
+        for(int dim=0; dim<Dimensions; dim++) {
+          //computes gradient values in all directions for the given node
+          std::fill(gradientValues, &gradientValues[strideQ-1], 0.0);
+
+          const int invDx = 1 / h(dim);
+
+          // computing gradients in direction dim
+          for(int node=0; node<nodesPerAxis; node++){
+            tarch::la::Vector<Dimensions,int> contributingNodeIndex = dof;
+            contributingNodeIndex[dim] = node;
+            const double coeffDerivative = invDx * Solver::DerivativeOperator1d[node + nodesPerAxis*dof(dim)];
+
+            for(int var=0; var<strideQ; var++){
+              gradientValues[var] += coeffDerivative * cellQin[enumeratorIn(currentCell, contributingNodeIndex, var)];
+              assertion(gradientValues[var]==gradientValues[var]);
+            } // var
+
+          } //node
+
+          Solver::nonconservativeProduct(
+            &cellQin[enumeratorIn(currentCell, dof, 0)],
+            gradientValues,
+            position,
+            t,
+            dt,
+            dim,
+            ncpValues,
+            Solver::Offloadable::Yes
+          );
+
+          for(int var=0; var<unknowns; var++){
+            assertion(ncpValues[var]==ncpValues[var]);
+            cellQout[enumeratorOut(currentCell, dof, var)] -= coeff * ncpValues[var];
+          } //var
+        } //dim
+      } //if useNCP
+    } // dof
+  } //currentCell
+}

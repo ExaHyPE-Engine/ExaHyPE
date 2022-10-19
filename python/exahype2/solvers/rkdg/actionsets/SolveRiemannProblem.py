@@ -23,12 +23,18 @@ class SolveRiemannProblem(AbstractRungeKuttaDGActionSet):
   {% for PREDICATE_NO in range(0,PREDICATES|length) %}
   if ({{PREDICATES[PREDICATE_NO]}}) {
     // no support for local time stepping or subcycling 
-    assertionNumericalEquals1(
-      {{FACE_METADATA_ACCESSOR}}.getNewTimeStamp(0),
-      {{FACE_METADATA_ACCESSOR}}.getNewTimeStamp(1),
-      {{FACE_METADATA_ACCESSOR}}.toString()
+    /*
+    assertionNumericalEquals2(
+      {{FACE_METADATA_ACCESSOR}}.getOldTimeStamp(0),
+      {{FACE_METADATA_ACCESSOR}}.getOldTimeStamp(1),
+      {{FACE_METADATA_ACCESSOR}}.toString(),
+      marker.toString()
     );
-    const double timeStampOldSolution = {{FACE_METADATA_ACCESSOR}}.getNewTimeStamp(0);
+    */
+    
+    
+    // Doesn't make a difference if we pick left or right
+    const double timeStampOldSolution = {{FACE_METADATA_ACCESSOR}}.getOldTimeStamp(0);
   
     // Set the variable
     // double timeStepSize
@@ -36,61 +42,13 @@ class SolveRiemannProblem(AbstractRungeKuttaDGActionSet):
     
     const double timeStamp = timeStampOldSolution + {{BUTCHER_TABLEAU_RELATIVE_TIME_STEP_SIZES[PREDICATE_NO]}} * timeStepSize;
     
-    assertion3( tarch::la::greaterEquals( timeStepSize, 0.0 ),  timeStamp, timeStepSize, timeStampOldSolution );
-    assertion3( tarch::la::greaterEquals( timeStamp, 0.0 ),     timeStamp, timeStepSize, timeStampOldSolution );
+    assertion5( tarch::la::greaterEquals( timeStepSize, 0.0 ),  timeStamp, timeStepSize, timeStampOldSolution, {{FACE_METADATA_ACCESSOR}}.toString(), marker.toString() );
+    assertion5( tarch::la::greaterEquals( timeStamp, 0.0 ),     timeStamp, timeStepSize, timeStampOldSolution, {{FACE_METADATA_ACCESSOR}}.toString(), marker.toString() );
     
     const double* __restrict__ QIn  = fineGridFace{{UNKNOWN_IDENTIFIER}}EstimateProjection.value;
     double* __restrict__       QOut = fineGridFace{{UNKNOWN_IDENTIFIER}}RiemannSolution.value;
 
-    ::exahype2::dg::rusanov::solveRiemannProblem_pointwise_in_situ(
-      [&](
-        const double * __restrict__                  Q,
-        const tarch::la::Vector<Dimensions,double>&  x,
-        double                                       t,
-        double                                       dt,
-        int                                          normal,
-        double * __restrict__                        F
-      )->void {
-        {% if FLUX_IMPLEMENTATION!="<none>" %}
-        repositories::{{SOLVER_INSTANCE}}.flux(Q,x,t,dt,normal,F);
-        {% endif %}
-      }, //flux
-      [&](
-          const double * __restrict__                  Q,
-          const double * __restrict__                  deltaQ,
-          const tarch::la::Vector<Dimensions,double>&  x,
-          double                                       t,
-          double                                       dt,
-          int                                          normal,
-          double * __restrict__                        F
-        ) -> void {
-          {% if NCP_IMPLEMENTATION!="<none>" %}
-          repositories::{{SOLVER_INSTANCE}}.nonconservativeProduct(Q, deltaQ, x, t, dt, normal, F);
-          {% endif %}          
-      }, //ncp
-      [&](
-          const double * __restrict__                  Q,
-          const tarch::la::Vector<Dimensions,double>&  x,
-          double                                       t,
-          double                                       dt,
-          int                                          normal
-        ) -> double {
-          return repositories::{{SOLVER_INSTANCE}}.maxEigenvalue(Q, x, t, dt, normal);
-      }, // maxEigenvalue
-      marker.x(),
-      marker.h(),
-      timeStamp,
-      timeStepSize,
-      {{ORDER}},                                                   
-      {{NUMBER_OF_UNKNOWNS}},
-      {{NUMBER_OF_AUXILIARY_VARIABLES}},
-      marker.getSelectedFaceNumber(),
-      repositories::{{SOLVER_INSTANCE}}.QuadraturePoints1d,
-      {{ "true" if FLUX_IMPLEMENTATION!="<none>" else "false" }}, //useFlux
-      {{ "true" if NCP_IMPLEMENTATION!="<none>" else "false" }},   //useNCP
-      fineGridFace{{UNKNOWN_IDENTIFIER}}EstimateProjection.value,
-      fineGridFace{{UNKNOWN_IDENTIFIER}}RiemannSolution.value
-    );
+    ::exahype2::dg::{{KERNEL_NAMESPACE}}::{{RIEMANN_SOLVER_CALL}}
   }
   {% endfor %}
 
@@ -147,5 +105,5 @@ class SolveRiemannProblem(AbstractRungeKuttaDGActionSet):
   
   def get_includes(self):
     return super(SolveRiemannProblem,self).get_includes() + """
-#include "exahype2/dg/rusanov/Riemann.h"
+#include "exahype2/dg/rusanov/Rusanov.h"
     """  
