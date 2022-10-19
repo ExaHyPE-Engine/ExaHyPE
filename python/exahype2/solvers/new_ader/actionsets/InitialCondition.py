@@ -11,10 +11,7 @@ class InitialCondition(AbstractAderDGActionSet):
     logTraceIn( "touchCellFirstTime(...)---InitialCondition" );
     int linearisedIndex = 0;
     
-    {% if USE_POINT_SOURCE!="<none>" %}
-    repositories::{{SOLVER_INSTANCE}}.initPointSourceLocations(repositories::{{SOLVER_INSTANCE}}.pointSourceLocation);
-    {% endif %}
-    
+    {% if INITIALIZE_PATCHES is sameas True %}
     dfor( index, {{ORDER}}+1 ) {
       repositories::{{SOLVER_INSTANCE}}.initialCondition(
         fineGridCell{{UNKNOWN_IDENTIFIER}}.value + linearisedIndex,
@@ -27,6 +24,19 @@ class InitialCondition(AbstractAderDGActionSet):
       );
       linearisedIndex += {{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}};
     }
+    {% else %}
+    repositories::{{SOLVER_INSTANCE}}.initialCondition(
+      fineGridCell{{UNKNOWN_IDENTIFIER}}.value,
+      marker.x(),
+      marker.h(),
+      0,
+      {{GRID_IS_CONSTRUCTED}}
+    );    
+    {% endif %}
+    
+    {% if USE_POINT_SOURCE!="<none>" %}
+    repositories::{{SOLVER_INSTANCE}}.initPointSourceLocations(repositories::{{SOLVER_INSTANCE}}.pointSourceLocation);
+    {% endif %}
         
     logTraceOut( "touchCellFirstTime(...)---InitialCondition" );
   } 
@@ -36,6 +46,7 @@ class InitialCondition(AbstractAderDGActionSet):
     super(InitialCondition,self).__init__(solver)
     self.guard               = guard
     self.grid_is_constructed = grid_is_constructed
+    self._initialize_patches = solver._initialize_patches
 
 
   def get_body_of_operation(self,operation_name):
@@ -44,8 +55,9 @@ class InitialCondition(AbstractAderDGActionSet):
       d = {}
       self._solver._init_dictionary_with_default_parameters(d)
       self._solver.add_entries_to_text_replacement_dictionary(d)
-      d[ "PREDICATE" ]           = self.guard      
-      d[ "GRID_IS_CONSTRUCTED" ] = self.grid_is_constructed      
+      d[ "PREDICATE" ]           = self.guard
+      d[ "GRID_IS_CONSTRUCTED" ] = self.grid_is_constructed
+      d[ "INITIALIZE_PATCHES" ]  = self._initialize_patches
       result = jinja2.Template(self.TemplateInitialCondition).render(**d)
       pass 
     return result
