@@ -40,8 +40,32 @@ class ADERDG( object ):
     
     self._order = order
 
-    self._unknowns = unknowns
-    self._auxiliary_variables = auxiliary_variables
+    self._use_var_shortcut  = False
+    self._variable_names    = []
+    self._variable_pos      = [0]
+    
+    if type(unknowns) is dict:
+        self._unknowns = sum(unknowns.values())
+        self._variable_names += list(unknowns.keys())
+        for var in list(unknowns.values()):
+            self._variable_pos.append(var+self._variable_pos[-1])
+        self._use_var_shortcut = True
+    elif type(unknowns) is int:
+        self._unknowns = unknowns
+    else:
+        raise Exception("not a valid type for parameter unknowns, needs to be int or dictionary")
+    
+    if type(auxiliary_variables) is dict:
+        self._auxiliary_variables = sum(auxiliary_variables.values())
+        self._variable_names += list(auxiliary_variables.keys())
+        for var in list(auxiliary_variables.values()):
+            self._variable_pos.append(var+self._variable_pos[-1])
+        self._use_var_shortcut = True
+    elif type(auxiliary_variables) is int:
+        self._auxiliary_variables = auxiliary_variables
+    else:
+        raise Exception("not a valid type for parameter auxiliary_variables, needs to be int or dictionary")
+        
 
     self._min_cell_h         = min_cell_h
     self._max_cell_h         = max_cell_h 
@@ -49,15 +73,16 @@ class ADERDG( object ):
       raise Exception( "Error: min_cell_h (" + str(min_cell_h) + ") is bigger than max_cell_h (" + str(max_cell_h) + ")" )
     
     #for kernel optimizations
-    self._is_linear = False
-    self._polynomials = Polynomials.Gauss_Legendre
-    self._basis = GaussLegendreBasis(order+1)
-    self._use_kernel_generator = False
-    self._use_vectorized_PDE = False
-    self._architecture = "noarch"
-    self._use_CERK_Guess = False
-    self._use_split_CK = False
-    self._predictor_recompute = False
+    self._is_linear             = False
+    self._polynomials           = Polynomials.Gauss_Legendre
+    self._basis                 = GaussLegendreBasis(order+1)
+    self._use_kernel_generator  = False
+    self._use_vectorized_PDE    = False
+    self._architecture          = "noarch"
+    self._use_CERK_Guess        = False
+    self._use_split_CK          = False
+    self._predictor_recompute   = False
+    self._initialize_patches    = False
 
 
     self._plot_grid_properties = plot_grid_properties
@@ -75,8 +100,6 @@ class ADERDG( object ):
     self._compute_time_step_size              = None
     self._compute_new_time_step_size          = None
     
-
-
     self._flux_implementation                 = PDETerms.None_Implementation
     self._ncp_implementation                  = PDETerms.None_Implementation
     self._eigenvalues_implementation          = PDETerms.None_Implementation
@@ -400,6 +423,32 @@ class ADERDG( object ):
         predictorRecompute=self._predictor_recompute
       )
     
+    
+    """" 
+    this is a very ugly fix that should be replaced asap ;)
+    essentially, the libxsmm kernel generator generates faulty code if
+    'noarch' is specified. This code works fine except that it contains a
+    #ifdef which is missing its corresponding #endif.
+    This code just inserts that missing endif
+     """
+    if self._architecture=="noarch":
+        file = open("generated/kernels/aderdg/" + is_linear + "/asm_fstpvi.c", 'r')
+        content = file.read()
+        file.close()
+        file = open("generated/kernels/aderdg/" + is_linear + "/asm_fstpvi.c", 'w')
+        content = content.replace("__FILE__)\n", "__FILE__)\n#endif\n")
+        file.write(content)
+        file.close()
+        
+        file = open("generated/kernels/aderdg/" + is_linear + "/asm_amrRoutines.c", 'r')
+        content = file.read()
+        file.close()
+        file = open("generated/kernels/aderdg/" + is_linear + "/asm_amrRoutines.c", 'w')
+        content = content.replace("__FILE__)\n", "__FILE__)\n#endif\n")
+        file.write(content)
+        file.close()
+
+    
     output.makefile.add_cpp_file("generated/kernels/aderdg/" + is_linear + "/Quadrature.cpp")
     output.makefile.add_cpp_file("generated/kernels/aderdg/" + is_linear + "/gemmsCPP.cpp")
     output.makefile.add_cpp_file("generated/kernels/aderdg/" + is_linear + "/DGMatrices.cpp")
@@ -461,6 +510,18 @@ class ADERDG( object ):
     output.add( generated_solver_files )
     output.makefile.add_cpp_file( "Abstract" + self._name + ".cpp" )
     output.makefile.add_cpp_file( self._name + ".cpp" )
+    
+    if self._use_var_shortcut:
+      generated_shortcut_file = peano4.output.Jinja2TemplatedHeaderFile(
+        os.path.dirname( os.path.realpath(__file__) ) + "/" + "VariableShortcuts.template.h",
+        "VariableShortcuts_" + self._name,
+        namespace,
+        ".",
+        implementationDictionary,
+        True,
+        True)
+      output.add(generated_shortcut_file)
+    
     
     if self._use_kernel_generator:
       self.generate_kernels(namespace, output, dimensions)
@@ -579,6 +640,11 @@ class ADERDG( object ):
     d["USE_POINT_SOURCE"]           = self._point_sources_implementation
     d["NUMBER_OF_POINT_SOURCES"]    = self._number_of_point_sources
     
+    
+    d["USE_VARIABLE_SHORTCUT"]  = self._use_var_shortcut
+    d["VARIABLE_NAMES"]         = self._variable_names
+    d["VARIABLE_POSITIONS"]     = self._variable_pos
+    
     self._basis.init_dictionary_with_default_parameters(d)
     
   def set_implementation(self,
@@ -633,7 +699,8 @@ class ADERDG( object ):
     architecture = "noarch",
     use_CERK_guess=False,
     use_split_CK=False,
-    predictor_recompute = False
+    predictor_recompute = False,
+    initialize_patches = False
   ):
     
     if polynomials is Polynomials.Gauss_Legendre:
@@ -657,6 +724,7 @@ class ADERDG( object ):
     self._use_split_CK        = use_split_CK
     self._predictor_recompute = predictor_recompute
 
+    self._initialize_patches = initialize_patches
     
     self.create_data_structures()
     self.create_action_sets()
