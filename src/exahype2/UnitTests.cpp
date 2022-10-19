@@ -3,7 +3,6 @@
 #include "dg/tests/CellIntegralTest.h"
 #include "tarch/tests/TreeTestCaseCollection.h"
 
-#include "exahype2/aderdg/tests/ADERDGTest.h"
 #include "exahype2/dg/tests/CellIntegralTest.h"
 #include "exahype2/dg/tests/DGUtilsTest.h"
 #include "exahype2/dg/tests/RiemannTest.h"
@@ -21,7 +20,6 @@ tarch::tests::TestCase* exahype2::getUnitTests() {
   result->addTestCase( new exahype2::dg::rusanov::tests::RiemannTest() );
   result->addTestCase( new exahype2::fv::rusanov::tests::CopyPatchTest() );
   result->addTestCase( new exahype2::fv::rusanov::tests::ApplySplit1DRiemannToPatchTest() );
-  result->addTestCase( new exahype2::aderdg::tests::ADERDGTest() );
 
   return result;
 }
