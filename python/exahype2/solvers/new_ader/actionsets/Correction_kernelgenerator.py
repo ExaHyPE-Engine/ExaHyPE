@@ -39,10 +39,10 @@ class Correction_kernelgenerator(AbstractAderDGActionSet):
     #endif
     
     double* luh = fineGridCell{{UNKNOWN_IDENTIFIER}}.value;
-    {{CORRECTOR_COMPUTATION_PRECISION}} lduh[spaceBasisSize*NumberOfVariables]{0.0};
+    {{CORRECTOR_COMPUTATION_PRECISION}} lduh[generated::kernels::AderDG::{{LINEARITY}}::getUpdateSize()]{0.0};
 
-    const int basisElementsByFace = spaceFaceSize*(NumberOfVariables+NumberOfParameters);
-    const int fluxElementsByFace  = spaceFaceSize*NumberOfVariables;
+    const int basisElementsByFace = generated::kernels::AderDG::{{LINEARITY}}::getBndFaceSize();
+    const int fluxElementsByFace  = generated::kernels::AderDG::{{LINEARITY}}::getBndFluxSize();
     
     {{CORRECTOR_COMPUTATION_PRECISION}} FL[fluxElementsByFace];
     {{CORRECTOR_COMPUTATION_PRECISION}} FR[fluxElementsByFace];
@@ -72,7 +72,7 @@ class Correction_kernelgenerator(AbstractAderDGActionSet):
       **  The solution elements are only accessed but not used as buffers and therefore no copying is needed.
       */
       std::copy_n(fineGridFaces{{UNKNOWN_IDENTIFIER}}FluxEstimates(d).value, fluxElementsByFace, FL);
-      std::copy_n(fineGridFaces{{UNKNOWN_IDENTIFIER}}FluxEstimates(d).value+fluxElementsByFace, fluxElementsByFace, FR);
+      std::copy_n(fineGridFaces{{UNKNOWN_IDENTIFIER}}FluxEstimates(d).value +fluxElementsByFace, fluxElementsByFace, FR);
       
       const double inverseDxDirection = 1/marker.h()[d];
       
@@ -129,7 +129,7 @@ class Correction_kernelgenerator(AbstractAderDGActionSet):
       QL = fineGridFaces{{UNKNOWN_IDENTIFIER}}Estimates(d+Dimensions).value;
       QR = fineGridFaces{{UNKNOWN_IDENTIFIER}}Estimates(d+Dimensions).value+basisElementsByFace;
       std::copy_n(fineGridFaces{{UNKNOWN_IDENTIFIER}}FluxEstimates(d+Dimensions).value, fluxElementsByFace, FL);
-      std::copy_n(fineGridFaces{{UNKNOWN_IDENTIFIER}}FluxEstimates(d+Dimensions).value+fluxElementsByFace, fluxElementsByFace, FR);
+      std::copy_n(fineGridFaces{{UNKNOWN_IDENTIFIER}}FluxEstimates(d+Dimensions).value +fluxElementsByFace, fluxElementsByFace, FR);
 
 
       atBoundary = fineGridFaces{{SOLVER_NAME}}FaceLabel(d+Dimensions).getBoundary() and

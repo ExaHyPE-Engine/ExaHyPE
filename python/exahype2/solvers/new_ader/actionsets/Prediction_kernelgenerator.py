@@ -27,7 +27,7 @@ class Prediction_kernelgenerator(AbstractAderDGActionSet):
     double* luh = fineGridCell{{UNKNOWN_IDENTIFIER}}.value;
   
     const int Order = {{ORDER}};
-    const int NumberOfVariables = {{NUMBER_OF_UNKNOWNS}};
+    const int NumberOfVariables  = {{NUMBER_OF_UNKNOWNS}};
     const int NumberOfParameters = {{NUMBER_OF_AUXILIARY_VARIABLES}};
     
     #if Dimensions==2
@@ -40,38 +40,7 @@ class Prediction_kernelgenerator(AbstractAderDGActionSet):
     
     constexpr int spaceTimeBasisSize = spaceBasisSize*(Order+1);
     
-    /*
-    constexpr int sizeLQi   = (NumberOfVariables+NumberOfParameters)*spaceTimeBasisSize;
-    constexpr int sizeRhs   = sizeLQi;
-    constexpr int sizeLFi   = (Dimensions + 1)*NumberOfVariables*spaceTimeBasisSize;
-    constexpr int sizeGradQ = Dimensions*NumberOfVariables*spaceBasisSize;
-    
-    constexpr int sizeLQhi = (NumberOfVariables+NumberOfParameters)*spaceBasisSize;
-    constexpr int sizeLFhi = (Dimensions + 1)*NumberOfVariables*spaceBasisSize;
-    
-    const int sizeLSi  = spaceTimeBasisSize * (NumberOfVariables);
-    const int sizeLShi = spaceBasisSize * (NumberOfVariables);
-    
-    constexpr int totalSize = sizeLQi + sizeRhs + sizeLFi + sizeGradQ +
-                          sizeLQhi + sizeLFhi + sizeLQhi + sizeLSi + sizeLShi;
-                          
-    {{PREDICTOR_COMPUTATION_PRECISION}} block [totalSize] __attribute__((aligned({{ARCHITECTURE_ALIGNMENT}})));
-    {{PREDICTOR_COMPUTATION_PRECISION}}* memory = block;
-                          
-    {{PREDICTOR_COMPUTATION_PRECISION}}* lQi   = memory + generated::kernels::AderDG::{{LINEARITY}}::getLQiShift();
-    {{PREDICTOR_COMPUTATION_PRECISION}}* rhs   = memory; memory+=sizeRhs;
-    {{PREDICTOR_COMPUTATION_PRECISION}}* lFi   = memory; memory+=sizeLFi;
-    {{PREDICTOR_COMPUTATION_PRECISION}}* gradQ = memory; memory+=sizeGradQ;
-    
-    {{PREDICTOR_COMPUTATION_PRECISION}}* lQhi  = memory; memory+=sizeLQhi;
-    {{PREDICTOR_COMPUTATION_PRECISION}}* lFhi  = memory; memory+=sizeLFhi;
-    {{PREDICTOR_COMPUTATION_PRECISION}}* lduh  = memory; memory+=sizeLQhi;
-    
-    {{PREDICTOR_COMPUTATION_PRECISION}}* lSi   = memory; memory+=sizeLSi;
-    {{PREDICTOR_COMPUTATION_PRECISION}}* lShi  = memory; 
 
-    */
-    
     constexpr int totalSize = generated::kernels::AderDG::{{LINEARITY}}::getFusedSTPVISize();  
     
     {{PREDICTOR_COMPUTATION_PRECISION}} memory[totalSize] __attribute__((aligned({{ARCHITECTURE_ALIGNMENT}})));
@@ -111,9 +80,9 @@ class Prediction_kernelgenerator(AbstractAderDGActionSet):
         
     {{PREDICTOR_COMPUTATION_PRECISION}} lduh[generated::kernels::AderDG::{{LINEARITY}}::getUpdateSize()];
         
-    {{PREDICTOR_STORAGE_PRECISION}} lQhbnd[2*Dimensions*spaceFaceSize*(NumberOfVariables+NumberOfParameters)]{0.0};
-    {{PREDICTOR_STORAGE_PRECISION}} lFhbnd[2*Dimensions*spaceFaceSize*NumberOfVariables]{0.0};
-    //{{PREDICTOR_STORAGE_PRECISION}} lGradQhbnd[2*Dimensions*Dimensions*spaceFaceSize*(NumberOfVariables+NumberOfParameters)]{0.0};
+    {{PREDICTOR_STORAGE_PRECISION}} lQhbnd[generated::kernels::AderDG::{{LINEARITY}}::getBndFaceTotalSize()]{0.0};
+    {{PREDICTOR_STORAGE_PRECISION}} lFhbnd[generated::kernels::AderDG::{{LINEARITY}}::getBndFluxTotalSize()]{0.0};
+    //{{PREDICTOR_STORAGE_PRECISION}} lGradQhbnd[generated::kernels::AderDG::{{LINEARITY}}::getBndGradQTotalSize()]{0.0};
     
 
     {% if IS_LINEAR is sameas True %}
@@ -254,8 +223,8 @@ class Prediction_kernelgenerator(AbstractAderDGActionSet):
     3d: 0,1,2,3,4,5 -> 0,3,1,4,2,5
     */
   
-    const int basisElementsByFace  = spaceFaceSize*(NumberOfVariables+NumberOfParameters);
-    const int fluxElementsByFace   = spaceFaceSize*NumberOfVariables;
+    const int basisElementsByFace  = generated::kernels::AderDG::{{LINEARITY}}::getBndFaceSize();
+    const int fluxElementsByFace   = generated::kernels::AderDG::{{LINEARITY}}::getBndFluxSize();
 
     for(int d=0; d<Dimensions; d++){
       //Projected solution estimations
