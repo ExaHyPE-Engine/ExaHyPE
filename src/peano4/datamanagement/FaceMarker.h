@@ -58,7 +58,7 @@ struct peano4::datamanagement::FaceMarker {
     FaceMarker(const peano4::grid::GridTraversalEvent& event, int select=0);
 
     /**
-     * Selects a face witin a cell, i.e. now the marker knows to which
+     * Selects a face within a cell, i.e. now the marker knows to which
      * face it corresponds. After that, the routine returns a this
      * reference.
      *

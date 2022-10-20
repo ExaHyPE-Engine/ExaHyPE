@@ -264,6 +264,60 @@ class LagrangeBasisWithDiagonalMassMatrix(LagrangeBasis):
     return stiffness_matrix
   
 
+  def __compute_interpolation_matrix(self):
+    """
+
+    compute the interpolation matrix, which used to prepare halo layer data for fine grid points at the refinement boundary.
+
+    The matrix is only 1d mapping, i.e. used for "surface" of a 2D domain and have a size of 3Dof \times Dof.
+    Its elements are \phi_j(x^f_i), i.e. the value of basis functions for coarse grid on fine grid point.
+    In practive we multiply this matrix to vector of weight in coarse grid (u^c_i):
+
+    \phi_j(x^f_i)*u^c_i=u^c(x^f_i)
+
+    u^c(x) is the original solution on coarse grid. Thus the result is actually the evaluation of coarse solution on fine grid position
+
+    We can also use the same matrix to interpolate along the normal direction.
+ 
+    """
+    interp_matrix = [ [0.0 for _ in range(0,self.dofs_per_axis)] for _ in range(0,3*self.dofs_per_axis) ]
+    fine_grid_point = [0.0 for _ in range(0,3*self.dofs_per_axis) ]  
+    for index in range(0,self.dofs_per_axis):
+      fine_grid_point[index                     ]=self.quadrature_points[index]/3.0
+      fine_grid_point[index+  self.dofs_per_axis]=self.quadrature_points[index]/3.0+1.0/3.0
+      fine_grid_point[index+2*self.dofs_per_axis]=self.quadrature_points[index]/3.0+2.0/3.0
+    for row in range(0, 3*self.dofs_per_axis):
+      for col in range(0, self.dofs_per_axis):
+        interp_matrix[row][col]=self.value1d(fine_grid_point[row],col)
+
+    return interp_matrix 
+
+
+  def __compute_restriction_matrix(self):
+    """
+
+    compute the restriction matrix, which used to prepare halo layer data for coarse cells at the refinement boundary.
+    the matrix formulation depends on the interpolation scheme.
+
+    The matrix is only 1d mapping, i.e. used for "surface" of a 2D domain and have a size of Dof \times 3Dof.
+
+    We can also use the same matrix to interpolate along the normal direction. 
+
+
+    """
+    restriction_matrix = [ [0.0 for _ in range(0,3*self.dofs_per_axis)] for _ in range(0,self.dofs_per_axis) ]
+    fine_grid_point = [0.0 for _ in range(0,3*self.dofs_per_axis) ]  
+    for index in range(0,self.dofs_per_axis):
+      fine_grid_point[index                     ]=self.quadrature_points[index]/3.0
+      fine_grid_point[index+  self.dofs_per_axis]=self.quadrature_points[index]/3.0+1.0/3.0
+      fine_grid_point[index+2*self.dofs_per_axis]=self.quadrature_points[index]/3.0+2.0/3.0
+    for row in range(0, 3*self.dofs_per_axis):
+      for col in range(0, self.dofs_per_axis):
+        restriction_matrix[row][col]=self.value1d(fine_grid_point[col],row)/3.0
+
+    return restriction_matrix   
+
+
   def __compute_K1(self):
     """
     

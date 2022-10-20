@@ -802,7 +802,7 @@ We use RK(""" + str(self._rk_order) + """) for the time stepping.
           
     step.add_action_set( peano4.toolbox.blockstructured.PlotPatchesInPeanoBlockFormat( 
       filename=output_path + "solution-" + self._name, 
-      patch=self._current_time_step, 
+      patch=self._current_time_step,
       dataset_name=self._unknown_identifier(), 
       description=self.plot_description,
       mapping=mapping,
@@ -819,7 +819,7 @@ We use RK(""" + str(self._rk_order) + """) for the time stepping.
       step.add_action_set( peano4.toolbox.PlotGridInPeanoBlockFormat( 
         filename = output_path + "grid-" + self._name,
         cell_unknown=None,
-        guard_guard="repositories::plotFilter.plotPatch(marker) and " + self._load_cell_data_default_guard(),
+        guard="repositories::plotFilter.plotPatch(marker) and " + self._load_cell_data_default_guard(),
         additional_includes="""
 #include "exahype2/PlotFilter.h"
 #include "../repositories/SolverRepository.h"
