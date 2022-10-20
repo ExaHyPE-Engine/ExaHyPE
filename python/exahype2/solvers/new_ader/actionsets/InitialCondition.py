@@ -12,6 +12,14 @@ class InitialCondition(AbstractAderDGActionSet):
     int linearisedIndex = 0;
     
     {% if INITIALIZE_PATCHES is sameas True %}
+    repositories::{{SOLVER_INSTANCE}}.initialCondition(
+      fineGridCell{{UNKNOWN_IDENTIFIER}}.value,
+      marker.x(),
+      marker.h(),
+      0,
+      {{GRID_IS_CONSTRUCTED}}
+    );
+    {% else %}
     dfor( index, {{ORDER}}+1 ) {
       repositories::{{SOLVER_INSTANCE}}.initialCondition(
         fineGridCell{{UNKNOWN_IDENTIFIER}}.value + linearisedIndex,
@@ -24,14 +32,6 @@ class InitialCondition(AbstractAderDGActionSet):
       );
       linearisedIndex += {{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}};
     }
-    {% else %}
-    repositories::{{SOLVER_INSTANCE}}.initialCondition(
-      fineGridCell{{UNKNOWN_IDENTIFIER}}.value,
-      marker.x(),
-      marker.h(),
-      0,
-      {{GRID_IS_CONSTRUCTED}}
-    );    
     {% endif %}
     
     {% if USE_POINT_SOURCE!="<none>" %}
