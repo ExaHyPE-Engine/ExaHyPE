@@ -148,7 +148,7 @@ if "fd4" in args.solver:
                                                                                    rk_order             = time_order,
                                                                                    unknowns             = number_of_unknowns,
                                                                                    auxiliary_variables  = auxiliary_variables,
-                                                                                   min_meshcell_h       = max_h, 
+                                                                                   min_meshcell_h       = min_h, 
                                                                                    max_meshcell_h       = max_h,
                                                                                    time_step_relaxation = 0.1,
                                                                                    flux                 = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
