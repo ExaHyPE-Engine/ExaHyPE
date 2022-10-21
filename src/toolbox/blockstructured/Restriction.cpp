@@ -239,6 +239,8 @@ void toolbox::blockstructured::restrictInnerHalfOfHaloLayer_AoS_averaging(
   ) {
     logTraceInWith6Arguments( "restrictInnerHalfOfHaloLayer_AoS_inject(...)", marker.toString(), numberOfDoFsPerAxisInPatch, overlap, unknowns, fineGridValues, coarseGridValues );
 
+    assertion1( overlap==1 or overlap%3==1, overlap );
+
     const int  normal                        = marker.getSelectedFaceNumber() % Dimensions;
     const bool pickLeftHalfOfHaloOnFineGrid  = (marker.getSelectedFaceNumber() >= Dimensions) xor swapInsideOutside;
 
