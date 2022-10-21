@@ -80,33 +80,31 @@ void ::applications::exahype2::AcousticWave::AcousticWaveFV::flux(
   logTraceOut("flux(...)");
 }
 
-void ::applications::exahype2::AcousticWave::AcousticWaveFV::nonconservativeProduct(
-    const double *__restrict__ Q,      // Q[3+0],
-    const double *__restrict__ deltaQ, // deltaQ[3+0]
-    const tarch::la::Vector<Dimensions, double> &faceCentre,
-    const tarch::la::Vector<Dimensions, double> &volumeH,
-    double t,
-    double dt,
-    int normal,
-    double *__restrict__ BTimesDeltaQ // BTimesDeltaQQ[3]
-)
-{
-  logTraceInWith4Arguments("nonconservativeProduct(...)", faceCentre, volumeH, t, normal);
+void ::applications::exahype2::AcousticWave::AcousticWaveFV::sourceTerm(
+      const double * __restrict__ Q,
+      const tarch::la::Vector<Dimensions,double>&  volumeCentre,
+      const tarch::la::Vector<Dimensions,double>&  volumeH,
+      double                                       t,
+      double                                       dt,
+      double * __restrict__ S
+    )
+    {
+      logTraceInWith4Arguments("sourceTerm(...)", volumeCentre, volumeH, t, dt);
 
-  tarch::la::Vector<Dimensions,double> centre = {5, 5};
-  bool nearCentre = tarch::la::norm2(faceCentre-centre)<0.1;
-  if (nearCentre)
-  {
-    double sigma = 0.1149;
-    double t0 = 0.7;
-    double f = 0.0;
-    double M0 = 1000.0;
+      tarch::la::Vector<Dimensions,double> centre = {5, 5};
+      bool nearCentre = tarch::la::norm2(volumeCentre-centre)<0.1;
+      if (nearCentre)
+      {
+        double sigma = 0.1149;
+        double t0 = 0.7;
+        double f = 0.0;
+        double M0 = 1000.0;
 
-    f = M0 * std::exp(-((t - t0) * (t - t0)) / (2.0 * sigma * sigma));
+        f = M0 * std::exp(-((t - t0) * (t - t0)) / (2.0 * sigma * sigma));
 
-    BTimesDeltaQ[0] = f;
-    BTimesDeltaQ[1] = 0.0;
-    BTimesDeltaQ[2] = 0.0;
-    logTraceOut("nonconservativeProduct(...)");
-  }
+        S[0] = f;
+        S[1] = 0.0;
+        S[2] = 0.0;
+        logTraceOut("sourceTerm(...)");
+    }
 }
