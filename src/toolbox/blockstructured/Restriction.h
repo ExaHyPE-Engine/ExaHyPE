@@ -112,6 +112,19 @@ namespace toolbox {
     );
 
 
+    /**
+     * This routine works for overlaps of 1 and multiples of 3. However, it
+     * does only set values for the overlap/3 adjacent cells. So if you work
+     * with an overlap of 1, then the overlap just works fine, but it is not
+     * really the average. It is the average of the one layer around the
+     * fine grid transition. In 2d, it is the sum scaled with 1/3.
+     *
+     * @image html Restriction_averaging.png
+     *
+     * If you have an overlap of 3, the routine computes a meaningful average,
+     * but as it has only three overlap cells on the fine grid, it can
+     * only set the overlap cell 1 on the next coarser mesh.
+     */
     void restrictInnerHalfOfHaloLayer_AoS_averaging(
       const peano4::datamanagement::FaceMarker& marker,
       int                                       numberOfDoFsPerAxisInPatch,

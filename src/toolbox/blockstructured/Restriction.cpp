@@ -3,6 +3,7 @@
 #include "Enumeration.h"
 
 #include "peano4/utils/Loop.h"
+#include "tarch/Assertions.h"
 #include "tarch/la/DynamicMatrix.h"
 
 
@@ -156,9 +157,11 @@ void toolbox::blockstructured::restrictInnerHalfOfHaloLayer_AoS_averaging(
 ) {
   logTraceInWith4Arguments( "restrictInnerHalfOfHaloLayer_AoS_averaging(...)", marker.toString(), numberOfDoFsPerAxisInPatch, overlap, unknowns );
 
+  assertion1( overlap==1 or overlap%3==0, overlap );
+
   bool mapFromInnerHalfOfHalo    = not swapInsideOutside; // mapOuterCoarseGridHaloOntoInnerFineGridHalo
   const int  normal              = marker.getSelectedFaceNumber() % Dimensions;
-  double scaleFineGridVolume     = std::pow(3.0,-static_cast<double>(Dimensions-1));
+  double scaleFineGridVolume     = std::pow(3.0,-static_cast<double>(Dimensions-1)) / std::min(3.0,static_cast<double>(overlap));
   const bool pickLeftHalfOfHalo  = (marker.getSelectedFaceNumber() < Dimensions) xor mapFromInnerHalfOfHalo;
 
   const double volumeHCoarse = marker.h()(0) / static_cast<double>(numberOfDoFsPerAxisInPatch) * 3.0;
