@@ -12,12 +12,9 @@ namespace toolbox {
     /**
      * This is a wrapper around the toolbox routines. It ensures that we
      * have a templated function which has the same signature as the other
-     * routines in blockstructured and thus can be swapped in and out. To
-     * use this guy within your FV solver, add the following steps:
-     *
-     *       mysolver.interpolation = "tensor_product< " + self._name + ">"
-     *       mysolver..add_solver_constants( "static constexpr double  NormalInterpolationMatrix1d[]     = {1.0};""" )
-     *       mysolver.add_solver_constants( "static constexpr double  TangentialInterpolationMatrix1d[] = {1.0,2.0,3.0};""" )
+     * routines in blockstructured and thus can be swapped in and out. See
+     * the documentation in exahype2.solvers.FV for example how to use it
+     * within Python.
      */
     template <typename C>
     void interpolateHaloLayer_AoS_tensor_product(
