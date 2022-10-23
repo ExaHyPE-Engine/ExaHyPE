@@ -30,7 +30,16 @@ class LeapfrogDrift:
      * Do not modify unless you know what you are doing.
      */
 
-    /* We do not excecute any specific action here */
+    if( 
+      localParticle->getParallelState() == globaldata::Particle::ParallelState::Local 
+      and 
+      not localParticle->getIsBoundaryParticle() )
+      {
+    
+      /* Prepare the particle for the Drift step */
+      localParticle->setMoveState( globaldata::Particle::MoveState::NotMovedYet );
+      
+    }
   
     /* End of inserted block */
 
@@ -57,6 +66,7 @@ class LeapfrogDrift:
      */
     
     const double timeStepSize = GLOBAL_TIME_STEP_SIZE;
+    const double dt_drift_hydro = timeStepSize;
     
     if(
       localParticle->getParallelState() == globaldata::Particle::ParallelState::Local
@@ -67,7 +77,7 @@ class LeapfrogDrift:
       {
     
       /* Drift the particle (update position for a full time-step) */
-      localParticle->setX( localParticle->getX() + timeStepSize * localParticle->getV_full() );
+      localParticle->setX( localParticle->getX() + dt_drift_hydro * localParticle->getV_full() );
       
       /* Flag this particle as Moved */
       localParticle->setMoveState( globaldata::Particle::MoveState::Moved );

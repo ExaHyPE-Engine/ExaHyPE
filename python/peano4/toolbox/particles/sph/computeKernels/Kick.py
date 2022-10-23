@@ -19,8 +19,9 @@
 class LeapfrogKick:
   """
   Compute kernels for the Kick 1 and Kick 2 steps in the leapfrog scheme. These
-  differt in the `touch_particle_last_time_compute_kernel` kernel, as they
-  update the particles slightly differently. 
+  slightly differ in `touch_particle_last_time_compute_kernel`: Kick 2 not
+  only updates the velocity but also re-set some values that have been
+  previously predicted.
 
   @param kickNumber: whether we are doing first (kick 1) or second (kick 2) in
   the leapfrog scheme.

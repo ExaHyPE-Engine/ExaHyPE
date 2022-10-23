@@ -9,6 +9,26 @@
 #include "peano4/datamanagement/CellMarker.h"
 
 
+void exahype2::dg::copyOneSideOfFaceProjection(
+  int    unknownsPlusAuxiliaryVariables,
+  int    order,
+  int    numberOfProjectedQuantities,
+  int    normal,
+  int    isRightFaceHalf,
+  const double* __restrict__   srcQ,
+  double* __restrict__         destQ
+) {
+  ::exahype2::fv::copyHalfOfHalo(
+    unknownsPlusAuxiliaryVariables,
+    order+1,
+    numberOfProjectedQuantities,
+    normal,
+    isRightFaceHalf,
+    srcQ,
+    destQ
+  );
+}
+
 
 double  exahype2::dg::getQuadratureWeight(
   const tarch::la::Vector<3,double>&  cellSize,
@@ -17,7 +37,7 @@ double  exahype2::dg::getQuadratureWeight(
 ) {
   double result = 1.0;
   for (int d=0; d<Dimensions; d++) {
-    result *= cellSize(d) * quadratureWeights[d];
+    result *= cellSize(d) * quadratureWeights[ index(d) ];
   }
   return result;
 }

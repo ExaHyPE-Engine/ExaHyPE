@@ -74,7 +74,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::merge(::peano4::grid::TraversalO
         eliminateSpatialDuplicates( true, 1.0 + 1e-6 );
 
         logDebug( "merge(...)", "merged incoming set of " << neighbour.size() << " particle(s) into local set of vertex " << marker.x() << " which now hosts " << this->size() << " particle(s):" );
-        for (auto& p: *this) {
+        for (auto *p: *this) {
           logDebug( "merge(...)", " - " << p->toString() );
         }
       }
@@ -211,7 +211,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::shutdownDatatype() {
 
 double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMinCutOffRadius() const {
   double result = std::numeric_limits<double>::max();
-  for (auto& p: *this) {
+  for (auto *p: *this) {
     result = std::min( result, p->getCutOffRadius() );
   }
   return result;
@@ -333,7 +333,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishedTraversal() {
 
 {{NAMESPACE | join("::")}}::{{CLASSNAME}} {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getSievedParticlesForNextGridTraversal() {
   {{NAMESPACE | join("::")}}::{{CLASSNAME}} result;
-  for (auto& p: _particlesThatHaveToBeSieved) {
+  for (auto *p: _particlesThatHaveToBeSieved) {
     globaldata::{{PARTICLE_TYPE}}* copyOfParticle = new globaldata::{{PARTICLE_TYPE}}(*p);
     copyOfParticle->setParallelState( globaldata::{{PARTICLE_TYPE}}::ParallelState::Virtual );
     result.push_back( copyOfParticle );
@@ -343,7 +343,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishedTraversal() {
 
 
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::deleteParticles() {
-  for (auto& p: *this) {
+  for (auto *p: *this) {
     delete p;
   }
   clear();
@@ -351,13 +351,13 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::deleteParticles() {
 
 
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::particlesCanNotBeLiftedLocally() {
-  for (auto& p: *this) {
+  for (auto *p: *this) {
     assertion2( p->getParallelState()==globaldata::{{PARTICLE_TYPE}}::ParallelState::Local, p->toString(), toString() );
     p->setNewParallelState( globaldata::{{PARTICLE_TYPE}}::NewParallelState::Virtual );
   }
 
   tarch::multicore::Lock lock( _semaphore );
-  for (auto& p: *this) {
+  for (auto *p: *this) {
     logDebug( "particlesCanNotBeLiftedLocally()", "add particle " << p->toString() << " from " << toString() << " to global sieve list for next iteration" );
     globaldata::{{PARTICLE_TYPE}}* copyOfParticle = new globaldata::{{PARTICLE_TYPE}}(*p);
     _particlesThatCanNotBeLiftedWithinTheirTree.push_back(copyOfParticle);

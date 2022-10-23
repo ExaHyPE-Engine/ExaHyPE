@@ -33,7 +33,7 @@ class Force:
         /* Reset the time derivatives */
         localParticle->setUDot(0.0);   
         localParticle->setHDot(0.0);   
-        localParticle->setV_sig_AV(2.0 * localParticle->getSoundSpeed());
+        localParticle->setV_sig_AV( 2.0 * localParticle->getSoundSpeed() );
 
       }
     
@@ -89,7 +89,7 @@ class Force:
       const double q_b = r / h_b;
       
       // Get actual interaction radius
-      const double cutoffR = KERNEL_SUPPORT_RAD*h_a;
+      const double cutoffR = KERNEL_SUPPORT_RAD * h_a;
      
       if( 
         tarch::la::smaller( r,cutoffR ) 
@@ -99,43 +99,30 @@ class Force:
         not localParticle->getIsBoundaryParticle() ) 
         {
 
-        // Evaluate kernel and its derivative for particle a
-        double w_a, dw_a_dq;
-        kernel_deval(q_a, w_a, dw_a_dq);
-
-        // Evaluate kernel and its derivative for particle b
-        double w_b, dw_b_dq;
-        kernel_deval(q_b, w_b, dw_b_dq);
-
-        // Normalization factors 
-
-/* 
-        // PHANTOM CODE version
-        double wa_dr = dw_a_dq / std::pow( h_a, HYDRO_DIMENSIONS + 1 );
-        double wb_dr = dw_b_dq / std::pow( h_b, HYDRO_DIMENSIONS + 1 );
-*/
-
-        /* SWIFT KERNEL */
         double wa, wb;
         double wa_dr, wb_dr;
         double dw_dqa, dw_dqb;
 
+        // Evaluate kernel and its derivative for particle a
         kernel_deval_SWIFT(q_a, wa, dw_dqa);
+
+        // Evaluate kernel and its derivative for particle b
         kernel_deval_SWIFT(q_b, wb, dw_dqb);
+
         wa_dr = dw_dqa / std::pow( h_a, HYDRO_DIMENSIONS + 1 );
         wb_dr = dw_dqb / std::pow( h_b, HYDRO_DIMENSIONS + 1 );
 
         /* Variable smoothing length term */
 
+        /* SWIFT "f" */
+        const double f_ab = 1.0 - localParticle ->getF() / m_b;
+        const double f_ba = 1.0 - activeParticle->getF() / m_a;
+
 /*
         // PHANTOM CODE version
-        const double f_ab = 1.0 / localParticle->getOmega() ;
-        const double f_ba = 1.0 / activeParticle->getOmega() ;
+        const double f_ab = 1.0 / localParticle ->getOmega();
+        const double f_ba = 1.0 / activeParticle->getOmega();
 */
-        
-        /* SWIFT "f" */
-        const double f_ab = 1.0 - localParticle ->getF()/m_b;
-        const double f_ba = 1.0 - activeParticle->getF()/m_a;
 
         /* Compute gradient terms */
         const double P_over_rho2_a = P_a / (rho_a * rho_a) * f_ab;
@@ -171,9 +158,7 @@ class Force:
               
         /* Use the force Luke ! */
         localParticle->setA( localParticle->getA() - m_b * acc * dx );
-        assertion8( not tarch::la::isEntryNan( localParticle->getA() ), localParticle->toString(), sph_acc_term, visc_acc_term, f_ab, f_ba,
-                    activeParticle->getOmega(), activeParticle->getF(), activeParticle->getIsBoundaryParticle() );
-                
+
         /* Get the time derivative for u. */
         const double sph_du_term_a = P_over_rho2_a * dvdr * r_inv * wa_dr;
 
@@ -187,11 +172,14 @@ class Force:
         localParticle->setUDot(localParticle->getUDot() + m_b * du_dt_a);
 
         /* Get the time derivative for h. */
-        localParticle->setHDot(localParticle->getHDot() - m_b * dvdr * r_inv/rho_b * wa_dr * f_ab);
-        assertion6( not std::isnan( localParticle->getHDot() ), localParticle->toString(), dvdr, r_inv, wa_dr, f_ab, f_ba );
+        localParticle->setHDot(localParticle->getHDot() - m_b * dvdr * r_inv / rho_b * wa_dr * f_ab);
 
         /* Update the signal velocity */
         localParticle->setV_sig_AV( std::max(localParticle->getV_sig_AV(), v_sig) );
+
+        assertion6( not std::isnan( localParticle->getHDot() ), localParticle->toString(), dvdr, r_inv, wa_dr, f_ab, f_ba );
+        assertion8( not tarch::la::isEntryNan( localParticle->getA() ), localParticle->toString(), sph_acc_term, visc_acc_term, f_ab, f_ba,
+                    activeParticle->getOmega(), activeParticle->getF(), activeParticle->getIsBoundaryParticle() );
       }
       
       /* End of inserted block */

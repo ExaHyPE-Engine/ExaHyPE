@@ -20,6 +20,8 @@ void applications::exahype2::euler::NeumannBoundaryConditions(
 }
 
 
+#include <iostream>
+
 double ::applications::exahype2::euler::maxEigenvalue(
   const double * __restrict__                  Q,
   const tarch::la::Vector<Dimensions,double>&  faceCentre,
@@ -35,10 +37,11 @@ double ::applications::exahype2::euler::maxEigenvalue(
   assertion(normal<Dimensions);
 
   if (Q[0]<=0.0 or Q[0]!=Q[0]) {
+    std::cout << faceCentre << " x " << normal << ": " << Q[0] << std::endl;
     ::exahype2::triggerNonCriticalAssertion( __FILE__, __LINE__, "Q[0]>0", "density negative (Q[0]=" + std::to_string( Q[0] ) + ") at x=" + toString(faceCentre) );
   }
 
-  const double irho = 1./Q[0];
+  const double irho = 1./ std::abs( Q[0] );
   #if Dimensions==3
   const double p = (gamma-1) * (Q[4] - 0.5*irho*(Q[1]*Q[1]+Q[2]*Q[2]+Q[3]*Q[3]));
   #else

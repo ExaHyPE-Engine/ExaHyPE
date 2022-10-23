@@ -60,6 +60,16 @@ namespace exahype2 {
 
     /**
      * Compute integral over shape function over cell defined by index
+     *
+     * @param cellSize  Size of the cell hosting the polygonials.
+     *   This vector determines the scaling, i.e. the @f$ h^d @f$
+     *   factor, of the outcome.
+     * @param index     Determine the quadrature point within the cell
+     *   that is to be evaluated.
+     * @param quadratureWeights    Array of the weights of a 1d shape
+     *   function, i.e. the outcome of the 1d integral. As we work with
+     *   a tensor product approach, we can evaluate each direction
+     *   independently.
      */
     double  getQuadratureWeight(
       const tarch::la::Vector<3,double>&  cellSize,
@@ -258,6 +268,19 @@ namespace exahype2 {
       const double* __restrict__                   Q,
       const tarch::la::Vector<Dimensions,double>&  x,
       int                                          unknown
+    );
+
+    /**
+     * Delegate to PatchUtils of the Finite Volume scheme
+     */
+    void copyOneSideOfFaceProjection(
+      int    unknownsPlusAuxiliaryVariables,
+      int    order,
+      int    numberOfProjectedQuantities,
+      int    normal,
+      int    isRightFaceHalf,
+      const double* __restrict__   srcQ,
+      double* __restrict__         destQ
     );
   }
 }

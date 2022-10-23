@@ -141,7 +141,6 @@ namespace exahype2 {
       int    normal,
       bool   prettyPrint = false
     );
-
   }
 }
 

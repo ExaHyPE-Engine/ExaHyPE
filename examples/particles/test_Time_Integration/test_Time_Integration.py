@@ -185,12 +185,14 @@ else:
   project.constants.export_const_with_type("PLOT", "false", "bool")
 
 # Dummy 
+HYDRO_PART_NUMBER = str(1000);
 GAMMA = str( 5./3. )
 HYDRO_h_MAX = str( 1.0 / 3.0 / float(2.0) ) 
 HYDRO_h_MIN = "1e-6"
-project.constants.export_const_with_type("GAMMA"        , GAMMA       , "double")
-project.constants.export_const_with_type("HYDRO_h_MAX"  , HYDRO_h_MAX , "double")
-project.constants.export_const_with_type("HYDRO_h_MIN"  , HYDRO_h_MIN , "double")
+project.constants.export_const_with_type("HYDRO_PART_NUMBER", HYDRO_PART_NUMBER   , "double")
+project.constants.export_const_with_type("GAMMA"            , GAMMA               , "double")
+project.constants.export_const_with_type("HYDRO_h_MAX"      , HYDRO_h_MAX         , "double")
+project.constants.export_const_with_type("HYDRO_h_MIN"      , HYDRO_h_MIN         , "double")
 
 ################################################################################################
 ###############################  Model the setup phases  #######################################
@@ -251,11 +253,18 @@ initialisation_snippet = """
   /* Sun-Earth initial distance */
   const double r_ini = particle->getX()(0) - SUN_X_COORD;
   const double r_inv = r_ini ? 1.0 / r_ini : 0.0;     
-  particle->setEnergyKin( 0.5 * tarch::la::norm2(particle->getV()) );
-  particle->setEnergyPot( - GN * r_inv );
+
+  const double vel = tarch::la::norm2( particle->getV() );
+//  const double E_kin = 0.5 * vel;
+  const double E_kin = 0.5 * vel * vel;
+
+  const double E_pot = - GN * r_inv;
+
+  particle->setEnergyKin( E_kin );
+  particle->setEnergyPot(-E_pot );
   
   /* Overall minus sign for plotting */
-  particle->setEnergyTot( -( particle->getEnergyKin() + particle->getEnergyPot() ) );
+  particle->setEnergyTot( -( E_kin + E_pot ) );
 
   /* Initialise the "extended" arrays */
   particle->setV_full(particle->getV());
@@ -277,6 +286,12 @@ initialisation_snippet = """
   particle->setHasConverged( false );
   particle->setSoundSpeed(1e-6);
 
+  logInfo( "Init()", " =====================================" );
+  logInfo( "Init()", "Initial energy:");
+  logInfo( "Init()", "Kinetic energy  :" << E_kin);
+  logInfo( "Init()", "Potential energy:" << E_pot);
+  logInfo( "Init()", "Total energy    :" << E_kin + E_pot);
+  logInfo( "Init()", " =====================================" );
 
 """
 
@@ -370,6 +385,7 @@ force_gravity_particles.add_action_set( peano4.toolbox.particles.ParticleParticl
     const double r = tarch::la::norm2(dx);
     const double r_inv = r ? 1.0 / r : 0.0;     
 
+    /* Only apply force on orbiting particle */
     if( tarch::la::greaterEquals( r, 0.5 * R_MIN / LENGTH_UNIT ) ) {
 
       /* Gravitational acceleration */
@@ -377,16 +393,26 @@ force_gravity_particles.add_action_set( peano4.toolbox.particles.ParticleParticl
 
     }
 
-    /* Update potential Energy */
-    const double E_pot = - GN * r_inv;
-    localParticle->setEnergyPot( E_pot );
+    /* Update Energy */
+    const double vel = tarch::la::norm2( localParticle->getV_full() );
+//    const double E_kin = 0.5 * vel;
+    const double E_kin = 0.5 * vel * vel;
 
-    /* Update potential Energy */
-    const double E_kin = 0.5 * tarch::la::norm2( localParticle->getV() );
-    localParticle->setEnergyKin( E_kin);
+    const double E_pot = - GN * r_inv;
 
     /* Update total energy (overall minus sign) */
-    localParticle->setEnergyTot( - ( E_kin + localParticle->getEnergyPot() ) );
+    localParticle->setEnergyKin( E_kin );
+    localParticle->setEnergyPot(-E_pot );
+    localParticle->setEnergyTot( - ( E_kin + E_pot ) );
+
+    if( tarch::la::greaterEquals( r, 0.5 * R_MIN / LENGTH_UNIT ) ) {
+      logInfo( "VertexTouchLast()", " =====================================" );
+      logInfo( "VertexTouchLast()", "Energy of orbiting particle:");
+      logInfo( "VertexTouchLast()", "Kinetic energy  :" << E_kin);
+      logInfo( "VertexTouchLast()", "Potential energy:" << E_pot);
+      logInfo( "VertexTouchLast()", "Total energy    :" << E_kin + E_pot);
+      logInfo( "VertexTouchLast()", " =====================================" );
+    }
 
     assertion1(  std::isfinite(localParticle->getA(0)), localParticle->toString() );
     assertion1(  std::isfinite(localParticle->getA(1)), localParticle->toString() );
@@ -534,36 +560,6 @@ init_time_step.add_action_set( peano4.toolbox.particles.UpdateParticleGridAssoci
 init_time_step.add_action_set( peano4.toolbox.particles.UpdateParallelState(particles) )
 project.solversteps.add_step(init_time_step)
 
-# -----------------------------------------------------------------------------
-#  Impose Boundary Conditions
-# -----------------------------------------------------------------------------
-impose_BC_particles = peano4.solversteps.Step( "ImposeBC", add_user_defined_actions=False )
-impose_BC_particles.use_vertex(particles)
-impose_BC_particles.use_cell(particle_tree_analysis.cell_marker)
-
-# Impose BC step from SPH library
-ImposeBC = peano4.toolbox.particles.sph.computeKernels.ImposeBoundaryConditions()
-
-particle_particle_compute_kernel = ImposeBC.particle_particle_compute_kernel
-touch_particle_first_time_compute_kernel= ImposeBC.touch_particle_first_time_compute_kernel
-touch_particle_last_time_compute_kernel = ImposeBC.touch_particle_last_time_compute_kernel
-
-# Add action to project
-impose_BC_particles.add_action_set( peano4.toolbox.particles.ParticleParticleInteraction(
-  particle_set=particles,
-  particle_particle_interaction_kernel = particle_particle_compute_kernel,
-  touch_vertex_first_time_compute_particle_update_kernel= touch_particle_first_time_compute_kernel,
-  touch_vertex_last_time_compute_particle_update_kernel = touch_particle_last_time_compute_kernel,
-  additional_includes="""
-#include "Constants.h"
-#include <cmath>
-"""
-  ))
-impose_BC_particles.add_action_set( peano4.toolbox.particles.ParticleAMR(particles,particle_tree_analysis,min_particles_per_cell=10) )
-impose_BC_particles.add_action_set( particle_tree_analysis )
-impose_BC_particles.add_action_set( peano4.toolbox.particles.UpdateParticleGridAssociation(particles) )
-impose_BC_particles.add_action_set( peano4.toolbox.particles.UpdateParallelState(particles) )
-project.solversteps.add_step(impose_BC_particles)
 
 # ------------------------------------------------------------------------------
 # Plot setup 

@@ -136,6 +136,7 @@ namespace exahype2 {
       int    unknowns
     );
 
+
     /**
      * Just runs over the patch and ensures that no entry is non or infinite. In
      * ExaHyPE, we primarily work with split approaches. That is, diagonal halo
@@ -161,6 +162,7 @@ namespace exahype2 {
       double* maxValues = nullptr
     );
 
+
     /**
      * Plot patch.
      *
@@ -178,8 +180,6 @@ namespace exahype2 {
     );
 
 
-
-
     std::string plotPatchOverlap(
       const double* __restrict__ Q,
       int    unknowns,
@@ -188,6 +188,24 @@ namespace exahype2 {
       int    haloSize,
       int    normal,
       bool   prettyPrint = false
+    );
+
+
+    /**
+     * A face always holds a left and a right overlap
+     *
+     * This routine copies over half of the overlap
+     *
+     * @param isRightLayer
+     */
+    void copyHalfOfHalo(
+      int    unknownsPlusAuxiliaryVariables,
+      int    numberOfGridCellsPerPatchPerAxis,
+      int    haloSize,  // same as overlap
+      int    normal,
+      bool   isRightLayer,
+      const double* __restrict__   srcQ,
+      double* __restrict__         destQ
     );
   }
 }
