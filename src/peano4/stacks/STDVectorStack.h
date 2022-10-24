@@ -102,7 +102,7 @@ class peano4::stacks::STDVectorStack {
      * One is allowed to clone/copy a stack, but it has to be empty.
      * Usually only when we cut the domain into pieces.
      */
-    STDVectorStack<T>( const STDVectorStack<T>& stack ):
+    STDVectorStack( const STDVectorStack<T>& stack ):
       _data(),
       _currentElement(0),
       _ioMode(IOMode::None)
