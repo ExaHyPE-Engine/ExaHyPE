@@ -24,7 +24,7 @@ class InitialCondition(AbstractAderDGActionSet):
       repositories::{{SOLVER_INSTANCE}}.initialCondition(
         fineGridCell{{UNKNOWN_IDENTIFIER}}.value + linearisedIndex,
         ::exahype2::aderdg::getQuadraturePoint(
-          marker.x(), marker.h(), index, repositories::{{SOLVER_INSTANCE}}.Order+1, repositories::{{SOLVER_INSTANCE}}.QuadraturePoints
+          marker.x(), marker.h(), index, repositories::{{SOLVER_INSTANCE}}.Order+1, repositories::{{SOLVER_INSTANCE}}.QuadraturePoints1d
         ),
         marker.h(),
         index,
