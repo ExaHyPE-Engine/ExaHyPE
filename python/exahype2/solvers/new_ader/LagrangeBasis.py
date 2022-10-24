@@ -43,6 +43,9 @@ class LagrangeBasis():
     self.__fine_grid_projector             = [None]*3
     for j in range(0,3):
       self.__fine_grid_projector[j] = self.__compute_fine_grid_projector(j)
+
+    #for tracer
+    self.order = num_points-1
       
       
   def __str__(self):
@@ -422,6 +425,8 @@ class LagrangeBasis():
     for var in ["quadrature_points","quadrature_weights","barycentric_weights","basis_function_values_left","basis_function_values_right","derivative_operator","mass_matrix","stiffness_operator","inverted_predictor_lhs_operator","equidistant_grid_projector","fine_grid_projector"]:
       var_key  = "_LagrangeBasis__" + var # prefix for privat variables of class LagrangeBasis
       var_name = snake_to_camel(var) # C++ name
+      if var is "quadrature_points":
+        var_name = "QuadraturePoints1d"
       if var in ["quadrature_points","quadrature_weights","barycentric_weights","basis_function_values_left","basis_function_values_right"]:
           basisDeclarations += "const double {var_name}[{order}+1];\n".format(indent="  "*2,var_name=var_name,order=self.__max_poly_order)
           basisInitializers += "{var_name}{initializer},\n".format(var_name=var_name,\
