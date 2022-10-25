@@ -13,11 +13,7 @@ import dastgen2.attributes.Integer
 class InsertParticlesbyCoordinates(ActionSet):
   def __init__(self,particle_set,coordinates=[[0,0,0],[0,0,0]]):
     """
-=
-
     particle_set: ParticleSet
- 
-    N: number of particles
 
     coordinates: [ [Int,Int,Int] ]
       Coordinates for the particle. If you work in 2d, the third coordinate
