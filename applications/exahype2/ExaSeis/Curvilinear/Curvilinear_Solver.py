@@ -18,7 +18,7 @@ unknowns       = {'sigma': 6, 'v': 3}
 auxiliary_variables = {'rho': 1, 'cp': 1, 'cs': 1, 'jacobian': 1, 'metric_derivative': 9, 'curve_grid': 3}
 
 max_h = 1.0
-min_h          = 0.9 * max_h / 3.0
+min_h = 0.9 * max_h / 3.0
 
 theSolver=GlobalFixedTimeStep(
   name="CurvilinearSolver",  order=3,
@@ -31,9 +31,46 @@ theSolver=GlobalFixedTimeStep(
   )
 
 theSolver.set_implementation( refinement_criterion=exahype2.solvers.new_ader.PDETerms.User_Defined_Implementation)
-theSolver.add_kernel_optimizations(is_linear=True,use_kernel_generator=True,architecture="noarch")
+theSolver.add_kernel_optimizations(is_linear=True,use_kernel_generator=True,architecture="noarch", initialize_patches=True)
 
 project.add_solver(theSolver)
+
+
+
+
+
+
+tracer_particles = project.add_tracer( name="Tracer", attribute_count=25 )
+project.add_action_set_to_initialisation( 
+  exahype2.tracer.InsertParticlesbyCoordinates( 
+    particle_set=tracer_particles,
+    coordinates=[
+      [0.0, 0.0, 0.693],   [0.0, 0.0, 5.543],   [0.0, 0.0, 10.392], 
+      [0.490, 0.0, 0.490], [3.919, 0.0, 3.919], [7.348, 0.0, 7.348], 
+      [0.577, 0.0, 0.384], [4.612, 0.0, 3.075], [8.647, 0.0, 5.674] ]
+    )
+  )
+project.add_action_set_to_timestepping(
+  peano4.toolbox.particles. UpdateParallelState(
+    particle_set=tracer_particles
+  )
+)
+
+project.add_action_set_to_timestepping(exahype2.tracer.DiscontinuousGalerkinTracing(tracer_particles,
+  theSolver,
+  time_stepping_kernel="toolbox::particles::staticPosition",
+  project_on_tracer_properties_kernel="::exahype2::dg::projectAllValuesOntoParticle"))
+
+project.add_action_set_to_timestepping(exahype2.tracer.DumpTrajectoryIntoDatabase(
+  particle_set=tracer_particles,
+  solver=theSolver,
+  filename="Tracer-Curvilinear",
+  data_delta_between_two_snapsots=1e16,
+  time_delta_between_two_snapsots=0.01
+  ))
+
+
+
 
 dimensions = 3
 build_mode = peano4.output.CompileMode.Release
@@ -45,30 +82,30 @@ project.set_global_simulation_parameters(
   dimensions = dimensions,
   offset = offset,
   size = size,
-  min_end_time = 5.0,
-  max_end_time = 5.0,
+  min_end_time = 0.5,
+  max_end_time = 0.5,
   first_plot_time_stamp = 0.0,
-  time_in_between_plots = 0.1,
+  time_in_between_plots = 0.0,
   periodic_BC = [False,False,False]
 )
 
-#plot everything every 10th time stamp
-project.add_plot_filter( offset,size,10 )
+
+
+
+
+
+
+
+
+
+
+
 
 #List of probe points every time stamp
 probe_points = [ 
   [0.0, 0.0, 0.693],   [0.0, 0.0, 5.543],   [0.0, 0.0, 10.392], 
   [0.490, 0.0, 0.490], [3.919, 0.0, 3.919], [7.348, 0.0, 7.348], 
   [0.577, 0.0, 0.384], [4.612, 0.0, 3.075], [8.647, 0.0, 5.674] ]
-
-#For each of these, add them to the plot filtering and write their output each time stamp
-for probe_point in probe_points:
-  project.add_plot_filter( probe_point, [0.0,0.0,0.0], 5 )
-
-#If it doesn't already exist, create the directory "output" and later write the solution data there
-if not os.path.exists("output"):
-  os.mkdir("output")
-project.set_output_path( "output" )
 
 #
 # So here's the parallel stuff. This is new compared to the serial
@@ -79,7 +116,6 @@ project.set_Peano4_installation( "../../../../", build_mode )
 peano4_project = project.generate_Peano4_project("False")
 
 peano4_project.output.makefile.set_CXX_compiler("mpic++")
-peano4_project.output.makefile.add_CXX_flag("-I/home/marc/.local/include")
-peano4_project.output.makefile.add_library("-L/home/marc/.local/lib -fopenmp -lcurvi -leasi -lyaml-cpp -limpalajit -lasagi -lnetcdf -lnuma -lmpi")
+peano4_project.output.makefile.add_library("-fopenmp -lcurvi -leasi -lyaml-cpp -limpalajit -lasagi -lnetcdf -lnuma -lmpi")
 
 peano4_project.build(make_clean_first=True, number_of_parallel_builds=4)
