@@ -161,40 +161,13 @@ class CellCenteredFiniteDifferences(object):
     self._refinement_criterion_implementation = None
     self._initial_conditions_implementation   = None
 
-    #self._interpolation = "linear_with_constant_extrapolation"
-    #self._restriction   = "inject"
-    self._restriction   = "inject"
+    #default interpolation scheme
+    #TP stands for tensor product type operator
+    self.interpolation = "TP_constant"
+    #self.interpolation = "TP_linear_with_linear_extrap_normal_interp" 
+    self.restriction   = "TP_inject" 
+    #self.restriction   = "TP_average_normal_extrap" 
 
-
-# This should go away
-
-    self._interpolation = "tensor_product< " + self._name + ">"
-    self.add_solver_constants( """static constexpr double  NormalInterpolationMatrix1d[]     = {
-      0.0, 0.0, 1.0, 0.0, 0.0, 0.0,
-      0.0, 0.0, 1.0, 0.0, 0.0, 0.0,
-      0.0, 0.0, 1.0, 0.0, 0.0, 0.0
-      0.0, 1.0, 0.0};
-    """ )
-    self.add_solver_constants( """static constexpr double  TangentialInterpolationMatrix1d[] = {
-      1.0,0.0,0.0,0.0,0.0,
-      1.0,0.0,0.0,0.0,0.0,
-      1.0,0.0,0.0,0.0,0.0,
-      0.0,1.0,0.0,0.0,0.0,
-      0.0,1.0,0.0,0.0,0.0,
-
-      0.0,1.0,0.0,0.0,0.0,
-      0.0,0.0,1.0,0.0,0.0,
-      0.0,0.0,1.0,0.0,0.0,
-      0.0,0.0,1.0,0.0,0.0,
-      0.0,0.0,0.0,1.0,0.0,
-
-      0.0,0.0,0.0,1.0,0.0,
-      0.0,0.0,0.0,1.0,0.0,
-      0.0,0.0,0.0,0.0,1.0,
-      0.0,0.0,0.0,0.0,1.0,
-      0.0,0.0,0.0,0.0,1.0
-    };""" )
-    
     self.create_data_structures()
     self.create_action_sets()
 
@@ -1007,7 +980,12 @@ The finest mesh width of """ + str(self.get_finest_volume_size(domain_size)) + "
 
   @interpolation.setter
   def interpolation(self,value):
+
     self._interpolation = value
+    interp_matrix_T, interp_matrix_N=self.__compute_interpolation_matrix1d(value)
+    self.add_solver_constants("""static constexpr double  TangentialInterpolationMatrix1d[] = {}\n\n""".format( self._render_tensor_3( interp_matrix_T ) ) )
+    self.add_solver_constants("""static constexpr double  NormalInterpolationMatrix1d[] = {}\n\n""".format( self._render_tensor_3( interp_matrix_N ) ) )
+
     self.create_data_structures()
     self.create_action_sets()
 
@@ -1019,6 +997,67 @@ The finest mesh width of """ + str(self.get_finest_volume_size(domain_size)) + "
 
   @restriction.setter
   def restriction(self,value):
+
     self._restriction = value
+    restrict_matrix=self.__compute_restriction_matrix1d(value)
+    self.add_solver_constants("""static constexpr double RestrictionMatrix1d[] = {};\n\n""".format( self._render_tensor_3( restrict_matrix ) ) )
+
     self.create_data_structures()
     self.create_action_sets()
+
+  def __compute_interpolation_matrix1d(self,value):
+    if value=="TP_constant":
+      pass 
+    if value=="TP_linear_with_linear_extrap_normal_interp":
+      pass #two matrix here
+    
+    return 1,2
+
+  def __compute_restriction_matrix1d(self,value):
+    if value=="TP_inject":
+      pass
+    if value=="TP_average_normal_extrap"
+      pass
+      
+    return 1
+
+
+  #I steal it from rkdg scheme to make the c++ code injection eaiser
+  def _render_tensor_3(self,tensor,use_multidimensional_arrays=False,entry_seperator=",",vector_seperator=("{","}")):
+    """
+    Converts nested list or numpy matrix to nested list of strings.
+    :param tensor: nested list or numpy matrix storing  mpmath numbers
+    """
+    def render_row(row):
+      row_result = ""
+      if use_multidimensional_arrays:
+        row_result += vector_seperator[0]
+      row_result += str(row[0])
+      for elem in row[1:]:
+        row_result += entry_seperator
+        row_result += str(elem)
+      if use_multidimensional_arrays:
+        row_result += vector_seperator[1]
+      return row_result
+        
+    
+    def render_block(block):
+      row_result = ""
+      if use_multidimensional_arrays:
+        row_result += vector_seperator[0]
+      row_result += render_row(block[0])
+      for elem in block[1:]:
+        row_result += entry_seperator
+        row_result += render_row(elem)
+      if use_multidimensional_arrays:
+        row_result += vector_seperator[1]
+      return row_result
+        
+    
+    result = vector_seperator[0]
+    result += render_block(tensor[0])
+    for row in tensor[1:]:
+      result += entry_seperator
+      result += render_block(row)
+    result += vector_seperator[1]
+    return result

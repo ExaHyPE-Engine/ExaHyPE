@@ -280,17 +280,20 @@ class LagrangeBasisWithDiagonalMassMatrix(LagrangeBasis):
     We can also use the same matrix to interpolate along the normal direction.
  
     """
-    interp_matrix = [ [0.0 for _ in range(0,self.dofs_per_axis)] for _ in range(0,3*self.dofs_per_axis) ]
-    fine_grid_point = [0.0 for _ in range(0,3*self.dofs_per_axis) ]  
-    for index in range(0,self.dofs_per_axis):
-      fine_grid_point[index                     ]=self.quadrature_points[index]/3.0
-      fine_grid_point[index+  self.dofs_per_axis]=self.quadrature_points[index]/3.0+1.0/3.0
-      fine_grid_point[index+2*self.dofs_per_axis]=self.quadrature_points[index]/3.0+2.0/3.0
-    for row in range(0, 3*self.dofs_per_axis):
-      for col in range(0, self.dofs_per_axis):
-        interp_matrix[row][col]=self.value1d(fine_grid_point[row],col)
+    if self._polynomial_order == 0:
+      return [[[1.0]],[[1.0]],[[1.0]]]
+    else:
+      interp_matrix = [ [0.0 for _ in range(0,self.dofs_per_axis)] for _ in range(0,3*self.dofs_per_axis) ]
+      fine_grid_point = [0.0 for _ in range(0,3*self.dofs_per_axis) ]  
+      for index in range(0,self.dofs_per_axis):
+        fine_grid_point[index                     ]=self.quadrature_points[index]/3.0
+        fine_grid_point[index+  self.dofs_per_axis]=self.quadrature_points[index]/3.0+1.0/3.0
+        fine_grid_point[index+2*self.dofs_per_axis]=self.quadrature_points[index]/3.0+2.0/3.0
+      for row in range(0, 3*self.dofs_per_axis):
+        for col in range(0, self.dofs_per_axis):
+          interp_matrix[row][col]=self.value1d(fine_grid_point[row],col)
 
-    return interp_matrix 
+      return interp_matrix 
 
 
   def __compute_restriction_matrix(self):
@@ -305,17 +308,20 @@ class LagrangeBasisWithDiagonalMassMatrix(LagrangeBasis):
 
 
     """
-    restriction_matrix = [ [0.0 for _ in range(0,3*self.dofs_per_axis)] for _ in range(0,self.dofs_per_axis) ]
-    fine_grid_point = [0.0 for _ in range(0,3*self.dofs_per_axis) ]  
-    for index in range(0,self.dofs_per_axis):
-      fine_grid_point[index                     ]=self.quadrature_points[index]/3.0
-      fine_grid_point[index+  self.dofs_per_axis]=self.quadrature_points[index]/3.0+1.0/3.0
-      fine_grid_point[index+2*self.dofs_per_axis]=self.quadrature_points[index]/3.0+2.0/3.0
-    for row in range(0, 3*self.dofs_per_axis):
-      for col in range(0, self.dofs_per_axis):
-        restriction_matrix[row][col]=self.value1d(fine_grid_point[col],row)/3.0
+    if self._polynomial_order == 0:
+      return [[[1.0/3.0]],[[1.0/3.0]],[[1.0/3.0]]]
+    else:
+      restriction_matrix = [ [0.0 for _ in range(0,3*self.dofs_per_axis)] for _ in range(0,self.dofs_per_axis) ]
+      fine_grid_point = [0.0 for _ in range(0,3*self.dofs_per_axis) ]  
+      for index in range(0,self.dofs_per_axis):
+        fine_grid_point[index                     ]=self.quadrature_points[index]/3.0
+        fine_grid_point[index+  self.dofs_per_axis]=self.quadrature_points[index]/3.0+1.0/3.0
+        fine_grid_point[index+2*self.dofs_per_axis]=self.quadrature_points[index]/3.0+2.0/3.0
+      for row in range(0, 3*self.dofs_per_axis):
+        for col in range(0, self.dofs_per_axis):
+          restriction_matrix[row][col]=self.value1d(fine_grid_point[col],row)/3.0
 
-    return restriction_matrix   
+      return restriction_matrix   
 
 
   def __compute_K1(self):
@@ -431,32 +437,6 @@ class LagrangeBasisWithDiagonalMassMatrix(LagrangeBasis):
       for m in range(0, self.__num_points): # DG basis
         equidistantGridProjector[m][i] = phi_i[m]
     return equidistantGridProjector
-  
-  
-  def __compute_restriction_matrix(self):
-    """
-    
-    Only variant is implemented atm. See __compute_interpolation_matrix() which 
-    also does not yet support higher orders.
-    
-    """
-    #assert self._polynomial_order==0
-    return [[[1.0/3.0]],[[1.0/3.0]],[[1.0/3.0]]]
-  
-  
-  def __compute_interpolation_matrix(self):
-    """
-    
-    There is alrady a projection operation. It is called __compute_fine_grid_projector. 
-    Maybe we can use this one (it is currently not used at all). If we don't use it,
-    we should remove it from the source code. This routine returns three matrices of 
-    size (p+1) x (p+1). Please consult the discussion around Discontinuous Galerkin
-    AMR in the C++ file exahype2/dg/Riemann.h. I explain there what this operator 
-    looks like and how it is used.
-    
-    """
-    #assert self._polynomial_order==0
-    return [[[1.0]],[[1.0]],[[1.0]]]
   
   
   def init_dictionary_with_default_parameters(self,dictionary,use_multidimensional_arrays):
