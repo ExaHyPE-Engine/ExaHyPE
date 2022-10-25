@@ -63,16 +63,27 @@ void benchmarks::exahype2::euler::sphericalaccretionupscaling::SelfSimilarInfall
 
 void benchmarks::exahype2::euler::sphericalaccretionupscaling::SelfSimilarInfallFD4::initialCondition(
   double * __restrict__ Q,
-  const tarch::la::Vector<Dimensions,double>&  volumeCentre,
-  const tarch::la::Vector<Dimensions,double>&  volumeH,
+  const tarch::la::Vector<Dimensions,double>&  meshCellCentre,
+  const tarch::la::Vector<Dimensions,double>&  meshCellH,
   bool                                         gridIsConstructred
 ) {
-  logTraceInWith3Arguments( "initialCondition(...)", volumeCentre, volumeH, gridIsConstructred );
+  logTraceInWith3Arguments( "initialCondition(...)", meshCellCentre, meshCellH, gridIsConstructred );
 
   for (int i=0; i<NumberOfUnknowns+NumberOfAuxiliaryVariables; i++) {
     Q[i] = 0.0;
   }
 
+  applications::exahype2::euler::sphericalaccretion::initialiseOverdensity_Gaussian(
+    Q,
+    meshCellCentre,
+    InitialTopHatRadius,
+    AdditionalMass,
+    BaseDensity,
+    pInitial,
+    Gamma
+  );
+
+/*
   applications::exahype2::euler::sphericalaccretion::initialiseOverdensity_topHat(
     Q,
     volumeCentre,
@@ -82,6 +93,7 @@ void benchmarks::exahype2::euler::sphericalaccretionupscaling::SelfSimilarInfall
     pInitial,
     Gamma
   );
+*/
 
   logTraceOut( "initialCondition(...)" );
 }

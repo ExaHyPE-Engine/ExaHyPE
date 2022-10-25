@@ -165,26 +165,34 @@ class CellCenteredFiniteDifferences(object):
     #self._restriction   = "inject"
     self._restriction   = "inject"
 
+
+# This should go away
+
     self._interpolation = "tensor_product< " + self._name + ">"
-    self.add_solver_constants(   "static constexpr double  NormalInterpolationMatrix1d[]     = {0.0, 1.0, 0.0};" )
+    self.add_solver_constants( """static constexpr double  NormalInterpolationMatrix1d[]     = {
+      0.0, 0.0, 1.0, 0.0, 0.0, 0.0,
+      0.0, 0.0, 1.0, 0.0, 0.0, 0.0,
+      0.0, 0.0, 1.0, 0.0, 0.0, 0.0
+      0.0, 1.0, 0.0};
+    """ )
     self.add_solver_constants( """static constexpr double  TangentialInterpolationMatrix1d[] = {
-            1.0,0.0,0.0,0.0,0.0,
-            1.0,0.0,0.0,0.0,0.0,
-            1.0,0.0,0.0,0.0,0.0,
-            0.0,1.0,0.0,0.0,0.0,               
-            0.0,1.0,0.0,0.0,0.0,
-            
-            0.0,1.0,0.0,0.0,0.0,
-            0.0,0.0,1.0,0.0,0.0,
-            0.0,0.0,1.0,0.0,0.0,
-            0.0,0.0,1.0,0.0,0.0,
-            0.0,0.0,0.0,1.0,0.0,
-            
-            0.0,0.0,0.0,1.0,0.0,
-            0.0,0.0,0.0,1.0,0.0,
-            0.0,0.0,0.0,0.0,1.0,
-            0.0,0.0,0.0,0.0,1.0,
-            0.0,0.0,0.0,0.0,1.0
+      1.0,0.0,0.0,0.0,0.0,
+      1.0,0.0,0.0,0.0,0.0,
+      1.0,0.0,0.0,0.0,0.0,
+      0.0,1.0,0.0,0.0,0.0,
+      0.0,1.0,0.0,0.0,0.0,
+
+      0.0,1.0,0.0,0.0,0.0,
+      0.0,0.0,1.0,0.0,0.0,
+      0.0,0.0,1.0,0.0,0.0,
+      0.0,0.0,1.0,0.0,0.0,
+      0.0,0.0,0.0,1.0,0.0,
+
+      0.0,0.0,0.0,1.0,0.0,
+      0.0,0.0,0.0,1.0,0.0,
+      0.0,0.0,0.0,0.0,1.0,
+      0.0,0.0,0.0,0.0,1.0,
+      0.0,0.0,0.0,0.0,1.0
     };""" )
     
     self.create_data_structures()
