@@ -680,7 +680,7 @@ if __name__ == "__main__":
       my_solver.overlap=3
     #for rkfd the overlap is automatically assigned in solver class
 
-    my_solver.restriction = "averaging" # "linear"
+    #my_solver.restriction = "averaging" # "linear"
 
     if args.interpolation=="constant":
       my_solver.interpolation = "piecewise_constant"
@@ -694,19 +694,23 @@ if __name__ == "__main__":
     if args.interpolation=="linear-con-extrap-lin-normal-interp":
       my_solver.interpolation = "linear_with_constant_extrapolation_and_linear_normal_interpolation"
       print( "Interpolation rule: linear+constant extrapolation and linear normal interpolation" )
-    if args.interpolation=="linear-lin-extrap-lin-normal-interp":
-      my_solver.interpolation = "linear_with_linear_extrapolation_and_linear_normal_interpolation" 
-      print( "Interpolation rule: linear+linear extrapolation and linear normal interpolation" )
+    #if args.interpolation=="linear-lin-extrap-lin-normal-interp":
+    #  my_solver.interpolation = "linear_with_linear_extrapolation_and_linear_normal_interpolation" 
+    #  print( "Interpolation rule: linear+linear extrapolation and linear normal interpolation" )
 
     if args.interpolation=="order-2":
       my_solver.interpolation = "linear" 
 
-    if args.restriction=="average":
-      my_solver.restriction =  "averaging"
-      print( "Restiction rule: averaging" )
-    if args.restriction=="inject":
-      my_solver.restriction_scheme = "inject" 
-      print( "Restiction rule: injection" )
+    #if args.restriction=="average":
+    #  my_solver.restriction =  "averaging"
+    #  print( "Restiction rule: averaging" )
+    #if args.restriction=="inject":
+    #  my_solver.restriction_ = "inject" 
+    #  print( "Restiction rule: injection" )
+
+    #we overwrite the transition scheme here to test multilayers operator
+    my_solver.interpolation = "TP_constant"
+    my_solver.restriction= "TP_inject_normal_extrap"
           
     #if args.interpolation=="linear+enforce" or args.interpolation=="linear-slow+enforce":
     #  self.point_wise_postprocessing_of_interpolation = "examples::exahype2::ccz4::enforceCCZ4constraints(targetVolume)" )
@@ -762,29 +766,29 @@ if __name__ == "__main__":
     solverconstants=""
 
     if args.scenario=="gauge":
-      solverconstants+= "static constexpr int Scenario=0; /* Gauge wave */  "
+      solverconstants+= "static constexpr int Scenario=0; /* Gauge wave */ \n "
       userinfo.append(("picking gauge wave scenario",None))
       floatparams.update({"sk":0.0}); floatparams.update({"bs":0.0})
       intparams.update({"LapseType":0})
     elif args.scenario=="dia_gauge":
-      solverconstants+= "static constexpr int Scenario=3; /* Diagonal Gauge wave */  "
+      solverconstants+= "static constexpr int Scenario=3; /* Diagonal Gauge wave */ \n "
       userinfo.append(("picking diagonal gauge wave scenario",None))
       floatparams.update({"sk":0.0}); floatparams.update({"bs":0.0})
       intparams.update({"LapseType":0})
     elif args.scenario=="linear":
-      solverconstants+= "static constexpr int Scenario=1; /* Linear wave */  "
+      solverconstants+= "static constexpr int Scenario=1; /* Linear wave */ \n "
       userinfo.append(("picking linear wave scenario",None))
       floatparams.update({"sk":0.0}); floatparams.update({"bs":0.0})
       intparams.update({"LapseType":0})
     elif  (args.scenario=="two-punctures") or (args.scenario=="single-puncture"):
-      solverconstants+= "static constexpr int Scenario=2; /* Two-puncture */ "
+      solverconstants+= "static constexpr int Scenario=2; /* Two-puncture */ \n"
       userinfo.append(("picking black hole scenario",None))
     else:
       raise Exception( "Scenario " + args.scenario + " is now unknown")  
 
     for k, v in floatparams.items(): solverconstants+= "static constexpr double {} = {};\n".format("CCZ4{}".format(k), v)
     for k, v in intparams.items():   solverconstants+= "static constexpr int {} = {};\n".format("CCZ4{}".format(k), v)
-    my_solver.set_solver_constants(solverconstants)
+    my_solver.add_solver_constants(solverconstants)
 
     project.add_solver(my_solver)
 
