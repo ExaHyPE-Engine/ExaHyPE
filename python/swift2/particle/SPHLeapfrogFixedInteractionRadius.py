@@ -84,6 +84,11 @@ class SPHLeapfrogFixedInteractionRadius(Particle):
     self.data.add_attribute( self.velocity )
     self.data.add_attribute( self.accelerator )
 
+    # SPH parameters (default values)
+    self.hydroDimensions = 2
+    self.kernelSupportRadius = 2.0
+
+
     """
 
     Here, we could further add some particle properties such as density.
@@ -117,13 +122,23 @@ class SPHLeapfrogFixedInteractionRadius(Particle):
         cell_kernel                    = """
                                          ::swift2::kernels::computeDensityWithConstantSmoothingLength<globaldata::{}>( 
                                            localParticles, 
-                                           activeParticles
+                                           activeParticles,
+                                           {},
+                                           {}
                                          );
-                                         """.format(self.name),
+                                         """.format(self.name,
+                                                    self.kernelSupportRadius,
+                                                    self.hydroDimensions),
 
         touch_vertex_last_time_kernel  = """
-                                         ::swift2::kernels::endDensityCalculation<globaldata::{}>( localParticles );
-                                         """.format(self.name),
+                                         ::swift2::kernels::endDensityCalculation<globaldata::{}>(
+                                             localParticles,
+                                             {},
+                                             {}
+                                             );
+                                         """.format(self.name,
+                                                    self.kernelSupportRadius,
+                                                    self.hydroDimensions),
  
         includes                       = """
                                          #include "Constants.h"
@@ -199,13 +214,23 @@ class SPHLeapfrogFixedInteractionRadius(Particle):
         cell_kernel                    = """
                                          ::swift2::kernels::computeDensityWithConstantSmoothingLength<globaldata::{}>( 
                                            localParticles, 
-                                           activeParticles
+                                           activeParticles,
+                                           {},
+                                           {}
                                          );
-                                         """.format(self.name),
+                                         """.format(self.name,
+                                                    self.kernelSupportRadius,
+                                                    self.hydroDimensions),
 
         touch_vertex_last_time_kernel  = """
-                                         ::swift2::kernels::endDensityCalculation<globaldata::{}>( localParticles );
-                                         """.format(self.name),
+                                         ::swift2::kernels::endDensityCalculation<globaldata::{}>(
+                                             localParticles,
+                                             {},
+                                             {}
+                                             );
+                                         """.format(self.name,
+                                                    self.kernelSupportRadius,
+                                                    self.hydroDimensions),
  
         includes                       = """
                                          #include "Constants.h"
