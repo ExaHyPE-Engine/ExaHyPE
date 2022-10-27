@@ -4,6 +4,7 @@
 
 
 #include <list>
+#include <vector>
 
 
 namespace swift2 {
@@ -23,7 +24,7 @@ namespace swift2 {
      */
     template <typename Particle>
     void genericSelfInteraction(
-      const std::list< Particle* > &localParticles,
+      const std::vector< Particle* >& localParticles,
       std::function< void(Particle* localParticle) > interaction
     );
 
@@ -32,7 +33,7 @@ namespace swift2 {
     // contribution, etc
     template <typename Particle>
     void prepareDensityCalculation(
-      const std::list< Particle* > &localParticles
+      const std::vector< Particle* >& localParticles
     );
 
     /* This is equivalent to the hydro_end_density function in SWIFT */
@@ -40,7 +41,7 @@ namespace swift2 {
     // iteration.
     template <typename Particle>
     void endDensityCalculation(
-      const std::list< Particle* > &localParticles,
+      const std::vector< Particle* >& localParticles,
       const double kernelSupportRadius,
       const int hydroDimensions
     );
