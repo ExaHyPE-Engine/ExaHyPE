@@ -63,6 +63,7 @@ class SPHLeapfrogFixedInteractionRadius(Particle):
                name, 
                cfl_factor, 
                initial_time_step_size,
+               swift_project_namespace,
                particle_particle_interaction_over_particle_sets_kernel = "",
                touch_particles_of_set_first_time_kernel = "",
                touch_particles_of_set_last_time_kernel  = ""
@@ -73,7 +74,7 @@ class SPHLeapfrogFixedInteractionRadius(Particle):
     self.cfl_factor                = cfl_factor
     self.initial_time_step_size    = initial_time_step_size
     
-    # particle interaction kernels
+    # particle interaction kernels -- not needed herE?
     self.particle_particle_interaction_over_particle_sets_kernel = particle_particle_interaction_over_particle_sets_kernel
     self.touch_particles_of_set_first_time_kernel                = touch_particles_of_set_first_time_kernel 
     self.touch_particles_of_set_last_time_kernel                 = touch_particles_of_set_last_time_kernel
@@ -87,7 +88,20 @@ class SPHLeapfrogFixedInteractionRadius(Particle):
     # SPH parameters (default values)
     self.hydroDimensions = 2
     self.kernelSupportRadius = 2.0
+    self.etaFactor = 1.235
+    self.hTolerance = 1e-4
+    self.hHydroMin = 1e-6
+    self.hHydroMax = 0.2
 
+    # Minimal SPH parameters
+    self.alphaAV = 0.8
+    self.betaAV = 3.0
+
+
+
+
+    # Project namespace to have consistent use of exported Constants in kernels
+    self.swift_project_namespace = swift_project_namespace
 
     """
 
@@ -134,11 +148,21 @@ class SPHLeapfrogFixedInteractionRadius(Particle):
                                          ::swift2::kernels::endDensityCalculation<globaldata::{}>(
                                              localParticles,
                                              {},
+                                             {},
+                                             {},
+                                             {},
+                                             {},
+                                             {},
                                              {}
                                              );
                                          """.format(self.name,
                                                     self.kernelSupportRadius,
-                                                    self.hydroDimensions),
+                                                    self.hydroDimensions,
+                                                    self.etaFactor,
+                                                    self.hTolerance,
+                                                    self.hHydroMin,
+                                                    self.hHydroMax,
+                                                    self.alphaAV),
  
         includes                       = """
                                          #include "Constants.h"
@@ -226,11 +250,21 @@ class SPHLeapfrogFixedInteractionRadius(Particle):
                                          ::swift2::kernels::endDensityCalculation<globaldata::{}>(
                                              localParticles,
                                              {},
+                                             {},
+                                             {},
+                                             {},
+                                             {},
+                                             {},
                                              {}
                                              );
                                          """.format(self.name,
                                                     self.kernelSupportRadius,
-                                                    self.hydroDimensions),
+                                                    self.hydroDimensions,
+                                                    self.etaFactor,
+                                                    self.hTolerance,
+                                                    self.hHydroMin,
+                                                    self.hHydroMax,
+                                                    self.alphaAV),
  
         includes                       = """
                                          #include "Constants.h"
@@ -301,4 +335,14 @@ class SPHLeapfrogFixedInteractionRadius(Particle):
                                          """              
       ),
     ]
+
+  def get_cpp_namespace_from_project_namespace(self):
+    namespace = ""
+    for entry in self.swift_project_namespace:
+      namespace = namespace + "::" + entry
+
+    namespace = namespace + "::" 
+    print(namespace)
+
+
 

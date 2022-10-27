@@ -43,7 +43,12 @@ namespace swift2 {
     void endDensityCalculation(
       const std::vector< Particle* >& localParticles,
       const double kernelSupportRadius,
-      const int hydroDimensions
+      const int hydroDimensions,
+      const double etaFactor,
+      const double alphaAV,
+      const double hTolerance,
+      const double hHydroMin,
+      const double hHydroMax
     );
 
 

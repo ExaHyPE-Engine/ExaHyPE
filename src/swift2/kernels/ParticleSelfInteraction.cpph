@@ -55,7 +55,12 @@ template <typename Particle>
 void swift2::kernels::endDensityCalculation(
   const std::vector< Particle* >& localParticles,
   const double kernelSupportRadius,
-  const int hydroDimensions
+  const int hydroDimensions,
+  const double etaFactor,
+  const double alphaAV,
+  const double hTolerance,
+  const double hHydroMin,
+  const double hHydroMax
 ) {
   for (auto* particle: localParticles ) {
     if ( not particle->getCellHasUpdatedParticle() ) {
@@ -165,11 +170,11 @@ void swift2::kernels::endDensityCalculation(
         }
       
         /* Compute the Balsara Switch */
-        const double balsara = ALPHA_AV * abs_div_v /
+        const double balsara = alphaAV * abs_div_v /
                                (abs_div_v + curl_v + 0.0001 * soundspeed * h_inv);
                                    
         assertion6( std::isfinite(balsara), particle->toString(), balsara, abs_div_v, 
-                                            curl_v, soundspeed, ALPHA_AV );
+                                            curl_v, soundspeed, alphaAV );
       
         /* Update variables */
         const double P_a = gas_pressure_from_internal_energy( rho_a, particle->getU() );
@@ -198,18 +203,18 @@ void swift2::kernels::endDensityCalculation(
       // =============================
       //
       {
-        const double timeStepSize = GLOBAL_TIME_STEP_SIZE;
-        const double hydro_eta_dim = std::pow(SMOOTH_L_FAC, hydroDimensions);
-        const double eps = H_TOLERANCE; 
+//        const double timeStepSize = GLOBAL_TIME_STEP_SIZE;
+        const double hydro_eta_dim = std::pow(etaFactor, hydroDimensions);
+        const double eps = hTolerance; 
 
         /* h value at the start of iteration procedure 
          * Here we use the last update on previous time-step */
         const double h_0 = particle->getSmoothingLengthPrevious();
 
         /* Set initial guess for NR */
-//          const double h_init = h_0;
+          const double h_init = h_0;
         // Improved initial guess
-        const double h_init = h_0 + particle->getHDot() * timeStepSize;
+//        const double h_init = h_0 + particle->getHDot() * timeStepSize;
 
         /* Get some useful values */
         double h_old = particle->getSmoothingLength();
@@ -255,13 +260,13 @@ void swift2::kernels::endDensityCalculation(
 /*
           const double one_over_dh_drho_a = - hydroDimensions * particle->getDensity() / h_old;
           const double rho_sum = particle->getDensity();
-          const double rho_target = m_a * std::pow( SMOOTH_L_FAC / h_old, hydroDimensions);
+          const double rho_target = m_a * std::pow( etaFactor / h_old, hydroDimensions);
           const double f = rho_sum - rho_target; // Price et al 2018 sign
           const double f_prime = - one_over_dh_drho_a * particle->getOmega(); // Opposite sign of Price et al 2018
 */
 
           // Debug
-          assertion6( f_prime !=0, particle->toString(), f_prime, h_new, h_old, HYDRO_h_MIN, HYDRO_h_MAX );       
+          assertion6( f_prime !=0, particle->toString(), f_prime, h_new, h_old, hHydroMin, hHydroMax );       
 
           /* Skip if h is already h_max and we don't have enough neighbours */
           /* Same if we are below h_min */
@@ -273,8 +278,8 @@ void swift2::kernels::endDensityCalculation(
           const double GridSizeHalf = 0.5 * 0.3; 
           const double CutoffParticleH = kernelSupportRadius * particle->getSmoothingLength();
    
-          if ( ((particle->getSmoothingLength() >= HYDRO_h_MAX) && (f < 0.0)) ||
-               ((particle->getSmoothingLength() <= HYDRO_h_MIN) && (f > 0.0)) ||
+          if ( ((particle->getSmoothingLength() >= hHydroMax) && (f < 0.0)) ||
+               ((particle->getSmoothingLength() <= hHydroMin) && (f > 0.0)) ||
                  tarch::la::greaterEquals(CutoffParticleH, GridSizeHalf) ){
 
             /* We have a particle whose smoothing length is already set (wants
