@@ -45,7 +45,7 @@ class UpdateParticleMarker(ActionSet):
   __Template_TouchVertexFirstTime = jinja2.Template("""
   auto& particles  = fineGridVertex{{PARTICLES_CONTAINER}};
 
-  for (auto& particle: particles) {
+  for (auto* particle: particles) {
     particle->setCellHasUpdatedParticle(false);
   }
 """)
