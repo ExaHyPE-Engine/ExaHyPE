@@ -161,21 +161,8 @@ class CellCenteredFiniteDifferences(object):
     self._refinement_criterion_implementation = None
     self._initial_conditions_implementation   = None
 
-
-
-    #default interpolation scheme
-    #TP stands for tensor product type operator
-    self._interpolation = "TP_constant"
-    self._restriction   = "TP_inject_normal_extrap" 
-
-    #self.create_data_structures()
-    #self.create_action_sets()
-
-    # real matrix is added here, not very elegant but working
-    #self.interpolation  = "TP_constant"
-    #self.interpolation  = "TP_linear_with_linear_extrap_normal_interp" 
-    #self.restriction    = "TP_inject_normal_extrap" 
-    #self.restriction    = "TP_average_normal_extrap" 
+    self._interpolation = "#error Not yet defined"
+    self._restriction   = "#error Not yet defined"
 
     self.create_data_structures()
     self.create_action_sets()
