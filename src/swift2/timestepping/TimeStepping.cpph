@@ -3,7 +3,7 @@ template <typename Particle>
 void swift2::timestepping::resetMovedParticleMarker(
   const std::vector< Particle* >&  localParticles
 ) {
-  for (auto& particle: localParticles) {
+  for (auto* particle: localParticles) {
     particle->setMoveState( Particle::MoveState::NotMovedYet );
   }
 }

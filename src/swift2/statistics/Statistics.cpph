@@ -10,7 +10,7 @@ void swift2::statistics::reduceVelocityAndCutOffRadius(
     double vMax = 0.0;
     double rMin = std::numeric_limits<double>::max();
     double rMax = 0.0;
-    for (const auto& particle: localParticles) {
+    for (const auto* particle: localParticles) {
       vMin = std::min( vMin, tarch::la::norm2( particle->getV() ) );
       vMax = std::max( vMax, tarch::la::norm2( particle->getV() ) );
       rMin = std::min( rMin, particle->getCutOffRadius() );

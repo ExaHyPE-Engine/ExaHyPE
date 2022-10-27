@@ -8,7 +8,7 @@ void swift2::kernels::genericSelfInteraction(
   const std::vector< Particle* >& localParticles,
   std::function< void(Particle* localParticle) > interaction
 ) {
-  for (auto& particle: localParticles ) {
+  for (auto* particle: localParticles ) {
     if ( not particle->getCellHasUpdatedParticle() ) {
       interaction(particle);
     }
@@ -22,7 +22,7 @@ template <typename Particle>
 void swift2::kernels::prepareDensityCalculation(
   const std::vector< Particle* >& localParticles
 ) {
-  for (auto& particle: localParticles ) {
+  for (auto* particle: localParticles ) {
     if ( not particle->getCellHasUpdatedParticle() ) {
 
       /* This is equivalent to the hydro_init_part function in SWIFT */
@@ -57,7 +57,7 @@ void swift2::kernels::endDensityCalculation(
   const double kernelSupportRadius,
   const int hydroDimensions
 ) {
-  for (auto& particle: localParticles ) {
+  for (auto* particle: localParticles ) {
     if ( not particle->getCellHasUpdatedParticle() ) {
 
     /* This is equivalent to the hydro_end_density function in SWIFT */

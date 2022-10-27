@@ -3,7 +3,7 @@ void swift2::timestepping::computeLeapfrogDriftWithGlobalTimeStepSize(
   const std::vector< Particle* >&  localParticles
 ) {
   double timeStepSize = Particle::getSpecies().getMinTimeStepSize();
-  for (auto& particle: localParticles) {
+  for (auto* particle: localParticles) {
     if (
       particle->getMoveState()==Particle::MoveState::NotMovedYet
       and
@@ -24,7 +24,7 @@ void swift2::timestepping::computeLeapfrogKickWithGlobalTimeStepSize(
   const int kickNumber
 ) {
   double timeStepSizeKick = 0.5 * Particle::getSpecies().getMinTimeStepSize();
-  for (auto& particle: localParticles) {
+  for (auto* particle: localParticles) {
     if (
       particle->getMoveState()==Particle::MoveState::NotMovedYet
       and

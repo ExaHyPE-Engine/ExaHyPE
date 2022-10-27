@@ -3,7 +3,7 @@ void swift2::timestepping::computeExplicitEulerWithGlobalTimeStepSize(
   const std::vector< Particle* >&  localParticles
 ) {
   double timeStepSize = Particle::getSpecies().getMinTimeStepSize();
-  for (auto& particle: localParticles) {
+  for (auto* particle: localParticles) {
     if (
       particle->getMoveState()==Particle::MoveState::NotMovedYet
       and
@@ -12,7 +12,7 @@ void swift2::timestepping::computeExplicitEulerWithGlobalTimeStepSize(
       particle->setX( particle->getX() + timeStepSize * particle->getV() );
     }
   }
-  for (auto& particle: localParticles) {
+  for (auto* particle: localParticles) {
     if (
       particle->getMoveState()==Particle::MoveState::NotMovedYet
       and
@@ -30,7 +30,7 @@ void swift2::timestepping::computeExplicitEulerCromerWithGlobalTimeStepSize(
   const std::vector< Particle* >&  localParticles
 ) {
   double timeStepSize = Particle::getSpecies().getMinTimeStepSize();
-  for (auto& particle: localParticles) {
+  for (auto* particle: localParticles) {
     if (
       particle->getMoveState()==Particle::MoveState::NotMovedYet
       and
@@ -39,7 +39,7 @@ void swift2::timestepping::computeExplicitEulerCromerWithGlobalTimeStepSize(
       particle->setV( particle->getV() + timeStepSize * particle->getA() );
     }
   }
-  for (auto& particle: localParticles) {
+  for (auto* particle: localParticles) {
     if (
       particle->getMoveState()==Particle::MoveState::NotMovedYet
       and
