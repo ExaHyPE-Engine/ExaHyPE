@@ -51,7 +51,24 @@ namespace swift2 {
       const double hHydroMax
     );
 
+    /**
+     * Resets the acceleration and other variables
+     * Done by "hydro_reset_acceleration" in SWIFT 
+     */
+    template <typename Particle>
+    void prepareHydroForceCalculation(
+      const std::vector< Particle* >& localParticles
+    );
 
+    /**
+     * Ends the force calculation and other variables
+     * Done by "hydro_end_force" in SWIFT 
+     */
+    template <typename Particle>
+    void endHydroForceCalculation(
+      const std::vector< Particle* >& localParticles,
+      const int hydroDimensions
+    );
 
 
   }

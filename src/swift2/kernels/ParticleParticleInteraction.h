@@ -26,6 +26,7 @@ namespace swift2 {
         std::function<void(Particle *localParticle, const Particle *const activeParticle)>
             interaction);
 
+
     // Density calculation particle-particle kernel
     template <typename Particle>
     void computeDensityWithConstantSmoothingLength(
@@ -33,6 +34,31 @@ namespace swift2 {
         const std::list<Particle *> &activeParticles,
         const double kernelSupportRadius, 
         const int hydroDimensions);
+
+    /** Hydro Force calculation particle-particle kernel
+     *
+     * @brief Non-symmetric force interaction between two particles (as per Swift terminology). 
+     * In this, only the Local particle is updated (in the symmetric case, both are updated at the same time).
+     * Time derivative of the internal energy, du/dt, is also updated here.
+     * Subscripts a and b represent indices of Local and Active particles, respectively:
+     *
+     * h_a: Smoothing length of Local particle
+     * h_b: Smoothign length of Active particle
+     * dx : Vector separating the two particles (x_loc - x_act)
+     * r  : Distance between the two particles  (|| dx ||)
+     *
+     */
+    template <typename Particle>
+    void computeHydroForce(
+        const std::list<Particle *> &localParticles,
+        const std::list<Particle *> &activeParticles,
+        const double kernelSupportRadius, 
+        const int hydroDimensions,
+        const double betaAV
+        );
+
+
+
 
   } 
 } 
