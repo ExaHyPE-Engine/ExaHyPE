@@ -64,26 +64,22 @@ class SPHLeapfrogFixedInteractionRadius(Particle):
                cfl_factor, 
                initial_time_step_size,
                swift_project_namespace,
-               particle_particle_interaction_over_particle_sets_kernel = "",
-               touch_particles_of_set_first_time_kernel = "",
-               touch_particles_of_set_last_time_kernel  = ""
+               is_sph = True,
+               sph_flavour = 'minimal',
                ):
     super( SPHLeapfrogFixedInteractionRadius , self ).__init__( name )
     
     # Simulation properties
     self.cfl_factor                = cfl_factor
     self.initial_time_step_size    = initial_time_step_size
-    
-    # particle interaction kernels -- not needed herE?
-    self.particle_particle_interaction_over_particle_sets_kernel = particle_particle_interaction_over_particle_sets_kernel
-    self.touch_particles_of_set_first_time_kernel                = touch_particles_of_set_first_time_kernel 
-    self.touch_particles_of_set_last_time_kernel                 = touch_particles_of_set_last_time_kernel
 
-    # Baseline properties --------------------------------------------------------------
-    self.velocity         = peano4.dastgen2.Peano4DoubleArray("v","Dimensions")
-    self.accelerator      = peano4.dastgen2.Peano4DoubleArray("a","Dimensions")
-    self.data.add_attribute( self.velocity )
-    self.data.add_attribute( self.accelerator )
+    # SPH check Boolean for Cpp kernels
+    if(is_sph==True): isSPH='true'
+    else: isSPH='false'
+    self.is_sph = isSPH
+                    
+    self.sph_flavour = sph_flavour
+    self.declare_sph_particle_attributes()
 
     # SPH parameters (default values)
     self.hydroDimensions = 2
@@ -97,20 +93,10 @@ class SPHLeapfrogFixedInteractionRadius(Particle):
     self.alphaAV = 0.8
     self.betaAV = 3.0
 
-
-
-
     # Project namespace to have consistent use of exported Constants in kernels
+    # Not used right now.
     self.swift_project_namespace = swift_project_namespace
-
-    """
-
-    Here, we could further add some particle properties such as density.
-    However, some of them will depend on the SPH flavour adopted. The latter
-    will be added in the actual project.
-
-    """
-
+    
     pass
 
 
@@ -216,7 +202,7 @@ class SPHLeapfrogFixedInteractionRadius(Particle):
         touch_vertex_first_time_kernel = """::swift2::timestepping::resetMovedParticleMarker(localParticles);""",
         touch_vertex_last_time_kernel  =
                     """::swift2::timestepping::computeLeapfrogKickWithGlobalTimeStepSize(
-                        localParticles, 1 );""",
+                        localParticles, 1, {} );""".format(self.is_sph),
         prepare_traversal_kernel       = """::swift2::timestepping::computeAdmissibleTimeStepSizeFromGlobalMeshSizeAndMaximumVelocity<globaldata::{}>({},{});""".format(self.name, self.cfl_factor,self.initial_time_step_size),
         includes                       = """
                                          #include "Constants.h"
@@ -333,7 +319,7 @@ class SPHLeapfrogFixedInteractionRadius(Particle):
         touch_vertex_first_time_kernel = """::swift2::timestepping::resetMovedParticleMarker(localParticles);""",
         touch_vertex_last_time_kernel  =
                     """::swift2::timestepping::computeLeapfrogKickWithGlobalTimeStepSize(
-                        localParticles, 1 );""",
+                        localParticles, 2, {} );""".format(self.is_sph),
         includes                       = """
                                          #include "Constants.h"
                                          #include "swift2/timestepping/Leapfrog.h"
@@ -373,6 +359,90 @@ class SPHLeapfrogFixedInteractionRadius(Particle):
 
     namespace = namespace + "::" 
     print(namespace)
+
+  def declare_sph_particle_attributes(self):
+    """
+    SPH Hydro particle attributes
+    """
+
+    # Baseline particle properties --------------------------------------------------------------
+    self.mass             = dastgen2.attributes.Double("mass")
+    self.velocity         = peano4.dastgen2.Peano4DoubleArray("v","Dimensions")
+    self.acceleration     = peano4.dastgen2.Peano4DoubleArray("a","Dimensions")
+    self.data.add_attribute( self.mass )
+    self.data.add_attribute( self.velocity )
+    self.data.add_attribute( self.acceleration )
+
+    # Basic SPH properties
+    self.smoothL = dastgen2.attributes.Double("smoothingLength")
+    self.density = dastgen2.attributes.Double("density")
+    self.pressure= dastgen2.attributes.Double("pressure")
+    self.u       = dastgen2.attributes.Double("u")
+    self.uDot    = dastgen2.attributes.Double("uDot")
+    self.data.add_attribute( self.smoothL )
+    self.data.add_attribute( self.density )
+    self.data.add_attribute( self.pressure )
+    self.data.add_attribute( self.u )
+    self.data.add_attribute( self.uDot )
+
+    # Variable smoothing length scheme ---------------------------------------------
+    self.f        = dastgen2.attributes.Double("f")   
+    self.wcount_dh= dastgen2.attributes.Double("wcount_dh")
+    self.rho_dh   = dastgen2.attributes.Double("rho_dh")
+    self.hleft    = dastgen2.attributes.Double("hLeft")
+    self.hright   = dastgen2.attributes.Double("hRight")
+    self.Omega    = dastgen2.attributes.Double("Omega")        # PHANTOM SPH (~1/f)
+    self.data.add_attribute(self.f)
+    self.data.add_attribute(self.wcount_dh)
+    self.data.add_attribute(self.rho_dh)
+    self.data.add_attribute(self.hleft)
+    self.data.add_attribute(self.hright)
+    self.data.add_attribute(self.Omega)
+
+    # Newton-Raphson iterations ----------------------------------------------------
+    self.smoothL_prev   = dastgen2.attributes.Double("smoothingLengthPrevious")
+    self.wcount         = dastgen2.attributes.Double("wcount")
+    self.hDot           = dastgen2.attributes.Double("hDot")
+    self.residual       = dastgen2.attributes.Double("residual")
+    self.iteration_count= dastgen2.attributes.Integer("iterCount")
+    self.has_converged  = dastgen2.attributes.Boolean("hasConverged")
+    self.data.add_attribute(self.smoothL_prev)
+    self.data.add_attribute(self.wcount)
+    self.data.add_attribute(self.hDot)
+    self.data.add_attribute(self.residual)
+    self.data.add_attribute(self.iteration_count)
+    self.data.add_attribute(self.has_converged)
+
+    # Artificial viscosity scheme -------------------------------------------------
+    self.balsara   = dastgen2.attributes.Double("balsara")
+    self.rot_v     = dastgen2.attributes.Double("rot_v")    # In 2D sims it only has 1 component (z)
+#    self.rot_v= peano4.dastgen2.Peano4DoubleArray("rot_v","Dimensions")
+    self.div_v     = dastgen2.attributes.Double("div_v")
+    self.v_sig_AV  = dastgen2.attributes.Double("v_sig_AV")
+    self.soundSpeed= dastgen2.attributes.Double("soundSpeed")
+    self.data.add_attribute(self.balsara)
+    self.data.add_attribute(self.rot_v)
+    self.data.add_attribute(self.div_v)
+    self.data.add_attribute(self.v_sig_AV)
+    self.data.add_attribute(self.soundSpeed)
+
+    # Extended arrays for time integration consistency
+    self.v_full = peano4.dastgen2.Peano4DoubleArray("v_full","Dimensions")
+    self.u_full = dastgen2.attributes.Double("u_full")
+    self.data.add_attribute(self.v_full)
+    self.data.add_attribute(self.u_full)
+
+    # Extra ------------------------------------------------------------------------
+    self.has_no_neighbours= dastgen2.attributes.Boolean("hasNoNeighbours")
+    self.is_boundary_part = dastgen2.attributes.Boolean("isBoundaryParticle")
+    self.time             = dastgen2.attributes.Double("time")
+    self.Ncount           = dastgen2.attributes.Integer("Ncount")                         # integer number count
+    self.part_id          = dastgen2.attributes.Integer("partid")
+    self.data.add_attribute(self.has_no_neighbours)
+    self.data.add_attribute(self.is_boundary_part)
+    self.data.add_attribute(self.time)
+    self.data.add_attribute(self.Ncount)
+    self.data.add_attribute(self.part_id)
 
 
 
