@@ -52,12 +52,15 @@ namespace swift2 {
     *
     * @param kickNumber: wether we are doing first (kick 1) or second (kick 2) in
     * the leapfrog scheme.
+    * @param isSPH: whether we are running an SPH simulation or not. True means
+    * we not only update the velocity but also other SPH variables.
     */
 
     template <typename Particle>
     void computeLeapfrogKickWithGlobalTimeStepSize(
       const std::vector< Particle* >&  localParticles,
-      const int kickNumber
+      const int kickNumber,
+      const bool isSPH
     );
 
 
