@@ -19,13 +19,14 @@ class InsertParticlesByCoordinates(ActionSet):
     N: number of particles
 
     coordinates: [ [Float,Float,Float] ]
-      Coordinates for the particle. If you work in 2d, the third coordinate
-      is simply ignored. But you always need three coordinates. So you can 
-      write 
+      Coordinates for the particle. So you can write 
       
             coordinates=[ [0.0,0.0,0.0], [0.2,0.2,0.0]]
             
-      and this will work for 2d and 3d.
+      for example to insert two particles. The code will create two particles.
+      This variant will work with 2d and 3d compiles, where the third 
+      coordinate is ignored if you compile in 2d. If you pass in 2d coordinates,
+      then the code will fail (assertion) if you try to compile it in 3d.
 
     """
 
@@ -101,12 +102,24 @@ class InsertParticlesByCoordinates(ActionSet):
 
   def Read_In_Coor(self):
     result=""
+    dimensions = -1
     for i in range(self.d["N"]):
-      assert len(self._coordinates[i])==3, "Always specify three coordinates. See class documentation"
-      result+= " coordinates["+str(i)+"][0]="+str(self._coordinates[i][0])+";"
-      result+= " coordinates["+str(i)+"][1]="+str(self._coordinates[i][1])+";"
-      result+= " coordinates["+str(i)+"][2]="+str(self._coordinates[i][2])+";"
-      result+= "\n"
+      if len(self._coordinates[i])==3:
+        result+= " coordinates["+str(i)+"][0]="+str(self._coordinates[i][0])+";"
+        result+= " coordinates["+str(i)+"][1]="+str(self._coordinates[i][1])+";"
+        result+= " #if Dimensions==3"
+        result+= " coordinates["+str(i)+"][2]="+str(self._coordinates[i][2])+";"
+        result+= " #endif"
+        result+= "\n"
+        assert dimensions==-1 or dimensions==3, "inconsistent data: all coordinates have to have three entries: {}".format(self._coordinates[i])
+        dimensions = 3
+      if len(self._coordinates[i])==2:
+        result+= " coordinates["+str(i)+"][0]="+str(self._coordinates[i][0])+";"
+        result+= " coordinates["+str(i)+"][1]="+str(self._coordinates[i][1])+";"
+        result+= " assertion(Dimensions==2);"
+        result+= "\n"
+        assert dimensions==-1 or dimensions==2, "inconsistent data: all coordinates have to have three entries: {}".format(self._coordinates[i])
+        dimensions = 2
     return result
 
 
