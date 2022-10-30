@@ -352,14 +352,6 @@ class SPHLeapfrogFixedInteractionRadius(Particle):
       ),
     ]
 
-  def get_cpp_namespace_from_project_namespace(self):
-    namespace = ""
-    for entry in self.swift_project_namespace:
-      namespace = namespace + "::" + entry
-
-    namespace = namespace + "::" 
-    print(namespace)
-
   def declare_sph_particle_attributes(self):
     """
     SPH Hydro particle attributes
@@ -445,4 +437,15 @@ class SPHLeapfrogFixedInteractionRadius(Particle):
     self.data.add_attribute(self.part_id)
 
 
+  """
+  Transform namespace into cpp format. Could be used to append namespace to
+  constants in kernels.
+  """
+  def get_cpp_namespace_from_project_namespace(self):
+    namespace = ""
+    for entry in self.swift_project_namespace:
+      namespace = namespace + "::" + entry
+
+    namespace = namespace + "::" 
+    print(namespace)
 

@@ -316,7 +316,7 @@ void swift2::kernels::endDensityCalculation(
     
           /* Ok, correct then */
 
-          particle->setSmoothingLength( h_new );
+//          particle->setSmoothingLength( h_new );
 
           /* Increase the iteration counter */
           particle->setIterCount( particle->getIterCount() + 1 );
@@ -327,7 +327,7 @@ void swift2::kernels::endDensityCalculation(
 
           /* However, if this is iter 0, we still update */
           if (particle->getIterCount() == 0) {
-            particle->setSmoothingLength( h_new );
+//            particle->setSmoothingLength( h_new );
           }
 
           /* Flag that particle has already converged */

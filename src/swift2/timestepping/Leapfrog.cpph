@@ -79,3 +79,38 @@ void swift2::timestepping::computeLeapfrogKickWithGlobalTimeStepSize(
   }
 }
 
+
+
+/* Debugging:
+ * Fake Drift step in which we move a particle into the midpoint of a cell.
+ * Does that particle disappear from the simulation?
+ */
+
+template <typename Particle>
+void swift2::timestepping::moveParticleIntoCriticalLine(
+  const std::vector< Particle* >&  localParticles
+) {
+  double timeStepSize = Particle::getSpecies().getMinTimeStepSize();
+  for (auto* particle: localParticles) {
+    if (
+      particle->getMoveState()==Particle::MoveState::NotMovedYet
+      and
+      particle->getParallelState()==Particle::ParallelState::Local
+    ) {
+
+      /* 
+       * Disappearing particle test.
+       * Just move the position to the central axis of a cell and watch it
+       * disappear.
+       */
+      tarch::la::Vector<Dimensions,double> xCritical = {1.0/6.0 , 0};
+      particle->setX( xCritical );
+      
+      /* Flag this particle as Moved */
+      particle->setMoveState( Particle::MoveState::Moved );
+
+    }
+  }
+}
+
+

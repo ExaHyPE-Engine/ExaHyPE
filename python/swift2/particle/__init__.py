@@ -6,3 +6,4 @@ from swift2.particle import Particle
 from .ExplicitEulerFixedInteractionRadius import ExplicitEulerFixedInteractionRadius
 from .LeapfrogFixedInteractionRadius      import LeapfrogFixedInteractionRadius
 from .SPHLeapfrogFixedInteractionRadius   import SPHLeapfrogFixedInteractionRadius
+from .DisappearingParticleTest import DisappearingParticleTest

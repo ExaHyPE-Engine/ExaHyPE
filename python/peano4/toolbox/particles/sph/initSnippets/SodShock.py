@@ -28,12 +28,31 @@ class SodShockIC:
        * Here we initialize the rest of arrays which are mostly trivial.
        */
 
+      // Internal cutoff radius used by Peano and with max value R = grid_size/2
+      tarch::la::Vector<Dimensions,double> GridSize = marker.h();
+      const double GridSize_x = GridSize(0); 
+
+      particle->setCutOffRadius( GridSize_x / 2.0);
+       
+      /* Constant density field */
+      particle->setDensity ( 1.0 );        
+      particle->setMass( particle->getDensity() / std::pow(HYDRO_PART_NUMBER, HYDRO_DIMENSIONS) );
+
+      /* Initial estimate for smoothing length */
+      particle->setSmoothingLength( SMOOTH_L_FAC * std::pow(particle->getMass()/particle->getDensity(), 1.0 / HYDRO_DIMENSIONS) );
+      particle->setSmoothingLengthPrevious( particle->getSmoothingLength() );
+
+      particle->setU( 1e-1 );  
+      particle->setPressure( 1e-1 );
+      particle->setSoundSpeed( 1e-2 );
+
       /* Initialize remaining fields  */
       
       // Vectors
       for(int d=0; d<Dimensions; d++){
+         particle->setV          (d,0);
          particle->setA          (d,0);
-         particle->setA_prev_step(d,0);
+//         particle->setA_prev_step(d,0);
       }
      
       /* For 2D sims, we only get one component */
@@ -44,7 +63,7 @@ class SodShockIC:
       particle->setU_full( particle->getU() );
 
       particle->setUDot  (0.0);        
-      particle->setUDot_prev_step(0.0);        
+//      particle->setUDot_prev_step(0.0);        
       particle->setHDot  (0.0);        
       particle->setWcount(0.0);        
       particle->setNcount(0  );        
@@ -56,13 +75,13 @@ class SodShockIC:
       particle->setHLeft (HYDRO_h_MIN);        
       particle->setHRight(HYDRO_h_MAX);        
       
-      particle->setTimeStepSize(GLOBAL_TIME_STEP_SIZE);
+//      particle->setTimeStepSize(GLOBAL_TIME_STEP_SIZE);
       particle->setHasConverged(false);
       particle->setHasNoNeighbours(false);
-      particle->setHasBeenKicked(true);
+//      particle->setHasBeenKicked(true);
       particle->setResidual(0.0);
       particle->setIterCount(0);
-      particle->setIsBoundaryParticle(false);
+//      particle->setIsBoundaryParticle(false);
 
       // Artificial viscosity scheme
       particle->setDiv_v   (0.0);
@@ -70,7 +89,6 @@ class SodShockIC:
       particle->setBalsara (0.0);
 
       
-
       /* End of inserted block */
 
       """

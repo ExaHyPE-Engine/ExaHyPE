@@ -64,6 +64,18 @@ namespace swift2 {
     );
 
 
+    /* Debugging:
+     * Fake Drift step in which we move a particle into the midpoint of a cell.
+     * Does that particle disappear from the simulation?
+     */
+    template <typename Particle>
+    void moveParticleIntoCriticalLine(
+      const std::vector< Particle* >&  localParticles
+    );
+
+
+
+
   }
 }
 
