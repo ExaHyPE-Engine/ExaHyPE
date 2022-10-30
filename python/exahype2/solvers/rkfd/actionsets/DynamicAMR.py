@@ -14,16 +14,20 @@ import peano4.toolbox.blockstructured.DynamicAMR
 class DynamicAMR( peano4.toolbox.blockstructured.DynamicAMR ):
   """
   
-   The FD4 handling of (dynamically) adaptive meshes
+   The handling of (dynamically) adaptive meshes for finite differences
    
    This class just invokes interpolation operators. Please consult the documentation
-   of the FD4 base class CellCenteredFiniteDifferences for a discussion of interpolation
-   and restriction operators.
+   of the base class CellCenteredFiniteDifferences for a discussion of interpolation
+   and restriction operators. The class documentation also explains how you switch 
+   to operators that you pass in manually.
   
   """
     
     
-  def __init__(self,solver,interpolation,restriction):
+  def __init__(self,
+               solver,
+               interpolation,
+               restriction):
     """
      Construct object
     
@@ -231,12 +235,9 @@ class DynamicAMR( peano4.toolbox.blockstructured.DynamicAMR ):
   coarseGridCell""" + solver._cell_label.name + """.setTimeStepSize( fineGridCell""" + solver._cell_label.name + """.getTimeStepSize() );
 """
 
-    #super( DynamicAMR, self ).switch_interpolation_scheme(interpolation)
-    #super( DynamicAMR, self ).switch_restriction_scheme(restriction)
-
-    #we need to change template code above as well or the following line is not working as well. 
-    super( DynamicAMR, self ).switch_interpolation_scheme("tensor_product")
-    super( DynamicAMR, self ).switch_restriction_scheme("tensor_product")
+    super( DynamicAMR, self ).switch_interpolation_scheme(interpolation)
+    super( DynamicAMR, self ).switch_restriction_scheme(restriction)
+    
     
   def get_action_set_name(self):
     return __name__.replace(".py", "").replace(".", "_")

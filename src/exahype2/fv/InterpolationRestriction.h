@@ -79,5 +79,70 @@ namespace toolbox {
         fineGridCellValues
       );
     }
+
+
+    template <typename C>
+    void restrictCell_AoS_tensor_product(
+      const peano4::datamanagement::CellMarker& marker,
+      int                                       numberOfDoFsPerAxisInPatch,
+      int                                       unknowns,
+      double*                                   fineGridValues,
+      double*                                   coarseGridValues
+    ) {
+      restrictCell_AoS_tensor_product(
+        marker,
+        numberOfDoFsPerAxisInPatch,
+        unknowns,
+        C::TangentialRestrictionMatrix1d,
+        fineGridValues,
+        coarseGridValues
+      );
+    }
+
+
+    template <typename C>
+    void restrictHaloLayer_AoS_tensor_product(
+      const peano4::datamanagement::FaceMarker& marker,
+      int                                       numberOfDoFsPerAxisInPatch,
+      int                                       overlap,
+      int                                       unknowns,
+      double*                                   fineGridValues,
+      double*                                   coarseGridValues
+    ) {
+      restrictHaloLayer_AoS_tensor_product(
+        marker,
+        numberOfDoFsPerAxisInPatch,
+        overlap,
+        unknowns,
+        C::NormalRestrictionMatrix1d,
+        C::TangentialRestrictionMatrix1d,
+        fineGridValues,
+        coarseGridValues
+      );
+    }
+
+
+    template <typename C>
+    void restrictInnerHalfOfHaloLayer_AoS_tensor_product(
+      const peano4::datamanagement::FaceMarker& marker,
+      int                                       numberOfDoFsPerAxisInPatch,
+      int                                       overlap,
+      int                                       unknowns,
+      double*                                   fineGridValues,
+      double*                                   coarseGridValues,
+      bool                                      swapInsideOutside=false
+    ) {
+      restrictInnerHalfOfHaloLayer_AoS_tensor_product(
+        marker,
+        numberOfDoFsPerAxisInPatch,
+        overlap,
+        unknowns,
+        C::NormalRestrictionMatrix1d,
+        C::TangentialRestrictionMatrix1d,
+        fineGridValues,
+        coarseGridValues,
+        swapInsideOutside
+      );
+    }
   }
 }
