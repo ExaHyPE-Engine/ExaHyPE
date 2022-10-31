@@ -49,8 +49,7 @@ class GlobalAdaptiveTimeStep( OneSweepPerRungeKuttaStep ):
 #include "exahype2/fd/fd4/FD4.h"
 """
 
-    switch_to_FD4_tensor_product_interpolation( self, "TP_constant")
-    switch_to_FD4_tensor_product_restriction( self, "TP_inject_normal_extrap")
+    
 
     self.set_implementation(flux=flux, 
       ncp=ncp, 
@@ -114,4 +113,9 @@ class GlobalAdaptiveTimeStep( OneSweepPerRungeKuttaStep ):
     
     self.create_action_sets()
 
+  def set_interpolation_scheme(self, scheme):
+    switch_to_FD4_tensor_product_interpolation( self, scheme, self.patch_size )
+
+  def set_restriction_scheme(self,scheme):
+    switch_to_FD4_tensor_product_restriction( self, scheme, self.patch_size )
 

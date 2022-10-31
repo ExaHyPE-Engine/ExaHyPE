@@ -708,9 +708,17 @@ if __name__ == "__main__":
     #  my_solver.restriction_ = "inject" 
     #  print( "Restiction rule: injection" )
 
-    #we overwrite the transition scheme here to test multilayers operator
-    #my_solver.interpolation = "TP_constant"
-    #my_solver.restriction= "TP_inject_normal_extrap"
+    #Below are the I&R set functions for FD4
+    #These functions here do two things:
+    #1. it set the solver.interpolation parameters similar to what we do for fv, so the code know what template shoule be named.
+    #2. it compute and inject the corresponding matrices for named schemes into the solver head files.
+    #notice point 2 is not needed as for build-in function (for fv) the matrices are already hard-coded.  
+    tem_interp=["TP_constant","TP_linear_with_linear_extrap_normal_interp"]
+    tem_restrict=["TP_inject_normal_extrap","TP_average_normal_extrap"]
+    if (args.implementation=="fd4-rk1-adaptive" or args.implementation=="fd4-rk1-fixed" 
+      or args.implementation=="fd4-rk4-adaptive" or args.implementation=="fd4-rk4-fixed"):
+      my_solver.set_interpolation_scheme(tem_interp[0])
+      my_solver.set_restriction_scheme(tem_restrict[0])
           
     #if args.interpolation=="linear+enforce" or args.interpolation=="linear-slow+enforce":
     #  self.point_wise_postprocessing_of_interpolation = "examples::exahype2::ccz4::enforceCCZ4constraints(targetVolume)" )

@@ -8,12 +8,7 @@ from exahype2.solvers.rkfd.CellCenteredFiniteDifferences import CellCenteredFini
 #
 from exahype2.solvers.LagrangeBasis import render_tensor_2
 
-#
-# @Han: I'm not sure this is the best name. First, it computes two matrices, so it 
-#       should likely matrices. And then I wonder if we want to include the fact
-#       in the name that we work with tensor products here.
-#
-def __compute_interpolation_matrix1d(value):
+def __compute_interpolation_matrices_1d(value, patch_size):
     """
 
     compute the interpolation matrix, which used to prepare halo layer data for fine cells at the refinement boundary.
@@ -58,7 +53,7 @@ def __compute_interpolation_matrix1d(value):
     ...     
 
     """
-    patch_size = 3
+    #patch_size = 3
     
     interp_matrix_T = [ [0.0 for _ in range(0,patch_size)] for _ in range(0,3*patch_size) ]
     interp_matrix_N = [ [0.0 for _ in range(0,6)] for _ in range(0,3) ]
@@ -76,7 +71,7 @@ def __compute_interpolation_matrix1d(value):
       interp_matrix_T[-1][-1]=4.0/3.0; interp_matrix_T[-1][-2]=-1.0/3.0
       interp_matrix_T[-2][-1]=1.0
       interp_matrix_T[-3][-1]=2.0/3.0; interp_matrix_T[-3][-2]= 1.0/3.0
-      for index in range(0,self.dofs_per_axis-2):
+      for index in range(0,patch_size-2):
         interp_matrix_T[(1+index)*3  ][index  ]=1.0/3.0; interp_matrix_T[(1+index)*3  ][index+1]=2.0/3.0;
         interp_matrix_T[(1+index)*3+1][index+1]=1.0;       
         interp_matrix_T[(1+index)*3+2][index+1]=2.0/3.0; interp_matrix_T[(1+index)*3+2][index+2]=1.0/3.0; 
@@ -89,7 +84,7 @@ def __compute_interpolation_matrix1d(value):
     return interp_matrix_T, interp_matrix_N
 
 
-def __compute_restriction_matrix1d(value):
+def __compute_restriction_matrices_1d(value, patch_size):
     """
 
     compute the restriction matrix, which used to prepare halo layer data for coarse cells at the refinement boundary.
@@ -130,7 +125,7 @@ def __compute_restriction_matrix1d(value):
     ...    
 
     """
-    patch_size = 3
+    #patch_size = 3
     
     restrict_matrix_T = [ [0.0 for _ in range(0,3*patch_size)] for _ in range(0,patch_size) ]
     restrict_matrix_N = [ [0.0 for _ in range(0,6)] for _ in range(0,3) ]
@@ -155,7 +150,7 @@ def __compute_restriction_matrix1d(value):
 
 
 def switch_to_FD4_tensor_product_interpolation( solver: CellCenteredFiniteDifferences,
-                                                variant ):
+                                                variant, patch_size ):
   """
   
   This routine accepts the solver object and an identifier object and then
@@ -164,7 +159,7 @@ def switch_to_FD4_tensor_product_interpolation( solver: CellCenteredFiniteDiffer
   Please do not switch the interpolation scheme more than once.
   
   """
-  interp_matrix_T, interp_matrix_N=__compute_interpolation_matrix1d(variant)
+  interp_matrix_T, interp_matrix_N=__compute_interpolation_matrices_1d(variant, patch_size)
   
   solver.add_solver_constants("""static constexpr double  TangentialInterpolationMatrix1d[] = {};\n\n""".format( render_tensor_2( tensor=interp_matrix_T, use_multidimensional_arrays=False ) ) )
   solver.add_solver_constants("""static constexpr double  NormalInterpolationMatrix1d[] = {};\n\n""".format(     render_tensor_2( tensor=interp_matrix_N, use_multidimensional_arrays=False ) ) )
@@ -173,13 +168,13 @@ def switch_to_FD4_tensor_product_interpolation( solver: CellCenteredFiniteDiffer
 
 
 def switch_to_FD4_tensor_product_restriction( solver: CellCenteredFiniteDifferences,
-                                              variant ):
+                                              variant, patch_size ):
   """
   
   Consult the docu of switch_to_FD4_tensor_product_interpolation().
   
   """
-  restrict_matrix_T, restrict_matrix_N=__compute_restriction_matrix1d(variant)
+  restrict_matrix_T, restrict_matrix_N=__compute_restriction_matrices_1d(variant, patch_size)
     
   solver.add_solver_constants("""static constexpr double TangentialRestrictionMatrix1d[] = {};\n\n""".format( render_tensor_2( tensor=restrict_matrix_T, use_multidimensional_arrays=False ) ) )
   solver.add_solver_constants("""static constexpr double NormalRestrictionMatrix1d[] = {};\n\n""".format(     render_tensor_2( tensor=restrict_matrix_N, use_multidimensional_arrays=False ) ) )

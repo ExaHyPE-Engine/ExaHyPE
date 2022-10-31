@@ -47,7 +47,7 @@ void toolbox::blockstructured::restrictInnerHalfOfHaloLayer_AoS_tensor_product(
   const double* __restrict__                tangentialRestrictionMatrix1d,
   double*                                   fineGridValues,
   double*                                   coarseGridValues,
-  bool                                      swapInsideOutside=false
+  bool                                      swapInsideOutside
 ) {
   assertionMsg( false, "@Han, we have to implement this one" );
 }
