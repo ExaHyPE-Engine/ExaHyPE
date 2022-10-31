@@ -17,6 +17,9 @@ from exahype2.solvers.rkfd.kernels import RiemannKernelVariant
 
 from exahype2.solvers.rkfd.AdaptiveTimeSteppingCodeSnippets import AdaptiveTimeSteppingCodeSnippets
 
+from .amr import switch_to_FD4_tensor_product_interpolation
+from .amr import switch_to_FD4_tensor_product_restriction
+
 
 class GlobalAdaptiveTimeStep( OneSweepPerRungeKuttaStep ):
   def __init__(self, 
@@ -45,6 +48,9 @@ class GlobalAdaptiveTimeStep( OneSweepPerRungeKuttaStep ):
     self._user_action_set_includes += """
 #include "exahype2/fd/fd4/FD4.h"
 """
+
+    switch_to_FD4_tensor_product_interpolation( self, "TP_constant")
+    switch_to_FD4_tensor_product_restriction( self, "TP_inject_normal_extrap")
 
     self.set_implementation(flux=flux, 
       ncp=ncp, 
@@ -107,4 +113,5 @@ class GlobalAdaptiveTimeStep( OneSweepPerRungeKuttaStep ):
     self._constructor_implementation         = solver_code_snippets.create_abstract_solver_constructor_statements()
     
     self.create_action_sets()
+
 

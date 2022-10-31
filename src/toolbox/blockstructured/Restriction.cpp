@@ -12,6 +12,46 @@ namespace {
 }
 
 
+void toolbox::blockstructured::restrictCell_AoS_tensor_product(
+  const peano4::datamanagement::CellMarker& marker,
+  int                                       numberOfDoFsPerAxisInPatch,
+  int                                       unknowns,
+  const double* __restrict__                tangentialRestrictionMatrix1d,
+  double*                                   fineGridValues,
+  double*                                   coarseGridValues
+) {
+  assertionMsg( false, "@Han, we have to implement this one" );
+}
+
+
+void toolbox::blockstructured::restrictHaloLayer_AoS_tensor_product(
+  const peano4::datamanagement::FaceMarker& marker,
+  int                                       numberOfDoFsPerAxisInPatch,
+  int                                       overlap,
+  int                                       unknowns,
+  const double* __restrict__                normalRestrictionMatrix1d,
+  const double* __restrict__                tangentialRestrictionMatrix1d,
+  double*                                   fineGridValues,
+  double*                                   coarseGridValues
+) {
+  assertionMsg( false, "@Han, we have to implement this one" );
+}
+
+
+void toolbox::blockstructured::restrictInnerHalfOfHaloLayer_AoS_tensor_product(
+  const peano4::datamanagement::FaceMarker& marker,
+  int                                       numberOfDoFsPerAxisInPatch,
+  int                                       overlap,
+  int                                       unknowns,
+  const double* __restrict__                normalRestrictionMatrix1d,
+  const double* __restrict__                tangentialRestrictionMatrix1d,
+  double*                                   fineGridValues,
+  double*                                   coarseGridValues,
+  bool                                      swapInsideOutside=false
+) {
+  assertionMsg( false, "@Han, we have to implement this one" );
+}
+
 
 void toolbox::blockstructured::restrictHaloLayer_AoS_inject(
   const peano4::datamanagement::FaceMarker& marker,

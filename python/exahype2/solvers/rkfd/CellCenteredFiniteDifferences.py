@@ -977,228 +977,39 @@ The finest mesh width of """ + str(self.get_finest_volume_size(domain_size)) + "
 
   @interpolation.setter
   def interpolation(self,value):
-
+    """
+    
+    Set the interpolation scheme. If you rely on a built-in operation, then this
+    call is all you have to do. Some ExaHyPE solvers however require each solver
+    to provide special matrices/operators for some interpolation/restriction 
+    variants. If this is the case, you still have to add these matrices manually
+    to your solver.
+    
+    """
     self._interpolation = value
-    interp_matrix_T, interp_matrix_N=self.__compute_interpolation_matrix1d(value)
-    self.add_solver_constants("""static constexpr double  TangentialInterpolationMatrix1d[] = {};\n\n""".format( self._render_tensor_2( interp_matrix_T ) ) )
-    self.add_solver_constants("""static constexpr double  NormalInterpolationMatrix1d[] = {};\n\n""".format( self._render_tensor_2( interp_matrix_N ) ) )
 
-    #self.create_data_structures()
-    #self.create_action_sets()
+    self.create_data_structures()
+    self.create_action_sets()
 
 
   @property
   def restriction(self):
+    """
+    
+    Set the restriction scheme. If you rely on a built-in operation, then this
+    call is all you have to do. Some ExaHyPE solvers however require each solver
+    to provide special matrices/operators for some interpolation/restriction 
+    variants. If this is the case, you still have to add these matrices manually
+    to your solver.
+    
+    """
     return self._restriction
 
 
   @restriction.setter
   def restriction(self,value):
-
     self._restriction = value
-    restrict_matrix_T, restrict_matrix_N=self.__compute_restriction_matrix1d(value)
-    self.add_solver_constants("""static constexpr double TangentialRestrictionMatrix1d[] = {};\n\n""".format( self._render_tensor_2( restrict_matrix_T ) ) )
-    self.add_solver_constants("""static constexpr double NormalRestrictionMatrix1d[] = {};\n\n""".format( self._render_tensor_2( restrict_matrix_N ) ) )
-
-    #self.create_data_structures()
-    #self.create_action_sets()
-
-  def __compute_interpolation_matrix1d(self,value):
-    """
-
-    compute the interpolation matrix, which used to prepare halo layer data for fine cells at the refinement boundary.
-    the matrix formulation depends on the interpolation scheme.
-
-    The matrix is only 1d mapping, say, the matrix is P_ij (it is a 3 patch_size \times patch_size matrix)
-    and u^f_i and u^c_j are solution at fine and coarse level, respectively. we have 
-
-    u^f_i = P_ij u^c_j
-
-    The interpolation routine for high dimensions can be found in a tensor-manner
-
-    u^f_ij = P_ik P_jl u^c_kl
-
-    The interpolation along the normal direction will use a slight difference matrix as we can always interpolate rather than extrapolate.
-    In fd4 scheme we require the interpolations for three halo layers, so the matrix P'_ij have a size of 3*6, 6 is for 6 layers of coarse volume.
-
-    Please note this method is limited due to no access to the diagonal volumes and the high order interpolation is achieved by tensor product way. 
-    We use TP to indicate this in our interpolation scheme name.
-
-    TP_constant: constant interpolation in both surface direction and normal direction
-
-    Tangential:                       Normal:
-    1  0  0  0  0  0 ...              0  0  1  0  0  0
-    1  0  0  0  0  0 ...              0  0  1  0  0  0
-    1  0  0  0  0  0 ...              0  0  1  0  0  0
-    0  1  0  0  0  0 ...
-    0  1  0  0  0  0 ...
-    0  1  0  0  0  0 ...
-    ...    
-
-    TP_linear_with_linear_extrap_normal_interp:
-        linear interpolation within the patch and along the normal direction, and extrapolate at the boundary of the surface
-
-    Tangential:                       Normal:
-    4/3  -1/3  0    0  0  0 ...       0  1/3  2/3  0    0  0  
-    1    0     0    0  0  0 ...       0  0    1    0    0  0 
-    2/3  1/3   0    0  0  0 ...       0  0    2/3  1/3  0  0 
-    1/3  2/3   0    0  0  0 ...
-    0    1     0    0  0  0 ...
-    0    2/3   1/3  0  0  0 ...
-    ...     
-
-    """
-    interp_matrix_T = [ [0.0 for _ in range(0,self._patch_size)] for _ in range(0,3*self._patch_size) ]
-    interp_matrix_N = [ [0.0 for _ in range(0,6)] for _ in range(0,3) ]
-    if value=="TP_constant":
-      for col in range(0,self._patch_size):
-        for index in range(0,2):
-          interp_matrix_T[col*3+index][col]=1.0
-      interp_matrix_N[0][2]=1.0
-      interp_matrix_N[1][2]=1.0
-      interp_matrix_N[2][2]=1.0
-
-    if value=="TP_linear_with_linear_extrap_normal_interp":
-      interp_matrix_T[0][0]=4.0/3.0; interp_matrix_T[0][1]=-1.0/3.0
-      interp_matrix_T[1][0]=1.0
-      interp_matrix_T[2][0]=2.0/3.0; interp_matrix_T[2][1]= 1.0/3.0
-      interp_matrix_T[-1][-1]=4.0/3.0; interp_matrix_T[-1][-2]=-1.0/3.0
-      interp_matrix_T[-2][-1]=1.0
-      interp_matrix_T[-3][-1]=2.0/3.0; interp_matrix_T[-3][-2]= 1.0/3.0
-      for index in range(0,self.dofs_per_axis-2):
-        interp_matrix_T[(1+index)*3  ][index  ]=1.0/3.0; interp_matrix_T[(1+index)*3  ][index+1]=2.0/3.0;
-        interp_matrix_T[(1+index)*3+1][index+1]=1.0;       
-        interp_matrix_T[(1+index)*3+2][index+1]=2.0/3.0; interp_matrix_T[(1+index)*3+2][index+2]=1.0/3.0; 
-      interp_matrix_N[0][1]=1.0/3.0;  interp_matrix_N[0][2]=2.0/3.0
-      interp_matrix_N[1][2]=1.0
-      interp_matrix_N[2][2]=2.0/3.0;  interp_matrix_N[2][3]=1.0/3.0
     
-    return interp_matrix_T, interp_matrix_N
+    self.create_data_structures()
+    self.create_action_sets()
 
-  def __compute_restriction_matrix1d(self,value):#
-    """
-
-    compute the restriction matrix, which used to prepare halo layer data for coarse cells at the refinement boundary.
-    the matrix formulation depends on the interpolation scheme.
-
-    The matrix is only 1d mapping, say, the matrix is Q_ij (it is a patch_size \times 3 patch_size matrix)and u^f_i and u^c_j
-    are solution at fine and coarse level, respectively. we have 
-
-    u^c_i = Q_ij u^f_j
-
-    The interpolation routine for high dimensions can be found in a tensor-manner
-
-    u^c_ij = Q_ik Q_jl u^f_kl
-
-    The interpolation along the normal direction will use a slight difference matrix as we need some extrapolation in linear scheme.
-    In fd4 scheme we require the interpolations for three halo layers, so the matrix Q'_ij have a size of 6*3, 6 is for 6 layers of fine volume.
-
-    Please note this method is limited due to no access to the diagonal volumes and the high order restriction is achieved by tensor product way. 
-    We use TP to indicate this in our restriction scheme name.
-
-    TP_inject_normal_extrap: directly use the central-surface fine cell to assign the coarse cell, but extrapolate along normal direction.
-                              Notice we can still do the average for the outmost layer to improve accuracy. 
-
-    Tangential:                                                              Normal:
-    0  1  0  0  0  0  0  0  0  0  0  0...                                    6    -5   0    0  0  0  
-    0  0  0  0  1  0  0  0  0  0  0  0...                                    3    -2   0    0  0  0  
-    0  0  0  0  0  0  0  0  0  0  0  0...                                    1/3  1/3  1/3  0  0  0  
-    0  0  0  0  0  0  0  1  0  0  0  0...
-    ...    
-
-    TP_average: average value in fine cells if possible, but extrapolate along normal direction.
-
-    Tangential:                                                              Normal:
-    1/3  1/3  1/3  0    0    0    0    0    0    0    0    0...              6    -5   0    0  0  0 
-    0    0    0    1/3  1/3  1/3  0    0    0    0    0    0...              3    -2   0    0  0  0 
-    0    0    0    0    0    0    1/3  1/3  1/3  0    0    0...              1/3  1/3  1/3  0  0  0  
-    0    0    0    0    0    0    0    0    0    1/3  1/3  1/3...
-    ...    
-
-    """
-    restrict_matrix_T = [ [0.0 for _ in range(0,3*self._patch_size)] for _ in range(0,self._patch_size) ]
-    restrict_matrix_N = [ [0.0 for _ in range(0,6)] for _ in range(0,3) ]
-    if value=="TP_inject_normal_extrap":
-      for index in range(0,self._patch_size):
-        restrict_matrix_T[index][3*index+1]=1.0
-      restrict_matrix_N[0][0]=6.0;  restrict_matrix_N[0][1]=-5.0;
-      restrict_matrix_N[1][0]=3.0;  restrict_matrix_N[1][1]=-2.0;
-      restrict_matrix_N[2][0]=1.0/3.0;  restrict_matrix_N[2][1]=1.0/3.0; restrict_matrix_N[2][2]=1.0/3.0;
-
-    if value=="TP_average_normal_extrap":
-      for index in range(0,self._patch_size):
-        restrict_matrix_T[index][3*index  ]=1.0/3.0  
-        restrict_matrix_T[index][3*index+1]=1.0/3.0 
-        restrict_matrix_T[index][3*index+2]=1.0/3.0 
-      restrict_matrix_N[0][0]=6.0;  restrict_matrix_N[0][1]=-5.0;
-      restrict_matrix_N[1][0]=3.0;  restrict_matrix_N[1][1]=-2.0;
-      restrict_matrix_N[2][0]=1.0/3.0;  restrict_matrix_N[2][1]=1.0/3.0; restrict_matrix_N[2][2]=1.0/3.0;
-      
-    return restrict_matrix_T, restrict_matrix_N
-
-
-  #I steal it from rkdg scheme to make the c++ code injection eaiser
-  def _render_tensor_2(self,tensor,use_multidimensional_arrays=False,entry_seperator=",",vector_seperator=("{","}")):
-    """
-    Converts nested list or numpy matrix to nested list of strings.
-    :param tensor: nested list or numpy matrix storing  mpmath numbers
-    """
-    def render_row(row):
-      row_result = ""
-      if use_multidimensional_arrays:
-        row_result += vector_seperator[0]
-      row_result += str(row[0])
-      for elem in row[1:]:
-        row_result += entry_seperator
-        row_result += str(elem)
-      if use_multidimensional_arrays:
-        row_result += vector_seperator[1]
-      return row_result
-        
-    
-    result = vector_seperator[0]
-    result += render_row(tensor[0])
-    for row in tensor[1:]:
-      result += entry_seperator
-      result += render_row(row)
-    result += vector_seperator[1]
-    return result
-
-  def _render_tensor_3(self,tensor,use_multidimensional_arrays=False,entry_seperator=",",vector_seperator=("{","}")):
-    """
-    Converts nested list or numpy matrix to nested list of strings.
-    :param tensor: nested list or numpy matrix storing  mpmath numbers
-    """
-    def render_row(row):
-      row_result = ""
-      if use_multidimensional_arrays:
-        row_result += vector_seperator[0]
-      row_result += str(row[0])
-      for elem in row[1:]:
-        row_result += entry_seperator
-        row_result += str(elem)
-      if use_multidimensional_arrays:
-        row_result += vector_seperator[1]
-      return row_result
-        
-    
-    def render_block(block):
-      row_result = ""
-      if use_multidimensional_arrays:
-        row_result += vector_seperator[0]
-      row_result += render_row(block[0])
-      for elem in block[1:]:
-        row_result += entry_seperator
-        row_result += render_row(elem)
-      if use_multidimensional_arrays:
-        row_result += vector_seperator[1]
-      return row_result
-        
-    
-    result = vector_seperator[0]
-    result += render_block(tensor[0])
-    for row in tensor[1:]:
-      result += entry_seperator
-      result += render_block(row)
-    result += vector_seperator[1]
-    return result
