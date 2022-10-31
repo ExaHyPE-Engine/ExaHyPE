@@ -63,6 +63,30 @@ namespace swift2 {
       const bool isSPH
     );
 
+    /*
+     * Kick extra step, i.e. update some thermodynamic
+     * quantities forward in time. In particular, U is integrated forward in
+     * time treating it as the velocity.
+     */
+    template <typename Particle>
+    void computeLeapfrogKickExtraWithGlobalTimeStepSize(
+      const std::vector< Particle* >&  localParticles
+    );
+
+    /* 
+     * Predict hydro terms (SWIFT) 
+     * Relevant for inactive particles when using local-timestepping, but always
+     * used.
+     */
+    template <typename Particle>
+    void computePredictHydro(
+      const std::vector< Particle* >&  localParticles,
+      const int hydroDimensions
+    );
+
+
+
+
 
     /* Debugging:
      * Fake Drift step in which we move a particle into the midpoint of a cell.

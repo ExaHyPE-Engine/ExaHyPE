@@ -80,10 +80,102 @@ void swift2::timestepping::computeLeapfrogKickWithGlobalTimeStepSize(
 }
 
 
+template <typename Particle>
+void computeLeapfrogKickExtraWithGlobalTimeStepSize(
+  const std::vector< Particle* >&  localParticles
+) {
+  /* In principle, this time-step could be different than that used for normal kick */
+  double dt_therm = 0.5 * Particle::getSpecies().getMinTimeStepSize();
+  for (auto* particle: localParticles) {
+    if(
+      particle->getMoveState()==Particle::MoveState::NotMovedYet
+      and
+      particle->getParallelState()==Particle::ParallelState::Local
+      and
+      not particle->getCellHasUpdatedParticle()
+    ) {
 
-/* Debugging:
+      /* Integrate the internal energy forward in time */
+      const double delta_u = particle->getUDot() * dt_therm;
+    
+      /* Do not decrease the energy by more than a factor of 2 */
+      particle->setU_full( std::max( particle->getU_full() + delta_u,
+                                          particle->getU_full() * 0.5 ) );
+
+      /* Check against absolute minimum.
+       * Default value is zero. */
+      if (particle->getU_full() < 0.0) 
+      {
+        particle->setU_full(0.0);
+        particle->setUDot(0.0);
+      }
+
+    }
+  }
+}
+
+
+template <typename Particle>
+void swift2::timestepping::computePredictHydro(
+  const std::vector< Particle* >&  localParticles,
+  const int hydroDimensions
+) {
+    const double timeStepSize = Particle::getSpecies().getMinTimeStepSize();
+    const double dt_kick_hydro = 0.5 * timeStepSize;
+    const double dt_drift = timeStepSize;
+    const double dt_therm = dt_kick_hydro;
+
+  for (auto* particle: localParticles) {
+    if (
+      particle->getParallelState()==Particle::ParallelState::Local
+      and
+      not particle->getCellHasUpdatedParticle()
+    ) {
+
+        /* Predict velocities for hydro terms */
+        particle->setV( particle->getV() + particle->getA() * dt_kick_hydro );
+
+        /* 
+         * Predict additional particle fields forward in time after the Drift step
+         */
+        
+        /* Predict the internal energy */
+        particle->setU( particle->getU() + particle->getUDot() * dt_therm );
+
+        /* Predict smoothing length */
+        const double h_inv = 1.0 / particle->getSmoothingLength();
+        const double w1 = particle->getHDot() * h_inv * dt_drift;
+//        particle->setSmoothingLength( particle->getSmoothingLength() * std::exp(w1) );
+        
+        /* Predict density */
+        const double w2 = - hydroDimensions * w1;
+        particle->setDensity( particle->getDensity() * std::exp(w2) );
+
+        particle->setU( std::max( particle->getU(), 0.0) );
+
+        /* Compute the new pressure */
+        const double pressure = 
+          gas_pressure_from_internal_energy( particle->getDensity(), particle->getU() );
+
+        /* Compute the new sound speed */
+        const double soundspeed = gas_soundspeed_from_internal_energy( particle->getU() );
+
+        particle->setPressure(pressure);
+        particle->setSoundSpeed(soundspeed);
+        particle->setV_sig_AV( std::max(particle->getV_sig_AV(), 2.0 * soundspeed) );
+    }
+  }
+}
+
+
+
+
+/* 
+ *
+ * Debugging:
  * Fake Drift step in which we move a particle into the midpoint of a cell.
  * Does that particle disappear from the simulation?
+ *
  */
 
 template <typename Particle>
