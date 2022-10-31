@@ -120,7 +120,7 @@ class SPHLeapfrogFixedInteractionRadius(Particle):
                                          """.format(self.name),
 
         cell_kernel                    = """
-                                         ::swift2::kernels::computeDensityWithConstantSmoothingLength<globaldata::{}>( 
+                                         ::swift2::kernels::computeDensity<globaldata::{}>( 
                                            localParticles, 
                                            activeParticles,
                                            {},
@@ -237,7 +237,7 @@ class SPHLeapfrogFixedInteractionRadius(Particle):
                                          """.format(self.name),
 
         cell_kernel                    = """
-                                         ::swift2::kernels::computeDensityWithConstantSmoothingLength<globaldata::{}>( 
+                                         ::swift2::kernels::computeDensity<globaldata::{}>( 
                                            localParticles, 
                                            activeParticles,
                                            {},
@@ -366,14 +366,14 @@ class SPHLeapfrogFixedInteractionRadius(Particle):
     self.data.add_attribute( self.acceleration )
 
     # Basic SPH properties
-    self.smoothL = dastgen2.attributes.Double("smoothingLength")
     self.density = dastgen2.attributes.Double("density")
     self.pressure= dastgen2.attributes.Double("pressure")
+    self.smoothL = dastgen2.attributes.Double("smoothingLength")
     self.u       = dastgen2.attributes.Double("u")
     self.uDot    = dastgen2.attributes.Double("uDot")
-    self.data.add_attribute( self.smoothL )
     self.data.add_attribute( self.density )
     self.data.add_attribute( self.pressure )
+    self.data.add_attribute( self.smoothL )
     self.data.add_attribute( self.u )
     self.data.add_attribute( self.uDot )
 
