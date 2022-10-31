@@ -2,28 +2,7 @@
 <img src="./documentation/Peano-logo.png"/>
 </div>
 
-# <u>Table of Contents</u>
-- [<u>Table of Contents</u>](#utable-of-contentsu)
-- [<u>General Information</u>](#ugeneral-informationu)
-- [<u>Availability</u>](#uavailabilityu)
-- [<u>Supported Platforms</u>](#usupported-platformsu)
-- [<u>Dependencies and Prerequisites</u>](#udependencies-and-prerequisitesu)
-- [<u>How to Build and Run (using GNU autotools)</u>](#uhow-to-build-and-run-using-gnu-autotoolsu)
-  - [Setup your build environment](#setup-your-build-environment)
-  - [Configure your build using a toolchain](#configure-your-build-using-a-toolchain)
-    - [Intel OneAPI toolchain](#intel-oneapi-toolchain)
-    - [Intel OneAPI toolchain with OpenMP GPU](#intel-oneapi-toolchain-with-openmp-gpu)
-    - [Clang toolchain](#clang-toolchain)
-    - [Clang toolchain with OpenMP GPU](#clang-toolchain-with-openmp-gpu)
-    - [NVIDIA NVC++ toolchain with OpenMP GPU](#nvidia-nvc-toolchain-with-openmp-gpu)
-    - [NVIDIA NVC++ toolchain with C++ GPU](#nvidia-nvc-toolchain-with-c-gpu)
-    - [AMD toolchain with OpenMP GPU](#amd-toolchain-with-openmp-gpu)
-  - [Compilation](#compilation)
-  - [Running a Simulation](#running-a-simulation)
-  - [Cleanup](#cleanup)
-- [<u>Guidebook</u>](#uguidebooku)
-
-# <u>General Information</u>
+# General Information
 Peano is an open source framework for solvers on dynamically adaptive
 Cartesian meshes.
 
@@ -36,16 +15,16 @@ Peano  realises such a grid traversal and storage algorithm, and it provides
 hook-in points for applications performing per-element, per-vertex, and so 
 forth operations on the grid. It also provides interfaces for dynamic load balancing, sophisticated geometry representations, and other features.
 
-# <u>Availability</u>
+# Availability
 All software is available as open source through www.peano-framework.org.
 This page also holds extensive documentation (written, extracted from 
 source code and as video tutorials).
 
-# <u>Supported Platforms</u>
+# Supported Platforms
 We test and maintain Peano for Linux only.
 If you prefer Windows or MacOS, it should work as long as you provide the mandatory tools, but we won't be able to help.
 
-# <u>Dependencies and Prerequisites</u>
+# Dependencies and Prerequisites
 Peano's core is plain C++17/C++20 code. 
 We however use a whole set of tools around it.
 The most important ones are:
@@ -63,7 +42,7 @@ A detailed list can be found in the guidebook which we ship with the
 download (TeX sources). It is also available through the webpage where
 it is built in regular intervals.
 
-# <u>How to Build and Run (using GNU autotools)</u>
+# How to Build and Run (using GNU autotools)
 Peano's build process relies on the autotool chain.
 It yields a couple of libraries and executables.
 Most codes then use Peano's Python API to build an application on top of the libraries.
@@ -152,7 +131,7 @@ where `<gpu-arch>` is either `cc50`, `cc52`, `cc53`, `cc60`, `cc61`, `cc62`, `cc
 ```
 where `<gpu-arch>` is either `cc70`, `cc72`, `cc75`, `cc80`, `cc86` or `cc90`.
 
-If you want to use the CUDA API you will need to add `-cuda` to the `CXXFLAGS` and the `LDFLAGS`. Unified memory is then automatically used.
+If you want to use the CUDA API you will need to add `-cuda` to the `CXXFLAGS` and the `LDFLAGS`.
 
 ### NVIDIA NVC++ toolchain with C++ GPU
 ```shell
@@ -205,7 +184,7 @@ make distclean
 make maintainer-clean
 ```
 
-# <u>Guidebook</u>
+# Documentation and Guidebook
 For more details regarding build configuration and features of the
 software, take a look at the Peano documentation. You can build a PDF version of the guidebook via:
 
