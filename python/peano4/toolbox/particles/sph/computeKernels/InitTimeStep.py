@@ -40,29 +40,29 @@ class InitializeTimeStep:
      * Do not modify unless you know what you are doing.
      */
 
-    if( localParticle->getParallelState() == globaldata::Particle::ParallelState::Local ){
+    if( particle->getParallelState() == globaldata::Particle::ParallelState::Local ){
     
       /* Store value of h at the beggining of current time-step */
-      localParticle->setSmoothingLengthPrevious( localParticle->getSmoothingLength() );
+      particle->setSmoothingLengthPrevious( particle->getSmoothingLength() );
           
       /* Reset for N-R of this time-step */
-      localParticle->setHasConverged(false);
-      localParticle->setIterCount(0);
+      particle->setHasConverged(false);
+      particle->setIterCount(0);
 
       /* Reset the bisection bounds */
-      localParticle->setHLeft (HYDRO_h_MIN);        
-      localParticle->setHRight(HYDRO_h_MAX);        
+      particle->setHLeft (HYDRO_h_MIN);        
+      particle->setHRight(HYDRO_h_MAX);        
       
       /* Flag if particle is at boundary of the simulation box */
-      localParticle->setIsBoundaryParticle(false);
+      particle->setIsBoundaryParticle(false);
       const double max_dist_boundary = 3 * (1.0 /HYDRO_PART_NUMBER); 
 
       for (int d=0; d<Dimensions; d++) {
-        if ( localParticle->getX()(d) < max_dist_boundary || 
-             localParticle->getX()(d) > (1.0 - max_dist_boundary) ) 
+        if ( particle->getX()(d) < max_dist_boundary || 
+             particle->getX()(d) > (1.0 - max_dist_boundary) ) 
         {
 
-          localParticle->setIsBoundaryParticle(true);
+          particle->setIsBoundaryParticle(true);
 
         }
       }
@@ -70,18 +70,18 @@ class InitializeTimeStep:
 //      // Fix right boundary of the Sod shock, which as fewer particles
 //      const double max_dist_boundary_right = 8 * max_dist_boundary;
 //      for (int d=0; d<Dimensions; d++) {
-//        if ( localParticle->getX()(d) > 0.5 &&
-//             localParticle->getX()(d) > (1.0 - max_dist_boundary_right) ) 
+//        if ( particle->getX()(d) > 0.5 &&
+//             particle->getX()(d) > (1.0 - max_dist_boundary_right) ) 
 //        {
-//          localParticle->setIsBoundaryParticle(true);
-//          localParticle->setDensity(0.125);
-//          localParticle->setPressure(0.1);
+//          particle->setIsBoundaryParticle(true);
+//          particle->setDensity(0.125);
+//          particle->setPressure(0.1);
 //        }
 //      }
 
 
       /* Also prepare particle for Drift step */
-      localParticle->setMoveState( globaldata::Particle::MoveState::NotMovedYet );    
+      particle->setMoveState( globaldata::Particle::MoveState::NotMovedYet );    
 
     }
 

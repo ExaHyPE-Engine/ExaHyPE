@@ -38,13 +38,13 @@ class LeapfrogKick:
      */
 
     if( 
-      localParticle->getParallelState() == globaldata::Particle::ParallelState::Local 
-      and 
-      not localParticle->getIsBoundaryParticle() )
+//      particle->getParallelState() == globaldata::Particle::ParallelState::Local 
+//      and 
+      not particle->getIsBoundaryParticle() )
       {
     
       /* Prepare the particle for kick */
-      localParticle->setHasBeenKicked(false);
+      particle->setHasBeenKicked(false);
       
     }
   
@@ -77,23 +77,23 @@ class LeapfrogKick:
       const double dt_kick_hydro = 0.5 * GLOBAL_TIME_STEP_SIZE;
       
       if(
-        localParticle->getParallelState() == globaldata::Particle::ParallelState::Local
-        and 
-        not localParticle->getHasBeenKicked()
+//        particle->getParallelState() == globaldata::Particle::ParallelState::Local
+//        and 
+        not particle->getHasBeenKicked()
         and
-        not localParticle->getIsBoundaryParticle() )
+        not particle->getIsBoundaryParticle() )
         {
       
         /* Kick the particle */
-        localParticle->setV_full( localParticle->getV_full() + dt_kick_hydro * localParticle->getA() );
+        particle->setV_full( particle->getV_full() + dt_kick_hydro * particle->getA() );
         
         /* If predictor is going to be used, store old acceleration */
-        localParticle->setA_prev_step( localParticle->getA() );
+        particle->setA_prev_step( particle->getA() );
 
-        assertion1(  std::isfinite(localParticle->getV(0)), localParticle->toString() );
-        assertion1(  std::isfinite(localParticle->getV(1)), localParticle->toString() );
+        assertion1(  std::isfinite(particle->getV(0)), particle->toString() );
+        assertion1(  std::isfinite(particle->getV(1)), particle->toString() );
         
-        localParticle->setHasBeenKicked(true);
+        particle->setHasBeenKicked(true);
         
       }
 
@@ -110,20 +110,20 @@ class LeapfrogKick:
       const double dt_kick_hydro = 0.5 * GLOBAL_TIME_STEP_SIZE;
 
       if( 
-        localParticle->getParallelState()==globaldata::Particle::ParallelState::Local
-        and 
-        not localParticle->getHasBeenKicked()
+//        particle->getParallelState()==globaldata::Particle::ParallelState::Local
+//        and 
+        not particle->getHasBeenKicked()
         and
-        not localParticle->getIsBoundaryParticle() )
+        not particle->getIsBoundaryParticle() )
         {
       
         /* Kick the particle */
-        localParticle->setV_full( localParticle->getV_full() + dt_kick_hydro * localParticle->getA() );
+        particle->setV_full( particle->getV_full() + dt_kick_hydro * particle->getA() );
         
-        assertion1(  std::isfinite(localParticle->getV(0)), localParticle->toString() );
-        assertion1(  std::isfinite(localParticle->getV(1)), localParticle->toString() );
+        assertion1(  std::isfinite(particle->getV(0)), particle->toString() );
+        assertion1(  std::isfinite(particle->getV(1)), particle->toString() );
         
-        localParticle->setHasBeenKicked(true);
+        particle->setHasBeenKicked(true);
      
         /*
          * Reset predicted values for next Drift step 
@@ -131,22 +131,22 @@ class LeapfrogKick:
          */
         
         /* Re-set the predicted velocities */
-        localParticle->setV( localParticle->getV_full() );
+        particle->setV( particle->getV_full() );
         
         /* Re-set the entropy */
-        localParticle->setU( localParticle->getU_full() );
+        particle->setU( particle->getU_full() );
 
         /* Re-compute the pressure */
         const double pressure = 
-          gas_pressure_from_internal_energy( localParticle->getDensity(), localParticle->getU() );
+          gas_pressure_from_internal_energy( particle->getDensity(), particle->getU() );
 
         /* Compute the new sound speed */
-        const double soundspeed = gas_soundspeed_from_internal_energy( localParticle->getU() );
+        const double soundspeed = gas_soundspeed_from_internal_energy( particle->getU() );
      
         /* Update variables */
-        localParticle->setPressure(pressure);
-        localParticle->setSoundSpeed(soundspeed);
-        localParticle->setV_sig_AV( std::max(localParticle->getV_sig_AV(), 2.0 * soundspeed) );
+        particle->setPressure(pressure);
+        particle->setSoundSpeed(soundspeed);
+        particle->setV_sig_AV( std::max(particle->getV_sig_AV(), 2.0 * soundspeed) );
 
       }
 
@@ -171,13 +171,13 @@ class LeapfrogKickExtra:
      */
 
     if( 
-      localParticle->getParallelState() == globaldata::Particle::ParallelState::Local 
-      and 
-      not localParticle->getIsBoundaryParticle() )
+//      particle->getParallelState() == globaldata::Particle::ParallelState::Local 
+//      and 
+      not particle->getIsBoundaryParticle() )
       {
     
       /* Prepare the particle for kick */
-      localParticle->setHasBeenKicked(false);
+      particle->setHasBeenKicked(false);
       
     }
 
@@ -212,26 +212,26 @@ class LeapfrogKickExtra:
     const double dt_therm = 0.5 * GLOBAL_TIME_STEP_SIZE;
     
     if(
-      localParticle->getParallelState() == globaldata::Particle::ParallelState::Local
-      and 
-      not localParticle->getHasBeenKicked()
+//      particle->getParallelState() == globaldata::Particle::ParallelState::Local
+//      and 
+      not particle->getHasBeenKicked()
       and
-      not localParticle->getIsBoundaryParticle() )
+      not particle->getIsBoundaryParticle() )
       {
         
       /* Integrate the internal energy forward in time */
-      const double delta_u = localParticle->getUDot() * dt_therm;
+      const double delta_u = particle->getUDot() * dt_therm;
     
       /* Do not decrease the energy by more than a factor of 2 */
-      localParticle->setU_full( std::max( localParticle->getU_full() + delta_u,
-                                          localParticle->getU_full() * 0.5      ) );
+      particle->setU_full( std::max( particle->getU_full() + delta_u,
+                                          particle->getU_full() * 0.5      ) );
 
       /* Check against absolute minimum.
        * Default value is zero. */
-      if (localParticle->getU_full() < 0.0) 
+      if (particle->getU_full() < 0.0) 
       {
-        localParticle->setU_full(0.0);
-        localParticle->setUDot(0.0);
+        particle->setU_full(0.0);
+        particle->setUDot(0.0);
       }
       
     }

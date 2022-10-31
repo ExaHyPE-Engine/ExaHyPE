@@ -44,7 +44,7 @@ class SodShockIC:
 
       particle->setU( 1e-1 );  
       particle->setPressure( 1e-1 );
-      particle->setSoundSpeed( 1e-2 );
+      particle->setSoundSpeed( 1e-1 );
 
       /* Initialize remaining fields  */
       
@@ -76,18 +76,20 @@ class SodShockIC:
       particle->setHRight(HYDRO_h_MAX);        
       
 //      particle->setTimeStepSize(GLOBAL_TIME_STEP_SIZE);
+      particle->setTime(0);
       particle->setHasConverged(false);
       particle->setHasNoNeighbours(false);
 //      particle->setHasBeenKicked(true);
       particle->setResidual(0.0);
       particle->setIterCount(0);
-//      particle->setIsBoundaryParticle(false);
+      particle->setIsBoundaryParticle(false);
 
       // Artificial viscosity scheme
       particle->setDiv_v   (0.0);
       particle->setV_sig_AV(2.0 * particle->getSoundSpeed());
       particle->setBalsara (0.0);
 
+      particle->setPartid(1);
       
       /* End of inserted block */
 

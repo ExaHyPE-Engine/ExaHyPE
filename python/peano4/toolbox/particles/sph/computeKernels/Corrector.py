@@ -46,21 +46,21 @@ class LeapfrogCorrector:
     const double timeStepSize_half = 0.5 * GLOBAL_TIME_STEP_SIZE;
     
     if(
-      localParticle->getParallelState() == globaldata::Particle::ParallelState::Local 
+      particle->getParallelState() == globaldata::Particle::ParallelState::Local 
       and
-      not localParticle->getHasBeenKicked()
+      not particle->getHasBeenKicked()
       and
-      not localParticle->getIsBoundaryParticle() )
+      not particle->getIsBoundaryParticle() )
       {
     
       /* Kick the particle */
-      localParticle->setV_full( localParticle->getV() + 
-                           timeStepSize_half * (localParticle->getA() - localParticle->getA_prev_step()) );
+      particle->setV_full( particle->getV() + 
+                           timeStepSize_half * (particle->getA() - particle->getA_prev_step()) );
 
-      localParticle->setHasBeenKicked(true);
+      particle->setHasBeenKicked(true);
 
       /* Store old acceleration for a potential additional corrector step */
-      localParticle->setA_prev_step( localParticle->getA() );  
+      particle->setA_prev_step( particle->getA() );  
       
     }
 
@@ -106,22 +106,22 @@ class LeapfrogCorrectorExtra:
     const double timeStepSize_half = 0.5 * GLOBAL_TIME_STEP_SIZE;
     
     if( 
-      localParticle->getParallelState() == globaldata::Particle::ParallelState::Local
+      particle->getParallelState() == globaldata::Particle::ParallelState::Local
       and
-      not localParticle->getHasBeenKicked()
+      not particle->getHasBeenKicked()
       and
-      not localParticle->getIsBoundaryParticle() )
+      not particle->getIsBoundaryParticle() )
       {
     
       /* Kick the internal energy of the particle */
       
-      localParticle->setU_full( localParticle->getU_full() + 
-                           timeStepSize_half * (localParticle->getUDot() - localParticle->getUDot_prev_step()) );
+      particle->setU_full( particle->getU_full() + 
+                           timeStepSize_half * (particle->getUDot() - particle->getUDot_prev_step()) );
 
-      localParticle->setHasBeenKicked(true);
+      particle->setHasBeenKicked(true);
 
       /* Store old value for a potential additional corrector step */
-      localParticle->setUDot_prev_step( localParticle->getUDot() );  
+      particle->setUDot_prev_step( particle->getUDot() );  
       
     }
 
