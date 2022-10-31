@@ -29,9 +29,6 @@ class testDensityCalculation(Particle):
     self.hydroDimensions = 2
     self.kernelSupportRadius = 2.0
     self.etaFactor = 1.235
-    self.hTolerance = 1e-4
-    self.hHydroMin = 1e-6
-    self.hHydroMax = 0.2
 
     # Minimal SPH parameters
     self.alphaAV = 0.8

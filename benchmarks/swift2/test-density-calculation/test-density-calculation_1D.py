@@ -55,7 +55,7 @@ particle_set = project.add_particle_species( particle )
 if args.asserts:
   build_mode = peano4.output.CompileMode.Asserts
 else:
-  build_mode = peano4.output.CompileMode.Debug
+  build_mode = peano4.output.CompileMode.Release
     
 offset      = [ 0, 0, 0 ] 
 domain_size = [ 1, 1, 1 ]
