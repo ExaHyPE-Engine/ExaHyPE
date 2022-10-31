@@ -709,8 +709,8 @@ if __name__ == "__main__":
     #  print( "Restiction rule: injection" )
 
     #we overwrite the transition scheme here to test multilayers operator
-    my_solver.interpolation = "TP_constant"
-    my_solver.restriction= "TP_inject_normal_extrap"
+    my_solver.interpolation = "TP_constant" #"TP_linear_with_linear_extrap_normal_interp"
+    my_solver.restriction= "TP_inject_normal_extrap" #"TP_average_normal_extrap"
           
     #if args.interpolation=="linear+enforce" or args.interpolation=="linear-slow+enforce":
     #  self.point_wise_postprocessing_of_interpolation = "examples::exahype2::ccz4::enforceCCZ4constraints(targetVolume)" )
