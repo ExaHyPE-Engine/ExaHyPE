@@ -243,39 +243,42 @@ void toolbox::blockstructured::restrictInnerHalfOfHaloLayer_AoS_averaging(
       tarch::la::Vector<Dimensions,int>    fineVolume                = kFine;
       tarch::la::Vector<Dimensions,int>    fineVolumeAlongCoarseFace = kFine;
 
-      bool restrictThisVolume = true;
-      for (int d=0; d<Dimensions; d++) {
-        if (d!=normal) {
-          fineVolumeAlongCoarseFace(d)+=marker.getRelativePositionWithinFatherCell()(d)*numberOfDoFsPerAxisInPatch;
+      for (int iFine=0; iFine<overlap; iFine++) {
+        fineVolume(normal) = iFine;
 
-          restrictThisVolume &= (fineVolumeAlongCoarseFace(d)%3)==1;
+        bool restrictThisVolume = true;
+        for (int d=0; d<Dimensions; d++) {
+          if (d==normal) {
+            restrictThisVolume &= (overlap==1 or fineVolumeAlongCoarseFace(d)%3==1);
+          }
+          else {
+            fineVolumeAlongCoarseFace(d)+=marker.getRelativePositionWithinFatherCell()(d)*numberOfDoFsPerAxisInPatch;
+            restrictThisVolume &= (fineVolumeAlongCoarseFace(d)%3)==1;
+          }
         }
-      }
 
-      if (restrictThisVolume) {
-        tarch::la::Vector<Dimensions,int>    coarseVolume = fineVolumeAlongCoarseFace/3;
+        if (restrictThisVolume) {
+          tarch::la::Vector<Dimensions,int>    coarseVolume = fineVolumeAlongCoarseFace/3;
 
-        assertion(overlap==1);
-      //for (int iFine=0;   iFine<overlap;   iFine+=3) {
-        const int iFine=0;
-        fineVolume(normal)   = pickLeftHalfOfHaloOnFineGrid ? iFine : iFine + overlap;
-        coarseVolume(normal) = pickLeftHalfOfHaloOnFineGrid ? iFine : iFine + overlap;
+          fineVolume(normal)   = pickLeftHalfOfHaloOnFineGrid ? iFine : iFine + overlap;
+          coarseVolume(normal) = pickLeftHalfOfHaloOnFineGrid ? iFine : iFine + overlap;
 
-        int coarseVolumeLinearised = serialiseVoxelIndexInOverlap(
-          coarseVolume,
-          numberOfDoFsPerAxisInPatch, overlap, normal
-          );
-        int fineVolumeLinearised = serialiseVoxelIndexInOverlap(
-          fineVolume,
-          numberOfDoFsPerAxisInPatch, overlap, normal
-          );
-        for (int j=0; j<unknowns; j++) {
-          assertion3(coarseGridValues[coarseVolumeLinearised*unknowns+j]==coarseGridValues[coarseVolumeLinearised*unknowns+j], coarseVolume, fineVolume, marker.toString());
-          assertion3(fineGridValues[fineVolumeLinearised*unknowns+j]==fineGridValues[fineVolumeLinearised*unknowns+j],         coarseVolume, fineVolume, marker.toString());
-          coarseGridValues[coarseVolumeLinearised*unknowns+j] = fineGridValues[fineVolumeLinearised*unknowns+j];
-        }
-      }
-    }
+          int coarseVolumeLinearised = serialiseVoxelIndexInOverlap(
+            coarseVolume,
+            numberOfDoFsPerAxisInPatch, overlap, normal
+            );
+          int fineVolumeLinearised = serialiseVoxelIndexInOverlap(
+            fineVolume,
+            numberOfDoFsPerAxisInPatch, overlap, normal
+            );
+          for (int j=0; j<unknowns; j++) {
+            assertion3(coarseGridValues[coarseVolumeLinearised*unknowns+j]==coarseGridValues[coarseVolumeLinearised*unknowns+j], coarseVolume, fineVolume, marker.toString());
+            assertion3(fineGridValues[fineVolumeLinearised*unknowns+j]==fineGridValues[fineVolumeLinearised*unknowns+j],         coarseVolume, fineVolume, marker.toString());
+            coarseGridValues[coarseVolumeLinearised*unknowns+j] = fineGridValues[fineVolumeLinearised*unknowns+j];
+          }
+        } // end of restrictThisVolume
+      } // for iFine loop, i.e. loop over halo layer depth
+    } // dfore loop, i.e. loop over submanifold
 
     logTraceOut( "restrictInnerHalfOfHaloLayer_AoS_restrict(...)" );
   }

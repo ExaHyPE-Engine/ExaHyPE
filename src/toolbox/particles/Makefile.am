@@ -9,6 +9,7 @@ endif
 
 ToolboxParticles_SOURCES = \
   FileReader.cpp \
+  FileReaderHDF5.cpp \
   Tracer.cpp \
   TrajectoryDatabase.cpp \
   particles.cpp \

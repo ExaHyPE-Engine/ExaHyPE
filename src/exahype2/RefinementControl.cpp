@@ -193,10 +193,6 @@ void exahype2::RefinementControl::triggerSendOfCopyOfCommittedEvents() {
 
 
 void exahype2::RefinementControl::finishStep() {
-  if (not _newEvents.empty()) {
-    logInfo( "finishStep()", "activate " << _newEvents.size() << " refinement/erase instructions (can be taken into account in next grid sweep)" );
-  }
-
   _committedEvents.clear();
 
   int maxLifetime = 0;

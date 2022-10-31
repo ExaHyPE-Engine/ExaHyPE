@@ -137,6 +137,16 @@
  * - The storage format identifier is followed by another underscore.
  * - The next part of the string is the actual interpolation scheme.
  *
+ * We offer two types of interpolation: There's a few hard-coded interpolation schemes
+ * which are written in core C++ and realise the interpolation. There is also a generic
+ * verison of the interpolation which expects the user to pass in an interpolation
+ * matrix and then applies this matrix instead of a hard-coded operation.
+ *
+ * If you work with the generic implementation accepting matrices, then most codes
+ * pre-compute the required matrices manually (within a Python script, e.g.) and then
+ * pass in a pointer to a constant double field holding the matrix. Please consult
+ * toolbox::blockstructured::interpolateHaloLayer_AoS_generic() for details.
+ *
  * Technically, there are always two types of interpolation routines per face:
  * There is a version which is given the coarse cell face only. I use this one to interpolate
  * from a coarse level onto a face at the boundary of a finer @f$ 3 \times 3 @f$
@@ -149,7 +159,7 @@
  * with the idea that face data always holds copies from adjacent fine grid data.
  *
  *
- * ## Caching of inter-grid transfer operators
+ * ## Caching of inter-grid transfer operators (only for built-in C++ operators)
  *
  * Constructing the interpolation operators can be time consuming. I therefore cache
  * the operators.
@@ -177,6 +187,44 @@
 
 namespace toolbox {
   namespace blockstructured {
+    /**
+     * Take the coarse grid values and interpolate them onto the fine grid
+     */
+    void interpolateHaloLayer_AoS_tensor_product(
+      const peano4::datamanagement::FaceMarker& marker,
+      int                                       numberOfDoFsPerAxisInPatch,
+      int                                       overlap,
+      int                                       unknowns,
+      const double* __restrict__                normalInterpolationMatrix1d,
+      const double* __restrict__                tangentialInterpolationMatrix1d,
+      const double* __restrict__                coarseGridFaceValues,
+      double* __restrict__                      fineGridFaceValues
+    );
+
+
+    void interpolateHaloLayer_AoS_tensor_product(
+      const peano4::datamanagement::FaceMarker& marker,
+      int                                       numberOfDoFsPerAxisInPatch,
+      int                                       overlap,
+      int                                       unknowns,
+      const double* __restrict__                normalInterpolationMatrix1d,
+      const double* __restrict__                tangentialInterpolationMatrix1d,
+      const double* __restrict__                coarseGridCellValues,
+      const double* __restrict__                coarseGridFaceValues,
+      double* __restrict__                      fineGridFaceValues
+    );
+
+
+    void interpolateCell_AoS_tensor_product(
+      const peano4::datamanagement::CellMarker& marker,
+      int                                       numberOfDoFsPerAxisInPatch,
+      int                                       unknowns,
+      const double* __restrict__                interpolationMatrix1d,
+      const double* __restrict__                coarseGridCellValues,
+      double* __restrict__                      fineGridCellValues
+    );
+
+
     /**
      * Take the coarse grid values and interpolate them onto the fine grid
      */
@@ -346,7 +394,6 @@ namespace toolbox {
     );
 
     namespace internal {
-
       /**
        * The realisation relies on the following observations/follows these
        * steps:
@@ -429,78 +476,78 @@ namespace toolbox {
        */
       tarch::la::DynamicMatrix*  createLinearInterpolationMatrix(int numberOfDoFsPerAxisInPatch, bool extrapolateLinearly);
 
-/**
- * Create piecewise constant interpolation matrix
- *
- * The matrix is very simple as it holds exclusively zeroes and ones. To
- * construct it, we run over the image and and look for each image voxel
- * which coarser face voxel is overlaps. In this context, we exploit the
- * fact that all voxels are enumarted lexicographically:
- *
- * @image html Interpolation_createPiecewiseConstantInterpolationMatrix.png
- *
- * The resulting matrix for the example above (where the normal equals 0)
- * is 24x8 matrix which equals
- *
- * \f$
-\begin{array}{cccccccc}
-1 & 0 & 0 & 0 & 0 & 0 & 0 & 0 \\
-0 & 1 & 0 & 0 & 0 & 0 & 0 & 0 \\
-1 & 0 & 0 & 0 & 0 & 0 & 0 & 0 \\
-0 & 1 & 0 & 0 & 0 & 0 & 0 & 0 \\
-1 & 0 & 0 & 0 & 0 & 0 & 0 & 0 \\
-0 & 1 & 0 & 0 & 0 & 0 & 0 & 0 \\
-0 & 0 & 1 & 0 & 0 & 0 & 0 & 0 \\
-0 & 0 & 0 & 1 & 0 & 0 & 0 & 0 \\
-0 & 0 & 1 & 0 & 0 & 0 & 0 & 0 \\
-0 & 0 & 0 & 1 & 0 & 0 & 0 & 0
-\end{array} 
-  \f$
- *
- * Below is another example for a face on y-direction in a 2D setup, assuming three-partitioning for every patch.
- * when we refine a face, we get @f$ 3^{d-1} @f$ subfaces.
- * we enumerate the volumes within a surface first, and then move to the next surface lexicographically.
- *
- * @image html Interpolation_ydirection_example.png
- *
- * ## Construction algorithm
- *
- * I have two variants of the actual construction in here. One of them is
- * commented out. It is the manual flavour which I wanted to keep to allow
- * people to understand what's going on.
- *
- * The one shipped is way more elegant (in my opinion) than the manual
- * implementation. It starts from the observation that a 1d interpolation
- * from a mesh onto a subdivided mesh with a subdivision factor by three
- * is very simplistic matrix.
- *
- * \f[
-  \begin{array}{cccccccc}
-1 & 0 & 0 & 0 \\
-1 & 0 & 0 & 0 \\
-1 & 0 & 0 & 0 \\
-0 & 1 & 0 & 0 \\
-0 & 1 & 0 & 0 \\
-0 & 1 & 0 & 0 \\
-0 & 0 & 1 & 0 \\
-0 & 0 & 1 & 0 \\
-0 & 0 & 1 & 0 \\
-0 & 0 & 0 & 1 \\
-0 & 0 & 0 & 1 \\
-0 & 0 & 0 & 1
-  \end{array}
- \f]
- *
- * Here, I use four-partitioning.
- *
- * ## Formatting of documentation (doxygen)
- *
- * Doxygen nowadays supports markup syntax. Unfortunately, this documentation
- * would be indented more than five spaces which makes some of the write-up
- * preformatted in markup. So the doxygen parser completely messes up things.
- *
- * For this reason, the documentation here is not properly indented.
- */
+    /**
+     * Create piecewise constant interpolation matrix
+     *
+     * The matrix is very simple as it holds exclusively zeroes and ones. To
+     * construct it, we run over the image and and look for each image voxel
+     * which coarser face voxel is overlaps. In this context, we exploit the
+     * fact that all voxels are enumerated lexicographically:
+     *
+     * @image html Interpolation_createPiecewiseConstantInterpolationMatrix.png
+     *
+     * The resulting matrix for the example above (where the normal equals 0)
+     * is 24x8 matrix which equals
+     *
+     * \f$
+    \begin{array}{cccccccc}
+    1 & 0 & 0 & 0 & 0 & 0 & 0 & 0 \\
+    0 & 1 & 0 & 0 & 0 & 0 & 0 & 0 \\
+    1 & 0 & 0 & 0 & 0 & 0 & 0 & 0 \\
+    0 & 1 & 0 & 0 & 0 & 0 & 0 & 0 \\
+    1 & 0 & 0 & 0 & 0 & 0 & 0 & 0 \\
+    0 & 1 & 0 & 0 & 0 & 0 & 0 & 0 \\
+    0 & 0 & 1 & 0 & 0 & 0 & 0 & 0 \\
+    0 & 0 & 0 & 1 & 0 & 0 & 0 & 0 \\
+    0 & 0 & 1 & 0 & 0 & 0 & 0 & 0 \\
+    0 & 0 & 0 & 1 & 0 & 0 & 0 & 0
+    \end{array}
+      \f$
+     *
+     * Below is another example for a face on y-direction in a 2D setup, assuming three-partitioning for every patch.
+     * when we refine a face, we get @f$ 3^{d-1} @f$ subfaces.
+     * we enumerate the volumes within a surface first, and then move to the next surface lexicographically.
+     *
+     * @image html Interpolation_ydirection_example.png
+     *
+     * ## Construction algorithm
+     *
+     * I have two variants of the actual construction in here. One of them is
+     * commented out. It is the manual flavour which I wanted to keep to allow
+     * people to understand what's going on.
+     *
+     * The one shipped is way more elegant (in my opinion) than the manual
+     * implementation. It starts from the observation that a 1d interpolation
+     * from a mesh onto a subdivided mesh with a subdivision factor by three
+     * is very simplistic matrix.
+     *
+     * \f[
+      \begin{array}{cccccccc}
+    1 & 0 & 0 & 0 \\
+    1 & 0 & 0 & 0 \\
+    1 & 0 & 0 & 0 \\
+    0 & 1 & 0 & 0 \\
+    0 & 1 & 0 & 0 \\
+    0 & 1 & 0 & 0 \\
+    0 & 0 & 1 & 0 \\
+    0 & 0 & 1 & 0 \\
+    0 & 0 & 1 & 0 \\
+    0 & 0 & 0 & 1 \\
+    0 & 0 & 0 & 1 \\
+    0 & 0 & 0 & 1
+      \end{array}
+     \f]
+     *
+     * Here, I use four-partitioning.
+     *
+     * ## Formatting of documentation (doxygen)
+     *
+     * Doxygen nowadays supports markup syntax. Unfortunately, this documentation
+     * would be indented more than five spaces which makes some of the write-up
+     * preformatted in markup. So the doxygen parser completely messes up things.
+     *
+     * For this reason, the documentation here is not properly indented.
+     */
       tarch::la::DynamicMatrix*  createPiecewiseConstantInterpolationMatrix(int numberOfDoFsPerAxisInPatch, int normal, int overlap);
 
       /**

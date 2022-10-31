@@ -7,15 +7,18 @@ import dastgen2
 
 import os
 import sys
-import swift2
+
+from swift2.particle.Particle   import Particle
+from swift2.strategy.Sequential import translate_particle_steps_into_sequence_of_grid_traversals
 
 
+from abc import abstractmethod
 
 
 class Project(object):
   """
    
-  Represents a SWIFT 2 project. An SWIFT 2 project is a Peano 4 
+  Represents an abstract SWIFT 2 project. An SWIFT 2 project is a Peano 4 
   project with a particular set of actions (algorithmic phases) 
   that you can choose from and with particular solver types. It 
   realises a builder mechanism, i.e. you build up your SWIFT 2
@@ -23,10 +26,16 @@ class Project(object):
   project". From hereon, you can use this Peano 4 project to actually
   set up the Peano 4 application.
   
+  Please do not use this class directly. Use one of its subclasses.
+  
   @see generate_Peano4_project()
   
   """
-  def __init__(self, namespace, project_name, directory = ".", executable="swift2"):
+  def __init__(self, 
+               namespace, 
+               project_name, 
+               directory  = ".", 
+               executable = "swift2"):
     self._project = peano4.Project(namespace, project_name, directory)
     
     self._domain_offset = [0.0, 0.0, 0.0]
@@ -42,21 +51,29 @@ class Project(object):
     self._build_mode          = peano4.output.CompileMode.Asserts
     self._executable_name = executable
     self._periodic_BC   = [False, False, False]
-    self._plot_filters  = []
     self._output_path   = "./"
-    self._plotter_precision = 5
+    self._min_h         = 0.01
+    self._max_h         = 0.1
 
-    #self._particle_species = []
+    self._particle_species = []
  
-    self.create_grid                         = peano4.solversteps.Step( "CreateGrid", False )
-    self.init_grid                           = peano4.solversteps.Step( "InitGrid",   False )
-    self.create_grid_but_postpone_refinement = peano4.solversteps.Step( "CreateGridButPostponeRefinement", False )
-    self.create_grid_and_converge_lb         = peano4.solversteps.Step( "CreateGridAndConvergeLoadBalancing", False )
-    self.plot_solution                       = peano4.solversteps.Step( "PlotSolution", False )
-    self.perform_time_step                   = peano4.solversteps.Step( "TimeStep",     False )
-        
+    self._algorithm_step_create_grid    = peano4.solversteps.Step( "CreateGrid", False )
+    self._algorithm_step_init           = peano4.solversteps.Step( "Init",       False )
+    self._algorithm_step_plot           = peano4.solversteps.Step( "Plot",       False )
+                
+    self._algorithm_step_plot.add_action_set( peano4.toolbox.PlotGridInPeanoBlockFormat( 
+      filename              = "grid", 
+      time_stamp_evaluation = "repositories::getMinTimeStamp()",
+      additional_includes   = """
+#include "repositories/GlobalState.h"
+"""      
+    ))
     
-  def  set_load_balancing(self, load_balancer_name, load_balancer_arguments = ""):
+    self.translator = translate_particle_steps_into_sequence_of_grid_traversals
+
+
+    
+  def  set_load_balancing(self, load_balancer_name, load_balancer_arguments):
     """
     
       load_balancer_name: string
@@ -98,42 +115,6 @@ class Project(object):
     self._build_mode          = mode
 
 
-  #def add_solver(self,solver):
-  #  self._solvers.append( solver )
-
-
-  def add_plot_filter(self,offset,size,frequency=1):
-    """
-    
-    Add a new filter to Peano/ExaHyPE
-    
-    offset: (float,float,float)
-    
-    size: (float,float,float)
-    
-    frequency: int
-      A positive value. Peano makes snapshots every dt simulation
-      units. This is something you specify once per simulation. But
-      you might decide only to splot every k of these snapshots.
-    
-    """  
-    new_entry = "{{"
-    new_entry += str(offset[0])
-    for i in offset[1:]:
-      new_entry += ","
-      new_entry += str(i)
-    new_entry += "},{"
-    new_entry += str(size[0])
-    for i in size[1:]:
-      new_entry += ","
-      new_entry += str(i)
-    new_entry += "},"
-    new_entry += str(frequency)
-    new_entry += "}"
-    
-    self._plot_filters.append( new_entry )
-
-  
   def __export_constants(self):
     """
     
@@ -165,6 +146,9 @@ class Project(object):
     self._project.constants.export( "TimeInBetweenPlots", str(self._time_in_between_plots) )
     self._project.constants.export( "PlotterPrecision", str(self._plotter_precision) )
     self._project.constants.export_boolean_sequence( "PeriodicBC", self._periodic_BC )
+    
+    self._project.constants.export( "MaxH", str(self._max_h) )
+    self._project.constants.export( "MinH", str(self._min_h) )
 
     build_string = "python3 "
     for i in sys.argv:
@@ -189,9 +173,6 @@ citation of the original SWIFT paper
 
 """ )
 
-    #for i in self._solvers:
-    #  self._project.output.readme.add_entry( i.create_readme_descriptor(self._domain_offset[0],self._domain_size[0]) ) 
-
 
   def __configure_makefile(self):
     self._project.output.makefile.set_dimension(self._dimensions)
@@ -201,6 +182,7 @@ citation of the original SWIFT paper
   def set_global_simulation_parameters(self,
                                        dimensions,
                                        offset,size,
+                                       max_h,min_h,
                                        min_end_time,
                                        first_plot_time_stamp,
                                        time_in_between_plots, 
@@ -225,6 +207,9 @@ citation of the original SWIFT paper
         most advanced cell exceeds this threshold.
       
     """
+    assert max_h>=min_h
+    self._max_h         = max_h
+    self._min_h         = min_h
     self._domain_offset = offset
     self._domain_size   = size
     self._dimensions    = dimensions
@@ -246,40 +231,31 @@ citation of the original SWIFT paper
       self._output_path += "/"
     
     
-  def __generate_solver_repository(self):
+  def __generate_global_state_files(self):
     solverRepositoryDictionary = {
-      "SOLVERS" : [],
+      "PARTICLE_SPECIES" : [],
       "LOAD_BALANCER" : self._load_balancer_name,
       "LOAD_BALANCER_ARGUMENTS" : self._load_balancer_arguments,
-      "PLOT_FILTER": self._plot_filters
     }
 
-    #for solver in self._solvers:
-    #  solverRepositoryDictionary[ "SOLVERS" ].append( (solver._name,solver.get_name_of_global_instance()) )
-      
+    templatefile_prefix = os.path.dirname(__file__)
+    generated_solver_files = peano4.output.Jinja2TemplatedHeaderImplementationFilePair(
+      templatefile_prefix + "/output/GlobalState.template.h",
+      templatefile_prefix + "/output/GlobalState.template.cpp",
+      "GlobalState", 
+      self._project.namespace + ["repositories"],
+      "repositories", 
+      solverRepositoryDictionary,
+      True)
 
-    #templatefile_prefix = os.path.realpath(__file__).replace( ".pyc", "" ).replace( ".py", "" )
-    #generated_solver_files = peano4.output.Jinja2TemplatedHeaderImplementationFilePair(
-    #  templatefile_prefix + "SolverRepository.template.h",
-    #  templatefile_prefix + "SolverRepository.template.cpp",
-    #  "SolverRepository", 
-    #  self._project.namespace + ["repositories"],
-    #  "repositories", 
-    #  solverRepositoryDictionary,
-    #  True)
-
-    #self._project.output.add( generated_solver_files )
-    #self._project.output.makefile.add_cpp_file( "repositories/SolverRepository.cpp" )
+    self._project.output.add( generated_solver_files )
+    self._project.output.makefile.add_cpp_file( "repositories/GlobalState.cpp" )
    
 
-
-  #def add_action_set_to_timestepping(self, action_set):
-  #  self.perform_time_step.add_action_set( action_set )
-
-
-  def add_action_set_to_initialisation(self, action_set):
-    self.init_grid.add_action_set( action_set )
-
+  def add_particle_species(self, particle: Particle ):
+    self._particle_species.append( particle )
+    pass
+      
         
   def generate_Peano4_project(self, verbose=False):
     """
@@ -295,43 +271,13 @@ citation of the original SWIFT paper
      Peano setup.
      
     """
-    #self._project.cleanup()
-            
-    self._project.solversteps.add_step(self.create_grid)
-    self._project.solversteps.add_step(self.init_grid)
-    self._project.solversteps.add_step(self.create_grid_but_postpone_refinement)
-    self._project.solversteps.add_step(self.create_grid_and_converge_lb)
-    self._project.solversteps.add_step(self.plot_solution)
-    self._project.solversteps.add_step(self.perform_time_step)
+    self._project.solversteps.add_step(self._algorithm_step_create_grid)
+    self._project.solversteps.add_step(self._algorithm_step_init)
+    self._project.solversteps.add_step(self._algorithm_step_plot)
    
-    #for solver in self._solvers:
-    #  print( "---------------------------------------")
-    #  print( "Create data for solver " +solver._name  )
-    #  print( "---------------------------------------")
-    #  print( str(solver) )
-      
-    #  solver.add_to_Peano4_datamodel( self._project.datamodel, verbose )
-      
-    #  solver.add_use_data_statements_to_Peano4_solver_step( self.create_grid )
-    #  solver.add_use_data_statements_to_Peano4_solver_step( self.plot_solution )
-    #  solver.add_use_data_statements_to_Peano4_solver_step( self.perform_time_step )
-    #  solver.add_use_data_statements_to_Peano4_solver_step( self.init_grid )
-    #  solver.add_use_data_statements_to_Peano4_solver_step( self.create_grid_but_postpone_refinement )
-    #  solver.add_use_data_statements_to_Peano4_solver_step( self.create_grid_and_converge_lb )
-      
-    #  solver.add_actions_to_create_grid( self.create_grid,                         evaluate_refinement_criterion=True  )
-    #  solver.add_actions_to_init_grid( self.init_grid )
-    #  solver.add_actions_to_create_grid( self.create_grid_but_postpone_refinement, evaluate_refinement_criterion=False )
-    #  solver.add_actions_to_create_grid( self.create_grid_and_converge_lb,         evaluate_refinement_criterion=False )
-    #  solver.add_actions_to_plot_solution( self.plot_solution, self._output_path )
-    #  solver.add_actions_to_perform_time_step( self.perform_time_step )
-      
-    #  solver.add_implementation_files_to_project( self._project.namespace, self._project.output )
+    self.__generate_global_state_files();
     
-
-    self.__generate_solver_repository();
-    
-    self._project.main = swift2.SWIFTMain(self._project)
+    #self._project.main = swift2.project.SWIFTMain(self._project, self.main_file_template() )
 
     self.__configure_makefile()
     self._project.output.makefile.parse_configure_script_outcome( self._Peano_src_directory )
@@ -342,3 +288,7 @@ citation of the original SWIFT paper
     return self._project
 
     
+  @abstractmethod
+  def main_file_template(self):
+    assert False, "should be implemented by subclass"
+    pass

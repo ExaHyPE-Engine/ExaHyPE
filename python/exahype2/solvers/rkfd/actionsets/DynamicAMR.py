@@ -14,14 +14,11 @@ import peano4.toolbox.blockstructured.DynamicAMR
 class DynamicAMR( peano4.toolbox.blockstructured.DynamicAMR ):
   """
   
-   The ExaHyPE 2 Finite Volume handling of (dynamically) adaptive meshes
+   The FD4 handling of (dynamically) adaptive meshes
    
-   This class is basically a plain copy of the DynamicAMR action set
-   from the toolbox. However, we have to ensure that we also set the
-   update markers appropriately such that restricted data are taken 
-   into account. This action set thus has to be studied in combination 
-   with the ProjectPatchOntoFaces action set which is very similar and
-   also enriches the toolbox version by this marker aspect.
+   This class just invokes interpolation operators. Please consult the documentation
+   of the FD4 base class CellCenteredFiniteDifferences for a discussion of interpolation
+   and restriction operators.
   
   """
     
@@ -76,7 +73,7 @@ class DynamicAMR( peano4.toolbox.blockstructured.DynamicAMR ):
       patch = solver._patch,
       patch_overlap_interpolation = solver._patch_overlap_old,
       patch_overlap_restriction   = solver._patch_overlap_update,
-      interpolation_scheme        = "linear_with_constant_extrapolation", 
+      interpolation_scheme        = "linear_with_constant_extrapolation",  # dummy which is overwritten below
       restriction_scheme          = "injection",
       interpolate_guard           = """
   repositories::""" + solver.get_name_of_global_instance() + """.getSolverState()!=""" + solver._name + """::SolverState::GridInitialisation
@@ -246,4 +243,5 @@ class DynamicAMR( peano4.toolbox.blockstructured.DynamicAMR ):
     return super(DynamicAMR,self).get_includes() + """
 #include <cstring>
 #include "exahype2/fv/PatchUtils.h"
+#include "exahype2/fv/InterpolationRestriction.h"
 """    

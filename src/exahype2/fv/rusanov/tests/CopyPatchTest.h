@@ -1,7 +1,8 @@
-
 // This file is part of the Peano project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
+
+
 #include "tarch/tests/TestCase.h"
 
 namespace exahype2 {
@@ -15,31 +16,18 @@ namespace exahype2 {
 }
 
 
-class exahype2::fv::rusanov::tests::CopyPatchTest : public tarch::tests::TestCase
-{
-private:
+class exahype2::fv::rusanov::tests::CopyPatchTest: public tarch::tests::TestCase {
+  private:
+    void testMe();
 
-  void testMe();
+  public:
+    /**
+     * Constructor.
+     */
+    CopyPatchTest();
 
-public:
-
-  /**
-   * Constructor.
-   */
-  CopyPatchTest();
-
-  /**
-   * Destructor, empty.
-   */
-  virtual ~CopyPatchTest() {}
-
-  /**
-   * This routine is triggered by the TestCaseCollection
-   */
-  virtual void run();
-
-  /**
-   * Setup your test case.
-   */
-  virtual void setUp() {}
+    /**
+     * This routine is triggered by the TestCaseCollection
+     */
+    void run() override;
 };

@@ -26,5 +26,7 @@ trace  examples                            -1     black always-on
 trace  exahype2                            -1     black always-on
 trace  toolbox                             -1     black always-on
 
+info  applications::exahype2::ccz4::AbstractRKDGCCZ4::AbstractRKDGCCZ4   -1	  black always-on
+info  applications::exahype2::ccz4::AbstractRKDGCCZ4::AbstractRKDGCCZ4    0	  white always-on
 
 

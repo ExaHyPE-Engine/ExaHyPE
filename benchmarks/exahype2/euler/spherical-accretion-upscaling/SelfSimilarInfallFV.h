@@ -155,6 +155,14 @@ class benchmarks::exahype2::euler::sphericalaccretionupscaling::SelfSimilarInfal
     ) override;
     
 
+    ::exahype2::RefinementCommand refinementCriterion(
+      const double * __restrict__ Q, // Q[5+0],
+      const tarch::la::Vector<Dimensions,double>&  volumeCentre,
+      const tarch::la::Vector<Dimensions,double>&  volumeH,
+      double                                       t
+    ) override;
+
+
     /**
      * According to the docu, I always call the superclass routine. After that,
      * I check whether this has been the last sweep of the current time step.

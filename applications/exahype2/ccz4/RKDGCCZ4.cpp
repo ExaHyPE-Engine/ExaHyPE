@@ -187,7 +187,7 @@ double ::applications::exahype2::ccz4::RKDGCCZ4::maxEigenvalue(
 )  {
   logTraceInWith4Arguments( "maxEigenvalue(...)", x, t, dt, normal );
   const double qmin = std::min({Q[0],Q[3],Q[5]});
-  const double alpha = std::max({1.0, std::exp(Q[16])}) * std::max({1.0, std::exp(Q[54])}) / std::sqrt(qmin);
+  const double alpha = std::max({1.0, Q[16]}) * std::max({1.0, Q[54]}) / std::sqrt(qmin);
 
   constexpr double sqrtwo = 1.4142135623730951;
   const double tempA = alpha * std::max({sqrtwo, CCZ4e, CCZ4ds, CCZ4GLMc/alpha, CCZ4GLMd/alpha});

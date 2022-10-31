@@ -150,10 +150,10 @@ class SeparateSweeps( RungeKuttaDG ):
     """
     super(SeparateSweeps, self).create_action_sets()
     
-    self._action_set_linear_combination_of_estimates.guards       = self._primary_sweeps_of_Runge_Kutta_step
+    self._action_set_linear_combination_of_estimates.guards                                  = self._primary_sweeps_of_Runge_Kutta_step
     self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement.guards = self._primary_sweeps_of_Runge_Kutta_step
-    self._action_set_project_linear_combination_onto_faces.guards = self._primary_sweeps_of_Runge_Kutta_step
-    self._action_set_solve_volume_integral.guards                 = self._primary_sweeps_of_Runge_Kutta_step
+    self._action_set_project_linear_combination_onto_faces.guards                            = self._primary_sweeps_of_Runge_Kutta_step
+    self._action_set_solve_volume_integral.guards                                            = self._primary_sweeps_of_Runge_Kutta_step
         
     self._action_set_add_volume_and_face_solution.guards = self._secondary_sweeps_of_Runge_Kutta_step
     self._action_set_solve_Riemann_problem.guards        = self._secondary_sweeps_of_Runge_Kutta_step

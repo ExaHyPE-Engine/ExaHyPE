@@ -34,6 +34,11 @@ project = swift2.Project( namespace=["benchmarks", "swift2", "planetorbit"],
                           executable="orbit-" + str(args.cell_size) )
 
 
+particle   = swift2.particle.ExplicitEulerFixedInteractionRadius( "Planet" )
+particle.data.add_attribute( peano4.dastgen2.Peano4DoubleArray("v","Dimensions") )
+particle.data.add_attribute( peano4.dastgen2.Peano4DoubleArray("a","Dimensions") )
+
+project.add_particle_species( particle )
 
 
 ########################################################################################
@@ -53,6 +58,7 @@ periodic_boundary_conditions = [True,True,True]          # Periodic BC
 project.set_global_simulation_parameters(
   dimensions,               # dimensions
   offset,  domain_size,
+  0.1,     0.001,
   args.end_time,
   0.0, 
   args.end_time/20,                      #args.plot_step_size,   # snapshots
@@ -63,7 +69,7 @@ project.set_global_simulation_parameters(
 project.set_Peano4_installation(args.peanodir, build_mode)
 
 
-project.set_load_balancing("toolbox::loadbalancing::RecursiveSubdivision","(new ::exahype2::LoadBalancingConfiguration(0.98,0))" )
+project.set_load_balancing("toolbox::loadbalancing::RecursiveSubdivision", "new toolbox::loadbalancing::RecursiveSubdivision::DefaultConfiguration()")
 
 
 ########################################################################################

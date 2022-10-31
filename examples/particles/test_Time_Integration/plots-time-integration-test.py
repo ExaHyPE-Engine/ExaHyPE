@@ -26,7 +26,7 @@ files = glob.glob(snapshot_dir + "particles-*.vtu")
 files = Tcl().call('lsort', '-dict', files)
 
 # Simulation parameters
-E_ini = 1.5622
+E_ini = 1.11362
 time_step_sim = 1e-3
 snapshot_rate = 10
 SUN_X = 0.5
@@ -71,25 +71,25 @@ for N_snapshot, file in enumerate(files, start=0):
 print("Done reading all snapshots. Total= ", N_snapshot )
 
 # Plot radial profile
-fig = plt.figure(figsize=(6, 4)) 
-gs = gridspec.GridSpec(1,1) 
+fig = plt.figure( figsize=(6, 4) )
 
-ax0 = plt.subplot(gs[0])
 plt.plot(t_all, E_dif_all, c='r', lw=0.8, zorder=1)
 plt.xlabel(r'$t$')
-plt.ylabel(r'$\Delta E/E$')
-plt.margins(0.05, 0.1)
-plt.tick_params(direction='in', top=True, right=True)
+plt.ylabel(r'$\Delta E/E_{\rm ini}$')
+#plt.margins(0.05, 0.1)
+plt.tick_params(direction='in', top=True, right=True, left=True, bottom=True)
 plt.axhline(0, c='gray', ls=':', lw=1.2, zorder=-49 )
 plt.xlim(0, t_all.max())
-plt.ylim(-0.2, 0.1 )
+plt.ylim(-0.005, 0.005 )
+
+plt.tight_layout()
 
 #plt.show()
 fig.savefig('energy_conservation_profile.pdf')
 #plt.close()
 
 # Check energy conservation
-E_tolerance = 0.15
+E_tolerance = 0.05
 
 E_min = E_dif_all.min()
 E_max = E_dif_all.max()

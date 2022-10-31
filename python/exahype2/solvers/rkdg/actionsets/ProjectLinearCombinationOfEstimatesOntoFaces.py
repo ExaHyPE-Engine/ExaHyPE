@@ -7,6 +7,10 @@ import peano4
 import jinja2
 
 
+from exahype2.solvers.ButcherTableau                import ButcherTableau
+
+
+
 from enum import Enum
 
 
@@ -48,7 +52,7 @@ def compute_number_of_face_projection_quantities( face_projections: FaceProjecti
 class ProjectLinearCombinationOfEstimatesOntoFaces(AbstractRungeKuttaDGActionSet):
   """
   
-  The linear combination of the Runge Kutta trials has to be projected onto
+  The linear combination of the Runge-Kutta trials has to be projected onto
   the faces, so we can then solve the Riemann problems. So the projection 
   happens in one grid sweep, the corresponding Riemann solve in the next one.
   
@@ -57,17 +61,16 @@ class ProjectLinearCombinationOfEstimatesOntoFaces(AbstractRungeKuttaDGActionSet
   
   ## Time step sizes and time stamps
 
-  Besides the actual projection, I also set the fields
-    
-      {{FACE_METADATA_ACCESSOR}}(d).setUpdated(1,true);
-      {{FACE_METADATA_ACCESSOR}}(d).setUpdatedTimeStamp(1,{{CELL_METADATA_ACCESSOR}}.getTimeStamp());
-      {{FACE_METADATA_ACCESSOR}}(d+Dimensions).setUpdated(0,true);
-      {{FACE_METADATA_ACCESSOR}}(d+Dimensions).setUpdatedTimeStamp(0,{{CELL_METADATA_ACCESSOR}}.getTimeStamp());
+  Besides the actual projection, I also set the following fields on the 
+  face:
 
-  on the face label. So the face now has a copy of the time stamp of the cell
-  plus there's a marker that we are in the process of updating the adjacent
-  cell. With the flag, we can determine whether a neighbouring cell runs a 
-  Runge-Kutta step too or not.
+  - Updated    Is set after each projection.
+  
+  - UpdatedTimeStamp   Is set after each projection with the time stamp 
+               of the current Runge-Kutta trial. 
+               
+  We do not update the new and old time stamp on the face label. These
+  values are properly set in the ComputeFinalLinearCombination action set.                 
   
   """
  
@@ -106,9 +109,20 @@ class ProjectLinearCombinationOfEstimatesOntoFaces(AbstractRungeKuttaDGActionSet
     );
     #endif
 
+      
+    // Set the variable
+    // double timeStepSize
+    const double timeStampOldSolution    = fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStamp();
+    {{COMPUTE_TIME_STEP_SIZE}}    
+    const double timeStamp = timeStampOldSolution + {{BUTCHER_TABLEAU_RELATIVE_TIME_STEP_SIZES[PREDICATE_NO]}} * timeStepSize;
+    
     for (int d=0; d<Dimensions; d++) {
-      {{FACE_METADATA_ACCESSOR}}(d).setUpdated(1,true);
+      {{FACE_METADATA_ACCESSOR}}(d).setUpdated(           1,true);
       {{FACE_METADATA_ACCESSOR}}(d+Dimensions).setUpdated(0,true);
+
+      {{FACE_METADATA_ACCESSOR}}(d).setUpdatedTimeStamp(           1, timeStamp );
+      {{FACE_METADATA_ACCESSOR}}(d+Dimensions).setUpdatedTimeStamp(0, timeStamp );
+
       logDebug( "touchCellLastTime(...)", "update {{FACE_METADATA_ACCESSOR}}(" << d << ")(1)" );
       logDebug( "touchCellLastTime(...)", "update {{FACE_METADATA_ACCESSOR}}(" << (d+Dimensions) << ")(0)" );
     }
@@ -117,28 +131,6 @@ class ProjectLinearCombinationOfEstimatesOntoFaces(AbstractRungeKuttaDGActionSet
 """
   
 
-  TemplateProjectAsEpilogue = """
-  if (
-    repositories::{{SOLVER_INSTANCE}}.isLastGridSweepOfTimeStep()
-  ) {
-    for (int d=0; d<Dimensions; d++) {
-      {{FACE_METADATA_ACCESSOR}}(d).setUpdated(1,true);
-      {{FACE_METADATA_ACCESSOR}}(d).setUpdatedTimeStamp(1,{{CELL_METADATA_ACCESSOR}}.getTimeStamp());
-      {{FACE_METADATA_ACCESSOR}}(d).setOldTimeStamp(    1,{{FACE_METADATA_ACCESSOR}}(d).getNewTimeStamp(1));
-      {{FACE_METADATA_ACCESSOR}}(d).setNewTimeStamp(    1,{{CELL_METADATA_ACCESSOR}}.getTimeStamp());
-
-      {{FACE_METADATA_ACCESSOR}}(d+Dimensions).setUpdated(0,true);
-      {{FACE_METADATA_ACCESSOR}}(d+Dimensions).setUpdatedTimeStamp(0,{{CELL_METADATA_ACCESSOR}}.getTimeStamp());
-      {{FACE_METADATA_ACCESSOR}}(d+Dimensions).setOldTimeStamp(    0,{{FACE_METADATA_ACCESSOR}}(d+Dimensions).getNewTimeStamp(0));
-      {{FACE_METADATA_ACCESSOR}}(d+Dimensions).setNewTimeStamp(    0,{{CELL_METADATA_ACCESSOR}}.getTimeStamp());
-
-      logDebug( "touchCellLastTime(...)", "update {{FACE_METADATA_ACCESSOR}}(" << d << ")(1)" );
-      logDebug( "touchCellLastTime(...)", "update {{FACE_METADATA_ACCESSOR}}(" << (d+Dimensions) << ")(0)" );
-    }
-  }
-"""
-
-  
   def __init__(self,
                solver,
                face_projections: FaceProjections):
@@ -149,6 +141,7 @@ class ProjectLinearCombinationOfEstimatesOntoFaces(AbstractRungeKuttaDGActionSet
     super(ProjectLinearCombinationOfEstimatesOntoFaces,self).__init__(solver)
     self.guards            = []
     self.face_projections  = face_projections
+    self._butcher_tableau = ButcherTableau(self._solver._rk_order)
 
 
   @property
@@ -171,17 +164,16 @@ class ProjectLinearCombinationOfEstimatesOntoFaces(AbstractRungeKuttaDGActionSet
     self._solver._init_dictionary_with_default_parameters(d)
     self._solver.add_entries_to_text_replacement_dictionary(d)
     d[ "PREDICATES" ]                               = self.guards
-    d[ "FACE_METADATA_ACCESSOR" ]     = "fineGridFaces"  + self._solver._face_label.name
-    d[ "CELL_METADATA_ACCESSOR" ]     = "fineGridCell""" + self._solver._cell_label.name
+    d[ "FACE_METADATA_ACCESSOR" ]   = "fineGridFaces"  + self._solver._face_label.name
+    d[ "CELL_METADATA_ACCESSOR" ]   = "fineGridCell""" + self._solver._cell_label.name
+    d[ "WEIGHTS" ]                  = self._butcher_tableau.final_estimate_weights()
+    d[ "BUTCHER_TABLEAU_RELATIVE_TIME_STEP_SIZES" ] = self._butcher_tableau.time_step_sizes()
     if operation_name==peano4.solversteps.ActionSet.OPERATION_TOUCH_CELL_FIRST_TIME and self.face_projections==FaceProjections.Solution:
       result = jinja2.Template(self.TemplateProjectLinearCombinationSolution).render(**d)
       pass 
     elif operation_name==peano4.solversteps.ActionSet.OPERATION_TOUCH_CELL_FIRST_TIME:
       assert False, "face projection variant {} not supported yet ".format( self.face_projections)
       
-    if operation_name==peano4.solversteps.ActionSet.OPERATION_TOUCH_CELL_LAST_TIME:
-      result = jinja2.Template(self.TemplateProjectAsEpilogue).render(**d)
-      pass 
     return result
 
 
