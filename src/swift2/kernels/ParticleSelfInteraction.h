@@ -51,6 +51,18 @@ namespace swift2 {
       const double hHydroMax
     );
 
+    /* Same as above, but with constant h, i.e. no Newton-Raphson */
+    // Ends the density calculation. Also does a single Newton-Raphson
+    // iteration.
+    template <typename Particle>
+    void endDensityCalculationWithConstantSmoothingLength(
+      const std::vector< Particle* >& localParticles,
+      const double kernelSupportRadius,
+      const int hydroDimensions,
+      const double etaFactor,
+      const double alphaAV
+    );
+
     /**
      * Resets the acceleration and other variables
      * Done by "hydro_reset_acceleration" in SWIFT 

@@ -29,7 +29,7 @@ namespace swift2 {
 
     // Density calculation particle-particle kernel
     template <typename Particle>
-    void computeDensityWithConstantSmoothingLength(
+    void computeDensity(
         const std::list<Particle *> &localParticles,
         const std::list<Particle *> &activeParticles,
         const double kernelSupportRadius, 
