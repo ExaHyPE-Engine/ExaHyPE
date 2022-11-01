@@ -28,17 +28,32 @@ namespace swift2 {
       std::function< void(Particle* localParticle) > interaction
     );
 
-    /* This is equivalent to the hydro_init_part function in SWIFT */
-    // Prepares the particle for the density calculation. Calculates self
-    // contribution, etc
+    /**
+     * @brief Prepares a particle for the density calculation  
+     *
+     * Zeroes all the relevant arrays in perparation for the sums taking place
+     * in the loop over neighbours (local-active set)
+     *
+     * This is equivalent to the hydro_init_part function in SWIFT
+     */
     template <typename Particle>
     void prepareDensityCalculation(
       const std::vector< Particle* >& localParticles
     );
 
-    /* This is equivalent to the hydro_end_density function in SWIFT */
-    // Ends the density calculation. Also does a single Newton-Raphson
-    // iteration.
+    /** 
+     * @brief Finishes the calculations from the density loop
+     *
+     * Multiplies the denstiy and number of neighbours by the appropiate
+     * constants and add the self-contribution term. Additional quantities
+     * such as the velocity gradients will also get the final terms added to
+     * them here.
+     * This is equivalent to the hydro_end_density function in SWIFT
+     *
+     * Ends the density calculation. Also does a single Newton-Raphson
+     * iteration.
+     *
+     */
     template <typename Particle>
     void endDensityCalculation(
       const std::vector< Particle* >& localParticles,
@@ -51,9 +66,9 @@ namespace swift2 {
       const double hHydroMax
     );
 
-    /* Same as above, but with constant h, i.e. no Newton-Raphson */
-    // Ends the density calculation. Also does a single Newton-Raphson
-    // iteration.
+    /**
+     * Same as above, but with constant h, i.e. no Newton-Raphson 
+     */
     template <typename Particle>
     void endDensityCalculationWithConstantSmoothingLength(
       const std::vector< Particle* >& localParticles,
@@ -65,7 +80,7 @@ namespace swift2 {
 
     /**
      * Resets the acceleration and other variables
-     * Done by "hydro_reset_acceleration" in SWIFT 
+     * Done by "hydro_reset_acceleration" in SWIFT
      */
     template <typename Particle>
     void prepareHydroForceCalculation(
@@ -73,8 +88,8 @@ namespace swift2 {
     );
 
     /**
-     * Ends the force calculation and other variables
-     * Done by "hydro_end_force" in SWIFT 
+     * Ends the force calculation. Only introduces missing factors for Udot
+     * Done by "hydro_end_force" in SWIFT
      */
     template <typename Particle>
     void endHydroForceCalculation(

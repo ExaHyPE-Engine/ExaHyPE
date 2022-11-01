@@ -27,7 +27,26 @@ namespace swift2 {
             interaction);
 
 
-    // Density calculation particle-particle kernel
+    /**
+     * @brief Non-symmetric density calculation (as per Swift terminology). 
+     * In this, only the local particle is updated (in the symmetric case, both 
+     * are updated at the same time). This compute kernel is inserted by Peano's
+     * Python API into the nested loop over active and local particles. So we can
+     * assume that those two terms do exist.
+     *
+     * The present kernel is a sole particle-particle interaction kernel.
+     *
+     * Here we calculate the density, Omega and drho/dt sums.
+     * The latter can be used in the Newton-Raphson iteration.
+     *
+     * Subscripts a and b represent indices of Local and Active particles, respectively:
+     *
+     * h_a: Smoothing length of Local particle
+     * h_b: Smoothign length of Active particle
+     * dx : Vector separating the two particles (x_loc - x_act)
+     * r  : Distance between the two particles  (|| dx ||)
+     *
+     */
     template <typename Particle>
     void computeDensity(
         const std::list<Particle *> &localParticles,

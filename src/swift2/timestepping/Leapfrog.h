@@ -63,7 +63,7 @@ namespace swift2 {
       const bool isSPH
     );
 
-    /*
+    /**
      * Kick extra step, i.e. update some thermodynamic
      * quantities forward in time. In particular, U is integrated forward in
      * time treating it as the velocity.
@@ -73,7 +73,7 @@ namespace swift2 {
       const std::vector< Particle* >&  localParticles
     );
 
-    /* 
+    /**
      * Predict hydro terms (SWIFT) 
      * Relevant for inactive particles when using local-timestepping, but always
      * used.
@@ -88,7 +88,8 @@ namespace swift2 {
 
 
 
-    /* Debugging:
+    /**
+     * Debugging:
      * Fake Drift step in which we move a particle into the midpoint of a cell.
      * Does that particle disappear from the simulation?
      */

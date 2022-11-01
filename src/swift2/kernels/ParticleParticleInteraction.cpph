@@ -19,7 +19,6 @@ void swift2::kernels::genericInteraction(
 
 
 
-
 template <typename Particle>
 void swift2::kernels::computeDensity(
   const std::list< Particle* >& localParticles,
@@ -31,47 +30,24 @@ void swift2::kernels::computeDensity(
     if ( not localParticle->getCellHasUpdatedParticle() ) {
       for (auto* activeParticle: activeParticles ) {
 
-
-        /*
-         * @brief Non-symmetric density calculation (as per Swift terminology). 
-         * In this, only the local particle is updated (in the symmetric case, both 
-         * are updated at the same time). This compute kernel is inserted by Peano's
-         * Python API into the nested loop over active and local particles. So we can
-         * assume that those two terms do exist.
-         *
-         * The present kernel is a sole particle-particle interaction kernel.
-         *
-         * Here we calculate the density, Omega and drho/dt sums.
-         * The latter can be used in the Newton-Raphson iteration.
-         *
-         * Subscripts a and b represent indices of Local and Active particles, respectively:
-         *
-         * h_a: Smoothing length of Local particle
-         * h_b: Smoothign length of Active particle
-         * dx : Vector separating the two particles (x_loc - x_act)
-         * r  : Distance between the two particles  (|| dx ||)
-         *
-         */
-
-
-        tarch::la::Vector<Dimensions,double> dx = localParticle->getX() - activeParticle->getX();
-        const double r = tarch::la::norm2(dx);
-
-        // Velocity terms for viscosity
-        tarch::la::Vector<Dimensions,double> dv_ab;
-        tarch::la::Vector<Dimensions,double> curlvr(0.0);
-
         /* Retrieve basic properties of local and active particles */
         const double h_a = localParticle->getSmoothingLength();
-
         const double m_a = localParticle ->getMass();  
         const double m_b = activeParticle->getMass();  
 
-        // Normalized distance to evaluate kernel
+        /* Distance between the particles */
+        tarch::la::Vector<Dimensions,double> dx = localParticle->getX() - activeParticle->getX();
+        const double r = tarch::la::norm2(dx);
+
+        /* Normalized distance to evaluate kernel */
         const double q_a = r / h_a;
         
         /* Compute the actual interaction radius */
         const double cutoffR = kernelSupportRadius * h_a;
+
+        /* Velocity terms for viscosity */
+        tarch::la::Vector<Dimensions,double> dv_ab;
+        tarch::la::Vector<Dimensions,double> curlvr(0.0);
 
         if(
           tarch::la::smaller( r, cutoffR ) 
@@ -85,8 +61,7 @@ void swift2::kernels::computeDensity(
           // Evaluate kernel and its derivative
 
           /* SWIFT KERNEL */
-          double W_a, dW_a_dh;
-          double w, dw_dx;
+          double W_a, dW_a_dh, w, dw_dx;
           kernel_deval_SWIFT(q_a, w, dw_dx);
           W_a = w / std::pow( h_a, hydroDimensions );
           dW_a_dh = - ( hydroDimensions * w + q_a * dw_dx ) / std::pow( h_a, hydroDimensions + 1 );
@@ -127,8 +102,6 @@ void swift2::kernels::computeDensity(
           assertion3( not std::isnan( localParticle->getOmega() ), localParticle->toString(), localParticle->getOmega(), dW_a_dh );
         } 
 
-
-
       }
     }
   }
@@ -147,11 +120,6 @@ void swift2::kernels::computeHydroForce(
     if ( not localParticle->getCellHasUpdatedParticle() ) {
       for (auto* activeParticle: activeParticles ) {
 
-      /* Distance between the two particles */
-      tarch::la::Vector<Dimensions,double> dx = localParticle->getX() - activeParticle->getX();
-      const double r = tarch::la::norm2(dx);
-      const double r_inv = r ? 1.0 / r : 0.0;
-
       // Retrieve basic properties of local and active particles
       const double rho_a = localParticle ->getDensity();
       const double rho_b = activeParticle->getDensity();
@@ -162,9 +130,13 @@ void swift2::kernels::computeHydroForce(
       const double m_a = localParticle ->getMass();  
       const double m_b = activeParticle->getMass();  
 
-      // Smoothing lengths
       const double h_a = localParticle ->getSmoothingLength();
       const double h_b = activeParticle->getSmoothingLength();
+
+      /* Distance between the two particles */
+      tarch::la::Vector<Dimensions,double> dx = localParticle->getX() - activeParticle->getX();
+      const double r = tarch::la::norm2(dx);
+      const double r_inv = r ? 1.0 / r : 0.0;
 
       // Dimensionless distance to evaluate kernel
       const double q_a = r / h_a;
@@ -263,7 +235,6 @@ void swift2::kernels::computeHydroForce(
         assertion8( not tarch::la::isEntryNan( localParticle->getA() ), localParticle->toString(), sph_acc_term, visc_acc_term, f_ab, f_ba,
                     activeParticle->getOmega(), activeParticle->getF(), activeParticle->getIsBoundaryParticle() );
       }
-
 
 
       }

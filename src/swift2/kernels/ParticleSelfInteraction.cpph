@@ -17,24 +17,12 @@ void swift2::kernels::genericSelfInteraction(
 
 
 
-
 template <typename Particle>
 void swift2::kernels::prepareDensityCalculation(
   const std::vector< Particle* >& localParticles
 ) {
   for (auto* particle: localParticles ) {
     if ( not particle->getCellHasUpdatedParticle() ) {
-
-      /* This is equivalent to the hydro_init_part function in SWIFT */
-
-      /* @brief Prepares a particle for the density calculation  
-       *
-       * Zeroes all the relevant arrays in perparation for the sums taking place
-       * in the loop over neighbours (local-active set)
-       *
-       */
-
-      // we'll accumulate the data throughout mesh/particle traversal
       particle->setDensity (0.0);                      
       particle->setWcount  (0.0);                      
       particle->setRho_dh  (0.0);   
@@ -42,14 +30,12 @@ void swift2::kernels::prepareDensityCalculation(
       particle->setDiv_v   (0.0);   
       particle->setRot_v   (0.0);   
 
-      /* Not needed in SWIFT */
+      /* Not originally in SWIFT */
       particle->setNcount  (0);
       particle->setOmega   (0.0);   
-
     }
   }
 }
-
 
 
 template <typename Particle>
@@ -66,19 +52,7 @@ void swift2::kernels::endDensityCalculation(
   for (auto* particle: localParticles ) {
     if ( not particle->getCellHasUpdatedParticle() ) {
 
-    /* This is equivalent to the hydro_end_density function in SWIFT */
-
-    /* @brief Finishes the calculations from the density loop
-     *
-     * Multiplies the denstiy and number of neighbours by the appropiate
-     * constants and add the self-contribution term. Additional quantities
-     * such as the velocity gradients will also get the final terms added to
-     * them here.
-     *
-     * Also adds/multiplies the cosmological terms if need be. @TODO: add.
-     *
-     */
-
+      // @TODO add adds/multiplies the cosmological terms if need be.
 
       /* Retrieve some properties */
       const double m_a = particle->getMass();
@@ -357,20 +331,6 @@ void swift2::kernels::endDensityCalculationWithConstantSmoothingLength(
   for (auto* particle: localParticles ) {
     if ( not particle->getCellHasUpdatedParticle() ) {
 
-    /* This is equivalent to the hydro_end_density function in SWIFT */
-
-    /* @brief Finishes the calculations from the density loop
-     *
-     * Multiplies the denstiy and number of neighbours by the appropiate
-     * constants and add the self-contribution term. Additional quantities
-     * such as the velocity gradients will also get the final terms added to
-     * them here.
-     *
-     * Also adds/multiplies the cosmological terms if need be. @TODO: add.
-     *
-     */
-
-
       /* Retrieve some properties */
       const double m_a = particle->getMass();
       const double h_a = particle->getSmoothingLength();
@@ -473,6 +433,7 @@ void swift2::kernels::prepareHydroForceCalculation(
     }
   }
 }
+
 
 template <typename Particle>
 void swift2::kernels::endHydroForceCalculation(
