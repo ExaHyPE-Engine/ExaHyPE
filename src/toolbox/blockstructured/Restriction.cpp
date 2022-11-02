@@ -34,7 +34,68 @@ void toolbox::blockstructured::restrictHaloLayer_AoS_tensor_product(
   double*                                   fineGridValues,
   double*                                   coarseGridValues
 ) {
-  assertionMsg( false, "@Han, we have to implement this one" );
+  logTraceInWith3Arguments( "restrictHaloLayer_AoS_tensor_product(...)", marker.toString(), numberOfDoFsPerAxisInPatch, overlap );
+
+  const int    normal          = marker.getSelectedFaceNumber() % Dimensions;
+  const int    leftRightOffset = marker.getSelectedFaceNumber() < Dimensions ? 0 : overlap;
+
+  dfore(kCoarse,numberOfDoFsPerAxisInPatch,normal,0) {
+    for (int iCoarse=leftRightOffset;   iCoarse<leftRightOffset+overlap;   iCoarse++) {
+      tarch::la::Vector<Dimensions,int> dest = kCoarse;
+      dest(normal) = iCoarse;
+
+      int destLinearised = serialiseVoxelIndexInOverlap(
+        dest,
+        numberOfDoFsPerAxisInPatch, overlap, normal
+      );
+
+      logDebug( "restrictHaloLayer_AoS_tensor_product(...)", "clear dof " << dest );
+      for (int unknown=0; unknown<unknowns; unknown++) {
+        coarseGridValues[destLinearised*unknowns+unknown] = 0.0;
+      }
+
+      dfore(kFine,numberOfDoFsPerAxisInPatch,normal,0) {
+        for (int iFine=0;   iFine<2*overlap;   iFine++) {
+          tarch::la::Vector<Dimensions,int> src  = kFine;
+          src(normal)  = iFine;
+          int srcLinearised = serialiseVoxelIndexInOverlap(
+            src,
+            numberOfDoFsPerAxisInPatch, overlap, normal
+          );
+
+          double weight = 1.0;
+          for (int d=0; d<Dimensions; d++) {
+            if (d==normal) {
+              int col   = marker.getSelectedFaceNumber() < Dimensions ? src(d)  : 2*overlap - src(d)  - 1;
+              int row   = marker.getSelectedFaceNumber() < Dimensions ? dest(d) : 2*overlap - dest(d) - 1;
+              assertion4(col>=0,row,col,src,dest);
+              assertion4(row>=0,row,col,src,dest);
+              int index = col + row * 2 * overlap;
+              logDebug( "restrictHaloLayer_AoS_tensor_product(...)", "(" << row << "," << col << ")=" << index << " (normal contribution)");
+              weight *= normalRestrictionMatrix1d[ index ];
+            }
+            else {
+              int col   = src(d)+ marker.getRelativePositionWithinFatherCell()(d) * numberOfDoFsPerAxisInPatch;
+              int row   = dest(d);
+              assertion4(col>=0,row,col,src,dest);
+              assertion4(row>=0,row,col,src,dest);
+              int index = col + row * numberOfDoFsPerAxisInPatch;
+              logDebug( "restrictHaloLayer_AoS_tensor_product(...)", "(" << row << "," << col << ")=" << index << " (tangential contribution)" );
+              weight *= tangentialRestrictionMatrix1d[ index ];
+            }
+          }
+
+          logDebug( "restrictHaloLayer_AoS_tensor_product(...)", "add dof " << src << " to " << dest << " with weight " << weight );
+
+          for (int unknown=0; unknown<unknowns; unknown++) {
+            coarseGridValues[destLinearised*unknowns+unknown] += weight * fineGridValues[srcLinearised*unknowns+unknown];
+          }
+        }
+      }
+    }
+  }
+
+  logTraceOut( "restrictHaloLayer_AoS_tensor_product(...)" );
 }
 
 
