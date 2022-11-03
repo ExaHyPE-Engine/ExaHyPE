@@ -26,8 +26,8 @@ class testDensityCalculation(Particle):
     self.declare_sph_particle_attributes()
 
     # SPH parameters (default values)
-    self.hydroDimensions = 2
-    self.kernelSupportRadius = 2.0
+    self.hydroDimensions = 1
+    self.kernelSupportRadius = 1.936492
     self.etaFactor = 1.235
 
     # Minimal SPH parameters

@@ -92,8 +92,7 @@ project.set_load_balancing("toolbox::loadbalancing::RecursiveSubdivision", "new 
 ###############################################################################
 
 # Snippet from library
-# Just to fill in some dummy values for this case
-ICs = peano4.toolbox.particles.sph.initSnippets.SodShockIC( dimensions=1 )
+ICs = peano4.toolbox.particles.sph.initSnippets.TestDensityCalculation()
 initialisation_snippet = ICs.initialisation_snippet
 
 #
@@ -213,23 +212,14 @@ HYDRO_h_MIN = "1e-6"
 # Smoothing-length free parameter (resolution "eta_neighbours"). 
 # Can be set by specifying a desired number of neighbours.
 SMOOTH_L_FAC = str( 1.235 ) 
+#SMOOTH_L_FAC = str( 1.5 ) 
+#SMOOTH_L_FAC = str( 1.1 )  # Josh's thesis. 4.4 nbs in 1D
 
-if(HYDRO_DIMENSIONS==1):
-    N_MEAN_TARGET = str( 2.0 *           (float(KERNEL_SUPPORT_RAD) * float(SMOOTH_L_FAC) )    )
-elif(HYDRO_DIMENSIONS==2):
-    N_MEAN_TARGET = str(         np.pi * (float(KERNEL_SUPPORT_RAD) * float(SMOOTH_L_FAC) )**2 )
-elif(HYDRO_DIMENSIONS==3):
-    N_MEAN_TARGET = str( 4./3. * np.pi * (float(KERNEL_SUPPORT_RAD) * float(SMOOTH_L_FAC) )**2 )
+N_MEAN_TARGET = str( 2.0 *           (float(KERNEL_SUPPORT_RAD) * float(SMOOTH_L_FAC) )    )
 
 # Kernel root value 
-if(HYDRO_DIMENSIONS==1):
-  #    CUBIC_SPLINE_SIGMA = str(8./3.)       # 1D M4 SWIFT
-    CUBIC_SPLINE_SIGMA = str(3125./768.)     # 1D M5 SWIFT DOUBLE CHECKED CORRECT
-elif(HYDRO_DIMENSIONS==2):
-    CUBIC_SPLINE_SIGMA = str(80/(7*np.pi))    # 2D SWIFT Kernel
-#    CUBIC_SPLINE_SIGMA = str(10/(7*pi))
-elif(HYDRO_DIMENSIONS==3):
-    CUBIC_SPLINE_SIGMA = str(1/np.pi)
+# CUBIC_SPLINE_SIGMA = str(8./3.)       # 1D M4 SWIFT
+CUBIC_SPLINE_SIGMA = str(3125./768.)     # 1D M5 SWIFT DOUBLE CHECKED CORRECT
 
 
 print('-----------------------------------------------------------------------')
