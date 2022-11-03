@@ -54,7 +54,7 @@ if __name__ == "__main__":
     parser.add_argument("-AMRMarker",  "--AMR-marker",      dest="marker", choices=["none", "poisson"],   default="none",  help="switch on or off the AMR boundary marker" )
     parser.add_argument("-et",   "--end-time",        dest="end_time",        type=float, default=1.0, help="End (terminal) time" )
     parser.add_argument("-pst",   "--plot-start-time",        dest="plot_start_time",        type=float, default=0.0, help="start time for plot" )
-    parser.add_argument("-s",    "--scenario",        dest="scenario",        choices=["gauge", "dia_gauge", "linear", "single-puncture","two-punctures"], required="True", help="Scenario" )
+    parser.add_argument("-s",    "--scenario",        dest="scenario",        choices=["gauge", "dia_gauge", "linear", "single-puncture","two-punctures", "flat"], required="True", help="Scenario" )
     parser.add_argument("-cfl",      "--CFL-ratio",           dest="cfl",             type=float, default=0.1, help="Set CFL ratio" )
     parser.add_argument("-tracer", "--add-tracer",    dest="add_tracer", type=int, default=0,  help="Add tracers and specify the seeds. 0-switch off, 1-x axis, 2-xy plane, 3-over domain (evenly), 4-over domain(with noise option), 5-inserted by coordinate, 6-spherical surface(Gauss_Legendre_quadrature), 7-spherical surface(t-design)" )
     parser.add_argument("-tn", "--tracer-name",       dest="tra_name",    type=str, default="de",  help="name of output tracer file (temporary)" )
@@ -717,7 +717,7 @@ if __name__ == "__main__":
     tem_restrict=["TP_inject_normal_extrap","TP_average_normal_extrap"]
     if (args.implementation=="fd4-rk1-adaptive" or args.implementation=="fd4-rk1-fixed" 
       or args.implementation=="fd4-rk4-adaptive" or args.implementation=="fd4-rk4-fixed"):
-      my_solver.set_interpolation_scheme(tem_interp[0])
+      my_solver.set_interpolation_scheme(tem_interp[1])
       my_solver.set_restriction_scheme(tem_restrict[0])
           
     #if args.interpolation=="linear+enforce" or args.interpolation=="linear-slow+enforce":
@@ -788,6 +788,9 @@ if __name__ == "__main__":
       userinfo.append(("picking linear wave scenario",None))
       floatparams.update({"sk":0.0}); floatparams.update({"bs":0.0})
       intparams.update({"LapseType":0})
+    elif args.scenario=="flat":
+      solverconstants+= "static constexpr int Scenario=4; /* flat spacetime */ \n "
+      userinfo.append(("picking flat scenario",None))
     elif  (args.scenario=="two-punctures") or (args.scenario=="single-puncture"):
       solverconstants+= "static constexpr int Scenario=2; /* Two-puncture */ \n"
       userinfo.append(("picking black hole scenario",None))
@@ -923,7 +926,7 @@ if __name__ == "__main__":
 ########################################################################################
     peano4_project = project.generate_Peano4_project(verbose=True)
 
-    if args.scenario=="gauge" or args.scenario=="linear" or args.scenario=="dia_gauge":
+    if args.scenario=="gauge" or args.scenario=="linear" or args.scenario=="dia_gauge" or args.scenario=="flat":
       pass
     elif args.scenario=="two-punctures" or args.scenario=="single-puncture":
       #

@@ -72,7 +72,9 @@ void benchmarks::exahype2::euler::sphericalaccretionupscaling::SelfSimilarInfall
   for (int i=0; i<NumberOfUnknowns+NumberOfAuxiliaryVariables; i++) {
     Q[i] = 0.0;
   }
+  Q[0]=0.1;
 
+  /*
   applications::exahype2::euler::sphericalaccretion::initialiseOverdensity_Gaussian(
     Q,
     meshCellCentre,
@@ -82,7 +84,7 @@ void benchmarks::exahype2::euler::sphericalaccretionupscaling::SelfSimilarInfall
     pInitial,
     Gamma
   );
-
+  */
 /*
   applications::exahype2::euler::sphericalaccretion::initialiseOverdensity_topHat(
     Q,
@@ -154,6 +156,7 @@ double ::benchmarks::exahype2::euler::sphericalaccretionupscaling::SelfSimilarIn
 
   logTraceOut( "maxEigenvalue(...)" );
 
+  if (result==0) {result=0.1;}
   return result;
 }
 

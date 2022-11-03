@@ -96,7 +96,7 @@ applications::exahype2::ccz4::FiniteVolumeCCZ4::FiniteVolumeCCZ4() {
   }
   #endif
   else {
-    std::cerr << "initial scenario " << Scenario << " is not supported" << std::endl << std::endl << std::endl;
+    //std::cerr << "initial scenario " << Scenario << " is not supported" << std::endl << std::endl << std::endl;
   }
 }
 
@@ -116,6 +116,9 @@ void applications::exahype2::ccz4::FiniteVolumeCCZ4::initialCondition(
   }
   else if ( Scenario==1 ) {
     applications::exahype2::ccz4::linearWave(Q, volumeX, 0);
+  }
+  else if ( Scenario==4 ) {
+    applications::exahype2::ccz4::flat(Q, volumeX, 0);
   }
   #ifdef IncludeTwoPunctures
   else if ( Scenario==2 ) {
