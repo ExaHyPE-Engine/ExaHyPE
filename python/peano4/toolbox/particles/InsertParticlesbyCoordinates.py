@@ -66,6 +66,7 @@ class InsertParticlesbyCoordinates(ActionSet):
       /* Now use initialisation snippet with the particle pointer */
       {{INITIALISATION_CALL}}
 
+// @todo das ist falsch
       logInfo( "touchVertexFirstTime(...)", "insert " << _particleNumberOnThisTree << "th particle at " << particle->toString() );
     }
   }

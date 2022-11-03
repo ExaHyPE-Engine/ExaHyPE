@@ -47,6 +47,7 @@
 
   void startGridConstructionStep();
   void startInitialisationStep();
+  void startSortingStep();
 
   /**
    * @see ParticleSpecies::startTimeStep()
@@ -57,6 +58,7 @@
 
   void finishGridConstructionStep();
   void finishInitialisationStep();
+  void finishSortingStep();
 
   /**
    * Call finishTimeStep() on each individual species and then dump some

@@ -92,6 +92,10 @@ void startInitialisationStep() {
 }
 
 
+void startSortingStep() {
+}
+
+
 void startTimeStep() {
   {% for PARTICLE in PARTICLE_SPECIES -%}
   globaldata::{{PARTICLE}}::getSpecies().startTimeStep();
@@ -140,7 +144,16 @@ void finishGridConstructionStep() {
 
 void finishInitialisationStep() {
   {% for PARTICLE in PARTICLE_SPECIES -%}
-  vertexdata::{{PARTICLE}}Set::finishedTraversal(PeanoDebug>0);
+  vertexdata::{{PARTICLE}}Set::finishedTraversal(true);
+  {%- endfor %}
+
+  loadBalancer.finishStep();
+}
+
+
+void finishSortingStep() {
+  {% for PARTICLE in PARTICLE_SPECIES -%}
+  vertexdata::{{PARTICLE}}Set::finishedTraversal(true);
   {%- endfor %}
 
   loadBalancer.finishStep();

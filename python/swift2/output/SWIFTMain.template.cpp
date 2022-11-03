@@ -33,6 +33,7 @@
 #include "observers/CreateGrid.h"
 #include "observers/Init.h"
 #include "observers/Plot.h"
+#include "observers/Sort.h"
 
 {% for STEP in SOLVERSTEP_NAMES %}
 #include "observers/{{STEP}}.h"
@@ -200,6 +201,20 @@ void {{NAMESPACE | join("::")}}::step() {
         peano4::parallel::SpacetreeSet::getInstance().traverse(observer);
         repositories::finishInitialisationStep();
         observers::Init::unprepareTraversal();
+        watch.stop();
+        initMeasurement.setValue( watch.getCalendarTime() );
+      }
+      break;
+    case repositories::StepRepository::Steps::Sort:
+      {
+        tarch::logging::LogFilter::getInstance().switchProgramPhase( "sort" );
+        otterPhaseBegin( "sort" );
+        observers::Sort  observer;
+        observers::Sort::prepareTraversal();
+        repositories::startSortingStep();
+        peano4::parallel::SpacetreeSet::getInstance().traverse(observer);
+        repositories::finishSortingStep();
+        observers::Sort::unprepareTraversal();
         watch.stop();
         initMeasurement.setValue( watch.getCalendarTime() );
       }
