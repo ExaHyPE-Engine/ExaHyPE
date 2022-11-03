@@ -147,9 +147,9 @@ class UpdateParticleGridAssociation(ActionSet):
 
   __Template_BeginTraversal = jinja2.Template("""
   _numberOfParticleReassignmentsOnCurrentLevel = 0;
-  _numberOfLifts = 0;
-  _numberOfDrops = 0;
-  _numberOfEliminations = 0;
+  _numberOfLifts  = 0;
+  _numberOfDrops  = 0;
+  _numberOfSieves = 0;
   
   _sieveParticles = vertexdata::{{PARTICLES_CONTAINER}}::getSievedParticlesForNextGridTraversal();
 """ )
@@ -158,18 +158,11 @@ class UpdateParticleGridAssociation(ActionSet):
   __Template_EndTraversal = jinja2.Template("""
   vertexdata::{{PARTICLES_CONTAINER}}::updateLiftDropStatistics(
     _numberOfLifts,
-    _numberOfDrops
+    _numberOfDrops,
+    _numberOfParticleReassignmentsOnCurrentLevel,
+    _numberOfSieves
   );
 
-  logInfo( 
-    "endTraversal()",
-    "tree " <<  _treeNumber <<
-    ": reassignments=" << _numberOfParticleReassignmentsOnCurrentLevel << 
-    ", lifts=" << _numberOfLifts << 
-    ", drops=" << _numberOfDrops <<
-    ", left-over sieve particles on tree=" << _sieveParticles.size()
-  );
-  
   _sieveParticles.deleteParticles();
 """ )
 
@@ -193,7 +186,7 @@ class UpdateParticleGridAssociation(ActionSet):
           break;
         case toolbox::particles::ParticleReassociationInstruction_SieveGlobally:
           // @todo Debug
-          logInfo( "touchVertexLastTime(...)", "particle " << p->toString() << " has to be sieved globally. Current assocation=" << marker.toString() );
+          logInfo( "touchVertexLastTime(...)", "particle " << (*p)->toString() << " has to be sieved globally. Current assocation=" << marker.toString() );
           fineGridVertex{{PARTICLES_CONTAINER}}.particleCanNotBeLiftedLocally(*p);    
           p = fineGridVertex{{PARTICLES_CONTAINER}}.erase(p);
           break;
@@ -288,7 +281,7 @@ class UpdateParticleGridAssociation(ActionSet):
         1.0+SortingTolerance
       );
       
-    _numberOfDrops += sievedParticles.size();
+    _numberOfSieves += sievedParticles.size();
 
     fineGridVertex{{PARTICLES_CONTAINER}}.insert(
       fineGridVertex{{PARTICLES_CONTAINER}}.end(),
@@ -342,6 +335,8 @@ class UpdateParticleGridAssociation(ActionSet):
         p++;
         break;
       case toolbox::particles::ParticleReassociationInstruction_SieveGlobally:
+        // @todo Debug (auch an der anderen Stelle)
+        logInfo( "touchVertexLastTime(...)", "have to lift particle " << (*p)->toString() << " globally. Previously assigned to " << marker.toString() );
         fineGridVertex{{PARTICLES_CONTAINER}}.particleCanNotBeLiftedLocally(*p);    
         p = fineGridVertex{{PARTICLES_CONTAINER}}.erase(p);
         break;
@@ -429,7 +424,7 @@ class UpdateParticleGridAssociation(ActionSet):
   int  _numberOfParticleReassignmentsOnCurrentLevel;
   int  _numberOfLifts;
   int  _numberOfDrops;
-  int  _numberOfEliminations;
+  int  _numberOfSieves;
   
   vertexdata::{{PARTICLES_CONTAINER}}  _sieveParticles;
 """).render(**self.d)

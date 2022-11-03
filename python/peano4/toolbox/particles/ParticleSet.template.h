@@ -53,7 +53,9 @@
 
       static int _numberOfLifts;
       static int _numberOfDrops;
+      static int _numberOfSieves;
       static int _numberOfAssignmentsToGlobalSieve;
+      static int _numberOfReassignments;
       static int _totalRealParticleCount;
       static int _totalVirtualParticleCount;
       static int _totalEliminatedSpatialDuplicates;
@@ -237,7 +239,9 @@
 
       static void updateLiftDropStatistics(
         int numberOfLiftsInThisTree,
-        int numberOfDropsInThisTree
+        int numberOfDropsInThisTree,
+        int numberOfReassignmentsInThisTree,
+        int numberOfSievesInThisTree
       );
 
       static void updateParticleCountStatistics(

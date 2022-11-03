@@ -12,8 +12,10 @@ tarch::multicore::BooleanSemaphore   {{NAMESPACE | join("::")}}::{{CLASSNAME}}::
 {{NAMESPACE | join("::")}}::{{CLASSNAME}}     {{NAMESPACE | join("::")}}::{{CLASSNAME}}::_particlesThatHaveToBeSieved;
 bool              {{NAMESPACE | join("::")}}::{{CLASSNAME}}::_thereAreParticlesToBeSieved;
 
-int {{NAMESPACE | join("::")}}::{{CLASSNAME}}::_numberOfLifts = 0;
-int {{NAMESPACE | join("::")}}::{{CLASSNAME}}::_numberOfDrops = 0;
+int {{NAMESPACE | join("::")}}::{{CLASSNAME}}::_numberOfLifts                    = 0;
+int {{NAMESPACE | join("::")}}::{{CLASSNAME}}::_numberOfDrops                    = 0;
+int {{NAMESPACE | join("::")}}::{{CLASSNAME}}::_numberOfSieves                   = 0;
+int {{NAMESPACE | join("::")}}::{{CLASSNAME}}::_numberOfReassignments            = 0;
 int {{NAMESPACE | join("::")}}::{{CLASSNAME}}::_numberOfAssignmentsToGlobalSieve = 0;
 int {{NAMESPACE | join("::")}}::{{CLASSNAME}}::_totalRealParticleCount = 0;
 int {{NAMESPACE | join("::")}}::{{CLASSNAME}}::_totalVirtualParticleCount = 0;
@@ -233,12 +235,14 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::clone( const {{CLASSNAME}}& othe
 
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishedTraversal(bool updateStatistics) {
   if (updateStatistics) {
-    int globalNumberOfLifts               = 0;
-    int globalNumberOfDrops               = 0;
-    int globalNumberOfSieveAssignments    = 0;
-    int globalRealNumberOfParticles       = 0;
-    int globalVirtualNumberOfParticles    = 0;
-    int globalEliminatedSpatialDuplicates = 0;
+    int globalNumberOfLifts                     = 0;
+    int globalNumberOfDrops                     = 0;
+    int globalNumberOfSieves                    = 0;
+    int globalNumberOfReassignments             = 0;
+    int globalNumberOfAssignmentsToGlobalSieve  = 0;
+    int globalRealNumberOfParticles             = 0;
+    int globalVirtualNumberOfParticles          = 0;
+    int globalEliminatedSpatialDuplicates       = 0;
     #if Parallel
     tarch::mpi::Rank::getInstance().reduce(
       &globalNumberOfLifts,
@@ -257,7 +261,23 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishedTraversal(bool updateSta
       [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); }
     );
     tarch::mpi::Rank::getInstance().reduce(
-      &globalNumberOfSieveAssignments,
+      &globalNumberOfSieves,
+      &_numberOfSieves,
+      1, MPI_INT,
+      MPI_SUM,
+      tarch::mpi::Rank::getGlobalMasterRank(),
+      [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); }
+    );
+    tarch::mpi::Rank::getInstance().reduce(
+      &globalNumberOfReassignments,
+      &_numberOfReassignments,
+      1, MPI_INT,
+      MPI_SUM,
+      tarch::mpi::Rank::getGlobalMasterRank(),
+      [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); }
+    );
+    tarch::mpi::Rank::getInstance().reduce(
+      &globalNumberOfAssignmentsToGlobalSieve,
       &_numberOfAssignmentsToGlobalSieve,
       1, MPI_INT,
       MPI_SUM,
@@ -289,12 +309,14 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishedTraversal(bool updateSta
       [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); }
     );
     #else
-    globalNumberOfLifts               = _numberOfLifts;
-    globalNumberOfDrops               = _numberOfDrops;
-    globalNumberOfSieveAssignments    = _numberOfAssignmentsToGlobalSieve;
-    globalRealNumberOfParticles      = _totalRealParticleCount;
-    globalVirtualNumberOfParticles    = _totalVirtualParticleCount;
-    globalEliminatedSpatialDuplicates = _totalEliminatedSpatialDuplicates;
+    globalNumberOfLifts                       = _numberOfLifts;
+    globalNumberOfDrops                       = _numberOfDrops;
+    globalNumberOfSieves                      = _numberOfSieves;
+    globalNumberOfReassignments               = _numberOfReassignments;
+    globalNumberOfAssignmentsToGlobalSieve    = _numberOfAssignmentsToGlobalSieve;
+    globalRealNumberOfParticles               = _totalRealParticleCount;
+    globalVirtualNumberOfParticles            = _totalVirtualParticleCount;
+    globalEliminatedSpatialDuplicates         = _totalEliminatedSpatialDuplicates;
     #endif
 
     if ( tarch::mpi::Rank::getInstance().isGlobalMaster() ) {
@@ -302,18 +324,22 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishedTraversal(bool updateSta
         "finishedTraversal()",
         "#lifts=" << globalNumberOfLifts <<
         ", #drops=" << globalNumberOfDrops <<
-        ", #sieves=" << globalNumberOfSieveAssignments <<
+        ", #sieves=" << globalNumberOfSieves <<
+        ", #reassignments=" << globalNumberOfReassignments <<
+        ", #assignments-to-sieve-set=" << globalNumberOfAssignmentsToGlobalSieve <<
         ", #particles=" << globalRealNumberOfParticles <<
         ", #virtual particles=" << globalVirtualNumberOfParticles <<
         ", #eliminated particle duplicates=" << globalEliminatedSpatialDuplicates
       );
     }
 
-    _numberOfLifts = 0;
-    _numberOfDrops = 0;
+    _numberOfLifts                    = 0;
+    _numberOfDrops                    = 0;
+    _numberOfSieves                   = 0;
+    _numberOfReassignments            = 0;
     _numberOfAssignmentsToGlobalSieve = 0;
-    _totalRealParticleCount = 0;
-    _totalVirtualParticleCount = 0;
+    _totalRealParticleCount           = 0;
+    _totalVirtualParticleCount        = 0;
     _totalEliminatedSpatialDuplicates = 0;
   }
 
@@ -402,11 +428,15 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::particlesCanNotBeLiftedLocally()
 
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::updateLiftDropStatistics(
   int numberOfLiftsInThisTree,
-  int numberOfDropsInThisTree
+  int numberOfDropsInThisTree,
+  int numberOfReassignmentsInThisTree,
+  int numberOfSievesInThisTree
 ) {
   tarch::multicore::Lock lock( _semaphore );
-  _numberOfLifts      += numberOfLiftsInThisTree;
-  _numberOfDrops      += numberOfDropsInThisTree;
+  _numberOfLifts         += numberOfLiftsInThisTree;
+  _numberOfDrops         += numberOfDropsInThisTree;
+  _numberOfReassignments += numberOfReassignmentsInThisTree;
+  _numberOfSieves        += numberOfSievesInThisTree;
 }
 
 
