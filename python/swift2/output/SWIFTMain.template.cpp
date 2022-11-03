@@ -55,6 +55,7 @@ tarch::timing::Measurement   timeStepMeasurement;
 bool {{NAMESPACE | join("::")}}::selectNextAlgorithmicStep() {
   static bool   gridConstructed                             = false;
   static bool   gridInitialised                             = false;
+  static bool   initialisationSorted                        = false;
   static double nextMaxPlotTimeStamp                        = {{NAMESPACE | join("::")}}::FirstPlotTimeStamp;
   static double nextMinPlotTimeStamp                        = {{NAMESPACE | join("::")}}::FirstPlotTimeStamp;
   static bool   haveJustWrittenSnapshot                     = false;
@@ -92,6 +93,13 @@ bool {{NAMESPACE | join("::")}}::selectNextAlgorithmicStep() {
     );
 
     gridInitialised = true;
+  }
+  else if (not initialisationSorted) {
+    peano4::parallel::Node::getInstance().setNextProgramStep(
+      repositories::StepRepository::toProgramStep( repositories::StepRepository::Steps::Sort )
+    );
+
+    initialisationSorted = true;
   }
   else if (
     ( repositories::getMinTimeStamp()>=MinTerminalTime or repositories::getMaxTimeStamp()>=MaxTerminalTime )

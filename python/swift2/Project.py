@@ -59,8 +59,9 @@ class Project(object):
     self._particle_species     = []
     self._particle_species_set = []
  
-    self._algorithm_step_create_grid    = peano4.solversteps.Step( "CreateGrid", False )
+    self._algorithm_step_create_grid   = peano4.solversteps.Step( "CreateGrid", False )
     self.algorithm_step_init           = peano4.solversteps.Step( "Init",       False )
+    self.algorithm_step_sort           = peano4.solversteps.Step( "Sort",       False )
     self.algorithm_step_plot           = peano4.solversteps.Step( "Plot",       False )
                 
     self.algorithm_step_plot.add_action_set( peano4.toolbox.PlotGridInPeanoBlockFormat( 
@@ -305,8 +306,19 @@ citation of the original SWIFT paper
      - Ensure that plotting and initialisation use the update particle-grid
        association properly. The plot has to update it, as previous steps 
        might have started a resort yet might not have finished it.
-     - Add all the algorithmic steps, including the three default ones, to
+     - Add all the algorithmic steps, including the default ones, to
        the project.
+       
+    ## Particle initialisation and proper sorting
+    
+    The particle initialisation might end up with an invalid association of 
+    particles to vertices. The graph compiler might make the first step of a
+    time step sequence sort if and only if the last one has altered the 
+    particles' position. Consequently, we might end up with an initialisation
+    which yields an inconsistent data association. We therefore make it sort
+    the particles, but we need another grid sweep to finalise this sort in 
+    case we have to do some global rearrangements. This is our rationale why
+    we realise the initialisation in two steps.
      
     """
     self.__generate_global_state_files();
@@ -315,9 +327,11 @@ citation of the original SWIFT paper
     ## species set into
     for current_species_set in self._particle_species_set:
       self.algorithm_step_plot.add_action_set(peano4.toolbox.particles.UpdateParticleGridAssociation(current_species_set),False)
-      #self.algorithm_step_init.add_action_set(peano4.toolbox.particles.UpdateParticleGridAssociation(current_species_set),False)
+      self.algorithm_step_init.add_action_set(peano4.toolbox.particles.UpdateParticleGridAssociation(current_species_set),False)
+      self.algorithm_step_sort.add_action_set(peano4.toolbox.particles.UpdateParticleGridAssociation(current_species_set),False)
       self.algorithm_step_plot.add_action_set(peano4.toolbox.particles.UpdateParallelState(current_species_set),False)
       self.algorithm_step_init.add_action_set(peano4.toolbox.particles.UpdateParallelState(current_species_set),False)
+      self.algorithm_step_sort.add_action_set(peano4.toolbox.particles.UpdateParallelState(current_species_set),False)
 
     ## Create mesh traversals aka solver steps
     solversteps = self.task_graph_compiler(self._particle_species_set)
@@ -329,12 +343,14 @@ citation of the original SWIFT paper
 
       self._algorithm_step_create_grid.use_vertex(current_species_set)
       self.algorithm_step_init.use_vertex(current_species_set)
+      self.algorithm_step_sort.use_vertex(current_species_set)
       self.algorithm_step_plot.use_vertex(current_species_set)
       for solverstep in solversteps:
         solverstep.use_vertex(current_species_set)
      
     self._project.solversteps.add_step(self._algorithm_step_create_grid)
     self._project.solversteps.add_step(self.algorithm_step_init)
+    self._project.solversteps.add_step(self.algorithm_step_sort)
     self._project.solversteps.add_step(self.algorithm_step_plot)
     for solverstep in solversteps:
       self._project.solversteps.add_step(solverstep)
