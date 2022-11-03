@@ -166,7 +166,8 @@ class UpdateParticleGridAssociation(ActionSet):
     "tree " <<  _treeNumber <<
     ": reassignments=" << _numberOfParticleReassignmentsOnCurrentLevel << 
     ", lifts=" << _numberOfLifts << 
-    ", drops=" << _numberOfDrops
+    ", drops=" << _numberOfDrops <<
+    ", left-over sieve particles on tree=" << _sieveParticles.size()
   );
   
   _sieveParticles.deleteParticles();
@@ -191,6 +192,8 @@ class UpdateParticleGridAssociation(ActionSet):
           p++;
           break;
         case toolbox::particles::ParticleReassociationInstruction_SieveGlobally:
+          // @todo Debug
+          logInfo( "touchVertexLastTime(...)", "particle " << p->toString() << " has to be sieved globally. Current assocation=" << marker.toString() );
           fineGridVertex{{PARTICLES_CONTAINER}}.particleCanNotBeLiftedLocally(*p);    
           p = fineGridVertex{{PARTICLES_CONTAINER}}.erase(p);
           break;
