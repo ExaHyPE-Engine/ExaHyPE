@@ -17,8 +17,8 @@ int {{NAMESPACE | join("::")}}::{{CLASSNAME}}::_numberOfDrops                   
 int {{NAMESPACE | join("::")}}::{{CLASSNAME}}::_numberOfSieves                   = 0;
 int {{NAMESPACE | join("::")}}::{{CLASSNAME}}::_numberOfReassignments            = 0;
 int {{NAMESPACE | join("::")}}::{{CLASSNAME}}::_numberOfAssignmentsToGlobalSieve = 0;
-int {{NAMESPACE | join("::")}}::{{CLASSNAME}}::_totalRealParticleCount = 0;
-int {{NAMESPACE | join("::")}}::{{CLASSNAME}}::_totalVirtualParticleCount = 0;
+int {{NAMESPACE | join("::")}}::{{CLASSNAME}}::_totalRealParticleCount           = 0;
+int {{NAMESPACE | join("::")}}::{{CLASSNAME}}::_totalVirtualParticleCount        = 0;
 int {{NAMESPACE | join("::")}}::{{CLASSNAME}}::_totalEliminatedSpatialDuplicates = 0;
 
 
@@ -319,7 +319,20 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishedTraversal(bool updateSta
     globalEliminatedSpatialDuplicates         = _totalEliminatedSpatialDuplicates;
     #endif
 
-    if ( tarch::mpi::Rank::getInstance().isGlobalMaster() ) {
+    bool log = tarch::mpi::Rank::getInstance().isGlobalMaster();
+    #if PeanoDebug==0
+    log &= (
+           globalNumberOfLifts>0
+        or globalNumberOfDrops>0
+        or globalNumberOfSieves>0
+        or globalNumberOfReassignments>0
+        or globalNumberOfAssignmentsToGlobalSieve>0
+        or globalRealNumberOfParticles>0
+        or globalVirtualNumberOfParticles>0
+        or globalEliminatedSpatialDuplicates>0
+        );
+    #endif
+    if ( log ) {
       logInfo(
         "finishedTraversal()",
         "#lifts=" << globalNumberOfLifts <<

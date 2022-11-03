@@ -83,10 +83,20 @@ namespace toolbox {
 
     /**
      * Find out which vertex should hold a particle.
+     *
+     * @param particle The particle of interest to be studied.
+     * @param marker   A description of the cell into which the particle is
+     *                 currently inserted or shall be inserted.
+     * @return         The number of the vertex within the cell identified by
+     *                 marker to which you should assign particle. Use
+     *                 to_ulong() to convert the result, as the result
+     *                 identifies the vertex in z-order, i.e. if it returns 00
+     *                 it is the left bottom vertex, 10 is the right bottom
+     *                 one, and so forth.
      */
     template <typename Particle>
     std::bitset<Dimensions>  getParticleAssociationWithinCell(
-      const Particle&                             p,
+      const Particle&                             particle,
       const peano4::datamanagement::VertexMarker  marker
     );
 

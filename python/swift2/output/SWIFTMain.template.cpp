@@ -49,6 +49,7 @@ tarch::logging::Log _log("::");
 
 tarch::timing::Measurement   createGridMeasurement;
 tarch::timing::Measurement   initMeasurement;
+tarch::timing::Measurement   sortMeasurement;
 tarch::timing::Measurement   plotMeasurement;
 tarch::timing::Measurement   timeStepMeasurement;
 
@@ -216,7 +217,7 @@ void {{NAMESPACE | join("::")}}::step() {
         repositories::finishSortingStep();
         observers::Sort::unprepareTraversal();
         watch.stop();
-        initMeasurement.setValue( watch.getCalendarTime() );
+        sortMeasurement.setValue( watch.getCalendarTime() );
       }
       break;
     case repositories::StepRepository::Steps::Plot:
@@ -350,6 +351,7 @@ int main(int argc, char** argv) {
     logInfo("main()", "terminated successfully");
     logInfo("main()", "grid construction:  " << createGridMeasurement.getAccumulatedValue() << "s\t" << createGridMeasurement.toString() );
     logInfo("main()", "init simulation:    " << initMeasurement.getAccumulatedValue() << "s\t" << initMeasurement.toString() );
+    logInfo("main()", "(initial) sort:     " << sortMeasurement.getAccumulatedValue() << "s\t" << initMeasurement.toString() );
     logInfo("main()", "plotting:           " << plotMeasurement.getAccumulatedValue() << "s\t" << plotMeasurement.toString() );
     logInfo("main()", "time stepping:      " << timeStepMeasurement.getAccumulatedValue() << "s\t" << timeStepMeasurement.toString() );
   }
