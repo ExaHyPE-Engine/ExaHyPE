@@ -8,6 +8,12 @@ import dastgen2
 
 import shutil
 
+# HDF5 Reader
+import peano4.toolbox.particles.sph.fileReader
+
+# SPH initialisation snippets library
+import peano4.toolbox.particles.sph.initSnippets
+
 ########################################################################################
 # Parse user input
 ########################################################################################
@@ -30,114 +36,25 @@ args = parser.parse_args()
 # Generate SWIFT project
 ########################################################################################
 
+project_namespace = ["benchmarks", "swift2", "sod"]
+
 dimensions  = args.dimensions
 
-#project = swift2.Project( namespace=["benchmarks", "swift2", "sod"], 
-project = swift2.Project( namespace=[], 
+project = swift2.Project( namespace=project_namespace,
                           project_name="Sod1D", 
                           executable="sod1D" )
 
-
 # Declare the particle type
-particle   = swift2.particle.SPHLeapfrogFixedInteractionRadius(name = "MinimalSPH", 
-                                                               cfl_factor             = 0.1, 
-                                                               initial_time_step_size = args.timestep_size )
+particle = swift2.particle.SPHLeapfrogFixedInteractionRadius(name = "MinimalSPH", 
+                                                             cfl_factor             = 0.1, 
+                                                             initial_time_step_size = args.timestep_size,
+                                                             swift_project_namespace=
+                                                             project_namespace,
+                                                             is_sph = True
+                                                             )
 
-
-# Some attributes specific to this test
-mass_attr    = dastgen2.attributes.Double("mass")
-smoothL_attr = dastgen2.attributes.Double("smoothingLength")
-density_attr = dastgen2.attributes.Double("density")
-pressure_attr= dastgen2.attributes.Double("pressure")
-u_attr       = dastgen2.attributes.Double("u")
-uDot_attr    = dastgen2.attributes.Double("uDot")
-
-# Variable smoothing length scheme ---------------------------------------------
-f_attr        = dastgen2.attributes.Double("f")   
-wcount_dh_attr= dastgen2.attributes.Double("wcount_dh")
-rho_dh_attr   = dastgen2.attributes.Double("rho_dh")
-hleft_attr    = dastgen2.attributes.Double("hLeft")
-hright_attr   = dastgen2.attributes.Double("hRight")
-Omega_attr    = dastgen2.attributes.Double("Omega")        # PHANTOM SPH (~1/f)
-
-# Newton-Raphson iterations ----------------------------------------------------
-smoothL_prev_attr    = dastgen2.attributes.Double("smoothingLengthPrevious")
-wcount_attr          = dastgen2.attributes.Double("wcount")
-hDot_attr            = dastgen2.attributes.Double("hDot")
-residual_attr        = dastgen2.attributes.Double("residual")
-iteration_count_attr = dastgen2.attributes.Integer("iterCount")
-has_converged_attr   = dastgen2.attributes.Boolean("hasConverged")
-
-# Artificial viscosity scheme -------------------------------------------------
-balsara_attr    = dastgen2.attributes.Double("balsara")
-rot_v_attr      = dastgen2.attributes.Double("rot_v")    # In 2D sims it only has 1 component (z)
-#rot_v_attr      = peano4.dastgen2.Peano4DoubleArray("rot_v","Dimensions")
-div_v_attr      = dastgen2.attributes.Double("div_v")
-v_sig_AV_attr   = dastgen2.attributes.Double("v_sig_AV")
-soundSpeed_attr = dastgen2.attributes.Double("soundSpeed")
-
-# Time integration -------------------------------------------------------------
-timeStepSize_attr     = dastgen2.attributes.Double("timeStepSize")
-v_full_attr           = peano4.dastgen2.Peano4DoubleArray("v_full","Dimensions")
-u_full_attr           = dastgen2.attributes.Double("u_full")
-has_been_kicked_attr  = dastgen2.attributes.Boolean("hasBeenKicked")
-
-# Extra ------------------------------------------------------------------------
-has_no_neighbours_attr= dastgen2.attributes.Boolean("hasNoNeighbours")
-is_boundary_part_attr = dastgen2.attributes.Boolean("isBoundaryParticle")
-time_attr             = dastgen2.attributes.Double("time")
-a_prev_step_attr      = peano4.dastgen2.Peano4DoubleArray("a_prev_step","Dimensions") # for PHANTOM corrector
-uDot_prev_step_attr   = dastgen2.attributes.Double("uDot_prev_step")                  # for PHANTOM corrector
-Ncount_attr           = dastgen2.attributes.Integer("Ncount")                         # integer number count
-
-# Particle id for Sod
-part_id_attr = dastgen2.attributes.Integer("partid")
-particle.data.add_attribute(part_id_attr)
-
-
-# Add the above properties to the particle data model
-particle.data.add_attribute(mass_attr)
-particle.data.add_attribute(smoothL_attr)
-particle.data.add_attribute(density_attr)
-particle.data.add_attribute(pressure_attr)
-particle.data.add_attribute(u_attr)
-particle.data.add_attribute(uDot_attr)
-
-particle.data.add_attribute(f_attr)
-particle.data.add_attribute(wcount_dh_attr)
-particle.data.add_attribute(rho_dh_attr)
-particle.data.add_attribute(hleft_attr)
-particle.data.add_attribute(hright_attr)
-particle.data.add_attribute(Omega_attr)
-
-particle.data.add_attribute(smoothL_prev_attr)
-particle.data.add_attribute(wcount_attr)
-particle.data.add_attribute(hDot_attr)
-particle.data.add_attribute(residual_attr)
-particle.data.add_attribute(iteration_count_attr)
-particle.data.add_attribute(has_converged_attr)
-
-particle.data.add_attribute(balsara_attr)
-particle.data.add_attribute(rot_v_attr)
-particle.data.add_attribute(div_v_attr)
-particle.data.add_attribute(v_sig_AV_attr)
-particle.data.add_attribute(soundSpeed_attr)
-
-particle.data.add_attribute(timeStepSize_attr)
-particle.data.add_attribute(v_full_attr)
-particle.data.add_attribute(u_full_attr)
-particle.data.add_attribute(has_been_kicked_attr)
-
-particle.data.add_attribute(has_no_neighbours_attr)
-particle.data.add_attribute(is_boundary_part_attr)
-particle.data.add_attribute(time_attr)
-particle.data.add_attribute(a_prev_step_attr)
-particle.data.add_attribute(uDot_prev_step_attr)
-particle.data.add_attribute(Ncount_attr)
-
-
-
-
+# Add particle to the SWIFT project
+particle_set = project.add_particle_species( particle )
 
 if args.asserts:
   build_mode = peano4.output.CompileMode.Asserts
@@ -147,7 +64,6 @@ else:
 offset      = [ 0, 0, 0 ] 
 domain_size = [ 1, 1, 1 ]
 periodic_boundary_conditions = [False,False,False]          # Periodic BC
-
 
 project.set_global_simulation_parameters(
   dimensions,               # dimensions
@@ -169,57 +85,6 @@ project.set_load_balancing("toolbox::loadbalancing::RecursiveSubdivision", "new 
 
 
 ###############################################################################
-# Declare the force acting on the particle
-###############################################################################
-#
-# We effectively solve a 2d setup even in 3d. Peano's vector classes can be 
-# used over the compiler symbol Dimensions, but then we have to use different 
-# initialisation lists - one with two entries and one if three - and 
-# distinguish them via an ifdef. If we compile without assertions, an 
-# additional entry in the initialisation list will simply be ignored. If we 
-# compile with assertions however the code will complain, as initialisation
-# lists with "too many" entries are a hint that something in the code is 
-# wrong.
-#
-# We have two variants covered by this script: Either we work with only one
-# particle or we resolve the sun explicitly. If we model the sun as explicit
-# particle, then we have to be careful not to update it.
-#
-# The code snippets here rely on some global constants that we compute here
-# in the Python code base. We have various ways how to deal with such 
-# constants:
-#
-# - We can calculate them within Python and then export them into the Peano
-#   project. This is the strategy implemented here: The statements
-#          
-#            peano4_project.constants.export_const_with_type
-#
-#   below make the constants known to the build environment. Consequently, we 
-#   can use them within our C code snippets, as they will be well-defined by
-#   the time we compile.
-# - We can construct the string in Python and replace the constants 
-#   straightaway. In this case, we don't have to add the constants to the 
-#   makefile, as they are not required throughout the compile. In return, we 
-#   have to ensure that the constants within the code snippet here are 
-#   replaced with their actual value before we hand the kernel particle_force
-#   over.
-#
-###############################################################################
-particle_force = """
-  #if Dimensions==2
-  #else
-  #endif
-
-"""
-#particle.particle_acceleration = particle_force
-particle.particle_particle_interaction_over_particle_sets_kernel = particle_force
-
-# Add particle to the SWIFT project
-particle_set = project.add_particle_species( particle )
-
-
-
-###############################################################################
 # Initialisation snippet for the particle
 ###############################################################################
 #
@@ -229,19 +94,37 @@ particle_set = project.add_particle_species( particle )
 # only the earth is given an initial velocity.
 #
 ###############################################################################
-cut_off_radius = 0.1
-initialisation_snippet = """
 
-"""
+# Snippet from library
+ICs = peano4.toolbox.particles.sph.initSnippets.SodShockIC( dimensions=1 )
+initialisation_snippet = ICs.initialisation_snippet
 
 #
-# I either insert sun and earth or only the earth
+# Insert particles by coordinate
 #
+coords = np.zeros((10,3))
+coords[:,1] = 0.51
+coords
+for i in range(10):
+  coords[i,0] = 0.1 * i
+
+
 project.algorithm_step_init.add_action_set( peano4.toolbox.particles.InsertParticlesbyCoordinates(
   particle_set         = particle_set,
   initialisation_call  = initialisation_snippet,
-  coordinates          = [ (0,0,0) ] )
-  )
+#  coordinates          = [ (0.5,0.5,0), (0.51,0.5,0), (0.52,0.5,0), (0.49,0.5,0), (0.48,0.5,0) ] ,
+  coordinates          = coords,
+  #  coordinates          = [ (0,0.5,0) ] 
+  ))
+
+#
+#  Insert particles from file
+#
+#project.algorithm_step_init.add_action_set( peano4.toolbox.particles.sph.fileReader.InsertParticlesFromHDF5File( 
+#  particle_set         = particle_set,
+#  filename='sodShock.hdf5' 
+#  ))
+
 
 ###############################################################################
 # Set up the plotter
@@ -270,7 +153,14 @@ project.algorithm_step_init.add_action_set( peano4.toolbox.particles.InsertParti
 particle_plotter = peano4.toolbox.particles.PlotParticlesInVTKFormat( "particles", 
                                                                       particle_set, 
                                                                       "globaldata::{}::getSpecies().getMinTimeStamp()".format(particle.name) )
-particle_plotter.add_attribute_to_plot(particle.velocity, dimensions)
+particle_plotter.add_attribute_to_plot(particle.part_id , 1)
+particle_plotter.add_attribute_to_plot(particle.velocity     , dimensions)
+particle_plotter.add_attribute_to_plot(particle.acceleration , dimensions)
+particle_plotter.add_attribute_to_plot(particle.mass , 1)
+particle_plotter.add_attribute_to_plot(particle.density , 1)
+particle_plotter.add_attribute_to_plot(particle.pressure, 1)
+particle_plotter.add_attribute_to_plot(particle.smoothL , 1)
+particle_plotter.add_attribute_to_plot(particle.f , 1)
 project.algorithm_step_plot.add_action_set( particle_plotter )
 
 
