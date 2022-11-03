@@ -79,6 +79,17 @@ namespace toolbox {
       const Particle&                             p,
       const peano4::datamanagement::VertexMarker  marker
     );
+
+
+    /**
+     * Find out which vertex should hold a particle.
+     */
+    template <typename Particle>
+    std::bitset<Dimensions>  getParticleAssociationWithinCell(
+      const Particle&                             p,
+      const peano4::datamanagement::VertexMarker  marker
+    );
+
   }
 }
 
