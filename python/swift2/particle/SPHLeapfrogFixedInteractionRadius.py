@@ -61,6 +61,7 @@ class SPHLeapfrogFixedInteractionRadius(Particle):
   """
   def __init__(self, 
                name, 
+               dimensions_hydro,
                cfl_factor, 
                initial_time_step_size,
                swift_project_namespace,
@@ -82,8 +83,8 @@ class SPHLeapfrogFixedInteractionRadius(Particle):
     self.declare_sph_particle_attributes()
 
     # SPH parameters (default values)
-    self.hydroDimensions = 2
-    self.kernelSupportRadius = 2.0
+    self.hydroDimensions = dimensions_hydro
+    self.kernelSupportRadius = 1.936492
     self.etaFactor = 1.235
     self.hTolerance = 1e-4
     self.hHydroMin = 1e-6
@@ -131,11 +132,8 @@ class SPHLeapfrogFixedInteractionRadius(Particle):
                                                     self.hydroDimensions),
 
         touch_vertex_last_time_kernel  = """
-                                         ::swift2::kernels::endDensityCalculation<globaldata::{}>(
+                                         ::swift2::kernels::endDensityCalculationWithConstantSmoothingLength<globaldata::{}>(
                                              localParticles,
-                                             {},
-                                             {},
-                                             {},
                                              {},
                                              {},
                                              {},
@@ -145,9 +143,6 @@ class SPHLeapfrogFixedInteractionRadius(Particle):
                                                     self.kernelSupportRadius,
                                                     self.hydroDimensions,
                                                     self.etaFactor,
-                                                    self.hTolerance,
-                                                    self.hHydroMin,
-                                                    self.hHydroMax,
                                                     self.alphaAV),
  
         includes                       = """
@@ -248,11 +243,8 @@ class SPHLeapfrogFixedInteractionRadius(Particle):
                                                     self.hydroDimensions),
 
         touch_vertex_last_time_kernel  = """
-                                         ::swift2::kernels::endDensityCalculation<globaldata::{}>(
+                                         ::swift2::kernels::endDensityCalculationWithConstantSmoothingLength<globaldata::{}>(
                                              localParticles,
-                                             {},
-                                             {},
-                                             {},
                                              {},
                                              {},
                                              {},
@@ -262,9 +254,6 @@ class SPHLeapfrogFixedInteractionRadius(Particle):
                                                     self.kernelSupportRadius,
                                                     self.hydroDimensions,
                                                     self.etaFactor,
-                                                    self.hTolerance,
-                                                    self.hHydroMin,
-                                                    self.hHydroMax,
                                                     self.alphaAV),
  
         includes                       = """

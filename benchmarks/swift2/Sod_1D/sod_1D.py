@@ -25,7 +25,6 @@ parser.add_argument("-c",   "--clean",             dest="clean_temporary_directo
 parser.add_argument("-d",   "--dimensions",        dest="dimensions",     type=int,   default=2,                    help="Spatial dimensions (default 2)" )
 parser.add_argument("-et",  "--end-time",          dest="end_time",       type=float, default=1.0,                  help="End of simulation" )
 parser.add_argument("-dt",  "--timestep-size",     dest="timestep_size",  type=float, default=1e-3,                 help="Global timestep size (initial value)" )
-parser.add_argument("-dist","--particle-distance",  dest="particle_distance",            required=True,  type=float,  help="Particle distance (start with 1/64 by default)" )
 parser.add_argument("-cs",  "--cell-size",         dest="cell_size",      type=float, default=0.3,                  help="Cell size (default 0.3)" )
 parser.add_argument("-pd",  "--peano-dir",         dest="peanodir",       default="../../..",                       help="Peano4 directory" )
 parser.add_argument("-asserts",  "--asserts",      dest="asserts",        action="store_true", default=False,       help="Switch on assertions" )
@@ -44,8 +43,12 @@ project = swift2.Project( namespace=project_namespace,
                           project_name="Sod1D", 
                           executable="sod1D" )
 
+# Effective SPH dimensions ----------------------------------------------------
+HYDRO_DIMENSIONS = 1
+
 # Declare the particle type
 particle = swift2.particle.SPHLeapfrogFixedInteractionRadius(name = "MinimalSPH", 
+                                                             dimensions_hydro = HYDRO_DIMENSIONS,
                                                              cfl_factor             = 0.1, 
                                                              initial_time_step_size = args.timestep_size,
                                                              swift_project_namespace=
@@ -95,35 +98,13 @@ project.set_load_balancing("toolbox::loadbalancing::RecursiveSubdivision", "new 
 #
 ###############################################################################
 
-# Snippet from library
-ICs = peano4.toolbox.particles.sph.initSnippets.SodShockIC( dimensions=1 )
-initialisation_snippet = ICs.initialisation_snippet
-
-#
-# Insert particles by coordinate
-#
-coords = np.zeros((10,3))
-coords[:,1] = 0.51
-coords
-for i in range(10):
-  coords[i,0] = 0.1 * i
-
-
-project.algorithm_step_init.add_action_set( peano4.toolbox.particles.InsertParticlesbyCoordinates(
-  particle_set         = particle_set,
-  initialisation_call  = initialisation_snippet,
-#  coordinates          = [ (0.5,0.5,0), (0.51,0.5,0), (0.52,0.5,0), (0.49,0.5,0), (0.48,0.5,0) ] ,
-  coordinates          = coords,
-  #  coordinates          = [ (0,0.5,0) ] 
-  ))
-
 #
 #  Insert particles from file
 #
-#project.algorithm_step_init.add_action_set( peano4.toolbox.particles.sph.fileReader.InsertParticlesFromHDF5File( 
-#  particle_set         = particle_set,
-#  filename='sodShock.hdf5' 
-#  ))
+project.algorithm_step_init.add_action_set( peano4.toolbox.particles.sph.fileReader.InsertParticlesFromHDF5File( 
+  particle_set         = particle_set,
+  filename='sodShock.hdf5' 
+  ))
 
 
 ###############################################################################
@@ -182,11 +163,9 @@ peano4_project = project.generate_Peano4_project(verbose=args.verbose)
 # There are plenty of constant simulation paramaters to specify for our SPH
 # simulation - we do that here. 
 
-# Effective SPH dimensions ----------------------------------------------------
-HYDRO_DIMENSIONS = 1
 
 # Particle number along 1 dimension -------------------------------------------
-HYDRO_PART_NUMBER = str( round(1.0 / args.particle_distance) );
+HYDRO_PART_NUMBER = str( 900 );
 
 # Time-integration parameters -------------------------------------------------
 GLOBAL_TIME_STEP_SIZE = "1e-4"
