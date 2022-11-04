@@ -16,3 +16,18 @@ void swift2::timestepping::computeAdmissibleTimeStepSizeFromGlobalMeshSizeAndMax
   }
 }
 
+
+
+template <typename Particle>
+void swift2::timestepping::computeCFLTimeStepSizeSPH( double cflFactor, double initialTimeStepSize, bool adjustTimeStepSize
+){
+
+  /* Set initial time step size */
+  Particle::getSpecies().setTimeStepSize(initialTimeStepSize);
+
+  if (adjustTimeStepSize){
+  // @TODO implement the CFL time step for SPH. IT depends not on V but on the signal velocity.
+  }
+
+}
+
