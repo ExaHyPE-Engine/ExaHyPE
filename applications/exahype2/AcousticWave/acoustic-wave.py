@@ -29,7 +29,7 @@ project.add_solver( thesolver )
 tracer_particles = project.add_tracer( name="Tracer", attribute_count=3 )
 project.add_action_set_to_initialisation( 
   exahype2.tracer.InsertParticlesByCoordinates( 
-    particle_set=tracer_particles, coordinates=[[2.5,0.0],[5.0,5.0],[7.5,0.0]]))
+    particle_set=tracer_particles, coordinates=[[0.2,0.2],[0,0]]))
 project.add_action_set_to_timestepping(
   peano4.toolbox.particles.UpdateParallelState(
     particle_set=tracer_particles
@@ -50,7 +50,7 @@ project.add_action_set_to_timestepping(
     solver=thesolver,
     filename="Tracer-" + solver_name,
     data_delta_between_two_snapsots=1e16,
-    time_delta_between_two_snapsots=0.0001
+    time_delta_between_two_snapsots=0.05
   )
 )
 
