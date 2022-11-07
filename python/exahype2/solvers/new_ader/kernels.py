@@ -24,7 +24,7 @@ def create_abstract_solver_declarations(flux_implementation, ncp_implementation,
 {% endif %}
 
 {% if NCP_IMPLEMENTATION=="<user-defined>" %}
-    virtual void nonConservativeProduct(const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const Q, const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const gradQ, {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const BgradQ) = 0;
+    virtual void nonConservativeProduct(const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const Q, const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const* const gradQ, {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}** const BgradQ) = 0;
 {% endif %}
 
 {% if SOURCE_TERM_IMPLEMENTATION=="<user-defined>" %}
@@ -463,7 +463,7 @@ def create_start_time_step_implementation_for_fixed_time_stepping():
     isLastGridSweepOfTimeStep()
   ) {
     logInfo( "step()", "Solver {{SOLVER_NAME}}:" );
-    logInfo( "step()", "t       = " << _minTimeStampThisTimeStep );
+    logInfo( "step()", "t       = " << globalMinTimeStamp );
     logInfo( "step()", "dt      = " << getTimeStepSize() );
     logInfo( "step()", "h_{min} = " << _minCellHThisTimeStep );
     logInfo( "step()", "h_{max} = " << _maxCellHThisTimeStep );
