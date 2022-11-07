@@ -255,7 +255,7 @@ class Prediction_kernelgenerator(AbstractAderDGActionSet):
     super(Prediction_kernelgenerator,self).__init__(solver)
     self.guard      = guard
     self._use_lfi   = solver._is_linear or solver._flux_implementation!="<none>"
-    self._use_lsi   = solver._source_term_implementation!="<none>"
+    self._use_lsi   = solver._source_term_implementation!="<none>" or (not solver._is_linear and solver._ncp_implementation!="<none>")
     self._use_gradQ = solver._ncp_implementation!="<none>"
     self._use_psi   = solver._is_linear and solver._point_sources_implementation!="<none>"
 
