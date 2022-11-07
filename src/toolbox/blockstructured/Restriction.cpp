@@ -49,10 +49,10 @@ void toolbox::blockstructured::restrictHaloLayer_AoS_tensor_product(
         numberOfDoFsPerAxisInPatch, overlap, normal
       );
 
-      logDebug( "restrictHaloLayer_AoS_tensor_product(...)", "clear dof " << dest );
-      for (int unknown=0; unknown<unknowns; unknown++) {
-        coarseGridValues[destLinearised*unknowns+unknown] = 0.0;
-      }
+      //logDebug( "restrictHaloLayer_AoS_tensor_product(...)", "clear dof " << dest );
+      //for (int unknown=0; unknown<unknowns; unknown++) {
+      //  coarseGridValues[destLinearised*unknowns+unknown] = 0.0;
+      //}
 
       dfore(kFine,numberOfDoFsPerAxisInPatch,normal,0) {
         for (int iFine=0;   iFine<2*overlap;   iFine++) {

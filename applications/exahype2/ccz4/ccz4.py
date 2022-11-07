@@ -717,7 +717,7 @@ if __name__ == "__main__":
     tem_restrict=["TP_inject_normal_extrap","TP_average_normal_extrap"]
     if (args.implementation=="fd4-rk1-adaptive" or args.implementation=="fd4-rk1-fixed" 
       or args.implementation=="fd4-rk4-adaptive" or args.implementation=="fd4-rk4-fixed"):
-      my_solver.set_interpolation_scheme(tem_interp[1])
+      my_solver.set_interpolation_scheme(tem_interp[0])
       my_solver.set_restriction_scheme(tem_restrict[0])
           
     #if args.interpolation=="linear+enforce" or args.interpolation=="linear-slow+enforce":
