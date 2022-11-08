@@ -13,6 +13,8 @@ void swift2::timestepping::computeLeapfrogDriftWithGlobalTimeStepSize(
       particle->getMoveState()==Particle::MoveState::NotMovedYet
       and
       particle->getParallelState()==Particle::ParallelState::Local
+      and
+      not particle->getIsBoundaryParticle()
     ) {
       /* Drift the particle (update position for a full time-step) */
       particle->setX( particle->getX() + timeStepSize * particle->getV() );
@@ -35,6 +37,8 @@ void swift2::timestepping::computeLeapfrogKickWithGlobalTimeStepSize(
       particle->getParallelState()==Particle::ParallelState::Local
       and
       not particle->getCellHasUpdatedParticle()
+      and
+      not particle->getIsBoundaryParticle()
     ) {
 
       if( isSPH ){
@@ -73,13 +77,15 @@ void swift2::timestepping::computeLeapfrogKickWithGlobalTimeStepSize(
         particle->setV( particle->getV() + timeStepSizeKick * particle->getA() );
       }
 
+//      particle->setCellHasUpdatedParticle(true);
+
     }
   }
 }
 
 
 template <typename Particle>
-void computeLeapfrogKickExtraWithGlobalTimeStepSize(
+void swift2::timestepping::computeLeapfrogKickExtraWithGlobalTimeStepSize(
   const std::vector< Particle* >&  localParticles
 ) {
   /* In principle, this time-step could be different than that used for normal kick */
@@ -90,6 +96,8 @@ void computeLeapfrogKickExtraWithGlobalTimeStepSize(
       particle->getParallelState()==Particle::ParallelState::Local
       and
       not particle->getCellHasUpdatedParticle()
+      and
+      not particle->getIsBoundaryParticle()
     ) {
 
       /* Integrate the internal energy forward in time */
@@ -127,6 +135,8 @@ void swift2::timestepping::computePredictHydro(
       particle->getParallelState()==Particle::ParallelState::Local
       and
       not particle->getCellHasUpdatedParticle()
+      and
+      not particle->getIsBoundaryParticle()
     ) {
 
         /* Predict velocities for hydro terms */
@@ -185,6 +195,8 @@ void swift2::timestepping::moveParticleIntoCriticalLine(
       particle->getMoveState()==Particle::MoveState::NotMovedYet
       and
       particle->getParallelState()==Particle::ParallelState::Local
+      and
+      not particle->getIsBoundaryParticle()
     ) {
 
       /* 
@@ -192,7 +204,7 @@ void swift2::timestepping::moveParticleIntoCriticalLine(
        * Just move the position to the central axis of a cell and watch it
        * disappear.
        */
-      tarch::la::Vector<Dimensions,double> xCritical = {1.0/6.0 , 0};
+      tarch::la::Vector<Dimensions,double> xCritical = {1.0/6.0 , 0.5};
       particle->setX( xCritical );
       
       /* Flag this particle as Moved */

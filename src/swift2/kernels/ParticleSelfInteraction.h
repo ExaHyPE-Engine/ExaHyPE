@@ -97,6 +97,15 @@ namespace swift2 {
       const int hydroDimensions
     );
 
+    /**
+     * Flag boundary particles.
+     * These particles we will not be updated by any algorithmic step.
+     */
+    template <typename Particle>
+    void flagBoundaryParticles(
+      const std::vector< Particle* >&  localParticles
+    );
+
 
   }
 }

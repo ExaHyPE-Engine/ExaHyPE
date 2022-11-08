@@ -7,5 +7,7 @@ from .ExplicitEulerFixedInteractionRadius import ExplicitEulerFixedInteractionRa
 from .LeapfrogFixedInteractionRadius      import LeapfrogFixedInteractionRadius
 from .SPHLeapfrogFixedInteractionRadius   import SPHLeapfrogFixedInteractionRadius
 
-from .testDensityCalculation import testDensityCalculation
+from .testDensityCalculation              import testDensityCalculation
+from .testLeapfrogFixedTimeStepSize       import testLeapfrogFixedTimeStepSize
+
 from .DisappearingParticleTest import DisappearingParticleTest

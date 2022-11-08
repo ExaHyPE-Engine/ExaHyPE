@@ -102,6 +102,10 @@ class InsertParticlesFromHDF5File(ActionSet):
       newParticle->setDensity        ( Density );        
       newParticle->setMass           ( Mass );
       newParticle->setSmoothingLength( SmoothingLength );
+
+//      /* Hard coded for Sod 1D */
+//      newParticle->setSmoothingLength( 0.005 );
+
       newParticle->setU              ( InternalEnergy ); 
 
       /* 

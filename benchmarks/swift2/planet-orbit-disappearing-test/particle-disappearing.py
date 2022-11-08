@@ -268,7 +268,7 @@ initialisation_snippet = """
 project.algorithm_step_init.add_action_set( peano4.toolbox.particles.InsertParticlesbyCoordinates(
   particle_set         = particle_set,
   initialisation_call  = initialisation_snippet,
-  coordinates          = [ (1.0/5.9, 0, 0) ] )
+  coordinates          = [ (1.0/6.1, 0.5, 0) ] )
   )
 
 ###############################################################################

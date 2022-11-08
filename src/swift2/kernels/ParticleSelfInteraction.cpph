@@ -22,7 +22,11 @@ void swift2::kernels::prepareDensityCalculation(
   const std::vector< Particle* >& localParticles
 ) {
   for (auto* particle: localParticles ) {
-    if ( not particle->getCellHasUpdatedParticle() ) {
+    if ( 
+      not particle->getCellHasUpdatedParticle() 
+      and
+      not particle->getIsBoundaryParticle()
+    ) {
       particle->setDensity (0.0);                      
       particle->setWcount  (0.0);                      
       particle->setRho_dh  (0.0);   
@@ -50,7 +54,11 @@ void swift2::kernels::endDensityCalculation(
   const double hHydroMax
 ) {
   for (auto* particle: localParticles ) {
-    if ( not particle->getCellHasUpdatedParticle() ) {
+    if ( 
+      not particle->getCellHasUpdatedParticle() 
+      and
+      not particle->getIsBoundaryParticle()
+    ) {
 
       // @TODO add adds/multiplies the cosmological terms if need be.
 
@@ -329,7 +337,11 @@ void swift2::kernels::endDensityCalculationWithConstantSmoothingLength(
   const double alphaAV
 ) {
   for (auto* particle: localParticles ) {
-    if ( not particle->getCellHasUpdatedParticle() ) {
+    if ( 
+      not particle->getCellHasUpdatedParticle() 
+      and
+      not particle->getIsBoundaryParticle()
+    ) {
 
       /* Retrieve some properties */
       const double m_a = particle->getMass();
@@ -420,7 +432,11 @@ void swift2::kernels::prepareHydroForceCalculation(
   const std::vector< Particle* >& localParticles
 ) {
   for (auto* particle: localParticles ) {
-    if ( not particle->getCellHasUpdatedParticle() ) {
+    if ( 
+    not particle->getCellHasUpdatedParticle() 
+    and
+    not particle->getIsBoundaryParticle()
+    ) {
 
       /* Reset the acceleration*/
       particle->setA   (0.0);   
@@ -441,7 +457,11 @@ void swift2::kernels::endHydroForceCalculation(
   const int hydroDimensions
 ) {
   for (auto* particle: localParticles ) {
-    if ( not particle->getCellHasUpdatedParticle() ) {
+    if ( 
+    not particle->getCellHasUpdatedParticle() 
+    and
+    not particle->getIsBoundaryParticle()
+    ) {
 
       particle->setHDot( 
         particle->getHDot() * particle->getSmoothingLength() / hydroDimensions );
@@ -451,7 +471,50 @@ void swift2::kernels::endHydroForceCalculation(
 }
 
 
+template <typename Particle>
+void swift2::kernels::flagBoundaryParticles(
+  const std::vector< Particle* >&  localParticles
+) {
+  for (auto* particle: localParticles) {
 
+    if( 
+      particle->getParallelState()==Particle::ParallelState::Local
+      and
+      not particle->getCellHasUpdatedParticle()
+      and
+      not particle->getIsBoundaryParticle()
+    ){
+    
+      /* Flag if particle is at boundary of the simulation box */
+      particle->setIsBoundaryParticle(false);
+//    @TODO Re-introduce dependence on particle separation.
+//      const double max_dist_boundary = 3 * (1.0 /HYDRO_PART_NUMBER); 
+      const double max_dist_boundary = 3 * (1.0 / 900); 
+
+      const double max_dist_boundary_left = 0.5 * 8 * max_dist_boundary;
+
+      for (int d=0; d<Dimensions; d++) {
+        if ( particle->getX()(d) < max_dist_boundary_left || 
+             particle->getX()(d) > (1.0 - max_dist_boundary) ) 
+        {
+          particle->setIsBoundaryParticle(true);
+        }
+      }
+
+      // Fix right boundary of the Sod shock, which as fewer particles
+      const double max_dist_boundary_right = max_dist_boundary * 8;
+      for (int d=0; d<Dimensions; d++) {
+        if ( particle->getX()(d) > (1.0 - max_dist_boundary_right) ) 
+        {
+          particle->setIsBoundaryParticle(true);
+          particle->setDensity(0.125);
+          const double pressure = gas_pressure_from_internal_energy( particle->getDensity(), particle->getU() );
+          particle->setPressure(pressure);
+        }
+      }
+    }
+  }
+}
 
 
 

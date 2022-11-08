@@ -8,6 +8,9 @@ import dastgen2
 
 import shutil
 
+# To execute shell commands via python
+import subprocess
+
 # HDF5 Reader
 import peano4.toolbox.particles.sph.fileReader
 
@@ -23,8 +26,8 @@ parser.add_argument("-j",   "--parallel-builds",   dest="j",              type=i
 parser.add_argument("-v",   "--verbose",           dest="verbose",        action="store_true", default=False,       help="Verbose")
 parser.add_argument("-c",   "--clean",             dest="clean_temporary_directories",  action="store_true",        help="Remove temporary directories before script starts" )
 parser.add_argument("-d",   "--dimensions",        dest="dimensions",     type=int,   default=2,                    help="Spatial dimensions (default 2)" )
-parser.add_argument("-et",  "--end-time",          dest="end_time",       type=float, default=1.0,                  help="End of simulation" )
-parser.add_argument("-dt",  "--timestep-size",     dest="timestep_size",  type=float, default=1e-3,                 help="Global timestep size (initial value)" )
+parser.add_argument("-et",  "--end-time",          dest="end_time",       type=float, default=0.2,                  help="End of simulation" )
+parser.add_argument("-dt",  "--timestep-size",     dest="timestep_size",  type=float, default=1e-4,                 help="Global timestep size (initial value)" )
 parser.add_argument("-cs",  "--cell-size",         dest="cell_size",      type=float, default=0.3,                  help="Cell size (default 0.3)" )
 parser.add_argument("-pd",  "--peano-dir",         dest="peanodir",       default="../../..",                       help="Peano4 directory" )
 parser.add_argument("-asserts",  "--asserts",      dest="asserts",        action="store_true", default=False,       help="Switch on assertions" )
@@ -51,8 +54,8 @@ particle = swift2.particle.SPHLeapfrogFixedInteractionRadius(name = "MinimalSPH"
                                                              dimensions_hydro = HYDRO_DIMENSIONS,
                                                              cfl_factor             = 0.1, 
                                                              initial_time_step_size = args.timestep_size,
-                                                             swift_project_namespace=
-                                                             project_namespace,
+                                                             constant_time_step_size= True,
+                                                             swift_project_namespace= project_namespace,
                                                              is_sph = True
                                                              )
 
@@ -140,8 +143,11 @@ particle_plotter.add_attribute_to_plot(particle.acceleration , dimensions)
 particle_plotter.add_attribute_to_plot(particle.mass , 1)
 particle_plotter.add_attribute_to_plot(particle.density , 1)
 particle_plotter.add_attribute_to_plot(particle.pressure, 1)
+particle_plotter.add_attribute_to_plot(particle.u       , 1)
 particle_plotter.add_attribute_to_plot(particle.smoothL , 1)
 particle_plotter.add_attribute_to_plot(particle.f , 1)
+particle_plotter.add_attribute_to_plot(particle.Ncount, 1)
+particle_plotter.add_attribute_to_plot(particle.is_boundary_part, 1)
 project.algorithm_step_plot.add_action_set( particle_plotter )
 
 
@@ -247,6 +253,10 @@ if args.clean_temporary_directories:
     shutil.rmtree( dir )
 
 peano4_project.generate( throw_away_data_after_generation=True )
+
+bashCommand = "sed -i 's/g++/h5c++/g' Makefile"
+subprocess.check_output(['bash','-c', bashCommand])
+
 peano4_project.build( make_clean_first = True, number_of_parallel_builds=args.j )
 
 # remove output files from previous runs

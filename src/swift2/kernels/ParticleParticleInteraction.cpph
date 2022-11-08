@@ -53,8 +53,8 @@ void swift2::kernels::computeDensity(
           tarch::la::smaller( r, cutoffR ) 
           and 
           tarch::la::greater( r, 0.0 )         /* Self-contribution is calculated elsewhere */  
-//          and 
-//          not localParticle->getIsBoundaryParticle() 
+          and 
+          not localParticle->getIsBoundaryParticle() 
           ) 
           {  
 
@@ -149,8 +149,8 @@ void swift2::kernels::computeHydroForce(
         tarch::la::smaller( r,cutoffR ) 
         and
         tarch::la::greater( r,0.0 ) 
-//        and 
-//        not localParticle->getIsBoundaryParticle() 
+        and 
+        not localParticle->getIsBoundaryParticle() 
         ){
 
         double wa, wb;
