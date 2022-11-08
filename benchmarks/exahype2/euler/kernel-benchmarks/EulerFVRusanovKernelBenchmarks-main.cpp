@@ -563,12 +563,12 @@ int main(int argc, char** argv) {
     return ExitCodeInvalidArguments;
   }
 
-  repositories::DataRepository::initDatatypes();
+  /*repositories::DataRepository::initDatatypes();
   tarch::tests::TreeTestCaseCollection* unitTests = new tarch::tests::TreeTestCaseCollection("");
   unitTests->addTestCase( exahype2::getUnitTests() );
   unitTests->run();
   tarch::mpi::Rank::abort( 3 );
-  delete unitTests;
+  delete unitTests;*/
 
   repositories::startSimulation();
 
