@@ -26,7 +26,8 @@
 #include "exahype2/UserInterface.h"
 
 #include "config.h"
-
+#include "tarch/tests/TreeTestCaseCollection.h"
+#include "exahype2/UnitTests.h"
 //#ifdef UseFenv
 //#include "tarch/FenvWrapper.h"
 //#endif
@@ -563,6 +564,12 @@ int main(int argc, char** argv) {
   }
 
   repositories::DataRepository::initDatatypes();
+  tarch::tests::TreeTestCaseCollection* unitTests = new tarch::tests::TreeTestCaseCollection("");
+  unitTests->addTestCase( exahype2::getUnitTests() );
+  unitTests->run();
+  tarch::mpi::Rank::abort( 3 );
+  delete unitTests;
+
   repositories::startSimulation();
 
   otterTraceInitialise();

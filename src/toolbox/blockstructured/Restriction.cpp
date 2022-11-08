@@ -77,9 +77,9 @@ void toolbox::blockstructured::restrictHaloLayer_AoS_tensor_product(
             else {
               int col   = src(d)+ marker.getRelativePositionWithinFatherCell()(d) * numberOfDoFsPerAxisInPatch;
               int row   = dest(d);
-              assertion4(col>=0,row,col,src,dest);
+              assertion5(col>=0,row,col,src,dest, marker.getRelativePositionWithinFatherCell());
               assertion4(row>=0,row,col,src,dest);
-              int index = col + row * numberOfDoFsPerAxisInPatch;
+              int index = col + row * 3 * numberOfDoFsPerAxisInPatch;
               logDebug( "restrictHaloLayer_AoS_tensor_product(...)", "(" << row << "," << col << ")=" << index << " (tangential contribution)" );
               weight *= tangentialRestrictionMatrix1d[ index ];
             }

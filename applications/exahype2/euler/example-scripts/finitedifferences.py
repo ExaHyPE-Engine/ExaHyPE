@@ -110,8 +110,8 @@ if args.type=="global-fixed-fd-4":
     unknowns, auxiliary_variables,
     min_h, max_h,
     time_step_size,
-    flux = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
-    eigenvalues = exahype2.solvers.fv.PDETerms.User_Defined_Implementation # not required here, but I like the signatures to be the same for all solver variants
+    flux = exahype2.solvers.fv.PDETerms.User_Defined_Implementation
+    #eigenvalues = exahype2.solvers.fv.PDETerms.User_Defined_Implementation # not required here, but I like the signatures to be the same for all solver variants
   )
 if args.type=="global-adaptive-fd-4":
   thesolver = exahype2.solvers.rkfd.fd4.GlobalAdaptiveTimeStep(
@@ -121,8 +121,8 @@ if args.type=="global-adaptive-fd-4":
     unknowns, auxiliary_variables,
     min_h, max_h,
     time_step_relaxation = 0.1,
-    flux = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
-    eigenvalues = exahype2.solvers.fv.PDETerms.User_Defined_Implementation # not required here, but I like the signatures to be the same for all solver variants
+    flux = exahype2.solvers.fv.PDETerms.User_Defined_Implementation
+    #eigenvalues = exahype2.solvers.fv.PDETerms.User_Defined_Implementation # not required here, but I like the signatures to be the same for all solver variants
   )
 
 

@@ -115,7 +115,7 @@ def __compute_restriction_matrices_1d(value, patch_size):
     0  0  0  0  0  0  0  1  0  0  0  0...
     ...    
 
-    TP_average: average value in fine cells if possible, but extrapolate along normal direction.
+    TP_average_normal_extrp: average value in fine cells if possible, but extrapolate along normal direction.
 
     Tangential:                                                              Normal:
     1/3  1/3  1/3  0    0    0    0    0    0    0    0    0...              6    -5   0    0  0  0 

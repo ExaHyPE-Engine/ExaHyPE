@@ -718,7 +718,7 @@ if __name__ == "__main__":
     if (args.implementation=="fd4-rk1-adaptive" or args.implementation=="fd4-rk1-fixed" 
       or args.implementation=="fd4-rk4-adaptive" or args.implementation=="fd4-rk4-fixed"):
       my_solver.set_interpolation_scheme(tem_interp[0])
-      my_solver.set_restriction_scheme(tem_restrict[0])
+      my_solver.set_restriction_scheme(tem_restrict[1])
           
     #if args.interpolation=="linear+enforce" or args.interpolation=="linear-slow+enforce":
     #  self.point_wise_postprocessing_of_interpolation = "examples::exahype2::ccz4::enforceCCZ4constraints(targetVolume)" )

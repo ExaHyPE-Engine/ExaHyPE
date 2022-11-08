@@ -19,6 +19,7 @@ namespace exahype2 {
 class exahype2::fv::tests::InterpolationRestrictionTest : public tarch::tests::TestCase {
   private:
     void testPiecewiseConstantInterpolation();
+    void testAverageRestriction();
 
   public:
     InterpolationRestrictionTest();
