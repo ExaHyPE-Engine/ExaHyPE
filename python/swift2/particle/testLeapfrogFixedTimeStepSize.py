@@ -90,6 +90,7 @@ class testLeapfrogFixedTimeStepSize(Particle):
     self.pressure= dastgen2.attributes.Double("pressure")
     self.soundSpeed= dastgen2.attributes.Double("soundSpeed")
     self.v_sig_AV  = dastgen2.attributes.Double("v_sig_AV")
+    self.is_boundary_part = dastgen2.attributes.Boolean("isBoundaryParticle")
     self.data.add_attribute(self.u )
     self.data.add_attribute(self.density )
     self.data.add_attribute(self.pressure )
@@ -97,6 +98,7 @@ class testLeapfrogFixedTimeStepSize(Particle):
     self.data.add_attribute(self.u_full)
     self.data.add_attribute(self.soundSpeed)
     self.data.add_attribute(self.v_sig_AV)
+    self.data.add_attribute(self.is_boundary_part)
     
     self.particle_particle_interaction_over_particle_sets_kernel = particle_particle_interaction_over_particle_sets_kernel
     self.touch_particles_of_set_first_time_kernel                = touch_particles_of_set_first_time_kernel 
