@@ -51,7 +51,6 @@ namespace swift2 {
     void computeDensity(
         const std::list<Particle *> &localParticles,
         const std::list<Particle *> &activeParticles,
-        const double kernelSupportRadius, 
         const int hydroDimensions);
 
     /** Hydro Force calculation particle-particle kernel
@@ -71,7 +70,6 @@ namespace swift2 {
     void computeHydroForce(
         const std::list<Particle *> &localParticles,
         const std::list<Particle *> &activeParticles,
-        const double kernelSupportRadius, 
         const int hydroDimensions,
         const double betaAV
         );

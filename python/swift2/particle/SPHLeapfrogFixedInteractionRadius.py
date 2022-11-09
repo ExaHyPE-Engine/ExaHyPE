@@ -90,7 +90,6 @@ class SPHLeapfrogFixedInteractionRadius(Particle):
 
     # SPH parameters (default values)
     self.hydroDimensions = dimensions_hydro
-    self.kernelSupportRadius = 1.936492
     self.etaFactor = 1.235
     self.hTolerance = 1e-4
     self.hHydroMin = 1e-6
@@ -148,11 +147,9 @@ class SPHLeapfrogFixedInteractionRadius(Particle):
                                          ::swift2::kernels::computeDensity<globaldata::{}>( 
                                            localParticles, 
                                            activeParticles,
-                                           {},
                                            {}
                                          );
                                          """.format(self.name,
-                                                    self.kernelSupportRadius,
                                                     self.hydroDimensions),
 
         touch_vertex_last_time_kernel  = """
@@ -160,11 +157,9 @@ class SPHLeapfrogFixedInteractionRadius(Particle):
                                              localParticles,
                                              {},
                                              {},
-                                             {},
                                              {}
                                              );
                                          """.format(self.name,
-                                                    self.kernelSupportRadius,
                                                     self.hydroDimensions,
                                                     self.etaFactor,
                                                     self.alphaAV),
@@ -190,11 +185,9 @@ class SPHLeapfrogFixedInteractionRadius(Particle):
                                            localParticles, 
                                            activeParticles,
                                            {},
-                                           {},
                                            {}
                                          );
                                          """.format(self.name,
-                                                    self.kernelSupportRadius,
                                                     self.hydroDimensions,
                                                     self.betaAV),
 
@@ -296,11 +289,9 @@ class SPHLeapfrogFixedInteractionRadius(Particle):
                                          ::swift2::kernels::computeDensity<globaldata::{}>( 
                                            localParticles, 
                                            activeParticles,
-                                           {},
                                            {}
                                          );
                                          """.format(self.name,
-                                                    self.kernelSupportRadius,
                                                     self.hydroDimensions),
 
         touch_vertex_last_time_kernel  = """
@@ -308,11 +299,9 @@ class SPHLeapfrogFixedInteractionRadius(Particle):
                                              localParticles,
                                              {},
                                              {},
-                                             {},
                                              {}
                                              );
                                          """.format(self.name,
-                                                    self.kernelSupportRadius,
                                                     self.hydroDimensions,
                                                     self.etaFactor,
                                                     self.alphaAV),
@@ -338,11 +327,9 @@ class SPHLeapfrogFixedInteractionRadius(Particle):
                                            localParticles, 
                                            activeParticles,
                                            {},
-                                           {},
                                            {}
                                          );
                                          """.format(self.name,
-                                                    self.kernelSupportRadius,
                                                     self.hydroDimensions,
                                                     self.betaAV),
 

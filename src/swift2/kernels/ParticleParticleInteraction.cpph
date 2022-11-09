@@ -23,7 +23,6 @@ template <typename Particle>
 void swift2::kernels::computeDensity(
   const std::list< Particle* >& localParticles,
   const std::list< Particle* >& activeParticles,
-  const double kernelSupportRadius,
   const int hydroDimensions
 ) {
   for (auto* localParticle: localParticles ) {
@@ -43,7 +42,7 @@ void swift2::kernels::computeDensity(
         const double q_a = r / h_a;
         
         /* Compute the actual interaction radius */
-        const double cutoffR = kernelSupportRadius * h_a;
+        const double cutoffR = kernel_constant * h_a;
 
         /* Velocity terms for viscosity */
         tarch::la::Vector<Dimensions,double> dv_ab;
@@ -112,7 +111,6 @@ template <typename Particle>
 void swift2::kernels::computeHydroForce(
   const std::list< Particle* >& localParticles,
   const std::list< Particle* >& activeParticles,
-  const double kernelSupportRadius,
   const int hydroDimensions,
   const double betaAV
 ) {
@@ -143,7 +141,7 @@ void swift2::kernels::computeHydroForce(
       const double q_b = r / h_b;
       
       // Get actual interaction radius
-      const double cutoffR = kernelSupportRadius * h_a;
+      const double cutoffR = kernel_constant * h_a;
      
       if( 
         tarch::la::smaller( r,cutoffR ) 

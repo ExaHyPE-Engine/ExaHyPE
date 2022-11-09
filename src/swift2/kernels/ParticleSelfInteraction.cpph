@@ -45,7 +45,6 @@ void swift2::kernels::prepareDensityCalculation(
 template <typename Particle>
 void swift2::kernels::endDensityCalculation(
   const std::vector< Particle* >& localParticles,
-  const double kernelSupportRadius,
   const int hydroDimensions,
   const double etaFactor,
   const double alphaAV,
@@ -259,7 +258,7 @@ void swift2::kernels::endDensityCalculation(
 //          tarch::la::Vector<Dimensions,double> GridSize = marker.h();
 //          const double GridSizeHalf = 0.5 * GridSize(0); 
           const double GridSizeHalf = 0.5 * 0.3; 
-          const double CutoffParticleH = kernelSupportRadius * particle->getSmoothingLength();
+          const double CutoffParticleH = kernel_constant * particle->getSmoothingLength();
    
           if ( ((particle->getSmoothingLength() >= hHydroMax) && (f < 0.0)) ||
                ((particle->getSmoothingLength() <= hHydroMin) && (f > 0.0)) ||
@@ -331,7 +330,6 @@ void swift2::kernels::endDensityCalculation(
 template <typename Particle>
 void swift2::kernels::endDensityCalculationWithConstantSmoothingLength(
   const std::vector< Particle* >& localParticles,
-  const double kernelSupportRadius,
   const int hydroDimensions,
   const double etaFactor,
   const double alphaAV

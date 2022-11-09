@@ -57,7 +57,6 @@ namespace swift2 {
     template <typename Particle>
     void endDensityCalculation(
       const std::vector< Particle* >& localParticles,
-      const double kernelSupportRadius,
       const int hydroDimensions,
       const double etaFactor,
       const double alphaAV,
@@ -72,7 +71,6 @@ namespace swift2 {
     template <typename Particle>
     void endDensityCalculationWithConstantSmoothingLength(
       const std::vector< Particle* >& localParticles,
-      const double kernelSupportRadius,
       const int hydroDimensions,
       const double etaFactor,
       const double alphaAV

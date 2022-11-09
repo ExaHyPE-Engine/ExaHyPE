@@ -155,24 +155,17 @@ project.algorithm_step_plot.add_action_set( particle_plotter )
 # Generate plain Peano 4 project
 ###############################################################################
 #
-# See commments above (for the force interaction kernel) why we might want to 
-# have some of the constants from the Python script within the C++ code base
-# that's generated.
+# The value of some constants such as the adiabatic index cannot be arbitrary
+# but rather we have a set of pre-defined options. The same happens for some
+# functions, e.g. the SPH smoothing kernel. This allows us to define some
+# symbols and fix the values at compile time.
+# 
 #
 ###############################################################################
 peano4_project = project.generate_Peano4_project(verbose=args.verbose)
 
-# -----------------------------------------------------------------------------
-# Export global SPH constants and parameters
-# -----------------------------------------------------------------------------
- 
 # There are plenty of constant simulation paramaters to specify for our SPH
 # simulation - we do that here. 
-
-# Define HYDRO_DIMENSION value for compilation (e.g. for SPH kernel)
-peano4_project.output.makefile.add_CXX_flag("-DHYDRO_DIMENSION=" +
-                                            str(HYDRO_DIMENSIONS) )
-
 
 # Particle number along 1 dimension -------------------------------------------
 HYDRO_PART_NUMBER = str( 900 );
@@ -182,7 +175,10 @@ GLOBAL_TIME_STEP_SIZE = "1e-4"
 CFL_CONSTANT = "0.1"
 
 # EoS parameter ---------------------------------------------------------------
-GAMMA = str(5./3.)
+gamma_hydro_list = [str(5/3), str(7/5), str(4/3), str(2/1)]
+gamma_hydro_list_symbols = ['HYDRO_GAMMA_5_3','HYDRO_GAMMA_7_5','HYDRO_GAMMA_4_3','HYDRO_GAMMA_2_1']
+GAMMA = gamma_hydro_list[0]
+GAMMA_HYDRO_SYMBOL = gamma_hydro_list_symbols[0]
 
 # Artificial viscosity parameters ---------------------------------------------
 ALPHA_AV= "0.8"     # =0.8 in SWIFT
@@ -195,43 +191,44 @@ HYDRO_DEFAULT_MAX_ITERATIONS = "10"
 # Tolerance for Newton-Raphson convergence
 H_TOLERANCE = "1e-4"
 
-# SPH kernel parameters -------------------------------------------------------
-#KERNEL_SUPPORT_RAD = "1.732051"  #  1D SWIFT M4 Kernel
-KERNEL_SUPPORT_RAD = "1.936492"  #  1D SWIFT M5 Kernel - DOUBLE CHECKED CORRECT
+# SPH kernel -------------------------------------------------------
+kernel_list = ['M5']
+kernel_list_symbols = ['QUARTIC_SPLINE_KERNEL']
+KERNEL = kernel_list[0]
+KERNEL_SYMBOL = kernel_list_symbols[0]
+
+# Smoothing-length free parameter (resolution "eta_neighbours"). 
+SMOOTH_L_FAC = str( 1.235 ) 
+
+if(KERNEL=='M5' and HYDRO_DIMENSIONS ==1):
+  KERNEL_SUPPORT_RAD = "1.936492"  #  1D SWIFT M5 Kernel
+else:
+  print(f'Unable to determine the kernel support radius. Please check.'  )
 
 # Max/min allowed values for smoothing length h
 HYDRO_h_MAX = str( 1.0 / 3.0 / float(KERNEL_SUPPORT_RAD) ) 
 HYDRO_h_MIN = "1e-6"
 
-# Smoothing-length free parameter (resolution "eta_neighbours"). 
-# Can be set by specifying a desired number of neighbours.
-SMOOTH_L_FAC = str( 1.235 ) 
+# Export symbols and values for compilation (e.g. for SPH kernel)
+peano4_project.output.makefile.add_CXX_flag("-D" + "HYDRO_DIMENSION=" + str(HYDRO_DIMENSIONS) )
+peano4_project.output.makefile.add_CXX_flag("-D" + GAMMA_HYDRO_SYMBOL )
+peano4_project.output.makefile.add_CXX_flag("-D" + KERNEL_SYMBOL )
 
-if(HYDRO_DIMENSIONS==1):
-    N_MEAN_TARGET = str( 2.0 *           (float(KERNEL_SUPPORT_RAD) * float(SMOOTH_L_FAC) )    )
-elif(HYDRO_DIMENSIONS==2):
-    N_MEAN_TARGET = str(         np.pi * (float(KERNEL_SUPPORT_RAD) * float(SMOOTH_L_FAC) )**2 )
-elif(HYDRO_DIMENSIONS==3):
-    N_MEAN_TARGET = str( 4./3. * np.pi * (float(KERNEL_SUPPORT_RAD) * float(SMOOTH_L_FAC) )**2 )
 
-# Kernel root value 
-if(HYDRO_DIMENSIONS==1):
-  #    CUBIC_SPLINE_SIGMA = str(8./3.)       # 1D M4 SWIFT
-    CUBIC_SPLINE_SIGMA = str(3125./768.)     # 1D M5 SWIFT DOUBLE CHECKED CORRECT
-elif(HYDRO_DIMENSIONS==2):
-    CUBIC_SPLINE_SIGMA = str(80/(7*np.pi))    # 2D SWIFT Kernel
-#    CUBIC_SPLINE_SIGMA = str(10/(7*pi))
-elif(HYDRO_DIMENSIONS==3):
-    CUBIC_SPLINE_SIGMA = str(1/np.pi)
+# Some sanity checks ----------------------------------------------------------
+if GAMMA not in gamma_hydro_list:
+  print(f'Please check the value of GAMMA. You have chosen: {GAMMA}'  )
 
+if KERNEL not in kernel_list:
+  print(f'Please check the kernel. You have chosen: {KERNEL}'  )
 
 print('-----------------------------------------------------------------------')
 print('SPH parameters summary:')
 print(f'Effective dimensions of the Simulation: {HYDRO_DIMENSIONS}'  )
 print(f'Global time-step size: {GLOBAL_TIME_STEP_SIZE}'  )
 print(f'Number of particles (1D): {HYDRO_PART_NUMBER}'  )
+print(f'Adiabatic index: {GAMMA}'  )
 print(f'Smoothing length free factor: {SMOOTH_L_FAC}'   )
-print(f'Kernel Root value (sigma): {CUBIC_SPLINE_SIGMA}')
 print('-----------------------------------------------------------------------')
 
 # Export Constants.h file
@@ -248,7 +245,6 @@ peano4_project.constants.export_const_with_type("KERNEL_SUPPORT_RAD"   , KERNEL_
 peano4_project.constants.export_const_with_type("HYDRO_h_MAX"          , HYDRO_h_MAX          , "double")
 peano4_project.constants.export_const_with_type("HYDRO_h_MIN"          , HYDRO_h_MIN          , "double")
 peano4_project.constants.export_const_with_type("SMOOTH_L_FAC"         , SMOOTH_L_FAC         , "double")
-peano4_project.constants.export_const_with_type("CUBIC_SPLINE_SIGMA"   , CUBIC_SPLINE_SIGMA   , "double")
 
 # If we want to start a project from scratch, we may want to remove some of the generated code
 if args.clean_temporary_directories:
