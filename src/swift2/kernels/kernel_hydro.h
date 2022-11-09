@@ -11,6 +11,8 @@
 
 #include "peano4/utils/Globals.h"
 
+
+#if defined(QUARTIC_SPLINE_KERNEL)
 /* ------------------------------------------------------------------------- */
 
 /* Quartic spline M5 kernel -- SWIFT version */
@@ -43,6 +45,13 @@ static const double kernel_coeffs[(kernel_degree + 1) * (kernel_ivals + 1)]
 /* ------------------------------------------------------------------------- */
 
 // @TODO implement additional kernels (M4)
+#else
+
+#error "An SPH projection kernel function must be chosen !"
+/* ------------------------------------------------------------------------- */
+#endif
+
+/* ------------------------------------------------------------------------- */
 
 /* Define generic values (i.e. common to all kernels) */
 
@@ -81,6 +90,8 @@ static const double kernel_coeffs[(kernel_degree + 1) * (kernel_ivals + 1)]
 #define kernel_root                                                            \
   ((float)(kernel_coeffs[kernel_degree]) * kernel_constant *                   \
    kernel_gamma_inv_dim)
+
+/* ------------------------------------------------------------------------- */
 
 
 /**

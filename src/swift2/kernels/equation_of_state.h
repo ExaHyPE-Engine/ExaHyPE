@@ -2,18 +2,17 @@
 #define PEANO_EQUATION_OF_STATE_HYDRO_H
 
 #include "cmath"
+#include "swift2/adiabatic_index.h"
 
 /*
  * Returns pressure using the standard EoS.
  *
  */
 
-#define hydro_gamma ((double)(1.66666667))
-
 __attribute__((always_inline)) inline static double
 gas_pressure_from_internal_energy(double density, double u) {
 
-  return density * u * (hydro_gamma - 1.0);
+  return density * u * hydro_gamma_minus_one;
 }
 
 /*
@@ -25,7 +24,7 @@ gas_pressure_from_internal_energy(double density, double u) {
 __attribute__((always_inline)) inline static double
 gas_soundspeed_from_internal_energy(double u) {
 
-  return std::sqrt(u * hydro_gamma * (hydro_gamma - 1.0));
+  return std::sqrt(u * hydro_gamma * hydro_gamma_minus_one);
 }
 
 #endif // PEANO_EQUATION_OF_STATE_HYDRO_H
