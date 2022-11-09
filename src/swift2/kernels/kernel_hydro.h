@@ -1,53 +1,35 @@
 #ifndef PEANO_KERNEL_HYDRO_H
 #define PEANO_KERNEL_HYDRO_H
 
-#include "peano4/utils/Globals.h"
-
-/*
- * This function takes q, and returns W(q) and W'(q)=dW/dq.
- * We do include the normalisation factor of the kernel,
- * but notice that h-factors have to be included outside.
+/**
+ * @file kernel_hydro.h
+ * @brief Kernel functions for SPH.
  *
- *  The derivative W'(q) is frequently used to construct others.
- *  For example:
- *
- *  dW_dh = - ( d*W + q*dW_dq ) / h^d+1
- *  dW_dr =  dW_dq / h^d+1
- *
- * where d=Dimensions.
- *
- *
+ * Constants and kernel coefficients are taken from table 1 of
+ * Dehnen & Aly, MNRAS, 425, pp. 1062-1082 (2012).
  */
 
-/*****************************************************************************/
-/*****************************************************************************/
-/* M5 KERNEL FROM SWIFT */
+#include "peano4/utils/Globals.h"
 
+/* ------------------------------------------------------------------------- */
+
+/* Quartic spline M5 kernel -- SWIFT version */
+
+#define kernel_name "Quartic spline (M5)"
 /* Coefficients for the kernel. */
 #define kernel_degree 4 /* Degree of the polynomial */
 #define kernel_ivals 5  /* Number of branches */
 
-/* 1D */
+#if HYDRO_DIMENSION==1
 #define kernel_gamma ((float)(1.936492))
 #define kernel_constant ((float)(3125. / 768.))
-
-/* First some powers of gamma = H/h */
-#define kernel_gamma_inv ((float)(1. / kernel_gamma))
-#define kernel_gamma2 ((float)(kernel_gamma * kernel_gamma))
-
-#define kernel_gamma_dim ((float)(kernel_gamma))
-#define kernel_gamma_dim_plus_one ((float)(kernel_gamma * kernel_gamma))
-#define kernel_gamma_inv_dim ((float)(1. / (kernel_gamma)))
-#define kernel_gamma_inv_dim_plus_one                                          \
-  ((float)(1. / (kernel_gamma * kernel_gamma)))
-
-/* The number of branches (floating point conversion) */
-#define kernel_ivals_f ((float)(kernel_ivals))
-
-/* Kernel self contribution (i.e. W(0,h)) */
-#define kernel_root                                                            \
-  ((float)(kernel_coeffs[kernel_degree]) * kernel_constant *                   \
-   kernel_gamma_inv_dim)
+#elif HYDRO_DIMENSION==2
+#define kernel_gamma ((float)(1.977173))
+#define kernel_constant ((float)(46875. * M_PI / 2398.))
+#elif HYDRO_DIMENSION==3
+#define kernel_gamma ((float)(2.018932))
+#define kernel_constant ((float)(15625. * M_PI / 512.))
+#endif
 
 static const double kernel_coeffs[(kernel_degree + 1) * (kernel_ivals + 1)]
     __attribute__((aligned(16))) = {
@@ -57,6 +39,49 @@ static const double kernel_coeffs[(kernel_degree + 1) * (kernel_ivals + 1)]
         1.0,  -4.0, 6.0,  -4.0, 1.0,   /* 0.6 < u < 0.8 */
         1.0,  -4.0, 6.0,  -4.0, 1.0,   /* 0.8 < u < 1 */
         0.0,  0.0,  0.0,  0.0,  0.0};  /* 1 < u */
+
+/* ------------------------------------------------------------------------- */
+
+// @TODO implement additional kernels (M4)
+
+/* Define generic values (i.e. common to all kernels) */
+
+/* First some powers of gamma = H/h */
+#define kernel_gamma_inv ((float)(1. / kernel_gamma))
+#define kernel_gamma2 ((float)(kernel_gamma * kernel_gamma))
+
+/* define gamma^d, gamma^(d+1), 1/gamma^d and 1/gamma^(d+1) */
+#if HYDRO_DIMENSION==1
+#define kernel_gamma_dim ((float)(kernel_gamma))
+#define kernel_gamma_dim_plus_one ((float)(kernel_gamma * kernel_gamma))
+#define kernel_gamma_inv_dim ((float)(1. / (kernel_gamma)))
+#define kernel_gamma_inv_dim_plus_one                                          \
+  ((float)(1. / (kernel_gamma * kernel_gamma)))
+#elif HYDRO_DIMENSION==2
+#define kernel_gamma_dim ((float)(kernel_gamma * kernel_gamma))
+#define kernel_gamma_dim_plus_one \
+  ((float)(kernel_gamma * kernel_gamma * kernel_gamma))
+#define kernel_gamma_inv_dim ((float)(1. / (kernel_gamma * kernel_gamma)))
+#define kernel_gamma_inv_dim_plus_one \
+  ((float)(1. / (kernel_gamma * kernel_gamma * kernel_gamma)))
+#elif HYDRO_DIMENSION==3
+#define kernel_gamma_dim ((float)(kernel_gamma * kernel_gamma * kernel_gamma))
+#define kernel_gamma_dim_plus_one \
+  ((float)(kernel_gamma * kernel_gamma * kernel_gamma * kernel_gamma))
+#define kernel_gamma_inv_dim \
+  ((float)(1. / (kernel_gamma * kernel_gamma * kernel_gamma)))
+#define kernel_gamma_inv_dim_plus_one \
+  ((float)(1. / (kernel_gamma * kernel_gamma * kernel_gamma * kernel_gamma)))
+#endif
+
+/* The number of branches (floating point conversion) */
+#define kernel_ivals_f ((float)(kernel_ivals))
+
+/* Kernel self contribution (i.e. W(0,h)) */
+#define kernel_root                                                            \
+  ((float)(kernel_coeffs[kernel_degree]) * kernel_constant *                   \
+   kernel_gamma_inv_dim)
+
 
 /**
  * @brief Computes the kernel function.
@@ -106,7 +131,7 @@ __attribute__((always_inline)) inline static void kernel_eval(double u,
  * @param dW_dx (return) The norm of the gradient of \f$|\nabla W(x,h)|\f$.
  */
 __attribute__((always_inline)) inline static void
-kernel_deval_SWIFT(double u, double &W, double &dW_dx) {
+kernel_deval(double u, double &W, double &dW_dx) {
 
   /* Go to the range [0,1[ from [0,H[ */
   const double x = u * kernel_gamma_inv;

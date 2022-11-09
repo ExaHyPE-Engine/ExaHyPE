@@ -169,6 +169,10 @@ peano4_project = project.generate_Peano4_project(verbose=args.verbose)
 # There are plenty of constant simulation paramaters to specify for our SPH
 # simulation - we do that here. 
 
+# Define HYDRO_DIMENSION value for compilation (e.g. for SPH kernel)
+peano4_project.output.makefile.add_CXX_flag("-DHYDRO_DIMENSION=" +
+                                            str(HYDRO_DIMENSIONS) )
+
 
 # Particle number along 1 dimension -------------------------------------------
 HYDRO_PART_NUMBER = str( 900 );

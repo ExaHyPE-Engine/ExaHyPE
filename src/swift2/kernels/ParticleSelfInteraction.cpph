@@ -73,7 +73,7 @@ void swift2::kernels::endDensityCalculation(
 
       /* SWIFT KERNEL */
       double W_a, w, dw_dh;
-      kernel_deval_SWIFT(0, w, dw_dh);
+      kernel_deval(0, w, dw_dh);
       W_a = w;
 
       /* Final operation. Add the self-contributions (i.e. at q=0) */
@@ -299,7 +299,7 @@ void swift2::kernels::endDensityCalculation(
     
           /* Ok, correct then */
 
-//          particle->setSmoothingLength( h_new );
+          particle->setSmoothingLength( h_new );
 
           /* Increase the iteration counter */
           particle->setIterCount( particle->getIterCount() + 1 );
@@ -310,7 +310,7 @@ void swift2::kernels::endDensityCalculation(
 
           /* However, if this is iter 0, we still update */
           if (particle->getIterCount() == 0) {
-//            particle->setSmoothingLength( h_new );
+            particle->setSmoothingLength( h_new );
           }
 
           /* Flag that particle has already converged */
@@ -354,7 +354,7 @@ void swift2::kernels::endDensityCalculationWithConstantSmoothingLength(
 
       /* SWIFT KERNEL */
       double W_a, w, dw_dh;
-      kernel_deval_SWIFT(0, w, dw_dh);
+      kernel_deval(0, w, dw_dh);
       W_a = w;
 
       /* Final operation. Add the self-contributions (i.e. at q=0) */

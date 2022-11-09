@@ -62,7 +62,7 @@ void swift2::kernels::computeDensity(
 
           /* SWIFT KERNEL */
           double W_a, dW_a_dh, w, dw_dx;
-          kernel_deval_SWIFT(q_a, w, dw_dx);
+          kernel_deval(q_a, w, dw_dx);
           W_a = w / std::pow( h_a, hydroDimensions );
           dW_a_dh = - ( hydroDimensions * w + q_a * dw_dx ) / std::pow( h_a, hydroDimensions + 1 );
 
@@ -158,10 +158,10 @@ void swift2::kernels::computeHydroForce(
         double dw_dqa, dw_dqb;
 
         // Evaluate kernel and its derivative for particle a
-        kernel_deval_SWIFT(q_a, wa, dw_dqa);
+        kernel_deval(q_a, wa, dw_dqa);
 
         // Evaluate kernel and its derivative for particle b
-        kernel_deval_SWIFT(q_b, wb, dw_dqb);
+        kernel_deval(q_b, wb, dw_dqb);
 
         wa_dr = dw_dqa / std::pow( h_a, hydroDimensions + 1 );
         wb_dr = dw_dqb / std::pow( h_b, hydroDimensions + 1 );
