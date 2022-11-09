@@ -188,7 +188,7 @@ particle_force = """
     localParticle->setEnergyTot( - ( E_kin + E_pot ) );
 
     /* Initialize dummy SPH variables */
-    localparticle->isBoundaryParticle(false)
+    localParticle->setIsBoundaryParticle(false);
 
   }
 """
