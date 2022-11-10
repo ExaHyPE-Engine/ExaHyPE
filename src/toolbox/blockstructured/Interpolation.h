@@ -189,6 +189,30 @@ namespace toolbox {
   namespace blockstructured {
     /**
      * Take the coarse grid values and interpolate them onto the fine grid
+     *
+     * This routine expects two matrices. Both phrase 1d interpolation
+     * rules, but one of them formalises the interpolation along the
+     * face normal and one the interpolation along the tangential directions.
+     *
+     * The normal interpolation is a matrix of size overlap x 2*overlap. If
+     * I have an overlap of 1, then I have to befill one halo layer around
+     * a resolution transition.
+     *
+     * @image html Restriction_averaging.png
+     *
+     * This one can be befilled by two entries on the coarser resolution,
+     * though only one of them is a real entry and the other one is a
+     * restricted one. So you can either have the corresponding restricted
+     * value entry in normalInterpolationMatrix1d as 0 - in this case you
+     * only couple from real coarse data to fine data - or you can have
+     * a value in there which means you interpolate over the resolution
+     * transition between real and restricted data.
+     *
+     * The normalInterpolationMatrix1d has the size 3 * numberOfDoFsPerAxisInPatch
+     * x numberOfDoFsPerAxisInPatch. So we have three matrix. Each of them
+     * phrases how an element of one of the three fine grid segments is
+     * affected by the numberOfDoFsPerAxisInPatch counterparts on the
+     * coarser level.
      */
     void interpolateHaloLayer_AoS_tensor_product(
       const peano4::datamanagement::FaceMarker& marker,

@@ -232,7 +232,10 @@ if "plot" in args.type:
 else:  
   plot_interval = 0.0
   
-cube_size = 1
+#end_time=0.004
+#plot_interval=0.001
+
+cube_size = 1.0
 project.set_global_simulation_parameters(
   dimensions            = dimensions,
   offset                = [-cube_size/2.0, -cube_size/2.0, -cube_size/2.0],
@@ -243,6 +246,11 @@ project.set_global_simulation_parameters(
   time_in_between_plots = plot_interval,
   periodic_BC           = [False, False, False]
 )
+
+tem_interp=["TP_constant","TP_linear_with_linear_extrap_normal_interp"]
+tem_restrict=["TP_inject_normal_extrap","TP_average_normal_extrap"]
+thesolver.set_interpolation_scheme(tem_interp[0])
+thesolver.set_restriction_scheme(tem_restrict[0])
 
 project.set_load_balancing( "toolbox::loadbalancing::RecursiveSubdivision", "new ::exahype2::LoadBalancingConfiguration()" )
 project.set_Peano4_installation( args.peanodir, build_mode )

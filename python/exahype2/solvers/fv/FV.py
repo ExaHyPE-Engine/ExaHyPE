@@ -112,7 +112,10 @@ class FV(object):
     If you wanna alter the inter-resolution transfer operators, please use
     
             self._interpolation = "tensor_product< " + self._name + ">"
-            self.add_solver_constants(   "static constexpr double  NormalInterpolationMatrix1d[]     = {1.0};" )
+            self.add_solver_constants( "" "static constexpr double  NormalInterpolationMatrix1d[]     = {
+              1.0, 0.0
+            };
+            "" " )
             self.add_solver_constants( "" "static constexpr double  TangentialInterpolationMatrix1d[] = {
             1.0,0.0,0.0,0.0,
             1.0,0.0,0.0,0.0,
@@ -130,7 +133,15 @@ class FV(object):
             0.0,0.0,0.0,1.0
             };"" " )
     
+    The above snippet refers to a overlap of one and five unknowns. So the interpolation 
+    along a 1d tangential direction is three 5x5 matrices. Along the normal, we have to 
+    project onto one target element, so our projection matrix has one row. We have two 
+    values (inside and outside) along this normal, so two columns. In the standard
+    enumeration scheme (refers to the face with normal 0), we have one real coarse 
+    grid value in this case. The other one would be the restricted value. We don't 
+    often use it (and therefore have a 0 here).
     
+        
     ## Data postprocessing or coupling to other codes
     
     For data postprocessing, the introduction of fancy interior conditions or the coupling to 

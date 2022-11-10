@@ -327,7 +327,18 @@ Please note that we assess only the Euler equations here, i.e.~we are extremely
 bandwidth-bound and induce almost no load.
 All GPU data comprise all data transfer and memory allocations on the GPU.
 They provide fair measurements and not raw compute figures.
+We have data for SYCL\footnotemark, OpenMP\footnotemark \ and C++\footnotemark 
+\ GPU benchmarks.
 \end{framed}
+
+\footnotetext{\texttt{
+./configure CXX=dpcpp CC=dpcpp CXXFLAGS="-g3 -std=c++17
+-Wno-unknown-attributes" "-ltbb" --enable-exahype --enable-loadbalancing --enable-particles --with-multithreading=tbb --enable-blockstructured --with-gpu=sycl
+}}
+% \footnote{\texttt{
+% ./configure CXX=dpcpp CC=dpcpp CXXFLAGS="-g3 -std=c++17
+% -Wno-unknown-attributes -fiopenmp  -fopenmp-targets=spir64' 'LDFLAGS=-g3 -L/opt/intel/oneapi_customer/tbb/latest/lib/intel64/gcc4.8 -ltbb -fiopenmp' --enable-exahype --enable-loadbalancing --enable-particles --with-multithreading=tbb --enable-blockstructured --with-gpu=sycl
+% }}.
 
 
 \section{Case study: A Finite Volumes code coupling two solvers  (hyperbolic+elliptic)}

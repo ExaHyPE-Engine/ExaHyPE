@@ -55,18 +55,6 @@ namespace toolbox {
     );
 
 
-    /**
-     * This routine is used when we delete a cell due to dynamic AMR
-     */
-    void restrictCell_AoS_averaging(
-      const peano4::datamanagement::CellMarker& marker,
-      int                                       numberOfDoFsPerAxisInPatch,
-      int                                       unknowns,
-      double*                                   fineGridValues,
-      double*                                   coarseGridValues
-    );
-
-
     void restrictInnerHalfOfHaloLayer_AoS_inject(
       const peano4::datamanagement::FaceMarker& marker,
       int                                       numberOfDoFsPerAxisInPatch,
@@ -78,6 +66,30 @@ namespace toolbox {
     );
 
 
+    /**
+     * Restrict data by injection
+     *
+     * This routine works for an overlap of 1 or an overlap of 3k+2.
+     * If the overlap equals 1, we walk along the fine grid layer
+     * along the AMR boundary and we restrict every third finite
+     * volume voxel:
+     *
+     * @image html Restriction_injection.png
+     *
+     * If the overlap equals two, we don't take the voxel directly
+     * adjacent to the resolution change face, but we take the one
+     * that is one voxel further away, as the centre of this one
+     * coincides with the centre of the coarser voxel. So we can
+     * actually inject. A similar argument holds for an overlap of
+     * 3+2.
+     *
+     * In all of these cases where we use a proper injection, i.e.
+     * where the overlap is greater than one, we cannot befill the
+     * whole coarser overlap. Instead, we will only fill one layer
+     * for an overlap of 2, or two layers for an overlap of 5. The
+     * remaining coarse layer entries are not touched.
+     *
+     */
     void restrictHaloLayer_AoS_inject(
       const peano4::datamanagement::FaceMarker& marker,
       int                                       numberOfDoFsPerAxisInPatch,
@@ -89,6 +101,18 @@ namespace toolbox {
 
 
     void restrictCell_AoS_inject(
+      const peano4::datamanagement::CellMarker& marker,
+      int                                       numberOfDoFsPerAxisInPatch,
+      int                                       unknowns,
+      double*                                   fineGridValues,
+      double*                                   coarseGridValues
+    );
+
+
+    /**
+     * This routine is used when we delete a cell due to dynamic AMR
+     */
+    void restrictCell_AoS_averaging(
       const peano4::datamanagement::CellMarker& marker,
       int                                       numberOfDoFsPerAxisInPatch,
       int                                       unknowns,
@@ -112,11 +136,58 @@ namespace toolbox {
     );
 
 
+    /**
+     * This routine works for overlaps of 1 and multiples of 3. However, it
+     * does only set values for the overlap/3 adjacent cells. So if you work
+     * with an overlap of 1, then the overlap just works fine, but it is not
+     * really the average. It is the average of the one layer adjacent to the
+     * fine grid transition. In 2d, it is the sum scaled with 1/3.
+     *
+     * @image html Restriction_averaging.png
+     *
+     * If you have an overlap of 3, the routine computes a meaningful average,
+     * but as it has only three overlap cells on the fine grid, it can
+     * only set the overlap cell 1 on the next coarser mesh.
+     */
     void restrictInnerHalfOfHaloLayer_AoS_averaging(
       const peano4::datamanagement::FaceMarker& marker,
       int                                       numberOfDoFsPerAxisInPatch,
       int                                       overlap,
       int                                       unknowns,
+      double*                                   fineGridValues,
+      double*                                   coarseGridValues,
+      bool                                      swapInsideOutside=false
+    );
+
+    void restrictCell_AoS_tensor_product(
+      const peano4::datamanagement::CellMarker& marker,
+      int                                       numberOfDoFsPerAxisInPatch,
+      int                                       unknowns,
+      const double* __restrict__                tangentialRestrictionMatrix1d,
+      double*                                   fineGridValues,
+      double*                                   coarseGridValues
+    );
+
+
+    void restrictHaloLayer_AoS_tensor_product(
+      const peano4::datamanagement::FaceMarker& marker,
+      int                                       numberOfDoFsPerAxisInPatch,
+      int                                       overlap,
+      int                                       unknowns,
+      const double* __restrict__                normalRestrictionMatrix1d,
+      const double* __restrict__                tangentialRestrictionMatrix1d,
+      double*                                   fineGridValues,
+      double*                                   coarseGridValues
+    );
+
+
+    void restrictInnerHalfOfHaloLayer_AoS_tensor_product(
+      const peano4::datamanagement::FaceMarker& marker,
+      int                                       numberOfDoFsPerAxisInPatch,
+      int                                       overlap,
+      int                                       unknowns,
+      const double* __restrict__                normalRestrictionMatrix1d,
+      const double* __restrict__                tangentialRestrictionMatrix1d,
       double*                                   fineGridValues,
       double*                                   coarseGridValues,
       bool                                      swapInsideOutside=false

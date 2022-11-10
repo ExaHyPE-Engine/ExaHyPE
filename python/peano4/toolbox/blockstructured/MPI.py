@@ -78,6 +78,9 @@ def get_face_merge_implementation(patch_overlap):
       assertionMsg( false, "not implemented yet" );
       break;
 
+    default:
+      assertionMsg( false, "not implemented yet" );
+      break;
   }}
 """
 
@@ -103,6 +106,10 @@ def get_cell_merge_implementation(patch_overlap):
 
     case ::peano4::grid::TraversalObserver::SendReceiveContext::PeriodicBoundaryDataSwap:
       assertionMsg( false, "should never be called" );
+      break;
+      
+    default:
+      assertionMsg( false, "not implemented yet" );
       break;
   }}
 """
