@@ -1,5 +1,7 @@
+// This file is part of the Peano project. For conditions of distribution and
+// use, please see the copyright notice at www.peano-framework.org
 #include "tarch/compiler/CompilerSpecificSettings.h"
-#include "tarch/multicore/multicore.h"
+#include "tarch/tarch.h"
 
 
 namespace tarch {
