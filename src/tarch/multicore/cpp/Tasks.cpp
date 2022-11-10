@@ -131,9 +131,6 @@ namespace {
         else { // no local tasks left over
           tarch::multicore::internal::copyInternalTaskQueuesOverIntoGlobalQueue(threadNumber);
           const int numberOfTasksToProcess = std::max(1,tarch::multicore::getNumberOfPendingTasks(-1)/2);
-          #if !defined(GPUOffloadingCPP)
-          ::tarch::logging::Statistics::getInstance().log( BackfillWhileWaitingForBSPTasks, numberOfTasksToProcess );
-          #endif
           processedSomeTasks = tarch::multicore::processPendingTasks( numberOfTasksToProcess );
         }
       }

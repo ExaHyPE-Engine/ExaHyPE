@@ -178,7 +178,6 @@ namespace {
             else { // no local tasks left over
               tarch::multicore::internal::copyInternalTaskQueuesOverIntoGlobalQueue(threadNumber);
               const int numberOfTasksToProcess = std::max(1,tarch::multicore::getNumberOfPendingTasks(-1)/2);
-              ::tarch::logging::Statistics::getInstance().log( BackfillWhileWaitingForBSPTasks, numberOfTasksToProcess );
               processedSomeTasks = tarch::multicore::processPendingTasks( numberOfTasksToProcess );
             }
           }
