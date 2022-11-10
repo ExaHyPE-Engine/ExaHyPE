@@ -14,7 +14,8 @@ SUBDIRS = . \
   toolbox/particles \
   exahype2 \
   swift2 \
-  unittests convert
+  convert \
+  unittests
 
 #
 # I want Peano4 to be as fast as possible and thus build it as static library

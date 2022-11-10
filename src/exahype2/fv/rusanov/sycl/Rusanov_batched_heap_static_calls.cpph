@@ -750,7 +750,7 @@ void exahype2::fv::rusanov::sycl::timeStepWithRusanov_batched_heap_static_calls(
                 patchData.t[patchIndex],
                 patchData.dt[patchIndex],
                 2, // normal
-                tempNonconservativeProductY,
+                tempNonconservativeProductZ,
                 ncpEnumerator
               );
             }
