@@ -443,7 +443,7 @@ fi
 if test "$toolchain" == nvidia; then
   AC_DEFINE([UseNVIDIA], [1], [UseNVIDIA])
   AC_DEFINE([UseLogService], [NVTXLogger], [NVTXLogger])
-  AC_CHECK_HEADERS([nvToolsExt.h],[],[AC_MSG_ERROR([header <nvToolsExt.h> not found])])
+  AC_CHECK_HEADERS([nvtx3/nvToolsExt.h],[],[AC_MSG_ERROR([header <nvtx3/nvToolsExt.h> not found])])
 fi
 
 if test "$toolchain" == chrome; then

@@ -15,6 +15,12 @@ namespace {
 }
 
 
+
+bool tarch::multicore::SYCLQueuesAreCreated() {
+  return not syclQueues.empty();
+}
+
+
 sycl::queue& tarch::multicore::getSYCLQueue( int number ) {
   assertion1( syclQueues.count(number)==1, number );
   return syclQueues[number];
@@ -42,9 +48,13 @@ void tarch::multicore::listSYCLQueues() {
 
 void tarch::multicore::initSYCLQueues(const std::set<int>& deviceList) {
   static tarch::logging::Log _log( "tarch::multicore" );
+
   auto platforms       = sycl::platform::get_platforms();
   int  physicalNumberOfDevices = 0;
   int  logicalNumberOfDevices  = 0;
+
+  syclQueues.clear();
+
   for (auto &platform : platforms) {
     auto devices = platform.get_devices();
     for (auto &device : devices ) {

@@ -10,12 +10,6 @@
 
 #include "config.h"
 
-
-
-
-tarch::logging::Log _log("examples::unittests");
-
-
 #include "peano4/UnitTests.h"
 #include "tarch/UnitTests.h"
 
@@ -27,6 +21,7 @@ tarch::logging::Log _log("examples::unittests");
 #include "swift2/UnitTests.h"
 #endif
 
+tarch::logging::Log _log("examples::unittests");
 
 void runTests() {
   int unitTestsErrors = 0;
