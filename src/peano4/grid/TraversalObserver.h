@@ -135,17 +135,26 @@ std::vector< peano4::grid::GridControlEvent > applications4::grid::MyObserver::g
     virtual std::vector< GridControlEvent > getGridControlEvents() const = 0;
 
     /**
-     * We do not really need stack numbers et al here, as everything will
-     * reside on the call stack anyway. If the routine is called on tree
-     * no 0, this operation has to establish the master of the global root
-     * tree (which usually is ill-defined, but the data should be there
-     * anyway).
+     * Begin the traversal
+     *
+     * This routine is called per spacetree instance, i.e. per subtree (thread)
+     * per rank. Within the usual implementation, everything will reside on the
+     * call stack anyway. If the routine is called on tree no 0, this operation
+     * has to establish the master data of the global root tree, i.e. ensure
+     * that the data of level -1 is technically there for the subsequent
+     * enterCell event, though this data is ill-defined.
+     *
+     * @param x Root cell coordinates
+     * @param h Root cell size
      */
     virtual void beginTraversal(
       const tarch::la::Vector<Dimensions,double>&  x,
       const tarch::la::Vector<Dimensions,double>&  h
     ) = 0;
 
+    /**
+     * @see beginTraversal()
+     */
     virtual void endTraversal(
       const tarch::la::Vector<Dimensions,double>&  x,
       const tarch::la::Vector<Dimensions,double>&  h

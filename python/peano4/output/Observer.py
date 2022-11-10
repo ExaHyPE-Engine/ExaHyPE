@@ -229,6 +229,45 @@ void {FULL_QUALIFIED_CLASSNAME}::endTraversal( const tarch::la::Vector<Dimension
     output_file.write( self.TemplateEndTraversal.format(**self.d) )
 
 
+  TemplatePrepareTraversal = """
+
+void {FULL_QUALIFIED_CLASSNAME}::prepareTraversal() {{
+  logTraceIn( "prepareTraversal(...)" );
+{MAPPING_PREPARE_TRAVERSAL_CALLS}
+  logTraceOut( "prepareTraversal(...)" );
+}}
+
+  """
+
+
+  def __generate_prepareTraversal(self,output_file):
+    self.d[ "MAPPING_PREPARE_TRAVERSAL_CALLS" ]     = ""
+    for action in self.included_actions:
+      self.d[ "MAPPING_PREPARE_TRAVERSAL_CALLS" ]  += "  "
+      self.d[ "MAPPING_PREPARE_TRAVERSAL_CALLS" ]  += action
+      self.d[ "MAPPING_PREPARE_TRAVERSAL_CALLS" ]  += "::prepareTraversal();\n"
+    output_file.write( self.TemplatePrepareTraversal.format(**self.d) )
+
+
+  TemplateUnprepareTraversal = """
+
+void {FULL_QUALIFIED_CLASSNAME}::unprepareTraversal() {{
+  logTraceIn( "unprepareTraversal(...)" );
+{MAPPING_UNPREPARE_TRAVERSAL_CALLS}
+  logTraceOut( "unprepareTraversal(...)" );
+}}
+
+  """
+
+
+  def __generate_unprepareTraversal(self,output_file):
+    self.d[ "MAPPING_UNPREPARE_TRAVERSAL_CALLS" ]     = ""
+    for action in self.included_actions:
+      self.d[ "MAPPING_UNPREPARE_TRAVERSAL_CALLS" ]  += "  "
+      self.d[ "MAPPING_UNPREPARE_TRAVERSAL_CALLS" ]  += action
+      self.d[ "MAPPING_UNPREPARE_TRAVERSAL_CALLS" ]  += "::unprepareTraversal();\n"
+    output_file.write( self.TemplateUnprepareTraversal.format(**self.d) )
+
 
   def __format_template_per_action(self,output_file,template,reverse_order=False, manual_dict=None):
     """
@@ -1652,6 +1691,8 @@ tarch::logging::Log {FULL_QUALIFIED_CLASSNAME}::_log( "{FULL_QUALIFIED_CLASSNAME
       self.__generate_getGridControlEvents(output_file)
       self.__generate_beginTraversal(output_file)
       self.__generate_endTraversal(output_file)
+      self.__generate_prepareTraversal(output_file)
+      self.__generate_unprepareTraversal(output_file)
       self.__generate_loadCell(output_file)
       self.__generate_enterCell(output_file)
       self.__generate_leaveCell(output_file)

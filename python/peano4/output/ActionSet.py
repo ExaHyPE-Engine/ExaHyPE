@@ -145,7 +145,11 @@ class ActionSet(object):
 """ )
           outputfile.write( "    " + self.classname + "(int treeNumber);\n\n" )
           outputfile.write( "    ~" + self.classname + "();\n\n" )
-          outputfile.write( "    std::vector< peano4::grid::GridControlEvent > getGridControlEvents() const;\n\n" )
+          outputfile.write( """
+    std::vector< peano4::grid::GridControlEvent > getGridControlEvents() const;
+    static void prepareTraversal();
+    static void unprepareTraversal();
+""" )
 
           for i in self.operations: self.__generate_operation(outputfile,i)
 
@@ -187,6 +191,14 @@ class ActionSet(object):
 
       outputfile.write( "std::vector< peano4::grid::GridControlEvent > " + self.__get_full_qualified_class_name() + "::getGridControlEvents() const {\n" )
       outputfile.write( self.implementation.get_body_of_getGridControlEvents() )
+      outputfile.write( "}\n\n\n" )
+
+      outputfile.write( "void " + self.__get_full_qualified_class_name() + "::prepareTraversal() {\n" )
+      outputfile.write( self.implementation.get_body_of_prepareTraversal() )
+      outputfile.write( "}\n\n\n" )
+
+      outputfile.write( "void " + self.__get_full_qualified_class_name() + "::unprepareTraversal() {\n" )
+      outputfile.write( self.implementation.get_body_of_unprepareTraversal() )
       outputfile.write( "}\n\n\n" )
 
 

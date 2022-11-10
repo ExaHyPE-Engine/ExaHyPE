@@ -286,8 +286,8 @@ H_TOLERANCE = "1e-4"
 
 # SPH kernel parameters -------------------------------------------------------
 #KERNEL_SUPPORT_RAD = "2"  # "gamma" parameter for Price et al 2018 M4 kernel
-KERNEL_SUPPORT_RAD = "1.732051"  #  1D SWIFT M4 Kernel
-#KERNEL_SUPPORT_RAD = "1.936492"  #  1D SWIFT M5 Kernel
+#KERNEL_SUPPORT_RAD = "1.732051"  #  1D SWIFT M4 Kernel
+KERNEL_SUPPORT_RAD = "1.936492"  #  1D SWIFT M5 Kernel
 
 # Max/min allowed values for smoothing length h
 HYDRO_h_MAX = str( 1.0 / 3.0 / float(KERNEL_SUPPORT_RAD) ) 

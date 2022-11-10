@@ -19,15 +19,13 @@ class Particle(DaStGen2):
     ParticleSet and this one is used by the observers.
     
     You have to add the particle to your project though via 
-    
-    my_project.add_global_object
+      
+            my_project.add_global_object
 
     If you want to attributes to a particle, use the data subattribute.
     An all-time classic is the call
     
-    <pre>
-    add_attribute( peano4.dastgen2.Peano4DoubleArray("v","Dimensions") )
-    </pre>
+           add_attribute( peano4.dastgen2.Peano4DoubleArray("v","Dimensions") )
   
   """
   def __init__(self,name):
@@ -42,9 +40,8 @@ class Particle(DaStGen2):
     peano4.datamodel.DaStGen2.__init__( self, name )
     
     self.name = name
-    self._position_identifier = "x"
     
-    self.data.add_attribute( peano4.dastgen2.Peano4DoubleArray(self._position_identifier,"Dimensions") )
+    self.data.add_attribute( peano4.dastgen2.Peano4DoubleArray("x","Dimensions") )
     self.data.add_attribute( dastgen2.attributes.Enumeration("ParallelState", ["Local","Virtual"]) )
     self.data.add_attribute( dastgen2.attributes.Enumeration("NewParallelState", ["Local","Virtual"]) )
     self.data.add_attribute( dastgen2.attributes.Double( "cutOffRadius" ) )

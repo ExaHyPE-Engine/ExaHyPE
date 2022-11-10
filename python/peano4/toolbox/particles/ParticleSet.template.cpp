@@ -12,11 +12,13 @@ tarch::multicore::BooleanSemaphore   {{NAMESPACE | join("::")}}::{{CLASSNAME}}::
 {{NAMESPACE | join("::")}}::{{CLASSNAME}}     {{NAMESPACE | join("::")}}::{{CLASSNAME}}::_particlesThatHaveToBeSieved;
 bool              {{NAMESPACE | join("::")}}::{{CLASSNAME}}::_thereAreParticlesToBeSieved;
 
-int {{NAMESPACE | join("::")}}::{{CLASSNAME}}::_numberOfLifts = 0;
-int {{NAMESPACE | join("::")}}::{{CLASSNAME}}::_numberOfDrops = 0;
+int {{NAMESPACE | join("::")}}::{{CLASSNAME}}::_numberOfLifts                    = 0;
+int {{NAMESPACE | join("::")}}::{{CLASSNAME}}::_numberOfDrops                    = 0;
+int {{NAMESPACE | join("::")}}::{{CLASSNAME}}::_numberOfSieves                   = 0;
+int {{NAMESPACE | join("::")}}::{{CLASSNAME}}::_numberOfReassignments            = 0;
 int {{NAMESPACE | join("::")}}::{{CLASSNAME}}::_numberOfAssignmentsToGlobalSieve = 0;
-int {{NAMESPACE | join("::")}}::{{CLASSNAME}}::_totalRealParticleCount = 0;
-int {{NAMESPACE | join("::")}}::{{CLASSNAME}}::_totalVirtualParticleCount = 0;
+int {{NAMESPACE | join("::")}}::{{CLASSNAME}}::_totalRealParticleCount           = 0;
+int {{NAMESPACE | join("::")}}::{{CLASSNAME}}::_totalVirtualParticleCount        = 0;
 int {{NAMESPACE | join("::")}}::{{CLASSNAME}}::_totalEliminatedSpatialDuplicates = 0;
 
 
@@ -231,91 +233,128 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::clone( const {{CLASSNAME}}& othe
 }
 
 
-void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishedTraversal() {
-  int globalNumberOfLifts               = 0;
-  int globalNumberOfDrops               = 0;
-  int globalNumberOfSieveAssignments    = 0;
-  int globalRealNumberOfParticles       = 0;
-  int globalVirtualNumberOfParticles    = 0;
-  int globalEliminatedSpatialDuplicates = 0;
-  #if Parallel
-  tarch::mpi::Rank::getInstance().reduce(
-    &globalNumberOfLifts,
-    &_numberOfLifts,
-    1, MPI_INT,
-    MPI_SUM,
-    tarch::mpi::Rank::getGlobalMasterRank(),
-    [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); }
-  );
-  tarch::mpi::Rank::getInstance().reduce(
-    &globalNumberOfDrops,
-    &_numberOfDrops,
-    1, MPI_INT,
-    MPI_SUM,
-    tarch::mpi::Rank::getGlobalMasterRank(),
-    [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); }
-  );
-  tarch::mpi::Rank::getInstance().reduce(
-    &globalNumberOfSieveAssignments,
-    &_numberOfAssignmentsToGlobalSieve,
-    1, MPI_INT,
-    MPI_SUM,
-    tarch::mpi::Rank::getGlobalMasterRank(),
-    [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); }
-  );
-  tarch::mpi::Rank::getInstance().reduce(
-    &globalRealNumberOfParticles,
-    &_totalRealParticleCount,
-    1, MPI_INT,
-    MPI_SUM,
-    tarch::mpi::Rank::getGlobalMasterRank(),
-    [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); }
-  );
-  tarch::mpi::Rank::getInstance().reduce(
-    &globalVirtualNumberOfParticles,
-    &_totalVirtualParticleCount,
-    1, MPI_INT,
-    MPI_SUM,
-    tarch::mpi::Rank::getGlobalMasterRank(),
-    [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); }
-  );
-  tarch::mpi::Rank::getInstance().reduce(
-    &globalEliminatedSpatialDuplicates,
-    &_totalEliminatedSpatialDuplicates,
-    1, MPI_INT,
-    MPI_SUM,
-    tarch::mpi::Rank::getGlobalMasterRank(),
-    [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); }
-  );
-  #else
-  globalNumberOfLifts               = _numberOfLifts;
-  globalNumberOfDrops               = _numberOfDrops;
-  globalNumberOfSieveAssignments    = _numberOfAssignmentsToGlobalSieve;
-  globalRealNumberOfParticles      = _totalRealParticleCount;
-  globalVirtualNumberOfParticles    = _totalVirtualParticleCount;
-  globalEliminatedSpatialDuplicates = _totalEliminatedSpatialDuplicates;
-  #endif
-
-  if ( tarch::mpi::Rank::getInstance().isGlobalMaster() ) {
-    logInfo(
-      "finishedTraversal()",
-      "#lifts=" << globalNumberOfLifts <<
-      ", #drops=" << globalNumberOfDrops <<
-      ", #sieves=" << globalNumberOfSieveAssignments <<
-      ", #particles=" << globalRealNumberOfParticles <<
-      ", #virtual particles=" << globalVirtualNumberOfParticles <<
-      ", #eliminated particle duplicates=" << globalEliminatedSpatialDuplicates
+void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishedTraversal(bool updateStatistics) {
+  if (updateStatistics) {
+    int globalNumberOfLifts                     = 0;
+    int globalNumberOfDrops                     = 0;
+    int globalNumberOfSieves                    = 0;
+    int globalNumberOfReassignments             = 0;
+    int globalNumberOfAssignmentsToGlobalSieve  = 0;
+    int globalRealNumberOfParticles             = 0;
+    int globalVirtualNumberOfParticles          = 0;
+    int globalEliminatedSpatialDuplicates       = 0;
+    #if Parallel
+    tarch::mpi::Rank::getInstance().reduce(
+      &globalNumberOfLifts,
+      &_numberOfLifts,
+      1, MPI_INT,
+      MPI_SUM,
+      tarch::mpi::Rank::getGlobalMasterRank(),
+      [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); }
     );
+    tarch::mpi::Rank::getInstance().reduce(
+      &globalNumberOfDrops,
+      &_numberOfDrops,
+      1, MPI_INT,
+      MPI_SUM,
+      tarch::mpi::Rank::getGlobalMasterRank(),
+      [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); }
+    );
+    tarch::mpi::Rank::getInstance().reduce(
+      &globalNumberOfSieves,
+      &_numberOfSieves,
+      1, MPI_INT,
+      MPI_SUM,
+      tarch::mpi::Rank::getGlobalMasterRank(),
+      [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); }
+    );
+    tarch::mpi::Rank::getInstance().reduce(
+      &globalNumberOfReassignments,
+      &_numberOfReassignments,
+      1, MPI_INT,
+      MPI_SUM,
+      tarch::mpi::Rank::getGlobalMasterRank(),
+      [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); }
+    );
+    tarch::mpi::Rank::getInstance().reduce(
+      &globalNumberOfAssignmentsToGlobalSieve,
+      &_numberOfAssignmentsToGlobalSieve,
+      1, MPI_INT,
+      MPI_SUM,
+      tarch::mpi::Rank::getGlobalMasterRank(),
+      [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); }
+    );
+    tarch::mpi::Rank::getInstance().reduce(
+      &globalRealNumberOfParticles,
+      &_totalRealParticleCount,
+      1, MPI_INT,
+      MPI_SUM,
+      tarch::mpi::Rank::getGlobalMasterRank(),
+      [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); }
+    );
+    tarch::mpi::Rank::getInstance().reduce(
+      &globalVirtualNumberOfParticles,
+      &_totalVirtualParticleCount,
+      1, MPI_INT,
+      MPI_SUM,
+      tarch::mpi::Rank::getGlobalMasterRank(),
+      [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); }
+    );
+    tarch::mpi::Rank::getInstance().reduce(
+      &globalEliminatedSpatialDuplicates,
+      &_totalEliminatedSpatialDuplicates,
+      1, MPI_INT,
+      MPI_SUM,
+      tarch::mpi::Rank::getGlobalMasterRank(),
+      [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); }
+    );
+    #else
+    globalNumberOfLifts                       = _numberOfLifts;
+    globalNumberOfDrops                       = _numberOfDrops;
+    globalNumberOfSieves                      = _numberOfSieves;
+    globalNumberOfReassignments               = _numberOfReassignments;
+    globalNumberOfAssignmentsToGlobalSieve    = _numberOfAssignmentsToGlobalSieve;
+    globalRealNumberOfParticles               = _totalRealParticleCount;
+    globalVirtualNumberOfParticles            = _totalVirtualParticleCount;
+    globalEliminatedSpatialDuplicates         = _totalEliminatedSpatialDuplicates;
+    #endif
+
+    bool log = tarch::mpi::Rank::getInstance().isGlobalMaster();
+    #if PeanoDebug==0
+    log &= (
+           globalNumberOfLifts>0
+        or globalNumberOfDrops>0
+        or globalNumberOfSieves>0
+        or globalNumberOfReassignments>0
+        or globalNumberOfAssignmentsToGlobalSieve>0
+        or globalRealNumberOfParticles>0
+        or globalVirtualNumberOfParticles>0
+        or globalEliminatedSpatialDuplicates>0
+        );
+    #endif
+    if ( log ) {
+      logInfo(
+        "finishedTraversal()",
+        "#lifts=" << globalNumberOfLifts <<
+        ", #drops=" << globalNumberOfDrops <<
+        ", #sieves=" << globalNumberOfSieves <<
+        ", #reassignments=" << globalNumberOfReassignments <<
+        ", #assignments-to-sieve-set=" << globalNumberOfAssignmentsToGlobalSieve <<
+        ", #particles=" << globalRealNumberOfParticles <<
+        ", #virtual particles=" << globalVirtualNumberOfParticles <<
+        ", #eliminated particle duplicates=" << globalEliminatedSpatialDuplicates
+      );
+    }
+
+    _numberOfLifts                    = 0;
+    _numberOfDrops                    = 0;
+    _numberOfSieves                   = 0;
+    _numberOfReassignments            = 0;
+    _numberOfAssignmentsToGlobalSieve = 0;
+    _totalRealParticleCount           = 0;
+    _totalVirtualParticleCount        = 0;
+    _totalEliminatedSpatialDuplicates = 0;
   }
-
-  if (globalRealNumberOfParticles==1) exit(-1);
-
-  _numberOfLifts = 0;
-  _numberOfDrops = 0;
-  _numberOfAssignmentsToGlobalSieve = 0;
-  _totalRealParticleCount = 0;
-  _totalVirtualParticleCount = 0;
-  _totalEliminatedSpatialDuplicates = 0;
 
   _particlesThatHaveToBeSieved.deleteParticles();
 
@@ -350,20 +389,17 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::deleteParticles() {
 }
 
 
+void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::particleCanNotBeLiftedLocally( globaldata::{{PARTICLE_TYPE}}* p ) {
+  assertion1( p->getParallelState()==globaldata::{{PARTICLE_TYPE}}::ParallelState::Local, p->toString() );
+  _particlesThatCanNotBeLiftedWithinTheirTree.push_back(p);
+  _numberOfAssignmentsToGlobalSieve++;
+}
+
+
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::particlesCanNotBeLiftedLocally() {
   for (auto *p: *this) {
-    assertion2( p->getParallelState()==globaldata::{{PARTICLE_TYPE}}::ParallelState::Local, p->toString(), toString() );
-    p->setNewParallelState( globaldata::{{PARTICLE_TYPE}}::NewParallelState::Virtual );
+    particleCanNotBeLiftedLocally(p);
   }
-
-  tarch::multicore::Lock lock( _semaphore );
-  for (auto *p: *this) {
-    logDebug( "particlesCanNotBeLiftedLocally()", "add particle " << p->toString() << " from " << toString() << " to global sieve list for next iteration" );
-    globaldata::{{PARTICLE_TYPE}}* copyOfParticle = new globaldata::{{PARTICLE_TYPE}}(*p);
-    _particlesThatCanNotBeLiftedWithinTheirTree.push_back(copyOfParticle);
-  }
-
-  _numberOfAssignmentsToGlobalSieve += size();
 }
 
 
@@ -405,11 +441,15 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::particlesCanNotBeLiftedLocally()
 
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::updateLiftDropStatistics(
   int numberOfLiftsInThisTree,
-  int numberOfDropsInThisTree
+  int numberOfDropsInThisTree,
+  int numberOfReassignmentsInThisTree,
+  int numberOfSievesInThisTree
 ) {
   tarch::multicore::Lock lock( _semaphore );
-  _numberOfLifts      += numberOfLiftsInThisTree;
-  _numberOfDrops      += numberOfDropsInThisTree;
+  _numberOfLifts         += numberOfLiftsInThisTree;
+  _numberOfDrops         += numberOfDropsInThisTree;
+  _numberOfReassignments += numberOfReassignmentsInThisTree;
+  _numberOfSieves        += numberOfSievesInThisTree;
 }
 
 

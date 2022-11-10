@@ -102,6 +102,10 @@ class InsertParticlesFromHDF5File(ActionSet):
       newParticle->setDensity        ( Density );        
       newParticle->setMass           ( Mass );
       newParticle->setSmoothingLength( SmoothingLength );
+
+//      /* Hard coded for Sod 1D */
+//      newParticle->setSmoothingLength( 0.005 );
+
       newParticle->setU              ( InternalEnergy ); 
 
       /* 
@@ -120,7 +124,7 @@ class InsertParticlesFromHDF5File(ActionSet):
       // Vectors
       for (int d=0; d<Dimensions; d++) {
          newParticle->setA          (d,0);
-         newParticle->setA_prev_step(d,0);
+//         newParticle->setA_prev_step(d,0);
       }
      
       /* For 2D sims, we only get one component */
@@ -131,7 +135,7 @@ class InsertParticlesFromHDF5File(ActionSet):
       newParticle->setU_full( newParticle->getU() );
 
       newParticle->setUDot  (0.0);        
-      newParticle->setUDot_prev_step(0.0);        
+//      newParticle->setUDot_prev_step(0.0);        
       newParticle->setHDot  (0.0);        
       newParticle->setWcount(0.0);        
       newParticle->setNcount(0  );        
@@ -143,10 +147,10 @@ class InsertParticlesFromHDF5File(ActionSet):
       newParticle->setHLeft (HYDRO_h_MIN);        
       newParticle->setHRight(HYDRO_h_MAX);        
       
-      newParticle->setTimeStepSize(GLOBAL_TIME_STEP_SIZE);
+//      newParticle->setTimeStepSize(GLOBAL_TIME_STEP_SIZE);
       newParticle->setHasConverged(false);
       newParticle->setHasNoNeighbours(false);
-      newParticle->setHasBeenKicked(true);
+//      newParticle->setHasBeenKicked(true);
       newParticle->setResidual(0.0);
       newParticle->setIterCount(0);
       newParticle->setIsBoundaryParticle(false);
@@ -215,8 +219,9 @@ class InsertParticlesFromHDF5File(ActionSet):
 #include "toolbox/particles/ParticleFactory.h"
 
 #include "Constants.h"
-#include "kernel_hydro.h"
-#include "equation_of_state.h"
+
+#include "swift2/kernels/kernel_hydro.h"
+#include "swift2/kernels/equation_of_state.h"
 
 #include <fstream>
 #include <string>

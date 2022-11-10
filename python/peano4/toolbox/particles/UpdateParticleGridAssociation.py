@@ -136,23 +136,20 @@ class UpdateParticleGridAssociation(ActionSet):
   def __init__(self,
                particle_set, 
                guard="true", 
-               lift_always=True,
-               warn_if_particles_tunnel=True):
+               lift_always=True ):
     self._particle_set = particle_set
     self.d = {}
     self.d[ "PARTICLE" ]                      = particle_set.particle_model.name
     self.d[ "PARTICLES_CONTAINER" ]           = particle_set.name
     self.d[ "GUARD" ]                         = guard
-    self.d[ "LIFT_ALWAYS" ]                   = lift_always
-    self.d[ "WARN_IF_PARTICLES_TUNNEL" ]      = warn_if_particles_tunnel
     self._lift_always                         = lift_always
 
 
   __Template_BeginTraversal = jinja2.Template("""
   _numberOfParticleReassignmentsOnCurrentLevel = 0;
-  _numberOfLifts = 0;
-  _numberOfDrops = 0;
-  _numberOfEliminations = 0;
+  _numberOfLifts  = 0;
+  _numberOfDrops  = 0;
+  _numberOfSieves = 0;
   
   _sieveParticles = vertexdata::{{PARTICLES_CONTAINER}}::getSievedParticlesForNextGridTraversal();
 """ )
@@ -161,94 +158,72 @@ class UpdateParticleGridAssociation(ActionSet):
   __Template_EndTraversal = jinja2.Template("""
   vertexdata::{{PARTICLES_CONTAINER}}::updateLiftDropStatistics(
     _numberOfLifts,
-    _numberOfDrops
+    _numberOfDrops,
+    _numberOfParticleReassignmentsOnCurrentLevel,
+    _numberOfSieves
   );
 
-  logInfo( 
-    "endTraversal()",
-    "tree " <<  _treeNumber <<
-    {% if not LIFT_ALWAYS %}
-    ": reassignments=" << _numberOfParticleReassignmentsOnCurrentLevel << 
-    {% endif %}
-    ", lifts=" << _numberOfLifts << 
-    ", drops=" << _numberOfDrops
-  );
-  
   _sieveParticles.deleteParticles();
 """ )
 
 
   """
   
-  This is where we actually run over the particles and check if they are 
-  still associated to the right vertex. As we want to accommodate 
-  position changes, we do this as last step in the routine.
+  @see toolbox::particles::getParticleReassociationInstructionWithinCellWithIntraCellReassignment()
   
   """
   __Template_ReassignAndLiftWithinCell = jinja2.Template("""
-  // move means particles that are actually to be associated with a new nearest vertex  
-  vertexdata::{{PARTICLES_CONTAINER}} particlesThatMoveOnSameLevel[TwoPowerD];
-  // particles that 'jumped' aka moved by more than half a mesh width
-  vertexdata::{{PARTICLES_CONTAINER}} liftParticles[TwoPowerD];
-
-  // run over all adjacent vertices, and find the bad guys, i.e. those 
-  // particles that are not associated to the correct nearest vertex
-  // anymore
   for (int i=0; i<TwoPowerD; i++) {
-    std::bitset<Dimensions> currentAssociation;
-    std::bitset<Dimensions> destAssociation;
-    bool                    remainsOnSameLevel;
-    
     vertexdata::{{PARTICLES_CONTAINER}}::iterator p = fineGridVertices{{PARTICLES_CONTAINER}}(i).begin(); 
     while ( p!=fineGridVertices{{PARTICLES_CONTAINER}}(i).end() ) {
-      // study only particles which are contained within the current cell
-      if ( marker.isContained((*p)->getX()) ) {
-        std::bitset<Dimensions>  currentAssociation = i;
-        bool                     remainsOnSameLevel = true;
-        // marker.x() gives me the centre of the cell
-        for (int d=0; d<Dimensions; d++) {
-          destAssociation[d]  = tarch::la::greaterEquals( (*p)->getX(d), marker.x()(d) );
-          remainsOnSameLevel &= tarch::la::smallerEquals( std::abs((*p)->getX(d) - marker.x()(d)), marker.h()(d));
-        }
-      
-        if (remainsOnSameLevel and currentAssociation==destAssociation) {
+      toolbox::particles::ParticleReassociationInstruction instruction = 
+        toolbox::particles::getParticleReassociationInstructionWithinCellWithIntraCellReassignment(
+          p, marker, i
+        );
+      switch ( instruction ) {
+        case toolbox::particles::ParticleReassociationInstruction_Keep:
           p++;
-        }
-        else if (remainsOnSameLevel) {
-          logDebug( "touchCellLastTime(...)", "reassign particle " << (*p)->toString() << " in tree " << _treeNumber << " within cell " << marker.toString() << " which had been associated with vertex " << i << " but belongs to " << destAssociation );
-          particlesThatMoveOnSameLevel[ destAssociation.to_ulong() ].push_back(*p);
+          break;
+        case toolbox::particles::ParticleReassociationInstruction_SieveGlobally:
+          logDebug( "touchVertexLastTime(...)", "particle " << (*p)->toString() << " has to be sieved globally. Current assocation=" << marker.toString() );
+          fineGridVertex{{PARTICLES_CONTAINER}}.particleCanNotBeLiftedLocally(*p);    
+          p = fineGridVertex{{PARTICLES_CONTAINER}}.erase(p);
+          break;
+        case 0:
+        case 1:
+        case 2:
+        case 3:
+        #if Dimensions==3
+        case 4:
+        case 5:
+        case 6:
+        case 7:
+        #endif
+          fineGridVertices{{PARTICLES_CONTAINER}}(instruction).push_back(*p);
           p = fineGridVertices{{PARTICLES_CONTAINER}}(i).erase(p);
           _numberOfParticleReassignmentsOnCurrentLevel++;
-        }
-        else {
-          logDebug( "touchCellLastTime(...)", "lift particle " << (*p)->toString() << " in tree " << _treeNumber << " from cell " << marker.toString() << " as difference is " << ((*p)->getX() - marker.x()) );
-          liftParticles[ destAssociation.to_ulong() ].push_back(*p);
+          break;
+        case 0+TwoPowerD:
+        case 1+TwoPowerD:
+        case 2+TwoPowerD:
+        case 3+TwoPowerD:
+        #if Dimensions==3
+        case 4+TwoPowerD:
+        case 5+TwoPowerD:
+        case 6+TwoPowerD:
+        case 7+TwoPowerD:
+        #endif
+          coarseGridVertices{{PARTICLES_CONTAINER}}(instruction-TwoPowerD).push_back(*p);
           p = fineGridVertices{{PARTICLES_CONTAINER}}(i).erase(p);
-        }
-      }
-      else {
-        p++;
-      }
+          _numberOfLifts ++;
+          break;
+        default:
+          assertionMsg( false, "value not implemented" );
+          break;
+      }      
     }
   }
   
-  // we have now extracted all particles which are not associated with their 
-  // nearest vertex anymore and we have put them into the two local lists.
-  // Finally, we thus have to run through the two local lists particlesThatMoveOnSameLevel
-  // and liftParticles and have to append those into the respective vertices.
-  for (int i=0; i<TwoPowerD; i++) {
-    fineGridVertices{{PARTICLES_CONTAINER}}(i).insert(   fineGridVertices{{PARTICLES_CONTAINER}}(i).end(),   particlesThatMoveOnSameLevel[ i ].begin(), particlesThatMoveOnSameLevel[ i ].end() ); 
-  }
-
-  if (marker.isCellLocal()) {
-    for (int i=0; i<TwoPowerD; i++) {
-      coarseGridVertices{{PARTICLES_CONTAINER}}(i).insert( coarseGridVertices{{PARTICLES_CONTAINER}}(i).end(), liftParticles[ i ].begin(), liftParticles[ i ].end() ); 
-      _numberOfLifts += liftParticles[ i ].size();
-    }
-  }
-  else {
-    liftParticles[ i ].particlesCanNotBeLiftedLocally();
-  }
 """)
 
 
@@ -305,7 +280,7 @@ class UpdateParticleGridAssociation(ActionSet):
         1.0+SortingTolerance
       );
       
-    _numberOfDrops += sievedParticles.size();
+    _numberOfSieves += sievedParticles.size();
 
     fineGridVertex{{PARTICLES_CONTAINER}}.insert(
       fineGridVertex{{PARTICLES_CONTAINER}}.end(),
@@ -351,63 +326,37 @@ class UpdateParticleGridAssociation(ActionSet):
   
   """
   __Template_LiftParticlesFurtherAway = jinja2.Template("""
-  vertexdata::{{PARTICLES_CONTAINER}} liftParticles;
-  
   auto p = fineGridVertex{{PARTICLES_CONTAINER}}.begin();
   while (p!=fineGridVertex{{PARTICLES_CONTAINER}}.end()) {
-    if ( not marker.isContainedInAdjacentCells((*p)->getX(),0.5) ) {
-      double maxDistance = tarch::la::max( tarch::la::abs( (*p)->getX()-marker.x() ) );
-
-      if (maxDistance>=tarch::la::min( marker.h() )) {
-        //
-        // If particles tunnel, it could happen that they are still virtual,
-        // as noone has reset their virtual flag, and we might have lifted
-        // them into a cell that we had already visited before. So I reset
-        // the flag to local manually. 
-        //
-        {% if WARN_IF_PARTICLES_TUNNEL %}
-        logWarning( 
-          "touchVertexLastTime(...)" ,
-          "particle " << (*p)->toString() << " from " << marker.toString() << " associated to vertex at " <<
-          marker.x() << " has tunnelled. Max distance=" <<
-          maxDistance << " while h_min=" << tarch::la::min( marker.h() ) << ". Lift particle" 
-        );
-        {% endif %}
-        (*p)->setNewParallelState( globaldata::{{PARTICLE}}::NewParallelState::Local );
-      }
-
-      liftParticles.push_back(*p);
-      p = fineGridVertex{{PARTICLES_CONTAINER}}.erase(p);
-    }
-    else {
-      p++;
+    toolbox::particles::ParticleReassociationInstruction instruction = toolbox::particles::liftParticleAssociatedWithVertex(**p, marker);
+    switch ( instruction ) {
+      case toolbox::particles::ParticleReassociationInstruction_Keep:
+        p++;
+        break;
+      case toolbox::particles::ParticleReassociationInstruction_SieveGlobally:
+        logDebug( "touchVertexLastTime(...)", "have to lift particle " << (*p)->toString() << " globally. Previously assigned to " << marker.toString() );
+        fineGridVertex{{PARTICLES_CONTAINER}}.particleCanNotBeLiftedLocally(*p);    
+        p = fineGridVertex{{PARTICLES_CONTAINER}}.erase(p);
+        break;
+      case 0:
+      case 1:
+      case 2:
+      case 3:
+      #if Dimensions==3
+      case 4:
+      case 5:
+      case 6:
+      case 7:
+      #endif
+        coarseGridVertices{{PARTICLES_CONTAINER}}( instruction ).push_back( *p );
+        _numberOfLifts ++;
+        p = fineGridVertex{{PARTICLES_CONTAINER}}.erase(p);
+        break;
+      default:
+        assertionMsg( false, "value not implemented" );
+        break;
     }
   }
-  
-  // If the parent cell is local, then we can safely move the particles
-  // up the tree, as we know that all 2^d coarse grid vertices are 
-  // adjacent to the local domain. If the parent is not local, we have
-  // to assume that we just did hit a vertical tree cut. In this case, 
-  // we are on the safe side if we just add the particles to the global
-  // particle list.
-  if ( not liftParticles.empty() and marker.isParentCellLocal() ) {
-    std::bitset<Dimensions> target;
-    for (int d=0; d<Dimensions; d++) {
-      target[d] = marker.getRelativePositionWithinFatherCell()(d)>=2;
-    }
-    if (not liftParticles.empty()) {
-      logDebug( "touchVertexLastTime(...)", "add " << liftParticles.size() << " to the parent vertex " << coarseGridVertices{{PARTICLES_CONTAINER}}( target.to_ulong() ).toString() << " at " << target );
-    }
-    coarseGridVertices{{PARTICLES_CONTAINER}}( target.to_ulong() ).insert( 
-      coarseGridVertices{{PARTICLES_CONTAINER}}( target.to_ulong() ).end(),
-      liftParticles.begin(),
-      liftParticles.end()
-    );
-    _numberOfLifts += liftParticles.size();
-  } 
-  else if (not liftParticles.empty()) {
-    liftParticles.particlesCanNotBeLiftedLocally();
-  } 
 """)  
 
 
@@ -460,6 +409,7 @@ class UpdateParticleGridAssociation(ActionSet):
   def get_includes(self):
     result = jinja2.Template( """
 #include "tarch/multicore/Lock.h"
+#include "toolbox/particles/MultiscaleTransitions.h"
 #include "vertexdata/{{PARTICLES_CONTAINER}}.h"
 #include "globaldata/{{PARTICLE}}.h"
 """ )
@@ -472,7 +422,7 @@ class UpdateParticleGridAssociation(ActionSet):
   int  _numberOfParticleReassignmentsOnCurrentLevel;
   int  _numberOfLifts;
   int  _numberOfDrops;
-  int  _numberOfEliminations;
+  int  _numberOfSieves;
   
   vertexdata::{{PARTICLES_CONTAINER}}  _sieveParticles;
 """).render(**self.d)

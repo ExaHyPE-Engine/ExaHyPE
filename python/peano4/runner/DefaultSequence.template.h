@@ -5,17 +5,17 @@
 // This is generated. Be careful with adding your own stuff, i.e. ensure first
 // whether file is maybe overwritten by Python generator/API.
 //
-#ifndef _{INCLUDE_GUARD}_
-#define _{INCLUDE_GUARD}_
+#pragma once
 
 
 #include <string>
 
-// GENERATED FOR THE SPH SIMULATION
 
-
-{OPEN_NAMESPACE}
+{% for item in NAMESPACE -%}
+  namespace {{ item }} {
+{%- endfor %}
   int main(int argc, char** argv);
-{CLOSE_NAMESPACE}
+{% for item in NAMESPACE -%}
+  }
+{%- endfor %}
 
-#endif

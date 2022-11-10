@@ -145,6 +145,12 @@ struct peano4::datamanagement::VertexMarker {
     /**
      * Will return true if x is contained within the adjacent cells. You can use
      * shrink those cells via the additional parameter if you want.
+     *
+     * The geometric operation is defined over the closed interval, i.e. we
+     * look into the adjacent cubes to the vertex and their faces still count as
+     * "inside". If x is exactly on the face of a cube adjacent to the vertex,
+     * we will get back a true. Indeed, the cubes are even slightly bigger due
+     * to machine precision.
      */
     bool isContainedInAdjacentCells( const tarch::la::Vector<Dimensions,double>& x, double scaleAdjacentCells = 1.0 ) const;
 

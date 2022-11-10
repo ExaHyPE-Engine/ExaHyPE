@@ -26,11 +26,13 @@ namespace toolbox {
      *
      * The further attribute that are set are
      *
-     * - the move state which is set to New.
-     * - the parallel state is set to Virtual.
+     * - the parallel state is set to Local, so we assume that you only insert
+     *   meaningful data into the grid.
      *
-     * @todo Please check: I don't think we can and should set the move state
-     *   here. The new is obsolete anyway.
+     * It is important to make particles local initially. All of Peano's sorting
+     * only works with local particles, i.e. if you initially set particles to
+     * virtual then the sorting will ignore them. This is not what we want.
+     *
      *
      * ## Parallel lifecycle
      *

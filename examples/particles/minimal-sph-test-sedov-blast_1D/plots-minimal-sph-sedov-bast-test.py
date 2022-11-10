@@ -232,11 +232,11 @@ Parameters to evaluate the analytical solution
 rho_0 = 1.0                        # Background Density
 P_0 = 1.0e-6                       # Background Pressure
 u_0 = 1.0
-E_0 = 1.0                          # Total Energy of the explosion
+E_0 = E_ini                          # Total Energy of the explosion
 gas_gamma = 5.0/3.0                # Gas polytropic index
 
 # The main properties of the solution
-r_s, P_s, rho_s, v_s, r_shock, _, _, _, _ = sedov(time, E_0, rho_0, gas_gamma, 2000, 2)
+r_s, P_s, rho_s, v_s, r_shock, _, _, _, _ = sedov(time, E_0, rho_0, gas_gamma, 2000, 1)
 
 # Append points for after the shock
 r_s = np.insert(r_s, np.size(r_s), [r_shock, r_shock*3])

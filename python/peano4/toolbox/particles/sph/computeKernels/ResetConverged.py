@@ -43,12 +43,12 @@ class ResetHasConverged:
     /* Reset HasConverged property back to false so we can perform new N-R iterations */
     
     if(
-      localParticle->getParallelState() == globaldata::Particle::ParallelState::Local
+      particle->getParallelState() == globaldata::Particle::ParallelState::Local
       and
-      not localParticle->getIsBoundaryParticle() )
+      not particle->getIsBoundaryParticle() )
       {
       
-      localParticle->setHasConverged(false);
+      particle->setHasConverged(false);
       
     }
 

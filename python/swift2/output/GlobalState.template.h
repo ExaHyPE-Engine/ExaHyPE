@@ -20,20 +20,9 @@
 #include "peano4/grid/GridStatistics.h"
 
 
-{% for item in PARTICLE_SPECIES -%}
-#include "{{ item[0] }}.h"
-{% endfor %}
-
-
 {% for item in NAMESPACE -%}
   namespace {{ item }} {
 {%- endfor %}
-
-  {% for item in PARTICLE_SPECIES -%}
-  extern {{ item[0] }}  {{ item[1] }};
-  {%- endfor %}
-
-
   {% if LOAD_BALANCER!="" -%}
   extern {{LOAD_BALANCER}}              loadBalancer;
   {% else -%}
@@ -52,18 +41,33 @@
   double getMaxTimeStamp();
   double getMinTimeStepSize();
   double getMaxTimeStepSize();
-  double getMinMeshSize();
-  double getMaxMeshSize();
+
+  double getMinCutOffRadius();
+  double getMaxCutOffRadius();
 
   void startGridConstructionStep();
   void startInitialisationStep();
+  void startSortingStep();
+
+  /**
+   * @see ParticleSpecies::startTimeStep()
+   */
   void startTimeStep();
   void startPlotStep();
+  void startIntermediateStep();
 
   void finishGridConstructionStep();
   void finishInitialisationStep();
+  void finishSortingStep();
+
+  /**
+   * Call finishTimeStep() on each individual species and then dump some
+   * global information. It is important to call finishTimeStep() first,
+   * as it triggers some global reduction.
+   */
   void finishTimeStep();
   void finishPlotStep();
+  void finishIntermediateStep();
 
 {% for item in NAMESPACE -%}
   }

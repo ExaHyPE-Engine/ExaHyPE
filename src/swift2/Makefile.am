@@ -8,6 +8,7 @@ endif
 
 
 SWIFT2Sources = \
+  ParticleSpecies.cpp \
   UnitTests.cpp
 
 libSWIFT2Core2d_a_CXXFLAGS          = $(CXXFLAGS_PEANO_2D_RELEASE)

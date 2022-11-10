@@ -17,6 +17,7 @@ class MPI(object):
   def set_model(self,data_model):
     self._data_model = data_model
 
+
   def get_include(self):
     return """
 #ifdef Parallel
@@ -24,6 +25,7 @@ class MPI(object):
   #include <functional>
 #endif
 """
+
   
   def get_attributes(self):
     return """

@@ -23,9 +23,9 @@ class ImposeBoundaryConditions:
     /* @brief: prepares particle to be potentially moved.
      */
 
-    if( localParticle->getParallelState() == globaldata::Particle::ParallelState::Local ){
+    if( particle->getParallelState() == globaldata::Particle::ParallelState::Local ){
 
-      localParticle->setMoveState( globaldata::Particle::MoveState::NotMovedYet );
+      particle->setMoveState( globaldata::Particle::MoveState::NotMovedYet );
 
     }
   
@@ -50,32 +50,32 @@ class ImposeBoundaryConditions:
      */
 
     if(
-      localParticle->getParallelState() == globaldata::Particle::ParallelState::Local
+      particle->getParallelState() == globaldata::Particle::ParallelState::Local
       and
-      localParticle->getMoveState() != globaldata::Particle::MoveState::Moved
+      particle->getMoveState() != globaldata::Particle::MoveState::Moved
       and
-      not localParticle->getIsBoundaryParticle() )
+      not particle->getIsBoundaryParticle() )
       {
     
       for( int d=0; d<Dimensions; d++ ){
-        if( localParticle->getX()(d)<0.0 ){
+        if( particle->getX()(d)<0.0 ){
 
           /* Reflecting BC */   
-          localParticle->setX     ( d, std::abs(localParticle->getX     ()(d)) );
-          localParticle->setV     ( d, std::abs(localParticle->getV_full()(d)) );
-          localParticle->setV_full( d, std::abs(localParticle->getV_full()(d)) );
+          particle->setX     ( d, std::abs(particle->getX     ()(d)) );
+          particle->setV     ( d, std::abs(particle->getV_full()(d)) );
+          particle->setV_full( d, std::abs(particle->getV_full()(d)) );
 
         }
-        if( localParticle->getX()(d)>1.0 ){
+        if( particle->getX()(d)>1.0 ){
 
           /* Reflecting BC */   
-          localParticle->setX     ( d,    2.0 - localParticle->getX     ()(d)  );
-          localParticle->setV     ( d,-std::abs(localParticle->getV     ()(d)) );
-          localParticle->setV_full( d,-std::abs(localParticle->getV_full()(d)) );
+          particle->setX     ( d,    2.0 - particle->getX     ()(d)  );
+          particle->setV     ( d,-std::abs(particle->getV     ()(d)) );
+          particle->setV_full( d,-std::abs(particle->getV_full()(d)) );
 
         }
       
-        localParticle->setMoveState( globaldata::Particle::MoveState::Moved );
+        particle->setMoveState( globaldata::Particle::MoveState::Moved );
         
       } /* End for dimensions */
         

@@ -5,14 +5,18 @@
 #include "peano4/parallel/SpacetreeSet.h"
 
 
+{% for PARTICLE in PARTICLE_SPECIES -%}
+#include "globaldata/{{ PARTICLE }}.h"
+#include "vertexdata/{{ PARTICLE }}Set.h"
+{% endfor %}
+
 
 {% for item in NAMESPACE -%}
   namespace {{ item }} {
 {%- endfor %}
 
-int statisticsExchangeTag = tarch::mpi::Rank::reserveFreeTag("SolverRepository - statistics exchange tag");
 
-tarch::logging::Log _log( "SolverRepository" );
+tarch::logging::Log _log( "GlobalState" );
 
 {% if LOAD_BALANCER!="" -%}
 {{LOAD_BALANCER}}              loadBalancer({{LOAD_BALANCER_ARGUMENTS}});
@@ -22,44 +26,37 @@ toolbox::loadbalancing::NoLoadBalancing  loadBalancer;
 
 
 
-{% for item in PARTICLE_SPECIES -%}
-{{ item[0] }} {{ item[1] }};
-{%- endfor %}
-
-
 double getMinTimeStamp() {
   double result = std::numeric_limits<double>::max();
-  {% for item in PARTICLE_SPECIES -%}
-    result = std::min( result, {{ item[1] }}.getMinTimeStamp(ofCurrentlyRunningGridSweep) );
+  {% for PARTICLE in PARTICLE_SPECIES -%}
+  result = std::min( result, globaldata::{{PARTICLE}}::getSpecies().getMinTimeStamp() );
   {%- endfor %}
-  // @todo change
-  return 1.0;
   return result;
 }
 
 
 double getMaxTimeStamp() {
   double result = 0.0;
-  {% for item in PARTICLE_SPECIES -%}
-    result = std::max( result, {{ item[1] }}.getMaxTimeStamp(ofCurrentlyRunningGridSweep) );
+  {% for PARTICLE in PARTICLE_SPECIES -%}
+  result = std::max( result, globaldata::{{PARTICLE}}::getSpecies().getMaxTimeStamp() );
   {%- endfor %}
   return result;
 }
 
 
-double getMinMeshSize() {
+double getMinCutOffRadius() {
   double result = std::numeric_limits<double>::max();
-  {% for item in PARTICLE_SPECIES -%}
-    result = std::min( result, {{ item[1] }}.getMinMeshSize() );
+  {% for PARTICLE in PARTICLE_SPECIES -%}
+  result = std::min( result, globaldata::{{PARTICLE}}::getSpecies().getMinCutOffRadius() );
   {%- endfor %}
   return result;
 }
 
 
-double getMaxMeshSize() {
+double getMaxCutOffRadius() {
   double result = 0.0;
-  {% for item in PARTICLE_SPECIES -%}
-    result = std::max( result, {{ item[1] }}.getMaxMeshSize() );
+  {% for PARTICLE in PARTICLE_SPECIES -%}
+  result = std::max( result, globaldata::{{PARTICLE}}::getSpecies().getMaxCutOffRadius() );
   {%- endfor %}
   return result;
 }
@@ -67,8 +64,8 @@ double getMaxMeshSize() {
 
 double getMinTimeStepSize() {
   double result = std::numeric_limits<double>::max();
-  {% for item in PARTICLE_SPECIES -%}
-    result = std::min( result, {{ item[1] }}.getMinTimeStepSize() );
+  {% for PARTICLE in PARTICLE_SPECIES -%}
+  result = std::min( result, globaldata::{{PARTICLE}}::getSpecies().getMinTimeStepSize() );
   {%- endfor %}
   return result;
 }
@@ -76,47 +73,59 @@ double getMinTimeStepSize() {
 
 double getMaxTimeStepSize() {
   double result = 0.0;
-  {% for item in PARTICLE_SPECIES -%}
-  result = std::max( result, {{ item[1] }}.getMaxTimeStepSize() );
+  {% for PARTICLE in PARTICLE_SPECIES -%}
+  result = std::max( result, globaldata::{{PARTICLE}}::getSpecies().getMaxTimeStepSize() );
   {%- endfor %}
   return result;
 }
 
 
 void startGridConstructionStep() {
-  {% for item in PARTICLE_SPECIES -%}
-  {{ item[1] }}.startGridConstructionStep();
-  {%- endfor %}
+}
+
+
+void startIntermediateStep() {
 }
 
 
 void startInitialisationStep() {
-  {% for item in PARTICLE_SPECIES -%}
-  {{ item[1] }}.startGridInitialisationStep();
-  {%- endfor %}
+}
+
+
+void startSortingStep() {
 }
 
 
 void startTimeStep() {
-  {% for item in PARTICLE_SPECIES -%}
-  {{ item[1] }}.startTimeStep(minTimeStamp,maxTimeStamp,minTimeStepSize,maxTimeStepSize);
+  {% for PARTICLE in PARTICLE_SPECIES -%}
+  globaldata::{{PARTICLE}}::getSpecies().startTimeStep();
   {%- endfor %}
 }
 
 
 void startPlotStep() {
-  {% for item in PARTICLE_SPECIES -%}
-  {{ item[1] }}.startPlottingStep(minTimeStamp,maxTimeStamp,minTimeStepSize,maxTimeStepSize);
-  {%- endfor %}
 }
 
 
 void finishTimeStep() {
-  {% for item in PARTICLE_SPECIES -%}
-  {{ item[1] }}.finishTimeStep();
+  {% for PARTICLE in PARTICLE_SPECIES -%}
+  globaldata::{{PARTICLE}}::getSpecies().finishTimeStep();
+  vertexdata::{{PARTICLE}}Set::finishedTraversal(true);
   {%- endfor %}
 
   loadBalancer.finishStep();
+
+  logInfo("finishTimeStep()", "min mesh size=" << ::peano4::parallel::SpacetreeSet::getInstance().getGridStatistics().getMinH()(0) );
+  logInfo("finishTimeStep()",
+    "#local cells=(" << ::peano4::parallel::SpacetreeSet::getInstance().getGridStatistics().getNumberOfLocalUnrefinedCells() <<
+    "/" << ::peano4::parallel::SpacetreeSet::getInstance().getGridStatistics().getNumberOfLocalRefinedCells() <<
+    ")\t(unrefined/refined)"
+   );
+  logInfo("finishTimeStep()",
+    "#remote cells=(" << ::peano4::parallel::SpacetreeSet::getInstance().getGridStatistics().getNumberOfRemoteUnrefinedCells() <<
+    "/" << ::peano4::parallel::SpacetreeSet::getInstance().getGridStatistics().getNumberOfRemoteRefinedCells() <<
+    ")\t(unrefined/refined)"
+   );
 
   #ifdef UseSmartMPI
   smartmpi::tick();
@@ -125,9 +134,8 @@ void finishTimeStep() {
 
 
 void finishGridConstructionStep() {
-  {% for item in PARTICLE_SPECIES -%}
-  {{ item[1] }}.finishGridConstructionStep();
-  vertexdata::{{ item }}::finishedTraversal();
+  {% for PARTICLE in PARTICLE_SPECIES -%}
+  vertexdata::{{PARTICLE}}Set::finishedTraversal(PeanoDebug>0);
   {%- endfor %}
 
   loadBalancer.finishStep();
@@ -135,9 +143,17 @@ void finishGridConstructionStep() {
 
 
 void finishInitialisationStep() {
-  {% for item in PARTICLE_SPECIES -%}
-  {{ item[1] }}.finishGridInitialisationStep();
-  vertexdata::{{ item }}::finishedTraversal();
+  {% for PARTICLE in PARTICLE_SPECIES -%}
+  vertexdata::{{PARTICLE}}Set::finishedTraversal(true);
+  {%- endfor %}
+
+  loadBalancer.finishStep();
+}
+
+
+void finishSortingStep() {
+  {% for PARTICLE in PARTICLE_SPECIES -%}
+  vertexdata::{{PARTICLE}}Set::finishedTraversal(true);
   {%- endfor %}
 
   loadBalancer.finishStep();
@@ -145,10 +161,15 @@ void finishInitialisationStep() {
 
 
 void finishPlotStep() {
-  {% for item in PARTICLE_SPECIES -%}
-  {{ item[1] }}.finishPlottingStep();
+  {% for PARTICLE in PARTICLE_SPECIES -%}
+  vertexdata::{{PARTICLE}}Set::finishedTraversal(PeanoDebug>0);
+  {%- endfor %}
+}
 
-  vertexdata::{{ item }}::finishedTraversal();
+
+void finishIntermediateStep() {
+  {% for PARTICLE in PARTICLE_SPECIES -%}
+  vertexdata::{{PARTICLE}}Set::finishedTraversal(PeanoDebug>0);
   {%- endfor %}
 }
 

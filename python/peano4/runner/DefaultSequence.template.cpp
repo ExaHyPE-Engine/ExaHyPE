@@ -1,4 +1,4 @@
-#include "{MAIN_NAME}.h"
+#include "{{MAIN_NAME}}.h"
 #include "Constants.h"
 
 #include "tarch/logging/Log.h"
@@ -21,7 +21,7 @@
 
 tarch::logging::Log _log("::");
 
-int main(int argc, char** argv) {{
+int main(int argc, char** argv) {
   const int ExitCodeSuccess         = 0;
   const int ExitCodeUnitTestsFailed = 1;
 
@@ -72,36 +72,36 @@ int main(int argc, char** argv) {{
   tarch::logging::LogFilter::getInstance().addFilterListEntry( tarch::logging::LogFilter::FilterListEntry(
     tarch::logging::LogFilter::FilterListEntry::TargetDebug, 
     tarch::logging::LogFilter::FilterListEntry::AnyRank, 
-    "{FULL_NAMESPACE}", 
+    "{{NAMESPACE | join("::")}}",
     tarch::logging::LogFilter::FilterListEntry::BlackListEntry,
     tarch::logging::LogFilter::FilterListEntry::AlwaysOn
   ));
   tarch::logging::LogFilter::getInstance().addFilterListEntry( tarch::logging::LogFilter::FilterListEntry(
     tarch::logging::LogFilter::FilterListEntry::TargetTrace, 
     tarch::logging::LogFilter::FilterListEntry::AnyRank, 
-    "{FULL_NAMESPACE}", 
+    "{{NAMESPACE | join("::")}}",
     tarch::logging::LogFilter::FilterListEntry::WhiteListEntry,
     tarch::logging::LogFilter::FilterListEntry::AlwaysOn
   ));
   tarch::logging::LogFilter::getInstance().addFilterListEntry( tarch::logging::LogFilter::FilterListEntry(
     tarch::logging::LogFilter::FilterListEntry::TargetInfo, 
     tarch::logging::LogFilter::FilterListEntry::AnyRank, 
-    "{FULL_NAMESPACE}", 
+    "{{NAMESPACE | join("::")}}",
     tarch::logging::LogFilter::FilterListEntry::WhiteListEntry,
     tarch::logging::LogFilter::FilterListEntry::AlwaysOn
   ));
 
   #if Dimensions==2
-  auto DomainOffset = {{0.0, 0.0}};
-  auto DomainSize   = {{1.0, 1.0}};
+  auto DomainOffset = {0.0, 0.0};
+  auto DomainSize   = {1.0, 1.0};
   #else
-  auto DomainOffset = {{0.0, 0.0, 0.0}};
-  auto DomainSize   = {{1.0, 1.0, 1.0}};
+  auto DomainOffset = {0.0, 0.0, 0.0};
+  auto DomainSize   = {1.0, 1.0, 1.0};
   #endif
 
   peano4::initParallelEnvironment(&argc,&argv);
   peano4::fillLookupTables();
-  {FULL_NAMESPACE}::repositories::DataRepository::initDatatypes();
+  {{NAMESPACE | join("::")}}::repositories::DataRepository::initDatatypes();
   peano4::initSingletons(
     DomainOffset,
     DomainSize,
@@ -115,43 +115,43 @@ int main(int argc, char** argv) {{
   #if PeanoDebug>=2
   tarch::tests::TestCase* peanoCoreTests = peano4::getUnitTests();
   peanoCoreTests->run();
-  if (peanoCoreTests->getNumberOfErrors() != 0) {{
+  if (peanoCoreTests->getNumberOfErrors() != 0) {
     logError("main()", "Peano4 core unit tests failed. Quit.");
     exit(ExitCodeUnitTestsFailed);
-  }}
+  }
   delete peanoCoreTests;
 
   tarch::tests::TestCase* peanoTarchTests = tarch::getUnitTests();
   peanoTarchTests->run();
-  if (peanoTarchTests->getNumberOfErrors() != 0) {{
+  if (peanoTarchTests->getNumberOfErrors() != 0) {
     logError("main()", "technical architecture (tarch) unit tests failed. Quit.");
     exit(ExitCodeUnitTestsFailed);
-  }}
+  }
   delete peanoTarchTests;
  
   #endif
 
   #if defined(SharedOMP)
   #pragma omp parallel
-  {{
+  {
   #pragma omp master 
-  {{
+  {
   #endif
-  if (tarch::mpi::Rank::getInstance().isGlobalMaster() ) {{
-  }}
-  else {{
-    while (peano4::parallel::Node::getInstance().continueToRun()) {{
+  if (tarch::mpi::Rank::getInstance().isGlobalMaster() ) {
+  }
+  else {
+    while (peano4::parallel::Node::getInstance().continueToRun()) {
       logDebug( "runParallel(...)", "trigger a new sweep with step " << peano4::parallel::Node::getInstance().getCurrentProgramStep() );
-    }}
-  }}
+    }
+  }
   #if defined(SharedOMP)
-  }}
-  }}
+  }
+  }
   #endif
 
   peano4::shutdownSingletons();
-  {FULL_NAMESPACE}::repositories::DataRepository::shutdownDatatypes();
+  {{NAMESPACE | join("::")}}::repositories::DataRepository::shutdownDatatypes();
   peano4::shutdownParallelEnvironment();
 
   return ExitCodeSuccess;
-}}
+}
