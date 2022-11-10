@@ -10,18 +10,23 @@ import dastgen2.attributes.Integer
 
 
 
-class InsertParticlesbyCoordinates(ActionSet):
-  def __init__(self,particle_set,coordinates=[[0,0,0],[0,0,0]]):
+class InsertParticlesByCoordinates(ActionSet):
+  def __init__(self,particle_set,coordinates):
     """
-=
 
     particle_set: ParticleSet
  
     N: number of particles
 
-    coordinates: [ [Int,Int,Int] ]
-      Coordinates for the particle. If you work in 2d, the third coordinate
-      is simply ignored. But you always need three coordinates.
+    coordinates: [ [Float,Float,Float] ]
+      Coordinates for the particle. So you can write 
+      
+            coordinates=[ [0.0,0.0,0.0], [0.2,0.2,0.0]]
+            
+      for example to insert two particles. The code will create two particles.
+      This variant will work with 2d and 3d compiles, where the third 
+      coordinate is ignored if you compile in 2d. If you pass in 2d coordinates,
+      then the code will fail (assertion) if you try to compile it in 3d.
 
     """
 
@@ -29,7 +34,7 @@ class InsertParticlesbyCoordinates(ActionSet):
     self.d[ "PARTICLE" ]                 = particle_set.particle_model.name
     self.d[ "PARTICLES_CONTAINER" ]      = particle_set.name
     self.d[ "N" ]                        = len(coordinates)
-    self._coordinates			             = coordinates
+    self._coordinates			         = coordinates
     
 
   __Template_TouchCellFirstTime = jinja2.Template("""
@@ -52,7 +57,11 @@ class InsertParticlesbyCoordinates(ActionSet):
       globaldata::{{PARTICLE}}* newParticle = new globaldata::{{PARTICLE}}();
       newParticle->setNumber(0, _spacetreeId);
       newParticle->setNumber(1, _particleNumberOnThisTree);
+      #if Dimensions==2
+      toolbox::particles::init(*newParticle,{coordinates[i][0],coordinates[i][1]},0.0);
+      #else
       toolbox::particles::init(*newParticle,{coordinates[i][0],coordinates[i][1],coordinates[i][2]},0.0);
+      #endif
       _particleNumberOnThisTree++;
       logInfo( "touchVertexFirstTime(...)", "insert " << _particleNumberOnThisTree << "th particle at " << newParticle->toString() );
       // just insert them; will be re-assigned then anyway
@@ -60,6 +69,7 @@ class InsertParticlesbyCoordinates(ActionSet):
     }
   }
 """)
+
 
   def get_body_of_operation(self,operation_name):
     result = "\n"
@@ -89,14 +99,29 @@ class InsertParticlesbyCoordinates(ActionSet):
 """ )
     return result.render(**self.d)
 
+
   def Read_In_Coor(self):
     result=""
+    dimensions = -1
     for i in range(self.d["N"]):
-      result+= "  coordinates["+str(i)+"][0]="+str(self._coordinates[i][0])+";"
-      result+= " coordinates["+str(i)+"][1]="+str(self._coordinates[i][1])+";"
-      result+= " coordinates["+str(i)+"][2]="+str(self._coordinates[i][2])+";"
-      result+= "\n"
+      if len(self._coordinates[i])==3:
+        result+= " coordinates["+str(i)+"][0]="+str(self._coordinates[i][0])+";"
+        result+= " coordinates["+str(i)+"][1]="+str(self._coordinates[i][1])+";"
+        result+= " #if Dimensions==3"
+        result+= " coordinates["+str(i)+"][2]="+str(self._coordinates[i][2])+";"
+        result+= " #endif"
+        result+= "\n"
+        assert dimensions==-1 or dimensions==3, "inconsistent data: all coordinates have to have three entries: {}".format(self._coordinates[i])
+        dimensions = 3
+      if len(self._coordinates[i])==2:
+        result+= " coordinates["+str(i)+"][0]="+str(self._coordinates[i][0])+";"
+        result+= " coordinates["+str(i)+"][1]="+str(self._coordinates[i][1])+";"
+        result+= " assertion(Dimensions==2);"
+        result+= "\n"
+        assert dimensions==-1 or dimensions==2, "inconsistent data: all coordinates have to have three entries: {}".format(self._coordinates[i])
+        dimensions = 2
     return result
+
 
   def get_constructor_body(self):
     return f"""
