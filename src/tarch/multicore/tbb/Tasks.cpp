@@ -1,4 +1,5 @@
 #include "tarch/Assertions.h"
+#include "tarch/logging/Statistics.h"
 
 #include "tarch/multicore/multicore.h"
 #include "tarch/multicore/Tasks.h"
@@ -16,6 +17,8 @@
 
 namespace {
   tarch::multicore::BooleanSemaphore  suspensionPointSemaphore;
+
+  const std::string BSPConcurrencyLevelStatisticsIdentifier( "tarch::multicore::bsp-concurrency-level" );
 
   /**
    * Seems that there is no atomic in tbb. So I use the standard one.
@@ -101,10 +104,10 @@ namespace {
     for (auto& p: tasks) {
       taskGroup.run(
         [&tasks,p]() -> void {
-          ::tarch::logging::Statistics::getInstance().inc( BSPTasksStatisticsIdentifier, 1.0, true );
+          ::tarch::logging::Statistics::getInstance().inc( BSPConcurrencyLevelStatisticsIdentifier, 1.0, true );
           while (p->run()) {}
           delete p;
-          ::tarch::logging::Statistics::getInstance().inc( BSPTasksStatisticsIdentifier, -1.0, true );
+          ::tarch::logging::Statistics::getInstance().inc( BSPConcurrencyLevelStatisticsIdentifier, -1.0, true );
         }
       );
     }
@@ -139,12 +142,12 @@ namespace {
         [&spawnedTasks,&pendingTasks,&tasks,i,NumberOfThreads,&strategy] () -> void {
           spawnedTasks++;
 
-          ::tarch::logging::Statistics::getInstance().inc( BSPTasksStatisticsIdentifier, 1.0, true );
+          ::tarch::logging::Statistics::getInstance().inc( BSPConcurrencyLevelStatisticsIdentifier, 1.0, true );
           if (i<tasks.size()) {
             while (tasks[i]->run()) {}
             delete tasks[i];
           }
-          ::tarch::logging::Statistics::getInstance().inc( BSPTasksStatisticsIdentifier, -1.0, true );
+          ::tarch::logging::Statistics::getInstance().inc( BSPConcurrencyLevelStatisticsIdentifier, -1.0, true );
   
           pendingTasks--;
 
@@ -166,7 +169,7 @@ namespace {
 
             bool processedSomeTasks = false;
             if (numberOfPendingTasks>=fusion.minTasks) {
-              internal::copyInternalTaskQueuesOverIntoGlobalQueue(threadNumber);
+              tarch::multicore::internal::copyInternalTaskQueuesOverIntoGlobalQueue(threadNumber);
               processedSomeTasks = tarch::multicore::internal::fusePendingTasks(fusion);
             }
             else if (numberOfPendingTasks>0) {

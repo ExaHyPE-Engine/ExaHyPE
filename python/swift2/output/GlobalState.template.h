@@ -69,6 +69,7 @@
   void finishPlotStep();
   void finishIntermediateStep();
 
+  bool rerunPreviousGridSweep();
 {% for item in NAMESPACE -%}
   }
 {%- endfor %}
