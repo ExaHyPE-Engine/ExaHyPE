@@ -317,6 +317,12 @@ project.algorithm_step_plot.add_action_set( particle_plotter )
 ###############################################################################
 peano4_project = project.generate_Peano4_project(verbose=args.verbose)
 
+# Export symbols and values for compilation (e.g. for SPH kernel)
+# Dummy values for non SPH
+peano4_project.output.makefile.add_CXX_flag("-D" + "HYDRO_DIMENSION=1" )
+peano4_project.output.makefile.add_CXX_flag("-D" + 'HYDRO_GAMMA_5_3' )
+peano4_project.output.makefile.add_CXX_flag("-D" + 'QUARTIC_SPLINE_KERNEL' )
+
 peano4_project.constants.export_const_with_type("GLOBAL_TIME_STEP_SIZE", GLOBAL_TIME_STEP_SIZE, "double")
 peano4_project.constants.export_const_with_type("G_NEWTON"   , str(G_NEWTON)   , "double")
 peano4_project.constants.export_const_with_type("LENGTH_UNIT", str(LENGTH_UNIT), "double")

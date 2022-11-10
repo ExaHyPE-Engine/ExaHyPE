@@ -221,6 +221,12 @@ N_MEAN_TARGET = str( 2.0 *           (float(KERNEL_SUPPORT_RAD) * float(SMOOTH_L
 # CUBIC_SPLINE_SIGMA = str(8./3.)       # 1D M4 SWIFT
 CUBIC_SPLINE_SIGMA = str(3125./768.)     # 1D M5 SWIFT DOUBLE CHECKED CORRECT
 
+# Export symbols and values for compilation (e.g. for SPH kernel)
+# Dummy values for non SPH
+peano4_project.output.makefile.add_CXX_flag("-D" + "HYDRO_DIMENSION=1" )
+peano4_project.output.makefile.add_CXX_flag("-D" + 'HYDRO_GAMMA_5_3' )
+peano4_project.output.makefile.add_CXX_flag("-D" + 'QUARTIC_SPLINE_KERNEL' )
+
 
 print('-----------------------------------------------------------------------')
 print('SPH parameters summary:')

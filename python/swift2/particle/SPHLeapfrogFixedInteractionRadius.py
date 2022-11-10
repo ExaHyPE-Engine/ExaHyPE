@@ -491,6 +491,13 @@ class SPHLeapfrogFixedInteractionRadius(Particle):
     self.data.add_attribute(self.part_id)
 
 
+  def set_eta_factor(self, etaFactor):
+    self.etaFactor = etaFactor
+
+  def set_h_hydro_limits(self, hHydroMin, hHydroMax):
+    self.hHydroMin = hHydroMin
+    self.hHydroMax = hHydroMax
+
   """
   Transform namespace into cpp format. Could be used to append namespace to
   constants in kernels.
