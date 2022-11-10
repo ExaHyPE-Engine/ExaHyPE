@@ -198,7 +198,8 @@ KERNEL = kernel_list[0]
 KERNEL_SYMBOL = kernel_list_symbols[0]
 
 # Smoothing-length free parameter (resolution "eta_neighbours"). 
-SMOOTH_L_FAC = str( 1.235 ) 
+SMOOTH_ETA_FAC = str( 1.235 ) 
+particle.set_eta_factor(SMOOTH_ETA_FAC)
 
 if(KERNEL=='M5' and HYDRO_DIMENSIONS ==1):
   KERNEL_SUPPORT_RAD = "1.936492"  #  1D SWIFT M5 Kernel
@@ -208,8 +209,10 @@ else:
 # Max/min allowed values for smoothing length h
 HYDRO_h_MAX = str( 1.0 / 3.0 / float(KERNEL_SUPPORT_RAD) ) 
 HYDRO_h_MIN = "1e-6"
+particle.set_h_hydro_limits(HYDRO_h_MIN, HYDRO_h_MAX)
 
-# Export symbols and values for compilation (e.g. for SPH kernel)
+
+# Export symbols for compilation (e.g. for SPH kernel) -----------------------
 peano4_project.output.makefile.add_CXX_flag("-D" + "HYDRO_DIMENSION=" + str(HYDRO_DIMENSIONS) )
 peano4_project.output.makefile.add_CXX_flag("-D" + GAMMA_HYDRO_SYMBOL )
 peano4_project.output.makefile.add_CXX_flag("-D" + KERNEL_SYMBOL )
@@ -228,7 +231,7 @@ print(f'Effective dimensions of the Simulation: {HYDRO_DIMENSIONS}'  )
 print(f'Global time-step size: {GLOBAL_TIME_STEP_SIZE}'  )
 print(f'Number of particles (1D): {HYDRO_PART_NUMBER}'  )
 print(f'Adiabatic index: {GAMMA}'  )
-print(f'Smoothing length free factor: {SMOOTH_L_FAC}'   )
+print(f'Smoothing length free factor: {SMOOTH_ETA_FAC}'   )
 print('-----------------------------------------------------------------------')
 
 # Export Constants.h file
@@ -244,7 +247,7 @@ peano4_project.constants.export_const_with_type("H_TOLERANCE"          , H_TOLER
 peano4_project.constants.export_const_with_type("KERNEL_SUPPORT_RAD"   , KERNEL_SUPPORT_RAD   , "double")
 peano4_project.constants.export_const_with_type("HYDRO_h_MAX"          , HYDRO_h_MAX          , "double")
 peano4_project.constants.export_const_with_type("HYDRO_h_MIN"          , HYDRO_h_MIN          , "double")
-peano4_project.constants.export_const_with_type("SMOOTH_L_FAC"         , SMOOTH_L_FAC         , "double")
+peano4_project.constants.export_const_with_type("SMOOTH_ETA_FAC"       , SMOOTH_ETA_FAC       , "double")
 
 # If we want to start a project from scratch, we may want to remove some of the generated code
 if args.clean_temporary_directories:
