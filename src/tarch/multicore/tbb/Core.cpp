@@ -41,7 +41,9 @@ tarch::multicore::Core::Core():
   _numberOfDevices( 0 ) {
   internal::configureInternalTaskQueues(_numberOfThreads);
   #if defined(GPUOffloadingSYCL)
-  initSYCLQueues();
+  if (not tarch::multicore::SYCLQueuesAreCreated() ) {
+    initSYCLQueues( std::set<int>() );
+  }
   _numberOfDevices = getNumberOfSYCLQueues();
   #endif
 }
@@ -115,9 +117,11 @@ int tarch::multicore::Core::getThreadNumber() const {
 }
 
 
+/*
 bool tarch::multicore::Core::isDeviceAvailable(int number) const {
   return number==HostDevice or _devicesToUse.empty() or _devicesToUse.count(number)>0;
 }
+*/
 
 
 #endif

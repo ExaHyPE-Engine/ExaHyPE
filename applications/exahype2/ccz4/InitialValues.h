@@ -35,6 +35,11 @@ namespace applications {
         const tarch::la::Vector<Dimensions,double>&  X,
         double t
       );
+      void flat(
+        double * __restrict__ Q, // Q[64+0],
+        const tarch::la::Vector<Dimensions,double>&  X,
+        double t
+      );
 
       #ifdef IncludeTwoPunctures
       void ApplyTwoPunctures(

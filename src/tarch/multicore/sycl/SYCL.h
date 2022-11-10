@@ -105,6 +105,8 @@ namespace tarch {
      * time.
      */
     void listSYCLQueues();
+
+    bool SYCLQueuesAreCreated();
   }
 }
 

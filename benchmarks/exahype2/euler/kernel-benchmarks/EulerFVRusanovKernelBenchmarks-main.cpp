@@ -26,7 +26,8 @@
 #include "exahype2/UserInterface.h"
 
 #include "config.h"
-
+#include "tarch/tests/TreeTestCaseCollection.h"
+#include "exahype2/UnitTests.h"
 //#ifdef UseFenv
 //#include "tarch/FenvWrapper.h"
 //#endif
@@ -562,7 +563,13 @@ int main(int argc, char** argv) {
     return ExitCodeInvalidArguments;
   }
 
-  repositories::DataRepository::initDatatypes();
+  /*repositories::DataRepository::initDatatypes();
+  tarch::tests::TreeTestCaseCollection* unitTests = new tarch::tests::TreeTestCaseCollection("");
+  unitTests->addTestCase( exahype2::getUnitTests() );
+  unitTests->run();
+  tarch::mpi::Rank::abort( 3 );
+  delete unitTests;*/
+
   repositories::startSimulation();
 
   otterTraceInitialise();
@@ -606,6 +613,12 @@ int main(int argc, char** argv) {
 
       runBenchmarksOnDevice(patches,device);
     }
+  }
+
+  if (Accuracy>0.0) {
+    logInfo("main()", "all kernels yield the same outcome up to a accuracy of " << Accuracy);
+  } else {
+    logInfo("main()", "no accuracy checks were performed");
   }
 
   otterTraceFinalise();

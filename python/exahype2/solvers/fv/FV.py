@@ -57,41 +57,15 @@ class FV(object):
     
     See the discussion on "Control flow between this class and subclasses" below.
 
-    :: Data structures
     
-    They key responsibility of FV is to establish which grid entities hold which 
-    data.
-    
-    Each cell holds a patch of (finite) volumes.   
-    
-    We use two overlaps in this case: the standard one and one we call new. In the
-    time stepping, we use the new one to project our data to. Then we roll it over
-    at the end of the iteration. This way, we ensure that the one from the previous
-    iteration is not overwritten by some adjacent cell halfway through the 
-    computation.
-
-    @todo TW write more
-    
-    :: Data flow
-    
-    @todo Rewrite
-    
-    The class has a number of guards. They are boolean expression which control 
-    whether data is stored and communicated. If you want to redefine these guards,
-    you have to redefine create_data_structures() and reset the guards after
-    you have called the superclass' operation. I recommend that you refrain from
-    defining completely new guards. Use the predefined guards instead and
-    refine them by adding more and and or clauses.
-  
-  
-    :: Parallelisation
+    ## Parallelisation
     
     I do equip both Q and NewQ with proper merge routines. However, all merge guards
     set to "never" by default. If you need some data exchange, you have to activate
     them manually.
     
     
-    :: Control flow between this class and subclasses
+    ## Control flow between this class and subclasses
     
     There are three key routines: the constructor, create_data_structures() and 
     create_action_sets(). The constructor sets some global variables (such as the 
@@ -129,7 +103,7 @@ class FV(object):
       data structures (which are now in place and called at the right time) with 
       information what it actually shall do.
       
-    :: Adaptive mesh refinement (AMR)
+    ## Adaptive mesh refinement (AMR)
     
     We use by default a linear interpolation and averaging. For the linear interpolation,
     I do not compute the operators on demand. Instead, I use the optimised scheme which 
@@ -137,13 +111,38 @@ class FV(object):
     
     If you wanna alter the inter-resolution transfer operators, please use
     
-    self.interpolation = "myCoolScheme"
+            self._interpolation = "tensor_product< " + self._name + ">"
+            self.add_solver_constants( "" "static constexpr double  NormalInterpolationMatrix1d[]     = {
+              1.0, 0.0
+            };
+            "" " )
+            self.add_solver_constants( "" "static constexpr double  TangentialInterpolationMatrix1d[] = {
+            1.0,0.0,0.0,0.0,
+            1.0,0.0,0.0,0.0,
+            1.0,0.0,0.0,0.0,
+            0.0,1.0,0.0,0.0,
+               
+            0.0,1.0,0.0,0.0,
+            0.0,1.0,0.0,0.0,
+            0.0,0.0,1.0,0.0,
+            0.0,0.0,1.0,0.0,
+        
+            0.0,0.0,1.0,0.0,
+            0.0,0.0,0.0,1.0,
+            0.0,0.0,0.0,1.0,
+            0.0,0.0,0.0,1.0
+            };"" " )
     
-    Consult the documentation of Peano's blockstructured toolbox for variations that we 
-    ship out of the box. You can obviously add your own ones.
-
+    The above snippet refers to a overlap of one and five unknowns. So the interpolation 
+    along a 1d tangential direction is three 5x5 matrices. Along the normal, we have to 
+    project onto one target element, so our projection matrix has one row. We have two 
+    values (inside and outside) along this normal, so two columns. In the standard
+    enumeration scheme (refers to the face with normal 0), we have one real coarse 
+    grid value in this case. The other one would be the restricted value. We don't 
+    often use it (and therefore have a 0 here).
     
-    :: Data postprocessing or coupling to other codes
+        
+    ## Data postprocessing or coupling to other codes
     
     For data postprocessing, the introduction of fancy interior conditions or the coupling to 
     other codes, each Finite Volume solver has an attribute
@@ -758,7 +757,7 @@ The finest mesh width of """ + str(self.get_finest_volume_size(domain_size)) + "
       step.add_action_set( peano4.toolbox.PlotGridInPeanoBlockFormat( 
         filename = output_path + "grid-" + self._name,
         cell_unknown=None,
-        guard_guard="repositories::plotFilter.plotPatch(marker) and " + self._load_cell_data_default_guard(),
+        guard="repositories::plotFilter.plotPatch(marker) and " + self._load_cell_data_default_guard(),
         additional_includes="""
 #include "exahype2/PlotFilter.h"
 #include "../repositories/SolverRepository.h"
@@ -846,7 +845,9 @@ The finest mesh width of """ + str(self.get_finest_volume_size(domain_size)) + "
     output.makefile.add_cpp_file( "Abstract" + self._name + ".cpp" )
     output.makefile.add_cpp_file( self._name + ".cpp" )
 
+
   def set_solver_constants(self, datastring): self._solver_constants = datastring
+
 
   def add_solver_constants(self, datastring): self._solver_constants += datastring + "\n"
 

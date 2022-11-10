@@ -54,7 +54,7 @@ if __name__ == "__main__":
     parser.add_argument("-AMRMarker",  "--AMR-marker",      dest="marker", choices=["none", "poisson"],   default="none",  help="switch on or off the AMR boundary marker" )
     parser.add_argument("-et",   "--end-time",        dest="end_time",        type=float, default=1.0, help="End (terminal) time" )
     parser.add_argument("-pst",   "--plot-start-time",        dest="plot_start_time",        type=float, default=0.0, help="start time for plot" )
-    parser.add_argument("-s",    "--scenario",        dest="scenario",        choices=["gauge", "dia_gauge", "linear", "single-puncture","two-punctures"], required="True", help="Scenario" )
+    parser.add_argument("-s",    "--scenario",        dest="scenario",        choices=["gauge", "dia_gauge", "linear", "single-puncture","two-punctures", "flat"], required="True", help="Scenario" )
     parser.add_argument("-cfl",      "--CFL-ratio",           dest="cfl",             type=float, default=0.1, help="Set CFL ratio" )
     parser.add_argument("-tracer", "--add-tracer",    dest="add_tracer", type=int, default=0,  help="Add tracers and specify the seeds. 0-switch off, 1-x axis, 2-xy plane, 3-over domain (evenly), 4-over domain(with noise option), 5-inserted by coordinate, 6-spherical surface(Gauss_Legendre_quadrature), 7-spherical surface(t-design)" )
     parser.add_argument("-tn", "--tracer-name",       dest="tra_name",    type=str, default="de",  help="name of output tracer file (temporary)" )
@@ -185,8 +185,9 @@ if __name__ == "__main__":
           SuperClass.__init__(
             self,
             name=name,
-            rk_order     = 1,
-            polynomials  = exahype2.solvers.GaussLegendreBasis(3),
+            rk_order     = 2,
+            polynomials  = exahype2.solvers.GaussLegendreBasis(2),
+            face_projections   = exahype2.solvers.rkdg.FaceProjections.Solution,
             unknowns=number_of_unknowns,
             auxiliary_variables=0,
             min_cell_h=min_volume_h, max_cell_h=max_volume_h, #not a good name, but use for now.
@@ -679,7 +680,7 @@ if __name__ == "__main__":
       my_solver.overlap=3
     #for rkfd the overlap is automatically assigned in solver class
 
-    my_solver.restriction = "averaging" # "linear"
+    #my_solver.restriction = "averaging" # "linear"
 
     if args.interpolation=="constant":
       my_solver.interpolation = "piecewise_constant"
@@ -693,19 +694,31 @@ if __name__ == "__main__":
     if args.interpolation=="linear-con-extrap-lin-normal-interp":
       my_solver.interpolation = "linear_with_constant_extrapolation_and_linear_normal_interpolation"
       print( "Interpolation rule: linear+constant extrapolation and linear normal interpolation" )
-    if args.interpolation=="linear-lin-extrap-lin-normal-interp":
-      my_solver.interpolation = "linear_with_linear_extrapolation_and_linear_normal_interpolation" 
-      print( "Interpolation rule: linear+linear extrapolation and linear normal interpolation" )
+    #if args.interpolation=="linear-lin-extrap-lin-normal-interp":
+    #  my_solver.interpolation = "linear_with_linear_extrapolation_and_linear_normal_interpolation" 
+    #  print( "Interpolation rule: linear+linear extrapolation and linear normal interpolation" )
 
     if args.interpolation=="order-2":
       my_solver.interpolation = "linear" 
 
-    if args.restriction=="average":
-      my_solver.restriction =  "averaging"
-      print( "Restiction rule: averaging" )
-    if args.restriction=="inject":
-      my_solver.restriction_scheme = "inject" 
-      print( "Restiction rule: injection" )
+    #if args.restriction=="average":
+    #  my_solver.restriction =  "averaging"
+    #  print( "Restiction rule: averaging" )
+    #if args.restriction=="inject":
+    #  my_solver.restriction_ = "inject" 
+    #  print( "Restiction rule: injection" )
+
+    #Below are the I&R set functions for FD4
+    #These functions here do two things:
+    #1. it set the solver.interpolation parameters similar to what we do for fv, so the code know what template shoule be named.
+    #2. it compute and inject the corresponding matrices for named schemes into the solver head files.
+    #notice point 2 is not needed as for build-in function (for fv) the matrices are already hard-coded.  
+    tem_interp=["TP_constant","TP_linear_with_linear_extrap_normal_interp"]
+    tem_restrict=["TP_inject_normal_extrap","TP_average_normal_extrap"]
+    if (args.implementation=="fd4-rk1-adaptive" or args.implementation=="fd4-rk1-fixed" 
+      or args.implementation=="fd4-rk4-adaptive" or args.implementation=="fd4-rk4-fixed"):
+      my_solver.set_interpolation_scheme(tem_interp[0])
+      my_solver.set_restriction_scheme(tem_restrict[1])
           
     #if args.interpolation=="linear+enforce" or args.interpolation=="linear-slow+enforce":
     #  self.point_wise_postprocessing_of_interpolation = "examples::exahype2::ccz4::enforceCCZ4constraints(targetVolume)" )
@@ -761,29 +774,32 @@ if __name__ == "__main__":
     solverconstants=""
 
     if args.scenario=="gauge":
-      solverconstants+= "static constexpr int Scenario=0; /* Gauge wave */  "
+      solverconstants+= "static constexpr int Scenario=0; /* Gauge wave */ \n "
       userinfo.append(("picking gauge wave scenario",None))
       floatparams.update({"sk":0.0}); floatparams.update({"bs":0.0})
       intparams.update({"LapseType":0})
     elif args.scenario=="dia_gauge":
-      solverconstants+= "static constexpr int Scenario=3; /* Diagonal Gauge wave */  "
+      solverconstants+= "static constexpr int Scenario=3; /* Diagonal Gauge wave */ \n "
       userinfo.append(("picking diagonal gauge wave scenario",None))
       floatparams.update({"sk":0.0}); floatparams.update({"bs":0.0})
       intparams.update({"LapseType":0})
     elif args.scenario=="linear":
-      solverconstants+= "static constexpr int Scenario=1; /* Linear wave */  "
+      solverconstants+= "static constexpr int Scenario=1; /* Linear wave */ \n "
       userinfo.append(("picking linear wave scenario",None))
       floatparams.update({"sk":0.0}); floatparams.update({"bs":0.0})
       intparams.update({"LapseType":0})
+    elif args.scenario=="flat":
+      solverconstants+= "static constexpr int Scenario=4; /* flat spacetime */ \n "
+      userinfo.append(("picking flat scenario",None))
     elif  (args.scenario=="two-punctures") or (args.scenario=="single-puncture"):
-      solverconstants+= "static constexpr int Scenario=2; /* Two-puncture */ "
+      solverconstants+= "static constexpr int Scenario=2; /* Two-puncture */ \n"
       userinfo.append(("picking black hole scenario",None))
     else:
       raise Exception( "Scenario " + args.scenario + " is now unknown")  
 
     for k, v in floatparams.items(): solverconstants+= "static constexpr double {} = {};\n".format("CCZ4{}".format(k), v)
     for k, v in intparams.items():   solverconstants+= "static constexpr int {} = {};\n".format("CCZ4{}".format(k), v)
-    my_solver.set_solver_constants(solverconstants)
+    my_solver.add_solver_constants(solverconstants)
 
     project.add_solver(my_solver)
 
@@ -831,7 +847,34 @@ if __name__ == "__main__":
 ########################################################################################
 #Tracer setting 
 ########################################################################################
-    if not args.add_tracer==0:
+    if args.add_tracer==5:
+        tracer_particles = project.add_tracer( name="Tracer",attribute_count=59 )
+        project.add_action_set_to_initialisation( 
+          exahype2.tracer.InsertParticlesbyCoordinates( 
+            particle_set=tracer_particles, coordinates=[[0,0,0],[0.5,0,0],[1.0,0,0],[1.5,0,0],[2.0,0,0]]))
+        project.add_action_set_to_timestepping(
+          peano4.toolbox.particles.UpdateParallelState(
+            particle_set=tracer_particles
+          )
+        )
+        
+        project.add_action_set_to_timestepping(exahype2.tracer.DiscontinuousGalerkinTracing(tracer_particles,
+                                                                                              my_solver,
+                                                                                              time_stepping_kernel="toolbox::particles::staticPosition",
+                                                                                              project_on_tracer_properties_kernel="::exahype2::dg::projectAllValuesOntoParticle"))
+        
+        
+        project.add_action_set_to_timestepping(exahype2.tracer.DumpTrajectoryIntoDatabase(
+          particle_set=tracer_particles,
+          solver=my_solver,
+          filename=args.path+"Tracer-dgtest",
+          data_delta_between_two_snapsots=1e16,
+          time_delta_between_two_snapsots=0.0001
+          ))
+
+
+    #if not args.add_tracer==0:
+    if 0:
       tracer_name = {1:"line", 2:"slide", 3:"volume", 6:"Gauss_Legendre_quadrature", 7:"t-design"}
       tracer_particles = project.add_tracer( name="MyTracer",attribute_count=65 )
        #project.add_action_set_to_timestepping(exahype2.tracer.FiniteVolumesTracing(tracer_particles,my_solver,[17,18,19],[16],-1,time_stepping_kernel="toolbox::particles::explicitEulerWithoutInterpolation"))
@@ -883,7 +926,7 @@ if __name__ == "__main__":
 ########################################################################################
     peano4_project = project.generate_Peano4_project(verbose=True)
 
-    if args.scenario=="gauge" or args.scenario=="linear" or args.scenario=="dia_gauge":
+    if args.scenario=="gauge" or args.scenario=="linear" or args.scenario=="dia_gauge" or args.scenario=="flat":
       pass
     elif args.scenario=="two-punctures" or args.scenario=="single-puncture":
       #

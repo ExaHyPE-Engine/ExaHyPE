@@ -264,6 +264,66 @@ class LagrangeBasisWithDiagonalMassMatrix(LagrangeBasis):
     return stiffness_matrix
   
 
+  def __compute_interpolation_matrix(self):
+    """
+
+    compute the interpolation matrix, which used to prepare halo layer data for fine grid points at the refinement boundary.
+
+    The matrix is only 1d mapping, i.e. used for "surface" of a 2D domain and have a size of 3Dof \times Dof.
+    Its elements are \phi_j(x^f_i), i.e. the value of basis functions for coarse grid on fine grid point.
+    In practive we multiply this matrix to vector of weight in coarse grid (u^c_i):
+
+    \phi_j(x^f_i)*u^c_i=u^c(x^f_i)
+
+    u^c(x) is the original solution on coarse grid. Thus the result is actually the evaluation of coarse solution on fine grid position
+
+    We can also use the same matrix to interpolate along the normal direction.
+ 
+    """
+    if self._polynomial_order == 0:
+      return [[[1.0]],[[1.0]],[[1.0]]]
+    else:
+      interp_matrix = [ [0.0 for _ in range(0,self.dofs_per_axis)] for _ in range(0,3*self.dofs_per_axis) ]
+      fine_grid_point = [0.0 for _ in range(0,3*self.dofs_per_axis) ]  
+      for index in range(0,self.dofs_per_axis):
+        fine_grid_point[index                     ]=self.quadrature_points[index]/3.0
+        fine_grid_point[index+  self.dofs_per_axis]=self.quadrature_points[index]/3.0+1.0/3.0
+        fine_grid_point[index+2*self.dofs_per_axis]=self.quadrature_points[index]/3.0+2.0/3.0
+      for row in range(0, 3*self.dofs_per_axis):
+        for col in range(0, self.dofs_per_axis):
+          interp_matrix[row][col]=self.value1d(fine_grid_point[row],col)
+
+      return interp_matrix 
+
+
+  def __compute_restriction_matrix(self):
+    """
+
+    compute the restriction matrix, which used to prepare halo layer data for coarse cells at the refinement boundary.
+    the matrix formulation depends on the interpolation scheme.
+
+    The matrix is only 1d mapping, i.e. used for "surface" of a 2D domain and have a size of Dof \times 3Dof.
+
+    We can also use the same matrix to interpolate along the normal direction. 
+
+
+    """
+    if self._polynomial_order == 0:
+      return [[[1.0/3.0]],[[1.0/3.0]],[[1.0/3.0]]]
+    else:
+      restriction_matrix = [ [0.0 for _ in range(0,3*self.dofs_per_axis)] for _ in range(0,self.dofs_per_axis) ]
+      fine_grid_point = [0.0 for _ in range(0,3*self.dofs_per_axis) ]  
+      for index in range(0,self.dofs_per_axis):
+        fine_grid_point[index                     ]=self.quadrature_points[index]/3.0
+        fine_grid_point[index+  self.dofs_per_axis]=self.quadrature_points[index]/3.0+1.0/3.0
+        fine_grid_point[index+2*self.dofs_per_axis]=self.quadrature_points[index]/3.0+2.0/3.0
+      for row in range(0, 3*self.dofs_per_axis):
+        for col in range(0, self.dofs_per_axis):
+          restriction_matrix[row][col]=self.value1d(fine_grid_point[col],row)/3.0
+
+      return restriction_matrix   
+
+
   def __compute_K1(self):
     """
     
@@ -379,32 +439,6 @@ class LagrangeBasisWithDiagonalMassMatrix(LagrangeBasis):
     return equidistantGridProjector
   
   
-  def __compute_restriction_matrix(self):
-    """
-    
-    Only variant is implemented atm. See __compute_interpolation_matrix() which 
-    also does not yet support higher orders.
-    
-    """
-    #assert self._polynomial_order==0
-    return [[[1.0/3.0]],[[1.0/3.0]],[[1.0/3.0]]]
-  
-  
-  def __compute_interpolation_matrix(self):
-    """
-    
-    There is alrady a projection operation. It is called __compute_fine_grid_projector. 
-    Maybe we can use this one (it is currently not used at all). If we don't use it,
-    we should remove it from the source code. This routine returns three matrices of 
-    size (p+1) x (p+1). Please consult the discussion around Discontinuous Galerkin
-    AMR in the C++ file exahype2/dg/Riemann.h. I explain there what this operator 
-    looks like and how it is used.
-    
-    """
-    #assert self._polynomial_order==0
-    return [[[1.0]],[[1.0]],[[1.0]]]
-  
-  
   def init_dictionary_with_default_parameters(self,dictionary,use_multidimensional_arrays):
     def snake_to_camel(word):
       return ''.join(x.capitalize() or '_' for x in word.lower().split('_'))
@@ -420,63 +454,63 @@ class LagrangeBasisWithDiagonalMassMatrix(LagrangeBasis):
     dictionary["BASIS_DECLARATIONS"] += self.QuadraturePoints1dDocumentation
     dictionary["BASIS_DECLARATIONS"] += "*/\n"
     #dictionary["BASIS_DECLARATIONS"] += "static const double QuadraturePoints1d[DGOrder+1];\n\n"
-    #dictionary["BASIS_INITIALIZERS"] += "             QuadraturePoints1d{},\n".format( self._render_tensor_1(self.quadrature_points) )
-    dictionary["BASIS_DECLARATIONS"] += "static constexpr double QuadraturePoints1d[] = {};\n\n".format( self._render_tensor_1(self.quadrature_points) )
+    #dictionary["BASIS_INITIALIZERS"] += "             QuadraturePoints1d{},\n".format( render_tensor_1(self.quadrature_points) )
+    dictionary["BASIS_DECLARATIONS"] += "static constexpr double QuadraturePoints1d[] = {};\n\n".format( render_tensor_1(self.quadrature_points) )
     
     dictionary["BASIS_DECLARATIONS"] += "/**\n"
     dictionary["BASIS_DECLARATIONS"] += self.QuadratureWeights1dDocumentation
     dictionary["BASIS_DECLARATIONS"] += "*/\n"
     #dictionary["BASIS_DECLARATIONS"] += "const double QuadratureWeights1d[DGOrder+1];\n\n"
-    #dictionary["BASIS_INITIALIZERS"] += "             QuadratureWeights1d{},\n".format( self._render_tensor_1(self.quadrature_weights) )
-    dictionary["BASIS_DECLARATIONS"] += "static constexpr double QuadratureWeights1d[] = {};\n\n".format( self._render_tensor_1(self.quadrature_weights) )
+    #dictionary["BASIS_INITIALIZERS"] += "             QuadratureWeights1d{},\n".format( render_tensor_1(self.quadrature_weights) )
+    dictionary["BASIS_DECLARATIONS"] += "static constexpr double QuadratureWeights1d[] = {};\n\n".format( render_tensor_1(self.quadrature_weights) )
 
     dictionary["BASIS_DECLARATIONS"] += "/**\n"
     dictionary["BASIS_DECLARATIONS"] += self.MassMatrix1dDocumentation
     dictionary["BASIS_DECLARATIONS"] += "*/\n"
     #dictionary["BASIS_DECLARATIONS"] += "const double MassMatrixDiagonal1d[DGOrder+1];\n\n"
-    #dictionary["BASIS_INITIALIZERS"] += "             MassMatrixDiagonal1d{},\n".format( self._render_tensor_1(self.__compute_mass_matrix_diagonal()) )
-    dictionary["BASIS_DECLARATIONS"] += "static constexpr double MassMatrixDiagonal1d[] = {};\n\n".format( self._render_tensor_1(self.__compute_mass_matrix_diagonal()) )
+    #dictionary["BASIS_INITIALIZERS"] += "             MassMatrixDiagonal1d{},\n".format( render_tensor_1(self.__compute_mass_matrix_diagonal()) )
+    dictionary["BASIS_DECLARATIONS"] += "static constexpr double MassMatrixDiagonal1d[] = {};\n\n".format( render_tensor_1(self.__compute_mass_matrix_diagonal()) )
 
     dictionary["BASIS_DECLARATIONS"] += "/**\n"
     dictionary["BASIS_DECLARATIONS"] += self.StiffnessOperator1dDocumentation
     dictionary["BASIS_DECLARATIONS"] += "*/\n"
     if use_multidimensional_arrays:        
       #dictionary["BASIS_DECLARATIONS"] += "const double StiffnessOperator1d[DGOrder+1][DGOrder+1];\n\n"
-      #dictionary["BASIS_INITIALIZERS"] += "             StiffnessOperator1d{},\n".format( self._render_tensor_2(self.__compute_stiffness_operator(),use_multidimensional_arrays) )
-      dictionary["BASIS_DECLARATIONS"] += "static constexpr double StiffnessOperator1d[][] = {};\n\n".format( self._render_tensor_2(self.__compute_stiffness_operator(),use_multidimensional_arrays) )
+      #dictionary["BASIS_INITIALIZERS"] += "             StiffnessOperator1d{},\n".format( render_tensor_2(self.__compute_stiffness_operator(),use_multidimensional_arrays) )
+      dictionary["BASIS_DECLARATIONS"] += "static constexpr double StiffnessOperator1d[][] = {};\n\n".format( render_tensor_2(self.__compute_stiffness_operator(),use_multidimensional_arrays) )
     else:
       #dictionary["BASIS_DECLARATIONS"] += "const double StiffnessOperator1d[(DGOrder+1)*(DGOrder+1)];\n\n"
-      #dictionary["BASIS_INITIALIZERS"] += "             StiffnessOperator1d{},\n".format( self._render_tensor_2(self.__compute_stiffness_operator(),use_multidimensional_arrays) )
-      dictionary["BASIS_DECLARATIONS"] += "static constexpr double StiffnessOperator1d[] = {};\n\n".format( self._render_tensor_2(self.__compute_stiffness_operator(),use_multidimensional_arrays) )
+      #dictionary["BASIS_INITIALIZERS"] += "             StiffnessOperator1d{},\n".format( render_tensor_2(self.__compute_stiffness_operator(),use_multidimensional_arrays) )
+      dictionary["BASIS_DECLARATIONS"] += "static constexpr double StiffnessOperator1d[] = {};\n\n".format( render_tensor_2(self.__compute_stiffness_operator(),use_multidimensional_arrays) )
 
     dictionary["BASIS_DECLARATIONS"] += "/**\n"
     dictionary["BASIS_DECLARATIONS"] += self.BasisFunctionValuesLeft1dDocumentation
     dictionary["BASIS_DECLARATIONS"] += "*/\n"
-    dictionary["BASIS_DECLARATIONS"] += "static constexpr double BasisFunctionValuesLeft1d[] = {};\n\n".format( self._render_tensor_1(self.__compute_basis_function_values_left()) )
+    dictionary["BASIS_DECLARATIONS"] += "static constexpr double BasisFunctionValuesLeft1d[] = {};\n\n".format( render_tensor_1(self.__compute_basis_function_values_left()) )
 
     dictionary["BASIS_DECLARATIONS"] += "/**\n"
     dictionary["BASIS_DECLARATIONS"] += self.DerivativeOperator1dDocumentation
     dictionary["BASIS_DECLARATIONS"] += "*/\n"
     if use_multidimensional_arrays:        
-      dictionary["BASIS_DECLARATIONS"] += "static constexpr double DerivativeOperator1d[][] = {};\n\n".format( self._render_tensor_2(self.__compute_derivative_operator(),use_multidimensional_arrays) )
+      dictionary["BASIS_DECLARATIONS"] += "static constexpr double DerivativeOperator1d[][] = {};\n\n".format( render_tensor_2(self.__compute_derivative_operator(),use_multidimensional_arrays) )
     else:
-      dictionary["BASIS_DECLARATIONS"] += "static constexpr double DerivativeOperator1d[] = {};\n\n".format( self._render_tensor_2(self.__compute_derivative_operator(),use_multidimensional_arrays) )
+      dictionary["BASIS_DECLARATIONS"] += "static constexpr double DerivativeOperator1d[] = {};\n\n".format( render_tensor_2(self.__compute_derivative_operator(),use_multidimensional_arrays) )
 
     dictionary["BASIS_DECLARATIONS"] += "/**\n"
     dictionary["BASIS_DECLARATIONS"] += self.RestrictionMatrix1dDocumentation
     dictionary["BASIS_DECLARATIONS"] += "*/\n"
     if use_multidimensional_arrays:        
-      dictionary["BASIS_DECLARATIONS"] += "static constexpr double RestrictionMatrix1d[][][] = {};\n\n".format( self._render_tensor_3(self.__compute_restriction_matrix(),use_multidimensional_arrays) )
+      dictionary["BASIS_DECLARATIONS"] += "static constexpr double RestrictionMatrix1d[][][] = {};\n\n".format( render_tensor_3(self.__compute_restriction_matrix(),use_multidimensional_arrays) )
     else:
-      dictionary["BASIS_DECLARATIONS"] += "static constexpr double RestrictionMatrix1d[] = {};\n\n".format( self._render_tensor_3(self.__compute_restriction_matrix(),use_multidimensional_arrays) )
+      dictionary["BASIS_DECLARATIONS"] += "static constexpr double RestrictionMatrix1d[] = {};\n\n".format( render_tensor_3(self.__compute_restriction_matrix(),use_multidimensional_arrays) )
 
     dictionary["BASIS_DECLARATIONS"] += "/**\n"
     dictionary["BASIS_DECLARATIONS"] += self.InterpolationMatrix1dDocumentation
     dictionary["BASIS_DECLARATIONS"] += "*/\n"
     if use_multidimensional_arrays:        
-      dictionary["BASIS_DECLARATIONS"] += "static constexpr double InterpolationMatrix1d[][][] = {};\n\n".format( self._render_tensor_3(self.__compute_interpolation_matrix(),use_multidimensional_arrays) )
+      dictionary["BASIS_DECLARATIONS"] += "static constexpr double InterpolationMatrix1d[][][] = {};\n\n".format( render_tensor_3(self.__compute_interpolation_matrix(),use_multidimensional_arrays) )
     else:
-      dictionary["BASIS_DECLARATIONS"] += "static constexpr double InterpolationMatrix1d[] = {};\n\n".format( self._render_tensor_3(self.__compute_interpolation_matrix(),use_multidimensional_arrays) )
+      dictionary["BASIS_DECLARATIONS"] += "static constexpr double InterpolationMatrix1d[] = {};\n\n".format( render_tensor_3(self.__compute_interpolation_matrix(),use_multidimensional_arrays) )
 
 
   @property

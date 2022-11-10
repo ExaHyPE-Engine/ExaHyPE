@@ -32,7 +32,7 @@ class EmptyPostprocessSolution(AbstractRKFDActionSet):
 
 
 
-class VolumeWisePostprocessSolution(AbstractRKFDActionSet):
+class CellWisePostprocessSolution(AbstractRKFDActionSet):
   """
   
   PostprocessSolution differs from other action sets, as I only create it once. See 

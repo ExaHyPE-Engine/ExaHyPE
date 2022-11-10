@@ -53,7 +53,9 @@ tarch::multicore::Core::Core():
   #endif
 
   #if defined(GPUOffloadingSYCL)
-  initSYCLQueues();
+  if (not tarch::multicore::SYCLQueuesAreCreated() ) {
+    initSYCLQueues( std::set<int>() );
+  }
   _numberOfDevices = getNumberOfSYCLQueues();
   #endif
 }
