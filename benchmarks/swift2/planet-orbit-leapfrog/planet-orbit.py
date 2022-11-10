@@ -207,7 +207,7 @@ particle_set = project.add_particle_species( particle )
 # only the earth is given an initial velocity.
 #
 ###############################################################################
-cut_off_radius = 0.1
+cut_off_radius = 0.001
 initialisation_snippet = """
   /*
    * In this problem we will initialize just a single particle (Earth)
@@ -316,6 +316,12 @@ project.algorithm_step_plot.add_action_set( particle_plotter )
 #
 ###############################################################################
 peano4_project = project.generate_Peano4_project(verbose=args.verbose)
+
+# Export symbols and values for compilation (e.g. for SPH kernel)
+# Dummy values for non SPH
+peano4_project.output.makefile.add_CXX_flag("-D" + "HYDRO_DIMENSION=1" )
+peano4_project.output.makefile.add_CXX_flag("-D" + 'HYDRO_GAMMA_5_3' )
+peano4_project.output.makefile.add_CXX_flag("-D" + 'QUARTIC_SPLINE_KERNEL' )
 
 peano4_project.constants.export_const_with_type("GLOBAL_TIME_STEP_SIZE", GLOBAL_TIME_STEP_SIZE, "double")
 peano4_project.constants.export_const_with_type("G_NEWTON"   , str(G_NEWTON)   , "double")
