@@ -1,4 +1,5 @@
 #include "tarch/Assertions.h"
+#include "tarch/logging/Statistics.h"
 
 #include "tarch/multicore/multicore.h"
 #include "tarch/multicore/Tasks.h"
@@ -17,6 +18,8 @@ namespace {
 
   const int StandardPriority           = 16;
   const int BackgroundConsumerPriority = 1;
+
+  const std::string BSPConcurrencyLevelStatisticsIdentifier( "tarch::multicore::bsp-concurrency-level" );
 
   /**
    * Native mapping of a task loop onto a task loop
@@ -45,8 +48,10 @@ namespace {
       #pragma omp task
       {
       #endif
+      ::tarch::logging::Statistics::getInstance().inc( BSPConcurrencyLevelStatisticsIdentifier, 1.0, true );
       while (tasks[i]->run()) {}
       delete tasks[i];
+      ::tarch::logging::Statistics::getInstance().inc( BSPConcurrencyLevelStatisticsIdentifier, -1.0, true );
       #if defined(__NVCOMPILER)
       }
       #endif
@@ -171,6 +176,7 @@ namespace {
       #pragma omp task
       {
       #endif
+        ::tarch::logging::Statistics::getInstance().inc( BSPConcurrencyLevelStatisticsIdentifier, 1.0, true );
         #pragma omp atomic
         spawnedTasks++;
 
@@ -219,6 +225,7 @@ namespace {
             processedSomeTasks = tarch::multicore::processPendingTasks( numberOfTasksToProcess );
           }
         }
+        ::tarch::logging::Statistics::getInstance().inc( BSPConcurrencyLevelStatisticsIdentifier, -1.0, true );
       #if defined(__NVCOMPILER)
       }
       #endif

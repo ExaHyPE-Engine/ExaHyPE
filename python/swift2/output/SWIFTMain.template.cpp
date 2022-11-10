@@ -70,7 +70,20 @@ bool {{NAMESPACE | join("::")}}::selectNextAlgorithmicStep() {
   /**
    * Part of one complete time step cycle, i.e. one sequence of steps
    */
-  else if ( repositories::StepRepository::toStepEnum(peano4::parallel::Node::getInstance().getCurrentProgramStep())==repositories::StepRepository::Steps::{{SOLVERSTEP_NAMES[STEP_NUMBER]}} ) {
+  else if (
+    repositories::StepRepository::toStepEnum(peano4::parallel::Node::getInstance().getCurrentProgramStep())==repositories::StepRepository::Steps::{{SOLVERSTEP_NAMES[STEP_NUMBER]}}
+    and
+    repositories::rerunPreviousGridSweep()
+  ) {
+    peano4::parallel::Node::getInstance().setNextProgramStep(
+      repositories::StepRepository::toProgramStep( repositories::StepRepository::Steps::{{SOLVERSTEP_NAMES[STEP_NUMBER]}} )
+    );
+  }
+  else if (
+    repositories::StepRepository::toStepEnum(peano4::parallel::Node::getInstance().getCurrentProgramStep())==repositories::StepRepository::Steps::{{SOLVERSTEP_NAMES[STEP_NUMBER]}}
+    and
+    not repositories::rerunPreviousGridSweep()
+  ) {
     peano4::parallel::Node::getInstance().setNextProgramStep(
       repositories::StepRepository::toProgramStep( repositories::StepRepository::Steps::{{SOLVERSTEP_NAMES[STEP_NUMBER+1]}} )
     );
@@ -148,7 +161,22 @@ bool {{NAMESPACE | join("::")}}::selectNextAlgorithmicStep() {
     );
     haveJustWrittenSnapshot = true;
   }
+  else if ( repositories::rerunPreviousGridSweep() ) {
+    assertionEquals(
+      repositories::StepRepository::toStepEnum(peano4::parallel::Node::getInstance().getCurrentProgramStep()),
+      repositories::StepRepository::Steps::{{SOLVERSTEP_NAMES[SOLVERSTEP_NAMES|length-1]}}
+    );
+
+    peano4::parallel::Node::getInstance().setNextProgramStep(
+      repositories::StepRepository::toProgramStep( repositories::StepRepository::Steps::{{SOLVERSTEP_NAMES[SOLVERSTEP_NAMES|length-1]}} )
+    );
+  }
   else {
+    assertionEquals(
+      repositories::StepRepository::toStepEnum(peano4::parallel::Node::getInstance().getCurrentProgramStep()),
+      repositories::StepRepository::Steps::{{SOLVERSTEP_NAMES[SOLVERSTEP_NAMES|length-1]}}
+    );
+
     peano4::parallel::Node::getInstance().setNextProgramStep(
       repositories::StepRepository::toProgramStep( repositories::StepRepository::Steps::{{SOLVERSTEP_NAMES[0]}} )
     );
