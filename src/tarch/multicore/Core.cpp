@@ -85,12 +85,6 @@ int tarch::multicore::Core::getNumberOfThreads() const {
   return 1;
 }
 
-
-int tarch::multicore::Core::getNumberOfGPUs() const {
-  return 0;
-}
-
-
 int tarch::multicore::Core::getCoreNumber() const {
   #ifdef CompilerHasSysinfo
   return sched_getcpu();

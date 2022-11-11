@@ -24,22 +24,9 @@
 
 tarch::logging::Log  tarch::multicore::Core::_log( "tarch::multicore::Core" );
 
-#if defined(GPUOffloadingOMP)
-bool checkOMPOffloading() {
-  bool canOffload = false;
-  #pragma omp target map(tofrom : canOffload)
-  {
-    if (!omp_is_initial_device()) {
-      canOffload = true;
-    }
-  }
-  return canOffload;
-}
-#endif
-
 tarch::multicore::Core::Core():
-  _numberOfThreads( omp_get_max_threads() ),
-  _numberOfDevices( 0 ) {
+  _numberOfThreads( omp_get_max_threads() ) {
+
   internal::configureInternalTaskQueues(_numberOfThreads);
 }
 
@@ -54,9 +41,7 @@ tarch::multicore::Core& tarch::multicore::Core::getInstance() {
 }
 
 
-void tarch::multicore::Core::configure( int numberOfThreads, const std::set<int>& devicesToUse ) {
-  _devicesToUse = devicesToUse;
-
+void tarch::multicore::Core::configure( int numberOfThreads) {
   if ( omp_get_num_procs() != omp_get_max_threads() ) {
     logWarning( "configure(int)", "omp_get_num_procs reports " << omp_get_num_procs() << " while omp_get_max_threads reports " << omp_get_max_threads() << ". Take smaller value to avoid overbooking" );
   }
@@ -97,12 +82,6 @@ bool tarch::multicore::Core::isInitialised() const {
 int tarch::multicore::Core::getNumberOfThreads() const {
   return _numberOfThreads;
 }
-
-
-int tarch::multicore::Core::getNumberOfGPUs() const {
-  return _numberOfDevices;
-}
-
 
 int tarch::multicore::Core::getThreadNumber() const {
   return omp_get_thread_num();
