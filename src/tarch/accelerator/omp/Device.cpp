@@ -5,12 +5,6 @@
 
 #if defined(GPUOffloadingOMP)
 
-
-#pragma omp declare target
-void tarch::gpuAbort() {
-}
-#pragma omp end declare target
-
 bool checkOMPOffloading() {
   bool canOffload = false;
   #pragma omp target map(tofrom : canOffload)

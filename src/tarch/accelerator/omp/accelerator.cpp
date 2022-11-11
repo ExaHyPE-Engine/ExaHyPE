@@ -15,6 +15,11 @@ void cudaAssertion(cudaError_t code, const char *file, int line) {
 }
 #endif
 
+#pragma omp declare target
+void tarch::gpuAbort() {
+}
+#pragma omp end declare target
+
 double* tarch::allocateMemory(int size, MemoryLocation location) {
   double* result = nullptr;
   switch (location) {
