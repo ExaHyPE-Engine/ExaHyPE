@@ -4,8 +4,6 @@
 #include "tarch/multicore/multicore.h"
 #include "tarch/compiler/CompilerSpecificSettings.h"
 
-#include "tarch/multicore/sycl/SYCL.h"
-
 
 #ifdef CompilerHasSysinfo
 #include <sched.h>
@@ -27,20 +25,30 @@
 tarch::logging::Log tarch::multicore::Core::_log( "tarch::multicore::Core" );
 
 
+namespace {
+  sycl::queue  hostSyclQueue;
+}
+
+
+sycl::queue& tarch::multicore::getHostSYCLQueue() {
+  return hostSyclQueue;
+}
+
+
 /**
  * The SYCL core object differs from other core objects in that is solely makes
- * the host available for task "offloading". If you want to use queues, you
- * have to invoke configure explicitly.
+ * the host available for task "offloading".
  */
 tarch::multicore::Core::Core():
-  _numberOfThreads( 0 ),
-  _numberOfDevices( 0 ) {
+  _numberOfThreads( 0 ) {
+
+  hostSyclQueue = sycl::device(sycl::cpu_selector());
+  #if PeanoDebug>0
+  std::cout << "host (CPU) device queue:" << syclQueues[tarch::multicore::Core::HostDevice].get_device().get_info<sycl::info::device::name>() << std::endl;
+  #endif
+
   internal::configureInternalTaskQueues(_numberOfThreads);
-  listSYCLQueues();
-  _devicesToUse.insert(tarch::multicore::Core::HostDevice);
-  initSYCLQueues( _devicesToUse );
-  _numberOfDevices = getNumberOfSYCLQueues();
-  _numberOfThreads = getSYCLQueue(tarch::multicore::Core::HostDevice).get_device().get_info<sycl::info::device::max_compute_units>();
+  _numberOfThreads = hostSyclQueue.get_device().get_info<sycl::info::device::max_compute_units>();
 }
 
 
@@ -78,11 +86,6 @@ bool tarch::multicore::Core::isInitialised() const {
 
 int tarch::multicore::Core::getNumberOfThreads() const {
   return _numberOfThreads;
-}
-
-
-int tarch::multicore::Core::getNumberOfGPUs() const {
-  return _numberOfDevices;
 }
 
 

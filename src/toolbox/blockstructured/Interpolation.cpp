@@ -6,6 +6,8 @@
 
 #include "tarch/multicore/BooleanSemaphore.h"
 #include "tarch/multicore/Lock.h"
+#include "tarch/accelerator/accelerator.h"
+
 
 namespace {
   tarch::logging::Log _log( "toolbox::blockstructured" );

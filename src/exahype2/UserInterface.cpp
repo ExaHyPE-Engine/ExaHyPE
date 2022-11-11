@@ -1,6 +1,7 @@
 #include "UserInterface.h"
 
 #include "tarch/multicore/Core.h"
+#include "tarch/accelerator/Device.h"
 #include "tarch/mpi/Rank.h"
 
 #include "tarch/logging/LogFilter.h"
@@ -206,7 +207,8 @@ bool exahype2::parseCommandLineArguments(int argc, char** argv) {
     }
   }
 
-  tarch::multicore::Core::getInstance().configure( cores, gpuDevices );
+  tarch::multicore::Core::getInstance().configure( cores );
+  tarch::accelerator::Device::getInstance().configure( gpuDevices );
 
   if ( not tarch::logging::LogFilterFileReader::parsePlainTextFile( logFilterFile ) ) {
     logWarning( "main()", "no exahype.log-filter file found or file has been corrupted. Use default logging configuration" );

@@ -98,6 +98,15 @@ Tarch_SOURCES= tarch/tarch.cpp \
  tarch/la/Scalar.cpp \
  tarch/la/Vector.cpp \
  tarch/la/DynamicMatrix.cpp \
+ tarch/accelerator/accelerator.cpp \
+ tarch/accelerator/Device.cpp \
+ tarch/accelerator/cpp/accelerator.cpp \
+ tarch/accelerator/cpp/Device.cpp \
+ tarch/accelerator/omp/accelerator.cpp \
+ tarch/accelerator/omp/Device.cpp \
+ tarch/accelerator/omp/GPUMemoryManager.cpp \
+ tarch/accelerator/sycl/accelerator.cpp \
+ tarch/accelerator/sycl/Device.cpp \
  tarch/multicore/BooleanSemaphore.cpp \
  tarch/multicore/multicore.cpp \
  tarch/multicore/Core.cpp \
@@ -114,7 +123,6 @@ Tarch_SOURCES= tarch/tarch.cpp \
  tarch/multicore/omp/multicore.cpp \
  tarch/multicore/omp/BooleanSemaphore.cpp \
  tarch/multicore/omp/Core.cpp \
- tarch/multicore/omp/GPUMemoryManager.cpp \
  tarch/multicore/omp/RecursiveSemaphore.cpp \
  tarch/multicore/omp/Tasks.cpp \
  tarch/multicore/tbb/multicore.cpp \
@@ -122,7 +130,6 @@ Tarch_SOURCES= tarch/tarch.cpp \
  tarch/multicore/tbb/Core.cpp \
  tarch/multicore/tbb/RecursiveSemaphore.cpp \
  tarch/multicore/tbb/Tasks.cpp \
- tarch/multicore/sycl/SYCL.cpp \
  tarch/multicore/sycl/multicore.cpp \
  tarch/multicore/sycl/BooleanSemaphore.cpp \
  tarch/multicore/sycl/Core.cpp \

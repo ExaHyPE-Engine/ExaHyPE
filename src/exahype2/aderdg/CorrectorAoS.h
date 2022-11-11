@@ -1,13 +1,11 @@
-#ifndef _EXAHYPE2_ADERDG_CORRECTOR_AOS_H_
-#define _EXAHYPE2_ADERDG_CORRECTOR_AOS_H_
+// This file is part of the Peano project. For conditions of distribution and
+// use, please see the copyright notice at www.peano-framework.org
+#pragma once
 
 #include "config.h"
 
 #include "tarch/la/Vector.h"
-
-#if GPUOffloadingSYCL>0
-#include "tarch/multicore/sycl/SYCL.h"
-#endif
+#include "tarch/accelerator/accelerator.h"
 
 #include <functional>
 
@@ -383,4 +381,3 @@ namespace exahype2 {
   }
 }
 
-#endif

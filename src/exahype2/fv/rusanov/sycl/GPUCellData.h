@@ -7,8 +7,8 @@
 
 
 #include "tarch/la/Vector.h"
+#include "tarch/accelerator/accelerator.h"
 #include "peano4/utils/Globals.h"
-#include "tarch/multicore/sycl/SYCL.h"
 #include "exahype2/enumerator/AoSLexicographicEnumerator.h"
 
 

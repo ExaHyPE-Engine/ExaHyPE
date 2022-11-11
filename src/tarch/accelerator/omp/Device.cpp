@@ -1,0 +1,51 @@
+#include "tarch/accelerator/Device.h"
+#include "tarch/compiler/CompilerSpecificSettings.h"
+
+
+
+#if defined(GPUOffloadingOMP)
+
+
+#pragma omp declare target
+void tarch::gpuAbort() {
+}
+#pragma omp end declare target
+
+
+namespace {
+  int numberOfDevices;
+}
+
+tarch::accelerator::Device::Device() {
+  numberOfDevices = omp_get_num_devices();
+}
+
+
+tarch::accelerator::Device::~Device() {
+}
+
+
+tarch::accelerator::Device& tarch::accelerator::Device::getInstance() {
+  static Device instance;
+  return instance;
+}
+
+
+void tarch::accelerator::Device::configure( const std::set<int>& devicesToUse ) {
+}
+
+
+void tarch::accelerator::Device::shutdown() {
+}
+
+
+bool tarch::accelerator::Device::isInitialised() const {
+  return numberOfDevices>0;
+}
+
+
+int tarch::accelerator::Device::getNumberOfDevices() const {
+  return numberOfDevices;
+}
+
+#endif
