@@ -1,6 +1,7 @@
 #include "UserInterface.h"
 
 #include "tarch/multicore/Core.h"
+#include "tarch/accelerator/Device.h"
 #include "tarch/mpi/Rank.h"
 
 #include "tarch/logging/LogFilter.h"

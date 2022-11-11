@@ -41,22 +41,6 @@ tarch::multicore::Core::Core():
   _numberOfThreads( omp_get_max_threads() ),
   _numberOfDevices( 0 ) {
   internal::configureInternalTaskQueues(_numberOfThreads);
-
-  #if defined(GPUOffloadingOMP)
-  _numberOfDevices = omp_get_num_devices();
-   /*if (!checkOMPOffloading()) {
-    std::cerr << "tarch was built with OpenMP GPU offloading support (--with-gpu=omp). "
-      "Either your chosen compiler does not support GPU offloading or your hardware does not have the required compute capability." << std::endl;
-    exit(-1);
-  }*/
-  #endif
-
-  #if defined(GPUOffloadingSYCL)
-  if (not tarch::multicore::SYCLQueuesAreCreated() ) {
-    initSYCLQueues( std::set<int>() );
-  }
-  _numberOfDevices = getNumberOfSYCLQueues();
-  #endif
 }
 
 

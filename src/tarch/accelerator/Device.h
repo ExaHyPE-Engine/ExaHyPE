@@ -1,7 +1,6 @@
 // This file is part of the Peano project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
-#ifndef _TARCH_ACCELERATOR_DEVICE_H_
-#define _TARCH_ACCELERATOR_DEVICE_H_
+#pragma once
 
 
 #include <thread>
@@ -99,5 +98,3 @@ class tarch::accelerator::Device {
     int getNumberOfDevices() const;
 };
 
-
-#endif

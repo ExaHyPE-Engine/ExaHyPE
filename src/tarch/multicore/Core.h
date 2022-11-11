@@ -1,7 +1,6 @@
 // This file is part of the Peano project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
-#ifndef _TARCH_MULTICORE_CORE_H_
-#define _TARCH_MULTICORE_CORE_H_
+#pragma once
 
 
 #include <thread>
@@ -129,6 +128,3 @@ class tarch::multicore::Core {
      */
     int getThreadNumber() const;
 };
-
-
-#endif
