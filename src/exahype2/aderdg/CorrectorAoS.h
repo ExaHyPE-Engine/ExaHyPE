@@ -5,7 +5,7 @@
 #include "config.h"
 
 #include "tarch/la/Vector.h"
-
+#include "tarch/accelerator/accelerator.h"
 
 #include <functional>
 

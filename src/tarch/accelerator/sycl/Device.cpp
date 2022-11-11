@@ -8,10 +8,6 @@
 
 
 #if defined(GPUOffloadingSYCL)
-GPUCallableMethod void tarch::gpuAbort() {
-}
-
-
 namespace {
   std::map< int, sycl::queue >  syclQueues;
 }

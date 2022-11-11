@@ -2,6 +2,8 @@
 #include "tarch/compiler/CompilerSpecificSettings.h"
 
 
+tarch::logging::Log  tarch::accelerator::Device::_log( "tarch::accelerator::Device" );
+
 
 #if defined(GPUOffloadingOff)
 void tarch::gpuAbort() {

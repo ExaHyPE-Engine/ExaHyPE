@@ -3,6 +3,7 @@
 
 #if defined(GPUOffloadingCPP)
 
+
 double* tarch::allocateMemory(int size, MemoryLocation location) {
   double* result;
   switch (location) {
