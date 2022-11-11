@@ -48,6 +48,10 @@ def serialise_and_map_onto_separate_mesh_traversals(species_sets, verbose=True):
         if verbose:
           print( "GRAPH COMPILER DEBUG: step {} on particle {} uses update-particle-grid-association (resort) action set".format( step.name, current_species_set.particle_model.name ) )
         new_step.add_action_set(peano4.toolbox.particles.UpdateParticleGridAssociation(current_species_set), append_at_end=True)
+        if verbose:
+          print( "GRAPH COMPILER DEBUG: step {} on particle {} uses ParticleAMR action set".format( step.name, current_species_set.particle_model.name ) )
+        particle_tree_analysis = peano4.toolbox.particles.ParticleTreeAnalysis(current_species_set)
+        new_step.add_action_set(peano4.toolbox.particles.ParticleAMR(current_species_set,particle_tree_analysis,min_particles_per_cell=0,max_particles_per_cell=1), append_at_end=True)
       if previous_step_has_altered_particle_positions:
         if verbose:
           print( "GRAPH COMPILER DEBUG: step {} on particle {} uses update-parallel-state action set".format( step.name, current_species_set.particle_model.name ) )

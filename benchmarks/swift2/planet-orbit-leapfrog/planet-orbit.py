@@ -207,7 +207,7 @@ particle_set = project.add_particle_species( particle )
 # only the earth is given an initial velocity.
 #
 ###############################################################################
-cut_off_radius = 0.001
+cut_off_radius = 0.01
 initialisation_snippet = """
   /*
    * In this problem we will initialize just a single particle (Earth)

@@ -163,6 +163,8 @@ class LeapfrogFixedInteractionRadius(Particle):
                                          #include "swift2/timestepping/Leapfrog.h"
                                          #include "swift2/timestepping/GlobalTimeStepping.h"
                                          #include "swift2/timestepping/TimeStepping.h"
+                                         #include "swift2/statistics/Reports.h"
+                                         #include "swift2/statistics/Statistics.h"
                                          """
       ),
       AlgorithmStep( 

@@ -345,8 +345,17 @@ citation of the original SWIFT paper
       self.algorithm_step_init.use_vertex(current_species_set)
       self.algorithm_step_sort.use_vertex(current_species_set)
       self.algorithm_step_plot.use_vertex(current_species_set)
+      # Enable cell statistics for this specie
+      particle_tree_analysis = peano4.toolbox.particles.ParticleTreeAnalysis(current_species_set)
+      self._project.datamodel.add_cell(particle_tree_analysis.cell_marker)   
+      # Add cell statistics to these action steps
+      self.algorithm_step_init.use_cell(particle_tree_analysis.cell_marker)
+      self.algorithm_step_sort.use_cell(particle_tree_analysis.cell_marker)
+      self.algorithm_step_plot.use_cell(particle_tree_analysis.cell_marker)
       for solverstep in solversteps:
         solverstep.use_vertex(current_species_set)
+        # Add cell statistics to rest of action steps
+        solverstep.use_cell(particle_tree_analysis.cell_marker)
      
     self._project.solversteps.add_step(self._algorithm_step_create_grid)
     self._project.solversteps.add_step(self.algorithm_step_init)
