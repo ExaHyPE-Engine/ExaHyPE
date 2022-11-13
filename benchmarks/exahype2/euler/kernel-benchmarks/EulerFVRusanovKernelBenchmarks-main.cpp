@@ -391,23 +391,38 @@ void submitSYCLKernels(int patches, int device, int thread) {
       );
       testStatelessVariantOnDevice(
         patches, device,
-        ::exahype2::fv::rusanov::sycl::timeStepWithRusanov_batched_heap_static_calls<EulerFVRusanov,EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch, 1, EulerFVRusanov::NumberOfUnknowns, EulerFVRusanov::NumberOfAuxiliaryVariables,exahype2::enumerator::AoSLexicographicEnumerator>,
-        "sycl, batched, AoS", thread
-      );
-      testStatelessVariantOnDevice(
-        patches, device,
         ::exahype2::fv::rusanov::sycl::timeStepWithRusanov_taskgraph_heap_static_calls<EulerFVRusanov,EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch, 1, EulerFVRusanov::NumberOfUnknowns, EulerFVRusanov::NumberOfAuxiliaryVariables,exahype2::enumerator::AoSoALexicographicEnumerator>,
         "sycl, task-graph, AoSoA", thread
       );
       testStatelessVariantOnDevice(
         patches, device,
-        ::exahype2::fv::rusanov::sycl::timeStepWithRusanov_batched_heap_static_calls<EulerFVRusanov,EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch, 1, EulerFVRusanov::NumberOfUnknowns, EulerFVRusanov::NumberOfAuxiliaryVariables,exahype2::enumerator::AoSoALexicographicEnumerator>,
-        "sycl, batched, AoSoA", thread
+        ::exahype2::fv::rusanov::sycl::timeStepWithRusanov_taskgraph_heap_static_calls<EulerFVRusanov,EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch, 1, EulerFVRusanov::NumberOfUnknowns, EulerFVRusanov::NumberOfAuxiliaryVariables,exahype2::enumerator::SoALexicographicEnumerator>,
+        "sycl, task-graph, SoA", thread
       );
       testStatelessVariantOnDevice(
         patches, device,
-        ::exahype2::fv::rusanov::sycl::timeStepWithRusanov_taskgraph_heap_static_calls<EulerFVRusanov,EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch, 1, EulerFVRusanov::NumberOfUnknowns, EulerFVRusanov::NumberOfAuxiliaryVariables,exahype2::enumerator::SoALexicographicEnumerator>,
-        "sycl, task-graph, SoA", thread
+        ::exahype2::fv::rusanov::sycl::timeStepWithRusanov_patchwise_heap_static_calls<EulerFVRusanov,EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch, 1, EulerFVRusanov::NumberOfUnknowns, EulerFVRusanov::NumberOfAuxiliaryVariables,exahype2::enumerator::AoSLexicographicEnumerator>,
+        "sycl, patch-wise, AoS", thread
+      );
+      testStatelessVariantOnDevice(
+        patches, device,
+        ::exahype2::fv::rusanov::sycl::timeStepWithRusanov_patchwise_heap_static_calls<EulerFVRusanov,EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch, 1, EulerFVRusanov::NumberOfUnknowns, EulerFVRusanov::NumberOfAuxiliaryVariables,exahype2::enumerator::AoSoALexicographicEnumerator>,
+        "sycl, patch-wise, AoSoA", thread
+      );
+      testStatelessVariantOnDevice(
+        patches, device,
+        ::exahype2::fv::rusanov::sycl::timeStepWithRusanov_patchwise_heap_static_calls<EulerFVRusanov,EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch, 1, EulerFVRusanov::NumberOfUnknowns, EulerFVRusanov::NumberOfAuxiliaryVariables,exahype2::enumerator::SoALexicographicEnumerator>,
+        "sycl, patch-wise, SoA", thread
+      );
+      testStatelessVariantOnDevice(
+        patches, device,
+        ::exahype2::fv::rusanov::sycl::timeStepWithRusanov_batched_heap_static_calls<EulerFVRusanov,EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch, 1, EulerFVRusanov::NumberOfUnknowns, EulerFVRusanov::NumberOfAuxiliaryVariables,exahype2::enumerator::AoSLexicographicEnumerator>,
+        "sycl, batched, AoS", thread
+      );
+      testStatelessVariantOnDevice(
+        patches, device,
+        ::exahype2::fv::rusanov::sycl::timeStepWithRusanov_batched_heap_static_calls<EulerFVRusanov,EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch, 1, EulerFVRusanov::NumberOfUnknowns, EulerFVRusanov::NumberOfAuxiliaryVariables,exahype2::enumerator::AoSoALexicographicEnumerator>,
+        "sycl, batched, AoSoA", thread
       );
       testStatelessVariantOnDevice(
         patches, device,
@@ -503,7 +518,7 @@ void runBenchmarksOnDevice(int patches, int device) {
   }
   #elif defined(SharedTBB) and defined(GPUOffloadingSYCL)
   ::tbb::task_group taskGroup;
-  for (int thread=1; thread<tarch::multicore::Core::getInstance().getNumberOfThreads(); thread++) {
+  for (int thread=0; thread<tarch::multicore::Core::getInstance().getNumberOfThreads(); thread++) {
     taskGroup.run(
       [=]() -> void {
         submitSYCLKernels(patches, device, thread);

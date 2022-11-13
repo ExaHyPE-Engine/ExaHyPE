@@ -8,14 +8,8 @@ namespace exahype2 {
   namespace fv {
     namespace rusanov {
       /**
-       * Read the docu of timeStepWithRusanov_batched_heap_static_calls()
-       * before you continue.
-       *
-       * The name sequential is a little bit irritating in a GPU context.
-       * What it means is that the code runs logically through the patches
-       * one by one and issues all kernel on one patch before it continues
-       * with the next one. Obviously, the patches are all independent of
-       * each other.
+       * Read the docu page "Rusanov ExaHyPE's Rusanov kernel implementation"
+       * (from Rusanov.h) before you continue.
        *
        * The realisation is thus very similar to timeStepWithRusanov_batched_heap_static_calls()
        * with one decisive difference: We do not build up a task graph for
@@ -87,10 +81,12 @@ namespace exahype2 {
          * then one to update with the eigenvalue damping (which depends on all previous steps), and
          * so forth.
          *
-         * Each individual step runs over all patches handed in. So the individual steps are
-         * relatively heavy, while the DAG exclusively represents logical steps of the underlying
-         * numerical scheme. I call the approach batched, as each individual logical step in the
-         * task graph runs over the batch of patches.
+         * Each individual step runs over all patches handed in. So the
+         * individual steps are relatively heavy, while the DAG exclusively
+         * represents logical steps of the underlying numerical scheme. It is a
+         * (trivial) sequence of steps. I call the approach batched, as each
+         * individual logical step in the task graph runs over the batch of patches.
+         *
          *
          * ## Memory management
          *
@@ -144,6 +140,28 @@ namespace exahype2 {
           typename TempDataEnumerator
         >
         static void timeStepWithRusanov_batched_heap_static_calls(
+          int                     targetDevice,
+          ::exahype2::CellData&   patchData,
+          bool                    evaluateFlux,
+          bool                    evaluateNonconservativeProduct,
+          bool                    evaluateSource,
+          bool                    evaluateMaximumEigenvalueAfterTimeStep
+        )
+        #if defined(UseManualInlining)
+        __attribute__((always_inline))
+        #endif
+        ;
+
+
+        template <
+          typename Solver,
+          std::size_t  numberOfVolumesPerAxisInPatch,
+          std::size_t  haloSize,
+          std::size_t  unknowns,
+          std::size_t  auxiliaryVariables,
+          typename TempDataEnumerator
+        >
+        static void timeStepWithRusanov_patchwise_heap_static_calls(
           int                     targetDevice,
           ::exahype2::CellData&   patchData,
           bool                    evaluateFlux,
