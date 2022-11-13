@@ -132,6 +132,7 @@ class ExplicitEulerFixedInteractionRadius(Particle):
                                          globaldata::{PARTICLE}::getSpecies().clearVelocity();
                                          """.replace( "{PARTICLE}", self.name ),
         unprepare_traversal_kernel     = """
+                                         globaldata::{PARTICLE}::getSpecies().allReduce();
                                          globaldata::{PARTICLE}::getSpecies().setTimeStamp( globaldata::{PARTICLE}::getSpecies().getMinTimeStamp() + globaldata::{PARTICLE}::getSpecies().getMinTimeStepSize(), false );
                                          ::swift2::statistics::reportCutOffRadiusVTDt<globaldata::{PARTICLE}>( "{PARTICLE}" );
                                          """.replace( "{PARTICLE}", self.name ),

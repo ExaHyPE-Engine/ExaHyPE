@@ -52,6 +52,18 @@ bool swift2::ParticleSpecies::rerunPreviousGridSweep() const {
 }
 
 
+void swift2::ParticleSpecies::clearRerunPreviousGridSweepFlag() {
+  _rerunPreviousGridSweep = false;
+}
+
+
+void swift2::ParticleSpecies::setRerunPreviousGridSweep() {
+  tarch::multicore::Lock lock(_semaphore);
+  _rerunPreviousGridSweep = true;
+}
+
+
+
 void swift2::ParticleSpecies::setTimeStepSize( double dtMin, double dtMax, bool reduceInsteadOfOverwrite ) {
   tarch::multicore::Lock lock(_semaphore);
   if (reduceInsteadOfOverwrite) {
@@ -145,3 +157,8 @@ void swift2::ParticleSpecies::finishTimeStep() {
 }
 
 
+void swift2::ParticleSpecies::allReduce() {
+  #ifdef Parallel
+  assertionMsg(false, "MPI reductions are missing so far");
+  #endif
+}
