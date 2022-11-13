@@ -1,4 +1,5 @@
 #include "tarch/Assertions.h"
+#include "tarch/logging/Statistics.h"
 
 #include "tarch/multicore/multicore.h"
 #include "tarch/multicore/Tasks.h"
@@ -27,6 +28,8 @@
 namespace {
   std::atomic<int> nonblockingTasksCounter          = 0;
 
+  const std::string BSPConcurrencyLevelStatisticsIdentifier( "tarch::multicore::bsp-concurrency-level" );
+
   /**
    * Native mapping of a task loop onto a task loop
    *
@@ -46,7 +49,7 @@ namespace {
       tasks.end(),
       [](auto&& item) -> void {
         #if !defined(GPUOffloadingCPP)
-        ::tarch::logging::Statistics::getInstance().inc( BSPTasksStatisticsIdentifier, 1.0, true );
+        ::tarch::logging::Statistics::getInstance().inc( BSPConcurrencyLevelStatisticsIdentifier, 1.0, true );
         #endif
         while (item->run()) {
           #if !defined(GPUOffloadingCPP)
@@ -55,7 +58,7 @@ namespace {
         }
         delete item;
         #if !defined(GPUOffloadingCPP)
-        ::tarch::logging::Statistics::getInstance().inc( BSPTasksStatisticsIdentifier, -1.0, true );
+        ::tarch::logging::Statistics::getInstance().inc( BSPConcurrencyLevelStatisticsIdentifier, -1.0, true );
         #endif
       }
     );
@@ -84,7 +87,7 @@ namespace {
       spawnedTasks++;
 
       #if !defined(GPUOffloadingCPP)
-      ::tarch::logging::Statistics::getInstance().inc( BSPTasksStatisticsIdentifier, 1.0, true );
+      ::tarch::logging::Statistics::getInstance().inc( BSPConcurrencyLevelStatisticsIdentifier, 1.0, true );
       #endif
       if (iterationCounter<tasks.size()) {
         while (tasks[iterationCounter]->run()) {
@@ -96,7 +99,7 @@ namespace {
       }
 
       #if !defined(GPUOffloadingCPP)
-      ::tarch::logging::Statistics::getInstance().inc( BSPTasksStatisticsIdentifier, -1.0, true );
+      ::tarch::logging::Statistics::getInstance().inc( BSPConcurrencyLevelStatisticsIdentifier, -1.0, true );
       #endif
 
       pendingTasks--;
@@ -128,9 +131,6 @@ namespace {
         else { // no local tasks left over
           tarch::multicore::internal::copyInternalTaskQueuesOverIntoGlobalQueue(threadNumber);
           const int numberOfTasksToProcess = std::max(1,tarch::multicore::getNumberOfPendingTasks(-1)/2);
-          #if !defined(GPUOffloadingCPP)
-          ::tarch::logging::Statistics::getInstance().log( BackfillWhileWaitingForBSPTasks, numberOfTasksToProcess );
-          #endif
           processedSomeTasks = tarch::multicore::processPendingTasks( numberOfTasksToProcess );
         }
       }

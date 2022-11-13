@@ -1,5 +1,6 @@
 #include "ApplySplit1DRiemannToPatchTest.h"
 
+#include "tarch/accelerator/accelerator.h"
 #include "tarch/multicore/multicore.h"
 #include "tarch/la/Vector.h"
 

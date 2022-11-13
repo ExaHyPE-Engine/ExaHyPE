@@ -6,8 +6,10 @@
 
 
 #include <cmath>
+#include "tarch/tarch.h"
 #include "tarch/compiler/CompilerSpecificSettings.h"
 #include "tarch/multicore/multicore.h"
+#include "tarch/accelerator/accelerator.h"
 
 
 namespace applications {

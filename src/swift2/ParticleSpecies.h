@@ -42,6 +42,8 @@ class swift2::ParticleSpecies {
 
     double _minVelocity;
     double _maxVelocity;
+
+    bool _rerunPreviousGridSweep;
   public:
     /**
      * Initialise all data with the data corresponding to a clear, i.e.
@@ -65,6 +67,8 @@ class swift2::ParticleSpecies {
 
     double getMinVelocity() const;
     double getMaxVelocity() const;
+
+    bool rerunPreviousGridSweep() const;
 
     /**
      * Set both min and max time stamp.

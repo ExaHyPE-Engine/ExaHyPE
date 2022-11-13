@@ -1,5 +1,6 @@
 #include "DynamicMatrix.h"
 #include "tarch/multicore/multicore.h"
+#include "tarch/accelerator/accelerator.h"
 
 
 #include <iostream>

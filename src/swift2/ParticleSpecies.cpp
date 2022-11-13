@@ -19,7 +19,8 @@ swift2::ParticleSpecies::ParticleSpecies():
   _minCutOffRadius(std::numeric_limits<double>::max()),
   _maxCutOffRadius(0.0),
   _minVelocity(std::numeric_limits<double>::max()),
-  _maxVelocity(0.0) {
+  _maxVelocity(0.0),
+  _rerunPreviousGridSweep(false) {
 }
 
 
@@ -43,6 +44,11 @@ void swift2::ParticleSpecies::setTimeStamp( double tMin, double tMax, bool reduc
 
 void swift2::ParticleSpecies::setTimeStepSize( double dt, bool reduceInsteadOfOverwrite ) {
   setTimeStepSize(dt,dt,reduceInsteadOfOverwrite);
+}
+
+
+bool swift2::ParticleSpecies::rerunPreviousGridSweep() const {
+  return _rerunPreviousGridSweep;
 }
 
 

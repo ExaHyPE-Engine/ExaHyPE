@@ -25,6 +25,14 @@ toolbox::loadbalancing::NoLoadBalancing  loadBalancer;
 {% endif -%}
 
 
+bool rerunPreviousGridSweep() {
+  bool result = false;
+  {% for PARTICLE in PARTICLE_SPECIES -%}
+  result |= globaldata::{{PARTICLE}}::getSpecies().rerunPreviousGridSweep();
+  {%- endfor %}
+  return result;
+}
+
 
 double getMinTimeStamp() {
   double result = std::numeric_limits<double>::max();

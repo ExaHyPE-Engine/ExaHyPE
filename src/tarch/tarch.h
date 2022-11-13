@@ -50,6 +50,16 @@ namespace tarch {
   int getTotalMemory(MemoryUsageFormat format);
 
   int getFreeMemory(MemoryUsageFormat format);
+
+  /**
+   * This is the marker that is to be used after the argument list of a
+   * function declaration.
+   */
+  #if defined(UseManualInlining)
+    #define InlineMethod __attribute__((always_inline))
+  #else
+    #define InlineMethod
+  #endif
 }
 
 

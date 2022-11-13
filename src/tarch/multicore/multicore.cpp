@@ -7,18 +7,6 @@
 #include "topology/topologies.h"
 #endif
 
-#ifndef SharedMemoryParallelisation
-
-double* tarch::allocateMemory(int size, MemoryLocation location) {
- return new (std::align_val_t(AlignmentOnHeap)) double[size];
-}
-
-
-void tarch::freeMemory(double* data, MemoryLocation location) {
-  delete[] data;
-}
-#endif
-
 
 void tarch::multicore::initSmartMPI() {
   #ifdef UseSmartMPI
@@ -42,27 +30,3 @@ void tarch::multicore::shutdownSmartMPI() {
   #endif
 }
 
-
-#if defined(GPUOffloadingOMP)
-
-#pragma omp declare target
-void tarch::gpuAbort() {
-}
-#pragma omp end declare target
-
-#elif defined(GPUOffloadingSYCL)
-
-GPUCallableMethod void tarch::gpuAbort() {
-}
-
-#elif defined(GPUOffloadingCPP)
-
-GPUCallableMethod void tarch::gpuAbort(){
-  std::abort();
-};
-
-#else
-void tarch::gpuAbort() {
-  std::abort();
-}
-#endif

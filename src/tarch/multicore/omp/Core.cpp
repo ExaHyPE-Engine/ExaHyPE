@@ -3,7 +3,6 @@
 #include "tarch/multicore/multicore.h"
 #include "tarch/compiler/CompilerSpecificSettings.h"
 
-#include "tarch/multicore/sycl/SYCL.h"
 
 
 #ifdef CompilerHasSysinfo
@@ -25,39 +24,10 @@
 
 tarch::logging::Log  tarch::multicore::Core::_log( "tarch::multicore::Core" );
 
-#if defined(GPUOffloadingOMP)
-bool checkOMPOffloading() {
-  bool canOffload = false;
-  #pragma omp target map(tofrom : canOffload)
-  {
-    if (!omp_is_initial_device()) {
-      canOffload = true;
-    }
-  }
-  return canOffload;
-}
-#endif
-
 tarch::multicore::Core::Core():
-  _numberOfThreads( omp_get_max_threads() ),
-  _numberOfDevices( 0 ) {
+  _numberOfThreads( omp_get_max_threads() ) {
+
   internal::configureInternalTaskQueues(_numberOfThreads);
-
-  #if defined(GPUOffloadingOMP)
-  _numberOfDevices = omp_get_num_devices();
-   /*if (!checkOMPOffloading()) {
-    std::cerr << "tarch was built with OpenMP GPU offloading support (--with-gpu=omp). "
-      "Either your chosen compiler does not support GPU offloading or your hardware does not have the required compute capability." << std::endl;
-    exit(-1);
-  }*/
-  #endif
-
-  #if defined(GPUOffloadingSYCL)
-  if (not tarch::multicore::SYCLQueuesAreCreated() ) {
-    initSYCLQueues( std::set<int>() );
-  }
-  _numberOfDevices = getNumberOfSYCLQueues();
-  #endif
 }
 
 
@@ -71,9 +41,7 @@ tarch::multicore::Core& tarch::multicore::Core::getInstance() {
 }
 
 
-void tarch::multicore::Core::configure( int numberOfThreads, const std::set<int>& devicesToUse ) {
-  _devicesToUse = devicesToUse;
-
+void tarch::multicore::Core::configure( int numberOfThreads) {
   if ( omp_get_num_procs() != omp_get_max_threads() ) {
     logWarning( "configure(int)", "omp_get_num_procs reports " << omp_get_num_procs() << " while omp_get_max_threads reports " << omp_get_max_threads() << ". Take smaller value to avoid overbooking" );
   }
@@ -114,12 +82,6 @@ bool tarch::multicore::Core::isInitialised() const {
 int tarch::multicore::Core::getNumberOfThreads() const {
   return _numberOfThreads;
 }
-
-
-int tarch::multicore::Core::getNumberOfGPUs() const {
-  return _numberOfDevices;
-}
-
 
 int tarch::multicore::Core::getThreadNumber() const {
   return omp_get_thread_num();
