@@ -156,31 +156,44 @@ namespace exahype2 {
         #endif
         ;
 
-        namespace helper {
-          #if defined(GPUOffloadingOMP)
-          /**
-           * On the GPU, we don't need any of exahype2::CellData's fancy routines or
-           * dynamic data management. We simply have to be able to create a struct
-           * on the accelerator, which we then befill with the required pointers
-           * which we copy over from the host.
-           *
-           * Therefore, this class is a mere copy of exahype2::CellData without any
-           * of its routines. The only different to the host variant (from a data
-           * field point of view) is that numberOfCells is not const.
-           */
-          #pragma omp declare target
-          struct OpenMPGPUCellData {
-            double**   QIn;
-            tarch::la::Vector<Dimensions,double>*   patchCentre;
-            tarch::la::Vector<Dimensions,double>*   patchSize;
-            double*    t;
-            double*    dt;
-            int        numberOfCells;
-            double**   QOut;
-            double*    maxEigenvalue;
-          };
-          #pragma omp end declare target
-          #endif
+
+        /**
+         * Dummy version delegating to one well-defined proper kernel. By
+         * offering such a routine, we can generate generic compute code
+         * in Python without knowing which kernel variants are on offer for
+         * a particular GPU backend.
+         */
+        template <
+          typename Solver,
+          int      numberOfVolumesPerAxisInPatch,
+          int      haloSize,
+          int      unknowns,
+          int      auxiliaryVariables,
+          typename TempDataEnumerator
+        >
+        static void timeStepWithRusanov_generic_static_calls(
+          int                     targetDevice,
+          ::exahype2::CellData&   patchData,
+          bool                    evaluateFlux,
+          bool                    evaluateNonconservativeProduct,
+          bool                    evaluateSource,
+          bool                    evaluateMaximumEigenvalueAfterTimeStep
+        ) {
+          timeStepWithRusanov_taskgraph_heap_static_calls<
+            Solver,
+            numberOfVolumesPerAxisInPatch,
+            haloSize,
+            unknowns,
+            auxiliaryVariables,
+            TempDataEnumerator
+          >(
+            targetDevice,
+            patchData,
+            evaluateFlux,
+            evaluateNonconservativeProduct,
+            evaluateSource,
+            evaluateMaximumEigenvalueAfterTimeStep
+          );
         }
       }
     }
@@ -190,5 +203,6 @@ namespace exahype2 {
 
 #include "Rusanov_taskgraph_heap_static_calls.cpph"
 #include "Rusanov_batched_heap_static_calls.cpph"
+#include "Rusanov_patchwise_heap_static_calls.cpph"
 
 #endif
