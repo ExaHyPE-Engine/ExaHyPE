@@ -257,7 +257,7 @@ void runBenchmarksOnHost(int patches) {
   for (int thread=0; thread<tarch::multicore::Core::getInstance().getNumberOfThreads(); thread++) {
 #elif defined(SharedTBB)
   ::tbb::task_group taskGroup;
-  for (int hostTask=1; hostTask<MaxHostTasks; hostTask++) {
+  for (int thread=1; thread<tarch::multicore::Core::getInstance().getNumberOfThreads(); thread++) {
     taskGroup.run(
       [&]() -> void {
 #elif defined(SharedCPP)
@@ -308,7 +308,6 @@ void runBenchmarksOnHost(int patches) {
 #if defined(SharedOMP)
   }
 #elif defined(SharedTBB)
-      });
     });
   }
   taskGroup.wait();
@@ -391,7 +390,7 @@ void runBenchmarksOnDevice(int patches, int device) {
     }
   };
 
-#if defined(SharedOMP) and defined(GPUOffloadingOMP)
+  #if defined(SharedOMP) and defined(GPUOffloadingOMP)
   #pragma omp parallel for
   for (int thread=0; thread<tarch::multicore::Core::getInstance().getNumberOfThreads(); thread++) {
     testStatelessVariantOnDevice(
@@ -446,14 +445,17 @@ void runBenchmarksOnDevice(int patches, int device) {
       "omp, batched, SoA, user-managed-memory", thread
     );
   }
-#elif defined(SharedTBB) and defined(GPUOffloadingSYCL)
+  #elif defined(SharedTBB) and defined(GPUOffloadingSYCL)
   ::tbb::task_group taskGroup;
-  for (int hostTask=1; hostTask<MaxHostTasks; hostTask++) {
+  for (int thread=1; thread<tarch::multicore::Core::getInstance().getNumberOfThreads(); thread++) {
     taskGroup.run(
       [&]() -> void {
-#elif defined(SharedCPP)
-  #error Not implemented yet
-#elif defined(SharedSYCL) and defined(GPUOffloadingSYCL)
+
+      }
+    );
+  }
+  taskGroup.wait();
+  #elif defined(SharedSYCL) and defined(GPUOffloadingSYCL)
   for (int thread=0; thread<tarch::multicore::Core::getInstance().getNumberOfThreads(); thread++) {
     tarch::multicore::getSYCLQueue(tarch::multicore::Core::HostDevice).submit([&](auto &h) {
       h.host_task([=]() {
@@ -482,64 +484,14 @@ void runBenchmarksOnDevice(int patches, int device) {
           "sycl, batched, SoA", thread
         );
       });
-    });
+    }
   }
   tarch::multicore::getSYCLQueue(tarch::multicore::Core::HostDevice).wait();
-#endif
-
-  /*
-  }
+  #elif defined(SharedCPP)
+  #error Not implemented yet
   #endif
-
-  #if defined(GPUOffloadingCPP)
-  if ( tarch::multicore::Core::getInstance().getNumberOfGPUs()==0 ) {
-    logWarning( "main()", "no device found" );
-  }
-  for (int device=0; device<tarch::multicore::Core::getInstance().getNumberOfGPUs(); device++) {
-    logInfo( "main()", "device " << device );
-    testStatelessVariantOnDevice(
-      device,
-      ::exahype2::fv::rusanov::cpp::timeStepWithRusanov_patchwise_heap_static_calls<EulerFVRusanov,EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch, 1, EulerFVRusanov::NumberOfUnknowns, EulerFVRusanov::NumberOfAuxiliaryVariables,exahype2::enumerator::AoSLexicographicEnumerator>,
-      "cpp, patch-wise, AoS", true
-    );
-    testStatelessVariantOnDevice(
-      device,
-      ::exahype2::fv::rusanov::cpp::timeStepWithRusanov_batched_heap_static_calls<EulerFVRusanov,EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch, 1, EulerFVRusanov::NumberOfUnknowns, EulerFVRusanov::NumberOfAuxiliaryVariables,exahype2::enumerator::AoSLexicographicEnumerator>,
-      "cpp, batched, AoS", true
-    );
-    testStatelessVariantOnDevice(
-      device,
-      ::exahype2::fv::rusanov::cpp::timeStepWithRusanov_patchwise_heap_static_calls<EulerFVRusanov,EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch, 1, EulerFVRusanov::NumberOfUnknowns, EulerFVRusanov::NumberOfAuxiliaryVariables,exahype2::enumerator::AoSoALexicographicEnumerator>,
-      "cpp, patch-wise, AoSoA", true
-    );
-    testStatelessVariantOnDevice(
-      device,
-      ::exahype2::fv::rusanov::cpp::timeStepWithRusanov_batched_heap_static_calls<EulerFVRusanov,EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch, 1, EulerFVRusanov::NumberOfUnknowns, EulerFVRusanov::NumberOfAuxiliaryVariables,exahype2::enumerator::AoSoALexicographicEnumerator>,
-      "cpp, batched, AoSoA", true
-    );
-    testStatelessVariantOnDevice(
-      device,
-      ::exahype2::fv::rusanov::cpp::timeStepWithRusanov_patchwise_heap_static_calls<EulerFVRusanov,EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch, 1, EulerFVRusanov::NumberOfUnknowns, EulerFVRusanov::NumberOfAuxiliaryVariables,exahype2::enumerator::SoALexicographicEnumerator>,
-      "cpp, patch-wise, SoA", true
-    );
-    testStatelessVariantOnDevice(
-      device,
-      ::exahype2::fv::rusanov::cpp::timeStepWithRusanov_batched_heap_static_calls<EulerFVRusanov,EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch, 1, EulerFVRusanov::NumberOfUnknowns, EulerFVRusanov::NumberOfAuxiliaryVariables,exahype2::enumerator::SoALexicographicEnumerator>,
-      "cpp, batched, SoA", true
-    );
-  }
-  #endif
-
-  #if defined(GPUOffloadingSYCL)
-  if ( tarch::multicore::Core::getInstance().getNumberOfGPUs()==0 ) {
-    logWarning( "main()", "no device found" );
-  }
-  for (int device=0; device<tarch::multicore::Core::getInstance().getNumberOfGPUs(); device++) {
-    logInfo( "main()", "device " << device );
-  }
-  #endif
-*/
 }
+
 
 int main(int argc, char** argv) {
   const int ExitCodeSuccess          = 0;
@@ -602,12 +554,7 @@ int main(int argc, char** argv) {
 
     runBenchmarksOnHost(patches);
 
-    // Only with SYCL, we might run task assemblies on the host, too
-    #if defined(GPUOffloadingSYCL)
-    for (int device=tarch::multicore::Core::HostDevice; device<tarch::accelerator::Device::getInstance().getNumberOfDevices(); device++) {
-    #else
     for (int device=0; device<tarch::accelerator::Device::getInstance().getNumberOfDevices(); device++) {
-    #endif
       std::stringstream msg;
       msg << "benchmark-" << patches << "-" << device;
 
