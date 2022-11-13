@@ -10,7 +10,7 @@
 #include "exahype2/enumerator/AoSoALexicographicEnumerator.h"
 
 #include "tarch/multicore/multicore.h"
-
+#include "tarch/accelerator/accelerator.h"
 
 namespace exahype2 {
   namespace fv {

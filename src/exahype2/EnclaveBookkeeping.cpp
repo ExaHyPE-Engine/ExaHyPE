@@ -6,6 +6,7 @@
 #include "tarch/multicore/Core.h"
 #include "tarch/multicore/Tasks.h"
 #include "tarch/multicore/otter.h"
+#include "tarch/accelerator/Device.h"
 
 #include "tarch/logging/Statistics.h"
 

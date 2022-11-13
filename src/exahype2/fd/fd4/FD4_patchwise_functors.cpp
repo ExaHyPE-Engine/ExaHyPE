@@ -1,4 +1,5 @@
 #include "FD4.h"
+#include "tarch/accelerator/accelerator.h"
 #include "tarch/multicore/otter.h"
 #include "exahype2/fd/LoopBody.h"
 #include "exahype2/fd/fd4/LoopBody.h"

@@ -1,8 +1,10 @@
-#ifndef _EXAHYPE2_ADERDG_KERNEL_UTILS_H_
-#define _EXAHYPE2_ADERDG_KERNEL_UTILS_H_
+// This file is part of the Peano project. For conditions of distribution and
+// use, please see the copyright notice at www.peano-framework.org
+#pragma once
 
 #include "tarch/la/Vector.h"
-#include "tarch/multicore/sycl/SYCL.h"
+#include "tarch/accelerator/accelerator.h"
+
 
 #define FLCoeff(i) FLCoeff[i]
 #define FRCoeff(i) FLCoeff[nodesPerAxis-1-i]
@@ -327,4 +329,4 @@ namespace exahype2 {
   } // aderdg
 } // exahype2
 
-#endif
+

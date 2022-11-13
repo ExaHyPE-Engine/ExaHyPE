@@ -1,6 +1,7 @@
 #include "BackfillAndDeployRoundRobin.h"
 #include "tarch/multicore/Tasks.h"
 #include "tarch/multicore/Core.h"
+#include "tarch/accelerator/Device.h"
 #include <limits>
 
 
@@ -14,12 +15,12 @@ tarch::multicore::orchestration::BackfillAndDeployRoundRobin::BackfillAndDeployR
 
 
 void tarch::multicore::orchestration::BackfillAndDeployRoundRobin::toggleDevice() {
-  if ( tarch::multicore::Core::getInstance().getNumberOfGPUs()==0 ) {
+  if ( tarch::accelerator::Device::getInstance().getNumberOfDevices()==0 ) {
     _nextDeviceToUse = Task::Host;
   }
   else {
     _nextDeviceToUse++;
-    _nextDeviceToUse = _nextDeviceToUse % tarch::multicore::Core::getInstance().getNumberOfGPUs();
+    _nextDeviceToUse = _nextDeviceToUse % tarch::accelerator::Device::getInstance().getNumberOfDevices();
   }
 }
 

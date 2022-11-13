@@ -1,7 +1,6 @@
 // This file is part of the Peano project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
-#ifndef _TARCH_MULTICORE_CORE_H_
-#define _TARCH_MULTICORE_CORE_H_
+#pragma once
 
 
 #include <thread>
@@ -61,8 +60,6 @@ class tarch::multicore::Core {
     Core();
 
     int               _numberOfThreads;
-    int               _numberOfDevices;
-    std::set<int>     _devicesToUse;
   public:
     /**
      * The default is what the system management typically gives you. So if
@@ -72,13 +69,6 @@ class tarch::multicore::Core {
      * Multiply with two to exploit hyperthreading.
      */
     static constexpr int UseDefaultNumberOfThreads         = 0;
-
-    /**
-     * Accelerator devices (GPUs) are enumerated starting from 0. If you argue
-     * where to offload tasks and want to pick the host, then pass in this
-     * constant instead.
-     */
-    static constexpr int HostDevice = -1;
 
     /**
      * Destructor
@@ -99,24 +89,6 @@ class tarch::multicore::Core {
      * should not/can not be used. Use the helper function
      * getNumberOfUnmaskedThreads().
      *
-     * ## TBB
-     *
-     * In the TBB context, the GPU setting are ignored. If you however combine
-     * TBB with SYCL, then the SYCL policies (see below) hold.
-     *
-     * ## OpenMP
-     *
-     * By default, OpenMP makes all devices visible to the user.
-     *
-     * ## SYCL
-     *
-     * In SYCL, you cannot alter the core count atm on the node. Obviously,
-     * we could split the queue on the host according to this spec, but then
-     * we'd end up with some cores idling. So we do not support resetting the
-     * thread count on the host with SYCL.
-     *
-     * By default, SYCL makes no device visible to the user. You have to call
-     * configure() manually to make GPUs available to Peano.
      *
      *
      *
@@ -125,7 +97,7 @@ class tarch::multicore::Core {
      *        of threads) or it equals DefaultNumberOfThreads which means that the code should
      *        use the default number of threads.
      */
-    void configure( int numberOfThreads = UseDefaultNumberOfThreads, const std::set<int>& devicesToUse = {} );
+    void configure( int numberOfThreads = UseDefaultNumberOfThreads );
 
     /**
      * Shutdown parallel environment.
@@ -147,15 +119,6 @@ class tarch::multicore::Core {
     int getNumberOfThreads() const;
 
     /**
-     * Return the number of GPUs that are available. It is then Peano's policy
-     * that you access these GPUs with numbers from 0 to ... We work with
-     * logical GPU numbers, i.e. they might be mapped onto different numbers
-     * internally. How this mapping is realised however is strongly depending
-     * on the used GPU backend.
-     */
-    int getNumberOfGPUs() const;
-
-    /**
      * @return Physical core the process is running on
      */
     int getCoreNumber() const;
@@ -165,6 +128,3 @@ class tarch::multicore::Core {
      */
     int getThreadNumber() const;
 };
-
-
-#endif

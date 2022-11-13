@@ -15,6 +15,7 @@
 
 #include "tarch/la/Vector.h"
 #include "tarch/multicore/BooleanSemaphore.h"
+#include "tarch/accelerator/accelerator.h"
 
 #include "peano4/utils/Globals.h"
 

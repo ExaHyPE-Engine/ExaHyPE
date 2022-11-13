@@ -4,8 +4,6 @@
 #include "tarch/multicore/multicore.h"
 #include "tarch/compiler/CompilerSpecificSettings.h"
 
-#include "tarch/multicore/sycl/SYCL.h"
-
 
 #ifdef CompilerHasSysinfo
 #include <sched.h>
@@ -37,15 +35,8 @@ tarch::logging::Log tarch::multicore::Core::_log( "tarch::multicore::Core" );
 
 
 tarch::multicore::Core::Core():
-  _numberOfThreads( ::tbb::info::default_concurrency() ),
-  _numberOfDevices( 0 ) {
+  _numberOfThreads( ::tbb::info::default_concurrency() ) {
   internal::configureInternalTaskQueues(_numberOfThreads);
-  #if defined(GPUOffloadingSYCL)
-  if (not tarch::multicore::SYCLQueuesAreCreated() ) {
-    initSYCLQueues( std::set<int>() );
-  }
-  _numberOfDevices = getNumberOfSYCLQueues();
-  #endif
 }
 
 
@@ -59,9 +50,7 @@ tarch::multicore::Core& tarch::multicore::Core::getInstance() {
 }
 
 
-void tarch::multicore::Core::configure( int numberOfThreads, const std::set<int>& devicesToUse ) {
-  _devicesToUse = devicesToUse;
-
+void tarch::multicore::Core::configure( int numberOfThreads ) {
   if (globalControl!=nullptr) delete globalControl;
   globalControl = nullptr;
   if (numberOfThreads != UseDefaultNumberOfThreads) {
@@ -97,11 +86,6 @@ int tarch::multicore::Core::getNumberOfThreads() const {
 }
 
 
-int tarch::multicore::Core::getNumberOfGPUs() const {
-  return _numberOfDevices;
-}
-
-
 int tarch::multicore::Core::getCoreNumber() const {
   #ifdef CompilerHasSysinfo
   return sched_getcpu();
@@ -115,13 +99,6 @@ int tarch::multicore::Core::getCoreNumber() const {
 int tarch::multicore::Core::getThreadNumber() const {
   return tbb::this_task_arena::current_thread_index();
 }
-
-
-/*
-bool tarch::multicore::Core::isDeviceAvailable(int number) const {
-  return number==HostDevice or _devicesToUse.empty() or _devicesToUse.count(number)>0;
-}
-*/
 
 
 #endif
