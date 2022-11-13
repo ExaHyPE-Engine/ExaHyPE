@@ -257,9 +257,9 @@ void runBenchmarksOnHost(int patches) {
   for (int thread=0; thread<tarch::multicore::Core::getInstance().getNumberOfThreads(); thread++) {
 #elif defined(SharedTBB)
   ::tbb::task_group taskGroup;
-  for (int thread=1; thread<tarch::multicore::Core::getInstance().getNumberOfThreads(); thread++) {
+  for (int thread=0; thread<tarch::multicore::Core::getInstance().getNumberOfThreads(); thread++) {
     taskGroup.run(
-      [&]() -> void {
+      [=]() -> void {
 #elif defined(SharedCPP)
   #error Not implemented yet
 #elif defined(SharedSYCL)

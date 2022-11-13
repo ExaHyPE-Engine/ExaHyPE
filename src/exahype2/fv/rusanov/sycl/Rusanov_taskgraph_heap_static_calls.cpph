@@ -1,10 +1,9 @@
 #include "Rusanov.h"
 #include "GPUCellData.h"
+#include "tarch/accelerator/accelerator.h"
 #include "tarch/compiler/CompilerSpecificSettings.h"
 #include "exahype2/fv/rusanov/LoopBody.h"
 
-
-#include "tarch/multicore/sycl/SYCL.h"
 
 
 template <
@@ -24,7 +23,7 @@ void exahype2::fv::rusanov::sycl::timeStepWithRusanov_taskgraph_heap_static_call
   bool                    evaluateMaximumEigenvalueAfterTimeStep
 ) {
   #if defined(GPUOffloadingSYCL)
-  ::sycl::queue& queue = tarch::multicore::getSYCLQueue(targetDevice);
+  ::sycl::queue& queue = tarch::accelerator::getSYCLQueue(targetDevice);
 
   constexpr int solversHaloSize        = 1;
 

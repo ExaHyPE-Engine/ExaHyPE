@@ -2,10 +2,9 @@
 #include "Rusanov.h"
 #include "GPUCellData.h"
 #include "tarch/compiler/CompilerSpecificSettings.h"
+#include "tarch/accelerator/accelerator.h"
 #include "exahype2/fv/rusanov/LoopBody.h"
 
-
-#include "tarch/multicore/sycl/SYCL.h"
 
 
 template <
