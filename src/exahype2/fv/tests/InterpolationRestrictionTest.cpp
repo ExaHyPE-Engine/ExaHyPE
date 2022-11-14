@@ -155,11 +155,6 @@ void exahype2::fv::tests::InterpolationRestrictionTest::testAverageRestriction()
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1.0/3.0, 1.0/3.0, 1.0/3.0 
   };
 
-  peano4::grid::GridTraversalEvent    dummEvent;
-  dummEvent.setRelativePositionToFather( {0,0} );
-  peano4::datamanagement::FaceMarker  marker(dummEvent);
-  marker.select(0);
-
   {
     double  fineGridFaceValues[] = {
       0.1,-0.1, 0.2,-0.2, 0.3,-0.3,    0.0,0.0, 0.0,0.0, 0.0,0.0,
@@ -224,6 +219,6 @@ void exahype2::fv::tests::InterpolationRestrictionTest::testAverageRestriction()
       }
       std::cout<<"\n";
     }
-*/
+
   }
 }
