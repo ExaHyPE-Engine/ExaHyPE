@@ -6,10 +6,6 @@ tarch::logging::Log  tarch::accelerator::Device::_log( "tarch::accelerator::Devi
 
 
 #if defined(GPUOffloadingOff)
-void tarch::gpuAbort() {
-  std::abort();
-}
-
 
 tarch::accelerator::Device::Device() {
 }

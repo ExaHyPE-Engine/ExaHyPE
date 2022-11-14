@@ -1,16 +1,20 @@
 #include "tarch/accelerator/Device.h"
 #include "tarch/compiler/CompilerSpecificSettings.h"
 
-
+#include <omp.h>
 
 #if defined(GPUOffloadingOMP)
 
-
-#pragma omp declare target
-void tarch::gpuAbort() {
+bool checkOMPOffloading() {
+  bool canOffload = false;
+  #pragma omp target map(tofrom : canOffload)
+  {
+    if (!omp_is_initial_device()) {
+      canOffload = true;
+    }
+  }
+  return canOffload;
 }
-#pragma omp end declare target
-
 
 namespace {
   int numberOfDevices;

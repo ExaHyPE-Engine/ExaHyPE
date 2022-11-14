@@ -147,13 +147,22 @@ void exahype2::fv::tests::InterpolationRestrictionTest::testAverageRestriction()
     3.0,     -2.0,    0.0,     0.0, 0.0, 0.0,
     1.0/3.0, 1.0/3.0, 1.0/3.0, 0.0, 0.0, 0.0
   };
-  static constexpr double  TangentialRestrictionMatrix1d[] = { //5 \times 15 matrix
+  static constexpr double  TangentialRestrictionMatrix1d[] = {
     1.0/3.0, 1.0/3.0, 1.0/3.0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
     0, 0, 0, 1.0/3.0, 1.0/3.0, 1.0/3.0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
     0, 0, 0, 0, 0, 0, 1.0/3.0, 1.0/3.0, 1.0/3.0, 0, 0, 0, 0, 0, 0,  
     0, 0, 0, 0, 0, 0, 0, 0, 0, 1.0/3.0, 1.0/3.0, 1.0/3.0, 0, 0, 0, 
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1.0/3.0, 1.0/3.0, 1.0/3.0 
   };
+
+  peano4::grid::GridTraversalEvent    dummEvent;
+  #if Dimension==2
+  dummEvent.setRelativePositionToFather( {0,0} );
+  #else
+  dummEvent.setRelativePositionToFather( {0,0,0} );
+  #endif
+  peano4::datamanagement::FaceMarker  marker(dummEvent);
+  marker.select(0);
 
   {
     double  fineGridFaceValues[] = {
@@ -166,10 +175,8 @@ void exahype2::fv::tests::InterpolationRestrictionTest::testAverageRestriction()
     double  coarseGridFaceValues[ 3*5*2*2 ]; // three width, five dofs per axis, two unknowns, two sides
     std::fill_n(coarseGridFaceValues, 3*5*2*2, 0.0 );
 
-    peano4::grid::GridTraversalEvent    dummEvent;
-    dummEvent.setRelativePositionToFather( {0,0} );
     peano4::datamanagement::FaceMarker  marker1(dummEvent);
-    marker1.select(0);
+    marker1.select(Dimensions);
 
     ::toolbox::blockstructured::restrictHaloLayer_AoS_tensor_product(
       marker1,
@@ -182,7 +189,13 @@ void exahype2::fv::tests::InterpolationRestrictionTest::testAverageRestriction()
       coarseGridFaceValues
     );
 
+    validateNumericalEquals( fineGridFaceValues[15*2+0],  0.1 );
+
+    #if Dimension==2
     dummEvent.setRelativePositionToFather( {0,1} );
+    #else
+    dummEvent.setRelativePositionToFather( {0,1,0} );
+    #endif
     peano4::datamanagement::FaceMarker  marker2(dummEvent);
     marker2.select(0);
     
@@ -197,7 +210,11 @@ void exahype2::fv::tests::InterpolationRestrictionTest::testAverageRestriction()
       coarseGridFaceValues
     );
 
+    #if Dimension==2
     dummEvent.setRelativePositionToFather( {0,2} );
+    #else
+    dummEvent.setRelativePositionToFather( {0,2,0} );
+    #endif
     peano4::datamanagement::FaceMarker  marker3(dummEvent);
     marker3.select(0);
     
@@ -211,6 +228,7 @@ void exahype2::fv::tests::InterpolationRestrictionTest::testAverageRestriction()
       fineGridFaceValues,
       coarseGridFaceValues
     );
+
 /*
     std::cout<<std::setprecision(1);
     for (int i=0;i<5;i++){
@@ -219,6 +237,8 @@ void exahype2::fv::tests::InterpolationRestrictionTest::testAverageRestriction()
       }
       std::cout<<"\n";
     }
+*/
 
+    validateNumericalEquals( fineGridFaceValues[15*2+0],  0.1 );
   }
 }

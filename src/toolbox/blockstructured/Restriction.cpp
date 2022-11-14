@@ -34,10 +34,26 @@ void toolbox::blockstructured::restrictHaloLayer_AoS_tensor_product(
   double*                                   fineGridValues,
   double*                                   coarseGridValues
 ) {
-  logTraceInWith3Arguments( "restrictHaloLayer_AoS_tensor_product(...)", marker.toString(), numberOfDoFsPerAxisInPatch, overlap );
+  restrictInnerHalfOfHaloLayer_AoS_tensor_product( marker, numberOfDoFsPerAxisInPatch, overlap, unknowns, normalRestrictionMatrix1d, tangentialRestrictionMatrix1d, fineGridValues, coarseGridValues, false );
+  restrictInnerHalfOfHaloLayer_AoS_tensor_product( marker, numberOfDoFsPerAxisInPatch, overlap, unknowns, normalRestrictionMatrix1d, tangentialRestrictionMatrix1d, fineGridValues, coarseGridValues, false );
+}
+
+
+void toolbox::blockstructured::restrictInnerHalfOfHaloLayer_AoS_tensor_product(
+  const peano4::datamanagement::FaceMarker& marker,
+  int                                       numberOfDoFsPerAxisInPatch,
+  int                                       overlap,
+  int                                       unknowns,
+  const double* __restrict__                normalRestrictionMatrix1d,
+  const double* __restrict__                tangentialRestrictionMatrix1d,
+  double*                                   fineGridValues,
+  double*                                   coarseGridValues,
+  bool                                      swapInsideOutside
+) {
+  logTraceInWith3Arguments( "restrictInnerHalfOfHaloLayer_AoS_tensor_product(...)", marker.toString(), numberOfDoFsPerAxisInPatch, overlap );
 
   const int    normal          = marker.getSelectedFaceNumber() % Dimensions;
-  const int    leftRightOffset = marker.getSelectedFaceNumber() < Dimensions ? 0 : overlap;
+  const int    leftRightOffset = (marker.getSelectedFaceNumber() >= Dimensions ? 0 : overlap) xor swapInsideOutside;
 
   dfore(kCoarse,numberOfDoFsPerAxisInPatch,normal,0) {
     for (int iCoarse=leftRightOffset;   iCoarse<leftRightOffset+overlap;   iCoarse++) {
@@ -71,7 +87,7 @@ void toolbox::blockstructured::restrictHaloLayer_AoS_tensor_product(
               assertion4(col>=0,row,col,src,dest);
               assertion4(row>=0,row,col,src,dest);
               int index = col + row * 2 * overlap;
-              logDebug( "restrictHaloLayer_AoS_tensor_product(...)", "(" << row << "," << col << ")=" << index << " (normal contribution)");
+              logDebug( "restrictInnerHalfOfHaloLayer_AoS_tensor_product(...)", "(" << row << "," << col << ")=" << index << " (normal contribution)");
               weight *= normalRestrictionMatrix1d[ index ];
             }
             else {
@@ -85,7 +101,7 @@ void toolbox::blockstructured::restrictHaloLayer_AoS_tensor_product(
             }
           }
 
-          logDebug( "restrictHaloLayer_AoS_tensor_product(...)", "add dof " << src << " to " << dest << " with weight " << weight );
+          logDebug( "restrictInnerHalfOfHaloLayer_AoS_tensor_product(...)", "add dof " << src << " to " << dest << " with weight " << weight );
 
           for (int unknown=0; unknown<unknowns; unknown++) {
             coarseGridValues[destLinearised*unknowns+unknown] += weight * fineGridValues[srcLinearised*unknowns+unknown];
@@ -95,22 +111,7 @@ void toolbox::blockstructured::restrictHaloLayer_AoS_tensor_product(
     }
   }
 
-  logTraceOut( "restrictHaloLayer_AoS_tensor_product(...)" );
-}
-
-
-void toolbox::blockstructured::restrictInnerHalfOfHaloLayer_AoS_tensor_product(
-  const peano4::datamanagement::FaceMarker& marker,
-  int                                       numberOfDoFsPerAxisInPatch,
-  int                                       overlap,
-  int                                       unknowns,
-  const double* __restrict__                normalRestrictionMatrix1d,
-  const double* __restrict__                tangentialRestrictionMatrix1d,
-  double*                                   fineGridValues,
-  double*                                   coarseGridValues,
-  bool                                      swapInsideOutside
-) {
-  assertionMsg( false, "@Han, we have to implement this one" );
+  logTraceOut( "restrictInnerHalfOfHaloLayer_AoS_tensor_product(...)" );
 }
 
 

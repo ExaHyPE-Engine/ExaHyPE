@@ -15,6 +15,8 @@
 #include "tarch/logging/LogFilter.h"
 #include "tarch/multicore/multicore.h"
 #include "tarch/multicore/Core.h"
+#include "tarch/accelerator/accelerator.h"
+#include "tarch/accelerator/Device.h"
 #include "tarch/timing/Watch.h"
 #include "tarch/timing/Measurement.h"
 
@@ -580,7 +582,7 @@ int main(int argc, char** argv) {
   const bool isPeanoComputeNode = not tarch::mpi::Rank::getInstance().isGlobalMaster();
 
   #if defined(GPUOffloadingSYCL)
-  if ( tarch::multicore::Core::getInstance().getNumberOfGPUs()>0 ) {
+  if ( tarch::accelerator::Device::getInstance().getNumberOfDevices()>0 ) {
     logWarning( "main()", "you might have to set ZE_SERIALIZE=1|2|3 before you start the benchmark" );
   }
   #endif
@@ -602,9 +604,9 @@ int main(int argc, char** argv) {
 
     // Only with SYCL, we might run task assemblies on the host, too
     #if defined(GPUOffloadingSYCL)
-    for (int device=tarch::multicore::Core::HostDevice; device<tarch::multicore::Core::getInstance().getNumberOfGPUs(); device++) {
+    for (int device=tarch::multicore::Core::HostDevice; device<tarch::accelerator::Device::getInstance().getNumberOfDevices(); device++) {
     #else
-    for (int device=0; device<tarch::multicore::Core::getInstance().getNumberOfGPUs(); device++) {
+    for (int device=0; device<tarch::accelerator::Device::getInstance().getNumberOfDevices(); device++) {
     #endif
       std::stringstream msg;
       msg << "benchmark-" << patches << "-" << device;

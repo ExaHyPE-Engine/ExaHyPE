@@ -1,5 +1,6 @@
 #include "Rusanov.h"
 #include "tarch/compiler/CompilerSpecificSettings.h"
+#include "tarch/accelerator/omp/GPUMemoryManager.h"
 #include "exahype2/fv/rusanov/LoopBody.h"
 
 template <
