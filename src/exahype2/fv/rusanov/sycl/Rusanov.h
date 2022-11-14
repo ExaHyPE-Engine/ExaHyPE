@@ -4,12 +4,15 @@
 #define _EXAHYPE2_FV_RUSANOV_SYCL_RUSANOV_H_
 
 
+
+
 namespace exahype2 {
   namespace fv {
     namespace rusanov {
       /**
        * Read the docu page "Rusanov ExaHyPE's Rusanov kernel implementation"
-       * (from Rusanov.h) before you continue.
+       * (from Rusanov.h) before you continue. I also recommend that you study
+       * timeStepWithRusanov_batched_heap_static_calls() first.
        *
        * The realisation is thus very similar to timeStepWithRusanov_batched_heap_static_calls()
        * with one decisive difference: We do not build up a task graph for
@@ -153,6 +156,37 @@ namespace exahype2 {
         ;
 
 
+        /**
+         * 1:1 translation of the numerical scheme.
+         *
+         * We grab the SYCL queue that we want to use (Peano puts one SYCL
+         * queue on each available device and enumerates them logically
+         * starting from 0). Next, we create enumerators which are simply
+         * classes that translate multidimensional indices into an integer.
+         * As we use enumerators which are template arguments, we can
+         * quickly exchange SoA with AoS for example. Once the enumerators
+         * are in place, we allocate the memory for all temporary data on
+         * the device.
+         *
+         * This implementation is called patch-wise. This means that we have
+         * a big outer loop which runs over all the patches. If we had a
+         * sequential accelerator, this would handle one patch after the
+         * other, i.e. process the patches patch-wisely. As these loop steps
+         * are independent of each other, we can use a parallel for.
+         *
+         * Per patch, we then run through the numerical steps and issue
+         * (nested) parallel fors.
+         *
+         * ## Flaws
+         *
+         * - We would like to use higher-dimensional range loops.
+         * - This version seems to crash from time to time. I assume it is
+         *   due to the fact that the parallel fors have different range
+         *   dimensions.
+         *
+         * @see timeStepWithRusanov_batched_heap_static_calls() for further
+         *   SYCL-relevant details.
+         */
         template <
           typename Solver,
           std::size_t  numberOfVolumesPerAxisInPatch,
@@ -183,10 +217,10 @@ namespace exahype2 {
          */
         template <
           typename Solver,
-          int      numberOfVolumesPerAxisInPatch,
-          int      haloSize,
-          int      unknowns,
-          int      auxiliaryVariables,
+          std::size_t  numberOfVolumesPerAxisInPatch,
+          std::size_t  haloSize,
+          std::size_t  unknowns,
+          std::size_t  auxiliaryVariables,
           typename TempDataEnumerator
         >
         static void timeStepWithRusanov_generic_static_calls(
