@@ -35,7 +35,7 @@ void toolbox::blockstructured::restrictHaloLayer_AoS_tensor_product(
   double*                                   coarseGridValues
 ) {
   restrictInnerHalfOfHaloLayer_AoS_tensor_product( marker, numberOfDoFsPerAxisInPatch, overlap, unknowns, normalRestrictionMatrix1d, tangentialRestrictionMatrix1d, fineGridValues, coarseGridValues, false );
-  restrictInnerHalfOfHaloLayer_AoS_tensor_product( marker, numberOfDoFsPerAxisInPatch, overlap, unknowns, normalRestrictionMatrix1d, tangentialRestrictionMatrix1d, fineGridValues, coarseGridValues, false );
+  restrictInnerHalfOfHaloLayer_AoS_tensor_product( marker, numberOfDoFsPerAxisInPatch, overlap, unknowns, normalRestrictionMatrix1d, tangentialRestrictionMatrix1d, fineGridValues, coarseGridValues, true );
 }
 
 
