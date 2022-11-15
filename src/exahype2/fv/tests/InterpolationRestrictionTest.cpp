@@ -15,7 +15,7 @@ exahype2::fv::tests::InterpolationRestrictionTest::InterpolationRestrictionTest(
 
 
 void exahype2::fv::tests::InterpolationRestrictionTest::run() {
-  testMethod (testPiecewiseConstantInterpolation);
+  //testMethod (testPiecewiseConstantInterpolation);
   testMethod (testAverageRestriction);
 }
 
@@ -176,7 +176,7 @@ void exahype2::fv::tests::InterpolationRestrictionTest::testAverageRestriction()
     std::fill_n(coarseGridFaceValues, 3*5*2*2, 0.0 );
 
     peano4::datamanagement::FaceMarker  marker1(dummEvent);
-    marker1.select(Dimensions);
+    marker1.select(0);
 
     ::toolbox::blockstructured::restrictHaloLayer_AoS_tensor_product(
       marker1,
@@ -236,8 +236,8 @@ void exahype2::fv::tests::InterpolationRestrictionTest::testAverageRestriction()
         std::cout<<coarseGridFaceValues[i*12+j] << " ";
       }
       std::cout<<"\n";
-    }
-*/
+    }*/
+
 
     //validateNumericalEquals( fineGridFaceValues[15*2+0],  0.1 );
   }

@@ -74,6 +74,7 @@ if __name__ == "__main__":
 
     SuperClass = None
 
+    print(args.implementation)
     if args.implementation=="fv-global-fixed":
        SuperClass = exahype2.solvers.fv.rusanov.GlobalFixedTimeStep
     if args.implementation=="fv-global-adaptive":
@@ -260,10 +261,10 @@ if __name__ == "__main__":
       def create_action_sets(self):
         SuperClass.create_action_sets(self)
 
-        if SuperClass == exahype2.solvers.rkdg.rusanov.GlobalAdaptiveTimeStep:
-          pass
-        else:
-          self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement.additional_includes += """ 
+        #if SuperClass == exahype2.solvers.rkdg.rusanov.GlobalAdaptiveTimeStep:
+        #  pass
+        #else:
+        self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement.additional_includes += """ 
 #include "../CCZ4Kernels.h"
             """
 

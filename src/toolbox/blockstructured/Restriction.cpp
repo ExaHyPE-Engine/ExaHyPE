@@ -53,7 +53,8 @@ void toolbox::blockstructured::restrictInnerHalfOfHaloLayer_AoS_tensor_product(
   logTraceInWith3Arguments( "restrictInnerHalfOfHaloLayer_AoS_tensor_product(...)", marker.toString(), numberOfDoFsPerAxisInPatch, overlap );
 
   const int    normal          = marker.getSelectedFaceNumber() % Dimensions;
-  const int    leftRightOffset = (marker.getSelectedFaceNumber() >= Dimensions ? 0 : overlap) xor swapInsideOutside;
+  const int    leftRightOffset = (marker.getSelectedFaceNumber() <= Dimensions xor swapInsideOutside) ? 0 : overlap;
+  logDebug( "restrictInnerHalfOfHaloLayer_AoS_tensor_product(...)", " leftRightOffset " << leftRightOffset);
 
   dfore(kCoarse,numberOfDoFsPerAxisInPatch,normal,0) {
     for (int iCoarse=leftRightOffset;   iCoarse<leftRightOffset+overlap;   iCoarse++) {
@@ -87,7 +88,7 @@ void toolbox::blockstructured::restrictInnerHalfOfHaloLayer_AoS_tensor_product(
               assertion4(col>=0,row,col,src,dest);
               assertion4(row>=0,row,col,src,dest);
               int index = col + row * 2 * overlap;
-              logDebug( "restrictInnerHalfOfHaloLayer_AoS_tensor_product(...)", "(" << row << "," << col << ")=" << index << " (normal contribution)");
+              //logDebug( "restrictInnerHalfOfHaloLayer_AoS_tensor_product(...)", "(" << row << "," << col << ")=" << index << " (normal contribution)");
               weight *= normalRestrictionMatrix1d[ index ];
             }
             else {
@@ -96,7 +97,7 @@ void toolbox::blockstructured::restrictInnerHalfOfHaloLayer_AoS_tensor_product(
               assertion5(col>=0,row,col,src,dest, marker.getRelativePositionWithinFatherCell());
               assertion4(row>=0,row,col,src,dest);
               int index = col + row * 3 * numberOfDoFsPerAxisInPatch;
-              logDebug( "restrictHaloLayer_AoS_tensor_product(...)", "(" << row << "," << col << ")=" << index << " (tangential contribution)" );
+              //logDebug( "restrictInnerHalfOfHaloLayer_AoS_tensor_product(...)", "(" << row << "," << col << ")=" << index << " (tangential contribution)" );
               weight *= tangentialRestrictionMatrix1d[ index ];
             }
           }
