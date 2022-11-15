@@ -170,7 +170,7 @@ namespace exahype2 {
           bool                    evaluateSource,
           bool                    evaluateMaximumEigenvalueAfterTimeStep
         ) {
-          timeStepWithRusanov_batched_heap_static_calls<
+          timeStepWithRusanov_patchwise_map_static_calls<
             Solver,
             numberOfVolumesPerAxisInPatch,
             haloSize,

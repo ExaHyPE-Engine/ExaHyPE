@@ -63,7 +63,7 @@ namespace exahype2 {
           std::size_t  auxiliaryVariables,
           typename TempDataEnumerator
         >
-        static void timeStepWithRusanov_taskgraph_heap_static_calls(
+        static void timeStepWithRusanov_taskgraph_static_calls(
           int                     targetDevice,
           ::exahype2::CellData&   patchData,
           bool                    evaluateFlux,
@@ -142,7 +142,7 @@ namespace exahype2 {
           std::size_t  auxiliaryVariables,
           typename TempDataEnumerator
         >
-        static void timeStepWithRusanov_batched_heap_static_calls(
+        static void timeStepWithRusanov_batched_static_calls(
           int                     targetDevice,
           ::exahype2::CellData&   patchData,
           bool                    evaluateFlux,
@@ -195,7 +195,7 @@ namespace exahype2 {
           std::size_t  auxiliaryVariables,
           typename TempDataEnumerator
         >
-        static void timeStepWithRusanov_patchwise_heap_static_calls(
+        static void timeStepWithRusanov_patchwise_static_calls(
           int                     targetDevice,
           ::exahype2::CellData&   patchData,
           bool                    evaluateFlux,
@@ -231,7 +231,7 @@ namespace exahype2 {
           bool                    evaluateSource,
           bool                    evaluateMaximumEigenvalueAfterTimeStep
         ) {
-          timeStepWithRusanov_taskgraph_heap_static_calls<
+          timeStepWithRusanov_taskgraph_static_calls<
             Solver,
             numberOfVolumesPerAxisInPatch,
             haloSize,
@@ -253,8 +253,8 @@ namespace exahype2 {
 }
 
 
-#include "Rusanov_taskgraph_heap_static_calls.cpph"
-#include "Rusanov_batched_heap_static_calls.cpph"
-#include "Rusanov_patchwise_heap_static_calls.cpph"
+#include "Rusanov_taskgraph_static_calls.cpph"
+#include "Rusanov_batched_static_calls.cpph"
+#include "Rusanov_patchwise_static_calls.cpph"
 
 #endif
