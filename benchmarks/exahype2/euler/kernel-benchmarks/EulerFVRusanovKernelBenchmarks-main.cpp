@@ -386,51 +386,51 @@ void submitSYCLKernels(int patches, int device, int thread) {
     h.host_task([=]() {
       testStatelessVariantOnDevice(
         patches, device,
-        ::exahype2::fv::rusanov::sycl::timeStepWithRusanov_taskgraph_heap_static_calls<EulerFVRusanov,EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch, 1, EulerFVRusanov::NumberOfUnknowns, EulerFVRusanov::NumberOfAuxiliaryVariables,exahype2::enumerator::AoSLexicographicEnumerator>,
+        ::exahype2::fv::rusanov::sycl::timeStepWithRusanov_taskgraph_static_calls<EulerFVRusanov,EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch, 1, EulerFVRusanov::NumberOfUnknowns, EulerFVRusanov::NumberOfAuxiliaryVariables,exahype2::enumerator::AoSLexicographicEnumerator>,
         "sycl, task-graph, AoS", thread
       );
       testStatelessVariantOnDevice(
         patches, device,
-        ::exahype2::fv::rusanov::sycl::timeStepWithRusanov_taskgraph_heap_static_calls<EulerFVRusanov,EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch, 1, EulerFVRusanov::NumberOfUnknowns, EulerFVRusanov::NumberOfAuxiliaryVariables,exahype2::enumerator::AoSoALexicographicEnumerator>,
+        ::exahype2::fv::rusanov::sycl::timeStepWithRusanov_taskgraph_static_calls<EulerFVRusanov,EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch, 1, EulerFVRusanov::NumberOfUnknowns, EulerFVRusanov::NumberOfAuxiliaryVariables,exahype2::enumerator::AoSoALexicographicEnumerator>,
         "sycl, task-graph, AoSoA", thread
       );
       testStatelessVariantOnDevice(
         patches, device,
-        ::exahype2::fv::rusanov::sycl::timeStepWithRusanov_taskgraph_heap_static_calls<EulerFVRusanov,EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch, 1, EulerFVRusanov::NumberOfUnknowns, EulerFVRusanov::NumberOfAuxiliaryVariables,exahype2::enumerator::SoALexicographicEnumerator>,
+        ::exahype2::fv::rusanov::sycl::timeStepWithRusanov_taskgraph_static_calls<EulerFVRusanov,EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch, 1, EulerFVRusanov::NumberOfUnknowns, EulerFVRusanov::NumberOfAuxiliaryVariables,exahype2::enumerator::SoALexicographicEnumerator>,
         "sycl, task-graph, SoA", thread
       );
       testStatelessVariantOnDevice(
         patches, device,
-        ::exahype2::fv::rusanov::sycl::timeStepWithRusanov_patchwise_heap_static_calls<EulerFVRusanov,EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch, 1, EulerFVRusanov::NumberOfUnknowns, EulerFVRusanov::NumberOfAuxiliaryVariables,exahype2::enumerator::AoSLexicographicEnumerator>,
+        ::exahype2::fv::rusanov::sycl::timeStepWithRusanov_patchwise_static_calls<EulerFVRusanov,EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch, 1, EulerFVRusanov::NumberOfUnknowns, EulerFVRusanov::NumberOfAuxiliaryVariables,exahype2::enumerator::AoSLexicographicEnumerator>,
         "sycl, patch-wise, AoS", thread
       );
       testStatelessVariantOnDevice(
         patches, device,
-        ::exahype2::fv::rusanov::sycl::timeStepWithRusanov_patchwise_heap_static_calls<EulerFVRusanov,EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch, 1, EulerFVRusanov::NumberOfUnknowns, EulerFVRusanov::NumberOfAuxiliaryVariables,exahype2::enumerator::AoSoALexicographicEnumerator>,
+        ::exahype2::fv::rusanov::sycl::timeStepWithRusanov_patchwise_static_calls<EulerFVRusanov,EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch, 1, EulerFVRusanov::NumberOfUnknowns, EulerFVRusanov::NumberOfAuxiliaryVariables,exahype2::enumerator::AoSoALexicographicEnumerator>,
         "sycl, patch-wise, AoSoA", thread
       );
       testStatelessVariantOnDevice(
         patches, device,
-        ::exahype2::fv::rusanov::sycl::timeStepWithRusanov_patchwise_heap_static_calls<EulerFVRusanov,EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch, 1, EulerFVRusanov::NumberOfUnknowns, EulerFVRusanov::NumberOfAuxiliaryVariables,exahype2::enumerator::SoALexicographicEnumerator>,
+        ::exahype2::fv::rusanov::sycl::timeStepWithRusanov_patchwise_static_calls<EulerFVRusanov,EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch, 1, EulerFVRusanov::NumberOfUnknowns, EulerFVRusanov::NumberOfAuxiliaryVariables,exahype2::enumerator::SoALexicographicEnumerator>,
         "sycl, patch-wise, SoA", thread
       );
       testStatelessVariantOnDevice(
         patches, device,
-        ::exahype2::fv::rusanov::sycl::timeStepWithRusanov_batched_heap_static_calls<EulerFVRusanov,EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch, 1, EulerFVRusanov::NumberOfUnknowns, EulerFVRusanov::NumberOfAuxiliaryVariables,exahype2::enumerator::AoSLexicographicEnumerator>,
+        ::exahype2::fv::rusanov::sycl::timeStepWithRusanov_batched_static_calls<EulerFVRusanov,EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch, 1, EulerFVRusanov::NumberOfUnknowns, EulerFVRusanov::NumberOfAuxiliaryVariables,exahype2::enumerator::AoSLexicographicEnumerator>,
         "sycl, batched, AoS", thread
       );
       testStatelessVariantOnDevice(
         patches, device,
-        ::exahype2::fv::rusanov::sycl::timeStepWithRusanov_batched_heap_static_calls<EulerFVRusanov,EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch, 1, EulerFVRusanov::NumberOfUnknowns, EulerFVRusanov::NumberOfAuxiliaryVariables,exahype2::enumerator::AoSoALexicographicEnumerator>,
+        ::exahype2::fv::rusanov::sycl::timeStepWithRusanov_batched_static_calls<EulerFVRusanov,EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch, 1, EulerFVRusanov::NumberOfUnknowns, EulerFVRusanov::NumberOfAuxiliaryVariables,exahype2::enumerator::AoSoALexicographicEnumerator>,
         "sycl, batched, AoSoA", thread
       );
       testStatelessVariantOnDevice(
         patches, device,
-        ::exahype2::fv::rusanov::sycl::timeStepWithRusanov_taskgraph_heap_static_calls<EulerFVRusanov,EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch, 1, EulerFVRusanov::NumberOfUnknowns, EulerFVRusanov::NumberOfAuxiliaryVariables,exahype2::enumerator::SoALexicographicEnumerator>,
+        ::exahype2::fv::rusanov::sycl::timeStepWithRusanov_taskgraph_static_calls<EulerFVRusanov,EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch, 1, EulerFVRusanov::NumberOfUnknowns, EulerFVRusanov::NumberOfAuxiliaryVariables,exahype2::enumerator::SoALexicographicEnumerator>,
         "sycl, batched, SoA", thread
       );
     });
-  });
+  }).wait();
 }
 #endif
 

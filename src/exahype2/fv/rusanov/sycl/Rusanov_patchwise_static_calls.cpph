@@ -14,7 +14,7 @@ template <
   std::size_t  auxiliaryVariables,
   typename TempDataEnumerator
 >
-void exahype2::fv::rusanov::sycl::timeStepWithRusanov_patchwise_heap_static_calls(
+void exahype2::fv::rusanov::sycl::timeStepWithRusanov_patchwise_static_calls(
   int                     targetDevice,
   ::exahype2::CellData&   hostPatchData,
   bool                    evaluateFlux,
@@ -23,6 +23,8 @@ void exahype2::fv::rusanov::sycl::timeStepWithRusanov_patchwise_heap_static_call
   bool                    evaluateMaximumEigenvalueAfterTimeStep
 ) {
   #if defined(GPUOffloadingSYCL)
+/*
+
   ::sycl::queue& queue = tarch::accelerator::getSYCLQueue(targetDevice);
 
   constexpr int solversHaloSize        = 1;
@@ -74,8 +76,6 @@ void exahype2::fv::rusanov::sycl::timeStepWithRusanov_patchwise_heap_static_call
                 }
           );
         }
-        // @todo Please comment in. Why does this not work?
-        /*
         else if (Dimensions==3 and evaluateSource) {
           handle.parallel_for(
                 ::sycl::range<3>{numberOfVolumesPerAxisInPatch,numberOfVolumesPerAxisInPatch,numberOfVolumesPerAxisInPatch},
@@ -98,13 +98,6 @@ void exahype2::fv::rusanov::sycl::timeStepWithRusanov_patchwise_heap_static_call
                 }
           );
         }
-        */
-
-
-
-
-
-        /*
         else if (Dimensions==2) {
           handle.parallel_for(
                 ::sycl::range<3>{unknowns,numberOfVolumesPerAxisInPatch,numberOfVolumesPerAxisInPatch},
@@ -679,8 +672,6 @@ void exahype2::fv::rusanov::sycl::timeStepWithRusanov_patchwise_heap_static_call
                   }
                   patchData.maxEigenvalue[patchIndex] = newMaxEigenvalue;
         }
-*/
-
       }
     );
     }
@@ -697,6 +688,7 @@ void exahype2::fv::rusanov::sycl::timeStepWithRusanov_patchwise_heap_static_call
   if (tempEigenvalueX!=nullptr)             ::sycl::free( tempEigenvalueX, queue);
   if (tempEigenvalueY!=nullptr)             ::sycl::free( tempEigenvalueY, queue);
   if (tempEigenvalueZ!=nullptr)             ::sycl::free( tempEigenvalueZ, queue);
+*/
   #else
   assertionMsg(false, "this routine should only be used in combination with OpenMP offloading, as it has a device parameter" );
   #endif
