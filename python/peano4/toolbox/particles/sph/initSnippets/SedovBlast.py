@@ -42,6 +42,8 @@ class SedovBlastIC:
       // Initialise the blast
       tarch::la::Vector<Dimensions,double> blast_cent(BLAST_CENTER);
       const double dist_blast = tarch::la::norm2( particle->getX() - blast_cent );
+
+      const double BLAST_CENTER = 0.1;
       
        /* Old method */
        /* Inject energy evenly into central particles */
@@ -84,7 +86,6 @@ class SedovBlastIC:
       for(int d=0; d<Dimensions; d++){
          particle->setV          (d,0);
          particle->setA          (d,0);
-         particle->setA_prev_step(d,0);
       }
      
       /* For 2D sims, we only get one component */
@@ -95,7 +96,6 @@ class SedovBlastIC:
       particle->setU_full(particle->getU());
 
       particle->setUDot  (0.0);        
-      particle->setUDot_prev_step(0.0);        
       particle->setHDot  (0.0);        
       particle->setWcount(0.0);        
       particle->setNcount(0  );        
@@ -107,10 +107,8 @@ class SedovBlastIC:
       particle->setHLeft (HYDRO_h_MIN);        
       particle->setHRight(HYDRO_h_MAX);        
       
-      particle->setTimeStepSize(GLOBAL_TIME_STEP_SIZE);
       particle->setHasConverged(false);
       particle->setHasNoNeighbours(false);
-      particle->setHasBeenKicked(false);
       particle->setResidual(0.0);
       particle->setIterCount(0);
       particle->setIsBoundaryParticle(false);
@@ -138,6 +136,12 @@ class SedovBlastIC:
       tarch::la::Vector<Dimensions,double> GridSize = marker.h();
       const double GridSize_x = GridSize(0); 
 
+      /* HARD-CODED FOR SEDOV TEST */
+      const double HYDRO_DIMENSIONS = 1;
+//      const int HYDRO_PART_NUMBER = 128;
+//      const int HYDRO_PART_NUMBER = 1000;
+      const int HYDRO_PART_NUMBER = 250;
+
       particle->setCutOffRadius( GridSize_x / 2.0);
       
       /* Constant density field */
@@ -145,9 +149,16 @@ class SedovBlastIC:
       particle->setMass( particle->getDensity() / std::pow(HYDRO_PART_NUMBER, HYDRO_DIMENSIONS) );
 
       /* Initial estimate for smoothing length */
-      particle->setSmoothingLength( SMOOTH_L_FAC * std::pow(particle->getMass()/particle->getDensity(), 1.0/HYDRO_DIMENSIONS ) );
+      particle->setSmoothingLength( 1.235 *
+                                   std::pow(particle->getMass()/particle->getDensity(),
+                                            1.0/HYDRO_DIMENSIONS ) );
+
+      /* HARD-CODED FOR SEDOV TEST */
+//      particle->setSmoothingLength( 2.0 * particle->getSmoothingLength() );
       particle->setSmoothingLengthPrevious( particle->getSmoothingLength() );
      
+      const double BLAST_CENTER = 0.5;
+      const double BLAST_ENERGY = 1.0;
       // Initialise the blast
       const double spike_radius = 2.0 * (1.0 / HYDRO_PART_NUMBER);
       tarch::la::Vector<Dimensions,double> blast_cent(BLAST_CENTER);
@@ -156,7 +167,7 @@ class SedovBlastIC:
        /* Old method */
        /* Inject energy evenly into central particles */
        if ( tarch::la::smaller( dist_blast, spike_radius ) ) {
-         particle->setU( BLAST_ENERGY / 4.0 / particle->getMass() );
+         particle->setU( BLAST_ENERGY / 3.0 / particle->getMass() );
        } else {
          particle->setU( 1e-6 );  // negligible background value
        }
@@ -194,7 +205,6 @@ class SedovBlastIC:
       for(int d=0; d<Dimensions; d++){
          particle->setV          (d,0);
          particle->setA          (d,0);
-         particle->setA_prev_step(d,0);
       }
      
       /* For 2D sims, we only get one component */
@@ -205,7 +215,6 @@ class SedovBlastIC:
       particle->setU_full(particle->getU());
 
       particle->setUDot  (0.0);        
-      particle->setUDot_prev_step(0.0);        
       particle->setHDot  (0.0);        
       particle->setWcount(0.0);        
       particle->setNcount(0  );        
@@ -217,13 +226,12 @@ class SedovBlastIC:
       particle->setHLeft (HYDRO_h_MIN);        
       particle->setHRight(HYDRO_h_MAX);        
       
-      particle->setTimeStepSize(GLOBAL_TIME_STEP_SIZE);
       particle->setHasConverged(false);
       particle->setHasNoNeighbours(false);
-      particle->setHasBeenKicked(false);
       particle->setResidual(0.0);
       particle->setIterCount(0);
       particle->setIsBoundaryParticle(false);
+      particle->setPartid(0);
 
       // Artificial viscosity scheme
       particle->setDiv_v   (0.0);
