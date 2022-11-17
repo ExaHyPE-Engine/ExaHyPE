@@ -17,19 +17,46 @@ After that, configure the build via
 
 ### SYCL setup      
 
-     ./configure CXX=dpcpp CC=dpcpp CXXFLAGS="-g3 -std=c++20 -Wno-unknown-attributes" "-ltbb" --enable-exahype --enable-loadbalancing --enable-particles --with-multithreading=tbb --enable-blockstructured --with-gpu=sycl
+For the Intel software stack, you will need (on Cosma)
 
+     module load oneAPI/2022.3.0
+     module load gnu_comp/11.1.0
+     libtoolize; aclocal; autoconf; autoheader; cp src/config.h.in .; automake --add-missing
+     ./configure CXX=dpcpp CC=dpcpp CXXFLAGS="-g3 -std=c++20 -Wno-unknown-attributes" LDFLAGS="-ltbb" --enable-exahype --enable-loadbalancing --enable-particles --with-multithreading=tbb --enable-blockstructured --with-gpu=sycl
+     make -j
+      
+The libtoolize commands (second line) are required only once. Also, it should
+be fine only to run configure once, even if you change some core routines
+later. Ensure you load the gnu_comp module as well, as the default STL coming
+along with the oneAPI module is too old.    
+
+If you run into linker issues for the unit tests, there's no point in continuing
+as you will get the same errors in the real simulation builds, too. Instead, try
+to alter the linker flags:
+    
+     ./configure CXX=dpcpp CC=dpcpp CXXFLAGS="-g3 -std=c++20 -Wno-unknown-attributes" LDFLAGS="-L/cosma/local/intel/oneAPI_2022.3.0/tbb/2021.7.1/env/../lib/intel64/gcc4.8 -ltbb" --enable-exahype --enable-loadbalancing --enable-particles --with-multithreading=tbb --enable-blockstructured --with-gpu=sycl    
+
+
+For the Codeplay software stack, use
+
+    module load sycl/2022.11-codeplay-cuda    
+    module load gnu_comp/11.1.0
+    ./configure CXX=clang++ CC=clang++ CXXFLAGS="-g3 -std=c++20 -Wno-unknown-attributes -fsycl -fsycl-targets=nvptx64-nvidia-cuda -DnoComplexNumbers" LDFLAGS="" --enable-exahype --enable-loadbalancing --enable-particles --with-multithreading=tbb --enable-blockstructured --with-gpu=sycl    
+
+    ./configure CXX=clang++ CC=clang++ CXXFLAGS="$CPPFLAGS -I/cosma/local/gcc/11.1.0/include/c++/11.1.0/ -g3 -std=c++20 -Wno-unknown-attributes -fsycl -fsycl-targets=nvptx64-nvidia-cuda -DnoComplexNumbers" LDFLAGS="" --enable-exahype --enable-loadbalancing --enable-particles --with-multithreading=tbb --enable-blockstructured --with-gpu=sycl    
+
+    ./configure CXX=clang++ CC=clang++ CXXFLAGS="$CPPFLAGS -I/cosma/local/gcc/11.1.0/include/c++/11.1.0/ -g3 -std=c++2a -Wno-unknown-attributes -fsycl -fsycl-targets=nvptx64-nvidia-cuda -DnoComplexNumbers" LDFLAGS="" --enable-exahype --enable-loadbalancing --enable-particles --with-multithreading=tbb --enable-blockstructured --with-gpu=sycl    
+
+
+    
 ### OpenMP setup      
 
-    ./configure t.b.d.
-
-(you might have to set up the autotools build environment first as discussed
-in configure.ac as a comment) and finally compile the setup:
-
-    make
-    
-Once you have all the Peano and ExaHyPE libraries, change into the 
-present directory and follow the instructions in Readme.md.
+     module load oneAPI/2022.3.0
+     module load gnu_comp/11.1.0
+     module load cuda/11.2
+     ./configure CXX=icpx CC=icx CXXFLAGS="-g3 -std=c++20 -Wno-unknown-attributes -fiopenmp  -fopenmp-targets=spir64" FCFLAGS="-fiopenmp  -fopenmp-targets=spir64" --enable-exahype --enable-loadbalancing --enable-particles --with-multithreading=omp --enable-blockstructured --with-gpu=omp
+     make -j
+     
 
       
 
@@ -43,6 +70,8 @@ that I tend to build from time to time.
 ### Finite Volumes
 
 I typically create a bunch of benchmarks around the Finite Volume solvers:
+
+    export PYTHONPATH=../../../../python
 
     python3 fv-rusanov-kernel-benchmarks.py --dim 2 --patch-size 4 
     python3 fv-rusanov-kernel-benchmarks.py --dim 2 --patch-size 6 
