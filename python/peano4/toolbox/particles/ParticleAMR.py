@@ -151,14 +151,14 @@ class ParticleAMR(ActionSet):
     and
     not fineGridCell{{CELL_DATA_NAME}}.getParentOfRefinedCell()
     and
-    marker.h()(0)*3.0<{{MAX_H}}
+    marker.h()(0)<{{MAX_H}} // we will remove the suboctants
   ) {
-    const double ScaleMarker = 1.2;
+    const double ScaleMarker = 1.4;
     peano4::grid::GridControlEvent newEntry;
     newEntry.setRefinementControl( peano4::grid::GridControlEvent::RefinementControl::Erase );
     newEntry.setOffset( marker.getOffset() + marker.h() * (1.0-ScaleMarker) / 2.0 );
     newEntry.setWidth( marker.h() * ScaleMarker );
-    newEntry.setH( marker.h() * 3.0 * ScaleMarker );
+    newEntry.setH( marker.h() * ScaleMarker );
     _localGridControlEvents.push_back(newEntry);
     logDebug( "touchCellLastTime(...)", "add " << newEntry.toString() );
   }

@@ -116,6 +116,12 @@ class Project(object):
     self._build_mode          = mode
 
 
+  def __compute_global_max_h(self):
+    self._global_max_h = 0.0
+    for current_species_set in self._particle_species_set:
+      self._global_max_h = max( self._global_max_h, current_species_set.particle_model.max_h )
+  
+
   def __export_constants(self):
     """
     
@@ -147,12 +153,7 @@ class Project(object):
     self._project.constants.export( "TimeInBetweenPlots", str(self._time_in_between_plots) )
     self._project.constants.export( "PlotterPrecision", str(self._plotter_precision) )
     self._project.constants.export_boolean_sequence( "PeriodicBC", self._periodic_BC )
-  
-
-    global_max_h = 0.0
-    for current_species_set in self._particle_species_set:
-      global_max_h = max( global_max_h, current_species_set.particle_model.max_h )
-    self._project.constants.export( "GlobalMaxH", str(global_max_h) )
+    self._project.constants.export( "GlobalMaxH", str(self._global_max_h) )
 
     build_string = "python3 "
     for i in sys.argv:
@@ -320,7 +321,8 @@ citation of the original SWIFT paper
     we realise the initialisation in two steps.
      
     """
-    self.__generate_global_state_files();
+    self.__generate_global_state_files()
+    self.__compute_global_max_h()
 
     ## Make pre-defined mesh traversals resort the particles. For this, they need 
     ## species set into
@@ -358,6 +360,8 @@ citation of the original SWIFT paper
       for solverstep in solversteps:
         solverstep.use_vertex(current_species_set)
         solverstep.use_cell(cell_marker_for_statistics)
+
+    self._algorithm_step_create_grid.add_action_set(peano4.toolbox.CreateRegularGrid(self._global_max_h),False)
      
     self._project.solversteps.add_step(self._algorithm_step_create_grid)
     self._project.solversteps.add_step(self.algorithm_step_init)
