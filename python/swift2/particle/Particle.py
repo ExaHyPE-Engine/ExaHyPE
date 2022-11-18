@@ -69,7 +69,10 @@ class Particle(peano4.toolbox.particles.Particle):
 """
     
     
-  def __init__(self, name):
+  def __init__(self, 
+               name,
+               particles_per_cell
+               ):
     """
     
     Initialise the particle
@@ -99,9 +102,15 @@ class Particle(peano4.toolbox.particles.Particle):
     
     """
     super( Particle, self ).__init__( name )
+    
     self.data.add_attribute( dastgen2.attributes.Enumeration("MoveState",["New","NotMovedYet","Moved"]) )
     self.data.add_attribute( dastgen2.attributes.Boolean("CellHasUpdatedParticle") )
     self.data.add_aspect( Particle.SpeciesAspect() )
+    
+    if particles_per_cell<=0:
+      print( "WARNING: Particles per cell set to zero, so code might refine up to maximum depth even if there is only one particle" )
+    self.particles_per_cell = particles_per_cell
+    
     pass
 
 

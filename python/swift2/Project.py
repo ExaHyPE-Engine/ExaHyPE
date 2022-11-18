@@ -184,14 +184,16 @@ citation of the original SWIFT paper
 
   def set_global_simulation_parameters(self,
                                        dimensions,
-                                       offset,size,
-                                       max_h,min_h,
+                                       offset,
+                                       domain_size,
+                                       min_h,
+                                       max_h,
                                        min_end_time,
+                                       max_end_time,
                                        first_plot_time_stamp,
                                        time_in_between_plots, 
-                                       periodic_BC = [False, False, False], 
-                                       plotter_precision=5,
-                                       max_end_time=0.0,
+                                       periodic_BC       = [False, False, False], 
+                                       plotter_precision = 5,
                                        ):
     """
     
@@ -214,7 +216,7 @@ citation of the original SWIFT paper
     self._max_h         = max_h
     self._min_h         = min_h
     self._domain_offset = offset
-    self._domain_size   = size
+    self._domain_size   = domain_size
     self._dimensions    = dimensions
     self._max_terminal_time = max_end_time
     self._min_terminal_time = min_end_time
@@ -308,6 +310,7 @@ citation of the original SWIFT paper
        might have started a resort yet might not have finished it.
      - Add all the algorithmic steps, including the default ones, to
        the project.
+
        
     ## Particle initialisation and proper sorting
     
@@ -338,6 +341,8 @@ citation of the original SWIFT paper
 
     ## Make each solver step (incl predefined ones) use the particles and particle sets
     for current_species_set in self._particle_species_set:
+      cell_marker_for_statistics = peano4.toolbox.particles.create_cell_marker(current_species_set.name + "CellStatistics")
+      
       self._project.datamodel.add_global_object(current_species_set.particle_model)
       self._project.datamodel.add_vertex(current_species_set)
 
@@ -346,23 +351,17 @@ citation of the original SWIFT paper
       self.algorithm_step_sort.use_vertex(current_species_set)
       self.algorithm_step_plot.use_vertex(current_species_set)
 
-      # Enable cell statistics for this specie
-      particle_tree_analysis = peano4.toolbox.particles.ParticleTreeAnalysis(current_species_set)
-      self._project.datamodel.add_cell(particle_tree_analysis.cell_marker)   
+      # Enable cell statistics for this species
+      self._project.datamodel.add_cell(cell_marker_for_statistics)   
+      
       # Add cell statistics to these action steps
-      self._algorithm_step_create_grid.use_cell(particle_tree_analysis.cell_marker)
-      self.algorithm_step_init.use_cell(particle_tree_analysis.cell_marker)
-      self.algorithm_step_sort.use_cell(particle_tree_analysis.cell_marker)
-      self.algorithm_step_plot.use_cell(particle_tree_analysis.cell_marker)
-      self._algorithm_step_create_grid.add_action_set(particle_tree_analysis)
-      self.algorithm_step_init.add_action_set(particle_tree_analysis)
-      self.algorithm_step_sort.add_action_set(particle_tree_analysis)
-      self.algorithm_step_plot.add_action_set(particle_tree_analysis)
+      self._algorithm_step_create_grid.use_cell(cell_marker_for_statistics)
+      self.algorithm_step_init.use_cell(cell_marker_for_statistics)
+      self.algorithm_step_sort.use_cell(cell_marker_for_statistics)
+      self.algorithm_step_plot.use_cell(cell_marker_for_statistics)
       for solverstep in solversteps:
         solverstep.use_vertex(current_species_set)
-        # Add cell statistics to rest of action steps
-        solverstep.use_cell(particle_tree_analysis.cell_marker)
-        solverstep.add_action_set(particle_tree_analysis)
+        solverstep.use_cell(cell_marker_for_statistics)
      
     self._project.solversteps.add_step(self._algorithm_step_create_grid)
     self._project.solversteps.add_step(self.algorithm_step_init)

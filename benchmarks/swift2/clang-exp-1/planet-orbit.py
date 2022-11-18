@@ -62,15 +62,16 @@ periodic_boundary_conditions = [False,False,False]          # Periodic BC
 
 
 project.set_global_simulation_parameters(
-  dimensions,               # dimensions
-  offset,  domain_size,
-  0.1, 
-  args.timestep_size,
-  args.end_time,
-  0.0, 
-  args.end_time/200,                      #args.plot_step_size,   # snapshots
-  periodic_boundary_conditions,
-  8  # plotter precision
+  dimensions            = dimensions,
+  offset                = offset,  
+  domain_size           = domain_size,
+  min_h                 = 0.01, 
+  max_h                 = 0.1,
+  min_end_time          = args.end_time,
+  max_end_time          = 0.0,
+  first_plot_time_stamp = 0.0, 
+  time_in_between_plots = args.end_time/200, 
+  periodic_BC           = periodic_boundary_conditions,
 )
 
 # additional global constants (to be exported down below)

@@ -63,9 +63,11 @@ class testLeapfrogFixedTimeStepSize(Particle):
                constant_time_step_size,
                particle_particle_interaction_over_particle_sets_kernel = "",
                touch_particles_of_set_first_time_kernel = "",
-               touch_particles_of_set_last_time_kernel  = ""
+               touch_particles_of_set_last_time_kernel  = "",
+               particles_per_cell = 0 # makes no sense, and should likely be forbidden
                ):
-    super( testLeapfrogFixedTimeStepSize, self ).__init__( name )
+    super( testLeapfrogFixedTimeStepSize, self ).__init__( name,
+                                                           particles_per_cell )
 
     self.cfl_factor                = cfl_factor
     self.initial_time_step_size    = initial_time_step_size

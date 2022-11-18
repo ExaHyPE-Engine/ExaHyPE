@@ -8,7 +8,8 @@ import peano4
 import swift2
 
 
-def serialise_and_map_onto_separate_mesh_traversals(species_sets, verbose=True):
+def serialise_and_map_onto_separate_mesh_traversals(species_sets, 
+                                                    verbose=True):
   """
   
   Very simple compiler which takes each individual algorithmic step 
@@ -35,35 +36,88 @@ def serialise_and_map_onto_separate_mesh_traversals(species_sets, verbose=True):
   only if the last step has changed a position. Otherwise, we know 
   that all is in place. As we run through the species one by one, we 
   also have to make this reasoning one by one.
+  
+  ## Tree statistics
+  
+  We assume that there is a tree marker already. So our analysis 
+  will create it, but we assume that it is already out there, so 
+  we don't have to add it actually to the project.
+  
     
   """
   mesh_traversals = []
-  
+    
   for current_species_set in species_sets:
     previous_step_has_altered_particle_positions = current_species_set.particle_model.algorithm_steps()[-1].effect==AlgorithmStep.Effect.CHANGE_POSITION_OR_INTERACTION_RADIUS
+    previous_step_has_reassigned_particles       = previous_step_has_altered_particle_positions
+    
     for step in current_species_set.particle_model.algorithm_steps():
-      new_step = peano4.solversteps.Step( "Step{}{}{}".format(current_species_set.particle_model.name,step.name,len(mesh_traversals)), add_user_defined_actions=False ) 
+      new_step                = peano4.solversteps.Step( "Step{}{}_sweep{}".format(current_species_set.particle_model.name,step.name,len(mesh_traversals)), add_user_defined_actions=False ) 
+
+      #
+      # Update particle-grid association 
+      # ================================
+      # We have to update the particle-grid assocation whenever we move
+      # a particle or in the cases where we have updated the particle in 
+      # the step before. In the latter case, we might have moved a particle
+      # into the next coarser level and now sieve it down again.
+      #
       new_step.add_action_set(UpdateParticleMarker(current_species_set), append_at_end=True)
       if step.effect==AlgorithmStep.Effect.CHANGE_POSITION_OR_INTERACTION_RADIUS or previous_step_has_altered_particle_positions:
         if verbose:
           print( "GRAPH COMPILER DEBUG: step {} on particle {} uses update-particle-grid-association (resort) action set".format( step.name, current_species_set.particle_model.name ) )
         new_step.add_action_set(peano4.toolbox.particles.UpdateParticleGridAssociation(current_species_set), append_at_end=True)
-        # AMR 
-        if verbose:
-          print( "GRAPH COMPILER DEBUG: step {} on particle {} uses ParticleAMR action set".format( step.name, current_species_set.particle_model.name ) )
-        particle_tree_analysis = peano4.toolbox.particles.ParticleTreeAnalysis(current_species_set)
-        new_step.add_action_set(particle_tree_analysis)
-        new_step.add_action_set(peano4.toolbox.particles.ParticleAMR(current_species_set,particle_tree_analysis,min_particles_per_cell=0,max_particles_per_cell=1), append_at_end=True)
+        
+      #
+      # Update parallel state
+      # =====================
+      # As long as particles stay in place, we don't have to updtae their
+      # parallel flag. However, once they move, we have to update their 
+      # state once we have found out in which octant/tree they belong.
+      #  
       if previous_step_has_altered_particle_positions:
         if verbose:
           print( "GRAPH COMPILER DEBUG: step {} on particle {} uses update-parallel-state action set".format( step.name, current_species_set.particle_model.name ) )
         new_step.add_action_set(peano4.toolbox.particles.UpdateParallelState(current_species_set), append_at_end=True)
-        # AMR 
+
+      #
+      #   AMR
+      # ======= 
+      # If the previous step has altered the particle positions, we should
+      # also update the marker. It makes no sense to update the markers 
+      # immediately when we alter the particles' positions, as particles 
+      # might have been lifted to coarser levels and hence any particle 
+      # counting might be wrong.
+      #
+      # So we get the updated improved mesh layout two sweeps after we've 
+      # actually moved the particles. We now have to realise any dynamic
+      # AMR, i.e. change the mesh. Therefore, we also add the mapping to 
+      # 
+      #
+      if previous_step_has_altered_particle_positions:
+        if verbose:
+          print( "GRAPH COMPILER DEBUG: step {} on particle {} uses ParticleTreeAnalysis action set".format( step.name, current_species_set.particle_model.name ) )
+        particle_tree_analysis = peano4.toolbox.particles.ParticleTreeAnalysis(current_species_set)
+        new_step.add_action_set(particle_tree_analysis)
+      if previous_step_has_reassigned_particles:
+      # or step.effect==AlgorithmStep.Effect.CHANGE_POSITION_OR_INTERACTION_RADIUS or previous_step_has_altered_particle_positions:
         if verbose:
           print( "GRAPH COMPILER DEBUG: step {} on particle {} uses ParticleAMR action set".format( step.name, current_species_set.particle_model.name ) )
         particle_tree_analysis = peano4.toolbox.particles.ParticleTreeAnalysis(current_species_set)
-        new_step.add_action_set(particle_tree_analysis)
-        new_step.add_action_set(peano4.toolbox.particles.ParticleAMR(current_species_set,particle_tree_analysis,min_particles_per_cell=0,max_particles_per_cell=1), append_at_end=True)
+        new_step.add_action_set(peano4.toolbox.particles.ParticleAMR(current_species_set,
+                                                                     particle_tree_analysis,
+                                                                     min_particles_per_cell=int(current_species_set.particle_model.particles_per_cell/27),
+                                                                     max_particles_per_cell=current_species_set.particle_model.particles_per_cell), append_at_end=True)
+
+
+      #
+      # Pick computational kernel
+      # =========================
+      # This is where the actual computation per step is done. We have two 
+      # fundamentally different kernels: one keeps track of (multiscale) 
+      # neighbours, while the other just updates the particles within the
+      # octant (cell).
+      #
       if step.dependencies==AlgorithmStep.Dependencies.NEIGHBOURS:
         if verbose:
           print( "GRAPH COMPILER DEBUG: step {} on particle {} uses particle-particle-interaction action set".format( step.name, current_species_set.particle_model.name ) )
@@ -93,8 +147,10 @@ def serialise_and_map_onto_separate_mesh_traversals(species_sets, verbose=True):
 
       else:
         assert False, "step {} seems to have no action at all".format( step )
+        
       mesh_traversals.append( new_step )
           
+      previous_step_has_reassigned_particles       = previous_step_has_altered_particle_positions
       previous_step_has_altered_particle_positions = step.effect==AlgorithmStep.Effect.CHANGE_POSITION_OR_INTERACTION_RADIUS
   return mesh_traversals
   
