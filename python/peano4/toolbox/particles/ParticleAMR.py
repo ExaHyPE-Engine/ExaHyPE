@@ -35,7 +35,13 @@ class ParticleAMR(ActionSet):
     that's totally fine, as it also ensures that 
     
   """
-  def __init__(self,particle_set,particle_tree_analysis,min_particles_per_cell=1,max_particles_per_cell=65536):
+  def __init__(self,
+               particle_set,
+               particle_tree_analysis,
+               min_particles_per_cell=1,
+               max_particles_per_cell=65536,
+               min_h = 0.1,
+               max_h = 0.01):
     """
 
     :: Arguments
@@ -81,6 +87,8 @@ class ParticleAMR(ActionSet):
       "CELL_DATA_NAME":          particle_tree_analysis._cell_data_name,
       "MIN_PARTICLES_PER_CELL":  min_particles_per_cell,
       "MAX_PARTICLES_PER_CELL":  max_particles_per_cell,
+      "MIN_H":                   min_h,
+      "MAX_H":                   max_h,
       "PARTICLE_SET":            particle_set.name,
       "PARTICLE":                particle_set.particle_model.name,
     }
@@ -117,28 +125,13 @@ class ParticleAMR(ActionSet):
    look at the flag getParentOfRefinedCell().
    
   */
-  bool refine       = false;
-  bool erase        = false;
-  
   if (
     not marker.willBeRefined()
     and
     fineGridCell{{CELL_DATA_NAME}}.getNumberOfParticles() > {{MAX_PARTICLES_PER_CELL}}
-  ) {
-    refine = true;
-  }
-
-  if (
-    marker.willBeRefined() 
-    and 
-    marker.hasBeenRefined()
     and
-    fineGridCell{{CELL_DATA_NAME}}.getNumberOfParticles() <= {{MIN_PARTICLES_PER_CELL}}
+    marker.h()(0)/3.0>{{MIN_H}}
   ) {
-    erase = true;
-  }
-
-  if (refine) {
     const double ScaleMarker = 0.8;
     peano4::grid::GridControlEvent newEntry;
     newEntry.setRefinementControl( peano4::grid::GridControlEvent::RefinementControl::Refine );
@@ -148,7 +141,18 @@ class ParticleAMR(ActionSet):
     _localGridControlEvents.push_back(newEntry);
     logDebug( "touchCellLastTime(...)", "add " << newEntry.toString() );
   }
-  else if (erase) {
+
+  if (
+    marker.willBeRefined() 
+    and 
+    marker.hasBeenRefined()
+    and
+    fineGridCell{{CELL_DATA_NAME}}.getNumberOfParticles() <= {{MIN_PARTICLES_PER_CELL}}
+    and
+    not fineGridCell{{CELL_DATA_NAME}}.getParentOfRefinedCell()
+    and
+    marker.h()(0)*3.0<{{MAX_H}}
+  ) {
     const double ScaleMarker = 1.2;
     peano4::grid::GridControlEvent newEntry;
     newEntry.setRefinementControl( peano4::grid::GridControlEvent::RefinementControl::Erase );

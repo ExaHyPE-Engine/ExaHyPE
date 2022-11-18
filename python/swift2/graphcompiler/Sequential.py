@@ -99,15 +99,18 @@ def serialise_and_map_onto_separate_mesh_traversals(species_sets,
           print( "GRAPH COMPILER DEBUG: step {} on particle {} uses ParticleTreeAnalysis action set".format( step.name, current_species_set.particle_model.name ) )
         particle_tree_analysis = peano4.toolbox.particles.ParticleTreeAnalysis(current_species_set)
         new_step.add_action_set(particle_tree_analysis)
+        
       if previous_step_has_reassigned_particles:
-      # or step.effect==AlgorithmStep.Effect.CHANGE_POSITION_OR_INTERACTION_RADIUS or previous_step_has_altered_particle_positions:
         if verbose:
           print( "GRAPH COMPILER DEBUG: step {} on particle {} uses ParticleAMR action set".format( step.name, current_species_set.particle_model.name ) )
         particle_tree_analysis = peano4.toolbox.particles.ParticleTreeAnalysis(current_species_set)
         new_step.add_action_set(peano4.toolbox.particles.ParticleAMR(current_species_set,
                                                                      particle_tree_analysis,
                                                                      min_particles_per_cell=int(current_species_set.particle_model.particles_per_cell/27),
-                                                                     max_particles_per_cell=current_species_set.particle_model.particles_per_cell), append_at_end=True)
+                                                                     max_particles_per_cell=current_species_set.particle_model.particles_per_cell,
+                                                                     min_h = current_species_set.particle_model.min_h,
+                                                                     max_h = current_species_set.particle_model.max_h
+                                                                     ), append_at_end=True)
 
 
       #

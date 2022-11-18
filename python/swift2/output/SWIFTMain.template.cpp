@@ -95,7 +95,7 @@ bool {{NAMESPACE | join("::")}}::selectNextAlgorithmicStep() {
     );
 
     if (
-      tarch::la::max( peano4::parallel::SpacetreeSet::getInstance().getGridStatistics().getMinH() ) < MaxH
+      tarch::la::max( peano4::parallel::SpacetreeSet::getInstance().getGridStatistics().getMinH() ) < GlobalMaxH
       or
       peano4::parallel::SpacetreeSet::getInstance().getGridStatistics().getStationarySweeps()>5
     ) {

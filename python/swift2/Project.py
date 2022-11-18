@@ -53,8 +53,6 @@ class Project(object):
     self._executable_name = executable
     self._periodic_BC   = [False, False, False]
     self._output_path   = "./"
-    self._min_h         = 0.01
-    self._max_h         = 0.1
 
     self._particle_species     = []
     self._particle_species_set = []
@@ -149,9 +147,12 @@ class Project(object):
     self._project.constants.export( "TimeInBetweenPlots", str(self._time_in_between_plots) )
     self._project.constants.export( "PlotterPrecision", str(self._plotter_precision) )
     self._project.constants.export_boolean_sequence( "PeriodicBC", self._periodic_BC )
-    
-    self._project.constants.export( "MaxH", str(self._max_h) )
-    self._project.constants.export( "MinH", str(self._min_h) )
+  
+
+    global_max_h = 0.0
+    for current_species_set in self._particle_species_set:
+      global_max_h = max( global_max_h, current_species_set.particle_model.max_h )
+    self._project.constants.export( "GlobalMaxH", str(global_max_h) )
 
     build_string = "python3 "
     for i in sys.argv:
@@ -186,8 +187,6 @@ citation of the original SWIFT paper
                                        dimensions,
                                        offset,
                                        domain_size,
-                                       min_h,
-                                       max_h,
                                        min_end_time,
                                        max_end_time,
                                        first_plot_time_stamp,
@@ -212,9 +211,6 @@ citation of the original SWIFT paper
         most advanced cell exceeds this threshold.
       
     """
-    assert max_h>=min_h
-    self._max_h         = max_h
-    self._min_h         = min_h
     self._domain_offset = offset
     self._domain_size   = domain_size
     self._dimensions    = dimensions

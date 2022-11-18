@@ -71,7 +71,9 @@ class Particle(peano4.toolbox.particles.Particle):
     
   def __init__(self, 
                name,
-               particles_per_cell
+               particles_per_cell,
+               min_h,
+               max_h,
                ):
     """
     
@@ -110,6 +112,8 @@ class Particle(peano4.toolbox.particles.Particle):
     if particles_per_cell<=0:
       print( "WARNING: Particles per cell set to zero, so code might refine up to maximum depth even if there is only one particle" )
     self.particles_per_cell = particles_per_cell
+    self.min_h              = min_h
+    self.max_h              = max_h
     
     pass
 

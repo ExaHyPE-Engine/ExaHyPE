@@ -65,8 +65,6 @@ project.set_global_simulation_parameters(
   dimensions            = dimensions,
   offset                = offset,  
   domain_size           = domain_size,
-  min_h                 = 0.01, 
-  max_h                 = 0.1,
   min_end_time          = args.end_time,
   max_end_time          = 0.0,
   first_plot_time_stamp = 0.0, 
