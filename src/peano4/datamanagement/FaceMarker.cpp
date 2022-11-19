@@ -135,11 +135,13 @@ bool peano4::datamanagement::FaceMarker::isLocal() const {
 
 
 tarch::la::Vector<Dimensions,int>  peano4::datamanagement::FaceMarker::getRelativePositionWithinFatherCell() const {
+  assertion1( _select>=0, toString() );
   return getRelativePositionWithinFatherCell(_select);
 }
 
 
 tarch::la::Vector<Dimensions,int>  peano4::datamanagement::FaceMarker::getRelativePositionWithinFatherCell(int i) const {
+  assertion2( i>=0, i, toString() );
   tarch::la::Vector<Dimensions,int> result = _relativePositionOfCellWithinFatherCell;
   const int normal = i % Dimensions;
   result(normal) += i>=Dimensions ? 1 : 0;
