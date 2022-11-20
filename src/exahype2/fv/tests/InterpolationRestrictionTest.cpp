@@ -231,12 +231,38 @@ void exahype2::fv::tests::InterpolationRestrictionTest::testAverageRestriction()
     );
 
 
-    validateNumericalEqualsWithParams3( coarseGridFaceValues[0*2+0],  0.1, coarseGridFaceValues[0*2+0], coarseGridFaceValues[1*2+0], coarseGridFaceValues[2*2+0] );
-    validateNumericalEquals( coarseGridFaceValues[0*2+1], -0.1 );
-    validateNumericalEquals( coarseGridFaceValues[1*2+0],  0.2 );
-    validateNumericalEquals( coarseGridFaceValues[1*2+1], -0.2 );
-    validateNumericalEquals( coarseGridFaceValues[2*2+0],  0.3 );
-    validateNumericalEquals( coarseGridFaceValues[2*2+1], -0.3 );
+    validateNumericalEqualsWithParams6(
+      coarseGridFaceValues[0*2+0],  0.1,
+      coarseGridFaceValues[0*2+0], coarseGridFaceValues[1*2+0], coarseGridFaceValues[2*2+0],
+      coarseGridFaceValues[3*2+0], coarseGridFaceValues[4*2+0], coarseGridFaceValues[5*2+0]
+    );
+    validateNumericalEqualsWithParams6(
+      coarseGridFaceValues[0*2+1], -0.1,
+      coarseGridFaceValues[0*2+0], coarseGridFaceValues[1*2+0], coarseGridFaceValues[2*2+0],
+      coarseGridFaceValues[3*2+0], coarseGridFaceValues[4*2+0], coarseGridFaceValues[5*2+0]
+    );
+
+    validateNumericalEqualsWithParams6(
+      coarseGridFaceValues[1*2+0],  0.2,
+      coarseGridFaceValues[0*2+0], coarseGridFaceValues[1*2+0], coarseGridFaceValues[2*2+0],
+      coarseGridFaceValues[3*2+0], coarseGridFaceValues[4*2+0], coarseGridFaceValues[5*2+0]
+    );
+    validateNumericalEqualsWithParams6(
+      coarseGridFaceValues[1*2+1], -0.2,
+      coarseGridFaceValues[0*2+0], coarseGridFaceValues[1*2+0], coarseGridFaceValues[2*2+0],
+      coarseGridFaceValues[3*2+0], coarseGridFaceValues[4*2+0], coarseGridFaceValues[5*2+0]
+    );
+
+    validateNumericalEqualsWithParams6(
+      coarseGridFaceValues[2*2+0],  0.3,
+      coarseGridFaceValues[0*2+0], coarseGridFaceValues[1*2+0], coarseGridFaceValues[2*2+0],
+      coarseGridFaceValues[3*2+0], coarseGridFaceValues[4*2+0], coarseGridFaceValues[5*2+0]
+    );
+    validateNumericalEqualsWithParams6(
+      coarseGridFaceValues[2*2+1], -0.3,
+      coarseGridFaceValues[0*2+0], coarseGridFaceValues[1*2+0], coarseGridFaceValues[2*2+0],
+      coarseGridFaceValues[3*2+0], coarseGridFaceValues[4*2+0], coarseGridFaceValues[5*2+0]
+    );
 
     return;
 
