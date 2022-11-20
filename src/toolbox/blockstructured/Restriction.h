@@ -169,6 +169,19 @@ namespace toolbox {
     );
 
 
+    /**
+     * Restrict whole halo layer
+     *
+     * This routine is usually only called when we destroy a face completely. In
+     * this case, we have to restrict the whole halo layer. Otherwise, we
+     * typically only restrict the inner halo layer, i.e. half of the overall
+     * face data.
+     *
+     * As we have a routine that handles half of the face data, I simply call
+     * this routine twice, but once switch inside and outside.
+     *
+     * @see restrictInnerHalfOfHaloLayer_AoS_tensor_product()
+     */
     void restrictHaloLayer_AoS_tensor_product(
       const peano4::datamanagement::FaceMarker& marker,
       int                                       numberOfDoFsPerAxisInPatch,
@@ -181,6 +194,20 @@ namespace toolbox {
     );
 
 
+    /**
+     * Restrict inner halo half of face data
+     *
+     * Every cell has 2d faces. From a cell's perspective, each face hosts k
+     * layers of the adjacent cell and k entries of the neighbouring cell.
+     * The latter are usually called halo. If a face is a hanging face, these
+     * halo data are interpolated and do not stem directly from a neighbour
+     * cell (as there is no neighbour cell on the same resolution level). Once
+     * the cell has updated its data, we have to befill the halo of the
+     * adjacent coarser cell however.
+     *
+     * For this, we take the inner data layers associated to the face and we
+     * restrict them into the halo of the coarser cell.
+     */
     void restrictInnerHalfOfHaloLayer_AoS_tensor_product(
       const peano4::datamanagement::FaceMarker& marker,
       int                                       numberOfDoFsPerAxisInPatch,

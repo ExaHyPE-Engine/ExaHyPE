@@ -28,6 +28,11 @@ class exahype2::fv::tests::InterpolationRestrictionTest : public tarch::tests::T
      *
      * The tangential restriction matrix thus is a 5 times 15 matrix, as we
      * take the five volumes that are tangential to a face in one direction.
+     * We assume that the normal points in the x-direction and we speak about
+     * the right face of a cell, i.e. the face index equals Dimensions.
+     *
+     * As we restrict, the right half of the fine grid face (inside) has to
+     * be restricted to the right half of the coarse grid face (outside).
      */
     void testAverageRestriction();
 
