@@ -1,9 +1,10 @@
 #include "tarch/accelerator/Device.h"
 #include "tarch/compiler/CompilerSpecificSettings.h"
 
-#include <omp.h>
 
 #if defined(GPUOffloadingOMP)
+
+#include <omp.h>
 
 bool checkOMPOffloading() {
   bool canOffload = false;
@@ -35,7 +36,7 @@ tarch::accelerator::Device& tarch::accelerator::Device::getInstance() {
 }
 
 
-void tarch::accelerator::Device::configure( const std::set<int>& devicesToUse ) {
+void tarch::accelerator::Device::configure() {
 }
 
 
