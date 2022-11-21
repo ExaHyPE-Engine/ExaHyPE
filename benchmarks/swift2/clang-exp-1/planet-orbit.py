@@ -19,6 +19,7 @@ parser.add_argument("-c",   "--clean",             dest="clean_temporary_directo
 parser.add_argument("-d",   "--dimensions",        dest="dimensions",     type=int,   default=2,                    help="Spatial dimensions (default 2)" )
 parser.add_argument("-et",  "--end-time",          dest="end_time",       type=float, default=0.5,                  help="End of simulation" )
 parser.add_argument("-dt",  "--timestep-size",     dest="timestep_size",  type=float, default=1e-3,                 help="Global timestep size (initial value)" )
+parser.add_argument("-r",   "--cut-off",           dest="cut_off_radius", type=float, default=0.1,                  help="Radius guiding AMR around particle" )
 parser.add_argument("-cs",  "--cell-size",         dest="cell_size",      type=float, default=0.3,                  help="Cell size (default 0.3)" )
 parser.add_argument("-pd",  "--peano-dir",         dest="peanodir",       default="../../..",                       help="Peano4 directory" )
 parser.add_argument("-asserts",  "--asserts",      dest="asserts",        action="store_true", default=False,       help="Switch on assertions" )
@@ -33,7 +34,7 @@ dimensions  = args.dimensions
 
 project = swift2.Project( namespace=["benchmarks", "swift2", "planetorbit"], 
                           project_name="planetorbit", 
-                          executable="orbit-" + str(args.cell_size) )
+                          executable="orbit-experiment" )
 
 
 # Declare the particle type
@@ -209,7 +210,8 @@ particle_set = project.add_particle_species( particle )
 # only the earth is given an initial velocity.
 #
 ###############################################################################
-cut_off_radius = 0.01
+cut_off_radius = args.cut_off_radius
+
 initialisation_snippet = """
   /*
    * In this problem we will initialize just a single particle (Earth)
