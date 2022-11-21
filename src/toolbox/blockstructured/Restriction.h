@@ -55,16 +55,6 @@ namespace toolbox {
     );
 
 
-    void restrictInnerHalfOfHaloLayer_AoS_inject(
-      const peano4::datamanagement::FaceMarker& marker,
-      int                                       numberOfDoFsPerAxisInPatch,
-      int                                       overlap,
-      int                                       unknowns,
-      double*                                   fineGridValues,
-      double*                                   coarseGridValues,
-      bool                                      swapInsideOutside=false
-    );
-
 
     /**
      * Restrict data by injection
@@ -72,9 +62,25 @@ namespace toolbox {
      * This routine works for an overlap of 1 or an overlap of 3k+2.
      * If the overlap equals 1, we walk along the fine grid layer
      * along the AMR boundary and we restrict every third finite
-     * volume voxel:
+     * volume voxel.
+     *
+     * The routine restricts only only have to a face, and it
+     * restricts the inner half:
      *
      * @image html Restriction_injection.png
+     *
+     * An interpolation sets the data in the halo layer of the fine
+     * grid cell. For this, it uses interior data from the coarse
+     * grid cell. A restriction sets the data in the halo of the
+     * coarser cell. For this, it uses the data inside the finer
+     * cell. In the sketch above, the left cell hosts the fine data.
+     * The right cell is a coarse cell. An interior voxel from the
+     * fine data left is copied into the halo of the coarser voxel.
+     *
+     * You can invert this behaviour by setting the marker.
+     *
+     *
+     * ## Halo sizes
      *
      * If the overlap equals two, we don't take the voxel directly
      * adjacent to the resolution change face, but we take the one
@@ -89,6 +95,23 @@ namespace toolbox {
      * for an overlap of 2, or two layers for an overlap of 5. The
      * remaining coarse layer entries are not touched.
      *
+     */
+    void restrictInnerHalfOfHaloLayer_AoS_inject(
+      const peano4::datamanagement::FaceMarker& marker,
+      int                                       numberOfDoFsPerAxisInPatch,
+      int                                       overlap,
+      int                                       unknowns,
+      double*                                   fineGridValues,
+      double*                                   coarseGridValues,
+      bool                                      swapInsideOutside=false
+    );
+
+
+    /**
+     * Restrict data by injection
+     *
+     * Required for dynamic AMR only. Invokes the one-sided routine twice:
+     * for the inner and the outer half of the face.
      */
     void restrictHaloLayer_AoS_inject(
       const peano4::datamanagement::FaceMarker& marker,
@@ -137,6 +160,8 @@ namespace toolbox {
 
 
     /**
+     * Restrict with averaging
+     *
      * This routine works for overlaps of 1 and multiples of 3. However, it
      * does only set values for the overlap/3 adjacent cells. So if you work
      * with an overlap of 1, then the overlap just works fine, but it is not
@@ -148,6 +173,7 @@ namespace toolbox {
      * If you have an overlap of 3, the routine computes a meaningful average,
      * but as it has only three overlap cells on the fine grid, it can
      * only set the overlap cell 1 on the next coarser mesh.
+     *
      */
     void restrictInnerHalfOfHaloLayer_AoS_averaging(
       const peano4::datamanagement::FaceMarker& marker,
@@ -207,6 +233,13 @@ namespace toolbox {
      *
      * For this, we take the inner data layers associated to the face and we
      * restrict them into the halo of the coarser cell.
+     *
+     * @see restrictInnerHalfOfHaloLayer_AoS_inject() for a discussion of the
+     *   data flow. From this sketch, it becomes clear that we never can set
+     *   all halo data on the coarser mesh directly. The fine grid would hold
+     *   all required data, but we accept the fine grid face data, and this
+     *   data is not sufficient to set all coarse entries. We have to take it
+     *   and extrapolate.
      */
     void restrictInnerHalfOfHaloLayer_AoS_tensor_product(
       const peano4::datamanagement::FaceMarker& marker,
