@@ -535,6 +535,16 @@ void runBenchmarksOnDevice(int patches, int device) {
     }
   }
   tarch::multicore::getHostSYCLQueue().wait();
+  #elif defined(SharedOMP) and defined(GPUOffloadingSYCL)
+  ::tbb::task_group taskGroup;
+  #pragma omp parallel for
+  for (int thread=0; thread<tarch::multicore::Core::getInstance().getNumberOfThreads(); thread++) {
+    taskGroup.run(
+      [=]() -> void {
+        submitSYCLKernels(patches, device, thread);
+      }
+    );
+  }
   #elif defined(SharedCPP)
   #error Not implemented yet
   #endif
