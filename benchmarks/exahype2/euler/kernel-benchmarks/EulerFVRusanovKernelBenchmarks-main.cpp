@@ -545,6 +545,8 @@ void runBenchmarksOnDevice(int patches, int device) {
       }
     );
   }
+  #elif defined(GPUOffloadingSYCL)
+  submitSYCLKernels(patches, device, 0);
   #elif defined(SharedCPP)
   #error Not implemented yet
   #endif
