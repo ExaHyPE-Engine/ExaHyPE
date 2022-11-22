@@ -53,13 +53,8 @@ void toolbox::blockstructured::restrictInnerHalfOfHaloLayer_AoS_tensor_product(
   logTraceInWith3Arguments( "restrictInnerHalfOfHaloLayer_AoS_tensor_product(...)", marker.toString(), numberOfDoFsPerAxisInPatch, overlap );
 
   const int    normal          = marker.getSelectedFaceNumber() % Dimensions;
-<<<<<<< HEAD
-  const int    leftRightOffset = ((marker.getSelectedFaceNumber() < Dimensions) xor swapInsideOutside) ? 0 : overlap;
-  logDebug( "restrictInnerHalfOfHaloLayer_AoS_tensor_product(...)", " leftRightOffset " << leftRightOffset);
-=======
   const int    leftRightOffset = ( (marker.getSelectedFaceNumber() >= Dimensions) xor swapInsideOutside) ? 0 : overlap;
   logDebug( "restrictInnerHalfOfHaloLayer_AoS_tensor_product(...)", "restrict " << marker.toString() << ", swap=" << swapInsideOutside << ", leftRightOffset=" << leftRightOffset);
->>>>>>> 5d47ec0bd57917ed18fd908c28ca0776dd2b6b29
 
   dfore(kCoarse,numberOfDoFsPerAxisInPatch,normal,0) {
     for (int iCoarse=leftRightOffset;   iCoarse<leftRightOffset+overlap;   iCoarse++) {
