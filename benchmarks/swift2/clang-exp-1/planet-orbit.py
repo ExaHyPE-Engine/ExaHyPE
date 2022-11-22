@@ -8,6 +8,8 @@ import dastgen2
 
 import shutil
 
+import swift2.particle.tests
+
 ########################################################################################
 # Parse user input
 ########################################################################################
@@ -19,8 +21,9 @@ parser.add_argument("-c",   "--clean",             dest="clean_temporary_directo
 parser.add_argument("-d",   "--dimensions",        dest="dimensions",     type=int,   default=2,                    help="Spatial dimensions (default 2)" )
 parser.add_argument("-et",  "--end-time",          dest="end_time",       type=float, default=0.5,                  help="End of simulation" )
 parser.add_argument("-dt",  "--timestep-size",     dest="timestep_size",  type=float, default=1e-3,                 help="Global timestep size (initial value)" )
-parser.add_argument("-r",   "--cut-off",           dest="cut_off_radius", type=float, default=0.1,                  help="Radius guiding AMR around particle" )
+parser.add_argument("-r",   "--cut-off",           dest="cut_off_radius", type=float, default=0.05,                 help="Radius guiding AMR around particle" )
 parser.add_argument("-cs",  "--cell-size",         dest="cell_size",      type=float, default=0.3,                  help="Cell size (default 0.3)" )
+parser.add_argument("-hmin","--h-min",             dest="h_min",          type=float, default=0.01,                 help="Minimum value for refined cell size" )
 parser.add_argument("-pd",  "--peano-dir",         dest="peanodir",       default="../../..",                       help="Peano4 directory" )
 parser.add_argument("-asserts",  "--asserts",      dest="asserts",        action="store_true", default=False,       help="Switch on assertions" )
 args = parser.parse_args()
@@ -38,10 +41,14 @@ project = swift2.Project( namespace=["benchmarks", "swift2", "planetorbit"],
 
 
 # Declare the particle type
-particle   = swift2.particle.testLeapfrogFixedTimeStepSize( name                   = "Planet", 
-                                                            cfl_factor             = 0.2, 
-                                                            constant_time_step_size= True,
-                                                            initial_time_step_size = args.timestep_size )
+particle   = swift2.particle.tests.testLeapfrogFixedTimeStepSize( name                   = "Planet", 
+                                                                  cfl_factor             = 0.2, 
+                                                                  constant_time_step_size= True,
+                                                                  initial_time_step_size = args.timestep_size,
+                                                                  particles_per_cell = 0,
+                                                                  min_h = args.h_min,
+                                                                  max_h = 0.3
+                                                                )
 
 
 # Some attributes specific to this test
