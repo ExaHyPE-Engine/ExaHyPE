@@ -138,7 +138,7 @@ LDADD_PEANO_3D_DEBUG="   -lPeano4Core3d_debug   -lTarch_debug"
 #
 AC_ARG_WITH(
   multithreading, 
-  AS_HELP_STRING([--with-multithreading],[switch on multithreading [default=no,cpp,omp,tbb,scyl]]),
+  AS_HELP_STRING([--with-multithreading],[switch on multithreading [default=no,cpp,omp,tbb,sycl]]),
   [
     AC_MSG_CHECKING(for multithreading)
     case "${withval}" in
