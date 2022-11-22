@@ -8,6 +8,8 @@ import dastgen2
 
 import shutil
 
+import swift2.particle.tests
+
 ########################################################################################
 # Parse user input
 ########################################################################################
@@ -37,10 +39,10 @@ project = swift2.Project( namespace=["benchmarks", "swift2", "planetorbit"],
 
 
 # Declare the particle type
-particle   = swift2.particle.testLeapfrogFixedTimeStepSize( name                   = "Planet", 
-                                                            cfl_factor             = 0.2, 
-                                                            constant_time_step_size= True,
-                                                            initial_time_step_size = args.timestep_size )
+particle = swift2.particle.tests.testLeapfrogFixedTimeStepSize( name                   = "Planet", 
+                                                                cfl_factor             = 0.2, 
+                                                                constant_time_step_size= True,
+                                                                initial_time_step_size = args.timestep_size )
 
 
 # Some attributes specific to this test
@@ -60,17 +62,16 @@ offset      = [ 0, 0, 0 ]
 domain_size = [ 1, 1, 1 ]
 periodic_boundary_conditions = [False,False,False]          # Periodic BC
 
-
 project.set_global_simulation_parameters(
-  dimensions,               # dimensions
-  offset,  domain_size,
-  0.1, 
-  args.timestep_size,
-  args.end_time,
-  0.0, 
-  args.end_time/200,                      #args.plot_step_size,   # snapshots
-  periodic_boundary_conditions,
-  8  # plotter precision
+  dimensions            = dimensions,
+  offset                = offset,  
+  domain_size           = domain_size,
+  min_end_time          = args.end_time,
+  max_end_time          = 0.0,
+  first_plot_time_stamp = 0.0, 
+  time_in_between_plots = args.end_time/200, 
+  periodic_BC           = periodic_boundary_conditions,
+  plotter_precision     = 8
 )
 
 # additional global constants (to be exported down below)
@@ -302,7 +303,6 @@ particle_plotter = peano4.toolbox.particles.PlotParticlesInVTKFormat( "particles
                                                                       particle_set, 
                                                                       "globaldata::{}::getSpecies().getMinTimeStamp()".format(particle.name) )
 particle_plotter.add_attribute_to_plot(particle.velocity, dimensions)
-#particle_plotter.add_attribute_to_plot(a_attr       , Dimensions)
 particle_plotter.add_attribute_to_plot(energy_kin_attr  , 1)
 particle_plotter.add_attribute_to_plot(energy_pot_attr  , 1)
 particle_plotter.add_attribute_to_plot(energy_tot_attr  , 1)

@@ -16,8 +16,16 @@ class testDensityCalculation(Particle):
                name, 
                cfl_factor, 
                initial_time_step_size,
+               particles_per_cell = 5, 
+               min_h = 0.1,
+               max_h = 0.3,
                ):
-    super( testDensityCalculation , self ).__init__( name )
+    super( testDensityCalculation , self ).__init__( name,
+                                                     particles_per_cell,
+                                                     min_h,
+                                                     max_h,
+                                                      )
+    
     
     # Simulation properties
     self.cfl_factor                = cfl_factor
@@ -27,7 +35,6 @@ class testDensityCalculation(Particle):
 
     # SPH parameters (default values)
     self.hydroDimensions = 1
-    self.kernelSupportRadius = 1.936492
     self.etaFactor = 1.235
 
     # Minimal SPH parameters
@@ -55,11 +62,9 @@ class testDensityCalculation(Particle):
                                          ::swift2::kernels::computeDensity<globaldata::{}>( 
                                            localParticles, 
                                            activeParticles,
-                                           {},
                                            {}
                                          );
                                          """.format(self.name,
-                                                    self.kernelSupportRadius,
                                                     self.hydroDimensions),
 
         touch_vertex_last_time_kernel  = """
@@ -67,11 +72,9 @@ class testDensityCalculation(Particle):
                                              localParticles,
                                              {},
                                              {},
-                                             {},
                                              {}
                                              );
                                          """.format(self.name,
-                                                    self.kernelSupportRadius,
                                                     self.hydroDimensions,
                                                     self.etaFactor,
                                                     self.alphaAV),

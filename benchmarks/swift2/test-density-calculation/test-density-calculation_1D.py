@@ -8,6 +8,8 @@ import dastgen2
 
 import shutil
 
+import swift2.particle.tests
+
 # HDF5 Reader
 import peano4.toolbox.particles.sph.fileReader
 
@@ -44,7 +46,7 @@ project = swift2.Project( namespace=project_namespace,
                           executable="test_density" )
 
 # Declare the particle type
-particle = swift2.particle.testDensityCalculation(name =
+particle = swift2.particle.tests.testDensityCalculation(name =
                                                   "testDensityCalculation",
                                                   cfl_factor=0.1,
                                                   initial_time_step_size=1e-4)
@@ -62,15 +64,15 @@ domain_size = [ 1, 1, 1 ]
 periodic_boundary_conditions = [False,False,False]          # Periodic BC
 
 project.set_global_simulation_parameters(
-  dimensions,               # dimensions
-  offset,  domain_size,
-  0.1, 
-  args.timestep_size,
-  args.end_time,
-  0.0, 
-  args.end_time/50,                      #args.plot_step_size,   # snapshots
-  periodic_boundary_conditions,
-  8  # plotter precision
+  dimensions            = dimensions,
+  offset                = offset,  
+  domain_size           = domain_size,
+  min_end_time          = args.end_time,
+  max_end_time          = 0.1,
+  first_plot_time_stamp = 0.0, 
+  time_in_between_plots = args.end_time/50, 
+  periodic_BC           = periodic_boundary_conditions,
+  plotter_precision     = 8
 )
 
 
