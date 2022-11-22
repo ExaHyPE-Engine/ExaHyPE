@@ -15,8 +15,8 @@ exahype2::fv::tests::InterpolationRestrictionTest::InterpolationRestrictionTest(
 
 
 void exahype2::fv::tests::InterpolationRestrictionTest::run() {
-  //testMethod (testPiecewiseConstantInterpolation);
-  testMethod (testAverageRestriction);
+  testMethod (testPiecewiseConstantInterpolation);
+  //testMethod (testAverageRestriction);
 }
 
 
@@ -94,6 +94,14 @@ void exahype2::fv::tests::InterpolationRestrictionTest::testPiecewiseConstantInt
 
     validateNumericalEquals( fineGridFaceValues[18*2+0],  1.3 );
     validateNumericalEquals( fineGridFaceValues[18*2+1], -1.3 );
+
+    /*std::cout<<std::setprecision(1);
+    for (int i=0;i<5;i++){
+      for (int j=0;j<12;j++){
+        std::cout<<fineGridFaceValues[i*12+j] << " ";
+      }
+      std::cout<<"\n";
+    }*/
   }
 
   {
@@ -136,6 +144,14 @@ void exahype2::fv::tests::InterpolationRestrictionTest::testPiecewiseConstantInt
 
     validateNumericalEquals( fineGridFaceValues[15*2+0],  0.1 );
     validateNumericalEquals( fineGridFaceValues[15*2+1], -0.1 );
+
+    /*std::cout<<std::setprecision(1);
+    for (int i=0;i<6;i++){
+      for (int j=0;j<10;j++){
+        std::cout<<fineGridFaceValues[i*10+j] << " ";
+      }
+      std::cout<<"\n";
+    }*/
   }
   #endif
 }
@@ -156,29 +172,39 @@ void exahype2::fv::tests::InterpolationRestrictionTest::testAverageRestriction()
   };
 
   peano4::grid::GridTraversalEvent    dummEvent;
-  #if Dimension==2
+  int face=3;
+  #if Dimensions==2
   dummEvent.setRelativePositionToFather( {0,0} );
-  #else
-  dummEvent.setRelativePositionToFather( {0,0,0} );
-  #endif
-  peano4::datamanagement::FaceMarker  marker(dummEvent);
-  marker.select(0);
+
+  //peano4::datamanagement::FaceMarker  marker(dummEvent);
+  //marker.select(face);
 
   {
+    /*double  fineGridFaceValues[] = {
+      0.1,-0.1, 0.2,-0.2, 0.3,-0.3,    5.1,-5.1, 5.2,-5.2, 5.3,-5.3,
+      1.1,-1.1, 1.2,-1.2, 1.3,-1.3,    6.1,-6.1, 6.2,-6.2, 6.3,-6.3,
+      2.1,-2.1, 2.2,-2.2, 2.3,-2.3,    7.1,-7.1, 7.2,-7.2, 7.3,-7.3,
+      3.1,-3.1, 3.2,-3.2, 3.3,-3.3,    8.1,-8.1, 8.2,-8.2, 8.3,-8.3, 
+      4.1,-4.1, 4.2,-4.2, 4.3,-4.3,    9.1,-9.1, 9.2,-9.2, 9.3,-9.3
+    };*/
     double  fineGridFaceValues[] = {
-      0.1,-0.1, 0.2,-0.2, 0.3,-0.3,    0.0,0.0, 0.0,0.0, 0.0,0.0,
-      1.1,-1.1, 1.2,-1.2, 1.3,-1.3,    0.0,0.0, 0.0,0.0, 0.0,0.0,
-      2.1,-2.1, 2.2,-2.2, 2.3,-2.3,    0.0,0.0, 0.0,0.0, 0.0,0.0,
-      3.1,-3.1, 3.2,-3.2, 3.3,-3.3,    0.0,0.0, 0.0,0.0, 0.0,0.0,
-      4.1,-4.1, 4.2,-4.2, 4.3,-4.3,    0.0,0.0, 0.0,0.0, 0.0,0.0
+      0.1,-0.1, 0.2,-0.2, 0.3,-0.3, 0.4,-0.4, 0.5,-0.5,
+      1.1,-1.1, 1.2,-1.2, 1.3,-1.3, 1.4,-1.4, 1.5,-1.5,
+      2.1,-2.1, 2.2,-2.2, 2.3,-2.3, 2.4,-2.4, 2.5,-2.5,
+
+      3.1,-3.1, 3.2,-3.2, 3.3,-3.3, 3.4,-3.4, 3.5,-3.5,
+      4.1,-4.1, 4.2,-4.2, 4.3,-4.3, 4.4,-4.4, 4.5,-4.5,
+      5.1,-5.1, 5.2,-5.2, 5.3,-5.3, 5.4,-5.4, 5.5,-5.5
     };
+
+
     double  coarseGridFaceValues[ 3*5*2*2 ]; // three width, five dofs per axis, two unknowns, two sides
     std::fill_n(coarseGridFaceValues, 3*5*2*2, 0.0 );
 
     peano4::datamanagement::FaceMarker  marker1(dummEvent);
-    marker1.select(0);
+    marker1.select(face);
 
-    ::toolbox::blockstructured::restrictHaloLayer_AoS_tensor_product(
+    ::toolbox::blockstructured::restrictInnerHalfOfHaloLayer_AoS_tensor_product(
       marker1,
       5,         // numberOfDoFsPerAxisInPatch
       3,         // overlap
@@ -191,15 +217,15 @@ void exahype2::fv::tests::InterpolationRestrictionTest::testAverageRestriction()
 
     //validateNumericalEquals( fineGridFaceValues[15*2+0],  0.1 );
 
-    #if Dimension==2
-    dummEvent.setRelativePositionToFather( {0,1} );
-    #else
-    dummEvent.setRelativePositionToFather( {0,1,0} );
-    #endif
+
+    dummEvent.setRelativePositionToFather( {1,0} );
+    //std::cout<<dummEvent.getRelativePositionToFather()<<std::endl;
     peano4::datamanagement::FaceMarker  marker2(dummEvent);
-    marker2.select(0);
+    marker2.select(face);
+    //std::cout<<marker2.getRelativePositionWithinFatherCell()<<std::endl;
+
     
-    ::toolbox::blockstructured::restrictHaloLayer_AoS_tensor_product(
+    ::toolbox::blockstructured::restrictInnerHalfOfHaloLayer_AoS_tensor_product(
       marker2,
       5,         // numberOfDoFsPerAxisInPatch
       3,         // overlap
@@ -210,15 +236,12 @@ void exahype2::fv::tests::InterpolationRestrictionTest::testAverageRestriction()
       coarseGridFaceValues
     );
 
-    #if Dimension==2
-    dummEvent.setRelativePositionToFather( {0,2} );
-    #else
-    dummEvent.setRelativePositionToFather( {0,2,0} );
-    #endif
+
+    dummEvent.setRelativePositionToFather( {2,0} );
     peano4::datamanagement::FaceMarker  marker3(dummEvent);
-    marker3.select(0);
+    marker3.select(face);
     
-    ::toolbox::blockstructured::restrictHaloLayer_AoS_tensor_product(
+    ::toolbox::blockstructured::restrictInnerHalfOfHaloLayer_AoS_tensor_product(
       marker3,
       5,         // numberOfDoFsPerAxisInPatch
       3,         // overlap
@@ -229,11 +252,11 @@ void exahype2::fv::tests::InterpolationRestrictionTest::testAverageRestriction()
       coarseGridFaceValues
     );
 
-/*
-    std::cout<<std::setprecision(1);
-    for (int i=0;i<5;i++){
-      for (int j=0;j<12;j++){
-        std::cout<<coarseGridFaceValues[i*12+j] << " ";
+
+    /*std::cout<<std::setprecision(1);
+    for (int i=0;i<6;i++){
+      for (int j=0;j<10;j++){
+        std::cout<<coarseGridFaceValues[i*10+j] << " ";
       }
       std::cout<<"\n";
     }*/
@@ -241,4 +264,111 @@ void exahype2::fv::tests::InterpolationRestrictionTest::testAverageRestriction()
 
     //validateNumericalEquals( fineGridFaceValues[15*2+0],  0.1 );
   }
+  #endif
+}
+
+void exahype2::fv::tests::InterpolationRestrictionTest::testPiecewiseConstantInterpolation1() {
+
+  //@tobias: you can just ignore it as I am just testing the schme in my stupid way.
+
+  static constexpr double  NormalInterpolationMatrix1d[]     = {
+    0.0, 0.0, 1.0, 0.0, 0.0, 0.0,
+    0.0, 0.0, 1.0, 0.0, 0.0, 0.0,
+    0.0, 0.0, 1.0, 0.0, 0.0, 0.0
+  };
+  static constexpr double  TangentialInterpolationMatrix1d[] = {
+    1.0,0.0,0.0,0.0,0.0,
+    1.0,0.0,0.0,0.0,0.0,
+    1.0,0.0,0.0,0.0,0.0,
+    0.0,1.0,0.0,0.0,0.0,
+    0.0,1.0,0.0,0.0,0.0,
+
+    0.0,1.0,0.0,0.0,0.0,
+    0.0,0.0,1.0,0.0,0.0,
+    0.0,0.0,1.0,0.0,0.0,
+    0.0,0.0,1.0,0.0,0.0,
+    0.0,0.0,0.0,1.0,0.0,
+
+    0.0,0.0,0.0,1.0,0.0,
+    0.0,0.0,0.0,1.0,0.0,
+    0.0,0.0,0.0,0.0,1.0,
+    0.0,0.0,0.0,0.0,1.0,
+    0.0,0.0,0.0,0.0,1.0
+  };
+
+
+  #if Dimensions==2
+  peano4::grid::GridTraversalEvent    dummEvent;
+  dummEvent.setRelativePositionToFather( {0,2} );
+
+  peano4::datamanagement::FaceMarker  marker(dummEvent);
+
+  {
+    double  coarseGridFaceValues[] = {
+      0.1,-0.1, 0.2,-0.2, 0.3,-0.3,    5.1,-5.1, 5.2,-5.2, 5.3,-5.3,
+      1.1,-1.1, 1.2,-1.2, 1.3,-1.3,    6.1,-6.1, 6.2,-6.2, 6.3,-6.3,
+      2.1,-2.1, 2.2,-2.2, 2.3,-2.3,    7.1,-7.1, 7.2,-7.2, 7.3,-7.3,
+      3.1,-3.1, 3.2,-3.2, 3.3,-3.3,    8.1,-8.1, 8.2,-8.2, 8.3,-8.3, 
+      4.1,-4.1, 4.2,-4.2, 4.3,-4.3,    9.1,-9.1, 9.2,-9.2, 9.3,-9.3
+    };
+    double  fineGridFaceValues[ 3*5*2*2 ]; // three width, five dofs per axis, two unknowns, two sides
+    std::fill_n(fineGridFaceValues, 3*5*2*2, 0.0 );
+
+    marker.select(0);
+
+    ::toolbox::blockstructured::interpolateHaloLayer_AoS_tensor_product(
+      marker,
+      5,         // numberOfDoFsPerAxisInPatch
+      3,         // overlap
+      2,         // unknowns
+      NormalInterpolationMatrix1d,
+      TangentialInterpolationMatrix1d,
+      coarseGridFaceValues,
+      fineGridFaceValues
+    );
+
+    std::cout<<std::setprecision(1);
+    for (int i=0;i<5;i++){
+      for (int j=0;j<12;j++){
+        std::cout<<fineGridFaceValues[i*12+j] << " ";
+      }
+      std::cout<<"\n";
+    }
+  }
+/*
+  {
+    double  coarseGridFaceValues[] = {
+      0.1,-0.1, 0.2,-0.2, 0.3,-0.3, 0.4,-0.4, 0.5,-0.5,
+      1.1,-1.1, 1.2,-1.2, 1.3,-1.3, 1.4,-1.4, 1.5,-1.5,
+      2.1,-2.1, 2.2,-2.2, 2.3,-2.3, 2.4,-2.4, 2.5,-2.5,
+
+      3.1,-3.1, 3.2,-3.2, 3.3,-3.3, 3.4,-3.4, 3.5,-3.5,
+      4.1,-4.1, 4.2,-4.2, 4.3,-4.3, 4.4,-4.4, 4.5,-4.5,
+      5.1,-5.1, 5.2,-5.2, 5.3,-5.3, 5.4,-5.4, 5.5,-5.5
+    };
+    double  fineGridFaceValues[ 3*5*2*2 ]; // three width, five dofs per axis, two unknowns, two sides
+    std::fill_n(fineGridFaceValues, 3*5*2*2, 0.0 );
+
+    marker.select(1);
+
+    ::toolbox::blockstructured::interpolateHaloLayer_AoS_tensor_product(
+      marker,
+      5,         // numberOfDoFsPerAxisInPatch
+      3,         // overlap
+      2,         // unknowns
+      NormalInterpolationMatrix1d,
+      TangentialInterpolationMatrix1d,
+      coarseGridFaceValues,
+      fineGridFaceValues
+    );
+
+    std::cout<<std::setprecision(1);
+    for (int i=0;i<6;i++){
+      for (int j=0;j<10;j++){
+        std::cout<<fineGridFaceValues[i*10+j] << " ";
+      }
+      std::cout<<"\n";
+    }
+  }*/
+  #endif
 }

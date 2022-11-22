@@ -53,7 +53,7 @@ void toolbox::blockstructured::restrictInnerHalfOfHaloLayer_AoS_tensor_product(
   logTraceInWith3Arguments( "restrictInnerHalfOfHaloLayer_AoS_tensor_product(...)", marker.toString(), numberOfDoFsPerAxisInPatch, overlap );
 
   const int    normal          = marker.getSelectedFaceNumber() % Dimensions;
-  const int    leftRightOffset = (marker.getSelectedFaceNumber() <= Dimensions xor swapInsideOutside) ? 0 : overlap;
+  const int    leftRightOffset = ((marker.getSelectedFaceNumber() < Dimensions) xor swapInsideOutside) ? 0 : overlap;
   logDebug( "restrictInnerHalfOfHaloLayer_AoS_tensor_product(...)", " leftRightOffset " << leftRightOffset);
 
   dfore(kCoarse,numberOfDoFsPerAxisInPatch,normal,0) {
@@ -96,6 +96,7 @@ void toolbox::blockstructured::restrictInnerHalfOfHaloLayer_AoS_tensor_product(
               int row   = dest(d);
               assertion5(col>=0,row,col,src,dest, marker.getRelativePositionWithinFatherCell());
               assertion4(row>=0,row,col,src,dest);
+              logDebug( "restrictInnerHalfOfHaloLayer_AoS_tensor_product(...)", "relativeposition " << marker.getRelativePositionWithinFatherCell());
               int index = col + row * 3 * numberOfDoFsPerAxisInPatch;
               //logDebug( "restrictInnerHalfOfHaloLayer_AoS_tensor_product(...)", "(" << row << "," << col << ")=" << index << " (tangential contribution)" );
               weight *= tangentialRestrictionMatrix1d[ index ];
