@@ -95,6 +95,8 @@ namespace toolbox {
      * for an overlap of 2, or two layers for an overlap of 5. The
      * remaining coarse layer entries are not touched.
      *
+     * This means that the halo data of the coarse cell is potentially
+     * incomplete - something to take into account if you use the data.
      */
     void restrictInnerHalfOfHaloLayer_AoS_inject(
       const peano4::datamanagement::FaceMarker& marker,
@@ -223,23 +225,88 @@ namespace toolbox {
     /**
      * Restrict inner halo half of face data
      *
+     *
      * Every cell has 2d faces. From a cell's perspective, each face hosts k
      * layers of the adjacent cell and k entries of the neighbouring cell.
      * The latter are usually called halo. If a face is a hanging face, these
      * halo data are interpolated and do not stem directly from a neighbour
      * cell (as there is no neighbour cell on the same resolution level). Once
      * the cell has updated its data, we have to befill the halo of the
-     * adjacent coarser cell however.
+     * adjacent coarser cell in return. This is what this routine is about.
      *
-     * For this, we take the inner data layers associated to the face and we
-     * restrict them into the halo of the coarser cell.
+     * For this restriction, we take the inner data layers associated to the
+     * face (therefore the name) and we restrict them into the halo, i.e.
+     * outer face data, of the coarser cell.
+     *
+     * This routine assumes that the restriction can be written as a tensor
+     * product between one operator along the face normal and an operator
+     * describing the tangential restriction. The latter is applied d-1 times.
+     *
+     *
+     * ## Normal restriction operator
+     *
+     * The normal restriction is constructed from a 1d adaptive mesh: The
+     * operator describes how the k coarse grid values are initialised from
+     * the 2k fine grid values:
+     *
+     * @image html Restriction_tensor_1d.png
+     *
+     * In the sketch above, we have a 1d adaptive mesh, where the coarse mesh
+     * is on the left and the fine mesh on the right. We restrict from the
+     * fine grid face (which is a point for a 1d setup) to the coarse grid
+     * face. Peano works with multiscale meshes: So we have two cells on the
+     * coarse mesh (fat lines top), but the right cell is refined, i.e. overlaps
+     * with a finer cell (fat lines bottom). The face in this example hosts an
+     * overlap of two, i.e. copies of two entries left and right.
+     *
+     * The routine has to set the two coarse face entries to the right. The
+     * left entries are initialised properly in the mesh, as they stem directly
+     * from an unrefined cell. You can also overwrite (add something to) the
+     * left entries of the face, but most codes don't do so.
+     *
+     * The normal operator now describes through a 4x4 matrix, what data goes
+     * from the fine mesh to the coarser mesh.
+     *
+     * ### Overlap of one
+     *
+     * If you work with an overlap of one, the restriction along the normal is
+     * kind of canonical. You can, for example, take the average from the fine
+     * grid data and project that one up. We have to take into account that the
+     * fine grid data left in the sketch stems in return from an interpolation
+     * from the coarse mesh, so it is not real data, which might cause numerical
+     * jitter. But in principle, the data flow is trivial.
+     *
+     * ### Overlap greater than one
+     *
+     * With an overlap greater than one, we observe that the fine grid data
+     * stops to overlap the coarse data spatially.
+     *
+     *
+     *
+     * @image html Restriction_injection.png
+     *
+     * An interpolation sets the data in the halo layer of the fine
+     * grid cell. For this, it uses interior data from the coarse
+     * grid cell. A restriction sets the data in the halo of the
+     * coarser cell. For this, it uses the data inside the finer
+     * cell. In the sketch above, the left cell hosts the fine data.
+     * The right cell is a coarse cell. An interior voxel from the
+     * fine data left is copied into the halo of the coarser voxel.
+     *
+     * You can invert this behaviour by setting the marker.
+     *
+     *
+     *
      *
      * @see restrictInnerHalfOfHaloLayer_AoS_inject() for a discussion of the
      *   data flow. From this sketch, it becomes clear that we never can set
-     *   all halo data on the coarser mesh directly. The fine grid would hold
-     *   all required data, but we accept the fine grid face data, and this
-     *   data is not sufficient to set all coarse entries. We have to take it
-     *   and extrapolate.
+     *   all halo data on the coarser mesh directly, i.e. using fine grid
+     *   data. The fine grid would hold all required data, but we accept the
+     *   fine grid face data only in this routine, and this
+     *   data is not sufficient to set all coarse entries. Consequently, we
+     *   take the face data and have to extrapolate again from the face data
+     *   to initialise all entries of the coarser meshes. This discussion is
+     *   true if and only if the halo size is bigger than one.
      */
     void restrictInnerHalfOfHaloLayer_AoS_tensor_product(
       const peano4::datamanagement::FaceMarker& marker,
