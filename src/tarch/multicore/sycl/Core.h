@@ -1,10 +1,9 @@
 // This file is part of the Peano project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
-#ifndef _TARCH_MULTICORE_SYCL_CORE_H_
+#include "config.h"
+
+#if defined(SharedSYCL) and !defined(_TARCH_MULTICORE_SYCL_CORE_H_)
 #define _TARCH_MULTICORE_SYCL_CORE_H_
-
-
-#if defined(SharedSYCL)
 
 #pragma push_macro("Dimensions")
 #pragma push_macro("assertion")

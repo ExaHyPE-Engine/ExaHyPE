@@ -1,4 +1,5 @@
 #include "tarch/Assertions.h"
+#include "Core.h"
 #include "tarch/multicore/Core.h"
 #include "tarch/multicore/Tasks.h"
 #include "tarch/multicore/multicore.h"
