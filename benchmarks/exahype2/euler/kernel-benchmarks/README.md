@@ -17,31 +17,34 @@ After that, configure the build via
 
 ### SYCL setup      
 
-For the Intel software stack, you will need (on Cosma)
+OneAPI on Cosma:
 
      module load oneAPI/2022.3.0
      module load gnu_comp/11.1.0
      libtoolize; aclocal; autoconf; autoheader; cp src/config.h.in .; automake --add-missing
-     ./configure CXX=dpcpp CC=dpcpp CXXFLAGS="-g3 -std=c++20 -Wno-unknown-attributes" LDFLAGS="-ltbb" --enable-exahype --enable-loadbalancing --enable-particles --with-multithreading=tbb --enable-blockstructured --with-gpu=sycl
+     ./configure CXX=dpcpp CC=dpcpp CXXFLAGS="-g3 -std=c++20 -Wno-unknown-attributes" LDFLAGS="-ltbb" --enable-exahype --enable-loadbalancing --enable-particles --enable-blockstructured --with-gpu=sycl
      make -j
       
-The libtoolize commands (second line) are required only once. Also, it should
-be fine only to run configure once, even if you change some core routines
-later. Ensure you load the gnu_comp module as well, as the default STL coming
-along with the oneAPI module is too old.    
 
-If you run into linker issues for the unit tests, there's no point in continuing
-as you will get the same errors in the real simulation builds, too. Instead, try
-to alter the linker flags:
-    
-     ./configure CXX=dpcpp CC=dpcpp CXXFLAGS="-g3 -std=c++20 -Wno-unknown-attributes" LDFLAGS="-L/cosma/local/intel/oneAPI_2022.3.0/tbb/2021.7.1/env/../lib/intel64/gcc4.8 -ltbb" --enable-exahype --enable-loadbalancing --enable-particles --with-multithreading=tbb --enable-blockstructured --with-gpu=sycl    
-
-
-For the Codeplay software stack, use
+Codeplay on Cosma:
 
     module load sycl/2022.11-codeplay-cuda    
     module load gnu_comp/11.1.0
-    ./configure CXX=clang++ CC=clang++ CXXFLAGS="-g3 -std=c++20 -Wno-unknown-attributes -fsycl -fsycl-targets=nvptx64-nvidia-cuda -DnoComplexNumbers" LDFLAGS="-fsycl -fsycl-targets=nvptx64-nvidia-cuda" --enable-exahype --enable-loadbalancing ---enable-blockstructured --with-gpu=sycl    
+    ./configure CXX=clang++ CC=clang++ CXXFLAGS="-g3 -std=c++20 -Wno-unknown-attributes -fsycl -fsycl-targets=nvptx64-nvidia-cuda -DnoComplexNumbers" LDFLAGS="-fsycl -fsycl-targets=nvptx64-nvidia-cuda" --enable-exahype --enable-loadbalancing --enable-blockstructured --with-gpu=sycl    
+    #./configure CXX=clang++ CC=clang++ CXXFLAGS="-g3 -std=c++20 -Wno-unknown-attributes -fsycl -fsycl-targets=nvptx64-nvidia-cuda -Xsycl-target-backend -offload-arch=sm_80" LDFLAGS="-fsycl -fsycl-targets=nvptx64-nvidia-cuda -Xsycl-target-backend -offload-arch=sm_80" --enable-exahype --enable-loadbalancing --enable-blockstructured --with-gpu=sycl    
+      
+
+Codeplay on Isambard:
+
+    module use /lustre/projects/bristol/modules-phase3/modulefiles
+    module load llvm/sycl/2022_11_21
+    ./configure CXX=clang++ CC=clang++ CXXFLAGS="-g3 -std=c++20 -Wno-unknown-attributes -fsycl -fsycl-targets=nvptx64-nvidia-cuda" LDFLAGS="-fsycl -fsycl-targets=nvptx64-nvidia-cuda" --enable-exahype --enable-loadbalancing --enable-blockstructured --with-gpu=sycl    
+
+
+
+The libtoolize commands (second line) are required only once. Also, it should
+be fine only to run configure once, even if you change some core routines
+later. 
 
 
 
