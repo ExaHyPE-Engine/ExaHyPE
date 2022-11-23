@@ -50,13 +50,13 @@ void exahype2::fv::rusanov::sycl::timeStepWithRusanov_patchwise_static_calls(
 
   queue.submit(
     [&](::sycl::handler &handle) {
-      handle.parallel_for(
+      handle.parallel_for(  -> should be parallel_for_work_groups
       ::sycl::range<1>{numberOfPatches},
       [=] (::sycl::item<1> i) {
         int patchIndex = i[0];
 
         if (Dimensions==2 and evaluateSource) {
-          handle.parallel_for(
+          handle.parallel_for(  -> should be parallel_for_work_items
                 ::sycl::range<2>{numberOfVolumesPerAxisInPatch,numberOfVolumesPerAxisInPatch},
                 [&] (::sycl::item<2> i) {
                   int x          = i[0];

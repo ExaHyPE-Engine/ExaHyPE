@@ -17,31 +17,30 @@ After that, configure the build via
 
 ### SYCL setup      
 
-OneAPI on Cosma:
-
-     module load oneAPI/2022.3.0
-     module load gnu_comp/11.1.0
-     libtoolize; aclocal; autoconf; autoheader; cp src/config.h.in .; automake --add-missing
-     ./configure CXX=dpcpp CC=dpcpp CXXFLAGS="-g3 -std=c++20 -Wno-unknown-attributes" LDFLAGS="-ltbb" --enable-exahype --enable-loadbalancing --enable-particles --enable-blockstructured --with-gpu=sycl
-     make -j
-      
-
 Codeplay on Cosma:
 
     module load sycl/2022.11-codeplay-cuda    
     module load gnu_comp/11.1.0
      libtoolize; aclocal; autoconf; autoheader; cp src/config.h.in .; automake --add-missing
-    #./configure CXX=clang++ CC=clang++ CXXFLAGS="-g3 -std=c++20 -Wno-unknown-attributes -fsycl -fsycl-targets=nvptx64-nvidia-cuda -DnoComplexNumbers" LDFLAGS="-fsycl -fsycl-targets=nvptx64-nvidia-cuda" --enable-exahype --enable-loadbalancing --enable-blockstructured --with-gpu=sycl    
-    ./configure CXX=clang++ CC=clang++ CXXFLAGS="-g3 -std=c++20 -Wno-unknown-attributes -fsycl -fsycl-targets=nvptx64-nvidia-cuda-sm_80 -DnoComplexNumbers" LDFLAGS="-fsycl -fsycl-targets=nvptx64-nvidia-cuda-sm_80" --enable-exahype --enable-loadbalancing --enable-blockstructured --with-gpu=sycl        
-    #./configure CXX=clang++ CC=clang++ CXXFLAGS="-g3 -std=c++20 -Wno-unknown-attributes -fsycl -fsycl-targets=nvptx64-nvidia-cuda -Xsycl-target-backend -offload-arch=sm_80" LDFLAGS="-fsycl -fsycl-targets=nvptx64-nvidia-cuda -Xsycl-target-backend -offload-arch=sm_80" --enable-exahype --enable-loadbalancing --enable-blockstructured --with-gpu=sycl    
+    ./configure CXX=clang++ CC=clang++ CXXFLAGS="-g3 -std=c++20 -Wno-unknown-attributes -fsycl -fsycl-targets=nvptx64-nvidia-cuda -DnoComplexNumbers" LDFLAGS="-fsycl -fsycl-targets=nvptx64-nvidia-cuda-sm_50" --enable-exahype --enable-loadbalancing --enable-blockstructured --with-gpu=sycl        
+      
+
+Codeplay on NCC:
+
+    module load llvm-clang/15.0.0
+    module load cuda/11.4    
+     libtoolize; aclocal; autoconf; autoheader; cp src/config.h.in .; automake --add-missing
+    ./configure CXX=clang++ CC=clang++ CXXFLAGS="-g3 -std=c++20 -Wno-unknown-attributes -fsycl -fsycl-targets=nvptx64-nvidia-cuda-sm_80" LDFLAGS="-fsycl -fsycl-targets=nvptx64-nvidia-cuda-sm_80" --enable-exahype --enable-loadbalancing --enable-blockstructured --with-gpu=sycl        
       
 
 Codeplay on Isambard:
 
     module use /lustre/projects/bristol/modules-phase3/modulefiles
     module load llvm/sycl/2022_11_21
+    module use /lustre/projects/bristol/modules/modulefiles
+    module load gcc/12.1.0
      libtoolize; aclocal; autoconf; autoheader; cp src/config.h.in .; automake --add-missing
-    ./configure CXX=clang++ CC=clang++ CXXFLAGS="-g3 -std=c++20 -Wno-unknown-attributes -fsycl -fsycl-targets=nvptx64-nvidia-cuda" LDFLAGS="-fsycl -fsycl-targets=nvptx64-nvidia-cuda" --enable-exahype --enable-loadbalancing --enable-blockstructured --with-gpu=sycl    
+    ./configure CXX=clang++ CC=clang++ CXXFLAGS="--gcc-toolchain=/lustre/projects/bristol/modules/gcc/12.1.0 -g3 -std=c++20 -Wno-unknown-attributes -fsycl -fsycl-targets=nvptx64-nvidia-cuda" LDFLAGS="-fuse-ld=lld -fsycl -fsycl-targets=nvptx64-nvidia-cuda" --enable-exahype --enable-loadbalancing --enable-blockstructured --with-gpu=sycl    
 
 
 
