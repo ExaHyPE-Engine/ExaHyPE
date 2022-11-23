@@ -30,7 +30,9 @@ Codeplay on Cosma:
 
     module load sycl/2022.11-codeplay-cuda    
     module load gnu_comp/11.1.0
-    ./configure CXX=clang++ CC=clang++ CXXFLAGS="-g3 -std=c++20 -Wno-unknown-attributes -fsycl -fsycl-targets=nvptx64-nvidia-cuda -DnoComplexNumbers" LDFLAGS="-fsycl -fsycl-targets=nvptx64-nvidia-cuda" --enable-exahype --enable-loadbalancing --enable-blockstructured --with-gpu=sycl    
+     libtoolize; aclocal; autoconf; autoheader; cp src/config.h.in .; automake --add-missing
+    #./configure CXX=clang++ CC=clang++ CXXFLAGS="-g3 -std=c++20 -Wno-unknown-attributes -fsycl -fsycl-targets=nvptx64-nvidia-cuda -DnoComplexNumbers" LDFLAGS="-fsycl -fsycl-targets=nvptx64-nvidia-cuda" --enable-exahype --enable-loadbalancing --enable-blockstructured --with-gpu=sycl    
+    ./configure CXX=clang++ CC=clang++ CXXFLAGS="-g3 -std=c++20 -Wno-unknown-attributes -fsycl -fsycl-targets=nvptx64-nvidia-cuda-sm_80 -DnoComplexNumbers" LDFLAGS="-fsycl -fsycl-targets=nvptx64-nvidia-cuda-sm_80" --enable-exahype --enable-loadbalancing --enable-blockstructured --with-gpu=sycl        
     #./configure CXX=clang++ CC=clang++ CXXFLAGS="-g3 -std=c++20 -Wno-unknown-attributes -fsycl -fsycl-targets=nvptx64-nvidia-cuda -Xsycl-target-backend -offload-arch=sm_80" LDFLAGS="-fsycl -fsycl-targets=nvptx64-nvidia-cuda -Xsycl-target-backend -offload-arch=sm_80" --enable-exahype --enable-loadbalancing --enable-blockstructured --with-gpu=sycl    
       
 
@@ -38,6 +40,7 @@ Codeplay on Isambard:
 
     module use /lustre/projects/bristol/modules-phase3/modulefiles
     module load llvm/sycl/2022_11_21
+     libtoolize; aclocal; autoconf; autoheader; cp src/config.h.in .; automake --add-missing
     ./configure CXX=clang++ CC=clang++ CXXFLAGS="-g3 -std=c++20 -Wno-unknown-attributes -fsycl -fsycl-targets=nvptx64-nvidia-cuda" LDFLAGS="-fsycl -fsycl-targets=nvptx64-nvidia-cuda" --enable-exahype --enable-loadbalancing --enable-blockstructured --with-gpu=sycl    
 
 
