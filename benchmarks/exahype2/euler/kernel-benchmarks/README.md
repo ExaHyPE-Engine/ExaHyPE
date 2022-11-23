@@ -41,11 +41,8 @@ For the Codeplay software stack, use
 
     module load sycl/2022.11-codeplay-cuda    
     module load gnu_comp/11.1.0
-    ./configure CXX=clang++ CC=clang++ CXXFLAGS="-g3 -std=c++20 -Wno-unknown-attributes -fsycl -fsycl-targets=nvptx64-nvidia-cuda -DnoComplexNumbers" LDFLAGS="" --enable-exahype --enable-loadbalancing --enable-particles --with-multithreading=tbb --enable-blockstructured --with-gpu=sycl    
+    ./configure CXX=clang++ CC=clang++ CXXFLAGS="-g3 -std=c++20 -Wno-unknown-attributes -fsycl -fsycl-targets=nvptx64-nvidia-cuda -DnoComplexNumbers" LDFLAGS="-fsycl -fsycl-targets=nvptx64-nvidia-cuda" --enable-exahype --enable-loadbalancing ---enable-blockstructured --with-gpu=sycl    
 
-    ./configure CXX=clang++ CC=clang++ CXXFLAGS="$CPPFLAGS -I/cosma/local/gcc/11.1.0/include/c++/11.1.0/ -g3 -std=c++20 -Wno-unknown-attributes -fsycl -fsycl-targets=nvptx64-nvidia-cuda -DnoComplexNumbers" LDFLAGS="" --enable-exahype --enable-loadbalancing --enable-particles --with-multithreading=tbb --enable-blockstructured --with-gpu=sycl    
-
-    ./configure CXX=clang++ CC=clang++ CXXFLAGS="$CPPFLAGS -I/cosma/local/gcc/11.1.0/include/c++/11.1.0/ -g3 -std=c++2a -Wno-unknown-attributes -fsycl -fsycl-targets=nvptx64-nvidia-cuda -DnoComplexNumbers" LDFLAGS="" --enable-exahype --enable-loadbalancing --enable-particles --with-multithreading=tbb --enable-blockstructured --with-gpu=sycl    
 
 
     
