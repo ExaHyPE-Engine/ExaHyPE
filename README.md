@@ -89,8 +89,21 @@ Some quickstart configure commands for different toolchains are given below. For
   --with-gpu=omp \
   --with-multithreading=omp \
   CC=icx CXX=icpx \
-  CXXFLAGS="-O3 -std=c++20 -W -Wall -Wextra -Wno-unknown-attributes -fiopenmp -fopenmp-targets=spir64" \
+  CXXFLAGS="-O3 -g3 -std=c++20 -W -Wall -Wextra -Wno-unknown-attributes -fiopenmp -fopenmp-targets=spir64" \
+  FCFLAGS="-fiopenmp  -fopenmp-targets=spir64" \
   LDFLAGS="-fiopenmp"
+```
+
+### Intel OneAPI toolchain with SYCL GPU
+```shell
+./configure \
+--enable-exahype \
+--enable-loadbalancing \
+--enable-blockstructured \
+--with-gpu=sycl \
+CXX=dpcpp CC=dpcpp \
+CXXFLAGS="-g3 -std=c++20 -Wno-unknown-attributes" \
+LDFLAGS="-ltbb"
 ```
 
 ### Clang toolchain
