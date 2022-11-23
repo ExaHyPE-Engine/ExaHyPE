@@ -117,6 +117,20 @@ Some quickstart configure commands for different toolchains are given below. For
 ```
 where `<gpu-arch>` is either `cc50`, `cc52`, `cc53`, `cc60`, `cc61`, `cc62`, `cc70`, `cc72`, `cc75`, `cc80`, `cc86` or `cc90`.
 
+### Clang toolchain with SYCL GPU
+
+```shell
+./configure
+  --enable-exahype
+  --enable-loadbalancing
+  --enable-blockstructured
+  --with-gpu=sycl
+  --with-multithreading=sycl
+  CC=clang CXX="clang++ --gcc-toolchain=/cosma/local/gcc/11.1.0/bin/gcc"
+  CXXFLAGS="-O3 -Xsycl-target-frontend -O3 -fgpu-inline-threshold=100000 -Wno-unknown-cuda-version -Wno-deprecated-declarations -Wno-linker-warnings -std=c++20 -Wno-unknown-attributes -fsycl -fsycl-targets=nvptx64-nvidia-cuda -Xsycl-target-backend --cuda-gpu-arch=sm_80"
+  LDFLAGS="-Xsycl-target-frontend -O3 -fsycl -fsycl-targets=nvptx64-nvidia-cuda -Xsycl-target-backend --cuda-gpu-arch=sm_80 -lstdc++fs"
+```
+
 ### NVIDIA NVC++ toolchain with OpenMP GPU
 ```shell
 ./configure \
