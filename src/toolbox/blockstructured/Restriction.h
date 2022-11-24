@@ -255,58 +255,81 @@ namespace toolbox {
      * is on the left and the fine mesh on the right. We restrict from the
      * fine grid face (which is a point for a 1d setup) to the coarse grid
      * face. Peano works with multiscale meshes: So we have two cells on the
-     * coarse mesh (fat lines top), but the right cell is refined, i.e. overlaps
-     * with a finer cell (fat lines bottom). The face in this example hosts an
-     * overlap of two, i.e. copies of two entries left and right.
+     * coarse mesh. The right cell is refined, i.e. overlaps
+     * with a finer cell (fat lines bottom), while the left cell is unrefined.
+     * The face in this example hosts an
+     * overlap of two, i.e. copies of two entries left and right. I denote the
+     * four coarse grid entries with green and blue bullets. The fine grid
+     * unknowns associated with the face are denoted with red and orange dots.
      *
-     * The routine has to set the two coarse face entries to the right. The
-     * left entries are initialised properly in the mesh, as they stem directly
+     * The restriction routine has to set the two coarse face entries to the
+     * right, i.e. the blue values. The left entries (green) are initialised
+     * properly by the mesh, as they stem directly
      * from an unrefined cell. You can also overwrite (add something to) the
      * left entries of the face, but most codes don't do so.
      *
      * The normal operator now describes through a 4x4 matrix, what data goes
-     * from the fine mesh to the coarser mesh.
+     * from the fine mesh to the four coarser mesh. Two rows (for the green
+     * dots) of this matrix are most of the time empty.
+     *
      *
      * ### Overlap of one
      *
      * If you work with an overlap of one, the restriction along the normal is
-     * kind of canonical. You can, for example, take the average from the fine
-     * grid data and project that one up. We have to take into account that the
-     * fine grid data left in the sketch stems in return from an interpolation
-     * from the coarse mesh, so it is not real data, which might cause numerical
-     * jitter. But in principle, the data flow is trivial.
+     * kind of canonical. You can, for example, take the fine grid data (the
+     * one orange point) and write that one to the one blue point.
+     * In principle, the data flow is trivial.
+     *
+     * A more sophisticated scheme would set the blue value such that the
+     * average in the real face position equals the average on the finer cell.
+     * So we compute the average of red and orange, assume that the red point
+     * equals hte value of the green point, and then set the blue point such
+     * that the average between blue and green matches the other average.
+     *
      *
      * ### Overlap greater than one
      *
      * With an overlap greater than one, we observe that the fine grid data
-     * stops to overlap the coarse data spatially.
+     * stops to overlap the coarse data spatially. We have discussed this
+     * property by means of the injection (see
+     * restrictInnerHalfOfHaloLayer_AoS_inject()). From the example above
+     * where we illustrate an overlap of two, it becomes clear that we now
+     * cannot set all halo data on the coarser mesh directly, i.e. using fine grid
+     * data. The fine grid would hold all required data, but the routine
+     * accepts the fine grid face data only. This data is not sufficient to set
+     * all coarse entries.
+     *
+     * In the illustration, we can for example take the right orange point
+     * and write its data to the left blue point. These two points do overlap.
+     * However, we also have to set the right blue point, and there's no
+     * fine grid info for this guy. The only thing that we can do is to take
+     * the red and orange points, extrapolate somehow and then set the one
+     * remaining blue point.
+     *
+     *
+     * ## Tangential operator
+     *
+     * This yet has to be written.
+     *
+     *
+     * ## Arguments
+     *
+     * @param normalRestrictionMatrix1d Matrix that describes how the fine
+     *   mesh unknowns affect the coarse grid unknowns. If you work with an
+     *   overlap of k, normalRestrictionMatrix1d is a @f$ k \times 2k @f$
+     *   matrix: It accepts the 2k fine grid values and spills out the value
+     *   of the k outer coarse grid values.
+     *
+     *   The matrix refers to face number 0, or the sketch as given above.
+     *   The values to restrict are the right ones (blue dots).
+     *
+     * @param swapInsideOutside All the discussions above refer to the
+     *   initialisation of coarse grid's outer halo (blue points). You can
+     *   alter this behaviour, i.e. make the routine manipulate the coarse
+     *   grid green points instead, by setting the swap flag.
      *
      *
      *
-     * @image html Restriction_injection.png
-     *
-     * An interpolation sets the data in the halo layer of the fine
-     * grid cell. For this, it uses interior data from the coarse
-     * grid cell. A restriction sets the data in the halo of the
-     * coarser cell. For this, it uses the data inside the finer
-     * cell. In the sketch above, the left cell hosts the fine data.
-     * The right cell is a coarse cell. An interior voxel from the
-     * fine data left is copied into the halo of the coarser voxel.
-     *
-     * You can invert this behaviour by setting the marker.
-     *
-     *
-     *
-     *
-     * @see restrictInnerHalfOfHaloLayer_AoS_inject() for a discussion of the
-     *   data flow. From this sketch, it becomes clear that we never can set
-     *   all halo data on the coarser mesh directly, i.e. using fine grid
-     *   data. The fine grid would hold all required data, but we accept the
-     *   fine grid face data only in this routine, and this
-     *   data is not sufficient to set all coarse entries. Consequently, we
-     *   take the face data and have to extrapolate again from the face data
-     *   to initialise all entries of the coarser meshes. This discussion is
-     *   true if and only if the halo size is bigger than one.
      */
     void restrictInnerHalfOfHaloLayer_AoS_tensor_product(
       const peano4::datamanagement::FaceMarker& marker,
