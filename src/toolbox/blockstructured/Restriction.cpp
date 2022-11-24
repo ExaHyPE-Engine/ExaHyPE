@@ -78,8 +78,10 @@ void toolbox::blockstructured::restrictInnerHalfOfHaloLayer_AoS_tensor_product(
           double weight = 1.0;
           for (int d=0; d<Dimensions; d++) {
             if (d==normal) {
-              int col   = marker.getSelectedFaceNumber() < Dimensions ? src(d)  : 2*overlap - src(d)  - 1;
-              int row   = marker.getSelectedFaceNumber() < Dimensions ? dest(d) : 2*overlap - dest(d) - 1;
+              //int col   = marker.getSelectedFaceNumber() < Dimensions ? src(d)  : 2*overlap - src(d)  - 1;
+              //int row   = marker.getSelectedFaceNumber() < Dimensions ? dest(d) : 2*overlap - dest(d) - 1;
+              int col   = marker.getSelectedFaceNumber() < Dimensions ? 2*overlap - src(d)  - 1 : src(d) ;
+              int row   = marker.getSelectedFaceNumber() < Dimensions ? 2*overlap - dest(d) - 1 : dest(d);
               assertion4(col>=0,row,col,src,dest);
               assertion4(row>=0,row,col,src,dest);
               int index = col + row * 2 * overlap;

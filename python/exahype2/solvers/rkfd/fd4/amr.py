@@ -59,7 +59,7 @@ def __compute_interpolation_matrices_1d(value, patch_size):
     interp_matrix_N = [ [0.0 for _ in range(0,6)] for _ in range(0,3) ]
     if value=="TP_constant":
       for col in range(0,patch_size):
-        for index in range(0,2):
+        for index in range(0,3):
           interp_matrix_T[col*3+index][col]=1.0
       interp_matrix_N[0][2]=1.0
       interp_matrix_N[1][2]=1.0
