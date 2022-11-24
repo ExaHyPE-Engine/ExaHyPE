@@ -15,16 +15,18 @@ exahype2::fv::tests::InterpolationRestrictionTest::InterpolationRestrictionTest(
 
 
 void exahype2::fv::tests::InterpolationRestrictionTest::run() {
-  testMethod (testPiecewiseConstantInterpolation);
+  testMethod (testPiecewiseConstantInterpolationWithTensorProduct1);
+  // @todo Han copy in if yuo wanna test more things
+  // testMethod (testPiecewiseConstantInterpolationWithTensorProduct2);
   testMethod (testAverageRestriction);
 }
 
 
-void exahype2::fv::tests::InterpolationRestrictionTest::testPiecewiseConstantInterpolation() {
+void exahype2::fv::tests::InterpolationRestrictionTest::testPiecewiseConstantInterpolationWithTensorProduct1() {
   static constexpr double  NormalInterpolationMatrix1d[]     = {
-    0.0, 0.0, 1.0, 0.0, 0.0, 0.0,
-    0.0, 0.0, 1.0, 0.0, 0.0, 0.0,
-    0.0, 0.0, 1.0, 0.0, 0.0, 0.0
+    0.0, 1.0, 0.0, 0.0, 0.0, 0.0,
+    0.0, 1.0, 0.0, 0.0, 0.0, 0.0,
+    0.0, 1.0, 0.0, 0.0, 0.0, 0.0
   };
   static constexpr double  TangentialInterpolationMatrix1d[] = {
     1.0,0.0,0.0,0.0,0.0,
@@ -77,31 +79,23 @@ void exahype2::fv::tests::InterpolationRestrictionTest::testPiecewiseConstantInt
       fineGridFaceValues
     );
 
-    validateNumericalEquals( fineGridFaceValues[0*2+0],  0.3 );
-    validateNumericalEquals( fineGridFaceValues[0*2+1], -0.3 );
-    validateNumericalEquals( fineGridFaceValues[1*2+0],  0.3 );
-    validateNumericalEquals( fineGridFaceValues[1*2+1], -0.3 );
-    validateNumericalEquals( fineGridFaceValues[2*2+0],  0.3 );
-    validateNumericalEquals( fineGridFaceValues[2*2+1], -0.3 );
+    validateNumericalEquals( fineGridFaceValues[0*2+0],  0.2 );
+    validateNumericalEquals( fineGridFaceValues[0*2+1], -0.2 );
+    validateNumericalEquals( fineGridFaceValues[1*2+0],  0.2 );
+    validateNumericalEquals( fineGridFaceValues[1*2+1], -0.2 );
+    validateNumericalEquals( fineGridFaceValues[2*2+0],  0.2 );
+    validateNumericalEquals( fineGridFaceValues[2*2+1], -0.2 );
     validateNumericalEquals( fineGridFaceValues[3*2+0],  0.0 );
     validateNumericalEquals( fineGridFaceValues[3*2+1],  0.0 );
 
-    validateNumericalEquals( fineGridFaceValues[6*2+0],  0.3 );
-    validateNumericalEquals( fineGridFaceValues[6*2+1], -0.3 );
+    validateNumericalEquals( fineGridFaceValues[6*2+0],  0.2 );
+    validateNumericalEquals( fineGridFaceValues[6*2+1], -0.2 );
 
-    validateNumericalEquals( fineGridFaceValues[12*2+0],  0.3 );
-    validateNumericalEquals( fineGridFaceValues[12*2+1], -0.3 );
+    validateNumericalEquals( fineGridFaceValues[12*2+0],  0.2 );
+    validateNumericalEquals( fineGridFaceValues[12*2+1], -0.2 );
 
-    validateNumericalEquals( fineGridFaceValues[18*2+0],  1.3 );
-    validateNumericalEquals( fineGridFaceValues[18*2+1], -1.3 );
-
-    /*std::cout<<std::setprecision(1);
-    for (int i=0;i<5;i++){
-      for (int j=0;j<12;j++){
-        std::cout<<fineGridFaceValues[i*12+j] << " ";
-      }
-      std::cout<<"\n";
-    }*/
+    validateNumericalEquals( fineGridFaceValues[18*2+0],  1.2 );
+    validateNumericalEquals( fineGridFaceValues[18*2+1], -1.2 );
   }
 
   {
@@ -142,16 +136,8 @@ void exahype2::fv::tests::InterpolationRestrictionTest::testPiecewiseConstantInt
     validateNumericalEquals( fineGridFaceValues[10*2+0],  0.0 );
     validateNumericalEquals( fineGridFaceValues[10*2+1],  0.0 );
 
-    validateNumericalEquals( fineGridFaceValues[15*2+0],  0.1 );
-    validateNumericalEquals( fineGridFaceValues[15*2+1], -0.1 );
-
-    /*std::cout<<std::setprecision(1);
-    for (int i=0;i<6;i++){
-      for (int j=0;j<10;j++){
-        std::cout<<fineGridFaceValues[i*10+j] << " ";
-      }
-      std::cout<<"\n";
-    }*/
+    validateNumericalEquals( fineGridFaceValues[15*2+0],  1.1 );
+    validateNumericalEquals( fineGridFaceValues[15*2+1], -1.1 );
   }
   #endif
 }
@@ -160,10 +146,17 @@ void exahype2::fv::tests::InterpolationRestrictionTest::testAverageRestriction()
   // Testing a patch with size of 5. See header documentation: these are
   // the operators for the right face.
   static constexpr double  NormalRestrictionMatrix1d[]     = {
+    0.0,    0.0,    0.0,    1.0/3.0,    1.0/3.0,    1.0/3.0,
+    0.0,    0.0,    0.0,    1.0/3.0,    1.0/3.0,    1.0/3.0,
+    0.0,    0.0,    0.0,    1.0/3.0,    1.0/3.0,    1.0/3.0
+  };
+/*
+  static constexpr double  NormalRestrictionMatrix1d[]     = {
     6.0,     -5.0,    0.0,     0.0, 0.0, 0.0,
     3.0,     -2.0,    0.0,     0.0, 0.0, 0.0,
     1.0/3.0, 1.0/3.0, 1.0/3.0, 0.0, 0.0, 0.0
   };
+*/
   static constexpr double  TangentialRestrictionMatrix1d[] = {
     1.0/3.0, 1.0/3.0, 1.0/3.0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
     0, 0, 0, 1.0/3.0, 1.0/3.0, 1.0/3.0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
@@ -180,17 +173,18 @@ void exahype2::fv::tests::InterpolationRestrictionTest::testAverageRestriction()
   //peano4::datamanagement::FaceMarker  marker(dummEvent);
   //marker.select(face);
 
-  #if Dimensions==2
   constexpr int NumberOfFaceValues = 3*5 * 2 * 2; // three width, five dofs per axis, two unknowns, two sides
 
   double  fineGridFaceValues[] = {
-    0.1,-0.1, 0.2,-0.2, 0.3,-0.3,    0.0,0.0, 0.0,0.0, 0.0,0.0,
-    1.1,-1.1, 1.2,-1.2, 1.3,-1.3,    0.0,0.0, 0.0,0.0, 0.0,0.0,
-    2.1,-2.1, 2.2,-2.2, 2.3,-2.3,    0.0,0.0, 0.0,0.0, 0.0,0.0,
-    3.1,-3.1, 3.2,-3.2, 3.3,-3.3,    0.0,0.0, 0.0,0.0, 0.0,0.0,
-    4.1,-4.1, 4.2,-4.2, 4.3,-4.3,    0.0,0.0, 0.0,0.0, 0.0,0.0
+    0.1,-0.1, 0.1,-0.1, 0.1,-0.1,    0.0,0.0, 0.0,0.0, 0.0,0.0,
+    0.1,-0.1, 0.1,-0.1, 0.1,-0.1,    0.0,0.0, 0.0,0.0, 0.0,0.0,
+    0.1,-0.1, 0.1,-0.1, 0.1,-0.1,    0.0,0.0, 0.0,0.0, 0.0,0.0,
+    0.1,-0.1, 0.1,-0.1, 0.1,-0.1,    0.0,0.0, 0.0,0.0, 0.0,0.0,
+    0.1,-0.1, 0.1,-0.1, 0.1,-0.1,    0.0,0.0, 0.0,0.0, 0.0,0.0
   };
   #else
+  dummEvent.setRelativePositionToFather( {0,0,0} );
+
   constexpr int NumberOfFaceValues = 3*5*5 * 2 * 2; // three width, five dofs per axis, two unknowns, two sides
 
   double  fineGridFaceValues[] = {
@@ -227,15 +221,12 @@ void exahype2::fv::tests::InterpolationRestrictionTest::testAverageRestriction()
   #endif
 
   double  coarseGridFaceValues[ NumberOfFaceValues ];
+  peano4::datamanagement::FaceMarker  marker1(dummEvent);
+  marker1.select(Dimensions);
 
-  {
-    peano4::datamanagement::FaceMarker  marker1(dummEvent);
+  std::fill_n(coarseGridFaceValues, NumberOfFaceValues, 0.0 );
 
-    marker1.select(Dimensions);
-
-    std::fill_n(coarseGridFaceValues, NumberOfFaceValues, 0.0 );
-
-    ::toolbox::blockstructured::restrictInnerHalfOfHaloLayer_AoS_tensor_product(
+  ::toolbox::blockstructured::restrictInnerHalfOfHaloLayer_AoS_tensor_product(
       marker1,
       5,         // numberOfDoFsPerAxisInPatch
       3,         // overlap
@@ -244,99 +235,19 @@ void exahype2::fv::tests::InterpolationRestrictionTest::testAverageRestriction()
       TangentialRestrictionMatrix1d,
       fineGridFaceValues,
       coarseGridFaceValues
-    );
+  );
 
-
-    validateNumericalEqualsWithParams6(
-      coarseGridFaceValues[0*2+0],  0.1,
-      coarseGridFaceValues[0*2+0], coarseGridFaceValues[1*2+0], coarseGridFaceValues[2*2+0],
-      coarseGridFaceValues[3*2+0], coarseGridFaceValues[4*2+0], coarseGridFaceValues[5*2+0]
-    );
-    validateNumericalEqualsWithParams6(
-      coarseGridFaceValues[0*2+1], -0.1,
-      coarseGridFaceValues[0*2+0], coarseGridFaceValues[1*2+0], coarseGridFaceValues[2*2+0],
-      coarseGridFaceValues[3*2+0], coarseGridFaceValues[4*2+0], coarseGridFaceValues[5*2+0]
-    );
-
-    validateNumericalEqualsWithParams6(
-      coarseGridFaceValues[1*2+0],  0.2,
-      coarseGridFaceValues[0*2+0], coarseGridFaceValues[1*2+0], coarseGridFaceValues[2*2+0],
-      coarseGridFaceValues[3*2+0], coarseGridFaceValues[4*2+0], coarseGridFaceValues[5*2+0]
-    );
-    validateNumericalEqualsWithParams6(
-      coarseGridFaceValues[1*2+1], -0.2,
-      coarseGridFaceValues[0*2+0], coarseGridFaceValues[1*2+0], coarseGridFaceValues[2*2+0],
-      coarseGridFaceValues[3*2+0], coarseGridFaceValues[4*2+0], coarseGridFaceValues[5*2+0]
-    );
-
-    validateNumericalEqualsWithParams6(
-      coarseGridFaceValues[2*2+0],  0.3,
-      coarseGridFaceValues[0*2+0], coarseGridFaceValues[1*2+0], coarseGridFaceValues[2*2+0],
-      coarseGridFaceValues[3*2+0], coarseGridFaceValues[4*2+0], coarseGridFaceValues[5*2+0]
-    );
-    validateNumericalEqualsWithParams6(
-      coarseGridFaceValues[2*2+1], -0.3,
-      coarseGridFaceValues[0*2+0], coarseGridFaceValues[1*2+0], coarseGridFaceValues[2*2+0],
-      coarseGridFaceValues[3*2+0], coarseGridFaceValues[4*2+0], coarseGridFaceValues[5*2+0]
-    );
-
-    return;
-
-
-    dummEvent.setRelativePositionToFather( {1,0} );
-    //std::cout<<dummEvent.getRelativePositionToFather()<<std::endl;
-    peano4::datamanagement::FaceMarker  marker2(dummEvent);
-    marker2.select(face);
-    //std::cout<<marker2.getRelativePositionWithinFatherCell()<<std::endl;
-
-    
-    std::fill_n(coarseGridFaceValues, NumberOfFaceValues, 0.0 );
-
-    ::toolbox::blockstructured::restrictInnerHalfOfHaloLayer_AoS_tensor_product(
-      marker2,
-      5,         // numberOfDoFsPerAxisInPatch
-      3,         // overlap
-      2,         // unknowns
-      NormalRestrictionMatrix1d,
-      TangentialRestrictionMatrix1d,
-      fineGridFaceValues,
-      coarseGridFaceValues
-    );
-
-
-    dummEvent.setRelativePositionToFather( {2,0} );
-    peano4::datamanagement::FaceMarker  marker3(dummEvent);
-    marker3.select(face);
-    
-    std::fill_n(coarseGridFaceValues, NumberOfFaceValues, 0.0 );
-
-    ::toolbox::blockstructured::restrictInnerHalfOfHaloLayer_AoS_tensor_product(
-      marker3,
-      5,         // numberOfDoFsPerAxisInPatch
-      3,         // overlap
-      2,         // unknowns
-      NormalRestrictionMatrix1d,
-      TangentialRestrictionMatrix1d,
-      fineGridFaceValues,
-      coarseGridFaceValues
-    );
-
-
-    /*std::cout<<std::setprecision(1);
-    for (int i=0;i<6;i++){
-      for (int j=0;j<10;j++){
-        std::cout<<coarseGridFaceValues[i*10+j] << " ";
-      }
-      std::cout<<"\n";
-    }*/
-
-
-    //validateNumericalEquals( fineGridFaceValues[15*2+0],  0.1 );
-  }
+  #if Dimensions==2
+  validateNumericalEqualsWithParams6(
+    coarseGridFaceValues[0*2+0],  0.1,
+    coarseGridFaceValues[0*2+0], coarseGridFaceValues[1*2+0], coarseGridFaceValues[2*2+0],
+    coarseGridFaceValues[3*2+0], coarseGridFaceValues[4*2+0], coarseGridFaceValues[5*2+0]
+  );
   #endif
 }
 
-void exahype2::fv::tests::InterpolationRestrictionTest::testPiecewiseConstantInterpolation1() {
+
+void exahype2::fv::tests::InterpolationRestrictionTest::testPiecewiseConstantInterpolationWithTensorProduct2() {
 
   //@tobias: you can just ignore it as I am just testing the schme in my stupid way.
 

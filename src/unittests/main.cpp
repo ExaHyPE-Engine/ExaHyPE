@@ -78,10 +78,10 @@ int main(int argc, char** argv) {
     tarch::logging::LogFilter::FilterListEntry::TargetTrace, tarch::logging::LogFilter::FilterListEntry::AnyRank, "exahype2", tarch::logging::LogFilter::FilterListEntry::BlackListEntry, tarch::logging::LogFilter::FilterListEntry::AlwaysOn
   ));
   tarch::logging::LogFilter::getInstance().addFilterListEntry( tarch::logging::LogFilter::FilterListEntry(
-    tarch::logging::LogFilter::FilterListEntry::TargetDebug, tarch::logging::LogFilter::FilterListEntry::AnyRank, "examples", tarch::logging::LogFilter::FilterListEntry::BlackListEntry, tarch::logging::LogFilter::FilterListEntry::AlwaysOn
+    tarch::logging::LogFilter::FilterListEntry::TargetDebug, tarch::logging::LogFilter::FilterListEntry::AnyRank, "toolbox", tarch::logging::LogFilter::FilterListEntry::BlackListEntry, tarch::logging::LogFilter::FilterListEntry::AlwaysOn
   ));
   tarch::logging::LogFilter::getInstance().addFilterListEntry( tarch::logging::LogFilter::FilterListEntry(
-    tarch::logging::LogFilter::FilterListEntry::TargetTrace, tarch::logging::LogFilter::FilterListEntry::AnyRank, "examples", tarch::logging::LogFilter::FilterListEntry::BlackListEntry, tarch::logging::LogFilter::FilterListEntry::AlwaysOn
+    tarch::logging::LogFilter::FilterListEntry::TargetTrace, tarch::logging::LogFilter::FilterListEntry::AnyRank, "toolbox", tarch::logging::LogFilter::FilterListEntry::BlackListEntry, tarch::logging::LogFilter::FilterListEntry::AlwaysOn
   ));
 
 

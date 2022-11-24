@@ -1026,13 +1026,12 @@ void toolbox::blockstructured::interpolateHaloLayer_AoS_tensor_product(
   logTraceInWith3Arguments( "interpolateHaloLayer_AoS_tensor_product(...)", marker.toString(), numberOfDoFsPerAxisInPatch, overlap );
 
   const int    normal          = marker.getSelectedFaceNumber() % Dimensions;
-  //const int    leftRightOffset = marker.getSelectedFaceNumber() < Dimensions ? 0 : overlap;
-  const int    leftRightOffset = marker.getSelectedFaceNumber() >= Dimensions ? 0 : overlap;
+  const int    leftRightOffset = marker.getSelectedFaceNumber() < Dimensions ? 0 : overlap;
 
   dfore(kFine,numberOfDoFsPerAxisInPatch,normal,0) {
-    for (int iFine=leftRightOffset;   iFine<leftRightOffset+overlap;   iFine++) {
+    for (int iFine=0;   iFine<overlap;   iFine++) {
       tarch::la::Vector<Dimensions,int> dest = kFine;
-      dest(normal) = iFine;
+      dest(normal) = (marker.getSelectedFaceNumber() < Dimensions) ? iFine : iFine + overlap;
 
       int destLinearised = serialiseVoxelIndexInOverlap(
         dest,
@@ -1056,10 +1055,8 @@ void toolbox::blockstructured::interpolateHaloLayer_AoS_tensor_product(
           double weight = 1.0;
           for (int d=0; d<Dimensions; d++) {
             if (d==normal) {
-              //int col   = marker.getSelectedFaceNumber() < Dimensions ? src(d)  : 2*overlap - src(d)  - 1;
-              //int row   = marker.getSelectedFaceNumber() < Dimensions ? dest(d) : 2*overlap - dest(d) - 1;
-              int col   = marker.getSelectedFaceNumber() < Dimensions ? 2*overlap - src(d)  - 1 : src(d) ;
-              int row   = marker.getSelectedFaceNumber() < Dimensions ? 2*overlap - dest(d) - 1 : dest(d);
+              int col   = marker.getSelectedFaceNumber() < Dimensions ?  src(d) : 2*overlap - src(d) - 1;
+              int row   = marker.getSelectedFaceNumber() < Dimensions ?   iFine : overlap   - iFine  - 1;
               assertion4(col>=0,row,col,src,dest);
               assertion4(row>=0,row,col,src,dest);
               int index = col + row * 2 * overlap;

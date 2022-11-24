@@ -53,13 +53,13 @@ void toolbox::blockstructured::restrictInnerHalfOfHaloLayer_AoS_tensor_product(
   logTraceInWith3Arguments( "restrictInnerHalfOfHaloLayer_AoS_tensor_product(...)", marker.toString(), numberOfDoFsPerAxisInPatch, overlap );
 
   const int    normal          = marker.getSelectedFaceNumber() % Dimensions;
-  const int    leftRightOffset = ( (marker.getSelectedFaceNumber() >= Dimensions) xor swapInsideOutside) ? 0 : overlap;
-  logDebug( "restrictInnerHalfOfHaloLayer_AoS_tensor_product(...)", "restrict " << marker.toString() << ", swap=" << swapInsideOutside << ", leftRightOffset=" << leftRightOffset);
+//  const int    leftRightOffset = ((marker.getSelectedFaceNumber() < Dimensions) xor swapInsideOutside) ? overlap : 0;
+//  logDebug( "restrictInnerHalfOfHaloLayer_AoS_tensor_product(...)", "restrict " << marker.toString() << ", swap=" << swapInsideOutside << ", leftRightOffset=" << leftRightOffset);
 
   dfore(kCoarse,numberOfDoFsPerAxisInPatch,normal,0) {
-    for (int iCoarse=leftRightOffset;   iCoarse<leftRightOffset+overlap;   iCoarse++) {
+    for (int iCoarse=0;   iCoarse<overlap;   iCoarse++) {
       tarch::la::Vector<Dimensions,int> dest = kCoarse;
-      dest(normal) = iCoarse;
+      dest(normal) = ((marker.getSelectedFaceNumber() < Dimensions) xor swapInsideOutside) ? iCoarse + overlap: overlap - iCoarse - 1;
 
       int destLinearised = serialiseVoxelIndexInOverlap(
         dest,
@@ -69,7 +69,7 @@ void toolbox::blockstructured::restrictInnerHalfOfHaloLayer_AoS_tensor_product(
       dfore(kFine,numberOfDoFsPerAxisInPatch,normal,0) {
         for (int iFine=0;   iFine<2*overlap;   iFine++) {
           tarch::la::Vector<Dimensions,int> src  = kFine;
-          src(normal)  = iFine;
+          src(normal) = iFine;
           int srcLinearised = serialiseVoxelIndexInOverlap(
             src,
             numberOfDoFsPerAxisInPatch, overlap, normal
@@ -78,27 +78,30 @@ void toolbox::blockstructured::restrictInnerHalfOfHaloLayer_AoS_tensor_product(
           double weight = 1.0;
           for (int d=0; d<Dimensions; d++) {
             if (d==normal) {
-              //int col   = marker.getSelectedFaceNumber() < Dimensions ? src(d)  : 2*overlap - src(d)  - 1;
-              //int row   = marker.getSelectedFaceNumber() < Dimensions ? dest(d) : 2*overlap - dest(d) - 1;
-              int col   = marker.getSelectedFaceNumber() < Dimensions ? 2*overlap - src(d)  - 1 : src(d) ;
-              int row   = marker.getSelectedFaceNumber() < Dimensions ? 2*overlap - dest(d) - 1 : dest(d);
+              int col   = ((marker.getSelectedFaceNumber() < Dimensions) xor swapInsideOutside) ?  iFine : 2 * overlap - iFine - 1;
+              int row   = ((marker.getSelectedFaceNumber() < Dimensions) xor swapInsideOutside) ?  iCoarse : overlap - iCoarse - 1;
+
               assertion4(col>=0,row,col,src,dest);
               assertion4(row>=0,row,col,src,dest);
+
+              assertion4(col<2*overlap,row,col,src,dest);
+              assertion4(row<  overlap,row,col,src,dest);
+
               int index = col + row * 2 * overlap;
-              //logDebug( "restrictInnerHalfOfHaloLayer_AoS_tensor_product(...)", "(" << row << "," << col << ")=" << index << " (normal contribution)");
               weight *= normalRestrictionMatrix1d[ index ];
             }
             else {
               assertion( marker.getRelativePositionWithinFatherCell()(d)>=0 );
               assertion( marker.getRelativePositionWithinFatherCell()(d)<3 );
+
               assertion( src(d)>=0 );
               int col   = src(d)+ marker.getRelativePositionWithinFatherCell()(d) * numberOfDoFsPerAxisInPatch;
               int row   = dest(d);
               assertion5(col>=0,row,col,src,dest, marker.getRelativePositionWithinFatherCell());
-              assertion4(row>=0,row,col,src,dest);
-              logDebug( "restrictInnerHalfOfHaloLayer_AoS_tensor_product(...)", "relativeposition " << marker.getRelativePositionWithinFatherCell());
+              assertion5(row>=0,row,col,src,dest, marker.getRelativePositionWithinFatherCell());
+              assertion5(col<3*numberOfDoFsPerAxisInPatch,row,col,src,dest, marker.getRelativePositionWithinFatherCell());
+              assertion5(row<  numberOfDoFsPerAxisInPatch,row,col,src,dest, marker.getRelativePositionWithinFatherCell());
               int index = col + row * 3 * numberOfDoFsPerAxisInPatch;
-              //logDebug( "restrictInnerHalfOfHaloLayer_AoS_tensor_product(...)", "(" << row << "," << col << ")=" << index << " (tangential contribution)" );
               weight *= tangentialRestrictionMatrix1d[ index ];
             }
           }

@@ -312,6 +312,33 @@ namespace toolbox {
      * This yet has to be written.
      *
      *
+     * ## Implementation
+     *
+     * We loop over a submanifold, i.e. over a d-1 dimensional array where the
+     * index along the normal direction equals 0. The loop vector is called
+     * kCoarse. iCoarse loops over the depth of the overlap, which we called k
+     * in the examples above. The destination degree of freedom can be
+     * constructed from kCoarse and iCoarse. For this, we have to take into
+     * account that this iCoarse always counts from 0 to overlap, but
+     * we obviously have to take into account if we consider a left hanging face
+     * or a right hanging face and invert it accordingly. The destination index
+     * determines the row that we use from the normal and tangential projection
+     * matrices.
+     *
+     * We next construct the weight of the restriction and initialise it with
+     * 1 as it will result from a tensor product of operators, i.e. a
+     * multiplication. For the tensor-product, we run over each dimension. The
+     * loop counter here's called k.
+     *
+     * Again, we do this combination of kFine and iFine, but iFine this time
+     * runs over 2k elements. If we assess the normal operator, we have to
+     * analyse if we work with a normalised layout, i.e. the left face of a
+     * cell or the right one. If we try to find out the entry in the normal
+     * matrix, we might have to mirror entries. All the other entries are
+     * ordered along the coordinate axes.
+     *
+     *
+     *
      * ## Arguments
      *
      * @param normalRestrictionMatrix1d Matrix that describes how the fine
