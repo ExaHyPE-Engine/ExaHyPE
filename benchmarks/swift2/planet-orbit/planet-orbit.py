@@ -6,20 +6,23 @@ import peano4
 import swift2
 import dastgen2
 
-
+import shutil
 
 ########################################################################################
 # Parse user input
 ########################################################################################
 
-parser = argparse.ArgumentParser(description='ExaHyPE 2 - Euler benchmarking script')
-parser.add_argument("-j",   "--parallel-builds",   dest="j",              type=int, default=-1, help="Parallel builds" )
-parser.add_argument("-pd",  "--peano-dir",         dest="peanodir",       default="../../..", help="Peano4 directory" )
-parser.add_argument("-v",   "--verbose",           dest="verbose",        action="store_true", default=False, help="Verbose")
-parser.add_argument("-et",  "--end-time",          dest="end_time",       type=float, default=1.0, help="End of simulation" )
-parser.add_argument("-cs",  "--cell-size",         dest="cell_size",      type=float, default=0.3, help="Cell size (default 0.3)" )
-parser.add_argument("-d",   "--dimensions",        dest="dimensions",     type=int,   default=2,   help="Spatial dimensions (default 2)" )
-parser.add_argument("-asserts",  "--asserts",      dest="asserts",        action="store_true", default=False, help="Switch on assertions" )
+parser = argparse.ArgumentParser(description='SPH benchmarking script')
+parser.add_argument("-j",   "--parallel-builds",   dest="j",              type=int, default=-1,                     help="Parallel builds" )
+parser.add_argument("-v",   "--verbose",           dest="verbose",        action="store_true", default=False,       help="Verbose")
+parser.add_argument("-c",   "--clean",             dest="clean_temporary_directories",  action="store_true",        help="Remove temporary directories before script starts" )
+parser.add_argument("-d",   "--dimensions",        dest="dimensions",     type=int,   default=2,                    help="Spatial dimensions (default 2)" )
+parser.add_argument("-et",  "--end-time",          dest="end_time",       type=float, default=1.0,                  help="End of simulation" )
+parser.add_argument("-dt",  "--timestep-size",     dest="timestep_size",  type=float, default=1e-3,                 help="Global timestep size (initial value)" )
+parser.add_argument("-cs",  "--cell-size",         dest="cell_size",      type=float, default=0.3,                  help="Cell size (default 0.3)" )
+parser.add_argument("-pd",  "--peano-dir",         dest="peanodir",       default="../../..",                       help="Peano4 directory" )
+parser.add_argument("-asserts",  "--asserts",      dest="asserts",        action="store_true", default=False,       help="Switch on assertions" )
+parser.add_argument("-integrator",  "--time-integrator", dest="time_integrator",       default="leapfrog",          help="Type of time integrator to use (default: leapfrog)" )
 args = parser.parse_args()
 
 
@@ -34,11 +37,56 @@ project = swift2.Project( namespace=["benchmarks", "swift2", "planetorbit"],
                           executable="orbit-" + str(args.cell_size) )
 
 
-# Declare the particle type
-particle   = swift2.particle.ExplicitEulerDynamicInteractionRadius( name                   = "Planet", 
-                                                                  cfl_factor             = 0.01, 
-                                                                  initial_time_step_size = 1e-5 )
+"""
+Declare the particle type:
+We need to specify the time integration scheme that will be used to evolve
+this particle. Current choices include:
+  - Leapfrog (default)
+  - Explicit Euler with fixed interaction radius
+  - Explicit Euler with variable interaction radius
 
+These take the same input parameters as shown below. If you switch between
+these, do not forget to remove the previous main
+
+@TODO implement set methods for input parameters to use a single call below.
+"""
+
+if(args.time_integrator=='leapfrog'):
+  particle   = swift2.particle.LeapfrogFixedInteractionRadius( name                   = "Planet", 
+                                                               cfl_factor             = 0.2, 
+                                                               initial_time_step_size = args.timestep_size,
+                                                               particles_per_cell = 0,
+                                                               min_h = 0.1,
+                                                               max_h = 0.3
+                                                             )
+elif(args.time_integrator=='euler' or 'Euler'):
+  particle   = swift2.particle.ExplicitEulerFixedInteractionRadius( name                   = "Planet", 
+                                                               cfl_factor             = 0.2, 
+                                                               initial_time_step_size = args.timestep_size,
+                                                               particles_per_cell = 0,
+                                                               min_h = 0.1,
+                                                               max_h = 0.3
+                                                             )
+
+elif(args.time_integrator=='euler-dynamic' or 'Euler-dynamic'):
+  particle   = swift2.particle.ExplicitEulerDynamicInteractionRadius( name                   = "Planet", 
+                                                               cfl_factor             = 0.2, 
+                                                               initial_time_step_size = args.timestep_size,
+                                                               particles_per_cell = 0,
+                                                               min_h = 0.1,
+                                                               max_h = 0.3
+                                                             )
+else:
+  print('Time integrator not supported. Please check the list of options.')
+
+
+# Declare some particle attributes useful for this test
+energy_kin_attr = dastgen2.attributes.Double("energyKin")
+energy_pot_attr = dastgen2.attributes.Double("energyPot")
+energy_tot_attr = dastgen2.attributes.Double("energyTot")
+particle.data.add_attribute(energy_kin_attr)
+particle.data.add_attribute(energy_pot_attr)
+particle.data.add_attribute(energy_tot_attr)
 
 if args.asserts:
   build_mode = peano4.output.CompileMode.Asserts
@@ -49,17 +97,18 @@ offset      = [ 0, 0, 0 ]
 domain_size = [ 1, 1, 1 ]
 periodic_boundary_conditions = [False,False,False]          # Periodic BC
 
-
 project.set_global_simulation_parameters(
-  dimensions,               # dimensions
-  offset,  domain_size,
-  0.1,     0.001,
-  args.end_time,
-  0.0, 
-  args.end_time/20,                      #args.plot_step_size,   # snapshots
-  periodic_boundary_conditions,
-  8  # plotter precision
+  dimensions            = dimensions,
+  offset                = offset,  
+  domain_size           = domain_size,
+  min_end_time          = args.end_time,
+  max_end_time          = 0.0,
+  first_plot_time_stamp = 0.0, 
+  time_in_between_plots = args.end_time/200, 
+  periodic_BC           = periodic_boundary_conditions,
+  plotter_precision     =8  # plotter precision
 )
+
 
 # additional global constants (to be exported down below)
 
@@ -153,20 +202,33 @@ particle_force = """
   tarch::la::Vector<Dimensions,double> pos_sun = {SUN_X_COORD,SUN_Y_COORD,0.0};
   #endif
 
-  //  /* G_NEWTON in internal units */
-  //  double const L3 = LENGTH_UNIT * LENGTH_UNIT * LENGTH_UNIT;
-  // double const T2 = PERIOD * PERIOD;
-  //  double const GN = G_NEWTON * M_SUN * T2 / L3;
-  double GN = 1.0;
+   /* G_NEWTON in internal units */
+  double const L3 = LENGTH_UNIT * LENGTH_UNIT * LENGTH_UNIT;
+  double const T2 = PERIOD * PERIOD;
+  double const GN = G_NEWTON * M_SUN * T2 / L3;
+  //double GN = 1.0;
 
   tarch::la::Vector<Dimensions,double> earthSunDistance = localParticle->getX() - pos_sun;
   const double r = tarch::la::norm2(earthSunDistance);
   if (tarch::la::greater(r,0.0)) {
     const double r_inv =  1.0 / r;     
     localParticle->setA( - GN * earthSunDistance * (r_inv * r_inv * r_inv) );
+
+    /* Update Energy */
+    const double vel = tarch::la::norm2( localParticle->getV() );
+    const double E_kin = 0.5 * vel * vel;
+    const double E_pot = - GN * r_inv;
+
+    /* Update total energy (overall minus sign) */
+    localParticle->setEnergyKin( E_kin );
+    localParticle->setEnergyPot(-E_pot );
+    localParticle->setEnergyTot( - ( E_kin + E_pot ) );
+
+
   }
 """
-particle.particle_acceleration = particle_force
+#particle.particle_acceleration = particle_force
+particle.particle_particle_interaction_over_particle_sets_kernel = particle_force
 
 # Add particle to the SWIFT project
 particle_set = project.add_particle_species( particle )
@@ -183,7 +245,7 @@ particle_set = project.add_particle_species( particle )
 # only the earth is given an initial velocity.
 #
 ###############################################################################
-cut_off_radius = 0.1
+cut_off_radius = 0.01
 initialisation_snippet = """
   /*
    * In this problem we will initialize just a single particle (Earth)
@@ -203,6 +265,36 @@ initialisation_snippet = """
     particle->setV(0, EARTH_V_INI_X) ;
     particle->setV(1, EARTH_V_INI_Y) ;
   } 
+
+  /* 
+   * Set initial energy
+   */
+
+  /* G_NEWTON in internal units */
+  double const L3 = LENGTH_UNIT * LENGTH_UNIT * LENGTH_UNIT;
+  double const T2 = PERIOD * PERIOD;
+  double const GN = G_NEWTON * M_SUN * T2 / L3;
+
+  /* Sun-Earth initial distance */
+  const double r_ini = particle->getX()(0) - SUN_X_COORD;
+  const double r_inv = r_ini ? 1.0 / r_ini : 0.0;     
+  const double vel = tarch::la::norm2( particle->getV() );
+
+  const double E_kin = 0.5 * vel * vel;
+  const double E_pot = - GN * r_inv;
+
+  particle->setEnergyKin( E_kin );
+  particle->setEnergyPot(-E_pot );
+  
+  /* Overall minus sign for plotting */
+  particle->setEnergyTot( -( E_kin + E_pot ) );
+
+  logInfo( "Init()", " =====================================" );
+  logInfo( "Init()", "Initial energy:");
+  logInfo( "Init()", "Kinetic energy  :" << E_kin);
+  logInfo( "Init()", "Potential energy:" << E_pot);
+  logInfo( "Init()", "Total energy    :" << E_kin + E_pot);
+  logInfo( "Init()", " =====================================" );
 
 
 """
@@ -246,9 +338,9 @@ particle_plotter = peano4.toolbox.particles.PlotParticlesInVTKFormat( "particles
                                                                       "globaldata::{}::getSpecies().getMinTimeStamp()".format(particle.name) )
 particle_plotter.add_attribute_to_plot(particle.velocity, dimensions)
 #particle_plotter.add_attribute_to_plot(a_attr       , Dimensions)
-#particle_plotter.add_attribute_to_plot(energy_kin_attr  , 1)
-#particle_plotter.add_attribute_to_plot(energy_pot_attr  , 1)
-#particle_plotter.add_attribute_to_plot(energy_tot_attr  , 1)
+particle_plotter.add_attribute_to_plot(energy_kin_attr  , 1)
+particle_plotter.add_attribute_to_plot(energy_pot_attr  , 1)
+particle_plotter.add_attribute_to_plot(energy_tot_attr  , 1)
 project.algorithm_step_plot.add_action_set( particle_plotter )
 
 
@@ -284,6 +376,17 @@ peano4_project.constants.export_const_with_type("PERIOD", str(T), "double")
 peano4_project.constants.export_const_with_type("R_MIN", str(R_MIN), "double")
 peano4_project.constants.export_const_with_type("R_MAX", str(R_MAX), "double")
 
-peano4_project.generate( throw_away_data_after_generation=False )
+# If we want to start a project from scratch, we may want to remove some of the generated code
+if args.clean_temporary_directories:
+  dirs = [ 'vertexdata/', 'repositories/', 'globaldata/', 'observers/' ]
+  for dir in dirs:
+    shutil.rmtree( dir )
+
+peano4_project.generate( throw_away_data_after_generation=True )
 peano4_project.build( make_clean_first = True, number_of_parallel_builds=args.j )
+
+# remove output files from previous runs
+output_files = [ f for f in os.listdir(".") if f.endswith(".peano-patch-file") or f.endswith(".vtu") or f.endswith(".pvd") ]
+for f in output_files:
+  os.remove(f)
 

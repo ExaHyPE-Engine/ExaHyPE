@@ -58,9 +58,16 @@ class ExplicitEulerFixedInteractionRadius(Particle):
                initial_time_step_size,
                particle_particle_interaction_over_particle_sets_kernel = "",
                touch_particles_of_set_first_time_kernel = "",
-               touch_particles_of_set_last_time_kernel  = ""
+               touch_particles_of_set_last_time_kernel  = "",
+               particles_per_cell = 0, # makes no sense, and should likely be forbidden
+               min_h = 0.005,
+               max_h = 0.3,
                ):
-    super( ExplicitEulerFixedInteractionRadius, self ).__init__( name )
+    super( ExplicitEulerFixedInteractionRadius, self ).__init__( name ,
+                                                                 particles_per_cell,
+                                                                 min_h,
+                                                                 max_h,
+                                                                )
     
     self.velocity    = peano4.dastgen2.Peano4DoubleArray("v","Dimensions")
     self.accelerator = peano4.dastgen2.Peano4DoubleArray("a","Dimensions")

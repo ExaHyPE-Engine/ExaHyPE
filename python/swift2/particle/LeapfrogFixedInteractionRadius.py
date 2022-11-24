@@ -62,9 +62,17 @@ class LeapfrogFixedInteractionRadius(Particle):
                initial_time_step_size,
                particle_particle_interaction_over_particle_sets_kernel = "",
                touch_particles_of_set_first_time_kernel = "",
-               touch_particles_of_set_last_time_kernel  = ""
+               touch_particles_of_set_last_time_kernel  = "",
+               particles_per_cell = 0, # makes no sense, and should likely be forbidden
+               min_h = 0.005,
+               max_h = 0.3,
                ):
-    super( LeapfrogFixedInteractionRadius , self ).__init__( name )
+    super( LeapfrogFixedInteractionRadius , self ).__init__( name,
+                                                           particles_per_cell,
+                                                           min_h,
+                                                           max_h,
+                                                            )
+
 
     self.cfl_factor                = cfl_factor
     self.initial_time_step_size    = initial_time_step_size
