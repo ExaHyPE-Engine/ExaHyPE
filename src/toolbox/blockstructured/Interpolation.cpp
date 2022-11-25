@@ -1026,7 +1026,7 @@ void toolbox::blockstructured::interpolateHaloLayer_AoS_tensor_product(
   logTraceInWith3Arguments( "interpolateHaloLayer_AoS_tensor_product(...)", marker.toString(), numberOfDoFsPerAxisInPatch, overlap );
 
   const int    normal          = marker.getSelectedFaceNumber() % Dimensions;
-  const int    leftRightOffset = marker.getSelectedFaceNumber() < Dimensions ? 0 : overlap;
+  //const int    leftRightOffset = marker.getSelectedFaceNumber() < Dimensions ? 0 : overlap;
 
   dfore(kFine,numberOfDoFsPerAxisInPatch,normal,0) {
     for (int iFine=0;   iFine<overlap;   iFine++) {
