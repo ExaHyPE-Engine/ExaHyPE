@@ -156,7 +156,8 @@ double ::benchmarks::exahype2::euler::sphericalaccretionupscaling::SelfSimilarIn
 
   logTraceOut( "maxEigenvalue(...)" );
 
-  if (result==0) {result=0.1;}
+  if (result==0.0) {result=0.1;}
+  //result=0.1;
   return result;
 }
 

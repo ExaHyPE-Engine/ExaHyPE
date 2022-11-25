@@ -232,8 +232,10 @@ if "plot" in args.type:
 else:  
   plot_interval = 0.0
   
-#end_time=0.004
-#plot_interval=0.001
+end_time=0.020
+plot_interval=0.007
+#end_time=0.1
+#plot_interval=0.02
 
 cube_size = 1.0
 project.set_global_simulation_parameters(
