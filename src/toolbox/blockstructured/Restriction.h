@@ -340,9 +340,43 @@ namespace toolbox {
      *
      * ## Example matrices
      *
-     * If we average over all fine grid values and set all
+     * If we average over all fine grid values and set all coarse grid values to
+     * the same restricted value, and if the overlap equals three, then you
+     * would pass in the following matrix:
+     *
+     *        static constexpr double  NormalRestrictionMatrix1d[]     = {
+     *          0.0,    0.0,    0.0,    1.0/3.0,    1.0/3.0,    1.0/3.0,
+     *          0.0,    0.0,    0.0,    1.0/3.0,    1.0/3.0,    1.0/3.0,
+     *          0.0,    0.0,    0.0,    1.0/3.0,    1.0/3.0,    1.0/3.0
+     *        };
+     *
+     * The image below illustrates the data flow (for an overlap of two, but I
+     * was too lazy to paint yet another pic):
      *
      * @image html Restriction_tensor_1d.png
+     *
+     * The three zeroes in the matrix mean that the real coarse grid values
+     * (green) remain unchanged. The blue values are set according to the
+     * three rows of the matrix. Each ignores the red entries to the left
+     * (therefore the leading zeroes) and then computes the average of the
+     * right ones. The result is then written to the coarse level.
+     *
+     * If you want to do the same type of averaging along the tangential, and
+     * if you have a patch size of 5, you have to pass in the following matrix:
+     *
+     *       static constexpr double  TangentialRestrictionMatrix1d[] = {
+     *         1.0/3.0, 1.0/3.0, 1.0/3.0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+     *         0, 0, 0, 1.0/3.0, 1.0/3.0, 1.0/3.0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+     *         0, 0, 0, 0, 0, 0, 1.0/3.0, 1.0/3.0, 1.0/3.0, 0, 0, 0, 0, 0, 0,
+     *         0, 0, 0, 0, 0, 0, 0, 0, 0, 1.0/3.0, 1.0/3.0, 1.0/3.0, 0, 0, 0,
+     *         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1.0/3.0, 1.0/3.0, 1.0/3.0
+     *       };
+     *
+     * We have 3x5 values on the fine grid, which determine the 5 entries on
+     * the coarse mesh. Therefore, we have a 5x15 matrix. The first coarse mesh
+     * entry is the average of the first three fine grid values. The second
+     * coarse entry results from the fine grid values 4,5,6.
+     *
      *
      * ## Arguments
      *
