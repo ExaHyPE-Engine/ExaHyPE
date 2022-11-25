@@ -338,6 +338,11 @@ namespace toolbox {
      * ordered along the coordinate axes.
      *
      *
+     * ## Example matrices
+     *
+     * If we average over all fine grid values and set all
+     *
+     * @image html Restriction_tensor_1d.png
      *
      * ## Arguments
      *

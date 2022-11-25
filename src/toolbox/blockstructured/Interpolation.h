@@ -263,6 +263,37 @@ namespace toolbox {
      * value but the one right of it. In the matrix, this means that third column
      * would be 1 and not the second one.
      *
+     * If you also want to interpolate piece-wise constant along the tangential
+     * directions, and if you have a patch size of 5, you would pass in the following
+     * tangential interpolation matrix:
+     *
+     *       static constexpr double  TangentialInterpolationMatrix1d[] = {
+     *         1.0,0.0,0.0,0.0,0.0,
+     *         1.0,0.0,0.0,0.0,0.0,
+     *         1.0,0.0,0.0,0.0,0.0,
+     *         0.0,1.0,0.0,0.0,0.0,
+     *         0.0,1.0,0.0,0.0,0.0,
+     *
+     *         0.0,1.0,0.0,0.0,0.0,
+     *         0.0,0.0,1.0,0.0,0.0,
+     *         0.0,0.0,1.0,0.0,0.0,
+     *         0.0,0.0,1.0,0.0,0.0,
+     *         0.0,0.0,0.0,1.0,0.0,
+     *
+     *         0.0,0.0,0.0,1.0,0.0,
+     *         0.0,0.0,0.0,1.0,0.0,
+     *         0.0,0.0,0.0,0.0,1.0,
+     *         0.0,0.0,0.0,0.0,1.0,
+     *         0.0,0.0,0.0,0.0,1.0
+     *       };
+     *
+     * This operator is self-explaining: With a patch size of 5, we have five
+     * coarse grid values along a tangent which are to projected onto 3x5 fine
+     * grid values, as we always split into three. The operators are always
+     * read along the coordinate axes. The left fine grid value has to equal
+     * the left-most coarse grid value. This is the 1 in the first row of the
+     * matrix. The second entry on the fine grid also holds this value. This is
+     * the second line.
      */
     void interpolateHaloLayer_AoS_tensor_product(
       const peano4::datamanagement::FaceMarker& marker,
