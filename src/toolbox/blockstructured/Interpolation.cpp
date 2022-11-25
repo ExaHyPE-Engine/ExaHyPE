@@ -1039,10 +1039,14 @@ void toolbox::blockstructured::interpolateHaloLayer_AoS_tensor_product(
       );
 
       logDebug( "interpolateHaloLayer_AoS_tensor_product(...)", "clear dof " << dest );
-      for (int unknown=0; unknown<unknowns; unknown++) {
-        fineGridFaceValues[destLinearised*unknowns+unknown] = 0.0;
-      }
-
+      //for (int unknown=0; unknown<unknowns; unknown++) {
+      fineGridFaceValues[destLinearised*unknowns+0] = 0.1;
+      fineGridFaceValues[destLinearised*unknowns+1] = 0.0;
+      fineGridFaceValues[destLinearised*unknowns+2] = 0.0;
+      fineGridFaceValues[destLinearised*unknowns+3] = 0.0;
+      fineGridFaceValues[destLinearised*unknowns+4] = 0.0;
+      //}
+/*
       dfore(kCoarse,numberOfDoFsPerAxisInPatch,normal,0) {
         for (int iCoarse=0;   iCoarse<2*overlap;   iCoarse++) {
           tarch::la::Vector<Dimensions,int> src  = kCoarse;
@@ -1062,6 +1066,7 @@ void toolbox::blockstructured::interpolateHaloLayer_AoS_tensor_product(
               int index = col + row * 2 * overlap;
               logDebug( "interpolateHaloLayer_AoS_tensor_product(...)", "(" << row << "," << col << ")=" << index << " (normal contribution)");
               weight *= normalInterpolationMatrix1d[ index ];
+              assertion(weight==weight);
             }
             else {
               int col   = src(d);
@@ -1071,6 +1076,7 @@ void toolbox::blockstructured::interpolateHaloLayer_AoS_tensor_product(
               int index = col + row * numberOfDoFsPerAxisInPatch;
               logDebug( "interpolateHaloLayer_AoS_tensor_product(...)", "(" << row << "," << col << ")=" << index << " (tangential contribution)" );
               weight *= tangentialInterpolationMatrix1d[ index ];
+              assertion(weight==weight);
             }
           }
 
@@ -1080,7 +1086,7 @@ void toolbox::blockstructured::interpolateHaloLayer_AoS_tensor_product(
             fineGridFaceValues[destLinearised*unknowns+unknown] += weight * coarseGridFaceValues[srcLinearised*unknowns+unknown];
           }
         }
-      }
+      }*/
     }
   }
 

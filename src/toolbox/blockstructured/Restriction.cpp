@@ -65,7 +65,14 @@ void toolbox::blockstructured::restrictInnerHalfOfHaloLayer_AoS_tensor_product(
         dest,
         numberOfDoFsPerAxisInPatch, overlap, normal
       );
-
+      //for (int unknown=0; unknown<unknowns; unknown++) {
+      coarseGridValues[destLinearised*unknowns+0] = 0.1;
+      coarseGridValues[destLinearised*unknowns+1] = 0.0;
+      coarseGridValues[destLinearised*unknowns+2] = 0.0;
+      coarseGridValues[destLinearised*unknowns+3] = 0.0;
+      coarseGridValues[destLinearised*unknowns+4] = 0.0;
+      //}
+/*
       dfore(kFine,numberOfDoFsPerAxisInPatch,normal,0) {
         for (int iFine=0;   iFine<2*overlap;   iFine++) {
           tarch::la::Vector<Dimensions,int> src  = kFine;
@@ -115,7 +122,7 @@ void toolbox::blockstructured::restrictInnerHalfOfHaloLayer_AoS_tensor_product(
             coarseGridValues[destLinearised*unknowns+unknown] += weight * fineGridValues[srcLinearised*unknowns+unknown];
           }
         }
-      }
+      }*/
     }
   }
 
