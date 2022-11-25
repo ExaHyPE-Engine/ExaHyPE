@@ -132,17 +132,17 @@ def __compute_restriction_matrices_1d(value, patch_size):
     if value=="TP_inject_normal_extrap":
       for index in range(0,patch_size):
         restrict_matrix_T[index][3*index+1]=1.0
-      restrict_matrix_N[0][0]=6.0;  restrict_matrix_N[0][1]=-5.0;
-      restrict_matrix_N[1][0]=3.0;  restrict_matrix_N[1][1]=-2.0;
-      restrict_matrix_N[2][0]=1.0/3.0;  restrict_matrix_N[2][1]=1.0/3.0; restrict_matrix_N[2][2]=1.0/3.0;
+      restrict_matrix_N[2][5]=6.0;  restrict_matrix_N[2][4]=-5.0;
+      restrict_matrix_N[1][5]=3.0;  restrict_matrix_N[1][4]=-2.0;
+      restrict_matrix_N[0][3]=1.0/3.0;  restrict_matrix_N[0][4]=1.0/3.0; restrict_matrix_N[0][5]=1.0/3.0;
     elif value=="TP_average_normal_extrap":
       for index in range(0,patch_size):
         restrict_matrix_T[index][3*index  ]=1.0/3.0  
         restrict_matrix_T[index][3*index+1]=1.0/3.0 
         restrict_matrix_T[index][3*index+2]=1.0/3.0 
-      restrict_matrix_N[0][0]=6.0;  restrict_matrix_N[0][1]=-5.0;
-      restrict_matrix_N[1][0]=3.0;  restrict_matrix_N[1][1]=-2.0;
-      restrict_matrix_N[2][0]=1.0/3.0;  restrict_matrix_N[2][1]=1.0/3.0; restrict_matrix_N[2][2]=1.0/3.0;
+      restrict_matrix_N[2][5]=6.0;  restrict_matrix_N[2][4]=-5.0;
+      restrict_matrix_N[1][5]=3.0;  restrict_matrix_N[1][4]=-2.0;
+      restrict_matrix_N[0][3]=1.0/3.0;  restrict_matrix_N[0][4]=1.0/3.0; restrict_matrix_N[0][5]=1.0/3.0;
     else:
       assert False, "value {} not supported".format(value)
       
