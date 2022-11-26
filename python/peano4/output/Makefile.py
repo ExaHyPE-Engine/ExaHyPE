@@ -28,27 +28,25 @@ class Makefile(object):
   @property
   def readme_entry(self):
     result_template = jinja2.Template( """
-## Compiler version
-
-{{VERSION}}
-
-
 ## Makefile settings
 
-CXX       = {{CXX}}
-CXXFLAGS  = {{CXXFLAGS}}
-FC        = {{FC}}
-FCFLAGS   = {{FCFLAGS}}
-LDFLAGS   = {{LDFLAGS}}
-GPUOBJS   = {{GPUOBJS}}
-LIBS      = {{LIBS}}
-DIM       = {{DIM}}
+CXX             = {{CXX}}
+CXXFLAGS        = {{CXXFLAGS}}
+FC              = {{FC}}
+FCFLAGS         = {{FCFLAGS}}
+LDFLAGS         = {{LDFLAGS}}
+GPUOBJS         = {{GPUOBJS}}
+LIBS            = {{LIBS}}
+DIM             = {{DIM}}
 CONFIGUREPATH   = {{CONFIGUREPATH}}
 EXECUTABLENAME  = {{EXECUTABLENAME}}
 FORTRAN_MODULES = {{FORTRAN_MODULES}}
 MODE            = {{MODE}}
 
-Code base configured with
+
+## Compiler version
+
+{{VERSION}}
 
 """)
     version_string    = subprocess.run([self.d["CXX"], '--version'], stdout=subprocess.PIPE)

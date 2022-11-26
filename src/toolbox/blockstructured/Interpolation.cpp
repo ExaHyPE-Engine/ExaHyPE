@@ -1026,7 +1026,6 @@ void toolbox::blockstructured::interpolateHaloLayer_AoS_tensor_product(
   logTraceInWith3Arguments( "interpolateHaloLayer_AoS_tensor_product(...)", marker.toString(), numberOfDoFsPerAxisInPatch, overlap );
 
   const int    normal          = marker.getSelectedFaceNumber() % Dimensions;
-  //const int    leftRightOffset = marker.getSelectedFaceNumber() < Dimensions ? 0 : overlap;
 
   dfore(kFine,numberOfDoFsPerAxisInPatch,normal,0) {
     for (int iFine=0;   iFine<overlap;   iFine++) {
@@ -1039,14 +1038,10 @@ void toolbox::blockstructured::interpolateHaloLayer_AoS_tensor_product(
       );
 
       logDebug( "interpolateHaloLayer_AoS_tensor_product(...)", "clear dof " << dest );
-      //for (int unknown=0; unknown<unknowns; unknown++) {
-      fineGridFaceValues[destLinearised*unknowns+0] = 0.1;
-      fineGridFaceValues[destLinearised*unknowns+1] = 0.0;
-      fineGridFaceValues[destLinearised*unknowns+2] = 0.0;
-      fineGridFaceValues[destLinearised*unknowns+3] = 0.0;
-      fineGridFaceValues[destLinearised*unknowns+4] = 0.0;
-      //}
-/*
+      for (int unknown=0; unknown<unknowns; unknown++) {
+        fineGridFaceValues[destLinearised*unknowns+unknown] = 0.0;
+      }
+
       dfore(kCoarse,numberOfDoFsPerAxisInPatch,normal,0) {
         for (int iCoarse=0;   iCoarse<2*overlap;   iCoarse++) {
           tarch::la::Vector<Dimensions,int> src  = kCoarse;
@@ -1086,7 +1081,7 @@ void toolbox::blockstructured::interpolateHaloLayer_AoS_tensor_product(
             fineGridFaceValues[destLinearised*unknowns+unknown] += weight * coarseGridFaceValues[srcLinearised*unknowns+unknown];
           }
         }
-      }*/
+      }
     }
   }
 
