@@ -16,9 +16,12 @@ exahype2::fv::tests::InterpolationRestrictionTest::InterpolationRestrictionTest(
 
 void exahype2::fv::tests::InterpolationRestrictionTest::run() {
   testMethod (testPiecewiseConstantInterpolationWithTensorProduct1);
+
+  testMethod( testAverageRestrictionWithTensorProduct );
+  testMethod( testInjectionExtrapolationRestrictionWithTensorProduct );
+
   // @todo Han copy in if yuo wanna test more things
   // testMethod (testPiecewiseConstantInterpolationWithTensorProduct2);
-  testMethod (testAverageRestriction);
 }
 
 
@@ -142,7 +145,8 @@ void exahype2::fv::tests::InterpolationRestrictionTest::testPiecewiseConstantInt
   #endif
 }
 
-void exahype2::fv::tests::InterpolationRestrictionTest::testAverageRestriction(){
+
+void exahype2::fv::tests::InterpolationRestrictionTest::testAverageRestrictionWithTensorProduct(){
   // Testing a patch with size of 5. See header documentation: these are
   // the operators for the right face.
   static constexpr double  NormalRestrictionMatrix1d[]     = {
@@ -352,3 +356,224 @@ void exahype2::fv::tests::InterpolationRestrictionTest::testPiecewiseConstantInt
   }*/
   #endif
 }
+
+
+void exahype2::fv::tests::InterpolationRestrictionTest::testInjectionExtrapolationRestrictionWithTensorProduct(){
+  static constexpr double TangentialRestrictionMatrix1d[] = {
+    0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0 ,0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+    0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+    0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+    0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0,
+    0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0};
+
+  static constexpr double NormalRestrictionMatrix1d[] = {
+    0.0, 0.0, 0.0, 0.3333333333333333, 0.3333333333333333, 0.3333333333333333,
+    0.0, 0.0, 0.0, 0.0, -2.0, 3.0,
+    0.0, 0.0, 0.0, 0.0, -5.0, 6.0};
+
+  peano4::grid::GridTraversalEvent    dummEvent;
+  int face=3;
+  #if Dimensions==2
+  dummEvent.setRelativePositionToFather( {0,0} );
+
+  constexpr int NumberOfFaceValues = 3*5 * 2 * 2; // three width, five dofs per axis, two unknowns, two sides
+
+  double  fineGridFaceValues[] = {
+    0.1,-0.1, 0.1,-0.1, 0.1,-0.1,    0.0,0.0, 0.0,0.0, 0.0,0.0,
+    0.1,-0.1, 0.1,-0.1, 0.1,-0.1,    0.0,0.0, 0.0,0.0, 0.0,0.0,
+    0.1,-0.1, 0.1,-0.1, 0.1,-0.1,    0.0,0.0, 0.0,0.0, 0.0,0.0,
+    0.1,-0.1, 0.1,-0.1, 0.1,-0.1,    0.0,0.0, 0.0,0.0, 0.0,0.0,
+    0.1,-0.1, 0.1,-0.1, 0.1,-0.1,    0.0,0.0, 0.0,0.0, 0.0,0.0
+  };
+  #else
+  dummEvent.setRelativePositionToFather( {0,0,2} );
+
+  constexpr int NumberOfFaceValues = 3*5*5 * 2 * 2; // three width, five dofs per axis, two unknowns, two sides
+
+  double  fineGridFaceValues[] = {
+    0.1,0,0,0,0, 0.1,0,0,0,0, 0.1,0,0,0,0, 0.1,0,0,0,0, 0.1,0,0,0,0,
+    0.1,0,0,0,0, 0.1,0,0,0,0, 0.1,0,0,0,0, 0.1,0,0,0,0, 0.1,0,0,0,0,
+    0.1,0,0,0,0, 0.1,0,0,0,0, 0.1,0,0,0,0, 0.1,0,0,0,0, 0.1,0,0,0,0,
+    0.1,0,0,0,0, 0.1,0,0,0,0, 0.1,0,0,0,0, 0.1,0,0,0,0, 0.1,0,0,0,0,
+    0.1,0,0,0,0, 0.1,0,0,0,0, 0.1,0,0,0,0, 0.1,0,0,0,0, 0.1,0,0,0,0,
+
+    0.1,0,0,0,0, 0.1,0,0,0,0, 0.1,0,0,0,0, 0.1,0,0,0,0, 0.1,0,0,0,0,
+    0.1,0,0,0,0, 0.1,0,0,0,0, 0.1,0,0,0,0, 0.1,0,0,0,0, 0.1,0,0,0,0,
+    0.1,0,0,0,0, 0.1,0,0,0,0, 0.1,0,0,0,0, 0.1,0,0,0,0, 0.1,0,0,0,0,
+    0.1,0,0,0,0, 0.1,0,0,0,0, 0.1,0,0,0,0, 0.1,0,0,0,0, 0.1,0,0,0,0,
+    0.1,0,0,0,0, 0.1,0,0,0,0, 0.1,0,0,0,0, 0.1,0,0,0,0, 0.1,0,0,0,0,
+
+    0.1,0,0,0,0, 0.1,0,0,0,0, 0.1,0,0,0,0, 0.1,0,0,0,0, 0.1,0,0,0,0,
+    0.1,0,0,0,0, 0.1,0,0,0,0, 0.1,0,0,0,0, 0.1,0,0,0,0, 0.1,0,0,0,0,
+    0.1,0,0,0,0, 0.1,0,0,0,0, 0.1,0,0,0,0, 0.1,0,0,0,0, 0.1,0,0,0,0,
+    0.1,0,0,0,0, 0.1,0,0,0,0, 0.1,0,0,0,0, 0.1,0,0,0,0, 0.1,0,0,0,0,
+    0.1,0,0,0,0, 0.1,0,0,0,0, 0.1,0,0,0,0, 0.1,0,0,0,0, 0.1,0,0,0,0,
+
+    0,0,0,0,0, 0,0,0,0,0, 0,0,0,0,0, 0,0,0,0,0, 0,0,0,0,0,
+    0,0,0,0,0, 0,0,0,0,0, 0,0,0,0,0, 0,0,0,0,0, 0,0,0,0,0,
+    0,0,0,0,0, 0,0,0,0,0, 0,0,0,0,0, 0,0,0,0,0, 0,0,0,0,0,
+    0,0,0,0,0, 0,0,0,0,0, 0,0,0,0,0, 0,0,0,0,0, 0,0,0,0,0,
+    0,0,0,0,0, 0,0,0,0,0, 0,0,0,0,0, 0,0,0,0,0, 0,0,0,0,0,
+
+    0,0,0,0,0, 0,0,0,0,0, 0,0,0,0,0, 0,0,0,0,0, 0,0,0,0,0,
+    0,0,0,0,0, 0,0,0,0,0, 0,0,0,0,0, 0,0,0,0,0, 0,0,0,0,0,
+    0,0,0,0,0, 0,0,0,0,0, 0,0,0,0,0, 0,0,0,0,0, 0,0,0,0,0,
+    0,0,0,0,0, 0,0,0,0,0, 0,0,0,0,0, 0,0,0,0,0, 0,0,0,0,0,
+    0,0,0,0,0, 0,0,0,0,0, 0,0,0,0,0, 0,0,0,0,0, 0,0,0,0,0,
+
+    0,0,0,0,0, 0,0,0,0,0, 0,0,0,0,0, 0,0,0,0,0, 0,0,0,0,0,
+    0,0,0,0,0, 0,0,0,0,0, 0,0,0,0,0, 0,0,0,0,0, 0,0,0,0,0,
+    0,0,0,0,0, 0,0,0,0,0, 0,0,0,0,0, 0,0,0,0,0, 0,0,0,0,0,
+    0,0,0,0,0, 0,0,0,0,0, 0,0,0,0,0, 0,0,0,0,0, 0,0,0,0,0,
+    0,0,0,0,0, 0,0,0,0,0, 0,0,0,0,0, 0,0,0,0,0, 0,0,0,0,0
+  };
+  #endif
+
+  double  coarseGridFaceValues[ NumberOfFaceValues ];
+  peano4::datamanagement::FaceMarker  marker1(dummEvent);
+  marker1.select(2*Dimensions-1);
+
+  std::fill_n(coarseGridFaceValues, NumberOfFaceValues, 0.0 );
+
+  ::toolbox::blockstructured::restrictInnerHalfOfHaloLayer_AoS_tensor_product(
+      marker1,
+      5,         // numberOfDoFsPerAxisInPatch
+      3,         // overlap
+      5,         // unknowns
+      NormalRestrictionMatrix1d,
+      TangentialRestrictionMatrix1d,
+      fineGridFaceValues,
+      coarseGridFaceValues
+  );
+
+  #if Dimensions==2
+  validateNumericalEqualsWithParams6(
+    coarseGridFaceValues[0*2+0],  0.1,
+    coarseGridFaceValues[0*2+0], coarseGridFaceValues[1*2+0], coarseGridFaceValues[2*2+0],
+    coarseGridFaceValues[3*2+0], coarseGridFaceValues[4*2+0], coarseGridFaceValues[5*2+0]
+  );
+  #else
+  validateNumericalEquals( coarseGridFaceValues[0*5+0],  0.1 );
+  validateNumericalEquals( coarseGridFaceValues[1*5+0],  0.1 );
+  validateNumericalEquals( coarseGridFaceValues[5*5+0],  0.1 );
+  validateNumericalEquals( coarseGridFaceValues[6*5+0],  0.1 );
+
+  dummEvent.setRelativePositionToFather( {1,0,2} );
+  peano4::datamanagement::FaceMarker  marker102(dummEvent);
+  marker102.select(2*Dimensions-1);
+  ::toolbox::blockstructured::restrictInnerHalfOfHaloLayer_AoS_tensor_product(
+      marker102,
+      5,         // numberOfDoFsPerAxisInPatch
+      3,         // overlap
+      5,         // unknowns
+      NormalRestrictionMatrix1d,
+      TangentialRestrictionMatrix1d,
+      fineGridFaceValues,
+      coarseGridFaceValues
+  );
+
+  dummEvent.setRelativePositionToFather( {2,0,2} );
+  peano4::datamanagement::FaceMarker  marker202(dummEvent);
+  marker202.select(2*Dimensions-1);
+  ::toolbox::blockstructured::restrictInnerHalfOfHaloLayer_AoS_tensor_product(
+      marker202,
+      5,         // numberOfDoFsPerAxisInPatch
+      3,         // overlap
+      5,         // unknowns
+      NormalRestrictionMatrix1d,
+      TangentialRestrictionMatrix1d,
+      fineGridFaceValues,
+      coarseGridFaceValues
+  );
+
+  dummEvent.setRelativePositionToFather( {0,1,2} );
+  peano4::datamanagement::FaceMarker  marker012(dummEvent);
+  marker012.select(2*Dimensions-1);
+  ::toolbox::blockstructured::restrictInnerHalfOfHaloLayer_AoS_tensor_product(
+      marker012,
+      5,         // numberOfDoFsPerAxisInPatch
+      3,         // overlap
+      5,         // unknowns
+      NormalRestrictionMatrix1d,
+      TangentialRestrictionMatrix1d,
+      fineGridFaceValues,
+      coarseGridFaceValues
+  );
+
+  dummEvent.setRelativePositionToFather( {1,1,2} );
+  peano4::datamanagement::FaceMarker  marker112(dummEvent);
+  marker112.select(2*Dimensions-1);
+  ::toolbox::blockstructured::restrictInnerHalfOfHaloLayer_AoS_tensor_product(
+      marker112,
+      5,         // numberOfDoFsPerAxisInPatch
+      3,         // overlap
+      5,         // unknowns
+      NormalRestrictionMatrix1d,
+      TangentialRestrictionMatrix1d,
+      fineGridFaceValues,
+      coarseGridFaceValues
+  );
+
+  dummEvent.setRelativePositionToFather( {2,1,2} );
+  peano4::datamanagement::FaceMarker  marker212(dummEvent);
+  marker212.select(2*Dimensions-1);
+  ::toolbox::blockstructured::restrictInnerHalfOfHaloLayer_AoS_tensor_product(
+      marker212,
+      5,         // numberOfDoFsPerAxisInPatch
+      3,         // overlap
+      5,         // unknowns
+      NormalRestrictionMatrix1d,
+      TangentialRestrictionMatrix1d,
+      fineGridFaceValues,
+      coarseGridFaceValues
+  );
+
+  dummEvent.setRelativePositionToFather( {0,2,2} );
+  peano4::datamanagement::FaceMarker  marker022(dummEvent);
+  marker022.select(2*Dimensions-1);
+  ::toolbox::blockstructured::restrictInnerHalfOfHaloLayer_AoS_tensor_product(
+      marker022,
+      5,         // numberOfDoFsPerAxisInPatch
+      3,         // overlap
+      5,         // unknowns
+      NormalRestrictionMatrix1d,
+      TangentialRestrictionMatrix1d,
+      fineGridFaceValues,
+      coarseGridFaceValues
+  );
+
+  dummEvent.setRelativePositionToFather( {1,2,2} );
+  peano4::datamanagement::FaceMarker  marker122(dummEvent);
+  marker122.select(2*Dimensions-1);
+  ::toolbox::blockstructured::restrictInnerHalfOfHaloLayer_AoS_tensor_product(
+      marker122,
+      5,         // numberOfDoFsPerAxisInPatch
+      3,         // overlap
+      5,         // unknowns
+      NormalRestrictionMatrix1d,
+      TangentialRestrictionMatrix1d,
+      fineGridFaceValues,
+      coarseGridFaceValues
+  );
+
+  dummEvent.setRelativePositionToFather( {2,2,2} );
+  peano4::datamanagement::FaceMarker  marker222(dummEvent);
+  marker222.select(2*Dimensions-1);
+  ::toolbox::blockstructured::restrictInnerHalfOfHaloLayer_AoS_tensor_product(
+      marker222,
+      5,         // numberOfDoFsPerAxisInPatch
+      3,         // overlap
+      5,         // unknowns
+      NormalRestrictionMatrix1d,
+      TangentialRestrictionMatrix1d,
+      fineGridFaceValues,
+      coarseGridFaceValues
+  );
+
+  for (int i=0; i<5*5*3; i++) {
+    validateNumericalEqualsWithParams1( coarseGridFaceValues[i*5+0],  0.1 );
+  }
+  #endif
+}
+
+
