@@ -571,7 +571,7 @@ void exahype2::fv::tests::InterpolationRestrictionTest::testInjectionExtrapolati
   );
 
   for (int i=0; i<5*5*3; i++) {
-    validateNumericalEqualsWithParams1( coarseGridFaceValues[i*5+0],  0.1 );
+    validateNumericalEquals( coarseGridFaceValues[i*5+0],  0.1 );
   }
   #endif
 }
