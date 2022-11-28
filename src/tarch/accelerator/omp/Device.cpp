@@ -1,9 +1,9 @@
 #include "tarch/accelerator/Device.h"
 #include "tarch/compiler/CompilerSpecificSettings.h"
 
-#include <omp.h>
-
 #if defined(GPUOffloadingOMP)
+
+#include <omp.h>
 
 bool checkOMPOffloading() {
   bool canOffload = false;

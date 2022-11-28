@@ -6,10 +6,6 @@
 #include "config.h"
 
 
-#if GPUOffloadingSYCL>0
-#include "tarch/multicore/sycl/SYCL.h"
-#endif
-
 #include "exahype2/fv/rusanov/Rusanov.h"
 #include "exahype2/CellData.h"
 #include "exahype2/EnclaveBookkeeping.h"
