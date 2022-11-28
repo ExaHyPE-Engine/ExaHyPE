@@ -74,21 +74,11 @@ void benchmarks::exahype2::euler::sphericalaccretionupscaling::SelfSimilarInfall
   }
   Q[0]=0.1;
 
-  /*
+
+/*
   applications::exahype2::euler::sphericalaccretion::initialiseOverdensity_Gaussian(
     Q,
     meshCellCentre,
-    InitialTopHatRadius,
-    AdditionalMass,
-    BaseDensity,
-    pInitial,
-    Gamma
-  );
-  */
-/*
-  applications::exahype2::euler::sphericalaccretion::initialiseOverdensity_topHat(
-    Q,
-    volumeCentre,
     InitialTopHatRadius,
     AdditionalMass,
     BaseDensity,

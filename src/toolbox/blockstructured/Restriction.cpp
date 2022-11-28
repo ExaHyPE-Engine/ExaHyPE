@@ -64,6 +64,9 @@ void toolbox::blockstructured::restrictInnerHalfOfHaloLayer_AoS_tensor_product(
         numberOfDoFsPerAxisInPatch, overlap, normal
       );
 
+      logDebug( "restrictInnerHalfOfHaloLayer_AoS_tensor_product(...)", "coarse volume/dof " << dest << " prior to update: " << coarseGridValues[destLinearised*5+0] );
+      assertion(  coarseGridValues[destLinearised*5+0]==coarseGridValues[destLinearised*5+0] );
+
       dfore(kFine,numberOfDoFsPerAxisInPatch,normal,0) {
         for (int iFine=0;   iFine<2*overlap;   iFine++) {
           tarch::la::Vector<Dimensions,int> src  = kFine;
@@ -87,7 +90,7 @@ void toolbox::blockstructured::restrictInnerHalfOfHaloLayer_AoS_tensor_product(
 
               int index = col + row * 2 * overlap;
               weight *= normalRestrictionMatrix1d[ index ];
-              logInfo( "restrictInnerHalfOfHaloLayer_AoS_tensor_product(...)", "use normal matrix entry " << row << ", " << row << ", i.e. index " << index << ": " << normalRestrictionMatrix1d[ index ]);
+              logDebug( "restrictInnerHalfOfHaloLayer_AoS_tensor_product(...)", "use normal matrix entry " << row << ", " << row << ", i.e. index " << index << ": " << normalRestrictionMatrix1d[ index ]);
             }
             else {
               assertion( marker.getRelativePositionWithinFatherCell()(d)>=0 );
@@ -102,24 +105,26 @@ void toolbox::blockstructured::restrictInnerHalfOfHaloLayer_AoS_tensor_product(
               assertion5(row<  numberOfDoFsPerAxisInPatch,row,col,src,dest, marker.getRelativePositionWithinFatherCell());
               int index = col + row * 3 * numberOfDoFsPerAxisInPatch;
               weight *= tangentialRestrictionMatrix1d[ index ];
-              logInfo( "restrictInnerHalfOfHaloLayer_AoS_tensor_product(...)", "use tangential matrix entry " << row << ", " << row << ", i.e. index " << index << ": " << tangentialRestrictionMatrix1d[ index ]);
+              logDebug( "restrictInnerHalfOfHaloLayer_AoS_tensor_product(...)", "use tangential matrix entry " << row << ", " << row << ", i.e. index " << index << ": " << tangentialRestrictionMatrix1d[ index ]);
             }
           }
-
-          logInfo(
-            "restrictInnerHalfOfHaloLayer_AoS_tensor_product(...)",
-            "add dof " << src  << " (" << srcLinearised << ") to "
-                       << dest << " (" << destLinearised << ") with weight " << weight << " for marker " << marker.toString() );
 
           assertion2(weight==weight, srcLinearised, destLinearised);
 
           for (int unknown=0; unknown<unknowns; unknown++) {
-            assertion2( coarseGridValues[destLinearised*unknowns+unknown] == coarseGridValues[destLinearised*unknowns+unknown], srcLinearised, destLinearised );
             assertion2( fineGridValues[srcLinearised*unknowns+unknown]    == fineGridValues[srcLinearised*unknowns+unknown],    srcLinearised, destLinearised );
             coarseGridValues[destLinearised*unknowns+unknown] += weight * fineGridValues[srcLinearised*unknowns+unknown];
+            assertion2( coarseGridValues[destLinearised*unknowns+unknown] == coarseGridValues[destLinearised*unknowns+unknown], srcLinearised, destLinearised );
           }
+
+          logDebug(
+            "restrictInnerHalfOfHaloLayer_AoS_tensor_product(...)",
+            "add dof " << src  << " (" << srcLinearised << ") to "
+                       << dest << " (" << destLinearised << ") with weight " << weight << " for marker " << marker.toString() <<
+            ": " << coarseGridValues[destLinearised*unknowns+0] << "<-" << fineGridValues[srcLinearised*unknowns+0] );
         }
       }
+      logDebug( "restrictInnerHalfOfHaloLayer_AoS_tensor_product(...)", "update coarse volume/dof " << dest << ": " << coarseGridValues[destLinearised*5+0] );
     }
   }
 
