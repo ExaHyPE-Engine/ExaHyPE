@@ -372,7 +372,6 @@ void exahype2::fv::tests::InterpolationRestrictionTest::testInjectionExtrapolati
     0.0, 0.0, 0.0, 0.0, -5.0, 6.0};
 
   peano4::grid::GridTraversalEvent    dummEvent;
-  int face=3;
   #if Dimensions==2
   dummEvent.setRelativePositionToFather( {0,0} );
 
@@ -388,7 +387,7 @@ void exahype2::fv::tests::InterpolationRestrictionTest::testInjectionExtrapolati
   #else
   dummEvent.setRelativePositionToFather( {0,0,2} );
 
-  constexpr int NumberOfFaceValues = 3*5*5 * 2 * 2; // three width, five dofs per axis, two unknowns, two sides
+  constexpr int NumberOfFaceValues = 3*5*5 * 5 * 2; // three width, five dofs per axis, five unknowns, two sides
 
   double  fineGridFaceValues[] = {
     0.1,0,0,0,0, 0.1,0,0,0,0, 0.1,0,0,0,0, 0.1,0,0,0,0, 0.1,0,0,0,0,
