@@ -1,4 +1,5 @@
 #include "tarch/Assertions.h"
+#include "Core.h"
 #include "tarch/multicore/Core.h"
 #include "tarch/multicore/Tasks.h"
 #include "tarch/multicore/multicore.h"
@@ -62,16 +63,11 @@ tarch::multicore::Core& tarch::multicore::Core::getInstance() {
 }
 
 
-void tarch::multicore::Core::configure( int numberOfThreads, const std::set<int>& devicesToUse ) {
-  _devicesToUse = devicesToUse;
-
+void tarch::multicore::Core::configure( int numberOfThreads ) {
   if ( numberOfThreads!=_numberOfThreads) {
     logWarning( "configure(int)", "can not reconfigure number of threads within SYCL queue. Will work with " << numberOfThreads << " logical threads within host queue having " << _numberOfThreads << " threads" );
     _numberOfThreads = numberOfThreads;
   }
-
-  initSYCLQueues( _devicesToUse );
-  _numberOfDevices = getNumberOfSYCLQueues();
 }
 
 
