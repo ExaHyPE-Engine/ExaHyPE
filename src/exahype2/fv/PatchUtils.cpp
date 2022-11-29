@@ -275,10 +275,12 @@ void exahype2::fv::validatePatch (
   dfor (k,PatchSize) {
     int index = peano4::utils::dLinearised(k,PatchSize) * (unknowns+auxiliaryVariables);
 
-    // It is a diagonal entry if this counter is bigger than 1. If it equals
-    // 0, it is interior. If it equals 1, then this is a face-connected halo
-    // entry.
-    bool isDiagonal = (tarch::la::count(k,0) + tarch::la::count(k,PatchSize-1))>1;
+    int outsidePatchAlongCoordinateAxis = 0;
+    for (int d=0; d<Dimensions; d++) {
+      if (k(d)<haloSize) outsidePatchAlongCoordinateAxis++;
+      if (k(d)>=haloSize+numberOfVolumesPerAxisInPatch) outsidePatchAlongCoordinateAxis++;
+    }
+    bool isDiagonal = outsidePatchAlongCoordinateAxis>1;
 
     if (haloSize==0 or not isDiagonal) {
       for (int i=0; i<unknowns+auxiliaryVariables; i++) {
@@ -295,8 +297,9 @@ void exahype2::fv::validatePatch (
             Q[entry]==Q[entry] and std::isfinite(Q[entry]) and dataValid,
             Q[entry], unknowns,
             auxiliaryVariables,
-            isDiagonal, haloSize, i,
+            isDiagonal, haloSize, entry,
             numberOfVolumesPerAxisInPatch, haloSize, k, i, location );
+          assertion( Q[entry]==Q[entry] and std::isfinite(Q[entry]) and dataValid );
         }
         else {
           assertion12(
