@@ -40,6 +40,26 @@ namespace exahype2 {
     }
 
 
+    static tarch::la::Vector<2,double>  getGridFaceSize(
+      const tarch::la::Vector<2,double>&  h,
+      int                                 numberOfGridCellsPerPatchPerAxis
+    )
+    //InlineMethod
+    {
+      return ::exahype2::fv::getFaceSize(h,numberOfGridCellsPerPatchPerAxis);
+    }
+
+
+    static tarch::la::Vector<3,double>  getGridFaceSize(
+      const tarch::la::Vector<3,double>&  h,
+      int                                 numberOfGridCellsPerPatchPerAxis
+    )
+    //InlineMethod
+    {
+      return ::exahype2::fv::getFaceSize(h,numberOfGridCellsPerPatchPerAxis);
+    }
+
+
     /**
      * In ExaHyPE's Finite Volume setup, a cell hosts a patch of Finite Volumes.
      * When we iterate over these volumes, we typically have to know the centre
@@ -76,6 +96,34 @@ namespace exahype2 {
     //InlineMethod
     {
       return ::exahype2::fv::getVolumeCentre(x,h,numberOfGridCellsPerPatchPerAxis,index);
+    }
+
+
+    static tarch::la::Vector<2,double>  getGridFaceCentre(
+      const tarch::la::Vector<2,double>&  x,
+      const tarch::la::Vector<2,double>&  h,
+      int                                 numberOfGridCellsPerPatchPerAxis,
+      int                                 overlap,
+      int                                 normal,
+      const tarch::la::Vector<2,int>&     index
+    )
+    //InlineMethod
+    {
+      return ::exahype2::fv::getFaceCentre(x,h,numberOfGridCellsPerPatchPerAxis,overlap,normal,index);
+    }
+
+
+    static tarch::la::Vector<3,double>  getGridFaceCentre(
+      const tarch::la::Vector<3,double>&  x,
+      const tarch::la::Vector<3,double>&  h,
+      int                                 numberOfGridCellsPerPatchPerAxis,
+      int                                 overlap,
+      int                                 normal,
+      const tarch::la::Vector<3,int>&     index
+    )
+    //InlineMethod
+    {
+      return ::exahype2::fv::getFaceCentre(x,h,numberOfGridCellsPerPatchPerAxis,overlap,normal,index);
     }
 
 
