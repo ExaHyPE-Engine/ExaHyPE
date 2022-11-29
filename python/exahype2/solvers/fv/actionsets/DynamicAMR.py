@@ -27,46 +27,8 @@ class DynamicAMR( peano4.toolbox.blockstructured.DynamicAMR ):
     """
      Construct object
     
-    
-     :: Interpolation
-     
-     Don't interpolate in initialisation. If you have a parallel run with AMR, then some 
-     boundary data has not been received yet and your face data thus is not initialised 
-     at all. Other than that, the interpolation is always on.
-
-
-     :: Restriction
-     
-     In contrast to the interpolation, it is absolutely key that we restrict alreaday in
-     the initialisation. If we have a cell that is adjacent to a refined cell, then this
-     cell requires proper face data for the subsequent first time step. So we have to 
-     restrict in the initialisation even if there's no update yet - just to get the 
-     coarse representation of fine hanging faces initialised.
-    
-          
-     :: Restriction of destructed faces
-     
-     A destructed face has to restrict its data: We've already restricted the cells,
-     but now we also have to restrict the faces, as faces span time spans. The cell
-     is only a snapshot, so we have to manually restrict.
-     
-     It is important to also disable the projection in return. The projection onto the
-     faces happens in leaveCell. However, if you have a face in-between two 3x3 patches,
-     then you will have a destruction of the left patch (and a corresponding cell restriction),
-     the coarse cell will then project its data onto the face, you go down on the other
-     side and now the face will be destroyed. If you restrict now, you overwrite the 
-     projected data with some (old) data, and you will get an inconsistent face data.
-     However, you always have to restrict both sides of persistent face when it is 
-     destroyed. If you only restricted the inner part, you'd run into situations where
-     a 3x3 patch is coarsened, but its neighbour remains refined. That is, logically the
-     face transitions from a persistent one to a hanging face. When yo go through the 
-     mesh next time, you'll need, on the coarse level, some valid data. So we have to 
-     restrict both sides.
-     
-     There's still a inconsistency here. To have really consistent data, we'd have to 
-     average 3^{d-1} cells when we project them onto the face, such that the cell-restricted
-     data followed by a (single cell) projection gives the same result as a projection 
-     first and then a face restriction. I neglect this fact here.
+     Please consult exahype2.solvers.rkfd.actionsets.DynamicAMR's class 
+     documentation of details.
           
     """
     super( DynamicAMR, self ).__init__(    
