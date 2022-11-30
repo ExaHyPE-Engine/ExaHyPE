@@ -21,13 +21,17 @@
 
 #include "{{solverHeader}}"
 
+
+template <typename pStoreType, typename cCompType>
 void {{codeNamespace}}::riemannSolver(
                           {{solverName}}& solver,
-                          double* __restrict__ FL, double* __restrict__ FR,
-                          const double* const __restrict__ QL, const double* const __restrict__ QR,
+                          cCompType* __restrict__ FL, 
+                          cCompType* __restrict__ FR,
+                          const pStoreType* const __restrict__ QL, 
+                          const pStoreType* const __restrict__ QR,
                           const double t,
                           const double dt,
-			  const double dx,
+                  			  const double dx,
                           const int direction
 ) {
   /*
@@ -45,12 +49,12 @@ void {{codeNamespace}}::riemannSolver(
   __assume_aligned(QR, {{alignmentSize}});
 #endif
   
-  std::memset(FL, 0, {{nVarPad*nDof*nDof3D}}*sizeof(double));
-  std::memset(FR, 0, {{nVarPad*nDof*nDof3D}}*sizeof(double));
+  std::memset(FL, 0, {{nVarPad*nDof*nDof3D}}*sizeof(cCompType));
+  std::memset(FR, 0, {{nVarPad*nDof*nDof3D}}*sizeof(cCompType));
   
   // Compute the average variables and parameters from the left and the right
-  double QavL[{{nDataPad}}] __attribute__((aligned({{alignmentSize}}))) = {0.0};
-  double QavR[{{nDataPad}}] __attribute__((aligned({{alignmentSize}}))) = {0.0};
+  cCompType QavL[{{nDataPad}}] __attribute__((aligned({{alignmentSize}}))) = {0.0};
+  cCompType QavR[{{nDataPad}}] __attribute__((aligned({{alignmentSize}}))) = {0.0};
 
   for (int ij = 0; ij < {{nDof*nDof3D}}; ij++) {
     #pragma omp simd aligned(QavL,QavR,QL,QR:{{alignmentSize}})
@@ -61,30 +65,30 @@ void {{codeNamespace}}::riemannSolver(
   }
 
   //get abs max eigenvalue 
-  double lambdaL[{{nVar}}] __attribute__((aligned({{alignmentSize}})));
+  cCompType lambdaL[{{nVar}}] __attribute__((aligned({{alignmentSize}})));
 #ifdef USE_IPO
   #pragma forceinline recursive
 #endif
   solver.{{solverName}}::eigenvalues(&QavL[0], direction, &lambdaL[0]);
-  double lambdaR[{{nVar}}] __attribute__((aligned({{alignmentSize}})));
+  cCompType lambdaR[{{nVar}}] __attribute__((aligned({{alignmentSize}})));
 #ifdef USE_IPO
   #pragma forceinline recursive
 #endif
   solver.{{solverName}}::eigenvalues(&QavR[0], direction, &lambdaR[0]);
   
-  double smax = 0.;
+  cCompType smax = 0.;
   for (int n = 0; n < {{nVar}}; n++) {
-    smax = std::max(smax, std::max(fabs(lambdaL[n]), fabs(lambdaR[n])));
+    smax = std::max(smax, std::max(std::abs(lambdaL[n]), std::abs(lambdaR[n])));
   }
 
-  double Qavg[{{nDataPad}}] __attribute__((aligned({{alignmentSize}})));
+  cCompType Qavg[{{nDataPad}}] __attribute__((aligned({{alignmentSize}})));
   #pragma omp simd aligned(Qavg,QavR,QavL:{{alignmentSize}})
   for (int n = 0; n < {{nDataPad}}; n++) {
     Qavg[n] = 0.5 *  (QavR[n] + QavL[n]);
   }
   
   //used by NCP or Flux (at least one is used)
-  double Qdiff[{{nDataPad}}] __attribute__((aligned({{alignmentSize}}))); 
+  cCompType Qdiff[{{nDataPad}}] __attribute__((aligned({{alignmentSize}}))); 
 {% if nPar > 0 %}
   //We copy the averaged material parameters to Qdiff as they are used in the flux term
   //These must not be overritten !
@@ -92,13 +96,13 @@ void {{codeNamespace}}::riemannSolver(
 {% endif %}
   
 {% if useNCP %}
-  double ncp_vec[{{nVarPad*nDim}}] __attribute__((aligned({{alignmentSize}}))) = {0.};
-  double* ncp[{{nDim}}] __attribute__((aligned({{alignmentSize}}))) = { ncp_vec, ncp_vec+{{nVarPad}}{{', ncp_vec+'~2*nVarPad if nDim==3 else ''}} };
-  double* gradQ[{{nDim}}] __attribute__((aligned({{alignmentSize}}))) = {Qdiff, Qdiff{{', Qdiff' if nDim==3 else ''}} }; //readonly, 2/3 time Qdiff
+  cCompType ncp_vec[{{nVarPad*nDim}}] __attribute__((aligned({{alignmentSize}}))) = {0.};
+  cCompType* ncp[{{nDim}}] __attribute__((aligned({{alignmentSize}}))) = { ncp_vec, ncp_vec+{{nVarPad}}{{', ncp_vec+'~2*nVarPad if nDim==3 else ''}} };
+  cCompType* gradQ[{{nDim}}] __attribute__((aligned({{alignmentSize}}))) = {Qdiff, Qdiff{{', Qdiff' if nDim==3 else ''}} }; //readonly, 2/3 time Qdiff
 {% endif %}
 {% if useFlux %}
-  double flux_vec[{{nVarPad*nDim}}] __attribute__((aligned({{alignmentSize}}))) = {0.};
-  double* flux[{{nDim}}] __attribute__((aligned({{alignmentSize}}))) { flux_vec, flux_vec+{{nVarPad}}{{', flux_vec+'~2*nVarPad if nDim==3 else ''}} };
+  cCompType flux_vec[{{nVarPad*nDim}}] __attribute__((aligned({{alignmentSize}}))) = {0.};
+  cCompType* flux[{{nDim}}] __attribute__((aligned({{alignmentSize}}))) { flux_vec, flux_vec+{{nVarPad}}{{', flux_vec+'~2*nVarPad if nDim==3 else ''}} };
 {% endif %}
   
   for (int ij = 0; ij < {{nDof*nDof3D}}; ij++) {
@@ -151,3 +155,15 @@ void {{codeNamespace}}::riemannSolver(
   } //ij
   
 }
+
+
+template void {{codeNamespace}}::riemannSolver(
+  {{solverName}}& solver,
+  {{correctorComputePrecision}}* __restrict__ FL, 
+  {{correctorComputePrecision}}* __restrict__ FR,
+  const {{predictorStoragePrecision}}* const __restrict__ QL, 
+  const {{predictorStoragePrecision}}* const __restrict__ QR,
+  const double t,
+  const double dt,
+  const double dx,
+  const int direction);

@@ -24,23 +24,23 @@
 
 #include "{{solverHeader}}"
 
-
+template <typename cStoreType, typename pCompType, typename pStoreType>
 int {{codeNamespace}}::fusedSpaceTimePredictorVolumeIntegral(
         {{solverName}}& solver, 
-        double* __restrict__ lduh,
-        double* __restrict__ lQhbnd, 
-        double* __restrict__ lGradQhbnd,
-        double* __restrict__ lFhbnd,
-        double* __restrict__ lQi,
-        double* __restrict__ rhs,
-        double* __restrict__ lFi,
-        double* __restrict__ lSi,   // for NCP or Source
-        double* __restrict__ lQhi,
-        double* __restrict__ lFhi,
-        double* __restrict__ lShi,  // for NCP or Source
-        double* __restrict__ gradQ, // for NCP or Source or viscousFlux
-        double* __restrict__ gradQAvg, // for viscousFlux
-        const double* const __restrict__ luh,
+        pCompType* __restrict__ lduh,
+        pStoreType* __restrict__ lQhbnd, 
+        pStoreType* __restrict__ lGradQhbnd,
+        pStoreType* __restrict__ lFhbnd,
+        pCompType* __restrict__ lQi,
+        pCompType* __restrict__ rhs,
+        pCompType* __restrict__ lFi,
+        pCompType* __restrict__ lSi,   // for NCP or Source
+        pCompType* __restrict__ lQhi,
+        pCompType* __restrict__ lFhi,
+        pCompType* __restrict__ lShi,  // for NCP or Source
+        pCompType* __restrict__ gradQ, // for NCP or Source or viscousFlux
+        pCompType* __restrict__ gradQAvg, // for viscousFlux
+        const cStoreType* const __restrict__ luh,
         const double inverseDx, //Assume dx[0] == dx[1] == dx[2]
         const double dt
 ) {
@@ -93,10 +93,10 @@ int {{codeNamespace}}::fusedSpaceTimePredictorVolumeIntegral(
   {{m.vectPDEsArrays('St', nVar, False) | indent(2)}}{##}
 {% endif %}
 
-  double new_lQi_slice[{{nDof*nVarPad}}] __attribute__((aligned({{alignmentSize}}))); //for step 4 (computing new lQi value), doesn't update parameters
-  const double dtBydx = inverseDx * dt; //Assume dx[0] == dx[1] == dx[2]
+  pCompType new_lQi_slice[{{nDof*nVarPad}}] __attribute__((aligned({{alignmentSize}}))); //for step 4 (computing new lQi value), doesn't update parameters
+  const pCompType dtBydx = inverseDx * dt; //Assume dx[0] == dx[1] == dx[2]
 {% if useNCP or (useFlux and useCERKGuess)  or useViscousFlux %}
-  double dudxT_by_dx[{{nDof*nDofPad}}] __attribute__((aligned({{alignmentSize}})));
+  pCompType dudxT_by_dx[{{nDof*nDofPad}}] __attribute__((aligned({{alignmentSize}})));
   
   // 0. precompute 1/dx * dudx_T. Assume dx[0] == dx[1] == dx[2]
   #pragma omp simd aligned(dudxT_by_dx,dudx_T:{{alignmentSize}})
@@ -105,7 +105,7 @@ int {{codeNamespace}}::fusedSpaceTimePredictorVolumeIntegral(
   }
 {% if useLibxsmm %}
 #if defined(USE_IPO) && ! defined(UNSAFE_IPO)
-  volatile double doNotOptimizeAway_dudx_by_dt = dudxT_by_dx[0]; //used to prevent the compiler from optimizing temp array away. Needs to be volatile
+  volatile pCompType doNotOptimizeAway_dudx_by_dt = dudxT_by_dx[0]; //used to prevent the compiler from optimizing temp array away. Needs to be volatile
 #endif   
 {% endif %}
 {% endif %}
@@ -122,17 +122,17 @@ int {{codeNamespace}}::fusedSpaceTimePredictorVolumeIntegral(
   {
 {% if useFlux %}{# use lFi as temp array, lFi total size = nVarPad*(nDof**(nDim+1))*nDim #}
     // use lFi as temporary storage for CERK's temporary arrays
-    double* const lF_guess = lFi; // lF[0-2][z?][y][x][n]
-    double* const K1 = lFi+{{nDim*(nDof**nDim)*nVarPad}}; // K1[z?][y][x][n]
-    double* const K2 = lFi+{{(nDim+1)*(nDof**nDim)*nVarPad}}; // K2[z?][y][x][n]
-    double* const lwh = lFi+{{(nDim+2)*(nDof**nDim)*nDataPad}}; // lwh[z?][y][x][n] (nData)
-    std::memset(lFi+{{nDim*(nDof**nDim)*nVarPad}}, 0, {{2*(nDof**nDim)*nVarPad}} * sizeof(double)); //K1 and K2 must be set to 0
+    pCompType* const lF_guess = lFi; // lF[0-2][z?][y][x][n]
+    pCompType* const K1 = lFi+{{nDim*(nDof**nDim)*nVarPad}}; // K1[z?][y][x][n]
+    pCompType* const K2 = lFi+{{(nDim+1)*(nDof**nDim)*nVarPad}}; // K2[z?][y][x][n]
+    pCompType* const lwh = lFi+{{(nDim+2)*(nDof**nDim)*nDataPad}}; // lwh[z?][y][x][n] (nData)
+    std::memset(lFi+{{nDim*(nDof**nDim)*nVarPad}}, 0, {{2*(nDof**nDim)*nVarPad}} * sizeof(pCompType)); //K1 and K2 must be set to 0
 {% else %}{# no flux so use lSi instead, lSi total size = nVarPad*(nDof**(nDim+1)) #}
     // use lSi as temporary storage for CERK's temporary arrays
-    double* const K1 = lSi; // K1[z?][y][x][n]
-    double* const K2 = lSi+{{(nDof**nDim)*nVarPad}}; // K2[z?][y][x][n]
-    double* const lwh = lSi+{{2*(nDof**nDim)*nDataPad}}; // lwh[z?][y][x][n] (nData)
-    std::memset(lSi, 0, {{2*(nDof**nDim)*nVarPad}} * sizeof(double)); //K1 and K2 must be set to 0
+    pCompType* const K1 = lSi; // K1[z?][y][x][n]
+    pCompType* const K2 = lSi+{{(nDof**nDim)*nVarPad}}; // K2[z?][y][x][n]
+    pCompType* const lwh = lSi+{{2*(nDof**nDim)*nDataPad}}; // lwh[z?][y][x][n] (nData)
+    std::memset(lSi, 0, {{2*(nDof**nDim)*nVarPad}} * sizeof(pCompType)); //K1 and K2 must be set to 0
 {% endif %}
     //Note: temporary storage will be overwritten by user functions later, no need to reset them to 0
 
@@ -180,14 +180,14 @@ int {{codeNamespace}}::fusedSpaceTimePredictorVolumeIntegral(
   for (; iter < MaxIterations; iter++) {
 {% if useViscousFlux %}
       //set gradQAvg to 0
-      std::memset(gradQAvg, 0, {{(nDof**nDim)*nVarPad*nDim}} * sizeof(double));
+      std::memset(gradQAvg, 0, {{(nDof**nDim)*nVarPad*nDim}} * sizeof(pCompType));
 {% endif %}
     for (int t = 0; t < {{nDof}}; t++) {  // time DOF
 
 
 {% if useNCP or useViscousFlux %}
       //set gradQ to 0
-      std::memset(gradQ, 0, {{(nDof**nDim)*nVarPad*nDim}} * sizeof(double));
+      std::memset(gradQ, 0, {{(nDof**nDim)*nVarPad*nDim}} * sizeof(pCompType));
 {% endif %}
       
       // Compute the "derivatives" (contributions of the stiffness matrix)      
@@ -242,7 +242,7 @@ int {{codeNamespace}}::fusedSpaceTimePredictorVolumeIntegral(
 
       // Compute the contribution of the initial condition uh to the right-hand side (rhs)
       for (int xyz = 0; xyz < {{nDof**nDim}}; xyz++) {
-        const double weight = weights3[xyz] * FLCoeff[t];
+        const pCompType weight = weights3[xyz] * FLCoeff[t];
         #pragma omp simd aligned(rhs,luh:{{alignmentSize}})
         for (int n = 0; n < {{nVar}}; n++) {
           rhs[n+{{nVarPad}}*(xyz+{{nDof**nDim}}*t)] = weight * luh[n+{{nData}}*xyz];
@@ -292,7 +292,7 @@ int {{codeNamespace}}::fusedSpaceTimePredictorVolumeIntegral(
 
     // 3. Multiply with (K1)^(-1) to get the discrete time integral of the
     // discrete Picard iteration
-    double sq_res = 0.0;
+    pCompType sq_res = 0.0;
     for (int xyz = 0; xyz < {{nDof**nDim}}; xyz++) {
       {{ m.matmul('lqi', 'rhs', 's_m_QSlice', 'new_lQi_slice',nVarPad~'*xyz', '0', '0', trueB='iK1_T', trueAlpha='iweights3[xyz]') | indent(6) }}{##}
       for(int t = 0; t < {{nDof}}; t++) {
@@ -304,7 +304,7 @@ int {{codeNamespace}}::fusedSpaceTimePredictorVolumeIntegral(
     }
 
     // 4. Exit condition
-    constexpr double tol2 = 1e-7 * 1e-7;
+    constexpr pCompType tol2 = 1e-7 * 1e-7;
     if (sq_res < tol2) {
       break;
     }
@@ -328,12 +328,12 @@ int {{codeNamespace}}::fusedSpaceTimePredictorVolumeIntegral(
 {% endif %}
 #endif  
 
-  std::memset(lQhi, 0, {{(nDof**nDim)*nDataPad    }} * sizeof(double));
+  std::memset(lQhi, 0, {{(nDof**nDim)*nDataPad    }} * sizeof(pCompType));
 {% if useFlux %}
-  std::memset(lFhi, 0, {{nDim*(nDof**nDim)*nVarPad}} * sizeof(double));
+  std::memset(lFhi, 0, {{nDim*(nDof**nDim)*nVarPad}} * sizeof(pCompType));
 {% endif %}
 {% if useSourceOrNCP %}
-  std::memset(lShi, 0, {{(nDof**nDim)*nVarPad     }} * sizeof(double));
+  std::memset(lShi, 0, {{(nDof**nDim)*nVarPad     }} * sizeof(pCompType));
 {% endif %}
 
   for (int z=0; z<{{nDof3D}}; z++) {
@@ -402,11 +402,11 @@ int {{codeNamespace}}::fusedSpaceTimePredictorVolumeIntegral(
   __assume_aligned(FLCoeff, {{alignmentSize}});
 #endif
   
-  std::memset(lQhbnd, 0, {{2*nDim*nDataPad*nDof*nDof3D}} * sizeof(double));
-  std::memset(lFhbnd, 0, {{2*nDim*nVarPad*nDof*nDof3D}} * sizeof(double));
+  std::memset(lQhbnd, 0, {{2*nDim*nDataPad*nDof*nDof3D}} * sizeof(pStoreType));
+  std::memset(lFhbnd, 0, {{2*nDim*nVarPad*nDof*nDof3D}} * sizeof(pStoreType));
 
   {% if useViscousFlux %}
-  std::memset(lGradQhbnd, 0, {{2*nDim*nVarPad*nDof*nDof3D*nDim}} * sizeof(double));
+  std::memset(lGradQhbnd, 0, {{2*nDim*nVarPad*nDof*nDof3D*nDim}} * sizeof(pStoreType));
   {% endif %}
 
   // x-direction: face 1 (left) and face 2 (right)
@@ -559,7 +559,7 @@ int {{codeNamespace}}::fusedSpaceTimePredictorVolumeIntegral(
   //*****************************
   
 
-  memset(lduh, 0, {{nVarPad*(nDof**nDim)}}*sizeof(double));
+  memset(lduh, 0, {{nVarPad*(nDof**nDim)}}*sizeof(pCompType));
 
 #ifdef __INTEL_COMPILER
 {% if useFlux %}
@@ -606,3 +606,22 @@ int {{codeNamespace}}::fusedSpaceTimePredictorVolumeIntegral(
 
   return std::min(iter+1, MaxIterations); //return number of Picard iterations, min to avoid doing a +1 if the loop wasn't exited early
 }
+
+template int {{codeNamespace}}::fusedSpaceTimePredictorVolumeIntegral(
+        {{solverName}}& solver, 
+        {{predictorComputePrecision}}* __restrict__ lduh,
+        {{predictorStoragePrecision}}* __restrict__ lQhbnd, 
+        {{predictorStoragePrecision}}* __restrict__ lGradQhbnd,
+        {{predictorStoragePrecision}}* __restrict__ lFhbnd,
+        {{predictorComputePrecision}}* __restrict__ lQi,
+        {{predictorComputePrecision}}* __restrict__ rhs,
+        {{predictorComputePrecision}}* __restrict__ lFi,
+        {{predictorComputePrecision}}* __restrict__ lSi,   // for NCP or Source
+        {{predictorComputePrecision}}* __restrict__ lQhi,
+        {{predictorComputePrecision}}* __restrict__ lFhi,
+        {{predictorComputePrecision}}* __restrict__ lShi,  // for NCP or Source
+        {{predictorComputePrecision}}* __restrict__ gradQ, // for NCP or Source or viscousFlux
+        {{predictorComputePrecision}}* __restrict__ gradQAvg, // for viscousFlux
+        const {{correctorStoragePrecision}}* const __restrict__ luh,
+        const double inverseDx, //Assume dx[0] == dx[1] == dx[2]
+        const double dt);

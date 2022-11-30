@@ -33,21 +33,22 @@
  * and extrapolated predictor lQhbnd.
  * Currently we simply copy them over from the solution array.
  */
+template <typename cStoreType, typename pCompType, typename pStoreType>
 int {{codeNamespace}}::fusedSpaceTimePredictorVolumeIntegral{{nameSuffix}}(
     {{solverName}}& solver,
-    double* __restrict__ lduh,
-    double* __restrict__ lQhbnd,
-    double* __restrict__ lFhbnd,
-    double* __restrict__ lQi,
-    double* __restrict__ lFi,
-    double* __restrict__ lSi,   // for NCP or Source
-    double* __restrict__ lQhi,
-    double* __restrict__ lFhi,
-    double* __restrict__ lShi,  // for Source
-    double* __restrict__ gradQ, // for NCP or Source
-    double* __restrict__ PSi,   // for pointSource
-    double* __restrict__ PSderivatives, // for pointSource
-    const double* const __restrict__ luh,
+    pCompType* __restrict__ lduh,
+    pStoreType* __restrict__ lQhbnd,
+    pStoreType* __restrict__ lFhbnd,
+    pCompType* __restrict__ lQi,
+    pCompType* __restrict__ lFi,
+    pCompType* __restrict__ lSi,   // for NCP or Source
+    pCompType* __restrict__ lQhi,
+    pCompType* __restrict__ lFhi,
+    pCompType* __restrict__ lShi,  // for Source
+    pCompType* __restrict__ gradQ, // for NCP or Source
+    pCompType* __restrict__ PSi,   // for pointSource
+    pCompType* __restrict__ PSderivatives, // for pointSource
+    const cStoreType* const __restrict__ luh,
     const double* const center,
     const double dx, // Assume dx[0] == dx[1] == dx[2]
     const double tStep, // == t
@@ -55,24 +56,24 @@ int {{codeNamespace}}::fusedSpaceTimePredictorVolumeIntegral{{nameSuffix}}(
     std::vector<int>* pointSources // will be deleted in the end if set
 ) {
 
-  const double invDt = 1. / dt;
-  const double invDx = 1. / dx;
+  const pCompType invDt = 1. / dt;
+  const pCompType invDx = 1. / dx;
 
-  std::memset(lQi, 0, {{(nDof+1)*(nDof**nDim)*nDataPad}}*sizeof(double));
-  std::memset(lFi, 0, {{nDim*nDof*(nDof**nDim)*nVarPad}}*sizeof(double));
+  std::memset(lQi, 0, {{(nDof+1)*(nDof**nDim)*nDataPad}}*sizeof(pCompType));
+  std::memset(lFi, 0, {{nDim*nDof*(nDof**nDim)*nVarPad}}*sizeof(pCompType));
 {% if useSource %}
-  std::memset(lSi  , 0, {{nDof*(nDof**nDim)*nVarPad}}*sizeof(double));
+  std::memset(lSi  , 0, {{nDof*(nDof**nDim)*nVarPad}}*sizeof(pCompType));
 {% endif %}
 
   // local tmp array
 {% if usePointSources %}
-  double* tmp_PSderivatives = lFi; // it's actually lFi used here as a temp array //TODO do something cleaner?
+  pCompType* tmp_PSderivatives = lFi; // it's actually lFi used here as a temp array //TODO do something cleaner?
 {% endif %}
-  double tmpArray[{{tmpArraySize}}] __attribute__((aligned({{alignmentSize}}))); //used by flux (nDof*nVarPad) and ncp (nVarPad*nDim)
-  double dudxT_by_dx[{{nDof*nDofPad}}] __attribute__((aligned({{alignmentSize}})));
+  pCompType tmpArray[{{tmpArraySize}}] __attribute__((aligned({{alignmentSize}}))); //used by flux (nDof*nVarPad) and ncp (nVarPad*nDim)
+  pCompType dudxT_by_dx[{{nDof*nDofPad}}] __attribute__((aligned({{alignmentSize}})));
 {% if useLibxsmm %}
 #if defined(USE_IPO) && ! defined(UNSAFE_IPO)
-  double doNotOptimizeAway = dudxT_by_dx[0]; // used to prevent the compiler from optimizing dudxT_by_dx away
+  pCompType doNotOptimizeAway = dudxT_by_dx[0]; // used to prevent the compiler from optimizing dudxT_by_dx away
 #endif
 {% endif %}
 {% if useFluxVect or useNCPVect or useMaterialParamVect%}
@@ -99,13 +100,13 @@ int {{codeNamespace}}::fusedSpaceTimePredictorVolumeIntegral{{nameSuffix}}(
 
 {% if usePointSources %}
   { // 0. compute point source contribution
-    std::memset(PSi, 0, {{(nDof+1)*(nDof**nDim)*nVarPad}}*sizeof(double));
+    std::memset(PSi, 0, {{(nDof+1)*(nDof**nDim)*nVarPad}}*sizeof(pCompType));
 
-    double tn;
-    double x1[{{nDim}}];
-    const double ivolume = 1.0/(dx * dx{{' * dx' if nDim==3}});
-    double forceVectorSource[{{nVarPad}}] __attribute__((aligned({{alignmentSize}})));
-    std::memset(forceVectorSource, 0, {{nVarPad}}*sizeof(double));
+    pCompType tn;
+    pCompType x1[{{nDim}}];
+    const pCompType ivolume = 1.0/(dx * dx{{' * dx' if nDim==3}});
+    pCompType forceVectorSource[{{nVarPad}}] __attribute__((aligned({{alignmentSize}})));
+    std::memset(forceVectorSource, 0, {{nVarPad}}*sizeof(pCompType));
 
     //loop over all quadrature points
     for (int t = 0; t < {{nDof+1}}; t++) { // time loop
@@ -128,7 +129,7 @@ int {{codeNamespace}}::fusedSpaceTimePredictorVolumeIntegral{{nameSuffix}}(
 
               // Map point source location onto reference element
               const double* const x_ps = solver.pointSourceLocation[p];
-              const double update =   solver.basisFunction[{{nDof-1}}][x]((x_ps[0] - center[0]) * invDx + 0.5)
+              const pCompType update =   solver.basisFunction[{{nDof-1}}][x]((x_ps[0] - center[0]) * invDx + 0.5)
                                     * solver.basisFunction[{{nDof-1}}][y]((x_ps[1] - center[1]) * invDx + 0.5)
 {% if nDim == 3 %}
                                     * solver.basisFunction[{{nDof-1}}][z]((x_ps[2] - center[2]) * invDx + 0.5)
@@ -180,7 +181,7 @@ int {{codeNamespace}}::fusedSpaceTimePredictorVolumeIntegral{{nameSuffix}}(
   }
 
   for (int i = 2; i < {{nDof}}; i++) {
-    std::memset(tmp_PSderivatives, 0, {{nDof*(nDof**nDim)*nVarPad}}*sizeof(double));
+    std::memset(tmp_PSderivatives, 0, {{nDof*(nDof**nDim)*nVarPad}}*sizeof(pCompType));
     // compute (t+1)-th derivative in time of point source
     for(int t = 0; t < {{nDof}}; t++ ){
      for (int xyz = 0; xyz < {{nDof**nDim}}; xyz++) {
@@ -207,7 +208,7 @@ int {{codeNamespace}}::fusedSpaceTimePredictorVolumeIntegral{{nameSuffix}}(
     std::copy_n(tmp_PSderivatives, {{(nDof**nDim)*nDof*nVarPad}}, PSderivatives);
 
   } // i
-  std::memset(tmp_PSderivatives, 0, {{nDof*(nDof**nDim)*nVarPad}}*sizeof(double)); //Since we actually use lFi, TODO remove when clean solution
+  std::memset(tmp_PSderivatives, 0, {{nDof*(nDof**nDim)*nVarPad}}*sizeof(pCompType)); //Since we actually use lFi, TODO remove when clean solution
 {% endif %}
 
   // 3. Cauchy-Kovalewski procedure
@@ -259,7 +260,7 @@ int {{codeNamespace}}::fusedSpaceTimePredictorVolumeIntegral{{nameSuffix}}(
 {% endif %}{# useFlux #}
 
 {% if useNCP %}
-    std::memset(gradQ, 0, {{nDim*(nDof**nDim)*nVarPad}}*sizeof(double));
+    std::memset(gradQ, 0, {{nDim*(nDof**nDim)*nVarPad}}*sizeof(pCompType));
     //NCP
     // Compute the derivatives in x direction (independent from the y and z derivatives)
     for (int yz = 0; yz < {{nDof*nDof3D}}; yz++) {
@@ -296,10 +297,10 @@ int {{codeNamespace}}::fusedSpaceTimePredictorVolumeIntegral{{nameSuffix}}(
 {% if nDim == 3 %}
         AoS2SoA<{{nVar }}, {{nVarPad }}>(gradQ+xyz*{{nVarPad}}+{{2*(nDof**nDim)*nVarPad}}, Ft_z_block);
 {% endif %}
-        std::memset(ncpResult_x_block, 0, {{nVar*vectSize}}*sizeof(double)); // zero out ncpResult
-        std::memset(ncpResult_y_block, 0, {{nVar*vectSize}}*sizeof(double)); // zero out ncpResult
+        std::memset(ncpResult_x_block, 0, {{nVar*vectSize}}*sizeof(pCompType)); // zero out ncpResult
+        std::memset(ncpResult_y_block, 0, {{nVar*vectSize}}*sizeof(pCompType)); // zero out ncpResult
 {% if nDim == 3 %}
-        std::memset(ncpResult_z_block, 0, {{nVar*vectSize}}*sizeof(double)); // zero out ncpResult
+        std::memset(ncpResult_z_block, 0, {{nVar*vectSize}}*sizeof(pCompType)); // zero out ncpResult
 {% endif %}
 #ifdef USE_IPO
         #pragma forceinline recursive
@@ -332,10 +333,10 @@ int {{codeNamespace}}::fusedSpaceTimePredictorVolumeIntegral{{nameSuffix}}(
 {% if nDim == 3 %}
         AoS2SoA_rest<{{nVar }}, {{nVarPad }}, {{restSize}}>(gradQ+xyz*{{nVarPad}}+{{2*(nDof**nDim)*nVarPad}}, Ft_z_block);
 {% endif %}
-        std::memset(ncpResult_x_block, 0, {{nVar*vectSize}}*sizeof(double)); // zero out ncpResult
-        std::memset(ncpResult_y_block, 0, {{nVar*vectSize}}*sizeof(double)); // zero out ncpResult
+        std::memset(ncpResult_x_block, 0, {{nVar*vectSize}}*sizeof(pCompType)); // zero out ncpResult
+        std::memset(ncpResult_y_block, 0, {{nVar*vectSize}}*sizeof(pCompType)); // zero out ncpResult
 {% if nDim == 3 %}
-        std::memset(ncpResult_z_block, 0, {{nVar*vectSize}}*sizeof(double)); // zero out ncpResult
+        std::memset(ncpResult_z_block, 0, {{nVar*vectSize}}*sizeof(pCompType)); // zero out ncpResult
 {% endif %}
 #ifdef USE_IPO
         #pragma forceinline recursive
@@ -362,15 +363,15 @@ int {{codeNamespace}}::fusedSpaceTimePredictorVolumeIntegral{{nameSuffix}}(
     }
 {% else %}
     {
-      double* G[{{nDim}}];
-      double* tmpArray_ncpResult[{{nDim}}] = { tmpArray, tmpArray+{{nVarPad}}{{', tmpArray+'~2*nVarPad if nDim==3 else ''}} };
+      pCompType* G[{{nDim}}];
+      pCompType* tmpArray_ncpResult[{{nDim}}] = { tmpArray, tmpArray+{{nVarPad}}{{', tmpArray+'~2*nVarPad if nDim==3 else ''}} };
       for (int xyz = 0; xyz < {{nDof**nDim}}; xyz++) {
         G[0] = gradQ+xyz*{{nVarPad}}; //x
         G[1] = gradQ+xyz*{{nVarPad}}+{{1*(nDof**nDim)*nVarPad}}; //y
 {% if nDim==3 %}
         G[2] = gradQ+xyz*{{nVarPad}}+{{2*(nDof**nDim)*nVarPad}}; //z
 {% endif %}
-        std::memset(tmpArray, 0, {{nDim*nVarPad}}*sizeof(double)); // zero out ncpResult (stored in tmpArray)
+        std::memset(tmpArray, 0, {{nDim*nVarPad}}*sizeof(pCompType)); // zero out ncpResult (stored in tmpArray)
 #ifdef USE_IPO
         #pragma forceinline recursive
 #endif
@@ -433,7 +434,7 @@ int {{codeNamespace}}::fusedSpaceTimePredictorVolumeIntegral{{nameSuffix}}(
 {% else %}
     //materialParam
     {
-      double* F[{{nDim}}];
+      pCompType* F[{{nDim}}];
       for (int xyz = 0; xyz < {{nDof**nDim}}; xyz++) {
         F[0]      = lFi+(i*{{nDof**nDim}}+xyz)*{{nVarPad}}; //x
         F[1]      = lFi+(i*{{nDof**nDim}}+xyz)*{{nVarPad}}+{{1*(nDof**nDim)*nDof*nVarPad}}; //y
@@ -491,7 +492,7 @@ int {{codeNamespace}}::fusedSpaceTimePredictorVolumeIntegral{{nameSuffix}}(
   // Fortran: lQhi(:,:,:,:) = lQi(:,:,:,:,1)
   std::copy_n(lQi, {{(nDof**nDim)*nDataPad}}, lQhi);
 
-  double dtavFac = 0.5 * dt;
+  pCompType dtavFac = 0.5 * dt;
   for (int i = 1; i < {{nDof}}; i++) {
     // Fortran: lQhi(:,:,:,:) += dtavFac * lQi(:,i,:,:,:)
     for (int xyz = 0; xyz < {{nDof**nDim}}; xyz++) {
@@ -535,11 +536,11 @@ int {{codeNamespace}}::fusedSpaceTimePredictorVolumeIntegral{{nameSuffix}}(
 
   // Add point source to the right hand side
 {% if usePointSources %}
-  double sum_array[{{nVarPad}}] __attribute__((aligned({{alignmentSize}})));
+  pCompType sum_array[{{nVarPad}}] __attribute__((aligned({{alignmentSize}})));
   for (int xyz = 0; xyz < {{nDof**nDim}}; xyz++) {
-    std::memset(sum_array, 0, {{nVarPad}}*sizeof(double));
+    std::memset(sum_array, 0, {{nVarPad}}*sizeof(pCompType));
     for (int n0 = 1; n0 < {{nDof+1}}; n0++) {
-      const double coeff = weights1[n0-1] / {{nDim}};
+      const pCompType coeff = weights1[n0-1] / {{nDim}};
       #pragma omp simd aligned(sum_array,PSi:{{alignmentSize}})
       for (int n = 0; n < {{nVarPad}}; n++) {
         sum_array[n] += coeff * PSi[(n0*{{nDof**nDim}}+xyz)*{{nVarPad}}+n];
@@ -561,8 +562,8 @@ int {{codeNamespace}}::fusedSpaceTimePredictorVolumeIntegral{{nameSuffix}}(
   //**** Extrapolation ****
   //***********************
 
-  std::memset(lQhbnd, 0, {{2*nDim*nDof*nDof3D*nDataPad}}*sizeof(double));
-  std::memset(lFhbnd, 0, {{2*nDim*nDof*nDof3D*nVarPad }}*sizeof(double));
+  std::memset(lQhbnd, 0, {{2*nDim*nDof*nDof3D*nDataPad}}*sizeof(pStoreType));
+  std::memset(lFhbnd, 0, {{2*nDim*nDof*nDof3D*nVarPad }}*sizeof(pStoreType));
 
   // x-direction: face 1 (left) and face 2 (right)
   for (int yz = 0; yz < {{nDof*nDof3D}}; yz++) {
@@ -647,7 +648,7 @@ int {{codeNamespace}}::fusedSpaceTimePredictorVolumeIntegral{{nameSuffix}}(
 #endif
   // for linear non-conservative PDE, the volume integral is trivial, since it
   // only involves the element mass matrix, which later will cancel
-  memset(lduh, 0, {{nVarPad*(nDof**nDim)}}*sizeof(double));
+  memset(lduh, 0, {{nVarPad*(nDof**nDim)}}*sizeof(pCompType));
 
   for (int xyz = 0; xyz < {{nDof**nDim}}; xyz++) {
     #pragma omp simd aligned(lduh,lFhi{{',lShi' if useSource else ''}}:{{alignmentSize}})
@@ -672,3 +673,25 @@ int {{codeNamespace}}::fusedSpaceTimePredictorVolumeIntegral{{nameSuffix}}(
   return -1; //no picard iteration in linear case
 
 }
+
+template int {{codeNamespace}}::fusedSpaceTimePredictorVolumeIntegral{{nameSuffix}}(
+    {{solverName}}& solver,
+    {{predictorComputePrecision}}* __restrict__ lduh,
+    {{predictorStoragePrecision}}* __restrict__ lQhbnd,
+    {{predictorStoragePrecision}}* __restrict__ lFhbnd,
+    {{predictorComputePrecision}}* __restrict__ lQi,
+    {{predictorComputePrecision}}* __restrict__ lFi,
+    {{predictorComputePrecision}}* __restrict__ lSi,   // for NCP or Source
+    {{predictorComputePrecision}}* __restrict__ lQhi,
+    {{predictorComputePrecision}}* __restrict__ lFhi,
+    {{predictorComputePrecision}}* __restrict__ lShi,  // for Source
+    {{predictorComputePrecision}}* __restrict__ gradQ, // for NCP or Source
+    {{predictorComputePrecision}}* __restrict__ PSi,   // for pointSource
+    {{predictorComputePrecision}}* __restrict__ PSderivatives, // for pointSource
+    const {{correctorStoragePrecision}}* const __restrict__ luh,
+    const double* const center,
+    const double dx, // Assume dx[0] == dx[1] == dx[2]
+    const double tStep, // == t
+    const double dt,
+    std::vector<int>* pointSources // will be deleted in the end if set
+);

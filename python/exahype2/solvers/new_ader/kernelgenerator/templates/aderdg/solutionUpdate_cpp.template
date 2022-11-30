@@ -16,10 +16,11 @@
 #include "{{pathToOptKernel}}/Kernels.h"
 #include "{{pathToOptKernel}}/Quadrature.h"
 
+template<typename cStoreType, typename compType>
 void {{codeNamespace}}::solutionUpdate( 
-  double* __restrict__ luh,
-  const double* __restrict__ const luhOld,
-  const double* __restrict__ const lduh, 
+  cStoreType* __restrict__ luh,
+  const cStoreType* __restrict__ const luhOld,
+  const compType* __restrict__ const lduh, 
   const double dt
 ) {
 #ifdef __INTEL_COMPILER
@@ -30,7 +31,7 @@ void {{codeNamespace}}::solutionUpdate(
 #endif
 
   for (int xyz = 0; xyz < {{nDof**nDim}}; xyz++) {
-    const double coeff = dt*iweights3[xyz];
+    const compType coeff = dt*iweights3[xyz];
     #pragma omp simd aligned(luh,luhOld,lduh:{{alignmentSize}})
     for (int n = 0; n < {{nVar}}; n++) { //update only the variables, lduh contains no parameters
       luh[xyz*{{nData}}+n] = luhOld[xyz*{{nData}}+n] + coeff*lduh[xyz*{{nVarPad}}+n]; //simd+fma
@@ -38,3 +39,17 @@ void {{codeNamespace}}::solutionUpdate(
   }
  
 }
+
+template void {{codeNamespace}}::solutionUpdate( 
+  {{correctorStoragePrecision}}* __restrict__ luh,
+  const {{correctorStoragePrecision}}* __restrict__ const luhOld,
+  const {{predictorComputePrecision}}* __restrict__ const lduh, 
+  const double dt);
+
+{% if correctorComputePrecision != predictorComputePrecision%}
+template void {{codeNamespace}}::solutionUpdate( 
+  {{correctorStoragePrecision}}* __restrict__ luh,
+  const {{correctorStoragePrecision}}* __restrict__ const luhOld,
+  const {{correctorComputePrecision}}* __restrict__ const lduh, 
+  const double dt);
+{% endif %}{# if correctorComputePrecision != predictorComputePrecision #}

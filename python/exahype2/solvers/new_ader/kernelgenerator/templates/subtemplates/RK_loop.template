@@ -40,7 +40,7 @@
 {% if useNCP %}
   
   //NCP component
-  std::memset(gradQ, 0, {{nDim*(nDof**nDim)*nVarPad}} * sizeof(double)); //reset gradQ to 0
+  std::memset(gradQ, 0, {{nDim*(nDof**nDim)*nVarPad}} * sizeof(pCompType)); //reset gradQ to 0
   
   // x direction
   for (int yz = 0; yz < {{nDof*nDof3D}}; yz++) {

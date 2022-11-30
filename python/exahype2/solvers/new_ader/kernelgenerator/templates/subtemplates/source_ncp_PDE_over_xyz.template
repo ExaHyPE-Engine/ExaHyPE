@@ -99,7 +99,7 @@ for (int xyz = 0; xyz < {{(nDof**nDim)-((nDof**nDim)%vectSize)}}; xyz+={{vectSiz
   // Update {{output}}
   for (int it_vect = 0; it_vect < {{vectSize}}; it_vect++) {
 {% if multiplyByWeights %}
-    const double updateSize = weights1[{{time_var}}] * weights3[xyz+it_vect] * dt;
+    const pCompType updateSize = weights1[{{time_var}}] * weights3[xyz+it_vect] * dt;
 {% endif %}
     #pragma vector aligned
     for (int n = 0; n < {{nVarPad}}; n++) {
@@ -139,7 +139,7 @@ for (int xyz = 0; xyz < {{(nDof**nDim)-((nDof**nDim)%vectSize)}}; xyz+={{vectSiz
   // Update {{output}}
   for (int it_vect = 0; it_vect < {{rest_size}}; it_vect++) {
 {% if multiplyByWeights %}
-    const double updateSize = weights1[{{time_var}}] * weights3[{{rest_start}}+it_vect] * dt;
+    const pCompType updateSize = weights1[{{time_var}}] * weights3[{{rest_start}}+it_vect] * dt;
 {% endif %}
     #pragma vector aligned
     for (int n = 0; n < {{nVarPad}}; n++) {
@@ -157,18 +157,18 @@ for (int xyz = 0; xyz < {{(nDof**nDim)-((nDof**nDim)%vectSize)}}; xyz+={{vectSiz
    **** No vect PDE ****
    *********************/ #}
 {% if useNCP or useFusedSource %}
-double gradQ_PDE[{{nVar*nDim}}] __attribute__((aligned({{alignmentSize}})));
+pCompType gradQ_PDE[{{nVar*nDim}}] __attribute__((aligned({{alignmentSize}})));
 {% if not useFusedSource%}
-double tmp_ncp_output[{{nVarPad}}] __attribute__((aligned({{alignmentSize}}))) = {0.}; //initialize for padding
+pCompType tmp_ncp_output[{{nVarPad}}] __attribute__((aligned({{alignmentSize}}))) = {0.}; //initialize for padding
 {% endif %}
 {% endif %}
 {% if not writeSource %}
-double {{sourceArray}}[{{nVarPad}}] __attribute__((aligned({{alignmentSize}})));
+pCompType {{sourceArray}}[{{nVarPad}}] __attribute__((aligned({{alignmentSize}})));
 {% endif %}
 for(int xyz = 0; xyz < {{nDof**nDim}}; xyz++) {
 {% if useNCP or useFusedSource %}
   // Remove padding to use the same user function as generic kernel
-  double gradQ_PDE[{{nVar*nDim}}]; 
+  pCompType gradQ_PDE[{{nVar*nDim}}]; 
   std::copy_n(gradQ+{{nVarPad}}*xyz, {{nVar}}, gradQ_PDE); //x
   std::copy_n(gradQ+{{nVarPad}}*xyz+{{1*nVarPad*(nDof**nDim)}}, {{nVar}}, gradQ_PDE+{{1*nVar}}); //y
 {% if nDim==3 %}
@@ -208,7 +208,7 @@ for(int xyz = 0; xyz < {{nDof**nDim}}; xyz++) {
 
   // Update {{output}}
 {% if multiplyByWeights %}
-  const double updateSize = weights1[{{time_var}}] * weights3[xyz] * dt;
+  const pCompType updateSize = weights1[{{time_var}}] * weights3[xyz] * dt;
 {% endif %}
   #pragma omp simd aligned({{output}},{{sourceArray}}:{{alignmentSize}})
   for (int n = 0; n < {{nVarPad}}; n++) {

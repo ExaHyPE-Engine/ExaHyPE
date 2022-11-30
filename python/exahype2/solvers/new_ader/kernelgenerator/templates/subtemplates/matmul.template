@@ -53,7 +53,7 @@
 #}
 {% if overrideUseLibxsmm %}
 {% if useTrueB %}{# will set B[it] to be trueAlpha*trueB[it] #}
-double {{B}}[{{conf.LDB*conf.K}}] __attribute__((aligned({{alignmentSize}})));
+pCompType {{B}}[{{conf.LDB*conf.K}}] __attribute__((aligned({{alignmentSize}})));
 #pragma omp simd aligned({{Bp}},{{trueBp}}:{{alignmentSize}})
 for (int it = 0; it < {{conf.LDB*conf.K}}; it++) {
   {{B}}[it] = {{trueAlpha}} * {{trueB}}[it];

@@ -74,7 +74,7 @@ for (int xyz = 0; xyz < {{(nDof**nDim)-((nDof**nDim)%vectSize)}}; xyz+={{vectSiz
 {% endif %}{# perform rest #}
 {% else %}{# useFluxVect #}
 { // Compute the fluxes
-  double* F[{{nDim}}];
+  pCompType* F[{{nDim}}];
   for (int xyz = 0; xyz < {{nDof**nDim}}; xyz++) {
     // Call PDE fluxes
     F[0] = &{{outputF}}[({% if useTime %}{{time_var}}*{{nDof**nDim}}+{% endif %}xyz)*{{nVarPad}}];
@@ -86,7 +86,7 @@ for (int xyz = 0; xyz < {{(nDof**nDim)-((nDof**nDim)%vectSize)}}; xyz+={{vectSiz
     {% if useViscousFlux %}
     // TODO(Lukas): Is this correct?
     // Remove padding to use the same user function as generic kernel
-    double gradQ_PDE[{{nVar*nDim}}]; 
+    pCompType gradQ_PDE[{{nVar*nDim}}]; 
     std::copy_n(gradQ+{{nVarPad}}*xyz, {{nVar}}, gradQ_PDE); //x
     std::copy_n(gradQ+{{nVarPad}}*xyz+{{1*nVarPad*(nDof**nDim)}}, {{nVar}}, gradQ_PDE+{{1*nVar}}); //y
     {% if nDim==3 %}

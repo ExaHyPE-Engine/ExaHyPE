@@ -22,10 +22,13 @@
 
 #include "{{solverHeader}}"
 
+template <typename pStoreType, typename cCompType>
 void {{codeNamespace}}::riemannSolver( 
   {{solverName}}& solver,
-  double* __restrict__ FL, double* __restrict__ FR,
-  const double* __restrict__ const QL, const double* __restrict__ const QR,
+  cCompType* __restrict__ FL, 
+  cCompType* __restrict__ FR,
+  const pStoreType* __restrict__ const QL, 
+  const pStoreType* __restrict__ const QR,
   const double t,
   const double dt,
   const double dx,
@@ -44,8 +47,8 @@ void {{codeNamespace}}::riemannSolver(
 #endif
 
   {{m.allocateArray('tmp_bnd', nVarPad*nDof*nDof3D) | indent(2)}}{##}
-  double QavL[{{nDataPad}}] __attribute__((aligned({{alignmentSize}}))) = {0.0};
-  double QavR[{{nDataPad}}] __attribute__((aligned({{alignmentSize}}))) = {0.0};
+  cCompType QavL[{{nDataPad}}] __attribute__((aligned({{alignmentSize}}))) = {0.0};
+  cCompType QavR[{{nDataPad}}] __attribute__((aligned({{alignmentSize}}))) = {0.0};
   
   for (int xy = 0; xy < {{nDof*nDof3D}}; xy++) { //xy = 1 or 2 spatial dim (1 in 2D, 2 in 3D)
     #pragma omp simd aligned(QavL,QavR,QL,QR:{{alignmentSize}})
@@ -56,25 +59,25 @@ void {{codeNamespace}}::riemannSolver(
   }
   
   // Check hyperbolic eigenvalues.
-  double lambdaL[{{nVarPad}}] __attribute__((aligned({{alignmentSize}})));
+  cCompType lambdaL[{{nVarPad}}] __attribute__((aligned({{alignmentSize}})));
 #ifdef USE_IPO
   #pragma forceinline recursive
 #endif
   solver.{{solverName}}::eigenvalues(&QavL[0], direction, &lambdaL[0]);
-  double lambdaR[{{nVarPad}}] __attribute__((aligned({{alignmentSize}})));
+  cCompType lambdaR[{{nVarPad}}] __attribute__((aligned({{alignmentSize}})));
 #ifdef USE_IPO
   #pragma forceinline recursive
 #endif
   solver.{{solverName}}::eigenvalues(&QavR[0], direction, &lambdaR[0]);
   
-  double smax = 0.;
+  cCompType smax = 0.;
   for (int ivar = 0; ivar < {{nVar}}; ivar++) {
-    smax = std::max(smax, std::max(fabs(lambdaL[ivar]), fabs(lambdaR[ivar])));
+    smax = std::max(smax, std::max(std::abs(lambdaL[ivar]), std::abs(lambdaR[ivar])));
   }
   
   {% if useViscousFlux %}
   // Check viscous eigenvalues.
-  double maxViscousEigenvalue = 0.0;
+  cCompType maxViscousEigenvalue = 0.0;
 #ifdef USE_IPO
   #pragma forceinline recursive
 #endif
@@ -84,10 +87,10 @@ void {{codeNamespace}}::riemannSolver(
 #endif
   solver.{{solverName}}::viscousEigenvalues(&QavR[0], direction, &lambdaR[0]);
   for (int ivar = 0; ivar < {{nVar}}; ivar++) {
-    maxViscousEigenvalue = std::max(maxViscousEigenvalue, std::max(fabs(lambdaL[ivar]), fabs(lambdaR[ivar])));
+    maxViscousEigenvalue = std::max(maxViscousEigenvalue, std::max(std::abs(lambdaL[ivar]), std::abs(lambdaR[ivar])));
   }
   const auto pi = std::acos(-1); // not constexpr for intel compilers
-  const double factor = 2 * (2 * {{nDof - 1}} + 1) / (dx * std::sqrt(0.5 * pi));
+  const cCompType factor = 2 * (2 * {{nDof - 1}} + 1) / (dx * std::sqrt(0.5 * pi));
   smax += factor * maxViscousEigenvalue;
   {% endif %}{# useViscousFlux #} 
   
@@ -156,9 +159,9 @@ void {{codeNamespace}}::riemannSolver(
   }
 {% endif %}{# rest#}
 {% else %}
-  double Qavg[{{nData}}] __attribute__((aligned({{alignmentSize}}))) = {0.0};
-  double gradQ[{{nDim*nVar}}] __attribute__((aligned({{alignmentSize}}))) = {0.0};
-  double ncp[{{nVarPad}}] __attribute__((aligned({{alignmentSize}}))) = {0.0};
+  cCompType Qavg[{{nData}}] __attribute__((aligned({{alignmentSize}}))) = {0.0};
+  cCompType gradQ[{{nDim*nVar}}] __attribute__((aligned({{alignmentSize}}))) = {0.0};
+  cCompType ncp[{{nVarPad}}] __attribute__((aligned({{alignmentSize}}))) = {0.0};
   for (int xy = 0; xy < {{nDof*nDof3D}}; xy++) {
     #pragma omp simd aligned(Qavg,QL,QR,gradQ:{{alignmentSize}})
     for (int n = 0; n < {{nVar}}; n++) {
@@ -184,3 +187,14 @@ void {{codeNamespace}}::riemannSolver(
 {% endif %}
 
 }
+
+template void {{codeNamespace}}::riemannSolver(
+  {{solverName}}& solver,
+  {{correctorComputePrecision}}* __restrict__ FL, 
+  {{correctorComputePrecision}}* __restrict__ FR,
+  const {{predictorStoragePrecision}}* const __restrict__ QL, 
+  const {{predictorStoragePrecision}}* const __restrict__ QR,
+  const double t,
+  const double dt,
+  const double dx,
+  const int direction);
