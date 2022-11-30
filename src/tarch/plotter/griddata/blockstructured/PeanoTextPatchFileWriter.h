@@ -141,6 +141,9 @@ class tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter: publi
          void plotVertex( int index, double value ) override;
          void plotVertex( int index, double* values ) override;
 
+         template<typename T>
+         void plotVertex( int index, T* values );
+
          void close() override;
 
          /**
