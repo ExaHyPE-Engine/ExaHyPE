@@ -25,6 +25,14 @@
 
 from sys import exit
 
+precisionTranslate = {
+    "DP": "DP",
+    "double": "DP",
+    "SP": "SP",
+    "float": "SP",
+    "single": "SP"
+}
+
 
 class MatmulConfig:
     """Specification of a dense matrix-matrix multiplication
@@ -74,7 +82,7 @@ class MatmulConfig:
     
     # Constructor
     def __init__(self, M, N, K, LDA, LDB, LDC, alpha, beta, alignment_A, alignment_C, name, prefetchStrategy, operationType="gemm", precision="DP"):
-        if precision not in ["DP", "SP"]:
+        if precision not in precisionTranslate.keys():
             print("MatmulConfig: Unknown precision")
             exit()
         if((M > LDC) or (K > LDB) or (M > LDA)):
@@ -101,7 +109,7 @@ class MatmulConfig:
         self.name = name
         self.prefetchStrategy = prefetchStrategy
         self.baseroutinename = operationType+"_"+str(M)+"_"+str(N)+"_"+str(K)+"_"+name
-        self.precision = precision
+        self.precision = precisionTranslate[precision]
         
 
     def __repr__(self):
