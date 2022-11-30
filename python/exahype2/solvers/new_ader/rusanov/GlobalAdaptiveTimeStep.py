@@ -35,11 +35,9 @@ class GlobalAdaptiveTimeStep( SingleSweep ):
     initial_conditions=PDETerms.User_Defined_Implementation,
     source_term=PDETerms.None_Implementation,
     material_parameters=PDETerms.None_Implementation,
-    plot_grid_properties=False,
-    predictor_persistent_storage_precision=PrecisionType.double,
-    predictor_computation_precision=PrecisionType.double
+    plot_grid_properties=False
   ):
-    super(GlobalAdaptiveTimeStep,self).__init__(name, order, unknowns, auxiliary_variables, min_cell_h, max_cell_h, plot_grid_properties, predictor_persistent_storage_precision, predictor_computation_precision) 
+    super(GlobalAdaptiveTimeStep,self).__init__(name, order, unknowns, auxiliary_variables, min_cell_h, max_cell_h, plot_grid_properties) 
    
     self._cflSafetyFactor = time_step_relaxation
 
@@ -81,14 +79,14 @@ class GlobalAdaptiveTimeStep( SingleSweep ):
                                                        point_source=point_source
                                                        )
 
-    corrector_precisions = list(set([self._predictor_computation_precision, self._corrector_computation_precision]))
-    self._abstract_solver_user_declarations  = create_abstract_solver_declarations(self._flux_implementation, self._ncp_implementation, self._eigenvalues_implementation, self._source_term_implementation, self._point_sources_implementation, corrector_precisions, False)
+    compute_precisions = list(set([self._predictor_computation_precision, self._corrector_computation_precision]))
+    self._abstract_solver_user_declarations  = create_abstract_solver_declarations(self._flux_implementation, self._ncp_implementation, self._eigenvalues_implementation, self._source_term_implementation, self._point_sources_implementation, self._is_linear, compute_precisions, False)
     self._abstract_solver_user_declarations += create_abstract_solver_user_declarations_for_adaptive_time_stepping()
-    self._abstract_solver_user_definitions   = create_abstract_solver_definitions( self._flux_implementation, self._ncp_implementation, self._eigenvalues_implementation, self._source_term_implementation, self._point_sources_implementation, corrector_precisions, False)
+    self._abstract_solver_user_definitions   = create_abstract_solver_definitions( self._flux_implementation, self._ncp_implementation, self._eigenvalues_implementation, self._source_term_implementation, self._point_sources_implementation, self._is_linear, compute_precisions, False)
     self._abstract_solver_user_definitions  += create_abstract_solver_user_definitions_for_adaptive_time_stepping()
     
-    self._solver_user_declarations           = create_solver_declarations(self._flux_implementation, self._ncp_implementation, self._eigenvalues_implementation, self._source_term_implementation, self._point_sources_implementation, corrector_precisions, False)
-    self._solver_user_definitions            = create_solver_definitions( self._flux_implementation, self._ncp_implementation, self._eigenvalues_implementation, self._source_term_implementation, self._point_sources_implementation, corrector_precisions, False)
+    self._solver_user_declarations           = create_solver_declarations(self._flux_implementation, self._ncp_implementation, self._eigenvalues_implementation, self._source_term_implementation, self._point_sources_implementation, self._is_linear, compute_precisions, False)
+    self._solver_user_definitions            = create_solver_definitions( self._flux_implementation, self._ncp_implementation, self._eigenvalues_implementation, self._source_term_implementation, self._point_sources_implementation, self._is_linear, compute_precisions, False)
     
     self._constructor_implementation         += create_constructor_implementation_for_adaptive_time_stepping()
     

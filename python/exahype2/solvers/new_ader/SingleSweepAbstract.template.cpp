@@ -206,7 +206,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::update(double timeStepSize, doub
 
 {% if REFINEMENT_CRITERION_IMPLEMENTATION!="<user-defined>" %}
 ::exahype2::RefinementCommand {{NAMESPACE | join("::")}}::{{CLASSNAME}}::refinementCriterion(
-  const double * __restrict__ Q,    // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
+  const {{SOLUTION_STORAGE_PRECISION}} * __restrict__ Q,    // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
   const tarch::la::Vector<Dimensions,double>&  x,
   const tarch::la::Vector<Dimensions,double>&  h,
 	double                                       t
@@ -225,7 +225,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::update(double timeStepSize, doub
 
 {% if INITIAL_CONDITIONS_IMPLEMENTATION!="<user-defined>" %}
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::initialCondition(
-  double * __restrict__ Q, //Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+  {{SOLUTION_STORAGE_PRECISION}} * __restrict__ Q, //Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
   const tarch::la::Vector<Dimensions,double>&  x,
   bool                                         gridIsConstructed
 ) {
@@ -235,12 +235,17 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::initialCondition(
 
 
 {% if BOUNDARY_CONDITIONS_IMPLEMENTATION!="<user-defined>" %}
-void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::boundaryConditions(
-  const double * __restrict__                  Qinside,   // Qinside[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
-  double * __restrict__                        Qoutside,  // Qoutside[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
-  const tarch::la::Vector<Dimensions,double>&  x,
-  double                                       t,
-  int                                          normal
+void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::boundaryConditionsboundaryValues(
+  const double* const x,
+  const double t,
+  const double dt,
+  const int faceIndex,
+  const int direction,
+  const {{CORRECTOR_COMPUTATION_PRECISION}} * const fluxIn,
+  const {{PREDICTOR_STORAGE_PRECISION}}* const stateIn,
+  const {{CORRECTOR_COMPUTATION_PRECISION}}* const gradStateIn,
+  {{CORRECTOR_COMPUTATION_PRECISION}} *fluxOut,
+  {{PREDICTOR_STORAGE_PRECISION}}* stateOut
 ) {
   {{BOUNDARY_CONDITIONS_IMPLEMENTATION}}
 }
@@ -345,8 +350,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishTimeStep() {
       [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); }
       );
   tarch::mpi::Rank::getInstance().allReduce(
-      &newMaxTimeSteSweepAbstract.template.cpp
-			modified:   SingleSweeamp,
+      &newMaxTimeStamp,
       &_maxTimeStampThisTimeStep,
       1, MPI_DOUBLE,
       MPI_MAX,

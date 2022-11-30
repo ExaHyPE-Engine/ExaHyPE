@@ -5,7 +5,7 @@ from exahype2.solvers.fv.PDETerms  import PDETerms
 import jinja2
 
 
-def create_abstract_solver_declarations(flux_implementation, ncp_implementation, eigenvalues_implementation, source_term_implementation, material_param_implementation, point_source_implementation, computation_precisions, pde_terms_without_state):
+def create_abstract_solver_declarations(flux_implementation, ncp_implementation, eigenvalues_implementation, source_term_implementation, material_param_implementation, point_source_implementation, is_linear, computation_precisions, pde_terms_without_state):
   Template = jinja2.Template( """
   public:
 
@@ -24,7 +24,11 @@ def create_abstract_solver_declarations(flux_implementation, ncp_implementation,
 {% endif %}
 
 {% if NCP_IMPLEMENTATION=="<user-defined>" %}
+{% if IS_LINEAR==True %}
     virtual void nonConservativeProduct(const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const Q, const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const* const gradQ, {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}** const BgradQ) = 0;
+{% else %}
+    virtual void nonConservativeProduct(const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const Q, const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const gradQ, {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const BgradQ) = 0;    
+{% endif %}
 {% endif %}
 
 {% if SOURCE_TERM_IMPLEMENTATION=="<user-defined>" %}
@@ -55,12 +59,13 @@ def create_abstract_solver_declarations(flux_implementation, ncp_implementation,
   d[ "SOURCE_TERM_IMPLEMENTATION" ]         = source_term_implementation
   d["MATERIAL_PARAMETER_IMPLEMENTATION"]    = material_param_implementation
   d[ "POINT_SOURCE_IMPLEMENTATION" ]        = point_source_implementation
+  d[ "IS_LINEAR" ]                          = is_linear
   d[ "COMPUTATION_PRECISIONS" ]             = computation_precisions
   d[ "STATELESS_PDE_TERMS"]                 = pde_terms_without_state
   return Template.render(**d)
 
 
-def create_abstract_solver_definitions(flux_implementation, ncp_implementation, eigenvalues_implementation, source_term_implementation, material_param_implementation, point_source_implementation, computation_precisions, pde_terms_without_state):
+def create_abstract_solver_definitions(flux_implementation, ncp_implementation, eigenvalues_implementation, source_term_implementation, material_param_implementation, point_source_implementation, is_linear, computation_precisions, pde_terms_without_state):
   Template = jinja2.Template( """
 {% for PRECISION_NUM in range(0,COMPUTATION_PRECISIONS|length) %}
 
@@ -77,9 +82,15 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::flux(const {{COMPUTATION_PRECI
 {% endif %}
 
 {% if NCP_IMPLEMENTATION!="<empty>" and NCP_IMPLEMENTATION!="<user-defined>" and NCP_IMPLEMENTATION!="<none>"%}
+{% if IS_LINEAR==True %}
+void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::nonConservativeProduct(const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const Q, const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const* const gradQ, {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}** const BgradQ) {
+    {{NCP_IMPLEMENTATION}}
+}
+{% else %}
 void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::nonConservativeProduct(const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const Q, const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const gradQ, {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const BgradQ) {
     {{NCP_IMPLEMENTATION}}
 }
+{% endif %}
 {% endif %}
 
 
@@ -112,15 +123,16 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::multiplyMaterialParameterMatri
   d[ "SOURCE_TERM_IMPLEMENTATION" ]     = source_term_implementation
   d[ "MATERIAL_PARAM_IMPLEMENTATION" ]  = material_param_implementation
   d[ "POINT_SOURCE_IMPLEMENTATION" ]    = point_source_implementation
+  d[ "IS_LINEAR" ]                      = is_linear  
   d[ "COMPUTATION_PRECISIONS" ]         = computation_precisions
   d[ "STATELESS_PDE_TERMS"]             = pde_terms_without_state
   return Template.render(**d)
 
 
-def create_solver_declarations(flux_implementation, ncp_implementation, eigenvalues_implementation, source_term_implementation, material_param_implementation, point_source_implementation, computation_precisions, pde_terms_without_state):
+def create_solver_declarations(flux_implementation, ncp_implementation, eigenvalues_implementation, source_term_implementation, material_param_implementation, point_source_implementation, is_linear, computation_precisions, pde_terms_without_state):
   
   TemplateSinglePrecisions = jinja2.Template( """
-  
+
   {% if EIGENVALUES_IMPLEMENTATION=="<user-defined>" %}
     void eigenvalues(const {{COMPUTATION_PRECISIONS[0]}}* const Q, const int direction, {{COMPUTATION_PRECISIONS[0]}}* const lambda) override;
 {% endif %}
@@ -128,7 +140,11 @@ def create_solver_declarations(flux_implementation, ncp_implementation, eigenval
     void flux(const {{COMPUTATION_PRECISIONS[0]}}* const Q, {{COMPUTATION_PRECISIONS[0]}}** const F) override;
 {% endif %}
 {% if NCP_IMPLEMENTATION=="<user-defined>" %}
+{% if IS_LINEAR==True %}
+    void nonConservativeProduct(const {{COMPUTATION_PRECISIONS[0]}}* const Q, const {{COMPUTATION_PRECISIONS[0]}}* const* const gradQ, {{COMPUTATION_PRECISIONS[0]}}** const BgradQ) override;
+{% else %}
     void nonConservativeProduct(const {{COMPUTATION_PRECISIONS[0]}}* const Q, const {{COMPUTATION_PRECISIONS[0]}}* const gradQ, {{COMPUTATION_PRECISIONS[0]}}* const BgradQ) override;
+{% endif %}
 {% endif %}
 {% if SOURCE_TERM_IMPLEMENTATION=="<user-defined>" %}
     void algebraicSource(const tarch::la::Vector<Dimensions, double>& x, double t, const {{COMPUTATION_PRECISIONS[0]}} *const Q, {{COMPUTATION_PRECISIONS[0]}} *S) override;
@@ -155,8 +171,13 @@ def create_solver_declarations(flux_implementation, ncp_implementation, eigenval
     void flux(const T* const Q, T** const F);
 {% endif %}
 {% if NCP_IMPLEMENTATION=="<user-defined>" %}
+{% if IS_LINEAR==True %}
+    template<typename T>
+    void nonConservativeProduct(const T* const Q, const T* const* const gradQ, T** const BgradQ);
+{% else %}
     template<typename T>
     void nonConservativeProduct(const T* const Q, const T* const gradQ, T* const BgradQ);
+{% endif %}
 {% endif %}
 {% if SOURCE_TERM_IMPLEMENTATION=="<user-defined>" %}
     template<typename T>
@@ -188,9 +209,15 @@ def create_solver_declarations(flux_implementation, ncp_implementation, eigenval
     }
 {% endif %}
 {% if NCP_IMPLEMENTATION=="<user-defined>" %}
+{% if IS_LINEAR==True %}
+    void nonConservativeProduct(const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const Q, const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const* const gradQ, {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}** const BgradQ) override {
+      nonConservativeProduct<{{COMPUTATION_PRECISIONS[PRECISION_NUM]}}>(Q, gradQ, BgradQ);
+    }
+{% else %}
     void nonConservativeProduct(const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const Q, const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const gradQ, {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const BgradQ) override {
       nonConservativeProduct<{{COMPUTATION_PRECISIONS[PRECISION_NUM]}}>(Q, gradQ, BgradQ);
     }
+{% endif %}
 {% endif %}
 {% if SOURCE_TERM_IMPLEMENTATION=="<user-defined>" %}
     void algebraicSource(const tarch::la::Vector<Dimensions, double>& x, double t, const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}} *const Q, {{COMPUTATION_PRECISIONS[PRECISION_NUM]}} *S) override {
@@ -217,6 +244,7 @@ def create_solver_declarations(flux_implementation, ncp_implementation, eigenval
   d[ "SOURCE_TERM_IMPLEMENTATION" ]     = source_term_implementation
   d[ "MATERIAL_PARAM_IMPLEMENTATION" ]  = material_param_implementation
   d[ "POINT_SOURCE_IMPLEMENTATION" ]    = point_source_implementation
+  d[ "IS_LINEAR" ]                      = is_linear  
   d[ "COMPUTATION_PRECISIONS" ]         = computation_precisions
   d[ "STATELESS_PDE_TERMS"]             = pde_terms_without_state
 
@@ -226,7 +254,7 @@ def create_solver_declarations(flux_implementation, ncp_implementation, eigenval
     return TemplateSinglePrecisions.render(**d)
 
 
-def create_solver_definitions(flux_implementation, ncp_implementation, eigenvalues_implementation, source_term_implementation, material_param_implementation, point_source_implementation, computation_precisions, pde_terms_without_state):
+def create_solver_definitions(flux_implementation, ncp_implementation, eigenvalues_implementation, source_term_implementation, material_param_implementation, point_source_implementation, is_linear, computation_precisions, pde_terms_without_state):
   
   TemplateSinglePrecisions = jinja2.Template( """
   
@@ -256,6 +284,17 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::flux(
 
 
 {% if NCP_IMPLEMENTATION=="<user-defined>" %}
+{% if IS_LINEAR==True %}
+void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::nonConservativeProduct(
+  const {{COMPUTATION_PRECISIONS[0]}}* const Q,      //Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+  const {{COMPUTATION_PRECISIONS[0]}}* const* const gradQ,  //Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+  {{COMPUTATION_PRECISIONS[0]}}** const BgradQ       //BgradQ[{{NUMBER_OF_UNKNOWNS}}]
+)  {
+  logTraceInWith3Arguments( "nonConservativeProduct(...)", x, t, normal );
+  // @todo implement
+  logTraceOut( "nonConservativeProduct(...)" );
+}
+{% else %}
 void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::nonConservativeProduct(
   const {{COMPUTATION_PRECISIONS[0]}}* const Q,      //Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
   const {{COMPUTATION_PRECISIONS[0]}}* const gradQ,  //Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
@@ -265,6 +304,7 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::nonConservativeProduct(
   // @todo implement
   logTraceOut( "nonConservativeProduct(...)" );
 }
+{% endif %}
 {% endif %}
 
 
@@ -327,6 +367,10 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::eigenvalues(
   // @todo implement
   logTraceOut( "eigenvalue(...)" );
 }
+
+{% for PRECISION_NUM in range(0,COMPUTATION_PRECISIONS|length) %}
+template void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::eigenvalues(const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const Q, const int direction, {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const lambda);
+{% endfor%}
 {% endif %}
 
 
@@ -340,10 +384,30 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::flux(
   // @todo implement
   logTraceOut( "flux(...)" );
 }
+
+{% for PRECISION_NUM in range(0,COMPUTATION_PRECISIONS|length) %}
+template void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::flux(const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const Q, {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}** const F);
+{% endfor%}
 {% endif %}
 
 
 {% if NCP_IMPLEMENTATION=="<user-defined>" %}
+{% if IS_LINEAR==True %}
+template<typename T>
+void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::nonConservativeProduct(
+  const T* const Q,      //Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+  const T* const* const gradQ,  //Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+  T** const BgradQ       //BgradQ[{{NUMBER_OF_UNKNOWNS}}]
+)  {
+  logTraceInWith3Arguments( "nonConservativeProduct(...)", x, t, normal );
+  // @todo implement
+  logTraceOut( "nonConservativeProduct(...)" );
+}
+
+{% for PRECISION_NUM in range(0,COMPUTATION_PRECISIONS|length) %}
+template void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::nonConservativeProduct(const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const Q, const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const* const gradQ, {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}** const BgradQ);
+{% endfor%}
+{% else %}
 template<typename T>
 void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::nonConservativeProduct(
   const T* const Q,      //Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
@@ -354,6 +418,11 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::nonConservativeProduct(
   // @todo implement
   logTraceOut( "nonConservativeProduct(...)" );
 }
+
+{% for PRECISION_NUM in range(0,COMPUTATION_PRECISIONS|length) %}
+template void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::nonConservativeProduct(const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const Q, const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const gradQ, {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const BgradQ);
+{% endfor%}
+{% endif %}
 {% endif %}
 
 
@@ -369,6 +438,10 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::algebraicSource(
   // @todo implement
   logTraceOut( "algebraicSource(...)" );
 }
+
+{% for PRECISION_NUM in range(0,COMPUTATION_PRECISIONS|length) %}
+template void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::algebraicSource(const tarch::la::Vector<Dimensions, double>& x, double t, const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}} *const Q, {{COMPUTATION_PRECISIONS[PRECISION_NUM]}} *S);
+{% endfor%}
 {% endif %}
 
 {% if MATERIAL_PARAM_IMPLEMENTATION=="<user-defined>" %}
@@ -381,6 +454,10 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::multiplyMaterialParameterMatri
     // @todo implement
   
 }
+
+{% for PRECISION_NUM in range(0,COMPUTATION_PRECISIONS|length) %}
+template void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::multiplyMaterialParameterMatrix(const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const Q, {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}** const rhs);
+{% endfor%}
 {% endif %}
 
 {% if POINT_SOURCE_IMPLEMENTATION!="<none>" %}
@@ -402,6 +479,10 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::pointSource(
   int n) {
   // @todo implement
 }
+
+{% for PRECISION_NUM in range(0,COMPUTATION_PRECISIONS|length) %}
+template void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::pointSource(const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const Q, const double* const x, const double t, const double dt, {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const forceVector, int n);
+{% endfor%}
 {% endif %}
 
 
@@ -413,6 +494,7 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::pointSource(
   d[ "SOURCE_TERM_IMPLEMENTATION" ]     = source_term_implementation
   d[ "MATERIAL_PARAM_IMPLEMENTATION" ]  = material_param_implementation
   d[ "POINT_SOURCE_IMPLEMENTATION" ]    = point_source_implementation
+  d[ "IS_LINEAR" ]                      = is_linear  
   d[ "COMPUTATION_PRECISIONS" ]         = computation_precisions
   d[ "STATELESS_PDE_TERMS"]             = pde_terms_without_state
   

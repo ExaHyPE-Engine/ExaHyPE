@@ -24,7 +24,7 @@ class Prediction_kernelgenerator(AbstractAderDGActionSet):
     // needs to declare and define timeStepSize
     {{COMPUTE_TIME_STEP_SIZE}}  
   
-    double* luh = fineGridCell{{UNKNOWN_IDENTIFIER}}.value;
+    {{SOLUTION_STORAGE_PRECISION}}* luh = fineGridCell{{UNKNOWN_IDENTIFIER}}.value;
   
     const int Order = {{ORDER}};
     const int NumberOfVariables  = {{NUMBER_OF_UNKNOWNS}};
@@ -87,9 +87,9 @@ class Prediction_kernelgenerator(AbstractAderDGActionSet):
 
     {% if IS_LINEAR is sameas True %}
 #if Dimensions==2
-  double centre[Dimensions] = {marker.x()[0], marker.x()[1]};
+    double centre[Dimensions] = {marker.x()[0], marker.x()[1]};
 #else
-  double centre[Dimensions] = {marker.x()[0], marker.x()[1], marker.x()[2]};  
+    double centre[Dimensions] = {marker.x()[0], marker.x()[1], marker.x()[2]};  
 #endif
 
     {% if USE_POINT_SOURCE!="<none>" %}
@@ -104,7 +104,7 @@ class Prediction_kernelgenerator(AbstractAderDGActionSet):
     
     if(pointSources != nullptr) {
         // perform pointsource
-        numberOfIterations = generated::kernels::AderDG::linear::fusedSpaceTimePredictorVolumeIntegral(
+        numberOfIterations = generated::kernels::AderDG::linear::fusedSpaceTimePredictorVolumeIntegral<{{SOLUTION_STORAGE_PRECISION}}, {{PREDICTOR_COMPUTATION_PRECISION}}, {{PREDICTOR_STORAGE_PRECISION}}>(
           repositories::{{SOLVER_INSTANCE}},
           lduh,
           lQhbnd,
@@ -126,7 +126,7 @@ class Prediction_kernelgenerator(AbstractAderDGActionSet):
           pointSources // will be deleted in the end if set
         );    
     } else {
-        numberOfIterations = generated::kernels::AderDG::linear::fusedSpaceTimePredictorVolumeIntegral_WithoutPS(
+        numberOfIterations = generated::kernels::AderDG::linear::fusedSpaceTimePredictorVolumeIntegral_WithoutPS<{{SOLUTION_STORAGE_PRECISION}}, {{PREDICTOR_COMPUTATION_PRECISION}}, {{PREDICTOR_STORAGE_PRECISION}}>(
           repositories::{{SOLVER_INSTANCE}},
           lduh,
           lQhbnd,
@@ -150,10 +150,10 @@ class Prediction_kernelgenerator(AbstractAderDGActionSet):
     }
     
     
-    {% else %}
+    {% else %}{# point_sources #}
     
     //linear, no pointSources
-    int numberOfIterations = generated::kernels::AderDG::linear::fusedSpaceTimePredictorVolumeIntegral(
+    int numberOfIterations = generated::kernels::AderDG::linear::fusedSpaceTimePredictorVolumeIntegral<{{SOLUTION_STORAGE_PRECISION}}, {{PREDICTOR_COMPUTATION_PRECISION}}, {{PREDICTOR_STORAGE_PRECISION}}>(
       repositories::{{SOLVER_INSTANCE}},
       lduh,
       lQhbnd,
@@ -174,15 +174,15 @@ class Prediction_kernelgenerator(AbstractAderDGActionSet):
       timeStepSize,
       nullptr // will be deleted in the end if set
     );    
-    {% endif %}
 
+    {% endif %} {# linear #}
 
-    {% else %}
+    {% else %} {# nonlinear #}
     
     {{PREDICTOR_COMPUTATION_PRECISION}} rhs[(NumberOfVariables+NumberOfParameters)*spaceTimeBasisSize];
 
     //nonlinear
-    int numberOfIterations = generated::kernels::AderDG::nonlinear::fusedSpaceTimePredictorVolumeIntegral(
+    int numberOfIterations = generated::kernels::AderDG::nonlinear::fusedSpaceTimePredictorVolumeIntegral<{{SOLUTION_STORAGE_PRECISION}}, {{PREDICTOR_COMPUTATION_PRECISION}}, {{PREDICTOR_STORAGE_PRECISION}}>(
         repositories::{{SOLVER_INSTANCE}},
         lduh,
         lQhbnd,
@@ -196,13 +196,13 @@ class Prediction_kernelgenerator(AbstractAderDGActionSet):
         lFhi,
         lShi,  // for NCP or Source
         gradQ, // for NCP or Source or viscousFlux
-        nullptr, //gradQVg, // for viscousFlux
+        nullptr, //gradQAvg, // for viscousFlux
         luh,
         1/(marker.h()[0]), //inverseDx, assume dx[0] == dx[1] == dx[2]
         timeStepSize
       );
 
-    {% endif %}
+    {% endif %} {# nonlinear #}
 
     generated::kernels::AderDG::{{LINEARITY}}::solutionUpdate( 
       luh,

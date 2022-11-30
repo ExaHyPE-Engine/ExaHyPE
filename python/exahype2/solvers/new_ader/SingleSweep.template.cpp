@@ -12,7 +12,7 @@ tarch::logging::Log   {{NAMESPACE | join("::")}}::{{CLASSNAME}}::_log( "{{NAMESP
 
 {% if REFINEMENT_CRITERION_IMPLEMENTATION=="<user-defined>" %}
 ::exahype2::RefinementCommand {{NAMESPACE | join("::")}}::{{CLASSNAME}}::refinementCriterion(
-  const double * __restrict__ Q,               // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+  const {{SOLUTION_STORAGE_PRECISION}} * __restrict__ Q,               // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
   const tarch::la::Vector<Dimensions,double>&  x,
 	const tarch::la::Vector<Dimensions,double>&  h,
   double                                       t
@@ -30,7 +30,7 @@ tarch::logging::Log   {{NAMESPACE | join("::")}}::{{CLASSNAME}}::_log( "{{NAMESP
 
 {% if INITIAL_CONDITIONS_IMPLEMENTATION=="<user-defined>" %}
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::initialCondition(
-  double * __restrict__ Q, //Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+  {{SOLUTION_STORAGE_PRECISION}} * __restrict__ Q, //Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
   const tarch::la::Vector<Dimensions,double>&  x,
   const tarch::la::Vector<Dimensions,double>&  h,
   const tarch::la::Vector<Dimensions,int>&     point,
@@ -53,11 +53,11 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::boundaryValues(
     const double        dt,
     const int           faceIndex,
     const int           direction,
-    const double* const fluxIn,
-    const double* const stateIn,
-    const double* const gradStateIn,
-    double* const       fluxOut,
-    double* const       stateOut
+    const {{CORRECTOR_COMPUTATION_PRECISION}}* const fluxIn,
+    const {{PREDICTOR_STORAGE_PRECISION}}* const stateIn,
+    const {{CORRECTOR_COMPUTATION_PRECISION}}* const gradStateIn,
+    {{CORRECTOR_COMPUTATION_PRECISION}}* const       fluxOut,
+    {{PREDICTOR_STORAGE_PRECISION}}* const       stateOut
 ) {
   logTraceInWith3Arguments( "boundaryConditions(...)", x, t, direction );
   // @todo implement

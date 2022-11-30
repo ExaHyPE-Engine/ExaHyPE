@@ -38,7 +38,7 @@ class Correction_kernelgenerator(AbstractAderDGActionSet):
     constexpr int spaceFaceSize      = (Order+1)*(Order+1);
     #endif
     
-    double* luh = fineGridCell{{UNKNOWN_IDENTIFIER}}.value;
+    {{SOLUTION_STORAGE_PRECISION}}* luh = fineGridCell{{UNKNOWN_IDENTIFIER}}.value;
     {{CORRECTOR_COMPUTATION_PRECISION}} lduh[generated::kernels::AderDG::{{LINEARITY}}::getUpdateSize()]{0.0};
 
     const int basisElementsByFace = generated::kernels::AderDG::{{LINEARITY}}::getBndFaceSize();
@@ -85,7 +85,7 @@ class Correction_kernelgenerator(AbstractAderDGActionSet):
          towards the cell
         */
         
-        generated::kernels::AderDG::{{LINEARITY}}::boundaryConditions(
+        generated::kernels::AderDG::{{LINEARITY}}::boundaryConditions<{{PREDICTOR_STORAGE_PRECISION}}, {{CORRECTOR_COMPUTATION_PRECISION}}>(
           repositories::{{SOLVER_INSTANCE}},
           FL,
           QL,
@@ -103,7 +103,7 @@ class Correction_kernelgenerator(AbstractAderDGActionSet):
         }
       
 
-      generated::kernels::AderDG::{{LINEARITY}}::riemannSolver(
+      generated::kernels::AderDG::{{LINEARITY}}::riemannSolver<{{PREDICTOR_STORAGE_PRECISION}}, {{CORRECTOR_COMPUTATION_PRECISION}}>(
         repositories::{{SOLVER_INSTANCE}},
         FL,
         FR,
@@ -116,7 +116,7 @@ class Correction_kernelgenerator(AbstractAderDGActionSet):
       );
 
 
-      generated::kernels::AderDG::{{LINEARITY}}::faceIntegral(
+      generated::kernels::AderDG::{{LINEARITY}}::faceIntegral<{{CORRECTOR_COMPUTATION_PRECISION}}>(
         lduh,
         FR,
         d, //direction
@@ -140,7 +140,7 @@ class Correction_kernelgenerator(AbstractAderDGActionSet):
          towards the cell
         */
 
-        generated::kernels::AderDG::{{LINEARITY}}::boundaryConditions(
+        generated::kernels::AderDG::{{LINEARITY}}::boundaryConditions<{{PREDICTOR_STORAGE_PRECISION}}, {{CORRECTOR_COMPUTATION_PRECISION}}>(
           repositories::{{SOLVER_INSTANCE}},
           FR,
           QR,
@@ -158,7 +158,7 @@ class Correction_kernelgenerator(AbstractAderDGActionSet):
       }
       
       
-      generated::kernels::AderDG::{{LINEARITY}}::riemannSolver(
+      generated::kernels::AderDG::{{LINEARITY}}::riemannSolver<{{PREDICTOR_STORAGE_PRECISION}}, {{CORRECTOR_COMPUTATION_PRECISION}}>(
         repositories::{{SOLVER_INSTANCE}},
         FL,
         FR,
@@ -171,7 +171,7 @@ class Correction_kernelgenerator(AbstractAderDGActionSet):
       );
 
 
-      generated::kernels::AderDG::{{LINEARITY}}::faceIntegral(
+      generated::kernels::AderDG::{{LINEARITY}}::faceIntegral<{{CORRECTOR_COMPUTATION_PRECISION}}>(
         lduh,
         FL,
         d, //direction

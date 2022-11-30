@@ -55,7 +55,7 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public Abstract{{CLASSNAME}} {
      *  which make the solution follow
      */
     ::exahype2::RefinementCommand refinementCriterion(
-      const double * __restrict__                  Q,    //Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+      const {{SOLUTION_STORAGE_PRECISION}} * __restrict__                  Q,    //Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
       const tarch::la::Vector<Dimensions,double>&  x,
       const tarch::la::Vector<Dimensions,double>&  h,
 			double                                       t
@@ -65,7 +65,7 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public Abstract{{CLASSNAME}} {
 
     {% if INITIAL_CONDITIONS_IMPLEMENTATION=="<user-defined>" %}
     void initialCondition(
-      double * __restrict__ Q, //Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+      {{SOLUTION_STORAGE_PRECISION}} * __restrict__ Q, //Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
       const tarch::la::Vector<Dimensions,double>&  x,
       const tarch::la::Vector<Dimensions,double>&  h,
       const tarch::la::Vector<Dimensions,int>&     index,
@@ -81,11 +81,11 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public Abstract{{CLASSNAME}} {
         const double dt,
         const int faceIndex,
         const int direction,
-        const double * const fluxIn,
-        const double* const stateIn,
-        const double* const gradStateIn,
-        double *fluxOut,
-        double* stateOut
+        const {{CORRECTOR_COMPUTATION_PRECISION}} * const fluxIn,
+        const {{PREDICTOR_STORAGE_PRECISION}}* const stateIn,
+        const {{CORRECTOR_COMPUTATION_PRECISION}}* const gradStateIn,
+        {{CORRECTOR_COMPUTATION_PRECISION}} *fluxOut,
+        {{PREDICTOR_STORAGE_PRECISION}}* stateOut
     ) final override;
     {% endif %}
 
