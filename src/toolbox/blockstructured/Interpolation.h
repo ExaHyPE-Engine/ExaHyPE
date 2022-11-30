@@ -198,21 +198,102 @@ namespace toolbox {
      * I have an overlap of 1, then I have to befill one halo layer around
      * a resolution transition.
      *
-     * @image html Restriction_averaging.png
      *
-     * This one can be befilled by two entries on the coarser resolution,
-     * though only one of them is a real entry and the other one is a
-     * restricted one. So you can either have the corresponding restricted
+     * ## Interpolation along the normal direction
+     *
+     * @image html Interpolation_tensor_1d.png
+     *
+     * The interpolation along the normal is a matrix of the dimensions
+     * @f$ 2k \times k @f$. It is always defined along the left-to-right,
+     * i.e. what happens if we have a face where the grid right of it is
+     * refined and the grid left of it is unrefined. In this case, we have
+     * two faces (one for the coarse level and one for the finer level).
+     *
+     * The image above illustrates this for k=2. In this case, the coarse
+     * face holds four entries (along the normal): The green ones to the
+     * left are real coarse grid data stemming from the adjacent block, while
+     * the blue ones are overlapping with the fine mesh and therefore likely
+     * restricted data. For AMR, we have to set (interpolate) the halo on the
+     * fine level, i.e. the red values. We do not have to interpolate the
+     * orange values, as these guys hold proper fine grid data. So that leaves
+     * us with two entries on the fine mesh, which can be initialised using the
+     * four entries on the coarser mesh. Overall, the
+     * interpolation can be written down as 2x4 matrix.
+     *
+     * The illustration arrows above show the data flow for the left halo
+     * entry.
+     * This one can be befilled by four entries on the coarser resolution,
+     * though only two of them are real entries and the other ones are
+     * restricted onvalues. So you can either have the corresponding restricted
      * value entry in normalInterpolationMatrix1d as 0 - in this case you
      * only couple from real coarse data to fine data - or you can have
      * a value in there which means you interpolate over the resolution
      * transition between real and restricted data.
+     *
+     *
+     * ## Tangential interpolation matrix
      *
      * The normalInterpolationMatrix1d has the size 3 * numberOfDoFsPerAxisInPatch
      * x numberOfDoFsPerAxisInPatch. So we have three matrix. Each of them
      * phrases how an element of one of the three fine grid segments is
      * affected by the numberOfDoFsPerAxisInPatch counterparts on the
      * coarser level.
+     *
+     *
+     * ## Example matrices
+     *
+     * ### Piece-wise interpolation
+     *
+     * The interpolation matrix below realises a piece-wise constant interpolation
+     * along the normal for an overlap of three. It takes the coarse grid value of
+     * the voluem that's one away from the AMR boundary and interpolates it to the
+     * fine mesh:
+     *
+     *         static constexpr double  NormalInterpolationMatrix1d[]     = {
+     *            0.0, 1.0, 0.0, 0.0, 0.0, 0.0,
+     *            0.0, 1.0, 0.0, 0.0, 0.0, 0.0,
+     *            0.0, 1.0, 0.0, 0.0, 0.0, 0.0
+     *         };
+     *
+     * The data flow is illustrated below:
+     *
+     * @image html Interpolation_tensor_1d_constant_interpolation.png
+     *
+     * Most constant interplation schemes would obviously not take the middle green
+     * value but the one right of it. In the matrix, this means that third column
+     * would be 1 and not the second one.
+     *
+     * If you also want to interpolate piece-wise constant along the tangential
+     * directions, and if you have a patch size of 5, you would pass in the following
+     * tangential interpolation matrix:
+     *
+     *       static constexpr double  TangentialInterpolationMatrix1d[] = {
+     *         1.0,0.0,0.0,0.0,0.0,
+     *         1.0,0.0,0.0,0.0,0.0,
+     *         1.0,0.0,0.0,0.0,0.0,
+     *         0.0,1.0,0.0,0.0,0.0,
+     *         0.0,1.0,0.0,0.0,0.0,
+     *
+     *         0.0,1.0,0.0,0.0,0.0,
+     *         0.0,0.0,1.0,0.0,0.0,
+     *         0.0,0.0,1.0,0.0,0.0,
+     *         0.0,0.0,1.0,0.0,0.0,
+     *         0.0,0.0,0.0,1.0,0.0,
+     *
+     *         0.0,0.0,0.0,1.0,0.0,
+     *         0.0,0.0,0.0,1.0,0.0,
+     *         0.0,0.0,0.0,0.0,1.0,
+     *         0.0,0.0,0.0,0.0,1.0,
+     *         0.0,0.0,0.0,0.0,1.0
+     *       };
+     *
+     * This operator is self-explaining: With a patch size of 5, we have five
+     * coarse grid values along a tangent which are to projected onto 3x5 fine
+     * grid values, as we always split into three. The operators are always
+     * read along the coordinate axes. The left fine grid value has to equal
+     * the left-most coarse grid value. This is the 1 in the first row of the
+     * matrix. The second entry on the fine grid also holds this value. This is
+     * the second line.
      */
     void interpolateHaloLayer_AoS_tensor_product(
       const peano4::datamanagement::FaceMarker& marker,

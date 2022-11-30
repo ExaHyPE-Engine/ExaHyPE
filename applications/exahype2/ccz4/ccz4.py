@@ -74,6 +74,7 @@ if __name__ == "__main__":
 
     SuperClass = None
 
+    print(args.implementation)
     if args.implementation=="fv-global-fixed":
        SuperClass = exahype2.solvers.fv.rusanov.GlobalFixedTimeStep
     if args.implementation=="fv-global-adaptive":
@@ -260,10 +261,10 @@ if __name__ == "__main__":
       def create_action_sets(self):
         SuperClass.create_action_sets(self)
 
-        if SuperClass == exahype2.solvers.rkdg.rusanov.GlobalAdaptiveTimeStep:
-          pass
-        else:
-          self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement.additional_includes += """ 
+        #if SuperClass == exahype2.solvers.rkdg.rusanov.GlobalAdaptiveTimeStep:
+        #  pass
+        #else:
+        self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement.additional_includes += """ 
 #include "../CCZ4Kernels.h"
             """
 
@@ -838,9 +839,9 @@ if __name__ == "__main__":
         path=args.path 
     #path="/cosma5/data/durham/dc-zhan3/bbh-c5-1"
     #path="/cosma6/data/dp004/dc-zhan3/exahype2/sbh-fv3"
-    project.set_output_path(path)
-    probe_point = [-4,-4,0.0]
-    project.add_plot_filter( probe_point,[8.0,8.0,0.01],1 )
+    #project.set_output_path(path)
+    #probe_point = [-4,-4,0.0]
+    #project.add_plot_filter( probe_point,[8.0,8.0,0.01],1 )
 
     project.set_load_balancing("toolbox::loadbalancing::RecursiveSubdivision","(new ::exahype2::LoadBalancingConfiguration(0.98,0))" )
 

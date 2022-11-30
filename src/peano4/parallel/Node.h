@@ -215,6 +215,8 @@ class peano4::parallel::Node {
      * Unfortunately, bitsets do not work properly within the pair type as they
      * seem not to define the comparison operator properly. So I use an int
      * here and wrap it into a bitset whenever necessary.
+     *
+     * @see toString()
      */
     typedef std::pair<int, int > PeriodicBoundaryStackIdentifier;
 
@@ -245,6 +247,8 @@ class peano4::parallel::Node {
      * it in a set.
      */
     static std::set< PeriodicBoundaryStackIdentifier >  getOutputStacksForPeriodicBoundaryExchange(const tarch::la::Vector<TwoPowerD,int>& flags);
+
+    static std::string toString( const std::set< PeriodicBoundaryStackIdentifier >& data );
 
     /**
      * Identify output stack for periodic boundary data written by face

@@ -57,6 +57,26 @@ namespace exahype2 {
     }
 
 
+    static tarch::la::Vector<2,double>  getFaceSize(
+      const tarch::la::Vector<2,double>&  h,
+      int                                 numberOfVolumesPerAxisInPatch
+    )
+    //InlineMethod
+    {
+      return getVolumeSize(h,numberOfVolumesPerAxisInPatch);
+    }
+
+
+    static tarch::la::Vector<3,double>  getFaceSize(
+      const tarch::la::Vector<3,double>&  h,
+      int                                 numberOfVolumesPerAxisInPatch
+    )
+    //InlineMethod
+    {
+      return getVolumeSize(h,numberOfVolumesPerAxisInPatch);
+    }
+
+
     /**
      * In ExaHyPE's Finite Volume setup, a cell hosts a patch of Finite Volumes.
      * When we iterate over these volumes, we typically have to know the centre
@@ -102,6 +122,60 @@ namespace exahype2 {
       for (int d=0; d<3; d++) {
         result(d) += index(d) * volumeSize(d);
       }
+      return result;
+    }
+
+
+    static tarch::la::Vector<2,double>  getFaceCentre(
+      const tarch::la::Vector<2,double>&  x,
+      const tarch::la::Vector<2,double>&  h,
+      int                                 numberOfVolumesPerAxisInPatch,
+      int                                 overlap,
+      int                                 normal,
+      const tarch::la::Vector<2,int>&     index
+    )
+    //InlineMethod
+    {
+      tarch::la::Vector<2,double> volumeSize = getFaceSize(h,numberOfVolumesPerAxisInPatch);
+      tarch::la::Vector<2,double> result;
+
+      for (int d=0; d<2; d++) {
+        if (d==normal) {
+          result(d) = x(d) - overlap * volumeSize(d) + 0.5 * volumeSize(d);
+        }
+        else {
+          result(d) = x(d) - 0.5 * h(d) + 0.5 * volumeSize(d);
+        }
+        result(d) += index(d) * volumeSize(d);
+      }
+
+      return result;
+    }
+
+
+    static tarch::la::Vector<3,double>  getFaceCentre(
+      const tarch::la::Vector<3,double>&  x,
+      const tarch::la::Vector<3,double>&  h,
+      int                                 numberOfVolumesPerAxisInPatch,
+      int                                 overlap,
+      int                                 normal,
+      const tarch::la::Vector<3,int>&     index
+    )
+    //InlineMethod
+    {
+      tarch::la::Vector<3,double> volumeSize = getVolumeSize(h,numberOfVolumesPerAxisInPatch);
+      tarch::la::Vector<3,double> result     = x - 0.5 * h + 0.5 * volumeSize;
+
+      for (int d=0; d<3; d++) {
+        if (d==normal) {
+          result(d) = x(d) - overlap * volumeSize(d) + 0.5 * volumeSize(d);
+        }
+        else {
+          result(d) = x(d) - 0.5 * h(d) + 0.5 * volumeSize(d);
+        }
+        result(d) += index(d) * volumeSize(d);
+      }
+
       return result;
     }
 

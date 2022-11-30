@@ -365,6 +365,18 @@
     return;\
   }
 
+
+#define validateNumericalEqualsWithParams6(actualValue, validValue, param0, param1, param2, param3, param4, param5) if (!testNumericalEquals(actualValue,validValue)) { \
+    _errors++; \
+    _error = true; \
+    std::cerr << "  numerical equality test failed: " << actualValue << " instead of " << validValue << std::endl \
+              << "  file: " << __FILE__ << " \t line: " << __LINE__ << std::endl \
+              << "  statement: " << #actualValue << "=="  << #validValue << std::endl \
+              << "  parameter " << #param0 << "=" << param0 << ", parameter " << #param1 << "=" << param1 << ", parameter " << #param2 << "=" << param2 << ", parameter " << #param3 << "=" << param3 << ", parameter " << #param4 << "=" << param4 << ", parameter " << #param5 << "=" << param5 << std::endl \
+              << "  difference:  " << fabs((actualValue)-(validValue)) << std::endl; \
+    return;\
+  }
+
 /**
  * Macro for validating the (numerical) equality of two Vectors.
  *

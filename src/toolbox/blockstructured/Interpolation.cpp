@@ -1026,12 +1026,11 @@ void toolbox::blockstructured::interpolateHaloLayer_AoS_tensor_product(
   logTraceInWith3Arguments( "interpolateHaloLayer_AoS_tensor_product(...)", marker.toString(), numberOfDoFsPerAxisInPatch, overlap );
 
   const int    normal          = marker.getSelectedFaceNumber() % Dimensions;
-  const int    leftRightOffset = marker.getSelectedFaceNumber() < Dimensions ? 0 : overlap;
 
   dfore(kFine,numberOfDoFsPerAxisInPatch,normal,0) {
-    for (int iFine=leftRightOffset;   iFine<leftRightOffset+overlap;   iFine++) {
+    for (int iFine=0;   iFine<overlap;   iFine++) {
       tarch::la::Vector<Dimensions,int> dest = kFine;
-      dest(normal) = iFine;
+      dest(normal) = (marker.getSelectedFaceNumber() < Dimensions) ? iFine : 2 * overlap - iFine - 1;
 
       int destLinearised = serialiseVoxelIndexInOverlap(
         dest,
@@ -1046,7 +1045,7 @@ void toolbox::blockstructured::interpolateHaloLayer_AoS_tensor_product(
       dfore(kCoarse,numberOfDoFsPerAxisInPatch,normal,0) {
         for (int iCoarse=0;   iCoarse<2*overlap;   iCoarse++) {
           tarch::la::Vector<Dimensions,int> src  = kCoarse;
-          src(normal)  = iCoarse;
+          src(normal)  = (marker.getSelectedFaceNumber() < Dimensions) ?  iCoarse : 2 * overlap - iCoarse - 1;
           int srcLinearised = serialiseVoxelIndexInOverlap(
             src,
             numberOfDoFsPerAxisInPatch, overlap, normal
@@ -1055,13 +1054,15 @@ void toolbox::blockstructured::interpolateHaloLayer_AoS_tensor_product(
           double weight = 1.0;
           for (int d=0; d<Dimensions; d++) {
             if (d==normal) {
-              int col   = marker.getSelectedFaceNumber() < Dimensions ? src(d)  : 2*overlap - src(d)  - 1;
-              int row   = marker.getSelectedFaceNumber() < Dimensions ? dest(d) : 2*overlap - dest(d) - 1;
+              int col   = iCoarse;
+              int row   = iFine;
+
               assertion4(col>=0,row,col,src,dest);
               assertion4(row>=0,row,col,src,dest);
               int index = col + row * 2 * overlap;
               logDebug( "interpolateHaloLayer_AoS_tensor_product(...)", "(" << row << "," << col << ")=" << index << " (normal contribution)");
               weight *= normalInterpolationMatrix1d[ index ];
+              assertion(weight==weight);
             }
             else {
               int col   = src(d);
@@ -1071,6 +1072,7 @@ void toolbox::blockstructured::interpolateHaloLayer_AoS_tensor_product(
               int index = col + row * numberOfDoFsPerAxisInPatch;
               logDebug( "interpolateHaloLayer_AoS_tensor_product(...)", "(" << row << "," << col << ")=" << index << " (tangential contribution)" );
               weight *= tangentialInterpolationMatrix1d[ index ];
+              assertion(weight==weight);
             }
           }
 
