@@ -1030,7 +1030,7 @@ void toolbox::blockstructured::interpolateHaloLayer_AoS_tensor_product(
   dfore(kFine,numberOfDoFsPerAxisInPatch,normal,0) {
     for (int iFine=0;   iFine<overlap;   iFine++) {
       tarch::la::Vector<Dimensions,int> dest = kFine;
-      dest(normal) = (marker.getSelectedFaceNumber() < Dimensions) ? iFine : iFine + overlap;
+      dest(normal) = (marker.getSelectedFaceNumber() < Dimensions) ? iFine : 2 * overlap - iFine - 1;
 
       int destLinearised = serialiseVoxelIndexInOverlap(
         dest,
@@ -1045,7 +1045,7 @@ void toolbox::blockstructured::interpolateHaloLayer_AoS_tensor_product(
       dfore(kCoarse,numberOfDoFsPerAxisInPatch,normal,0) {
         for (int iCoarse=0;   iCoarse<2*overlap;   iCoarse++) {
           tarch::la::Vector<Dimensions,int> src  = kCoarse;
-          src(normal)  = iCoarse;
+          src(normal)  = (marker.getSelectedFaceNumber() < Dimensions) ?  iCoarse : 2 * overlap - iCoarse - 1;
           int srcLinearised = serialiseVoxelIndexInOverlap(
             src,
             numberOfDoFsPerAxisInPatch, overlap, normal
@@ -1054,12 +1054,8 @@ void toolbox::blockstructured::interpolateHaloLayer_AoS_tensor_product(
           double weight = 1.0;
           for (int d=0; d<Dimensions; d++) {
             if (d==normal) {
-              // I'm still not sure if the ordering is correct here. But it is the only
-              // ordering that let the SSInfall experiment run for some time at least.
-              int col   = marker.getSelectedFaceNumber() < Dimensions ?  src(d) : 2*overlap - src(d) - 1;
-              int row   = marker.getSelectedFaceNumber() < Dimensions ?   iFine : overlap   - iFine  - 1;
-//              int col   = iFine;
-//              int row   = iCoarse;
+              int col   = iCoarse;
+              int row   = iFine;
 
               assertion4(col>=0,row,col,src,dest);
               assertion4(row>=0,row,col,src,dest);

@@ -70,7 +70,7 @@ void toolbox::blockstructured::restrictInnerHalfOfHaloLayer_AoS_tensor_product(
       dfore(kFine,numberOfDoFsPerAxisInPatch,normal,0) {
         for (int iFine=0;   iFine<2*overlap;   iFine++) {
           tarch::la::Vector<Dimensions,int> src  = kFine;
-          src(normal) = iFine;
+          src(normal) = ((marker.getSelectedFaceNumber() < Dimensions) xor swapInsideOutside) ? iFine : 2 * overlap - iFine - 1;
           int srcLinearised = serialiseVoxelIndexInOverlap(
             src,
             numberOfDoFsPerAxisInPatch, overlap, normal
@@ -79,12 +79,8 @@ void toolbox::blockstructured::restrictInnerHalfOfHaloLayer_AoS_tensor_product(
           double weight = 1.0;
           for (int d=0; d<Dimensions; d++) {
             if (d==normal) {
-              // I'm still not sure if the ordering is correct here. But it is the only
-              // ordering that let the SSInfall experiment run for some time at least.
-              //int col   = ((marker.getSelectedFaceNumber() < Dimensions) xor swapInsideOutside) ?  iFine : 2 * overlap - iFine - 1;
-              int row   = ((marker.getSelectedFaceNumber() < Dimensions) xor swapInsideOutside) ?  iCoarse : overlap - iCoarse - 1;
               int col   = iFine;
-              //int row   = iCoarse;
+              int row   = iCoarse;
 
               assertion4(col>=0,row,col,src,dest);
               assertion4(row>=0,row,col,src,dest);
@@ -94,7 +90,7 @@ void toolbox::blockstructured::restrictInnerHalfOfHaloLayer_AoS_tensor_product(
 
               int index = col + row * 2 * overlap;
               weight *= normalRestrictionMatrix1d[ index ];
-              logDebug( "restrictInnerHalfOfHaloLayer_AoS_tensor_product(...)", "use normal matrix entry " << row << ", " << row << ", i.e. index " << index << ": " << normalRestrictionMatrix1d[ index ]);
+              logDebug( "restrictInnerHalfOfHaloLayer_AoS_tensor_product(...)", "use normal matrix entry " << row << ", " << col << ", i.e. index " << index << ": " << normalRestrictionMatrix1d[ index ]);
             }
             else {
               assertion( marker.getRelativePositionWithinFatherCell()(d)>=0 );
