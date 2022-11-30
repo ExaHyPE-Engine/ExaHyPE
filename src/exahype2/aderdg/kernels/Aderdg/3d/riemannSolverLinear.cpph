@@ -123,8 +123,8 @@ void riemannSolverLinear(SolverType& solver, double* FL, double* FR,
         std::copy_n(Qdiff,numberOfVariables,gradQ[2]);            
           
         if(useNCP) {
-//          solver.nonConservativeProduct(Qavg, gradQ, ncp);
-          solver.nonConservativeProduct(Qavg, gradQ_vec, ncp_vec);
+          solver.nonConservativeProduct(Qavg, gradQ, ncp);
+//          solver.nonConservativeProduct(Qavg, gradQ_vec, ncp_vec); //changes function signature to correspond to that of the nonlinear kernels, though the functioning still isn't the same
         
           if(useMM){
             solver.multiplyMaterialParameterMatrix(Qavg, ncp);
