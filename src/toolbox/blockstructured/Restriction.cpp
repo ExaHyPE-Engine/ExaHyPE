@@ -79,8 +79,12 @@ void toolbox::blockstructured::restrictInnerHalfOfHaloLayer_AoS_tensor_product(
           double weight = 1.0;
           for (int d=0; d<Dimensions; d++) {
             if (d==normal) {
-              int col   = ((marker.getSelectedFaceNumber() < Dimensions) xor swapInsideOutside) ?  iFine : 2 * overlap - iFine - 1;
+              // I'm still not sure if the ordering is correct here. But it is the only
+              // ordering that let the SSInfall experiment run for some time at least.
+              //int col   = ((marker.getSelectedFaceNumber() < Dimensions) xor swapInsideOutside) ?  iFine : 2 * overlap - iFine - 1;
               int row   = ((marker.getSelectedFaceNumber() < Dimensions) xor swapInsideOutside) ?  iCoarse : overlap - iCoarse - 1;
+              int col   = iFine;
+              //int row   = iCoarse;
 
               assertion4(col>=0,row,col,src,dest);
               assertion4(row>=0,row,col,src,dest);
