@@ -150,7 +150,7 @@ def __compute_restriction_matrices_1d(value, patch_size):
 
 
 def switch_to_FD4_tensor_product_interpolation( solver: CellCenteredFiniteDifferences,
-                                                variant, patch_size ):
+                                                variant ):
   """
   
   This routine accepts the solver object and an identifier object and then
@@ -159,7 +159,7 @@ def switch_to_FD4_tensor_product_interpolation( solver: CellCenteredFiniteDiffer
   Please do not switch the interpolation scheme more than once.
   
   """
-  interp_matrix_T, interp_matrix_N=__compute_interpolation_matrices_1d(variant, patch_size)
+  interp_matrix_T, interp_matrix_N=__compute_interpolation_matrices_1d(variant, solver._patch_size)
   
   solver.add_solver_constants("""static constexpr double  TangentialInterpolationMatrix1d[] = {};\n\n""".format( render_tensor_2( tensor=interp_matrix_T, use_multidimensional_arrays=False ) ) )
   solver.add_solver_constants("""static constexpr double  NormalInterpolationMatrix1d[] = {};\n\n""".format(     render_tensor_2( tensor=interp_matrix_N, use_multidimensional_arrays=False ) ) )
@@ -168,13 +168,13 @@ def switch_to_FD4_tensor_product_interpolation( solver: CellCenteredFiniteDiffer
 
 
 def switch_to_FD4_tensor_product_restriction( solver: CellCenteredFiniteDifferences,
-                                              variant, patch_size ):
+                                              variant):
   """
   
   Consult the docu of switch_to_FD4_tensor_product_interpolation().
   
   """
-  restrict_matrix_T, restrict_matrix_N=__compute_restriction_matrices_1d(variant, patch_size)
+  restrict_matrix_T, restrict_matrix_N=__compute_restriction_matrices_1d(variant, solver._patch_size)
     
   solver.add_solver_constants("""static constexpr double TangentialRestrictionMatrix1d[] = {};\n\n""".format( render_tensor_2( tensor=restrict_matrix_T, use_multidimensional_arrays=False ) ) )
   solver.add_solver_constants("""static constexpr double NormalRestrictionMatrix1d[] = {};\n\n""".format(     render_tensor_2( tensor=restrict_matrix_N, use_multidimensional_arrays=False ) ) )

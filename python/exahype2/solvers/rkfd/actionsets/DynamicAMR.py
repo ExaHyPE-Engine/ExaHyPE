@@ -307,6 +307,12 @@ class DynamicAMR( peano4.toolbox.blockstructured.DynamicAMR):
           ::exahype2::fd::getGridFaceSize( marker.h(), {{DOFS_PER_AXIS}} ),
           true // grid grid is constructed
         );
+        repositories::{{SOLVER_INSTANCE}}.initialCondition(
+          fineGridFace""" + solver._name + """QUpdate.value + serialisedDoF * {{UNKNOWNS}},
+          ::exahype2::fd::getGridFaceCentre( marker.x(), marker.h(), {{DOFS_PER_AXIS}}, {{OVERLAP}}, normal, dof), 
+          ::exahype2::fd::getGridFaceSize( marker.h(), {{DOFS_PER_AXIS}} ),
+          true // grid grid is constructed
+        );
       }
     }
     
@@ -387,7 +393,7 @@ class DynamicAMR( peano4.toolbox.blockstructured.DynamicAMR):
   logTraceOut( "createCell(...)" );
 """
 
-    self._Template_DestroyCell_Core = """
+    self._Template_DestroyCell = """
   logTraceInWith1Argument( "destroyCell(...)", marker.toString() );
 
   ::toolbox::blockstructured::restrictCell_AoS_{{RESTRICTION_SCHEME}}(
