@@ -67,6 +67,15 @@ class Configuration:
         "skx"    : 64,
     }
 
+    # accepted precisions
+
+    validPrecisions = [
+        "float",
+        "double",
+        "long double"
+    ]
+
+
     # set to false to use standard loops instead of libxsmm
     useLibxsmm = True;
     
