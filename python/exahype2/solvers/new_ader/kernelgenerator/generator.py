@@ -43,7 +43,11 @@ def generate_aderdg_kernels(
     architecture="noarch",
     useCERKGuess=False,
     useSplitCK=False,
-    predictorRecompute=False
+    predictorRecompute=False,
+    predictorComputePrecision="double",
+    predictorStoragePrecision="double",
+    correctorComputePrecision="double",
+    correctorStoragePrecision="double" 
     ):
   
   InputConfig = {
@@ -80,7 +84,11 @@ def generate_aderdg_kernels(
     "useSplitCK"            : useSplitCK,
     "useVectPDE"            : useVectPDE,
     "predictorRecompute"    : predictorRecompute,
-    "initialGuess"          : "mixedPicard"
+    "initialGuess"          : "mixedPicard",
+    "predictorComputePrecision": predictorComputePrecision,
+    "predictorStoragePrecision": predictorStoragePrecision,
+    "correctorComputePrecision": correctorComputePrecision,
+    "correctorStoragePrecision": correctorStoragePrecision
   })
   
   control = Controller(InputConfig)

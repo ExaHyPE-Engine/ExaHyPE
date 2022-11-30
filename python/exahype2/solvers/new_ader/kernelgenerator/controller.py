@@ -98,8 +98,12 @@ class Controller:
                 "useSplitCK"            : args["useSplitCK"],
                 "useVectPDE"            : args["useVectPDE"],
                 "predictorRecompute"    : args["predictorRecompute"],
-                "initialGuess"          : "mixedPicard" #TODO JMG put as proper toolkit arg
+                "initialGuess"          : "mixedPicard", #TODO JMG put as proper toolkit arg
                 #"initialGuess"          : "default" #TODO JMG put as proper toolkit arg
+                "predictorComputePrecision": args["predictorComputePrecision"] if "predictorComputePrecision" in args else "double",
+                "predictorStoragePrecision": args["predictorStoragePrecision"] if "predictorStoragePrecision" in args else "double",
+                "correctorComputePrecision": args["correctorComputePrecision"] if "correctorComputePrecision" in args else "double",
+                "correctorStoragePrecision": args["correctorStoragePrecision"] if "correctorStoragePrecision" in args else "double",
             })
             self.config["useSourceOrNCP"] = self.config["useSource"] or self.config["useNCP"]
         elif self.config["kernelType"] == "limiter":
@@ -157,6 +161,9 @@ class Controller:
                raise ValueError("Number of dimensions must be 2 or 3")
             if self.config["nDof"] < 1 or self.config["nDof"] > 15+1: #nDof = order+1
                raise ValueError("Order has to be between 0 and 15 (inclusive)")
+            for key in ["predictorComputePrecision", "predictorStoragePrecision", "correctorComputePrecision", "correctorStoragePrecision"]:
+                if self.config[key] not in Configuration.validPrecisions:
+                    raise ValueError("One of the chosen precisions for storage or calculation was not a valid choise")
         if self.config["kernelType"] == "fv":
             if self.config["finiteVolumesType"] != "musclhancock":
                raise ValueError("Only musclhancock scheme is supported")
@@ -285,6 +292,6 @@ class Controller:
                 " " + str(matmul.alignment_C) + \
                 " " + self.config["architecture"] + \
                 " " + matmul.prefetchStrategy + \
-                " " + matmul.precision
+                " " + matmul.precision #SP (single-precision), DP (double-precision) or l16 (only dense)
             bashCommand = self.config["pathToLibxsmmGemmGenerator"] + commandLineArguments
             subprocess.call(bashCommand.split())
