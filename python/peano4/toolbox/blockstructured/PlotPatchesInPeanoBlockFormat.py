@@ -7,10 +7,11 @@ from peano4.solversteps.ActionSet import ActionSet
 class PlotPatchesInPeanoBlockFormat(ActionSet):
   """
   Very simple plotter that should be used in combination with Patches.
-  At the moment, I only support plain double patches, i.e. you have to 
-  use the default source code generator for your stuff. This plotter 
-  works only for cell patches, i.e. patches associated with faces or 
-  vertices are not supported.
+  Patches with varying datatypes are supported via the "dataType" parameter,
+  but this defaults to doubles. This parameter should contain the C-style-
+  name of the type of the variable in the patch, e.g. float, double, etc.
+  This plotter works only for cell patches, i.e. patches associated with 
+  faces or vertices are not supported.
   
   At the moment, I can only plot one dataset (patch type) per plotter.
   In theory, the underlying Peano plotter however could dump multiple
@@ -18,9 +19,11 @@ class PlotPatchesInPeanoBlockFormat(ActionSet):
   
   Also, this dump expects incoming data to be AoS.
   """
+
+  valid_datatypes = {"float", "double", "long double"}
   
   
-  def __init__(self,filename,patch,dataset_name, description, time_stamp_evaluation, plot_cell_data=True, metadata = "", mapping = [], guard="true", additional_includes="", precision=3):
+  def __init__(self,filename,patch,dataset_name, description, time_stamp_evaluation, plot_cell_data=True, metadata = "", mapping = [], guard="true", additional_includes="", precision=3, dataType="double"):
     """
     
       plot_cell_data: Boolean
@@ -87,7 +90,11 @@ class PlotPatchesInPeanoBlockFormat(ActionSet):
       if i!=patch.dim[0]:
         print( "Error: patch plotter requires patch to have same dimension along all coordinate axes")
 
+    if dataType not in valid_datatypes:
+      raise Exception("Chosen datatype " + datatype + " for plotting of patches is not a recognized choice.")
+
     self.d[ "PRECISION" ]        = precision
+    self.d[ "DATATYPE"  ]        = dataType
     self.d[ "TIMESTAMP" ]        = time_stamp_evaluation
 
 
@@ -154,7 +161,7 @@ class PlotPatchesInPeanoBlockFormat(ActionSet):
     int currentDoF = 0;
   
     dfor(k,{DOFS_PER_AXIS}) {{
-      double* data = fineGridCell{NAME}.value + currentDoF;
+      {DATATYPE}* data = fineGridCell{NAME}.value + currentDoF;
       _dataWriter->plotCell( cellIndex, data );
       cellIndex++;
       currentDoF += {UNKNOWNS};
@@ -182,7 +189,7 @@ class PlotPatchesInPeanoBlockFormat(ActionSet):
     int currentDoF = 0;
   
     dfor(k,{DOFS_PER_AXIS}) {{
-      double* data = fineGridCell{NAME}.value + currentDoF;
+      {DATATYPE}* data = fineGridCell{NAME}.value + currentDoF;
       _dataWriter->plotVertex( vertexIndex, data );
       vertexIndex++;
       currentDoF += {UNKNOWNS};
