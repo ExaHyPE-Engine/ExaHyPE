@@ -28,9 +28,9 @@ parser.add_argument("-c",   "--clean",             dest="clean_temporary_directo
 parser.add_argument("-d",   "--dimensions",        dest="dimensions",     type=int,   default=2,                    help="Spatial dimensions (default 2)" )
 parser.add_argument("-et",  "--end-time",          dest="end_time",
                     type=float, default=0.05,                  help="End of simulation" )
-parser.add_argument("-dt",  "--timestep-size",     dest="timestep_size",  type=float, default=1e-4,                 help="Global timestep size (initial value)" )
+parser.add_argument("-dt",  "--timestep-size",     dest="timestep_size",  type=float, default=1e-5,                 help="Global timestep size (initial value)" )
 parser.add_argument("-cs",  "--cell-size",         dest="cell_size",      type=float, default=0.3,                  help="Cell size (default 0.3)" )
-parser.add_argument("-pd",  "--peano-dir",         dest="peanodir",       default="../../..",                       help="Peano4 directory" )
+parser.add_argument("-pd",  "--peano-dir",         dest="peanodir",       default="../../../..",                    help="Peano4 directory" )
 parser.add_argument("-asserts",  "--asserts",      dest="asserts",        action="store_true", default=False,       help="Switch on assertions" )
 args = parser.parse_args()
 
@@ -57,7 +57,10 @@ particle = swift2.particle.SPHLeapfrogFixedInteractionRadius(name = "MinimalSPH"
                                                              initial_time_step_size = args.timestep_size,
                                                              constant_time_step_size= True,
                                                              swift_project_namespace= project_namespace,
-                                                             is_sph = True
+                                                             is_sph = True,
+                                                             particles_per_cell = 100,
+                                                             min_h = 0.6,
+                                                             max_h = 0.5
                                                              )
 
 # Add particle to the SWIFT project
@@ -73,15 +76,15 @@ domain_size = [ 1, 1, 1 ]
 periodic_boundary_conditions = [False,False,False]          # Periodic BC
 
 project.set_global_simulation_parameters(
-  dimensions,               # dimensions
-  offset,  domain_size,
-  0.1, 
-  args.timestep_size,
-  args.end_time,
-  0.0, 
-  args.end_time/50,                      #args.plot_step_size,   # snapshots
-  periodic_boundary_conditions,
-  8  # plotter precision
+  dimensions            = dimensions,
+  offset                = offset,  
+  domain_size           = domain_size,
+  min_end_time          = args.end_time,
+  max_end_time          = 0.0,
+  first_plot_time_stamp = 0.0, 
+  time_in_between_plots = args.end_time/50, 
+  periodic_BC           = periodic_boundary_conditions,
+  plotter_precision     = 8  # plotter precision
 )
 
 

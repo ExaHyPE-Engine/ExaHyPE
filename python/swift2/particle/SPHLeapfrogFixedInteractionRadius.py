@@ -66,10 +66,17 @@ class SPHLeapfrogFixedInteractionRadius(Particle):
                initial_time_step_size,
                constant_time_step_size,
                swift_project_namespace,
-               is_sph = True,
                sph_flavour = 'minimal',
+               is_sph = True,
+               particles_per_cell = 0, # makes no sense, and should likely be forbidden
+               min_h = 0.3,
+               max_h = 0.3,
                ):
-    super( SPHLeapfrogFixedInteractionRadius , self ).__init__( name )
+    super( SPHLeapfrogFixedInteractionRadius , self ).__init__( name,
+                                                                particles_per_cell,
+                                                                min_h,
+                                                                max_h,
+                                                               )
     
     # Simulation properties
     self.cfl_factor                = cfl_factor
