@@ -142,21 +142,21 @@ not repositories::{{SOLVER_INSTANCE}}.patchCanUseStatelessPDETerms(marker.x(), m
   """     )
 if "fd4" in args.solver:
   patch_size = 5
-  time_order = int(args.solver[2])
+  time_order = int(args.solver[6])
   thesolver = exahype2.solvers.rkfd.fd4.GlobalAdaptiveTimeStep(name                 = solver_name + "FD4", 
-                                                                                   patch_size           = patch_size,
-                                                                                   rk_order             = time_order,
-                                                                                   unknowns             = number_of_unknowns,
-                                                                                   auxiliary_variables  = auxiliary_variables,
-                                                                                   min_meshcell_h       = min_h, 
-                                                                                   max_meshcell_h       = max_h,
-                                                                                   time_step_relaxation = 0.1,
-                                                                                   flux                 = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
-                                                                                   eigenvalues          = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
-                                                                                   source_term          = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
-                                                                                   refinement_criterion = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
-#                                                                                   pde_terms_without_state = args.optimise_stateless
-                                                                                  )
+                                                               patch_size           = patch_size,
+                                                               rk_order             = time_order,
+                                                               unknowns             = number_of_unknowns,
+                                                               auxiliary_variables  = auxiliary_variables,
+                                                               min_meshcell_h       = min_h, 
+                                                               max_meshcell_h       = max_h,
+                                                               time_step_relaxation = 0.1,
+                                                               flux                 = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
+                                                               eigenvalues          = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
+                                                               source_term          = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
+                                                               refinement_criterion = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
+#                                                              pde_terms_without_state = args.optimise_stateless
+                                                               )
   executable_name = executable_name + "-FD4-" + str(patch_size)
   
   thesolver._action_set_postprocess_solution = exahype2.solvers.rkfd.actionsets.CellWisePostprocessSolution(thesolver)
@@ -168,6 +168,9 @@ repositories::{{SOLVER_INSTANCE}}.isLastGridSweepOfTimeStep()
   thesolver._action_set_postprocess_solution.add_postprocessing_kernel( """
     repositories::{{SOLVER_INSTANCE}}.addDensity(volumeX,volumeH,value[0]);  
   """     )
+
+  exahype2.solvers.rkfd.fd4.switch_to_FD4_tensor_product_interpolation( thesolver, "TP_constant" ) 
+  exahype2.solvers.rkfd.fd4.switch_to_FD4_tensor_product_restriction(   thesolver, "TP_inject_normal_extrap" ) 
 if "rk" in args.solver and "dg" in args.solver:
   space_order = int(args.solver[2])
   time_order  = int(args.solver[6])
@@ -232,8 +235,6 @@ if "plot" in args.type:
 else:  
   plot_interval = 0.0
   
-#end_time=0.004
-#plot_interval=0.001
 
 cube_size = 1.0
 project.set_global_simulation_parameters(
@@ -247,10 +248,6 @@ project.set_global_simulation_parameters(
   periodic_BC           = [False, False, False]
 )
 
-tem_interp=["TP_constant","TP_linear_with_linear_extrap_normal_interp"]
-tem_restrict=["TP_inject_normal_extrap","TP_average_normal_extrap"]
-thesolver.set_interpolation_scheme(tem_interp[0])
-thesolver.set_restriction_scheme(tem_restrict[0])
 
 project.set_load_balancing( "toolbox::loadbalancing::RecursiveSubdivision", "new ::exahype2::LoadBalancingConfiguration()" )
 project.set_Peano4_installation( args.peanodir, build_mode )

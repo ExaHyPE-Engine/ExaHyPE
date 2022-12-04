@@ -111,9 +111,9 @@ class SubcyclingFixedTimeStep( SingleSweep ):
 
     self._fused_compute_kernel_call_gpu  = create_compute_Riemann_kernel_for_Rusanov(
       self._flux_implementation, self._ncp_implementation, self._source_term_implementation, 
-      compute_max_eigenvalue_of_next_time_step=False, 
-      solver_variant = SolverVariant.Accelerator,
-      kernel_name    = "timeStepWithRusanov_batched_map_static_calls<{{SOLVER_NAME}},{{NUMBER_OF_VOLUMES_PER_AXIS}},{{HALO_SIZE}}, {{NUMBER_OF_UNKNOWNS}}, {{NUMBER_OF_AUXILIARY_VARIABLES}}, ::exahype2::enumerator::AoSLexicographicEnumerator>"
+      compute_max_eigenvalue_of_next_time_step = False, 
+      solver_variant                           = SolverVariant.Accelerator,
+      kernel_name                              = "timeStepWithRusanov_generic_static_calls<{{SOLVER_NAME}},{{NUMBER_OF_VOLUMES_PER_AXIS}},{{HALO_SIZE}}, {{NUMBER_OF_UNKNOWNS}}, {{NUMBER_OF_AUXILIARY_VARIABLES}}, ::exahype2::enumerator::AoSLexicographicEnumerator>"
     )
 
     solver_code_snippets = FixedSubcyclingTimeSteppingCodeSnippets(self._time_step_size,False,True)

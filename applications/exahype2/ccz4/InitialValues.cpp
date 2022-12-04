@@ -124,6 +124,7 @@ void applications::exahype2::ccz4::flat(
   Q[0]  = 1.0 ;          //\tilde(\gamma)_xx
   Q[3]  = 1.0  ;          //\tilde(\gamma)_yy
   Q[5]  = 1.0                            ;    //\tilde(\gamma)_zz
+  Q[16] = 1.0;
   Q[54] = 1.0;          //\phi
 }
 

@@ -110,7 +110,7 @@ void peano4::parallel::tests::NodeTest::testGetOutputStacksForPeriodicBoundaryEx
   flags(0) = 0;
 
   std::set< peano4::parallel::Node::PeriodicBoundaryStackIdentifier > result = peano4::parallel::Node::getOutputStacksForPeriodicBoundaryExchange(flags);
-  validateEqualsWithParams1( result.size(), 7, flags );
+  validateEqualsWithParams3( result.size(), 7, flags, peano4::parallel::Node::toString(result), "expected output={(stack=9,bnd=111),(stack=10,bnd=110),(stack=12,bnd=101),(stack=13,bnd=100),(stack=18,bnd=011),(stack=19,bnd=010),(stack=21,bnd=001)}" );
   #endif
 }
 

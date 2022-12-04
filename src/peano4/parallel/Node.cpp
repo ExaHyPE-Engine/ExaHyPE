@@ -273,6 +273,26 @@ int  peano4::parallel::Node::getOutputStackForPeriodicBoundaryExchange(int faceN
 }
 
 
+std::string peano4::parallel::Node::toString( const std::set< PeriodicBoundaryStackIdentifier >& data ) {
+  std::ostringstream msg;
+
+  msg << "{";
+  bool firstEntry = true;
+  for (auto& p: data) {
+      if (firstEntry) {
+        firstEntry = false;
+      }
+      else {
+        msg << ",";
+      }
+    msg << "(stack=" << p.first << ",bnd=" << std::bitset<Dimensions>(p.second) << ")";
+  }
+  msg << "}";
+
+  return msg.str();
+}
+
+
 std::set<peano4::parallel::Node::PeriodicBoundaryStackIdentifier> peano4::parallel::Node::getOutputStacksForPeriodicBoundaryExchange(const tarch::la::Vector<TwoPowerD,int>& flags) {
   std::bitset<2*Dimensions> boundaryNumbers = getPeriodicBoundaryNumber(flags);
   logTraceInWith2Arguments( "getOutputStacksForPeriodicBoundaryExchange(...)", flags, boundaryNumbers );

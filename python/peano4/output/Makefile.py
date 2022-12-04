@@ -7,6 +7,7 @@ from .CompileMode import CompileMode
 
 import os
 import re
+import subprocess
 
 
 try:
@@ -26,25 +27,32 @@ class Makefile(object):
 
   @property
   def readme_entry(self):
-    return jinja2.Template( """
+    result_template = jinja2.Template( """
 ## Makefile settings
 
-CXX       = {{CXX}}
-CXXFLAGS  = {{CXXFLAGS}}
-FC        = {{FC}}
-FCFLAGS   = {{FCFLAGS}}
-LDFLAGS   = {{LDFLAGS}}
-GPUOBJS   = {{GPUOBJS}}
-LIBS      = {{LIBS}}
-DIM       = {{DIM}}
+CXX             = {{CXX}}
+CXXFLAGS        = {{CXXFLAGS}}
+FC              = {{FC}}
+FCFLAGS         = {{FCFLAGS}}
+LDFLAGS         = {{LDFLAGS}}
+GPUOBJS         = {{GPUOBJS}}
+LIBS            = {{LIBS}}
+DIM             = {{DIM}}
 CONFIGUREPATH   = {{CONFIGUREPATH}}
 EXECUTABLENAME  = {{EXECUTABLENAME}}
 FORTRAN_MODULES = {{FORTRAN_MODULES}}
 MODE            = {{MODE}}
- 
-Code base configured with
 
-""").render(**self.d) + self.configure_call  
+
+## Compiler version
+
+{{VERSION}}
+
+""")
+    version_string    = subprocess.run([self.d["CXX"], '--version'], stdout=subprocess.PIPE)
+    self.d["VERSION"] = version_string.stdout.decode('utf-8')
+    
+    return result_template.render(**self.d) + self.configure_call  
 
 
   @property
