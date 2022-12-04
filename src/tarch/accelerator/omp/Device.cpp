@@ -1,10 +1,6 @@
 #include "tarch/accelerator/Device.h"
 #include "tarch/compiler/CompilerSpecificSettings.h"
 
-<<<<<<< HEAD
-
-=======
->>>>>>> refs/remotes/origin/p4
 #if defined(GPUOffloadingOMP)
 
 #include <omp.h>
