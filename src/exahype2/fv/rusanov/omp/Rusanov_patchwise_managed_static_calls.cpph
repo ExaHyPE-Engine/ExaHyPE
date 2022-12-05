@@ -26,14 +26,16 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanov_patchwise_managed_static_ca
 
   // The following parameter is a magic number chosen in such a way that it works with our kernel benchmarks.
   // This parameter should be provided by an autotuner rather than being a magic number.
-  #if Dimensions==2
-  static constexpr int MaxNumberOfPossiblePatchEntries = 1024*2*2*2*2;
+  #if Dimensions == 2
+    constexpr int MaxNumberOfPossiblePatchEntries = 1024*2*2*2*2;
   #else
-  static constexpr int MaxNumberOfPossiblePatchEntries = 1024*2;
+    constexpr int MaxNumberOfPossiblePatchEntries = 1024*2;
   #endif
+
   static const TempDataEnumerator FluxHostEnumerator      (MaxNumberOfPossiblePatchEntries, numberOfVolumesPerAxisInPatch,   solversHaloSize, unknowns, 0);
   static const TempDataEnumerator NcpHostEnumerator       (MaxNumberOfPossiblePatchEntries, numberOfVolumesPerAxisInPatch+1, solversHaloSize, unknowns, 0);
   static const TempDataEnumerator EigenvalueHostEnumerator(MaxNumberOfPossiblePatchEntries, numberOfVolumesPerAxisInPatch,   solversHaloSize,        1, 0);
+
   static int currentOffloadedPatches = 0;
   // A + |P| <= |P|_max
   if (currentOffloadedPatches + hostPatchData.numberOfCells <= MaxNumberOfPossiblePatchEntries) {

@@ -61,7 +61,7 @@ namespace exahype2 {
         const tarch::la::Vector<Dimensions,int>&  volumeIndex,
         int unknown
       ) const InlineMethod {
-        if (Dimensions==2) {
+        if constexpr (Dimensions==2) {
           return                         unknown * _numberOfPatches * (_numberOfVolumesPerAxisInPatch+2*_haloSize) * (_numberOfVolumesPerAxisInPatch+2*_haloSize)
                + (patchIndex % _numberOfPatches) *                    (_numberOfVolumesPerAxisInPatch+2*_haloSize) * (_numberOfVolumesPerAxisInPatch+2*_haloSize)
                +      (volumeIndex(1)+_haloSize) *                                                                   (_numberOfVolumesPerAxisInPatch+2*_haloSize)
@@ -84,8 +84,8 @@ namespace exahype2 {
       /**
        * Returns the total size.
        */
-      int size() const {
-        if (Dimensions==2) {
+      int size() const InlineMethod {
+        if constexpr (Dimensions==2) {
           return _numberOfPatches
               * (_numberOfVolumesPerAxisInPatch+2*_haloSize)
               * (_numberOfVolumesPerAxisInPatch+2*_haloSize)

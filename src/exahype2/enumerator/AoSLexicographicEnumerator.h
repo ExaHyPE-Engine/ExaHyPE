@@ -65,7 +65,7 @@ namespace exahype2 {
           const tarch::la::Vector<Dimensions,int>&  volumeIndex,
           int unknown
         ) const InlineMethod {
-          if (Dimensions==2) {
+          if constexpr (Dimensions==2) {
             return (cellIndex % _numberOfCells) * (_numberOfDoFsPerAxisInCell+2*_haloSize) * (_numberOfDoFsPerAxisInCell+2*_haloSize) * (_unknowns+_numberOfAuxiliaryVariables)
                  +      (volumeIndex(1)+_haloSize) *                                                (_numberOfDoFsPerAxisInCell+2*_haloSize) * (_unknowns+_numberOfAuxiliaryVariables)
                  +      (volumeIndex(0)+_haloSize) *                                                                                               (_unknowns+_numberOfAuxiliaryVariables)
@@ -84,8 +84,8 @@ namespace exahype2 {
         std::string toString() const;
         #endif
 
-        int size() const {
-          if (Dimensions==2) {
+        int size() const InlineMethod {
+          if constexpr (Dimensions==2) {
             return _numberOfCells
                 * (_numberOfDoFsPerAxisInCell+2*_haloSize)
                 * (_numberOfDoFsPerAxisInCell+2*_haloSize)
@@ -100,8 +100,8 @@ namespace exahype2 {
           }
         }
 
-        int numberOfDofsPerCell() const {
-          if (Dimensions==2) {
+        int numberOfDofsPerCell() const InlineMethod {
+          if constexpr (Dimensions==2) {
             return (_numberOfDoFsPerAxisInCell+2*_haloSize)
                  * (_numberOfDoFsPerAxisInCell+2*_haloSize);
           }

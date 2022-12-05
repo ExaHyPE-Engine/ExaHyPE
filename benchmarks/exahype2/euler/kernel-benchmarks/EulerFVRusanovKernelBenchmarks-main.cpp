@@ -30,6 +30,7 @@
 #include "config.h"
 #include "tarch/tests/TreeTestCaseCollection.h"
 #include "exahype2/UnitTests.h"
+
 //#ifdef UseFenv
 //#include "tarch/FenvWrapper.h"
 //#endif
@@ -97,7 +98,7 @@ void storeOutcome( const double* Q, const double maxEigenvalue) {
  *
  * @return Tuple of maximum difference and total number of errors.
  */
-std::tuple<double, int> validateOutcome( double* Q, int patchIndex , const double maxEigenvalue) {
+std::tuple<double, int> validateOutcome(double* Q, int patchIndex, const double maxEigenvalue) {
   int index = 0;
   int errors = 0;
   double maxDifference = 0.0;
@@ -175,6 +176,10 @@ void runBenchmarksOnHost(int patches) {
     }
     watch.stop();
 
+    if (currentThread==0) {
+      logInfo("main()", "baseline: "       << watch.getCalendarTime() << " / " << (watch.getCalendarTime()/patches/EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch/EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch/EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch) );
+    }
+
     int errors = 0;
     double maxDifference = 0.0;
     if (Accuracy>0.0) {
@@ -187,12 +192,9 @@ void runBenchmarksOnHost(int patches) {
       }
     }
 
-    if (currentThread==0) {
-      logInfo("main()", "baseline: "       << watch.getCalendarTime() << " / " << (watch.getCalendarTime()/patches/EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch/EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch/EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch) );
-    }
     if (errors > 0) {
-      logError("main()", "max difference of outcome for all patches is " << maxDifference << " (admissible accuracy=" << Accuracy << ")" << " for " << errors << " entries");
-      exit(-1);
+      logError("main()", "max difference of outcome from baseline for all patches is " << maxDifference << " (admissible accuracy=" << Accuracy << ")" << " for " << errors << " entries");
+      std::abort();
     }
   };
 
@@ -230,6 +232,10 @@ void runBenchmarksOnHost(int patches) {
     );
     watch.stop();
 
+    if (currentThread==0) {
+      logInfo("main()", "stateless kernels on host with " << markerName << ": " << watch.getCalendarTime() << " / " << (watch.getCalendarTime()/patches/EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch/EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch/EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch) );
+    }
+
     int errors = 0;
     double maxDifference = 0.0;
     if (Accuracy>0.0) {
@@ -243,12 +249,9 @@ void runBenchmarksOnHost(int patches) {
       }
     }
 
-    if (currentThread==0) {
-      logInfo("main()", "stateless kernels on host with " << markerName << ": " << watch.getCalendarTime() << " / " << (watch.getCalendarTime()/patches/EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch/EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch/EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch) );
-    }
     if (errors > 0) {
-      logError("main()", "max difference of outcome for all patches is " << maxDifference << " (admissible accuracy=" << Accuracy << ")" << " for " << errors << " entries");
-      exit(-1);
+      logError("main()", "max difference of outcome from " << markerName << " for all patches is " << maxDifference << " (admissible accuracy=" << Accuracy << ")" << " for " << errors << " entries");
+      std::abort();
     }
   };
 
@@ -283,10 +286,10 @@ void runBenchmarksOnHost(int patches) {
           ::exahype2::fv::rusanov::timeStepWithRusanov_patchwise_heap_static_calls<EulerFVRusanov,EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch, 1, EulerFVRusanov::NumberOfUnknowns, EulerFVRusanov::NumberOfAuxiliaryVariables,exahype2::enumerator::SoALexicographicEnumerator>,
           "heap, patch-wise, SoA", thread
         );
-        testStatelessVariantOnHost(
+        /*testStatelessVariantOnHost(
           ::exahype2::fv::rusanov::timeStepWithRusanov_patchwise_in_situ_static_calls<EulerFVRusanov,EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch, 1, EulerFVRusanov::NumberOfUnknowns, EulerFVRusanov::NumberOfAuxiliaryVariables>,
           "heap, patch-wise, in-situ", thread
-        );
+        );*/
 
         testStatelessVariantOnHost(
           ::exahype2::fv::rusanov::timeStepWithRusanov_batched_heap_static_calls<EulerFVRusanov,EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch, 1, EulerFVRusanov::NumberOfUnknowns, EulerFVRusanov::NumberOfAuxiliaryVariables,exahype2::enumerator::AoSLexicographicEnumerator>,
@@ -300,10 +303,10 @@ void runBenchmarksOnHost(int patches) {
           ::exahype2::fv::rusanov::timeStepWithRusanov_batched_heap_static_calls<EulerFVRusanov,EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch, 1, EulerFVRusanov::NumberOfUnknowns, EulerFVRusanov::NumberOfAuxiliaryVariables,exahype2::enumerator::SoALexicographicEnumerator>,
           "heap, batched, SoA", thread
         );
-        testStatelessVariantOnHost(
+        /*testStatelessVariantOnHost(
           ::exahype2::fv::rusanov::timeStepWithRusanov_batched_in_situ_static_calls<EulerFVRusanov,EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch, 1, EulerFVRusanov::NumberOfUnknowns, EulerFVRusanov::NumberOfAuxiliaryVariables>,
           "heap, batched, in-situ", thread
-        );
+        );*/
 
 #if defined(SharedOMP)
   }
@@ -319,7 +322,6 @@ void runBenchmarksOnHost(int patches) {
 #else
 #endif
 }
-
 
 void testStatelessVariantOnDevice(
   int                       patches,
@@ -357,6 +359,10 @@ void testStatelessVariantOnDevice(
   );
   watch.stop();
 
+  if (currentThread==0) {
+    logInfo("main()", "stateless kernels on device " << device << " with " << markerName << ": " << watch.getCalendarTime() << " / " << (watch.getCalendarTime()/patches/EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch/EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch/EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch) );
+  }
+
   int errors = 0;
   double maxDifference = 0.0;
   if (Accuracy>0.0) {
@@ -370,15 +376,11 @@ void testStatelessVariantOnDevice(
     }
   }
 
-  if (currentThread==0) {
-    logInfo("main()", "stateless kernels on device " << device << " with " << markerName << ": " << watch.getCalendarTime() << " / " << (watch.getCalendarTime()/patches/EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch/EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch/EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch) );
-  }
   if (errors > 0) {
-    logError("main()", "max difference of outcome for all patches is " << maxDifference << " (admissible accuracy=" << Accuracy << ")" << " for " << errors << " entries");
-    exit(-1);
+    logError("main()", "max difference of outcome from " << markerName << " for all patches is " << maxDifference << " (admissible accuracy=" << Accuracy << ")" << " for " << errors << " entries");
+    std::abort();
   }
 };
-
 
 #if defined(GPUOffloadingSYCL)
 void submitSYCLKernels(int patches, int device, int thread) {
@@ -433,7 +435,6 @@ void submitSYCLKernels(int patches, int device, int thread) {
   }).wait();
 }
 #endif
-
 
 /**
  * This is the heart of the overall benchmark. We first of all invoke
@@ -552,7 +553,6 @@ void runBenchmarksOnDevice(int patches, int device) {
   #endif
 }
 
-
 int main(int argc, char** argv) {
   const int ExitCodeSuccess          = 0;
   const int ExitCodeInvalidArguments = 2;
@@ -576,13 +576,6 @@ int main(int argc, char** argv) {
     logError("main()", "Invalid command line arguments.");
     return ExitCodeInvalidArguments;
   }
-
-  /*repositories::DataRepository::initDatatypes();
-  tarch::tests::TreeTestCaseCollection* unitTests = new tarch::tests::TreeTestCaseCollection("");
-  unitTests->addTestCase( exahype2::getUnitTests() );
-  unitTests->run();
-  tarch::mpi::Rank::abort( 3 );
-  delete unitTests;*/
 
   repositories::startSimulation();
 
@@ -617,9 +610,7 @@ int main(int argc, char** argv) {
     for (int device=0; device<tarch::accelerator::Device::getInstance().getNumberOfDevices(); device++) {
       std::stringstream msg;
       msg << "benchmark-" << patches << "-" << device;
-
       otterPhaseSwitch( msg.str().c_str() );
-
       runBenchmarksOnDevice(patches,device);
     }
   }

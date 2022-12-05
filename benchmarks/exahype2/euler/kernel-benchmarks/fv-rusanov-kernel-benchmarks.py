@@ -19,12 +19,17 @@ parser.add_argument("-pd",  "--peano-dir",         dest="peanodir",       defaul
 parser.add_argument("-v",   "--verbose",           dest="verbose",        action="store_true", default=False, help="Verbose")
 parser.add_argument(        "--debug",             dest="debug"  ,        action="store_true", default=False, help="Verbose")
 parser.add_argument("-ps",  "--patch-size",        dest="patch_size",     type=int, default=17, help="Number of finite volumes per axis (dimension) per patch")
-parser.add_argument("-a",   "--accuracy",          dest="accuracy",       type=float, default=0.0, help="Floating point accuracy to which the different kernel variants have to match (absolute). Pass in 0 to disable correctness check.")
+parser.add_argument("-a",   "--accuracy",          dest="accuracy",       type=float, default=0.0, help="Floating point accuracy to which the different kernel variants have to match (absolute). Pass in 0 to disable correctness check. Pass in values < 0 to use machine epsilon.")
 args = parser.parse_args()
 
 if args.dim not in [2,3]:
     print("Number of dimensions must be 2 or 3, but you supplied {}".format(args.dim))
     sys.exit(1)
+
+accuracy = args.accuracy
+if(args.accuracy < 0):
+  import numpy
+  accuracy = default=numpy.finfo(float).eps
 
 dimensions = args.dim
 project = exahype2.Project( ["benchmarks", "exahype2", "euler"], "EulerFVRusanovKernelBenchmarks", ".", executable="kernel-benchmark-fv-" + str(args.dim) + "d-patch-size-"+ str(args.patch_size) )
@@ -77,7 +82,7 @@ project.set_load_balancing( "toolbox::loadbalancing::RecursiveSubdivision", "new
 project.set_Peano4_installation( args.peanodir, build_mode )
 
 peano4_project = project.generate_Peano4_project(args.verbose)
-peano4_project.constants.export_const_with_type( "Accuracy", str(args.accuracy), "double" )
+peano4_project.constants.export_const_with_type( "Accuracy", str(accuracy), "double" )
 peano4_project.output.makefile.add_cpp_file( "../../../../applications/exahype2/euler/EulerKernels.cpp" )
 peano4_project.output.makefile.add_header_search_path( "../../../../applications/exahype2/euler" )
 peano4_project.generate()
