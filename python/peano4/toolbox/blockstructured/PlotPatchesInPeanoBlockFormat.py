@@ -19,10 +19,7 @@ class PlotPatchesInPeanoBlockFormat(ActionSet):
   
   Also, this dump expects incoming data to be AoS.
   """
-
-  valid_datatypes = {"float", "double", "long double"}
-  
-  
+    
   def __init__(self,filename,patch,dataset_name, description, time_stamp_evaluation, plot_cell_data=True, metadata = "", mapping = [], guard="true", additional_includes="", precision=3, dataType="double"):
     """
     
@@ -37,6 +34,9 @@ class PlotPatchesInPeanoBlockFormat(ActionSet):
         points within a reference cube/square. Can be empty alternatively.
          
     """
+
+    valid_datatypes = {"float", "double", "long double"}
+
     self._plot_cell_data           = plot_cell_data
     
     self.d = {}
