@@ -595,7 +595,7 @@ int main(int argc, char** argv) {
   #if Dimensions==2
   for (int patches=1; patches<=1024*2*2*2*2; patches*=2) {
   #else
-  for (int patches=1; patches<=1024*2; patches*=2) {
+  for (int patches=1; patches<=1024; patches*=2) {
   #endif
     std::stringstream msg;
     msg << "benchmark-" << patches << "-host";

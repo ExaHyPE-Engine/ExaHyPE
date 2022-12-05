@@ -29,12 +29,8 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanov_patchwise_managed_static_ca
   #if Dimensions == 2
     constexpr int MaxNumberOfPossiblePatchEntries = 1024*2*2*2*2;
   #else
-    constexpr int MaxNumberOfPossiblePatchEntries = 1024*2;
+    constexpr int MaxNumberOfPossiblePatchEntries = 1024;
   #endif
-
-  static const TempDataEnumerator FluxHostEnumerator      (MaxNumberOfPossiblePatchEntries, numberOfVolumesPerAxisInPatch,   solversHaloSize, unknowns, 0);
-  static const TempDataEnumerator NcpHostEnumerator       (MaxNumberOfPossiblePatchEntries, numberOfVolumesPerAxisInPatch+1, solversHaloSize, unknowns, 0);
-  static const TempDataEnumerator EigenvalueHostEnumerator(MaxNumberOfPossiblePatchEntries, numberOfVolumesPerAxisInPatch,   solversHaloSize,        1, 0);
 
   static int currentOffloadedPatches = 0;
   // A + |P| <= |P|_max
@@ -45,9 +41,9 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanov_patchwise_managed_static_ca
 
   exahype2::enumerator::AoSLexicographicEnumerator QInHostEnumerator       (                        1, numberOfVolumesPerAxisInPatch, haloSize, unknowns, auxiliaryVariables);
   exahype2::enumerator::AoSLexicographicEnumerator QOutHostEnumerator      (                        1, numberOfVolumesPerAxisInPatch,        0, unknowns, auxiliaryVariables);
-  TempDataEnumerator fluxHostEnumerator      (hostPatchData.numberOfCells, numberOfVolumesPerAxisInPatch,   solversHaloSize, unknowns, 0);
-  TempDataEnumerator ncpHostEnumerator       (hostPatchData.numberOfCells, numberOfVolumesPerAxisInPatch+1, solversHaloSize, unknowns, 0);
-  TempDataEnumerator eigenvalueHostEnumerator(hostPatchData.numberOfCells, numberOfVolumesPerAxisInPatch,   solversHaloSize,        1, 0);
+  static const TempDataEnumerator FluxHostEnumerator      (MaxNumberOfPossiblePatchEntries, numberOfVolumesPerAxisInPatch,   solversHaloSize, unknowns, 0);
+  static const TempDataEnumerator NcpHostEnumerator       (MaxNumberOfPossiblePatchEntries, numberOfVolumesPerAxisInPatch+1, solversHaloSize, unknowns, 0);
+  static const TempDataEnumerator EigenvalueHostEnumerator(MaxNumberOfPossiblePatchEntries, numberOfVolumesPerAxisInPatch,   solversHaloSize,        1, 0);
 
   double* tempFluxX = tarch::multicore::omp::GPUMemoryManager::getInstance().allocate<double>( FluxHostEnumerator.size(), targetDevice );
   double* tempFluxY = tarch::multicore::omp::GPUMemoryManager::getInstance().allocate<double>( FluxHostEnumerator.size(), targetDevice );
