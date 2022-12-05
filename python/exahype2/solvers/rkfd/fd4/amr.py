@@ -109,18 +109,18 @@ def __compute_restriction_matrices_1d(value, patch_size):
                               Notice we can still do the average for the outmost layer to improve accuracy. 
 
     Tangential:                                                              Normal:
-    0  1  0  0  0  0  0  0  0  0  0  0...                                    6    -5   0    0  0  0  
-    0  0  0  0  1  0  0  0  0  0  0  0...                                    3    -2   0    0  0  0  
-    0  0  0  0  0  0  0  0  0  0  0  0...                                    1/3  1/3  1/3  0  0  0  
+    0  1  0  0  0  0  0  0  0  0  0  0...                                    0  0  0   1/3  1/3  1/3   
+    0  0  0  0  1  0  0  0  0  0  0  0...                                    0  0  0     0    -2   3
+    0  0  0  0  0  0  0  0  0  0  0  0...                                    0  0  0     0    -5   6
     0  0  0  0  0  0  0  1  0  0  0  0...
     ...    
 
     TP_average_normal_extrp: average value in fine cells if possible, but extrapolate along normal direction.
 
     Tangential:                                                              Normal:
-    1/3  1/3  1/3  0    0    0    0    0    0    0    0    0...              6    -5   0    0  0  0 
-    0    0    0    1/3  1/3  1/3  0    0    0    0    0    0...              3    -2   0    0  0  0 
-    0    0    0    0    0    0    1/3  1/3  1/3  0    0    0...              1/3  1/3  1/3  0  0  0  
+    1/3  1/3  1/3  0    0    0    0    0    0    0    0    0...              0  0  0   1/3  1/3  1/3
+    0    0    0    1/3  1/3  1/3  0    0    0    0    0    0...              0  0  0     0    -2   3
+    0    0    0    0    0    0    1/3  1/3  1/3  0    0    0...              0  0  0     0    -5   6  
     0    0    0    0    0    0    0    0    0    1/3  1/3  1/3...
     ...    
 

@@ -718,9 +718,8 @@ if __name__ == "__main__":
     tem_restrict=["TP_inject_normal_extrap","TP_average_normal_extrap"]
     if (args.implementation=="fd4-rk1-adaptive" or args.implementation=="fd4-rk1-fixed" 
       or args.implementation=="fd4-rk4-adaptive" or args.implementation=="fd4-rk4-fixed"):
-      my_solver.set_interpolation_scheme(tem_interp[0])
-      my_solver.set_restriction_scheme(tem_restrict[1])
-          
+      exahype2.solvers.rkfd.fd4.switch_to_FD4_tensor_product_interpolation( my_solver, tem_interp[1] ) 
+      exahype2.solvers.rkfd.fd4.switch_to_FD4_tensor_product_restriction(   my_solver, tem_restrict[1] ) 
     #if args.interpolation=="linear+enforce" or args.interpolation=="linear-slow+enforce":
     #  self.point_wise_postprocessing_of_interpolation = "examples::exahype2::ccz4::enforceCCZ4constraints(targetVolume)" )
     #if args.restriction=="average+enforce" or args.restriction=="inject+enforce":
@@ -839,9 +838,9 @@ if __name__ == "__main__":
         path=args.path 
     #path="/cosma5/data/durham/dc-zhan3/bbh-c5-1"
     #path="/cosma6/data/dp004/dc-zhan3/exahype2/sbh-fv3"
-    #project.set_output_path(path)
-    #probe_point = [-4,-4,0.0]
-    #project.add_plot_filter( probe_point,[8.0,8.0,0.01],1 )
+    project.set_output_path(path)
+    probe_point = [-6,-6,0.0]
+    project.add_plot_filter( probe_point,[12.0,12.0,0.01],1 )
 
     project.set_load_balancing("toolbox::loadbalancing::RecursiveSubdivision","(new ::exahype2::LoadBalancingConfiguration(0.98,0))" )
 
