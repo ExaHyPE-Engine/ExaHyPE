@@ -56,7 +56,7 @@ if(args.time_integrator=='leapfrog'):
                                                                cfl_factor             = 0.2, 
                                                                initial_time_step_size = args.timestep_size,
                                                                particles_per_cell = 0,
-                                                               min_h = 0.1,
+                                                               min_h = args.cell_size,
                                                                max_h = 0.3
                                                              )
 elif(args.time_integrator=='euler' or 'Euler'):
@@ -64,7 +64,7 @@ elif(args.time_integrator=='euler' or 'Euler'):
                                                                cfl_factor             = 0.2, 
                                                                initial_time_step_size = args.timestep_size,
                                                                particles_per_cell = 0,
-                                                               min_h = 0.1,
+                                                               min_h = args.cell_size,
                                                                max_h = 0.3
                                                              )
 
@@ -73,7 +73,7 @@ elif(args.time_integrator=='euler-dynamic' or 'Euler-dynamic'):
                                                                cfl_factor             = 0.2, 
                                                                initial_time_step_size = args.timestep_size,
                                                                particles_per_cell = 0,
-                                                               min_h = 0.1,
+                                                               min_h = args.cell_size,
                                                                max_h = 0.3
                                                              )
 else:
@@ -245,7 +245,7 @@ particle_set = project.add_particle_species( particle )
 # only the earth is given an initial velocity.
 #
 ###############################################################################
-cut_off_radius = 0.01
+cut_off_radius = args.cell_size / 100.0
 initialisation_snippet = """
   /*
    * In this problem we will initialize just a single particle (Earth)
