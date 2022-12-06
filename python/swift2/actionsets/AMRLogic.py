@@ -1,6 +1,11 @@
 # This file is part of the Peano project. For conditions of distribution and
 # use, please see the copyright notice at www.peano-framework.org
 import jinja2
+import peano4
+
+
+from peano4.solversteps            import Steps
+from swift2.actionsets.ParticleAMR import ParticleAMR
 
 
 
@@ -13,7 +18,7 @@ import jinja2
   all particle-particle interactions. If we don't get the mesh right, we 
   might not be optimal in terms of cost. But we are never wrong!
   
-  ## Naive workflow 
+  ## Straightforward workflow 
   
   In principle, SPH's AMR logic is pretty simple in the context of a the dual
   tree with its lifts and drops. The illustration below shows this trivial 
@@ -50,7 +55,7 @@ import jinja2
   five follow-up mesh traversals.
   
   
-  ## Optimised data workflow
+  ## Workflow optimised towards minimal resorting
   
   The optimised workflow accepts that we we are fine to deal with a suboptimal 
   mesh layout, as long as we minimise the number of particle movements. This
@@ -79,9 +84,92 @@ import jinja2
 
 
 """
+def add_mesh_management_optimise_mesh(steps, 
+                                      alter_position,
+                                      species_sets,
+                                      verbose ):
+  """
+  
+  steps: [peano4.solversteps.Step]
+  
+  alter_position: [{True,False}]
+  
+  """
+  if len(steps) != len(alter_position):
+    raise Exception( "number of steps does not equal number of alter_position flags: {} vs {}".format(steps,alter_position) )
+      
+  for i in range(0,len(steps)):
+    if alter_position[i]:
+      if verbose:
+        print( "GRAPH COMPILER DEBUG [add_mesh_management_optimise_mesh]: {}th step alters the particle positions".format(i) )
 
-Ist das Refine-Event static, d.h. wirklich nur einmal da?
-Oder sind das verschiedene Klassen?
-Sollten es nicht sein.
+      steps_to_update_particle_grid_assocation = { (i+0) % len(steps), 
+                                                   (i+1) % len(steps), 
+                                                   (i+3) % len(steps), 
+                                                   (i+4) % len(steps) }
+      if verbose:
+        print( "GRAPH COMPILER DEBUG [add_mesh_management_optimise_mesh]: add peano4.toolbox.particles.UpdateParticleGridAssociation to steps {}".format(steps_to_update_particle_grid_assocation) )
+      for j in steps_to_update_particle_grid_assocation:
+        for current_species_set in species_sets:
+          steps[j].add_action_set(peano4.toolbox.particles.UpdateParticleGridAssociation(current_species_set), append_at_end=True)
 
-Tut das delete wirklich liften?
+      steps_to_update_parallel_state = { (i+1) % len(steps), 
+                                         (i+4) % len(steps) }
+      if verbose:
+        print( "GRAPH COMPILER DEBUG [add_mesh_management_optimise_mesh]: add peano4.toolbox.particles.UpdateParallelState to steps {}".format(steps_to_update_parallel_state) )
+      for j in steps_to_update_parallel_state:
+        for current_species_set in species_sets:
+          steps[j].add_action_set(peano4.toolbox.particles.UpdateParallelState(current_species_set), append_at_end=True)
+
+      steps_to_evaluate_amr = { (i+1) % len(steps) }
+      if verbose:
+        print( "GRAPH COMPILER DEBUG [add_mesh_management_optimise_mesh]: add peano4.toolbox.particles.ParticleTreeAnalysis to steps {}".format(steps_to_evaluate_amr) )
+      for j in steps_to_evaluate_amr:
+        for current_species_set in species_sets:
+          particle_tree_analysis = peano4.toolbox.particles.ParticleTreeAnalysis(current_species_set)
+          steps[j].add_action_set(particle_tree_analysis)
+
+
+      steps_to_realise_amr = { (i+1) % len(steps),
+                               (i+2) % len(steps) }
+      if verbose:
+        print( "GRAPH COMPILER DEBUG [add_mesh_management_optimise_mesh]: swift2.actionsets.ParticleAMR to steps {}".format(steps_to_realise_amr) )
+      for j in steps_to_realise_amr:
+        for current_species_set in species_sets:
+          particle_tree_analysis = peano4.toolbox.particles.ParticleTreeAnalysis(current_species_set)
+          steps[j].add_action_set(ParticleAMR(current_species_set,
+                                                                particle_tree_analysis,
+                                                                min_particles_per_cell=int(current_species_set.particle_model.particles_per_cell/27),
+                                                                max_particles_per_cell=current_species_set.particle_model.particles_per_cell,
+                                                                min_h = current_species_set.particle_model.min_h,
+                                                                max_h = current_species_set.particle_model.max_h
+                                                                ), append_at_end=True)
+
+
+
+
+def add_mesh_management_minimise_resorting(steps,
+                                           alter_position,
+                                           species_sets,
+                                           verbose):
+  """
+  
+  steps: [peano4.solversteps.Step]
+  
+  alter_position: [{True,False}]
+  
+  """
+  if len(steps) != len(alter_position):
+    raise Exception( "number of steps does not equal number of alter_position flags: {} vs {}".format(steps,alter_position) )
+      
+  for i in range(0,len(steps)):
+    pass
+
+
+#Ist das Refine-Event static, d.h. wirklich nur einmal da?
+#Oder sind das verschiedene Klassen?
+#Sollten es nicht sein.
+#Wird AMR auch wirklich geloescht und ruebergerollt? Wo ist Doku, dass es zwei Iterationen sein muessen?
+
+#Tut das delete wirklich liften?
+
