@@ -266,8 +266,8 @@ if args.clean_temporary_directories:
 
 peano4_project.generate( throw_away_data_after_generation=True )
 
-bashCommand = "sed -i 's/g++/h5c++/g' Makefile"
-subprocess.check_output(['bash','-c', bashCommand])
+#bashCommand = "sed -i 's/g++/h5c++/g' Makefile"
+#subprocess.check_output(['bash','-c', bashCommand])
 
 peano4_project.build( make_clean_first = True, number_of_parallel_builds=args.j )
 

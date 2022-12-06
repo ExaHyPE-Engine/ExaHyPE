@@ -94,7 +94,6 @@ class SPHLeapfrogFixedInteractionRadius(Particle):
     self.is_sph = isSPH
                     
     self.sph_flavour = sph_flavour
-    self.declare_sph_particle_attributes()
 
     # SPH parameters (default values)
     self.hydroDimensions = dimensions_hydro
@@ -107,10 +106,11 @@ class SPHLeapfrogFixedInteractionRadius(Particle):
     self.alphaAV = 0.8
     self.betaAV = 3.0
 
-
     # Mantissa size. Can be used for Pawel's clang truncation.
     # Default value corresponds to IEEE doubles.
     self.mantissa_size = 52
+
+    self.declare_sph_particle_attributes()
 
     # Project namespace to have consistent use of exported Constants in kernels
     # Not used right now.
@@ -419,6 +419,7 @@ class SPHLeapfrogFixedInteractionRadius(Particle):
       ),
     ]
 
+
   def declare_sph_particle_attributes(self):
     """
     SPH Hydro particle attributes
@@ -549,15 +550,13 @@ class SPHLeapfrogFixedInteractionRadius(Particle):
     self.hHydroMin = hHydroMin
     self.hHydroMax = hHydroMax
 
-
   """
-  Set mantissa size for doubles and Peano double arrays if we want to use
-  reduced precission via Clang annotations. 
-  As a reference, floats have mantissa size = 23.
+  Set the mantissa size of doubles and Peano double arrays if
+  we want to use reduced precission via Clang annotations. As a reference,
+  floats have mantissa size = 23. 
   """
   def set_mantissa_size(self, mantissa_size):
     self.mantissa_size = mantissa_size
-
 
   """
   Transform namespace into cpp format. Could be used to append namespace to
