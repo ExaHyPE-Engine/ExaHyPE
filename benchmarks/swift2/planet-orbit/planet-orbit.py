@@ -22,7 +22,7 @@ parser.add_argument("-dt",  "--timestep-size",     dest="timestep_size",  type=f
 parser.add_argument("-cs",  "--cell-size",         dest="cell_size",      type=float, default=0.3,                  help="Cell size (default 0.3)" )
 parser.add_argument("-pd",  "--peano-dir",         dest="peanodir",       default="../../..",                       help="Peano4 directory" )
 parser.add_argument("-asserts",  "--asserts",      dest="asserts",        action="store_true", default=False,       help="Switch on assertions" )
-parser.add_argument("-integrator",  "--time-integrator", dest="time_integrator",       default="leapfrog",          help="Type of time integrator to use (default: leapfrog)" )
+parser.add_argument("-integrator",  "--time-integrator", dest="time_integrator",  choices=[ "leapfrog", "euler", "euler-dynamic", "Euler", "Euler-dynamic" ], required=True,   help="Type of time integrator to use (default: leapfrog)" )
 args = parser.parse_args()
 
 
