@@ -35,7 +35,7 @@ tarch::accelerator::Device& tarch::accelerator::Device::getInstance() {
 }
 
 
-void tarch::accelerator::Device::configure() {
+void tarch::accelerator::Device::configure( const std::set<int>& devicesToUse ) {
 }
 
 
