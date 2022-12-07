@@ -9,6 +9,7 @@ import os
 import sys
 
 from swift2.particle.Particle         import Particle
+from swift2.actionsets.DynamicMeshRefinementAnalysis import DynamicMeshRefinementAnalysis
 from swift2.graphcompiler.Sequential  import serialise_and_map_onto_separate_mesh_traversals
 from swift2.output.SWIFTMain          import SWIFTMain
 
@@ -330,6 +331,7 @@ citation of the original SWIFT paper
       self.algorithm_step_plot.add_action_set(peano4.toolbox.particles.UpdateParticleGridAssociation(current_species_set),False)
       self.algorithm_step_init.add_action_set(peano4.toolbox.particles.UpdateParticleGridAssociation(current_species_set),False)
       self.algorithm_step_sort.add_action_set(peano4.toolbox.particles.UpdateParticleGridAssociation(current_species_set),False)
+      
       self.algorithm_step_plot.add_action_set(peano4.toolbox.particles.UpdateParallelState(current_species_set),False)
       self.algorithm_step_init.add_action_set(peano4.toolbox.particles.UpdateParallelState(current_species_set),False)
       self.algorithm_step_sort.add_action_set(peano4.toolbox.particles.UpdateParallelState(current_species_set),False)
@@ -339,7 +341,7 @@ citation of the original SWIFT paper
 
     ## Make each solver step (incl predefined ones) use the particles and particle sets
     for current_species_set in self._particle_species_set:
-      cell_marker_for_statistics = peano4.toolbox.particles.create_cell_marker(current_species_set.name + "CellStatistics")
+      cell_marker_for_statistics = DynamicMeshRefinementAnalysis.create_cell_marker(current_species_set.name)
       
       self._project.datamodel.add_global_object(current_species_set.particle_model)
       self._project.datamodel.add_vertex(current_species_set)

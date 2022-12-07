@@ -4,8 +4,9 @@ import jinja2
 import peano4
 
 
-from peano4.solversteps            import Steps
-from swift2.actionsets.ParticleAMR import ParticleAMR
+from peano4.solversteps                              import Steps
+from swift2.actionsets.DynamicMeshRefinementAnalysis import DynamicMeshRefinementAnalysis
+from swift2.actionsets.DynamicMeshRefinementTrigger  import DynamicMeshRefinementTrigger
 
 
 
@@ -123,27 +124,23 @@ def add_mesh_management_optimise_mesh(steps,
 
       steps_to_evaluate_amr = { (i+1) % len(steps) }
       if verbose:
-        print( "GRAPH COMPILER DEBUG [add_mesh_management_optimise_mesh]: add peano4.toolbox.particles.ParticleTreeAnalysis to steps {}".format(steps_to_evaluate_amr) )
+        print( "GRAPH COMPILER DEBUG [add_mesh_management_optimise_mesh]: add peano4.toolbox.particles.ParticleTreeAnalysis and swift2.actionsets.DynamicMeshRefinementAnalysis to steps {}".format(steps_to_evaluate_amr) )
       for j in steps_to_evaluate_amr:
         for current_species_set in species_sets:
-          particle_tree_analysis = peano4.toolbox.particles.ParticleTreeAnalysis(current_species_set)
-          steps[j].add_action_set(particle_tree_analysis)
-
-
-      steps_to_realise_amr = { (i+1) % len(steps),
-                               (i+2) % len(steps) }
-      if verbose:
-        print( "GRAPH COMPILER DEBUG [add_mesh_management_optimise_mesh]: swift2.actionsets.ParticleAMR to steps {}".format(steps_to_realise_amr) )
-      for j in steps_to_realise_amr:
-        for current_species_set in species_sets:
-          particle_tree_analysis = peano4.toolbox.particles.ParticleTreeAnalysis(current_species_set)
-          steps[j].add_action_set(ParticleAMR(current_species_set,
-                                                                particle_tree_analysis,
+          steps[j].add_action_set(DynamicMeshRefinementAnalysis(current_species_set,
                                                                 min_particles_per_cell=int(current_species_set.particle_model.particles_per_cell/27),
                                                                 max_particles_per_cell=current_species_set.particle_model.particles_per_cell,
                                                                 min_h = current_species_set.particle_model.min_h,
                                                                 max_h = current_species_set.particle_model.max_h
                                                                 ), append_at_end=True)
+
+
+      steps_to_realise_amr = { (i+2) % len(steps) }
+      if verbose:
+        print( "GRAPH COMPILER DEBUG [add_mesh_management_optimise_mesh]: swift2.actionsets.DynamicMeshRefinementTrigger to steps {}".format(steps_to_realise_amr) )
+      for j in steps_to_realise_amr:
+        for current_species_set in species_sets:
+          steps[j].add_action_set(DynamicMeshRefinementTrigger(), append_at_end=True)
 
 
 
