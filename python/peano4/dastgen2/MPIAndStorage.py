@@ -5,10 +5,10 @@ from dastgen2 import *
 from peano4.datamodel.DoF import DoFAssociation
 
 
-class MPI(object):
+class MPIAndStorage(object):
   """ 
   
-  Represents Peano's MPI aspect injected into a DaStGen model. 
+  Represents Peano's MPI and storage aspect injected into a DaStGen model. 
   
   
   This is an aspect to a DaStGen object, i.e. something that's
@@ -22,19 +22,22 @@ class MPI(object):
     is associated to
   - The aspect lets you embed a data merge operation into the 
     generated data. 
+
+  The aspect also determines how and
+  if we store data or not in Peano. Therefore, it covers more than 
+  solely MPI. Use the store and load attribute to control these 
+  predicates.
+    
   
-  =====
-  Usage
-  =====
+  ## Usage
   
   The instance is to be added to a DaStGen2 model through add_aspect().  
   
   If you want to inject a particular merge code, just set the internal 
   string self.merge_implementation.
+
   
-  ==========
-  Attributes
-  ==========
+  ## Attributes
 
   dof_association: DoFAssociation
     Clarifies which grid entity the underlying datatype is associated
@@ -55,15 +58,24 @@ class MPI(object):
     result = "("
     if self.dof_association==DoFAssociation.Vertex:
       result += "vertex"
-    if self.dof_association==DoFAssociation.Face:
+    elif self.dof_association==DoFAssociation.Face:
       result += "face"
-    if self.dof_association==DoFAssociation.Cell:
+    elif self.dof_association==DoFAssociation.Cell:
       result += "cell"
+    else:
+      result += "not-associated"
+      
     if self.merge_implementation!="":
       result += ",merge-impl="
       result += self.merge_implementation
     else:
       result += ",empty-merge-impl"
+      
+    result += ",store="    + self.store_predicate
+    result += ",load="     + self.load_predicate
+    result += ",send="     + self.send_predicate
+    result += ",receive="  + self.receive_predicate
+      
     result += ")"
     return result
 
@@ -231,22 +243,22 @@ void """ + full_qualified_name + "::merge(peano4::grid::TraversalObserver::SendR
 
 
 bool """ + full_qualified_name + """::receiveAndMerge(const peano4::datamanagement::FaceMarker& marker) {
-  return true;
+  return """ + self.receive_predicate + """;
 }
 
 
 bool """ + full_qualified_name + """::send(const peano4::datamanagement::FaceMarker& marker) {
-  return true;
+  return """ + self.send_predicate + """;
 }
 
 
 bool """ + full_qualified_name + """::storePersistently(const peano4::datamanagement::FaceMarker& marker) {
-  return true;
+  return """ + self.store_predicate + """;
 }
 
 
 bool """ + full_qualified_name + """::loadPersistently(const peano4::datamanagement::FaceMarker& marker) {
-  return true;
+  return """ + self.load_predicate + """;
 }
 """ 
     elif self.dof_association==DoFAssociation.Cell:
@@ -257,22 +269,22 @@ void """ + full_qualified_name + "::merge(peano4::grid::TraversalObserver::SendR
 
 
 bool """ + full_qualified_name + """::receiveAndMerge(const peano4::datamanagement::CellMarker& marker) {
-  return true;
+  return """ + self.receive_predicate + """;
 }
 
 
 bool """ + full_qualified_name + """::send(const peano4::datamanagement::CellMarker& marker) {
-  return true;
+  return """ + self.send_predicate + """;
 }
 
 
 bool """ + full_qualified_name + """::storePersistently(const peano4::datamanagement::CellMarker& marker) {
-  return true;
+  return """ + self.store_predicate + """;
 }
 
 
 bool """ + full_qualified_name + """::loadPersistently(const peano4::datamanagement::CellMarker& marker) {
-  return true;
+  return """ + self.load_predicate + """;
 }
 """      
     elif self.dof_association==DoFAssociation.Generic or self.dof_association==DoFAssociation.Global:
