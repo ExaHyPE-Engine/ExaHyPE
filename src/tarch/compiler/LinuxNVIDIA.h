@@ -32,3 +32,7 @@
  * eat stuff. Therefore we do not define the static keyword here.
  */
 #define KeywordToAvoidDuplicateSymbolsForInlinedFunctions inline
+
+#define PRAGMA_PUSH _Pragma("diag_push")
+#define SILENCE_UNKNOWN_ATTRIBUTE _Pragma("diag_suppress unrecognized_attribute")
+#define PRAGMA_POP _Pragma ("diag_pop")

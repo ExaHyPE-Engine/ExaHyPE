@@ -55,6 +55,8 @@ struct peano4::parallel::StartTraversalMessage {
     
 
     #ifdef Parallel
+    PRAGMA_PUSH
+    SILENCE_UNKNOWN_ATTRIBUTE
     /**
      * Hands out MPI datatype if we work without the LLVM MPI extension.
      * If we work with this additional feature, this is the routine where
@@ -74,7 +76,7 @@ struct peano4::parallel::StartTraversalMessage {
 
     [[clang::map_mpi_datatype]]
     static MPI_Datatype  getGlobalCommunciationDatatype();
-    
+     PRAGMA_POP
     
     /**
      * @return The rank of the sender of an object. It only make ssense to call
@@ -114,14 +116,13 @@ struct peano4::parallel::StartTraversalMessage {
     static void receive(peano4::parallel::StartTraversalMessage& buffer, int source, int tag, std::function<void()> waitFunctor, MPI_Comm communicator );
     #endif
 
-
     std::string toString() const;
   
   private:
+    PRAGMA_PUSH
+    SILENCE_UNKNOWN_ATTRIBUTE
     [[clang::pack_range(0,std::numeric_limits<int>::max())]]  int   _stepIdentifier;
-
-
-
+    PRAGMA_POP
 
     #ifdef Parallel
     private:
@@ -137,10 +138,6 @@ struct peano4::parallel::StartTraversalMessage {
       static MPI_Datatype  Datatype;
       #endif
     #endif
-
-
-
 };
 
 #endif
-  

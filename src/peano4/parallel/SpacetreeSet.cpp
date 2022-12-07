@@ -532,7 +532,7 @@ void peano4::parallel::SpacetreeSet::traverse(peano4::grid::TraversalObserver& o
   }
 
   // I use this boolean flag from time to time to debug the code.
-  const bool runSequentially = false;
+  [[maybe_unused]] const bool runSequentially = false;
 
   logTraceInWith1Argument( "traverse(TraversalObserver&)-primary", primaryTasks.size() );
   tarch::multicore::spawnAndWait( primaryTasks );

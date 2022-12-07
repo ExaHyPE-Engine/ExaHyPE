@@ -44,7 +44,7 @@ double exahype2::aderdg::corrector_adjustSolution_computeMaxEigenvalue_body_AoS(
 
   if ( callMaxEigenvalue ) {
     double lambdaMax = 0.0;
-    for ( int d; d < Dimensions; d++ ) {
+    for ( int d = 0; d < Dimensions; d++ ) {
       lambdaMax = std::max( lambdaMax, maxAbsoluteEigenvalue(Q,x,t,d) );
     }
     return lambdaMax;

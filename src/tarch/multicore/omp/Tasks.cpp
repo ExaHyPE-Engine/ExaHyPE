@@ -16,7 +16,10 @@
 namespace {
   int nonblockingTasksCounter          = 0;
 
+  #if !defined(__NVCOMPILER)
   const int StandardPriority           = 16;
+  #endif
+
   const int BackgroundConsumerPriority = 1;
 
   const std::string BSPConcurrencyLevelStatisticsIdentifier( "tarch::multicore::bsp-concurrency-level" );
@@ -211,10 +214,10 @@ namespace {
           tarch::services::ServiceRepository::getInstance().receiveDanglingMessages();
           int numberOfPendingTasks = tarch::multicore::getNumberOfPendingTasks(threadNumber);
 
-          bool processedSomeTasks = false;
+          //bool processedSomeTasks = false;
           if (numberOfPendingTasks>=fusion.minTasks) {
             tarch::multicore::internal::copyInternalTaskQueuesOverIntoGlobalQueue(threadNumber);
-            processedSomeTasks = tarch::multicore::internal::fusePendingTasks(fusion);
+            //processedSomeTasks = tarch::multicore::internal::fusePendingTasks(fusion);
           }
           else if (numberOfPendingTasks>0) {
             tarch::multicore::internal::processThreadLocalTask(threadNumber);
@@ -222,7 +225,7 @@ namespace {
           else { // no local tasks left over
             tarch::multicore::internal::copyInternalTaskQueuesOverIntoGlobalQueue(threadNumber);
             const int numberOfTasksToProcess = std::max(1,tarch::multicore::getNumberOfPendingTasks(-1)/2);
-            processedSomeTasks = tarch::multicore::processPendingTasks( numberOfTasksToProcess );
+            //processedSomeTasks = tarch::multicore::processPendingTasks( numberOfTasksToProcess );
           }
         }
         ::tarch::logging::Statistics::getInstance().inc( BSPConcurrencyLevelStatisticsIdentifier, -1.0, true );

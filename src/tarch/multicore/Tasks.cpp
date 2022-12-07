@@ -35,9 +35,9 @@ namespace {
   std::vector<NonblockingTasks>        localNonblockingTasks;
   tarch::multicore::BooleanSemaphore   nonblockingTasksSemaphore;
 
-  tarch::multicore::orchestration::Strategy* orchestrationStrategy = tarch::multicore::orchestration::createDefaultStrategy();
+  [[maybe_unused]] tarch::logging::Log _log( "tarch::multicore" );
 
-  tarch::logging::Log _log( "tarch::multicore" );
+  tarch::multicore::orchestration::Strategy* orchestrationStrategy = tarch::multicore::orchestration::createDefaultStrategy();
 
   const std::string BSPConcurrencyLevelStatisticsIdentifier( "tarch::multicore::bsp-concurrency-level" );
   const std::string GlobalPendingTasksStatisticsIdentifier( "tarch::multicore::global-pending-tasks" );
@@ -95,8 +95,9 @@ namespace {
     else return false;
   }
 
+  // Not used in the moment.
 
-  bool mapOnePendingTaskOntoNativeTask() {
+  /*bool mapOnePendingTaskOntoNativeTask() {
     tarch::multicore::Task* myTask = nullptr;
 
     tarch::multicore::Lock lock(nonblockingTasksSemaphore);
@@ -110,13 +111,12 @@ namespace {
       tarch::multicore::native::spawnTask(myTask);
     }
     return myTask!=nullptr;
-  }
-
+  }*/
 
   /**
    * @return Number of processed tasks
    */
-  int processPendingTasksFIFO(int maxTasks) {
+  /*int processPendingTasksFIFO(int maxTasks) {
     NonblockingTasks extractedTasks;
 
     tarch::multicore::Lock lock(nonblockingTasksSemaphore);
@@ -143,7 +143,7 @@ namespace {
     }
 
     return extractedTasks.size();
-  }
+  }*/
 }
 
 
@@ -543,8 +543,6 @@ void tarch::multicore::spawnTask(Task*  task) {
 void tarch::multicore::spawnAndWait(
   const std::vector< Task* >&  tasks
 ) {
-  static tarch::logging::Log _log( "tarch::multicore" );
-
   if (not tasks.empty()) {
     ::tarch::logging::Statistics::getInstance().inc( BSPConcurrencyLevelStatisticsIdentifier, static_cast<int>(tasks.size()), true );
 

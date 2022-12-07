@@ -433,10 +433,10 @@ void exahype2::dg::tests::CellIntegralTest::runDGEuler(){
   }
 
 
-  //* The faces are assembled into one pointer construct for ease of access in the
-  //* next steps. In addition information about whether the faces are at the boundary
-  //* is provided since at the boundary the flux must be computed with boundary values
-  //* instead of using the extrapolated solution from the neighbour.
+  // The faces are assembled into one pointer construct for ease of access in the
+  // next steps. In addition information about whether the faces are at the boundary
+  // is provided since at the boundary the flux must be computed with boundary values
+  // instead of using the extrapolated solution from the neighbour.
   double* QHull[Dimensions*2];
 #if Dimensions==2
   QHull[0] = QLeft;
@@ -733,9 +733,9 @@ void exahype2::dg::tests::CellIntegralTest::runDGElastic(){
 #endif
 
 
-  // *  project data onto opposite face as well to trade with "identical" cell,
-  // *  this essentially simulates the exchange of surface data with the
-  // *  neighbouring cells which Peano would take care of for us normally
+  //   project data onto opposite face as well to trade with "identical" cell,
+  //   this essentially simulates the exchange of surface data with the
+  //   neighbouring cells which Peano would take care of for us normally
   projectVolumetricDataOntoFaces(
     QIn,
     order,
@@ -769,10 +769,10 @@ void exahype2::dg::tests::CellIntegralTest::runDGElastic(){
   }
 
 
-  //* The faces are assembled into one pointer construct for ease of access in the
-  //* next steps. In addition information about whether the faces are at the boundary
-  //* is provided since at the boundary the flux must be computed with boundary values
-  //* instead of using the extrapolated solution from the neighbour.
+  // The faces are assembled into one pointer construct for ease of access in the
+  // next steps. In addition information about whether the faces are at the boundary
+  // is provided since at the boundary the flux must be computed with boundary values
+  // instead of using the extrapolated solution from the neighbour.
   double* QHull[Dimensions*2];
 #if Dimensions==2
   QHull[0] = QLeft;

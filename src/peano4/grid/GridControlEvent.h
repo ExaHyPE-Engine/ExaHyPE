@@ -15,6 +15,7 @@
 #include "tarch/la/Vector.h"
 #include "tarch/mpi/Rank.h"
 #include "tarch/services/ServiceRepository.h"
+#include "tarch/compiler/CompilerSpecificSettings.h"
 #include "peano4/utils/Globals.h"
 #include "peano4/grid/TraversalObserver.h"
 
@@ -70,6 +71,8 @@ struct peano4::grid::GridControlEvent {
     
 
     #ifdef Parallel
+    PRAGMA_PUSH
+    SILENCE_UNKNOWN_ATTRIBUTE
     /**
      * Hands out MPI datatype if we work without the LLVM MPI extension.
      * If we work with this additional feature, this is the routine where
@@ -89,7 +92,7 @@ struct peano4::grid::GridControlEvent {
 
     [[clang::map_mpi_datatype]]
     static MPI_Datatype  getGlobalCommunciationDatatype();
-    
+    PRAGMA_POP
     
     /**
      * @return The rank of the sender of an object. It only make ssense to call
@@ -133,13 +136,13 @@ struct peano4::grid::GridControlEvent {
     std::string toString() const;
   
   private:
+    PRAGMA_PUSH
+    SILENCE_UNKNOWN_ATTRIBUTE
     [[clang::pack]]  RefinementControl   _refinementControl;
     tarch::la::Vector<Dimensions,double>   _offset;
     tarch::la::Vector<Dimensions,double>   _width;
     tarch::la::Vector<Dimensions,double>   _h;
-
-
-
+    PRAGMA_POP
 
     #ifdef Parallel
     private:
@@ -155,10 +158,6 @@ struct peano4::grid::GridControlEvent {
       static MPI_Datatype  Datatype;
       #endif
     #endif
-
-
-
 };
 
 #endif
-  

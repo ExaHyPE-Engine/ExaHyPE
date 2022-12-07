@@ -41,7 +41,7 @@
 
 using namespace benchmarks::exahype2::euler;
 
-static_assert(Accuracy >= std::numeric_limits<double>::epsilon());
+static_assert(Accuracy >= std::numeric_limits<double>::epsilon() || Accuracy == 0.0);
 
 tarch::logging::Log _log("::");
 

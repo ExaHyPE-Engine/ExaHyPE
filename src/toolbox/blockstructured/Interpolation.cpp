@@ -10,7 +10,7 @@
 
 
 namespace {
-  tarch::logging::Log _log( "toolbox::blockstructured" );
+  [[maybe_unused]] tarch::logging::Log _log( "toolbox::blockstructured" );
 
   tarch::multicore::BooleanSemaphore  interpolationMapSemaphore;
 }
