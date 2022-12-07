@@ -67,7 +67,7 @@ def serialise_and_map_onto_separate_mesh_traversals(species_sets,
       #
       if step.dependencies==AlgorithmStep.Dependencies.NEIGHBOURS:
         if verbose:
-          print( "GRAPH COMPILER DEBUG [serialise_and_map_onto_separate_mesh_traversals]: step {} on particle {} uses peano4.toolbox.particles.ParticleParticleInteraction action set".format( step.name, current_species_set.particle_model.name ) )
+          print( "GRAPH COMPILER DEBUG [serialise_and_map_onto_separate_mesh_traversals]: step no {} ({}) on particle {} uses peano4.toolbox.particles.ParticleParticleInteraction action set".format( len(mesh_traversals), step.name, current_species_set.particle_model.name ) )
         new_step.add_action_set(peano4.toolbox.particles.ParticleParticleInteraction(
             particle_set                                           = current_species_set,
             particle_particle_interaction_kernel                   = step.cell_kernel,
@@ -80,7 +80,7 @@ def serialise_and_map_onto_separate_mesh_traversals(species_sets,
           ), append_at_end=True)
       elif step.dependencies==AlgorithmStep.Dependencies.SELF:
         if verbose:
-          print( "GRAPH COMPILER DEBUG [serialise_and_map_onto_separate_mesh_traversals]: step {} on particle {} uses peano4.toolbox.particles.ParticlePerCellUpdate action set".format( step.name, current_species_set.particle_model.name ) )
+          print( "GRAPH COMPILER DEBUG [serialise_and_map_onto_separate_mesh_traversals]: step no {} ({}) on particle {} uses peano4.toolbox.particles.ParticlePerCellUpdate action set".format( len(mesh_traversals), step.name, current_species_set.particle_model.name ) )
         new_step.add_action_set(peano4.toolbox.particles.ParticlePerCellUpdate(
             particle_set                                           = current_species_set,
             particle_cell_update_kernel                            = step.cell_kernel,
