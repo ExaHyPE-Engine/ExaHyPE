@@ -3,9 +3,7 @@
 #ifndef _TARCH_ACCELERATOR_ACCELERATOR_H_
 #define _TARCH_ACCELERATOR_ACCELERATOR_H_
 
-
 #include "tarch/multicore/multicore.h"
-
 
 #if !defined(GPUOffloadingOMP) and !defined(GPUOffloadingSYCL) and !defined(GPUOffloadingCPP)
 #define GPUOffloadingOff
@@ -16,9 +14,7 @@
  */
 #include "tarch/accelerator/sycl/Device.h"
 
-
 namespace tarch {
-
   /**
    * We need an annotation GPUCallableMethod for some targets like HIP. This
    * marker is to be used before the return type is written down. This is different
@@ -33,7 +29,6 @@ namespace tarch {
   #else
     #define GPUCallableMethod
   #endif
-
 
   /**
    * Delegates to std::abort() if no GPU offloading is active. Otherwise is
@@ -53,7 +48,6 @@ namespace tarch {
   void gpuAbort();
   #endif
 
-
   enum class MemoryLocation {
     /**
      * Create data on the heap of the local device. That is, if you run
@@ -66,7 +60,6 @@ namespace tarch {
      */
     ManagedAcceleratorMemory
   };
-
 
   double* allocateMemory(int size, MemoryLocation location);
   void freeMemory(double* data, MemoryLocation location);

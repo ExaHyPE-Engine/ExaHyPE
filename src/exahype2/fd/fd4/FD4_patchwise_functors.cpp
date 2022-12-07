@@ -21,7 +21,7 @@ void exahype2::fd::fd4::timeStep_patchwise_heap_functors(
   NonconservativeProduct  DifferentialSource,
   Source                  AlgebraicSource
 ) {
-  static tarch::logging::Log _log( "exahype2::fd" );
+  /*static tarch::logging::Log _log( "exahype2::fd" );
 
   assertionEquals(haloSize,3);
 
@@ -651,5 +651,5 @@ void exahype2::fd::fd4::timeStep_patchwise_heap_functors(
   if (tempKODissipationX!=nullptr)      tarch::freeMemory(tempKODissipationX,      tarch::MemoryLocation::Heap);
   if (tempKODissipationY!=nullptr)      tarch::freeMemory(tempKODissipationY,      tarch::MemoryLocation::Heap);
   if (tempKODissipationZ!=nullptr)      tarch::freeMemory(tempKODissipationZ,      tarch::MemoryLocation::Heap);
-
+*/
 }

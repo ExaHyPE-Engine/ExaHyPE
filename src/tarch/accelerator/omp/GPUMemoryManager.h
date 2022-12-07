@@ -13,7 +13,7 @@
 #include <vector>
 
 namespace tarch {
-  namespace multicore {
+  namespace accelerator {
     namespace omp {
       class GPUMemoryManager;
     }
@@ -31,7 +31,7 @@ namespace tarch {
  * It seems that memory allocation on GPUs is very slow with most OMP runtimes.
  * Therefore, it is reasonable to manage the GPU memory in the user space.
  */
-class tarch::multicore::omp::GPUMemoryManager {
+class tarch::accelerator::omp::GPUMemoryManager {
   private:
     static tarch::logging::Log          _log;
 
@@ -76,7 +76,7 @@ class tarch::multicore::omp::GPUMemoryManager {
      * @return This pointer is a device pointer, i.e. do not use it on the
      *   host.
      */
-    template< typename T >
+    template <class T>
     T* allocate( int size, int device ) {
       return reinterpret_cast<T*>( allocateRawData(size * static_cast<int>(sizeof(T)), device ) );
     }

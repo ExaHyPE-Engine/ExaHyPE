@@ -2,20 +2,18 @@
 
 #if defined(GPUOffloadingOMP)
 
-
 #include "tarch/Assertions.h"
 #include "tarch/multicore/Lock.h"
+#include "tarch/accelerator/accelerator.h"
 
-tarch::logging::Log  tarch::multicore::omp::GPUMemoryManager::_log( "tarch::multicore::omp::GPUMemoryManager" );
+tarch::logging::Log  tarch::accelerator::omp::GPUMemoryManager::_log( "tarch::accelerator::omp::GPUMemoryManager" );
 
-
-tarch::multicore::omp::GPUMemoryManager& tarch::multicore::omp::GPUMemoryManager::getInstance() {
-  static tarch::multicore::omp::GPUMemoryManager singleton;
+tarch::accelerator::omp::GPUMemoryManager& tarch::accelerator::omp::GPUMemoryManager::getInstance() {
+  static tarch::accelerator::omp::GPUMemoryManager singleton;
   return singleton;
 }
 
-
-void*  tarch::multicore::omp::GPUMemoryManager::allocateRawData( int size, int device, int growth ) {
+void* tarch::accelerator::omp::GPUMemoryManager::allocateRawData( int size, int device, int growth ) {
   tarch::multicore::Lock lock(_semaphore);
 
   assertion1(growth>0, growth);
@@ -51,8 +49,7 @@ void*  tarch::multicore::omp::GPUMemoryManager::allocateRawData( int size, int d
   return result;
 }
 
-
-void tarch::multicore::omp::GPUMemoryManager::free(void* devicePointer, int device) {
+void tarch::accelerator::omp::GPUMemoryManager::free(void* devicePointer, int device) {
   tarch::multicore::Lock lock(_semaphore);
 
   assertion( _deviceMemory.count(device)==1 );
@@ -65,13 +62,11 @@ void tarch::multicore::omp::GPUMemoryManager::free(void* devicePointer, int devi
   _deviceMemory.at(device).freePages.at(size).push_back( devicePointer );
 }
 
-
-tarch::multicore::omp::GPUMemoryManager::~GPUMemoryManager() {
+tarch::accelerator::omp::GPUMemoryManager::~GPUMemoryManager() {
   clear();
 }
 
-
-void tarch::multicore::omp::GPUMemoryManager::clear() {
+void tarch::accelerator::omp::GPUMemoryManager::clear() {
   tarch::multicore::Lock lock(_semaphore);
 
   for (auto& deviceMemory: _deviceMemory) {
