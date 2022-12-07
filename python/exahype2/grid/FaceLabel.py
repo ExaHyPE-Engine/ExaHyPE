@@ -123,7 +123,7 @@ def create_face_label(solver_name):
   result.data.add_attribute( peano4.dastgen2.Peano4DoubleArray("NewTimeStamp","2") )
   result.data.add_attribute( peano4.dastgen2.Peano4DoubleArray("OldTimeStamp","2") )
   
-  result._peano4_aspect.merge_implementation = """
+  result.peano4_mpi_and_storage_aspect.merge_implementation = """
   switch (context) {
     case ::peano4::grid::TraversalObserver::SendReceiveContext::BoundaryExchange:
     case ::peano4::grid::TraversalObserver::SendReceiveContext::PeriodicBoundaryDataSwap:
