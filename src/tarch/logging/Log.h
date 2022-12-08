@@ -41,7 +41,7 @@ namespace tarch {
    { \
       std::ostringstream conv; \
       conv << messageStream; \
-      conv << " (file:" << __FILE__ << ",line:" << __LINE__ << ")"; \
+      conv << " (file:" << __FILE__ << ", line:" << __LINE__ << ")"; \
       _log.debug (methodName, conv.str()); \
    }
 #else
@@ -53,7 +53,7 @@ namespace tarch {
 #define logTraceIn(methodName) \
   { \
     std::ostringstream conv; \
-    conv << "in (file:" << __FILE__ << ",line:" << __LINE__ << ")"; \
+    conv << "in (file:" << __FILE__ << ", line:" << __LINE__ << ")"; \
     _log.traceIn(methodName, conv.str()); \
     _log.indent(true,_log.getTraceInformation(methodName),conv.str()); \
   }
@@ -62,7 +62,7 @@ namespace tarch {
   { \
     std::ostringstream conv; \
     conv << "in:" << #argument0 << ":" << argument0; \
-    conv << " (file:" << __FILE__ << ",line:" << __LINE__ << ")"; \
+    conv << " (file:" << __FILE__ << ", line:" << __LINE__ << ")"; \
     _log.traceIn (methodName, conv.str()); \
     _log.indent(true,_log.getTraceInformation(methodName),conv.str()); \
   }
@@ -72,7 +72,7 @@ namespace tarch {
     std::ostringstream conv; \
     conv << "in:" << #argument0 << ":" << argument0; \
     conv << "," << #argument1 << ":" << argument1; \
-    conv << " (file:" << __FILE__ << ",line:" << __LINE__ << ")"; \
+    conv << " (file:" << __FILE__ << ", line:" << __LINE__ << ")"; \
     _log.traceIn (methodName, conv.str()); \
     _log.indent(true,_log.getTraceInformation(methodName),conv.str()); \
   }
@@ -83,7 +83,7 @@ namespace tarch {
     conv << "in:" << #argument0 << ":" << argument0; \
     conv << "," << #argument1 << ":" << argument1; \
     conv << "," << #argument2 << ":" << argument2; \
-    conv << " (file:" << __FILE__ << ",line:" << __LINE__ << ")"; \
+    conv << " (file:" << __FILE__ << ", line:" << __LINE__ << ")"; \
     _log.traceIn (methodName, conv.str()); \
     _log.indent(true,_log.getTraceInformation(methodName),conv.str()); \
   }
@@ -95,7 +95,7 @@ namespace tarch {
     conv << "," << #argument1 << ":" << argument1; \
     conv << "," << #argument2 << ":" << argument2; \
     conv << "," << #argument3 << ":" << argument3; \
-    conv << " (file:" << __FILE__ << ",line:" << __LINE__ << ")"; \
+    conv << " (file:" << __FILE__ << ", line:" << __LINE__ << ")"; \
     _log.traceIn (methodName, conv.str()); \
     _log.indent(true,_log.getTraceInformation(methodName),conv.str()); \
   }
@@ -108,7 +108,7 @@ namespace tarch {
     conv << "," << #argument2 << ":" << argument2; \
     conv << "," << #argument3 << ":" << argument3; \
     conv << "," << #argument4 << ":" << argument4; \
-    conv << " (file:" << __FILE__ << ",line:" << __LINE__ << ")"; \
+    conv << " (file:" << __FILE__ << ", line:" << __LINE__ << ")"; \
     _log.traceIn (methodName, conv.str()); \
     _log.indent(true,_log.getTraceInformation(methodName),conv.str()); \
   }
@@ -122,7 +122,7 @@ namespace tarch {
     conv << "," << #argument3 << ":" << argument3; \
     conv << "," << #argument4 << ":" << argument4; \
     conv << "," << #argument5 << ":" << argument5; \
-    conv << " (file:" << __FILE__ << ",line:" << __LINE__ << ")"; \
+    conv << " (file:" << __FILE__ << ", line:" << __LINE__ << ")"; \
     _log.traceIn (methodName, conv.str()); \
     _log.indent(true,_log.getTraceInformation(methodName),conv.str()); \
   }
@@ -137,7 +137,7 @@ namespace tarch {
     conv << "," << #argument4 << ":" << argument4; \
     conv << "," << #argument5 << ":" << argument5; \
     conv << "," << #argument6 << ":" << argument6; \
-    conv << " (file:" << __FILE__ << ",line:" << __LINE__ << ")"; \
+    conv << " (file:" << __FILE__ << ", line:" << __LINE__ << ")"; \
     _log.traceIn (methodName, conv.str()); \
     _log.indent(true,_log.getTraceInformation(methodName),conv.str()); \
   }
@@ -153,7 +153,7 @@ namespace tarch {
     conv << "," << #argument5 << ":" << argument5; \
     conv << "," << #argument6 << ":" << argument6; \
     conv << "," << #argument7 << ":" << argument7; \
-    conv << " (file:" << __FILE__ << ",line:" << __LINE__ << ")"; \
+    conv << " (file:" << __FILE__ << ", line:" << __LINE__ << ")"; \
     _log.traceIn (methodName, conv.str()); \
     _log.indent(true,_log.getTraceInformation(methodName),conv.str()); \
   }
@@ -170,7 +170,7 @@ namespace tarch {
     conv << "," << #argument6 << ":" << argument6; \
     conv << "," << #argument7 << ":" << argument7; \
     conv << "," << #argument8 << ":" << argument8; \
-    conv << " (file:" << __FILE__ << ",line:" << __LINE__ << ")"; \
+    conv << " (file:" << __FILE__ << ", line:" << __LINE__ << ")"; \
     _log.traceIn (methodName, conv.str()); \
     _log.indent(true,_log.getTraceInformation(methodName),conv.str()); \
   }
@@ -178,7 +178,7 @@ namespace tarch {
 #define logTraceOut(methodName) \
   { \
     std::ostringstream conv; \
-    conv << "out (file:" << __FILE__ << ",line:" << __LINE__ << ")"; \
+    conv << "out (file:" << __FILE__ << ", line:" << __LINE__ << ")"; \
     _log.indent(false,_log.getTraceInformation(methodName),conv.str()); \
     _log.traceOut (methodName, conv.str()); \
   }
@@ -187,7 +187,7 @@ namespace tarch {
   { \
     std::ostringstream conv; \
     conv << "out:" << #argument0 << ":" << argument0; \
-    conv << " (file:" << __FILE__ << ",line:" << __LINE__ << ")"; \
+    conv << " (file:" << __FILE__ << ", line:" << __LINE__ << ")"; \
     _log.indent(false,_log.getTraceInformation(methodName),conv.str()); \
     _log.traceOut (methodName, conv.str()); \
   }
@@ -197,7 +197,7 @@ namespace tarch {
     std::ostringstream conv; \
     conv << "out:" << #argument0 << ":" << argument0; \
     conv << "," << #argument1 << ":" << argument1; \
-    conv << " (file:" << __FILE__ << ",line:" << __LINE__ << ")"; \
+    conv << " (file:" << __FILE__ << ", line:" << __LINE__ << ")"; \
     _log.indent(false,_log.getTraceInformation(methodName),conv.str()); \
     _log.traceOut (methodName, conv.str()); \
   }
@@ -208,7 +208,7 @@ namespace tarch {
     conv << "out:" << #argument0 << ":" << argument0; \
     conv << "," << #argument1 << ":" << argument1; \
     conv << "," << #argument2 << ":" << argument2; \
-    conv << " (file:" << __FILE__ << ",line:" << __LINE__ << ")"; \
+    conv << " (file:" << __FILE__ << ", line:" << __LINE__ << ")"; \
     _log.indent(false,_log.getTraceInformation(methodName),conv.str()); \
     _log.traceOut (methodName, conv.str()); \
   }
@@ -220,7 +220,7 @@ namespace tarch {
     conv << "," << #argument1 << ":" << argument1; \
     conv << "," << #argument2 << ":" << argument2; \
     conv << "," << #argument3 << ":" << argument3; \
-    conv << " (file:" << __FILE__ << ",line:" << __LINE__ << ")"; \
+    conv << " (file:" << __FILE__ << ", line:" << __LINE__ << ")"; \
     _log.indent(false,_log.getTraceInformation(methodName),conv.str()); \
     _log.traceOut (methodName, conv.str()); \
   }
@@ -233,7 +233,7 @@ namespace tarch {
     conv << "," << #argument2 << ":" << argument2; \
     conv << "," << #argument3 << ":" << argument3; \
     conv << "," << #argument4 << ":" << argument4; \
-    conv << " (file:" << __FILE__ << ",line:" << __LINE__ << ")"; \
+    conv << " (file:" << __FILE__ << ", line:" << __LINE__ << ")"; \
     _log.indent(false,_log.getTraceInformation(methodName),conv.str()); \
     _log.traceOut (methodName, conv.str()); \
   }
@@ -247,7 +247,7 @@ namespace tarch {
     conv << "," << #argument3 << ":" << argument3; \
     conv << "," << #argument4 << ":" << argument4; \
     conv << "," << #argument5 << ":" << argument5; \
-    conv << " (file:" << __FILE__ << ",line:" << __LINE__ << ")"; \
+    conv << " (file:" << __FILE__ << ", line:" << __LINE__ << ")"; \
     _log.indent(false,_log.getTraceInformation(methodName),conv.str()); \
     _log.traceOut (methodName, conv.str()); \
   }
@@ -262,7 +262,7 @@ namespace tarch {
     conv << "," << #argument4 << ":" << argument4; \
     conv << "," << #argument5 << ":" << argument5; \
     conv << "," << #argument6 << ":" << argument6; \
-    conv << " (file:" << __FILE__ << ",line:" << __LINE__ << ")"; \
+    conv << " (file:" << __FILE__ << ", line:" << __LINE__ << ")"; \
     _log.indent(false,_log.getTraceInformation(methodName),conv.str()); \
     _log.traceOut (methodName, conv.str()); \
   }
@@ -279,7 +279,7 @@ namespace tarch {
     conv << "," << #argument5 << ":" << argument5; \
     conv << "," << #argument6 << ":" << argument6; \
     conv << "," << #argument7 << ":" << argument7; \
-    conv << " (file:" << __FILE__ << ",line:" << __LINE__ << ")"; \
+    conv << " (file:" << __FILE__ << ", line:" << __LINE__ << ")"; \
     _log.indent(false,_log.getTraceInformation(methodName),conv.str()); \
     _log.traceOut (methodName, conv.str()); \
   }
@@ -299,7 +299,7 @@ namespace tarch {
     conv << "," << #argument9  << ":" << argument9; \
     conv << "," << #argument10 << ":" << argument10; \
     conv << "," << #argument11 << ":" << argument11; \
-    conv << " (file:" << __FILE__ << ",line:" << __LINE__ << ")"; \
+    conv << " (file:" << __FILE__ << ", line:" << __LINE__ << ")"; \
     _log.indent(false,_log.getTraceInformation(methodName),conv.str()); \
     _log.traceOut (methodName, conv.str()); \
   }
@@ -357,7 +357,7 @@ namespace tarch {
 
 #define logExceptionAndQuit(exception) \
   { \
-    std::cerr << std::string("caught exception (file:)") << __FILE__ << std::string(",line:") << __LINE__ << std::string("): ") << std::string(exception.what()); \
+    std::cerr << std::string("caught exception (file:)") << __FILE__ << std::string(", line:") << __LINE__ << std::string("): ") << std::string(exception.what()); \
     exit(-1); \
   }
 
@@ -379,7 +379,7 @@ namespace tarch {
    { \
       std::ostringstream conv; \
       conv << messageStream; \
-      conv << " (file:" << __FILE__ << ",line:" << __LINE__ << ")"; \
+      conv << " (file:" << __FILE__ << ", line:" << __LINE__ << ")"; \
       _log.warning (methodName, conv.str()); \
    }
 
@@ -400,7 +400,7 @@ namespace tarch {
    { \
       std::ostringstream conv; \
       conv << messageStream; \
-      conv << " (file:" << __FILE__ << ",line:" << __LINE__ << ")"; \
+      conv << " (file:" << __FILE__ << ", line:" << __LINE__ << ")"; \
       _log.error (methodName, conv.str()); \
    }
 

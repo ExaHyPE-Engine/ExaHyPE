@@ -13,11 +13,9 @@ ExaHyPE 2 - Euler Finite Volume Rusanov Kernel Benchmarks
 """)
 
 parser = argparse.ArgumentParser(description='ExaHyPE 2 - Euler FV Rusanov Kernel Benchmarking Script')
-parser.add_argument("-j",   "--parallel-builds",   dest="j",              type=int, default=8, help="Parallel builds")
 parser.add_argument("-d",   "--dim",               dest="dim",            type=int, default=2, help="Number of space dimensions")
-parser.add_argument("-pd",  "--peano-dir",         dest="peanodir",       default="../../../../", help="Peano4 directory")
-parser.add_argument("-v",   "--verbose",           dest="verbose",        action="store_true", default=False, help="Verbose")
-parser.add_argument(        "--debug",             dest="debug"  ,        action="store_true", default=False, help="Build in debug mode")
+parser.add_argument("-v",   "--verbose",           dest="verbose",        action="store_true", default=False, help="Verbose mode")
+parser.add_argument(        "--debug",             dest="debug"  ,        action="store_true", default=False, help="Debug mode")
 parser.add_argument(        "--managed-memory",    dest="managed_memory", action="store_true", default=False, help="Use managed memory kernel variants")
 parser.add_argument("-ps",  "--patch-size",        dest="patch_size",     type=int, default=17, help="Number of finite volumes per axis (dimension) per patch")
 parser.add_argument("-a",   "--accuracy",          dest="accuracy",       type=float, default=0.0, help="Floating point accuracy to which the different kernel variants have to match (absolute). Pass in 0 to disable correctness check. Pass in values < 0 to use machine epsilon.")
@@ -80,7 +78,7 @@ project.set_global_simulation_parameters(
 )
 
 project.set_load_balancing( "toolbox::loadbalancing::RecursiveSubdivision", "new ::exahype2::LoadBalancingConfiguration()" )
-project.set_Peano4_installation( args.peanodir, build_mode )
+project.set_Peano4_installation( "../../../../", build_mode )
 
 peano4_project = project.generate_Peano4_project(args.verbose)
 peano4_project.constants.export_constexpr_with_type( "Accuracy", str(accuracy), "double" )
@@ -89,7 +87,9 @@ peano4_project.output.makefile.add_cpp_file( "../../../../applications/exahype2/
 peano4_project.output.makefile.add_header_search_path( "../../../../applications/exahype2/euler" )
 peano4_project.generate()
 os.system( "make clean" )
-if args.j>0:
-  os.system( "make -j{}".format(args.j) )
-else:
-  os.system( "make -j" )
+#if args.j>0:
+#  os.system( "make -j{}".format(args.j) )
+#else:
+#  os.system( "make -j" )
+
+print("Done")
