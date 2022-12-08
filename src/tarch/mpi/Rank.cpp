@@ -278,7 +278,7 @@ void tarch::mpi::Rank::allReduce(
 ) {
   logTraceIn( "allReduce()" );
 
-  if (getNumberOfRanks()>1) {
+//  if (getNumberOfRanks()>1) {
     MPI_Request* request = new MPI_Request();
     MPI_Iallreduce(sendbuf, recvbuf, count, datatype, op, getCommunicator(), request );
 
@@ -308,7 +308,7 @@ void tarch::mpi::Rank::allReduce(
     }
 
     delete request;
-  }
+//  }
 
   logTraceOut( "allReduce()" );
 }
@@ -322,7 +322,7 @@ void tarch::mpi::Rank::reduce(
 ) {
   logTraceIn( "reduce()" );
 
-  if (getNumberOfRanks()>1) {
+//  if (getNumberOfRanks()>1) {
     MPI_Request* request = new MPI_Request();
     MPI_Ireduce(sendbuf, recvbuf, count, datatype, op, root, getCommunicator(), request );
 
@@ -352,7 +352,7 @@ void tarch::mpi::Rank::reduce(
     }
 
     delete request;
-  }
+//  }
 
   logTraceOut( "reduce()" );
 }
