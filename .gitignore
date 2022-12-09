@@ -280,5 +280,3 @@ cython_debug/
 # Misc
 .DS_Store
 /Debug/
-/documentatio.synctex.gz
-/documentation/
