@@ -1,13 +1,11 @@
 // This file is part of the Peano project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
-#ifndef _APPLICATIONS_EULER_EULER_KERNELS_H_
-#define _APPLICATIONS_EULER_EULER_KERNELS_H_
-
+#pragma once
 
 #include "tarch/la/Vector.h"
-#include "peano4/utils/Globals.h"
 #include "tarch/multicore/multicore.h"
 
+#include "peano4/utils/Globals.h"
 
 namespace applications {
   namespace exahype2 {
@@ -27,7 +25,6 @@ namespace applications {
         int                                          numberOfAuxiliaryVariables
       ) InlineMethod;
 
-
       /**
        * Dimension-generic implementation of the max eigenvalue computation
        *
@@ -46,7 +43,6 @@ namespace applications {
         double                                       gamma = 1.4
       ) InlineMethod;
 
-
       /**
        * GPU variant of the max eigenvalue computation
        *
@@ -57,6 +53,9 @@ namespace applications {
        * - It is all in the header to force/enable the compiler to inline stuff
        *   directly and, hence, to generate GPU code.
        */
+      #if defined(GPUOffloadingOMP)
+      #pragma omp declare target
+      #endif
       KeywordToAvoidDuplicateSymbolsForInlinedFunctions double maxEigenvalueOnGPU(
         const double * __restrict__                  Q,
         const tarch::la::Vector<Dimensions,double>&  faceCentre,
@@ -82,7 +81,9 @@ namespace applications {
 
         return result;
       }
-
+      #if defined(GPUOffloadingOMP)
+      #pragma omp end declare target
+      #endif
 
       /**
        * Dimension-generic implementation of the flux computation
@@ -103,7 +104,6 @@ namespace applications {
         double                                       gamma = 1.4
       ) InlineMethod;
 
-
       /**
        * GPU variant of the flux computation
        *
@@ -114,6 +114,9 @@ namespace applications {
        * - It is all in the header to force/enable the compiler to inline stuff
        *   directly and, hence, to generate GPU code.
        */
+      #if defined(GPUOffloadingOMP)
+      #pragma omp declare target
+      #endif
       KeywordToAvoidDuplicateSymbolsForInlinedFunctions void fluxOnGPU(
         const double * __restrict__                  Q,
         const tarch::la::Vector<Dimensions,double>&  faceCentre,
@@ -146,8 +149,9 @@ namespace applications {
         F[3] = coeff*Q[3] + coeff*p;
         #endif
       }
+      #if defined(GPUOffloadingOMP)
+      #pragma omp end declare target
+      #endif
     }
   }
 }
-
-#endif

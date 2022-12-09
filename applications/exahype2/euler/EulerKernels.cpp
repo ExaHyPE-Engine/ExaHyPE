@@ -1,6 +1,7 @@
 #include "EulerKernels.h"
 #include "exahype2/NonCriticalAssertions.h"
 
+#include <iostream>
 
 void applications::exahype2::euler::NeumannBoundaryConditions(
   const double * __restrict__                  Qinside, // Qinside[5+0]
@@ -18,9 +19,6 @@ void applications::exahype2::euler::NeumannBoundaryConditions(
     Qoutside[i] = Qinside[i];
   }
 }
-
-
-#include <iostream>
 
 double ::applications::exahype2::euler::maxEigenvalue(
   const double * __restrict__                  Q,
@@ -57,7 +55,6 @@ double ::applications::exahype2::euler::maxEigenvalue(
   return result;
 }
 
-
 void ::applications::exahype2::euler::flux(
   const double * __restrict__                  Q,
   const tarch::la::Vector<Dimensions,double>&  faceCentre,
@@ -93,4 +90,3 @@ void ::applications::exahype2::euler::flux(
   F[3] = coeff*Q[3] + coeff*p;
   #endif
 }
-

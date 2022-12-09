@@ -1,4 +1,5 @@
 #include "tarch/compiler/CompilerSpecificSettings.h"
+
 #include "exahype2/Solver.h"
 #include "exahype2/fv/PatchUtils.h"
 
@@ -184,7 +185,6 @@ void exahype2::fv::rusanov::internal::copySolutionAndAddSourceTerm_LoopBody(
 #pragma omp end declare target
 #endif
 
-
 #if defined(GPUOffloadingOMP)
 #pragma omp declare target
 #endif
@@ -233,12 +233,11 @@ void exahype2::fv::rusanov::internal::copySolutionAndAddSourceTerm_LoopBody(
       QOutEnumerator(patchIndex, volumeIndex,unknown)
     );
     #endif
-  } 
+  }
 }
 #if defined(GPUOffloadingOMP)
 #pragma omp end declare target
 #endif
-
 
 template <class QInEnumeratorType, class QMaxEigenvalueEnumeratorType>
 void exahype2::fv::rusanov::internal::computeMaxEigenvalue_LoopBody(

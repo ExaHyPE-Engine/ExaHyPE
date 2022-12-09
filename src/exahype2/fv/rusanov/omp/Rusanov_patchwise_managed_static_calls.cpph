@@ -3,8 +3,6 @@
 #include "tarch/accelerator/omp/GPUMemoryManager.h"
 #include "exahype2/fv/rusanov/LoopBody.h"
 
-#include <cstring>
-
 template <
   typename Solver,
   int      numberOfVolumesPerAxisInPatch,

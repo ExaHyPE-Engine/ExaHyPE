@@ -1,15 +1,19 @@
 #include "EulerFVRusanovKernelBenchmarks-main.h"
 #include "Constants.h"
+
 #include "observers/CreateGrid.h"
 #include "observers/CreateGridAndConvergeLoadBalancing.h"
 #include "observers/CreateGridButPostponeRefinement.h"
 #include "observers/InitGrid.h"
 #include "observers/PlotSolution.h"
 #include "observers/TimeStep.h"
+
 #include "repositories/DataRepository.h"
 #include "repositories/SolverRepository.h"
 #include "repositories/StepRepository.h"
+
 #include "tasks/EulerFVRusanovEnclaveTask.h"
+
 #include "tarch/logging/Log.h"
 #include "tarch/logging/Statistics.h"
 #include "tarch/logging/LogFilter.h"
@@ -22,14 +26,12 @@
 
 #include "peano4/peano.h"
 
-#include "toolbox/loadbalancing/loadbalancing.h"
-
 #include "exahype2/NonCriticalAssertions.h"
 #include "exahype2/UserInterface.h"
 
+#include "toolbox/loadbalancing/loadbalancing.h"
+
 #include "config.h"
-#include "tarch/tests/TreeTestCaseCollection.h"
-#include "exahype2/UnitTests.h"
 
 //#ifdef UseFenv
 //#include "tarch/FenvWrapper.h"
@@ -107,8 +109,8 @@ std::tuple<double, int> validateOutcome(double* Q, int patchIndex, const double 
   for (int i=0; i<NumberOfOutputEntries; i++) {
     if (not tarch::la::equals( Q[i], validOutcome[i], Accuracy) ) {
       errors++;
-      std::cout.precision(16);
       if (patchIndex == 0) { // We don't want to mess up the terminal.
+        std::cout.precision(16);
         std::cout << std::fixed << "Q[" << i << "]!=validOutcome[" << i << "]: " << Q[i] << "!=" << validOutcome[i] << std::endl;
       }
     }
