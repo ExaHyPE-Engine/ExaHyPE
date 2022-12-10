@@ -42,6 +42,10 @@ class Particle(DaStGen2):
     self.name = name
     
     self.data.add_attribute( peano4.dastgen2.Peano4DoubleArray("x","Dimensions") )
-    self.data.add_attribute( dastgen2.attributes.Enumeration("ParallelState", ["Local","Virtual"]) )
-    self.data.add_attribute( dastgen2.attributes.Enumeration("NewParallelState", ["Local","Virtual"]) )
+    #
+    # Both states are not to be used by algorithms. They are for the grid management.
+    #
+    self.data.add_attribute( dastgen2.attributes.Enumeration("ParallelState", [ "Local", "Virtual" ]) )
+    self.data.add_attribute( dastgen2.attributes.Enumeration("NewParallelState", [ "Local", "Virtual" ]) )
     self.data.add_attribute( dastgen2.attributes.Double( "cutOffRadius" ) )
+    self.data.add_attribute( dastgen2.attributes.Double( "NewcutOffRadius" ) )
