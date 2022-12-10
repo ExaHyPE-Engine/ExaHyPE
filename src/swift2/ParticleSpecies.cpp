@@ -159,6 +159,6 @@ void swift2::ParticleSpecies::finishTimeStep() {
 
 void swift2::ParticleSpecies::allReduce() {
   #ifdef Parallel
-  assertionMsg(false, "MPI reductions are missing so far");
+//  assertionMsg(false, "MPI reductions are missing so far");
   #endif
 }

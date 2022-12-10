@@ -17,6 +17,7 @@
 #include "peano4/UnitTests.h"
 #include "tarch/UnitTests.h"
 #include "swift2/UnitTests.h"
+#include "toolbox/particles/UnitTests.h"
 
 #include "Constants.h"
 
@@ -358,10 +359,18 @@ int main(int argc, char** argv) {
   tarch::tests::TestCase* swiftTests = swift2::getUnitTests();
   swiftTests->run();
   if (swiftTests->getNumberOfErrors() != 0) {
-    logError("main()", "technical architecture (tarch) unit tests failed. Quit.");
+    logError("main()", "Swift unit tests failed. Quit.");
     exit(ExitCodeUnitTestsFailed);
   }
   delete swiftTests;
+
+  tarch::tests::TestCase* particlesTests = toolbox::particles::getUnitTests();
+  particlesTests->run();
+  if (particlesTests->getNumberOfErrors() != 0) {
+    logError("main()", "toolbox particles unit tests failed. Quit.");
+    exit(ExitCodeUnitTestsFailed);
+  }
+  delete particlesTests;
   #endif
 
   tarch::logging::Statistics::getInstance().clear();

@@ -4,14 +4,14 @@
 #include "tarch/tests/TreeTestCaseCollection.h"
 
 
-#include "toolbox/blockstructured/tests/InterpolationTest.h"
+#include "toolbox/particles/tests/MultiscaleTransitionsTest.h"
 
 
 
-tarch::tests::TestCase* toolbox::blockstructured::getUnitTests() {
-  tarch::tests::TreeTestCaseCollection* result = new tarch::tests::TreeTestCaseCollection("blockstructured");
+tarch::tests::TestCase* toolbox::particles::getUnitTests() {
+  tarch::tests::TreeTestCaseCollection* result = new tarch::tests::TreeTestCaseCollection( "particles" );
 
-  result->addTestCase( new toolbox::blockstructured::tests::InterpolationTest() );
+  result->addTestCase( new toolbox::particles::tests::MultiscaleTransitionsTest() );
 
   return result;
 }
