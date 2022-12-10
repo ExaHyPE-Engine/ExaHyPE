@@ -84,7 +84,7 @@ int __attribute__((optimize("O0"))) toolbox::multiprecision::findMostAgressiveCo
 #ifdef CompilerICC
 void toolbox::multiprecision::decomposeIntoEightVariants(
 #elif defined(CompilerCLANG)
-int __attribute__((optnone)) toolbox::multiprecision::findMostAgressiveCompression(
+void __attribute__((optnone)) toolbox::multiprecision::decomposeIntoEightVariants(
 #else
 void __attribute__((optimize("O0"))) toolbox::multiprecision::decomposeIntoEightVariants(
 #endif
@@ -149,7 +149,7 @@ void __attribute__((optimize("O0"))) toolbox::multiprecision::decomposeIntoEight
 #ifdef CompilerICC
 void toolbox::multiprecision::decompose(
 #elif defined(CompilerCLANG)
-int __attribute__((optnone)) toolbox::multiprecision::findMostAgressiveCompression(
+void __attribute__((optnone)) toolbox::multiprecision::decompose(
 #else
 void __attribute__((optimize("O0"))) toolbox::multiprecision::decompose(
 #endif
