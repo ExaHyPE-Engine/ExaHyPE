@@ -100,6 +100,24 @@ namespace toolbox {
       const peano4::datamanagement::VertexMarker  marker
     );
 
+
+    /**
+     * A particle is to be sieved into a vertex if
+     *
+     * - this vertex is closer to the particle than half the mesh size of
+     *   an adjacent mesh element, as we always store particles next to
+     *   their closest vertex; AND
+     * - this vertex's cut-off radius would not fit into the next finer
+     *   mesh level OR
+     *   there is no next finer mesh level; AND
+     * - the particle's cut-off is not too big for teh current mesh level.
+     *
+     */
+    template <typename Particle>
+    bool sieveParticle(
+      const Particle&                             particle,
+      const peano4::datamanagement::VertexMarker  marker
+    );
   }
 }
 
