@@ -79,7 +79,8 @@ void tarch::services::ServiceRepository::receiveDanglingMessages() {
   smartmpi::chime();
   #endif
 
-  tarch::multicore::processPendingTasks(1);
+  // Don't do such a thing. See docu
+  // tarch::multicore::processPendingTasks(1);
 
   tarch::multicore::RecursiveLock  lock(_receiveDanglingMessagesSemaphore,false);
   if ( lock.tryLock() ) {

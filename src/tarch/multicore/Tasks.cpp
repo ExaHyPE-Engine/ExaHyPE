@@ -589,7 +589,7 @@ void tarch::multicore::internal::copyInternalTaskQueuesOverIntoGlobalQueue(int t
       p.clear();
     }
   }
-  else {
+  else if ( not localNonblockingTasks[threadNumber].empty() ) {
     tarch::multicore::Lock lock(nonblockingTasksSemaphore);
     std::copy(
       localNonblockingTasks[threadNumber].begin(),
