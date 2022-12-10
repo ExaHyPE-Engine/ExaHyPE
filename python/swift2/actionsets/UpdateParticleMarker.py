@@ -55,7 +55,7 @@ class UpdateParticleMarker(ActionSet):
   for (int i=0; i<TwoPowerD; i++) {
     for (auto* particle: fineGridVertices{{PARTICLES_CONTAINER}}(i) ) {
       if ( marker.isContained( particle->getX() ) ) {
-        particle->setCellHasUpdatedParticle(false);
+        particle->setCellHasUpdatedParticle(true);
       }
     }
   }
