@@ -275,10 +275,7 @@ class UpdateParticleGridAssociation(ActionSet):
 
   __Template_Sieve = jinja2.Template("""
   if ( not _sieveParticles.empty() ) {
-    vertexdata::{{PARTICLES_CONTAINER}} sievedParticles = _sieveParticles.getParticlesToBeSievedIntoVertex(
-        marker,
-        1.0+SortingTolerance
-      );
+    vertexdata::{{PARTICLES_CONTAINER}} sievedParticles = _sieveParticles.getParticlesToBeSievedIntoVertex( marker );
       
     _numberOfSieves += sievedParticles.size();
 
