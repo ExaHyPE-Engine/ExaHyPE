@@ -90,10 +90,95 @@ def add_mesh_management_optimise_mesh(steps,
                                       species_sets,
                                       verbose ):
   """
+
+  This implementation puts emphasis that the mesh is always as tighly 
+  adopted to the particles as possible. If necessary, this might mean
+  that we resort the particles multiple times per grid sweep: If they
+  change their position, we resort. But once we have resorted, we might
+  want to change the mesh, which in turn means we have to resort again,
+  as we might have new cells or cells might have been deleted.
   
+  
+  ## Order of action sets
+
+  As so often, the order of the action sets is tremendously important, 
+  as the individual action sets interact with each other. When we 
+  discuss the order here, we may assume that all the function steps
+  aka action sets are already fully implemented and in the right order.
+  
+  The trigger the AMR can be integrated whereever we want within the 
+  pipeline. It simply deploys events, i.e. it is order-agnostic.
+  
+  For the remaining action sets, we observe the following properties:
+  
+  - Mesh analysis: Looks into the cell stats. These are in place, so 
+    it should be one of the last things. The analysis happens in 
+    touchCellLastTime().
+  - UpdateParallelState sets the particle flags in touchCellFirstTime().
+    In the last access to the vertex, it looks at all particles' flags
+    and throws away particles which are virtual. It is iportant that 
+    that flag update happens when all particles are properly in place.
+    The throwing away should be the very last thing, though we can 
+    throw away particles before we move them around if we want.
+  - UpdateAssociation. Should be the very first thing, but should 
+    happen, before we update the state. In principle, the state can
+    also come later, but we might mess up the stats if it comes 
+    before the particle migration: it might count particles multiple 
+    times.
+
+  So we want to have the following lifecycle from a grid's point of
+  view:
+  
+  - touchVertexFirstTime(): 
+    - Sort in the particles from coarser meshes or the global sieve list.
+    - Set their new parallel state to virtual.
+    - Then the user-defined stuff.
+  - touchCellFirstTime():
+    - Mark local particles as local, but it doesn't really matter when
+      this happens.
+  - touchCellLastTime():
+    - User code.
+    - Maintain some mesh statistics.
+  - touchVertexLastTime():
+    - User-defined stuff.
+    - Resort particles (to coarser levels, e.g.).
+    - Throw away virtual (remote) particles and make a note that we've
+      lost a particle to another domain.
+      
+  We finally reiterate that action sets always append, but the order
+  of the action sets refers to the steps down within the tree traversal.
+  When we do the backtracing in the tree, i.e. touch mesh elements for
+  the last time or walk from fine to coarse, the action set order is
+  inverted.
+  
+  So we want to have
+  
+  - update state (we only reset a flag which we can do multiple times)
+    before
+  - update association before
+  - update AMR state (also reset of some helper variables)
+  - user routines
+  
+  throughout the steps dowmn of the mesh traversal and
+  
+  - user routines before
+  - update AMR state
+  - update assocation before
+  - update state
+  
+  throughout the steps up.
+
+  
+  ## Arguments
+    
   steps: [peano4.solversteps.Step]
   
   alter_position: [{True,False}]
+  
+  species_sets: [Species]
+ 
+  verbose: {True, False}
+    Controls how much debug information is dropped.
   
   """
   if len(steps) != len(alter_position):
@@ -104,24 +189,10 @@ def add_mesh_management_optimise_mesh(steps,
       if verbose:
         print( "GRAPH COMPILER DEBUG [add_mesh_management_optimise_mesh]: {}th step alters the particle positions".format(i) )
 
-      steps_to_update_particle_grid_assocation = { (i+0) % len(steps), 
-                                                   (i+1) % len(steps), 
-                                                   (i+3) % len(steps), 
-                                                   (i+4) % len(steps) }
-      if verbose:
-        print( "GRAPH COMPILER DEBUG [add_mesh_management_optimise_mesh]: add peano4.toolbox.particles.UpdateParticleGridAssociation to steps {}".format(steps_to_update_particle_grid_assocation) )
-      for j in steps_to_update_particle_grid_assocation:
-        for current_species_set in species_sets:
-          steps[j].add_action_set(peano4.toolbox.particles.UpdateParticleGridAssociation(current_species_set), append_at_end=True)
-
-      steps_to_update_parallel_state = { (i+1) % len(steps), 
-                                         (i+4) % len(steps) }
-      if verbose:
-        print( "GRAPH COMPILER DEBUG [add_mesh_management_optimise_mesh]: add peano4.toolbox.particles.UpdateParallelState to steps {}".format(steps_to_update_parallel_state) )
-      for j in steps_to_update_parallel_state:
-        for current_species_set in species_sets:
-          steps[j].add_action_set(peano4.toolbox.particles.UpdateParallelState(current_species_set), append_at_end=True)
-
+      #
+      #   AMR
+      # =======
+      #
       steps_to_evaluate_amr = { (i+1) % len(steps) }
       if verbose:
         print( "GRAPH COMPILER DEBUG [add_mesh_management_optimise_mesh]: add peano4.toolbox.particles.ParticleTreeAnalysis and swift2.actionsets.DynamicMeshRefinementAnalysis to steps {}".format(steps_to_evaluate_amr) )
@@ -132,9 +203,39 @@ def add_mesh_management_optimise_mesh(steps,
                                                                 max_particles_per_cell=current_species_set.particle_model.particles_per_cell,
                                                                 min_h = current_species_set.particle_model.min_h,
                                                                 max_h = current_species_set.particle_model.max_h
-                                                                ), append_at_end=True)
+                                                                ), append_at_end=False)
+
+      #
+      #   Association
+      # ==============
+      #
+      steps_to_update_particle_grid_assocation = { (i+0) % len(steps), 
+                                                   (i+1) % len(steps), 
+                                                   (i+3) % len(steps), 
+                                                   (i+4) % len(steps) }
+      if verbose:
+        print( "GRAPH COMPILER DEBUG [add_mesh_management_optimise_mesh]: add peano4.toolbox.particles.UpdateParticleGridAssociation to steps {}".format(steps_to_update_particle_grid_assocation) )
+      for j in steps_to_update_particle_grid_assocation:
+        for current_species_set in species_sets:
+          steps[j].add_action_set(peano4.toolbox.particles.UpdateParticleGridAssociation(current_species_set), append_at_end=False)
+
+      #
+      #   State
+      # =========
+      #          
+      steps_to_update_parallel_state = { (i+1) % len(steps), 
+                                         (i+4) % len(steps) }
+      if verbose:
+        print( "GRAPH COMPILER DEBUG [add_mesh_management_optimise_mesh]: add peano4.toolbox.particles.UpdateParallelState to steps {}".format(steps_to_update_parallel_state) )
+      for j in steps_to_update_parallel_state:
+        for current_species_set in species_sets:
+          steps[j].add_action_set(peano4.toolbox.particles.UpdateParallelState(current_species_set), append_at_end=False)
 
 
+      #
+      #   Realise AMR
+      # ===============
+      #
       steps_to_realise_amr = { (i+2) % len(steps) }
       if verbose:
         print( "GRAPH COMPILER DEBUG [add_mesh_management_optimise_mesh]: swift2.actionsets.DynamicMeshRefinementTrigger to steps {}".format(steps_to_realise_amr) )
