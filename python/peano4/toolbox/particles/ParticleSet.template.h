@@ -56,9 +56,24 @@
       static int _numberOfSieves;
       static int _numberOfAssignmentsToGlobalSieve;
       static int _numberOfReassignments;
-      static int _totalRealParticleCount;
-      static int _totalVirtualParticleCount;
-      static int _totalEliminatedSpatialDuplicates;
+
+      /**
+       * Set by parallel state analysis
+       */
+      static int _numberOfRemainingLocalParticles;
+      static int _numberOfIncomingLocalParticles;
+      static int _numberOfLeavingLocalParticles;
+      
+      /**
+       * Typically updated by boundary merge operations
+       */
+      static int _numberOfMergedVirtualParticles;
+
+      /**
+       * This one is updated internally by eliminateSpatialDuplicates() which you
+       * might call or you might not call.
+       */
+      static int _numberOfEliminatedSpatialDuplicates;
 
       #if PeanoDebug>=1
       private:
@@ -145,6 +160,7 @@
        * @see clone()
        */
       void merge(::peano4::grid::TraversalObserver::SendReceiveContext context, const {{CLASSNAME}}& neighbour, const peano4::datamanagement::VertexMarker& marker);
+
       static bool send(const peano4::datamanagement::VertexMarker& marker);
       static bool receiveAndMerge(const peano4::datamanagement::VertexMarker& marker);
       static bool storePersistently(const peano4::datamanagement::VertexMarker& marker);
@@ -216,7 +232,7 @@
        * - We roll over the globally lifted particles into the sieve set for the
        *   next mesh traversal.
        */
-      static void finishedTraversal(bool updateStatistics);
+      static void finishedTraversal();
 
       /**
        * Mark whole particle set as set of particles which can't be lifted
@@ -229,12 +245,22 @@
       static void particleCanNotBeLiftedLocally( globaldata::{{PARTICLE_TYPE}}* particle );
 
       /**
+       * Get particles that are to be sieved
+       *
        * Takes the current particle set and finds those particles which can be
-       * sieved into current vertex.
+       * sieved into current vertex. The operation alters the object state, as
+       * it returns the particles that are to be sieved and removes them from
+       * the current object.
+       *
+       * All the particles in the result set have the parallel state Virtual,
+       * as we have to assume that they have been non-local on the current rank
+       * so far. The new parallel state is not altered, as this is the job of
+       * the action set UpdateParallelSet.
+       *
+       * @see ::toolbox::particles::sieveParticle() for the sieve logic.
        */
       {{NAMESPACE | join("::")}}::{{CLASSNAME}}  getParticlesToBeSievedIntoVertex(
-        const peano4::datamanagement::VertexMarker& marker,
-        double sortingTolerance
+        const peano4::datamanagement::VertexMarker&  marker
       );
 
       static void updateLiftDropStatistics(
@@ -244,9 +270,10 @@
         int numberOfSievesInThisTree
       );
 
-      static void updateParticleCountStatistics(
-        int totalRealParticleCountInThisTree,
-        int totalVirtualParticleCountInThisTree
+      static void updateNumberOfLocalParticleStatistics(
+        int numberOfRemainingLocalParticles,
+        int numberOfIncomingLocalParticles,
+        int numberOfLeavingLocalParticles
       );
 
       /**
@@ -266,6 +293,14 @@
        * invalid.
        */
       void deleteParticles();
+
+      static void clearReassignmentStatistics();
+      static void clearParticleStateStatistics();
+
+      /**
+       * Reduces and prints the global statistics
+       */
+      static void reduceAndPrintStatistics();
 };
 
 {% for item in NAMESPACE -%}
