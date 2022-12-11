@@ -240,6 +240,29 @@
       void particlesCanNotBeLiftedLocally();
 
       /**
+       * Inform set that particle cannot be lifted on its current tree
+       *
+       * This routine basically takes the particle and inserts it into the list
+       * of particles that the current tree cannot re-sort locally. They will
+       * end up in a global sieve list which is distributed among all MPI
+       * ranks.
+       *
+       * The tree traversal handles all particles independent of their status.
+       * However, it makes no sense to lift virtual particles, as they are
+       * copies of another rank and therefore this other rank has the
+       * responsibility to handle them. Whenever this routine is called for
+       * a virtual particle, I hence ignore the lift/sieve request. Someone
+       * else will have to handle the respective particle.
+       *
+       * Side note: a rank should not move around a virtual particle anyway,
+       * but some codes do. In this case, the moving is wrong almost certainly
+       * anyway, as we have no ownership of virtual particles and their data
+       * thus might not be correct.
+       *
+       * The fact that we ignore virtual particles mirrors the fact that we
+       * never send out virtual particles that run through the domain boundary.
+       * Actually, we do send these guys out, but they will be ignored on the
+       * receiver side.
        *
        */
       static void particleCanNotBeLiftedLocally( globaldata::{{PARTICLE_TYPE}}* particle );

@@ -245,6 +245,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::clone( const {{CLASSNAME}}& othe
 
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishedTraversal() {
   // @todo Wo werden die per MPI ausgetauscht?
+
   _particlesThatHaveToBeSieved.deleteParticles();
 
   _particlesThatHaveToBeSieved.insert(
@@ -447,9 +448,10 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::deleteParticles() {
 
 
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::particleCanNotBeLiftedLocally( globaldata::{{PARTICLE_TYPE}}* p ) {
-  assertion1( p->getParallelState()==globaldata::{{PARTICLE_TYPE}}::ParallelState::Local, p->toString() );
-  _particlesThatCanNotBeLiftedWithinTheirTree.push_back(p);
-  _numberOfAssignmentsToGlobalSieve++;
+  if ( p->getParallelState()==globaldata::{{PARTICLE_TYPE}}::ParallelState::Local ) {
+    _particlesThatCanNotBeLiftedWithinTheirTree.push_back(p);
+    _numberOfAssignmentsToGlobalSieve++;
+  }
 }
 
 
