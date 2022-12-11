@@ -19,7 +19,7 @@ parser.add_argument(        "--debug",             dest="debug"  ,        action
 parser.add_argument(        "--managed",           dest="managed_memory", action="store_true", default=False, help="Use managed memory kernel variants")
 parser.add_argument("-ps",  "--patch-size",        dest="patch_size",     type=int, default=17, help="Number of finite volumes per axis (dimension) per patch")
 parser.add_argument("-a",   "--accuracy",          dest="accuracy",       type=float, default=0.0, help="Floating point accuracy to which the different kernel variants have to match (absolute). Pass in 0 to disable correctness check. Pass in values < 0 to use machine epsilon.")
-parser.add_argument("-i",   "--iterations",        dest="iterations",     type=int, default=1000, help="Number of iterations to be done for each kernel invocation. Used for warmup and to give a realistic measurement.")
+parser.add_argument("-i",   "--iterations",        dest="iterations",     type=int, default=100, help="Number of iterations to be done for each kernel invocation. Used for warmup and to give a realistic measurement.")
 args = parser.parse_args()
 
 if args.dim not in [2,3]:
