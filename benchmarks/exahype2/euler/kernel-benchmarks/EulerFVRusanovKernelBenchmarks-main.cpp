@@ -125,10 +125,10 @@ std::tuple<double, int> validateOutcome(double* Q, int patchIndex, const double 
   return { maxDifference, errors };
 }
 
-static constexpr double TimeStamp    = 0.5;
-static constexpr double TimeStepSize = 1e-6;
-static constexpr double CellSize     = 0.1;
-static constexpr double CellOffset   = 4.0;
+constexpr double TimeStamp    = 0.5;
+constexpr double TimeStepSize = 1e-6;
+constexpr double CellSize     = 0.1;
+constexpr double CellOffset   = 4.0;
 
 /**
  * Run the benchmark for one particular number of patches
@@ -188,7 +188,7 @@ void runBenchmarksOnHost(int patches) {
 
     int errors = 0;
     double maxDifference = 0.0;
-    if (Accuracy>0.0) {
+    if constexpr (Accuracy>0.0) {
       for (int i=0; i<patches; i++) {
         storeOutcome( outputData[i],outputMaxEigenvalue );
         auto [maxDifferencePerPatch, errorsPerPatch] = validateOutcome( outputData[i],i ,outputMaxEigenvalue);
@@ -244,7 +244,7 @@ void runBenchmarksOnHost(int patches) {
 
     int errors = 0;
     double maxDifference = 0.0;
-    if (Accuracy>0.0) {
+    if constexpr (Accuracy>0.0) {
       double maxDifference = 0.0;
       for (int i=0; i<patches; i++) {
         auto [maxDifferencePerPatch, errorsPerPatch] = validateOutcome( patchData.QOut[i],i,patchData.maxEigenvalue[i]);
@@ -343,6 +343,7 @@ void testStatelessVariantOnDevice(
   const std::string&      markerName,
   int                     currentThread
 ) {
+  tarch::accelerator::omp::GPUMemoryManager::getInstance().clear();
   ::exahype2::CellData patchData(patches);
   for (int i=0; i<patches; i++) {
     patchData.QIn[i]           = new double[ NumberOfInputEntries ];
@@ -355,23 +356,36 @@ void testStatelessVariantOnDevice(
   }
 
   tarch::timing::Watch watch( "::runBenchmarksOnDevice", "testStatelessVariantOnDevice(...)", false );
-  kernel(
-    device,
-    patchData,
-    true ,
-    false ,
-    false ,
-    true   //computeCFL
-  );
+  tarch::timing::Watch watchAllocationOnly( "::runBenchmarksOnDevice", "testStatelessVariantOnDeviceAllocationOnly(...)", false );
+  for (int i = 0; i < Iterations; i++) {
+    kernel(
+      device,
+      patchData,
+      true ,
+      false ,
+      false ,
+      true   //computeCFL
+    );
+     // We want to only measure the time of the first kernel invocation so
+     // that we know the overhead for memory allocation on the GPU.
+    if (i == 0) {
+      watchAllocationOnly.stop();
+    }
+  }
+
   watch.stop();
 
   if (currentThread==0) {
-    logInfo("main()", "stateless kernels on device " << device << " with " << markerName << ": " << watch.getCalendarTime() << " / " << (watch.getCalendarTime()/patches/EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch/EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch/EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch) );
+    logInfo("main()", "stateless kernels on device " << device << " with " << markerName << ": "
+      << "first iteration: " << watchAllocationOnly.getCalendarTime() << " / "
+      << ((watchAllocationOnly.getCalendarTime()/Iterations)/patches/EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch/EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch/EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch) << ", "
+      << Iterations << " iterations: " << (watch.getCalendarTime()/Iterations) << " / "
+      << ((watch.getCalendarTime()/Iterations)/patches/EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch/EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch/EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch));
   }
 
   int errors = 0;
   double maxDifference = 0.0;
-  if (Accuracy>0.0) {
+  if constexpr (Accuracy>0.0) {
     double maxDifference = 0.0;
     for (int i=0; i<patches; i++) {
       auto [maxDifferencePerPatch, errorsPerPatch] = validateOutcome( patchData.QOut[i],i,patchData.maxEigenvalue[i]);
@@ -569,9 +583,9 @@ void runBenchmarksOnDevice(int patches, int device) {
 }
 
 int main(int argc, char** argv) {
-  const int ExitCodeSuccess          = 0;
-  const int ExitCodeInvalidArguments = 2;
-  const int ExitCodeInvalidBuild     = 3;
+  constexpr int ExitCodeSuccess          = 0;
+  constexpr int ExitCodeInvalidArguments = 2;
+  constexpr int ExitCodeInvalidBuild     = 3;
 
   peano4::initParallelEnvironment(&argc,&argv);
   exahype2::initNonCritialAssertionEnvironment();
@@ -608,7 +622,7 @@ int main(int argc, char** argv) {
   #endif
 
   #if Dimensions==2
-  for (int patches=1; patches<=1024*2*2*2*2; patches*=2) {
+  for (int patches=1; patches <= patches<=1024*2*2*2*2; patches*=2) {
   #else
   for (int patches=1; patches<=1024; patches*=2) {
   #endif
@@ -626,11 +640,12 @@ int main(int argc, char** argv) {
       std::stringstream msg;
       msg << "benchmark-" << patches << "-" << device;
       otterPhaseSwitch( msg.str().c_str() );
+
       runBenchmarksOnDevice(patches,device);
     }
   }
 
-  if (Accuracy>0.0) {
+  if constexpr (Accuracy>0.0) {
     logInfo("main()", "all kernels yield the same outcome up to a accuracy of " << Accuracy);
   } else {
     logInfo("main()", "no accuracy checks were performed");

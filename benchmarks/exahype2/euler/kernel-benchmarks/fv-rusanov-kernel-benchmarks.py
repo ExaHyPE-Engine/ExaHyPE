@@ -16,9 +16,10 @@ parser = argparse.ArgumentParser(description='ExaHyPE 2 - Euler FV Rusanov Kerne
 parser.add_argument("-d",   "--dim",               dest="dim",            type=int, default=2, help="Number of space dimensions")
 parser.add_argument("-v",   "--verbose",           dest="verbose",        action="store_true", default=False, help="Verbose mode")
 parser.add_argument(        "--debug",             dest="debug"  ,        action="store_true", default=False, help="Debug mode")
-parser.add_argument(        "--managed-memory",    dest="managed_memory", action="store_true", default=False, help="Use managed memory kernel variants")
+parser.add_argument(        "--managed",           dest="managed_memory", action="store_true", default=False, help="Use managed memory kernel variants")
 parser.add_argument("-ps",  "--patch-size",        dest="patch_size",     type=int, default=17, help="Number of finite volumes per axis (dimension) per patch")
 parser.add_argument("-a",   "--accuracy",          dest="accuracy",       type=float, default=0.0, help="Floating point accuracy to which the different kernel variants have to match (absolute). Pass in 0 to disable correctness check. Pass in values < 0 to use machine epsilon.")
+parser.add_argument("-i",   "--iterations",        dest="iterations",     type=int, default=1000, help="Number of iterations to be done for each kernel invocation. Used for warmup and to give a realistic measurement.")
 args = parser.parse_args()
 
 if args.dim not in [2,3]:
@@ -82,6 +83,7 @@ project.set_Peano4_installation( "../../../../", build_mode )
 
 peano4_project = project.generate_Peano4_project(args.verbose)
 peano4_project.constants.export_constexpr_with_type( "Accuracy", str(accuracy), "double" )
+peano4_project.constants.export_constexpr_with_type( "Iterations", str(args.iterations), "int" )
 peano4_project.constants.export_boolean( "EnableManagedMemory", args.managed_memory )
 peano4_project.output.makefile.add_cpp_file( "../../../../applications/exahype2/euler/EulerKernels.cpp" )
 peano4_project.output.makefile.add_header_search_path( "../../../../applications/exahype2/euler" )

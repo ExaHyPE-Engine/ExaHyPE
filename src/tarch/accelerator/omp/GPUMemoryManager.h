@@ -49,8 +49,8 @@ class tarch::accelerator::omp::GPUMemoryManager {
     typedef std::map< void*, int >               UsedPages;
 
     struct DeviceMemory {
-      FreePages   freePages;
-      UsedPages   usedPages;
+      FreePages freePages;
+      UsedPages usedPages;
     };
 
     /**
@@ -73,8 +73,7 @@ class tarch::accelerator::omp::GPUMemoryManager {
     /**
      * @param size Count of block, i.e. number of doubles
      *
-     * @return This pointer is a device pointer, i.e. do not use it on the
-     *   host.
+     * @return This pointer is a device pointer, i.e. do not use it on the host.
      */
     template <class T>
     T* allocate( int size, int device ) {
@@ -129,6 +128,5 @@ class tarch::accelerator::omp::GPUMemoryManager {
      */
     void clear();
 };
-
 
 #endif

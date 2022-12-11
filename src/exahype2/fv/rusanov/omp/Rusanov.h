@@ -187,7 +187,6 @@ namespace exahype2 {
           );
         }
 
-
         #if defined(GPUOffloadingOMP)
         /**
          * On the GPU, we don't need any of exahype2::CellData's fancy routines or
@@ -211,6 +210,7 @@ namespace exahype2 {
           double*    maxEigenvalue;
         };
         #pragma omp end declare target
+
         #endif
       }
     }
