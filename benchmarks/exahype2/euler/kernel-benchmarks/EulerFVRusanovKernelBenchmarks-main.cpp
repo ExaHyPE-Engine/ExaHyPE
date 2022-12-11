@@ -541,18 +541,18 @@ void runBenchmarksOnDevice(int patches, int device) {
         "omp, batched, AoS, " + std::string(memoryType), thread
       );
     }
+    tarch::accelerator::omp::GPUMemoryManager::getInstance().clear();
     #pragma omp parallel for
     for (int thread=0; thread<tarch::multicore::Core::getInstance().getNumberOfThreads(); thread++) {
-    tarch::accelerator::omp::GPUMemoryManager::getInstance().clear();
       testStatelessVariantOnDevice(
         patches, device,
         ::exahype2::fv::rusanov::omp::timeStepWithRusanov_batched_managed_static_calls<EulerFVRusanov,EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch, 1, EulerFVRusanov::NumberOfUnknowns, EulerFVRusanov::NumberOfAuxiliaryVariables,exahype2::enumerator::AoSoALexicographicEnumerator>,
         "omp, batched, AoSoA, " + std::string(memoryType), thread
       );
     }
+    tarch::accelerator::omp::GPUMemoryManager::getInstance().clear();
     #pragma omp parallel for
     for (int thread=0; thread<tarch::multicore::Core::getInstance().getNumberOfThreads(); thread++) {
-    tarch::accelerator::omp::GPUMemoryManager::getInstance().clear();
       testStatelessVariantOnDevice(
         patches, device,
         ::exahype2::fv::rusanov::omp::timeStepWithRusanov_batched_managed_static_calls<EulerFVRusanov,EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch, 1, EulerFVRusanov::NumberOfUnknowns, EulerFVRusanov::NumberOfAuxiliaryVariables,exahype2::enumerator::SoALexicographicEnumerator>,
