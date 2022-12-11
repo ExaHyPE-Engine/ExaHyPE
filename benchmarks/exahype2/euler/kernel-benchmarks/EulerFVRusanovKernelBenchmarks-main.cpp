@@ -355,7 +355,7 @@ void testStatelessVariantOnDevice(
   }
 
   tarch::timing::Watch watch( "::runBenchmarksOnDevice", "testStatelessVariantOnDevice(...)", false );
-  tarch::timing::Watch watchAllocationOnly( "::runBenchmarksOnDevice", "testStatelessVariantOnDeviceAllocationOnly(...)", false );
+  tarch::timing::Watch watchFirstIteration( "::runBenchmarksOnDevice", "testStatelessVariantOnDeviceFirstIteration(...)", false );
   for (int i = 0; i < Iterations; i++) {
     kernel(
       device,
@@ -368,7 +368,7 @@ void testStatelessVariantOnDevice(
      // We want to only measure the time of the first kernel invocation so
      // that we know the overhead for memory allocation on the GPU.
     if (i == 0) {
-      watchAllocationOnly.stop();
+      watchFirstIteration.stop();
     }
   }
 
@@ -376,8 +376,8 @@ void testStatelessVariantOnDevice(
 
   if (currentThread==0) {
     logInfo("main()", "stateless kernels on device " << device << " with " << markerName << ": "
-      << "first iteration: " << watchAllocationOnly.getCalendarTime() << " / "
-      << (watchAllocationOnly.getCalendarTime()/patches/EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch/EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch/EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch) << ", "
+      << "first iteration: " << watchFirstIteration.getCalendarTime() << " / "
+      << (watchFirstIteration.getCalendarTime()/patches/EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch/EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch/EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch) << ", "
       << Iterations << " iterations: " << (watch.getCalendarTime()/Iterations) << " / "
       << ((watch.getCalendarTime()/Iterations)/patches/EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch/EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch/EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch));
   }
