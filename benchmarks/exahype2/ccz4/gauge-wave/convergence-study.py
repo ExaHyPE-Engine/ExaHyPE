@@ -7,8 +7,6 @@ import dastgen2
 
 import peano4.toolbox.particles
 
-
-
 parser = argparse.ArgumentParser(description='ExaHyPE 2 - CCZ4-GaugeWave benchmarking script')
 parser.add_argument("-j",   "--parallel-builds",   dest="j",              type=int, default=-1, help="Parallel builds" )
 parser.add_argument("-pd",  "--peano-dir",         dest="peanodir",       default="../../../../", help="Peano4 directory" )
@@ -19,8 +17,6 @@ parser.add_argument("-cs",  "--cell-size",         dest="cell_size",      type=f
 parser.add_argument("-asserts",  "--asserts",      dest="asserts",        action="store_true", default=False, help="Switch on assertions" )
 parser.add_argument("-tracer",   "--tracer",       dest="tracer",         action="store_true", default=False, help="Activate tracer" )
 args = parser.parse_args()
-
-
 
 #
 # This part si only for convenience. We could use these symbols to augment
@@ -47,12 +43,10 @@ unknowns = {
           "K0":1,
         }
 
-
 #
 # Create solver class
 #
 my_solver = None
-
 
 #
 # I pick patches of 9x9x9 here, as I then can match stuff exactly with the DG solver of
@@ -102,7 +96,6 @@ my_solver.add_user_solver_includes( """
 #include <cstring>
 """)
 
-
 #
 # I need a couple of constants. I could either replace them directly
 # within the Python snippets below, but I prefer here to go a different
@@ -138,7 +131,6 @@ for key, value in integer_constants.items():
   my_solver.add_solver_constants("static constexpr int {} = {};".format(key, value))
 for key, value in double_constants.items():   
   my_solver.add_solver_constants("static constexpr double {} = {};".format(key, value))
-
 
 #
 # All of our solver routines (events) will basically delegate to some 
@@ -206,7 +198,6 @@ for (int i=0; i<NumberOfUnknowns+NumberOfAuxiliaryVariables; i++) Q[i] = 0.0;
 """
         )    
 
-    
 # ===============
 # Postprocessing
 # ===============
@@ -258,11 +249,7 @@ if "rk" in args.solver and "dg" in args.solver:
   }
 """
 
-
-
 project = exahype2.Project( ["benchmarks", "exahype2", "ccz4"], "ccz4", executable=args.solver + "-" + str(args.cell_size))
-
-
 
 ########################################################################################
 #parameter setting according to scenarios
@@ -271,8 +258,6 @@ project = exahype2.Project( ["benchmarks", "exahype2", "ccz4"], "ccz4", executab
 #      intparams.update({k:eval("args.CCZ4{}".format(k))})
 #    for k, v in floatparams.items():
 #      floatparams.update({k:eval("args.CCZ4{}".format(k))})
-
-
 
 solverconstants=""
 
@@ -284,10 +269,8 @@ solverconstants=""
 
 project.add_solver(my_solver)
 
-
-
 ########################################################################################
-#Tracer setting 
+#Tracer setting
 ########################################################################################
 if args.tracer:
     tracer_particles = project.add_tracer( name="Tracer",attribute_count=59 )
@@ -332,7 +315,7 @@ if args.asserts:
 else:
   build_mode = peano4.output.CompileMode.Release
   delta_plot = 1.0/20 
-    
+
 dimensions  = 3
 offset      = [-0.5, -0.5, -0.5] 
 domain_size = [   1,    1,    1]
@@ -350,12 +333,9 @@ project.set_global_simulation_parameters(
 
 project.set_Peano4_installation(args.peanodir, build_mode)
 
-
 project.set_load_balancing("toolbox::loadbalancing::RecursiveSubdivision","(new ::exahype2::LoadBalancingConfiguration(0.98,0))" )
 
-
 peano4_project = project.generate_Peano4_project(verbose=args.verbose)
-
 
 peano4_project.output.makefile.add_cpp_file( "../../../../applications/exahype2/ccz4/InitialValues.cpp" )
 peano4_project.output.makefile.add_cpp_file( "../../../../applications/exahype2/ccz4/CCZ4Kernels.cpp" )
