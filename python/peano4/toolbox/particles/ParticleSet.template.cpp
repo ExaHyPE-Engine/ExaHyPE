@@ -367,7 +367,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::reduceAndPrintStatistics() {
 
   globalNumberOfRemainingLocalParticles     = _numberOfRemainingLocalParticles;
   globalNumberOfIncomingLocalParticles      = _numberOfIncomingLocalParticles;
-  globalNumberOfLeavingLocalParticles       = _totalLeavingLocalParticles;
+  globalNumberOfLeavingLocalParticles       = _numberOfLeavingLocalParticles;
 
   globalNumberOfMergedVirtualParticles      = _numberOfMergedVirtualParticles;
 
