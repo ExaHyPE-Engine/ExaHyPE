@@ -51,22 +51,22 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanov_patchwise_managed_static_ca
   double* dts = tarch::accelerator::omp::GPUMemoryManager::getInstance().allocate<double>(hostPatchData.numberOfCells, targetDevice );
   double* maxEigenvalues = tarch::accelerator::omp::GPUMemoryManager::getInstance().allocate<double>(hostPatchData.numberOfCells, targetDevice );
 
-  double* tmpQIn = new double[QInCount];
-  double* tmpQOut = new double[QOutCount];
+  std::vector<double> tmpQIn(QInCount);
+  std::vector<double> tmpQOut(QOutCount);
 
   for (int patchIndex=0; patchIndex<hostPatchData.numberOfCells; patchIndex++) {
     std::memcpy(&tmpQIn[patchIndex * QInHostEnumerator.size()], hostPatchData.QIn[patchIndex], QInHostEnumerator.size() * sizeof(double));
   }
 
 #ifdef __NVCOMPILER_CUDA__ // Use CUDA managed memory -> We only need to consider host copies
-  std::memcpy(mappedPointersToQIns, tmpQIn, QInCount * sizeof(double));
+  std::memcpy(mappedPointersToQIns, &tmpQIn[0], QInCount * sizeof(double));
   std::memcpy(rawPointerToCellCentres, &hostPatchData.cellCentre[0], hostPatchData.numberOfCells * Dimensions * sizeof(double));
   std::memcpy(rawPointerToCellSizes, &hostPatchData.cellSize[0], hostPatchData.numberOfCells * Dimensions * sizeof(double));
   std::memcpy(ts, hostPatchData.t, hostPatchData.numberOfCells * sizeof(double));
   std::memcpy(dts, hostPatchData.dt, hostPatchData.numberOfCells * sizeof(double));
 #else
   const auto hostId = omp_get_initial_device();
-  omp_target_memcpy(mappedPointersToQIns, tmpQIn, QInCount * sizeof(double), 0, 0, targetDevice, hostId);
+  omp_target_memcpy(mappedPointersToQIns, &tmpQIn[0], QInCount * sizeof(double), 0, 0, targetDevice, hostId);
   omp_target_memcpy(rawPointerToCellCentres, &hostPatchData.cellCentre[0], hostPatchData.numberOfCells * Dimensions * sizeof(double), 0, 0, targetDevice, hostId);
   omp_target_memcpy(rawPointerToCellSizes, &hostPatchData.cellSize[0], hostPatchData.numberOfCells * Dimensions * sizeof(double), 0, 0, targetDevice, hostId);
   omp_target_memcpy(ts, hostPatchData.t, hostPatchData.numberOfCells * sizeof(double), 0, 0, targetDevice, hostId);
@@ -618,10 +618,10 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanov_patchwise_managed_static_ca
   } // This is the end of the target offloading block
 
 #ifdef __NVCOMPILER_CUDA__
-  std::memcpy(tmpQOut, mappedPointersToQOuts, QOutCount * sizeof(double));
+  std::memcpy(&tmpQOut[0], mappedPointersToQOuts, QOutCount * sizeof(double));
   std::memcpy(hostPatchData.maxEigenvalue, maxEigenvalues, hostPatchData.numberOfCells * sizeof(double));
 #else
-  omp_target_memcpy(tmpQOut, mappedPointersToQOuts, QOutCount * sizeof(double), 0, 0, hostId, targetDevice);
+  omp_target_memcpy(&tmpQOut[0], mappedPointersToQOuts, QOutCount * sizeof(double), 0, 0, hostId, targetDevice);
   omp_target_memcpy(hostPatchData.maxEigenvalue, maxEigenvalues, hostPatchData.numberOfCells * sizeof(double), 0, 0, hostId, targetDevice);
 #endif
 
@@ -646,9 +646,6 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanov_patchwise_managed_static_ca
   for (int patchIndex=0; patchIndex<hostPatchData.numberOfCells; patchIndex++) {
     std::memcpy(hostPatchData.QOut[patchIndex], &tmpQOut[patchIndex * QOutHostEnumerator.size()], QOutHostEnumerator.size() * sizeof(double));
   }
-
-  if (tmpQIn!=nullptr) delete[] tmpQIn;
-  if (tmpQOut!=nullptr) delete[] tmpQOut;
 
 #else
   assertionMsg(false, "this routine should only be used in combination with OpenMP offloading" );
