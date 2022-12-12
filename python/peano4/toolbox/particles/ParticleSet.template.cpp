@@ -377,16 +377,18 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::reduceAndPrintStatistics() {
   bool log = tarch::mpi::Rank::getInstance().isGlobalMaster();
   #if PeanoDebug==0
   log &= (
-         globalNumberOfLifts>0
-      or globalNumberOfDrops>0
-      or globalNumberOfSieves>0
-      or globalNumberOfReassignments>0
-      or globalNumberOfAssignmentsToGlobalSieve>0
-      or globalNumberOfRemainingLocalParticles>0
-      or globalNumberOfIncomingLocalParticles>0
-      or globalNumberOfLeavingLocalParticles>0
-      or globalNumberOfMergedVirtualParticles>0
-      or globalEliminatedSpatialDuplicates>0
+      globalNumberOfLifts>0
+   or globalNumberOfDrops>0
+   or globalNumberOfSieves>0
+   or globalNumberOfAssignmentsToGlobalSieve>0
+   or globalNumberOfReassignments>0
+
+   or globalNumberOfRemainingLocalParticles>0
+   or globalNumberOfIncomingLocalParticles>0
+   or globalNumberOfLeavingLocalParticles>0
+
+   or globalNumberOfMergedVirtualParticles>0
+   or globalNumberOfEliminatedSpatialDuplicates>0
       );
   #endif
   if ( log ) {
