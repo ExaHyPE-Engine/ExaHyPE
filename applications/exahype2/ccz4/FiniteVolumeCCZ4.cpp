@@ -302,12 +302,12 @@ void applications::exahype2::ccz4::FiniteVolumeCCZ4::nonconservativeProduct(
   if (CCZ4ReSwi==1){ //radius based
     if (radius<0.2) {result=::exahype2::RefinementCommand::Refine;}
   }
-  if (CCZ4ReSwi==2){ //single black hole
+  if (CCZ4ReSwi==2){ //single black hole, low refinement
     if (tarch::la::equals(t,0.0)){  //as we use a quantity calculated in postpocessing, we need to provide criterion at the first timestep 
-      constexpr int NumberOfRefinementLayers = 3;
+      constexpr int NumberOfRefinementLayers = 2;
 //    current "standard" refinement pattern
-      double Radius[NumberOfRefinementLayers] = {5.0, 3.0, 1.5};
-      double MaxH[NumberOfRefinementLayers]   = {0.3, 0.15, 0.0};
+      double Radius[NumberOfRefinementLayers] = {2.0, 1.0};
+      double MaxH[NumberOfRefinementLayers]   = {0.06, 0.02};
 //    with some alter
 //      double Radius[NumberOfRefinementLayers] = {5.0, 3.0};
 //      double MaxH[NumberOfRefinementLayers]   = {0.3, 0.15};
@@ -369,6 +369,24 @@ void applications::exahype2::ccz4::FiniteVolumeCCZ4::nonconservativeProduct(
 //    current "standard" refinement pattern
       double Radius[NumberOfRefinementLayers] = {4.0, 2.0, 1.5};
       double MaxH[NumberOfRefinementLayers]   = {0.2, 0.08, 0.0};
+//    with some alter
+//      double Radius[NumberOfRefinementLayers] = {5.0, 3.0};
+//      double MaxH[NumberOfRefinementLayers]   = {0.3, 0.15};
+
+      result = ::exahype2::RefinementCommand::Keep;
+      for (int i=0; i<NumberOfRefinementLayers; i++) {
+        if (radius<Radius[i] and tarch::la::max(volumeH)>MaxH[i]) {
+          result=::exahype2::RefinementCommand::Refine;
+        }
+      }
+    }
+  }
+  if (CCZ4ReSwi==6){ //single black hole, another low refinement pattern to keep finest volume the same size as it in the regular grid tests.
+    if (tarch::la::equals(t,0.0)){  //as we use a quantity calculated in postpocessing, we need to provide criterion at the first timestep 
+      constexpr int NumberOfRefinementLayers = 2;
+//    current "standard" refinement pattern
+      double Radius[NumberOfRefinementLayers] = {3.0, 1.5};
+      double MaxH[NumberOfRefinementLayers]   = {0.15,0.04};
 //    with some alter
 //      double Radius[NumberOfRefinementLayers] = {5.0, 3.0};
 //      double MaxH[NumberOfRefinementLayers]   = {0.3, 0.15};

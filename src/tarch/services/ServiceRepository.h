@@ -63,19 +63,31 @@ class tarch::services::ServiceRepository: public tarch::services::Service {
      * Tell all registered services to answer to MPI messages that are still
      * pending in the MPI queues.
      *
+     *
      * ## MPI tuning
      *
      * I once had an implementation that checks via Iprobe whether to call the
      * receiveDanglingMessages() of all registered services. Without that probe,
      * my ExaHyPE 2 code did crash. Today, I think this has been a bug in the
      * way how parts of the code handled the requests, so I could remove the
-     * snippet again. Nevertheless, it makes sense to allow codes to do something
-     * else while receiveDanglingMessages() is called. If this routine is called,
-     * the system basically flags that there's a lack of MPI progression or poor
-     * load balancing, so the routine indeed should give a user code to do
-     * something meaningful meanwhile. This can be to check for further messages
-     * (unexpected message arrival). But it can also be something else such as
-     * the handling of left-ofter tasks.
+     * snippet again.
+     *
+     *
+     * ## Starvation
+     *
+     * From a theory point of view, it makes sense nevertheless to allow codes
+     * to do something else while receiveDanglingMessages() is called. If this
+     * routine is called, the system basically flags that there's a lack of MPI
+     * progression or poor load balancing, so the routine indeed should give a
+     * user code to do something meaningful meanwhile.
+     *
+     * I thought it would be an excellent idea to process some tasks therefore.
+     * With a lot of tasks, this is a poor idea. Potentially p-1 threads hit
+     * the task queue (if one thread is doing I/O for example) and then they
+     * all block each other and no MPI progress is made, as very few tasks call
+     * the actual MPI routines. So I removed that line to process a task, and
+     * this has made the system much more stable.
+     *
      *
      * ## Receive dangling message in multithreaded environment
      *
@@ -89,12 +101,6 @@ class tarch::services::ServiceRepository: public tarch::services::Service {
      * but we also solve it in the old-fashioned way if you only issue receives
      * through the repository, as the repository invokes the services, but it
      * first blocks all other threads through a semaphore.
-     *
-     * ## Interplay with tasking system
-     *
-     * It is important that we get the number of iprobes down. At the same time,
-     * when I hit this operation, I know that I'm waiting for something. So what
-     * I do is that I also invoke the tasking subsystem.
      */
     void receiveDanglingMessages() override;
 
