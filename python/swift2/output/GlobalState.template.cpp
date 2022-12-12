@@ -97,6 +97,7 @@ void startIntermediateStep() {
 
 
 void startInitialisationStep() {
+  loadBalancer.enable(false);
 }
 
 
