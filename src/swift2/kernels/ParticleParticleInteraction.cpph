@@ -102,6 +102,9 @@ void swift2::kernels::computeDensity(
         } 
 
       }
+      /* Flag local particle as updated */
+      localParticle->setCellHasUpdatedParticle(true);
+
     }
   }
 }

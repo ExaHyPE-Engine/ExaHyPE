@@ -33,7 +33,7 @@ class NohProblemIC:
       particle->setMass( particle->getDensity() / std::pow(HYDRO_PART_NUMBER, HYDRO_DIMENSIONS) );
 
       /* Initial estimate for smoothing length */
-      particle->setSmoothingLength( SMOOTH_L_FAC * std::pow(particle->getMass() / particle->getDensity(), 1.0 / HYDRO_DIMENSIONS) );
+      particle->setSmoothingLength( SMOOTH_ETA_FAC * std::pow(particle->getMass() / particle->getDensity(), 1.0 / HYDRO_DIMENSIONS) );
       particle->setSmoothingLengthPrevious( particle->getSmoothingLength() );
      
       /* Set neglibible internal energy */
@@ -78,7 +78,6 @@ class NohProblemIC:
       // Vectors
       for(int d=0; d<Dimensions; d++){
          particle->setA          (d,0);
-         particle->setA_prev_step(d,0);
       }
      
       /* For 2D sims, we only get one component */
@@ -89,7 +88,6 @@ class NohProblemIC:
       particle->setU_full(particle->getU());
 
       particle->setUDot  (0.0);        
-      particle->setUDot_prev_step(0.0);        
       particle->setHDot  (0.0);        
       particle->setWcount(0.0);        
       particle->setNcount(0  );        
@@ -101,10 +99,8 @@ class NohProblemIC:
       particle->setHLeft (HYDRO_h_MIN);        
       particle->setHRight(HYDRO_h_MAX);        
       
-      particle->setTimeStepSize(GLOBAL_TIME_STEP_SIZE);
       particle->setHasConverged(false);
       particle->setHasNoNeighbours(false);
-      particle->setHasBeenKicked(false);
       particle->setResidual(0.0);
       particle->setIterCount(0);
       particle->setIsBoundaryParticle(false);

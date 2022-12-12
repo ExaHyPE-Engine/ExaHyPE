@@ -14,19 +14,20 @@ class testDensityCalculation(Particle):
   """
   def __init__(self, 
                name, 
+               dimensions_hydro,
                cfl_factor, 
                initial_time_step_size,
                particles_per_cell = 5, 
-               min_h = 0.1,
-               max_h = 0.3,
+               min_h = 0.6,
+               max_h = 0.5,
                ):
     super( testDensityCalculation , self ).__init__( name,
                                                      particles_per_cell,
                                                      min_h,
                                                      max_h,
                                                       )
-    
-    
+
+
     # Simulation properties
     self.cfl_factor                = cfl_factor
     self.initial_time_step_size    = initial_time_step_size
@@ -34,7 +35,7 @@ class testDensityCalculation(Particle):
     self.declare_sph_particle_attributes()
 
     # SPH parameters (default values)
-    self.hydroDimensions = 1
+    self.hydroDimensions = dimensions_hydro
     self.etaFactor = 1.235
 
     # Minimal SPH parameters
@@ -50,7 +51,7 @@ class testDensityCalculation(Particle):
     Test only the density calculation
     """
     return [ 
-      AlgorithmStep( 
+      AlgorithmStep(
         name                           = "DensityLoopWithConstantSmoothingLength",          
         dependencies                   = AlgorithmStep.Dependencies.NEIGHBOURS, 
         effect                         = AlgorithmStep.Effect.ALTER_LOCAL_STATE, 
@@ -194,4 +195,11 @@ class testDensityCalculation(Particle):
     self.data.add_attribute(self.Ncount)
     self.data.add_attribute(self.part_id)
 
+  """
+  Set the eta factor used by the SPH kernel to target a certain number
+  of neighbour particles. 
+  The default value is eta = 1.235.
+  """
+  def set_eta_factor(self, etaFactor):
+    self.etaFactor = etaFactor
 
