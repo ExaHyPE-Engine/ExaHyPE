@@ -1,9 +1,9 @@
 #!/bin/sh
 
-# Script to run experiment (Noh shockwave 1D)
+# Script to run experiment (Noh 2D)
 
 # set threads number
-export OMP_NUM_THREADS=1
+export OMP_NUM_THREADS=4
 
 # Parameters
 END_TIME=0.2

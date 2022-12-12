@@ -29,7 +29,7 @@ class TestDensityCalculation:
     particle->setSoundSpeed( 1e-1 );
 
     /* Compute initial smoothing length */
-    particle->setSmoothingLength( SMOOTH_L_FAC * std::pow(particle->getMass()/particle->getDensity(), 1.0 / HYDRO_DIMENSIONS) );
+    particle->setSmoothingLength( SMOOTH_ETA_FAC * std::pow(particle->getMass()/particle->getDensity(), 1.0 / HYDRO_DIMENSIONS) );
     particle->setSmoothingLengthPrevious( particle->getSmoothingLength() );
     
     /* Initialize remaining fields  */

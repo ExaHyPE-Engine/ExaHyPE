@@ -418,9 +418,10 @@ void swift2::kernels::endDensityCalculationWithConstantSmoothingLength(
         particle->setSoundSpeed( soundspeed );
         particle->setBalsara( balsara );
 
+        particle->setCellHasUpdatedParticle(true);
+
       } /* End hydro_prepare_force */
       
-
     }
   }
 }
