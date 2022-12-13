@@ -176,8 +176,8 @@ struct peano4::grid::GridTraversalEvent {
      * the message went through. In systems with heavy MPI usage, this can 
      * help to avoid deadlocks.
      */
-    static void send(const peano4::grid::GridTraversalEvent& buffer, int destination, int tag, std::function<void()> waitFunctor, MPI_Comm communicator );
-    static void receive(peano4::grid::GridTraversalEvent& buffer, int source, int tag, std::function<void()> waitFunctor, MPI_Comm communicator );
+    static void send(const peano4::grid::GridTraversalEvent& buffer, int destination, int tag, std::function<void()> startCommunicationFunctor, std::function<void()> waitFunctor, MPI_Comm communicator );
+    static void receive(   peano4::grid::GridTraversalEvent& buffer, int source,      int tag, std::function<void()> startCommunicationFunctor, std::function<void()> waitFunctor, MPI_Comm communicator );
     #endif
 
 

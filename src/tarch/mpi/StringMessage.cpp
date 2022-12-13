@@ -33,23 +33,12 @@ void tarch::mpi::StringMessage::sendAndPollDanglingMessages(const tarch::mpi::St
   tarch::mpi::StringMessage::send(
     message, destination, tag,
     [&]() {
-      auto timeOutWarning   = tarch::mpi::Rank::getInstance().getDeadlockWarningTimeStamp();
-      auto timeOutShutdown  = tarch::mpi::Rank::getInstance().getDeadlockTimeOutTimeStamp();
-      bool triggeredTimeoutWarning = false;
-      if (
-        tarch::mpi::Rank::getInstance().isTimeOutWarningEnabled() &&
-        (std::chrono::system_clock::now()>timeOutWarning) &&
-        (!triggeredTimeoutWarning)
-      ) {
-        tarch::mpi::Rank::getInstance().writeTimeOutWarning( "tarch::mpi::StringMessage", "sendAndPollDanglingMessages()",destination, tag );
-        triggeredTimeoutWarning = true;
-      }
-      if (
-        tarch::mpi::Rank::getInstance().isTimeOutDeadlockEnabled() &&
-        (std::chrono::system_clock::now()>timeOutShutdown)
-      ) {
-        tarch::mpi::Rank::getInstance().triggerDeadlockTimeOut( "tarch::mpi::StringMessage", "sendAndPollDanglingMessages()", destination, tag );
-      }
+      tarch::mpi::Rank::getInstance().setDeadlockWarningTimeStamp();
+      tarch::mpi::Rank::getInstance().setDeadlockTimeOutTimeStamp();
+    },
+    [&]() {
+      tarch::mpi::Rank::getInstance().writeTimeOutWarning( "tarch::mpi::StringMessage", "sendAndPollDanglingMessages()",destination, tag );
+      tarch::mpi::Rank::getInstance().triggerDeadlockTimeOut( "tarch::mpi::StringMessage", "sendAndPollDanglingMessages()", destination, tag );
       tarch::services::ServiceRepository::getInstance().receiveDanglingMessages();
     },
     tarch::mpi::Rank::getInstance().getCommunicator()
@@ -61,23 +50,12 @@ void tarch::mpi::StringMessage::receiveAndPollDanglingMessages(tarch::mpi::Strin
   tarch::mpi::StringMessage::receive(
     message, source, tag,
     [&]() {
-      auto timeOutWarning   = tarch::mpi::Rank::getInstance().getDeadlockWarningTimeStamp();
-      auto timeOutShutdown  = tarch::mpi::Rank::getInstance().getDeadlockTimeOutTimeStamp();
-      bool triggeredTimeoutWarning = false;
-      if (
-        tarch::mpi::Rank::getInstance().isTimeOutWarningEnabled() &&
-        (std::chrono::system_clock::now()>timeOutWarning) &&
-        (!triggeredTimeoutWarning)
-      ) {
-        tarch::mpi::Rank::getInstance().writeTimeOutWarning( "tarch::mpi::StringMessage", "receiveAndPollDanglingMessages()", source, tag );
-        triggeredTimeoutWarning = true;
-      }
-      if (
-        tarch::mpi::Rank::getInstance().isTimeOutDeadlockEnabled() &&
-        (std::chrono::system_clock::now()>timeOutShutdown)
-      ) {
-        tarch::mpi::Rank::getInstance().triggerDeadlockTimeOut( "tarch::mpi::StringMessage", "receiveAndPollDanglingMessages()", source, tag );
-      }
+      tarch::mpi::Rank::getInstance().setDeadlockWarningTimeStamp();
+      tarch::mpi::Rank::getInstance().setDeadlockTimeOutTimeStamp();
+    },
+    [&]() {
+      tarch::mpi::Rank::getInstance().writeTimeOutWarning( "tarch::mpi::StringMessage", "receiveAndPollDanglingMessages()", source, tag );
+      tarch::mpi::Rank::getInstance().triggerDeadlockTimeOut( "tarch::mpi::StringMessage", "receiveAndPollDanglingMessages()", source, tag );
       tarch::services::ServiceRepository::getInstance().receiveDanglingMessages();
     },
     tarch::mpi::Rank::getInstance().getCommunicator()
@@ -109,11 +87,19 @@ void tarch::mpi::StringMessage::receive(tarch::mpi::StringMessage& buffer, int s
 }
 
 
-void tarch::mpi::StringMessage::send(const tarch::mpi::StringMessage& buffer, int destination, int tag, std::function<void()> waitFunctor, MPI_Comm communicator ) {
+void tarch::mpi::StringMessage::send(
+  const tarch::mpi::StringMessage& buffer,
+  int destination,
+  int tag,
+  std::function<void()> startCommunicationFunctor,
+  std::function<void()> waitFunctor,
+  MPI_Comm communicator
+) {
   MPI_Request sendRequestHandle; 
   int         flag = 0; 
   MPI_Isend( buffer._data.c_str(), buffer._data.size()+1, MPI_CHAR, destination, tag, communicator, &sendRequestHandle );
   MPI_Test( &sendRequestHandle, &flag, MPI_STATUS_IGNORE ); 
+  startCommunicationFunctor();
   while (!flag) { 
     waitFunctor();
     MPI_Test( &sendRequestHandle, &flag, MPI_STATUS_IGNORE ); 
@@ -121,10 +107,18 @@ void tarch::mpi::StringMessage::send(const tarch::mpi::StringMessage& buffer, in
 }
 
 
-void tarch::mpi::StringMessage::receive(tarch::mpi::StringMessage& buffer, int source, int tag, std::function<void()> waitFunctor, MPI_Comm communicator ) {
+void tarch::mpi::StringMessage::receive(
+  tarch::mpi::StringMessage& buffer,
+  int source,
+  int tag,
+  std::function<void()> startCommunicationFunctor,
+  std::function<void()> waitFunctor,
+  MPI_Comm communicator
+) {
   MPI_Status  status;
   int         flag = 0; 
   MPI_Iprobe( source, tag, communicator, &flag, &status );
+  startCommunicationFunctor();
   while (!flag) { 
     waitFunctor();
     MPI_Iprobe( source, tag, communicator, &flag, &status );

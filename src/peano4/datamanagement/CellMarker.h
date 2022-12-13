@@ -181,8 +181,22 @@ struct peano4::datamanagement::CellMarker {
      * the message went through. In systems with heavy MPI usage, this can
      * help to avoid deadlocks.
      */
-    static void send(const CellMarker& buffer, int destination, int tag, std::function<void()> waitFunctor, MPI_Comm communicator );
-    static void receive(CellMarker& buffer, int source, int tag, std::function<void()> waitFunctor, MPI_Comm communicator );
+    static void send(
+      const CellMarker& buffer,
+      int destination,
+      int tag,
+      std::function<void()> startCommunicationFunctor,
+      std::function<void()> waitFunctor,
+      MPI_Comm communicator
+    );
+    static void receive(
+      CellMarker& buffer,
+      int source,
+      int tag,
+      std::function<void()> startCommunicationFunctor,
+      std::function<void()> waitFunctor,
+      MPI_Comm communicator
+    );
 
     static void sendAndPollDanglingMessages(const CellMarker& message, int destination, int tag, MPI_Comm communicator  );
     static void receiveAndPollDanglingMessages(CellMarker& message, int source, int tag, MPI_Comm communicator  );

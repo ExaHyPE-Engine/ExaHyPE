@@ -103,8 +103,8 @@ class MPI(object):
      * the message went through. In systems with heavy MPI usage, this can 
      * help to avoid deadlocks.
      */
-    static void send(const """ + full_qualified_name + """& buffer, int destination, int tag, std::function<void()> waitFunctor, MPI_Comm communicator );
-    static void receive(""" + full_qualified_name + """& buffer, int source, int tag, std::function<void()> waitFunctor, MPI_Comm communicator );
+    static void send(const """ + full_qualified_name + """& buffer, int destination, int tag, std::function<void()> startCommunicationFunctor, std::function<void()> waitFunctor, MPI_Comm communicator );
+    static void receive(   """ + full_qualified_name + """& buffer, int source,      int tag, std::function<void()> startCommunicationFunctor, std::function<void()> waitFunctor, MPI_Comm communicator );
     #endif
 """
 
@@ -268,11 +268,19 @@ void """ + full_qualified_name + """::receive(""" + full_qualified_name + """& b
 }
 
 
-void """ + full_qualified_name + """::send(const """ + full_qualified_name + """& buffer, int destination, int tag, std::function<void()> waitFunctor, MPI_Comm communicator ) {
+void """ + full_qualified_name + """::send(
+  const """ + full_qualified_name + """& buffer, 
+  int destination, 
+  int tag, 
+  std::function<void()> startCommunicationFunctor, 
+  std::function<void()> waitFunctor, 
+  MPI_Comm communicator 
+) {
   MPI_Request sendRequestHandle; 
   int         flag = 0; 
   MPI_Isend( &buffer, 1, Datatype, destination, tag, communicator, &sendRequestHandle ); 
-  MPI_Test( &sendRequestHandle, &flag, MPI_STATUS_IGNORE ); 
+  MPI_Test( &sendRequestHandle, &flag, MPI_STATUS_IGNORE );
+  startCommunicationFunctor(); 
   while (!flag) { 
     waitFunctor();
     MPI_Test( &sendRequestHandle, &flag, MPI_STATUS_IGNORE ); 
@@ -280,12 +288,20 @@ void """ + full_qualified_name + """::send(const """ + full_qualified_name + """
 }
 
 
-void """ + full_qualified_name + """::receive(""" + full_qualified_name + """& buffer, int source, int tag, std::function<void()> waitFunctor, MPI_Comm communicator ) {   
+void """ + full_qualified_name + """::receive(
+  """ + full_qualified_name + """& buffer, 
+  int source, 
+  int tag, 
+  std::function<void()> startCommunicationFunctor, 
+  std::function<void()> waitFunctor, 
+  MPI_Comm communicator 
+) {   
   MPI_Status  status;
   MPI_Request receiveRequestHandle; 
   int         flag = 0; 
   MPI_Irecv( &buffer, 1, Datatype, source, tag, communicator, &receiveRequestHandle ); 
-  MPI_Test( &receiveRequestHandle, &flag, &status ); 
+  MPI_Test( &receiveRequestHandle, &flag, &status );
+  startCommunicationFunctor(); 
   while (!flag) { 
     waitFunctor();
     MPI_Test( &receiveRequestHandle, &flag, &status ); 

@@ -153,23 +153,12 @@ void """ + full_qualified_name + """::sendAndPollDanglingMessages(const """ + fu
   """ + full_qualified_name + """::send(
     message, destination, tag,
     [&]() {
-      auto  timeOutWarning   = tarch::mpi::Rank::getInstance().getDeadlockWarningTimeStamp();
-      auto timeOutShutdown  = tarch::mpi::Rank::getInstance().getDeadlockTimeOutTimeStamp();
-      bool triggeredTimeoutWarning = false;
-      if (
-        tarch::mpi::Rank::getInstance().isTimeOutWarningEnabled() &&
-        (std::chrono::system_clock::now()>timeOutWarning) &&
-        (!triggeredTimeoutWarning)
-      ) {
-        tarch::mpi::Rank::getInstance().writeTimeOutWarning( """ + "\"" + full_qualified_name + "\"" + """, "sendAndPollDanglingMessages()",destination, tag );
-        triggeredTimeoutWarning = true;
-      }
-      if (
-        tarch::mpi::Rank::getInstance().isTimeOutDeadlockEnabled() &&
-        (std::chrono::system_clock::now()>timeOutShutdown)
-      ) {
-        tarch::mpi::Rank::getInstance().triggerDeadlockTimeOut( """ + "\"" + full_qualified_name + "\"" + """, "sendAndPollDanglingMessages()", destination, tag );
-      }
+      tarch::mpi::Rank::getInstance().setDeadlockWarningTimeStamp();
+      tarch::mpi::Rank::getInstance().setDeadlockTimeOutTimeStamp();
+    },
+    [&]() {
+      tarch::mpi::Rank::getInstance().writeTimeOutWarning( """ + "\"" + full_qualified_name + "\"" + """, "sendAndPollDanglingMessages()",destination, tag );
+      tarch::mpi::Rank::getInstance().triggerDeadlockTimeOut( """ + "\"" + full_qualified_name + "\"" + """, "sendAndPollDanglingMessages()", destination, tag );
       tarch::services::ServiceRepository::getInstance().receiveDanglingMessages();
     },
     communicator
@@ -181,23 +170,12 @@ void """ + full_qualified_name + """::receiveAndPollDanglingMessages(""" + full_
   """ + full_qualified_name + """::receive(
     message, source, tag,
     [&]() {
-      auto timeOutWarning   = tarch::mpi::Rank::getInstance().getDeadlockWarningTimeStamp();
-      auto timeOutShutdown  = tarch::mpi::Rank::getInstance().getDeadlockTimeOutTimeStamp();
-      bool triggeredTimeoutWarning = false;
-      if (
-        tarch::mpi::Rank::getInstance().isTimeOutWarningEnabled() &&
-        (std::chrono::system_clock::now()>timeOutWarning) &&
-        (!triggeredTimeoutWarning)
-      ) {
-        tarch::mpi::Rank::getInstance().writeTimeOutWarning( """ + "\"" + full_qualified_name + "\"" + """, "receiveAndPollDanglingMessages()", source, tag );
-        triggeredTimeoutWarning = true;
-      }
-      if (
-        tarch::mpi::Rank::getInstance().isTimeOutDeadlockEnabled() &&
-        (std::chrono::system_clock::now()>timeOutShutdown)
-      ) {
-        tarch::mpi::Rank::getInstance().triggerDeadlockTimeOut( """ + "\"" + full_qualified_name + "\"" + """, "receiveAndPollDanglingMessages()", source, tag );
-      }
+      tarch::mpi::Rank::getInstance().setDeadlockWarningTimeStamp();
+      tarch::mpi::Rank::getInstance().setDeadlockTimeOutTimeStamp();
+    },
+    [&]() {
+      tarch::mpi::Rank::getInstance().writeTimeOutWarning( """ + "\"" + full_qualified_name + "\"" + """, "receiveAndPollDanglingMessages()", source, tag );
+      tarch::mpi::Rank::getInstance().triggerDeadlockTimeOut( """ + "\"" + full_qualified_name + "\"" + """, "receiveAndPollDanglingMessages()", source, tag );
       tarch::services::ServiceRepository::getInstance().receiveDanglingMessages();
     },
     communicator

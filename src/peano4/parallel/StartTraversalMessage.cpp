@@ -44,23 +44,12 @@ void peano4::parallel::StartTraversalMessage::sendAndPollDanglingMessages(const 
   peano4::parallel::StartTraversalMessage::send(
     message, destination, tag,
     [&]() {
-      auto  timeOutWarning   = tarch::mpi::Rank::getInstance().getDeadlockWarningTimeStamp();
-      auto timeOutShutdown  = tarch::mpi::Rank::getInstance().getDeadlockTimeOutTimeStamp();
-      bool triggeredTimeoutWarning = false;
-      if (
-        tarch::mpi::Rank::getInstance().isTimeOutWarningEnabled() &&
-        (std::chrono::system_clock::now()>timeOutWarning) &&
-        (!triggeredTimeoutWarning)
-      ) {
-        tarch::mpi::Rank::getInstance().writeTimeOutWarning( "peano4::parallel::StartTraversalMessage", "sendAndPollDanglingMessages()",destination, tag );
-        triggeredTimeoutWarning = true;
-      }
-      if (
-        tarch::mpi::Rank::getInstance().isTimeOutDeadlockEnabled() &&
-        (std::chrono::system_clock::now()>timeOutShutdown)
-      ) {
-        tarch::mpi::Rank::getInstance().triggerDeadlockTimeOut( "peano4::parallel::StartTraversalMessage", "sendAndPollDanglingMessages()", destination, tag );
-      }
+      tarch::mpi::Rank::getInstance().setDeadlockWarningTimeStamp();
+      tarch::mpi::Rank::getInstance().setDeadlockTimeOutTimeStamp();
+    },
+    [&]() {
+      tarch::mpi::Rank::getInstance().writeTimeOutWarning( "peano4::parallel::StartTraversalMessage", "sendAndPollDanglingMessages()",destination, tag );
+      tarch::mpi::Rank::getInstance().triggerDeadlockTimeOut( "peano4::parallel::StartTraversalMessage", "sendAndPollDanglingMessages()", destination, tag );
       tarch::services::ServiceRepository::getInstance().receiveDanglingMessages();
     },
     communicator
@@ -72,23 +61,12 @@ void peano4::parallel::StartTraversalMessage::receiveAndPollDanglingMessages(pea
   peano4::parallel::StartTraversalMessage::receive(
     message, source, tag,
     [&]() {
-      auto timeOutWarning   = tarch::mpi::Rank::getInstance().getDeadlockWarningTimeStamp();
-      auto timeOutShutdown  = tarch::mpi::Rank::getInstance().getDeadlockTimeOutTimeStamp();
-      bool triggeredTimeoutWarning = false;
-      if (
-        tarch::mpi::Rank::getInstance().isTimeOutWarningEnabled() &&
-        (std::chrono::system_clock::now()>timeOutWarning) &&
-        (!triggeredTimeoutWarning)
-      ) {
-        tarch::mpi::Rank::getInstance().writeTimeOutWarning( "peano4::parallel::StartTraversalMessage", "receiveAndPollDanglingMessages()", source, tag );
-        triggeredTimeoutWarning = true;
-      }
-      if (
-        tarch::mpi::Rank::getInstance().isTimeOutDeadlockEnabled() &&
-        (std::chrono::system_clock::now()>timeOutShutdown)
-      ) {
-        tarch::mpi::Rank::getInstance().triggerDeadlockTimeOut( "peano4::parallel::StartTraversalMessage", "receiveAndPollDanglingMessages()", source, tag );
-      }
+      tarch::mpi::Rank::getInstance().setDeadlockWarningTimeStamp();
+      tarch::mpi::Rank::getInstance().setDeadlockTimeOutTimeStamp();
+    },
+    [&]() {
+      tarch::mpi::Rank::getInstance().writeTimeOutWarning( "peano4::parallel::StartTraversalMessage", "receiveAndPollDanglingMessages()", source, tag );
+      tarch::mpi::Rank::getInstance().triggerDeadlockTimeOut( "peano4::parallel::StartTraversalMessage", "receiveAndPollDanglingMessages()", source, tag );
       tarch::services::ServiceRepository::getInstance().receiveDanglingMessages();
     },
     communicator
@@ -224,11 +202,19 @@ void peano4::parallel::StartTraversalMessage::receive(peano4::parallel::StartTra
 }
 
 
-void peano4::parallel::StartTraversalMessage::send(const peano4::parallel::StartTraversalMessage& buffer, int destination, int tag, std::function<void()> waitFunctor, MPI_Comm communicator ) {
+void peano4::parallel::StartTraversalMessage::send(
+  const peano4::parallel::StartTraversalMessage& buffer, 
+  int destination, 
+  int tag, 
+  std::function<void()> startCommunicationFunctor, 
+  std::function<void()> waitFunctor, 
+  MPI_Comm communicator 
+) {
   MPI_Request sendRequestHandle; 
   int         flag = 0; 
   MPI_Isend( &buffer, 1, Datatype, destination, tag, communicator, &sendRequestHandle ); 
-  MPI_Test( &sendRequestHandle, &flag, MPI_STATUS_IGNORE ); 
+  MPI_Test( &sendRequestHandle, &flag, MPI_STATUS_IGNORE );
+  startCommunicationFunctor(); 
   while (!flag) { 
     waitFunctor();
     MPI_Test( &sendRequestHandle, &flag, MPI_STATUS_IGNORE ); 
@@ -236,12 +222,20 @@ void peano4::parallel::StartTraversalMessage::send(const peano4::parallel::Start
 }
 
 
-void peano4::parallel::StartTraversalMessage::receive(peano4::parallel::StartTraversalMessage& buffer, int source, int tag, std::function<void()> waitFunctor, MPI_Comm communicator ) {   
+void peano4::parallel::StartTraversalMessage::receive(
+  peano4::parallel::StartTraversalMessage& buffer, 
+  int source, 
+  int tag, 
+  std::function<void()> startCommunicationFunctor, 
+  std::function<void()> waitFunctor, 
+  MPI_Comm communicator 
+) {   
   MPI_Status  status;
   MPI_Request receiveRequestHandle; 
   int         flag = 0; 
   MPI_Irecv( &buffer, 1, Datatype, source, tag, communicator, &receiveRequestHandle ); 
-  MPI_Test( &receiveRequestHandle, &flag, &status ); 
+  MPI_Test( &receiveRequestHandle, &flag, &status );
+  startCommunicationFunctor(); 
   while (!flag) { 
     waitFunctor();
     MPI_Test( &receiveRequestHandle, &flag, &status ); 

@@ -51,7 +51,6 @@
 
       static {{CLASSNAME}}     _particlesThatCanNotBeLiftedWithinTheirTree;
       static {{CLASSNAME}}     _particlesThatHaveToBeSieved;
-      static bool              _thereAreParticlesToBeSieved;
 
       static int _numberOfLifts;
       static int _numberOfDrops;
@@ -217,22 +216,55 @@
       double getMinCutOffRadius() const;
 
       /**
+       * Get all the global sieve data consistent
+       *
        * Has to be called after the traversal has finished on each rank by the
-       * main, i.e. do not call it within the action sets. You may not call this
-       * routine more than once per rank per traversal.
+       * main, i.e. do not call it within the action sets. You may not call
+       * this routine more than once per rank per traversal. The core purpose
+       * of this routine is to get the global sieve data all consistent: If a
+       * tree cannot resort its local particles, and, hence, cannot even
+       * synchronise with its neighbours as particles moved too fast, it dumps
+       * the particle into the global sieve list. After the traversal, all
+       * ranks (and eventually trees) should see the same global sieve list and
+       * start to sieve particles into their respective domain.
        *
        *
        * ## Algorithmic steps
        *
-       * - First, we exchange all the global stats and plot them. Once we have
-       *   plotted them (only on rank 0), we can reset all stats to zero.
        * - Delete all the sieve particles which have not been sieved. We note
        *   that only particles within the domain are taken from the sieve set
-       *   and inserted into hte mesh. For particles close to domain boundaries,
-       *   we create copies and insert these copies. The preimage consequently
-       *   has to be deleted at one point, i.e. here in this routine.
-       * - We roll over the globally lifted particles into the sieve set for the
-       *   next mesh traversal.
+       *   and inserted into the mesh. For particles close to domain
+       *   boundaries, we create copies and insert these copies. The preimage
+       *   consequently has to be deleted at one point, i.e. here in this
+       *   routine.
+       * - Inform all other ranks about my number of local particles that I
+       *   could not sort on the local rank.
+       * - Per other rank:
+       *   - Find out how many particles will be received from this partner.
+       *   - Send out my own copy of particles with an unblocking send.
+       *   - Receive the guys from the neighbour. We can append these received
+       *     data directly to our local data. We will use these local buffers
+       *     to send out stuff to other neighbours, but as we append, we will
+       *     only send out the first few particles which really stem from the
+       *     local node.
+       *   - Wrap up the unblocking send via a wait.
+       *   It is important that we allow the rank to handle other (unexpected)
+       *   message while we wait for the particle exchange to terminate. This
+       *   is possible, as we use a tag of its own for the global particle
+       *   exchange. Without a wait for unexpected messages, it could for
+       *   example be that another rank requires a tree booking due to load
+       *   balancing, and we cannot serve the tree request in our rank, as we
+       *   are already stuck in the global particle exchange.
+       * - We roll over the globally lifted particles into the sieve set for
+       *   the next mesh traversal.
+       * - Remove duplicates from the sieve list. The sieve list might contain
+       *   redundant particles for those guys which ended up exactly on the
+       *   boundary between two trees. Such guys are considered to be local in
+       *   multiple subdomains and hence might also end up redundantly within
+       *   the sieve list.
+       * - Clear the container _particlesThatCanNotBeLiftedWithinTheirTree
+       *   which will be used in the future to gather the newly sieved
+       *   particles.
        */
       static void finishedTraversal();
 

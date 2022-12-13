@@ -17,7 +17,6 @@ tarch::multicore::BooleanSemaphore   {{NAMESPACE | join("::")}}::{{CLASSNAME}}::
 
 {{NAMESPACE | join("::")}}::{{CLASSNAME}}     {{NAMESPACE | join("::")}}::{{CLASSNAME}}::_particlesThatCanNotBeLiftedWithinTheirTree;
 {{NAMESPACE | join("::")}}::{{CLASSNAME}}     {{NAMESPACE | join("::")}}::{{CLASSNAME}}::_particlesThatHaveToBeSieved;
-bool              {{NAMESPACE | join("::")}}::{{CLASSNAME}}::_thereAreParticlesToBeSieved;
 
 int {{NAMESPACE | join("::")}}::{{CLASSNAME}}::_numberOfLifts                        = 0;
 int {{NAMESPACE | join("::")}}::{{CLASSNAME}}::_numberOfDrops                        = 0;
@@ -251,12 +250,11 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishedTraversal() {
   _particlesThatHaveToBeSieved.deleteParticles();
 
   #ifdef Parallel
-  todo alles hier muss asynchron sein
   logInfo( "finishedTraversal()", "inform all other ranks that I host " << _particlesThatCanNotBeLiftedWithinTheirTree.size() << " particles that cannot be sorted locally" );
   for (int rank=0; rank<tarch::mpi::Rank::getInstance().getNumberOfRanks(); rank++) {
     if (rank!=tarch::mpi::Rank::getInstance().getRank()) {
       tarch::mpi::IntegerMessage message( _particlesThatCanNotBeLiftedWithinTheirTree.size() );
-      tarch::mpi::IntegerMessage::send(
+      tarch::mpi::IntegerMessage::sendAndPollDanglingMessages(
         message,
         rank,
         _SieveReductionTag,
@@ -269,14 +267,14 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishedTraversal() {
     if (rank!=tarch::mpi::Rank::getInstance().getRank()) {
       logInfo( "finishedTraversal()", "ask rank " << rank << " how many messages have to be received" );
       tarch::mpi::IntegerMessage numberOfReceivedMessages;
-      tarch::mpi::IntegerMessage::receive(
+      tarch::mpi::IntegerMessage::receiveAndPollDanglingMessages(
         numberOfReceivedMessages,
         rank,
         _SieveReductionTag,
         tarch::mpi::Rank::getInstance().getCommunicator()
       );
 
-      MPI_Request* receiveRequest = new MPI_Request();
+      MPI_Request sendReceiveRequests[2];
       {{NAMESPACE | join("::")}}::{{CLASSNAME}} receiveBuffer;
       receiveBuffer.resize( numberOfReceivedMessages.getValue() );
       MPI_Irecv(
@@ -286,19 +284,24 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishedTraversal() {
         rank,
         _SieveReductionTag,
         tarch::mpi::Rank::getInstance().getCommunicator(),
-        receiveRequest
+        &(sendReceiveRequests[1])
       );
-      MPI_Send(
+      MPI_Isend(
         _particlesThatCanNotBeLiftedWithinTheirTree.data(),
         _particlesThatCanNotBeLiftedWithinTheirTree.size(),
         DoFType::getGlobalCommunciationDatatype(),
         rank,
         _SieveReductionTag,
-        tarch::mpi::Rank::getInstance().getCommunicator()
+        tarch::mpi::Rank::getInstance().getCommunicator(),
+        &(sendReceiveRequests[0])
       );
-      MPI_Wait( receiveRequest, MPI_STATUS_IGNORE );
-      delete receiveRequest;
+      logInfo( "finishedTraversal()", "issued my sends and receives" );
+      int         flag = 0;
+      while (not flag) {
+        MPI_Testall( 2, sendReceiveRequests, &flag, MPI_STATUSES_IGNORE );
+      }
 
+      logInfo( "finishedTraversal()", "append " << receiveBuffer.size() << " messages to local sieve particle list" );
       // we append at the end, i.e.~we can be sure that subsequent
       // sends do not send away the new stuff
       _particlesThatHaveToBeSieved.insert(
@@ -316,9 +319,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishedTraversal() {
     _particlesThatCanNotBeLiftedWithinTheirTree.end()
   );
 
-  // this is important, but I don't know why
   _particlesThatHaveToBeSieved.eliminateSpatialDuplicates( false, 1.0 + 1e-6 );
-  _thereAreParticlesToBeSieved = not _particlesThatHaveToBeSieved.empty();
   _particlesThatCanNotBeLiftedWithinTheirTree.clear();
 }
 

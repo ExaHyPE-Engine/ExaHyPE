@@ -80,8 +80,22 @@ struct tarch::mpi::StringMessage {
      * the message went through. In systems with heavy MPI usage, this can 
      * help to avoid deadlocks.
      */
-    static void send(const tarch::mpi::StringMessage& buffer, int destination, int tag, std::function<void()> waitFunctor, MPI_Comm communicator );
-    static void receive(tarch::mpi::StringMessage& buffer, int source, int tag, std::function<void()> waitFunctor, MPI_Comm communicator );
+    static void send(
+      const tarch::mpi::StringMessage& buffer,
+      int destination,
+      int tag,
+      std::function<void()> startCommunicationFunctor,
+      std::function<void()> waitFunctor,
+      MPI_Comm communicator
+    );
+    static void receive(
+      tarch::mpi::StringMessage& buffer,
+      int source,
+      int tag,
+      std::function<void()> startCommunicationFunctor,
+      std::function<void()> waitFunctor,
+      MPI_Comm communicator
+    );
 
     /**
      * In older DaStGen version, I tried to find out whether a particular 
