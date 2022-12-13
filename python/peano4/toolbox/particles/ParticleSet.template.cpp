@@ -273,6 +273,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishedTraversal() {
         _SieveReductionTag,
         tarch::mpi::Rank::getInstance().getCommunicator()
       );
+      logInfo( "finishedTraversal()", "will receive " << numberOfReceivedMessages.getValue() << " from rank " << rank );
 
       MPI_Request sendReceiveRequests[2];
       {{NAMESPACE | join("::")}}::{{CLASSNAME}} receiveBuffer;
