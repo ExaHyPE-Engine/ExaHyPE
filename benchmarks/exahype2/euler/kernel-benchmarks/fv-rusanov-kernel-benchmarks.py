@@ -31,34 +31,56 @@ if(args.accuracy < 0):
   import numpy
   accuracy = default=numpy.finfo(float).eps
 
-dimensions = args.dim
 project = exahype2.Project( ["benchmarks", "exahype2", "euler"], "EulerFVRusanovKernelBenchmarks", ".", executable="kernel-benchmark-fv-" + str(args.dim) + "d-patch-size-"+ str(args.patch_size) )
 
-unknowns            = 1+dimensions+1
-max_h               = 0.01
-min_h               = 0.01
-auxiliary_variables = 0
-
-solver_name = "EulerFVRusanov"
-
 fv_rusanov_solver = exahype2.solvers.fv.rusanov.GlobalAdaptiveTimeStepWithEnclaveTasking(
-  solver_name,
-  args.patch_size,
-  unknowns, auxiliary_variables,
-  min_volume_h = min_h,
-  max_volume_h = max_h,
+  name = "EulerFVRusanov",
+  patch_size = args.patch_size,
+  unknowns = 1+args.dim+1,
+  auxiliary_variables = 0,
+  min_volume_h = 0.01,
+  max_volume_h = 0.01,
   time_step_relaxation = 0.01,
-  flux = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
-  eigenvalues = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
   pde_terms_without_state = True
 )
 
-project.add_solver(fv_rusanov_solver)
+fv_rusanov_solver.add_user_action_set_includes( """
+#include "EulerKernels.h"
+""")
+fv_rusanov_solver.add_user_solver_includes( """
+#include "EulerKernels.h"
+""")
 
-if args.debug:
-  build_mode = peano4.output.CompileMode.Debug
-else:
-  build_mode = peano4.output.CompileMode.Release
+fv_rusanov_solver.set_implementation(
+  boundary_conditions  = exahype2.solvers.fv.PDETerms.Empty_Implementation,
+  ncp                  = exahype2.solvers.fv.PDETerms.None_Implementation,
+  flux                 = """
+  ::applications::exahype2::euler::fluxOnGPU(
+    Q,
+    faceCentre, volumeH, t, dt, normal,
+    NumberOfUnknowns, NumberOfAuxiliaryVariables,
+    F
+  );
+""",
+  source_term          = exahype2.solvers.fv.PDETerms.None_Implementation,
+  refinement_criterion = exahype2.solvers.fv.PDETerms.Empty_Implementation,
+  eigenvalues          = """
+  return ::applications::exahype2::euler::maxEigenvalueOnGPU(
+    Q,
+    faceCentre, volumeH, t, dt, normal,
+    NumberOfUnknowns, NumberOfAuxiliaryVariables
+  );
+""",
+  initial_conditions   = """
+  printf("Initial conditions should not be called in this benchmark!");
+  std::abort();
+  for (int i=0; i<NumberOfUnknowns+NumberOfAuxiliaryVariables; i++) {
+    Q[i] = 0.0;
+  }
+"""
+)
+
+project.add_solver(fv_rusanov_solver)
 
 if args.dim==2:
   offset = [0.0,0.0]
@@ -68,7 +90,7 @@ else:
   size = [1.0,1.0,1.0]
   
 project.set_global_simulation_parameters(
-  dimensions   = dimensions,
+  dimensions   = args.dim,
   offset       = offset,
   size         = size,
   min_end_time = 1.0,
@@ -79,19 +101,23 @@ project.set_global_simulation_parameters(
 )
 
 project.set_load_balancing( "toolbox::loadbalancing::RecursiveSubdivision", "new ::exahype2::LoadBalancingConfiguration()" )
+
+if args.debug:
+  build_mode = peano4.output.CompileMode.Debug
+else:
+  build_mode = peano4.output.CompileMode.Release
 project.set_Peano4_installation( "../../../../", build_mode )
 
 peano4_project = project.generate_Peano4_project(args.verbose)
+
 peano4_project.constants.export_constexpr_with_type( "Accuracy", str(accuracy), "double" )
 peano4_project.constants.export_constexpr_with_type( "Iterations", str(args.iterations), "int" )
 peano4_project.constants.export_boolean( "EnableManagedMemory", args.managed_memory )
+
 peano4_project.output.makefile.add_cpp_file( "../../../../applications/exahype2/euler/EulerKernels.cpp" )
 peano4_project.output.makefile.add_header_search_path( "../../../../applications/exahype2/euler" )
+
 peano4_project.generate()
-os.system( "make clean" )
-#if args.j>0:
-#  os.system( "make -j{}".format(args.j) )
-#else:
-#  os.system( "make -j" )
+peano4_project.build( make_clean_first = True)
 
 print("Done")

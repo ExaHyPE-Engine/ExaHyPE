@@ -54,6 +54,9 @@ tarch::timing::Measurement plotMeasurement;
 double validMaxEigenvalue = 0;
 double* validOutcome = nullptr;
 
+double accumulatedTimeBurn = 0;
+double accumulatedTimeBenchmark = 0;
+
 #if Dimensions==2
 constexpr int NumberOfInputEntries  = (EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch+2)*(EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch+2) * EulerFVRusanov::NumberOfUnknowns;
 constexpr int NumberOfOutputEntries = (EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch+0)*(EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch+0) * EulerFVRusanov::NumberOfUnknowns;
@@ -183,24 +186,31 @@ void runBenchmarksOnHost(int patches) {
     watch.stop();
 
     if (currentThread==0) {
+#if Dimensions == 2
+      logInfo("main()", "baseline: "       << watch.getCalendarTime() << " / " << (watch.getCalendarTime()/patches/EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch/EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch) );
+#else
       logInfo("main()", "baseline: "       << watch.getCalendarTime() << " / " << (watch.getCalendarTime()/patches/EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch/EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch/EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch) );
+#endif
     }
 
-    int errors = 0;
-    double maxDifference = 0.0;
     if constexpr (Accuracy>0.0) {
+      int errors = 0;
+      double maxDifference = 0.0;
       for (int i=0; i<patches; i++) {
         storeOutcome( outputData[i],outputMaxEigenvalue );
         auto [maxDifferencePerPatch, errorsPerPatch] = validateOutcome( outputData[i],i ,outputMaxEigenvalue);
         errors += errorsPerPatch;
         maxDifference = std::max(maxDifference, maxDifferencePerPatch);
-        delete[] outputData[i];
+      }
+
+      if (errors > 0) {
+        logError("main()", "max difference of outcome from baseline for all patches is " << maxDifference << " (admissible accuracy=" << Accuracy << ")" << " for " << errors << " entries");
+        std::abort();
       }
     }
 
-    if (errors > 0) {
-      logError("main()", "max difference of outcome from baseline for all patches is " << maxDifference << " (admissible accuracy=" << Accuracy << ")" << " for " << errors << " entries");
-      std::abort();
+    for (int i=0; i<patches; i++) {
+      delete[] outputData[i];
     }
   };
 
@@ -239,30 +249,36 @@ void runBenchmarksOnHost(int patches) {
     watch.stop();
 
     if (currentThread==0) {
+#if Dimensions == 2
+      logInfo("main()", "stateless kernels on host with " << markerName << ": " << watch.getCalendarTime() << " / " << (watch.getCalendarTime()/patches/EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch/EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch) );
+#else
       logInfo("main()", "stateless kernels on host with " << markerName << ": " << watch.getCalendarTime() << " / " << (watch.getCalendarTime()/patches/EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch/EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch/EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch) );
+#endif
     }
 
-    int errors = 0;
-    double maxDifference = 0.0;
     if constexpr (Accuracy>0.0) {
+      int errors = 0;
       double maxDifference = 0.0;
       for (int i=0; i<patches; i++) {
         auto [maxDifferencePerPatch, errorsPerPatch] = validateOutcome( patchData.QOut[i],i,patchData.maxEigenvalue[i]);
         errors += errorsPerPatch;
         maxDifference = std::max(maxDifference, maxDifferencePerPatch);
-        delete[] patchData.QIn[i];
-        delete[] patchData.QOut[i];
+      }
+
+      if (errors > 0) {
+        logError("main()", "max difference of outcome from " << markerName << " for all patches is " << maxDifference << " (admissible accuracy=" << Accuracy << ")" << " for " << errors << " entries");
+        std::abort();
       }
     }
 
-    if (errors > 0) {
-      logError("main()", "max difference of outcome from " << markerName << " for all patches is " << maxDifference << " (admissible accuracy=" << Accuracy << ")" << " for " << errors << " entries");
-      std::abort();
+    for (int i=0; i<patches; i++) {
+      delete[] patchData.QIn[i];
+      delete[] patchData.QOut[i];
     }
   };
 
 #if defined(SharedOMP)
-  #pragma omp parallel for
+  #pragma omp parallel for shared(accumulatedTimeBurn, accumulatedTimeBenchmark)
   for (int thread=0; thread<tarch::multicore::Core::getInstance().getNumberOfThreads(); thread++) {
 #elif defined(SharedTBB)
   ::tbb::task_group taskGroup;
@@ -354,8 +370,18 @@ void testStatelessVariantOnDevice(
     initInputData( patchData.QIn[i] );
   }
 
-  tarch::timing::Watch watch( "::runBenchmarksOnDevice", "testStatelessVariantOnDevice(...)", false );
-  tarch::timing::Watch watchFirstIteration( "::runBenchmarksOnDevice", "testStatelessVariantOnDeviceFirstIteration(...)", false );
+  tarch::timing::Watch watchBurn( "::runBenchmarksOnDevice", "testStatelessVariantOnDevice(...)", false );
+  kernel(
+    device,
+    patchData,
+    true ,
+    false ,
+    false ,
+    true   //computeCFL
+  );
+  watchBurn.stop();
+
+  tarch::timing::Watch watchBenchmark( "::runBenchmarksOnDevice", "testStatelessVariantOnDevice(...)", false );
   for (int i = 0; i < Iterations; i++) {
     kernel(
       device,
@@ -365,39 +391,64 @@ void testStatelessVariantOnDevice(
       false ,
       true   //computeCFL
     );
-     // We want to only measure the time of the first kernel invocation so
-     // that we know the overhead for memory allocation on the GPU.
-    if (i == 0) {
-      watchFirstIteration.stop();
-    }
   }
+  watchBenchmark.stop();
 
-  watch.stop();
+  {
+    #pragma omp atomic
+    accumulatedTimeBurn += watchBurn.getCalendarTime();
+    #pragma omp atomic
+    accumulatedTimeBenchmark += watchBenchmark.getCalendarTime();
+    #pragma omp barrier
+  }
 
   if (currentThread==0) {
+#if Dimensions == 2
     logInfo("main()", "stateless kernels on device " << device << " with " << markerName << ": "
-      << "first iteration: " << watchFirstIteration.getCalendarTime() << " / "
-      << (watchFirstIteration.getCalendarTime()/patches/EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch/EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch/EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch) << ", "
-      << Iterations << " iterations: " << (watch.getCalendarTime()/Iterations) << " / "
-      << ((watch.getCalendarTime()/Iterations)/patches/EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch/EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch/EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch));
+      << "burn phase: " << watchBurn.getCalendarTime() << " / "
+      << (watchBurn.getCalendarTime()/patches/EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch/EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch) << ", "
+      << Iterations << " iterations: " << (watchBenchmark.getCalendarTime()/Iterations) << " / "
+      << (watchBenchmark.getCalendarTime()/Iterations/patches/EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch/EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch) << ", "
+      << "burn phase for all threads: " << (accumulatedTimeBurn/omp_get_num_threads()) << " / "
+      << (accumulatedTimeBurn/omp_get_num_threads()/patches/EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch/EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch) << ", "
+      << Iterations << " iterations for all threads: " << (accumulatedTimeBenchmark/omp_get_num_threads()/Iterations) << " / "
+      << (accumulatedTimeBenchmark/omp_get_num_threads()/Iterations/patches/EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch/EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch));
+#else
+    logInfo("main()", "stateless kernels on device " << device << " with " << markerName << ": "
+      << "burn phase: " << watchBurn.getCalendarTime() << " / "
+      << (watchBurn.getCalendarTime()/patches/EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch/EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch/EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch) << ", "
+      << Iterations << " iterations: " << (watchBenchmark.getCalendarTime()/Iterations) << " / "
+      << (watchBenchmark.getCalendarTime()/Iterations/patches/EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch/EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch/EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch) << ", "
+      << "burn phase for all threads: " << (accumulatedTimeBurn/omp_get_num_threads()) << " / "
+      << (accumulatedTimeBurn/omp_get_num_threads()/patches/EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch/EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch/EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch) << ", "
+      << Iterations << " iterations for all threads: " << (accumulatedTimeBenchmark/omp_get_num_threads()/Iterations) << " / "
+      << (accumulatedTimeBenchmark/omp_get_num_threads()/Iterations/patches/EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch/EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch/EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch));
+#endif
   }
 
-  int errors = 0;
-  double maxDifference = 0.0;
+  {
+    accumulatedTimeBurn = 0.0;
+    accumulatedTimeBenchmark = 0.0;
+  }
+
   if constexpr (Accuracy>0.0) {
+    int errors = 0;
     double maxDifference = 0.0;
     for (int i=0; i<patches; i++) {
       auto [maxDifferencePerPatch, errorsPerPatch] = validateOutcome( patchData.QOut[i],i,patchData.maxEigenvalue[i]);
       errors += errorsPerPatch;
       maxDifference = std::max(maxDifference, maxDifferencePerPatch);
-      delete[] patchData.QIn[i];
-      delete[] patchData.QOut[i];
+    }
+
+    if (errors > 0) {
+      logError("main()", "max difference of outcome from " << markerName << " for all patches is " << maxDifference << " (admissible accuracy=" << Accuracy << ")" << " for " << errors << " entries");
+      std::abort();
     }
   }
 
-  if (errors > 0) {
-    logError("main()", "max difference of outcome from " << markerName << " for all patches is " << maxDifference << " (admissible accuracy=" << Accuracy << ")" << " for " << errors << " entries");
-    std::abort();
+  for (int i=0; i<patches; i++) {
+    delete[] patchData.QIn[i];
+    delete[] patchData.QOut[i];
   }
 };
 

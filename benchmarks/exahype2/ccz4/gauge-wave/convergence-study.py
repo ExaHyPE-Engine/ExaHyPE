@@ -19,7 +19,7 @@ parser.add_argument("-tracer",   "--tracer",       dest="tracer",         action
 args = parser.parse_args()
 
 #
-# This part si only for convenience. We could use these symbols to augment
+# This part is only for convenience. We could use these symbols to augment
 # the output files, but I don't use this feature here.
 #
 unknowns = {
