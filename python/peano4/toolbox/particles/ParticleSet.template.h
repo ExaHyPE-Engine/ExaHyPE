@@ -45,6 +45,8 @@
     private:
       static tarch::logging::Log _log;
 
+      static int _SieveReductionTag;
+
       static tarch::multicore::BooleanSemaphore   _semaphore;
 
       static {{CLASSNAME}}     _particlesThatCanNotBeLiftedWithinTheirTree;
