@@ -10,7 +10,7 @@
 tarch::logging::Log {{NAMESPACE | join("::")}}::{{CLASSNAME}}::_log( "{{NAMESPACE | join("::")}}::{{CLASSNAME}}" );
 
 
-int {{NAMESPACE | join("::")}}::{{CLASSNAME}}::_SieveReductionTag = tarch::mpi::Rank::reserveFreeTag("{{NAMESPACE | join("::")}}::{{CLASSNAME}}");;
+int {{NAMESPACE | join("::")}}::{{CLASSNAME}}::_SieveReductionTag = tarch::mpi::Rank::reserveFreeTag("{{NAMESPACE | join("::")}}::{{CLASSNAME}}");
 
 
 tarch::multicore::BooleanSemaphore   {{NAMESPACE | join("::")}}::{{CLASSNAME}}::_semaphore;
@@ -250,10 +250,11 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishedTraversal() {
   _particlesThatHaveToBeSieved.deleteParticles();
 
   #ifdef Parallel
-  logInfo( "finishedTraversal()", "inform all other ranks that I host " << _particlesThatCanNotBeLiftedWithinTheirTree.size() << " particles that cannot be sorted locally" );
+  const int numberOfParticlesToSend = _particlesThatCanNotBeLiftedWithinTheirTree.size();
+  logInfo( "finishedTraversal()", "inform all other ranks that I host " << numberOfParticlesToSend << " particles that cannot be sorted locally. Use tag " << _SieveReductionTag );
   for (int rank=0; rank<tarch::mpi::Rank::getInstance().getNumberOfRanks(); rank++) {
     if (rank!=tarch::mpi::Rank::getInstance().getRank()) {
-      tarch::mpi::IntegerMessage message( _particlesThatCanNotBeLiftedWithinTheirTree.size() );
+      tarch::mpi::IntegerMessage message( numberOfParticlesToSend );
       tarch::mpi::IntegerMessage::sendAndPollDanglingMessages(
         message,
         rank,
@@ -262,7 +263,14 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishedTraversal() {
       );
     }
   }
-  // Tell everybody how many elements we have
+
+  logInfo( "finishedTraversal()", "pack send information (vector of pointers) into array" );
+  std::vector<DoFType>  sendBuffer;    // no pointers here
+  sendBuffer.resize( numberOfParticlesToSend );
+  for (int i=0; i<numberOfParticlesToSend; i++) {
+    sendBuffer[i] = *(_particlesThatCanNotBeLiftedWithinTheirTree[i]);
+  }
+
   for (int rank=0; rank<tarch::mpi::Rank::getInstance().getNumberOfRanks(); rank++) {
     if (rank!=tarch::mpi::Rank::getInstance().getRank()) {
       logInfo( "finishedTraversal()", "ask rank " << rank << " how many messages have to be received" );
@@ -273,43 +281,62 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishedTraversal() {
         _SieveReductionTag,
         tarch::mpi::Rank::getInstance().getCommunicator()
       );
-      logInfo( "finishedTraversal()", "will receive " << numberOfReceivedMessages.getValue() << " from rank " << rank );
+      logInfo( "finishedTraversal()", "will receive " << numberOfReceivedMessages.getValue() << " particles from rank " << rank );
 
-      MPI_Request sendReceiveRequests[2];
-      {{NAMESPACE | join("::")}}::{{CLASSNAME}} receiveBuffer;
-      receiveBuffer.resize( numberOfReceivedMessages.getValue() );
-      MPI_Irecv(
-        receiveBuffer.data(),
-        numberOfReceivedMessages.getValue(),
-        DoFType::getGlobalCommunciationDatatype(),
-        rank,
-        _SieveReductionTag,
-        tarch::mpi::Rank::getInstance().getCommunicator(),
-        &(sendReceiveRequests[1])
-      );
-      MPI_Isend(
-        _particlesThatCanNotBeLiftedWithinTheirTree.data(),
-        _particlesThatCanNotBeLiftedWithinTheirTree.size(),
-        DoFType::getGlobalCommunciationDatatype(),
-        rank,
-        _SieveReductionTag,
-        tarch::mpi::Rank::getInstance().getCommunicator(),
-        &(sendReceiveRequests[0])
-      );
+      MPI_Request* sendRequest    = nullptr;
+      MPI_Request* receiveRequest = nullptr;
+
+      std::vector<DoFType>  receiveBuffer; // no pointers here
+      if ( numberOfReceivedMessages.getValue()>0 ) {
+        receiveRequest = new MPI_Request();
+        receiveBuffer.resize( numberOfReceivedMessages.getValue() );
+        MPI_Irecv(
+          receiveBuffer.data(),
+          numberOfReceivedMessages.getValue(),
+          DoFType::getGlobalCommunciationDatatype(),
+          rank,
+          _SieveReductionTag,
+          tarch::mpi::Rank::getInstance().getCommunicator(),
+          receiveRequest
+        );
+      }
+
+      if ( numberOfParticlesToSend>0 ) {
+        sendRequest = new MPI_Request();
+        MPI_Isend(
+          sendBuffer.data(),
+          numberOfParticlesToSend,  // this is important
+          DoFType::getGlobalCommunciationDatatype(),
+          rank,
+          _SieveReductionTag,
+          tarch::mpi::Rank::getInstance().getCommunicator(),
+          sendRequest
+        );
+      }
+
       logInfo( "finishedTraversal()", "issued my sends and receives" );
       int         flag = 0;
+      tarch::mpi::Rank::getInstance().setDeadlockWarningTimeStamp();
+      tarch::mpi::Rank::getInstance().setDeadlockTimeOutTimeStamp();
       while (not flag) {
-        MPI_Testall( 2, sendReceiveRequests, &flag, MPI_STATUSES_IGNORE );
+        int sendFlag    = 1;
+        int receiveFlag = 1;
+        if (sendRequest!=nullptr)    MPI_Test( sendRequest,    &sendFlag,    MPI_STATUS_IGNORE );
+        if (receiveRequest!=nullptr) MPI_Test( receiveRequest, &receiveFlag, MPI_STATUS_IGNORE );
+        flag = sendFlag and receiveFlag;
+
+        tarch::mpi::Rank::getInstance().writeTimeOutWarning( "toolbox::particles::ParticleSet", "finishedTraversal()",rank, _SieveReductionTag );
+        tarch::mpi::Rank::getInstance().triggerDeadlockTimeOut( "toolbox::particles::ParticleSet", "finishedTraversal()", rank, _SieveReductionTag );
+        tarch::services::ServiceRepository::getInstance().receiveDanglingMessages();
       }
 
       logInfo( "finishedTraversal()", "append " << receiveBuffer.size() << " messages to local sieve particle list" );
-      // we append at the end, i.e.~we can be sure that subsequent
-      // sends do not send away the new stuff
-      _particlesThatHaveToBeSieved.insert(
-        _particlesThatHaveToBeSieved.end(),
-        receiveBuffer.begin(),
-        receiveBuffer.end()
-      );
+      for (int i=0; i<numberOfReceivedMessages.getValue(); i++) {
+        _particlesThatHaveToBeSieved.push_back( new DoFType(receiveBuffer[i]) );
+      }
+
+      if (sendRequest!=nullptr)    delete sendRequest;
+      if (receiveRequest!=nullptr) delete receiveRequest;
     }
   }
   #endif
@@ -319,8 +346,10 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishedTraversal() {
     _particlesThatCanNotBeLiftedWithinTheirTree.begin(),
     _particlesThatCanNotBeLiftedWithinTheirTree.end()
   );
+  logInfo( "finishedTraversal()", "rolled over local list and now have " << _particlesThatHaveToBeSieved.size() << " sieve particles here" );
 
   _particlesThatHaveToBeSieved.eliminateSpatialDuplicates( false, 1.0 + 1e-6 );
+  logInfo( "finishedTraversal()", "after eliminating all redundant particles, " << _particlesThatHaveToBeSieved.size() << " particles are left" );
   _particlesThatCanNotBeLiftedWithinTheirTree.clear();
 }
 
@@ -458,7 +487,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::reduceAndPrintStatistics() {
   #endif
   if ( log ) {
     logInfo(
-      "finishedTraversal()",
+      "reduceAndPrintStatistics()",
       "#lifts=" << globalNumberOfLifts <<
       ", #drops=" << globalNumberOfDrops <<
       ", #sieves=" << globalNumberOfSieves <<

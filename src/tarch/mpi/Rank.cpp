@@ -116,6 +116,8 @@ void tarch::mpi::Rank::triggerDeadlockTimeOut(
   if (
     _areTimeoutsEnabled
     and
+    _deadlockTimeOut>std::chrono::seconds(0)
+    and
     std::chrono::system_clock::now() > _globalTimeOutDeadlock
   ) {
     std::ostringstream out;
@@ -143,6 +145,8 @@ void tarch::mpi::Rank::writeTimeOutWarning(
   if (
     _areTimeoutsEnabled
     and
+    _timeOutWarning>std::chrono::seconds(0)
+    and
     std::chrono::system_clock::now() > _globalTimeOutDeadlock
   ) {
     logWarning(
@@ -152,18 +156,12 @@ void tarch::mpi::Rank::writeTimeOutWarning(
       << " seconds for " << numberOfExpectedMessages
       << " message(s) from node " << communicationPartnerRank << " with tag " << tag
     );
-    if (_deadlockTimeOut>std::chrono::seconds(0)) {
-      logWarning(
-        "writeTimeOutWarning(...)",
-        "application will terminate after " << std::to_string(_deadlockTimeOut.count()) << " seconds because of a deadlock"
-      );
-    }
-    else {
-      logWarning(
-        "writeTimeOutWarning(...)",
-        "no deadlock threshold set, i.e. application will not terminate because of any deadlock"
-      );
-    }
+
+    logWarning(
+      "writeTimeOutWarning(...)",
+      "application will terminate after " << std::to_string(_deadlockTimeOut.count()) << " seconds because of a deadlock"
+    );
+
     if (_timeOutWarning<_deadlockTimeOut/2) {
       std::chrono::seconds newTimeOutWarning = _timeOutWarning*2;
       logWarning(
