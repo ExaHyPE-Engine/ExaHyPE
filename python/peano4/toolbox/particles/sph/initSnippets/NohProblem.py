@@ -68,11 +68,6 @@ class NohProblemIC:
 
       particle->setV( v_ini );
 
-      /* Verbose */
-      logInfo( "Init()", "dist = " << dist );
-      logInfo( "Init()", "v_ini = " << v_ini );
-      logInfo( "Init()", "Particle: " << particle->toString() );
-
       /* Initialize remaining fields  */
       
       // Vectors
@@ -98,7 +93,7 @@ class NohProblemIC:
 
       particle->setHLeft (HYDRO_h_MIN);        
       particle->setHRight(HYDRO_h_MAX);        
-      
+
       particle->setHasConverged(false);
       particle->setHasNoNeighbours(false);
       particle->setResidual(0.0);
@@ -109,9 +104,17 @@ class NohProblemIC:
       particle->setDiv_v   (0.0);
       particle->setV_sig_AV(2.0 * particle->getSoundSpeed());
       particle->setBalsara (0.0);
-     
+
+      particle->setCellHasUpdatedParticle(false);
+      particle->setPartid(1);
+
+      /* Verbose */
+      logInfo( "Init()", "dist = " << dist );
+      logInfo( "Init()", "v_ini = " << v_ini );
+      logInfo( "Init()", "Particle: " << particle->toString() );
+
       /* End of inserted block */
-     
+
     """
     else:
       print('dimensions not supported!')

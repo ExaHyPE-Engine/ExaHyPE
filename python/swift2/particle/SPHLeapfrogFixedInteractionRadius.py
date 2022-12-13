@@ -415,7 +415,7 @@ class SPHLeapfrogFixedInteractionRadius(Particle):
                                          #include "swift2/statistics/Statistics.h"
                                          #include "swift2/kernels/kernel_hydro.h"
                                          #include "swift2/kernels/equation_of_state.h"
-                                         """              
+                                         """
       ),
     ]
 
@@ -455,7 +455,7 @@ class SPHLeapfrogFixedInteractionRadius(Particle):
 
     # Variable smoothing length scheme ---------------------------------------------
     self.f        = dastgen2.attributes.Double("f",
-                                               valid_mantissa_bits=self.mantissa_size)   
+                                               valid_mantissa_bits=self.mantissa_size)
     self.wcount_dh= dastgen2.attributes.Double("wcount_dh",
                                                valid_mantissa_bits=self.mantissa_size)
     self.rho_dh   = dastgen2.attributes.Double("rho_dh",
@@ -465,7 +465,7 @@ class SPHLeapfrogFixedInteractionRadius(Particle):
     self.hright   = dastgen2.attributes.Double("hRight",
                                                valid_mantissa_bits=self.mantissa_size)
     self.Omega    = dastgen2.attributes.Double("Omega",
-                                               valid_mantissa_bits=self.mantissa_size)        # PHANTOM SPH (~1/f)
+                                               valid_mantissa_bits=self.mantissa_size)   # PHANTOM (~1/f)
     self.data.add_attribute(self.f)
     self.data.add_attribute(self.wcount_dh)
     self.data.add_attribute(self.rho_dh)
@@ -520,20 +520,17 @@ class SPHLeapfrogFixedInteractionRadius(Particle):
     # Extra ------------------------------------------------------------------------
     self.has_no_neighbours= dastgen2.attributes.Boolean("hasNoNeighbours")
     self.is_boundary_part = dastgen2.attributes.Boolean("isBoundaryParticle")
-    self.time             = dastgen2.attributes.Double("time",
-                                                       valid_mantissa_bits=self.mantissa_size)
-    self.Ncount           = dastgen2.attributes.Integer("Ncount")                         # integer number count
+    self.Ncount           = dastgen2.attributes.Integer("Ncount")              # integer number count
     self.part_id          = dastgen2.attributes.Integer("partid")
     self.data.add_attribute(self.has_no_neighbours)
     self.data.add_attribute(self.is_boundary_part)
-    self.data.add_attribute(self.time)
     self.data.add_attribute(self.Ncount)
     self.data.add_attribute(self.part_id)
 
 
   """
-  Set the eta factor used by the SPH kernel to target a certain number
-  of neighbour particles. 
+  Set the eta factor used by the SPH kernel to target a certain number of
+  neighbour particles.
   The default value is eta = 1.235.
   """
   def set_eta_factor(self, etaFactor):
@@ -553,7 +550,7 @@ class SPHLeapfrogFixedInteractionRadius(Particle):
   """
   Set the mantissa size of doubles and Peano double arrays if
   we want to use reduced precission via Clang annotations. As a reference,
-  floats have mantissa size = 23. 
+  floats have mantissa size = 23.
   """
   def set_mantissa_size(self, mantissa_size):
     self.mantissa_size = mantissa_size
@@ -567,6 +564,6 @@ class SPHLeapfrogFixedInteractionRadius(Particle):
     for entry in self.swift_project_namespace:
       namespace = namespace + "::" + entry
 
-    namespace = namespace + "::" 
+    namespace = namespace + "::"
     print(namespace)
 
