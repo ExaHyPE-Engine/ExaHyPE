@@ -45,7 +45,7 @@ dimensions  = args.dimensions
 
 project = swift2.Project( namespace=project_namespace,
                           project_name="Noh", 
-                          executable="noh1D" )
+                          executable="noh2D" )
 
 # Effective SPH dimensions ----------------------------------------------------
 HYDRO_DIMENSIONS = 2

@@ -25,6 +25,8 @@ class TestDensityCalculation:
     particle->setMass( particle->getDensity() / std::pow(HYDRO_PART_NUMBER, HYDRO_DIMENSIONS) );
 
     particle->setU( 1e-1 ); 
+    particle->setUDot( 0 ); 
+    particle->setU_full( 1e-1 ); 
     particle->setPressure( 1e-1 );
     particle->setSoundSpeed( 1e-1 );
 
@@ -37,6 +39,7 @@ class TestDensityCalculation:
     // Vectors
     for(int d=0; d<Dimensions; d++){
        particle->setV          (d,0);
+       particle->setV_full     (d,0);
        particle->setA          (d,0);
     }
    
@@ -65,7 +68,7 @@ class TestDensityCalculation:
     particle->setBalsara (0.0);
 
     particle->setPartid(1);
-    
+
     /* End of inserted block */
 
     """

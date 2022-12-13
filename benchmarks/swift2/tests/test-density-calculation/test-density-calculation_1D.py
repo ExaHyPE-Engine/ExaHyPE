@@ -59,8 +59,8 @@ particle = swift2.particle.tests.testDensityCalculation(
                                                   cfl_factor=0.1,
                                                   initial_time_step_size=1e-4,
                                                   particles_per_cell = 5,
-                                                  min_h = 0.1,
-                                                  max_h = 0.1
+                                                  min_h = args.cell_size,
+                                                  max_h = args.cell_size
                                                   )
 
 # Add particle to the SWIFT project

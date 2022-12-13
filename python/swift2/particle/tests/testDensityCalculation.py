@@ -186,12 +186,10 @@ class testDensityCalculation(Particle):
     # Extra ------------------------------------------------------------------------
     self.has_no_neighbours= dastgen2.attributes.Boolean("hasNoNeighbours")
     self.is_boundary_part = dastgen2.attributes.Boolean("isBoundaryParticle")
-    self.time             = dastgen2.attributes.Double("time")
     self.Ncount           = dastgen2.attributes.Integer("Ncount")                         # integer number count
     self.part_id          = dastgen2.attributes.Integer("partid")
     self.data.add_attribute(self.has_no_neighbours)
     self.data.add_attribute(self.is_boundary_part)
-    self.data.add_attribute(self.time)
     self.data.add_attribute(self.Ncount)
     self.data.add_attribute(self.part_id)
 
