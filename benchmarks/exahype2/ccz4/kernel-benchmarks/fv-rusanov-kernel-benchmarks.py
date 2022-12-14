@@ -118,8 +118,10 @@ fv_rusanov_solver.set_implementation(
   return ::applications::exahype2::ccz4::maxEigenvalue(Q, normal%Dimensions, CCZ4e, CCZ4ds, CCZ4GLMc, CCZ4GLMd );
 """,
   initial_conditions   = """
-for (int i=0; i<NumberOfUnknowns+NumberOfAuxiliaryVariables; i++) Q[i] = 0.0;
-::applications::exahype2::ccz4::gaugeWave(Q, volumeCentre, 0);
+  printf("Initial conditions should not be called in this benchmark!");
+  std::abort();
+  for (int i=0; i<NumberOfUnknowns+NumberOfAuxiliaryVariables; i++) Q[i] = 0.0;
+  ::applications::exahype2::ccz4::gaugeWave(Q, volumeCentre, 0);
 """
 )
 

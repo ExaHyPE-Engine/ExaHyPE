@@ -427,6 +427,7 @@ void testStatelessVariantOnDevice(
   }
 
   {
+    #pragma omp barrier
     accumulatedTimeBurn = 0.0;
     accumulatedTimeBenchmark = 0.0;
   }
@@ -529,7 +530,7 @@ void runBenchmarksOnDevice(int patches, int device) {
 
   if constexpr (EnableManagedMemory) {
     tarch::accelerator::omp::GPUMemoryManager::getInstance().clear();
-    #pragma omp parallel for
+    #pragma omp parallel for shared(accumulatedTimeBurn, accumulatedTimeBenchmark)
     for (int thread=0; thread<tarch::multicore::Core::getInstance().getNumberOfThreads(); thread++) {
       testStatelessVariantOnDevice(
         patches, device,
@@ -538,7 +539,7 @@ void runBenchmarksOnDevice(int patches, int device) {
       );
     }
     tarch::accelerator::omp::GPUMemoryManager::getInstance().clear();
-    #pragma omp parallel for
+    #pragma omp parallel for shared(accumulatedTimeBurn, accumulatedTimeBenchmark)
     for (int thread=0; thread<tarch::multicore::Core::getInstance().getNumberOfThreads(); thread++) {
       testStatelessVariantOnDevice(
         patches, device,
@@ -547,7 +548,7 @@ void runBenchmarksOnDevice(int patches, int device) {
       );
     }
     tarch::accelerator::omp::GPUMemoryManager::getInstance().clear();
-    #pragma omp parallel for
+    #pragma omp parallel for shared(accumulatedTimeBurn, accumulatedTimeBenchmark)
     for (int thread=0; thread<tarch::multicore::Core::getInstance().getNumberOfThreads(); thread++) {
       testStatelessVariantOnDevice(
         patches, device,
@@ -556,7 +557,7 @@ void runBenchmarksOnDevice(int patches, int device) {
       );
     }
   } else {
-    #pragma omp parallel for
+    #pragma omp parallel for shared(accumulatedTimeBurn, accumulatedTimeBenchmark)
     for (int thread=0; thread<tarch::multicore::Core::getInstance().getNumberOfThreads(); thread++) {
       testStatelessVariantOnDevice(
         patches, device,
@@ -564,7 +565,7 @@ void runBenchmarksOnDevice(int patches, int device) {
         "omp, patch-wise, AoS, map", thread
       );
     }
-    #pragma omp parallel for
+    #pragma omp parallel for shared(accumulatedTimeBurn, accumulatedTimeBenchmark)
     for (int thread=0; thread<tarch::multicore::Core::getInstance().getNumberOfThreads(); thread++) {
       testStatelessVariantOnDevice(
         patches, device,
@@ -572,7 +573,7 @@ void runBenchmarksOnDevice(int patches, int device) {
         "omp, patch-wise, AoSoA, map", thread
       );
     }
-    #pragma omp parallel for
+    #pragma omp parallel for shared(accumulatedTimeBurn, accumulatedTimeBenchmark)
     for (int thread=0; thread<tarch::multicore::Core::getInstance().getNumberOfThreads(); thread++) {
       testStatelessVariantOnDevice(
         patches, device,
@@ -584,7 +585,7 @@ void runBenchmarksOnDevice(int patches, int device) {
 
   if constexpr (EnableManagedMemory) {
     tarch::accelerator::omp::GPUMemoryManager::getInstance().clear();
-    #pragma omp parallel for
+    #pragma omp parallel for shared(accumulatedTimeBurn, accumulatedTimeBenchmark)
     for (int thread=0; thread<tarch::multicore::Core::getInstance().getNumberOfThreads(); thread++) {
       testStatelessVariantOnDevice(
         patches, device,
@@ -593,7 +594,7 @@ void runBenchmarksOnDevice(int patches, int device) {
       );
     }
     tarch::accelerator::omp::GPUMemoryManager::getInstance().clear();
-    #pragma omp parallel for
+    #pragma omp parallel for shared(accumulatedTimeBurn, accumulatedTimeBenchmark)
     for (int thread=0; thread<tarch::multicore::Core::getInstance().getNumberOfThreads(); thread++) {
       testStatelessVariantOnDevice(
         patches, device,
@@ -602,7 +603,7 @@ void runBenchmarksOnDevice(int patches, int device) {
       );
     }
     tarch::accelerator::omp::GPUMemoryManager::getInstance().clear();
-    #pragma omp parallel for
+    #pragma omp parallel for shared(accumulatedTimeBurn, accumulatedTimeBenchmark)
     for (int thread=0; thread<tarch::multicore::Core::getInstance().getNumberOfThreads(); thread++) {
       testStatelessVariantOnDevice(
         patches, device,
@@ -611,7 +612,7 @@ void runBenchmarksOnDevice(int patches, int device) {
       );
     }
   } else {
-    #pragma omp parallel for
+    #pragma omp parallel for shared(accumulatedTimeBurn, accumulatedTimeBenchmark)
     for (int thread=0; thread<tarch::multicore::Core::getInstance().getNumberOfThreads(); thread++) {
       testStatelessVariantOnDevice(
         patches, device,
@@ -619,7 +620,7 @@ void runBenchmarksOnDevice(int patches, int device) {
         "omp, batched, AoS, map", thread
       );
     }
-    #pragma omp parallel for
+    #pragma omp parallel for shared(accumulatedTimeBurn, accumulatedTimeBenchmark)
     for (int thread=0; thread<tarch::multicore::Core::getInstance().getNumberOfThreads(); thread++) {
       testStatelessVariantOnDevice(
         patches, device,
@@ -627,7 +628,7 @@ void runBenchmarksOnDevice(int patches, int device) {
         "omp, batched, AoSoA, map", thread
       );
     }
-    #pragma omp parallel for
+    #pragma omp parallel for shared(accumulatedTimeBurn, accumulatedTimeBenchmark)
     for (int thread=0; thread<tarch::multicore::Core::getInstance().getNumberOfThreads(); thread++) {
       testStatelessVariantOnDevice(
         patches, device,
