@@ -99,28 +99,28 @@ peano4::stacks::STDVectorOverVectorOfPointersStack<T>::STDVectorOverVectorOfPoin
 
 template <class T>
 void peano4::stacks::STDVectorOverVectorOfPointersStack<T>::clone( const STDVectorOverVectorOfPointersStack<T>&  data ) {
-      assertionEquals1( Base::_currentElement, 0, Base::toString() );
+  assertionEquals1( Base::_currentElement, 0, Base::toString() );
 
-      Base::_data.clear();
-      Base::_currentElement = data._currentElement;
-      Base::_data.resize(Base::_currentElement);
+  Base::_data.clear();
+  Base::_currentElement = data._currentElement;
+  Base::_data.resize(Base::_currentElement);
 
-      logDebug( "clone()", "copy over stack of size " << data.size() );
+  logDebug( "clone()", "copy over stack of size " << data.size() );
 
-      for (int stackNumber = 0; stackNumber<Base::_currentElement; stackNumber++) {
-        Base::_data[stackNumber].clone( data._data[stackNumber] );
-      }
-    }
+  for (int stackNumber = 0; stackNumber<Base::_currentElement; stackNumber++) {
+    Base::_data[stackNumber].clone( data._data[stackNumber] );
+  }
+}
 
 
 template <class T>
 void peano4::stacks::STDVectorOverVectorOfPointersStack<T>::clear() {
-      logDebug( "clear()", "clear " << Base::_currentElement << " vectors on current stack" );
-      for (auto& p: Base::_data) {
-        p.clear();
-      }
-      Base::_currentElement = 0;
-    }
+  logDebug( "clear()", "clear " << Base::_currentElement << " vectors on current stack" );
+  for (auto& p: Base::_data) {
+    p.clear();
+  }
+  Base::_currentElement = 0;
+}
 
 
 template <class T>

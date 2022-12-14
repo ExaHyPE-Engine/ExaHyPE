@@ -37,17 +37,20 @@ namespace peano4 {
 /**
  * Administer vector over pointers
  *
- * I assume that T is in itself a vector over pointers. Usually, I realise it
- * as a subclass of std::vector, i.e. by inheritance, as I need some additional
- * routines and slightly different semantics to std::vector. You could,
- * obviously, also write a whole new class providing all the functions used
- * here.
+ * I assume that T is in itself a vector over pointers with some additional
+ * routines beyond the ones offered by the STL. This class therefore implements a
+ * stack as vector over a pimped vector of pointers.
  *
  * The list of additional routines or routines with special semantics that I
- * need are
+ * need from T are
  *
- * - clone()
- * - clear()
+ * - clone() - through this method, it is up to the implementation of T to decide
+ *   if you want to work with shallow or deep copies. I strongly recommend deep
+ *   copies as per documentation below.
+ * - clear() - counterpart of clone(). If you use the standard std::vector's
+ *   clear(), you'll end up with a shallow clear, as you simply erase the list
+ *   over pointers. If your clone() makes deep copies, you'll create a memory
+ *   leak.
  * - merge()
  * - void setDebugX( const tarch::la::Vector<Dimensions,double>& data );
  * - void setDebugH( const tarch::la::Vector<Dimensions,double>& data );
@@ -65,23 +68,21 @@ namespace peano4 {
  * Finally, the type T has to provide a typedef DoFType which says to which the
  * underlying pointer points to.
  *
- * ## Data ownership
+ *
+ * Views
+ *
+ *
+ * ## Data ownership (on single tree/subpartition)
  *
  * The vectors don't actually own any data for this particular stack type.
  * The data resides on the heap and the vectors are mere meta data structures
- * referencing the core data. It is consequently (usually) not copied. We can
- * however happily copy around the meta data on one core or clear some replica or
- * do whatever we want - the actual data stays at the same location on the heap.
+ * referencing the core data. It is consequently not copied as long as we stay
+ * within one subpartition aka tree.
  *
- * The stack class works with shallow copies/data ownership.
- *
- * If you clone() a stack, there's no need to clone non-local particles. So the
- * clone is shallow, but it is typically not trivial. You can amend the clone()
- * in your set implementation, as the vector wrapper itself simply calls your
- * container's clone().
+ * The stack class therefore works with shallow copies by default.
  *
  *
- * ## Shared memory parallelisation
+ * ## Parallelisation rationale
  *
  * In principle, shared memory parallelisation would work out of the box. You
  * could use the std::vector copy constructor which automatically copies the
@@ -95,44 +96,21 @@ namespace peano4 {
  * sweep. It also naturally makes the code vulnerable to race conditions. Yet,
  * you can still work with such a shallow data model.
  *
- * Before we discuss different realisation variants, we recognise that a vertex
+ * We recognise that a vertex
  * at a domain boundary pipes its data onto different stacks: the local stack and
  * one stack per communication partner. These communication partner stacks hold
  * shallow copies. So far, nothing is copied really from Peano's point of view.
- *
- * We further more recommend that user codes delete all remote data before they
- * trigger any communication: They should simply throw away what they've got
- * from somewhere else. Particles, e.g., reside on the tree that holds the cell
- * in which the particle is contained. The particle is sent out per grid sweep
- * to all neighbours. So they can throw away stuff - an updated version will be
- * sent in later anyway.
+ * It is the responsibility of this stack therefore, to eventually deep copy once
+ * we exchange stacks between trees - either on the node or via MPI.
  *
  *
- * ### Shallow copies, i.e. shared objects
- *
- * When you work with shallow copies, all stack entries are literally pointers
- * to the heap, and multiple trees per rank all point to the same heap objects.
- * It is the user code responsibility to ensure that no data races arise when
- * we access the heap objects.
- *
- * To realise this behaviour, let clone() simply copy over the pointers (so act
- * the same way as the std::vector copy constructor), and delegate clear() to
- * the standard std::vector::clear(). That means, the clear erases the pointers,
- * but not the objects the pointers are pointing to.
- *
- * ### Deep copies
+ * ### Deep copies, data ownership and memory deletes
  *
  * The clear() operation remains a shallow clear, i.e. it only eliminates the
  * pointers but does not delete any actual data. We expect the actual grid
  * traversal to throw away remote content after the grid sweep. See the
  * comments above.
  *
- * clone() is, in principle, also relatively simple: Ensure that _debugX and
- * _debugH are cloned, i.e. copied over. Otherwise, all of Peano's assertions
- * will fail. After that, we invoke the set's clone operation. This should now
- * be a deep copy. Again, we might be overambitious with creating new local
- * copies of data which are actually not local at all. We don't care. Such
- * data will be thrown away later.
  *
  *
  * ### General remarks
@@ -176,6 +154,9 @@ namespace peano4 {
  * delete our own pointers without touching the stuff they point to.
  *
  * @see ParticleSet.template.h for an example of the required signature.
+ *
+ * @param T Is usually a std::vector over pointers or any class providing a
+ *   similar signature.
  */
 template <class T>
 class peano4::stacks::STDVectorOverVectorOfPointersStack: public peano4::stacks::STDVectorStack<T> {
@@ -217,19 +198,21 @@ class peano4::stacks::STDVectorOverVectorOfPointersStack: public peano4::stacks:
     /**
      * Clone data into the current object on which clone() is called.
      *
-     * Semi-shallow copy. We first create exactly the same number of stack
-     * elements as data. After that, we invoke T's clone() per stack entry.
-     * This is typically a shallow copy, though you might decide that not
-     * all entries are to be copied.
+     * This operation overwrites the baseclass version. If we called the
+     * plain base class version, we would end up with a shallow copy.
+     * However, we want a semi-shallow copy: We replicate the meta data,
+     * and then we call the clone() of the actual vector over pointers.
+     * It is up to this routine if we craete a shallow copy or not.
      */
     void  clone( const STDVectorOverVectorOfPointersStack<T>&  data );
 
 
     /**
-     * As we only have meta data, i.e. as our vectors just point to memory locations
-     * on the heap, we simply call clear on each individual substack, i.e. forget the
-     * actual pointers, and then we reset _currentElement such that we start to befill
-     * our local stack from scratch again.
+     * Deep clear
+     *
+     * Counterpart of clone(). We call clear() per stack entry, which
+     * in itself is another vector. So it is up to you to decide if
+     * you want to have a shallow or a deep clear().
      */
     void clear();
 

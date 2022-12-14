@@ -247,6 +247,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::clone( const {{CLASSNAME}}& othe
 
 
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishedTraversal() {
+  logInfo( "finishedTraversal()", "#particles left over from previous sweep=" << _particlesThatHaveToBeSieved.size() );
   _particlesThatHaveToBeSieved.deleteParticles();
 
   #ifdef Parallel
@@ -350,7 +351,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishedTraversal() {
 
   _particlesThatHaveToBeSieved.eliminateSpatialDuplicates( false, 1.0 + 1e-6 );
   logInfo( "finishedTraversal()", "after eliminating all redundant particles, " << _particlesThatHaveToBeSieved.size() << " particles are left" );
-  _particlesThatCanNotBeLiftedWithinTheirTree.clear();
+  _particlesThatCanNotBeLiftedWithinTheirTree.deleteMetaData();
 }
 
 
@@ -539,7 +540,17 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::deleteParticles() {
   for (auto *p: *this) {
     delete p;
   }
-  clear();
+  Base::clear();
+}
+
+
+void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::clear() {
+  deleteParticles();
+}
+
+
+void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::deleteMetaData() {
+  Base::clear();
 }
 
 

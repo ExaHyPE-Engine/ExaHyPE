@@ -168,6 +168,8 @@
       static bool loadPersistently(const peano4::datamanagement::VertexMarker& marker);
 
       /**
+       * Deep clone
+       *
        * This is a deep clone. We get data from somewhere else and create our
        * own version with which we can work from hereon. Besides the particles,
        * we also copy (aka clone) the debug x and h values.
@@ -298,6 +300,7 @@
        * Actually, we do send these guys out, but they will be ignored on the
        * receiver side.
        *
+       * The routine equals a shallow copy or move semantically.
        */
       static void particleCanNotBeLiftedLocally( globaldata::{{PARTICLE_TYPE}}* particle );
 
@@ -350,6 +353,17 @@
        * invalid.
        */
       void deleteParticles();
+
+      /**
+       * Shallow delete not erasing the actual data.
+       */
+      void deleteMetaData();
+
+      /**
+       * Delegates to deleteParticles(), i.e. realises a deep copy.
+       */
+      void clear();
+
 
       static void clearReassignmentStatistics();
       static void clearParticleStateStatistics();
