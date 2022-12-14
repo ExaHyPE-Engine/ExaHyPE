@@ -247,12 +247,12 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::clone( const {{CLASSNAME}}& othe
 
 
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishedTraversal() {
-  logInfo( "finishedTraversal()", "#particles left over from previous sweep=" << _particlesThatHaveToBeSieved.size() );
+  logDebug( "finishedTraversal()", "#particles left over from previous sweep=" << _particlesThatHaveToBeSieved.size() );
   _particlesThatHaveToBeSieved.deleteParticles();
 
   #ifdef Parallel
   const int numberOfParticlesToSend = _particlesThatCanNotBeLiftedWithinTheirTree.size();
-  logInfo( "finishedTraversal()", "inform all other ranks that I host " << numberOfParticlesToSend << " particles that cannot be sorted locally. Use tag " << _SieveReductionTag );
+  logDebug( "finishedTraversal()", "inform all other ranks that I host " << numberOfParticlesToSend << " particles that cannot be sorted locally. Use tag " << _SieveReductionTag );
   for (int rank=0; rank<tarch::mpi::Rank::getInstance().getNumberOfRanks(); rank++) {
     if (rank!=tarch::mpi::Rank::getInstance().getRank()) {
       tarch::mpi::IntegerMessage message( numberOfParticlesToSend );
@@ -265,7 +265,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishedTraversal() {
     }
   }
 
-  logInfo( "finishedTraversal()", "pack send information (vector of pointers) into array" );
+  logDebug( "finishedTraversal()", "pack send information (vector of pointers) into array" );
   std::vector<DoFType>  sendBuffer;    // no pointers here
   sendBuffer.resize( numberOfParticlesToSend );
   for (int i=0; i<numberOfParticlesToSend; i++) {
@@ -274,7 +274,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishedTraversal() {
 
   for (int rank=0; rank<tarch::mpi::Rank::getInstance().getNumberOfRanks(); rank++) {
     if (rank!=tarch::mpi::Rank::getInstance().getRank()) {
-      logInfo( "finishedTraversal()", "ask rank " << rank << " how many messages have to be received" );
+        logDebug( "finishedTraversal()", "ask rank " << rank << " how many messages have to be received" );
       tarch::mpi::IntegerMessage numberOfReceivedMessages;
       tarch::mpi::IntegerMessage::receiveAndPollDanglingMessages(
         numberOfReceivedMessages,
@@ -282,7 +282,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishedTraversal() {
         _SieveReductionTag,
         tarch::mpi::Rank::getInstance().getCommunicator()
       );
-      logInfo( "finishedTraversal()", "will receive " << numberOfReceivedMessages.getValue() << " particles from rank " << rank );
+      logDebug( "finishedTraversal()", "will receive " << numberOfReceivedMessages.getValue() << " particles from rank " << rank );
 
       MPI_Request* sendRequest    = nullptr;
       MPI_Request* receiveRequest = nullptr;
@@ -315,7 +315,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishedTraversal() {
         );
       }
 
-      logInfo( "finishedTraversal()", "issued my sends and receives" );
+      logDebug( "finishedTraversal()", "issued my sends and receives" );
       int         flag = 0;
       tarch::mpi::Rank::getInstance().setDeadlockWarningTimeStamp();
       tarch::mpi::Rank::getInstance().setDeadlockTimeOutTimeStamp();
@@ -331,7 +331,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishedTraversal() {
         tarch::services::ServiceRepository::getInstance().receiveDanglingMessages();
       }
 
-      logInfo( "finishedTraversal()", "append " << receiveBuffer.size() << " messages to local sieve particle list" );
+      logDebug( "finishedTraversal()", "append " << receiveBuffer.size() << " messages to local sieve particle list" );
       for (int i=0; i<numberOfReceivedMessages.getValue(); i++) {
         _particlesThatHaveToBeSieved.push_back( new DoFType(receiveBuffer[i]) );
       }
@@ -347,10 +347,10 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishedTraversal() {
     _particlesThatCanNotBeLiftedWithinTheirTree.begin(),
     _particlesThatCanNotBeLiftedWithinTheirTree.end()
   );
-  logInfo( "finishedTraversal()", "rolled over local list and now have " << _particlesThatHaveToBeSieved.size() << " sieve particles here" );
+  logDebug( "finishedTraversal()", "rolled over local list and now have " << _particlesThatHaveToBeSieved.size() << " sieve particles here" );
 
   _particlesThatHaveToBeSieved.eliminateSpatialDuplicates( false, 1.0 + 1e-6 );
-  logInfo( "finishedTraversal()", "after eliminating all redundant particles, " << _particlesThatHaveToBeSieved.size() << " particles are left" );
+  logDebug( "finishedTraversal()", "after eliminating all redundant particles, " << _particlesThatHaveToBeSieved.size() << " particles are left" );
   _particlesThatCanNotBeLiftedWithinTheirTree.clear();
 }
 

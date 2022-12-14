@@ -6,51 +6,53 @@ tarch::logging::Log peano4::stacks::STDVectorOverVectorOfPointersStack<T>::_log(
 
 template <class T>
 void peano4::stacks::STDVectorOverVectorOfPointersStack<T>::workInReceivedMetaData() {
-      assertion( _metaDataSizeBuffer!=nullptr );
-      #if PeanoDebug>=1
-      assertion( _metaDataDebugBuffer!=nullptr );
-      #endif
-      for (int i=0; i<Base::_currentElement; i++) {
-        const int entries = _metaDataSizeBuffer[i];
-        Base::_data[i].resize(entries);
-        #if PeanoDebug>=1 and Dimensions==2
-        tarch::la::Vector<Dimensions,double> x = {_metaDataDebugBuffer[i*2*2+0], _metaDataDebugBuffer[i*2*2+1]};
-        tarch::la::Vector<Dimensions,double> h = {_metaDataDebugBuffer[i*2*2+2], _metaDataDebugBuffer[i*2*2+3]};
-        Base::_data[i].setDebugX( x );
-        Base::_data[i].setDebugH( h );
-        #endif
-        #if PeanoDebug>=1 and Dimensions==3
-        tarch::la::Vector<Dimensions,double> x = {_metaDataDebugBuffer[i*2*3+0], _metaDataDebugBuffer[i*2*3+1], _metaDataDebugBuffer[i*2*3+2]};
-        tarch::la::Vector<Dimensions,double> h = {_metaDataDebugBuffer[i*2*3+3], _metaDataDebugBuffer[i*2*3+4], _metaDataDebugBuffer[i*2*3+5]};
-        Base::_data[i].setDebugX( x );
-        Base::_data[i].setDebugH( h );
-        #endif
-        logDebug( "workInReceivedMetaData()", "initialised entry " << i << ": " << Base::_data[i].toString() );
-      }
+  assertion( _metaDataSizeBuffer!=nullptr );
+  #if PeanoDebug>=1
+  assertion( _metaDataDebugBuffer!=nullptr );
+  #endif
+
+  for (int i=0; i<Base::_currentElement; i++) {
+    const int entries = _metaDataSizeBuffer[i];
+    Base::_data[i].resize(entries);
+    #if PeanoDebug>=1 and Dimensions==2
+    tarch::la::Vector<Dimensions,double> x = {_metaDataDebugBuffer[i*2*2+0], _metaDataDebugBuffer[i*2*2+1]};
+    tarch::la::Vector<Dimensions,double> h = {_metaDataDebugBuffer[i*2*2+2], _metaDataDebugBuffer[i*2*2+3]};
+    Base::_data[i].setDebugX( x );
+    Base::_data[i].setDebugH( h );
+    #endif
+    #if PeanoDebug>=1 and Dimensions==3
+    tarch::la::Vector<Dimensions,double> x = {_metaDataDebugBuffer[i*2*3+0], _metaDataDebugBuffer[i*2*3+1], _metaDataDebugBuffer[i*2*3+2]};
+    tarch::la::Vector<Dimensions,double> h = {_metaDataDebugBuffer[i*2*3+3], _metaDataDebugBuffer[i*2*3+4], _metaDataDebugBuffer[i*2*3+5]};
+    Base::_data[i].setDebugX( x );
+    Base::_data[i].setDebugH( h );
+    #endif
+    logDebug( "workInReceivedMetaData()", "initialised entry " << i << ": " << Base::_data[i].toString() );
+  }
 }
 
 
 template <class T>
 void peano4::stacks::STDVectorOverVectorOfPointersStack<T>::workInReceivedData() {
-      int entry = 0;
-      for (int i=0; i<Base::_currentElement; i++) {
-        for (int j=0; j<Base::_data[i].size(); j++) {
-          *(Base::_data[i].data()[j]) = _deepCopyDataBuffer[entry];
-          entry++;
-        }
-      }
+  int entry = 0;
+  for (int i=0; i<Base::_currentElement; i++) {
+    for (int j=0; j<Base::_data[i].size(); j++) {
+//      *(Base::_data[i].data()[j]) = _deepCopyDataBuffer[entry];
+     Base::_data[i].data()[j] = new typename T::DoFType( _deepCopyDataBuffer[entry] );
+     entry++;
+    }
+  }
 }
 
 
 template <class T>
 void peano4::stacks::STDVectorOverVectorOfPointersStack<T>::prepareDataToSendOut() {
-      int entry = 0;
-      for (int i=0; i<Base::_currentElement; i++) {
-        for (int j=0; j<Base::_data[i].size(); j++) {
-          _deepCopyDataBuffer[entry] = *(Base::_data[i].data()[j]);
-          entry++;
-        }
-      }
+  int entry = 0;
+  for (int i=0; i<Base::_currentElement; i++) {
+    for (int j=0; j<Base::_data[i].size(); j++) {
+      _deepCopyDataBuffer[entry] = *(Base::_data[i].data()[j]);
+      entry++;
+    }
+  }
 }
 
 
@@ -170,7 +172,7 @@ void peano4::stacks::STDVectorOverVectorOfPointersStack<T>::startSend(peano4::gr
     if (flattenedDataSize>0) {
       _deepCopyDataBuffer = new typename T::DoFType[ flattenedDataSize ];
       prepareDataToSendOut();
-     logDebug( "startSend(int,int)", "created deep copy of all " << entry << " entries in the vector of pointers" );
+      logDebug( "startSend(int,int)", "created deep copy of all " << entry << " entries in the vector of pointers" );
 
       Base::_ioMPIRequest = new MPI_Request;
       MPI_Isend(

@@ -159,19 +159,59 @@ class peano4::stacks::STDVectorOverVectorOfPointersStack: public peano4::stacks:
     int*                   _metaDataSizeBuffer;
     double*                _metaDataDebugBuffer;
 
+    /**
+     *
+     * If we are in debug mode, we receive the meta data and set the meta
+     * attributes accordingly. Next, we take the array of integers stored
+     * in _metaDataSizeBuffer and use the entries therein to resize the
+     * individual vectors within the stack: After all, the stack size is
+     * known a priori (encoded within _currentElement), but the vector
+     * sizes per stack element are not known. They are read from the buffer.
+     * The routine solely resizes these vectors. It does not create any
+     * memory, i.e. the resized vectors stored on the stack hold exclusively
+     * pointers to garbage once the routine has terminated.
+     *
+     * @see workInReceivedData() for the next step.
+     */
     void workInReceivedMetaData();
 
 
+    /**
+     * Take the flattened actual data and unpack it into a proper stack
+     *
+     * The routine assumes that all entries, i.e. vectors, within the stack
+     * aka vector already have been assigned the correct size. This happens
+     * through a previous call to workInReceivedMetaData(). In principle, we
+     * now run through the flattened input data (which is a mere array) and
+     * sort the input one by one into the target stacks.
+     *
+     * This sorting however requires us to create a deep copy and actually
+     * one alloc per received element. The need for a deep copy becomes clear
+     * once we recognise that workInReceivedMetaData() has created an array
+     * of garbage pointers. They do not point to anything meaningful.
+     * Furthermore, tryToFinishSendOrReceive() will eventually free the
+     * flattened buffers. So we have deep copy. Furthermore, these deep
+     * copies have to happen individual per vector element: After all, the
+     * whole exercise of stacks of vectors of pointers is to allow for a
+     * lot of flexibility in moving stuff around. So the user might also
+     * delete individual entries that a vector points to. If we alloc one
+     * huge memory sequence, I don't know whether it would go down well if
+     * we deleted only subsegments.
+     *
+     *
+     * @see workInReceivedMetaData()
+     * @see tryToFinishSendOrReceive()
+     */
     void workInReceivedData();
 
 
     void prepareDataToSendOut();
 
+
     /**
      * @return Total size of all entres
      */
     int prepareMetaDataToSendOut();
-
     #endif
 
   public:
@@ -212,57 +252,76 @@ class peano4::stacks::STDVectorOverVectorOfPointersStack: public peano4::stacks:
  * As MPI introduces a distribute memory paradigm, MPI is intrinsically tied
  * to a deep copy data ownership policy.
  *
- * To realise the MPI data exchange, I did originally plan to require the
- * handed in vector datatype to provide some proper MPI datatypes. This did
- * not work: If we have inheritance, the byte alignment easily becomes messed
- * up and I never really managed to make everything work. Therefore, I do
- * work now with three different, explicit buffers:
- *
- * - There's a size meta data buffer which is a sequence of integers. Each
- *   entry stores how big the underlying vector is.
- * - There's a debug meta data buffer which I befill if and only if we work
- *   with meta data. It is a long sequence of doubles. Per stack entry, I
- *   hold 2*Dimensions data points: Dimensions entries encode the x value of
- *   the debug data, and a further Dimensions entries encode the h value.
- * - The actual data has to be flattened (serialised) too, as I cannot
- *   transfer any pointers. This serialised data is held in yet another
- *   buffer and has to be copied forth and back. Obviously, there's no need
- *   to use this buffer if no data travels in-between MPI boundaries.
- *
- * From a data ownership point of view, the startReceive() routine plays the
- * role of clone(), i.e. it creates new local copies. These will, from thereon,
- * be merged into the local data via shallow copies, i.e. by moving around
- * pointers to the deep copies.
- *
- * startSend() also copies data explicitly into its local buffer. We have to
- * delete those local copies in tryToFinishSendOrReceive(). Other than that,
- * nothing is to be done. The outgoing stack had pointers to objects on the
- * heap. We may assume that these objects still are used, and thus can simply
- * delete our own pointers without touching the stuff they point to.
+     * To realise the MPI data exchange, I did originally plan to require the
+     * handed in vector datatype to provide some proper MPI datatypes. This did
+     * not work and does not help: The data is organised via pointers and those
+     * pointers are distributed over the whole memory.
      *
+     * Therefore, I introduce the following format:
+     *
+     * - There's a size meta data buffer which is a sequence of integers. Each
+     *   entry stores how big the underlying vector is. I realise the setup
+     *   of the meta data in prepareMetaDataToSendOut(). It initialises
+     *   _metaDataSizeBuffer properly and returns the size of the output data.
+     *   Note that there is still no need to exchange the size of the stack.
+     *   The size of two communication partners is always known and the same.
+     *   The number of entries per stack entry is not known and has to be
+     *   exchanged explicitly.
+     * - There's a debug meta data buffer which I befill if and only if we work
+     *   with meta data. It is a long sequence of doubles. Per stack entry, I
+     *   hold 2*Dimensions data points: Dimensions entries encode the x value of
+     *   the debug data, and a further Dimensions entries encode the h value.
+     * - The actual data has to be flattened (serialised) too, as I cannot
+     *   transfer any pointers. This serialised data is held in yet another
+     *   buffer and has to be copied forth and back. Obviously, there's no need
+     *   to use this buffer if no data travels in-between MPI boundaries.
+     *
+     * startSend() ensures that three local buffers are initialised
+     * (allocated), befilled and subject to a non-blocking send. It is
+     * tryToFinishSendOrReceive() which has to free these data.
      */
     void startSend(peano4::grid::TraversalObserver::SendReceiveContext, int rank, int tag, MPI_Comm comm);
 
 
     /**
-     * See class documentation.
+     * Receive whole stack via MPI
      *
- * To send out a stack, we thus first have to deep copy the whole content
- * into a continuous buffer, send this buffer out, and eventually destroy
- * the deep copy. If we receive, we have to create a continuous buffer,
- * and receive into this one. When we "unpack" the data into a vector of
- * vectors, we don't have to destroy the original buffer. We have to store
- * the particels somewhere in the end. However, this causes problems if we
- * later on eliminate particular subsegments (some particles) or more elements
- * around: We cannot delete parts of one large memory block which we previously
- * allocated en bloc.
+     * We know the number of entries on the stack. They are given by
+     * numberOfElements. After that, we receive the total size of the
+     * packed/flattened buffers and create the corresponding data
+     * regions. Finally, we issue the non-blocking receives.
      *
+     * The operation ensures that all three buffers are potentially
+     * up and subject to an MPI receive in the background.
+     *
+     * @see tryToFinishSendOrReceive() for an overview discussion of the
+     *   receive process.
+     * @see workInReceivedData()
+     * @see workInReceivedMetaData()
      */
     void startReceive(peano4::grid::TraversalObserver::SendReceiveContext, int rank, int tag, MPI_Comm comm, int numberOfElements);
 
 
     /**
-     * See class documentation.
+     * Finish send or receive if possible, i.e. if non-blocking data exchange
+     * has completed.
+     *
+     * ## Finish a send process
+     *
+     * To finish a send process, we simply have to delete the three flattened
+     * buffers. After that, we call clear() on the stack. This stack had been
+     * a shallow copy, i.e. the data resides on a real (persistent) stack for
+     * data inside the domain. So a simple clear() does the job.
+     *
+     * ## Finish a receive process
+     *
+     * To finish a receive process, we roll over the received data into a
+     * proper stack. That is, we unpack or unflatten it. This is done via
+     * workInReceivedMetaData() and workInReceivedData(). Once compelted,
+     * we can free all three unpacked data regions.
+     *
+     * @see startSend()
+     * @see startReceive()
      */
     bool tryToFinishSendOrReceive();
 };
