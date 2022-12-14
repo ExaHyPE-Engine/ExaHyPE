@@ -179,7 +179,11 @@
        * on one rank is a real local one, all the others have virtual copies.
        * This state analysis or flipping is realised within merge().
        *
-       * @see STDVectorOverVectorOfPointersStack() for a description.
+       * @see STDVectorOverVectorOfPointersStack() for a description of the
+       *   intra-node parallelisation. This description provides an overview
+       *   of the overall lifecycle of the data.
+       * @see merge() for the corresponding delete that eliminates the deep
+       *   copies.
        */
       void clone( const {{CLASSNAME}}& otherSet );
 
@@ -355,12 +359,13 @@
       void deleteParticles();
 
       /**
-       * Shallow delete not erasing the actual data.
-       */
-      void deleteMetaData();
-
-      /**
-       * Delegates to deleteParticles(), i.e. realises a deep copy.
+       * Shallow clear
+       *
+       * Delegates to base class. Therefore, this routine is a shallow clear.
+       * There is no technical reason to redefine this routine here in this
+       * header file (as I simply forward the call to the base class), but I
+       * think it is important that I make it explicit that this is a shallow
+       * clear.
        */
       void clear();
 

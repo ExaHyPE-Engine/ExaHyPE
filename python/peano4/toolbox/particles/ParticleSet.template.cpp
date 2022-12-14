@@ -351,7 +351,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishedTraversal() {
 
   _particlesThatHaveToBeSieved.eliminateSpatialDuplicates( false, 1.0 + 1e-6 );
   logInfo( "finishedTraversal()", "after eliminating all redundant particles, " << _particlesThatHaveToBeSieved.size() << " particles are left" );
-  _particlesThatCanNotBeLiftedWithinTheirTree.deleteMetaData();
+  _particlesThatCanNotBeLiftedWithinTheirTree.clear();
 }
 
 
@@ -545,11 +545,6 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::deleteParticles() {
 
 
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::clear() {
-  deleteParticles();
-}
-
-
-void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::deleteMetaData() {
   Base::clear();
 }
 
