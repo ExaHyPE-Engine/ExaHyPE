@@ -57,8 +57,15 @@ tarch::la::Vector<Dimensions,double> {{NAMESPACE | join("::")}}::{{CLASSNAME}}::
 
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::merge(::peano4::grid::TraversalObserver::SendReceiveContext context, const {{CLASSNAME}}& neighbour, const peano4::datamanagement::VertexMarker& marker) {
   switch (context) {
-    case ::peano4::grid::TraversalObserver::SendReceiveContext::BoundaryExchange:
     case ::peano4::grid::TraversalObserver::SendReceiveContext::PeriodicBoundaryDataSwap:
+      {
+        for (auto p: neighbour) {
+          assertionMsg( false, "Cristian fix. Here, the coordinates have to be flipped/mirrored along the boundaries. If a boundary is periodic is encoded in Constants.h (I think), so we might want to include it from there" );
+        }
+      }
+      // There is no break here, as we continue with the normal boundary exchange handling!
+      // this is not a bug but intentional.
+    case ::peano4::grid::TraversalObserver::SendReceiveContext::BoundaryExchange:
       {
         for (auto p: neighbour) {
           if (
