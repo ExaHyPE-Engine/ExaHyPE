@@ -44,41 +44,41 @@ fv_rusanov_solver = exahype2.solvers.fv.rusanov.GlobalAdaptiveTimeStepWithEnclav
   pde_terms_without_state = True
 )
 
-#fv_rusanov_solver.add_user_action_set_includes( """
-##include "EulerKernels.h"
-#""")
-#fv_rusanov_solver.add_user_solver_includes( """
-##include "EulerKernels.h"
-#""")
+fv_rusanov_solver.add_user_action_set_includes( """
+#include "EulerKernels.h"
+""")
+fv_rusanov_solver.add_user_solver_includes( """
+#include "EulerKernels.h"
+""")
 
-#fv_rusanov_solver.set_implementation(
-#  boundary_conditions  = exahype2.solvers.fv.PDETerms.Empty_Implementation,
-#  ncp                  = exahype2.solvers.fv.PDETerms.None_Implementation,
-#  flux                 = """
-#  ::applications::exahype2::euler::fluxOnGPU(
-#    Q,
-#    faceCentre, volumeH, t, dt, normal,
-#    NumberOfUnknowns, NumberOfAuxiliaryVariables,
-#    F
-#  );
-#""",
-#  source_term          = exahype2.solvers.fv.PDETerms.None_Implementation,
-#  refinement_criterion = exahype2.solvers.fv.PDETerms.Empty_Implementation,
-#  eigenvalues          = """
-#  return ::applications::exahype2::euler::maxEigenvalueOnGPU(
-#    Q,
-#    faceCentre, volumeH, t, dt, normal,
-#    NumberOfUnknowns, NumberOfAuxiliaryVariables
-#  );
-#""",
-#  initial_conditions   = """
-#  printf("Initial conditions should not be called in this benchmark!");
-#  std::abort();
-#  for (int i=0; i<NumberOfUnknowns+NumberOfAuxiliaryVariables; i++) {
-#    Q[i] = 0.0;
-#  }
-#"""
-#)
+fv_rusanov_solver.set_implementation(
+  boundary_conditions  = exahype2.solvers.fv.PDETerms.Empty_Implementation,
+  ncp                  = exahype2.solvers.fv.PDETerms.None_Implementation,
+  flux                 = """
+  ::applications::exahype2::euler::flux(
+    Q,
+    faceCentre, volumeH, t, dt, normal,
+    NumberOfUnknowns, NumberOfAuxiliaryVariables,
+    F
+  );
+""",
+  source_term          = exahype2.solvers.fv.PDETerms.None_Implementation,
+  refinement_criterion = exahype2.solvers.fv.PDETerms.Empty_Implementation,
+  eigenvalues          = """
+  return ::applications::exahype2::euler::maxEigenvalue(
+    Q,
+    faceCentre, volumeH, t, dt, normal,
+    NumberOfUnknowns, NumberOfAuxiliaryVariables
+  );
+""",
+  initial_conditions   = """
+  printf("Initial conditions should not be called in this benchmark!");
+  std::abort();
+  for (int i=0; i<NumberOfUnknowns+NumberOfAuxiliaryVariables; i++) {
+    Q[i] = 0.0;
+  }
+"""
+)
 
 project.add_solver(fv_rusanov_solver)
 
@@ -114,7 +114,6 @@ peano4_project.constants.export_constexpr_with_type( "Accuracy", str(accuracy), 
 peano4_project.constants.export_constexpr_with_type( "Iterations", str(args.iterations), "int" )
 peano4_project.constants.export_boolean( "EnableManagedMemory", args.managed_memory )
 
-peano4_project.output.makefile.add_cpp_file( "../../../../applications/exahype2/euler/EulerKernels.cpp" )
 peano4_project.output.makefile.add_header_search_path( "../../../../applications/exahype2/euler" )
 
 peano4_project.generate()
