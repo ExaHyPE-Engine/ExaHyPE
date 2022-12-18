@@ -690,24 +690,19 @@ The finest mesh width of """ + str(self.get_finest_volume_size(domain_size)) + "
     else:
       step.add_action_set( self._action_set_AMR_commit_without_further_analysis )
 
-
   @property
   def plot_description(self,):
     return self._plot_description
-          
-  
+
   @plot_description.setter
   def plot_description(self,description):
     """
-    
      Use this one to set a description within the output patch file that tells
-     the vis solver what the semantics of the entries are. Typicallly, I use 
-     a comma-separated list here. 
-    
+     the solver what the semantics of the entries are. Typically, I use 
+     a comma-separated list here.
     """
     self._plot_description = description
-    
-  
+
   def add_actions_to_plot_solution(self, step, output_path):
     """
     

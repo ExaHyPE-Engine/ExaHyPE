@@ -118,16 +118,13 @@ class Project (object):
     self.main.construct_output(self.output,self.project_name + "-main")
     self.output.generate(overwrite, self.directory)
     self.constants.generate(overwrite, self.directory)
-
     print( "generation complete" )
-    
+
     if throw_away_data_after_generation:
       self.datamodel = None
       self.solversteps = None
       self.output      = None
-      
       gc.collect()
-      
       print( "threw away all data and ran garbage collection" )
 
       
@@ -135,8 +132,7 @@ class Project (object):
     """
       Invokes the underlying make/C build mechanism on the project. 
       We invoke the make command via a subprocess. That's it.
-      
-      
+
       number_of_parallel_builds: int
         This is mapped onto make -jnumber_of_parallel_builds, i.e. it 
         determines how many parallel make instances the code spawns.
@@ -177,41 +173,36 @@ class Project (object):
         self.is_built = True
         self.build_was_successful = False
     else:
-      print( "can not build as code generation has not been successful" )
-  
-  
-  def run(self, args=[], prefix=None, pipefile=None, rebuild_if_required=True):
+      print( "cannot build as code generation has not been successful" )
+
+  def run(self, executable, args=[], prefix=None, pipefile=None, rebuild_if_required=True):
     """
     Runs the code. args should be a list of strings or the empty list.
     prefix is an array, too. A typical invocation looks alike
-
     project.run( ["16.0", "32.0"], ["/opt/mpi/mpirun", "-n", "1"] )
-    
     The operation returns True if the run had been successful
 
     pipefile: string or None
-
     """
     success = False
     if rebuild_if_required and not self.is_built and not self.build_was_successful:
       self.build()
-      
+
     if not rebuild_if_required or (self.is_built and self.build_was_successful):
-      print( "run application ..." )
+      print( "run executable " + str(executable))
 
       invocation  = []
       if prefix!=None:
         invocation += prefix
-      invocation += [ "./peano4" ]
+      invocation += ["./" + executable]
       invocation += args
 
       try:
         result = None
         if pipefile==None:
-          result = subprocess.run( invocation, stderr=subprocess.PIPE, stdout=subprocess.PIPE )
+          result = subprocess.run( invocation, stdout=subprocess.PIPE, stderr=subprocess.PIPE )
         else:
           result = subprocess.run( invocation, stdout=open( pipefile, "w" ), stderr=subprocess.PIPE )
-
         if result.returncode==0:
           if pipefile==None:
             print( result.stdout.decode("utf-8") )
@@ -221,17 +212,14 @@ class Project (object):
         else:
           print( result.stderr.decode("utf-8") )
           print( "run failed" )
-
         success = True
       except Exception as e:
         print( "run of application was not successful: " + str(e) )
         print( "invocation: " + str(invocation) )
     else:
-      print( "can not run as code compilation has not been successful" )
-  
+      print( "cannot run as code compilation has not been successful" )
     return success
-      
-      
+
   def set_sph_sequence(self, hydroScheme = 'minimal'):    
     """
     Change the DefaultSequence used to generate the main file template, to the

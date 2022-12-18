@@ -2,25 +2,20 @@
 # use, please see the copyright notice at www.peano-framework.org
 import sympy
 
-
 class PDE(object):
-  def __init__(self, unknowns, auxiliary_variables, dimensions ):
-    self.unknowns              = unknowns
-    self.auxiliary_variables   = auxiliary_variables
-    self.dimensions            = dimensions
-    
-    self.Q              = sympy.symarray("Q",               (unknowns+auxiliary_variables))
-  
-    self.initial_values = sympy.symarray("Q0",              (unknowns+auxiliary_variables))
-    self.x              = sympy.symarray("x",               (dimensions))
+  def __init__(self, unknowns, auxiliary_variables, dimensions):
+    self.unknowns               = unknowns
+    self.auxiliary_variables    = auxiliary_variables
+    self.dimensions             = dimensions
+    self.Q                      = sympy.symarray("Q",   (unknowns+auxiliary_variables))
+    self.initial_values         = sympy.symarray("Q0",  (unknowns+auxiliary_variables))
+    self.x                      = sympy.symarray("x",   (dimensions))
     pass
-  
-  
+
   def unknown_identifier_for_plotter(self):
     """
-    
-      Use this one to feed  set_plot_description of your solver.
-    
+      Returns identifier for the unknowns.
+      Use this one to feed set_plot_description of your solver.
     """
     result = ""
     for i in range(0,self.unknowns+self.auxiliary_variables):
@@ -28,14 +23,11 @@ class PDE(object):
         result += ","
       result += str( self.Q[i] )
     return result
-     
-  
+
   def _implementation_of_mapping_onto_named_quantities(self, is_cell_mapping = True):
     """
-    
       Return the C code that maps the quantities from Q onto
       properly labelled quantities
-      
     """
     result = ""
     for i in range(0,self.unknowns+self.auxiliary_variables):
