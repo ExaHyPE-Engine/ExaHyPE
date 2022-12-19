@@ -24,7 +24,7 @@ class PDE(object):
       result += str( self.Q[i] )
     return result
 
-  def _implementation_of_mapping_onto_named_quantities(self, is_cell_mapping = True):
+  def _implementation_of_mapping_onto_named_quantities(self, is_cell_mapping=True):
     """
       Return the C code that maps the quantities from Q onto
       properly labelled quantities
@@ -35,7 +35,7 @@ class PDE(object):
       result += "double "
       result += sympy.printing.cxxcode( self.Q[i] )
       result += " = Q[" + str(i) + "];\n"
-      
+
     for i in range(0,self.dimensions):
       result += "const double x_"
       result += str(i)
@@ -48,57 +48,50 @@ class PDE(object):
       result += ";\n"
     return result
 
-
   def name_Q_entry(self,offset_in_Q,name):
     """
      Q covers both unknowns plus auxiliary variables. They simply are concatenated.
      So if you have 10 unknowns and 2 auxiliary variables, the name you assign the
-     10s Q entry is the one for the first auxiliary variable. 
-     
+     10s Q entry is the one for the first auxiliary variable.
      There's also a dedicated routine for auxiliary variables if you prefer this one.
     """
     self.Q[offset_in_Q] = sympy.symbols( name )
     return self.Q[offset_in_Q]
 
-
   def name_auxiliary_variable(self,number,name):
     """
      Q covers both unknowns plus auxiliary variables. They simply are concatenated.
      So if you have 10 unknowns and 2 auxiliary variables, the name you assign the
-     10s Q entry is the one for the first auxiliary variable. 
-     
+     10s Q entry is the one for the first auxiliary variable.
      There's also a dedicated routine for auxiliary variables if you prefer this one.
     """
     self.Q[number+self.auxiliary_variables] = sympy.symbols( name )
     return self.Q[number+self.auxiliary_variables]
-
 
   def name_Q_entries(self,offset_in_Q,cardinality,name):
     new_entry = sympy.symarray(name, cardinality)
     for i in range(0,cardinality):
       self.Q[offset_in_Q+i] = new_entry[i]
     return new_entry
-  
-  
+
   def implementation_of_homogeneous_Neumann_BC(self):
     result = ""
     for i in range(0,self.unknowns + self.auxiliary_variables):
       result += "Qoutside[" + str(i) + "] = Qinside[" + str(i) + "];\n"
     return result
-  
-  
-  def implementation_of_initial_conditions(self, invoke_evalf_before_output = True):
+
+  def implementation_of_initial_conditions(self, invoke_evalf_before_output=True):
     """
       invoke_evalf_before_output: boolean
-        If your expression is a symbolic expression (default) then we use evalf 
+        If your expression is a symbolic expression (default) then we use evalf
         before we pipe it into the output. If your expression is something numeric,
-        then evalf will fail (as it is not defined for scalar quantities). 
+        then evalf will fail (as it is not defined for scalar quantities).
     """
-    result  = self._implementation_of_mapping_onto_named_quantities(is_cell_mapping = True)
+    result = self._implementation_of_mapping_onto_named_quantities(is_cell_mapping=True)
     for i in range(0,self.unknowns + self.auxiliary_variables):
       if invoke_evalf_before_output:
         result += sympy.printing.cxxcode( self.initial_values[i].evalf(), assign_to="Q[" + str(i) + "]" )
       else:
         result += "Q[" + str(i) + "] = " + sympy.printing.cxxcode( self.initial_values[i] ) + ";"
       result += "\n"
-    return result  
+    return result

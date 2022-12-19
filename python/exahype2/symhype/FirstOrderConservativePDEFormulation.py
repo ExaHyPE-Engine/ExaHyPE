@@ -4,44 +4,38 @@ import sympy
 
 from .PDE import PDE
 
-
 class FirstOrderConservativePDEFormulation(PDE):
   """
-    
-    Helper class to model a hyperbolic PDE in first-order conservative 
+    Helper class to model a hyperbolic PDE in first-order conservative
     formulation.
-    
-    To model your PDE, you typically run through a couple of single steps. 
+
+    To model your PDE, you typically run through a couple of single steps.
     First, include this package plus sympy. Next, create a new instance
     of this class to which you pass the number of equations in your PDE 
     system, i.e. the number of unknowns you want to develop, plus the 
     dimension.
-    
+
     As a consequence, the solver holds an equation pde which describes the
     pde's right-hand side in the representation
-    
+
     \partial Q(t) + div_x F(Q)
-    
+
     Most people prefer not to work with a vector Q but with some symbolic
     names. Feel free to derive them from Q via constructs similar to
-      
+
     rho = euler.Q[0]
     j = sympy.Array( euler.Q[1:4] )
     E = euler.Q[4]
-
-        
   """
-  def __init__(self, unknowns, auxiliary_variables, dimensions ):
+  def __init__(self, unknowns, auxiliary_variables, dimensions):
     PDE.__init__(self, unknowns, auxiliary_variables, dimensions)
-    
-    self.eigenvalue     = sympy.symarray("alpha",           (unknowns,dimensions))
-    self.F              = sympy.symarray("F",               (unknowns,dimensions))
-    
-    for i in range(0,unknowns):
-      self.F[i]          = [0 for i in range(0,dimensions)]
-      self.eigenvalue[i] = [0 for i in range(0,dimensions)]
-    pass
 
+    self.F                = sympy.symarray("F",     (unknowns,dimensions))
+    self.eigenvalue       = sympy.symarray("alpha", (unknowns,dimensions))
+    for i in range(0,unknowns):
+      self.F[i]           = [0 for i in range(0,dimensions)]
+      self.eigenvalue[i]  = [0 for i in range(0,dimensions)]
+    pass
 
   def __str__(self):
     result = ""
@@ -54,7 +48,6 @@ class FirstOrderConservativePDEFormulation(PDE):
       result += str( self.eigenvalue[i] )
       result += "\n"
     return result
-    
 
   def LaTeX(self):
     result = "\\begin{eqnarray*}"
@@ -73,37 +66,28 @@ class FirstOrderConservativePDEFormulation(PDE):
         result += str( self.eigenvalue[i][j] )
       result += "] \\\\"
     result += "\\end{eqnarray*}"
-    
-    #
-    # Some text replacement magic
-    #
     result = result.replace( "**", "^" )
     result = result.replace( "sqrt", "\\sqrt" )
-    return result  
-
+    return result
 
   def substitute_expression(self,expression,new_expression):
     """
-    
-      Usually used to set a symbolic variable (expression) to a value 
-      (new_expression). We run over all internal expressions and set 
-      them accordin
-      
+      Usually used to set a symbolic variable (expression) to a value
+      (new_expression). We run over all internal expressions and set
+      them accordingly.
     """
     for i in range(0,self.unknowns):
       for d in range(0,self.dimensions):
         self.F[i,d]          = self.F[i,d].subs(expression,new_expression)
         self.eigenvalue[i,d] = self.eigenvalue[i,d].subs(expression,new_expression)
 
-
-  def implementation_of_flux(self, invoke_evalf_before_output = False):
+  def implementation_of_flux(self, invoke_evalf_before_output=False):
     """
       Return implementation for flux along one coordinate axis (d) as C code.
-        
       invoke_evalf_before_output: boolean
-        If your expression is a symbolic expression (default) then we use evalf 
+        If your expression is a symbolic expression (default) then we use evalf
         before we pipe it into the output. If your expression is something numeric,
-        then evalf will fail (as it is not defined for scalar quantities). 
+        then evalf will fail (as it is not defined for scalar quantities).
     """
     result  = self._implementation_of_mapping_onto_named_quantities(is_cell_mapping = False)
     result += "switch( normal ) {\n"
@@ -119,21 +103,20 @@ class FirstOrderConservativePDEFormulation(PDE):
     result += "}\n"
     return result
 
-
-  def implementation_of_eigenvalues(self, invoke_evalf_before_output = False):
+  def implementation_of_eigenvalues(self, invoke_evalf_before_output=False):
     """
       Return eigenvalues
-      
-      This yields a set of eigenvalues, i.e. one per unknown. For many solvers such as 
+
+      This yields a set of eigenvalues, i.e., one per unknown. For many solvers such as
       Rusanov, you need only one.
-      
+
       d: int
         The axis along which we wanna have the eigenvalues
-        
+
       invoke_evalf_before_output: boolean
-        If your expression is a symbolic expression (default) then we use evalf 
+        If your expression is a symbolic expression (default) then we use evalf
         before we pipe it into the output. If your expression is something numeric,
-        then evalf will fail (as it is not defined for scalar quantities). 
+        then evalf will fail (as it is not defined for scalar quantities).
     """
     result  = self._implementation_of_mapping_onto_named_quantities(is_cell_mapping = False)
     result += "switch (normal) {\n"
@@ -148,14 +131,12 @@ class FirstOrderConservativePDEFormulation(PDE):
       result += "  break;\n"
     result += "}\n"
     return result
-  
-  
 
-  def implementation_of_max_eigenvalue(self, invoke_evalf_before_output = False, use_absolute_values=True):
+  def implementation_of_max_eigenvalue(self, invoke_evalf_before_output=False, use_absolute_values=True):
     """
       Return maximum eigenvalue
     """
-    result  = self._implementation_of_mapping_onto_named_quantities(is_cell_mapping = False)
+    result  = self._implementation_of_mapping_onto_named_quantities(is_cell_mapping=False)
     result += "double lambda[" + str(self.unknowns) + "];\n"
     result += "switch (normal) {\n"
     for d in range(0,self.dimensions):
@@ -175,6 +156,4 @@ class FirstOrderConservativePDEFormulation(PDE):
       else:
         result += "result = std::max( result, lambda[" + str(i)+ "] );\n"
     result += "return result;\n"
-    return result  
-
-    
+    return result
