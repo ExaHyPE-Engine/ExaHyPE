@@ -136,12 +136,6 @@ class SedovBlastIC:
       tarch::la::Vector<Dimensions,double> GridSize = marker.h();
       const double GridSize_x = GridSize(0); 
 
-      /* HARD-CODED FOR SEDOV TEST */
-      const double HYDRO_DIMENSIONS = 1;
-//      const int HYDRO_PART_NUMBER = 128;
-//      const int HYDRO_PART_NUMBER = 1000;
-      const int HYDRO_PART_NUMBER = 250;
-
       particle->setCutOffRadius( GridSize_x / 2.0);
       
       /* Constant density field */

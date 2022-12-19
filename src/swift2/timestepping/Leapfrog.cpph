@@ -36,8 +36,6 @@ void swift2::timestepping::computeLeapfrogKickWithGlobalTimeStepSize(
     if (
       particle->getParallelState()==Particle::ParallelState::Local
       and
-      not particle->getCellHasUpdatedParticle()
-      and
       not particle->getIsBoundaryParticle()
     ) {
 
@@ -77,8 +75,6 @@ void swift2::timestepping::computeLeapfrogKickWithGlobalTimeStepSize(
         particle->setV( particle->getV() + timeStepSizeKick * particle->getA() );
       }
 
-//      particle->setCellHasUpdatedParticle(true);
-
     }
   }
 }
@@ -94,8 +90,6 @@ void swift2::timestepping::computeLeapfrogKickExtraWithGlobalTimeStepSize(
   for (auto* particle: localParticles) {
     if(
       particle->getParallelState()==Particle::ParallelState::Local
-      and
-      not particle->getCellHasUpdatedParticle()
       and
       not particle->getIsBoundaryParticle()
     ) {
@@ -133,8 +127,6 @@ void swift2::timestepping::computePredictHydro(
   for (auto* particle: localParticles) {
     if (
       particle->getParallelState()==Particle::ParallelState::Local
-      and
-      not particle->getCellHasUpdatedParticle()
       and
       not particle->getIsBoundaryParticle()
     ) {

@@ -439,6 +439,12 @@ void swift2::kernels::prepareHydroForceCalculation(
       particle->setHDot(0.0);   
       particle->setV_sig_AV( 2.0 * particle->getSoundSpeed() );
 
+//      /* Debugging */
+//      if( particle->getX()(0) == 0.5){
+//        printf("DEBUGGING prepareHydroForceCalculation --- \n");
+//        std::cout << "local particle: "<< particle->toString() << std::endl;
+//      }
+
     }
   }
 }
@@ -456,6 +462,12 @@ void swift2::kernels::endHydroForceCalculation(
 
       particle->setHDot( 
         particle->getHDot() * particle->getSmoothingLength() / hydroDimensions );
+
+//      /* Debugging */
+//      if( particle->getX()(0) == 0.5){
+//        printf("DEBUGGING endHydroForceCalculation --- \n");
+//        std::cout << "local particle: "<< particle->toString() << std::endl;
+//      }
 
     }
   }
