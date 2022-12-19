@@ -9,9 +9,7 @@ void swift2::kernels::genericSelfInteraction(
   std::function< void(Particle* localParticle) > interaction
 ) {
   for (auto* particle: localParticles ) {
-    if ( not particle->getCellHasUpdatedParticle() ) {
-      interaction(particle);
-    }
+    interaction(particle);
   }
 }
 
@@ -23,8 +21,6 @@ void swift2::kernels::prepareDensityCalculation(
 ) {
   for (auto* particle: localParticles ) {
     if ( 
-      not particle->getCellHasUpdatedParticle() 
-      and
       not particle->getIsBoundaryParticle()
     ) {
       particle->setDensity (0.0);                      
@@ -54,8 +50,6 @@ void swift2::kernels::endDensityCalculation(
 ) {
   for (auto* particle: localParticles ) {
     if ( 
-      not particle->getCellHasUpdatedParticle() 
-      and
       not particle->getIsBoundaryParticle()
     ) {
 
@@ -258,7 +252,7 @@ void swift2::kernels::endDensityCalculation(
 //          tarch::la::Vector<Dimensions,double> GridSize = marker.h();
 //          const double GridSizeHalf = 0.5 * GridSize(0); 
           const double GridSizeHalf = 0.5 * 0.3; 
-          const double CutoffParticleH = kernel_constant * particle->getSmoothingLength();
+          const double CutoffParticleH = kernel_gamma * particle->getSmoothingLength();
    
           if ( ((particle->getSmoothingLength() >= hHydroMax) && (f < 0.0)) ||
                ((particle->getSmoothingLength() <= hHydroMin) && (f > 0.0)) ||
@@ -336,8 +330,6 @@ void swift2::kernels::endDensityCalculationWithConstantSmoothingLength(
 ) {
   for (auto* particle: localParticles ) {
     if ( 
-      not particle->getCellHasUpdatedParticle() 
-      and
       not particle->getIsBoundaryParticle()
     ) {
 
@@ -418,7 +410,11 @@ void swift2::kernels::endDensityCalculationWithConstantSmoothingLength(
         particle->setSoundSpeed( soundspeed );
         particle->setBalsara( balsara );
 
-        particle->setCellHasUpdatedParticle(true);
+//          /* Debugging */
+//        if( particle->getX()(0) == 0.5){
+//          printf("DEBUGGING endDensityCalculationWithConstantSmoothingLength --- \n");
+//          std::cout << "local particle: "<< particle->toString() << std::endl;
+//        }
 
       } /* End hydro_prepare_force */
       
@@ -432,8 +428,6 @@ void swift2::kernels::prepareHydroForceCalculation(
 ) {
   for (auto* particle: localParticles ) {
     if ( 
-    not particle->getCellHasUpdatedParticle() 
-    and
     not particle->getIsBoundaryParticle()
     ) {
 
@@ -457,8 +451,6 @@ void swift2::kernels::endHydroForceCalculation(
 ) {
   for (auto* particle: localParticles ) {
     if ( 
-    not particle->getCellHasUpdatedParticle() 
-    and
     not particle->getIsBoundaryParticle()
     ) {
 
@@ -478,8 +470,6 @@ void swift2::kernels::flagBoundaryParticles(
 
     if( 
       particle->getParallelState()==Particle::ParallelState::Local
-      and
-      not particle->getCellHasUpdatedParticle()
       and
       not particle->getIsBoundaryParticle()
     ){

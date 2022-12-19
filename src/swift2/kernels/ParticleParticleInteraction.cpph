@@ -42,7 +42,7 @@ void swift2::kernels::computeDensity(
         const double q_a = r / h_a;
         
         /* Compute the actual interaction radius */
-        const double cutoffR = kernel_constant * h_a;
+        const double cutoffR = kernel_gamma * h_a;
 
         /* Velocity terms for viscosity */
         tarch::la::Vector<Dimensions,double> dv_ab;
@@ -99,13 +99,20 @@ void swift2::kernels::computeDensity(
           localParticle->setRot_v( localParticle->getRot_v() + fac_a * curlvr2D );
 
           assertion3( not std::isnan( localParticle->getOmega() ), localParticle->toString(), localParticle->getOmega(), dW_a_dh );
-        } 
 
-      }
-      /* Flag local particle as updated */
-      localParticle->setCellHasUpdatedParticle(true);
+//          /* Debugging */
+//          if( localParticle->getX()(0) == 0.5){
+//            printf("DEBUGGING computeDensity --- \n");
+//            std::cout << "local particle: "<< localParticle->toString() << std::endl;
+//            std::cout << "active particle: "<< activeParticle->toString() << std::endl;
+//            printf("r=%E, cutoffR=%E, kernel_gamma=%E, \n", r, cutoffR, kernel_gamma );
+//            printf("size of active set=%d \n", localParticles.size() );
+//          }
 
-    }
+        } /* End if r<cutoffR */
+      } /* End for active particles */
+
+    } /* End Cell has not updated local particle */
   }
 }
 
@@ -144,7 +151,7 @@ void swift2::kernels::computeHydroForce(
       const double q_b = r / h_b;
       
       // Get actual interaction radius
-      const double cutoffR = kernel_constant * h_a;
+      const double cutoffR = kernel_gamma * h_a;
      
       if( 
         tarch::la::smaller( r,cutoffR ) 

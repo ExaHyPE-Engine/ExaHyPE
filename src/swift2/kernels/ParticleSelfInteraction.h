@@ -10,17 +10,27 @@
 namespace swift2 {
   namespace kernels {
     /**
-     * Generic particle interaction kernel accepting a functor
+     * Generic particle self-interaction kernel accepting a functor
      *
-     * The generic implementation realises a nested loops: We call interaction
-     * per pair of local and active particles. The interaction functor may
-     * modify the local particle. Besides the simple nested loop, the routine
-     * ensures that no particle is updated twice if it belongs to two cells
-     * simulatenously.
+     * The generic implementation realises a single loop: We call a self interaction
+     * per particle that has no dependence over neighbours. The functor hence modifies the particle. 
      *
-     * What the routine not does is to check if activeParticle!=localParticle,
-     * i.e. please assume that the routine is also called for self-interaction
-     * potentials.
+     * We distinguish two use cases for the particle self-interactions:
+     *
+     * 1) We want to execute a stand-alone computation over the particle, e.g.
+     * the kick step, which is does not require any particle-particle
+     * contribution.
+     *
+     * 2) We want to execute computations after and before the particle-particle interactions kernels, e.g. to
+     * 'prepare' or 'end' a given calculation in SPH loops (e.g. density).
+     * In order to ensure the self-interaction kernels execute consistently during the mesh
+     * traversals for these type of operations, the user should bear in mind the difference between these two cases:
+     *
+     *  - The 'prepare' case should be mapped into touchVertexFirstTime. Peano internally ensures 
+     *  that CellHasUpdatedParticle is false in this situation.
+     *  - The 'end' case should be mapped into touchVertexLastTime. Peano internally ensures 
+     *  that CellHasUpdatedParticle is true in this situation.
+     * 
      */
     template <typename Particle>
     void genericSelfInteraction(
