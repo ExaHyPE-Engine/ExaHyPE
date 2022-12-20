@@ -6,8 +6,7 @@
 // This is generated. If you change fundamental properties, you will have to 
 // generate this file. Backup your manual changes before you do so.
 //
-#ifndef _examples_exahype2_selfgravitation_Poisson_H_
-#define _examples_exahype2_selfgravitation_Poisson_H_
+#pragma once
 
 #include "../selfgravitation-with-Poisson/AbstractPoisson.h"
 #include "tarch/logging/Log.h"
@@ -126,4 +125,3 @@ class examples::exahype2::selfgravitation::Poisson: public AbstractPoisson {
 };
 
 
-#endif

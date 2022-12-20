@@ -11,8 +11,7 @@
  * For the full license text, see LICENSE.txt
  **/
 
-#ifndef _EXAHYPE_KERNELS_KERNEL_UTILS_H_
-#define _EXAHYPE_KERNELS_KERNEL_UTILS_H_
+#pragma once
 
 #include "tarch/Assertions.h"
 #include "tarch/la/Vector.h"
@@ -353,4 +352,3 @@ struct idx6 {
 
 }  // namespace kernels
 
-#endif  // _EXAHYPE_KERNELS_KERNEL_UTILS_H_

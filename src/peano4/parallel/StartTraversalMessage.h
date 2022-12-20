@@ -6,8 +6,7 @@
 // however are not subject of copyright, i.e. feel free to add your copyright in 
 // here
 //  
-#ifndef _INCLUDE_PEANO4_PARALLEL_STARTTRAVERSALMESSAGE_
-#define _INCLUDE_PEANO4_PARALLEL_STARTTRAVERSALMESSAGE_
+#pragma once
 
 #include <string>
   
@@ -142,5 +141,4 @@ struct peano4::parallel::StartTraversalMessage {
 
 };
 
-#endif
   

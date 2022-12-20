@@ -1,7 +1,6 @@
 // This file is part of the Peano project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
-#ifndef _PEANO4_GRID_EMPTY_TRAVERSAL_OBSERVER_H_
-#define _PEANO4_GRID_EMPTY_TRAVERSAL_OBSERVER_H_
+#pragma once
 
 
 #include "TraversalObserver.h"
@@ -58,4 +57,3 @@ class peano4::grid::EmptyTraversalObserver: public peano4::grid::TraversalObserv
     std::vector< GridControlEvent > getGridControlEvents() const override;
 };
 
-#endif

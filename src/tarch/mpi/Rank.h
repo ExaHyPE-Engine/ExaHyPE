@@ -1,7 +1,6 @@
 // This file is part of the Peano project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
-#ifndef _TARCH_MPI_RANK_H_
-#define _TARCH_MPI_RANK_H_
+#pragma once
 
 
 #include "tarch/logging/Log.h"
@@ -498,4 +497,3 @@ class tarch::mpi::Rank {
     static void abort(int errorCode);
 };
 
-#endif

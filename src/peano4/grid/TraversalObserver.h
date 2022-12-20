@@ -1,7 +1,6 @@
 // This file is part of the Peano project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
-#ifndef _PEANO4_GRID_TRAVERSAL_OBSERVER_H_
-#define _PEANO4_GRID_TRAVERSAL_OBSERVER_H_
+#pragma once
 
 
 #include "peano4/parallel/parallel.h"
@@ -256,4 +255,3 @@ std::vector< peano4::grid::GridControlEvent > applications4::grid::MyObserver::g
     virtual void deleteAllStacks() {};
 };
 
-#endif

@@ -1,5 +1,4 @@
-#ifndef _CONVERT_INPUT_PEANO_TEXT_PATCH_FILE_READER_H_
-#define _CONVERT_INPUT_PEANO_TEXT_PATCH_FILE_READER_H_
+#pragma once
 
 
 
@@ -79,4 +78,3 @@ PeanoTextPatchFileReader(const std::string &file);
 	std::vector< convert::data::DataSet >  getData() const override;
 };
 
-#endif

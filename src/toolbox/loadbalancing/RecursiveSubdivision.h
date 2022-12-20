@@ -1,7 +1,6 @@
 // This file is part of the Peano project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
-#ifndef _TOOLBOX_LOAD_BALANCING_RECURSIVE_SUBDIVISION_
-#define _TOOLBOX_LOAD_BALANCING_RECURSIVE_SUBDIVISION_
+#pragma once
 
 
 
@@ -461,5 +460,4 @@ class toolbox::loadbalancing::RecursiveSubdivision {
 };
 
 
-#endif
 

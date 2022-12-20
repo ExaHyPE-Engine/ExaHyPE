@@ -1,7 +1,6 @@
 // This file is part of the Peano project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
-#ifndef _TOOLBOX_PARTICLES_FILE_READER_HDF5
-#define _TOOLBOX_PARTICLES_FILE_READER_HDF5
+#pragma once
 
 #include "config.h"
 #include "peano4/utils/Globals.h"
@@ -183,4 +182,3 @@ class toolbox::particles::FileReaderHDF5 {
 
 };
 
-#endif //_TOOLBOX_PARTICLES_FILE_READER_HDF5

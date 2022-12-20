@@ -1,7 +1,6 @@
 // This file is part of the Peano project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
-#ifndef _TARCH_TESTS_TREETESTCASECOLLECTION_H_
-#define _TARCH_TESTS_TREETESTCASECOLLECTION_H_
+#pragma once
 
 #include "tarch/tests/TestCase.h"
 #include "tarch/logging/Log.h"
@@ -106,4 +105,3 @@ class tarch::tests::TreeTestCaseCollection: public tarch::tests::TestCase {
 };
 
 
-#endif
