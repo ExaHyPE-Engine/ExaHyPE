@@ -40,4 +40,4 @@
  */
 #define KeywordToAvoidDuplicateSymbolsForInlinedFunctions static
 
-#undef OpenMPTaskGroup
+#define OpenMPTaskGroup
