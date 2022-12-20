@@ -1,5 +1,4 @@
-#ifndef _EXAHYPE2_ADERDG_RIEMANN_AOS_H_
-#define _EXAHYPE2_ADERDG_RIEMANN_AOS_H_
+#pragma once
 
 /**
  * Common routines required for a variety of Riemann solvers.
@@ -184,4 +183,3 @@ namespace exahype2 {
   }
 }
 
-#endif

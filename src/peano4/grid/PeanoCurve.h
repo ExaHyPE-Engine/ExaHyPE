@@ -1,7 +1,6 @@
 // This file is part of the Peano project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
-#ifndef _PEANO4_GRID_PEANO_CURVE_H_
-#define _PEANO4_GRID_PEANO_CURVE_H_
+#pragma once
 
 
 #include "peano4/utils/Loop.h"
@@ -190,4 +189,3 @@ class peano4::grid::PeanoCurve {
     static int getOutputStackNumber(const AutomatonState& state);
 };
 
-#endif

@@ -11,8 +11,7 @@
  * For the full license text, see LICENSE.txt
  **/
  
-#ifndef _EXAHYPE_KERNELS_KERNEL_CALLS_H_
-#define _EXAHYPE_KERNELS_KERNEL_CALLS_H_
+#pragma once
 
 #include "exahype/parser/Parser.h"
 #include <ostream>
@@ -45,4 +44,3 @@ namespace kernels {
   std::string readSpecificationFileToJSON(const std::string& filename);
 }
 
-#endif

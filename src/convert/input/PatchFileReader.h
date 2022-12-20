@@ -1,5 +1,4 @@
-#ifndef _CONVERT_INPUT_PEANO_PATCH_FILE_READER_H_
-#define _CONVERT_INPUT_PEANO_PATCH_FILE_READER_H_
+#pragma once
 
 
 namespace convert {
@@ -29,4 +28,3 @@ class convert::input::PatchFileReader {
     virtual std::vector< convert::data::DataSet >  getData() const = 0;
 };
 
-#endif

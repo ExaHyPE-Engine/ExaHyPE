@@ -1,7 +1,6 @@
 // This file is part of the ExaHyPE2 project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
-#ifndef _EXAHYPE2_LOAD_BALANCING_CONFIGURATION_H_
-#define _EXAHYPE2_LOAD_BALANCING_CONFIGURATION_H_
+#pragma once
 
 
 #include "toolbox/loadbalancing/RecursiveSubdivision.h"
@@ -41,4 +40,3 @@ class exahype2::LoadBalancingConfiguration: public toolbox::loadbalancing::Recur
 };
 
 
-#endif

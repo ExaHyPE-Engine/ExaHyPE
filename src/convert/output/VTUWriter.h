@@ -1,5 +1,4 @@
-#ifndef _CONVERT_OUTPUT_VTU_WRITER_H_
-#define _CONVERT_OUTPUT_VTU_WRITER_H_
+#pragma once
 
 #include "Writer.h"
 
@@ -88,4 +87,3 @@ class convert::output::VTUWriter: public convert::output::Writer {
 	static int xyzToIndex(int x, int y, int z, int verticesPerAxis);
 };
 
-#endif

@@ -1,0 +1,18 @@
+if(ENABLE_BLOCKSTRUCTURED)
+	message(STATUS "Configuring ToolboxBlockStructured")
+
+	file(GLOB_RECURSE TOOLBOX_BLOCKSTRUCTURED_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/*.cpp)
+
+	foreach(dimension IN LISTS PEANO_DIMENSIONS)
+		foreach(mode IN LISTS BUILD_MODES)
+			add_library(ToolboxBlockStructured${dimension}d${SUFFIX_${mode}} STATIC)
+			target_sources(ToolboxBlockStructured${dimension}d${SUFFIX_${mode}} PRIVATE ${TOOLBOX_BLOCKSTRUCTURED_SOURCES})
+			target_include_directories(ToolboxBlockStructured${dimension}d${SUFFIX_${mode}} PRIVATE ${CMAKE_SOURCE_DIR}/src)
+			target_link_libraries(ToolboxBlockStructured${dimension}d${SUFFIX_${mode}} PRIVATE Tarch${SUFFIX_${mode}}) 
+			target_link_libraries(ToolboxBlockStructured${dimension}d${SUFFIX_${mode}} PRIVATE Peano4Core${dimension}d${SUFFIX_${mode}}) 
+			target_link_options(ToolboxBlockStructured${dimension}d${SUFFIX_${mode}} PRIVATE ${${mode}_LDFLAGS})
+			target_compile_options(ToolboxBlockStructured${dimension}d${SUFFIX_${mode}} PRIVATE ${${mode}_FLAGS})
+			target_compile_definitions(ToolboxBlockStructured${dimension}d${SUFFIX_${mode}} PRIVATE ${${mode}_DEFINITIONS} Dimensions=${dimension})
+		endforeach()
+	endforeach()
+endif()

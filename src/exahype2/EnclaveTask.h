@@ -1,7 +1,6 @@
 // This file is part of the ExaHyPE2 project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
-#ifndef _EXAHYPE2_ENCLAVE_TASK_H_
-#define _EXAHYPE2_ENCLAVE_TASK_H_
+#pragma once
 
 
 #include "config.h"
@@ -120,4 +119,3 @@ class exahype2::EnclaveTask: public tarch::multicore::Task {
 
 
 
-#endif

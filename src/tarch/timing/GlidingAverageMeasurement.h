@@ -1,8 +1,7 @@
 // Copyright (C) 2009 Technische Universitaet Muenchen
 // This file is part of the Peano project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org#ifndef _PEANO_KERNEL_MULTICORE_MULTILEVELSCHEDULER_ACTION_H_
-#ifndef _TARCH_TIMING_GLIDING_AVERAGE_MEASUREMENT_H_
-#define _TARCH_TIMING_GLIDING_AVERAGE_MEASUREMENT_H_
+#pragma once
 
 
 #include <string>
@@ -80,4 +79,3 @@ class tarch::timing::GlidingAverageMeasurement {
     void erase();
 };
 
-#endif

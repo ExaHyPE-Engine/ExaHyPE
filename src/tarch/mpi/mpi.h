@@ -1,7 +1,6 @@
 // This file is part of the Peano project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
-#ifndef _TARCH_MPI_
-#define _TARCH_MPI_
+#pragma once
 
 
 #include "config.h"
@@ -82,5 +81,4 @@ tarch::mpi::IntegerMessage::receive(
  */
 
 
-#endif
 

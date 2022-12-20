@@ -1,7 +1,6 @@
 // This file is part of the Peano project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
-#ifndef _CONVERT_FILTER_CONVERT_TREE_ID_INTO_DATA_FIELD_H_
-#define _CONVERT_FILTER_CONVERT_TREE_ID_INTO_DATA_FIELD_H_
+#pragma once
 
 
 #include "Filter.h"
@@ -24,4 +23,3 @@ class convert::filter::ConvertTreeIdIntoDataField: public convert::filter::Filte
 	  void apply( convert::data::DataSet& dataSet, convert::data::Variable& inputVariable, std::string targetSelectorName ) override;
 };
 
-#endif

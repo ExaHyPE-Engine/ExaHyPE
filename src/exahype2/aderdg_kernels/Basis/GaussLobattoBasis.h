@@ -10,8 +10,7 @@
  * Released under the BSD 3 Open Source License.
  * For the full license text, see LICENSE.txt
  **/
-#ifndef GAUSSLOBATTO_H_
-#define GAUSSLOBATTO_H_
+#pragma once
 
 #include "../Utils/KernelUtils.h"
 
@@ -53,4 +52,3 @@ double interpolate(
 }
 }
 
-#endif //GAUSSLOBATTO_H_

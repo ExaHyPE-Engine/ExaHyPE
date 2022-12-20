@@ -6,8 +6,7 @@
 // however are not subject of copyright, i.e. feel free to add your copyright in 
 // here
 //  
-#ifndef _INCLUDE_TARCH_MPI_INTEGERMESSAGE_
-#define _INCLUDE_TARCH_MPI_INTEGERMESSAGE_
+#pragma once
 
 #include <string>
   
@@ -139,5 +138,4 @@ struct tarch::mpi::IntegerMessage {
 
 };
 
-#endif
   

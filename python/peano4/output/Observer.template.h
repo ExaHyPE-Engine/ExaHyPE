@@ -1,7 +1,6 @@
 // This file is part of the Peano project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
-#ifndef {% for item in NAMESPACE -%}_{{ item }}{%- endfor %}_{{CLASSNAME}}_H_
-#define {% for item in NAMESPACE -%}_{{ item }}{%- endfor %}_{{CLASSNAME}}_H_
+#pragma once
 
 
 #include "tarch/la/Vector.h"
@@ -110,4 +109,3 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public peano4::grid::TraversalO
     void deleteAllStacks() override;
 };
 
-#endif

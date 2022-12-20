@@ -1,7 +1,6 @@
 // This file is part of the ExaHyPE2 project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
-#ifndef _EXAHYPE2_FV_RUSANOV_OMP_RUSANOV_H_
-#define _EXAHYPE2_FV_RUSANOV_OMP_RUSANOV_H_
+#pragma once
 
 namespace exahype2 {
   namespace fv {
@@ -222,4 +221,3 @@ namespace exahype2 {
 #include "Rusanov_patchwise_managed_static_calls.cpph"
 #include "Rusanov_batched_managed_static_calls.cpph"
 
-#endif
