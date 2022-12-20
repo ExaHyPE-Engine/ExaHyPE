@@ -1,5 +1,4 @@
-#ifndef _CONVERT_INPUT_PEANO_META_FILE_READER_H_
-#define _CONVERT_INPUT_PEANO_META_FILE_READER_H_
+#pragma once
 
 
 
@@ -22,4 +21,3 @@ class convert::input::MetaFileReader {
     virtual void parse() = 0;
 };
 
-#endif

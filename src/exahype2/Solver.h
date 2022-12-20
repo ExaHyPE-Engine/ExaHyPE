@@ -1,7 +1,6 @@
 // This file is part of the ExaHyPE2 project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
-#ifndef _EXAHYPE2_SOLVER_H_
-#define _EXAHYPE2_SOLVER_H_
+#pragma once
 
 
 
@@ -84,4 +83,3 @@ class exahype2::Solver {
 };
 
 
-#endif

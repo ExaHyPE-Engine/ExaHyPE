@@ -1,7 +1,6 @@
 // This file is part of the Peano project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
-#ifndef _TOOLBOX_MULTIPRECISION_TESTS_COMPRESSED_FLOATING_POINT_NUMBERS_TESTS_
-#define _TOOLBOX_MULTIPRECISION_TESTS_COMPRESSED_FLOATING_POINT_NUMBERS_TESTS_
+#pragma once
  
 
 #include "tarch/tests/TestCase.h"
@@ -63,4 +62,3 @@ public:
 };
 
 
-#endif

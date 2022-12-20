@@ -1,7 +1,6 @@
 // This file is part of the ExaHyPE2 project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
-#ifndef _EXAHYPE2_DG_TESTS_DGUTILS_TEST_H_
-#define _EXAHYPE2_DG_TESTS_DGUTILS_TEST_H_
+#pragma once
 
 
 #include "tarch/tests/TestCase.h"
@@ -32,4 +31,3 @@ class exahype2::dg::tests::DGUtilsTest : public tarch::tests::TestCase {
 };
 
 
-#endif

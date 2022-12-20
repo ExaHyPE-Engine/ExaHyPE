@@ -1,0 +1,17 @@
+if(ENABLE_MULTIPRECISION)
+	message(STATUS "Configuring ToolboxMultiprecision")
+
+	file(GLOB_RECURSE TOOLBOX_MULTIPRECISION_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/*.cpp)
+
+	foreach(dimension IN LISTS PEANO_DIMENSIONS)
+		foreach(mode IN LISTS BUILD_MODES)
+			add_library(ToolboxMultiprecision${dimension}d${SUFFIX_${mode}} STATIC)
+			target_sources(ToolboxMultiprecision${dimension}d${SUFFIX_${mode}} PRIVATE ${TOOLBOX_MULTIPRECISION_SOURCES})
+			target_include_directories(ToolboxMultiprecision${dimension}d${SUFFIX_${mode}} PRIVATE ${CMAKE_SOURCE_DIR}/src)
+			target_link_libraries(ToolboxMultiprecision${dimension}d${SUFFIX_${mode}} PRIVATE Tarch${SUFFIX_${mode}}) 
+			target_link_options(ToolboxMultiprecision${dimension}d${SUFFIX_${mode}} PRIVATE ${${mode}_LDFLAGS})
+			target_compile_options(ToolboxMultiprecision${dimension}d${SUFFIX_${mode}} PRIVATE ${${mode}_FLAGS})
+			target_compile_definitions(ToolboxMultiprecision${dimension}d${SUFFIX_${mode}} PRIVATE ${${mode}_DEFINITIONS})
+		endforeach()
+	endforeach()
+endif()

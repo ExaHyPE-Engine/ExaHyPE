@@ -1,7 +1,6 @@
 // This file is part of the Peano project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
-#ifndef _PEANO4_PARALLEL_TESTS_PING_POINT_TEST_H_
-#define _PEANO4_PARALLEL_TESTS_PING_POINT_TEST_H_
+#pragma once
 
 #include "tarch/tests/TestCase.h"
 #include "tarch/logging/Log.h"
@@ -58,4 +57,3 @@ class peano4::parallel::tests::PingPongTest: public tarch::tests::TestCase {
 };
 
 
-#endif

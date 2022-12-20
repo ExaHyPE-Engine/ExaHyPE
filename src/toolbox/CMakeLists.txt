@@ -1,0 +1,5 @@
+add_subdirectory(blockstructured)
+add_subdirectory(finiteelements)
+add_subdirectory(loadbalancing)
+add_subdirectory(multiprecision)
+add_subdirectory(particles)

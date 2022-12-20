@@ -1,7 +1,6 @@
 // This file is part of the Peano project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
-#ifndef _TARCH_MULTICORE_TASKS_H_
-#define _TARCH_MULTICORE_TASKS_H_
+#pragma once
 
 
 #include "multicore.h"
@@ -436,5 +435,4 @@ namespace tarch {
 bool operator<( const tarch::multicore::Task& lhs, const tarch::multicore::Task& rhs );
 
 
-#endif
 

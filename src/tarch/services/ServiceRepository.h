@@ -1,7 +1,6 @@
 // This file is part of the Peano project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
-#ifndef _TARCH_SERVICES_SERVICE_REPOSITORY_H_
-#define _TARCH_SERVICES_SERVICE_REPOSITORY_H_
+#pragma once
 
 
 #include <vector>
@@ -117,4 +116,3 @@ class tarch::services::ServiceRepository: public tarch::services::Service {
 };
 
 
-#endif

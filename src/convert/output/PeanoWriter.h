@@ -1,5 +1,4 @@
-#ifndef _CONVERT_OUTPUT_PEANO_WRITER_H_
-#define _CONVERT_OUTPUT_PEANO_WRITER_H_
+#pragma once
 
 #include "convert/data/Variable.h"
 
@@ -53,4 +52,3 @@ class convert::output::PeanoWriter: public convert::output::Writer {
 	void writePatchData(const convert::data::Variable& variable, const convert::data::PatchData& data, std::ofstream&  );
 };
 
-#endif

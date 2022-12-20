@@ -1,5 +1,4 @@
-#ifndef PEANO_ADIABATIC_INDEX_H
-#define PEANO_ADIABATIC_INDEX_H
+#pragma once
 
 
 /* Powers of the adiabatic index */
@@ -70,4 +69,3 @@
 #endif
 
 
-#endif /* PEANO_ADIABATIC_INDEX_H */

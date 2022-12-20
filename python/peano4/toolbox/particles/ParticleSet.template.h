@@ -4,8 +4,7 @@
 // www.peano-framework.org
 // This is generated. Be careful with adding your own stuff
 //
-#ifndef {% for item in NAMESPACE -%}_{{ item }}{%- endfor %}_{{CLASSNAME}}_H_
-#define {% for item in NAMESPACE -%}_{{ item }}{%- endfor %}_{{CLASSNAME}}_H_
+#pragma once
 
 
 #include <vector>
@@ -384,4 +383,3 @@
 {%- endfor %}
 
 
-#endif

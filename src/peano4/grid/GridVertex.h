@@ -6,8 +6,7 @@
 // however are not subject of copyright, i.e. feel free to add your copyright in 
 // here
 //  
-#ifndef _INCLUDE_PEANO4_GRID_GRIDVERTEX_
-#define _INCLUDE_PEANO4_GRID_GRIDVERTEX_
+#pragma once
 
 #include <string>
   
@@ -186,5 +185,4 @@ struct peano4::grid::GridVertex {
 
 };
 
-#endif
   
