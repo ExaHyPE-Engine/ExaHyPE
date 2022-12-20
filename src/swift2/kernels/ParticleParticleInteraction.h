@@ -2,7 +2,10 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
+
 #include <list>
+#include <unordered_set>
+
 
 namespace swift2 {
   namespace kernels {
@@ -21,10 +24,26 @@ namespace swift2 {
      */
     template <typename Particle>
     void genericInteraction(
-        const std::list<Particle *> &localParticles,
-        const std::list<Particle *> &activeParticles,
-        std::function<void(Particle *localParticle, const Particle *const activeParticle)>
-            interaction);
+      const std::list<Particle *>&  localParticles,
+      const std::list<Particle *>&  activeParticles,
+      std::function<void(Particle *localParticle, const Particle *const activeParticle)>  interaction
+    );
+
+
+    /**
+     * Overloaded version of genericInteraction() which employs sets instead
+     * of lists. It really depends on the type of tree walker that you use
+     * which implicitly picks the interaction kernel: ParticleParticleInteraction_StackOfLists
+     * uses the version above with std::list. The action set
+     * ParticleParticleInteraction_Sets will automatically use the version
+     * below with std::unordered_set.
+     */
+    template <typename Particle>
+    void genericInteraction(
+      const std::unordered_set<Particle *>&  localParticles,
+      const std::unordered_set<Particle *>&  activeParticles,
+      std::function<void(Particle *localParticle, const Particle *const activeParticle)>  interaction
+    );
 
 
     /**

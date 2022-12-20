@@ -168,14 +168,15 @@ namespace {
     int       pendingTasks  = NumberOfThreads;
     int       spawnedTasks  = 0;
 
-    #if !defined(__NVCOMPILER)
-    #pragma omp taskloop nogroup shared(pendingTasks, spawnedTasks) priority(StandardPriority) untied
+    #if defined(OpenMPTaskGroup)
+    //#pragma omp taskloop nogroup shared(pendingTasks, spawnedTasks) priority(StandardPriority) untied
+    //#pragma omp taskloop nogroup shared(pendingTasks, spawnedTasks)
     #endif
     for (int i=0; i<NumberOfThreads; i++) {
-      #if defined(__NVCOMPILER)
+      #if !defined(OpenMPTaskGroup)
       #pragma omp task
-      {
       #endif
+      {
         ::tarch::logging::Statistics::getInstance().inc( BSPConcurrencyLevelStatisticsIdentifier, 1.0, true );
         #pragma omp atomic
         spawnedTasks++;
@@ -226,9 +227,7 @@ namespace {
           }
         }
         ::tarch::logging::Statistics::getInstance().inc( BSPConcurrencyLevelStatisticsIdentifier, -1.0, true );
-      #if defined(__NVCOMPILER)
       }
-      #endif
     }
 
     #ifdef UseSmartMPI

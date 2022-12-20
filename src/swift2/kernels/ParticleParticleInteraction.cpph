@@ -18,6 +18,22 @@ void swift2::kernels::genericInteraction(
 }
 
 
+template <typename Particle>
+void swift2::kernels::genericInteraction(
+  const std::unordered_set< Particle* >&  localParticles,
+  const std::unordered_set< Particle* >&  activeParticles,
+  std::function< void(Particle* localParticle, const Particle * const activeParticle) > interaction
+) {
+  for (auto* localParticle: localParticles ) {
+    if ( not localParticle->getCellHasUpdatedParticle() ) {
+      for (auto* activeParticle: activeParticles ) {
+        interaction(localParticle, activeParticle);
+      }
+    }
+  }
+}
+
+
 
 template <typename Particle>
 void swift2::kernels::computeDensity(

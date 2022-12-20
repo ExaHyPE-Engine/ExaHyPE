@@ -10,7 +10,7 @@ import dastgen2.attributes.Integer
 
 
 
-class ParticleParticleInteraction(ActionSet):
+class ParticleParticleInteraction_StackOfLists(ActionSet):
   def __init__(self, 
                particle_set, 
                particle_particle_interaction_kernel, 
@@ -22,9 +22,20 @@ class ParticleParticleInteraction(ActionSet):
                active_particle_set=None ):
     """
 
+    Tree walker to realise particle-particle interactions with particles held
+    by different adjacent cells or on different mesh levels.
+    
     This code snippet creates a tree walker, i.e. an action set that runs
-    through the underlying spacetree top down. It builds up sets recursively.
+    through the underlying spacetree top down. It builds up two sets: The 
+    active set and the local set. Both are of the same type if you stick 
+    to the default value of None for active_particle_set. But you can also
+    let particles of different type interact by selecting a local particle 
+    set that is different to the active one. Users can inject code to modify 
+    the local set per cell and hence to alter particle states.
 
+
+    ## Set definitions
+    
     image:: dependency_sets.png
 
     Per tree node there are two different sets. We explain it by means of
@@ -60,6 +71,29 @@ class ParticleParticleInteraction(ActionSet):
     far away - even on the coarser mesh where we again work with a "halo"
     around the coarse cell of h_{coarse}/2.
 
+
+    ## Realisation
+    
+    This tree walker realises the two sets via two lists: Per cell, we 
+    append the local set to the active set and memorise on a stack how
+    many of these particles have been added. When we backtrace, i.e. 
+    ascend within the tree again, this memorised size is used to remove 
+    the last n elements from the active set.
+    
+    So the active set grows while we descend in the tree, and it is 
+    truncated when we ascend again.
+    
+    This is a very efficient implementation yet fails if particles move
+    up and down within the tree while we walk. It should work perfectly
+    fine if particles do not move. If particles move up and down, the 
+    present algorithms might have redundant pointers within the active set.
+    I am also not 100% sure if we might run into memory issues if particles
+    suddenly leave cells and hence "disappear" from the active sets.
+    
+    In the case of a dynamic setup, i.e. in combinatino with the action 
+    set UpdateParticleGridAssociation, you might be better of with using
+    the set-based implementation of the particle-particle interaction.
+    
 
     ## Further plug-in points
     
