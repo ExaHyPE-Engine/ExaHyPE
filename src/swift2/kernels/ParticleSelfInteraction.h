@@ -31,10 +31,17 @@ namespace swift2 {
      *  - The 'end' case should be mapped into touchVertexLastTime. Peano internally ensures 
      *  that CellHasUpdatedParticle is true in this situation.
      * 
+     *
+     * @param ParticleContainer Typicaly either
+     *         std::list<Particle *>
+     *   or
+     *         std::unordered_set<Particle *>
+     *
+     *
      */
-    template <typename Particle>
+    template <typename ParticleContainer, typename Particle>
     void genericSelfInteraction(
-      const std::vector< Particle* >& localParticles,
+      const ParticleContainer& localParticles,
       std::function< void(Particle* localParticle) > interaction
     );
 
@@ -45,10 +52,17 @@ namespace swift2 {
      * in the loop over neighbours (local-active set)
      *
      * This is equivalent to the hydro_init_part function in SWIFT
+     *
+     * @param ParticleContainer Typicaly either
+     *         std::list<Particle *>
+     *   or
+     *         std::unordered_set<Particle *>
+     *
+     *
      */
-    template <typename Particle>
+    template <typename ParticleContainer>
     void prepareDensityCalculation(
-      const std::vector< Particle* >& localParticles
+      const ParticleContainer& localParticles
     );
 
     /** 
@@ -63,10 +77,17 @@ namespace swift2 {
      * Ends the density calculation. Also does a single Newton-Raphson
      * iteration.
      *
+     *
+     * @param ParticleContainer Typicaly either
+     *         std::list<Particle *>
+     *   or
+     *         std::unordered_set<Particle *>
+     *
+     *
      */
-    template <typename Particle>
+    template <typename ParticleContainer>
     void endDensityCalculation(
-      const std::vector< Particle* >& localParticles,
+      const ParticleContainer&  localParticles,
       const int hydroDimensions,
       const double etaFactor,
       const double alphaAV,
@@ -77,10 +98,17 @@ namespace swift2 {
 
     /**
      * Same as above, but with constant h, i.e. no Newton-Raphson 
+     *
+     * @param ParticleContainer Typicaly either
+     *         std::list<Particle *>
+     *   or
+     *         std::unordered_set<Particle *>
+     *
+     *
      */
-    template <typename Particle>
+    template <typename ParticleContainer>
     void endDensityCalculationWithConstantSmoothingLength(
-      const std::vector< Particle* >& localParticles,
+      const ParticleContainer&   localParticles,
       const int hydroDimensions,
       const double etaFactor,
       const double alphaAV
@@ -89,29 +117,50 @@ namespace swift2 {
     /**
      * Resets the acceleration and other variables
      * Done by "hydro_reset_acceleration" in SWIFT
+     *
+     * @param ParticleContainer Typicaly either
+     *         std::list<Particle *>
+     *   or
+     *         std::unordered_set<Particle *>
+     *
+     *
      */
-    template <typename Particle>
+    template <typename ParticleContainer>
     void prepareHydroForceCalculation(
-      const std::vector< Particle* >& localParticles
+      const ParticleContainer& localParticles
     );
 
     /**
      * Ends the force calculation. Only introduces missing factors for Udot
      * Done by "hydro_end_force" in SWIFT
+     *
+     * @param ParticleContainer Typicaly either
+     *         std::list<Particle *>
+     *   or
+     *         std::unordered_set<Particle *>
+     *
+     *
      */
-    template <typename Particle>
+    template <typename ParticleContainer>
     void endHydroForceCalculation(
-      const std::vector< Particle* >& localParticles,
+      const ParticleContainer& localParticles,
       const int hydroDimensions
     );
 
     /**
      * Flag boundary particles.
      * These particles we will not be updated by any algorithmic step.
+     *
+     * @param ParticleContainer Typicaly either
+     *         std::list<Particle *>
+     *   or
+     *         std::unordered_set<Particle *>
+     *
+     *
      */
-    template <typename Particle>
+    template <typename ParticleContainer>
     void flagBoundaryParticles(
-      const std::vector< Particle* >&  localParticles
+      const ParticleContainer&  localParticles
     );
 
 

@@ -3,9 +3,9 @@
 
 
 
-template <typename Particle>
+template <typename ParticleContainer, typename Particle>
 void swift2::kernels::genericSelfInteraction(
-  const std::vector< Particle* >& localParticles,
+  const ParticleContainer&  localParticles,
   std::function< void(Particle* localParticle) > interaction
 ) {
   for (auto* particle: localParticles ) {
@@ -15,9 +15,9 @@ void swift2::kernels::genericSelfInteraction(
 
 
 
-template <typename Particle>
+template <typename ParticleContainer>
 void swift2::kernels::prepareDensityCalculation(
-  const std::vector< Particle* >& localParticles
+  const ParticleContainer&  localParticles
 ) {
   for (auto* particle: localParticles ) {
     if ( 
@@ -38,9 +38,9 @@ void swift2::kernels::prepareDensityCalculation(
 }
 
 
-template <typename Particle>
+template <typename ParticleContainer>
 void swift2::kernels::endDensityCalculation(
-  const std::vector< Particle* >& localParticles,
+  const ParticleContainer&  localParticles,
   const int hydroDimensions,
   const double etaFactor,
   const double alphaAV,
@@ -321,9 +321,9 @@ void swift2::kernels::endDensityCalculation(
 }
 
 
-template <typename Particle>
+template <typename ParticleContainer>
 void swift2::kernels::endDensityCalculationWithConstantSmoothingLength(
-  const std::vector< Particle* >& localParticles,
+  const ParticleContainer&  localParticles,
   const int hydroDimensions,
   const double etaFactor,
   const double alphaAV
@@ -422,9 +422,9 @@ void swift2::kernels::endDensityCalculationWithConstantSmoothingLength(
   }
 }
 
-template <typename Particle>
+template <typename ParticleContainer>
 void swift2::kernels::prepareHydroForceCalculation(
-  const std::vector< Particle* >& localParticles
+  const ParticleContainer&  localParticles
 ) {
   for (auto* particle: localParticles ) {
     if ( 
@@ -450,9 +450,9 @@ void swift2::kernels::prepareHydroForceCalculation(
 }
 
 
-template <typename Particle>
+template <typename ParticleContainer>
 void swift2::kernels::endHydroForceCalculation(
-  const std::vector< Particle* >& localParticles,
+  const ParticleContainer& localParticles,
   const int hydroDimensions
 ) {
   for (auto* particle: localParticles ) {
@@ -474,14 +474,14 @@ void swift2::kernels::endHydroForceCalculation(
 }
 
 
-template <typename Particle>
+template <typename ParticleContainer>
 void swift2::kernels::flagBoundaryParticles(
-  const std::vector< Particle* >&  localParticles
+  const ParticleContainer&  localParticles
 ) {
   for (auto* particle: localParticles) {
 
     if( 
-      particle->getParallelState()==Particle::ParallelState::Local
+      particle->getParallelState()==std::remove_pointer<typename ParticleContainer::value_type>::type::ParallelState::Local
       and
       not particle->getIsBoundaryParticle()
     ){

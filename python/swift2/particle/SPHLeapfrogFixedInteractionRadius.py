@@ -137,8 +137,7 @@ class SPHLeapfrogFixedInteractionRadius(Particle):
         touch_vertex_first_time_kernel = """
                                          """,
         touch_vertex_last_time_kernel  =
-                    """::swift2::kernels::flagBoundaryParticles<globaldata::{}>(
-                        localParticles );""".format(self.name),
+                    """::swift2::kernels::flagBoundaryParticles(localParticles );""",
  
         includes                       = """
                                          #include "Constants.h"
@@ -153,9 +152,8 @@ class SPHLeapfrogFixedInteractionRadius(Particle):
         dependencies                   = AlgorithmStep.Dependencies.NEIGHBOURS, 
         effect                         = AlgorithmStep.Effect.ALTER_LOCAL_STATE, 
         touch_vertex_first_time_kernel = """
-                                         ::swift2::kernels::prepareDensityCalculation<globaldata::{}>( localParticles );
-                                         """.format(self.name),
-
+                                         ::swift2::kernels::prepareDensityCalculation( localParticles );
+                                         """,
         cell_kernel                    = """
                                          ::swift2::kernels::computeDensity( 
                                            localParticles, 
@@ -165,14 +163,13 @@ class SPHLeapfrogFixedInteractionRadius(Particle):
                                          """.format(self.hydroDimensions),
 
         touch_vertex_last_time_kernel  = """
-                                         ::swift2::kernels::endDensityCalculationWithConstantSmoothingLength<globaldata::{}>(
+                                         ::swift2::kernels::endDensityCalculationWithConstantSmoothingLength(
                                              localParticles,
                                              {},
                                              {},
                                              {}
                                              );
-                                         """.format(self.name,
-                                                    self.hydroDimensions,
+                                         """.format(self.hydroDimensions,
                                                     self.etaFactor,
                                                     self.alphaAV),
  
@@ -189,8 +186,8 @@ class SPHLeapfrogFixedInteractionRadius(Particle):
         dependencies                   = AlgorithmStep.Dependencies.NEIGHBOURS, 
         effect                         = AlgorithmStep.Effect.ALTER_LOCAL_STATE, 
         touch_vertex_first_time_kernel = """
-                                         ::swift2::kernels::prepareHydroForceCalculation<globaldata::{}>( localParticles );
-                                         """.format(self.name),
+                                         ::swift2::kernels::prepareHydroForceCalculation( localParticles );
+                                         """,
 
         cell_kernel                    = """
                                          ::swift2::kernels::computeHydroForce( 
@@ -203,12 +200,11 @@ class SPHLeapfrogFixedInteractionRadius(Particle):
                                                     self.betaAV),
 
         touch_vertex_last_time_kernel  = """
-                                         ::swift2::kernels::endHydroForceCalculation<globaldata::{}>(
+                                         ::swift2::kernels::endHydroForceCalculation(
                                              localParticles,
                                              {}
                                              );
-                                         """.format(self.name,
-                                                    self.hydroDimensions),
+                                         """.format(self.hydroDimensions),
  
         includes                       = """
                                          #include "Constants.h"
@@ -293,8 +289,8 @@ class SPHLeapfrogFixedInteractionRadius(Particle):
         dependencies                   = AlgorithmStep.Dependencies.NEIGHBOURS, 
         effect                         = AlgorithmStep.Effect.ALTER_LOCAL_STATE, 
         touch_vertex_first_time_kernel = """
-                                         ::swift2::kernels::prepareDensityCalculation<globaldata::{}>( localParticles );
-                                         """.format(self.name),
+                                         ::swift2::kernels::prepareDensityCalculation( localParticles );
+                                         """,
 
         cell_kernel                    = """
                                          ::swift2::kernels::computeDensity( 
@@ -305,14 +301,13 @@ class SPHLeapfrogFixedInteractionRadius(Particle):
                                          """.format(self.hydroDimensions),
 
         touch_vertex_last_time_kernel  = """
-                                         ::swift2::kernels::endDensityCalculationWithConstantSmoothingLength<globaldata::{}>(
+                                         ::swift2::kernels::endDensityCalculationWithConstantSmoothingLength(
                                              localParticles,
                                              {},
                                              {},
                                              {}
                                              );
-                                         """.format(self.name,
-                                                    self.hydroDimensions,
+                                         """.format(self.hydroDimensions,
                                                     self.etaFactor,
                                                     self.alphaAV),
  
@@ -329,8 +324,8 @@ class SPHLeapfrogFixedInteractionRadius(Particle):
         dependencies                   = AlgorithmStep.Dependencies.NEIGHBOURS, 
         effect                         = AlgorithmStep.Effect.ALTER_LOCAL_STATE, 
         touch_vertex_first_time_kernel = """
-                                         ::swift2::kernels::prepareHydroForceCalculation<globaldata::{}>( localParticles );
-                                         """.format(self.name),
+                                         ::swift2::kernels::prepareHydroForceCalculation( localParticles );
+                                         """,
 
         cell_kernel                    = """
                                          ::swift2::kernels::computeHydroForce( 
@@ -343,12 +338,11 @@ class SPHLeapfrogFixedInteractionRadius(Particle):
                                                     self.betaAV),
 
         touch_vertex_last_time_kernel  = """
-                                         ::swift2::kernels::endHydroForceCalculation<globaldata::{}>(
+                                         ::swift2::kernels::endHydroForceCalculation(
                                              localParticles,
                                              {}
                                              );
-                                         """.format(self.name,
-                                                    self.hydroDimensions),
+                                         """.format(self.hydroDimensions),
  
         includes                       = """
                                          #include "Constants.h"
