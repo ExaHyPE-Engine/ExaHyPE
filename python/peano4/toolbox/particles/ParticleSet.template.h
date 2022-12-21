@@ -156,6 +156,8 @@
        * accumulate local particles and get more and more. We have to eliminate
        * replicas asap.
        *
+       * In both cases, we have to destroy the local copy as the stacks perform
+       * deep copies.
        *
        *
        * @see STDVectorOverContainerOfPointers::startReceive()

@@ -19,12 +19,12 @@ toolbox::particles::ParticleReassociationInstruction toolbox::particles::getPart
   else {
     std::bitset<Dimensions> currentAssociation = numberOfVertexWithinCell;
     std::bitset<Dimensions> destAssociation;
-    bool                    remainsOnSameLevel = true;
+    bool                    remainsOnSameLevel = tarch::la::min(marker.h()) >= 2.0 * particle.getCutOffRadius();
 
     // marker.x() gives me the centre of the cell
     for (int d=0; d<Dimensions; d++) {
       destAssociation[d]  = tarch::la::greaterEquals( particle.getX(d), marker.x()(d) );
-      remainsOnSameLevel &= tarch::la::smallerEquals( std::abs(particle.getX(d) - marker.x()(d)), marker.h()(d));
+      remainsOnSameLevel &= tarch::la::smallerEquals( std::abs(particle.getX(d) - marker.x()(d)) * 1.5 * LiftingTolerance, marker.h()(d));
     }
 
     if (remainsOnSameLevel and currentAssociation==destAssociation) {
@@ -54,12 +54,17 @@ toolbox::particles::ParticleReassociationInstruction toolbox::particles::liftPar
   double maxDistance = tarch::la::max( tarch::la::abs( particle.getX()-marker.x() ) );
 
   if (
-    tarch::la::smallerEquals( maxDistance, tarch::la::min(marker.h())/2.0 )
-    or
     particle.getParallelState()!=Particle::ParallelState::Local
   ) {
+    return ParticleReassociationInstruction_Keep;
+  }
+  else if (
+    tarch::la::min(marker.h()) >= 2.0 * particle.getCutOffRadius()
+    and
+    tarch::la::smallerEquals( maxDistance, tarch::la::min(marker.h())/2.0 * LiftingTolerance )
+  ) {
     assertion2(
-      marker.isContainedInAdjacentCells(particle.getX(),0.5)
+      marker.isContainedInAdjacentCells(particle.getX(),0.5 * LiftingTolerance)
       or
       particle.getParallelState()!=Particle::ParallelState::Local,
       marker.toString(), particle.toString()
@@ -82,8 +87,8 @@ toolbox::particles::ParticleReassociationInstruction toolbox::particles::liftPar
 
 template <typename Particle>
 std::bitset<Dimensions>  toolbox::particles::getParticleAssociationWithinCell(
-  const Particle&                             particle,
-  const peano4::datamanagement::VertexMarker  marker
+  const Particle&                           particle,
+  const peano4::datamanagement::CellMarker  marker
 ) {
   std::bitset<Dimensions> destAssociation;
 
@@ -96,19 +101,18 @@ std::bitset<Dimensions>  toolbox::particles::getParticleAssociationWithinCell(
 }
 
 
-
 template <typename Particle>
 bool toolbox::particles::sieveParticle(
   const Particle&                             particle,
   const peano4::datamanagement::VertexMarker  marker
 ) {
-  const double sortingTolerance = 1.01;
+  assertion( ReassignmentTolerance<LiftingTolerance );
 
   const bool   fitsIntoThisGridResolution      = tarch::la::min( marker.h() )     >= 2.0 * particle.getCutOffRadius();
-  const bool   fitsIntoNextFinerGridResolution = tarch::la::min( marker.h() )/3.0 >= 2.0 * particle.getCutOffRadius();
+  const bool   fitsIntoNextFinerGridResolution = tarch::la::min( marker.h() )/3.0 >  2.0 * particle.getCutOffRadius() * DroppingTolerance;
 
   return
-      marker.isContainedInAdjacentCells( particle.getX(), 0.5 * sortingTolerance)
+      marker.isContainedInAdjacentCells( particle.getX(), 0.5 * ReassignmentTolerance)
       and
       fitsIntoThisGridResolution
       and

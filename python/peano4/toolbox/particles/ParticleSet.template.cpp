@@ -96,10 +96,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::merge(
           }
         }
 
-        eliminateSpatialDuplicates(
-          //true,            // examineOnlyVirtualParticles
-          1.0 + 1e-6
-        );
+        eliminateSpatialDuplicates( ::toolbox::particles::SpatialDuplicateTolerance );
 
         logDebug( "merge(...)", "merged incoming set of " << neighbour.size() << " particle(s) into local set of vertex " << marker.x() << " which now hosts " << this->size() << " particle(s):" );
         for (auto *p: *this) {

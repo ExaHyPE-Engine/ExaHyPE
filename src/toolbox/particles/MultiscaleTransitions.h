@@ -8,6 +8,70 @@
 
 namespace toolbox {
   namespace particles {
+    /**
+     * Tolerance when we really have to lift
+     *
+     * As the particle association is not unique and not sharp, there is
+     * also no sharp threshold when we should lift. As lifts are expensive,
+     * I recommend to be a little bit relaxed when it comes to the lifts,
+     * i.e. to try to avoid them.
+     *
+     * Please note that it is notably important to make the lift threshold
+     * as least as relaxed as the reassignment threshold which we use
+     * throughout the drops and sieves. See ReassignmentTolerance for
+     * some remarks.
+     *
+     * @see liftParticleAssociatedWithVertex()
+     * @see getParticleReassociationInstructionWithinCellWithIntraCellReassignment()
+     */
+    constexpr double LiftingTolerance          = 1.02;
+
+    /**
+     * When we sieve a particle into the next level, we have to find
+     * out to which particle we do so. To find this out, we run over
+     * the vertices as we encounter touchVertexFirstTime(). As particles
+     * are not uniquely assigned to cells or vertices, we have some
+     * flexibility here. There are two things to weight up:
+     *
+     * - We have to ensure that the particles actually go down;
+     * - We have to ensure that we don't immediately lift the particle
+     *   again.
+     *
+     * The latter property is essential: Usually, drops, sieves and
+     * lifts are done within one action set. However, we always need
+     * a second sweep after each lift. If the user runs two sweeps with
+     * the action set, the users relies upon the fact that all is sorted
+     * completely. If you lift again immediately due to an invalid drop,
+     * we mess up this logic. Therefore, it is important that this
+     * sorting tolerance is always smaller than the lift tolerance.
+     *
+     *
+     * @see sieveParticle()
+     */
+    constexpr double ReassignmentTolerance     = 1.01;
+
+    /**
+     * We always try to sieve a particle directly into the right level.
+     * Once more, it is absolutely essential that we don't sieve into
+     * a cell or vertex where we then have to lift stuff again.
+     *
+     * Lifting will always be subject to a comparison similar to
+     *
+     *       marker.h() < 2.0 * particle.getCutOffRadius()
+     *
+     * This threshold is hard. However, we can sieve into a coarser
+     * level obviously to ensure that we don't violate it.
+     *
+     *
+     * @see sieveParticle()
+     */
+    constexpr double DroppingTolerance         = 1.01;
+
+    /**
+     * Default tolerance to decide when two particles are the same.
+     */
+    constexpr double SpatialDuplicateTolerance = 1.00 + 1e-6;
+
     typedef int ParticleReassociationInstruction;
 
     constexpr int ParticleReassociationInstruction_Keep          = -1;
@@ -73,6 +137,8 @@ namespace toolbox {
      * All of these considerations apply if and only if a particle is local. If
      * a particle is virtual, it is a copy from another rank. In this case, we
      * should not change its position, and we should not change its association.
+     *
+     * @see LiftingTolerance
      */
     template <typename Particle>
     ParticleReassociationInstruction liftParticleAssociatedWithVertex(
@@ -96,8 +162,8 @@ namespace toolbox {
      */
     template <typename Particle>
     std::bitset<Dimensions>  getParticleAssociationWithinCell(
-      const Particle&                             particle,
-      const peano4::datamanagement::VertexMarker  marker
+      const Particle&                           particle,
+      const peano4::datamanagement::CellMarker  marker
     );
 
 
