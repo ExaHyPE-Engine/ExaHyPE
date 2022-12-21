@@ -32,3 +32,5 @@
  * eat stuff. Therefore we do not define the static keyword here.
  */
 #define KeywordToAvoidDuplicateSymbolsForInlinedFunctions inline
+
+#define OpenMPTaskGroup

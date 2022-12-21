@@ -83,7 +83,7 @@ class tarch::accelerator::Device {
      *
      *
      */
-    void configure( const std::set<int>& devicesToUse = {} );
+    void configure();
 
     /**
      * Shutdown parallel environment.

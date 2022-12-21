@@ -35,6 +35,7 @@ IntegerMessage::receive(message, rank, BarrierTag, tarch::mpi::Rank::getInstance
  <pre>
 tarch::mpi::IntegerMessage::receive(
   message, rank, BarrierTag,
+  []() {},
   [&]() {
     tarch::services::ServiceRepository::getInstance().receiveDanglingMessages();
   },
@@ -46,28 +47,15 @@ tarch::mpi::IntegerMessage::receive(
  further incoming messages. I do prefer the more sophisticated version which also
  has a timeout mechanism:
 
-
- <pre>
-tarch::mpi::IntegerMessage::receive(
+      tarch::mpi::IntegerMessage::receive(
         message, rank, BarrierTag,
         [&]() {
-          auto timeOutWarning   = tarch::mpi::Rank::getInstance().getDeadlockWarningTimeStamp();
-          auto timeOutShutdown  = tarch::mpi::Rank::getInstance().getDeadlockTimeOutTimeStamp();
-          bool triggeredTimeoutWarning = false;
-          if (
-            tarch::mpi::Rank::getInstance().isTimeOutWarningEnabled() &&
-            (std::chrono::system_clock::now()>timeOutWarning) &&
-            (!triggeredTimeoutWarning)
-          ) {
-            tarch::mpi::Rank::getInstance().writeTimeOutWarning( "__FILE__", "__LINE__",rank, BarrierTag );
-            triggeredTimeoutWarning = true;
-          }
-          if (
-            tarch::mpi::Rank::getInstance().isTimeOutDeadlockEnabled() &&
-            (std::chrono::system_clock::now()>timeOutShutdown)
-          ) {
-            tarch::mpi::Rank::getInstance().triggerDeadlockTimeOut( "__FILE__", "__LINE__",rank, BarrierTag );
-          }
+          tarch::mpi::Rank::getInstance().setDeadlockWarningTimeStamp();
+          tarch::mpi::Rank::getInstance().setDeadlockTimeOutTimeStamp();
+        },
+        [&]() {
+          tarch::mpi::Rank::getInstance().writeTimeOutWarning( "tarch::mpi::DoubleMessage", "sendAndPollDanglingMessages()",destination, tag );
+          tarch::mpi::Rank::getInstance().triggerDeadlockTimeOut( "tarch::mpi::DoubleMessage", "sendAndPollDanglingMessages()", destination, tag );
           tarch::services::ServiceRepository::getInstance().receiveDanglingMessages();
         },
         tarch::mpi::Rank::getInstance().getCommunicator()

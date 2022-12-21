@@ -99,6 +99,8 @@ class InsertParticlesbyCoordinates(ActionSet):
 #include "globaldata/{{PARTICLE}}.h"
 #include "toolbox/particles/ParticleFactory.h"
 
+#include "swift2/kernels/kernel_hydro.h"
+#include "swift2/kernels/equation_of_state.h"
 #include "Constants.h"
 """ )
     return result.render(**self.d)

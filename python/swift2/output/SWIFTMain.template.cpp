@@ -17,6 +17,7 @@
 #include "peano4/UnitTests.h"
 #include "tarch/UnitTests.h"
 #include "swift2/UnitTests.h"
+#include "toolbox/particles/UnitTests.h"
 
 #include "Constants.h"
 
@@ -95,8 +96,8 @@ bool {{NAMESPACE | join("::")}}::selectNextAlgorithmicStep() {
     );
 
     if (
-      tarch::la::max( peano4::parallel::SpacetreeSet::getInstance().getGridStatistics().getMinH() ) < MaxH
-      or
+      tarch::la::max( peano4::parallel::SpacetreeSet::getInstance().getGridStatistics().getMinH() ) < GlobalMaxH
+      and
       peano4::parallel::SpacetreeSet::getInstance().getGridStatistics().getStationarySweeps()>5
     ) {
       gridConstructed = true;
@@ -162,20 +163,24 @@ bool {{NAMESPACE | join("::")}}::selectNextAlgorithmicStep() {
     haveJustWrittenSnapshot = true;
   }
   else if ( repositories::rerunPreviousGridSweep() ) {
+    /*
     assertionEquals(
       repositories::StepRepository::toStepEnum(peano4::parallel::Node::getInstance().getCurrentProgramStep()),
       repositories::StepRepository::Steps::{{SOLVERSTEP_NAMES[SOLVERSTEP_NAMES|length-1]}}
     );
+    */
 
     peano4::parallel::Node::getInstance().setNextProgramStep(
       repositories::StepRepository::toProgramStep( repositories::StepRepository::Steps::{{SOLVERSTEP_NAMES[SOLVERSTEP_NAMES|length-1]}} )
     );
   }
   else {
+    /*
     assertionEquals(
       repositories::StepRepository::toStepEnum(peano4::parallel::Node::getInstance().getCurrentProgramStep()),
       repositories::StepRepository::Steps::{{SOLVERSTEP_NAMES[SOLVERSTEP_NAMES|length-1]}}
     );
+    */
 
     peano4::parallel::Node::getInstance().setNextProgramStep(
       repositories::StepRepository::toProgramStep( repositories::StepRepository::Steps::{{SOLVERSTEP_NAMES[0]}} )
@@ -269,8 +274,8 @@ void {{NAMESPACE | join("::")}}::step() {
         observers::{{SOLVERSTEP_NAMES[0]}}  observer;
         observers::{{SOLVERSTEP_NAMES[0]}}::prepareTraversal();
         repositories::startTimeStep();
-        repositories::finishIntermediateStep();
         peano4::parallel::SpacetreeSet::getInstance().traverse(observer);
+        repositories::finishIntermediateStep();
         observers::{{SOLVERSTEP_NAMES[0]}}::unprepareTraversal();
       }
       break;
@@ -354,10 +359,18 @@ int main(int argc, char** argv) {
   tarch::tests::TestCase* swiftTests = swift2::getUnitTests();
   swiftTests->run();
   if (swiftTests->getNumberOfErrors() != 0) {
-    logError("main()", "technical architecture (tarch) unit tests failed. Quit.");
+    logError("main()", "Swift unit tests failed. Quit.");
     exit(ExitCodeUnitTestsFailed);
   }
   delete swiftTests;
+
+  tarch::tests::TestCase* particlesTests = toolbox::particles::getUnitTests();
+  particlesTests->run();
+  if (particlesTests->getNumberOfErrors() != 0) {
+    logError("main()", "toolbox particles unit tests failed. Quit.");
+    exit(ExitCodeUnitTestsFailed);
+  }
+  delete particlesTests;
   #endif
 
   tarch::logging::Statistics::getInstance().clear();

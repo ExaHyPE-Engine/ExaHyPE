@@ -3,16 +3,16 @@
 
 
 
-template <typename Particle>
+template <typename ParticleContainer>
 void swift2::timestepping::computeLeapfrogDriftWithGlobalTimeStepSize(
-  const std::vector< Particle* >&  localParticles
+  const ParticleContainer&  localParticles
 ) {
-  double timeStepSize = Particle::getSpecies().getMinTimeStepSize();
+  double timeStepSize = std::remove_pointer<typename ParticleContainer::value_type>::type::getSpecies().getMinTimeStepSize();
   for (auto* particle: localParticles) {
     if (
-      particle->getMoveState()==Particle::MoveState::NotMovedYet
+      particle->getMoveState()==std::remove_pointer<typename ParticleContainer::value_type>::type::MoveState::NotMovedYet
       and
-      particle->getParallelState()==Particle::ParallelState::Local
+      particle->getParallelState()==std::remove_pointer<typename ParticleContainer::value_type>::type::ParallelState::Local
       and
       not particle->getIsBoundaryParticle()
     ) {
@@ -20,23 +20,21 @@ void swift2::timestepping::computeLeapfrogDriftWithGlobalTimeStepSize(
       particle->setX( particle->getX() + timeStepSize * particle->getV() );
 
       /* Flag this particle as Moved */
-      particle->setMoveState( Particle::MoveState::Moved );
+      particle->setMoveState( std::remove_pointer<typename ParticleContainer::value_type>::type::MoveState::Moved );
     }
   }
 }
 
-template <typename Particle>
+template <typename ParticleContainer>
 void swift2::timestepping::computeLeapfrogKickWithGlobalTimeStepSize(
-  const std::vector< Particle* >&  localParticles,
+  const ParticleContainer&  localParticles,
   const int kickNumber,
   const bool isSPH
 ) {
-  double timeStepSizeKick = 0.5 * Particle::getSpecies().getMinTimeStepSize();
+  double timeStepSizeKick = 0.5 * std::remove_pointer<typename ParticleContainer::value_type>::type::getSpecies().getMinTimeStepSize();
   for (auto* particle: localParticles) {
     if (
-      particle->getParallelState()==Particle::ParallelState::Local
-      and
-      not particle->getCellHasUpdatedParticle()
+      particle->getParallelState()==std::remove_pointer<typename ParticleContainer::value_type>::type::ParallelState::Local
       and
       not particle->getIsBoundaryParticle()
     ) {
@@ -77,25 +75,21 @@ void swift2::timestepping::computeLeapfrogKickWithGlobalTimeStepSize(
         particle->setV( particle->getV() + timeStepSizeKick * particle->getA() );
       }
 
-//      particle->setCellHasUpdatedParticle(true);
-
     }
   }
 }
 
 
-template <typename Particle>
+template <typename ParticleContainer>
 void swift2::timestepping::computeLeapfrogKickExtraWithGlobalTimeStepSize(
-  const std::vector< Particle* >&  localParticles
+  const ParticleContainer&  localParticles
 ) {
   /* In principle, this time-step could be different than that used for normal kick */
-  double dt_therm = 0.5 * Particle::getSpecies().getMinTimeStepSize();
+  double dt_therm = 0.5 * std::remove_pointer<typename ParticleContainer::value_type>::type::getSpecies().getMinTimeStepSize();
 
   for (auto* particle: localParticles) {
     if(
-      particle->getParallelState()==Particle::ParallelState::Local
-      and
-      not particle->getCellHasUpdatedParticle()
+      particle->getParallelState()==std::remove_pointer<typename ParticleContainer::value_type>::type::ParallelState::Local
       and
       not particle->getIsBoundaryParticle()
     ) {
@@ -120,21 +114,19 @@ void swift2::timestepping::computeLeapfrogKickExtraWithGlobalTimeStepSize(
 }
 
 
-template <typename Particle>
+template <typename ParticleContainer>
 void swift2::timestepping::computePredictHydro(
-  const std::vector< Particle* >&  localParticles,
+  const ParticleContainer&  localParticles,
   const int hydroDimensions
 ) {
-    const double timeStepSize = Particle::getSpecies().getMinTimeStepSize();
+    const double timeStepSize = std::remove_pointer<typename ParticleContainer::value_type>::type::getSpecies().getMinTimeStepSize();
     const double dt_kick_hydro = 0.5 * timeStepSize;
     const double dt_drift = timeStepSize;
     const double dt_therm = dt_kick_hydro;
 
   for (auto* particle: localParticles) {
     if (
-      particle->getParallelState()==Particle::ParallelState::Local
-      and
-      not particle->getCellHasUpdatedParticle()
+      particle->getParallelState()==std::remove_pointer<typename ParticleContainer::value_type>::type::ParallelState::Local
       and
       not particle->getIsBoundaryParticle()
     ) {
@@ -185,16 +177,16 @@ void swift2::timestepping::computePredictHydro(
  *
  */
 
-template <typename Particle>
+template <typename ParticleContainer>
 void swift2::timestepping::moveParticleIntoCriticalLine(
-  const std::vector< Particle* >&  localParticles
+  const ParticleContainer&  localParticles
 ) {
-  double timeStepSize = Particle::getSpecies().getMinTimeStepSize();
+  double timeStepSize = std::remove_pointer<typename ParticleContainer::value_type>::type::getSpecies().getMinTimeStepSize();
   for (auto* particle: localParticles) {
     if (
-      particle->getMoveState()==Particle::MoveState::NotMovedYet
+      particle->getMoveState()==std::remove_pointer<typename ParticleContainer::value_type>::type::MoveState::NotMovedYet
       and
-      particle->getParallelState()==Particle::ParallelState::Local
+      particle->getParallelState()==std::remove_pointer<typename ParticleContainer::value_type>::type::ParallelState::Local
       and
       not particle->getIsBoundaryParticle()
     ) {
@@ -208,7 +200,7 @@ void swift2::timestepping::moveParticleIntoCriticalLine(
       particle->setX( xCritical );
       
       /* Flag this particle as Moved */
-      particle->setMoveState( Particle::MoveState::Moved );
+      particle->setMoveState( std::remove_pointer<typename ParticleContainer::value_type>::type::MoveState::Moved );
 
     }
   }

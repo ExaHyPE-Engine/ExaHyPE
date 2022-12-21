@@ -39,3 +39,5 @@
  * eat stuff. But Clang needs a static.
  */
 #define KeywordToAvoidDuplicateSymbolsForInlinedFunctions static
+
+#define OpenMPTaskGroup

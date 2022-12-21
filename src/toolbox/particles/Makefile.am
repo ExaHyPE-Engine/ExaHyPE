@@ -12,8 +12,11 @@ ToolboxParticles_SOURCES = \
   FileReaderHDF5.cpp \
   Tracer.cpp \
   TrajectoryDatabase.cpp \
+  UnitTests.cpp \
   particles.cpp \
-  potentials/Springs.cpp
+  potentials/Springs.cpp \
+  tests/MultiscaleTransitionsTest.cpp \
+  tests/TestParticle.cpp
   
 
 libToolboxParticles2d_a_CXXFLAGS         = $(CXXFLAGS_PEANO_2D_RELEASE) 

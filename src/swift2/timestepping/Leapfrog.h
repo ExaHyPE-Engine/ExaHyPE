@@ -32,9 +32,9 @@ namespace swift2 {
      * particles must be re-sorted before further operations can be executed.
      */
 
-    template <typename Particle>
+    template <typename ParticleContainer>
     void computeLeapfrogDriftWithGlobalTimeStepSize(
-      const std::vector< Particle* >&  localParticles
+      const ParticleContainer&  localParticles
     );
 
     /**
@@ -56,9 +56,9 @@ namespace swift2 {
     * we not only update the velocity but also other SPH variables.
     */
 
-    template <typename Particle>
+    template <typename ParticleContainer>
     void computeLeapfrogKickWithGlobalTimeStepSize(
-      const std::vector< Particle* >&  localParticles,
+      const ParticleContainer&  localParticles,
       const int kickNumber,
       const bool isSPH
     );
@@ -68,9 +68,9 @@ namespace swift2 {
      * quantities forward in time. In particular, U is integrated forward in
      * time treating it as the velocity.
      */
-    template <typename Particle>
+    template <typename ParticleContainer>
     void computeLeapfrogKickExtraWithGlobalTimeStepSize(
-      const std::vector< Particle* >&  localParticles
+      const ParticleContainer&  localParticles
     );
 
     /**
@@ -78,9 +78,9 @@ namespace swift2 {
      * Relevant for inactive particles when using local-timestepping, but always
      * used.
      */
-    template <typename Particle>
+    template <typename ParticleContainer>
     void computePredictHydro(
-      const std::vector< Particle* >&  localParticles,
+      const ParticleContainer&  localParticles,
       const int hydroDimensions
     );
 
@@ -93,9 +93,9 @@ namespace swift2 {
      * Fake Drift step in which we move a particle into the midpoint of a cell.
      * Does that particle disappear from the simulation?
      */
-    template <typename Particle>
+    template <typename ParticleContainer>
     void moveParticleIntoCriticalLine(
-      const std::vector< Particle* >&  localParticles
+      const ParticleContainer&  localParticles
     );
 
 

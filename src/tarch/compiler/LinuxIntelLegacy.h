@@ -58,3 +58,5 @@
  * eat stuff. icpc is GNU-based and therefore we do not define the static keyword here.
  */
 #define KeywordToAvoidDuplicateSymbolsForInlinedFunctions
+
+#define OpenMPTaskGroup

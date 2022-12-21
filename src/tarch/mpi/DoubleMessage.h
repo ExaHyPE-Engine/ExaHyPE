@@ -14,6 +14,9 @@
 #include "tarch/la/Vector.h"
 #include "tarch/mpi/Rank.h"
 #include "tarch/services/ServiceRepository.h"
+#include "peano4/utils/Globals.h"
+#include "peano4/grid/TraversalObserver.h"
+
 
 #ifdef Parallel
   #include <mpi.h>
@@ -106,8 +109,8 @@ struct tarch::mpi::DoubleMessage {
      * the message went through. In systems with heavy MPI usage, this can 
      * help to avoid deadlocks.
      */
-    static void send(const tarch::mpi::DoubleMessage& buffer, int destination, int tag, std::function<void()> waitFunctor, MPI_Comm communicator );
-    static void receive(tarch::mpi::DoubleMessage& buffer, int source, int tag, std::function<void()> waitFunctor, MPI_Comm communicator );
+    static void send(const tarch::mpi::DoubleMessage& buffer, int destination, int tag, std::function<void()> startCommunicationFunctor, std::function<void()> waitFunctor, MPI_Comm communicator );
+    static void receive(   tarch::mpi::DoubleMessage& buffer, int source,      int tag, std::function<void()> startCommunicationFunctor, std::function<void()> waitFunctor, MPI_Comm communicator );
     #endif
 
 

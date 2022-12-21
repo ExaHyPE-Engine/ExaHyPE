@@ -16,9 +16,9 @@ namespace swift2 {
      * as you should also call this routine prior to a change of the interaction
      * radius.
      */
-    template <typename Particle>
+    template <typename ParticleContainer>
     void resetMovedParticleMarker(
-      const std::vector< Particle* >&  localParticles
+      const ParticleContainer&  localParticles
     );
   }
 }

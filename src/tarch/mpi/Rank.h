@@ -96,6 +96,9 @@ class tarch::mpi::Rank {
 
     std::chrono::seconds _deadlockTimeOut;
 
+    std::chrono::system_clock::time_point  _globalTimeOutWarning;
+    std::chrono::system_clock::time_point  _globalTimeOutDeadlock;
+
     bool    _areTimeoutsEnabled;
 
     /**
@@ -379,7 +382,7 @@ class tarch::mpi::Rank {
     bool isGlobalMaster() const;
 
     /**
-     * Triggers a time out and shuts down the cluster:
+     * Triggers a time out and shuts down the cluster if a timeout is violated
      *
      * The implementation does not use MPI_Abort, since it seems that this
      * operation requires all nodes running. Instead of,
@@ -405,6 +408,20 @@ class tarch::mpi::Rank {
       const std::string&  comment = ""
     );
 
+    /**
+     * Writes a warning if relevant
+     *
+     * This operation writes a warning if the code might assume that it runs
+     * into a timeout (or excessive wait). The routine assumes that timeouts
+     * are enabled and that the user has called
+     *
+     * setDeadlockTimeoutTimeStamp()
+     *
+     * before. To avoid an excessive list of timeout warnings, a warning is
+     * always followed by moving the next warning timestamp (so you don't get
+     * dozens of timeouts) and the code also creases the time span that it
+     * uses from hereon to report on timeouts.
+     */
     void writeTimeOutWarning(
       const std::string&  className,
       const std::string&  methodName,
@@ -421,43 +438,15 @@ class tarch::mpi::Rank {
     void ensureThatMessageQueuesAreEmpty( int fromRank, int tag );
 
     /**
-     * If you want to make any receive operation to be able to recognize a
-     * time-out, you have to insert the following code snipped before your
-     * receive call.
-     *
-     * \code
-     *   MPI_Status  status;
-     *   int         flag = 0;
-     *   clock_t     timeOutWarning   = Rank::getInstance().getDeadlockWarningTimeStamp();
-     *   clock_t     timeOutShutdown  = Rank::getInstance().getDeadlockTimeOutTimeStamp();
-     *   bool        triggeredTimeoutWarning = false;
-     *   MPI_Iprobe( source, CommunicationTag, Rank::getInstance().getCommunicator(), &flag, &status );
-     *
-     *   while (!flag) {
-     *     if ( Rank::getInstance().isTimeOutWarningEnabled() && (std::chrono::system_clock::now()>timeOutWarning) && (!triggeredTimeoutWarning)) {
-     *       Rank::getInstance().writeTimeOutWarning( "parallel::SendReceiveBuffer", "receiveAllMessages()", source );
-     *       triggeredTimeoutWarning = true;
-     *     }
-     *     if ( Rank::getInstance().isTimeOutDeadlockEnabled() && (std::chrono::system_clock::now()>timeOutShutdown)) {
-     *       Rank::getInstance().triggerDeadlockTimeOut( "parallel::SendReceiveBuffer", "receiveAllMessages()", source );
-     *     }
-     *     MPI_Iprobe( source, CommunicationTag, Rank::getInstance().getCommunicator(), &flag, &status );
-     *   }
-     * \endcode
-     *
-     * @return Time stamp when next warning should be written if no message has
-     *         been received meanwhile.
+     * Memorise global timeout
      */
-    std::chrono::system_clock::time_point getDeadlockWarningTimeStamp() const;
+    void setDeadlockWarningTimeStamp();
 
     /**
      * @return Time stamp when next application should terminate because of a
      *         time out if no message has been received meanwhile.
      */
-    std::chrono::system_clock::time_point getDeadlockTimeOutTimeStamp() const;
-
-    bool isTimeOutDeadlockEnabled() const;
-    bool isTimeOutWarningEnabled() const;
+    void setDeadlockTimeOutTimeStamp();
 
     bool isInitialised() const;
 
