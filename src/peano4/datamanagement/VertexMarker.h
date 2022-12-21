@@ -88,6 +88,10 @@ struct peano4::datamanagement::VertexMarker {
      * @return Position of ith vertex
      */
     tarch::la::Vector<Dimensions,double> x(int i) const;
+
+    /**
+     * @return Position in space of currently selected vertex.
+     */
     tarch::la::Vector<Dimensions,double> x() const;
 
     tarch::la::Vector<Dimensions,double>  h() const;
