@@ -484,9 +484,12 @@ class SPHLeapfrogFixedInteractionRadius(Particle):
     # Artificial viscosity scheme -------------------------------------------------
     self.balsara   = dastgen2.attributes.Double("balsara",
                                                 valid_mantissa_bits=self.mantissa_size)
-    self.rot_v     = dastgen2.attributes.Double("rot_v",
+    if( self.hydroDimensions == 3 ):
+      self.rot_v= peano4.dastgen2.Peano4DoubleArray("rot_v", "Dimensions",
+                                                valid_mantissa_bits=self.mantissa_size)
+    else: # Curl is a scalar in lower dimensions
+      self.rot_v     = dastgen2.attributes.Double("rot_v",
                                                 valid_mantissa_bits=self.mantissa_size)    # In 2D sims it only has 1 component (z)
-#    self.rot_v= peano4.dastgen2.Peano4DoubleArray("rot_v","Dimensions")
     self.div_v     = dastgen2.attributes.Double("div_v",
                                                 valid_mantissa_bits=self.mantissa_size)
     self.v_sig_AV  = dastgen2.attributes.Double("v_sig_AV",

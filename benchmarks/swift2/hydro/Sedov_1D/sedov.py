@@ -229,9 +229,9 @@ particle.set_eta_factor(SMOOTH_ETA_FAC)
 
 if(KERNEL=='M5' and HYDRO_DIMENSIONS ==1):
   KERNEL_SUPPORT_RAD = "1.936492"  #  1D M5 Kernel
-elif(KERNEL=='M5' and HYDRO_DIMENSIONS ==1):
+elif(KERNEL=='M5' and HYDRO_DIMENSIONS ==2):
   KERNEL_SUPPORT_RAD = "1.977173"  #  2D M5 Kernel
-elif(KERNEL=='M5' and HYDRO_DIMENSIONS ==1):
+elif(KERNEL=='M5' and HYDRO_DIMENSIONS ==3):
   KERNEL_SUPPORT_RAD = "2.018932"  #  3D M5 Kernel
 else:
   print(f'Unable to determine the kernel support radius. Please check.'  )
