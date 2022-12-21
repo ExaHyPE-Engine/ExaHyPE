@@ -8,6 +8,7 @@
 
 
 #include <vector>
+#include <list>
 
 #include "tarch/logging/Log.h"
 #include "tarch/la/Vector.h"
@@ -40,7 +41,7 @@
 {%- endfor %}
 
 
-  class {{CLASSNAME}}: public std::vector< {% for item in NAMESPACE -%}{% if not loop.last %}{{ item }}::{% endif %}{%- endfor %}globaldata::{{PARTICLE_TYPE}}* > {
+  class {{CLASSNAME}}: public std::list< {% for item in NAMESPACE -%}{% if not loop.last %}{{ item }}::{% endif %}{%- endfor %}globaldata::{{PARTICLE_TYPE}}* > {
     private:
       static tarch::logging::Log _log;
 
@@ -73,7 +74,8 @@
        * This one is updated internally by eliminateSpatialDuplicates() which you
        * might call or you might not call.
        */
-      static int _numberOfEliminatedSpatialDuplicates;
+      static int _numberOfVirtualEliminatedSpatialDuplicates;
+      static int _numberOfLocalEliminatedSpatialDuplicates;
 
       #if PeanoDebug>=1
       private:
@@ -88,7 +90,7 @@
       #endif
     public:
       typedef {% for item in NAMESPACE -%}{% if not loop.last %}{{ item }}::{% endif %}{%- endfor %}globaldata::{{PARTICLE_TYPE}}  DoFType;
-      typedef std::vector< {% for item in NAMESPACE -%}{% if not loop.last %}{{ item }}::{% endif %}{%- endfor %}globaldata::{{PARTICLE_TYPE}}* >  Base;
+      typedef std::list< {% for item in NAMESPACE -%}{% if not loop.last %}{{ item }}::{% endif %}{%- endfor %}globaldata::{{PARTICLE_TYPE}}* >  Base;
 
       /**
        * Merge two particle sets
@@ -207,7 +209,7 @@
        * @param sortingTolerance I call it sorting tolerance, as I recommend to
        *   use the same as for the lifts and drops
        */
-      void eliminateSpatialDuplicates(bool examineOnlyVirtualParticles, double sortingTolerance);
+      void eliminateSpatialDuplicates(double sortingTolerance);
 
 
       #ifdef Parallel

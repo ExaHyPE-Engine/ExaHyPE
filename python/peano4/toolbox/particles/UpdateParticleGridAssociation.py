@@ -285,7 +285,7 @@ class UpdateParticleGridAssociation(ActionSet):
       sievedParticles.end()
     );
     
-    fineGridVertex{{PARTICLES_CONTAINER}}.eliminateSpatialDuplicates(false, 1.0+SortingTolerance);
+    fineGridVertex{{PARTICLES_CONTAINER}}.eliminateSpatialDuplicates(1.0+SortingTolerance);
   }
 """)  
   
