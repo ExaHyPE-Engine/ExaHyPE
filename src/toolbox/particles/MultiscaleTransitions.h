@@ -110,8 +110,25 @@ namespace toolbox {
      * - this vertex's cut-off radius would not fit into the next finer
      *   mesh level OR
      *   there is no next finer mesh level; AND
-     * - the particle's cut-off is not too big for teh current mesh level.
+     * - the particle's cut-off is not too big for the current mesh level.
      *
+     *
+     * ## Rationale and usage
+     *
+     * I assume that the tree sieving particles removes a particle from the
+     * sieve set as soon as it is inserted into the domain. The association
+     * of particles to vertices is not unique. In line with this, the sieving
+     * is not unique either. So it is important that you remove the particle
+     * from the sieve set once it is inserted.
+     *
+     * In theory, we could insert particles on the top level of a segment and
+     * then rely on the drops to move them down. This all works fine in a
+     * serial code. Once you parallelise, we however encounter an issue when
+     * particles drop through vertical tree cuts, i.e. if the fine grid child
+     * of a cell is remote. In this case, we might have inserted a particle
+     * into a rather coarse resolution level and rely on the drop. The remote
+     * child will insert the particle as well. The father will not be able to
+     * drop the particle all the way down into a remote tree.
      */
     template <typename Particle>
     bool sieveParticle(

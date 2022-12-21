@@ -103,16 +103,17 @@ bool toolbox::particles::sieveParticle(
   const peano4::datamanagement::VertexMarker  marker
 ) {
   const double sortingTolerance = 1.01;
+
+  const bool   fitsIntoThisGridResolution      = tarch::la::min( marker.h() )     >= 2.0 * particle.getCutOffRadius();
+  const bool   fitsIntoNextFinerGridResolution = tarch::la::min( marker.h() )/3.0 >= 2.0 * particle.getCutOffRadius();
+
   return
       marker.isContainedInAdjacentCells( particle.getX(), 0.5 * sortingTolerance)
       and
-      tarch::la::min( marker.h() ) >= 2.0 * particle.getCutOffRadius()
+      fitsIntoThisGridResolution
       and
       (
-          // das ist der magische Trigger, der sagt, dass man direkt ins feinste Gitter sieven soll
-          // das ist ultra-wichtig, weil das Sieve-Set nicht extrahiert wird. Sollte es aber, und
-          // dann ist der Rest wurscht
-        tarch::la::min( marker.h() ) / 3.0 < 2.0 * particle.getCutOffRadius()
+        not fitsIntoNextFinerGridResolution
         or
         not marker.hasBeenRefined()
       );
