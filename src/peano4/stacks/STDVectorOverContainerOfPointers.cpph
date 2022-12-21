@@ -1,11 +1,11 @@
 template <class T>
-tarch::logging::Log peano4::stacks::STDVectorOverVectorOfPointersStack<T>::_log( "peano4::stacks::STDVectorOverVectorOfPointersStack<T>" );
+tarch::logging::Log peano4::stacks::STDVectorOverContainerOfPointers<T>::_log( "peano4::stacks::STDVectorOverContainerOfPointers<T>" );
 
 
 #ifdef Parallel
 
 template <class T>
-void peano4::stacks::STDVectorOverVectorOfPointersStack<T>::workInReceivedMetaData() {
+void peano4::stacks::STDVectorOverContainerOfPointers<T>::workInReceivedMetaData() {
   assertion( _metaDataSizeBuffer!=nullptr );
   #if PeanoDebug>=1
   assertion( _metaDataDebugBuffer!=nullptr );
@@ -32,7 +32,7 @@ void peano4::stacks::STDVectorOverVectorOfPointersStack<T>::workInReceivedMetaDa
 
 
 template <class T>
-void peano4::stacks::STDVectorOverVectorOfPointersStack<T>::workInReceivedData() {
+void peano4::stacks::STDVectorOverContainerOfPointers<T>::workInReceivedData() {
   int entry = 0;
   for (int i=0; i<Base::_currentElement; i++) {
     for (auto& p: Base::_data[i]) {
@@ -45,7 +45,7 @@ void peano4::stacks::STDVectorOverVectorOfPointersStack<T>::workInReceivedData()
 
 
 template <class T>
-void peano4::stacks::STDVectorOverVectorOfPointersStack<T>::prepareDataToSendOut() {
+void peano4::stacks::STDVectorOverContainerOfPointers<T>::prepareDataToSendOut() {
   int entry = 0;
   for (int i=0; i<Base::_currentElement; i++) {
     for (auto& p: Base::_data[i]) {
@@ -57,7 +57,7 @@ void peano4::stacks::STDVectorOverVectorOfPointersStack<T>::prepareDataToSendOut
 
 
 template <class T>
-int peano4::stacks::STDVectorOverVectorOfPointersStack<T>::prepareMetaDataToSendOut() {
+int peano4::stacks::STDVectorOverContainerOfPointers<T>::prepareMetaDataToSendOut() {
       int flattenedDataSize = 0;
       for (int i=0; i<Base::_currentElement; i++) {
         int sizeOfThisStackEntry          = Base::_data[i].size();
@@ -86,7 +86,7 @@ int peano4::stacks::STDVectorOverVectorOfPointersStack<T>::prepareMetaDataToSend
 
 
 template <class T>
-peano4::stacks::STDVectorOverVectorOfPointersStack<T>::STDVectorOverVectorOfPointersStack() {
+peano4::stacks::STDVectorOverContainerOfPointers<T>::STDVectorOverContainerOfPointers() {
       #ifdef Parallel
       _metaDataSizeMPIRequest  = nullptr;
       _metaDataDebugMPIRequest = nullptr;
@@ -100,7 +100,7 @@ peano4::stacks::STDVectorOverVectorOfPointersStack<T>::STDVectorOverVectorOfPoin
 
 
 template <class T>
-void peano4::stacks::STDVectorOverVectorOfPointersStack<T>::clone( const STDVectorOverVectorOfPointersStack<T>&  data ) {
+void peano4::stacks::STDVectorOverContainerOfPointers<T>::clone( const STDVectorOverContainerOfPointers<T>&  data ) {
   assertionEquals1( Base::_currentElement, 0, Base::toString() );
 
   Base::_data.clear();
@@ -116,7 +116,7 @@ void peano4::stacks::STDVectorOverVectorOfPointersStack<T>::clone( const STDVect
 
 
 template <class T>
-void peano4::stacks::STDVectorOverVectorOfPointersStack<T>::clear() {
+void peano4::stacks::STDVectorOverContainerOfPointers<T>::clear() {
   logDebug( "clear()", "clear " << Base::_currentElement << " vectors on current stack" );
   for (auto& p: Base::_data) {
     p.clear();
@@ -126,7 +126,7 @@ void peano4::stacks::STDVectorOverVectorOfPointersStack<T>::clear() {
 
 
 template <class T>
-void peano4::stacks::STDVectorOverVectorOfPointersStack<T>::startSend(peano4::grid::TraversalObserver::SendReceiveContext context, int rank, int tag, MPI_Comm comm) {
+void peano4::stacks::STDVectorOverContainerOfPointers<T>::startSend(peano4::grid::TraversalObserver::SendReceiveContext context, int rank, int tag, MPI_Comm comm) {
   #ifdef Parallel
     assertion( Base::_ioMode==IOMode::None );
 
@@ -189,7 +189,7 @@ void peano4::stacks::STDVectorOverVectorOfPointersStack<T>::startSend(peano4::gr
 
 
 template <class T>
-void peano4::stacks::STDVectorOverVectorOfPointersStack<T>::startReceive(peano4::grid::TraversalObserver::SendReceiveContext context, int rank, int tag, MPI_Comm comm, int numberOfElements) {
+void peano4::stacks::STDVectorOverContainerOfPointers<T>::startReceive(peano4::grid::TraversalObserver::SendReceiveContext context, int rank, int tag, MPI_Comm comm, int numberOfElements) {
   #ifdef Parallel
     assertion3( Base::_ioMode==IOMode::None, rank, tag, numberOfElements );
     assertion3( numberOfElements>0, rank, tag, numberOfElements );
@@ -252,7 +252,7 @@ void peano4::stacks::STDVectorOverVectorOfPointersStack<T>::startReceive(peano4:
 
 
 template <class T>
-bool peano4::stacks::STDVectorOverVectorOfPointersStack<T>::tryToFinishSendOrReceive() {
+bool peano4::stacks::STDVectorOverContainerOfPointers<T>::tryToFinishSendOrReceive() {
       #ifdef Parallel
       logTraceInWith4Arguments( "tryToFinishSendOrReceive()", ::toString(Base::_ioMode), Base::size(), Base::_ioRank, Base::_ioTag );
 

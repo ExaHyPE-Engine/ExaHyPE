@@ -158,7 +158,7 @@
        *
        *
        *
-       * @see STDVectorOverVectorOfPointersStack::startReceive()
+       * @see STDVectorOverContainerOfPointers::startReceive()
        * @see clone()
        */
       void merge(::peano4::grid::TraversalObserver::SendReceiveContext context, const {{CLASSNAME}}& neighbour, const peano4::datamanagement::VertexMarker& marker);
@@ -180,7 +180,7 @@
        * on one rank is a real local one, all the others have virtual copies.
        * This state analysis or flipping is realised within merge().
        *
-       * @see STDVectorOverVectorOfPointersStack() for a description of the
+       * @see STDVectorOverContainerOfPointers() for a description of the
        *   intra-node parallelisation. This description provides an overview
        *   of the overall lifecycle of the data.
        * @see merge() for the corresponding delete that eliminates the deep
