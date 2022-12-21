@@ -24,6 +24,7 @@
 #include "peano4/grid/TraversalObserver.h"
 
 
+// @todo Name ist falsch
 
 namespace peano4 {
   namespace stacks {

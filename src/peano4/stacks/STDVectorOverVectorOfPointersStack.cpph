@@ -35,9 +35,9 @@ template <class T>
 void peano4::stacks::STDVectorOverVectorOfPointersStack<T>::workInReceivedData() {
   int entry = 0;
   for (int i=0; i<Base::_currentElement; i++) {
-    for (int j=0; j<Base::_data[i].size(); j++) {
+    for (auto& p: Base::_data[i]) {
 //      *(Base::_data[i].data()[j]) = _deepCopyDataBuffer[entry];
-     Base::_data[i].data()[j] = new typename T::DoFType( _deepCopyDataBuffer[entry] );
+     p = new typename T::DoFType( _deepCopyDataBuffer[entry] );
      entry++;
     }
   }
@@ -48,8 +48,8 @@ template <class T>
 void peano4::stacks::STDVectorOverVectorOfPointersStack<T>::prepareDataToSendOut() {
   int entry = 0;
   for (int i=0; i<Base::_currentElement; i++) {
-    for (int j=0; j<Base::_data[i].size(); j++) {
-      _deepCopyDataBuffer[entry] = *(Base::_data[i].data()[j]);
+    for (auto& p: Base::_data[i]) {
+      _deepCopyDataBuffer[entry] = *p;
       entry++;
     }
   }
