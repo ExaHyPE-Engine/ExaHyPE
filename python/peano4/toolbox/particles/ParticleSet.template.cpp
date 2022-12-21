@@ -56,7 +56,11 @@ tarch::la::Vector<Dimensions,double> {{NAMESPACE | join("::")}}::{{CLASSNAME}}::
 #endif
 
 
-void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::merge(::peano4::grid::TraversalObserver::SendReceiveContext context, const {{CLASSNAME}}& neighbour, const peano4::datamanagement::VertexMarker& marker) {
+void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::merge(
+  ::peano4::grid::TraversalObserver::SendReceiveContext  context,
+  {{CLASSNAME}}&                                         neighbour,
+  const peano4::datamanagement::VertexMarker&            marker
+) {
   switch (context) {
     case ::peano4::grid::TraversalObserver::SendReceiveContext::PeriodicBoundaryDataSwap:
       {
@@ -83,11 +87,9 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::merge(::peano4::grid::TraversalO
           ) {
             logDebug(
               "merge(...)",
-              "incoming particle " << p->toString() << " is virtual on neighbour, yet was not deleted there. " <<
-              "Assume it had just switched from local to virtual there, as it had moved. " <<
-              "We should have got the virtual copy in the step before which we have switched to local here already if it fits into our domain. " <<
-              "Hence, ignore this incoming copy."
+              "incoming particle " << p->toString() << " is virtual on neighbour. Such a copy is not relevant here."
             );
+            delete p;
           }
           else {
             assertion1(false,p->toString());

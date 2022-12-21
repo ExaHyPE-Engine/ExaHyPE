@@ -161,7 +161,7 @@
        * @see STDVectorOverContainerOfPointers::startReceive()
        * @see clone()
        */
-      void merge(::peano4::grid::TraversalObserver::SendReceiveContext context, const {{CLASSNAME}}& neighbour, const peano4::datamanagement::VertexMarker& marker);
+      void merge(::peano4::grid::TraversalObserver::SendReceiveContext context, {{CLASSNAME}}& neighbour, const peano4::datamanagement::VertexMarker& marker);
 
       static bool send(const peano4::datamanagement::VertexMarker& marker);
       static bool receiveAndMerge(const peano4::datamanagement::VertexMarker& marker);
