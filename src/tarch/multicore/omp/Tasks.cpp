@@ -16,9 +16,7 @@
 namespace {
   int nonblockingTasksCounter          = 0;
 
-  #if !defined(__NVCOMPILER)
   const int StandardPriority           = 16;
-  #endif
 
   const int BackgroundConsumerPriority = 1;
 
@@ -176,7 +174,7 @@ namespace {
     #endif
     for (int i=0; i<NumberOfThreads; i++) {
       #if defined(__NVCOMPILER)
-      #pragma omp task
+      #pragma omp task shared(pendingTasks, spawnedTasks, tasks, strategy) firstprivate(NumberOfThreads, i) priority(StandardPriority) untied
       {
       #endif
         ::tarch::logging::Statistics::getInstance().inc( BSPConcurrencyLevelStatisticsIdentifier, 1.0, true );
