@@ -1,4 +1,5 @@
-import os, sys
+import os
+import sys
 import argparse
 
 import peano4
@@ -9,9 +10,9 @@ width             = [10,10]
 offset            = [0,0]
 end_time          = 6.0
 plot_interval     = 0.05
-patch_size        = 1
-maximum_cell_size = 1
-minimum_cell_size = 0.005
+patch_size        = 17
+maximum_cell_size = 0.002
+minimum_cell_size = 0.0001
 space_order       = 2
 time_order        = 2
 
@@ -23,7 +24,7 @@ solvers = {
   #"fv-rusanov-local-enclave":exahype2.solvers.fv.rusanov.LocalTimeStepWithEnclaveTasking,
   "rkdg":exahype2.solvers.rkdg.rusanov.GlobalAdaptiveTimeStep,
 }
-solver="fv-rusanov-global-adaptive"
+solver="fv-rusanov-global-adaptive-enclave"
 
 build_modes = { 
   "release":peano4.output.CompileMode.Release,
@@ -116,7 +117,7 @@ my_solver = solvers[args.solver](
     min_volume_h              = args.min_cell_size,
     max_volume_h              = args.max_cell_size,
     time_step_relaxation      = 0.01,
-    #pde_terms_without_state  = True
+    pde_terms_without_state  = True
     #rk_order                 = args.time_order,
     #polynomials              = exahype2.solvers.GaussLegendreBasis(args.space_order),
     #face_projections         = exahype2.solvers.rkdg.FaceProjections.Solution,
@@ -128,7 +129,7 @@ my_solver.set_implementation(
   flux                 = flux,
   eigenvalues          = eigenvalues,
   source_term          = source_term,
-  refinement_criterion = refinement_criterion
+  #refinement_criterion = refinement_criterion
 )
 
 index = 0

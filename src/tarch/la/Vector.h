@@ -136,46 +136,66 @@ struct tarch::la::Vector {
      *   calls, i.e. vector element accesses, as function calls and does not vectorise
      *   loops containing vector element accesses.
      */
+    #ifdef GPUOffloadingOMP
+    #pragma omp declare target
+    #endif
     inline const Scalar & operator[] (int index) const InlineMethod {
         #if !defined(GPUOffloadingOMP) and !defined(GPUOffloadingSYCL)
         assertion3 ( index >= 0, index, Size, ::toString(*this) );
         assertion4 ( index < Size, index, Size, ::toString(*this), "you may not take the indexth entry from a vector with only Size components" );
         #endif
         return _values[index];
-      }
-
+    }
+    #ifdef GPUOffloadingOMP
+    #pragma omp end declare target
+    #endif
 
     /**
      * Returns ref. to component of given index.
      *
      * @see operator[] for remarks on SSE
      */
+    #ifdef GPUOffloadingOMP
+    #pragma omp declare target
+    #endif
     inline Scalar & operator[] (int index) InlineMethod {
         #if !defined(GPUOffloadingOMP) and !defined(GPUOffloadingSYCL)
         assertion3 ( index >= 0, index, Size, toString(*this) );
         assertion3 ( index < Size, index, Size, toString(*this) );
         #endif
         return _values[index];
-      }
+    }
+    #ifdef GPUOffloadingOMP
+    #pragma omp end declare target
+    #endif
 
     /**
      * Returns read-only ref. to component of given index.
      *
      * @see operator[] for remarks on SSE
      */
+    #ifdef GPUOffloadingOMP
+    #pragma omp declare target
+    #endif
     inline const Scalar & operator() (int index) const InlineMethod {
         #if !defined(GPUOffloadingOMP) and !defined(GPUOffloadingSYCL)
         assertion3 ( index >= 0, index, Size, toString(*this) );
         assertion3 ( index < Size, index, Size, toString(*this) );
         #endif
         return _values[index];
-      }
+    }
+    #ifdef GPUOffloadingOMP
+    #pragma omp end declare target
+    #endif
 
     /**
      * Returns ref. to component of given index.
      *
      * @see operator[] for remarks on SSE
      */
+    #ifdef GPUOffloadingOMP
+    #pragma omp declare target
+    #endif
     inline Scalar & operator() (int index) InlineMethod {
        #if !defined(GPUOffloadingOMP) and !defined(GPUOffloadingSYCL)
        assertion3 ( index >= 0, index, Size, toString(*this) );
@@ -183,8 +203,10 @@ struct tarch::la::Vector {
        #endif
        return _values[index];
      }
+    #ifdef GPUOffloadingOMP
+    #pragma omp end declare target
+    #endif
 
-   
     /**
      * This routine returns a pointer to the first data element. Not a
      * beautiful one as it harms the OO idea, but in many cases it is

@@ -32,6 +32,7 @@ class FirstOrderConservativePDEFormulation(PDE):
 
     self.F                = sympy.symarray("F",     (unknowns,dimensions))
     self.eigenvalue       = sympy.symarray("alpha", (unknowns,dimensions))
+    self.sources          = sympy.symarray("S",      unknowns)
     for i in range(0,unknowns):
       self.F[i]           = [0 for i in range(0,dimensions)]
       self.eigenvalue[i]  = [0 for i in range(0,dimensions)]
@@ -47,6 +48,7 @@ class FirstOrderConservativePDEFormulation(PDE):
       result += "\lambda _{max," + str( i ) + "}(x) = "
       result += str( self.eigenvalue[i] )
       result += "\n"
+    result += " = "
     return result
 
   def LaTeX(self):
@@ -89,7 +91,7 @@ class FirstOrderConservativePDEFormulation(PDE):
         before we pipe it into the output. If your expression is something numeric,
         then evalf will fail (as it is not defined for scalar quantities).
     """
-    result  = self._implementation_of_mapping_onto_named_quantities(is_cell_mapping = False)
+    result  = self._implementation_of_mapping_onto_named_quantities(is_cell_mapping=False)
     result += "switch( normal ) {\n"
     for d in range(0,self.dimensions):
       result += "  case " + str(d) + ":\n"

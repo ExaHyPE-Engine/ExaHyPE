@@ -127,8 +127,7 @@ class Project (object):
       gc.collect()
       print( "threw away all data and ran garbage collection" )
 
-      
-  def build(self, make_clean_first=True, number_of_parallel_builds = -1, additional_libraries = []):
+  def build(self, make_clean_first=True, make_dist_clean_first=False, number_of_parallel_builds=-1, additional_libraries=[]):
     """
       Invokes the underlying make/C build mechanism on the project. 
       We invoke the make command via a subprocess. That's it.
@@ -143,14 +142,17 @@ class Project (object):
     """
     if number_of_parallel_builds<=0:
         number_of_parallel_builds = multiprocessing.cpu_count()
-        
+
     if not self.is_generated:
       self.generate();
 
-    if make_clean_first:
+    if make_clean_first or make_dist_clean_first:
       print( "clean up project ..." )
       try:
-        subprocess.check_call(["make", "clean"])
+        if make_clean_first:
+          subprocess.check_call(["make", "clean"])
+        if make_dist_clean_first:
+          subprocess.check_call(["make", "distclean"])
         self.is_built = False
         print( "clean complete" )
       except Exception as e:

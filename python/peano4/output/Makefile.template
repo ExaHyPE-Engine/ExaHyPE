@@ -119,6 +119,6 @@ distclean:
 	rm -rf globaldata celldata facedata vertexdata observers repositories tasks
 	rm -f Constants.h
 	rm -f solution-*
-	rm -f Readme-*
+	rm -f README-*
 
 maintainer-clean: distclean

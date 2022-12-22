@@ -1,5 +1,5 @@
 <div align="center">
-<img src="./documentation/Peano-logo.png"/>
+<img src="./documentation/logos/Peano-logo.png"/>
 </div>
 
 # General Information
@@ -66,7 +66,9 @@ Use `configure`'s help to find out which options you want to use.
 ./configure --my-options
 ```
 
-Some quickstart configure commands for different toolchains are given below. For detailed information please refer to the guidebook in the documentation.
+For an overview of all configure
+commands for different toolchains are given below.
+For detailed information on each flag please refer to the guidebook in the documentation.
 
 ### Intel OneAPI toolchain
 ```shell
@@ -194,7 +196,7 @@ make
 make install
 ```
 Invoke make -jX to use X threads to build the code. Peano is mainly a 
-library collection, i.e. you might want to skip the install command and
+library collection, i.e., you might want to skip the install command and
 work directly against the libraries built in the source directory.
 
 ## Running a Simulation

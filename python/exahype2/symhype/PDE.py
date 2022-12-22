@@ -9,6 +9,7 @@ class PDE(object):
     self.dimensions             = dimensions
     self.Q                      = sympy.symarray("Q",   (unknowns+auxiliary_variables))
     self.initial_values         = sympy.symarray("Q0",  (unknowns+auxiliary_variables))
+    self.boundary_values        = sympy.symarray("Qb",  (unknowns+auxiliary_variables))
     self.x                      = sympy.symarray("x",   (dimensions))
     pass
 
@@ -80,7 +81,23 @@ class PDE(object):
       result += "Qoutside[" + str(i) + "] = Qinside[" + str(i) + "];\n"
     return result
 
-  def implementation_of_initial_conditions(self, invoke_evalf_before_output=True):
+  def implementation_of_boundary_conditions(self, invoke_evalf_before_output=False):
+    """
+      invoke_evalf_before_output: boolean
+        If your expression is a symbolic expression (default) then we use evalf
+        before we pipe it into the output. If your expression is something numeric,
+        then evalf will fail (as it is not defined for scalar quantities).
+    """
+    result = self._implementation_of_mapping_onto_named_quantities(is_cell_mapping=True)
+    for i in range(0,self.unknowns + self.auxiliary_variables):
+      if invoke_evalf_before_output:
+        result += sympy.printing.cxxcode( self.boundary_values[i].evalf(), assign_to="Q[" + str(i) + "]" )
+      else:
+        result += "Q[" + str(i) + "] = " + sympy.printing.cxxcode( self.boundary_values[i] ) + ";"
+      result += "\n"
+    return result
+
+  def implementation_of_initial_conditions(self, invoke_evalf_before_output=False):
     """
       invoke_evalf_before_output: boolean
         If your expression is a symbolic expression (default) then we use evalf

@@ -14,4 +14,4 @@ from .TemplatedHeaderImplementationFilePair         import TemplatedHeaderImplem
 from .Jinja2TemplatedHeaderFile                     import Jinja2TemplatedHeaderFile
 from .Jinja2TemplatedHeaderImplementationFilePair   import Jinja2TemplatedHeaderImplementationFilePair
 from .Readme                                        import Readme
-from .Gitignore                                     import Gitignore
+#from .Gitignore                                     import Gitignore
