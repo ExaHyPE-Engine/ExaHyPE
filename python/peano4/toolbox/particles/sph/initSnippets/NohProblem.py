@@ -109,9 +109,9 @@ class NohProblemIC:
       particle->setPartid(1);
 
       /* Verbose */
-      logInfo( "Init()", "dist = " << dist );
-      logInfo( "Init()", "v_ini = " << v_ini );
-      logInfo( "Init()", "Particle: " << particle->toString() );
+      logDebug( "Init()", "dist = " << dist );
+      logDebug( "Init()", "v_ini = " << v_ini );
+      logDebug( "Init()", "Particle: " << particle->toString() );
 
       /* End of inserted block */
 
