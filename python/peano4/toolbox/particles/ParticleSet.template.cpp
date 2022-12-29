@@ -150,12 +150,11 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::eliminateSpatialDuplicates(doubl
     if (foundDuplicate) {
       assertion( (*p)!=(*pp) );
 
-        // bias towards virtual particles
+      // bias to eliminate virtual particles
       if (
         (*p)->getParallelState()==DoFType::ParallelState::Local
         and
         (*pp)->getParallelState()==DoFType::ParallelState::Local
-
       ) {
         logWarning( "eliminateSpatialDuplicates()", "particle " << (*pp)->toString() << " found twice as local in domain" );
 

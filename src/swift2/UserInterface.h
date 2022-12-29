@@ -10,6 +10,15 @@ namespace swift2 {
   void printUsage(char** argv);
 
   void setDefaultLogStatements();
+
+  namespace commandlinesettings {
+    /**
+     * Find out if user has enabled dynamic load balancing or
+     * not. If this flag is false, the code should disable the load
+     * balancing in the initialisation step.
+     */
+    bool enableDynamicLoadBalancing();
+  }
 }
 
 

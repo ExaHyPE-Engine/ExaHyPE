@@ -1,8 +1,12 @@
 #include <algorithm>
 
 #include "GlobalState.h"
+
 #include "peano4/grid/grid.h"
 #include "peano4/parallel/SpacetreeSet.h"
+
+
+#include "swift2/UserInterface.h"
 
 
 {% for PARTICLE in PARTICLE_SPECIES -%}
@@ -97,7 +101,9 @@ void startIntermediateStep() {
 
 
 void startInitialisationStep() {
-  loadBalancer.enable(false);
+  if (not ::swift2::commandlinesettings::enableDynamicLoadBalancing() ) {
+    loadBalancer.enable(false);
+  }
 }
 
 

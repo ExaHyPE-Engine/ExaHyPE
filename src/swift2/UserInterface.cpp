@@ -19,6 +19,11 @@ namespace {
 }
 
 
+bool swift2::commandlinesettings::enableDynamicLoadBalancing() {
+  return ::enableDynamicLoadBalancing;
+}
+
+
 void swift2::setDefaultLogStatements() {
   tarch::logging::LogFilter::getInstance().addFilterListEntry( tarch::logging::LogFilter::FilterListEntry(
       tarch::logging::LogFilter::FilterListEntry::TargetDebug,
