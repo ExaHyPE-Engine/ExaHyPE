@@ -1,7 +1,6 @@
 // This file is part of the ExaHyPE2 project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
-#ifndef _EXAHYPE2_PLOT_FILTER_H_
-#define _EXAHYPE2_PLOT_FILTER_H_
+#pragma once
 
 
 #include "peano4/datamanagement/CellMarker.h"
@@ -58,5 +57,4 @@ class exahype2::PlotFilter {
   
   
   
-#endif
  

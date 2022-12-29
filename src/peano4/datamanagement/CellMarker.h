@@ -1,7 +1,6 @@
 // This file is part of the Peano project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
-#ifndef _PEANO4_DATAMANAGEMENT_CELL_MARKER_H_
-#define _PEANO4_DATAMANAGEMENT_CELL_MARKER_H_
+#pragma once
 
 
 #include "tarch/la/Vector.h"
@@ -181,8 +180,22 @@ struct peano4::datamanagement::CellMarker {
      * the message went through. In systems with heavy MPI usage, this can
      * help to avoid deadlocks.
      */
-    static void send(const CellMarker& buffer, int destination, int tag, std::function<void()> waitFunctor, MPI_Comm communicator );
-    static void receive(CellMarker& buffer, int source, int tag, std::function<void()> waitFunctor, MPI_Comm communicator );
+    static void send(
+      const CellMarker& buffer,
+      int destination,
+      int tag,
+      std::function<void()> startCommunicationFunctor,
+      std::function<void()> waitFunctor,
+      MPI_Comm communicator
+    );
+    static void receive(
+      CellMarker& buffer,
+      int source,
+      int tag,
+      std::function<void()> startCommunicationFunctor,
+      std::function<void()> waitFunctor,
+      MPI_Comm communicator
+    );
 
     static void sendAndPollDanglingMessages(const CellMarker& message, int destination, int tag, MPI_Comm communicator  );
     static void receiveAndPollDanglingMessages(CellMarker& message, int source, int tag, MPI_Comm communicator  );
@@ -193,4 +206,3 @@ struct peano4::datamanagement::CellMarker {
 };
 
 
-#endif

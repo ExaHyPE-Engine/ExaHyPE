@@ -1,7 +1,6 @@
 // This file is part of the ExaHyPE2 project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
-#ifndef _EXAHYPE2_FV_MUSCLHAN_MUSCL_H_
-#define _EXAHYPE2_FV_MUSCLHAN_MUSCL_H_
+#pragma once
 
 
 #include "Functors.h"
@@ -41,4 +40,3 @@ namespace exahype2 {
 #include "MusclHancock_patchwise_functors.cpph"
 
 
-#endif

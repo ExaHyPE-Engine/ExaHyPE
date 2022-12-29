@@ -97,6 +97,7 @@ void startIntermediateStep() {
 
 
 void startInitialisationStep() {
+  loadBalancer.enable(false);
 }
 
 
@@ -106,6 +107,8 @@ void startSortingStep() {
 
 void startTimeStep() {
   {% for PARTICLE in PARTICLE_SPECIES -%}
+  vertexdata::{{PARTICLE}}Set::clearReassignmentStatistics();
+  vertexdata::{{PARTICLE}}Set::clearParticleStateStatistics();
   globaldata::{{PARTICLE}}::getSpecies().startTimeStep();
   {%- endfor %}
 }
@@ -118,7 +121,8 @@ void startPlotStep() {
 void finishTimeStep() {
   {% for PARTICLE in PARTICLE_SPECIES -%}
   globaldata::{{PARTICLE}}::getSpecies().finishTimeStep();
-  vertexdata::{{PARTICLE}}Set::finishedTraversal(true);
+  vertexdata::{{PARTICLE}}Set::finishedTraversal();
+  vertexdata::{{PARTICLE}}Set::reduceAndPrintStatistics();
   {%- endfor %}
 
   loadBalancer.finishStep();
@@ -143,7 +147,7 @@ void finishTimeStep() {
 
 void finishGridConstructionStep() {
   {% for PARTICLE in PARTICLE_SPECIES -%}
-  vertexdata::{{PARTICLE}}Set::finishedTraversal(PeanoDebug>0);
+  vertexdata::{{PARTICLE}}Set::finishedTraversal();
   {%- endfor %}
 
   loadBalancer.finishStep();
@@ -152,7 +156,7 @@ void finishGridConstructionStep() {
 
 void finishInitialisationStep() {
   {% for PARTICLE in PARTICLE_SPECIES -%}
-  vertexdata::{{PARTICLE}}Set::finishedTraversal(true);
+  vertexdata::{{PARTICLE}}Set::finishedTraversal();
   {%- endfor %}
 
   loadBalancer.finishStep();
@@ -161,7 +165,7 @@ void finishInitialisationStep() {
 
 void finishSortingStep() {
   {% for PARTICLE in PARTICLE_SPECIES -%}
-  vertexdata::{{PARTICLE}}Set::finishedTraversal(true);
+  vertexdata::{{PARTICLE}}Set::finishedTraversal();
   {%- endfor %}
 
   loadBalancer.finishStep();
@@ -170,14 +174,14 @@ void finishSortingStep() {
 
 void finishPlotStep() {
   {% for PARTICLE in PARTICLE_SPECIES -%}
-  vertexdata::{{PARTICLE}}Set::finishedTraversal(PeanoDebug>0);
+  vertexdata::{{PARTICLE}}Set::finishedTraversal();
   {%- endfor %}
 }
 
 
 void finishIntermediateStep() {
   {% for PARTICLE in PARTICLE_SPECIES -%}
-  vertexdata::{{PARTICLE}}Set::finishedTraversal(PeanoDebug>0);
+  vertexdata::{{PARTICLE}}Set::finishedTraversal();
   {%- endfor %}
 }
 

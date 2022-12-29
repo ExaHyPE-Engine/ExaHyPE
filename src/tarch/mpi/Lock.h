@@ -1,8 +1,7 @@
 // Copyright (C) 2009 Technische Universitaet Muenchen
 // This file is part of the Peano project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
-#ifndef _TARCH_MPI_LOCK_H_
-#define _TARCH_MPI_LOCK_H_
+#pragma once
 
 
 namespace tarch {
@@ -30,4 +29,3 @@ class tarch::mpi::Lock {
     void free();
 };
 
-#endif

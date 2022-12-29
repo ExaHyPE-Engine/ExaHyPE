@@ -2,7 +2,10 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
+
 #include <list>
+#include <unordered_set>
+
 
 namespace swift2 {
   namespace kernels {
@@ -18,13 +21,20 @@ namespace swift2 {
      * What the routine not does is to check if activeParticle!=localParticle,
      * i.e. please assume that the routine is also called for self-interaction
      * potentials.
+     *
+     * @param ParticleContainer Typicaly either
+     *         std::list<Particle *>
+     *   or
+     *         std::unordered_set<Particle *>
+     *
+     *
      */
-    template <typename Particle>
+    template <typename Particle, typename ParticleContainer>
     void genericInteraction(
-        const std::list<Particle *> &localParticles,
-        const std::list<Particle *> &activeParticles,
-        std::function<void(Particle *localParticle, const Particle *const activeParticle)>
-            interaction);
+      const ParticleContainer&  localParticles,
+      const ParticleContainer&  activeParticles,
+      std::function<void(Particle *localParticle, const Particle *const activeParticle)>  interaction
+    );
 
 
     /**
@@ -46,12 +56,20 @@ namespace swift2 {
      * dx : Vector separating the two particles (x_loc - x_act)
      * r  : Distance between the two particles  (|| dx ||)
      *
+     *
+     * @param ParticleContainer Typicaly either
+     *         std::list<Particle *>
+     *   or
+     *         std::unordered_set<Particle *>
+     *   where Particle is your particular Particle type.
+     *
      */
-    template <typename Particle>
+    template <typename ParticleContainer>
     void computeDensity(
-        const std::list<Particle *> &localParticles,
-        const std::list<Particle *> &activeParticles,
-        const int hydroDimensions);
+        const ParticleContainer&  localParticles,
+        const ParticleContainer&  activeParticles,
+        const int                 hydroDimensions);
+
 
     /** Hydro Force calculation particle-particle kernel
      *
@@ -65,18 +83,21 @@ namespace swift2 {
      * dx : Vector separating the two particles (x_loc - x_act)
      * r  : Distance between the two particles  (|| dx ||)
      *
+     *
+     * @param ParticleContainer Typicaly either
+     *         std::list<Particle *>
+     *   or
+     *         std::unordered_set<Particle *>
+     *   where Particle is your particular Particle type.
+     *
      */
-    template <typename Particle>
+    template <typename ParticleContainer>
     void computeHydroForce(
-        const std::list<Particle *> &localParticles,
-        const std::list<Particle *> &activeParticles,
+        const ParticleContainer&  localParticles,
+        const ParticleContainer&  activeParticles,
         const int hydroDimensions,
         const double betaAV
         );
-
-
-
-
   } 
 } 
 

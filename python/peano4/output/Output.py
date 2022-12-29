@@ -3,7 +3,6 @@
 from .Makefile import Makefile
 from .Readme   import Readme
 
-
 class Output(object):
   """
   Represents the total output generated from the Peano4 data model plus all

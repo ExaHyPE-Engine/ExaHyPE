@@ -1,7 +1,6 @@
 // This file is part of the Peano project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
-#ifndef _PEANO4_GRID_H_
-#define _PEANO4_GRID_H_
+#pragma once
 
 
 #include <vector>
@@ -386,4 +385,3 @@ namespace peano4 {
 
 peano4::grid::GridStatistics operator+( peano4::grid::GridStatistics lhs, peano4::grid::GridStatistics rhs );
 
-#endif

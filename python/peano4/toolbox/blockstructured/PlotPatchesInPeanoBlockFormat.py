@@ -20,7 +20,16 @@ class PlotPatchesInPeanoBlockFormat(ActionSet):
   """
   
   
-  def __init__(self,filename,patch,dataset_name, description, time_stamp_evaluation, plot_cell_data=True, metadata = "", mapping = [], guard="true", additional_includes="", precision=3):
+  def __init__(self,
+               filename,
+               patch,
+               dataset_name, 
+               description, time_stamp_evaluation, 
+               plot_cell_data=True, 
+               metadata = "", 
+               mapping = [], 
+               guard="true", 
+               additional_includes="", precision=3):
     """
     
       plot_cell_data: Boolean

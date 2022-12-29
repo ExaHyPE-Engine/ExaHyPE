@@ -8,6 +8,7 @@ endif
 
 
 SWIFT2Sources = \
+  GridControlEvents.cpp \
   ParticleSpecies.cpp \
   UnitTests.cpp
 

@@ -1,7 +1,6 @@
 // This file is part of the Peano project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
-#ifndef _TARCH_TESTS_TEST_MACROS_H_
-#define _TARCH_TESTS_TEST_MACROS_H_
+#pragma once
 
 #if defined(GPUOffloadingCPP)
 #include <algorithm>
@@ -433,4 +432,3 @@
     return;\
   }
 
-#endif

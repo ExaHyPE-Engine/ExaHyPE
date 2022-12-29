@@ -6,8 +6,7 @@
 // This is generated. If you change fundamental properties, you will have to 
 // generate this file. Backup your manual changes before you do so.
 //
-#ifndef _applications_exahype2_ccz4_RKDGCCZ4_H_
-#define _applications_exahype2_ccz4_RKDGCCZ4_H_
+#pragma once
 
 #include "AbstractRKDGCCZ4.h"
 #include "tarch/logging/Log.h"
@@ -143,4 +142,3 @@ class applications::exahype2::ccz4::RKDGCCZ4: public AbstractRKDGCCZ4 {
 };
 
 
-#endif

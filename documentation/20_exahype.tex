@@ -1100,6 +1100,16 @@ will never split up if it has less than 200 cells.
  
 
 
+\begin{remark}
+ The more subpartition (trees) you allow \Peano\ to host per rank, the more you
+ stress the MPI subsystem.
+ Many trees give \Peano\ more headspace to balance out the mesh, but every tree
+ may (in theory) exchange data with any other tree, and this can quickly
+ overwhelm MPI.
+ If you encounter deadlocks, it is therefore reasonable to constrain the number
+ of trees (subpartitions) per rank.
+\end{remark}   
+
 
 \paragraph{Task parallelism}
 

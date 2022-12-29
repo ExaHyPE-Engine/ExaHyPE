@@ -1,5 +1,4 @@
-#ifndef _CONVERT_FILTER_FILTER_H_
-#define _CONVERT_FILTER_FILTER_H_
+#pragma once
 
 
 #include <string>
@@ -25,4 +24,3 @@ class convert::filter::Filter {
 	virtual void apply( convert::data::DataSet& dataSet, convert::data::Variable& inputVariable, std::string targetSelectorName ) = 0;
 };
 
-#endif

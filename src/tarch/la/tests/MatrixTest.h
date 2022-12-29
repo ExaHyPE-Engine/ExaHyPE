@@ -1,7 +1,6 @@
 // This file is part of the Peano project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
-#ifndef _LA_TARCH_TESTS_MATRIXTEST_H_
-#define _LA_TARCH_TESTS_MATRIXTEST_H_
+#pragma once
 
 #include "tarch/tests/TestCase.h"
 
@@ -68,4 +67,3 @@ public:
   virtual void setUp() {};
 };
 
-#endif /* _LA_TARCH_TESTS_MATRIXTEST_H_ */

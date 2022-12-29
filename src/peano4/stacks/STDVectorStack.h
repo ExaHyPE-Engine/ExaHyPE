@@ -1,7 +1,6 @@
 // This file is part of the Peano project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
-#ifndef _PEANO4_STACKS_STDVECTOR_STACK_H_
-#define _PEANO4_STACKS_STDVECTOR_STACK_H_
+#pragma once
 
 
 #include <vector>
@@ -510,4 +509,3 @@ MPI_Datatype peano4::stacks::translateContextIntoDatatype( peano4::grid::Travers
 #endif
 
 
-#endif

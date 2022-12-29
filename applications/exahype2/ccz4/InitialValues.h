@@ -5,8 +5,7 @@
  *
  */
 
-#ifndef _APPLICATIONS_EXAHYPE2_CCZ4_INITIAL_VALUES__
-#define _APPLICATIONS_EXAHYPE2_CCZ4_INITIAL_VALUES__
+#pragma once
 
 #include "tarch/la/Vector.h"
 
@@ -54,4 +53,3 @@ namespace applications {
   }
 }
 
-#endif /* __EXAHYPE_USER_PDE__ */

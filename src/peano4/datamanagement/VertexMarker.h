@@ -1,7 +1,6 @@
 // This file is part of the Peano project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
-#ifndef _PEANO4_DATAMANAGEMENT_VERTEX_MARKER_H_
-#define _PEANO4_DATAMANAGEMENT_VERTEX_MARKER_H_
+#pragma once
 
 
 #include "peano4/utils/Globals.h"
@@ -16,11 +15,30 @@ namespace peano4 {
 }
 
 
+/**
+ * Forward declarations for test purposes
+ */
+
+namespace toolbox {
+  namespace particles {
+    namespace tests {
+      class MultiscaleTransitionsTest;
+    }
+  }
+}
+
+
+
 std::ostream& operator<<( std::ostream& out, const peano4::datamanagement::VertexMarker& marker );
 
 
 struct peano4::datamanagement::VertexMarker {
   private:
+    /**
+     * For unit tests
+     */
+    friend class toolbox::particles::tests::MultiscaleTransitionsTest;
+
     /**
      * Centre of the underlying cell
      */
@@ -45,6 +63,13 @@ struct peano4::datamanagement::VertexMarker {
      * Entries from (0,1,2). (0,0) or (0,0,0) is the left, bottom cell.
      */
     tarch::la::Vector<Dimensions,int>  _relativePositionOfCellWithinFatherCell;
+
+    /**
+     * Some unit tests prefer to construct a marker manually, so I offer a
+     * dummy default constructor. The normal code should and does not use a
+     * default constructor.
+     */
+    VertexMarker() = default;
   public:
     VertexMarker(const peano4::grid::GridTraversalEvent& event, int select = 0);
 
@@ -179,4 +204,3 @@ struct peano4::datamanagement::VertexMarker {
 
 
 
-#endif

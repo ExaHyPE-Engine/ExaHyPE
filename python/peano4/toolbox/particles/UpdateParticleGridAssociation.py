@@ -275,10 +275,7 @@ class UpdateParticleGridAssociation(ActionSet):
 
   __Template_Sieve = jinja2.Template("""
   if ( not _sieveParticles.empty() ) {
-    vertexdata::{{PARTICLES_CONTAINER}} sievedParticles = _sieveParticles.getParticlesToBeSievedIntoVertex(
-        marker,
-        1.0+SortingTolerance
-      );
+    vertexdata::{{PARTICLES_CONTAINER}} sievedParticles = _sieveParticles.getParticlesToBeSievedIntoVertex( marker );
       
     _numberOfSieves += sievedParticles.size();
 
@@ -288,7 +285,7 @@ class UpdateParticleGridAssociation(ActionSet):
       sievedParticles.end()
     );
     
-    fineGridVertex{{PARTICLES_CONTAINER}}.eliminateSpatialDuplicates(false, 1.0+SortingTolerance);
+    fineGridVertex{{PARTICLES_CONTAINER}}.eliminateSpatialDuplicates(1.0+SortingTolerance);
   }
 """)  
   

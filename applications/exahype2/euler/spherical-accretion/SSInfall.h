@@ -6,8 +6,7 @@
 // This is generated. If you change fundamental properties, you will have to 
 // generate this file. Backup your manual changes before you do so.
 //
-#ifndef _examples_exahype2_SSInfall_SSInfall_H_
-#define _examples_exahype2_SSInfall_SSInfall_H_
+#pragma once
 
 #include "tarch/logging/Log.h"
 #include <iomanip>
@@ -253,4 +252,3 @@ class examples::exahype2::SSInfall::SSInfall: public AbstractSSInfall {
 };
 
 
-#endif

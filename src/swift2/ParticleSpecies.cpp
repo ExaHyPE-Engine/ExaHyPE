@@ -2,7 +2,8 @@
 
 #include "tarch/Assertions.h"
 #include "tarch/multicore/Lock.h"
-
+#include "tarch/mpi/Rank.h"
+#include "tarch/services/ServiceRepository.h"
 
 #include <limits>
 
@@ -50,6 +51,18 @@ void swift2::ParticleSpecies::setTimeStepSize( double dt, bool reduceInsteadOfOv
 bool swift2::ParticleSpecies::rerunPreviousGridSweep() const {
   return _rerunPreviousGridSweep;
 }
+
+
+void swift2::ParticleSpecies::clearRerunPreviousGridSweepFlag() {
+  _rerunPreviousGridSweep = false;
+}
+
+
+void swift2::ParticleSpecies::setRerunPreviousGridSweep() {
+  tarch::multicore::Lock lock(_semaphore);
+  _rerunPreviousGridSweep = true;
+}
+
 
 
 void swift2::ParticleSpecies::setTimeStepSize( double dtMin, double dtMax, bool reduceInsteadOfOverwrite ) {
@@ -145,3 +158,88 @@ void swift2::ParticleSpecies::finishTimeStep() {
 }
 
 
+void swift2::ParticleSpecies::allReduce() {
+  #ifdef Parallel
+
+  double localMinTimeStepSize  = _minTimeStepSize;
+  double localMaxTimeStepSize  = _maxTimeStepSize;
+
+  double localMinTimeStamp     = _minTimeStamp;
+  double localMaxTimeStamp     = _maxTimeStamp;
+
+  double localMinCutOffRadius  = _minCutOffRadius;
+  double localMaxCutOffRadius  = _maxCutOffRadius;
+
+  double localMinVelocity      = _minVelocity;
+  double localMaxVelocity      = _maxVelocity;
+
+  int localRerunPreviousGridSweep  = _rerunPreviousGridSweep ? 1 : 0;
+  int globalRerunPreviousGridSweep = 0;
+
+  tarch::mpi::Rank::getInstance().allReduce(
+    &localMinTimeStepSize,
+    &_minTimeStepSize,
+    1, MPI_DOUBLE,
+    MPI_MIN,
+    [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); }
+  );
+  tarch::mpi::Rank::getInstance().allReduce(
+    &localMaxTimeStepSize,
+    &_maxTimeStepSize,
+    1, MPI_DOUBLE,
+    MPI_MAX,
+    [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); }
+  );
+  tarch::mpi::Rank::getInstance().allReduce(
+    &localMinTimeStamp,
+    &_minTimeStamp,
+    1, MPI_DOUBLE,
+    MPI_MIN,
+    [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); }
+  );
+  tarch::mpi::Rank::getInstance().allReduce(
+    &localMaxTimeStamp,
+    &_maxTimeStamp,
+    1, MPI_DOUBLE,
+    MPI_MAX,
+    [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); }
+  );
+  tarch::mpi::Rank::getInstance().allReduce(
+    &localMinCutOffRadius,
+    &_minCutOffRadius,
+    1, MPI_DOUBLE,
+    MPI_MIN,
+    [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); }
+  );
+  tarch::mpi::Rank::getInstance().allReduce(
+    &localMaxCutOffRadius,
+    &_maxCutOffRadius,
+    1, MPI_DOUBLE,
+    MPI_MAX,
+    [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); }
+  );
+  tarch::mpi::Rank::getInstance().allReduce(
+    &localMinVelocity,
+    &_minVelocity,
+    1, MPI_DOUBLE,
+    MPI_MIN,
+    [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); }
+  );
+  tarch::mpi::Rank::getInstance().allReduce(
+    &localMaxVelocity,
+    &_maxVelocity,
+    1, MPI_DOUBLE,
+    MPI_MAX,
+    [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); }
+  );
+  tarch::mpi::Rank::getInstance().allReduce(
+    &localRerunPreviousGridSweep,
+    &globalRerunPreviousGridSweep,
+    1, MPI_INT,
+    MPI_SUM,
+    [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); }
+  );
+  _rerunPreviousGridSweep = globalRerunPreviousGridSweep>0;
+
+  #endif
+}

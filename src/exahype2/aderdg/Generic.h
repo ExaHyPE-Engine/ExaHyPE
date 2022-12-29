@@ -1,7 +1,6 @@
 // This file is part of the ExaHyPE2 project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
-#ifndef _EXAHYPE2_ADERDG_GENERIC_H_
-#define _EXAHYPE2_ADERDG_GENERIC_H_
+#pragma once
 
 #include "tarch/la/Vector.h"
 #include "peano4/utils/Globals.h"
@@ -57,4 +56,3 @@ namespace exahype2 {
   }
 }
 
-#endif

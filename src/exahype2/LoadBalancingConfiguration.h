@@ -1,7 +1,6 @@
 // This file is part of the ExaHyPE2 project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
-#ifndef _EXAHYPE2_LOAD_BALANCING_CONFIGURATION_H_
-#define _EXAHYPE2_LOAD_BALANCING_CONFIGURATION_H_
+#pragma once
 
 
 #include "toolbox/loadbalancing/RecursiveSubdivision.h"
@@ -25,6 +24,15 @@ class exahype2::LoadBalancingConfiguration: public toolbox::loadbalancing::Recur
     const int      _maxNumberOfTrees;
     const int      _maxSizeOfDeployedRemoteMPITree;
   public:
+    /**
+     * @param minSizeOfTree If a partition (tree) is smaller than the given
+     *   number of cells, we do not split it up further. If you set this
+     *   argument to 0, you effectively set no threshold - Peano will try to
+     *   split any tree if it thinks it would improve the load balancing.
+     *
+     * @param maxNumberOfTrees Set the maximum number of trees (per rank).
+     *
+     */
     LoadBalancingConfiguration( double loadBalancingQuality=0.9, int minSizeOfTree = 0, int maxNumberOfTrees=std::numeric_limits<int>::max(), int maxSizeOfDeployedRemoteMPITree = std::numeric_limits<int>::max() );
 
     virtual ~LoadBalancingConfiguration() = default;
@@ -41,4 +49,3 @@ class exahype2::LoadBalancingConfiguration: public toolbox::loadbalancing::Recur
 };
 
 
-#endif

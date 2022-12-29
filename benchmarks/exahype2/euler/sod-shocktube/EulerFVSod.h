@@ -1,5 +1,4 @@
-#ifndef _benchmarks_exahype2_euler_sod_shocktube_EulerFVSod_H_
-#define _benchmarks_exahype2_euler_sod_shocktube_EulerFVSod_H_
+#pragma once
 
 #include "AbstractEulerFVSod.h"
 #include "tarch/logging/Log.h"
@@ -49,4 +48,3 @@ class benchmarks::exahype2::euler::sod_shocktube::EulerFVSod: public benchmarks:
       double * __restrict__ F // F[4]
     ) override;
 };
-#endif

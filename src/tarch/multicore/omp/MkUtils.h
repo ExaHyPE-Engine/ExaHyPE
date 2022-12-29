@@ -1,7 +1,6 @@
 // This file is part of the Peano project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
-#ifndef _TARCH_MULTICORE_OMP_MKUTILS_H_
-#define _TARCH_MULTICORE_OMP_MKUTILS_H_
+#pragma once
 
 #include "tarch/compiler/CompilerSpecificSettings.h"
 
@@ -31,4 +30,3 @@ void * mk_omp_get_mapped_ptr(const void * ptr, int device_num) {
 
 #endif // SharedOMP
 
-#endif // _TARCH_MULTICORE_OMP_MKUTILS_H_

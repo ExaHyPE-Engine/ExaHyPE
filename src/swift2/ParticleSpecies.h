@@ -68,7 +68,21 @@ class swift2::ParticleSpecies {
     double getMinVelocity() const;
     double getMaxVelocity() const;
 
+    /**
+     * Query species whether the last grid sweep/update sweep has to be
+     * repeated. This happens if the cut-off radius changes for example.
+     */
     bool rerunPreviousGridSweep() const;
+
+    /**
+     * Set the rerun flag back to false.
+     */
+    void clearRerunPreviousGridSweepFlag();
+
+    /**
+     * The rerun flag can only be activated. You cannot deactivate it.
+     */
+    void setRerunPreviousGridSweep();
 
     /**
      * Set both min and max time stamp.
@@ -103,4 +117,6 @@ class swift2::ParticleSpecies {
     void clearCutOffRadius();
     void clearVelocity();
     void clearTimeStampAndTimeStepSize();
+
+    void allReduce();
 };

@@ -177,7 +177,7 @@ Relaxation coefficient: {}
     self._data_model.generator.send_condition               = "true"
     self._data_model.generator.receive_and_merge_condition  = "true"
 
-    self._data_model._peano4_aspect.merge_implementation = """
+    self._data_model.peano4_mpi_and_storage_aspect.merge_implementation = """
   setResidual( getResidual() + neighbour.getResidual() );
 """    
     

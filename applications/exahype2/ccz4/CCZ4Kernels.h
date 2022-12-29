@@ -1,8 +1,7 @@
 //
 // ExaHyPE2 CCZ4 implementation
 //
-#ifndef _APPLICATIONS_EXAHYPE2_CCZ4_CCZ4KERNELS_H_
-#define _APPLICATIONS_EXAHYPE2_CCZ4_CCZ4KERNELS_H_
+#pragma once
 
 
 #include <cmath>
@@ -135,5 +134,4 @@ namespace applications {
 #include "CCZ4Kernels.cpph"
 
 
-#endif
 

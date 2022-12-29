@@ -9,6 +9,7 @@ import os
 import sys
 
 from swift2.particle.Particle         import Particle
+from swift2.actionsets.DynamicMeshRefinementAnalysis import DynamicMeshRefinementAnalysis
 from swift2.graphcompiler.Sequential  import serialise_and_map_onto_separate_mesh_traversals
 from swift2.output.SWIFTMain          import SWIFTMain
 
@@ -53,8 +54,6 @@ class Project(object):
     self._executable_name = executable
     self._periodic_BC   = [False, False, False]
     self._output_path   = "./"
-    self._min_h         = 0.01
-    self._max_h         = 0.1
 
     self._particle_species     = []
     self._particle_species_set = []
@@ -118,6 +117,12 @@ class Project(object):
     self._build_mode          = mode
 
 
+  def __compute_global_max_h(self):
+    self._global_max_h = 0.0
+    for current_species_set in self._particle_species_set:
+      self._global_max_h = max( self._global_max_h, current_species_set.particle_model.max_h )
+  
+
   def __export_constants(self):
     """
     
@@ -149,9 +154,7 @@ class Project(object):
     self._project.constants.export( "TimeInBetweenPlots", str(self._time_in_between_plots) )
     self._project.constants.export( "PlotterPrecision", str(self._plotter_precision) )
     self._project.constants.export_boolean_sequence( "PeriodicBC", self._periodic_BC )
-    
-    self._project.constants.export( "MaxH", str(self._max_h) )
-    self._project.constants.export( "MinH", str(self._min_h) )
+    self._project.constants.export( "GlobalMaxH", str(self._global_max_h) )
 
     build_string = "python3 "
     for i in sys.argv:
@@ -184,14 +187,14 @@ citation of the original SWIFT paper
 
   def set_global_simulation_parameters(self,
                                        dimensions,
-                                       offset,size,
-                                       max_h,min_h,
+                                       offset,
+                                       domain_size,
                                        min_end_time,
+                                       max_end_time,
                                        first_plot_time_stamp,
                                        time_in_between_plots, 
-                                       periodic_BC = [False, False, False], 
-                                       plotter_precision=5,
-                                       max_end_time=0.0,
+                                       periodic_BC       = [False, False, False], 
+                                       plotter_precision = 5,
                                        ):
     """
     
@@ -210,11 +213,8 @@ citation of the original SWIFT paper
         most advanced cell exceeds this threshold.
       
     """
-    assert max_h>=min_h
-    self._max_h         = max_h
-    self._min_h         = min_h
     self._domain_offset = offset
-    self._domain_size   = size
+    self._domain_size   = domain_size
     self._dimensions    = dimensions
     self._max_terminal_time = max_end_time
     self._min_terminal_time = min_end_time
@@ -308,6 +308,7 @@ citation of the original SWIFT paper
        might have started a resort yet might not have finished it.
      - Add all the algorithmic steps, including the default ones, to
        the project.
+
        
     ## Particle initialisation and proper sorting
     
@@ -321,7 +322,8 @@ citation of the original SWIFT paper
     we realise the initialisation in two steps.
      
     """
-    self.__generate_global_state_files();
+    self.__generate_global_state_files()
+    self.__compute_global_max_h()
 
     ## Make pre-defined mesh traversals resort the particles. For this, they need 
     ## species set into
@@ -329,6 +331,7 @@ citation of the original SWIFT paper
       self.algorithm_step_plot.add_action_set(peano4.toolbox.particles.UpdateParticleGridAssociation(current_species_set),False)
       self.algorithm_step_init.add_action_set(peano4.toolbox.particles.UpdateParticleGridAssociation(current_species_set),False)
       self.algorithm_step_sort.add_action_set(peano4.toolbox.particles.UpdateParticleGridAssociation(current_species_set),False)
+      
       self.algorithm_step_plot.add_action_set(peano4.toolbox.particles.UpdateParallelState(current_species_set),False)
       self.algorithm_step_init.add_action_set(peano4.toolbox.particles.UpdateParallelState(current_species_set),False)
       self.algorithm_step_sort.add_action_set(peano4.toolbox.particles.UpdateParallelState(current_species_set),False)
@@ -338,6 +341,8 @@ citation of the original SWIFT paper
 
     ## Make each solver step (incl predefined ones) use the particles and particle sets
     for current_species_set in self._particle_species_set:
+      cell_marker_for_statistics = DynamicMeshRefinementAnalysis.create_cell_marker(current_species_set.name)
+      
       self._project.datamodel.add_global_object(current_species_set.particle_model)
       self._project.datamodel.add_vertex(current_species_set)
 
@@ -345,8 +350,20 @@ citation of the original SWIFT paper
       self.algorithm_step_init.use_vertex(current_species_set)
       self.algorithm_step_sort.use_vertex(current_species_set)
       self.algorithm_step_plot.use_vertex(current_species_set)
+
+      # Enable cell statistics for this species
+      self._project.datamodel.add_cell(cell_marker_for_statistics)   
+      
+      # Add cell statistics to these action steps
+      self._algorithm_step_create_grid.use_cell(cell_marker_for_statistics)
+      self.algorithm_step_init.use_cell(cell_marker_for_statistics)
+      self.algorithm_step_sort.use_cell(cell_marker_for_statistics)
+      self.algorithm_step_plot.use_cell(cell_marker_for_statistics)
       for solverstep in solversteps:
         solverstep.use_vertex(current_species_set)
+        solverstep.use_cell(cell_marker_for_statistics)
+
+    self._algorithm_step_create_grid.add_action_set(peano4.toolbox.CreateRegularGrid(self._global_max_h),False)
      
     self._project.solversteps.add_step(self._algorithm_step_create_grid)
     self._project.solversteps.add_step(self.algorithm_step_init)

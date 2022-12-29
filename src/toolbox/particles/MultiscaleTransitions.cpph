@@ -7,6 +7,8 @@ toolbox::particles::ParticleReassociationInstruction toolbox::particles::getPart
   const peano4::datamanagement::CellMarker  marker,
   int                                       numberOfVertexWithinCell
 ) {
+  static tarch::logging::Log _log( "toolbox::particles" );
+
   if (
     not marker.isContained(particle.getX())
     or
@@ -29,14 +31,14 @@ toolbox::particles::ParticleReassociationInstruction toolbox::particles::getPart
       return ParticleReassociationInstruction_Keep;
     }
     else if (remainsOnSameLevel) {
-      logDebug( "touchCellLastTime(...)", "reassign particle " << (*p)->toString() << " in tree " << _treeNumber << " within cell " << marker.toString() << " which had been associated with vertex " << i << " but belongs to " << destAssociation );
+      logDebug( "getParticleReassociationInstructionWithinCellWithIntraCellReassignment(...)", "reassign particle " << particle.toString() << " within cell " << marker.toString() << " which had been associated with vertex " << currentAssociation << " but belongs to " << destAssociation );
       return destAssociation.to_ulong();
     }
     else if ( not marker.isParentLocal() ) {
       return ParticleReassociationInstruction_SieveGlobally;
     }
     else {
-      logDebug( "touchCellLastTime(...)", "lift particle " << (*p)->toString() << " in tree " << _treeNumber << " from cell " << marker.toString() << " as difference is " << ((*p)->getX() - marker.x()) );
+      logDebug( "getParticleReassociationInstructionWithinCellWithIntraCellReassignment(...)", "lift particle " << particle.toString() << " from cell " << marker.toString() << " as difference is " << (particle.getX() - marker.x()) );
       return destAssociation.to_ulong() + TwoPowerD;
     }
   }
@@ -92,3 +94,29 @@ std::bitset<Dimensions>  toolbox::particles::getParticleAssociationWithinCell(
 
   return destAssociation;
 }
+
+
+
+template <typename Particle>
+bool toolbox::particles::sieveParticle(
+  const Particle&                             particle,
+  const peano4::datamanagement::VertexMarker  marker
+) {
+  const double sortingTolerance = 1.01;
+
+  const bool   fitsIntoThisGridResolution      = tarch::la::min( marker.h() )     >= 2.0 * particle.getCutOffRadius();
+  const bool   fitsIntoNextFinerGridResolution = tarch::la::min( marker.h() )/3.0 >= 2.0 * particle.getCutOffRadius();
+
+  return
+      marker.isContainedInAdjacentCells( particle.getX(), 0.5 * sortingTolerance)
+      and
+      fitsIntoThisGridResolution
+      and
+      (
+        not fitsIntoNextFinerGridResolution
+        or
+        not marker.hasBeenRefined()
+      );
+}
+
+
