@@ -87,7 +87,9 @@ class UpdateParallelState(ActionSet):
 // run over all adjacent vertices
 for (int i=0; i<TwoPowerD; i++) {
   for (auto* p: fineGridVertices{{PARTICLES_CONTAINER}}(i) ) {
-    if ( marker.isContained(p->getX()) ) {
+    if ( 
+      marker.isContained(p->getX(), toolbox::particles::relativeSpatialSortingTolerance(marker) * tarch::la::NUMERICAL_ZERO_DIFFERENCE )
+    ) {
       p->setNewParallelState( globaldata::{{PARTICLE}}::NewParallelState::Local );
     }
   }
@@ -187,6 +189,8 @@ while ( p!=fineGridVertex{{PARTICLES_CONTAINER}}.end() ) {
   def get_includes(self):
     result = jinja2.Template( """
 #include "tarch/multicore/Lock.h"
+#include "toolbox/particles/MultiscaleTransitions.h"
+
 #include "vertexdata/{{PARTICLES_CONTAINER}}.h"
 #include "globaldata/{{PARTICLE}}.h"
 """ )

@@ -1,16 +1,19 @@
 #include "tarch/la/VectorOperations.h"
 
+#include "peano4/datamanagement/CellMarker.h"
+#include "peano4/datamanagement/VertexMarker.h"
+
 
 template <typename Particle>
 toolbox::particles::ParticleReassociationInstruction toolbox::particles::getParticleReassociationInstructionWithinCellWithIntraCellReassignment(
-  const Particle&                           particle,
-  const peano4::datamanagement::CellMarker  marker,
-  int                                       numberOfVertexWithinCell
+  const Particle&                            particle,
+  const peano4::datamanagement::CellMarker&  marker,
+  int                                        numberOfVertexWithinCell
 ) {
   static tarch::logging::Log _log( "toolbox::particles" );
 
   if (
-    not marker.isContained(particle.getX())
+    not marker.isContained(particle.getX(), relativeSpatialSortingTolerance(marker) * tarch::la::NUMERICAL_ZERO_DIFFERENCE)
     or
     particle.getParallelState()!=Particle::ParallelState::Local
   ) {
@@ -19,12 +22,12 @@ toolbox::particles::ParticleReassociationInstruction toolbox::particles::getPart
   else {
     std::bitset<Dimensions> currentAssociation = numberOfVertexWithinCell;
     std::bitset<Dimensions> destAssociation;
-    bool                    remainsOnSameLevel = tarch::la::min(marker.h()) >= 2.0 * particle.getCutOffRadius();
+    bool                    remainsOnSameLevel = tarch::la::min(marker.h()) * MultilevelSortingTolerance >= 2.0 * particle.getCutOffRadius();
 
     // marker.x() gives me the centre of the cell
     for (int d=0; d<Dimensions; d++) {
       destAssociation[d]  = tarch::la::greaterEquals( particle.getX(d), marker.x()(d) );
-      remainsOnSameLevel &= tarch::la::smallerEquals( std::abs(particle.getX(d) - marker.x()(d)) * 1.5 * LiftingTolerance, marker.h()(d));
+      remainsOnSameLevel &= tarch::la::smallerEquals( std::abs(particle.getX(d) - marker.x()(d)), marker.h()(d) * MultilevelSortingTolerance);
     }
 
     if (remainsOnSameLevel and currentAssociation==destAssociation) {
@@ -51,24 +54,16 @@ toolbox::particles::ParticleReassociationInstruction toolbox::particles::liftPar
   const Particle&                             particle,
   const peano4::datamanagement::VertexMarker  marker
 ) {
-  double maxDistance = tarch::la::max( tarch::la::abs( particle.getX()-marker.x() ) );
-
   if (
     particle.getParallelState()!=Particle::ParallelState::Local
   ) {
     return ParticleReassociationInstruction_Keep;
   }
   else if (
-    tarch::la::min(marker.h()) >= 2.0 * particle.getCutOffRadius()
+    tarch::la::min(marker.h()) * MultilevelSortingTolerance >= 2.0 * particle.getCutOffRadius()
     and
-    tarch::la::smallerEquals( maxDistance, tarch::la::min(marker.h())/2.0 * LiftingTolerance )
+    marker.isContainedInAdjacentCells( particle.getX(), 0.5, relativeSpatialSortingTolerance(marker) * tarch::la::NUMERICAL_ZERO_DIFFERENCE)
   ) {
-    assertion2(
-      marker.isContainedInAdjacentCells(particle.getX(),0.5 * LiftingTolerance)
-      or
-      particle.getParallelState()!=Particle::ParallelState::Local,
-      marker.toString(), particle.toString()
-    );
     return ParticleReassociationInstruction_Keep;
   }
   else if ( not marker.isParentCellLocal() ) {
@@ -103,16 +98,14 @@ std::bitset<Dimensions>  toolbox::particles::getParticleAssociationWithinCell(
 
 template <typename Particle>
 bool toolbox::particles::sieveParticle(
-  const Particle&                             particle,
-  const peano4::datamanagement::VertexMarker  marker
+  const Particle&                              particle,
+  const peano4::datamanagement::VertexMarker&  marker
 ) {
-  assertion( ReassignmentTolerance<LiftingTolerance );
-
-  const bool   fitsIntoThisGridResolution      = tarch::la::min( marker.h() )     >= 2.0 * particle.getCutOffRadius();
-  const bool   fitsIntoNextFinerGridResolution = tarch::la::min( marker.h() )/3.0 >  2.0 * particle.getCutOffRadius() * DroppingTolerance;
+  const bool   fitsIntoThisGridResolution      = tarch::la::min( marker.h() )     * MultilevelSortingTolerance * AsymmetricSortingDamping >= 2.0 * particle.getCutOffRadius();
+  const bool   fitsIntoNextFinerGridResolution = tarch::la::min( marker.h() )/3.0 >  2.0 * particle.getCutOffRadius();
 
   return
-      marker.isContainedInAdjacentCells( particle.getX(), 0.5 * ReassignmentTolerance)
+      marker.isContainedInAdjacentCells( particle.getX(), 0.5, relativeSpatialSortingTolerance(marker) * AsymmetricSortingDamping * tarch::la::NUMERICAL_ZERO_DIFFERENCE)
       and
       fitsIntoThisGridResolution
       and
@@ -121,6 +114,90 @@ bool toolbox::particles::sieveParticle(
         or
         not marker.hasBeenRefined()
       );
+}
+
+
+template <typename ParticleContainer>
+std::tuple<int, int> toolbox::particles::eliminateSpatialDuplicates(
+  ParticleContainer&   particleSet
+) {
+  static tarch::logging::Log _log( "toolbox::particles" );
+
+  int numberOfLocalEliminatedSpatialDuplicates   = 0;
+  int numberOfVirtualEliminatedSpatialDuplicates = 0;
+
+  auto p = particleSet.begin();
+  while (p!=particleSet.end()) {
+    bool foundDuplicate = false;
+
+    auto pp = p;
+    pp++;
+    while (
+      pp!=particleSet.end()
+      and
+      not foundDuplicate
+    ) {
+      if (
+        tarch::la::equals( (*p)->getX(), (*pp)->getX(), SpatialDuplicateTolerance )
+      ) {
+        logDebug( "eliminateSpatialDuplicates()", "found duplicates p=" << (*p)->toString() << " and pp=" << (*pp)->toString() );
+        foundDuplicate = true;
+      }
+      else {
+        pp++;
+      }
+    }
+
+    if (foundDuplicate) {
+      assertion( (*p)!=(*pp) );
+
+      // bias to eliminate virtual particles
+      if (
+        (*p)->getParallelState()==std::remove_pointer<typename ParticleContainer::value_type>::type::ParallelState::Local
+        and
+        (*pp)->getParallelState()==std::remove_pointer<typename ParticleContainer::value_type>::type::ParallelState::Local
+      ) {
+        logWarning( "eliminateSpatialDuplicates()", "particle " << (*pp)->toString() << " found twice as local in domain" );
+
+        delete *p;
+        particleSet.erase(p);
+
+        numberOfLocalEliminatedSpatialDuplicates++;
+      }
+      else if ( (*p)->getParallelState()==std::remove_pointer<typename ParticleContainer::value_type>::type::ParallelState::Virtual ) {
+        delete *p;
+        particleSet.erase(p);
+
+        numberOfVirtualEliminatedSpatialDuplicates++;
+      }
+      else {
+        delete *pp;
+        particleSet.erase(pp);
+
+        numberOfVirtualEliminatedSpatialDuplicates++;
+      }
+
+      p = particleSet.begin(); // if we delete something, we might corrupt the whole container, so
+                         // better start from scratch.
+    }
+    else {
+      p++;
+    }
+  }
+
+  return {numberOfLocalEliminatedSpatialDuplicates,numberOfVirtualEliminatedSpatialDuplicates};
+}
+
+
+template <typename Particle>
+bool toolbox::particles::dropParticle(
+  const Particle&                              particle,
+  const peano4::datamanagement::VertexMarker&  marker
+) {
+  return
+    tarch::la::min( marker.h() ) > 2.0 * particle.getCutOffRadius()
+    and
+    marker.isContainedInAdjacentCells( particle.getX(), 0.5, relativeSpatialSortingTolerance(marker) * AsymmetricSortingDamping  * tarch::la::NUMERICAL_ZERO_DIFFERENCE);
 }
 
 
