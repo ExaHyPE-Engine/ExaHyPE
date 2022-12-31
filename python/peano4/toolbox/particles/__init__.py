@@ -13,7 +13,9 @@ from .ParticlePerCellUpdate         import ParticlePerCellUpdate
 from .ParticleTreeAnalysis          import create_cell_marker
 from .ParticleTreeAnalysis          import ParticleTreeAnalysis
 
-from .UpdateParticleGridAssociation import UpdateParticleGridAssociation
+from .UpdateParticleGridAssociation_Reassign import UpdateParticleGridAssociation_Reassign
+from .UpdateParticleGridAssociation_LiftDrop import UpdateParticleGridAssociation_LiftDrop
+
 from .UpdateParallelState           import UpdateParallelState
 
 from .InsertRandomParticlesIntoUnrefinedCells               import InsertRandomParticlesIntoUnrefinedCells
