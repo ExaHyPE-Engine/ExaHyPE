@@ -47,7 +47,8 @@
 
       static int _SieveReductionTag;
 
-      static tarch::multicore::BooleanSemaphore   _semaphore;
+      static tarch::multicore::BooleanSemaphore   _statisticsSemaphore;
+      static tarch::multicore::BooleanSemaphore   _particlesThatCanNotBeLiftedWithinTheirTreeSemaphore;
 
       static {{CLASSNAME}}     _particlesThatCanNotBeLiftedWithinTheirTree;
       static {{CLASSNAME}}     _particlesThatHaveToBeSieved;
@@ -198,21 +199,8 @@
        * tell us about a particle (some of them have virtual copies, some have
        * local ones). In this case, we however only check the virtual particles.
        * Those are the bad guys.
-       *
-       * If I check all particles, then I can simply run through the list and
-       * check all the particles that are still to come if they are at the
-       * same position. If I only check virtual particles, then I have to invest
-       * slightly more work. Then I have to run over all particles, as I only
-       * want to eliminate virtual particles and not their non-virtual
-       * counterparts.
-       *
-       * @return Number of eliminated particles
-       *
-       * @param sortingTolerance I call it sorting tolerance, as I recommend to
-       *   use the same as for the lifts and drops
        */
-      void eliminateSpatialDuplicates(double sortingTolerance);
-
+      void eliminateSpatialDuplicates();
 
       #ifdef Parallel
       static void initDatatype();
@@ -308,6 +296,24 @@
        * receiver side.
        *
        * The routine equals a shallow copy or move semantically.
+       *
+       *
+       * ## MPI
+       *
+       * Each rank will assemble its own set of particles within
+       * _particlesThatCanNotBeLiftedWithinTheirTree. These rank-local lists
+       * have to be consolidated (all reduce) after each step. This reduction
+       * is done within finishedTraversal(). It is hence important that
+       * finishedTraversal() is called on the set after each grid sweep which
+       * might lift particles. Otherwise, the subsequent sweep cannot sieve
+       * the particles correctly.
+       *
+       *
+       * ## Thread safety
+       *
+       * As we add particles to the static field _particlesThatCanNotBeLiftedWithinTheirTree,
+       * we have to protect any additional via a semaphore. As we do so, the
+       * routine is thread safe.
        */
       static void particleCanNotBeLiftedLocally( globaldata::{{PARTICLE_TYPE}}* particle );
 
@@ -324,7 +330,24 @@
        * so far. The new parallel state is not altered, as this is the job of
        * the action set UpdateParallelSet.
        *
+       *
+       * ## Thread safety
+       *
+       * This routine is not static, i.e. we assume it works on a thread-local
+       * list of particles. This thread-local list is typically constructed as
+       * deep copy of the global sieve list. getSievedParticlesForNextGridTraversal()
+       * provides these deep copy semantics. Since we work with a copy of the
+       * global particles per thread, there's no need to add semaphores. We are
+       * inherently thread-safe. However, we have to delete all left-over
+       * particles which have not been sieved by a local thread. As the list
+       * had been a deep copy, we'd otherwise create a memory leak.
+       *
+       *
+       * @see getSievedParticlesForNextGridTraversal() for the deep copy and the
+       *   roll-over of particles that cannot be lifted into particles that have
+       *   to be sieved.
        * @see ::toolbox::particles::sieveParticle() for the sieve logic.
+       * @see deleteParticles() for the deletion of deep copies.
        */
       {{NAMESPACE | join("::")}}::{{CLASSNAME}}  getParticlesToBeSievedIntoVertex(
         const peano4::datamanagement::VertexMarker&  marker
