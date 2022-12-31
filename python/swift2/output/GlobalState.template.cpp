@@ -101,6 +101,11 @@ void startIntermediateStep() {
 
 
 void startInitialisationStep() {
+  {% for PARTICLE in PARTICLE_SPECIES -%}
+  vertexdata::{{PARTICLE}}Set::clearReassignmentStatistics();
+  vertexdata::{{PARTICLE}}Set::clearParticleStateStatistics();
+  {%- endfor %}
+
   if (not ::swift2::commandlinesettings::enableDynamicLoadBalancing() ) {
     loadBalancer.enable(false);
   }
@@ -108,6 +113,10 @@ void startInitialisationStep() {
 
 
 void startSortingStep() {
+  {% for PARTICLE in PARTICLE_SPECIES -%}
+  vertexdata::{{PARTICLE}}Set::clearReassignmentStatistics();
+  vertexdata::{{PARTICLE}}Set::clearParticleStateStatistics();
+  {%- endfor %}
 }
 
 
@@ -163,6 +172,7 @@ void finishGridConstructionStep() {
 void finishInitialisationStep() {
   {% for PARTICLE in PARTICLE_SPECIES -%}
   vertexdata::{{PARTICLE}}Set::finishedTraversal();
+  vertexdata::{{PARTICLE}}Set::reduceAndPrintStatistics();
   {%- endfor %}
 
   loadBalancer.finishStep();
@@ -172,6 +182,7 @@ void finishInitialisationStep() {
 void finishSortingStep() {
   {% for PARTICLE in PARTICLE_SPECIES -%}
   vertexdata::{{PARTICLE}}Set::finishedTraversal();
+  vertexdata::{{PARTICLE}}Set::reduceAndPrintStatistics();
   {%- endfor %}
 
   loadBalancer.finishStep();

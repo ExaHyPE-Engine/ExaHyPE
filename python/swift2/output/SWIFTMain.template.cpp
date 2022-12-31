@@ -99,9 +99,22 @@ bool {{NAMESPACE | join("::")}}::selectNextAlgorithmicStep() {
 
     if (
       tarch::la::max( peano4::parallel::SpacetreeSet::getInstance().getGridStatistics().getMinH() ) < GlobalMaxH
-      or // not sure if this should be and
+    ) {
+      logInfo(
+        "selectNextAlgorithmicStep()",
+        "h_min=" << tarch::la::max( peano4::parallel::SpacetreeSet::getInstance().getGridStatistics().getMinH() ) <<
+        ", which his smaller than global h_max=" << GlobalMaxH <<
+        ". Stop grid construction"
+      );
+      gridConstructed = true;
+    }
+    if (
       peano4::parallel::SpacetreeSet::getInstance().getGridStatistics().getStationarySweeps()>5
     ) {
+      logInfo(
+        "selectNextAlgorithmicStep()",
+        "mesh has been stationary for more than 5 grid sweeps. Stop grid construction"
+      );
       gridConstructed = true;
     }
   }
