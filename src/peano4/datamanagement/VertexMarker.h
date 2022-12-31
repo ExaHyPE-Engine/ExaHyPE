@@ -181,7 +181,11 @@ struct peano4::datamanagement::VertexMarker {
      * we will get back a true. Indeed, the cubes are even slightly bigger due
      * to machine precision.
      */
-    bool isContainedInAdjacentCells( const tarch::la::Vector<Dimensions,double>& x, double scaleAdjacentCells = 1.0 ) const;
+    bool isContainedInAdjacentCells(
+      const tarch::la::Vector<Dimensions,double>&  x,
+      double                                       scaleAdjacentCells = 1.0,
+      double                                       tolerance          = tarch::la::NUMERICAL_ZERO_DIFFERENCE
+    ) const;
 
     /**
      * Each vertex is surrounded by @f$ 2^d @f$ cells. In reality,
