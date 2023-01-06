@@ -66,7 +66,7 @@ namespace {
     std::atomic<int>       spawnedTasks  = 0;
 
     for (auto& p: tasks) {
-      tarch::multicore::getHostSYCLQueue().submit([&,p](auto &h) {
+      tarch::multicore::getHostSYCLQueue().submit([&](auto &h) {
         h.host_task([&]() {
           spawnedTasks++;
 

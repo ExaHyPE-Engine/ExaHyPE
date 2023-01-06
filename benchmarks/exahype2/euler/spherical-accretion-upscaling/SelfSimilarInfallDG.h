@@ -9,7 +9,9 @@
 #pragma once
 
 #include "AbstractSelfSimilarInfallDG.h"
+
 #include "tarch/logging/Log.h"
+#include "tarch/accelerator/accelerator.h"
 
 #include "spherical-accretion/MassAccumulator.h"
 #include "spherical-accretion/GravityModel.h"
