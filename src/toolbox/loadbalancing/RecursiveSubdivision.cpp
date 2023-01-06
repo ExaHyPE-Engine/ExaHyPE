@@ -263,36 +263,7 @@ void toolbox::loadbalancing::RecursiveSubdivision::updateState() {
         or
         tarch::multicore::Core::getInstance().getNumberOfThreads()<=1
       ) {
-        _state = State::InterRankBalancing;
-        // @todo Debug
-        logInfo( "updateState()", "switch to state " << toString(_state) );
-      }
-      break;
-    case State::InterRankBalancing:
-      {
-        if (
-          tarch::mpi::Rank::getInstance().getNumberOfRanks()<=1
-          or
-          !hasSplitRecently()
-        ) {
-          _state = State::APosterioriBalancingPerRank;
-          // @todo Debug
-          logInfo( "updateState()", "switch to state " << toString(_state) );
-        }
-      }
-      break;
-    case State::APosterioriBalancingPerRank:
-      {
-        if (
-          getWeightOfHeaviestLocalSpacetree()==-1
-          or
-          tarch::multicore::Core::getInstance().getNumberOfThreads()<=1
-         ) {
-          _state = State::Stagnation;
-        }
-        else {
-          _state = State::WaitForRoundRobinToken;
-        }
+        _state = State::WaitForRoundRobinToken;
         // @todo Debug
         logInfo( "updateState()", "switch to state " << toString(_state) );
       }
@@ -303,7 +274,36 @@ void toolbox::loadbalancing::RecursiveSubdivision::updateState() {
         _roundRobinToken = _roundRobinToken % tarch::mpi::Rank::getInstance().getNumberOfRanks();
 
         if (_roundRobinToken==tarch::mpi::Rank::getInstance().getRank()) {
-          _state = State::APosterioriBalancingPerRank;
+          _state = State::InterRankBalancing;
+          // @todo Debug
+          logInfo( "updateState()", "switch to state " << toString(_state) );
+        }
+      }
+      break;
+    case State::InterRankBalancing:
+      {
+        if (
+          tarch::mpi::Rank::getInstance().getNumberOfRanks()<=1
+          or
+          !hasSplitRecently()
+        ) {
+          _state = State::IntraRankBalancing;
+          // @todo Debug
+          logInfo( "updateState()", "switch to state " << toString(_state) );
+        }
+        else {
+          _state = State::WaitForRoundRobinToken;
+        }
+      }
+      break;
+    case State::IntraRankBalancing:
+      {
+        if (
+          getWeightOfHeaviestLocalSpacetree()==-1
+          or
+          tarch::multicore::Core::getInstance().getNumberOfThreads()<=1
+         ) {
+          _state = State::Stagnation;
           // @todo Debug
           logInfo( "updateState()", "switch to state " << toString(_state) );
         }
@@ -433,7 +433,7 @@ toolbox::loadbalancing::RecursiveSubdivision::Action toolbox::loadbalancing::Rec
         return Action::None;
       }
       break;
-    case State::APosterioriBalancingPerRank:
+    case State::IntraRankBalancing:
       {
         // =================================
         // A posteriori intra-rank balancing
@@ -527,8 +527,8 @@ std::string toolbox::loadbalancing::RecursiveSubdivision::toString( State state 
       return "intra-rank-distribution";
     case State::InterRankBalancing:
       return "inter-rank-balancing";
-    case State::APosterioriBalancingPerRank:
-      return "a-posteriori-balancing-per-rank";
+    case State::IntraRankBalancing:
+      return "intra-rank-balancing";
     case State::WaitForRoundRobinToken:
       return "wait-for-round-robin";
     case State::Stagnation:

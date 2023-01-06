@@ -139,7 +139,7 @@ class toolbox::loadbalancing::RecursiveSubdivision {
        * ranks and now spawns more partitions per rank to increase the per-rank
        * concurrency.
        */
-      APosterioriBalancingPerRank,
+      IntraRankBalancing,
 
       /**
        * You usually don't get this state when we query the configuration, i.e.

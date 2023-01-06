@@ -18,7 +18,7 @@ int exahype2::LoadBalancingConfiguration::getMaxLocalTreesPerRank(toolbox::loadb
   if (
     state==toolbox::loadbalancing::RecursiveSubdivision::State::IntraRankDistribution
     or
-    state==toolbox::loadbalancing::RecursiveSubdivision::State::APosterioriBalancingPerRank
+    state==toolbox::loadbalancing::RecursiveSubdivision::State::IntraRankBalancing
   ) {
     return _maxNumberOfTrees;
   }
@@ -37,7 +37,7 @@ int exahype2::LoadBalancingConfiguration::getMinTreeSize(toolbox::loadbalancing:
   if (
     state==toolbox::loadbalancing::RecursiveSubdivision::State::InterRankBalancing
     or
-    state==toolbox::loadbalancing::RecursiveSubdivision::State::APosterioriBalancingPerRank
+    state==toolbox::loadbalancing::RecursiveSubdivision::State::IntraRankBalancing
   ) {
     return 0;
   }
