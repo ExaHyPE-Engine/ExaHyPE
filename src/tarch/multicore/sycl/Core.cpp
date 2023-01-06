@@ -52,14 +52,15 @@ sycl::queue& tarch::multicore::getHostSYCLQueue() {
  * the host available for task "offloading".
  */
 tarch::multicore::Core::Core():
-  _numberOfThreads( 0 ) {
+  _numberOfThreads( hostSyclQueue.get_device().get_info<sycl::info::device::max_compute_units>() ) {
+  internal::configureInternalTaskQueues(_numberOfThreads);
 
   #if PeanoDebug>0
-  std::cout << "host (CPU) device queue:" << hostSyclQueue.get_device().get_info<sycl::info::device::name>() << std::endl;
+  std::cout << "host (CPU) device queue:" << hostSyclQueue.get_device().get_info<sycl::info::device::name>()
+            << " with " << _numberOfThreads << " threads" << std::endl;
   #endif
 
-  internal::configureInternalTaskQueues(_numberOfThreads);
-  _numberOfThreads = hostSyclQueue.get_device().get_info<sycl::info::device::max_compute_units>();
+  assertion(_numberOfThreads>0);
 }
 
 
@@ -74,8 +75,10 @@ tarch::multicore::Core& tarch::multicore::Core::getInstance() {
 
 
 void tarch::multicore::Core::configure( int numberOfThreads ) {
-  if ( numberOfThreads!=_numberOfThreads) {
-    logWarning( "configure(int)", "can not reconfigure number of threads within SYCL queue. Will work with " << numberOfThreads << " logical threads within host queue having " << _numberOfThreads << " threads" );
+  if ( numberOfThreads!=tarch::multicore::Core::UseDefaultNumberOfThreads ) {
+    if ( numberOfThreads!=_numberOfThreads ) {
+      logWarning( "configure(int)", "can not reconfigure number of threads within SYCL queue. Will work with " << numberOfThreads << " logical threads within host queue having " << _numberOfThreads << " threads" );
+    }
     _numberOfThreads = numberOfThreads;
   }
 }
@@ -91,6 +94,7 @@ bool tarch::multicore::Core::isInitialised() const {
 
 
 int tarch::multicore::Core::getNumberOfThreads() const {
+  assertion(_numberOfThreads>0);
   return _numberOfThreads;
 }
 
@@ -106,7 +110,7 @@ int tarch::multicore::Core::getCoreNumber() const {
 
 
 int tarch::multicore::Core::getThreadNumber() const {
-  return -1;
+  return 0;
 }
 
 

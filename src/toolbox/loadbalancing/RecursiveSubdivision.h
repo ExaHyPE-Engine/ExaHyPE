@@ -114,21 +114,74 @@ namespace toolbox {
  */
 class toolbox::loadbalancing::RecursiveSubdivision {
   public:
+    enum class State {
+      /**
+       * Code has not yet spread out over all ranks but would like to do so
+       * now.
+       */
+      InterRankDistribution,
+
+      /**
+       * Code has spread over all ranks, but it has not spread over all cores
+       * yet, i.e. there's around one tree per rank and that's it w.r.t. the
+       * global decomposition.
+       */
+      IntraRankDistribution,
+
+      /**
+       * We have completed the first two phases and try to balance between the
+       * ranks now to meet the load balancing quality.
+       */
+      InterRankBalancing,
+
+      /**
+       * The code is satisfied with the load balancing quality between the
+       * ranks and now spawns more partitions per rank to increase the per-rank
+       * concurrency.
+       */
+      APosterioriBalancingPerRank,
+
+      /**
+       * You usually don't get this state when we query the configuration, i.e.
+       * if the lb on a rank is in this state, then it will not ask the
+       * configuration.
+       */
+      WaitForRoundRobinToken,
+
+      /**
+       * You usually don't get this state when we query the configuration, i.e.
+       * if the lb on a rank is in this state, then it will not ask the
+       * configuration.
+       */
+      Stagnation,
+
+      /**
+       * You usually don't get this state when we query the configuration, i.e.
+       * if the lb on a rank is in this state, then it will not ask the
+       * configuration.
+       */
+      SwitchedOff
+    };
+
+    static std::string toString( State state);
+
     /**
-     * @see getStrategyStep()
+     * @see getAction()
      */
-    enum class StrategyStep {
+    enum class Action {
       /**
        * Required for the strategy.
        */
       Unspecified,
-      Wait,
+      None,
       SpreadEquallyOverAllRanks,
       SplitHeaviestLocalTreeMultipleTimes_UseLocalRank_UseRecursivePartitioning,
       SplitHeaviestLocalTreeOnce_UseAllRanks_UseRecursivePartitioning,
       SplitHeaviestLocalTreeOnce_DontUseLocalRank_UseRecursivePartitioning,
       SplitHeaviestLocalTreeOnce_UseLocalRank_UseRecursivePartitioning
     };
+
+    static std::string toString( Action action );
 
     /**
      * Abstract interface to tweak the behaviour of the recursive subdivision.
@@ -142,34 +195,6 @@ class toolbox::loadbalancing::RecursiveSubdivision {
      */
     class Configuration {
       public:
-        enum class Phase {
-          /**
-           * Code has not yet spread out over all ranks but would like to do so
-           * now.
-           */
-          InitialInterRankDistribution,
-
-          /**
-           * Code has spread over all ranks, but it has not spread over all cores
-           * yet, i.e. there's around one tree per rank and that's it w.r.t. the
-           * global decomposition.
-           */
-          InitialIntraRankDistribution,
-
-          /**
-           * We have completed the first two phases and try to balance between the
-           * ranks now to meet the load balancing quality.
-           */
-          InterRankBalancing,
-
-          /**
-           * The code is satisfied with the load balancing quality between the
-           * ranks and now spawns more partitions per rank to increase the per-rank
-           * concurrency.
-           */
-          APosterioriBalancingPerRank
-        };
-
         virtual ~Configuration() = default;
 
         /**
@@ -177,7 +202,7 @@ class toolbox::loadbalancing::RecursiveSubdivision {
          * veto too many local splits. Each split creates some overhead, so it can
          * happen that we run out of memory.
          */
-        virtual bool   makeSplitDependOnMemory(Phase phase) = 0;
+        virtual bool   makeSplitDependOnMemory(State state) = 0;
 
         /**
          * Constraint on the number of trees per rank. The number is always
@@ -188,40 +213,40 @@ class toolbox::loadbalancing::RecursiveSubdivision {
          * number of subpartitions per rank. I however do recommend that you
          * return peano4::parallel::Node::MaxSpacetreesPerRank.
          */
-        virtual int    getMaxLocalTreesPerRank(Phase phase) = 0;
+        virtual int    getMaxLocalTreesPerRank(State state) = 0;
 
         /**
          * Control when to balance between ranks.
          */
-        virtual double getWorstCaseBalancingRatio(Phase phase) = 0;
+        virtual double getWorstCaseBalancingRatio(State state) = 0;
 
         /**
          * Minimum tree size.
          */
-        virtual int getMinTreeSize(Phase phase) = 0;
+        virtual int getMinTreeSize(State state) = 0;
 
-        virtual int getMaxTreeSize(Phase phsae) = 0;
+        virtual int getMaxTreeSize(State state) = 0;
     };
 
 
     class DefaultConfiguration: public Configuration {
-      bool makeSplitDependOnMemory(Phase phase) override {
+      bool makeSplitDependOnMemory(State state) override {
         return false;
       }
 
-      int getMaxLocalTreesPerRank(Phase phase) override {
+      int getMaxLocalTreesPerRank(State state) override {
         return peano4::parallel::Node::MaxSpacetreesPerRank;
       }
 
-      double getWorstCaseBalancingRatio(Phase phase) override {
+      double getWorstCaseBalancingRatio(State state) override {
         return 0.9;
       }
 
-      int getMinTreeSize(Phase phase) override {
+      int getMinTreeSize(State state) override {
         return 0;
       }
 
-      int getMaxTreeSize(Phase phsae) override {
+      int getMaxTreeSize(State state) override {
         return std::numeric_limits<int>::max();
       }
     };
@@ -287,13 +312,12 @@ class toolbox::loadbalancing::RecursiveSubdivision {
       int      _rank;
     };
 
-    static std::string toString( StrategyStep step );
-
     /**
      * Analyse current global situation and commit to a strategy. This routine
-     * analyses the rank state and returns an action.
+     * analyses the rank state and returns an action. Depending on what it recommends,
+     * it might also change the state. Therefore, the routine is not const.
      */
-    StrategyStep getStrategyStep() const;
+    Action getAction() const;
 
     static tarch::logging::Log  _log;
 
@@ -306,9 +330,6 @@ class toolbox::loadbalancing::RecursiveSubdivision {
      */
     std::map< int, int>    _blacklist;
     std::map< int, int>    _initialBlacklistWeight;
-
-
-    bool _hasSpreadOutOverAllRanks;
 
     /**
      * Status variable required to compute good load balancing. 
@@ -341,18 +362,7 @@ class toolbox::loadbalancing::RecursiveSubdivision {
 
     int _numberOfStateUpdatesWithoutAnySplit;
 
-    enum class StrategyState {
-      Standard,
-      WaitForRoundRobinToken,
-      PostponedDecisionDueToLackOfCells,
-      Stagnation
-    };
-
-    static std::string toString( StrategyState state );
-
-    StrategyState  _state;
-
-    bool _enabled;
+    State  _state;
 
     void updateGlobalView();
     
@@ -410,6 +420,14 @@ class toolbox::loadbalancing::RecursiveSubdivision {
      */
     void updateState();
 
+    /**
+     * Core actions where we take the action and translate it into action -
+     * what a pun.
+     *
+     * Please call this routine before you invoke updateState().
+     */
+    void updateLoadBalancing();
+
     bool isLocalBalancingBad() const;
 
     /**
@@ -423,7 +441,7 @@ class toolbox::loadbalancing::RecursiveSubdivision {
     /**
      * Ensure enough memory is left-over.
      */
-    bool fitsIntoMemory(Configuration::Phase phase) const;
+    bool fitsIntoMemory(State state) const;
 
     #ifdef Parallel
     MPI_Request*    _globalSumRequest;
