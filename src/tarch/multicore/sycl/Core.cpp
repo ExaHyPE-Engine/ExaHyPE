@@ -23,10 +23,21 @@
 #include <map>
 
 
+#pragma push_macro("Dimensions")
+#pragma push_macro("assertion")
+#undef Dimensions
+#undef assertion
+#include <CL/sycl.hpp>
+#pragma pop_macro("Dimensions")
+#pragma pop_macro("assertion")
+
+
 tarch::logging::Log tarch::multicore::Core::_log( "tarch::multicore::Core" );
 
 
 namespace {
+  //sycl::queue  hostSyclQueue( sycl::device(sycl::cpu_selector()) );
+  //sycl::queue  hostSyclQueue( sycl::cpu_selector_v() );
   sycl::queue  hostSyclQueue;
 }
 
@@ -43,9 +54,8 @@ sycl::queue& tarch::multicore::getHostSYCLQueue() {
 tarch::multicore::Core::Core():
   _numberOfThreads( 0 ) {
 
-  hostSyclQueue = sycl::device(sycl::cpu_selector());
   #if PeanoDebug>0
-  std::cout << "host (CPU) device queue:" << syclQueues[tarch::multicore::Core::HostDevice].get_device().get_info<sycl::info::device::name>() << std::endl;
+  std::cout << "host (CPU) device queue:" << hostSyclQueue.get_device().get_info<sycl::info::device::name>() << std::endl;
   #endif
 
   internal::configureInternalTaskQueues(_numberOfThreads);

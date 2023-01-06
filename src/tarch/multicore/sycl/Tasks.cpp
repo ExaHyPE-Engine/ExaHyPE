@@ -3,6 +3,7 @@
 #include "tarch/multicore/multicore.h"
 #include "tarch/multicore/Tasks.h"
 #include "tarch/multicore/Core.h"
+#include "tarch/multicore/sycl/Core.h"
 #include "tarch/multicore/BooleanSemaphore.h"
 #include "tarch/multicore/Lock.h"
 #include "tarch/services/ServiceRepository.h"
@@ -34,13 +35,13 @@ namespace {
     assertion( not tasks.empty() );
 
     for (auto& p: tasks) {
-      tarch::multicore::getSYCLQueue(tarch::multicore::Core::HostDevice).submit([&](auto &h) {
+      tarch::multicore::getHostSYCLQueue().submit([&](auto &h) {
         while (p->run()) {}
         delete p;
       });
     }
 
-    tarch::multicore::getSYCLQueue(tarch::multicore::Core::HostDevice).wait();
+    tarch::multicore::getHostSYCLQueue().wait();
   }
 
 
@@ -65,7 +66,7 @@ namespace {
     std::atomic<int>       spawnedTasks  = 0;
 
     for (auto& p: tasks) {
-      tarch::multicore::getSYCLQueue(tarch::multicore::Core::HostDevice).submit([&,p](auto &h) {
+      tarch::multicore::getHostSYCLQueue().submit([&,p](auto &h) {
         h.host_task([&]() {
           spawnedTasks++;
 
@@ -110,7 +111,7 @@ namespace {
 
     // @todo This is not nice. I don't want to wait for all events. I would like
     // to wait for BSP events only
-    tarch::multicore::getSYCLQueue(tarch::multicore::Core::HostDevice).wait();
+    tarch::multicore::getHostSYCLQueue().wait();
   }
 }
 
@@ -136,8 +137,7 @@ namespace {
 void tarch::multicore::native::spawnTask(Task*  job) {
   nonblockingTasksCounter++;
 
-  sycl::event e = tarch::multicore::getSYCLQueue(tarch::multicore::Core::HostDevice).submit([&](auto &h) {
-//    h.single_task([=]() {
+  sycl::event e = tarch::multicore::getHostSYCLQueue().submit([&](auto &h) {
     h.host_task([=]() {
       while (job->run()) {}
       delete job;
@@ -199,7 +199,7 @@ void tarch::multicore::native::processFusedTask(Task*  myTask, const std::list< 
 
 
 void tarch::multicore::native::deferRunningThreadAndContinueWithOtherTasks() {
-  tarch::multicore::getSYCLQueue(tarch::multicore::Core::HostDevice).wait();
+  tarch::multicore::getHostSYCLQueue().wait();
 }
 
 
