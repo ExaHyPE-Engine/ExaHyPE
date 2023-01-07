@@ -345,15 +345,11 @@ const double boundaryValue = 0.0;
      We plot if and only if we are asked to do so
      
     """
+    ## Add it. I can't harm to do one more iteration, and we at least
+    ## get the hanging nodes right this way
+    step.add_action_set( self._action_set_smoother )
     if self._plot:
-#      d = {}
-#      self._init_dictionary_with_default_parameters(d)
-#      self.add_entries_to_text_replacement_dictionary(d)
-
-      ## Add it. I can't harm to do one more iteration, and we at least
-      ## get the hanging nodes right this way
-      step.add_action_set( self._action_set_smoother )
-      step.add_action_set( peano4.toolbox.PlotScalarNodalFieldInPeanoBlockFormat( 
+      step.add_action_set( peano4.toolbox.PlotVertexDataInPeanoBlockFormat( 
         filename=output_path + "amr-marker-" + self._name, 
         vertex_unknown=self._data_model,
         getter="getU()", 

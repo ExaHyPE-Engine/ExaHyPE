@@ -28,7 +28,7 @@ parser.add_argument("-v",   "--verbose",            dest="verbose",        actio
 parser.add_argument("-m",   "--mode",               dest="mode",           choices=["release","stats","asserts"], required=True, help="Pick build type" )
 parser.add_argument("-t",   "--type",               dest="type",           choices=["plot-0","plot-1","plot-2","plot-3","reg-0"], required=True, help="Pick scenario" )
 parser.add_argument(        "--optimise-stateless", dest="optimise_stateless",            action="store_true", default=False, help="Optimise stateless/side-effect free cells (required for GPU offloading)")
-parser.add_argument("-s",   "--solver",             dest="solver",         choices=["fv-4", "fv-6", "fv-8", "dg1-rk1", "dg2-rk2", "dg3-rk3", "dg4-rk4", "fd4-rk1", "fd4-rk4"], required=True, help="Pick solver type. For the Finite Volume (fv) solvers, the second index is the patch/block size. For DG, you can pick different Runge-Kutta time integration orders" )
+parser.add_argument("-s",   "--solver",             dest="solver",         choices=["dg1-rk1", "dg2-rk2", "dg3-rk3", "dg4-rk4"], required=True, help="Pick solver type" )
 args = parser.parse_args()
 
 
@@ -90,12 +90,6 @@ elif "dg3-" in args.solver:
 elif "dg4-" in args.solver:
   max_h = baseline_max_h * 5
   min_h = baseline_min_h * 5
-elif "fd4-" in args.solver:
-  max_h = baseline_max_h
-  min_h = baseline_min_h
-elif "fv-" in args.solver:
-  max_h = baseline_max_h 
-  min_h = baseline_min_h 
 
 
 
@@ -113,68 +107,12 @@ if args.mode!="release":
   executable_name = executable_name + "-" + args.mode
 
 
-    
-if "fv" in args.solver:
-  patch_size = int(args.solver[-1])
-  thesolver = exahype2.solvers.fv.rusanov.GlobalAdaptiveTimeStepWithEnclaveTasking(name                 = solver_name + "FV", 
-                                                                                   patch_size           = patch_size,
-                                                                                   unknowns             = number_of_unknowns,
-                                                                                   auxiliary_variables  = auxiliary_variables,
-                                                                                   min_volume_h         = min_h, 
-                                                                                   max_volume_h         = max_h,
-                                                                                   time_step_relaxation = 0.1,
-                                                                                   flux                 = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
-                                                                                   eigenvalues          = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
-                                                                                   source_term          = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
-                                                                                   refinement_criterion = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
-                                                                                   pde_terms_without_state = args.optimise_stateless
-                                                                                  )
-  executable_name = executable_name + "-FV-" + str(patch_size)
-  
-  thesolver._action_set_postprocess_solution = exahype2.solvers.fv.actionsets.VolumeWisePostprocessSolution(thesolver)
-  thesolver._action_set_postprocess_solution.guard = """
-repositories::{{SOLVER_INSTANCE}}.isLastGridSweepOfTimeStep() 
-and 
-not repositories::{{SOLVER_INSTANCE}}.patchCanUseStatelessPDETerms(marker.x(), marker.h(), timeStamp, timeStepSize)
-"""
-  thesolver._action_set_postprocess_solution.add_postprocessing_kernel( """
-    repositories::{{SOLVER_INSTANCE}}.addDensity(volumeX,volumeH,value[0]);  
-  """     )
-if "fd4" in args.solver:
-  patch_size = 5
-  time_order = int(args.solver[6])
-  thesolver = exahype2.solvers.rkfd.fd4.GlobalAdaptiveTimeStep(name                 = solver_name + "FD4", 
-                                                               patch_size           = patch_size,
-                                                               rk_order             = time_order,
-                                                               unknowns             = number_of_unknowns,
-                                                               auxiliary_variables  = auxiliary_variables,
-                                                               min_meshcell_h       = min_h, 
-                                                               max_meshcell_h       = max_h,
-                                                               time_step_relaxation = 0.1,
-                                                               flux                 = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
-                                                               eigenvalues          = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
-                                                               source_term          = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
-                                                               refinement_criterion = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
-#                                                              pde_terms_without_state = args.optimise_stateless
-                                                               )
-  executable_name = executable_name + "-FD4-" + str(patch_size)
-  
-  thesolver._action_set_postprocess_solution = exahype2.solvers.rkfd.actionsets.CellWisePostprocessSolution(thesolver)
-  thesolver._action_set_postprocess_solution.guard = """
-repositories::{{SOLVER_INSTANCE}}.isLastGridSweepOfTimeStep() 
-//and 
-//not repositories::{{SOLVER_INSTANCE}}.patchCanUseStatelessPDETerms(marker.x(), marker.h(), timeStamp, timeStepSize)
-"""
-  thesolver._action_set_postprocess_solution.add_postprocessing_kernel( """
-    repositories::{{SOLVER_INSTANCE}}.addDensity(volumeX,volumeH,value[0]);  
-  """     )
 
-  exahype2.solvers.rkfd.fd4.switch_to_FD4_tensor_product_interpolation( thesolver, "TP_constant" ) 
-  exahype2.solvers.rkfd.fd4.switch_to_FD4_tensor_product_restriction(   thesolver, "TP_inject_normal_extrap" ) 
-if "rk" in args.solver and "dg" in args.solver:
-  space_order = int(args.solver[2])
-  time_order  = int(args.solver[6])
-  thesolver = exahype2.solvers.rkdg.rusanov.GlobalAdaptiveTimeStepWithEnclaveTasking(name                 = solver_name + "DG",
+space_order     = int(args.solver[2])
+time_order      = int(args.solver[6])
+executable_name = executable_name + "-RK" + str(time_order) + "DG" + str(space_order)
+
+dg_solver = exahype2.solvers.rkdg.rusanov.GlobalAdaptiveTimeStepWithEnclaveTasking(name                 = solver_name + "DG",
                                                                    rk_order             = time_order,
                                                                    polynomials          = exahype2.solvers.GaussLegendreBasis(space_order),
                                                                    face_projections     = exahype2.solvers.rkdg.FaceProjections.Solution,
@@ -189,27 +127,84 @@ if "rk" in args.solver and "dg" in args.solver:
                                                                    refinement_criterion = exahype2.solvers.rkdg.PDETerms.User_Defined_Implementation,
                                                                    pde_terms_without_state = args.optimise_stateless
                                                                    )
-  executable_name = executable_name + "-RK" + str(time_order) + "DG" + str(space_order)
 
-  thesolver._action_set_postprocess_solution = exahype2.solvers.rkdg.actionsets.DoFWisePostprocessSolution(thesolver)
-  thesolver._action_set_postprocess_solution.guard = """
+patch_size = 2*space_order+1
+
+fv_solver = exahype2.solvers.fv.rusanov.GlobalAdaptiveTimeStepWithEnclaveTasking(name                 = solver_name + "FV", 
+                                                                                 patch_size           = patch_size,
+                                                                                 unknowns             = number_of_unknowns,
+                                                                                 auxiliary_variables  = auxiliary_variables,
+                                                                                 min_volume_h         = min_h, 
+                                                                                 max_volume_h         = max_h,
+                                                                                 time_step_relaxation = 0.1,
+                                                                                 flux                 = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
+                                                                                 eigenvalues          = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
+                                                                                 source_term          = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
+                                                                                 refinement_criterion = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
+                                                                                 pde_terms_without_state = args.optimise_stateless
+                                                                                )
+
+#
+# Get the global data accumulation in place. We do this only for the FV solver, 
+# as we assume that the interesting stuff is all covered by the FV 
+# discretisation.
+#  
+fv_solver._action_set_postprocess_solution = exahype2.solvers.fv.actionsets.VolumeWisePostprocessSolution(fv_solver)
+fv_solver._action_set_postprocess_solution.guard = """
 repositories::{{SOLVER_INSTANCE}}.isLastGridSweepOfTimeStep() 
 and 
-not repositories::{{SOLVER_INSTANCE}}.cellCanUseStatelessPDETerms(marker.x(), marker.h(), timeStamp, timeStepSize)
+not repositories::{{SOLVER_INSTANCE}}.patchCanUseStatelessPDETerms(marker.x(), marker.h(), timeStamp, timeStepSize)
 """
-  thesolver._action_set_postprocess_solution.add_postprocessing_kernel( """
-    repositories::{{SOLVER_INSTANCE}}.addDensity(x, marker.h(), index, values[0]);  
+fv_solver._action_set_postprocess_solution.add_postprocessing_kernel( """
+    repositories::{{SOLVER_INSTANCE}}.addDensity(volumeX,volumeH,value[0]);  
   """     )
+
+#
+# Get the marker in place which switches between the solvers, i.e. lets the 
+# FV solver overrule the DG solver.
+#
+marker_solver = exahype2.solvers.elliptic.ConstrainedPoissonEquationOnCells(
+  name = "AlphaFV",
+  plot = True)
+
+
+#marker_name = "AlphaDG"
+#exahype2.exahype2.solvers.rkdg.coupling.PoissonEquationForMarker.augment_cell_label( dg_solver._cell_label, 
+#                                                                                       marker_name )
+#exahype2.exahype2.solvers.rkdg.coupling.PoissonEquationForMarker.augment_face_label( dg_solver._face_label, 
+#                                                                                       marker_name )
+#exahype2.exahype2.solvers.rkdg.coupling.PoissonEquationForMarker.augment_face_label_update_action_set( dg_solver._action_set_update_face_label,
+#                                                                                       marker_name )
+
+
+#fv_solver._cell_label.data.add_attribute(dastgen2.attributes.Double("AlphaFV"))
+#fv_solver._face_label.data.add_attribute(dastgen2.attributes.Double("AverageAlphaFV"))
+
+#dg_solver._cell_label.data.add_attribute(dastgen2.attributes.Double("AlphaDG"))
+#dg_solver._face_label.data.add_attribute(dastgen2.attributes.Double("AverageAlphaDG"))
+
+#dg_solver._action_set_postprocess_solution = exahype2.solvers.rkdg.actionsets.CellWisePostprocessSolution(fv_solver)
+#dg_solver._action_set_postprocess_solution.guard = """
+#repositories::{{SOLVER_INSTANCE}}.isLastGridSweepOfTimeStep() 
+#and 
+#not repositories::{{SOLVER_INSTANCE}}.patchCanUseStatelessPDETerms(marker.x(), marker.h(), timeStamp, timeStepSize)
+#"""
+#dg_solver._action_set_postprocess_solution.add_postprocessing_kernel( """
+#  Test
+#  """     )
 
 
 #
 # Configure plots and enable or disable dynamic AMR
 #
-thesolver.plot_description = "rho,j_x,j_y,j_z,E,aux"
+fv_solver.plot_description = "rho,j_x,j_y,j_z,E,aux"
+dg_solver.plot_description = "rho,j_x,j_y,j_z,E,aux"
 if "dyn" in args.type:
-  thesolver.add_solver_constants("static constexpr bool DynamicAMR = true;" )
+  fv_solver.add_solver_constants("static constexpr bool DynamicAMR = true;" )
+  dg_solver.add_solver_constants("static constexpr bool DynamicAMR = true;" )
 else:
-  thesolver.add_solver_constants("static constexpr bool DynamicAMR = false;" )
+  fv_solver.add_solver_constants("static constexpr bool DynamicAMR = false;" )
+  dg_solver.add_solver_constants("static constexpr bool DynamicAMR = false;" )
   
         
 #
@@ -217,7 +212,9 @@ else:
 # subdirectory). 
 #
 project = exahype2.Project( ["benchmarks", "exahype2", "euler", "sphericalaccretionupscaling"], "benchmark", ".", executable=executable_name )
-project.add_solver( thesolver )
+project.add_solver( dg_solver )
+project.add_solver( fv_solver )
+project.add_solver( marker_solver )
     
     
 #

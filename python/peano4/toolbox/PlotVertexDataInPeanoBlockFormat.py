@@ -5,11 +5,19 @@ from peano4.solversteps.ActionSet import ActionSet
 import jinja2
 
 
-class PlotScalarNodalFieldInPeanoBlockFormat(ActionSet):
+class PlotVertexDataInPeanoBlockFormat(ActionSet):
   NoMetaFile     = "no-meta-file"
   CountTimeSteps = "count-time-steps"
 
-  def __init__(self,filename,vertex_unknown,getter,description,time_stamp_evaluation, guard_predicate="true", additional_includes=""):
+  def __init__(self,
+               filename,
+               vertex_unknown,
+               getter,description,
+               time_stamp_evaluation, 
+               number_of_unknows_per_vertex=1,
+               guard_predicate="true", 
+               additional_includes=""
+               ):
     """
       Plot only the grid structure
       
@@ -33,12 +41,15 @@ class PlotScalarNodalFieldInPeanoBlockFormat(ActionSet):
         C++ expression returning a double. This is used to write the time series
         file for a series of snapshots. Pass in "0" if you solve a stationary 
         problem, e.g. 
-                              
+
+      number_of_unknows_per_vertex: Integer
+        Has to match to the getter.                        
     """
     self.d = {}
     self.d[ "FILENAME" ]            = filename
     self.d[ "VERTEX_UNKNOWN_NAME" ] = vertex_unknown.name
     self.d[ "GETTER" ]              = getter
+    self.d[ "NUMBER_OF_UNKNOWNS_PER_VERTEX" ]              = number_of_unknows_per_vertex
     self.d[ "DESCRIPTION" ]         = description
     self.d[ "TIMESTAMP" ]           = time_stamp_evaluation
     self.d[ "GUARD_PREDICATE" ]    = guard_predicate
@@ -146,7 +157,12 @@ if ( {{GUARD_PREDICATE}} ) {
   );    
   {% endif %}
     
-  _dataWriter = _writer->createVertexDataWriter( "{{VERTEX_UNKNOWN_NAME}}", 2, 1, "{{DESCRIPTION}}" );
+  _dataWriter = _writer->createVertexDataWriter( 
+    "{{VERTEX_UNKNOWN_NAME}}", 
+    2, // number of dofs per axis per cell
+    {{NUMBER_OF_UNKNOWNS_PER_VERTEX}},
+    "{{DESCRIPTION}}" 
+  );
 """
 
 
