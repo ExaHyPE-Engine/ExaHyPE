@@ -14,4 +14,4 @@ from .DynamicAMR                          import DynamicAMR
 from .PostprocessSolution                 import EmptyPostprocessSolution
 from .PostprocessSolution                 import DoFWisePostprocessSolution
 from .PostprocessSolution                 import CellWisePostprocessSolution
-
+from .PoissonEquationForMarker            import PoissonEquationForMarker
