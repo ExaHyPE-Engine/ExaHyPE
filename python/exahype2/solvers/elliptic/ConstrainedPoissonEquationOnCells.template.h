@@ -40,6 +40,7 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
     static constexpr double MaxAdmissibleCellH  = std::numeric_limits<double>::max();
     static constexpr double MinAdmissibleCellH  = 0.0;
 
+
     {{CLASSNAME}}();
 
     /**

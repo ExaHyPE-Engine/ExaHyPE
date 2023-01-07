@@ -6,9 +6,8 @@ from peano4.solversteps.ActionSet import ActionSet
 import jinja2
 
 
-class MatrixFreeJacobi(ActionSet):
+class ScalarJacobiWithRediscretisation(ActionSet):
 
-  
   
   def __init__(self, 
                vertex_data, 

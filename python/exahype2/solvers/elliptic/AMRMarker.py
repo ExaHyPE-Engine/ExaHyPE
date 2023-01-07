@@ -9,7 +9,7 @@ import peano4.output.TemplatedHeaderImplementationFilePair
 import peano4.output.Jinja2TemplatedHeaderFile
 import peano4.output.Jinja2TemplatedHeaderImplementationFilePair
 
-import peano4.toolbox.multigrid.MatrixFreeJacobi
+import peano4.toolbox.multigrid.vertexbased.ScalarJacobiWithRediscretisation
 
 import jinja2
 
@@ -202,7 +202,7 @@ Relaxation coefficient: {}
      within the inheritance tree.
      
     """
-    self._action_set_smoother = peano4.toolbox.multigrid.MatrixFreeJacobi( 
+    self._action_set_smoother = peano4.toolbox.multigrid.vertexbased.ScalarJacobiWithRediscretisation( 
       self._data_model, 
       self._relaxation_coefficient, 
       "{}".format(self._right_hand_side) 

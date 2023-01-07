@@ -9,7 +9,7 @@ import peano4.output.TemplatedHeaderImplementationFilePair
 import peano4.output.Jinja2TemplatedHeaderFile
 import peano4.output.Jinja2TemplatedHeaderImplementationFilePair
 
-import peano4.toolbox.multigrid.MatrixFreeJacobi
+import peano4.toolbox.multigrid.cellbased.ScalarGaussSeidelWithRediscretisation
 
 import jinja2
 
@@ -141,24 +141,10 @@ Relaxation coefficient: {}
     """
     self._cell_data_model = peano4.datamodel.DaStGen2( self._unknown_identifier() )
     self._cell_data_model.data.add_attribute(dastgen2.attributes.Double("Value") )
+        
+    self._face_data_model = peano4.toolbox.multigrid.cellbased.ScalarGaussSeidelWithRediscretisation.construct_face_helper_data(self._cell_data_model)
     
     
-    self._face_data_model = peano4.datamodel.DaStGen2( self._unknown_identifier() )
-    self._face_data_model.data.add_attribute(dastgen2.attributes.Double("OldAverage") )
-    self._face_data_model.data.add_attribute(dastgen2.attributes.Double("NewAverage") )
-
-    self._face_data_model.generator.store_persistent_condition   = "true"
-    self._face_data_model.generator.load_persistent_condition    = "true"
-
-    self._face_data_model.generator.send_condition               = "true"
-    self._face_data_model.generator.receive_and_merge_condition  = "true"
-
-    self._face_data_model.peano4_mpi_and_storage_aspect.merge_implementation += """
-      _NewAverage += neighbour._NewAverage;
-"""
-    
-    
-
   @abstractmethod
   def create_action_sets(self):
     """
@@ -179,16 +165,15 @@ Relaxation coefficient: {}
      within the inheritance tree.
      
     """
-    pass
-#    self._action_set_smoother = peano4.toolbox.multigrid.MatrixFreeJacobi( 
-#      self._data_model, 
-#      self._relaxation_coefficient, 
-#      "{}".format(self._right_hand_side) 
-#      )
-#    self._action_set_smoother.Template_CreateHangingVertex = """
-#  fineGridVertex{{UNKNOWN}}.{{UNKNOWN_SETTER}}(1.0);
-#  fineGridVertex{{UNKNOWN}}.{{RESIDUAL_SETTER}}(0.0);
-#"""    
+    self._action_set_smoother = peano4.toolbox.multigrid.cellbased.ScalarGaussSeidelWithRediscretisation( 
+      cell_data               = self._cell_data_model, 
+      face_data               = self._face_data_model,
+      relaxation_coefficient  = self._relaxation_coefficient,
+      rhs_expr                = self._right_hand_side,
+      unknown_setter          = "setValue",
+      unknown_getter          = "getValue"
+      )
+
 
 
 #  def couple_with_FV_solver(self,FV_solver,auxiliary_variable):
@@ -272,28 +257,7 @@ Relaxation coefficient: {}
     
     
     """
-#    step.add_action_set( self._action_set_smoother )
-#    action_set_update_face_label._Template_CreateFace += """
-#  fineGridFace{{FACE_LABEL_NAME}}.setOldAverage""" + marker_name + """( 0.0 );
-#  fineGridFace{{FACE_LABEL_NAME}}.setNewAverage""" + marker_name + """( 0.0 );
-#"""
-#    action_set_update_face_label._Template_CreateHangingFace += ""#"
-#  double markerValue = coarseGridFaces{{FACE_LABEL_NAME}}( marker.getSelectedFaceNumber() ).getOldAverage""" + marker_name + """();#
-#
-#  fineGridFace{{FACE_LABEL_NAME}}.setOldAverage""" + marker_name + """( markerValue );
-#  fineGridFace{{FACE_LABEL_NAME}}.setNewAverage""" + marker_name + """( markerValue );
-#"""
-#    action_set_update_face_label._Template_TouchFaceFirstTime += """
-#  fineGridFace{{FACE_LABEL_NAME}}.setOldAverage""" + marker_name + """( fineGridFace{{FACE_LABEL_NAME}}.getNewAverage""" + marker_name + """() );
-#  fineGridFace{{FACE_LABEL_NAME}}.setNewAverage""" + marker_name + """( 0.0 );
-#"""
-#    action_set_update_face_label._Template_DestroyHangingFace += """
-#  coarseGridFaces{{FACE_LABEL_NAME}}( marker.getSelectedFaceNumber() ).setNewAverage""" + marker_name + """(
-#    coarseGridFaces{{FACE_LABEL_NAME}}( marker.getSelectedFaceNumber() ).getNewAverage""" + marker_name + """()
-#    +
-#    fineGridFace{{FACE_LABEL_NAME}}.getNewAverage""" + marker_name + """()
-#  );
-#"""
+    step.add_action_set( self._action_set_smoother )
     pass
 
     
@@ -304,7 +268,7 @@ Relaxation coefficient: {}
      we get the creational events.
      
     """
-#    step.add_action_set( self._action_set_smoother )
+    step.add_action_set( self._action_set_smoother )
     pass
 
   
@@ -314,7 +278,7 @@ Relaxation coefficient: {}
      We plot if and only if we are asked to do so
      
     """
-      #step.add_action_set( self._action_set_smoother )
+    step.add_action_set( self._action_set_smoother )
     if self._plot:
       step.add_action_set( peano4.toolbox.PlotCellDataInPeanoBlockFormat( 
         filename     = output_path + "poisson-equation-" + self._name, 
@@ -337,7 +301,7 @@ Relaxation coefficient: {}
     apply the boundary conditions.
     
     """
-#    step.add_action_set( self._action_set_smoother )
+    step.add_action_set( self._action_set_smoother )
     pass
 
 
@@ -361,8 +325,6 @@ Relaxation coefficient: {}
 
     headerDictionary = {}
     implementationDictionary = {}
-#    self._init_dictionary_with_default_parameters(headerDictionary)
-#    self._init_dictionary_with_default_parameters(implementationDictionary)
     self.add_entries_to_text_replacement_dictionary(headerDictionary)
     self.add_entries_to_text_replacement_dictionary(implementationDictionary)
 
@@ -380,6 +342,12 @@ Relaxation coefficient: {}
     output.makefile.add_cpp_file( self._name + ".cpp" )
 
 
+  @property
+  def name(self):
+    return self._name
+
+  #    action_set_update_face_label._Template_DestroyHangingFace += """
+#"""
 #  def _init_dictionary_with_default_parameters(self,d):
 #    """
 #
@@ -403,8 +371,3 @@ Relaxation coefficient: {}
 #    d["SOLVER_NAME"]                    = self._name
 
 
-  @property
-  def name(self):
-    return self._name
-
-  
