@@ -57,7 +57,7 @@ HYDRO_PART_NUMBER = str(args.particle_number);
 # Declare the particle type
 particle = swift2.particle.SPHLeapfrogFixedInteractionRadius(name = "MinimalSPH",
                                                              dimensions_hydro = HYDRO_DIMENSIONS,
-                                                             cfl_factor             = 0.1,
+                                                             cfl_factor             = 0.2,
                                                              initial_time_step_size = args.timestep_size,
                                                              constant_time_step_size= True,
                                                              swift_project_namespace= project_namespace,

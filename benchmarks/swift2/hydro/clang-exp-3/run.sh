@@ -3,7 +3,7 @@
 # Script to run experiment (Noh 2D)
 
 # set number of threads
-export OMP_NUM_THREADS=26
+export OMP_NUM_THREADS=28
 
 # Parameters
 END_TIME=0.1
@@ -41,5 +41,3 @@ mv *.cvs Constants.h $DIRNAME
 mkdir $DIRNAME"/snapshots/"
 mv particles* grid* $DIRNAME"/snapshots/"
 
-
-# @TODO: run plot script
