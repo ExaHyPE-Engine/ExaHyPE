@@ -9,7 +9,7 @@ import peano4.output.TemplatedHeaderImplementationFilePair
 import peano4.output.Jinja2TemplatedHeaderFile
 import peano4.output.Jinja2TemplatedHeaderImplementationFilePair
 
-import peano4.toolbox.multigrid.cellbased.ScalarGaussSeidelWithRediscretisation
+import peano4.toolbox.multigrid.cellbased.ScalarJacobiWithRediscretisation
 
 import jinja2
 
@@ -142,7 +142,7 @@ Relaxation coefficient: {}
     self._cell_data_model = peano4.datamodel.DaStGen2( self._unknown_identifier() )
     self._cell_data_model.data.add_attribute(dastgen2.attributes.Double("Value") )
         
-    self._face_data_model = peano4.toolbox.multigrid.cellbased.ScalarGaussSeidelWithRediscretisation.construct_face_helper_data(self._cell_data_model)
+    self._face_data_model = peano4.toolbox.multigrid.cellbased.ScalarJacobiWithRediscretisation.construct_face_helper_data(self._cell_data_model)
     
     
   @abstractmethod
@@ -165,7 +165,7 @@ Relaxation coefficient: {}
      within the inheritance tree.
      
     """
-    self._action_set_smoother = peano4.toolbox.multigrid.cellbased.ScalarGaussSeidelWithRediscretisation( 
+    self._action_set_smoother = peano4.toolbox.multigrid.cellbased.ScalarJacobiWithRediscretisation( 
       cell_data               = self._cell_data_model, 
       face_data               = self._face_data_model,
       relaxation_coefficient  = self._relaxation_coefficient,

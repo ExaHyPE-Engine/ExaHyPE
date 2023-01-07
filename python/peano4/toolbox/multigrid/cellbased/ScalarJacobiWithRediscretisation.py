@@ -8,7 +8,7 @@ import peano4
 import dastgen2
 
 
-class ScalarGaussSeidelWithRediscretisation(ActionSet):
+class ScalarJacobiWithRediscretisation(ActionSet):
 
 
   def construct_face_helper_data(cell_data_model: peano4.datamodel.DaStGen2):
@@ -123,7 +123,7 @@ class ScalarGaussSeidelWithRediscretisation(ActionSet):
   // @todo Das ist nicht schoen. Ich haette hier gerne nen allgemeinen Stencil
   
   double diagonal = 0.0;
-  double Ax       = 0.0;
+  double residual = {{RHS}};
   
   double centralValue = fineGridCell{{CELL_NAME}}.{{UNKNOWN_GETTER}}();
   
@@ -131,22 +131,17 @@ class ScalarGaussSeidelWithRediscretisation(ActionSet):
     double leftNeighbour  = 2.0 * (fineGridFaces{{FACE_NAME}}(d).getOldAverage()            - 0.5 * centralValue);
     double rightNeighbour = 2.0 * (fineGridFaces{{FACE_NAME}}(d+Dimensions).getOldAverage() - 0.5 * centralValue);
     
-    Ax += -1.0 * leftNeighbour + 2.0 * centralValue - 1.0 * rightNeighbour;
-    diagonal += 2.0;
+    residual -= (-1.0 * leftNeighbour + 2.0 * centralValue - 1.0 * rightNeighbour) / marker.h()(d) / marker.h()(d);
+    diagonal += (2.0) / marker.h()(d) / marker.h()(d);
   }
-  
-  Ax       *= 1.0 / marker.h()(0) / marker.h()(0);
-  diagonal *= 1.0 / marker.h()(0) / marker.h()(0);
-  
-  //double update   = {{OMEGA}} / diagonal * ( {{RHS}} - Ax );
-  double update   = {{OMEGA}} / diagonal * ( 0.0 - Ax );
-  double newValue = fineGridCell{{CELL_NAME}}.{{UNKNOWN_GETTER}}() + update;
+    
+  double newValue = fineGridCell{{CELL_NAME}}.{{UNKNOWN_GETTER}}() + {{OMEGA}} / diagonal * residual;
   
   fineGridCell{{CELL_NAME}}.{{UNKNOWN_SETTER}}( newValue );
 
   for (int d=0; d<Dimensions; d++) {
-    fineGridFaces{{FACE_NAME}}(d).setNewAverage(            0.5 * newValue );
-    fineGridFaces{{FACE_NAME}}(d+Dimensions).setNewAverage( 0.5 * newValue );
+    fineGridFaces{{FACE_NAME}}(d).setNewAverage(            fineGridFaces{{FACE_NAME}}(d).getNewAverage()            + 0.5 * newValue );
+    fineGridFaces{{FACE_NAME}}(d+Dimensions).setNewAverage( fineGridFaces{{FACE_NAME}}(d+Dimensions).getNewAverage() + 0.5 * newValue );
   }
 """
   
