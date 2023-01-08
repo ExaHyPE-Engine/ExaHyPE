@@ -118,8 +118,8 @@ class ScalarJacobiWithRediscretisation(ActionSet):
   fineGridFace{{FACE_NAME}}.setNewAverage( 0.0 );
 """
 
-  _Template_TouchCellFirstTime = """
-  
+
+  _Template_TouchCellFirstTime_UpdateSolution = """
   // @todo Das ist nicht schoen. Ich haette hier gerne nen allgemeinen Stencil
   
   double diagonal = 0.0;
@@ -138,12 +138,17 @@ class ScalarJacobiWithRediscretisation(ActionSet):
   double newValue = fineGridCell{{CELL_NAME}}.{{UNKNOWN_GETTER}}() + {{OMEGA}} / diagonal * residual;
   
   fineGridCell{{CELL_NAME}}.{{UNKNOWN_SETTER}}( newValue );
+"""
 
+
+  _Template_TouchCellFirstTime_UpdateFaceHelperData = """
   for (int d=0; d<Dimensions; d++) {
+    const double newValue = fineGridCell{{CELL_NAME}}.{{UNKNOWN_GETTER}}();
     fineGridFaces{{FACE_NAME}}(d).setNewAverage(            fineGridFaces{{FACE_NAME}}(d).getNewAverage()            + 0.5 * newValue );
     fineGridFaces{{FACE_NAME}}(d+Dimensions).setNewAverage( fineGridFaces{{FACE_NAME}}(d+Dimensions).getNewAverage() + 0.5 * newValue );
   }
 """
+
   
   def get_body_of_operation(self,operation_name):
     result = "\n"
@@ -156,7 +161,8 @@ class ScalarJacobiWithRediscretisation(ActionSet):
     if operation_name==ActionSet.OPERATION_TOUCH_FACE_FIRST_TIME:
       result = jinja2.Template(self._Template_TouchFaceFirstTime).render(**self.d) 
     if operation_name==ActionSet.OPERATION_TOUCH_CELL_FIRST_TIME:
-      result = jinja2.Template(self._Template_TouchCellFirstTime).render(**self.d) 
+      result  = jinja2.Template(self._Template_TouchCellFirstTime_UpdateSolution).render(**self.d) 
+      result += jinja2.Template(self._Template_TouchCellFirstTime_UpdateFaceHelperData).render(**self.d) 
     if operation_name==ActionSet.OPERATION_DESTROY_HANGING_FACE:
       result = jinja2.Template(self._Template_DestroyHangingFace).render(**self.d) 
     return result

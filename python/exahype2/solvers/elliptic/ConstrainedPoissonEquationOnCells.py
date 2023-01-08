@@ -60,6 +60,8 @@ class ConstrainedPoissonEquationOnCells(object):
     the areas where @f$ u=u_{\text{max}} @f$ is manually set/enforced do not 
     change.
     
+    @see create_action_sets() for the exact mechanics how the actual rules
+      are computed.
     
     ## Usage
         
@@ -79,6 +81,8 @@ class ConstrainedPoissonEquationOnCells(object):
                right_hand_side = -10.0, 
                min_value = 0.0, 
                max_value = 1.0, 
+               min_threshold = 0.4,
+               max_threshold = 0.6,
                plot = False):
     """
     
@@ -101,11 +105,18 @@ class ConstrainedPoissonEquationOnCells(object):
      go away from the AMR transition area.
  
     """
+    assert min_value<max_value, "arguments invalid"
+    assert max_threshold<=max_value, "arguments invalid"
+    assert min_threshold>=min_value, "arguments invalid"
+    assert min_threshold<max_threshold, "arguments invalid"
+    
     self._name                   = name
     self._relaxation_coefficient = relaxation_coefficient
     self._right_hand_side        = right_hand_side
     self._min_value              = min_value
     self._max_value              = max_value
+    self._min_threshold          = min_threshold
+    self._max_threshold          = max_threshold
     self._plot                   = plot
     
     self.create_data_structures()
@@ -137,10 +148,15 @@ Relaxation coefficient: {}
   def create_data_structures(self):
     """
     
+    Create cell and face data structures required. For the face data,
+    we rely on the multigrid toolbox routines.
        
     """
+    Variants = ["AnotB","AdeterminesB","BnotA","BdeterminesA"]
+    
     self._cell_data_model = peano4.datamodel.DaStGen2( self._unknown_identifier() )
     self._cell_data_model.data.add_attribute(dastgen2.attributes.Double("Value") )
+    self._cell_data_model.data.add_attribute(dastgen2.attributes.Enumeration( name="Marker", variants=Variants ) )
         
     self._face_data_model = peano4.toolbox.multigrid.cellbased.ScalarJacobiWithRediscretisation.construct_face_helper_data(self._cell_data_model)
     
@@ -152,7 +168,7 @@ Relaxation coefficient: {}
      Overwrite in subclasses if you wanna create different
      action sets.
      
-     :: Call order and ownership
+     ## Call order and ownership
      
      This operation can be called multiple times. However, only the very
      last call matters. All previous calls are wiped out.
@@ -164,6 +180,15 @@ Relaxation coefficient: {}
      specialised) run through all create_data_structure() variants 
      within the inheritance tree.
      
+     ## Postprocessing algorithm
+     
+     After we have updated the cell, i.e. computed the Poisson equation update,
+     we launch a series of postprocessing steps:
+     
+     - We impose the value constraints, i.e. ensure the solution is within min
+       and max.
+       
+     
     """
     self._action_set_smoother = peano4.toolbox.multigrid.cellbased.ScalarJacobiWithRediscretisation( 
       cell_data               = self._cell_data_model, 
@@ -173,6 +198,61 @@ Relaxation coefficient: {}
       unknown_setter          = "setValue",
       unknown_getter          = "getValue"
       )
+    self._action_set_smoother._Template_TouchCellFirstTime_UpdateSolution += """
+    if ( fineGridCell{{CELL_NAME}}.getValue() < """ + str(self._min_value) + """ ) {
+      fineGridCell{{CELL_NAME}}.setValue(""" + str(self._min_value) + """);
+    }
+    if ( fineGridCell{{CELL_NAME}}.getValue() > """ + str(self._max_value) + """ ) {
+      fineGridCell{{CELL_NAME}}.setValue(""" + str(self._max_value) + """);
+    }
+    
+    bool cellHoldsBnotA              = false;
+    bool neighbourHoldsBnotA         = false;
+    bool cellHoldsBdeterminesA       = false;
+    bool neighbourHoldsBdeterminesA  = false;
+    bool cellHoldsAdeterminesB       = false;
+    bool neighbourHoldsAdeterminesB  = false;
+    
+    cellHoldsBnotA        = fineGridCell{{CELL_NAME}}.getValue() > """ + str(self._max_threshold ) + """;
+    cellHoldsBdeterminesA = fineGridCell{{CELL_NAME}}.getValue() > """ + str( 0.5*self._max_threshold+0.5*self._min_threshold ) + """;
+    cellHoldsAdeterminesB = fineGridCell{{CELL_NAME}}.getValue() > """ + str(self._min_threshold ) + """;
+
+    for (int d=0; d<Dimensions; d++) {
+      double leftNeighbour  = 2.0 * (fineGridFaces{{FACE_NAME}}(d).getOldAverage()            - 0.5 * centralValue);
+      double rightNeighbour = 2.0 * (fineGridFaces{{FACE_NAME}}(d+Dimensions).getOldAverage() - 0.5 * centralValue);
+
+      neighbourHoldsBnotA |= leftNeighbour  > """ + str(self._max_threshold ) + """;
+      neighbourHoldsBnotA |= rightNeighbour > """ + str(self._max_threshold ) + """;
+
+      neighbourHoldsBdeterminesA |= leftNeighbour  > """ + str( 0.5*self._max_threshold+0.5*self._min_threshold ) + """;
+      neighbourHoldsBdeterminesA |= rightNeighbour > """ + str( 0.5*self._max_threshold+0.5*self._min_threshold ) + """;
+      
+      neighbourHoldsAdeterminesB |= leftNeighbour  > """ + str(self._min_threshold ) + """;
+      neighbourHoldsAdeterminesB |= rightNeighbour > """ + str(self._min_threshold ) + """;
+    }
+    
+    // "lift" current state
+    cellHoldsBdeterminesA |= neighbourHoldsBnotA;
+    cellHoldsAdeterminesB |= neighbourHoldsBdeterminesA;
+    
+    const double Tolerance = 1.01;
+    
+    if (cellHoldsBnotA) {
+      fineGridCell{{CELL_NAME}}.setMarker( std::remove_reference<decltype(fineGridCell{{CELL_NAME}})>::type::Marker::BnotA );
+      fineGridCell{{CELL_NAME}}.setValue( std::max(fineGridCell{{CELL_NAME}}.getValue(), """ + str(self._max_threshold) + """ * Tolerance) );
+    }
+    else if (cellHoldsBdeterminesA) {
+      fineGridCell{{CELL_NAME}}.setMarker( std::remove_reference<decltype(fineGridCell{{CELL_NAME}})>::type::Marker::BdeterminesA );
+      fineGridCell{{CELL_NAME}}.setValue( std::max(fineGridCell{{CELL_NAME}}.getValue(), """ + str(0.5*self._max_threshold+0.5*self._min_threshold) + """ * Tolerance) );
+    }
+    else if (cellHoldsAdeterminesB) {
+      fineGridCell{{CELL_NAME}}.setMarker( std::remove_reference<decltype(fineGridCell{{CELL_NAME}})>::type::Marker::AdeterminesB );
+      fineGridCell{{CELL_NAME}}.setValue( std::max(fineGridCell{{CELL_NAME}}.getValue(), """ + str(self._min_threshold) + """ * Tolerance) );
+    }
+    else {
+      fineGridCell{{CELL_NAME}}.setMarker( std::remove_reference<decltype(fineGridCell{{CELL_NAME}})>::type::Marker::AnotB );
+    }
+    """
 
 
 
@@ -281,7 +361,7 @@ Relaxation coefficient: {}
     step.add_action_set( self._action_set_smoother )
     if self._plot:
       step.add_action_set( peano4.toolbox.PlotCellDataInPeanoBlockFormat( 
-        filename     = output_path + "poisson-equation-" + self._name, 
+        filename     = output_path + "marker-poisson-equation-" + self._name, 
         cell_unknown = self._cell_data_model,
         getter       = "getValue()",
         description  = "Alpha",
@@ -289,7 +369,18 @@ Relaxation coefficient: {}
         additional_includes="""
 #include "repositories/SolverRepository.h"       
 """        
-     ))
+      ))
+      step.add_action_set( peano4.toolbox.PlotCellDataInPeanoBlockFormat( 
+        filename     = output_path + "marker-" + self._name, 
+        cell_unknown = self._cell_data_model,
+        getter       = "getMarker()",
+        number_of_unknows_per_cell = peano4.toolbox.PlotCellDataInPeanoBlockFormat.CastToDouble,
+        description  = "AnotB,AdeterminesB,BdeterminesA,BnotA",
+        time_stamp_evaluation="0.5*(repositories::getMinTimeStamp()+repositories::getMaxTimeStamp())",
+        additional_includes="""
+#include "repositories/SolverRepository.h"       
+"""        
+      ))
    
  
   def add_actions_to_perform_time_step(self, step):

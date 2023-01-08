@@ -8,6 +8,7 @@ import jinja2
 class PlotCellDataInPeanoBlockFormat(ActionSet):
   NoMetaFile     = "no-meta-file"
   CountTimeSteps = "count-time-steps"
+  CastToDouble   = -1
 
   def __init__(self,
                filename,
@@ -44,13 +45,14 @@ class PlotCellDataInPeanoBlockFormat(ActionSet):
         problem, e.g. 
 
       number_of_unknows_per_cell: Integer
-        Has to match to the getter.                        
+        Has to match to the getter. You can hand in a CastToDouble which instructs the 
+        plotter to explicitly cast the entry to double.
     """
     self.d = {}
     self.d[ "FILENAME" ]            = filename
     self.d[ "CELL_UNKNOWN_NAME" ] = cell_unknown.name
     self.d[ "GETTER" ]              = getter
-    self.d[ "NUMBER_OF_UNKNOWNS_PER_CELL" ]              = number_of_unknows_per_cell
+    self.d[ "NUMBER_OF_UNKNOWNS_PER_CELL" ] = number_of_unknows_per_cell
     self.d[ "DESCRIPTION" ]         = description
     self.d[ "TIMESTAMP" ]           = time_stamp_evaluation
     self.d[ "GUARD_PREDICATE" ]    = guard_predicate
@@ -112,8 +114,11 @@ if ( {{GUARD_PREDICATE}} ) {
     marker.h()
   );
 
-
+  {% if NUMBER_OF_UNKNOWNS_PER_CELL<0 %}
+  double data = static_cast<double>(fineGridCell{{CELL_UNKNOWN_NAME}}.{{GETTER}});
+  {% else %}
   auto data = fineGridCell{{CELL_UNKNOWN_NAME}}.{{GETTER}};
+  {% endif %}
   _dataWriter->plotCell( cellIndex, data );
 }
 """
@@ -157,7 +162,11 @@ if ( {{GUARD_PREDICATE}} ) {
   _dataWriter = _writer->createCellDataWriter( 
     "{{CELL_UNKNOWN_NAME}}", 
     1,
+    {% if NUMBER_OF_UNKNOWNS_PER_CELL<0 %}
+    1,
+    {% else %}
     {{NUMBER_OF_UNKNOWNS_PER_CELL}},
+    {% endif %}
     "{{DESCRIPTION}}" 
   );
 """
