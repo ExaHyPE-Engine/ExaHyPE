@@ -33,12 +33,34 @@ namespace tarch {
      */
     int aPowI(int i,int a);
 
+    /**
+     * @param tolerance Absolute tolerance when we compare two values.
+     */
     bool greater( double lhs, double rhs, double tolerance = NUMERICAL_ZERO_DIFFERENCE);
+
+    /**
+     * @param tolerance Absolute tolerance when we compare two values.
+     */
     bool greaterEquals( double lhs, double rhs, double tolerance = NUMERICAL_ZERO_DIFFERENCE);
+
+    /**
+     * @param tolerance Absolute tolerance when we compare two values.
+     */
     bool equals( double lhs, double rhs, double tolerance = NUMERICAL_ZERO_DIFFERENCE);
+
+    /**
+     * @param tolerance Absolute tolerance when we compare two values.
+     */
     bool smaller( double lhs, double rhs, double tolerance = NUMERICAL_ZERO_DIFFERENCE);
+
+    /**
+     * @param tolerance Absolute tolerance when we compare two values.
+     */
     bool smallerEquals( double lhs, double rhs, double tolerance = NUMERICAL_ZERO_DIFFERENCE);
 
+    /**
+     * @param tolerance Absolute tolerance when we compare two values.
+     */
     bool equals( const std::complex<double>& lhs, const std::complex<double>& rhs, double tolerance = NUMERICAL_ZERO_DIFFERENCE);
 
     /**

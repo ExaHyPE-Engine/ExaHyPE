@@ -28,6 +28,7 @@ parser.add_argument("-c",   "--clean",           dest="clean_temporary_directori
 parser.add_argument("-d",   "--dimensions",      dest="dimensions",     type=int,   default=2,                 help="Spatial dimensions (default 2)" )
 parser.add_argument("-np",  "--particle-number", dest="particle_number",   required=True,  type=int,           help="Particle number (1D)" )
 parser.add_argument("-et",  "--end-time",        dest="end_time",       type=float, default=0.2,               help="End of simulation" )
+parser.add_argument("-plot",  "--plot-delta",      dest="plot_delta",     type=float, default=0.01,              help="Plot delta (0 switches off)" )
 parser.add_argument("-dt",  "--timestep-size",   dest="timestep_size",  type=float, default=1e-4,              help="Global timestep size (initial value)" )
 parser.add_argument("-cs",  "--cell-size",       dest="cell_size",      type=float, default=0.3,               help="Cell size (default 0.3)" )
 parser.add_argument("-pd",  "--peano-dir",       dest="peanodir",       default="../../../..",                 help="Peano4 directory" )
@@ -87,7 +88,7 @@ project.set_global_simulation_parameters(
 #  first_plot_time_stamp = 2*args.end_time,
 #  time_in_between_plots = 2*args.end_time,
   first_plot_time_stamp = 0,
-  time_in_between_plots = args.end_time/50,
+  time_in_between_plots = args.plot_delta,
   periodic_BC           = periodic_boundary_conditions,
   plotter_precision     = 8  # plotter precision
 )

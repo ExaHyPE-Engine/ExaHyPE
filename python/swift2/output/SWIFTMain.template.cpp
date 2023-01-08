@@ -19,6 +19,8 @@
 #include "swift2/UnitTests.h"
 #include "toolbox/particles/UnitTests.h"
 
+#include "swift2/UserInterface.h"
+
 #include "Constants.h"
 
 #include "toolbox/loadbalancing/RecursiveSubdivision.h"
@@ -97,9 +99,22 @@ bool {{NAMESPACE | join("::")}}::selectNextAlgorithmicStep() {
 
     if (
       tarch::la::max( peano4::parallel::SpacetreeSet::getInstance().getGridStatistics().getMinH() ) < GlobalMaxH
-      and
+    ) {
+      logInfo(
+        "selectNextAlgorithmicStep()",
+        "h_min=" << tarch::la::max( peano4::parallel::SpacetreeSet::getInstance().getGridStatistics().getMinH() ) <<
+        ", which his smaller than global h_max=" << GlobalMaxH <<
+        ". Stop grid construction"
+      );
+      gridConstructed = true;
+    }
+    if (
       peano4::parallel::SpacetreeSet::getInstance().getGridStatistics().getStationarySweeps()>5
     ) {
+      logInfo(
+        "selectNextAlgorithmicStep()",
+        "mesh has been stationary for more than 5 grid sweeps. Stop grid construction"
+      );
       gridConstructed = true;
     }
   }
@@ -314,8 +329,9 @@ void {{NAMESPACE | join("::")}}::step() {
 
 
 int main(int argc, char** argv) {
-  const int ExitCodeSuccess         = 0;
-  const int ExitCodeUnitTestsFailed = 1;
+  const int ExitCodeSuccess          = 0;
+  const int ExitCodeUnitTestsFailed  = 1;
+  const int ExitCodeInvalidArguments = 2;
 
 #ifdef UseFEExcept
   feenableexcept(FE_DIVBYZERO | FE_INVALID | FE_OVERFLOW);
@@ -333,11 +349,10 @@ int main(int argc, char** argv) {
 
   {{NAMESPACE | join("::")}}::repositories::DataRepository::initDatatypes();
 
-  std::string logFilterFile = "swift2.log-filter";
-  if ( not tarch::logging::LogFilterFileReader::parsePlainTextFile( logFilterFile ) ) {
-    logWarning( "main()", "no swift2.log-filter file found or file has been corrupted. Use default logging configuration" );
+  if (not swift2::parseCommandLineArguments(argc,argv) ) {
+    logError("main()", "Invalid command line arguments.");
+    return ExitCodeInvalidArguments;
   }
-
 
   #if PeanoDebug>=2
   tarch::tests::TestCase* peanoCoreTests = peano4::getUnitTests();

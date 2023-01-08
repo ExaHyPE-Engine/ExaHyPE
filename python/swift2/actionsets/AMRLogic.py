@@ -214,10 +214,10 @@ def add_mesh_management_optimise_mesh(steps,
                                                    (i+3) % len(steps), 
                                                    (i+4) % len(steps) }
       if verbose:
-        print( "GRAPH COMPILER DEBUG [add_mesh_management_optimise_mesh]: add peano4.toolbox.particles.UpdateParticleGridAssociation to steps {}".format(steps_to_update_particle_grid_assocation) )
+        print( "GRAPH COMPILER DEBUG [add_mesh_management_optimise_mesh]: add peano4.toolbox.particles.UpdateParticleGridAssociation_Reassign to steps {}".format(steps_to_update_particle_grid_assocation) )
       for j in steps_to_update_particle_grid_assocation:
         for current_species_set in species_sets:
-          steps[j].add_action_set(peano4.toolbox.particles.UpdateParticleGridAssociation(current_species_set), append_at_end=False)
+          steps[j].add_action_set(peano4.toolbox.particles.UpdateParticleGridAssociation_LiftDrop(current_species_set), append_at_end=False)
 
       #
       #   State

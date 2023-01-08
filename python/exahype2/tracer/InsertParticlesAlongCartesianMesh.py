@@ -55,8 +55,11 @@ class InsertParticlesAlongCartesianMesh(ActionSet):
       p->setNumber(1,_particleNumberOnThisTree);
       _particleNumberOnThisTree++;
     }
-    // just insert them; will be re-assigned then anyway
-    fineGridVertices{{PARTICLES_CONTAINER}}(0).insert( fineGridVertices{{PARTICLES_CONTAINER}}(0).end(), newParticles.begin(), newParticles.end() );
+    toolbox::particles::insertParticlesIntoCell(
+      marker,
+      newParticles,
+      fineGridVertices{{PARTICLES_CONTAINER}}
+    );
   }
 """)
 

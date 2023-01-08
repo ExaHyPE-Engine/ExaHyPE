@@ -64,8 +64,12 @@ class InsertParticlesByCoordinates(ActionSet):
       #endif
       _particleNumberOnThisTree++;
       logInfo( "touchVertexFirstTime(...)", "insert " << _particleNumberOnThisTree << "th particle at " << newParticle->toString() );
-      // just insert them; will be re-assigned then anyway
-      fineGridVertices{{PARTICLES_CONTAINER}}(0).push_back( newParticle );
+
+      toolbox::particles::insertParticleIntoCell(
+        marker,
+        newParticle,
+        fineGridVertices{{PARTICLES_CONTAINER}}
+      );
     }
   }
 """)

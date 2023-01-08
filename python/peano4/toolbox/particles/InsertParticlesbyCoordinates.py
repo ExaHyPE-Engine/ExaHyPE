@@ -55,18 +55,19 @@ class InsertParticlesbyCoordinates(ActionSet):
     {
       globaldata::{{PARTICLE}}* particle = new globaldata::{{PARTICLE}}();
 
-//      particle->setNumber(0, _spacetreeId);
-//      particle->setNumber(1, _particleNumberOnThisTree);
       toolbox::particles::init(*particle, {coordinates[i][0],coordinates[i][1],coordinates[i][2]}, 0.0);
       _particleNumberOnThisTree++;
-
-      // just insert them; will be re-assigned then anyway
-      fineGridVertices{{PARTICLES_CONTAINER}}(0).push_back( particle );
 
       /* Now use initialisation snippet with the particle pointer */
       {{INITIALISATION_CALL}}
 
-      logInfo( "touchVertexFirstTime(...)", "insert " << _particleNumberOnThisTree << "th particle at " << particle->toString() );
+      toolbox::particles::insertParticleIntoCell(
+        marker,
+        particle,
+        fineGridVertices{{PARTICLES_CONTAINER}}
+      );
+
+      logDebug( "touchVertexFirstTime(...)", "insert " << _particleNumberOnThisTree << "th particle at " << particle->toString() );
     }
   }
 
@@ -97,6 +98,7 @@ class InsertParticlesbyCoordinates(ActionSet):
 #include "tarch/multicore/Lock.h"
 #include "vertexdata/{{PARTICLES_CONTAINER}}.h"
 #include "globaldata/{{PARTICLE}}.h"
+#include "toolbox/particles/particles.h"
 #include "toolbox/particles/ParticleFactory.h"
 
 #include "swift2/kernels/kernel_hydro.h"
@@ -104,6 +106,7 @@ class InsertParticlesbyCoordinates(ActionSet):
 #include "Constants.h"
 """ )
     return result.render(**self.d)
+
 
   def Read_In_Coor(self):
     result=""
@@ -113,6 +116,7 @@ class InsertParticlesbyCoordinates(ActionSet):
       result+= " coordinates["+str(i)+"][2]="+str(self._coordinates[i][2])+";"
       result+= "\n"
     return result
+
 
   def get_constructor_body(self):
     return f"""

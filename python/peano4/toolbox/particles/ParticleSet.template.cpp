@@ -13,7 +13,8 @@ tarch::logging::Log {{NAMESPACE | join("::")}}::{{CLASSNAME}}::_log( "{{NAMESPAC
 int {{NAMESPACE | join("::")}}::{{CLASSNAME}}::_SieveReductionTag = tarch::mpi::Rank::reserveFreeTag("{{NAMESPACE | join("::")}}::{{CLASSNAME}}");
 
 
-tarch::multicore::BooleanSemaphore   {{NAMESPACE | join("::")}}::{{CLASSNAME}}::_semaphore;
+tarch::multicore::BooleanSemaphore   {{NAMESPACE | join("::")}}::{{CLASSNAME}}::_statisticsSemaphore;
+tarch::multicore::BooleanSemaphore   {{NAMESPACE | join("::")}}::{{CLASSNAME}}::_particlesThatCanNotBeLiftedWithinTheirTreeSemaphore;
 
 {{NAMESPACE | join("::")}}::{{CLASSNAME}}     {{NAMESPACE | join("::")}}::{{CLASSNAME}}::_particlesThatCanNotBeLiftedWithinTheirTree;
 {{NAMESPACE | join("::")}}::{{CLASSNAME}}     {{NAMESPACE | join("::")}}::{{CLASSNAME}}::_particlesThatHaveToBeSieved;
@@ -78,9 +79,9 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::merge(
           ) {
             logDebug( "merge(...)", "assume incoming particle " << p->toString() << " is local on other rank and will be virtual here" );
             p->setParallelState( DoFType::ParallelState::Virtual );
-            tarch::multicore::Lock lock( _semaphore );
-            _numberOfMergedVirtualParticles++;
             this->push_back(p);
+            tarch::multicore::Lock lock( _statisticsSemaphore );
+            _numberOfMergedVirtualParticles++;
           }
           else if (
             p->getParallelState()==DoFType::ParallelState::Virtual
@@ -96,10 +97,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::merge(
           }
         }
 
-        eliminateSpatialDuplicates(
-          //true,            // examineOnlyVirtualParticles
-          1.0 + 1e-6
-        );
+        eliminateSpatialDuplicates();
 
         logDebug( "merge(...)", "merged incoming set of " << neighbour.size() << " particle(s) into local set of vertex " << marker.x() << " which now hosts " << this->size() << " particle(s):" );
         for (auto *p: *this) {
@@ -124,72 +122,13 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::merge(
 }
 
 
-void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::eliminateSpatialDuplicates(double sortingTolerance) {
-  assertion(sortingTolerance>1.0);
+void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::eliminateSpatialDuplicates() {
+  auto [numberOfLocalEliminatedSpatialDuplicates,numberOfVirtualEliminatedSpatialDuplicates] =
+    toolbox::particles::eliminateSpatialDuplicates(*this);
 
-  int numberOfEliminations = 0;
-  auto p = this->begin();
-  while (p!=this->end()) {
-    bool foundDuplicate = false;
-
-    auto pp = p;
-    pp++;
-    while (
-      pp!=this->end()
-      and
-      not foundDuplicate
-    ) {
-      if (
-        tarch::la::equals( (*p)->getX(), (*pp)->getX(), sortingTolerance-1.0 )
-      ) {
-        logDebug( "eliminateSpatialDuplicates()", "found duplicates p=" << (*p)->toString() << " and pp=" << (*pp)->toString() );
-        foundDuplicate = true;
-      }
-      else {
-        pp++;
-      }
-    }
-
-    if (foundDuplicate) {
-      assertion( (*p)!=(*pp) );
-
-        // bias towards virtual particles
-      if (
-        (*p)->getParallelState()==DoFType::ParallelState::Local
-        and
-        (*pp)->getParallelState()==DoFType::ParallelState::Local
-
-      ) {
-        logWarning( "eliminateSpatialDuplicates()", "particle " << (*pp)->toString() << " found twice as local in domain" );
-
-        delete *p;
-        erase(p);
-
-        tarch::multicore::Lock lock( _semaphore );
-        _numberOfLocalEliminatedSpatialDuplicates++;
-      }
-      else if ( (*p)->getParallelState()==DoFType::ParallelState::Virtual ) {
-        delete *p;
-        erase(p);
-
-        tarch::multicore::Lock lock( _semaphore );
-        _numberOfVirtualEliminatedSpatialDuplicates++;
-      }
-      else {
-        delete *pp;
-        erase(pp);
-
-        tarch::multicore::Lock lock( _semaphore );
-        _numberOfVirtualEliminatedSpatialDuplicates++;
-      }
-
-      p = this->begin(); // if we delete something, we might corrupt the whole container, so
-                         // better start from scratch.
-    }
-    else {
-      p++;
-    }
-  }
+  tarch::multicore::Lock lock( _statisticsSemaphore );
+  _numberOfLocalEliminatedSpatialDuplicates   += numberOfLocalEliminatedSpatialDuplicates;
+  _numberOfVirtualEliminatedSpatialDuplicates += numberOfVirtualEliminatedSpatialDuplicates;
 }
 
 
@@ -364,7 +303,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishedTraversal() {
   );
   logDebug( "finishedTraversal()", "rolled over local list and now have " << _particlesThatHaveToBeSieved.size() << " sieve particles here" );
 
-  _particlesThatHaveToBeSieved.eliminateSpatialDuplicates( 1.0 + 1e-6 );
+  _particlesThatHaveToBeSieved.eliminateSpatialDuplicates();
   logDebug( "finishedTraversal()", "after eliminating all redundant particles, " << _particlesThatHaveToBeSieved.size() << " particles are left" );
   _particlesThatCanNotBeLiftedWithinTheirTree.clear();
 }
@@ -583,8 +522,15 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::clear() {
 
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::particleCanNotBeLiftedLocally( globaldata::{{PARTICLE_TYPE}}* p ) {
   if ( p->getParallelState()==globaldata::{{PARTICLE_TYPE}}::ParallelState::Local ) {
-    _particlesThatCanNotBeLiftedWithinTheirTree.push_back(p);
-    _numberOfAssignmentsToGlobalSieve++;
+    {
+      tarch::multicore::Lock lock( _particlesThatCanNotBeLiftedWithinTheirTreeSemaphore );
+      _particlesThatCanNotBeLiftedWithinTheirTree.push_back(p);
+    }
+
+    {
+      tarch::multicore::Lock lock( _statisticsSemaphore );
+      _numberOfAssignmentsToGlobalSieve++;
+    }
   }
 }
 
@@ -624,7 +570,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::updateLiftDropStatistics(
   int numberOfReassignmentsInThisTree,
   int numberOfSievesInThisTree
 ) {
-  tarch::multicore::Lock lock( _semaphore );
+  tarch::multicore::Lock lock( _statisticsSemaphore );
   _numberOfLifts         += numberOfLiftsInThisTree;
   _numberOfDrops         += numberOfDropsInThisTree;
   _numberOfReassignments += numberOfReassignmentsInThisTree;
@@ -637,7 +583,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::updateNumberOfLocalParticleStati
   int numberOfIncomingLocalParticles,
   int numberOfLeavingLocalParticles
 ) {
-  tarch::multicore::Lock lock( _semaphore );
+  tarch::multicore::Lock lock( _statisticsSemaphore );
   _numberOfRemainingLocalParticles += numberOfRemainingLocalParticles;
   _numberOfIncomingLocalParticles  += numberOfIncomingLocalParticles;
   _numberOfLeavingLocalParticles   += numberOfLeavingLocalParticles;
