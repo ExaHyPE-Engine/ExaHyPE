@@ -905,21 +905,21 @@ There are two fundamental approaches to tackle this dilemma: On the one hand,
 we can introduce artificial damping terms, i.e.~numerical diffusion, or
 truncation terms for the Riemann solvers such that these oscillations are
 eliminated. 
-This is a numerical a posterioi fix.
 On the other hand, we can accept that both DG and FV have their pros and cons
 and try to use each solver where it unfolds its full potential.
 This is the prime strategy in the original \ExaHyPE\ project.
 
 
-In principle, we will follow the same pattern that we exploited in the previous
-case study:
-We will define two different solvers, and couple them with each other.
-Different to the previous setup, we make all of our operations local:
+To realise this a posteriori limiting (which really will become an a priori
+limiting), we follow the same pattern that we exploited in the
+previous case study:
+We define two different solvers, and couple them with each other.
+Different to the previous setup, we however make all of our operations local:
 
 \begin{itemize}
   \item The Finite Volume solver is our fallback strategy and we therefore
-  neither should solver a FV everywhere in the computational domain nor should
-  we store the corresponding data.
+  neither solve with Finite Volumes everywhere in the computational domain nor
+  should do we store the corresponding data.
   \item The FV and the DG solver are not coupled everywhere but only in boundary
   regions, i.e.~in regions where the FV solver and the DG solver kind of agree
   solution-wisely.
@@ -927,8 +927,11 @@ Different to the previous setup, we make all of our operations local:
 
 
 \noindent
-To realise this pattern, we will need a marker, i.e.~a label per cell
-which tells us, similar to a multi-phase flow, which solver rules in this
+We will effectively end up with a domain decomposition where parts of the
+computational domain are handled by the DG solver and the other parts are
+handled with FV.
+To realise this, we need a marker, i.e.~a
+label per cell which tells us, similar to a multi-phase flow, which solver rules in this
 particular cell.
 Then, we construct two solvers that are coupled with each other similar to the
 previous case study.
@@ -942,45 +945,62 @@ are active, and where the two solvers are coupled with each other.
 
 In this simple setup, we just create a DG solver and then add an additional
 Finite Volume solver. 
-The latter works with a patch size of $2k+1$ where $k$ is the spatial DG order.
-We add both of them to the project and refer to them as \texttt{dg\_solver} and  
-\texttt{fv\_solver} objects in the Python script.
+The latter works with a patch size of $2p+1$ where $p$ is the spatial DG order.
+You might want to use a different patch size, but this choice usually yields
+time step sizes in the FV discretisation which is similar to the DG scheme.
+We
+add both of them to the project and refer to them as \texttt{dg\_solver} and \texttt{fv\_solver} objects in the Python script.
  
 \paragraph*{The marker}
 
-We associate the marker with the DG solver in the case study. 
-The DG solver runs everywhere, so can update its DG marker everywhere.
-As this marker stuff is something we need in various applications, \ExaHyPE\
-provides a pre-manufactured postprocessing action set which takes care of all
-the details (and also has more documentation):
+The marker is determined by a quantity $\alpha $ which solves the equation
+\[
+ - \Delta \alpha = C < 0 
+ \qquad
+ \text{s.t.} \ 
+ 0 \leq \alpha  \leq 1, \ 
+ \alpha  | _{\partial \Omega} = 0
+\]
+via a cell-centered finite differences scheme. 
+In  the cells where we definitely need the Finite Volume scheme, we set $\alpha
+ = 1$.
+The higher $\alpha $, the more sure we are that the FV scheme yields
+the correct result.
+
+\ExaHyPE\ is shipped with a pre-manufactured solver for this Poisson setup 
+which takes care of all the details---including the mapping of the continuous
+$\alpha $ value onto the states which solver is active where---and also has more
+documentation):
 
 
 \begin{code}
-
+marker_solver = exahype2.solvers.elliptic.ConstrainedPoissonEquationOnCells( name = "Alpha",
+                                                                             plot = True) 
 project.add_solver( marker_solver )
 \end{code}
 
-The snippet above adds a value $\alpha _{\text{DG}}$ to the DG solver's cell
-data.
-It frequently accesses solver-private data such as \texttt{\_cell\_label}.
-A cleaner strategy would therefore be to specialise your solver and then
-to overwrite the routine \texttt{create\_data\_structures(self)} calling first the
-superclass implementation and then adding these calls.
+
+\paragraph*{Control the marker}
+
+The marker by default will be $\alpha =0$ in the present configuration. 
+As a first step, we hence have to reset it to $\alpha =1$ where we want the FV
+scheme to dominate, i.e.~where we definitely know that it is the FV scheme that
+we need.
+Technically, we realise this by a postprocessing step on the respective solver:
+
+\begin{code}
+ marker_solver.postprocess_updated_cell = """
+if ( check some conditions ) {
+  fineGridCell{{CELL_NAME}}.setValue(1.0);
+}
+"""
+\end{code}
 
 
-Our idea is that we solve the equation
-\[
- - \Delta \alpha _{\text{DG}} = C _{\text{DG}} 
- \qquad
- \text{s.t.} \ 
- 0 \leq \alpha _{\text{DG}} \leq 1, \ 
- \alpha _{\text{DG}} | _{\partial \Omega} = 0
-\]
-with a cell-centered finite differences scheme. 
-In the cells where we definitely need the Finite Volume scheme, we set $\alpha
-_{\text{DG}}=0$.
-The higher $\alpha _{\text{FV}}$, the more sure we are that the FV scheme yields
-the correct result.
+\paragraph*{Couple marker and FV scheme}
+
+With the three solvers (two PDE solvers plus the marker's Poisson equation) at
+hand, we have to couple them with each other.
     
 
 

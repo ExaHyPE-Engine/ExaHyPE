@@ -164,9 +164,19 @@ fv_solver._action_set_postprocess_solution.add_postprocessing_kernel( """
 # FV solver overrule the DG solver.
 #
 marker_solver = exahype2.solvers.elliptic.ConstrainedPoissonEquationOnCells(
-  name = "AlphaFV",
+  name = "Alpha",
   plot = True)
-
+marker_solver.postprocess_updated_cell = """
+if ( not repositories::""" + fv_solver.get_name_of_global_instance() + """.patchCanUseStatelessPDETerms(
+  marker.x(), 
+  marker.h(), 
+  // it would be nicer to use fineGridCellSelfSimilarInfallFVCellLabel here I guess
+  repositories::""" + fv_solver.get_name_of_global_instance() + """.getMinTimeStamp(), 
+  repositories::""" + fv_solver.get_name_of_global_instance() + """.getMinTimeStepSize()
+)) {
+  fineGridCell{{CELL_NAME}}.setValue(1.0);
+}
+"""
 
 #marker_name = "AlphaDG"
 #exahype2.exahype2.solvers.rkdg.coupling.PoissonEquationForMarker.augment_cell_label( dg_solver._cell_label, 

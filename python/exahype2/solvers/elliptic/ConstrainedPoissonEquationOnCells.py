@@ -78,11 +78,11 @@ class ConstrainedPoissonEquationOnCells(object):
   def __init__(self, 
                name, 
                relaxation_coefficient = 0.6, 
-               right_hand_side = -10.0, 
+               right_hand_side = -25.0, 
                min_value = 0.0, 
                max_value = 1.0, 
-               min_threshold = 0.4,
-               max_threshold = 0.6,
+               min_threshold = 0.8,
+               max_threshold = 0.9,
                plot = False):
     """
     
@@ -118,6 +118,8 @@ class ConstrainedPoissonEquationOnCells(object):
     self._min_threshold          = min_threshold
     self._max_threshold          = max_threshold
     self._plot                   = plot
+
+    self._postprocess_updated_cell = None
     
     self.create_data_structures()
     self.create_action_sets()
@@ -152,7 +154,7 @@ Relaxation coefficient: {}
     we rely on the multigrid toolbox routines.
        
     """
-    Variants = ["AnotB","AdeterminesB","BnotA","BdeterminesA"]
+    Variants = ["AnotB","AdeterminesB","BdeterminesA","BnotA"]
     
     self._cell_data_model = peano4.datamodel.DaStGen2( self._unknown_identifier() )
     self._cell_data_model.data.add_attribute(dastgen2.attributes.Double("Value") )
@@ -198,6 +200,13 @@ Relaxation coefficient: {}
       unknown_setter          = "setValue",
       unknown_getter          = "getValue"
       )
+    
+    self._action_set_smoother.additional_includes = self._get_default_includes()
+    self._action_set_smoother.d[ "SOLVER_INSTANCE" ] = self.get_name_of_global_instance()
+    
+    if self._postprocess_updated_cell!=None:
+      self._action_set_smoother._Template_TouchCellFirstTime_UpdateSolution += self._postprocess_updated_cell
+
     self._action_set_smoother._Template_TouchCellFirstTime_UpdateSolution += """
     if ( fineGridCell{{CELL_NAME}}.getValue() < """ + str(self._min_value) + """ ) {
       fineGridCell{{CELL_NAME}}.setValue(""" + str(self._min_value) + """);
@@ -254,34 +263,6 @@ Relaxation coefficient: {}
     }
     """
 
-
-
-#  def couple_with_FV_solver(self,FV_solver,auxiliary_variable):
-#    """
-#    
-#      FV_solver: exahype2.solver.fv.Solver
-#        Instance of the solver you want to couple this marker to
-#        
-#      auxiliary_variable: Integer
-#        index of the auxiliary variable that you want this class to dump its output
-#        to.
-#         
-#    """
-#    self._volumetric_coupling_term = """
-#  double cellAverage = 0.0;
-#  for(int k=0; k<TwoPowerD; k++) {{
-#    cellAverage += fineGridVertices{}(k).getU();
-#  }}
-#  cellAverage /= TwoPowerD;
-#  int index = {};
-#  dfor(k,{}) {{
-#    fineGridCell{}Q.value[index] = cellAverage;
-#    index += {};
-#  }}
-#""".format(self._unknown_identifier(),FV_solver._unknowns+auxiliary_variable,FV_solver.patch_size,FV_solver.name,FV_solver._unknowns+FV_solver._auxiliary_variables)    
-#
-#    self.create_action_sets()
-  
   
   def _unknown_identifier(self):
     return self._name +"PoissonSolver"
@@ -319,17 +300,17 @@ Relaxation coefficient: {}
     step.use_face(self._face_data_model)
 
   
-#  def _get_default_includes(self):
-#    return """
-##include "tarch/la/Vector.h" 
-#
-##include "peano4/utils/Globals.h"
-##include "peano4/utils/Loop.h"
-#
-##include "repositories/SolverRepository.h"
-#
-##include "Constants.h"
-#"""
+  def _get_default_includes(self):
+    return """
+#include "tarch/la/Vector.h" 
+
+#include "peano4/utils/Globals.h"
+#include "peano4/utils/Loop.h"
+
+#include "repositories/SolverRepository.h"
+
+#include "Constants.h"
+"""
 
 
   def add_actions_to_init_grid(self, step):
@@ -437,28 +418,35 @@ Relaxation coefficient: {}
   def name(self):
     return self._name
 
-  #    action_set_update_face_label._Template_DestroyHangingFace += """
-#"""
-#  def _init_dictionary_with_default_parameters(self,d):
-#    """
-#
-#      This one is called by all algorithmic steps before I invoke
-#      add_entries_to_text_replacement_dictionary().
-#
-#      See the remarks on set_postprocess_updated_patch_kernel to understand why
-#      we have to apply the (partially befilled) dictionary to create a new entry
-#      for this very dictionary.##
-##
-#
-#    """
-#    d["RIGHT_HAND_SIDE"]        = self._right_hand_side
-#    d["RELAXATION_COEFFICIENT"] = self._relaxation_coefficient
-#    if self._flag_domain_boundary:
-#      d["BOUNDARY_VALUE"]       = 1.0
-#    else:
-#      d["BOUNDARY_VALUE"]       = 0.0
-#    
-#    d["SOLVER_INSTANCE"]                = self.get_name_of_global_instance()
-#    d["SOLVER_NAME"]                    = self._name
+
+  @property
+  def postprocess_updated_cell(self):
+    return self._postprocess_updated_cell
 
 
+  @postprocess_updated_cell.setter
+  def postprocess_updated_cell(self, kernel):
+    """
+
+    Define a postprocessing routine over the data
+    
+    Typically, you do something similar to
+    
+         if ( not repositories::{{SOLVER_INSTANCE}}.patchCanUseStatelessPDETerms(marker.x(), marker.h(), timeStamp, timeStepSize) ) {
+           fineGridCell{{CELL_NAME}}.setValue(1.0);
+         }
+
+    We evaluate some criterion (here, we only look at a global function, but we 
+    also have access to all the other solver data in the kernel) and then set
+    the cell value to the maximum if the criterion holds. 
+    
+
+    ## Attributes
+
+    kernel: String
+      C++ code that holds the postprocessing kernel
+
+    """
+    self._postprocess_updated_cell = kernel
+    self.create_data_structures()
+    self.create_action_sets()
