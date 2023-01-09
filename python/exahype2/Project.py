@@ -34,6 +34,8 @@ class Project(object):
   """
   def __init__(self, namespace, project_name, directory = ".", executable="peano4"):
     self._project = peano4.Project(namespace, project_name, directory)
+    self._project.output.makefile.add_cmake_core_library("exahype2")
+
     self._solvers = []
     self._domain_offset = [0.0, 0.0, 0.0]
     self._domain_size   = [1.0, 1.0, 1.0]

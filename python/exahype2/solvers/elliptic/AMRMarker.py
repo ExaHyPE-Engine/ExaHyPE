@@ -9,7 +9,7 @@ import peano4.output.TemplatedHeaderImplementationFilePair
 import peano4.output.Jinja2TemplatedHeaderFile
 import peano4.output.Jinja2TemplatedHeaderImplementationFilePair
 
-import peano4.toolbox.multigrid.MatrixFreeJacobi
+import peano4.toolbox.multigrid.vertexbased.ScalarJacobiWithRediscretisation
 
 import jinja2
 
@@ -177,7 +177,7 @@ Relaxation coefficient: {}
     self._data_model.generator.send_condition               = "true"
     self._data_model.generator.receive_and_merge_condition  = "true"
 
-    self._data_model._peano4_aspect.merge_implementation = """
+    self._data_model.peano4_mpi_and_storage_aspect.merge_implementation = """
   setResidual( getResidual() + neighbour.getResidual() );
 """    
     
@@ -202,7 +202,7 @@ Relaxation coefficient: {}
      within the inheritance tree.
      
     """
-    self._action_set_smoother = peano4.toolbox.multigrid.MatrixFreeJacobi( 
+    self._action_set_smoother = peano4.toolbox.multigrid.vertexbased.ScalarJacobiWithRediscretisation( 
       self._data_model, 
       self._relaxation_coefficient, 
       "{}".format(self._right_hand_side) 
@@ -345,15 +345,11 @@ const double boundaryValue = 0.0;
      We plot if and only if we are asked to do so
      
     """
+    ## Add it. I can't harm to do one more iteration, and we at least
+    ## get the hanging nodes right this way
+    step.add_action_set( self._action_set_smoother )
     if self._plot:
-#      d = {}
-#      self._init_dictionary_with_default_parameters(d)
-#      self.add_entries_to_text_replacement_dictionary(d)
-
-      ## Add it. I can't harm to do one more iteration, and we at least
-      ## get the hanging nodes right this way
-      step.add_action_set( self._action_set_smoother )
-      step.add_action_set( peano4.toolbox.PlotScalarNodalFieldInPeanoBlockFormat( 
+      step.add_action_set( peano4.toolbox.PlotVertexDataInPeanoBlockFormat( 
         filename=output_path + "amr-marker-" + self._name, 
         vertex_unknown=self._data_model,
         getter="getU()", 

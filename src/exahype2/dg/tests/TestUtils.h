@@ -1,7 +1,6 @@
 // This file is part of the Peano project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
-#ifndef _EXAHYPE2_DG_TEST_TESTUTILS_CPP_
-#define _EXAHYPE2_DG_TEST_TESTUTILS_CPP_
+#pragma once
 
 #include <vector>
 
@@ -154,4 +153,3 @@ namespace exahype2 {
   }
 }
 
-#endif

@@ -1,7 +1,6 @@
 // This file is part of the Peano project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
-#ifndef _TARCH_LOGGING_STATISTICS_H_
-#define _TARCH_LOGGING_STATISTICS_H_
+#pragma once
 
 
 #include <string>
@@ -142,4 +141,3 @@ class tarch::logging::Statistics {
 
 
 
-#endif

@@ -1,7 +1,6 @@
 // This file is part of the Peano project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
-#ifndef _TARCH_LA_DYNAMIC_MATRIX_H_
-#define _TARCH_LA_DYNAMIC_MATRIX_H_
+#pragma once
 
 
 
@@ -216,4 +215,3 @@ tarch::la::DynamicMatrix operator*(const tarch::la::DynamicMatrix& A, const tarc
 //void multiply( double* result, double* x );
 
 
-#endif

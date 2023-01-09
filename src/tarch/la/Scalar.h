@@ -1,7 +1,6 @@
 // This file is part of the Peano project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
-#ifndef _TARCH_LA_SCALAR_H_
-#define _TARCH_LA_SCALAR_H_
+#pragma once
 
 
 #include <limits>
@@ -59,4 +58,3 @@ namespace tarch {
   }
 }
 
-#endif

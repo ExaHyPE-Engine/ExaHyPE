@@ -4,11 +4,13 @@ from peano4.solversteps.ActionSet import ActionSet
 
 import dastgen2
 import peano4.datamodel.DaStGen2
+import jinja2
 
 
 class UpdateFaceLabel(ActionSet):
   def get_attribute_name(solver_name):
     return solver_name + "FaceLabel"
+
   
   """
   
@@ -54,8 +56,37 @@ class UpdateFaceLabel(ActionSet):
     return ""
 
 
-  #def get_body_of_getGridControlEvents(self):
-  #  return self.__Template_GridControlEvents.format(**self.d)
+  _Template_TouchFaceFirstTime = """
+  fineGridFace{{FACE_LABEL_NAME}}.setUpdated( false );
+"""
+
+
+  _Template_CreateFace = """
+  logTraceInWith1Argument( "createPersistent/HangingFace(...)", marker.toString() );
+      
+  tarch::la::Vector<Dimensions, double> offset(DomainOffset);
+  tarch::la::Vector<Dimensions, double> size(DomainSize);
+  bool isBoundary = false;
+  for (int d=0; d<Dimensions; d++) {
+    isBoundary |= tarch::la::equals( marker.x()(d), offset(d) );
+    isBoundary |= tarch::la::equals( marker.x()(d), offset(d) + size(d) );
+  }
+  fineGridFace{{FACE_LABEL_NAME}}.setBoundary( isBoundary );
+
+  fineGridFace{{FACE_LABEL_NAME}}.setUpdatedTimeStamp( 0.0 );
+  fineGridFace{{FACE_LABEL_NAME}}.setNewTimeStamp( 0.0 );
+  fineGridFace{{FACE_LABEL_NAME}}.setOldTimeStamp( 0.0 );
+
+  logTraceOutWith1Argument( "createPersistent/HangingFace(...)", fineGridFace{{FACE_LABEL_NAME}}.toString() );
+"""
+
+
+  _Template_CreateHangingFace = """
+"""  
+  
+  
+  _Template_DestroyHangingFace = """
+"""  
 
 
   def get_action_set_name(self):
@@ -68,30 +99,19 @@ class UpdateFaceLabel(ActionSet):
 
   def get_body_of_operation(self,operation_name):
     result = "\n"
+    
+    d = {}
+    d[ "FACE_LABEL_NAME" ] = UpdateFaceLabel.get_attribute_name(self._solver_name)
+    
     if operation_name==ActionSet.OPERATION_CREATE_PERSISTENT_FACE or operation_name==ActionSet.OPERATION_CREATE_HANGING_FACE:
-      result += """
-  logTraceInWith1Argument( "createPersistent/HangingFace(...)", marker.toString() );
-      
-  tarch::la::Vector<Dimensions, double> offset(DomainOffset);
-  tarch::la::Vector<Dimensions, double> size(DomainSize);
-  bool isBoundary = false;
-  for (int d=0; d<Dimensions; d++) {{
-    isBoundary |= tarch::la::equals( marker.x()(d), offset(d) );
-    isBoundary |= tarch::la::equals( marker.x()(d), offset(d) + size(d) );
-  }}
-  fineGridFace""" + UpdateFaceLabel.get_attribute_name(self._solver_name) + """.setBoundary( isBoundary );
-
-  fineGridFace""" + UpdateFaceLabel.get_attribute_name(self._solver_name) + """.setUpdatedTimeStamp( 0.0 );
-  fineGridFace""" + UpdateFaceLabel.get_attribute_name(self._solver_name) + """.setNewTimeStamp( 0.0 );
-  fineGridFace""" + UpdateFaceLabel.get_attribute_name(self._solver_name) + """.setOldTimeStamp( 0.0 );
-
-  logTraceOutWith1Argument( "createPersistent/HangingFace(...)", fineGridFace""" + UpdateFaceLabel.get_attribute_name(self._solver_name) + """.toString() );
-"""
+      result = jinja2.Template( self._Template_CreateFace ).render( **d )
+    if operation_name==ActionSet.OPERATION_CREATE_HANGING_FACE:
+      result = jinja2.Template( self._Template_CreateHangingFace ).render( **d )
     if operation_name==ActionSet.OPERATION_TOUCH_FACE_FIRST_TIME:
-      result = """
-  fineGridFace""" + UpdateFaceLabel.get_attribute_name(self._solver_name) + """.setUpdated( false );
-"""
-
+      result = jinja2.Template( self._Template_TouchFaceFirstTime ).render( **d )
+    if operation_name==ActionSet.OPERATION_DESTROY_HANGING_FACE:
+      result = jinja2.Template( self._Template_DestroyHangingFace ).render( **d )
+      
     return result
 
 
@@ -123,7 +143,7 @@ def create_face_label(solver_name):
   result.data.add_attribute( peano4.dastgen2.Peano4DoubleArray("NewTimeStamp","2") )
   result.data.add_attribute( peano4.dastgen2.Peano4DoubleArray("OldTimeStamp","2") )
   
-  result._peano4_aspect.merge_implementation = """
+  result.peano4_mpi_and_storage_aspect.merge_implementation = """
   switch (context) {
     case ::peano4::grid::TraversalObserver::SendReceiveContext::BoundaryExchange:
     case ::peano4::grid::TraversalObserver::SendReceiveContext::PeriodicBoundaryDataSwap:

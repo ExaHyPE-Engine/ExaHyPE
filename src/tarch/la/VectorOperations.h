@@ -1,7 +1,6 @@
 // This file is part of the Peano project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
-#ifndef _TARCH_LA_VECTOR_OPERATIONS_H_
-#define _TARCH_LA_VECTOR_OPERATIONS_H_
+#pragma once
 
 
 #include "tarch/la/ScalarOperations.h"
@@ -193,4 +192,3 @@ std::ostream& operator<<(std::ostream&  os, const tarch::la::Vector<Size,Scalar>
 
 #include "VectorOperations.cpph"
 
-#endif

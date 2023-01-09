@@ -889,6 +889,119 @@ double examples::exahype2::selfgravitation::Poisson::getAdmissibleTimeStepSize()
 
 
 
+\section{Case study: Coupling finite volumes with Runge-Kutta DG (limiting)}
+\label{section:exahype:fv:limiting}
+
+
+Even simple initial conditions can make a Discontinuous Galerking solver fail: 
+The higher order solution representation is not capable to resolve shocks
+properly (or steep gradients), and the solution therefore starts to oscillation.
+At the same time, experiments with Finite Volumes yield solutions which a
+subject to very strong numerical diffusion.
+The solution quality is not good.
+
+
+There are two fundamental approaches to tackle this dilemma: On the one hand,
+we can introduce artificial damping terms, i.e.~numerical diffusion, or
+truncation terms for the Riemann solvers such that these oscillations are
+eliminated. 
+On the other hand, we can accept that both DG and FV have their pros and cons
+and try to use each solver where it unfolds its full potential.
+This is the prime strategy in the original \ExaHyPE\ project.
+
+
+To realise this a posteriori limiting (which really will become an a priori
+limiting), we follow the same pattern that we exploited in the
+previous case study:
+We define two different solvers, and couple them with each other.
+Different to the previous setup, we however make all of our operations local:
+
+\begin{itemize}
+  \item The Finite Volume solver is our fallback strategy and we therefore
+  neither solve with Finite Volumes everywhere in the computational domain nor
+  should do we store the corresponding data.
+  \item The FV and the DG solver are not coupled everywhere but only in boundary
+  regions, i.e.~in regions where the FV solver and the DG solver kind of agree
+  solution-wisely.
+\end{itemize}
+
+
+\noindent
+We will effectively end up with a domain decomposition where parts of the
+computational domain are handled by the DG solver and the other parts are
+handled with FV.
+To realise this, we need a marker, i.e.~a
+label per cell which tells us, similar to a multi-phase flow, which solver rules in this
+particular cell.
+Then, we construct two solvers that are coupled with each other similar to the
+previous case study.
+The marker will determine which solver is ``valid'' in which cell, where they
+are active, and where the two solvers are coupled with each other.
+
+
+
+
+\paragraph*{Two solvers}
+
+In this simple setup, we just create a DG solver and then add an additional
+Finite Volume solver. 
+The latter works with a patch size of $2p+1$ where $p$ is the spatial DG order.
+You might want to use a different patch size, but this choice usually yields
+time step sizes in the FV discretisation which is similar to the DG scheme.
+We
+add both of them to the project and refer to them as \texttt{dg\_solver} and \texttt{fv\_solver} objects in the Python script.
+ 
+\paragraph*{The marker}
+
+The marker is determined by a quantity $\alpha $ which solves the equation
+\[
+ - \Delta \alpha = C < 0 
+ \qquad
+ \text{s.t.} \ 
+ 0 \leq \alpha  \leq 1, \ 
+ \alpha  | _{\partial \Omega} = 0
+\]
+via a cell-centered finite differences scheme. 
+In  the cells where we definitely need the Finite Volume scheme, we set $\alpha
+ = 1$.
+The higher $\alpha $, the more sure we are that the FV scheme yields
+the correct result.
+
+\ExaHyPE\ is shipped with a pre-manufactured solver for this Poisson setup 
+which takes care of all the details---including the mapping of the continuous
+$\alpha $ value onto the states which solver is active where---and also has more
+documentation):
+
+
+\begin{code}
+marker_solver = exahype2.solvers.elliptic.ConstrainedPoissonEquationOnCells( name = "Alpha",
+                                                                             plot = True) 
+project.add_solver( marker_solver )
+\end{code}
+
+
+\paragraph*{Control the marker}
+
+The marker by default will be $\alpha =0$ in the present configuration. 
+As a first step, we hence have to reset it to $\alpha =1$ where we want the FV
+scheme to dominate, i.e.~where we definitely know that it is the FV scheme that
+we need.
+Technically, we realise this by a postprocessing step on the respective solver:
+
+\begin{code}
+ marker_solver.postprocess_updated_cell = """
+if ( check some conditions ) {
+  fineGridCell{{CELL_NAME}}.setValue(1.0);
+}
+"""
+\end{code}
+
+
+\paragraph*{Couple marker and FV scheme}
+
+With the three solvers (two PDE solvers plus the marker's Poisson equation) at
+hand, we have to couple them with each other.
+    
 
 
 \section{Generic \ExaHyPE\ features}
@@ -1099,6 +1212,16 @@ will never split up if it has less than 200 cells.
 \end{remark}   
  
 
+
+\begin{remark}
+ The more subpartition (trees) you allow \Peano\ to host per rank, the more you
+ stress the MPI subsystem.
+ Many trees give \Peano\ more headspace to balance out the mesh, but every tree
+ may (in theory) exchange data with any other tree, and this can quickly
+ overwhelm MPI.
+ If you encounter deadlocks, it is therefore reasonable to constrain the number
+ of trees (subpartitions) per rank.
+\end{remark}   
 
 
 \paragraph{Task parallelism}

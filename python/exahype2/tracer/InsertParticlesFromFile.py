@@ -43,8 +43,12 @@ class InsertParticlesFromFile(ActionSet):
       newParticle->setNumber(1, _particleNumberOnThisTree);
       toolbox::particles::init(*newParticle,p,0.0);
       _particleNumberOnThisTree++;
-      // just insert them; will be re-assigned then anyway
-      fineGridVertices{{PARTICLES_CONTAINER}}(0).push_back( newParticle );
+
+      toolbox::particles::insertParticleIntoCell(
+        marker,
+        newParticle,
+        fineGridVertices{{PARTICLES_CONTAINER}}
+      );
     }
     
     logDebug( "touchVertexFirstTime(...)", "assigned " << coords.size() << " particle(s) to vertex " << marker.toString() << " on tree " << _spacetreeId );

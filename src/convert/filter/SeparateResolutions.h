@@ -1,7 +1,6 @@
 // This file is part of the Peano project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
-#ifndef _CONVERT_FILTER_SEPARATE_RESOLUTIONS_H_
-#define _CONVERT_FILTER_SEPARATE_RESOLUTIONS_H_
+#pragma once
 
 
 #include "Filter.h"
@@ -22,4 +21,3 @@ class convert::filter::SeparateResolutions: public convert::filter::Filter {
 	void apply( convert::data::DataSet& dataSet, convert::data::Variable& inputVariable, std::string targetSelectorName ) override;
 };
 
-#endif

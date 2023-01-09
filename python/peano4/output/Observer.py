@@ -1356,7 +1356,7 @@ void {FULL_QUALIFIED_CLASSNAME}::receiveAndMergeFace(int position, int fromStack
   logTraceInWith4Arguments( "receiveAndMergeFace(...)", position, fromStack, event.toString(), _spacetreeId );
 """
 
-
+  
   TemplateReceiveAndMergeVertex_ReceiveAndMergeCalls = """
   {{
     peano4::datamanagement::VertexMarker  marker(event,position);
@@ -1402,7 +1402,7 @@ void {FULL_QUALIFIED_CLASSNAME}::receiveAndMergeFace(int position, int fromStack
           data.getDebugX(), incomingData.getDebugX(), fromStack, event.toString(), marker.toString(), _spacetreeId );
       }}
 
-      data.merge(context,incomingData, marker);
+      data.merge(context, incomingData, marker);
     }}
   }}
 """

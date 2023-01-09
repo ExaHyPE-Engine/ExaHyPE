@@ -35,3 +35,5 @@
  */
 #define KeywordToAvoidDuplicateSymbolsForInlinedFunctions
 
+#define OpenMPTaskGroup
+

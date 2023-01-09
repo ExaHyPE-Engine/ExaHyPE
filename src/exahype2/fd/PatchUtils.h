@@ -1,7 +1,6 @@
 // This file is part of the ExaHyPE2 project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
-#ifndef _EXAHYPE2_FD_PATCH_UTILS_H_
-#define _EXAHYPE2_FD_PATCH_UTILS_H_
+#pragma once
 
 
 #include <vector>
@@ -192,4 +191,3 @@ namespace exahype2 {
   }
 }
 
-#endif

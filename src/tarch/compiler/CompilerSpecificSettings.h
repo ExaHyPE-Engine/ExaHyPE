@@ -1,7 +1,6 @@
 // This file is part of the Peano project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
-#ifndef _TARCH_COMPILER_COMPILER_SPECIFIC_SETTINGS
-#define _TARCH_COMPILER_COMPILER_SPECIFIC_SETTINGS
+#pragma once
 
   #if defined(__INTEL_COMPILER) && defined(__WIN32__)
     #include "tarch/compiler/WindowsIntelLegacy.h"
@@ -38,4 +37,3 @@
   #endif
 
 
-#endif

@@ -1,5 +1,4 @@
-#ifndef __TP_PARAMETERS__
-#define __TP_PARAMETERS__
+#pragma once
 
 #include "libtwopunctures/TP_Logging.h"
 
@@ -71,4 +70,3 @@ struct Parameters : public LoggingAdapter {
 }; // class Parameters
 } // namespace 
 
-#endif /* __TP_PARAMETERS__ */

@@ -109,7 +109,7 @@ class tarch::multicore::omp::GPUMemoryManager {
      * @param growth Number greater than zero which tells code how many entries
      *   (pages) to book whenever it runs out of memory.
      */
-    void* allocateRawData( int size, int device, int growth=Dimensions*4 );
+    void* allocateRawData( int size, int device, int growth=8);
 
     /**
      * Free does not actually free data, but instead hands the memory block

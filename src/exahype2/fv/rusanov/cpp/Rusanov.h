@@ -1,7 +1,6 @@
 // This file is part of the ExaHyPE2 project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
-#ifndef _EXAHYPE2_FV_RUSANOV_CPP_RUSANOV_H_
-#define _EXAHYPE2_FV_RUSANOV_CPP_RUSANOV_H_
+#pragma once
 
 #include <vector>
 #include <iterator>
@@ -161,4 +160,3 @@ namespace exahype2 {
 #include "Rusanov_patchwise_heap_static_calls.cpph"
 #include "Rusanov_batched_heap_static_calls.cpph"
 
-#endif

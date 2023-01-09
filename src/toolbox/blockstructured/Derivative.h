@@ -1,7 +1,6 @@
 // This file is part of the Peano project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
-#ifndef _PEANO4_TOOLBOX_BLOCKSTRUCTURED_DERIVATIVE_H_
-#define _PEANO4_TOOLBOX_BLOCKSTRUCTURED_DERIVATIVE_H_
+#pragma once
 
 
 #include "peano4/utils/Globals.h"
@@ -57,4 +56,3 @@ namespace toolbox {
 }
 
 
-#endif

@@ -1,5 +1,4 @@
-#ifndef _EXAHYPE2_ADERDG_RUSANOV_NONLINEAR_AOS_H_
-#define _EXAHYPE2_ADERDG_RUSANOV_NONLINEAR_AOS_H_
+#pragma once
 
 #include "tarch/la/Vector.h"
 
@@ -136,4 +135,3 @@ namespace exahype2 {
   }
 }
 
-#endif

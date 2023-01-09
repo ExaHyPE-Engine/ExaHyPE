@@ -33,6 +33,13 @@ namespace {
    * NVIDIA's nvc++ does not support taskloops. We have contacted their R&D and they
    * confirmed that they only implement a subset of OpenMP, and the taskloop is not
    * on the list of features that they want to support.
+   *
+   *
+   * ## Implementation (bugs)
+   *
+   * See discussion in the context of the other taskloop: It is important to
+   * label tasks as shared even though I think copying should be fine as a copy
+   * degenerates to a shallow copy.
    */
   void spawnAndWaitAsTaskLoop(
     const std::vector< tarch::multicore::Task* >&  tasks
@@ -40,21 +47,19 @@ namespace {
     // important, otherwise taskwait synchronises
     assertion( not tasks.empty() );
 
-    #if !defined(__NVCOMPILER)
-    #pragma omp taskloop nogroup priority(StandardPriority) untied
+    #if defined(OpenMPTaskGroup)
+    #pragma omp taskloop nogroup shared(tasks) priority(StandardPriority) untied
     #endif
     for (int i=0; i<static_cast<int>(tasks.size()); i++) {
-      #if defined(__NVCOMPILER)
+      #if !defined(OpenMPTaskGroup)
       #pragma omp task
+      #endif
       {
-      #endif
-      ::tarch::logging::Statistics::getInstance().inc( BSPConcurrencyLevelStatisticsIdentifier, 1.0, true );
-      while (tasks[i]->run()) {}
-      delete tasks[i];
-      ::tarch::logging::Statistics::getInstance().inc( BSPConcurrencyLevelStatisticsIdentifier, -1.0, true );
-      #if defined(__NVCOMPILER)
+        ::tarch::logging::Statistics::getInstance().inc( BSPConcurrencyLevelStatisticsIdentifier, 1.0, true );
+        while (tasks[i]->run()) {}
+        delete tasks[i];
+        ::tarch::logging::Statistics::getInstance().inc( BSPConcurrencyLevelStatisticsIdentifier, -1.0, true );
       }
-      #endif
     }
 
     #ifdef UseSmartMPI
@@ -156,6 +161,16 @@ namespace {
    * NVIDIA's nvc++ does not support taskloops. We have contacted their R&D and they
    * confirmed that they only implement a subset of OpenMP, and the taskloop is not
    * on the list of features that they want to support.
+   *
+   *
+   * ## Bugs/flaws
+   *
+   * The tasks object and the strategy pointer both are logically shared. In
+   * theory, it is fine if they are copied. As they are either a pointer or a
+   * container over pointers, any copying degenerates to a shallow copy. With
+   * the newest LLVM generation shipped with Intel 2023, the code however
+   * segfault if tasks is not marked as shared. We are still discussing if this
+   * is a bug.
    */
   void spawnAndWaitAsExplicitTasksWithPolling(
     const std::vector< tarch::multicore::Task* >&  tasks,
@@ -168,14 +183,14 @@ namespace {
     int       pendingTasks  = NumberOfThreads;
     int       spawnedTasks  = 0;
 
-    #if !defined(__NVCOMPILER)
-    #pragma omp taskloop nogroup shared(pendingTasks, spawnedTasks) priority(StandardPriority) untied
+    #if defined(OpenMPTaskGroup)
+    #pragma omp taskloop nogroup shared(pendingTasks, spawnedTasks, tasks, strategy) firstprivate(NumberOfThreads) priority(StandardPriority) untied
     #endif
     for (int i=0; i<NumberOfThreads; i++) {
-      #if defined(__NVCOMPILER)
+      #if !defined(OpenMPTaskGroup)
       #pragma omp task
-      {
       #endif
+      {
         ::tarch::logging::Statistics::getInstance().inc( BSPConcurrencyLevelStatisticsIdentifier, 1.0, true );
         #pragma omp atomic
         spawnedTasks++;
@@ -226,9 +241,7 @@ namespace {
           }
         }
         ::tarch::logging::Statistics::getInstance().inc( BSPConcurrencyLevelStatisticsIdentifier, -1.0, true );
-      #if defined(__NVCOMPILER)
       }
-      #endif
     }
 
     #ifdef UseSmartMPI
