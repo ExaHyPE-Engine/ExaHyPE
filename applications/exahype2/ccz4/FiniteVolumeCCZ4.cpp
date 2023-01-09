@@ -37,27 +37,27 @@ void applications::exahype2::ccz4::FiniteVolumeCCZ4::prepare(TP::TwoPunctures* t
 		tp->TP_epsilon=1e-6;}
 		
 	if (CCZ4swi==1){
-		tp->par_b=4.0;
+		tp->par_b=2.0;
 		tp->center_offset[0]=0.0; tp->center_offset[1]=0.0; tp->center_offset[2]=0.0;
-		tp->target_M_plus=1.0;//adm mass
+		tp->target_M_plus=0.5;//adm mass
 		tp->par_P_plus[0]=0.0; tp->par_P_plus[1]=0.0; tp->par_P_plus[2]=0.0;//linear momentum
 		tp->par_S_plus[0]=0.0; tp->par_S_plus[1]=0.0; tp->par_S_plus[2]=0.0;//spin
-		tp->target_M_minus=1.0;//adm mass
+		tp->target_M_minus=0.5;//adm mass
 		tp->par_P_minus[0]=0.0; tp->par_P_minus[1]=0.0; tp->par_P_minus[2]=0.0;//linear momentum
 		tp->par_S_minus[0]=0.0; tp->par_S_minus[1]=0.0; tp->par_S_minus[2]=0.0; //spin		
 		tp->grid_setup_method="evaluation"; //evaluation or Taylor expansion
 		tp->TP_epsilon=1e-6;}
 	
 	if (CCZ4swi==2){
-		tp->par_b=4.251;
+		tp->par_b=2.0;
 		tp->center_offset[0]=0.0; tp->center_offset[1]=0.0; tp->center_offset[2]=0.0;
 		tp->give_bare_mass=true;//use puncture mass instead of adm mass
 		tp->par_m_plus=0.494; tp->par_m_minus=0.494;
 		//tp->target_M_plus=999;//adm mass
-		tp->par_P_plus[0]=0.0; tp->par_P_plus[1]=0.1091; tp->par_P_plus[2]=0.0;//linear momentum
+		tp->par_P_plus[0]=0.0; tp->par_P_plus[1]=0.159; tp->par_P_plus[2]=0.0;//linear momentum
 		tp->par_S_plus[0]=0.0; tp->par_S_plus[1]=0.0; tp->par_S_plus[2]=0.0;//spin
 		//tp->target_M_minus=999;//adm mass
-		tp->par_P_minus[0]=0.0; tp->par_P_minus[1]=-0.1091; tp->par_P_minus[2]=0.0;//linear momentum
+		tp->par_P_minus[0]=0.0; tp->par_P_minus[1]=-0.159; tp->par_P_minus[2]=0.0;//linear momentum
 		tp->par_S_minus[0]=0.0; tp->par_S_minus[1]=0.0; tp->par_S_minus[2]=0.0; //spin		
 		tp->grid_setup_method="evaluation"; //evaluation or Taylor expansion
 		tp->TP_epsilon=1e-6;}
@@ -306,7 +306,7 @@ void applications::exahype2::ccz4::FiniteVolumeCCZ4::nonconservativeProduct(
     if (tarch::la::equals(t,0.0)){  //as we use a quantity calculated in postpocessing, we need to provide criterion at the first timestep 
       constexpr int NumberOfRefinementLayers = 2;
 //    current "standard" refinement pattern
-      double Radius[NumberOfRefinementLayers] = {2.0, 1.0};
+      double Radius[NumberOfRefinementLayers] = {1.5, 0.5};
       double MaxH[NumberOfRefinementLayers]   = {0.06, 0.02};
 //    with some alter
 //      double Radius[NumberOfRefinementLayers] = {5.0, 3.0};
@@ -367,8 +367,8 @@ void applications::exahype2::ccz4::FiniteVolumeCCZ4::nonconservativeProduct(
     if (tarch::la::equals(t,0.0)){  //as we use a quantity calculated in postpocessing, we need to provide criterion at the first timestep 
       constexpr int NumberOfRefinementLayers = 3;
 //    current "standard" refinement pattern
-      double Radius[NumberOfRefinementLayers] = {4.0, 2.0, 1.5};
-      double MaxH[NumberOfRefinementLayers]   = {0.2, 0.08, 0.0};
+      double Radius[NumberOfRefinementLayers] = {3.0, 1.0, 0.5};
+      double MaxH[NumberOfRefinementLayers]   = {0.2, 0.06, 0.02};
 //    with some alter
 //      double Radius[NumberOfRefinementLayers] = {5.0, 3.0};
 //      double MaxH[NumberOfRefinementLayers]   = {0.3, 0.15};
