@@ -21,7 +21,209 @@ import dastgen2
 import peano4.datamodel.DaStGen2
 
 
-class ConstrainedPoissonEquationOnCells(object):
+class ConstrainedPoissonEquationForMarkerOnCells(object):
+  class PlotMarkerInPeanoBlockFormat(ActionSet):
+    def __init__(self,
+                 filename,
+                 cell_unknown,
+#                   getter,
+#                   description,
+#                   time_stamp_evaluation, 
+#                   number_of_unknows_per_cell=1,
+#                   guard_predicate="true", 
+#                   additional_includes=""
+                 ):
+        """
+          Plot only the marker
+          
+        """
+        self.d = {}
+        self.d[ "FILENAME" ]            = filename
+        self.d[ "CELL_UNKNOWN_NAME" ] = cell_unknown.name
+#        self.d[ "GETTER" ]              = getter
+#        self.d[ "NUMBER_OF_UNKNOWNS_PER_CELL" ] = number_of_unknows_per_cell
+#        self.d[ "DESCRIPTION" ]         = description
+#        self.d[ "TIMESTAMP" ]           = time_stamp_evaluation
+#        self.d[ "GUARD_PREDICATE" ]    = guard_predicate
+#        self.additional_includes       = additional_includes
+            
+    
+    __Template_Constructor = """
+      _writer      = nullptr;
+      
+      _dataPoissonWriter      = nullptr;
+      _dataMarkerWriter       = nullptr;
+      _dataTransitionAWriter  = nullptr;
+      _dataTransitionBWriter  = nullptr;
+      
+      _treeNumber  = treeNumber;
+    
+      // An MPI lock (critical section) would be important!
+        
+      logDebug( "PlotGrid2PlotGridInPeanoBlockFormat1()", "created tree instance for " << treeNumber );
+    """
+    
+    
+    def get_constructor_body(self):
+      return self.__Template_Constructor.format(**self.d)
+    
+    
+    __Template_EndTraversal = """
+      assertion(_dataPoissonWriter    !=nullptr);
+      assertion(_dataMarkerWriter     !=nullptr);
+      assertion(_dataTransitionAWriter!=nullptr);
+      assertion(_dataTransitionBWriter!=nullptr);
+      
+      assertion1(_dataPoissonWriter    !=nullptr,_treeNumber);
+      assertion1(_dataMarkerWriter     !=nullptr,_treeNumber);
+      assertion1(_dataTransitionAWriter!=nullptr,_treeNumber);
+      assertion1(_dataTransitionBWriter!=nullptr,_treeNumber);
+      
+      _dataPoissonWriter->close();
+      _dataMarkerWriter->close();
+      _dataTransitionAWriter->close();
+      _dataTransitionBWriter->close();
+      
+      _dataPoissonWriter->writeToFile();
+      _dataMarkerWriter->writeToFile();
+      _dataTransitionAWriter->writeToFile();
+      _dataTransitionBWriter->writeToFile();
+      
+      delete _dataPoissonWriter;
+      delete _dataMarkerWriter;
+      delete _dataTransitionAWriter;
+      delete _dataTransitionBWriter;
+      
+      delete _writer;
+    
+      _dataPoissonWriter     = nullptr;
+      _dataMarkerWriter      = nullptr;
+      _dataTransitionAWriter = nullptr;
+      _dataTransitionBWriter = nullptr;
+      
+      _writer     = nullptr;
+    """
+    
+        
+#    def get_destructor_body(self):
+#        return ""
+    
+    
+#      def get_body_of_getGridControlEvents(self):
+#        return "  return std::vector< peano4::grid::GridControlEvent >();\n" 
+    
+    
+    def get_action_set_name(self):
+      return __name__.replace(".py", "").replace(".", "_")
+    
+    
+    def user_should_modify_template(self):
+      return False
+    
+    
+    __Template_TouchCellFirstTime = """ 
+    if ( true ) {
+      int vertexIndices[TwoPowerD];
+    
+      int cellIndex = _writer->plotPatch(
+        marker.x()-0.5 * marker.h(),
+        marker.h()
+      );
+
+      double dataPoisson     = fineGridCell{{CELL_UNKNOWN_NAME}}.getValue();
+      double dataMarker      = static_cast<double>( fineGridCell{{CELL_UNKNOWN_NAME}}.getMarker() );
+      double dataTransitionA = static_cast<double>( fineGridCell{{CELL_UNKNOWN_NAME}}.getTransitionA() );
+      double dataTransitionB = static_cast<double>( fineGridCell{{CELL_UNKNOWN_NAME}}.getTransitionB() );
+
+      _dataPoissonWriter->plotCell(     cellIndex, dataPoisson );
+      _dataMarkerWriter->plotCell(      cellIndex, dataMarker );
+      _dataTransitionAWriter->plotCell( cellIndex, dataTransitionA );
+      _dataTransitionBWriter->plotCell( cellIndex, dataTransitionB );
+    }
+    """
+    
+    
+    __Template_BeginTraversal = """
+      tarch::mpi::Lock lock( _semaphore );
+      
+      static int counter = -1;
+      counter++;
+    
+      std::ostringstream snapshotFileName;
+      snapshotFileName << "{{FILENAME}}-" << counter;
+    
+      if (tarch::mpi::Rank::getInstance().getNumberOfRanks()>1 ) {
+        snapshotFileName << "-rank-" << tarch::mpi::Rank::getInstance().getRank();
+      }
+    
+
+      _writer = new tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter(
+        Dimensions, snapshotFileName.str(), "{{FILENAME}}",
+        tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter::IndexFileMode::AppendNewData,
+        0.5*(repositories::getMinTimeStamp()+repositories::getMaxTimeStamp())
+      );    
+        
+      _dataPoissonWriter = _writer->createCellDataWriter( 
+        "Poisson", 
+        1, 1, "value"
+      );
+      _dataMarkerWriter = _writer->createCellDataWriter( 
+        "Marker", 
+        1, 1, "marker"
+      );
+      _dataPoissonWriter = _writer->createCellDataWriter( 
+        "Poisson", 
+        1, 1, "value"
+      );
+      _dataPoissonWriter = _writer->createCellDataWriter( 
+        "Poisson", 
+        1, 1, "value"
+      );
+    """
+    
+    
+      def get_body_of_operation(self,operation_name):
+        result = "\n"
+        if operation_name==ActionSet.OPERATION_TOUCH_CELL_FIRST_TIME:
+          result = jinja2.Template( self.__Template_TouchCellFirstTime).render(**self.d) 
+        if operation_name==ActionSet.OPERATION_BEGIN_TRAVERSAL:
+          result = jinja2.Template( self.__Template_BeginTraversal).render(**self.d)             
+        if operation_name==ActionSet.OPERATION_END_TRAVERSAL:
+          result = jinja2.Template( self.__Template_EndTraversal).render(**self.d)             
+        return result
+    
+    
+      def get_attributes(self):
+        return """
+        static tarch::mpi::BooleanSemaphore                                              _semaphore;
+        
+        int                _treeNumber;
+    
+        tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter*                  _writer;
+        tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter::CellDataWriter*  _dataWriter;
+    """
+    
+    
+      def get_includes(self):
+        return """
+    #include "tarch/plotter/griddata/blockstructured/PeanoTextPatchFileWriter.h"
+    #include "tarch/mpi/Lock.h"
+    #include "tarch/mpi/BooleanSemaphore.h"
+    #include "tarch/multicore/Lock.h"
+    #include "tarch/multicore/BooleanSemaphore.h"
+    #include "peano4/utils/Loop.h"
+    #include "peano4/parallel/SpacetreeSet.h"
+    """ + self.additional_includes
+    
+    
+      def get_static_initialisations(self,full_qualified_classname):
+        return """
+    tarch::mpi::BooleanSemaphore  """ + full_qualified_classname + "::_semaphore(\"""" + full_qualified_classname + """\");
+    """
+        
+    
+    
+    
   """ 
     A very simple Poisson equation system solver
 
@@ -158,7 +360,9 @@ Relaxation coefficient: {}
     
     self._cell_data_model = peano4.datamodel.DaStGen2( self._unknown_identifier() )
     self._cell_data_model.data.add_attribute(dastgen2.attributes.Double("Value") )
-    self._cell_data_model.data.add_attribute(dastgen2.attributes.Enumeration( name="Marker", variants=Variants ) )
+    self._cell_data_model.data.add_attribute(dastgen2.attributes.Enumeration( name="Marker",      variants=Variants ) )
+    self._cell_data_model.data.add_attribute(dastgen2.attributes.Enumeration( name="TransitionA", variants=[ "LoadStore", "Load", "Store", "None" ] ) )
+    self._cell_data_model.data.add_attribute(dastgen2.attributes.Enumeration( name="TransitionB", variants=[ "LoadStore", "Load", "Store", "None" ] ) )
         
     self._face_data_model = peano4.toolbox.multigrid.cellbased.ScalarJacobiWithRediscretisation.construct_face_helper_data(self._cell_data_model)
     
@@ -208,64 +412,17 @@ Relaxation coefficient: {}
       self._action_set_smoother._Template_TouchCellFirstTime_UpdateSolution += self._postprocess_updated_cell
 
     self._action_set_smoother._Template_TouchCellFirstTime_UpdateSolution += """
-    if ( fineGridCell{{CELL_NAME}}.getValue() < """ + str(self._min_value) + """ ) {
-      fineGridCell{{CELL_NAME}}.setValue(""" + str(self._min_value) + """);
-    }
-    if ( fineGridCell{{CELL_NAME}}.getValue() > """ + str(self._max_value) + """ ) {
-      fineGridCell{{CELL_NAME}}.setValue(""" + str(self._max_value) + """);
-    }
-    
-    bool cellHoldsBnotA              = false;
-    bool neighbourHoldsBnotA         = false;
-    bool cellHoldsBdeterminesA       = false;
-    bool neighbourHoldsBdeterminesA  = false;
-    bool cellHoldsAdeterminesB       = false;
-    bool neighbourHoldsAdeterminesB  = false;
-    
-    cellHoldsBnotA        = fineGridCell{{CELL_NAME}}.getValue() > """ + str(self._max_threshold ) + """;
-    cellHoldsBdeterminesA = fineGridCell{{CELL_NAME}}.getValue() > """ + str( 0.5*self._max_threshold+0.5*self._min_threshold ) + """;
-    cellHoldsAdeterminesB = fineGridCell{{CELL_NAME}}.getValue() > """ + str(self._min_threshold ) + """;
-
-    for (int d=0; d<Dimensions; d++) {
-      double leftNeighbour  = 2.0 * (fineGridFaces{{FACE_NAME}}(d).getOldAverage()            - 0.5 * centralValue);
-      double rightNeighbour = 2.0 * (fineGridFaces{{FACE_NAME}}(d+Dimensions).getOldAverage() - 0.5 * centralValue);
-
-      neighbourHoldsBnotA |= leftNeighbour  > """ + str(self._max_threshold ) + """;
-      neighbourHoldsBnotA |= rightNeighbour > """ + str(self._max_threshold ) + """;
-
-      neighbourHoldsBdeterminesA |= leftNeighbour  > """ + str( 0.5*self._max_threshold+0.5*self._min_threshold ) + """;
-      neighbourHoldsBdeterminesA |= rightNeighbour > """ + str( 0.5*self._max_threshold+0.5*self._min_threshold ) + """;
-      
-      neighbourHoldsAdeterminesB |= leftNeighbour  > """ + str(self._min_threshold ) + """;
-      neighbourHoldsAdeterminesB |= rightNeighbour > """ + str(self._min_threshold ) + """;
-    }
-    
-    // "lift" current state
-    cellHoldsBdeterminesA |= neighbourHoldsBnotA;
-    cellHoldsAdeterminesB |= neighbourHoldsBdeterminesA;
-    
-    const double Tolerance = 1.01;
-    
-    if (cellHoldsBnotA) {
-      fineGridCell{{CELL_NAME}}.setMarker( std::remove_reference<decltype(fineGridCell{{CELL_NAME}})>::type::Marker::BnotA );
-      fineGridCell{{CELL_NAME}}.setValue( std::max(fineGridCell{{CELL_NAME}}.getValue(), """ + str(self._max_threshold) + """ * Tolerance) );
-    }
-    else if (cellHoldsBdeterminesA) {
-      fineGridCell{{CELL_NAME}}.setMarker( std::remove_reference<decltype(fineGridCell{{CELL_NAME}})>::type::Marker::BdeterminesA );
-      fineGridCell{{CELL_NAME}}.setValue( std::max(fineGridCell{{CELL_NAME}}.getValue(), """ + str(0.5*self._max_threshold+0.5*self._min_threshold) + """ * Tolerance) );
-    }
-    else if (cellHoldsAdeterminesB) {
-      fineGridCell{{CELL_NAME}}.setMarker( std::remove_reference<decltype(fineGridCell{{CELL_NAME}})>::type::Marker::AdeterminesB );
-      fineGridCell{{CELL_NAME}}.setValue( std::max(fineGridCell{{CELL_NAME}}.getValue(), """ + str(self._min_threshold) + """ * Tolerance) );
-    }
-    else {
-      fineGridCell{{CELL_NAME}}.setMarker( std::remove_reference<decltype(fineGridCell{{CELL_NAME}})>::type::Marker::AnotB );
-    }
+    repositories::{{SOLVER_INSTANCE}}.computeNewMarkerState( 
+      fineGridCell{{CELL_NAME}},
+      fineGridFaces{{FACE_NAME}} 
+    );
+        
+    repositories::{{SOLVER_INSTANCE}}.constrainValue( fineGridCell{{CELL_NAME}} );
     """
 
   
   def _unknown_identifier(self):
-    return self._name +"PoissonSolver"
+    return self._name +"PoissonMarker"
   
 
   def get_name_of_global_instance(self):
@@ -341,27 +498,31 @@ Relaxation coefficient: {}
     """
     step.add_action_set( self._action_set_smoother )
     if self._plot:
-      step.add_action_set( peano4.toolbox.PlotCellDataInPeanoBlockFormat( 
-        filename     = output_path + "marker-poisson-equation-" + self._name, 
-        cell_unknown = self._cell_data_model,
-        getter       = "getValue()",
-        description  = "Alpha",
-        time_stamp_evaluation="0.5*(repositories::getMinTimeStamp()+repositories::getMaxTimeStamp())",
-        additional_includes="""
-#include "repositories/SolverRepository.h"       
-"""        
-      ))
-      step.add_action_set( peano4.toolbox.PlotCellDataInPeanoBlockFormat( 
+      step.add_action_set( PlotMarkerInPeanoBlockFormat(
         filename     = output_path + "marker-" + self._name, 
-        cell_unknown = self._cell_data_model,
-        getter       = "getMarker()",
-        number_of_unknows_per_cell = peano4.toolbox.PlotCellDataInPeanoBlockFormat.CastToDouble,
-        description  = "AnotB,AdeterminesB,BdeterminesA,BnotA",
-        time_stamp_evaluation="0.5*(repositories::getMinTimeStamp()+repositories::getMaxTimeStamp())",
-        additional_includes="""
-#include "repositories/SolverRepository.h"       
-"""        
       ))
+      
+#      step.add_action_set( peano4.toolbox.PlotCellDataInPeanoBlockFormat( 
+#        filename     = output_path + "marker-poisson-equation-" + self._name, 
+#        cell_unknown = self._cell_data_model,
+#        getter       = "getValue()",
+#        description  = "Alpha",
+#        time_stamp_evaluation="0.5*(repositories::getMinTimeStamp()+repositories::getMaxTimeStamp())",
+#        additional_includes="""
+##include "repositories/SolverRepository.h"       
+#"""        
+#      ))
+#      step.add_action_set( peano4.toolbox.PlotCellDataInPeanoBlockFormat( 
+#        filename     = output_path + "marker-" + self._name, 
+#        cell_unknown = self._cell_data_model,
+#        getter       = "getMarker()",
+#        number_of_unknows_per_cell = peano4.toolbox.PlotCellDataInPeanoBlockFormat.CastToDouble,
+#        description  = "AnotB,AdeterminesB,BdeterminesA,BnotA",
+#        time_stamp_evaluation="0.5*(repositories::getMinTimeStamp()+repositories::getMaxTimeStamp())",
+#        additional_includes="""
+##include "repositories/SolverRepository.h"       
+#"""        
+#      ))
    
  
   def add_actions_to_perform_time_step(self, step):
@@ -393,13 +554,20 @@ Relaxation coefficient: {}
      output: peano4.output.Output
      
     """
-    templatefile_prefix = os.path.dirname( os.path.realpath(__file__) ) + "/ConstrainedPoissonEquationOnCells"
+    templatefile_prefix = os.path.dirname( os.path.realpath(__file__) ) + "/ConstrainedPoissonEquationForMarkerOnCells"
 
-    headerDictionary = {}
     implementationDictionary = {}
-    self.add_entries_to_text_replacement_dictionary(headerDictionary)
     self.add_entries_to_text_replacement_dictionary(implementationDictionary)
 
+    implementationDictionary[ "RELAXATION_COEFFICIENT" ] = self._relaxation_coefficient
+    implementationDictionary[ "RHS" ]                    = self._right_hand_side
+    implementationDictionary[ "MIN_VALUE" ]              = self._min_value
+    implementationDictionary[ "MAX_VALUE" ]              = self._max_value
+    implementationDictionary[ "MIN_THRESHOLD" ]          = self._min_threshold
+    implementationDictionary[ "MAX_THRESHOLD" ]          = self._max_threshold
+
+    implementationDictionary[ "MARKER" ]                 = self._cell_data_model.name
+    
     generated_solver_files = peano4.output.Jinja2TemplatedHeaderImplementationFilePair(
       templatefile_prefix + ".template.h",
       templatefile_prefix + ".template.cpp",
