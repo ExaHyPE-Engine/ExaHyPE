@@ -155,7 +155,7 @@ void toolbox::loadbalancing::RecursiveSubdivision::updateGlobalView() {
     _lightestRankOut._rank                          = tarch::mpi::Rank::getInstance().getRank();
     _numberOfSplitsOut                              = _localNumberOfSplits;
     _numberOfTreesOut                               = peano4::parallel::SpacetreeSet::getInstance().getLocalSpacetrees().size();
-    _numberOfRanksWithEnabledLoadBalancingOut       = _enabled ? 1 : 0;
+    _numberOfRanksWithEnabledLoadBalancingOut       = isEnabled(false) ? 1 : 0;
 
     MPI_Iallreduce(
       &_numberOfRanksWithEnabledLoadBalancingOut,  // send
