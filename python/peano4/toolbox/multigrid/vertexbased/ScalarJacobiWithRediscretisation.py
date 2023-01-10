@@ -17,7 +17,8 @@ class ScalarJacobiWithRediscretisation(ActionSet):
                unknown_getter="getU",
                residual_setter="setResidual",
                residual_getter="getResidual",
-               store_residual_persistently_and_update_in_touch_first = True
+               store_residual_persistently_and_update_in_touch_first = True,
+               guard="true"
                ):
     """
       
@@ -40,6 +41,7 @@ class ScalarJacobiWithRediscretisation(ActionSet):
     self.d[ "RESIDUAL_GETTER" ] = residual_getter
     self.d[ "OMEGA" ]           = relaxation_coefficient
     self.d[ "RHS" ]             = rhs_expr
+    self.d[ "GUARD" ]           = guard
     self.additional_includes    = ""
     self._store_residual_persistently_and_update_in_touch_first = store_residual_persistently_and_update_in_touch_first
     
@@ -83,24 +85,26 @@ class ScalarJacobiWithRediscretisation(ActionSet):
 
   
   Template_TouchCellFirstTime = """
-  const tarch::la::Vector<ThreePowerD,double> stencil = toolbox::finiteelements::getLaplacian(
-    marker.h(), 1.0
-  );
-  const toolbox::finiteelements::ElementWiseAssemblyMatrix A = toolbox::finiteelements::getElementWiseAssemblyMatrix(
-    stencil
-  );
-
-  tarch::la::Vector<TwoPowerD,double> u;
-  for (int i=0; i<TwoPowerD; i++) {
-    u(i) = fineGridVertices{{UNKNOWN}}(i).{{UNKNOWN_GETTER}}();
-  }
-
-  tarch::la::Vector<TwoPowerD,double> r = A * u;
-  
-  for (int i=0; i<TwoPowerD; i++) {
-    fineGridVertices{{UNKNOWN}}(i).{{RESIDUAL_SETTER}}(
-      fineGridVertices{{UNKNOWN}}(i).{{RESIDUAL_GETTER}}() + r(i)
+  if ({{GUARD}}) {
+    const tarch::la::Vector<ThreePowerD,double> stencil = toolbox::finiteelements::getLaplacian(
+      marker.h(), 1.0
     );
+    const toolbox::finiteelements::ElementWiseAssemblyMatrix A = toolbox::finiteelements::getElementWiseAssemblyMatrix(
+      stencil
+    );
+
+    tarch::la::Vector<TwoPowerD,double> u;
+    for (int i=0; i<TwoPowerD; i++) {
+      u(i) = fineGridVertices{{UNKNOWN}}(i).{{UNKNOWN_GETTER}}();
+    }
+
+    tarch::la::Vector<TwoPowerD,double> r = A * u;
+  
+    for (int i=0; i<TwoPowerD; i++) {
+      fineGridVertices{{UNKNOWN}}(i).{{RESIDUAL_SETTER}}(
+        fineGridVertices{{UNKNOWN}}(i).{{RESIDUAL_GETTER}}() + r(i)
+      );
+    }
   }
 """  
 

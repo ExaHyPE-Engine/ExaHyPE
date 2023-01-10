@@ -45,7 +45,8 @@ class ScalarJacobiWithRediscretisation(ActionSet):
                relaxation_coefficient, 
                rhs_expr, 
                unknown_setter="setU", 
-               unknown_getter="getU"
+               unknown_getter="getU",
+               guard="true"
                ):
     """
       
@@ -70,6 +71,7 @@ class ScalarJacobiWithRediscretisation(ActionSet):
     self.d[ "UNKNOWN_GETTER" ]  = unknown_getter
     self.d[ "OMEGA" ]           = relaxation_coefficient
     self.d[ "RHS" ]             = rhs_expr
+    self.d[ "GUARD" ]           = guard
     self.additional_includes    = ""
     
 
@@ -121,23 +123,25 @@ class ScalarJacobiWithRediscretisation(ActionSet):
 
   _Template_TouchCellFirstTime_UpdateSolution = """
   // @todo Das ist nicht schoen. Ich haette hier gerne nen allgemeinen Stencil
+
+  if ({{GUARD}}) {  
+    double diagonal = 0.0;
+    double residual = {{RHS}};
   
-  double diagonal = 0.0;
-  double residual = {{RHS}};
+    double centralValue = fineGridCell{{CELL_NAME}}.{{UNKNOWN_GETTER}}();
   
-  double centralValue = fineGridCell{{CELL_NAME}}.{{UNKNOWN_GETTER}}();
-  
-  for (int d=0; d<Dimensions; d++) {
-    double leftNeighbour  = 2.0 * (fineGridFaces{{FACE_NAME}}(d).getOldAverage()            - 0.5 * centralValue);
-    double rightNeighbour = 2.0 * (fineGridFaces{{FACE_NAME}}(d+Dimensions).getOldAverage() - 0.5 * centralValue);
+    for (int d=0; d<Dimensions; d++) {
+      double leftNeighbour  = 2.0 * (fineGridFaces{{FACE_NAME}}(d).getOldAverage()            - 0.5 * centralValue);
+      double rightNeighbour = 2.0 * (fineGridFaces{{FACE_NAME}}(d+Dimensions).getOldAverage() - 0.5 * centralValue);
     
-    residual -= (-1.0 * leftNeighbour + 2.0 * centralValue - 1.0 * rightNeighbour) / marker.h()(d) / marker.h()(d);
-    diagonal += (2.0) / marker.h()(d) / marker.h()(d);
+      residual -= (-1.0 * leftNeighbour + 2.0 * centralValue - 1.0 * rightNeighbour) / marker.h()(d) / marker.h()(d);
+      diagonal += (2.0) / marker.h()(d) / marker.h()(d);
+    }
+    
+    double newValue = fineGridCell{{CELL_NAME}}.{{UNKNOWN_GETTER}}() + {{OMEGA}} / diagonal * residual;
+  
+    fineGridCell{{CELL_NAME}}.{{UNKNOWN_SETTER}}( newValue );
   }
-    
-  double newValue = fineGridCell{{CELL_NAME}}.{{UNKNOWN_GETTER}}() + {{OMEGA}} / diagonal * residual;
-  
-  fineGridCell{{CELL_NAME}}.{{UNKNOWN_SETTER}}( newValue );
 """
 
 

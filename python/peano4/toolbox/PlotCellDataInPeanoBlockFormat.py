@@ -105,10 +105,8 @@ class PlotCellDataInPeanoBlockFormat(ActionSet):
     return False
 
 
-  __Template_TouchCellFirstTime = """ 
+  Template_TouchCellFirstTime = """ 
 if ( {{GUARD_PREDICATE}} ) {
-  int vertexIndices[TwoPowerD];
-
   int cellIndex = _writer->plotPatch(
     marker.x()-0.5 * marker.h(),
     marker.h()
@@ -175,7 +173,7 @@ if ( {{GUARD_PREDICATE}} ) {
   def get_body_of_operation(self,operation_name):
     result = "\n"
     if operation_name==ActionSet.OPERATION_TOUCH_CELL_FIRST_TIME:
-      result = jinja2.Template( self.__Template_TouchCellFirstTime).render(**self.d) 
+      result = jinja2.Template( self.Template_TouchCellFirstTime).render(**self.d) 
     if operation_name==ActionSet.OPERATION_BEGIN_TRAVERSAL:
       result = jinja2.Template( self.__Template_BeginTraversal).render(**self.d)             
     if operation_name==ActionSet.OPERATION_END_TRAVERSAL:

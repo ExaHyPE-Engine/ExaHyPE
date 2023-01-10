@@ -138,68 +138,67 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::computeNewMarkerState(
     newMarker == benchmarks::exahype2::euler::sphericalaccretionupscaling::celldata::{{MARKER}}::Marker::AnotB
     or
     newMarker == benchmarks::exahype2::euler::sphericalaccretionupscaling::celldata::{{MARKER}}::Marker::AdeterminesB
+    or
+    newMarker == benchmarks::exahype2::euler::sphericalaccretionupscaling::celldata::{{MARKER}}::Marker::BdeterminesA
   ) {
-    if (
-      cellMarker.getMarker() == benchmarks::exahype2::euler::sphericalaccretionupscaling::celldata::{{MARKER}}::Marker::BnotA
-    ) {
-      logWarning( "computeNewMarkerState(...)", "sudden transition from " << cellMarker.toString() );
-    }
-
     cellMarker.setTransitionA(
       AhadBeenStoredBefore
         ? benchmarks::exahype2::euler::sphericalaccretionupscaling::celldata::{{MARKER}}::TransitionA::LoadStore
         : benchmarks::exahype2::euler::sphericalaccretionupscaling::celldata::{{MARKER}}::TransitionA::Store
     );
-    cellMarker.setTransitionB(
-        BhadBeenStoredBefore
-        ? benchmarks::exahype2::euler::sphericalaccretionupscaling::celldata::{{MARKER}}::TransitionB::Load
-        : benchmarks::exahype2::euler::sphericalaccretionupscaling::celldata::{{MARKER}}::TransitionB::None
-    );
   }
-  else if (
-    newMarker == benchmarks::exahype2::euler::sphericalaccretionupscaling::celldata::{{MARKER}}::Marker::BnotA
-    or
-    newMarker == benchmarks::exahype2::euler::sphericalaccretionupscaling::celldata::{{MARKER}}::Marker::BdeterminesA
-  ) {
-    if (
-      cellMarker.getMarker() == benchmarks::exahype2::euler::sphericalaccretionupscaling::celldata::{{MARKER}}::Marker::AnotB
-    ) {
-      logWarning( "computeNewMarkerState(...)", "sudden transition from " << cellMarker.toString() );
-    }
-
+  else {
     cellMarker.setTransitionA(
       AhadBeenStoredBefore
         ? benchmarks::exahype2::euler::sphericalaccretionupscaling::celldata::{{MARKER}}::TransitionA::Load
         : benchmarks::exahype2::euler::sphericalaccretionupscaling::celldata::{{MARKER}}::TransitionA::None
     );
+  }
+
+  if (
+    newMarker == benchmarks::exahype2::euler::sphericalaccretionupscaling::celldata::{{MARKER}}::Marker::BnotA
+    or
+    newMarker == benchmarks::exahype2::euler::sphericalaccretionupscaling::celldata::{{MARKER}}::Marker::AdeterminesB
+    or
+    newMarker == benchmarks::exahype2::euler::sphericalaccretionupscaling::celldata::{{MARKER}}::Marker::BdeterminesA
+  ) {
     cellMarker.setTransitionB(
-        BhadBeenStoredBefore
+      BhadBeenStoredBefore
         ? benchmarks::exahype2::euler::sphericalaccretionupscaling::celldata::{{MARKER}}::TransitionB::LoadStore
         : benchmarks::exahype2::euler::sphericalaccretionupscaling::celldata::{{MARKER}}::TransitionB::Store
     );
   }
+  else {
+    cellMarker.setTransitionB(
+      BhadBeenStoredBefore
+        ? benchmarks::exahype2::euler::sphericalaccretionupscaling::celldata::{{MARKER}}::TransitionB::Load
+        : benchmarks::exahype2::euler::sphericalaccretionupscaling::celldata::{{MARKER}}::TransitionB::None
+    );
+  }
 
-  cellMarker.setMarker(      benchmarks::exahype2::euler::sphericalaccretionupscaling::celldata::{{MARKER}}::Marker::AnotB );
+  cellMarker.setMarker( newMarker );
 }
 
 
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::constrainValue( benchmarks::exahype2::euler::sphericalaccretionupscaling::celldata::{{MARKER}}& marker ) {
+  const double Tolerance = 0.01;
+
   switch (marker.getMarker()) {
     case benchmarks::exahype2::euler::sphericalaccretionupscaling::celldata::{{MARKER}}::Marker::BnotA:
-      marker.setValue( std::min(MaxValue,marker.getValue()) );
-      marker.setValue( std::max(MaxThreshold,marker.getValue()) );
+      marker.setValue( std::min(marker.getValue(), MaxValue) );
+      marker.setValue( std::max(marker.getValue(), MaxThreshold * (1.0+Tolerance) ) );
       break;
     case benchmarks::exahype2::euler::sphericalaccretionupscaling::celldata::{{MARKER}}::Marker::BdeterminesA:
-      marker.setValue( std::min(MaxThreshold,marker.getValue()) );
-      marker.setValue( std::max(0.5*MinThreshold+0.5*MaxThreshold,marker.getValue()) );
+//      marker.setValue( std::min(marker.getValue(), MaxThreshold * (1.0-Tolerance) ) );
+//      marker.setValue( std::max(marker.getValue(), (0.5*MinThreshold+0.5*MaxThreshold)*(1.0+Tolerance) ) );
       break;
     case benchmarks::exahype2::euler::sphericalaccretionupscaling::celldata::{{MARKER}}::Marker::AdeterminesB:
-      marker.setValue( std::min(0.5*MinThreshold+0.5*MaxThreshold,marker.getValue()) );
-      marker.setValue( std::max(MinThreshold,marker.getValue()) );
+//      marker.setValue( std::min(marker.getValue(), (0.5*MinThreshold+0.5*MaxThreshold)*(1.0-Tolerance) ) );
+//      marker.setValue( std::min(marker.getValue(), MinThreshold * (1.0+Tolerance) ) );
       break;
     case benchmarks::exahype2::euler::sphericalaccretionupscaling::celldata::{{MARKER}}::Marker::AnotB:
-      marker.setValue( std::max(MinValue,marker.getValue()) );
-      marker.setValue( std::min(MinThreshold,marker.getValue()) );
+      marker.setValue( std::min(marker.getValue(), MinThreshold * (1.0-Tolerance) ) );
+      marker.setValue( std::max(marker.getValue(), MinValue) );
       break;
   }
 }

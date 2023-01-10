@@ -58,6 +58,7 @@ class ProjectLinearCombinationOfEstimatesOntoFaces(AbstractRungeKuttaDGActionSet
   
   Please consult the documentation of RungeKuttaDG for an explanation of the
   role of the two different boundary data fields.
+
   
   ## Time step sizes and time stamps
 
@@ -71,7 +72,17 @@ class ProjectLinearCombinationOfEstimatesOntoFaces(AbstractRungeKuttaDGActionSet
                
   We do not update the new and old time stamp on the face label. These
   values are properly set in the ComputeFinalLinearCombination action set.                 
-  
+
+
+  ## Guards
+
+  We can set separate guards for each individual step (which we have to do,
+  as the different steps depend on the role of the individual Runge-Kutta
+  phases). The action set does not initialise the guards with a dummy. 
+  Instead, I expect that the person who creates the action set explicitly 
+  sets the guard list before the action set is handed over to the code 
+  generation phase.  
+    
   """
  
   

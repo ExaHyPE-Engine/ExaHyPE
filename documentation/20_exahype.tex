@@ -950,6 +950,12 @@ You might want to use a different patch size, but this choice usually yields
 time step sizes in the FV discretisation which is similar to the DG scheme.
 We
 add both of them to the project and refer to them as \texttt{dg\_solver} and \texttt{fv\_solver} objects in the Python script.
+You can use any solver you like, but I strongly recommend that you use the same
+time stepping scheme for both solvers. 
+All the explanations below refer to adaptive time stepping. 
+You might have to alter some bits and pieces if you use a different time
+stepping scheme.
+
  
 \paragraph*{The marker}
 
@@ -974,7 +980,7 @@ documentation):
 
 
 \begin{code}
-marker_solver = exahype2.solvers.elliptic.ConstrainedPoissonEquationOnCells( name = "Alpha",
+marker_solver = exahype2.solvers.elliptic.ConstrainedPoissonEquationForMarkerOnCells( name = "Alpha",
                                                                              plot = True) 
 project.add_solver( marker_solver )
 \end{code}
@@ -995,6 +1001,36 @@ if ( check some conditions ) {
 }
 """
 \end{code}
+
+
+\paragraph*{Restrict the solvers}
+
+With the marker at hand, we can instruct the solver not to solve their equation
+in certain regions. 
+We can also ensure that they don't store data where it actually is not required.
+The cell marker as introduced by
+\texttt{ConstrainedPoissonEquationForMarkerOnCells} provides all the necessary
+information to guide the data flow.
+
+
+We don't want to alter the core logic of the data flow, but actually veto for
+some cells that data is stored or loaded. 
+There are various ways to achieve this.
+Obviously, we should plug into \texttt{\_load\_cell\_data\_default\_guard()} and 
+\texttt{\_store\_cell\_data\_default\_guard()}.
+While this would work, we would have to specialise the solver classes first to
+get access to these routines which construct the storage predicates.
+If we know the solvers and their action sets, we can also directly manipulate
+the guards:
+
+\begin{code}
+dg_solver._action_set_update_cell.guard                = UpdateCell(self)
+dg_solver._action_set_merge_enclave_task_outcome = MergeEnclaveTaskOutcome(self)                                                                                 
+\end{code}
+
+Schoen ist das nicht mit dem Ueberschreiben -> remark
+Wir sehen, dass der Status hier gar keine Rolle spielt, sondern nur die
+Storage-Rules. Evtl ist das fuer andere Loeser anders
 
 
 \paragraph*{Couple marker and FV scheme}
