@@ -41,5 +41,3 @@ python3 noh.py -j $OMP_NUM_THREADS -et $END_TIME -np $N_PART -cs $CELL_SIZE
 #mkdir $DIRNAME"/snapshots/"
 #mv particles* grid* $DIRNAME"/snapshots/"
 
-
-# @TODO: run plot script
