@@ -62,8 +62,8 @@ particle = swift2.particle.SPHLeapfrogFixedInteractionRadius(name = "MinimalSPH"
                                                              swift_project_namespace= project_namespace,
                                                              is_sph = True,
                                                              particles_per_cell = 100,
-                                                             min_h = 0.6,
-                                                             max_h = 0.5
+                                                             min_h = 0.1,
+                                                             max_h = args.cell_size
                                                              )
 
 # Add particle to the SWIFT project
