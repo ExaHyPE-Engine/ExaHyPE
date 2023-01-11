@@ -4,12 +4,12 @@ include(CMakePushCheckState)
 
 cmake_push_check_state()
 
-if(NOT WITH_GPU_ARCH IN_LIST ACCELERATOR_ARCHITECTURES)
-  message(FATAL_ERROR "GPU architechture must be one of: ${ACCELERATOR_ARCHITECTURES}")
-endif()
-
 if(NOT DEFINED WITH_GPU_ARCH OR WITH_GPU_ARCH STREQUAL " ")
   message(FATAL_ERROR "GPU architechture is not defined")
+endif()
+
+if(NOT WITH_GPU_ARCH IN_LIST ACCELERATOR_ARCHITECTURES)
+  message(FATAL_ERROR "GPU architechture must be one of: ${ACCELERATOR_ARCHITECTURES}")
 endif()
 
 if(${CMAKE_CXX_COMPILER_ID} STREQUAL "Clang")
@@ -72,12 +72,11 @@ if(OPENMP_OFFLOADING_RESULT)
         ${OpenMP_CXX_LIBRARIES}
         ${OpenMP_Offloading_CXX_FLAGS}
         ${OpenMP_Offloading_LINK_LIBRARIES})
-    endif()
 else()
   message(FATAL_ERROR "OpenMP GPU offloading was demanded but it was not set."
     "Check your compiler whether it can perform OpenMP GPU offloading.")
 endif()
 
-find_package_handle_standard_args(OpenMP_Offloading REQUIRED_VARS OPENMP_OFFLOADING_RESULT)
+find_package_handle_standard_args(OpenMPWithOffloading REQUIRED_VARS OPENMP_OFFLOADING_RESULT)
 mark_as_advanced(OpenMP_Offloading_CXX_FLAGS OpenMP_Offloading_LINK_LIBRARIES OPENMP_OFFLOADING_RESULT)
 cmake_pop_check_state()

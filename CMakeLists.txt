@@ -35,7 +35,6 @@ set(META_GIT_HASH "${GIT_COMMIT_HASH}")
 set(META_GIT_BUGREPORT "https://gitlab.lrz.de/hpcsoftware/Peano/-/issues")
 set(META_GIT_URL "https://gitlab.lrz.de/hpcsoftware/Peano")
 message(STATUS "On Git Branch: ${GIT_BRANCH} (${GIT_COMMIT_HASH})")
-set(META_COMPILER_VERSION "${CMAKE_SYSTEM_NAME} ${CMAKE_CXX_COMPILER_ID} (${CMAKE_CXX_COMPILER_VERSION})")
 
 set(CMAKE_C_STANDARD 17)
 set(CMAKE_C_STANDARD_REQUIRED TRUE)
@@ -76,6 +75,8 @@ project(
   HOMEPAGE_URL ${META_AUTHOR_DOMAIN}
   LANGUAGES ${LANGUAGES})
 file(WRITE "${PROJECT_BINARY_DIR}/.gitignore" "*")
+set(META_COMPILER_VERSION "${CMAKE_SYSTEM_NAME} ${CMAKE_CXX_COMPILER_ID} (${CMAKE_CXX_COMPILER_VERSION})")
+message(STATUS "Compiler is: ${META_COMPILER_VERSION}")
 
 include(${_project_options_SOURCE_DIR}/Index.cmake)
 include(${_project_options_SOURCE_DIR}/src/DynamicProjectOptions.cmake)
@@ -133,31 +134,58 @@ list(APPEND TOOLCHAINS " " "intel" "nvidia" "scorep" "chrome" "gnu")
 set(WITH_TOOLCHAIN "" CACHE STRING "${TOOLCHAINS}")
 set_property(CACHE WITH_TOOLCHAIN PROPERTY STRINGS ${TOOLCHAINS})
 
-list(APPEND MULTICORES_BACKENDS " " "cpp" "omp" "tbb")
-set(WITH_MULTITHREADING " " CACHE STRING "${MULTICORES_BACKENDS}")
+  # Some Toolchains of Peano do not work (even for autoconf) therefore the current toolchain options are disabled for CMake
+  # if(WITH_TOOLCHAIN STREQUAL "scorep")
+  # # TODO: Fix logging libraries
+  # find_library(PAPI libpapi.a papi)
+  # find_library(CUBE4W libcube4w.a cube4w)
+  # target_link_libraries(Tarch${SUFFIX_${mode}} PRIVATE ${PAPI})
+  # target_link_libraries(Tarch${SUFFIX_${mode}} PRIVATE ${CUBE4W})
+  # target_link_directories(Tarch${SUFFIX_${mode}} PRIVATE ${LD_LIBRARY_PATH})
+  # target_link_libraries(Tarch${SUFFIX_${mode}} PRIVATE ${SCOREP_LIBRARIES})
+  # target_compile_options(Tarch${SUFFIX_${mode}} PRIVATE ${SCOREP_COMPILE_FLAGS})
+  # target_link_options(Tarch${SUFFIX_${mode}} PRIVATE ${SCOREP_LINK_OPTION})
+  # elseif(WITH_TOOLCHAIN STREQUAL "intel")
+  # target_link_libraries(Tarch${SUFFIX_${mode}} INTERFACE VT::VT)
+  # target_include_directories(Tarch${SUFFIX_${mode}} SYSTEM PRIVATE ${VT_INCLUDE_DIRS})
+  # target_link_directories(Tarch${SUFFIX_${mode}} INTERFACE ${VT_LIBRARIES_DIR})
+  # endif()
+
+list(APPEND MULTICORES_BACKENDS
+  " "
+  "cpp"
+  "omp"
+  "tbb"
+)
+set(WITH_MULTITHREADING "" CACHE STRING "${MULTICORES_BACKENDS}")
 set_property(CACHE WITH_MULTITHREADING PROPERTY STRINGS ${MULTICORES_BACKENDS})
+
 if(WITH_MULTITHREADING)
   string(TOUPPER ${WITH_MULTITHREADING} WITH_MULTITHREADING_UPPER)
-  set(Shared${WITH_MULTITHREADING_UPPER} 1)
+  target_compile_definitions(project_options INTERFACE Shared${WITH_MULTITHREADING_UPPER})
 endif()
-
 if(WITH_MULTITHREADING STREQUAL "omp")
   find_package(OpenMP REQUIRED)
   target_link_libraries(project_options INTERFACE OpenMP::OpenMP_CXX)
+  #target_link_libraries(project_options INTERFACE OpenMP::OpenMP_Fortran)
 elseif(WITH_MULTITHREADING STREQUAL "tbb")
   find_package(TBB REQUIRED)
+  target_link_libraries(project_options INTERFACE TBB::tbb)
 elseif(WITH_MULTITHREADING STREQUAL "cpp")
   set(THREADS_PREFER_PTHREAD_FLAG ON)
   find_package(Threads REQUIRED)
+  target_link_libraries(project_options INTERFACE Threads::Threads)
 endif()
 
-list(APPEND ACCELERATOR_BACKENDS " " "cpp" "omp" "sycl" "hip")
+list(APPEND ACCELERATOR_BACKENDS
+  " "
+  "cpp"
+  "omp"
+  "sycl"
+  "hip"
+)
 set(WITH_GPU "" CACHE STRING "${ACCELERATOR_BACKENDS}")
 set_property(CACHE WITH_GPU PROPERTY STRINGS ${ACCELERATOR_BACKENDS})
-if(WITH_GPU)
-  string(TOUPPER ${WITH_GPU} WITH_GPU_UPPER)
-  set(GPUOffloading${WITH_GPU_UPPER} 1)
-endif()
 
 list(APPEND ACCELERATOR_ARCHITECTURES
   " "
@@ -182,7 +210,6 @@ list(APPEND ACCELERATOR_ARCHITECTURES
   "gfx90a"
 )
 set(WITH_GPU_ARCH "" CACHE STRING "GPU architecture sm_XX or gfxXXX")
-list(APPEND WITH_GPU_ARCH ${ACCELERATOR_ARCHITECTURES})
 set_property(CACHE WITH_GPU_ARCH PROPERTY STRINGS ${ACCELERATOR_ARCHITECTURES})
 
 string(SUBSTRING "${WITH_GPU_ARCH}" 0 3 GPU_PREFIX)
@@ -192,49 +219,43 @@ elseif("${GPU_PREFIX}" STREQUAL "gfx")
   set(AMD_GPU TRUE)
 endif()
 
+if(WITH_GPU)
+  string(TOUPPER ${WITH_GPU} WITH_GPU_UPPER)
+  target_compile_definitions(project_options INTERFACE GPUOffloading${WITH_GPU_UPPER})
+endif()
 if(WITH_GPU STREQUAL "omp")
-  find_package(OpenMP REQUIRED)
   find_package(OpenMPWithOffloading REQUIRED)
-  target_link_libraries(project_options INTERFACE OpenMP::OpenMP_CXX)
   target_link_libraries(project_options INTERFACE OpenMP::OpenMP_CXX_with_offloading)
 elseif(WITH_GPU STREQUAL "cpp")
   if(${CMAKE_CXX_COMPILER_ID} MATCHES "NVHPC|PGI")
-    target_link_libraries(project_options "-mp=gpu -gpu=${WITH_GPU_ARCH}")
-    target_compile_options(project_options "-mp=gpu -gpu=${WITH_GPU_ARCH}")
+    target_link_libraries(project_options INTERFACE "-mp=gpu -gpu=${WITH_GPU_ARCH}")
+    target_compile_options(project_options INTERFACE "-mp=gpu -gpu=${WITH_GPU_ARCH}")
   endif()
 elseif(WITH_GPU STREQUAL "sycl")
+  set(WITH_MULTITHREADING CACHE "tbb")
 elseif(WITH_GPU STREQUAL "hip")
 endif()
 
-#set(CMAKE_CXX_FLAGS "")
-#set(CMAKE_CXX_FLAGS_RELEASE "")
-#set(CMAKE_CXX_FLAGS_DEBUG "")
-#set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "")
-#set(CMAKE_CXX_FLAGS_MINSIZEREL "")
 if(${CMAKE_CXX_COMPILER_ID} MATCHES "NVHPC|PGI")
-  set(RELEASE_FLAGS -O4)
-else()
-  set(RELEASE_FLAGS -O3)
+  list(TRANSFORM CMAKE_CXX_FLAGS_RELEASE REPLACE "-O3" "-O4")
 endif()
 set(RELEASE_DEFINITIONS -DPeanoDebug=0 -DNDEBUG)
-if(${CMAKE_CXX_COMPILER_ID} MATCHES "NVHPC|PGI")
-  set(STATS_FLAGS -O4)
-else()
-  set(STATS_FLAGS -O3)
-endif()
-set(STATS_DEFINITIONS -DPeanoDebug=0 -DTrackStatistics)
-set(ASSERTS_FLAGS -g -O0)
-set(ASSERTS_DEFINITIONS -DPeanoDebug=2)
-set(TRACE_FLAGS -g -O2)
-set(TRACE_DEFINITIONS -DPeanoDebug=1 -DNDEBUG)
-set(DEBUG_FLAGS -g -O0)
-set(DEBUG_DEFINITIONS -DPeanoDebug=4)
-
 set(RELEASE_LDFLAGS -g)
-set(STATS_LDFLAGS -g)
-set(ASSERTS_LDFLAGS -g)
-set(TRACE_LDFLAGS -g)
+
+set(DEBUG_DEFINITIONS -DPeanoDebug=4)
 set(DEBUG_LDFLAGS -g)
+
+set(CMAKE_CXX_FLAGS_STATS ${CMAKE_CXX_FLAGS_RELEASE})
+set(STATS_DEFINITIONS -DPeanoDebug=0 -DTrackStatistics)
+set(STATS_LDFLAGS -g)
+
+set(CMAKE_CXX_FLAGS_ASSERTS ${CMAKE_CXX_FLAGS_DEBUG})
+set(ASSERTS_DEFINITIONS -DPeanoDebug=2)
+set(ASSERTS_LDFLAGS -g)
+
+set(CMAKE_CXX_FLAGS_TRACE "-g -O2")
+set(TRACE_DEFINITIONS -DPeanoDebug=1 -DNDEBUG)
+set(TRACE_LDFLAGS -g)
 
 set(CMAKE_CONFIGURATION_TYPES "Debug" "Release" "Asserts" "Trace" "Stats" CACHE STRING "Enabled build types" FORCE)
 if(NOT CMAKE_BUILD_TYPE OR NOT ${CMAKE_BUILD_TYPE} IN_LIST CMAKE_CONFIGURATION_TYPES)
@@ -245,9 +266,9 @@ else()
   list(APPEND BUILD_MODES ${CMAKE_BUILD_TYPE})
 endif()
 
-#set(WITH_DIMENSIONS "2 3" CACHE STRING)
-option(WITH_MPI "With MPI" OFF)
-option(WITH_OTTER "Enable Otter" OFF)
+set(WITH_DIMENSIONS "2 3" CACHE STRING "Build with number of dimensions")
+option(WITH_MPI "Build with distributed memory parallelisation" OFF)
+option(WITH_OTTER "Build with Otter" OFF)
 option(ENABLE_EXAHYPE "Enable ExaHyPE2" OFF)
 option(ENABLE_FEM "Enable the finite elements toolbox" OFF)
 option(ENABLE_MULTIPRECISION "Enable the multi-precision toolbox" OFF)
@@ -258,28 +279,27 @@ option(ENABLE_BLOCKSTRUCTURED "Enable the blockstructured toolbox" OFF)
 if(WITH_MPI)
   find_package(MPI REQUIRED)
   message(STATUS "Run: ${MPIEXEC} ${MPIEXEC_NUMPROC_FLAG} ${MPIEXEC_MAX_NUMPROCS} ${MPIEXEC_PREFLAGS} EXECUTABLE ${MPIEXEC_POSTFLAGS} ARGS")
-  include_directories(SYSTEM ${MPI_INCLUDE_PATH})
-  add_compile_definitions(OMPI_SKIP_MPICXX) # To prevent compiler warnings
-  add_compile_definitions(Parallel)
-  set(Parallel 1)
+  #include_directories(SYSTEM ${MPI_INCLUDE_PATH})
+  target_compile_definitions(project_options INTERFACE OMPI_SKIP_MPICXX) # To prevent compiler warnings
+  target_compile_definitions(project_options INTERFACE Parallel)
+  target_link_libraries(project_options INTERFACE MPI::MPI_CXX)
+  target_link_libraries(project_options INTERFACE MPI::MPI_Fortran)
 endif()
 
 if(WITH_OTTER)
   find_package(OTF2 REQUIRED)
   find_package(Otter REQUIRED)
-  set(UseOtter 1)
+  target_link_libraries(project_options INTERFACE Otter::Otter)
 endif()
 
 if(ENABLE_EXAHYPE)
   if(NOT ENABLE_LOADBALANCING)
     set(ENABLE_LOADBALANCING CACHE ON)
   endif()
-
   if(NOT ENABLE_BLOCKSTRUCTURED)
     set(ENABLE_BLOCKSTRUCTURED CACHE ON)
   endif()
-
-  set(UseExaHyPE 1)
+  target_compile_definitions(project_options UseExaHyPE)
 endif()
 
 file(COPY "${PROJECT_SOURCE_DIR}/applications" DESTINATION "${CMAKE_BINARY_DIR}")
@@ -292,6 +312,13 @@ set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS ${CMAKE_BINARY_DI
 
 add_subdirectory(src)
 
+include(CMakePackageConfigHelpers)
+write_basic_package_version_file(
+    ${META_PROJECT_NAME}ConfigVersion.cmake
+    VERSION ${META_VERSION_REVISION}
+    COMPATIBILITY SameMajorVersion
+)
+
 display_separator("Project Configuration Summary")
 
 display_variable(AVAILABLE_PROCESSOR_COUNT)
@@ -299,8 +326,21 @@ display_variable(AVAILABLE_PROCESSOR_COUNT)
 display_variable(CMAKE_BUILD_TYPE)
 display_variable(CMAKE_CONFIGURATION_TYPES)
 display_variable(CMAKE_CXX_FLAGS)
-display_variable(CMAKE_CXX_FLAGS_DEBUG)
 display_variable(CMAKE_CXX_FLAGS_RELEASE)
+display_variable(RELEASE_DEFINITIONS)
+display_variable(RELEASE_LDFLAGS)
+display_variable(CMAKE_CXX_FLAGS_DEBUG)
+display_variable(DEBUG_DEFINITIONS)
+display_variable(DEBUG_LDFLAGS)
+display_variable(CMAKE_CXX_FLAGS_STATS)
+display_variable(STATS_DEFINITIONS)
+display_variable(STATS_LDFLAGS)
+display_variable(CMAKE_CXX_FLAGS_ASSERTS)
+display_variable(ASSERTS_DEFINITIONS)
+display_variable(ASSERTS_LDFLAGS)
+display_variable(CMAKE_CXX_FLAGS_TRACE)
+display_variable(TRACE_DEFINITIONS)
+display_variable(TRACE_LDFLAGS)
 display_variable(CMAKE_CXX_FLAGS_MINSIZEREL)
 display_variable(CMAKE_CXX_FLAGS_RELWITHDEBINFO)
 display_variable(CMAKE_VERBOSE_MAKEFILE)

@@ -4,7 +4,7 @@ configure_file(
 )
 
 add_subdirectory(tarch)
-#add_subdirectory(peano4)
+add_subdirectory(peano4)
 #add_subdirectory(toolbox)
 #add_subdirectory(exahype2)
 #add_subdirectory(convert)
