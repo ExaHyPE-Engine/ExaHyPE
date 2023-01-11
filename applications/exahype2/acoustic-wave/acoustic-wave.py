@@ -2,6 +2,8 @@ import os
 import sys
 import argparse
 
+sys.path.insert(0, os.path.abspath('../../../python'))
+
 import peano4
 import exahype2
 

@@ -1,33 +1,30 @@
-message(STATUS "Configuring swift2")
-
-file(GLOB_RECURSE SWIFT2_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/*.cpp)
+file(GLOB_RECURSE SOURCES "*")
+source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${SOURCES})
 
 foreach(mode IN LISTS BUILD_MODES)
-	string(TOUPPER ${mode} mode_upper)
-	foreach(dimension IN LISTS PEANO_DIMENSIONS)
-		message(
-			STATUS
-				"Adding a Swift2 target with dimension=${dimension} and build_mode=${mode}"
-		)
-		
-		add_library(SWIFT2Core${dimension}d${SUFFIX_${mode}} STATIC)
-		target_sources(SWIFT2Core${dimension}d${SUFFIX_${mode}} PUBLIC ${SWIFT2_SOURCES})
-		target_include_directories(SWIFT2Core${dimension}d${SUFFIX_${mode}} PUBLIC ${CMAKE_SOURCE_DIR}/src)
-		target_link_libraries(SWIFT2Core${dimension}d${SUFFIX_${mode}} PRIVATE Tarch${SUFFIX_${mode}})
-		target_compile_definitions(SWIFT2Core${dimension}d${SUFFIX_${mode}} PRIVATE Dimensions=${dimension})
-		target_compile_options(SWIFT2Core${dimension}d${SUFFIX_${mode}} PRIVATE ${${mode_upper}_FLAGS})
-		target_compile_definitions(SWIFT2Core${dimension}d${SUFFIX_${mode}} PRIVATE ${${mode_upper}_DEFINITIONS})
-		target_link_options(SWIFT2Core${dimension}d${SUFFIX_${mode}} PRIVATE ${${mode_upper}_LDFLAGS})
+  string(TOLOWER ${mode} mode_lower)
+  string(TOUPPER ${mode} mode_upper)
 
-		install(
-			TARGETS SWIFT2Core${dimension}d${SUFFIX_${mode}}
-			RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
-							COMPONENT ${PROJECT_NAME}_Runtime
-			LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
-							COMPONENT ${PROJECT_NAME}_Runtime
-							NAMELINK_COMPONENT ${PROJECT_NAME}_Devel
-			ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
-							COMPONENT ${PROJECT_NAME}_Devel)
+  foreach(dimension IN LISTS WITH_DIMENSIONS)
+    add_library(SWIFT2Core${dimension}d_${mode_lower} STATIC)
+    display_header("Creating Makefile of SWIFT2Core${dimension}d_${mode_lower}")
 
-	endforeach()
+    target_sources(SWIFT2Core${dimension}d_${mode_lower} PRIVATE ${SOURCES})
+    target_include_directories(SWIFT2Core${dimension}d_${mode_lower} PRIVATE ${CMAKE_SOURCE_DIR}/src)
+    string(REPLACE " " ";" COMPILE_OPTIONS ${CMAKE_CXX_FLAGS_${mode_upper}})
+    target_compile_options(SWIFT2Core${dimension}d_${mode_lower} PUBLIC ${COMPILE_OPTIONS})
+    target_compile_definitions(SWIFT2Core${dimension}d_${mode_lower} PUBLIC ${${mode_upper}_DEFINITIONS} Dimensions=${dimension})
+    target_link_options(SWIFT2Core${dimension}d_${mode_lower} PUBLIC ${${mode_upper}_LDFLAGS})
+    target_link_libraries(SWIFT2Core${dimension}d_${mode_lower} PRIVATE project_options project_warnings Peano4Core${dimension}d_${mode_lower})
+
+    install(TARGETS SWIFT2Core${dimension}d_${mode_lower}
+          RUNTIME DESTINATION         ${CMAKE_INSTALL_BINDIR}
+                  COMPONENT           ${PROJECT_NAME}_Runtime
+          LIBRARY DESTINATION         ${CMAKE_INSTALL_LIBDIR}
+                  COMPONENT           ${PROJECT_NAME}_Runtime
+                  NAMELINK_COMPONENT  ${PROJECT_NAME}_Devel
+          ARCHIVE DESTINATION         ${CMAKE_INSTALL_LIBDIR}
+                  COMPONENT           ${PROJECT_NAME}_Devel
+    )
+  endforeach()
 endforeach()

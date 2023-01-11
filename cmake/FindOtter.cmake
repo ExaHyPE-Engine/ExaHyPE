@@ -5,21 +5,21 @@ find_path(Otter_INCLUDE_DIR NAMES otter/otter-serial.h)
 # Provide find library first with *.a to prefer static libraries
 # libotter-ompt requires OpenMP standard at least 5.0
 if(OpenMP_FOUND)
-	if(OpenMP_CXX_VERSION VERSION_LESS "5.0")
-		message(WARNING "Otter with OpenMP Tracing requires OpenMP 5.0 or newer.\
+  if(OpenMP_CXX_VERSION VERSION_LESS "5.0")
+    message(WARNING "Otter with OpenMP Tracing requires OpenMP 5.0 or newer.\
 OpenMP ${OpenMP_CXX_VERSION} was provided, reverting to serial otter")
-		find_library(Otter_LIBRARY NAMES libotter-serial.a otter-serial)
-	else()
-		#find_library(Otter_LIBRARY NAMES libotter-ompt.a otter-ompt)
-		find_library(Otter_LIBRARY NAMES libotter-serial.a otter-serial)
-	endif()
+    find_library(Otter_LIBRARY NAMES libotter-serial.a otter-serial)
+  else()
+    #find_library(Otter_LIBRARY NAMES libotter-ompt.a otter-ompt)
+    find_library(Otter_LIBRARY NAMES libotter-serial.a otter-serial)
+  endif()
 else()
-	find_library(Otter_LIBRARY NAMES libotter-serial.a otter-serial)
-	message(STATUS "Link to otter-serial as OpenMP Is not Found")
+  find_library(Otter_LIBRARY NAMES libotter-serial.a otter-serial)
+  message(STATUS "Link to otter-serial as OpenMP Is not Found")
 endif()
 
 find_package_handle_standard_args(Otter
- DEFAULT_MSG
+  DEFAULT_MSG
   Otter_INCLUDE_DIR
   Otter_LIBRARY
 )
@@ -28,10 +28,9 @@ message(STATUS "Otter_LIBRARY: ${Otter_LIBRARY}, Otter_INCLUDE_DIR: ${Otter_INCL
 mark_as_advanced(Otter_LIBRARY Otter_INCLUDE_DIR)
 
 if(Otter_FOUND)
-	set(Otter_LIBRARIES    ${Otter_LIBRARY})
-	set(Otter_INCLUDE_DIRS ${Otter_INCLUDE_DIR})
+  set(Otter_LIBRARIES ${Otter_LIBRARY})
+  set(Otter_INCLUDE_DIRS ${Otter_INCLUDE_DIR})
 endif()
-
 
 if(Otter_FOUND AND NOT TARGET Otter::Otter)
   add_library(Otter::Otter UNKNOWN IMPORTED)
@@ -43,6 +42,3 @@ if(Otter_FOUND AND NOT TARGET Otter::Otter)
   find_package(OTF2 REQUIRED)
   target_link_libraries(Otter::Otter INTERFACE OTF2::OTF2)
 endif()
-
-
-

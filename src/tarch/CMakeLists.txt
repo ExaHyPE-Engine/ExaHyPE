@@ -1,4 +1,4 @@
-file(GLOB_RECURSE TARCH_SOURCES "*")
+file(GLOB_RECURSE SOURCES "*")
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${SOURCES})
 
 foreach(mode IN LISTS BUILD_MODES)
@@ -8,7 +8,7 @@ foreach(mode IN LISTS BUILD_MODES)
   add_library(Tarch_${mode_lower} STATIC)
   display_header("Creating Makefile of Tarch_${mode_lower}")
 
-  target_sources(Tarch_${mode_lower} PRIVATE ${TARCH_SOURCES})
+  target_sources(Tarch_${mode_lower} PRIVATE ${SOURCES})
   target_include_directories(Tarch_${mode_lower} PRIVATE ${CMAKE_SOURCE_DIR}/src)
   string(REPLACE " " ";" COMPILE_OPTIONS ${CMAKE_CXX_FLAGS_${mode_upper}})
   target_compile_options(Tarch_${mode_lower} PUBLIC ${COMPILE_OPTIONS})
