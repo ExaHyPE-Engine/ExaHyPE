@@ -36,9 +36,7 @@ class DaStGen2Generator(object):
 
     self._data.data.write_header_file( self._data.namespace[-1] + "/" + self._data.name + ".h" )
     self._data.data.write_implementation_file(  self._data.namespace[-1] + "/" + self._data.name + ".cpp" )
-    #self.__generate_dastgen_input_file()
     output.makefile.add_cpp_file( self._data.namespace[-1] + "/" + self._data.name + ".cpp" )
-    #output.add( peano4.output.InvokeExternalTool( "java -jar " + self.DaStGenJarFile + " " + self.__DaStGenArguments + " " + self.__get_file_name() + " .", self.data.namespace[-1] ), False )
 
 
 
@@ -159,4 +157,17 @@ a citation of the two original DaStGen papers when you discuss the memory needs:
     super(DaStGen2, self).configure(namespace,association)
     self.peano4_mpi_and_storage_aspect.dof_association = association
     
+    
+  @property
+  def additional_load_and_store_arguments(self):
+    return self._additional_load_and_store_arguments
+    
 
+  @additional_load_and_store_arguments.setter
+  def additional_load_and_store_arguments(self,new_arguments):
+    self.peano4_mpi_and_storage_aspect.additional_load_and_store_arguments = [ (x[1],x[2]) for x in new_arguments]
+    for new_argument in new_arguments:
+      self.peano4_mpi_and_storage_aspect.includes.append( """
+#include \"""" + new_argument[1].replace("::","/") + """.h"
+""")
+    self._additional_load_and_store_arguments = new_arguments

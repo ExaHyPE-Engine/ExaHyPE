@@ -42,19 +42,22 @@ class DoF(object):
     namespace:   [String]
       Sequence of namespaces.
       
-    additional_load_and_store_arguments: Boolean
-      This flag is, by default, false, and it has to be changed carefully.
-      If you set it true, the functions that we use to assess if to store
-      or load a piece of data will be given the other data associated 
-      with the mesh. At the point of the load, these data might not be 
-      initialised properly, and therefore this is a tricky feature that
-      I prefer to disable.
+    additional_load_and_store_arguments: [(String,String,String)]
+      This flag is, by default, an empty list, and it has to be changed 
+      carefully. If you add an entry to this list, each store and load routine 
+      will get an additional parameter. The first entry of this triple is the
+      expressino that you want the observer to pass in, the second one is a C++ 
+      type and the third one the name that you wanna use.
+      
+      It is the responsibility of the DoF subclass to ensure that the second 
+      entry is properly used to initialise the store and load routines.
+      Most define an additional setter for property.
     
     """
     self.association = DoFAssociation.Undef
     self.name        = name
     self.namespace   = []
-    self.additional_load_and_store_arguments = ""
+    self._additional_load_and_store_arguments = []
   
   
   def configure(self,namespace,association):
@@ -122,3 +125,7 @@ class DoF(object):
     result += ">"
     return result
 
+
+  @property
+  def additional_load_and_store_arguments(self):
+    return self._additional_load_and_store_arguments
