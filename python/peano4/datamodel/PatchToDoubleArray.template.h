@@ -68,24 +68,42 @@ struct {{NAMESPACE | join("::")}}::{{CLASSNAME}} {
   void merge(peano4::grid::TraversalObserver::SendReceiveContext context, const {{CLASSNAME}}& neighbour, const peano4::datamanagement::VertexMarker& marker);
   static bool send(const peano4::datamanagement::VertexMarker& marker);
   static bool receiveAndMerge(const peano4::datamanagement::VertexMarker& marker);
-  static bool storePersistently(const peano4::datamanagement::VertexMarker& marker);
-  static bool loadPersistently(const peano4::datamanagement::VertexMarker& marker);
+  static bool storePersistently(
+    const peano4::datamanagement::VertexMarker& marker
+    {% for arg in ADDITIONAL_LOAD_STORE_ARGUMENTS %}, {{arg[0]}} {% endfor %}
+  );
+  static bool loadPersistently(
+    const peano4::datamanagement::VertexMarker& marker
+    {% for arg in ADDITIONAL_LOAD_STORE_ARGUMENTS %}, {{arg[0]}} {% endfor %}
+  );
   {% endif -%}
 
   {% if DATA_ASSOCIATION == 2 -%}
   void merge(peano4::grid::TraversalObserver::SendReceiveContext context, const {{CLASSNAME}}& neighbour, const peano4::datamanagement::FaceMarker& marker);
   static bool send(const peano4::datamanagement::FaceMarker& marker);
   static bool receiveAndMerge(const peano4::datamanagement::FaceMarker& marker);
-  static bool storePersistently(const peano4::datamanagement::FaceMarker& marker);
-  static bool loadPersistently(const peano4::datamanagement::FaceMarker& marker);
+  static bool storePersistently(
+    const peano4::datamanagement::FaceMarker& marker
+    {% for arg in ADDITIONAL_LOAD_STORE_ARGUMENTS %}, {{arg[0]}} {% endfor %}
+  );
+  static bool loadPersistently(
+    const peano4::datamanagement::FaceMarker& marker
+    {% for arg in ADDITIONAL_LOAD_STORE_ARGUMENTS %}, {{arg[0]}} {% endfor %}
+  );
   {% endif -%}
 
   {% if DATA_ASSOCIATION == 3 -%}
   void merge(peano4::grid::TraversalObserver::SendReceiveContext context, const {{CLASSNAME}}& neighbour, const peano4::datamanagement::CellMarker& marker);
   static bool send(const peano4::datamanagement::CellMarker& marker);
   static bool receiveAndMerge(const peano4::datamanagement::CellMarker& marker);
-  static bool storePersistently(const peano4::datamanagement::CellMarker& marker);
-  static bool loadPersistently(const peano4::datamanagement::CellMarker& marker);
+  static bool storePersistently(
+    const peano4::datamanagement::CellMarker& marker
+    {% for arg in ADDITIONAL_LOAD_STORE_ARGUMENTS %}, {{arg[0]}} {% endfor %}
+  );
+  static bool loadPersistently(
+    const peano4::datamanagement::CellMarker& marker
+    {% for arg in ADDITIONAL_LOAD_STORE_ARGUMENTS %}, {{arg[0]}} {% endfor %}
+  );
   {% endif -%}
   
   

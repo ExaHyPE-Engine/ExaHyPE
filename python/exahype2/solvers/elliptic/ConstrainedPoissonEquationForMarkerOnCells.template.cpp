@@ -186,7 +186,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::constrainValue( benchmarks::exah
   switch (marker.getMarker()) {
     case benchmarks::exahype2::euler::sphericalaccretionupscaling::celldata::{{MARKER}}::Marker::BnotA:
       marker.setValue( std::min(marker.getValue(), MaxValue) );
-      marker.setValue( std::max(marker.getValue(), MaxThreshold * (1.0+Tolerance) ) );
+//      marker.setValue( std::max(marker.getValue(), MaxThreshold * (1.0+Tolerance) ) );
       break;
     case benchmarks::exahype2::euler::sphericalaccretionupscaling::celldata::{{MARKER}}::Marker::BdeterminesA:
 //      marker.setValue( std::min(marker.getValue(), MaxThreshold * (1.0-Tolerance) ) );
@@ -197,7 +197,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::constrainValue( benchmarks::exah
 //      marker.setValue( std::min(marker.getValue(), MinThreshold * (1.0+Tolerance) ) );
       break;
     case benchmarks::exahype2::euler::sphericalaccretionupscaling::celldata::{{MARKER}}::Marker::AnotB:
-      marker.setValue( std::min(marker.getValue(), MinThreshold * (1.0-Tolerance) ) );
+//      marker.setValue( std::min(marker.getValue(), MinThreshold * (1.0-Tolerance) ) );
       marker.setValue( std::max(marker.getValue(), MinValue) );
       break;
   }

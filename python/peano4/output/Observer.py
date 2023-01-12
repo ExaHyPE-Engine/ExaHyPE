@@ -321,6 +321,7 @@ std::vector< peano4::grid::GridControlEvent > {{FULL_QUALIFIED_CLASSNAME}}::getG
   return result;
 }
 
+
 """
 
 
@@ -359,7 +360,10 @@ void {{FULL_QUALIFIED_CLASSNAME}}::enterCell( const peano4::grid::GridTraversalE
         and
         inVertexStack!=peano4::grid::TraversalObserver::NoData
         and
-        (not peano4::grid::PeanoCurve::isInOutStack(inVertexStack) or {{full_qualified_type}}::loadPersistently(marker{additional_load_store_arguments}))
+        (not peano4::grid::PeanoCurve::isInOutStack(inVertexStack) or {{full_qualified_type}}::loadPersistently(
+          marker
+          {% for arg in ADDITIONAL_LOAD_STORE_ARGUMENTS %}, {{arg[0]}} {% endfor %}
+        ))
       ) {
         assertion4( not repositories::DataRepository::_{{logical_type_name}}Stack.getForPop( repositories::DataRepository::DataKey(_spacetreeId,inVertexStack))->empty(), event.toString(), peano4::datamanagement::VertexMarker(event).toString(), _spacetreeId, inVertexStack);
         data = repositories::DataRepository::_{{logical_type_name}}Stack.getForPop( repositories::DataRepository::DataKey(_spacetreeId,inVertexStack))->pop();
@@ -373,9 +377,15 @@ void {{FULL_QUALIFIED_CLASSNAME}}::enterCell( const peano4::grid::GridTraversalE
         or
         inVertexStack==peano4::grid::TraversalObserver::NoData
         or
-        not {{full_qualified_type}}::loadPersistently(marker{additional_load_store_arguments})
+        not {{full_qualified_type}}::loadPersistently(
+          marker
+          {% for arg in ADDITIONAL_LOAD_STORE_ARGUMENTS %}, {{arg[0]}} {% endfor %}
+        )
       ) {
-        logDebug( "loadCell(...)", "initialise meta data of vertex {{name}} with " << marker.x(outVertexStackPosition) << " x " << marker.h() << ": load persistent data=" << {{full_qualified_type}}::loadPersistently(marker{additional_load_store_arguments}) << " (" << marker.toString() << ")" );
+        logDebug( "loadCell(...)", "initialise meta data of vertex {{name}} with " << marker.x(outVertexStackPosition) << " x " << marker.h() << ": load persistent data=" << {{full_qualified_type}}::loadPersistently(
+          marker
+          {% for arg in ADDITIONAL_LOAD_STORE_ARGUMENTS %}, {{arg[0]}} {% endfor %}
+        ) << " (" << marker.toString() << ")" );
         data.setDebugX( marker.x(outVertexStackPosition) );
         data.setDebugH( marker.h() );
       }
@@ -417,12 +427,12 @@ void {{FULL_QUALIFIED_CLASSNAME}}::enterCell( const peano4::grid::GridTraversalE
         {{ACTIVE_ACTION_SET}}.createPersistentVertex(
            marker
           ,{{MAPPING_SIGNATURE_FINE_GRID_VERTICES_ARGUMENTS_PICK_ENTRY}}
-          {{,MAPPING_SIGNATURE_COARSE_GRID_VERTICES_ARGUMENTS,MAPPING_SIGNATURE_COARSE_GRID_FACES_ARGUMENTS,MAPPING_SIGNATURE_COARSE_GRID_CELL_ARGUMENTS}}
+          {{_COMMA_MAPPING_SIGNATURE_COARSE_GRID_VERTICES_ARGUMENTS_COMMA_MAPPING_SIGNATURE_COARSE_GRID_FACES_ARGUMENTS_COMMA_MAPPING_SIGNATURE_COARSE_GRID_CELL_ARGUMENTS}}
         );
         {{ACTIVE_ACTION_SET}}.touchVertexFirstTime(
            marker
           ,{{MAPPING_SIGNATURE_FINE_GRID_VERTICES_ARGUMENTS_PICK_ENTRY}}
-          {{,MAPPING_SIGNATURE_COARSE_GRID_VERTICES_ARGUMENTS,MAPPING_SIGNATURE_COARSE_GRID_FACES_ARGUMENTS,MAPPING_SIGNATURE_COARSE_GRID_CELL_ARGUMENTS}}
+          {{_COMMA_MAPPING_SIGNATURE_COARSE_GRID_VERTICES_ARGUMENTS_COMMA_MAPPING_SIGNATURE_COARSE_GRID_FACES_ARGUMENTS_COMMA_MAPPING_SIGNATURE_COARSE_GRID_CELL_ARGUMENTS}}
         );
       }
       else if (
@@ -433,7 +443,7 @@ void {{FULL_QUALIFIED_CLASSNAME}}::enterCell( const peano4::grid::GridTraversalE
         {{ACTIVE_ACTION_SET}}.createHangingVertex(
            marker
           ,{{MAPPING_SIGNATURE_FINE_GRID_VERTICES_ARGUMENTS_PICK_ENTRY}}
-          {{,MAPPING_SIGNATURE_COARSE_GRID_VERTICES_ARGUMENTS,MAPPING_SIGNATURE_COARSE_GRID_FACES_ARGUMENTS,MAPPING_SIGNATURE_COARSE_GRID_CELL_ARGUMENTS}}
+          {{_COMMA_MAPPING_SIGNATURE_COARSE_GRID_VERTICES_ARGUMENTS_COMMA_MAPPING_SIGNATURE_COARSE_GRID_FACES_ARGUMENTS_COMMA_MAPPING_SIGNATURE_COARSE_GRID_CELL_ARGUMENTS}}
         );
       }
       else if (
@@ -444,7 +454,7 @@ void {{FULL_QUALIFIED_CLASSNAME}}::enterCell( const peano4::grid::GridTraversalE
         {{ACTIVE_ACTION_SET}}.touchVertexFirstTime(
            marker
           ,{{MAPPING_SIGNATURE_FINE_GRID_VERTICES_ARGUMENTS_PICK_ENTRY}}
-          {{,MAPPING_SIGNATURE_COARSE_GRID_VERTICES_ARGUMENTS,MAPPING_SIGNATURE_COARSE_GRID_FACES_ARGUMENTS,MAPPING_SIGNATURE_COARSE_GRID_CELL_ARGUMENTS}}
+          {{_COMMA_MAPPING_SIGNATURE_COARSE_GRID_VERTICES_ARGUMENTS_COMMA_MAPPING_SIGNATURE_COARSE_GRID_FACES_ARGUMENTS_COMMA_MAPPING_SIGNATURE_COARSE_GRID_CELL_ARGUMENTS}}
         );
       }
     }
@@ -471,7 +481,10 @@ void {{FULL_QUALIFIED_CLASSNAME}}::enterCell( const peano4::grid::GridTraversalE
         and
         inFaceStack!=peano4::grid::TraversalObserver::NoData
         and
-        (not peano4::grid::PeanoCurve::isInOutStack(inFaceStack) or {{full_qualified_type}}::loadPersistently(marker{additional_load_store_arguments}))
+        (not peano4::grid::PeanoCurve::isInOutStack(inFaceStack) or {{full_qualified_type}}::loadPersistently(
+          marker
+          {% for arg in ADDITIONAL_LOAD_STORE_ARGUMENTS %}, {{arg[0]}} {% endfor %}
+        ))
       ) {
         assertion4( not repositories::DataRepository::_{{logical_type_name}}Stack.getForPop( repositories::DataRepository::DataKey(_spacetreeId,inFaceStack))->empty(), event.toString(), peano4::datamanagement::FaceMarker(event).toString(), _spacetreeId,inFaceStack );
         data = repositories::DataRepository::_{{logical_type_name}}Stack.getForPop( repositories::DataRepository::DataKey(_spacetreeId,inFaceStack))->pop();
@@ -485,9 +498,15 @@ void {{FULL_QUALIFIED_CLASSNAME}}::enterCell( const peano4::grid::GridTraversalE
         or
         inFaceStack==peano4::grid::TraversalObserver::NoData
         or
-        not {{full_qualified_type}}::loadPersistently(marker{additional_load_store_arguments})
+        not {{full_qualified_type}}::loadPersistently(
+          marker
+          {% for arg in ADDITIONAL_LOAD_STORE_ARGUMENTS %}, {{arg[0]}} {% endfor %}
+        )
       ) {
-        logDebug( "loadCell(...)", "initialise meta data of face {{name}} with " << marker.x(outFaceStackPosition) << " x " << marker.h() << ": load persistent data=" << {{full_qualified_type}}::loadPersistently(marker{additional_load_store_arguments})  << " (" << marker.toString() << ")" );
+        logDebug( "loadCell(...)", "initialise meta data of face {{name}} with " << marker.x(outFaceStackPosition) << " x " << marker.h() << ": load persistent data=" << {{full_qualified_type}}::loadPersistently(
+          marker
+          {% for arg in ADDITIONAL_LOAD_STORE_ARGUMENTS %}, {{arg[0]}} {% endfor %}
+        )  << " (" << marker.toString() << ")" );
         data.setDebugX( marker.x(outFaceStackPosition) );
         data.setDebugH( marker.h() );
       }
@@ -524,15 +543,15 @@ void {{FULL_QUALIFIED_CLASSNAME}}::enterCell( const peano4::grid::GridTraversalE
       ) {
         {{ACTIVE_ACTION_SET}}.createPersistentFace(
            marker
-          {{,MAPPING_SIGNATURE_FINE_GRID_VERTICES_ARGUMENTS}}
+          {{_COMMA_MAPPING_SIGNATURE_FINE_GRID_VERTICES_ARGUMENTS}}
           ,{{MAPPING_SIGNATURE_FINE_GRID_FACES_ARGUMENTS_PICK_ENTRY}}
-          {{,MAPPING_SIGNATURE_COARSE_GRID_VERTICES_ARGUMENTS,MAPPING_SIGNATURE_COARSE_GRID_FACES_ARGUMENTS,MAPPING_SIGNATURE_COARSE_GRID_CELL_ARGUMENTS}}
+          {{_COMMA_MAPPING_SIGNATURE_COARSE_GRID_VERTICES_ARGUMENTS_COMMA_MAPPING_SIGNATURE_COARSE_GRID_FACES_ARGUMENTS_COMMA_MAPPING_SIGNATURE_COARSE_GRID_CELL_ARGUMENTS}}
         );
         {{ACTIVE_ACTION_SET}}.touchFaceFirstTime(
            marker
-          {{,MAPPING_SIGNATURE_FINE_GRID_VERTICES_ARGUMENTS}}
+          {{_COMMA_MAPPING_SIGNATURE_FINE_GRID_VERTICES_ARGUMENTS}}
           ,{{MAPPING_SIGNATURE_FINE_GRID_FACES_ARGUMENTS_PICK_ENTRY}}
-          {{,MAPPING_SIGNATURE_COARSE_GRID_VERTICES_ARGUMENTS,MAPPING_SIGNATURE_COARSE_GRID_FACES_ARGUMENTS,MAPPING_SIGNATURE_COARSE_GRID_CELL_ARGUMENTS}}
+          {{_COMMA_MAPPING_SIGNATURE_COARSE_GRID_VERTICES_ARGUMENTS_COMMA_MAPPING_SIGNATURE_COARSE_GRID_FACES_ARGUMENTS_COMMA_MAPPING_SIGNATURE_COARSE_GRID_CELL_ARGUMENTS}}
         );
       }
       else if (
@@ -542,9 +561,9 @@ void {{FULL_QUALIFIED_CLASSNAME}}::enterCell( const peano4::grid::GridTraversalE
       ) {
         {{ACTIVE_ACTION_SET}}.createHangingFace(
            marker
-          {{,MAPPING_SIGNATURE_FINE_GRID_VERTICES_ARGUMENTS}}
+          {{_COMMA_MAPPING_SIGNATURE_FINE_GRID_VERTICES_ARGUMENTS}}
           ,{{MAPPING_SIGNATURE_FINE_GRID_FACES_ARGUMENTS_PICK_ENTRY}}
-          {{,MAPPING_SIGNATURE_COARSE_GRID_VERTICES_ARGUMENTS,MAPPING_SIGNATURE_COARSE_GRID_FACES_ARGUMENTS,MAPPING_SIGNATURE_COARSE_GRID_CELL_ARGUMENTS}}
+          {{_COMMA_MAPPING_SIGNATURE_COARSE_GRID_VERTICES_ARGUMENTS_COMMA_MAPPING_SIGNATURE_COARSE_GRID_FACES_ARGUMENTS_COMMA_MAPPING_SIGNATURE_COARSE_GRID_CELL_ARGUMENTS}}
         );
       }
       else if (
@@ -554,9 +573,9 @@ void {{FULL_QUALIFIED_CLASSNAME}}::enterCell( const peano4::grid::GridTraversalE
       ) {
         {{ACTIVE_ACTION_SET}}.touchFaceFirstTime(
            marker
-          {{,MAPPING_SIGNATURE_FINE_GRID_VERTICES_ARGUMENTS}}
+          {{_COMMA_MAPPING_SIGNATURE_FINE_GRID_VERTICES_ARGUMENTS}}
           ,{{MAPPING_SIGNATURE_FINE_GRID_FACES_ARGUMENTS_PICK_ENTRY}}
-          {{,MAPPING_SIGNATURE_COARSE_GRID_VERTICES_ARGUMENTS,MAPPING_SIGNATURE_COARSE_GRID_FACES_ARGUMENTS,MAPPING_SIGNATURE_COARSE_GRID_CELL_ARGUMENTS}}
+          {{_COMMA_MAPPING_SIGNATURE_COARSE_GRID_VERTICES_ARGUMENTS_COMMA_MAPPING_SIGNATURE_COARSE_GRID_FACES_ARGUMENTS_COMMA_MAPPING_SIGNATURE_COARSE_GRID_CELL_ARGUMENTS}}
         );
       }
     }
@@ -573,7 +592,10 @@ void {{FULL_QUALIFIED_CLASSNAME}}::enterCell( const peano4::grid::GridTraversalE
 
     const int inCellStack  = event.getCellData();
     const int outCellStack = peano4::grid::PeanoCurve::CallStack;
-    logDebug("loadCell(...)", "cell stack " << inCellStack << "->pos-" << outCellStack << "(" << {{full_qualified_type}}::loadPersistently(marker{additional_load_store_arguments}) << ")" );
+    logDebug("loadCell(...)", "cell stack " << inCellStack << "->pos-" << outCellStack << "(" << {{full_qualified_type}}::loadPersistently(
+      marker
+      {% for arg in ADDITIONAL_LOAD_STORE_ARGUMENTS %}, {{arg[0]}} {% endfor %}
+    ) << ")" );
 
     {{full_qualified_type}}& data = view.get(0);
     if (
@@ -581,7 +603,10 @@ void {{FULL_QUALIFIED_CLASSNAME}}::enterCell( const peano4::grid::GridTraversalE
       and
       inCellStack!=peano4::grid::TraversalObserver::NoData
       and
-      (not peano4::grid::PeanoCurve::isInOutStack(inCellStack) or {{full_qualified_type}}::loadPersistently(marker{additional_load_store_arguments}))
+      (not peano4::grid::PeanoCurve::isInOutStack(inCellStack) or {{full_qualified_type}}::loadPersistently(
+        marker
+        {% for arg in ADDITIONAL_LOAD_STORE_ARGUMENTS %}, {{arg[0]}} {% endfor %}
+      ))
     ) {
       assertion3( not repositories::DataRepository::_{{logical_type_name}}Stack.getForPop( repositories::DataRepository::DataKey(_spacetreeId,inCellStack))->empty(), event.toString(), _spacetreeId, inCellStack);
       data = repositories::DataRepository::_{{logical_type_name}}Stack.getForPop( repositories::DataRepository::DataKey(_spacetreeId,inCellStack))->pop();
@@ -593,7 +618,10 @@ void {{FULL_QUALIFIED_CLASSNAME}}::enterCell( const peano4::grid::GridTraversalE
       or
       inCellStack==peano4::grid::TraversalObserver::NoData
       or
-      not {{full_qualified_type}}::loadPersistently(marker{additional_load_store_arguments})
+      not {{full_qualified_type}}::loadPersistently(
+        marker
+        {% for arg in ADDITIONAL_LOAD_STORE_ARGUMENTS %}, {{arg[0]}} {% endfor %}
+      )
     ) {
       logDebug( "loadCell(...)", "initialise meta data of cell {{name}} with " << marker.x() << " x " << marker.h()  << " (" << marker.toString() << ")");
       data.setDebugX( marker.x() );
@@ -619,12 +647,12 @@ void {{FULL_QUALIFIED_CLASSNAME}}::enterCell( const peano4::grid::GridTraversalE
     ) {
       {{ACTIVE_ACTION_SET}}.createCell(
         marker,
-        {{MAPPING_SIGNATURE_FINE_GRID_VERTICES_ARGUMENTS,}}
-        {{MAPPING_SIGNATURE_FINE_GRID_FACES_ARGUMENTS,}}
+        {{MAPPING_SIGNATURE_FINE_GRID_VERTICES_ARGUMENTS_COMMA_}}
+        {{MAPPING_SIGNATURE_FINE_GRID_FACES_ARGUMENTS_COMMA_}}
         {{MAPPING_SIGNATURE_FINE_GRID_CELL_ARGUMENTS_PICK_ENTRY}}
-        {{,MAPPING_SIGNATURE_COARSE_GRID_VERTICES_ARGUMENTS}}
-        {{,MAPPING_SIGNATURE_COARSE_GRID_FACES_ARGUMENTS}}
-        {{,MAPPING_SIGNATURE_COARSE_GRID_CELL_ARGUMENTS}}
+        {{_COMMA_MAPPING_SIGNATURE_COARSE_GRID_VERTICES_ARGUMENTS}}
+        {{_COMMA_MAPPING_SIGNATURE_COARSE_GRID_FACES_ARGUMENTS}}
+        {{_COMMA_MAPPING_SIGNATURE_COARSE_GRID_CELL_ARGUMENTS}}
       );
     }
   }
@@ -637,8 +665,8 @@ void {{FULL_QUALIFIED_CLASSNAME}}::enterCell( const peano4::grid::GridTraversalE
     if (marker.isLocal()) {
       {{ACTIVE_ACTION_SET}}.touchCellFirstTime(
          marker
-        {{,MAPPING_SIGNATURE_FINE_GRID_VERTICES_ARGUMENTS,MAPPING_SIGNATURE_FINE_GRID_FACES_ARGUMENTS,MAPPING_SIGNATURE_FINE_GRID_CELL_ARGUMENTS_CELL_EVENT}}
-        {{,MAPPING_SIGNATURE_COARSE_GRID_VERTICES_ARGUMENTS,MAPPING_SIGNATURE_COARSE_GRID_FACES_ARGUMENTS,MAPPING_SIGNATURE_COARSE_GRID_CELL_ARGUMENTS_CELL_EVENT}}
+        {{_COMMA_MAPPING_SIGNATURE_FINE_GRID_VERTICES_ARGUMENTS_COMMA_MAPPING_SIGNATURE_FINE_GRID_FACES_ARGUMENTS_COMMA_MAPPING_SIGNATURE_FINE_GRID_CELL_ARGUMENTS_CELL_EVENT}}
+        {{_COMMA_MAPPING_SIGNATURE_COARSE_GRID_VERTICES_ARGUMENTS_COMMA_MAPPING_SIGNATURE_COARSE_GRID_FACES_ARGUMENTS_COMMA_MAPPING_SIGNATURE_COARSE_GRID_CELL_ARGUMENTS_CELL_EVENT}}
       );
     }
   }
@@ -648,6 +676,8 @@ void {{FULL_QUALIFIED_CLASSNAME}}::enterCell( const peano4::grid::GridTraversalE
   TemplateEnterCell_Epilogue = """
   logTraceOut( "enterCell(...)" );
 }
+
+
 """
 
   def generateDictEntry(self, key):
@@ -670,13 +700,21 @@ void {{FULL_QUALIFIED_CLASSNAME}}::enterCell( const peano4::grid::GridTraversalE
 
 
   def mkSubDict(self, keys):
+      """
+      
+      Create the particular subdictionary that's used for an expression.
+      
+      """
       temp = {}
       for k in keys:
           if not k in self.d:
               temp[k] = self.generateDictEntry(k)
           else:
               temp[k] = self.d[k]
-      return temp
+      result = {}
+      for k in temp:
+        result[ k.replace(",", "_COMMA_").strip() ] = temp[k]
+      return result
 
 
   def __generate_loadCell(self,output_file):
@@ -688,7 +726,7 @@ void {{FULL_QUALIFIED_CLASSNAME}}::enterCell( const peano4::grid::GridTraversalE
         "enumeration_type":vertex.get_enumeration_type(),
         "logical_type_name":vertex.get_logical_type_name(),
         "full_qualified_type": vertex.get_full_qualified_type(),
-        "additional_load_store_arguments": vertex.load_and_store_take_all_other_objects_into_account
+        "ADDITIONAL_LOAD_STORE_ARGUMENTS": vertex.additional_load_and_store_arguments
       }
       self.d[ "name" ]                 = vertex.name
       output_file.write( jinja2.Template( self.TemplateLoadCell_VertexLoad ).render(**temp) )
@@ -699,7 +737,7 @@ void {{FULL_QUALIFIED_CLASSNAME}}::enterCell( const peano4::grid::GridTraversalE
         "enumeration_type":face.get_enumeration_type(),
         "logical_type_name":face.get_logical_type_name(),
         "full_qualified_type": face.get_full_qualified_type(),
-        "additional_load_store_arguments": face.load_and_store_take_all_other_objects_into_account
+        "ADDITIONAL_LOAD_STORE_ARGUMENTS": face.additional_load_and_store_arguments
        }
       self.d[ "name" ]                 = face.name
       output_file.write( jinja2.Template( self.TemplateLoadCell_FaceLoad ).render(**temp) )
@@ -709,7 +747,7 @@ void {{FULL_QUALIFIED_CLASSNAME}}::enterCell( const peano4::grid::GridTraversalE
         "name": cell.name,
         "logical_type_name":cell.get_logical_type_name(),
         "full_qualified_type": cell.get_full_qualified_type(),
-        "additional_load_store_arguments": cell.load_and_store_take_all_other_objects_into_account
+        "ADDITIONAL_LOAD_STORE_ARGUMENTS": cell.additional_load_and_store_arguments
        }
       self.d[ "name" ]                 = cell.name
       output_file.write( jinja2.Template( self.TemplateLoadCell_CellLoad ).render(**temp) )
@@ -786,8 +824,8 @@ void {{FULL_QUALIFIED_CLASSNAME}}::leaveCell( const peano4::grid::GridTraversalE
     if (marker.isLocal()) {
       {{ACTIVE_ACTION_SET}}.touchCellLastTime(
          marker
-        {{,MAPPING_SIGNATURE_FINE_GRID_VERTICES_ARGUMENTS,MAPPING_SIGNATURE_FINE_GRID_FACES_ARGUMENTS,MAPPING_SIGNATURE_FINE_GRID_CELL_ARGUMENTS_CELL_EVENT}}
-        {{,MAPPING_SIGNATURE_COARSE_GRID_VERTICES_ARGUMENTS,MAPPING_SIGNATURE_COARSE_GRID_FACES_ARGUMENTS,MAPPING_SIGNATURE_COARSE_GRID_CELL_ARGUMENTS_CELL_EVENT}}
+        {{_COMMA_MAPPING_SIGNATURE_FINE_GRID_VERTICES_ARGUMENTS_COMMA_MAPPING_SIGNATURE_FINE_GRID_FACES_ARGUMENTS_COMMA_MAPPING_SIGNATURE_FINE_GRID_CELL_ARGUMENTS_CELL_EVENT}}
+        {{_COMMA_MAPPING_SIGNATURE_COARSE_GRID_VERTICES_ARGUMENTS_COMMA_MAPPING_SIGNATURE_COARSE_GRID_FACES_ARGUMENTS_COMMA_MAPPING_SIGNATURE_COARSE_GRID_CELL_ARGUMENTS_CELL_EVENT}}
       );
     }
   }
@@ -804,9 +842,9 @@ void {{FULL_QUALIFIED_CLASSNAME}}::leaveCell( const peano4::grid::GridTraversalE
     ) {
     {{ACTIVE_ACTION_SET}}.destroyCell(
       marker
-        {{,MAPPING_SIGNATURE_FINE_GRID_VERTICES_ARGUMENTS,MAPPING_SIGNATURE_FINE_GRID_FACES_ARGUMENTS}}
+        {{_COMMA_MAPPING_SIGNATURE_FINE_GRID_VERTICES_ARGUMENTS_COMMA_MAPPING_SIGNATURE_FINE_GRID_FACES_ARGUMENTS}}
         ,{{MAPPING_SIGNATURE_FINE_GRID_CELL_ARGUMENTS_PICK_ENTRY}}
-        {{,MAPPING_SIGNATURE_COARSE_GRID_VERTICES_ARGUMENTS,MAPPING_SIGNATURE_COARSE_GRID_FACES_ARGUMENTS,MAPPING_SIGNATURE_COARSE_GRID_CELL_ARGUMENTS}}
+        {{_COMMA_MAPPING_SIGNATURE_COARSE_GRID_VERTICES_ARGUMENTS_COMMA_MAPPING_SIGNATURE_COARSE_GRID_FACES_ARGUMENTS_COMMA_MAPPING_SIGNATURE_COARSE_GRID_CELL_ARGUMENTS}}
       );
     }
   }
@@ -815,7 +853,7 @@ void {{FULL_QUALIFIED_CLASSNAME}}::leaveCell( const peano4::grid::GridTraversalE
 
   TemplateLeaveCell_CellStore_Epilogue = """
   // Handle cell {name}
-  {{
+  {
     const int inCellStack   = peano4::grid::PeanoCurve::CallStack;
     const int outCellStack  = event.getCellData();
     logDebug("storeCell(...)", "cell stack " << inCellStack << "->pos-" << outCellStack );
@@ -829,21 +867,27 @@ void {{FULL_QUALIFIED_CLASSNAME}}::leaveCell( const peano4::grid::GridTraversalE
       and
       outCellStack!=peano4::grid::TraversalObserver::NoData
       and
-      (not peano4::grid::PeanoCurve::isInOutStack(outCellStack) or {{full_qualified_type}}::storePersistently(marker{additional_load_store_arguments}))
-    ) {{
+      (not peano4::grid::PeanoCurve::isInOutStack(outCellStack) or {{full_qualified_type}}::storePersistently(
+        marker
+        {% for arg in ADDITIONAL_LOAD_STORE_ARGUMENTS %}, {{arg[0]}} {% endfor %}
+      ))
+    ) {
       repositories::DataRepository::_{{logical_type_name}}Stack.getForPush( repositories::DataRepository::DataKey(_spacetreeId,outCellStack))->push( view.get(0) );
-    }}
-    else {{
+    }
+    else {
       logDebug( 
         "storeCell(...)", 
         "do not store cell {{name}} with " << marker.x() << " x " << marker.h() << ":" << 
         "  destroy=" << (outCellStack==peano4::grid::TraversalObserver::CreateOrDestroyPersistentGridEntity) <<
         ", no-data=" << (outCellStack==peano4::grid::TraversalObserver::NoData) <<
         ", is-in/out=" << peano4::grid::PeanoCurve::isInOutStack(outCellStack) <<
-        ", store-persistently=" << {{full_qualified_type}}::storePersistently(marker{additional_load_store_arguments})
+        ", store-persistently=" << {{full_qualified_type}}::storePersistently(
+          marker
+          {% for arg in ADDITIONAL_LOAD_STORE_ARGUMENTS %}, {{arg[0]}} {% endfor %}
+        )
       );
-    }}
-  }}
+    }
+  }
 """
 
 
@@ -865,15 +909,15 @@ void {{FULL_QUALIFIED_CLASSNAME}}::leaveCell( const peano4::grid::GridTraversalE
       ) {
         {{ACTIVE_ACTION_SET}}.touchFaceLastTime(
            marker
-          {{,MAPPING_SIGNATURE_FINE_GRID_VERTICES_ARGUMENTS}}
+          {{_COMMA_MAPPING_SIGNATURE_FINE_GRID_VERTICES_ARGUMENTS}}
           ,{{MAPPING_SIGNATURE_FINE_GRID_FACES_ARGUMENTS_PICK_ENTRY}}
-          {{,MAPPING_SIGNATURE_COARSE_GRID_VERTICES_ARGUMENTS,MAPPING_SIGNATURE_COARSE_GRID_FACES_ARGUMENTS,MAPPING_SIGNATURE_COARSE_GRID_CELL_ARGUMENTS}}
+          {{_COMMA_MAPPING_SIGNATURE_COARSE_GRID_VERTICES_ARGUMENTS_COMMA_MAPPING_SIGNATURE_COARSE_GRID_FACES_ARGUMENTS_COMMA_MAPPING_SIGNATURE_COARSE_GRID_CELL_ARGUMENTS}}
         );
         {{ACTIVE_ACTION_SET}}.destroyPersistentFace(
            marker
-          {{,MAPPING_SIGNATURE_FINE_GRID_VERTICES_ARGUMENTS}}
+          {{_COMMA_MAPPING_SIGNATURE_FINE_GRID_VERTICES_ARGUMENTS}}
           ,{{MAPPING_SIGNATURE_FINE_GRID_FACES_ARGUMENTS_PICK_ENTRY}}
-          {{,MAPPING_SIGNATURE_COARSE_GRID_VERTICES_ARGUMENTS,MAPPING_SIGNATURE_COARSE_GRID_FACES_ARGUMENTS,MAPPING_SIGNATURE_COARSE_GRID_CELL_ARGUMENTS}}
+          {{_COMMA_MAPPING_SIGNATURE_COARSE_GRID_VERTICES_ARGUMENTS_COMMA_MAPPING_SIGNATURE_COARSE_GRID_FACES_ARGUMENTS_COMMA_MAPPING_SIGNATURE_COARSE_GRID_CELL_ARGUMENTS}}
         );
       }
       else if (
@@ -883,9 +927,9 @@ void {{FULL_QUALIFIED_CLASSNAME}}::leaveCell( const peano4::grid::GridTraversalE
       ) {
         {{ACTIVE_ACTION_SET}}.destroyHangingFace(
            marker
-          {{,MAPPING_SIGNATURE_FINE_GRID_VERTICES_ARGUMENTS}}
+          {{_COMMA_MAPPING_SIGNATURE_FINE_GRID_VERTICES_ARGUMENTS}}
           ,{{MAPPING_SIGNATURE_FINE_GRID_FACES_ARGUMENTS_PICK_ENTRY}}
-          {{,MAPPING_SIGNATURE_COARSE_GRID_VERTICES_ARGUMENTS,MAPPING_SIGNATURE_COARSE_GRID_FACES_ARGUMENTS,MAPPING_SIGNATURE_COARSE_GRID_CELL_ARGUMENTS}}
+          {{_COMMA_MAPPING_SIGNATURE_COARSE_GRID_VERTICES_ARGUMENTS_COMMA_MAPPING_SIGNATURE_COARSE_GRID_FACES_ARGUMENTS_COMMA_MAPPING_SIGNATURE_COARSE_GRID_CELL_ARGUMENTS}}
         );
       }
       else if (
@@ -895,9 +939,9 @@ void {{FULL_QUALIFIED_CLASSNAME}}::leaveCell( const peano4::grid::GridTraversalE
       ) {
         {{ACTIVE_ACTION_SET}}.touchFaceLastTime(
            marker
-          {{,MAPPING_SIGNATURE_FINE_GRID_VERTICES_ARGUMENTS}}
+          {{_COMMA_MAPPING_SIGNATURE_FINE_GRID_VERTICES_ARGUMENTS}}
           ,{{MAPPING_SIGNATURE_FINE_GRID_FACES_ARGUMENTS_PICK_ENTRY}}
-          {{,MAPPING_SIGNATURE_COARSE_GRID_VERTICES_ARGUMENTS,MAPPING_SIGNATURE_COARSE_GRID_FACES_ARGUMENTS,MAPPING_SIGNATURE_COARSE_GRID_CELL_ARGUMENTS}}
+          {{_COMMA_MAPPING_SIGNATURE_COARSE_GRID_VERTICES_ARGUMENTS_COMMA_MAPPING_SIGNATURE_COARSE_GRID_FACES_ARGUMENTS_COMMA_MAPPING_SIGNATURE_COARSE_GRID_CELL_ARGUMENTS}}
         );
       }
     }
@@ -924,13 +968,19 @@ void {{FULL_QUALIFIED_CLASSNAME}}::leaveCell( const peano4::grid::GridTraversalE
         and
         outFaceStack!=peano4::grid::TraversalObserver::NoData
         and
-        (not peano4::grid::PeanoCurve::isInOutStack(outFaceStack) or {{full_qualified_type}}::storePersistently(marker{additional_load_store_arguments}))
+        (not peano4::grid::PeanoCurve::isInOutStack(outFaceStack) or {{full_qualified_type}}::storePersistently(
+          marker
+          {% for arg in ADDITIONAL_LOAD_STORE_ARGUMENTS %}, {{arg[0]}} {% endfor %}
+        ))
       ) {
         logDebug( "storeCell(...)", "store face {{name}} with " << marker.x(inFaceStackPosition) << " x " << marker.h() );
         repositories::DataRepository::_{{logical_type_name}}Stack.getForPush( repositories::DataRepository::DataKey(_spacetreeId,outFaceStack))->push(data);
-      }}
+      }
       else {
-        logDebug( "storeCell(...)", "do not store face {{name}} with " << marker.x(inFaceStackPosition) << " x " << marker.h() << ": store persistently=" << {{full_qualified_type}}::storePersistently(marker{additional_load_store_arguments}) );
+        logDebug( "storeCell(...)", "do not store face {{name}} with " << marker.x(inFaceStackPosition) << " x " << marker.h() << ": store persistently=" << {{full_qualified_type}}::storePersistently(
+          marker
+          {% for arg in ADDITIONAL_LOAD_STORE_ARGUMENTS %}, {{arg[0]}} {% endfor %}
+        ) );
       }
     }
   }
@@ -955,12 +1005,12 @@ void {{FULL_QUALIFIED_CLASSNAME}}::leaveCell( const peano4::grid::GridTraversalE
         {{ACTIVE_ACTION_SET}}.touchVertexLastTime(
            marker
           ,{{MAPPING_SIGNATURE_FINE_GRID_VERTICES_ARGUMENTS_PICK_ENTRY}}
-          {{,MAPPING_SIGNATURE_COARSE_GRID_VERTICES_ARGUMENTS,MAPPING_SIGNATURE_COARSE_GRID_FACES_ARGUMENTS,MAPPING_SIGNATURE_COARSE_GRID_CELL_ARGUMENTS}}
+          {{_COMMA_MAPPING_SIGNATURE_COARSE_GRID_VERTICES_ARGUMENTS_COMMA_MAPPING_SIGNATURE_COARSE_GRID_FACES_ARGUMENTS_COMMA_MAPPING_SIGNATURE_COARSE_GRID_CELL_ARGUMENTS}}
         );
         {{ACTIVE_ACTION_SET}}.destroyPersistentVertex(
            marker
           ,{{MAPPING_SIGNATURE_FINE_GRID_VERTICES_ARGUMENTS_PICK_ENTRY}}
-          {{,MAPPING_SIGNATURE_COARSE_GRID_VERTICES_ARGUMENTS,MAPPING_SIGNATURE_COARSE_GRID_FACES_ARGUMENTS,MAPPING_SIGNATURE_COARSE_GRID_CELL_ARGUMENTS}}
+          {{_COMMA_MAPPING_SIGNATURE_COARSE_GRID_VERTICES_ARGUMENTS_COMMA_MAPPING_SIGNATURE_COARSE_GRID_FACES_ARGUMENTS_COMMA_MAPPING_SIGNATURE_COARSE_GRID_CELL_ARGUMENTS}}
         );
       }
       else if (
@@ -971,7 +1021,7 @@ void {{FULL_QUALIFIED_CLASSNAME}}::leaveCell( const peano4::grid::GridTraversalE
         {{ACTIVE_ACTION_SET}}.destroyHangingVertex(
            marker
           ,{{MAPPING_SIGNATURE_FINE_GRID_VERTICES_ARGUMENTS_PICK_ENTRY}}
-          {{,MAPPING_SIGNATURE_COARSE_GRID_VERTICES_ARGUMENTS,MAPPING_SIGNATURE_COARSE_GRID_FACES_ARGUMENTS,MAPPING_SIGNATURE_COARSE_GRID_CELL_ARGUMENTS}}
+          {{_COMMA_MAPPING_SIGNATURE_COARSE_GRID_VERTICES_ARGUMENTS_COMMA_MAPPING_SIGNATURE_COARSE_GRID_FACES_ARGUMENTS_COMMA_MAPPING_SIGNATURE_COARSE_GRID_CELL_ARGUMENTS}}
         );
       }
       else if (
@@ -982,7 +1032,7 @@ void {{FULL_QUALIFIED_CLASSNAME}}::leaveCell( const peano4::grid::GridTraversalE
         {{ACTIVE_ACTION_SET}}.touchVertexLastTime(
            marker
           ,{{MAPPING_SIGNATURE_FINE_GRID_VERTICES_ARGUMENTS_PICK_ENTRY}}
-          {{,MAPPING_SIGNATURE_COARSE_GRID_VERTICES_ARGUMENTS,MAPPING_SIGNATURE_COARSE_GRID_FACES_ARGUMENTS,MAPPING_SIGNATURE_COARSE_GRID_CELL_ARGUMENTS}}
+          {{_COMMA_MAPPING_SIGNATURE_COARSE_GRID_VERTICES_ARGUMENTS_COMMA_MAPPING_SIGNATURE_COARSE_GRID_FACES_ARGUMENTS_COMMA_MAPPING_SIGNATURE_COARSE_GRID_CELL_ARGUMENTS}}
         );
       }
     }
@@ -1009,7 +1059,10 @@ void {{FULL_QUALIFIED_CLASSNAME}}::leaveCell( const peano4::grid::GridTraversalE
         and
         outVertexStack!=peano4::grid::TraversalObserver::NoData
         and
-        (not peano4::grid::PeanoCurve::isInOutStack(outVertexStack) or {{full_qualified_type}}::storePersistently(marker{additional_load_store_arguments}))
+        (not peano4::grid::PeanoCurve::isInOutStack(outVertexStack) or {{full_qualified_type}}::storePersistently(
+          marker
+          {% for arg in ADDITIONAL_LOAD_STORE_ARGUMENTS %}, {{arg[0]}} {% endfor %}
+        ))
       ) {
         logDebug( "storeCell(...)", "store vertex {{name}} with " << marker.x(inVertexStackPosition) << " x " << marker.h() );
         repositories::DataRepository::_{{logical_type_name}}Stack.getForPush(repositories::DataRepository::DataKey(_spacetreeId,outVertexStack))->push(data);
@@ -1025,18 +1078,24 @@ void {{FULL_QUALIFIED_CLASSNAME}}::leaveCell( const peano4::grid::GridTraversalE
   TemplateLeaveCell_Epilogue = """
   logTraceOutWith1Argument( "leaveCell(...)", _spacetreeId );
 }
+
+
 """
 
 
   TemplateLoadCell_Epilogue = """
   logTraceOutWith1Argument( "loadCell(...)", _spacetreeId );
 }
+
+
 """
 
 
   TemplateStoreCell_Epilogue = """
   logTraceOutWith1Argument( "storeCell(...)", _spacetreeId );
 }
+
+
 """
 
 
@@ -1093,7 +1152,7 @@ void {{FULL_QUALIFIED_CLASSNAME}}::leaveCell( const peano4::grid::GridTraversalE
         "name" : cell.name, 
         "logical_type_name" : cell.get_logical_type_name(), 
         "full_qualified_type" : cell.get_full_qualified_type(),
-        "additional_load_store_arguments": cell.load_and_store_take_all_other_objects_into_account
+        "ADDITIONAL_LOAD_STORE_ARGUMENTS": cell.additional_load_and_store_arguments
       }
       self.d[ "name" ]                 = cell.name
       output_file.write( jinja2.Template( self.TemplateLeaveCell_CellStore_Epilogue ).render(**temp) )
@@ -1104,7 +1163,7 @@ void {{FULL_QUALIFIED_CLASSNAME}}::leaveCell( const peano4::grid::GridTraversalE
         "enumeration_type":face.get_enumeration_type(), 
         "logical_type_name":face.get_logical_type_name(), 
         "full_qualified_type":face.get_full_qualified_type(),
-        "additional_load_store_arguments": face.load_and_store_take_all_other_objects_into_account
+        "ADDITIONAL_LOAD_STORE_ARGUMENTS": face.additional_load_and_store_arguments
       }
       self.d[ "name" ]                 = face.name
       output_file.write( jinja2.Template( self.TemplateLeaveCell_FaceStore_Epilogue ).render(**temp) )
@@ -1115,7 +1174,7 @@ void {{FULL_QUALIFIED_CLASSNAME}}::leaveCell( const peano4::grid::GridTraversalE
         "enumeration_type": vertex.get_enumeration_type(), 
         "logical_type_name":vertex.get_logical_type_name(), 
         "full_qualified_type":vertex.get_full_qualified_type(),
-        "additional_load_store_arguments": vertex.load_and_store_take_all_other_objects_into_account
+        "ADDITIONAL_LOAD_STORE_ARGUMENTS": vertex.additional_load_and_store_arguments
       }
       self.d[ "name" ]                 = vertex.name
       output_file.write( jinja2.Template( self.TemplateLeaveCell_VertexStore_Epilogue ).render(**temp) )
@@ -1124,7 +1183,7 @@ void {{FULL_QUALIFIED_CLASSNAME}}::leaveCell( const peano4::grid::GridTraversalE
     
       
   TemplateExchangeRoutines_exchangeAllVerticalDataExchangeStacks_Prologue = """
-void {{FULL_QUALIFIED_CLASSNAME}}::exchangeAllVerticalDataExchangeStacks( int masterId ) {{
+void {{FULL_QUALIFIED_CLASSNAME}}::exchangeAllVerticalDataExchangeStacks( int masterId ) {
   logTraceInWith2Arguments( "exchangeAllVerticalDataExchangeStacks(...)", masterId, _spacetreeId  );
 """
 
@@ -1138,14 +1197,16 @@ void {{FULL_QUALIFIED_CLASSNAME}}::exchangeAllVerticalDataExchangeStacks( int ma
 
   TemplateExchangeRoutines_exchangeAllVerticalDataExchangeStacks_Epilogue = """
   logTraceOut( "exchangeAllVerticalDataExchangeStacks(...)" );
-}}
+}
+
+
 """
 
 
 
 
   TemplateExchangeRoutines_exchangeAllHorizontalDataExchangeStacks_Prologue = """
-void {{FULL_QUALIFIED_CLASSNAME}}::exchangeAllHorizontalDataExchangeStacks( bool symmetricDataCardinality ) {{
+void {{FULL_QUALIFIED_CLASSNAME}}::exchangeAllHorizontalDataExchangeStacks( bool symmetricDataCardinality ) {
   logTraceInWith2Arguments( "exchangeAllHorizontalDataExchangeStacks(...)", symmetricDataCardinality, _spacetreeId  );
 """
 
@@ -1159,14 +1220,16 @@ void {{FULL_QUALIFIED_CLASSNAME}}::exchangeAllHorizontalDataExchangeStacks( bool
 
   TemplateExchangeRoutines_exchangeAllHorizontalDataExchangeStacks_Epilogue = """
   logTraceOut( "exchangeAllHorizontalDataExchangeStacks(...)" );
-}}
+}
+
+
 """
 
 
 
 
   TemplateExchangeRoutines_exchangeAllPeriodicBoundaryDataStacks_Prologue = """
-void {{FULL_QUALIFIED_CLASSNAME}}::exchangeAllPeriodicBoundaryDataStacks() {{
+void {{FULL_QUALIFIED_CLASSNAME}}::exchangeAllPeriodicBoundaryDataStacks() {
   logTraceInWith1Argument( "exchangeAllPeriodicBoundaryDataStacks()", _spacetreeId  );
 """
 
@@ -1179,14 +1242,16 @@ void {{FULL_QUALIFIED_CLASSNAME}}::exchangeAllPeriodicBoundaryDataStacks() {{
 
   TemplateExchangeRoutines_exchangeAllPeriodicBoundaryDataStacks_Epilogue = """
   logTraceOut( "exchangeAllPeriodicBoundaryDataStacks()" );
-}}
+}
+
+
 """
 
 
 
 
   TemplateExchangeRoutines_streamDataFromSplittingTreeToNewTree_Prologue = """
-void {{FULL_QUALIFIED_CLASSNAME}}::streamDataFromSplittingTreeToNewTree(int newWorker) {{
+void {{FULL_QUALIFIED_CLASSNAME}}::streamDataFromSplittingTreeToNewTree(int newWorker) {
   logTraceInWith2Arguments( "streamDataFromSplittingTreeToNewTree(int)", _spacetreeId, newWorker );
 """
 
@@ -1200,12 +1265,14 @@ void {{FULL_QUALIFIED_CLASSNAME}}::streamDataFromSplittingTreeToNewTree(int newW
 
   TemplateExchangeRoutines_streamDataFromSplittingTreeToNewTree_Epilogue = """
   logTraceOut( "streamDataFromSplittingTreeToNewTree(int)");
-}}
+}
+
+
 """
 
 
   TemplateExchangeRoutines_streamDataFromJoiningTreeToMasterTree_Prologue = """
-void {{FULL_QUALIFIED_CLASSNAME}}::streamDataFromJoiningTreeToMasterTree(int master) {{
+void {{FULL_QUALIFIED_CLASSNAME}}::streamDataFromJoiningTreeToMasterTree(int master) {
   logTraceInWith2Arguments( "streamDataFromJoiningTreeToMasterTree(int)", _spacetreeId, master );
 """
 
@@ -1219,12 +1286,14 @@ void {{FULL_QUALIFIED_CLASSNAME}}::streamDataFromJoiningTreeToMasterTree(int mas
 
   TemplateExchangeRoutines_streamDataFromJoiningTreeToMasterTree_Epilogue = """
   logTraceOut( "streamDataFromJoiningTreeToMasterTree(int)");
-}}
+}
+
+
 """
 
 
   TemplateExchangeRoutines_finishAllOutstandingSendsAndReceives_Prologue = """
-void {{FULL_QUALIFIED_CLASSNAME}}::finishAllOutstandingSendsAndReceives() {{
+void {{FULL_QUALIFIED_CLASSNAME}}::finishAllOutstandingSendsAndReceives() {
   logTraceInWith1Argument( "finishAllOutstandingSendsAndReceives()", _spacetreeId );
 """
 
@@ -1237,24 +1306,29 @@ void {{FULL_QUALIFIED_CLASSNAME}}::finishAllOutstandingSendsAndReceives() {{
 
   TemplateExchangeRoutines_finishAllOutstandingSendsAndReceives_Epilogue = """
   logTraceOut( "finishAllOutstandingSendsAndReceives()");
-}}
+}
+
+
 """
 
 
   TemplateSendVertex_Prologue = """
-void {{FULL_QUALIFIED_CLASSNAME}}::sendVertex(int position, int toStack, ::peano4::grid::TraversalObserver::SendReceiveContext context, const peano4::grid::GridTraversalEvent&  event) {{
+void {{FULL_QUALIFIED_CLASSNAME}}::sendVertex(int position, int toStack, ::peano4::grid::TraversalObserver::SendReceiveContext context, const peano4::grid::GridTraversalEvent&  event) {
   logTraceInWith4Arguments( "sendVertex(int,int,int)", position, toStack, event.toString(), _spacetreeId );
   
 """
   
   TemplateSendVertex_SendCall = """
-  {{
+  {
     peano4::datamanagement::VertexMarker  marker(event,position);
     if (
-      {{full_qualified_type}}::storePersistently(marker{additional_load_store_arguments}) 
+      {{full_qualified_type}}::storePersistently(
+        marker
+        {% for arg in ADDITIONAL_LOAD_STORE_ARGUMENTS %}, {{arg[0]}} {% endfor %}
+      ) 
       and
       {{full_qualified_type}}::send(marker)
-    ) {{
+    ) {
       {{full_qualified_type}} data = repositories::DataRepository::_{{logical_type_name}}Stack.getForPop( 
         repositories::DataRepository::DataKey(_spacetreeId,peano4::grid::PeanoCurve::CallStack)
       )->top(TwoPowerD-1-position);
@@ -1264,30 +1338,35 @@ void {{FULL_QUALIFIED_CLASSNAME}}::sendVertex(int position, int toStack, ::peano
       repositories::DataRepository::_{{logical_type_name}}Stack.getForPush(
         _spacetreeId, toStack
       ) -> push(data);
-    }}
-  }}
+    }
+  }
 """
 
   TemplateSendVertex_Epilogue = """
   logTraceOut( "sendVertex(int,int,int)");
-}}
+}
+
+
 """
 
 
   TemplateSendFace_Prologue = """
-void {{FULL_QUALIFIED_CLASSNAME}}::sendFace(int position, int toStack, ::peano4::grid::TraversalObserver::SendReceiveContext context, const peano4::grid::GridTraversalEvent&  event) {{
+void {{FULL_QUALIFIED_CLASSNAME}}::sendFace(int position, int toStack, ::peano4::grid::TraversalObserver::SendReceiveContext context, const peano4::grid::GridTraversalEvent&  event) {
   logTraceInWith4Arguments( "sendFace(int,int,int)", position, toStack, event.toString(), _spacetreeId );
 
 """
 
   TemplateSendFace_SendCall = """
-  {{
+  {
     peano4::datamanagement::FaceMarker  marker(event,position);
     if (
-      {{full_qualified_type}}::storePersistently(marker{additional_load_store_arguments}) 
+      {{full_qualified_type}}::storePersistently(
+        marker
+        {% for arg in ADDITIONAL_LOAD_STORE_ARGUMENTS %}, {{arg[0]}} {% endfor %}
+      ) 
       and
       {{full_qualified_type}}::send(marker)
-    ) {{
+    ) {
       {{full_qualified_type}} data = repositories::DataRepository::_{{logical_type_name}}Stack.getForPop( 
         repositories::DataRepository::DataKey(_spacetreeId,peano4::grid::PeanoCurve::CallStack)
       )->top(TwoTimesD-1-position);
@@ -1297,19 +1376,21 @@ void {{FULL_QUALIFIED_CLASSNAME}}::sendFace(int position, int toStack, ::peano4:
       repositories::DataRepository::_{{logical_type_name}}Stack.getForPush(
         _spacetreeId, toStack
       ) -> push(data);
-    }}
-  }}
+    }
+  }
 """
 
 
   TemplateSendFace_Epilogue = """
   logTraceOut( "sendFace(int,int,int)");
-}}
+}
+
+
 """
 
 
   TemplateSendCell_Prologue = """
-void {{FULL_QUALIFIED_CLASSNAME}}::sendCell(int toStack, ::peano4::grid::TraversalObserver::SendReceiveContext context, const peano4::grid::GridTraversalEvent&  event) {{
+void {{FULL_QUALIFIED_CLASSNAME}}::sendCell(int toStack, ::peano4::grid::TraversalObserver::SendReceiveContext context, const peano4::grid::GridTraversalEvent&  event) {
   logTraceInWith3Arguments( "sendCell(int,int,int)", toStack, event.toString(), _spacetreeId );
   
 """
@@ -1318,7 +1399,10 @@ void {{FULL_QUALIFIED_CLASSNAME}}::sendCell(int toStack, ::peano4::grid::Travers
   {
     peano4::datamanagement::CellMarker  marker(event);
     if (
-      {{full_qualified_type}}::storePersistently(marker{additional_load_store_arguments}) 
+      {{full_qualified_type}}::storePersistently(
+        marker
+        {% for arg in ADDITIONAL_LOAD_STORE_ARGUMENTS %}, {{arg[0]}} {% endfor %}
+      ) 
       and
       {{full_qualified_type}}::send(marker)
     ) {
@@ -1337,6 +1421,8 @@ void {{FULL_QUALIFIED_CLASSNAME}}::sendCell(int toStack, ::peano4::grid::Travers
   TemplateSendCell_Epilogue = """
   logTraceOut( "sendCell(int,int,int)");
 }
+
+
 """
 
 
@@ -1349,6 +1435,8 @@ void {{FULL_QUALIFIED_CLASSNAME}}::receiveAndMergeCell(int fromStack, peano4::gr
   TemplateReceiveAndMergeCell_Epilogue = """
   logTraceOut( "receiveAndMergeCell(...)");
 }
+
+
 """
 
 
@@ -1361,12 +1449,16 @@ void {{FULL_QUALIFIED_CLASSNAME}}::receiveAndMergeVertex(int position, int fromS
   TemplateReceiveAndMergeVertex_Epilogue = """
   logTraceOut( "receiveAndMergeVertex(...)");
 }
+
+
 """
 
 
   TemplateReceiveAndMergeFace_Epilogue = """
   logTraceOut( "receiveAndMergeFace(...)");
 }
+
+
 """
 
 
@@ -1381,7 +1473,10 @@ void {{FULL_QUALIFIED_CLASSNAME}}::receiveAndMergeFace(int position, int fromSta
     peano4::datamanagement::VertexMarker  marker(event,position);
 
     if ( 
-      {{full_qualified_type}}::loadPersistently(marker{additional_load_store_arguments}) 
+      {{full_qualified_type}}::loadPersistently(
+        marker
+        {% for arg in ADDITIONAL_LOAD_STORE_ARGUMENTS %}, {{arg[0]}} {% endfor %}
+      ) 
       and
       {{full_qualified_type}}::receiveAndMerge(marker)
     ) {
@@ -1400,7 +1495,7 @@ void {{FULL_QUALIFIED_CLASSNAME}}::receiveAndMergeFace(int position, int fromSta
 
       logDebug( "receiveAndMergeVertex(...)", "merge " << incomingData.toString() << " into " << data.toString() );
 
-      if (context==::peano4::grid::TraversalObserver::SendReceiveContext::PeriodicBoundaryDataSwap) {{
+      if (context==::peano4::grid::TraversalObserver::SendReceiveContext::PeriodicBoundaryDataSwap) {
         // @todo Different to faces. As we can have diagonal exchange, too,
         //       we only know that it has to be unequal
         assertion8(
@@ -1411,32 +1506,35 @@ void {{FULL_QUALIFIED_CLASSNAME}}::receiveAndMergeFace(int position, int fromSta
         assertionVectorNumericalEquals6(
           data.getDebugH(), incomingData.getDebugH(),
           data.getDebugX(), incomingData.getDebugX(), fromStack, event.toString(), marker.toString(), _spacetreeId );
-      }}
-      else {{
+      }
+      else {
         assertionVectorNumericalEquals6(
           data.getDebugX(), incomingData.getDebugX(),
           data.getDebugH(), incomingData.getDebugH(), fromStack, event.toString(), marker.toString(), _spacetreeId );
           assertionVectorNumericalEquals6(
           data.getDebugH(), incomingData.getDebugH(),
           data.getDebugX(), incomingData.getDebugX(), fromStack, event.toString(), marker.toString(), _spacetreeId );
-      }}
+      }
 
       data.merge(context, incomingData, marker);
-    }}
-  }}
+    }
+  }
 """
 
 
 
   TemplateReceiveAndMergeFace_ReceiveAndMergeCalls = """
-  {{
+  {
     peano4::datamanagement::FaceMarker  marker(event,position);
 
     if ( 
-      {{full_qualified_type}}::loadPersistently(marker{additional_load_store_arguments}) 
+      {{full_qualified_type}}::loadPersistently(
+        marker
+        {% for arg in ADDITIONAL_LOAD_STORE_ARGUMENTS %}, {{arg[0]}} {% endfor %}
+      ) 
       and
       {{full_qualified_type}}::receiveAndMerge(marker)
-    ) {{
+    ) {
       auto   incomingData = repositories::DataRepository::_{{logical_type_name}}Stack.getForPop(
         _spacetreeId, fromStack
       )->pop();
@@ -1447,7 +1545,7 @@ void {{FULL_QUALIFIED_CLASSNAME}}::receiveAndMergeFace(int position, int fromSta
 
       logDebug( "receiveAndMergeFace(...)", "merge " << incomingData.toString() << " into " << data.toString() << " within marker " << marker.toString() );
 
-      if (context==::peano4::grid::TraversalObserver::SendReceiveContext::PeriodicBoundaryDataSwap) {{
+      if (context==::peano4::grid::TraversalObserver::SendReceiveContext::PeriodicBoundaryDataSwap) {
         assertion8(
           tarch::la::countEqualEntries(data.getDebugX(), incomingData.getDebugX())==Dimensions-1,
           data.getDebugX(), incomingData.getDebugX(),
@@ -1456,19 +1554,19 @@ void {{FULL_QUALIFIED_CLASSNAME}}::receiveAndMergeFace(int position, int fromSta
         assertionVectorNumericalEquals6(
           data.getDebugH(), incomingData.getDebugH(),
           data.getDebugX(), incomingData.getDebugX(), fromStack, event.toString(), marker.toString(), _spacetreeId );
-      }}
-      else {{
+      }
+      else {
         assertionVectorNumericalEquals6(
           data.getDebugX(), incomingData.getDebugX(),
           data.getDebugH(), incomingData.getDebugH(), fromStack, event.toString(), marker.toString(), _spacetreeId );
           assertionVectorNumericalEquals6(
           data.getDebugH(), incomingData.getDebugH(),
           data.getDebugX(), incomingData.getDebugX(), fromStack, event.toString(), marker.toString(), _spacetreeId );
-      }}
+      }
 
       data.merge(context,incomingData, marker);
-    }}
-  }}
+    }
+  }
 """
 
 
@@ -1477,7 +1575,10 @@ void {{FULL_QUALIFIED_CLASSNAME}}::receiveAndMergeFace(int position, int fromSta
     peano4::datamanagement::CellMarker  marker(event);
 
     if ( 
-      {{full_qualified_type}}::loadPersistently(marker{additional_load_store_arguments}) 
+      {{full_qualified_type}}::loadPersistently(
+        marker
+        {% for arg in ADDITIONAL_LOAD_STORE_ARGUMENTS %}, {{arg[0]}} {% endfor %}
+      ) 
       and
       {{full_qualified_type}}::receiveAndMerge(marker)
     ) {
@@ -1532,6 +1633,8 @@ void {{FULL_QUALIFIED_CLASSNAME}}::deleteAllStacks() {
   TemplateExchangeRoutines_deleteAllStacks_Epilogue = """
   logTraceOut( "deleteAllStacks()");
 }
+
+
 """
 
   def __generate_exchange_routines(self,output_file):
@@ -1601,7 +1704,7 @@ void {{FULL_QUALIFIED_CLASSNAME}}::deleteAllStacks() {
         "logical_type_name":vertex.get_logical_type_name(), 
         "full_qualified_type":vertex.get_full_qualified_type(),
         "FULL_QUALIFIED_CLASSNAME": self.d["FULL_QUALIFIED_CLASSNAME"],
-        "additional_load_store_arguments": vertex.load_and_store_take_all_other_objects_into_account
+        "ADDITIONAL_LOAD_STORE_ARGUMENTS": vertex.additional_load_and_store_arguments
       }
       s+=  jinja2.Template( self.TemplateSendVertex_SendCall ).render(**temp)
     s+=  jinja2.Template( self.TemplateSendVertex_Epilogue ).render(**generic_dict_for_prologue_and_epilogue)
@@ -1614,7 +1717,7 @@ void {{FULL_QUALIFIED_CLASSNAME}}::deleteAllStacks() {
         "logical_type_name":face.get_logical_type_name(), 
         "full_qualified_type":face.get_full_qualified_type(),
         "FULL_QUALIFIED_CLASSNAME": self.d["FULL_QUALIFIED_CLASSNAME"],
-        "additional_load_store_arguments": face.load_and_store_take_all_other_objects_into_account
+        "ADDITIONAL_LOAD_STORE_ARGUMENTS": face.additional_load_and_store_arguments
       }
       s+=  jinja2.Template( self.TemplateSendFace_SendCall ).render(**temp)
     s+=  jinja2.Template( self.TemplateSendFace_Epilogue ).render(**generic_dict_for_prologue_and_epilogue)
@@ -1626,7 +1729,7 @@ void {{FULL_QUALIFIED_CLASSNAME}}::deleteAllStacks() {
         "logical_type_name":cell.get_logical_type_name(), 
         "full_qualified_type":cell.get_full_qualified_type(),
         "FULL_QUALIFIED_CLASSNAME": self.d["FULL_QUALIFIED_CLASSNAME"],
-        "additional_load_store_arguments": cell.load_and_store_take_all_other_objects_into_account
+        "ADDITIONAL_LOAD_STORE_ARGUMENTS": cell.additional_load_and_store_arguments
       }
       s+=  jinja2.Template( self.TemplateSendCell_SendCall ).render(**temp)
     s+=  jinja2.Template( self.TemplateSendCell_Epilogue ).render(**generic_dict_for_prologue_and_epilogue)
@@ -1638,7 +1741,7 @@ void {{FULL_QUALIFIED_CLASSNAME}}::deleteAllStacks() {
         "logical_type_name":cell.get_logical_type_name(), 
         "full_qualified_type":cell.get_full_qualified_type(),
         "FULL_QUALIFIED_CLASSNAME": self.d["FULL_QUALIFIED_CLASSNAME"],
-        "additional_load_store_arguments": cell.load_and_store_take_all_other_objects_into_account
+        "ADDITIONAL_LOAD_STORE_ARGUMENTS": cell.additional_load_and_store_arguments
       }
       s+=  jinja2.Template( self.TemplateReceiveAndMergeCell_ReceiveAndMergeCalls ).render(**temp)
     s+=  jinja2.Template( self.TemplateReceiveAndMergeCell_Epilogue ).render(**generic_dict_for_prologue_and_epilogue)
@@ -1651,7 +1754,7 @@ void {{FULL_QUALIFIED_CLASSNAME}}::deleteAllStacks() {
         "logical_type_name":face.get_logical_type_name(), 
         "full_qualified_type":face.get_full_qualified_type(),
         "FULL_QUALIFIED_CLASSNAME": self.d["FULL_QUALIFIED_CLASSNAME"],
-        "additional_load_store_arguments": face.load_and_store_take_all_other_objects_into_account
+        "ADDITIONAL_LOAD_STORE_ARGUMENTS": face.additional_load_and_store_arguments
       }
       s+=  jinja2.Template( self.TemplateReceiveAndMergeFace_ReceiveAndMergeCalls ).render(**temp)
     s+=  jinja2.Template( self.TemplateReceiveAndMergeFace_Epilogue ).render(**generic_dict_for_prologue_and_epilogue)
@@ -1664,19 +1767,19 @@ void {{FULL_QUALIFIED_CLASSNAME}}::deleteAllStacks() {
         "logical_type_name":vertex.get_logical_type_name(), 
         "full_qualified_type":vertex.get_full_qualified_type(),
         "FULL_QUALIFIED_CLASSNAME": self.d["FULL_QUALIFIED_CLASSNAME"],
-        "additional_load_store_arguments": vertex.load_and_store_take_all_other_objects_into_account
+        "ADDITIONAL_LOAD_STORE_ARGUMENTS": vertex.additional_load_and_store_arguments
       }
       s+=  jinja2.Template( self.TemplateReceiveAndMergeVertex_ReceiveAndMergeCalls ).render(**temp)
     s+=  jinja2.Template( self.TemplateReceiveAndMergeVertex_Epilogue ).render(**generic_dict_for_prologue_and_epilogue)
 
     s+=  jinja2.Template( self.TemplateExchangeRoutines_deleteAllStacks_Prologue ).render(**generic_dict_for_prologue_and_epilogue)
     for cell in self.cells:
-      s+=  self.TemplateExchangeRoutines_deleteAllStacks_Exchange.format(**{"DATASET":"repositories::DataRepository::_" + cell.get_logical_type_name() + "Stack"})
+      s+=  jinja2.Template(self.TemplateExchangeRoutines_deleteAllStacks_Exchange ).render(**{"DATASET":"repositories::DataRepository::_" + cell.get_logical_type_name() + "Stack"})
     for face in self.faces:
-      s+=  self.TemplateExchangeRoutines_deleteAllStacks_Exchange.format(**{"DATASET":"repositories::DataRepository::_" + face.get_logical_type_name() + "Stack"})
+      s+=  jinja2.Template(self.TemplateExchangeRoutines_deleteAllStacks_Exchange ).render(**{"DATASET":"repositories::DataRepository::_" + face.get_logical_type_name() + "Stack"})
     for vertex in self.vertices:
-      s+=  self.TemplateExchangeRoutines_deleteAllStacks_Exchange.format(**{"DATASET":"repositories::DataRepository::_" + vertex.get_logical_type_name() + "Stack"})
-    s+=  self.TemplateExchangeRoutines_deleteAllStacks_Epilogue.format(**generic_dict_for_prologue_and_epilogue)
+      s+=  jinja2.Template(self.TemplateExchangeRoutines_deleteAllStacks_Exchange ).render(**{"DATASET":"repositories::DataRepository::_" + vertex.get_logical_type_name() + "Stack"})
+    s+=  jinja2.Template(self.TemplateExchangeRoutines_deleteAllStacks_Epilogue ).render(**generic_dict_for_prologue_and_epilogue)
 
 
     output_file.write( s)
@@ -1684,7 +1787,7 @@ void {{FULL_QUALIFIED_CLASSNAME}}::deleteAllStacks() {
 
 
   TemplateImplementationFilePrologue = """
-#include "{CLASSNAME}.h"
+#include "{{CLASSNAME}}.h"
 #include "repositories/DataRepository.h"
 
 #include "peano4/grid/PeanoCurve.h"
@@ -1698,7 +1801,7 @@ void {{FULL_QUALIFIED_CLASSNAME}}::deleteAllStacks() {
 #include "peano4/parallel/SpacetreeSet.h"
 
 
-tarch::logging::Log {{FULL_QUALIFIED_CLASSNAME}}::_log( "{FULL_QUALIFIED_CLASSNAME}" );
+tarch::logging::Log {{FULL_QUALIFIED_CLASSNAME}}::_log( "{{FULL_QUALIFIED_CLASSNAME}}" );
 
 """
 
@@ -1709,7 +1812,7 @@ tarch::logging::Log {{FULL_QUALIFIED_CLASSNAME}}::_log( "{FULL_QUALIFIED_CLASSNA
       print( "{} written by {}".format(full_qualified_filename, os.path.basename(inspect.getfile(self.__class__))))
 
       output_file = open( full_qualified_filename, "w" )
-      output_file.write( self.TemplateImplementationFilePrologue.format(**self.d) )
+      output_file.write( jinja2.Template( self.TemplateImplementationFilePrologue ).render(**self.d) )
 
       self.__generate_constructor(output_file)
       self.__generate_clone(output_file)

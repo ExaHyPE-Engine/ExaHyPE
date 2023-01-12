@@ -939,6 +939,31 @@ The marker will determine which solver is ``valid'' in which cell, where they
 are active, and where the two solvers are coupled with each other.
 
 
+\begin{remark}
+ For the coupling of two solvers, it is advantageous not to work with \ExaHyPE\
+ solver instances directly. Instead, I recommend that you specialise the solver
+ of your choice such that you can add further features to this class. In Python,
+ this is straightforward. The line
+ \begin{code}
+dg_solver = exahype2.solvers.rkdg.exahype2.solvers.rkdg.rusanov.
+  GlobalAdaptiveTimeStepWithEnclaveTasking(...)
+ \end{code}
+ 
+ \noindent
+ is replaced with 
+ \begin{code}
+class MyDGSolver(exahype2.solvers.rkdg.rusanov.GlobalAdaptiveTimeStepWithEnclaveTasking):
+  def __init__(self):
+    super(MyDGSolver,self).__init__(...)
+    
+dg_solver = MyDGSolver()
+ \end{code}
+ 
+ \noindent
+ All remarks below refer to objects instantiating the specialisation of the FV
+ and DG solver, respectively, rather than a direct specialisation.
+\end{remark}
+
 
 
 \paragraph*{Two solvers}
@@ -1003,6 +1028,33 @@ if ( check some conditions ) {
 \end{code}
 
 
+\paragraph*{Translate marker outcome onto grid}
+
+The marker helps us to identify where which solver is active. 
+This is information we next want to project onto the grid, i.e.~we want to find
+out which mesh cells have to store which data.
+For this, we have to augment the marker object within the cell which is an
+object that is always associated with any \Peano\ mesh cell and has nothing to
+do with the stuff that we call ``a marker'' above.
+
+\begin{remark}
+ It seems to be (and is) quite complicated that we move the storage information
+ from the marker into the grid. 
+ However, there are two good reasons for this:
+ \begin{itemize}
+   \item On the one hand, we might want to tailor the information delivered by
+   the marker towards our needs. It is not even prescribed how many solvers in
+   total are guided by one marker!
+   \item On the other hand, we need the mesh storage information later within
+   the solver, where we have to access to the newly generated Poisson equation.
+   We have access to the mesh marker however.
+ \end{itemize}
+\end{remark}
+
+Ganz ganz wichtig ist, dass der Poisson solver als erstes kommt vor dem DG und
+dem FV Zeugs!
+
+
 \paragraph*{Restrict the solvers}
 
 With the marker at hand, we can instruct the solver not to solve their equation
@@ -1016,12 +1068,8 @@ information to guide the data flow.
 We don't want to alter the core logic of the data flow, but actually veto for
 some cells that data is stored or loaded. 
 There are various ways to achieve this.
-Obviously, we should plug into \texttt{\_load\_cell\_data\_default\_guard()} and 
+I propose to plug into \texttt{\_load\_cell\_data\_default\_guard()} and 
 \texttt{\_store\_cell\_data\_default\_guard()}.
-While this would work, we would have to specialise the solver classes first to
-get access to these routines which construct the storage predicates.
-If we know the solvers and their action sets, we can also directly manipulate
-the guards:
 
 \begin{code}
 dg_solver._action_set_update_cell.guard                = UpdateCell(self)

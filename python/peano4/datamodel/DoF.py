@@ -21,16 +21,40 @@ class DoFAssociation(IntEnum):
   # grid entities
   #
   Generic = 4
-  Global = 5
+  Global  = 5
   
   
   
 class DoF(object):
   def __init__(self, name):
+    """
+    
+    Both the association and the namespace are not to be set directly,
+    but through the operation configure().
+    
+    ## Attributes
+    
+    association: DoFAssociation
+    
+    name:        String
+      Has to be a fit to the C++ naming conventions
+      
+    namespace:   [String]
+      Sequence of namespaces.
+      
+    additional_load_and_store_arguments: Boolean
+      This flag is, by default, false, and it has to be changed carefully.
+      If you set it true, the functions that we use to assess if to store
+      or load a piece of data will be given the other data associated 
+      with the mesh. At the point of the load, these data might not be 
+      initialised properly, and therefore this is a tricky feature that
+      I prefer to disable.
+    
+    """
     self.association = DoFAssociation.Undef
-    self.name      = name
-    self.namespace = []
-
+    self.name        = name
+    self.namespace   = []
+    self.additional_load_and_store_arguments = ""
   
   
   def configure(self,namespace,association):
@@ -50,7 +74,6 @@ class DoF(object):
       self.namespace += [ "globaldata" ]
     else:
       assert False
-    #print( "added a new DoF: " + str(self.namespace) )
     
 
   def get_full_qualified_type(self):

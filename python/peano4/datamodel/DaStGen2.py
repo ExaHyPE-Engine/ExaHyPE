@@ -5,7 +5,7 @@ from .DoF                 import DoF
 
 import dastgen2
 
-import peano4.dastgen2.MPIAndStorage
+import peano4.dastgen2.MPI
 
 
 class DaStGen2Generator(object):
@@ -134,10 +134,8 @@ a citation of the two original DaStGen papers when you discuss the memory needs:
     self.data.add_attribute( peano4.dastgen2.Peano4DoubleArray( "debugX", "Dimensions", ifdefs=["PeanoDebug>0"] ) )
     self.data.add_attribute( peano4.dastgen2.Peano4DoubleArray( "debugH", "Dimensions", ifdefs=["PeanoDebug>0"] ) )
     
-    self._dastgen2_aspect              = dastgen2.aspects.MPI()
-    self.peano4_mpi_and_storage_aspect = peano4.dastgen2.MPIAndStorage(peano4.datamodel.DoFAssociation.Undef)
+    self.peano4_mpi_and_storage_aspect = peano4.dastgen2.MPI(peano4.datamodel.DoFAssociation.Undef)
 
-    self.data.add_aspect( self._dastgen2_aspect )
     self.data.add_aspect( self.peano4_mpi_and_storage_aspect )
 
 
@@ -159,8 +157,6 @@ a citation of the two original DaStGen papers when you discuss the memory needs:
       
     """
     super(DaStGen2, self).configure(namespace,association)
-    #self.data.add_aspect( dastgen2.aspects.MPI() )
-    #self.data.add_aspect( peano4.dastgen2.MPI(association) )
     self.peano4_mpi_and_storage_aspect.dof_association = association
     
 
