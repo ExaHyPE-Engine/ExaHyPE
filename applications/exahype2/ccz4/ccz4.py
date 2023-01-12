@@ -48,7 +48,7 @@ if __name__ == "__main__":
     parser.add_argument("-plt",  "--plot-step-size",  dest="plot_step_size",  type=float, default=0.04, help="Plot step size (0 to switch it off)" )
     parser.add_argument("-m",    "--mode",            dest="mode",            default="release",  help="|".join(modes.keys()) )
     parser.add_argument( "--gpu",            dest="GPU",            default=False, action="store_true",  help="Run with accelerator support" )
-    parser.add_argument("-ext",  "--extension",       dest="extension",       choices=["none", "gradient", "AMRadm", "Full"],   default="none",  help="Pick extension, i.e. what should be plotted on top. Default is none" )
+    parser.add_argument("-ext",  "--extension",       dest="extension",       choices=["none", "gradient", "AMRadm", "Full", "Psi4"],   default="none",  help="Pick extension, i.e. what should be plotted on top. Default is none" )
     parser.add_argument("-impl", "--implementation",  dest="implementation",  choices=["fv-global-fixed", "fv-global-adaptive", "fv-global-fixed-enclave", "fv-global-adaptive-enclave","fv-subcyling-adaptive-enclave","fv-local-enclave", "fv-musclhancock", "fd4-rk1-adaptive", "fd4-rk1-fixed", "fd4-rk4-adaptive", "fd4-rk4-fixed", "RKDG"], required="True",  help="Pick solver type" )
     parser.add_argument("-no-pbc",  "--no-periodic-boundary-conditions",      dest="periodic_bc", action="store_false", default="True",  help="switch on or off the periodic BC" )
     parser.add_argument("-AMRMarker",  "--AMR-marker",      dest="marker", choices=["none", "poisson"],   default="none",  help="switch on or off the AMR boundary marker" )
@@ -581,6 +581,54 @@ if __name__ == "__main__":
         self.create_data_structures()
         self.create_action_sets()
 
+      def add_Psi4W(self):
+        """
+  add psi4 writer
+        """
+        self._auxiliary_variables = 2
+
+        self._my_user_includes += """
+  #include "../libtwopunctures/TP_PunctureTracker.h"
+  #include "../CCZ4Kernels.h"
+    """
+
+        self._preprocess_reconstructed_patch = """
+        const int patchSize = """ + str( self._patch.dim[0] ) + """;
+        double volumeH = ::exahype2::fv::getVolumeLength(marker.h(),patchSize);
+
+    const int n_a_v=2;
+
+    dfor(cell,patchSize) {
+      tarch::la::Vector<Dimensions,int> currentCell = cell + tarch::la::Vector<Dimensions,int>(1);
+
+      double gradQ[3*59]={ 0 };
+
+      for (int d=0; d<3; d++) {
+        tarch::la::Vector<Dimensions,int> leftCell  = currentCell;
+        tarch::la::Vector<Dimensions,int> rightCell = currentCell;
+        leftCell(d)  -= 1;
+        rightCell(d) += 1;
+        const int leftCellSerialised  = peano4::utils::dLinearised(leftCell, patchSize + 2*1);
+        const int rightCellSerialised = peano4::utils::dLinearised(rightCell,patchSize + 2*1);
+        for(int i=0; i<59; i++) {
+          gradQ[d*59+i] = ( oldQWithHalo[rightCellSerialised*(59+n_a_v)+i] - oldQWithHalo[leftCellSerialised*(59+n_a_v)+i] ) / 2.0 / volumeH;
+        }
+      }
+
+      const int cellSerialised  = peano4::utils::dLinearised(currentCell, patchSize + 2*1);
+      
+      double Psi4[2]={0,0};
+      double currentPosition[3]; 
+      for (int d=0; d<3; d++) currentPosition[d]=marker.getOffset()(d)+(cell(d)+0.5)*volumeH;
+      Psi4Calc(Psi4, oldQWithHalo+cellSerialised*(59+n_a_v), gradQ, currentPosition);
+      oldQWithHalo[cellSerialised*(59+n_a_v)+59+0]=Psi4[0];//re part of psi4
+      oldQWithHalo[cellSerialised*(59+n_a_v)+59+1]=Psi4[1];//im part of psi4
+    }   
+    """
+
+        self.create_data_structures()
+        self.create_action_sets()
+
       def pick_Gauge_wave_scenario(self):
         self.add_solver_constants( """static constexpr int Scenario=0; /* Gauge wave */  """ )
 
@@ -736,6 +784,8 @@ if __name__ == "__main__":
       my_solver.add_constraint_RefinementFlag_verification()
     if args.extension=="Full":
       my_solver.add_PT_ConsW_Psi4W_AMRFlag()
+    if args.extension=="Psi4":
+      my_solver.add_Psi4W()
 
       #my_solver._auxiliary_variables = 59*3
 
