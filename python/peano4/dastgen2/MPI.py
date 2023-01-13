@@ -200,8 +200,8 @@ void {{full_qualified_name}}::sendAndPollDanglingMessages(const {{full_qualified
       tarch::mpi::Rank::getInstance().setDeadlockTimeOutTimeStamp();
     },
     [&]() {
-      tarch::mpi::Rank::getInstance().writeTimeOutWarning( {{full_qualified_name}}, "sendAndPollDanglingMessages()",destination, tag );
-      tarch::mpi::Rank::getInstance().triggerDeadlockTimeOut( {{full_qualified_name}}, "sendAndPollDanglingMessages()", destination, tag );
+      tarch::mpi::Rank::getInstance().writeTimeOutWarning( "{{full_qualified_name}}", "sendAndPollDanglingMessages()",destination, tag );
+      tarch::mpi::Rank::getInstance().triggerDeadlockTimeOut( "{{full_qualified_name}}", "sendAndPollDanglingMessages()", destination, tag );
       tarch::services::ServiceRepository::getInstance().receiveDanglingMessages();
     },
     communicator
@@ -217,8 +217,8 @@ void {{full_qualified_name}}::receiveAndPollDanglingMessages({{full_qualified_na
       tarch::mpi::Rank::getInstance().setDeadlockTimeOutTimeStamp();
     },
     [&]() {
-      tarch::mpi::Rank::getInstance().writeTimeOutWarning( {{full_qualified_name}}, "receiveAndPollDanglingMessages()", source, tag );
-      tarch::mpi::Rank::getInstance().triggerDeadlockTimeOut( {{full_qualified_name}}, "receiveAndPollDanglingMessages()", source, tag );
+      tarch::mpi::Rank::getInstance().writeTimeOutWarning( "{{full_qualified_name}}", "receiveAndPollDanglingMessages()", source, tag );
+      tarch::mpi::Rank::getInstance().triggerDeadlockTimeOut( "{{full_qualified_name}}", "receiveAndPollDanglingMessages()", source, tag );
       tarch::services::ServiceRepository::getInstance().receiveDanglingMessages();
     },
     communicator
