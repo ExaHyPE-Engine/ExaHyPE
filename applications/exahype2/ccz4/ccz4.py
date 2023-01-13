@@ -621,8 +621,8 @@ if __name__ == "__main__":
       double currentPosition[3]; 
       for (int d=0; d<3; d++) currentPosition[d]=marker.getOffset()(d)+(cell(d)+0.5)*volumeH;
       Psi4Calc(Psi4, oldQWithHalo+cellSerialised*(59+n_a_v), gradQ, currentPosition);
-      oldQWithHalo[cellSerialised*(59+n_a_v)+59+0]=Psi4[0];//re part of psi4
-      oldQWithHalo[cellSerialised*(59+n_a_v)+59+1]=Psi4[1];//im part of psi4
+      oldQWithHalo[cellSerialised*(59+n_a_v)+59+0]=Psi4[0]-3;//re part of psi4
+      oldQWithHalo[cellSerialised*(59+n_a_v)+59+1]=Psi4[1]+5;//im part of psi4
     }   
     """
 
