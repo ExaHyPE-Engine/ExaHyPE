@@ -889,6 +889,203 @@ double examples::exahype2::selfgravitation::Poisson::getAdmissibleTimeStepSize()
 
 
 
+\section{Case study: Coupling finite volumes with Runge-Kutta DG (limiting)}
+\label{section:exahype:fv:limiting}
+
+
+Even simple initial conditions can make a Discontinuous Galerking solver fail: 
+The higher order solution representation is not capable to resolve shocks
+properly (or steep gradients), and the solution therefore starts to oscillation.
+At the same time, experiments with Finite Volumes yield solutions which a
+subject to very strong numerical diffusion.
+The solution quality is not good.
+
+
+There are two fundamental approaches to tackle this dilemma: On the one hand,
+we can introduce artificial damping terms, i.e.~numerical diffusion, or
+truncation terms for the Riemann solvers such that these oscillations are
+eliminated. 
+On the other hand, we can accept that both DG and FV have their pros and cons
+and try to use each solver where it unfolds its full potential.
+This is the prime strategy in the original \ExaHyPE\ project.
+
+
+To realise this a posteriori limiting (which really will become an a priori
+limiting), we follow the same pattern that we exploited in the
+previous case study:
+We define two different solvers, and couple them with each other.
+Different to the previous setup, we however make all of our operations local:
+
+\begin{itemize}
+  \item The Finite Volume solver is our fallback strategy and we therefore
+  neither solve with Finite Volumes everywhere in the computational domain nor
+  should do we store the corresponding data.
+  \item The FV and the DG solver are not coupled everywhere but only in boundary
+  regions, i.e.~in regions where the FV solver and the DG solver kind of agree
+  solution-wisely.
+\end{itemize}
+
+
+\noindent
+We will effectively end up with a domain decomposition where parts of the
+computational domain are handled by the DG solver and the other parts are
+handled with FV.
+To realise this, we need a marker, i.e.~a
+label per cell which tells us, similar to a multi-phase flow, which solver rules in this
+particular cell.
+Then, we construct two solvers that are coupled with each other similar to the
+previous case study.
+The marker will determine which solver is ``valid'' in which cell, where they
+are active, and where the two solvers are coupled with each other.
+
+
+\begin{remark}
+ For the coupling of two solvers, it is advantageous not to work with \ExaHyPE\
+ solver instances directly. Instead, I recommend that you specialise the solver
+ of your choice such that you can add further features to this class. In Python,
+ this is straightforward. The line
+ \begin{code}
+dg_solver = exahype2.solvers.rkdg.exahype2.solvers.rkdg.rusanov.
+  GlobalAdaptiveTimeStepWithEnclaveTasking(...)
+ \end{code}
+ 
+ \noindent
+ is replaced with 
+ \begin{code}
+class MyDGSolver(exahype2.solvers.rkdg.rusanov.GlobalAdaptiveTimeStepWithEnclaveTasking):
+  def __init__(self):
+    super(MyDGSolver,self).__init__(...)
+    
+dg_solver = MyDGSolver()
+ \end{code}
+ 
+ \noindent
+ All remarks below refer to objects instantiating the specialisation of the FV
+ and DG solver, respectively, rather than a direct specialisation.
+\end{remark}
+
+
+
+\paragraph*{Two solvers}
+
+In this simple setup, we just create a DG solver and then add an additional
+Finite Volume solver. 
+The latter works with a patch size of $2p+1$ where $p$ is the spatial DG order.
+You might want to use a different patch size, but this choice usually yields
+time step sizes in the FV discretisation which is similar to the DG scheme.
+We
+add both of them to the project and refer to them as \texttt{dg\_solver} and \texttt{fv\_solver} objects in the Python script.
+You can use any solver you like, but I strongly recommend that you use the same
+time stepping scheme for both solvers. 
+All the explanations below refer to adaptive time stepping. 
+You might have to alter some bits and pieces if you use a different time
+stepping scheme.
+
+ 
+\paragraph*{The marker}
+
+The marker is determined by a quantity $\alpha $ which solves the equation
+\[
+ - \Delta \alpha = C < 0 
+ \qquad
+ \text{s.t.} \ 
+ 0 \leq \alpha  \leq 1, \ 
+ \alpha  | _{\partial \Omega} = 0
+\]
+via a cell-centered finite differences scheme. 
+In  the cells where we definitely need the Finite Volume scheme, we set $\alpha
+ = 1$.
+The higher $\alpha $, the more sure we are that the FV scheme yields
+the correct result.
+
+\ExaHyPE\ is shipped with a pre-manufactured solver for this Poisson setup 
+which takes care of all the details---including the mapping of the continuous
+$\alpha $ value onto the states which solver is active where---and also has more
+documentation):
+
+
+\begin{code}
+marker_solver = exahype2.solvers.elliptic.ConstrainedPoissonEquationForMarkerOnCells( name = "Alpha",
+                                                                             plot = True) 
+project.add_solver( marker_solver )
+\end{code}
+
+
+\paragraph*{Control the marker}
+
+The marker by default will be $\alpha =0$ in the present configuration. 
+As a first step, we hence have to reset it to $\alpha =1$ where we want the FV
+scheme to dominate, i.e.~where we definitely know that it is the FV scheme that
+we need.
+Technically, we realise this by a postprocessing step on the respective solver:
+
+\begin{code}
+ marker_solver.postprocess_updated_cell = """
+if ( check some conditions ) {
+  fineGridCell{{CELL_NAME}}.setValue(1.0);
+}
+"""
+\end{code}
+
+
+\paragraph*{Translate marker outcome onto grid}
+
+The marker helps us to identify where which solver is active. 
+This is information we next want to project onto the grid, i.e.~we want to find
+out which mesh cells have to store which data.
+For this, we have to augment the marker object within the cell which is an
+object that is always associated with any \Peano\ mesh cell and has nothing to
+do with the stuff that we call ``a marker'' above.
+
+\begin{remark}
+ It seems to be (and is) quite complicated that we move the storage information
+ from the marker into the grid. 
+ However, there are two good reasons for this:
+ \begin{itemize}
+   \item On the one hand, we might want to tailor the information delivered by
+   the marker towards our needs. It is not even prescribed how many solvers in
+   total are guided by one marker!
+   \item On the other hand, we need the mesh storage information later within
+   the solver, where we have to access to the newly generated Poisson equation.
+   We have access to the mesh marker however.
+ \end{itemize}
+\end{remark}
+
+Ganz ganz wichtig ist, dass der Poisson solver als erstes kommt vor dem DG und
+dem FV Zeugs!
+
+
+\paragraph*{Restrict the solvers}
+
+With the marker at hand, we can instruct the solver not to solve their equation
+in certain regions. 
+We can also ensure that they don't store data where it actually is not required.
+The cell marker as introduced by
+\texttt{ConstrainedPoissonEquationForMarkerOnCells} provides all the necessary
+information to guide the data flow.
+
+
+We don't want to alter the core logic of the data flow, but actually veto for
+some cells that data is stored or loaded. 
+There are various ways to achieve this.
+I propose to plug into \texttt{\_load\_cell\_data\_default\_guard()} and 
+\texttt{\_store\_cell\_data\_default\_guard()}.
+
+\begin{code}
+dg_solver._action_set_update_cell.guard                = UpdateCell(self)
+dg_solver._action_set_merge_enclave_task_outcome = MergeEnclaveTaskOutcome(self)                                                                                 
+\end{code}
+
+Schoen ist das nicht mit dem Ueberschreiben -> remark
+Wir sehen, dass der Status hier gar keine Rolle spielt, sondern nur die
+Storage-Rules. Evtl ist das fuer andere Loeser anders
+
+
+\paragraph*{Couple marker and FV scheme}
+
+With the three solvers (two PDE solvers plus the marker's Poisson equation) at
+hand, we have to couple them with each other.
+    
 
 
 \section{Generic \ExaHyPE\ features}

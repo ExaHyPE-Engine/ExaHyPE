@@ -57,42 +57,23 @@ namespace tarch {
     /**
      * Get a SYCL queue
      *
-     * The Core singleton instantiates all SYCL queues. You can query the
+     * The Device singleton instantiates all SYCL queues. You can query the
      * singleton for the total number of (logical) devices. Per device,
      * we hold one SYCL queue persistently. You can gain access to this
      * one queue via this getter.
      *
      * number is a logical number, i.e. it is a number from 0 to
      * getNumberOfSYCLQueues(). The actual device number might be totally
-     * different. You can also pass in Core::HostDevice to access the queue
-     * on the host. This is a feature that is not available in OpenMP.
+     * different.
+     *
+     * If you use SYCL on the host, too, you should not access this queue
+     * throught he accelerator namespace, but use the tarch::multicore
+     * namespace.
+     *
+     * @see tarch::multicore::getHostSYCLQueue()
      */
     sycl::queue& getSYCLQueue( int number );
 
-    /**
-     * Return number of SYCL queues
-     *
-     * The default host queue is not counted here, so you won't get the queue
-     * labelled by HostDefaultQueue. The number of SYCL queues refers to the
-     * logical number: As we pack one queue on each device, it effectively
-     * tells you how many devices we are allowed to use minus one (for the
-     * host).
-     *
-     * @see initSYCLQueues() on the blacklisting and initialisation mechanism.
-     */
-//    int getNumberOfSYCLQueues();
-
-    /**
-     * This routine creates one SYCL queue per enabled device. The routine
-     * works incrementally, i.e. you can call it multiple times and it will
-     * shut down or create additional queues as the number of available
-     * devices changes.
-     *
-     * @param deviceList List of devices to initialise. Can be empty if you
-     *   want all of them to be filled with a SYCL queue. These numbers are
-     *   physical device numbers as they are plotted by listSYCLQueues().
-     */
-//    void initSYCLQueues(const std::set<int>& deviceList);
 
     /**
      * Write available queues to cout. The logging interface is not used, as
@@ -100,8 +81,6 @@ namespace tarch {
      * time.
      */
     void listSYCLQueues();
-
-//    bool SYCLQueuesAreCreated();
   }
 }
 

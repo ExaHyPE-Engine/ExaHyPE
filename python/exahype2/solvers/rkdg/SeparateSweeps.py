@@ -50,15 +50,25 @@ class SeparateSweeps( RungeKuttaDG ):
       "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::PlottingAfterGridInitialisation" + \
     ")"
     
-    self._primary_sweeps_of_Runge_Kutta_step = [
+    self._primary_sweeps_of_Runge_Kutta_step_on_cell = [
       "{} and repositories::{}.getSolverState()=={}::SolverState::ProjectOnFacesAndComputeVolumeIntegralOfStep{}".format(self._store_cell_data_default_guard(),self.get_name_of_global_instance(),self._name,step) for step in range(0,self.number_of_Runge_Kutta_steps())
     ]
-    self._secondary_sweeps_of_Runge_Kutta_step = [
+    self._secondary_sweeps_of_Runge_Kutta_step_on_cell = [
       "{} and repositories::{}.getSolverState()=={}::SolverState::SolveRiemannProblemAndAddToVolumeIntegralOfStep{}".format(self._store_cell_data_default_guard(),self.get_name_of_global_instance(),self._name,step) for step in range(0,self.number_of_Runge_Kutta_steps())
     ]
+
+    self._primary_sweeps_of_Runge_Kutta_step_on_face = [
+      "{} and repositories::{}.getSolverState()=={}::SolverState::ProjectOnFacesAndComputeVolumeIntegralOfStep{}".format(self._store_face_data_default_guard(),self.get_name_of_global_instance(),self._name,step) for step in range(0,self.number_of_Runge_Kutta_steps())
+    ]
+    self._secondary_sweeps_of_Runge_Kutta_step_on_face = [
+      "{} and repositories::{}.getSolverState()=={}::SolverState::SolveRiemannProblemAndAddToVolumeIntegralOfStep{}".format(self._store_face_data_default_guard(),self.get_name_of_global_instance(),self._name,step) for step in range(0,self.number_of_Runge_Kutta_steps())
+    ]
     
-    self._any_primary_sweep_of_a_Runge_Kutta_step   = " or ".join( self._primary_sweeps_of_Runge_Kutta_step )
-    self._any_secondary_sweep_of_a_Runge_Kutta_step = " or ".join( self._secondary_sweeps_of_Runge_Kutta_step )
+    self._any_primary_sweep_of_a_Runge_Kutta_step_on_cell   = " or ".join( self._primary_sweeps_of_Runge_Kutta_step_on_cell )
+    self._any_secondary_sweep_of_a_Runge_Kutta_step_on_cell = " or ".join( self._secondary_sweeps_of_Runge_Kutta_step_on_cell )
+
+    self._any_primary_sweep_of_a_Runge_Kutta_step_on_face   = " or ".join( self._primary_sweeps_of_Runge_Kutta_step_on_face )
+    self._any_secondary_sweep_of_a_Runge_Kutta_step_on_face = " or ".join( self._secondary_sweeps_of_Runge_Kutta_step_on_face )
         
     super(SeparateSweeps, self).__init__(name, 
                                          rk_order, 
@@ -67,21 +77,6 @@ class SeparateSweeps( RungeKuttaDG ):
                                          unknowns, auxiliary_variables, min_cell_h, max_cell_h, plot_grid_properties)
     
     self._solver_template_file_class_name     = "SeparateSweeps"
-
-
-    
-    #self._first_grid_sweep_within_RK_step = "( false "
-    #for step in range(0,self.number_of_Runge_Kutta_steps()):
-    #  self._first_grid_sweep_within_RK_step += "or ("
-    #  self._first_grid_sweep_within_RK_step += "repositories::{}.getSolverState()=={}::SolverState::ProjectOnFacesAndComputeVolumeIntegralOfStep{}".format(self.get_name_of_global_instance(),self._name,step)
-    #  self._first_grid_sweep_within_RK_step += ")"
-    #self._first_grid_sweep_within_RK_step += ")"
-    #self._second_grid_sweep_within_RK_step = "( false "
-    #for step in range(0,self.number_of_Runge_Kutta_steps()):
-    #  self._second_grid_sweep_within_RK_step += "or ("
-    #  self._second_grid_sweep_within_RK_step += "repositories::{}.getSolverState()=={}::SolverState::SolveRiemannProblemAndAddToVolumeIntegralOfStep{}".format(self.get_name_of_global_instance(),self._name,step)
-    #  self._second_grid_sweep_within_RK_step += ")"
-    #self._second_grid_sweep_within_RK_step += ")" 
    
     self.create_action_sets()
     self.create_data_structures()
@@ -99,8 +94,8 @@ class SeparateSweeps( RungeKuttaDG ):
     """
     super(SeparateSweeps, self).create_data_structures()
 
-    self._estimate_projection.generator.send_condition               = self._any_primary_sweep_of_a_Runge_Kutta_step
-    self._estimate_projection.generator.receive_and_merge_condition  = self._any_secondary_sweep_of_a_Runge_Kutta_step
+    self._estimate_projection.generator.send_condition               = self._any_primary_sweep_of_a_Runge_Kutta_step_on_face
+    self._estimate_projection.generator.receive_and_merge_condition  = self._any_secondary_sweep_of_a_Runge_Kutta_step_on_face
 
     self._Riemann_solution.generator.send_condition               = "false"
     self._Riemann_solution.generator.receive_and_merge_condition  = "false"
@@ -150,14 +145,14 @@ class SeparateSweeps( RungeKuttaDG ):
     """
     super(SeparateSweeps, self).create_action_sets()
     
-    self._action_set_linear_combination_of_estimates.guards                                  = self._primary_sweeps_of_Runge_Kutta_step
-    self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement.guards = self._primary_sweeps_of_Runge_Kutta_step
-    self._action_set_project_linear_combination_onto_faces.guards                            = self._primary_sweeps_of_Runge_Kutta_step
-    self._action_set_solve_volume_integral.guards                                            = self._primary_sweeps_of_Runge_Kutta_step
+    self._action_set_linear_combination_of_estimates.guards                                  = self._primary_sweeps_of_Runge_Kutta_step_on_cell
+    self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement.guards = self._primary_sweeps_of_Runge_Kutta_step_on_face
+    self._action_set_project_linear_combination_onto_faces.guards                            = self._primary_sweeps_of_Runge_Kutta_step_on_cell
+    self._action_set_solve_volume_integral.guards                                            = self._primary_sweeps_of_Runge_Kutta_step_on_cell
         
-    self._action_set_add_volume_and_face_solution.guards = self._secondary_sweeps_of_Runge_Kutta_step
-    self._action_set_solve_Riemann_problem.guards        = self._secondary_sweeps_of_Runge_Kutta_step
-    self._action_set_handle_boundary.guards              = self._secondary_sweeps_of_Runge_Kutta_step
+    self._action_set_add_volume_and_face_solution.guards = self._secondary_sweeps_of_Runge_Kutta_step_on_cell
+    self._action_set_solve_Riemann_problem.guards        = self._secondary_sweeps_of_Runge_Kutta_step_on_face
+    self._action_set_handle_boundary.guards              = self._secondary_sweeps_of_Runge_Kutta_step_on_face
 
     self._action_set_compute_final_linear_combination_and_project_solution_onto_faces.guard = self._store_cell_data_default_guard() + " and repositories::{}.getSolverState()=={}::SolverState::SolveRiemannProblemAndAddToVolumeIntegralOfStep{}".format(self.get_name_of_global_instance(),self._name,self.number_of_Runge_Kutta_steps()-1)
     

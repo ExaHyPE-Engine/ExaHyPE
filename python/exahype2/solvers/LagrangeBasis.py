@@ -7,7 +7,7 @@ from abc import abstractmethod
 
 
     
-def render_tensor_1(self,tensor,entry_seperator=",",vector_seperator=("{","}")):
+def render_tensor_1(tensor,entry_seperator=",",vector_seperator=("{","}")):
   """
   Converts nested list or numpy matrix to nested list of strings.
   :param tensor: list or numpy vector storing  mpmath numbers
@@ -76,8 +76,7 @@ def render_tensor_3(tensor,use_multidimensional_arrays,entry_seperator=",",vecto
     if use_multidimensional_arrays:
       row_result += vector_seperator[1]
     return row_result
-      
-  
+
   result = vector_seperator[0]
   result += render_block(tensor[0])
   for row in tensor[1:]:

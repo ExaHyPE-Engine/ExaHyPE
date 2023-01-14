@@ -77,6 +77,7 @@ class VolumeWisePostprocessSolution(AbstractFVActionSet):
     
     """
     self._compute_kernel += """
+{
   {{COMPUTE_TIME_STEP_SIZE}}
   const double timeStamp = fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStamp();
     
@@ -99,6 +100,7 @@ class VolumeWisePostprocessSolution(AbstractFVActionSet):
     }
     logTraceOut( "touchCellFirstTime(...)" );
   } 
+}
 """
 
     
