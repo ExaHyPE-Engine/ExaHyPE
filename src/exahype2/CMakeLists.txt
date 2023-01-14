@@ -15,18 +15,18 @@ foreach(mode IN LISTS BUILD_MODES)
     target_compile_options(ExaHyPE2Core${dimension}d_${mode_lower} PUBLIC ${COMPILE_OPTIONS})
     target_compile_definitions(ExaHyPE2Core${dimension}d_${mode_lower} PUBLIC ${${mode_upper}_DEFINITIONS} Dimensions=${dimension})
     target_link_options(ExaHyPE2Core${dimension}d_${mode_lower} PUBLIC ${${mode_upper}_LDFLAGS})
-    target_link_libraries(ExaHyPE2Core${dimension}d_${mode_lower} PRIVATE project_options project_warnings Peano4Core${dimension}d_${mode_lower})
-    target_link_libraries(ExaHyPE2Core${dimension}d_${mode_lower} PRIVATE ToolboxLoadBalancing${dimension}d_${mode_lower})
-    target_link_libraries(ExaHyPE2Core${dimension}d_${mode_lower} PRIVATE ToolboxBlockStructured${dimension}d_${mode_lower})
+    target_link_libraries(ExaHyPE2Core${dimension}d_${mode_lower} PUBLIC project_options project_warnings Peano4Core${dimension}d_${mode_lower})
+    target_link_libraries(ExaHyPE2Core${dimension}d_${mode_lower} PUBLIC ToolboxLoadBalancing${dimension}d_${mode_lower})
+    target_link_libraries(ExaHyPE2Core${dimension}d_${mode_lower} PUBLIC ToolboxBlockStructured${dimension}d_${mode_lower})
 
     install(TARGETS ExaHyPE2Core${dimension}d_${mode_lower}
-          RUNTIME DESTINATION         ${CMAKE_INSTALL_BINDIR}
-                  COMPONENT           ${PROJECT_NAME}_Runtime
-          LIBRARY DESTINATION         ${CMAKE_INSTALL_LIBDIR}
-                  COMPONENT           ${PROJECT_NAME}_Runtime
-                  NAMELINK_COMPONENT  ${PROJECT_NAME}_Devel
-          ARCHIVE DESTINATION         ${CMAKE_INSTALL_LIBDIR}
-                  COMPONENT           ${PROJECT_NAME}_Devel
+      RUNTIME DESTINATION         ${CMAKE_INSTALL_BINDIR}
+              COMPONENT           ${PROJECT_NAME}_Runtime
+      LIBRARY DESTINATION         ${CMAKE_INSTALL_LIBDIR}
+              COMPONENT           ${PROJECT_NAME}_Runtime
+              NAMELINK_COMPONENT  ${PROJECT_NAME}_Devel
+      ARCHIVE DESTINATION         ${CMAKE_INSTALL_LIBDIR}
+              COMPONENT           ${PROJECT_NAME}_Devel
     )
   endforeach()
 endforeach()

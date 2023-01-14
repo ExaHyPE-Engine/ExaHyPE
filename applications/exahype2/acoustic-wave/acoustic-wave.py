@@ -179,7 +179,6 @@ build_mode = build_modes[args.build_mode]
 my_project.set_Peano4_installation("../../../", build_mode )
 
 peano4_project = my_project.generate_Peano4_project(verbose=True)
-peano4_project.generate(throw_away_data_after_generation=True)
-peano4_project.build(make_clean_first=True)
+peano4_project.build(make_clean_first=True, throw_away_data_after_build=True)
 
 print("Done")

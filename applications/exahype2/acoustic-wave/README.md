@@ -1,11 +1,5 @@
 # The acoustic wave equation
 
-<p align="center">
-  <video width="640" height="480" controls>
-    <source src="example-output.mp4" type="video/mp4">
-  </video>
-</p
-
 The acoustic wave equation describes the propagation of a wave through a material. This
 equation assumes that all movements are only small perturbations over the background flow
 field. They can be obtained by linearizing the more general Euler equations over this back-

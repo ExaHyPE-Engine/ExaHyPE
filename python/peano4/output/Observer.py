@@ -1,19 +1,16 @@
 # This file is part of the Peano project. For conditions of distribution and
 # use, please see the copyright notice at www.peano-framework.org
-from .Helper import Overwrite
-from .Helper import writeFile
-
-from .Jinja2TemplatedHeaderFile import Jinja2TemplatedHeaderFile
-
-
 import os
 import re
 
+from .Helper import write_file
 
+from .Overwrite import Overwrite
+
+from .Jinja2TemplatedHeaderFile import Jinja2TemplatedHeaderFile
 
 class Observer(object):
   default_overwrite = True
-
 
   def __init__(self,classname,namespace,subdirectory,included_actions,vertices,faces,cells):
     """
@@ -1656,8 +1653,6 @@ void {FULL_QUALIFIED_CLASSNAME}::deleteAllStacks() {{
 
     output_file.write( s)
 
-
-
   TemplateImplementationFilePrologue = """
 #include "{CLASSNAME}.h"
 #include "repositories/DataRepository.h"
@@ -1677,9 +1672,8 @@ tarch::logging::Log {FULL_QUALIFIED_CLASSNAME}::_log( "{FULL_QUALIFIED_CLASSNAME
 
 """
 
-
   def __generate_implementation(self,overwrite,full_qualified_filename):
-    if writeFile(overwrite,self.default_overwrite,full_qualified_filename):
+    if write_file(overwrite,self.default_overwrite,full_qualified_filename):
       import inspect, os
       print( "{} written by {}".format(full_qualified_filename, os.path.basename(inspect.getfile(self.__class__))))
 
@@ -1699,13 +1693,11 @@ tarch::logging::Log {FULL_QUALIFIED_CLASSNAME}::_log( "{FULL_QUALIFIED_CLASSNAME
       self.__generate_storeCell(output_file)
       self.__generate_exchange_routines(output_file)
 
-
   #
   # @todo Sollte man mit Jinja 2 nicht mehr brauchen
   #
   def get_cpp_file_name(self):
     return self.subdirectory + "/" + self.classname + ".cpp"
-
 
   def generate(self,overwrite,directory):
     if not os.path.exists( directory + "/" + self.subdirectory ):

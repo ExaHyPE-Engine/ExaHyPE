@@ -1,26 +1,21 @@
 # This file is part of the Peano project. For conditions of distribution and
 # use, please see the copyright notice at www.peano-framework.org
-from .Helper import Overwrite
-from .Helper import writeFile
-from .CompileMode import CompileMode
-
-
 import os
 import re
-import subprocess
 import sys
-from .FindCmakeBuildDir import find_cmake_build_dir
+import subprocess
+import jinja2
 
-try:
-  import jinja2
-except:
-  print( "Warning: jinja2 not available, i.e. you will have very limited API support (such as visualisation only)")
+from .Helper import write_file
+from .Helper import find_cmake_build_dir
 
+from .Overwrite import Overwrite
+
+from .CompileMode import CompileMode
 
 class Makefile(object):
   """ Represents the created makefile of a Peano4 project """
   default_overwrite = True
-
 
   def __init__(self):
     self.clear()
@@ -54,7 +49,6 @@ MODE            = {{MODE}}
     except Exception:
       version_string = subprocess.run(['echo', 'Unknown'], shell=True, stdout=subprocess.PIPE)
     self.d["VERSION"] = version_string.stdout.decode('utf-8')
-    
     return result_template.render(**self.d) + self.configure_call  
 
 
@@ -130,10 +124,8 @@ the SISC paper
 
 """).render(**self.d)
 
-
   def executable_name(self):
     return self.d["EXECUTABLENAME"]
-
 
   def clear(self):
     self.configure_call = ""
@@ -147,10 +139,10 @@ the SISC paper
     self.d["LIBS"]             = ""
     self.d["DIM"]              = "2"
     self.d["CONFIGUREPATH"]    = "."
-    self.d["EXECUTABLENAME"]   = "peano4"
+    self.d["EXECUTABLENAME"]   = ""
     self.d["FORTRAN_MODULES"]  = []
     self.d["GENERATED_INCLUDE_DIRS"] = set()
-    self.d["CMAKE_CORE_LIBS"] = ["peano4", "tarch"]
+    self.d["CMAKE_CORE_LIBS"] = ["Peano4Core"]
     self.d["CMAKE_LIBS"] = []
     self.set_mode( CompileMode.Debug )
     self.clear_files()
@@ -158,19 +150,15 @@ the SISC paper
   def add_cmake_core_library(self, name):
     self.d["CMAKE_CORE_LIBS"].append(name)
 
-
   def set_executable_name(self, fname):
       self.d["EXECUTABLENAME"] = fname
-
 
   def clear_files(self):
     self.cppfiles     = []
     self.fortranfiles = []
 
-
   def set_dimension(self,dimension):
     self.d["DIM"] = str(dimension)
-
 
   def get_configure_path(self):
     """
@@ -178,13 +166,11 @@ the SISC paper
     """
     return self.d["CONFIGUREPATH"]
 
-
   def get_source_path(self):
     """
     Returns the directory where the ./configure script is located
     """
     return self.get_configure_path() + "/src"
-
 
   def add_header_search_path(self, path ):
     """
@@ -196,7 +182,6 @@ the SISC paper
     self.d["FCFLAGS"]  += " -I" + path
     self.d["GENERATED_INCLUDE_DIRS"].add(path)
 
-
   def add_gpu_object(self, object_path):
     """
     This is a temporary fix for GPU offloading with OpenMP and LLVM and will
@@ -206,7 +191,6 @@ the SISC paper
     objects must be left of the static libs later.
     """
     self.d["GPUOBJS"] += " {}".format(object_path)
-
 
   def add_library(self, library_name, library_path="" ):
     """
@@ -219,27 +203,12 @@ the SISC paper
     A popular invocation including one of Peano's toolboxes is
 
     project.output.makefile.add_library( "ToolboxFiniteElements2d_trace", project.output.makefile.get_source_path() + "/toolbox/finiteelements" )
-    
     """
     if library_path!="":
       self.d["LIBS"] = "-L" + library_path + " " + self.d["LIBS"]
 #    self.d["LIBS"] += " -l" + library_name + " "
     self.d["LIBS"] += library_name + " "
 
-    #TODO: ask
-    # For added libraries in the cmake I think we should support 2 input forms
-    # 1) With dimension and build mode, e.g. ToolboxFiniteElements2d_trace
-    # 2) Without dimension or build mode, e.g. ToolboxFiniteElements
-    # As build mode and dimension is saved in the configuration of Peano4, we can infer
-    # Them from there.
-    # Only possible problem is having a library that does not need suffixes e.g.
-    # Tarch, then this function might accidentally add dimensions and cause errors
-    # Since tarch is always added as a core library when a Peano4 project is initialized,
-    # it should not be added, here
-    #if library_path.match('2d') or library_path.match('3d'):
-    #  if library_path.match('_debug')
-    #    ...
-    # Maybe it is best to enforce the user to give the right library name
     if self.d['MODE'].lower() == "release":
       self.d["CMAKE_LIBS"].append(f"{library_name}{self.d['DIM']}d")
     else:
@@ -266,14 +235,11 @@ the SISC paper
     else:
       assert(False)
 
-
   def set_CXX_compiler(self,value):
     self.d["CXX"]           = value
 
-
   def set_CXX_flags(self,value):
     self.d["CXXFLAGS"]      = value
-
 
   def add_CXX_flag(self,value,force=False):
     if value in self.d["CXXFLAGS"] and not force:
@@ -281,14 +247,11 @@ the SISC paper
     else:
       self.d["CXXFLAGS"]     += " " + value
 
-
   def set_Fortran_compiler(self,value):
     self.d["FC"]           = value
 
-
   def set_Fortran_flags(self,value):
     self.d["FCFLAGS"]       = value
-
 
   def add_Fortran_flag(self,value,force=False):
     if value in self.d["FCFLAGS"] and not force:
@@ -296,25 +259,22 @@ the SISC paper
     else:
       self.d["FCFLAGS"]      += " " + value
 
-
   def add_linker_flag(self,value):
     self.d["LDFLAGS"]      += " " + value
-
 
   def set_linker_flags(self,value):
     self.d["LDFLAGS"]       = value + " "
 
-
   def parse_configure_script_outcome(self,directory):
     """
-
     directory should point to the directory which holds the ./configure script.
     It furthermore has to be invoked after configure has passed successfully.
     This script does not accept relative paths. I then search for the subdirector
     src and parse the Makefile there.
-    
     """
     self.d[ "CONFIGUREPATH" ] = directory
+    cmake_path = find_cmake_build_dir()
+    if cmake_path != "": return
 
     MakefileDefined = [
         "Parallel",
@@ -322,7 +282,7 @@ the SISC paper
         "SharedSYCL",
         "SharedCPP",
     ]
-    
+
     input_file = directory + "/config.log"
     try:
       input = open( input_file, "r" )
@@ -333,7 +293,7 @@ the SISC paper
           print( "found the configure call info " + line )
           self.configure_call = line.strip()
         for define in MakefileDefined: 
-          if re.search( "#define " + define, line ): 
+          if re.search( "#define " + define, line ):
               self.d[define] = "1"
     except IOError:
       print( """
@@ -341,13 +301,11 @@ Error: if you call parse_configure_script_outcome(), please hand over directory 
 ./configure had been called. You passed """ + directory + """ and the script therefore
 did search for a file """ + input_file )
 
-
-
     input_file = directory + "/src/Makefile"
     try:
       input = open( input_file, "r" )
       print( "parse configure outcome " + input_file + " to extract compile settings" )
-      
+
       MakefileConstants = [
         "CXXFLAGS_PEANO_2D_RELEASE",
         "CXXFLAGS_PEANO_2D_STATS",
@@ -380,7 +338,7 @@ did search for a file """ + input_file )
         "LDFLAGS",
         "LIBS"
       ]
-            
+
       for line in input:
         for constant in MakefileConstants: 
           if re.search( constant + " *=", line) and line.startswith( constant ): 
@@ -410,11 +368,8 @@ Error: if you call parse_configure_script_outcome(), please hand over directory 
 ./configure had been called. You passed """ + directory + """ and the script therefore
 did search for a file """ + input_file )
 
-
-
   def add_cpp_file(self,filename):
     """
-
      Add a new filename. This is basically a set implementation, i.e. you can
      add files multiple times, but they are not inserted multiple times. This
      is important, as the steps add the cpp files. Multiple steps can hold the
@@ -423,15 +378,12 @@ did search for a file """ + input_file )
      All the standard Peano 4 routines rely on this function to add their
      generated files to the build environment. Nothing stops you however to
      add more files yourself.
-
     """
     if self.cppfiles.count(filename)==0:
       self.cppfiles.append( filename )
 
-
   def add_Fortran_file(self,filename):
     """
-
      Add a new Fortran file.
 
      All the standard Peano 4 routines rely on this function to add their
@@ -448,38 +400,31 @@ did search for a file """ + input_file )
 
      filename: String
        Filename of a Fortran file. They usually should have the .f90 extension.
-
     """
     if self.fortranfiles.count(filename)==0:
       self.fortranfiles.append( filename )
 
-
   def add_Fortran_files(self,filenames):
     """
-
      Calls add_Fortran_file() for each file.
 
      filenames: [String]
        List of files.
-
     """
     for i in filenames:
       self.add_Fortran_file(i)
 
-
   def add_Fortran_module(self,module_file,force=False):
     """
-
      Add a Fortran module
 
      module_file: String
        Filename of a Fortran source code file which hosts a module. It should
        have the extension .f90 or similar.
-       
+
      force: Boolean
        Enforce that Fortran module is added even though it might already be in
        the list.
-
     """
     if not module_file.endswith( ".f90" ):
       print( "Warning: Fortran module file does not have extension .f90 (" + module_file + ") and translation thus might fail" )
@@ -497,49 +442,20 @@ then this message can typically be ignored.
     else:
       self.d["FORTRAN_MODULES"].append( module_file )
 
-
   def add_Fortran_modules(self,module_files):
     for i in module_files:
       self.add_Fortran_module( i )
 
-
-  def generate_old(self,overwrite,directory):
-    filename = directory + "/Makefile";
-    if writeFile(overwrite,self.default_overwrite,filename):
-      print( "write " + filename )
-
-      # files
-      self.d[ 'CXX_SOURCES' ]     = self.cppfiles
-
-      self.d[ 'FORTRAN_SOURCES' ] = self.fortranfiles
-
-
-      template_file   = os.path.realpath(__file__).replace( ".pyc", ".template" ).replace( ".py", ".template" )
-      template_loader = jinja2.FileSystemLoader(searchpath=os.path.split(template_file)[0])
-      templateEnv     = jinja2.Environment(loader=template_loader)
-      template        = templateEnv.get_template( os.path.split(template_file)[1] )
-
-
-      try:
-        # We first eliminate the precompiled variant, and then we get rid of the
-        # postfix in the case where it is a source file
-        with open( filename, "w" ) as output:
-          output.write( template.render(self.d) )
-      except Exception as e:
-        print( "ERROR: have not been able to write main file {} from template {}".format(filename,template_file) )
-        print( str(e) )
-
   def generate(self,overwrite,directory):
-    build_dir = find_cmake_build_dir()
-    self.d["CMAKE_BUILD_DIR"] = build_dir
-    # files
+    cmake_build_dir = find_cmake_build_dir()
+    self.d[ "CMAKE_BUILD_DIR" ] = cmake_build_dir
     self.d[ 'CXX_SOURCES' ]     = self.cppfiles
     self.d[ 'FORTRAN_SOURCES' ] = self.fortranfiles
-    self.d[ 'GENERATOR' ] = sys.argv[0]
+    self.d[ 'GENERATOR' ]       = sys.argv[0]
 
     # Anonymous function that generates the output_file_path from input_file_path template
     def generate_build_file(input_file_path, output_file_path):
-      if writeFile(overwrite, self.default_overwrite, output_file_path):
+      if write_file(overwrite, self.default_overwrite, output_file_path):
         print( "write " + output_file_path )
 
         # Encapsulate file generation as a function
@@ -558,7 +474,7 @@ then this message can typically be ignored.
           print( str(e) )
 
     file_dir  = os.path.dirname(os.path.realpath(__file__))
-    
+
     template_output_pairs = list()
 
     template_output_pairs.append(
@@ -571,6 +487,7 @@ then this message can typically be ignored.
     # We do not want the same line multiple times as it creates build problems, so we read it into a set
     # and do not write if the new executable entry is already inside
     generated_paths_filepath = os.path.join(self.d["CMAKE_BUILD_DIR"], "GeneratedSubdirectories.cmake")
+    print("generated_paths_filepath " + self.d["CMAKE_BUILD_DIR"])
     generated_paths_before = os.path.exists(generated_paths_filepath)
     generated_path_entries = set()
 

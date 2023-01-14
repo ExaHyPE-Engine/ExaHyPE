@@ -17,12 +17,12 @@ foreach(mode IN LISTS BUILD_MODES)
   target_link_libraries(Tarch_${mode_lower} PUBLIC project_options project_warnings)
 
   install(TARGETS Tarch_${mode_lower}
-        RUNTIME DESTINATION         ${CMAKE_INSTALL_BINDIR}
-                COMPONENT           ${PROJECT_NAME}_Runtime
-        LIBRARY DESTINATION         ${CMAKE_INSTALL_LIBDIR}
-                COMPONENT           ${PROJECT_NAME}_Runtime
-                NAMELINK_COMPONENT  ${PROJECT_NAME}_Devel
-        ARCHIVE DESTINATION         ${CMAKE_INSTALL_LIBDIR}
-                COMPONENT           ${PROJECT_NAME}_Devel
+    RUNTIME DESTINATION         ${CMAKE_INSTALL_BINDIR}
+            COMPONENT           ${PROJECT_NAME}_Runtime
+    LIBRARY DESTINATION         ${CMAKE_INSTALL_LIBDIR}
+            COMPONENT           ${PROJECT_NAME}_Runtime
+            NAMELINK_COMPONENT  ${PROJECT_NAME}_Devel
+    ARCHIVE DESTINATION         ${CMAKE_INSTALL_LIBDIR}
+            COMPONENT           ${PROJECT_NAME}_Devel
   )
 endforeach()

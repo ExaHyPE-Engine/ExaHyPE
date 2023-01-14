@@ -1,11 +1,11 @@
 # This file is part of the Peano project. For conditions of distribution and
 # use, please see the copyright notice at www.peano-framework.org
-from .Helper import Overwrite
-from .Helper import writeFile
-
 import os
 import re
 
+from .Helper import write_file
+
+from .Overwrite  import Overwrite
 
 class Constants(object):
   """
@@ -111,7 +111,7 @@ class Constants(object):
     pass
 
   def clear(self):
-    self.d[ "ADD_CONSTANTS" ]            = ""
+    self.d[ "ADD_CONSTANTS" ] = ""
     pass
 
   def export_boolean( self, name, value ):
@@ -129,8 +129,8 @@ class Constants(object):
     pass
 
   def generate(self, overwrite, directory):
-    filename = directory + "/Constants.h";
-    if writeFile(overwrite,self.default_overwrite,filename):
+    filename = directory + "/Constants.h"
+    if write_file(overwrite,self.default_overwrite,filename):
       print( "write " + filename )
 
       #for i in self.cppfiles:

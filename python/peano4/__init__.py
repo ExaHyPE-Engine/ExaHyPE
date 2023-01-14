@@ -5,7 +5,7 @@ havejinja2=False
 try:
   import jinja2
 except ImportError:
-  raise("Sympy is not available, some functionality might not be provided.")
+  raise("Jinja2 is not available, some functionality might not be provided.")
 
 import peano4.datamodel
 import peano4.solversteps
