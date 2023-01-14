@@ -867,7 +867,7 @@ void {{FULL_QUALIFIED_CLASSNAME}}::leaveCell( const peano4::grid::GridTraversalE
       and
       outCellStack!=peano4::grid::TraversalObserver::NoData
       and
-      (not peano4::grid::PeanoCurve::isInOutStack(outCellStack) or {{full_qualified_type}}::storePersistently(
+      (not peano4::grid::PeanoCurve::isInOutStack(outCellStack) or view.get(0).storePersistently(
         marker
         {% for arg in ADDITIONAL_LOAD_STORE_ARGUMENTS %}, {{arg[0]}} {% endfor %}
       ))
@@ -881,9 +881,9 @@ void {{FULL_QUALIFIED_CLASSNAME}}::leaveCell( const peano4::grid::GridTraversalE
         "  destroy=" << (outCellStack==peano4::grid::TraversalObserver::CreateOrDestroyPersistentGridEntity) <<
         ", no-data=" << (outCellStack==peano4::grid::TraversalObserver::NoData) <<
         ", is-in/out=" << peano4::grid::PeanoCurve::isInOutStack(outCellStack) <<
-        ", store-persistently=" << {{full_qualified_type}}::storePersistently(
-          marker
+        ", store-persistently=" << view.get(0).storePersistently(
           {% for arg in ADDITIONAL_LOAD_STORE_ARGUMENTS %}, {{arg[0]}} {% endfor %}
+          marker
         )
       );
     }
@@ -968,7 +968,7 @@ void {{FULL_QUALIFIED_CLASSNAME}}::leaveCell( const peano4::grid::GridTraversalE
         and
         outFaceStack!=peano4::grid::TraversalObserver::NoData
         and
-        (not peano4::grid::PeanoCurve::isInOutStack(outFaceStack) or {{full_qualified_type}}::storePersistently(
+        (not peano4::grid::PeanoCurve::isInOutStack(outFaceStack) or data.storePersistently(
           marker
           {% for arg in ADDITIONAL_LOAD_STORE_ARGUMENTS %}, {{arg[0]}} {% endfor %}
         ))
@@ -977,7 +977,7 @@ void {{FULL_QUALIFIED_CLASSNAME}}::leaveCell( const peano4::grid::GridTraversalE
         repositories::DataRepository::_{{logical_type_name}}Stack.getForPush( repositories::DataRepository::DataKey(_spacetreeId,outFaceStack))->push(data);
       }
       else {
-        logDebug( "storeCell(...)", "do not store face {{name}} with " << marker.x(inFaceStackPosition) << " x " << marker.h() << ": store persistently=" << {{full_qualified_type}}::storePersistently(
+        logDebug( "storeCell(...)", "do not store face {{name}} with " << marker.x(inFaceStackPosition) << " x " << marker.h() << ": store persistently=" << data.storePersistently(
           marker
           {% for arg in ADDITIONAL_LOAD_STORE_ARGUMENTS %}, {{arg[0]}} {% endfor %}
         ) );
@@ -1059,7 +1059,7 @@ void {{FULL_QUALIFIED_CLASSNAME}}::leaveCell( const peano4::grid::GridTraversalE
         and
         outVertexStack!=peano4::grid::TraversalObserver::NoData
         and
-        (not peano4::grid::PeanoCurve::isInOutStack(outVertexStack) or {{full_qualified_type}}::storePersistently(
+        (not peano4::grid::PeanoCurve::isInOutStack(outVertexStack) or data.storePersistently(
           marker
           {% for arg in ADDITIONAL_LOAD_STORE_ARGUMENTS %}, {{arg[0]}} {% endfor %}
         ))
@@ -1321,18 +1321,18 @@ void {{FULL_QUALIFIED_CLASSNAME}}::sendVertex(int position, int toStack, ::peano
   TemplateSendVertex_SendCall = """
   {
     peano4::datamanagement::VertexMarker  marker(event,position);
-    if (
-      {{full_qualified_type}}::storePersistently(
+
+    const {{full_qualified_type}}& data = repositories::DataRepository::_{{logical_type_name}}Stack.getForPop( 
+      repositories::DataRepository::DataKey(_spacetreeId,peano4::grid::PeanoCurve::CallStack)
+    )->top(TwoPowerD-1-position);
+    if ( 
+      data.storePersistently(
         marker
         {% for arg in ADDITIONAL_LOAD_STORE_ARGUMENTS %}, {{arg[0]}} {% endfor %}
       ) 
       and
-      {{full_qualified_type}}::send(marker)
+      data.send(marker)
     ) {
-      {{full_qualified_type}} data = repositories::DataRepository::_{{logical_type_name}}Stack.getForPop( 
-        repositories::DataRepository::DataKey(_spacetreeId,peano4::grid::PeanoCurve::CallStack)
-      )->top(TwoPowerD-1-position);
-    
       logDebug( "sendVertex(...)", "send out " << data.toString() << " to stack " << toStack << " on tree " << _spacetreeId << " for marker " << marker.toString() );
 
       repositories::DataRepository::_{{logical_type_name}}Stack.getForPush(
@@ -1359,18 +1359,17 @@ void {{FULL_QUALIFIED_CLASSNAME}}::sendFace(int position, int toStack, ::peano4:
   TemplateSendFace_SendCall = """
   {
     peano4::datamanagement::FaceMarker  marker(event,position);
+    const {{full_qualified_type}}& data = repositories::DataRepository::_{{logical_type_name}}Stack.getForPop( 
+      repositories::DataRepository::DataKey(_spacetreeId,peano4::grid::PeanoCurve::CallStack)
+    )->top(TwoTimesD-1-position);
     if (
-      {{full_qualified_type}}::storePersistently(
+      data.storePersistently(marker) 
+      and
+      data.send(
         marker
         {% for arg in ADDITIONAL_LOAD_STORE_ARGUMENTS %}, {{arg[0]}} {% endfor %}
-      ) 
-      and
-      {{full_qualified_type}}::send(marker)
+      )
     ) {
-      {{full_qualified_type}} data = repositories::DataRepository::_{{logical_type_name}}Stack.getForPop( 
-        repositories::DataRepository::DataKey(_spacetreeId,peano4::grid::PeanoCurve::CallStack)
-      )->top(TwoTimesD-1-position);
-    
       logDebug( "sendFace(...)", "send out " << data.toString() << " to stack " << toStack << " on tree " << _spacetreeId << " for marker " << marker.toString() );
 
       repositories::DataRepository::_{{logical_type_name}}Stack.getForPush(
@@ -1398,15 +1397,18 @@ void {{FULL_QUALIFIED_CLASSNAME}}::sendCell(int toStack, ::peano4::grid::Travers
   TemplateSendCell_SendCall = """
   {
     peano4::datamanagement::CellMarker  marker(event);
+    const {{full_qualified_type}}&  data = repositories::DataRepository::_{{logical_type_name}}Stack.getForPop( repositories::DataRepository::DataKey(_spacetreeId,peano4::grid::PeanoCurve::CallStack))->top();
     if (
-      {{full_qualified_type}}::storePersistently(
+      data.storePersistently(
         marker
         {% for arg in ADDITIONAL_LOAD_STORE_ARGUMENTS %}, {{arg[0]}} {% endfor %}
       ) 
       and
-      {{full_qualified_type}}::send(marker)
+      data.send(
+        marker
+        {% for arg in ADDITIONAL_LOAD_STORE_ARGUMENTS %}, {{arg[0]}} {% endfor %}
+      )
     ) {
-      {{full_qualified_type}} data = repositories::DataRepository::_{{logical_type_name}}Stack.getForPop( repositories::DataRepository::DataKey(_spacetreeId,peano4::grid::PeanoCurve::CallStack))->top();
     
       logDebug( "sendCell(...)", "send out " << data.toString() << " to stack " << toStack << " on tree " << _spacetreeId );
 
@@ -1473,12 +1475,15 @@ void {{FULL_QUALIFIED_CLASSNAME}}::receiveAndMergeFace(int position, int fromSta
     peano4::datamanagement::VertexMarker  marker(event,position);
 
     if ( 
-      {{full_qualified_type}}::loadPersistently(
+      data.loadPersistently(
         marker
         {% for arg in ADDITIONAL_LOAD_STORE_ARGUMENTS %}, {{arg[0]}} {% endfor %}
       ) 
       and
-      {{full_qualified_type}}::receiveAndMerge(marker)
+      data.receiveAndMerge(
+        marker
+        {% for arg in ADDITIONAL_LOAD_STORE_ARGUMENTS %}, {{arg[0]}} {% endfor %}
+      )
     ) {
       assertion5(
         not repositories::DataRepository::_{{logical_type_name}}Stack.getForPop(_spacetreeId, fromStack)->empty(),
@@ -1526,22 +1531,24 @@ void {{FULL_QUALIFIED_CLASSNAME}}::receiveAndMergeFace(int position, int fromSta
   TemplateReceiveAndMergeFace_ReceiveAndMergeCalls = """
   {
     peano4::datamanagement::FaceMarker  marker(event,position);
+    {{full_qualified_type}}& data = repositories::DataRepository::_{{logical_type_name}}Stack.getForPush( 
+      repositories::DataRepository::DataKey(_spacetreeId,peano4::grid::PeanoCurve::CallStack)
+    )->top(TwoTimesD-1-position);
 
     if ( 
-      {{full_qualified_type}}::loadPersistently(
+      data.loadPersistently(
         marker
         {% for arg in ADDITIONAL_LOAD_STORE_ARGUMENTS %}, {{arg[0]}} {% endfor %}
       ) 
       and
-      {{full_qualified_type}}::receiveAndMerge(marker)
+      data.receiveAndMerge(
+        marker
+        {% for arg in ADDITIONAL_LOAD_STORE_ARGUMENTS %}, {{arg[0]}} {% endfor %}
+      )
     ) {
       auto   incomingData = repositories::DataRepository::_{{logical_type_name}}Stack.getForPop(
         _spacetreeId, fromStack
       )->pop();
-
-      {{full_qualified_type}}& data = repositories::DataRepository::_{{logical_type_name}}Stack.getForPush( 
-        repositories::DataRepository::DataKey(_spacetreeId,peano4::grid::PeanoCurve::CallStack)
-      )->top(TwoTimesD-1-position);
 
       logDebug( "receiveAndMergeFace(...)", "merge " << incomingData.toString() << " into " << data.toString() << " within marker " << marker.toString() );
 
@@ -1574,21 +1581,24 @@ void {{FULL_QUALIFIED_CLASSNAME}}::receiveAndMergeFace(int position, int fromSta
   {
     peano4::datamanagement::CellMarker  marker(event);
 
+    {{full_qualified_type}}& data = repositories::DataRepository::_{{logical_type_name}}Stack.getForPush( 
+      repositories::DataRepository::DataKey(_spacetreeId,peano4::grid::PeanoCurve::CallStack)
+    )->top();
+
     if ( 
-      {{full_qualified_type}}::loadPersistently(
+      data.loadPersistently(
         marker
         {% for arg in ADDITIONAL_LOAD_STORE_ARGUMENTS %}, {{arg[0]}} {% endfor %}
       ) 
       and
-      {{full_qualified_type}}::receiveAndMerge(marker)
+      data.receiveAndMerge(
+        marker
+        {% for arg in ADDITIONAL_LOAD_STORE_ARGUMENTS %}, {{arg[0]}} {% endfor %}
+      )
     ) {
       auto   incomingData = repositories::DataRepository::_{{logical_type_name}}Stack.getForPop(
         _spacetreeId, fromStack
       )->pop();
-
-      {{full_qualified_type}}& data = repositories::DataRepository::_{{logical_type_name}}Stack.getForPush( 
-        repositories::DataRepository::DataKey(_spacetreeId,peano4::grid::PeanoCurve::CallStack)
-      )->top();
 
       logDebug( "receiveAndMergeCell(...)", "merge " << incomingData.toString() << " into " << data.toString() );
 

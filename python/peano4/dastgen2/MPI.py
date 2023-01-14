@@ -44,15 +44,6 @@ class MPI( dastgen2.aspects.MPI ):
     Clarifies which grid entity the underlying datatype is associated
     to.
   
-  additional_load_and_store_arguments: [(String,String)]
-    List of tuples, where the first entry specifies a type and the second
-    entry names it.
-    
-  include: [String]
-    List of include statements. Has to be the whole statement, i.e.
-    
-          #include "myvalue.h"
-  
   """
   def __init__(self, dof_association_):
     super( MPI, self ).__init__()
@@ -60,10 +51,10 @@ class MPI( dastgen2.aspects.MPI ):
     self.merge_implementation = ""
     self.receive_predicate    = "true"
     self.send_predicate       = "true"
-    self.store_predicate      = "true"
     self.load_predicate       = "true"
-    self.includes             = []
-    self.additional_load_and_store_arguments = []
+    self.store_predicate      = "true"
+    self.compute_predicate    = "true"
+    self.includes             = ""
     pass
 
 
@@ -84,8 +75,9 @@ class MPI( dastgen2.aspects.MPI ):
     else:
       result += ",empty-merge-impl"
       
-    result += ",store="    + self.store_predicate
     result += ",load="     + self.load_predicate
+    result += ",store="    + self.store_predicate
+    result += ",compute="  + self.compute
     result += ",send="     + self.send_predicate
     result += ",receive="  + self.receive_predicate
       
@@ -115,7 +107,6 @@ class MPI( dastgen2.aspects.MPI ):
   def get_method_declarations(self,full_qualified_name):
     d = {
       "full_qualified_name":              full_qualified_name,
-      "additional_load_store_arguments":  self.additional_load_and_store_arguments
     }    
     result = super(MPI,self).get_method_declarations(full_qualified_name) +  """
 #ifdef Parallel
@@ -128,46 +119,31 @@ class MPI( dastgen2.aspects.MPI ):
       result += """
     void merge(peano4::grid::TraversalObserver::SendReceiveContext context, const {{full_qualified_name}}& neighbour, const peano4::datamanagement::VertexMarker& marker);
     
-    static bool receiveAndMerge(const peano4::datamanagement::VertexMarker& marker);
-    static bool send(const peano4::datamanagement::VertexMarker& marker);
-    static bool storePersistently(
-      const peano4::datamanagement::VertexMarker& marker
-      {% for arg in additional_load_store_arguments %}, const {{arg[0]}}& {{arg[1]}} {% endfor %}
-    );
-    static bool loadPersistently(
-      const peano4::datamanagement::VertexMarker& marker
-      {% for arg in additional_load_store_arguments %}, const {{arg[0]}}& {{arg[1]}} {% endfor %}
-    );
+    bool receiveAndMerge(const peano4::datamanagement::VertexMarker& marker) const;
+    bool send(const peano4::datamanagement::VertexMarker& marker) const;
+    static bool loadPersistently(const peano4::datamanagement::VertexMarker& marker);
+    bool storePersistently(const peano4::datamanagement::VertexMarker& marker) const;
+    bool compute(const peano4::datamanagement::VertexMarker& marker) const;
 """ 
     elif self.dof_association==DoFAssociation.Face:
       result += """
     void merge(peano4::grid::TraversalObserver::SendReceiveContext context, const {{full_qualified_name}}& neighbour, const peano4::datamanagement::FaceMarker& marker);
 
-    static bool receiveAndMerge(const peano4::datamanagement::FaceMarker& marker);
-    static bool send(const peano4::datamanagement::FaceMarker& marker);
-    static bool storePersistently(
-      const peano4::datamanagement::FaceMarker& marker
-      {% for arg in additional_load_store_arguments %}, const {{arg[0]}}& {{arg[1]}} {% endfor %}
-    );
-    static bool loadPersistently(
-      const peano4::datamanagement::FaceMarker& marker
-      {% for arg in additional_load_store_arguments %}, const {{arg[0]}}& {{arg[1]}} {% endfor %}
-    );
+    bool receiveAndMerge(const peano4::datamanagement::FaceMarker& marker) const;
+    bool send(const peano4::datamanagement::FaceMarker& marker) const;
+    static bool loadPersistently(const peano4::datamanagement::FaceMarker& marker);
+    bool storePersistently(const peano4::datamanagement::FaceMarker& marker) const;
+    bool compute(const peano4::datamanagement::FaceMarker& marker) const;
 """ 
     elif self.dof_association==DoFAssociation.Cell:
       result += """
     void merge(peano4::grid::TraversalObserver::SendReceiveContext context, const {{full_qualified_name}}& neighbour, const peano4::datamanagement::CellMarker& marker);
 
-    static bool receiveAndMerge(const peano4::datamanagement::CellMarker& marker);
-    static bool send(const peano4::datamanagement::CellMarker& marker);
-    static bool storePersistently(
-      const peano4::datamanagement::CellMarker& marker
-      {% for arg in additional_load_store_arguments %}, const {{arg[0]}}& {{arg[1]}} {% endfor %}
-    );
-    static bool loadPersistently(
-      const peano4::datamanagement::CellMarker& marker
-      {% for arg in additional_load_store_arguments %}, const {{arg[0]}}& {{arg[1]}} {% endfor %}
-    );
+    bool receiveAndMerge(const peano4::datamanagement::CellMarker& marker) const;
+    bool send(const peano4::datamanagement::CellMarker& marker) const;
+    static bool loadPersistently(const peano4::datamanagement::CellMarker& marker);
+    bool storePersistently(const peano4::datamanagement::CellMarker& marker) const;
+    bool compute(const peano4::datamanagement::CellMarker& marker) const;
 """ 
       pass
     elif self.dof_association==DoFAssociation.Generic or self.dof_association==DoFAssociation.Global:
@@ -184,9 +160,9 @@ class MPI( dastgen2.aspects.MPI ):
       "merge_implementation":  self.merge_implementation,
       "receive_predicate":     self.receive_predicate,
       "send_predicate":        self.send_predicate,
-      "store_predicate":       self.store_predicate,
       "load_predicate":        self.load_predicate,
-      "additional_load_store_arguments":  self.additional_load_and_store_arguments
+      "store_predicate":       self.store_predicate,
+      "compute_predicate":     self.compute_predicate,
     }    
         
       
@@ -235,32 +211,44 @@ void {{full_qualified_name}}::merge(peano4::grid::TraversalObserver::SendReceive
 }
 
 
-bool {{full_qualified_name}}::receiveAndMerge(const peano4::datamanagement::VertexMarker& marker) {
+bool {{full_qualified_name}}::receiveAndMerge(
+  const peano4::datamanagement::VertexMarker& marker
+  {% for arg in ADDITIONAL_LOAD_STORE_ARGUMENTS %}, const {{arg[0]}}& {{arg[1]}} {% endfor %}
+) const {
   return {{receive_predicate}};
 }
 
 
-bool {{full_qualified_name}}::send(const peano4::datamanagement::VertexMarker& marker) {
+bool {{full_qualified_name}}::send(
+  const peano4::datamanagement::VertexMarker& marker
+  {% for arg in ADDITIONAL_LOAD_STORE_ARGUMENTS %}, const {{arg[0]}}& {{arg[1]}} {% endfor %}
+) const {
   return {{send_predicate}};
 }
 
 
-bool {{full_qualified_name}}::storePersistently(
-  const peano4::datamanagement::VertexMarker& marker
-  {% for arg in additional_load_store_arguments %}, const {{arg[0]}}& {{arg[1]}} {% endfor %}
-) {
-  return {{store_predicate}};
-}
-
-
-bool {{full_qualified_name}}::loadPersistently(
-  const peano4::datamanagement::VertexMarker& marker
-  {% for arg in additional_load_store_arguments %}, const {{arg[0]}}& {{arg[1]}} {% endfor %}
+bool {{full_qualified_name}}::loadPersistently( 
+  const peano4::datamanagement::VertexMarker& marker 
+  {% for arg in ADDITIONAL_LOAD_STORE_ARGUMENTS %}, const {{arg[0]}}& {{arg[1]}} {% endfor %}
 ) {
   return {{load_predicate}};
 }
 
 
+bool {{full_qualified_name}}::storePersistently( 
+  const peano4::datamanagement::VertexMarker& marker 
+  {% for arg in ADDITIONAL_LOAD_STORE_ARGUMENTS %}, const {{arg[0]}}& {{arg[1]}} {% endfor %}
+) const {
+  return {{store_predicate}};
+}
+
+
+bool {{full_qualified_name}}::compute( 
+  const peano4::datamanagement::VertexMarker& marker 
+  {% for arg in ADDITIONAL_LOAD_STORE_ARGUMENTS %}, const {{arg[0]}}& {{arg[1]}} {% endfor %}
+) const {
+  return {{compute_predicate}};
+}
 """ 
     elif self.dof_association==DoFAssociation.Face:
       result += """
@@ -269,29 +257,43 @@ void {{full_qualified_name}}::merge(peano4::grid::TraversalObserver::SendReceive
 }
 
 
-bool {{full_qualified_name}}::receiveAndMerge(const peano4::datamanagement::FaceMarker& marker) {
+bool {{full_qualified_name}}::receiveAndMerge(
+  const peano4::datamanagement::FaceMarker& marker
+  {% for arg in ADDITIONAL_LOAD_STORE_ARGUMENTS %}, const {{arg[0]}}& {{arg[1]}} {% endfor %}
+) const {
   return {{receive_predicate}};
 }
 
 
-bool {{full_qualified_name}}::send(const peano4::datamanagement::FaceMarker& marker) {
+bool {{full_qualified_name}}::send(
+  const peano4::datamanagement::FaceMarker& marker
+  {% for arg in ADDITIONAL_LOAD_STORE_ARGUMENTS %}, const {{arg[0]}}& {{arg[1]}} {% endfor %}
+) const {
   return {{send_predicate}};
 }
 
 
-bool {{full_qualified_name}}::storePersistently(
-  const peano4::datamanagement::FaceMarker& marker
-  {% for arg in additional_load_store_arguments %}, const {{arg[0]}}& {{arg[1]}} {% endfor %}
+bool {{full_qualified_name}}::loadPersistently( 
+  const peano4::datamanagement::FaceMarker& marker 
+  {% for arg in ADDITIONAL_LOAD_STORE_ARGUMENTS %}, const {{arg[0]}}& {{arg[1]}} {% endfor %}
 ) {
+  return {{load_predicate}};
+}
+
+
+bool {{full_qualified_name}}::storePersistently( 
+  const peano4::datamanagement::FaceMarker& marker 
+  {% for arg in ADDITIONAL_LOAD_STORE_ARGUMENTS %}, const {{arg[0]}}& {{arg[1]}} {% endfor %}
+) const {
   return {{store_predicate}};
 }
 
 
-bool {{full_qualified_name}}::loadPersistently(
-  const peano4::datamanagement::FaceMarker& marker
-  {% for arg in additional_load_store_arguments %}, const {{arg[0]}}& {{arg[1]}} {% endfor %}
-) {
-  return {{load_predicate}};
+bool {{full_qualified_name}}::compute( 
+  const peano4::datamanagement::FaceMarker& marker 
+  {% for arg in ADDITIONAL_LOAD_STORE_ARGUMENTS %}, const {{arg[0]}}& {{arg[1]}} {% endfor %}
+) const {
+  return {{compute_predicate}};
 }
 """ 
     elif self.dof_association==DoFAssociation.Cell:
@@ -301,29 +303,43 @@ void {{full_qualified_name}}::merge(peano4::grid::TraversalObserver::SendReceive
 }
 
 
-bool {{full_qualified_name}}::receiveAndMerge(const peano4::datamanagement::CellMarker& marker) {
+bool {{full_qualified_name}}::receiveAndMerge(
+  const peano4::datamanagement::CellMarker& marker
+  {% for arg in ADDITIONAL_LOAD_STORE_ARGUMENTS %}, const {{arg[0]}}& {{arg[1]}} {% endfor %}
+) const {
   return {{receive_predicate}};
 }
 
 
-bool {{full_qualified_name}}::send(const peano4::datamanagement::CellMarker& marker) {
+bool {{full_qualified_name}}::send(
+  const peano4::datamanagement::CellMarker& marker
+  {% for arg in ADDITIONAL_LOAD_STORE_ARGUMENTS %}, const {{arg[0]}}& {{arg[1]}} {% endfor %}
+) const {
   return {{send_predicate}};
 }
 
 
-bool {{full_qualified_name}}::storePersistently(
-  const peano4::datamanagement::CellMarker& marker
-  {% for arg in additional_load_store_arguments %}, const {{arg[0]}}& {{arg[1]}} {% endfor %}
-) {
+bool {{full_qualified_name}}::storePersistently( 
+  const peano4::datamanagement::CellMarker& marker 
+  {% for arg in ADDITIONAL_LOAD_STORE_ARGUMENTS %}, const {{arg[0]}}& {{arg[1]}} {% endfor %}
+) const {
   return {{store_predicate}};
 }
 
 
-bool {{full_qualified_name}}::loadPersistently(
-  const peano4::datamanagement::CellMarker& marker
-  {% for arg in additional_load_store_arguments %}, const {{arg[0]}}& {{arg[1]}} {% endfor %}
+bool {{full_qualified_name}}::loadPersistently( 
+  const peano4::datamanagement::CellMarker& marker 
+  {% for arg in ADDITIONAL_LOAD_STORE_ARGUMENTS %}, const {{arg[0]}}& {{arg[1]}} {% endfor %}
 ) {
   return {{load_predicate}};
+}
+
+
+bool {{full_qualified_name}}::compute( 
+  const peano4::datamanagement::CellMarker& marker 
+  {% for arg in ADDITIONAL_LOAD_STORE_ARGUMENTS %}, const {{arg[0]}}& {{arg[1]}} {% endfor %}
+) const {
+  return {{compute_predicate}};
 }
 """      
     elif self.dof_association==DoFAssociation.Generic or self.dof_association==DoFAssociation.Global:

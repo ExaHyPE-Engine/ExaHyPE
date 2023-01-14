@@ -33,4 +33,17 @@ Generator: """ + str(self.generator) + """
 """    
 
 
+  @property
+  def additional_load_and_store_arguments(self):
+    return self._additional_load_and_store_arguments
+    
+
+  @additional_load_and_store_arguments.setter
+  def additional_load_and_store_arguments(self,new_arguments):
+    for new_argument in new_arguments:
+      self.generator.includes += """
+#include \"""" + new_argument[1].replace("::","/") + """.h"
+"""
+    self._additional_load_and_store_arguments = new_arguments
+
 
