@@ -89,7 +89,7 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR})
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR})
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR})
 
-add_subdirectory(CMake)
+add_subdirectory(cmake)
 include(MessageUtils)
 #include(Clang-Format)
 include(TestBigEndian)
