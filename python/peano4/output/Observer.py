@@ -342,7 +342,7 @@ void {{FULL_QUALIFIED_CLASSNAME}}::enterCell( const peano4::grid::GridTraversalE
 
 
   TemplateLoadCell_VertexLoad = """
-  // Load vertex {name}
+  // Load vertex {{name}}
   {
     auto view = repositories::DataRepository::_{{logical_type_name}}Stack.getForPush( repositories::DataRepository::DataKey(_spacetreeId,peano4::grid::PeanoCurve::CallStack))->pushBlock( TwoPowerD );
     for (int i=0; i<TwoPowerD; i++) {
@@ -404,7 +404,7 @@ void {{FULL_QUALIFIED_CLASSNAME}}::enterCell( const peano4::grid::GridTraversalE
 
 
   TemplateEnterCell_VertexMappingCall = """
-  // Handle vertex
+  // Handle vertex {{logical_type_name}}
   {
     peano4::datamanagement::VertexMarker  marker(event);
 
@@ -463,7 +463,7 @@ void {{FULL_QUALIFIED_CLASSNAME}}::enterCell( const peano4::grid::GridTraversalE
 
 
   TemplateLoadCell_FaceLoad = """
-  // Load face {name}
+  // Load face {{logical_type_name}}
   {
     auto view = repositories::DataRepository::_{{logical_type_name}}Stack.getForPush( repositories::DataRepository::DataKey(_spacetreeId,peano4::grid::PeanoCurve::CallStack))->pushBlock( TwoTimesD );
     for (int i=0; i<TwoTimesD; i++) {
@@ -525,7 +525,7 @@ void {{FULL_QUALIFIED_CLASSNAME}}::enterCell( const peano4::grid::GridTraversalE
 
 
   TemplateEnterCell_FaceMappingCall = """
-  // Handle face {name}
+  // Handle face {{logical_type_name}}
   {
     peano4::datamanagement::FaceMarker marker( event );
     for (int i=0; i<TwoTimesD; i++) {
@@ -584,7 +584,7 @@ void {{FULL_QUALIFIED_CLASSNAME}}::enterCell( const peano4::grid::GridTraversalE
 
 
   TemplateLoadCell_CellLoad = """
-  // Load cell {name}
+  // Load cell {{logical_type_name}}
   {
     auto view = repositories::DataRepository::_{{logical_type_name}}Stack.getForPush( repositories::DataRepository::DataKey(_spacetreeId,peano4::grid::PeanoCurve::CallStack))->pushBlock( 1 );
 
@@ -637,7 +637,7 @@ void {{FULL_QUALIFIED_CLASSNAME}}::enterCell( const peano4::grid::GridTraversalE
 
 
   TemplateEnterCell_CellMappingCall = """
-  // Invoke creational events on cell {name}
+  // Invoke creational events on cell {{logical_type_name}}
   {
     peano4::datamanagement::CellMarker marker( event );
     if (
@@ -852,7 +852,7 @@ void {{FULL_QUALIFIED_CLASSNAME}}::leaveCell( const peano4::grid::GridTraversalE
 
 
   TemplateLeaveCell_CellStore_Epilogue = """
-  // Handle cell {name}
+  // Handle cell {{logical_type_name}}
   {
     const int inCellStack   = peano4::grid::PeanoCurve::CallStack;
     const int outCellStack  = event.getCellData();
@@ -892,7 +892,7 @@ void {{FULL_QUALIFIED_CLASSNAME}}::leaveCell( const peano4::grid::GridTraversalE
 
 
   TemplateLeaveCell_FaceStore_MappingCall = """
-  // Handle face {name}
+  // Handle face {{logical_type_name}}
   {
     peano4::datamanagement::FaceMarker  marker(event);
 
@@ -949,7 +949,7 @@ void {{FULL_QUALIFIED_CLASSNAME}}::leaveCell( const peano4::grid::GridTraversalE
 """
 
   TemplateLeaveCell_FaceStore_Epilogue = """
-  // Store face {name}
+  // Store face {{logical_type_name}}
   {
     auto view = repositories::DataRepository::_{{logical_type_name}}Stack.getForPop( repositories::DataRepository::DataKey(_spacetreeId,peano4::grid::PeanoCurve::CallStack))->popBlock( TwoTimesD );
     for (int i=0; i<TwoTimesD; i++) {
@@ -987,7 +987,7 @@ void {{FULL_QUALIFIED_CLASSNAME}}::leaveCell( const peano4::grid::GridTraversalE
 """
 
   TemplateLeaveCell_VertexStore_MappingCall = """
-  // Handle vertex {name}
+  // Handle vertex {{logical_type_name}}
   {
     peano4::datamanagement::VertexMarker  marker(event);
 
@@ -1040,7 +1040,7 @@ void {{FULL_QUALIFIED_CLASSNAME}}::leaveCell( const peano4::grid::GridTraversalE
 """
 
   TemplateLeaveCell_VertexStore_Epilogue = """
-  // Store vertex {name}
+  // Store vertex {{logical_type_name}}
   {
     auto view = repositories::DataRepository::_{{logical_type_name}}Stack.getForPop( repositories::DataRepository::DataKey(_spacetreeId,peano4::grid::PeanoCurve::CallStack))->popBlock( TwoPowerD );
     for (int i=0; i<TwoPowerD; i++) {
