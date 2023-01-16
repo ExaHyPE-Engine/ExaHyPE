@@ -28,7 +28,7 @@ void exahype2::fd::fd4::timeStep_patchwise_heap_functors(
   bool evaluateKODissipation = KOSigma>0.0;
 
   exahype2::enumerator::AoSLexicographicEnumerator QInEnumerator (1,numberOfGridCellsPerPatchPerAxis,haloSize,unknowns,auxiliaryVariables);
-  exahype2::enumerator::AoSLexicographicEnumerator QOutEnumerator(1,numberOfGridCellsPerPatchPerAxis,0,       unknowns,0);
+  exahype2::enumerator::AoSLexicographicEnumerator QOutEnumerator(1,numberOfGridCellsPerPatchPerAxis,0,       unknowns,auxiliaryVariables);
 
   logDebug( "timeStep_patchwise_heap_functors(...)", "size of temp flux field=" << QOutEnumerator.size() );
   double* tempFluxX =  evaluateFlux                                                ? tarch::allocateMemory( QOutEnumerator.size(),tarch::MemoryLocation::Heap ) : nullptr;
@@ -71,16 +71,31 @@ void exahype2::fd::fd4::timeStep_patchwise_heap_functors(
       for (int x = 0; x < numberOfGridCellsPerPatchPerAxis; x++)
       for (int y = 0; y < numberOfGridCellsPerPatchPerAxis; y++)
       for (int z = 0; z < numberOfGridCellsPerPatchPerAxis; z++)
-      for (int unknown=0; unknown<unknowns+auxiliaryVariables; unknown++) {
-        otterLoopIterationBegin();
-        ::exahype2::fd::internal::clearSolution_LoopBody(
-          patchIndex,
-          gridCellIndex3d(x,y,z),
-          unknown,
-          patchData.QOut[patchIndex],
-          QOutEnumerator
-        );
-        otterLoopIterationEnd();
+      {
+        for (int unknown=0; unknown<unknowns; unknown++) {
+          otterLoopIterationBegin();
+          ::exahype2::fd::internal::clearSolution_LoopBody(
+            patchIndex,
+            gridCellIndex3d(x,y,z),
+            unknown,
+            patchData.QOut[patchIndex],
+            QOutEnumerator
+          );
+          otterLoopIterationEnd();
+        }
+        for (int unknown=unknowns; unknown<unknowns+auxiliaryVariables; unknown++) {
+          otterLoopIterationBegin();
+          ::exahype2::fd::internal::copySolution_LoopBody(
+            patchData.QIn[patchIndex],
+            QInEnumerator,
+            patchIndex,
+            gridCellIndex3d(x,y,z),
+            unknown,
+            patchData.QOut[patchIndex],
+            QOutEnumerator
+          );
+          otterLoopIterationEnd();
+        }
       }
       otterLoopEnd();
     }
@@ -106,17 +121,31 @@ void exahype2::fd::fd4::timeStep_patchwise_heap_functors(
     else {
       otterLoopBegin();
       for (int x = 0; x < numberOfGridCellsPerPatchPerAxis; x++)
-      for (int y = 0; y < numberOfGridCellsPerPatchPerAxis; y++)
-      for (int unknown=0; unknown<unknowns+auxiliaryVariables; unknown++) {
-        otterLoopIterationBegin();
-        ::exahype2::fd::internal::clearSolution_LoopBody(
-          patchIndex,
-          gridCellIndex2d(x,y),
-          unknown,
-          patchData.QOut[patchIndex],
-          QOutEnumerator
-        );
-        otterLoopIterationEnd();
+      for (int y = 0; y < numberOfGridCellsPerPatchPerAxis; y++){
+        for (int unknown=0; unknown<unknowns; unknown++) {
+          otterLoopIterationBegin();
+          ::exahype2::fd::internal::clearSolution_LoopBody(
+            patchIndex,
+            gridCellIndex2d(x,y),
+            unknown,
+            patchData.QOut[patchIndex],
+            QOutEnumerator
+          );
+          otterLoopIterationEnd();
+        }
+        for (int unknown=unknowns; unknown<unknowns+auxiliaryVariables; unknown++) {
+          otterLoopIterationBegin();
+          ::exahype2::fd::internal::copySolution_LoopBody(
+            patchData.QIn[patchIndex],
+            QInEnumerator,
+            patchIndex,
+            gridCellIndex2d(x,y),
+            unknown,
+            patchData.QOut[patchIndex],
+            QOutEnumerator
+          );
+          otterLoopIterationEnd();
+        }
       }
       otterLoopEnd();
     }
