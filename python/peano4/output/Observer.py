@@ -1147,7 +1147,15 @@ void {{FULL_QUALIFIED_CLASSNAME}}::leaveCell( const peano4::grid::GridTraversalE
   def __generate_storeCell(self,output_file):
     output_file.write( jinja2.Template( self.TemplateStoreCell_Prologue ).render(**self.d) )
     
-    for cell in self.cells:
+    cells_inverted    = [x for x in self.cells]
+    faces_inverted    = [x for x in self.faces]
+    vertices_inverted = [x for x in self.vertices]
+
+    cells_inverted.reverse()
+    faces_inverted.reverse()
+    vertices_inverted.reverse()
+
+    for cell in cells_inverted:
       temp = { 
         "name" : cell.name, 
         "logical_type_name" : cell.get_logical_type_name(), 
@@ -1157,7 +1165,7 @@ void {{FULL_QUALIFIED_CLASSNAME}}::leaveCell( const peano4::grid::GridTraversalE
       self.d[ "name" ]                 = cell.name
       output_file.write( jinja2.Template( self.TemplateLeaveCell_CellStore_Epilogue ).render(**temp) )
 
-    for face in self.faces:
+    for face in faces_inverted:
       temp = { 
         "name" : face.name, 
         "enumeration_type":face.get_enumeration_type(), 
@@ -1168,7 +1176,7 @@ void {{FULL_QUALIFIED_CLASSNAME}}::leaveCell( const peano4::grid::GridTraversalE
       self.d[ "name" ]                 = face.name
       output_file.write( jinja2.Template( self.TemplateLeaveCell_FaceStore_Epilogue ).render(**temp) )
 
-    for vertex in self.vertices:
+    for vertex in vertices_inverted:
       temp = { 
         "name":vertex.name, 
         "enumeration_type": vertex.get_enumeration_type(), 

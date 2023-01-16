@@ -112,7 +112,10 @@ space_order     = int(args.solver[2])
 time_order      = int(args.solver[6])
 executable_name = executable_name + "-RK" + str(time_order) + "DG" + str(space_order)
 
-dg_solver = exahype2.solvers.rkdg.rusanov.GlobalAdaptiveTimeStepWithEnclaveTasking(name                 = solver_name + "DG",
+
+class MyDGSolver(exahype2.solvers.rkdg.rusanov.GlobalAdaptiveTimeStepWithEnclaveTasking):
+  def __init__(self):
+    super(MyDGSolver,self).__init__(name                 = solver_name + "DG",
                                                                    rk_order             = time_order,
                                                                    polynomials          = exahype2.solvers.GaussLegendreBasis(space_order),
                                                                    face_projections     = exahype2.solvers.rkdg.FaceProjections.Solution,
@@ -127,6 +130,33 @@ dg_solver = exahype2.solvers.rkdg.rusanov.GlobalAdaptiveTimeStepWithEnclaveTaski
                                                                    refinement_criterion = exahype2.solvers.rkdg.PDETerms.User_Defined_Implementation,
                                                                    pde_terms_without_state = args.optimise_stateless
                                                                    )
+
+    self._current_time_step.additional_load_and_store_arguments = [ 
+        # Das muss aus dem Alpha-Dings rausgeneriert werden: create_data_dependency
+      ("repositories::DataRepository::_CellDataAlphaPoissonMarkerStack.getForPush( repositories::DataRepository::DataKey(_spacetreeId,peano4::grid::PeanoCurve::CallStack))->top()","celldata::AlphaPoissonMarker","alpha")
+    ]
+    self._current_time_step.generator.load_persistent_condition = """
+(""" + self._current_time_step.generator.load_persistent_condition + """
+      and
+      (alpha.getTransitionA()==celldata::AlphaPoissonMarker::TransitionA::LoadStore or alpha.getTransitionA()==celldata::AlphaPoissonMarker::TransitionA::Load)
+    )
+"""
+    self._current_time_step.generator.store_persistent_condition = """
+(""" + self._current_time_step.generator.store_persistent_condition + """
+      and
+      (alpha.getTransitionA()==celldata::AlphaPoissonMarker::TransitionA::LoadStore or alpha.getTransitionA()==celldata::AlphaPoissonMarker::TransitionA::Store)
+    )
+"""
+    
+    # Bei compute bin ich mir echt unsicher
+    
+#    self._rhs_estimates                     = peano4.datamodel.Patch( (self.number_of_Runge_Kutta_steps()*(self._basis.dofs_per_axis),
+#    self._linear_combination_of_estimates   = peano4.datamodel.Patch( (self._basis.dofs_per_axis,
+
+
+
+
+dg_solver = MyDGSolver()
 
 patch_size = 2*space_order+1
 
@@ -163,7 +193,7 @@ fv_solver._action_set_postprocess_solution.add_postprocessing_kernel( """
 # Get the marker in place which switches between the solvers, i.e. lets the 
 # FV solver overrule the DG solver.
 #
-marker_solver = exahype2.solvers.elliptic.ConstrainedPoissonEquationOnCells(
+marker_solver = exahype2.solvers.elliptic.ConstrainedPoissonEquationForMarkerOnCells(
   name = "Alpha",
   plot = True)
 marker_solver.postprocess_updated_cell = """
@@ -178,30 +208,6 @@ if ( not repositories::""" + fv_solver.get_name_of_global_instance() + """.patch
 }
 """
 
-#marker_name = "AlphaDG"
-#exahype2.exahype2.solvers.rkdg.coupling.PoissonEquationForMarker.augment_cell_label( dg_solver._cell_label, 
-#                                                                                       marker_name )
-#exahype2.exahype2.solvers.rkdg.coupling.PoissonEquationForMarker.augment_face_label( dg_solver._face_label, 
-#                                                                                       marker_name )
-#exahype2.exahype2.solvers.rkdg.coupling.PoissonEquationForMarker.augment_face_label_update_action_set( dg_solver._action_set_update_face_label,
-#                                                                                       marker_name )
-
-
-#fv_solver._cell_label.data.add_attribute(dastgen2.attributes.Double("AlphaFV"))
-#fv_solver._face_label.data.add_attribute(dastgen2.attributes.Double("AverageAlphaFV"))
-
-#dg_solver._cell_label.data.add_attribute(dastgen2.attributes.Double("AlphaDG"))
-#dg_solver._face_label.data.add_attribute(dastgen2.attributes.Double("AverageAlphaDG"))
-
-#dg_solver._action_set_postprocess_solution = exahype2.solvers.rkdg.actionsets.CellWisePostprocessSolution(fv_solver)
-#dg_solver._action_set_postprocess_solution.guard = """
-#repositories::{{SOLVER_INSTANCE}}.isLastGridSweepOfTimeStep() 
-#and 
-#not repositories::{{SOLVER_INSTANCE}}.patchCanUseStatelessPDETerms(marker.x(), marker.h(), timeStamp, timeStepSize)
-#"""
-#dg_solver._action_set_postprocess_solution.add_postprocessing_kernel( """
-#  Test
-#  """     )
 
 
 #
@@ -222,10 +228,12 @@ else:
 # subdirectory). 
 #
 project = exahype2.Project( ["benchmarks", "exahype2", "euler", "sphericalaccretionupscaling"], "benchmark", ".", executable=executable_name )
+project.add_solver( marker_solver )
 project.add_solver( dg_solver )
 project.add_solver( fv_solver )
-project.add_solver( marker_solver )
-    
+
+
+
     
 #
 # Configure build
