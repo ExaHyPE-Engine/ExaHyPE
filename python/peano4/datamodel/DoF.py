@@ -31,7 +31,20 @@ class DoF(object):
     
     Both the association and the namespace are not to be set directly,
     but through the operation configure().
+
+    ## Additional store/load/send/receive arguments
     
+    - The first entry of this triple is the expression that you want the 
+      observer to pass in.
+    - The second one is the C++ type of this expression.
+    - The third one is the name that you wanna use in the dof signatures
+      for this argument.
+      
+      It is the responsibility of the DoF subclass to ensure that the second 
+      entry is properly used to initialise the store and load routines.
+      Most define an additional setter for property.
+    
+        
     ## Attributes
     
     association: DoFAssociation
@@ -43,16 +56,11 @@ class DoF(object):
       Sequence of namespaces.
       
     additional_load_and_store_arguments: [(String,String,String)]
-      This flag is, by default, an empty list, and it has to be changed 
-      carefully. If you add an entry to this list, each store and load routine 
-      will get an additional parameter. The first entry of this triple is the
-      expressino that you want the observer to pass in, the second one is a C++ 
-      type and the third one the name that you wanna use.
-      
-      It is the responsibility of the DoF subclass to ensure that the second 
-      entry is properly used to initialise the store and load routines.
-      Most define an additional setter for property.
+      This flag is, by default, an empty list. If you add an entry to this 
+      list, each store and load routine will get an additional parameter. 
+      Consult documentation above for the semantics of the list entries.
     
+          
     """
     self.association = DoFAssociation.Undef
     self.name        = name
@@ -117,8 +125,6 @@ class DoF(object):
       result += "peano4::datamanagement::VertexEnumerator<"
     elif self.association==DoFAssociation.Face:
       result += "peano4::datamanagement::FaceEnumerator<"
-    #elif self.association==DoFAssociation.Cell:
-    #  result += "peano4::datamanagement::CellWrapper<"
     else:
       assert False
     result += self.get_full_qualified_type()

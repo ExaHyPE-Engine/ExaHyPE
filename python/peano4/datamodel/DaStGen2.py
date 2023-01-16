@@ -157,7 +157,7 @@ a citation of the two original DaStGen papers when you discuss the memory needs:
     super(DaStGen2, self).configure(namespace,association)
     self.peano4_mpi_and_storage_aspect.dof_association = association
     
-    
+        
   @property
   def additional_load_and_store_arguments(self):
     return self._additional_load_and_store_arguments
@@ -171,3 +171,4 @@ a citation of the two original DaStGen papers when you discuss the memory needs:
 #include \"""" + new_argument[1].replace("::","/") + """.h"
 """)
     self._additional_load_and_store_arguments = new_arguments
+
