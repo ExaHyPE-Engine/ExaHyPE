@@ -599,32 +599,35 @@ if __name__ == "__main__":
     const int n_a_v=2;
     const int overlap=3; //make sure you are using fd4 solver!
 
-    dfor(cell,patchSize) {
-      tarch::la::Vector<Dimensions,int> currentCell = cell + tarch::la::Vector<Dimensions,int>(overlap);
+    if (not marker.willBeRefined() and repositories::InstanceOfFiniteVolumeCCZ4.getSolverState()!=FiniteVolumeCCZ4::SolverState::GridConstruction and repositories::InstanceOfFiniteVolumeCCZ4.getSolverState()==FiniteVolumeCCZ4::SolverState::RungeKuttaSubStep0) {
+      dfor(cell,patchSize) {
+        tarch::la::Vector<Dimensions,int> currentCell = cell + tarch::la::Vector<Dimensions,int>(overlap);
 
-      double gradQ[3*59]={ 0 };
+        double gradQ[3*59]={ 0 };
 
-      for (int d=0; d<3; d++) {
-        tarch::la::Vector<Dimensions,int> leftCell  = currentCell;
-        tarch::la::Vector<Dimensions,int> rightCell = currentCell;
-        leftCell(d)  -= 1;
-        rightCell(d) += 1;
-        const int leftCellSerialised  = peano4::utils::dLinearised(leftCell, patchSize + 2*overlap);
-        const int rightCellSerialised = peano4::utils::dLinearised(rightCell,patchSize + 2*overlap);
-        for(int i=0; i<59; i++) {
-          gradQ[d*59+i] = ( oldQWithHalo[rightCellSerialised*(59+n_a_v)+i] - oldQWithHalo[leftCellSerialised*(59+n_a_v)+i] ) / 2.0 / volumeH;
+        for (int d=0; d<3; d++) {
+          tarch::la::Vector<Dimensions,int> leftCell  = currentCell;
+          tarch::la::Vector<Dimensions,int> rightCell = currentCell;
+          leftCell(d)  -= 1;
+          rightCell(d) += 1;
+          const int leftCellSerialised  = peano4::utils::dLinearised(leftCell, patchSize + 2*overlap);
+          const int rightCellSerialised = peano4::utils::dLinearised(rightCell,patchSize + 2*overlap);
+          for(int i=0; i<59; i++) {
+            gradQ[d*59+i] = ( oldQWithHalo[rightCellSerialised*(59+n_a_v)+i] - oldQWithHalo[leftCellSerialised*(59+n_a_v)+i] ) / 2.0 / volumeH;
+          }
         }
-      }
 
-      const int cellSerialised  = peano4::utils::dLinearised(currentCell, patchSize + 2*overlap);
-      
-      double Psi4[2]={0,0};
-      double currentPosition[3]; 
-      for (int d=0; d<3; d++) currentPosition[d]=marker.getOffset()(d)+(cell(d)+0.5)*volumeH;
-      Psi4Calc(Psi4, oldQWithHalo+cellSerialised*(59+n_a_v), gradQ, currentPosition);
-      oldQWithHalo[cellSerialised*(59+n_a_v)+59+0]=-3;//re part of psi4
-      oldQWithHalo[cellSerialised*(59+n_a_v)+59+1]=+5;//im part of psi4
-    }   
+        const int cellSerialised  = peano4::utils::dLinearised(currentCell, patchSize + 2*overlap);
+        
+        double Psi4[2]={0,0};
+        double currentPosition[3]; 
+        for (int d=0; d<3; d++) currentPosition[d]=marker.getOffset()(d)+(cell(d)+0.5)*volumeH;
+        Psi4Calc(Psi4, oldQWithHalo+cellSerialised*(59+n_a_v), gradQ, currentPosition);
+        ::exahype2::enumerator::AoSLexicographicEnumerator enumeratorWithAuxiliaryVariables   ( 1, 3, 0, 59, n_a_v);
+        fineGridCellFiniteVolumeCCZ4Q.value[ enumeratorWithAuxiliaryVariables(0,cell,59+0) ] = gradQ[0]; //placeholder
+        fineGridCellFiniteVolumeCCZ4Q.value[ enumeratorWithAuxiliaryVariables(0,cell,59+1) ] = currentPosition[0]; //placeholder
+      }  
+    } 
     """
 
         self.create_data_structures()
