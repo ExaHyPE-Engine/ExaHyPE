@@ -1,7 +1,6 @@
 #include "LoopBody.h"
 #include "exahype2/fd/FD_Helper.cpph"
 
-
 void exahype2::fd::reduceMaxEigenvalue_patchwise_functors(
   ::exahype2::CellData&   patchData,
   int                     numberOfGridCellsPerPatchPerAxis,
@@ -9,7 +8,7 @@ void exahype2::fd::reduceMaxEigenvalue_patchwise_functors(
   int                     auxiliaryVariables,
   MaxEigenvalue           maxEigenvalue
 ) {
-  exahype2::enumerator::AoSLexicographicEnumerator QOutEnumerator(1,numberOfGridCellsPerPatchPerAxis,0,       unknowns,auxiliaryVariables);
+  exahype2::enumerator::AoSLexicographicEnumerator QOutEnumerator(1, numberOfGridCellsPerPatchPerAxis, 0, unknowns, auxiliaryVariables);
 
   for (int patchIndex=0; patchIndex<patchData.numberOfCells; patchIndex++) {
     double newMaxEigenvalue = 0.0;
@@ -37,5 +36,4 @@ void exahype2::fd::reduceMaxEigenvalue_patchwise_functors(
     otterLoopEnd();
     patchData.maxEigenvalue[patchIndex] = newMaxEigenvalue;
   }
-
 }

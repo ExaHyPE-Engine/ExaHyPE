@@ -16,12 +16,6 @@ namespace exahype2 {
   namespace fd {
       constexpr int PickAllEntriesFromOutputVector = -1;
 
-      /**
-       * ## Modifiers
-       *
-       * I need this static keyword to avoid multiple definition errors in the
-       * linker. No clue why.
-       */
       void reduceMaxEigenvalue_patchwise_functors(
         ::exahype2::CellData&   patchData,
         int                     numberOfGridCellsPerPatchPerAxis,
@@ -29,7 +23,6 @@ namespace exahype2 {
         int                     auxiliaryVariables,
         MaxEigenvalue           maxEigenvalue
       );
-
 
       namespace internal {
         #if defined(SharedOMP) and ((!defined(__INTEL_LLVM_COMPILER) and !defined(__clang__)) or !defined(GPUOffloadingOMP))
@@ -52,7 +45,6 @@ namespace exahype2 {
         #pragma omp end declare target
         #endif
 
-
         /**
          * The complicated way to write =0.
          */
@@ -74,7 +66,6 @@ namespace exahype2 {
         #pragma omp end declare target
         #endif
 
-
         /**
          * Copy previous solution over into new time step and add source term
          *
@@ -91,8 +82,7 @@ namespace exahype2 {
          * variables that you use to compute some metrics, ... They are not
          * evolved as part of the PDE. As the source term affects only the PDE
          * variables, we copy these entries in Q over and add the source term 
-	 * contribution, while the auxilibary parameters remain plain copies.
-         *
+         * contribution, while the auxilibary parameters remain plain copies.
          *
          * No SIMD declaration here, as we can't SIMDise over functors anyway.
          *
@@ -113,7 +103,6 @@ namespace exahype2 {
           const QOutEnumeratorType&                    QOutEnumerator
         ) InlineMethod;
 
-
         template <class QOutEnumeratorType>
         static double reduceMaxEigenvalue_LoopBody(
           const double* __restrict__                   QOut,
@@ -130,6 +119,4 @@ namespace exahype2 {
     }
 }
 
-
 #include "LoopBody.cpph"
-

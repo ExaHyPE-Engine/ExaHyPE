@@ -3,9 +3,6 @@
 #include "exahype2/fd/PatchUtils.h"
 #include <algorithm>    // std::find
 #include <vector>
-//this is the original version
-
-
 
 template <class QInEnumeratorType, class QOutEnumeratorType>
 void exahype2::fd::fd4::internal::computeDifferentialSourceTerm_LoopBody(
