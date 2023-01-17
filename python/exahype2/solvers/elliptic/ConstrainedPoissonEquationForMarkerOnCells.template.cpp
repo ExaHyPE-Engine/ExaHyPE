@@ -84,37 +84,63 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::computeNewMarkerState(
   const peano4::datamanagement::FaceEnumerator<benchmarks::exahype2::euler::sphericalaccretionupscaling::facedata::{{MARKER}}>&  faceMarker
 ) {
   bool cellHoldsBnotA              = false;
-//  bool neighbourHoldsBnotA         = false;
   bool cellHoldsBdeterminesA       = false;
-//  bool neighbourHoldsBdeterminesA  = false;
   bool cellHoldsAdeterminesB       = false;
-//  bool neighbourHoldsAdeterminesB  = false;
   bool cellHoldsAnotB              = false;
+  
+  bool oneNeighbourHoldsBnotA         = false;
+  bool oneNeighbourHoldsBdeterminesA  = false;
+  bool oneNeighbourHoldsAdeterminesB  = false;
+  bool oneNeighbourHoldsAnotB         = false;
+  
+  auto holdsBnotA = [=](double markerValue) -> bool {
+    return markerValue > MaxThreshold;
+  };
+  auto holdsBdeterminesA = [=](double markerValue) -> bool {
+    return not holdsBnotA(markerValue) and cellMarker.getValue() > 0.5*MaxThreshold+0.5*MinThreshold;
+  };
+  auto holdsAdeterminesB = [=](double markerValue) -> bool {
+    return not holdsBnotA(markerValue) and not holdsBdeterminesA(markerValue) and cellMarker.getValue() > MinThreshold;
+  };
+  auto holdsAnotB = [=](double markerValue) -> bool {
+    return not holdsBnotA(markerValue) and not holdsBdeterminesA(markerValue) and not holdsAdeterminesB(markerValue);
+  };
 
-  cellHoldsBnotA        = cellMarker.getValue() > MaxThreshold;
-  cellHoldsBdeterminesA = not cellHoldsBnotA and cellMarker.getValue() > 0.5*MaxThreshold+0.5*MinThreshold;
-  cellHoldsAdeterminesB = not cellHoldsBnotA and not cellHoldsBdeterminesA and cellMarker.getValue() > MinThreshold;
-  cellHoldsAnotB        = not cellHoldsBnotA and not cellHoldsBdeterminesA and not cellHoldsAdeterminesB;
+  cellHoldsBnotA        = holdsBnotA(cellMarker.getValue());
+  cellHoldsBdeterminesA = holdsBdeterminesA(cellMarker.getValue());
+  cellHoldsAdeterminesB = holdsAdeterminesB(cellMarker.getValue());
+  cellHoldsAnotB        = holdsAnotB(cellMarker.getValue());
 
-/*
   for (int d=0; d<Dimensions; d++) {
     double leftNeighbour  = 2.0 * (faceMarker(d).getOldAverage()            - 0.5 * cellMarker.getValue());
     double rightNeighbour = 2.0 * (faceMarker(d+Dimensions).getOldAverage() - 0.5 * cellMarker.getValue());
 
-    neighbourHoldsBnotA |= leftNeighbour  > MaxThreshold;
-    neighbourHoldsBnotA |= rightNeighbour > MaxThreshold;
+    oneNeighbourHoldsBnotA |= holdsBnotA(leftNeighbour);
+    oneNeighbourHoldsBnotA |= holdsBnotA(rightNeighbour);
 
-    neighbourHoldsBdeterminesA |= leftNeighbour  > 0.5*MaxThreshold+0.5*MinThreshold;
-    neighbourHoldsBdeterminesA |= rightNeighbour > 0.5*MaxThreshold+0.5*MinThreshold;
+    oneNeighbourHoldsBdeterminesA |= holdsBdeterminesA(leftNeighbour);
+    oneNeighbourHoldsBdeterminesA |= holdsBdeterminesA(rightNeighbour);
 
-    neighbourHoldsAdeterminesB |= leftNeighbour  > MinThreshold;
-    neighbourHoldsAdeterminesB |= rightNeighbour > MinThreshold;
+    oneNeighbourHoldsAdeterminesB |= holdsAdeterminesB(leftNeighbour);
+    oneNeighbourHoldsAdeterminesB |= holdsAdeterminesB(rightNeighbour);
+
+    oneNeighbourHoldsAnotB        |= holdsAnotB(leftNeighbour);
+    oneNeighbourHoldsAnotB        |= holdsAnotB(rightNeighbour);
   }
 
   // "lift" current state
-  cellHoldsBdeterminesA |= neighbourHoldsBnotA;
-  cellHoldsAdeterminesB |= neighbourHoldsBdeterminesA;
-*/
+  if ( cellHoldsAnotB and oneNeighbourHoldsBnotA ) {
+    cellHoldsAnotB        = false;
+    cellHoldsBdeterminesA = true;
+  }
+  else if ( cellHoldsAdeterminesB and oneNeighbourHoldsBnotA ) {
+    cellHoldsAdeterminesB = false;
+    cellHoldsBdeterminesA = true;
+  }
+  else if ( cellHoldsAnotB and oneNeighbourHoldsBdeterminesA ) {
+    cellHoldsAnotB        = false;
+    cellHoldsAdeterminesB = true;
+  }
 
   benchmarks::exahype2::euler::sphericalaccretionupscaling::celldata::{{MARKER}}::Marker newMarker =
     benchmarks::exahype2::euler::sphericalaccretionupscaling::celldata::{{MARKER}}::Marker::AnotB;
@@ -124,9 +150,9 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::computeNewMarkerState(
     cellHoldsBnotA
     and
     (
-      newMarker == benchmarks::exahype2::euler::sphericalaccretionupscaling::celldata::{{MARKER}}::Marker::AnotB
+      cellMarker.getMarker() == benchmarks::exahype2::euler::sphericalaccretionupscaling::celldata::{{MARKER}}::Marker::AnotB
       or
-      newMarker == benchmarks::exahype2::euler::sphericalaccretionupscaling::celldata::{{MARKER}}::Marker::AdeterminesB
+      cellMarker.getMarker() == benchmarks::exahype2::euler::sphericalaccretionupscaling::celldata::{{MARKER}}::Marker::AdeterminesB
     )
   ) {
     newMarker = benchmarks::exahype2::euler::sphericalaccretionupscaling::celldata::{{MARKER}}::Marker::BdeterminesA;
@@ -134,14 +160,14 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::computeNewMarkerState(
   else if (
     cellHoldsBdeterminesA
     and
-    newMarker == benchmarks::exahype2::euler::sphericalaccretionupscaling::celldata::{{MARKER}}::Marker::AnotB
+    cellMarker.getMarker() == benchmarks::exahype2::euler::sphericalaccretionupscaling::celldata::{{MARKER}}::Marker::AnotB
   ) {
     newMarker = benchmarks::exahype2::euler::sphericalaccretionupscaling::celldata::{{MARKER}}::Marker::AdeterminesB;
   }
   else if (
     cellHoldsAdeterminesB
     and
-    newMarker == benchmarks::exahype2::euler::sphericalaccretionupscaling::celldata::{{MARKER}}::Marker::BnotA
+    cellMarker.getMarker() == benchmarks::exahype2::euler::sphericalaccretionupscaling::celldata::{{MARKER}}::Marker::BnotA
   ) {
     newMarker = benchmarks::exahype2::euler::sphericalaccretionupscaling::celldata::{{MARKER}}::Marker::BdeterminesA;
   }
@@ -149,9 +175,9 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::computeNewMarkerState(
     cellHoldsAnotB
     and
     (
-      newMarker == benchmarks::exahype2::euler::sphericalaccretionupscaling::celldata::{{MARKER}}::Marker::BnotA
+      cellMarker.getMarker() == benchmarks::exahype2::euler::sphericalaccretionupscaling::celldata::{{MARKER}}::Marker::BnotA
       or
-      newMarker == benchmarks::exahype2::euler::sphericalaccretionupscaling::celldata::{{MARKER}}::Marker::BdeterminesA
+      cellMarker.getMarker() == benchmarks::exahype2::euler::sphericalaccretionupscaling::celldata::{{MARKER}}::Marker::BdeterminesA
     )
   ) {
     newMarker = benchmarks::exahype2::euler::sphericalaccretionupscaling::celldata::{{MARKER}}::Marker::AdeterminesB;
@@ -166,56 +192,6 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::computeNewMarkerState(
     newMarker = benchmarks::exahype2::euler::sphericalaccretionupscaling::celldata::{{MARKER}}::Marker::AdeterminesB;
   }
 
-  /*
-  const bool AhadBeenStoredBefore =
-    cellMarker.getMarker() == benchmarks::exahype2::euler::sphericalaccretionupscaling::celldata::{{MARKER}}::Marker::AnotB
-    or
-    cellMarker.getMarker() == benchmarks::exahype2::euler::sphericalaccretionupscaling::celldata::{{MARKER}}::Marker::AdeterminesB;
-
-  const bool BhadBeenStoredBefore =
-    cellMarker.getMarker() == benchmarks::exahype2::euler::sphericalaccretionupscaling::celldata::{{MARKER}}::Marker::BnotA
-    or
-    cellMarker.getMarker() == benchmarks::exahype2::euler::sphericalaccretionupscaling::celldata::{{MARKER}}::Marker::BdeterminesA;
-
-  if (
-    newMarker == benchmarks::exahype2::euler::sphericalaccretionupscaling::celldata::{{MARKER}}::Marker::AnotB
-    or
-    newMarker == benchmarks::exahype2::euler::sphericalaccretionupscaling::celldata::{{MARKER}}::Marker::AdeterminesB
-  ) {
-    cellMarker.setTransitionA(
-      AhadBeenStoredBefore
-        ? benchmarks::exahype2::euler::sphericalaccretionupscaling::celldata::{{MARKER}}::TransitionA::LoadStore
-        : benchmarks::exahype2::euler::sphericalaccretionupscaling::celldata::{{MARKER}}::TransitionA::Store
-    );
-  }
-  else {
-    cellMarker.setTransitionA(
-      AhadBeenStoredBefore
-        ? benchmarks::exahype2::euler::sphericalaccretionupscaling::celldata::{{MARKER}}::TransitionA::Load
-        : benchmarks::exahype2::euler::sphericalaccretionupscaling::celldata::{{MARKER}}::TransitionA::None
-    );
-  }
-
-  if (
-    newMarker == benchmarks::exahype2::euler::sphericalaccretionupscaling::celldata::{{MARKER}}::Marker::BnotA
-    or
-    newMarker == benchmarks::exahype2::euler::sphericalaccretionupscaling::celldata::{{MARKER}}::Marker::BdeterminesA
-  ) {
-    cellMarker.setTransitionB(
-      BhadBeenStoredBefore
-        ? benchmarks::exahype2::euler::sphericalaccretionupscaling::celldata::{{MARKER}}::TransitionB::LoadStore
-        : benchmarks::exahype2::euler::sphericalaccretionupscaling::celldata::{{MARKER}}::TransitionB::Store
-    );
-  }
-  else {
-    cellMarker.setTransitionB(
-      BhadBeenStoredBefore
-        ? benchmarks::exahype2::euler::sphericalaccretionupscaling::celldata::{{MARKER}}::TransitionB::Load
-        : benchmarks::exahype2::euler::sphericalaccretionupscaling::celldata::{{MARKER}}::TransitionB::None
-    );
-  }
-  */
-
   cellMarker.setMarker( newMarker );
 }
 
@@ -223,22 +199,51 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::computeNewMarkerState(
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::constrainValue( benchmarks::exahype2::euler::sphericalaccretionupscaling::celldata::{{MARKER}}& marker ) {
   const double Tolerance = 0.01;
 
+  //  marker.setValue( std::min(marker.getValue(), MaxValue) );
+  //  marker.setValue( std::max(marker.getValue(), MinValue) );
+
   switch (marker.getMarker()) {
     case benchmarks::exahype2::euler::sphericalaccretionupscaling::celldata::{{MARKER}}::Marker::BnotA:
-      marker.setValue( std::min(marker.getValue(), MaxValue) );
-      marker.setValue( std::max(marker.getValue(), MaxThreshold * (1.0+Tolerance) ) );
+      {
+        marker.setValue( std::min(marker.getValue(), MaxValue) );
+        const double LowerThreshold = MaxThreshold * (1.0+Tolerance);
+        if ( marker.getValue() < LowerThreshold ) {
+          marker.setValue( 0.5 * marker.getValue() + 0.5 * LowerThreshold );
+        }
+      }
       break;
     case benchmarks::exahype2::euler::sphericalaccretionupscaling::celldata::{{MARKER}}::Marker::BdeterminesA:
-      marker.setValue( std::min(marker.getValue(), MaxThreshold * (1.0-Tolerance) ) );
-      marker.setValue( std::max(marker.getValue(), (0.5*MinThreshold+0.5*MaxThreshold)*(1.0+Tolerance) ) );
+      {
+        const double LowerThreshold = (0.5*MinThreshold+0.5*MaxThreshold)*(1.0+Tolerance);
+        if ( marker.getValue() < LowerThreshold ) {
+          marker.setValue( 0.5 * marker.getValue() + 0.5 * LowerThreshold );
+        }
+        const double UpperThreshold = MaxThreshold * (1.0-Tolerance);
+        if ( marker.getValue() > UpperThreshold ) {
+          marker.setValue( 0.5 * marker.getValue() + 0.5 * UpperThreshold );
+        }
+      }
       break;
     case benchmarks::exahype2::euler::sphericalaccretionupscaling::celldata::{{MARKER}}::Marker::AdeterminesB:
-      marker.setValue( std::min(marker.getValue(), (0.5*MinThreshold+0.5*MaxThreshold)*(1.0-Tolerance) ) );
-      marker.setValue( std::min(marker.getValue(), MinThreshold * (1.0+Tolerance) ) );
+      {
+        const double LowerThreshold = MinThreshold * (1.0+Tolerance);
+        if ( marker.getValue() < LowerThreshold ) {
+          marker.setValue( 0.5 * marker.getValue() + 0.5 * LowerThreshold );
+        }
+        const double UpperThreshold = (0.5*MinThreshold+0.5*MaxThreshold)*(1.0-Tolerance);
+        if ( marker.getValue() > UpperThreshold ) {
+          marker.setValue( 0.5 * marker.getValue() + 0.5 * UpperThreshold );
+        }
+      }
       break;
     case benchmarks::exahype2::euler::sphericalaccretionupscaling::celldata::{{MARKER}}::Marker::AnotB:
-      marker.setValue( std::min(marker.getValue(), MinThreshold * (1.0-Tolerance) ) );
-      marker.setValue( std::max(marker.getValue(), MinValue) );
+      {
+        const double UpperThreshold = MinThreshold * (1.0-Tolerance);
+        if ( marker.getValue() > UpperThreshold ) {
+          marker.setValue( 0.5 * marker.getValue() + 0.5 * UpperThreshold );
+        }
+        marker.setValue( std::max(marker.getValue(), MinValue) );
+      }
       break;
   }
 }

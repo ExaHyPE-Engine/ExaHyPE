@@ -23,7 +23,7 @@ import peano4.datamodel.DaStGen2
 
 class ConstrainedPoissonEquationForMarkerOnCells(object):
   """ 
-    A very simple Poisson equation system solver
+    Use Finite Differences Poisson equation system solver to guide cell labels
 
     The most popular application of this solver is to guide limiters: 
     Some codes need to know where to solve their PDE with an alternative 
@@ -60,8 +60,12 @@ class ConstrainedPoissonEquationForMarkerOnCells(object):
     the areas where @f$ u=u_{\text{max}} @f$ is manually set/enforced do not 
     change.
     
-    @see create_action_sets() for the exact mechanics how the actual rules
-      are computed.
+    The solver works with a constant right-hand side and is defined over two
+    attributes per cell: There's the actual value (u in the example above)
+    and a marker which switches the Jacobi smoothing on and off per cell.
+    In cells where we fix the value, we toggle the marker so Jacobi updates
+    are disabled.
+
     
     ## Usage
         
@@ -81,8 +85,8 @@ class ConstrainedPoissonEquationForMarkerOnCells(object):
                right_hand_side = -25.0, 
                min_value = 0.0, 
                max_value = 1.0, 
-               min_threshold = 0.8,
-               max_threshold = 0.9,
+               min_threshold = 0.4,
+               max_threshold = 0.6,
                plot = False):
     """
     
@@ -157,10 +161,9 @@ Relaxation coefficient: {}
     Variants = ["AnotB","AdeterminesB","BdeterminesA","BnotA"]
     
     self._cell_data_model = peano4.datamodel.DaStGen2( self._unknown_identifier() )
+    self._cell_data_model.data.add_attribute(dastgen2.attributes.Boolean("Invariant") )
     self._cell_data_model.data.add_attribute(dastgen2.attributes.Double("Value") )
     self._cell_data_model.data.add_attribute(dastgen2.attributes.Enumeration( name="Marker",      variants=Variants ) )
-    #self._cell_data_model.data.add_attribute(dastgen2.attributes.Enumeration( name="TransitionA", variants=[ "LoadStore", "Load", "Store", "None" ] ) )
-    #self._cell_data_model.data.add_attribute(dastgen2.attributes.Enumeration( name="TransitionB", variants=[ "LoadStore", "Load", "Store", "None" ] ) )
         
     self._face_data_model = peano4.toolbox.multigrid.cellbased.ScalarJacobiWithRediscretisation.construct_face_helper_data(self._cell_data_model)
     
@@ -201,7 +204,7 @@ Relaxation coefficient: {}
       rhs_expr                = self._right_hand_side,
       unknown_setter          = "setValue",
       unknown_getter          = "getValue",
-      guard                   = "repositories::isLastGridSweepOfTimeStep()"
+      guard                   = "repositories::isLastGridSweepOfTimeStep() and not fineGridCellAlphaPoissonMarker.getInvariant()"
       )
     
     self._action_set_smoother.additional_includes = self._get_default_includes()
@@ -300,9 +303,9 @@ Relaxation coefficient: {}
       plotter_action_set = peano4.toolbox.PlotCellDataInPeanoBlockFormat( 
         filename     = output_path + "marker-" + self._name, 
         cell_unknown = self._cell_data_model,
-        getter       = "{getValue(),static_cast<double>(getMarker())}",
-        number_of_unknows_per_cell = 2,
-        description  = "value,marker(AnotB,AdeterminesB,BdeterminesA,BnotA)",
+        getter       = "defined below",
+        number_of_unknows_per_cell = 3,
+        description  = "value,marker(AnotB,AdeterminesB,BdeterminesA,BnotA),invariant",
         time_stamp_evaluation="0.5*(repositories::getMinTimeStamp()+repositories::getMaxTimeStamp())",
         additional_includes="""
 #include "repositories/SolverRepository.h"       
@@ -316,7 +319,8 @@ Relaxation coefficient: {}
 
   double data[] = {
                         fineGridCell{{CELL_UNKNOWN_NAME}}.getValue(),
-    static_cast<double>(fineGridCell{{CELL_UNKNOWN_NAME}}.getMarker())
+    static_cast<double>(fineGridCell{{CELL_UNKNOWN_NAME}}.getMarker()),
+    static_cast<double>(fineGridCell{{CELL_UNKNOWN_NAME}}.getInvariant()),
   };
 
   _dataWriter->plotCell( cellIndex, data );

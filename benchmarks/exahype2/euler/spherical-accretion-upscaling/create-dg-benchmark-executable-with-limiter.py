@@ -205,6 +205,10 @@ if ( not repositories::""" + fv_solver.get_name_of_global_instance() + """.patch
   repositories::""" + fv_solver.get_name_of_global_instance() + """.getMinTimeStepSize()
 )) {
   fineGridCell{{CELL_NAME}}.setValue(1.0);
+  fineGridCell{{CELL_NAME}}.setInvariant(true);
+}
+else {
+  fineGridCell{{CELL_NAME}}.setInvariant(false);
 }
 """
 
