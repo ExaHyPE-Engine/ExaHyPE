@@ -159,8 +159,8 @@ Relaxation coefficient: {}
     self._cell_data_model = peano4.datamodel.DaStGen2( self._unknown_identifier() )
     self._cell_data_model.data.add_attribute(dastgen2.attributes.Double("Value") )
     self._cell_data_model.data.add_attribute(dastgen2.attributes.Enumeration( name="Marker",      variants=Variants ) )
-    self._cell_data_model.data.add_attribute(dastgen2.attributes.Enumeration( name="TransitionA", variants=[ "LoadStore", "Load", "Store", "None" ] ) )
-    self._cell_data_model.data.add_attribute(dastgen2.attributes.Enumeration( name="TransitionB", variants=[ "LoadStore", "Load", "Store", "None" ] ) )
+    #self._cell_data_model.data.add_attribute(dastgen2.attributes.Enumeration( name="TransitionA", variants=[ "LoadStore", "Load", "Store", "None" ] ) )
+    #self._cell_data_model.data.add_attribute(dastgen2.attributes.Enumeration( name="TransitionB", variants=[ "LoadStore", "Load", "Store", "None" ] ) )
         
     self._face_data_model = peano4.toolbox.multigrid.cellbased.ScalarJacobiWithRediscretisation.construct_face_helper_data(self._cell_data_model)
     
@@ -300,9 +300,9 @@ Relaxation coefficient: {}
       plotter_action_set = peano4.toolbox.PlotCellDataInPeanoBlockFormat( 
         filename     = output_path + "marker-" + self._name, 
         cell_unknown = self._cell_data_model,
-        getter       = "{getValue(),static_cast<double>(getMarker()),static_cast<double>(getTransitionA()),static_cast<double>(getTransitionB())}",
-        number_of_unknows_per_cell = 4,
-        description  = "value,marker(AnotB,AdeterminesB,BdeterminesA,BnotA),transition-A(LoadStore,Load,Store,None),transition-B(LoadStore,Load,Store,None)",
+        getter       = "{getValue(),static_cast<double>(getMarker())}",
+        number_of_unknows_per_cell = 2,
+        description  = "value,marker(AnotB,AdeterminesB,BdeterminesA,BnotA)",
         time_stamp_evaluation="0.5*(repositories::getMinTimeStamp()+repositories::getMaxTimeStamp())",
         additional_includes="""
 #include "repositories/SolverRepository.h"       
@@ -316,9 +316,7 @@ Relaxation coefficient: {}
 
   double data[] = {
                         fineGridCell{{CELL_UNKNOWN_NAME}}.getValue(),
-    static_cast<double>(fineGridCell{{CELL_UNKNOWN_NAME}}.getMarker()),
-    static_cast<double>(fineGridCell{{CELL_UNKNOWN_NAME}}.getTransitionA()),
-    static_cast<double>(fineGridCell{{CELL_UNKNOWN_NAME}}.getTransitionB())
+    static_cast<double>(fineGridCell{{CELL_UNKNOWN_NAME}}.getMarker())
   };
 
   _dataWriter->plotCell( cellIndex, data );

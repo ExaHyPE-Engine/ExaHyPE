@@ -138,13 +138,13 @@ class MyDGSolver(exahype2.solvers.rkdg.rusanov.GlobalAdaptiveTimeStepWithEnclave
     self._current_time_step.generator.load_persistent_condition = """
 (""" + self._current_time_step.generator.load_persistent_condition + """
       and
-      (alpha.getTransitionA()==celldata::AlphaPoissonMarker::TransitionA::LoadStore or alpha.getTransitionA()==celldata::AlphaPoissonMarker::TransitionA::Load)
+      (alpha.getMarker()==celldata::AlphaPoissonMarker::Marker::AnotB or alpha.getMarker()==celldata::AlphaPoissonMarker::Marker::AdeterminesB)
     )
 """
     self._current_time_step.generator.store_persistent_condition = """
 (""" + self._current_time_step.generator.store_persistent_condition + """
       and
-      (alpha.getTransitionA()==celldata::AlphaPoissonMarker::TransitionA::LoadStore or alpha.getTransitionA()==celldata::AlphaPoissonMarker::TransitionA::Store)
+      (alpha.getMarker()==celldata::AlphaPoissonMarker::Marker::AnotB or alpha.getMarker()==celldata::AlphaPoissonMarker::Marker::AdeterminesB)
     )
 """
     
