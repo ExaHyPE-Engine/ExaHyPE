@@ -83,19 +83,6 @@ void exahype2::fd::fd4::timeStep_patchwise_heap_functors(
           );
           otterLoopIterationEnd();
         }
-        /*for (int unknown=unknowns; unknown<unknowns+auxiliaryVariables; unknown++) {
-          otterLoopIterationBegin();
-          ::exahype2::fd::internal::copySolution_LoopBody(
-            patchData.QIn[patchIndex],
-            QInEnumerator,
-            patchIndex,
-            gridCellIndex3d(x,y,z),
-            unknown,
-            patchData.QOut[patchIndex],
-            QOutEnumerator
-          );
-          otterLoopIterationEnd();
-        }*/
       }
       otterLoopEnd();
     }
@@ -133,19 +120,6 @@ void exahype2::fd::fd4::timeStep_patchwise_heap_functors(
           );
           otterLoopIterationEnd();
         }
-        /*for (int unknown=unknowns; unknown<unknowns+auxiliaryVariables; unknown++) {
-          otterLoopIterationBegin();
-          ::exahype2::fd::internal::copySolution_LoopBody(
-            patchData.QIn[patchIndex],
-            QInEnumerator,
-            patchIndex,
-            gridCellIndex2d(x,y),
-            unknown,
-            patchData.QOut[patchIndex],
-            QOutEnumerator
-          );
-          otterLoopIterationEnd();
-        }*/
       }
       otterLoopEnd();
     }
