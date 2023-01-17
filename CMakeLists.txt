@@ -134,6 +134,21 @@ list(APPEND TOOLCHAINS " " "intel" "nvidia" "scorep" "chrome" "gnu")
 set(WITH_TOOLCHAIN "" CACHE STRING "${TOOLCHAINS}")
 set_property(CACHE WITH_TOOLCHAIN PROPERTY STRINGS ${TOOLCHAINS})
 
+if(WITH_TOOLCHAIN STREQUAL "scorep")
+  find_library(PAPI libpapi.a papi)
+  find_library(CUBE4W libcube4w.a cube4w)
+  target_link_libraries(project_options INTERFACE ${PAPI})
+  target_link_libraries(project_options INTERFACE ${CUBE4W})
+  target_link_directories(project_options INTERFACE ${LD_LIBRARY_PATH})
+  target_link_libraries(project_options INTERFACE ${SCOREP_LIBRARIES})
+  target_compile_options(project_options INTERFACE ${SCOREP_COMPILE_FLAGS})
+  target_link_options(project_options INTERFACE ${SCOREP_LINK_OPTION})
+elseif(WITH_TOOLCHAIN STREQUAL "intel")
+  target_link_libraries(project_options INTERFACE VT::VT)
+  target_include_directories(project_options SYSTEM INTERFACE ${VT_INCLUDE_DIRS})
+  target_link_directories(project_options INTERFACE ${VT_LIBRARIES_DIR})
+endif()
+
 list(APPEND MULTICORES_BACKENDS
   " "
   "cpp"
@@ -150,7 +165,9 @@ endif()
 if(WITH_MULTITHREADING STREQUAL "omp")
   find_package(OpenMP REQUIRED)
   target_link_libraries(project_options INTERFACE OpenMP::OpenMP_CXX)
-  #target_link_libraries(project_options INTERFACE OpenMP::OpenMP_Fortran)
+  if(CMAKE_Fortran_COMPILER)
+    target_link_libraries(project_options INTERFACE OpenMP::OpenMP_Fortran)
+  endif()
 elseif(WITH_MULTITHREADING STREQUAL "tbb")
   find_package(TBB REQUIRED)
   target_link_libraries(project_options INTERFACE TBB::tbb)
@@ -263,11 +280,13 @@ option(ENABLE_BLOCKSTRUCTURED "Enable the blockstructured toolbox" OFF)
 if(WITH_MPI)
   find_package(MPI REQUIRED)
   message(STATUS "Run: ${MPIEXEC} ${MPIEXEC_NUMPROC_FLAG} ${MPIEXEC_MAX_NUMPROCS} ${MPIEXEC_PREFLAGS} EXECUTABLE ${MPIEXEC_POSTFLAGS} ARGS")
-  #include_directories(SYSTEM ${MPI_INCLUDE_PATH})
+  include_directories(SYSTEM ${MPI_INCLUDE_PATH})
   target_compile_definitions(project_options INTERFACE OMPI_SKIP_MPICXX) # To prevent compiler warnings
   target_compile_definitions(project_options INTERFACE Parallel)
   target_link_libraries(project_options INTERFACE MPI::MPI_CXX)
-  target_link_libraries(project_options INTERFACE MPI::MPI_Fortran)
+  if(CMAKE_Fortran_COMPILER)
+    target_link_libraries(project_options INTERFACE MPI::MPI_Fortran)
+  endif()
 endif()
 
 if(WITH_OTTER)
@@ -284,22 +303,23 @@ if(ENABLE_SWIFT)
   target_compile_definitions(project_options INTERFACE UseSWIFT)
 endif()
 
-file(COPY "${PROJECT_SOURCE_DIR}/applications" DESTINATION "${CMAKE_BINARY_DIR}")
-file(COPY "${PROJECT_SOURCE_DIR}/benchmarks" DESTINATION "${CMAKE_BINARY_DIR}")
-file(COPY "${PROJECT_SOURCE_DIR}/python" DESTINATION "${CMAKE_BINARY_DIR}")
-
 file(TOUCH ${CMAKE_BINARY_DIR}/GeneratedSubdirectories.cmake)
 include(${CMAKE_BINARY_DIR}/GeneratedSubdirectories.cmake)
 set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS ${CMAKE_BINARY_DIR}/GeneratedSubdirectories.cmake)
 
-add_subdirectory(src)
-
 include(CMakePackageConfigHelpers)
 write_basic_package_version_file(
-    ${META_PROJECT_NAME}ConfigVersion.cmake
-    VERSION ${META_VERSION_REVISION}
-    COMPATIBILITY SameMajorVersion
+  ${META_PROJECT_NAME}ConfigVersion.cmake
+  VERSION ${META_VERSION_REVISION}
+  COMPATIBILITY SameMajorVersion
 )
+
+file(COPY "${PROJECT_SOURCE_DIR}/applications" DESTINATION "${CMAKE_BINARY_DIR}")
+file(COPY "${PROJECT_SOURCE_DIR}/benchmarks" DESTINATION "${CMAKE_BINARY_DIR}")
+file(COPY "${PROJECT_SOURCE_DIR}/python" DESTINATION "${CMAKE_BINARY_DIR}")
+file(COPY "${PROJECT_SOURCE_DIR}/.continuous_integration/jupyterlab.sh" DESTINATION "${CMAKE_BINARY_DIR}")
+
+add_subdirectory(src)
 
 display_separator("Project Configuration Summary")
 

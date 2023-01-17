@@ -5,8 +5,8 @@ configure_file(
 
 add_subdirectory(tarch)
 add_subdirectory(peano4)
-add_subdirectory(toolbox)
 add_subdirectory(convert)
+add_subdirectory(toolbox)
 if(ENABLE_EXAHYPE)
   add_subdirectory(exahype2)
 endif()
