@@ -1481,6 +1481,9 @@ void {{FULL_QUALIFIED_CLASSNAME}}::receiveAndMergeFace(int position, int fromSta
   TemplateReceiveAndMergeVertex_ReceiveAndMergeCalls = """
   {
     peano4::datamanagement::VertexMarker  marker(event,position);
+    {{full_qualified_type}}& data = repositories::DataRepository::_{{logical_type_name}}Stack.getForPush( 
+      repositories::DataRepository::DataKey(_spacetreeId,peano4::grid::PeanoCurve::CallStack)
+    )->top(TwoPowerD-1-position);
 
     if ( 
       data.loadPersistently(
@@ -1501,10 +1504,6 @@ void {{FULL_QUALIFIED_CLASSNAME}}::receiveAndMergeFace(int position, int fromSta
       auto   incomingData = repositories::DataRepository::_{{logical_type_name}}Stack.getForPop(
         _spacetreeId, fromStack
       )->pop();
-
-      {{full_qualified_type}}& data = repositories::DataRepository::_{{logical_type_name}}Stack.getForPush( 
-        repositories::DataRepository::DataKey(_spacetreeId,peano4::grid::PeanoCurve::CallStack)
-      )->top(TwoPowerD-1-position);
 
       logDebug( "receiveAndMergeVertex(...)", "merge " << incomingData.toString() << " into " << data.toString() );
 
