@@ -1,7 +1,6 @@
 // This file is part of the Peano project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
-#ifndef _TOOLBOX_PARTICLE_PARTICLE_FACTORY_
-#define _TOOLBOX_PARTICLE_PARTICLE_FACTORY_
+#pragma once
 
 
 #include <vector>
@@ -108,4 +107,3 @@ if ( not marker.isRefined() ) {
 #include "ParticleFactory.cpph"
 
 
-#endif

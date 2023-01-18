@@ -1,7 +1,6 @@
 // This file is part of the Peano project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
-#ifndef _TARCH_LOGGING_ITAC_LOGGER_H_
-#define _TARCH_LOGGING_ITAC_LOGGER_H_
+#pragma once
 
 
 #ifdef Parallel
@@ -187,4 +186,3 @@ class tarch::logging::ITACLogger {
     void close();
 };
 
-#endif

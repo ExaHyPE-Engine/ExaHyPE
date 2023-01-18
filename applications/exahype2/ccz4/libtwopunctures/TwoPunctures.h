@@ -1,6 +1,5 @@
 /* TwoPunctures:  File  "TwoPunctures.h"*/
-#ifndef __TWO_PUNCTURES_MAIN__
-#define __TWO_PUNCTURES_MAIN__
+#pragma once
 
 #include "libtwopunctures/TP_Utilities.h"
 #include "libtwopunctures/TP_Parameters.h"
@@ -176,4 +175,3 @@ public:
 
 } // namespace TP
 
-#endif /* __TWO_PUNCTURES_MAIN__ */

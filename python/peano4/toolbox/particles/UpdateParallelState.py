@@ -11,8 +11,13 @@ import jinja2
 
 class UpdateParallelState(ActionSet):
   """
-   Update the parallel state of particles
+   Update the parallel state of particles and keep stats of local particles
      
+   This operation should always been called after you've resorted the particles
+   due to position changes or alterations of the cut-off radii. The action set
+   is the only place which heavily uses the particles' parallel states. These 
+   states are not to be used anywhere else in the code.
+   
    
    ## Statistics 
      
@@ -26,50 +31,28 @@ class UpdateParallelState(ActionSet):
    We have two states per particle: local and virtual. In our data model, 
    particles are either local or virtual throughout 
    the mesh traversal, but they might change their position and 
-   consequently enter the regime local-to-virtual. As we solely update local 
-   particles, it can never happen that you have virtual-to-local. Such a 
-   transition would happen on another tree (where it is a local-to-virtual
-   transition from this tree's point of view) and then would be sent back 
-   as update.
+   consequently enter their state. Virtual particles can only fly in through
+   the boundary, while particles can leave the local domain (and hence become
+   virtual) by moving through the boundary. 
+
+   We recognise that we can throw away virtual particles after the sweep.
+   We assume that they are temporary copies from another rank which will
+   drop in again.
    
-   At the begin of a traversal, i.e. when we 
-   touch a particle for the first time, we set the new state to virtual. 
-   This happens via the template __Template_InitialiseParallelStatus. 
-   
-   When we leave a cell, i.e. after all cell-local operations have finished,
-   we run over all particles associated to its @f$ 2^d @f$ 
-   vertices and look if a particle's position x falls into a cell. If so,
-   we set the particle's state to local.
-   
-   If we touch a vertex for the last time, we run over its particles. If 
-   a particle has been local and still is local, all is fine. If a particle
-   is virtual and has been local, we know it has left the domain. We keep
-   it (as we have to tell the others that this particle might have moved 
-   over), but we flag it as virtual from hereon. If a particle has been
-   virtual and still is virtual, we delete it. These are particles that 
-   we have received from other trees to run our calculations, so they are 
-   remote copies. We should not keep such data and notably not distribute
-   it further.   
-   
-   ## Usage
-   
-   This action set is not idempotent, i.e. you have to merge it at most once
-   into your algorithmic step.
-   
-   Please add this action set as soon as possible to your code. This ensures
-   that the touchCellLastTime() is called as late as possible and likely 
-   takes any particle movement into account. In most codes, this action set
-   will be the second one used, while UpdateParticleGridAssociation is the 
-   first one.
-   
-   If a particle changes its position in touchVertexLastTime() and leaves
-   the current domain, we will not be able to spot this. We will need one
-   more grid sweep to get all the states consistent again. If you work 
-   with a parallel computer, I therefore recommend that you never check 
-   the particle state re its local or virtual flag. I recommend that you 
-   simply assume that the fact that a particle is within the local set is 
-   totally sufficient to update it.
-   
+   The new state analysis is very simple:
+   - We clear the flag in touchVertexFirstTime(), i.e. all the particles 
+     associated to a vertex are initially set to virtual. We actually 
+     clear the new flag which is a working field, whereas the real parallel
+     state is always the valid one.
+   - Within a cell, we mark all local particles within this cell as local.
+   - When we hit a vertex and its particles for the last time, we can 
+     analyse the particles' parallel state. If the new state still is 
+     virtual, we throw the particle away. Otherwise we keep it and make
+     the (real) parallel state equal to the new state. By comparing the 
+     parallel state which results from the previous grid sweeps and the new
+     one, we can keep statistics how many particles are local, how many 
+     have flown into the domain, and how many have left the domain,
+    
   """
   def __init__(self,particle_set):
     self._particle_set = particle_set
@@ -79,24 +62,17 @@ class UpdateParallelState(ActionSet):
 
 
   __Template_BeginTraversal = jinja2.Template("""
-  _numberOfLocalParticles = 0;
-  _numberOfVirtualParticles = 0;
-  _numberOfLeavingParticles = 0;
+  _numberOfRemainingLocalParticles = 0;
+  _numberOfIncomingLocalParticles  = 0;
+  _numberOfLeavingLocalParticles   = 0;
 """ )
 
 
   __Template_EndTraversal = jinja2.Template("""
-  vertexdata::{{PARTICLES_CONTAINER}}::updateParticleCountStatistics(
-    _numberOfLocalParticles,
-    _numberOfVirtualParticles
-  );
-  
-  logInfo( 
-    "endTraversal()",
-    "tree=" <<  _treeNumber <<
-    ", local particles=" << _numberOfLocalParticles << 
-    ", virtual particles=" << _numberOfVirtualParticles << 
-    ", leaving particles=" << _numberOfLeavingParticles
+  vertexdata::{{PARTICLES_CONTAINER}}::updateNumberOfLocalParticleStatistics(
+    _numberOfRemainingLocalParticles,
+    _numberOfIncomingLocalParticles,
+    _numberOfLeavingLocalParticles
   );
 """ )
 
@@ -111,7 +87,9 @@ class UpdateParallelState(ActionSet):
 // run over all adjacent vertices
 for (int i=0; i<TwoPowerD; i++) {
   for (auto* p: fineGridVertices{{PARTICLES_CONTAINER}}(i) ) {
-    if ( marker.isContained(p->getX()) ) {
+    if ( 
+      marker.isContained(p->getX(), toolbox::particles::relativeSpatialSortingTolerance(marker) * tarch::la::NUMERICAL_ZERO_DIFFERENCE )
+    ) {
       p->setNewParallelState( globaldata::{{PARTICLE}}::NewParallelState::Local );
     }
   }
@@ -119,70 +97,59 @@ for (int i=0; i<TwoPowerD; i++) {
 """)
 
 
-  
-  __Template_InitialiseParallelStatus = jinja2.Template("""
-  for (auto* p: fineGridVertex{{PARTICLES_CONTAINER}} ) {
-    p->setNewParallelState( globaldata::{{PARTICLE}}::NewParallelState::Virtual );
-  }
+  __Template_TouchVertexFirstTime = jinja2.Template("""
+// run over all adjacent vertices
+for (auto p: fineGridVertex{{PARTICLES_CONTAINER}} ) {
+  logDebug( "enterCell(...)", "Particle " << p->toString() << " is marked as local" );
+  p->setNewParallelState( globaldata::{{PARTICLE}}::NewParallelState::Virtual );
+}
 """)
 
 
-  """
-  
-  This postamble of the grid traversal plugs into touchVertexLastTime().
-   
-  """
-  __Template_DetermineNewParallelStatus = jinja2.Template("""
-    auto p = fineGridVertex{{PARTICLES_CONTAINER}}.begin();
-    while (p!=fineGridVertex{{PARTICLES_CONTAINER}}.end()) {
-      if ( 
-        (*p)->getParallelState()==globaldata::{{PARTICLE}}::ParallelState::Local
-        and 
-        (*p)->getNewParallelState()==globaldata::{{PARTICLE}}::NewParallelState::Virtual
-      ) {
-        logInfo( "touchVertexLastTime()", "local status from previous sweep not confirmed on tree " << _treeNumber << ". Particle " << (*p)->toString() << " has left domain. Keep for the time being as a virtual particle" );
-        (*p)->setParallelState( globaldata::{{PARTICLE}}::ParallelState::Virtual );
-        _numberOfLeavingParticles++;
-        p++;
-      }
-      else if ( 
-        (*p)->getParallelState()==globaldata::{{PARTICLE}}::ParallelState::Local
-        and 
-        (*p)->getNewParallelState()==globaldata::{{PARTICLE}}::NewParallelState::Local
-      ) {
-        logDebug( "touchVertexLastTime()", "local status confirmed on tree " << _treeNumber << ", i.e. particle " << (*p)->toString() << " remains local" );
-        _numberOfLocalParticles++;
-        p++;
-      }
-      else if ( 
-        (*p)->getParallelState()==globaldata::{{PARTICLE}}::ParallelState::Virtual
-        and 
-        (*p)->getNewParallelState()==globaldata::{{PARTICLE}}::NewParallelState::Virtual
-      ) {
-        logDebug( "touchVertexLastTime()", "virtual particle, i.e. from other tree. Delete local copy " << (*p)->toString() << " on tree " << _treeNumber );
-        _numberOfVirtualParticles++;
-        delete *p;
-        p = fineGridVertex{{PARTICLES_CONTAINER}}.erase(p);
-      }
-      else {
-        logDebug( 
-          "touchVertexLastTime()", 
-          "new particle " << (*p)->toString() << " had been originally labelled as virtual but now is confirmed as local on tree " << _treeNumber <<
-          ". This can happen throughout particle insertion or due to lifts and sieves"
-        );
-        (*p)->setParallelState( globaldata::{{PARTICLE}}::ParallelState::Local );
-        _numberOfLocalParticles++;
-        p++;
-      }
-    }
-    for (auto* p: fineGridVertex{{PARTICLES_CONTAINER}}) {
-      assertion3(
-        not (p->getParallelState()==globaldata::{{PARTICLE}}::ParallelState::Virtual and p->getNewParallelState()==globaldata::{{PARTICLE}}::NewParallelState::Local),
-        p->toString(),
-        marker.toString(),
-        _treeNumber
-      );
-    }
+  __Template_TouchVertexLastTime = jinja2.Template("""
+// run over all adjacent vertices
+auto p = fineGridVertex{{PARTICLES_CONTAINER}}.begin();
+while ( p!=fineGridVertex{{PARTICLES_CONTAINER}}.end() ) {
+  if ( 
+    (*p)->getParallelState()==globaldata::{{PARTICLE}}::ParallelState::Local 
+    and
+    (*p)->getNewParallelState()==globaldata::{{PARTICLE}}::NewParallelState::Local 
+  ) {
+    logDebug( "touchVertexLastTime(...)", "particle " << (*p)->toString() << " is local and remains local" );
+    _numberOfRemainingLocalParticles++;
+    (*p)->setParallelState( globaldata::{{PARTICLE}}::ParallelState::Local );
+    p++;
+  }
+  else if ( 
+    (*p)->getParallelState()==globaldata::{{PARTICLE}}::ParallelState::Virtual 
+    and
+    (*p)->getNewParallelState()==globaldata::{{PARTICLE}}::NewParallelState::Local 
+  ) {
+    logDebug( "touchVertexLastTime(...)", "particle " << (*p)->toString() << " was remote but now is local" );
+    _numberOfIncomingLocalParticles++;
+    (*p)->setParallelState( globaldata::{{PARTICLE}}::ParallelState::Local );
+    p++;
+  }
+  else if ( 
+    (*p)->getParallelState()==globaldata::{{PARTICLE}}::ParallelState::Local
+    and
+    (*p)->getNewParallelState()==globaldata::{{PARTICLE}}::NewParallelState::Virtual
+  ) {
+    logDebug( "touchVertexLastTime(...)", "particle " << (*p)->toString() << " was local but now is remote" );
+    _numberOfLeavingLocalParticles++;
+    delete *p;
+    p = fineGridVertex{{PARTICLES_CONTAINER}}.erase(p);
+  }
+  else if ( 
+    (*p)->getParallelState()==globaldata::{{PARTICLE}}::ParallelState::Virtual
+    and
+    (*p)->getNewParallelState()==globaldata::{{PARTICLE}}::NewParallelState::Virtual
+  ) {
+    logDebug( "touchVertexLastTime(...)", "particle " << (*p)->toString() << " was virtual but remains virtual" );
+    delete *p;
+    p = fineGridVertex{{PARTICLES_CONTAINER}}.erase(p);
+  }
+}
 """)
 
 
@@ -197,13 +164,11 @@ for (int i=0; i<TwoPowerD; i++) {
     if operation_name==ActionSet.OPERATION_BEGIN_TRAVERSAL:
       result = self.__Template_BeginTraversal.render(**self.d) 
     if operation_name==ActionSet.OPERATION_TOUCH_VERTEX_FIRST_TIME:
-      result = self.__Template_InitialiseParallelStatus.render(**self.d)
-    if operation_name==ActionSet.OPERATION_TOUCH_VERTEX_LAST_TIME:
-      result = self.__Template_DetermineNewParallelStatus.render(**self.d)
+      result = self.__Template_TouchVertexFirstTime.render(**self.d) 
     if operation_name==ActionSet.OPERATION_TOUCH_CELL_FIRST_TIME:
       result = self.__Template_TouchCell.render(**self.d) 
-    if operation_name==ActionSet.OPERATION_TOUCH_CELL_LAST_TIME:
-      result = self.__Template_TouchCell.render(**self.d) 
+    if operation_name==ActionSet.OPERATION_TOUCH_VERTEX_LAST_TIME:
+      result = self.__Template_TouchVertexLastTime.render(**self.d) 
     if operation_name==ActionSet.OPERATION_END_TRAVERSAL:
       result = self.__Template_EndTraversal.render(**self.d) 
     return result
@@ -224,6 +189,8 @@ for (int i=0; i<TwoPowerD; i++) {
   def get_includes(self):
     result = jinja2.Template( """
 #include "tarch/multicore/Lock.h"
+#include "toolbox/particles/MultiscaleTransitions.h"
+
 #include "vertexdata/{{PARTICLES_CONTAINER}}.h"
 #include "globaldata/{{PARTICLE}}.h"
 """ )
@@ -233,9 +200,16 @@ for (int i=0; i<TwoPowerD; i++) {
   def get_attributes(self):
     return """
   int  _treeNumber;
-  int  _numberOfLocalParticles;
-  int  _numberOfVirtualParticles;
-  int  _numberOfLeavingParticles;
+  
+  int  _numberOfRemainingLocalParticles;
+  int  _numberOfIncomingLocalParticles;
+  int  _numberOfLeavingLocalParticles;
 """
 
+
+  def get_body_of_prepareTraversal(self):
+    template = jinja2.Template( """
+  vertexdata::{{PARTICLES_CONTAINER}}::clearParticleStateStatistics();
+""" )
+    return template.render(**self.d)
 

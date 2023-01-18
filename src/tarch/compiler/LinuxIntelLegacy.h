@@ -17,8 +17,7 @@
 #define UseTestSpecificCompilerSettings
 
 
-#ifndef noCompilerICC
-  #define CompilerICC
+#pragma once
 #endif
 
 #define CompilerHasProcStat
@@ -52,7 +51,6 @@
 
 #if !defined(AlignmentOnHeap)
 #define AlignmentOnHeap 64
-#endif
 
 /**
  * Clang requires us to put a static keyword in front of header file implementations,
@@ -60,3 +58,5 @@
  * eat stuff. icpc is GNU-based and therefore we do not define the static keyword here.
  */
 #define KeywordToAvoidDuplicateSymbolsForInlinedFunctions
+
+#define OpenMPTaskGroup

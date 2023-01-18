@@ -1,7 +1,6 @@
 // This file is part of the Peano project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
-#ifndef _PEANO4_PARALLEL_NODE_H_
-#define _PEANO4_PARALLEL_NODE_H_
+#pragma once
 
 
 #include "tarch/logging/Log.h"
@@ -406,4 +405,3 @@ class peano4::parallel::Node {
     static std::string getSemanticsForTag( int tag );
 };
 
-#endif

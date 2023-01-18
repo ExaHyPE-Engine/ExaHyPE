@@ -1,7 +1,6 @@
 // This file is part of the ExaHyPE2 project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
-#ifndef _EXAHYPE2_ENUMERATOR_AOSOA_LEXICOGRAPHIC_ENUMERATOR_H_
-#define _EXAHYPE2_ENUMERATOR_AOSOA_LEXICOGRAPHIC_ENUMERATOR_H_
+#pragma once
 
 
 #include "tarch/la/Vector.h"
@@ -113,5 +112,4 @@ namespace exahype2 {
 }
 
 
-#endif
 

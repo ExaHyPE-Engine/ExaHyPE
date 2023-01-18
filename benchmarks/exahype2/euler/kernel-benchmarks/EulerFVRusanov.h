@@ -1,5 +1,4 @@
-#ifndef __BENCHMARKS_EXAHYPE2_EULER_EULERFVRUSANOV_H__
-#define __BENCHMARKS_EXAHYPE2_EULER_EULERFVRUSANOV_H__
+#pragma once
 
 #include "../kernel-benchmarks/AbstractEulerFVRusanov.h"
 #include "tarch/logging/Log.h"
@@ -104,4 +103,3 @@ class benchmarks::exahype2::euler::EulerFVRusanov: public benchmarks::exahype2::
     #endif
 };
 
-#endif

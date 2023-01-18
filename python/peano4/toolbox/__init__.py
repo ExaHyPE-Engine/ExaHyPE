@@ -5,7 +5,8 @@
 try:
   from .CreateRegularGrid                      import CreateRegularGrid
   from .PlotGridInPeanoBlockFormat             import PlotGridInPeanoBlockFormat
-  from .PlotScalarNodalFieldInPeanoBlockFormat import PlotScalarNodalFieldInPeanoBlockFormat
+  from .PlotVertexDataInPeanoBlockFormat       import PlotVertexDataInPeanoBlockFormat
+  from .PlotCellDataInPeanoBlockFormat         import PlotCellDataInPeanoBlockFormat
 except ImportError:
   print("Numpy/mpmath is not available, not loading rkdg")
   print("Numpy/mpmath is not available, not loading aderdg")

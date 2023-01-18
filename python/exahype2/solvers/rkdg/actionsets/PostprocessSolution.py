@@ -3,8 +3,10 @@
 
 from .AbstractRungeKuttaDGActionSet import AbstractRungeKuttaDGActionSet
 
+
 import peano4
 import jinja2
+
 
 class EmptyPostprocessSolution(AbstractRungeKuttaDGActionSet):
   """
@@ -72,6 +74,7 @@ class DoFWisePostprocessSolution(AbstractRungeKuttaDGActionSet):
     
     """
     self._compute_kernel += """
+{    
   {{COMPUTE_TIME_STEP_SIZE}}
   const double timeStamp = fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStamp();
     
@@ -98,6 +101,7 @@ class DoFWisePostprocessSolution(AbstractRungeKuttaDGActionSet):
     }
     logTraceOut( "touchCellFirstTime(...)" );
   } 
+}
 """
 
     
@@ -122,4 +126,68 @@ class DoFWisePostprocessSolution(AbstractRungeKuttaDGActionSet):
     return super(DoFWisePostprocessSolution,self).get_includes() + """
 #include "exahype2/enumerator/AoSLexicographicEnumerator.h"
 """
+
+
+
+class CellWisePostprocessSolution(AbstractRungeKuttaDGActionSet):
+  """
+  
+  
+  """
+  def __init__(self,solver):
+    super(CellWisePostprocessSolution,self).__init__(solver)
+    self.guard                            = "true"
+    self._compute_kernel                  = ""
+
+
+  def add_postprocessing_kernel(self, operation_per_cell):
+    """
+    
+    Add a code snippet which is applied to each and every point. You have the following
+    variables which are well-defined:
+    
+    - value: Is a pointer to the current finite volume's data
+    - x: A tarch::la::Vector over doubles
+    - marker.h(): A tarch::la::Vector over doubles
+    
+    
+    operation_per_point: String
+      C/C++ code snippet
+    
+    """
+    self._compute_kernel += """
+{    
+  {{COMPUTE_TIME_STEP_SIZE}}
+  const double timeStamp = fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStamp();
+    
+  if (
+    not marker.hasBeenRefined() 
+    and 
+    {{PREDICATE}}
+  ) { 
+    logTraceIn( "touchCellFirstTime(...)" );
+    
+    """ + operation_per_cell + """
+
+    logTraceOut( "touchCellFirstTime(...)" );
+  } 
+}
+"""
+
+    
+
+  def get_body_of_operation(self,operation_name):
+    result = ""
+    if operation_name==peano4.solversteps.ActionSet.OPERATION_TOUCH_CELL_LAST_TIME:
+      d = {}
+      self._solver._init_dictionary_with_default_parameters(d)
+      self._solver.add_entries_to_text_replacement_dictionary(d)
+      d[ "PREDICATE" ]           = jinja2.Template(self.guard, undefined=jinja2.DebugUndefined).render(**d)
+      result = jinja2.Template(self._compute_kernel, undefined=jinja2.DebugUndefined).render(**d)
+      pass 
+    return result
+
+
+  def get_action_set_name(self):
+    return __name__.replace(".py", "").replace(".", "_")
 

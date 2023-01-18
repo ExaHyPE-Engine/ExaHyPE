@@ -48,14 +48,39 @@ libtoolize; aclocal; autoconf; autoheader; cp src/config.h.in .; automake --add-
 
 
 
-\section{Set up the simulator}
+\section{Set up a simulation}
 
 Our interface for \Swift\ is almost complete realised in Python.
-Only specialised potentials have to be injected via C++.
+We configure the whole simulation in Python, but typically make the key 
+steps of a simulation point to generic C++ routines which are shipped with
+\Peano.
+Alterantively, we can inject C++ code manually into the Python code (which is
+great for prototyping).
+Once the Python script is executed, it generates a plain C++ code with a
+makefile which waves \Peano's core and the SPH kernels together.
 
+
+We start with the creation of a \Swift\ project:
+\begin{code}
+project = swift2.Project( namespace=["benchmarks", "swift2", "planetorbit"], 
+                          project_name="planetorbit", 
+                          executable="orbit-exec" )
+\end{code}
+
+
+\marginpar{@todo Cristian}
+\begin{itemize}
+  \item global parameters
+%   project.set_Peano4_installation(args.peanodir, build_mode)
+% 
+% project.set_load_balancing("toolbox::loadbalancing::RecursiveSubdivision", "new toolbox::loadbalancing::RecursiveSubdivision::DefaultConfiguration()")
+  \item generate files
+  \item compile
+\end{itemize}
 
 \section{Introduce a new particle}
 
+\marginpar{@todo Critsian revise}
 The generation of a particle is straightforward. We employ a tool called
 DaStGen2 which really just is a set of Python classes which represent the 
 attributes of a C++ class. We build up a set of Python objects and \Swift\
@@ -92,12 +117,19 @@ particle.data.add_attribute(mass_attr)
 \end{definition}
 
 
-
-\section{IO control}
+\section{Input and output}
 
 \Peano\ dumps a lot of information to the terminal by default. Consult
 Section~\ref{section:logging:log-filter} for some remarks on how to filter the
 output properly.
+
+
+For the output of the data, the code can dump the particle data in various 
+formats.
+The easiest format to use is vtu data.
+
+\marginpar{@Cristian Erklaerung}
+
 
 
 % \subsection{todo}

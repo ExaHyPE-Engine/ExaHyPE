@@ -11,8 +11,7 @@
  * For the full license text, see LICENSE.txt
  **/
 
-#ifndef _EXAHYPE_KERNELS_RIEMANN_SOLVERS_H_
-#define _EXAHYPE_KERNELS_RIEMANN_SOLVERS_H_
+#pragma once
 
 #include "tarch/Assertions.h"
 #include "tarch/la/Vector.h"
@@ -181,4 +180,3 @@ void averageRiemannInputs(
 } // namespace riemannsolvers
 } // namespace kernels
 
-#endif  // _EXAHYPE_KERNELS_RIEMANN_SOLVERS_H_

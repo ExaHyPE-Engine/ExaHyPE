@@ -1,7 +1,6 @@
 // This file is part of the Peano project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
-#ifndef _TARCH_ACCELERATOR_ACCELERATOR_H_
-#define _TARCH_ACCELERATOR_ACCELERATOR_H_
+#pragma once
 
 
 #include "tarch/multicore/multicore.h"
@@ -72,4 +71,3 @@ namespace tarch {
   void freeMemory(double* data, MemoryLocation location);
 }
 
-#endif

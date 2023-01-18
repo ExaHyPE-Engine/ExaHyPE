@@ -21,16 +21,51 @@ class DoFAssociation(IntEnum):
   # grid entities
   #
   Generic = 4
-  Global = 5
+  Global  = 5
   
   
   
 class DoF(object):
   def __init__(self, name):
-    self.association = DoFAssociation.Undef
-    self.name      = name
-    self.namespace = []
+    """
+    
+    Both the association and the namespace are not to be set directly,
+    but through the operation configure().
 
+    ## Additional store/load/send/receive arguments
+    
+    - The first entry of this triple is the expression that you want the 
+      observer to pass in.
+    - The second one is the C++ type of this expression.
+    - The third one is the name that you wanna use in the dof signatures
+      for this argument.
+      
+      It is the responsibility of the DoF subclass to ensure that the second 
+      entry is properly used to initialise the store and load routines.
+      Most define an additional setter for property.
+    
+        
+    ## Attributes
+    
+    association: DoFAssociation
+    
+    name:        String
+      Has to be a fit to the C++ naming conventions
+      
+    namespace:   [String]
+      Sequence of namespaces.
+      
+    additional_load_and_store_arguments: [(String,String,String)]
+      This flag is, by default, an empty list. If you add an entry to this 
+      list, each store and load routine will get an additional parameter. 
+      Consult documentation above for the semantics of the list entries.
+    
+          
+    """
+    self.association = DoFAssociation.Undef
+    self.name        = name
+    self.namespace   = []
+    self._additional_load_and_store_arguments = []
   
   
   def configure(self,namespace,association):
@@ -50,7 +85,6 @@ class DoF(object):
       self.namespace += [ "globaldata" ]
     else:
       assert False
-    #print( "added a new DoF: " + str(self.namespace) )
     
 
   def get_full_qualified_type(self):
@@ -91,11 +125,13 @@ class DoF(object):
       result += "peano4::datamanagement::VertexEnumerator<"
     elif self.association==DoFAssociation.Face:
       result += "peano4::datamanagement::FaceEnumerator<"
-    #elif self.association==DoFAssociation.Cell:
-    #  result += "peano4::datamanagement::CellWrapper<"
     else:
       assert False
     result += self.get_full_qualified_type()
     result += ">"
     return result
 
+
+  @property
+  def additional_load_and_store_arguments(self):
+    return self._additional_load_and_store_arguments

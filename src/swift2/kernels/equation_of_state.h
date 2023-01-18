@@ -1,5 +1,4 @@
-#ifndef PEANO_EQUATION_OF_STATE_HYDRO_H
-#define PEANO_EQUATION_OF_STATE_HYDRO_H
+#pragma once
 
 #include "cmath"
 #include "swift2/adiabatic_index.h"
@@ -27,4 +26,3 @@ gas_soundspeed_from_internal_energy(double u) {
   return std::sqrt(u * hydro_gamma * hydro_gamma_minus_one);
 }
 
-#endif // PEANO_EQUATION_OF_STATE_HYDRO_H

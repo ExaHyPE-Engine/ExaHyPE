@@ -12,8 +12,9 @@ import subprocess
 import sys
 import multiprocessing
 import gc
+import os
 
-
+from peano4.output.FindCmakeBuildDir import find_cmake_build_dir
 
 class Project (object):
   """ 
@@ -163,7 +164,12 @@ class Project (object):
     if not self.is_built:
       print( "start to compile with concurrency level of " + str(number_of_parallel_builds) + " ..." )
       try:
-        result = subprocess.run(["make", "-j"+str(number_of_parallel_builds)], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        path = find_cmake_build_dir()
+        if path != "":
+          command = f"cd {path} && cmake .. && make -j{number_of_parallel_builds} {self.output.makefile.executable_name()}"
+          result = subprocess.run([command], shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        else:
+          result = subprocess.run(["make", "-j"+str(number_of_parallel_builds)], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         if result.returncode==0:
           print( result.stdout.decode("utf-8") )
           print( "compile completed successfully" )

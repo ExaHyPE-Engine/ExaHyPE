@@ -1,7 +1,6 @@
 // This file is part of the Peano project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
-#ifndef _PEANO4_DATAMANAGEMENT_FACE_MARKER_H_
-#define _PEANO4_DATAMANAGEMENT_FACE_MARKER_H_
+#pragma once
 
 
 #include "peano4/utils/Globals.h"
@@ -154,4 +153,3 @@ struct peano4::datamanagement::FaceMarker {
 };
 
 
-#endif

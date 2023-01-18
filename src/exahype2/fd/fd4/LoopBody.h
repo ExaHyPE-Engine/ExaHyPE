@@ -1,7 +1,6 @@
 // This file is part of the ExaHyPE2 project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
-#ifndef _EXAHYPE2_FD_FD4_LOOP_BODY_H_
-#define _EXAHYPE2_FD_FD4_LOOP_BODY_H_
+#pragma once
 
 
 
@@ -211,4 +210,3 @@ namespace exahype2 {
 
 #include "LoopBody.cpph"
 
-#endif

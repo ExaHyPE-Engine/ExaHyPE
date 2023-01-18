@@ -1,7 +1,6 @@
 // This file is part of the Peano project. For conditions of distribution and 
 // use, please see the copyright notice at www.peano-framework.org
-#ifndef _TARCH_PLOTTER_GRIDDATA_UNSTRUCTURED_VTK_TESTS_BINARY_FILE_TEST_
-#define _TARCH_PLOTTER_GRIDDATA_UNSTRUCTURED_VTK_TESTS_BINARY_FILE_TEST_
+#pragma once
  
 
 
@@ -42,4 +41,3 @@ class tarch::plotter::griddata::unstructured::vtk::tests::VTKBinaryFileTestCase:
 };
 
 
-#endif

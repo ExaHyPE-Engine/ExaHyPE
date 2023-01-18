@@ -1,5 +1,4 @@
-#ifndef __TP_BINDDING__
-#define __TP_BINDDING__
+#pragma once
 
 #include "libtwopunctures/TwoPunctures.h"
 //#include "AbstractFiniteVolumeCCZ4.h"
@@ -108,4 +107,3 @@ namespace TP_bindding {
     }
 }
 
-#endif /* __TP_BINDDING__ */

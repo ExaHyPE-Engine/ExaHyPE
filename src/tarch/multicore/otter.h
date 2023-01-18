@@ -1,7 +1,6 @@
 // This file is part of the Peano project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
-#ifndef _OTTER_H_
-#define _OTTER_H_
+#pragma once
 
 
 #include "config.h"
@@ -57,4 +56,3 @@ namespace otter {
 
 
 
-#endif

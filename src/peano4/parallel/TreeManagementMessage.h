@@ -6,8 +6,7 @@
 // however are not subject of copyright, i.e. feel free to add your copyright in 
 // here
 //  
-#ifndef _INCLUDE_PEANO4_PARALLEL_TREEMANAGEMENTMESSAGE_
-#define _INCLUDE_PEANO4_PARALLEL_TREEMANAGEMENTMESSAGE_
+#pragma once
 
 #include <string>
   
@@ -117,8 +116,8 @@ struct peano4::parallel::TreeManagementMessage {
      * the message went through. In systems with heavy MPI usage, this can 
      * help to avoid deadlocks.
      */
-    static void send(const peano4::parallel::TreeManagementMessage& buffer, int destination, int tag, std::function<void()> waitFunctor, MPI_Comm communicator );
-    static void receive(peano4::parallel::TreeManagementMessage& buffer, int source, int tag, std::function<void()> waitFunctor, MPI_Comm communicator );
+    static void send(const peano4::parallel::TreeManagementMessage& buffer, int destination, int tag, std::function<void()> startCommunicationFunctor, std::function<void()> waitFunctor, MPI_Comm communicator );
+    static void receive(   peano4::parallel::TreeManagementMessage& buffer, int source,      int tag, std::function<void()> startCommunicationFunctor, std::function<void()> waitFunctor, MPI_Comm communicator );
     #endif
 
 
@@ -151,5 +150,4 @@ struct peano4::parallel::TreeManagementMessage {
 
 };
 
-#endif
   

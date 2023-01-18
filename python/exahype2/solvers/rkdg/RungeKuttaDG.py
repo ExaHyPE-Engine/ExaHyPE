@@ -516,27 +516,43 @@ We use RK(""" + str(self._rk_order) + """) for the time stepping.
                                                                        self._unknowns, 
                                                                        self._unknown_identifier() + "RiemannSolution" )
            
+
+    self._estimate_projection.generator.store_persistent_condition = self._store_face_data_default_guard()
+    self._estimate_projection.generator.load_persistent_condition  = self._load_face_data_default_guard()
+    self._estimate_projection.generator.includes                   += """
+#include "peano4/utils/Loop.h"
+#include "repositories/SolverRepository.h" 
+"""
     self._estimate_projection.generator.merge_method_definition = peano4.toolbox.blockstructured.get_face_merge_implementation(self._estimate_projection)
+    
+    self._old_solution_projection.generator.store_persistent_condition = self._store_face_data_default_guard()
+    self._old_solution_projection.generator.load_persistent_condition  = self._load_face_data_default_guard()
+    self._old_solution_projection.generator.includes                   += """
+#include "peano4/utils/Loop.h"
+#include "repositories/SolverRepository.h" 
+"""
+
+    self._current_time_step.generator.store_persistent_condition = self._store_cell_data_default_guard()
+    self._current_time_step.generator.load_persistent_condition  = self._load_cell_data_default_guard()
+    self._current_time_step.generator.includes                   += """
+#include "peano4/utils/Loop.h"
+#include "repositories/SolverRepository.h" 
+"""
     self._current_time_step.generator.merge_method_definition   = peano4.toolbox.blockstructured.get_cell_merge_implementation(self._current_time_step)
 
-    self._estimate_projection.generator.includes     += """
+    self._rhs_estimates.generator.store_persistent_condition = self._store_cell_data_default_guard()
+    self._rhs_estimates.generator.load_persistent_condition  = self._load_cell_data_default_guard()
+    self._rhs_estimates.generator.includes                   += """
 #include "peano4/utils/Loop.h"
 #include "repositories/SolverRepository.h" 
 """
 
-    self._old_solution_projection.generator.includes     += """
+    self._linear_combination_of_estimates.generator.store_persistent_condition = self._store_cell_data_default_guard()
+    self._linear_combination_of_estimates.generator.load_persistent_condition  = self._load_cell_data_default_guard()
+    self._linear_combination_of_estimates.generator.includes                   += """
 #include "peano4/utils/Loop.h"
 #include "repositories/SolverRepository.h" 
 """
-
-    self._estimate_projection.generator.store_persistent_condition = self._store_cell_data_default_guard()
-    self._estimate_projection.generator.load_persistent_condition  = self._load_cell_data_default_guard()
-    
-    self._old_solution_projection.generator.store_persistent_condition = self._store_cell_data_default_guard()
-    self._old_solution_projection.generator.load_persistent_condition  = self._load_cell_data_default_guard()
-
-    self._linear_combination_of_estimates.store_persistent_condition = "false"
-    self._linear_combination_of_estimates.load_persistent_condition = "false"
 
     self._estimate_projection.generator.send_condition               = "false"
     self._estimate_projection.generator.receive_and_merge_condition  = "false"
@@ -546,6 +562,9 @@ We use RK(""" + str(self._rk_order) + """) for the time stepping.
 
     self._Riemann_solution.generator.store_persistent_condition = self._store_face_data_default_guard()
     self._Riemann_solution.generator.load_persistent_condition  = self._load_face_data_default_guard()
+    self._Riemann_solution.generator.includes                   += """
+#include "repositories/SolverRepository.h" 
+"""
 
     self._Riemann_solution.generator.send_condition               = "false"
     self._Riemann_solution.generator.receive_and_merge_condition  = "false"
@@ -567,7 +586,11 @@ We use RK(""" + str(self._rk_order) + """) for the time stepping.
 
     self._cell_label = exahype2.grid.create_cell_label( self._name )
     self._face_label = exahype2.grid.create_face_label( self._name )
-        
+
+
+  def _query_fine_grid_cell_in_action_set_if_it_holds_solution(self):
+    return self._store_cell_data_default_guard()
+          
 
   @abstractmethod
   def create_action_sets(self):
@@ -590,8 +613,8 @@ We use RK(""" + str(self._rk_order) + """) for the time stepping.
      within the inheritance tree.
      
     """
-    self._action_set_initial_conditions                                               = exahype2.solvers.rkdg.actionsets.InitialCondition(self, self._store_cell_data_default_guard(), "true" )
-    self._action_set_initial_conditions_for_grid_construction                         = exahype2.solvers.rkdg.actionsets.InitialCondition(self, self._store_cell_data_default_guard(), "false")
+    self._action_set_initial_conditions                                               = exahype2.solvers.rkdg.actionsets.InitialCondition(self, self._query_fine_grid_cell_in_action_set_if_it_holds_solution(), "true" )
+    self._action_set_initial_conditions_for_grid_construction                         = exahype2.solvers.rkdg.actionsets.InitialCondition(self, self._query_fine_grid_cell_in_action_set_if_it_holds_solution(), "false")
     self._action_set_AMR                                                              = exahype2.solvers.rkdg.actionsets.AdaptivityCriterion(solver=self, 
                                                                                                                                              guard=self._store_cell_data_default_guard() + " and (repositories::" + self.get_name_of_global_instance() + ".isLastGridSweepOfTimeStep() or repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::GridInitialisation)", 
                                                                                                                                              build_up_new_refinement_instructions=True,  implement_previous_refinement_instructions=True )
