@@ -96,7 +96,13 @@ if ( not marker.isRefined() ) {
      *
      */
     template <class T>
-    std::vector<T*> createEquallySpacedParticles(double spacingH, const tarch::la::Vector<Dimensions,double>& voxelX, const tarch::la::Vector<Dimensions,double>& voxelH, bool roundDown, bool addNoise);
+    std::vector<T*> createEquallySpacedParticles(
+      double spacingH,
+      const tarch::la::Vector<Dimensions,double>& voxelX,
+      const tarch::la::Vector<Dimensions,double>& voxelH,
+      bool roundDown,
+      bool addNoise
+    );
 
     template <class T>
     std::vector<T*> createParticlesAlignedWithGlobalCartesianMesh(double spacingH, const tarch::la::Vector<Dimensions,double>& voxelX, const tarch::la::Vector<Dimensions,double>& voxelH, const tarch::la::Vector<Dimensions,double>& domainOffset, bool addNoise);
