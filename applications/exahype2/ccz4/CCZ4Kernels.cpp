@@ -537,7 +537,7 @@ void applications::exahype2::ccz4::Psi4Calc(double* Psi4, const double* const Q,
     	//Real part for Psi4
 		Psi4[0] += 0.5*elec[i][j]*(w_vec[i]*w_vec[j]-u_vec[i]*u_vec[j])-0.5*mag[i][j]*(u_vec[i]*w_vec[j]+u_vec[j]*w_vec[i]);
 		//imaginary part for Psi4
-		Psi4[0] += -0.5*elec[i][j]*(u_vec[i]*w_vec[j]+u_vec[j]*w_vec[j])-0.5*mag[i][j]*(w_vec[i]*w_vec[j]-u_vec[i]*u_vec[i]);
+		Psi4[1] += -0.5*elec[i][j]*(u_vec[i]*w_vec[j]+u_vec[j]*w_vec[j])-0.5*mag[i][j]*(w_vec[i]*w_vec[j]-u_vec[i]*u_vec[i]);
 	}
 	
 }

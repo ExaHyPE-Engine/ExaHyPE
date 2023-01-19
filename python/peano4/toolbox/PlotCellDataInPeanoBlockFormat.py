@@ -5,11 +5,21 @@ from peano4.solversteps.ActionSet import ActionSet
 import jinja2
 
 
-class PlotScalarNodalFieldInPeanoBlockFormat(ActionSet):
+class PlotCellDataInPeanoBlockFormat(ActionSet):
   NoMetaFile     = "no-meta-file"
   CountTimeSteps = "count-time-steps"
+  CastToDouble   = -1
 
-  def __init__(self,filename,vertex_unknown,getter,description,time_stamp_evaluation, guard_predicate="true", additional_includes=""):
+  def __init__(self,
+               filename,
+               cell_unknown,
+               getter,
+               description,
+               time_stamp_evaluation, 
+               number_of_unknows_per_cell=1,
+               guard_predicate="true", 
+               additional_includes=""
+               ):
     """
       Plot only the grid structure
       
@@ -20,7 +30,7 @@ class PlotScalarNodalFieldInPeanoBlockFormat(ActionSet):
         The object you have associated with a vertex and that you want to print.
         The code will access its name via 
         
-             fineGridVertices{VERTEX_UNKNOWN_NAME}
+             fineGridCell{CELL_UNKNOWN_NAME}
              
         in the generated source code 
         
@@ -33,12 +43,16 @@ class PlotScalarNodalFieldInPeanoBlockFormat(ActionSet):
         C++ expression returning a double. This is used to write the time series
         file for a series of snapshots. Pass in "0" if you solve a stationary 
         problem, e.g. 
-                              
+
+      number_of_unknows_per_cell: Integer
+        Has to match to the getter. You can hand in a CastToDouble which instructs the 
+        plotter to explicitly cast the entry to double.
     """
     self.d = {}
     self.d[ "FILENAME" ]            = filename
-    self.d[ "VERTEX_UNKNOWN_NAME" ] = vertex_unknown.name
+    self.d[ "CELL_UNKNOWN_NAME" ] = cell_unknown.name
     self.d[ "GETTER" ]              = getter
+    self.d[ "NUMBER_OF_UNKNOWNS_PER_CELL" ] = number_of_unknows_per_cell
     self.d[ "DESCRIPTION" ]         = description
     self.d[ "TIMESTAMP" ]           = time_stamp_evaluation
     self.d[ "GUARD_PREDICATE" ]    = guard_predicate
@@ -91,22 +105,19 @@ class PlotScalarNodalFieldInPeanoBlockFormat(ActionSet):
     return False
 
 
-  __Template_TouchCellFirstTime = """ 
+  Template_TouchCellFirstTime = """ 
 if ( {{GUARD_PREDICATE}} ) {
-  int vertexIndices[TwoPowerD];
-
-  int patchIndex = _writer->plotPatch(
+  int cellIndex = _writer->plotPatch(
     marker.x()-0.5 * marker.h(),
     marker.h()
   );
 
-  assertion( _dataWriter!=nullptr );
-  int vertexIndex  = _dataWriter->getFirstVertexWithinPatch(patchIndex);
-  dfor2(k)
-    auto data = fineGridVertices{{VERTEX_UNKNOWN_NAME}}(kScalar).{{GETTER}};
-    _dataWriter->plotVertex( vertexIndex, data );
-    vertexIndex++;
-  enddforx
+  {% if NUMBER_OF_UNKNOWNS_PER_CELL<0 %}
+  double data = static_cast<double>(fineGridCell{{CELL_UNKNOWN_NAME}}.{{GETTER}});
+  {% else %}
+  auto data = fineGridCell{{CELL_UNKNOWN_NAME}}.{{GETTER}};
+  {% endif %}
+  _dataWriter->plotCell( cellIndex, data );
 }
 """
 
@@ -146,14 +157,23 @@ if ( {{GUARD_PREDICATE}} ) {
   );    
   {% endif %}
     
-  _dataWriter = _writer->createVertexDataWriter( "{{VERTEX_UNKNOWN_NAME}}", 2, 1, "{{DESCRIPTION}}" );
+  _dataWriter = _writer->createCellDataWriter( 
+    "{{CELL_UNKNOWN_NAME}}", 
+    1,
+    {% if NUMBER_OF_UNKNOWNS_PER_CELL<0 %}
+    1,
+    {% else %}
+    {{NUMBER_OF_UNKNOWNS_PER_CELL}},
+    {% endif %}
+    "{{DESCRIPTION}}" 
+  );
 """
 
 
   def get_body_of_operation(self,operation_name):
     result = "\n"
     if operation_name==ActionSet.OPERATION_TOUCH_CELL_FIRST_TIME:
-      result = jinja2.Template( self.__Template_TouchCellFirstTime).render(**self.d) 
+      result = jinja2.Template( self.Template_TouchCellFirstTime).render(**self.d) 
     if operation_name==ActionSet.OPERATION_BEGIN_TRAVERSAL:
       result = jinja2.Template( self.__Template_BeginTraversal).render(**self.d)             
     if operation_name==ActionSet.OPERATION_END_TRAVERSAL:
@@ -167,8 +187,8 @@ if ( {{GUARD_PREDICATE}} ) {
     
     int                _treeNumber;
 
-    tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter*                    _writer;
-    tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter::VertexDataWriter*  _dataWriter;
+    tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter*                  _writer;
+    tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter::CellDataWriter*  _dataWriter;
 """
 
 

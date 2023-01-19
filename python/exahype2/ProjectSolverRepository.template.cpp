@@ -221,6 +221,12 @@ void finishGridConstructionStep() {
           rank,
           statisticsExchangeTag,
           [&]() {
+            tarch::mpi::Rank::getInstance().setDeadlockWarningTimeStamp();
+            tarch::mpi::Rank::getInstance().setDeadlockTimeOutTimeStamp();
+          },
+          [&]() {
+            tarch::mpi::Rank::getInstance().writeTimeOutWarning( "", "finishGridConstructionStep()", rank, statisticsExchangeTag );
+            tarch::mpi::Rank::getInstance().triggerDeadlockTimeOut( "", "receifinishGridConstructionStepve()", rank, statisticsExchangeTag );
             tarch::services::ServiceRepository::getInstance().receiveDanglingMessages();
           },
           tarch::mpi::Rank::getInstance().getCommunicator()
@@ -236,6 +242,12 @@ void finishGridConstructionStep() {
       tarch::mpi::Rank::getInstance().getGlobalMasterRank(),
       statisticsExchangeTag,
       [&]() {
+        tarch::mpi::Rank::getInstance().setDeadlockWarningTimeStamp();
+        tarch::mpi::Rank::getInstance().setDeadlockTimeOutTimeStamp();
+      },
+      [&]() {
+        tarch::mpi::Rank::getInstance().writeTimeOutWarning( "", "receive()", tarch::mpi::Rank::getInstance().getGlobalMasterRank(), statisticsExchangeTag );
+        tarch::mpi::Rank::getInstance().triggerDeadlockTimeOut( "", "receive()", tarch::mpi::Rank::getInstance().getGlobalMasterRank(), statisticsExchangeTag );
         tarch::services::ServiceRepository::getInstance().receiveDanglingMessages();
       },
       tarch::mpi::Rank::getInstance().getCommunicator()

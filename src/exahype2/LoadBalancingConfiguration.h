@@ -37,15 +37,15 @@ class exahype2::LoadBalancingConfiguration: public toolbox::loadbalancing::Recur
 
     virtual ~LoadBalancingConfiguration() = default;
 
-    bool makeSplitDependOnMemory(Phase phase) override;
+    bool makeSplitDependOnMemory(toolbox::loadbalancing::RecursiveSubdivision::State state) override;
 
-    int getMaxLocalTreesPerRank(Phase phase) override;
+    int getMaxLocalTreesPerRank(toolbox::loadbalancing::RecursiveSubdivision::State state) override;
 
-    double getWorstCaseBalancingRatio(Phase phase) override;
+    double getWorstCaseBalancingRatio(toolbox::loadbalancing::RecursiveSubdivision::State state) override;
 
-    int getMinTreeSize(Phase phase) override;
+    int getMinTreeSize(toolbox::loadbalancing::RecursiveSubdivision::State state) override;
 
-    int getMaxTreeSize(Phase phsae) override;
+    int getMaxTreeSize(toolbox::loadbalancing::RecursiveSubdivision::State state) override;
 };
 
 

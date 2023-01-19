@@ -778,7 +778,7 @@ void exahype2::fv::rusanov::internal::updateSolutionWithFlux_LoopBody(
   int                                          normal,
   double* __restrict__                         QOut,
   const QOutEnumeratorType&                    QOutEnumerator
-) InlineMethod {
+) {
   tarch::la::Vector<Dimensions,int> leftVolume   = volumeIndex;
   tarch::la::Vector<Dimensions,int> rightVolume  = volumeIndex;
   rightVolume(normal)++;

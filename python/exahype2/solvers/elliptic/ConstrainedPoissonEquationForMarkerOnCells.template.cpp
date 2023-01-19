@@ -1,0 +1,253 @@
+#include "{{CLASSNAME}}.h"
+#include "exahype2/RefinementControl.h"
+
+
+tarch::logging::Log   {{NAMESPACE | join("::")}}::{{CLASSNAME}}::_log( "{{NAMESPACE | join("::")}}::{{CLASSNAME}}" );
+
+
+std::bitset<Dimensions> {{NAMESPACE | join("::")}}::{{CLASSNAME}}::{{CLASSNAME}}::PeriodicBC = {{NAMESPACE | join("::")}}::PeriodicBC;
+
+
+{{NAMESPACE | join("::")}}::{{CLASSNAME}}::{{CLASSNAME}}() {
+}
+
+
+double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMinTimeStamp(bool ofCurrentlyRunningGridSweep) const {
+  return std::numeric_limits<double>::max();
+}
+
+
+double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMaxTimeStamp(bool ofCurrentlyRunningGridSweep) const {
+  return 0.0;
+}
+
+
+double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMinTimeStepSize() const {
+  return 0.0;
+}
+
+
+double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMaxTimeStepSize() const {
+  return std::numeric_limits<double>::max();
+}
+
+
+double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMaxMeshSize() const {
+  return std::numeric_limits<double>::max();
+}
+
+
+double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMinMeshSize() const {
+  return 0.0;
+}
+
+
+bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::mayPlot() const {
+  return true;
+}
+
+
+bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::isFirstGridSweepOfTimeStep() const {
+  return true;
+}
+
+
+bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::isLastGridSweepOfTimeStep() const {
+  return true;
+}
+
+
+void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startGridConstructionStep() {}
+void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishGridConstructionStep() {}
+void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startGridInitialisationStep() {}
+void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishGridInitialisationStep() {}
+void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startTimeStep(
+  double globalMinTimeStamp,
+  double globalMaxTimeStamp,
+  double globalMinTimeStepSize,
+  double globalMaxTimeStepSize
+) {}
+void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishTimeStep() {}
+void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startPlottingStep(
+  double globalMinTimeStamp,
+  double globalMaxTimeStamp,
+  double globalMinTimeStepSize,
+  double globalMaxTimeStepSize
+) {}
+void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishPlottingStep() {}
+void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startSimulation() {}
+void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishSimulation() {}
+
+
+void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::computeNewMarkerState(
+  benchmarks::exahype2::euler::sphericalaccretionupscaling::celldata::{{MARKER}}&                                                cellMarker,
+  const peano4::datamanagement::FaceEnumerator<benchmarks::exahype2::euler::sphericalaccretionupscaling::facedata::{{MARKER}}>&  faceMarker
+) {
+  bool cellHoldsBnotA              = false;
+  bool cellHoldsBdeterminesA       = false;
+  bool cellHoldsAdeterminesB       = false;
+  bool cellHoldsAnotB              = false;
+  
+  bool oneNeighbourHoldsBnotA         = false;
+  bool oneNeighbourHoldsBdeterminesA  = false;
+  bool oneNeighbourHoldsAdeterminesB  = false;
+  bool oneNeighbourHoldsAnotB         = false;
+  
+  auto holdsBnotA = [=](double markerValue) -> bool {
+    return markerValue > MaxThreshold;
+  };
+  auto holdsBdeterminesA = [=](double markerValue) -> bool {
+    return not holdsBnotA(markerValue) and cellMarker.getValue() > 0.5*MaxThreshold+0.5*MinThreshold;
+  };
+  auto holdsAdeterminesB = [=](double markerValue) -> bool {
+    return not holdsBnotA(markerValue) and not holdsBdeterminesA(markerValue) and cellMarker.getValue() > MinThreshold;
+  };
+  auto holdsAnotB = [=](double markerValue) -> bool {
+    return not holdsBnotA(markerValue) and not holdsBdeterminesA(markerValue) and not holdsAdeterminesB(markerValue);
+  };
+
+  cellHoldsBnotA        = holdsBnotA(cellMarker.getValue());
+  cellHoldsBdeterminesA = holdsBdeterminesA(cellMarker.getValue());
+  cellHoldsAdeterminesB = holdsAdeterminesB(cellMarker.getValue());
+  cellHoldsAnotB        = holdsAnotB(cellMarker.getValue());
+
+  for (int d=0; d<Dimensions; d++) {
+    double leftNeighbour  = 2.0 * (faceMarker(d).getOldAverage()            - 0.5 * cellMarker.getValue());
+    double rightNeighbour = 2.0 * (faceMarker(d+Dimensions).getOldAverage() - 0.5 * cellMarker.getValue());
+
+    oneNeighbourHoldsBnotA |= holdsBnotA(leftNeighbour);
+    oneNeighbourHoldsBnotA |= holdsBnotA(rightNeighbour);
+
+    oneNeighbourHoldsBdeterminesA |= holdsBdeterminesA(leftNeighbour);
+    oneNeighbourHoldsBdeterminesA |= holdsBdeterminesA(rightNeighbour);
+
+    oneNeighbourHoldsAdeterminesB |= holdsAdeterminesB(leftNeighbour);
+    oneNeighbourHoldsAdeterminesB |= holdsAdeterminesB(rightNeighbour);
+
+    oneNeighbourHoldsAnotB        |= holdsAnotB(leftNeighbour);
+    oneNeighbourHoldsAnotB        |= holdsAnotB(rightNeighbour);
+  }
+
+  // "lift" current state
+  if ( cellHoldsAnotB and oneNeighbourHoldsBnotA ) {
+    cellHoldsAnotB        = false;
+    cellHoldsBdeterminesA = true;
+  }
+  else if ( cellHoldsAdeterminesB and oneNeighbourHoldsBnotA ) {
+    cellHoldsAdeterminesB = false;
+    cellHoldsBdeterminesA = true;
+  }
+  else if ( cellHoldsAnotB and oneNeighbourHoldsBdeterminesA ) {
+    cellHoldsAnotB        = false;
+    cellHoldsAdeterminesB = true;
+  }
+
+  benchmarks::exahype2::euler::sphericalaccretionupscaling::celldata::{{MARKER}}::Marker newMarker =
+    benchmarks::exahype2::euler::sphericalaccretionupscaling::celldata::{{MARKER}}::Marker::AnotB;
+
+  // max one step at a time
+  if (
+    cellHoldsBnotA
+    and
+    (
+      cellMarker.getMarker() == benchmarks::exahype2::euler::sphericalaccretionupscaling::celldata::{{MARKER}}::Marker::AnotB
+      or
+      cellMarker.getMarker() == benchmarks::exahype2::euler::sphericalaccretionupscaling::celldata::{{MARKER}}::Marker::AdeterminesB
+    )
+  ) {
+    newMarker = benchmarks::exahype2::euler::sphericalaccretionupscaling::celldata::{{MARKER}}::Marker::BdeterminesA;
+  }
+  else if (
+    cellHoldsBdeterminesA
+    and
+    cellMarker.getMarker() == benchmarks::exahype2::euler::sphericalaccretionupscaling::celldata::{{MARKER}}::Marker::AnotB
+  ) {
+    newMarker = benchmarks::exahype2::euler::sphericalaccretionupscaling::celldata::{{MARKER}}::Marker::AdeterminesB;
+  }
+  else if (
+    cellHoldsAdeterminesB
+    and
+    cellMarker.getMarker() == benchmarks::exahype2::euler::sphericalaccretionupscaling::celldata::{{MARKER}}::Marker::BnotA
+  ) {
+    newMarker = benchmarks::exahype2::euler::sphericalaccretionupscaling::celldata::{{MARKER}}::Marker::BdeterminesA;
+  }
+  else if (
+    cellHoldsAnotB
+    and
+    (
+      cellMarker.getMarker() == benchmarks::exahype2::euler::sphericalaccretionupscaling::celldata::{{MARKER}}::Marker::BnotA
+      or
+      cellMarker.getMarker() == benchmarks::exahype2::euler::sphericalaccretionupscaling::celldata::{{MARKER}}::Marker::BdeterminesA
+    )
+  ) {
+    newMarker = benchmarks::exahype2::euler::sphericalaccretionupscaling::celldata::{{MARKER}}::Marker::AdeterminesB;
+  }
+  else if (cellHoldsBnotA) {
+    newMarker = benchmarks::exahype2::euler::sphericalaccretionupscaling::celldata::{{MARKER}}::Marker::BnotA;
+  }
+  else if (cellHoldsBdeterminesA) {
+    newMarker = benchmarks::exahype2::euler::sphericalaccretionupscaling::celldata::{{MARKER}}::Marker::BdeterminesA;
+  }
+  else if (cellHoldsAdeterminesB) {
+    newMarker = benchmarks::exahype2::euler::sphericalaccretionupscaling::celldata::{{MARKER}}::Marker::AdeterminesB;
+  }
+
+  cellMarker.setMarker( newMarker );
+}
+
+
+void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::constrainValue( benchmarks::exahype2::euler::sphericalaccretionupscaling::celldata::{{MARKER}}& marker ) {
+  const double Tolerance = 0.01;
+
+  //  marker.setValue( std::min(marker.getValue(), MaxValue) );
+  //  marker.setValue( std::max(marker.getValue(), MinValue) );
+
+  switch (marker.getMarker()) {
+    case benchmarks::exahype2::euler::sphericalaccretionupscaling::celldata::{{MARKER}}::Marker::BnotA:
+      {
+        marker.setValue( std::min(marker.getValue(), MaxValue) );
+        const double LowerThreshold = MaxThreshold * (1.0+Tolerance);
+        if ( marker.getValue() < LowerThreshold ) {
+          marker.setValue( 0.5 * marker.getValue() + 0.5 * LowerThreshold );
+        }
+      }
+      break;
+    case benchmarks::exahype2::euler::sphericalaccretionupscaling::celldata::{{MARKER}}::Marker::BdeterminesA:
+      {
+        const double LowerThreshold = (0.5*MinThreshold+0.5*MaxThreshold)*(1.0+Tolerance);
+        if ( marker.getValue() < LowerThreshold ) {
+          marker.setValue( 0.5 * marker.getValue() + 0.5 * LowerThreshold );
+        }
+        const double UpperThreshold = MaxThreshold * (1.0-Tolerance);
+        if ( marker.getValue() > UpperThreshold ) {
+          marker.setValue( 0.5 * marker.getValue() + 0.5 * UpperThreshold );
+        }
+      }
+      break;
+    case benchmarks::exahype2::euler::sphericalaccretionupscaling::celldata::{{MARKER}}::Marker::AdeterminesB:
+      {
+        const double LowerThreshold = MinThreshold * (1.0+Tolerance);
+        if ( marker.getValue() < LowerThreshold ) {
+          marker.setValue( 0.5 * marker.getValue() + 0.5 * LowerThreshold );
+        }
+        const double UpperThreshold = (0.5*MinThreshold+0.5*MaxThreshold)*(1.0-Tolerance);
+        if ( marker.getValue() > UpperThreshold ) {
+          marker.setValue( 0.5 * marker.getValue() + 0.5 * UpperThreshold );
+        }
+      }
+      break;
+    case benchmarks::exahype2::euler::sphericalaccretionupscaling::celldata::{{MARKER}}::Marker::AnotB:
+      {
+        const double UpperThreshold = MinThreshold * (1.0-Tolerance);
+        if ( marker.getValue() > UpperThreshold ) {
+          marker.setValue( 0.5 * marker.getValue() + 0.5 * UpperThreshold );
+        }
+        marker.setValue( std::max(marker.getValue(), MinValue) );
+      }
+      break;
+  }
+}
+
+
+
+

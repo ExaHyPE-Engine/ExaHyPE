@@ -178,6 +178,7 @@ void exahype2::fd::fd4::internal::computeDifferentialSourceTerm_LoopBody(
 
   delete[] CentralQ;
   delete[] DeltaQ;
+  delete[] AdvectionDeltaQ;
   delete[] QDifferentialSourceTermGathered;
 }
 

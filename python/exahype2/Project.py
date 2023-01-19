@@ -368,13 +368,13 @@ thus appreciate any citation of the original release paper
     #
     # Initialisation
     #
-    self.init_grid.add_action_set(peano4.toolbox.particles.UpdateParticleGridAssociation(particles),False)
-
+    self.init_grid.add_action_set(peano4.toolbox.particles.UpdateParticleGridAssociation_LiftDrop(particles),False)
+        
     #
     # Move particles
     #
-    self.perform_time_step.add_action_set(peano4.toolbox.particles.UpdateParticleGridAssociation(particles),False)
-
+    self.perform_time_step.add_action_set(peano4.toolbox.particles.UpdateParticleGridAssociation_LiftDrop(particles),False)
+    
     #
     # Plotter: The timestamp here is slightly wrong, as I use the min time stamp. It 
     # really should be the time stamp of the underlying solver. However, tracers are 
@@ -396,10 +396,11 @@ thus appreciate any citation of the original release paper
                                              2,
                                              "tarch::la::convertScalar<double>(p->getNumber())"
                                              )
-      self.plot_solution.add_action_set( particle_plotter )
-
-    self.plot_solution.add_action_set(peano4.toolbox.particles.UpdateParticleGridAssociation(particles),False)
-
+      
+      self.plot_solution.add_action_set( particle_plotter ) 
+      
+    self.plot_solution.add_action_set(peano4.toolbox.particles.UpdateParticleGridAssociation_LiftDrop(particles),False)
+    
     self._tracer_particles.append(particles)
 
     return particles

@@ -13,15 +13,13 @@ from scipy.integrate import quad
 from abc import abstractmethod
 
 from .LagrangeBasis import LagrangeBasis
+from .LagrangeBasis import render_tensor_1
+from .LagrangeBasis import render_tensor_2
+from .LagrangeBasis import render_tensor_3
+
 from numpy import number
 
-#import re
-#from numpy.lib.polynomial import poly
 
-#PREC_DIGITS   = 256
-
-#mp.dps    = PREC_DIGITS
-#mp.pretty = False
 
 
 class LagrangeBasisWithDiagonalMassMatrix(LagrangeBasis):
@@ -284,14 +282,16 @@ class LagrangeBasisWithDiagonalMassMatrix(LagrangeBasis):
       return [[[1.0]],[[1.0]],[[1.0]]]
     else:
       interp_matrix = [ [0.0 for _ in range(0,self.dofs_per_axis)] for _ in range(0,3*self.dofs_per_axis) ]
+      interp_matrix = [ [[0.0 for _ in range(0,self.dofs_per_axis)] for _ in range(0,self.dofs_per_axis) ] for _ in range(0,3) ]
       fine_grid_point = [0.0 for _ in range(0,3*self.dofs_per_axis) ]  
       for index in range(0,self.dofs_per_axis):
         fine_grid_point[index                     ]=self.quadrature_points[index]/3.0
         fine_grid_point[index+  self.dofs_per_axis]=self.quadrature_points[index]/3.0+1.0/3.0
         fine_grid_point[index+2*self.dofs_per_axis]=self.quadrature_points[index]/3.0+2.0/3.0
-      for row in range(0, 3*self.dofs_per_axis):
-        for col in range(0, self.dofs_per_axis):
-          interp_matrix[row][col]=self.value1d(fine_grid_point[row],col)
+      for block in range(0, 3):
+        for row in range(0, self.dofs_per_axis):
+          for col in range(0, self.dofs_per_axis):
+            interp_matrix[block][row][col]=self.value1d(fine_grid_point[row],col)
 
       return interp_matrix 
 
@@ -311,15 +311,16 @@ class LagrangeBasisWithDiagonalMassMatrix(LagrangeBasis):
     if self._polynomial_order == 0:
       return [[[1.0/3.0]],[[1.0/3.0]],[[1.0/3.0]]]
     else:
-      restriction_matrix = [ [0.0 for _ in range(0,3*self.dofs_per_axis)] for _ in range(0,self.dofs_per_axis) ]
+      restriction_matrix = [ [[0.0 for _ in range(0,self.dofs_per_axis)] for _ in range(0,self.dofs_per_axis) ] for _ in range(0,3) ]
       fine_grid_point = [0.0 for _ in range(0,3*self.dofs_per_axis) ]  
       for index in range(0,self.dofs_per_axis):
         fine_grid_point[index                     ]=self.quadrature_points[index]/3.0
         fine_grid_point[index+  self.dofs_per_axis]=self.quadrature_points[index]/3.0+1.0/3.0
         fine_grid_point[index+2*self.dofs_per_axis]=self.quadrature_points[index]/3.0+2.0/3.0
-      for row in range(0, 3*self.dofs_per_axis):
-        for col in range(0, self.dofs_per_axis):
-          restriction_matrix[row][col]=self.value1d(fine_grid_point[col],row)/3.0
+      for block in range(0, 3):
+        for row in range(0, self.dofs_per_axis):
+          for col in range(0, self.dofs_per_axis):
+            restriction_matrix[block][row][col]=self.value1d(fine_grid_point[col],row)/3.0
 
       return restriction_matrix   
 

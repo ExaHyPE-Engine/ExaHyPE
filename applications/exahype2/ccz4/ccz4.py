@@ -48,7 +48,7 @@ if __name__ == "__main__":
     parser.add_argument("-plt",  "--plot-step-size",  dest="plot_step_size",  type=float, default=0.04, help="Plot step size (0 to switch it off)" )
     parser.add_argument("-m",    "--mode",            dest="mode",            default="release",  help="|".join(modes.keys()) )
     parser.add_argument( "--gpu",            dest="GPU",            default=False, action="store_true",  help="Run with accelerator support" )
-    parser.add_argument("-ext",  "--extension",       dest="extension",       choices=["none", "gradient", "AMRadm", "Full"],   default="none",  help="Pick extension, i.e. what should be plotted on top. Default is none" )
+    parser.add_argument("-ext",  "--extension",       dest="extension",       choices=["none", "gradient", "AMRadm", "Full", "Psi4"],   default="none",  help="Pick extension, i.e. what should be plotted on top. Default is none" )
     parser.add_argument("-impl", "--implementation",  dest="implementation",  choices=["fv-global-fixed", "fv-global-adaptive", "fv-global-fixed-enclave", "fv-global-adaptive-enclave","fv-subcyling-adaptive-enclave","fv-local-enclave", "fv-musclhancock", "fd4-rk1-adaptive", "fd4-rk1-fixed", "fd4-rk4-adaptive", "fd4-rk4-fixed", "RKDG"], required="True",  help="Pick solver type" )
     parser.add_argument("-no-pbc",  "--no-periodic-boundary-conditions",      dest="periodic_bc", action="store_false", default="True",  help="switch on or off the periodic BC" )
     parser.add_argument("-AMRMarker",  "--AMR-marker",      dest="marker", choices=["none", "poisson"],   default="none",  help="switch on or off the AMR boundary marker" )
@@ -581,6 +581,58 @@ if __name__ == "__main__":
         self.create_data_structures()
         self.create_action_sets()
 
+      def add_Psi4W(self):
+        """
+  add psi4 writer
+        """
+        self._auxiliary_variables = 2
+
+        self._my_user_includes += """
+  #include "../libtwopunctures/TP_PunctureTracker.h"
+  #include "../CCZ4Kernels.h"
+    """
+
+        self._preprocess_reconstructed_patch = """ 
+        const int patchSize = """ + str( self._patch.dim[0] ) + """;
+        double volumeH = ::exahype2::fv::getVolumeLength(marker.h(),patchSize);
+
+    const int n_a_v=2;
+    const int overlap=3; //make sure you are using fd4 solver!
+
+    if (not marker.willBeRefined() and repositories::InstanceOfFiniteVolumeCCZ4.getSolverState()!=FiniteVolumeCCZ4::SolverState::GridConstruction and repositories::InstanceOfFiniteVolumeCCZ4.getSolverState()==FiniteVolumeCCZ4::SolverState::RungeKuttaSubStep0) {
+      dfor(cell,patchSize) {
+        tarch::la::Vector<Dimensions,int> currentCell = cell + tarch::la::Vector<Dimensions,int>(overlap);
+
+        double gradQ[3*59]={ 0 };
+
+        for (int d=0; d<3; d++) {
+          tarch::la::Vector<Dimensions,int> leftCell  = currentCell;
+          tarch::la::Vector<Dimensions,int> rightCell = currentCell;
+          leftCell(d)  -= 1;
+          rightCell(d) += 1;
+          const int leftCellSerialised  = peano4::utils::dLinearised(leftCell, patchSize + 2*overlap);
+          const int rightCellSerialised = peano4::utils::dLinearised(rightCell,patchSize + 2*overlap);
+          for(int i=0; i<59; i++) {
+            gradQ[d*59+i] = ( oldQWithHalo[rightCellSerialised*(59+n_a_v)+i] - oldQWithHalo[leftCellSerialised*(59+n_a_v)+i] ) / 2.0 / volumeH;
+          }
+        }
+
+        const int cellSerialised  = peano4::utils::dLinearised(currentCell, patchSize + 2*overlap);
+        
+        double Psi4[2]={0,0};
+        double currentPosition[3]; 
+        for (int d=0; d<3; d++) currentPosition[d]=marker.getOffset()(d)+(cell(d)+0.5)*volumeH;
+        Psi4Calc(Psi4, oldQWithHalo+cellSerialised*(59+n_a_v), gradQ, currentPosition);
+        ::exahype2::enumerator::AoSLexicographicEnumerator enumeratorWithAuxiliaryVariables   ( 1, 3, 0, 59, n_a_v);
+        fineGridCellFiniteVolumeCCZ4Q.value[ enumeratorWithAuxiliaryVariables(0,cell,59+0) ] = Psi4[0]; //placeholder
+        fineGridCellFiniteVolumeCCZ4Q.value[ enumeratorWithAuxiliaryVariables(0,cell,59+1) ] = Psi4[1]; //placeholder
+      }  
+    } 
+    """
+
+        self.create_data_structures()
+        self.create_action_sets()
+
       def pick_Gauge_wave_scenario(self):
         self.add_solver_constants( """static constexpr int Scenario=0; /* Gauge wave */  """ )
 
@@ -736,6 +788,8 @@ if __name__ == "__main__":
       my_solver.add_constraint_RefinementFlag_verification()
     if args.extension=="Full":
       my_solver.add_PT_ConsW_Psi4W_AMRFlag()
+    if args.extension=="Psi4":
+      my_solver.add_Psi4W()
 
       #my_solver._auxiliary_variables = 59*3
 
@@ -842,7 +896,7 @@ if __name__ == "__main__":
     probe_point = [-6,-6,0.0]
     project.add_plot_filter( probe_point,[12.0,12.0,0.01],1 )
 
-    project.set_load_balancing("toolbox::loadbalancing::RecursiveSubdivision","(new ::exahype2::LoadBalancingConfiguration(0.98,0,8))" )
+    project.set_load_balancing("toolbox::loadbalancing::RecursiveSubdivision","(new ::exahype2::LoadBalancingConfiguration(0.95,0,8))" )
 
 ########################################################################################
 #Tracer setting 
@@ -850,7 +904,7 @@ if __name__ == "__main__":
     if args.add_tracer==5:
         tracer_particles = project.add_tracer( name="Tracer",attribute_count=59 )
         project.add_action_set_to_initialisation( 
-          exahype2.tracer.InsertParticlesbyCoordinates( 
+          exahype2.tracer.InsertParticlesByCoordinates( 
             particle_set=tracer_particles, coordinates=[[0,0,0],[0.5,0,0],[1.0,0,0],[1.5,0,0],[2.0,0,0]]))
         project.add_action_set_to_timestepping(
           peano4.toolbox.particles.UpdateParallelState(
@@ -898,7 +952,7 @@ if __name__ == "__main__":
       if args.add_tracer==4:  
         project.add_action_set_to_initialisation( exahype2.tracer.InsertParticlesAlongCartesianMesh( particle_set=tracer_particles, h=args.max_h/2.0, noise=True ))
       if args.add_tracer==5:
-        project.add_action_set_to_initialisation( exahype2.tracer.InsertParticlesbyCoordinates ( particle_set=tracer_particles, N=3, coor_s=[[0.4251,0,0],[-0.4251,0,0],[0.2,0.2,0]]))
+        project.add_action_set_to_initialisation( exahype2.tracer.InsertParticlesByCoordinates ( particle_set=tracer_particles, N=3, coor_s=[[0.4251,0,0],[-0.4251,0,0],[0.2,0.2,0]]))
       if args.add_tracer==6 or args.add_tracer==7:
         project.add_action_set_to_initialisation( exahype2.tracer.InsertParticlesFromFile( particle_set=tracer_particles, filename=tracer_name[args.add_tracer]+".dat", scale_factor=abs(offset[0])*0.8)) #"Gauss_Legendre_quadrature.dat" #"t-design.dat" 
       

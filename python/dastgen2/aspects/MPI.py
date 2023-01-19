@@ -1,15 +1,17 @@
 # This file is part of the DaStGen2 project. For conditions of distribution and
 # use, please see the copyright notice at www.peano-framework.org
-from dastgen2 import *
+import dastgen2
 from dastgen2.DataModel import construct_ifdef_string
 
 
-class MPI(object):
+class MPI( object ):
   """ 
   
   Represents the MPI aspect injected into a DaStGen model.
     
   """
+  
+  
   def __init__(self):
     pass
 

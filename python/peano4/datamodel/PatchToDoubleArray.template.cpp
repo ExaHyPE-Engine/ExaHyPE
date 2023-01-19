@@ -8,8 +8,6 @@
 #include "{{CLASSNAME}}.h"
 
 
-{{INCLUDES}}
-
 {{NAMESPACE | join("::")}}::{{CLASSNAME}}::{{CLASSNAME}}() {
 }
 
@@ -85,23 +83,48 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::merge(peano4::grid::TraversalObs
 }
 
 
-bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::send(const peano4::datamanagement::VertexMarker& marker) {
+bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::send(
+  const peano4::datamanagement::VertexMarker& marker
+  {% for arg in ADDITIONAL_LOAD_STORE_ARGUMENTS %}, const {{arg[1]}}& {{arg[2]}} {% endfor %}
+) const {
   return {{SEND_CONDITION}};
 }
 
 
-bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::receiveAndMerge(const peano4::datamanagement::VertexMarker& marker) {
+bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::receiveAndMerge(
+  const peano4::datamanagement::VertexMarker& marker
+  {% for arg in ADDITIONAL_LOAD_STORE_ARGUMENTS %}, const {{arg[1]}}& {{arg[2]}} {% endfor %}
+) const {
   return {{RECEIVE_AND_MERGE_CONDITION}};
 }
 
 
-bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::storePersistently(const peano4::datamanagement::VertexMarker& marker) {
+bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::storePersistently(
+  const peano4::datamanagement::VertexMarker& marker
+  {% for arg in ADDITIONAL_LOAD_STORE_ARGUMENTS %}, const {{arg[1]}}& {{arg[2]}} {% endfor %}
+) const {
   return {{STORE_PERSISTENT_CONDITION}};
 }
 
 
 bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::loadPersistently(const peano4::datamanagement::VertexMarker& marker) {
   return {{LOAD_PERSISTENT_CONDITION}};
+}
+
+
+bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::storePersistently(
+  const peano4::datamanagement::VertexMarker& marker
+  {% for arg in ADDITIONAL_LOAD_STORE_ARGUMENTS %}, const {{arg[1]}}& {{arg[2]}} {% endfor %}
+) const {
+  return {{STORE_PERSISTENT_CONDITION}};
+}
+
+
+bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::compute(
+  const peano4::datamanagement::VertexMarker& marker
+  {% for arg in ADDITIONAL_LOAD_STORE_ARGUMENTS %}, const {{arg[1]}}& {{arg[2]}} {% endfor %}
+) const {
+  return {{COMPUTE_CONDITION}};
 }
 {% endif -%}
 
@@ -112,23 +135,43 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::merge(peano4::grid::TraversalObs
 }
 
 
-bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::send(const peano4::datamanagement::FaceMarker& marker) {
+bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::send(
+  const peano4::datamanagement::FaceMarker& marker
+  {% for arg in ADDITIONAL_LOAD_STORE_ARGUMENTS %}, const {{arg[1]}}& {{arg[2]}} {% endfor %}
+) const {
   return {{SEND_CONDITION}};
 }
 
 
-bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::receiveAndMerge(const peano4::datamanagement::FaceMarker& marker) {
+bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::receiveAndMerge(
+  const peano4::datamanagement::FaceMarker& marker
+  {% for arg in ADDITIONAL_LOAD_STORE_ARGUMENTS %}, const {{arg[1]}}& {{arg[2]}} {% endfor %}
+) const {
   return {{RECEIVE_AND_MERGE_CONDITION}};
 }
 
 
-bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::storePersistently(const peano4::datamanagement::FaceMarker& marker) {
+bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::loadPersistently(
+  const peano4::datamanagement::FaceMarker& marker
+  {% for arg in ADDITIONAL_LOAD_STORE_ARGUMENTS %}, const {{arg[1]}}& {{arg[2]}} {% endfor %}
+) {
+  return {{LOAD_PERSISTENT_CONDITION}};
+}
+
+
+bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::storePersistently(
+  const peano4::datamanagement::FaceMarker& marker
+  {% for arg in ADDITIONAL_LOAD_STORE_ARGUMENTS %}, const {{arg[1]}}& {{arg[2]}} {% endfor %}
+) const {
   return {{STORE_PERSISTENT_CONDITION}};
 }
 
 
-bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::loadPersistently(const peano4::datamanagement::FaceMarker& marker) {
-  return {{LOAD_PERSISTENT_CONDITION}};
+bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::compute(
+  const peano4::datamanagement::FaceMarker& marker
+  {% for arg in ADDITIONAL_LOAD_STORE_ARGUMENTS %}, const {{arg[1]}}& {{arg[2]}} {% endfor %}
+) const {
+  return {{COMPUTE_CONDITION}};
 }
 {% endif -%}
 
@@ -139,23 +182,43 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::merge(peano4::grid::TraversalObs
 }
 
 
-bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::send(const peano4::datamanagement::CellMarker& marker) {
+bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::send(
+  const peano4::datamanagement::CellMarker& marker
+  {% for arg in ADDITIONAL_LOAD_STORE_ARGUMENTS %}, const {{arg[1]}}& {{arg[2]}} {% endfor %}
+) const {
   return {{SEND_CONDITION}};
 }
 
 
-bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::receiveAndMerge(const peano4::datamanagement::CellMarker& marker) {
+bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::receiveAndMerge(
+  const peano4::datamanagement::CellMarker& marker
+  {% for arg in ADDITIONAL_LOAD_STORE_ARGUMENTS %}, const {{arg[1]}}& {{arg[2]}} {% endfor %}
+) const {
   return {{RECEIVE_AND_MERGE_CONDITION}};
 }
 
 
-bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::storePersistently(const peano4::datamanagement::CellMarker& marker) {
+bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::loadPersistently(
+  const peano4::datamanagement::CellMarker& marker
+  {% for arg in ADDITIONAL_LOAD_STORE_ARGUMENTS %}, const {{arg[1]}}& {{arg[2]}} {% endfor %}
+) {
+  return {{LOAD_PERSISTENT_CONDITION}};
+}
+
+
+bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::storePersistently(
+  const peano4::datamanagement::CellMarker& marker
+  {% for arg in ADDITIONAL_LOAD_STORE_ARGUMENTS %}, const {{arg[1]}}& {{arg[2]}} {% endfor %}
+) const {
   return {{STORE_PERSISTENT_CONDITION}};
 }
 
 
-bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::loadPersistently(const peano4::datamanagement::CellMarker& marker) {
-  return {{LOAD_PERSISTENT_CONDITION}};
+bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::compute(
+  const peano4::datamanagement::CellMarker& marker
+  {% for arg in ADDITIONAL_LOAD_STORE_ARGUMENTS %}, const {{arg[1]}}& {{arg[2]}} {% endfor %}
+) const {
+  return {{COMPUTE_CONDITION}};
 }
 {% endif -%}
   
