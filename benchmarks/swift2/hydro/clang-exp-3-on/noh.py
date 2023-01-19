@@ -57,15 +57,18 @@ HYDRO_PART_NUMBER = str(args.particle_number);
 # Declare the particle type
 particle = swift2.particle.SPHLeapfrogFixedInteractionRadius(name = "MinimalSPH",
                                                              dimensions_hydro = HYDRO_DIMENSIONS,
-                                                             cfl_factor             = 0.2,
+                                                             cfl_factor             = 0.1,
                                                              initial_time_step_size = args.timestep_size,
                                                              constant_time_step_size= True,
                                                              swift_project_namespace= project_namespace,
                                                              is_sph = True,
-                                                             particles_per_cell = 1000,
+                                                             particles_per_cell = 30,
                                                              min_h = args.cell_size,
                                                              max_h = args.cell_size
                                                              )
+# Set mantissa size
+#particle.set_mantissa_size(23) DONE in python template
+
 
 # Add particle to the SWIFT project
 particle_set = project.add_particle_species( particle )
@@ -85,8 +88,8 @@ project.set_global_simulation_parameters(
   domain_size           = domain_size,
   min_end_time          = args.end_time,
   max_end_time          = 0.0,
-#  first_plot_time_stamp = 2*args.end_time,
-#  time_in_between_plots = 2*args.end_time,
+#  first_plot_time_stamp = args.end_time,
+#  time_in_between_plots = args.end_time,
   first_plot_time_stamp = 0,
   time_in_between_plots = args.plot_delta,
   periodic_BC           = periodic_boundary_conditions,
@@ -122,11 +125,14 @@ initialisation_snippet = ICs.initialisation_snippet
 
 # Insert particles by coordinate
 Npart = args.particle_number
+offset = 1/Npart
 
 coords = np.zeros((Npart**HYDRO_DIMENSIONS, 3))
 
-x = np.linspace(0, 1, Npart, endpoint=False)
-y = np.linspace(0, 1, Npart, endpoint=False)
+#x = np.linspace(0, 1, Npart, endpoint=False)
+#y = np.linspace(0, 1, Npart, endpoint=False)
+x = np.linspace(offset, 1, Npart, endpoint=False)
+y = np.linspace(offset, 1, Npart, endpoint=False)
 
 xp, yp = np.meshgrid(x, y)
 xp= xp.reshape((np.prod(xp.shape),))

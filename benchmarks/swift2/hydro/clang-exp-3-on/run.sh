@@ -6,16 +6,18 @@
 export OMP_NUM_THREADS=28
 
 # Parameters
-END_TIME=0.1
-N_PART=99
+TIMESTEP_SIZE=0.0001
+END_TIME=0.0010
+N_PART=100
 CELL_SIZE=0.1
+PLOT_DELTA=0
 
 # Run python script to generate the experiment
-python3 noh.py -j $OMP_NUM_THREADS -et $END_TIME -np $N_PART -cs $CELL_SIZE
+python3 noh.py -j $OMP_NUM_THREADS -dt $TIMESTEP_SIZE -et $END_TIME -np $N_PART -cs $CELL_SIZE -plot $PLOT_DELTA
 
 # run experiment
-#echo 'running experiment...'
-#./noh2D
+echo 'running experiment...'
+./noh2D
 
 #likwid-perfctr -f -C 0 -g MEM            -o output_MEM.cvs            -O ./noh2D
 #likwid-perfctr -f -C 0 -g DATA           -o output_DATA.cvs           -O ./noh2D
@@ -35,9 +37,11 @@ python3 noh.py -j $OMP_NUM_THREADS -et $END_TIME -np $N_PART -cs $CELL_SIZE
 #fi
 #
 #mkdir $DIRNAME
-#mv *.cvs Constants.h $DIRNAME
-#
-## Save snapshots
+#mv *.cvs $DIRNAME
+
+# Save snapshots
 #mkdir $DIRNAME"/snapshots/"
 #mv particles* grid* $DIRNAME"/snapshots/"
 
+
+# @TODO: run plot script
