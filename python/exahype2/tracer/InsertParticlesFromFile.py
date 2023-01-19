@@ -89,6 +89,7 @@ class InsertParticlesFromFile(ActionSet):
 #include "vertexdata/{{PARTICLES_CONTAINER}}.h"
 #include "globaldata/{{PARTICLE}}.h"
 #include "toolbox/particles/FileReader.h"
+#include "toolbox/particles/particles.h"
 #include "toolbox/particles/ParticleFactory.h"
 #include <fstream>
 #include <string>
