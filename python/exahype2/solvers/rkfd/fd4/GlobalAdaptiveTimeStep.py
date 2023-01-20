@@ -34,20 +34,20 @@ class GlobalAdaptiveTimeStep( SeparateSweeps ):
     super(GlobalAdaptiveTimeStep,self).__init__(name, 
                                              patch_size, 
                                              3, #overlap, 
-                                             rk_order, unknowns, auxiliary_variables, min_meshcell_h, max_meshcell_h, plot_grid_properties, kernel_namespace="fd4") 
+                                             rk_order, 
+                                             unknowns, 
+                                             auxiliary_variables, 
+                                             min_meshcell_h, 
+                                             max_meshcell_h, 
+                                             plot_grid_properties,
+                                             kernel_namespace="fd4"
+                                             ) 
 
     self._time_step_relaxation = time_step_relaxation
+    self._compute_eigenvalue                  = True
 
     self._KO_Sigma                            = KOSigma
-
-    self._compute_eigenvalue                  = True
     
-    self._user_action_set_includes += """
-#include "exahype2/fd/fd4/FD4.h"
-"""
-
-    
-
     self.set_implementation(flux=flux, 
       ncp=ncp, 
       eigenvalues=eigenvalues, 
@@ -110,3 +110,9 @@ class GlobalAdaptiveTimeStep( SeparateSweeps ):
     
     self.create_action_sets()
 
+
+  @property
+  def user_action_set_includes(self):
+    return super(GlobalAdaptiveTimeStep, self).user_action_set_includes + """
+#include "exahype2/fd/fd4/FD4.h"
+"""

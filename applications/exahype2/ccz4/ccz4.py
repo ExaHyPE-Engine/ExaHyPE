@@ -154,7 +154,7 @@ if __name__ == "__main__":
             min_volume_h=min_volume_h, max_volume_h=max_volume_h,
             time_step_relaxation=cfl
           )
-        elif SuperClass==exahype2.solvers.rkfd.fd4.GlobalAdaptiveTimeStep:
+        elif SuperClass==exahype2.solvers.rkfd.fd4.GlobalAdaptiveTimeStep or SuperClass==exahype2.solvers.rkfd.fd4.GlobalAdaptiveTimeStepWithEnclaveTasking:
           if args.implementation=="fd4-rk1-adaptive":
             rk_order = 1
           else:
@@ -168,7 +168,7 @@ if __name__ == "__main__":
             time_step_relaxation=cfl,
             KOSigma=KOSig
           )
-        elif SuperClass==exahype2.solvers.rkfd.fd4.GlobalFixedTimeStep:
+        elif SuperClass==exahype2.solvers.rkfd.fd4.GlobalFixedTimeStep or SuperClass==exahype2.solvers.rkfd.fd4.GlobalFixedTimeStepWithEnclaveTasking:
           if args.implementation=="fd4-rk1-fixed":
             rk_order = 1
           else:
@@ -681,7 +681,7 @@ if __name__ == "__main__":
         is_rkdg = True
     except Exception as e:
         pass
-        msg = "Warning: RKDG no supported on this machine"
+        msg = "Warning: RKDG not supported on this machine"
         print(msg)
         userinfo.append((msg,e))
 

@@ -191,7 +191,18 @@ class SeparateSweeps( CellCenteredFiniteDifferences ):
   """
 
 
-  def __init__(self, name, patch_size, overlap, rk_order, unknowns, auxiliary_variables, min_meshcell_h, max_meshcell_h, plot_grid_properties, kernel_namespace):
+  def __init__(self, 
+               name, 
+               patch_size, 
+               overlap, 
+               rk_order, 
+               unknowns, 
+               auxiliary_variables, 
+               min_meshcell_h, 
+               max_meshcell_h, 
+               plot_grid_properties, 
+               kernel_namespace
+               ):
     """
 
       Instantiate a generic FV scheme with an overlap of 1.

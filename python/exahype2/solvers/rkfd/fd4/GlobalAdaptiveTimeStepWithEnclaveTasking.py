@@ -18,6 +18,7 @@ from exahype2.solvers.rkfd.kernels import RiemannKernelVariant
 from exahype2.solvers.rkfd.AdaptiveTimeSteppingCodeSnippets import AdaptiveTimeSteppingCodeSnippets
 
 
+
 class GlobalAdaptiveTimeStepWithEnclaveTasking( SeparateSweepsWithEnclaveTasking ):
   def __init__(self, 
     name, patch_size, rk_order, unknowns, auxiliary_variables, min_meshcell_h, max_meshcell_h, time_step_relaxation,
@@ -29,27 +30,26 @@ class GlobalAdaptiveTimeStepWithEnclaveTasking( SeparateSweepsWithEnclaveTasking
     initial_conditions=PDETerms.User_Defined_Implementation,
     source_term=PDETerms.None_Implementation,
     eigenvalues=PDETerms.User_Defined_Implementation, 
-    pde_terms_without_state=False,
+    pde_terms_without_state: bool = False,
     plot_grid_properties=False, KOSigma=8.0
   ):
     super(GlobalAdaptiveTimeStepWithEnclaveTasking,self).__init__(name, 
                                              patch_size, 
                                              3, #overlap, 
-                                             rk_order, unknowns, auxiliary_variables, min_meshcell_h, max_meshcell_h, plot_grid_properties, 
-                                             pde_terms_without_state,
-                                             kernel_namespace="fd4") 
+                                             rk_order, 
+                                             unknowns, 
+                                             auxiliary_variables, 
+                                             min_meshcell_h, 
+                                             max_meshcell_h, 
+                                             plot_grid_properties, 
+                                             kernel_namespace="fd4",
+                                             pde_terms_without_state=pde_terms_without_state,
+                                             ) 
 
     self._time_step_relaxation = time_step_relaxation
+    self._compute_eigenvalue                  = True
 
     self._KO_Sigma                            = KOSigma
-
-    self._compute_eigenvalue                  = True
-    
-    self._user_action_set_includes += """
-#include "exahype2/fd/fd4/FD4.h"
-"""
-
-    
 
     self.set_implementation(flux=flux, 
       ncp=ncp, 
@@ -93,6 +93,20 @@ class GlobalAdaptiveTimeStepWithEnclaveTasking( SeparateSweepsWithEnclaveTasking
       riemann_kernel_variant = RiemannKernelVariant.PatchWiseAoSHeap,
       KOSigma=self._KO_Sigma
     )
+    self._fused_compute_kernel_call_cpu = create_compute_Riemann_kernel_for_FD4(
+      self._flux_implementation, self._ncp_implementation, self._source_term_implementation, 
+      compute_max_eigenvalue_of_next_time_step=True,
+      solver_variant = SolverVariant.Stateless,
+      riemann_kernel_variant = RiemannKernelVariant.PatchWiseAoSHeap,
+      KOSigma=self._KO_Sigma
+    )
+    self._fused_compute_kernel_call_cpu = create_compute_Riemann_kernel_for_FD4(
+      self._flux_implementation, self._ncp_implementation, self._source_term_implementation, 
+      compute_max_eigenvalue_of_next_time_step=True,
+      solver_variant = SolverVariant.Accelerator,
+      riemann_kernel_variant = RiemannKernelVariant.PatchWiseAoSHeap,
+      KOSigma=self._KO_Sigma
+    )
 
     solver_code_snippets = AdaptiveTimeSteppingCodeSnippets(self._time_step_relaxation)
 
@@ -113,3 +127,9 @@ class GlobalAdaptiveTimeStepWithEnclaveTasking( SeparateSweepsWithEnclaveTasking
     
     self.create_action_sets()
 
+
+  @property
+  def user_action_set_includes(self):
+    return super(GlobalAdaptiveTimeStepWithEnclaveTasking, self).user_action_set_includes + """
+#include "exahype2/fd/fd4/FD4.h"
+"""
