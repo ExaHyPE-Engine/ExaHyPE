@@ -49,6 +49,7 @@ parser.add_argument("-pi",      "--plot-interval",     dest="plot_interval",  ty
 parser.add_argument("-et",      "--end-time",          dest="end_time",       type=float, default=end_time, help="End time of simulation")
 parser.add_argument("-s",       "--solver",            dest="solver",         choices=solvers.keys(), default=solver, help="|".join(solvers.keys()) )
 parser.add_argument("-m",       "--build-mode",        dest="build_mode",     choices=build_modes.keys(), default=build_mode, help="|".join(build_modes.keys()) )
+parser.add_argument("--no-compile",                    dest="compile",        action="store_false", default="True", help="Compile (on by default)" )
 args = parser.parse_args()
 
 if args.dim not in [2,3]:
@@ -70,13 +71,18 @@ pde.boundary_values[2] = 0
 rho = sympy.symbols("rho")
 c = sympy.symbols("c")
 K0 = rho * c * c
-pde.F[0, :] = K0 * v
-pde.F[1, 0] = 1 / rho * p
-pde.F[2, 1] = 1 / rho * p
 
-pde.eigenvalue[0] = c
-pde.eigenvalue[1] = -c
-pde.eigenvalue[2] = 0
+# [unknowns, dimensions]
+pde.F[0, 0] = -K0 * v[0]
+pde.F[0, 1] = -K0 * v[1]
+pde.F[1, 0] = -1/rho * p
+pde.F[1, 1] = 0
+pde.F[2, 0] = 0
+pde.F[2, 1] = -1/rho * p
+
+pde.eigenvalues[0] = c
+pde.eigenvalues[1] = -c
+pde.eigenvalues[2] = 0
 
 sigma = sympy.symbols("sigma")
 t0 = sympy.symbols("t0")
@@ -107,7 +113,7 @@ my_solver.set_implementation(
   boundary_conditions  = pde.implementation_of_boundary_conditions(),
   flux                 = pde.implementation_of_flux(),
   eigenvalues          = pde.implementation_of_max_eigenvalue(),
-  source_term          = 
+  source_term          = pde.implementation_of_sources(),
   refinement_criterion = """
   auto command = ::exahype2::RefinementCommand::Keep;
   if (tarch::la::equals(t, 0.0)) {
@@ -156,7 +162,8 @@ build_mode = build_modes[args.build_mode]
 my_project.set_Peano4_installation("../../../", build_mode )
 
 peano4_project = my_project.generate_Peano4_project(verbose=True)
-peano4_project.build(make_clean_first=True, throw_away_data_after_build=True)
+if(args.compile):
+  peano4_project.build(make_clean_first=True, throw_away_data_after_build=True)
 
-print("PDE: " + str(pde))
+print("PDE:\n" + str(pde))
 print("Done")

@@ -31,11 +31,12 @@ class FirstOrderConservativePDEFormulation(PDE):
     PDE.__init__(self, unknowns, auxiliary_variables, dimensions)
 
     self.F                = sympy.symarray("F",     (unknowns,dimensions))
-    self.eigenvalue       = sympy.symarray("alpha", (unknowns,dimensions))
+    self.eigenvalues      = sympy.symarray("alpha", (unknowns,dimensions))
     self.sources          = sympy.symarray("S",      unknowns)
     for i in range(0,unknowns):
-      self.F[i]           = [0 for i in range(0,dimensions)]
-      self.eigenvalue[i]  = [0 for i in range(0,dimensions)]
+      self.F[i]           = [0 for d in range(0,dimensions)]
+      self.eigenvalues[i] = [0 for d in range(0,dimensions)]
+      self.sources[i] = 0
     pass
 
   def __str__(self):
@@ -43,12 +44,12 @@ class FirstOrderConservativePDEFormulation(PDE):
     for i in range(0,self.unknowns):
       result += "d_t " + str( self.Q[i] ) + "(x) + div_x( "
       result += str( self.F[i] )
-      result += " ) = 0\n"
+      result += " ) = "
+      result += str(self.sources[i]) + "\n"
     for i in range(0,self.unknowns):
-      result += "\lambda _{max," + str( i ) + "}(x) = "
-      result += str( self.eigenvalue[i] )
+      result += "\lambda_{max," + str( i ) + "}(x) = "
+      result += str( self.eigenvalues[i] )
       result += "\n"
-    result += " = "
     return result
 
   def LaTeX(self):
@@ -59,13 +60,14 @@ class FirstOrderConservativePDEFormulation(PDE):
         if j!=0:
           result += ","
         result += str( self.F[i][j] )
-      result += " ) & = & 0 \\\\"
+      result += " ) & = & "
+      result += str(self.sources[i]) + " \\\\"
     for i in range(0,self.unknowns):
       result += "\\lambda _{max," + str( i ) + "}(x) & = & ["
-      for j in range(0,len(self.eigenvalue[i])):
+      for j in range(0,len(self.eigenvalues[i])):
         if j!=0:
           result += ","
-        result += str( self.eigenvalue[i][j] )
+        result += str( self.eigenvalues[i][j] )
       result += "] \\\\"
     result += "\\end{eqnarray*}"
     result = result.replace( "**", "^" )
@@ -79,9 +81,10 @@ class FirstOrderConservativePDEFormulation(PDE):
       them accordingly.
     """
     for i in range(0,self.unknowns):
+      self.sources[i] = self.sources[i].subs(expression,new_expression)
       for d in range(0,self.dimensions):
-        self.F[i,d]          = self.F[i,d].subs(expression,new_expression)
-        self.eigenvalue[i,d] = self.eigenvalue[i,d].subs(expression,new_expression)
+        self.F[i,d]           = self.F[i,d].subs(expression,new_expression)
+        self.eigenvalues[i,d] = self.eigenvalues[i,d].subs(expression,new_expression)
 
   def implementation_of_flux(self, invoke_evalf_before_output=False):
     """
@@ -120,15 +123,15 @@ class FirstOrderConservativePDEFormulation(PDE):
         before we pipe it into the output. If your expression is something numeric,
         then evalf will fail (as it is not defined for scalar quantities).
     """
-    result  = self._implementation_of_mapping_onto_named_quantities(is_cell_mapping = False)
+    result  = self._implementation_of_mapping_onto_named_quantities(is_cell_mapping=False)
     result += "switch (normal) {\n"
     for d in range(0,self.dimensions):
       result += "  case " + str(d) + ":\n"
       for i in range(0,self.unknowns):
         if invoke_evalf_before_output:
-          result += sympy.printing.cxxcode( self.eigenvalue[i,d].evalf(), assign_to="lambda[" + str(i) + "]" )
+          result += sympy.printing.cxxcode( self.eigenvalues[i,d].evalf(), assign_to="lambda[" + str(i) + "]" )
         else:
-          result += "lambda[" + str(i) + "] = " + sympy.printing.cxxcode( self.eigenvalue[i,d] ) + ";"
+          result += "lambda[" + str(i) + "] = " + sympy.printing.cxxcode( self.eigenvalues[i,d] ) + ";"
         result += "\n"
       result += "  break;\n"
     result += "}\n"
@@ -145,9 +148,9 @@ class FirstOrderConservativePDEFormulation(PDE):
       result += "  case " + str(d) + ":\n"
       for i in range(0,self.unknowns):
         if invoke_evalf_before_output:
-          result += sympy.printing.cxxcode( self.eigenvalue[i,d].evalf(), assign_to="lambda[" + str(i) + "]" )
+          result += sympy.printing.cxxcode( self.eigenvalues[i,d].evalf(), assign_to="lambda[" + str(i) + "]" )
         else:
-          result += "lambda[" + str(i) + "] = " + sympy.printing.cxxcode( self.eigenvalue[i,d] ) + ";"
+          result += "lambda[" + str(i) + "] = " + sympy.printing.cxxcode( self.eigenvalues[i,d] ) + ";"
         result += "\n"
       result += "  break;\n"
     result += "}\n"
@@ -158,4 +161,17 @@ class FirstOrderConservativePDEFormulation(PDE):
       else:
         result += "result = std::max( result, lambda[" + str(i)+ "] );\n"
     result += "return result;\n"
+    return result
+
+  def implementation_of_sources(self, invoke_evalf_before_output=False):
+    """
+      Return implementation for sources as C code.
+    """
+    result  = self._implementation_of_mapping_onto_named_quantities(is_cell_mapping=False)
+    for i in range(0,self.unknowns):
+      if invoke_evalf_before_output:
+        result += sympy.printing.cxxcode( self.sources[i].evalf(), assign_to="S[" + str(i) + "]" )
+      else:
+        result += "S[" + str(i) + "] = " + sympy.printing.cxxcode( self.sources[i] ) + ";"
+      result += "\n"
     return result

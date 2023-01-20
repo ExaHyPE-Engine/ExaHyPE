@@ -4,14 +4,14 @@ import os
 import re
 import jinja2
 
+from .Helper import write_file
+
 from .Overwrite import Overwrite
 
 from .Jinja2TemplatedHeaderFile import Jinja2TemplatedHeaderFile
 
 class Observer(object):
   default_overwrite = True
-
-
 
   def __init__(self,classname,namespace,subdirectory,included_actions,vertices,faces,cells):
     """
