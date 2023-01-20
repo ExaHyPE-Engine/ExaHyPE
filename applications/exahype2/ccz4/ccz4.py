@@ -49,7 +49,7 @@ if __name__ == "__main__":
     parser.add_argument("-m",    "--mode",            dest="mode",            default="release",  help="|".join(modes.keys()) )
     parser.add_argument( "--gpu",            dest="GPU",            default=False, action="store_true",  help="Run with accelerator support" )
     parser.add_argument("-ext",  "--extension",       dest="extension",       choices=["none", "gradient", "AMRadm", "Full", "Psi4"],   default="none",  help="Pick extension, i.e. what should be plotted on top. Default is none" )
-    parser.add_argument("-impl", "--implementation",  dest="implementation",  choices=["fv-global-fixed", "fv-global-adaptive", "fv-global-fixed-enclave", "fv-global-adaptive-enclave","fv-subcyling-adaptive-enclave","fv-local-enclave", "fv-musclhancock", "fd4-rk1-adaptive", "fd4-rk1-fixed", "fd4-rk4-adaptive", "fd4-rk4-fixed", "RKDG"], required="True",  help="Pick solver type" )
+    parser.add_argument("-impl", "--implementation",  dest="implementation",  choices=["fv-global-fixed", "fv-global-adaptive", "fv-global-fixed-enclave", "fv-global-adaptive-enclave","fv-subcyling-adaptive-enclave","fv-local-enclave", "fv-musclhancock", "fd4-rk1-adaptive", "fd4-rk1-adaptive-enclave", "fd4-rk1-fixed", "fd4-rk4-adaptive", "fd4-rk4-fixed", "RKDG"], required="True",  help="Pick solver type" )
     parser.add_argument("-no-pbc",  "--no-periodic-boundary-conditions",      dest="periodic_bc", action="store_false", default="True",  help="switch on or off the periodic BC" )
     parser.add_argument("-AMRMarker",  "--AMR-marker",      dest="marker", choices=["none", "poisson"],   default="none",  help="switch on or off the AMR boundary marker" )
     parser.add_argument("-et",   "--end-time",        dest="end_time",        type=float, default=1.0, help="End (terminal) time" )
@@ -90,6 +90,8 @@ if __name__ == "__main__":
     if args.implementation=="fv-musclhancock":
        SuperClass = exahype2.solvers.fv.musclhancock.GlobalAdaptiveTimeStep
     if args.implementation=="fd4-rk1-adaptive" or args.implementation=="fd4-rk4-adaptive":
+       SuperClass = exahype2.solvers.rkfd.fd4.GlobalAdaptiveTimeStep
+    if args.implementation=="fd4-rk1-adaptive-enclave":
        SuperClass = exahype2.solvers.rkfd.fd4.GlobalAdaptiveTimeStepWithEnclaveTasking
     if args.implementation=="fd4-rk1-fixed" or args.implementation=="fd4-rk4-fixed":
        SuperClass = exahype2.solvers.rkfd.fd4.GlobalFixedTimeStep
@@ -155,7 +157,7 @@ if __name__ == "__main__":
             time_step_relaxation=cfl
           )
         elif SuperClass==exahype2.solvers.rkfd.fd4.GlobalAdaptiveTimeStep or SuperClass==exahype2.solvers.rkfd.fd4.GlobalAdaptiveTimeStepWithEnclaveTasking:
-          if args.implementation=="fd4-rk1-adaptive":
+          if args.implementation=="fd4-rk1-adaptive" or args.implementation=="fd4-rk1-adaptive-enclave":
             rk_order = 1
           else:
             rk_order = 4
