@@ -1,6 +1,6 @@
 # This file is part of the ExaHyPE2 project. For conditions of distribution and 
 # use, please see the copyright notice at www.peano-framework.org
-from exahype2.solvers.rkfd.OneSweepPerRungeKuttaStep import OneSweepPerRungeKuttaStep
+from exahype2.solvers.rkfd.SeparateSweeps import SeparateSweeps
 from exahype2.solvers.rkfd.PDETerms    import PDETerms
 
 import jinja2
@@ -18,7 +18,7 @@ from exahype2.solvers.rkfd.kernels import RiemannKernelVariant
 from exahype2.solvers.rkfd.AdaptiveTimeSteppingCodeSnippets import AdaptiveTimeSteppingCodeSnippets
 
 
-class GlobalAdaptiveTimeStep( OneSweepPerRungeKuttaStep ):
+class GlobalAdaptiveTimeStep( SeparateSweeps ):
   def __init__(self, 
     name, patch_size, rk_order, unknowns, auxiliary_variables, min_meshcell_h, max_meshcell_h, time_step_relaxation,
     flux=PDETerms.User_Defined_Implementation, 

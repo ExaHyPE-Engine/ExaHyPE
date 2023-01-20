@@ -90,11 +90,11 @@ if __name__ == "__main__":
     if args.implementation=="fv-musclhancock":
        SuperClass = exahype2.solvers.fv.musclhancock.GlobalAdaptiveTimeStep
     if args.implementation=="fd4-rk1-adaptive" or args.implementation=="fd4-rk4-adaptive":
-       SuperClass = exahype2.solvers.rkfd.fd4.GlobalAdaptiveTimeStep
+       SuperClass = exahype2.solvers.rkfd.fd4.GlobalAdaptiveTimeStepWithEnclaveTasking
     if args.implementation=="fd4-rk1-fixed" or args.implementation=="fd4-rk4-fixed":
        SuperClass = exahype2.solvers.rkfd.fd4.GlobalFixedTimeStep
     if args.implementation=="RKDG":
-       SuperClass = exahype2.solvers.rkdg.rusanov.GlobalAdaptiveTimeStep
+       SuperClass = exahype2.solvers.rkdg.rusanov.GlobalAdaptiveTimeStepWithEnclaveTasking
 
 
     class CCZ4Solver( SuperClass ):
