@@ -478,6 +478,7 @@ class EnclaveTasking( FV ):
     # Some includes might logically belong into the action sets, but now they are 
     # 'outsourced' into the enclave task. So we manually add it here.
     implementationDictionary[ "SOLVER_INCLUDES" ] += self.user_solver_includes
+    implementationDictionary[ "SOLVER_INCLUDES" ] += self.user_action_set_includes
 
     task_name = self._enclave_task_name()
     generated_solver_files = peano4.output.Jinja2TemplatedHeaderImplementationFilePair(

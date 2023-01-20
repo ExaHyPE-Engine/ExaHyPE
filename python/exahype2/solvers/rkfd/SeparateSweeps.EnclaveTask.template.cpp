@@ -6,12 +6,13 @@
 #include "config.h"
 
 
-#include "exahype2/fv/rusanov/Rusanov.h"
 #include "exahype2/CellData.h"
 #include "exahype2/EnclaveBookkeeping.h"
 #include "exahype2/EnclaveTask.h"
 
 #include "exahype2/enumerator/Enumerator.h"
+
+#include "exahype2/fd/PatchUtils.h"
 
 #include "peano4/parallel/parallel.h"
 
@@ -49,13 +50,13 @@ double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::applyKernelToCell(
 ) {
   ::exahype2::CellData  patchData( reconstructedPatch, marker.x(), marker.h(), t, dt, targetPatch );
 
-  ::exahype2::fv::{{KERNEL_NAMESPACE}}::{{COMPUTE_KERNEL_CALL}}
+  ::exahype2::fd::{{KERNEL_NAMESPACE}}::{{COMPUTE_KERNEL_CALL}}
 
-  ::exahype2::fv::validatePatch(
+  ::exahype2::fd::validatePatch(
     targetPatch,
     {{NUMBER_OF_UNKNOWNS}},
     {{NUMBER_OF_AUXILIARY_VARIABLES}},
-    {{NUMBER_OF_VOLUMES_PER_AXIS}},
+    {{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}},
     0, // halo
     std::string(__FILE__) + "(" + std::to_string(__LINE__) + "): " + marker.toString()
   ); // outcome has to be valid
@@ -85,11 +86,11 @@ double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::applyKernelToCell(
     dt,
     reconstructedPatch,
     #if Dimensions==2
-    {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_PLUS_HALO_2D}},
-    {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_2D}},
+    ({{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}}+2*{{OVERLAP}}) * ({{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}}+2*{{OVERLAP}}) * ({{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}),
+    {{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}} * {{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}} * {{NUMBER_OF_UNKNOWNS}},
     #else
-    {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_PLUS_HALO_3D}},
-    {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_3D}},
+    ({{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}}+2*{{OVERLAP}}) * ({{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}}+2*{{OVERLAP}}) * ({{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}}+2*{{OVERLAP}}) * ({{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}),
+    {{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}} * {{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}} * {{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}} * {{NUMBER_OF_UNKNOWNS}},
     #endif
     [&]() -> void {
       _maxEigenvalue = applyKernelToCell(
@@ -358,14 +359,14 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse( const std::list<Task*>& ot
   #if defined(GPUOffloadingOMP)
   if (targetDevice>=0) {
     foundOffloadingBranch = true;
-    ::exahype2::fv::{{KERNEL_NAMESPACE}}::omp::{{FUSED_COMPUTE_KERNEL_CALL_GPU}}
+    ::exahype2::fd::{{KERNEL_NAMESPACE}}::omp::{{FUSED_COMPUTE_KERNEL_CALL_GPU}}
   }
   #endif
 
   #if defined(GPUOffloadingHIP)
   if (targetDevice>=0) {
     foundOffloadingBranch = true;
-    ::exahype2::fv::{{KERNEL_NAMESPACE}}::hip::{{FUSED_COMPUTE_KERNEL_CALL_GPU}}
+    ::exahype2::fd::{{KERNEL_NAMESPACE}}::hip::{{FUSED_COMPUTE_KERNEL_CALL_GPU}}
   }
   #endif
 
@@ -373,12 +374,12 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse( const std::list<Task*>& ot
   if (targetDevice>=0 or targetDevice==Host) {
     foundOffloadingBranch = true;
 
-    ::exahype2::fv::{{KERNEL_NAMESPACE}}::sycl::{{FUSED_COMPUTE_KERNEL_CALL_GPU}}
+    ::exahype2::fd::{{KERNEL_NAMESPACE}}::sycl::{{FUSED_COMPUTE_KERNEL_CALL_GPU}}
   }
   #endif
 
   if (not foundOffloadingBranch) {
-    ::exahype2::fv::{{KERNEL_NAMESPACE}}::{{FUSED_COMPUTE_KERNEL_CALL_CPU}}
+    ::exahype2::fd::{{KERNEL_NAMESPACE}}::{{FUSED_COMPUTE_KERNEL_CALL_CPU}}
   }
 
   otterParallelEnd();

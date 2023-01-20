@@ -62,10 +62,11 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
       GridConstruction,
       GridInitialisation,
       PlottingAfterGridInitialisation,
-      RungeKuttaSubStep0AfterGridInitialisation,
+      RungeKuttaPrimarySubStep0AfterGridInitialisation,
       Plotting {% for item in range(RK_STEPS) -%}
       ,
-      RungeKuttaSubStep{{item}}
+      RungeKuttaPrimarySubStep{{item}},
+      RungeKuttaSecondarySubStep{{item}},
       {%- endfor %}
     };
 

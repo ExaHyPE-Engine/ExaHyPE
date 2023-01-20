@@ -4,6 +4,11 @@
 #include "{{CLASSNAME}}.h"
 #include "Constants.h"
 
+#if defined(UseSmartMPI)
+#include "tasks/{{SOLVER_NAME}}EnclaveTask.h"
+#include "tarch/multicore/smartScheduling.h"
+#endif
+
 
 #include "tarch/multicore/Lock.h"
 #include "exahype2/NonCriticalAssertions.h"
@@ -198,25 +203,25 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startTimeStep(
       _solverState = SolverState::GridInitialisation;
       break;
   {% for item in range(RK_STEPS-1) %}
-    case SolverState::RungeKuttaSubStep{{item}}:
-      _solverState = SolverState::RungeKuttaSubStep{{item+1}};
+    case SolverState::RungeKuttaPrimarySubStep{{item}}:
+      _solverState = SolverState::RungeKuttaSecondarySubStep{{item}};
+      break;
+    case SolverState::RungeKuttaSecondarySubStep{{item}}:
+      _solverState = SolverState::RungeKuttaPrimarySubStep{{item+1}};
       break;
   {% endfor %}
     case SolverState::Plotting:
     case SolverState::PlottingAfterGridInitialisation:
     case SolverState::GridInitialisation:
-    case SolverState::RungeKuttaSubStep{{RK_STEPS-1}}:
-      _solverState = SolverState::RungeKuttaSubStep0;
+    case SolverState::RungeKuttaPrimarySubStep{{RK_STEPS-1}}:
+      _solverState = SolverState::RungeKuttaSecondarySubStep{{RK_STEPS-1}};
       break;
-    {% if RK_STEPS>1 %}
-    case SolverState::RungeKuttaSubStep0AfterGridInitialisation:
-      _solverState = SolverState::RungeKuttaSubStep1;
+    case SolverState::RungeKuttaSecondarySubStep{{RK_STEPS-1}}:
+      _solverState = SolverState::RungeKuttaPrimarySubStep0;
       break;
-    {% else %}
-    case SolverState::RungeKuttaSubStep0AfterGridInitialisation:
-      _solverState = SolverState::RungeKuttaSubStep0;
+    case SolverState::RungeKuttaPrimarySubStep0AfterGridInitialisation:
+      _solverState = SolverState::RungeKuttaSecondarySubStep0;
       break;
-    {% endif %}
   }
 
   {{START_TIME_STEP_IMPLEMENTATION}}
@@ -250,88 +255,87 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startTimeStep(
 
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishTimeStep() {
   if ( isLastGridSweepOfTimeStep() ) {
+    #ifdef Parallel
+    double newMinTimeStamp = _minTimeStampThisTimeStep;
+    double newMaxTimeStamp = _maxTimeStampThisTimeStep;
+    double newMinGridCellH   = _minGridCellHThisTimeStep;
+    double newMaxGridCellH   = _maxGridCellHThisTimeStep;
+    double newMinTimeStepSize = _minTimeStepSizeThisTimeStep;
+    double newMaxTimeStepSize = _maxTimeStepSizeThisTimeStep;
 
-  #ifdef Parallel
-  double newMinTimeStamp = _minTimeStampThisTimeStep;
-  double newMaxTimeStamp = _maxTimeStampThisTimeStep;
-  double newMinGridCellH   = _minGridCellHThisTimeStep;
-  double newMaxGridCellH   = _maxGridCellHThisTimeStep;
-  double newMinTimeStepSize = _minTimeStepSizeThisTimeStep;
-  double newMaxTimeStepSize = _maxTimeStepSizeThisTimeStep;
+    double newLocalMinTimeStamp = _localMinTimeStampThisTimeStep;
+    double newLocalMaxTimeStamp = _localMaxTimeStampThisTimeStep;
 
-  double newLocalMinTimeStamp = _localMinTimeStampThisTimeStep;
-  double newLocalMaxTimeStamp = _localMaxTimeStampThisTimeStep;
+    int newPatchUpdates = _patchUpdates;
 
-  int newPatchUpdates = _patchUpdates;
+    tarch::mpi::Rank::getInstance().allReduce(
+        &newMinTimeStamp,
+        &_minTimeStampThisTimeStep,
+        1, MPI_DOUBLE,
+        MPI_MIN,
+        [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); }
+        );
+    tarch::mpi::Rank::getInstance().allReduce(
+        &newMaxTimeStamp,
+        &_maxTimeStampThisTimeStep,
+        1, MPI_DOUBLE,
+        MPI_MAX,
+        [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); }
+        );
 
-  tarch::mpi::Rank::getInstance().allReduce(
-      &newMinTimeStamp,
-      &_minTimeStampThisTimeStep,
-      1, MPI_DOUBLE,
-      MPI_MIN,
-      [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); }
-      );
-  tarch::mpi::Rank::getInstance().allReduce(
-      &newMaxTimeStamp,
-      &_maxTimeStampThisTimeStep,
-      1, MPI_DOUBLE,
-      MPI_MAX,
-      [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); }
-      );
+    tarch::mpi::Rank::getInstance().allReduce(
+        &newMinGridCellH,
+        &_minGridCellHThisTimeStep,
+        1, MPI_DOUBLE,
+        MPI_MIN,
+        [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); }
+        );
+    tarch::mpi::Rank::getInstance().allReduce(
+        &newMaxGridCellH,
+        &_maxGridCellHThisTimeStep,
+        1, MPI_DOUBLE,
+        MPI_MAX,
+        [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); }
+        );
 
-  tarch::mpi::Rank::getInstance().allReduce(
-      &newMinGridCellH,
-      &_minGridCellHThisTimeStep,
-      1, MPI_DOUBLE,
-      MPI_MIN,
-      [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); }
-      );
-  tarch::mpi::Rank::getInstance().allReduce(
-      &newMaxGridCellH,
-      &_maxGridCellHThisTimeStep,
-      1, MPI_DOUBLE,
-      MPI_MAX,
-      [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); }
-      );
+    tarch::mpi::Rank::getInstance().allReduce(
+        &newMinTimeStepSize,
+        &_minTimeStepSizeThisTimeStep,
+        1, MPI_DOUBLE,
+        MPI_MIN,
+        [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); }
+        );
+    tarch::mpi::Rank::getInstance().allReduce(
+        &newMaxTimeStepSize,
+        &_maxTimeStepSizeThisTimeStep,
+        1, MPI_DOUBLE,
+        MPI_MAX,
+        [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); }
+        );
 
-  tarch::mpi::Rank::getInstance().allReduce(
-      &newMinTimeStepSize,
-      &_minTimeStepSizeThisTimeStep,
-      1, MPI_DOUBLE,
-      MPI_MIN,
-      [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); }
-      );
-  tarch::mpi::Rank::getInstance().allReduce(
-      &newMaxTimeStepSize,
-      &_maxTimeStepSizeThisTimeStep,
-      1, MPI_DOUBLE,
-      MPI_MAX,
-      [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); }
-      );
+    tarch::mpi::Rank::getInstance().allReduce(
+        &newLocalMinTimeStamp,
+        &_localMinTimeStampThisTimeStep,
+        1, MPI_DOUBLE,
+        MPI_MIN,
+        [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); }
+        );
+    tarch::mpi::Rank::getInstance().allReduce(
+        &newLocalMaxTimeStamp,
+        &_localMaxTimeStampThisTimeStep,
+        1, MPI_DOUBLE,
+        MPI_MAX,
+        [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); }
+        );
 
-  tarch::mpi::Rank::getInstance().allReduce(
-      &newLocalMinTimeStamp,
-      &_localMinTimeStampThisTimeStep,
-      1, MPI_DOUBLE,
-      MPI_MIN,
-      [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); }
-      );
-  tarch::mpi::Rank::getInstance().allReduce(
-      &newLocalMaxTimeStamp,
-      &_localMaxTimeStampThisTimeStep,
-      1, MPI_DOUBLE,
-      MPI_MAX,
-      [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); }
-      );
-
-  tarch::mpi::Rank::getInstance().allReduce(
-      &newPatchUpdates,
-      &_patchUpdates,
-      1, MPI_INT,
-      MPI_SUM,
-      [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); }
-      );
-  #endif
+    tarch::mpi::Rank::getInstance().allReduce(
+        &newPatchUpdates,
+        &_patchUpdates,
+        1, MPI_INT,
+        MPI_SUM,
+        [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); }
+        );
+    #endif
 
     if ( _minTimeStampThisTimeStep>=std::numeric_limits<double>::max()/10.0) {
       _minTimeStampThisTimeStep = 0.0;
@@ -374,11 +378,14 @@ std::string {{NAMESPACE | join("::")}}::{{CLASSNAME}}::toString(SolverState stat
       return "plotting";
     case SolverState::PlottingAfterGridInitialisation:
       return "plotting-after-grid-initialisation";
-    case SolverState::RungeKuttaSubStep0AfterGridInitialisation:
-      return "runge-kutta-step-0-after-grid-initialisation";
+    case SolverState::RungeKuttaPrimarySubStep0AfterGridInitialisation:
+      return "runge-kutta-primary-step-0-after-grid-initialisation";
     {% for item in range(RK_STEPS) %}
-    case SolverState::RungeKuttaSubStep{{item}}:
-      return "runge-kutta-step-{{item}}";
+    case SolverState::RungeKuttaPrimarySubStep{{item}}:
+      return "runge-kutta-primary-step-{{item}}";
+      break;
+    case SolverState::RungeKuttaSecondarySubStep{{item}}:
+      return "runge-kutta-secondary-step-{{item}}";
       break;
     {%- endfor %}
   }
@@ -394,13 +401,13 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::mayPlot() const {
 
 
 bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::isFirstGridSweepOfTimeStep() const {
-  return _solverState==SolverState::RungeKuttaSubStep0
-      or _solverState==SolverState::RungeKuttaSubStep0AfterGridInitialisation;
+  return _solverState==SolverState::RungeKuttaPrimarySubStep0
+      or _solverState==SolverState::RungeKuttaPrimarySubStep0AfterGridInitialisation;
 }
 
 
 bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::isLastGridSweepOfTimeStep() const {
-  return _solverState==SolverState::RungeKuttaSubStep{{RK_STEPS-1}};
+  return _solverState==SolverState::RungeKuttaSecondarySubStep{{RK_STEPS-1}};
 }
 
 

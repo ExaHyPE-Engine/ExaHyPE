@@ -16,6 +16,145 @@ from peano4.toolbox.blockstructured.ReconstructPatchAndApplyFunctor import Recon
 from exahype2.solvers.ButcherTableau                import ButcherTableau
 
 
+class UpdateCell(ReconstructPatchAndApplyFunctor):
+  """
+  
+  Update one cell, i.e. compute Runge-Kutta step on it
+  
+  This routine is significantly simpler than its counterpart in SeparateSweeps,
+  as we basically check if a cell is an enclave cell or not. If it is one, we
+  spawn a task. If not, we call the static routine from the task class which 
+  updates the patch. All the computations thus are removed.
+  
+  """  
+    
+  SolveRiemannProblemsOverPatch = jinja2.Template( """
+      double timeStamp    = fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStamp();
+
+      // Set the variable
+      // double timeStepSize
+      {{COMPUTE_TIME_STEP_SIZE}}
+
+      {% for PREDICATE_NO in range(0,PREDICATES|length) %}
+      if ({{PREDICATES[PREDICATE_NO]}}) {
+        ::exahype2::enumerator::AoSLexicographicEnumerator enumeratorWithAuxiliaryVariablesOnReconstructedPatch( 1, {{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}}, {{HALO_SIZE}}, {{NUMBER_OF_UNKNOWNS}}, {{NUMBER_OF_AUXILIARY_VARIABLES}});
+        ::exahype2::enumerator::AoSLexicographicEnumerator enumeratorWithoutAuxiliaryVariables( {{RK_STEPS}}, {{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}}, 0, {{NUMBER_OF_UNKNOWNS}}, 0 );
+    
+        dfor( dof, {{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}} ) {
+          for (int unknown=0; unknown<{{NUMBER_OF_UNKNOWNS}}; unknown++) {
+            {% for WEIGHT_NO in range(0,BUTCHER_TABLEAU_WEIGHTS[PREDICATE_NO]|length) %}
+            {% if BUTCHER_TABLEAU_WEIGHTS[PREDICATE_NO][WEIGHT_NO]!=0 %}
+            oldQWithHalo[ enumeratorWithAuxiliaryVariablesOnReconstructedPatch(0,dof,unknown) ] += 
+              {{BUTCHER_TABLEAU_RELATIVE_TIME_STEP_SIZES[PREDICATE_NO]}} * timeStepSize * {{BUTCHER_TABLEAU_WEIGHTS[PREDICATE_NO][WEIGHT_NO]}} * 
+              fineGridCell{{UNKNOWN_IDENTIFIER}}RhsEstimates.value[ enumeratorWithoutAuxiliaryVariables({{PREDICATE_NO-1}},dof,unknown) ];
+            {% endif %}
+            {% endfor %}
+          }      
+        }
+        
+        newQ = fineGridCell{{UNKNOWN_IDENTIFIER}}RhsEstimates.value + enumeratorWithoutAuxiliaryVariables({{PREDICATE_NO}},0,0);
+      }
+      {% endfor %} 
+   
+      {{PREPROCESS_RECONSTRUCTED_PATCH}}
+
+      assertion2( tarch::la::greaterEquals( timeStamp, 0.0 ),    timeStamp, timeStepSize );
+      assertion2( tarch::la::greaterEquals( timeStepSize, 0.0 ), timeStamp, timeStepSize );
+
+      ::exahype2::fd::validatePatch(
+        oldQWithHalo,
+        {{NUMBER_OF_UNKNOWNS}},
+        {{NUMBER_OF_AUXILIARY_VARIABLES}},
+        {{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}},
+        {{HALO_SIZE}}, // halo
+        std::string(__FILE__) + "(" + std::to_string(__LINE__) + "): " + marker.toString()
+      ); // previous time step has to be valid
+  
+      if (marker.willBeSkeletonCell()) {
+        tasks::{{SOLVER_NAME}}EnclaveTask::applyKernelToCell(
+          marker,
+          timeStamp,
+          timeStepSize,
+          oldQWithHalo,
+          newQ
+        );
+        
+        fineGridCell{{SEMAPHORE_LABEL}}.setSemaphoreNumber( ::exahype2::EnclaveBookkeeping::SkeletonTask );
+      }
+      else {
+        assertion( marker.willBeEnclaveCell() );
+        assertion( not marker.willBeRefined() );
+        auto newEnclaveTask = new tasks::{{SOLVER_NAME}}EnclaveTask(
+          marker,
+          timeStamp,
+          timeStepSize,
+          oldQWithHalo
+        );
+        fineGridCell{{SEMAPHORE_LABEL}}.setSemaphoreNumber( newEnclaveTask->getTaskId() );
+        fineGridCell{{SOLVER_NAME}}CellLabel.setTimeStamp(timeStamp + timeStepSize);
+
+        tarch::multicore::spawnTask( newEnclaveTask );
+      }
+  """ )
+
+
+  def __init__(self, solver):
+    """
+    
+    
+    """
+    super( UpdateCell, self ).__init__(
+      patch = solver._patch,
+      patch_overlap = solver._patch_overlap_new,
+      functor_implementation = """
+#error please switch to your Riemann solver of choice
+""",
+      reconstructed_array_memory_location = solver._reconstructed_array_memory_location,
+      guard = "not marker.willBeRefined() and not marker.hasBeenRefined()",
+      add_assertions_to_halo_exchange = False
+    )
+    self._solver = solver
+    
+    self._Template_TouchCellFirstTime_Preamble = """
+  fineGridCell""" + solver._name + """CellLabel.setHasUpdated(false);
+""" + self._Template_TouchCellFirstTime_Preamble
+
+    self._butcher_tableau     = ButcherTableau(self._solver._rk_order)
+
+
+  def _add_action_set_entries_to_dictionary(self,d):
+    """
+    
+    This is our plug-in point to alter the underlying dictionary
+    
+    """
+    super(UpdateCell,self)._add_action_set_entries_to_dictionary(d)
+    
+    self._solver._init_dictionary_with_default_parameters(d)
+    self._solver.add_entries_to_text_replacement_dictionary(d)
+    
+    d[ "PREDICATES" ] = self._solver._primary_sweeps_of_Runge_Kutta_step_on_cell
+    d[ "BUTCHER_TABLEAU_WEIGHTS" ]                  = self._butcher_tableau.weight_matrix()
+    d[ "BUTCHER_TABLEAU_RELATIVE_TIME_STEP_SIZES" ] = self._butcher_tableau.time_step_sizes()
+
+    # Has to come after we've set the predicates, as we use these
+    # fields in here already
+    d[ "CELL_FUNCTOR_IMPLEMENTATION" ] = self.SolveRiemannProblemsOverPatch.render(**d)
+
+  
+  def get_includes(self):
+    return """
+#include "exahype2/NonCriticalAssertions.h"
+#include "exahype2/enumerator/Enumerator.h"
+#include "exahype2/fd/PatchUtils.h"
+#include "exahype2/EnclaveBookkeeping.h"
+#include "tarch/multicore/Tasks.h"
+""" + self._solver._get_default_includes() + self._solver.user_action_set_includes + """
+#include "tasks/{}.h"
+""".format(self._solver._enclave_task_name())
+
+
+
 class MergeEnclaveTaskOutcome(AbstractRKFDActionSet):
   Template = """
   {% for PREDICATE_NO in range(0,PREDICATES|length) %}
@@ -27,9 +166,11 @@ class MergeEnclaveTaskOutcome(AbstractRKFDActionSet):
     {{PREDICATES[PREDICATE_NO]}}
   ) {
     #if Dimensions==2
-    double* QOut = fineGridCell{{UNKNOWN_IDENTIFIER}}RhsEstimates.value + {{PREDICATE_NO}} * {{NUMBER_OF_DOFS_PER_CELL_2D}} * {{NUMBER_OF_UNKNOWNS}};
+    constexpr int NumberOfDoFsPerCell = {{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}} * {{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}};
+    double* QOut = fineGridCell{{UNKNOWN_IDENTIFIER}}RhsEstimates.value + {{PREDICATE_NO}} * NumberOfDoFsPerCell * {{NUMBER_OF_UNKNOWNS}};
     #elif Dimensions==3
-    double* QOut = fineGridCell{{UNKNOWN_IDENTIFIER}}RhsEstimates.value + {{PREDICATE_NO}} * {{NUMBER_OF_DOFS_PER_CELL_3D}} * {{NUMBER_OF_UNKNOWNS}};
+    constexpr int NumberOfDoFsPerCell = {{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}} * {{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}} * {{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}};
+    double* QOut = fineGridCell{{UNKNOWN_IDENTIFIER}}RhsEstimates.value + {{PREDICATE_NO}} * NumberOfDoFsPerCell * {{NUMBER_OF_UNKNOWNS}};
     #endif
     
     const int taskNumber = fineGridCell{{LABEL_NAME}}.getSemaphoreNumber();
@@ -71,23 +212,8 @@ class MergeEnclaveTaskOutcome(AbstractRKFDActionSet):
 
 class SeparateSweepsWithEnclaveTasking( SeparateSweeps ):
   """
-    Probably the simplest solver you could think off. 
-    
-    This particular variant works only for Runge-Kutta order greater or equal
-    to two.
-    
-
-    :: Write your own specialisation ::
-    
-    self._preprocess_reconstructed_patch 
-      Has to hold any preprocessing, but it also has to set the doubles
-      timeStepSize and timeStamp to valid data.
-      
-    self._postprocess_updated_patch 
-      You don't have to redefine this one, but if you want to alter the
-      time step size, then this is the right place to do so. If you don't
-      alter timeStepSize, the code will automatically continue with
-      the current one subject to a preprocessing in the next step.
+    A straightforward extension of the approach where we run through the
+    mesh 
 
   """
 
@@ -122,7 +248,10 @@ class SeparateSweepsWithEnclaveTasking( SeparateSweeps ):
                                                            kernel_namespace
                                                            )
     
-    self._solver_template_file_class_name     = "SeparateSweeps"
+    self._solver_template_file_class_name     = "SeparateSweepsWithEnclaveTasking"
+    
+    self._fused_compute_kernel_call_cpu       = "#error Not yet defined. Set in your Python solver class."
+    self._fused_compute_kernel_call_gpu       = "#error Not yet defined. Set in your Python solver class."
     self._pde_terms_without_state             = pde_terms_without_state
 
     self._fused_volumetric_kernel_call_cpu       = "#error Not yet defined. Set self._fused_volumetric_kernel_call_cpu in your Python solver class."
@@ -150,6 +279,18 @@ class SeparateSweepsWithEnclaveTasking( SeparateSweeps ):
     """
     super(SeparateSweepsWithEnclaveTasking, self).create_data_structures()
 
+    initialisation_sweep_guard = "(" + \
+      "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::GridInitialisation" + \
+      ")"
+    first_iteration_after_initialisation_guard = "(" + \
+      "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::RungeKuttaPrimarySubStep0AfterGridInitialisation or " + \
+      "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::PlottingAfterGridInitialisation" + \
+    ")"
+
+    self._patch_overlap_old.generator.send_condition               = initialisation_sweep_guard
+    self._patch_overlap_old.generator.receive_and_merge_condition  = first_iteration_after_initialisation_guard
+
+
             
   def create_action_sets(self):
     """
@@ -162,7 +303,32 @@ class SeparateSweepsWithEnclaveTasking( SeparateSweeps ):
     """
     super(SeparateSweepsWithEnclaveTasking, self).create_action_sets()
 
-    self._action_set_merge_enclave_task_outcome = MergeEnclaveTaskOutcome(self)                                                                                 
+    self._primary_sweeps_of_Runge_Kutta_step_on_cell = [
+      "{} and repositories::{}.getSolverState()=={}::SolverState::RungeKuttaPrimarySubStep{}".format(self._store_cell_data_default_guard(),self.get_name_of_global_instance(),self._name,step) for step in range(0,self.number_of_Runge_Kutta_steps())
+    ] + [
+      "{} and repositories::{}.getSolverState()=={}::SolverState::RungeKuttaPrimarySubStep0AfterGridInitialisation".format(self._store_cell_data_default_guard(),self.get_name_of_global_instance(),self._name)
+    ]
+    self._secondary_sweeps_of_Runge_Kutta_step_on_cell = [
+      "{} and repositories::{}.getSolverState()=={}::SolverState::RungeKuttaSecondarySubStep{}".format(self._store_cell_data_default_guard(),self.get_name_of_global_instance(),self._name,step) for step in range(0,self.number_of_Runge_Kutta_steps())
+    ]
+
+    self._primary_sweeps_of_Runge_Kutta_step_on_face = [
+      "{} and repositories::{}.getSolverState()=={}::SolverState::RungeKuttaPrimarySubStep{}".format(self._store_face_data_default_guard(),self.get_name_of_global_instance(),self._name,step) for step in range(0,self.number_of_Runge_Kutta_steps())
+    ] + [
+      "{} and repositories::{}.getSolverState()=={}::SolverState::RungeKuttaPrimarySubStep0AfterGridInitialisation".format(self._store_face_data_default_guard(),self.get_name_of_global_instance(),self._name)
+    ]
+    self._secondary_sweeps_of_Runge_Kutta_step_on_face = [
+      "{} and repositories::{}.getSolverState()=={}::SolverState::RungeKuttaSecondarySubStep{}".format(self._store_face_data_default_guard(),self.get_name_of_global_instance(),self._name,step) for step in range(0,self.number_of_Runge_Kutta_steps())
+    ]
+
+    self._action_set_merge_enclave_task_outcome             = MergeEnclaveTaskOutcome(self)                                                                                 
+    self._action_set_update_cell                            = UpdateCell(self)
+    self._action_set_compute_final_linear_combination.guard = self._store_cell_data_default_guard() + " and repositories::{}.getSolverState()=={}::SolverState::RungeKuttaSecondarySubStep{}".format(self.get_name_of_global_instance(),self._name,self.number_of_Runge_Kutta_steps()-1)
+    self._action_set_project_patch_onto_faces.guards        = self._secondary_sweeps_of_Runge_Kutta_step_on_cell + [ "{} and repositories::{}.getSolverState()=={}::SolverState::GridInitialisation".format(self._store_cell_data_default_guard(),self.get_name_of_global_instance(),self._name) ]
+    self._action_set_handle_boundary.guards                 = self._primary_sweeps_of_Runge_Kutta_step_on_face
+    self._action_set_roll_over_update_of_faces.guards              = self._secondary_sweeps_of_Runge_Kutta_step_on_face
+    self._action_set_copy_new_faces_onto_old_faces.guards          = self._secondary_sweeps_of_Runge_Kutta_step_on_face
+    self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement.guards = self._primary_sweeps_of_Runge_Kutta_step_on_face
 
 
   def add_implementation_files_to_project(self,namespace,output):
@@ -221,8 +387,9 @@ class SeparateSweepsWithEnclaveTasking( SeparateSweeps ):
 
   def add_entries_to_text_replacement_dictionary(self,d):
     super(SeparateSweepsWithEnclaveTasking, self).add_entries_to_text_replacement_dictionary(d)
-    d[ "FUSED_VOLUMETRIC_KERNEL_CALL_CPU"] = jinja2.Template(self._fused_volumetric_kernel_call_cpu, undefined=jinja2.DebugUndefined).render( **d )
-    d[ "FUSED_VOLUMETRIC_KERNEL_CALL_GPU"] = jinja2.Template(self._fused_volumetric_kernel_call_gpu, undefined=jinja2.DebugUndefined).render( **d )
+    
+    d[ "FUSED_COMPUTE_KERNEL_CALL_CPU"] = jinja2.Template(self._fused_compute_kernel_call_cpu, undefined=jinja2.DebugUndefined).render( **d )
+    d[ "FUSED_COMPUTE_KERNEL_CALL_GPU"] = jinja2.Template(self._fused_compute_kernel_call_gpu, undefined=jinja2.DebugUndefined).render( **d )
 
     d[ "SEMAPHORE_LABEL" ]      = exahype2.grid.UpdateCellLabel.get_attribute_name(self._name)
     d[ "STATELESS_PDE_TERMS" ]  = self._pde_terms_without_state
@@ -235,13 +402,6 @@ class SeparateSweepsWithEnclaveTasking( SeparateSweeps ):
 """ + super(SeparateSweeps, self).user_action_set_includes
 
 
-  def add_entries_to_text_replacement_dictionary(self,d):
-    """
-     d: Dictionary of string to string
-        in/out argument
-    """
-    pass
-
-
   def _enclave_task_name(self): 
     return "{}EnclaveTask".format(self._name)
+
