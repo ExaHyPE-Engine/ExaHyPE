@@ -51,7 +51,14 @@ class ReconstructPatchAndApplyFunctor(ActionSet):
   """
   
   
-  def __init__(self,patch,patch_overlap,functor_implementation,reconstructed_array_memory_location=ReconstructedArrayMemoryLocation.Heap,guard="true", add_assertions_to_halo_exchange = True):
+  def __init__(self,
+               patch,
+               patch_overlap,
+               functor_implementation,
+               reconstructed_array_memory_location=ReconstructedArrayMemoryLocation.Heap,
+               guard="true", 
+               add_assertions_to_halo_exchange = True
+               ):
     """
 
   patch: peano4.datamodel.Patch
