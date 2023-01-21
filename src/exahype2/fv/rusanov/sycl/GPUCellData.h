@@ -7,8 +7,8 @@
 
 
 #include "tarch/la/Vector.h"
+#include "tarch/accelerator/accelerator.h"
 #include "peano4/utils/Globals.h"
-#include "tarch/multicore/sycl/SYCL.h"
 #include "exahype2/enumerator/AoSLexicographicEnumerator.h"
 
 
@@ -51,6 +51,28 @@ namespace exahype2 {
          *
          * Call destroy() on the host once the kernels have finished. This actually
          * frees the copies in the shared memory.
+         *
+         *
+         * @todo Here are some todos:
+         *
+         * - We have to clarify more explicitly, that the GPUCellData is a wrapper
+         *   which actually transfers data. So it has some semantics. This is not
+         *   properly done within the kernels.
+         * - A GPUCellData can either create a copy of the input in the shared
+         *   memory region (current implementation), or it can copy stuff over
+         *   into the device explicitly. For this, it needs to know the queue,
+         *   allocate memory on the device, and then call handle.copy()
+         *   explicitly. We end up with a dedicated copy kernel. We can realise
+         *   this within the present code base, by adding an explicit transfer()
+         *   operation as counterpart of destroy. There can be a transfer_shared
+         *   and transfer_copy operation with the latter returning an event.
+         * - The kernels should be renamed. The explicit copy should have copy
+         *   in the name just as the OpenMP variant has a map in its name.
+         * - SYCL has this notion of buffers which wrap around arrays. The
+         *   buffers then are again wrapped via accessors which are annotated
+         *   with read_only or write_only. Again, the GPUCellData could own the
+         *   host data and provide the accessors which then are used by
+         *   alternative kernel variants.
          *
          */
         struct GPUCellData {

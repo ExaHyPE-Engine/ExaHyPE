@@ -1,7 +1,6 @@
 // This file is part of the Peano project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
-#ifndef _PEANO4_GRID_TRAVERSAL_VTK_PLOTTER_H_
-#define _PEANO4_GRID_TRAVERSAL_VTK_PLOTTER_H_
+#pragma once
 
 
 #include "TraversalObserver.h"
@@ -117,4 +116,3 @@ class peano4::grid::TraversalVTKPlotter: public peano4::grid::TraversalObserver 
     std::vector< GridControlEvent > getGridControlEvents() const override;
 };
 
-#endif

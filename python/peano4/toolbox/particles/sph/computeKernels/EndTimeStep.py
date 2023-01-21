@@ -20,12 +20,12 @@ class EndTimeStep:
 
     /* Mark that particle needs to be updated */
     if( 
-      localParticle->getParallelState() == globaldata::Particle::ParallelState::Local
+      particle->getParallelState() == globaldata::Particle::ParallelState::Local
       and
-      not localParticle->getIsBoundaryParticle() )
+      not particle->getIsBoundaryParticle() )
       {
 
-      localParticle->setHasBeenKicked( false );
+      particle->setHasBeenKicked( false );
 
     }
 
@@ -52,23 +52,23 @@ class EndTimeStep:
     const double timeStepSize = GLOBAL_TIME_STEP_SIZE;
     
     if(
-      localParticle->getParallelState() == globaldata::Particle::ParallelState::Local
+      particle->getParallelState() == globaldata::Particle::ParallelState::Local
       and
-      not localParticle->getHasBeenKicked()
+      not particle->getHasBeenKicked()
       and
-      not localParticle->getIsBoundaryParticle() )
+      not particle->getIsBoundaryParticle() )
       {
         
       /* Calculate max time-step size value allowed by the CFL condition */
-      const double soundspeed = localParticle->getSoundSpeed();
-      const double timeStepSizeCFL = CFL_CONSTANT * localParticle->getSmoothingLength() * KERNEL_SUPPORT_RAD / soundspeed;
-      localParticle->setTimeStepSize( timeStepSizeCFL );
+      const double soundspeed = particle->getSoundSpeed();
+      const double timeStepSizeCFL = CFL_CONSTANT * particle->getSmoothingLength() * KERNEL_SUPPORT_RAD / soundspeed;
+      particle->setTimeStepSize( timeStepSizeCFL );
       
-      assertion1( tarch::la::greaterEquals( localParticle->getTimeStepSize(), timeStepSize ), 
-                   localParticle->toString() );
+      assertion1( tarch::la::greaterEquals( particle->getTimeStepSize(), timeStepSize ), 
+                   particle->toString() );
 
       /* Mark that particle is done */
-      localParticle->setHasBeenKicked(true);
+      particle->setHasBeenKicked(true);
       
     }
 

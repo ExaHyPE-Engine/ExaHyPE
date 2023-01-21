@@ -39,14 +39,14 @@ void applications::exahype2::ccz4::gaugeWave(
   Q[6]  = phi*phi*(Kxx - 1.0/3.0*traceK*HH ) ;		//\tilde(A)_xx
   Q[9] =  phi*phi*(0.0 - 1.0/3.0*traceK*1.0) ;		//\tilde(A)_yy
   Q[11] = phi*phi*(0.0 - 1.0/3.0*traceK*1.0) ;		//\tilde(A)_zz
-  Q[16] = sqrt(HH);				        //ln(\alpha)
+  Q[16] = sqrt(HH);				        //\alpha
   Q[13] = 2.0/(3.0*pow(HH,(5.0/3.0)))*dxH        ;	//\hat(\Gamma)^x
   Q[23] = 1.0/(2.0)*dxH*pow(HH,(-1.0/2.0))       ;		//A_x
   Q[35] = pow(HH,(-1.0/3.0))*dxH/3.0         ;		//D_xxx
   Q[38] = phi*dxphi                     ;		//D_xyy
   Q[40] = phi*dxphi                    ;		//D_xzz
   Q[53] = traceK;					//K
-  Q[54] = phi;					//ln(\phi)
+  Q[54] = phi;					//\phi
   Q[55] = dxphi;					//P_x
 }
 
@@ -115,6 +115,18 @@ void applications::exahype2::ccz4::linearWave(
   Q[54] = log(1.0) ;		//ln(\phi)
 }
 
+void applications::exahype2::ccz4::flat(
+  double * __restrict__ Q, // Q[64+0],
+  const tarch::la::Vector<Dimensions,double>&  x,
+  double t
+) {
+  memset(Q, .0, 59*sizeof(double));
+  Q[0]  = 1.0 ;          //\tilde(\gamma)_xx
+  Q[3]  = 1.0  ;          //\tilde(\gamma)_yy
+  Q[5]  = 1.0                            ;    //\tilde(\gamma)_zz
+  Q[16] = 1.0;
+  Q[54] = 1.0;          //\phi
+}
 
 #ifdef IncludeTwoPunctures
 void applications::exahype2::ccz4::ApplyTwoPunctures(

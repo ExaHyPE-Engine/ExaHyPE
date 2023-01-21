@@ -6,8 +6,7 @@
 // This is generated. If you change fundamental properties, you will have to 
 // generate this file. Backup your manual changes before you do so.
 //
-#ifndef _examples_exahype2_euler_sphericalaccretionupscaling_SelfSimilarInfallFV_H_
-#define _examples_exahype2_euler_sphericalaccretionupscaling_SelfSimilarInfallFV_H_
+#pragma once
 
 #include "AbstractSelfSimilarInfallFV.h"
 #include "tarch/logging/Log.h"
@@ -290,4 +289,3 @@ class benchmarks::exahype2::euler::sphericalaccretionupscaling::SelfSimilarInfal
 };
 
 
-#endif

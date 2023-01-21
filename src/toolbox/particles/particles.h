@@ -1,7 +1,6 @@
 // This file is part of the Peano project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
-#ifndef _TOOLBOX_PARTICLES_PARTICLES_
-#define _TOOLBOX_PARTICLES_PARTICLES_
+#pragma once
 
 
 #include "tarch/la/Vector.h"
@@ -29,6 +28,10 @@ namespace toolbox {
     /**
      * Shallow copy, i.e. you can remove the input container newParticles, but
      * you may not delete the particles it is pointing to.
+     *
+     * This routine basically runs through the vector passed and calls the
+     * other insertParticleIntoCell() operation per particle.
+     *
      */
     template <typename Particle, typename ParticleSet >
     void insertParticlesIntoCell(
@@ -37,6 +40,35 @@ namespace toolbox {
       peano4::datamanagement::VertexEnumerator< ParticleSet >&  fineGridVertices
     );
 
+
+    /**
+     * Insert particle into cell
+     *
+     * This routine assumes that the particle indeed fits into a cell.
+     * Otherwise, I cannot assign in properly. If it falls into a cell,
+     * then I can in return rightfully assume that the particle is local.
+     * Setting the flag to local is important, as the locality analysis
+     * of Peano usually sets particles to local in touchCellFirstTime().
+     * You don't know if the particle insertion is called before or after
+     * this analysis step, so we might just have missed the local insertion
+     * and therefore miss out on particles.
+     *
+     * I recommend never to insert a particle directly, but always to run
+     * through this routine and to combine it with a particle sorting step.
+     * On the one hand, thisensures that
+     * particles are inserted in a consistent way, i.e. stored next to their
+     * closest neighbour. On the other hand, this ensures that a
+     * particle is never assigned to a hanging vertex and then lost. If you
+     * assign to a hanging vertex in a step where no grid re-sorting is active,
+     * you will effectively loose the particle, as it will disappear with the
+     * elimination of the hanging vertex.
+     *
+     * ## Realisation
+     *
+     * - Find which vertex in the cell is the closest vertex.
+     * - Set the particle state to local. As we know that we insert only into
+     *   local cells, we can do this without any fear.
+     */
     template <typename Particle, typename ParticleSet >
     void insertParticleIntoCell(
       const peano4::datamanagement::CellMarker&                 marker,
@@ -50,4 +82,3 @@ namespace toolbox {
 #include "particles.cpph"
 
 
-#endif

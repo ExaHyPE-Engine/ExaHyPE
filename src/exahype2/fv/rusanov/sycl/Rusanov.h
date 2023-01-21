@@ -1,21 +1,17 @@
 // This file is part of the ExaHyPE2 project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
-#ifndef _EXAHYPE2_FV_RUSANOV_SYCL_RUSANOV_H_
-#define _EXAHYPE2_FV_RUSANOV_SYCL_RUSANOV_H_
+#pragma once
+
+
 
 
 namespace exahype2 {
   namespace fv {
     namespace rusanov {
       /**
-       * Read the docu of timeStepWithRusanov_batched_heap_static_calls()
-       * before you continue.
-       *
-       * The name sequential is a little bit irritating in a GPU context.
-       * What it means is that the code runs logically through the patches
-       * one by one and issues all kernel on one patch before it continues
-       * with the next one. Obviously, the patches are all independent of
-       * each other.
+       * Read the docu page "Rusanov ExaHyPE's Rusanov kernel implementation"
+       * (from Rusanov.h) before you continue. I also recommend that you study
+       * timeStepWithRusanov_batched_heap_static_calls() first.
        *
        * The realisation is thus very similar to timeStepWithRusanov_batched_heap_static_calls()
        * with one decisive difference: We do not build up a task graph for
@@ -66,7 +62,7 @@ namespace exahype2 {
           std::size_t  auxiliaryVariables,
           typename TempDataEnumerator
         >
-        static void timeStepWithRusanov_taskgraph_heap_static_calls(
+        static void timeStepWithRusanov_taskgraph_static_calls(
           int                     targetDevice,
           ::exahype2::CellData&   patchData,
           bool                    evaluateFlux,
@@ -87,10 +83,12 @@ namespace exahype2 {
          * then one to update with the eigenvalue damping (which depends on all previous steps), and
          * so forth.
          *
-         * Each individual step runs over all patches handed in. So the individual steps are
-         * relatively heavy, while the DAG exclusively represents logical steps of the underlying
-         * numerical scheme. I call the approach batched, as each individual logical step in the
-         * task graph runs over the batch of patches.
+         * Each individual step runs over all patches handed in. So the
+         * individual steps are relatively heavy, while the DAG exclusively
+         * represents logical steps of the underlying numerical scheme. It is a
+         * (trivial) sequence of steps. I call the approach batched, as each
+         * individual logical step in the task graph runs over the batch of patches.
+         *
          *
          * ## Memory management
          *
@@ -143,7 +141,7 @@ namespace exahype2 {
           std::size_t  auxiliaryVariables,
           typename TempDataEnumerator
         >
-        static void timeStepWithRusanov_batched_heap_static_calls(
+        static void timeStepWithRusanov_batched_static_calls(
           int                     targetDevice,
           ::exahype2::CellData&   patchData,
           bool                    evaluateFlux,
@@ -156,31 +154,97 @@ namespace exahype2 {
         #endif
         ;
 
-        namespace helper {
-          #if defined(GPUOffloadingOMP)
-          /**
-           * On the GPU, we don't need any of exahype2::CellData's fancy routines or
-           * dynamic data management. We simply have to be able to create a struct
-           * on the accelerator, which we then befill with the required pointers
-           * which we copy over from the host.
-           *
-           * Therefore, this class is a mere copy of exahype2::CellData without any
-           * of its routines. The only different to the host variant (from a data
-           * field point of view) is that numberOfCells is not const.
-           */
-          #pragma omp declare target
-          struct OpenMPGPUCellData {
-            double**   QIn;
-            tarch::la::Vector<Dimensions,double>*   patchCentre;
-            tarch::la::Vector<Dimensions,double>*   patchSize;
-            double*    t;
-            double*    dt;
-            int        numberOfCells;
-            double**   QOut;
-            double*    maxEigenvalue;
-          };
-          #pragma omp end declare target
-          #endif
+
+        /**
+         * 1:1 translation of the numerical scheme.
+         *
+         * We grab the SYCL queue that we want to use (Peano puts one SYCL
+         * queue on each available device and enumerates them logically
+         * starting from 0). Next, we create enumerators which are simply
+         * classes that translate multidimensional indices into an integer.
+         * As we use enumerators which are template arguments, we can
+         * quickly exchange SoA with AoS for example. Once the enumerators
+         * are in place, we allocate the memory for all temporary data on
+         * the device.
+         *
+         * This implementation is called patch-wise. This means that we have
+         * a big outer loop which runs over all the patches. If we had a
+         * sequential accelerator, this would handle one patch after the
+         * other, i.e. process the patches patch-wisely. As these loop steps
+         * are independent of each other, we can use a parallel for.
+         *
+         * Per patch, we then run through the numerical steps and issue
+         * (nested) parallel fors.
+         *
+         * ## Flaws
+         *
+         * - We would like to use higher-dimensional range loops.
+         * - This version seems to crash from time to time. I assume it is
+         *   due to the fact that the parallel fors have different range
+         *   dimensions.
+         *
+         * @see timeStepWithRusanov_batched_heap_static_calls() for further
+         *   SYCL-relevant details.
+         */
+        template <
+          typename Solver,
+          std::size_t  numberOfVolumesPerAxisInPatch,
+          std::size_t  haloSize,
+          std::size_t  unknowns,
+          std::size_t  auxiliaryVariables,
+          typename TempDataEnumerator
+        >
+        static void timeStepWithRusanov_patchwise_static_calls(
+          int                     targetDevice,
+          ::exahype2::CellData&   patchData,
+          bool                    evaluateFlux,
+          bool                    evaluateNonconservativeProduct,
+          bool                    evaluateSource,
+          bool                    evaluateMaximumEigenvalueAfterTimeStep
+        )
+        #if defined(UseManualInlining)
+        __attribute__((always_inline))
+        #endif
+        ;
+
+
+        /**
+         * Dummy version delegating to one well-defined proper kernel. By
+         * offering such a routine, we can generate generic compute code
+         * in Python without knowing which kernel variants are on offer for
+         * a particular GPU backend.
+         */
+        template <
+          typename Solver,
+          std::size_t  numberOfVolumesPerAxisInPatch,
+          std::size_t  haloSize,
+          std::size_t  unknowns,
+          std::size_t  auxiliaryVariables,
+          typename TempDataEnumerator
+        >
+        static void timeStepWithRusanov_generic_static_calls(
+          int                     targetDevice,
+          ::exahype2::CellData&   patchData,
+          bool                    evaluateFlux,
+          bool                    evaluateNonconservativeProduct,
+          bool                    evaluateSource,
+          bool                    evaluateMaximumEigenvalueAfterTimeStep
+        ) {
+          timeStepWithRusanov_taskgraph_static_calls<
+            Solver,
+            numberOfVolumesPerAxisInPatch,
+            haloSize,
+            unknowns,
+            auxiliaryVariables,
+            TempDataEnumerator
+          >(
+            targetDevice,
+            patchData,
+            evaluateFlux,
+            evaluateNonconservativeProduct,
+            evaluateSource,
+            evaluateMaximumEigenvalueAfterTimeStep
+          );
         }
       }
     }
@@ -188,7 +252,7 @@ namespace exahype2 {
 }
 
 
-#include "Rusanov_taskgraph_heap_static_calls.cpph"
-#include "Rusanov_batched_heap_static_calls.cpph"
+#include "Rusanov_taskgraph_static_calls.cpph"
+#include "Rusanov_batched_static_calls.cpph"
+#include "Rusanov_patchwise_static_calls.cpph"
 
-#endif

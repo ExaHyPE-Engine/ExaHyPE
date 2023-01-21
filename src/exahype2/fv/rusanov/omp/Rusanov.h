@@ -1,7 +1,6 @@
 // This file is part of the ExaHyPE2 project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
-#ifndef _EXAHYPE2_FV_RUSANOV_OMP_RUSANOV_H_
-#define _EXAHYPE2_FV_RUSANOV_OMP_RUSANOV_H_
+#pragma once
 
 namespace exahype2 {
   namespace fv {
@@ -147,7 +146,48 @@ namespace exahype2 {
         #endif
         ;
 
-#if defined(GPUOffloadingOMP)
+
+        /**
+         * Dummy version delegating to one well-defined proper kernel. By
+         * offering such a routine, we can generate generic compute code
+         * in Python without knowing which kernel variants are on offer for
+         * a particular GPU backend.
+         */
+        template <
+          typename Solver,
+          int      numberOfVolumesPerAxisInPatch,
+          int      haloSize,
+          int      unknowns,
+          int      auxiliaryVariables,
+          typename TempDataEnumerator
+        >
+        static void timeStepWithRusanov_generic_static_calls(
+          int                     targetDevice,
+          ::exahype2::CellData&   patchData,
+          bool                    evaluateFlux,
+          bool                    evaluateNonconservativeProduct,
+          bool                    evaluateSource,
+          bool                    evaluateMaximumEigenvalueAfterTimeStep
+        ) {
+          timeStepWithRusanov_patchwise_map_static_calls<
+            Solver,
+            numberOfVolumesPerAxisInPatch,
+            haloSize,
+            unknowns,
+            auxiliaryVariables,
+            TempDataEnumerator
+          >(
+            targetDevice,
+            patchData,
+            evaluateFlux,
+            evaluateNonconservativeProduct,
+            evaluateSource,
+            evaluateMaximumEigenvalueAfterTimeStep
+          );
+        }
+
+
+        #if defined(GPUOffloadingOMP)
         /**
          * On the GPU, we don't need any of exahype2::CellData's fancy routines or
          * dynamic data management. We simply have to be able to create a struct
@@ -170,7 +210,7 @@ namespace exahype2 {
           double*    maxEigenvalue;
         };
         #pragma omp end declare target
-#endif
+        #endif
       }
     }
   }
@@ -181,4 +221,3 @@ namespace exahype2 {
 #include "Rusanov_patchwise_managed_static_calls.cpph"
 #include "Rusanov_batched_managed_static_calls.cpph"
 
-#endif

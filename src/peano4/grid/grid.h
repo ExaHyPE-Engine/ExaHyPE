@@ -1,7 +1,6 @@
 // This file is part of the Peano project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
-#ifndef _PEANO4_GRID_H_
-#define _PEANO4_GRID_H_
+#pragma once
 
 
 #include <vector>
@@ -295,7 +294,10 @@ namespace peano4 {
     bool overlaps( const AutomatonState& x, const GridControlEvent& event );
 
     /**
-     * @return x is completely embeddd into event. x is subject to a re-calibration.
+     * isContained() is defined over the closed interval, i.e. we look if x is
+     * contained within the cube spanned by x including its faces.
+     *
+     * @return x is completely embedded into event. x is subject to a re-calibration.
      */
     bool isContained( const AutomatonState& x, const GridControlEvent& event, double upscaleAutomatonState=1.0 );
 
@@ -383,4 +385,3 @@ namespace peano4 {
 
 peano4::grid::GridStatistics operator+( peano4::grid::GridStatistics lhs, peano4::grid::GridStatistics rhs );
 
-#endif

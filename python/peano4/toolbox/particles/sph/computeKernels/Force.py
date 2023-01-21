@@ -22,18 +22,18 @@ class Force:
       /* Done by "hydro_reset_acceleration" in SWIFT */
       
       if( 
-        localParticle->getParallelState() == globaldata::Particle::ParallelState::Local
-        and 
-        not localParticle->getIsBoundaryParticle() ) 
+//        particle->getParallelState() == globaldata::Particle::ParallelState::Local
+//        and 
+        not particle->getIsBoundaryParticle() ) 
         {
 
         /* Reset the acceleration*/
-        localParticle->setA   (0.0);   
+        particle->setA   (0.0);   
         
         /* Reset the time derivatives */
-        localParticle->setUDot(0.0);   
-        localParticle->setHDot(0.0);   
-        localParticle->setV_sig_AV( 2.0 * localParticle->getSoundSpeed() );
+        particle->setUDot(0.0);   
+        particle->setHDot(0.0);   
+        particle->setV_sig_AV( 2.0 * particle->getSoundSpeed() );
 
       }
     
@@ -194,13 +194,13 @@ class Force:
       /* Done by "hydro_end_force" does in SWIFT */
 
       if( 
-        localParticle->getParallelState()==globaldata::Particle::ParallelState::Local
-        and 
-        not localParticle->getIsBoundaryParticle() ) 
+//        particle->getParallelState()==globaldata::Particle::ParallelState::Local
+//        and 
+        not particle->getIsBoundaryParticle() ) 
         {
 
-        localParticle->setHDot( 
-          localParticle->getHDot() * localParticle->getSmoothingLength() / HYDRO_DIMENSIONS );
+        particle->setHDot( 
+          particle->getHDot() * particle->getSmoothingLength() / HYDRO_DIMENSIONS );
       
       }
 

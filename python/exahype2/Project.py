@@ -34,6 +34,8 @@ class Project(object):
   """
   def __init__(self, namespace, project_name, directory = ".", executable="peano4"):
     self._project = peano4.Project(namespace, project_name, directory)
+    self._project.output.makefile.add_cmake_core_library("exahype2")
+
     self._solvers = []
     self._domain_offset = [0.0, 0.0, 0.0]
     self._domain_size   = [1.0, 1.0, 1.0]
@@ -402,12 +404,12 @@ thus appreciate any citation of the original release paper
     #
     # Initialisation
     #
-    self.init_grid.add_action_set(peano4.toolbox.particles.UpdateParticleGridAssociation(particles),False)
+    self.init_grid.add_action_set(peano4.toolbox.particles.UpdateParticleGridAssociation_LiftDrop(particles),False)
         
     #
     # Move particles
     #
-    self.perform_time_step.add_action_set(peano4.toolbox.particles.UpdateParticleGridAssociation(particles),False)
+    self.perform_time_step.add_action_set(peano4.toolbox.particles.UpdateParticleGridAssociation_LiftDrop(particles),False)
     
     #
     # Plotter: The timestamp here is slightly wrong, as I use the min time stamp. It 
@@ -433,7 +435,7 @@ thus appreciate any citation of the original release paper
       
       self.plot_solution.add_action_set( particle_plotter ) 
       
-    self.plot_solution.add_action_set(peano4.toolbox.particles.UpdateParticleGridAssociation(particles),False)
+    self.plot_solution.add_action_set(peano4.toolbox.particles.UpdateParticleGridAssociation_LiftDrop(particles),False)
     
     self._tracer_particles.append(particles)
 

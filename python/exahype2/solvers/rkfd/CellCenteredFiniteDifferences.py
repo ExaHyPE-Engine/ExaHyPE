@@ -26,6 +26,42 @@ class CellCenteredFiniteDifferences(object):
     Abstract solver for patch-based finite diffences
 
     All solvers in ExaHyPE are cell-centered discretisations.    
+    
+    
+    ## Adaptive mesh refinement
+    
+    We have, at the moment, no hard-coded AMR operator set available unless
+    you work with an overlap of one. In this case, you find operators in the 
+    toolbox. Very few pre-manufactured operators there are ready to go for 
+    higher overlaps (the injection operator is an example). In general, you 
+    will have to inject your own transfer operators.
+    
+    It depends on the flavour that you want to use for your interpolation and
+    restriction. A simple interpolation for an overlap of three and a patch_size
+    of five would be
+        
+            self._interpolation = "tensor_product< " + self._name + ">"
+            self.add_solver_constants(   "static constexpr double  NormalInterpolationMatrix1d[]     = {0.0, 1.0, 0.0};" )
+            self.add_solver_constants( " ""static constexpr double  TangentialInterpolationMatrix1d[] = {
+                    1.0,0.0,0.0,0.0,0.0,
+                    1.0,0.0,0.0,0.0,0.0,
+                    1.0,0.0,0.0,0.0,0.0,
+                    0.0,1.0,0.0,0.0,0.0,               
+                    0.0,1.0,0.0,0.0,0.0,
+                    
+                    0.0,1.0,0.0,0.0,0.0,
+                    0.0,0.0,1.0,0.0,0.0,
+                    0.0,0.0,1.0,0.0,0.0,
+                    0.0,0.0,1.0,0.0,0.0,
+                    0.0,0.0,0.0,1.0,0.0,
+                    
+                    0.0,0.0,0.0,1.0,0.0,
+                    0.0,0.0,0.0,1.0,0.0,
+                    0.0,0.0,0.0,0.0,1.0,
+                    0.0,0.0,0.0,0.0,1.0,
+                    0.0,0.0,0.0,0.0,1.0
+            };" "" )
+
 
   """
   
@@ -125,11 +161,12 @@ class CellCenteredFiniteDifferences(object):
     self._refinement_criterion_implementation = None
     self._initial_conditions_implementation   = None
 
-    self._interpolation = "linear_with_constant_extrapolation"
-    self._restriction   = "inject"
-    
+    self._interpolation = "#error Not yet defined"
+    self._restriction   = "#error Not yet defined"
+
     self.create_data_structures()
     self.create_action_sets()
+
 
 
   def __str__(self):
@@ -940,18 +977,39 @@ The finest mesh width of """ + str(self.get_finest_volume_size(domain_size)) + "
 
   @interpolation.setter
   def interpolation(self,value):
+    """
+    
+    Set the interpolation scheme. If you rely on a built-in operation, then this
+    call is all you have to do. Some ExaHyPE solvers however require each solver
+    to provide special matrices/operators for some interpolation/restriction 
+    variants. If this is the case, you still have to add these matrices manually
+    to your solver.
+    
+    """
     self._interpolation = value
+
     self.create_data_structures()
     self.create_action_sets()
 
 
   @property
   def restriction(self):
+    """
+    
+    Set the restriction scheme. If you rely on a built-in operation, then this
+    call is all you have to do. Some ExaHyPE solvers however require each solver
+    to provide special matrices/operators for some interpolation/restriction 
+    variants. If this is the case, you still have to add these matrices manually
+    to your solver.
+    
+    """
     return self._restriction
 
 
   @restriction.setter
   def restriction(self,value):
     self._restriction = value
+    
     self.create_data_structures()
     self.create_action_sets()
+

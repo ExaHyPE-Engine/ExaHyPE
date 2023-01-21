@@ -967,7 +967,7 @@ void exahype2::fv::rusanov::cpp::timeStepWithRusanov_batched_heap_static_calls(
           t[patchIndex],
           dt[patchIndex],
           2, // normal
-          tempNonconservativeProductY,
+          tempNonconservativeProductZ,
           ncpEnumerator
         );
 

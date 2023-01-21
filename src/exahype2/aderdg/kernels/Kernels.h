@@ -11,8 +11,7 @@
  * For the full license text, see LICENSE.txt
  **/
 
-#ifndef _EXAHYPE_KERNELS_ADERDG_GENERIC_PDEFLUXES_H_
-#define _EXAHYPE_KERNELS_ADERDG_GENERIC_PDEFLUXES_H_
+#pragma once
 
 #include <string>
 #include <vector>
@@ -331,4 +330,3 @@ void deltaDistribution(
 #endif
 
 
-#endif /* _EXAHYPE_KERNELS_ADERDG_GENERIC_PDEFLUXES_H_ */

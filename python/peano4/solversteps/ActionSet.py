@@ -64,6 +64,16 @@ class ActionSet(object):
     return "return std::vector< peano4::grid::GridControlEvent >();\n" 
 
 
+  @abstractmethod
+  def get_body_of_prepareTraversal(self):
+    return "\n" 
+
+  
+  @abstractmethod
+  def get_body_of_unprepareTraversal(self):
+    return "\n" 
+
+
   OPERATION_BEGIN_TRAVERSAL           = "beginTraversal"
   OPERATION_END_TRAVERSAL             = "endTraversal"
   

@@ -1,7 +1,6 @@
 // This file is part of the Peano project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
-#ifndef _TARCH_MULTICORE_TASKS_H_
-#define _TARCH_MULTICORE_TASKS_H_
+#pragma once
 
 
 #include "multicore.h"
@@ -378,10 +377,45 @@ namespace tarch {
       void configureInternalTaskQueues(int numberOfTasks);
 
       /**
+       * Commit local task queues into global queue
+       *
        * If we work with thread-local queues, we have to flush them over into the
        * global queue eventually. To do so, this routine is to be called either
        * per thread or with a -1 to roll all local queues over into the one global
        * task queue.
+       *
+       * ## Deadlocks
+       *
+       * We found that the commitment to the global queue is prone to starvation
+       * effects: If we have 127 threads hammering the global queue for work and
+       * if there's one thread left over, the one thread will struggle to get its
+       * message into the global queue. This is particularly cumbersome, if the
+       * local thread doesn't have any message:
+       *
+       * My original implementation locked the global queue and then copied the
+       * local tasks over. If the local tasks are empty, the copy is becoming a
+       * trivial operation. In the situation sketched above, it however is
+       * problematic, as I still would request a global lock, even though nothing
+       * will be copied over. Therefore, we found it advantageous to add a separate
+       * case distinction: If we don't have a local task, we should not even lock
+       * the queue (and, obviously, don't have to copy over either).
+       *
+       * This insight materialises in
+       *
+       *           else if ( not localNonblockingTasks[threadNumber].empty() ) {
+       *
+       *
+       * ## Flush all queues
+       *
+       * In line with the observation above (and in terms of code redundancy), we
+       * might make the flush a loop over all queues and then call the individual
+       * flush per queue. This would mean that we potentially lock the global
+       * queue p times for p threads.
+       *
+       * I usually flush all queues if and only if I'm at the end of a BSP section.
+       * So I avoid repeated locks, lock once and then flush all of the task queues
+       * in one go before I release the lock.
+       *
        *
        * @param threadNumber -1 if you want to flush all thread buffers
        */
@@ -401,5 +435,4 @@ namespace tarch {
 bool operator<( const tarch::multicore::Task& lhs, const tarch::multicore::Task& rhs );
 
 
-#endif
 

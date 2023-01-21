@@ -18,6 +18,9 @@ from exahype2.solvers.rkfd.kernels import RiemannKernelVariant
 
 from exahype2.solvers.rkfd.FixedTimeSteppingCodeSnippets import FixedTimeSteppingCodeSnippets
 
+from .amr import switch_to_FD4_tensor_product_interpolation
+from .amr import switch_to_FD4_tensor_product_restriction
+
 
 class GlobalFixedTimeStep( OneSweepPerRungeKuttaStep ):
   def __init__(self, 
@@ -60,6 +63,9 @@ class GlobalFixedTimeStep( OneSweepPerRungeKuttaStep ):
     self._user_action_set_includes += """
 #include "exahype2/fd/fd4/FD4.h"
 """
+
+    switch_to_FD4_tensor_product_interpolation( self, "TP_constant")
+    switch_to_FD4_tensor_product_restriction( self, "TP_inject_normal_extrap")
 
     self.set_implementation(flux=flux, 
       ncp=ncp, 

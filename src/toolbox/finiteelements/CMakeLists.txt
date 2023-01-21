@@ -1,0 +1,18 @@
+if(ENABLE_FINITE_ELEMENTS)
+	message(STATUS "Configuring ToolboxFiniteElements")
+
+	file(GLOB_RECURSE TOOLBOX_FINITEELEMENTS_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/*.cpp)
+
+	foreach(dimension IN LISTS PEANO_DIMENSIONS)
+		foreach(mode IN LISTS BUILD_MODES)
+			add_library(ToolboxFiniteElements${dimension}d${SUFFIX_${mode}} STATIC)
+			target_sources(ToolboxFiniteElements${dimension}d${SUFFIX_${mode}} PRIVATE ${TOOLBOX_FINITEELEMENTS_SOURCES})
+			target_include_directories(ToolboxFiniteElements${dimension}d${SUFFIX_${mode}} PRIVATE ${CMAKE_SOURCE_DIR}/src)
+			target_link_libraries(ToolboxFiniteElements${dimension}d${SUFFIX_${mode}} PRIVATE Peano4Core${dimension}d${SUFFIX_${mode}})
+			target_link_libraries(ToolboxFiniteElements${dimension}d${SUFFIX_${mode}} PRIVATE Tarch${SUFFIX_${mode}})
+			target_link_options(ToolboxFiniteElements${dimension}d${SUFFIX_${mode}} PRIVATE ${${mode}_LDFLAGS})
+			target_compile_options(ToolboxFiniteElements${dimension}d${SUFFIX_${mode}} PRIVATE ${${mode}_FLAGS})
+			target_compile_definitions(ToolboxFiniteElements${dimension}d${SUFFIX_${mode}} PRIVATE ${${mode}_DEFINITIONS} Dimensions=${dimension})
+		endforeach()
+	endforeach()
+endif()

@@ -1,7 +1,6 @@
 // This file is part of the ExaHyPE2 project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
-#ifndef _EXAHYPE2_FV_RUSANOV_LOOP_BODY_H_
-#define _EXAHYPE2_FV_RUSANOV_LOOP_BODY_H_
+#pragma once
 
 #include "Functors.h"
 
@@ -10,7 +9,7 @@
 #include "exahype2/enumerator/AoSoALexicographicEnumerator.h"
 
 #include "tarch/multicore/multicore.h"
-
+#include "tarch/accelerator/accelerator.h"
 
 namespace exahype2 {
   namespace fv {
@@ -902,4 +901,3 @@ namespace exahype2 {
 
 #include "LoopBody.cpph"
 
-#endif

@@ -37,7 +37,6 @@ double ::applications::exahype2::euler::maxEigenvalue(
   assertion(normal<Dimensions);
 
   if (Q[0]<=0.0 or Q[0]!=Q[0]) {
-    std::cout << faceCentre << " x " << normal << ": " << Q[0] << std::endl;
     ::exahype2::triggerNonCriticalAssertion( __FILE__, __LINE__, "Q[0]>0", "density negative (Q[0]=" + std::to_string( Q[0] ) + ") at x=" + toString(faceCentre) );
   }
 

@@ -1,7 +1,6 @@
 // This file is part of the Peano project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
-#ifndef _TOOLBOX_PARTICLE_PARTICLE_FACTORY_
-#define _TOOLBOX_PARTICLE_PARTICLE_FACTORY_
+#pragma once
 
 
 #include <vector>
@@ -26,11 +25,13 @@ namespace toolbox {
      *
      * The further attribute that are set are
      *
-     * - the move state which is set to New.
-     * - the parallel state is set to Virtual.
+     * - the parallel state is set to Local, so we assume that you only insert
+     *   meaningful data into the grid.
      *
-     * @todo Please check: I don't think we can and should set the move state
-     *   here. The new is obsolete anyway.
+     * It is important to make particles local initially. All of Peano's sorting
+     * only works with local particles, i.e. if you initially set particles to
+     * virtual then the sorting will ignore them. This is not what we want.
+     *
      *
      * ## Parallel lifecycle
      *
@@ -95,7 +96,13 @@ if ( not marker.isRefined() ) {
      *
      */
     template <class T>
-    std::vector<T*> createEquallySpacedParticles(double spacingH, const tarch::la::Vector<Dimensions,double>& voxelX, const tarch::la::Vector<Dimensions,double>& voxelH, bool roundDown, bool addNoise);
+    std::vector<T*> createEquallySpacedParticles(
+      double spacingH,
+      const tarch::la::Vector<Dimensions,double>& voxelX,
+      const tarch::la::Vector<Dimensions,double>& voxelH,
+      bool roundDown,
+      bool addNoise
+    );
 
     template <class T>
     std::vector<T*> createParticlesAlignedWithGlobalCartesianMesh(double spacingH, const tarch::la::Vector<Dimensions,double>& voxelX, const tarch::la::Vector<Dimensions,double>& voxelH, const tarch::la::Vector<Dimensions,double>& domainOffset, bool addNoise);
@@ -106,4 +113,3 @@ if ( not marker.isRefined() ) {
 #include "ParticleFactory.cpph"
 
 
-#endif

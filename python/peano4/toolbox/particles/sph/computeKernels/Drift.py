@@ -31,13 +31,13 @@ class LeapfrogDrift:
      */
 
     if( 
-      localParticle->getParallelState() == globaldata::Particle::ParallelState::Local 
-      and 
-      not localParticle->getIsBoundaryParticle() )
+//      particle->getParallelState() == globaldata::Particle::ParallelState::Local 
+//      and 
+      not particle->getIsBoundaryParticle() )
       {
     
       /* Prepare the particle for the Drift step */
-      localParticle->setMoveState( globaldata::Particle::MoveState::NotMovedYet );
+      particle->setMoveState( globaldata::Particle::MoveState::NotMovedYet );
       
     }
   
@@ -69,18 +69,18 @@ class LeapfrogDrift:
     const double dt_drift_hydro = timeStepSize;
     
     if(
-      localParticle->getParallelState() == globaldata::Particle::ParallelState::Local
-      and 
-      localParticle->getMoveState() != globaldata::Particle::MoveState::Moved
+//      particle->getParallelState() == globaldata::Particle::ParallelState::Local
+//      and 
+      particle->getMoveState() != globaldata::Particle::MoveState::Moved
       and
-      not localParticle->getIsBoundaryParticle() )
+      not particle->getIsBoundaryParticle() )
       {
     
       /* Drift the particle (update position for a full time-step) */
-      localParticle->setX( localParticle->getX() + dt_drift_hydro * localParticle->getV_full() );
+      particle->setX( particle->getX() + dt_drift_hydro * particle->getV_full() );
       
       /* Flag this particle as Moved */
-      localParticle->setMoveState( globaldata::Particle::MoveState::Moved );
+      particle->setMoveState( globaldata::Particle::MoveState::Moved );
     }
 
     /* End of inserted block */

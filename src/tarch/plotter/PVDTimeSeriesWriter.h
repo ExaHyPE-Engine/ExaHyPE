@@ -1,7 +1,6 @@
 // This file is part of the Peano project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
-#ifndef _TARCH_PLOTTER_PVD_TIME_SERIES_WRITER_H_
-#define _TARCH_PLOTTER_PVD_TIME_SERIES_WRITER_H_
+#pragma once
 
 
 #include <string>
@@ -75,5 +74,4 @@ class tarch::plotter::PVDTimeSeriesWriter {
 };
 
 
-#endif
 

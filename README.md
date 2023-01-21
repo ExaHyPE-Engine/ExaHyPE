@@ -2,28 +2,7 @@
 <img src="./documentation/Peano-logo.png"/>
 </div>
 
-# <u>Table of Contents</u>
-- [<u>Table of Contents</u>](#utable-of-contentsu)
-- [<u>General Information</u>](#ugeneral-informationu)
-- [<u>Availability</u>](#uavailabilityu)
-- [<u>Supported Platforms</u>](#usupported-platformsu)
-- [<u>Dependencies and Prerequisites</u>](#udependencies-and-prerequisitesu)
-- [<u>How to Build and Run (using GNU autotools)</u>](#uhow-to-build-and-run-using-gnu-autotoolsu)
-  - [Setup your build environment](#setup-your-build-environment)
-  - [Configure your build](#configure-your-build)
-    - [Intel](#intel)
-    - [Intel with OpenMP GPU](#intel-with-openmp-gpu)
-    - [ROCm with OpenMP GPU (AMD)](#rocm-with-openmp-gpu-amd)
-    - [Clang](#clang)
-    - [Clang with OpenMP GPU (NVIDIA)](#clang-with-openmp-gpu-nvidia)
-    - [NVHPC with OpenMP GPU](#nvhpc-with-openmp-gpu)
-    - [NVHPC with C++ GPU](#nvhpc-with-c-gpu)
-  - [Compilation](#compilation)
-  - [Running a Simulation](#running-a-simulation)
-  - [Cleanup](#cleanup)
-- [<u>Guidebook</u>](#uguidebooku)
-
-# <u>General Information</u>
+# General Information
 Peano is an open source framework for solvers on dynamically adaptive
 Cartesian meshes.
 
@@ -36,16 +15,16 @@ Peano  realises such a grid traversal and storage algorithm, and it provides
 hook-in points for applications performing per-element, per-vertex, and so 
 forth operations on the grid. It also provides interfaces for dynamic load balancing, sophisticated geometry representations, and other features.
 
-# <u>Availability</u>
+# Availability
 All software is available as open source through www.peano-framework.org.
 This page also holds extensive documentation (written, extracted from 
 source code and as video tutorials).
 
-# <u>Supported Platforms</u>
+# Supported Platforms
 We test and maintain Peano for Linux only.
 If you prefer Windows or MacOS, it should work as long as you provide the mandatory tools, but we won't be able to help.
 
-# <u>Dependencies and Prerequisites</u>
+# Dependencies and Prerequisites
 Peano's core is plain C++17/C++20 code. 
 We however use a whole set of tools around it.
 The most important ones are:
@@ -63,7 +42,7 @@ A detailed list can be found in the guidebook which we ship with the
 download (TeX sources). It is also available through the webpage where
 it is built in regular intervals.
 
-# <u>How to Build and Run (using GNU autotools)</u>
+# How to Build and Run (using GNU autotools)
 Peano's build process relies on the autotool chain.
 It yields a couple of libraries and executables.
 Most codes then use Peano's Python API to build an application on top of the libraries.
@@ -78,18 +57,18 @@ If you work against the Peano repository, you however have to run these steps:
 libtoolize && aclocal && autoconf && autoheader && cp src/config.h.in . && automake --add-missing
 ```
 
-## Configure your build
-We rely on configure to set up the build system.
-Use configure's help to find out which options you want to use.
+## Configure your build using a toolchain
+We rely on `configure` to set up the build system.
+Use `configure`'s help to find out which options you want to use.
 
 ```shell
 ./configure --help
 ./configure --my-options
 ```
 
-Some exemplary configure commands are given below. For detailed information please refer to the guidebook.
+Some quickstart configure commands for different toolchains are given below. For detailed information please refer to the guidebook in the documentation.
 
-### Intel
+### Intel OneAPI toolchain
 ```shell
 ./configure \
   --enable-exahype \
@@ -97,11 +76,11 @@ Some exemplary configure commands are given below. For detailed information plea
   --enable-blockstructured \
   --with-multithreading=omp \
   CC=icx CXX=icpx \
-  CXXFLAGS="-O3 -std=c++20 -fiopenmp" \
+  CXXFLAGS="-O3 -std=c++20 -W -Wall -Wextra -Wno-unknown-attributes -fiopenmp" \
   LDFLAGS="-fiopenmp"
 ```
 
-### Intel with OpenMP GPU
+### Intel OneAPI toolchain with OpenMP GPU
 ```shell
 ./configure \
   --enable-exahype \
@@ -110,25 +89,24 @@ Some exemplary configure commands are given below. For detailed information plea
   --with-gpu=omp \
   --with-multithreading=omp \
   CC=icx CXX=icpx \
-  CXXFLAGS="-O3 -std=c++20 -fiopenmp -fopenmp-targets=spir64" \
+  CXXFLAGS="-O3 -g3 -std=c++20 -W -Wall -Wextra -Wno-unknown-attributes -fiopenmp -fopenmp-targets=spir64" \
+  FCFLAGS="-fiopenmp  -fopenmp-targets=spir64" \
   LDFLAGS="-fiopenmp"
 ```
 
-### ROCm with OpenMP GPU (AMD)
+### Intel OneAPI toolchain with SYCL GPU
 ```shell
-export LD=ld &&
-export AOMP=/opt/rocm/llvm &&
 ./configure \
-  --enable-exahype \
-  --enable-loadbalancing \
-  --enable-blockstructured \
-  --with-gpu=omp \
-  --with-multithreading=omp \
-  CC=aompcc CXX=aompcc \
-  CXXFLAGS="-O3 -std=c++20 -fopenmp -fopenmp-targets=amdgcn-amd-amdhsa -Xopenmp-target=amdgcn-amd-amdhsa -march=gfx908" \
-  LDFLAGS="-fopenmp -fopenmp-targets=amdgcn-amd-amdhsa -Xopenmp-target=amdgcn-amd-amdhsa -march=gfx908"
+--enable-exahype \
+--enable-loadbalancing \
+--enable-blockstructured \
+--with-gpu=sycl \
+CXX=dpcpp CC=dpcpp \
+CXXFLAGS="-g3 -std=c++20 -Wno-unknown-attributes" \
+LDFLAGS="-ltbb"
 ```
-### Clang
+
+### Clang toolchain
 ```shell
 ./configure \
   --enable-exahype \
@@ -136,10 +114,10 @@ export AOMP=/opt/rocm/llvm &&
   --enable-blockstructured \
   --with-multithreading=omp \
   CC=clang CXX=clang++ \
-  CXXFLAGS="-O3 -std=c++17 -fopenmp"
+  CXXFLAGS="-O3 -std=c++17 -W -Wall -Wextra -Wno-unknown-attributes -fopenmp"
 ```
 
-### Clang with OpenMP GPU (NVIDIA)
+### Clang toolchain with OpenMP GPU
 ```shell
 ./configure \
   --enable-exahype \
@@ -148,10 +126,25 @@ export AOMP=/opt/rocm/llvm &&
   --with-gpu=omp \
   --with-multithreading=omp \
   CC=clang CXX=clang++ \
-  CXXFLAGS="-O3 -std=c++17 -fopenmp -fopenmp-targets=nvptx64-nvidia-cuda -Xopenmp-target -march=sm_86"
+  CXXFLAGS="-O3 -std=c++17 -W -Wall -Wextra -Wno-unknown-attributes -fopenmp -fopenmp-targets=nvptx64-nvidia-cuda -Xopenmp-target -march=<gpu-arch>"
+```
+where `<gpu-arch>` is either `cc50`, `cc52`, `cc53`, `cc60`, `cc61`, `cc62`, `cc70`, `cc72`, `cc75`, `cc80`, `cc86` or `cc90`.
+
+### Clang toolchain with SYCL GPU
+
+```shell
+./configure \
+  --enable-exahype \
+  --enable-loadbalancing \
+  --enable-blockstructured \
+  --with-gpu=sycl \
+  --with-multithreading=sycl \
+  CC=clang CXX=clang++ \
+  CXXFLAGS="-O3 -Xsycl-target-frontend -O3 -fgpu-inline-threshold=100000 -Wno-unknown-cuda-version -Wno-deprecated-declarations -Wno-linker-warnings -std=c++20 -Wno-unknown-attributes -fsycl -fsycl-targets=nvptx64-nvidia-cuda -Xsycl-target-backend --cuda-gpu-arch=sm_80" \
+  LDFLAGS="-Xsycl-target-frontend -O3 -fsycl -fsycl-targets=nvptx64-nvidia-cuda -Xsycl-target-backend --cuda-gpu-arch=sm_80 -lstdc++fs"
 ```
 
-### NVHPC with OpenMP GPU
+### NVIDIA NVC++ toolchain with OpenMP GPU
 ```shell
 ./configure \
   --enable-exahype \
@@ -160,11 +153,14 @@ export AOMP=/opt/rocm/llvm &&
   --with-gpu=omp \
   --with-multithreading=omp \
   CC=nvc++ CXX=nvc++ \
-  CXXFLAGS="-O4 -std=c++20 -mp=gpu -gpu=cc86" \
-  LDFLAGS="-mp=gpu -gpu=cc86"
+  CXXFLAGS="-O4 -std=c++20 -W -Wall -Wextra -mp=gpu -gpu=<gpu-arch>" \
+  LDFLAGS="-mp=gpu -gpu=<gpu-arch>"
 ```
+where `<gpu-arch>` is either `cc70`, `cc72`, `cc75`, `cc80`, `cc86` or `cc90`.
 
-### NVHPC with C++ GPU
+If you want to use the CUDA API you will need to add `-cuda` to the `CXXFLAGS` and the `LDFLAGS`.
+
+### NVIDIA NVC++ toolchain with C++ GPU
 ```shell
 ./configure \
   --enable-exahype \
@@ -173,9 +169,24 @@ export AOMP=/opt/rocm/llvm &&
   --with-gpu=cpp \
   --with-multithreading=cpp \
   CC=nvc++ CXX=nvc++ \
-  CXXFLAG="-O4 -std=c++20 -mp=gpu -gpu=cc86" \
-  LDFLAGS="-gpu=cc86"
+  CXXFLAG="-O4 -std=c++20 -W -Wall -Wextra -mp=gpu -gpu=<gpu-arch>" \
+  LDFLAGS="-mp=gpu -gpu=<gpu-arch>"
 ```
+where `<gpu-arch>` is either `cc70`, `cc72`, `cc75`, `cc80`, `cc86` or `cc90`.
+
+### AMD toolchain with OpenMP GPU
+```shell
+./configure \
+  --enable-exahype \
+  --enable-loadbalancing \
+  --enable-blockstructured \
+  --with-gpu=omp \
+  --with-multithreading=omp \
+  CC=clang CXX=clang++ \
+  CXXFLAGS="-O3 -std=c++20 -W -Wall -Wextra -Wno-unknown-attributes -fopenmp -O3 -std=c++20 --offload-arch=<gpu-arch>" \
+  LDFLAGS="-fopenmp --offload-arch=<gpu-arch> -lstdc++fs"
+```
+where `<gpu-arch>` is either `gfx906` (MI 50), `gfx908` (MI 100), or `gfx90a` (MI 200 series).
 
 ## Compilation
 ```shell
@@ -200,7 +211,7 @@ make distclean
 make maintainer-clean
 ```
 
-# <u>Guidebook</u>
+# Documentation and Guidebook
 For more details regarding build configuration and features of the
 software, take a look at the Peano documentation. You can build a PDF version of the guidebook via:
 

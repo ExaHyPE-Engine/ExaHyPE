@@ -25,10 +25,6 @@ ExaHyPE2Sources = \
   dg/DGUtils.cpp \
   dg/CellIntegral.cpp \
   dg/Riemann.cpp \
-  dg/Tracer.cpp \
-  dg/average/Average.cpp \
-  dg/fluxaverage/FluxAverage.cpp \
-  dg/laxfriedrichs/LaxFriedrichs.cpp \
   dg/rusanov/Rusanov.cpp \
   dg/tests/CellIntegralTest.cpp \
   dg/tests/DGUtilsTest.cpp \
@@ -43,6 +39,7 @@ ExaHyPE2Sources = \
   fd/BoundaryConditions.cpp \
   fd/PatchUtils.cpp \
   fd/LoopBody.cpp \
+  fd/fd4/FD4_patchwise_functors.cpp \
   fv/BoundaryConditions.cpp \
   fv/PatchUtils.cpp \
   fv/PatchAccess.cpp \

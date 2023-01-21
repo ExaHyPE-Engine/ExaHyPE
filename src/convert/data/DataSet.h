@@ -1,5 +1,4 @@
-#ifndef _CONVERT_DATA_DATA_SET_H_
-#define _CONVERT_DATA_DATA_SET_H_
+#pragma once
 
 #include <string>
 #include <vector>
@@ -71,4 +70,3 @@ class convert::data::DataSet {
     std::map< Variable, std::vector<PatchData> >  data;
 };
 
-#endif

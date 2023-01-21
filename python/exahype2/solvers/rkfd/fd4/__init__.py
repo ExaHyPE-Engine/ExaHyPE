@@ -8,3 +8,6 @@ from .GlobalAdaptiveTimeStep                        import GlobalAdaptiveTimeSte
 
 from .kernels import SolverVariant
 from .kernels import RiemannKernelVariant
+
+from .amr import switch_to_FD4_tensor_product_interpolation
+from .amr import switch_to_FD4_tensor_product_restriction

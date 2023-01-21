@@ -1,7 +1,6 @@
 // This file is part of the ExaHyPE2 project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
-#ifndef _EXAHYPE2_DG_RUSANOV_LAX_FRIEDRICHS_H_
-#define _EXAHYPE2_DG_RUSANOV_LAX_FRIEDRICHS_H_
+#pragma once
 
 
 #include <vector>
@@ -260,4 +259,3 @@ namespace exahype2 {
   }
 }
 
-#endif

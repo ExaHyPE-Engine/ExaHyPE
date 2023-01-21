@@ -11,16 +11,28 @@ class DynamicAMR(ActionSet):
   This class assumes that you have an 2MxNxN patch on your faces. 
   
   patch: peano4.datamodel.Patch
+  
   patch_overlap_interpolation:  peano4.datamodel.Patch
     Consult remark above about how the dimensions of this overlap 
     patch have to match. This overlap is used for the 
     interpolation. It can be the same as for the restriction.
+    
   patch_overlap_restriction: peano4.datamodel.Patch
                  
   """
   
   
-  def __init__(self, patch, patch_overlap_interpolation, patch_overlap_restriction, interpolation_scheme, restriction_scheme, clear_guard="true", restrict_guard="true", interpolate_guard="true", additional_includes="", point_wise_postprocessing_of_interpolation="" , point_wise_postprocessing_of_restriction="" ):
+  def __init__(self, 
+               patch, 
+               patch_overlap_interpolation, 
+               patch_overlap_restriction, 
+               interpolation_scheme, 
+               restriction_scheme, 
+               clear_guard="true", 
+               restrict_guard="true", 
+               interpolate_guard="true", 
+               additional_includes=""
+              ):
     """
     
     restrict_guard: String
@@ -55,8 +67,6 @@ class DynamicAMR(ActionSet):
     self.d[ "CLEAR_GUARD" ]               = clear_guard
     self.d[ "RESTRICT_GUARD" ]            = restrict_guard
     self.d[ "INTERPOLATE_GUARD" ]         = interpolate_guard
-    self.d[ "POINT_WISE_POSTPROCESSING_INTERPOLATION" ] = point_wise_postprocessing_of_interpolation
-    self.d[ "POINT_WISE_POSTPROCESSING_RESTRICTION" ]   = point_wise_postprocessing_of_restriction
     
     self.additional_includes                = additional_includes
 
@@ -81,7 +91,7 @@ class DynamicAMR(ActionSet):
     return False
 
 
-  __Template_TouchFaceFirstTime = """
+  _Template_TouchFaceFirstTime = """
   if ( {{CLEAR_GUARD}} ) {
     logTraceInWith2Arguments( "touchFaceFirstTime(...)", marker.toString(), "clear halo layer {{FINE_GRID_FACE_ACCESSOR_RESTRICTION}}" );
     
@@ -98,7 +108,7 @@ class DynamicAMR(ActionSet):
 """
 
 
-  __Template_TouchCellFirstTime = """
+  _Template_TouchCellFirstTime = """
   if ( marker.hasBeenRefined() and not marker.willBeRefined() ) {
     logTraceInWith2Arguments( "touchCellFirstTime(...)", marker.toString(), "clear cell {{FINE_GRID_CELL}}" );
     
@@ -114,13 +124,10 @@ class DynamicAMR(ActionSet):
 """
 
 
-  __Template_CreateHangingFace_Prologue = """
+  _Template_CreateHangingFace = """
   if ( {{INTERPOLATE_GUARD}} ) {
     logTraceInWith1Argument( "createHangingFace(...)", marker.toString() );
-"""
 
-
-  __Template_CreateHangingFace_Core = """
     ::toolbox::blockstructured::interpolateHaloLayer_AoS_{{INTERPOLATION_SCHEME}}(
       marker,
       {{DOFS_PER_AXIS}},
@@ -129,28 +136,7 @@ class DynamicAMR(ActionSet):
       {{COARSE_GRID_FACE_ACCESSOR_INTERPOLATION}}(marker.getSelectedFaceNumber()).value,
       {{FINE_GRID_FACE_ACCESSOR_INTERPOLATION}}.value
     );
-"""
 
-
-  __Template_CreateHangingFace_Epilogue = """
-    {% if POINT_WISE_POSTPROCESSING_INTERPOLATION!="" %}
-    const int  normal                        = marker.getSelectedFaceNumber() % Dimensions;
-    const bool pickLeftHalfOfHaloOnFineGrid  = marker.getSelectedFaceNumber() < Dimensions;
-
-    dfore(k,{{DOFS_PER_AXIS}},normal,pickLeftHalfOfHaloOnFineGrid ? 0 : {{OVERLAP}}) {
-      for (int i=0; i<{{OVERLAP}}; i++) {
-        tarch::la::Vector<Dimensions,int>    fineVolume = k;
-        fineVolume(normal) +=i ;
-        int fineVolumeLinearised = toolbox::blockstructured::serialiseVoxelIndexInOverlap(
-          fineVolume,
-          {{DOFS_PER_AXIS}}, {{OVERLAP}}, normal
-        );
-        double* targetVolume = {{FINE_GRID_FACE_ACCESSOR_INTERPOLATION}}.value + fineVolumeLinearised * {{UNKNOWNS}};
-        {{POINT_WISE_POSTPROCESSING_INTERPOLATION}};
-      }  
-    }
-    {% endif %}
-    
     logTraceOut( "createHangingFace(...)" );
   }
   else {
@@ -159,13 +145,10 @@ class DynamicAMR(ActionSet):
 """
 
 
-  __Template_DestroyHangingFace_Prologue = """
+  _Template_DestroyHangingFace = """
   if ( {{RESTRICT_GUARD}} ) {
     logTraceInWith4Arguments( "destroyHangingFace(...)", "{{FINE_GRID_FACE_ACCESSOR_RESTRICTION}}", "{{COARSE_GRID_FACE_ACCESSOR_RESTRICTION}}", marker.getSelectedFaceNumber(), marker.toString() );
-"""
 
-
-  __Template_DestroyHangingFace_Core = """
     ::toolbox::blockstructured::restrictInnerHalfOfHaloLayer_AoS_{{RESTRICTION_SCHEME}}(
       marker,
       {{DOFS_PER_AXIS}},
@@ -174,39 +157,18 @@ class DynamicAMR(ActionSet):
       {{FINE_GRID_FACE_ACCESSOR_RESTRICTION}}.value,
       {{COARSE_GRID_FACE_ACCESSOR_RESTRICTION}}(marker.getSelectedFaceNumber()).value
     );
-"""
-
-    
-  __Template_DestroyHangingFace_Epilogue = """
-    {% if POINT_WISE_POSTPROCESSING_RESTRICTION!="" %}
-    const int  normal                        = marker.getSelectedFaceNumber() % Dimensions;
-    const bool pickLeftHalfOfHaloOnFineGrid  = marker.getSelectedFaceNumber() < Dimensions;
-
-    dfore(k,{{DOFS_PER_AXIS}},normal,pickLeftHalfOfHaloOnFineGrid ? 0 : {{OVERLAP}}) {
-      for (int i=0; i<{{OVERLAP}}; i++) {
-        tarch::la::Vector<Dimensions,int>    fineVolume = k;
-        fineVolume(normal) +=i ;
-        int fineVolumeLinearised = toolbox::blockstructured::serialiseVoxelIndexInOverlap(
-          fineVolume,
-          {{DOFS_PER_AXIS}}, {{OVERLAP}}, normal
-        );
-        double* targetVolume = {{COARSE_GRID_FACE_ACCESSOR_RESTRICTION}}(marker.getSelectedFaceNumber()).value + fineVolumeLinearised * {{UNKNOWNS}};
-        {{POINT_WISE_POSTPROCESSING_RESTRICTION}};
-      }  
-    }
-    {% endif %}
 
     logTraceOut( "destroyHangingFace(...)" );
   }
 """
 
 
-  __Template_CreatePersistentFace_Prologue = """
+  """
+  
+  """
+  _Template_CreatePersistentFace = """
   logTraceInWith1Argument( "createPersistentFace(...)", marker.toString() );
-"""
 
-
-  __Template_CreatePersistentFace_Core = """
   ::toolbox::blockstructured::interpolateHaloLayer_AoS_{{INTERPOLATION_SCHEME}}(
       marker,
       {{DOFS_PER_AXIS}},
@@ -216,45 +178,32 @@ class DynamicAMR(ActionSet):
       {{COARSE_GRID_FACE_ACCESSOR_INTERPOLATION}}(marker.getSelectedFaceNumber()).value,
       {{FINE_GRID_FACE_ACCESSOR_INTERPOLATION}}.value
   );
-"""
 
-    
-  __Template_CreatePersistentFace_Epilogue = """
   logTraceOutWith1Argument( "createPersistentFace(...)", marker.toString() );
 """
   
 
-  __Template_DestroyPersistentFace_Prologue = """
-  logTraceIn( "destroyPersistentFace(...)" );
-  
+  _Template_DestroyPersistentFace = """
   if ( not marker.isInteriorFaceWithinPatch() ) {
-"""
-
-
-  __Template_DestroyPersistentFace_Core = """
-  ::toolbox::blockstructured::restrictHaloLayer_AoS_{{RESTRICTION_SCHEME}}(
+    logTraceIn( "destroyPersistentFace(...)" );
+    
+    ::toolbox::blockstructured::restrictHaloLayer_AoS_{{RESTRICTION_SCHEME}}(
       marker,
       {{DOFS_PER_AXIS}},
       {{OVERLAP}},
       {{UNKNOWNS}},
       {{FINE_GRID_FACE_ACCESSOR_RESTRICTION}}.value,
       {{COARSE_GRID_FACE_ACCESSOR_RESTRICTION}}(marker.getSelectedFaceNumber()).value
-  );
-"""    
-
-  
-  __Template_DestroyPersistentFace_Epilogue = """
+    );
+    
+    logTraceOut( "destroyPersistentFace(...)" );
   }
-  logTraceOut( "destroyPersistentFace(...)" );
 """
 
 
-  __Template_CreateCell_Prologue = """
+  _Template_CreateCell = """
   logTraceIn( "createCell(...)" );
-"""
 
-  
-  __Template_CreateCell_Core = """
   ::toolbox::blockstructured::interpolateCell_AoS_{{INTERPOLATION_SCHEME}}(
       marker,
       {{DOFS_PER_AXIS}},
@@ -262,20 +211,14 @@ class DynamicAMR(ActionSet):
       {{COARSE_GRID_CELL}}.value,
       {{FINE_GRID_CELL}}.value
   );
-"""
 
-
-  __Template_CreateCell_Epilogue = """   
   logTraceOut( "createCell(...)" );
 """
 
 
-  __Template_DestroyCell_Prologue = """
+  _Template_DestroyCell = """
   logTraceInWith1Argument( "destroyCell(...)", marker.toString() );
-"""
 
-
-  __Template_DestroyCell_Core = """
   ::toolbox::blockstructured::restrictCell_AoS_{{RESTRICTION_SCHEME}}(
       marker,
       {{DOFS_PER_AXIS}},
@@ -283,10 +226,7 @@ class DynamicAMR(ActionSet):
       {{FINE_GRID_CELL}}.value,
       {{COARSE_GRID_CELL}}.value
   );
-"""
 
-    
-  __Template_DestroyCell_Epilogue = """
   logTraceOut( "destroyCell(...)" );
 """
 
@@ -294,40 +234,28 @@ class DynamicAMR(ActionSet):
   def get_body_of_operation(self,operation_name):
     result = "\n"
     if operation_name==ActionSet.OPERATION_CREATE_HANGING_FACE:
-      result =  jinja2.Template(self.__Template_CreateHangingFace_Prologue).render(**self.d)
-      result += jinja2.Template(self.__Template_CreateHangingFace_Core).render(**self.d)
-      result += jinja2.Template(self.__Template_CreateHangingFace_Epilogue).render(**self.d)
+      result =  jinja2.Template(self._Template_CreateHangingFace).render(**self.d)
       pass 
     if operation_name==ActionSet.OPERATION_CREATE_PERSISTENT_FACE:
-      result =  jinja2.Template(self.__Template_CreatePersistentFace_Prologue).render(**self.d)
-      result += jinja2.Template(self.__Template_CreatePersistentFace_Core).render(**self.d)
-      result += jinja2.Template(self.__Template_CreatePersistentFace_Epilogue).render(**self.d)
+      result =  jinja2.Template(self._Template_CreatePersistentFace).render(**self.d)
       pass 
     if operation_name==ActionSet.OPERATION_DESTROY_HANGING_FACE:
-      result  = jinja2.Template(self.__Template_DestroyHangingFace_Prologue).render(**self.d)
-      result += jinja2.Template(self.__Template_DestroyHangingFace_Core).render(**self.d)
-      result += jinja2.Template(self.__Template_DestroyHangingFace_Epilogue).render(**self.d)
+      result  = jinja2.Template(self._Template_DestroyHangingFace).render(**self.d)
       pass 
     if operation_name==ActionSet.OPERATION_DESTROY_PERSISTENT_FACE:
-      result  = jinja2.Template(self.__Template_DestroyPersistentFace_Prologue).render(**self.d)
-      result += jinja2.Template(self.__Template_DestroyPersistentFace_Core).render(**self.d)
-      result += jinja2.Template(self.__Template_DestroyPersistentFace_Epilogue).render(**self.d)
+      result  = jinja2.Template(self._Template_DestroyPersistentFace).render(**self.d)
       pass 
     if operation_name==ActionSet.OPERATION_CREATE_CELL:
-      result  = jinja2.Template(self.__Template_CreateCell_Prologue).render(**self.d)
-      result += jinja2.Template(self.__Template_CreateCell_Core).render(**self.d)
-      result += jinja2.Template(self.__Template_CreateCell_Epilogue).render(**self.d)
+      result  = jinja2.Template(self._Template_CreateCell).render(**self.d)
       pass 
     if operation_name==ActionSet.OPERATION_DESTROY_CELL:
-      result  = jinja2.Template(self.__Template_DestroyCell_Prologue).render(**self.d)
-      result += jinja2.Template(self.__Template_DestroyCell_Core).render(**self.d)
-      result += jinja2.Template(self.__Template_DestroyCell_Epilogue).render(**self.d)
+      result  = jinja2.Template(self._Template_DestroyCell).render(**self.d)
       pass 
     if operation_name==ActionSet.OPERATION_TOUCH_FACE_FIRST_TIME:
-      result = jinja2.Template(self.__Template_TouchFaceFirstTime).render(**self.d)
+      result = jinja2.Template(self._Template_TouchFaceFirstTime).render(**self.d)
       pass 
     if operation_name==ActionSet.OPERATION_TOUCH_CELL_FIRST_TIME:
-      result = jinja2.Template(self.__Template_TouchCellFirstTime).render(**self.d)
+      result = jinja2.Template(self._Template_TouchCellFirstTime).render(**self.d)
       pass 
     return result
 
@@ -363,15 +291,4 @@ class DynamicAMR(ActionSet):
 
   def switch_restriction_scheme(self,restriction_scheme):
     self.d[ "RESTRICTION_SCHEME" ]        = restriction_scheme
-
-
-  def switch_point_wise_postprocessing_of_interpolation(self,point_wise_postprocessing_of_interpolation):
-    """
-    Add a code snippet which does something with a double pointer targetVolume.
-    """
-    self.d[ "POINT_WISE_POSTPROCESSING_INTERPOLATION" ] = point_wise_postprocessing_of_interpolation
-
-
-  def switch_point_wise_postprocessing_of_restriction(self,point_wise_postprocessing_of_restriction):
-    self.d[ "POINT_WISE_POSTPROCESSING_RESTRICTION" ]   = point_wise_postprocessing_of_restriction
 

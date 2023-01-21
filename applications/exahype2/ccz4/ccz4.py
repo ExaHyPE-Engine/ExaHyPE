@@ -48,13 +48,13 @@ if __name__ == "__main__":
     parser.add_argument("-plt",  "--plot-step-size",  dest="plot_step_size",  type=float, default=0.04, help="Plot step size (0 to switch it off)" )
     parser.add_argument("-m",    "--mode",            dest="mode",            default="release",  help="|".join(modes.keys()) )
     parser.add_argument( "--gpu",            dest="GPU",            default=False, action="store_true",  help="Run with accelerator support" )
-    parser.add_argument("-ext",  "--extension",       dest="extension",       choices=["none", "gradient", "AMRadm", "Full"],   default="none",  help="Pick extension, i.e. what should be plotted on top. Default is none" )
+    parser.add_argument("-ext",  "--extension",       dest="extension",       choices=["none", "gradient", "AMRadm", "Full", "Psi4"],   default="none",  help="Pick extension, i.e. what should be plotted on top. Default is none" )
     parser.add_argument("-impl", "--implementation",  dest="implementation",  choices=["fv-global-fixed", "fv-global-adaptive", "fv-global-fixed-enclave", "fv-global-adaptive-enclave","fv-subcyling-adaptive-enclave","fv-local-enclave", "fv-musclhancock", "fd4-rk1-adaptive", "fd4-rk1-fixed", "fd4-rk4-adaptive", "fd4-rk4-fixed", "RKDG"], required="True",  help="Pick solver type" )
     parser.add_argument("-no-pbc",  "--no-periodic-boundary-conditions",      dest="periodic_bc", action="store_false", default="True",  help="switch on or off the periodic BC" )
     parser.add_argument("-AMRMarker",  "--AMR-marker",      dest="marker", choices=["none", "poisson"],   default="none",  help="switch on or off the AMR boundary marker" )
     parser.add_argument("-et",   "--end-time",        dest="end_time",        type=float, default=1.0, help="End (terminal) time" )
     parser.add_argument("-pst",   "--plot-start-time",        dest="plot_start_time",        type=float, default=0.0, help="start time for plot" )
-    parser.add_argument("-s",    "--scenario",        dest="scenario",        choices=["gauge", "dia_gauge", "linear", "single-puncture","two-punctures"], required="True", help="Scenario" )
+    parser.add_argument("-s",    "--scenario",        dest="scenario",        choices=["gauge", "dia_gauge", "linear", "single-puncture","two-punctures", "flat"], required="True", help="Scenario" )
     parser.add_argument("-cfl",      "--CFL-ratio",           dest="cfl",             type=float, default=0.1, help="Set CFL ratio" )
     parser.add_argument("-tracer", "--add-tracer",    dest="add_tracer", type=int, default=0,  help="Add tracers and specify the seeds. 0-switch off, 1-x axis, 2-xy plane, 3-over domain (evenly), 4-over domain(with noise option), 5-inserted by coordinate, 6-spherical surface(Gauss_Legendre_quadrature), 7-spherical surface(t-design)" )
     parser.add_argument("-tn", "--tracer-name",       dest="tra_name",    type=str, default="de",  help="name of output tracer file (temporary)" )
@@ -74,6 +74,7 @@ if __name__ == "__main__":
 
     SuperClass = None
 
+    print(args.implementation)
     if args.implementation=="fv-global-fixed":
        SuperClass = exahype2.solvers.fv.rusanov.GlobalFixedTimeStep
     if args.implementation=="fv-global-adaptive":
@@ -260,10 +261,10 @@ if __name__ == "__main__":
       def create_action_sets(self):
         SuperClass.create_action_sets(self)
 
-        if SuperClass == exahype2.solvers.rkdg.rusanov.GlobalAdaptiveTimeStep:
-          pass
-        else:
-          self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement.additional_includes += """ 
+        #if SuperClass == exahype2.solvers.rkdg.rusanov.GlobalAdaptiveTimeStep:
+        #  pass
+        #else:
+        self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement.additional_includes += """ 
 #include "../CCZ4Kernels.h"
             """
 
@@ -580,6 +581,58 @@ if __name__ == "__main__":
         self.create_data_structures()
         self.create_action_sets()
 
+      def add_Psi4W(self):
+        """
+  add psi4 writer
+        """
+        self._auxiliary_variables = 2
+
+        self._my_user_includes += """
+  #include "../libtwopunctures/TP_PunctureTracker.h"
+  #include "../CCZ4Kernels.h"
+    """
+
+        self._preprocess_reconstructed_patch = """ 
+        const int patchSize = """ + str( self._patch.dim[0] ) + """;
+        double volumeH = ::exahype2::fv::getVolumeLength(marker.h(),patchSize);
+
+    const int n_a_v=2;
+    const int overlap=3; //make sure you are using fd4 solver!
+
+    if (not marker.willBeRefined() and repositories::InstanceOfFiniteVolumeCCZ4.getSolverState()!=FiniteVolumeCCZ4::SolverState::GridConstruction and repositories::InstanceOfFiniteVolumeCCZ4.getSolverState()==FiniteVolumeCCZ4::SolverState::RungeKuttaSubStep0) {
+      dfor(cell,patchSize) {
+        tarch::la::Vector<Dimensions,int> currentCell = cell + tarch::la::Vector<Dimensions,int>(overlap);
+
+        double gradQ[3*59]={ 0 };
+
+        for (int d=0; d<3; d++) {
+          tarch::la::Vector<Dimensions,int> leftCell  = currentCell;
+          tarch::la::Vector<Dimensions,int> rightCell = currentCell;
+          leftCell(d)  -= 1;
+          rightCell(d) += 1;
+          const int leftCellSerialised  = peano4::utils::dLinearised(leftCell, patchSize + 2*overlap);
+          const int rightCellSerialised = peano4::utils::dLinearised(rightCell,patchSize + 2*overlap);
+          for(int i=0; i<59; i++) {
+            gradQ[d*59+i] = ( oldQWithHalo[rightCellSerialised*(59+n_a_v)+i] - oldQWithHalo[leftCellSerialised*(59+n_a_v)+i] ) / 2.0 / volumeH;
+          }
+        }
+
+        const int cellSerialised  = peano4::utils::dLinearised(currentCell, patchSize + 2*overlap);
+        
+        double Psi4[2]={0,0};
+        double currentPosition[3]; 
+        for (int d=0; d<3; d++) currentPosition[d]=marker.getOffset()(d)+(cell(d)+0.5)*volumeH;
+        Psi4Calc(Psi4, oldQWithHalo+cellSerialised*(59+n_a_v), gradQ, currentPosition);
+        ::exahype2::enumerator::AoSLexicographicEnumerator enumeratorWithAuxiliaryVariables   ( 1, 3, 0, 59, n_a_v);
+        fineGridCellFiniteVolumeCCZ4Q.value[ enumeratorWithAuxiliaryVariables(0,cell,59+0) ] = Psi4[0]; //placeholder
+        fineGridCellFiniteVolumeCCZ4Q.value[ enumeratorWithAuxiliaryVariables(0,cell,59+1) ] = Psi4[1]; //placeholder
+      }  
+    } 
+    """
+
+        self.create_data_structures()
+        self.create_action_sets()
+
       def pick_Gauge_wave_scenario(self):
         self.add_solver_constants( """static constexpr int Scenario=0; /* Gauge wave */  """ )
 
@@ -680,7 +733,7 @@ if __name__ == "__main__":
       my_solver.overlap=3
     #for rkfd the overlap is automatically assigned in solver class
 
-    my_solver.restriction = "averaging" # "linear"
+    #my_solver.restriction = "averaging" # "linear"
 
     if args.interpolation=="constant":
       my_solver.interpolation = "piecewise_constant"
@@ -694,20 +747,31 @@ if __name__ == "__main__":
     if args.interpolation=="linear-con-extrap-lin-normal-interp":
       my_solver.interpolation = "linear_with_constant_extrapolation_and_linear_normal_interpolation"
       print( "Interpolation rule: linear+constant extrapolation and linear normal interpolation" )
-    if args.interpolation=="linear-lin-extrap-lin-normal-interp":
-      my_solver.interpolation = "linear_with_linear_extrapolation_and_linear_normal_interpolation" 
-      print( "Interpolation rule: linear+linear extrapolation and linear normal interpolation" )
+    #if args.interpolation=="linear-lin-extrap-lin-normal-interp":
+    #  my_solver.interpolation = "linear_with_linear_extrapolation_and_linear_normal_interpolation" 
+    #  print( "Interpolation rule: linear+linear extrapolation and linear normal interpolation" )
 
     if args.interpolation=="order-2":
       my_solver.interpolation = "linear" 
 
-    if args.restriction=="average":
-      my_solver.restriction =  "averaging"
-      print( "Restiction rule: averaging" )
-    if args.restriction=="inject":
-      my_solver.restriction_scheme = "inject" 
-      print( "Restiction rule: injection" )
-          
+    #if args.restriction=="average":
+    #  my_solver.restriction =  "averaging"
+    #  print( "Restiction rule: averaging" )
+    #if args.restriction=="inject":
+    #  my_solver.restriction_ = "inject" 
+    #  print( "Restiction rule: injection" )
+
+    #Below are the I&R set functions for FD4
+    #These functions here do two things:
+    #1. it set the solver.interpolation parameters similar to what we do for fv, so the code know what template shoule be named.
+    #2. it compute and inject the corresponding matrices for named schemes into the solver head files.
+    #notice point 2 is not needed as for build-in function (for fv) the matrices are already hard-coded.  
+    tem_interp=["TP_constant","TP_linear_with_linear_extrap_normal_interp"]
+    tem_restrict=["TP_inject_normal_extrap","TP_average_normal_extrap"]
+    if (args.implementation=="fd4-rk1-adaptive" or args.implementation=="fd4-rk1-fixed" 
+      or args.implementation=="fd4-rk4-adaptive" or args.implementation=="fd4-rk4-fixed"):
+      exahype2.solvers.rkfd.fd4.switch_to_FD4_tensor_product_interpolation( my_solver, tem_interp[1] ) 
+      exahype2.solvers.rkfd.fd4.switch_to_FD4_tensor_product_restriction(   my_solver, tem_restrict[1] ) 
     #if args.interpolation=="linear+enforce" or args.interpolation=="linear-slow+enforce":
     #  self.point_wise_postprocessing_of_interpolation = "examples::exahype2::ccz4::enforceCCZ4constraints(targetVolume)" )
     #if args.restriction=="average+enforce" or args.restriction=="inject+enforce":
@@ -724,6 +788,8 @@ if __name__ == "__main__":
       my_solver.add_constraint_RefinementFlag_verification()
     if args.extension=="Full":
       my_solver.add_PT_ConsW_Psi4W_AMRFlag()
+    if args.extension=="Psi4":
+      my_solver.add_Psi4W()
 
       #my_solver._auxiliary_variables = 59*3
 
@@ -762,29 +828,32 @@ if __name__ == "__main__":
     solverconstants=""
 
     if args.scenario=="gauge":
-      solverconstants+= "static constexpr int Scenario=0; /* Gauge wave */  "
+      solverconstants+= "static constexpr int Scenario=0; /* Gauge wave */ \n "
       userinfo.append(("picking gauge wave scenario",None))
       floatparams.update({"sk":0.0}); floatparams.update({"bs":0.0})
       intparams.update({"LapseType":0})
     elif args.scenario=="dia_gauge":
-      solverconstants+= "static constexpr int Scenario=3; /* Diagonal Gauge wave */  "
+      solverconstants+= "static constexpr int Scenario=3; /* Diagonal Gauge wave */ \n "
       userinfo.append(("picking diagonal gauge wave scenario",None))
       floatparams.update({"sk":0.0}); floatparams.update({"bs":0.0})
       intparams.update({"LapseType":0})
     elif args.scenario=="linear":
-      solverconstants+= "static constexpr int Scenario=1; /* Linear wave */  "
+      solverconstants+= "static constexpr int Scenario=1; /* Linear wave */ \n "
       userinfo.append(("picking linear wave scenario",None))
       floatparams.update({"sk":0.0}); floatparams.update({"bs":0.0})
       intparams.update({"LapseType":0})
+    elif args.scenario=="flat":
+      solverconstants+= "static constexpr int Scenario=4; /* flat spacetime */ \n "
+      userinfo.append(("picking flat scenario",None))
     elif  (args.scenario=="two-punctures") or (args.scenario=="single-puncture"):
-      solverconstants+= "static constexpr int Scenario=2; /* Two-puncture */ "
+      solverconstants+= "static constexpr int Scenario=2; /* Two-puncture */ \n"
       userinfo.append(("picking black hole scenario",None))
     else:
       raise Exception( "Scenario " + args.scenario + " is now unknown")  
 
     for k, v in floatparams.items(): solverconstants+= "static constexpr double {} = {};\n".format("CCZ4{}".format(k), v)
     for k, v in intparams.items():   solverconstants+= "static constexpr int {} = {};\n".format("CCZ4{}".format(k), v)
-    my_solver.set_solver_constants(solverconstants)
+    my_solver.add_solver_constants(solverconstants)
 
     project.add_solver(my_solver)
 
@@ -824,10 +893,10 @@ if __name__ == "__main__":
     #path="/cosma5/data/durham/dc-zhan3/bbh-c5-1"
     #path="/cosma6/data/dp004/dc-zhan3/exahype2/sbh-fv3"
     project.set_output_path(path)
-    probe_point = [-4,-4,0.0]
-    project.add_plot_filter( probe_point,[8.0,8.0,0.01],1 )
+    probe_point = [-6,-6,0.0]
+    project.add_plot_filter( probe_point,[12.0,12.0,0.01],1 )
 
-    project.set_load_balancing("toolbox::loadbalancing::RecursiveSubdivision","(new ::exahype2::LoadBalancingConfiguration(0.98,0))" )
+    project.set_load_balancing("toolbox::loadbalancing::RecursiveSubdivision","(new ::exahype2::LoadBalancingConfiguration(0.95,0,8))" )
 
 ########################################################################################
 #Tracer setting 
@@ -835,7 +904,7 @@ if __name__ == "__main__":
     if args.add_tracer==5:
         tracer_particles = project.add_tracer( name="Tracer",attribute_count=59 )
         project.add_action_set_to_initialisation( 
-          exahype2.tracer.InsertParticlesbyCoordinates( 
+          exahype2.tracer.InsertParticlesByCoordinates( 
             particle_set=tracer_particles, coordinates=[[0,0,0],[0.5,0,0],[1.0,0,0],[1.5,0,0],[2.0,0,0]]))
         project.add_action_set_to_timestepping(
           peano4.toolbox.particles.UpdateParallelState(
@@ -883,7 +952,7 @@ if __name__ == "__main__":
       if args.add_tracer==4:  
         project.add_action_set_to_initialisation( exahype2.tracer.InsertParticlesAlongCartesianMesh( particle_set=tracer_particles, h=args.max_h/2.0, noise=True ))
       if args.add_tracer==5:
-        project.add_action_set_to_initialisation( exahype2.tracer.InsertParticlesbyCoordinates ( particle_set=tracer_particles, N=3, coor_s=[[0.4251,0,0],[-0.4251,0,0],[0.2,0.2,0]]))
+        project.add_action_set_to_initialisation( exahype2.tracer.InsertParticlesByCoordinates ( particle_set=tracer_particles, N=3, coor_s=[[0.4251,0,0],[-0.4251,0,0],[0.2,0.2,0]]))
       if args.add_tracer==6 or args.add_tracer==7:
         project.add_action_set_to_initialisation( exahype2.tracer.InsertParticlesFromFile( particle_set=tracer_particles, filename=tracer_name[args.add_tracer]+".dat", scale_factor=abs(offset[0])*0.8)) #"Gauss_Legendre_quadrature.dat" #"t-design.dat" 
       
@@ -911,7 +980,7 @@ if __name__ == "__main__":
 ########################################################################################
     peano4_project = project.generate_Peano4_project(verbose=True)
 
-    if args.scenario=="gauge" or args.scenario=="linear" or args.scenario=="dia_gauge":
+    if args.scenario=="gauge" or args.scenario=="linear" or args.scenario=="dia_gauge" or args.scenario=="flat":
       pass
     elif args.scenario=="two-punctures" or args.scenario=="single-puncture":
       #

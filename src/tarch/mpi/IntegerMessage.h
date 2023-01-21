@@ -6,8 +6,7 @@
 // however are not subject of copyright, i.e. feel free to add your copyright in 
 // here
 //  
-#ifndef _INCLUDE_TARCH_MPI_INTEGERMESSAGE_
-#define _INCLUDE_TARCH_MPI_INTEGERMESSAGE_
+#pragma once
 
 #include <string>
   
@@ -110,8 +109,8 @@ struct tarch::mpi::IntegerMessage {
      * the message went through. In systems with heavy MPI usage, this can 
      * help to avoid deadlocks.
      */
-    static void send(const tarch::mpi::IntegerMessage& buffer, int destination, int tag, std::function<void()> waitFunctor, MPI_Comm communicator );
-    static void receive(tarch::mpi::IntegerMessage& buffer, int source, int tag, std::function<void()> waitFunctor, MPI_Comm communicator );
+    static void send(const tarch::mpi::IntegerMessage& buffer, int destination, int tag, std::function<void()> startCommunicationFunctor, std::function<void()> waitFunctor, MPI_Comm communicator );
+    static void receive(   tarch::mpi::IntegerMessage& buffer, int source,      int tag, std::function<void()> startCommunicationFunctor, std::function<void()> waitFunctor, MPI_Comm communicator );
     #endif
 
 
@@ -142,5 +141,4 @@ struct tarch::mpi::IntegerMessage {
 
 };
 
-#endif
   

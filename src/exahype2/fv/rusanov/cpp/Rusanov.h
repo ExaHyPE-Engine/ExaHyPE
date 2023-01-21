@@ -1,7 +1,6 @@
 // This file is part of the ExaHyPE2 project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
-#ifndef _EXAHYPE2_FV_RUSANOV_CPP_RUSANOV_H_
-#define _EXAHYPE2_FV_RUSANOV_CPP_RUSANOV_H_
+#pragma once
 
 #include <vector>
 #include <iterator>
@@ -114,6 +113,44 @@ namespace exahype2 {
         };
         #endif
 
+        /**
+         * Dummy version delegating to one well-defined proper kernel. By
+         * offering such a routine, we can generate generic compute code
+         * in Python without knowing which kernel variants are on offer for
+         * a particular GPU backend.
+         */
+        template <
+          typename Solver,
+          int      numberOfVolumesPerAxisInPatch,
+          int      haloSize,
+          int      unknowns,
+          int      auxiliaryVariables,
+          typename TempDataEnumerator
+        >
+        static void timeStepWithRusanov_generic_static_calls(
+          int                     targetDevice,
+          ::exahype2::CellData&   patchData,
+          bool                    evaluateFlux,
+          bool                    evaluateNonconservativeProduct,
+          bool                    evaluateSource,
+          bool                    evaluateMaximumEigenvalueAfterTimeStep
+        ) {
+          timeStepWithRusanov_batched_heap_static_calls<
+            Solver,
+            numberOfVolumesPerAxisInPatch,
+            haloSize,
+            unknowns,
+            auxiliaryVariables,
+            TempDataEnumerator
+          >(
+            targetDevice,
+            patchData,
+            evaluateFlux,
+            evaluateNonconservativeProduct,
+            evaluateSource,
+            evaluateMaximumEigenvalueAfterTimeStep
+          );
+        }
       }
     }
   }
@@ -123,4 +160,3 @@ namespace exahype2 {
 #include "Rusanov_patchwise_heap_static_calls.cpph"
 #include "Rusanov_batched_heap_static_calls.cpph"
 
-#endif

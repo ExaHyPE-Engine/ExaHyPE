@@ -9,16 +9,16 @@ exahype2::LoadBalancingConfiguration::LoadBalancingConfiguration( double loadBal
 }
 
 
-bool exahype2::LoadBalancingConfiguration::makeSplitDependOnMemory(toolbox::loadbalancing::RecursiveSubdivision::Configuration::Phase phase) {
+bool exahype2::LoadBalancingConfiguration::makeSplitDependOnMemory(toolbox::loadbalancing::RecursiveSubdivision::State state) {
   return false;
 }
 
 
-int exahype2::LoadBalancingConfiguration::getMaxLocalTreesPerRank(toolbox::loadbalancing::RecursiveSubdivision::Configuration::Phase phase) {
+int exahype2::LoadBalancingConfiguration::getMaxLocalTreesPerRank(toolbox::loadbalancing::RecursiveSubdivision::State state) {
   if (
-    phase==Configuration::Phase::InitialIntraRankDistribution
+    state==toolbox::loadbalancing::RecursiveSubdivision::State::IntraRankDistribution
     or
-    phase==Configuration::Phase::APosterioriBalancingPerRank
+    state==toolbox::loadbalancing::RecursiveSubdivision::State::IntraRankBalancing
   ) {
     return _maxNumberOfTrees;
   }
@@ -28,16 +28,16 @@ int exahype2::LoadBalancingConfiguration::getMaxLocalTreesPerRank(toolbox::loadb
 }
 
 
-double exahype2::LoadBalancingConfiguration::getWorstCaseBalancingRatio(toolbox::loadbalancing::RecursiveSubdivision::Configuration::Phase phase) {
+double exahype2::LoadBalancingConfiguration::getWorstCaseBalancingRatio(toolbox::loadbalancing::RecursiveSubdivision::State state) {
   return _loadBalancingQuality;
 }
 
 
-int exahype2::LoadBalancingConfiguration::getMinTreeSize(toolbox::loadbalancing::RecursiveSubdivision::Configuration::Phase phase) {
+int exahype2::LoadBalancingConfiguration::getMinTreeSize(toolbox::loadbalancing::RecursiveSubdivision::State state) {
   if (
-    phase==Configuration::Phase::InterRankBalancing
+    state==toolbox::loadbalancing::RecursiveSubdivision::State::InterRankBalancing
     or
-    phase==Configuration::Phase::APosterioriBalancingPerRank
+    state==toolbox::loadbalancing::RecursiveSubdivision::State::IntraRankBalancing
   ) {
     return 0;
   }
@@ -48,11 +48,11 @@ int exahype2::LoadBalancingConfiguration::getMinTreeSize(toolbox::loadbalancing:
 
 
 
-int exahype2::LoadBalancingConfiguration::getMaxTreeSize(toolbox::loadbalancing::RecursiveSubdivision::Configuration::Phase phase) {
+int exahype2::LoadBalancingConfiguration::getMaxTreeSize(toolbox::loadbalancing::RecursiveSubdivision::State state) {
   if (
-    phase==Configuration::Phase::InitialInterRankDistribution
+    state==toolbox::loadbalancing::RecursiveSubdivision::State::InterRankDistribution
     or
-    phase==Configuration::Phase::InitialIntraRankDistribution
+    state==toolbox::loadbalancing::RecursiveSubdivision::State::IntraRankDistribution
   ) {
     return _maxSizeOfDeployedRemoteMPITree;
   }

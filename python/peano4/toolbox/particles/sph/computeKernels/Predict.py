@@ -51,25 +51,25 @@ class LeapfrogPredict:
   //  const double dt_therm = dt_drift;
     
     if( 
-      localParticle->getParallelState() == globaldata::Particle::ParallelState::Local 
+      particle->getParallelState() == globaldata::Particle::ParallelState::Local 
       and 
-      not localParticle->getIsBoundaryParticle() )
+      not particle->getIsBoundaryParticle() )
       {
     
         /* Predict velocities for hydro terms */
-        localParticle->setV( localParticle->getV() + localParticle->getA() * dt_kick_hydro );
+        particle->setV( particle->getV() + particle->getA() * dt_kick_hydro );
 
         /* 
          * Predict additional particle fields forward in time after the Drift step
          */
         
         /* Predict the internal energy */
-        localParticle->setU( localParticle->getU() + localParticle->getUDot() * dt_therm );
+        particle->setU( particle->getU() + particle->getUDot() * dt_therm );
 
         /* Predict smoothing length */
-        const double h_inv = 1.0 / localParticle->getSmoothingLength();
-        const double w1 = localParticle->getHDot() * h_inv * dt_drift;
-        localParticle->setSmoothingLength( localParticle->getSmoothingLength() * std::exp(w1) );
+        const double h_inv = 1.0 / particle->getSmoothingLength();
+        const double w1 = particle->getHDot() * h_inv * dt_drift;
+        particle->setSmoothingLength( particle->getSmoothingLength() * std::exp(w1) );
         
         /* SWIFT custom exponential functions -- @TODO implement */
   //      
@@ -82,7 +82,7 @@ class LeapfrogPredict:
 
         /* Predict density */
         const double w2 = - HYDRO_DIMENSIONS * w1;
-        localParticle->setDensity( localParticle->getDensity() * std::exp(w2) );
+        particle->setDensity( particle->getDensity() * std::exp(w2) );
 
   //
   //    if (fabsf(w2) < 0.2f) {
@@ -103,20 +103,20 @@ class LeapfrogPredict:
   //      p->u = max(p->u, floor_u);
   //      p->u = max(p->u, min_u);
 
-        localParticle->setU( std::max( localParticle->getU(), 0.0) );
+        particle->setU( std::max( particle->getU(), 0.0) );
 
         /* Compute the new pressure */
         const double pressure = 
-          gas_pressure_from_internal_energy( localParticle->getDensity(), localParticle->getU() );
+          gas_pressure_from_internal_energy( particle->getDensity(), particle->getU() );
 
         /* Compute the new sound speed */
   //      const float soundspeed = gas_soundspeed_from_pressure(p->rho, pressure);
 
-        const double soundspeed = gas_soundspeed_from_internal_energy( localParticle->getU() );
+        const double soundspeed = gas_soundspeed_from_internal_energy( particle->getU() );
 
-        localParticle->setPressure(pressure);
-        localParticle->setSoundSpeed(soundspeed);
-        localParticle->setV_sig_AV( std::max(localParticle->getV_sig_AV(), 2.0 * soundspeed) );
+        particle->setPressure(pressure);
+        particle->setSoundSpeed(soundspeed);
+        particle->setV_sig_AV( std::max(particle->getV_sig_AV(), 2.0 * soundspeed) );
       
     }
 

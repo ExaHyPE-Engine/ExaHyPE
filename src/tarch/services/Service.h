@@ -1,7 +1,6 @@
 // This file is part of the Peano project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
-#ifndef _TARCH_SERVICES_SERVICE_H_
-#define _TARCH_SERVICES_SERVICE_H_
+#pragma once
 
 
 #include "tarch/multicore/RecursiveSemaphore.h"
@@ -131,4 +130,3 @@ class tarch::services::Service {
     virtual void shutdown() = 0;
 };
 
-#endif

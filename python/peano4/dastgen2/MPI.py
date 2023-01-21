@@ -1,14 +1,15 @@
 # This file is part of the Peano project. For conditions of distribution and
 # use, please see the copyright notice at www.peano-framework.org
-from dastgen2 import *
-
 from peano4.datamodel.DoF import DoFAssociation
 
+import jinja2
+import dastgen2
 
-class MPI(object):
+
+class MPI( dastgen2.aspects.MPI ):
   """ 
   
-  Represents Peano's MPI aspect injected into a DaStGen model. 
+  Represents Peano's MPI and storage aspect injected into a DaStGen model. 
   
   
   This is an aspect to a DaStGen object, i.e. something that's
@@ -22,19 +23,22 @@ class MPI(object):
     is associated to
   - The aspect lets you embed a data merge operation into the 
     generated data. 
+
+  The aspect also determines how and
+  if we store data or not in Peano. Therefore, it covers more than 
+  solely MPI. Use the store and load attribute to control these 
+  predicates.
+    
   
-  =====
-  Usage
-  =====
+  ## Usage
   
   The instance is to be added to a DaStGen2 model through add_aspect().  
   
   If you want to inject a particular merge code, just set the internal 
   string self.merge_implementation.
+
   
-  ==========
-  Attributes
-  ==========
+  ## Attributes
 
   dof_association: DoFAssociation
     Clarifies which grid entity the underlying datatype is associated
@@ -42,12 +46,15 @@ class MPI(object):
   
   """
   def __init__(self, dof_association_):
+    super( MPI, self ).__init__()
     self.dof_association      = dof_association_
     self.merge_implementation = ""
     self.receive_predicate    = "true"
     self.send_predicate       = "true"
-    self.store_predicate      = "true"
     self.load_predicate       = "true"
+    self.store_predicate      = "true"
+    self.compute_predicate    = "true"
+    self.includes             = ""
     pass
 
 
@@ -55,24 +62,31 @@ class MPI(object):
     result = "("
     if self.dof_association==DoFAssociation.Vertex:
       result += "vertex"
-    if self.dof_association==DoFAssociation.Face:
+    elif self.dof_association==DoFAssociation.Face:
       result += "face"
-    if self.dof_association==DoFAssociation.Cell:
+    elif self.dof_association==DoFAssociation.Cell:
       result += "cell"
+    else:
+      result += "not-associated"
+      
     if self.merge_implementation!="":
       result += ",merge-impl="
       result += self.merge_implementation
     else:
       result += ",empty-merge-impl"
+      
+    result += ",load="     + self.load_predicate
+    result += ",store="    + self.store_predicate
+    result += ",compute="  + self.compute
+    result += ",send="     + self.send_predicate
+    result += ",receive="  + self.receive_predicate
+      
     result += ")"
     return result
 
 
-  def set_model(self,data_model):
-    self._data_model = data_model
-
   def get_include(self):
-    result = """
+    result = super(MPI,self).get_include() + """
 #include "tarch/la/Vector.h"
 #include "tarch/mpi/Rank.h"
 #include "tarch/services/ServiceRepository.h"
@@ -85,45 +99,51 @@ class MPI(object):
 #include "peano4/datamanagement/FaceMarker.h"
 #include "peano4/datamanagement/VertexMarker.h"
 """
+    for include in self.includes:
+      result += include
     return result
-  
-  def get_attributes(self):
-    return ""
+
   
   def get_method_declarations(self,full_qualified_name):
-    result = """
+    d = {
+      "full_qualified_name":              full_qualified_name,
+    }    
+    result = super(MPI,self).get_method_declarations(full_qualified_name) +  """
 #ifdef Parallel
-    static void sendAndPollDanglingMessages(const """ + full_qualified_name + """& message, int destination, int tag, MPI_Comm communicator=tarch::mpi::Rank::getInstance().getCommunicator());
-    static void receiveAndPollDanglingMessages(""" + full_qualified_name + """& message, int source, int tag, MPI_Comm communicator=tarch::mpi::Rank::getInstance().getCommunicator() );
+    static void sendAndPollDanglingMessages(const {{full_qualified_name}}& message, int destination, int tag, MPI_Comm communicator=tarch::mpi::Rank::getInstance().getCommunicator());
+    static void receiveAndPollDanglingMessages({{full_qualified_name}}& message, int source, int tag, MPI_Comm communicator=tarch::mpi::Rank::getInstance().getCommunicator() );
 #endif
     """
     
     if self.dof_association==DoFAssociation.Vertex:
       result += """
-    void merge(peano4::grid::TraversalObserver::SendReceiveContext context, const """ + full_qualified_name + """& neighbour, const peano4::datamanagement::VertexMarker& marker);
+    void merge(peano4::grid::TraversalObserver::SendReceiveContext context, const {{full_qualified_name}}& neighbour, const peano4::datamanagement::VertexMarker& marker);
     
-    static bool receiveAndMerge(const peano4::datamanagement::VertexMarker& marker);
-    static bool send(const peano4::datamanagement::VertexMarker& marker);
-    static bool storePersistently(const peano4::datamanagement::VertexMarker& marker);
+    bool receiveAndMerge(const peano4::datamanagement::VertexMarker& marker) const;
+    bool send(const peano4::datamanagement::VertexMarker& marker) const;
     static bool loadPersistently(const peano4::datamanagement::VertexMarker& marker);
+    bool storePersistently(const peano4::datamanagement::VertexMarker& marker) const;
+    bool compute(const peano4::datamanagement::VertexMarker& marker) const;
 """ 
     elif self.dof_association==DoFAssociation.Face:
       result += """
-    void merge(peano4::grid::TraversalObserver::SendReceiveContext context, const """ + full_qualified_name + """& neighbour, const peano4::datamanagement::FaceMarker& marker);
+    void merge(peano4::grid::TraversalObserver::SendReceiveContext context, const {{full_qualified_name}}& neighbour, const peano4::datamanagement::FaceMarker& marker);
 
-    static bool receiveAndMerge(const peano4::datamanagement::FaceMarker& marker);
-    static bool send(const peano4::datamanagement::FaceMarker& marker);
-    static bool storePersistently(const peano4::datamanagement::FaceMarker& marker);
+    bool receiveAndMerge(const peano4::datamanagement::FaceMarker& marker) const;
+    bool send(const peano4::datamanagement::FaceMarker& marker) const;
     static bool loadPersistently(const peano4::datamanagement::FaceMarker& marker);
+    bool storePersistently(const peano4::datamanagement::FaceMarker& marker) const;
+    bool compute(const peano4::datamanagement::FaceMarker& marker) const;
 """ 
     elif self.dof_association==DoFAssociation.Cell:
       result += """
-    void merge(peano4::grid::TraversalObserver::SendReceiveContext context, const """ + full_qualified_name + """& neighbour, const peano4::datamanagement::CellMarker& marker);
+    void merge(peano4::grid::TraversalObserver::SendReceiveContext context, const {{full_qualified_name}}& neighbour, const peano4::datamanagement::CellMarker& marker);
 
-    static bool receiveAndMerge(const peano4::datamanagement::CellMarker& marker);
-    static bool send(const peano4::datamanagement::CellMarker& marker);
-    static bool storePersistently(const peano4::datamanagement::CellMarker& marker);
+    bool receiveAndMerge(const peano4::datamanagement::CellMarker& marker) const;
+    bool send(const peano4::datamanagement::CellMarker& marker) const;
     static bool loadPersistently(const peano4::datamanagement::CellMarker& marker);
+    bool storePersistently(const peano4::datamanagement::CellMarker& marker) const;
+    bool compute(const peano4::datamanagement::CellMarker& marker) const;
 """ 
       pass
     elif self.dof_association==DoFAssociation.Generic or self.dof_association==DoFAssociation.Global:
@@ -131,33 +151,33 @@ class MPI(object):
     else:
       assert False
     
-    return result
+    return jinja2.Template( result ).render( **d )
 
 
   def get_implementation(self,full_qualified_name):
-    result = """
+    d = {
+      "full_qualified_name":   full_qualified_name,
+      "merge_implementation":  self.merge_implementation,
+      "receive_predicate":     self.receive_predicate,
+      "send_predicate":        self.send_predicate,
+      "load_predicate":        self.load_predicate,
+      "store_predicate":       self.store_predicate,
+      "compute_predicate":     self.compute_predicate,
+    }    
+        
+      
+    result = super(MPI,self).get_implementation(full_qualified_name) + """
 #ifdef Parallel
-void """ + full_qualified_name + """::sendAndPollDanglingMessages(const """ + full_qualified_name + """& message, int destination, int tag, MPI_Comm communicator ) {
-  """ + full_qualified_name + """::send(
+void {{full_qualified_name}}::sendAndPollDanglingMessages(const {{full_qualified_name}}& message, int destination, int tag, MPI_Comm communicator ) {
+  {{full_qualified_name}}::send(
     message, destination, tag,
     [&]() {
-      auto  timeOutWarning   = tarch::mpi::Rank::getInstance().getDeadlockWarningTimeStamp();
-      auto timeOutShutdown  = tarch::mpi::Rank::getInstance().getDeadlockTimeOutTimeStamp();
-      bool triggeredTimeoutWarning = false;
-      if (
-        tarch::mpi::Rank::getInstance().isTimeOutWarningEnabled() &&
-        (std::chrono::system_clock::now()>timeOutWarning) &&
-        (!triggeredTimeoutWarning)
-      ) {
-        tarch::mpi::Rank::getInstance().writeTimeOutWarning( """ + "\"" + full_qualified_name + "\"" + """, "sendAndPollDanglingMessages()",destination, tag );
-        triggeredTimeoutWarning = true;
-      }
-      if (
-        tarch::mpi::Rank::getInstance().isTimeOutDeadlockEnabled() &&
-        (std::chrono::system_clock::now()>timeOutShutdown)
-      ) {
-        tarch::mpi::Rank::getInstance().triggerDeadlockTimeOut( """ + "\"" + full_qualified_name + "\"" + """, "sendAndPollDanglingMessages()", destination, tag );
-      }
+      tarch::mpi::Rank::getInstance().setDeadlockWarningTimeStamp();
+      tarch::mpi::Rank::getInstance().setDeadlockTimeOutTimeStamp();
+    },
+    [&]() {
+      tarch::mpi::Rank::getInstance().writeTimeOutWarning( "{{full_qualified_name}}", "sendAndPollDanglingMessages()",destination, tag );
+      tarch::mpi::Rank::getInstance().triggerDeadlockTimeOut( "{{full_qualified_name}}", "sendAndPollDanglingMessages()", destination, tag );
       tarch::services::ServiceRepository::getInstance().receiveDanglingMessages();
     },
     communicator
@@ -165,27 +185,16 @@ void """ + full_qualified_name + """::sendAndPollDanglingMessages(const """ + fu
 }
 
 
-void """ + full_qualified_name + """::receiveAndPollDanglingMessages(""" + full_qualified_name + """& message, int source, int tag, MPI_Comm communicator ) {
-  """ + full_qualified_name + """::receive(
+void {{full_qualified_name}}::receiveAndPollDanglingMessages({{full_qualified_name}}& message, int source, int tag, MPI_Comm communicator ) {
+  {{full_qualified_name}}::receive(
     message, source, tag,
     [&]() {
-      auto timeOutWarning   = tarch::mpi::Rank::getInstance().getDeadlockWarningTimeStamp();
-      auto timeOutShutdown  = tarch::mpi::Rank::getInstance().getDeadlockTimeOutTimeStamp();
-      bool triggeredTimeoutWarning = false;
-      if (
-        tarch::mpi::Rank::getInstance().isTimeOutWarningEnabled() &&
-        (std::chrono::system_clock::now()>timeOutWarning) &&
-        (!triggeredTimeoutWarning)
-      ) {
-        tarch::mpi::Rank::getInstance().writeTimeOutWarning( """ + "\"" + full_qualified_name + "\"" + """, "receiveAndPollDanglingMessages()", source, tag );
-        triggeredTimeoutWarning = true;
-      }
-      if (
-        tarch::mpi::Rank::getInstance().isTimeOutDeadlockEnabled() &&
-        (std::chrono::system_clock::now()>timeOutShutdown)
-      ) {
-        tarch::mpi::Rank::getInstance().triggerDeadlockTimeOut( """ + "\"" + full_qualified_name + "\"" + """, "receiveAndPollDanglingMessages()", source, tag );
-      }
+      tarch::mpi::Rank::getInstance().setDeadlockWarningTimeStamp();
+      tarch::mpi::Rank::getInstance().setDeadlockTimeOutTimeStamp();
+    },
+    [&]() {
+      tarch::mpi::Rank::getInstance().writeTimeOutWarning( "{{full_qualified_name}}", "receiveAndPollDanglingMessages()", source, tag );
+      tarch::mpi::Rank::getInstance().triggerDeadlockTimeOut( "{{full_qualified_name}}", "receiveAndPollDanglingMessages()", source, tag );
       tarch::services::ServiceRepository::getInstance().receiveDanglingMessages();
     },
     communicator
@@ -197,82 +206,140 @@ void """ + full_qualified_name + """::receiveAndPollDanglingMessages(""" + full_
 
     if self.dof_association==DoFAssociation.Vertex:
       result += """
-void """ + full_qualified_name + "::merge(peano4::grid::TraversalObserver::SendReceiveContext context, const """ + full_qualified_name + """& neighbour, const peano4::datamanagement::VertexMarker& marker) {
-""" + self.merge_implementation + """
+void {{full_qualified_name}}::merge(peano4::grid::TraversalObserver::SendReceiveContext context, const {{full_qualified_name}}& neighbour, const peano4::datamanagement::VertexMarker& marker) {
+  {{merge_implementation}}
 }
 
 
-bool """ + full_qualified_name + """::receiveAndMerge(const peano4::datamanagement::VertexMarker& marker) {
-  return """ + self.receive_predicate + """;
+bool {{full_qualified_name}}::receiveAndMerge(
+  const peano4::datamanagement::VertexMarker& marker
+  {% for arg in ADDITIONAL_LOAD_STORE_ARGUMENTS %}, const {{arg[0]}}& {{arg[1]}} {% endfor %}
+) const {
+  return {{receive_predicate}};
 }
 
 
-bool """ + full_qualified_name + """::send(const peano4::datamanagement::VertexMarker& marker) {
-  return """ + self.send_predicate + """;
+bool {{full_qualified_name}}::send(
+  const peano4::datamanagement::VertexMarker& marker
+  {% for arg in ADDITIONAL_LOAD_STORE_ARGUMENTS %}, const {{arg[0]}}& {{arg[1]}} {% endfor %}
+) const {
+  return {{send_predicate}};
 }
 
 
-bool """ + full_qualified_name + """::storePersistently(const peano4::datamanagement::VertexMarker& marker) {
-  return """ + self.store_predicate + """;
+bool {{full_qualified_name}}::loadPersistently( 
+  const peano4::datamanagement::VertexMarker& marker 
+  {% for arg in ADDITIONAL_LOAD_STORE_ARGUMENTS %}, const {{arg[0]}}& {{arg[1]}} {% endfor %}
+) {
+  return {{load_predicate}};
 }
 
 
-bool """ + full_qualified_name + """::loadPersistently(const peano4::datamanagement::VertexMarker& marker) {
-  return """ + self.load_predicate + """;
+bool {{full_qualified_name}}::storePersistently( 
+  const peano4::datamanagement::VertexMarker& marker 
+  {% for arg in ADDITIONAL_LOAD_STORE_ARGUMENTS %}, const {{arg[0]}}& {{arg[1]}} {% endfor %}
+) const {
+  return {{store_predicate}};
 }
 
 
+bool {{full_qualified_name}}::compute( 
+  const peano4::datamanagement::VertexMarker& marker 
+  {% for arg in ADDITIONAL_LOAD_STORE_ARGUMENTS %}, const {{arg[0]}}& {{arg[1]}} {% endfor %}
+) const {
+  return {{compute_predicate}};
+}
 """ 
     elif self.dof_association==DoFAssociation.Face:
       result += """
-void """ + full_qualified_name + "::merge(peano4::grid::TraversalObserver::SendReceiveContext context, const """ + full_qualified_name + """& neighbour, const peano4::datamanagement::FaceMarker& marker) {
-""" + self.merge_implementation + """
+void {{full_qualified_name}}::merge(peano4::grid::TraversalObserver::SendReceiveContext context, const {{full_qualified_name}}& neighbour, const peano4::datamanagement::FaceMarker& marker) {
+  {{merge_implementation}}
 }
 
 
-bool """ + full_qualified_name + """::receiveAndMerge(const peano4::datamanagement::FaceMarker& marker) {
-  return true;
+bool {{full_qualified_name}}::receiveAndMerge(
+  const peano4::datamanagement::FaceMarker& marker
+  {% for arg in ADDITIONAL_LOAD_STORE_ARGUMENTS %}, const {{arg[0]}}& {{arg[1]}} {% endfor %}
+) const {
+  return {{receive_predicate}};
 }
 
 
-bool """ + full_qualified_name + """::send(const peano4::datamanagement::FaceMarker& marker) {
-  return true;
+bool {{full_qualified_name}}::send(
+  const peano4::datamanagement::FaceMarker& marker
+  {% for arg in ADDITIONAL_LOAD_STORE_ARGUMENTS %}, const {{arg[0]}}& {{arg[1]}} {% endfor %}
+) const {
+  return {{send_predicate}};
 }
 
 
-bool """ + full_qualified_name + """::storePersistently(const peano4::datamanagement::FaceMarker& marker) {
-  return true;
+bool {{full_qualified_name}}::loadPersistently( 
+  const peano4::datamanagement::FaceMarker& marker 
+  {% for arg in ADDITIONAL_LOAD_STORE_ARGUMENTS %}, const {{arg[0]}}& {{arg[1]}} {% endfor %}
+) {
+  return {{load_predicate}};
 }
 
 
-bool """ + full_qualified_name + """::loadPersistently(const peano4::datamanagement::FaceMarker& marker) {
-  return true;
+bool {{full_qualified_name}}::storePersistently( 
+  const peano4::datamanagement::FaceMarker& marker 
+  {% for arg in ADDITIONAL_LOAD_STORE_ARGUMENTS %}, const {{arg[0]}}& {{arg[1]}} {% endfor %}
+) const {
+  return {{store_predicate}};
+}
+
+
+bool {{full_qualified_name}}::compute( 
+  const peano4::datamanagement::FaceMarker& marker 
+  {% for arg in ADDITIONAL_LOAD_STORE_ARGUMENTS %}, const {{arg[0]}}& {{arg[1]}} {% endfor %}
+) const {
+  return {{compute_predicate}};
 }
 """ 
     elif self.dof_association==DoFAssociation.Cell:
       result += """
-void """ + full_qualified_name + "::merge(peano4::grid::TraversalObserver::SendReceiveContext context, const """ + full_qualified_name + """& neighbour, const peano4::datamanagement::CellMarker& marker) {
-""" + self.merge_implementation + """
+void {{full_qualified_name}}::merge(peano4::grid::TraversalObserver::SendReceiveContext context, const {{full_qualified_name}}& neighbour, const peano4::datamanagement::CellMarker& marker) {
+  {{merge_implementation}}
 }
 
 
-bool """ + full_qualified_name + """::receiveAndMerge(const peano4::datamanagement::CellMarker& marker) {
-  return true;
+bool {{full_qualified_name}}::receiveAndMerge(
+  const peano4::datamanagement::CellMarker& marker
+  {% for arg in ADDITIONAL_LOAD_STORE_ARGUMENTS %}, const {{arg[0]}}& {{arg[1]}} {% endfor %}
+) const {
+  return {{receive_predicate}};
 }
 
 
-bool """ + full_qualified_name + """::send(const peano4::datamanagement::CellMarker& marker) {
-  return true;
+bool {{full_qualified_name}}::send(
+  const peano4::datamanagement::CellMarker& marker
+  {% for arg in ADDITIONAL_LOAD_STORE_ARGUMENTS %}, const {{arg[0]}}& {{arg[1]}} {% endfor %}
+) const {
+  return {{send_predicate}};
 }
 
 
-bool """ + full_qualified_name + """::storePersistently(const peano4::datamanagement::CellMarker& marker) {
-  return true;
+bool {{full_qualified_name}}::storePersistently( 
+  const peano4::datamanagement::CellMarker& marker 
+  {% for arg in ADDITIONAL_LOAD_STORE_ARGUMENTS %}, const {{arg[0]}}& {{arg[1]}} {% endfor %}
+) const {
+  return {{store_predicate}};
 }
 
 
-bool """ + full_qualified_name + """::loadPersistently(const peano4::datamanagement::CellMarker& marker) {
-  return true;
+bool {{full_qualified_name}}::loadPersistently( 
+  const peano4::datamanagement::CellMarker& marker 
+  {% for arg in ADDITIONAL_LOAD_STORE_ARGUMENTS %}, const {{arg[0]}}& {{arg[1]}} {% endfor %}
+) {
+  return {{load_predicate}};
+}
+
+
+bool {{full_qualified_name}}::compute( 
+  const peano4::datamanagement::CellMarker& marker 
+  {% for arg in ADDITIONAL_LOAD_STORE_ARGUMENTS %}, const {{arg[0]}}& {{arg[1]}} {% endfor %}
+) const {
+  return {{compute_predicate}};
 }
 """      
     elif self.dof_association==DoFAssociation.Generic or self.dof_association==DoFAssociation.Global:
@@ -281,7 +348,7 @@ bool """ + full_qualified_name + """::loadPersistently(const peano4::datamanagem
       assert False
     
     
-    return result
+    return jinja2.Template( result ).render( **d )
 
 
 

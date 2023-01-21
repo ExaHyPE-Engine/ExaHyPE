@@ -3,8 +3,6 @@
 #include "tarch/multicore/multicore.h"
 #include "tarch/compiler/CompilerSpecificSettings.h"
 
-#include "tarch/multicore/sycl/SYCL.h"
-
 
 #ifdef CompilerHasSysinfo
 #include <sched.h>
@@ -21,14 +19,9 @@ tarch::logging::Log tarch::multicore::Core::_log( "tarch::multicore::Core" );
 
 
 tarch::multicore::Core::Core():
-  _numberOfThreads(std::thread::hardware_concurrency()),
-  _numberOfDevices(0) {
-  internal::configureInternalTaskQueues(_numberOfThreads);
+  _numberOfThreads(std::thread::hardware_concurrency()) {
 
-  #if defined(GPUOffloadingSYCL)
-  initSYCLQueues();
-  _numberOfDevices = getNumberOfSYCLQueues();
-  #endif
+  internal::configureInternalTaskQueues(_numberOfThreads);
 }
 
 
@@ -42,9 +35,7 @@ tarch::multicore::Core& tarch::multicore::Core::getInstance() {
 }
 
 
-void tarch::multicore::Core::configure( int numberOfThreads, const std::set<int>& devicesToUse ) {
-  _devicesToUse = devicesToUse;
-
+void tarch::multicore::Core::configure( int numberOfThreads ) {
   if (numberOfThreads != UseDefaultNumberOfThreads) {
     _numberOfThreads = numberOfThreads;
   }
@@ -76,12 +67,6 @@ int tarch::multicore::Core::getNumberOfThreads() const {
 }
 
 
-int tarch::multicore::Core::getNumberOfGPUs() const {
-  // @todo Uzmar, we have to ask NVIDIA how this will work
-  return 1;
-}
-
-
 int tarch::multicore::Core::getCoreNumber() const {
   #ifdef CompilerHasSysinfo
   return sched_getcpu();
@@ -94,11 +79,6 @@ int tarch::multicore::Core::getCoreNumber() const {
 
 int tarch::multicore::Core::getThreadNumber() const {
   return getCoreNumber();
-}
-
-
-bool tarch::multicore::Core::isDeviceAvailable(int number) const {
-  return _devicesToUse.empty() or _devicesToUse.count(number)>0;
 }
 
 

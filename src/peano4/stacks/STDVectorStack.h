@@ -1,7 +1,6 @@
 // This file is part of the Peano project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
-#ifndef _PEANO4_STACKS_STDVECTOR_STACK_H_
-#define _PEANO4_STACKS_STDVECTOR_STACK_H_
+#pragma once
 
 
 #include <vector>
@@ -121,7 +120,7 @@ class peano4::stacks::STDVectorStack {
     /**
      * One is not allowed to copy a stack but it has to be empty.
      */
-    STDVectorStack<T>&  operator=( const STDVectorStack<T>& stack ) {
+    STDVectorStack&  operator=( const STDVectorStack<T>& stack ) {
       assertionEquals( stack._currentElement, 0 );
       assertionEquals( _currentElement, 0 );
       assertion( _data.empty() );
@@ -510,4 +509,3 @@ MPI_Datatype peano4::stacks::translateContextIntoDatatype( peano4::grid::Travers
 #endif
 
 
-#endif

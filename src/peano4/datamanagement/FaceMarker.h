@@ -1,7 +1,6 @@
 // This file is part of the Peano project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
-#ifndef _PEANO4_DATAMANAGEMENT_FACE_MARKER_H_
-#define _PEANO4_DATAMANAGEMENT_FACE_MARKER_H_
+#pragma once
 
 
 #include "peano4/utils/Globals.h"
@@ -58,7 +57,7 @@ struct peano4::datamanagement::FaceMarker {
     FaceMarker(const peano4::grid::GridTraversalEvent& event, int select=0);
 
     /**
-     * Selects a face witin a cell, i.e. now the marker knows to which
+     * Selects a face within a cell, i.e. now the marker knows to which
      * face it corresponds. After that, the routine returns a this
      * reference.
      *
@@ -154,4 +153,3 @@ struct peano4::datamanagement::FaceMarker {
 };
 
 
-#endif

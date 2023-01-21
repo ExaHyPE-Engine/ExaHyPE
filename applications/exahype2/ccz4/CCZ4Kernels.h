@@ -1,13 +1,14 @@
 //
 // ExaHyPE2 CCZ4 implementation
 //
-#ifndef _APPLICATIONS_EXAHYPE2_CCZ4_CCZ4KERNELS_H_
-#define _APPLICATIONS_EXAHYPE2_CCZ4_CCZ4KERNELS_H_
+#pragma once
 
 
 #include <cmath>
+#include "tarch/tarch.h"
 #include "tarch/compiler/CompilerSpecificSettings.h"
 #include "tarch/multicore/multicore.h"
+#include "tarch/accelerator/accelerator.h"
 
 
 namespace applications {
@@ -133,5 +134,4 @@ namespace applications {
 #include "CCZ4Kernels.cpph"
 
 
-#endif
 

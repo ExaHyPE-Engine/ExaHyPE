@@ -12,12 +12,9 @@ namespace toolbox {
     /**
      * This is a wrapper around the toolbox routines. It ensures that we
      * have a templated function which has the same signature as the other
-     * routines in blockstructured and thus can be swapped in and out. To
-     * use this guy within your FV solver, add the following steps:
-     *
-     *       mysolver.interpolation = "tensor_product< " + self._name + ">"
-     *       mysolver..add_solver_constants( "static constexpr double  NormalInterpolationMatrix1d[]     = {1.0};""" )
-     *       mysolver.add_solver_constants( "static constexpr double  TangentialInterpolationMatrix1d[] = {1.0,2.0,3.0};""" )
+     * routines in blockstructured and thus can be swapped in and out. See
+     * the documentation in exahype2.solvers.FV for example how to use it
+     * within Python.
      */
     template <typename C>
     void interpolateHaloLayer_AoS_tensor_product(
@@ -80,6 +77,71 @@ namespace toolbox {
         C::TangentialInterpolationMatrix1d,
         coarseGridCellValues,
         fineGridCellValues
+      );
+    }
+
+
+    template <typename C>
+    void restrictCell_AoS_tensor_product(
+      const peano4::datamanagement::CellMarker& marker,
+      int                                       numberOfDoFsPerAxisInPatch,
+      int                                       unknowns,
+      double*                                   fineGridValues,
+      double*                                   coarseGridValues
+    ) {
+      restrictCell_AoS_tensor_product(
+        marker,
+        numberOfDoFsPerAxisInPatch,
+        unknowns,
+        C::TangentialRestrictionMatrix1d,
+        fineGridValues,
+        coarseGridValues
+      );
+    }
+
+
+    template <typename C>
+    void restrictHaloLayer_AoS_tensor_product(
+      const peano4::datamanagement::FaceMarker& marker,
+      int                                       numberOfDoFsPerAxisInPatch,
+      int                                       overlap,
+      int                                       unknowns,
+      double*                                   fineGridValues,
+      double*                                   coarseGridValues
+    ) {
+      restrictHaloLayer_AoS_tensor_product(
+        marker,
+        numberOfDoFsPerAxisInPatch,
+        overlap,
+        unknowns,
+        C::NormalRestrictionMatrix1d,
+        C::TangentialRestrictionMatrix1d,
+        fineGridValues,
+        coarseGridValues
+      );
+    }
+
+
+    template <typename C>
+    void restrictInnerHalfOfHaloLayer_AoS_tensor_product(
+      const peano4::datamanagement::FaceMarker& marker,
+      int                                       numberOfDoFsPerAxisInPatch,
+      int                                       overlap,
+      int                                       unknowns,
+      double*                                   fineGridValues,
+      double*                                   coarseGridValues,
+      bool                                      swapInsideOutside=false
+    ) {
+      restrictInnerHalfOfHaloLayer_AoS_tensor_product(
+        marker,
+        numberOfDoFsPerAxisInPatch,
+        overlap,
+        unknowns,
+        C::NormalRestrictionMatrix1d,
+        C::TangentialRestrictionMatrix1d,
+        fineGridValues,
+        coarseGridValues,
+        swapInsideOutside
       );
     }
   }

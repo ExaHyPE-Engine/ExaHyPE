@@ -19,8 +19,18 @@ class PlotPatchesInPeanoBlockFormat(ActionSet):
   
   Also, this dump expects incoming data to be AoS.
   """
-    
-  def __init__(self,filename,patch,dataset_name, description, time_stamp_evaluation, plot_cell_data=True, metadata = "", mapping = [], guard="true", additional_includes="", precision=3, dataType="double"):
+  
+  def __init__(self,
+               filename,
+               patch,
+               dataset_name, 
+               description, time_stamp_evaluation, 
+               plot_cell_data=True, 
+               metadata = "", 
+               mapping = [], 
+               guard="true", 
+               additional_includes="", precision=3,
+               dataType="double"):
     """
     
       plot_cell_data: Boolean

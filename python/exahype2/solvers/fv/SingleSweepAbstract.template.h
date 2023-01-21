@@ -6,8 +6,7 @@
 // This is generated. Don't change it! Every rerun of the Python API will
 // overwrite your changes.
 //
-#ifndef {% for item in NAMESPACE -%}_{{ item }}{%- endfor %}_{{CLASSNAME}}_H_
-#define {% for item in NAMESPACE -%}_{{ item }}{%- endfor %}_{{CLASSNAME}}_H_
+#pragma once
 
 
 {{SOLVER_INCLUDES}}
@@ -17,6 +16,7 @@
 
 #include "tarch/la/Vector.h"
 #include "tarch/multicore/BooleanSemaphore.h"
+#include "tarch/accelerator/accelerator.h"
 
 #include "peano4/utils/Globals.h"
 
@@ -286,6 +286,5 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
 };
 
 
-#endif
 
 {# Empty line here #}

@@ -8,7 +8,7 @@ import jinja2
 
 
 
-class FiniteVolumesTracing(peano4.toolbox.particles.ParticleParticleInteraction):
+class FiniteVolumesTracing(peano4.toolbox.particles.ParticleParticleInteraction_StackOfLists):
   """
   
   Particle tracing over the Finite Volumes solver. 
@@ -124,7 +124,7 @@ if (
   }
 """
 
-    peano4.toolbox.particles.ParticleParticleInteraction.__init__(self,
+    peano4.toolbox.particles.ParticleParticleInteraction_StackOfLists.__init__(self,
       particle_set,
       jinja2.Template(cell_compute_kernel).render(**self.tracerDict),
       jinja2.Template(touch_vertex_first_time_compute_kernel).render(**self.tracerDict)
@@ -132,7 +132,7 @@ if (
 
 
   #def get_body_of_operation(self,operation_name):
-  #  result = peano4.toolbox.particles.ParticleParticleInteraction.get_body_of_operation(self,operation_name)
+  #  result = peano4.toolbox.particles.ParticleParticleInteraction_StackOfLists.get_body_of_operation(self,operation_name)
   #  if operation_name==ActionSet.OPERATION_BEGIN_TRAVERSAL:
   #    result = self.__Template_BeginIteration.render(**self.tracerDict)
   #  return result
@@ -156,10 +156,10 @@ if (
 #include "repositories/SolverRepository.h"
 #include "exahype2/fv/Tracer.h"
 """ )
-    return peano4.toolbox.particles.ParticleParticleInteraction.get_includes(self) + "\n" + result.render(**self.tracerDict)
+    return peano4.toolbox.particles.ParticleParticleInteraction_StackOfLists.get_includes(self) + "\n" + result.render(**self.tracerDict)
 
 
   def get_attributes(self):
-    return peano4.toolbox.particles.ParticleParticleInteraction.get_attributes(self) + """
+    return peano4.toolbox.particles.ParticleParticleInteraction_StackOfLists.get_attributes(self) + """
 double _timeStepSize;    
 """

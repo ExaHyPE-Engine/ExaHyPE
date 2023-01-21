@@ -138,7 +138,6 @@ void tarch::logging::NVTXLogger::error(long int timestampNanoseconds, int rank, 
   std::cerr.flush();
 
   close();
-  tarch::mpi::Rank::abort(-1);
 }
 
 

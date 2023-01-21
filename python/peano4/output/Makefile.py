@@ -7,7 +7,9 @@ from .CompileMode import CompileMode
 
 import os
 import re
-
+import subprocess
+import sys
+from .FindCmakeBuildDir import find_cmake_build_dir
 
 try:
   import jinja2
@@ -23,28 +25,37 @@ class Makefile(object):
   def __init__(self):
     self.clear()
 
-
   @property
   def readme_entry(self):
-    return jinja2.Template( """
+    result_template = jinja2.Template( """
 ## Makefile settings
 
-CXX       = {{CXX}}
-CXXFLAGS  = {{CXXFLAGS}}
-FC        = {{FC}}
-FCFLAGS   = {{FCFLAGS}}
-LDFLAGS   = {{LDFLAGS}}
-GPUOBJS   = {{GPUOBJS}}
-LIBS      = {{LIBS}}
-DIM       = {{DIM}}
+CXX             = {{CXX}}
+CXXFLAGS        = {{CXXFLAGS}}
+FC              = {{FC}}
+FCFLAGS         = {{FCFLAGS}}
+LDFLAGS         = {{LDFLAGS}}
+GPUOBJS         = {{GPUOBJS}}
+LIBS            = {{LIBS}}
+DIM             = {{DIM}}
 CONFIGUREPATH   = {{CONFIGUREPATH}}
 EXECUTABLENAME  = {{EXECUTABLENAME}}
 FORTRAN_MODULES = {{FORTRAN_MODULES}}
 MODE            = {{MODE}}
- 
-Code base configured with
 
-""").render(**self.d) + self.configure_call  
+
+## Compiler version
+
+{{VERSION}}
+
+""")
+    try:
+      version_string = subprocess.run([self.d["CXX"], '--version'], stdout=subprocess.PIPE)
+    except Exception:
+      version_string = subprocess.run(['echo', 'Unknown'], shell=True, stdout=subprocess.PIPE)
+    self.d["VERSION"] = version_string.stdout.decode('utf-8')
+    
+    return result_template.render(**self.d) + self.configure_call  
 
 
   @property
@@ -138,8 +149,14 @@ the SISC paper
     self.d["CONFIGUREPATH"]    = "."
     self.d["EXECUTABLENAME"]   = "peano4"
     self.d["FORTRAN_MODULES"]  = []
+    self.d["GENERATED_INCLUDE_DIRS"] = set()
+    self.d["CMAKE_CORE_LIBS"] = ["peano4", "tarch"]
+    self.d["CMAKE_LIBS"] = []
     self.set_mode( CompileMode.Debug )
     self.clear_files()
+
+  def add_cmake_core_library(self, name):
+    self.d["CMAKE_CORE_LIBS"].append(name)
 
 
   def set_executable_name(self, fname):
@@ -177,6 +194,7 @@ the SISC paper
     """
     self.d["CXXFLAGS"] += " -I" + path
     self.d["FCFLAGS"]  += " -I" + path
+    self.d["GENERATED_INCLUDE_DIRS"].add(path)
 
 
   def add_gpu_object(self, object_path):
@@ -208,6 +226,24 @@ the SISC paper
 #    self.d["LIBS"] += " -l" + library_name + " "
     self.d["LIBS"] += library_name + " "
 
+    #TODO: ask
+    # For added libraries in the cmake I think we should support 2 input forms
+    # 1) With dimension and build mode, e.g. ToolboxFiniteElements2d_trace
+    # 2) Without dimension or build mode, e.g. ToolboxFiniteElements
+    # As build mode and dimension is saved in the configuration of Peano4, we can infer
+    # Them from there.
+    # Only possible problem is having a library that does not need suffixes e.g.
+    # Tarch, then this function might accidentally add dimensions and cause errors
+    # Since tarch is always added as a core library when a Peano4 project is initialized,
+    # it should not be added, here
+    #if library_path.match('2d') or library_path.match('3d'):
+    #  if library_path.match('_debug')
+    #    ...
+    # Maybe it is best to enforce the user to give the right library name
+    if self.d['MODE'].lower() == "release":
+      self.d["CMAKE_LIBS"].append(f"{library_name}{self.d['DIM']}d")
+    else:
+      self.d["CMAKE_LIBS"].append(f"{library_name}{self.d['DIM']}d_{self.d['MODE'].lower()}")
 
   def set_mode( self, mode ):
     """
@@ -467,7 +503,7 @@ then this message can typically be ignored.
       self.add_Fortran_module( i )
 
 
-  def generate(self,overwrite,directory):
+  def generate_old(self,overwrite,directory):
     filename = directory + "/Makefile";
     if writeFile(overwrite,self.default_overwrite,filename):
       print( "write " + filename )
@@ -493,3 +529,61 @@ then this message can typically be ignored.
         print( "ERROR: have not been able to write main file {} from template {}".format(filename,template_file) )
         print( str(e) )
 
+  def generate(self,overwrite,directory):
+    build_dir = find_cmake_build_dir()
+    self.d["CMAKE_BUILD_DIR"] = build_dir
+    # files
+    self.d[ 'CXX_SOURCES' ]     = self.cppfiles
+    self.d[ 'FORTRAN_SOURCES' ] = self.fortranfiles
+    self.d[ 'GENERATOR' ] = sys.argv[0]
+
+    # Anonymous function that generates the output_file_path from input_file_path template
+    def generate_build_file(input_file_path, output_file_path):
+      if writeFile(overwrite, self.default_overwrite, output_file_path):
+        print( "write " + output_file_path )
+
+        # Encapsulate file generation as a function
+
+        template_loader = jinja2.FileSystemLoader(searchpath=os.path.split(input_file_path)[0])
+        templateEnv     = jinja2.Environment(loader=template_loader)
+        template        = templateEnv.get_template( os.path.split(input_file_path)[1] )
+
+        try:
+          # We first eliminate the precompiled variant, and then we get rid of the
+          # postfix in the case where it is a source file
+          with open( output_file_path, "w" ) as output:
+            output.write( template.render(self.d) )
+        except Exception as e:
+          print( "ERROR: have not been able to write main file {} from template {}".format(output_file_path, input_file_path) )
+          print( str(e) )
+
+    file_dir  = os.path.dirname(os.path.realpath(__file__))
+    
+    template_output_pairs = list()
+
+    template_output_pairs.append(
+      (os.path.join(file_dir, "Makefile.template"), os.path.join(directory, "Makefile"))
+    )
+    template_output_pairs.append(
+      (os.path.join(file_dir, "CMakeLists.txt.template"), os.path.join(directory, "CMakeLists.txt"))
+    )
+
+    # We do not want the same line multiple times as it creates build problems, so we read it into a set
+    # and do not write if the new executable entry is already inside
+    generated_paths_filepath = os.path.join(self.d["CMAKE_BUILD_DIR"], "GeneratedSubdirectories.cmake")
+    generated_paths_before = os.path.exists(generated_paths_filepath)
+    generated_path_entries = set()
+
+    if generated_paths_before:
+      with open(generated_paths_filepath, "r") as generated_paths_file:
+        for line in generated_paths_file.readlines():
+          generated_path_entries.add(line)
+
+    # Only append to the file only if doesnt exist before
+    generated_entry = f"add_subdirectory({os.path.abspath(directory)})\n"
+    if not generated_entry in generated_path_entries:
+      with open(generated_paths_filepath, "a") as subdir_cmake:
+        subdir_cmake.write(f"add_subdirectory({os.path.abspath(directory)})\n")
+
+    for (template, output_file) in template_output_pairs:
+      generate_build_file(template, output_file)

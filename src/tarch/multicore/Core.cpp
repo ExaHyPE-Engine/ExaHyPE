@@ -67,7 +67,7 @@ tarch::multicore::Core& tarch::multicore::Core::getInstance() {
 }
 
 
-void tarch::multicore::Core::configure( int numberOfThreads, const std::set<int>& devicesToUse ) {
+void tarch::multicore::Core::configure( int numberOfThreads ) {
   internal::configureInternalTaskQueues(numberOfThreads);
 }
 
@@ -84,12 +84,6 @@ bool tarch::multicore::Core::isInitialised() const {
 int tarch::multicore::Core::getNumberOfThreads() const {
   return 1;
 }
-
-
-int tarch::multicore::Core::getNumberOfGPUs() const {
-  return 0;
-}
-
 
 int tarch::multicore::Core::getCoreNumber() const {
   #ifdef CompilerHasSysinfo

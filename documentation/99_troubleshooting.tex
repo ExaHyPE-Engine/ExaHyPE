@@ -127,6 +127,13 @@ the directory.} includes a file such that the
   For some systems, it then still remains necessary to add pthreads, too.
   \item \textbf{ My compiler terminates with errors when I enable OpenMP multithreading }.
   Make sure that you are using a compiler with OpenMP 5.0 support, such as GCC 9.x.
+  \item \textbf{I configured Peano with HDF5, but my application (experiment) will not compile}.
+  The application will parse the configure call used by Peano to feed its
+  Makefile, but will not infer the settings from \texttt{--with-hdf5}. To get
+  the correct flags for HDF5 support for your experiment, you might want to add
+  the following to your Peano configuration call:
+  \texttt{LDFLAGS="-lhdf5\_hl\_cpp -lhdf5\_cpp -lhdf5\_hl -lhdf5 -lstdc++"}.
+  Notice that some outdated GCC compilers might struggle with the last one on the list.
   \item To be continued \dots
 \end{itemize}
 
@@ -365,6 +372,22 @@ export SYCL_DEVICE_TYPE=CPU
 
 
 
+\section{Errors with particular software stacks}
+
+
+\begin{itemize}
+  \item \textbf{My unit tests fail in the NodeTest}. We have found that GCC's
+  STL is buggy (confirmed in version 9.3.0), although we do not know if this bug
+  is found within the \texttt{unordered\_set}, the \texttt{bitset} or the
+  \texttt{pair} implementation. Anyway, a newer version of GCC (12 for example)
+  seem to fix this issue. If you use Intel's toolchain or literally any LLVM,
+  you might have to manually load a newer GNU version after you've loaded your
+  core compiler.
+  \item To be continued \dots
+\end{itemize}
+
+
+
 \section{PDT (legacy)}
 
 This section is deprecated and is of relevance if and only if you use the Python API with 
@@ -383,10 +406,6 @@ the legacy DaStGen support to model application-specific data.
   \end{bash}
   Use the \texttt{pdt.jar} from the \texttt{pdt} directory now. 
 \end{itemize}
-
-
-%update-alterantives --config java
-
 
 
 

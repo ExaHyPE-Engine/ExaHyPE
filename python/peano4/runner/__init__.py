@@ -2,4 +2,3 @@
 # use, please see the copyright notice at www.peano-framework.org
 
 from .DefaultSequence   import DefaultSequence
-from .SPHSequence       import SPHSequence

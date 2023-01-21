@@ -1,7 +1,6 @@
 // This file is part of the Peano project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
-#ifndef _TARCH_LA_VECTOR_OPERATIONS_H_
-#define _TARCH_LA_VECTOR_OPERATIONS_H_
+#pragma once
 
 
 #include "tarch/la/ScalarOperations.h"
@@ -42,6 +41,9 @@ namespace tarch {
     template<int Size, typename Scalar>
     Scalar norm2 (const Vector<Size,Scalar>& vector);
 
+    template<int Size, typename Scalar>
+    Scalar norm2Squared (const Vector<Size,Scalar>& vector);
+
     /**
      * Specialisation that is different to standard definition. Works as result
      * type is not part of the signature
@@ -49,6 +51,8 @@ namespace tarch {
     template<int Size>
     double norm2 (const Vector<Size,std::complex<double> >& vector);
 
+    template<int Size>
+    double norm2Squared (const Vector<Size,std::complex<double> >& vector);
 
     /**
      * Computes the max-norm of the vector.
@@ -188,4 +192,3 @@ std::ostream& operator<<(std::ostream&  os, const tarch::la::Vector<Size,Scalar>
 
 #include "VectorOperations.cpph"
 
-#endif
