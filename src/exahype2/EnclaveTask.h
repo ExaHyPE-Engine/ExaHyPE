@@ -20,6 +20,8 @@ namespace exahype2 {
 
 
 /**
+ * Base class for all enclave tasks
+ *
  * Please study the enclave task in tandem with the EnclaveBookkeeping. Enclave
  * tasks use the bookkeeping to register themselves (obtain a task number). The
  * bookkeeping thus is aware which enclave tasks are outstanding still. Once an
@@ -41,7 +43,7 @@ namespace exahype2 {
  * ## Data ownership
  *
  * - The run() operation allocates the output data and then invokes the functor.
- * - I assume that the functor releases the input data.
+ * - I assume that the functor frees the input data.
  *
  * ## SmartMPI
  * 
