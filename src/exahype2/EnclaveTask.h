@@ -44,6 +44,11 @@ namespace exahype2 {
  *
  * - The run() operation allocates the output data and then invokes the functor.
  * - I assume that the functor frees the input data.
+ * - The task allocated the output value within _outputValues itself before it
+ *   invokes the actual task functor. This happens in computeTask(). We have the
+ *   following sequence: run() calls computeTask() calls the user's functor. The
+ *   size of the output field is specified in the constructor argument. The
+ *   output will be on the heap.
  *
  * ## SmartMPI
  * 
