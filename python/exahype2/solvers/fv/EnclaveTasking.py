@@ -77,7 +77,7 @@ class UpdateCell(ReconstructPatchAndApplyFunctor):
       # todo hier muessen beide rein, denn ich muss ja interpolieren -> machen die anderen Codes dann
       patch_overlap = solver._patch_overlap_new,
       functor_implementation = self.TemplateUpdateCell.render(**d),
-      reconstructed_array_memory_location = peano4.toolbox.blockstructured.ReconstructedArrayMemoryLocation.HeapThroughTarchWithoutDelete,
+      reconstructed_array_memory_location = peano4.toolbox.blockstructured.ReconstructedArrayMemoryLocation.ManagedSharedAcceleratorDeviceMemoryThroughTarchWithoutDelete,
       # todo Dokumentieren, dass net willBeRefined(), weil wir ja das brauchen wenn wir runtergehen
       guard  = "not marker.hasBeenRefined() and (" + \
       "repositories::" + solver.get_name_of_global_instance() + ".getSolverState()==" + solver._name + "::SolverState::Primary or " + \

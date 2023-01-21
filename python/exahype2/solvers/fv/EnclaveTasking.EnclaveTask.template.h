@@ -88,12 +88,11 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::EnclaveTask
      * Simple call to compute kernels.
      *
      * The finite volume solver assumes that _inputValues are reconstructed
-     * values, i.e. a temporary data field on the heap. So we don't have to
-     * allocate anything but we have to free stuff after the run. This is
-     * done here in the Finite Volume solver.
-     *
-     * The routine also frees the memory reconstructedPatch points to.
-     * Therefore, the argument is not const.
+     * values, i.e. a temporary data field. So we don't have to allocate
+     * anything but we have to free stuff after the run. This is done here in
+     * the Finite Volume solver. We assume that the input data has been
+     * allocated through tarch::allocateMemory() with the flag
+     * ManagedSharedAcceleratorDeviceMemory.
      *
      * @return Max eigenvalue over cell
      */
@@ -105,7 +104,19 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::EnclaveTask
       double* __restrict__                        targetPatch
     );
     
-    
+
+    /**
+     * Task constructor
+     *
+     * The task construction injects a call to applyKernelToCell() into
+     * the generic enclave superclass. I assuem that reconstructedPatch
+     * is created on the heap before - typically in the actual action
+     * set. As applyKernelToCell() erases the
+     * reconstructedPatch argument, we don't have to call a free in the
+     * task constructor of the functor that we pass to the enclave
+     * task (superclass). Likewisely, the superclass EnclaveTask tasks
+     * care of the allocation of the output data.
+     */
     {{CLASSNAME}}(
       const ::peano4::datamanagement::CellMarker& marker, 
       double                                      t,

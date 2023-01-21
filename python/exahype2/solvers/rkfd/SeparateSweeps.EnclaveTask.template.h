@@ -87,13 +87,14 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::EnclaveTask
     /**
      * Simple call to compute kernels.
      *
-     * The finite volume solver assumes that _inputValues are reconstructed
-     * values, i.e. a temporary data field on the heap. So we don't have to
-     * allocate anything but we have to free stuff after the run. This is
-     * done here in the Finite Volume solver.
-     *
-     * The routine also frees the memory reconstructedPatch points to.
-     * Therefore, the argument is not const.
+     * The finite differences solver assumes that _inputValues are
+     * reconstructed values, i.e. a temporary data field, which
+     * also hold the halo data from the faces. So we don't have to allocate
+     * anything but we have to free stuff after the run. This is done here
+     * analogously to the Finite Volume solver. We assume that the input
+     * data has been allocated through tarch::allocateMemory() with the
+     * flag ManagedSharedAcceleratorDeviceMemory. As we have to free data,
+     * reconstructedPatch is not const.
      *
      * @return Max eigenvalue over cell
      */
@@ -105,7 +106,14 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::EnclaveTask
       double* __restrict__                        targetPatch
     );
     
-    
+
+    /**
+     * Construct Finite Differences enclave task
+     *
+     * This routine initialises an enclave task (the superclass) with a functor
+     * invoking applyKernelToCell(). This is exactly the same story as the
+     * Finite Volume task. As we mirror the Finite Volume data flow here,
+     */
     {{CLASSNAME}}(
       const ::peano4::datamanagement::CellMarker& marker, 
       double                                      t,

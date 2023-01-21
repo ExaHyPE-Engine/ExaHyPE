@@ -18,15 +18,17 @@ class ReconstructedArrayMemoryLocation(IntEnum):
    reconstructed data yourself.
   """
   Heap = 1,
-  HeapThroughTarch = 2,
+  HeapWithoutDelete = 2,
   """
-   Create data on the heap for an accelerator. It relies on the tarch::allocateMemoryOnAccelerator
-   routine and you have to use this one again to free it.
-  """
-  Accelerator = 3,
+    Use tarch::allocateMemory()
+  """  
+  HeapThroughTarch = 3,
   HeapThroughTarchWithoutDelete = 4,
-  HeapWithoutDelete = 5,
-  AcceleratorWithoutDelete = 6
+  """
+    Use tarch::allocateMemory()
+  """
+  ManagedSharedAcceleratorDeviceMemoryThroughTarch = 5,
+  ManagedSharedAcceleratorDeviceMemoryThroughTarchWithoutDelete = 6
 
 
 
@@ -164,13 +166,13 @@ class ReconstructPatchAndApplyFunctor(ActionSet):
     oldQWithHalo = ::tarch::allocateMemory(""" + d[ "NUMBER_OF_DOUBLE_VALUES_IN_RECONSTRUCTED_PATCH_3D" ] + """, ::tarch::MemoryLocation::Heap);
     #endif
 """    
-    elif self.reconstructed_array_memory_location==ReconstructedArrayMemoryLocation.Accelerator or self.reconstructed_array_memory_location==ReconstructedArrayMemoryLocation.AcceleratorWithoutDelete:
+    elif self.reconstructed_array_memory_location==ReconstructedArrayMemoryLocation.ManagedSharedAcceleratorDeviceMemoryThroughTarch or self.reconstructed_array_memory_location==ReconstructedArrayMemoryLocation.ManagedSharedAcceleratorDeviceMemoryThroughTarchWithoutDelete:
       d[ "CREATE_RECONSTRUCTED_PATCH" ] = """
     double* oldQWithHalo;
     #if Dimensions==2
-    oldQWithHalo = ::tarch::allocateMemory(""" + d[ "NUMBER_OF_DOUBLE_VALUES_IN_RECONSTRUCTED_PATCH_2D" ] + """, ::tarch::MemoryLocation::ManagedAcceleratorMemory);
+    oldQWithHalo = ::tarch::allocateMemory(""" + d[ "NUMBER_OF_DOUBLE_VALUES_IN_RECONSTRUCTED_PATCH_2D" ] + """, ::tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory);
     #elif Dimensions==3
-    oldQWithHalo = ::tarch::allocateMemory(""" + d[ "NUMBER_OF_DOUBLE_VALUES_IN_RECONSTRUCTED_PATCH_3D" ] + """, ::tarch::MemoryLocation::ManagedAcceleratorMemory);
+    oldQWithHalo = ::tarch::allocateMemory(""" + d[ "NUMBER_OF_DOUBLE_VALUES_IN_RECONSTRUCTED_PATCH_3D" ] + """, ::tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory);
     #endif
 """    
     else:  
@@ -185,9 +187,9 @@ class ReconstructPatchAndApplyFunctor(ActionSet):
       d[ "DESTROY_RECONSTRUCTED_PATCH" ] = """
     ::tarch::freeMemory(oldQWithHalo, tarch::MemoryLocation::Heap );
 """    
-    elif self.reconstructed_array_memory_location==ReconstructedArrayMemoryLocation.Accelerator:
+    elif self.reconstructed_array_memory_location==ReconstructedArrayMemoryLocation.ManagedSharedAcceleratorDeviceMemoryThroughTarch:
       d[ "DESTROY_RECONSTRUCTED_PATCH" ] = """
-    ::tarch::freeMemory(oldQWithHalo, tarch::MemoryLocation::ManagedAcceleratorMemory );
+    ::tarch::freeMemory(oldQWithHalo, tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory );
 """    
     else:
       d[ "DESTROY_RECONSTRUCTED_PATCH" ] = ""

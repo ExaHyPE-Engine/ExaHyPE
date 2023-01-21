@@ -103,15 +103,19 @@ class UpdateCell(ReconstructPatchAndApplyFunctor):
     
     
     """
+    one_huge_boolean_guard_expression = "false"
+    for expr in solver._primary_sweeps_of_Runge_Kutta_step_on_cell:
+      one_huge_boolean_guard_expression += " or (" + expr + ")"
+    
     super( UpdateCell, self ).__init__(
       patch = solver._patch,
       patch_overlap = solver._patch_overlap_new,
       functor_implementation = """
 #error please switch to your Riemann solver of choice
 """,
-      reconstructed_array_memory_location = solver._reconstructed_array_memory_location,
-      guard = "not marker.willBeRefined() and not marker.hasBeenRefined()",
-      add_assertions_to_halo_exchange = False
+      reconstructed_array_memory_location = peano4.toolbox.blockstructured.ReconstructedArrayMemoryLocation.ManagedSharedAcceleratorDeviceMemoryThroughTarchWithoutDelete,
+      guard                               = one_huge_boolean_guard_expression,
+      add_assertions_to_halo_exchange     = False
     )
     self._solver = solver
     
@@ -152,6 +156,11 @@ class UpdateCell(ReconstructPatchAndApplyFunctor):
 """ + self._solver._get_default_includes() + self._solver.user_action_set_includes + """
 #include "tasks/{}.h"
 """.format(self._solver._enclave_task_name())
+
+
+  def get_action_set_name(self):
+    return __name__.replace(".py", "").replace(".", "_") + "_UpdateCell"
+
 
 
 
@@ -200,7 +209,7 @@ class MergeEnclaveTaskOutcome(AbstractRKFDActionSet):
 
 
   def get_action_set_name(self):
-    return __name__.replace(".py", "").replace(".", "_")
+    return __name__.replace(".py", "").replace(".", "_") + "_MergeEnclaveTaskOutcome"
 
 
   def get_includes(self):

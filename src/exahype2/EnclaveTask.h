@@ -48,7 +48,8 @@ namespace exahype2 {
  *   invokes the actual task functor. This happens in computeTask(). We have the
  *   following sequence: run() calls computeTask() calls the user's functor. The
  *   size of the output field is specified in the constructor argument. The
- *   output will be on the heap.
+ *   output will be on the heap and is eventually passed over to the enclave
+ *   bookkeeping.
  *
  * ## SmartMPI
  * 

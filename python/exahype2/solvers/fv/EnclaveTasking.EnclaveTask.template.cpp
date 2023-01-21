@@ -59,7 +59,7 @@ double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::applyKernelToCell(
     std::string(__FILE__) + "(" + std::to_string(__LINE__) + "): " + marker.toString()
   ); // outcome has to be valid
 
-  tarch::freeMemory(reconstructedPatch,tarch::MemoryLocation::Heap );
+  tarch::freeMemory(reconstructedPatch,tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory );
 
   {% if COMPUTE_MAX_EIGENVALUE %}
   return patchData.maxEigenvalue[0];
@@ -75,19 +75,18 @@ double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::applyKernelToCell(
   const ::peano4::datamanagement::CellMarker& marker,
   double                                      t,
   double                                      dt,
-  double* __restrict__                        reconstructedPatchWithLinearCombinationOfPreviousShots
+  double* __restrict__                        reconstructedPatch
 ):
   ::exahype2::EnclaveTask(
     _enclaveTaskTypeId,
     marker,
     t,
     dt,
+    reconstructedPatch,
     #if Dimensions==2
-    allocateMemory({{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_PLUS_HALO_2D}}), tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory),
     {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_PLUS_HALO_2D}},
     {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_2D}},
     #else
-    allocateMemory({{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_PLUS_HALO_3D}}), tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory),
     {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_PLUS_HALO_3D}},
     {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_3D}},
     #endif
@@ -99,16 +98,12 @@ double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::applyKernelToCell(
         _inputValues,
         _outputValues
       );
-
-      tarch::freeMemory( _inputValues, tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory );
     }
   )
   #ifdef UseSmartMPI
   , smartmpi::Task(_enclaveTaskTypeId)
   #endif
-{
-  std::copy_n( reconstructedPatchWithLinearCombinationOfPreviousShots, _numberOfInputValues, _inputValues );
-}
+{}
 
 
 bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::isSmartMPITask() const {
