@@ -8,7 +8,15 @@ import jinja2
 
 class InsertParticlesAlongCartesianLayoutIntoUnrefinedCells(ActionSet):
 
-  def __init__(self,particle_set,distance_between_particles,initialisation_call,computational_domain_offset,round_down = False, noise=True,additional_includes="",guard="true"):
+  def __init__(self,
+               particle_set,
+               distance_between_particles,
+               computational_domain_offset,
+               initialisation_call = "",
+               noise=True,
+               additional_includes="",
+               guard="true"
+               ):
     """
       Insert particles
       
@@ -62,8 +70,8 @@ class InsertParticlesAlongCartesianLayoutIntoUnrefinedCells(ActionSet):
       {{NOISE}}
     );
     for (auto* particle: newParticles) {
-      {{INITIALISATION_CALL}}
       if ( {{GUARD}} ) {
+        {{INITIALISATION_CALL}}
         toolbox::particles::insertParticleIntoCell(
           marker,
           particle,
