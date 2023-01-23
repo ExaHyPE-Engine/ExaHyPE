@@ -243,12 +243,12 @@ bool toolbox::loadbalancing::RecursiveSubdivision::doesRankViolateBalancingCondi
 
 
 void toolbox::loadbalancing::RecursiveSubdivision::updateState() {
+      // @todo Debug
+  logInfo( "updateState()", "update from current state " << toString(_state) );
   switch (_state) {
     case State::InterRankDistribution:
       if (
-        not tarch::mpi::Rank::getInstance().isGlobalMaster()
-        or
-        getAction()!=Action::None
+        not doesRankViolateBalancingCondition()
         or
         tarch::mpi::Rank::getInstance().getNumberOfRanks()<=1
       ) {
@@ -259,13 +259,16 @@ void toolbox::loadbalancing::RecursiveSubdivision::updateState() {
       break;
     case State::IntraRankDistribution:
       if (
-        getAction()!=Action::None
-        or
+        peano4::parallel::SpacetreeSet::getInstance().getLocalSpacetrees().size() > 1
+      ) {
+        _state = State::WaitForRoundRobinToken;
+        logInfo( "updateState()", "switch to state " << toString(_state) << " as more than one local subpartition is already hosted, i.e. we assume rank has already spread out locally" );
+      }
+      if (
         tarch::multicore::Core::getInstance().getNumberOfThreads()<=1
       ) {
         _state = State::WaitForRoundRobinToken;
-        // @todo Debug
-        logInfo( "updateState()", "switch to state " << toString(_state) );
+        logInfo( "updateState()", "switch to state " << toString(_state) << " as rank is degenerated with only one thread, i.e. rank-local distribution makes no sense" );
       }
       break;
     case State::WaitForRoundRobinToken:
@@ -293,6 +296,9 @@ void toolbox::loadbalancing::RecursiveSubdivision::updateState() {
         }
         else {
           _state = State::WaitForRoundRobinToken;
+	           // @todo Debug
+          logInfo( "updateState()", "switch to state " << toString(_state) );
+
         }
       }
       break;
@@ -312,9 +318,13 @@ void toolbox::loadbalancing::RecursiveSubdivision::updateState() {
     case State::Stagnation:
       if ( getWeightOfHeaviestLocalSpacetree()==-1) {
         _state = State::Stagnation;
+         // @todo Debug
+          logInfo( "updateState()", "switch to state " << toString(_state) );
       }
       else {
        _state = State::WaitForRoundRobinToken;
+         // @todo Debug
+          logInfo( "updateState()", "switch to state " << toString(_state) );
       }
       break;
     case State::SwitchedOff:
@@ -383,25 +393,6 @@ toolbox::loadbalancing::RecursiveSubdivision::Action toolbox::loadbalancing::Rec
       break;
     case State::InterRankBalancing:
       {
-        if ( tarch::mpi::Rank::getInstance().getNumberOfRanks()<=1 ) {
-          return Action::None;
-        }
-
-        if (
-          peano4::parallel::SpacetreeSet::getInstance().getLocalSpacetrees().size()>1
-          and
-          doesRankViolateBalancingCondition()
-          and
-          peano4::parallel::SpacetreeSet::getInstance().getLocalSpacetrees().size() > 2*std::min(tarch::multicore::Core::getInstance().getNumberOfThreads(),_configuration->getMaxLocalTreesPerRank(_state))
-        ) {
-          static bool wroteWarning = false;
-          if (not wroteWarning) {
-            logInfo( "getStrategyStep()", "local rank violates balancing condition and thus should split up further. However, there are already so many subpartitions locally that we assume that we already have a quite fine-granular decomposition. Skip further split-ups therefore" );
-            wroteWarning = true;
-          }
-          return Action::None;
-        }
-
         if (
           peano4::parallel::SpacetreeSet::getInstance().getLocalSpacetrees().size()>1
           and
@@ -414,21 +405,23 @@ toolbox::loadbalancing::RecursiveSubdivision::Action toolbox::loadbalancing::Rec
             logInfo( "getStrategyStep()", "local rank is not big enough, so we postpone re-balancing" );
             wroteWarning = true;
           }
-          return Action::None;
         }
-
-        if (
+	else if (
           peano4::parallel::SpacetreeSet::getInstance().getLocalSpacetrees().size()>1
           and
           doesRankViolateBalancingCondition()
-          and
-          fitsIntoMemory(_state)
-        ) {
-          return Action::SplitHeaviestLocalTreeOnce_UseAllRanks_UseRecursivePartitioning;
-        }
-        else {
-          return Action::SplitHeaviestLocalTreeOnce_DontUseLocalRank_UseRecursivePartitioning;
-        }
+	) {
+	  if (
+            fitsIntoMemory(_state)
+            and
+  	    peano4::parallel::SpacetreeSet::getInstance().getLocalSpacetrees().size() < _configuration->getMaxLocalTreesPerRank(_state)
+          ) {
+            return Action::SplitHeaviestLocalTreeOnce_UseAllRanks_UseRecursivePartitioning;
+          }
+          else {
+            return Action::SplitHeaviestLocalTreeOnce_DontUseLocalRank_UseRecursivePartitioning;
+          }
+	}
 
         return Action::None;
       }
@@ -445,9 +438,12 @@ toolbox::loadbalancing::RecursiveSubdivision::Action toolbox::loadbalancing::Rec
           not doesRankViolateBalancingCondition()
           and
           isLocalBalancingBad()
-          and
-          peano4::parallel::SpacetreeSet::getInstance().getLocalSpacetrees().size() >
-          std::min( tarch::multicore::Core::getInstance().getNumberOfThreads()-1, _configuration->getMaxLocalTreesPerRank(_state))
+	  and 
+	  // @todo raus
+	  peano4::parallel::SpacetreeSet::getInstance().getLocalSpacetrees().size() >= tarch::multicore::Core::getInstance().getNumberOfThreads()
+//          and
+//          peano4::parallel::SpacetreeSet::getInstance().getLocalSpacetrees().size() >
+//          std::min( tarch::multicore::Core::getInstance().getNumberOfThreads()-1, _configuration->getMaxLocalTreesPerRank(_state))
         ) {
           static bool wroteWarning = false;
           if (not wroteWarning) {
@@ -580,7 +576,9 @@ int toolbox::loadbalancing::RecursiveSubdivision::getNumberOfSplitsOnLocalRank()
       "getNumberOfSplitsOnLocalRank(...)",
        "assume enough memory is available, so split " << numberOfSplits <<
        " times (current mem footprint=" << worstCaseEstimateForSizeOfSpacetree << " MByte, free memory=" <<
-       tarch::getFreeMemory( tarch::MemoryUsageFormat::MByte ) << " MByte, est. cells per tree=" << estimatedCellsPerTree << ")"
+       tarch::getFreeMemory( tarch::MemoryUsageFormat::MByte ) << " MByte, est. cells per tree=" << estimatedCellsPerTree << 
+       ", max-local-trees-per-rank=" << _configuration->getMaxLocalTreesPerRank(_state) << ", no-of-threads=" << 
+       tarch::multicore::Core::getInstance().getNumberOfThreads() << ")"
     );
   }
   else if ( _configuration->makeSplitDependOnMemory(_state) ) {
@@ -803,6 +801,8 @@ bool toolbox::loadbalancing::RecursiveSubdivision::hasSplitRecently() const {
 void toolbox::loadbalancing::RecursiveSubdivision::enable( bool value ) {
   if (value) {
     _state = State::InterRankBalancing;
+    // @todo Debug
+    logInfo( "enable()", "switched load balancing on (again) and therefore change to state " << toString(_state) );
   }
   else {
     _state = State::SwitchedOff;
@@ -819,4 +819,5 @@ bool toolbox::loadbalancing::RecursiveSubdivision::isEnabled(bool globally) cons
 int toolbox::loadbalancing::RecursiveSubdivision::getGlobalNumberOfTrees() const {
   return _globalNumberOfTrees;
 }
+
 
