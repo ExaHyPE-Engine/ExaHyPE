@@ -406,22 +406,22 @@ toolbox::loadbalancing::RecursiveSubdivision::Action toolbox::loadbalancing::Rec
             wroteWarning = true;
           }
         }
-	else if (
+        else if (
           peano4::parallel::SpacetreeSet::getInstance().getLocalSpacetrees().size()>1
           and
           doesRankViolateBalancingCondition()
-	) {
-	  if (
+        ) {
+	        if (
             fitsIntoMemory(_state)
             and
-  	    peano4::parallel::SpacetreeSet::getInstance().getLocalSpacetrees().size() < _configuration->getMaxLocalTreesPerRank(_state)
+            peano4::parallel::SpacetreeSet::getInstance().getLocalSpacetrees().size() < _configuration->getMaxLocalTreesPerRank(_state)
           ) {
             return Action::SplitHeaviestLocalTreeOnce_UseAllRanks_UseRecursivePartitioning;
           }
           else {
             return Action::SplitHeaviestLocalTreeOnce_DontUseLocalRank_UseRecursivePartitioning;
           }
-	}
+        }
 
         return Action::None;
       }
@@ -438,12 +438,8 @@ toolbox::loadbalancing::RecursiveSubdivision::Action toolbox::loadbalancing::Rec
           not doesRankViolateBalancingCondition()
           and
           isLocalBalancingBad()
-	  and 
-	  // @todo raus
-	  peano4::parallel::SpacetreeSet::getInstance().getLocalSpacetrees().size() >= tarch::multicore::Core::getInstance().getNumberOfThreads()
-//          and
-//          peano4::parallel::SpacetreeSet::getInstance().getLocalSpacetrees().size() >
-//          std::min( tarch::multicore::Core::getInstance().getNumberOfThreads()-1, _configuration->getMaxLocalTreesPerRank(_state))
+          and
+          peano4::parallel::SpacetreeSet::getInstance().getLocalSpacetrees().size() >= _configuration->getMaxLocalTreesPerRank(_state)
         ) {
           static bool wroteWarning = false;
           if (not wroteWarning) {
