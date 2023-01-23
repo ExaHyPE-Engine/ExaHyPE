@@ -20,10 +20,11 @@
 #include "string.h"
 
 #if Dimensions == 2
-template <typename SolverType,int numberOfVariables,int basisSize>
-void singleLevelFaceUnknownsProlongation(
-    double* lQhbndFine,
-    const double* lQhbndCoarse,
+
+template <typename SolverType, typename pStoreType, int numberOfVariables, int basisSize>
+void kernels::aderdg::generic::c::singleLevelFaceUnknownsProlongation(
+    pStoreType* lQhbndFine,
+    const pStoreType* lQhbndCoarse,
     const tarch::la::Vector<Dimensions-1, int>& subfaceIndex) {
   kernels::idx2 idx(basisSize,numberOfVariables);
 
@@ -32,7 +33,30 @@ void singleLevelFaceUnknownsProlongation(
       for (int n1 = 0; n1 < basisSize; ++n1) {
         lQhbndFine[idx(m1,ivar)] +=
             lQhbndCoarse[idx(n1,ivar)] *
-            exahype2::solvers::aderdg::ADERDGSolver::fineGridProjector[basisSize-1][subfaceIndex[0]][n1][m1];
+            SolverType::fineGridProjector[basisSize-1][subfaceIndex[0]][n1][m1];
+      }
+    }
+  }
+}
+
+
+template <typename SolverType, typename pStoreType, int numberOfVariables, int basisSize>
+void kernels::aderdg::generic::c::singleLevelFaceUnknownsRestriction(
+    pStoreType* lQhbndCoarse,
+    const pStoreType* lQhbndFine,
+    const tarch::la::Vector<Dimensions-1, int>& subfaceIndex) {
+  constexpr int order = basisSize-1;
+
+  kernels::idx2 idx(basisSize,numberOfVariables);
+
+  for (int m1 = 0; m1 < basisSize; ++m1) {
+    for (int ivar = 0; ivar < numberOfVariables; ++ivar) {
+      for (int n1 = 0; n1 < basisSize; ++n1) {
+        lQhbndCoarse[idx(m1,ivar)] +=
+            SolverType::weights[order][n1] *
+            SolverType::fineGridProjector[order][subfaceIndex[0]][m1][n1] *
+            lQhbndFine[idx(n1,ivar)] /
+            SolverType::weights[order][m1] / 3.0;
       }
     }
   }
@@ -96,22 +120,22 @@ void kernels::aderdg::generic::c::faceUnknownsProlongation(
     // and use the first pair of pointers 
     // in the subsequent ones.
     if (l==1) {
-      singleLevelFaceUnknownsProlongation<SolverType,numberOfData,basisSize>(
+      singleLevelFaceUnknownsProlongation<SolverType,double,numberOfData,basisSize>(
           pointerQhbnd1,
           lQhbndCoarse,
           subintervalIndex);
 
-      singleLevelFaceUnknownsProlongation<SolverType,numberOfVariables,basisSize>(
+      singleLevelFaceUnknownsProlongation<SolverType,double,numberOfVariables,basisSize>(
           pointerFhbnd1,
           lFhbndCoarse,
           subintervalIndex);
     } else {
-      singleLevelFaceUnknownsProlongation<SolverType,numberOfData,basisSize>(
+      singleLevelFaceUnknownsProlongation<SolverType,double,numberOfData,basisSize>(
           pointerQhbnd1,
           pointerQhbnd2,
           subintervalIndex);
 
-      singleLevelFaceUnknownsProlongation<SolverType,numberOfVariables,basisSize>(
+      singleLevelFaceUnknownsProlongation<SolverType,double,numberOfVariables,basisSize>(
           pointerFhbnd1,
           pointerFhbnd2,
           subintervalIndex);
@@ -130,28 +154,6 @@ void kernels::aderdg::generic::c::faceUnknownsProlongation(
     } else {
       pointerQhbnd1 = lQhbndFineTemp;
       pointerFhbnd1 = lFhbndFineTemp;
-    }
-  }
-}
-
-template <typename SolverType,int numberOfVariables,int basisSize>
-void singleLevelFaceUnknownsRestriction(
-    double* lQhbndCoarse,
-    const double* lQhbndFine,
-    const tarch::la::Vector<Dimensions-1, int>& subfaceIndex) {
-  constexpr int order = basisSize-1;
-
-  kernels::idx2 idx(basisSize,numberOfVariables);
-
-  for (int m1 = 0; m1 < basisSize; ++m1) {
-    for (int ivar = 0; ivar < numberOfVariables; ++ivar) {
-      for (int n1 = 0; n1 < basisSize; ++n1) {
-        lQhbndCoarse[idx(m1,ivar)] +=
-            exahype2::solvers::aderdg::ADERDGSolver::weights[order][n1] *
-            exahype2::solvers::aderdg::ADERDGSolver::fineGridProjector[order][subfaceIndex[0]][m1][n1] *
-            lQhbndFine[idx(n1,ivar)] /
-            exahype2::solvers::aderdg::ADERDGSolver::weights[order][m1] / 3.0;
-      }
     }
   }
 }
@@ -202,12 +204,12 @@ void kernels::aderdg::generic::c::faceUnknownsRestriction(
     // unknowns as input. In he subsequent ones
     // use the second pair of pointers.
     if (l==1) {
-      singleLevelFaceUnknownsRestriction<SolverType,numberOfVariables,basisSize>(
+      singleLevelFaceUnknownsRestriction<SolverType,double,numberOfVariables,basisSize>(
           pointerFhbnd1,
           lFhbndFine,
           subintervalIndex);
     } else {
-      singleLevelFaceUnknownsRestriction<SolverType,numberOfVariables,basisSize>(
+      singleLevelFaceUnknownsRestriction<SolverType,double,numberOfVariables,basisSize>(
           pointerFhbnd1,
           pointerFhbnd2,
           subintervalIndex);
@@ -277,22 +279,22 @@ void kernels::aderdg::generic::c::faceUnknownsRestriction(
     // unknowns as input. In he subsequent ones
     // use the second pair of pointers.
     if (l==1) {
-      singleLevelFaceUnknownsRestriction<SolverType,numberOfData,basisSize>(
+      singleLevelFaceUnknownsRestriction<SolverType,double,numberOfData,basisSize>(
           pointerQhbnd1,
           lQhbndFine,
           subintervalIndex);
 
-      singleLevelFaceUnknownsRestriction<SolverType,numberOfVariables,basisSize>(
+      singleLevelFaceUnknownsRestriction<SolverType,double,numberOfVariables,basisSize>(
           pointerFhbnd1,
           lFhbndFine,
           subintervalIndex);
     } else {
-      singleLevelFaceUnknownsRestriction<SolverType,numberOfData,basisSize>(
+      singleLevelFaceUnknownsRestriction<SolverType,double,numberOfData,basisSize>(
           pointerQhbnd1,
           pointerQhbnd2,
           subintervalIndex);
 
-      singleLevelFaceUnknownsRestriction<SolverType,numberOfVariables,basisSize>(
+      singleLevelFaceUnknownsRestriction<SolverType,double,numberOfVariables,basisSize>(
           pointerFhbnd1,
           pointerFhbnd2,
           subintervalIndex);

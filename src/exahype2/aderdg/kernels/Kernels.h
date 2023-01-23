@@ -220,6 +220,19 @@ double maxScaledEigenvalue(SolverType& solver, const double* const luh,
  * \note We need to consider material parameters in
  * lQhbndFine and lQhbndCoarse.
  */
+
+template <typename SolverType, typename pStoreType, int numberOfVariables,int basisSize>
+void singleLevelFaceUnknownsProlongation(
+    pStoreType* lQhbndFine,
+    const pStoreType* lQhbndCoarse,
+    const tarch::la::Vector<Dimensions-1, int>& subfaceIndex);
+
+template <typename SolverType, typename pStoreType, int numberOfVariables,int basisSize>
+void singleLevelFaceUnknownsRestriction(
+    pStoreType* lQhbndCoarse,
+    const pStoreType* lQhbndFine,
+    const tarch::la::Vector<Dimensions-1, int>& subfaceIndex);
+
 template <typename SolverType,int numberOfVariables,int numberOfParameters,int basisSize>
 void faceUnknownsProlongation(
     double* lQhbndFine, double* lFhbndFine, const double* lQhbndCoarse,
