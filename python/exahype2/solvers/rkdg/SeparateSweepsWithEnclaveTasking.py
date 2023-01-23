@@ -59,7 +59,7 @@ class MergeEnclaveTaskOutcome(AbstractFVActionSet):
 
 
   def get_action_set_name(self):
-    return __name__.replace(".py", "").replace(".", "_")
+    return __name__.replace(".py", "").replace(".", "_") + "_MergeEnclaveTaskOutcome"
 
 
   def get_includes(self):

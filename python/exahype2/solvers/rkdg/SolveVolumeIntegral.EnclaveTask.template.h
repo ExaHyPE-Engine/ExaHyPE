@@ -108,9 +108,24 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::EnclaveTask
      * Initialise superclass with right compute functor
      *
      * Besides the "configuration" of the superclass, we have to copy the
-     * QIn data from the marker manually. So we initialise the superclass
-     * with a new chunk for memory, and we fill this information with
-     * proper content in the subclass constructor.
+     * QIn data from the marker manually: The action set spawning the task
+     * will have constructed the input data. In the Runge-Kutta world, this
+     * is a linear combination of previous shots and the old time step's
+     * solution. However, this linear combination is not stored persistently
+     * and hence might be lost by the time we invoke the enclave task. Hence
+     * the copy.
+     *
+     * We initialise the superclass with a new chunk for memory, and we fill
+     * this information with proper content in the subclass constructor. To
+     * facilitate GPU offloading with managed memory, we allocate this new
+     * copy of the input data in managed memory and rely on tarch::allocateMemory()
+     * to place it on the heap if no managed memory is available.
+     *
+     * The superclass will take care of a proper allocation and handling of
+     * the output data. See the class description of EnclaveTask for details.
+     * As we create these manual input copies and as applyKernelToCell()
+     * does not free anything, our task functor not only calls
+     * applyKernelToCell(). It also has to free the input data.
      *
      * @see applyKernelToCell()
      */
