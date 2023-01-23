@@ -367,7 +367,7 @@ toolbox::loadbalancing::RecursiveSubdivision::Action toolbox::loadbalancing::Rec
           return Action::None;
         }
         else if ( _localNumberOfInnerUnrefinedCell < MinOriginalTreeSizeToTriggerMPISpreadOut ) {
-          logInfo( "getAction()", "have to postpone any decision, as local no of inner unrefined cells of " << _localNumberOfInnerUnrefinedCell << " is smaller than " << MinOriginalTreeSizeToTriggerMPISpreadOut );
+          logInfo( "getAction()", "have to postpone any decision, as local no of inner unrefined cells of " << _localNumberOfInnerUnrefinedCell << " is smaller than " << MinOriginalTreeSizeToTriggerMPISpreadOut << " (which would occupy all ranks)" );
           return Action::None;
         }
         else {
@@ -383,7 +383,7 @@ toolbox::loadbalancing::RecursiveSubdivision::Action toolbox::loadbalancing::Rec
         );
 
         if ( _localNumberOfInnerUnrefinedCell < MinOriginalTreeSizeToTriggerThreadSpreadOut ) {
-          logInfo( "getAction()", "have to postpone any decision, as local no of inner unrefined cells of " << _localNumberOfInnerUnrefinedCell << " is smaller than " << MinOriginalTreeSizeToTriggerThreadSpreadOut );
+          logInfo( "getAction()", "have to postpone any decision, as local no of inner unrefined cells of " << _localNumberOfInnerUnrefinedCell << " is smaller than " << MinOriginalTreeSizeToTriggerThreadSpreadOut << " (which would occupy all threads)" );
           return Action::None;
         }
         else {
@@ -411,7 +411,7 @@ toolbox::loadbalancing::RecursiveSubdivision::Action toolbox::loadbalancing::Rec
           and
           doesRankViolateBalancingCondition()
         ) {
-	        if (
+          if (
             fitsIntoMemory(_state)
             and
             peano4::parallel::SpacetreeSet::getInstance().getLocalSpacetrees().size() < _configuration->getMaxLocalTreesPerRank(_state)
@@ -438,35 +438,35 @@ toolbox::loadbalancing::RecursiveSubdivision::Action toolbox::loadbalancing::Rec
           not doesRankViolateBalancingCondition()
           and
           isLocalBalancingBad()
-          and
-          peano4::parallel::SpacetreeSet::getInstance().getLocalSpacetrees().size() >= _configuration->getMaxLocalTreesPerRank(_state)
-        ) {
-          static bool wroteWarning = false;
-          if (not wroteWarning) {
-            logInfo( "getStrategyStep()", "local rank does not violate balancing condition between ranks but its local balancing is not good. However, there are already so many subpartitions locally that we assume that we already have a quite fine-granular decomposition. Skip further split-ups therefore" );
-            wroteWarning = true;
-          }
-          return Action::None;
-        }
+	) {
 
-        if (
-          peano4::parallel::SpacetreeSet::getInstance().getLocalSpacetrees().size()>1
-          and
-          not doesRankViolateBalancingCondition()
-          and
-          isLocalBalancingBad()
-          and
-          getWeightOfHeaviestLocalSpacetree() < _configuration->getMinTreeSize(_state)
-        ) {
-          static bool wroteWarning = false;
-          if (not wroteWarning) {
-            logInfo( "getStrategyStep()", "local rank is not big enough, so we postpone re-balancing even though partitions per rank are ill-balanced" );
-            wroteWarning = true;
-          }
-          return Action::None;
-        }
 
-        return Action::SplitHeaviestLocalTreeOnce_UseLocalRank_UseRecursivePartitioning;
+          if (
+            peano4::parallel::SpacetreeSet::getInstance().getLocalSpacetrees().size() >= _configuration->getMaxLocalTreesPerRank(_state)
+          ) {
+            static bool wroteWarning = false;
+            if (not wroteWarning) {
+              logInfo( "getStrategyStep()", "local rank does not violate balancing condition between ranks but its local balancing is not good. However, there are already so many subpartitions locally that we assume that we already have a quite fine-granular decomposition. Skip further split-ups therefore" );
+// @todo rein
+	      //              wroteWarning = true;
+            }
+            return Action::None;
+          }
+
+          if (
+            getWeightOfHeaviestLocalSpacetree() < _configuration->getMinTreeSize(_state)
+          ) {
+            static bool wroteWarning = false;
+            if (not wroteWarning) {
+              logInfo( "getStrategyStep()", "local rank is not big enough, so we postpone re-balancing even though partitions per rank are ill-balanced" );
+// @todo rain
+	      //              wroteWarning = true;
+            }
+            return Action::None;
+          }
+
+          return Action::SplitHeaviestLocalTreeOnce_UseLocalRank_UseRecursivePartitioning;
+        }
       }
       break;
     case State::WaitForRoundRobinToken:
@@ -544,7 +544,7 @@ bool toolbox::loadbalancing::RecursiveSubdivision::fitsIntoMemory(State state) c
 
 
 int toolbox::loadbalancing::RecursiveSubdivision::getNumberOfSplitsOnLocalRank() const {
-  int numberOfSplits     = std::max(1, std::min(_configuration->getMaxLocalTreesPerRank(_state),tarch::multicore::Core::getInstance().getNumberOfThreads())-1);
+  int numberOfSplits     = std::max(1, _configuration->getMaxLocalTreesPerRank(_state)-1 );
   int maxSizeOfLocalRank = getWeightOfHeaviestLocalSpacetree();
 
   int worstCaseEstimateForSizeOfSpacetree = tarch::getMemoryUsage( tarch::MemoryUsageFormat::MByte );
@@ -594,14 +594,14 @@ int toolbox::loadbalancing::RecursiveSubdivision::getNumberOfSplitsOnLocalRank()
 
 void toolbox::loadbalancing::RecursiveSubdivision::updateLoadBalancing() {
   auto action = getAction();
-
-  #if PeanoDebug>0
+// @todo rein
+//  #if PeanoDebug>0
   logInfo( "updateLoadBalancing()", "load balancing's action " << toString(action) << " with internal state" << toString() );
-  #else
-  if ( action!=Action::None ) {
-    logInfo( "updateLoadBalancing()", "load balancing's action " << toString(action) << " with internal state" << toString() );
-  }
-  #endif
+//  #else
+//  if ( action!=Action::None ) {
+//    logInfo( "updateLoadBalancing()", "load balancing's action " << toString(action) << " with internal state" << toString() );
+//  }
+//  #endif
 
   switch ( action ) {
     case Action::None:
@@ -710,14 +710,14 @@ void toolbox::loadbalancing::RecursiveSubdivision::updateLoadBalancing() {
           int cellsPerCore      = std::max(1, std::min( numberOfLocalUnrefinedCellsOfHeaviestSpacetree/2,_configuration->getMaxTreeSize(_state) ));
           logInfo(
             "updateLoadBalancing()",
-            "split local rank and assign it " << cellsPerCore << " cell(s)"
+            "split tree on local rank and assign it " << cellsPerCore << " cell(s)"
           );
           triggerSplit(heaviestSpacetree, cellsPerCore, tarch::mpi::Rank::getInstance().getRank());
         }
         else if (_blacklist.count(heaviestSpacetree)!=0) {
           logInfo(
             "updateLoadBalancing()",
-            "can't split heaviest tree " << heaviestSpacetree << " as this rank is on the blacklist"
+            "can't split heaviest tree " << heaviestSpacetree << " as this tree is on the blacklist"
           );
         }
       }

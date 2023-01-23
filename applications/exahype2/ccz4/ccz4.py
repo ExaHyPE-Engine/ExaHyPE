@@ -906,7 +906,8 @@ if __name__ == "__main__":
     probe_point = [-6,-6,0.0]
     project.add_plot_filter( probe_point,[12.0,12.0,0.01],1 )
 
-    project.set_load_balancing("toolbox::loadbalancing::RecursiveSubdivision","(new ::exahype2::LoadBalancingConfiguration(0.95,0,8))" )
+    project.set_load_balancing("toolbox::loadbalancing::RecursiveSubdivision","(new ::exahype2::LoadBalancingConfiguration(0.95,2000,1,32))" )
+    #project.set_load_balancing("toolbox::loadbalancing::RecursiveSubdivision","(new ::exahype2::LoadBalancingConfiguration(0.95,0))" )
 
 ########################################################################################
 #Tracer setting 

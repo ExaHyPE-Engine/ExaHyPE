@@ -11,8 +11,8 @@ exahype2::LoadBalancingConfiguration::LoadBalancingConfiguration(
 ):
   _loadBalancingQuality(loadBalancingQuality),
   _minSizeOfTree(minSizeOfTree),
-  _maxNumberOfTreesThroughoutInitialDistribution( maxNumberOfTreesThroughoutInitialDistribution==UseNumberOfThreads ? tarch::multicore::Core::getInstance().getNumberOfThreads() : maxNumberOfTreesThroughoutInitialDistribution ),
-  _maxNumberOfTrees( maxNumberOfTrees==UseNumberOfThreads ? tarch::multicore::Core::getInstance().getNumberOfThreads() : maxNumberOfTrees ),
+  _maxNumberOfTreesThroughoutInitialDistribution( maxNumberOfTreesThroughoutInitialDistribution ),
+  _maxNumberOfTrees( maxNumberOfTrees ),
   _maxSizeOfDeployedRemoteMPITree(maxSizeOfDeployedRemoteMPITree) {
 }
 
@@ -26,10 +26,10 @@ int exahype2::LoadBalancingConfiguration::getMaxLocalTreesPerRank(toolbox::loadb
   if (
     state==toolbox::loadbalancing::RecursiveSubdivision::State::IntraRankDistribution
   ) {
-    return _maxNumberOfTreesThroughoutInitialDistribution;
+    return _maxNumberOfTreesThroughoutInitialDistribution==UseNumberOfThreads ? tarch::multicore::Core::getInstance().getNumberOfThreads() : _maxNumberOfTreesThroughoutInitialDistribution;
   }
   else {
-    return _maxNumberOfTrees;
+    return _maxNumberOfTrees==UseNumberOfThreads ? tarch::multicore::Core::getInstance().getNumberOfThreads() : _maxNumberOfTrees;
   }
 }
 
