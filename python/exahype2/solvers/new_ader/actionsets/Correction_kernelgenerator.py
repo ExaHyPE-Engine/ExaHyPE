@@ -74,34 +74,7 @@ class Correction_kernelgenerator(AbstractAderDGActionSet):
       std::copy_n(fineGridFaces{{UNKNOWN_IDENTIFIER}}FluxEstimates(d).value, fluxElementsByFace, FL);
       std::copy_n(fineGridFaces{{UNKNOWN_IDENTIFIER}}FluxEstimates(d).value +fluxElementsByFace, fluxElementsByFace, FR);
       
-      const double inverseDxDirection = 1/marker.h()[d];
-      
-      bool atBoundary = fineGridFaces{{SOLVER_NAME}}FaceLabel(d).getBoundary() and
-           not repositories::{{SOLVER_INSTANCE}}.PeriodicBC[d];
-
-      if(atBoundary){
-        /*
-         since this is the negative face, the "right" side of the negative face is on the "inside"
-         towards the cell
-        */
-        
-        generated::kernels::AderDG::{{LINEARITY}}::boundaryConditions<{{PREDICTOR_STORAGE_PRECISION}}, {{CORRECTOR_COMPUTATION_PRECISION}}>(
-          repositories::{{SOLVER_INSTANCE}},
-          FL,
-          QL,
-          FR,
-          QR,
-          nullptr, //gradQ
-          cellCentre,
-          cellSize,
-          timeStamp,
-          timeStepSize,
-          2*d, //faceIndex
-          d //normalNonZero
-        );
-        
-        }
-      
+      const double inverseDxDirection = 1/marker.h()[d];      
 
       generated::kernels::AderDG::{{LINEARITY}}::riemannSolver<{{PREDICTOR_STORAGE_PRECISION}}, {{CORRECTOR_COMPUTATION_PRECISION}}>(
         repositories::{{SOLVER_INSTANCE}},
@@ -131,32 +104,6 @@ class Correction_kernelgenerator(AbstractAderDGActionSet):
       std::copy_n(fineGridFaces{{UNKNOWN_IDENTIFIER}}FluxEstimates(d+Dimensions).value, fluxElementsByFace, FL);
       std::copy_n(fineGridFaces{{UNKNOWN_IDENTIFIER}}FluxEstimates(d+Dimensions).value +fluxElementsByFace, fluxElementsByFace, FR);
 
-
-      atBoundary = fineGridFaces{{SOLVER_NAME}}FaceLabel(d+Dimensions).getBoundary() and
-           not repositories::{{SOLVER_INSTANCE}}.PeriodicBC[d+Dimensions];
-      if(atBoundary){
-        /*
-         since this is the positive face, the "left" side of the positive face is on the "inside"
-         towards the cell
-        */
-
-        generated::kernels::AderDG::{{LINEARITY}}::boundaryConditions<{{PREDICTOR_STORAGE_PRECISION}}, {{CORRECTOR_COMPUTATION_PRECISION}}>(
-          repositories::{{SOLVER_INSTANCE}},
-          FR,
-          QR,
-          FL,
-          QL,
-          nullptr, //gradQ
-          cellCentre,
-          cellSize,
-          timeStamp,
-          timeStepSize,
-          2*d+1, //faceIndex
-          d //normalNonZero
-        );
-            
-      }
-      
       
       generated::kernels::AderDG::{{LINEARITY}}::riemannSolver<{{PREDICTOR_STORAGE_PRECISION}}, {{CORRECTOR_COMPUTATION_PRECISION}}>(
         repositories::{{SOLVER_INSTANCE}},

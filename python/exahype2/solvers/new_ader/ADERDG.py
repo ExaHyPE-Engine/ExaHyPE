@@ -297,11 +297,11 @@ class ADERDG( object ):
     #sets initial conditions for the solution
     self._action_set_initial_conditions = exahype2.solvers.new_ader.actionsets.InitialCondition(self, self._store_cell_data_default_guard(), "true" )
     self._action_set_initial_conditions_for_grid_construction  = exahype2.solvers.new_ader.actionsets.InitialCondition(self, self._store_cell_data_default_guard(), "false")
+
+    self._action_set_handle_boundary = exahype2.solvers.new_ader.actionsets.Handle_boundary(self, self._store_boundary_data_default_guard())
     
     #handles adaptive mesh refinement
-    self._action_set_AMR = exahype2.solvers.new_ader.actionsets.AdaptivityCriterion(solver=self, 
-         guard=self._store_cell_data_default_guard() + " and (repositories::" + self.get_name_of_global_instance() + ".isLastGridSweepOfTimeStep() or repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::GridInitialisation)", 
-         build_up_new_refinement_instructions=True,  implement_previous_refinement_instructions=True )
+    self._action_set_AMR = exahype2.solvers.new_ader.actionsets.AdaptivityCriterion(solver=self, guard=self._store_cell_data_default_guard(), build_up_new_refinement_instructions=True,  implement_previous_refinement_instructions=True )
     self._action_set_AMR_commit_without_further_analysis  = exahype2.solvers.new_ader.actionsets.AdaptivityCriterion(solver=self, guard=self._store_cell_data_default_guard(), build_up_new_refinement_instructions=False, implement_previous_refinement_instructions=True )
         
     self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement = exahype2.solvers.new_ader.actionsets.DynamicAMR(solver=self,guard=self._store_cell_data_default_guard())
@@ -360,7 +360,11 @@ class ADERDG( object ):
     return "not marker.hasBeenRefined() " + \
            "and repositories::" + self.get_name_of_global_instance() + ".getSolverState()!=" + self._name + "::SolverState::GridConstruction " + \
            "and repositories::" + self.get_name_of_global_instance() + ".getSolverState()!=" + self._name + "::SolverState::GridInitialisation"
-  
+
+  def _store_boundary_data_default_guard(self):
+    return self._store_face_data_default_guard() + \
+      " and not repositories::" + self.get_name_of_global_instance() +".PeriodicBC[marker.getSelectedFaceNumber()%Dimensions]" + \
+      " and not marker.hasBeenRefined() and fineGridFace" + self._name + "FaceLabel.getBoundary()"      
   
   def _unknown_identifier(self):
     return self._name+"Q"
@@ -476,6 +480,7 @@ class ADERDG( object ):
     step.add_action_set( self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement )
         
     step.add_action_set(self._action_set_prediction)
+    step.add_action_set(self._action_set_handle_boundary)
     step.add_action_set(self._action_set_correction)
 
     step.add_action_set( self._action_set_AMR )

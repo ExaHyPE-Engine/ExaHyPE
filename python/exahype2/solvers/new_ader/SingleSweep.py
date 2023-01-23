@@ -56,6 +56,9 @@ class SingleSweep( ADERDG ):
     return super(SingleSweep, self).get_user_action_set_includes() + """
 """
 
+  def _store_boundary_data_default_guard(self):
+    return super(SingleSweep, self)._store_boundary_data_default_guard() + \
+      " and repositories::{}.getSolverState()=={}::SolverState::Correction".format(self.get_name_of_global_instance(),self._name)
 
   def set_preprocess_reconstructed_patch_kernel(self,kernel):
     """

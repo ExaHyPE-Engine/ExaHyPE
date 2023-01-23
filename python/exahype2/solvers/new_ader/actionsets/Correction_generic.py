@@ -66,33 +66,6 @@ class Correction_generic(AbstractAderDGActionSet):
       std::copy_n(fineGridFaces{{UNKNOWN_IDENTIFIER}}FluxEstimates(d).value, fluxElementsByFace, FL);
       std::copy_n(fineGridFaces{{UNKNOWN_IDENTIFIER}}FluxEstimates(d).value+fluxElementsByFace, fluxElementsByFace, FR);
       
-      bool atBoundary = fineGridFaces{{SOLVER_NAME}}FaceLabel(d).getBoundary() and
-           not repositories::{{SOLVER_INSTANCE}}.PeriodicBC[d];
-      if(atBoundary){
-        /*
-         since this is the negative face, the "right" side of the negative face is on the "inside"
-         towards the cell
-        */
-        
-        kernels::aderdg::generic::c::boundaryConditions<
-          false, //useGradientFlux, essentially useViscousFlux
-          {{SOLVER_NAME}}>(
-            repositories::{{SOLVER_INSTANCE}},
-            FL,
-            QL,
-            FR,
-            QR,
-            nullptr, //gradQ
-            marker.x(),
-            marker.h(),
-            timeStamp,
-            timeStepSize,
-            2*d, //faceIndex
-            d //normalNonZero
-            );
-        
-        }
-      
       {% if IS_LINEAR is sameas True %}
       //template <bool useFlux, bool useNCP, bool useMM, typename SolverType>
       kernels::aderdg::generic::c::riemannSolverLinear<
@@ -158,35 +131,6 @@ class Correction_generic(AbstractAderDGActionSet):
       std::copy_n(fineGridFaces{{UNKNOWN_IDENTIFIER}}FluxEstimates(d+Dimensions).value, fluxElementsByFace, FL);
       std::copy_n(fineGridFaces{{UNKNOWN_IDENTIFIER}}FluxEstimates(d+Dimensions).value+fluxElementsByFace, fluxElementsByFace, FR);
 
-
-      atBoundary = fineGridFaces{{SOLVER_NAME}}FaceLabel(d+Dimensions).getBoundary() and
-           not repositories::{{SOLVER_INSTANCE}}.PeriodicBC[d+Dimensions];
-      if(atBoundary){
-        /*
-         since this is the positive face, the "left" side of the positive face is on the "inside"
-         towards the cell
-        */
-
-        kernels::aderdg::generic::c::boundaryConditions<
-          false, //useGradientFlux, essentially useViscousFlux
-          {{SOLVER_NAME}}>(
-            repositories::{{SOLVER_INSTANCE}},
-            FR,
-            QR,
-            FL,
-            QL,
-            nullptr, //gradQ
-            marker.x(),
-            marker.h(),
-            timeStamp,
-            timeStepSize,
-            2*d+1, //faceIndex
-            d //normalNonZero
-            );
-            
-      }
-      
-      
       {% if IS_LINEAR is sameas True %}
       //template <bool useFlux, bool useNCP, bool useMM, typename SolverType>
       kernels::aderdg::generic::c::riemannSolverLinear<
