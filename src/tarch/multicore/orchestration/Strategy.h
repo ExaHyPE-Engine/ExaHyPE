@@ -82,11 +82,18 @@ class tarch::multicore::orchestration::Strategy {
     virtual FuseInstruction getNumberOfTasksToFuseAndTargetDevice() = 0;
 
     /**
-     * If you set this flag, tasks are immediately fused. You might want
-     * idling threads to fuse the tasks. In this case, return false.
+     * If you set this flag, tasks are immediately fused. You can ensure
+     * that only idling threads fuse tasks. In this case, return false.
      */
     virtual bool fuseTasksImmediatelyWhenSpawned() = 0;
 
+    /**
+     * If you want threads to run through the queues and to process tasks,
+     * then return true here. If you return true, the default behaviour is
+     * that a traversal (grid sweep) task does not terminate when it has
+     * completed its traversal, but instead polls the task queue. By
+     * default, a task will always first try to process its local tasks.
+     */
     virtual bool processPendingTasksWhileWaitingInBSPSection() = 0;
 };
 

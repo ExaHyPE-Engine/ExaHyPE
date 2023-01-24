@@ -1,10 +1,18 @@
 #include "LoadBalancingConfiguration.h"
+#include "tarch/multicore/Core.h"
 
 
-exahype2::LoadBalancingConfiguration::LoadBalancingConfiguration( double loadBalancingQuality, int minSizeOfTree, int maxNumberOfTrees, int maxSizeOfDeployedRemoteMPITree ):
+exahype2::LoadBalancingConfiguration::LoadBalancingConfiguration(
+  double loadBalancingQuality,
+  int minSizeOfTree,
+  int maxNumberOfTreesThroughoutInitialDistribution,
+  int maxNumberOfTrees,
+  int maxSizeOfDeployedRemoteMPITree
+):
   _loadBalancingQuality(loadBalancingQuality),
   _minSizeOfTree(minSizeOfTree),
-  _maxNumberOfTrees(maxNumberOfTrees),
+  _maxNumberOfTreesThroughoutInitialDistribution( maxNumberOfTreesThroughoutInitialDistribution ),
+  _maxNumberOfTrees( maxNumberOfTrees ),
   _maxSizeOfDeployedRemoteMPITree(maxSizeOfDeployedRemoteMPITree) {
 }
 
@@ -17,13 +25,11 @@ bool exahype2::LoadBalancingConfiguration::makeSplitDependOnMemory(toolbox::load
 int exahype2::LoadBalancingConfiguration::getMaxLocalTreesPerRank(toolbox::loadbalancing::RecursiveSubdivision::State state) {
   if (
     state==toolbox::loadbalancing::RecursiveSubdivision::State::IntraRankDistribution
-    or
-    state==toolbox::loadbalancing::RecursiveSubdivision::State::IntraRankBalancing
   ) {
-    return _maxNumberOfTrees;
+    return _maxNumberOfTreesThroughoutInitialDistribution==UseNumberOfThreads ? tarch::multicore::Core::getInstance().getNumberOfThreads() : _maxNumberOfTreesThroughoutInitialDistribution;
   }
   else {
-    return std::numeric_limits<int>::max();
+    return _maxNumberOfTrees==UseNumberOfThreads ? tarch::multicore::Core::getInstance().getNumberOfThreads() : _maxNumberOfTrees;
   }
 }
 

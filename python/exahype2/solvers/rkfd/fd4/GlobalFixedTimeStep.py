@@ -1,6 +1,6 @@
 # This file is part of the ExaHyPE2 project. For conditions of distribution and 
 # use, please see the copyright notice at www.peano-framework.org
-from exahype2.solvers.rkfd.OneSweepPerRungeKuttaStep import OneSweepPerRungeKuttaStep
+from exahype2.solvers.rkfd.SeparateSweeps import SeparateSweeps
 from exahype2.solvers.rkfd.PDETerms    import PDETerms
 
 
@@ -22,7 +22,7 @@ from .amr import switch_to_FD4_tensor_product_interpolation
 from .amr import switch_to_FD4_tensor_product_restriction
 
 
-class GlobalFixedTimeStep( OneSweepPerRungeKuttaStep ):
+class GlobalFixedTimeStep( SeparateSweeps ):
   def __init__(self, 
     name, patch_size, rk_order, unknowns, auxiliary_variables, min_meshcell_h, max_meshcell_h, normalised_time_step_size,
     flux=PDETerms.User_Defined_Implementation, 

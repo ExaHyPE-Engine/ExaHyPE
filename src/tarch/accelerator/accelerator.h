@@ -57,7 +57,7 @@ namespace tarch {
     /**
      * To be used on host only.
      */
-    ManagedAcceleratorMemory
+    ManagedSharedAcceleratorDeviceMemory
   };
 
   double* allocateMemory(int size, MemoryLocation location);

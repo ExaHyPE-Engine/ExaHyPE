@@ -49,7 +49,7 @@ if __name__ == "__main__":
     parser.add_argument("-m",    "--mode",            dest="mode",            default="release",  help="|".join(modes.keys()) )
     parser.add_argument( "--gpu",            dest="GPU",            default=False, action="store_true",  help="Run with accelerator support" )
     parser.add_argument("-ext",  "--extension",       dest="extension",       choices=["none", "gradient", "AMRadm", "Full", "Psi4"],   default="none",  help="Pick extension, i.e. what should be plotted on top. Default is none" )
-    parser.add_argument("-impl", "--implementation",  dest="implementation",  choices=["fv-global-fixed", "fv-global-adaptive", "fv-global-fixed-enclave", "fv-global-adaptive-enclave","fv-subcyling-adaptive-enclave","fv-local-enclave", "fv-musclhancock", "fd4-rk1-adaptive", "fd4-rk1-fixed", "fd4-rk4-adaptive", "fd4-rk4-fixed", "RKDG"], required="True",  help="Pick solver type" )
+    parser.add_argument("-impl", "--implementation",  dest="implementation",  choices=["fv-global-fixed", "fv-global-adaptive", "fv-global-fixed-enclave", "fv-global-adaptive-enclave","fv-subcyling-adaptive-enclave","fv-local-enclave", "fv-musclhancock", "fd4-rk1-adaptive", "fd4-rk1-adaptive-enclave", "fd4-rk1-fixed", "fd4-rk4-adaptive", "fd4-rk4-fixed", "RKDG"], required="True",  help="Pick solver type" )
     parser.add_argument("-no-pbc",  "--no-periodic-boundary-conditions",      dest="periodic_bc", action="store_false", default="True",  help="switch on or off the periodic BC" )
     parser.add_argument("-AMRMarker",  "--AMR-marker",      dest="marker", choices=["none", "poisson"],   default="none",  help="switch on or off the AMR boundary marker" )
     parser.add_argument("-et",   "--end-time",        dest="end_time",        type=float, default=1.0, help="End (terminal) time" )
@@ -91,10 +91,12 @@ if __name__ == "__main__":
        SuperClass = exahype2.solvers.fv.musclhancock.GlobalAdaptiveTimeStep
     if args.implementation=="fd4-rk1-adaptive" or args.implementation=="fd4-rk4-adaptive":
        SuperClass = exahype2.solvers.rkfd.fd4.GlobalAdaptiveTimeStep
+    if args.implementation=="fd4-rk1-adaptive-enclave":
+       SuperClass = exahype2.solvers.rkfd.fd4.GlobalAdaptiveTimeStepWithEnclaveTasking
     if args.implementation=="fd4-rk1-fixed" or args.implementation=="fd4-rk4-fixed":
        SuperClass = exahype2.solvers.rkfd.fd4.GlobalFixedTimeStep
     if args.implementation=="RKDG":
-       SuperClass = exahype2.solvers.rkdg.rusanov.GlobalAdaptiveTimeStep
+       SuperClass = exahype2.solvers.rkdg.rusanov.GlobalAdaptiveTimeStepWithEnclaveTasking
 
 
     class CCZ4Solver( SuperClass ):
@@ -154,8 +156,8 @@ if __name__ == "__main__":
             min_volume_h=min_volume_h, max_volume_h=max_volume_h,
             time_step_relaxation=cfl
           )
-        elif SuperClass==exahype2.solvers.rkfd.fd4.GlobalAdaptiveTimeStep:
-          if args.implementation=="fd4-rk1-adaptive":
+        elif SuperClass==exahype2.solvers.rkfd.fd4.GlobalAdaptiveTimeStep or SuperClass==exahype2.solvers.rkfd.fd4.GlobalAdaptiveTimeStepWithEnclaveTasking:
+          if args.implementation=="fd4-rk1-adaptive" or args.implementation=="fd4-rk1-adaptive-enclave":
             rk_order = 1
           else:
             rk_order = 4
@@ -168,7 +170,7 @@ if __name__ == "__main__":
             time_step_relaxation=cfl,
             KOSigma=KOSig
           )
-        elif SuperClass==exahype2.solvers.rkfd.fd4.GlobalFixedTimeStep:
+        elif SuperClass==exahype2.solvers.rkfd.fd4.GlobalFixedTimeStep or SuperClass==exahype2.solvers.rkfd.fd4.GlobalFixedTimeStepWithEnclaveTasking:
           if args.implementation=="fd4-rk1-fixed":
             rk_order = 1
           else:
@@ -222,7 +224,12 @@ if __name__ == "__main__":
 {
 """
         
-        if SuperClass==exahype2.solvers.rkfd.fd4.GlobalAdaptiveTimeStep or SuperClass==exahype2.solvers.rkfd.fd4.GlobalFixedTimeStep:
+        if (
+            SuperClass==exahype2.solvers.rkfd.fd4.GlobalAdaptiveTimeStep 
+            or SuperClass==exahype2.solvers.rkfd.fd4.GlobalFixedTimeStep
+            or SuperClass==exahype2.solvers.rkfd.fd4.GlobalAdaptiveTimeStepWithEnclaveTasking
+            or SuperClass==exahype2.solvers.rkfd.fd4.GlobalFixedTimeStepWithEnclaveTasking
+            ):
           self.postprocess_updated_patch += """
     #if Dimensions==2
     constexpr int itmax = {{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}} * {{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}};
@@ -260,10 +267,6 @@ if __name__ == "__main__":
    
       def create_action_sets(self):
         SuperClass.create_action_sets(self)
-
-        #if SuperClass == exahype2.solvers.rkdg.rusanov.GlobalAdaptiveTimeStep:
-        #  pass
-        #else:
         self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement.additional_includes += """ 
 #include "../CCZ4Kernels.h"
             """
@@ -681,7 +684,7 @@ if __name__ == "__main__":
         is_rkdg = True
     except Exception as e:
         pass
-        msg = "Warning: RKDG no supported on this machine"
+        msg = "Warning: RKDG not supported on this machine"
         print(msg)
         userinfo.append((msg,e))
 
@@ -768,8 +771,15 @@ if __name__ == "__main__":
     #notice point 2 is not needed as for build-in function (for fv) the matrices are already hard-coded.  
     tem_interp=["TP_constant","TP_linear_with_linear_extrap_normal_interp"]
     tem_restrict=["TP_inject_normal_extrap","TP_average_normal_extrap"]
-    if (args.implementation=="fd4-rk1-adaptive" or args.implementation=="fd4-rk1-fixed" 
-      or args.implementation=="fd4-rk4-adaptive" or args.implementation=="fd4-rk4-fixed"):
+    if (args.implementation=="fd4-rk1-adaptive" 
+      or args.implementation=="fd4-rk1-adaptive-enclave" 
+      or args.implementation=="fd4-rk1-fixed" 
+      or args.implementation=="fd4-rk1-fixed-enclave" 
+      or args.implementation=="fd4-rk4-adaptive" 
+      or args.implementation=="fd4-rk5-adaptive-enclave" 
+      or args.implementation=="fd4-rk4-fixed"
+      or args.implementation=="fd4-rk4-fixed-enclave" 
+      ):
       exahype2.solvers.rkfd.fd4.switch_to_FD4_tensor_product_interpolation( my_solver, tem_interp[1] ) 
       exahype2.solvers.rkfd.fd4.switch_to_FD4_tensor_product_restriction(   my_solver, tem_restrict[1] ) 
     #if args.interpolation=="linear+enforce" or args.interpolation=="linear-slow+enforce":
@@ -896,7 +906,8 @@ if __name__ == "__main__":
     probe_point = [-6,-6,0.0]
     project.add_plot_filter( probe_point,[12.0,12.0,0.01],1 )
 
-    project.set_load_balancing("toolbox::loadbalancing::RecursiveSubdivision","(new ::exahype2::LoadBalancingConfiguration(0.95,0,8))" )
+    project.set_load_balancing("toolbox::loadbalancing::RecursiveSubdivision","(new ::exahype2::LoadBalancingConfiguration(0.95,2000,1,32))" )
+    #project.set_load_balancing("toolbox::loadbalancing::RecursiveSubdivision","(new ::exahype2::LoadBalancingConfiguration(0.95,0))" )
 
 ########################################################################################
 #Tracer setting 

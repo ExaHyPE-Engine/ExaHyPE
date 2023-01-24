@@ -13,7 +13,7 @@ info  tarch                                -1     black timestep
 info  peano4                               -1     white always-on
 info  examples                             -1     white always-on
 info  exahype2                             -1     white always-on
-info  toolbox                              -1     black always-on
+info  toolbox                              -1     white always-on
 
 info  exahype2::RefinementControl	   -1	  black always-on
 
@@ -25,6 +25,7 @@ trace  peano4                              -1     black always-on
 trace  examples                            -1     black always-on
 trace  exahype2                            -1     black always-on
 trace  toolbox                             -1     black always-on
+trace  applications                        -1     black always-on
 
 info  applications::exahype2::ccz4::AbstractRKDGCCZ4::AbstractRKDGCCZ4   -1	  black always-on
 info  applications::exahype2::ccz4::AbstractRKDGCCZ4::AbstractRKDGCCZ4    0	  white always-on

@@ -9,6 +9,8 @@
 #pragma once
 
 
+{{SOLVER_INCLUDES}}
+
 #include "exahype2/RefinementControl.h"
 #include "exahype2/Solver.h"
 
@@ -19,9 +21,6 @@
 #include "peano4/utils/Globals.h"
 
 #include "Constants.h"
-
-
-{{SOLVER_INCLUDES}}
 
 
 {% for item in NAMESPACE -%}

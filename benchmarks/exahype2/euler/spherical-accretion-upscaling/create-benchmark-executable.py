@@ -143,7 +143,7 @@ not repositories::{{SOLVER_INSTANCE}}.patchCanUseStatelessPDETerms(marker.x(), m
 if "fd4" in args.solver:
   patch_size = 5
   time_order = int(args.solver[6])
-  thesolver = exahype2.solvers.rkfd.fd4.GlobalAdaptiveTimeStep(name                 = solver_name + "FD4", 
+  thesolver = exahype2.solvers.rkfd.fd4.GlobalAdaptiveTimeStepWithEnclaveTasking(name                 = solver_name + "FD4", 
                                                                patch_size           = patch_size,
                                                                rk_order             = time_order,
                                                                unknowns             = number_of_unknowns,
