@@ -304,7 +304,7 @@ class ADERDG( object ):
     self._action_set_AMR = exahype2.solvers.new_ader.actionsets.AdaptivityCriterion(solver=self, guard=self._store_cell_data_default_guard(), build_up_new_refinement_instructions=True,  implement_previous_refinement_instructions=True )
     self._action_set_AMR_commit_without_further_analysis  = exahype2.solvers.new_ader.actionsets.AdaptivityCriterion(solver=self, guard=self._store_cell_data_default_guard(), build_up_new_refinement_instructions=False, implement_previous_refinement_instructions=True )
         
-    self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement = exahype2.solvers.new_ader.actionsets.DynamicAMR(solver=self,guard=self._store_cell_data_default_guard())
+    self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement = exahype2.solvers.new_ader.actionsets.DynamicAMR(solver=self, clear_guard=self._clear_face_data_default_guard(), interpolate_guard=self._interpolate_face_data_default_guard(), restrict_guard=self._restrict_face_data_default_guard())
     if self._action_set_postprocess_solution==None:
           self._action_set_postprocess_solution                                       = exahype2.solvers.new_ader.actionsets.EmptyPostprocessSolution(solver=self)
 
@@ -343,18 +343,15 @@ class ADERDG( object ):
   def _store_cell_data_default_guard(self):
     return "not marker.willBeRefined() " + \
            "and repositories::" + self.get_name_of_global_instance() + ".getSolverState()!=" + self._name + "::SolverState::GridConstruction"
-  
-  
+    
   def _load_cell_data_default_guard(self):
     return "not marker.hasBeenRefined() " + \
            "and repositories::" + self.get_name_of_global_instance() + ".getSolverState()!=" + self._name + "::SolverState::GridConstruction " + \
            "and repositories::" + self.get_name_of_global_instance() + ".getSolverState()!=" + self._name + "::SolverState::GridInitialisation"
 
-
   def _store_face_data_default_guard(self):
     return "not marker.willBeRefined() " + \
            "and repositories::" + self.get_name_of_global_instance() + ".getSolverState()!=" + self._name + "::SolverState::GridConstruction"
-  
   
   def _load_face_data_default_guard(self):
     return "not marker.hasBeenRefined() " + \
@@ -366,10 +363,21 @@ class ADERDG( object ):
       " and not repositories::" + self.get_name_of_global_instance() +".PeriodicBC[marker.getSelectedFaceNumber()%Dimensions]" + \
       " and not marker.hasBeenRefined() and fineGridFace" + self._name + "FaceLabel.getBoundary()"      
   
+  def _clear_face_data_default_guard(self):
+    return "not marker.willBeRefined()" + \
+      "and repositories::" + self.get_name_of_global_instance() + ".getSolverState()!=" + self._name + "::SolverState::GridConstruction "
+
+  def _interpolate_face_data_default_guard(self):
+    return "repositories::" + self.get_name_of_global_instance() + ".getSolverState()!=" + self._name + "::SolverState::GridInitialisation"
+
+  def _restrict_face_data_default_guard(self):    
+    return "true"
+
+
+
   def _unknown_identifier(self):
     return self._name+"Q"
   
-
   def get_name_of_global_instance(self):
     return "InstanceOf" + self._name
        

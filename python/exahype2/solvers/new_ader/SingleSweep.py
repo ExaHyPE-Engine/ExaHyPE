@@ -60,6 +60,14 @@ class SingleSweep( ADERDG ):
     return super(SingleSweep, self)._store_boundary_data_default_guard() + \
       " and repositories::{}.getSolverState()=={}::SolverState::Correction".format(self.get_name_of_global_instance(),self._name)
 
+  def _clear_face_data_default_guard(self):
+    return super(SingleSweep, self)._clear_face_data_default_guard() + \
+      " and repositories::{}.getSolverState()=={}::SolverState::Prediction".format(self.get_name_of_global_instance(),self._name)
+
+  def _restrict_face_data_default_guard(self):    
+    return super(SingleSweep, self)._restrict_face_data_default_guard() + \
+      " and repositories::{}.getSolverState()=={}::SolverState::Prediction".format(self.get_name_of_global_instance(),self._name)
+
   def set_preprocess_reconstructed_patch_kernel(self,kernel):
     """
   
