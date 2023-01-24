@@ -243,8 +243,7 @@ bool toolbox::loadbalancing::RecursiveSubdivision::doesRankViolateBalancingCondi
 
 
 void toolbox::loadbalancing::RecursiveSubdivision::updateState() {
-      // @todo Debug
-  logInfo( "updateState()", "update from current state " << toString(_state) );
+  logDebug( "updateState()", "update from current state " << toString(_state) );
   switch (_state) {
     case State::InterRankDistribution:
       if (
@@ -439,17 +438,14 @@ toolbox::loadbalancing::RecursiveSubdivision::Action toolbox::loadbalancing::Rec
           not doesRankViolateBalancingCondition()
           and
           isLocalBalancingBad()
-	) {
-
-
+        ) {
           if (
             peano4::parallel::SpacetreeSet::getInstance().getLocalSpacetrees().size() >= _configuration->getMaxLocalTreesPerRank(_state)
           ) {
             static bool wroteWarning = false;
             if (not wroteWarning) {
               logInfo( "getStrategyStep()", "local rank does not violate balancing condition between ranks but its local balancing is not good. However, there are already so many subpartitions locally that we assume that we already have a quite fine-granular decomposition. Skip further split-ups therefore" );
-// @todo rein
-	      //              wroteWarning = true;
+              wroteWarning = true;
             }
             return Action::None;
           }
@@ -460,8 +456,7 @@ toolbox::loadbalancing::RecursiveSubdivision::Action toolbox::loadbalancing::Rec
             static bool wroteWarning = false;
             if (not wroteWarning) {
               logInfo( "getStrategyStep()", "local rank is not big enough, so we postpone re-balancing even though partitions per rank are ill-balanced" );
-// @todo rain
-	      //              wroteWarning = true;
+              wroteWarning = true;
             }
             return Action::None;
           }
