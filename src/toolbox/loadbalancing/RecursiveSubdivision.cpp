@@ -376,7 +376,7 @@ toolbox::loadbalancing::RecursiveSubdivision::Action toolbox::loadbalancing::Rec
       break;
     case State::IntraRankDistribution:
       {
-	const int ThreadsToKeepBusy = std::min( tarch::multicore::Core::getInstance().getNumberOfThreads(), _configuration->getMaxLocalTreesPerRank(_state) );
+        const int ThreadsToKeepBusy = std::min( tarch::multicore::Core::getInstance().getNumberOfThreads(), _configuration->getMaxLocalTreesPerRank(_state) );
         const int MinOriginalTreeSizeToTriggerThreadSpreadOut = std::max(
           _configuration->getMinTreeSize(_state) * ThreadsToKeepBusy,
           tarch::multicore::Core::getInstance().getNumberOfThreads()
@@ -463,6 +463,7 @@ toolbox::loadbalancing::RecursiveSubdivision::Action toolbox::loadbalancing::Rec
 
           return Action::SplitHeaviestLocalTreeOnce_UseLocalRank_UseRecursivePartitioning;
         }
+        return Action::None;
       }
       break;
     case State::WaitForRoundRobinToken:
@@ -471,7 +472,7 @@ toolbox::loadbalancing::RecursiveSubdivision::Action toolbox::loadbalancing::Rec
       return Action::None;
   }
 
-  assertion(false);
+  assertion1(false, toString(_state));
   return Action::None;
 }
 
