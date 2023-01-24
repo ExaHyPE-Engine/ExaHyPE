@@ -1,6 +1,7 @@
 # This file is part of the ExaHyPE2 project. For conditions of distribution and 
 # use, please see the copyright notice at www.peano-framework.org
 import sympy
+import numbers
 
 from .PDE import PDE
 
@@ -32,12 +33,7 @@ class FirstOrderConservativePDEFormulation(PDE):
 
     self.F                = sympy.symarray("F",     (unknowns,dimensions))
     self.eigenvalues      = sympy.symarray("alpha", (unknowns,dimensions))
-    self.sources          = sympy.symarray("S",      unknowns)
-    for i in range(0,unknowns):
-      self.F[i]           = [0 for d in range(0,dimensions)]
-      self.eigenvalues[i] = [0 for d in range(0,dimensions)]
-      self.sources[i] = 0
-    pass
+    self.sources          = sympy.symarray("S",     (unknowns))
 
   def __str__(self):
     result = ""
@@ -81,10 +77,13 @@ class FirstOrderConservativePDEFormulation(PDE):
       them accordingly.
     """
     for i in range(0,self.unknowns):
-      self.sources[i] = self.sources[i].subs(expression,new_expression)
+      if not isinstance(self.sources[i], numbers.Number):
+        self.sources[i]         = self.sources[i].subs(expression,new_expression)
       for d in range(0,self.dimensions):
-        self.F[i,d]           = self.F[i,d].subs(expression,new_expression)
-        self.eigenvalues[i,d] = self.eigenvalues[i,d].subs(expression,new_expression)
+        if not isinstance(self.F[i,d], numbers.Number):
+          self.F[i,d]           = self.F[i,d].subs(expression,new_expression)
+        if not isinstance(self.eigenvalues[i,d], numbers.Number):
+          self.eigenvalues[i,d] = self.eigenvalues[i,d].subs(expression,new_expression)
 
   def implementation_of_flux(self, invoke_evalf_before_output=False):
     """
@@ -94,7 +93,7 @@ class FirstOrderConservativePDEFormulation(PDE):
         before we pipe it into the output. If your expression is something numeric,
         then evalf will fail (as it is not defined for scalar quantities).
     """
-    result  = self._implementation_of_mapping_onto_named_quantities(is_cell_mapping=False)
+    result = self._implementation_of_mapping_onto_named_quantities(is_cell_mapping=False)
     result += "switch( normal ) {\n"
     for d in range(0,self.dimensions):
       result += "  case " + str(d) + ":\n"
@@ -167,7 +166,7 @@ class FirstOrderConservativePDEFormulation(PDE):
     """
       Return implementation for sources as C code.
     """
-    result  = self._implementation_of_mapping_onto_named_quantities(is_cell_mapping=False)
+    result  = self._implementation_of_mapping_onto_named_quantities(is_cell_mapping=True)
     for i in range(0,self.unknowns):
       if invoke_evalf_before_output:
         result += sympy.printing.cxxcode( self.sources[i].evalf(), assign_to="S[" + str(i) + "]" )

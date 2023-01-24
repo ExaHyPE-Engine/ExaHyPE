@@ -1,20 +1,19 @@
 # This file is part of the ExaHyPE2 project. For conditions of distribution and 
 # use, please see the copyright notice at www.peano-framework.org
-from exahype2.solvers.fv.PDETerms  import PDETerms
-
 import jinja2
+
 from enum import Enum
-    
+
+from exahype2.solvers.fv.PDETerms import PDETerms
 
 class SolverVariant(Enum):
   WithVirtualFunctions = 0,
   Stateless            = 1,
   Accelerator          = 2
-    
 
-def create_compute_Riemann_kernel_for_Rusanov(flux_implementation, 
-                                              ncp_implementation, 
-                                              source_implementation, 
+def create_compute_Riemann_kernel_for_Rusanov(flux_implementation,
+                                              ncp_implementation,
+                                              source_implementation,
                                               compute_max_eigenvalue_of_next_time_step,
                                               solver_variant: SolverVariant,
                                               kernel_name ): 
@@ -126,13 +125,17 @@ def create_compute_Riemann_kernel_for_Rusanov(flux_implementation,
   return result.render(**d)
 
 
-def create_abstract_solver_declarations(flux_implementation, ncp_implementation, eigenvalues_implementation, source_term_implementation, pde_terms_without_state):
+def create_abstract_solver_declarations(flux_implementation,
+                                        ncp_implementation,
+                                        eigenvalues_implementation,
+                                        source_term_implementation,
+                                        pde_terms_without_state):
   Template = jinja2.Template( """
   public:
     {% if EIGENVALUES_IMPLEMENTATION=="<none>" %}
     #error eigenvalue implementation cannot be none
     {% endif %}
-    
+
     {% if EIGENVALUES_IMPLEMENTATION!="<user-defined>" and STATELESS_PDE_TERMS %}
     /**
      * Depending on the implementation, this variant might be slow as it 
@@ -166,7 +169,7 @@ def create_abstract_solver_declarations(flux_implementation, ncp_implementation,
     #pragma omp end declare target
     #endif
     {% endif %}
-    
+
     /**
      * Determine max eigenvalue over Jacobian in a given point with solution values
      * (states) Q. All parameters are in.
@@ -182,7 +185,6 @@ def create_abstract_solver_declarations(flux_implementation, ncp_implementation,
       double                                       dt,
       int                                          normal
     ) {% if EIGENVALUES_IMPLEMENTATION=="<user-defined>" %}= 0{% else %} final{% endif %};
-
 
     {% if FLUX_IMPLEMENTATION!="<user-defined>" and STATELESS_PDE_TERMS %}
     /**
@@ -226,7 +228,6 @@ def create_abstract_solver_declarations(flux_implementation, ncp_implementation,
     ) {% if FLUX_IMPLEMENTATION=="<user-defined>" %}=0{% else %} final {% endif %};
     {% endif %}
 
-
     {% if NCP_IMPLEMENTATION!="<user-defined>" and STATELESS_PDE_TERMS %}
     /**
      * Depending on the implementation, this variant might be slow as it 
@@ -257,7 +258,7 @@ def create_abstract_solver_declarations(flux_implementation, ncp_implementation,
     #pragma omp end declare target
     #endif
     {% endif %}
-    
+
     {% if NCP_IMPLEMENTATION!="<none>" %}
     virtual void nonconservativeProduct(
       const double * __restrict__                  Q,      // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
@@ -270,7 +271,6 @@ def create_abstract_solver_declarations(flux_implementation, ncp_implementation,
       double * __restrict__                        BTimesDeltaQ // BTimesDeltaQ[{{NUMBER_OF_UNKNOWNS}}]
     ) {% if NCP_IMPLEMENTATION=="<user-defined>" %}=0{% endif %};
     {% endif %}
-    
 
     {% if SOURCE_TERM_IMPLEMENTATION!="<user-defined>" and STATELESS_PDE_TERMS %}
     /**
@@ -300,7 +300,7 @@ def create_abstract_solver_declarations(flux_implementation, ncp_implementation,
     #pragma omp end declare target
     #endif
     {% endif %}
-    
+
     {% if SOURCE_TERM_IMPLEMENTATION!="<none>" %}
     virtual void sourceTerm(
       const double * __restrict__ Q,
@@ -311,7 +311,6 @@ def create_abstract_solver_declarations(flux_implementation, ncp_implementation,
       double * __restrict__                        S
     ) {% if SOURCE_TERM_IMPLEMENTATION=="<user-defined>" %}= 0{% else %} final {% endif %};
     {% endif %}
-
 """, undefined=jinja2.DebugUndefined)
 
   d= {}
@@ -321,7 +320,6 @@ def create_abstract_solver_declarations(flux_implementation, ncp_implementation,
   d[ "SOURCE_TERM_IMPLEMENTATION"]          = source_term_implementation
   d[ "STATELESS_PDE_TERMS"]                 = pde_terms_without_state
   return Template.render(**d)
-
 
 def create_abstract_solver_definitions(flux_implementation, ncp_implementation, eigenvalues_implementation, source_term_implementation, pde_terms_without_state):
   Template = jinja2.Template( """
@@ -337,7 +335,6 @@ double {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::maxEigenvalue(
   {{EIGENVALUES_IMPLEMENTATION}}
 }
 {% endif %}
-
 
 {% if FLUX_IMPLEMENTATION!="<none>" and FLUX_IMPLEMENTATION!="<user-defined>" %}
 void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::flux(

@@ -314,10 +314,14 @@ write_basic_package_version_file(
   COMPATIBILITY SameMajorVersion
 )
 
-file(COPY "${PROJECT_SOURCE_DIR}/applications" DESTINATION "${CMAKE_BINARY_DIR}")
-file(COPY "${PROJECT_SOURCE_DIR}/benchmarks" DESTINATION "${CMAKE_BINARY_DIR}")
 file(COPY "${PROJECT_SOURCE_DIR}/python" DESTINATION "${CMAKE_BINARY_DIR}")
+file(COPY "${PROJECT_SOURCE_DIR}/benchmarks" DESTINATION "${CMAKE_BINARY_DIR}")
+file(COPY "${PROJECT_SOURCE_DIR}/applications" DESTINATION "${CMAKE_BINARY_DIR}")
 file(COPY "${PROJECT_SOURCE_DIR}/.continuous_integration/jupyterlab.sh" DESTINATION "${CMAKE_BINARY_DIR}")
+
+install(DIRECTORY "${PROJECT_SOURCE_DIR}/python" DESTINATION "${CMAKE_INSTALL_PREFIX}")
+install(DIRECTORY "${PROJECT_SOURCE_DIR}/benchmarks" DESTINATION "${CMAKE_INSTALL_PREFIX}")
+install(DIRECTORY "${PROJECT_SOURCE_DIR}/applications" DESTINATION "${CMAKE_INSTALL_PREFIX}")
 
 add_subdirectory(src)
 
@@ -339,6 +343,8 @@ display_variable(ENABLE_PARTICLES)
 display_variable(ENABLE_BLOCKSTRUCTURED)
 
 display_subseparator("Options to Build")
+display_variable(CMAKE_CXX_COMPILER)
+display_variable(CMAKE_CXX_STANDARD)
 display_variable(CMAKE_BUILD_TYPE)
 display_variable(CMAKE_CONFIGURATION_TYPES)
 display_variable(CMAKE_CXX_FLAGS)

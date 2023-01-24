@@ -2,8 +2,7 @@
 
 The acoustic wave equation describes the propagation of a wave through a material. This
 equation assumes that all movements are only small perturbations over the background flow
-field. They can be obtained by linearizing the more general Euler equations over this back-
-ground field. This clearly cannot work for complex flows, e.g. for supersonic “booms”.
+field. They can be obtained by linearizing the more general Euler equations over this background field. This clearly cannot work for complex flows, e.g., for supersonic “booms”.
 We describe our material by the parameters $`K_0`$ , which is the so-called bulk-modulus and by the density $`\rho_0`$. Waves propagate through the material with a velocity of $`c=\sqrt{\rho K_0}`$.
 
 We solve here for velocity $`v`$ and pressure $`p`$ in one dimension

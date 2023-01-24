@@ -1,7 +1,6 @@
 # This file is part of the ExaHyPE2 project. For conditions of distribution and 
 # use, please see the copyright notice at www.peano-framework.org
 
-
 def create_halo_layer_construction_with_interpolation_for_reconstructed_patch(solver):
   """
   
@@ -72,4 +71,3 @@ def create_halo_layer_construction_with_interpolation_for_reconstructed_patch(so
       logTraceOut( "touchCellFirstTime(...)::loopOverFace" );
     }}
 """
-  

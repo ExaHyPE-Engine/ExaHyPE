@@ -25,17 +25,20 @@ class PDE(object):
       result += str( self.Q[i] )
     return result
 
-  def _implementation_of_mapping_onto_named_quantities(self, is_cell_mapping=True):
+  def _implementation_of_mapping_onto_named_quantities(self, is_cell_mapping=True, is_boundary=False):
     """
       Return the C code that maps the quantities from Q onto
       properly labelled quantities
     """
     result = ""
     for i in range(0,self.unknowns+self.auxiliary_variables):
-      result += "const "
+      result += "[[maybe_unused]] const "
       result += "double "
       result += sympy.printing.cxxcode( self.Q[i] )
-      result += " = Q[" + str(i) + "];\n"
+      if is_boundary:
+        result += " = Qinside[" + str(i) + "];\n"
+      else:
+        result += " = Q[" + str(i) + "];\n"
 
     for i in range(0,self.dimensions):
       result += "const double x_"
@@ -88,12 +91,12 @@ class PDE(object):
         before we pipe it into the output. If your expression is something numeric,
         then evalf will fail (as it is not defined for scalar quantities).
     """
-    result = self._implementation_of_mapping_onto_named_quantities(is_cell_mapping=True)
+    result = self._implementation_of_mapping_onto_named_quantities(is_cell_mapping=False, is_boundary=True)
     for i in range(0,self.unknowns + self.auxiliary_variables):
       if invoke_evalf_before_output:
         result += sympy.printing.cxxcode( self.boundary_values[i].evalf(), assign_to="Q[" + str(i) + "]" )
       else:
-        result += "Q[" + str(i) + "] = " + sympy.printing.cxxcode( self.boundary_values[i] ) + ";"
+        result += "Qoutside[" + str(i) + "] = " + sympy.printing.cxxcode( self.boundary_values[i] ) + ";"
       result += "\n"
     return result
 
