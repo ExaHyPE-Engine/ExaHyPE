@@ -377,8 +377,9 @@ toolbox::loadbalancing::RecursiveSubdivision::Action toolbox::loadbalancing::Rec
       break;
     case State::IntraRankDistribution:
       {
+	const int ThreadsToKeepBusy = std::min( tarch::multicore::Core::getInstance().getNumberOfThreads(), _configuration->getMaxLocalTreesPerRank(_state) );
         const int MinOriginalTreeSizeToTriggerThreadSpreadOut = std::max(
-          _configuration->getMinTreeSize(_state) * tarch::multicore::Core::getInstance().getNumberOfThreads(),
+          _configuration->getMinTreeSize(_state) * ThreadsToKeepBusy,
           tarch::multicore::Core::getInstance().getNumberOfThreads()
         );
 
