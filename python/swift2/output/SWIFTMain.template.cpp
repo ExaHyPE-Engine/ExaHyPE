@@ -198,6 +198,9 @@ bool {{NAMESPACE | join("::")}}::selectNextAlgorithmicStep() {
 }
 
 
+tarch::timing::Watch  watch( "::", "step()", false );
+
+
 void {{NAMESPACE | join("::")}}::step() {
   int  stepIdentifier = peano4::parallel::Node::getInstance().getCurrentProgramStep();
   auto stepName       = repositories::StepRepository::toStepEnum(stepIdentifier);
@@ -208,8 +211,6 @@ void {{NAMESPACE | join("::")}}::step() {
   if (tarch::mpi::Rank::getInstance().isGlobalMaster())
   #endif
   logInfo( "step()", "run " << repositories::StepRepository::toString(stepName) );
-
-  tarch::timing::Watch  watch( "::", "step()", false );
 
   switch ( stepName ) {
     case repositories::StepRepository::Steps::CreateGrid:
