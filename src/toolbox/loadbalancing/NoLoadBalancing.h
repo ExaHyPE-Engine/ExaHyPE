@@ -1,7 +1,6 @@
 // This file is part of the Peano project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
-#ifndef _TOOLBOX_LOAD_BALANCING_NO_LOAD_BALANCING_
-#define _TOOLBOX_LOAD_BALANCING_NO_LOAD_BALANCING_
+#pragma once
 
 
 
@@ -50,5 +49,4 @@ class toolbox::loadbalancing::NoLoadBalancing {
 };
 
 
-#endif
 

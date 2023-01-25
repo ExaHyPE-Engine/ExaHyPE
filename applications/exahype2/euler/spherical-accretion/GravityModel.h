@@ -1,5 +1,4 @@
-#ifndef __APPLICATIONS_EXAHYPE2_EULER_SPHERICAL_ACCRETION_GRAVITY_MODEL_H__
-#define __APPLICATIONS_EXAHYPE2_EULER_SPHERICAL_ACCRETION_GRAVITY_MODEL_H__
+#pragma once
 
 
 #include "tarch/multicore/BooleanSemaphore.h"
@@ -140,4 +139,3 @@ namespace applications {
 }
 
 
-#endif

@@ -26,8 +26,8 @@ parser.add_argument("-j",   "--parallel-builds",   dest="j",              type=i
 parser.add_argument("-v",   "--verbose",           dest="verbose",        action="store_true", default=False,       help="Verbose")
 parser.add_argument("-c",   "--clean",             dest="clean_temporary_directories",  action="store_true",        help="Remove temporary directories before script starts" )
 parser.add_argument("-d",   "--dimensions",        dest="dimensions",     type=int,   default=2,                    help="Spatial dimensions (default 2)" )
-parser.add_argument("-et",  "--end-time",          dest="end_time",
-                    type=float, default=0.05,                  help="End of simulation" )
+parser.add_argument("-np",  "--particle-number",   dest="particle_number",   required=True,  type=int,           help="Particle number (1D)" )
+parser.add_argument("-et",  "--end-time",          dest="end_time",       type=float, default=0.05,                 help="End of simulation" )
 parser.add_argument("-dt",  "--timestep-size",     dest="timestep_size",  type=float, default=1e-5,                 help="Global timestep size (initial value)" )
 parser.add_argument("-cs",  "--cell-size",         dest="cell_size",      type=float, default=0.3,                  help="Cell size (default 0.3)" )
 parser.add_argument("-pd",  "--peano-dir",         dest="peanodir",       default="../../../..",                    help="Peano4 directory" )
@@ -50,6 +50,9 @@ project = swift2.Project( namespace=project_namespace,
 # Effective SPH dimensions ----------------------------------------------------
 HYDRO_DIMENSIONS = 1
 
+# Particle number along 1 dimension -------------------------------------------
+HYDRO_PART_NUMBER = args.particle_number
+
 # Declare the particle type
 particle = swift2.particle.SPHLeapfrogFixedInteractionRadius(name = "MinimalSPH", 
                                                              dimensions_hydro = HYDRO_DIMENSIONS,
@@ -59,8 +62,8 @@ particle = swift2.particle.SPHLeapfrogFixedInteractionRadius(name = "MinimalSPH"
                                                              swift_project_namespace= project_namespace,
                                                              is_sph = True,
                                                              particles_per_cell = 100,
-                                                             min_h = 0.6,
-                                                             max_h = 0.5
+                                                             min_h = args.cell_size,
+                                                             max_h = args.cell_size
                                                              )
 
 # Add particle to the SWIFT project
@@ -121,22 +124,18 @@ project.set_load_balancing("toolbox::loadbalancing::RecursiveSubdivision", "new 
 ICs = peano4.toolbox.particles.sph.initSnippets.SedovBlastIC(dimensions=1)
 initialisation_snippet = ICs.initialisation_snippet
 
+Npart = args.particle_number
+coords = np.zeros( (Npart**HYDRO_DIMENSIONS, 3) )
 
-#Npart = 128
-Npart = 1000
-coords = np.zeros((Npart,3))
 coords[:,1] = 0.5
-for i in range(Npart):
-  coords[i,0] = (1/Npart) * i
+coords[:,0] = np.linspace(0, 1, Npart, endpoint=False)
 
 print('inserting particles at:', coords)
 
 project.algorithm_step_init.add_action_set( peano4.toolbox.particles.InsertParticlesbyCoordinates(
   particle_set         = particle_set,
   initialisation_call  = initialisation_snippet,
-  #  coordinates          = [ (0.5,0.5,0), (0.51,0.5,0), (0.52,0.5,0), (0.49,0.5,0), (0.48,0.5,0) ]
-    coordinates          = coords,
-#  coordinates          = [ (0,0.5,0) ] 
+  coordinates          = coords,
   ))
 
 
@@ -197,9 +196,6 @@ peano4_project = project.generate_Peano4_project(verbose=args.verbose)
 # There are plenty of constant simulation paramaters to specify for our SPH
 # simulation - we do that here. 
 
-# Particle number along 1 dimension -------------------------------------------
-HYDRO_PART_NUMBER = str( 900 );
-
 # Time-integration parameters -------------------------------------------------
 GLOBAL_TIME_STEP_SIZE = "1e-4"
 CFL_CONSTANT = "0.1"
@@ -232,7 +228,11 @@ SMOOTH_ETA_FAC = str( 1.235 )
 particle.set_eta_factor(SMOOTH_ETA_FAC)
 
 if(KERNEL=='M5' and HYDRO_DIMENSIONS ==1):
-  KERNEL_SUPPORT_RAD = "1.936492"  #  1D SWIFT M5 Kernel
+  KERNEL_SUPPORT_RAD = "1.936492"  #  1D M5 Kernel
+elif(KERNEL=='M5' and HYDRO_DIMENSIONS ==2):
+  KERNEL_SUPPORT_RAD = "1.977173"  #  2D M5 Kernel
+elif(KERNEL=='M5' and HYDRO_DIMENSIONS ==3):
+  KERNEL_SUPPORT_RAD = "2.018932"  #  3D M5 Kernel
 else:
   print(f'Unable to determine the kernel support radius. Please check.'  )
 
@@ -266,7 +266,7 @@ print('-----------------------------------------------------------------------')
 
 # Export Constants.h file
 peano4_project.constants.export_const_with_type("HYDRO_DIMENSIONS"     , str(HYDRO_DIMENSIONS), "double")
-peano4_project.constants.export_const_with_type("HYDRO_PART_NUMBER"    , HYDRO_PART_NUMBER    , "double")
+peano4_project.constants.export_const_with_type("HYDRO_PART_NUMBER"    , str(HYDRO_PART_NUMBER) , "double")
 peano4_project.constants.export_const_with_type("GLOBAL_TIME_STEP_SIZE", GLOBAL_TIME_STEP_SIZE, "double")
 peano4_project.constants.export_const_with_type("CFL_CONSTANT"         , CFL_CONSTANT         , "double")
 peano4_project.constants.export_const_with_type("GAMMA"                , GAMMA                , "double")
@@ -285,7 +285,7 @@ if args.clean_temporary_directories:
   for dir in dirs:
     shutil.rmtree( dir )
 
-peano4_project.generate( throw_away_data_after_generation=True )
+peano4_project.generate( overwrite=1, throw_away_data_after_generation=True )
 
 bashCommand = "sed -i 's/g++/h5c++/g' Makefile"
 subprocess.check_output(['bash','-c', bashCommand])

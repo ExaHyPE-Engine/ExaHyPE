@@ -1,7 +1,6 @@
 // This file is part of the Peano project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
-#ifndef _EXAHYPE2_ADERDG_TESTS_ADERDGTEST_H_
-#define _EXAHYPE2_ADERDG_TESTS_ADERDGTEST_H_
+#pragma once
 
 #include "tarch/tests/TestCase.h"
 
@@ -115,4 +114,3 @@ public:
 
 
 
-#endif /* _EXAHYPE2_ADERDG_TESTS_ADERDGTEST_H_ */

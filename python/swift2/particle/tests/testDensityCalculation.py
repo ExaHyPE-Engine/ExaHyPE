@@ -56,27 +56,24 @@ class testDensityCalculation(Particle):
         dependencies                   = AlgorithmStep.Dependencies.NEIGHBOURS, 
         effect                         = AlgorithmStep.Effect.ALTER_LOCAL_STATE, 
         touch_vertex_first_time_kernel = """
-                                         ::swift2::kernels::prepareDensityCalculation<globaldata::{}>( localParticles );
-                                         """.format(self.name),
-
+                                         ::swift2::kernels::prepareDensityCalculation( localParticles );
+                                         """,
         cell_kernel                    = """
-                                         ::swift2::kernels::computeDensity<globaldata::{}>( 
+                                         ::swift2::kernels::computeDensity( 
                                            localParticles, 
                                            activeParticles,
                                            {}
                                          );
-                                         """.format(self.name,
-                                                    self.hydroDimensions),
+                                         """.format(self.hydroDimensions),
 
         touch_vertex_last_time_kernel  = """
-                                         ::swift2::kernels::endDensityCalculationWithConstantSmoothingLength<globaldata::{}>(
+                                         ::swift2::kernels::endDensityCalculationWithConstantSmoothingLength(
                                              localParticles,
                                              {},
                                              {},
                                              {}
                                              );
-                                         """.format(self.name,
-                                                    self.hydroDimensions,
+                                         """.format(self.hydroDimensions,
                                                     self.etaFactor,
                                                     self.alphaAV),
  

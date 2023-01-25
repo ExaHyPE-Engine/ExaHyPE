@@ -1,5 +1,4 @@
-#ifndef PEANO_KERNEL_HYDRO_H
-#define PEANO_KERNEL_HYDRO_H
+#pragma once
 
 /**
  * @file kernel_hydro.h
@@ -170,4 +169,3 @@ kernel_deval(double u, double &W, double &dW_dx) {
   dW_dx = dw_dx * kernel_constant * kernel_gamma_inv_dim_plus_one;
 }
 
-#endif // PEANO_KERNEL_HYDRO_H

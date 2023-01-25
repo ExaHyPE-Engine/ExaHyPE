@@ -6,8 +6,7 @@
 // however are not subject of copyright, i.e. feel free to add your copyright in 
 // here
 //  
-#ifndef _INCLUDE_TARCH_MPI_STRINGMESSAGE_
-#define _INCLUDE_TARCH_MPI_STRINGMESSAGE_
+#pragma once
 
 #include <string>
   
@@ -117,5 +116,4 @@ struct tarch::mpi::StringMessage {
     int _senderDestinationRank;
 };
 
-#endif
   

@@ -264,7 +264,7 @@ if args.clean_temporary_directories:
   for dir in dirs:
     shutil.rmtree( dir )
 
-peano4_project.generate( throw_away_data_after_generation=True )
+peano4_project.generate( overwrite=1, throw_away_data_after_generation=True )
 
 #bashCommand = "sed -i 's/g++/h5c++/g' Makefile"
 #subprocess.check_output(['bash','-c', bashCommand])

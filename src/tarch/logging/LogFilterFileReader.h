@@ -1,7 +1,6 @@
 // This file is part of the Peano project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
-#ifndef _TARCH_LOGGING_LOG_FILTER_FILE_READER_H_
-#define _TARCH_LOGGING_LOG_FILTER_FILE_READER_H_
+#pragma once
 
 
 #include <string>
@@ -83,4 +82,3 @@ class tarch::logging::LogFilterFileReader {
     static bool parsePlainTextFile( const std::string& filename );
 };
 
-#endif

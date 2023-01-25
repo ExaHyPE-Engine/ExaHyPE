@@ -45,6 +45,8 @@ void toolbox::particles::insertParticleIntoCell(
 
   newParticle->setNewParallelState( Particle::NewParallelState::Local );
 
-  logDebug( "insertParticleIntoCell(...)", "assign particle " << newParticle->toString() << " to vertex " << targetVertex.to_ulong() << " in cell " << marker.toString() << " (vertex=" << fineGridVertices( targetVertex.to_ulong() ).toString() << ")" );
-  fineGridVertices( targetVertex.to_ulong() ).push_back( newParticle );
+  const int linearisedTargetVertex = targetVertex.to_ulong();
+
+  logDebug( "insertParticleIntoCell(...)", "assign particle " << newParticle->toString() << " to vertex " << linearisedTargetVertex << " in cell " << marker.toString() << " (vertex=" << fineGridVertices( targetVertex.to_ulong() ).toString() << ")" );
+  fineGridVertices( linearisedTargetVertex ).push_back( newParticle );
 }

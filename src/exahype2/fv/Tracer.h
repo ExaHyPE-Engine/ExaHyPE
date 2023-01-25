@@ -1,7 +1,6 @@
 // This file is part of the Peano project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
-#ifndef _EXAHYPE2_FV_TRACER_
-#define _EXAHYPE2_FV_TRACER_
+#pragma once
 
 
 #include "peano4/utils/Globals.h"
@@ -162,4 +161,3 @@ namespace exahype2 {
 
 #include "Tracer.cpph"
 
-#endif

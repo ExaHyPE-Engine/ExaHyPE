@@ -10,7 +10,8 @@ endif
 SWIFT2Sources = \
   GridControlEvents.cpp \
   ParticleSpecies.cpp \
-  UnitTests.cpp
+  UnitTests.cpp \
+  UserInterface.cpp
 
 libSWIFT2Core2d_a_CXXFLAGS          = $(CXXFLAGS_PEANO_2D_RELEASE)
 libSWIFT2Core2d_trace_a_CXXFLAGS    = $(CXXFLAGS_PEANO_2D_TRACE)  

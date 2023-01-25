@@ -1,7 +1,6 @@
 // This file is part of the Peano project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
-#ifndef _TOOLBOX_LOAD_BALANCING_HARDCODED_
-#define _TOOLBOX_LOAD_BALANCING_HARDCODED_
+#pragma once
 
 
 
@@ -88,5 +87,4 @@ class toolbox::loadbalancing::Hardcoded {
 };
 
 
-#endif
 

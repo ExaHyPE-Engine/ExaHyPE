@@ -1,7 +1,6 @@
 // This file is part of the Peano project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
-#ifndef LUDECOMPOSITIONTEST_H_
-#define LUDECOMPOSITIONTEST_H_
+#pragma once
 
 #include "tarch/tests/TestCase.h"
 
@@ -44,4 +43,3 @@ public:
   virtual void setUp() {}
 };
 
-#endif /* LUDECOMPOSITIONTEST_H_ */

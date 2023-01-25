@@ -6,8 +6,7 @@
 // This is generated. Don't change it! Every rerun of the Python API will
 // overwrite your changes.
 //
-#ifndef {% for item in NAMESPACE -%}_{{ item }}{%- endfor %}_{{CLASSNAME}}_H_
-#define {% for item in NAMESPACE -%}_{{ item }}{%- endfor %}_{{CLASSNAME}}_H_
+#pragma once
 
 
 {{SOLVER_INCLUDES}}
@@ -447,4 +446,3 @@ public:
 };
 
 
-#endif

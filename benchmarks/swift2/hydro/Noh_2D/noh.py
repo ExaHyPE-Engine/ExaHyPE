@@ -62,8 +62,8 @@ particle = swift2.particle.SPHLeapfrogFixedInteractionRadius(name = "MinimalSPH"
                                                              swift_project_namespace= project_namespace,
                                                              is_sph = True,
                                                              particles_per_cell = 100,
-                                                             min_h = 0.6,
-                                                             max_h = 0.5
+                                                             min_h = 0.1,
+                                                             max_h = args.cell_size
                                                              )
 
 # Add particle to the SWIFT project
@@ -302,7 +302,7 @@ if args.clean_temporary_directories:
   for dir in dirs:
     shutil.rmtree( dir )
 
-peano4_project.generate( throw_away_data_after_generation=True )
+peano4_project.generate( overwrite=1, throw_away_data_after_generation=True )
 
 bashCommand = "sed -i 's/g++/h5c++/g' Makefile"
 subprocess.check_output(['bash','-c', bashCommand])

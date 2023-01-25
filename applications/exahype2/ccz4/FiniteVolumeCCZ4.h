@@ -6,8 +6,7 @@
 // This is generated. If you change fundamental properties, you will have to 
 // generate this file. Backup your manual changes before you do so.
 //
-#ifndef _examples_exahype2_ccz4_FiniteVolumeCCZ4_H_
-#define _examples_exahype2_ccz4_FiniteVolumeCCZ4_H_
+#pragma once
 
 #include "AbstractFiniteVolumeCCZ4.h"
 #include "tarch/logging/Log.h"
@@ -264,4 +263,3 @@ class applications::exahype2::ccz4::FiniteVolumeCCZ4: public AbstractFiniteVolum
 };
 
 
-#endif

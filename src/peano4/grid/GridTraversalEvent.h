@@ -6,8 +6,7 @@
 // however are not subject of copyright, i.e. feel free to add your copyright in 
 // here
 //  
-#ifndef _INCLUDE_PEANO4_GRID_GRIDTRAVERSALEVENT_
-#define _INCLUDE_PEANO4_GRID_GRIDTRAVERSALEVENT_
+#pragma once
 
 #include <string>
   
@@ -270,5 +269,4 @@ struct peano4::grid::GridTraversalEvent {
 
 };
 
-#endif
   

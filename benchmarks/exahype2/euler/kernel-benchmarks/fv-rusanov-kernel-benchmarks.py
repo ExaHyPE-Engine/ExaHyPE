@@ -81,8 +81,8 @@ peano4_project.constants.export_const_with_type( "Accuracy", str(args.accuracy),
 peano4_project.output.makefile.add_cpp_file( "../../../../applications/exahype2/euler/EulerKernels.cpp" )
 peano4_project.output.makefile.add_header_search_path( "../../../../applications/exahype2/euler" )
 peano4_project.generate()
-os.system( "make clean" )
-if args.j>0:
-  os.system( "make -j{}".format(args.j) )
-else:
-  os.system( "make -j" )
+#os.system( "make clean" )
+#if args.j>0:
+#  os.system( "make -j{}".format(args.j) )
+#else:
+#  os.system( "make -j" )

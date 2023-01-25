@@ -1,7 +1,6 @@
 // This file is part of the Peano project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
-#ifndef _TOOLBOX_PARTICLES_PARTICLES_
-#define _TOOLBOX_PARTICLES_PARTICLES_
+#pragma once
 
 
 #include "tarch/la/Vector.h"
@@ -41,6 +40,7 @@ namespace toolbox {
       peano4::datamanagement::VertexEnumerator< ParticleSet >&  fineGridVertices
     );
 
+
     /**
      * Insert particle into cell
      *
@@ -52,6 +52,22 @@ namespace toolbox {
      * You don't know if the particle insertion is called before or after
      * this analysis step, so we might just have missed the local insertion
      * and therefore miss out on particles.
+     *
+     * I recommend never to insert a particle directly, but always to run
+     * through this routine and to combine it with a particle sorting step.
+     * On the one hand, thisensures that
+     * particles are inserted in a consistent way, i.e. stored next to their
+     * closest neighbour. On the other hand, this ensures that a
+     * particle is never assigned to a hanging vertex and then lost. If you
+     * assign to a hanging vertex in a step where no grid re-sorting is active,
+     * you will effectively loose the particle, as it will disappear with the
+     * elimination of the hanging vertex.
+     *
+     * ## Realisation
+     *
+     * - Find which vertex in the cell is the closest vertex.
+     * - Set the particle state to local. As we know that we insert only into
+     *   local cells, we can do this without any fear.
      */
     template <typename Particle, typename ParticleSet >
     void insertParticleIntoCell(
@@ -66,4 +82,3 @@ namespace toolbox {
 #include "particles.cpph"
 
 
-#endif

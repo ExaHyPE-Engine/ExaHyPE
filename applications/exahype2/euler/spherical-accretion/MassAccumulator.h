@@ -1,5 +1,4 @@
-#ifndef __APPLICATIONS_EXAHYPE2_EULER_SPHERICAL_ACCRETION_MASS_ACCUMULATOR_H__
-#define __APPLICATIONS_EXAHYPE2_EULER_SPHERICAL_ACCRETION_MASS_ACCUMULATOR_H__
+#pragma once
 
 
 #include "tarch/multicore/BooleanSemaphore.h"
@@ -163,4 +162,3 @@ class applications::exahype2::euler::sphericalaccretion::MassAccumulator {
 
 
 
-#endif

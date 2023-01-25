@@ -1,8 +1,6 @@
 #!/bin/sh
 
-"""
-Script to run experiment (Sod shockwave 1D)
-"""
+# Script to run experiment (Sod shockwave 1D)
 
 # set threads number
 export OMP_NUM_THREADS=1
@@ -15,8 +13,8 @@ END_TIME=0.1
 # Generate initial condition file
 if [ ! -e $IC_FILENAME ]
 then
-  echo 'Generating initial conditions...'
-  python3 makeIC.py
+    echo 'Generating initial conditions...'
+    python3 makeIC.py
 fi
 
 # Run python script to generate the experiment
@@ -40,7 +38,7 @@ echo 'running experiment...'
 DIRNAME="output"
 if [ -d $DIRNAME ]
 then
-  rm -r $DIRNAME
+    rm -r $DIRNAME
 fi
 
 mkdir $DIRNAME

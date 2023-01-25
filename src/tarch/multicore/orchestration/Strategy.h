@@ -1,7 +1,6 @@
 // This file is part of the Peano project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
-#ifndef _TARCH_MULTICORE_ORCHESTRATION_STRATEGY_H_
-#define _TARCH_MULTICORE_ORCHESTRATION_STRATEGY_H_
+#pragma once
 
 
 namespace tarch {
@@ -91,4 +90,3 @@ class tarch::multicore::orchestration::Strategy {
     virtual bool processPendingTasksWhileWaitingInBSPSection() = 0;
 };
 
-#endif

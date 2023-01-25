@@ -1,7 +1,6 @@
 // This file is part of the ExaHyPE2 project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
-#ifndef _EXAHYPE2_FD_FD4_H_
-#define _EXAHYPE2_FD_FD4_H_
+#pragma once
 
 
 #include "exahype2/fd/Functors.h"
@@ -80,4 +79,3 @@ namespace exahype2 {
 }
 
 
-#endif

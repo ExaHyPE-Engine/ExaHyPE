@@ -1,7 +1,6 @@
 // This file is part of the Peano project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
-#ifndef _PEANO4_STACKS_STDVECTOR_POINTER_STACK_H_
-#define _PEANO4_STACKS_STDVECTOR_POINTER_STACK_H_
+#pragma once
 
 
 #include <vector>
@@ -29,7 +28,7 @@
 namespace peano4 {
   namespace stacks {
     template <class T>
-    class STDVectorOverVectorOfPointersStack;
+    class STDVectorOverContainerOfPointers;
   }
 }
 
@@ -142,7 +141,7 @@ namespace peano4 {
  *   similar signature.
  */
 template <class T>
-class peano4::stacks::STDVectorOverVectorOfPointersStack: public peano4::stacks::STDVectorStack<T> {
+class peano4::stacks::STDVectorOverContainerOfPointers: public peano4::stacks::STDVectorStack<T> {
   private:
     /**
      * Logging device.
@@ -215,7 +214,7 @@ class peano4::stacks::STDVectorOverVectorOfPointersStack: public peano4::stacks:
     #endif
 
   public:
-    STDVectorOverVectorOfPointersStack();
+    STDVectorOverContainerOfPointers();
 
 
     /**
@@ -231,7 +230,7 @@ class peano4::stacks::STDVectorOverVectorOfPointersStack: public peano4::stacks:
      * subvectors should create a deep copy. It is the section on
      * intra-node parallelisation.
      */
-    void  clone( const STDVectorOverVectorOfPointersStack<T>&  data );
+    void  clone( const STDVectorOverContainerOfPointers<T>&  data );
 
 
     /**
@@ -327,8 +326,7 @@ class peano4::stacks::STDVectorOverVectorOfPointersStack: public peano4::stacks:
 };
 
 
-#include "STDVectorOverVectorOfPointersStack.cpph"
+#include "STDVectorOverContainerOfPointers.cpph"
 
 
 
-#endif

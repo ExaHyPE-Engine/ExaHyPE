@@ -3,15 +3,17 @@
 # Script to run experiment (Noh 2D)
 
 # set number of threads
-export OMP_NUM_THREADS=26
+export OMP_NUM_THREADS=28
 
 # Parameters
-END_TIME=0.1
-N_PART=99
-CELL_SIZE=0.3
+TIMESTEP_SIZE=0.0001
+END_TIME=0.0010
+N_PART=100
+CELL_SIZE=0.1
+PLOT_DELTA=0
 
 # Run python script to generate the experiment
-python3 noh.py -j $OMP_NUM_THREADS -et $END_TIME -np $N_PART -cs $CELL_SIZE
+python3 noh.py -j $OMP_NUM_THREADS -dt $TIMESTEP_SIZE -et $END_TIME -np $N_PART -cs $CELL_SIZE -plot $PLOT_DELTA
 
 # run experiment
 echo 'running experiment...'
@@ -28,18 +30,18 @@ echo 'running experiment...'
 #pvpython ../../../../python/peano4/visualisation/render.py grid.peano-patch-file
 
 # Save results into directory
-DIRNAME="output_np_"$N_PART"_et_"$END_TIME
-if [ -d $DIRNAME ]
-then
-  rm -r $DIRNAME
-fi
-
-mkdir $DIRNAME
-mv *.cvs Constants.h $DIRNAME
+#DIRNAME="output_np_"$N_PART"_et_"$END_TIME
+#if [ -d $DIRNAME ]
+#then
+#  rm -r $DIRNAME
+#fi
+#
+#mkdir $DIRNAME
+#mv *.cvs $DIRNAME
 
 # Save snapshots
-mkdir $DIRNAME"/snapshots/"
-mv particles* grid* $DIRNAME"/snapshots/"
+#mkdir $DIRNAME"/snapshots/"
+#mv particles* grid* $DIRNAME"/snapshots/"
 
 
 # @TODO: run plot script

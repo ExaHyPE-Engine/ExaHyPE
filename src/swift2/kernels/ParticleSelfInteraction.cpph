@@ -3,28 +3,24 @@
 
 
 
-template <typename Particle>
+template <typename ParticleContainer, typename Particle>
 void swift2::kernels::genericSelfInteraction(
-  const std::vector< Particle* >& localParticles,
+  const ParticleContainer&  localParticles,
   std::function< void(Particle* localParticle) > interaction
 ) {
   for (auto* particle: localParticles ) {
-    if ( not particle->getCellHasUpdatedParticle() ) {
-      interaction(particle);
-    }
+    interaction(particle);
   }
 }
 
 
 
-template <typename Particle>
+template <typename ParticleContainer>
 void swift2::kernels::prepareDensityCalculation(
-  const std::vector< Particle* >& localParticles
+  const ParticleContainer&  localParticles
 ) {
   for (auto* particle: localParticles ) {
     if ( 
-      not particle->getCellHasUpdatedParticle() 
-      and
       not particle->getIsBoundaryParticle()
     ) {
       particle->setDensity (0.0);                      
@@ -42,9 +38,9 @@ void swift2::kernels::prepareDensityCalculation(
 }
 
 
-template <typename Particle>
+template <typename ParticleContainer>
 void swift2::kernels::endDensityCalculation(
-  const std::vector< Particle* >& localParticles,
+  const ParticleContainer&  localParticles,
   const int hydroDimensions,
   const double etaFactor,
   const double alphaAV,
@@ -54,8 +50,6 @@ void swift2::kernels::endDensityCalculation(
 ) {
   for (auto* particle: localParticles ) {
     if ( 
-      not particle->getCellHasUpdatedParticle() 
-      and
       not particle->getIsBoundaryParticle()
     ) {
 
@@ -258,7 +252,7 @@ void swift2::kernels::endDensityCalculation(
 //          tarch::la::Vector<Dimensions,double> GridSize = marker.h();
 //          const double GridSizeHalf = 0.5 * GridSize(0); 
           const double GridSizeHalf = 0.5 * 0.3; 
-          const double CutoffParticleH = kernel_constant * particle->getSmoothingLength();
+          const double CutoffParticleH = kernel_gamma * particle->getSmoothingLength();
    
           if ( ((particle->getSmoothingLength() >= hHydroMax) && (f < 0.0)) ||
                ((particle->getSmoothingLength() <= hHydroMin) && (f > 0.0)) ||
@@ -327,17 +321,15 @@ void swift2::kernels::endDensityCalculation(
 }
 
 
-template <typename Particle>
+template <typename ParticleContainer>
 void swift2::kernels::endDensityCalculationWithConstantSmoothingLength(
-  const std::vector< Particle* >& localParticles,
+  const ParticleContainer&  localParticles,
   const int hydroDimensions,
   const double etaFactor,
   const double alphaAV
 ) {
   for (auto* particle: localParticles ) {
     if ( 
-      not particle->getCellHasUpdatedParticle() 
-      and
       not particle->getIsBoundaryParticle()
     ) {
 
@@ -418,7 +410,11 @@ void swift2::kernels::endDensityCalculationWithConstantSmoothingLength(
         particle->setSoundSpeed( soundspeed );
         particle->setBalsara( balsara );
 
-        particle->setCellHasUpdatedParticle(true);
+//          /* Debugging */
+//        if( particle->getX()(0) == 0.5){
+//          printf("DEBUGGING endDensityCalculationWithConstantSmoothingLength --- \n");
+//          std::cout << "local particle: "<< particle->toString() << std::endl;
+//        }
 
       } /* End hydro_prepare_force */
       
@@ -426,14 +422,12 @@ void swift2::kernels::endDensityCalculationWithConstantSmoothingLength(
   }
 }
 
-template <typename Particle>
+template <typename ParticleContainer>
 void swift2::kernels::prepareHydroForceCalculation(
-  const std::vector< Particle* >& localParticles
+  const ParticleContainer&  localParticles
 ) {
   for (auto* particle: localParticles ) {
     if ( 
-    not particle->getCellHasUpdatedParticle() 
-    and
     not particle->getIsBoundaryParticle()
     ) {
 
@@ -445,41 +439,49 @@ void swift2::kernels::prepareHydroForceCalculation(
       particle->setHDot(0.0);   
       particle->setV_sig_AV( 2.0 * particle->getSoundSpeed() );
 
+//      /* Debugging */
+//      if( particle->getX()(0) == 0.5){
+//        printf("DEBUGGING prepareHydroForceCalculation --- \n");
+//        std::cout << "local particle: "<< particle->toString() << std::endl;
+//      }
+
     }
   }
 }
 
 
-template <typename Particle>
+template <typename ParticleContainer>
 void swift2::kernels::endHydroForceCalculation(
-  const std::vector< Particle* >& localParticles,
+  const ParticleContainer& localParticles,
   const int hydroDimensions
 ) {
   for (auto* particle: localParticles ) {
     if ( 
-    not particle->getCellHasUpdatedParticle() 
-    and
     not particle->getIsBoundaryParticle()
     ) {
 
       particle->setHDot( 
         particle->getHDot() * particle->getSmoothingLength() / hydroDimensions );
 
+//      /* Debugging */
+//      if( particle->getX()(0) == 0.5){
+//        printf("DEBUGGING endHydroForceCalculation --- \n");
+//        std::cout << "local particle: "<< particle->toString() << std::endl;
+//      }
+
     }
   }
 }
 
 
-template <typename Particle>
+template <typename ParticleContainer>
 void swift2::kernels::flagBoundaryParticles(
-  const std::vector< Particle* >&  localParticles
+  const ParticleContainer&  localParticles
 ) {
   for (auto* particle: localParticles) {
 
     if( 
-      particle->getParallelState()==Particle::ParallelState::Local
-      and
-      not particle->getCellHasUpdatedParticle()
+      particle->getParallelState()==std::remove_pointer<typename ParticleContainer::value_type>::type::ParallelState::Local
       and
       not particle->getIsBoundaryParticle()
     ){

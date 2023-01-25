@@ -1,8 +1,12 @@
 #include <algorithm>
 
 #include "GlobalState.h"
+
 #include "peano4/grid/grid.h"
 #include "peano4/parallel/SpacetreeSet.h"
+
+
+#include "swift2/UserInterface.h"
 
 
 {% for PARTICLE in PARTICLE_SPECIES -%}
@@ -97,11 +101,22 @@ void startIntermediateStep() {
 
 
 void startInitialisationStep() {
-  loadBalancer.enable(false);
+  {% for PARTICLE in PARTICLE_SPECIES -%}
+  vertexdata::{{PARTICLE}}Set::clearReassignmentStatistics();
+  vertexdata::{{PARTICLE}}Set::clearParticleStateStatistics();
+  {%- endfor %}
+
+  if (not ::swift2::commandlinesettings::enableDynamicLoadBalancing() ) {
+    loadBalancer.enable(false);
+  }
 }
 
 
 void startSortingStep() {
+  {% for PARTICLE in PARTICLE_SPECIES -%}
+  vertexdata::{{PARTICLE}}Set::clearReassignmentStatistics();
+  vertexdata::{{PARTICLE}}Set::clearParticleStateStatistics();
+  {%- endfor %}
 }
 
 
@@ -157,6 +172,7 @@ void finishGridConstructionStep() {
 void finishInitialisationStep() {
   {% for PARTICLE in PARTICLE_SPECIES -%}
   vertexdata::{{PARTICLE}}Set::finishedTraversal();
+  vertexdata::{{PARTICLE}}Set::reduceAndPrintStatistics();
   {%- endfor %}
 
   loadBalancer.finishStep();
@@ -166,6 +182,7 @@ void finishInitialisationStep() {
 void finishSortingStep() {
   {% for PARTICLE in PARTICLE_SPECIES -%}
   vertexdata::{{PARTICLE}}Set::finishedTraversal();
+  vertexdata::{{PARTICLE}}Set::reduceAndPrintStatistics();
   {%- endfor %}
 
   loadBalancer.finishStep();

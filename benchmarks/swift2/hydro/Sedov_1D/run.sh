@@ -1,8 +1,6 @@
 #!/bin/sh
 
-"""
-Script to run experiment (Sedov-Taylor blast 1D)
-"""
+# Script to run experiment (Sedov-Taylor blast 1D)
 
 # set threads number
 export OMP_NUM_THREADS=1
@@ -11,7 +9,11 @@ export OMP_NUM_THREADS=1
 IC_FILENAME="sedov.hdf5"
 
 # Parameters
-END_TIME=0.1
+END_TIME=0.05
+TIME_STEP_SIZE=1e-4
+#N_PART=128
+N_PART=100
+CELL_SIZE=0.5
 
 # Generate initial condition file
 if [ ! -e $IC_FILENAME ]
@@ -21,11 +23,11 @@ then
 fi
 
 # Run python script to generate the experiment
-python3 sedov.py -et=$END_TIME
+python3 sedov.py -dt $TIME_STEP_SIZE -et $END_TIME -np $N_PART -cs $CELL_SIZE 
 
 # run experiment
 echo 'running experiment...'
-./sedov1D
+./sedov1D > output.txt
 
 #likwid-perfctr -f -C 0 -g MEM            -o output_MEM.cvs            -O ./orbit-experiment
 #likwid-perfctr -f -C 0 -g DATA           -o output_DATA.cvs           -O ./orbit-experiment
@@ -45,11 +47,17 @@ then
 fi
 
 mkdir $DIRNAME
-mv *.cvs Constants.h $DIRNAME
+mv  Constants.h $DIRNAME
 
 # Save snapshots
 mkdir $DIRNAME"/snapshots/"
 mv particles* grid* $DIRNAME"/snapshots/"
 
+# Save other outputs, if any
+if [ -e *.cvs ]; then
+  mv *.cvs $DIRNAME
+fi
+
+echo "Done."
 
 # @TODO: run plot script

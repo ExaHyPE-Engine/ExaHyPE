@@ -4,11 +4,11 @@
 // www.peano-framework.org
 // This is generated. Be careful with adding your own stuff
 //
-#ifndef {% for item in NAMESPACE -%}_{{ item }}{%- endfor %}_{{CLASSNAME}}_H_
-#define {% for item in NAMESPACE -%}_{{ item }}{%- endfor %}_{{CLASSNAME}}_H_
+#pragma once
 
 
 #include <vector>
+#include <list>
 
 #include "tarch/logging/Log.h"
 #include "tarch/la/Vector.h"
@@ -41,13 +41,14 @@
 {%- endfor %}
 
 
-  class {{CLASSNAME}}: public std::vector< {% for item in NAMESPACE -%}{% if not loop.last %}{{ item }}::{% endif %}{%- endfor %}globaldata::{{PARTICLE_TYPE}}* > {
+  class {{CLASSNAME}}: public std::list< {% for item in NAMESPACE -%}{% if not loop.last %}{{ item }}::{% endif %}{%- endfor %}globaldata::{{PARTICLE_TYPE}}* > {
     private:
       static tarch::logging::Log _log;
 
       static int _SieveReductionTag;
 
-      static tarch::multicore::BooleanSemaphore   _semaphore;
+      static tarch::multicore::BooleanSemaphore   _statisticsSemaphore;
+      static tarch::multicore::BooleanSemaphore   _particlesThatCanNotBeLiftedWithinTheirTreeSemaphore;
 
       static {{CLASSNAME}}     _particlesThatCanNotBeLiftedWithinTheirTree;
       static {{CLASSNAME}}     _particlesThatHaveToBeSieved;
@@ -74,7 +75,8 @@
        * This one is updated internally by eliminateSpatialDuplicates() which you
        * might call or you might not call.
        */
-      static int _numberOfEliminatedSpatialDuplicates;
+      static int _numberOfVirtualEliminatedSpatialDuplicates;
+      static int _numberOfLocalEliminatedSpatialDuplicates;
 
       #if PeanoDebug>=1
       private:
@@ -89,7 +91,7 @@
       #endif
     public:
       typedef {% for item in NAMESPACE -%}{% if not loop.last %}{{ item }}::{% endif %}{%- endfor %}globaldata::{{PARTICLE_TYPE}}  DoFType;
-      typedef std::vector< {% for item in NAMESPACE -%}{% if not loop.last %}{{ item }}::{% endif %}{%- endfor %}globaldata::{{PARTICLE_TYPE}}* >  Base;
+      typedef std::list< {% for item in NAMESPACE -%}{% if not loop.last %}{{ item }}::{% endif %}{%- endfor %}globaldata::{{PARTICLE_TYPE}}* >  Base;
 
       /**
        * Merge two particle sets
@@ -155,12 +157,14 @@
        * accumulate local particles and get more and more. We have to eliminate
        * replicas asap.
        *
+       * In both cases, we have to destroy the local copy as the stacks perform
+       * deep copies.
        *
        *
-       * @see STDVectorOverVectorOfPointersStack::startReceive()
+       * @see STDVectorOverContainerOfPointers::startReceive()
        * @see clone()
        */
-      void merge(::peano4::grid::TraversalObserver::SendReceiveContext context, const {{CLASSNAME}}& neighbour, const peano4::datamanagement::VertexMarker& marker);
+      void merge(::peano4::grid::TraversalObserver::SendReceiveContext context, {{CLASSNAME}}& neighbour, const peano4::datamanagement::VertexMarker& marker);
 
       static bool send(const peano4::datamanagement::VertexMarker& marker);
       static bool receiveAndMerge(const peano4::datamanagement::VertexMarker& marker);
@@ -179,7 +183,7 @@
        * on one rank is a real local one, all the others have virtual copies.
        * This state analysis or flipping is realised within merge().
        *
-       * @see STDVectorOverVectorOfPointersStack() for a description of the
+       * @see STDVectorOverContainerOfPointers() for a description of the
        *   intra-node parallelisation. This description provides an overview
        *   of the overall lifecycle of the data.
        * @see merge() for the corresponding delete that eliminates the deep
@@ -195,21 +199,8 @@
        * tell us about a particle (some of them have virtual copies, some have
        * local ones). In this case, we however only check the virtual particles.
        * Those are the bad guys.
-       *
-       * If I check all particles, then I can simply run through the list and
-       * check all the particles that are still to come if they are at the
-       * same position. If I only check virtual particles, then I have to invest
-       * slightly more work. Then I have to run over all particles, as I only
-       * want to eliminate virtual particles and not their non-virtual
-       * counterparts.
-       *
-       * @return Number of eliminated particles
-       *
-       * @param sortingTolerance I call it sorting tolerance, as I recommend to
-       *   use the same as for the lifts and drops
        */
-      void eliminateSpatialDuplicates(bool examineOnlyVirtualParticles, double sortingTolerance);
-
+      void eliminateSpatialDuplicates();
 
       #ifdef Parallel
       static void initDatatype();
@@ -305,6 +296,24 @@
        * receiver side.
        *
        * The routine equals a shallow copy or move semantically.
+       *
+       *
+       * ## MPI
+       *
+       * Each rank will assemble its own set of particles within
+       * _particlesThatCanNotBeLiftedWithinTheirTree. These rank-local lists
+       * have to be consolidated (all reduce) after each step. This reduction
+       * is done within finishedTraversal(). It is hence important that
+       * finishedTraversal() is called on the set after each grid sweep which
+       * might lift particles. Otherwise, the subsequent sweep cannot sieve
+       * the particles correctly.
+       *
+       *
+       * ## Thread safety
+       *
+       * As we add particles to the static field _particlesThatCanNotBeLiftedWithinTheirTree,
+       * we have to protect any additional via a semaphore. As we do so, the
+       * routine is thread safe.
        */
       static void particleCanNotBeLiftedLocally( globaldata::{{PARTICLE_TYPE}}* particle );
 
@@ -321,7 +330,24 @@
        * so far. The new parallel state is not altered, as this is the job of
        * the action set UpdateParallelSet.
        *
+       *
+       * ## Thread safety
+       *
+       * This routine is not static, i.e. we assume it works on a thread-local
+       * list of particles. This thread-local list is typically constructed as
+       * deep copy of the global sieve list. getSievedParticlesForNextGridTraversal()
+       * provides these deep copy semantics. Since we work with a copy of the
+       * global particles per thread, there's no need to add semaphores. We are
+       * inherently thread-safe. However, we have to delete all left-over
+       * particles which have not been sieved by a local thread. As the list
+       * had been a deep copy, we'd otherwise create a memory leak.
+       *
+       *
+       * @see getSievedParticlesForNextGridTraversal() for the deep copy and the
+       *   roll-over of particles that cannot be lifted into particles that have
+       *   to be sieved.
        * @see ::toolbox::particles::sieveParticle() for the sieve logic.
+       * @see deleteParticles() for the deletion of deep copies.
        */
       {{NAMESPACE | join("::")}}::{{CLASSNAME}}  getParticlesToBeSievedIntoVertex(
         const peano4::datamanagement::VertexMarker&  marker
@@ -358,18 +384,6 @@
        */
       void deleteParticles();
 
-      /**
-       * Shallow clear
-       *
-       * Delegates to base class. Therefore, this routine is a shallow clear.
-       * There is no technical reason to redefine this routine here in this
-       * header file (as I simply forward the call to the base class), but I
-       * think it is important that I make it explicit that this is a shallow
-       * clear.
-       */
-      void clear();
-
-
       static void clearReassignmentStatistics();
       static void clearParticleStateStatistics();
 
@@ -384,4 +398,3 @@
 {%- endfor %}
 
 
-#endif
