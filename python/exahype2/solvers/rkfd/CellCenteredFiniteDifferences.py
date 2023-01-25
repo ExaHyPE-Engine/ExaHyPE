@@ -370,7 +370,7 @@ The finest mesh width of """ + str(self.get_finest_volume_size(domain_size)) + "
    
     self._patch.generator.store_persistent_condition = self._store_cell_data_default_guard()
     self._patch.generator.load_persistent_condition  = self._load_cell_data_default_guard()
-    
+
     self._patch_estimates.generator.store_persistent_condition = self._store_cell_data_default_guard()
     self._patch_estimates.generator.load_persistent_condition  = self._load_cell_data_default_guard()
 
