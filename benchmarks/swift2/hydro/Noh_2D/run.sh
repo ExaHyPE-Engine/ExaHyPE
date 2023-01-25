@@ -6,7 +6,7 @@
 export OMP_NUM_THREADS=4
 
 # Parameters
-END_TIME=0.05
+END_TIME=0.01
 N_PART=33
 CELL_SIZE=0.3
 
@@ -15,7 +15,7 @@ python3 noh.py -cs $CELL_SIZE -et $END_TIME -np $N_PART
 
 # run experiment
 echo 'running experiment...'
-./noh2D output.txt
+./noh2D > output.txt
 
 #likwid-perfctr -f -C 0 -g MEM            -o output_MEM.cvs            -O ./noh2D
 #likwid-perfctr -f -C 0 -g DATA           -o output_DATA.cvs           -O ./noh2D
@@ -29,7 +29,8 @@ echo 'running experiment...'
 
 # Save results into directory
 DIRNAME="output"
-if [ -d $DIRNAME ]; then
+if [ -d $DIRNAME ]
+then
     rm -r $DIRNAME
 fi
 mkdir $DIRNAME
@@ -43,7 +44,8 @@ mkdir $DIRNAME"/snapshots/"
 mv particles* grid* $DIRNAME"/snapshots/"
 
 # Save other data, if any
-if [ -e *.cvs ]; then
+if [ -e *.cvs ]
+then
     mv *.cvs $DIRNAME
 fi
 
