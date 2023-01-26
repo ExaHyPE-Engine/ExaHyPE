@@ -13,6 +13,8 @@ void applications::exahype2::euler::NeumannBoundaryConditions(
   int                                          numberOfAuxiliaryVariables
 ) {
   nonCriticalAssertion5( Qinside[0]>1e-12, faceCentre, volumeH, t, normal, Qinside[0] );
+  // @todo raus
+  assertion( Qinside[0]>1e-12 );
 
   for (int i=0; i<numberOfUnknowns+numberOfAuxiliaryVariables; i++) {
     Qoutside[i] = Qinside[i];
@@ -47,8 +49,10 @@ double ::applications::exahype2::euler::maxEigenvalue(
   const double p = (gamma-1) * (Q[3] - 0.5*irho*(Q[1]*Q[1]+Q[2]*Q[2]));
   #endif
 
-  nonCriticalAssertion9( p>=0.0, Q[0], Q[1], Q[2], Q[3], Q[4], faceCentre, volumeH, t, normal );
-  const double c   = std::sqrt(gamma * p * irho);
+  nonCriticalAssertion9( tarch::la::greaterEquals(p,0.0), Q[0], Q[1], Q[2], Q[3], Q[4], faceCentre, volumeH, t, normal );
+  // @todo raus
+  assertion1(tarch::la::greaterEquals(p,0.0), p);
+  const double c   = std::sqrt(gamma * std::abs(p) * irho);
 
   const double u_n = Q[normal + 1] * irho;
   double result = std::max( std::abs(u_n - c), std::abs(u_n + c) );

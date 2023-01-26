@@ -309,6 +309,9 @@ class SeparateSweeps( CellCenteredFiniteDifferences ):
       
       This operation is implicity called via the superconstructor.
       
+      Each guard here should combine the storage predicate with the 
+      actual solver phase.
+      
     """
     super(SeparateSweeps, self).create_action_sets()
     self._action_set_update_cell = UpdateCell(self)

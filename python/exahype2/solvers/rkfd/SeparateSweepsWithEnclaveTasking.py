@@ -266,14 +266,12 @@ class SeparateSweepsWithEnclaveTasking( SeparateSweeps ):
       "{} and repositories::{}.getSolverState()=={}::SolverState::RungeKuttaSecondarySubStep{}".format(self._store_face_data_default_guard(),self.get_name_of_global_instance(),self._name,step) for step in range(0,self.number_of_Runge_Kutta_steps())
     ]
     
-    self._secondary_sweep_or_grid_initialisation_or_plot_guard = "(" + \
-      "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::GridInitialisation or " + \
-      "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::PlottingAfterGridInitialisation or " + \
-      "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::Plotting"
+    self._primary_sweep_guard = "(" + \
+      "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::RungeKuttaPrimarySubStep0AfterGridInitialisation "
     for step in range(0,self.number_of_Runge_Kutta_steps()):
-      self._secondary_sweep_or_grid_initialisation_or_plot_guard += " or repositories::{}.getSolverState()=={}::SolverState::RungeKuttaSecondarySubStep{}".format(self.get_name_of_global_instance(),self._name,step)
-    self._secondary_sweep_or_grid_initialisation_or_plot_guard += ")"
-
+      self._primary_sweep_guard += " or repositories::{}.getSolverState()=={}::SolverState::RungeKuttaPrimarySubStep{}".format(self.get_name_of_global_instance(),self._name,step)
+    self._primary_sweep_guard += ")"
+    
     self._primary_sweep_or_plot_guard = "(" + \
       "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::RungeKuttaPrimarySubStep0AfterGridInitialisation or " + \
       "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::PlottingAfterGridInitialisation or " + \
@@ -281,7 +279,19 @@ class SeparateSweepsWithEnclaveTasking( SeparateSweeps ):
     for step in range(0,self.number_of_Runge_Kutta_steps()):
       self._primary_sweep_or_plot_guard += " or repositories::{}.getSolverState()=={}::SolverState::RungeKuttaPrimarySubStep{}".format(self.get_name_of_global_instance(),self._name,step)
     self._primary_sweep_or_plot_guard += ")"
+
+    self._secondary_sweep_guard = "( false"
+    for step in range(0,self.number_of_Runge_Kutta_steps()):
+      self._secondary_sweep_guard += " or repositories::{}.getSolverState()=={}::SolverState::RungeKuttaSecondarySubStep{}".format(self.get_name_of_global_instance(),self._name,step)
+    self._secondary_sweep_guard += ")"
+
+    self._secondary_sweep_or_initialisation_guard = """( 
+      repositories::{}.getSolverState()=={}::SolverState::GridInitialisation""".format(self.get_name_of_global_instance(),self._name)
+    for step in range(0,self.number_of_Runge_Kutta_steps()):
+      self._secondary_sweep_or_initialisation_guard += " or repositories::{}.getSolverState()=={}::SolverState::RungeKuttaSecondarySubStep{}".format(self.get_name_of_global_instance(),self._name,step)
+    self._secondary_sweep_or_initialisation_guard += ")"
     
+
     super(SeparateSweepsWithEnclaveTasking, self).__init__(name, 
                                                            patch_size, 
                                                            overlap, 
@@ -397,17 +407,38 @@ class SeparateSweepsWithEnclaveTasking( SeparateSweeps ):
       
       This operation is implicity called via the superconstructor.
       
+      ## Guard construction
+      
+      We note that the guard sets all contain the storage predicate already,
+      i.e. they combine the logic state analysis with an evaluation of 
+      _load_cell_data_default_guard() and _store_cell_data_default_guard().
+      The singular strings like _primary_sweep_guard do not have this check
+      built in. We have to add it here.
+      
     """
     super(SeparateSweepsWithEnclaveTasking, self).create_action_sets()
 
     self._action_set_merge_enclave_task_outcome             = MergeEnclaveTaskOutcome(self)                                                                                 
     self._action_set_update_cell                            = UpdateCell(self)
-    # Das sollte gegen Solver gehen
-    self._action_set_compute_final_linear_combination.guard = self._store_cell_data_default_guard() + " and " + self._last_secondary_sweep_of_Runge_Kutta_step_on_cell 
-    self._action_set_project_patch_onto_faces.guards        = self._secondary_sweeps_of_Runge_Kutta_step_on_cell + [ "{} and repositories::{}.getSolverState()=={}::SolverState::GridInitialisation".format(self._store_cell_data_default_guard(),self.get_name_of_global_instance(),self._name) ]
-    self._action_set_handle_boundary.guards                 = self._primary_sweeps_of_Runge_Kutta_step_on_face
-    self._action_set_roll_over_update_of_faces.guards              = self._secondary_sweeps_of_Runge_Kutta_step_on_face
-    self._action_set_copy_new_faces_onto_old_faces.guards          = self._secondary_sweeps_of_Runge_Kutta_step_on_face
+    
+    #
+    # have a single guard (technically)
+    #
+    self._action_set_compute_final_linear_combination.guard        = self._store_cell_data_default_guard() + " and (" + self._last_secondary_sweep_of_Runge_Kutta_step_on_cell + ")"
+    self._action_set_handle_boundary.guard                         = self._load_face_data_default_guard() + " and (" + self._primary_sweep_guard + ")"
+    self._action_set_roll_over_update_of_faces.guard               = self._store_face_data_default_guard() + " and (" + self._secondary_sweep_or_initialisation_guard + ")"
+    
+    #
+    # the following mappings have guards, i.e. a whole set of guards
+    #
+    self._action_set_project_patch_onto_faces.guards               = self._secondary_sweeps_of_Runge_Kutta_step_on_cell + [ "{} and repositories::{}.getSolverState()=={}::SolverState::GridInitialisation".format(self._store_cell_data_default_guard(),self.get_name_of_global_instance(),self._name) ]
+    
+    #
+    # this one is fine, as it only is used in the initialisation
+    #
+    #self._action_set_copy_new_faces_onto_old_faces.guard          = self._secondary_sweeps_of_Runge_Kutta_step_on_face
+
+    #last_sweep_of_time_step_or_plotting_or_initialisation
     self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement.guards = self._primary_sweeps_of_Runge_Kutta_step_on_face
 
 
