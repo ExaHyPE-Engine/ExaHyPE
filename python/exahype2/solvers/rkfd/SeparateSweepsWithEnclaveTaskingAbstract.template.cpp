@@ -200,7 +200,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startTimeStep(
 ) {
   switch (_solverState) {
     case SolverState::GridConstruction:
-      _solverState = SolverState::GridInitialisation;
+      assertionMsg(false, "grid construction should lead into initialisation and not time stepping" );
       break;
   {% for item in range(RK_STEPS-1) %}
     case SolverState::RungeKuttaPrimarySubStep{{item}}:
@@ -212,7 +212,11 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startTimeStep(
   {% endfor %}
     case SolverState::Plotting:
     case SolverState::PlottingAfterGridInitialisation:
+      _solverState = SolverState::RungeKuttaPrimarySubStep0;
+      break;
     case SolverState::GridInitialisation:
+      _solverState = SolverState::RungeKuttaPrimarySubStep0AfterGridInitialisation;
+      break;
     case SolverState::RungeKuttaPrimarySubStep{{RK_STEPS-1}}:
       _solverState = SolverState::RungeKuttaSecondarySubStep{{RK_STEPS-1}};
       break;
