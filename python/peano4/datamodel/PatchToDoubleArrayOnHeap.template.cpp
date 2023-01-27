@@ -1,7 +1,13 @@
 #include "{{CLASSNAME}}.h"
 
 
-{{NAMESPACE | join("::")}}::{{CLASSNAME}}::{{CLASSNAME}}() {
+{{NAMESPACE | join("::")}}::{{CLASSNAME}}::{{CLASSNAME}}():
+#if Dimensions==2
+  value( new {{FLOAT_TYPE}}[{{CARDINALITY_2D}}] )
+#else
+  value( new {{FLOAT_TYPE}}[{{CARDINALITY_3D}}] )
+#endif
+{
 }
 
 
@@ -11,11 +17,7 @@
   _debugH = other._debugH;
   #endif
 
-  #if Dimensions==2
-  std::copy(other.value, other.value+{{CARDINALITY_2D}},value);
-  #else
-  std::copy(other.value, other.value+{{CARDINALITY_3D}},value);
-  #endif
+  value = other.value;
 }
 
 
@@ -24,12 +26,9 @@
   _debugX = other._debugX;
   _debugH = other._debugH;
   #endif
+
+  value = other.value;
   
-  #if Dimensions==2
-  std::copy(other.value, other.value+{{CARDINALITY_2D}},value);
-  #else
-  std::copy(other.value, other.value+{{CARDINALITY_3D}},value);
-  #endif
   return *this;
 }
 

@@ -55,14 +55,18 @@ struct {{NAMESPACE | join("::")}}::{{CLASSNAME}} {
     tarch::la::Vector<Dimensions,{{FLOAT_TYPE}}> getDebugH() const;
   #endif
 
-  #if Dimensions==2
-  {{FLOAT_TYPE}}                                 value[{{CARDINALITY_2D}}];
-  #else
-  {{FLOAT_TYPE}}                                 value[{{CARDINALITY_3D}}];
-  #endif
+  {{FLOAT_TYPE}}*   value;
   
   {{CLASSNAME}}();
+
+  /**
+   * Shallow copy
+   */
   {{CLASSNAME}}(const {{CLASSNAME}}& other);
+
+  /**
+   * Shallow copy
+   */
   {{CLASSNAME}}& operator=(const {{CLASSNAME}}& other);
 
   std::string toString() const;
