@@ -942,7 +942,7 @@ if __name__ == "__main__":
           number_of_entries_between_two_db_flushes=10000,
           output_precision=10,
           data_delta_between_two_snapsots=1e16,
-          time_delta_between_two_snapsots=0.0001
+          time_delta_between_two_snapsots=0.01
           ))
 
 
