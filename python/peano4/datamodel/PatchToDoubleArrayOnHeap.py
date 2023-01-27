@@ -31,71 +31,14 @@ class PatchToDoubleArrayOnHeap(PatchToDoubleArray):
       
     """
     super( PatchToDoubleArrayOnHeap, self ).__init__(patch, float_type)
-    self.data = patch
-    self.merge_method_definition     = ""
-    self.send_condition              = "true"
-    self.receive_and_merge_condition = "true"
-    self.store_persistent_condition  = "true"
-    self.load_persistent_condition   = "true"
-    self.compute_condition           = "true"
-    self.includes                    = ""
-    self.float_type                  = FloatTypes(float_type)
-
-
-  def __str__(self):
-    result =  """Map to double array
-  - send condition:          """ + self.send_condition + """
-  - receive/merge condition: """ + self.receive_and_merge_condition + """
-  - load condition:          """ + self.load_persistent_condition + """
-  - store condition:         """ + self.store_persistent_condition + """
-  - compute condition:       """ + self.compute_condition + """
-  - merge criterion:         """
-  
-    if self.merge_method_definition!="":
-      result += """user-defined
-"""
-    else:    
-      result += """nop
-"""
-    return result    
 
 
   def get_stack_container(self):
-    return "peano4::stacks::STDVectorStack< " + self.data.get_full_qualified_type() + " >";
-
-    
-  def get_header_file_include(self):
-    """
-    
-     This is the include statement for the data container. It is not something
-     directly generated but how to use the generated code. 
-     
-    """
-    return """
-#include "peano4/stacks/STDVectorStack.h"    
-#include \"""" + self.data.namespace[-1] + "/" + self.data.name + """.h"
-"""
+    return "peano4::stacks::STDVectorStack< " + self.data.get_full_qualified_type() + " >";    
 
     
   def construct_output(self,output):
-    d = { 
-        "CARDINALITY_2D": str( int( self.data.no_of_unknowns*self.data.dim[0]*self.data.dim[1] )), 
-        "CARDINALITY_3D": str( int( self.data.no_of_unknowns*self.data.dim[0]*self.data.dim[1]*self.data.dim[2] )),
-        "MERGE_METHOD_DECLARATIONS": "",
-        "MERGE_METHOD_DEFINITIONS": "",
-        "SEND_CONDITION":              self.send_condition,
-        "RECEIVE_AND_MERGE_CONDITION": self.receive_and_merge_condition,
-        "INCLUDES":                    self.includes,
-        "DATA_ASSOCIATION":            int(self.data.association),
-        "MERGE_METHOD_DEFINITION":     self.merge_method_definition,
-        "LOAD_PERSISTENT_CONDITION":   self.load_persistent_condition,
-        "STORE_PERSISTENT_CONDITION":  self.store_persistent_condition,
-        "COMPUTE_CONDITION":           self.compute_condition,
-        "FLOAT_TYPE":                  self.float_type.cpp,
-        "MPI_FLOAT_TYPE":              self.float_type.mpi,
-        "ADDITIONAL_LOAD_STORE_ARGUMENTS": self.data.additional_load_and_store_arguments
-      }
-
+    d = self._get_dictionary_for_output()
     """
       Pass in a version of output
     """
@@ -110,3 +53,4 @@ class PatchToDoubleArrayOnHeap(PatchToDoubleArray):
       d, 
       True)
     output.add(generated_files)
+

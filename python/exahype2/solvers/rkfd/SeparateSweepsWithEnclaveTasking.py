@@ -372,6 +372,7 @@ class SeparateSweepsWithEnclaveTasking( SeparateSweeps ):
     self._patch_overlap_new.generator.send_condition               = secondary_sweep_or_initialisation_or_plotting_guard
     self._patch_overlap_new.generator.receive_and_merge_condition  = primary_sweep_or_plotting
 
+    self._patch.generator = peano4.datamodel.PatchToDoubleArrayOnHeap(self._patch, "double")
 
 
 
