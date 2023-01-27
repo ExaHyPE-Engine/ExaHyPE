@@ -6,6 +6,7 @@ import os
 import exahype2.postprocessing
 import sys
 
+from tkinter import Tcl
 
 import matplotlib.pyplot as plt
 
@@ -86,6 +87,7 @@ A generic script to create speedup plots.
   parser.add_argument("--labels",             dest="labels",          help="Plot labels. You can use $...$ to use the math mode, but you will have to escape the dollars with a \\. Separate with , and ensure there's exactly one entry per file", default="" )
   parser.add_argument("--output",             dest="output",          help="output file prefix (file name extension is added automatically)", default="" )
   parser.add_argument("--solver-name",        dest="solver_name",     help="Solver name (leave blank if there is only one solver)", default="" )
+  parser.add_argument("--sort-files",         dest="sort_files",      help="Switch file sorting (natural sort)", default=True )
   args = parser.parse_args()
 
   max_x        = -1
@@ -122,6 +124,9 @@ A generic script to create speedup plots.
       try:
         tar = tarfile.open( file, "r:gz" )
         data_files = tar.getnames()
+
+        # Sort input data
+        if args.sort_files: data_files = Tcl().call('lsort', '-dict', data_files)
     
         data_points = []
         for data_file in data_files:
