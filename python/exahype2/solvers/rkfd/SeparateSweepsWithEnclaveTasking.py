@@ -346,26 +346,31 @@ class SeparateSweepsWithEnclaveTasking( SeparateSweeps ):
     self._patch_overlap_old.generator.send_condition               = initialisation_sweep_guard
     self._patch_overlap_old.generator.receive_and_merge_condition  = first_iteration_after_initialisation_guard
 
-    #secondary_sweep_or_initialisation_or_plotting_guard = """(
-    #  repositories::{}.getSolverState()=={}::SolverState::Initialisation or
-    #  repositories::{}.getSolverState()=={}::SolverState::PlottingAfterGridInitialisation or
-    #  repositories::{}.getSolverState()=={}::SolverState::Plotting
-    #""".format(
-    #  self.get_name_of_global_instance(), self._name,
-    #  self.get_name_of_global_instance(), self._name,
-    #  self.get_name_of_global_instance(), self._name,
-    #)
-    #for i in range(0,self.number_of_Runge_Kutta_steps()):
-    #  primary_sweep_or_initialisation_guard += " or repositories::{}.getSolverState()=={}::SolverState::Initialisation
-    #    
-    #self._primary_sweeps_of_Runge_Kutta_step_on_cell = [
-    #  "{} and repositories::{}.getSolverState()=={}::SolverState::RungeKuttaPrimarySubStep{}".format(self._store_cell_data_default_guard(),self.get_name_of_global_instance(),self._name,step) for step in range(0,self.number_of_Runge_Kutta_steps())
-    #] + [
-    #  "{} and repositories::{}.getSolverState()=={}::SolverState::RungeKuttaPrimarySubStep0AfterGridInitialisation".format(self._store_cell_data_default_guard(),self.get_name_of_global_instance(),self._name)
-    #]#
+    secondary_sweep_or_initialisation_or_plotting_guard = """(
+      repositories::{}.getSolverState()=={}::SolverState::GridInitialisation or
+      repositories::{}.getSolverState()=={}::SolverState::PlottingAfterGridInitialisation or
+      repositories::{}.getSolverState()=={}::SolverState::Plotting or
+      repositories::{}.isLastGridSweepOfTimeStep()
+    )
+    """.format(
+      self.get_name_of_global_instance(), self._name,
+      self.get_name_of_global_instance(), self._name,
+      self.get_name_of_global_instance(), self._name,
+      self.get_name_of_global_instance(), 
+    )
+    primary_sweep_or_plotting = """(
+      repositories::{}.getSolverState()=={}::SolverState::PlottingAfterGridInitialisation or
+      repositories::{}.getSolverState()=={}::SolverState::Plotting or
+      repositories::{}.isFirstGridSweepOfTimeStep()
+    )
+    """.format(
+      self.get_name_of_global_instance(), self._name,
+      self.get_name_of_global_instance(), self._name,
+      self.get_name_of_global_instance(), 
+    )
 
-    #self._patch_overlap_new.generator.send_condition               = "true"
-    #self._patch_overlap_new.generator.receive_and_merge_condition  = "true"
+    self._patch_overlap_new.generator.send_condition               = secondary_sweep_or_initialisation_or_plotting_guard
+    self._patch_overlap_new.generator.receive_and_merge_condition  = primary_sweep_or_plotting
 
 
 
