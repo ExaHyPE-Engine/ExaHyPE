@@ -62,6 +62,15 @@ class CellCenteredFiniteDifferences(object):
                     0.0,0.0,0.0,0.0,1.0
             };" "" )
 
+    ## Reduce memory movements
+
+    You can switch for individual fields to a heap-based scheme by changing 
+    the generator:
+    
+           self._patch.generator        = peano4.datamodel.PatchToDoubleArrayOnHeap(self._patch,           "double")
+           self._patch._patch_estimates = peano4.datamodel.PatchToDoubleArrayOnHeap(self._patch_estimates, "double")
+
+    Alternatively, use the switch_to_heap_storage() routine.
 
   """
   
@@ -323,6 +332,7 @@ The finest mesh width of """ + str(self.get_finest_volume_size(domain_size)) + "
      specialised versions. So it is (logically) a top-down (general to
      specialised) run through all create_data_structure() variants 
      within the inheritance tree.
+     
      
      :: Arguments
      
@@ -1021,4 +1031,17 @@ The finest mesh width of """ + str(self.get_finest_volume_size(domain_size)) + "
     
     self.create_data_structures()
     self.create_action_sets()
+
+
+  def switch_to_heap_storage(self,
+                             hold_cell_data_on_heap_with_smart_pointer = True,
+                             hold_face_data_on_heap_with_smart_pointer = False
+                             ):
+    if hold_cell_data_on_heap_with_smart_pointer:
+      self._patch.generator        = peano4.datamodel.PatchToDoubleArrayOnHeap(self._patch,           "double")
+      self._patch._patch_estimates = peano4.datamodel.PatchToDoubleArrayOnHeap(self._patch_estimates, "double")
+    if hold_face_data_on_heap_with_smart_pointer:
+      self._patch_overlap_old.generator    = peano4.datamodel.PatchToDoubleArrayOnHeap(self._patch_overlap_old,    "double") 
+      self._patch_overlap_new.generator    = peano4.datamodel.PatchToDoubleArrayOnHeap(self._patch_overlap_new,    "double") 
+      self._patch_overlap_update.generator = peano4.datamodel.PatchToDoubleArrayOnHeap(self._patch_overlap_update, "double") 
 

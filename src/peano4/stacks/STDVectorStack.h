@@ -198,7 +198,7 @@ class peano4::stacks::STDVectorStack {
          */
         PushBlockStackView(int size, int base, peano4::stacks::STDVectorStack<T>* stack):
           _size(size),
-		  _baseElement(base),
+          _baseElement(base),
           _stack(stack) {
         }
 

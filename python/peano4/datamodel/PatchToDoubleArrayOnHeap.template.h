@@ -9,6 +9,8 @@
 
 
 #include <string>
+#include <memory>
+
 
 #include "tarch/la/Vector.h"
 #include "tarch/mpi/mpi.h"
@@ -37,32 +39,58 @@
 
 
 struct {{NAMESPACE | join("::")}}::{{CLASSNAME}} {
-  #if Parallel
   private:
+    #if Parallel
     static MPI_Datatype   Datatype;
+    #endif
+
+    #if PeanoDebug>=1
+    tarch::la::Vector<Dimensions,double> _debugX;
+    tarch::la::Vector<Dimensions,double> _debugH;
+    #endif
+
+    std::shared_ptr< {{FLOAT_TYPE}}[] > _dataSmartPointer;
   public:
-  #endif
-  #if PeanoDebug>=1
-  private:
-    tarch::la::Vector<Dimensions,{{FLOAT_TYPE}}> _debugX;
-    tarch::la::Vector<Dimensions,{{FLOAT_TYPE}}> _debugH;
+    #if PeanoDebug>=1
+    void setDebugX( const tarch::la::Vector<Dimensions,double>& data );
+    void setDebugH( const tarch::la::Vector<Dimensions,double>& data );
+    tarch::la::Vector<Dimensions,double> getDebugX() const;
+    tarch::la::Vector<Dimensions,double> getDebugH() const;
+    #endif
 
-
-  public:
-    void setDebugX( const tarch::la::Vector<Dimensions,{{FLOAT_TYPE}}>& data );
-    void setDebugH( const tarch::la::Vector<Dimensions,{{FLOAT_TYPE}}>& data );
-    tarch::la::Vector<Dimensions,{{FLOAT_TYPE}}> getDebugX() const;
-    tarch::la::Vector<Dimensions,{{FLOAT_TYPE}}> getDebugH() const;
-  #endif
-
+  /**
+   * This is an alias to the actual data stored within _dataSmartPointer. We
+   * need this alias, as a lot of code snippets in Peano work with raw pointers
+   * including pointer arithmetics. The latter are not supported by smart
+   * pointers. SO the actual data is held via the smart pointer, but the
+   * content can also be accessed through this attribute.
+   */
   {{FLOAT_TYPE}}*   value;
   
+
+  /**
+   * Create new instance
+   *
+   * The routine creates a new smart pointer data set and then sets the value
+   * pointer to the smart pointer's raw data. It does not set the debug values,
+   * which you have to initialise separately.
+   *
+   * This routine is used by all creational events, i.e. create a vertex for
+   * example uses it as well as create a hanging vertex.
+   */
   {{CLASSNAME}}();
 
   /**
    * Shallow copy
    */
   {{CLASSNAME}}(const {{CLASSNAME}}& other);
+
+  /**
+   * Clone content. Assume other and present class have their own smart pointer
+   *
+   * This routine is used by the deep copies of the stack.
+   */
+  void clone(const {{CLASSNAME}}& other);
 
   /**
    * Shallow copy

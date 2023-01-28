@@ -3,11 +3,12 @@
 
 {{NAMESPACE | join("::")}}::{{CLASSNAME}}::{{CLASSNAME}}():
 #if Dimensions==2
-  value( new {{FLOAT_TYPE}}[{{CARDINALITY_2D}}] )
+  _dataSmartPointer( std::make_shared<{{FLOAT_TYPE}}[]>({{CARDINALITY_2D}}) )
 #else
-  value( new {{FLOAT_TYPE}}[{{CARDINALITY_3D}}] )
+  _dataSmartPointer( std::make_shared<{{FLOAT_TYPE}}[]>({{CARDINALITY_3D}}) )
 #endif
 {
+  value = &( _dataSmartPointer[0] );
 }
 
 
@@ -17,7 +18,22 @@
   _debugH = other._debugH;
   #endif
 
-  value = other.value;
+  _dataSmartPointer = other._dataSmartPointer;
+  value = &( _dataSmartPointer[0] );
+}
+
+
+void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::clone(const {{CLASSNAME}}& other) {
+  #if PeanoDebug>=1
+  _debugX = other._debugX;
+  _debugH = other._debugH;
+  #endif
+
+  #if Dimensions==2
+  std::copy_n( other.value, {{CARDINALITY_2D}}, value );
+  #else
+  std::copy_n( other.value, {{CARDINALITY_3D}}, value );
+  #endif
 }
 
 
@@ -27,7 +43,8 @@
   _debugH = other._debugH;
   #endif
 
-  value = other.value;
+  _dataSmartPointer = other._dataSmartPointer;
+  value = &( _dataSmartPointer[0] );
   
   return *this;
 }
@@ -48,22 +65,22 @@ std::string {{NAMESPACE | join("::")}}::{{CLASSNAME}}::toString() const {
 
 #if PeanoDebug>=1
 
-void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::setDebugX( const tarch::la::Vector<Dimensions,{{FLOAT_TYPE}}>& data ) {
+void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::setDebugX( const tarch::la::Vector<Dimensions,double>& data ) {
   _debugX = data;
 }
 
 
-void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::setDebugH( const tarch::la::Vector<Dimensions,{{FLOAT_TYPE}}>& data ) {
+void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::setDebugH( const tarch::la::Vector<Dimensions,double>& data ) {
   _debugH = data;
 }
 
 
-tarch::la::Vector<Dimensions,{{FLOAT_TYPE}}> {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getDebugX() const {
+tarch::la::Vector<Dimensions,double> {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getDebugX() const {
   return _debugX;
 }
 
 
-tarch::la::Vector<Dimensions,{{FLOAT_TYPE}}> {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getDebugH() const {
+tarch::la::Vector<Dimensions,double> {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getDebugH() const {
   return _debugH;
 }
 #endif
