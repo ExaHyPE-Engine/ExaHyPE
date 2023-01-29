@@ -1,11 +1,24 @@
 #include "{{CLASSNAME}}.h"
 
+#include "tarch/accelerator/accelerator.h"
+
 
 {{NAMESPACE | join("::")}}::{{CLASSNAME}}::{{CLASSNAME}}():
+/*
 #if Dimensions==2
   _dataSmartPointer( std::make_shared<{{FLOAT_TYPE}}[]>({{CARDINALITY_2D}}) )
 #else
   _dataSmartPointer( std::make_shared<{{FLOAT_TYPE}}[]>({{CARDINALITY_3D}}) )
+#endif
+*/
+#if Dimensions==2
+  _dataSmartPointer(
+    static_cast< {{FLOAT_TYPE}}* >( allocateMemory({{CARDINALITY_2D}}, tarch::MemoryLocation::Heap) )
+  )
+#else
+  _dataSmartPointer(
+    static_cast< {{FLOAT_TYPE}}* >( allocateMemory({{CARDINALITY_3D}}, tarch::MemoryLocation::Heap) )
+  )
 #endif
 {
   value = &( _dataSmartPointer[0] );

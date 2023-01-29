@@ -49,7 +49,9 @@ struct {{NAMESPACE | join("::")}}::{{CLASSNAME}} {
     tarch::la::Vector<Dimensions,double> _debugH;
     #endif
 
+    // das muss doch anders heissen?
     std::shared_ptr< {{FLOAT_TYPE}}[] > _dataSmartPointer;
+    std::shared_ptr< {{FLOAT_TYPE}} > _dataSmartPointer;
   public:
     #if PeanoDebug>=1
     void setDebugX( const tarch::la::Vector<Dimensions,double>& data );
