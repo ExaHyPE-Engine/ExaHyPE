@@ -2748,6 +2748,10 @@ a lower runtime.
 self._patch.generator = peano4.datamodel.PatchToDoubleArrayOnHeap(self._patch,"double")
   \end{code}, i.e.~you have to swap how a patch is mapped onto a C++
   implementation.
+  See also next section on AVX/alignment.
+  \item {\bf The code seems to fail to use aligned data}. See general remarks
+  in documentation of \texttt{tarch::allocateMemory()} and
+  \texttt{tarch::MemoryLocation}.
 \end{itemize}
 
 \section*{Links and further reading}
