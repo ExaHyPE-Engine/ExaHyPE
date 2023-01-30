@@ -113,24 +113,24 @@ if __name__ == "__main__":
     class CCZ4Solver( SuperClass ):
       def __init__(self, name, patch_size, min_volume_h, max_volume_h, cfl, domain_r, KOSig):
         unknowns = {
-          "G":6,
-          "K":6,
-          "theta":1,
-          "Z":3,
-          "lapse":1,
-          "shift":3,
-          "b":3,
-          "dLapse":3,
-          "dxShift":3,
-          "dyShift":3,
-          "dzShift":3,
-          "dxG":6,
-          "dyG":6,
-          "dzG":6,
-          "traceK":1,
-          "phi":1,
-          "P":3,
-          "K0":1,
+          "G":6,      #0-5
+          "K":6,      #6-11
+          "theta":1,  #12
+          "Z":3,      #13-15
+          "lapse":1,  #16
+          "shift":3,  #17-19
+          "b":3,      #20-22
+          "dLapse":3, #23-25
+          "dxShift":3,#26-28
+          "dyShift":3,#29-31
+          "dzShift":3,#32-34
+          "dxG":6,    #35-40
+          "dyG":6,    #41-46
+          "dzG":6,    #47-52
+          "traceK":1, #53
+          "phi":1,    #54
+          "P":3,      #55-57
+          "K0":1,     #58
         }
 
         number_of_unknowns = sum(unknowns.values())
