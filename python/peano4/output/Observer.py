@@ -597,7 +597,7 @@ void {{FULL_QUALIFIED_CLASSNAME}}::enterCell( const peano4::grid::GridTraversalE
       {% for arg in ADDITIONAL_LOAD_STORE_ARGUMENTS %}, {{arg[0]}} {% endfor %}
     ) << ")" );
 
-    {{full_qualified_type}}& data = view.get(0);
+    {{full_qualified_type}} data = std::move( view.get(0) );
     if (
       inCellStack!=peano4::grid::TraversalObserver::CreateOrDestroyPersistentGridEntity
       and
@@ -959,7 +959,7 @@ void {{FULL_QUALIFIED_CLASSNAME}}::leaveCell( const peano4::grid::GridTraversalE
 
       peano4::datamanagement::FaceMarker  marker(event,inFaceStackPosition);
 
-      {{full_qualified_type}} data = view.get(inFaceStackPosition);
+      {{full_qualified_type}} data = std::move( view.get(inFaceStackPosition) );
 
       if (
         outFaceStack!=peano4::grid::TraversalObserver::CreateOrDestroyPersistentGridEntity
@@ -1050,7 +1050,7 @@ void {{FULL_QUALIFIED_CLASSNAME}}::leaveCell( const peano4::grid::GridTraversalE
 
       peano4::datamanagement::VertexMarker  marker(event,inVertexStackPosition);
 
-      {{full_qualified_type}} data = view.get(inVertexStackPosition);
+      {{full_qualified_type}} data = std::move( view.get(inVertexStackPosition) );
 
       if (
         outVertexStack!=peano4::grid::TraversalObserver::CreateOrDestroyPersistentGridEntity
