@@ -78,8 +78,8 @@ class ModelToDataRepository(object):
     output.makefile.add_cpp_file( namespace[-1] + "/" + class_name + ".cpp" )
     templatefile_prefix = os.path.realpath(__file__).replace( ".pyc", "" ).replace( ".py", "" )
     generated_files = peano4.output.TemplatedHeaderImplementationFilePair(
-      templatefile_prefix+".h.template",
-      templatefile_prefix+".cpp.template",
+      templatefile_prefix+".template.h",
+      templatefile_prefix+".template.cpp",
       class_name, 
       namespace,
       namespace[-1], 
