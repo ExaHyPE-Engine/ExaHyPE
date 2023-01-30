@@ -374,7 +374,7 @@ namespace tarch {
        * way better to work with one queue per thread, so we can spawn enclave
        * tasks without any additional locks.
        */
-      void configureInternalTaskQueues(int numberOfTasks);
+      void configureInternalTaskQueues(int numerOfThreads);
 
       /**
        * Commit local task queues into global queue

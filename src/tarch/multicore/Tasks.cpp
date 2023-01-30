@@ -240,7 +240,7 @@ bool tarch::multicore::internal::fusePendingTasks(const tarch::multicore::orches
       and
       (*pp)->getTaskType()==myTask->getTaskType()
       and
-      (*pp)->getTaskType()==myTask->canFuse()
+      (*pp)->canFuse()
       and
       tasksOfSameType.size()<fuseInstruction.maxTasks-1
     ) {
@@ -570,8 +570,8 @@ void tarch::multicore::spawnAndWait(
 }
 
 
-void tarch::multicore::internal::configureInternalTaskQueues(int numberOfTasks) {
-  localNonblockingTasks.resize(numberOfTasks);
+void tarch::multicore::internal::configureInternalTaskQueues(int numberOfThreads) {
+  localNonblockingTasks.resize(numberOfThreads);
 }
 
 
