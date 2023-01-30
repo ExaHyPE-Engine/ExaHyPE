@@ -7,6 +7,7 @@ import exahype2.postprocessing
 import sys
 
 from tkinter import Tcl
+import numpy as np
 
 import matplotlib.pyplot as plt
 
@@ -26,7 +27,6 @@ def add_linear_speedup_trend_line():
     
     plt.plot( [1,max_x], [max_serial_y,max_serial_y/max_x], "--", color="#ababab" )
     plt.plot( [1,max_x], [min_serial_y,min_serial_y/max_x], "--", color="#ababab" )
-    
 
 
 def visualise( data_points, symbol_counter, colour_counter):
@@ -68,6 +68,9 @@ def visualise( data_points, symbol_counter, colour_counter):
         raise Exception( "Unable to extract " + str(args.file.index(file)) + "th entry from " + args.labels + ": " + str(args.labels.split(",")) )
       plt.plot( x_data, y_data, symbol, label=my_label, color=my_color, markevery=my_markevery )
     
+      # Save plot data into a file
+      if( args.export_data ): 
+        np.savetxt(args.output + ".txt", np.c_[x_data,y_data], fmt=['%1.f','%1.2f'])
 
 
 if __name__ == "__main__":
@@ -87,6 +90,7 @@ A generic script to create speedup plots.
   parser.add_argument("--labels",             dest="labels",          help="Plot labels. You can use $...$ to use the math mode, but you will have to escape the dollars with a \\. Separate with , and ensure there's exactly one entry per file", default="" )
   parser.add_argument("--output",             dest="output",          help="output file prefix (file name extension is added automatically)", default="" )
   parser.add_argument("--solver-name",        dest="solver_name",     help="Solver name (leave blank if there is only one solver)", default="" )
+  parser.add_argument("--export-data",        dest="export_data",     help="Export plot data into a txt file", default=False )
   parser.add_argument("--sort-files",         dest="sort_files",      help="Switch file sorting (natural sort)", default=True )
   args = parser.parse_args()
 
