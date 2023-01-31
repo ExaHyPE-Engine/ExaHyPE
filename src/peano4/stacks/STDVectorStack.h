@@ -177,10 +177,10 @@ class peano4::stacks::STDVectorStack {
           return _stack->_data[_baseElement+index];
         }
 
-        T&& get(int index) {
+        T& get(int index) {
           assertion2( index>=0, index, _size );
           assertion2( index<_size, index, _size );
-          return std::move(_stack->_data[_baseElement+index]);
+          return _stack->_data[_baseElement+index];
         }
 
         std::string toString() const {
@@ -232,10 +232,10 @@ class peano4::stacks::STDVectorStack {
           return _stack->_data[_baseElement+index];
         }
 
-        T&& get(int index) {
+        T& get(int index) {
           assertion2( index>=0, index, _size );
           assertion2( index<_size, index, _size );
-          return std::move( _stack->_data[_baseElement+index] );
+          return _stack->_data[_baseElement+index];
         }
 
         std::string toString() const {
@@ -247,13 +247,31 @@ class peano4::stacks::STDVectorStack {
         }
     };
 
+
     /**
      * Pops element from a stack.
-     */
+     *
+     * I original implemented this routine with a plain move, i.e. as
+     *
+     * <pre>
     T pop() {
       assertion1(_currentElement>0,_currentElement);
       _currentElement--;
-      return _data[_currentElement];
+      return std::move( _data[_currentElement] );
+    }
+       </pre>
+     *
+     * I put the move into this routine to highlight that we are actually
+     * moving stuff out of the container. However, this move is not required
+     * and, according to the C++ standard, degenerates to the identify here.
+     *
+     * I now try to work with the move operator to avoid copying. Not sure if
+     * this makes a difference or is semantically admissible.
+     */
+    T&& pop() {
+      assertion1(_currentElement>0,_currentElement);
+      _currentElement--;
+      return std::move( _data[_currentElement] );
     }
 
 
@@ -267,6 +285,19 @@ class peano4::stacks::STDVectorStack {
       assertion2(_currentElement>shift, _currentElement, shift);
       return _data[_currentElement-1-shift];
     }
+
+
+    /**
+     * Get top element or shiftth top element. We start to count with
+     * 0, i.e. a shift of 0 (default) really returns the top element.
+     * A shift of 3 returns the fourth element from the stack
+     */
+    const T& top(int shift=0) const {
+      assertion1(shift>=0,shift);
+      assertion2(_currentElement>shift, _currentElement, shift);
+      return _data[_currentElement-1-shift];
+    }
+
 
     /**
      * Pushes element to a stack.
