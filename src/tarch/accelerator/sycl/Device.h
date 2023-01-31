@@ -2,7 +2,6 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-
 /**
  * @page SYCL SYCL support
  *
@@ -19,7 +18,6 @@
  * put one SYCL queue onto each device. You can query the singleton for the
  * number of devices from anywhere in the code, but to get hold of these
  * devices, you should use the getter in the SYCL.h header.
- *
  *
  * ## Implementation
  *
@@ -39,7 +37,6 @@
 
 #if defined(GPUOffloadingSYCL)
 
-
 #pragma push_macro("Dimensions")
 #pragma push_macro("assertion")
 #undef Dimensions
@@ -48,9 +45,7 @@
 #pragma pop_macro("Dimensions")
 #pragma pop_macro("assertion")
 
-
 #include <set>
-
 
 namespace tarch {
   namespace accelerator {
@@ -73,7 +68,6 @@ namespace tarch {
      * @see tarch::multicore::getHostSYCLQueue()
      */
     sycl::queue& getSYCLQueue( int number );
-
 
     /**
      * Write available queues to cout. The logging interface is not used, as

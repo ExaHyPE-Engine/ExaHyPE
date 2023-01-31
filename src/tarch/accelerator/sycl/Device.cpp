@@ -5,29 +5,23 @@
 
 #include "tarch/Assertions.h"
 
-
-
 #if defined(GPUOffloadingSYCL)
 namespace {
   std::map< int, sycl::queue >  syclQueues;
 }
 
-
 tarch::accelerator::Device::Device() {
   listSYCLQueues();
 }
-
 
 tarch::accelerator::Device::~Device() {
   shutdown();
 }
 
-
 tarch::accelerator::Device& tarch::accelerator::Device::getInstance() {
   static Device instance;
   return instance;
 }
-
 
 void tarch::accelerator::Device::configure( const std::set<int>& devicesToUse ) {
   auto platforms       = sycl::platform::get_platforms();
@@ -65,27 +59,22 @@ void tarch::accelerator::Device::configure( const std::set<int>& devicesToUse ) 
   }
 }
 
-
 void tarch::accelerator::Device::shutdown() {
   syclQueues.clear();
 }
-
 
 bool tarch::accelerator::Device::isInitialised() const {
   return not syclQueues.empty();
 }
 
-
 int tarch::accelerator::Device::getNumberOfDevices() const {
   return syclQueues.size();
 }
-
 
 sycl::queue& tarch::accelerator::getSYCLQueue( int number ) {
   assertion1( syclQueues.count(number)==1, number );
   return syclQueues[number];
 }
-
 
 void tarch::accelerator::listSYCLQueues() {
   auto platforms       = sycl::platform::get_platforms();
@@ -99,6 +88,5 @@ void tarch::accelerator::listSYCLQueues() {
     }
   }
 }
-
 
 #endif

@@ -10,7 +10,6 @@
 #include "tarch/multicore/BooleanSemaphore.h"
 #include "tarch/logging/Log.h"
 
-
 namespace tarch {
   namespace multicore {
     class RecursiveSemaphore;
@@ -18,14 +17,11 @@ namespace tarch {
   }
 }
 
-
-
 /**
  * Recursive Semaphore
  *
  * A recursive semaphore is a boolean semphore that one thread (the first one)
  * can lock an arbitrary number of times.
- *
  *
  * @author Tobias Weinzierl
  */
@@ -47,11 +43,11 @@ class tarch::multicore::RecursiveSemaphore {
     /**
      * You may not copy a semaphore
      */
-    RecursiveSemaphore& operator=( const RecursiveSemaphore& semaphore ) {return *this;}
+    RecursiveSemaphore& operator=( const RecursiveSemaphore& semaphore ) { return *this; }
+
   public:
     RecursiveSemaphore();
     ~RecursiveSemaphore();
 };
-
 
 #endif

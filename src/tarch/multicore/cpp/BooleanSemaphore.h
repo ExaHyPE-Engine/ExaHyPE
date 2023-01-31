@@ -5,7 +5,6 @@
 #include <string>
 #include "tarch/multicore/multicore.h"
 
-
 namespace tarch {
   namespace multicore {
     class BooleanSemaphore;
@@ -13,10 +12,8 @@ namespace tarch {
   }
 }
 
-
 #if defined(SharedCPP)
 #include <mutex>
-
 
 class tarch::multicore::BooleanSemaphore {
   private:
@@ -38,10 +35,10 @@ class tarch::multicore::BooleanSemaphore {
      * You may not copy a semaphore
      */
     BooleanSemaphore& operator=( const BooleanSemaphore& semaphore ) {return *this;}
+
   public:
     BooleanSemaphore();
     ~BooleanSemaphore();
 };
+
 #endif
-
-

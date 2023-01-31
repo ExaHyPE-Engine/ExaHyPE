@@ -280,36 +280,36 @@ void runBenchmarksOnHost(int patches) {
         testCPUVariant(thread);
 
         testStatelessVariantOnHost(
-          ::exahype2::fv::rusanov::timeStepWithRusanov_patchwise_heap_static_calls<AbstractCCZ4FVRusanov,AbstractCCZ4FVRusanov::NumberOfFiniteVolumesPerAxisPerPatch, 1, AbstractCCZ4FVRusanov::NumberOfUnknowns, AbstractCCZ4FVRusanov::NumberOfAuxiliaryVariables,exahype2::enumerator::AoSLexicographicEnumerator>,
+          ::exahype2::fv::rusanov::timeStepWithRusanov_patchwise_heap_static_calls<CCZ4FVRusanov,CCZ4FVRusanov::NumberOfFiniteVolumesPerAxisPerPatch, 1, CCZ4FVRusanov::NumberOfUnknowns, CCZ4FVRusanov::NumberOfAuxiliaryVariables,exahype2::enumerator::AoSLexicographicEnumerator>,
           "heap, patch-wise, AoS", thread
         );
         testStatelessVariantOnHost(
-          ::exahype2::fv::rusanov::timeStepWithRusanov_patchwise_heap_static_calls<AbstractCCZ4FVRusanov,AbstractCCZ4FVRusanov::NumberOfFiniteVolumesPerAxisPerPatch, 1, AbstractCCZ4FVRusanov::NumberOfUnknowns, AbstractCCZ4FVRusanov::NumberOfAuxiliaryVariables,exahype2::enumerator::AoSoALexicographicEnumerator>,
+          ::exahype2::fv::rusanov::timeStepWithRusanov_patchwise_heap_static_calls<CCZ4FVRusanov,CCZ4FVRusanov::NumberOfFiniteVolumesPerAxisPerPatch, 1, CCZ4FVRusanov::NumberOfUnknowns, CCZ4FVRusanov::NumberOfAuxiliaryVariables,exahype2::enumerator::AoSoALexicographicEnumerator>,
           "heap, patch-wise, AoSoA", thread
         );
         testStatelessVariantOnHost(
-          ::exahype2::fv::rusanov::timeStepWithRusanov_patchwise_heap_static_calls<AbstractCCZ4FVRusanov,AbstractCCZ4FVRusanov::NumberOfFiniteVolumesPerAxisPerPatch, 1, AbstractCCZ4FVRusanov::NumberOfUnknowns, AbstractCCZ4FVRusanov::NumberOfAuxiliaryVariables,exahype2::enumerator::SoALexicographicEnumerator>,
+          ::exahype2::fv::rusanov::timeStepWithRusanov_patchwise_heap_static_calls<CCZ4FVRusanov,CCZ4FVRusanov::NumberOfFiniteVolumesPerAxisPerPatch, 1, CCZ4FVRusanov::NumberOfUnknowns, CCZ4FVRusanov::NumberOfAuxiliaryVariables,exahype2::enumerator::SoALexicographicEnumerator>,
           "heap, patch-wise, SoA", thread
         );
         /*testStatelessVariantOnHost(
-          ::exahype2::fv::rusanov::timeStepWithRusanov_patchwise_in_situ_static_calls<AbstractCCZ4FVRusanov,AbstractCCZ4FVRusanov::NumberOfFiniteVolumesPerAxisPerPatch, 1, AbstractCCZ4FVRusanov::NumberOfUnknowns, AbstractCCZ4FVRusanov::NumberOfAuxiliaryVariables>,
+          ::exahype2::fv::rusanov::timeStepWithRusanov_patchwise_in_situ_static_calls<CCZ4FVRusanov,CCZ4FVRusanov::NumberOfFiniteVolumesPerAxisPerPatch, 1, CCZ4FVRusanov::NumberOfUnknowns, CCZ4FVRusanov::NumberOfAuxiliaryVariables>,
           "heap, patch-wise, in-situ", thread
         );*/
 
         testStatelessVariantOnHost(
-          ::exahype2::fv::rusanov::timeStepWithRusanov_batched_heap_static_calls<AbstractCCZ4FVRusanov,AbstractCCZ4FVRusanov::NumberOfFiniteVolumesPerAxisPerPatch, 1, AbstractCCZ4FVRusanov::NumberOfUnknowns, AbstractCCZ4FVRusanov::NumberOfAuxiliaryVariables,exahype2::enumerator::AoSLexicographicEnumerator>,
+          ::exahype2::fv::rusanov::timeStepWithRusanov_batched_heap_static_calls<CCZ4FVRusanov,CCZ4FVRusanov::NumberOfFiniteVolumesPerAxisPerPatch, 1, CCZ4FVRusanov::NumberOfUnknowns, CCZ4FVRusanov::NumberOfAuxiliaryVariables,exahype2::enumerator::AoSLexicographicEnumerator>,
           "heap, batched, AoS", thread
         );
         testStatelessVariantOnHost(
-          ::exahype2::fv::rusanov::timeStepWithRusanov_batched_heap_static_calls<AbstractCCZ4FVRusanov,AbstractCCZ4FVRusanov::NumberOfFiniteVolumesPerAxisPerPatch, 1, AbstractCCZ4FVRusanov::NumberOfUnknowns, AbstractCCZ4FVRusanov::NumberOfAuxiliaryVariables,exahype2::enumerator::AoSoALexicographicEnumerator>,
+          ::exahype2::fv::rusanov::timeStepWithRusanov_batched_heap_static_calls<CCZ4FVRusanov,CCZ4FVRusanov::NumberOfFiniteVolumesPerAxisPerPatch, 1, CCZ4FVRusanov::NumberOfUnknowns, CCZ4FVRusanov::NumberOfAuxiliaryVariables,exahype2::enumerator::AoSoALexicographicEnumerator>,
           "heap, batched, AoSoA", thread
         );
         testStatelessVariantOnHost(
-          ::exahype2::fv::rusanov::timeStepWithRusanov_batched_heap_static_calls<AbstractCCZ4FVRusanov,AbstractCCZ4FVRusanov::NumberOfFiniteVolumesPerAxisPerPatch, 1, AbstractCCZ4FVRusanov::NumberOfUnknowns, AbstractCCZ4FVRusanov::NumberOfAuxiliaryVariables,exahype2::enumerator::SoALexicographicEnumerator>,
+          ::exahype2::fv::rusanov::timeStepWithRusanov_batched_heap_static_calls<CCZ4FVRusanov,CCZ4FVRusanov::NumberOfFiniteVolumesPerAxisPerPatch, 1, CCZ4FVRusanov::NumberOfUnknowns, CCZ4FVRusanov::NumberOfAuxiliaryVariables,exahype2::enumerator::SoALexicographicEnumerator>,
           "heap, batched, SoA", thread
         );
         /*testStatelessVariantOnHost(
-          ::exahype2::fv::rusanov::timeStepWithRusanov_batched_in_situ_static_calls<AbstractCCZ4FVRusanov,AbstractCCZ4FVRusanov::NumberOfFiniteVolumesPerAxisPerPatch, 1, AbstractCCZ4FVRusanov::NumberOfUnknowns, AbstractCCZ4FVRusanov::NumberOfAuxiliaryVariables>,
+          ::exahype2::fv::rusanov::timeStepWithRusanov_batched_in_situ_static_calls<CCZ4FVRusanov,CCZ4FVRusanov::NumberOfFiniteVolumesPerAxisPerPatch, 1, CCZ4FVRusanov::NumberOfUnknowns, CCZ4FVRusanov::NumberOfAuxiliaryVariables>,
           "heap, batched, in-situ", thread
         );*/
 
@@ -409,47 +409,47 @@ void submitSYCLKernels(int patches, int device, int thread) {
     h.host_task([=]() {
       testStatelessVariantOnDevice(
         patches, device,
-        ::exahype2::fv::rusanov::sycl::timeStepWithRusanov_taskgraph_static_calls<AbstractCCZ4FVRusanov,AbstractCCZ4FVRusanov::NumberOfFiniteVolumesPerAxisPerPatch, 1, AbstractCCZ4FVRusanov::NumberOfUnknowns, AbstractCCZ4FVRusanov::NumberOfAuxiliaryVariables,exahype2::enumerator::AoSLexicographicEnumerator>,
+        ::exahype2::fv::rusanov::sycl::timeStepWithRusanov_taskgraph_static_calls<CCZ4FVRusanov,CCZ4FVRusanov::NumberOfFiniteVolumesPerAxisPerPatch, 1, CCZ4FVRusanov::NumberOfUnknowns, CCZ4FVRusanov::NumberOfAuxiliaryVariables,exahype2::enumerator::AoSLexicographicEnumerator>,
         "sycl, task-graph, AoS", thread
       );
       testStatelessVariantOnDevice(
         patches, device,
-        ::exahype2::fv::rusanov::sycl::timeStepWithRusanov_taskgraph_static_calls<AbstractCCZ4FVRusanov,AbstractCCZ4FVRusanov::NumberOfFiniteVolumesPerAxisPerPatch, 1, AbstractCCZ4FVRusanov::NumberOfUnknowns, AbstractCCZ4FVRusanov::NumberOfAuxiliaryVariables,exahype2::enumerator::AoSoALexicographicEnumerator>,
+        ::exahype2::fv::rusanov::sycl::timeStepWithRusanov_taskgraph_static_calls<CCZ4FVRusanov,CCZ4FVRusanov::NumberOfFiniteVolumesPerAxisPerPatch, 1, CCZ4FVRusanov::NumberOfUnknowns, CCZ4FVRusanov::NumberOfAuxiliaryVariables,exahype2::enumerator::AoSoALexicographicEnumerator>,
         "sycl, task-graph, AoSoA", thread
       );
       testStatelessVariantOnDevice(
         patches, device,
-        ::exahype2::fv::rusanov::sycl::timeStepWithRusanov_taskgraph_static_calls<AbstractCCZ4FVRusanov,AbstractCCZ4FVRusanov::NumberOfFiniteVolumesPerAxisPerPatch, 1, AbstractCCZ4FVRusanov::NumberOfUnknowns, AbstractCCZ4FVRusanov::NumberOfAuxiliaryVariables,exahype2::enumerator::SoALexicographicEnumerator>,
+        ::exahype2::fv::rusanov::sycl::timeStepWithRusanov_taskgraph_static_calls<CCZ4FVRusanov,CCZ4FVRusanov::NumberOfFiniteVolumesPerAxisPerPatch, 1, CCZ4FVRusanov::NumberOfUnknowns, CCZ4FVRusanov::NumberOfAuxiliaryVariables,exahype2::enumerator::SoALexicographicEnumerator>,
         "sycl, task-graph, SoA", thread
       );
       testStatelessVariantOnDevice(
         patches, device,
-        ::exahype2::fv::rusanov::sycl::timeStepWithRusanov_patchwise_static_calls<AbstractCCZ4FVRusanov,AbstractCCZ4FVRusanov::NumberOfFiniteVolumesPerAxisPerPatch, 1, AbstractCCZ4FVRusanov::NumberOfUnknowns, AbstractCCZ4FVRusanov::NumberOfAuxiliaryVariables,exahype2::enumerator::AoSLexicographicEnumerator>,
+        ::exahype2::fv::rusanov::sycl::timeStepWithRusanov_patchwise_static_calls<CCZ4FVRusanov,CCZ4FVRusanov::NumberOfFiniteVolumesPerAxisPerPatch, 1, CCZ4FVRusanov::NumberOfUnknowns, CCZ4FVRusanov::NumberOfAuxiliaryVariables,exahype2::enumerator::AoSLexicographicEnumerator>,
         "sycl, patch-wise, AoS", thread
       );
       testStatelessVariantOnDevice(
         patches, device,
-        ::exahype2::fv::rusanov::sycl::timeStepWithRusanov_patchwise_static_calls<AbstractCCZ4FVRusanov,AbstractCCZ4FVRusanov::NumberOfFiniteVolumesPerAxisPerPatch, 1, AbstractCCZ4FVRusanov::NumberOfUnknowns, AbstractCCZ4FVRusanov::NumberOfAuxiliaryVariables,exahype2::enumerator::AoSoALexicographicEnumerator>,
+        ::exahype2::fv::rusanov::sycl::timeStepWithRusanov_patchwise_static_calls<CCZ4FVRusanov,CCZ4FVRusanov::NumberOfFiniteVolumesPerAxisPerPatch, 1, CCZ4FVRusanov::NumberOfUnknowns, CCZ4FVRusanov::NumberOfAuxiliaryVariables,exahype2::enumerator::AoSoALexicographicEnumerator>,
         "sycl, patch-wise, AoSoA", thread
       );
       testStatelessVariantOnDevice(
         patches, device,
-        ::exahype2::fv::rusanov::sycl::timeStepWithRusanov_patchwise_static_calls<AbstractCCZ4FVRusanov,AbstractCCZ4FVRusanov::NumberOfFiniteVolumesPerAxisPerPatch, 1, AbstractCCZ4FVRusanov::NumberOfUnknowns, AbstractCCZ4FVRusanov::NumberOfAuxiliaryVariables,exahype2::enumerator::SoALexicographicEnumerator>,
+        ::exahype2::fv::rusanov::sycl::timeStepWithRusanov_patchwise_static_calls<CCZ4FVRusanov,CCZ4FVRusanov::NumberOfFiniteVolumesPerAxisPerPatch, 1, CCZ4FVRusanov::NumberOfUnknowns, CCZ4FVRusanov::NumberOfAuxiliaryVariables,exahype2::enumerator::SoALexicographicEnumerator>,
         "sycl, patch-wise, SoA", thread
       );
       testStatelessVariantOnDevice(
         patches, device,
-        ::exahype2::fv::rusanov::sycl::timeStepWithRusanov_batched_static_calls<AbstractCCZ4FVRusanov,AbstractCCZ4FVRusanov::NumberOfFiniteVolumesPerAxisPerPatch, 1, AbstractCCZ4FVRusanov::NumberOfUnknowns, AbstractCCZ4FVRusanov::NumberOfAuxiliaryVariables,exahype2::enumerator::AoSLexicographicEnumerator>,
+        ::exahype2::fv::rusanov::sycl::timeStepWithRusanov_batched_static_calls<CCZ4FVRusanov,CCZ4FVRusanov::NumberOfFiniteVolumesPerAxisPerPatch, 1, CCZ4FVRusanov::NumberOfUnknowns, CCZ4FVRusanov::NumberOfAuxiliaryVariables,exahype2::enumerator::AoSLexicographicEnumerator>,
         "sycl, batched, AoS", thread
       );
       testStatelessVariantOnDevice(
         patches, device,
-        ::exahype2::fv::rusanov::sycl::timeStepWithRusanov_batched_static_calls<AbstractCCZ4FVRusanov,AbstractCCZ4FVRusanov::NumberOfFiniteVolumesPerAxisPerPatch, 1, AbstractCCZ4FVRusanov::NumberOfUnknowns, AbstractCCZ4FVRusanov::NumberOfAuxiliaryVariables,exahype2::enumerator::AoSoALexicographicEnumerator>,
+        ::exahype2::fv::rusanov::sycl::timeStepWithRusanov_batched_static_calls<CCZ4FVRusanov,CCZ4FVRusanov::NumberOfFiniteVolumesPerAxisPerPatch, 1, CCZ4FVRusanov::NumberOfUnknowns, CCZ4FVRusanov::NumberOfAuxiliaryVariables,exahype2::enumerator::AoSoALexicographicEnumerator>,
         "sycl, batched, AoSoA", thread
       );
       testStatelessVariantOnDevice(
         patches, device,
-        ::exahype2::fv::rusanov::sycl::timeStepWithRusanov_taskgraph_static_calls<AbstractCCZ4FVRusanov,AbstractCCZ4FVRusanov::NumberOfFiniteVolumesPerAxisPerPatch, 1, AbstractCCZ4FVRusanov::NumberOfUnknowns, AbstractCCZ4FVRusanov::NumberOfAuxiliaryVariables,exahype2::enumerator::SoALexicographicEnumerator>,
+        ::exahype2::fv::rusanov::sycl::timeStepWithRusanov_taskgraph_static_calls<CCZ4FVRusanov,CCZ4FVRusanov::NumberOfFiniteVolumesPerAxisPerPatch, 1, CCZ4FVRusanov::NumberOfUnknowns, CCZ4FVRusanov::NumberOfAuxiliaryVariables,exahype2::enumerator::SoALexicographicEnumerator>,
         "sycl, batched, SoA", thread
       );
     });
@@ -473,27 +473,30 @@ void runBenchmarksOnDevice(int patches, int device) {
 
 #if defined(SharedOMP) and defined(GPUOffloadingOMP)
   #ifdef __NVCOMPILER_CUDA__
+    tarch::accelerator::omp::GPUMemoryManager::getInstance().clear();
     #pragma omp parallel for
     for (int thread=0; thread<tarch::multicore::Core::getInstance().getNumberOfThreads(); thread++) {
       testStatelessVariantOnDevice(
         patches, device,
-        ::exahype2::fv::rusanov::omp::timeStepWithRusanov_patchwise_managed_static_calls<AbstractCCZ4FVRusanov,AbstractCCZ4FVRusanov::NumberOfFiniteVolumesPerAxisPerPatch, 1, AbstractCCZ4FVRusanov::NumberOfUnknowns, AbstractCCZ4FVRusanov::NumberOfAuxiliaryVariables,exahype2::enumerator::AoSLexicographicEnumerator>,
+        ::exahype2::fv::rusanov::omp::timeStepWithRusanov_patchwise_managed_static_calls<CCZ4FVRusanov,CCZ4FVRusanov::NumberOfFiniteVolumesPerAxisPerPatch, 1, CCZ4FVRusanov::NumberOfUnknowns, CCZ4FVRusanov::NumberOfAuxiliaryVariables,exahype2::enumerator::AoSLexicographicEnumerator>,
         "omp, patch-wise, AoS, managed", thread
       );
     }
-  #pragma omp parallel for
+    tarch::accelerator::omp::GPUMemoryManager::getInstance().clear();
+    #pragma omp parallel for
     for (int thread=0; thread<tarch::multicore::Core::getInstance().getNumberOfThreads(); thread++) {
       testStatelessVariantOnDevice(
         patches, device,
-        ::exahype2::fv::rusanov::omp::timeStepWithRusanov_patchwise_managed_static_calls<AbstractCCZ4FVRusanov,AbstractCCZ4FVRusanov::NumberOfFiniteVolumesPerAxisPerPatch, 1, AbstractCCZ4FVRusanov::NumberOfUnknowns, AbstractCCZ4FVRusanov::NumberOfAuxiliaryVariables,exahype2::enumerator::AoSoALexicographicEnumerator>,
+        ::exahype2::fv::rusanov::omp::timeStepWithRusanov_patchwise_managed_static_calls<CCZ4FVRusanov,CCZ4FVRusanov::NumberOfFiniteVolumesPerAxisPerPatch, 1, CCZ4FVRusanov::NumberOfUnknowns, CCZ4FVRusanov::NumberOfAuxiliaryVariables,exahype2::enumerator::AoSoALexicographicEnumerator>,
         "omp, patch-wise, AoSoA, managed", thread
       );
     }
-  #pragma omp parallel for
+    tarch::accelerator::omp::GPUMemoryManager::getInstance().clear();
+    #pragma omp parallel for
     for (int thread=0; thread<tarch::multicore::Core::getInstance().getNumberOfThreads(); thread++) {
       testStatelessVariantOnDevice(
         patches, device,
-        ::exahype2::fv::rusanov::omp::timeStepWithRusanov_patchwise_managed_static_calls<AbstractCCZ4FVRusanov,AbstractCCZ4FVRusanov::NumberOfFiniteVolumesPerAxisPerPatch, 1, AbstractCCZ4FVRusanov::NumberOfUnknowns, AbstractCCZ4FVRusanov::NumberOfAuxiliaryVariables,exahype2::enumerator::SoALexicographicEnumerator>,
+        ::exahype2::fv::rusanov::omp::timeStepWithRusanov_patchwise_managed_static_calls<CCZ4FVRusanov,CCZ4FVRusanov::NumberOfFiniteVolumesPerAxisPerPatch, 1, CCZ4FVRusanov::NumberOfUnknowns, CCZ4FVRusanov::NumberOfAuxiliaryVariables,exahype2::enumerator::SoALexicographicEnumerator>,
         "omp, patch-wise, SoA, managed", thread
       );
     }
@@ -502,7 +505,7 @@ void runBenchmarksOnDevice(int patches, int device) {
     for (int thread=0; thread<tarch::multicore::Core::getInstance().getNumberOfThreads(); thread++) {
       testStatelessVariantOnDevice(
         patches, device,
-        ::exahype2::fv::rusanov::omp::timeStepWithRusanov_patchwise_map_static_calls<AbstractCCZ4FVRusanov,AbstractCCZ4FVRusanov::NumberOfFiniteVolumesPerAxisPerPatch, 1, AbstractCCZ4FVRusanov::NumberOfUnknowns, AbstractCCZ4FVRusanov::NumberOfAuxiliaryVariables,exahype2::enumerator::AoSLexicographicEnumerator>,
+        ::exahype2::fv::rusanov::omp::timeStepWithRusanov_patchwise_map_static_calls<CCZ4FVRusanov,CCZ4FVRusanov::NumberOfFiniteVolumesPerAxisPerPatch, 1, CCZ4FVRusanov::NumberOfUnknowns, CCZ4FVRusanov::NumberOfAuxiliaryVariables,exahype2::enumerator::AoSLexicographicEnumerator>,
         "omp, patch-wise, AoS, map", thread
       );
     }
@@ -510,7 +513,7 @@ void runBenchmarksOnDevice(int patches, int device) {
     for (int thread=0; thread<tarch::multicore::Core::getInstance().getNumberOfThreads(); thread++) {
       testStatelessVariantOnDevice(
         patches, device,
-        ::exahype2::fv::rusanov::omp::timeStepWithRusanov_patchwise_map_static_calls<AbstractCCZ4FVRusanov,AbstractCCZ4FVRusanov::NumberOfFiniteVolumesPerAxisPerPatch, 1, AbstractCCZ4FVRusanov::NumberOfUnknowns, AbstractCCZ4FVRusanov::NumberOfAuxiliaryVariables,exahype2::enumerator::AoSoALexicographicEnumerator>,
+        ::exahype2::fv::rusanov::omp::timeStepWithRusanov_patchwise_map_static_calls<CCZ4FVRusanov,CCZ4FVRusanov::NumberOfFiniteVolumesPerAxisPerPatch, 1, CCZ4FVRusanov::NumberOfUnknowns, CCZ4FVRusanov::NumberOfAuxiliaryVariables,exahype2::enumerator::AoSoALexicographicEnumerator>,
         "omp, patch-wise, AoSoA, map", thread
       );
     }
@@ -518,34 +521,37 @@ void runBenchmarksOnDevice(int patches, int device) {
     for (int thread=0; thread<tarch::multicore::Core::getInstance().getNumberOfThreads(); thread++) {
       testStatelessVariantOnDevice(
         patches, device,
-        ::exahype2::fv::rusanov::omp::timeStepWithRusanov_patchwise_map_static_calls<AbstractCCZ4FVRusanov,AbstractCCZ4FVRusanov::NumberOfFiniteVolumesPerAxisPerPatch, 1, AbstractCCZ4FVRusanov::NumberOfUnknowns, AbstractCCZ4FVRusanov::NumberOfAuxiliaryVariables,exahype2::enumerator::SoALexicographicEnumerator>,
+        ::exahype2::fv::rusanov::omp::timeStepWithRusanov_patchwise_map_static_calls<CCZ4FVRusanov,CCZ4FVRusanov::NumberOfFiniteVolumesPerAxisPerPatch, 1, CCZ4FVRusanov::NumberOfUnknowns, CCZ4FVRusanov::NumberOfAuxiliaryVariables,exahype2::enumerator::SoALexicographicEnumerator>,
         "omp, patch-wise, SoA, map", thread
       );
     }
   #endif
 
   #ifdef __NVCOMPILER_CUDA__
+    tarch::accelerator::omp::GPUMemoryManager::getInstance().clear();
     #pragma omp parallel for
     for (int thread=0; thread<tarch::multicore::Core::getInstance().getNumberOfThreads(); thread++) {
       testStatelessVariantOnDevice(
         patches, device,
-        ::exahype2::fv::rusanov::omp::timeStepWithRusanov_batched_managed_static_calls<AbstractCCZ4FVRusanov,AbstractCCZ4FVRusanov::NumberOfFiniteVolumesPerAxisPerPatch, 1, AbstractCCZ4FVRusanov::NumberOfUnknowns, AbstractCCZ4FVRusanov::NumberOfAuxiliaryVariables,exahype2::enumerator::AoSLexicographicEnumerator>,
+        ::exahype2::fv::rusanov::omp::timeStepWithRusanov_batched_managed_static_calls<CCZ4FVRusanov,CCZ4FVRusanov::NumberOfFiniteVolumesPerAxisPerPatch, 1, CCZ4FVRusanov::NumberOfUnknowns, CCZ4FVRusanov::NumberOfAuxiliaryVariables,exahype2::enumerator::AoSLexicographicEnumerator>,
         "omp, batched, AoS, managed", thread
       );
     }
+    tarch::accelerator::omp::GPUMemoryManager::getInstance().clear();
     #pragma omp parallel for
     for (int thread=0; thread<tarch::multicore::Core::getInstance().getNumberOfThreads(); thread++) {
       testStatelessVariantOnDevice(
         patches, device,
-        ::exahype2::fv::rusanov::omp::timeStepWithRusanov_batched_managed_static_calls<AbstractCCZ4FVRusanov,AbstractCCZ4FVRusanov::NumberOfFiniteVolumesPerAxisPerPatch, 1, AbstractCCZ4FVRusanov::NumberOfUnknowns, AbstractCCZ4FVRusanov::NumberOfAuxiliaryVariables,exahype2::enumerator::AoSoALexicographicEnumerator>,
+        ::exahype2::fv::rusanov::omp::timeStepWithRusanov_batched_managed_static_calls<CCZ4FVRusanov,CCZ4FVRusanov::NumberOfFiniteVolumesPerAxisPerPatch, 1, CCZ4FVRusanov::NumberOfUnknowns, CCZ4FVRusanov::NumberOfAuxiliaryVariables,exahype2::enumerator::AoSoALexicographicEnumerator>,
         "omp, batched, AoSoA, managed", thread
       );
     }
+    tarch::accelerator::omp::GPUMemoryManager::getInstance().clear();
     #pragma omp parallel for
     for (int thread=0; thread<tarch::multicore::Core::getInstance().getNumberOfThreads(); thread++) {
       testStatelessVariantOnDevice(
         patches, device,
-        ::exahype2::fv::rusanov::omp::timeStepWithRusanov_batched_managed_static_calls<AbstractCCZ4FVRusanov,AbstractCCZ4FVRusanov::NumberOfFiniteVolumesPerAxisPerPatch, 1, AbstractCCZ4FVRusanov::NumberOfUnknowns, AbstractCCZ4FVRusanov::NumberOfAuxiliaryVariables,exahype2::enumerator::SoALexicographicEnumerator>,
+        ::exahype2::fv::rusanov::omp::timeStepWithRusanov_batched_managed_static_calls<CCZ4FVRusanov,CCZ4FVRusanov::NumberOfFiniteVolumesPerAxisPerPatch, 1, CCZ4FVRusanov::NumberOfUnknowns, CCZ4FVRusanov::NumberOfAuxiliaryVariables,exahype2::enumerator::SoALexicographicEnumerator>,
         "omp, batched, SoA, managed", thread
       );
     }
@@ -554,7 +560,7 @@ void runBenchmarksOnDevice(int patches, int device) {
     for (int thread=0; thread<tarch::multicore::Core::getInstance().getNumberOfThreads(); thread++) {
       testStatelessVariantOnDevice(
         patches, device,
-        ::exahype2::fv::rusanov::omp::timeStepWithRusanov_batched_map_static_calls<AbstractCCZ4FVRusanov,AbstractCCZ4FVRusanov::NumberOfFiniteVolumesPerAxisPerPatch, 1, AbstractCCZ4FVRusanov::NumberOfUnknowns, AbstractCCZ4FVRusanov::NumberOfAuxiliaryVariables,exahype2::enumerator::AoSLexicographicEnumerator>,
+        ::exahype2::fv::rusanov::omp::timeStepWithRusanov_batched_map_static_calls<CCZ4FVRusanov,CCZ4FVRusanov::NumberOfFiniteVolumesPerAxisPerPatch, 1, CCZ4FVRusanov::NumberOfUnknowns, CCZ4FVRusanov::NumberOfAuxiliaryVariables,exahype2::enumerator::AoSLexicographicEnumerator>,
         "omp, batched, AoS, map", thread
       );
     }
@@ -562,7 +568,7 @@ void runBenchmarksOnDevice(int patches, int device) {
     for (int thread=0; thread<tarch::multicore::Core::getInstance().getNumberOfThreads(); thread++) {
       testStatelessVariantOnDevice(
         patches, device,
-        ::exahype2::fv::rusanov::omp::timeStepWithRusanov_batched_map_static_calls<AbstractCCZ4FVRusanov,AbstractCCZ4FVRusanov::NumberOfFiniteVolumesPerAxisPerPatch, 1, AbstractCCZ4FVRusanov::NumberOfUnknowns, AbstractCCZ4FVRusanov::NumberOfAuxiliaryVariables,exahype2::enumerator::AoSoALexicographicEnumerator>,
+        ::exahype2::fv::rusanov::omp::timeStepWithRusanov_batched_map_static_calls<CCZ4FVRusanov,CCZ4FVRusanov::NumberOfFiniteVolumesPerAxisPerPatch, 1, CCZ4FVRusanov::NumberOfUnknowns, CCZ4FVRusanov::NumberOfAuxiliaryVariables,exahype2::enumerator::AoSoALexicographicEnumerator>,
         "omp, batched, AoSoA, map", thread
       );
     }
@@ -570,7 +576,7 @@ void runBenchmarksOnDevice(int patches, int device) {
     for (int thread=0; thread<tarch::multicore::Core::getInstance().getNumberOfThreads(); thread++) {
       testStatelessVariantOnDevice(
         patches, device,
-        ::exahype2::fv::rusanov::omp::timeStepWithRusanov_batched_map_static_calls<AbstractCCZ4FVRusanov,AbstractCCZ4FVRusanov::NumberOfFiniteVolumesPerAxisPerPatch, 1, AbstractCCZ4FVRusanov::NumberOfUnknowns, AbstractCCZ4FVRusanov::NumberOfAuxiliaryVariables,exahype2::enumerator::SoALexicographicEnumerator>,
+        ::exahype2::fv::rusanov::omp::timeStepWithRusanov_batched_map_static_calls<CCZ4FVRusanov,CCZ4FVRusanov::NumberOfFiniteVolumesPerAxisPerPatch, 1, CCZ4FVRusanov::NumberOfUnknowns, CCZ4FVRusanov::NumberOfAuxiliaryVariables,exahype2::enumerator::SoALexicographicEnumerator>,
         "omp, batched, SoA, map", thread
       );
     }
@@ -606,8 +612,40 @@ void runBenchmarksOnDevice(int patches, int device) {
   }
 #elif defined(GPUOffloadingSYCL)
   submitSYCLKernels(patches, device, 0);
-#elif defined(SharedCPP)
-  #error Not implemented yet
+#elif /*defined(SharedCPP) and*/ defined(GPUOffloadingCPP)
+  // @TODO: Parallelise with C++ threads
+  for (int thread=0; thread<tarch::multicore::Core::getInstance().getNumberOfThreads(); thread++) {
+    testStatelessVariantOnDevice(
+      patches, device,
+      ::exahype2::fv::rusanov::cpp::timeStepWithRusanov_patchwise_heap_static_calls<CCZ4FVRusanov,CCZ4FVRusanov::NumberOfFiniteVolumesPerAxisPerPatch, 1, CCZ4FVRusanov::NumberOfUnknowns, CCZ4FVRusanov::NumberOfAuxiliaryVariables,exahype2::enumerator::AoSLexicographicEnumerator>,
+      "cpp, patch-wise, AoS", thread
+    );
+    testStatelessVariantOnDevice(
+      patches, device,
+      ::exahype2::fv::rusanov::cpp::timeStepWithRusanov_patchwise_heap_static_calls<CCZ4FVRusanov,CCZ4FVRusanov::NumberOfFiniteVolumesPerAxisPerPatch, 1, CCZ4FVRusanov::NumberOfUnknowns, CCZ4FVRusanov::NumberOfAuxiliaryVariables,exahype2::enumerator::AoSoALexicographicEnumerator>,
+      "cpp, patch-wise, AoSoA", thread
+    );
+    testStatelessVariantOnDevice(
+      patches, device,
+      ::exahype2::fv::rusanov::cpp::timeStepWithRusanov_patchwise_heap_static_calls<CCZ4FVRusanov,CCZ4FVRusanov::NumberOfFiniteVolumesPerAxisPerPatch, 1, CCZ4FVRusanov::NumberOfUnknowns, CCZ4FVRusanov::NumberOfAuxiliaryVariables,exahype2::enumerator::SoALexicographicEnumerator>,
+      "cpp, patch-wise, SoA", thread
+    );
+    testStatelessVariantOnDevice(
+      patches, device,
+      ::exahype2::fv::rusanov::cpp::timeStepWithRusanov_batched_heap_static_calls<CCZ4FVRusanov,CCZ4FVRusanov::NumberOfFiniteVolumesPerAxisPerPatch, 1, CCZ4FVRusanov::NumberOfUnknowns, CCZ4FVRusanov::NumberOfAuxiliaryVariables,exahype2::enumerator::AoSLexicographicEnumerator>,
+      "cpp, batched, AoS", thread
+    );
+    testStatelessVariantOnDevice(
+      patches, device,
+      ::exahype2::fv::rusanov::cpp::timeStepWithRusanov_batched_heap_static_calls<CCZ4FVRusanov,CCZ4FVRusanov::NumberOfFiniteVolumesPerAxisPerPatch, 1, CCZ4FVRusanov::NumberOfUnknowns, CCZ4FVRusanov::NumberOfAuxiliaryVariables,exahype2::enumerator::AoSoALexicographicEnumerator>,
+      "cpp, batched, AoSoA", thread
+    );
+    testStatelessVariantOnDevice(
+      patches, device,
+      ::exahype2::fv::rusanov::cpp::timeStepWithRusanov_batched_heap_static_calls<CCZ4FVRusanov,CCZ4FVRusanov::NumberOfFiniteVolumesPerAxisPerPatch, 1, CCZ4FVRusanov::NumberOfUnknowns, CCZ4FVRusanov::NumberOfAuxiliaryVariables,exahype2::enumerator::SoALexicographicEnumerator>,
+      "cpp, batched, SoA", thread
+    );
+  }
 #endif
 }
 
@@ -662,7 +700,6 @@ int main(int argc, char** argv) {
     runBenchmarksOnHost(patches);
 
     for (int device=0; device<tarch::accelerator::Device::getInstance().getNumberOfDevices(); device++) {
-      tarch::accelerator::omp::GPUMemoryManager::getInstance().clear();
       std::stringstream msg;
       msg << "benchmark-" << patches << "-" << device;
       otterPhaseSwitch( msg.str().c_str() );

@@ -1,23 +1,7 @@
 #include "tarch/accelerator/accelerator.h"
-#include "tarch/Assertions.h"
-
-#include <sstream>
+#include "tarch/accelerator/cuda/ErrorCheck.h"
 
 #if defined(GPUOffloadingOMP)
-
-#if defined(__NVCOMPILER_CUDA__)
-#include <cuda_runtime.h>
-
-#define CHECK_CUDA_ERROR(ans) { cudaAssertion((ans), __FILE__, __LINE__); }
-void cudaAssertion(cudaError_t code, const char *file, int line) {
-  assertion(code == cudaSuccess);
-  if (code != cudaSuccess) {
-    std::stringstream ss;
-    ss << "CUDA assertion: " << cudaGetErrorString(code) << " " << file << " " << line;
-    throw std::runtime_error(ss.str());
-  }
-}
-#endif
 
 #pragma omp declare target
 void tarch::gpuAbort() {}
@@ -43,7 +27,7 @@ void* tarch::internal::allocateRawData(int size, MemoryLocation location) {
 void tarch::freeMemory(void* data, MemoryLocation location) {
   switch (location) {
     case MemoryLocation::Heap:
-      delete[] data; // TODO: This leaks memory, we should not delete a void* pointer as destructors are not called -> should refactor code into malloc/free instead.
+      delete[] data; // @TODO: This leaks memory, we should not delete a void* pointer as destructors are not called -> should refactor code into malloc/free instead.
       break;
     case MemoryLocation::ManagedSharedAcceleratorDeviceMemory:
       #if defined(__NVCOMPILER_CUDA__)

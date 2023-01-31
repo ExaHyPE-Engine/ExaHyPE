@@ -2,7 +2,6 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-
 #include <thread>
 #include <set>
 #include <string>
@@ -10,13 +9,11 @@
 #include "tarch/logging/Log.h"
 #include "accelerator.h"
 
-
 namespace tarch {
   namespace accelerator{
     class Device;
   }
 }
-
 
 /**
  * Core
@@ -97,4 +94,3 @@ class tarch::accelerator::Device {
      */
     int getNumberOfDevices() const;
 };
-
