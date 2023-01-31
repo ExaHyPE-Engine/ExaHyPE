@@ -1,4 +1,4 @@
-# The acoustic wave equation
+# The Acoustic Wave Equation
 
 The acoustic wave equation describes the propagation of a wave through a material. This
 equation assumes that all movements are only small perturbations over the background flow
