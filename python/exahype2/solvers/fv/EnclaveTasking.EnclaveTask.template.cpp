@@ -1,10 +1,8 @@
 #include "{{CLASSNAME}}.h"
 
-// user includes
 {{SOLVER_INCLUDES}}
 
 #include "config.h"
-
 
 #include "exahype2/CellData.h"
 #include "exahype2/EnclaveBookkeeping.h"
@@ -209,7 +207,6 @@ smartmpi::Task* {{NAMESPACE | join("::")}}::{{CLASSNAME}}::receiveTask(int rank,
   return result;
 }
 
-
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::runLocallyAndSendTaskOutputToRank(int rank, int tag, MPI_Comm communicator) {
   _outputValues = tarch::allocateMemory( _numberOfResultValues, tarch::MemoryLocation::Heap );
 
@@ -224,7 +221,6 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::runLocallyAndSendTaskOutputToRan
 
   forwardTaskOutputToRank(rank, tag, communicator);
 }
-
 
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::forwardTaskOutputToRank(int rank, int tag, MPI_Comm communicator) {
   logInfo(
@@ -255,7 +251,6 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::forwardTaskOutputToRank(int rank
 
   // tarch::freeMemory(_outputValues,tarch::MemoryLocation::Heap );
 }
-
 
 smartmpi::Task* {{NAMESPACE | join("::")}}::{{CLASSNAME}}::receiveOutcome(int rank, int tag, MPI_Comm communicator, const bool intentionToForward) {
   logInfo( "receiveOutcome(...)", "rank=" << rank << ", tag=" << tag );
@@ -318,7 +313,6 @@ smartmpi::Task* {{NAMESPACE | join("::")}}::{{CLASSNAME}}::receiveOutcome(int ra
   return nullptr;
 }
 #endif
-
 
 {% if STATELESS_PDE_TERMS %}
 bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::canFuse() const {
@@ -385,6 +379,14 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse( const std::list<Task*>& ot
     foundOffloadingBranch = true;
 
     ::exahype2::fv::{{KERNEL_NAMESPACE}}::sycl::{{FUSED_COMPUTE_KERNEL_CALL_GPU}}
+  }
+  #endif
+
+  #if defined(GPUOffloadingCPP)
+  if (targetDevice>=0 or targetDevice==Host) {
+    foundOffloadingBranch = true;
+
+    ::exahype2::fv::{{KERNEL_NAMESPACE}}::cpp::{{FUSED_COMPUTE_KERNEL_CALL_GPU}}
   }
   #endif
 
