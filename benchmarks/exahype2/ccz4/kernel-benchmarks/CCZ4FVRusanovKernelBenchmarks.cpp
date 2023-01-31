@@ -33,9 +33,9 @@
 
 #include "config.h"
 
-//#ifdef UseFenv
-//#include "tarch/FenvWrapper.h"
-//#endif
+#ifdef UseFenv
+#include "tarch/FenvWrapper.h"
+#endif
 
 #if defined(SharedTBB)
 #include <tbb/task_group.h>
@@ -54,11 +54,9 @@ tarch::timing::Measurement plotMeasurement;
 double validMaxEigenvalue = 0;
 double* validOutcome = nullptr;
 
-double accumulatedTimeBurn = 0;
-double accumulatedTimeBenchmark = 0;
-
-constexpr int NumberOfInputEntries  = (AbstractCCZ4FVRusanov::NumberOfFiniteVolumesPerAxisPerPatch+2)*(AbstractCCZ4FVRusanov::NumberOfFiniteVolumesPerAxisPerPatch+2)*(AbstractCCZ4FVRusanov::NumberOfFiniteVolumesPerAxisPerPatch+2) * AbstractCCZ4FVRusanov::NumberOfUnknowns;
-constexpr int NumberOfOutputEntries = (AbstractCCZ4FVRusanov::NumberOfFiniteVolumesPerAxisPerPatch+0)*(AbstractCCZ4FVRusanov::NumberOfFiniteVolumesPerAxisPerPatch+0)*(AbstractCCZ4FVRusanov::NumberOfFiniteVolumesPerAxisPerPatch+0) * AbstractCCZ4FVRusanov::NumberOfUnknowns;
+constexpr int NumberOfInputEntries  = (CCZ4FVRusanov::NumberOfFiniteVolumesPerAxisPerPatch+2)*(CCZ4FVRusanov::NumberOfFiniteVolumesPerAxisPerPatch+2)*(CCZ4FVRusanov::NumberOfFiniteVolumesPerAxisPerPatch+2) * CCZ4FVRusanov::NumberOfUnknowns;
+constexpr int NumberOfOutputEntries = (CCZ4FVRusanov::NumberOfFiniteVolumesPerAxisPerPatch+0)*(CCZ4FVRusanov::NumberOfFiniteVolumesPerAxisPerPatch+0)*(CCZ4FVRusanov::NumberOfFiniteVolumesPerAxisPerPatch+0) * CCZ4FVRusanov::NumberOfUnknowns;
+constexpr int NumberOfFiniteVolumesPerPatch = CCZ4FVRusanov::NumberOfFiniteVolumesPerAxisPerPatch*CCZ4FVRusanov::NumberOfFiniteVolumesPerAxisPerPatch*CCZ4FVRusanov::NumberOfFiniteVolumesPerAxisPerPatch;
 
 /**
  * Set input data
@@ -154,7 +152,7 @@ void runBenchmarksOnHost(int patches) {
     std::vector<double*> inputData;
     std::vector<double*> outputData;
     for (int i=0; i<patches; i++) {
-      inputData.push_back( new double[ NumberOfInputEntries ] );
+      inputData.push_back( tarch::allocateMemory<double>(NumberOfInputEntries, tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory) );
       outputData.push_back( new double[ NumberOfOutputEntries ] );
       initInputData( inputData[i] );
     }
@@ -173,7 +171,9 @@ void runBenchmarksOnHost(int patches) {
     watch.stop();
 
     if (currentThread==0) {
-      logInfo("main()", "baseline: "       << watch.getCalendarTime() << " / " << (watch.getCalendarTime()/patches/AbstractCCZ4FVRusanov::NumberOfFiniteVolumesPerAxisPerPatch/AbstractCCZ4FVRusanov::NumberOfFiniteVolumesPerAxisPerPatch/AbstractCCZ4FVRusanov::NumberOfFiniteVolumesPerAxisPerPatch) );
+      logInfo("main()", "baseline: "
+        << watch.getCalendarTime() << " / "
+        << (watch.getCalendarTime()/patches/NumberOfFiniteVolumesPerPatch) );
     }
 
     if constexpr (Accuracy>0.0) {
@@ -187,12 +187,14 @@ void runBenchmarksOnHost(int patches) {
       }
 
       if (errors > 0) {
-        logError("main()", "max difference of outcome from baseline for all patches is " << maxDifference << " (admissible accuracy=" << Accuracy << ")" << " for " << errors << " entries");
+        logError("main()", "max difference of outcome from baseline for all patches is "
+          << maxDifference << " (admissible accuracy=" << Accuracy << ")" << " for " << errors << " entries");
         std::abort();
       }
     }
 
     for (int i=0; i<patches; i++) {
+      // inputData is freed automatically by the kernel
       delete[] outputData[i];
     }
   };
@@ -232,7 +234,9 @@ void runBenchmarksOnHost(int patches) {
     watch.stop();
 
     if (currentThread==0) {
-      logInfo("main()", "stateless kernels on host with " << markerName << ": " << watch.getCalendarTime() << " / " << (watch.getCalendarTime()/patches/AbstractCCZ4FVRusanov::NumberOfFiniteVolumesPerAxisPerPatch/AbstractCCZ4FVRusanov::NumberOfFiniteVolumesPerAxisPerPatch/AbstractCCZ4FVRusanov::NumberOfFiniteVolumesPerAxisPerPatch) );
+      logInfo("main()", "stateless kernels on host with " << markerName << ": "
+        << watch.getCalendarTime() << " / "
+        << (watch.getCalendarTime()/patches/NumberOfFiniteVolumesPerPatch) );
     }
 
     if constexpr (Accuracy>0.0) {
@@ -257,7 +261,7 @@ void runBenchmarksOnHost(int patches) {
   };
 
 #if defined(SharedOMP)
-  #pragma omp parallel for shared(accumulatedTimeBurn, accumulatedTimeBenchmark)
+  #pragma omp parallel for
   for (int thread=0; thread<tarch::multicore::Core::getInstance().getNumberOfThreads(); thread++) {
 #elif defined(SharedTBB)
   ::tbb::task_group taskGroup;
@@ -340,7 +344,7 @@ void testStatelessVariantOnDevice(
 ) {
   ::exahype2::CellData patchData(patches);
   for (int i=0; i<patches; i++) {
-    patchData.QIn[i]           = new double[ NumberOfInputEntries ];
+    patchData.QIn[i]           = tarch::allocateMemory<double>(NumberOfInputEntries, tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory);
     patchData.t[i]             = TimeStamp;
     patchData.dt[i]            = TimeStepSize;
     patchData.QOut[i]          = new double[ NumberOfOutputEntries ];
@@ -349,7 +353,8 @@ void testStatelessVariantOnDevice(
     initInputData( patchData.QIn[i] );
   }
 
-  tarch::timing::Watch watchBurn( "::runBenchmarksOnDevice", "testStatelessVariantOnDevice(...)", false );
+  // We launch the kernel once before we do the actual measurement.
+  // This is to simulate the "burn-in" phase of the GPU memory manager.
   kernel(
     device,
     patchData,
@@ -358,45 +363,22 @@ void testStatelessVariantOnDevice(
     true ,
     true   //computeCFL
   );
-  watchBurn.stop();
 
-  tarch::timing::Watch watchBenchmark( "::runBenchmarksOnDevice", "testStatelessVariantOnDevice(...)", false );
-  for (int i = 0; i < Iterations; i++) {
-    kernel(
-      device,
-      patchData,
-      false ,
-      true ,
-      true ,
-      true   //computeCFL
-    );
-  }
-  watchBenchmark.stop();
-
-  {
-    #pragma omp atomic
-    accumulatedTimeBurn += watchBurn.getCalendarTime();
-    #pragma omp atomic
-    accumulatedTimeBenchmark += watchBenchmark.getCalendarTime();
-    #pragma omp barrier
-  }
+  tarch::timing::Watch watch( "::runBenchmarksOnDevice", "testStatelessVariantOnDevice(...)", false );
+  kernel(
+    device,
+    patchData,
+    false ,
+    true ,
+    true ,
+    true   //computeCFL
+  );
+  watch.stop();
 
   if (currentThread==0) {
     logInfo("main()", "stateless kernels on device " << device << " with " << markerName << ": "
-      << "burn phase: " << watchBurn.getCalendarTime() << " / "
-      << (watchBurn.getCalendarTime()/patches/AbstractCCZ4FVRusanov::NumberOfFiniteVolumesPerAxisPerPatch/AbstractCCZ4FVRusanov::NumberOfFiniteVolumesPerAxisPerPatch/AbstractCCZ4FVRusanov::NumberOfFiniteVolumesPerAxisPerPatch) << ", "
-      << Iterations << " iterations: " << (watchBenchmark.getCalendarTime()/Iterations) << " / "
-      << (watchBenchmark.getCalendarTime()/Iterations/patches/AbstractCCZ4FVRusanov::NumberOfFiniteVolumesPerAxisPerPatch/AbstractCCZ4FVRusanov::NumberOfFiniteVolumesPerAxisPerPatch/AbstractCCZ4FVRusanov::NumberOfFiniteVolumesPerAxisPerPatch) << ", "
-      << "burn phase for all threads: " << (accumulatedTimeBurn/omp_get_num_threads()) << " / "
-      << (accumulatedTimeBurn/omp_get_num_threads()/patches/AbstractCCZ4FVRusanov::NumberOfFiniteVolumesPerAxisPerPatch/AbstractCCZ4FVRusanov::NumberOfFiniteVolumesPerAxisPerPatch/AbstractCCZ4FVRusanov::NumberOfFiniteVolumesPerAxisPerPatch) << ", "
-      << Iterations << " iterations for all threads: " << (accumulatedTimeBenchmark/omp_get_num_threads()/Iterations) << " / "
-      << (accumulatedTimeBenchmark/omp_get_num_threads()/Iterations/patches/AbstractCCZ4FVRusanov::NumberOfFiniteVolumesPerAxisPerPatch/AbstractCCZ4FVRusanov::NumberOfFiniteVolumesPerAxisPerPatch/AbstractCCZ4FVRusanov::NumberOfFiniteVolumesPerAxisPerPatch));
-  }
-
-  {
-    #pragma omp barrier
-    accumulatedTimeBurn = 0.0;
-    accumulatedTimeBenchmark = 0.0;
+      << watch.getCalendarTime() << " / "
+      << (watch.getCalendarTime()/patches/NumberOfFiniteVolumesPerPatch));
   }
 
   if constexpr (Accuracy>0.0) {
@@ -409,13 +391,14 @@ void testStatelessVariantOnDevice(
     }
 
     if (errors > 0) {
-      logError("main()", "max difference of outcome from " << markerName << " for all patches is " << maxDifference << " (admissible accuracy=" << Accuracy << ")" << " for " << errors << " entries");
+      logError("main()", "max difference of outcome from "
+        << markerName << " for all patches is " << maxDifference << " (admissible accuracy=" << Accuracy << ")" << " for " << errors << " entries");
       std::abort();
     }
   }
 
   for (int i=0; i<patches; i++) {
-    delete[] patchData.QIn[i];
+    tarch::freeMemory( patchData.QIn[i], tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory );
     delete[] patchData.QOut[i];
   }
 };
@@ -488,43 +471,34 @@ void runBenchmarksOnDevice(int patches, int device) {
   event.setH(CellSize);
   peano4::datamanagement::CellMarker marker(event);
 
-  #if defined(SharedOMP) and defined(GPUOffloadingOMP)
+#if defined(SharedOMP) and defined(GPUOffloadingOMP)
   #ifdef __NVCOMPILER_CUDA__
-  constexpr auto memoryType = "cuda-managed-memory";
-  #else
-  constexpr auto memoryType = "user-managed-memory";
-  #endif
-
-  if constexpr (EnableManagedMemory) {
-    tarch::accelerator::omp::GPUMemoryManager::getInstance().clear();
-  #pragma omp parallel for shared(accumulatedTimeBurn, accumulatedTimeBenchmark)
+    #pragma omp parallel for
     for (int thread=0; thread<tarch::multicore::Core::getInstance().getNumberOfThreads(); thread++) {
       testStatelessVariantOnDevice(
         patches, device,
         ::exahype2::fv::rusanov::omp::timeStepWithRusanov_patchwise_managed_static_calls<AbstractCCZ4FVRusanov,AbstractCCZ4FVRusanov::NumberOfFiniteVolumesPerAxisPerPatch, 1, AbstractCCZ4FVRusanov::NumberOfUnknowns, AbstractCCZ4FVRusanov::NumberOfAuxiliaryVariables,exahype2::enumerator::AoSLexicographicEnumerator>,
-        "omp, patch-wise, AoS, " + std::string(memoryType), thread
+        "omp, patch-wise, AoS, managed", thread
       );
     }
-    tarch::accelerator::omp::GPUMemoryManager::getInstance().clear();
-  #pragma omp parallel for shared(accumulatedTimeBurn, accumulatedTimeBenchmark)
+  #pragma omp parallel for
     for (int thread=0; thread<tarch::multicore::Core::getInstance().getNumberOfThreads(); thread++) {
       testStatelessVariantOnDevice(
         patches, device,
         ::exahype2::fv::rusanov::omp::timeStepWithRusanov_patchwise_managed_static_calls<AbstractCCZ4FVRusanov,AbstractCCZ4FVRusanov::NumberOfFiniteVolumesPerAxisPerPatch, 1, AbstractCCZ4FVRusanov::NumberOfUnknowns, AbstractCCZ4FVRusanov::NumberOfAuxiliaryVariables,exahype2::enumerator::AoSoALexicographicEnumerator>,
-        "omp, patch-wise, AoSoA, " + std::string(memoryType), thread
+        "omp, patch-wise, AoSoA, managed", thread
       );
     }
-    tarch::accelerator::omp::GPUMemoryManager::getInstance().clear();
-  #pragma omp parallel for shared(accumulatedTimeBurn, accumulatedTimeBenchmark)
+  #pragma omp parallel for
     for (int thread=0; thread<tarch::multicore::Core::getInstance().getNumberOfThreads(); thread++) {
       testStatelessVariantOnDevice(
         patches, device,
         ::exahype2::fv::rusanov::omp::timeStepWithRusanov_patchwise_managed_static_calls<AbstractCCZ4FVRusanov,AbstractCCZ4FVRusanov::NumberOfFiniteVolumesPerAxisPerPatch, 1, AbstractCCZ4FVRusanov::NumberOfUnknowns, AbstractCCZ4FVRusanov::NumberOfAuxiliaryVariables,exahype2::enumerator::SoALexicographicEnumerator>,
-        "omp, patch-wise, SoA, " + std::string(memoryType), thread
+        "omp, patch-wise, SoA, managed", thread
       );
     }
-  } else {
-  #pragma omp parallel for shared(accumulatedTimeBurn, accumulatedTimeBenchmark)
+  #else
+    #pragma omp parallel
     for (int thread=0; thread<tarch::multicore::Core::getInstance().getNumberOfThreads(); thread++) {
       testStatelessVariantOnDevice(
         patches, device,
@@ -532,7 +506,7 @@ void runBenchmarksOnDevice(int patches, int device) {
         "omp, patch-wise, AoS, map", thread
       );
     }
-  #pragma omp parallel for shared(accumulatedTimeBurn, accumulatedTimeBenchmark)
+    #pragma omp parallel for
     for (int thread=0; thread<tarch::multicore::Core::getInstance().getNumberOfThreads(); thread++) {
       testStatelessVariantOnDevice(
         patches, device,
@@ -540,7 +514,7 @@ void runBenchmarksOnDevice(int patches, int device) {
         "omp, patch-wise, AoSoA, map", thread
       );
     }
-  #pragma omp parallel for shared(accumulatedTimeBurn, accumulatedTimeBenchmark)
+    #pragma omp parallel for
     for (int thread=0; thread<tarch::multicore::Core::getInstance().getNumberOfThreads(); thread++) {
       testStatelessVariantOnDevice(
         patches, device,
@@ -548,38 +522,35 @@ void runBenchmarksOnDevice(int patches, int device) {
         "omp, patch-wise, SoA, map", thread
       );
     }
-  }
+  #endif
 
-  if constexpr (EnableManagedMemory) {
-    tarch::accelerator::omp::GPUMemoryManager::getInstance().clear();
-  #pragma omp parallel for shared(accumulatedTimeBurn, accumulatedTimeBenchmark)
+  #ifdef __NVCOMPILER_CUDA__
+    #pragma omp parallel for
     for (int thread=0; thread<tarch::multicore::Core::getInstance().getNumberOfThreads(); thread++) {
       testStatelessVariantOnDevice(
         patches, device,
         ::exahype2::fv::rusanov::omp::timeStepWithRusanov_batched_managed_static_calls<AbstractCCZ4FVRusanov,AbstractCCZ4FVRusanov::NumberOfFiniteVolumesPerAxisPerPatch, 1, AbstractCCZ4FVRusanov::NumberOfUnknowns, AbstractCCZ4FVRusanov::NumberOfAuxiliaryVariables,exahype2::enumerator::AoSLexicographicEnumerator>,
-        "omp, batched, AoS, " + std::string(memoryType), thread
+        "omp, batched, AoS, managed", thread
       );
     }
-    tarch::accelerator::omp::GPUMemoryManager::getInstance().clear();
-  #pragma omp parallel for shared(accumulatedTimeBurn, accumulatedTimeBenchmark)
+    #pragma omp parallel for
     for (int thread=0; thread<tarch::multicore::Core::getInstance().getNumberOfThreads(); thread++) {
       testStatelessVariantOnDevice(
         patches, device,
         ::exahype2::fv::rusanov::omp::timeStepWithRusanov_batched_managed_static_calls<AbstractCCZ4FVRusanov,AbstractCCZ4FVRusanov::NumberOfFiniteVolumesPerAxisPerPatch, 1, AbstractCCZ4FVRusanov::NumberOfUnknowns, AbstractCCZ4FVRusanov::NumberOfAuxiliaryVariables,exahype2::enumerator::AoSoALexicographicEnumerator>,
-        "omp, batched, AoSoA, " + std::string(memoryType), thread
+        "omp, batched, AoSoA, managed", thread
       );
     }
-    tarch::accelerator::omp::GPUMemoryManager::getInstance().clear();
-  #pragma omp parallel for shared(accumulatedTimeBurn, accumulatedTimeBenchmark)
+    #pragma omp parallel for
     for (int thread=0; thread<tarch::multicore::Core::getInstance().getNumberOfThreads(); thread++) {
       testStatelessVariantOnDevice(
         patches, device,
         ::exahype2::fv::rusanov::omp::timeStepWithRusanov_batched_managed_static_calls<AbstractCCZ4FVRusanov,AbstractCCZ4FVRusanov::NumberOfFiniteVolumesPerAxisPerPatch, 1, AbstractCCZ4FVRusanov::NumberOfUnknowns, AbstractCCZ4FVRusanov::NumberOfAuxiliaryVariables,exahype2::enumerator::SoALexicographicEnumerator>,
-        "omp, batched, SoA, " + std::string(memoryType), thread
+        "omp, batched, SoA, managed", thread
       );
     }
-  } else {
-  #pragma omp parallel for shared(accumulatedTimeBurn, accumulatedTimeBenchmark)
+  #else
+    #pragma omp parallel for
     for (int thread=0; thread<tarch::multicore::Core::getInstance().getNumberOfThreads(); thread++) {
       testStatelessVariantOnDevice(
         patches, device,
@@ -587,7 +558,7 @@ void runBenchmarksOnDevice(int patches, int device) {
         "omp, batched, AoS, map", thread
       );
     }
-  #pragma omp parallel for shared(accumulatedTimeBurn, accumulatedTimeBenchmark)
+    #pragma omp parallel for
     for (int thread=0; thread<tarch::multicore::Core::getInstance().getNumberOfThreads(); thread++) {
       testStatelessVariantOnDevice(
         patches, device,
@@ -595,7 +566,7 @@ void runBenchmarksOnDevice(int patches, int device) {
         "omp, batched, AoSoA, map", thread
       );
     }
-  #pragma omp parallel for shared(accumulatedTimeBurn, accumulatedTimeBenchmark)
+    #pragma omp parallel for
     for (int thread=0; thread<tarch::multicore::Core::getInstance().getNumberOfThreads(); thread++) {
       testStatelessVariantOnDevice(
         patches, device,
@@ -603,8 +574,8 @@ void runBenchmarksOnDevice(int patches, int device) {
         "omp, batched, SoA, map", thread
       );
     }
-  }
-  #elif defined(SharedTBB) and defined(GPUOffloadingSYCL)
+  #endif
+#elif defined(SharedTBB) and defined(GPUOffloadingSYCL)
   ::tbb::task_group taskGroup;
   for (int thread=0; thread<tarch::multicore::Core::getInstance().getNumberOfThreads(); thread++) {
     taskGroup.run(
@@ -614,7 +585,7 @@ void runBenchmarksOnDevice(int patches, int device) {
     );
   }
   taskGroup.wait();
-  #elif defined(SharedSYCL) and defined(GPUOffloadingSYCL)
+#elif defined(SharedSYCL) and defined(GPUOffloadingSYCL)
   for (int thread=0; thread<tarch::multicore::Core::getInstance().getNumberOfThreads(); thread++) {
     tarch::multicore::getHostSYCLQueue().submit([&](auto &h) {
       h.host_task([=]() {
@@ -623,7 +594,7 @@ void runBenchmarksOnDevice(int patches, int device) {
     }
   }
   tarch::multicore::getHostSYCLQueue().wait();
-  #elif defined(SharedOMP) and defined(GPUOffloadingSYCL)
+#elif defined(SharedOMP) and defined(GPUOffloadingSYCL)
   ::tbb::task_group taskGroup;
   #pragma omp parallel for
   for (int thread=0; thread<tarch::multicore::Core::getInstance().getNumberOfThreads(); thread++) {
@@ -633,11 +604,11 @@ void runBenchmarksOnDevice(int patches, int device) {
       }
     );
   }
-  #elif defined(GPUOffloadingSYCL)
+#elif defined(GPUOffloadingSYCL)
   submitSYCLKernels(patches, device, 0);
-  #elif defined(SharedCPP)
+#elif defined(SharedCPP)
   #error Not implemented yet
-  #endif
+#endif
 }
 
 int main(int argc, char** argv) {
@@ -650,9 +621,9 @@ int main(int argc, char** argv) {
   tarch::multicore::initSmartMPI();
   peano4::fillLookupTables();
 
-//#ifdef UseFenv
-  //tarch::feenableexcept(FE_DIVBYZERO | FE_INVALID | FE_OVERFLOW);
-//#endif
+#ifdef UseFenv
+  tarch::feenableexcept(FE_DIVBYZERO | FE_INVALID | FE_OVERFLOW);
+#endif
 
   if ( tarch::mpi::Rank::getInstance().getNumberOfRanks()>1 and tarch::multicore::Core::getInstance().getNumberOfThreads()<=1 ) {
     logError("main()", "MPI runs without multithreading are not supported currently.");
@@ -691,6 +662,7 @@ int main(int argc, char** argv) {
     runBenchmarksOnHost(patches);
 
     for (int device=0; device<tarch::accelerator::Device::getInstance().getNumberOfDevices(); device++) {
+      tarch::accelerator::omp::GPUMemoryManager::getInstance().clear();
       std::stringstream msg;
       msg << "benchmark-" << patches << "-" << device;
       otterPhaseSwitch( msg.str().c_str() );
