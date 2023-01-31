@@ -77,11 +77,18 @@ FCFLAGS  += {{FCFLAGS}}
 
 GPU_OBJS = {{GPUOBJS}}
 
+H_HEADERS={% for item in H_HEADERS -%} {{item+" "}} {%- endfor %}
 CXX_SOURCES={% for item in CXX_SOURCES -%} {{item+" "}} {%- endfor %}
 FORTRAN_SOURCES={% for item in FORTRAN_SOURCES -%} {{item+" "}} {%- endfor %}
 
+GENERATED_H_HEADERS={% for item in GENERATED_H_HEADERS -%} {{item+" "}} {%- endfor %}
+GENERATED_CXX_SOURCES={% for item in GENERATED_CXX_SOURCES -%} {{item+" "}} {%- endfor %}
+GENERATED_FORTRAN_SOURCES={% for item in GENERATED_FORTRAN_SOURCES -%} {{item+" "}} {%- endfor %}
+
 CXX_OBJS=$(subst .cpp,.o,$(CXX_SOURCES))
+CXX_OBJS+=$(subst .cpp,.o,$(GENERATED_CXX_SOURCES))
 FORTRAN_OBJS=$(subst .f,.o,$(subst .f90,.o,$(FORTRAN_SOURCES)))
+FORTRAN_OBJS+=$(subst .f,.o,$(subst .f90,.o,$(GENERATED_FORTRAN_SOURCES)))
 FORTRAN_MODULE_OBJS={% for module in FORTRAN_MODULES -%} {{module | replace(".f90", ".o") +" "}} {%- endfor %}
 
 all: solver
@@ -116,10 +123,14 @@ distclean:
 	rm -f $(CXX_OBJS) $(FORTRAN_OBJS) $(FORTRAN_MODULE_OBJS)
 	rm -f *.mod
 	rm -f {{EXECUTABLENAME}}
-	rm -f $(CXX_SOURCES)
-	rm -f ${FORTRAN_SOURCES}
+	rm -f $(GENERATED_H_HEADERS)
+	rm -f $(GENERATED_CXX_SOURCES)
+	rm -f ${GENERATED_FORTRAN_SOURCES}
 	rm -rf globaldata celldata facedata vertexdata observers repositories tasks
 	rm -f Constants.h
 	rm -f README-*
+	rm -rf .gitignore
+	rm -rf GeneratedSubdirectories.cmake
+	rm -rf CMakeLists.txt
 
 maintainer-clean: distclean

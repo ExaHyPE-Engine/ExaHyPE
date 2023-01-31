@@ -38,7 +38,6 @@ EXECUTABLENAME  = {{EXECUTABLENAME}}
 FORTRAN_MODULES = {{FORTRAN_MODULES}}
 MODE            = {{MODE}}
 
-
 ## Compiler version
 
 {{VERSION}}
@@ -85,19 +84,18 @@ an old EuroPar publication:
 
 ### OpenMP parallelisation
 
-Peano 4 run uses a wrapper around OpenMP to obtain a high task efficiency. 
-The wrapper can be read as user-level threading implemented on top of OpenMP's 
+Peano 4 run uses a wrapper around OpenMP to obtain a high task efficiency.
+The wrapper can be read as user-level threading implemented on top of OpenMP's
 tasking mechanism. It is described in
-                                                                            
+
        @article{Schulz:2021:Tasking,   
-         title = {Task inefficiency patterns for a wave equation solver},   
+         title = {Task inefficiency patterns for a wave equation solver},
          journal = {IWOMP},   "
          year = {2021},   
          author = {Holger Schulz and Gonzalo Brito Gadeschi and Oleksandr Rudyy and Tobias Weinzierl},
       } 
 
 {% endif %}
-
 
 {% if SharedOMP %}
 
@@ -106,7 +104,7 @@ parallelism. The domain decomposition provides the baseline performance,
 and the tasking adds the big flexibility and scalability gain on top. The 
 key publication discussing the overall idea and algorithmic ingredients is
 the SISC paper
-                                                                            
+
        @article{Charrier:2020:Enclave,
          author = {Charrier, Dominic Etienne and Hazelwood, Benjamin and Weinzierl, Tobias},
          title = {Enclave Tasking for DG Methods on Dynamically Adaptive Meshes},
@@ -154,8 +152,12 @@ the SISC paper
       self.d["EXECUTABLENAME"] = fname
 
   def clear_files(self):
-    self.cppfiles     = []
-    self.fortranfiles = []
+    self.hfiles                     = []
+    self.cppfiles                   = []
+    self.fortranfiles               = []
+    self.generated_hfiles           = []
+    self.generated_cppfiles         = []
+    self.generated_fortranfiles     = []
 
   def set_dimension(self,dimension):
     self.d["DIM"] = str(dimension)
@@ -176,7 +178,6 @@ the SISC paper
     """
      Add the header search path to both the C++ and the Fortran
      call command.
-    
     """
     self.d["CXXFLAGS"] += " -I" + path
     self.d["FCFLAGS"]  += " -I" + path
@@ -324,12 +325,12 @@ did search for a file """ + input_file )
         "LDFLAGS_PEANO_DEBUG",
         "LDADD_PEANO_2D_RELEASE",
         "LDADD_PEANO_2D_STATS",
-        "LDADD_PEANO_2D_ASSERTS", 
+        "LDADD_PEANO_2D_ASSERTS",
         "LDADD_PEANO_2D_TRACE",
         "LDADD_PEANO_2D_DEBUG",
         "LDADD_PEANO_3D_RELEASE",
         "LDADD_PEANO_3D_STATS",
-        "LDADD_PEANO_3D_ASSERTS", 
+        "LDADD_PEANO_3D_ASSERTS",
         "LDADD_PEANO_3D_TRACE",
         "LDADD_PEANO_3D_DEBUG",
         "CXX",
@@ -368,9 +369,29 @@ Error: if you call parse_configure_script_outcome(), please hand over directory 
 ./configure had been called. You passed """ + directory + """ and the script therefore
 did search for a file """ + input_file )
 
-  def add_cpp_file(self,filename):
+  def add_h_file(self,filename,generated=True):
     """
-     Add a new filename. This is basically a set implementation, i.e. you can
+     Add a new header filename.
+     This is actually not needed for compilation,
+     but is useful to have for IDEs where the header files can be displayed
+     in the project.
+
+     filename: String
+        Filename of a C/C++ header file. They usually should have the .h/.hpp extension.
+     generated: Bool
+        Use this flag for generated files which can be tracked
+        by the cleaning routines 'distclean' or 'maintainer-clean' of the Makefile.
+    """
+    if generated:
+      if self.generated_hfiles.count(filename)==0:
+        self.generated_hfiles.append( filename )
+    else:
+      if self.hfiles.count(filename)==0:
+        self.hfiles.append( filename )
+
+  def add_cpp_file(self,filename,generated=True):
+    """
+     Add a new cpp filename. This is basically a set implementation, i.e., you can
      add files multiple times, but they are not inserted multiple times. This
      is important, as the steps add the cpp files. Multiple steps can hold the
      same action, so this action would be created multiple times.
@@ -378,11 +399,21 @@ did search for a file """ + input_file )
      All the standard Peano 4 routines rely on this function to add their
      generated files to the build environment. Nothing stops you however to
      add more files yourself.
-    """
-    if self.cppfiles.count(filename)==0:
-      self.cppfiles.append( filename )
 
-  def add_Fortran_file(self,filename):
+     filename: String
+        Filename of a C++ file. They usually should have the .cpp/.cxx extension.
+     generated: Bool
+        Use this flag for generated files which can be tracked
+        by the cleaning routines 'distclean' or 'maintainer-clean' of the Makefile.
+    """
+    if generated:
+      if self.generated_cppfiles.count(filename)==0:
+        self.generated_cppfiles.append( filename )
+    else:
+      if self.cppfiles.count(filename)==0:
+        self.cppfiles.append( filename )
+
+  def add_Fortran_file(self,filename,generated=True):
     """
      Add a new Fortran file.
 
@@ -399,20 +430,17 @@ did search for a file """ + input_file )
      add_Fortran_module() instead.
 
      filename: String
-       Filename of a Fortran file. They usually should have the .f90 extension.
+        Filename of a Fortran file. They usually should have the .f90 extension.
+     generated: Bool
+        Use this flag for generated files which can be tracked
+        by the cleaning routines 'distclean' or 'maintainer-clean' of the Makefile.
     """
-    if self.fortranfiles.count(filename)==0:
-      self.fortranfiles.append( filename )
-
-  def add_Fortran_files(self,filenames):
-    """
-     Calls add_Fortran_file() for each file.
-
-     filenames: [String]
-       List of files.
-    """
-    for i in filenames:
-      self.add_Fortran_file(i)
+    if generated:
+      if self.generated_fortranfiles.count(filename)==0:
+        self.generated_fortranfiles.append( filename )
+    else:
+      if self.fortranfiles.count(filename)==0:
+        self.fortranfiles.append( filename )
 
   def add_Fortran_module(self,module_file,force=False):
     """
@@ -448,10 +476,14 @@ then this message can typically be ignored.
 
   def generate(self,overwrite,directory):
     cmake_build_dir = find_cmake_build_dir()
-    self.d[ "CMAKE_BUILD_DIR" ] = cmake_build_dir
-    self.d[ 'CXX_SOURCES' ]     = self.cppfiles
-    self.d[ 'FORTRAN_SOURCES' ] = self.fortranfiles
-    self.d[ 'GENERATOR' ]       = sys.argv[0]
+    self.d[ "CMAKE_BUILD_DIR" ]               = cmake_build_dir
+    self.d[ 'H_HEADERS' ]                     = self.hfiles
+    self.d[ 'CXX_SOURCES' ]                   = self.cppfiles
+    self.d[ 'FORTRAN_SOURCES' ]               = self.fortranfiles
+    self.d[ 'GENERATED_H_HEADERS' ]           = self.generated_hfiles
+    self.d[ 'GENERATED_CXX_SOURCES' ]         = self.generated_cppfiles
+    self.d[ 'GENERATED_FORTRAN_SOURCES' ]     = self.generated_fortranfiles
+    self.d[ 'GENERATOR' ]                     = sys.argv[0]
 
     # Anonymous function that generates the output_file_path from input_file_path template
     def generate_build_file(input_file_path, output_file_path):
@@ -482,6 +514,9 @@ then this message can typically be ignored.
     )
     template_output_pairs.append(
       (os.path.join(file_dir, "CMakeLists.txt.template"), os.path.join(directory, "CMakeLists.txt"))
+    )
+    template_output_pairs.append(
+      (os.path.join(file_dir, "Gitignore.template"), os.path.join(directory, ".gitignore"))
     )
 
     # We do not want the same line multiple times as it creates build problems, so we read it into a set

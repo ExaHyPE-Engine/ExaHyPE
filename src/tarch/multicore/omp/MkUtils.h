@@ -29,4 +29,3 @@ void * mk_omp_get_mapped_ptr(const void * ptr, int device_num) {
 }
 
 #endif // SharedOMP
-

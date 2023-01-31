@@ -52,8 +52,8 @@ class TemplatedHeaderImplementationFilePair(object):
     if not os.path.exists( directory + "/" + self.subdirectory ):
       os.mkdir(directory + "/" + self.subdirectory)
 
-    header_filename = directory + "/" + self.subdirectory + "/" + self.classname + ".h";
-    cpp_filename    = directory + "/" + self.subdirectory + "/" + self.classname + ".cpp";
+    header_filename = directory + "/" + self.subdirectory + "/" + self.classname + ".h"
+    cpp_filename    = directory + "/" + self.subdirectory + "/" + self.classname + ".cpp"
 
-    self.generate_file(overwrite,header_filename,self.headerfile_template)    
-    self.generate_file(overwrite,cpp_filename   ,self.cppfile_template)    
+    self.generate_file(overwrite,header_filename,self.headerfile_template)
+    self.generate_file(overwrite,cpp_filename   ,self.cppfile_template)

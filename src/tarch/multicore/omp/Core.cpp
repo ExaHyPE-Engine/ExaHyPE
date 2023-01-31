@@ -16,12 +16,6 @@
 
 #include "config.h"
 
-#if defined(UseNVIDIA)
-#include <cuda_runtime_api.h>
-#include <cuda.h>
-#endif
-
-
 tarch::logging::Log  tarch::multicore::Core::_log( "tarch::multicore::Core" );
 
 tarch::multicore::Core::Core():

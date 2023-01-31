@@ -33,11 +33,9 @@
 tarch::logging::Log                {{NAMESPACE | join("::")}}::{{CLASSNAME}}::_log( "{{NAMESPACE | join("::")}}::{{CLASSNAME}}" );
 int                                {{NAMESPACE | join("::")}}::{{CLASSNAME}}::_enclaveTaskTypeId( peano4::parallel::getTaskType("{{NAMESPACE | join("::")}}::{{CLASSNAME}}") );
 
-
 int {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getEnclaveTaskTypeId() {
   return _enclaveTaskTypeId;
 }
-
 
 double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::applyKernelToCell(
   const ::peano4::datamanagement::CellMarker& marker,
@@ -46,7 +44,7 @@ double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::applyKernelToCell(
   double* __restrict__                        reconstructedPatch,
   double* __restrict__                        targetPatch
 ) {
-  ::exahype2::CellData  patchData( reconstructedPatch, marker.x(), marker.h(), t, dt, targetPatch );
+  ::exahype2::CellData patchData( reconstructedPatch, marker.x(), marker.h(), t, dt, targetPatch );
 
   ::exahype2::fv::{{KERNEL_NAMESPACE}}::{{COMPUTE_KERNEL_CALL}}
 
@@ -68,8 +66,20 @@ double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::applyKernelToCell(
   {% endif %}
 }
 
-
-//_inputValues,_outputValues,_marker,_t,_dt,_maxEigenvalue
+{% if STATELESS_PDE_TERMS %}
+#if defined(GPUOffloadingOMP)
+bool checkOMPOffloading() {
+  bool canOffload = true;
+  #pragma omp target map(tofrom : canOffload)
+  {
+    if (!omp_is_initial_device()) {
+      canOffload = true;
+    }
+  }
+  return canOffload;
+}
+#endif
+{% endif %}
 
 {{NAMESPACE | join("::")}}::{{CLASSNAME}}::{{CLASSNAME}}(
   const ::peano4::datamanagement::CellMarker& marker,
@@ -103,8 +113,15 @@ double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::applyKernelToCell(
   #ifdef UseSmartMPI
   , smartmpi::Task(_enclaveTaskTypeId)
   #endif
-{}
-
+{
+{% if STATELESS_PDE_TERMS %}
+#if defined(GPUOffloadingOMP)
+  if (!checkOMPOffloading()) {
+    throw std::runtime_error("ExaHyPE 2 was built with OpenMP GPU offloading support, but the chosen solver cannot offload to the GPU.");
+  }
+#endif
+{% endif %}
+}
 
 bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::isSmartMPITask() const {
   #ifdef UseSmartMPI
@@ -113,7 +130,6 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::isSmartMPITask() const {
   return false;
   #endif
 }
-
 
 #ifdef UseSmartMPI
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::runLocally() {
@@ -124,7 +140,6 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::runLocally() {
     ::exahype2::EnclaveBookkeeping::getInstance().finishedTask(getTaskId(),_numberOfResultValues,_outputValues,_maxEigenvalue);
   }
 }
-
 
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::moveTask(int rank, int tag, MPI_Comm communicator) {
   ::tarch::mpi::DoubleMessage  tMessage(_t);
@@ -153,7 +168,6 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::moveTask(int rank, int tag, MPI_
     " via tag " << tag
   );
 }
-
 
 smartmpi::Task* {{NAMESPACE | join("::")}}::{{CLASSNAME}}::receiveTask(int rank, int tag, MPI_Comm communicator) {
   peano4::grid::GridTraversalEvent dummyEvent;
@@ -316,7 +330,6 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::canFuse() const {
   );
 }
 
-
 /**
  * Also merge the current task
  */
@@ -332,7 +345,7 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse( const std::list<Task*>& ot
     patchData.t[currentTask]           = static_cast<{{NAMESPACE | join("::")}}::{{CLASSNAME}}*>(p)->_t;
     patchData.dt[currentTask]          = static_cast<{{NAMESPACE | join("::")}}::{{CLASSNAME}}*>(p)->_dt;
     patchData.id[currentTask]          = static_cast<{{NAMESPACE | join("::")}}::{{CLASSNAME}}*>(p)->_id;
-    patchData.QOut[currentTask]        = tarch::allocateMemory( _numberOfResultValues, tarch::MemoryLocation::Heap );
+    patchData.QOut[currentTask]        = tarch::allocateMemory<double>( _numberOfResultValues, tarch::MemoryLocation::Heap );
     delete p;
     currentTask++;
   }
@@ -342,8 +355,7 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse( const std::list<Task*>& ot
   patchData.t[currentTask]           = _t;
   patchData.dt[currentTask]          = _dt;
   patchData.id[currentTask]          = _id;
-  patchData.QOut[currentTask]        = tarch::allocateMemory( _numberOfResultValues, tarch::MemoryLocation::Heap );
-
+  patchData.QOut[currentTask]        = tarch::allocateMemory<double>( _numberOfResultValues, tarch::MemoryLocation::Heap );
 
   //
   // ==============
@@ -388,7 +400,7 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse( const std::list<Task*>& ot
   // ==================
   //
   for (int i=0; i<patchData.numberOfCells; i++) {
-    tarch::freeMemory( patchData.QIn[i], tarch::MemoryLocation::Heap );
+    tarch::freeMemory( patchData.QIn[i], tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory );
     ::exahype2::EnclaveBookkeeping::getInstance().finishedTask(patchData.id[i], _numberOfResultValues, patchData.QOut[i], patchData.maxEigenvalue[i]);
   }
 

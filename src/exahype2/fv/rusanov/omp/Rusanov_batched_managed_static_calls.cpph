@@ -40,10 +40,9 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanov_batched_managed_static_call
 
   exahype2::enumerator::AoSLexicographicEnumerator QInHostEnumerator       (                        1, numberOfVolumesPerAxisInPatch, haloSize, unknowns, auxiliaryVariables);
   exahype2::enumerator::AoSLexicographicEnumerator QOutHostEnumerator      (                        1, numberOfVolumesPerAxisInPatch,        0, unknowns, auxiliaryVariables);
-  const int QInCount = hostPatchData.numberOfCells * QInHostEnumerator.size();
-  const int QOutCount = hostPatchData.numberOfCells * QOutHostEnumerator.size();
 
-  double* mappedPointersToQIns = tarch::accelerator::omp::GPUMemoryManager::getInstance().allocate<double>(QInCount, targetDevice );
+  const int QOutCount = hostPatchData.numberOfCells * QOutHostEnumerator.size();
+  double** mappedPointersToQIns = hostPatchData.QIn;
   double* mappedPointersToQOuts = tarch::accelerator::omp::GPUMemoryManager::getInstance().allocate<double>(QOutCount, targetDevice );
   double* rawPointerToCellCentres = tarch::accelerator::omp::GPUMemoryManager::getInstance().allocate<double>(hostPatchData.numberOfCells * Dimensions, targetDevice );
   double* rawPointerToCellSizes = tarch::accelerator::omp::GPUMemoryManager::getInstance().allocate<double>(hostPatchData.numberOfCells * Dimensions, targetDevice );
@@ -51,27 +50,11 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanov_batched_managed_static_call
   double* dts = tarch::accelerator::omp::GPUMemoryManager::getInstance().allocate<double>(hostPatchData.numberOfCells, targetDevice );
   double* maxEigenvalues = tarch::accelerator::omp::GPUMemoryManager::getInstance().allocate<double>(hostPatchData.numberOfCells, targetDevice );
 
-  std::vector<double> tmpQIn(QInCount);
-  std::vector<double> tmpQOut(QOutCount);
-
-  for (int patchIndex=0; patchIndex<hostPatchData.numberOfCells; patchIndex++) {
-    std::memcpy(&tmpQIn[patchIndex * QInHostEnumerator.size()], hostPatchData.QIn[patchIndex], QInHostEnumerator.size() * sizeof(double));
-  }
-
-#ifdef __NVCOMPILER_CUDA__ // Use CUDA managed memory -> We only need to consider host copies
-  std::memcpy(mappedPointersToQIns, &tmpQIn[0], QInCount * sizeof(double));
-  std::memcpy(rawPointerToCellCentres, &hostPatchData.cellCentre[0], hostPatchData.numberOfCells * Dimensions * sizeof(double));
-  std::memcpy(rawPointerToCellSizes, &hostPatchData.cellSize[0], hostPatchData.numberOfCells * Dimensions * sizeof(double));
-  std::memcpy(ts, hostPatchData.t, hostPatchData.numberOfCells * sizeof(double));
-  std::memcpy(dts, hostPatchData.dt, hostPatchData.numberOfCells * sizeof(double));
-#else
-  auto hostId = omp_get_initial_device();
-  omp_target_memcpy(mappedPointersToQIns, &tmpQIn[0], QInCount * sizeof(double), 0, 0, targetDevice, hostId);
+  const auto hostId = omp_get_initial_device();
   omp_target_memcpy(rawPointerToCellCentres, &hostPatchData.cellCentre[0], hostPatchData.numberOfCells * Dimensions * sizeof(double), 0, 0, targetDevice, hostId);
   omp_target_memcpy(rawPointerToCellSizes, &hostPatchData.cellSize[0], hostPatchData.numberOfCells * Dimensions * sizeof(double), 0, 0, targetDevice, hostId);
   omp_target_memcpy(ts, hostPatchData.t, hostPatchData.numberOfCells * sizeof(double), 0, 0, targetDevice, hostId);
   omp_target_memcpy(dts, hostPatchData.dt, hostPatchData.numberOfCells * sizeof(double), 0, 0, targetDevice, hostId);
-#endif
 
   const int numberOfCells = hostPatchData.numberOfCells;
   if (Dimensions==2 and evaluateSource) {
@@ -88,7 +71,7 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanov_batched_managed_static_call
       TempDataEnumerator ncpEnumerator       (numberOfCells, numberOfVolumesPerAxisInPatch+1,haloSize,unknowns,0);
       TempDataEnumerator eigenvalueEnumerator(numberOfCells, numberOfVolumesPerAxisInPatch,haloSize,1,0);
 
-      double* QIn = &mappedPointersToQIns[patchIndex * QInEnumerator.size()];
+      double* QIn = mappedPointersToQIns[patchIndex];
       double* QOut = &mappedPointersToQOuts[patchIndex * QOutEnumerator.size()];
       const tarch::la::Vector<Dimensions,double>& patchCentre = rawPointerToCellCentres[patchIndex];
       const tarch::la::Vector<Dimensions,double>& patchSize = rawPointerToCellSizes[patchIndex];
@@ -124,7 +107,7 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanov_batched_managed_static_call
       TempDataEnumerator ncpEnumerator       (numberOfCells, numberOfVolumesPerAxisInPatch+1,haloSize,unknowns,0);
       TempDataEnumerator eigenvalueEnumerator(numberOfCells, numberOfVolumesPerAxisInPatch,haloSize,1,0);
 
-      double* QIn = &mappedPointersToQIns[patchIndex * QInEnumerator.size()];
+      double* QIn = mappedPointersToQIns[patchIndex];
       double* QOut = &mappedPointersToQOuts[patchIndex * QOutEnumerator.size()];
       const tarch::la::Vector<Dimensions,double>& patchCentre = rawPointerToCellCentres[patchIndex];
       const tarch::la::Vector<Dimensions,double>& patchSize = rawPointerToCellSizes[patchIndex];
@@ -158,7 +141,7 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanov_batched_managed_static_call
       TempDataEnumerator ncpEnumerator       (numberOfCells, numberOfVolumesPerAxisInPatch+1,haloSize,unknowns,0);
       TempDataEnumerator eigenvalueEnumerator(numberOfCells, numberOfVolumesPerAxisInPatch,haloSize,1,0);
 
-      double* QIn = &mappedPointersToQIns[patchIndex * QInEnumerator.size()];
+      double* QIn = mappedPointersToQIns[patchIndex];
       double* QOut = &mappedPointersToQOuts[patchIndex * QOutEnumerator.size()];
 
       internal::copySolution_LoopBody(
@@ -186,7 +169,7 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanov_batched_managed_static_call
       TempDataEnumerator ncpEnumerator       (numberOfCells, numberOfVolumesPerAxisInPatch+1,haloSize,unknowns,0);
       TempDataEnumerator eigenvalueEnumerator(numberOfCells, numberOfVolumesPerAxisInPatch,haloSize,1,0);
 
-      double* QIn = &mappedPointersToQIns[patchIndex * QInEnumerator.size()];
+      double* QIn = mappedPointersToQIns[patchIndex];
       double* QOut = &mappedPointersToQOuts[patchIndex * QOutEnumerator.size()];
 
       internal::copySolution_LoopBody(
@@ -216,7 +199,7 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanov_batched_managed_static_call
       TempDataEnumerator ncpEnumerator       (numberOfCells, numberOfVolumesPerAxisInPatch+1,haloSize,unknowns,0);
       TempDataEnumerator eigenvalueEnumerator(numberOfCells, numberOfVolumesPerAxisInPatch,haloSize,1,0);
 
-      double* QIn = &mappedPointersToQIns[patchIndex * QInEnumerator.size()];
+      double* QIn = mappedPointersToQIns[patchIndex];
       const tarch::la::Vector<Dimensions,double>& patchCentre = rawPointerToCellCentres[patchIndex];
       const tarch::la::Vector<Dimensions,double>& patchSize = rawPointerToCellSizes[patchIndex];
       const double t = ts[patchIndex];
@@ -251,7 +234,7 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanov_batched_managed_static_call
       TempDataEnumerator ncpEnumerator       (numberOfCells, numberOfVolumesPerAxisInPatch+1,haloSize,unknowns,0);
       TempDataEnumerator eigenvalueEnumerator(numberOfCells, numberOfVolumesPerAxisInPatch,haloSize,1,0);
 
-      double* QIn = &mappedPointersToQIns[patchIndex * QInEnumerator.size()];
+      double* QIn = mappedPointersToQIns[patchIndex];
       const tarch::la::Vector<Dimensions,double>& patchCentre = rawPointerToCellCentres[patchIndex];
       const tarch::la::Vector<Dimensions,double>& patchSize = rawPointerToCellSizes[patchIndex];
       const double t = ts[patchIndex];
@@ -287,7 +270,7 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanov_batched_managed_static_call
       TempDataEnumerator ncpEnumerator       (numberOfCells, numberOfVolumesPerAxisInPatch+1,haloSize,unknowns,0);
       TempDataEnumerator eigenvalueEnumerator(numberOfCells, numberOfVolumesPerAxisInPatch,haloSize,1,0);
 
-      double* QIn = &mappedPointersToQIns[patchIndex * QInEnumerator.size()];
+      double* QIn = mappedPointersToQIns[patchIndex];
       double* QOut = &mappedPointersToQOuts[patchIndex * QOutEnumerator.size()];
       const tarch::la::Vector<Dimensions,double>& patchCentre = rawPointerToCellCentres[patchIndex];
       const tarch::la::Vector<Dimensions,double>& patchSize = rawPointerToCellSizes[patchIndex];
@@ -327,7 +310,7 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanov_batched_managed_static_call
       TempDataEnumerator ncpEnumerator       (numberOfCells, numberOfVolumesPerAxisInPatch+1,haloSize,unknowns,0);
       TempDataEnumerator eigenvalueEnumerator(numberOfCells, numberOfVolumesPerAxisInPatch,haloSize,1,0);
 
-      double* QIn = &mappedPointersToQIns[patchIndex * QInEnumerator.size()];
+      double* QIn = mappedPointersToQIns[patchIndex];
       const tarch::la::Vector<Dimensions,double>& patchCentre = rawPointerToCellCentres[patchIndex];
       const tarch::la::Vector<Dimensions,double>& patchSize = rawPointerToCellSizes[patchIndex];
       const double t = ts[patchIndex];
@@ -363,7 +346,7 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanov_batched_managed_static_call
       TempDataEnumerator ncpEnumerator       (numberOfCells, numberOfVolumesPerAxisInPatch+1,haloSize,unknowns,0);
       TempDataEnumerator eigenvalueEnumerator(numberOfCells, numberOfVolumesPerAxisInPatch,haloSize,1,0);
 
-      double* QIn = &mappedPointersToQIns[patchIndex * QInEnumerator.size()];
+      double* QIn = mappedPointersToQIns[patchIndex];
       const tarch::la::Vector<Dimensions,double>& patchCentre = rawPointerToCellCentres[patchIndex];
       const tarch::la::Vector<Dimensions,double>& patchSize = rawPointerToCellSizes[patchIndex];
       const double t = ts[patchIndex];
@@ -399,7 +382,7 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanov_batched_managed_static_call
       TempDataEnumerator ncpEnumerator       (numberOfCells, numberOfVolumesPerAxisInPatch+1,haloSize,unknowns,0);
       TempDataEnumerator eigenvalueEnumerator(numberOfCells, numberOfVolumesPerAxisInPatch,haloSize,1,0);
 
-      double* QIn = &mappedPointersToQIns[patchIndex * QInEnumerator.size()];
+      double* QIn = mappedPointersToQIns[patchIndex];
       const tarch::la::Vector<Dimensions,double>& patchCentre = rawPointerToCellCentres[patchIndex];
       const tarch::la::Vector<Dimensions,double>& patchSize = rawPointerToCellSizes[patchIndex];
       const double t = ts[patchIndex];
@@ -436,7 +419,7 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanov_batched_managed_static_call
       TempDataEnumerator ncpEnumerator       (numberOfCells, numberOfVolumesPerAxisInPatch+1,haloSize,unknowns,0);
       TempDataEnumerator eigenvalueEnumerator(numberOfCells, numberOfVolumesPerAxisInPatch,haloSize,1,0);
 
-      double* QIn = &mappedPointersToQIns[patchIndex * QInEnumerator.size()];
+      double* QIn = mappedPointersToQIns[patchIndex];
       double* QOut = &mappedPointersToQOuts[patchIndex * QOutEnumerator.size()];
       const tarch::la::Vector<Dimensions,double>& patchCentre = rawPointerToCellCentres[patchIndex];
       const tarch::la::Vector<Dimensions,double>& patchSize = rawPointerToCellSizes[patchIndex];
@@ -476,7 +459,7 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanov_batched_managed_static_call
       TempDataEnumerator ncpEnumerator       (numberOfCells, numberOfVolumesPerAxisInPatch+1,haloSize,unknowns,0);
       TempDataEnumerator eigenvalueEnumerator(numberOfCells, numberOfVolumesPerAxisInPatch,haloSize,1,0);
 
-      double* QIn = &mappedPointersToQIns[patchIndex * QInEnumerator.size()];
+      double* QIn = mappedPointersToQIns[patchIndex];
       const tarch::la::Vector<Dimensions,double>& patchCentre = rawPointerToCellCentres[patchIndex];
       const tarch::la::Vector<Dimensions,double>& patchSize = rawPointerToCellSizes[patchIndex];
       const double t = ts[patchIndex];
@@ -511,7 +494,7 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanov_batched_managed_static_call
       TempDataEnumerator ncpEnumerator       (numberOfCells, numberOfVolumesPerAxisInPatch+1,haloSize,unknowns,0);
       TempDataEnumerator eigenvalueEnumerator(numberOfCells, numberOfVolumesPerAxisInPatch,haloSize,1,0);
 
-      double* QIn = &mappedPointersToQIns[patchIndex * QInEnumerator.size()];
+      double* QIn = mappedPointersToQIns[patchIndex];
       const tarch::la::Vector<Dimensions,double>& patchCentre = rawPointerToCellCentres[patchIndex];
       const tarch::la::Vector<Dimensions,double>& patchSize = rawPointerToCellSizes[patchIndex];
       const double t = ts[patchIndex];
@@ -582,7 +565,7 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanov_batched_managed_static_call
       TempDataEnumerator ncpEnumerator       (numberOfCells, numberOfVolumesPerAxisInPatch+1,haloSize,unknowns,0);
       TempDataEnumerator eigenvalueEnumerator(numberOfCells, numberOfVolumesPerAxisInPatch,haloSize,1,0);
 
-      double* QIn = &mappedPointersToQIns[patchIndex * QInEnumerator.size()];
+      double* QIn = mappedPointersToQIns[patchIndex];
       const tarch::la::Vector<Dimensions,double>& patchCentre = rawPointerToCellCentres[patchIndex];
       const tarch::la::Vector<Dimensions,double>& patchSize = rawPointerToCellSizes[patchIndex];
       const double t = ts[patchIndex];
@@ -618,7 +601,7 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanov_batched_managed_static_call
       TempDataEnumerator ncpEnumerator       (numberOfCells, numberOfVolumesPerAxisInPatch+1,haloSize,unknowns,0);
       TempDataEnumerator eigenvalueEnumerator(numberOfCells, numberOfVolumesPerAxisInPatch,haloSize,1,0);
 
-      double* QIn = &mappedPointersToQIns[patchIndex * QInEnumerator.size()];
+      double* QIn = mappedPointersToQIns[patchIndex];
       const tarch::la::Vector<Dimensions,double>& patchCentre = rawPointerToCellCentres[patchIndex];
       const tarch::la::Vector<Dimensions,double>& patchSize = rawPointerToCellSizes[patchIndex];
       const double t = ts[patchIndex];
@@ -654,7 +637,7 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanov_batched_managed_static_call
       TempDataEnumerator ncpEnumerator       (numberOfCells, numberOfVolumesPerAxisInPatch+1,haloSize,unknowns,0);
       TempDataEnumerator eigenvalueEnumerator(numberOfCells, numberOfVolumesPerAxisInPatch,haloSize,1,0);
 
-      double* QIn = &mappedPointersToQIns[patchIndex * QInEnumerator.size()];
+      double* QIn = mappedPointersToQIns[patchIndex];
       const tarch::la::Vector<Dimensions,double>& patchCentre = rawPointerToCellCentres[patchIndex];
       const tarch::la::Vector<Dimensions,double>& patchSize = rawPointerToCellSizes[patchIndex];
       const double t = ts[patchIndex];
@@ -726,7 +709,7 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanov_batched_managed_static_call
       TempDataEnumerator ncpEnumerator       (numberOfCells, numberOfVolumesPerAxisInPatch+1,haloSize,unknowns,0);
       TempDataEnumerator eigenvalueEnumerator(numberOfCells, numberOfVolumesPerAxisInPatch,haloSize,1,0);
 
-      double* QIn = &mappedPointersToQIns[patchIndex * QInEnumerator.size()];
+      double* QIn = mappedPointersToQIns[patchIndex];
       const tarch::la::Vector<Dimensions,double>& patchCentre = rawPointerToCellCentres[patchIndex];
       const tarch::la::Vector<Dimensions,double>& patchSize = rawPointerToCellSizes[patchIndex];
       const double t = ts[patchIndex];
@@ -761,7 +744,7 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanov_batched_managed_static_call
       TempDataEnumerator ncpEnumerator       (numberOfCells, numberOfVolumesPerAxisInPatch+1,haloSize,unknowns,0);
       TempDataEnumerator eigenvalueEnumerator(numberOfCells, numberOfVolumesPerAxisInPatch,haloSize,1,0);
 
-      double* QIn = &mappedPointersToQIns[patchIndex * QInEnumerator.size()];
+      double* QIn = mappedPointersToQIns[patchIndex];
       const tarch::la::Vector<Dimensions,double>& patchCentre = rawPointerToCellCentres[patchIndex];
       const tarch::la::Vector<Dimensions,double>& patchSize = rawPointerToCellSizes[patchIndex];
       const double t = ts[patchIndex];
@@ -834,7 +817,7 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanov_batched_managed_static_call
       TempDataEnumerator ncpEnumerator       (numberOfCells, numberOfVolumesPerAxisInPatch+1,haloSize,unknowns,0);
       TempDataEnumerator eigenvalueEnumerator(numberOfCells, numberOfVolumesPerAxisInPatch,haloSize,1,0);
 
-      double* QIn = &mappedPointersToQIns[patchIndex * QInEnumerator.size()];
+      double* QIn = mappedPointersToQIns[patchIndex];
       const tarch::la::Vector<Dimensions,double>& patchCentre = rawPointerToCellCentres[patchIndex];
       const tarch::la::Vector<Dimensions,double>& patchSize = rawPointerToCellSizes[patchIndex];
       const double t = ts[patchIndex];
@@ -870,7 +853,7 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanov_batched_managed_static_call
       TempDataEnumerator ncpEnumerator       (numberOfCells, numberOfVolumesPerAxisInPatch+1,haloSize,unknowns,0);
       TempDataEnumerator eigenvalueEnumerator(numberOfCells, numberOfVolumesPerAxisInPatch,haloSize,1,0);
 
-      double* QIn = &mappedPointersToQIns[patchIndex * QInEnumerator.size()];
+      double* QIn = mappedPointersToQIns[patchIndex];
       const tarch::la::Vector<Dimensions,double>& patchCentre = rawPointerToCellCentres[patchIndex];
       const tarch::la::Vector<Dimensions,double>& patchSize = rawPointerToCellSizes[patchIndex];
       const double t = ts[patchIndex];
@@ -906,7 +889,7 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanov_batched_managed_static_call
       TempDataEnumerator ncpEnumerator       (numberOfCells, numberOfVolumesPerAxisInPatch+1,haloSize,unknowns,0);
       TempDataEnumerator eigenvalueEnumerator(numberOfCells, numberOfVolumesPerAxisInPatch,haloSize,1,0);
 
-      double* QIn = &mappedPointersToQIns[patchIndex * QInEnumerator.size()];
+      double* QIn = mappedPointersToQIns[patchIndex];
       const tarch::la::Vector<Dimensions,double>& patchCentre = rawPointerToCellCentres[patchIndex];
       const tarch::la::Vector<Dimensions,double>& patchSize = rawPointerToCellSizes[patchIndex];
       const double t = ts[patchIndex];
@@ -1041,15 +1024,11 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanov_batched_managed_static_call
       }
       maxEigenvalues[patchIndex] = newMaxEigenvalue;
     }
-  } // This is the end of the target offloading block
+  }
 
-#ifdef __NVCOMPILER_CUDA__
-  std::memcpy(&tmpQOut[0], mappedPointersToQOuts, QOutCount * sizeof(double));
-  std::memcpy(hostPatchData.maxEigenvalue, maxEigenvalues, hostPatchData.numberOfCells * sizeof(double));
-#else
+  std::vector<double> tmpQOut(QOutCount);
   omp_target_memcpy(&tmpQOut[0], mappedPointersToQOuts, QOutCount * sizeof(double), 0, 0, hostId, targetDevice);
   omp_target_memcpy(hostPatchData.maxEigenvalue, maxEigenvalues, hostPatchData.numberOfCells * sizeof(double), 0, 0, hostId, targetDevice);
-#endif
 
   tarch::accelerator::omp::GPUMemoryManager::getInstance().free( tempFluxX, targetDevice );
   tarch::accelerator::omp::GPUMemoryManager::getInstance().free( tempFluxY, targetDevice );
@@ -1061,7 +1040,6 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanov_batched_managed_static_call
   tarch::accelerator::omp::GPUMemoryManager::getInstance().free( tempEigenvalueY, targetDevice );
   tarch::accelerator::omp::GPUMemoryManager::getInstance().free( tempEigenvalueZ, targetDevice );
 
-  tarch::accelerator::omp::GPUMemoryManager::getInstance().free( mappedPointersToQIns, targetDevice );
   tarch::accelerator::omp::GPUMemoryManager::getInstance().free( mappedPointersToQOuts, targetDevice );
   tarch::accelerator::omp::GPUMemoryManager::getInstance().free( rawPointerToCellCentres, targetDevice );
   tarch::accelerator::omp::GPUMemoryManager::getInstance().free( rawPointerToCellSizes, targetDevice );

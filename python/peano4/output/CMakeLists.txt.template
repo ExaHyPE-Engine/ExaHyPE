@@ -47,7 +47,14 @@ endif()
 list(APPEND DEPENDS_CORE {% for item in CMAKE_CORE_LIBS -%} {{item+' '}} {%- endfor %})
 list(APPEND DEPENDS_OTHER {% for item in CMAKE_LIBS -%} {{item+' '}} {%- endfor %})
 
-set(GENERATED_FILES {% for item in CXX_SOURCES -%} {{item+" "}} {%- endfor %})
+set(H_HEADERS {% for item in H_HEADERS -%} {{item+" "}} {%- endfor %})
+set(CXX_SOURCES {% for item in CXX_SOURCES -%} {{item+" "}} {%- endfor %})
+set(FORTRAN_SOURCES {% for item in FORTRAN_SOURCES -%} {{item+" "}} {%- endfor %})
+
+set(GENERATED_H_HEADERS {% for item in GENERATED_H_HEADERS -%} {{item+" "}} {%- endfor %})
+set(GENERATED_CXX_SOURCES {% for item in GENERATED_CXX_SOURCES -%} {{item+" "}} {%- endfor %})
+set(GENERATED_FORTRAN_SOURCES {% for item in GENERATED_FORTRAN_SOURCES -%} {{item+" "}} {%- endfor %})
+
 set(GENERATED_INCLUDE_DIRS {% for item in GENERATED_INCLUDE_DIRS -%} ${CMAKE_CURRENT_SOURCE_DIR}/{{item+" "}} {%- endfor %})
 
 string(TOLOWER ${MODE} MODE_LOWER)
@@ -65,7 +72,12 @@ add_executable(${TARGET_NAME})
 
 # Set sources of the executable, we depend in the generated CMake file, the generator script.
 target_sources(${TARGET_NAME} PRIVATE
-  ${GENERATED_FILES}
+  ${H_HEADERS}
+  ${CXX_SOURCES}
+  ${FORTRAN_SOURCES}
+  ${GENERATED_H_HEADERS}
+  ${GENERATED_CXX_SOURCES}
+  ${GENERATED_FORTRAN_SOURCES}
   ${GENERATOR}
 )
 

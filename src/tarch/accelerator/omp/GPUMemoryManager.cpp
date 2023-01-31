@@ -13,10 +13,8 @@ tarch::accelerator::omp::GPUMemoryManager& tarch::accelerator::omp::GPUMemoryMan
   return singleton;
 }
 
-void* tarch::accelerator::omp::GPUMemoryManager::allocateRawData( int size, int device, int growth ) {
+void* tarch::accelerator::omp::GPUMemoryManager::allocateRawData( int size, int device ) {
   tarch::multicore::Lock lock(_semaphore);
-
-  assertion1(growth>0, growth);
 
   // Is device initialised?
   if ( _deviceMemory.count(device)==0 ) {
@@ -25,16 +23,7 @@ void* tarch::accelerator::omp::GPUMemoryManager::allocateRawData( int size, int 
 
   // Is a free page left? If not, insert one
   if ( _deviceMemory.at(device).freePages[size].empty() ) {
-    for (int i=0; i<growth; i++) {
-      _deviceMemory.at(device).freePages[size].push_back(
-#ifdef __NVCOMPILER_CUDA__ // Use CUDA managed memory
-        // TODO: "size / sizeof(double) should not be necessary after some rework in the allocateMemory functionality."
-        allocateMemory((size / sizeof(double)), MemoryLocation::ManagedSharedAcceleratorDeviceMemory)
-#else
-        omp_target_alloc(size, device)
-#endif
-      );
-    }
+    _deviceMemory.at(device).freePages[size].push_back(omp_target_alloc(size, device));
   }
 
   // Grab fitting page
@@ -79,15 +68,10 @@ void tarch::accelerator::omp::GPUMemoryManager::clear() {
 
     for (auto& p: deviceMemory.second.freePages)
     for (auto& pp: p.second) {
-#ifdef __NVCOMPILER_CUDA__ // Use CUDA managed memory
-      freeMemory(static_cast<double *>(pp), MemoryLocation::ManagedSharedAcceleratorDeviceMemory);
-#else
       omp_target_free(pp, device);
-#endif
     }
   }
 
   _deviceMemory.clear();
 }
 #endif
-

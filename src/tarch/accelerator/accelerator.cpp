@@ -2,8 +2,8 @@
 
 #if defined(GPUOffloadingOff)
 
-double* tarch::allocateMemory(int size, MemoryLocation location) {
- return new (std::align_val_t(AlignmentOnHeap)) double[size];
+void* tarch::internal::allocateRawData(int size, MemoryLocation location) {
+ return new (std::align_val_t(AlignmentOnHeap)) char[size];
 }
 
 void tarch::freeMemory(double* data, MemoryLocation location) {

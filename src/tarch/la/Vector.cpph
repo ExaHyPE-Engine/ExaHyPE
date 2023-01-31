@@ -23,7 +23,6 @@ tarch::la::Vector<Size,Scalar>::Vector( const std::bitset<Size>& value ) {
   }
 }
 
-
 template<int Size, typename Scalar>
 tarch::la::Vector<Size,Scalar>&  tarch::la::Vector<Size,Scalar>::operator= (
   const Vector<Size,Scalar>&  toAssign
@@ -40,7 +39,6 @@ tarch::la::Vector<Size,Scalar>&  tarch::la::Vector<Size,Scalar>::operator= (
   }
   return *this;
 }
-
 
 template<int Size, typename Scalar>
 tarch::la::Vector<Size,Scalar>::Vector (
@@ -59,8 +57,6 @@ tarch::la::Vector<Size,Scalar>::Vector (
   }
 }
 
-
-
 template<int Size, typename Scalar>
 tarch::la::Vector<Size,Scalar>::Vector(
   const Scalar& initialValue
@@ -71,10 +67,30 @@ tarch::la::Vector<Size,Scalar>::Vector(
   }
 }
 
-
 template<int Size, typename Scalar>
 int tarch::la::Vector<Size,Scalar>::size() const {
   return Size;
 }
 
+template<int Size, typename Scalar>
+std::string toString( const tarch::la::Vector<Size,Scalar>& vector ) {
+  std::ostringstream os;
+  os << "[";
+  for ( int i=0; i < Size; i++ ) {
+    os << vector(i);
+    if ( i + 1 < Size ) {
+      os << ",";
+    }
+  }
+  os << "]";
+  return os.str();
+}
 
+template <typename NewScalarType, int Size, typename Scalar>
+tarch::la::Vector<Size,NewScalarType> tarch::la::convertScalar(const tarch::la::Vector<Size,Scalar>&  vector) {
+  tarch::la::Vector<Size,NewScalarType> result;
+  for ( int i=0; i < Size; i++ ) {
+    result(i) = vector(i);
+  }
+  return result;
+}

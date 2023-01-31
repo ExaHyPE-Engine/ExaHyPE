@@ -60,7 +60,13 @@ namespace tarch {
     ManagedSharedAcceleratorDeviceMemory
   };
 
-  double* allocateMemory(int size, MemoryLocation location);
-  void freeMemory(double* data, MemoryLocation location);
-}
+  namespace internal {
+    void* allocateRawData(int size, MemoryLocation location);
+  }
 
+  template <class T>
+  T* allocateMemory( int size, MemoryLocation location, int device = -1 ) {
+    return reinterpret_cast<T*>( internal::allocateRawData(size * static_cast<int>(sizeof(T)), location ) );
+  }
+  void freeMemory(void* data, MemoryLocation location);
+}

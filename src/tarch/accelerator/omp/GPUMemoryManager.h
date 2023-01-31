@@ -108,7 +108,7 @@ class tarch::accelerator::omp::GPUMemoryManager {
      * @param growth Number greater than zero which tells the code how many entries
      * (pages) to book whenever it runs out of memory.
      */
-    void* allocateRawData( int size, int device, int growth=1 );
+    void* allocateRawData( int size, int device );
 
     /**
      * Free does not actually free data, but instead hands the memory block

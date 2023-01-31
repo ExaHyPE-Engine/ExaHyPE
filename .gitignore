@@ -282,3 +282,5 @@ cython_debug/
 # Misc
 .DS_Store
 /Debug/
+
+compile_commands.json
