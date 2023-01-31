@@ -33,6 +33,8 @@ class InsertParticlesByCoordinates(peano4.toolbox.particles.InsertParticlesByCoo
       particle->setNumber(0,_spacetreeId);
       particle->setNumber(1,_particleNumberOnThisTree);
       _particleNumberOnThisTree++;
+      
+      logInfo( "touchVertexFirstTime(...)", "insert particle " << particle->toString() << " into " << marker.toString() );
       """, # initialisation_call,
 )
 
@@ -42,7 +44,8 @@ class InsertParticlesByCoordinates(peano4.toolbox.particles.InsertParticlesByCoo
     
 
   def get_constructor_body(self):
-    return f"""
+    # return super( InsertParticlesByCoordinates ).get_constructor_body() + """
+    return """
   _particleNumberOnThisTree = 0;
   _spacetreeId              = treeNumber;
 {self.Read_In_Coor()}
@@ -50,7 +53,8 @@ class InsertParticlesByCoordinates(peano4.toolbox.particles.InsertParticlesByCoo
 
 
   def get_attributes(self):
-     return f"""
+    # return super( InsertParticlesByCoordinates ).get_attributes() + """
+    return """
   int _particleNumberOnThisTree;
   int _spacetreeId;
   double coordinates["""+str(self.d["N"])+"""][3];
