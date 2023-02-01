@@ -51,6 +51,14 @@ struct {{NAMESPACE | join("::")}}::{{CLASSNAME}} {
 
     std::shared_ptr< {{FLOAT_TYPE}}[] > _dataSmartPointer;
   public:
+    typedef {{FLOAT_TYPE}} DoFType;
+
+    #if Dimensions==2
+    static constexpr int Cardinality = {{CARDINALITY_2D}};
+    #else
+    static constexpr int Cardinality = {{CARDINALITY_3D}};
+    #endif
+
     #if PeanoDebug>=1
     void setDebugX( const tarch::la::Vector<Dimensions,double>& data );
     void setDebugH( const tarch::la::Vector<Dimensions,double>& data );

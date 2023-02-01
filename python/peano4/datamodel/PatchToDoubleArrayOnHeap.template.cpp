@@ -4,23 +4,9 @@
 
 
 {{NAMESPACE | join("::")}}::{{CLASSNAME}}::{{CLASSNAME}}():
-/*
-#if Dimensions==2
-  _dataSmartPointer( std::make_shared<{{FLOAT_TYPE}}[]>({{CARDINALITY_2D}}) )
-#else
-  _dataSmartPointer( std::make_shared<{{FLOAT_TYPE}}[]>({{CARDINALITY_3D}}) )
-#endif
-*/
-#if Dimensions==2
   _dataSmartPointer(
-    static_cast< {{FLOAT_TYPE}}* >( allocateMemory({{CARDINALITY_2D}}, tarch::MemoryLocation::Heap) )
-  )
-#else
-  _dataSmartPointer(
-    static_cast< {{FLOAT_TYPE}}* >( allocateMemory({{CARDINALITY_3D}}, tarch::MemoryLocation::Heap) )
-  )
-#endif
-{
+    static_cast< {{FLOAT_TYPE}}* >( allocateMemory(Cardinality, tarch::MemoryLocation::Heap) )
+  ) {
   value = &( _dataSmartPointer[0] );
 }
 
@@ -253,21 +239,13 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::initDatatype() {
   #if PeanoDebug>=1
     MPI_Datatype subtypes[] = { {{MPI_FLOAT_TYPE}}, {{MPI_FLOAT_TYPE}}, {{MPI_FLOAT_TYPE}} };
 
-    #if Dimensions==2
-    int blocklen[] = { Dimensions, Dimensions, {{CARDINALITY_2D}} };
-    #else
-    int blocklen[] = { Dimensions, Dimensions, {{CARDINALITY_3D}} };
-    #endif
+    int blocklen[] = { Dimensions, Dimensions, Cardinality };
 
     const int NumberOfAttributes = 3;
   #else   
     MPI_Datatype subtypes[] = { {{MPI_FLOAT_TYPE}} };
     
-    #if Dimensions==2
-    int blocklen[] = { {{CARDINALITY_2D}} };
-    #else
-    int blocklen[] = { {{CARDINALITY_3D}} };
-    #endif
+    int blocklen[] = { Cardinality };
   
     const int NumberOfAttributes = 1;  
   #endif
