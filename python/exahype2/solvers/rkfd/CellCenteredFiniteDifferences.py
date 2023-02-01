@@ -1038,8 +1038,8 @@ The finest mesh width of """ + str(self.get_finest_volume_size(domain_size)) + "
                              hold_face_data_on_heap_with_smart_pointer = False
                              ):
     if hold_cell_data_on_heap_with_smart_pointer:
-      self._patch.generator        = peano4.datamodel.PatchToDoubleArrayOnHeap(self._patch,           "double")
-      self._patch._patch_estimates = peano4.datamodel.PatchToDoubleArrayOnHeap(self._patch_estimates, "double")
+      self._patch.generator           = peano4.datamodel.PatchToDoubleArrayOnHeap(self._patch,           "double")
+      self._patch_estimates.generator = peano4.datamodel.PatchToDoubleArrayOnHeap(self._patch_estimates, "double")
     if hold_face_data_on_heap_with_smart_pointer:
       self._patch_overlap_old.generator    = peano4.datamodel.PatchToDoubleArrayOnHeap(self._patch_overlap_old,    "double") 
       self._patch_overlap_new.generator    = peano4.datamodel.PatchToDoubleArrayOnHeap(self._patch_overlap_new,    "double") 
