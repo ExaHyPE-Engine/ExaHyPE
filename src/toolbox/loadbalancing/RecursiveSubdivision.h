@@ -224,8 +224,6 @@ class toolbox::loadbalancing::RecursiveSubdivision {
          * Minimum tree size.
          */
         virtual int getMinTreeSize(State state) = 0;
-
-        virtual int getMaxTreeSize(State state) = 0;
     };
 
 
@@ -244,10 +242,6 @@ class toolbox::loadbalancing::RecursiveSubdivision {
 
       int getMinTreeSize(State state) override {
         return 0;
-      }
-
-      int getMaxTreeSize(State state) override {
-        return std::numeric_limits<int>::max();
       }
     };
 

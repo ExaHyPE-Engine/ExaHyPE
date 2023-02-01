@@ -606,8 +606,9 @@ void toolbox::loadbalancing::RecursiveSubdivision::updateLoadBalancing() {
     case Action::SpreadEquallyOverAllRanks:
       {
         int cellsPerRank = std::max( 
-          std::min( static_cast<int>(std::round(_globalNumberOfInnerUnrefinedCells / tarch::mpi::Rank::getInstance().getNumberOfRanks())), _configuration->getMaxTreeSize(_state) ),
-          1);
+          static_cast<int>(std::round(_globalNumberOfInnerUnrefinedCells / tarch::mpi::Rank::getInstance().getNumberOfRanks())),
+          1
+        );
 
         for (int targetRank=1; targetRank<tarch::mpi::Rank::getInstance().getNumberOfRanks(); targetRank++ ) {
           int thisRanksCells = cellsPerRank;
@@ -625,7 +626,7 @@ void toolbox::loadbalancing::RecursiveSubdivision::updateLoadBalancing() {
           int numberOfLocalUnrefinedCellsOfHeaviestSpacetree = getWeightOfHeaviestLocalSpacetree();
           // This operation takes care of the max tree count and size
           int numberOfSplits    = getNumberOfSplitsOnLocalRank();
-          int cellsPerCore      = std::max(1, std::min( numberOfLocalUnrefinedCellsOfHeaviestSpacetree/(numberOfSplits+1),_configuration->getMaxTreeSize(_state) ));
+          int cellsPerCore      = std::max( {1, numberOfLocalUnrefinedCellsOfHeaviestSpacetree/(numberOfSplits+1),_configuration->getMinTreeSize(_state)} );
 
           logInfo(
             "updateLoadBalancing()",
@@ -660,7 +661,7 @@ void toolbox::loadbalancing::RecursiveSubdivision::updateLoadBalancing() {
             "biggest local tree " << heaviestSpacetree << " is too heavy as it hosts " <<
             numberOfLocalUnrefinedCellsOfHeaviestSpacetree << " cells"
           );
-          int cellsPerCore      = std::max(1, std::min( numberOfLocalUnrefinedCellsOfHeaviestSpacetree/2,_configuration->getMaxTreeSize(_state) ));
+          int cellsPerCore      = std::max( {1, numberOfLocalUnrefinedCellsOfHeaviestSpacetree/2,_configuration->getMinTreeSize(_state)} );
  
           logInfo(
             "updateLoadBalancing()",
@@ -686,7 +687,7 @@ void toolbox::loadbalancing::RecursiveSubdivision::updateLoadBalancing() {
             "biggest local tree " << heaviestSpacetree << " is too heavy as it hosts " <<
             numberOfLocalUnrefinedCellsOfHeaviestSpacetree << " cells"
           );
-          int cellsPerCore      = std::max(1, std::min( numberOfLocalUnrefinedCellsOfHeaviestSpacetree/2,_configuration->getMaxTreeSize(_state) ));
+          int cellsPerCore      = std::max( {1, numberOfLocalUnrefinedCellsOfHeaviestSpacetree/2, _configuration->getMinTreeSize(_state)} );
           logInfo(
             "updateLoadBalancing()",
             "lightest global rank is rank " << _lightestRank._rank << ", so assign this rank " << cellsPerCore << " cell(s)"
@@ -704,7 +705,7 @@ void toolbox::loadbalancing::RecursiveSubdivision::updateLoadBalancing() {
           and
           _blacklist.count(heaviestSpacetree)==0
         ) {
-          int cellsPerCore      = std::max(1, std::min( numberOfLocalUnrefinedCellsOfHeaviestSpacetree/2,_configuration->getMaxTreeSize(_state) ));
+          int cellsPerCore      = std::max( {1, numberOfLocalUnrefinedCellsOfHeaviestSpacetree/2, _configuration->getMinTreeSize(_state)} );
           logInfo(
             "updateLoadBalancing()",
             "split tree on local rank and assign it " << cellsPerCore << " cell(s)"
