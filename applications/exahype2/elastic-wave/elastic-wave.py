@@ -10,11 +10,11 @@ import exahype2
 dimensions            = 2
 width                 = [20, 20]
 offset                = [-5, 0]
-source_location       = [4, 5]
+source_location       = [10, 10]
 tracer_location       = [0.2, 0.2]
 end_time              = 0.02
 time_step_relaxation  = 0.99
-plot_interval         = 0.00
+plot_interval         = 0.001
 patch_size            = 17
 maximum_cell_size     = 0.1
 amr_levels            = 3

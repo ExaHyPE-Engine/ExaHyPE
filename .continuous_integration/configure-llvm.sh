@@ -66,7 +66,7 @@ then
       esac
     done
 
-    CXXFLAGS+=" -fopenmp-targets=nvptx64-nvidia-cuda -Xopenmp-target -march=$cap"
+    CXXFLAGS+=" -fopenmp-targets=nvptx64-nvidia-cuda -Xopenmp-target -march=$cap -Wno-unknown-cuda-version"
 
     echo "CXXFLAGS: $CXXFLAGS"
     echo "LDFLAGS: $LDFLAGS"
@@ -77,7 +77,6 @@ then
       --enable-loadbalancing \
       --enable-blockstructured \
       --enable-fem \
-      --enable-swift \
       --with-fenv \
       --with-gpu=$gpu \
       --with-multithreading=$shared \

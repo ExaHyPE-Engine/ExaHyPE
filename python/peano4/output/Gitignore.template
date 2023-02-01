@@ -13,6 +13,8 @@
 {% for item in GENERATED_CXX_SOURCES -%} {{item+"\n"}} {%- endfor %}
 {% for item in GENERATED_FORTRAN_SOURCES -%} {{item+"\n"}} {%- endfor %}
 
+{{EXECUTABLENAME}}
+
 globaldata/
 celldata/
 facedata/
@@ -20,6 +22,7 @@ vertexdata/
 observers/
 repositories/
 tasks/
+solution-*
 
 Constants.h
 README-*

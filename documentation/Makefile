@@ -10,6 +10,7 @@ all:
 pdf:
 	# Also see .latexmkrc
 	mkdir -p $(OUT)
+	echo '*' > $(OUT)/.gitignore
 	latexmk -outdir=$(OUT) -auxdir=$(OUT) -shell-escape -pdf $(MAINFILE)
 
 pdfa:

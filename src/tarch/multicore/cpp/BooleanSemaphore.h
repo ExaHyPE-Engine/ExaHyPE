@@ -17,7 +17,7 @@ namespace tarch {
 
 class tarch::multicore::BooleanSemaphore {
   private:
-    std::mutex   _mutex;
+    std::mutex _mutex;
 
     friend class tarch::multicore::Lock;
     friend class RecursiveSemaphore;
@@ -29,12 +29,12 @@ class tarch::multicore::BooleanSemaphore {
     /**
      * You may not copy a semaphore
      */
-    BooleanSemaphore( const BooleanSemaphore& semaphore ) {}
+    inline BooleanSemaphore([[maybe_unused]] const BooleanSemaphore& semaphore) {}
 
     /**
      * You may not copy a semaphore
      */
-    BooleanSemaphore& operator=( const BooleanSemaphore& semaphore ) {return *this;}
+    BooleanSemaphore& operator = ([[maybe_unused]] const BooleanSemaphore& semaphore) { return *this; }
 
   public:
     BooleanSemaphore();

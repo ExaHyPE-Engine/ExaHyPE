@@ -78,9 +78,8 @@ class tarch::accelerator::Device {
      * By default, SYCL makes no device visible to the user. You have to call
      * configure() manually to make GPUs available to Peano.
      *
-     *
      */
-    void configure();
+    void configure(const std::set<int>& devicesToUse);
 
     /**
      * Shutdown parallel environment.

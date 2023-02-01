@@ -8,7 +8,6 @@
 #include <iostream>
 #include <sstream>
 
-
 #ifdef __APPLE__
 #include <mach/mach_time.h>
 #include <mach/mach.h>
@@ -19,7 +18,6 @@
 #include <chrono>
 
 #include "config.h"
-
 
 namespace tarch {
   namespace logging {
@@ -46,7 +44,6 @@ namespace tarch {
 #else
 #define logDebug(methodName, messageStream)
 #endif
-
 
 #if PeanoDebug>=1
 #define logTraceIn(methodName) \
@@ -326,7 +323,6 @@ namespace tarch {
 #define logTraceOutWith12Arguments(methodName,argument0,argument1,argument2,argument3,argument4,argument5,argument6,argument7,argument8,argument9,argument10,argument11)
 #endif
 
-
 /**
  * @brief Wrapper macro around tarch::tarch::logging::Log to improve logging.
  *
@@ -359,7 +355,6 @@ namespace tarch {
     std::cerr << std::string("caught exception (file:)") << __FILE__ << std::string(", line:") << __LINE__ << std::string("): ") << std::string(exception.what()); \
     exit(-1); \
   }
-
 
 /**
  * @brief Wrapper macro around tarch::tarch::logging::Log to improve logging.
@@ -402,8 +397,6 @@ namespace tarch {
       conv << " (file:" << __FILE__ << ", line:" << __LINE__ << ")"; \
       _log.error (methodName, conv.str()); \
    }
-
-
 
 /**
  * Log Device
@@ -452,7 +445,6 @@ class tarch::logging::Log {
     typedef CommandLineLogger     UseLogService;
     #endif
 
-
     /**
      * Returns the time stamp in nanoseconds.
      */
@@ -475,7 +467,6 @@ class tarch::logging::Log {
      * name and the cpu name.
      */
     static std::string getMachineInformation();
-
 
     /**
      * Constructor
@@ -516,10 +507,9 @@ class tarch::logging::Log {
      * @param message    log message
      */
     #if PeanoDebug>=4
-    void debug(const std::string& methodName, const std::string& message);
+      void debug(const std::string& methodName, const std::string& message);
     #else
-    void debug(const std::string& methodName, const std::string& message) const {
-    }
+      inline void debug([[maybe_unused]] const std::string& methodName, [[maybe_unused]] const std::string& message) const {}
     #endif
 
     /**
@@ -538,7 +528,6 @@ class tarch::logging::Log {
      * @param message    log message
      */
     void info(const std::string& methodName, const std::string& message);
-
 
     /**
      * Log a Warning

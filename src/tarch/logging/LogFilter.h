@@ -2,18 +2,15 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-
 #include <string>
 #include <set>
 #include <stack>
-
 
 namespace tarch {
   namespace logging {
     class LogFilter;
   }
 }
-
 
 /**
  * Peano4's log filter is used by every single log instance. Please note that
@@ -23,6 +20,7 @@ namespace tarch {
 class tarch::logging::LogFilter {
   private:
     std::string  _activeProgramPhase;
+
   public:
     /**
      * Represents one entry of the filter list. Syntax:
@@ -95,7 +93,6 @@ class tarch::logging::LogFilter {
     std::stack<std::string>  _indentTraces;
     #endif
 
-
     /**
      * By default, everything is on
      */
@@ -138,5 +135,3 @@ class tarch::logging::LogFilter {
 
     void switchProgramPhase(const std::string& activeProgramPhase);
 };
-
-

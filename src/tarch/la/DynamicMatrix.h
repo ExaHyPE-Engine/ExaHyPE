@@ -23,7 +23,7 @@ class tarch::la::DynamicMatrix {
     int       _rows;
     double*   _m;
 
-    static inline int serialise( int row, int col, int Rows, int Cols ) {
+    static inline int serialise( int row, int col, [[maybe_unused]] int Rows, int Cols ) {
       return col + row * Cols;
     }
 

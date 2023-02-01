@@ -29,7 +29,7 @@ class tarch::multicore::RecursiveSemaphore {
   private:
     friend class tarch::multicore::RecursiveLock;
 
-    std::recursive_mutex   _mutex;
+    std::recursive_mutex _mutex;
 
     void enterCriticalSection();
     void leaveCriticalSection();
@@ -38,12 +38,12 @@ class tarch::multicore::RecursiveSemaphore {
     /**
      * You may not copy a semaphore
      */
-    RecursiveSemaphore( const RecursiveSemaphore& semaphore ) {}
+    inline RecursiveSemaphore([[maybe_unused]] const RecursiveSemaphore& semaphore) {}
 
     /**
      * You may not copy a semaphore
      */
-    RecursiveSemaphore& operator=( const RecursiveSemaphore& semaphore ) { return *this; }
+    inline RecursiveSemaphore& operator = ([[maybe_unused]] const RecursiveSemaphore& semaphore) { return *this; }
 
   public:
     RecursiveSemaphore();

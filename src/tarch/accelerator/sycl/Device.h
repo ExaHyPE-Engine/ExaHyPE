@@ -34,7 +34,6 @@
  * The only header you need from Peano is the actual config.h.
  *
  */
-
 #if defined(GPUOffloadingSYCL)
 
 #pragma push_macro("Dimensions")
