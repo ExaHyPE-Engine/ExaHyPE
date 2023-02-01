@@ -216,9 +216,7 @@ class peano4::stacks::STDVectorStack {
           return _size;
         }
 
-        /**
-         * @return Pointer to element set
-         */
+
         T* set(int index, const T& value) {
           assertion2( index>=0, index, _size );
           assertion2( index<_size, index, _size );
@@ -226,17 +224,41 @@ class peano4::stacks::STDVectorStack {
           return &(_stack->_data[_baseElement+index]);
         }
 
+
+        /**
+         * Overloaded version of set() with move semantics.
+         *
+         * But in Peano's context, we only need the move semantics logically,
+         * as we only migrate stuff over stacks. However, I already catch
+         * entries with references, therefore I cannot move those guys around.
+         * So I need the other set() flavour, too.
+         *
+         * It is not clear to me if the compiler will always pick the most
+         * efficient version.
+         *
+         * @return Pointer to element set
+         */
+        T* set(int index, T&& value) {
+          assertion2( index>=0, index, _size );
+          assertion2( index<_size, index, _size );
+          _stack->_data[_baseElement+index] = std::move( value );
+          return &(_stack->_data[_baseElement+index]);
+        }
+
+
         const T& get(int index) const {
           assertion2( index>=0, index, _size );
           assertion2( index<_size, index, _size );
           return _stack->_data[_baseElement+index];
         }
 
+
         T& get(int index) {
           assertion2( index>=0, index, _size );
           assertion2( index<_size, index, _size );
           return _stack->_data[_baseElement+index];
         }
+
 
         std::string toString() const {
           std::ostringstream msg;
@@ -315,6 +337,23 @@ class peano4::stacks::STDVectorStack {
       }
       _currentElement++;
     }
+
+
+    /**
+     * We overload w.r.t. the move operator. This is allowed in C++.
+     */
+    void push( const T&& element ) {
+      assertion( _currentElement <= static_cast<int>(_data.size()) );
+      if (_currentElement >= static_cast<int>(_data.size()) ) {
+        assertion(_currentElement - static_cast<int>(_data.size()) <= 1 );
+        _data.push_back( std::move(element) );
+      }
+      else {
+        _data[_currentElement] = std::move(element);
+      }
+      _currentElement++;
+    }
+
 
     /**
      * This operation grabs numberOfElements from the input stack en block and
