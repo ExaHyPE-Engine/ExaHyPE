@@ -247,7 +247,7 @@ void toolbox::loadbalancing::RecursiveSubdivision::updateState() {
   switch (_state) {
     case State::InterRankDistribution:
       if (
-        not doesRankViolateBalancingCondition()
+        _globalNumberOfTrees > 1
         or
         tarch::mpi::Rank::getInstance().getNumberOfRanks()<=1
       ) {
