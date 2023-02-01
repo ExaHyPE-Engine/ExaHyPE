@@ -52,7 +52,7 @@ then
     done
 
     CXXFLAGS+=" --offload-arch=$cap"
-    LDFLAGS+=" -mp=gpu --offload-arch=$cap -lstdc++fs"
+    LDFLAGS+=" --offload-arch=$cap -lstdc++fs"
 
     echo "$cc $CXXFLAGS"
     echo "$cxx $CXXFLAGS"
