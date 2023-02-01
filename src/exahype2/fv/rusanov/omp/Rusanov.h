@@ -168,7 +168,7 @@ namespace exahype2 {
           bool                    evaluateSource,
           bool                    evaluateMaximumEigenvalueAfterTimeStep
         ) {
-          #ifdef __NVCOMPILER_CUDA__
+          #if defined(__NVCOMPILER_CUDA__) or defined(__HIPCC__)
             timeStepWithRusanov_patchwise_managed_static_calls<
               Solver,
               numberOfVolumesPerAxisInPatch,

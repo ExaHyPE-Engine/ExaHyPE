@@ -1,6 +1,10 @@
 #include "tarch/accelerator/accelerator.h"
 #include "tarch/accelerator/cuda/ErrorCheck.h"
 
+#if defined(__HIPCC__)
+#include <hip/hip_runtime.h>
+#endif
+
 #if defined(GPUOffloadingOMP)
 
 #pragma omp declare target
@@ -14,8 +18,10 @@ void* tarch::internal::allocateRawData(int size, MemoryLocation location) {
       result = new (std::align_val_t(AlignmentOnHeap)) char[size];
       break;
     case MemoryLocation::ManagedSharedAcceleratorDeviceMemory:
-      #if defined(__NVCOMPILER_CUDA__)
+      #if defined(__NVCOMPILER_CUDA__) // __NVCC__
         CHECK_CUDA_ERROR(cudaMallocManaged((void**)&result, size));
+      #elif defined(__HIPCC__)
+        hipMallocManaged(&result, size, hipMemAttachGlobal);
       #else
         result = new (std::align_val_t(AlignmentOnHeap)) char[size];
       #endif
@@ -32,7 +38,7 @@ void tarch::freeMemory(void* data, MemoryLocation location) {
     case MemoryLocation::ManagedSharedAcceleratorDeviceMemory:
       #if defined(__NVCOMPILER_CUDA__)
         CHECK_CUDA_ERROR(cudaFree(data));
-      #elif defined(UseAMD)
+      #elif defined(__HIPCC__)
         hipFree(data);
       #else
         delete[] data;

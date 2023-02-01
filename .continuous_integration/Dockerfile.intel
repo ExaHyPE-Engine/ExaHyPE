@@ -28,7 +28,7 @@ RUN echo "source $(spack location -i lmod)/lmod/lmod/init/bash" >> /etc/profile.
     echo "source $SPACK_ROOT/share/spack/setup-env.sh" >> /etc/profile.d/spack.sh
 
 # https://www.intel.com/content/www/us/en/develop/documentation/installation-guide-for-intel-oneapi-toolkits-linux/top/prerequisites/install-intel-gpu-drivers.html
-RUN cd /opt && wget wget https://registrationcenter-download.intel.com/akdlm/irc_nas/19079/l_BaseKit_p_2023.0.0.25537_offline.sh && \
+RUN cd /opt && wget https://registrationcenter-download.intel.com/akdlm/irc_nas/19079/l_BaseKit_p_2023.0.0.25537_offline.sh && \
     sh ./l_BaseKit_p_2023.0.0.25537_offline.sh -a -s --eula accept --install-dir=/opt/intel/oneapi --log-dir=/opt/intel/build-log --action=install --intel-sw-improvement-program-consent=decline --components intel.oneapi.lin.dpcpp-cpp-compiler:intel.oneapi.lin.dpl && \
     ln -s /opt/intel/oneapi/compiler/latest/linux/bin/* /usr/local/bin && \
     echo "/opt/intel/oneapi/compiler/latest/linux/compiler/lib/intel64_lin" > /etc/ld.so.conf.d/usr-local.conf && ldconfig

@@ -70,7 +70,7 @@ class tarch::accelerator::Device {
      * configure() manually to make GPUs available to Peano.
      *
      */
-    void configure( const std::set<int>& devicesToUse = {} );
+    void configure(const std::set<int>& devicesToUse = {});
 
     /**
      * Shutdown parallel environment.

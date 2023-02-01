@@ -6,6 +6,8 @@
 #include "tarch/multicore/Lock.h"
 #include "tarch/accelerator/accelerator.h"
 
+#include <omp.h>
+
 tarch::logging::Log  tarch::accelerator::omp::GPUMemoryManager::_log( "tarch::accelerator::omp::GPUMemoryManager" );
 
 tarch::accelerator::omp::GPUMemoryManager& tarch::accelerator::omp::GPUMemoryManager::getInstance() {

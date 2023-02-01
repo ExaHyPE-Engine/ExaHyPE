@@ -487,7 +487,7 @@ void runBenchmarksOnDevice(int patches, int device) {
   peano4::datamanagement::CellMarker marker(event);
 
 #if defined(SharedOMP) and defined(GPUOffloadingOMP)
-  #ifdef __NVCOMPILER_CUDA__
+  #if defined(__NVCOMPILER_CUDA__) or defined(__HIPCC__)
     tarch::accelerator::omp::GPUMemoryManager::getInstance().clear();
     #pragma omp parallel for
     for (int thread=0; thread<tarch::multicore::Core::getInstance().getNumberOfThreads(); thread++) {
@@ -542,7 +542,7 @@ void runBenchmarksOnDevice(int patches, int device) {
     }
   #endif
 
-  #ifdef __NVCOMPILER_CUDA__
+  #if defined(__NVCOMPILER_CUDA__) or defined(__HIPCC__)
     tarch::accelerator::omp::GPUMemoryManager::getInstance().clear();
     #pragma omp parallel for
     for (int thread=0; thread<tarch::multicore::Core::getInstance().getNumberOfThreads(); thread++) {
