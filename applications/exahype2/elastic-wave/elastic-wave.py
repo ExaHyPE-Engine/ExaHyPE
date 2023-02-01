@@ -35,7 +35,7 @@ build_modes = {
   "Debug":peano4.output.CompileMode.Debug,
 }
 
-parser = argparse.ArgumentParser(description='ExaHyPE 2 - Acoustic Wave Application Script')
+parser = argparse.ArgumentParser(description='ExaHyPE 2 - Elastic Wave Application Script')
 parser.add_argument("-s",       "--solver",            dest="solver",         choices=solvers.keys(), required=True, help="|".join(solvers.keys()) )
 parser.add_argument("-m",       "--build-mode",        dest="build_mode",     choices=build_modes.keys(), default="Release", help="|".join(build_modes.keys()) )
 parser.add_argument("-d",       "--dim",               dest="dim",            type=int, default=dimensions, help="Number of space dimensions")

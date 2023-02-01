@@ -3,11 +3,13 @@
 # This is an interactive script which configures the Peano project with every toolbox available.
 # If you want to use only a subset of toolboxes, copy the commands into your command line and adapt it accordingly.
 
-read -p "Enter CC compiler: " cc
-read -p "Enter CXX compiler: " cxx
+read -p "Enter CC compiler [nvc]: " cc
+cc=${cc:-nvc}
+read -p "Enter CXX compiler [nvc++]: " cxx
+cxx=${cxx:-nvc++}
 #read -p "Enter Fortran compiler: " fcc
 
-CXXFLAGS="-std=c++17 -W -Wall -Wextra"
+CXXFLAGS="-std=c++20 -W -Wall -Wextra"
 LDFLAGS=""
 
 PS3="Select multithreading mode: "
@@ -83,7 +85,8 @@ then
       esac
     done
 
-    echo "CXXFLAGS: $CXXFLAGS"
+    echo "$cc $CXXFLAGS"
+    echo "$cxx $CXXFLAGS"
     echo "LDFLAGS: $LDFLAGS"
 
     libtoolize && aclocal && autoconf && autoheader && cp src/config.h.in . && automake --add-missing && \
