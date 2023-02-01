@@ -594,7 +594,7 @@ void {{FULL_QUALIFIED_CLASSNAME}}::enterCell( const peano4::grid::GridTraversalE
       view.set(0,data);
     }
     else {
-      {{full_qualified_type}}& data = repositories::DataRepository::_{{logical_type_name}}Stack.getForPop( repositories::DataRepository::DataKey(_spacetreeId,inCellStack))->pop();
+      {{full_qualified_type}} data;
     
       #if PeanoDebug>0
       logDebug( "loadCell(...)", "initialise meta data of cell {{name}} with " << marker.x() << " x " << marker.h()  << " (" << marker.toString() << ")");
