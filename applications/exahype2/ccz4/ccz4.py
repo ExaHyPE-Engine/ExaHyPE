@@ -456,6 +456,13 @@ if __name__ == "__main__":
         self.create_data_structures()
         self.create_action_sets()
 
+
+
+      def create_data_structures(self):
+        SuperClass.create_data_structures(self)
+        self.switch_to_heap_storage(True, True)
+
+
       def add_PT_ConsW_Psi4W_AMRFlag(self):
         """
 	add puncutrestracker, constraints writer, psi4 writer, AMRflag(currently using gradient of phi)
