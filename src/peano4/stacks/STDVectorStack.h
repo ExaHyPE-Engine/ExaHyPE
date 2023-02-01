@@ -220,7 +220,7 @@ class peano4::stacks::STDVectorStack {
         T* set(int index, const T& value) {
           assertion2( index>=0, index, _size );
           assertion2( index<_size, index, _size );
-          _stack->_data[_baseElement+index] = value;
+          _stack->_data[_baseElement+index] = std::move( value );
           return &(_stack->_data[_baseElement+index]);
         }
 
@@ -287,13 +287,17 @@ class peano4::stacks::STDVectorStack {
      * moving stuff out of the container. However, this move is not required
      * and, according to the C++ standard, degenerates to the identify here.
      *
-     * I now try to work with the move operator to avoid copying. Not sure if
-     * this makes a difference or is semantically admissible.
+     * I now try to work with a reference operator to avoid copying. Not sure if
+     * this makes a difference or is semantically admissible. The point is: In
+     * Peano, we never pop multiple times and then add again stuff: data are
+     * subsequentially popped and then pushed to another stack. So we can work
+     * with a reference here - notably as we work with a std::stack behind the
+     * scenes.
      */
-    T&& pop() {
+    T& pop() {
       assertion1(_currentElement>0,_currentElement);
       _currentElement--;
-      return std::move( _data[_currentElement] );
+      return _data[_currentElement];
     }
 
 
@@ -330,10 +334,10 @@ class peano4::stacks::STDVectorStack {
       assertion( _currentElement <= static_cast<int>(_data.size()) );
       if (_currentElement >= static_cast<int>(_data.size()) ) {
         assertion(_currentElement - static_cast<int>(_data.size()) <= 1 );
-        _data.push_back(element);
+        _data.push_back( std::move(element) );
       }
       else {
-        _data[_currentElement] = element;
+        _data[_currentElement] = std::move( element );
       }
       _currentElement++;
     }
