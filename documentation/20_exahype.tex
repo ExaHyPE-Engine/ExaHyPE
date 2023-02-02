@@ -1565,6 +1565,7 @@ The discussion around Finite Volume solvers for example can be found on page
 
 
 \subsection{GPU support}
+\label{section:exahype:gpu-support}
 
 \begin{definition}
  \ExaHyPE\ uses GPUs in a classic \emph{offloading, accelerator style}.
@@ -2752,6 +2753,11 @@ self._patch.generator = peano4.datamodel.PatchToDoubleArrayOnHeap(self._patch,"d
   \item {\bf The code seems to fail to use aligned data}. See general remarks
   in documentation of \texttt{tarch::allocateMemory()} and
   \texttt{tarch::MemoryLocation}.
+  \item {\bf The PDE term routines (sources, ncp, fluxes, eigenvalues,
+  \ldots) are extremely expensive}. In principle, that's what you want to see.
+  If this is the case, then you should next follow the recommendations for GPU
+  parallelisation (cmp.~\ref{section:exahype:gpu-support}). These focus on GPU
+  efficiency, but the optimisations also pay off significantly for CPUs.
 \end{itemize}
 
 \section*{Links and further reading}
