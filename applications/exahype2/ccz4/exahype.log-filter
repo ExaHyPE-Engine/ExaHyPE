@@ -14,6 +14,7 @@ info  peano4                               -1     white always-on
 info  examples                             -1     white always-on
 info  exahype2                             -1     white always-on
 info  toolbox                              -1     white always-on
+info  toolbox::loadbalancing			   -1	  black always-on
 
 info  exahype2::RefinementControl	   -1	  black always-on
 

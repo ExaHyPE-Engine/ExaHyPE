@@ -291,6 +291,7 @@ if __name__ == "__main__":
 
       def add_constraint_RefinementFlag_verification(self):
         """
+          @todo legacy code
 
          Add the constraint verification code
 
@@ -410,6 +411,7 @@ if __name__ == "__main__":
 
       def add_derivative_calculation(self):
         """
+          @todo legacy code
 
          Add the constraint verification code
 
@@ -458,7 +460,9 @@ if __name__ == "__main__":
 
       def add_PT_ConsW_Psi4W_AMRFlag(self):
         """
-	add puncutrestracker, constraints writer, psi4 writer, AMRflag(currently using gradient of phi)
+        @todo legacy code
+          
+	      add puncutrestracker, constraints writer, psi4 writer, AMRflag(currently using gradient of phi)
         """
         self._auxiliary_variables = 9
 
@@ -638,26 +642,14 @@ if __name__ == "__main__":
         for (int d=0; d<3; d++) currentPosition[d]=marker.getOffset()(d)+(cell(d)+0.5)*volumeH;
         Psi4Calc(Psi4, oldQWithHalo+cellSerialised*(59+n_a_v), gradQ, currentPosition);
         ::exahype2::enumerator::AoSLexicographicEnumerator enumeratorWithAuxiliaryVariables   ( 1, 3, 0, 59, n_a_v);
-        fineGridCellFiniteVolumeCCZ4Q.value[ enumeratorWithAuxiliaryVariables(0,cell,59+0) ] = Psi4[0]; //placeholder
-        fineGridCellFiniteVolumeCCZ4Q.value[ enumeratorWithAuxiliaryVariables(0,cell,59+1) ] = Psi4[1]; //placeholder
+        fineGridCellFiniteVolumeCCZ4Q.value[ enumeratorWithAuxiliaryVariables(0,cell,59+0) ] = Psi4[0]; 
+        fineGridCellFiniteVolumeCCZ4Q.value[ enumeratorWithAuxiliaryVariables(0,cell,59+1) ] = Psi4[1];
       }  
     } 
     """
 
         self.create_data_structures()
         self.create_action_sets()
-
-      def pick_Gauge_wave_scenario(self):
-        self.add_solver_constants( """static constexpr int Scenario=0; /* Gauge wave */  """ )
-
-      def pick_Diagonal_Gauge_wave_scenario(self):
-        self.add_solver_constants( """static constexpr int Scenario=3; /* Diagonal Gauge wave */  """ )
-
-      def pick_Linear_wave_scenario(self):
-        self.add_solver_constants( """static constexpr int Scenario=1; /* Linear wave */  """ )
-
-      def pick_two_puncture_scenario(self):
-        self.add_solver_constants( """static constexpr int Scenario=2; /* Two-puncture */  """ )
 
 ########################################################################################
 #main starts here
@@ -745,12 +737,6 @@ if __name__ == "__main__":
     if args.interpolation=="order-2":
       my_solver.overlap=2
 
-    #if args.implementation=="fd-fourth-order" or args.implementation=="fd-fourth-order-fixed" or args.implementation=="fv-fd4":
-    #  my_solver.overlap=3
-    #for rkfd the overlap is automatically assigned in solver class
-
-    #my_solver.restriction = "averaging" # "linear"
-
     if args.interpolation=="constant":
       my_solver.interpolation = "piecewise_constant"
       print( "Interpolation rule: piecewise_constant" )
@@ -763,31 +749,21 @@ if __name__ == "__main__":
     if args.interpolation=="linear-con-extrap-lin-normal-interp":
       my_solver.interpolation = "linear_with_constant_extrapolation_and_linear_normal_interpolation"
       print( "Interpolation rule: linear+constant extrapolation and linear normal interpolation" )
-    #if args.interpolation=="linear-lin-extrap-lin-normal-interp":
-    #  my_solver.interpolation = "linear_with_linear_extrapolation_and_linear_normal_interpolation" 
-    #  print( "Interpolation rule: linear+linear extrapolation and linear normal interpolation" )
 
     if args.interpolation=="order-2":
       my_solver.interpolation = "linear" 
 
-    #if args.restriction=="average":
-    #  my_solver.restriction =  "averaging"
-    #  print( "Restiction rule: averaging" )
-    #if args.restriction=="inject":
-    #  my_solver.restriction_ = "inject" 
-    #  print( "Restiction rule: injection" )
-
     #Below are the I&R set functions for FD4
     #These functions here do two things:
     #1. it set the solver.interpolation parameters similar to what we do for fv, so the code know what template shoule be named.
-    #2. it compute and inject the corresponding matrices for named schemes into the solver head files.
+    #2. it computes and write the corresponding matrices for named schemes into the solver head files.
     #notice point 2 is not needed as for build-in function (for fv) the matrices are already hard-coded.  
     tem_interp=["TP_constant","TP_linear_with_linear_extrap_normal_interp"]
     tem_restrict=["TP_inject_normal_extrap","TP_average_normal_extrap"]
     if ("fd4-rk" in args.implementation):
       exahype2.solvers.rkfd.fd4.switch_to_FD4_tensor_product_interpolation( my_solver, tem_interp[1] ) 
       exahype2.solvers.rkfd.fd4.switch_to_FD4_tensor_product_restriction(   my_solver, tem_restrict[1] ) 
-      userinfo.append(("FD4 refinement: " + tem_interp[1] + " & " + tem_restrict[1], None))
+      userinfo.append(("FD4 Interpolation: " + tem_interp[1] + " & Restriction: " + tem_restrict[1], None))
     #if args.interpolation=="linear+enforce" or args.interpolation=="linear-slow+enforce":
     #  self.point_wise_postprocessing_of_interpolation = "examples::exahype2::ccz4::enforceCCZ4constraints(targetVolume)" )
     #if args.restriction=="average+enforce" or args.restriction=="inject+enforce":
@@ -939,7 +915,7 @@ if __name__ == "__main__":
           particle_set=tracer_particles,
           solver=my_solver,
           filename=args.path+"Tracer-test",
-          number_of_entries_between_two_db_flushes=10000,
+          number_of_entries_between_two_db_flushes=1000,
           output_precision=10,
           data_delta_between_two_snapsots=1e16,
           time_delta_between_two_snapsots=0.01
@@ -1060,7 +1036,7 @@ if __name__ == "__main__":
 
     peano4_project.build( make_clean_first = True )
 
-    # Remind the user of warnings!
+    #Report the application information
     userinfo.append(("the executable file name: "+exe, None))
     userinfo.append(("output directory: "+path, None))
     print("=========================================================")
