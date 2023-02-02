@@ -18,14 +18,14 @@ namespace {
   #if defined(GPUOffloadingOMP)
   #pragma omp declare target
   #endif
-  static tarch::la::Vector<Dimensions,int> gridCellIndex2d( int x, int y ) InlineMethod {
+  tarch::la::Vector<Dimensions,int> gridCellIndex2d( int x, int y ) InlineMethod {
     tarch::la::Vector<Dimensions,int> result;
     result(0) = x;
     result(1) = y;
     return result;
   }
 
-  static tarch::la::Vector<Dimensions,int> gridCellIndex3d( int x, int y, int z ) InlineMethod {
+  tarch::la::Vector<Dimensions,int> gridCellIndex3d( int x, int y, int z ) InlineMethod {
     tarch::la::Vector<Dimensions,int> result;
     result(0) = x;
     result(1) = y;
