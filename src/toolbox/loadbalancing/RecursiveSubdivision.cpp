@@ -362,7 +362,11 @@ toolbox::loadbalancing::RecursiveSubdivision::Action toolbox::loadbalancing::Rec
           tarch::mpi::Rank::getInstance().getNumberOfRanks()
         );
 
-        if ( tarch::mpi::Rank::getInstance().getNumberOfRanks()<=1 ) {
+        if (
+          tarch::mpi::Rank::getInstance().getNumberOfRanks()<=1
+          or
+          not tarch::mpi::Rank::getInstance().isGlobalMaster()
+        ) {
           return Action::None;
         }
         else if ( _localNumberOfInnerUnrefinedCell < MinOriginalTreeSizeToTriggerMPISpreadOut ) {
