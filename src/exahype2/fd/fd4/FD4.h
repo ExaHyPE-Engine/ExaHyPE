@@ -74,8 +74,31 @@ namespace exahype2 {
       __attribute__((always_inline))
       #endif
       ;
+
+
+      template <
+        typename Solver,
+        int                     numberOfVolumesPerAxisInPatch,
+        int                     haloSize,
+        int                     unknowns,
+        int                     auxiliaryVariables,
+        typename TempDataEnumerator
+      >
+      static void timeStep_patchwise_heap_static_calls(
+        ::exahype2::CellData&   patchData,
+        double                  KOSigma,
+        bool                    evaluateFlux,
+        bool                    evaluateDifferentialSource, //for ncp
+        bool                    evaluateAlgebraicSource, //real source
+        bool                    copyOldTimeStepAndScaleWithTimeStepSize
+      )
+      #if defined(UseManualInlining)
+      __attribute__((always_inline))
+      #endif
+      ;
     }
   }
 }
 
 
+#include "FD4_patchwise_static_calls.cpph"

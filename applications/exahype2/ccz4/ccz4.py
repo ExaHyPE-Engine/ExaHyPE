@@ -179,7 +179,8 @@ if __name__ == "__main__":
             auxiliary_variables=0,
             min_meshcell_h=min_volume_h, max_meshcell_h=max_volume_h,
             time_step_relaxation=cfl,
-            KOSigma=KOSig
+            KOSigma=KOSig,
+            pde_terms_without_state=True
           )
         elif SuperClass==exahype2.solvers.rkfd.fd4.GlobalFixedTimeStep or SuperClass==exahype2.solvers.rkfd.fd4.GlobalFixedTimeStepWithEnclaveTasking:
           if args.implementation=="fd4-rk1-fixed":
