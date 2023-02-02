@@ -2,7 +2,7 @@
 // use, please see the copyright notice at www.peano-framework.org
 #include "tarch/multicore/multicore.h"
 
-#if !defined( _TARCH_MULTICORE_OMP_GPU_MEMORY_MANAGER_H_) && defined(GPUOffloadingOMP)
+#if !defined( _TARCH_MULTICORE_OMP_GPU_MEMORY_MANAGER_H_) and defined(GPUOffloadingOMP) and defined(_OPENMP) and not defined(__HIP_DEVICE_COMPILE__)
 #define _TARCH_MULTICORE_OMP_GPU_MEMORY_MANAGER_H_
 
 #include "tarch/multicore/BooleanSemaphore.h"

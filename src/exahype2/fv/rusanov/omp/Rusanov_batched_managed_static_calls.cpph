@@ -21,7 +21,7 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanov_batched_managed_static_call
   bool                    evaluateSource,
   bool                    evaluateMaximumEigenvalueAfterTimeStep
 ) {
-#if defined(GPUOffloadingOMP)
+#if defined(GPUOffloadingOMP) and defined(_OPENMP) and not defined(__HIP_DEVICE_COMPILE__)
   constexpr int solversHaloSize = 1;
 
   const TempDataEnumerator fluxHostEnumerator      (hostPatchData.numberOfCells, numberOfVolumesPerAxisInPatch,   solversHaloSize, unknowns, 0);
