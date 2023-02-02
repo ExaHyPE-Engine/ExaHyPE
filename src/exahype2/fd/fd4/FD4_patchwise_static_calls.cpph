@@ -38,7 +38,7 @@ namespace exahype2 {
           double* tempKODissipationY,
           double* tempKODissipationZ
         ) {
-
+std::cout << "@";
         }
       }
     }
