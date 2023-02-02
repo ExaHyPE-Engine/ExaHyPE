@@ -458,6 +458,13 @@ if __name__ == "__main__":
         self.create_data_structures()
         self.create_action_sets()
 
+
+
+      def create_data_structures(self):
+        SuperClass.create_data_structures(self)
+        self.switch_to_heap_storage(True, True)
+
+
       def add_PT_ConsW_Psi4W_AMRFlag(self):
         """
         @todo legacy code
@@ -888,7 +895,7 @@ if __name__ == "__main__":
     probe_point = [-6,-6,0.0]
     project.add_plot_filter( probe_point,[12.0,12.0,0.01],1 )
 
-    project.set_load_balancing("toolbox::loadbalancing::RecursiveSubdivision","(new ::exahype2::LoadBalancingConfiguration(0.95,2000,1,32))" )
+    project.set_load_balancing("toolbox::loadbalancing::RecursiveSubdivision","(new ::exahype2::LoadBalancingConfiguration(0.95,2000,-1,32))" )
     #project.set_load_balancing("toolbox::loadbalancing::RecursiveSubdivision","(new ::exahype2::LoadBalancingConfiguration(0.95,0))" )
 
 ########################################################################################

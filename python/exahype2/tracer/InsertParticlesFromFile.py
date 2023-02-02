@@ -39,10 +39,14 @@ class InsertParticlesFromFile(ActionSet):
     std::list< tarch::la::Vector<Dimensions,double> > coords = _fileReader.getParticlesWithinVoxel(marker.x(), marker.h(), true);  
     for (auto* p: coords) {
       globaldata::{{PARTICLE}}* newParticle = new globaldata::{{PARTICLE}}();
+      
       newParticle->setNumber(0, _spacetreeId);
       newParticle->setNumber(1, _particleNumberOnThisTree);
-      toolbox::particles::init(*newParticle,p,0.0);
       _particleNumberOnThisTree++;
+      
+      logInfo( "touchVertexFirstTime(...)", "insert particle " << particle->toString() << " into " << marker.toString() );
+
+      toolbox::particles::init(*newParticle,p,0.0);
 
       toolbox::particles::insertParticleIntoCell(
         marker,
@@ -106,7 +110,7 @@ toolbox::particles::FileReader     """ + full_qualified_classname + """::_fileRe
 
 
   def get_constructor_body(self):
-    return """
+    return super( InsertParticlesFromFile ).get_constructor_body() + """
   _particleNumberOnThisTree = 0;
   _spacetreeId              = treeNumber;
   
@@ -123,7 +127,7 @@ toolbox::particles::FileReader     """ + full_qualified_classname + """::_fileRe
 
 
   def get_attributes(self):
-     return """
+     return super( InsertParticlesFromFile ).get_attributes() + """
   static tarch::multicore::BooleanSemaphore _semaphore;
      
   int                                    _particleNumberOnThisTree;
