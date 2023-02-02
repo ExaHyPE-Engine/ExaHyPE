@@ -366,6 +366,8 @@ toolbox::loadbalancing::RecursiveSubdivision::Action toolbox::loadbalancing::Rec
           tarch::mpi::Rank::getInstance().getNumberOfRanks()<=1
           or
           not tarch::mpi::Rank::getInstance().isGlobalMaster()
+          or
+          hasSplitRecently()
         ) {
           return Action::None;
         }

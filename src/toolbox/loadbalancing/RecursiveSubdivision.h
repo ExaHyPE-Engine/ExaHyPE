@@ -307,9 +307,37 @@ class toolbox::loadbalancing::RecursiveSubdivision {
     };
 
     /**
-     * Analyse current global situation and commit to a strategy. This routine
-     * analyses the rank state and returns an action. Depending on what it recommends,
-     * it might also change the state. Therefore, the routine is not const.
+     * Translate the state and further global knowledge into actions
+     *
+     *
+     * ## InterRankDistribution
+     *
+     * This is the initial state, where our ambition has to be to get as many
+     * ranks into the computation as quickly as possible. The only constraint
+     * to take into account is that the user might have defined a certain
+     * minimal tree size that they want to use. So as long as the local cell
+     * count times the number of ranks is bigger than this minimal tree size,
+     * we can spread out, i.e. return Action::SpreadEquallyOverAllRanks.
+     *
+     * There are a few further exceptions to the rule: If we have less then two
+     * ranks, we ignore the step and rely on updateState() to toggle the state
+     * so we start another strategy next. If we are not the global master, we
+     * don't do anything either. It is the global master that has to decide.
+     * Once it has spread out, the global number of trees will eventually
+     * become bigger than one and we will leave the InterRankDistribution
+     * state. But this is not our job. It is realised within updateState(). If
+     * we are on the global master and have just spread out, we should not do
+     * anything either. It needs at least two cycles to realise the initial
+     * domain decomposition, so we should not trigger the spreading twice in
+     * a row - otherwise the global rank zero will be left empty. So if we have
+     * just split on the global master, lets just return None and wait for one
+     * more cycle.
+     *
+     * Load balancing recommendation: Most load balancing configurations set
+     * the minimal tree size for this stage to zero, so they simply say "spread
+     * out as aggressively as possible, we care about minimal mesh sizes per
+     * subdomain later".
+     *
      */
     Action getAction() const;
 
