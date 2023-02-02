@@ -90,7 +90,7 @@ A generic script to create speedup plots.
   parser.add_argument("--labels",             dest="labels",          help="Plot labels. You can use $...$ to use the math mode, but you will have to escape the dollars with a \\. Separate with , and ensure there's exactly one entry per file", default="" )
   parser.add_argument("--output",             dest="output",          help="output file prefix (file name extension is added automatically)", default="" )
   parser.add_argument("--solver-name",        dest="solver_name",     help="Solver name (leave blank if there is only one solver)", default="" )
-  parser.add_argument("--export-data",        dest="export_data",     help="Export plot data into a txt file", default=False )
+  parser.add_argument("--export-data",        dest="export_data",     help="Export plot data into a txt file", action="store_true")
   parser.add_argument("--sort-files",         dest="sort_files",      help="Switch file sorting (natural sort)", default=True )
   args = parser.parse_args()
 
