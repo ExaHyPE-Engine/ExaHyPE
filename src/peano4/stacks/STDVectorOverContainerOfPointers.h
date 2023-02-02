@@ -246,11 +246,11 @@ class peano4::stacks::STDVectorOverContainerOfPointers: public peano4::stacks::S
     /**
      * See class documentation.
      *
- * ## MPI parallelisation
- *
- * As MPI introduces a distribute memory paradigm, MPI is intrinsically tied
- * to a deep copy data ownership policy.
- *
+     * ## MPI parallelisation
+     *
+     * As MPI introduces a distribute memory paradigm, MPI is intrinsically tied
+     * to a deep copy data ownership policy.
+     *
      * To realise the MPI data exchange, I did originally plan to require the
      * handed in vector datatype to provide some proper MPI datatypes. This did
      * not work and does not help: The data is organised via pointers and those

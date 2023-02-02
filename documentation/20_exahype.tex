@@ -2712,6 +2712,47 @@ postprocessing scripts that you can use straightaway to visualise the code
 behaviour and outcomes.
 
 
+\section{Performance optimisation}
+
+This section discusses some \ExaHyPE-specific performance optimisation steps.
+Any performance optimisation should obviously be guided by rigorous performance
+analysis, i.e.~trial-and-error performance optimisation is unlikely to yield
+a lower runtime.
+
+\begin{itemize}
+  \item {\bf The multithreading is very imbalanced}. This manifests typically in
+  poor multicore speedup and high Spin Time (in VTune, e.g.). Operations like
+  \texttt{\_\_kmp\_fork\_barrier} appear high up in the list of the most
+  expensive routine. There are different things to check in a row:
+  \begin{enumerate}
+    \item Does the code spawn enough subtrees per node? If not, your problem
+    might be too small, or you might artificially restrict the number of trees
+    per node. You might also want to use a more regular AMR mesh structure.
+    \item Does the code yield subtrees which are extremely ill-balanced? In this
+    case, you might try to enforce more subtrees per node, or to switch to an
+    enclave tasking solver.
+    \item Does the code use enclave tasks but does not yield many tasks? In this
+    case, try a more regular mesh, i.e.~artificially refine to avoid steep
+    resolution changes.
+    \item Does the code use enclave tasks and yield many tasks? In this case,
+    you might have encountered a scheduler flaw. Change the multicore scheduler
+    on the command line.
+  \end{enumerate}
+  \item {\bf The code is extremely bandwidth-bound and seems to move data
+  forth and back all the time}. Most \ExaHyPE\ solvers store their data on
+  (call) stacks to localise all memory accesses. This implies that they move
+  their data around a lot. You can alter this behaviour by switching to a
+  heap-based memory administration. Consult the documentation of the solver of
+  interest, but the ``fix'' always looks similar to 
+  \begin{code}
+self._patch.generator = peano4.datamodel.PatchToDoubleArrayOnHeap(self._patch,"double")
+  \end{code}, i.e.~you have to swap how a patch is mapped onto a C++
+  implementation.
+  See also next section on AVX/alignment.
+  \item {\bf The code seems to fail to use aligned data}. See general remarks
+  in documentation of \texttt{tarch::allocateMemory()} and
+  \texttt{tarch::MemoryLocation}.
+\end{itemize}
 
 \section*{Links and further reading}
 
