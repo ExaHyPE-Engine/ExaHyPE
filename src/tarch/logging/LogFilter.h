@@ -34,6 +34,7 @@ class tarch::logging::LogFilter {
       static const std::string TargetInfo;
       static const std::string TargetDebug;
       static const std::string TargetTrace;
+      static const std::string TargetWarning;
 
       static const std::string AlwaysOn;
 
@@ -132,6 +133,7 @@ class tarch::logging::LogFilter {
     bool writeDebug(const std::string& trace);
     bool writeInfo(const std::string& trace);
     bool writeTrace(const std::string& trace);
+    bool writeWarning(const std::string& trace);
 
     void switchProgramPhase(const std::string& activeProgramPhase);
 };

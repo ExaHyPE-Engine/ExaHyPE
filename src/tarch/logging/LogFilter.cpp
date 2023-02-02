@@ -17,6 +17,7 @@ const std::string tarch::logging::LogFilter::FilterListEntry::TargetAll   = "all
 const std::string tarch::logging::LogFilter::FilterListEntry::TargetInfo  = "info";
 const std::string tarch::logging::LogFilter::FilterListEntry::TargetDebug = "debug";
 const std::string tarch::logging::LogFilter::FilterListEntry::TargetTrace = "trace";
+const std::string tarch::logging::LogFilter::FilterListEntry::TargetWarning = "warning";
 
 const std::string tarch::logging::LogFilter::FilterListEntry::AlwaysOn = "always-on";
 
@@ -29,7 +30,7 @@ tarch::logging::LogFilter::FilterListEntry::FilterListEntry( const std::string& 
   _namespaceName(""),
   _isBlackEntry(isBlackListEntry),
   _programPhase(AlwaysOn) {
-  assertion1( targetName==TargetInfo or targetName==TargetDebug or targetName==TargetAll or targetName==TargetTrace, targetName );
+  assertion1( targetName==TargetWarning or  targetName==TargetInfo or targetName==TargetDebug or targetName==TargetAll or targetName==TargetTrace, targetName );
 }
 
 tarch::logging::LogFilter::FilterListEntry::FilterListEntry( const std::string& targetName, int rank, const std::string& className, bool isBlackListEntry, const std::string& programPhase ):
@@ -38,7 +39,7 @@ tarch::logging::LogFilter::FilterListEntry::FilterListEntry( const std::string& 
   _namespaceName(className),
   _isBlackEntry(isBlackListEntry),
   _programPhase(programPhase) {
-  assertion1( targetName==TargetInfo or targetName==TargetDebug or targetName==TargetAll or targetName==TargetTrace, targetName );
+  assertion1( targetName==TargetWarning or targetName==TargetInfo or targetName==TargetDebug or targetName==TargetAll or targetName==TargetTrace, targetName );
 }
 
 std::string tarch::logging::LogFilter::FilterListEntry::toString() const {
@@ -134,6 +135,10 @@ bool tarch::logging::LogFilter::writeDebug(const std::string& className) {
 
 bool tarch::logging::LogFilter::writeInfo(const std::string& className) {
   return !filterOut(FilterListEntry::TargetInfo,className);
+}
+
+bool tarch::logging::LogFilter::writeWarning(const std::string& className) {
+  return !filterOut(FilterListEntry::TargetWarning,className);
 }
 
 bool tarch::logging::LogFilter::writeTrace(const std::string& className) {
