@@ -236,19 +236,11 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::compute(
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::initDatatype() {
   {{NAMESPACE | join("::")}}::{{CLASSNAME}}  instances[2];
  
-  #if PeanoDebug>=1
-    MPI_Datatype subtypes[] = { {{MPI_FLOAT_TYPE}}, {{MPI_FLOAT_TYPE}}, {{MPI_FLOAT_TYPE}} };
-
-    int blocklen[] = { Dimensions, Dimensions, Cardinality };
-
-    const int NumberOfAttributes = 3;
-  #else   
-    MPI_Datatype subtypes[] = { {{MPI_FLOAT_TYPE}} };
+  MPI_Datatype subtypes[] = { {{MPI_FLOAT_TYPE}} };
     
-    int blocklen[] = { Cardinality };
+  int blocklen[] = { Cardinality };
   
-    const int NumberOfAttributes = 1;  
-  #endif
+  const int NumberOfAttributes = 1;
 
   MPI_Aint  baseFirstInstance;
   MPI_Aint  baseSecondInstance;
@@ -256,12 +248,6 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::initDatatype() {
   MPI_Get_address( &instances[1], &baseSecondInstance );
   MPI_Aint  disp[ NumberOfAttributes ];
   int       currentAddress = 0;
-  #if PeanoDebug>=1
-  MPI_Get_address( &(instances[0]._debugX.data()[0]), &disp[currentAddress] );
-  currentAddress++;
-  MPI_Get_address( &(instances[0]._debugH.data()[0]), &disp[currentAddress] );
-  currentAddress++;
-  #endif
   MPI_Get_address( &(instances[0].value), &disp[currentAddress] );
   currentAddress++;
 

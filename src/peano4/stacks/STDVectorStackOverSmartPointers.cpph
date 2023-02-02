@@ -24,14 +24,178 @@ void peano4::stacks::STDVectorStackOverSmartPointers<T>::clone( const STDVectorS
 }
 
 
-/*
 template <class T>
-void peano4::stacks::STDVectorStackOverSmartPointers<T>::clear() {
-  logDebug( "clear()", "clear " << Base::_currentElement << " vectors on current stack" );
-  for (auto& p: Base::_data) {
-    p.clear();
+void peano4::stacks::STDVectorStackOverSmartPointers<T>::startSend(peano4::grid::TraversalObserver::SendReceiveContext context, int rank, int tag, MPI_Comm comm) {
+  #ifdef Parallel
+  assertion( Base::_ioMode==IOMode::None );
+  assertion( Base::_ioMPIRequest==nullptr );
+
+  Base::_ioMode = IOMode::MPISend;
+  Base::_ioTag  = tag;
+  Base::_ioRank = rank;
+
+  // backup data as clear() below might change this value
+  const int stackEntriesToSend = Base::_currentElement;
+
+  _gatheredData     = new typename T::DoFType[ stackEntriesToSend * T::Cardinality ];
+  for (int i=0; i<stackEntriesToSend; i++) {
+    std::copy_n( Base::_data[i].value, T::Cardinality, _gatheredData + T::Cardinality * i );
   }
-  Base::_currentElement = 0;
+  Base::clear();
+
+  #if PeanoDebug>=1
+  _gatheredMetaData = new double[ Dimensions*2*stackEntriesToSend ];
+  for (int i=0; i<stackEntriesToSend; i++)
+  for (int d=0; d<Dimensions; d++) {
+    _gatheredMetaData[i*Dimensions*2+d]            = Base::_data[i].getDebugX()(d);
+    _gatheredMetaData[i*Dimensions*2+d+Dimensions] = Base::_data[i].getDebugH()(d);
+  }
+
+  _ioMetaDataMPIRequest = new MPI_Request();
+  MPI_Isend(
+    _gatheredMetaData,
+    stackEntriesToSend * 2 * Dimensions,
+    MPI_DOUBLE,
+    Base::_ioRank,
+    Base::_ioTag,
+    comm,
+    _ioMetaDataMPIRequest
+  );
+  logDebug( "startSend(...)", "sent out meta data with " << (stackEntriesToSend * 2 * Dimensions) << " entries" );
+  #endif
+
+  Base::_ioMPIRequest = new MPI_Request;
+  int result = MPI_Isend(
+    _gatheredData,
+    stackEntriesToSend,
+    translateContextIntoDatatype<T>( context ),
+    Base::_ioRank,
+    Base::_ioTag,
+    comm,
+    Base::_ioMPIRequest
+  );
+  if  (result!=MPI_SUCCESS) {
+    logError( "startSend(int,int,bool)", "was not able to send to node " << rank << " on tag " << tag
+      << ": " << tarch::mpi::MPIReturnValueToString(result)
+    );
+  }
+
+  logDebug( "startSend(...)", "sent out real data with " << stackEntriesToSend << " entries" );
+  #endif
 }
 
-*/
+
+template <class T>
+void peano4::stacks::STDVectorStackOverSmartPointers<T>::startReceive(peano4::grid::TraversalObserver::SendReceiveContext context, int rank, int tag, MPI_Comm comm, int numberOfElements) {
+  #ifdef Parallel
+  assertion3( Base::_ioMode==IOMode::None, rank, tag, numberOfElements );
+  assertion3( numberOfElements>0, rank, tag, numberOfElements );
+
+  Base::_ioMode = IOMode::MPIReceive;
+  Base::_ioTag  = tag;
+  Base::_ioRank = rank;
+
+  Base::_data.clear();
+  Base::_currentElement = numberOfElements;
+
+  #if PeanoDebug>=1
+  logDebug( "startReceive(...)", "I'll gonna receive " << (Base::_currentElement * 2 * Dimensions) << " meta data entries" );
+  _gatheredMetaData = new double[ Dimensions*2*Base::_currentElement ];
+
+  _ioMetaDataMPIRequest = new MPI_Request();
+  MPI_Irecv(
+    _gatheredMetaData,
+    Base::_currentElement * 2 * Dimensions,
+    MPI_DOUBLE,
+    Base::_ioRank,
+    Base::_ioTag,
+    comm,
+    _ioMetaDataMPIRequest
+  );
+  #endif
+
+  _gatheredData     = new typename T::DoFType[ Base::_currentElement * T::Cardinality ];
+
+  assertion( Base::_ioMPIRequest == nullptr );
+  Base::_ioMPIRequest = new MPI_Request;
+
+  logDebug( "startReceive(...)", "I'll gonna receive " << Base::_currentElement << " data entries" );
+
+  int result = MPI_Irecv(
+    _gatheredData,
+    Base::_currentElement,
+    translateContextIntoDatatype<T>( context ),
+    Base::_ioRank,
+    Base::_ioTag,
+    comm,
+    Base::_ioMPIRequest);
+  if  (result!=MPI_SUCCESS) {
+    logError( "startReceive(int,int,int)", "was not able to receive " << numberOfElements << " values from node " << rank << " on tag " << tag
+       << ": " << tarch::mpi::MPIReturnValueToString(result)
+    );
+  }
+
+  logDebug( "startReceive()", toString() );
+  #endif
+}
+
+
+template <class T>
+bool peano4::stacks::STDVectorStackOverSmartPointers<T>::tryToFinishSendOrReceive() {
+  #ifdef Parallel
+  logTraceInWith4Arguments( "tryToFinishSendOrReceive()", ::toString(Base::_ioMode), Base::size(), Base::_ioRank, Base::_ioTag );
+  bool result = true;
+  if ( Base::_ioMode==IOMode::MPISend or Base::_ioMode==IOMode::MPIReceive ) {
+    assertion( Base::_ioMPIRequest!=nullptr );
+
+    int          flag = 0;
+    MPI_Test( Base::_ioMPIRequest, &flag, MPI_STATUS_IGNORE );
+    if (flag) {
+      result = true;
+      logDebug( "tryToFinishSendOrReceive()", "send/receive complete, free MPI request: " << toString() );
+
+      delete Base::_ioMPIRequest;
+      Base::_ioMPIRequest = nullptr;
+
+      #if PeanoDebug>=1
+      MPI_Wait( _ioMetaDataMPIRequest, MPI_STATUS_IGNORE );
+      delete   _ioMetaDataMPIRequest;
+      _ioMetaDataMPIRequest = nullptr;
+      #endif
+
+      if (Base::_ioMode==IOMode::MPIReceive ) {
+        Base::_data.resize(Base::_currentElement);
+        for (int i=0; i<Base::_currentElement; i++) {
+          std::copy_n( _gatheredData + T::Cardinality * i, T::Cardinality, Base::_data[i].value );
+        }
+        #if PeanoDebug>=1
+        for (int i=0; i<Base::_currentElement; i++) {
+          #if Dimensions==2
+          Base::_data[i].setDebugX( { _gatheredMetaData[i*Dimensions*2+0], _gatheredMetaData[i*Dimensions*2+1] });
+          Base::_data[i].setDebugH( { _gatheredMetaData[i*Dimensions*2+2], _gatheredMetaData[i*Dimensions*2+3] });
+          #else
+          Base::_data[i].setDebugX( { _gatheredMetaData[i*Dimensions*2+0], _gatheredMetaData[i*Dimensions*2+1], _gatheredMetaData[i*Dimensions*2+2] });
+          Base::_data[i].setDebugH( { _gatheredMetaData[i*Dimensions*2+3], _gatheredMetaData[i*Dimensions*2+4], _gatheredMetaData[i*Dimensions*2+5] });
+          #endif
+        }
+        #endif
+      }
+
+      delete[] _gatheredData;
+
+      #if PeanoDebug>=1
+      delete[] _gatheredMetaData;
+      #endif
+
+      Base::_ioMode = IOMode::None;
+    }
+    else {
+      result = false;
+    }
+  }
+  logTraceOutWith1Argument( "tryToFinishSendOrReceive()", result );
+  return result;
+  #else
+  return true;
+  #endif
+}

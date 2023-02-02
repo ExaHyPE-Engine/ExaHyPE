@@ -190,11 +190,8 @@ struct {{NAMESPACE | join("::")}}::{{CLASSNAME}} {
   static void shutdownDatatype();
   
   /**
-   * Map each entry to an MPI_DOUBLE. So we will end up with three
-   * arrays of doubles: one for the x, one for the size of the
-   * patchy data, and one for the actual data. This holds for the
-   * debug mode. In release mode, it is the plain data only, i.e.
-   * one sequence of doubles.
+   * Different to the vanilla version of the patch to double mapping, the datatype here
+   * does never (!) include any meta data.
    */
   static MPI_Datatype  getForkDatatype();
   static MPI_Datatype  getJoinDatatype();
