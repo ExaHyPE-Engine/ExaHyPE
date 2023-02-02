@@ -78,7 +78,7 @@ namespace exahype2 {
 
       template <
         typename Solver,
-        int                     numberOfVolumesPerAxisInPatch,
+        int                     numberOfGridCellsPerPatchPerAxis,
         int                     haloSize,
         int                     unknowns,
         int                     auxiliaryVariables,
