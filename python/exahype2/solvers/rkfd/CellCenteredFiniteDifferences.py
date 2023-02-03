@@ -764,7 +764,7 @@ The finest mesh width of """ + str(self.get_finest_volume_size(domain_size)) + "
       templatefile_prefix += self.__class__.__name__
     else:
       templatefile_prefix += self._solver_template_file_class_name
-
+    
     abstractHeaderDictionary = {}
     implementationDictionary = {}
     self._init_dictionary_with_default_parameters(abstractHeaderDictionary)
@@ -864,15 +864,7 @@ The finest mesh width of """ + str(self.get_finest_volume_size(domain_size)) + "
 
     d[ "KERNEL_NAMESPACE"]                    = self._kernel_namespace
 
-    # RungeKuttaDG hat einige er Implementeirungen hier oben schon, weil es ja fuer alle Riemann Loeser gilt
-    #    d[ "FLUX_IMPLEMENTATION"]                 = self._flux_implementation
-    #d[ "NCP_IMPLEMENTATION"]                  = self._ncp_implementation
-    #d[ "SOURCE_TERM_IMPLEMENTATION"]          = self._source_term_implementation
-    #d[ "POINT_SOURCES_IMPLEMENTATION"]        = self._point_sources_implementation
-
-    # setimplementation ist also hier
-    
-    
+   
   @property
   def unknowns(self):
     return self._unknowns
