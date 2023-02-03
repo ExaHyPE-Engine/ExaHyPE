@@ -103,23 +103,23 @@ then
       CC=$cc CXX=$cxx \
       CXXFLAGS="$CXXFLAGS" \
       LDFLAGS="$LDFLAGS"
+  else
+    echo "$cc $CXXFLAGS"
+    echo "$cxx $CXXFLAGS"
+    echo "LDFLAGS: $LDFLAGS"
+
+    libtoolize && aclocal && autoconf && autoheader && cp src/config.h.in . && automake --add-missing && \
+    ./configure \
+      --enable-exahype \
+      --enable-loadbalancing \
+      --enable-blockstructured \
+      --enable-particles \
+      --enable-fem \
+      --enable-swift \
+      --with-fenv \
+      --with-multithreading=$shared \
+      CC=$cc CXX=$cxx \
+      CXXFLAGS="$CXXFLAGS" \
+      LDFLAGS="$LDFLAGS"
   fi
-
-  echo "$cc $CXXFLAGS"
-  echo "$cxx $CXXFLAGS"
-  echo "LDFLAGS: $LDFLAGS"
-
-  libtoolize && aclocal && autoconf && autoheader && cp src/config.h.in . && automake --add-missing && \
-  ./configure \
-    --enable-exahype \
-    --enable-loadbalancing \
-    --enable-blockstructured \
-    --enable-particles \
-    --enable-fem \
-    --enable-swift \
-    --with-fenv \
-    --with-multithreading=$shared \
-    CC=$cc CXX=$cxx \
-    CXXFLAGS="$CXXFLAGS" \
-    LDFLAGS="$LDFLAGS"
 fi
