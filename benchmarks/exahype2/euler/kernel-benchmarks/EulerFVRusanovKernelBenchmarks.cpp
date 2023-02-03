@@ -284,7 +284,9 @@ void runBenchmarksOnHost(int totalPatches) {
   for (int numThreads = 1; numThreads <= omp_get_num_procs(); numThreads *= 2) {
     tarch::multicore::Core::getInstance().configure(numThreads);
     const int fusedPatches = totalPatches / tarch::multicore::Core::getInstance().getNumberOfThreads();
-    logInfo( "main()", " --> Number of patches fused: " << fusedPatches   );
+    logInfo( "main()", "----------------------------------------" );
+    logInfo( "main()", " --> Number of patches fused: "       << fusedPatches   );
+    logInfo( "main()", "----------------------------------------" );
 
     #pragma omp parallel for
     for (int thread=0; thread<tarch::multicore::Core::getInstance().getNumberOfThreads(); thread++) {
@@ -702,7 +704,7 @@ int main(int argc, char** argv) {
     msg << "benchmark-" << patches << "-host";
     otterPhaseSwitch( msg.str().c_str() );
 
-    logInfo( "main()", "-=======================================" );
+    logInfo( "main()", "========================================" );
     logInfo( "main()", "  Number of total patches: " << patches   );
     logInfo( "main()", "========================================" );
 

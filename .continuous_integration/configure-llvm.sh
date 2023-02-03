@@ -68,7 +68,8 @@ then
 
     CXXFLAGS+=" -fopenmp-targets=nvptx64-nvidia-cuda -Xopenmp-target -march=$cap -Wno-unknown-cuda-version"
 
-    echo "CXXFLAGS: $CXXFLAGS"
+    echo "$cc $CXXFLAGS"
+    echo "$cxx $CXXFLAGS"
     echo "LDFLAGS: $LDFLAGS"
 
     libtoolize && aclocal && autoconf && autoheader && cp src/config.h.in . && automake --add-missing && \
@@ -79,6 +80,24 @@ then
       --enable-fem \
       --with-fenv \
       --with-gpu=$gpu \
+      --with-multithreading=$shared \
+      CC=$cc CXX=$cxx \
+      CXXFLAGS="$CXXFLAGS" \
+      LDFLAGS="$LDFLAGS"
+  else
+    echo "$cc $CXXFLAGS"
+    echo "$cxx $CXXFLAGS"
+    echo "LDFLAGS: $LDFLAGS"
+
+    libtoolize && aclocal && autoconf && autoheader && cp src/config.h.in . && automake --add-missing && \
+    ./configure \
+      --enable-exahype \
+      --enable-loadbalancing \
+      --enable-blockstructured \
+      --enable-particles \
+      --enable-fem \
+      --enable-swift \
+      --with-fenv \
       --with-multithreading=$shared \
       CC=$cc CXX=$cxx \
       CXXFLAGS="$CXXFLAGS" \
