@@ -101,4 +101,5 @@ namespace exahype2 {
 }
 
 
+#include "../FD_Helper.cpph"
 #include "FD4_patchwise_static_calls.cpph"

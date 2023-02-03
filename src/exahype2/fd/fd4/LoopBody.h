@@ -18,6 +18,13 @@ namespace exahype2 {
     namespace fd4 {
       constexpr int PickAllEntriesFromOutputVector = -1;
       namespace internal {
+        enum class DifferentialSourceTermVariant {
+          CentralDifferences,
+          CentralDifferencesWithLopsidedAdvection,
+          CentralDifferencesWithLimiter,
+          CentralDifferencesWithLimiterAndLopsidedAdvection
+        };
+
         /**
          * This function calculates the source term that involves B_i\nabla_iQ where
          * i is the spatial dimension. These involve first gradients of quantitiets 
@@ -42,8 +49,52 @@ namespace exahype2 {
           int                                            normal,
           double* __restrict__                           QDiffSrc,
           const QOutEnumeratorType&                      QDiffSrcEnumerator,
-          int                                            pick = PickAllEntriesFromOutputVector
+          DifferentialSourceTermVariant                  variant
         ) InlineMethod;
+
+
+/*
+ *      not implemented yet
+ *      ===================
+
+        template <>
+        void computeDifferentialSourceTerm_LoopBody(
+          const double* __restrict__                     QIn,
+          const exahype2::enumerator::AoSLexicographicEnumerator&                       QInEnumerator,
+          exahype2::fd::NonconservativeProduct           DifferentialSource,
+          const tarch::la::Vector<Dimensions,double>&    patchCentre,
+          const tarch::la::Vector<Dimensions,double>&    patchSize,
+          int                                            patchIndex,
+          const tarch::la::Vector<Dimensions,int>&       volumeIndex,
+          double                                         t,
+          double                                         dt,
+          int                                            normal,
+          double* __restrict__                           QDiffSrc,
+          const exahype2::enumerator::AoSLexicographicEnumerator&                      QDiffSrcEnumerator,
+          DifferentialSourceTermVariant                  variant
+        ) InlineMethod;
+*/
+
+
+        /**
+         * Overlaoded version with static calls.
+         */
+        template <typename Solver, class QInEnumeratorType, class QOutEnumeratorType>
+        static void computeDifferentialSourceTerm_LoopBody(
+          const double* __restrict__                     QIn,
+          const exahype2::enumerator::AoSLexicographicEnumerator&                       QInEnumerator,
+          const tarch::la::Vector<Dimensions,double>&    patchCentre,
+          const tarch::la::Vector<Dimensions,double>&    patchSize,
+          int                                            patchIndex,
+          const tarch::la::Vector<Dimensions,int>&       volumeIndex,
+          double                                         t,
+          double                                         dt,
+          int                                            normal,
+          double* __restrict__                           QDiffSrc,
+          const exahype2::enumerator::AoSLexicographicEnumerator&                      QDiffSrcEnumerator,
+          DifferentialSourceTermVariant                  variant
+        ) InlineMethod;
+
 
         /**
          * Add the difference source contributions to one volume.
@@ -170,6 +221,26 @@ namespace exahype2 {
           const QOutEnumeratorType&                          QFluxEnumerator
         ) InlineMethod;
 
+
+        /**
+         * Overloaded version with static calls.
+         */
+        template <typename Solver, class QInEnumeratorType, class QOutEnumeratorType>
+        static void computeFlux_LoopBody(
+          const double* __restrict__                   QIn,
+          const QInEnumeratorType&                     QInEnumerator,
+          const tarch::la::Vector<Dimensions,double>&  patchCentre,
+          const tarch::la::Vector<Dimensions,double>&  patchSize,
+          int                                          patchIndex,
+          const tarch::la::Vector<Dimensions,int>&     volumeIndex,
+          double                                       t,
+          double                                       dt,
+          int                                          normal,
+          double* __restrict__                         QFlux,
+          const QOutEnumeratorType&                    QFluxEnumerator
+        ) InlineMethod;
+
+
         /**
          * Plain update of flux in a finite differences scheme.
          *
@@ -189,7 +260,7 @@ namespace exahype2 {
           const double* __restrict__                   tempFluxX,
           const double* __restrict__                   tempFluxY,
           const double* __restrict__                   tempFluxZ,
-          const QOutEnumeratorType&                   fluxEnumerator,
+          const QOutEnumeratorType&                    fluxEnumerator,
           const tarch::la::Vector<Dimensions,double>&  patchCentre,
           const tarch::la::Vector<Dimensions,double>&  patchSize,
           int                                          patchIndex,

@@ -3,7 +3,6 @@
 #include "tarch/multicore/otter.h"
 #include "exahype2/fd/LoopBody.h"
 #include "exahype2/fd/fd4/LoopBody.h"
-#include "exahype2/fd/FD_Helper.cpph"
 
 
 void exahype2::fd::fd4::timeStep_patchwise_heap_functors(
@@ -460,7 +459,10 @@ void exahype2::fd::fd4::timeStep_patchwise_heap_functors(
           timeStepSize,
           2, // normal
           tempDifferentialSourceZ,
-          QOutEnumerator
+          QOutEnumerator,
+          internal::DifferentialSourceTermVariant::CentralDifferencesWithLimiter
+
+          todo das noch ueberall nachtragen
         );
         otterLoopIterationEnd();
       }
