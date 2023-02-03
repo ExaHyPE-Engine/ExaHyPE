@@ -67,6 +67,7 @@ def create_compute_kernel_for_FD4(flux_implementation,
   {% if NCP_IMPLEMENTATION=="<none>" %} false {% else %} true {% endif %},
   {% if SOURCE_IMPLEMENTATION=="<none>" %} false {% else %} true {% endif %},
   false, // Runge-Kutta, so no need to copy old data over or to take dt into account
+  ::exahype2::fd::fd4::DifferentialSourceTermVariant::CentralDifferencesWithLopsidedAdvection,
   [&](
     const double * __restrict__ Q,
     const tarch::la::Vector<Dimensions,double>&  faceCentre,
@@ -115,7 +116,8 @@ def create_compute_kernel_for_FD4(flux_implementation,
       {% if FLUX_IMPLEMENTATION=="<none>" %} false {% else %} true {% endif %},
       {% if NCP_IMPLEMENTATION=="<none>" %} false {% else %} true {% endif %},
       {% if SOURCE_IMPLEMENTATION=="<none>" %} false {% else %} true {% endif %},
-      false     // Runge-Kutta, so no need to copy old data over or to take dt into account
+      false,     // Runge-Kutta, so no need to copy old data over or to take dt into account
+      ::exahype2::fd::fd4::DifferentialSourceTermVariant::CentralDifferencesWithLopsidedAdvection
     );
   """
   if solver_variant == SolverVariant.Accelerator and EnumeratorTemplateTypes[kernel_variant]==None:
@@ -126,7 +128,8 @@ def create_compute_kernel_for_FD4(flux_implementation,
       {% if FLUX_IMPLEMENTATION=="<none>" %} false {% else %} true {% endif %},
       {% if NCP_IMPLEMENTATION=="<none>" %} false {% else %} true {% endif %},
       {% if SOURCE_IMPLEMENTATION=="<none>" %} false {% else %} true {% endif %},
-      false     // Runge-Kutta, so no need to copy old data over or to take dt into account
+      false,     // Runge-Kutta, so no need to copy old data over or to take dt into account
+      ::exahype2::fd::fd4::DifferentialSourceTermVariant::CentralDifferencesWithLopsidedAdvection
     );
   """
   if solver_variant == SolverVariant.Stateless and EnumeratorTemplateTypes[kernel_variant]!=None:
@@ -136,7 +139,8 @@ def create_compute_kernel_for_FD4(flux_implementation,
       {% if FLUX_IMPLEMENTATION=="<none>" %} false {% else %} true {% endif %},
       {% if NCP_IMPLEMENTATION=="<none>" %} false {% else %} true {% endif %},
       {% if SOURCE_IMPLEMENTATION=="<none>" %} false {% else %} true {% endif %},
-      false     // Runge-Kutta, so no need to copy old data over or to take dt into account
+      false,     // Runge-Kutta, so no need to copy old data over or to take dt into account
+      ::exahype2::fd::fd4::DifferentialSourceTermVariant::CentralDifferencesWithLopsidedAdvection
     );
   """
   if solver_variant == SolverVariant.Accelerator and EnumeratorTemplateTypes[kernel_variant]!=None:
@@ -147,7 +151,8 @@ def create_compute_kernel_for_FD4(flux_implementation,
       {% if FLUX_IMPLEMENTATION=="<none>" %} false {% else %} true {% endif %},
       {% if NCP_IMPLEMENTATION=="<none>" %} false {% else %} true {% endif %},
       {% if SOURCE_IMPLEMENTATION=="<none>" %} false {% else %} true {% endif %},
-      false     // Runge-Kutta, so no need to copy old data over or to take dt into account
+      false,     // Runge-Kutta, so no need to copy old data over or to take dt into account
+      ::exahype2::fd::fd4::DifferentialSourceTermVariant::CentralDifferencesWithLopsidedAdvection
     );
   """
         

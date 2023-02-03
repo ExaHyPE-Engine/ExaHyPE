@@ -5,6 +5,7 @@
 
 
 #include "exahype2/fd/Functors.h"
+#include "KernelVariants.h"
 
 #include "exahype2/enumerator/AoSLexicographicEnumerator.h"
 #include "exahype2/enumerator/SoALexicographicEnumerator.h"
@@ -16,14 +17,7 @@
 namespace exahype2 {
   namespace fd {
     namespace fd4 {
-      constexpr int PickAllEntriesFromOutputVector = -1;
       namespace internal {
-        enum class DifferentialSourceTermVariant {
-          CentralDifferences,
-          CentralDifferencesWithLopsidedAdvection,
-          CentralDifferencesWithLimiter,
-          CentralDifferencesWithLimiterAndLopsidedAdvection
-        };
 
         /**
          * This function calculates the source term that involves B_i\nabla_iQ where
@@ -82,7 +76,7 @@ namespace exahype2 {
         template <typename Solver, class QInEnumeratorType, class QOutEnumeratorType>
         static void computeDifferentialSourceTerm_LoopBody(
           const double* __restrict__                     QIn,
-          const exahype2::enumerator::AoSLexicographicEnumerator&                       QInEnumerator,
+          const QInEnumeratorType&                       QInEnumerator,
           const tarch::la::Vector<Dimensions,double>&    patchCentre,
           const tarch::la::Vector<Dimensions,double>&    patchSize,
           int                                            patchIndex,
@@ -91,7 +85,7 @@ namespace exahype2 {
           double                                         dt,
           int                                            normal,
           double* __restrict__                           QDiffSrc,
-          const exahype2::enumerator::AoSLexicographicEnumerator&                      QDiffSrcEnumerator,
+          const QOutEnumeratorType&                      QDiffSrcEnumerator,
           DifferentialSourceTermVariant                  variant
         ) InlineMethod;
 
@@ -151,8 +145,7 @@ namespace exahype2 {
           double                                         dt,
           int                                            normal,
           double* __restrict__                           QKODsp,
-          const QOutEnumeratorType&                      QKODspEnumerator,
-          int                                            pick = PickAllEntriesFromOutputVector
+          const QOutEnumeratorType&                      QKODspEnumerator
         ) InlineMethod;
 
         /**
@@ -208,7 +201,7 @@ namespace exahype2 {
         template <class QInEnumeratorType, class QOutEnumeratorType>
         static void computeFlux_LoopBody(
           const double* __restrict__                   QIn,
-          const QInEnumeratorType&                           QInEnumerator,
+          const QInEnumeratorType&                     QInEnumerator,
           exahype2::fd::Flux                           flux,
           const tarch::la::Vector<Dimensions,double>&  patchCentre,
           const tarch::la::Vector<Dimensions,double>&  patchSize,
@@ -218,7 +211,7 @@ namespace exahype2 {
           double                                       dt,
           int                                          normal,
           double* __restrict__                         QFlux,
-          const QOutEnumeratorType&                          QFluxEnumerator
+          const QOutEnumeratorType&                    QFluxEnumerator
         ) InlineMethod;
 
 

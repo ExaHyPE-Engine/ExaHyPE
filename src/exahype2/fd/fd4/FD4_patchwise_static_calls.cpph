@@ -24,6 +24,7 @@ namespace exahype2 {
           bool                    evaluateDifferentialSource, //for ncp
           bool                    evaluateAlgebraicSource, //real source
           bool                    copyOldTimeStepAndScaleWithTimeStepSize,
+          DifferentialSourceTermVariant                  variant,
           const exahype2::enumerator::AoSLexicographicEnumerator& QInEnumerator,
           const exahype2::enumerator::AoSLexicographicEnumerator& QOutEnumerator,
           const TempDataEnumerator& fluxEnumerator,
@@ -338,7 +339,8 @@ namespace exahype2 {
                   timeStepSize,
                   0, // normal
                   tempDifferentialSourceX,
-                  QOutEnumerator
+                  QOutEnumerator,
+                  variant
                 );
                 otterLoopIterationEnd();
               }
@@ -359,7 +361,8 @@ namespace exahype2 {
                   timeStepSize,
                   1, // normal
                   tempDifferentialSourceY,
-                  QOutEnumerator
+                  QOutEnumerator,
+                  variant
                 );
                 otterLoopIterationEnd();
               }
@@ -403,7 +406,8 @@ namespace exahype2 {
                   timeStepSize,
                   0, // normal
                   tempDifferentialSourceX,
-                  QOutEnumerator
+                  QOutEnumerator,
+                  variant
                 );
                 otterLoopIterationEnd();
               }
@@ -425,7 +429,8 @@ namespace exahype2 {
                   timeStepSize,
                   1, // normal
                   tempDifferentialSourceY,
-                  QOutEnumerator
+                  QOutEnumerator,
+                  variant
                 );
                 otterLoopIterationEnd();
               }
@@ -447,7 +452,8 @@ namespace exahype2 {
                   timeStepSize,
                   2, // normal
                   tempDifferentialSourceZ,
-                  QOutEnumerator
+                  QOutEnumerator,
+                  variant
                 );
                 otterLoopIterationEnd();
               }
@@ -652,7 +658,8 @@ void exahype2::fd::fd4::timeStep_patchwise_heap_static_calls(
   bool                    evaluateFlux,
   bool                    evaluateDifferentialSource, //for ncp
   bool                    evaluateAlgebraicSource, //real source
-  bool                    copyOldTimeStepAndScaleWithTimeStepSize
+  bool                    copyOldTimeStepAndScaleWithTimeStepSize,
+  DifferentialSourceTermVariant                  variant
 ) {
   assertionEquals(haloSize,3);
 
@@ -682,6 +689,7 @@ void exahype2::fd::fd4::timeStep_patchwise_heap_static_calls(
     evaluateDifferentialSource,
     evaluateAlgebraicSource,
     copyOldTimeStepAndScaleWithTimeStepSize,
+    variant,
     QInEnumerator,
     QOutEnumerator,
     fluxEnumerator,

@@ -16,6 +16,7 @@ void exahype2::fd::fd4::timeStep_patchwise_heap_functors(
   bool                    evaluateDifferentialSource, //for ncp
   bool                    evaluateAlgebraicSource, //real source
   bool                    copyOldTimeStepAndScaleWithTimeStepSize,
+  DifferentialSourceTermVariant                  variant,
   Flux                    flux,
   NonconservativeProduct  DifferentialSource,
   Source                  AlgebraicSource
@@ -346,7 +347,8 @@ void exahype2::fd::fd4::timeStep_patchwise_heap_functors(
           timeStepSize,
           0, // normal
           tempDifferentialSourceX,
-          QOutEnumerator
+          QOutEnumerator,
+          variant
         );
         otterLoopIterationEnd();
       }
@@ -368,7 +370,8 @@ void exahype2::fd::fd4::timeStep_patchwise_heap_functors(
           timeStepSize,
           1, // normal
           tempDifferentialSourceY,
-          QOutEnumerator
+          QOutEnumerator,
+          variant
         );
         otterLoopIterationEnd();
       }
@@ -413,7 +416,8 @@ void exahype2::fd::fd4::timeStep_patchwise_heap_functors(
           timeStepSize,
           0, // normal
           tempDifferentialSourceX,
-          QOutEnumerator
+          QOutEnumerator,
+          variant
         );
         otterLoopIterationEnd();
       }
@@ -436,7 +440,8 @@ void exahype2::fd::fd4::timeStep_patchwise_heap_functors(
           timeStepSize,
           1, // normal
           tempDifferentialSourceY,
-          QOutEnumerator
+          QOutEnumerator,
+          variant
         );
         otterLoopIterationEnd();
       }
@@ -460,9 +465,7 @@ void exahype2::fd::fd4::timeStep_patchwise_heap_functors(
           2, // normal
           tempDifferentialSourceZ,
           QOutEnumerator,
-          internal::DifferentialSourceTermVariant::CentralDifferencesWithLimiter
-
-          todo das noch ueberall nachtragen
+          variant
         );
         otterLoopIterationEnd();
       }

@@ -7,6 +7,9 @@
 #include "exahype2/CellData.h"
 
 
+#include "KernelVariants.h"
+
+
 namespace exahype2 {
   namespace fd {
     namespace fd4 {
@@ -66,6 +69,7 @@ namespace exahype2 {
         bool                    evaluateDifferentialSource, //for ncp
         bool                    evaluateAlgebraicSource, //real source
         bool                    copyOldTimeStepAndScaleWithTimeStepSize,
+        DifferentialSourceTermVariant variant,
         Flux                    flux,
         NonconservativeProduct  DifferentialSource,
         Source                  AlgebraicSource
@@ -90,7 +94,8 @@ namespace exahype2 {
         bool                    evaluateFlux,
         bool                    evaluateDifferentialSource, //for ncp
         bool                    evaluateAlgebraicSource, //real source
-        bool                    copyOldTimeStepAndScaleWithTimeStepSize
+        bool                    copyOldTimeStepAndScaleWithTimeStepSize,
+        DifferentialSourceTermVariant variant
       )
       #if defined(UseManualInlining)
       __attribute__((always_inline))
