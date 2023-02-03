@@ -167,7 +167,21 @@ if __name__ == "__main__":
             min_volume_h=min_volume_h, max_volume_h=max_volume_h,
             time_step_relaxation=cfl
           )
-        elif SuperClass==exahype2.solvers.rkfd.fd4.GlobalAdaptiveTimeStep or SuperClass==exahype2.solvers.rkfd.fd4.GlobalAdaptiveTimeStepWithEnclaveTasking:
+        elif SuperClass==exahype2.solvers.rkfd.fd4.GlobalAdaptiveTimeStep:
+          if args.implementation=="fd4-rk1-adaptive" or args.implementation=="fd4-rk1-adaptive-enclave":
+            rk_order = 1
+          else:
+            rk_order = 4
+          SuperClass.__init__(
+            self,
+            name=name, patch_size=patch_size, rk_order=rk_order,
+            unknowns=number_of_unknowns,
+            auxiliary_variables=0,
+            min_meshcell_h=min_volume_h, max_meshcell_h=max_volume_h,
+            time_step_relaxation=cfl,
+            KOSigma=KOSig
+          )
+        elif SuperClass==exahype2.solvers.rkfd.fd4.GlobalAdaptiveTimeStepWithEnclaveTasking:
           if args.implementation=="fd4-rk1-adaptive" or args.implementation=="fd4-rk1-adaptive-enclave":
             rk_order = 1
           else:
@@ -180,6 +194,7 @@ if __name__ == "__main__":
             min_meshcell_h=min_volume_h, max_meshcell_h=max_volume_h,
             time_step_relaxation=cfl,
             KOSigma=KOSig,
+            #pde_terms_without_state=False
             pde_terms_without_state=True
           )
         elif SuperClass==exahype2.solvers.rkfd.fd4.GlobalFixedTimeStep or SuperClass==exahype2.solvers.rkfd.fd4.GlobalFixedTimeStepWithEnclaveTasking:
@@ -920,7 +935,7 @@ if __name__ == "__main__":
     probe_point = [-6,-6,0.0]
     project.add_plot_filter( probe_point,[12.0,12.0,0.01],1 )
 
-    project.set_load_balancing("toolbox::loadbalancing::RecursiveSubdivision","(new ::exahype2::LoadBalancingConfiguration(0.95,2000,-1,32))" )
+    project.set_load_balancing("toolbox::loadbalancing::RecursiveSubdivision","(new ::exahype2::LoadBalancingConfiguration(0.95,100,-1,32))" )
     #project.set_load_balancing("toolbox::loadbalancing::RecursiveSubdivision","(new ::exahype2::LoadBalancingConfiguration(0.95,0))" )
 
 ########################################################################################
