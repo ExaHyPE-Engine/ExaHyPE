@@ -892,8 +892,8 @@ if __name__ == "__main__":
     #path="/cosma5/data/durham/dc-zhan3/bbh-c5-1"
     #path="/cosma6/data/dp004/dc-zhan3/exahype2/sbh-fv3"
     project.set_output_path(path)
-    probe_point = [-6,-6,0.0]
-    project.add_plot_filter( probe_point,[12.0,12.0,0.01],1 )
+    #probe_point = [-6,-6,0.0]
+    #project.add_plot_filter( probe_point,[12.0,12.0,0.01],1 )
 
     project.set_load_balancing("toolbox::loadbalancing::RecursiveSubdivision","(new ::exahype2::LoadBalancingConfiguration(0.95,2000,-1,32))" )
     #project.set_load_balancing("toolbox::loadbalancing::RecursiveSubdivision","(new ::exahype2::LoadBalancingConfiguration(0.95,0))" )

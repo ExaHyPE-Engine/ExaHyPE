@@ -314,7 +314,7 @@ void applications::exahype2::ccz4::FiniteVolumeCCZ4::nonconservativeProduct(
   //if (volumeCentre(0)>1.2) {result=::exahype2::RefinementCommand::Refine;}
   double radius=volumeCentre(0)*volumeCentre(0)+volumeCentre(1)*volumeCentre(1)+volumeCentre(2)*volumeCentre(2); radius=pow(radius,0.5);
   if (CCZ4ReSwi==1){ //radius based
-    if (radius<0.2) {result=::exahype2::RefinementCommand::Refine;}
+    if (radius<0.1) {result=::exahype2::RefinementCommand::Refine;}
   }
   if (CCZ4ReSwi==2){ //single black hole, low refinement
     if (tarch::la::equals(t,0.0)){  //as we use a quantity calculated in postpocessing, we need to provide criterion at the first timestep 
@@ -416,13 +416,8 @@ void applications::exahype2::ccz4::FiniteVolumeCCZ4::nonconservativeProduct(
   if (CCZ4ReSwi==7){ 
     if (tarch::la::equals(t,0.0)){  //as we use a quantity calculated in postpocessing, we need to provide criterion at the first timestep 
       constexpr int NumberOfRefinementLayers = 2;
-//    current "standard" refinement pattern
-      double Radius[NumberOfRefinementLayers] = {3, 1.5};
+      double Radius[NumberOfRefinementLayers] = {3.0, 1.5};
       double MaxH[NumberOfRefinementLayers]   = {0.15,0.04};
-//    with some alter
-//      double Radius[NumberOfRefinementLayers] = {5.0, 3.0};
-//      double MaxH[NumberOfRefinementLayers]   = {0.3, 0.15};
-
       result = ::exahype2::RefinementCommand::Keep;
       for (int i=0; i<NumberOfRefinementLayers; i++) {
         if (radius<Radius[i] and tarch::la::max(volumeH)>MaxH[i]) {
