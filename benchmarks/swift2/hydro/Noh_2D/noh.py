@@ -61,17 +61,71 @@ particle = swift2.particle.SPHLeapfrogFixedInteractionRadius(name = "MinimalSPH"
                                                              constant_time_step_size= True,
                                                              swift_project_namespace= project_namespace,
                                                              is_sph = True,
-<<<<<<< HEAD
-                                                             particles_per_cell = 100,
-                                                             min_h = 0.1,
-=======
                                                              particles_per_cell = 10,
                                                              min_h = 0.01,
->>>>>>> 09247d2db (Replaced high res clock by steady clock)
                                                              max_h = args.cell_size
                                                              )
 
+
+# Set the mantissa size for particle attributes
+# Native size is 53 (double precision)
+particle.mantissa_size = 14
+
+# There are plenty of constant simulation paramaters to specify for our SPH
+# simulation - we do that here. 
+
+
+# @TODO Introduce get and set methods to interface into SPHLeapfrogFixedInteractionRadius
+
+# Time-integration parameters -------------------------------------------------
+GLOBAL_TIME_STEP_SIZE = "1e-4"
+CFL_CONSTANT = "0.1"
+
+# EoS parameter ---------------------------------------------------------------
+gamma_hydro_list = [str(5/3), str(7/5), str(4/3), str(2/1)]
+gamma_hydro_list_symbols = ['HYDRO_GAMMA_5_3','HYDRO_GAMMA_7_5','HYDRO_GAMMA_4_3','HYDRO_GAMMA_2_1']
+GAMMA = gamma_hydro_list[0]
+GAMMA_HYDRO_SYMBOL = gamma_hydro_list_symbols[0]
+
+# Artificial viscosity parameters ---------------------------------------------
+ALPHA_AV= "0.8"     # =0.8 in SWIFT
+BETA_AV = "3"       # =3 in SWIFT/SPHENIX
+
+# Newton-Raphson parameters --------------------------------------------------
+# Maximum allowed number of Newton-Raphson iterations
+HYDRO_DEFAULT_MAX_ITERATIONS = "10"
+
+# Tolerance for Newton-Raphson convergence
+H_TOLERANCE = "1e-4"
+
+# SPH kernel -------------------------------------------------------
+kernel_list = ['M5']
+kernel_list_symbols = ['QUARTIC_SPLINE_KERNEL']
+KERNEL = kernel_list[0]
+KERNEL_SYMBOL = kernel_list_symbols[0]
+
+# Smoothing-length free parameter (resolution "eta_neighbours"). 
+SMOOTH_ETA_FAC = str( 1.245 ) 
+particle.set_eta_factor(SMOOTH_ETA_FAC)
+
+if(KERNEL=='M5' and HYDRO_DIMENSIONS ==1):
+  KERNEL_SUPPORT_RAD = "1.936492"  #  1D SWIFT M5 Kernel
+if(KERNEL=='M5' and HYDRO_DIMENSIONS ==2):
+  KERNEL_SUPPORT_RAD = "1.977173"
+else:
+  print(f'Unable to determine the kernel support radius. Please check.'  )
+
+# Max/min allowed values for smoothing length h
+HYDRO_h_MAX = str( 1.0 / 3.0 / float(KERNEL_SUPPORT_RAD) ) 
+HYDRO_h_MIN = "1e-6"
+particle.set_h_hydro_limits(HYDRO_h_MIN, HYDRO_h_MAX)
+
+# We have to declare the sph particle attributes, in this case for MinimalSPH.
+particle.declare_sph_particle_attributes()
+
 # Add particle to the SWIFT project
+# Notice that you any change to the particle will not take effect after adding
+# the particle_set to the project
 particle_set = project.add_particle_species( particle )
 
 if args.asserts:
@@ -216,52 +270,6 @@ project.algorithm_step_plot.add_action_set( particle_plotter )
 ###############################################################################
 peano4_project = project.generate_Peano4_project(verbose=args.verbose)
 
-# There are plenty of constant simulation paramaters to specify for our SPH
-# simulation - we do that here. 
-
-
-# Time-integration parameters -------------------------------------------------
-GLOBAL_TIME_STEP_SIZE = "1e-4"
-CFL_CONSTANT = "0.1"
-
-# EoS parameter ---------------------------------------------------------------
-gamma_hydro_list = [str(5/3), str(7/5), str(4/3), str(2/1)]
-gamma_hydro_list_symbols = ['HYDRO_GAMMA_5_3','HYDRO_GAMMA_7_5','HYDRO_GAMMA_4_3','HYDRO_GAMMA_2_1']
-GAMMA = gamma_hydro_list[0]
-GAMMA_HYDRO_SYMBOL = gamma_hydro_list_symbols[0]
-
-# Artificial viscosity parameters ---------------------------------------------
-ALPHA_AV= "0.8"     # =0.8 in SWIFT
-BETA_AV = "3"       # =3 in SWIFT/SPHENIX
-
-# Newton-Raphson parameters --------------------------------------------------
-# Maximum allowed number of Newton-Raphson iterations
-HYDRO_DEFAULT_MAX_ITERATIONS = "10"
-
-# Tolerance for Newton-Raphson convergence
-H_TOLERANCE = "1e-4"
-
-# SPH kernel -------------------------------------------------------
-kernel_list = ['M5']
-kernel_list_symbols = ['QUARTIC_SPLINE_KERNEL']
-KERNEL = kernel_list[0]
-KERNEL_SYMBOL = kernel_list_symbols[0]
-
-# Smoothing-length free parameter (resolution "eta_neighbours"). 
-SMOOTH_ETA_FAC = str( 1.235 ) 
-particle.set_eta_factor(SMOOTH_ETA_FAC)
-
-if(KERNEL=='M5' and HYDRO_DIMENSIONS ==1):
-  KERNEL_SUPPORT_RAD = "1.936492"  #  1D SWIFT M5 Kernel
-if(KERNEL=='M5' and HYDRO_DIMENSIONS ==2):
-  KERNEL_SUPPORT_RAD = "1.977173"
-else:
-  print(f'Unable to determine the kernel support radius. Please check.'  )
-
-# Max/min allowed values for smoothing length h
-HYDRO_h_MAX = str( 1.0 / 3.0 / float(KERNEL_SUPPORT_RAD) ) 
-HYDRO_h_MIN = "1e-6"
-particle.set_h_hydro_limits(HYDRO_h_MIN, HYDRO_h_MAX)
 
 
 # Export symbols for compilation (e.g. for SPH kernel) -----------------------
