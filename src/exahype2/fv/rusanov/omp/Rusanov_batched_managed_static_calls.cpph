@@ -24,6 +24,8 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanov_batched_managed_static_call
 #if defined(GPUOffloadingOMP) and defined(_OPENMP) and not defined(__HIP_DEVICE_COMPILE__)
   constexpr int solversHaloSize = 1;
 
+  const auto hostId = omp_get_initial_device();
+
   const TempDataEnumerator fluxHostEnumerator      (hostPatchData.numberOfCells, numberOfVolumesPerAxisInPatch,   solversHaloSize, unknowns, 0);
   const TempDataEnumerator ncpHostEnumerator       (hostPatchData.numberOfCells, numberOfVolumesPerAxisInPatch+1, solversHaloSize, unknowns, 0);
   const TempDataEnumerator eigenvalueHostEnumerator(hostPatchData.numberOfCells, numberOfVolumesPerAxisInPatch,   solversHaloSize,        1, 0);
@@ -41,16 +43,28 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanov_batched_managed_static_call
   exahype2::enumerator::AoSLexicographicEnumerator QInHostEnumerator       (                        1, numberOfVolumesPerAxisInPatch, haloSize, unknowns, auxiliaryVariables);
   exahype2::enumerator::AoSLexicographicEnumerator QOutHostEnumerator      (                        1, numberOfVolumesPerAxisInPatch,        0, unknowns, auxiliaryVariables);
 
-  const int QOutCount = hostPatchData.numberOfCells * QOutHostEnumerator.size();
+  // We do not assume the memory is in the unified memory already -> need to do it manually.
+  #if defined(__AMDGPU__) or defined(__clang__)
+  const int QInCount = hostPatchData.numberOfCells * QInHostEnumerator.size();
+  double* mappedPointersToQIns = tarch::accelerator::omp::GPUMemoryManager::getInstance().allocate<double>(QInCount, targetDevice );
+  std::vector<double> tmpQIn(QInCount);
+   for (int patchIndex=0; patchIndex<hostPatchData.numberOfCells; patchIndex++) {
+    std::memcpy(&tmpQIn[patchIndex * QInHostEnumerator.size()], hostPatchData.QIn[patchIndex], QInHostEnumerator.size() * sizeof(double));
+  }
+  omp_target_memcpy(mappedPointersToQIns, &tmpQIn[0], QInCount * sizeof(double), 0, 0, targetDevice, hostId);
+  #else // Memory is already in the unified memory -> we don't need to do anything.
   double** mappedPointersToQIns = hostPatchData.QIn;
+  #endif
+
+  const int QOutCount = hostPatchData.numberOfCells * QOutHostEnumerator.size();
   double* mappedPointersToQOuts = tarch::accelerator::omp::GPUMemoryManager::getInstance().allocate<double>(QOutCount, targetDevice );
+
   double* rawPointerToCellCentres = tarch::accelerator::omp::GPUMemoryManager::getInstance().allocate<double>(hostPatchData.numberOfCells * Dimensions, targetDevice );
   double* rawPointerToCellSizes = tarch::accelerator::omp::GPUMemoryManager::getInstance().allocate<double>(hostPatchData.numberOfCells * Dimensions, targetDevice );
   double* ts = tarch::accelerator::omp::GPUMemoryManager::getInstance().allocate<double>(hostPatchData.numberOfCells, targetDevice );
   double* dts = tarch::accelerator::omp::GPUMemoryManager::getInstance().allocate<double>(hostPatchData.numberOfCells, targetDevice );
   double* maxEigenvalues = tarch::accelerator::omp::GPUMemoryManager::getInstance().allocate<double>(hostPatchData.numberOfCells, targetDevice );
 
-  const auto hostId = omp_get_initial_device();
   omp_target_memcpy(rawPointerToCellCentres, &hostPatchData.cellCentre[0], hostPatchData.numberOfCells * Dimensions * sizeof(double), 0, 0, targetDevice, hostId);
   omp_target_memcpy(rawPointerToCellSizes, &hostPatchData.cellSize[0], hostPatchData.numberOfCells * Dimensions * sizeof(double), 0, 0, targetDevice, hostId);
   omp_target_memcpy(ts, hostPatchData.t, hostPatchData.numberOfCells * sizeof(double), 0, 0, targetDevice, hostId);
@@ -71,7 +85,11 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanov_batched_managed_static_call
       TempDataEnumerator ncpEnumerator       (numberOfCells, numberOfVolumesPerAxisInPatch+1,haloSize,unknowns,0);
       TempDataEnumerator eigenvalueEnumerator(numberOfCells, numberOfVolumesPerAxisInPatch,haloSize,1,0);
 
+      #if defined(__AMDGPU__) or defined(__clang__)
+      double* QIn = &mappedPointersToQIns[patchIndex * QInEnumerator.size()];
+      #else
       double* QIn = mappedPointersToQIns[patchIndex];
+      #endif
       double* QOut = &mappedPointersToQOuts[patchIndex * QOutEnumerator.size()];
       const tarch::la::Vector<Dimensions,double>& patchCentre = rawPointerToCellCentres[patchIndex];
       const tarch::la::Vector<Dimensions,double>& patchSize = rawPointerToCellSizes[patchIndex];
@@ -107,7 +125,11 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanov_batched_managed_static_call
       TempDataEnumerator ncpEnumerator       (numberOfCells, numberOfVolumesPerAxisInPatch+1,haloSize,unknowns,0);
       TempDataEnumerator eigenvalueEnumerator(numberOfCells, numberOfVolumesPerAxisInPatch,haloSize,1,0);
 
+      #if defined(__AMDGPU__) or defined(__clang__)
+      double* QIn = &mappedPointersToQIns[patchIndex * QInEnumerator.size()];
+      #else
       double* QIn = mappedPointersToQIns[patchIndex];
+      #endif
       double* QOut = &mappedPointersToQOuts[patchIndex * QOutEnumerator.size()];
       const tarch::la::Vector<Dimensions,double>& patchCentre = rawPointerToCellCentres[patchIndex];
       const tarch::la::Vector<Dimensions,double>& patchSize = rawPointerToCellSizes[patchIndex];
@@ -141,7 +163,11 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanov_batched_managed_static_call
       TempDataEnumerator ncpEnumerator       (numberOfCells, numberOfVolumesPerAxisInPatch+1,haloSize,unknowns,0);
       TempDataEnumerator eigenvalueEnumerator(numberOfCells, numberOfVolumesPerAxisInPatch,haloSize,1,0);
 
+      #if defined(__AMDGPU__) or defined(__clang__)
+      double* QIn = &mappedPointersToQIns[patchIndex * QInEnumerator.size()];
+      #else
       double* QIn = mappedPointersToQIns[patchIndex];
+      #endif
       double* QOut = &mappedPointersToQOuts[patchIndex * QOutEnumerator.size()];
 
       internal::copySolution_LoopBody(
@@ -169,7 +195,11 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanov_batched_managed_static_call
       TempDataEnumerator ncpEnumerator       (numberOfCells, numberOfVolumesPerAxisInPatch+1,haloSize,unknowns,0);
       TempDataEnumerator eigenvalueEnumerator(numberOfCells, numberOfVolumesPerAxisInPatch,haloSize,1,0);
 
+      #if defined(__AMDGPU__) or defined(__clang__)
+      double* QIn = &mappedPointersToQIns[patchIndex * QInEnumerator.size()];
+      #else
       double* QIn = mappedPointersToQIns[patchIndex];
+      #endif
       double* QOut = &mappedPointersToQOuts[patchIndex * QOutEnumerator.size()];
 
       internal::copySolution_LoopBody(
@@ -199,7 +229,11 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanov_batched_managed_static_call
       TempDataEnumerator ncpEnumerator       (numberOfCells, numberOfVolumesPerAxisInPatch+1,haloSize,unknowns,0);
       TempDataEnumerator eigenvalueEnumerator(numberOfCells, numberOfVolumesPerAxisInPatch,haloSize,1,0);
 
+      #if defined(__AMDGPU__) or defined(__clang__)
+      double* QIn = &mappedPointersToQIns[patchIndex * QInEnumerator.size()];
+      #else
       double* QIn = mappedPointersToQIns[patchIndex];
+      #endif
       const tarch::la::Vector<Dimensions,double>& patchCentre = rawPointerToCellCentres[patchIndex];
       const tarch::la::Vector<Dimensions,double>& patchSize = rawPointerToCellSizes[patchIndex];
       const double t = ts[patchIndex];
@@ -234,7 +268,11 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanov_batched_managed_static_call
       TempDataEnumerator ncpEnumerator       (numberOfCells, numberOfVolumesPerAxisInPatch+1,haloSize,unknowns,0);
       TempDataEnumerator eigenvalueEnumerator(numberOfCells, numberOfVolumesPerAxisInPatch,haloSize,1,0);
 
+      #if defined(__AMDGPU__) or defined(__clang__)
+      double* QIn = &mappedPointersToQIns[patchIndex * QInEnumerator.size()];
+      #else
       double* QIn = mappedPointersToQIns[patchIndex];
+      #endif
       const tarch::la::Vector<Dimensions,double>& patchCentre = rawPointerToCellCentres[patchIndex];
       const tarch::la::Vector<Dimensions,double>& patchSize = rawPointerToCellSizes[patchIndex];
       const double t = ts[patchIndex];
@@ -270,7 +308,11 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanov_batched_managed_static_call
       TempDataEnumerator ncpEnumerator       (numberOfCells, numberOfVolumesPerAxisInPatch+1,haloSize,unknowns,0);
       TempDataEnumerator eigenvalueEnumerator(numberOfCells, numberOfVolumesPerAxisInPatch,haloSize,1,0);
 
+      #if defined(__AMDGPU__) or defined(__clang__)
+      double* QIn = &mappedPointersToQIns[patchIndex * QInEnumerator.size()];
+      #else
       double* QIn = mappedPointersToQIns[patchIndex];
+      #endif
       double* QOut = &mappedPointersToQOuts[patchIndex * QOutEnumerator.size()];
       const tarch::la::Vector<Dimensions,double>& patchCentre = rawPointerToCellCentres[patchIndex];
       const tarch::la::Vector<Dimensions,double>& patchSize = rawPointerToCellSizes[patchIndex];
@@ -310,7 +352,11 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanov_batched_managed_static_call
       TempDataEnumerator ncpEnumerator       (numberOfCells, numberOfVolumesPerAxisInPatch+1,haloSize,unknowns,0);
       TempDataEnumerator eigenvalueEnumerator(numberOfCells, numberOfVolumesPerAxisInPatch,haloSize,1,0);
 
+      #if defined(__AMDGPU__) or defined(__clang__)
+      double* QIn = &mappedPointersToQIns[patchIndex * QInEnumerator.size()];
+      #else
       double* QIn = mappedPointersToQIns[patchIndex];
+      #endif
       const tarch::la::Vector<Dimensions,double>& patchCentre = rawPointerToCellCentres[patchIndex];
       const tarch::la::Vector<Dimensions,double>& patchSize = rawPointerToCellSizes[patchIndex];
       const double t = ts[patchIndex];
@@ -346,7 +392,11 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanov_batched_managed_static_call
       TempDataEnumerator ncpEnumerator       (numberOfCells, numberOfVolumesPerAxisInPatch+1,haloSize,unknowns,0);
       TempDataEnumerator eigenvalueEnumerator(numberOfCells, numberOfVolumesPerAxisInPatch,haloSize,1,0);
 
+      #if defined(__AMDGPU__) or defined(__clang__)
+      double* QIn = &mappedPointersToQIns[patchIndex * QInEnumerator.size()];
+      #else
       double* QIn = mappedPointersToQIns[patchIndex];
+      #endif
       const tarch::la::Vector<Dimensions,double>& patchCentre = rawPointerToCellCentres[patchIndex];
       const tarch::la::Vector<Dimensions,double>& patchSize = rawPointerToCellSizes[patchIndex];
       const double t = ts[patchIndex];
@@ -382,7 +432,11 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanov_batched_managed_static_call
       TempDataEnumerator ncpEnumerator       (numberOfCells, numberOfVolumesPerAxisInPatch+1,haloSize,unknowns,0);
       TempDataEnumerator eigenvalueEnumerator(numberOfCells, numberOfVolumesPerAxisInPatch,haloSize,1,0);
 
+      #if defined(__AMDGPU__) or defined(__clang__)
+      double* QIn = &mappedPointersToQIns[patchIndex * QInEnumerator.size()];
+      #else
       double* QIn = mappedPointersToQIns[patchIndex];
+      #endif
       const tarch::la::Vector<Dimensions,double>& patchCentre = rawPointerToCellCentres[patchIndex];
       const tarch::la::Vector<Dimensions,double>& patchSize = rawPointerToCellSizes[patchIndex];
       const double t = ts[patchIndex];
@@ -419,7 +473,11 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanov_batched_managed_static_call
       TempDataEnumerator ncpEnumerator       (numberOfCells, numberOfVolumesPerAxisInPatch+1,haloSize,unknowns,0);
       TempDataEnumerator eigenvalueEnumerator(numberOfCells, numberOfVolumesPerAxisInPatch,haloSize,1,0);
 
+      #if defined(__AMDGPU__) or defined(__clang__)
+      double* QIn = &mappedPointersToQIns[patchIndex * QInEnumerator.size()];
+      #else
       double* QIn = mappedPointersToQIns[patchIndex];
+      #endif
       double* QOut = &mappedPointersToQOuts[patchIndex * QOutEnumerator.size()];
       const tarch::la::Vector<Dimensions,double>& patchCentre = rawPointerToCellCentres[patchIndex];
       const tarch::la::Vector<Dimensions,double>& patchSize = rawPointerToCellSizes[patchIndex];
@@ -459,7 +517,11 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanov_batched_managed_static_call
       TempDataEnumerator ncpEnumerator       (numberOfCells, numberOfVolumesPerAxisInPatch+1,haloSize,unknowns,0);
       TempDataEnumerator eigenvalueEnumerator(numberOfCells, numberOfVolumesPerAxisInPatch,haloSize,1,0);
 
+      #if defined(__AMDGPU__) or defined(__clang__)
+      double* QIn = &mappedPointersToQIns[patchIndex * QInEnumerator.size()];
+      #else
       double* QIn = mappedPointersToQIns[patchIndex];
+      #endif
       const tarch::la::Vector<Dimensions,double>& patchCentre = rawPointerToCellCentres[patchIndex];
       const tarch::la::Vector<Dimensions,double>& patchSize = rawPointerToCellSizes[patchIndex];
       const double t = ts[patchIndex];
@@ -494,7 +556,11 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanov_batched_managed_static_call
       TempDataEnumerator ncpEnumerator       (numberOfCells, numberOfVolumesPerAxisInPatch+1,haloSize,unknowns,0);
       TempDataEnumerator eigenvalueEnumerator(numberOfCells, numberOfVolumesPerAxisInPatch,haloSize,1,0);
 
+      #if defined(__AMDGPU__) or defined(__clang__)
+      double* QIn = &mappedPointersToQIns[patchIndex * QInEnumerator.size()];
+      #else
       double* QIn = mappedPointersToQIns[patchIndex];
+      #endif
       const tarch::la::Vector<Dimensions,double>& patchCentre = rawPointerToCellCentres[patchIndex];
       const tarch::la::Vector<Dimensions,double>& patchSize = rawPointerToCellSizes[patchIndex];
       const double t = ts[patchIndex];
@@ -565,7 +631,11 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanov_batched_managed_static_call
       TempDataEnumerator ncpEnumerator       (numberOfCells, numberOfVolumesPerAxisInPatch+1,haloSize,unknowns,0);
       TempDataEnumerator eigenvalueEnumerator(numberOfCells, numberOfVolumesPerAxisInPatch,haloSize,1,0);
 
+      #if defined(__AMDGPU__) or defined(__clang__)
+      double* QIn = &mappedPointersToQIns[patchIndex * QInEnumerator.size()];
+      #else
       double* QIn = mappedPointersToQIns[patchIndex];
+      #endif
       const tarch::la::Vector<Dimensions,double>& patchCentre = rawPointerToCellCentres[patchIndex];
       const tarch::la::Vector<Dimensions,double>& patchSize = rawPointerToCellSizes[patchIndex];
       const double t = ts[patchIndex];
@@ -601,7 +671,11 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanov_batched_managed_static_call
       TempDataEnumerator ncpEnumerator       (numberOfCells, numberOfVolumesPerAxisInPatch+1,haloSize,unknowns,0);
       TempDataEnumerator eigenvalueEnumerator(numberOfCells, numberOfVolumesPerAxisInPatch,haloSize,1,0);
 
+      #if defined(__AMDGPU__) or defined(__clang__)
+      double* QIn = &mappedPointersToQIns[patchIndex * QInEnumerator.size()];
+      #else
       double* QIn = mappedPointersToQIns[patchIndex];
+      #endif
       const tarch::la::Vector<Dimensions,double>& patchCentre = rawPointerToCellCentres[patchIndex];
       const tarch::la::Vector<Dimensions,double>& patchSize = rawPointerToCellSizes[patchIndex];
       const double t = ts[patchIndex];
@@ -637,7 +711,11 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanov_batched_managed_static_call
       TempDataEnumerator ncpEnumerator       (numberOfCells, numberOfVolumesPerAxisInPatch+1,haloSize,unknowns,0);
       TempDataEnumerator eigenvalueEnumerator(numberOfCells, numberOfVolumesPerAxisInPatch,haloSize,1,0);
 
+      #if defined(__AMDGPU__) or defined(__clang__)
+      double* QIn = &mappedPointersToQIns[patchIndex * QInEnumerator.size()];
+      #else
       double* QIn = mappedPointersToQIns[patchIndex];
+      #endif
       const tarch::la::Vector<Dimensions,double>& patchCentre = rawPointerToCellCentres[patchIndex];
       const tarch::la::Vector<Dimensions,double>& patchSize = rawPointerToCellSizes[patchIndex];
       const double t = ts[patchIndex];
@@ -709,7 +787,11 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanov_batched_managed_static_call
       TempDataEnumerator ncpEnumerator       (numberOfCells, numberOfVolumesPerAxisInPatch+1,haloSize,unknowns,0);
       TempDataEnumerator eigenvalueEnumerator(numberOfCells, numberOfVolumesPerAxisInPatch,haloSize,1,0);
 
+      #if defined(__AMDGPU__) or defined(__clang__)
+      double* QIn = &mappedPointersToQIns[patchIndex * QInEnumerator.size()];
+      #else
       double* QIn = mappedPointersToQIns[patchIndex];
+      #endif
       const tarch::la::Vector<Dimensions,double>& patchCentre = rawPointerToCellCentres[patchIndex];
       const tarch::la::Vector<Dimensions,double>& patchSize = rawPointerToCellSizes[patchIndex];
       const double t = ts[patchIndex];
@@ -744,7 +826,11 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanov_batched_managed_static_call
       TempDataEnumerator ncpEnumerator       (numberOfCells, numberOfVolumesPerAxisInPatch+1,haloSize,unknowns,0);
       TempDataEnumerator eigenvalueEnumerator(numberOfCells, numberOfVolumesPerAxisInPatch,haloSize,1,0);
 
+      #if defined(__AMDGPU__) or defined(__clang__)
+      double* QIn = &mappedPointersToQIns[patchIndex * QInEnumerator.size()];
+      #else
       double* QIn = mappedPointersToQIns[patchIndex];
+      #endif
       const tarch::la::Vector<Dimensions,double>& patchCentre = rawPointerToCellCentres[patchIndex];
       const tarch::la::Vector<Dimensions,double>& patchSize = rawPointerToCellSizes[patchIndex];
       const double t = ts[patchIndex];
@@ -817,7 +903,11 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanov_batched_managed_static_call
       TempDataEnumerator ncpEnumerator       (numberOfCells, numberOfVolumesPerAxisInPatch+1,haloSize,unknowns,0);
       TempDataEnumerator eigenvalueEnumerator(numberOfCells, numberOfVolumesPerAxisInPatch,haloSize,1,0);
 
+      #if defined(__AMDGPU__) or defined(__clang__)
+      double* QIn = &mappedPointersToQIns[patchIndex * QInEnumerator.size()];
+      #else
       double* QIn = mappedPointersToQIns[patchIndex];
+      #endif
       const tarch::la::Vector<Dimensions,double>& patchCentre = rawPointerToCellCentres[patchIndex];
       const tarch::la::Vector<Dimensions,double>& patchSize = rawPointerToCellSizes[patchIndex];
       const double t = ts[patchIndex];
@@ -853,7 +943,11 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanov_batched_managed_static_call
       TempDataEnumerator ncpEnumerator       (numberOfCells, numberOfVolumesPerAxisInPatch+1,haloSize,unknowns,0);
       TempDataEnumerator eigenvalueEnumerator(numberOfCells, numberOfVolumesPerAxisInPatch,haloSize,1,0);
 
+      #if defined(__AMDGPU__) or defined(__clang__)
+      double* QIn = &mappedPointersToQIns[patchIndex * QInEnumerator.size()];
+      #else
       double* QIn = mappedPointersToQIns[patchIndex];
+      #endif
       const tarch::la::Vector<Dimensions,double>& patchCentre = rawPointerToCellCentres[patchIndex];
       const tarch::la::Vector<Dimensions,double>& patchSize = rawPointerToCellSizes[patchIndex];
       const double t = ts[patchIndex];
@@ -889,7 +983,11 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanov_batched_managed_static_call
       TempDataEnumerator ncpEnumerator       (numberOfCells, numberOfVolumesPerAxisInPatch+1,haloSize,unknowns,0);
       TempDataEnumerator eigenvalueEnumerator(numberOfCells, numberOfVolumesPerAxisInPatch,haloSize,1,0);
 
+      #if defined(__AMDGPU__) or defined(__clang__)
+      double* QIn = &mappedPointersToQIns[patchIndex * QInEnumerator.size()];
+      #else
       double* QIn = mappedPointersToQIns[patchIndex];
+      #endif
       const tarch::la::Vector<Dimensions,double>& patchCentre = rawPointerToCellCentres[patchIndex];
       const tarch::la::Vector<Dimensions,double>& patchSize = rawPointerToCellSizes[patchIndex];
       const double t = ts[patchIndex];
@@ -1040,6 +1138,9 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanov_batched_managed_static_call
   tarch::accelerator::omp::GPUMemoryManager::getInstance().free( tempEigenvalueY, targetDevice );
   tarch::accelerator::omp::GPUMemoryManager::getInstance().free( tempEigenvalueZ, targetDevice );
 
+  #if defined(__AMDGPU__) or defined(__clang__)
+  tarch::accelerator::omp::GPUMemoryManager::getInstance().free( mappedPointersToQIns, targetDevice );
+  #endif
   tarch::accelerator::omp::GPUMemoryManager::getInstance().free( mappedPointersToQOuts, targetDevice );
   tarch::accelerator::omp::GPUMemoryManager::getInstance().free( rawPointerToCellCentres, targetDevice );
   tarch::accelerator::omp::GPUMemoryManager::getInstance().free( rawPointerToCellSizes, targetDevice );

@@ -478,7 +478,7 @@ void runBenchmarksOnDevice(int totalPatches, int device) {
     const int fusedPatches = totalPatches / tarch::multicore::Core::getInstance().getNumberOfThreads();
     logInfo( "main()", " --> Number of patches fused: " << fusedPatches   );
 
-    #if defined(__NVCOMPILER_CUDA__) or defined(__HIPCC__)
+    #if defined(__NVCOMPILER_CUDA__) or defined(__HIPCC__) or defined(__AMDGPU__) or defined(__clang__)
       tarch::accelerator::omp::GPUMemoryManager::getInstance().clear();
       #pragma omp parallel for
       for (int thread=0; thread<tarch::multicore::Core::getInstance().getNumberOfThreads(); thread++) {
@@ -533,7 +533,7 @@ void runBenchmarksOnDevice(int totalPatches, int device) {
       }
     #endif
 
-    #if defined(__NVCOMPILER_CUDA__) or defined(__HIPCC__)
+    #if defined(__NVCOMPILER_CUDA__) or defined(__HIPCC__) or defined(__AMDGPU__) or defined(__clang__)
       tarch::accelerator::omp::GPUMemoryManager::getInstance().clear();
       #pragma omp parallel for
       for (int thread=0; thread<tarch::multicore::Core::getInstance().getNumberOfThreads(); thread++) {

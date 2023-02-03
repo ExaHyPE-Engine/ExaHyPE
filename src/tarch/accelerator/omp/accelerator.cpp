@@ -22,6 +22,8 @@ void* tarch::internal::allocateRawData(int size, MemoryLocation location) {
         CHECK_CUDA_ERROR(cudaMallocManaged((void**)&result, size));
       #elif defined(__HIPCC__)
         hipMallocManaged(&result, size, hipMemAttachGlobal);
+      #elif defined(__AMDGPU__) or defined(__clang__) // fall back to non-managed memory when on AMD/LLVM
+        result = new (std::align_val_t(AlignmentOnHeap)) char[size];
       #else
         result = new (std::align_val_t(AlignmentOnHeap)) char[size];
       #endif
@@ -40,6 +42,8 @@ void tarch::freeMemory(void* data, MemoryLocation location) {
         CHECK_CUDA_ERROR(cudaFree(data));
       #elif defined(__HIPCC__)
         hipFree(data);
+      #elif defined(__AMDGPU__) or defined(__clang__) // fall back to non-managed memory when on AMD/LLVM
+        delete[] data;
       #else
         delete[] data;
       #endif
