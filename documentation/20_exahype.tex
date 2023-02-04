@@ -2720,6 +2720,30 @@ Any performance optimisation should obviously be guided by rigorous performance
 analysis, i.e.~trial-and-error performance optimisation is unlikely to yield
 a lower runtime.
 
+\begin{remark}
+  If you plan to run any performance analysis
+  with the Intel tools, I recommend you switch
+  to the respective toolchain and logging
+  before you continue (cmp.~Section~\ref{section:logging:logger:ITAC}).
+  
+  After that, add all tracing libraries to the blacklist besides your project's
+  repositories. This way, you will get a coarse breakdown of program phases.
+  After that, you might enable additional tracing as you dig deeper into your
+  code's performance. 
+  If your project is in the directory \texttt{applications::exahype2::ccz4}, an
+  initial log filter file could look as follows:
+  
+  \begin{bash}
+trace  tarch                               -1     black always-on
+trace  peano4                              -1     black always-on
+trace  exahype2                            -1     black always-on
+trace  toolbox                             -1     black always-on
+trace  applications::exahype2::ccz4 -1  black always-on
+trace  applications::exahype2::ccz4::repositories -1  white always-on
+  \end{bash}
+\end{remark}
+
+
 \begin{itemize}
   \item {\bf The multithreading is very imbalanced}. This manifests typically in
   poor multicore speedup and high Spin Time (in VTune, e.g.). Operations like
