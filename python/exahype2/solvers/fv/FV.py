@@ -579,6 +579,9 @@ The finest mesh width of """ + str(self.get_finest_volume_size(domain_size)) + "
       Inform Peano4 step which data are to be moved around via the 
       use_cell and use_face commands. This operation is generic from
       ExaHyPE's point of view, i.e. I use it for all grid sweep types. 
+      
+      It is important that the cell label comes first, as some other
+      data might make their load/store decisions depend on the label.
     
     """
     step.use_cell(self._patch)
@@ -797,27 +800,23 @@ The finest mesh width of """ + str(self.get_finest_volume_size(domain_size)) + "
 
     output.add( generated_abstract_header_file )
     output.add( generated_solver_files )
+    output.makefile.add_h_file( "Abstract" + self._name + ".h" )
+    output.makefile.add_h_file( self._name + ".h" )
     output.makefile.add_cpp_file( "Abstract" + self._name + ".cpp" )
     output.makefile.add_cpp_file( self._name + ".cpp" )
 
-
   def set_solver_constants(self, datastring): self._solver_constants = datastring
-
 
   def add_solver_constants(self, datastring): self._solver_constants += datastring + "\n"
 
-
   def _init_dictionary_with_default_parameters(self,d):
     """
-
       This one is called by all algorithmic steps before I invoke
       add_entries_to_text_replacement_dictionary().
 
       See the remarks on set_postprocess_updated_patch_kernel to understand why
       we have to apply the (partially befilled) dictionary to create a new entry
       for this very dictionary.
-
-
     """
     d["NUMBER_OF_VOLUMES_PER_AXIS"]     = self._patch.dim[0]
     d["OVERLAP"]                        = self._overlap

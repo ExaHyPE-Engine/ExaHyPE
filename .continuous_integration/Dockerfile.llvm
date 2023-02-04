@@ -33,7 +33,7 @@ RUN cd /opt && git clone https://github.com/llvm/llvm-project.git && \
     cmake -DLLVM_ENABLE_PROJECTS="clang;clang-tools-extra;openmp" \
           -DLLVM_TARGETS_TO_BUILD="X86;NVPTX" \
           -DCLANG_OPENMP_NVPTX_DEFAULT_ARCH=sm_75 \
-          -DLIBOMPTARGET_NVPTX_COMPUTE_CAPABILITIES=75 \
+          -DLIBOMPTARGET_NVPTX_COMPUTE_CAPABILITIES=75,80,86 \
           -DCMAKE_BUILD_TYPE:STRING=Release -DCMAKE_INSTALL_PREFIX=/usr/local/llvm ../llvm && \
     make -j`getconf _NPROCESSORS_ONLN` > /opt/llvm-build-log 2>&1 && make check-clang && make install && \
     ln -s /usr/local/llvm/bin/* /usr/local/bin && \

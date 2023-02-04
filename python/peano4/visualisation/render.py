@@ -1,11 +1,12 @@
-from paraview.simple import *
-
-import peano4.visualisation
-import peano4.visualisation.filters
-
 import sys
 import os
 import argparse
+from paraview.simple import *
+
+sys.path.insert(0, os.path.abspath('../../../python'))
+
+import peano4.visualisation
+import peano4.visualisation.filters
 
 def render(filename, filter_fine_grid=False, filter_average=False, norm_calculator=False, shrink_cells=1.0, type="vtu", dir=".", verbose=False):
   if not os.path.exists(filename):

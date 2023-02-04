@@ -130,7 +130,14 @@ check_include_files(CL/sycl.hpp HAVE_CL_SYCL_HPP)
 # An example where how to implement the check is here:
 # https://github.com/LuaDist/libgd/tree/master/cmake/modules
 
-list(APPEND TOOLCHAINS " " "intel" "nvidia" "scorep" "chrome" "gnu")
+list(APPEND TOOLCHAINS
+  " "
+  "intel"
+  "nvidia"
+  "scorep"
+  "chrome"
+  "gnu"
+)
 set(WITH_TOOLCHAIN "" CACHE STRING "${TOOLCHAINS}")
 set_property(CACHE WITH_TOOLCHAIN PROPERTY STRINGS ${TOOLCHAINS})
 
@@ -195,8 +202,8 @@ list(APPEND ACCELERATOR_ARCHITECTURES
   "sm_35"
   "sm_37"
   "sm_50"
-  "sm_53"
   "sm_52"
+  "sm_53"
   "sm_60"
   "sm_61"
   "sm_62"
@@ -223,6 +230,14 @@ endif()
 if(WITH_GPU)
   string(TOUPPER ${WITH_GPU} WITH_GPU_UPPER)
   target_compile_definitions(project_options INTERFACE GPUOffloading${WITH_GPU_UPPER})
+  if(${CMAKE_CXX_COMPILER_ID} MATCHES "NVHPC|PGI")
+    include(CMakeDependentOption)
+    cmake_dependent_option(WITH_CUDA "Build with the CUDA API" ON "WITH_GPU" OFF)
+    if(WITH_CUDA)
+      target_link_libraries(project_options INTERFACE "-cuda")
+      target_compile_options(project_options INTERFACE "-cuda")
+    endif()
+  endif()
 endif()
 if(WITH_GPU STREQUAL "omp")
   find_package(OpenMPWithOffloading REQUIRED)

@@ -56,22 +56,22 @@ std::string {{NAMESPACE | join("::")}}::{{CLASSNAME}}::toString() const {
 
 #if PeanoDebug>=1
 
-void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::setDebugX( const tarch::la::Vector<Dimensions,{{FLOAT_TYPE}}>& data ) {
+void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::setDebugX( const tarch::la::Vector<Dimensions,double>& data ) {
   _debugX = data;
 }
 
 
-void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::setDebugH( const tarch::la::Vector<Dimensions,{{FLOAT_TYPE}}>& data ) {
+void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::setDebugH( const tarch::la::Vector<Dimensions,double>& data ) {
   _debugH = data;
 }
 
 
-tarch::la::Vector<Dimensions,{{FLOAT_TYPE}}> {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getDebugX() const {
+tarch::la::Vector<Dimensions,double> {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getDebugX() const {
   return _debugX;
 }
 
 
-tarch::la::Vector<Dimensions,{{FLOAT_TYPE}}> {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getDebugH() const {
+tarch::la::Vector<Dimensions,double> {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getDebugH() const {
   return _debugH;
 }
 #endif

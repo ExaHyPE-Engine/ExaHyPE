@@ -9,7 +9,6 @@
 #include "tarch/services/ServiceRepository.h"
 #include "tarch/mpi/Rank.h"
 
-
 #if defined(SharedSYCL)
 #include <tbb/task_group.h>
 #include <tbb/task_arena.h>
@@ -24,7 +23,6 @@ namespace {
 
   /**
    * Native mapping of a task loop onto a SYCL loop
-   *
    *
    * @see spawnTask()
    *
@@ -43,7 +41,6 @@ namespace {
 
     tarch::multicore::getHostSYCLQueue().wait();
   }
-
 
   /**
    * Aggressive BSP-type variant to run through tasks which ensures high
@@ -115,7 +112,6 @@ namespace {
   }
 }
 
-
 /**
  * Read spawnAndWaitAsTaskLoop() first.
  *
@@ -127,10 +123,8 @@ namespace {
  * that this is not the case and that SYCL/DPC++ refuses to translate this
  * code: you have to spawn explicitly as host task.
  *
- *
  * @author Andrew Mallinson
  * @author Tobias Weinzierl
- *
  *
  * @see spawnAndWaitAsTaskLoop()
  */
@@ -147,7 +141,6 @@ void tarch::multicore::native::spawnTask(Task*  job) {
 
   e.wait();
 }
-
 
 /**
  * Use a taskloop and label it as nogroup, i.e. we only synchronise over the
@@ -171,11 +164,9 @@ void tarch::multicore::native::spawnAndWait(
   }
 }
 
-
 int tarch::multicore::native::getNumberOfPendingTasks() {
   return nonblockingTasksCounter;
 }
-
 
 /**
  * It is not clear what happens if I use tasksOfSameType directly within the task.
@@ -197,10 +188,8 @@ void tarch::multicore::native::processFusedTask(Task*  myTask, const std::list< 
   }
 }
 
-
 void tarch::multicore::native::deferRunningThreadAndContinueWithOtherTasks() {
   tarch::multicore::getHostSYCLQueue().wait();
 }
-
 
 #endif

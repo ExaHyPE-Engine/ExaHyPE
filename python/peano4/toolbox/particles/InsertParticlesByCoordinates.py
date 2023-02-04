@@ -69,8 +69,6 @@ class InsertParticlesByCoordinates(ActionSet):
       toolbox::particles::init(*particle,{coordinates[i][0],coordinates[i][1],coordinates[i][2]},0.0);
       #endif
 
-      logInfo( "touchVertexFirstTime(...)", "insert " << _particleNumberOnThisTree << "th particle at " << particle->toString() );
-
       toolbox::particles::insertParticleIntoCell(
         marker,
         particle,
@@ -136,15 +134,11 @@ class InsertParticlesByCoordinates(ActionSet):
 
   def get_constructor_body(self):
     return f"""
-  _particleNumberOnThisTree = 0;
-  _spacetreeId              = treeNumber;
 {self.Read_In_Coor()}
 """
 
 
   def get_attributes(self):
      return f"""
-  int _particleNumberOnThisTree;
-  int _spacetreeId;
   double coordinates["""+str(self.d["N"])+"""][3];
 """

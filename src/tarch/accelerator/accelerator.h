@@ -52,6 +52,11 @@ namespace tarch {
      * Create data on the heap of the local device. That is, if you run
      * on an accelerator, use the accelerator's heap. If you invoke it
      * on the host, use the host's accelerator.
+     *
+     * The alignment of this routine can be controlled via the compile
+     * time constant AlignmentOnHeap. It is typically set (to a default)
+     * within the corresponding compiler-specific header-file in
+     * tarch/compiler.
      */
     Heap,
     /**
@@ -60,7 +65,13 @@ namespace tarch {
     ManagedSharedAcceleratorDeviceMemory
   };
 
-  double* allocateMemory(int size, MemoryLocation location);
-  void freeMemory(double* data, MemoryLocation location);
-}
+  namespace internal {
+    void* allocateRawData(int size, MemoryLocation location);
+  }
 
+  template <class T>
+  T* allocateMemory( int size, MemoryLocation location, [[maybe_unused]] int device = -1 ) {
+    return reinterpret_cast<T*>( internal::allocateRawData(size * static_cast<int>(sizeof(T)), location ) );
+  }
+  void freeMemory(void* data, MemoryLocation location);
+}

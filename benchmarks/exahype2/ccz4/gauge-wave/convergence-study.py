@@ -6,6 +6,8 @@ import exahype2
 import dastgen2
 
 import peano4.toolbox.particles
+import numpy as np
+
 
 parser = argparse.ArgumentParser(description='ExaHyPE 2 - CCZ4-GaugeWave benchmarking script')
 parser.add_argument("-j",   "--parallel-builds",   dest="j",              type=int, default=-1, help="Parallel builds" )
@@ -42,6 +44,16 @@ unknowns = {
           "P":3,
           "K0":1,
         }
+        
+def CoordListFromFile(file,scale):
+  f=open(file)
+  data=[]
+  tem=f.readlines()
+  for line in tem:
+    data.append(list(map(float,line.split(' ')[1:])))
+  print(len(data))
+  data=np.array(data)
+  return data*scale
 
 #
 # Create solver class
@@ -277,6 +289,9 @@ if args.tracer:
     project.add_action_set_to_initialisation( 
       exahype2.tracer.InsertParticlesByCoordinates( 
         particle_set=tracer_particles, coordinates=[[-0.4251,0,0],[0,0,0],[0.4251,0,0]]))
+    #project.add_action_set_to_initialisation( 
+      #exahype2.tracer.InsertParticlesByCoordinates( 
+        #particle_set=tracer_particles, coordinates=CoordListFromFile('t-design (copy).dat',0.3)))
     project.add_action_set_to_timestepping(
       peano4.toolbox.particles.UpdateParallelState(
         particle_set=tracer_particles
@@ -300,8 +315,10 @@ if args.tracer:
       particle_set=tracer_particles,
       solver=my_solver,
       filename="Tracer-" + args.solver + "-" + str(args.cell_size),
+      number_of_entries_between_two_db_flushes=5000,
+      output_precision=10,
       data_delta_between_two_snapsots=1e16,
-      time_delta_between_two_snapsots=0.0001
+      time_delta_between_two_snapsots=0.01
       ))
 
 

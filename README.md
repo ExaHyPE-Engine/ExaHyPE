@@ -55,7 +55,9 @@ You obviously also can create a sole C++ application.
 The Python API actually yields such applications, too, i.e.,
 Python is not required to run the simulations but only to construct them.
 
-A collection of configuration commands using different toolchains can be found [here](./.continuous_integration).
+A collection of configuration commands using different toolchains can be found in the configure scripts [here](./.continuous_integration/).
+
+For CMake, it is recommended to use `ccmake`.
 
 For a detailed information on each flag please refer to the guidebook in the documentation.
 

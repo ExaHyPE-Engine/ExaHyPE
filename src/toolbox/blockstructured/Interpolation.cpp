@@ -8,13 +8,11 @@
 #include "tarch/multicore/Lock.h"
 #include "tarch/accelerator/accelerator.h"
 
-
 namespace {
   [[maybe_unused]] tarch::logging::Log _log( "toolbox::blockstructured" );
 
   tarch::multicore::BooleanSemaphore  interpolationMapSemaphore;
 }
-
 
 tarch::la::DynamicMatrix*  toolbox::blockstructured::internal::createPiecewiseConstantInterpolationMatrix(int numberOfDoFsPerAxisInPatch) {
   #if Dimensions==2
@@ -41,7 +39,6 @@ tarch::la::DynamicMatrix*  toolbox::blockstructured::internal::createPiecewiseCo
   return result;
 }
 
-
 tarch::la::DynamicMatrix*  toolbox::blockstructured::internal::createPiecewiseConstantInterpolationMatrix(int numberOfDoFsPerAxisInPatch, int normal, int overlap) {
   tarch::la::DynamicMatrix P1d(3,1,{ {1.0},{1.0},{1.0} });
   P1d.replicateRows( 3, numberOfDoFsPerAxisInPatch, 1, true );
@@ -50,7 +47,6 @@ tarch::la::DynamicMatrix*  toolbox::blockstructured::internal::createPiecewiseCo
     P1d, numberOfDoFsPerAxisInPatch, normal
   );
 }
-
 
 tarch::la::DynamicMatrix*  toolbox::blockstructured::internal::createInterpolationMatrixFrom1dTemplateByInsertingZeroColsAndRows(
   const tarch::la::DynamicMatrix&  P1d,
@@ -84,7 +80,6 @@ tarch::la::DynamicMatrix*  toolbox::blockstructured::internal::createInterpolati
   logDebug( "createInterpolationMatrixFrom1dTemplateByInsertingZeroColsAndRows(...)", "matrix for normal=" << normal << ": " << P->toString() );
   return P;
 }
-
 
 tarch::la::DynamicMatrix*  toolbox::blockstructured::internal::createInterpolationMatrixFrom1dTemplateByLinearInterpolationAlongNormal(
   const tarch::la::DynamicMatrix&  P1d,
@@ -123,7 +118,6 @@ tarch::la::DynamicMatrix*  toolbox::blockstructured::internal::createInterpolati
   logDebug( "createInterpolationMatrixFrom1dTemplateByLinearInterpolationAlongNormal(...)", "matrix for normal=" << normal << ": " << P->toString() );
   return P;
 }
-
 
 tarch::la::DynamicMatrix*  toolbox::blockstructured::internal::createLinearInterpolationMatrix(
   int numberOfDoFsPerAxisInPatch,
@@ -167,7 +161,6 @@ tarch::la::DynamicMatrix*  toolbox::blockstructured::internal::createLinearInter
   }
 }
 
-
 tarch::la::DynamicMatrix*  toolbox::blockstructured::internal::createLinearInterpolationMatrix(int numberOfDoFsPerAxisInPatch, bool extrapolateLinearly) {
   logTraceInWith1Argument( "createLinearInterpolationMatrix(...)", numberOfDoFsPerAxisInPatch );
   tarch::la::DynamicMatrix P1d(3,3,{
@@ -204,7 +197,6 @@ tarch::la::DynamicMatrix*  toolbox::blockstructured::internal::createLinearInter
   return new tarch::la::DynamicMatrix( P2d );
   #endif
 }
-
 
 void toolbox::blockstructured::internal::projectInterpolatedFineCellsOnHaloLayer_AoS(
   const peano4::datamanagement::FaceMarker& marker,
@@ -260,7 +252,6 @@ void toolbox::blockstructured::internal::projectInterpolatedFineCellsOnHaloLayer
   logTraceOut( "projectInterpolatedFineCellsOnHaloLayer_AoS(...)" );
 }
 
-
 //
 // ==========================================
 // Piece-wise constant interpolation routines
@@ -310,7 +301,6 @@ void toolbox::blockstructured::interpolateHaloLayer_AoS_piecewise_constant(
   logTraceOut( "interpolateHaloLayer_AoS_piecewise_constant(...)" );
 }
 
-
 void toolbox::blockstructured::interpolateHaloLayer_AoS_piecewise_constant(
   const peano4::datamanagement::FaceMarker& marker,
   int                                       numberOfDoFsPerAxisInPatch,
@@ -329,8 +319,8 @@ void toolbox::blockstructured::interpolateHaloLayer_AoS_piecewise_constant(
     const int patchSize = numberOfDoFsPerAxisInPatch*numberOfDoFsPerAxisInPatch*numberOfDoFsPerAxisInPatch;
     #endif
 
-    double* leftAdjacentPatchData  = tarch::allocateMemory(patchSize * unknowns, tarch::MemoryLocation::Heap);
-    double* rightAdjacentPatchData = tarch::allocateMemory(patchSize * unknowns, tarch::MemoryLocation::Heap);
+    double* leftAdjacentPatchData  = tarch::allocateMemory<double>(patchSize * unknowns, tarch::MemoryLocation::Heap);
+    double* rightAdjacentPatchData = tarch::allocateMemory<double>(patchSize * unknowns, tarch::MemoryLocation::Heap);
 
     tarch::la::Vector<Dimensions,int> leftAdjacentPatchIndex = marker.getRelativePositionWithinFatherCell();
     tarch::la::Vector<Dimensions,int> rightAdjacentPatchIndex = marker.getRelativePositionWithinFatherCell();
@@ -374,8 +364,6 @@ void toolbox::blockstructured::interpolateHaloLayer_AoS_piecewise_constant(
   logTraceOut( "interpolateHaloLayer_AoS_piecewise_constant(...)" );
 }
 
-
-
 void toolbox::blockstructured::interpolateCell_AoS_piecewise_constant(
   const peano4::datamanagement::CellMarker& marker,
   int                                       numberOfDoFsPerAxisInPatch,
@@ -395,7 +383,6 @@ void toolbox::blockstructured::interpolateCell_AoS_piecewise_constant(
 
   logTraceOut("interpolateCell_AoS_piecewise_constant(...)");
 }
-
 
 void toolbox::blockstructured::internal::interpolateCell_AoS_piecewise_constant(
   const tarch::la::Vector<Dimensions,int>&  relativePositionWithinFatherCell,
@@ -428,7 +415,6 @@ void toolbox::blockstructured::internal::interpolateCell_AoS_piecewise_constant(
     serialiseMarkerIn3x3PatchAssembly(relativePositionWithinFatherCell, numberOfDoFsPerAxisInPatch)
   );
 }
-
 
 //
 // =============================
@@ -481,7 +467,6 @@ void toolbox::blockstructured::interpolateHaloLayer_AoS_linear_with_constant_ext
   logTraceOut( "interpolateHaloLayer_AoS_linear_with_constant_extrapolation(...)" );
 }
 
-
 void toolbox::blockstructured::interpolateHaloLayer_AoS_linear_with_constant_extrapolation(
   const peano4::datamanagement::FaceMarker& marker,
   int                                       numberOfDoFsPerAxisInPatch,
@@ -500,8 +485,8 @@ void toolbox::blockstructured::interpolateHaloLayer_AoS_linear_with_constant_ext
     const int patchSize = numberOfDoFsPerAxisInPatch*numberOfDoFsPerAxisInPatch*numberOfDoFsPerAxisInPatch;
     #endif
 
-    double* leftAdjacentPatchData  = tarch::allocateMemory(patchSize * unknowns, tarch::MemoryLocation::Heap);
-    double* rightAdjacentPatchData = tarch::allocateMemory(patchSize * unknowns, tarch::MemoryLocation::Heap);
+    double* leftAdjacentPatchData  = tarch::allocateMemory<double>(patchSize * unknowns, tarch::MemoryLocation::Heap);
+    double* rightAdjacentPatchData = tarch::allocateMemory<double>(patchSize * unknowns, tarch::MemoryLocation::Heap);
 
     tarch::la::Vector<Dimensions,int> leftAdjacentPatchIndex = marker.getRelativePositionWithinFatherCell();
     tarch::la::Vector<Dimensions,int> rightAdjacentPatchIndex = marker.getRelativePositionWithinFatherCell();
@@ -547,8 +532,6 @@ void toolbox::blockstructured::interpolateHaloLayer_AoS_linear_with_constant_ext
   logTraceOut( "interpolateHaloLayer_AoS_linear_with_constant_extrapolation(...)" );
 }
 
-
-
 void toolbox::blockstructured::interpolateCell_AoS_linear_with_constant_extrapolation(
   const peano4::datamanagement::CellMarker& marker,
   int                                       numberOfDoFsPerAxisInPatch,
@@ -569,7 +552,6 @@ void toolbox::blockstructured::interpolateCell_AoS_linear_with_constant_extrapol
 
   logTraceOut("interpolateCell_AoS_linear_with_constant_extrapolation(...)");
 }
-
 
 void toolbox::blockstructured::interpolateHaloLayer_AoS_linear_with_linear_extrapolation(
   const peano4::datamanagement::FaceMarker& marker,
@@ -617,7 +599,6 @@ void toolbox::blockstructured::interpolateHaloLayer_AoS_linear_with_linear_extra
   logTraceOut( "interpolateHaloLayer_AoS_linear_with_linear_extrapolation(...)" );
 }
 
-
 void toolbox::blockstructured::interpolateHaloLayer_AoS_linear_with_linear_extrapolation(
   const peano4::datamanagement::FaceMarker& marker,
   int                                       numberOfDoFsPerAxisInPatch,
@@ -636,8 +617,8 @@ void toolbox::blockstructured::interpolateHaloLayer_AoS_linear_with_linear_extra
     const int patchSize = numberOfDoFsPerAxisInPatch*numberOfDoFsPerAxisInPatch*numberOfDoFsPerAxisInPatch;
     #endif
 
-    double* leftAdjacentPatchData  = tarch::allocateMemory(patchSize * unknowns, tarch::MemoryLocation::Heap);
-    double* rightAdjacentPatchData = tarch::allocateMemory(patchSize * unknowns, tarch::MemoryLocation::Heap);
+    double* leftAdjacentPatchData  = tarch::allocateMemory<double>(patchSize * unknowns, tarch::MemoryLocation::Heap);
+    double* rightAdjacentPatchData = tarch::allocateMemory<double>(patchSize * unknowns, tarch::MemoryLocation::Heap);
 
     tarch::la::Vector<Dimensions,int> leftAdjacentPatchIndex = marker.getRelativePositionWithinFatherCell();
     tarch::la::Vector<Dimensions,int> rightAdjacentPatchIndex = marker.getRelativePositionWithinFatherCell();
@@ -683,8 +664,6 @@ void toolbox::blockstructured::interpolateHaloLayer_AoS_linear_with_linear_extra
   logTraceOut( "interpolateHaloLayer_AoS_linear_with_linear_extrapolation(...)" );
 }
 
-
-
 void toolbox::blockstructured::interpolateCell_AoS_linear_with_linear_extrapolation(
   const peano4::datamanagement::CellMarker& marker,
   int                                       numberOfDoFsPerAxisInPatch,
@@ -705,7 +684,6 @@ void toolbox::blockstructured::interpolateCell_AoS_linear_with_linear_extrapolat
 
   logTraceOut("interpolateCell_AoS_linear_with_linear_extrapolation(...)");
 }
-
 
 void toolbox::blockstructured::interpolateHaloLayer_AoS_linear_with_constant_extrapolation_and_linear_normal_interpolation(
   const peano4::datamanagement::FaceMarker& marker,
@@ -753,7 +731,6 @@ void toolbox::blockstructured::interpolateHaloLayer_AoS_linear_with_constant_ext
   logTraceOut( "interpolateHaloLayer_AoS_linear_with_constant_extrapolation_and_linear_normal_interpolation(...)" );
 }
 
-
 void toolbox::blockstructured::interpolateHaloLayer_AoS_linear_with_constant_extrapolation_and_linear_normal_interpolation(
   const peano4::datamanagement::FaceMarker& marker,
   int                                       numberOfDoFsPerAxisInPatch,
@@ -772,8 +749,8 @@ void toolbox::blockstructured::interpolateHaloLayer_AoS_linear_with_constant_ext
     const int patchSize = numberOfDoFsPerAxisInPatch*numberOfDoFsPerAxisInPatch*numberOfDoFsPerAxisInPatch;
     #endif
 
-    double* leftAdjacentPatchData  = tarch::allocateMemory(patchSize * unknowns, tarch::MemoryLocation::Heap);
-    double* rightAdjacentPatchData = tarch::allocateMemory(patchSize * unknowns, tarch::MemoryLocation::Heap);
+    double* leftAdjacentPatchData  = tarch::allocateMemory<double>(patchSize * unknowns, tarch::MemoryLocation::Heap);
+    double* rightAdjacentPatchData = tarch::allocateMemory<double>(patchSize * unknowns, tarch::MemoryLocation::Heap);
 
     tarch::la::Vector<Dimensions,int> leftAdjacentPatchIndex = marker.getRelativePositionWithinFatherCell();
     tarch::la::Vector<Dimensions,int> rightAdjacentPatchIndex = marker.getRelativePositionWithinFatherCell();
@@ -819,8 +796,6 @@ void toolbox::blockstructured::interpolateHaloLayer_AoS_linear_with_constant_ext
   logTraceOut( "interpolateHaloLayer_AoS_linear_with_constant_extrapolation_and_linear_normal_interpolation(...)" );
 }
 
-
-
 void toolbox::blockstructured::interpolateCell_AoS_linear_with_constant_extrapolation_and_linear_normal_interpolation(
   const peano4::datamanagement::CellMarker& marker,
   int                                       numberOfDoFsPerAxisInPatch,
@@ -841,7 +816,6 @@ void toolbox::blockstructured::interpolateCell_AoS_linear_with_constant_extrapol
 
   logTraceOut("interpolateCell_AoS_linear_with_constant_extrapolation_and_linear_normal_interpolation(...)");
 }
-
 
 void toolbox::blockstructured::interpolateHaloLayer_AoS_linear_with_linear_extrapolation_and_linear_normal_interpolation(
   const peano4::datamanagement::FaceMarker& marker,
@@ -889,7 +863,6 @@ void toolbox::blockstructured::interpolateHaloLayer_AoS_linear_with_linear_extra
   logTraceOut( "interpolateHaloLayer_AoS_linear_with_linear_extrapolation_and_linear_normal_interpolation(...)" );
 }
 
-
 void toolbox::blockstructured::interpolateHaloLayer_AoS_linear_with_linear_extrapolation_and_linear_normal_interpolation(
   const peano4::datamanagement::FaceMarker& marker,
   int                                       numberOfDoFsPerAxisInPatch,
@@ -908,8 +881,8 @@ void toolbox::blockstructured::interpolateHaloLayer_AoS_linear_with_linear_extra
     const int patchSize = numberOfDoFsPerAxisInPatch*numberOfDoFsPerAxisInPatch*numberOfDoFsPerAxisInPatch;
     #endif
 
-    double* leftAdjacentPatchData  = tarch::allocateMemory(patchSize * unknowns, tarch::MemoryLocation::Heap);
-    double* rightAdjacentPatchData = tarch::allocateMemory(patchSize * unknowns, tarch::MemoryLocation::Heap);
+    double* leftAdjacentPatchData  = tarch::allocateMemory<double>(patchSize * unknowns, tarch::MemoryLocation::Heap);
+    double* rightAdjacentPatchData = tarch::allocateMemory<double>(patchSize * unknowns, tarch::MemoryLocation::Heap);
 
     tarch::la::Vector<Dimensions,int> leftAdjacentPatchIndex = marker.getRelativePositionWithinFatherCell();
     tarch::la::Vector<Dimensions,int> rightAdjacentPatchIndex = marker.getRelativePositionWithinFatherCell();
@@ -955,8 +928,6 @@ void toolbox::blockstructured::interpolateHaloLayer_AoS_linear_with_linear_extra
   logTraceOut( "interpolateHaloLayer_AoS_linear_with_linear_extrapolation_and_linear_normal_interpolation(...)" );
 }
 
-
-
 void toolbox::blockstructured::interpolateCell_AoS_linear_with_linear_extrapolation_and_linear_normal_interpolation(
   const peano4::datamanagement::CellMarker& marker,
   int                                       numberOfDoFsPerAxisInPatch,
@@ -977,7 +948,6 @@ void toolbox::blockstructured::interpolateCell_AoS_linear_with_linear_extrapolat
 
   logTraceOut("interpolateCell_AoS_linear_with_linear_extrapolation_and_linear_normal_interpolation(...)");
 }
-
 
 void toolbox::blockstructured::internal::interpolateCell_AoS_linear(
   const tarch::la::Vector<Dimensions,int>&  relativePositionWithinFatherCell,
@@ -1011,7 +981,6 @@ void toolbox::blockstructured::internal::interpolateCell_AoS_linear(
     serialiseMarkerIn3x3PatchAssembly(relativePositionWithinFatherCell, numberOfDoFsPerAxisInPatch)
   );
 }
-
 
 void toolbox::blockstructured::interpolateHaloLayer_AoS_tensor_product(
   const peano4::datamanagement::FaceMarker& marker,
@@ -1089,7 +1058,6 @@ void toolbox::blockstructured::interpolateHaloLayer_AoS_tensor_product(
   logTraceOut( "interpolateHaloLayer_AoS_tensor_product(...)" );
 }
 
-
 void toolbox::blockstructured::interpolateHaloLayer_AoS_tensor_product(
       const peano4::datamanagement::FaceMarker& marker,
       int                                       numberOfDoFsPerAxisInPatch,
@@ -1104,7 +1072,6 @@ void toolbox::blockstructured::interpolateHaloLayer_AoS_tensor_product(
   assertion(false);
 }
 
-
 void toolbox::blockstructured::interpolateCell_AoS_tensor_product(
       const peano4::datamanagement::CellMarker& marker,
       int                                       numberOfDoFsPerAxisInPatch,
@@ -1115,4 +1082,3 @@ void toolbox::blockstructured::interpolateCell_AoS_tensor_product(
 ) {
   assertion(false);
 }
-

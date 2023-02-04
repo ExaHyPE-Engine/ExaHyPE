@@ -69,7 +69,9 @@ void tarch::logging::Log::info(const std::string& methodName, const std::string&
 
 
 void tarch::logging::Log::warning(const std::string& methodName, const std::string& message) {
-  UseLogService::getInstance().warning(getTimeStamp(),tarch::mpi::Rank::getInstance().getRank(),tarch::multicore::Core::getInstance().getCoreNumber(),getTraceInformation(methodName),message);
+  if (LogFilter::getInstance().writeWarning( _className )) {
+    UseLogService::getInstance().warning(getTimeStamp(),tarch::mpi::Rank::getInstance().getRank(),tarch::multicore::Core::getInstance().getCoreNumber(),getTraceInformation(methodName),message);
+  }
 }
 
 

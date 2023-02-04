@@ -41,15 +41,15 @@ struct {{NAMESPACE | join("::")}}::{{CLASSNAME}} {
   #endif
   #if PeanoDebug>=1
   private:
-    tarch::la::Vector<Dimensions,{{FLOAT_TYPE}}> _debugX;
-    tarch::la::Vector<Dimensions,{{FLOAT_TYPE}}> _debugH;
+    tarch::la::Vector<Dimensions,double> _debugX;
+    tarch::la::Vector<Dimensions,double> _debugH;
 
 
   public:
-    void setDebugX( const tarch::la::Vector<Dimensions,{{FLOAT_TYPE}}>& data );
-    void setDebugH( const tarch::la::Vector<Dimensions,{{FLOAT_TYPE}}>& data );
-    tarch::la::Vector<Dimensions,{{FLOAT_TYPE}}> getDebugX() const;
-    tarch::la::Vector<Dimensions,{{FLOAT_TYPE}}> getDebugH() const;
+    void setDebugX( const tarch::la::Vector<Dimensions,double>& data );
+    void setDebugH( const tarch::la::Vector<Dimensions,double>& data );
+    tarch::la::Vector<Dimensions,double> getDebugX() const;
+    tarch::la::Vector<Dimensions,double> getDebugH() const;
   #endif
 
   #if Dimensions==2

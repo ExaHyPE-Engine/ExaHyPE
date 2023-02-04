@@ -146,7 +146,6 @@ namespace exahype2 {
         #endif
         ;
 
-
         /**
          * Dummy version delegating to one well-defined proper kernel. By
          * offering such a routine, we can generate generic compute code
@@ -169,21 +168,39 @@ namespace exahype2 {
           bool                    evaluateSource,
           bool                    evaluateMaximumEigenvalueAfterTimeStep
         ) {
-          timeStepWithRusanov_patchwise_map_static_calls<
-            Solver,
-            numberOfVolumesPerAxisInPatch,
-            haloSize,
-            unknowns,
-            auxiliaryVariables,
-            TempDataEnumerator
-          >(
-            targetDevice,
-            patchData,
-            evaluateFlux,
-            evaluateNonconservativeProduct,
-            evaluateSource,
-            evaluateMaximumEigenvalueAfterTimeStep
-          );
+          #if defined(__NVCOMPILER_CUDA__) or defined(__HIPCC__)
+            timeStepWithRusanov_patchwise_managed_static_calls<
+              Solver,
+              numberOfVolumesPerAxisInPatch,
+              haloSize,
+              unknowns,
+              auxiliaryVariables,
+              TempDataEnumerator
+            >(
+              targetDevice,
+              patchData,
+              evaluateFlux,
+              evaluateNonconservativeProduct,
+              evaluateSource,
+              evaluateMaximumEigenvalueAfterTimeStep
+            );
+          #else
+            timeStepWithRusanov_patchwise_map_static_calls<
+              Solver,
+              numberOfVolumesPerAxisInPatch,
+              haloSize,
+              unknowns,
+              auxiliaryVariables,
+              TempDataEnumerator
+            >(
+              targetDevice,
+              patchData,
+              evaluateFlux,
+              evaluateNonconservativeProduct,
+              evaluateSource,
+              evaluateMaximumEigenvalueAfterTimeStep
+            );
+          #endif
         }
 
         #if defined(GPUOffloadingOMP)
