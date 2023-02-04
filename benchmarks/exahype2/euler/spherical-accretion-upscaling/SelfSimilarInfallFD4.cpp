@@ -69,6 +69,14 @@ void benchmarks::exahype2::euler::sphericalaccretionupscaling::SelfSimilarInfall
 ) {
   logTraceInWith3Arguments( "initialCondition(...)", meshCellCentre, meshCellH, gridIsConstructred );
 
+  applications::exahype2::euler::sphericalaccretion::initialiseHomogeneousDensity(
+    Q,
+    BaseDensity,
+    pInitial,
+    Gamma
+  );
+
+/*
   applications::exahype2::euler::sphericalaccretion::initialiseOverdensity_Gaussian(
     Q,
     meshCellCentre,
@@ -78,6 +86,7 @@ void benchmarks::exahype2::euler::sphericalaccretionupscaling::SelfSimilarInfall
     pInitial,
     Gamma
   );
+*/
 
   logTraceOut( "initialCondition(...)" );
 }

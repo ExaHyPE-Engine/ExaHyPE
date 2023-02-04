@@ -219,6 +219,8 @@ class SeparateSweeps( CellCenteredFiniteDifferences ):
       Instantiate a generic FV scheme with an overlap of 1.
 
     """
+    self._rk_order = rk_order
+    
     super(SeparateSweeps, self).__init__(name, patch_size, overlap, rk_order, unknowns, auxiliary_variables, min_meshcell_h, max_meshcell_h, plot_grid_properties, kernel_namespace)
     
     if rk_order<1:
@@ -250,19 +252,53 @@ class SeparateSweeps( CellCenteredFiniteDifferences ):
     """
     super(SeparateSweeps, self).create_data_structures()
 
-    initialisation_sweep_guard = "(" + \
-      "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::GridInitialisation" + \
-      ")"
-    first_iteration_after_initialisation_guard = "(" + \
-      "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::RungeKuttaSubStep0AfterGridInitialisation or " + \
-      "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::PlottingAfterGridInitialisation" + \
-    ")"
+    initialisation_sweep_guard = """(
+      repositories::{}.getSolverState()=={}::SolverState::GridInitialisation
+    )""".format(
+      self.get_name_of_global_instance(), self._name
+    )
+    first_iteration_after_initialisation_guard = """(
+      repositories::{}.getSolverState()=={}::SolverState::RungeKuttaSubStep0AfterGridInitialisation or
+      repositories::{}.getSolverState()=={}::SolverState::PlottingAfterGridInitialisation
+    )""".format(
+      self.get_name_of_global_instance(), self._name,
+      self.get_name_of_global_instance(), self._name,
+    )
 
     self._patch_overlap_new.generator.send_condition               = "true"
     self._patch_overlap_new.generator.receive_and_merge_condition  = "true"
 
     self._patch_overlap_old.generator.send_condition               = initialisation_sweep_guard
     self._patch_overlap_old.generator.receive_and_merge_condition  = first_iteration_after_initialisation_guard
+
+    first_sweep_of_time_step_or_plotting_guard = """(
+      repositories::{}.getSolverState()=={}::SolverState::RungeKuttaSubStep0AfterGridInitialisation or
+      repositories::{}.getSolverState()=={}::SolverState::RungeKuttaSubStep0 or
+      repositories::{}.getSolverState()=={}::SolverState::PlottingAfterGridInitialisation or
+      repositories::{}.getSolverState()=={}::SolverState::Plotting
+    )""".format(
+      self.get_name_of_global_instance(), self._name,
+      self.get_name_of_global_instance(), self._name,
+      self.get_name_of_global_instance(), self._name,
+      self.get_name_of_global_instance(), self._name,
+    )
+
+    last_sweep_of_time_step_or_plotting_initialisation = """(
+      repositories::{}.getSolverState()=={}::SolverState::GridInitialisation or
+      repositories::{}.getSolverState()=={}::SolverState::RungeKuttaSubStep{} or
+      repositories::{}.getSolverState()=={}::SolverState::PlottingAfterGridInitialisation or
+      repositories::{}.getSolverState()=={}::SolverState::Plotting
+    )""".format(
+      self.get_name_of_global_instance(), self._name,
+      self.get_name_of_global_instance(), self._name, self.number_of_Runge_Kutta_steps()-1,
+      self.get_name_of_global_instance(), self._name,
+      self.get_name_of_global_instance(), self._name,
+    )
+
+    self._patch_estimates.generator.store_persistent_condition = self._store_cell_data_default_guard() + """
+      and not (""" + last_sweep_of_time_step_or_plotting_initialisation + ")"
+    self._patch_estimates.generator.load_persistent_condition  = self._load_cell_data_default_guard() + """
+      and not (""" + first_sweep_of_time_step_or_plotting_guard + ")"   
 
             
   def create_action_sets(self):
@@ -272,6 +308,9 @@ class SeparateSweeps( CellCenteredFiniteDifferences ):
       Only the UpdateCell action set is specific to a single sweep.
       
       This operation is implicity called via the superconstructor.
+      
+      Each guard here should combine the storage predicate with the 
+      actual solver phase.
       
     """
     super(SeparateSweeps, self).create_action_sets()

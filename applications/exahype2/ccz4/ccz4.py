@@ -11,6 +11,17 @@ from Probe_file_gene import tracer_seeds_generate
 
 from peano4.toolbox.blockstructured.DynamicAMR                 import DynamicAMR
 import numpy as np
+#todo no mpmath here so rkdg not working
+
+def CoordListFromFile(file,scale):
+  f=open(file)
+  data=[]
+  tem=f.readlines()
+  for line in tem:
+    data.append(list(map(float,line.split(' ')[1:])))
+  print(len(data))
+  data=np.array(data)
+  return data*scale
 
 
 modes = { 
@@ -38,7 +49,7 @@ floatparams = {
 	#"tp_epsilon":1e-6
 }
 
-intparams = {"LapseType":1, "tp_grid_setup":0, "swi":99, "ReSwi":0, "source":0}
+intparams = {"BBHType":2, "LapseType":1, "tp_grid_setup":0, "swi":99, "ReSwi":0, "source":0}
 #sss
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='ExaHyPE 2 - CCZ4 script')
@@ -135,7 +146,7 @@ if __name__ == "__main__":
             unknowns=number_of_unknowns,
             auxiliary_variables=0,
             min_volume_h=min_volume_h, max_volume_h=max_volume_h,
-            time_step_size=1e-2
+            normalised_time_step_size=1e-2
           )
         elif SuperClass==exahype2.solvers.fv.rusanov.GlobalFixedTimeStepWithEnclaveTasking:
           SuperClass.__init__(
@@ -228,7 +239,7 @@ if __name__ == "__main__":
             SuperClass==exahype2.solvers.rkfd.fd4.GlobalAdaptiveTimeStep 
             or SuperClass==exahype2.solvers.rkfd.fd4.GlobalFixedTimeStep
             or SuperClass==exahype2.solvers.rkfd.fd4.GlobalAdaptiveTimeStepWithEnclaveTasking
-            or SuperClass==exahype2.solvers.rkfd.fd4.GlobalFixedTimeStepWithEnclaveTasking
+            #or SuperClass==exahype2.solvers.rkfd.fd4.GlobalFixedTimeStepWithEnclaveTasking no fixed enclave version yet
             ):
           self.postprocess_updated_patch += """
     #if Dimensions==2
@@ -239,10 +250,10 @@ if __name__ == "__main__":
     constexpr int itmax = {{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}} * {{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}} * {{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}};
     #endif
 """
-        elif SuperClass == exahype2.solvers.rkdg.rusanov.GlobalAdaptiveTimeStep:
-          self.postprocess_updated_patch = """
-    constexpr int itmax = ({{ORDER}}+1) * ({{ORDER}}+1) * ({{ORDER}}+1); // only support 3d
-"""
+        #elif SuperClass == exahype2.solvers.rkdg.rusanov.GlobalAdaptiveTimeStep: fix it after rkdg is back
+        #  self.postprocess_updated_patch = """
+    #constexpr int itmax = ({{ORDER}}+1) * ({{ORDER}}+1) * ({{ORDER}}+1); // only support 3d
+#"""
         else:
           self.postprocess_updated_patch += """
     #if Dimensions==2
@@ -444,6 +455,13 @@ if __name__ == "__main__":
 
         self.create_data_structures()
         self.create_action_sets()
+
+
+
+      def create_data_structures(self):
+        SuperClass.create_data_structures(self)
+        self.switch_to_heap_storage(True, True)
+
 
       def add_PT_ConsW_Psi4W_AMRFlag(self):
         """
@@ -714,6 +732,8 @@ if __name__ == "__main__":
       my_solver = CCZ4Solver(solver_name, args.patch_size, min_h, args.max_h, args.cfl, args.CCZ4domain_r,args.CCZ4KOSigma)
       userinfo.append(("CFL ratio set as "+str(args.cfl), None))
 
+    userinfo.append(("The solver is "+args.implementation, None))
+
 ########################################################################################
 #AMR boundary tracing
 ########################################################################################
@@ -732,8 +752,8 @@ if __name__ == "__main__":
     if args.interpolation=="order-2":
       my_solver.overlap=2
 
-    if args.implementation=="fd-fourth-order" or args.implementation=="fd-fourth-order-fixed" or args.implementation=="fv-fd4":
-      my_solver.overlap=3
+    #if args.implementation=="fd-fourth-order" or args.implementation=="fd-fourth-order-fixed" or args.implementation=="fv-fd4":
+    #  my_solver.overlap=3
     #for rkfd the overlap is automatically assigned in solver class
 
     #my_solver.restriction = "averaging" # "linear"
@@ -771,17 +791,10 @@ if __name__ == "__main__":
     #notice point 2 is not needed as for build-in function (for fv) the matrices are already hard-coded.  
     tem_interp=["TP_constant","TP_linear_with_linear_extrap_normal_interp"]
     tem_restrict=["TP_inject_normal_extrap","TP_average_normal_extrap"]
-    if (args.implementation=="fd4-rk1-adaptive" 
-      or args.implementation=="fd4-rk1-adaptive-enclave" 
-      or args.implementation=="fd4-rk1-fixed" 
-      or args.implementation=="fd4-rk1-fixed-enclave" 
-      or args.implementation=="fd4-rk4-adaptive" 
-      or args.implementation=="fd4-rk5-adaptive-enclave" 
-      or args.implementation=="fd4-rk4-fixed"
-      or args.implementation=="fd4-rk4-fixed-enclave" 
-      ):
+    if ("fd4-rk" in args.implementation):
       exahype2.solvers.rkfd.fd4.switch_to_FD4_tensor_product_interpolation( my_solver, tem_interp[1] ) 
       exahype2.solvers.rkfd.fd4.switch_to_FD4_tensor_product_restriction(   my_solver, tem_restrict[1] ) 
+      userinfo.append(("FD4 refinement: " + tem_interp[1] + " & " + tem_restrict[1], None))
     #if args.interpolation=="linear+enforce" or args.interpolation=="linear-slow+enforce":
     #  self.point_wise_postprocessing_of_interpolation = "examples::exahype2::ccz4::enforceCCZ4constraints(targetVolume)" )
     #if args.restriction=="average+enforce" or args.restriction=="inject+enforce":
@@ -906,33 +919,35 @@ if __name__ == "__main__":
     probe_point = [-6,-6,0.0]
     project.add_plot_filter( probe_point,[12.0,12.0,0.01],1 )
 
-    project.set_load_balancing("toolbox::loadbalancing::RecursiveSubdivision","(new ::exahype2::LoadBalancingConfiguration(0.95,2000,1,32))" )
+    project.set_load_balancing("toolbox::loadbalancing::RecursiveSubdivision","(new ::exahype2::LoadBalancingConfiguration(0.95,2000,-1,32))" )
     #project.set_load_balancing("toolbox::loadbalancing::RecursiveSubdivision","(new ::exahype2::LoadBalancingConfiguration(0.95,0))" )
 
 ########################################################################################
 #Tracer setting 
 ########################################################################################
     if args.add_tracer==5:
-        tracer_particles = project.add_tracer( name="Tracer",attribute_count=59 )
+        tracer_particles = project.add_tracer( name="Tracer",attribute_count=61 )
         project.add_action_set_to_initialisation( 
           exahype2.tracer.InsertParticlesByCoordinates( 
-            particle_set=tracer_particles, coordinates=[[0,0,0],[0.5,0,0],[1.0,0,0],[1.5,0,0],[2.0,0,0]]))
+            particle_set=tracer_particles, coordinates=[[-7,0,0],[7,0,0],[0,-7,0],[0,7,0],[0,0,-7],[0,0,7]]))
         project.add_action_set_to_timestepping(
           peano4.toolbox.particles.UpdateParallelState(
             particle_set=tracer_particles
           )
         )
         
-        project.add_action_set_to_timestepping(exahype2.tracer.DiscontinuousGalerkinTracing(tracer_particles,
-                                                                                              my_solver,
-                                                                                              time_stepping_kernel="toolbox::particles::staticPosition",
-                                                                                              project_on_tracer_properties_kernel="::exahype2::dg::projectAllValuesOntoParticle"))
+        project.add_action_set_to_timestepping(exahype2.tracer.FiniteVolumesTracing(tracer_particles,
+                                                                                  my_solver,
+                                                                                  time_stepping_kernel="toolbox::particles::staticPosition",
+                                                                                  project_on_tracer_properties_kernel="::exahype2::fv::projectAllValuesOntoParticle_piecewiseLinear"))
         
         
         project.add_action_set_to_timestepping(exahype2.tracer.DumpTrajectoryIntoDatabase(
           particle_set=tracer_particles,
           solver=my_solver,
-          filename=args.path+"Tracer-dgtest",
+          filename=args.path+"Tracer-test",
+          number_of_entries_between_two_db_flushes=10000,
+          output_precision=10,
           data_delta_between_two_snapsots=1e16,
           time_delta_between_two_snapsots=0.0001
           ))
@@ -1057,7 +1072,7 @@ if __name__ == "__main__":
     userinfo.append(("output directory: "+path, None))
     print("=========================================================")
     if not args.add_tracer==0:
-        userinfo.append(("tracer output file: "+path1+"zz"+args.tra_name, None))
+        userinfo.append(("tracer output file: "+args.path+"Tracer-test", None))
     if len(userinfo) >0:
         print("The building information:")
         for msg, exception in userinfo:

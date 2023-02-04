@@ -66,7 +66,7 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
       Plotting {% for item in range(RK_STEPS) -%}
       ,
       RungeKuttaPrimarySubStep{{item}},
-      RungeKuttaSecondarySubStep{{item}},
+      RungeKuttaSecondarySubStep{{item}}
       {%- endfor %}
     };
 

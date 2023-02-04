@@ -19,6 +19,7 @@ namespace exahype2 {
       void reduceMaxEigenvalue_patchwise_functors(
         ::exahype2::CellData&   patchData,
         int                     numberOfGridCellsPerPatchPerAxis,
+        int                     overlap,
         int                     unknowns,
         int                     auxiliaryVariables,
         MaxEigenvalue           maxEigenvalue
@@ -107,6 +108,23 @@ namespace exahype2 {
         static double reduceMaxEigenvalue_LoopBody(
           const double* __restrict__                   QOut,
           const QOutEnumeratorType&                    QOutEnumerator,
+          exahype2::fd::MaxEigenvalue                  maxEigenvalue,
+          const tarch::la::Vector<Dimensions,double>&  patchCentre,
+          const tarch::la::Vector<Dimensions,double>&  patchSize,
+          int                                          patchIndex,
+          const tarch::la::Vector<Dimensions,int>&     volumeIndex,
+          double                                       t,
+          double                                       dt
+        ) InlineMethod;
+
+
+        /**
+         * Specialisation without the gather.
+         */
+        template <>
+        static double reduceMaxEigenvalue_LoopBody(
+          const double* __restrict__                   QOut,
+          const exahype2::enumerator::AoSLexicographicEnumerator&                    QOutEnumerator,
           exahype2::fd::MaxEigenvalue                  maxEigenvalue,
           const tarch::la::Vector<Dimensions,double>&  patchCentre,
           const tarch::la::Vector<Dimensions,double>&  patchSize,

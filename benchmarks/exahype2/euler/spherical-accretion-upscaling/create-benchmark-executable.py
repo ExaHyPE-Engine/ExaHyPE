@@ -144,6 +144,7 @@ if "fd4" in args.solver:
   patch_size = 5
   time_order = int(args.solver[6])
   thesolver = exahype2.solvers.rkfd.fd4.GlobalAdaptiveTimeStepWithEnclaveTasking(name                 = solver_name + "FD4", 
+  #thesolver = exahype2.solvers.rkfd.fd4.GlobalAdaptiveTimeStep(name                 = solver_name + "FD4", 
                                                                patch_size           = patch_size,
                                                                rk_order             = time_order,
                                                                unknowns             = number_of_unknowns,
@@ -157,6 +158,11 @@ if "fd4" in args.solver:
                                                                refinement_criterion = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
 #                                                              pde_terms_without_state = args.optimise_stateless
                                                                )
+  # 126 hab ich ohne
+  # 115 mit default
+  # 117 mit True, True
+  thesolver.switch_to_heap_storage(True, True)
+  
   executable_name = executable_name + "-FD4-" + str(patch_size)
   
   thesolver._action_set_postprocess_solution = exahype2.solvers.rkfd.actionsets.CellWisePostprocessSolution(thesolver)

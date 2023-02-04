@@ -23,9 +23,9 @@ class exahype2::LoadBalancingConfiguration: public toolbox::loadbalancing::Recur
     const int      _minSizeOfTree;
     const int      _maxNumberOfTreesThroughoutInitialDistribution;
     const int      _maxNumberOfTrees;
-    const int      _maxSizeOfDeployedRemoteMPITree;
   public:
     static constexpr int  UseNumberOfThreads = -1;
+
     /**
      * @param minSizeOfTree If a partition (tree) is smaller than the given
      *   number of cells, we do not split it up further. If you set this
@@ -39,8 +39,7 @@ class exahype2::LoadBalancingConfiguration: public toolbox::loadbalancing::Recur
       double loadBalancingQuality=0.9,
       int    minSizeOfTree = 0,
       int    maxNumberOfTreesThroughoutInitialDistribution=UseNumberOfThreads,
-      int    maxNumberOfTrees=UseNumberOfThreads,
-      int    maxSizeOfDeployedRemoteMPITree = std::numeric_limits<int>::max()
+      int    maxNumberOfTrees=UseNumberOfThreads
     );
 
     virtual ~LoadBalancingConfiguration() = default;
@@ -51,9 +50,11 @@ class exahype2::LoadBalancingConfiguration: public toolbox::loadbalancing::Recur
 
     double getWorstCaseBalancingRatio(toolbox::loadbalancing::RecursiveSubdivision::State state) override;
 
+    /**
+     * If we do the initial distribution in-between ranks, then there
+     * should be no such thing as a min tree size.
+     */
     int getMinTreeSize(toolbox::loadbalancing::RecursiveSubdivision::State state) override;
-
-    int getMaxTreeSize(toolbox::loadbalancing::RecursiveSubdivision::State state) override;
 };
 
 

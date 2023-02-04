@@ -579,6 +579,9 @@ The finest mesh width of """ + str(self.get_finest_volume_size(domain_size)) + "
       Inform Peano4 step which data are to be moved around via the 
       use_cell and use_face commands. This operation is generic from
       ExaHyPE's point of view, i.e. I use it for all grid sweep types. 
+      
+      It is important that the cell label comes first, as some other
+      data might make their load/store decisions depend on the label.
     
     """
     step.use_cell(self._patch)
