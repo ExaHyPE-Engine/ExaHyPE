@@ -183,6 +183,7 @@ list(APPEND ACCELERATOR_BACKENDS
   "omp"
   "sycl"
   "hip"
+  "cuda"
 )
 set(WITH_GPU "" CACHE STRING "${ACCELERATOR_BACKENDS}")
 set_property(CACHE WITH_GPU PROPERTY STRINGS ${ACCELERATOR_BACKENDS})
@@ -234,6 +235,13 @@ elseif(WITH_GPU STREQUAL "cpp")
 elseif(WITH_GPU STREQUAL "sycl")
   set(WITH_MULTITHREADING CACHE "tbb")
 elseif(WITH_GPU STREQUAL "hip")
+elseif(WITH_GPU STREQUAL "cuda")
+  include(CheckLanguage)
+  check_language(CUDA)
+  if(NOT CMAKE_CUDA_COMPILER)
+    message(FATAL_ERROR "CMake configured to use CUDA but can't find a CUDA compiler")
+  endif()
+  enable_language(CUDA)
 endif()
 
 if(${CMAKE_CXX_COMPILER_ID} MATCHES "NVHPC|PGI")
