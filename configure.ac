@@ -862,18 +862,20 @@ AC_SUBST(LDADD_PEANO_3D_ASSERTS)
 AC_SUBST(LDADD_PEANO_3D_TRACE)
 AC_SUBST(LDADD_PEANO_3D_DEBUG)
 
-
 #
-# Kick out makefiles. I'm not sure but it seems that you have to add the directories to 
+# Kick out makefiles. I'm not sure but it seems that you have to add the directories to
 # Makefile.am in the src subdirectories, too
 #
-AC_CONFIG_FILES([Makefile 
-  src/Makefile 
-  src/toolbox/blockstructured/Makefile src/toolbox/multiprecision/Makefile src/toolbox/finiteelements/Makefile src/toolbox/loadbalancing/Makefile src/toolbox/particles/Makefile
-  examples/grid/Makefile examples/regulargridupscaling/Makefile 
+AC_CONFIG_FILES([Makefile
+  src/Makefile
+  src/toolbox/blockstructured/Makefile
+  src/toolbox/multiprecision/Makefile
+  src/toolbox/finiteelements/Makefile
+  src/toolbox/loadbalancing/Makefile
+  src/toolbox/particles/Makefile
   src/convert/Makefile
-  src/exahype2/Makefile src/swift2/Makefile
+  src/exahype2/Makefile
+  src/swift2/Makefile
   src/unittests/Makefile
 ])
 AC_OUTPUT
-
