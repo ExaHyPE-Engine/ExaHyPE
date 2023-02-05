@@ -3,8 +3,10 @@
 # This is an interactive script which configures the Peano project with every toolbox available.
 # If you want to use only a subset of toolboxes, copy the commands into your command line and adapt it accordingly.
 
-read -p "Enter CC compiler: " cc
-read -p "Enter CXX compiler: " cxx
+read -p "Enter CC compiler [clang]: " cc
+cc=${cc:-clang}
+read -p "Enter CXX compiler [clang++]: " cxx
+cxx=${cxx:-clang++}
 #read -p "Enter Fortran compiler: " fcc
 
 CXXFLAGS="-std=c++17 -W -Wall -Wextra"
