@@ -31,12 +31,13 @@ tarch::timing::Watch::~Watch() {
   }
 
   if (_plotResultInDestructor) {
-    std::ostringstream message;
-    message << "total number of clock ticks within block (cpu-time,calendar-time): "
-            << "(" << getCPUTime() << "s"
-            << "," << getCalendarTime() << "s"
-            << ")";
-    _log.info( _operationName, message.str() );
+    logInfo(
+      _operationName,
+      "total number of clock ticks within block (cpu-time,calendar-time): "
+                  << "(" << getCPUTime() << "s"
+                  << "," << getCalendarTime() << "s"
+                  << ")"
+    );
   }
 
 }
