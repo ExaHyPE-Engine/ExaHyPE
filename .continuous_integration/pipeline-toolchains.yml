@@ -1,0 +1,51 @@
+default:
+  tags:
+    - peano-tum05-k8s-4cores-4gb
+  image:
+    name: "ubuntu:22.04"
+    entrypoint: ["/bin/bash", "-l", "-c"]
+
+stages:
+  - docker
+
+pre-build:
+  stage: docker
+  script:
+    - pwd
+    - ls
+    - whoami
+    - hostname
+    - lscpu
+    - echo $CI_COMMIT_SHA
+    - echo $CI_COMMIT_BRANCH
+    - echo "Running CI with $(nproc) cores"
+
+build-gcc-docker-image:
+  stage: docker
+  allow_failure: yes
+  before_script:
+    - ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
+    - apt update && apt -yqq install ca-certificates curl gnupg lsb-release
+    - mkdir -p /etc/apt/keyrings
+    - curl -fsSL https://download.docker.com/linux/ubuntu/gpg | gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+    - echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" | tee /etc/apt/sources.list.d/docker.list > /dev/null
+    - apt update
+    - apt -yqq install docker-ce docker-ce-cli containerd.io docker-compose-plugin
+    - echo "$IMAGE_REGISTRY_KEY" | docker login -u "$IMAGE_REGISTRY_USER" --password-stdin
+  script:
+    - export FULL_IMAGE_NAME="${IMAGE_REGISTRY_USER}/gcc:latest"
+    - chmod 744 ./.continuous_integration/is_file_changed.sh
+    - chmod 744 ./.continuous_integration/does_image_exists.sh
+    - export FILE_CHANGED=$(./.continuous_integration/is_file_changed.sh ./.continuous_integration/Dockerfile.gcc)
+    - export IMAGE_EXISTS=$(./.continuous_integration/does_image_exists.sh "${FULL_IMAGE_NAME}")
+    - >
+      if [ $FILE_CHANGED -eq 1 ] || [ $IMAGE_EXISTS -eq 0 ]; then
+        echo "Building a new image - ${FULL_IMAGE_NAME}" ;
+        docker build -t "${FULL_IMAGE_NAME}" -f ./.continuous_integration/Dockerfile.gcc . ;
+        docker push "${FULL_IMAGE_NAME}"
+      else
+        echo "Image exists, Dockerfile.gcc was not modified. Skipping this step."
+      fi
+  artifacts:
+    paths:
+      - ./*

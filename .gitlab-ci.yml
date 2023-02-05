@@ -1,0 +1,30 @@
+stages:
+  - toolchains
+  - documentation
+  - exahype2
+
+variables:
+  IMAGE_VERSION: "latest"
+
+check-toolchains:
+  stage: toolchains
+  trigger:
+    include:
+      - .continuous_integration/pipeline-toolchains.yml
+    strategy: depend
+
+check-documentation:
+  stage: documentation
+  trigger:
+    include:
+      - .continuous_integration/pipeline-documentation.yml
+    strategy: depend
+
+check-exahype2:
+  stage: exahype2
+  needs:
+    - job: check-toolchains
+  trigger:
+    include:
+      - .continuous_integration/pipeline-exahype2.yml
+    strategy: depend
