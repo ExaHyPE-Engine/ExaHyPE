@@ -235,6 +235,7 @@ void exahype2::fd::fd4::internal::computeDifferentialSourceTerm_LoopBody(
       case DifferentialSourceTermVariant::CentralDifferencesWithLimiter:
       case DifferentialSourceTermVariant::CentralDifferencesWithLimiterAndLopsidedAdvection:
         computeCentralDifferencesWithLimiterForDifferentialSourceTerm(
+          QIn,
           QInEnumerator,
           patchIndex,
           volumeIndex,
