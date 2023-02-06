@@ -7,7 +7,7 @@ project = exahype2.Project( ["applications","exahype2", "CompressibleNavierStoke
 
 solver_name = "NavierStokesFV"
 unknowns    = 4
-auxiliary_variables = 0
+auxiliary_variables = 1
 mesh_size   = 0.3
 patch_size  = 10
 dimensions  = 2

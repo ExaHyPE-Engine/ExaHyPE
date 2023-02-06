@@ -939,19 +939,32 @@ void exahype2::fv::rusanov::internal::computeNonconservativeFlux_LoopBody(
   int                                 pick
 ) {
   double QAverage[QInEnumerator._unknowns+QInEnumerator._numberOfAuxiliaryVariables];
-  double DeltaQ[QInEnumerator._unknowns+QInEnumerator._numberOfAuxiliaryVariables];
+  double DeltaQ[Dimensions*(QInEnumerator._unknowns+QInEnumerator._numberOfAuxiliaryVariables)];
   double QFluxGathered[QInEnumerator._unknowns];
 
   tarch::la::Vector<Dimensions,int> leftAdjacentVolume  = volumeIndex;
   tarch::la::Vector<Dimensions,int> rightAdjacentVolume = volumeIndex;
-  rightAdjacentVolume(normal)++;
+  tarch::la::Vector<Dimensions,int> topAdjacentVolume   = volumeIndex;
+  tarch::la::Vector<Dimensions,int> frontAdjacentVolume = volumeIndex;
+  
+  rightAdjacentVolume(0)++;
+  if(Dimensions>=2) 
+    topAdjacentVolume(1)++;
+  if(Dimensions==3)
+    frontAdjacentVolume(2)++;
 
   // gather
   for (int unknown=0; unknown<QInEnumerator._unknowns+QInEnumerator._numberOfAuxiliaryVariables; unknown++) {
     QAverage[unknown] = 0.5 * QIn[ QInEnumerator(patchIndex,leftAdjacentVolume,unknown) ]
                       + 0.5 * QIn[ QInEnumerator(patchIndex,rightAdjacentVolume,unknown) ];
-    DeltaQ[unknown]    = QIn[ QInEnumerator(patchIndex,rightAdjacentVolume,unknown) ]
+    DeltaQ[unknown*Dimensions]    = QIn[ QInEnumerator(patchIndex,rightAdjacentVolume,unknown) ]
                       - QIn[ QInEnumerator(patchIndex,leftAdjacentVolume,unknown) ];
+    if(Dimensions>=2)
+    DeltaQ[unknown*Dimensions + 1]   = QIn[ QInEnumerator(patchIndex,topAdjacentVolume,unknown) ]
+                      - QIn[ QInEnumerator(patchIndex,leftAdjacentVolume,unknown) ];
+    if(Dimensions==3)
+    DeltaQ[unknown*Dimensions +2]   = QIn[ QInEnumerator(patchIndex,frontAdjacentVolume,unknown) ]
+                      - QIn[ QInEnumerator(patchIndex,leftAdjacentVolume,unknown) ];  
   }
 
   ncp(
@@ -997,19 +1010,32 @@ void exahype2::fv::rusanov::internal::computeNonconservativeFlux_LoopBody(
   int                                            pick
 ) {
   double QAverage[numberOfUnknowns+numberOfAuxiliaryVariables];
-  double DeltaQ[numberOfUnknowns+numberOfAuxiliaryVariables];
+  double DeltaQ[Dimensions*(numberOfUnknowns+numberOfAuxiliaryVariables)];
   double QFluxGathered[numberOfUnknowns];
 
   tarch::la::Vector<Dimensions,int> leftAdjacentVolume  = volumeIndex;
   tarch::la::Vector<Dimensions,int> rightAdjacentVolume = volumeIndex;
+  tarch::la::Vector<Dimensions,int> topAdjacentVolume   = volumeIndex;
+  tarch::la::Vector<Dimensions,int> frontAdjacentVolume = volumeIndex;
+
   rightAdjacentVolume(normal)++;
+  if(Dimensions>=2) 
+    topAdjacentVolume(1)++;
+  if(Dimensions==3)
+    frontAdjacentVolume(2)++;
 
   // gather
   for (int unknown=0; unknown<QInEnumerator._unknowns+QInEnumerator._numberOfAuxiliaryVariables; unknown++) {
     QAverage[unknown] = 0.5 * QIn[ QInEnumerator(patchIndex,leftAdjacentVolume,unknown) ]
                       + 0.5 * QIn[ QInEnumerator(patchIndex,rightAdjacentVolume,unknown) ];
-    DeltaQ[unknown]   = QIn[ QInEnumerator(patchIndex,rightAdjacentVolume,unknown) ]
+    DeltaQ[unknown*Dimensions]   = QIn[ QInEnumerator(patchIndex,rightAdjacentVolume,unknown) ]
                       - QIn[ QInEnumerator(patchIndex,leftAdjacentVolume,unknown) ];
+    if(Dimensions>=2) 
+    DeltaQ[unknown*Dimensions + 1]   = QIn[ QInEnumerator(patchIndex,topAdjacentVolume,unknown) ]
+                      - QIn[ QInEnumerator(patchIndex,leftAdjacentVolume,unknown) ];
+    if(Dimensions==3)
+    DeltaQ[unknown*Dimensions +2]   = QIn[ QInEnumerator(patchIndex,frontAdjacentVolume,unknown) ]
+                      - QIn[ QInEnumerator(patchIndex,leftAdjacentVolume,unknown) ];  
   }
 
   Solver::nonconservativeProduct(
