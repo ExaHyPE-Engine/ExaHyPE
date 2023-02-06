@@ -636,15 +636,15 @@ namespace exahype2 {
 #include "Rusanov_batched_in_situ_static_calls.cpph"
 
 
-#if defined(GPUOffloadingOMP)
+#if defined(GPUOffloadingOMP) or defined(SharedOMP)
 #include "exahype2/fv/rusanov/omp/Rusanov.h"
 #endif
 
-#if defined(GPUOffloadingCPP)
+#if defined(GPUOffloadingCPP) or defined(SharedCPP)
 #include "exahype2/fv/rusanov/cpp/Rusanov.h"
 #endif
 
-#if defined(GPUOffloadingSYCL)
+#if defined(GPUOffloadingSYCL) or defined(SharedSYCL)
 #include "exahype2/fv/rusanov/sycl/Rusanov.h"
 #endif
 

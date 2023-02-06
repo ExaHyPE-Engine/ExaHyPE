@@ -36,9 +36,9 @@ def create_compute_kernel_for_FD4(flux_implementation,
     KernelVariant.BatchedAoSHeap:                 "timeStep_batched_heap",
     KernelVariant.BatchedAoSoAHeap:               "timeStep_batched_heap",
     KernelVariant.BatchedSoAHeap:                 "timeStep_batched_heap",
-    KernelVariant.TaskGraphAoSHeap:               "timeStep_batched_heap",
-    KernelVariant.TaskGraphAoSoAHeap:             "timeStep_batched_heap",
-    KernelVariant.TaskGraphSoAHeap:               "timeStep_batched_heap",
+    KernelVariant.TaskGraphAoSHeap:               "timeStep_taskgraph_heap",
+    KernelVariant.TaskGraphAoSoAHeap:             "timeStep_taskgraph_heap",
+    KernelVariant.TaskGraphSoAHeap:               "timeStep_taskgraph_heap",
   }
   
   EnumeratorTemplateTypes = {
@@ -109,30 +109,41 @@ def create_compute_kernel_for_FD4(flux_implementation,
   }
 );
   """
-  if solver_variant == SolverVariant.Stateless and EnumeratorTemplateTypes[kernel_variant]==None:
-    template += """_static_calls<{{SOLVER_NAME}},{{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}},{{HALO_SIZE}}, {{NUMBER_OF_UNKNOWNS}}, {{NUMBER_OF_AUXILIARY_VARIABLES}}>(
-      patchData,
-      {{KOSIGMA}},
-      {% if FLUX_IMPLEMENTATION=="<none>" %} false {% else %} true {% endif %},
-      {% if NCP_IMPLEMENTATION=="<none>" %} false {% else %} true {% endif %},
-      {% if SOURCE_IMPLEMENTATION=="<none>" %} false {% else %} true {% endif %},
-      false,     // Runge-Kutta, so no need to copy old data over or to take dt into account
-      ::exahype2::fd::fd4::DifferentialSourceTermVariant::CentralDifferencesWithLopsidedAdvection
-    );
-  """
-  if solver_variant == SolverVariant.Accelerator and EnumeratorTemplateTypes[kernel_variant]==None:
-    template += """_static_calls<{{SOLVER_NAME}},{{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}},{{HALO_SIZE}}, {{NUMBER_OF_UNKNOWNS}}, {{NUMBER_OF_AUXILIARY_VARIABLES}}>(
-      targetDevice,
-      patchData,
-      {{KOSIGMA}},
-      {% if FLUX_IMPLEMENTATION=="<none>" %} false {% else %} true {% endif %},
-      {% if NCP_IMPLEMENTATION=="<none>" %} false {% else %} true {% endif %},
-      {% if SOURCE_IMPLEMENTATION=="<none>" %} false {% else %} true {% endif %},
-      false,     // Runge-Kutta, so no need to copy old data over or to take dt into account
-      ::exahype2::fd::fd4::DifferentialSourceTermVariant::CentralDifferencesWithLopsidedAdvection
-    );
-  """
-  if solver_variant == SolverVariant.Stateless and EnumeratorTemplateTypes[kernel_variant]!=None:
+  #elif solver_variant == SolverVariant.Stateless and EnumeratorTemplateTypes[kernel_variant]==None:
+  #  template += """_static_calls<{{SOLVER_NAME}},{{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}},{{HALO_SIZE}}, {{NUMBER_OF_UNKNOWNS}}, {{NUMBER_OF_AUXILIARY_VARIABLES}}>(
+  #    patchData,
+  #    {{KOSIGMA}},
+  #    {% if FLUX_IMPLEMENTATION=="<none>" %} false {% else %} true {% endif %},
+  #    {% if NCP_IMPLEMENTATION=="<none>" %} false {% else %} true {% endif %},
+  #    {% if SOURCE_IMPLEMENTATION=="<none>" %} false {% else %} true {% endif %},
+  #    false,     // Runge-Kutta, so no need to copy old data over or to take dt into account
+  #    ::exahype2::fd::fd4::DifferentialSourceTermVariant::CentralDifferencesWithLopsidedAdvection
+  #  );
+  #"""
+  #elif solver_variant == SolverVariant.Multicore and EnumeratorTemplateTypes[kernel_variant]==None:
+  #  template += """_multicore_static_calls<{{SOLVER_NAME}},{{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}},{{HALO_SIZE}}, {{NUMBER_OF_UNKNOWNS}}, {{NUMBER_OF_AUXILIARY_VARIABLES}}>(
+  #    patchData,
+  #    {{KOSIGMA}},
+  #    {% if FLUX_IMPLEMENTATION=="<none>" %} false {% else %} true {% endif %},
+  #    {% if NCP_IMPLEMENTATION=="<none>" %} false {% else %} true {% endif %},
+  #    {% if SOURCE_IMPLEMENTATION=="<none>" %} false {% else %} true {% endif %},
+  #    false,     // Runge-Kutta, so no need to copy old data over or to take dt into account
+  #    ::exahype2::fd::fd4::DifferentialSourceTermVariant::CentralDifferencesWithLopsidedAdvection
+  #  );
+  #"""
+  #elif solver_variant == SolverVariant.Accelerator and EnumeratorTemplateTypes[kernel_variant]==None:
+  #  template += """_static_calls<{{SOLVER_NAME}},{{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}},{{HALO_SIZE}}, {{NUMBER_OF_UNKNOWNS}}, {{NUMBER_OF_AUXILIARY_VARIABLES}}>(
+  #    targetDevice,
+  #    patchData,
+  #    {{KOSIGMA}},
+  #    {% if FLUX_IMPLEMENTATION=="<none>" %} false {% else %} true {% endif %},
+  #    {% if NCP_IMPLEMENTATION=="<none>" %} false {% else %} true {% endif %},
+  #    {% if SOURCE_IMPLEMENTATION=="<none>" %} false {% else %} true {% endif %},
+  #    false,     // Runge-Kutta, so no need to copy old data over or to take dt into account
+  #    ::exahype2::fd::fd4::DifferentialSourceTermVariant::CentralDifferencesWithLopsidedAdvection
+  #  );
+  #"""
+  elif solver_variant == SolverVariant.Stateless:
     template += """_static_calls<{{SOLVER_NAME}},{{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}},{{HALO_SIZE}}, {{NUMBER_OF_UNKNOWNS}}, {{NUMBER_OF_AUXILIARY_VARIABLES}}, {{TEMP_DATA_ENUMERATOR}}>(
       patchData,
       {{KOSIGMA}},
@@ -143,7 +154,18 @@ def create_compute_kernel_for_FD4(flux_implementation,
       ::exahype2::fd::fd4::DifferentialSourceTermVariant::CentralDifferencesWithLopsidedAdvection
     );
   """
-  if solver_variant == SolverVariant.Accelerator and EnumeratorTemplateTypes[kernel_variant]!=None:
+  elif solver_variant == SolverVariant.Multicore:
+    template += """_multicore_static_calls<{{SOLVER_NAME}},{{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}},{{HALO_SIZE}}, {{NUMBER_OF_UNKNOWNS}}, {{NUMBER_OF_AUXILIARY_VARIABLES}}, {{TEMP_DATA_ENUMERATOR}}>(
+      patchData,
+      {{KOSIGMA}},
+      {% if FLUX_IMPLEMENTATION=="<none>" %} false {% else %} true {% endif %},
+      {% if NCP_IMPLEMENTATION=="<none>" %} false {% else %} true {% endif %},
+      {% if SOURCE_IMPLEMENTATION=="<none>" %} false {% else %} true {% endif %},
+      false,     // Runge-Kutta, so no need to copy old data over or to take dt into account
+      ::exahype2::fd::fd4::DifferentialSourceTermVariant::CentralDifferencesWithLopsidedAdvection
+    );
+  """
+  elif solver_variant == SolverVariant.Accelerator:
     template += """_static_calls<{{SOLVER_NAME}},{{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}},{{HALO_SIZE}}, {{NUMBER_OF_UNKNOWNS}}, {{NUMBER_OF_AUXILIARY_VARIABLES}}, {{TEMP_DATA_ENUMERATOR}}>(
       targetDevice,
       patchData,
@@ -155,7 +177,8 @@ def create_compute_kernel_for_FD4(flux_implementation,
       ::exahype2::fd::fd4::DifferentialSourceTermVariant::CentralDifferencesWithLopsidedAdvection
     );
   """
-        
+  else:
+    assert False, "not supported combination: {} x {}".format( solver_variant, kernel_variant )
 
   result = jinja2.Template( template, undefined=jinja2.DebugUndefined)
   d= {}
