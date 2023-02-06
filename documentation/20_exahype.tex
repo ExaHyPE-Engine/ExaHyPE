@@ -1750,10 +1750,7 @@ virtual bool patchCanUseStatelessPDETerms(
 \end{remark}
 
 
-\section{Finite Volume extensions}
-
-
-\subsection{Boundary conditions}
+\section{Boundary conditions}
 
 
 Boundary conditions often are tricky to implement and solely up to the user. 
@@ -1794,11 +1791,13 @@ Boundary conditions in general are realised via their own callback called
 When you run the Python toolkit, you get an empty implementation of this routine
 that you can befill.
 The routine is called per outer volume (Figure
-\ref{figure:exahype:boundary-conditions}).
+\ref{figure:exahype:boundary-conditions}) or per degree of freedom in the
+Discontinuous Galerkin schemes.
 
 
+\subsection{Boundary conditions on unit box for Finite Volume schemes}
 
-\paragraph{Dirichlet boundary conditions}.
+\paragraph{Dirichlet boundary conditions}
 %
 %
 %
@@ -1807,7 +1806,7 @@ Dirichlet boundary conditions
   Q(x) | _{\partial \Omega } = f(x,t)
 \]
 are close to trivial to implement. 
-You set  outer values due to
+You set  outer values of the halo layer due to
 
 \begin{code}
 void ...::MySolver::boundaryConditions(
@@ -1841,8 +1840,10 @@ such that the eigenvalue term along the boundary face has the correct
 (imposed) value too.
 
 
-\paragraph{Neumann boundary conditions (Finite Volumes)}
-
+\paragraph{Neumann boundary conditions}
+%
+%
+%
 As we can read the volume values inside the domain prior to a time step
 and modify those outside of the domain, it is straightforward to implement
 homogeneous Neumann conditions.
@@ -1869,8 +1870,10 @@ non-homogeneous conditions as well.
 
 
 
-\paragraph{Inflow/outflow boundary conditions}
-
+\paragraph{Inflow/outflow conditions}
+%
+%
+%
 Inflow or outflow boundary conditions are conceptually close to Neumann
 conditions. 
 Often, it is however reasonable to supplement them with some limiter, i.e.~if
@@ -1890,20 +1893,21 @@ Yet, increasing the domain size usually helps in such a case.
 
 
 
+\section{More complex boundaries}
 
-\paragraph{Extrapolating boundary data (Finite Volumes)}
-
-
-
+\paragraph{Extrapolating boundary data}
+%
+%
+%
 It is more complicated to realise boundary conditions that extrapolate
 data into the outside.
 Such boundary conditions read as
 \[
   Q(x) | _{\partial \Omega } = \lim _{x \mapsto \partial \Omega}
-  f(Q(x,t),\nabla f(Q(x,t))
+  Bnd(Q(x,t),\nabla f(Q(x,t))
   \ \text{or} \
   \left( \nabla Q(x), n \right) | _{\partial \Omega } = \lim _{x \mapsto
-  \partial \Omega} f(Q(x,t),\nabla f(Q(x,t)).
+  \partial \Omega} Bnd(Q(x,t),\nabla f(Q(x,t)).
 \]
 It is obviously trivial to extrapolate the solution value within the domain to
 the boundary volumes (dark red to blue value in Figure
@@ -1965,8 +1969,10 @@ my_solver.preprocess_reconstructed_patch_kernel = """
 
 
 
-\paragraph{Boundary-aligned geometries}
-
+\paragraph{Boundary-aligned non-cubic geometries}
+%
+%
+%
 \ExaHyPE's mesh is topologically Cartesian.
 That does not mean that you have to work in a Cartesian world.
 You can distort, squeeze, rotate the mesh locally as long as your mesh topology
@@ -1979,13 +1985,42 @@ Obviously, the actual boundary condition implementations then have to be adopted
 accordingly, too.
 
 
+\paragraph{Distinguishing different boundary types}
+%
+%
+%
+Some solvers require different boundary conditions in different areas. 
+We distinguish two different paradigms to realise this:
+\begin{enumerate}
+  \item compute boundary type on-the-fly;
+  \item map boundary type onto marker.
+\end{enumerate} 
+
+
+\noindent
+Each boundary condition callback is supplemented with spatial data (aka
+geometry) and time step.
+These two ingredients allow you to compute the boundary type \emph{on the fly}: 
+Whenever the boundary data routine is invoked, you read out the coordinate of
+the boundary face, and then you decide which boundary condition to apply.
+After all, the realisation of the boundary is totally up to you in the call
+back, i.e.~you can have multiple ifs or a case distinction via a switch.
+
+
+If these case distinctions are something you want to avoid---as the geometry
+checks are too expensive or for other reasons---you can introduce a
+\emph{boundary marker}.
+\ExaHyPE\ does not have genuine markers, but it does have material parameters.
+Add an additional material parameter in your solver setup, and initialise this
+parameter with an integer constant which represents your boundary type. 
+When the actual boundary routine is invoked, the inner degree of freedom will
+contain this material parameter, i.e.~you can read it out and make your boundary
+realisation depend upon its value.
 
 
 
 
-
-
-\subsection{Interpolation and restriction schemes}
+\section{Interpolation and restriction schemes for Finite Volumes}
 \label{section:exahype:finite-volumes:interpolation-schemes}
 
 If you employ adaptive mesh refinement, you have to project coarser resolutions
