@@ -14,17 +14,21 @@ void applications::exahype2::CompressibleNavierStokes::NavierStokesFV::initialCo
   // @todo Implement your stuff here, but ensure all entries are
   //   initialised incl all auxiliary variables. The snippet below
   //   sets everything to zero
-  for (int i = 0; i < NumberOfUnknowns + NumberOfAuxiliaryVariables; i++)
-  {
-    Q[i] = 0.0;
-  }
 
-  logTraceOut("initialCondition(...)");
+  const double gamma = 1.4;
+  const double p = 100 / gamma;                                      // pressure
+  Q[0] = 1.0;                                                        // density
+  Q[1] = 0.0;                                                        // x-momentum
+  Q[2] = 0.0;                                                        // y-momentum
+  Q[3] = p / (gamma - 1) + 0.5 * (Q[1] * Q[1] + Q[2] * Q[2]) / Q[0]; // energy
+  Q[4] = 1e-4;                                                       // viscosity of fluid
+  Q[5] = 0.7                                                         // prandtl number
+      logTraceOut("initialCondition(...)");
 }
 
 void applications::exahype2::CompressibleNavierStokes::NavierStokesFV::boundaryConditions(
-    const double *__restrict__ Qinside, // Qinside[4+0]
-    double *__restrict__ Qoutside,      // Qoutside[4+0]
+    const double *__restrict__ Qinside, // Qinside[4+1]
+    double *__restrict__ Qoutside,      // Qoutside[4+1]
     const tarch::la::Vector<Dimensions, double> &faceCentre,
     const tarch::la::Vector<Dimensions, double> &volumeH,
     double t,
@@ -32,11 +36,23 @@ void applications::exahype2::CompressibleNavierStokes::NavierStokesFV::boundaryC
 {
   logTraceInWith4Arguments("boundaryConditions(...)", faceCentre, volumeH, t, normal);
   // @todo implement
+  const double 
+  Qoutside[0] = Qinside[0];
+  if (faceCentre == 1.0)
+  {
+    Qoutside[1] = 1.0;
+  }
+  else
+  {
+    Qoutside[1] = Qinside[1];
+  }
+  Qoutside[2] = Qinside[2];
+  Qoutside[3] = Qinside[3];
   logTraceOut("boundaryConditions(...)");
 }
 
 double ::applications::exahype2::CompressibleNavierStokes::NavierStokesFV::maxEigenvalue(
-    const double *__restrict__ Q, // Q[4+0],
+    const double *__restrict__ Q, // Q[4+1],
     const tarch::la::Vector<Dimensions, double> &faceCentre,
     const tarch::la::Vector<Dimensions, double> &volumeH,
     double t,
@@ -45,14 +61,17 @@ double ::applications::exahype2::CompressibleNavierStokes::NavierStokesFV::maxEi
 {
   logTraceInWith4Arguments("maxEigenvalue(...)", faceCentre, volumeH, t, normal);
   const double gamma = 1.4;
-  double p = (gamma - 1) * (Q[3] - 0.5 * (Q[1] * Q[1] + Q[2] * Q[2]) / Q[0]);
-  double c = std::sqrt(gamma * p / Q[0]);
+  const double p = (gamma - 1) * (Q[3] - 0.5 * (Q[1] * Q[1] + Q[2] * Q[2]) / Q[0]);    // pressure
+  const double c = std::sqrt(gamma * p / Q[0]);                                        // speed of sound
+  const double lambda_c = std::abs(Q[1 + normal] / Q[0]) + c;                          // max convective eigenvalue
+  const double lambda_v = std::max(4 / 3 * Q[4] / Q[0], gamma * Q[4] / (Q[5] * Q[0])); // max viscous eigenvalue
+
   logTraceOut("maxEigenvalue(...)");
-  return std::abs(Q[1 + normal] / Q[0]) + c;
+  return std::max(lambda_c, lambda_v);
 }
 
 void ::applications::exahype2::CompressibleNavierStokes::NavierStokesFV::flux(
-    const double *__restrict__ Q, // Q[4+0],
+    const double *__restrict__ Q, // Q[4+1],
     const tarch::la::Vector<Dimensions, double> &faceCentre,
     const tarch::la::Vector<Dimensions, double> &volumeH,
     double t,
@@ -64,7 +83,10 @@ void ::applications::exahype2::CompressibleNavierStokes::NavierStokesFV::flux(
   logTraceInWith4Arguments("flux(...)", faceCentre, volumeH, t, normal);
   const double gamma = 1.4;
   double p = (gamma - 1) * (Q[3] - 0.5 * (Q[1] * Q[1] + Q[2] * Q[2]) / Q[0]);
+
   F[0] = Q[1 + normal];
+  F[3] = Q[1 + normal] * (Q[3] + p) / Q[0];
+
   if (normal == 0)
   {
     F[1] = Q[1] * Q[1] / Q[0] + p;
@@ -75,13 +97,13 @@ void ::applications::exahype2::CompressibleNavierStokes::NavierStokesFV::flux(
     F[1] = Q[1] * Q[2] / Q[0];
     F[2] = Q[2] * Q[2] / Q[0] + p;
   }
-  F[3] = Q[1 + normal] * (Q[3] + p) / Q[0];
+
   logTraceOut("flux(...)");
 }
 
 void ::applications::exahype2::CompressibleNavierStokes::NavierStokesFV::nonconservativeProduct(
-    const double *__restrict__ Q,      // Q[4+0],
-    const double *__restrict__ deltaQ, // deltaQ[4+0]
+    const double *__restrict__ Q,      // Q[4+1],
+    const double *__restrict__ deltaQ, // deltaQ[4+1]
     const tarch::la::Vector<Dimensions, double> &faceCentre,
     const tarch::la::Vector<Dimensions, double> &volumeH,
     double t,
@@ -91,12 +113,23 @@ void ::applications::exahype2::CompressibleNavierStokes::NavierStokesFV::noncons
 )
 {
   logTraceInWith4Arguments("nonconservativeProduct(...)", faceCentre, volumeH, t, normal);
-  // @todo implement
+  if (normal == 0)
+  {
+    BTimesDeltaQ[1] = Q[4] * (2.0 / 3.0 * deltaQ[2] - 2 * deltaQ[2]) / Q[0]; // mu{2/3(du/dx)-2(du/dx)}
+    BTimesDeltaQ[2] = -Q[4] * (deltaQ[4] + deltaQ[3]) / Q[0];                // mu{dv/dx + du/dy}
+  }
+  else
+  {
+    BTimesDeltaQ[1] = -Q[4] * (deltaQ[4] + deltaQ[3]) / Q[0];                // mu{dv/dx + du/dy}
+    BTimesDeltaQ[2] = Q[4] * (2.0 / 3.0 * deltaQ[5] - 2 * deltaQ[5]) / Q[0]; // mu{2/3(dv/dy)-2(dv/dy)}
+  }
+  BTimesDeltaQ[0] = 0;
+  BTimesDeltaQ[3] = Q[1] / Q[0] * BTimesDeltaQ[1] + Q[2] / Q[0] * BTimesDeltaQ[2];
   logTraceOut("nonconservativeProduct(...)");
 }
 
 void ::applications::exahype2::CompressibleNavierStokes::NavierStokesFV::sourceTerm(
-    const double *__restrict__ Q, // Q[4+0]
+    const double *__restrict__ Q, // Q[4+1]
     const tarch::la::Vector<Dimensions, double> &volumeX,
     const tarch::la::Vector<Dimensions, double> &volumeH,
     double t,
