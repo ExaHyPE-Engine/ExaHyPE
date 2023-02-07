@@ -62,6 +62,15 @@ class CellCenteredFiniteDifferences(object):
                     0.0,0.0,0.0,0.0,1.0
             };" "" )
 
+    ## Reduce memory movements
+
+    You can switch for individual fields to a heap-based scheme by changing 
+    the generator:
+    
+           self._patch.generator        = peano4.datamodel.PatchToDoubleArrayOnHeap(self._patch,           "double")
+           self._patch._patch_estimates = peano4.datamodel.PatchToDoubleArrayOnHeap(self._patch_estimates, "double")
+
+    Alternatively, use the switch_to_heap_storage() routine.
 
   """
   
@@ -324,6 +333,7 @@ The finest mesh width of """ + str(self.get_finest_volume_size(domain_size)) + "
      specialised) run through all create_data_structure() variants 
      within the inheritance tree.
      
+     
      :: Arguments
      
      _patch: Patch (NxNxN)
@@ -370,7 +380,7 @@ The finest mesh width of """ + str(self.get_finest_volume_size(domain_size)) + "
    
     self._patch.generator.store_persistent_condition = self._store_cell_data_default_guard()
     self._patch.generator.load_persistent_condition  = self._load_cell_data_default_guard()
-    
+
     self._patch_estimates.generator.store_persistent_condition = self._store_cell_data_default_guard()
     self._patch_estimates.generator.load_persistent_condition  = self._load_cell_data_default_guard()
 
@@ -450,6 +460,15 @@ The finest mesh width of """ + str(self.get_finest_volume_size(domain_size)) + "
      scheme. Therefore, I have to hold the interpolation and restriction
      scheme seperatae.
      
+     :: Injecting your own guards
+     
+     If you inject your own guards, you should combine them with a storage
+     predicate, i.e. _store_cell_data_default_guard() and 
+     _load_cell_data_default_guard(). The action sets themselves will not
+     combine the guard with further boolean expressions. Also, you have to 
+     study carefully if a predicate accepts a unique guard or a set of 
+     guards.
+     
     """
     self._action_set_initial_conditions                          = exahype2.solvers.rkfd.actionsets.InitialCondition(self, self._store_cell_data_default_guard(), "true" )
     self._action_set_initial_conditions_for_grid_construction    = exahype2.solvers.rkfd.actionsets.InitialCondition(self, self._store_cell_data_default_guard(), "false")
@@ -457,7 +476,7 @@ The finest mesh width of """ + str(self.get_finest_volume_size(domain_size)) + "
     self._action_set_AMR_commit_without_further_analysis         = exahype2.solvers.rkfd.actionsets.AdaptivityCriterion(solver=self, guard=self._store_cell_data_default_guard(), build_up_new_refinement_instructions=False, implement_previous_refinement_instructions=True )
     self._action_set_handle_boundary                             = exahype2.solvers.rkfd.actionsets.HandleBoundary(self, self._store_face_data_default_guard())
     self._action_set_project_patch_onto_faces                    = exahype2.solvers.rkfd.actionsets.ProjectPatchOntoFaces(self)
-    self._action_set_roll_over_update_of_faces                   = exahype2.solvers.rkfd.actionsets.RollOverUpdatedFace(self, self._store_face_data_default_guard() )
+    self._action_set_roll_over_update_of_faces                   = exahype2.solvers.rkfd.actionsets.RollOverUpdatedFace(self, self._store_face_data_default_guard())
     self._action_set_copy_new_faces_onto_old_faces               = peano4.toolbox.blockstructured.BackupPatchOverlap(self._patch_overlap_new, self._patch_overlap_old, False, self._store_face_data_default_guard(), self._get_default_includes())
     self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement = exahype2.solvers.rkfd.actionsets.DynamicAMR( solver=self, interpolation=self._interpolation, restriction=self._restriction )
 
@@ -1012,4 +1031,17 @@ The finest mesh width of """ + str(self.get_finest_volume_size(domain_size)) + "
     
     self.create_data_structures()
     self.create_action_sets()
+
+
+  def switch_to_heap_storage(self,
+                             hold_cell_data_on_heap_with_smart_pointer = True,
+                             hold_face_data_on_heap_with_smart_pointer = False
+                             ):
+    if hold_cell_data_on_heap_with_smart_pointer:
+      self._patch.generator           = peano4.datamodel.PatchToDoubleArrayOnHeap(self._patch,           "double")
+      self._patch_estimates.generator = peano4.datamodel.PatchToDoubleArrayOnHeap(self._patch_estimates, "double")
+    if hold_face_data_on_heap_with_smart_pointer:
+      self._patch_overlap_old.generator    = peano4.datamodel.PatchToDoubleArrayOnHeap(self._patch_overlap_old,    "double") 
+      self._patch_overlap_new.generator    = peano4.datamodel.PatchToDoubleArrayOnHeap(self._patch_overlap_new,    "double") 
+      self._patch_overlap_update.generator = peano4.datamodel.PatchToDoubleArrayOnHeap(self._patch_overlap_update, "double") 
 

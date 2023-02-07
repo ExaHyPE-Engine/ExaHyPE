@@ -26,7 +26,7 @@ double* tarch::allocateMemory(int size, MemoryLocation location) {
     case MemoryLocation::Heap:
       result = new (std::align_val_t(AlignmentOnHeap)) double[size];
       break;
-    case MemoryLocation::ManagedAcceleratorMemory:
+    case MemoryLocation::ManagedSharedAcceleratorDeviceMemory:
       #if defined(__NVCOMPILER_CUDA__)
       CHECK_CUDA_ERROR(cudaMallocManaged((void**)&result, size*sizeof(double)));
       #else
@@ -42,7 +42,7 @@ void tarch::freeMemory(double* data, MemoryLocation location) {
     case MemoryLocation::Heap:
       delete[] data;
       break;
-    case MemoryLocation::ManagedAcceleratorMemory:
+    case MemoryLocation::ManagedSharedAcceleratorDeviceMemory:
       #if defined(__NVCOMPILER_CUDA__)
       CHECK_CUDA_ERROR(cudaFree(data));
       #elif defined(UseAMD)

@@ -1,11 +1,17 @@
 #include "LoadBalancingConfiguration.h"
+#include "tarch/multicore/Core.h"
 
 
-exahype2::LoadBalancingConfiguration::LoadBalancingConfiguration( double loadBalancingQuality, int minSizeOfTree, int maxNumberOfTrees, int maxSizeOfDeployedRemoteMPITree ):
+exahype2::LoadBalancingConfiguration::LoadBalancingConfiguration(
+  double loadBalancingQuality,
+  int minSizeOfTree,
+  int maxNumberOfTreesThroughoutInitialDistribution,
+  int maxNumberOfTrees
+):
   _loadBalancingQuality(loadBalancingQuality),
   _minSizeOfTree(minSizeOfTree),
-  _maxNumberOfTrees(maxNumberOfTrees),
-  _maxSizeOfDeployedRemoteMPITree(maxSizeOfDeployedRemoteMPITree) {
+  _maxNumberOfTreesThroughoutInitialDistribution( maxNumberOfTreesThroughoutInitialDistribution ),
+  _maxNumberOfTrees( maxNumberOfTrees ) {
 }
 
 
@@ -17,13 +23,11 @@ bool exahype2::LoadBalancingConfiguration::makeSplitDependOnMemory(toolbox::load
 int exahype2::LoadBalancingConfiguration::getMaxLocalTreesPerRank(toolbox::loadbalancing::RecursiveSubdivision::State state) {
   if (
     state==toolbox::loadbalancing::RecursiveSubdivision::State::IntraRankDistribution
-    or
-    state==toolbox::loadbalancing::RecursiveSubdivision::State::IntraRankBalancing
   ) {
-    return _maxNumberOfTrees;
+    return _maxNumberOfTreesThroughoutInitialDistribution==UseNumberOfThreads ? tarch::multicore::Core::getInstance().getNumberOfThreads() : _maxNumberOfTreesThroughoutInitialDistribution;
   }
   else {
-    return std::numeric_limits<int>::max();
+    return _maxNumberOfTrees==UseNumberOfThreads ? tarch::multicore::Core::getInstance().getNumberOfThreads() : _maxNumberOfTrees;
   }
 }
 
@@ -35,29 +39,14 @@ double exahype2::LoadBalancingConfiguration::getWorstCaseBalancingRatio(toolbox:
 
 int exahype2::LoadBalancingConfiguration::getMinTreeSize(toolbox::loadbalancing::RecursiveSubdivision::State state) {
   if (
-    state==toolbox::loadbalancing::RecursiveSubdivision::State::InterRankBalancing
+    state==toolbox::loadbalancing::RecursiveSubdivision::State::InterRankDistribution
     or
-    state==toolbox::loadbalancing::RecursiveSubdivision::State::IntraRankBalancing
+    state==toolbox::loadbalancing::RecursiveSubdivision::State::IntraRankDistribution
   ) {
     return 0;
   }
   else {
     return _minSizeOfTree;
-  }
-}
-
-
-
-int exahype2::LoadBalancingConfiguration::getMaxTreeSize(toolbox::loadbalancing::RecursiveSubdivision::State state) {
-  if (
-    state==toolbox::loadbalancing::RecursiveSubdivision::State::InterRankDistribution
-    or
-    state==toolbox::loadbalancing::RecursiveSubdivision::State::IntraRankDistribution
-  ) {
-    return _maxSizeOfDeployedRemoteMPITree;
-  }
-  else {
-    return std::numeric_limits<int>::max();
   }
 }
 

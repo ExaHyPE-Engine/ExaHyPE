@@ -255,7 +255,8 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
     #endif
 
     /**
-     * Always holds.
+     * Holds after each time step but not while we are doing Runge Kutta
+     * sweeps or have only completed the primary sweep.
      */
     bool mayPlot() const override;
 

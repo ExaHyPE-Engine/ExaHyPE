@@ -16,11 +16,30 @@ namespace tarch {
 
 
 /**
+ * Backfill strategy with GPU offloading
+ *
  * This mapping holds back all tasks in the user-defined queues throughout the
- * BSP section, i.e. no tasks should become a native one at this time. It also
- * allows the code to fuse tasks immediately. After we've terminated the BSP
- * section, all pending tasks are mapped onto native ones (see case distinction
- * in realisation of getNumberOfTasksToHoldBack()).
+ * "active" BSP section, i.e. no tasks should become a native one directly when
+ * it is spawned. getNumberOfTasksToHoldBack() returns inf while one thread at
+ * least is still traversing its subdomain.
+ *
+ * If a thread becomes idle while others still traverse their domain, it
+ * processes tasks that have been spawned before. processPendingTasksWhileWaitingInBSPSection()
+ * consequently returns true.
+ *
+ * If we have more tasks than the given threshold in this phase of the
+ * computation, we deploy them to a GPU (see below). This behaviour is controlled
+ * via fuseTasksImmediatelyWhenSpawned(), i.e. it kicks in directly when we
+ * spawn the task and a set of tasks consequently might be deployed onto an
+ * accelerator while we still run through the mesh. Due to this check, idling
+ * threads throughout the mesh traversal will get the left-overs and compete
+ * with the actual spawns who grabs the big chunks and deploys them to the GPU.
+ *
+ * After all traversal tasks have joined again, we map the remaining tasks in our
+ * local queue all to native tasks.
+ *
+ *
+ * ## GPU strategy
  *
  * When we use the GPU, we always allow the code to fuse as many tasks as it
  * can, though we limited the minimum number of tasks to a hard-coded value.

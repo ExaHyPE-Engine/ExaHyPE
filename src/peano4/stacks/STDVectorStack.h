@@ -171,7 +171,13 @@ class peano4::stacks::STDVectorStack {
           return _size;
         }
 
-        T get(int index) {
+        const T& get(int index) const {
+          assertion2( index>=0, index, _size );
+          assertion2( index<_size, index, _size );
+          return _stack->_data[_baseElement+index];
+        }
+
+        T& get(int index) {
           assertion2( index>=0, index, _size );
           assertion2( index<_size, index, _size );
           return _stack->_data[_baseElement+index];
@@ -198,7 +204,7 @@ class peano4::stacks::STDVectorStack {
          */
         PushBlockStackView(int size, int base, peano4::stacks::STDVectorStack<T>* stack):
           _size(size),
-		  _baseElement(base),
+          _baseElement(base),
           _stack(stack) {
         }
 
@@ -210,15 +216,42 @@ class peano4::stacks::STDVectorStack {
           return _size;
         }
 
-        /**
-         * @return Pointer to element set
-         */
+
         T* set(int index, const T& value) {
           assertion2( index>=0, index, _size );
           assertion2( index<_size, index, _size );
-          _stack->_data[_baseElement+index] = value;
+          _stack->_data[_baseElement+index] = std::move( value );
           return &(_stack->_data[_baseElement+index]);
         }
+
+
+        /**
+         * Overloaded version of set() with move semantics.
+         *
+         * But in Peano's context, we only need the move semantics logically,
+         * as we only migrate stuff over stacks. However, I already catch
+         * entries with references, therefore I cannot move those guys around.
+         * So I need the other set() flavour, too.
+         *
+         * It is not clear to me if the compiler will always pick the most
+         * efficient version.
+         *
+         * @return Pointer to element set
+         */
+        T* set(int index, T&& value) {
+          assertion2( index>=0, index, _size );
+          assertion2( index<_size, index, _size );
+          _stack->_data[_baseElement+index] = std::move( value );
+          return &(_stack->_data[_baseElement+index]);
+        }
+
+
+        const T& get(int index) const {
+          assertion2( index>=0, index, _size );
+          assertion2( index<_size, index, _size );
+          return _stack->_data[_baseElement+index];
+        }
+
 
         T& get(int index) {
           assertion2( index>=0, index, _size );
@@ -226,13 +259,6 @@ class peano4::stacks::STDVectorStack {
           return _stack->_data[_baseElement+index];
         }
 
-        #if PeanoDebug>=1
-        T get(int index) const {
-          assertion2( index>=0, index, _size );
-          assertion2( index<_size, index, _size );
-          return _stack->_data[_baseElement+index];
-        }
-        #endif
 
         std::string toString() const {
           std::ostringstream msg;
@@ -243,10 +269,32 @@ class peano4::stacks::STDVectorStack {
         }
     };
 
+
     /**
      * Pops element from a stack.
-     */
+     *
+     * I original implemented this routine with a plain move, i.e. as
+     *
+     * <pre>
     T pop() {
+      assertion1(_currentElement>0,_currentElement);
+      _currentElement--;
+      return std::move( _data[_currentElement] );
+    }
+       </pre>
+     *
+     * I put the move into this routine to highlight that we are actually
+     * moving stuff out of the container. However, this move is not required
+     * and, according to the C++ standard, degenerates to the identify here.
+     *
+     * I now try to work with a reference operator to avoid copying. Not sure if
+     * this makes a difference or is semantically admissible. The point is: In
+     * Peano, we never pop multiple times and then add again stuff: data are
+     * subsequentially popped and then pushed to another stack. So we can work
+     * with a reference here - notably as we work with a std::stack behind the
+     * scenes.
+     */
+    T& pop() {
       assertion1(_currentElement>0,_currentElement);
       _currentElement--;
       return _data[_currentElement];
@@ -264,6 +312,19 @@ class peano4::stacks::STDVectorStack {
       return _data[_currentElement-1-shift];
     }
 
+
+    /**
+     * Get top element or shiftth top element. We start to count with
+     * 0, i.e. a shift of 0 (default) really returns the top element.
+     * A shift of 3 returns the fourth element from the stack
+     */
+    const T& top(int shift=0) const {
+      assertion1(shift>=0,shift);
+      assertion2(_currentElement>shift, _currentElement, shift);
+      return _data[_currentElement-1-shift];
+    }
+
+
     /**
      * Pushes element to a stack.
      *
@@ -273,13 +334,30 @@ class peano4::stacks::STDVectorStack {
       assertion( _currentElement <= static_cast<int>(_data.size()) );
       if (_currentElement >= static_cast<int>(_data.size()) ) {
         assertion(_currentElement - static_cast<int>(_data.size()) <= 1 );
-        _data.push_back(element);
+        _data.push_back( std::move(element) );
       }
       else {
-        _data[_currentElement] = element;
+        _data[_currentElement] = std::move( element );
       }
       _currentElement++;
     }
+
+
+    /**
+     * We overload w.r.t. the move operator. This is allowed in C++.
+     */
+    void push( const T&& element ) {
+      assertion( _currentElement <= static_cast<int>(_data.size()) );
+      if (_currentElement >= static_cast<int>(_data.size()) ) {
+        assertion(_currentElement - static_cast<int>(_data.size()) <= 1 );
+        _data.push_back( std::move(element) );
+      }
+      else {
+        _data[_currentElement] = std::move(element);
+      }
+      _currentElement++;
+    }
+
 
     /**
      * This operation grabs numberOfElements from the input stack en block and

@@ -165,10 +165,21 @@ class UpdateCell(ReconstructPatchAndApplyFunctor):
 """ + self._solver._get_default_includes() + self._solver.user_action_set_includes
 
 
+  def get_action_set_name(self):
+    """
+     
+     You should replicate this function in each subclass, so you get 
+     meaningful action set names (otherwise, it will be 
+     AbstractRKFDActionSet0,1,2,...).
+     
+    """
+    return __name__.replace(".py", "").replace(".", "_") + "_UpdateCell"
 
 
 
-class OneSweepPerRungeKuttaStep( CellCenteredFiniteDifferences ):
+
+
+class SeparateSweeps( CellCenteredFiniteDifferences ):
   """
     Probably the simplest solver you could think off. 
     
@@ -191,18 +202,31 @@ class OneSweepPerRungeKuttaStep( CellCenteredFiniteDifferences ):
   """
 
 
-  def __init__(self, name, patch_size, overlap, rk_order, unknowns, auxiliary_variables, min_meshcell_h, max_meshcell_h, plot_grid_properties, kernel_namespace):
+  def __init__(self, 
+               name, 
+               patch_size, 
+               overlap, 
+               rk_order, 
+               unknowns, 
+               auxiliary_variables, 
+               min_meshcell_h, 
+               max_meshcell_h, 
+               plot_grid_properties, 
+               kernel_namespace
+               ):
     """
 
       Instantiate a generic FV scheme with an overlap of 1.
 
     """
-    super(OneSweepPerRungeKuttaStep, self).__init__(name, patch_size, overlap, rk_order, unknowns, auxiliary_variables, min_meshcell_h, max_meshcell_h, plot_grid_properties, kernel_namespace)
+    self._rk_order = rk_order
+    
+    super(SeparateSweeps, self).__init__(name, patch_size, overlap, rk_order, unknowns, auxiliary_variables, min_meshcell_h, max_meshcell_h, plot_grid_properties, kernel_namespace)
     
     if rk_order<1:
       raise Exception( "Runge-Kutta order has to be at least 1 but was {}".format(rk_order) )
 
-    self._solver_template_file_class_name     = "OneSweepPerRungeKuttaStep"
+    self._solver_template_file_class_name     = "SeparateSweeps"
 
     self._flux_implementation                 = PDETerms.None_Implementation
     self._ncp_implementation                  = PDETerms.None_Implementation
@@ -226,21 +250,55 @@ class OneSweepPerRungeKuttaStep( CellCenteredFiniteDifferences ):
      initialisation sweep and the first first grid run-through.
     
     """
-    super(OneSweepPerRungeKuttaStep, self).create_data_structures()
+    super(SeparateSweeps, self).create_data_structures()
 
-    initialisation_sweep_guard = "(" + \
-      "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::GridInitialisation" + \
-      ")"
-    first_iteration_after_initialisation_guard = "(" + \
-      "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::RungeKuttaSubStep0AfterGridInitialisation or " + \
-      "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::PlottingAfterGridInitialisation" + \
-    ")"
+    initialisation_sweep_guard = """(
+      repositories::{}.getSolverState()=={}::SolverState::GridInitialisation
+    )""".format(
+      self.get_name_of_global_instance(), self._name
+    )
+    first_iteration_after_initialisation_guard = """(
+      repositories::{}.getSolverState()=={}::SolverState::RungeKuttaSubStep0AfterGridInitialisation or
+      repositories::{}.getSolverState()=={}::SolverState::PlottingAfterGridInitialisation
+    )""".format(
+      self.get_name_of_global_instance(), self._name,
+      self.get_name_of_global_instance(), self._name,
+    )
 
     self._patch_overlap_new.generator.send_condition               = "true"
     self._patch_overlap_new.generator.receive_and_merge_condition  = "true"
 
     self._patch_overlap_old.generator.send_condition               = initialisation_sweep_guard
     self._patch_overlap_old.generator.receive_and_merge_condition  = first_iteration_after_initialisation_guard
+
+    first_sweep_of_time_step_or_plotting_guard = """(
+      repositories::{}.getSolverState()=={}::SolverState::RungeKuttaSubStep0AfterGridInitialisation or
+      repositories::{}.getSolverState()=={}::SolverState::RungeKuttaSubStep0 or
+      repositories::{}.getSolverState()=={}::SolverState::PlottingAfterGridInitialisation or
+      repositories::{}.getSolverState()=={}::SolverState::Plotting
+    )""".format(
+      self.get_name_of_global_instance(), self._name,
+      self.get_name_of_global_instance(), self._name,
+      self.get_name_of_global_instance(), self._name,
+      self.get_name_of_global_instance(), self._name,
+    )
+
+    last_sweep_of_time_step_or_plotting_initialisation = """(
+      repositories::{}.getSolverState()=={}::SolverState::GridInitialisation or
+      repositories::{}.getSolverState()=={}::SolverState::RungeKuttaSubStep{} or
+      repositories::{}.getSolverState()=={}::SolverState::PlottingAfterGridInitialisation or
+      repositories::{}.getSolverState()=={}::SolverState::Plotting
+    )""".format(
+      self.get_name_of_global_instance(), self._name,
+      self.get_name_of_global_instance(), self._name, self.number_of_Runge_Kutta_steps()-1,
+      self.get_name_of_global_instance(), self._name,
+      self.get_name_of_global_instance(), self._name,
+    )
+
+    self._patch_estimates.generator.store_persistent_condition = self._store_cell_data_default_guard() + """
+      and not (""" + last_sweep_of_time_step_or_plotting_initialisation + ")"
+    self._patch_estimates.generator.load_persistent_condition  = self._load_cell_data_default_guard() + """
+      and not (""" + first_sweep_of_time_step_or_plotting_guard + ")"   
 
             
   def create_action_sets(self):
@@ -251,8 +309,11 @@ class OneSweepPerRungeKuttaStep( CellCenteredFiniteDifferences ):
       
       This operation is implicity called via the superconstructor.
       
+      Each guard here should combine the storage predicate with the 
+      actual solver phase.
+      
     """
-    super(OneSweepPerRungeKuttaStep, self).create_action_sets()
+    super(SeparateSweeps, self).create_action_sets()
     self._action_set_update_cell = UpdateCell(self)
     self._action_set_compute_final_linear_combination.guard = self._store_cell_data_default_guard() + " and repositories::{}.getSolverState()=={}::SolverState::RungeKuttaSubStep{}".format(self.get_name_of_global_instance(),self._name,self.number_of_Runge_Kutta_steps()-1)
     self._action_set_project_patch_onto_faces.guards        = [
@@ -264,7 +325,7 @@ class OneSweepPerRungeKuttaStep( CellCenteredFiniteDifferences ):
   def user_action_set_includes(self):
     return """
 #include "exahype2/CellData.h"
-""" + super(OneSweepPerRungeKuttaStep, self).user_action_set_includes
+""" + super(SeparateSweeps, self).user_action_set_includes
 
 
   def set_implementation(self,
@@ -300,7 +361,7 @@ class OneSweepPerRungeKuttaStep( CellCenteredFiniteDifferences ):
     
     if self._reconstructed_array_memory_location==peano4.toolbox.blockstructured.ReconstructedArrayMemoryLocation.HeapThroughTarchWithoutDelete or \
        self._reconstructed_array_memory_location==peano4.toolbox.blockstructured.ReconstructedArrayMemoryLocation.HeapWithoutDelete or \
-       self._reconstructed_array_memory_location==peano4.toolbox.blockstructured.ReconstructedArrayMemoryLocation.AcceleratorWithoutDelete:
+       self._reconstructed_array_memory_location==peano4.toolbox.blockstructured.ReconstructedArrayMemoryLocation.ManagedSharedAcceleratorDeviceMemoryThroughTarchWithoutDelete:
       raise Exception( "memory mode without appropriate delete chosen, i.e. this will lead to a memory leak" )
 
     self._user_action_set_includes += additional_action_set_includes
@@ -309,10 +370,12 @@ class OneSweepPerRungeKuttaStep( CellCenteredFiniteDifferences ):
     self.create_action_sets()
 
 
+
   def add_entries_to_text_replacement_dictionary(self,d):
     """
      d: Dictionary of string to string
         in/out argument
     """
     pass
+
 
