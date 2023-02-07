@@ -22,8 +22,8 @@ void applications::exahype2::CompressibleNavierStokes::NavierStokesFV::initialCo
   Q[2] = 0.0;                                                        // y-momentum
   Q[3] = p / (gamma - 1) + 0.5 * (Q[1] * Q[1] + Q[2] * Q[2]) / Q[0]; // energy
   Q[4] = 1e-4;                                                       // viscosity of fluid
-  Q[5] = 0.7                                                         // prandtl number
-      logTraceOut("initialCondition(...)");
+  Q[5] = 0.7;                                                        // prandtl number
+  logTraceOut("initialCondition(...)");
 }
 
 void applications::exahype2::CompressibleNavierStokes::NavierStokesFV::boundaryConditions(
@@ -36,11 +36,11 @@ void applications::exahype2::CompressibleNavierStokes::NavierStokesFV::boundaryC
 {
   logTraceInWith4Arguments("boundaryConditions(...)", faceCentre, volumeH, t, normal);
   // @todo implement
-  const double 
+  const double wall_velocity = 1.0;
   Qoutside[0] = Qinside[0];
-  if (faceCentre == 1.0)
+  if (faceCentre[0] >= 0.8)
   {
-    Qoutside[1] = 1.0;
+    Qoutside[1] = 2.0 * wall_velocity * Qinside[0] - Qinside[1];
   }
   else
   {
@@ -65,7 +65,7 @@ double ::applications::exahype2::CompressibleNavierStokes::NavierStokesFV::maxEi
   const double c = std::sqrt(gamma * p / Q[0]);                                        // speed of sound
   const double lambda_c = std::abs(Q[1 + normal] / Q[0]) + c;                          // max convective eigenvalue
   const double lambda_v = std::max(4 / 3 * Q[4] / Q[0], gamma * Q[4] / (Q[5] * Q[0])); // max viscous eigenvalue
-
+  
   logTraceOut("maxEigenvalue(...)");
   return std::max(lambda_c, lambda_v);
 }
@@ -128,22 +128,22 @@ void ::applications::exahype2::CompressibleNavierStokes::NavierStokesFV::noncons
   logTraceOut("nonconservativeProduct(...)");
 }
 
-void ::applications::exahype2::CompressibleNavierStokes::NavierStokesFV::sourceTerm(
-    const double *__restrict__ Q, // Q[4+1]
-    const tarch::la::Vector<Dimensions, double> &volumeX,
-    const tarch::la::Vector<Dimensions, double> &volumeH,
-    double t,
-    double dt,
-    double *__restrict__ S // S[4]
-)
-{
-  logTraceInWith4Arguments("sourceTerm(...)", volumeX, volumeH, t, dt);
+// void ::applications::exahype2::CompressibleNavierStokes::NavierStokesFV::sourceTerm(
+//     const double *__restrict__ Q, // Q[4+1]
+//     const tarch::la::Vector<Dimensions, double> &volumeX,
+//     const tarch::la::Vector<Dimensions, double> &volumeH,
+//     double t,
+//     double dt,
+//     double *__restrict__ S // S[4]
+// )
+// {
+//   logTraceInWith4Arguments("sourceTerm(...)", volumeX, volumeH, t, dt);
 
-  // @todo implement and ensure that all entries of S are properly set
-  for (int i = 0; i < NumberOfUnknowns; i++)
-  {
-    S[i] = 0.0;
-  }
+//   // @todo implement and ensure that all entries of S are properly set
+//   for (int i = 0; i < NumberOfUnknowns; i++)
+//   {
+//     S[i] = 0.0;
+//   }
 
-  logTraceOut("sourceTerm(...)");
-}
+//   logTraceOut("sourceTerm(...)");
+//}

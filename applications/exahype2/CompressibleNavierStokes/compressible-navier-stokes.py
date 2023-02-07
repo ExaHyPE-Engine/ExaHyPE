@@ -20,46 +20,18 @@ thesolver = exahype2.solvers.fv.rusanov.GlobalAdaptiveTimeStep(
   mesh_size,
   time_step_relaxation = 0.01,
   flux = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
-  source_term = exahype2.solvers.fv.PDETerms.User_Defined_Implementation, 
+  #source_term = exahype2.solvers.fv.PDETerms.User_Defined_Implementation, 
   eigenvalues = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
   ncp = exahype2.solvers.fv.PDETerms.User_Defined_Implementation
 )
 
 project.add_solver( thesolver )
 
-# tracer_particles = project.add_tracer( name="Tracer", attribute_count=3 )
-# project.add_action_set_to_initialisation( 
-#   exahype2.tracer.InsertParticlesByCoordinates( 
-#     particle_set=tracer_particles, coordinates=[[0.2,0.2]]))
-# project.add_action_set_to_timestepping(
-#   peano4.toolbox.particles.UpdateParallelState(
-#     particle_set=tracer_particles
-#   )
-# )
-# project.add_action_set_to_timestepping(
-#   exahype2.tracer.FiniteVolumesTracing(
-#     tracer_particles, 
-#     thesolver, 
-#     time_stepping_kernel="toolbox::particles::staticPosition",
-#     project_on_tracer_properties_kernel="::exahype2::fv::projectAllValuesOntoParticle_piecewiseLinear"
-#   )
-# )
-
-# project.add_action_set_to_timestepping(
-#   exahype2.tracer.DumpTrajectoryIntoDatabase(
-#     particle_set=tracer_particles,
-#     solver=thesolver,
-#     filename="Tracer-" + solver_name,
-#     data_delta_between_two_snapsots=1e16,
-#     time_delta_between_two_snapsots=0.05
-#   )
-# )
-
 build_mode = peano4.output.CompileMode.Release
 project.set_global_simulation_parameters(
   dimensions = dimensions,
   offset = [0.0,0.0],
-  size = [10.0,10.0],
+  size = [1.0,1.0],
   min_end_time = 5.0,
   max_end_time = 5.0,
   first_plot_time_stamp = 0.0,
