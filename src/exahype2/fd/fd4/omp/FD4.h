@@ -7,7 +7,7 @@
 #include "exahype2/CellData.h"
 
 
-#include "KernelVariants.h"
+#include "../KernelVariants.h"
 
 
 namespace exahype2 {
@@ -22,7 +22,7 @@ namespace exahype2 {
           int                     auxiliaryVariables,
           typename TempDataEnumerator
         >
-        static void timeStep_patchwise_taskgroup_static_calls(
+        static void timeStep_batched_heap_multicore_static_calls(
           ::exahype2::CellData&   patchData,
           double                  KOSigma,
           bool                    evaluateFlux,
@@ -41,4 +41,4 @@ namespace exahype2 {
 }
 
 
-#include "FD4_patchwise_taskgroup_static_calls.cpph"
+#include "FD4_batched_static_calls.cpph"

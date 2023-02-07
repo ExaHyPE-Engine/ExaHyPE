@@ -100,8 +100,8 @@ class GlobalAdaptiveTimeStepWithEnclaveTasking( SeparateSweepsWithEnclaveTasking
       self._ncp_implementation, 
       self._source_term_implementation, 
       compute_max_eigenvalue_of_next_time_step = True,
-      solver_variant                           = SolverVariant.Stateless,
-      #solver_variant                           = SolverVariant.Multicore,
+      #solver_variant                           = SolverVariant.Stateless,
+      solver_variant                           = SolverVariant.Multicore,
       kernel_variant                           = KernelVariant.BatchedAoSHeap,
       KOSigma                                  = self._KO_Sigma
     )

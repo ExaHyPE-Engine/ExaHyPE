@@ -765,3 +765,44 @@ void exahype2::fd::fd4::timeStep_batched_heap_static_calls(
   if (tempKODissipationY!=nullptr)          tarch::freeMemory(tempKODissipationY, tarch::MemoryLocation::Heap);
   if (tempKODissipationZ!=nullptr)          tarch::freeMemory(tempKODissipationZ, tarch::MemoryLocation::Heap);
 }
+
+
+
+template <
+  typename Solver,
+  int                     numberOfGridCellsPerPatchPerAxis,
+  int                     haloSize,
+  int                     unknowns,
+  int                     auxiliaryVariables,
+  typename TempDataEnumerator
+>
+static void exahype2::fd::fd4::timeStep_batched_heap_multicore_static_calls(
+  ::exahype2::CellData&   patchData,
+  double                  KOSigma,
+  bool                    evaluateFlux,
+  bool                    evaluateDifferentialSource, //for ncp
+  bool                    evaluateAlgebraicSource, //real source
+  bool                    copyOldTimeStepAndScaleWithTimeStepSize,
+  DifferentialSourceTermVariant variant
+) {
+  #if defined(SharedOMP)
+  ::exahype2::fd::fd4::omp::timeStep_batched_heap_multicore_static_calls<
+    Solver,
+    numberOfGridCellsPerPatchPerAxis,
+    haloSize,
+    unknowns,
+    auxiliaryVariables,
+    TempDataEnumerator
+  >(
+    patchData,
+    KOSigma,
+    evaluateFlux,
+    evaluateDifferentialSource, //for ncp
+    evaluateAlgebraicSource, //real source
+    copyOldTimeStepAndScaleWithTimeStepSize,
+    variant
+  );
+  #else
+  assertionMsg(false, "not implemented yet");
+  #endif
+}
