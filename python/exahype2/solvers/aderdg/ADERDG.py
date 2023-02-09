@@ -122,7 +122,7 @@ class ADERDG( object ):
     self._is_linear             = False
     self._polynomials           = Polynomials.Gauss_Legendre
     self._basis                 = GaussLegendreBasis(order+1)
-    self._use_kernel_generator  = False
+    self._use_kernel_generator  = True
     self._use_vectorized_PDE    = False
     self._architecture          = "noarch"
     self._use_CERK_Guess        = False
@@ -830,7 +830,7 @@ class ADERDG( object ):
   def add_kernel_optimizations(self,
     is_linear=False,
     polynomials=Polynomials.Gauss_Legendre,
-    use_kernel_generator=False,
+    use_kernel_generator=True,
     predictor_computation_precision="double",
     corrector_computation_precision="double",
     solution_persistent_storage_precision="double",
