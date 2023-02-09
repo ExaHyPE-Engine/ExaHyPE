@@ -105,6 +105,7 @@ void ::examples::exahype2::euler2D::euler2D::eigenvalues(
   lambda[0] = u-c;
   lambda[1] = u;
   lambda[2] = u+c;
+  lambda[3] = 0.0;
 
   logTraceOut( "eigenvalue(...)" );
 }
