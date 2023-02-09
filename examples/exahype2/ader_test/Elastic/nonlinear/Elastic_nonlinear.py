@@ -10,45 +10,51 @@ from exahype2.solvers.aderdg.ADERDG import ADERDG
 from exahype2.solvers.aderdg.SingleSweep import SingleSweep
 from exahype2.solvers.aderdg.ADERDG import Polynomials
 
-project = exahype2.Project( ["examples", "exahype2", "elastic"], "elastic", ".", executable="EL_LIN" )
+project = exahype2.Project( ["examples", "exahype2", "elastic"], "elastic", ".", executable="NL_EL" )
 
 #stability condition: CFL for Ader-DG
 # dt <= c*dx / (lambda_max*(2N+1)
 # cflAder = [ 1.0, 0.33, 0.17, 0.1, 0.069, 0.045, 0.038, 0.03, 0.02, 0.015]
 
-unknowns       = {"sigma": 6, "v": 3}
-auxiliary_variables = {"rho":1, "cp": 1, "cs": 1}
+unknowns       = {"sigma": 6, "v": 3} 
+auxiliary_variables = { "rho":1, "cp": 1, "cs": 1}
 
-max_h          = 0.3
+parser = argparse.ArgumentParser(description='ExaHyPE 2 - ADER testing script')
+parser.add_argument("-cs", "--cell-size",              dest="h",              type=float, default=0.3, help="Mesh size" )
+parser.add_argument("-d",  "--dim",                    dest="dim",            type=int, default=2, help="Dimensions" )
+args = parser.parse_args()
+
+max_h          = args.h
 min_h          = 0.9 * max_h / 3.0
+time_step_size=0.00001
 
 theSolver=GlobalFixedTimeStep(
-  name="elastic",  order=5,
+  name="elastic",  order=3,
   unknowns=unknowns, auxiliary_variables=auxiliary_variables,
-  min_cell_h=min_h, max_cell_h=max_h, time_step_size=0.0001,
+  min_cell_h=min_h, max_cell_h=max_h, time_step_size=time_step_size,
   flux=exahype2.solvers.aderdg.PDETerms.User_Defined_Implementation,
-  ncp=exahype2.solvers.aderdg.PDETerms.User_Defined_Implementation)
+  ncp=exahype2.solvers.aderdg.PDETerms.User_Defined_Implementation,
+  )
 
 theSolver.set_implementation( refinement_criterion=exahype2.solvers.aderdg.PDETerms.User_Defined_Implementation)
-theSolver.add_kernel_optimizations(is_linear=True,use_kernel_generator=True,architecture="noarch")
+theSolver.add_kernel_optimizations(is_linear=False,use_kernel_generator=True,architecture="noarch")
 
 project.add_solver(theSolver)
 
-dimensions = 3
+dimensions = args.dim
 build_mode = peano4.output.CompileMode.Release
 
-offset = [0.0, 0.0, 0.0]
-size = [1.0,1.0,1.0]
+end_time = 2000*time_step_size
 
 project.set_global_simulation_parameters(
-  dimensions            = dimensions,
-  offset                = offset[0:dimensions],
-  size                  = size[0:dimensions],
-  min_end_time          = 0.15,
-  max_end_time          = 0.15,
+  dimensions = dimensions,
+  offset = [0.0,0.0,0.0][0:dimensions],
+  size = [1.0,1.0,1.0][0:dimensions],
+  min_end_time = end_time,
+  max_end_time = end_time,
   first_plot_time_stamp = 0.0,
-  time_in_between_plots = 0.01,
-  periodic_BC           = [False,False,False]
+  time_in_between_plots = 50*time_step_size,
+  periodic_BC = [False,False,False]
 )
 
 
