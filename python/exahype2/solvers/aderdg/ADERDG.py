@@ -7,8 +7,8 @@ import peano4.toolbox.blockstructured
 import peano4.datamodel
 import peano4.output
 import exahype2.grid
-import exahype2.solvers.new_ader.actionsets
-from exahype2.solvers.new_ader.LagrangeBasis import GaussLegendreBasis, GaussLobattoBasis
+import exahype2.solvers.aderdg.actionsets
+from exahype2.solvers.aderdg.LagrangeBasis import GaussLegendreBasis, GaussLobattoBasis
 from .PDETerms import PDETerms
 from .kernels import get_face_overlap_merge_implementation
 from .kernelgenerator import generate_aderdg_kernels, Configuration 
@@ -18,10 +18,10 @@ from abc import abstractmethod
 
 from enum import IntEnum
 import jinja2
-from exahype2.solvers.new_ader.actionsets.Prediction_generic import Prediction_generic
-from exahype2.solvers.new_ader.actionsets.Prediction_kernelgenerator import Prediction_kernelgenerator
-from exahype2.solvers.new_ader.actionsets.Correction_generic import Correction_generic
-from exahype2.solvers.new_ader.actionsets.Correction_kernelgenerator import Correction_kernelgenerator
+from exahype2.solvers.aderdg.actionsets.Prediction_generic import Prediction_generic
+from exahype2.solvers.aderdg.actionsets.Prediction_kernelgenerator import Prediction_kernelgenerator
+from exahype2.solvers.aderdg.actionsets.Correction_generic import Correction_generic
+from exahype2.solvers.aderdg.actionsets.Correction_kernelgenerator import Correction_kernelgenerator
 
 """
 used to have a central way for all of this class' descendants to differentiate between gauss-legendre
@@ -295,18 +295,18 @@ class ADERDG( object ):
   def create_action_sets(self):
 
     #sets initial conditions for the solution
-    self._action_set_initial_conditions = exahype2.solvers.new_ader.actionsets.InitialCondition(self, self._store_cell_data_default_guard(), "true" )
-    self._action_set_initial_conditions_for_grid_construction  = exahype2.solvers.new_ader.actionsets.InitialCondition(self, self._store_cell_data_default_guard(), "false")
+    self._action_set_initial_conditions = exahype2.solvers.aderdg.actionsets.InitialCondition(self, self._store_cell_data_default_guard(), "true" )
+    self._action_set_initial_conditions_for_grid_construction  = exahype2.solvers.aderdg.actionsets.InitialCondition(self, self._store_cell_data_default_guard(), "false")
 
-    self._action_set_handle_boundary = exahype2.solvers.new_ader.actionsets.Handle_boundary(self, self._store_boundary_data_default_guard())
+    self._action_set_handle_boundary = exahype2.solvers.aderdg.actionsets.Handle_boundary(self, self._store_boundary_data_default_guard())
     
     #handles adaptive mesh refinement
-    self._action_set_AMR = exahype2.solvers.new_ader.actionsets.AdaptivityCriterion(solver=self, guard=self._store_cell_data_default_guard(), build_up_new_refinement_instructions=True,  implement_previous_refinement_instructions=True )
-    self._action_set_AMR_commit_without_further_analysis  = exahype2.solvers.new_ader.actionsets.AdaptivityCriterion(solver=self, guard=self._store_cell_data_default_guard(), build_up_new_refinement_instructions=False, implement_previous_refinement_instructions=True )
+    self._action_set_AMR = exahype2.solvers.aderdg.actionsets.AdaptivityCriterion(solver=self, guard=self._store_cell_data_default_guard(), build_up_new_refinement_instructions=True,  implement_previous_refinement_instructions=True )
+    self._action_set_AMR_commit_without_further_analysis  = exahype2.solvers.aderdg.actionsets.AdaptivityCriterion(solver=self, guard=self._store_cell_data_default_guard(), build_up_new_refinement_instructions=False, implement_previous_refinement_instructions=True )
         
-    self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement = exahype2.solvers.new_ader.actionsets.DynamicAMR(solver=self, clear_guard=self._clear_face_data_default_guard(), interpolate_guard=self._interpolate_face_data_default_guard(), restrict_guard=self._restrict_face_data_default_guard())
+    self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement = exahype2.solvers.aderdg.actionsets.DynamicAMR(solver=self, clear_guard=self._clear_face_data_default_guard(), interpolate_guard=self._interpolate_face_data_default_guard(), restrict_guard=self._restrict_face_data_default_guard())
     if self._action_set_postprocess_solution==None:
-          self._action_set_postprocess_solution                                       = exahype2.solvers.new_ader.actionsets.EmptyPostprocessSolution(solver=self)
+          self._action_set_postprocess_solution                                       = exahype2.solvers.aderdg.actionsets.EmptyPostprocessSolution(solver=self)
 
     
     #updates faces and cells (whether at boundary, refined etc.)

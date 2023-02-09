@@ -1,6 +1,6 @@
 # This file is part of the ExaHyPE2 project. For conditions of distribution and 
 # use, please see the copyright notice at www.peano-framework.org
-from exahype2.solvers.new_ader.PDETerms  import PDETerms
+from exahype2.solvers.fv.PDETerms  import PDETerms
 
 import jinja2
 
@@ -91,8 +91,8 @@ def create_abstract_solver_declarations(flux_implementation, ncp_implementation,
     #pragma omp declare target
     #endif
     static void nonconservativeProduct(
-      const double * __restrict__ Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
-      const double * __restrict__             deltaQ, // [{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+      const double * __restrict__                  Q,    // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
+      const double * __restrict__                  dQdx, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
       const tarch::la::Vector<Dimensions,double>&  x,
       double                                       t,
       int                                          normal,
@@ -106,8 +106,8 @@ def create_abstract_solver_declarations(flux_implementation, ncp_implementation,
     
     {% if NCP_IMPLEMENTATION!="<none>" %}
     virtual void nonconservativeProduct(
-      const double * __restrict__ Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
-      const double * __restrict__             deltaQ, // [{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+      const double * __restrict__                  Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
+      const double * __restrict__                  dQdx, // [{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
       const tarch::la::Vector<Dimensions,double>&  x,
       double                                       t,
       int                                          normal,
@@ -129,7 +129,6 @@ def create_abstract_solver_declarations(flux_implementation, ncp_implementation,
       const double * __restrict__ Q,
       const tarch::la::Vector<Dimensions,double>&  x,
       double                                       t,
-      double                                       dt,
       double * __restrict__ S,
       Offloadable
     );
@@ -143,7 +142,6 @@ def create_abstract_solver_declarations(flux_implementation, ncp_implementation,
       const double * __restrict__ Q,
       const tarch::la::Vector<Dimensions,double>&  x,
       double                                       t,
-      double                                       dt,
       double * __restrict__ S
     ) {% if SOURCE_TERM_IMPLEMENTATION=="<user-defined>" %}= 0{% else %} final {% endif %};
     {% endif %}
@@ -181,7 +179,7 @@ def create_abstract_solver_declarations(flux_implementation, ncp_implementation,
       double * __restrict__ S
     ) {% if SOURCE_TERM_IMPLEMENTATION=="<user-defined>" %}= 0{% else %} final {% endif %};
     {% endif %}
-    """, undefined=jinja2.DebugUndefined)
+""", undefined=jinja2.DebugUndefined)
 
   d= {}
   d[ "FLUX_IMPLEMENTATION"]                 = flux_implementation
@@ -620,7 +618,6 @@ def create_solver_declarations(flux_implementation, ncp_implementation, eigenval
     #pragma omp end declare target
     #endif
     {% endif %}    
-    
 """, undefined=jinja2.DebugUndefined)
   d= {}
   d[ "FLUX_IMPLEMENTATION"]                 = flux_implementation
@@ -808,11 +805,58 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::sourceTerm(
   d[ "STATELESS_PDE_TERMS"]                 = pde_terms_without_state  
   return Template.render(**d)
 
+def create_compute_time_step_size_for_fixed_time_stepping():
+  """
+  
+  If you work with fixed time stepping, the computation of the next
+  time step size per cell or patch is trivial: You simply read out 
+  the solver. Therefore, this computation can trivially be a generic
+  one which is the same for all solver flavours.
+  
+  """
+  return """
+  const double timeStepSize = repositories::{{SOLVER_INSTANCE}}.getTimeStepSize();
+"""
 
-def create_abstract_solver_user_declarations_for_fixed_time_stepping():
+def create_finish_time_step_implementation_for_fixed_time_stepping(normalised_time_step_size):
+  return """
+  assertion( _minCellH >= 0.0 );
+  assertion( MaxAdmissibleCellH > 0.0 );
+  if (_minCellH <= MaxAdmissibleCellH) {
+    _timeStepSize  = """ + str(normalised_time_step_size) + """ * _minCellH;
+  }
+  else {
+    _timeStepSize = 0.0;
+  }
+"""
+
+def create_start_time_step_implementation_for_fixed_time_stepping():
+  """
+  
+  The outcome is used before we actually roll over the accumulation variables
+  and other stuff.
+  
+  """
+  return """
+  if (
+    tarch::mpi::Rank::getInstance().isGlobalMaster() 
+    and
+    _maxCellH>0.0
+    and
+    isLastGridSweepOfTimeStep()
+  ) {
+    logInfo( "step()", "Solver {{SOLVER_NAME}}:" );
+    logInfo( "step()", "t       = " << _minTimeStampThisTimeStep );
+    logInfo( "step()", "dt      = " << getTimeStepSize() );
+    logInfo( "step()", "h_{min} = " << _minCellHThisTimeStep );
+    logInfo( "step()", "h_{max} = " << _maxCellHThisTimeStep );
+  }
+"""
+
+def create_abstract_solver_user_declarations_for_fixed_time_stepping(timeStep):
   return """
 private:
-  double _timeStepSize;
+  double _timeStepSize =""" + str(timeStep) + """;
 public:
   double getTimeStepSize() const;  
     """  
@@ -823,179 +867,4 @@ def create_abstract_solver_user_definitions_for_fixed_time_stepping():
 double {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::getTimeStepSize() const {
   return _timeStepSize;
 }
-    """  
-
-
-def create_compute_time_step_size_for_fixed_time_stepping(_time_step_size):
-  return """
-  const double timeStepSize = """ +str(_time_step_size)
-
-def create_start_time_step_implementation_for_fixed_time_stepping(use_enclave_tasking):
-  """
-  
-  The outcome is used before we actually roll over the accumulation variables
-  and other stuff.
-  
-  """
-  predicate = """
-    tarch::mpi::Rank::getInstance().isGlobalMaster() 
-    and
-    _maxCellH>0.0
-  """
-  
-  if use_enclave_tasking:
-    predicate += """and (_solverState == SolverState::Primary or _solverState == SolverState::PrimaryAfterGridInitialisation) """
-      
-  return """
-  if (""" + predicate + """) {
-    logInfo( "step()", "Solver {{SOLVER_NAME}}:" );
-    logInfo( "step()", "t       = " << _minTimeStampThisTimeStep );
-    logInfo( "step()", "dt      = " << getTimeStepSize() );
-    logInfo( "step()", "h_{min} = " << _minCellHThisTimeStep << " (volume size)");
-    logInfo( "step()", "h_{max} = " << _maxCellHThisTimeStep<< " (volume size)" );
-  }
-"""
-
-def create_finish_time_step_implementation_for_fixed_time_stepping(normalised_time_step_size):
-  return """
-  assertion( _minCellH >= 0.0 );
-  assertion( MaxAdmissibleCellH > 0.0 );
-  if (_minCellH <= MaxAdmissibleCellH) {
-    _timeStepSize  = """ + str(normalised_time_step_size) + """ * _minCellH / MaxAdmissibleCellH;
-  }
-  else {
-    _timeStepSize = 0.0;
-  }
-"""
-
-
-def create_abstract_solver_user_declarations_for_adaptive_time_stepping():
-  return """
-private:
-  double _maxEigenvalue;
-  double _admissibleTimeStepSize;
-public:
-  void setMaxEigenvalue( double eigenvalue );  
-  /**
-   * @return Admissible time step size for the current sweep, i.e. 
-   *         return _admissibleTimeStepSize. This value always refers
-   *         to the minimum mesh volume size. If you use subcycling,
-   *         you have to scale it for cells that are not on the finest
-   *         mesh resolution. 
-   */
-  virtual double getAdmissibleTimeStepSize() const;  
-"""
-
-
-def create_abstract_solver_user_definitions_for_adaptive_time_stepping():
-  return """
-void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::setMaxEigenvalue( double eigenvalue ) {
-  if ( tarch::la::greater( eigenvalue, 0.0 ) ) {
-    tarch::multicore::Lock lock(_semaphore);
-    _maxEigenvalue = std::max(_maxEigenvalue,eigenvalue);
-  }
-}    
-
-
-double {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::getAdmissibleTimeStepSize() const {
-  return _admissibleTimeStepSize;
-}
-"""
-
-def create_compute_time_step_size_for_adaptive_time_stepping():
-  return """
-  double timeStepSize = repositories::{{SOLVER_INSTANCE}}.getAdmissibleTimeStepSize();
-"""
-
-def create_compute_new_time_step_size_for_adaptive_time_stepping():
-  return """
-  
-    double maxEigenvalue = kernels::aderdg::generic::c::maxScaledEigenvalue<
-      {{SOLVER_NAME}},
-      false //useViscousFlux
-      >(
-        repositories::{{SOLVER_INSTANCE}},
-        luh,
-        marker.x()
-      );
-
-    repositories::{{SOLVER_INSTANCE}}.setMaxEigenvalue( maxEigenvalue );  
-    
-    // This is a value set for stats reasons. We'll ignore it later as we 
-    // ask for a new valid time step size from getAdmissibleTimeStepSize().
-    //const double newTimeStepSize = 0.0;
-    const double newTimeStepSize =  repositories::{{SOLVER_INSTANCE}}.getMinCellSize(false)>0.0 ?
-      repositories::{{SOLVER_INSTANCE}}.getAdmissibleTimeStepSize() * marker.h()(0) / repositories::{{SOLVER_INSTANCE}}.getMinCellSize(false) :
-      0.0;
-
-"""
-
-def create_start_time_step_implementation_for_adaptive_time_stepping():
-  predicate = """
-    tarch::mpi::Rank::getInstance().isGlobalMaster() 
-    and
-    _maxCellH>0.0
-  """
-        
-  statistics = """
-  if (""" + predicate + """) {
-    logInfo( "startTimeStep()", "Solver {{SOLVER_NAME}}:" );
-    logInfo( "startTimeStep()", "t            = " << _minTimeStampThisTimeStep );
-    logInfo( "startTimeStep()", "dt           = " << getAdmissibleTimeStepSize() );
-    logInfo( "startTimeStep()", "h_{min}      = " << _minCellHThisTimeStep << " (volume size)");
-    logInfo( "startTimeStep()", "h_{max}      = " << _maxCellHThisTimeStep << " (volume size)" );
-    logInfo( "startTimeStep()", "lambda_{max} = " << _maxEigenvalue );
-  }
-"""
-    
-  clear_max_eigenvalue = """if (_solverState == SolverState::Correction) {
-  _maxEigenvalue = 0.0;
-}"""
-
-  return statistics + clear_max_eigenvalue
-
-def create_finish_time_step_implementation_for_adaptive_time_stepping():
-  """
-  
-  This routine is inserted after we have reduced all global quantities. These
-  are the quantities with the postfix ThisTimeStep.
-  
-  """ 
-  return """
-  #ifdef Parallel
-  double newMaxEigenvalue = _maxEigenvalue;
-  tarch::mpi::Rank::getInstance().allReduce(
-        &newMaxEigenvalue,
-        &_maxEigenvalue,
-        1,
-        MPI_DOUBLE,
-        MPI_MAX, 
-        [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); }
-        );
-  #endif
-
-  if (_solverState == SolverState::Correction) {  
-    if ( tarch::la::smaller(_maxEigenvalue, 0.0 ) ) {
-      ::exahype2::triggerNonCriticalAssertion( __FILE__, __LINE__, "_maxEigenvalue>=0", "invalid max eigenvalue: " + std::to_string(_maxEigenvalue) );
-      // keep time step size invariant
-      // _admissibleTimeStepSize = _admissibleTimeStepSize;
-    }
-    else if ( tarch::la::equals(_maxEigenvalue, 0.0 ) ) {
-      logWarning( "finishTimeStep(...)", "maximum eigenvalue approaches 0.0. For nonlinear PDEs, this often means the PDE becomes stationary. It could also be a bug however" ); 
-      _admissibleTimeStepSize = 0.0;
-    }
-    else {
-      const double minVolumeSize = _minCellHThisTimeStep;
-      _admissibleTimeStepSize = CFL * PNPM / _maxEigenvalue; //the max eigenvalue here is already scaled with the volume size
-      if ( std::isnan(_admissibleTimeStepSize) or std::isinf(_admissibleTimeStepSize) ) {
-        ::exahype2::triggerNonCriticalAssertion( __FILE__, __LINE__, "_admissibleTimeStepSize>0", "invalid (NaN of inf) time step size: " + std::to_string(_admissibleTimeStepSize) );
-      }
-      if (tarch::la::smallerEquals(_admissibleTimeStepSize,0.0,1e-10) ) {
-        logWarning( "finishTimeStep(...)", "degenerated time step size of " << std::to_string(_admissibleTimeStepSize) << ". Problem might be extremely stiff (and can't be solved) or there could be a bug (h_volume=" << minVolumeSize << ")" );
-      }
-    }
-  }
-"""
-
-def create_constructor_implementation_for_adaptive_time_stepping():
-  return "_admissibleTimeStepSize = 0.0;"
+    """

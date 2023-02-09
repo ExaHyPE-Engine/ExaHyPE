@@ -1,21 +1,21 @@
   # This file is part of the ExaHyPE2 project. For conditions of distribution and 
 # use, please see the copyright notice at www.peano-framework.org
-from exahype2.solvers.new_ader.ADERDG         import PrecisionType
-from exahype2.solvers.new_ader.SingleSweep    import SingleSweep
-from exahype2.solvers.new_ader.PDETerms       import PDETerms
+from exahype2.solvers.aderdg.ADERDG         import PrecisionType
+from exahype2.solvers.aderdg.SingleSweep    import SingleSweep
+from exahype2.solvers.aderdg.PDETerms       import PDETerms
 
-from exahype2.solvers.new_ader.kernels import create_abstract_solver_declarations
-from exahype2.solvers.new_ader.kernels import create_abstract_solver_definitions
-from exahype2.solvers.new_ader.kernels import create_solver_declarations
-from exahype2.solvers.new_ader.kernels import create_solver_definitions
+from exahype2.solvers.aderdg.kernels import create_abstract_solver_declarations
+from exahype2.solvers.aderdg.kernels import create_abstract_solver_definitions
+from exahype2.solvers.aderdg.kernels import create_solver_declarations
+from exahype2.solvers.aderdg.kernels import create_solver_definitions
 
-from exahype2.solvers.new_ader.kernels import create_abstract_solver_user_declarations_for_fixed_time_stepping
-from exahype2.solvers.new_ader.kernels import create_abstract_solver_user_definitions_for_fixed_time_stepping
+from exahype2.solvers.aderdg.kernels import create_abstract_solver_user_declarations_for_fixed_time_stepping
+from exahype2.solvers.aderdg.kernels import create_abstract_solver_user_definitions_for_fixed_time_stepping
 
-from exahype2.solvers.new_ader.kernels import create_compute_time_step_size_for_fixed_time_stepping
+from exahype2.solvers.aderdg.kernels import create_compute_time_step_size_for_fixed_time_stepping
 
-from exahype2.solvers.new_ader.kernels import create_finish_time_step_implementation_for_fixed_time_stepping
-from exahype2.solvers.new_ader.kernels import create_start_time_step_implementation_for_fixed_time_stepping
+from exahype2.solvers.aderdg.kernels import create_finish_time_step_implementation_for_fixed_time_stepping
+from exahype2.solvers.aderdg.kernels import create_start_time_step_implementation_for_fixed_time_stepping
 
 
 class GlobalFixedTimeStep( SingleSweep ):
