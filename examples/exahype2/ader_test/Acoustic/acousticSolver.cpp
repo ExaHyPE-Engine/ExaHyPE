@@ -1,38 +1,19 @@
-#include "ACOUSTIC.h"
+#include "acousticSolver.h"
 #include "exahype2/RefinementControl.h"
 
-
-tarch::logging::Log   examples::exahype2::acoustic::ACOUSTIC::_log( "examples::exahype2::acoustic::ACOUSTIC" );
-
+tarch::logging::Log   exahype2::acoustic::acousticSolver::_log( "exahype2::acoustic::acousticSolver" );
 
 
 
-::exahype2::RefinementCommand examples::exahype2::acoustic::ACOUSTIC::refinementCriterion(
+
+::exahype2::RefinementCommand exahype2::acoustic::acousticSolver::refinementCriterion(
   const double * __restrict__ Q,               // Q[4+0]
   const tarch::la::Vector<Dimensions,double>&  x,
 	const tarch::la::Vector<Dimensions,double>&  h,
   double                                       t
 ) {
 	logTraceInWith3Arguments( "refinementCriterion(...)", x, h, t );
-  ::exahype2::RefinementCommand result = ::exahype2::RefinementCommand::Keep;
 
-  // see comments in header file
-
-  logTraceOutWith1Argument( "refinementCriterion(...)", ::toString(result) );
-  return result;
-}
-
-
-
-
-void examples::exahype2::acoustic::ACOUSTIC::initialCondition(
-  double * __restrict__ Q,
-  const tarch::la::Vector<Dimensions,double>&  x,
-  const tarch::la::Vector<Dimensions,double>&  h,
-  const tarch::la::Vector<Dimensions,int>&     point,
-	bool                                         gridIsConstructred
-) {
-  logTraceInWith2Arguments( "initialCondition(...)", x, gridIsConstructred );
 
 #if Dimensions==2
   tarch::la::Vector<Dimensions,double> centre = {0.5,0.5,0.5};
@@ -42,10 +23,36 @@ void examples::exahype2::acoustic::ACOUSTIC::initialCondition(
 
   bool nearCentre = tarch::la::norm2(x-centre) < 0.05;
 
-  Q[0] = (nearCentre ? 0.1 : 0.0);
-  Q[1] = 0.0;
-  Q[2] = 0.0;
-  Q[3] = 0.0;
+  ::exahype2::RefinementCommand result = nearCentre ? ::exahype2::RefinementCommand::Refine : ::exahype2::RefinementCommand::Keep;
+
+  logTraceOutWith1Argument( "refinementCriterion(...)", ::toString(result) );
+  return result;
+}
+
+
+
+
+void exahype2::acoustic::acousticSolver::initialCondition(
+  double * __restrict__ Q, //Q[4+0]
+  const tarch::la::Vector<Dimensions,double>&  x,
+  const tarch::la::Vector<Dimensions,double>&  h,
+  const tarch::la::Vector<Dimensions,int>&     point,
+	bool                                         gridIsConstructed
+) {
+  logTraceInWith2Arguments( "initialCondition(...)", x, gridIsConstructed );
+
+#if Dimensions==2
+  tarch::la::Vector<Dimensions,double> centre = {0.5,0.5,0.5};
+#else
+  tarch::la::Vector<Dimensions,double> centre = {0.5,0.5,0.5};
+#endif
+
+  bool nearCentre = tarch::la::norm2(x-centre) < 0.05;
+
+  Q[0] = (nearCentre ? 0.1 : 0.0); //p
+  Q[1] = 0.0; //vx
+  Q[2] = 0.0; //vy
+  Q[3] = 0.0; //vz
 
   logTraceOut( "initialCondition(...)" );
 }
@@ -54,7 +61,7 @@ void examples::exahype2::acoustic::ACOUSTIC::initialCondition(
 
 
 
-void examples::exahype2::acoustic::ACOUSTIC::boundaryValues(
+void exahype2::acoustic::acousticSolver::boundaryValues(
     const double* const x,
     const double        t,
     const double        dt,
@@ -86,11 +93,10 @@ void examples::exahype2::acoustic::ACOUSTIC::boundaryValues(
 
   
 
-template<typename T>
-void ::examples::exahype2::acoustic::ACOUSTIC::eigenvalues(
-    const T* const Q, // Q[4+0]
+void ::exahype2::acoustic::acousticSolver::eigenvalues(
+    const double* const Q, // Q[4+0]
     const int direction,
-    T* const lambda
+    double* const lambda
   )  {
   logTraceInWith3Arguments( "eigenvalue(...)", x, t, normal );
 
@@ -105,10 +111,9 @@ void ::examples::exahype2::acoustic::ACOUSTIC::eigenvalues(
 
 
 
-template<typename T>
-void ::examples::exahype2::acoustic::ACOUSTIC::flux(
-  const T* const Q, // Q[4+0]
-  T** const F // F[Dimensions*4]
+void ::exahype2::acoustic::acousticSolver::flux(
+  const double* const Q, // Q[4+0]
+  double** const F // F[Dimensions*4]
 )  {
   logTraceIn( "flux(...)");
 
@@ -135,6 +140,9 @@ void ::examples::exahype2::acoustic::ACOUSTIC::flux(
 
   logTraceOut( "flux(...)" );
 }
+
+
+
 
 
 

@@ -1,52 +1,58 @@
 
 import peano4
 import exahype2
+import os
 
-import argparse
+import exahype2.solvers.aderdg
+from exahype2.solvers.aderdg.rusanov.GlobalFixedTimeStep import GlobalFixedTimeStep
+from exahype2.solvers.aderdg.ADERDG import ADERDG
+from exahype2.solvers.aderdg.SingleSweep import SingleSweep
+from exahype2.solvers.aderdg.ADERDG import Polynomials
 
-import exahype2.solvers.new_ader
-from exahype2.solvers.new_ader.rusanov.GlobalFixedTimeStep import GlobalFixedTimeStep
-from exahype2.solvers.new_ader.ADERDG import ADERDG, PrecisionType
-from exahype2.solvers.new_ader.SingleSweep import SingleSweep
-from exahype2.solvers.new_ader.ADERDG import Polynomials
+dimensions = 2
 
-project = exahype2.Project( ["examples", "exahype2", "acoustic"], "acoustic", ".", executable="ACOUSTIC" )
+project = exahype2.Project( ["exahype2", "acoustic"], ".", executable="Acoustic"+str(dimensions)+"D" )
 
-#stability condition: CFL
-# dt <= 0.5*dx/lambda_max
+#stability condition: CFL for Ader-DG
+# dt <= c*dx / (lambda_max*(2N+1)
+# cflAder = [ 1.0, 0.33, 0.17, 0.1, 0.069, 0.045, 0.038, 0.03, 0.02, 0.015]
+# here lambda_max = 1
+# dt <= 0.1 * 0.03 / 7 \approx  0.0004
+# dt <= 0.1 * 0.03 / 11 \approx  0.00025
 
 unknowns       = 4
 auxiliary_variables = 0
-max_h          = 0.2
-min_h          = 0.2
+
+max_h = 0.1
+min_h = 0.9 * max_h / 3.0
 
 theSolver=GlobalFixedTimeStep(
-  name="ACOUSTIC",  order=3, polynomials=Polynomials.Gauss_Legendre,
+  name="acousticSolver",  order=3,
   unknowns=unknowns, auxiliary_variables=auxiliary_variables,
-  min_cell_h=min_h, max_cell_h=max_h, time_step_size=0.001,
-  flux=exahype2.solvers.new_ader.PDETerms.User_Defined_Implementation,
-  is_linear=True,
-  predictor_persistent_storage_precision=PrecisionType.double,
-  predictor_computation_precision=PrecisionType.float)
+  min_cell_h=min_h, max_cell_h=max_h, time_step_size=0.0001,
+  flux=exahype2.solvers.aderdg.PDETerms.User_Defined_Implementation
+  )
 
-theSolver.set_implementation( refinement_criterion=exahype2.solvers.new_ader.PDETerms.User_Defined_Implementation)
+
+theSolver.set_implementation( refinement_criterion=exahype2.solvers.aderdg.PDETerms.User_Defined_Implementation)
+theSolver.add_kernel_optimizations(is_linear=True,use_kernel_generator=True,architecture="noarch")
 
 project.add_solver(theSolver)
 
-dimensions = 3
 build_mode = peano4.output.CompileMode.Release
 
-
+offset = [0.0, 0.0, 0.0]
+size   = [1.0, 1.0, 1.0]
 
 project.set_global_simulation_parameters(
   dimensions = dimensions,
-  offset = [0.0,0.0,0.0],
-  size = [1.0,1.0,1.0],
-  min_end_time = 0.1,
-  max_end_time = 0.1,
+  offset = offset[0:dimensions],
+  size = size[0:dimensions],
+  min_end_time = 0.5,
+  max_end_time = 0.5,
   first_plot_time_stamp = 0.0,
-  time_in_between_plots = 0.001,
-  periodic_BC = [False,False,False]
+  time_in_between_plots = 0.01,
+  periodic_BC = [False, False, False]
 )
 
 

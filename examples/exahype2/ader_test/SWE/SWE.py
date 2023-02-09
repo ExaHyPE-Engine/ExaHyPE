@@ -4,16 +4,17 @@ import exahype2
 
 import argparse
 
-import exahype2.solvers.new_ader
-from exahype2.solvers.new_ader.rusanov.GlobalFixedTimeStep import GlobalFixedTimeStep
-from exahype2.solvers.new_ader.ADERDG import ADERDG
-from exahype2.solvers.new_ader.SingleSweep import SingleSweep
-from exahype2.solvers.new_ader.ADERDG import Polynomials
+import exahype2.solvers.aderdg
+from exahype2.solvers.aderdg.rusanov.GlobalFixedTimeStep import GlobalFixedTimeStep
+from exahype2.solvers.aderdg.ADERDG import ADERDG
+from exahype2.solvers.aderdg.SingleSweep import SingleSweep
+from exahype2.solvers.aderdg.ADERDG import Polynomials
 
 project = exahype2.Project( ["examples", "exahype2", "heat"], "heat", ".", executable="SWE" )
 
-#stability condition: CFL
-# dt <= 0.5*dx/lambda_max
+#stability condition: CFL for Ader-DG
+# dt <= c*dx / (lambda_max*(2N+1)
+# cflAder = [ 1.0, 0.33, 0.17, 0.1, 0.069, 0.045, 0.038, 0.03, 0.02, 0.015]
 
 unknowns       = 3
 auxiliary_variables = 0
@@ -21,13 +22,14 @@ max_h          = 0.1
 min_h          = 0.9 * max_h / 3.0
 
 theSolver=GlobalFixedTimeStep(
-  name="SWE",  order=3, polynomials=Polynomials.Gauss_Legendre,
+  name="SWE",  order=3,
   unknowns=unknowns, auxiliary_variables=auxiliary_variables,
   min_cell_h=min_h, max_cell_h=max_h, time_step_size=0.001,
-  flux=exahype2.solvers.new_ader.PDETerms.User_Defined_Implementation,
-  is_linear=False)
+  flux=exahype2.solvers.aderdg.PDETerms.User_Defined_Implementation,
+  )
 
-theSolver.set_implementation( refinement_criterion=exahype2.solvers.new_ader.PDETerms.User_Defined_Implementation)
+theSolver.set_implementation( refinement_criterion=exahype2.solvers.aderdg.PDETerms.User_Defined_Implementation)
+theSolver.add_kernel_optimizations(use_kernel_generator=True,architecture="noarch")
 
 project.add_solver(theSolver)
 
@@ -38,8 +40,8 @@ build_mode = peano4.output.CompileMode.Release
 
 project.set_global_simulation_parameters(
   dimensions = dimensions,
-  offset = [0.0,0.0,0.0],
-  size = [1.0,1.0,1.0],
+  offset = [0.0,0.0,0.0][0:dimensions],
+  size = [1.0,1.0,1.0][0:dimensions],
   min_end_time = 0.1,
   max_end_time = 0.1,
   first_plot_time_stamp = 0.0,

@@ -4,11 +4,11 @@ import exahype2
 
 import argparse
 
-import exahype2.solvers.new_ader
-from exahype2.solvers.new_ader.rusanov.GlobalAdaptiveTimeStep import GlobalAdaptiveTimeStep
-from exahype2.solvers.new_ader.ADERDG import ADERDG
-from exahype2.solvers.new_ader.SingleSweep import SingleSweep
-from exahype2.solvers.new_ader.ADERDG import Polynomials
+import exahype2.solvers.aderdg
+from exahype2.solvers.aderdg.rusanov.GlobalAdaptiveTimeStep import GlobalAdaptiveTimeStep
+from exahype2.solvers.aderdg.ADERDG import ADERDG
+from exahype2.solvers.aderdg.SingleSweep import SingleSweep
+from exahype2.solvers.aderdg.ADERDG import Polynomials
 
 modes = {
   "release": peano4.output.CompileMode.Release,
@@ -33,8 +33,9 @@ args = parser.parse_args()
 
 project = exahype2.Project( ["examples", "exahype2", "euler2D"], "euler2D", ".", executable=args.out )
 
-#stability condition: CFL
-# dt <= 0.5*dx/lambda_max
+#stability condition: CFL for Ader-DG
+# dt <= c*dx / (lambda_max*(2N+1)
+# cflAder = [ 1.0, 0.33, 0.17, 0.1, 0.069, 0.045, 0.038, 0.03, 0.02, 0.015]
 
 unknowns       = 4
 auxiliary_variables = 0
@@ -50,11 +51,12 @@ else:
   raise AttributeError("not acceptable choice of polynomials")  
 
 theSolver=GlobalAdaptiveTimeStep(
-  name="euler2D",  order=order, polynomials=polynomials,
+  name="euler2D",  order=order,
   unknowns=unknowns, auxiliary_variables=auxiliary_variables,
   min_cell_h=min_h, max_cell_h=max_h, time_step_relaxation=0.9)
 
 theSolver.set_implementation( refinement_criterion=exahype2.solvers.fv.PDETerms.User_Defined_Implementation)
+theSolver.add_kernel_optimizations(polynomials=polynomials, use_kernel_generator=True,architecture="noarch")
 
 project.add_solver(theSolver)
 
@@ -65,8 +67,8 @@ build_mode = modes[args.mode]
 
 project.set_global_simulation_parameters(
   dimensions = dimensions,
-  offset = [0.0,0.0,0.0],
-  size = [1.0,1.0,1.0],
+  offset = [0.0,0.0,0.0][0:dimensions],
+  size = [1.0,1.0,1.0][0:dimensions],
   min_end_time = args.end_time,
   max_end_time = args.end_time,
   first_plot_time_stamp = 0.0,
