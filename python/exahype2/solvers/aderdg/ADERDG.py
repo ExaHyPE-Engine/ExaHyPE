@@ -715,7 +715,7 @@ class ADERDG( object ):
     d["NUMBER_OF_AUXILIARY_VARIABLES"]  = self._auxiliary_variables
     
     d["CFL_SAFETY_FACTOR"]  = self._cflSafetyFactor
-    d["CFL_ADER"]           = self._cflAder[self._order]
+    d["CFL_ADER"]           = self._cflAder[self._order]/(2*(self._order+1)+1)
     
     d[ "NUMBER_OF_DOFS_PER_CELL_2D" ] = (self._order+1) * (self._order+1);
     d[ "NUMBER_OF_DOFS_PER_CELL_3D" ] = (self._order+1) * (self._order+1) * (self._order+1);
