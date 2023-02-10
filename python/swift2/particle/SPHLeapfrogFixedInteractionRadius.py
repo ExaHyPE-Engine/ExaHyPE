@@ -61,11 +61,11 @@ class SPHLeapfrogFixedInteractionRadius(Particle):
   """
   def __init__(self, 
                name, 
-               dimensions_hydro,
-               cfl_factor, 
-               initial_time_step_size,
-               constant_time_step_size,
-               swift_project_namespace,
+               dimensions_hydro=2,
+               cfl_factor=0.1, 
+               initial_time_step_size=1e-4,
+               constant_time_step_size=True,
+               swift_project_namespace="SPH",
                sph_flavour = 'minimal',
                is_sph = True,
                particles_per_cell = 0, # makes no sense, and should likely be forbidden
@@ -88,8 +88,8 @@ class SPHLeapfrogFixedInteractionRadius(Particle):
     else: adjustTimeStepSize='true'
     self._adjustTimeStepSize = adjustTimeStepSize
 
-    # SPH check Boolean for Cpp kernels. Maybe these can be replaced by
-    # compiler directives.
+    # SPH-check Boolean for Cpp kernels. Maybe these can be replaced by
+    # compiler directives to get better performance.
     if(is_sph==True): isSPH='true'
     else: isSPH='false'
     self._is_sph = isSPH
@@ -98,14 +98,15 @@ class SPHLeapfrogFixedInteractionRadius(Particle):
 
     # SPH parameters (default values)
     self._hydroDimensions = dimensions_hydro
-    self._etaFactor = 1.235
-    self._hTolerance = 1e-4
-    self._hHydroMin = 1e-6
-    self._hHydroMax = 1.0 / 3.0 / 2    # Approximated value for coarsest grid level
+    self._eta_factor = 1.235
+    self._h_hydro_min = 1e-6
+    self._h_hydro_max = 1.0 / 3.0 / 2    # Approximated value for coarsest grid level
+    self._h_tolerance = 1e-4
+    self._h_max_iterations = 10
 
     # Minimal SPH parameters
-    self._alphaAV = 0.8
-    self._betaAV = 3.0
+    self._alpha_av = 0.8
+    self._beta_av = 3.0
 
     # Mantissa size. Can be used for Pawel's clang truncation.
     # Default value corresponds to IEEE doubles.
@@ -139,7 +140,7 @@ class SPHLeapfrogFixedInteractionRadius(Particle):
         touch_vertex_first_time_kernel = """
                                          """,
         touch_vertex_last_time_kernel  =
-                    """::swift2::kernels::flagBoundaryParticles(localParticles );""",
+                                        """::swift2::kernels::flagBoundaryParticles(localParticles );""",
  
         includes                       = """
                                          #include "Constants.h"
@@ -172,8 +173,8 @@ class SPHLeapfrogFixedInteractionRadius(Particle):
                                              {}
                                              );
                                          """.format(self._hydroDimensions,
-                                                    self._etaFactor,
-                                                    self._alphaAV),
+                                                    self._eta_factor,
+                                                    self._alpha_av),
  
         includes                       = """
                                          #include "Constants.h"
@@ -199,7 +200,7 @@ class SPHLeapfrogFixedInteractionRadius(Particle):
                                            {}
                                          );
                                          """.format(self._hydroDimensions,
-                                                    self._betaAV),
+                                                    self._beta_av),
 
         touch_vertex_last_time_kernel  = """
                                          ::swift2::kernels::endHydroForceCalculation(
@@ -311,8 +312,8 @@ class SPHLeapfrogFixedInteractionRadius(Particle):
                                              {}
                                              );
                                          """.format(self._hydroDimensions,
-                                                    self._etaFactor,
-                                                    self._alphaAV),
+                                                    self._eta_factor,
+                                                    self._alpha_av),
  
         includes                       = """
                                          #include "Constants.h"
@@ -338,7 +339,7 @@ class SPHLeapfrogFixedInteractionRadius(Particle):
                                            {}
                                          );
                                          """.format(self._hydroDimensions,
-                                                    self._betaAV),
+                                                    self._beta_av),
 
         touch_vertex_last_time_kernel  = """
                                          ::swift2::kernels::endHydroForceCalculation(
@@ -529,8 +530,44 @@ class SPHLeapfrogFixedInteractionRadius(Particle):
   neighbour particles.
   The default value is eta = 1.235.
   """
-  def set_eta_factor(self, etaFactor):
-    self._etaFactor = etaFactor
+  @property
+  def eta_factor(self):
+    return self._eta_factor
+
+  @eta_factor.setter
+  def eta_factor(self, eta_factor):
+    print('Set eta_factor method called.')
+    if(eta_factor <= 0):
+      raise ValueError("SPH eta factor value not valid.")
+    self._eta_factor = eta_factor
+
+  """
+  Viscosity parameters of the Minimal SPH model. Default SWIFT values are
+  alpha_av=0.8
+  and beta_av=3.
+  """
+  @property
+  def alpha_av(self):
+    return self._alpha_av
+
+  @alpha_av.setter
+  def alpha_av(self, alpha_av):
+    print('Set alpha_av method called.')
+    if(alpha_av <= 0):
+      raise ValueError("Value for the alpha_av viscosiy parameter not valid.")
+    self._alpha_av = alpha_av
+
+  @property
+  def beta_av(self):
+    return self._alpha_av
+
+  @beta_av.setter
+  def beta_av(self, beta_av):
+    print('Set beta_av method called.')
+    if(beta_av <= 0):
+      raise ValueError("Value for the beta_av viscosiy parameter not valid.")
+    self._beta_av = beta_av
+
 
 
   """
@@ -539,9 +576,62 @@ class SPHLeapfrogFixedInteractionRadius(Particle):
   gamma_k, where gamma_k is the SPH kernel factor that relates h and H.
   Typically gamma_k = 2, so h_max = max_grid_size / 2.
   """
-  def set_h_hydro_limits(self, hHydroMin, hHydroMax):
-    self._hHydroMin = hHydroMin
-    self._hHydroMax = hHydroMax
+
+  @property
+  def h_hydro_min(self):
+    print('get h_hydro_min method called.')
+    return self._h_hydro_min
+
+  @h_hydro_min.setter
+  def h_hydro_min(self, h_hydro_min):
+    print('Set h_hydro_min method called.')
+    if(h_hydro_min > self._h_hydro_max):
+      raise ValueError("Min value of smoothing length larger than max allowed.")
+    self._h_hydro_min = h_hydro_min
+
+  @property
+  def h_hydro_max(self):
+    print('get h_hydro_max method called.')
+    return self._h_hydro_max
+
+  @h_hydro_max.setter
+  def h_hydro_max(self, h_hydro_max):
+    print('Set h_hydro_max method called.')
+    if(h_hydro_max < self._h_hydro_min):
+      raise ValueError("max value of smoothing length smaller than min allowed.")
+    self._h_hydro_max = h_hydro_max
+
+
+  """
+  Tolerance for Newton-Raphson convergence criterion.
+  """
+  @property
+  def h_tolerance(self):
+    print('get h_tolerance method called.')
+    return self._h_tolerance
+
+  @h_tolerance.setter
+  def h_tolerance(self, h_tolerance):
+    print('Set h_tolerance method called.')
+    if(h_tolerance > 1):
+      raise ValueError("Value of h_tolerance cannot be larger than 1.")
+    self._h_tolerance = h_tolerance
+
+  """
+  Max number of iterations to adapt the SPH smoothing length
+  """
+
+  @property
+  def h_max_iterations(self):
+    print('get h_max_iterations method called.')
+    return self._h_max_iterations
+
+  @h_max_iterations.setter
+  def h_max_iterations(self, h_max_iterations):
+    print('set h_max_iterations method called.')
+    if(h_max_iterations > 50):
+      raise ValueError("Value of h_max_iterations is too large.")
+    self._h_max_iterations = h_max_iterations
 
   """
   Set the mantissa size of doubles and Peano double arrays if
