@@ -1,5 +1,9 @@
 cmake_minimum_required(VERSION 3.20)
 
+string(REPLACE "-fcolor-diagnostics" "" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
+set(CUDA_NVCC_FLAGS "${CUDA_NVCC_FLAGS};--expt-relaxed-constexpr")
+string(REPLACE "-fast" "-Ofast" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
+
 if(EXISTS "${CMAKE_SOURCE_DIR}/.git")
   execute_process(
     COMMAND git rev-parse --abbrev-ref HEAD
@@ -257,6 +261,7 @@ elseif(WITH_GPU STREQUAL "cuda")
     message(FATAL_ERROR "CMake configured to use CUDA but can't find a CUDA compiler")
   endif()
   enable_language(CUDA)
+  set(CMAKE_CUDA_STANDARD 17)
 endif()
 
 if(${CMAKE_CXX_COMPILER_ID} MATCHES "NVHPC|PGI")

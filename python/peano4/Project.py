@@ -11,6 +11,7 @@ import peano4.datamodel
 import peano4.solversteps
 import peano4.runner
 
+from peano4.output.Helper import using_cuda_backend
 class Project (object):
   """
   Represents a Peano 4 project.
@@ -127,10 +128,13 @@ class Project (object):
     if make_clean_first:
       print( "clean up project ..." )
       try:
-        if make_clean_first:
-          subprocess.check_call(["make", "clean"])
-        self.is_built = False
-        print( "clean complete" )
+        if not using_cuda_backend():
+          if make_clean_first:
+            subprocess.check_call(["make", "clean"])
+          self.is_built = False
+          print( "clean complete" )
+        else:
+          print("Clean step doesnt work with cuda")
       except Exception as e:
         print( "clean failed (" + str(e) + ") - continue anyway" )
 

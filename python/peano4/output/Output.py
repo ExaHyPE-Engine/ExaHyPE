@@ -2,6 +2,7 @@
 # use, please see the copyright notice at www.peano-framework.org
 from .Makefile import Makefile
 from .Readme   import Readme
+from .Helper import using_cuda_backend
 
 class Output(object):
   """
@@ -24,10 +25,16 @@ class Output(object):
     self.makefile.clear_files()
 
   def add(self,artefact,append=True):
-    if append:
-      self.artefacts.append(artefact)
+    if not using_cuda_backend:
+      if append:
+        self.artefacts.append(artefact)
+      else:
+        self.artefacts = [artefact] + self.artefacts
     else:
-      self.artefacts = [artefact] + self.artefacts
+      if append:
+        self.artefacts.append(artefact)
+      else:
+        self.artefacts = [artefact] + self.artefacts
 
   def generate(self,overwrite,directory):
     """

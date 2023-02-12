@@ -8,6 +8,7 @@ import jinja2
 
 from .Helper import write_file
 from .Helper import find_cmake_build_dir
+from .Helper import using_cuda_backend
 
 from .Overwrite import Overwrite
 
@@ -16,6 +17,7 @@ from .CompileMode import CompileMode
 class Makefile(object):
   """ Represents the created makefile of a Peano4 project """
   default_overwrite = True
+  cuda = using_cuda_backend()
 
   def __init__(self):
     self.clear()
@@ -406,12 +408,20 @@ did search for a file """ + input_file )
         Use this flag for generated files which can be tracked
         by the cleaning routines 'distclean' or 'maintainer-clean' of the Makefile.
     """
-    if generated:
-      if self.generated_cppfiles.count(filename)==0:
-        self.generated_cppfiles.append( filename )
+    if not self.cuda:
+      if generated:
+        if self.generated_cppfiles.count(filename)==0:
+          self.generated_cppfiles.append(filename)
+      else:
+        if self.cppfiles.count(filename)==0:
+          self.cppfiles.append(filename)
     else:
-      if self.cppfiles.count(filename)==0:
-        self.cppfiles.append( filename )
+      if generated:
+        if self.generated_cppfiles.count(filename.replace(".cpp", ".cu"))==0:
+          self.generated_cppfiles.append(filename.replace(".cpp", ".cu"))
+      else:
+        if self.cppfiles.count(filename.replace(".cpp", ".cu"))==0:
+          self.cppfiles.append(filename.replace(".cpp", ".cu"))
 
   def add_Fortran_file(self,filename,generated=True):
     """
