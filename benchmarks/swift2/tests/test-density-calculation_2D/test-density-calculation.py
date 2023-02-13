@@ -203,26 +203,12 @@ peano4_project = project.generate_Peano4_project(verbose=args.verbose)
 # simulation - we do that here. 
 
 
-# Time-integration parameters -------------------------------------------------
-GLOBAL_TIME_STEP_SIZE = "1e-4"
-CFL_CONSTANT = "0.1"
-
 # EoS parameter ---------------------------------------------------------------
 gamma_hydro_list = [str(5/3), str(7/5), str(4/3), str(2/1)]
 gamma_hydro_list_symbols = ['HYDRO_GAMMA_5_3','HYDRO_GAMMA_7_5','HYDRO_GAMMA_4_3','HYDRO_GAMMA_2_1']
 GAMMA = gamma_hydro_list[0]
 GAMMA_HYDRO_SYMBOL = gamma_hydro_list_symbols[0]
 
-# Artificial viscosity parameters ---------------------------------------------
-ALPHA_AV= "0.8"     # =0.8 in SWIFT
-BETA_AV = "3"       # =3 in SWIFT/SPHENIX
-
-# Newton-Raphson parameters --------------------------------------------------
-# Maximum allowed number of Newton-Raphson iterations
-HYDRO_DEFAULT_MAX_ITERATIONS = "10"
-
-# Tolerance for Newton-Raphson convergence
-H_TOLERANCE = "1e-4"
 
 # SPH kernel -------------------------------------------------------
 kernel_list = ['M5']
@@ -259,7 +245,6 @@ peano4_project.output.makefile.add_CXX_flag("-D" + KERNEL_SYMBOL )
 print('-----------------------------------------------------------------------')
 print('SPH parameters summary:')
 print(f'Effective dimensions of the Simulation: {HYDRO_DIMENSIONS}'  )
-print(f'Global time-step size: {GLOBAL_TIME_STEP_SIZE}'  )
 print(f'Number of particles (1D): {HYDRO_PART_NUMBER}'  )
 print(f'Smoothing length free factor: {SMOOTH_ETA_FAC}'   )
 print('-----------------------------------------------------------------------')
@@ -267,13 +252,7 @@ print('-----------------------------------------------------------------------')
 # Export Constants.h file
 peano4_project.constants.export_const_with_type("HYDRO_DIMENSIONS"     , str(HYDRO_DIMENSIONS), "double")
 peano4_project.constants.export_const_with_type("HYDRO_PART_NUMBER"    , HYDRO_PART_NUMBER    , "double")
-peano4_project.constants.export_const_with_type("GLOBAL_TIME_STEP_SIZE", GLOBAL_TIME_STEP_SIZE, "double")
-peano4_project.constants.export_const_with_type("CFL_CONSTANT"         , CFL_CONSTANT         , "double")
 peano4_project.constants.export_const_with_type("GAMMA"                , GAMMA                , "double")
-peano4_project.constants.export_const_with_type("ALPHA_AV"             , ALPHA_AV             , "double")
-peano4_project.constants.export_const_with_type("BETA_AV"              , BETA_AV              , "double")
-peano4_project.constants.export_const_with_type("HYDRO_DEFAULT_MAX_ITERATIONS", HYDRO_DEFAULT_MAX_ITERATIONS, "int")
-peano4_project.constants.export_const_with_type("H_TOLERANCE"          , H_TOLERANCE          , "double")
 peano4_project.constants.export_const_with_type("KERNEL_SUPPORT_RAD"   , KERNEL_SUPPORT_RAD   , "double")
 peano4_project.constants.export_const_with_type("HYDRO_h_MAX"          , HYDRO_h_MAX          , "double")
 peano4_project.constants.export_const_with_type("HYDRO_h_MIN"          , HYDRO_h_MIN          , "double")
@@ -285,7 +264,9 @@ if args.clean_temporary_directories:
   for dir in dirs:
     shutil.rmtree( dir )
 
-peano4_project.generate( overwrite=1, throw_away_data_after_generation=True )
+# It is safe (and recommended) to overwrite any existing main file, since this
+# is generated automatically by the Swift2 graph compiler.
+peano4_project.generate( overwrite=peano4.output.Overwrite.Always, throw_away_data_after_generation=True )
 peano4_project.build( make_clean_first = True, number_of_parallel_builds=args.j )
 
 # remove output files from previous runs
