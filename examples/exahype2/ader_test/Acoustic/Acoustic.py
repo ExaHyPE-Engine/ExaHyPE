@@ -16,9 +16,9 @@ project = exahype2.Project( ["exahype2", "acoustic"], ".", executable="Acoustic"
 #stability condition: CFL for Ader-DG
 # dt <= c*dx / (lambda_max*(2N+1)
 # cflAder = [ 1.0, 0.33, 0.17, 0.1, 0.069, 0.045, 0.038, 0.03, 0.02, 0.015]
-# here lambda_max = 1
-# dt <= 0.1 * 0.03 / 7 \approx  0.0004
-# dt <= 0.1 * 0.03 / 11 \approx  0.00025
+# here lambda_max = 100
+# dt <= 0.1 * 0.03 / 700 \approx  0.000004
+# dt <= 0.1 * 0.03 / 1100 \approx  0.0000025
 
 unknowns       = 4
 auxiliary_variables = 0
@@ -26,10 +26,12 @@ auxiliary_variables = 0
 max_h = 0.1
 min_h = 0.9 * max_h / 3.0
 
+timestep = 0.00001
+
 theSolver=GlobalFixedTimeStep(
   name="acousticSolver",  order=3,
   unknowns=unknowns, auxiliary_variables=auxiliary_variables,
-  min_cell_h=min_h, max_cell_h=max_h, time_step_size=0.0001,
+  min_cell_h=min_h, max_cell_h=max_h, time_step_size=timestep,
   flux=exahype2.solvers.aderdg.PDETerms.User_Defined_Implementation
   )
 
@@ -48,10 +50,10 @@ project.set_global_simulation_parameters(
   dimensions = dimensions,
   offset = offset[0:dimensions],
   size = size[0:dimensions],
-  min_end_time = 0.5,
-  max_end_time = 0.5,
+  min_end_time = 500*timestep,
+  max_end_time = 500*timestep,
   first_plot_time_stamp = 0.0,
-  time_in_between_plots = 0.01,
+  time_in_between_plots = 10*timestep,
   periodic_BC = [False, False, False]
 )
 

@@ -15,15 +15,15 @@ tarch::logging::Log   exahype2::acoustic::acousticSolver::_log( "exahype2::acous
 	logTraceInWith3Arguments( "refinementCriterion(...)", x, h, t );
 
 
-#if Dimensions==2
-  tarch::la::Vector<Dimensions,double> centre = {0.5,0.5,0.5};
-#else
-  tarch::la::Vector<Dimensions,double> centre = {0.5,0.5,0.5};
-#endif
+// #if Dimensions==2
+//   tarch::la::Vector<Dimensions,double> centre = {0.5,0.5,0.5};
+// #else
+//   tarch::la::Vector<Dimensions,double> centre = {0.5,0.5,0.5};
+// #endif
+//  bool refine = tarch::la::norm2(x-centre) < 0.05;
 
-  bool nearCentre = tarch::la::norm2(x-centre) < 0.05;
-
-  ::exahype2::RefinementCommand result = nearCentre ? ::exahype2::RefinementCommand::Refine : ::exahype2::RefinementCommand::Keep;
+  bool refine = false;
+  ::exahype2::RefinementCommand result = refine ? ::exahype2::RefinementCommand::Refine : ::exahype2::RefinementCommand::Keep;
 
   logTraceOutWith1Argument( "refinementCriterion(...)", ::toString(result) );
   return result;
@@ -41,17 +41,19 @@ void exahype2::acoustic::acousticSolver::initialCondition(
 ) {
   logTraceInWith2Arguments( "initialCondition(...)", x, gridIsConstructed );
 
-#if Dimensions==2
-  tarch::la::Vector<Dimensions,double> centre = {0.5,0.5,0.5};
-#else
-  tarch::la::Vector<Dimensions,double> centre = {0.5,0.5,0.5};
-#endif
+// #if Dimensions==2
+//   tarch::la::Vector<Dimensions,double> centre = {0.5,0.5,0.5};
+// #else
+//   tarch::la::Vector<Dimensions,double> centre = {0.5,0.5,0.5};
+// #endif
 
-  bool nearCentre = tarch::la::norm2(x-centre) < 0.05;
+//   bool nearCentre = tarch::la::norm2(x-centre) < 0.05;
 
-  Q[0] = (nearCentre ? 0.1 : 0.0); //p
-  Q[1] = 0.0; //vx
-  Q[2] = 0.0; //vy
+//   Q[0] = (nearCentre ? 0.1 : 0.0); //p
+
+  Q[0] = 0.5*(sqrt(x[0])+sqrt(x[1]));
+  Q[1] = 0.005*( sqrt(x[0]) + sqrt(x[1]) ); //vx
+  Q[2] = Q[1]; //vy
   Q[3] = 0.0; //vz
 
   logTraceOut( "initialCondition(...)" );
@@ -75,15 +77,31 @@ void exahype2::acoustic::acousticSolver::boundaryValues(
 ) {
   logTraceInWith3Arguments( "boundaryConditions(...)", x, t, direction );
 
-  stateOut[0] = 0.0;
-  stateOut[1] = 0.0;
-  stateOut[2] = 0.0;
+  // stateOut[0] = stateIn[0];
+  // stateOut[1] = stateIn[1];
+  // stateOut[2] = stateIn[2];
+  // stateOut[3] = stateIn[3];
+
+  // fluxOut[0] = fluxIn[0];
+  // fluxOut[1] = fluxIn[1];
+  // fluxOut[2] = fluxIn[2];
+  // fluxOut[3] = fluxIn[3];
+
+  stateOut[0] = 0.5*( sqrt(x[0]) + sqrt(x[1]) ) -10*t;
+  stateOut[1] = 0.005*(x[0]+x[1]) - 0.05*sqrt(2)*t;
+  stateOut[2] = stateOut[1];
   stateOut[3] = 0.0;
 
-  fluxOut[0] = fluxIn[0];
-  fluxOut[1] = fluxIn[1];
-  fluxOut[2] = fluxIn[2];
-  fluxOut[3] = fluxIn[3];
+  double fluxValues[8];
+  double* fluxPointer[2] = {&fluxValues[0], &fluxValues[4]}; 
+  flux(stateOut, fluxPointer);
+
+  fluxOut[0] = fluxPointer[direction][0];
+  fluxOut[1] = fluxPointer[direction][1];
+  fluxOut[2] = fluxPointer[direction][2];
+  fluxOut[3] = fluxPointer[direction][3];
+
+//  std::cout << "Position of boundary : [" << x[0] << ", " << x[1] << "], time of boundary: " << t << "\n";
 
   logTraceOut( "boundaryConditions(...)" );
 }
@@ -100,8 +118,8 @@ void ::exahype2::acoustic::acousticSolver::eigenvalues(
   )  {
   logTraceInWith3Arguments( "eigenvalue(...)", x, t, normal );
 
-  lambda[0] = 1.0;
-  lambda[1] = -1.0;
+  lambda[0] = 100.0;
+  lambda[1] = -100.0;
   lambda[2] = 0.0;
   lambda[3] = 0.0;
 
@@ -117,9 +135,9 @@ void ::exahype2::acoustic::acousticSolver::flux(
 )  {
   logTraceIn( "flux(...)");
 
-  double rho = 2.7;
-  double c = 1.0;
-  double K_0    = rho*c*c;
+  double rho = 10.0;
+//  double c = 100.0;
+  double K_0 = 1000; //rho*c*c;
 
   F[0][0] = K_0 * Q[1];
   F[0][1] = (1/rho) * Q[0];
