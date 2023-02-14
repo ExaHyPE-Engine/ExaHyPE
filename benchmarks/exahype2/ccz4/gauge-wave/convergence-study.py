@@ -76,7 +76,8 @@ if args.solver=="fv":
                                                                                    time_step_relaxation = 0.1)
 if "fd4-rk" in args.solver:
   order = int(args.solver[-1])
-  my_solver = exahype2.solvers.rkfd.fd4.GlobalAdaptiveTimeStep(name                 = "CCZ4FD4RK" + str(order), 
+  my_solver = exahype2.solvers.rkfd.fd4.GlobalAdaptiveTimeStepWithEnclaveTasking(name                 = "CCZ4FD4RK" + str(order), 
+  #my_solver = exahype2.solvers.rkfd.fd4.GlobalAdaptiveTimeStep(name                 = "CCZ4FD4RK" + str(order), 
                                                                patch_size           = 5,
                                                                rk_order             = order,
                                                                unknowns             = sum(unknowns.values()),
