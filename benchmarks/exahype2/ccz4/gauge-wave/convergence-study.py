@@ -93,8 +93,8 @@ if "rk" in args.solver and "dg" in args.solver:
                                                                face_projections     = exahype2.solvers.rkdg.FaceProjections.Solution,
                                                                unknowns             = sum(unknowns.values()),
                                                                auxiliary_variables  = 0,
-                                                               min_cell_h           = args.cell_size, 
-                                                               max_cell_h           = args.cell_size,
+                                                               min_cell_h           = args.cell_size * space_order, 
+                                                               max_cell_h           = args.cell_size * space_order,
                                                                time_step_relaxation = 0.1)
 
 #
