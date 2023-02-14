@@ -81,8 +81,8 @@ if "fd4-rk" in args.solver:
                                                                rk_order             = order,
                                                                unknowns             = sum(unknowns.values()),
                                                                auxiliary_variables  = 0,
-                                                               min_meshcell_h       = args.cell_size / 5, 
-                                                               max_meshcell_h       = args.cell_size / 5,
+                                                               min_meshcell_h       = args.cell_size / 3, 
+                                                               max_meshcell_h       = args.cell_size / 3,
                                                                time_step_relaxation = 0.1)
 if "rk" in args.solver and "dg" in args.solver:
   space_order = int(args.solver[2])
@@ -185,6 +185,36 @@ if ("rk" in args.solver and "dg" in args.solver):
   ::applications::exahype2::ccz4::gaugeWave(Q, x, 0);
 """
         )
+elif ("fd" in args.solver and "rk" in args.solver):
+  my_solver.set_implementation(
+          boundary_conditions  = exahype2.solvers.fv.PDETerms.Empty_Implementation,
+          ncp                  = """
+  double deltaQSerialised[NumberOfUnknowns*3];
+  for (int i=0; i<NumberOfUnknowns; i++) {
+    deltaQSerialised[i+0*NumberOfUnknowns] = 0.0;
+    deltaQSerialised[i+1*NumberOfUnknowns] = 0.0;
+    deltaQSerialised[i+2*NumberOfUnknowns] = 0.0;
+
+    deltaQSerialised[i+normal*NumberOfUnknowns] = deltaQ[i];
+  }
+  ::applications::exahype2::ccz4::ncp(BTimesDeltaQ, Q, deltaQSerialised, normal%Dimensions, CCZ4LapseType, CCZ4ds, CCZ4c, CCZ4e, CCZ4f, CCZ4bs, CCZ4sk, CCZ4xi, CCZ4mu);
+""",
+          flux                 = exahype2.solvers.fv.PDETerms.None_Implementation,
+          source_term          = """
+  memset(S, 0.0, NumberOfUnknowns*sizeof(double)); 
+  ::applications::exahype2::ccz4::source(S,Q, CCZ4LapseType, CCZ4ds, CCZ4c, CCZ4e, CCZ4f, CCZ4bs, CCZ4sk, CCZ4xi, CCZ4itau, CCZ4eta, CCZ4k1, CCZ4k2, CCZ4k3);
+""",
+          refinement_criterion = exahype2.solvers.fv.PDETerms.Empty_Implementation,
+          eigenvalues          = """
+  return ::applications::exahype2::ccz4::maxEigenvalue(Q, normal%Dimensions, CCZ4e, CCZ4ds, CCZ4GLMc, CCZ4GLMd );
+"""          ,
+          initial_conditions   = """
+  for (int i=0; i<NumberOfUnknowns+NumberOfAuxiliaryVariables; i++) Q[i] = 0.0; 
+  ::applications::exahype2::ccz4::gaugeWave(Q, meshCellCentre, 0);
+"""
+        )
+  exahype2.solvers.rkfd.fd4.switch_to_FD4_tensor_product_interpolation( my_solver, "TP_linear_with_linear_extrap_normal_interp" ) 
+  exahype2.solvers.rkfd.fd4.switch_to_FD4_tensor_product_restriction(   my_solver, "TP_average_normal_extrap" ) 
 else:    
   my_solver.set_implementation(
           boundary_conditions  = exahype2.solvers.fv.PDETerms.Empty_Implementation,
