@@ -48,6 +48,7 @@ void applications::exahype2::ccz4::FiniteVolumeCCZ4::prepare(TP::TwoPunctures* t
 		tp->grid_setup_method="evaluation"; //evaluation or Taylor expansion
 		tp->TP_epsilon=1e-6;}
 	
+  //following data reference: https://journals.aps.org/prd/pdf/10.1103/PhysRevD.69.024006
 	if (CCZ4swi==2 and CCZ4BBHType==1){
 		tp->par_b=3.0;
 		tp->center_offset[0]=0.0; tp->center_offset[1]=0.0; tp->center_offset[2]=0.0;
