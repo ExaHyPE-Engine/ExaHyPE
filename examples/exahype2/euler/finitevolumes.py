@@ -56,8 +56,8 @@ periodic_BC = [False, False, False]
 
 project.set_global_simulation_parameters(
   dimensions = dimensions,
-  offset = [0.0,0.0,0.0],
-  size = [1.0,1.0,1.0],
+  offset = [0.0,0.0],
+  size = [1.0,1.0],
   min_end_time = end_time,
   max_end_time = end_time,
   first_plot_time_stamp = 0.0,
