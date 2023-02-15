@@ -118,7 +118,7 @@ class peano4::stacks::STDVectorStack {
 
 
     /**
-     * One is not allowed to copy a stack but it has to be empty.
+     * One is allowed to copy a stack but it has to be empty.
      */
     STDVectorStack&  operator=( const STDVectorStack<T>& stack ) {
       assertionEquals( stack._currentElement, 0 );
