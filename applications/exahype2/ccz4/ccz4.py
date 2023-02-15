@@ -462,7 +462,7 @@ if __name__ == "__main__":
 
       def create_data_structures(self):
         SuperClass.create_data_structures(self)
-        self.switch_to_heap_storage(False, False)
+        self.switch_to_heap_storage(True, True)
 
 
       def add_PT_ConsW_Psi4W_AMRFlag(self):
