@@ -164,6 +164,7 @@ bool peano4::stacks::STDVectorStackOverSmartPointers<T>::tryToFinishSendOrReceiv
       #endif
 
       if (Base::_ioMode==IOMode::MPIReceive ) {
+        Base::_data.clear();
         Base::_data.resize(Base::_currentElement);
         for (int i=0; i<Base::_currentElement; i++) {
           std::copy_n( _gatheredData + T::Cardinality * i, T::Cardinality, Base::_data[i].value );
