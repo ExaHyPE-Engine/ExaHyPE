@@ -226,20 +226,20 @@ h_volume_max:           """ + str( self._max_meshcell_h ) + """
     return 3**self.get_max_number_of_spacetree_levels(domain_size)
 
 
-  def get_coarsest_number_of_finite_volumes(self,domain_size):
+  def get_coarsest_number_of_compute_grid_cells(self,domain_size):
     return self.get_coarsest_number_of_patches(domain_size)*self._patch_size
 
 
-  def get_finest_number_of_finite_volumes(self,domain_size):
+  def get_finest_number_of_compute_grid_cells(self,domain_size):
     return self.get_finest_number_of_patches(domain_size)*self._patch_size
 
     
-  def get_coarsest_volume_size(self,domain_size):
-    return domain_size/self.get_coarsest_number_of_finite_volumes(domain_size)
+  def get_coarsest_compute_grid_cell_size(self,domain_size):
+    return domain_size/self.get_coarsest_number_of_compute_grid_cells(domain_size)
 
 
-  def get_finest_volume_size(self,domain_size):
-    return domain_size/self.get_finest_number_of_finite_volumes(domain_size)
+  def get_finest_compute_grid_cell_size(self,domain_size):
+    return domain_size/self.get_finest_number_of_compute_grid_cells(domain_size)
 
   
   def create_readme_descriptor(self, domain_offset, domain_size):
@@ -256,16 +256,23 @@ and recursively into three parts along each coordinate axis. This yields a space
 The spacetree will at least have """ + str(self.get_min_number_of_spacetree_levels(domain_size)) + """ levels.
 The spacetree will at most have """ + str(self.get_max_number_of_spacetree_levels(domain_size)) + """ levels.
 
-The spacetree will thus span at least """ + str(self.get_coarsest_number_of_patches(domain_size)) + """ cells (or patches) per coordinate axis. This means a """ + str(self.get_coarsest_number_of_patches(domain_size)) + """^d grid of patches.
-The spacetree will thus span at most """ + str(self.get_finest_number_of_patches(domain_size)) + """ cells (or patches) per coordinate axis. This means a """ + str(self.get_finest_number_of_patches(domain_size)) + """^d grid of patches.
+The spacetree will thus span at least """ + str(self.get_coarsest_number_of_patches(domain_size)) + """ octants/cells (see clarification below) per coordinate axis. This means a """ + str(self.get_coarsest_number_of_patches(domain_size)) + """^d grid of octants.
+The spacetree will thus span at most """ + str(self.get_finest_number_of_patches(domain_size)) + """ octants/cells (see clarification below) per coordinate axis. This means a """ + str(self.get_finest_number_of_patches(domain_size)) + """^d grid of octants.
 
-ExaHyPE 2 embeds """ + str(self._patch_size) + """^d patches of Finite Volumes into the finest tree level.
+ExaHyPE 2 embeds """ + str(self._patch_size) + """^d patches of compute cells into the finest tree level. 
+We refer to elements of this level as octant above.
+They are squares/cubes and many papers refer to them as cells, but they are not 
+the actual compute data structure. The compute data structure is the cells that
+are embedded into these finest level spacetree cells. We therefore prefer the 
+term octant for the latter, whereas we use the term (compute) cell for the 
+entities that are actually used for the computations, i.e. hold degrees of 
+freedom, and are actually visible within Paraview, e.g.
 
-The coarsest possible mesh will consist of """ + str(self.get_coarsest_number_of_finite_volumes(domain_size)) + """ Finite Volumes per coordinate axis.
-The finest possible mesh will consist of """ + str(self.get_finest_number_of_finite_volumes(domain_size)) + """ Finite Volumes per coordinate axis.
+The coarsest possible mesh will consist of """ + str(self.get_coarsest_number_of_compute_grid_cells(domain_size)) + """ compute cells per coordinate axis.
+The finest possible mesh will consist of """ + str(self.get_finest_number_of_compute_grid_cells(domain_size)) + """ compute cells per coordinate axis.
 
-The coarsest mesh width of """ + str(self.get_coarsest_volume_size(domain_size)) + """ is thus just smaller than the maximum volume size """ + str(self._max_meshcell_h) + """.
-The finest mesh width of """ + str(self.get_finest_volume_size(domain_size)) + """ is thus just smaller than the minimum volume size """ + str(self._min_meshcell_h) + """.
+The coarsest mesh width of """ + str(self.get_coarsest_compute_grid_cell_size(domain_size)) + """ is thus just smaller than the maximum volume size """ + str(self._max_meshcell_h) + """.
+The finest mesh width of """ + str(self.get_finest_compute_grid_cell_size(domain_size)) + """ is thus just smaller than the minimum volume size """ + str(self._min_meshcell_h) + """.
 
 """ 
   
