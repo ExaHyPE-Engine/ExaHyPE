@@ -9,31 +9,20 @@ from enum import Enum
 class SolverVariant(Enum):
   WithVirtualFunctions = 0,
   Stateless            = 1,
-  Accelerator          = 2
+  Multicore            = 2,
+  Accelerator          = 3
 
 
-class RiemannKernelVariant(Enum):
-  PatchWiseAoSStack                = 0
-  PatchWiseAoSoAStack              = 1
-  PatchWiseSoAStack                = 2
-  BatchedAoSStack                  = 10
-  BatchedAoSoAStack                = 11
-  BatchedSoAStack                  = 12
-  PatchWiseSplitTermsAoSStack      = 20
-  PatchWiseSplitTermsAoSoAStack    = 21
+class KernelVariant(Enum):
   PatchWiseAoSHeap                 = 30
   PatchWiseAoSoAHeap               = 31
   PatchWiseSoAHeap                 = 32
   BatchedAoSHeap                   = 40
   BatchedAoSoAHeap                 = 41
   BatchedSoAHeap                   = 42
-  PatchWiseSplitTermsAoSHeap       = 50
-  PatchWiseSplitTermsAoSoAHeap     = 51
   TaskGraphAoSHeap                 = 60
   TaskGraphAoSoAHeap               = 61
   TaskGraphSoAHeap                 = 62
-  PatchWiseInSitu                  = 90
-  BatchedInSitu                    = 91
     
 
 def create_abstract_solver_declarations(flux_implementation, ncp_implementation, eigenvalues_implementation, source_term_implementation, pde_terms_without_state):

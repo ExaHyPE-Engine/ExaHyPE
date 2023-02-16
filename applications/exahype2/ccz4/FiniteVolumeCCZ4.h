@@ -159,7 +159,7 @@ class applications::exahype2::ccz4::FiniteVolumeCCZ4: public AbstractFiniteVolum
        double                                       t,
        double                                       dt,
        double * __restrict__ S,
-       Offloadable
+       ::exahype2::Solver::Offloadable
      ) {
       memset(S, 0, NumberOfUnknowns*sizeof(double));
       source(S,Q, CCZ4LapseType, CCZ4ds, CCZ4c, CCZ4e, CCZ4f, CCZ4bs, CCZ4sk, CCZ4xi, CCZ4itau, CCZ4eta, CCZ4k1, CCZ4k2, CCZ4k3);
@@ -195,7 +195,7 @@ class applications::exahype2::ccz4::FiniteVolumeCCZ4: public AbstractFiniteVolum
       double                                       t,
       double                                       dt,
       int                                          normal,
-      Offloadable
+      ::exahype2::Solver::Offloadable
     ) {
       #if defined(CCZ4EINSTEIN)
       const double qmin = std::min({Q[0],Q[3],Q[5]});
@@ -254,7 +254,7 @@ class applications::exahype2::ccz4::FiniteVolumeCCZ4: public AbstractFiniteVolum
       double                                       dt,
       int                                          normal,
       double * __restrict__                        BgradQ,     // BgradQ[5]
-      Offloadable
+      ::exahype2::Solver::Offloadable
     );
     #if defined(GPUOffloadingOMP)
     #pragma omp end declare target

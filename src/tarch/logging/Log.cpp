@@ -53,56 +53,56 @@ tarch::logging::Log::~Log() {
 
 
 #if PeanoDebug>=4
-void tarch::logging::Log::debug(const std::string& methodName, const std::string& message) {
+void tarch::logging::Log::debug(const std::string& methodName, Message message) {
   if (LogFilter::getInstance().writeDebug( _className )) {
-    UseLogService::getInstance().debug(getTimeStamp(),tarch::mpi::Rank::getInstance().getRank(),tarch::multicore::Core::getInstance().getCoreNumber(),getTraceInformation(methodName),message);
+    UseLogService::getInstance().debug(getTimeStamp(),tarch::mpi::Rank::getInstance().getRank(),tarch::multicore::Core::getInstance().getCoreNumber(),getTraceInformation(methodName),message());
   }
 }
 #endif
 
 
-void tarch::logging::Log::info(const std::string& methodName, const std::string& message) {
+void tarch::logging::Log::info(const std::string& methodName, Message message) {
   if (LogFilter::getInstance().writeInfo( _className )) {
-    UseLogService::getInstance().info(getTimeStamp(),tarch::mpi::Rank::getInstance().getRank(),tarch::multicore::Core::getInstance().getCoreNumber(),getTraceInformation(methodName),message);
+    UseLogService::getInstance().info(getTimeStamp(),tarch::mpi::Rank::getInstance().getRank(),tarch::multicore::Core::getInstance().getCoreNumber(),getTraceInformation(methodName),message());
   }
 }
 
 
-void tarch::logging::Log::warning(const std::string& methodName, const std::string& message) {
-  UseLogService::getInstance().warning(getTimeStamp(),tarch::mpi::Rank::getInstance().getRank(),tarch::multicore::Core::getInstance().getCoreNumber(),getTraceInformation(methodName),message);
+void tarch::logging::Log::warning(const std::string& methodName, Message message) {
+  UseLogService::getInstance().warning(getTimeStamp(),tarch::mpi::Rank::getInstance().getRank(),tarch::multicore::Core::getInstance().getCoreNumber(),getTraceInformation(methodName),message());
 }
 
 
-void tarch::logging::Log::error(const std::string& methodName, const std::string& message) {
-  UseLogService::getInstance().error(getTimeStamp(),tarch::mpi::Rank::getInstance().getRank(),tarch::multicore::Core::getInstance().getCoreNumber(),getTraceInformation(methodName),message);
+void tarch::logging::Log::error(const std::string& methodName, Message message) {
+  UseLogService::getInstance().error(getTimeStamp(),tarch::mpi::Rank::getInstance().getRank(),tarch::multicore::Core::getInstance().getCoreNumber(),getTraceInformation(methodName),message());
 }
 
 
 #if PeanoDebug>=1
-void tarch::logging::Log::traceIn(const std::string& methodName, const std::string& message) {
+void tarch::logging::Log::traceIn(const std::string& methodName, Message message) {
   if (LogFilter::getInstance().writeTrace( _className )) {
-    UseLogService::getInstance().traceIn(getTimeStamp(),tarch::mpi::Rank::getInstance().getRank(),tarch::multicore::Core::getInstance().getCoreNumber(),getTraceInformation(methodName),message);
+    UseLogService::getInstance().traceIn(getTimeStamp(),tarch::mpi::Rank::getInstance().getRank(),tarch::multicore::Core::getInstance().getCoreNumber(),getTraceInformation(methodName),message());
   }
 }
 
 
-void tarch::logging::Log::traceOut(const std::string& methodName, const std::string& message) {
+void tarch::logging::Log::traceOut(const std::string& methodName, Message message) {
   if (LogFilter::getInstance().writeTrace( _className )) {
-    UseLogService::getInstance().traceOut(getTimeStamp(),tarch::mpi::Rank::getInstance().getRank(),tarch::multicore::Core::getInstance().getCoreNumber(),getTraceInformation(methodName),message);
+    UseLogService::getInstance().traceOut(getTimeStamp(),tarch::mpi::Rank::getInstance().getRank(),tarch::multicore::Core::getInstance().getCoreNumber(),getTraceInformation(methodName),message());
   }
 }
 #else
-void tarch::logging::Log::traceIn(const std::string& methodName, const std::string& message) {
+void tarch::logging::Log::traceIn(const std::string& methodName, Message message) {
 }
 
 
-void tarch::logging::Log::traceOut(const std::string& methodName, const std::string& message) {
+void tarch::logging::Log::traceOut(const std::string& methodName, Message message) {
 }
 #endif
 
 
-void tarch::logging::Log::indent( bool indent, const std::string& trace, const std::string& message ) const {
-  UseLogService::getInstance().indent( indent, trace, message );
+void tarch::logging::Log::indent( bool indent, const std::string& trace, Message message ) const {
+  UseLogService::getInstance().indent( indent, trace, message() );
 }
 
 

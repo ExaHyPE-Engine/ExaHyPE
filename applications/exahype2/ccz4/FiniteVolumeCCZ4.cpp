@@ -312,8 +312,10 @@ void applications::exahype2::ccz4::FiniteVolumeCCZ4::nonconservativeProduct(
   double t
 ) {
   ::exahype2::RefinementCommand result = ::exahype2::RefinementCommand::Keep;
-  //if (volumeCentre(0)>1.2) {result=::exahype2::RefinementCommand::Refine;}
-  double radius=volumeCentre(0)*volumeCentre(0)+volumeCentre(1)*volumeCentre(1)+volumeCentre(2)*volumeCentre(2); radius=pow(radius,0.5);
+
+  // double radius=volumeCentre(0)*volumeCentre(0)+volumeCentre(1)*volumeCentre(1)+volumeCentre(2)*volumeCentre(2); radius=pow(radius,0.5);
+  const double radius = tarch::la::norm2( volumeCentre );
+
   if (CCZ4ReSwi==1){ //radius based
     if (radius<0.1) {result=::exahype2::RefinementCommand::Refine;}
   }
@@ -336,8 +338,15 @@ void applications::exahype2::ccz4::FiniteVolumeCCZ4::nonconservativeProduct(
     }
   }
   if (CCZ4ReSwi==3){ //binary black holes
-  double radius1=(volumeCentre(0)-4.251)*(volumeCentre(0)-4.251)+volumeCentre(1)*volumeCentre(1)+volumeCentre(2)*volumeCentre(2); radius=pow(radius,0.5);
-  double radius2=(volumeCentre(0)+4.251)*(volumeCentre(0)+4.251)+volumeCentre(1)*volumeCentre(1)+volumeCentre(2)*volumeCentre(2); radius=pow(radius,0.5);
+    //double radius1=(volumeCentre(0)-4.251)*(volumeCentre(0)-4.251)+volumeCentre(1)*volumeCentre(1)+volumeCentre(2)*volumeCentre(2);
+    //double radius2=(volumeCentre(0)+4.251)*(volumeCentre(0)+4.251)+volumeCentre(1)*volumeCentre(1)+volumeCentre(2)*volumeCentre(2);
+
+    tarch::la::Vector<Dimensions,double> leftBH  = {-4.241, 0.0, 0.0};
+    tarch::la::Vector<Dimensions,double> rightBH = { 4.241, 0.0, 0.0};
+
+    const double radius1 = tarch::la::norm2( volumeCentre - leftBH  );
+    const double radius2 = tarch::la::norm2( volumeCentre - rightBH );
+
     if (tarch::la::equals(t,0.0)){  //as we use a quantity calculated in postpocessing, we need to provide criterion at the first timestep 
       if ( ((radius1<5) or (radius2<5)) and (volumeH(0)>1.0)) { result=::exahype2::RefinementCommand::Refine; }
       else if ((radius1<2.5) or (radius2<2.5)) { result=::exahype2::RefinementCommand::Refine; }
