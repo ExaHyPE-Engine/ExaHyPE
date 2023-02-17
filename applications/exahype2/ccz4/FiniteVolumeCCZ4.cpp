@@ -314,11 +314,6 @@ void applications::exahype2::ccz4::FiniteVolumeCCZ4::nonconservativeProduct(
   ::exahype2::RefinementCommand result = ::exahype2::RefinementCommand::Keep;
 
   const double radius = tarch::la::norm2( volumeCentre );
-
-<<<<<<< HEAD
-  if (CCZ4ReSwi==1){ //radius based
-    if (radius<0.1) {result=::exahype2::RefinementCommand::Refine;}
-=======
   //
   // see documentation in header file
   //
@@ -326,7 +321,6 @@ void applications::exahype2::ccz4::FiniteVolumeCCZ4::nonconservativeProduct(
     if (radius<0.2) {
       result=::exahype2::RefinementCommand::Refine;
     }
->>>>>>> performance
   }
   if (CCZ4ReSwi==2) { //
     if (tarch::la::equals(t,0.0)){  //as we use a quantity calculated in postpocessing, we need to provide criterion at the first timestep 
