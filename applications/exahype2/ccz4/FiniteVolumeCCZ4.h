@@ -37,16 +37,31 @@ class applications::exahype2::ccz4::FiniteVolumeCCZ4: public AbstractFiniteVolum
     /**
      * Refinement criterion
      *
-     * ExaHypE2 is guided by a maximum and minimum mesh (patch) size.
-     * All (dynamic) AMR is constrained by these values, i.e. if your
-     * mesh is coarser than the maximum mesh size, ExaHyPE 2 will
-     * automatically refine. If you try to refine further than the
-     * minimum mesh size, ExaHyPE 2 will ignore any refinement.
      *
-     * Consequently, you are fine if you work with a regular mesh:
-     * You set the maximum mesh size, and you leave everything else
-     * to Peano 4/ExaHyPE 2. If you want to have an adaptive mesh,
-     * use this routine to implement the refinement pattern.
+     * ## Single black hole, low refinement (CCZ4ReSwi==2)
+     *
+     *
+     * ## Single black hole (CCZ4ReSwi==6)
+     *
+     * Single black hole setup with two refinement levels such that the finest
+     * volume is the same size as it is in the regular grid tests. We use two
+     * level of refinement which arrange around the area of interest. Within
+     * the innermost radius of 3.5, we enforce a mesh size of 0.04, while we
+     * have a compute cell size of at least 0.15 within the radius of 5. For
+     * everything futher away than 5 from the centre, we stick to the maximum
+     * mesh size.
+     *
+     * We use the setup with
+     *
+     *         python3 ccz4.py -impl fd4-rk1-adaptive -s two-punctures -maxh 0.4 -minh 0.04 -ps 6 -plt 0.5 -et 0.5 -exn test --domain_r 9.0 --ReSwi 7 -cfl 0.1 -outdir ./ --KOSigma 8.0
+     *
+     * in standard benchmarks.
+     *
+     * Alternative settings would have been
+     *
+     *        double Radius[NumberOfRefinementLayers] = {5.0, 3.0};
+     *        double MaxH[NumberOfRefinementLayers]   = {0.3, 0.15};
+     *
      *
      * @param Q This is the (current) solution. The data is not set
      *  to a valid value throughout grid construction. That is: If
