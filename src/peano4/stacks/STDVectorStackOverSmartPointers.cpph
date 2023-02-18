@@ -26,17 +26,20 @@ peano4::stacks::STDVectorStackOverSmartPointers<T>::STDVectorStackOverSmartPoint
   _ioMetaDataMPIRequest(nullptr)
   #endif
 {
-  assertionMsg( stack.empty(), "may not copy non-empty stack" );
+  assertionMsg( _data.empty(), "may not copy non-empty stack" );
+  assertionMsg( copy._data.empty(), "may not copy non-empty stack" );
   #ifdef Parallel
-  assertionMsg( stack._ioMPIRequest==nullptr, "may not copy sending/receiving stack" );
-  assertionMsg( stack._ioMetaDataMPIRequest==nullptr, "may not copy sending/receiving stack" );
+  assertionMsg( _ioMPIRequest==nullptr, "may not copy sending/receiving stack" );
+  assertionMsg( _ioMetaDataMPIRequest==nullptr, "may not copy sending/receiving stack" );
+  assertionMsg( copy._ioMPIRequest==nullptr, "may not copy sending/receiving stack" );
+  assertionMsg( copy._ioMetaDataMPIRequest==nullptr, "may not copy sending/receiving stack" );
   #endif
 }
 
 
 template <class T>
 void peano4::stacks::STDVectorStackOverSmartPointers<T>::clone( const STDVectorStackOverSmartPointers<T>&  data ) {
-  assertionEquals1( _currentElement, 0, toString() );
+  assertion1( _data.empty(), toString() );
 
   _data.clear();
   _data.resize( data._data.size() );
@@ -124,13 +127,13 @@ void peano4::stacks::STDVectorStackOverSmartPointers<T>::startReceive(peano4::gr
   _data.resize(numberOfElements);
 
   #if PeanoDebug>=1
-  logDebug( "startReceive(...)", "I'll gonna receive " << (_currentElement * 2 * Dimensions) << " meta data entries" );
-  _gatheredMetaData = new double[ Dimensions*2*_currentElement ];
+  logDebug( "startReceive(...)", "I'll gonna receive " << (numberOfElements * 2 * Dimensions) << " meta data entries" );
+  _gatheredMetaData = new double[ Dimensions*2*numberOfElements ];
 
   _ioMetaDataMPIRequest = new MPI_Request();
   MPI_Irecv(
     _gatheredMetaData,
-    _currentElement * 2 * Dimensions,
+    numberOfElements * 2 * Dimensions,
     MPI_DOUBLE,
     _ioRank,
     _ioTag,
@@ -191,7 +194,7 @@ bool peano4::stacks::STDVectorStackOverSmartPointers<T>::tryToFinishSendOrReceiv
           std::copy_n( _gatheredData + T::Cardinality * i, T::Cardinality, _data[i].value );
         }
         #if PeanoDebug>=1
-        for (int i=0; i<_currentElement; i++) {
+        for (int i=0; i<size(); i++) {
           #if Dimensions==2
           _data[i].setDebugX( { _gatheredMetaData[i*Dimensions*2+0], _gatheredMetaData[i*Dimensions*2+1] });
           _data[i].setDebugH( { _gatheredMetaData[i*Dimensions*2+2], _gatheredMetaData[i*Dimensions*2+3] });
