@@ -100,6 +100,26 @@ class peano4::stacks::STDVectorStackOverSmartPointers {
     MPI_Request*        _ioMetaDataMPIRequest;
     #endif
 
+    /**
+     * Allocate buffer and gather
+     */
+    void gather();
+    /**
+     * Mere alloc
+     */
+    void prepareReceiveBuffer();
+    void scatter();
+
+    /**
+     * Allocate buffer and gather
+     */
+    void gatherMetaData();
+    /**
+     * Mere alloc
+     */
+    void prepareMetaDataReceiveBuffer();
+    void scatterMetaData();
+
   public:
     STDVectorStackOverSmartPointers();
 
