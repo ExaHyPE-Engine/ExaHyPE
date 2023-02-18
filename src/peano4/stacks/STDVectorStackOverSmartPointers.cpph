@@ -1,3 +1,6 @@
+#include "tarch/accelerator/accelerator.h"
+
+
 template <class T>
 tarch::logging::Log peano4::stacks::STDVectorStackOverSmartPointers<T>::_log( "peano4::stacks::STDVectorStackOverSmartPointers<T>" );
 
@@ -70,7 +73,7 @@ void peano4::stacks::STDVectorStackOverSmartPointers<T>::gatherMetaData() {
 template <class T>
 void peano4::stacks::STDVectorStackOverSmartPointers<T>::prepareMetaDataReceiveBuffer() {
   #if PeanoDebug>=1
-  _gatheredMetaData = new double[ Dimensions*2*size() ];
+  _gatheredMetaData = tarch::allocateMemory(Dimensions*2*size(), tarch::MemoryLocation::Heap );
  #endif
 }
 
@@ -118,8 +121,7 @@ void peano4::stacks::STDVectorStackOverSmartPointers<T>::prepareReceiveBuffer() 
     size() << " local entries with " << T::Cardinality <<
     " values per entry"
   );
-  /// @todo Use tarch
-  _gatheredData     = new typename T::DoFType[ size() * T::Cardinality ];
+  _gatheredData = tarch::allocateMemory(size() * T::Cardinality, tarch::MemoryLocation::Heap );
 }
 
 
@@ -260,10 +262,9 @@ bool peano4::stacks::STDVectorStackOverSmartPointers<T>::tryToFinishSendOrReceiv
         scatter();
       }
 
-      delete[] _gatheredData;
-
+      tarch::freeMemory(_gatheredData, tarch::MemoryLocation::Heap );
       #if PeanoDebug>=1
-      delete[] _gatheredMetaData;
+      tarch::freeMemory(_gatheredMetaData, tarch::MemoryLocation::Heap );
       #endif
 
       _ioMode = IOMode::None;

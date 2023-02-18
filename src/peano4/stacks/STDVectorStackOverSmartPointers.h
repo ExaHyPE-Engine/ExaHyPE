@@ -105,7 +105,11 @@ class peano4::stacks::STDVectorStackOverSmartPointers {
      */
     void gather();
     /**
-     * Mere alloc
+     * Mere alloc. We use the tarch's allocation. Therefore, we can have
+     * aligned data here. Without the tarch, the code call would be
+     *
+     *         _gatheredData     = new typename T::DoFType[ size() * T::Cardinality ];
+     *
      */
     void prepareReceiveBuffer();
     void scatter();
@@ -115,7 +119,11 @@ class peano4::stacks::STDVectorStackOverSmartPointers {
      */
     void gatherMetaData();
     /**
-     * Mere alloc
+     * Mere alloc. We use the tarch's allocation. Therefore, we can have
+     * aligned data here. Without tarch, the call would be
+     *
+     *         _gatheredMetaData = new double[ Dimensions*2*size() ];
+     *
      */
     void prepareMetaDataReceiveBuffer();
     void scatterMetaData();
