@@ -55,13 +55,13 @@ void peano4::stacks::STDVectorStackOverSmartPointers<T>::clone( const STDVectorS
 template <class T>
 void peano4::stacks::STDVectorStackOverSmartPointers<T>::gatherMetaData() {
   #if PeanoDebug>=1
-  // @todo
-  logInfo( "gatherMetaData()", "copy " << (size()*2*Dimensions) << " doubles over into temporary local buffer" );
   prepareMetaDataReceiveBuffer();
-  for (int i=0; i<size(); i++)
-  for (int d=0; d<Dimensions; d++) {
-    _gatheredMetaData[i*Dimensions*2+d]            = _data[i].getDebugX()(d);
-    _gatheredMetaData[i*Dimensions*2+d+Dimensions] = _data[i].getDebugH()(d);
+  for (int i=0; i<size(); i++) {
+    logDebug( "gatherMetaData()", i << "th entry: copy " << (size()*2*Dimensions) << " doubles over into temporary local buffer. x=" << _data[i].getDebugX() << ", h=" << _data[i].getDebugH() );
+    for (int d=0; d<Dimensions; d++) {
+      _gatheredMetaData[i*Dimensions*2+d]            = _data[i].getDebugX()(d);
+      _gatheredMetaData[i*Dimensions*2+d+Dimensions] = _data[i].getDebugH()(d);
+    }
   }
   #endif
 }
@@ -78,7 +78,6 @@ void peano4::stacks::STDVectorStackOverSmartPointers<T>::prepareMetaDataReceiveB
 template <class T>
 void peano4::stacks::STDVectorStackOverSmartPointers<T>::scatterMetaData() {
   #if PeanoDebug>=1
-  logInfo( "scatterMetaData()", "copy " << (size()*2*Dimensions) << " doubles over into meta data" );
   for (int i=0; i<size(); i++) {
     #if Dimensions==2
     _data[i].setDebugX( { _gatheredMetaData[i*Dimensions*2+0], _gatheredMetaData[i*Dimensions*2+1] });
@@ -87,6 +86,7 @@ void peano4::stacks::STDVectorStackOverSmartPointers<T>::scatterMetaData() {
     _data[i].setDebugX( { _gatheredMetaData[i*Dimensions*2+0], _gatheredMetaData[i*Dimensions*2+1], _gatheredMetaData[i*Dimensions*2+2] });
     _data[i].setDebugH( { _gatheredMetaData[i*Dimensions*2+3], _gatheredMetaData[i*Dimensions*2+4], _gatheredMetaData[i*Dimensions*2+5] });
     #endif
+    logDebug( "scatterMetaData()", "copied " << (size()*2*Dimensions) << " doubles over into meta data. x=" << _data[i].getDebugX() << ", h=" << _data[i].getDebugH() );
   }
   #endif
 }
@@ -94,29 +94,31 @@ void peano4::stacks::STDVectorStackOverSmartPointers<T>::scatterMetaData() {
 
 template <class T>
 void peano4::stacks::STDVectorStackOverSmartPointers<T>::scatter() {
-  // @todo
-  logInfo( "scatter()", "copy " << size() << " data entries over into real smart pointer data structure. One entry hosts " << (T::Cardinality) << " unknowns" );
+  logDebug( "scatter()", "copy " << size() << " data entries over into real smart pointer data structure. One entry hosts " << (T::Cardinality) << " unknowns" );
   for (int i=0; i<size(); i++) {
     std::copy_n( _gatheredData + T::Cardinality * i, T::Cardinality, _data[i].value );
-    logInfo( "scatter()", i << "th entry is " << _data[i].value[0] );
   }
 }
 
 
 template <class T>
 void peano4::stacks::STDVectorStackOverSmartPointers<T>::gather() {
-  // @todo debug
-  logInfo( "gather()", "copy " << size() << " data entries over into real smart pointer data structure. One entry hosts " << (T::Cardinality) << " unknowns" );
   prepareReceiveBuffer();
   for (int i=0; i<size(); i++) {
     std::copy_n( _data[i].value, T::Cardinality, _gatheredData + T::Cardinality * i );
-    logInfo( "gather()", i << "th entry is " << _data[i].value[0] );
   }
 }
 
 
 template <class T>
 void peano4::stacks::STDVectorStackOverSmartPointers<T>::prepareReceiveBuffer() {
+  logInfo(
+    "prepareReceiveBuffer()",
+    "allocate (temporary) receive of size " << (size() * T::Cardinality) << ". " <<
+    size() << " local entries with " << T::Cardinality <<
+    " values per entry"
+  );
+  /// @todo Use tarch
   _gatheredData     = new typename T::DoFType[ size() * T::Cardinality ];
 }
 
@@ -131,8 +133,8 @@ void peano4::stacks::STDVectorStackOverSmartPointers<T>::startSend(peano4::grid:
   _ioTag  = tag;
   _ioRank = rank;
 
-  gather();
   gatherMetaData();
+  gather();
 
   // backup data as clear() below might change this value
   const int stackEntriesToSend = size();
@@ -155,8 +157,11 @@ void peano4::stacks::STDVectorStackOverSmartPointers<T>::startSend(peano4::grid:
   _ioMPIRequest = new MPI_Request;
   int result = MPI_Isend(
     _gatheredData,
-    stackEntriesToSend,
-    translateContextIntoDatatype<T>( context ),
+    //    stackEntriesToSend,
+    //    translateContextIntoDatatype<T>( context ),
+    // @todo Change
+    stackEntriesToSend * T::Cardinality,
+    MPI_DOUBLE,
     _ioRank,
     _ioTag,
     comm,
@@ -207,12 +212,15 @@ void peano4::stacks::STDVectorStackOverSmartPointers<T>::startReceive(peano4::gr
 
   int result = MPI_Irecv(
     _gatheredData,
-    numberOfElements,
-    translateContextIntoDatatype<T>( context ),
+//    numberOfElements,
+//    translateContextIntoDatatype<T>( context ),
+    numberOfElements * T::Cardinality,
+    MPI_DOUBLE,
     _ioRank,
     _ioTag,
     comm,
-    _ioMPIRequest);
+    _ioMPIRequest
+  );
   if  (result!=MPI_SUCCESS) {
     logError( "startReceive(int,int,int)", "was not able to receive " << numberOfElements << " values from node " << rank << " on tag " << tag
        << ": " << tarch::mpi::MPIReturnValueToString(result)
@@ -248,8 +256,8 @@ bool peano4::stacks::STDVectorStackOverSmartPointers<T>::tryToFinishSendOrReceiv
       #endif
 
       if (_ioMode==IOMode::MPIReceive ) {
-        scatter();
         scatterMetaData();
+        scatter();
       }
 
       delete[] _gatheredData;
