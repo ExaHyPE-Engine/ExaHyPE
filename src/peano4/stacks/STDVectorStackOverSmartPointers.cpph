@@ -115,7 +115,7 @@ void peano4::stacks::STDVectorStackOverSmartPointers<T>::gather() {
 
 template <class T>
 void peano4::stacks::STDVectorStackOverSmartPointers<T>::prepareReceiveBuffer() {
-  logInfo(
+  logDebug(
     "prepareReceiveBuffer()",
     "allocate (temporary) receive of size " << (size() * T::Cardinality) << ". " <<
     size() << " local entries with " << T::Cardinality <<
@@ -159,11 +159,8 @@ void peano4::stacks::STDVectorStackOverSmartPointers<T>::startSend(peano4::grid:
   _ioMPIRequest = new MPI_Request;
   int result = MPI_Isend(
     _gatheredData,
-    //    stackEntriesToSend,
-    //    translateContextIntoDatatype<T>( context ),
-    // @todo Change
-    stackEntriesToSend * T::Cardinality,
-    MPI_DOUBLE,
+    stackEntriesToSend,
+    translateContextIntoDatatype<T>( context ),
     _ioRank,
     _ioTag,
     comm,
@@ -214,10 +211,8 @@ void peano4::stacks::STDVectorStackOverSmartPointers<T>::startReceive(peano4::gr
 
   int result = MPI_Irecv(
     _gatheredData,
-//    numberOfElements,
-//    translateContextIntoDatatype<T>( context ),
-    numberOfElements * T::Cardinality,
-    MPI_DOUBLE,
+    numberOfElements,
+    translateContextIntoDatatype<T>( context ),
     _ioRank,
     _ioTag,
     comm,
