@@ -212,7 +212,7 @@ if "dyn" in args.type:
 else:
   thesolver.add_solver_constants("static constexpr bool DynamicAMR = false;" )
 
-thesolver.switch_to_heap_storage()
+thesolver.switch_to_heap_storage(True, True)
   
         
 #
