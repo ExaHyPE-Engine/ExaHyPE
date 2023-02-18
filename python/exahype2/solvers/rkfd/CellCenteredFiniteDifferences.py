@@ -173,6 +173,9 @@ class CellCenteredFiniteDifferences(object):
     self._interpolation = "#error Not yet defined"
     self._restriction   = "#error Not yet defined"
 
+    self._hold_cell_data_on_heap_with_smart_pointer = False
+    self._hold_face_data_on_heap_with_smart_pointer = False
+
     self.create_data_structures()
     self.create_action_sets()
 
@@ -223,20 +226,20 @@ h_volume_max:           """ + str( self._max_meshcell_h ) + """
     return 3**self.get_max_number_of_spacetree_levels(domain_size)
 
 
-  def get_coarsest_number_of_finite_volumes(self,domain_size):
+  def get_coarsest_number_of_compute_grid_cells(self,domain_size):
     return self.get_coarsest_number_of_patches(domain_size)*self._patch_size
 
 
-  def get_finest_number_of_finite_volumes(self,domain_size):
+  def get_finest_number_of_compute_grid_cells(self,domain_size):
     return self.get_finest_number_of_patches(domain_size)*self._patch_size
 
     
-  def get_coarsest_volume_size(self,domain_size):
-    return domain_size/self.get_coarsest_number_of_finite_volumes(domain_size)
+  def get_coarsest_compute_grid_cell_size(self,domain_size):
+    return domain_size/self.get_coarsest_number_of_compute_grid_cells(domain_size)
 
 
-  def get_finest_volume_size(self,domain_size):
-    return domain_size/self.get_finest_number_of_finite_volumes(domain_size)
+  def get_finest_compute_grid_cell_size(self,domain_size):
+    return domain_size/self.get_finest_number_of_compute_grid_cells(domain_size)
 
   
   def create_readme_descriptor(self, domain_offset, domain_size):
@@ -253,16 +256,23 @@ and recursively into three parts along each coordinate axis. This yields a space
 The spacetree will at least have """ + str(self.get_min_number_of_spacetree_levels(domain_size)) + """ levels.
 The spacetree will at most have """ + str(self.get_max_number_of_spacetree_levels(domain_size)) + """ levels.
 
-The spacetree will thus span at least """ + str(self.get_coarsest_number_of_patches(domain_size)) + """ cells (or patches) per coordinate axis. This means a """ + str(self.get_coarsest_number_of_patches(domain_size)) + """^d grid of patches.
-The spacetree will thus span at most """ + str(self.get_finest_number_of_patches(domain_size)) + """ cells (or patches) per coordinate axis. This means a """ + str(self.get_finest_number_of_patches(domain_size)) + """^d grid of patches.
+The spacetree will thus span at least """ + str(self.get_coarsest_number_of_patches(domain_size)) + """ octants/cells (see clarification below) per coordinate axis. This means a """ + str(self.get_coarsest_number_of_patches(domain_size)) + """^d grid of octants.
+The spacetree will thus span at most """ + str(self.get_finest_number_of_patches(domain_size)) + """ octants/cells (see clarification below) per coordinate axis. This means a """ + str(self.get_finest_number_of_patches(domain_size)) + """^d grid of octants.
 
-ExaHyPE 2 embeds """ + str(self._patch_size) + """^d patches of Finite Volumes into the finest tree level.
+ExaHyPE 2 embeds """ + str(self._patch_size) + """^d patches of compute cells into the finest tree level. 
+We refer to elements of this level as octant above.
+They are squares/cubes and many papers refer to them as cells, but they are not 
+the actual compute data structure. The compute data structure is the cells that
+are embedded into these finest level spacetree cells. We therefore prefer the 
+term octant for the latter, whereas we use the term (compute) cell for the 
+entities that are actually used for the computations, i.e. hold degrees of 
+freedom, and are actually visible within Paraview, e.g.
 
-The coarsest possible mesh will consist of """ + str(self.get_coarsest_number_of_finite_volumes(domain_size)) + """ Finite Volumes per coordinate axis.
-The finest possible mesh will consist of """ + str(self.get_finest_number_of_finite_volumes(domain_size)) + """ Finite Volumes per coordinate axis.
+The coarsest possible mesh will consist of """ + str(self.get_coarsest_number_of_compute_grid_cells(domain_size)) + """ compute cells per coordinate axis.
+The finest possible mesh will consist of """ + str(self.get_finest_number_of_compute_grid_cells(domain_size)) + """ compute cells per coordinate axis.
 
-The coarsest mesh width of """ + str(self.get_coarsest_volume_size(domain_size)) + """ is thus just smaller than the maximum volume size """ + str(self._max_meshcell_h) + """.
-The finest mesh width of """ + str(self.get_finest_volume_size(domain_size)) + """ is thus just smaller than the minimum volume size """ + str(self._min_meshcell_h) + """.
+The coarsest mesh width of """ + str(self.get_coarsest_compute_grid_cell_size(domain_size)) + """ is thus just smaller than the maximum volume size """ + str(self._max_meshcell_h) + """.
+The finest mesh width of """ + str(self.get_finest_compute_grid_cell_size(domain_size)) + """ is thus just smaller than the minimum volume size """ + str(self._min_meshcell_h) + """.
 
 """ 
   
@@ -364,6 +374,14 @@ The finest mesh width of """ + str(self.get_finest_volume_size(domain_size)) + "
     self._patch_overlap_old    = peano4.datamodel.Patch( (2*self._overlap,self._patch_size,self._patch_size),  self._unknowns+self._auxiliary_variables, self._unknown_identifier() + "Old" )
     self._patch_overlap_new    = peano4.datamodel.Patch( (2*self._overlap,self._patch_size,self._patch_size),  self._unknowns+self._auxiliary_variables, self._unknown_identifier() + "New" )
     self._patch_overlap_update = peano4.datamodel.Patch( (2*self._overlap,self._patch_size,self._patch_size),  self._unknowns+self._auxiliary_variables, self._unknown_identifier() + "Update" )
+
+    if self._hold_cell_data_on_heap_with_smart_pointer:
+      self._patch.generator           = peano4.datamodel.PatchToDoubleArrayOnHeap(self._patch,           "double")
+      self._patch_estimates.generator = peano4.datamodel.PatchToDoubleArrayOnHeap(self._patch_estimates, "double")
+    if self._hold_face_data_on_heap_with_smart_pointer:
+      self._patch_overlap_old.generator    = peano4.datamodel.PatchToDoubleArrayOnHeap(self._patch_overlap_old,    "double") 
+      self._patch_overlap_new.generator    = peano4.datamodel.PatchToDoubleArrayOnHeap(self._patch_overlap_new,    "double") 
+      self._patch_overlap_update.generator = peano4.datamodel.PatchToDoubleArrayOnHeap(self._patch_overlap_update, "double") 
     
     self._patch_overlap_old.generator.merge_method_definition = peano4.toolbox.blockstructured.get_face_merge_implementation(self._patch_overlap_old)
     self._patch_overlap_new.generator.merge_method_definition = peano4.toolbox.blockstructured.get_face_merge_implementation(self._patch_overlap_new)
@@ -764,7 +782,7 @@ The finest mesh width of """ + str(self.get_finest_volume_size(domain_size)) + "
       templatefile_prefix += self.__class__.__name__
     else:
       templatefile_prefix += self._solver_template_file_class_name
-
+    
     abstractHeaderDictionary = {}
     implementationDictionary = {}
     self._init_dictionary_with_default_parameters(abstractHeaderDictionary)
@@ -864,15 +882,7 @@ The finest mesh width of """ + str(self.get_finest_volume_size(domain_size)) + "
 
     d[ "KERNEL_NAMESPACE"]                    = self._kernel_namespace
 
-    # RungeKuttaDG hat einige er Implementeirungen hier oben schon, weil es ja fuer alle Riemann Loeser gilt
-    #    d[ "FLUX_IMPLEMENTATION"]                 = self._flux_implementation
-    #d[ "NCP_IMPLEMENTATION"]                  = self._ncp_implementation
-    #d[ "SOURCE_TERM_IMPLEMENTATION"]          = self._source_term_implementation
-    #d[ "POINT_SOURCES_IMPLEMENTATION"]        = self._point_sources_implementation
-
-    # setimplementation ist also hier
-    
-    
+   
   @property
   def unknowns(self):
     return self._unknowns
@@ -1034,14 +1044,20 @@ The finest mesh width of """ + str(self.get_finest_volume_size(domain_size)) + "
 
 
   def switch_to_heap_storage(self,
-                             hold_cell_data_on_heap_with_smart_pointer = True,
-                             hold_face_data_on_heap_with_smart_pointer = False
+                             hold_cell_data_on_heap_with_smart_pointer,
+                             hold_face_data_on_heap_with_smart_pointer
                              ):
-    if hold_cell_data_on_heap_with_smart_pointer:
-      self._patch.generator           = peano4.datamodel.PatchToDoubleArrayOnHeap(self._patch,           "double")
-      self._patch_estimates.generator = peano4.datamodel.PatchToDoubleArrayOnHeap(self._patch_estimates, "double")
-    if hold_face_data_on_heap_with_smart_pointer:
-      self._patch_overlap_old.generator    = peano4.datamodel.PatchToDoubleArrayOnHeap(self._patch_overlap_old,    "double") 
-      self._patch_overlap_new.generator    = peano4.datamodel.PatchToDoubleArrayOnHeap(self._patch_overlap_new,    "double") 
-      self._patch_overlap_update.generator = peano4.datamodel.PatchToDoubleArrayOnHeap(self._patch_overlap_update, "double") 
+    """
+    
+    By default, we hold all data on the call stacks. You can explicitly switch
+    to storage on the heap via smart pointers.
+    
+    @see create_data_structures()
+    
+    """
+    self._hold_cell_data_on_heap_with_smart_pointer = hold_cell_data_on_heap_with_smart_pointer
+    self._hold_face_data_on_heap_with_smart_pointer = hold_face_data_on_heap_with_smart_pointer
+    
+    self.create_data_structures()
+    self.create_action_sets()
 

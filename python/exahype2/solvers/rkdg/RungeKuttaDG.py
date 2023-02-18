@@ -299,6 +299,9 @@ class RungeKuttaDG(object):
     self._finish_time_step_implementation          = ""
     
     self._constructor_implementation = ""
+
+    self._hold_cell_data_on_heap_with_smart_pointer = False
+    self._hold_face_data_on_heap_with_smart_pointer = False
     
     self.create_data_structures()
     self.create_action_sets()
@@ -516,6 +519,15 @@ We use RK(""" + str(self._rk_order) + """) for the time stepping.
                                                                        self._unknowns, 
                                                                        self._unknown_identifier() + "RiemannSolution" )
            
+    if self._hold_cell_data_on_heap_with_smart_pointer:
+      self._current_time_step.generator               = peano4.datamodel.PatchToDoubleArrayOnHeap(self._current_time_step,               "double")
+      self._rhs_estimates.generator                   = peano4.datamodel.PatchToDoubleArrayOnHeap(self._rhs_estimates,                   "double")
+      self._linear_combination_of_estimates.generator = peano4.datamodel.PatchToDoubleArrayOnHeap(self._linear_combination_of_estimates, "double")
+
+    if self._hold_face_data_on_heap_with_smart_pointer:
+      self._estimate_projection.generator     = peano4.datamodel.PatchToDoubleArrayOnHeap(self._estimate_projection,     "double") 
+      self._old_solution_projection.generator = peano4.datamodel.PatchToDoubleArrayOnHeap(self._old_solution_projection, "double") 
+      self._Riemann_solution.generator        = peano4.datamodel.PatchToDoubleArrayOnHeap(self._Riemann_solution,        "double") 
 
     self._estimate_projection.generator.store_persistent_condition = self._store_face_data_default_guard()
     self._estimate_projection.generator.load_persistent_condition  = self._load_face_data_default_guard()
@@ -1232,6 +1244,25 @@ We use RK(""" + str(self._rk_order) + """) for the time stepping.
 
     """
     self._postprocess_updated_cell_after_final_linear_combination = kernel
+    self.create_data_structures()
+    self.create_action_sets()
+
+
+  def switch_to_heap_storage(self,
+                             hold_cell_data_on_heap_with_smart_pointer,
+                             hold_face_data_on_heap_with_smart_pointer
+                             ):
+    """
+    
+    By default, we hold all data on the call stacks. You can explicitly switch
+    to storage on the heap via smart pointers.
+    
+    @see create_data_structures()
+    
+    """
+    self._hold_cell_data_on_heap_with_smart_pointer = hold_cell_data_on_heap_with_smart_pointer
+    self._hold_face_data_on_heap_with_smart_pointer = hold_face_data_on_heap_with_smart_pointer
+    
     self.create_data_structures()
     self.create_action_sets()
 

@@ -49,7 +49,7 @@ void tarch::tests::TestCaseCollection::run() {
     logInformation += " failed";
   }
   if (_writeToLog) {
-    _log.info("run()",logInformation );
+    logInfo("run()",logInformation );
   }
   logTraceOutWith2Arguments( "run()", _testCaseName, _errors );
 }

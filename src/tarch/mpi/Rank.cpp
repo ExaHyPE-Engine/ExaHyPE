@@ -91,7 +91,7 @@ void tarch::mpi::Rank::plotMessageQueues() {
   MPI_Status   status;
   MPI_Iprobe(MPI_ANY_SOURCE, MPI_ANY_TAG, _communicator, &flag, &status);
   if (flag==0) {
-    _log.error("plotMessageQueues()", "there are no messages from any sender in MPI queue");
+    logError("plotMessageQueues()", "there are no messages from any sender in MPI queue");
   }
   else {
     logError(
@@ -126,7 +126,7 @@ void tarch::mpi::Rank::triggerDeadlockTimeOut(
         << " seconds for " << numberOfExpectedMessages
         << " message(s) from node " << communicationPartnerRank << " with tag " << tag
         << ". Timeout. " << comment;
-    _log.error( "triggerDeadlockTimeOut(...)", out.str() );
+    logError( "triggerDeadlockTimeOut(...)", out.str() );
 
     plotMessageQueues();
 
@@ -439,7 +439,7 @@ void tarch::mpi::Rank::logStatus() const {
   #endif
   statusMessage << ", #processors=" << _numberOfProcessors;
 
-  _log.info( "logStatus()", statusMessage.str() );
+  logInfo( "logStatus()", statusMessage.str() );
 }
 
 

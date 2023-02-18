@@ -70,6 +70,12 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::setDebugX( const tarch::la::Vect
 
 
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::setDebugH( const tarch::la::Vector<Dimensions,double>& data ) {
+  // At the moment, we only use square/cubic elements
+  assertion2( data(0)>0.0, data, toString() );
+  assertion2( data(0)==data(1), data, toString() );
+  #if Dimensions==3
+  assertion2( data(1)==data(2), data, toString() );
+  #endif
   _debugH = data;
 }
 
@@ -234,35 +240,16 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::compute(
   
 #ifdef Parallel
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::initDatatype() {
-  {{NAMESPACE | join("::")}}::{{CLASSNAME}}  instances[2];
- 
-  MPI_Datatype subtypes[] = { {{MPI_FLOAT_TYPE}} };
-    
-  int blocklen[] = { Cardinality };
+  int errorCode = MPI_Type_vector(
+    1,           // number of blocks (count)
+    Cardinality, // number of entries per block (blocklength),
+    0,           // no stride as we work with a continuous datatype,
+    {{MPI_FLOAT_TYPE}},
+    &Datatype
+  );
   
-  const int NumberOfAttributes = 1;
-
-  MPI_Aint  baseFirstInstance;
-  MPI_Aint  baseSecondInstance;
-  MPI_Get_address( &instances[0], &baseFirstInstance );
-  MPI_Get_address( &instances[1], &baseSecondInstance );
-  MPI_Aint  disp[ NumberOfAttributes ];
-  int       currentAddress = 0;
-  MPI_Get_address( &(instances[0].value), &disp[currentAddress] );
-  currentAddress++;
-
-  MPI_Aint offset = disp[0] - baseFirstInstance;
-  MPI_Aint extent = baseSecondInstance - baseFirstInstance - offset;
-  for (int i=NumberOfAttributes-1; i>=0; i--) {
-    disp[i] = disp[i] - disp[0];
-  }
-
-  int errorCode = 0; 
-  MPI_Datatype tmpType; 
-  errorCode += MPI_Type_create_struct( NumberOfAttributes, blocklen, disp, subtypes, &tmpType );
-  errorCode += MPI_Type_create_resized( tmpType, offset, extent, &Datatype );
   errorCode += MPI_Type_commit( &Datatype );
-  errorCode += MPI_Type_free( &tmpType );
+
   if (errorCode) std::cerr << "error constructing MPI datatype in " << __FILE__ << ":" << __LINE__ << std::endl;
 }
 
