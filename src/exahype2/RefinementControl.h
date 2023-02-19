@@ -132,8 +132,9 @@ class exahype2::RefinementControl: public tarch::services::Service {
      * Depending on the context, we add a new refinement instruction
      * interpreting x and h. If you refine, I divide h by three.
      *
-     * @param x Centre of the cell for which this command is triggered
-     * @param h Size of this cell
+     * @param x Centre of the cell for which this command is triggered. This is
+     *   typically marker.x().
+     * @param h Size of this cell. Typically marker.h().
      */
     void addCommand(
       const tarch::la::Vector<Dimensions,double>&  x,

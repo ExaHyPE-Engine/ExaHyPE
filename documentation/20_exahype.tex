@@ -889,6 +889,203 @@ double examples::exahype2::selfgravitation::Poisson::getAdmissibleTimeStepSize()
 
 
 
+\section{Case study: Coupling finite volumes with Runge-Kutta DG (limiting)}
+\label{section:exahype:fv:limiting}
+
+
+Even simple initial conditions can make a Discontinuous Galerking solver fail: 
+The higher order solution representation is not capable to resolve shocks
+properly (or steep gradients), and the solution therefore starts to oscillation.
+At the same time, experiments with Finite Volumes yield solutions which a
+subject to very strong numerical diffusion.
+The solution quality is not good.
+
+
+There are two fundamental approaches to tackle this dilemma: On the one hand,
+we can introduce artificial damping terms, i.e.~numerical diffusion, or
+truncation terms for the Riemann solvers such that these oscillations are
+eliminated. 
+On the other hand, we can accept that both DG and FV have their pros and cons
+and try to use each solver where it unfolds its full potential.
+This is the prime strategy in the original \ExaHyPE\ project.
+
+
+To realise this a posteriori limiting (which really will become an a priori
+limiting), we follow the same pattern that we exploited in the
+previous case study:
+We define two different solvers, and couple them with each other.
+Different to the previous setup, we however make all of our operations local:
+
+\begin{itemize}
+  \item The Finite Volume solver is our fallback strategy and we therefore
+  neither solve with Finite Volumes everywhere in the computational domain nor
+  should do we store the corresponding data.
+  \item The FV and the DG solver are not coupled everywhere but only in boundary
+  regions, i.e.~in regions where the FV solver and the DG solver kind of agree
+  solution-wisely.
+\end{itemize}
+
+
+\noindent
+We will effectively end up with a domain decomposition where parts of the
+computational domain are handled by the DG solver and the other parts are
+handled with FV.
+To realise this, we need a marker, i.e.~a
+label per cell which tells us, similar to a multi-phase flow, which solver rules in this
+particular cell.
+Then, we construct two solvers that are coupled with each other similar to the
+previous case study.
+The marker will determine which solver is ``valid'' in which cell, where they
+are active, and where the two solvers are coupled with each other.
+
+
+\begin{remark}
+ For the coupling of two solvers, it is advantageous not to work with \ExaHyPE\
+ solver instances directly. Instead, I recommend that you specialise the solver
+ of your choice such that you can add further features to this class. In Python,
+ this is straightforward. The line
+ \begin{code}
+dg_solver = exahype2.solvers.rkdg.exahype2.solvers.rkdg.rusanov.
+  GlobalAdaptiveTimeStepWithEnclaveTasking(...)
+ \end{code}
+ 
+ \noindent
+ is replaced with 
+ \begin{code}
+class MyDGSolver(exahype2.solvers.rkdg.rusanov.GlobalAdaptiveTimeStepWithEnclaveTasking):
+  def __init__(self):
+    super(MyDGSolver,self).__init__(...)
+    
+dg_solver = MyDGSolver()
+ \end{code}
+ 
+ \noindent
+ All remarks below refer to objects instantiating the specialisation of the FV
+ and DG solver, respectively, rather than a direct specialisation.
+\end{remark}
+
+
+
+\paragraph*{Two solvers}
+
+In this simple setup, we just create a DG solver and then add an additional
+Finite Volume solver. 
+The latter works with a patch size of $2p+1$ where $p$ is the spatial DG order.
+You might want to use a different patch size, but this choice usually yields
+time step sizes in the FV discretisation which is similar to the DG scheme.
+We
+add both of them to the project and refer to them as \texttt{dg\_solver} and \texttt{fv\_solver} objects in the Python script.
+You can use any solver you like, but I strongly recommend that you use the same
+time stepping scheme for both solvers. 
+All the explanations below refer to adaptive time stepping. 
+You might have to alter some bits and pieces if you use a different time
+stepping scheme.
+
+ 
+\paragraph*{The marker}
+
+The marker is determined by a quantity $\alpha $ which solves the equation
+\[
+ - \Delta \alpha = C < 0 
+ \qquad
+ \text{s.t.} \ 
+ 0 \leq \alpha  \leq 1, \ 
+ \alpha  | _{\partial \Omega} = 0
+\]
+via a cell-centered finite differences scheme. 
+In  the cells where we definitely need the Finite Volume scheme, we set $\alpha
+ = 1$.
+The higher $\alpha $, the more sure we are that the FV scheme yields
+the correct result.
+
+\ExaHyPE\ is shipped with a pre-manufactured solver for this Poisson setup 
+which takes care of all the details---including the mapping of the continuous
+$\alpha $ value onto the states which solver is active where---and also has more
+documentation):
+
+
+\begin{code}
+marker_solver = exahype2.solvers.elliptic.ConstrainedPoissonEquationForMarkerOnCells( name = "Alpha",
+                                                                             plot = True) 
+project.add_solver( marker_solver )
+\end{code}
+
+
+\paragraph*{Control the marker}
+
+The marker by default will be $\alpha =0$ in the present configuration. 
+As a first step, we hence have to reset it to $\alpha =1$ where we want the FV
+scheme to dominate, i.e.~where we definitely know that it is the FV scheme that
+we need.
+Technically, we realise this by a postprocessing step on the respective solver:
+
+\begin{code}
+ marker_solver.postprocess_updated_cell = """
+if ( check some conditions ) {
+  fineGridCell{{CELL_NAME}}.setValue(1.0);
+}
+"""
+\end{code}
+
+
+\paragraph*{Translate marker outcome onto grid}
+
+The marker helps us to identify where which solver is active. 
+This is information we next want to project onto the grid, i.e.~we want to find
+out which mesh cells have to store which data.
+For this, we have to augment the marker object within the cell which is an
+object that is always associated with any \Peano\ mesh cell and has nothing to
+do with the stuff that we call ``a marker'' above.
+
+\begin{remark}
+ It seems to be (and is) quite complicated that we move the storage information
+ from the marker into the grid. 
+ However, there are two good reasons for this:
+ \begin{itemize}
+   \item On the one hand, we might want to tailor the information delivered by
+   the marker towards our needs. It is not even prescribed how many solvers in
+   total are guided by one marker!
+   \item On the other hand, we need the mesh storage information later within
+   the solver, where we have to access to the newly generated Poisson equation.
+   We have access to the mesh marker however.
+ \end{itemize}
+\end{remark}
+
+Ganz ganz wichtig ist, dass der Poisson solver als erstes kommt vor dem DG und
+dem FV Zeugs!
+
+
+\paragraph*{Restrict the solvers}
+
+With the marker at hand, we can instruct the solver not to solve their equation
+in certain regions. 
+We can also ensure that they don't store data where it actually is not required.
+The cell marker as introduced by
+\texttt{ConstrainedPoissonEquationForMarkerOnCells} provides all the necessary
+information to guide the data flow.
+
+
+We don't want to alter the core logic of the data flow, but actually veto for
+some cells that data is stored or loaded. 
+There are various ways to achieve this.
+I propose to plug into \texttt{\_load\_cell\_data\_default\_guard()} and 
+\texttt{\_store\_cell\_data\_default\_guard()}.
+
+\begin{code}
+dg_solver._action_set_update_cell.guard                = UpdateCell(self)
+dg_solver._action_set_merge_enclave_task_outcome = MergeEnclaveTaskOutcome(self)                                                                                 
+\end{code}
+
+Schoen ist das nicht mit dem Ueberschreiben -> remark
+Wir sehen, dass der Status hier gar keine Rolle spielt, sondern nur die
+Storage-Rules. Evtl ist das fuer andere Loeser anders
+
+
+\paragraph*{Couple marker and FV scheme}
+
+With the three solvers (two PDE solvers plus the marker's Poisson equation) at
+hand, we have to couple them with each other.
+    
 
 
 \section{Generic \ExaHyPE\ features}
@@ -1368,6 +1565,7 @@ The discussion around Finite Volume solvers for example can be found on page
 
 
 \subsection{GPU support}
+\label{section:exahype:gpu-support}
 
 \begin{definition}
  \ExaHyPE\ uses GPUs in a classic \emph{offloading, accelerator style}.
@@ -1552,10 +1750,7 @@ virtual bool patchCanUseStatelessPDETerms(
 \end{remark}
 
 
-\section{Finite Volume extensions}
-
-
-\subsection{Boundary conditions}
+\section{Boundary conditions}
 
 
 Boundary conditions often are tricky to implement and solely up to the user. 
@@ -1596,11 +1791,13 @@ Boundary conditions in general are realised via their own callback called
 When you run the Python toolkit, you get an empty implementation of this routine
 that you can befill.
 The routine is called per outer volume (Figure
-\ref{figure:exahype:boundary-conditions}).
+\ref{figure:exahype:boundary-conditions}) or per degree of freedom in the
+Discontinuous Galerkin schemes.
 
 
+\subsection{Boundary conditions on unit box for Finite Volume schemes}
 
-\paragraph{Dirichlet boundary conditions}.
+\paragraph{Dirichlet boundary conditions}
 %
 %
 %
@@ -1609,7 +1806,7 @@ Dirichlet boundary conditions
   Q(x) | _{\partial \Omega } = f(x,t)
 \]
 are close to trivial to implement. 
-You set  outer values due to
+You set  outer values of the halo layer due to
 
 \begin{code}
 void ...::MySolver::boundaryConditions(
@@ -1643,8 +1840,10 @@ such that the eigenvalue term along the boundary face has the correct
 (imposed) value too.
 
 
-\paragraph{Neumann boundary conditions (Finite Volumes)}
-
+\paragraph{Neumann boundary conditions}
+%
+%
+%
 As we can read the volume values inside the domain prior to a time step
 and modify those outside of the domain, it is straightforward to implement
 homogeneous Neumann conditions.
@@ -1671,8 +1870,10 @@ non-homogeneous conditions as well.
 
 
 
-\paragraph{Inflow/outflow boundary conditions}
-
+\paragraph{Inflow/outflow conditions}
+%
+%
+%
 Inflow or outflow boundary conditions are conceptually close to Neumann
 conditions. 
 Often, it is however reasonable to supplement them with some limiter, i.e.~if
@@ -1692,20 +1893,21 @@ Yet, increasing the domain size usually helps in such a case.
 
 
 
+\section{More complex boundaries}
 
-\paragraph{Extrapolating boundary data (Finite Volumes)}
-
-
-
+\paragraph{Extrapolating boundary data}
+%
+%
+%
 It is more complicated to realise boundary conditions that extrapolate
 data into the outside.
 Such boundary conditions read as
 \[
   Q(x) | _{\partial \Omega } = \lim _{x \mapsto \partial \Omega}
-  f(Q(x,t),\nabla f(Q(x,t))
+  Bnd(Q(x,t),\nabla f(Q(x,t))
   \ \text{or} \
   \left( \nabla Q(x), n \right) | _{\partial \Omega } = \lim _{x \mapsto
-  \partial \Omega} f(Q(x,t),\nabla f(Q(x,t)).
+  \partial \Omega} Bnd(Q(x,t),\nabla f(Q(x,t)).
 \]
 It is obviously trivial to extrapolate the solution value within the domain to
 the boundary volumes (dark red to blue value in Figure
@@ -1767,8 +1969,10 @@ my_solver.preprocess_reconstructed_patch_kernel = """
 
 
 
-\paragraph{Boundary-aligned geometries}
-
+\paragraph{Boundary-aligned non-cubic geometries}
+%
+%
+%
 \ExaHyPE's mesh is topologically Cartesian.
 That does not mean that you have to work in a Cartesian world.
 You can distort, squeeze, rotate the mesh locally as long as your mesh topology
@@ -1781,13 +1985,42 @@ Obviously, the actual boundary condition implementations then have to be adopted
 accordingly, too.
 
 
+\paragraph{Distinguishing different boundary types}
+%
+%
+%
+Some solvers require different boundary conditions in different areas. 
+We distinguish two different paradigms to realise this:
+\begin{enumerate}
+  \item compute boundary type on-the-fly;
+  \item map boundary type onto marker.
+\end{enumerate} 
+
+
+\noindent
+Each boundary condition callback is supplemented with spatial data (aka
+geometry) and time step.
+These two ingredients allow you to compute the boundary type \emph{on the fly}: 
+Whenever the boundary data routine is invoked, you read out the coordinate of
+the boundary face, and then you decide which boundary condition to apply.
+After all, the realisation of the boundary is totally up to you in the call
+back, i.e.~you can have multiple ifs or a case distinction via a switch.
+
+
+If these case distinctions are something you want to avoid---as the geometry
+checks are too expensive or for other reasons---you can introduce a
+\emph{boundary marker}.
+\ExaHyPE\ does not have genuine markers, but it does have material parameters.
+Add an additional material parameter in your solver setup, and initialise this
+parameter with an integer constant which represents your boundary type. 
+When the actual boundary routine is invoked, the inner degree of freedom will
+contain this material parameter, i.e.~you can read it out and make your boundary
+realisation depend upon its value.
 
 
 
 
-
-
-\subsection{Interpolation and restriction schemes}
+\section{Interpolation and restriction schemes for Finite Volumes}
 \label{section:exahype:finite-volumes:interpolation-schemes}
 
 If you employ adaptive mesh refinement, you have to project coarser resolutions
@@ -2513,6 +2746,132 @@ toolboxes as well.
 Some of them (compare the discussion above about the tracing API) offer more
 postprocessing scripts that you can use straightaway to visualise the code
 behaviour and outcomes.
+
+
+\section{Performance optimisation}
+
+This section discusses some \ExaHyPE-specific performance optimisation steps.
+Any performance optimisation should obviously be guided by rigorous performance
+analysis, i.e.~trial-and-error performance optimisation is unlikely to yield
+a lower runtime.
+
+\begin{remark}
+  If you plan to run any performance analysis
+  with the Intel tools, I recommend you switch
+  to the respective toolchain and logging
+  before you continue (cmp.~Section~\ref{section:logging:logger:ITAC}).
+  
+  After that, add all tracing libraries to the blacklist besides your project's
+  repositories. This way, you will get a coarse breakdown of program phases.
+  After that, you might enable additional tracing as you dig deeper into your
+  code's performance. 
+  If your project is in the directory \texttt{applications::exahype2::ccz4}, an
+  initial log filter file could look as follows:
+  
+  \begin{bash}
+trace  tarch                               -1     black always-on
+trace  peano4                              -1     black always-on
+trace  exahype2                            -1     black always-on
+trace  toolbox                             -1     black always-on
+trace  applications::exahype2::ccz4 -1  black always-on
+trace  applications::exahype2::ccz4::repositories -1  white always-on
+  \end{bash}
+\end{remark}
+
+
+\begin{itemize}
+  \item {\bf I do not profit from more cores}. There can be many reasons for
+  this, but I recommend to check a few things first:
+  \begin{enumerate}
+    \item Is your problem big enough per rank or are you maybe using too many
+    nodes/MPI ranks? If so, you should either accept that your problem is simply
+    too small for this number of nodes or jump down to next item. Read through
+    the other suggestions first, though.
+    \item Does the code spawn enough subtrees per node? If not, you might artificially restrict the number of trees
+    per node in your load balancing, i.e.~set a maximum number of trees.
+    Increase the number of trees per rank!
+    \item Have you already switched from a naive solver to one with enclave
+    tasking? Almost all of \ExaHyPE's solvers are offered as version with
+    enclave tasking which means that they employ domain decomposition plus
+    tasking on top.
+  \end{enumerate}
+  \item {\bf I cannot use more trees per rank, and enclave tasking doesn't make
+    my code faster either}. This phenomenon often goes hand in hand with a lack
+    of enclave tasks: The problem is simply too small to find enough tasks.
+    There are a few tasks, but as tasks can only run on one single core, the
+    code struggles to keep all cores busy.
+    \begin{enumerate}
+      \item Check if you can work with more regular grids. They usually help you
+      to generate more tasks. So avoid steep AMR changes.
+      \item Switch the compute kernel. For the FD4 scheme and OpenMP, we provide
+      for example compute kernels which theoretically can spread out over the
+      whole node. The kernel is slower than the default version on one core, but
+      it can use further cores and thus eventually becomes faster. Usually, you
+      have to follow a few steps to enable this alternative kernel:
+      \begin{itemize}
+        \item Switch to an enclave solver.
+        \item Ensure that the routine \texttt{patchCanUseStatelessPDETerms}
+        return true most of the time (this is the default).
+        \item Make the solver use a solver on the CPU which uses the batched
+        taskgraph realisation.
+        Most \ExaHyPE\ solver have an attribute similar to
+        \texttt{self.\_fused\_compute\_kernel\_call\_cpu} which is initialised
+        with some default kernel call. Browse through your code and alter it
+        such that it uses
+\begin{code}
+solver_variant                           = SolverVariant.Multicore,
+kernel_variant                           = KernelVariant.BatchedAoSHeap,
+\end{code}
+      \end{itemize}
+    \end{enumerate} 
+  \item {\bf The multithreading is very imbalanced, i.e.~I see a lot of trees
+  per rank, but this does not materialise in higher speed}.
+  The phenomenon typically goes hand in hand with high Spin Times (in VTune,
+  e.g.). Operations like \texttt{\_\_kmp\_fork\_barrier} appear high up in the list of the most expensive routine. There are different things to check:
+  \begin{enumerate}
+    \item Does the code yield subtrees which are extremely ill-balanced? In this
+    case, you might might want to reduce the number of ranks per tree. \ExaHyPE\
+    reports how big the trees are via
+    \begin{bash}
+rank:1  toolbox::loadbalancing::dumpStatistics()    info    2 tree(s): \
+  (#1:13/716)(#3:14/715) total=27/1431 (local/remote)
+    \end{bash}
+    In this case, we have only two trees and they are of almost the
+    same size (13 vs.~14). But if these numbers differ dramatically,
+    you might want to reduce the number of trees.
+    \item Does the code use enclave tasks but does not yield many tasks? In this
+    case, try a more regular mesh, i.e.~artificially refine to avoid steep
+    resolution changes.
+    \item Does the code use enclave tasks and yield many tasks? In this case,
+    you might have encountered a scheduler flaw. Change the multicore scheduler
+    on the command line.
+  \end{enumerate}
+  \item {\bf The code is extremely bandwidth-bound and seems to move data
+  forth and back all the time}. Most \ExaHyPE\ solvers store their data on
+  (call) stacks to localise all memory accesses. This implies that they move
+  their data around a lot. You can alter this behaviour by switching to a
+  heap-based memory administration. Consult the documentation of the solver of
+  interest, but the ``fix'' always looks similar to 
+  \begin{code}
+self._patch.generator = peano4.datamodel.PatchToDoubleArrayOnHeap(self._patch,"double")
+  \end{code}, i.e.~you have to swap how a patch is mapped onto a C++
+  implementation.
+  Most solvers provide a routine
+  \begin{code}
+  my_solver.switch_to_heap_storage(True, True)
+  \end{code} which does the switch for you. Please around with different
+  \texttt{True}, \texttt{False} combinations.
+  See also next section on
+  AVX/alignment.
+  \item {\bf The code seems to fail to use aligned data}. See general remarks
+  in documentation of \texttt{tarch::allocateMemory()} and
+  \texttt{tarch::MemoryLocation}.
+  \item {\bf The PDE term routines (sources, ncp, fluxes, eigenvalues,
+  \ldots) are extremely expensive}. In principle, that's what you want to see.
+  If this is the case, then you should next follow the recommendations for GPU
+  parallelisation (cmp.~\ref{section:exahype:gpu-support}). These focus on GPU
+  efficiency, but the optimisations also pay off significantly for CPUs.
+\end{itemize}
 
 
 

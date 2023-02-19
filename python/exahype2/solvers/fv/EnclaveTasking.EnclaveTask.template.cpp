@@ -6,7 +6,6 @@
 #include "config.h"
 
 
-#include "exahype2/fv/rusanov/Rusanov.h"
 #include "exahype2/CellData.h"
 #include "exahype2/EnclaveBookkeeping.h"
 #include "exahype2/EnclaveTask.h"
@@ -20,6 +19,7 @@
 #include "tarch/compiler/CompilerSpecificSettings.h"
 
 #include "tarch/multicore/smartScheduling.h"
+#include "tarch/multicore/otter.h"
 
 #include "tarch/mpi/DoubleMessage.h"
 #include "tarch/mpi/IntegerMessage.h"
@@ -49,6 +49,18 @@ double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::applyKernelToCell(
 ) {
   ::exahype2::CellData  patchData( reconstructedPatch, marker.x(), marker.h(), t, dt, targetPatch );
 
+  {% if STATELESS_PDE_TERMS %}
+  if ( repositories::{{SOLVER_INSTANCE}}.patchCanUseStatelessPDETerms(
+      marker.x(),
+      marker.h(),
+      t,
+      dt
+  )) {
+    ::exahype2::fd::{{KERNEL_NAMESPACE}}::{{FUSED_COMPUTE_KERNEL_CALL_CPU}}
+  }
+  else
+  {% endif %}
+
   ::exahype2::fv::{{KERNEL_NAMESPACE}}::{{COMPUTE_KERNEL_CALL}}
 
   ::exahype2::fv::validatePatch(
@@ -60,7 +72,7 @@ double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::applyKernelToCell(
     std::string(__FILE__) + "(" + std::to_string(__LINE__) + "): " + marker.toString()
   ); // outcome has to be valid
 
-  tarch::freeMemory(reconstructedPatch,tarch::MemoryLocation::Heap );
+  tarch::freeMemory(reconstructedPatch,tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory );
 
   {% if COMPUTE_MAX_EIGENVALUE %}
   return patchData.maxEigenvalue[0];

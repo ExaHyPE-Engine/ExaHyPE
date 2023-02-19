@@ -299,6 +299,9 @@ class RungeKuttaDG(object):
     self._finish_time_step_implementation          = ""
     
     self._constructor_implementation = ""
+
+    self._hold_cell_data_on_heap_with_smart_pointer = False
+    self._hold_face_data_on_heap_with_smart_pointer = False
     
     self.create_data_structures()
     self.create_action_sets()
@@ -516,27 +519,52 @@ We use RK(""" + str(self._rk_order) + """) for the time stepping.
                                                                        self._unknowns, 
                                                                        self._unknown_identifier() + "RiemannSolution" )
            
+    if self._hold_cell_data_on_heap_with_smart_pointer:
+      self._current_time_step.generator               = peano4.datamodel.PatchToDoubleArrayOnHeap(self._current_time_step,               "double")
+      self._rhs_estimates.generator                   = peano4.datamodel.PatchToDoubleArrayOnHeap(self._rhs_estimates,                   "double")
+      self._linear_combination_of_estimates.generator = peano4.datamodel.PatchToDoubleArrayOnHeap(self._linear_combination_of_estimates, "double")
+
+    if self._hold_face_data_on_heap_with_smart_pointer:
+      self._estimate_projection.generator     = peano4.datamodel.PatchToDoubleArrayOnHeap(self._estimate_projection,     "double") 
+      self._old_solution_projection.generator = peano4.datamodel.PatchToDoubleArrayOnHeap(self._old_solution_projection, "double") 
+      self._Riemann_solution.generator        = peano4.datamodel.PatchToDoubleArrayOnHeap(self._Riemann_solution,        "double") 
+
+    self._estimate_projection.generator.store_persistent_condition = self._store_face_data_default_guard()
+    self._estimate_projection.generator.load_persistent_condition  = self._load_face_data_default_guard()
+    self._estimate_projection.generator.includes                   += """
+#include "peano4/utils/Loop.h"
+#include "repositories/SolverRepository.h" 
+"""
     self._estimate_projection.generator.merge_method_definition = peano4.toolbox.blockstructured.get_face_merge_implementation(self._estimate_projection)
+    
+    self._old_solution_projection.generator.store_persistent_condition = self._store_face_data_default_guard()
+    self._old_solution_projection.generator.load_persistent_condition  = self._load_face_data_default_guard()
+    self._old_solution_projection.generator.includes                   += """
+#include "peano4/utils/Loop.h"
+#include "repositories/SolverRepository.h" 
+"""
+
+    self._current_time_step.generator.store_persistent_condition = self._store_cell_data_default_guard()
+    self._current_time_step.generator.load_persistent_condition  = self._load_cell_data_default_guard()
+    self._current_time_step.generator.includes                   += """
+#include "peano4/utils/Loop.h"
+#include "repositories/SolverRepository.h" 
+"""
     self._current_time_step.generator.merge_method_definition   = peano4.toolbox.blockstructured.get_cell_merge_implementation(self._current_time_step)
 
-    self._estimate_projection.generator.includes     += """
+    self._rhs_estimates.generator.store_persistent_condition = self._store_cell_data_default_guard()
+    self._rhs_estimates.generator.load_persistent_condition  = self._load_cell_data_default_guard()
+    self._rhs_estimates.generator.includes                   += """
 #include "peano4/utils/Loop.h"
 #include "repositories/SolverRepository.h" 
 """
 
-    self._old_solution_projection.generator.includes     += """
+    self._linear_combination_of_estimates.generator.store_persistent_condition = self._store_cell_data_default_guard()
+    self._linear_combination_of_estimates.generator.load_persistent_condition  = self._load_cell_data_default_guard()
+    self._linear_combination_of_estimates.generator.includes                   += """
 #include "peano4/utils/Loop.h"
 #include "repositories/SolverRepository.h" 
 """
-
-    self._estimate_projection.generator.store_persistent_condition = self._store_cell_data_default_guard()
-    self._estimate_projection.generator.load_persistent_condition  = self._load_cell_data_default_guard()
-    
-    self._old_solution_projection.generator.store_persistent_condition = self._store_cell_data_default_guard()
-    self._old_solution_projection.generator.load_persistent_condition  = self._load_cell_data_default_guard()
-
-    self._linear_combination_of_estimates.store_persistent_condition = "false"
-    self._linear_combination_of_estimates.load_persistent_condition = "false"
 
     self._estimate_projection.generator.send_condition               = "false"
     self._estimate_projection.generator.receive_and_merge_condition  = "false"
@@ -546,6 +574,9 @@ We use RK(""" + str(self._rk_order) + """) for the time stepping.
 
     self._Riemann_solution.generator.store_persistent_condition = self._store_face_data_default_guard()
     self._Riemann_solution.generator.load_persistent_condition  = self._load_face_data_default_guard()
+    self._Riemann_solution.generator.includes                   += """
+#include "repositories/SolverRepository.h" 
+"""
 
     self._Riemann_solution.generator.send_condition               = "false"
     self._Riemann_solution.generator.receive_and_merge_condition  = "false"
@@ -567,7 +598,11 @@ We use RK(""" + str(self._rk_order) + """) for the time stepping.
 
     self._cell_label = exahype2.grid.create_cell_label( self._name )
     self._face_label = exahype2.grid.create_face_label( self._name )
-        
+
+
+  def _query_fine_grid_cell_in_action_set_if_it_holds_solution(self):
+    return self._store_cell_data_default_guard()
+          
 
   @abstractmethod
   def create_action_sets(self):
@@ -590,8 +625,8 @@ We use RK(""" + str(self._rk_order) + """) for the time stepping.
      within the inheritance tree.
      
     """
-    self._action_set_initial_conditions                                               = exahype2.solvers.rkdg.actionsets.InitialCondition(self, self._store_cell_data_default_guard(), "true" )
-    self._action_set_initial_conditions_for_grid_construction                         = exahype2.solvers.rkdg.actionsets.InitialCondition(self, self._store_cell_data_default_guard(), "false")
+    self._action_set_initial_conditions                                               = exahype2.solvers.rkdg.actionsets.InitialCondition(self, self._query_fine_grid_cell_in_action_set_if_it_holds_solution(), "true" )
+    self._action_set_initial_conditions_for_grid_construction                         = exahype2.solvers.rkdg.actionsets.InitialCondition(self, self._query_fine_grid_cell_in_action_set_if_it_holds_solution(), "false")
     self._action_set_AMR                                                              = exahype2.solvers.rkdg.actionsets.AdaptivityCriterion(solver=self, 
                                                                                                                                              guard=self._store_cell_data_default_guard() + " and (repositories::" + self.get_name_of_global_instance() + ".isLastGridSweepOfTimeStep() or repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::GridInitialisation)", 
                                                                                                                                              build_up_new_refinement_instructions=True,  implement_previous_refinement_instructions=True )
@@ -1209,6 +1244,25 @@ We use RK(""" + str(self._rk_order) + """) for the time stepping.
 
     """
     self._postprocess_updated_cell_after_final_linear_combination = kernel
+    self.create_data_structures()
+    self.create_action_sets()
+
+
+  def switch_to_heap_storage(self,
+                             hold_cell_data_on_heap_with_smart_pointer,
+                             hold_face_data_on_heap_with_smart_pointer
+                             ):
+    """
+    
+    By default, we hold all data on the call stacks. You can explicitly switch
+    to storage on the heap via smart pointers.
+    
+    @see create_data_structures()
+    
+    """
+    self._hold_cell_data_on_heap_with_smart_pointer = hold_cell_data_on_heap_with_smart_pointer
+    self._hold_face_data_on_heap_with_smart_pointer = hold_face_data_on_heap_with_smart_pointer
+    
     self.create_data_structures()
     self.create_action_sets()
 

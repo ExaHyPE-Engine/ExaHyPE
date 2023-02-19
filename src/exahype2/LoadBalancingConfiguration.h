@@ -21,9 +21,11 @@ class exahype2::LoadBalancingConfiguration: public toolbox::loadbalancing::Recur
   private:
     const double   _loadBalancingQuality;
     const int      _minSizeOfTree;
+    const int      _maxNumberOfTreesThroughoutInitialDistribution;
     const int      _maxNumberOfTrees;
-    const int      _maxSizeOfDeployedRemoteMPITree;
   public:
+    static constexpr int  UseNumberOfThreads = -1;
+
     /**
      * @param minSizeOfTree If a partition (tree) is smaller than the given
      *   number of cells, we do not split it up further. If you set this
@@ -33,19 +35,26 @@ class exahype2::LoadBalancingConfiguration: public toolbox::loadbalancing::Recur
      * @param maxNumberOfTrees Set the maximum number of trees (per rank).
      *
      */
-    LoadBalancingConfiguration( double loadBalancingQuality=0.9, int minSizeOfTree = 0, int maxNumberOfTrees=std::numeric_limits<int>::max(), int maxSizeOfDeployedRemoteMPITree = std::numeric_limits<int>::max() );
+    LoadBalancingConfiguration(
+      double loadBalancingQuality=0.9,
+      int    minSizeOfTree = 0,
+      int    maxNumberOfTreesThroughoutInitialDistribution=UseNumberOfThreads,
+      int    maxNumberOfTrees=UseNumberOfThreads
+    );
 
     virtual ~LoadBalancingConfiguration() = default;
 
-    bool makeSplitDependOnMemory(Phase phase) override;
+    bool makeSplitDependOnMemory(toolbox::loadbalancing::RecursiveSubdivision::State state) override;
 
-    int getMaxLocalTreesPerRank(Phase phase) override;
+    int getMaxLocalTreesPerRank(toolbox::loadbalancing::RecursiveSubdivision::State state) override;
 
-    double getWorstCaseBalancingRatio(Phase phase) override;
+    double getWorstCaseBalancingRatio(toolbox::loadbalancing::RecursiveSubdivision::State state) override;
 
-    int getMinTreeSize(Phase phase) override;
-
-    int getMaxTreeSize(Phase phsae) override;
+    /**
+     * If we do the initial distribution in-between ranks, then there
+     * should be no such thing as a min tree size.
+     */
+    int getMinTreeSize(toolbox::loadbalancing::RecursiveSubdivision::State state) override;
 };
 
 

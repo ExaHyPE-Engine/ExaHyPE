@@ -6,21 +6,21 @@ import exahype2
 import dastgen2
 
 import peano4.toolbox.particles
-
+import numpy as np
 
 
 parser = argparse.ArgumentParser(description='ExaHyPE 2 - CCZ4-GaugeWave benchmarking script')
-parser.add_argument("-j",   "--parallel-builds",   dest="j",              type=int, default=-1, help="Parallel builds" )
-parser.add_argument("-pd",  "--peano-dir",         dest="peanodir",       default="../../../../", help="Peano4 directory" )
-parser.add_argument("-v",   "--verbose",           dest="verbose",        action="store_true", default=False, help="Verbose")
-parser.add_argument("-s",   "--solver",            dest="solver",         choices=["fv", "fd4-rk1", "fd4-rk2", "fd4-rk3", "fd4-rk4", "dg0-rk1",  "dg0-rk2",  "dg0-rk3",  "dg0-rk4", "dg1-rk1", "dg2-rk1", "dg2-rk2", "dg3-rk1", "dg3-rk3", "dg4-rk4", "dg4-rk1", "dg4-rk2", "dg4-rk3"], required=True, help="Pick solver type" )
-parser.add_argument("-et",  "--end-time",          dest="end_time",       type=float, default=1.0, help="End of simulation" )
-parser.add_argument("-cs",  "--cell-size",         dest="cell_size",      type=float, default=0.3, help="Cell size (default 0.3)" )
-parser.add_argument("-asserts",  "--asserts",      dest="asserts",        action="store_true", default=False, help="Switch on assertions" )
-parser.add_argument("-tracer",   "--tracer",       dest="tracer",         action="store_true", default=False, help="Activate tracer" )
+parser.add_argument("-j",   "--parallel-builds",   dest="j",                type=int, default=-1, help="Parallel builds" )
+parser.add_argument("-pd",  "--peano-dir",         dest="peanodir",         default="../../../../", help="Peano4 directory" )
+parser.add_argument("-v",   "--verbose",           dest="verbose",          action="store_true", default=False, help="Verbose")
+parser.add_argument("-s",   "--solver",            dest="solver",           choices=["fv", "fd4-rk1", "fd4-rk2", "fd4-rk3", "fd4-rk4", "dg0-rk1",  "dg0-rk2",  "dg0-rk3",  "dg0-rk4", "dg1-rk1", "dg2-rk1", "dg2-rk2", "dg3-rk1", "dg3-rk3", "dg4-rk4", "dg4-rk1", "dg4-rk2", "dg4-rk3"], required=True, help="Pick solver type" )
+parser.add_argument("-et",  "--end-time",          dest="end_time",         type=float, default=1.0, help="End of simulation" )
+parser.add_argument("-cs",  "--cell-size",         dest="cell_size",        type=float, default=0.3, help="Cell size (default 0.3)" )
+parser.add_argument("-asserts",  "--asserts",      dest="asserts",          action="store_true", default=False, help="Switch on assertions" )
+parser.add_argument("-tracer",   "--tracer",       dest="tracer",           action="store_true", default=False, help="Activate tracer" )
+parser.add_argument("-hs",  "--heap-storage",      dest="use_heap_storage", action="store_true", default=False, help="Store user data on heap via smart pointers" )
+
 args = parser.parse_args()
-
-
 
 #
 # This part si only for convenience. We could use these symbols to augment
@@ -46,6 +46,16 @@ unknowns = {
           "P":3,
           "K0":1,
         }
+        
+def CoordListFromFile(file,scale):
+  f=open(file)
+  data=[]
+  tem=f.readlines()
+  for line in tem:
+    data.append(list(map(float,line.split(' ')[1:])))
+  print(len(data))
+  data=np.array(data)
+  return data*scale
 
 
 #
@@ -68,13 +78,14 @@ if args.solver=="fv":
                                                                                    time_step_relaxation = 0.1)
 if "fd4-rk" in args.solver:
   order = int(args.solver[-1])
-  my_solver = exahype2.solvers.rkfd.fd4.GlobalAdaptiveTimeStep(name                 = "CCZ4FD4RK" + str(order), 
+  my_solver = exahype2.solvers.rkfd.fd4.GlobalAdaptiveTimeStepWithEnclaveTasking(name                 = "CCZ4FD4RK" + str(order), 
+  #my_solver = exahype2.solvers.rkfd.fd4.GlobalAdaptiveTimeStep(name                 = "CCZ4FD4RK" + str(order), 
                                                                patch_size           = 5,
                                                                rk_order             = order,
                                                                unknowns             = sum(unknowns.values()),
                                                                auxiliary_variables  = 0,
-                                                               min_meshcell_h       = args.cell_size / 5, 
-                                                               max_meshcell_h       = args.cell_size / 5,
+                                                               min_meshcell_h       = args.cell_size / 3, 
+                                                               max_meshcell_h       = args.cell_size / 3,
                                                                time_step_relaxation = 0.1)
 if "rk" in args.solver and "dg" in args.solver:
   space_order = int(args.solver[2])
@@ -85,8 +96,8 @@ if "rk" in args.solver and "dg" in args.solver:
                                                                face_projections     = exahype2.solvers.rkdg.FaceProjections.Solution,
                                                                unknowns             = sum(unknowns.values()),
                                                                auxiliary_variables  = 0,
-                                                               min_cell_h           = args.cell_size, 
-                                                               max_cell_h           = args.cell_size,
+                                                               min_cell_h           = args.cell_size * space_order, 
+                                                               max_cell_h           = args.cell_size * space_order,
                                                                time_step_relaxation = 0.1)
 
 #
@@ -101,6 +112,10 @@ my_solver.add_user_solver_includes( """
 #include "InitialValues.h"
 #include <cstring>
 """)
+
+
+if args.use_heap_storage:
+  my_solver.switch_to_heap_storage(True, True)
 
 
 #
@@ -177,6 +192,36 @@ if ("rk" in args.solver and "dg" in args.solver):
   ::applications::exahype2::ccz4::gaugeWave(Q, x, 0);
 """
         )
+elif ("fd" in args.solver and "rk" in args.solver):
+  my_solver.set_implementation(
+          boundary_conditions  = exahype2.solvers.fv.PDETerms.Empty_Implementation,
+          ncp                  = """
+  double deltaQSerialised[NumberOfUnknowns*3];
+  for (int i=0; i<NumberOfUnknowns; i++) {
+    deltaQSerialised[i+0*NumberOfUnknowns] = 0.0;
+    deltaQSerialised[i+1*NumberOfUnknowns] = 0.0;
+    deltaQSerialised[i+2*NumberOfUnknowns] = 0.0;
+
+    deltaQSerialised[i+normal*NumberOfUnknowns] = deltaQ[i];
+  }
+  ::applications::exahype2::ccz4::ncp(BTimesDeltaQ, Q, deltaQSerialised, normal%Dimensions, CCZ4LapseType, CCZ4ds, CCZ4c, CCZ4e, CCZ4f, CCZ4bs, CCZ4sk, CCZ4xi, CCZ4mu);
+""",
+          flux                 = exahype2.solvers.fv.PDETerms.None_Implementation,
+          source_term          = """
+  memset(S, 0.0, NumberOfUnknowns*sizeof(double)); 
+  ::applications::exahype2::ccz4::source(S,Q, CCZ4LapseType, CCZ4ds, CCZ4c, CCZ4e, CCZ4f, CCZ4bs, CCZ4sk, CCZ4xi, CCZ4itau, CCZ4eta, CCZ4k1, CCZ4k2, CCZ4k3);
+""",
+          refinement_criterion = exahype2.solvers.fv.PDETerms.Empty_Implementation,
+          eigenvalues          = """
+  return ::applications::exahype2::ccz4::maxEigenvalue(Q, normal%Dimensions, CCZ4e, CCZ4ds, CCZ4GLMc, CCZ4GLMd );
+"""          ,
+          initial_conditions   = """
+  for (int i=0; i<NumberOfUnknowns+NumberOfAuxiliaryVariables; i++) Q[i] = 0.0; 
+  ::applications::exahype2::ccz4::gaugeWave(Q, meshCellCentre, 0);
+"""
+        )
+  exahype2.solvers.rkfd.fd4.switch_to_FD4_tensor_product_interpolation( my_solver, "TP_linear_with_linear_extrap_normal_interp" ) 
+  exahype2.solvers.rkfd.fd4.switch_to_FD4_tensor_product_restriction(   my_solver, "TP_average_normal_extrap" ) 
 else:    
   my_solver.set_implementation(
           boundary_conditions  = exahype2.solvers.fv.PDETerms.Empty_Implementation,
@@ -292,8 +337,11 @@ project.add_solver(my_solver)
 if args.tracer:
     tracer_particles = project.add_tracer( name="Tracer",attribute_count=59 )
     project.add_action_set_to_initialisation( 
-      exahype2.tracer.InsertParticlesbyCoordinates( 
+      exahype2.tracer.InsertParticlesByCoordinates( 
         particle_set=tracer_particles, coordinates=[[-0.4251,0,0],[0,0,0],[0.4251,0,0]]))
+    #project.add_action_set_to_initialisation( 
+      #exahype2.tracer.InsertParticlesByCoordinates( 
+        #particle_set=tracer_particles, coordinates=CoordListFromFile('t-design (copy).dat',0.3)))
     project.add_action_set_to_timestepping(
       peano4.toolbox.particles.UpdateParallelState(
         particle_set=tracer_particles
@@ -317,8 +365,10 @@ if args.tracer:
       particle_set=tracer_particles,
       solver=my_solver,
       filename="Tracer-" + args.solver + "-" + str(args.cell_size),
+      number_of_entries_between_two_db_flushes=5000,
+      output_precision=10,
       data_delta_between_two_snapsots=1e16,
-      time_delta_between_two_snapsots=0.0001
+      time_delta_between_two_snapsots=0.01
       ))
 
 

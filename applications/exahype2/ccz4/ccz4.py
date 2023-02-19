@@ -11,6 +11,17 @@ from Probe_file_gene import tracer_seeds_generate
 
 from peano4.toolbox.blockstructured.DynamicAMR                 import DynamicAMR
 import numpy as np
+#todo no mpmath here so rkdg not working
+
+def CoordListFromFile(file,scale):
+  f=open(file)
+  data=[]
+  tem=f.readlines()
+  for line in tem:
+    data.append(list(map(float,line.split(' ')[1:])))
+  print(len(data))
+  data=np.array(data)
+  return data*scale
 
 
 modes = { 
@@ -38,7 +49,7 @@ floatparams = {
 	#"tp_epsilon":1e-6
 }
 
-intparams = {"LapseType":1, "tp_grid_setup":0, "swi":99, "ReSwi":0, "source":0}
+intparams = {"BBHType":2, "LapseType":1, "tp_grid_setup":0, "swi":99, "ReSwi":0, "source":0}
 #sss
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='ExaHyPE 2 - CCZ4 script')
@@ -48,8 +59,8 @@ if __name__ == "__main__":
     parser.add_argument("-plt",  "--plot-step-size",  dest="plot_step_size",  type=float, default=0.04, help="Plot step size (0 to switch it off)" )
     parser.add_argument("-m",    "--mode",            dest="mode",            default="release",  help="|".join(modes.keys()) )
     parser.add_argument( "--gpu",            dest="GPU",            default=False, action="store_true",  help="Run with accelerator support" )
-    parser.add_argument("-ext",  "--extension",       dest="extension",       choices=["none", "gradient", "AMRadm", "Full"],   default="none",  help="Pick extension, i.e. what should be plotted on top. Default is none" )
-    parser.add_argument("-impl", "--implementation",  dest="implementation",  choices=["fv-global-fixed", "fv-global-adaptive", "fv-global-fixed-enclave", "fv-global-adaptive-enclave","fv-subcyling-adaptive-enclave","fv-local-enclave", "fv-musclhancock", "fd4-rk1-adaptive", "fd4-rk1-fixed", "fd4-rk4-adaptive", "fd4-rk4-fixed", "RKDG"], required="True",  help="Pick solver type" )
+    parser.add_argument("-ext",  "--extension",       dest="extension",       choices=["none", "gradient", "AMRadm", "Full", "Psi4"],   default="none",  help="Pick extension, i.e. what should be plotted on top. Default is none" )
+    parser.add_argument("-impl", "--implementation",  dest="implementation",  choices=["fv-global-fixed", "fv-global-adaptive", "fv-global-fixed-enclave", "fv-global-adaptive-enclave","fv-subcyling-adaptive-enclave","fv-local-enclave", "fv-musclhancock", "fd4-rk1-adaptive", "fd4-rk1-adaptive-enclave", "fd4-rk1-fixed", "fd4-rk4-adaptive", "fd4-rk4-fixed", "RKDG"], required="True",  help="Pick solver type" )
     parser.add_argument("-no-pbc",  "--no-periodic-boundary-conditions",      dest="periodic_bc", action="store_false", default="True",  help="switch on or off the periodic BC" )
     parser.add_argument("-AMRMarker",  "--AMR-marker",      dest="marker", choices=["none", "poisson"],   default="none",  help="switch on or off the AMR boundary marker" )
     parser.add_argument("-et",   "--end-time",        dest="end_time",        type=float, default=1.0, help="End (terminal) time" )
@@ -91,10 +102,12 @@ if __name__ == "__main__":
        SuperClass = exahype2.solvers.fv.musclhancock.GlobalAdaptiveTimeStep
     if args.implementation=="fd4-rk1-adaptive" or args.implementation=="fd4-rk4-adaptive":
        SuperClass = exahype2.solvers.rkfd.fd4.GlobalAdaptiveTimeStep
+    if args.implementation=="fd4-rk1-adaptive-enclave":
+       SuperClass = exahype2.solvers.rkfd.fd4.GlobalAdaptiveTimeStepWithEnclaveTasking
     if args.implementation=="fd4-rk1-fixed" or args.implementation=="fd4-rk4-fixed":
        SuperClass = exahype2.solvers.rkfd.fd4.GlobalFixedTimeStep
     if args.implementation=="RKDG":
-       SuperClass = exahype2.solvers.rkdg.rusanov.GlobalAdaptiveTimeStep
+       SuperClass = exahype2.solvers.rkdg.rusanov.GlobalAdaptiveTimeStepWithEnclaveTasking
 
 
     class CCZ4Solver( SuperClass ):
@@ -133,7 +146,7 @@ if __name__ == "__main__":
             unknowns=number_of_unknowns,
             auxiliary_variables=0,
             min_volume_h=min_volume_h, max_volume_h=max_volume_h,
-            time_step_size=1e-2
+            normalised_time_step_size=1e-2
           )
         elif SuperClass==exahype2.solvers.fv.rusanov.GlobalFixedTimeStepWithEnclaveTasking:
           SuperClass.__init__(
@@ -155,7 +168,7 @@ if __name__ == "__main__":
             time_step_relaxation=cfl
           )
         elif SuperClass==exahype2.solvers.rkfd.fd4.GlobalAdaptiveTimeStep:
-          if args.implementation=="fd4-rk1-adaptive":
+          if args.implementation=="fd4-rk1-adaptive" or args.implementation=="fd4-rk1-adaptive-enclave":
             rk_order = 1
           else:
             rk_order = 4
@@ -168,7 +181,23 @@ if __name__ == "__main__":
             time_step_relaxation=cfl,
             KOSigma=KOSig
           )
-        elif SuperClass==exahype2.solvers.rkfd.fd4.GlobalFixedTimeStep:
+        elif SuperClass==exahype2.solvers.rkfd.fd4.GlobalAdaptiveTimeStepWithEnclaveTasking:
+          if args.implementation=="fd4-rk1-adaptive" or args.implementation=="fd4-rk1-adaptive-enclave":
+            rk_order = 1
+          else:
+            rk_order = 4
+          SuperClass.__init__(
+            self,
+            name=name, patch_size=patch_size, rk_order=rk_order,
+            unknowns=number_of_unknowns,
+            auxiliary_variables=0,
+            min_meshcell_h=min_volume_h, max_meshcell_h=max_volume_h,
+            time_step_relaxation=cfl,
+            KOSigma=KOSig,
+            #pde_terms_without_state=False
+            pde_terms_without_state=True
+          )
+        elif SuperClass==exahype2.solvers.rkfd.fd4.GlobalFixedTimeStep or SuperClass==exahype2.solvers.rkfd.fd4.GlobalFixedTimeStepWithEnclaveTasking:
           if args.implementation=="fd4-rk1-fixed":
             rk_order = 1
           else:
@@ -222,7 +251,12 @@ if __name__ == "__main__":
 {
 """
         
-        if SuperClass==exahype2.solvers.rkfd.fd4.GlobalAdaptiveTimeStep or SuperClass==exahype2.solvers.rkfd.fd4.GlobalFixedTimeStep:
+        if (
+            SuperClass==exahype2.solvers.rkfd.fd4.GlobalAdaptiveTimeStep 
+            or SuperClass==exahype2.solvers.rkfd.fd4.GlobalFixedTimeStep
+            or SuperClass==exahype2.solvers.rkfd.fd4.GlobalAdaptiveTimeStepWithEnclaveTasking
+            #or SuperClass==exahype2.solvers.rkfd.fd4.GlobalFixedTimeStepWithEnclaveTasking no fixed enclave version yet
+            ):
           self.postprocess_updated_patch += """
     #if Dimensions==2
     constexpr int itmax = {{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}} * {{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}};
@@ -232,10 +266,10 @@ if __name__ == "__main__":
     constexpr int itmax = {{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}} * {{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}} * {{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}};
     #endif
 """
-        elif SuperClass == exahype2.solvers.rkdg.rusanov.GlobalAdaptiveTimeStep:
-          self.postprocess_updated_patch = """
-    constexpr int itmax = ({{ORDER}}+1) * ({{ORDER}}+1) * ({{ORDER}}+1); // only support 3d
-"""
+        #elif SuperClass == exahype2.solvers.rkdg.rusanov.GlobalAdaptiveTimeStep: fix it after rkdg is back
+        #  self.postprocess_updated_patch = """
+    #constexpr int itmax = ({{ORDER}}+1) * ({{ORDER}}+1) * ({{ORDER}}+1); // only support 3d
+#"""
         else:
           self.postprocess_updated_patch += """
     #if Dimensions==2
@@ -256,14 +290,11 @@ if __name__ == "__main__":
     }
   }
 """
+        self.switch_to_heap_storage(True, True)
 
    
       def create_action_sets(self):
         SuperClass.create_action_sets(self)
-
-        #if SuperClass == exahype2.solvers.rkdg.rusanov.GlobalAdaptiveTimeStep:
-        #  pass
-        #else:
         self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement.additional_includes += """ 
 #include "../CCZ4Kernels.h"
             """
@@ -442,6 +473,7 @@ if __name__ == "__main__":
         self.create_data_structures()
         self.create_action_sets()
 
+
       def add_PT_ConsW_Psi4W_AMRFlag(self):
         """
 	add puncutrestracker, constraints writer, psi4 writer, AMRflag(currently using gradient of phi)
@@ -581,6 +613,58 @@ if __name__ == "__main__":
         self.create_data_structures()
         self.create_action_sets()
 
+      def add_Psi4W(self):
+        """
+  add psi4 writer
+        """
+        self._auxiliary_variables = 2
+
+        self._my_user_includes += """
+  #include "../libtwopunctures/TP_PunctureTracker.h"
+  #include "../CCZ4Kernels.h"
+    """
+
+        self._preprocess_reconstructed_patch = """ 
+        const int patchSize = """ + str( self._patch.dim[0] ) + """;
+        double volumeH = ::exahype2::fv::getVolumeLength(marker.h(),patchSize);
+
+    const int n_a_v=2;
+    const int overlap=3; //make sure you are using fd4 solver!
+
+    if (not marker.willBeRefined() and repositories::InstanceOfFiniteVolumeCCZ4.getSolverState()!=FiniteVolumeCCZ4::SolverState::GridConstruction and repositories::InstanceOfFiniteVolumeCCZ4.getSolverState()==FiniteVolumeCCZ4::SolverState::RungeKuttaSubStep0) {
+      dfor(cell,patchSize) {
+        tarch::la::Vector<Dimensions,int> currentCell = cell + tarch::la::Vector<Dimensions,int>(overlap);
+
+        double gradQ[3*59]={ 0 };
+
+        for (int d=0; d<3; d++) {
+          tarch::la::Vector<Dimensions,int> leftCell  = currentCell;
+          tarch::la::Vector<Dimensions,int> rightCell = currentCell;
+          leftCell(d)  -= 1;
+          rightCell(d) += 1;
+          const int leftCellSerialised  = peano4::utils::dLinearised(leftCell, patchSize + 2*overlap);
+          const int rightCellSerialised = peano4::utils::dLinearised(rightCell,patchSize + 2*overlap);
+          for(int i=0; i<59; i++) {
+            gradQ[d*59+i] = ( oldQWithHalo[rightCellSerialised*(59+n_a_v)+i] - oldQWithHalo[leftCellSerialised*(59+n_a_v)+i] ) / 2.0 / volumeH;
+          }
+        }
+
+        const int cellSerialised  = peano4::utils::dLinearised(currentCell, patchSize + 2*overlap);
+        
+        double Psi4[2]={0,0};
+        double currentPosition[3]; 
+        for (int d=0; d<3; d++) currentPosition[d]=marker.getOffset()(d)+(cell(d)+0.5)*volumeH;
+        Psi4Calc(Psi4, oldQWithHalo+cellSerialised*(59+n_a_v), gradQ, currentPosition);
+        ::exahype2::enumerator::AoSLexicographicEnumerator enumeratorWithAuxiliaryVariables   ( 1, 3, 0, 59, n_a_v);
+        fineGridCellFiniteVolumeCCZ4Q.value[ enumeratorWithAuxiliaryVariables(0,cell,59+0) ] = Psi4[0]; //placeholder
+        fineGridCellFiniteVolumeCCZ4Q.value[ enumeratorWithAuxiliaryVariables(0,cell,59+1) ] = Psi4[1]; //placeholder
+      }  
+    } 
+    """
+
+        self.create_data_structures()
+        self.create_action_sets()
+
       def pick_Gauge_wave_scenario(self):
         self.add_solver_constants( """static constexpr int Scenario=0; /* Gauge wave */  """ )
 
@@ -629,7 +713,7 @@ if __name__ == "__main__":
         is_rkdg = True
     except Exception as e:
         pass
-        msg = "Warning: RKDG no supported on this machine"
+        msg = "Warning: RKDG not supported on this machine"
         print(msg)
         userinfo.append((msg,e))
 
@@ -659,6 +743,8 @@ if __name__ == "__main__":
       my_solver = CCZ4Solver(solver_name, args.patch_size, min_h, args.max_h, args.cfl, args.CCZ4domain_r,args.CCZ4KOSigma)
       userinfo.append(("CFL ratio set as "+str(args.cfl), None))
 
+    userinfo.append(("The solver is "+args.implementation, None))
+
 ########################################################################################
 #AMR boundary tracing
 ########################################################################################
@@ -677,8 +763,8 @@ if __name__ == "__main__":
     if args.interpolation=="order-2":
       my_solver.overlap=2
 
-    if args.implementation=="fd-fourth-order" or args.implementation=="fd-fourth-order-fixed" or args.implementation=="fv-fd4":
-      my_solver.overlap=3
+    #if args.implementation=="fd-fourth-order" or args.implementation=="fd-fourth-order-fixed" or args.implementation=="fv-fd4":
+    #  my_solver.overlap=3
     #for rkfd the overlap is automatically assigned in solver class
 
     #my_solver.restriction = "averaging" # "linear"
@@ -716,10 +802,10 @@ if __name__ == "__main__":
     #notice point 2 is not needed as for build-in function (for fv) the matrices are already hard-coded.  
     tem_interp=["TP_constant","TP_linear_with_linear_extrap_normal_interp"]
     tem_restrict=["TP_inject_normal_extrap","TP_average_normal_extrap"]
-    if (args.implementation=="fd4-rk1-adaptive" or args.implementation=="fd4-rk1-fixed" 
-      or args.implementation=="fd4-rk4-adaptive" or args.implementation=="fd4-rk4-fixed"):
+    if ("fd4-rk" in args.implementation):
       exahype2.solvers.rkfd.fd4.switch_to_FD4_tensor_product_interpolation( my_solver, tem_interp[1] ) 
       exahype2.solvers.rkfd.fd4.switch_to_FD4_tensor_product_restriction(   my_solver, tem_restrict[1] ) 
+      userinfo.append(("FD4 refinement: " + tem_interp[1] + " & " + tem_restrict[1], None))
     #if args.interpolation=="linear+enforce" or args.interpolation=="linear-slow+enforce":
     #  self.point_wise_postprocessing_of_interpolation = "examples::exahype2::ccz4::enforceCCZ4constraints(targetVolume)" )
     #if args.restriction=="average+enforce" or args.restriction=="inject+enforce":
@@ -736,6 +822,8 @@ if __name__ == "__main__":
       my_solver.add_constraint_RefinementFlag_verification()
     if args.extension=="Full":
       my_solver.add_PT_ConsW_Psi4W_AMRFlag()
+    if args.extension=="Psi4":
+      my_solver.add_Psi4W()
 
       #my_solver._auxiliary_variables = 59*3
 
@@ -842,32 +930,35 @@ if __name__ == "__main__":
     probe_point = [-6,-6,0.0]
     project.add_plot_filter( probe_point,[12.0,12.0,0.01],1 )
 
-    project.set_load_balancing("toolbox::loadbalancing::RecursiveSubdivision","(new ::exahype2::LoadBalancingConfiguration(0.98,0,8))" )
+    project.set_load_balancing("toolbox::loadbalancing::RecursiveSubdivision","(new ::exahype2::LoadBalancingConfiguration(0.95,100,-1,32))" )
+    #project.set_load_balancing("toolbox::loadbalancing::RecursiveSubdivision","(new ::exahype2::LoadBalancingConfiguration(0.95,0))" )
 
 ########################################################################################
 #Tracer setting 
 ########################################################################################
     if args.add_tracer==5:
-        tracer_particles = project.add_tracer( name="Tracer",attribute_count=59 )
+        tracer_particles = project.add_tracer( name="Tracer",attribute_count=61 )
         project.add_action_set_to_initialisation( 
-          exahype2.tracer.InsertParticlesbyCoordinates( 
-            particle_set=tracer_particles, coordinates=[[0,0,0],[0.5,0,0],[1.0,0,0],[1.5,0,0],[2.0,0,0]]))
+          exahype2.tracer.InsertParticlesByCoordinates( 
+            particle_set=tracer_particles, coordinates=[[-7,0,0],[7,0,0],[0,-7,0],[0,7,0],[0,0,-7],[0,0,7]]))
         project.add_action_set_to_timestepping(
           peano4.toolbox.particles.UpdateParallelState(
             particle_set=tracer_particles
           )
         )
         
-        project.add_action_set_to_timestepping(exahype2.tracer.DiscontinuousGalerkinTracing(tracer_particles,
-                                                                                              my_solver,
-                                                                                              time_stepping_kernel="toolbox::particles::staticPosition",
-                                                                                              project_on_tracer_properties_kernel="::exahype2::dg::projectAllValuesOntoParticle"))
+        project.add_action_set_to_timestepping(exahype2.tracer.FiniteVolumesTracing(tracer_particles,
+                                                                                  my_solver,
+                                                                                  time_stepping_kernel="toolbox::particles::staticPosition",
+                                                                                  project_on_tracer_properties_kernel="::exahype2::fv::projectAllValuesOntoParticle_piecewiseLinear"))
         
         
         project.add_action_set_to_timestepping(exahype2.tracer.DumpTrajectoryIntoDatabase(
           particle_set=tracer_particles,
           solver=my_solver,
-          filename=args.path+"Tracer-dgtest",
+          filename=args.path+"Tracer-test",
+          number_of_entries_between_two_db_flushes=10000,
+          output_precision=10,
           data_delta_between_two_snapsots=1e16,
           time_delta_between_two_snapsots=0.0001
           ))
@@ -898,7 +989,7 @@ if __name__ == "__main__":
       if args.add_tracer==4:  
         project.add_action_set_to_initialisation( exahype2.tracer.InsertParticlesAlongCartesianMesh( particle_set=tracer_particles, h=args.max_h/2.0, noise=True ))
       if args.add_tracer==5:
-        project.add_action_set_to_initialisation( exahype2.tracer.InsertParticlesbyCoordinates ( particle_set=tracer_particles, N=3, coor_s=[[0.4251,0,0],[-0.4251,0,0],[0.2,0.2,0]]))
+        project.add_action_set_to_initialisation( exahype2.tracer.InsertParticlesByCoordinates ( particle_set=tracer_particles, N=3, coor_s=[[0.4251,0,0],[-0.4251,0,0],[0.2,0.2,0]]))
       if args.add_tracer==6 or args.add_tracer==7:
         project.add_action_set_to_initialisation( exahype2.tracer.InsertParticlesFromFile( particle_set=tracer_particles, filename=tracer_name[args.add_tracer]+".dat", scale_factor=abs(offset[0])*0.8)) #"Gauss_Legendre_quadrature.dat" #"t-design.dat" 
       
@@ -992,7 +1083,7 @@ if __name__ == "__main__":
     userinfo.append(("output directory: "+path, None))
     print("=========================================================")
     if not args.add_tracer==0:
-        userinfo.append(("tracer output file: "+path1+"zz"+args.tra_name, None))
+        userinfo.append(("tracer output file: "+args.path+"Tracer-test", None))
     if len(userinfo) >0:
         print("The building information:")
         for msg, exception in userinfo:

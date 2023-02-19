@@ -52,14 +52,14 @@ class MergeEnclaveTaskOutcome(AbstractFVActionSet):
       self._solver._init_dictionary_with_default_parameters(d)
       self._solver.add_entries_to_text_replacement_dictionary(d)
       d[ "LABEL_NAME" ] = self.label_name      
-      d[ "PREDICATES" ] = self._solver._secondary_sweeps_of_Runge_Kutta_step
+      d[ "PREDICATES" ] = self._solver._secondary_sweeps_of_Runge_Kutta_step_on_cell
       result = jinja2.Template(self.Template).render(**d)
       pass 
     return result
 
 
   def get_action_set_name(self):
-    return __name__.replace(".py", "").replace(".", "_")
+    return __name__.replace(".py", "").replace(".", "_") + "_MergeEnclaveTaskOutcome"
 
 
   def get_includes(self):

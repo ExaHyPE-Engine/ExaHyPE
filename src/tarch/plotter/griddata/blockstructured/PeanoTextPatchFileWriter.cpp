@@ -324,7 +324,7 @@ bool tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter::writeT
   std::ofstream out;
   out.open( _fileName, std::ios::binary );
   if ( (!out.fail()) && out.is_open() ) {
-    _log.debug( "writeToFile()", "opened data file " + _fileName );
+    logDebug( "writeToFile()", "opened data file " + _fileName );
 
     if (_haveWrittenAtLeastOnePatch) {
       _snapshotFileOut << "end patch" << std::endl << std::endl;
@@ -336,7 +336,7 @@ bool tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter::writeT
     return true;
   }
   else {
-    _log.error( "close()", "unable to write output file " + _fileName );
+    logError( "close()", "unable to write output file " + _fileName );
     return false;
   }
 }
