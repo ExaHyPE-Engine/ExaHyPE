@@ -294,6 +294,8 @@ initialisation_snippet = """
   logInfo( "Init()", "Kinetic energy  :" << E_kin);
   logInfo( "Init()", "Potential energy:" << E_pot);
   logInfo( "Init()", "Total energy    :" << E_kin + E_pot);
+  logInfo( "Init()", "Cut off         :" << particle->getCutOffRadius() );
+  logInfo( "Init()", "Initial velocity:" << particle->getV() );
   logInfo( "Init()", " =====================================" );
 
 
