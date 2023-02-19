@@ -800,12 +800,11 @@ bool toolbox::loadbalancing::RecursiveSubdivision::hasSplitRecently() const {
 
 
 void toolbox::loadbalancing::RecursiveSubdivision::enable( bool value ) {
-  if (value) {
+  if (value and _state==State::SwitchedOff) {
     _state = State::InterRankBalancing;
-    // @todo Debug
     logInfo( "enable()", "switched load balancing on (again) and therefore change to state " << toString(_state) );
   }
-  else {
+  else if (not value) {
     _state = State::SwitchedOff;
   }
 }
