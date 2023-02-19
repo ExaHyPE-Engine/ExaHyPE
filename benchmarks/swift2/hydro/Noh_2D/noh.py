@@ -8,9 +8,6 @@ import dastgen2
 
 import shutil
 
-# SPH initialisation snippets library
-import peano4.toolbox.particles.sph.initSnippets
-
 
 ########################################################################################
 # Parse user input
@@ -184,7 +181,7 @@ coords[:,1] = yp
 #  that converges towards the center of the domain and that generates the
 #  collapse.
 
-ICs = peano4.toolbox.particles.sph.initSnippets.NohProblemIC( dimensions=HYDRO_DIMENSIONS )
+ICs = swift2.scenario.NohProblemIC( dimensions=HYDRO_DIMENSIONS )
 initialisation_snippet = ICs.initialisation_snippet
 
 # Finally, pass this configuration to the initialisation script
