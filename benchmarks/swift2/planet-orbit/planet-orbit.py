@@ -302,7 +302,7 @@ initialisation_snippet = """
 #
 # I either insert sun and earth or only the earth
 #
-project.algorithm_step_init.add_action_set( peano4.toolbox.particles.InsertParticlesByCoordinates(
+project.algorithm_step_init.add_action_set( swift2.input.InsertParticlesByCoordinates(
   particle_set         = particle_set,
   initialisation_call  = initialisation_snippet,
   coordinates          = [ (EARTH_X_INI,EARTH_Y_INI,0) ] )
