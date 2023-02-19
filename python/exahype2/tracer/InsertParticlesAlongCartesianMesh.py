@@ -41,7 +41,9 @@ class InsertParticlesAlongCartesianMesh(peano4.toolbox.particles.InsertParticles
       logInfo( "touchVertexFirstTime(...)", "insert particle " << particle->toString() << " into " << marker.toString() );
       """, # initialisation_call,
                noise,
-               additional_includes,
+               additional_includes + """  
+#include "Constants.h"
+""",
                guard
                )
 
@@ -62,4 +64,5 @@ class InsertParticlesAlongCartesianMesh(peano4.toolbox.particles.InsertParticles
   int _particleNumberOnThisTree;
   int _spacetreeId;
 """
+
 

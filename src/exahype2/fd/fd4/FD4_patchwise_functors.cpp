@@ -3,7 +3,6 @@
 #include "tarch/multicore/otter.h"
 #include "exahype2/fd/LoopBody.h"
 #include "exahype2/fd/fd4/LoopBody.h"
-#include "exahype2/fd/FD_Helper.cpph"
 
 
 void exahype2::fd::fd4::timeStep_patchwise_heap_functors(
@@ -17,6 +16,7 @@ void exahype2::fd::fd4::timeStep_patchwise_heap_functors(
   bool                    evaluateDifferentialSource, //for ncp
   bool                    evaluateAlgebraicSource, //real source
   bool                    copyOldTimeStepAndScaleWithTimeStepSize,
+  DifferentialSourceTermVariant                  variant,
   Flux                    flux,
   NonconservativeProduct  DifferentialSource,
   Source                  AlgebraicSource
@@ -347,7 +347,8 @@ void exahype2::fd::fd4::timeStep_patchwise_heap_functors(
           timeStepSize,
           0, // normal
           tempDifferentialSourceX,
-          QOutEnumerator
+          QOutEnumerator,
+          variant
         );
         otterLoopIterationEnd();
       }
@@ -369,7 +370,8 @@ void exahype2::fd::fd4::timeStep_patchwise_heap_functors(
           timeStepSize,
           1, // normal
           tempDifferentialSourceY,
-          QOutEnumerator
+          QOutEnumerator,
+          variant
         );
         otterLoopIterationEnd();
       }
@@ -414,7 +416,8 @@ void exahype2::fd::fd4::timeStep_patchwise_heap_functors(
           timeStepSize,
           0, // normal
           tempDifferentialSourceX,
-          QOutEnumerator
+          QOutEnumerator,
+          variant
         );
         otterLoopIterationEnd();
       }
@@ -437,7 +440,8 @@ void exahype2::fd::fd4::timeStep_patchwise_heap_functors(
           timeStepSize,
           1, // normal
           tempDifferentialSourceY,
-          QOutEnumerator
+          QOutEnumerator,
+          variant
         );
         otterLoopIterationEnd();
       }
@@ -460,7 +464,8 @@ void exahype2::fd::fd4::timeStep_patchwise_heap_functors(
           timeStepSize,
           2, // normal
           tempDifferentialSourceZ,
-          QOutEnumerator
+          QOutEnumerator,
+          variant
         );
         otterLoopIterationEnd();
       }
