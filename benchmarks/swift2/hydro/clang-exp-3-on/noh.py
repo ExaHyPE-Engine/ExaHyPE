@@ -11,11 +11,7 @@ import shutil
 # To execute shell commands via python
 import subprocess
 
-# HDF5 Reader
-import peano4.toolbox.particles.sph.fileReader
 
-# SPH initialisation snippets library
-import peano4.toolbox.particles.sph.initSnippets
 
 ########################################################################################
 # Parse user input
@@ -120,7 +116,7 @@ project.set_load_balancing("toolbox::loadbalancing::RecursiveSubdivision", "new 
 #
 
 # Noh problem (2D) snippet 
-ICs = peano4.toolbox.particles.sph.initSnippets.NohProblemIC( dimensions=HYDRO_DIMENSIONS )
+ICs = swift2.scenario.NohProblemIC( dimensions=HYDRO_DIMENSIONS )
 initialisation_snippet = ICs.initialisation_snippet
 
 # Insert particles by coordinate
@@ -141,7 +137,7 @@ yp= yp.reshape((np.prod(yp.shape),))
 coords[:,0] = xp
 coords[:,1] = yp
 
-project.algorithm_step_init.add_action_set( peano4.toolbox.particles.InsertParticlesbyCoordinates(
+project.algorithm_step_init.add_action_set( swift2.input.InsertParticlesByCoordinates(
   particle_set        = particle_set,
   initialisation_call = initialisation_snippet,
   coordinates         = coords,
