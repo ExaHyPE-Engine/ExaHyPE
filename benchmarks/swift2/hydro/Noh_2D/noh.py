@@ -188,10 +188,13 @@ ICs = peano4.toolbox.particles.sph.initSnippets.NohProblemIC( dimensions=HYDRO_D
 initialisation_snippet = ICs.initialisation_snippet
 
 # Finally, pass this configuration to the initialisation script
-project.algorithm_step_init.add_action_set( peano4.toolbox.particles.InsertParticlesbyCoordinates(
+project.algorithm_step_init.add_action_set( swift2.input.InsertParticlesByCoordinates(
   particle_set        = particle_set,
   initialisation_call = initialisation_snippet,
   coordinates         = coords,
+  additional_includes = """
+#include "swift2/kernels/equation_of_state.h"
+"""  
   )
 )
 

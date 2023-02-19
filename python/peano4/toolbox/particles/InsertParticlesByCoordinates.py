@@ -14,7 +14,8 @@ class InsertParticlesByCoordinates(ActionSet):
   def __init__(self,
                particle_set,
                coordinates,
-               initialisation_call = ""
+               initialisation_call,
+               additional_includes = ""
                ):
     """
 
@@ -39,7 +40,9 @@ class InsertParticlesByCoordinates(ActionSet):
     self.d[ "PARTICLES_CONTAINER" ]      = particle_set.name
     self.d[ "N" ]                        = len(coordinates)
     self.d[ "INITIALISATION_CALL" ]      = initialisation_call
+    
     self._coordinates                    = coordinates
+    self.additional_includes             = additional_includes
     
 
   __Template_TouchCellFirstTime = jinja2.Template("""
@@ -105,7 +108,7 @@ class InsertParticlesByCoordinates(ActionSet):
 #include "globaldata/{{PARTICLE}}.h"
 #include "toolbox/particles/particles.h"
 #include "toolbox/particles/ParticleFactory.h"
-""" )
+""" + self.additional_includes )
     return result.render(**self.d)
 
 
