@@ -43,8 +43,9 @@ class Project(object):
 
     self.algorithm_step_create_grid             = peano4.solversteps.Step( "CreateGrid",          False )
     self.algorithm_step_enumerate               = peano4.solversteps.Step( "Enumerate",           False )
-    self.algorithm_step_init                    = peano4.solversteps.Step( "Init",                False )
+    self._algorithm_step_init                   = peano4.solversteps.Step( "Init",                False )
     self.algorithm_step_assemble                = peano4.solversteps.Step( "Assemble",            False )
+    self._algorithm_step_solve                  = peano4.solversteps.Step( "Solve",               False )
     self.algorithm_step_map_solution_onto_mesh  = peano4.solversteps.Step( "MapSolutionOntoMesh", False )
     self.algorithm_step_plot                    = peano4.solversteps.Step( "Plot",                False )
                 
@@ -146,7 +147,10 @@ class Project(object):
      Peano setup.
           
     """
-    self._project.main = PETScMain(self._project)
+    self._project.main = PETScMain(self._project,
+                                   self._domain_offset,
+                                   self._domain_size
+                                   )
 
 
     #
@@ -175,8 +179,9 @@ class Project(object):
 
     self._project.solversteps.add_step(self.algorithm_step_create_grid)
     self._project.solversteps.add_step(self.algorithm_step_enumerate)
-    self._project.solversteps.add_step(self.algorithm_step_init)
+    self._project.solversteps.add_step(self._algorithm_step_init)
     self._project.solversteps.add_step(self.algorithm_step_assemble)
+    self._project.solversteps.add_step(self._algorithm_step_solve)
     self._project.solversteps.add_step(self.algorithm_step_map_solution_onto_mesh)
     self._project.solversteps.add_step(self.algorithm_step_plot)
 

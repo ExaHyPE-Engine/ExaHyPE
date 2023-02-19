@@ -5,14 +5,30 @@ import os
 
 
 class PETScMain(peano4.runner.DefaultSequence):
-  def __init__(self,project):
+  def __init__(self,
+               project,
+               domain_offset,
+               domain_size
+               ):
     """
     
      project: peano4.Project
      
     """
     super(PETScMain,self).__init__(project)
-    self.overwrite     = False
+
+    self.overwrite     = True
+    
+    self.d[ "DomainOffset" ] = "{" + str(domain_offset[0])
+    self.d[ "DomainSize" ]   = "{" + str(domain_size[0])
+    for i in domain_offset[1:]:
+      self.d[ "DomainOffset" ] += ", "
+      self.d[ "DomainOffset" ] += str(i)
+    for i in domain_size[1:]:
+      self.d[ "DomainSize" ] += ", "
+      self.d[ "DomainSize" ] += str(i)
+    self.d[ "DomainOffset" ] += "}"
+    self.d[ "DomainSize" ]   += "}"
 
 
   def _get_header_file_template(self):
