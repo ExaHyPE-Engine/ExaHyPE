@@ -46,7 +46,16 @@ $.
 For this, we create a simple \PETSc\ project:
 
 \begin{code}
-
+project = petsc.Project(project_name = "Poisson", 
+                        namespace = [ "multigrid", "petsc", "poisson" ]
+                        ) 
+                        
+project.set_global_simulation_parameters(
+  dimensions            = 2,
+  offset                = [0.0, 0.0, 0.0],
+  mesh_size             = 0.01,
+  domain_size           = [1.0, 1.0, 1.0],
+)
 \end{code}
 
 
@@ -59,9 +68,7 @@ The project will yield the following trivial steps:
   of the vertices (aka degrees of freedom).
   Eventually, it reduces the total degree of freedom count which allows us to
   map the local enumeration onto a global scheme.
-  \item Set up \PETSc\ (\PETSc\ call).
-  \item Init (\Peano\ mesh sweep). This step sets up the right-hand side of all
-  mesh vertices. 
+  \item Init \PETSc\ (\PETSc\ call).
   \item Assemble (\Peano\ mesh sweep). This step actually sets up the equation
   system and creates the right-hand side, i.e.~it sets $A$ and $b$ of $Au=b$.
   \item Solve (\PETSc\ call).
@@ -71,5 +78,15 @@ The project will yield the following trivial steps:
 \end{enumerate}
 
 
+\noindent
+Finally, we make the Python PETSc project yield a \Peano\ project which we can
+then trigger to generate all C++ code plus the build environment:
+
+\begin{code}
+peano4_project = project.generate_Peano4_project(args.verbose)
+peano4_project.generate()
+
+os.system( "make" )
+\end{code}
 
 
