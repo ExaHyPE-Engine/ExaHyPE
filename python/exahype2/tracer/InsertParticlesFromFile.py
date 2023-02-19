@@ -11,7 +11,11 @@ import dastgen2.attributes.Integer
 import numpy as np
 
 class InsertParticlesFromFile(ActionSet):
-  def __init__(self, particle_set, filename, scale_factor=1.0):
+  def __init__(self, 
+               particle_set, 
+               filename, 
+               scale_factor=1.0
+               ):
     """
 
     particle_set: ParticleSet

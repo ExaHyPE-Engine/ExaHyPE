@@ -231,16 +231,6 @@ void swift2::kernels::endDensityCalculation(
                                     hydroDimensions * particle->getWcount() * h_old_dim_minus_one;
 
           
-          /* PHANTOM code version */
-
-/*
-          const double one_over_dh_drho_a = - hydroDimensions * particle->getDensity() / h_old;
-          const double rho_sum = particle->getDensity();
-          const double rho_target = m_a * std::pow( etaFactor / h_old, hydroDimensions);
-          const double f = rho_sum - rho_target; // Price et al 2018 sign
-          const double f_prime = - one_over_dh_drho_a * particle->getOmega(); // Opposite sign of Price et al 2018
-*/
-
           // Debug
           assertion6( f_prime !=0, particle->toString(), f_prime, h_new, h_old, hHydroMin, hHydroMax );       
 
@@ -312,9 +302,6 @@ void swift2::kernels::endDensityCalculation(
         }
 
       } /* End of Newton-Raphson */
-
-
-
 
     }
   }
@@ -409,13 +396,6 @@ void swift2::kernels::endDensityCalculationWithConstantSmoothingLength(
         particle->setPressure( P_a );
         particle->setSoundSpeed( soundspeed );
         particle->setBalsara( balsara );
-
-//          /* Debugging */
-//        if( particle->getX()(0) == 0.5){
-//          printf("DEBUGGING endDensityCalculationWithConstantSmoothingLength --- \n");
-//          std::cout << "local particle: "<< particle->toString() << std::endl;
-//        }
-
       } /* End hydro_prepare_force */
       
     }
@@ -438,13 +418,6 @@ void swift2::kernels::prepareHydroForceCalculation(
       particle->setUDot(0.0);   
       particle->setHDot(0.0);   
       particle->setV_sig_AV( 2.0 * particle->getSoundSpeed() );
-
-//      /* Debugging */
-//      if( particle->getX()(0) == 0.5){
-//        printf("DEBUGGING prepareHydroForceCalculation --- \n");
-//        std::cout << "local particle: "<< particle->toString() << std::endl;
-//      }
-
     }
   }
 }
@@ -459,16 +432,8 @@ void swift2::kernels::endHydroForceCalculation(
     if ( 
     not particle->getIsBoundaryParticle()
     ) {
-
       particle->setHDot( 
         particle->getHDot() * particle->getSmoothingLength() / hydroDimensions );
-
-//      /* Debugging */
-//      if( particle->getX()(0) == 0.5){
-//        printf("DEBUGGING endHydroForceCalculation --- \n");
-//        std::cout << "local particle: "<< particle->toString() << std::endl;
-//      }
-
     }
   }
 }
