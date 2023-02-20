@@ -42,6 +42,10 @@
 
 
   class {{CLASSNAME}}: public std::list< {% for item in NAMESPACE -%}{% if not loop.last %}{{ item }}::{% endif %}{%- endfor %}globaldata::{{PARTICLE_TYPE}}* > {
+    public:
+      typedef {% for item in NAMESPACE -%}{% if not loop.last %}{{ item }}::{% endif %}{%- endfor %}globaldata::{{PARTICLE_TYPE}}  DoFType;
+      typedef std::list< {% for item in NAMESPACE -%}{% if not loop.last %}{{ item }}::{% endif %}{%- endfor %}globaldata::{{PARTICLE_TYPE}}* >  Base;
+
     private:
       static tarch::logging::Log _log;
 
@@ -89,9 +93,12 @@
         tarch::la::Vector<Dimensions,double> getDebugX() const;
         tarch::la::Vector<Dimensions,double> getDebugH() const;
       #endif
+
+      /**
+       * Return if there's already a particle at p's position in the set.
+       */
+      bool particleIsDuplicate( const DoFType*  p ) const;
     public:
-      typedef {% for item in NAMESPACE -%}{% if not loop.last %}{{ item }}::{% endif %}{%- endfor %}globaldata::{{PARTICLE_TYPE}}  DoFType;
-      typedef std::list< {% for item in NAMESPACE -%}{% if not loop.last %}{{ item }}::{% endif %}{%- endfor %}globaldata::{{PARTICLE_TYPE}}* >  Base;
 
       /**
        * Merge two particle sets

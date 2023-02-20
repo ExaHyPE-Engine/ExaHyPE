@@ -57,6 +57,18 @@ tarch::la::Vector<Dimensions,double> {{NAMESPACE | join("::")}}::{{CLASSNAME}}::
 #endif
 
 
+bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::particleIsDuplicate(const DoFType* particle) const {
+  for (auto p: *this) {
+    if (
+      tarch::la::equals( p->getX(), particle->getX(), toolbox::particles::SpatialDuplicateTolerance )
+    ) {
+      return true;
+    }
+  }
+  return false;
+}
+
+
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::merge(
   ::peano4::grid::TraversalObserver::SendReceiveContext  context,
   {{CLASSNAME}}&                                         neighbour,
@@ -79,9 +91,16 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::merge(
           ) {
             logDebug( "merge(...)", "assume incoming particle " << p->toString() << " is local on other rank and will be virtual here" );
             p->setParallelState( DoFType::ParallelState::Virtual );
-            this->push_back(p);
-            tarch::multicore::Lock lock( _statisticsSemaphore );
-            _numberOfMergedVirtualParticles++;
+
+            if ( particleIsDuplicate(p) ) {
+              tarch::multicore::Lock lock( _statisticsSemaphore );
+              _numberOfVirtualEliminatedSpatialDuplicates++;
+            }
+            else {
+              this->push_back(p);
+              tarch::multicore::Lock lock( _statisticsSemaphore );
+              _numberOfMergedVirtualParticles++;
+            }
           }
           else if (
             p->getParallelState()==DoFType::ParallelState::Virtual
@@ -97,7 +116,8 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::merge(
           }
         }
 
-        eliminateSpatialDuplicates();
+        // not done before we insert
+        //eliminateSpatialDuplicates();
 
         logDebug( "merge(...)", "merged incoming set of " << neighbour.size() << " particle(s) into local set of vertex " << marker.x() << " which now hosts " << this->size() << " particle(s):" );
         for (auto *p: *this) {
