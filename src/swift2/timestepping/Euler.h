@@ -22,14 +22,15 @@ namespace swift2 {
      * of the particle should do this, and we then expect such a rank to send
      * over a new copy.
      */
-    template <typename Particle>
+    template <typename ParticleContainer>
     void computeExplicitEulerWithGlobalTimeStepSize(
-      const std::vector< Particle* >&  localParticles
+      const ParticleContainer&  localParticles
     );
 
-    template <typename Particle>
+
+    template <typename ParticleContainer>
     void computeExplicitEulerCromerWithGlobalTimeStepSize(
-      const std::vector< Particle* >&  localParticles
+      const ParticleContainer&  localParticles
     );
   }
 }

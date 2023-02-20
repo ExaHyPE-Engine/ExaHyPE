@@ -100,6 +100,34 @@ class peano4::stacks::STDVectorStackOverSmartPointers {
     MPI_Request*        _ioMetaDataMPIRequest;
     #endif
 
+    /**
+     * Allocate buffer and gather
+     */
+    void gather();
+    /**
+     * Mere alloc. We use the tarch's allocation. Therefore, we can have
+     * aligned data here. Without the tarch, the code call would be
+     *
+     *         _gatheredData     = new typename T::DoFType[ size() * T::Cardinality ];
+     *
+     */
+    void prepareReceiveBuffer();
+    void scatter();
+
+    /**
+     * Allocate buffer and gather
+     */
+    void gatherMetaData();
+    /**
+     * Mere alloc. We use the tarch's allocation. Therefore, we can have
+     * aligned data here. Without tarch, the call would be
+     *
+     *         _gatheredMetaData = new double[ Dimensions*2*size() ];
+     *
+     */
+    void prepareMetaDataReceiveBuffer();
+    void scatterMetaData();
+
   public:
     STDVectorStackOverSmartPointers();
 

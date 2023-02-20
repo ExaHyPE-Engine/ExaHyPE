@@ -2,7 +2,11 @@
 
 
 template <typename Particle>
-void swift2::timestepping::computeAdmissibleTimeStepSizeFromGlobalMeshSizeAndMaximumVelocity( double cflFactor, double initialTimeStepSize ) {
+void swift2::timestepping::computeAdmissibleTimeStepSizeFromGlobalMeshSizeAndMaximumVelocity(
+  double cflFactor,
+  double initialTimeStepSize,
+  double maxRelativeGrowth
+) {
   const double minH = peano4::parallel::SpacetreeSet::getInstance().getGridStatistics().getMinH()(0);
   const double maxV = Particle::getSpecies().getMaxVelocity();
 
@@ -10,12 +14,14 @@ void swift2::timestepping::computeAdmissibleTimeStepSizeFromGlobalMeshSizeAndMax
     Particle::getSpecies().setTimeStepSize(initialTimeStepSize);
   }
   else {
-    Particle::getSpecies().setTimeStepSize(
-      cflFactor * minH / maxV, false
+    double oldTimeStepSize = Particle::getSpecies().getMaxTimeStepSize();
+    double newTimeStepSize = std::min(
+      cflFactor * minH / maxV,
+      oldTimeStepSize*(1.0+maxRelativeGrowth)
     );
+    Particle::getSpecies().setTimeStepSize( newTimeStepSize, false );
   }
 }
-
 
 
 template <typename Particle>
