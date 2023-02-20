@@ -64,6 +64,9 @@ int tarch::mpi::Rank::reserveFreeTag(const std::string& fullQualifiedMessageName
               << " the free tag " << result << " (" << numberOfTags << " consecutive tags reserved)" << std::endl;
   }
   #endif
+
+  validateMaxTagIsSupported();
+
   return result;
 }
 
@@ -252,7 +255,8 @@ tarch::mpi::Rank::Rank():
   _communicator( MPI_COMM_WORLD),
   _timeOutWarning(0),
   _deadlockTimeOut(0),
-  _areTimeoutsEnabled(true) {
+  _areTimeoutsEnabled(true),
+  _maxTags(-1) {
 }
 #else
 tarch::mpi::Rank::Rank():
@@ -261,7 +265,8 @@ tarch::mpi::Rank::Rank():
   _numberOfProcessors(1),
   _timeOutWarning(0),
   _deadlockTimeOut(0),
-  _areTimeoutsEnabled(true) {
+  _areTimeoutsEnabled(true),
+  _maxTasg(-1) {
 }
 #endif
 
@@ -443,6 +448,21 @@ void tarch::mpi::Rank::logStatus() const {
 }
 
 
+bool tarch::mpi::Rank::validateMaxTagIsSupported() {
+  if (
+    getInstance()._maxTags <= 0
+    or
+    tagCounter<getInstance()._maxTags
+    ) {
+    return true;
+  }
+  else {
+    logWarning( "validateMaxTagIsSupported()", "maximum tag value is " << getInstance()._maxTags << " though we would need " << tagCounter << " tags. Code will likely crash" );
+    return false;
+  }
+}
+
+
 bool tarch::mpi::Rank::init(int* argc, char*** argv) {
   #ifdef Parallel
   int result = MPI_SUCCESS;
@@ -474,6 +494,15 @@ bool tarch::mpi::Rank::init(int* argc, char*** argv) {
   if (result!=MPI_SUCCESS) {
     std::cerr << "init(int*,char***)\t initialisation failed: " + MPIReturnValueToString(result) + " (no logging available yet)";
     return false;
+  }
+
+  int answerFlag;
+  void* rawMaxTag;
+  MPI_Comm_get_attr(MPI_COMM_WORLD, MPI_TAG_UB, &rawMaxTag, &answerFlag);
+  _maxTags = *(int*)rawMaxTag;
+  validateMaxTagIsSupported();
+  if (not answerFlag) {
+    logError( "init()", "was not able to query what the maximum tag value is" );
   }
 
   DoubleMessage::initDatatype();

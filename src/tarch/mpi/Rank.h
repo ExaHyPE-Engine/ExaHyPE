@@ -101,6 +101,8 @@ class tarch::mpi::Rank {
 
     bool    _areTimeoutsEnabled;
 
+    int     _maxTags;
+
     /**
      * The standard constructor assignes the attributes default values and
      * checks whether the program is compiled using the -DParallel option.
@@ -129,6 +131,14 @@ class tarch::mpi::Rank {
     void receiveDanglingMessagesFromReceiveBuffers();
 
   public:
+    /**
+     * Just try to find out if a tag is actually supported. This works after
+     * we've called the init() routine. if we call this routine before, it
+     * will always pass. If the tag is not supported, we write a warning and
+     * return false.
+     */
+    static bool validateMaxTagIsSupported();
+
     /**
      * Return a Free Tag
      *
@@ -306,11 +316,21 @@ class tarch::mpi::Rank {
      * environment. Afterwards the original parameters from the user are stored
      * within them.
      *
-     * !! Implementation details
+     * ## Implementation details
      *
      * init never uses the log device to report any errors as the log device
      * usually in turn uses Node's getters. Furthermore, the _initIsCalled flag
      * has thus to be set before the log state operation is invoked.
+     *
+     *
+     * ## Upper tag bound
+     *
+     * We try to find out how many tags the system does support. Here, the MPI
+     * standard is a little bit weird, as it requires a pointer to a void pointer
+     * and then we can read the data from there. So it seems we get a pointer to
+     * a system variable back rather than the system variable.
+     *
+     * Thanks to Andrew Mallinson (Intel) for pointing this out.
      *
      * @return true if initialisation has been successful
      */

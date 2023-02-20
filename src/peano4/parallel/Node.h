@@ -127,6 +127,7 @@ class peano4::parallel::Node {
      * I originally wanted to embed these guys into the singleton's
      * constructor. However, the singleton might not yet be up when
      * I run the (mpi) tests.
+     *
      */
     static void initMPIDatatypes();
     static void shutdownMPIDatatypes();
