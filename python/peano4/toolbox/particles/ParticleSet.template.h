@@ -167,6 +167,14 @@
        * In both cases, we have to destroy the local copy as the stacks perform
        * deep copies.
        *
+       * ##  Realisation
+       *
+       * I started with an implementation which first inserts all the particles
+       * into the vertex and then eliminates those guys which are redundant.
+       * This turns out to be a slow version. It is way faster to find those
+       * guys which are to be added and then to check prior to the insert if
+       * they really should be added or not.
+       *
        *
        * @see STDVectorOverContainerOfPointers::startReceive()
        * @see clone()
