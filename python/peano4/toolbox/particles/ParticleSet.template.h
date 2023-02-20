@@ -384,18 +384,6 @@
        */
       void deleteParticles();
 
-      /**
-       * Shallow clear
-       *
-       * Delegates to base class. Therefore, this routine is a shallow clear.
-       * There is no technical reason to redefine this routine here in this
-       * header file (as I simply forward the call to the base class), but I
-       * think it is important that I make it explicit that this is a shallow
-       * clear.
-       */
-      void clear();
-
-
       static void clearReassignmentStatistics();
       static void clearParticleStateStatistics();
 

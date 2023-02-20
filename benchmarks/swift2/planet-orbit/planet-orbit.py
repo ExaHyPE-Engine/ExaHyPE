@@ -294,6 +294,8 @@ initialisation_snippet = """
   logInfo( "Init()", "Kinetic energy  :" << E_kin);
   logInfo( "Init()", "Potential energy:" << E_pot);
   logInfo( "Init()", "Total energy    :" << E_kin + E_pot);
+  logInfo( "Init()", "Cut off         :" << particle->getCutOffRadius() );
+  logInfo( "Init()", "Initial velocity:" << particle->getV() );
   logInfo( "Init()", " =====================================" );
 
 
@@ -302,7 +304,7 @@ initialisation_snippet = """
 #
 # I either insert sun and earth or only the earth
 #
-project.algorithm_step_init.add_action_set( peano4.toolbox.particles.InsertParticlesByCoordinates(
+project.algorithm_step_init.add_action_set( swift2.input.InsertParticlesByCoordinates(
   particle_set         = particle_set,
   initialisation_call  = initialisation_snippet,
   coordinates          = [ (EARTH_X_INI,EARTH_Y_INI,0) ] )

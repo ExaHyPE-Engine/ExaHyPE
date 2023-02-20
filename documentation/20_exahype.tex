@@ -2780,17 +2780,65 @@ trace  applications::exahype2::ccz4::repositories -1  white always-on
 
 
 \begin{itemize}
-  \item {\bf The multithreading is very imbalanced}. This manifests typically in
-  poor multicore speedup and high Spin Time (in VTune, e.g.). Operations like
-  \texttt{\_\_kmp\_fork\_barrier} appear high up in the list of the most
-  expensive routine. There are different things to check in a row:
+  \item {\bf I do not profit from more cores}. There can be many reasons for
+  this, but I recommend to check a few things first:
   \begin{enumerate}
-    \item Does the code spawn enough subtrees per node? If not, your problem
-    might be too small, or you might artificially restrict the number of trees
-    per node. You might also want to use a more regular AMR mesh structure.
+    \item Is your problem big enough per rank or are you maybe using too many
+    nodes/MPI ranks? If so, you should either accept that your problem is simply
+    too small for this number of nodes or jump down to next item. Read through
+    the other suggestions first, though.
+    \item Does the code spawn enough subtrees per node? If not, you might artificially restrict the number of trees
+    per node in your load balancing, i.e.~set a maximum number of trees.
+    Increase the number of trees per rank!
+    \item Have you already switched from a naive solver to one with enclave
+    tasking? Almost all of \ExaHyPE's solvers are offered as version with
+    enclave tasking which means that they employ domain decomposition plus
+    tasking on top.
+  \end{enumerate}
+  \item {\bf I cannot use more trees per rank, and enclave tasking doesn't make
+    my code faster either}. This phenomenon often goes hand in hand with a lack
+    of enclave tasks: The problem is simply too small to find enough tasks.
+    There are a few tasks, but as tasks can only run on one single core, the
+    code struggles to keep all cores busy.
+    \begin{enumerate}
+      \item Check if you can work with more regular grids. They usually help you
+      to generate more tasks. So avoid steep AMR changes.
+      \item Switch the compute kernel. For the FD4 scheme and OpenMP, we provide
+      for example compute kernels which theoretically can spread out over the
+      whole node. The kernel is slower than the default version on one core, but
+      it can use further cores and thus eventually becomes faster. Usually, you
+      have to follow a few steps to enable this alternative kernel:
+      \begin{itemize}
+        \item Switch to an enclave solver.
+        \item Ensure that the routine \texttt{patchCanUseStatelessPDETerms}
+        return true most of the time (this is the default).
+        \item Make the solver use a solver on the CPU which uses the batched
+        taskgraph realisation.
+        Most \ExaHyPE\ solver have an attribute similar to
+        \texttt{self.\_fused\_compute\_kernel\_call\_cpu} which is initialised
+        with some default kernel call. Browse through your code and alter it
+        such that it uses
+\begin{code}
+solver_variant                           = SolverVariant.Multicore,
+kernel_variant                           = KernelVariant.BatchedAoSHeap,
+\end{code}
+      \end{itemize}
+    \end{enumerate} 
+  \item {\bf The multithreading is very imbalanced, i.e.~I see a lot of trees
+  per rank, but this does not materialise in higher speed}.
+  The phenomenon typically goes hand in hand with high Spin Times (in VTune,
+  e.g.). Operations like \texttt{\_\_kmp\_fork\_barrier} appear high up in the list of the most expensive routine. There are different things to check:
+  \begin{enumerate}
     \item Does the code yield subtrees which are extremely ill-balanced? In this
-    case, you might try to enforce more subtrees per node, or to switch to an
-    enclave tasking solver.
+    case, you might might want to reduce the number of ranks per tree. \ExaHyPE\
+    reports how big the trees are via
+    \begin{bash}
+rank:1  toolbox::loadbalancing::dumpStatistics()    info    2 tree(s): \
+  (#1:13/716)(#3:14/715) total=27/1431 (local/remote)
+    \end{bash}
+    In this case, we have only two trees and they are of almost the
+    same size (13 vs.~14). But if these numbers differ dramatically,
+    you might want to reduce the number of trees.
     \item Does the code use enclave tasks but does not yield many tasks? In this
     case, try a more regular mesh, i.e.~artificially refine to avoid steep
     resolution changes.
@@ -2808,7 +2856,13 @@ trace  applications::exahype2::ccz4::repositories -1  white always-on
 self._patch.generator = peano4.datamodel.PatchToDoubleArrayOnHeap(self._patch,"double")
   \end{code}, i.e.~you have to swap how a patch is mapped onto a C++
   implementation.
-  See also next section on AVX/alignment.
+  Most solvers provide a routine
+  \begin{code}
+  my_solver.switch_to_heap_storage(True, True)
+  \end{code} which does the switch for you. Please around with different
+  \texttt{True}, \texttt{False} combinations.
+  See also next section on
+  AVX/alignment.
   \item {\bf The code seems to fail to use aligned data}. See general remarks
   in documentation of \texttt{tarch::allocateMemory()} and
   \texttt{tarch::MemoryLocation}.
@@ -2818,6 +2872,8 @@ self._patch.generator = peano4.datamodel.PatchToDoubleArrayOnHeap(self._patch,"d
   parallelisation (cmp.~\ref{section:exahype:gpu-support}). These focus on GPU
   efficiency, but the optimisations also pay off significantly for CPUs.
 \end{itemize}
+
+
 
 \section*{Links and further reading}
 
