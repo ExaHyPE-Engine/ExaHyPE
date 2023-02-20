@@ -68,8 +68,6 @@ void exahype2::fd::applyBoundaryConditions(
         *(Q + enumerator(insideGridCell,0))
       );
 
-      dt and old value
-
       boundaryCondition(
         Q + enumerator(insideGridCell,0),
         Q + enumerator(outsideGridCell,0),
@@ -82,3 +80,27 @@ void exahype2::fd::applyBoundaryConditions(
 }
 
 
+void exahype2::fd::applySommerfeldConditions(
+  std::function< double(
+    const double* __restrict__                   Q,
+    const tarch::la::Vector<Dimensions,double>&  faceCentre,
+    const tarch::la::Vector<Dimensions,double>&  gridCellH,
+    double                                       t,
+    double                                       dt,
+    int                                          normal
+  ) >   maxEigenvalue,
+  const tarch::la::Vector<Dimensions,double>&  faceCentre,
+  const tarch::la::Vector<Dimensions,double>&  patchSize,
+  double                                       dt,
+  int                                          numberOfGridCellsPerPatchPerAxis,
+  int                                          overlap,
+  int                                          unknownsPlusAuxiliaryVariables,
+  int                                          faceNumber,
+  const tarch::la::Vector<Dimensions,double>&  systemOrigin,
+  double* __restrict__                         Qold,
+  double* __restrict__                         Qnew
+) {
+  static tarch::logging::Log _log( "exahype2::fd" );
+  logTraceInWith4Arguments( "applySommerfeldConditions(...)", faceCentre, patchSize, numberOfGridCellsPerPatchPerAxis, faceNumber);
+  logTraceOut( "applySommerfeldConditions(...)" );
+}

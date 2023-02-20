@@ -29,6 +29,7 @@ class HandleBoundary(AbstractRKFDActionSet):
       fineGridFace{{SOLVER_NAME}}FaceLabel.getBoundary()
     ) {
       logTraceInWith3Arguments( "touchFaceFirstTime(...)", fineGridFace{{SOLVER_NAME}}FaceLabel.toString(), (repositories::{{SOLVER_INSTANCE}}.PeriodicBC[marker.getSelectedFaceNumber()%Dimensions]), marker.toString() );
+      
 """
 
 
@@ -81,6 +82,7 @@ class HandleBoundary(AbstractRKFDActionSet):
 
 
   TemplateHandleBoundary_Epilogue = """     
+
       bool isLeftEntryOutside = marker.getSelectedFaceNumber() < Dimensions;
       double innerTimeStamp;
       

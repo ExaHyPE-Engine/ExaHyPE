@@ -44,6 +44,7 @@ class HandleBoundary(AbstractRungeKuttaDGActionSet):
     
     assertion5( tarch::la::greaterEquals( timeStepSize, 0.0 ),  timeStamp, timeStepSize, timeStampOldSolution, marker.toString(), fineGridFace{{SOLVER_NAME}}FaceLabel.toString() );
     assertion5( tarch::la::greaterEquals( timeStamp, 0.0 ),     timeStamp, timeStepSize, timeStampOldSolution, marker.toString(), fineGridFace{{SOLVER_NAME}}FaceLabel.toString() );
+
 """
 
 
@@ -73,6 +74,7 @@ class HandleBoundary(AbstractRungeKuttaDGActionSet):
 """    
     
   TemplateHandleBoundary_Epilogue = """
+
     if (marker.getSelectedFaceNumber()<Dimensions) {
       fineGridFace{{SOLVER_NAME}}FaceLabel.setUpdatedTimeStamp(0, fineGridFace{{SOLVER_NAME}}FaceLabel.getUpdatedTimeStamp(1) );
       fineGridFace{{SOLVER_NAME}}FaceLabel.setNewTimeStamp    (0, fineGridFace{{SOLVER_NAME}}FaceLabel.getNewTimeStamp(1) );

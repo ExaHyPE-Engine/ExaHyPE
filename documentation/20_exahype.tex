@@ -2036,7 +2036,36 @@ need when they implement their boundary data.
 
 
 \noindent
-There is no general answer to this, 
+Every \ExaHyPE\ solver has an attribute \texttt{\_action\_set\_handle\_boundary}.
+This is the action set that we invoke to handle the boundary. 
+It has an attribute \texttt{TemplateHandleBoundary\_KernelCalls} which is a
+string in jinja2 format.
+It is used to actually generate the kernel call.
+By default, it invokes the \texttt{applyBoundaryConditions} function of your
+solver. 
+You can redirect this call:
+
+
+\begin{code}
+  thesolver._action_set_handle_boundary.TemplateHandleBoundary_KernelCalls = """
+::exahype2::fd::myFancyBCs( ... );
+""" 
+\end{code}
+
+
+\noindent
+The start of the attribute with an underscore emphasises that I usually do not
+expect users to alter the action set.
+This is for experienced users.
+Most of them will create their own subclass of the solver.
+In this case, an attribute with an underscore make sense.
+
+
+\ExaHyPE\ comes along with a limited set of pre-manufactured boundary
+conditions. 
+What is available in which content depends strongly on the solver type used.
+Consult the documentation of the \texttt{HandleBoundary.h} file of your solver
+type.
 
 
 
