@@ -68,6 +68,8 @@ void exahype2::fd::applyBoundaryConditions(
         *(Q + enumerator(insideGridCell,0))
       );
 
+      dt and old value
+
       boundaryCondition(
         Q + enumerator(insideGridCell,0),
         Q + enumerator(outsideGridCell,0),

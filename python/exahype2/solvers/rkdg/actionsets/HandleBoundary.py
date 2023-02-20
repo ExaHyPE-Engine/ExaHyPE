@@ -23,7 +23,7 @@ class HandleBoundary(AbstractRungeKuttaDGActionSet):
   
   """
   
-  TemplateProject = """
+  TemplateHandleBoundary_Prologue = """
   {% for PREDICATE_NO in range(0,PREDICATES|length) %}
   if (
     {{PREDICATES[PREDICATE_NO]}}
@@ -34,19 +34,6 @@ class HandleBoundary(AbstractRungeKuttaDGActionSet):
     and 
     fineGridFace{{SOLVER_NAME}}FaceLabel.getBoundary()
   ) {
-    if (marker.getSelectedFaceNumber()<Dimensions) {
-      fineGridFace{{SOLVER_NAME}}FaceLabel.setUpdatedTimeStamp(0, fineGridFace{{SOLVER_NAME}}FaceLabel.getUpdatedTimeStamp(1) );
-      fineGridFace{{SOLVER_NAME}}FaceLabel.setNewTimeStamp    (0, fineGridFace{{SOLVER_NAME}}FaceLabel.getNewTimeStamp(1) );
-      fineGridFace{{SOLVER_NAME}}FaceLabel.setOldTimeStamp    (0, fineGridFace{{SOLVER_NAME}}FaceLabel.getOldTimeStamp(1) );
-      fineGridFace{{SOLVER_NAME}}FaceLabel.setUpdatedTimeStamp(0, fineGridFace{{SOLVER_NAME}}FaceLabel.getUpdatedTimeStamp(1) );
-    }
-    else {
-      fineGridFace{{SOLVER_NAME}}FaceLabel.setUpdatedTimeStamp(1, fineGridFace{{SOLVER_NAME}}FaceLabel.getUpdatedTimeStamp(0) );
-      fineGridFace{{SOLVER_NAME}}FaceLabel.setNewTimeStamp(    1, fineGridFace{{SOLVER_NAME}}FaceLabel.getNewTimeStamp(0) );
-      fineGridFace{{SOLVER_NAME}}FaceLabel.setOldTimeStamp(    1, fineGridFace{{SOLVER_NAME}}FaceLabel.getOldTimeStamp(0) );
-      fineGridFace{{SOLVER_NAME}}FaceLabel.setUpdatedTimeStamp(1, fineGridFace{{SOLVER_NAME}}FaceLabel.getUpdatedTimeStamp(0) );
-    }
-      
     const double timeStampOldSolution = fineGridFace{{SOLVER_NAME}}FaceLabel.getOldTimeStamp()(0);
   
     // Set the variable
@@ -57,7 +44,10 @@ class HandleBoundary(AbstractRungeKuttaDGActionSet):
     
     assertion5( tarch::la::greaterEquals( timeStepSize, 0.0 ),  timeStamp, timeStepSize, timeStampOldSolution, marker.toString(), fineGridFace{{SOLVER_NAME}}FaceLabel.toString() );
     assertion5( tarch::la::greaterEquals( timeStamp, 0.0 ),     timeStamp, timeStepSize, timeStampOldSolution, marker.toString(), fineGridFace{{SOLVER_NAME}}FaceLabel.toString() );
-      
+"""
+
+
+   TemplateHandleBoundary_KernelCalls = """
     ::exahype2::dg::applyBoundaryConditions(
       [&](
         const double * __restrict__                  Qinside,
@@ -80,6 +70,19 @@ class HandleBoundary(AbstractRungeKuttaDGActionSet):
       repositories::{{SOLVER_INSTANCE}}.QuadraturePoints1d,
       fineGridFace{{UNKNOWN_IDENTIFIER}}EstimateProjection.value
     );
+"""    
+    
+  TemplateHandleBoundary_Epilogue = """
+    if (marker.getSelectedFaceNumber()<Dimensions) {
+      fineGridFace{{SOLVER_NAME}}FaceLabel.setUpdatedTimeStamp(0, fineGridFace{{SOLVER_NAME}}FaceLabel.getUpdatedTimeStamp(1) );
+      fineGridFace{{SOLVER_NAME}}FaceLabel.setNewTimeStamp    (0, fineGridFace{{SOLVER_NAME}}FaceLabel.getNewTimeStamp(1) );
+      fineGridFace{{SOLVER_NAME}}FaceLabel.setOldTimeStamp    (0, fineGridFace{{SOLVER_NAME}}FaceLabel.getOldTimeStamp(1) );
+    }
+    else {
+      fineGridFace{{SOLVER_NAME}}FaceLabel.setUpdatedTimeStamp(1, fineGridFace{{SOLVER_NAME}}FaceLabel.getUpdatedTimeStamp(0) );
+      fineGridFace{{SOLVER_NAME}}FaceLabel.setNewTimeStamp(    1, fineGridFace{{SOLVER_NAME}}FaceLabel.getNewTimeStamp(0) );
+      fineGridFace{{SOLVER_NAME}}FaceLabel.setOldTimeStamp(    1, fineGridFace{{SOLVER_NAME}}FaceLabel.getOldTimeStamp(0) );
+    }
   }
   {% endfor %}
 """
@@ -122,7 +125,9 @@ class HandleBoundary(AbstractRungeKuttaDGActionSet):
       self._solver.add_entries_to_text_replacement_dictionary(d)
       d[ "PREDICATES" ]            = self.guards
       d[ "BUTCHER_TABLEAU_RELATIVE_TIME_STEP_SIZES" ] = self._butcher_tableau.time_step_sizes()
-      result = jinja2.Template(self.TemplateProject).render(**d)
+      result  = jinja2.Template(self.TemplateHandleBoundary_Prologue).render(**self.d)
+      result += jinja2.Template(self.TemplateHandleBoundary_KernelCalls).render(**self.d)
+      result += jinja2.Template(self.TemplateHandleBoundary_Epilogue).render(**self.d)
       pass 
     return result
 

@@ -14,7 +14,11 @@
 namespace exahype2 {
   namespace fd {
     /**
-     * Apply boundary conditions. Works only for a halo size of 1.
+     * Apply (generic) boundary conditions
+     *
+     * This implementation runs over the boundary and applies the generic
+     * (point-wise) boundary conditions via a call-back to the user
+     * implementation.
      *
      * @param unknownsPlusAuxiliaryVariables Number of unknowns plus the number
      *   of auxiliary variables. The boundary treatment routine does not
