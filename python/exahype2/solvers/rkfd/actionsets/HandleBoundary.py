@@ -18,7 +18,7 @@ class HandleBoundary(AbstractRKFDActionSet):
     the assertions.
    
   """
-  TemplateHandleBoundary = """
+  TemplateHandleBoundary_Prologue = """
     if (
       {{PREDICATE}}
       and
@@ -29,6 +29,11 @@ class HandleBoundary(AbstractRKFDActionSet):
       fineGridFace{{SOLVER_NAME}}FaceLabel.getBoundary()
     ) {
       logTraceInWith3Arguments( "touchFaceFirstTime(...)", fineGridFace{{SOLVER_NAME}}FaceLabel.toString(), (repositories::{{SOLVER_INSTANCE}}.PeriodicBC[marker.getSelectedFaceNumber()%Dimensions]), marker.toString() );
+      
+"""
+
+
+  TemplateHandleBoundary_KernelCalls = """
       ::exahype2::fd::applyBoundaryConditions(
         [&](
           const double * __restrict__                  Qinside,
@@ -73,7 +78,11 @@ class HandleBoundary(AbstractRKFDActionSet):
         marker.getSelectedFaceNumber(),
         fineGridFace{{UNKNOWN_IDENTIFIER}}Old.value
       );
-      
+"""
+
+
+  TemplateHandleBoundary_Epilogue = """     
+
       bool isLeftEntryOutside = marker.getSelectedFaceNumber() < Dimensions;
       double innerTimeStamp;
       
@@ -106,7 +115,9 @@ class HandleBoundary(AbstractRKFDActionSet):
       self._solver.add_entries_to_text_replacement_dictionary(self.d)
       self.d[ "PREDICATE" ] = self.guard      
       self.d[ "FACE_METADATA_ACCESSOR" ] = "fineGridFace"  + self._solver._face_label.name
-      result = jinja2.Template(self.TemplateHandleBoundary).render(**self.d)
+      result  = jinja2.Template(self.TemplateHandleBoundary_Prologue).render(**self.d)
+      result += jinja2.Template(self.TemplateHandleBoundary_KernelCalls).render(**self.d)
+      result += jinja2.Template(self.TemplateHandleBoundary_Epilogue).render(**self.d)
       pass 
     return result
 

@@ -1893,7 +1893,7 @@ Yet, increasing the domain size usually helps in such a case.
 
 
 
-\section{More complex boundaries}
+\subsection{More complex boundaries}
 
 \paragraph{Extrapolating boundary data}
 %
@@ -2017,6 +2017,55 @@ When the actual boundary routine is invoked, the inner degree of freedom will
 contain this material parameter, i.e.~you can read it out and make your boundary
 realisation depend upon its value.
 
+
+\subsection{A complete swap out of boundary conditions}
+
+So far, all boundary conditions have relies on a call-back principle: The user
+supplements an implementation of the (point-wise) boundary data behaviour, and
+there is some generic kernel which runs over the boundary and calls this
+implementation.
+This means, \ExaHyPE\ has to anticipate what kind of information the user might
+need when they implement their boundary data.
+
+\begin{remark}
+ The current interface for boundary conditions is more or less tailored towards
+ stationary boundary data. As soon as you need some time-dependent behaviour on
+ the boundary such as ODEs (Sommerfeld boundary conditions, e.g.), you might be
+ well-advised to swap out the whole boundary implementation.
+\end{remark}
+
+
+\noindent
+Every \ExaHyPE\ solver has an attribute \texttt{\_action\_set\_handle\_boundary}.
+This is the action set that we invoke to handle the boundary. 
+It has an attribute \texttt{TemplateHandleBoundary\_KernelCalls} which is a
+string in jinja2 format.
+It is used to actually generate the kernel call.
+By default, it invokes the \texttt{applyBoundaryConditions} function of your
+solver. 
+You can redirect this call:
+
+
+\begin{code}
+  thesolver._action_set_handle_boundary.TemplateHandleBoundary_KernelCalls = """
+::exahype2::fd::myFancyBCs( ... );
+""" 
+\end{code}
+
+
+\noindent
+The start of the attribute with an underscore emphasises that I usually do not
+expect users to alter the action set.
+This is for experienced users.
+Most of them will create their own subclass of the solver.
+In this case, an attribute with an underscore make sense.
+
+
+\ExaHyPE\ comes along with a limited set of pre-manufactured boundary
+conditions. 
+What is available in which content depends strongly on the solver type used.
+Consult the documentation of the \texttt{HandleBoundary.h} file of your solver
+type.
 
 
 
