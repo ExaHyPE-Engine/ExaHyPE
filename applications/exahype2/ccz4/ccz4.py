@@ -246,6 +246,17 @@ if __name__ == "__main__":
           refinement_criterion = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
           eigenvalues = exahype2.solvers.fv.PDETerms.User_Defined_Implementation
         )
+        
+        if SuperClass==exahype2.solvers.rkfd.fd4.GlobalAdaptiveTimeStepWithEnclaveTasking:
+          self._fused_compute_kernel_call_cpu = exahype2.solvers.rkfd.fd4.kernels.create_compute_kernel_for_FD4(
+            self._flux_implementation, 
+            self._ncp_implementation, 
+            self._source_term_implementation, 
+            compute_max_eigenvalue_of_next_time_step = True,
+            solver_variant                           = exahype2.solvers.rkfd.kernels.SolverVariant.Multicore,
+            kernel_variant                           = exahype2.solvers.rkfd.kernels.KernelVariant.BatchedAoSHeap,
+            KOSigma                                  = self._KO_Sigma
+          )
 
         self.postprocess_updated_patch = """
 {
@@ -635,7 +646,8 @@ if __name__ == "__main__":
     const int n_a_v=2;
     const int overlap=3; //make sure you are using fd4 solver!
 
-    if (not marker.willBeRefined() and repositories::InstanceOfFiniteVolumeCCZ4.getSolverState()!=FiniteVolumeCCZ4::SolverState::GridConstruction and repositories::InstanceOfFiniteVolumeCCZ4.getSolverState()==FiniteVolumeCCZ4::SolverState::RungeKuttaSubStep0) {
+    //if (not marker.willBeRefined() and repositories::InstanceOfFiniteVolumeCCZ4.getSolverState()!=FiniteVolumeCCZ4::SolverState::GridConstruction and repositories::InstanceOfFiniteVolumeCCZ4.getSolverState()==FiniteVolumeCCZ4::SolverState::RungeKuttaSubStep0) {
+    if (not marker.willBeRefined() and repositories::InstanceOfFiniteVolumeCCZ4.getSolverState()!=FiniteVolumeCCZ4::SolverState::GridConstruction) {
       dfor(cell,patchSize) {
         tarch::la::Vector<Dimensions,int> currentCell = cell + tarch::la::Vector<Dimensions,int>(overlap);
 
