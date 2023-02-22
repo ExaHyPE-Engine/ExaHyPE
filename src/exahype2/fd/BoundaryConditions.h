@@ -82,14 +82,17 @@ self._action_set_handle_boundary.TemplateHandleBoundary_KernelCalls = """
         },
         marker.x(),
         marker.h(),
+        {{FACE_METADATA_ACCESSOR}}.getOldTimeStamp(marker.getSelectedFaceNumber()<Dimensions ? 1 : 0),
         repositories::{{SOLVER_INSTANCE}}.getMinTimeStepSize(),
         {{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}},
         {{OVERLAP}},
-        {{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}},
+        {{NUMBER_OF_UNKNOWNS}},
+        {{NUMBER_OF_AUXILIARY_VARIABLES}},
         marker.getSelectedFaceNumber(),
         {0.0, 0.0, 0.0},
         fineGridFace{{UNKNOWN_IDENTIFIER}}Old.value,
-        fineGridFace{{UNKNOWN_IDENTIFIER}}New.value
+        fineGridFace{{UNKNOWN_IDENTIFIER}}New.value,
+        {...} //approximate background solution at infinity 
       );
       </pre>
 """
@@ -106,14 +109,17 @@ self._action_set_handle_boundary.TemplateHandleBoundary_KernelCalls = """
       ) >   maxEigenvalue,
       const tarch::la::Vector<Dimensions,double>&  faceCentre,
       const tarch::la::Vector<Dimensions,double>&  patchSize,
+      double                                       t,
       double                                       dt,
       int                                          numberOfGridCellsPerPatchPerAxis,
       int                                          overlap,
-      int                                          unknownsPlusAuxiliaryVariables,
+      int                                          numberOfUnknowns,
+      int                                          numberOfAuxiliaryVariables,
       int                                          faceNumber,
       const tarch::la::Vector<Dimensions,double>&  systemOrigin,
       double* __restrict__                         Qold,
-      double* __restrict__                         Qnew
+      double* __restrict__                         Qnew,
+      double* __restrict__                         Qinf
     );
   }
 }
