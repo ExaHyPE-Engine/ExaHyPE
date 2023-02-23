@@ -48,7 +48,7 @@ class HandleBoundary(AbstractRungeKuttaDGActionSet):
 """
 
 
-   TemplateHandleBoundary_KernelCalls = """
+  TemplateHandleBoundary_KernelCalls = """
     ::exahype2::dg::applyBoundaryConditions(
       [&](
         const double * __restrict__                  Qinside,
