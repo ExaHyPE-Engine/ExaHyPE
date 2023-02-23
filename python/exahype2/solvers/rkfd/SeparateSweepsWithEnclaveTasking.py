@@ -91,7 +91,8 @@ class UpdateCell(ReconstructPatchAndApplyFunctor):
           oldQWithHalo
         );
         fineGridCell{{SEMAPHORE_LABEL}}.setSemaphoreNumber( newEnclaveTask->getTaskId() );
-        fineGridCell{{SOLVER_NAME}}CellLabel.setTimeStamp(timeStamp + timeStepSize);
+        // Time stamp is not updated, as this will be done by final linear combination
+        // fineGridCell{{SOLVER_NAME}}CellLabel.setTimeStamp(timeStamp + timeStepSize);
 
         tarch::multicore::spawnTask( newEnclaveTask );
       }
