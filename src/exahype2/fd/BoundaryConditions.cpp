@@ -162,10 +162,10 @@ void exahype2::fd::applySommerfeldConditions(
 
       for(int i=0; i<numberOfUnknowns; i++) {
         double numerator=-(waveSpeed/rOnLayer)*((Qold + enumerator(outsideGridCell,0))[i]+(Qold+enumerator(insideGridCell,0))[i]-2*Qinf[i])
-                          +(-dtInverse+spaceFactor)*(Qold + enumerator(outsideGridCell,0))[i]
-                          +( dtInverse-spaceFactor)*(Qnew + enumerator( insideGridCell,0))[i]
-                          +(-dtInverse-spaceFactor)*(Qold + enumerator( insideGridCell,0))[i];
-        //logInfo("text","numerator "<<numerator );
+                          +(+dtInverse-spaceFactor)*(Qold + enumerator(outsideGridCell,0))[i]
+                          +(-dtInverse+spaceFactor)*(Qnew + enumerator( insideGridCell,0))[i]
+                          +(+dtInverse+spaceFactor)*(Qold + enumerator( insideGridCell,0))[i];
+        //logInfo("numerator","numerator "<<numerator );
         (Qnew + enumerator(outsideGridCell,0))[i]=numerator/(dtInverse+spaceFactor);
       }
       for(int i=numberOfUnknowns; i<numberOfUnknowns+numberOfAuxiliaryVariables; i++) {
