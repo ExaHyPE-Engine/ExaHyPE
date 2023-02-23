@@ -687,6 +687,7 @@ int main(int argc, char** argv) {
 
   logInfo("main()", "Number of threads: " << tarch::multicore::Core::getInstance().getNumberOfThreads());
   logInfo("main()", "Number of finite volumes per axis per patch: " << EulerFVRusanov::NumberOfFiniteVolumesPerAxisPerPatch);
+  logInfo("main()", "Dimensions: " << Dimensions);
 
   int numberOfPatches = tarch::multicore::Core::getInstance().getNumberOfThreads();
   for (; numberOfPatches <= 1024*2*2*2*2; numberOfPatches *= 2) {
@@ -700,7 +701,7 @@ int main(int argc, char** argv) {
 
     runBenchmarksOnHost(numberOfPatches);
     if (tarch::accelerator::Device::getInstance().getNumberOfDevices() > 0) {
-      //runBenchmarksOnDevice(numberOfPatches);
+      runBenchmarksOnDevice(numberOfPatches);
     }
   }
 
