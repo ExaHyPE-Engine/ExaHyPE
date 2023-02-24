@@ -259,12 +259,13 @@ namespace exahype2 {
      *   solution is to be evaluated.
      * @param unknown        Unknown of interest.
      */
-    double evaluatePolynomial(
+    template<typename QStoreType>
+    QStoreType evaluatePolynomial(
       const peano4::datamanagement::CellMarker&    marker,
       int                                          order,
       const double* __restrict__                   QuadratureNodes1d,
       int                                          unknownsPerDoF,
-      const double* __restrict__                   Q,
+      const QStoreType* __restrict__               Q,
       const tarch::la::Vector<Dimensions,double>&  x,
       int                                          unknown
     );
