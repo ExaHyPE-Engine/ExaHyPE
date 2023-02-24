@@ -103,7 +103,7 @@ int {{codeNamespace}}::fusedSpaceTimePredictorVolumeIntegral{{nameSuffix}}(
     std::memset(PSi, 0, {{(nDof+1)*(nDof**nDim)*nVarPad}}*sizeof(pCompType));
 
     pCompType tn;
-    pCompType x1[{{nDim}}];
+    double x1[{{nDim}}]; //position
     const pCompType ivolume = 1.0/(dx * dx{{' * dx' if nDim==3}});
     pCompType forceVectorSource[{{nVarPad}}] __attribute__((aligned({{alignmentSize}})));
     std::memset(forceVectorSource, 0, {{nVarPad}}*sizeof(pCompType));
