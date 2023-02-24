@@ -311,13 +311,20 @@ void applications::exahype2::ccz4::FiniteVolumeCCZ4::nonconservativeProduct(
   double t
 ) {
   ::exahype2::RefinementCommand result = ::exahype2::RefinementCommand::Keep;
-  //if (volumeCentre(0)>1.2) {result=::exahype2::RefinementCommand::Refine;}
-  double radius=volumeCentre(0)*volumeCentre(0)+volumeCentre(1)*volumeCentre(1)+volumeCentre(2)*volumeCentre(2); radius=pow(radius,0.5);
-  if (CCZ4ReSwi==1){ //radius based
-    if (radius<0.2) {result=::exahype2::RefinementCommand::Refine;}
+
+  const double radius = tarch::la::norm2( volumeCentre );
+
+  //
+  // see documentation in header file
+  //
+  if (CCZ4ReSwi==1) { //radius based
+    if (radius<0.2) {
+      result=::exahype2::RefinementCommand::Refine;
+    }
   }
-  if (CCZ4ReSwi==2){ //single black hole, low refinement
+  if (CCZ4ReSwi==2) { //
     if (tarch::la::equals(t,0.0)){  //as we use a quantity calculated in postpocessing, we need to provide criterion at the first timestep 
+        std::cout << "@";
       constexpr int NumberOfRefinementLayers = 2;
 //    current "standard" refinement pattern
       double Radius[NumberOfRefinementLayers] = {4, 2.5};
@@ -334,9 +341,16 @@ void applications::exahype2::ccz4::FiniteVolumeCCZ4::nonconservativeProduct(
       }
     }
   }
-  if (CCZ4ReSwi==3){ //binary black holes
-  double radius1=(volumeCentre(0)-4.251)*(volumeCentre(0)-4.251)+volumeCentre(1)*volumeCentre(1)+volumeCentre(2)*volumeCentre(2); radius=pow(radius,0.5);
-  double radius2=(volumeCentre(0)+4.251)*(volumeCentre(0)+4.251)+volumeCentre(1)*volumeCentre(1)+volumeCentre(2)*volumeCentre(2); radius=pow(radius,0.5);
+  if (CCZ4ReSwi==3) { //binary black holes
+    //double radius1=(volumeCentre(0)-4.251)*(volumeCentre(0)-4.251)+volumeCentre(1)*volumeCentre(1)+volumeCentre(2)*volumeCentre(2);
+    //double radius2=(volumeCentre(0)+4.251)*(volumeCentre(0)+4.251)+volumeCentre(1)*volumeCentre(1)+volumeCentre(2)*volumeCentre(2);
+
+    tarch::la::Vector<Dimensions,double> leftBH  = {-4.241, 0.0, 0.0};
+    tarch::la::Vector<Dimensions,double> rightBH = { 4.241, 0.0, 0.0};
+
+    const double radius1 = tarch::la::norm2( volumeCentre - leftBH  );
+    const double radius2 = tarch::la::norm2( volumeCentre - rightBH );
+
     if (tarch::la::equals(t,0.0)){  //as we use a quantity calculated in postpocessing, we need to provide criterion at the first timestep 
       if ( ((radius1<5) or (radius2<5)) and (volumeH(0)>1.0)) { result=::exahype2::RefinementCommand::Refine; }
       else if ((radius1<2.5) or (radius2<2.5)) { result=::exahype2::RefinementCommand::Refine; }
@@ -395,15 +409,11 @@ void applications::exahype2::ccz4::FiniteVolumeCCZ4::nonconservativeProduct(
       }
     }
   }
-  if (CCZ4ReSwi==6){ //single black hole, another low refinement pattern to keep finest volume the same size as it in the regular grid tests.
-    if (tarch::la::equals(t,0.0)){  //as we use a quantity calculated in postpocessing, we need to provide criterion at the first timestep 
+  if (CCZ4ReSwi==6) {
+    if (tarch::la::equals(t,0.0)) {
       constexpr int NumberOfRefinementLayers = 2;
-//    current "standard" refinement pattern
       double Radius[NumberOfRefinementLayers] = {5, 3.5};
       double MaxH[NumberOfRefinementLayers]   = {0.15,0.04};
-//    with some alter
-//      double Radius[NumberOfRefinementLayers] = {5.0, 3.0};
-//      double MaxH[NumberOfRefinementLayers]   = {0.3, 0.15};
 
       result = ::exahype2::RefinementCommand::Keep;
       for (int i=0; i<NumberOfRefinementLayers; i++) {

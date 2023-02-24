@@ -20,22 +20,26 @@ class InsertParticlesByCoordinates(peano4.toolbox.particles.InsertParticlesByCoo
   
   def __init__(self,
                particle_set,
-               coordinates
+               coordinates,
+               additional_includes="",
                ):
     """
 
     See superclass.
 
     """
-    super( InsertParticlesByCoordinates, self ).__init__(particle_set, 
-                                                         coordinates,
-                                                         """
+    super( InsertParticlesByCoordinates, self ).__init__(particle_set = particle_set, 
+                                                         coordinates  = coordinates,
+                                                         initialisation_call = """
       particle->setNumber(0,_spacetreeId);
       particle->setNumber(1,_particleNumberOnThisTree);
       _particleNumberOnThisTree++;
       
       logInfo( "touchVertexFirstTime(...)", "insert particle " << particle->toString() << " into " << marker.toString() );
-      """, # initialisation_call,
+      """, 
+                                                         additional_includes = additional_includes + """  
+#include "Constants.h"
+""",
 )
 
 

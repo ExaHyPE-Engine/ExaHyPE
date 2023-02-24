@@ -22,7 +22,7 @@
 
 int statisticsExchangeTag = tarch::mpi::Rank::reserveFreeTag("SolverRepository - statistics exchange tag");
 
-tarch::logging::Log _log( "SolverRepository" );
+tarch::logging::Log _log( "{{NAMESPACE | join("::")}}::SolverRepository" );
 
 ::exahype2::RefinementControl  refinementControl;
 ::exahype2::PlotFilter         plotFilter;
@@ -145,6 +145,7 @@ void startGridConstructionStep() {
   {% for item in SOLVERS -%}
   {{ item[1] }}.startGridConstructionStep();
   {%- endfor %}
+  logTraceIn( "GridConstructionStep()" );
 }
 
 
@@ -152,6 +153,7 @@ void startGridInitialisationStep() {
   {% for item in SOLVERS -%}
   {{ item[1] }}.startGridInitialisationStep();
   {%- endfor %}
+  logTraceIn( "GridInitialisationStep()" );
 }
 
 
@@ -164,6 +166,7 @@ void startTimeStep(
   {% for item in SOLVERS -%}
   {{ item[1] }}.startTimeStep(minTimeStamp,maxTimeStamp,minTimeStepSize,maxTimeStepSize);
   {%- endfor %}
+  logTraceIn( "TimeStep()" );
 }
 
 
@@ -176,6 +179,7 @@ void startPlottingStep(
   {% for item in SOLVERS -%}
   {{ item[1] }}.startPlottingStep(minTimeStamp,maxTimeStamp,minTimeStepSize,maxTimeStepSize);
   {%- endfor %}
+  logTraceIn( "PlottingStep()" );
 }
 
 
@@ -194,6 +198,7 @@ void finishTimeStep() {
   #ifdef UseSmartMPI
   smartmpi::tick();
   #endif
+  logTraceOut( "TimeStep()" );
 }
 
 
@@ -215,7 +220,7 @@ void finishGridConstructionStep() {
     for (int rank=0; rank<tarch::mpi::Rank::getInstance().getNumberOfRanks(); rank++ ) {
       if (rank!=tarch::mpi::Rank::getGlobalMasterRank()) {
         peano4::grid::GridStatistics rankLocalStats;
-        logDebug( "finishGridConstructionStep()", "receive grid statistics from rank " << rank << " via tag " << statisticsExchangeTag );
+        logDebug( "GridConstructionStep()", "receive grid statistics from rank " << rank << " via tag " << statisticsExchangeTag );
         peano4::grid::GridStatistics::receive(
           rankLocalStats,
           rank,
@@ -225,7 +230,7 @@ void finishGridConstructionStep() {
             tarch::mpi::Rank::getInstance().setDeadlockTimeOutTimeStamp();
           },
           [&]() {
-            tarch::mpi::Rank::getInstance().writeTimeOutWarning( "", "finishGridConstructionStep()", rank, statisticsExchangeTag );
+            tarch::mpi::Rank::getInstance().writeTimeOutWarning( "", "GridConstructionStep()", rank, statisticsExchangeTag );
             tarch::mpi::Rank::getInstance().triggerDeadlockTimeOut( "", "receifinishGridConstructionStepve()", rank, statisticsExchangeTag );
             tarch::services::ServiceRepository::getInstance().receiveDanglingMessages();
           },
@@ -236,7 +241,7 @@ void finishGridConstructionStep() {
     }
   }
   else {
-    logDebug( "finishGridConstructionStep()", "send out local statistics " << gridStatisticsAfterGridConstruction.toString() << " to global master via tag " << statisticsExchangeTag );
+    logDebug( "GridConstructionStep()", "send out local statistics " << gridStatisticsAfterGridConstruction.toString() << " to global master via tag " << statisticsExchangeTag );
     peano4::grid::GridStatistics::send(
       gridStatisticsAfterGridConstruction,
       tarch::mpi::Rank::getInstance().getGlobalMasterRank(),
@@ -254,6 +259,7 @@ void finishGridConstructionStep() {
     );
   }
   #endif
+  logTraceOut( "GridConstructionStep()" );
 }
 
 
@@ -267,6 +273,7 @@ void finishGridInitialisationStep() {
   {%- endfor %}
 
   loadBalancer.finishStep();
+  logTraceOut( "GridInitialisationStep()" );
 }
 
 
@@ -280,6 +287,7 @@ void finishPlottingStep() {
   {%- endfor %}
 
   plotFilter.finishPlottingStep();
+  logTraceOut( "PlottingStep()" );
 }
 
 

@@ -24,6 +24,7 @@
 #include "tarch/compiler/CompilerSpecificSettings.h"
 
 #include "tarch/multicore/smartScheduling.h"
+#include "tarch/multicore/otter.h"
 
 #include "tarch/mpi/DoubleMessage.h"
 #include "tarch/mpi/IntegerMessage.h"
@@ -59,6 +60,18 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::applyKernelToCell(
     timeStepSize,
     QOut
   );
+
+  {% if STATELESS_PDE_TERMS %}
+  if ( repositories::{{SOLVER_INSTANCE}}.patchCanUseStatelessPDETerms(
+      marker.x(),
+      marker.h(),
+      t,
+      dt
+  )) {
+    ::exahype2::fd::{{KERNEL_NAMESPACE}}::{{FUSED_COMPUTE_KERNEL_CALL_CPU}}
+  }
+  else
+  {% endif %}
 
   ::exahype2::dg::{{KERNEL_NAMESPACE}}::{{VOLUMETRIC_SOLVER_CALL}}
 }

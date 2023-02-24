@@ -250,6 +250,9 @@ class FV(object):
 
     self._kernel_namespace = kernel_namespace
 
+    self._hold_cell_data_on_heap_with_smart_pointer = False
+    self._hold_face_data_on_heap_with_smart_pointer = False
+
     self.create_data_structures()
     self.create_action_sets()
 
@@ -406,6 +409,13 @@ The finest mesh width of """ + str(self.get_finest_volume_size(domain_size)) + "
     self._patch_overlap_new    = peano4.datamodel.Patch( (2*self._overlap,self._patch_size,self._patch_size),  self._unknowns+self._auxiliary_variables, self._unknown_identifier() + "New" )
     self._patch_overlap_update = peano4.datamodel.Patch( (2*self._overlap,self._patch_size,self._patch_size),  self._unknowns+self._auxiliary_variables, self._unknown_identifier() + "Update" )
 
+    if self._hold_cell_data_on_heap_with_smart_pointer:
+      self._patch.generator           = peano4.datamodel.PatchToDoubleArrayOnHeap(self._patch,           "double")
+    if self._hold_face_data_on_heap_with_smart_pointer:
+      self._patch_overlap_old.generator    = peano4.datamodel.PatchToDoubleArrayOnHeap(self._patch_overlap_old,    "double") 
+      self._patch_overlap_new.generator    = peano4.datamodel.PatchToDoubleArrayOnHeap(self._patch_overlap_new,    "double") 
+      self._patch_overlap_update.generator = peano4.datamodel.PatchToDoubleArrayOnHeap(self._patch_overlap_update, "double") 
+    
     self._patch_overlap_old.generator.merge_method_definition = peano4.toolbox.blockstructured.get_face_merge_implementation(self._patch_overlap_old)
     self._patch_overlap_new.generator.merge_method_definition = peano4.toolbox.blockstructured.get_face_merge_implementation(self._patch_overlap_new)
     self._patch.generator.merge_method_definition             = peano4.toolbox.blockstructured.get_cell_merge_implementation(self._patch)
@@ -1027,3 +1037,23 @@ The finest mesh width of """ + str(self.get_finest_volume_size(domain_size)) + "
     self._restriction = value
     self.create_data_structures()
     self.create_action_sets()
+
+
+  def switch_to_heap_storage(self,
+                             hold_cell_data_on_heap_with_smart_pointer,
+                             hold_face_data_on_heap_with_smart_pointer
+                             ):
+    """
+    
+    By default, we hold all data on the call stacks. You can explicitly switch
+    to storage on the heap via smart pointers.
+    
+    @see create_data_structures()
+    
+    """
+    self._hold_cell_data_on_heap_with_smart_pointer = hold_cell_data_on_heap_with_smart_pointer
+    self._hold_face_data_on_heap_with_smart_pointer = hold_face_data_on_heap_with_smart_pointer
+    
+    self.create_data_structures()
+    self.create_action_sets()
+

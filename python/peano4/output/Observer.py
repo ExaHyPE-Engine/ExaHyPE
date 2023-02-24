@@ -362,7 +362,7 @@ void {{FULL_QUALIFIED_CLASSNAME}}::enterCell( const peano4::grid::GridTraversalE
         ))
       ) {
         assertion4( not repositories::DataRepository::_{{logical_type_name}}Stack.getForPop( repositories::DataRepository::DataKey(_spacetreeId,inVertexStack))->empty(), event.toString(), peano4::datamanagement::VertexMarker(event).toString(), _spacetreeId, inVertexStack);
-        {{full_qualified_type}}& data = repositories::DataRepository::_{{logical_type_name}}Stack.getForPop( repositories::DataRepository::DataKey(_spacetreeId,inVertexStack))->pop();
+        {{full_qualified_type}} data = std::move( repositories::DataRepository::_{{logical_type_name}}Stack.getForPop( repositories::DataRepository::DataKey(_spacetreeId,inVertexStack))->pop() );
         #if PeanoDebug>0
         if ( peano4::grid::PeanoCurve::isInOutStack(inVertexStack) ) {
           assertionVectorNumericalEquals7( data.getDebugX(), marker.x(outVertexStackPosition), event.toString(), data.getDebugX(), marker.toString(), inVertexStack, i, outVertexStackPosition, _spacetreeId );
@@ -471,7 +471,7 @@ void {{FULL_QUALIFIED_CLASSNAME}}::enterCell( const peano4::grid::GridTraversalE
         ))
       ) {
         assertion4( not repositories::DataRepository::_{{logical_type_name}}Stack.getForPop( repositories::DataRepository::DataKey(_spacetreeId,inFaceStack))->empty(), event.toString(), peano4::datamanagement::FaceMarker(event).toString(), _spacetreeId,inFaceStack );
-        {{full_qualified_type}}& data = repositories::DataRepository::_{{logical_type_name}}Stack.getForPop( repositories::DataRepository::DataKey(_spacetreeId,inFaceStack))->pop();
+        {{full_qualified_type}} data = std::move( repositories::DataRepository::_{{logical_type_name}}Stack.getForPop( repositories::DataRepository::DataKey(_spacetreeId,inFaceStack))->pop() );
         #if PeanoDebug>0
         if ( peano4::grid::PeanoCurve::isInOutStack(inFaceStack) ) {
           assertionVectorNumericalEquals5( data.getDebugX(), marker.x(outFaceStackPosition), data.getDebugX(), data.getDebugH(), marker.toString(), outFaceStackPosition, _spacetreeId );
@@ -581,7 +581,7 @@ void {{FULL_QUALIFIED_CLASSNAME}}::enterCell( const peano4::grid::GridTraversalE
       ))
     ) {
       assertion3( not repositories::DataRepository::_{{logical_type_name}}Stack.getForPop( repositories::DataRepository::DataKey(_spacetreeId,inCellStack))->empty(), event.toString(), _spacetreeId, inCellStack);
-      {{full_qualified_type}}& data = repositories::DataRepository::_{{logical_type_name}}Stack.getForPop( repositories::DataRepository::DataKey(_spacetreeId,inCellStack))->pop();
+      {{full_qualified_type}} data = std::move( repositories::DataRepository::_{{logical_type_name}}Stack.getForPop( repositories::DataRepository::DataKey(_spacetreeId,inCellStack))->pop() );
       
       #if PeanoDebug>0
       assertionVectorNumericalEquals4( data.getDebugX(), marker.x(), data.getDebugX(), data.getDebugH(), marker.toString(), _spacetreeId );

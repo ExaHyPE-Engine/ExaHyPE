@@ -16,6 +16,9 @@ namespace exahype2 {
   namespace fd {
       constexpr int PickAllEntriesFromOutputVector = -1;
 
+      /**
+       *
+       */
       void reduceMaxEigenvalue_patchwise_functors(
         ::exahype2::CellData&   patchData,
         int                     numberOfGridCellsPerPatchPerAxis,
@@ -93,7 +96,7 @@ namespace exahype2 {
         static void addAlgebraicSourceTerm_LoopBody(
           const double* __restrict__                   QIn,
           const QInEnumeratorType&                     QInEnumerator,
-          exahype2::fd::Source                    AlgebraicSource,
+          exahype2::fd::Source                         AlgebraicSource,
           const tarch::la::Vector<Dimensions,double>&  patchCentre,
           const tarch::la::Vector<Dimensions,double>&  patchSize,
           int                                          patchIndex,
@@ -103,6 +106,44 @@ namespace exahype2 {
           double* __restrict__                         QOut,
           const QOutEnumeratorType&                    QOutEnumerator
         ) InlineMethod;
+
+
+        /**
+         * Overloaded version which uses static invocation instead of a
+         * functor.
+         */
+        template <typename Solver, class QInEnumeratorType, class QOutEnumeratorType>
+        static void addAlgebraicSourceTerm_LoopBody(
+          const double* __restrict__                   QIn,
+          const QInEnumeratorType&                     QInEnumerator,
+          const tarch::la::Vector<Dimensions,double>&  patchCentre,
+          const tarch::la::Vector<Dimensions,double>&  patchSize,
+          int                                          patchIndex,
+          const tarch::la::Vector<Dimensions,int>&     volumeIndex,
+          double                                       t,
+          double                                       dt,
+          double* __restrict__                         QOut,
+          const QOutEnumeratorType&                    QOutEnumerator
+        ) InlineMethod;
+
+
+        /**
+         * Specialised version.
+         */
+        template <typename Solver>
+        static void addAlgebraicSourceTerm_LoopBody(
+          const double* __restrict__                   QIn,
+          const exahype2::enumerator::AoSLexicographicEnumerator&                     QInEnumerator,
+          const tarch::la::Vector<Dimensions,double>&  patchCentre,
+          const tarch::la::Vector<Dimensions,double>&  patchSize,
+          int                                          patchIndex,
+          const tarch::la::Vector<Dimensions,int>&     volumeIndex,
+          double                                       t,
+          double                                       dt,
+          double* __restrict__                         QOut,
+          const exahype2::enumerator::AoSLexicographicEnumerator&                    QOutEnumerator
+        ) InlineMethod;
+
 
         template <class QOutEnumeratorType>
         static double reduceMaxEigenvalue_LoopBody(
@@ -126,6 +167,38 @@ namespace exahype2 {
           const double* __restrict__                   QOut,
           const exahype2::enumerator::AoSLexicographicEnumerator&                    QOutEnumerator,
           exahype2::fd::MaxEigenvalue                  maxEigenvalue,
+          const tarch::la::Vector<Dimensions,double>&  patchCentre,
+          const tarch::la::Vector<Dimensions,double>&  patchSize,
+          int                                          patchIndex,
+          const tarch::la::Vector<Dimensions,int>&     volumeIndex,
+          double                                       t,
+          double                                       dt
+        ) InlineMethod;
+
+
+        /**
+         * Overloaded version with static function calls.
+         */
+        template <typename Solver, class QOutEnumeratorType>
+        static double reduceMaxEigenvalue_LoopBody(
+          const double* __restrict__                   QOut,
+          const QOutEnumeratorType&                    QOutEnumerator,
+          const tarch::la::Vector<Dimensions,double>&  patchCentre,
+          const tarch::la::Vector<Dimensions,double>&  patchSize,
+          int                                          patchIndex,
+          const tarch::la::Vector<Dimensions,int>&     volumeIndex,
+          double                                       t,
+          double                                       dt
+        ) InlineMethod;
+
+
+        /**
+         * Overloaded version with static function calls.
+         */
+        template <typename Solver>
+        static double reduceMaxEigenvalue_LoopBody(
+          const double* __restrict__                   QOut,
+          const exahype2::enumerator::AoSLexicographicEnumerator&                    QOutEnumerator,
           const tarch::la::Vector<Dimensions,double>&  patchCentre,
           const tarch::la::Vector<Dimensions,double>&  patchSize,
           int                                          patchIndex,

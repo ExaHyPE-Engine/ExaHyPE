@@ -6,46 +6,51 @@
 export OMP_NUM_THREADS=4
 
 # Parameters
-END_TIME=0.05
-N_PART=33
-CELL_SIZE=0.3
+N_PART=64
+END_TIME=0.2
+TIMESTEP_SIZE=1e-3
+CFL_FACTOR=0.2
+PLOT_DELTA=0.01
+CELL_SIZE=0.1
 
 # Run python script to generate the experiment
-python3 noh.py -cs $CELL_SIZE -et $END_TIME -np $N_PART
+echo 'generate and compile code ...'
+echo python3 noh.py -np $N_PART -et $END_TIME -dt $TIMESTEP_SIZE -cfl $CFL_FACTOR -plot $PLOT_DELTA -cs $CELL_SIZE
+python3 noh.py -np $N_PART -et $END_TIME -dt $TIMESTEP_SIZE -cfl $CFL_FACTOR -plot $PLOT_DELTA -cs $CELL_SIZE
 
 # run experiment
 echo 'running experiment...'
-./noh2D output.txt
+./noh2D > output.txt
+echo 'experiment run finished.'
 
-#likwid-perfctr -f -C 0 -g MEM            -o output_MEM.cvs            -O ./noh2D
-#likwid-perfctr -f -C 0 -g DATA           -o output_DATA.cvs           -O ./noh2D
-#likwid-perfctr -f -C 0 -g CACHES         -o output_CACHES.cvs         -O ./noh2D
-#likwid-perfctr -f -C 0 -g L2CACHE        -o output_L2CACHE.cvs        -O ./noh2D
-#likwid-perfctr -f -C 0 -g L3CACHE        -o output_L3CACHE.cvs        -O ./noh2D
-#likwid-perfctr -f -C 0 -g CYCLE_ACTIVITY -o output_CYCLE_ACTIVITY.cvs -O ./noh2D
+echo 'post-processing results...'
 
 # generate Peano grid for Paraview (if needed)
-#pvpython ../../../../python/peano4/visualisation/render.py grid.peano-patch-file
+pvpython ../../../../python/peano4/visualisation/render.py grid.peano-patch-file
 
 # Save results into directory
 DIRNAME="output"
-if [ -d $DIRNAME ]; then
+if [ -d $DIRNAME ]
+then
     rm -r $DIRNAME
 fi
 mkdir $DIRNAME
 mv output.txt $DIRNAME
 
 # Save file with parameters and metadata
-mv Constants.h $DIRNAME
+less Constants.h > Constants.txt && mv Constants.txt $DIRNAME
 
 # Save snapshots
 mkdir $DIRNAME"/snapshots/"
 mv particles* grid* $DIRNAME"/snapshots/"
 
 # Save other data, if any
-if [ -e *.cvs ]; then
+if [ -e *.cvs ]
+then
     mv *.cvs $DIRNAME
 fi
+
+echo 'Done. Bye!'
 
 
 # @TODO: run plot script if necessary

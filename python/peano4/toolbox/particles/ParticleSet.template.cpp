@@ -511,12 +511,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::deleteParticles() {
   for (auto *p: *this) {
     delete p;
   }
-  Base::clear();
-}
-
-
-void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::clear() {
-  Base::clear();
+  clear();
 }
 
 

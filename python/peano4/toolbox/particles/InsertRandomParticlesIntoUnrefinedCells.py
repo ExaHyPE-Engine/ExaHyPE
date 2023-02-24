@@ -27,9 +27,19 @@ class InsertRandomParticlesIntoUnrefinedCells(ActionSet):
       average_distance_between_particles: Float
          Some positive floating point value.
          
-      initialisation_call: String (C code)
-         Within this code snippet, you have a variable particle which is a pointer to 
-         your particle type. You can use it to set the particle attributes.
+      initialisation_call: String (C++ code snippet)
+        Arbitrary code snippet which can work over a pointer particle. The object
+        to which this pointer points to is properly allocated, and its 
+        coordinates are set. Furthermore, the object's cut-off radius is 
+        initialised with zero. You can alter the particle attributes now, i.e.
+        initialise the domain-specific data. Please also ensure you assign the 
+        particle a proper cut-off (interaction) radius if the radius is of 
+        relevance for your application.
+        
+        Please note that we create a lot of particles and then decide if we 
+        actually insert them. Only those particles where we come to the 
+        conclusion that we should insert them (as they overlap with the cell)
+        are actually then initialised through this code snippet.
 
     """
     self.d = {}
@@ -58,6 +68,7 @@ class InsertRandomParticlesIntoUnrefinedCells(ActionSet):
       {{NOISE}}
     );
     for (auto* particle: newParticles) {
+      // See documentation of constructor on initialisation snippet
       {{INITIALISATION_CALL}}
     }
     toolbox::particles::insertParticlesIntoCell(
