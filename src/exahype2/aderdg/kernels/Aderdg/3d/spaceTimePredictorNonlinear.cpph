@@ -46,11 +46,11 @@ template <bool useSource, bool useFlux, bool useViscousFlux, bool useNCP,
 int aderPicardLoopNonlinear(SolverType& solver,
                             const double* luh, const double t, const double dt,
                             const tarch::la::Vector<Dimensions, double>& cellCenter,
-                            const tarch::la::Vector<Dimensions, double>& invDx,
+                            const tarch::la::Vector<Dimensions, double>& dx,
                             pCompType* lQi, pCompType* rhs, 
                             pCompType* lFi, pCompType* gradQ) {
   
-  
+  const tarch::la::Vector<Dimensions, double>& invDx = tarch::la::invertEntries(dx);
   
   constexpr int numberOfVariables = SolverType::NumberOfVariables;
   constexpr int numberOfParameters = SolverType::NumberOfParameters;
@@ -212,7 +212,37 @@ int aderPicardLoopNonlinear(SolverType& solver,
               if (useViscousFlux) {
                 solver.viscousFlux(Q, gradQCur + idx_gradQ(j, k, l, 0, 0), F);
               } else {
-                solver.flux(Q, F);
+
+                solver.flux(
+                  Q,
+                  cellCenter,
+                  dx,
+                  t,
+                  dt,
+                  0,
+                  F[0]
+                ); //x
+
+                solver.flux(
+                  Q,
+                  cellCenter,
+                  dx,
+                  t,
+                  dt,
+                  1,
+                  F[1]
+                ); //y
+
+                solver.flux(
+                  Q,
+                  cellCenter,
+                  dx,
+                  t,
+                  dt,
+                  2,
+                  F[2]
+                ); //y
+
               }
 
               for (int m = 0; m < numberOfVariables; m++) {

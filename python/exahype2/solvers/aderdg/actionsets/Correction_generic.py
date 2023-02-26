@@ -83,6 +83,8 @@ class Correction_generic(AbstractAderDGActionSet):
           QR,
           timeStamp,
           timeStepSize,
+          faceCentre,
+          marker.h(),
           d //direction
           );
       {% else %}
@@ -150,6 +152,8 @@ class Correction_generic(AbstractAderDGActionSet):
           QR,
           timeStamp,
           timeStepSize,
+          faceCentre,
+          marker.h(),
           d //direction
           );
       {% else %}

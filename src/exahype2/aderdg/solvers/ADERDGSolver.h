@@ -47,12 +47,25 @@ public:
      * be replaced by an instance of the function in a derived class.
      */
     
-    virtual void flux(const double* const Q, double** const F) {
+    virtual void flux(
+      const double * __restrict__ Q,
+      const tarch::la::Vector<Dimensions,double>&  volumeX,
+      const tarch::la::Vector<Dimensions,double>&  volumeH,
+      double                                       t,
+      double                                       dt,
+      int                                          normal,
+      double * __restrict__ F
+    ) {
       // should not be called
       exit(1);
     }
     
     virtual void nonConservativeProduct(const double* const Q, const double* const gradQ, double* const BgradQ) {
+      // should not be called
+      exit(1);
+    }
+
+    virtual void nonConservativeProduct(const double* const Q, const double* const* const gradQ, double** const BgradQ) {
       // should not be called
       exit(1);
     }

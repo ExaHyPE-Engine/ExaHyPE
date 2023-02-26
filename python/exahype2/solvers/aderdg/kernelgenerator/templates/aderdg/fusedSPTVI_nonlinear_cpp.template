@@ -26,25 +26,28 @@
 
 template <typename cStoreType, typename pCompType, typename pStoreType>
 int {{codeNamespace}}::fusedSpaceTimePredictorVolumeIntegral(
-        {{solverName}}& solver, 
-        pCompType* __restrict__ lduh,
-        pStoreType* __restrict__ lQhbnd, 
-        pStoreType* __restrict__ lGradQhbnd,
-        pStoreType* __restrict__ lFhbnd,
-        pCompType* __restrict__ lQi,
-        pCompType* __restrict__ rhs,
-        pCompType* __restrict__ lFi,
-        pCompType* __restrict__ lSi,   // for NCP or Source
-        pCompType* __restrict__ lQhi,
-        pCompType* __restrict__ lFhi,
-        pCompType* __restrict__ lShi,  // for NCP or Source
-        pCompType* __restrict__ gradQ, // for NCP or Source or viscousFlux
-        pCompType* __restrict__ gradQAvg, // for viscousFlux
-        const cStoreType* const __restrict__ luh,
-        const double inverseDx, //Assume dx[0] == dx[1] == dx[2]
-        const double dt
+  {{solverName}}& solver, 
+  pCompType* __restrict__ lduh,
+  pStoreType* __restrict__ lQhbnd, 
+  pStoreType* __restrict__ lGradQhbnd,
+  pStoreType* __restrict__ lFhbnd,
+  pCompType* __restrict__ lQi,
+  pCompType* __restrict__ rhs,
+  pCompType* __restrict__ lFi,
+  pCompType* __restrict__ lSi,   // for NCP or Source
+  pCompType* __restrict__ lQhi,
+  pCompType* __restrict__ lFhi,
+  pCompType* __restrict__ lShi,  // for NCP or Source
+  pCompType* __restrict__ gradQ, // for NCP or Source or viscousFlux
+  pCompType* __restrict__ gradQAvg, // for viscousFlux
+  const cStoreType* const __restrict__ luh,
+  const tarch::la::Vector<Dimensions,double>&  volumeCentre,
+  const tarch::la::Vector<Dimensions,double>&  dx,
+  const double timeStamp,
+  const double dt
 ) {
 
+  const double inverseDx = 1/dx[0]; //assume dx[0] == dx[1] == dx[2]
 
   //********************
   //****** Picard ******
@@ -59,6 +62,7 @@ int {{codeNamespace}}::fusedSpaceTimePredictorVolumeIntegral(
   __assume_aligned(FLCoeff, {{alignmentSize}}); // == F0
   __assume_aligned(Kxi, {{alignmentSize}});
   __assume_aligned(iK1_T, {{alignmentSize}});
+  __assume_aligned(nodes, {{alignmentSize}});
   __assume_aligned(weights1, {{alignmentSize}});
   __assume_aligned(weights3, {{alignmentSize}});
   __assume_aligned(iweights3, {{alignmentSize}});
@@ -192,34 +196,29 @@ int {{codeNamespace}}::fusedSpaceTimePredictorVolumeIntegral(
       
       // Compute the "derivatives" (contributions of the stiffness matrix)      
       // x direction (independent from the y and z derivatives)
+{% if useNCP or useViscousFlux %}
       for (int z = 0; z < {{nDof3D}}; z++) {
         for (int y = 0; y < {{nDof}}; y++) {
-{% if useNCP or useViscousFlux %}
           {{ m.matmul('gradQ_x', 'lQi', 'dudxT_by_dx', 'gradQ', '((t*'~nDof3D~'+z)*'~nDof~'+y)*'~nDof*nDataPad, '0', '(z*'~nDof~'+y)*'~nVarPad*nDof) | indent(10) }}{##}
-{% endif %}
         }
       }
       
       // y direction (independent from the x and z derivatives)
       for (int z = 0; z < {{nDof3D}}; z++) {
         for (int x = 0; x < {{nDof}}; x++) {
-{% if useNCP or useViscousFlux %}
           {{ m.matmul('gradQ_y', 'lQi', 'dudxT_by_dx', 'gradQ', '((t*'~nDof3D~'+z)*'~nDof*nDof~'+x)*'~nDataPad, '0', '(z*'~nDof*nDof~'+x)*'~nVarPad~'+'~nVarPad*(nDof**nDim)) | indent(10) }}{##}
-{% endif %}
         }
       }
-       
-{% if nDim==3 %}
+  {% if nDim==3 %}
       // z direction (independent from the x and y derivatives)
       for (int y = 0; y < {{nDof}}; y++) {
         for (int x = 0; x < {{nDof}}; x++) {
-{% if useNCP or useViscousFlux %}
           {{ m.matmul('gradQ_z', 'lQi', 'dudxT_by_dx', 'gradQ', '((t*'~nDof3D*nDof~'+y)*'~nDof~'+x)*'~nDataPad, '0', '(y*'~nDof~'+x)*'~nVarPad~'+'~2*nVarPad*(nDof**nDim)) | indent(10) }}{##}
-{% endif %}
         }
       }
+  {% endif %}
 {% endif %}
-
+       
 
 {% if useViscousFlux %}
 // Compute time-avg gradQ
@@ -608,20 +607,22 @@ int {{codeNamespace}}::fusedSpaceTimePredictorVolumeIntegral(
 }
 
 template int {{codeNamespace}}::fusedSpaceTimePredictorVolumeIntegral(
-        {{solverName}}& solver, 
-        {{predictorComputePrecision}}* __restrict__ lduh,
-        {{predictorStoragePrecision}}* __restrict__ lQhbnd, 
-        {{predictorStoragePrecision}}* __restrict__ lGradQhbnd,
-        {{predictorStoragePrecision}}* __restrict__ lFhbnd,
-        {{predictorComputePrecision}}* __restrict__ lQi,
-        {{predictorComputePrecision}}* __restrict__ rhs,
-        {{predictorComputePrecision}}* __restrict__ lFi,
-        {{predictorComputePrecision}}* __restrict__ lSi,   // for NCP or Source
-        {{predictorComputePrecision}}* __restrict__ lQhi,
-        {{predictorComputePrecision}}* __restrict__ lFhi,
-        {{predictorComputePrecision}}* __restrict__ lShi,  // for NCP or Source
-        {{predictorComputePrecision}}* __restrict__ gradQ, // for NCP or Source or viscousFlux
-        {{predictorComputePrecision}}* __restrict__ gradQAvg, // for viscousFlux
-        const {{correctorStoragePrecision}}* const __restrict__ luh,
-        const double inverseDx, //Assume dx[0] == dx[1] == dx[2]
-        const double dt);
+  {{solverName}}& solver, 
+  {{predictorComputePrecision}}* __restrict__ lduh,
+  {{predictorStoragePrecision}}* __restrict__ lQhbnd, 
+  {{predictorStoragePrecision}}* __restrict__ lGradQhbnd,
+  {{predictorStoragePrecision}}* __restrict__ lFhbnd,
+  {{predictorComputePrecision}}* __restrict__ lQi,
+  {{predictorComputePrecision}}* __restrict__ rhs,
+  {{predictorComputePrecision}}* __restrict__ lFi,
+  {{predictorComputePrecision}}* __restrict__ lSi,   // for NCP or Source
+  {{predictorComputePrecision}}* __restrict__ lQhi,
+  {{predictorComputePrecision}}* __restrict__ lFhi,
+  {{predictorComputePrecision}}* __restrict__ lShi,  // for NCP or Source
+  {{predictorComputePrecision}}* __restrict__ gradQ, // for NCP or Source or viscousFlux
+  {{predictorComputePrecision}}* __restrict__ gradQAvg, // for viscousFlux
+  const {{correctorStoragePrecision}}* const __restrict__ luh,
+  const tarch::la::Vector<Dimensions,double>&  x,
+  const tarch::la::Vector<Dimensions,double>&  dx,
+  const double timeStamp,
+  const double dt);

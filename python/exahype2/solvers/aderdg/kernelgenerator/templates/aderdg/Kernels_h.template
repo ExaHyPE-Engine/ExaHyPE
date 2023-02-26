@@ -63,8 +63,8 @@ namespace {{namespaceName}} {
     pCompType* __restrict__ PSderivatives, // for pointSource
 {% endif %}
     const cStoreType* const __restrict__ luh,
-    const double* const center,
-    const double dx, // Assume dx[0] == dx[1] == dx[2]
+    const tarch::la::Vector<Dimensions,double>&  x,
+    const tarch::la::Vector<Dimensions,double>&  dx,  
     const double tStep, // == t
     const double dt,
     std::vector<int>* pointSources // will be deleted in the end if set
@@ -96,8 +96,8 @@ namespace {{namespaceName}} {
     pCompType* __restrict__ PSderivatives, // for pointSource
 {% endif %}
     const cStoreType* const __restrict__ luh,
-    const double* const center,
-    const double dx, // Assume dx[0] == dx[1] == dx[2]
+    const tarch::la::Vector<Dimensions,double>&  x,
+    const tarch::la::Vector<Dimensions,double>&  dx,  
     const double tStep, // == t
     const double dt,
     std::vector<int>* pointSources // will be deleted in the end if set
@@ -127,7 +127,9 @@ namespace {{namespaceName}} {
     pCompType* __restrict__ gradQAvg, // for viscousFlux
 {% endif %}
     const cStoreType* const __restrict__ luh,
-    const double inverseDx, //Assume dx[0] == dx[1] == dx[2]
+    const tarch::la::Vector<Dimensions,double>&  x,
+    const tarch::la::Vector<Dimensions,double>&  dx,
+    const double timeStamp,
     const double dt
   );
 {% endif %}

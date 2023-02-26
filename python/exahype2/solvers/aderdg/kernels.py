@@ -34,7 +34,15 @@ def create_abstract_solver_declarations(flux_implementation, ncp_implementation,
 {% endif %}
 
 {% if FLUX_IMPLEMENTATION=="<user-defined>" %}
-    virtual void flux(const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const Q, {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}** const F) = 0;
+    virtual void flux(
+      const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* __restrict__ Q,
+      const tarch::la::Vector<Dimensions,double>&  volumeX,
+      const tarch::la::Vector<Dimensions,double>&  volumeH,
+      double                                       t,
+      double                                       dt,
+      int                                          normal,
+      {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* __restrict__ F
+    ) = 0;
 {% endif %}
 
 {% if NCP_IMPLEMENTATION=="<user-defined>" %}
@@ -97,7 +105,15 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::maxEigenvalue(
 {% endif %}
 
 {% if FLUX_IMPLEMENTATION!="<empty>" and FLUX_IMPLEMENTATION!="<user-defined>" and FLUX_IMPLEMENTATION!="<none>"%}
-void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::flux(const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const Q, {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}** const F) {
+void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::flux(
+  const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* __restrict__ Q, // Q[3+0],
+  const tarch::la::Vector<Dimensions,double>&  volumeX,
+  const tarch::la::Vector<Dimensions,double>&  volumeH,
+  double                                       t,
+  double                                       dt,
+  int                                          normal,
+  {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* __restrict__ F // F[3]
+){
   {{FLUX_IMPLEMENTATION}}
 }
 {% endif %}
@@ -165,7 +181,15 @@ def create_solver_declarations(flux_implementation, ncp_implementation, eigenval
   ) override;
 {% endif %}
 {% if FLUX_IMPLEMENTATION=="<user-defined>" %}
-    void flux(const {{COMPUTATION_PRECISIONS[0]}}* const Q, {{COMPUTATION_PRECISIONS[0]}}** const F) override;
+    void flux(
+      const {{COMPUTATION_PRECISIONS[0]}} * __restrict__ Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+      const tarch::la::Vector<Dimensions,double>&  volumeX,
+      const tarch::la::Vector<Dimensions,double>&  volumeH,
+      double                                       t,
+      double                                       dt,
+      int                                          normal,
+      {{COMPUTATION_PRECISIONS[0]}} * __restrict__ F // F[{{NUMBER_OF_UNKNOWNS}}]
+    ) override;
 {% endif %}
 {% if NCP_IMPLEMENTATION=="<user-defined>" %}
 {% if IS_LINEAR==True %}
@@ -203,7 +227,15 @@ def create_solver_declarations(flux_implementation, ncp_implementation, eigenval
 {% endif %}
 {% if FLUX_IMPLEMENTATION=="<user-defined>" %}
     template<typename T>
-    void flux(const T* const Q, T** const F);
+    void flux(
+      const T* __restrict__                        Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+      const tarch::la::Vector<Dimensions,double>&  volumeX,
+      const tarch::la::Vector<Dimensions,double>&  volumeH,
+      double                                       t,
+      double                                       dt,
+      int                                          normal,
+      T* __restrict__                              F // F[{{NUMBER_OF_UNKNOWNS}}]
+    );
 {% endif %}
 {% if NCP_IMPLEMENTATION=="<user-defined>" %}
 {% if IS_LINEAR==True %}
@@ -247,8 +279,16 @@ def create_solver_declarations(flux_implementation, ncp_implementation, eigenval
     }
 {% endif %}
 {% if FLUX_IMPLEMENTATION=="<user-defined>" %}
-    void flux(const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const Q, {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}** const F) override {
-      flux<{{COMPUTATION_PRECISIONS[PRECISION_NUM]}}>(Q, F);
+    void flux(
+      const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* __restrict__ Q,
+      const tarch::la::Vector<Dimensions,double>&  volumeX,
+      const tarch::la::Vector<Dimensions,double>&  volumeH,
+      double                                       t,
+      double                                       dt,
+      int                                          normal,
+      {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* __restrict__ F
+    ){
+      flux<{{COMPUTATION_PRECISIONS[PRECISION_NUM]}}>(Q, volumeX, volumeH, t, dt, normal, F);
     }
 {% endif %}
 {% if NCP_IMPLEMENTATION=="<user-defined>" %}
@@ -320,9 +360,14 @@ double {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::maxEigenvalue(
 
 {% if FLUX_IMPLEMENTATION=="<user-defined>" %}
 void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::flux(
-  const {{COMPUTATION_PRECISIONS[0]}}* const Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
-  {{COMPUTATION_PRECISIONS[0]}}** const F // F[Dimensions*{{NUMBER_OF_UNKNOWNS}}]
-)  {
+  const {{COMPUTATION_PRECISIONS[0]}}* __restrict__ Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+  const tarch::la::Vector<Dimensions,double>&  volumeX,
+  const tarch::la::Vector<Dimensions,double>&  volumeH,
+  double                                       t,
+  double                                       dt,
+  int                                          normal,
+  {{COMPUTATION_PRECISIONS[0]}}* __restrict__ F // F[{{NUMBER_OF_UNKNOWNS}}]
+) {
   logTraceIn( "flux(...)");
   // @todo implement
   logTraceOut( "flux(...)" );
@@ -434,16 +479,29 @@ template double {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::maxEigenvalue(
 {% if FLUX_IMPLEMENTATION=="<user-defined>" %}
 template<typename T>
 void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::flux(
-  const T* const Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
-  T** const F // F[Dimensions*{{NUMBER_OF_UNKNOWNS}}]
-)  {
+  const T* __restrict__                        Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+  const tarch::la::Vector<Dimensions,double>&  volumeX,
+  const tarch::la::Vector<Dimensions,double>&  volumeH,
+  double                                       t,
+  double                                       dt,
+  int                                          normal,
+  T* __restrict__                              F // F[Dimensions*{{NUMBER_OF_UNKNOWNS}}]
+){
   logTraceIn( "flux(...)");
   // @todo implement
   logTraceOut( "flux(...)" );
 }
 
 {% for PRECISION_NUM in range(0,COMPUTATION_PRECISIONS|length) %}
-template void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::flux(const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const Q, {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}** const F);
+template void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::flux(
+  const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* __restrict__ Q,
+  const tarch::la::Vector<Dimensions,double>&  volumeX,
+  const tarch::la::Vector<Dimensions,double>&  volumeH,
+  double                                       t,
+  double                                       dt,
+  int                                          normal,
+  {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* __restrict__ F
+);
 {% endfor%}
 {% endif %}
 

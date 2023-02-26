@@ -49,15 +49,15 @@ int {{codeNamespace}}::fusedSpaceTimePredictorVolumeIntegral{{nameSuffix}}(
     pCompType* __restrict__ PSi,   // for pointSource
     pCompType* __restrict__ PSderivatives, // for pointSource
     const cStoreType* const __restrict__ luh,
-    const double* const center,
-    const double dx, // Assume dx[0] == dx[1] == dx[2]
-    const double tStep, // == t
+    const tarch::la::Vector<Dimensions,double>&  volumeCentre,
+    const tarch::la::Vector<Dimensions,double>&  dx,
+    const double timeStamp, // == t
     const double dt,
     std::vector<int>* pointSources // will be deleted in the end if set
 ) {
 
   const pCompType invDt = 1. / dt;
-  const pCompType invDx = 1. / dx;
+  const pCompType invDx = 1. / dx[0];
 
   std::memset(lQi, 0, {{(nDof+1)*(nDof**nDim)*nDataPad}}*sizeof(pCompType));
   std::memset(lFi, 0, {{nDim*nDof*(nDof**nDim)*nVarPad}}*sizeof(pCompType));
@@ -110,15 +110,15 @@ int {{codeNamespace}}::fusedSpaceTimePredictorVolumeIntegral{{nameSuffix}}(
 
     //loop over all quadrature points
     for (int t = 0; t < {{nDof+1}}; t++) { // time loop
-      t == 0 ? tn = tStep : tn = dt * nodes[t-1] + tStep; //First Point in time is current time, then use GL nodes in time
+      t == 0 ? tn = timeStamp : tn = dt * nodes[t-1] + timeStamp; //First Point in time is current time, then use GL nodes in time
       for (int z = 0; z < {{nDof3D}}; z++) {   //z loop
 {% if nDim == 3 %}
-        x1[2] = center[2] + dx * (nodes[z] - 0.5); //transform onto element
+        x1[2] = volumeCentre[2] + dx * (nodes[z] - 0.5); //transform onto element
 {% endif %}
         for (int y = 0; y < {{nDof}}; y++) {  //y loop
-          x1[1] = center[1] + dx * (nodes[y] - 0.5); //transform onto element
+          x1[1] = volumeCentre[1] + dx * (nodes[y] - 0.5); //transform onto element
           for (int x = 0; x < {{nDof}}; x++) {  //x loop
-            x1[0] = center[0] + dx * (nodes[x] - 0.5); //transform onto element
+            x1[0] = volumeCentre[0] + dx * (nodes[x] - 0.5); //transform onto element
             //loop over all point sources
             for (int p : *pointSources) {
               // get the source vector located at quadrature node x at time tn
@@ -129,10 +129,10 @@ int {{codeNamespace}}::fusedSpaceTimePredictorVolumeIntegral{{nameSuffix}}(
 
               // Map point source location onto reference element
               const double* const x_ps = solver.pointSourceLocation[p];
-              const pCompType update =   solver.basisFunction[{{nDof-1}}][x]((x_ps[0] - center[0]) * invDx + 0.5)
-                                    * solver.basisFunction[{{nDof-1}}][y]((x_ps[1] - center[1]) * invDx + 0.5)
+              const pCompType update =   solver.basisFunction[{{nDof-1}}][x]((x_ps[0] - volumeCentre[0]) * invDx + 0.5)
+                                    * solver.basisFunction[{{nDof-1}}][y]((x_ps[1] - volumeCentre[1]) * invDx + 0.5)
 {% if nDim == 3 %}
-                                    * solver.basisFunction[{{nDof-1}}][z]((x_ps[2] - center[2]) * invDx + 0.5)
+                                    * solver.basisFunction[{{nDof-1}}][z]((x_ps[2] - volumeCentre[2]) * invDx + 0.5)
 {% endif %}
                                     * iweights3[(z*{{nDof3D}}+y)*{{nDof}}+x] * ivolume ; //division by weights product and volume
 
@@ -456,7 +456,7 @@ int {{codeNamespace}}::fusedSpaceTimePredictorVolumeIntegral{{nameSuffix}}(
       #pragma forceinline recursive
 #endif
       // TODO(JMG): Pass correct x here
-      solver.{{solverName}}::algebraicSource(center[0],tStep,lQi+(i*{{nDof**nDim}}+xyz)*{{nDataPad}}, lSi+(i*{{nDof**nDim}}+xyz)*{{nVarPad}});
+      solver.{{solverName}}::algebraicSource(volumeCentre[0],timeStamp,lQi+(i*{{nDof**nDim}}+xyz)*{{nDataPad}}, lSi+(i*{{nDof**nDim}}+xyz)*{{nVarPad}});
     }
 {% endif %}{# useSource #}
 
@@ -689,9 +689,9 @@ template int {{codeNamespace}}::fusedSpaceTimePredictorVolumeIntegral{{nameSuffi
     {{predictorComputePrecision}}* __restrict__ PSi,   // for pointSource
     {{predictorComputePrecision}}* __restrict__ PSderivatives, // for pointSource
     const {{correctorStoragePrecision}}* const __restrict__ luh,
-    const double* const center,
-    const double dx, // Assume dx[0] == dx[1] == dx[2]
-    const double tStep, // == t
+    const tarch::la::Vector<Dimensions,double>&  volumeCentre,
+    const tarch::la::Vector<Dimensions,double>&  dx,
+    const double timeStamp, // == t
     const double dt,
     std::vector<int>* pointSources // will be deleted in the end if set
 );

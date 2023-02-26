@@ -119,8 +119,8 @@ class Prediction_kernelgenerator(AbstractAderDGActionSet):
           PSi,            // for pointSource
           PSderivatives,  // for pointSource
           luh,
-          centre,
-          marker.h()[0], // Assume dx[0] == dx[1] == dx[2]
+          marker.x(),
+          marker.h(),
           timeStamp, // tStep, doesn't seem to ever get used
           timeStepSize,
           pointSources // will be deleted in the end if set
@@ -141,6 +141,8 @@ class Prediction_kernelgenerator(AbstractAderDGActionSet):
           nullptr, // PSi, for pointSource
           nullptr, // PSderivatives, for pointSource
           luh,
+          marker.x(),
+          marker.h(),
           centre,
           marker.h()[0], // Assume dx[0] == dx[1] == dx[2]
           timeStamp, // tStep, doesn't seem to ever get used
@@ -198,7 +200,9 @@ class Prediction_kernelgenerator(AbstractAderDGActionSet):
         gradQ, // for NCP or Source or viscousFlux
         nullptr, //gradQAvg, // for viscousFlux
         luh,
-        1/(marker.h()[0]), //inverseDx, assume dx[0] == dx[1] == dx[2]
+        marker.x(),
+        marker.h(),
+        timeStamp,
         timeStepSize
       );
 

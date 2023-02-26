@@ -69,11 +69,11 @@ void {{codeNamespace}}::riemannSolver(
 #ifdef USE_IPO
   #pragma forceinline recursive
 #endif
-  cCompType smaxL = solver.examples::exahype2::euler2D::euler2D::maxEigenvalue(&QavL[0], faceCentre, dx, t, dt, direction);
+  cCompType smaxL = solver.{{solverName}}::maxEigenvalue(&QavL[0], faceCentre, dx, t, dt, direction);
 #ifdef USE_IPO
   #pragma forceinline recursive
 #endif
-  cCompType smaxR = solver.examples::exahype2::euler2D::euler2D::maxEigenvalue(&QavR[0], faceCentre, dx, t, dt, direction);
+  cCompType smaxR = solver.{{solverName}}::maxEigenvalue(&QavR[0], faceCentre, dx, t, dt, direction);
   cCompType smax = std::max(smaxL, smaxR);
 
   cCompType Qavg[{{nDataPad}}] __attribute__((aligned({{alignmentSize}})));
@@ -96,8 +96,7 @@ void {{codeNamespace}}::riemannSolver(
   cCompType* gradQ[{{nDim}}] __attribute__((aligned({{alignmentSize}}))) = {Qdiff, Qdiff{{', Qdiff' if nDim==3 else ''}} }; //readonly, 2/3 time Qdiff
 {% endif %}
 {% if useFlux %}
-  cCompType flux_vec[{{nVarPad*nDim}}] __attribute__((aligned({{alignmentSize}}))) = {0.};
-  cCompType* flux[{{nDim}}] __attribute__((aligned({{alignmentSize}}))) { flux_vec, flux_vec+{{nVarPad}}{{', flux_vec+'~2*nVarPad if nDim==3 else ''}} };
+  cCompType flux_values[{{nVarPad}}] __attribute__((aligned({{alignmentSize}}))) = {0.};
 {% endif %}
   
   for (int ij = 0; ij < {{nDof*nDof3D}}; ij++) {
@@ -129,16 +128,24 @@ void {{codeNamespace}}::riemannSolver(
 #ifdef USE_IPO
     #pragma forceinline recursive
 #endif  
-    solver.{{solverName}}::flux(Qdiff, flux);
+    solver.{{solverName}}::flux(
+      Qdiff,
+      faceCentre,
+      dx,
+      t,
+      dt,
+      direction,
+      flux_values
+    );
 {% if useMaterialParam %}
 #ifdef USE_IPO
     #pragma forceinline recursive
 #endif
     solver.{{solverName}}::multiplyMaterialParameterMatrix(Qavg, flux);
 {% endif %}{# useMaterialParam #}
-    #pragma omp simd aligned(FL,flux_vec:{{alignmentSize}})
+    #pragma omp simd aligned(FL,flux_values:{{alignmentSize}})
     for (int n = 0; n < {{nVar}}; n++) {
-      FL[ij*{{nVarPad}}+n] += flux_vec[direction*{{nVarPad}}+n];
+      FL[ij*{{nVarPad}}+n] += flux_values[n];
     }
 {% endif %}{# useFlux #}
 

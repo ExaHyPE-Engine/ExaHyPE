@@ -94,7 +94,7 @@ class Prediction_generic(AbstractAderDGActionSet):
         lFhi,
         luh,
         marker.x(), //cellCentre
-        tarch::la::invertEntries(marker.h()), //cellSize
+        marker.h(), //cellSize
         timeStamp,
         timeStepSize
         );
@@ -123,7 +123,7 @@ class Prediction_generic(AbstractAderDGActionSet):
         lFhi,
         luh,
         marker.x(), //cellCentre
-        tarch::la::invertEntries(marker.h()), //cellSize
+        marker.h(), //cellSize
         timeStamp,
         timeStepSize
         );

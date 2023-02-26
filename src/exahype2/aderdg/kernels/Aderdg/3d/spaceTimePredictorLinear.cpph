@@ -40,10 +40,12 @@ void spaceTimePredictorLinear(SolverType& solver,
     pCompType* lQhi, pCompType* lFhi,
     const double* const luh,
     const tarch::la::Vector<Dimensions, double>& cellCenter,
-    const tarch::la::Vector<Dimensions, double>& invDx,
+    const tarch::la::Vector<Dimensions, double>& dx,
     const double t,
     const double dt
 ) {
+
+  const tarch::la::Vector<Dimensions, double>& invDx = tarch::la::invertEntries(dx);
   
   // Define constants
   constexpr int numberOfVariables  = SolverType::NumberOfVariables;
@@ -197,7 +199,37 @@ void spaceTimePredictorLinear(SolverType& solver,
             F[0]      = lFi + idx_lFi(i, j, k, l, 0, 0);
             F[1]      = lFi + idx_lFi(i, j, k, l, 1, 0);
             F[2]      = lFi + idx_lFi(i, j, k, l, 2, 0);
-            solver.flux(&lQi[idx_lQi(i, j, k, l, 0)], F );
+            //solver.flux(&lQi[idx_lQi(i, j, k, l, 0)], F );
+
+            solver.flux(
+              &lQi[idx_lQi(i, j, k, 0)],
+              cellCenter,
+              dx,
+              t,
+              dt,
+              0,
+              F[0]
+            ); //x
+
+            solver.flux(
+              &lQi[idx_lQi(i, j, k, 0)],
+              cellCenter,
+              dx,
+              t,
+              dt,
+              1,
+              F[1]
+            ); //y
+
+            solver.flux(
+              &lQi[idx_lQi(i, j, k, 0)],
+              cellCenter,
+              dx,
+              t,
+              dt,
+              2,
+              F[2]
+            ); //y
           }
         }
       }

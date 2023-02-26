@@ -100,7 +100,17 @@ for (int xyz = 0; xyz < {{(nDof**nDim)-((nDof**nDim)%vectSize)}}; xyz+={{vectSiz
     #ifdef USE_IPO
         #pragma forceinline recursive
     #endif
-    solver.{{solverName}}::flux({{inputQ}}+{{inputQ_iterator}}, F);
+    for(int d=0; d<Dimensions; d++){
+      solver.{{solverName}}::flux(
+        {{inputQ}}+{{inputQ_iterator}},
+        volumeCentre, //TODO, fix to node position
+        dx,
+        timeStamp, //+nodes[t]*dt exact timestamp for node, 
+        dt,
+        d,
+        F[d]
+      );
+    }
     {% endif %}
   }
 }

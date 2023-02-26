@@ -65,12 +65,8 @@ void riemannSolverLinear(SolverType& solver, double* FL, double* FR,
 
   idx2 idx_2d(Dimensions, numberOfVariables);
   
-  double flux_vec[numberOfVariables*Dimensions] = {0.0};
-  double* flux[Dimensions];
-  
-  flux[0] = &flux_vec[idx_2d(0,0)];
-  flux[1] = &flux_vec[idx_2d(1,0)];
-  
+  double flux[numberOfVariables];
+
   double ncp_vec[numberOfVariables*Dimensions] = {0.0};
   double* ncp[Dimensions];
   
@@ -123,15 +119,24 @@ void riemannSolverLinear(SolverType& solver, double* FL, double* FR,
       }
       
       if(useFlux){
-        solver.flux(Qdiff, flux);
 
-        if(useMM){
-          solver.multiplyMaterialParameterMatrix(Qavg, flux);
-        }
+        solver.flux(
+          Qdiff,
+          faceCentre,
+          dx,
+          t,
+          dt,
+          direction,
+          flux
+        );
+
+//        if(useMM){
+//          solver.multiplyMaterialParameterMatrix(Qavg, flux);
+//        }
   
         for(int l=0; l < numberOfVariables; l++) {
-          FL[idx_FLR(j, l)] +=  flux[direction][l];
-          FR[idx_FLR(j, l)] +=  flux[direction][l];
+          FL[idx_FLR(j, l)] +=  flux[l];
+          FR[idx_FLR(j, l)] +=  flux[l];
         }
       }
 
