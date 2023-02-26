@@ -75,6 +75,8 @@ class Correction_kernelgenerator(AbstractAderDGActionSet):
       std::copy_n(fineGridFaces{{UNKNOWN_IDENTIFIER}}FluxEstimates(d).value +fluxElementsByFace, fluxElementsByFace, FR);
       
       const double inverseDxDirection = 1/marker.h()[d];      
+      tarch::la::Vector<Dimensions,double> faceCentre = marker.x();
+      faceCentre[d] -= 0.5*marker.h()[d];
 
       generated::kernels::AderDG::{{LINEARITY}}::riemannSolver<{{PREDICTOR_STORAGE_PRECISION}}, {{CORRECTOR_COMPUTATION_PRECISION}}>(
         repositories::{{SOLVER_INSTANCE}},
@@ -84,10 +86,10 @@ class Correction_kernelgenerator(AbstractAderDGActionSet):
         QR,
         timeStamp,
         timeStepSize,
-        marker.h()[d],
+        faceCentre,
+        marker.h(),
         d //direction
       );
-
 
       generated::kernels::AderDG::{{LINEARITY}}::faceIntegral<{{CORRECTOR_COMPUTATION_PRECISION}}>(
         lduh,
@@ -104,6 +106,7 @@ class Correction_kernelgenerator(AbstractAderDGActionSet):
       std::copy_n(fineGridFaces{{UNKNOWN_IDENTIFIER}}FluxEstimates(d+Dimensions).value, fluxElementsByFace, FL);
       std::copy_n(fineGridFaces{{UNKNOWN_IDENTIFIER}}FluxEstimates(d+Dimensions).value +fluxElementsByFace, fluxElementsByFace, FR);
 
+      faceCentre[d] += marker.h()[d];
       
       generated::kernels::AderDG::{{LINEARITY}}::riemannSolver<{{PREDICTOR_STORAGE_PRECISION}}, {{CORRECTOR_COMPUTATION_PRECISION}}>(
         repositories::{{SOLVER_INSTANCE}},
@@ -113,10 +116,10 @@ class Correction_kernelgenerator(AbstractAderDGActionSet):
         QR,
         timeStamp,
         timeStepSize,
-        marker.h()[d],
+        faceCentre,
+        marker.h(),
         d //direction
       );
-
 
       generated::kernels::AderDG::{{LINEARITY}}::faceIntegral<{{CORRECTOR_COMPUTATION_PRECISION}}>(
         lduh,

@@ -17,66 +17,54 @@
  * since the actual time step size may be only required once for the entire application (MML)
  */
 
-template <typename SolverType, bool useViscousFlux>
+#include "exahype2/dg/DGUtils.h"
+#include "peano4/utils/Loop.h"
+
+
+template <typename SolverType>
 double kernels::aderdg::generic::c::maxScaledEigenvalue(
-    SolverType& solver,
-    const double* const luh,
-    const tarch::la::Vector<Dimensions, double>& dx) {
+  SolverType& solver,
+  const double* const luh,
+  const tarch::la::Vector<Dimensions, double>& cellCentre,
+  const tarch::la::Vector<Dimensions, double>& dx,
+  const double t,
+  const double dt) {
+    
   constexpr int numberOfVariables  = SolverType::NumberOfVariables;
   constexpr int numberOfParameters = SolverType::NumberOfParameters;
   constexpr int numberOfData       = numberOfVariables+numberOfParameters;
   constexpr int order              = SolverType::Order;
   constexpr int basisSize          = order+1;
-  constexpr double cflFactor       = SolverType::CFL;
-  constexpr double PNPM            = SolverType::PNPM;
 
   const double invDx[2] = { 1.0/dx[0], 1.0/dx[1] };
   
-  idx3 idx_luh(basisSize, basisSize, numberOfData); // idx_luh(y,x,nVar)
-  
-  double lambda[numberOfVariables] = {0.0};
-  double maxScEv = 0.0;
-//  double dt = std::numeric_limits<double>::max();
-  for (int i = 0; i < basisSize; i++) {
-    for (int j = 0; j < basisSize; j++) {
+  double maxEigenvalue = 0.0;
+  for(int i=0; i<basisSize; i++){
+    for(int j=0; j<basisSize; j++){
+
+      int linearisedIndex = i + basisSize*j;
+      const tarch::la::Vector<Dimensions, int> index = {i,j};
 
       double denominator = 0.0;
-      for (int d = 0; d < Dimensions; d++) {
-        solver.eigenvalues(&luh[idx_luh(i,j,0)], d, lambda);
-
-        double maxEigenvalue = 0.0;
-        for (int ivar = 0; ivar < numberOfVariables; ivar++) {
-          maxEigenvalue = std::max(std::abs(lambda[ivar]), maxEigenvalue);
-        }
-        
-        /*
-        if(useViscousFlux){
-            solver.viscousEigenvalues(&luh[idx_luh(i,j,0)], d, lambda);
-
-            double maxEigenvalueV = 0.0;
-            for (int ivar = 0; ivar < numberOfVariables; ivar++) {
-                maxEigenvalueV = std::max(std::abs(lambda[ivar]), maxEigenvalueV);
-            }
-            maxEigenvalue += maxEigenvalueV * (2.0/PNPM) * invDx[d];
-        }
-        */
-        
-        denominator += maxEigenvalue * invDx[d];
+      for(int d=0; d<Dimensions; d++){
+        denominator += solver.maxEigenvalue(
+          &luh[linearisedIndex*numberOfData],
+          ::exahype2::dg::getQuadraturePoint(
+            cellCentre,
+            dx,
+            index, //index
+            order,
+            solver.QuadraturePoints1d
+          ), //faceCentre
+          dx,
+          t,
+          dt,
+          d
+        ) * invDx[d];
       }
-
-      maxScEv = std::max(maxScEv, denominator);
-//      dt = std::min(dt, cflFactor * PNPM / denominator);
-      
+      maxEigenvalue=std::max(maxEigenvalue, denominator);
     }
   }
+  return maxEigenvalue;
 
-//   std::cout << "-----------------------------------" << std::endl;
-//   std::cout << "dt="<< dt << std::endl;
-//   std::cout << "order="<< order << std::endl;
-//   std::cout << "basisSize="<< basisSize << std::endl;
-//   std::cout << "-----------------------------------" << std::endl;
-//  return dt;
-  
-  return maxScEv;
-  
 }

@@ -65,6 +65,9 @@ class Correction_generic(AbstractAderDGActionSet):
       */
       std::copy_n(fineGridFaces{{UNKNOWN_IDENTIFIER}}FluxEstimates(d).value, fluxElementsByFace, FL);
       std::copy_n(fineGridFaces{{UNKNOWN_IDENTIFIER}}FluxEstimates(d).value+fluxElementsByFace, fluxElementsByFace, FR);
+
+      tarch::la::Vector<Dimensions,double> faceCentre = marker.x();
+      faceCentre[d] -= 0.5*marker.h()[d];
       
       {% if IS_LINEAR is sameas True %}
       //template <bool useFlux, bool useNCP, bool useMM, typename SolverType>
@@ -86,7 +89,6 @@ class Correction_generic(AbstractAderDGActionSet):
       //template <bool useNCP, bool useViscousFlux, typename SolverType>
       kernels::aderdg::generic::c::riemannSolverNonlinear<
         {{ "true" if USE_NCP!="<none>" else "false" }}, //useNCP
-        false, //useViscousFlux
         {{SOLVER_NAME}}>(
           repositories::{{SOLVER_INSTANCE}},
           FL,
@@ -95,6 +97,7 @@ class Correction_generic(AbstractAderDGActionSet):
           QR,
           timeStamp,
           timeStepSize,
+          faceCentre,
           marker.h(),
           d //direction
           );
@@ -131,6 +134,8 @@ class Correction_generic(AbstractAderDGActionSet):
       std::copy_n(fineGridFaces{{UNKNOWN_IDENTIFIER}}FluxEstimates(d+Dimensions).value, fluxElementsByFace, FL);
       std::copy_n(fineGridFaces{{UNKNOWN_IDENTIFIER}}FluxEstimates(d+Dimensions).value+fluxElementsByFace, fluxElementsByFace, FR);
 
+      faceCentre[d] += marker.h()[d];
+
       {% if IS_LINEAR is sameas True %}
       //template <bool useFlux, bool useNCP, bool useMM, typename SolverType>
       kernels::aderdg::generic::c::riemannSolverLinear<
@@ -151,7 +156,6 @@ class Correction_generic(AbstractAderDGActionSet):
       //template <bool useNCP, bool useViscousFlux, typename SolverType>
       kernels::aderdg::generic::c::riemannSolverNonlinear<
         {{ "true" if USE_NCP!="<none>" else "false" }}, //useNCP
-        false, //useViscousFlux
         {{SOLVER_NAME}}>(
           repositories::{{SOLVER_INSTANCE}},
           FL,
@@ -160,6 +164,7 @@ class Correction_generic(AbstractAderDGActionSet):
           QR,
           timeStamp,
           timeStepSize,
+          faceCentre,
           marker.h(),
           d //direction
           );

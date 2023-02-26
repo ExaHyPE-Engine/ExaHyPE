@@ -26,6 +26,8 @@ void riemannSolverLinear(SolverType& solver, double* FL, double* FR,
                          const double* const QL, const double* const QR,
                          const double t,
                          const double dt,
+                         const tarch::la::Vector<Dimensions, double>& faceCentre,
+                         const tarch::la::Vector<Dimensions, double>& dx,
                          const int direction) {
   /*
    * For the linear kernels, we need the material parameters in the
@@ -54,15 +56,9 @@ void riemannSolverLinear(SolverType& solver, double* FL, double* FR,
       QR,exahype2::solvers::aderdg::ADERDGSolver::weights,QavR);
 
   //get abs max eigenvalue
-  double LL[numberOfVariables] = {0.0}; 
-  double LR[numberOfVariables] = {0.0}; 
-  solver.eigenvalues(QavL, direction, LL);
-  solver.eigenvalues(QavR, direction, LR);
-  std::transform(LL, LL + numberOfVariables, LL, std::abs<double>);
-  std::transform(LR, LR + numberOfVariables, LR, std::abs<double>);
-  const double* smax_L = std::max_element(LL, LL + numberOfVariables);
-  const double* smax_R = std::max_element(LR, LR + numberOfVariables);
-  const double  smax   = std::max(*smax_L, *smax_R);
+  const double maxHyperbolicEigenvalueL = solver.maxEigenvalue(QavL, faceCentre, dx, t, dt, direction);
+  const double maxHyperbolicEigenvalueR = solver.maxEigenvalue(QavR, faceCentre, dx, t, dt, direction);
+  const double smax = std::max(maxHyperbolicEigenvalueL, maxHyperbolicEigenvalueR);
 
   double Qdiff[numberOfData] = {0.0};
   double Qavg[numberOfData] = {0.0};

@@ -150,15 +150,18 @@ void solutionAdjustment(SolverType& solver, double* luh,
  * @param QR
  * @param t
  * @param dt
+ * @param faceCentre
+ * @param dx
  * @param direction
  */
-template <bool useNCP, bool useViscousFlux, typename SolverType>
+template <bool useNCP, typename SolverType>
 void riemannSolverNonlinear(
     SolverType& solver, double* FL, double* FR,
     const double* const QL,
     const double* const QR,
     const double t,
     const double dt,
+    const tarch::la::Vector<Dimensions, double>& faceCentre,
     const tarch::la::Vector<Dimensions, double>& dx,
     const int direction);
 
@@ -212,9 +215,11 @@ void boundaryConditions(
     const int faceIndex,
     const int direction);
 
-template <typename SolverType,bool useViscousFlux>
+template <typename SolverType>
 double maxScaledEigenvalue(SolverType& solver, const double* const luh,
-                          const tarch::la::Vector<Dimensions, double>& dx);
+                          const tarch::la::Vector<Dimensions, double>& cellCentre,
+                          const tarch::la::Vector<Dimensions, double>& dx,
+                          const double t, const double dt);
 
 /**
  * \note We need to consider material parameters in

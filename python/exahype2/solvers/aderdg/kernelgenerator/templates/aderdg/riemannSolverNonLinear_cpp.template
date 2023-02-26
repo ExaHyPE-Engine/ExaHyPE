@@ -31,7 +31,8 @@ void {{codeNamespace}}::riemannSolver(
   const pStoreType* __restrict__ const QR,
   const double t,
   const double dt,
-  const double dx,
+  const tarch::la::Vector<Dimensions,double>& faceCentre,
+  const tarch::la::Vector<Dimensions,double>& dx,
   const int direction
 {% if useDeepProfiler %}
   , exahype::profilers::Profiler* profiler
@@ -59,21 +60,15 @@ void {{codeNamespace}}::riemannSolver(
   }
   
   // Check hyperbolic eigenvalues.
-  cCompType lambdaL[{{nVarPad}}] __attribute__((aligned({{alignmentSize}})));
 #ifdef USE_IPO
   #pragma forceinline recursive
 #endif
-  solver.{{solverName}}::eigenvalues(&QavL[0], direction, &lambdaL[0]);
-  cCompType lambdaR[{{nVarPad}}] __attribute__((aligned({{alignmentSize}})));
+  cCompType smaxL = solver.{{solverName}}::maxEigenvalue(&QavL[0], faceCentre, dx, t, dt, direction);
 #ifdef USE_IPO
   #pragma forceinline recursive
 #endif
-  solver.{{solverName}}::eigenvalues(&QavR[0], direction, &lambdaR[0]);
-  
-  cCompType smax = 0.;
-  for (int ivar = 0; ivar < {{nVar}}; ivar++) {
-    smax = std::max(smax, std::max(std::abs(lambdaL[ivar]), std::abs(lambdaR[ivar])));
-  }
+  cCompType smaxR = solver.{{solverName}}::maxEigenvalue(&QavR[0], faceCentre, dx, t, dt, direction);
+  cCompType smax = std::max(smaxL, smaxR);
   
   {% if useViscousFlux %}
   // Check viscous eigenvalues.
@@ -196,5 +191,6 @@ template void {{codeNamespace}}::riemannSolver(
   const {{predictorStoragePrecision}}* const __restrict__ QR,
   const double t,
   const double dt,
-  const double dx,
+  const tarch::la::Vector<Dimensions,double>& faceCentre,
+  const tarch::la::Vector<Dimensions,double>& dx,
   const int direction);

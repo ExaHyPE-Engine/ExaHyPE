@@ -17,29 +17,49 @@
 
 #include "{{solverHeader}}"
 
+#include "exahype2/dg/DGUtils.h"
+#include "peano4/utils/Loop.h"
+
 double {{codeNamespace}}::stableTimeStepSize(
-    {{solverName}}& solver,
-    const double* __restrict__ const luh,
-    const double inverseDx //Assume dx[0] == dx[1] == dx[2]
-) {
+  {{solverName}}& solver,
+  const double* __restrict__ const luh,
+  const tarch::la::Vector<Dimensions, double>& cellCentre,
+  const tarch::la::Vector<Dimensions, double>& dx,
+  const double t,
+  const double last_dt) {
   constexpr double cflFactor = {{solverName}}::CFL;
   constexpr double PNPM      = {{solverName}}::PNPM;
+  const double inverseDx = 1/dx[0]; //Assume dx[0] == dx[1] == dx[2]
   
-  double lambda[{{nVar}}] __attribute__((aligned({{alignmentSize}}))) = {0.0};
   double dt = std::numeric_limits<double>::max();
   
-  for (int xyz = 0; xyz < {{nDof**nDim}}; xyz++) { //xyz
+  dfor(index, {{nDof}}){
+
+    int linearisedIndex = 0;
+    int stride = 1;
+    for(int d=0; d<Dimensions; d++){        
+      linearisedIndex += stride*index[d];
+      stride *= {{nDof}};
+    }
+
     double denominator = 0.0;
-    for (int d = 0; d < {{nDim}}; d++) {
-#ifdef USE_IPO
-      #pragma forceinline recursive
-#endif
-      solver.{{solverName}}::eigenvalues(luh+({{nData}}*xyz), d, lambda);
-      
-      double maxEigenvalue = 0.0;
-      for (int n = 0; n < {{nVar}}; n++) {
-        maxEigenvalue = std::max(fabs(lambda[n]), maxEigenvalue);
-      }
+    for(int d=0; d<Dimensions; d++){
+      double maxEigenvalue = 
+        solver.maxEigenvalue(
+          &luh[linearisedIndex*{{nData}}],
+
+          ::exahype2::dg::getQuadraturePoint(
+            cellCentre,
+            dx,
+            index, //index
+            {{nDof-1}},
+            solver.QuadraturePoints1d
+          ), //faceCentre
+          dx,
+          t,
+          last_dt,
+          d
+        );
       {% if useViscousFlux %}
       double maxEigenvalueVisc = 0.0;
       solver.{{solverName}}::viscousEigenvalues(luh+({{nData}}*xyz), d, lambda);
@@ -49,9 +69,10 @@ double {{codeNamespace}}::stableTimeStepSize(
       maxEigenvalue += maxEigenvalueVisc * (2.0/PNPM) * inverseDx;
       {% endif %}
       denominator += maxEigenvalue * inverseDx; //Assume dx[0] == dx[1] == dx[2]
-    }
 
-    dt = std::min(dt, cflFactor * PNPM / denominator);  // order = nDof-1
+      }
+
+      dt = std::min(dt, cflFactor * PNPM / denominator);
 
   }
 

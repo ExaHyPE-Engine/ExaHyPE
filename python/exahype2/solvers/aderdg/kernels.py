@@ -14,9 +14,23 @@ def create_abstract_solver_declarations(flux_implementation, ncp_implementation,
 {% if EIGENVALUES_IMPLEMENTATION=="<none>" or EIGENVALUES_IMPLEMENTATION=="<empty>" %}
   #error eigenvalue implementation cannot be none or empty
 {% elif EIGENVALUES_IMPLEMENTATION=="<user-defined>" %}
-    virtual void eigenvalues(const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const Q, const int direction, {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const lambda) = 0;
+    virtual double maxEigenvalue(
+      const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* __restrict__ Q,
+      const tarch::la::Vector<Dimensions,double>&  volumeX,
+      const tarch::la::Vector<Dimensions,double>&  volumeH,
+      double                                       t,
+      double                                       dt,
+      int                                          normal
+    ) = 0;
 {% else %}
-    void eigenvalues(const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const Q, const int direction, {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const lambda);
+    double maxEigenvalue(
+      const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* __restrict__ Q,
+      const tarch::la::Vector<Dimensions,double>&  volumeX,
+      const tarch::la::Vector<Dimensions,double>&  volumeH,
+      double                                       t,
+      double                                       dt,
+      int                                          normal
+    );
 {% endif %}
 
 {% if FLUX_IMPLEMENTATION=="<user-defined>" %}
@@ -70,7 +84,14 @@ def create_abstract_solver_definitions(flux_implementation, ncp_implementation, 
 {% for PRECISION_NUM in range(0,COMPUTATION_PRECISIONS|length) %}
 
 {% if EIGENVALUES_IMPLEMENTATION!="<empty>" and EIGENVALUES_IMPLEMENTATION!="<user-defined>" and EIGENVALUES_IMPLEMENTATION!="<none>" %}
-void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::eigenvalues(const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const Q, const int direction, {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const lambda){
+void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::maxEigenvalue(
+  const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* __restrict__ Q,
+  const tarch::la::Vector<Dimensions,double>&  volumeX,
+  const tarch::la::Vector<Dimensions,double>&  volumeH,
+  double                                       t,
+  double                                       dt,
+  int                                          normal
+){
   {{EIGENVALUES_IMPLEMENTATION}}
 }
 {% endif %}
@@ -134,7 +155,14 @@ def create_solver_declarations(flux_implementation, ncp_implementation, eigenval
   TemplateSinglePrecisions = jinja2.Template( """
 
   {% if EIGENVALUES_IMPLEMENTATION=="<user-defined>" %}
-    void eigenvalues(const {{COMPUTATION_PRECISIONS[0]}}* const Q, const int direction, {{COMPUTATION_PRECISIONS[0]}}* const lambda) override;
+  double maxEigenvalue(
+    const {{COMPUTATION_PRECISIONS[0]}}* __restrict__ Q,
+    const tarch::la::Vector<Dimensions,double>&  volumeX,
+    const tarch::la::Vector<Dimensions,double>&  volumeH,
+    double                                       t,
+    double                                       dt,
+    int                                          normal
+  ) override;
 {% endif %}
 {% if FLUX_IMPLEMENTATION=="<user-defined>" %}
     void flux(const {{COMPUTATION_PRECISIONS[0]}}* const Q, {{COMPUTATION_PRECISIONS[0]}}** const F) override;
@@ -164,7 +192,14 @@ def create_solver_declarations(flux_implementation, ncp_implementation, eigenval
   public:
 {% if EIGENVALUES_IMPLEMENTATION=="<user-defined>" %}
     template<typename T>
-    void eigenvalues(const T* const Q, const int direction, T* const lambda);
+    double maxEigenvalue(
+      const T* __restrict__ Q,
+      const tarch::la::Vector<Dimensions,double>&  volumeX,
+      const tarch::la::Vector<Dimensions,double>&  volumeH,
+      double                                       t,
+      double                                       dt,
+      int                                          normal
+    );
 {% endif %}
 {% if FLUX_IMPLEMENTATION=="<user-defined>" %}
     template<typename T>
@@ -199,8 +234,16 @@ def create_solver_declarations(flux_implementation, ncp_implementation, eigenval
 {% for PRECISION_NUM in range(0,COMPUTATION_PRECISIONS|length) %}
 
 {% if EIGENVALUES_IMPLEMENTATION=="<user-defined>" %}
-    void eigenvalues(const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const Q, const int direction, {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const lambda) override {
-      eigenvalues<{{COMPUTATION_PRECISIONS[PRECISION_NUM]}}>(Q, direction, lambda);
+
+    double maxEigenvalue(
+      const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* __restrict__ Q,
+      const tarch::la::Vector<Dimensions,double>&  volumeX,
+      const tarch::la::Vector<Dimensions,double>&  volumeH,
+      double                                       t,
+      double                                       dt,
+      int                                          normal
+    ){
+      maxEigenvalue<{{COMPUTATION_PRECISIONS[PRECISION_NUM]}}>(Q, volumeX, volumeH, t, dt, normal);
     }
 {% endif %}
 {% if FLUX_IMPLEMENTATION=="<user-defined>" %}
@@ -259,12 +302,16 @@ def create_solver_definitions(flux_implementation, ncp_implementation, eigenvalu
   TemplateSinglePrecisions = jinja2.Template( """
   
 {% if EIGENVALUES_IMPLEMENTATION=="<user-defined>" %}
-void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::eigenvalues(
-    const {{COMPUTATION_PRECISIONS[0]}}* const Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
-    const int direction,
-    {{COMPUTATION_PRECISIONS[0]}}* const lambda
-  )  {
-  logTraceInWith3Arguments( "eigenvalue(...)", x, t, normal );
+
+double {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::maxEigenvalue(
+  const {{COMPUTATION_PRECISIONS[0]}}* __restrict__ Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+  const tarch::la::Vector<Dimensions,double>&  volumeCentre,
+  const tarch::la::Vector<Dimensions,double>&  volumeSize,
+  double                                       t,
+  double                                       dt,
+  int                                          normal
+){
+  logTraceInWith3Arguments( "eigenvalue(...)", volumeCentre, t, normal );
   // @todo implement
   logTraceOut( "eigenvalue(...)" );
 }
@@ -358,18 +405,28 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::pointSource(
   
 {% if EIGENVALUES_IMPLEMENTATION=="<user-defined>" %}
 template<typename T>
-void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::eigenvalues(
-    const T* const Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
-    const int direction,
-    T* const lambda
-  )  {
+double {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::maxEigenvalue(
+  const T* __restrict__ Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+  const tarch::la::Vector<Dimensions,double>&  volumeCentre,
+  const tarch::la::Vector<Dimensions,double>&  volumeSize,
+  double                                       t,
+  double                                       dt,
+  int                                          normal
+) {
   logTraceInWith3Arguments( "eigenvalue(...)", x, t, normal );
   // @todo implement
   logTraceOut( "eigenvalue(...)" );
 }
 
 {% for PRECISION_NUM in range(0,COMPUTATION_PRECISIONS|length) %}
-template void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::eigenvalues(const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const Q, const int direction, {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const lambda);
+template double {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::maxEigenvalue(
+  const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* __restrict__ Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+  const tarch::la::Vector<Dimensions,double>&  volumeCentre,
+  const tarch::la::Vector<Dimensions,double>&  volumeSize,
+  double                                       t,
+  double                                       dt,
+  int                                          normal
+);
 {% endfor%}
 {% endif %}
 

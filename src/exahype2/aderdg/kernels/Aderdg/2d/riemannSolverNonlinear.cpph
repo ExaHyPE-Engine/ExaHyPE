@@ -34,12 +34,13 @@ namespace c {
  * We don't need to consider material parameters
  * in FL,FR.
  */
-template <bool useNCP, bool useViscousFlux, typename SolverType>
+template <bool useNCP, typename SolverType>
 void riemannSolverNonlinear(SolverType& solver, double* FL, double* FR,
                             const double* const QL,
                             const double* const QR,
                             const double t,
                             const double dt,
+                            const tarch::la::Vector<Dimensions, double>& faceCentre,
                             const tarch::la::Vector<Dimensions, double>& dx,
                             const int direction) {
   constexpr int numberOfVariables  = SolverType::NumberOfVariables;
@@ -56,35 +57,10 @@ void riemannSolverNonlinear(SolverType& solver, double* FL, double* FR,
   kernels::riemannsolvers::util::averageRiemannInputs<basisSize,numberOfData>(
       QR,exahype2::solvers::aderdg::ADERDGSolver::weights,QavR);
 
-  double LL[numberOfVariables] = {0.0}; // do not need to store material parameters
-  double LR[numberOfVariables] = {0.0};
-
   // Hyperbolic eigenvalues
-  solver.eigenvalues(QavL, direction, LL);
-  solver.eigenvalues(QavR, direction, LR);
-  // skip parameters
-  std::transform(LL, LL + numberOfVariables, LL, std::abs<double>);
-  std::transform(LR, LR + numberOfVariables, LR, std::abs<double>);
-  const double maxHyperbolicEigenvalueL = *std::max_element(LL, LL + numberOfVariables);
-  const double maxHyperbolicEigenvalueR = *std::max_element(LR, LR + numberOfVariables);
-  const double maxHyperbolicEigenvalue = std::max(maxHyperbolicEigenvalueL, maxHyperbolicEigenvalueR);
-
-  double smax = maxHyperbolicEigenvalue;
-  if (useViscousFlux) {
-    solver.viscousEigenvalues(QavL, direction, LL);
-    solver.viscousEigenvalues(QavR, direction, LR);
-    // skip parameters
-    std::transform(LL, LL + numberOfVariables, LL, std::abs<double>);
-    std::transform(LR, LR + numberOfVariables, LR, std::abs<double>);
-    const double maxViscousEigenvalueL = *std::max_element(LL, LL + numberOfVariables);
-    const double maxViscousEigenvalueR = *std::max_element(LR, LR + numberOfVariables);
-    const double maxViscousEigenvalue  = std::max(maxViscousEigenvalueL, maxViscousEigenvalueR);
-
-    const auto pi = std::acos(-1); // not constexpr for intel compilers
-    const double factor = 2 * (2 * order + 1) / (dx[direction] * std::sqrt(0.5 * pi));
-    smax += factor * maxViscousEigenvalue;
-  }
-
+  const double maxHyperbolicEigenvalueL = solver.maxEigenvalue(QavL, faceCentre, dx, t, dt, direction);
+  const double maxHyperbolicEigenvalueR = solver.maxEigenvalue(QavR, faceCentre, dx, t, dt, direction);
+  const double smax = std::max(maxHyperbolicEigenvalueL, maxHyperbolicEigenvalueR);
 
   // compute fluxes (and fluctuations for non-conservative PDEs)
   double Qavg[numberOfData];

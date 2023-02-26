@@ -24,15 +24,16 @@
 
 template <typename pStoreType, typename cCompType>
 void {{codeNamespace}}::riemannSolver(
-                          {{solverName}}& solver,
-                          cCompType* __restrict__ FL, 
-                          cCompType* __restrict__ FR,
-                          const pStoreType* const __restrict__ QL, 
-                          const pStoreType* const __restrict__ QR,
-                          const double t,
-                          const double dt,
-                  			  const double dx,
-                          const int direction
+  {{solverName}}& solver,
+  cCompType* __restrict__ FL, 
+  cCompType* __restrict__ FR,
+  const pStoreType* const __restrict__ QL, 
+  const pStoreType* const __restrict__ QR,
+  const double t,
+  const double dt,
+  const tarch::la::Vector<Dimensions,double>& faceCentre,
+  const tarch::la::Vector<Dimensions,double>& dx,
+  const int direction
 ) {
   /*
    * For the linear kernels, we need the material parameters in the
@@ -65,21 +66,15 @@ void {{codeNamespace}}::riemannSolver(
   }
 
   //get abs max eigenvalue 
-  cCompType lambdaL[{{nVar}}] __attribute__((aligned({{alignmentSize}})));
 #ifdef USE_IPO
   #pragma forceinline recursive
 #endif
-  solver.{{solverName}}::eigenvalues(&QavL[0], direction, &lambdaL[0]);
-  cCompType lambdaR[{{nVar}}] __attribute__((aligned({{alignmentSize}})));
+  cCompType smaxL = solver.examples::exahype2::euler2D::euler2D::maxEigenvalue(&QavL[0], faceCentre, dx, t, dt, direction);
 #ifdef USE_IPO
   #pragma forceinline recursive
 #endif
-  solver.{{solverName}}::eigenvalues(&QavR[0], direction, &lambdaR[0]);
-  
-  cCompType smax = 0.;
-  for (int n = 0; n < {{nVar}}; n++) {
-    smax = std::max(smax, std::max(std::abs(lambdaL[n]), std::abs(lambdaR[n])));
-  }
+  cCompType smaxR = solver.examples::exahype2::euler2D::euler2D::maxEigenvalue(&QavR[0], faceCentre, dx, t, dt, direction);
+  cCompType smax = std::max(smaxL, smaxR);
 
   cCompType Qavg[{{nDataPad}}] __attribute__((aligned({{alignmentSize}})));
   #pragma omp simd aligned(Qavg,QavR,QavL:{{alignmentSize}})
@@ -165,5 +160,6 @@ template void {{codeNamespace}}::riemannSolver(
   const {{predictorStoragePrecision}}* const __restrict__ QR,
   const double t,
   const double dt,
-  const double dx,
+  const tarch::la::Vector<Dimensions,double>& faceCentre,
+  const tarch::la::Vector<Dimensions,double>& dx,
   const int direction);

@@ -173,14 +173,18 @@ template <typename pStoreType, typename cCompType>
     const pStoreType* __restrict__ const QR,
     const double t,
     const double dt,
-    const double dx,
+    const tarch::la::Vector<Dimensions,double>& faceCentre,
+    const tarch::la::Vector<Dimensions,double>& dx,
     const int direction
   );
 
   double stableTimeStepSize(
     {{solverName}}& solver,
     const double* __restrict__ const luh,
-    const double inverseDx //Assume dx[0] == dx[1] == dx[2]
+    const tarch::la::Vector<Dimensions, double>& cellCentre,
+    const tarch::la::Vector<Dimensions, double>& dx,
+    const double t,
+    const double last_dt
   );
 
   template <typename pStoreType, typename cCompType>
