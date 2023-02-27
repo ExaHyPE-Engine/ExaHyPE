@@ -349,6 +349,43 @@ namespace tarch {
 
 
     namespace internal {
+      /**
+       * Progression routine within spawnAndWaitAsExplicitTasksWithPolling()
+       *
+       * This function has to be called within spawnAndWaitAsExplicitTasksWithPolling()
+       * whenever a thread has finished its local partition and should now
+       * process further tasks. The whole thing consists of three parts:
+       *
+       * - First, I find out which thread I'm running on and how many tasks
+       *   I may fuse. These two things potentially are expensive to find out
+       *   and they don't change, so I do this only once.
+       * - A guard loop ensures that we don't poll too long or too often.
+       * - The actual loop body ensures that we progress tasks.
+       *
+       *
+       * ## Guard loop
+       *
+       * The guard loop consists of three checks that all have to hold:
+       *
+       * - If the number of pending (BSP) tasks equals zero, we terminate
+       *   immediately. That is, we only continue to progress while another
+       *   thread traverses a subdomain and hence might produce new tasks.
+       * - If the number of pending tasks is bigger or equal to the number
+       *   of physical threads, we terminate immediately. This can happen
+       *   if we have more subdomains that have to be mapped onto tasks than
+       *   we have actual threads. So better terminate this task immediately
+       *   to give the runtime the opportunity to process real compute tasks.
+       * - If not all tasks have been spawned yet, we also terminate
+       *   immediately. If the runtime hasn't had the opportunity yet to
+       *   kick off the other tasks, we better ensure that happens asap.
+       *
+       *
+       */
+      void progressTasksWithinSpawnAndWaitAsExplicitTasksWithPolling(
+        int&  pendingTasks,
+        int&  spawnedTasks
+      );
+
       int  mapPendingTasksOntoNativeTasks(int maxTasks);
 
       /**
