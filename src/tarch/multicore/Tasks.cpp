@@ -583,7 +583,11 @@ void tarch::multicore::internal::progressTasksWithinSpawnAndWaitAsExplicitTasksW
   int numberOfPendingTasks = tarch::multicore::getNumberOfPendingTasks(threadNumber);
 
   bool processedSomeTasks = false;
-  if (numberOfPendingTasks>=fusion.minTasks) {
+  if (
+    numberOfPendingTasks>0
+    and
+    fusion.minTasks!=std::numeric_limits<int>::max()
+  ) {
     tarch::multicore::internal::copyInternalTaskQueuesOverIntoGlobalQueue(threadNumber);
     processedSomeTasks = tarch::multicore::internal::fusePendingTasks(fusion);
   }
