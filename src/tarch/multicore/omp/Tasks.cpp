@@ -211,7 +211,9 @@ namespace {
 
         progressTasksWithinSpawnAndWaitAsExplicitTasksWithPolling(
           pendingTasks,
-          spawnedTasks
+          spawnedTasks,
+          strategy,
+          NumberOfThreads
         );
 
         ::tarch::logging::Statistics::getInstance().inc( BSPConcurrencyLevelStatisticsIdentifier, -1.0, true );

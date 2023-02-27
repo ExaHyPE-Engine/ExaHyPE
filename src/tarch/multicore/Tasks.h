@@ -383,7 +383,9 @@ namespace tarch {
        */
       void progressTasksWithinSpawnAndWaitAsExplicitTasksWithPolling(
         int&  pendingTasks,
-        int&  spawnedTasks
+        int&  spawnedTasks,
+        tarch::multicore::orchestration::Strategy*     strategy,
+        const int                                      NumberOfThreads
       );
 
       int  mapPendingTasksOntoNativeTasks(int maxTasks);

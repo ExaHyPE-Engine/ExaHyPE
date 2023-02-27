@@ -77,7 +77,9 @@ namespace {
 
           progressTasksWithinSpawnAndWaitAsExplicitTasksWithPolling(
             pendingTasks,
-            spawnedTasks
+            spawnedTasks,
+            strategy,
+            NumberOfThreads
           );
        });
       });

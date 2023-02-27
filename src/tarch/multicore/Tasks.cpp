@@ -1,5 +1,6 @@
 #include "tarch/Assertions.h"
 #include "tarch/logging/Statistics.h"
+#include "tarch/services/ServiceRepository.h"
 
 #include "BooleanSemaphore.h"
 #include "Lock.h"
@@ -574,7 +575,9 @@ void tarch::multicore::spawnAndWait(
 
 void tarch::multicore::internal::progressTasksWithinSpawnAndWaitAsExplicitTasksWithPolling(
  int&  pendingTasks,
- int&  spawnedTasks
+ int&  spawnedTasks,
+ tarch::multicore::orchestration::Strategy*     strategy,
+ const int                                      NumberOfThreads
 ) {
   const auto fusion       = strategy->getNumberOfTasksToFuseAndTargetDevice();
   const int  threadNumber = tarch::multicore::Core::getInstance().getThreadNumber();
