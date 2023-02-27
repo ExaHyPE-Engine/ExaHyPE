@@ -21,17 +21,17 @@
 
 template<typename pStoreType, typename cCompType>
 void {{codeNamespace}}::boundaryConditions(
-                        {{solverName}}& solver,
-                        cCompType* fluxOut,
-                        pStoreType* stateOut,
-                        const cCompType* const fluxIn,
-                        const pStoreType* const stateIn,
-                        const pStoreType* const gradStateIn,
-                        const double* const cellCentre,
-                        const double* const cellSize,
-                        const double t,const double dt,
-                        const int faceIndex,
-                        const int normalNonZero
+  {{solverName}}&                             solver,
+  cCompType*                                  fluxOut,
+  pStoreType*                                 stateOut,
+  const cCompType* const                      fluxIn,
+  const pStoreType* const                     stateIn,
+  const pStoreType* const                     gradStateIn,
+  const tarch::la::Vector<Dimensions,double>& cellCentre,
+  const tarch::la::Vector<Dimensions,double>& cellSize,
+  const double t,const double                 dt,
+  const int                                   faceIndex,
+  const int                                   normalNonZero
 ) {                         
   // Compute if face is "left" (0,2,4) or "right" face (1,2,3).
   const int f = faceIndex-2*normalNonZero;
@@ -42,7 +42,7 @@ void {{codeNamespace}}::boundaryConditions(
   const int d2 = 2 - (normalNonZero/2);   //0->2, 1->2, 2->1 
 {% endif %}
   
-  double x[{{nDim}}];
+  tarch::la::Vector<Dimensions,double> x;
   x[normalNonZero] = cellCentre[normalNonZero] + (-0.5 + f)*cellSize[normalNonZero];
   
   for (int jj = 0; jj < {{nDof3D}}; jj++) {  // loop over dof, loop removed by compiler if 2D
@@ -64,14 +64,34 @@ void {{codeNamespace}}::boundaryConditions(
 #ifdef USE_IPO
     #pragma forceinline recursive
 #endif
-    solver.{{solverName}}::boundaryValues(x,t,dt,faceIndex,normalNonZero,
-                          &fluxIn[(jj*{{nDof3D}}+ii)*{{nVarPad}}], &stateIn[(jj*{{nDof3D}}+ii)*{{nDataPad}}],
+
+    solver.{{solverName}}::boundaryConditions(
+      &stateIn[(jj*{{nDof3D}}+ii)*{{nDataPad}}],  //Qinside
+      &stateOut[(jj*{{nDof3D}}+ii)*{{nDataPad}}], //Qoutside
+      x,
+      cellSize,
+      t,
+      normalNonZero
+    );
+
+    solver.{{solverName}}::flux(
+      &stateOut[(jj*{{nDof3D}}+ii)*{{nDataPad}}],
+      x,
+      cellSize,
+      t,
+      dt,
+      normalNonZero,
+      &fluxOut[(jj*{{nDof3D}}+ii)*{{nVarPad}}]
+    );
+
+//    solver.{{solverName}}::boundaryValues(x,t,dt,faceIndex,normalNonZero,
+//      &fluxIn[(jj*{{nDof3D}}+ii)*{{nVarPad}}], &stateIn[(jj*{{nDof3D}}+ii)*{{nDataPad}}],
+//      &fluxOut[(jj*{{nDof3D}}+ii)*{{nVarPad}}],&stateOut[(jj*{{nDof3D}}+ii)*{{nDataPad}}]);
+
 {% if useViscousFlux %}
-                          gradQ_PDE,
-{% else %}
-                          nullptr,
+    #error viscous flux needs to be used here
 {% endif %}
-                          &fluxOut[(jj*{{nDof3D}}+ii)*{{nVarPad}}],&stateOut[(jj*{{nDof3D}}+ii)*{{nDataPad}}]);
+
     }
   }
   
@@ -84,8 +104,8 @@ template void {{codeNamespace}}::boundaryConditions(
   const {{correctorComputePrecision}}* const fluxIn,
   const {{predictorStoragePrecision}}* const stateIn,
   const {{predictorStoragePrecision}}* const gradStateIn,
-  const double* const cellCentre,
-  const double* const cellSize,
+  const tarch::la::Vector<Dimensions,double>& cellCentre,
+  const tarch::la::Vector<Dimensions,double>& cellSize,
   const double t,const double dt,
   const int faceIndex,
   const int normalNonZero);

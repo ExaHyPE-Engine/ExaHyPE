@@ -199,18 +199,14 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::solvers::ade
      * \param[inout] FOut      the normal fluxes at point x from outside of the domain
      *                         and time-averaged (over [t,t+dt]) as C array (already allocated).
      */
-    virtual void boundaryValues(
-        const double* const x,
-        const double t,
-        const double dt,
-        const int faceIndex,
-        const int direction,
-        const {{CORRECTOR_COMPUTATION_PRECISION}}* const fluxIn,
-        const {{PREDICTOR_STORAGE_PRECISION}}* const stateIn,
-        const {{CORRECTOR_COMPUTATION_PRECISION}}* const gradStateIn,
-        {{CORRECTOR_COMPUTATION_PRECISION}} *fluxOut,
-        {{PREDICTOR_STORAGE_PRECISION}}* stateOut
-        ){% if BOUNDARY_CONDITIONS_IMPLEMENTATION=="<user-defined>" %}= 0{% else %} final{% endif %};
+    virtual void boundaryConditions(
+      const {{PREDICTOR_STORAGE_PRECISION}} * __restrict__                  Qinside, // Qinside[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+      {{PREDICTOR_STORAGE_PRECISION}} * __restrict__                        Qoutside, // Qoutside[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+      const tarch::la::Vector<Dimensions,double>&  faceCentre,
+      const tarch::la::Vector<Dimensions,double>&  volumeH,
+      double                                       t,
+      int                                          normal
+    ){% if BOUNDARY_CONDITIONS_IMPLEMENTATION=="<user-defined>" %}= 0{% else %} final{% endif %};
 
 
     /**

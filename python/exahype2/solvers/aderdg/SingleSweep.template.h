@@ -74,17 +74,13 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public Abstract{{CLASSNAME}} {
 
     
     {% if BOUNDARY_CONDITIONS_IMPLEMENTATION=="<user-defined>" %}
-    void boundaryValues(
-        const double* const x,
-        const double t,
-        const double dt,
-        const int faceIndex,
-        const int direction,
-        const {{CORRECTOR_COMPUTATION_PRECISION}} * const fluxIn,
-        const {{PREDICTOR_STORAGE_PRECISION}}* const stateIn,
-        const {{CORRECTOR_COMPUTATION_PRECISION}}* const gradStateIn,
-        {{CORRECTOR_COMPUTATION_PRECISION}} *fluxOut,
-        {{PREDICTOR_STORAGE_PRECISION}}* stateOut
+    void boundaryConditions(
+      const {{PREDICTOR_STORAGE_PRECISION}} * __restrict__                  Qinside, // Qinside[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+      {{PREDICTOR_STORAGE_PRECISION}} * __restrict__                        Qoutside, // Qoutside[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+      const tarch::la::Vector<Dimensions,double>&  faceCentre,
+      const tarch::la::Vector<Dimensions,double>&  volumeH,
+      double                                       t,
+      int                                          normal
     ) final override;
     {% endif %}
 

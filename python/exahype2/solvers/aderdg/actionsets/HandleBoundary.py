@@ -31,13 +31,9 @@ class Handle_boundary(AbstractAderDGActionSet):
     const int NumberOfData = NumberOfVariables+NumberOfParameters;
     
     #if Dimensions==2
-    constexpr int spaceBasisSize     = (Order+1)*(Order+1);
     constexpr int spaceFaceSize      = (Order+1);
-    const double x[2] = {marker.x()[0], marker.x()[1]};
     #else
-    constexpr int spaceBasisSize     = (Order+1)*(Order+1)*(Order+1);
     constexpr int spaceFaceSize      = (Order+1)*(Order+1);
-    const double x[3] = {marker.x()[0], marker.x()[1], marker.x()[2]};    
     #endif
     
     const int basisElementsByFace = spaceFaceSize*NumberOfData;
@@ -46,37 +42,63 @@ class Handle_boundary(AbstractAderDGActionSet):
     const int normal = marker.getSelectedFaceNumber()%Dimensions;
     const bool isLeftFace = marker.getSelectedFaceNumber()<Dimensions;
 
-    /*
-    {{PREDICTOR_STORAGE_PRECISION}}* FIn  = fineGridFace{{UNKNOWN_IDENTIFIER}}FluxEstimates.value + (isLeftFace ? 0 : fluxElementsByFace);
-    {{PREDICTOR_STORAGE_PRECISION}}* FOut = fineGridFace{{UNKNOWN_IDENTIFIER}}FluxEstimates.value + (isLeftFace ? fluxElementsByFace : 0);
-    {{PREDICTOR_STORAGE_PRECISION}}* QIn  = fineGridFace{{UNKNOWN_IDENTIFIER}}Estimates.value + (isLeftFace ? 0 : basisElementsByFace);
-    {{PREDICTOR_STORAGE_PRECISION}}* QOut = fineGridFace{{UNKNOWN_IDENTIFIER}}Estimates.value + (isLeftFace ? basisElementsByFace : 0);
-    */
-
     {{PREDICTOR_STORAGE_PRECISION}}* FIn  = fineGridFace{{UNKNOWN_IDENTIFIER}}FluxEstimates.value + (!isLeftFace ? 0 : fluxElementsByFace);
     {{PREDICTOR_STORAGE_PRECISION}}* FOut = fineGridFace{{UNKNOWN_IDENTIFIER}}FluxEstimates.value + (!isLeftFace ? fluxElementsByFace : 0);
     {{PREDICTOR_STORAGE_PRECISION}}* QIn  = fineGridFace{{UNKNOWN_IDENTIFIER}}Estimates.value + (!isLeftFace ? 0 : basisElementsByFace);
     {{PREDICTOR_STORAGE_PRECISION}}* QOut = fineGridFace{{UNKNOWN_IDENTIFIER}}Estimates.value + (!isLeftFace ? basisElementsByFace : 0);    
 
-    for(int i=0; i<spaceFaceSize; i++){
+    tarch::la::Vector<Dimensions,double> bottomLeftPosition = marker.x()-marker.h();
+    bottomLeftPosition[normal] += marker.h()[normal];
 
-      repositories::{{SOLVER_INSTANCE}}.boundaryValues(
-        x,
-        timeStamp,
-        timeStepSize,
-        marker.getSelectedFaceNumber(), //faceIndex
-        normal, //direction
-        FIn,
-        QIn,
-        nullptr, //gradStateIn
-        FOut,
-        QOut
-      );
+    for(int i=0; i<(Order+1); i++){
+      #if Dimensions==3
+      for(int j=0; j<(Order+1); j++){
+      #endif
 
-      FIn   += NumberOfVariables;
-      QIn   += NumberOfData;
-      FOut  += NumberOfVariables;
-      QOut  += NumberOfData;
+        tarch::la::Vector<Dimensions,double> nodePosition = bottomLeftPosition;
+
+        #if Dimensions==2
+          nodePosition[1-normal] += repositories::{{SOLVER_INSTANCE}}.QuadraturePoints1d[i]*marker.h()[1-normal];
+        #else
+          /*
+          * These access the first and second components that are not in the normal direction
+          * i.e. if normal = 0, they access components 1 and 2,
+          *      if normal = 1, they access components 0 and 2,
+          *      if normal = 2, they access components 0 and 1,
+          */
+          nodePosition[std::max[(1-normal), 0]] += repositories::{{SOLVER_INSTANCE}}.QuadraturePoints1d[i]
+                                                   *marker.h()[std::max[(1-normal), 0]];
+          nodePosition[std::min[2, (3-normal)]] += repositories::{{SOLVER_INSTANCE}}.QuadraturePoints1d[j]
+                                                   *marker.h()[std::min[2, (3-normal)]];
+        #endif
+
+        repositories::{{SOLVER_INSTANCE}}.boundaryConditions(
+          QIn,
+          QOut,
+          marker.x(),
+          marker.h(),
+          timeStamp,
+          normal
+        );
+
+        repositories::{{SOLVER_INSTANCE}}.flux(
+          QOut,
+          marker.x(),
+          marker.h(),
+          timeStamp,
+          timeStepSize,
+          normal,
+          FOut
+        );
+
+        FIn   += NumberOfVariables;
+        QIn   += NumberOfData;
+        FOut  += NumberOfVariables;
+        QOut  += NumberOfData;
+
+      #if Dimensions==3
+      }
+      #endif
     }
    
   }
