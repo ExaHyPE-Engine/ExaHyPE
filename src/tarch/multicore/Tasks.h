@@ -354,12 +354,12 @@ namespace tarch {
        *
        * This function has to be called within spawnAndWaitAsExplicitTasksWithPolling()
        * whenever a thread has finished its local partition and should now
-       * process further tasks. The whole thing consists of three parts:
+       * process further tasks. The polling thing consists of three parts:
        *
+       * - A guard loop ensures that we don't poll too long or too often.
        * - First, I find out which thread I'm running on and how many tasks
        *   I may fuse. These two things potentially are expensive to find out
        *   and they don't change, so I do this only once.
-       * - A guard loop ensures that we don't poll too long or too often.
        * - The actual loop body ensures that we progress tasks.
        *
        *
@@ -379,13 +379,30 @@ namespace tarch {
        *   immediately. If the runtime hasn't had the opportunity yet to
        *   kick off the other tasks, we better ensure that happens asap.
        *
+       * I originally wanted to integrate this guard loop into the routine.
+       * However, that does not work. The task loop is defined over some
+       * atomics, and the type of such atomics depends on the chosen
+       * environment. They have a different type for OpenMP vs TBB, e.g. So
+       * the user has to wrap the function call into a code snippet similar
+       * to
+       *
+       *
+       *        while (
+       *          pendingTasks>0
+       *          and
+       *          pendingTasks<tarch::multicore::Core::getInstance().getNumberOfThreads()
+       *          and
+       *          spawnedTasks==NumberOfThreads
+       *        ) {
+       *          progressTasksWithinSpawnAndWaitAsExplicitTasksWithPolling(
+       *            strategy
+       *          );
+       *        }
+       *
        *
        */
       void progressTasksWithinSpawnAndWaitAsExplicitTasksWithPolling(
-        int&  pendingTasks,
-        int&  spawnedTasks,
-        tarch::multicore::orchestration::Strategy*     strategy,
-        const int                                      NumberOfThreads
+        tarch::multicore::orchestration::Strategy*     strategy
       );
 
       int  mapPendingTasksOntoNativeTasks(int maxTasks);
