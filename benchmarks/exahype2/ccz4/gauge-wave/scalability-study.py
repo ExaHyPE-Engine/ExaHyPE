@@ -337,93 +337,25 @@ project = exahype2.Project( ["benchmarks", "exahype2", "ccz4"], "ccz4", executab
 
 
 
-########################################################################################
-#parameter setting according to scenarios
-########################################################################################
-#    for k, v in intparams.items():
-#      intparams.update({k:eval("args.CCZ4{}".format(k))})
-#    for k, v in floatparams.items():
-#      floatparams.update({k:eval("args.CCZ4{}".format(k))})
-
-
-
 solverconstants=""
-
-#    if args.scenario=="gauge":
-#      solverconstants+= "static constexpr int Scenario=0; /* Gauge wave */  "
-#      userinfo.append(("picking gauge wave scenario",None))
-#      floatparams.update({"sk":0.0}); floatparams.update({"bs":0.0})
-#      intparams.update({"LapseType":0})
 
 project.add_solver(my_solver)
 
 
-
-########################################################################################
-#Tracer setting 
-########################################################################################
-if args.tracer:
-    tracer_particles = project.add_tracer( name="Tracer",attribute_count=59 )
-    project.add_action_set_to_initialisation( 
-      exahype2.tracer.InsertParticlesByCoordinates( 
-        particle_set=tracer_particles, coordinates=[[-0.4251,0,0],[0,0,0],[0.4251,0,0]]))
-    #project.add_action_set_to_initialisation( 
-      #exahype2.tracer.InsertParticlesByCoordinates( 
-        #particle_set=tracer_particles, coordinates=CoordListFromFile('t-design (copy).dat',0.3)))
-    project.add_action_set_to_timestepping(
-      peano4.toolbox.particles.UpdateParallelState(
-        particle_set=tracer_particles
-      )
-    )
-
-    if args.solver=="fv" or "fd4-rk" in args.solver:
-      project.add_action_set_to_timestepping(exahype2.tracer.FiniteVolumesTracing(tracer_particles,
-                                                                                  my_solver,
-                                                                                  time_stepping_kernel="toolbox::particles::staticPosition",
-                                                                                  project_on_tracer_properties_kernel="::exahype2::fv::projectAllValuesOntoParticle_piecewiseLinear"))
-    
-    if "rk" in args.solver and "dg" in args.solver:
-      project.add_action_set_to_timestepping(exahype2.tracer.DiscontinuousGalerkinTracing(tracer_particles,
-                                                                                          my_solver,
-                                                                                          time_stepping_kernel="toolbox::particles::staticPosition",
-                                                                                          project_on_tracer_properties_kernel="::exahype2::dg::projectAllValuesOntoParticle"))
-    
-    
-    project.add_action_set_to_timestepping(exahype2.tracer.DumpTrajectoryIntoDatabase(
-      particle_set=tracer_particles,
-      solver=my_solver,
-      filename="Tracer-" + args.solver + "-" + str(args.cell_size),
-      number_of_entries_between_two_db_flushes=5000,
-      output_precision=10,
-      data_delta_between_two_snapsots=1e16,
-      time_delta_between_two_snapsots=0.01
-      ))
 
 
 ########################################################################################
 # Build the project
 ########################################################################################
 
-if args.asserts:
-  build_mode = peano4.output.CompileMode.Asserts
-else:
-  build_mode = peano4.output.CompileMode.Release
+build_mode = peano4.output.CompileMode.Release
     
-if args.no_plot:
-  delta_plot = 0
-elif args.asserts:
-  delta_plot = 1.0/100
-else:
-  delta_plot = 1.0/20
-
 dimensions  = 3
 offset      = [-0.5, -0.5, -0.5] 
 domain_size = [   1,    1,    1]
+delta_plot  = 0
 
-if args.no_pbc:
-  periodic_boundary_conditions = [False,False,False]       # Periodic BC
-else:
-  periodic_boundary_conditions = [True,True,True]          # Periodic BC
+periodic_boundary_conditions = [False,False,False]       # Periodic BC
 
 project.set_global_simulation_parameters(
   dimensions,               # dimensions
