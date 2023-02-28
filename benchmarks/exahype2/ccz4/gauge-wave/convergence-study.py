@@ -19,8 +19,6 @@ parser.add_argument("-cs",  "--cell-size",         dest="cell_size",        type
 parser.add_argument("-asserts", "--asserts",      dest="asserts",          action="store_true", default=False, help="Switch on assertions" )
 parser.add_argument("-tracer",  "--tracer",       dest="tracer",           action="store_true", default=False, help="Activate tracer" )
 parser.add_argument("-hs",      "--heap-storage",          dest="use_heap_storage", action="store_true", default=False, help="Store user data on heap via smart pointers" )
-parser.add_argument("-no-pbc",  "--disable-periodic-bcs",  dest="no_pbc",   action="store_true", default=False, help="Disable the periodic boundary conditions" )
-parser.add_argument( "-no-plot", "--no-plot",               dest="no_plot",  action="store_true", default=False, help="Do not plot" )
 
 args = parser.parse_args()
 
@@ -384,9 +382,7 @@ if args.asserts:
 else:
   build_mode = peano4.output.CompileMode.Release
     
-if args.no_plot:
-  delta_plot = 0
-elif args.asserts:
+if args.asserts:
   delta_plot = 1.0/100
 else:
   delta_plot = 1.0/20
@@ -395,10 +391,7 @@ dimensions  = 3
 offset      = [-0.5, -0.5, -0.5] 
 domain_size = [   1,    1,    1]
 
-if args.no_pbc:
-  periodic_boundary_conditions = [False,False,False]       # Periodic BC
-else:
-  periodic_boundary_conditions = [True,True,True]          # Periodic BC
+periodic_boundary_conditions = [True,True,True]          # Periodic BC
 
 project.set_global_simulation_parameters(
   dimensions,               # dimensions
