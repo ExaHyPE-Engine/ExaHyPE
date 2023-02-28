@@ -16,9 +16,10 @@ parser.add_argument("-v",   "--verbose",           dest="verbose",          acti
 parser.add_argument("-s",   "--solver",            dest="solver",           choices=["fv", "fd4-rk1", "fd4-rk2", "fd4-rk3", "fd4-rk4", "dg0-rk1",  "dg0-rk2",  "dg0-rk3",  "dg0-rk4", "dg1-rk1", "dg2-rk1", "dg2-rk2", "dg3-rk1", "dg3-rk3", "dg4-rk4", "dg4-rk1", "dg4-rk2", "dg4-rk3"], required=True, help="Pick solver type" )
 parser.add_argument("-et",  "--end-time",          dest="end_time",         type=float, default=1.0, help="End of simulation" )
 parser.add_argument("-cs",  "--cell-size",         dest="cell_size",        type=float, default=0.3, help="Cell size (default 0.3)" )
-parser.add_argument("-asserts",  "--asserts",      dest="asserts",          action="store_true", default=False, help="Switch on assertions" )
-parser.add_argument("-tracer",   "--tracer",       dest="tracer",           action="store_true", default=False, help="Activate tracer" )
-parser.add_argument("-hs",  "--heap-storage",      dest="use_heap_storage", action="store_true", default=False, help="Store user data on heap via smart pointers" )
+parser.add_argument("-asserts", "--asserts",      dest="asserts",          action="store_true", default=False, help="Switch on assertions" )
+parser.add_argument("-tracer",  "--tracer",       dest="tracer",           action="store_true", default=False, help="Activate tracer" )
+parser.add_argument("-hs",      "--heap-storage",          dest="use_heap_storage", action="store_true", default=False, help="Store user data on heap via smart pointers" )
+parser.add_argument("-no-pbc",  "--disable-periodic-bcs",  dest="no_pbc",   action="store_true", default=False, help="Disable the periodic boundary conditions" )
 
 args = parser.parse_args()
 
@@ -386,7 +387,11 @@ else:
 dimensions  = 3
 offset      = [-0.5, -0.5, -0.5] 
 domain_size = [   1,    1,    1]
-periodic_boundary_conditions = [True,True,True]          # Periodic BC
+
+if args.no_pbc:
+  periodic_boundary_conditions = [False,False,False]       # Periodic BC
+else:
+  periodic_boundary_conditions = [True,True,True]          # Periodic BC
 
 project.set_global_simulation_parameters(
   dimensions,               # dimensions
