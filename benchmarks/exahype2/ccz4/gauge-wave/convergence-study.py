@@ -13,13 +13,14 @@ parser = argparse.ArgumentParser(description='ExaHyPE 2 - CCZ4-GaugeWave benchma
 parser.add_argument("-j",   "--parallel-builds",   dest="j",                type=int, default=-1, help="Parallel builds" )
 parser.add_argument("-pd",  "--peano-dir",         dest="peanodir",         default="../../../../", help="Peano4 directory" )
 parser.add_argument("-v",   "--verbose",           dest="verbose",          action="store_true", default=False, help="Verbose")
-parser.add_argument("-s",   "--solver",            dest="solver",           choices=["fv", "fd4-rk1", "fd4-rk2", "fd4-rk3", "fd4-rk4", "dg0-rk1",  "dg0-rk2",  "dg0-rk3",  "dg0-rk4", "dg1-rk1", "dg2-rk1", "dg2-rk2", "dg3-rk1", "dg3-rk3", "dg4-rk4", "dg4-rk1", "dg4-rk2", "dg4-rk3"], required=True, help="Pick solver type" )
+parser.add_argument("-s",   "--solver",            dest="solver",           choices=["fv-legacy", "fv", "fd4-rk1", "fd4-rk2", "fd4-rk3", "fd4-rk4", "dg0-rk1",  "dg0-rk2",  "dg0-rk3",  "dg0-rk4", "dg1-rk1", "dg2-rk1", "dg2-rk2", "dg3-rk1", "dg3-rk3", "dg4-rk4", "dg4-rk1", "dg4-rk2", "dg4-rk3"], required=True, help="Pick solver type" )
 parser.add_argument("-et",  "--end-time",          dest="end_time",         type=float, default=1.0, help="End of simulation" )
 parser.add_argument("-cs",  "--cell-size",         dest="cell_size",        type=float, default=0.3, help="Cell size (default 0.3)" )
 parser.add_argument("-asserts", "--asserts",      dest="asserts",          action="store_true", default=False, help="Switch on assertions" )
 parser.add_argument("-tracer",  "--tracer",       dest="tracer",           action="store_true", default=False, help="Activate tracer" )
 parser.add_argument("-hs",      "--heap-storage",          dest="use_heap_storage", action="store_true", default=False, help="Store user data on heap via smart pointers" )
 parser.add_argument("-no-pbc",  "--disable-periodic-bcs",  dest="no_pbc",   action="store_true", default=False, help="Disable the periodic boundary conditions" )
+parser.add_argument( "-no-plot", "--no-plot",               dest="no_plot",  action="store_true", default=False, help="Do not plot" )
 
 args = parser.parse_args()
 
@@ -69,6 +70,7 @@ my_solver = None
 # I pick patches of 9x9x9 here, as I then can match stuff exactly with the DG solver of
 # DG order 0. This helps me to debug stuff.
 #
+
 if args.solver=="fv":
   my_solver = exahype2.solvers.fv.rusanov.GlobalAdaptiveTimeStepWithEnclaveTasking(name                 = "CCZ4FV", 
                                                                                    patch_size           = 9,
@@ -379,11 +381,16 @@ if args.tracer:
 
 if args.asserts:
   build_mode = peano4.output.CompileMode.Asserts
-  delta_plot = 1.0/100 
 else:
   build_mode = peano4.output.CompileMode.Release
-  delta_plot = 1.0/20 
     
+if args.no_plot:
+  delta_plot = 0
+elif args.asserts:
+  delta_plot = 1.0/100
+else:
+  delta_plot = 1.0/20
+
 dimensions  = 3
 offset      = [-0.5, -0.5, -0.5] 
 domain_size = [   1,    1,    1]
