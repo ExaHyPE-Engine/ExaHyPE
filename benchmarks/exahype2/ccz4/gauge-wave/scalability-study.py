@@ -9,11 +9,14 @@ import peano4.toolbox.particles
 import numpy as np
 
 
+from exahype2.solvers.fv.rusanov.kernels import create_compute_Riemann_kernel_for_Rusanov
+
+
 parser = argparse.ArgumentParser(description='ExaHyPE 2 - CCZ4-GaugeWave benchmarking script')
 parser.add_argument("-j",   "--parallel-builds",   dest="j",                type=int, default=-1, help="Parallel builds" )
 parser.add_argument("-pd",  "--peano-dir",         dest="peanodir",         default="../../../../", help="Peano4 directory" )
 parser.add_argument("-v",   "--verbose",           dest="verbose",          action="store_true", default=False, help="Verbose")
-parser.add_argument("-s",   "--solver",            dest="solver",           choices=["fv-legacy", "fv-legacy-no-heap", "fv", "fv-no-heap", "fd4-rk1", "fd4-rk2", "fd4-rk3", "fd4-rk4", "dg0-rk1",  "dg0-rk2",  "dg0-rk3",  "dg0-rk4", "dg1-rk1", "dg2-rk1", "dg2-rk2", "dg3-rk1", "dg3-rk3", "dg4-rk4", "dg4-rk1", "dg4-rk2", "dg4-rk3"], required=True, help="Pick solver type" )
+parser.add_argument("-s",   "--solver",            dest="solver",           choices=["fv-legacy-no-heap", "fv-legacy", "fv-no-heap", "fv", "fv-tasks", "fd4-rk1", "fd4-rk2", "fd4-rk3", "fd4-rk4", "dg0-rk1",  "dg0-rk2",  "dg0-rk3",  "dg0-rk4", "dg1-rk1", "dg2-rk1", "dg2-rk2", "dg3-rk1", "dg3-rk3", "dg4-rk4", "dg4-rk1", "dg4-rk2", "dg4-rk3"], required=True, help="Pick solver type" )
 parser.add_argument("-et",  "--end-time",          dest="end_time",         type=float, default=0.002, help="End of simulation" )
 parser.add_argument("-cs",  "--cell-size",         dest="cell_size",        type=float, default=0.05,  help="Cell size (default 0.3)" )
 
@@ -66,7 +69,7 @@ my_solver = None
 # DG order 0. This helps me to debug stuff.
 #
 
-if args.solver=="fv":
+if args.solver=="fv" or args.solver=="fv-tasks":
   my_solver = exahype2.solvers.fv.rusanov.GlobalAdaptiveTimeStepWithEnclaveTasking(name                 = "CCZ4FV", 
                                                                                    patch_size           = 9,
                                                                                    unknowns             = sum(unknowns.values()),
@@ -77,6 +80,7 @@ if args.solver=="fv":
                                                                                    pde_terms_without_state = True
                                                                                    )
   my_solver.switch_to_heap_storage(True, True)
+  # the task-specific stuff comes later in the implementation 
 if args.solver=="fv-no-heap":
   my_solver = exahype2.solvers.fv.rusanov.GlobalAdaptiveTimeStepWithEnclaveTasking(name                 = "CCZ4FV", 
                                                                                    patch_size           = 9,
@@ -278,7 +282,16 @@ for (int i=0; i<NumberOfUnknowns+NumberOfAuxiliaryVariables; i++) Q[i] = 0.0;
 ::applications::exahype2::ccz4::gaugeWave(Q, volumeCentre, 0);
 """
         )    
-
+  if args.solver=="fv-tasks":
+    my_solver._fused_compute_kernel_call_cpu = create_compute_Riemann_kernel_for_Rusanov(
+      my_solver._flux_implementation, 
+      my_solver._ncp_implementation, 
+      my_solver._source_term_implementation, 
+      compute_max_eigenvalue_of_next_time_step=True, 
+      solver_variant = exahype2.solvers.fv.rusanov.SolverVariant.Multicore,
+      kernel_variant = exahype2.solvers.fv.rusanov.KernelVariant.BatchedAoSHeap
+    )
+  
     
 # ===============
 # Postprocessing
@@ -308,17 +321,6 @@ if "fd4-rk" in args.solver:
   }
 """
 if "rk" in args.solver and "dg" in args.solver:
-#  my_solver.postprocess_updated_cell_after_Runge_Kutta_step = """
-#{
-#    constexpr int itmax = ({{DG_ORDER}}+1) * ({{DG_ORDER}}+1) * ({{DG_ORDER}}+1);
-#    int index = 0;
-#    for (int i=0;i<itmax;i++)
-#    {
-#      applications::exahype2::ccz4::enforceCCZ4constraints( oldQ+index, dQdt+index, timeStepSize );
-#      index += {{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}};
-#    }
-#  }
-#"""
   my_solver.postprocess_updated_cell_after_final_linear_combination = """
 {
     constexpr int itmax = ({{DG_ORDER}}+1) * ({{DG_ORDER}}+1) * ({{DG_ORDER}}+1);
