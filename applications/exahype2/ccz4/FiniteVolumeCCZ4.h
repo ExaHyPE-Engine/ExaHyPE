@@ -219,19 +219,19 @@ class applications::exahype2::ccz4::FiniteVolumeCCZ4: public AbstractFiniteVolum
       const double alpha = 1.0;
       #endif
 
-  constexpr double sqrtwo = 1.4142135623730951;
-  // NOTE parameters are stored in Constants.h
-  const double tempA = alpha * std::max({sqrtwo, CCZ4e, CCZ4ds, CCZ4GLMc/alpha, CCZ4GLMd/alpha});
-  const double tempB = Q[17+normal];//DOT_PRODUCT(Q(18:20),nv(:))
-  double tem = std::max({1.0, std::abs(-tempA-tempB), std::abs(tempA-tempB)});
-  bool flag = false;
-  //for(int i=0; i<(NumberOfUnknowns-1); i++){
-  //  if ( std::abs(Q[i]) > 2.0) { flag = true; break; }
-  //}
-  //return flag? 2*tem: tem;
-  return tem;
-   //return examples::exahype2::ccz4::FiniteVolumeCCZ4::maxEigenvalue(Q, faceCentre, volumeH, t , normal);
-}
+      constexpr double sqrtwo = 1.4142135623730951;
+      // NOTE parameters are stored in Constants.h
+      const double tempA = alpha * std::max({sqrtwo, CCZ4e, CCZ4ds, CCZ4GLMc/alpha, CCZ4GLMd/alpha});
+      const double tempB = Q[17+normal];//DOT_PRODUCT(Q(18:20),nv(:))
+      double tem = std::max({1.0, std::abs(-tempA-tempB), std::abs(tempA-tempB)});
+      bool flag = false;
+      //for(int i=0; i<(NumberOfUnknowns-1); i++){
+      //  if ( std::abs(Q[i]) > 2.0) { flag = true; break; }
+      //}
+      //return flag? 2*tem: tem;
+      return tem;
+       //return examples::exahype2::ccz4::FiniteVolumeCCZ4::maxEigenvalue(Q, faceCentre, volumeH, t , normal);
+    }
 
     #if defined(GPUOffloadingOMP)
     #pragma omp end declare target
