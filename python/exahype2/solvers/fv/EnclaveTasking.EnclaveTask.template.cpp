@@ -52,7 +52,7 @@ double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::applyKernelToCell(
       t,
       dt
   )) {
-    ::exahype2::fd::{{KERNEL_NAMESPACE}}::{{FUSED_COMPUTE_KERNEL_CALL_CPU}}
+    ::exahype2::fv::{{KERNEL_NAMESPACE}}::{{FUSED_COMPUTE_KERNEL_CALL_CPU}}
   }
   else
   {% endif %}

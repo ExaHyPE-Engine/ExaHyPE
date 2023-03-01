@@ -1,5 +1,6 @@
 #include "tarch/Assertions.h"
 #include "tarch/logging/Statistics.h"
+#include "tarch/services/ServiceRepository.h"
 
 #include "BooleanSemaphore.h"
 #include "Lock.h"
@@ -534,8 +535,38 @@ void tarch::multicore::spawnAndWait(
   }
 }
 
-void tarch::multicore::internal::configureInternalTaskQueues(int numberOfThreads) {
-  localNonblockingTasks.resize(numberOfThreads);
+
+void tarch::multicore::internal::progressTasksWithinSpawnAndWaitAsExplicitTasksWithPolling(
+ tarch::multicore::orchestration::Strategy*     strategy
+) {
+  const auto fusion       = strategy->getNumberOfTasksToFuseAndTargetDevice();
+  const int  threadNumber = tarch::multicore::Core::getInstance().getThreadNumber();
+
+  tarch::services::ServiceRepository::getInstance().receiveDanglingMessages();
+  int numberOfPendingTasks = tarch::multicore::getNumberOfPendingTasks(threadNumber);
+
+  bool processedSomeTasks = false;
+  if (
+    numberOfPendingTasks>0
+    and
+    fusion.minTasks!=std::numeric_limits<int>::max()
+  ) {
+    tarch::multicore::internal::copyInternalTaskQueuesOverIntoGlobalQueue(threadNumber);
+    processedSomeTasks = tarch::multicore::internal::fusePendingTasks(fusion);
+  }
+  else if (numberOfPendingTasks>0) {
+    tarch::multicore::internal::processThreadLocalTask(threadNumber);
+  }
+  else { // no local tasks left over
+    tarch::multicore::internal::copyInternalTaskQueuesOverIntoGlobalQueue(threadNumber);
+    const int numberOfTasksToProcess = std::max(1,tarch::multicore::getNumberOfPendingTasks(-1)/2);
+    processedSomeTasks = tarch::multicore::processPendingTasks( numberOfTasksToProcess );
+  }
+}
+
+
+void tarch::multicore::internal::configureInternalTaskQueues(int numberOfTasks) {
+  localNonblockingTasks.resize(numberOfTasks);
 }
 
 void tarch::multicore::internal::copyInternalTaskQueuesOverIntoGlobalQueue(int threadNumber) {
