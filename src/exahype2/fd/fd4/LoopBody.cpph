@@ -481,8 +481,19 @@ void exahype2::fd::fd4::internal::updateSolutionWithKODissipationTerm_LoopBody(
   auto updateAlongOneCoordinateDirection = [=](const double* __restrict__ QKODsp, int normal) {
     double QKODspTerm = QKODsp[QKODspEnumerator(patchIndex, volumeIndex, unknown)];
 
+    int flag=0;
     //double sigmaKO=8.0;
-    QOut[ QOutEnumerator(patchIndex, volumeIndex,unknown) ] += KOSigma * dt / patchSize(normal) * QOutEnumerator._numberOfDoFsPerAxisInCell * QKODspTerm;
+    if (flag==0){
+      QOut[ QOutEnumerator(patchIndex, volumeIndex,unknown) ] += KOSigma * dt / patchSize(normal) * QOutEnumerator._numberOfDoFsPerAxisInCell * QKODspTerm;
+    }
+
+    if (flag==1){
+      if ( (unknown>=23 and unknown<=52) or (unknown>=55 and unknown<=57) ){
+        QOut[ QOutEnumerator(patchIndex, volumeIndex,unknown) ] += KOSigma * dt / patchSize(normal) /patchSize(normal) * QOutEnumerator._numberOfDoFsPerAxisInCell * QKODspTerm;
+      } else {
+        QOut[ QOutEnumerator(patchIndex, volumeIndex,unknown) ] += KOSigma * dt / patchSize(normal) * QOutEnumerator._numberOfDoFsPerAxisInCell * QKODspTerm;
+      }
+    }
 
     #if !defined(GPUOffloadingOMP) and  !defined(GPUOffloadingSYCL)
     assertion8(

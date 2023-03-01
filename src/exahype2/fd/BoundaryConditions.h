@@ -14,7 +14,11 @@
 namespace exahype2 {
   namespace fd {
     /**
-     * Apply boundary conditions. Works only for a halo size of 1.
+     * Apply (generic) boundary conditions
+     *
+     * This implementation runs over the boundary and applies the generic
+     * (point-wise) boundary conditions via a call-back to the user
+     * implementation.
      *
      * @param unknownsPlusAuxiliaryVariables Number of unknowns plus the number
      *   of auxiliary variables. The boundary treatment routine does not
@@ -44,6 +48,78 @@ namespace exahype2 {
       int                                          unknownsPlusAuxiliaryVariables,
       int                                          faceNumber,
       double* __restrict__                         Q
+    );
+
+
+    /**
+     * Apply Sommerfeld boundary conditions
+     *
+     * Sommerfeld boundary conditions don't need a callback for the actual
+     * boundary data, but they need the max flux. If you employ Sommerfeld
+     * conditions, you can ignore the generic boundary condition function
+     * of your solver. It will still remain there, but you can leave it
+     * empty (or add an assertion in there, as it should never be called).
+     *
+     *
+     *
+     * ## Usage
+     *
+     * The typical user switches to Sommerfeld conditions by exchanging the
+     * boundary kernel call:
+     *
+     * <pre>
+self._action_set_handle_boundary.TemplateHandleBoundary_KernelCalls = """
+      ::exahype2::fd::applySommerfeldConditions(
+        [&](
+          const double * __restrict__                  Q,
+          const tarch::la::Vector<Dimensions,double>&  faceCentre,
+          const tarch::la::Vector<Dimensions,double>&  gridCellH,
+          double                                       t,
+          double                                       dt,
+          int                                          normal
+        ) -> double {
+          return repositories::{{SOLVER_INSTANCE}}.maxEigenvalue( Q, faceCentre, gridCellH, t, dt, normal );
+        },
+        marker.x(),
+        marker.h(),
+        {{FACE_METADATA_ACCESSOR}}.getOldTimeStamp(marker.getSelectedFaceNumber()<Dimensions ? 1 : 0),
+        repositories::{{SOLVER_INSTANCE}}.getMinTimeStepSize(),
+        {{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}},
+        {{OVERLAP}},
+        {{NUMBER_OF_UNKNOWNS}},
+        {{NUMBER_OF_AUXILIARY_VARIABLES}},
+        marker.getSelectedFaceNumber(),
+        {0.0, 0.0, 0.0},
+        fineGridFace{{UNKNOWN_IDENTIFIER}}Old.value,
+        fineGridFace{{UNKNOWN_IDENTIFIER}}New.value,
+        {...} //approximate background solution at infinity 
+      );
+      </pre>
+"""
+     *
+     */
+    void applySommerfeldConditions(
+      std::function< double(
+        const double* __restrict__                   Q,
+        const tarch::la::Vector<Dimensions,double>&  faceCentre,
+        const tarch::la::Vector<Dimensions,double>&  gridCellH,
+        double                                       t,
+        double                                       dt,
+        int                                          normal
+      ) >   maxEigenvalue,
+      const tarch::la::Vector<Dimensions,double>&  faceCentre,
+      const tarch::la::Vector<Dimensions,double>&  patchSize,
+      double                                       t,
+      double                                       dt,
+      int                                          numberOfGridCellsPerPatchPerAxis,
+      int                                          overlap,
+      int                                          numberOfUnknowns,
+      int                                          numberOfAuxiliaryVariables,
+      int                                          faceNumber,
+      const tarch::la::Vector<Dimensions,double>&  systemOrigin,
+      double* __restrict__                         Qold,
+      double* __restrict__                         Qnew,
+      double* __restrict__                         Qinf
     );
   }
 }
