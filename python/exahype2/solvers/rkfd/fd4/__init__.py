@@ -4,10 +4,11 @@ from exahype2.solvers.fv.PDETerms  import PDETerms
 
 from .GlobalFixedTimeStep                           import GlobalFixedTimeStep
 from .GlobalAdaptiveTimeStep                        import GlobalAdaptiveTimeStep
+from .GlobalAdaptiveTimeStepWithEnclaveTasking      import GlobalAdaptiveTimeStepWithEnclaveTasking
 
 
 from .kernels import SolverVariant
-from .kernels import RiemannKernelVariant
+from .kernels import KernelVariant
 
 from .amr import switch_to_FD4_tensor_product_interpolation
 from .amr import switch_to_FD4_tensor_product_restriction

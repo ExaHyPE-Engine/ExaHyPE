@@ -89,8 +89,8 @@ class PatchToDoubleArray():
 #include \"""" + self.data.namespace[-1] + "/" + self.data.name + """.h"
 """
 
-    
-  def construct_output(self,output):
+
+  def _get_dictionary_for_output(self):
     d = { 
         "CARDINALITY_2D": str( int( self.data.no_of_unknowns*self.data.dim[0]*self.data.dim[1] )), 
         "CARDINALITY_3D": str( int( self.data.no_of_unknowns*self.data.dim[0]*self.data.dim[1]*self.data.dim[2] )),
@@ -108,7 +108,12 @@ class PatchToDoubleArray():
         "MPI_FLOAT_TYPE":              self.float_type.mpi,
         "ADDITIONAL_LOAD_STORE_ARGUMENTS": self.data.additional_load_and_store_arguments
       }
+    return d
 
+
+    
+  def construct_output(self,output):
+    d = self._get_dictionary_for_output()
     """
       Pass in a version of output
     """

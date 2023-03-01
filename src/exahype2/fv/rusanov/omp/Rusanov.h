@@ -101,6 +101,7 @@ namespace exahype2 {
         #endif
         ;
 
+
         template <
           typename Solver,
           int      numberOfVolumesPerAxisInPatch,
@@ -211,6 +212,27 @@ namespace exahype2 {
         };
         #pragma omp end declare target
         #endif
+
+
+        template <
+          typename Solver,
+          int      numberOfVolumesPerAxisInPatch,
+          int      haloSize,
+          int      unknowns,
+          int      auxiliaryVariables,
+          typename TempDataEnumerator
+        >
+        static void timeStepWithRusanov_batched_heap_multicore_static_calls(
+          ::exahype2::CellData&   patchData,
+          bool                    evaluateFlux,
+          bool                    evaluateNonconservativeProduct,
+          bool                    evaluateSource,
+          bool                    evaluateMaximumEigenvalueAfterTimeStep
+        )
+        #if defined(UseManualInlining)
+        __attribute__((always_inline))
+        #endif
+        ;
       }
     }
   }
@@ -220,4 +242,4 @@ namespace exahype2 {
 #include "Rusanov_batched_map_static_calls.cpph"
 #include "Rusanov_patchwise_managed_static_calls.cpph"
 #include "Rusanov_batched_managed_static_calls.cpph"
-
+#include "Rusanov_batched_heap_multicore_static_calls.cpph"

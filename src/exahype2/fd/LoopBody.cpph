@@ -1,6 +1,8 @@
-#include "tarch/compiler/CompilerSpecificSettings.h"
 #include "exahype2/Solver.h"
 #include "exahype2/fd/PatchUtils.h"
+
+#include "tarch/compiler/CompilerSpecificSettings.h"
+#include "tarch/Assertions.h"
 #include "tarch/multicore/otter.h"
 
 
@@ -88,6 +90,86 @@ void exahype2::fd::internal::addAlgebraicSourceTerm_LoopBody(
 }
 
 
+template <typename Solver, class QInEnumeratorType, class QOutEnumeratorType>
+void exahype2::fd::internal::addAlgebraicSourceTerm_LoopBody(
+  const double* __restrict__                   QIn,
+  const QInEnumeratorType&                     QInEnumerator,
+  const tarch::la::Vector<Dimensions,double>&  patchCentre,
+  const tarch::la::Vector<Dimensions,double>&  patchSize,
+  int                                          patchIndex,
+  const tarch::la::Vector<Dimensions,int>&     volumeIndex,
+  double                                       t,
+  double                                       dt,
+  double* __restrict__                         QOut,
+  const QOutEnumeratorType&                    QOutEnumerator
+) {
+  double* QInGathered              = new double[QInEnumerator._unknowns+QInEnumerator._numberOfAuxiliaryVariables];
+  double* QAlgebraicSourceGathered = new double[QInEnumerator._unknowns];
+
+  // gather
+  for (int unknown=0; unknown<QInEnumerator._unknowns+QInEnumerator._numberOfAuxiliaryVariables; unknown++) {
+    QInGathered[unknown] = QIn[ QInEnumerator(patchIndex,volumeIndex,unknown) ];
+  }
+
+  Solver::sourceTerm(
+      QInGathered,
+      ::exahype2::fd::getGridCellCentre( patchCentre, patchSize, QInEnumerator._numberOfDoFsPerAxisInCell, volumeIndex ),
+      ::exahype2::fd::getGridCellSize( patchSize, QInEnumerator._numberOfDoFsPerAxisInCell ),
+      t,
+      dt,
+      QAlgebraicSourceGathered,
+      ::exahype2::Solver::Offloadable::Yes
+  );
+
+  for (int unknown=0; unknown<QOutEnumerator._unknowns; unknown++) {
+    QOut[ QOutEnumerator(patchIndex,volumeIndex,unknown) ] += dt * QAlgebraicSourceGathered[unknown];
+    assertion4(
+      QOut[ QOutEnumerator(patchIndex, volumeIndex,unknown) ]==QOut[ QOutEnumerator(patchIndex, volumeIndex,unknown) ],
+      dt, unknown, volumeIndex,
+      QOutEnumerator(patchIndex,volumeIndex,unknown)
+    );
+  }
+
+  delete[] QInGathered;
+  delete[] QAlgebraicSourceGathered;
+}
+
+
+template <typename Solver>
+void exahype2::fd::internal::addAlgebraicSourceTerm_LoopBody(
+  const double* __restrict__                   QIn,
+  const exahype2::enumerator::AoSLexicographicEnumerator&                     QInEnumerator,
+  const tarch::la::Vector<Dimensions,double>&  patchCentre,
+  const tarch::la::Vector<Dimensions,double>&  patchSize,
+  int                                          patchIndex,
+  const tarch::la::Vector<Dimensions,int>&     volumeIndex,
+  double                                       t,
+  double                                       dt,
+  double* __restrict__                         QOut,
+  const exahype2::enumerator::AoSLexicographicEnumerator&                    QOutEnumerator
+) {
+  double* QAlgebraicSourceGathered = new double[QInEnumerator._unknowns];
+
+  Solver::sourceTerm(
+      & (QIn[ QInEnumerator(patchIndex,volumeIndex,0) ]),
+      ::exahype2::fd::getGridCellCentre( patchCentre, patchSize, QInEnumerator._numberOfDoFsPerAxisInCell, volumeIndex ),
+      ::exahype2::fd::getGridCellSize( patchSize, QInEnumerator._numberOfDoFsPerAxisInCell ),
+      t,
+      dt,
+      QAlgebraicSourceGathered,
+      ::exahype2::Solver::Offloadable::Yes
+  );
+
+  for (int unknown=0; unknown<QOutEnumerator._unknowns; unknown++) {
+    QOut[ QOutEnumerator(patchIndex,volumeIndex,unknown) ] += dt * QAlgebraicSourceGathered[unknown];
+    assertion4(
+      QOut[ QOutEnumerator(patchIndex, volumeIndex,unknown) ]==QOut[ QOutEnumerator(patchIndex, volumeIndex,unknown) ],
+      dt, unknown, volumeIndex,
+      QOutEnumerator(patchIndex,volumeIndex,unknown)
+    );
+  }
+}
+
 
 template <class QOutEnumeratorType>
 double exahype2::fd::internal::reduceMaxEigenvalue_LoopBody(
@@ -121,12 +203,43 @@ double exahype2::fd::internal::reduceMaxEigenvalue_LoopBody(
           ::exahype2::fd::getGridCellSize( patchSize, QOutEnumerator._numberOfDoFsPerAxisInCell ),
           t,
           dt,
-          normal
+          normal,
+          ::exahype2::Solver::Offloadable::Yes
         )
       );
     }
 
     delete[] QGathered;
 
+    return result;
+}
+
+
+template <typename Solver>
+double exahype2::fd::internal::reduceMaxEigenvalue_LoopBody(
+    const double* __restrict__                   QOut,
+    const exahype2::enumerator::AoSLexicographicEnumerator&                    QOutEnumerator,
+    const tarch::la::Vector<Dimensions,double>&  patchCentre,
+    const tarch::la::Vector<Dimensions,double>&  patchSize,
+    int                                          patchIndex,
+    const tarch::la::Vector<Dimensions,int>&     volumeIndex,
+    double                                       t,
+    double                                       dt
+) {
+    double result = 0.0;
+    for (int normal=0; normal<Dimensions; normal++) {
+      result = std::max(
+        result,
+        Solver::maxEigenvalue(
+          &( QOut[ QOutEnumerator(patchIndex,volumeIndex,0) ] ),
+          ::exahype2::fd::getGridCellCentre( patchCentre, patchSize, QOutEnumerator._numberOfDoFsPerAxisInCell, volumeIndex ),
+          ::exahype2::fd::getGridCellSize( patchSize, QOutEnumerator._numberOfDoFsPerAxisInCell ),
+          t,
+          dt,
+          normal,
+          ::exahype2::Solver::Offloadable::Yes
+        )
+      );
+    }
     return result;
 }

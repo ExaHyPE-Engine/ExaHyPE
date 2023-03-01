@@ -20,20 +20,26 @@ class InsertParticlesByCoordinates(peano4.toolbox.particles.InsertParticlesByCoo
   
   def __init__(self,
                particle_set,
-               coordinates
+               coordinates,
+               additional_includes="",
                ):
     """
 
     See superclass.
 
     """
-    super( InsertParticlesByCoordinates, self ).__init__(particle_set, 
-                                                         coordinates,
-                                                         """
+    super( InsertParticlesByCoordinates, self ).__init__(particle_set = particle_set, 
+                                                         coordinates  = coordinates,
+                                                         initialisation_call = """
       particle->setNumber(0,_spacetreeId);
       particle->setNumber(1,_particleNumberOnThisTree);
       _particleNumberOnThisTree++;
-      """, # initialisation_call,
+      
+      logInfo( "touchVertexFirstTime(...)", "insert particle " << particle->toString() << " into " << marker.toString() );
+      """, 
+                                                         additional_includes = additional_includes + """  
+#include "Constants.h"
+""",
 )
 
 
@@ -42,6 +48,7 @@ class InsertParticlesByCoordinates(peano4.toolbox.particles.InsertParticlesByCoo
     
 
   def get_constructor_body(self):
+    # return super( InsertParticlesByCoordinates ).get_constructor_body() + """
     return f"""
   _particleNumberOnThisTree = 0;
   _spacetreeId              = treeNumber;
@@ -50,7 +57,8 @@ class InsertParticlesByCoordinates(peano4.toolbox.particles.InsertParticlesByCoo
 
 
   def get_attributes(self):
-     return f"""
+    # return super( InsertParticlesByCoordinates ).get_attributes() + """
+    return """
   int _particleNumberOnThisTree;
   int _spacetreeId;
   double coordinates["""+str(self.d["N"])+"""][3];

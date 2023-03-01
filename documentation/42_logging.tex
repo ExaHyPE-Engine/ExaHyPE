@@ -1,4 +1,4 @@
-\chapter{Logging, tracing, statistics and assertions}
+\chapter{Logging, tracing, statistics, profiling and assertions}
 \label{section:logging}
 
 
@@ -6,6 +6,8 @@
 
 Peano is built upon a technical architecture (\texttt{tarch}) which provides
 logging, tracing and assertions.
+This is also the layer which decides which information is pre-prepared for 
+the supported profiling tools.
 The two directory of relevance here is therefore \texttt{tarch/logging} plus the
 file \texttt{Assertions.h}.
 The latter file holds all the assertion macros, while the logging directory
@@ -98,7 +100,7 @@ Peano offers four levels of logging through its macros:
 
 
 
-\section{Logging devices (formats)}
+\section{Logging devices, formats, backends and profiling support}
 \label{section:logging:logging-devices}
 
 The \texttt{Log} instance forwards the information to a logger. By default, this
@@ -112,7 +114,14 @@ your code with \texttt{-DUseLogService=xxx}.
 I detail the variants I currently ship with Peano below.
 
 
-
+\begin{definition}
+ \Peano\ supports the instrumentation of source code for particular performance
+ analysis tools via its loggers.
+ Notably all output to the \texttt{trace} target are forwarded to
+ instrumentation APIs.
+ To make this work, you either have to pick a particular logging device, or you
+ switch to a tool-/vendor-specific toolchain.
+\end{definition}
 
 
 
@@ -181,43 +190,46 @@ This logger forwards all trace commands to NVIDIA's profiling/tracing library.
 
 
 \subsection{ITAC logger}
+\label{section:logging:logger:ITAC}
 
-To select this logger, compile with
-\texttt{-DUseLogService=ITACLogger} and configure \texttt{--with-toolchain=intel}
+To select this logger, configure \texttt{--with-toolchain=intel}.
+This switch sets, automatically, the compile flag
+\texttt{-DUseLogService=ITACLogger}.
 
-This logger forwards all trace commands to Intel's profiling/tracing library. 
 
-On Hamilton8 you can activate the ITAC logger as follows:
+The ITAC logger forwards all trace commands to Intel's profiling/tracing
+library.
+You can now compile \Peano's tracing backend, and \Peano\ will continue to plot
+all \texttt{info} statements to the terminal.
+The trace statements however are piped directly into ITAC, i.e.~if you analyse
+the code with Intel's \texttt{traceanalyzer} or VTune, you should see the
+\Peano-specific annotations and traces.
+You can also use \Peano's log filter
+(cmp.~Section~\ref{section:logging:log-filter}) to filter which events are
+actually handed over to ITAC.
 
-\begin{code}
-export FLAVOUR_NOCONFLICT=1
-module load gcc advisor oneapi intelmpi itac
 
-./configure --with-multithreading=omp --enable-exahype --enable-loadbalancing --enable-blockstructured --with-mpi="I_MPI_CXX=icpx mpiicpc" CC=icx CXX=icpx CXXFLAGS="-std=c++17 -g -fiopenmp -funroll-loops -O3 -I/apps/developers/tools/itac/2021.4/1/default/itac/latest/include -DUseLogService=ITACLogger" LDFLAGS="-L/apps/developers/compilers/intel/2021.4/1/default/compiler/2021.4.0/linux/compiler/lib/intel64_lin -liomp5 -L/apps/developers/tools/itac/2021.4/1/default/itac/2021.4.0/slib -lVTnull" --with-toolchain=intel
-\end{code} 
+\begin{remark}
+I've recognised that the Intel scripts often do not include the ITAC headers
+that \Peano\ requires in their search path. 
+In this case, you will have to augment your configure call:
 
-Remember to ask SLURM for a lot of memory as the trace data soon becomes huge:
-\texttt{\#SBATCH --gres=tmp:400G}.
-Also be sure to add \texttt{-trace} when you run the python glue code and filter the trace data as desired in \texttt{exahype.log-filter} (described above).
+\begin{bash}
+./configure CXXFLAGS="... -I${VT_ROOT}/include" LDFLAGS="... -L${VT_LIB_DIR}" \
+            LIBS="... ${VT_ADD_LIBS}     ...
+\end{bash}
+\end{remark}
 
-To do a run with the trace analyzer add \texttt{-trace} to your mpirun command:
 
-\begin{code}
-mpirun -trace -np <N> ./Peano
-\end{code}
+\noindent
+The class \texttt{ITACLogger} provides further detail on the usage of the
+logging back-end. 
+The punch line is that you have to translate in trace mode to get proper ITAC
+data.
+As the trace information of \Peano\ quickly becomes vast, I recommend to 
+create a log filter, and start a run where you disable all but the top-level
+tracing information.
 
-And visualise the results with -X forwarding with:
-
-\begin{code}
-traceanalyzer peano4.stf
-\end{code}
-
-Vtune output can also be enhanced by the ITAC logger. For vtune the following structure works and creates data that can be viewed using the \texttt{vtune-gui}:
-
-\begin{code}
-module load vtune
-OMP_NUM_THREADS=2 mpirun -trace -np 4 vtune -collect hotspots -r my_result_dir ./peano4 --timeout 2000 --threading-model backfill
-\end{code}
 
 \section{Log filter}
 \label{section:logging:log-filter}
