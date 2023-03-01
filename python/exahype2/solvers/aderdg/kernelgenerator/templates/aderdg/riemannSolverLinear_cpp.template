@@ -91,9 +91,7 @@ void {{codeNamespace}}::riemannSolver(
 {% endif %}
   
 {% if useNCP %}
-  cCompType ncp_vec[{{nVarPad*nDim}}] __attribute__((aligned({{alignmentSize}}))) = {0.};
-  cCompType* ncp[{{nDim}}] __attribute__((aligned({{alignmentSize}}))) = { ncp_vec, ncp_vec+{{nVarPad}}{{', ncp_vec+'~2*nVarPad if nDim==3 else ''}} };
-  cCompType* gradQ[{{nDim}}] __attribute__((aligned({{alignmentSize}}))) = {Qdiff, Qdiff{{', Qdiff' if nDim==3 else ''}} }; //readonly, 2/3 time Qdiff
+  cCompType ncp[{{nVarPad}}] __attribute__((aligned({{alignmentSize}}))) = {0.};
 {% endif %}
 {% if useFlux %}
   cCompType flux_values[{{nVarPad}}] __attribute__((aligned({{alignmentSize}}))) = {0.};
@@ -110,16 +108,25 @@ void {{codeNamespace}}::riemannSolver(
 #ifdef USE_IPO
     #pragma forceinline recursive
 #endif
-    solver.{{solverName}}::nonConservativeProduct(Qavg, gradQ, ncp);
+    solver.{{solverName}}::nonconservativeProduct(
+      Qavg,
+      Qdiff,
+      faceCentre,
+      dx,
+      t,
+      dt,
+      direction,
+      ncp
+    );
 {% if useMaterialParam %}
 #ifdef USE_IPO
     #pragma forceinline recursive
 #endif
     solver.{{solverName}}::multiplyMaterialParameterMatrix(Qavg, ncp);
 {% endif %}{# useMaterialParam #}
-    #pragma omp simd aligned(FL,ncp_vec:{{alignmentSize}})
+    #pragma omp simd aligned(FL,ncp:{{alignmentSize}})
     for (int n = 0; n < {{nVarPad}}; n++) {
-      FL[ij*{{nVarPad}}+n] += ncp_vec[direction*{{nVarPad}}+n]; 
+      FL[ij*{{nVarPad}}+n] += ncp[n]; 
     }
 {% endif %}{# useNCP #}
     

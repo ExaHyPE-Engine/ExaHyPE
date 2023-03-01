@@ -46,11 +46,15 @@ def create_abstract_solver_declarations(flux_implementation, ncp_implementation,
 {% endif %}
 
 {% if NCP_IMPLEMENTATION=="<user-defined>" %}
-{% if IS_LINEAR==True %}
-    virtual void nonConservativeProduct(const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const Q, const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const* const gradQ, {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}** const BgradQ) = 0;
-{% else %}
-    virtual void nonConservativeProduct(const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const Q, const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const gradQ, {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const BgradQ) = 0;    
-{% endif %}
+    virtual void nonconservativeProduct(
+    const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}*__restrict__ Q,
+    const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}*__restrict__ deltaQ,
+    const tarch::la::Vector<Dimensions, double> &faceCentre,
+    const tarch::la::Vector<Dimensions, double> &volumeH,
+    double t,
+    double dt,
+    int normal,
+    {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}*__restrict__ BgradQ) = 0;
 {% endif %}
 
 {% if SOURCE_TERM_IMPLEMENTATION=="<user-defined>" %}
@@ -119,15 +123,18 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::flux(
 {% endif %}
 
 {% if NCP_IMPLEMENTATION!="<empty>" and NCP_IMPLEMENTATION!="<user-defined>" and NCP_IMPLEMENTATION!="<none>"%}
-{% if IS_LINEAR==True %}
-void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::nonConservativeProduct(const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const Q, const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const* const gradQ, {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}** const BgradQ) {
+void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::nonconservativeProduct(
+  const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}*__restrict__ Q,
+  const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}*__restrict__ deltaQ,
+  const tarch::la::Vector<Dimensions, double> &faceCentre,
+  const tarch::la::Vector<Dimensions, double> &volumeH,
+  double t,
+  double dt,
+  int normal,
+  {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}*__restrict__ BgradQ)
+{
     {{NCP_IMPLEMENTATION}}
 }
-{% else %}
-void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::nonConservativeProduct(const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const Q, const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const gradQ, {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const BgradQ) {
-    {{NCP_IMPLEMENTATION}}
-}
-{% endif %}
 {% endif %}
 
 
@@ -192,11 +199,15 @@ def create_solver_declarations(flux_implementation, ncp_implementation, eigenval
     ) override;
 {% endif %}
 {% if NCP_IMPLEMENTATION=="<user-defined>" %}
-{% if IS_LINEAR==True %}
-    void nonConservativeProduct(const {{COMPUTATION_PRECISIONS[0]}}* const Q, const {{COMPUTATION_PRECISIONS[0]}}* const* const gradQ, {{COMPUTATION_PRECISIONS[0]}}** const BgradQ) override;
-{% else %}
-    void nonConservativeProduct(const {{COMPUTATION_PRECISIONS[0]}}* const Q, const {{COMPUTATION_PRECISIONS[0]}}* const gradQ, {{COMPUTATION_PRECISIONS[0]}}* const BgradQ) override;
-{% endif %}
+    void nonconservativeProduct(
+      const {{COMPUTATION_PRECISIONS[0]}}*__restrict__ Q,
+      const {{COMPUTATION_PRECISIONS[0]}}*__restrict__ deltaQ,
+      const tarch::la::Vector<Dimensions, double> &faceCentre,
+      const tarch::la::Vector<Dimensions, double> &volumeH,
+      double t,
+      double dt,
+      int normal,
+      {{COMPUTATION_PRECISIONS[0]}}*__restrict__ BgradQ) override;
 {% endif %}
 {% if SOURCE_TERM_IMPLEMENTATION=="<user-defined>" %}
     void algebraicSource(const tarch::la::Vector<Dimensions, double>& x, double t, const {{COMPUTATION_PRECISIONS[0]}} *const Q, {{COMPUTATION_PRECISIONS[0]}} *S) override;
@@ -238,13 +249,17 @@ def create_solver_declarations(flux_implementation, ncp_implementation, eigenval
     );
 {% endif %}
 {% if NCP_IMPLEMENTATION=="<user-defined>" %}
-{% if IS_LINEAR==True %}
     template<typename T>
-    void nonConservativeProduct(const T* const Q, const T* const* const gradQ, T** const BgradQ);
-{% else %}
-    template<typename T>
-    void nonConservativeProduct(const T* const Q, const T* const gradQ, T* const BgradQ);
-{% endif %}
+    void nonconservativeProduct(
+      const T*__restrict__ Q,
+      const T*__restrict__ deltaQ,
+      const tarch::la::Vector<Dimensions, double> &volumeX,
+      const tarch::la::Vector<Dimensions, double> &volumeH,
+      double t,
+      double dt,
+      int normal,
+      T*__restrict__ BgradQ);
+
 {% endif %}
 {% if SOURCE_TERM_IMPLEMENTATION=="<user-defined>" %}
     template<typename T>
@@ -292,15 +307,20 @@ def create_solver_declarations(flux_implementation, ncp_implementation, eigenval
     }
 {% endif %}
 {% if NCP_IMPLEMENTATION=="<user-defined>" %}
-{% if IS_LINEAR==True %}
-    void nonConservativeProduct(const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const Q, const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const* const gradQ, {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}** const BgradQ) override {
-      nonConservativeProduct<{{COMPUTATION_PRECISIONS[PRECISION_NUM]}}>(Q, gradQ, BgradQ);
+    void nonconservativeProduct(
+      const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}} *__restrict__ Q,
+      const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}} *__restrict__ deltaQ,
+      const tarch::la::Vector<Dimensions, double> &volumeX,
+      const tarch::la::Vector<Dimensions, double> &volumeH,
+      double t,
+      double dt,
+      int normal,
+      {{COMPUTATION_PRECISIONS[PRECISION_NUM]}} *__restrict__ BgradQ) override 
+    {
+      
+      nonconservativeProduct<{{COMPUTATION_PRECISIONS[PRECISION_NUM]}}>(Q, deltaQ, volumeX, volumeH, t, dt, normal, BgradQ);
+
     }
-{% else %}
-    void nonConservativeProduct(const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const Q, const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const gradQ, {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const BgradQ) override {
-      nonConservativeProduct<{{COMPUTATION_PRECISIONS[PRECISION_NUM]}}>(Q, gradQ, BgradQ);
-    }
-{% endif %}
 {% endif %}
 {% if SOURCE_TERM_IMPLEMENTATION=="<user-defined>" %}
     void algebraicSource(const tarch::la::Vector<Dimensions, double>& x, double t, const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}} *const Q, {{COMPUTATION_PRECISIONS[PRECISION_NUM]}} *S) override {
@@ -376,27 +396,20 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::flux(
 
 
 {% if NCP_IMPLEMENTATION=="<user-defined>" %}
-{% if IS_LINEAR==True %}
-void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::nonConservativeProduct(
-  const {{COMPUTATION_PRECISIONS[0]}}* const Q,      //Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
-  const {{COMPUTATION_PRECISIONS[0]}}* const* const gradQ,  //Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
-  {{COMPUTATION_PRECISIONS[0]}}** const BgradQ       //BgradQ[{{NUMBER_OF_UNKNOWNS}}]
-)  {
-  logTraceInWith3Arguments( "nonConservativeProduct(...)", x, t, normal );
+void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::nonconservativeProduct(
+  const {{COMPUTATION_PRECISIONS[0]}} *__restrict__ Q, //Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+  const {{COMPUTATION_PRECISIONS[0]}} *__restrict__ deltaQ, //deltaQ[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+  const tarch::la::Vector<Dimensions, double> &volumeX,
+  const tarch::la::Vector<Dimensions, double> &volumeH,
+  double t,
+  double dt,
+  int normal,
+  {{COMPUTATION_PRECISIONS[0]}} *__restrict__ BgradQ //BgradQ[{{NUMBER_OF_UNKNOWNS}}]
+){
+  logTraceInWith3Arguments( "nonconservativeProduct(...)", volumeX, t, normal );
   // @todo implement
-  logTraceOut( "nonConservativeProduct(...)" );
+  logTraceOut( "nonconservativeProduct(...)" );
 }
-{% else %}
-void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::nonConservativeProduct(
-  const {{COMPUTATION_PRECISIONS[0]}}* const Q,      //Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
-  const {{COMPUTATION_PRECISIONS[0]}}* const gradQ,  //Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
-  {{COMPUTATION_PRECISIONS[0]}}* const BgradQ       //BgradQ[{{NUMBER_OF_UNKNOWNS}}]
-)  {
-  logTraceInWith3Arguments( "nonConservativeProduct(...)", x, t, normal );
-  // @todo implement
-  logTraceOut( "nonConservativeProduct(...)" );
-}
-{% endif %}
 {% endif %}
 
 
@@ -507,37 +520,36 @@ template void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::flux(
 
 
 {% if NCP_IMPLEMENTATION=="<user-defined>" %}
-{% if IS_LINEAR==True %}
+
 template<typename T>
-void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::nonConservativeProduct(
-  const T* const Q,      //Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
-  const T* const* const gradQ,  //Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
-  T** const BgradQ       //BgradQ[{{NUMBER_OF_UNKNOWNS}}]
-)  {
-  logTraceInWith3Arguments( "nonConservativeProduct(...)", x, t, normal );
+void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::(
+  const T*__restrict__ Q, //Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+  const T*__restrict__ deltaQ, //deltaQ[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+  const tarch::la::Vector<Dimensions, double> &volumeX,
+  const tarch::la::Vector<Dimensions, double> &volumeH,
+  double t,
+  double dt,
+  int normal,
+  T*__restrict__ BgradQ //BgradQ[{{NUMBER_OF_UNKNOWNS}}]
+){
+  logTraceInWith3Arguments( "nonconservativeProduct(...)", volumeX, t, normal );
   // @todo implement
-  logTraceOut( "nonConservativeProduct(...)" );
+  logTraceOut( "nonconservativeProduct(...)" );
 }
 
 {% for PRECISION_NUM in range(0,COMPUTATION_PRECISIONS|length) %}
-template void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::nonConservativeProduct(const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const Q, const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const* const gradQ, {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}** const BgradQ);
+template void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::nonconservativeProduct(
+  const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}*__restrict__ Q,
+  const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}*__restrict__ deltaQ,
+  const tarch::la::Vector<Dimensions, double> &volumeX,
+  const tarch::la::Vector<Dimensions, double> &volumeH,
+  double t,
+  double dt,
+  int normal,
+  {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}*__restrict__ BgradQ
+);
 {% endfor%}
-{% else %}
-template<typename T>
-void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::nonConservativeProduct(
-  const T* const Q,      //Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
-  const T* const gradQ,  //Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
-  T* const BgradQ       //BgradQ[{{NUMBER_OF_UNKNOWNS}}]
-)  {
-  logTraceInWith3Arguments( "nonConservativeProduct(...)", x, t, normal );
-  // @todo implement
-  logTraceOut( "nonConservativeProduct(...)" );
-}
 
-{% for PRECISION_NUM in range(0,COMPUTATION_PRECISIONS|length) %}
-template void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::nonConservativeProduct(const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const Q, const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const gradQ, {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const BgradQ);
-{% endfor%}
-{% endif %}
 {% endif %}
 
 

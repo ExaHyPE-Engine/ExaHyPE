@@ -69,7 +69,7 @@ void riemannSolverNonlinear(SolverType& solver, double* FL, double* FR,
   // compute fluxes (and fluctuations for non-conservative PDEs)
   double Qavg[numberOfData];
   idx2 idx_gradQ(Dimensions, numberOfVariables);
-  double gradQ[Dimensions][numberOfVariables] = {0.0};
+  double gradQ[numberOfVariables] = {0.0};
   double ncp[numberOfVariables]               = {0.0};
   {
     idx3 idx_FLR(basisSize, basisSize, numberOfVariables);
@@ -80,13 +80,22 @@ void riemannSolverNonlinear(SolverType& solver, double* FL, double* FR,
 
         if(useNCP) { // we don't use matrixB but the NCP call here.
           for(int l=0; l < numberOfVariables; l++) {
-            gradQ[direction][l] = QR[idx_QLR(i, j, l)] - QL[idx_QLR(i, j, l)];
+            gradQ[l] = QR[idx_QLR(i, j, l)] - QL[idx_QLR(i, j, l)];
           }
           for(int l=0; l < numberOfData; l++) {
             Qavg[l] = 0.5 * (QR[idx_QLR(i, j, l)] + QL[idx_QLR(i, j, l)]);
           }
           
-          solver.nonConservativeProduct(Qavg, gradQ[0], ncp);
+          solver.nonconservativeProduct(
+            Qavg,
+            gradQ,
+            faceCentre,
+            dx,
+            t,
+            dt,
+            direction,
+            ncp
+          );
         }
 
         // skip parameters

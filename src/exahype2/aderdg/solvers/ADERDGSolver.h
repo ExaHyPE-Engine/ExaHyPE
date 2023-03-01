@@ -60,16 +60,19 @@ public:
       exit(1);
     }
     
-    virtual void nonConservativeProduct(const double* const Q, const double* const gradQ, double* const BgradQ) {
+    virtual void nonconservativeProduct(
+      const double*__restrict__ Q,
+      const double*__restrict__ deltaQ,
+      const tarch::la::Vector<Dimensions, double> &faceCentre,
+      const tarch::la::Vector<Dimensions, double> &volumeH,
+      double t,
+      double dt,
+      int normal,
+      double*__restrict__ BgradQ) {
       // should not be called
       exit(1);
     }
 
-    virtual void nonConservativeProduct(const double* const Q, const double* const* const gradQ, double** const BgradQ) {
-      // should not be called
-      exit(1);
-    }
-    
     virtual void algebraicSource(const tarch::la::Vector<Dimensions, double>& x, double t, const double *const Q, double *S) {
       // should not be called
       exit(1);

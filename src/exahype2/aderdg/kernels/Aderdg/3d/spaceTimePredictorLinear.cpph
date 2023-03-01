@@ -87,14 +87,7 @@ void spaceTimePredictorLinear(SolverType& solver,
   pCompType fluxDerivative[basisSize*numberOfVariables];
   idx2 idx_fluxDerivative(basisSize, numberOfVariables);
   
-  idx2 idx_ncpResult(Dimensions, numberOfVariables);
-  pCompType* ncpResult[Dimensions];
-  pCompType ncpResult_vec[numberOfVariables*Dimensions] = {0.0};
-  
-  ncpResult[0] = &ncpResult_vec[idx_ncpResult(0,0)];
-  ncpResult[1] = &ncpResult_vec[idx_ncpResult(1,0)];
-  ncpResult[2] = &ncpResult_vec[idx_ncpResult(2,0)];
-
+  pCompType ncpResult[numberOfVariables] = {0.0};
   
   //***************************
   //**** Cauchy-Kovalewski ****
@@ -202,7 +195,7 @@ void spaceTimePredictorLinear(SolverType& solver,
             //solver.flux(&lQi[idx_lQi(i, j, k, l, 0)], F );
 
             solver.flux(
-              &lQi[idx_lQi(i, j, k, 0)],
+              &lQi[idx_lQi(i, j, k, l, 0)],
               cellCenter,
               dx,
               t,
@@ -212,7 +205,7 @@ void spaceTimePredictorLinear(SolverType& solver,
             ); //x
 
             solver.flux(
-              &lQi[idx_lQi(i, j, k, 0)],
+              &lQi[idx_lQi(i, j, k, l, 0)],
               cellCenter,
               dx,
               t,
@@ -222,7 +215,7 @@ void spaceTimePredictorLinear(SolverType& solver,
             ); //y
 
             solver.flux(
-              &lQi[idx_lQi(i, j, k, 0)],
+              &lQi[idx_lQi(i, j, k, l, 0)],
               cellCenter,
               dx,
               t,
@@ -347,16 +340,28 @@ void spaceTimePredictorLinear(SolverType& solver,
       for (int j = 0; j < basisSize; j++) {
         for (int k = 0; k < basisSize; k++) {
           for (int l = 0; l < basisSize; l++) {
-            std::fill_n(&ncpResult_vec[0],Dimensions*numberOfVariables, 0.); // zero out ncpResult
+
             pCompType* G[3];
             G[0]      = gradQ + idx_gradQ(j, k, l, 0, 0);
             G[1]      = gradQ + idx_gradQ(j, k, l, 1, 0);
             G[2]      = gradQ + idx_gradQ(j, k, l, 2, 0);
-            solver.nonConservativeProduct(&lQi[idx_lQi(i, j, k, l, 0)], G, ncpResult);
-//            solver.nonConservativeProduct(&lQi[idx_lQi(i, j, k, l, 0)], G[0], ncpResult_vec); //changes function signature to correspond to that of the nonlinear kernels, though the functioning still isn't the same
+
             for(int d = 0; d < Dimensions; d++) {
+
+              std::fill_n(ncpResult,numberOfVariables, 0.); // zero out ncpResult
+              solver.nonconservativeProduct(
+                &lQi[idx_lQi(i, j, k, l, 0)],
+                G[d],
+                cellCenter,
+                dx,
+                t,
+                dt,
+                d,
+                ncpResult
+              );
+
               for (int n = 0; n < numberOfVariables; n++) {
-                lFi[idx_lFi(i, j, k, l, d, n)] += ncpResult[d][n];
+                lFi[idx_lFi(i, j, k, l, d, n)] += ncpResult[n];
               }
             }
             

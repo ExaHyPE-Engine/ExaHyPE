@@ -67,18 +67,8 @@ void riemannSolverLinear(SolverType& solver, double* FL, double* FR,
   
   double flux[numberOfVariables];
 
-  double ncp_vec[numberOfVariables*Dimensions] = {0.0};
-  double* ncp[Dimensions];
+  double ncp[numberOfVariables] = {0.0};
   
-  ncp[0] = &ncp_vec[idx_2d(0,0)];
-  ncp[1] = &ncp_vec[idx_2d(1,0)];
-  
-  double gradQ_vec[numberOfVariables*Dimensions] = {0.0};
-  double* gradQ[Dimensions];
-  
-  gradQ[0] = &gradQ_vec[idx_2d(0,0)];
-  gradQ[1] = &gradQ_vec[idx_2d(1,0)];
-
   for(int l = 0; l < numberOfData; l++) {
     Qavg[l] = 0.5 *  (QavR[l] + QavL[l]);
   }
@@ -99,22 +89,29 @@ void riemannSolverLinear(SolverType& solver, double* FL, double* FR,
       for(int l = 0 ; l< numberOfVariables ; l++){ 
         Qdiff[l] = 0.5 * (QR[idx_QLR(j, l)] - QL[idx_QLR(j, l)]);
       }
-
-      std::copy_n(Qdiff,numberOfVariables,gradQ[0]);
-      std::copy_n(Qdiff,numberOfVariables,gradQ[1]);
-      
     
       if(useNCP) {
-        solver.nonConservativeProduct(Qavg, gradQ, ncp);
-//        solver.nonConservativeProduct(Qavg, gradQ_vec, ncp_vec); //changes function signature to correspond to that of the nonlinear kernels, though the functioning still isn't the same
-        
+
+        solver.nonconservativeProduct(
+          Qavg,
+          Qdiff,
+          faceCentre,
+          dx,
+          t,
+          dt,
+          direction,
+          ncp
+        );
+
+/* removed when the nonconservative product format was changed since it no longer fits with new form of ncp (MML)
         if(useMM){
           solver.multiplyMaterialParameterMatrix(Qavg, ncp);
         }
+*/
         
         for(int l=0; l < numberOfVariables; l++) {
-          FL[idx_FLR(j, l)] += ncp[direction][l];
-          FR[idx_FLR(j, l)] += ncp[direction][l];
+          FL[idx_FLR(j, l)] += ncp[l];
+          FR[idx_FLR(j, l)] += ncp[l];
         }
       }
       

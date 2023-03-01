@@ -364,7 +364,6 @@ int {{codeNamespace}}::fusedSpaceTimePredictorVolumeIntegral{{nameSuffix}}(
 {% else %}
     {
       pCompType* G[{{nDim}}];
-      pCompType* tmpArray_ncpResult[{{nDim}}] = { tmpArray, tmpArray+{{nVarPad}}{{', tmpArray+'~2*nVarPad if nDim==3 else ''}} };
       for (int xyz = 0; xyz < {{nDof**nDim}}; xyz++) {
         G[0] = gradQ+xyz*{{nVarPad}}; //x
         G[1] = gradQ+xyz*{{nVarPad}}+{{1*(nDof**nDim)*nVarPad}}; //y
@@ -375,12 +374,24 @@ int {{codeNamespace}}::fusedSpaceTimePredictorVolumeIntegral{{nameSuffix}}(
 #ifdef USE_IPO
         #pragma forceinline recursive
 #endif
-        solver.{{solverName}}::nonConservativeProduct(lQi+(i*{{nDof**nDim}}+xyz)*{{nDataPad}}, G, tmpArray_ncpResult);
         for(int d = 0; d < {{nDim}}; d++) {
+
+          solver.{{solverName}}::nonconservativeProduct(
+            lQi+(i*36+xyz)*12,
+            G[d],
+            volumeCentre,
+            dx,
+            timeStamp,
+            dt,
+            d,
+            &tmpArray[d*9]
+          );
+
           #pragma omp simd aligned(lFi,tmpArray:{{alignmentSize}})
           for (int n = 0; n < {{nVarPad}}; n++) {
             lFi[((d*{{nDof}}+i)*{{nDof**nDim}}+xyz)*{{nVarPad}}+n] += tmpArray[d*{{nVarPad}}+n];
           }
+          
         }
       }
     }

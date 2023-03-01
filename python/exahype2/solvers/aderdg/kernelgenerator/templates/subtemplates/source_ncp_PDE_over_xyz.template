@@ -183,13 +183,6 @@ for(int xyz = 0; xyz < {{nDof**nDim}}; xyz++) {
   #endif
   solver.{{solverName}}::fusedSource({{inputQ}}+{{inputQ_iterator}}, gradQ_PDE, {{sourceArray}}{{addShift}});
 {% else %}{# useFusedSource #}
-{% if useNCP %}
-  // NCP
-  #ifdef USE_IPO
-    #pragma forceinline recursive
-  #endif
-  solver.{{solverName}}::nonConservativeProduct({{inputQ}}+{{inputQ_iterator}}, gradQ_PDE, tmp_ncp_output);
-{% endif %}
 {% if useSource %}
   // Source
   #ifdef USE_IPO
@@ -197,11 +190,29 @@ for(int xyz = 0; xyz < {{nDof**nDim}}; xyz++) {
   #endif
   // TODO(JMG): Pass x/t here to enable spatio-temporal source terms.
   solver.{{solverName}}::algebraicSource({0.0}, 0.0, {{inputQ}}+{{inputQ_iterator}}, {{sourceArray}}{{addShift}});
+{% else %}
+std::fill_n(&{{sourceArray}}[0{{addShift}}], {{nVarPad}}, 0.0);
 {% endif %}
 {% if useNCP %}
-  #pragma omp simd aligned({{sourceArray}},tmp_ncp_output:{{alignmentSize}})
-  for(int n = 0; n<{{nVarPad}}; n++) {
-    {{sourceArray}}[n{{addShift}}] {{ '-=' if useSource else '= -'}} tmp_ncp_output[n];{# if not useSource set and update lSi #}
+  // NCP
+  for(int d=0; d<Dimensions; d++){
+    #ifdef USE_IPO
+      #pragma forceinline recursive
+    #endif
+    solver.{{solverName}}::nonconservativeProduct(
+      {{inputQ}}+{{inputQ_iterator}}, 
+      gradQ_PDE+{{nVarPad}}*d, 
+      volumeCentre,
+      dx,
+      timeStamp,
+      dt,
+      d,
+      tmp_ncp_output  
+    );
+    #pragma omp simd aligned({{sourceArray}},tmp_ncp_output:{{alignmentSize}})
+    for(int n = 0; n<{{nVarPad}}; n++) {
+      {{sourceArray}}[n{{addShift}}] -= tmp_ncp_output[n];
+    }
   }
 {% endif %}
 {% endif %}{# useFusedSource #}

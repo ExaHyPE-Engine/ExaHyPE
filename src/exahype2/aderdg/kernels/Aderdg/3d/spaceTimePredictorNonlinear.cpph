@@ -381,13 +381,23 @@ int aderPicardLoopNonlinear(SolverType& solver,
               } else {
                 std::fill_n(S, numberOfVariables, 0.0);
               }
+
               if (useNCP) {
                 pCompType ncp[numberOfVariables];
-                solver.nonConservativeProduct(
+                for(int d=0; d<Dimensions; d++){
+                  solver.nonconservativeProduct(
                     lQi + idx_lQi(j, k, l, i, 0),
-                    gradQCur + idx_gradQ(j, k, l, 0, 0), ncp);
-                for (int l = 0; l < numberOfVariables; l++) {
-                  S[l] -= ncp[l];
+                    gradQCur + idx_gradQ(j, k, l, 0, 0)+d*numberOfVariables,
+                    cellCenter,
+                    dx,
+                    t,
+                    dt,
+                    d,
+                    ncp
+                  );
+                  for (int l = 0; l < numberOfVariables; l++) {
+                   S[l] -= ncp[l];
+                  }
                 }
               }
 

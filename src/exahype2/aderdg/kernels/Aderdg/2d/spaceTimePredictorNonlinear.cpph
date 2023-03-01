@@ -265,9 +265,21 @@ int aderPicardLoopNonlinear(SolverType& solver,
             }
             if(useNCP) {
               pCompType ncp[numberOfVariables];
-              solver.nonConservativeProduct(lQi+idx_lQi(k, l, i, 0), gradQCur+idx_gradQ(k, l, 0, 0), ncp);
-              for(int l=0; l<numberOfVariables; l++) {
-                S[l] -= ncp[l];
+              for(int d=0; d<Dimensions; d++){
+                //solver.nonConservativeProduct(lQi+idx_lQi(k, l, i, 0), gradQCur+idx_gradQ(k, l, 0, 0), ncp);
+                solver.nonconservativeProduct(
+                  lQi+idx_lQi(k, l, i, 0),
+                  gradQCur+idx_gradQ(k, l, 0, 0)+d*numberOfVariables,
+                  cellCenter,
+                  dx,
+                  t,
+                  dt,
+                  d,
+                  ncp
+                );
+                for(int l=0; l<numberOfVariables; l++) {
+                  S[l] -= ncp[l];
+                }
               }
             }
 
@@ -277,6 +289,7 @@ int aderPicardLoopNonlinear(SolverType& solver,
           }
         }
       }
+
     }  // end time dof
 
 

@@ -66,10 +66,10 @@ class Handle_boundary(AbstractAderDGActionSet):
           *      if normal = 1, they access components 0 and 2,
           *      if normal = 2, they access components 0 and 1,
           */
-          nodePosition[std::max[(1-normal), 0]] += repositories::{{SOLVER_INSTANCE}}.QuadraturePoints1d[i]
-                                                   *marker.h()[std::max[(1-normal), 0]];
-          nodePosition[std::min[2, (3-normal)]] += repositories::{{SOLVER_INSTANCE}}.QuadraturePoints1d[j]
-                                                   *marker.h()[std::min[2, (3-normal)]];
+          nodePosition[std::max((1-normal), 0)] += repositories::{{SOLVER_INSTANCE}}.QuadraturePoints1d[i]
+                                                   *marker.h()[std::max((1-normal), 0)];
+          nodePosition[std::min(2, (3-normal))] += repositories::{{SOLVER_INSTANCE}}.QuadraturePoints1d[j]
+                                                   *marker.h()[std::min(2, (3-normal))];
         #endif
 
         repositories::{{SOLVER_INSTANCE}}.boundaryConditions(
