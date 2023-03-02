@@ -18,7 +18,6 @@
 
 
 #pragma once
-#endif
 
 #define CompilerHasProcStat
 
@@ -51,6 +50,7 @@
 
 #if !defined(AlignmentOnHeap)
 #define AlignmentOnHeap 64
+#endif
 
 /**
  * Clang requires us to put a static keyword in front of header file implementations,
