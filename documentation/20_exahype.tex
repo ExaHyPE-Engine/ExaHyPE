@@ -2751,13 +2751,13 @@ subfragments of the overall mesh are dumped into the file in the first place.
 %
 The most sophisticated variant tailors the actual file writer per solver to the
 needs of the code.
-Each solver has a function
+Each solver has an attribute \texttt{select\_dofs\_to\_print}.
+It is set to \texttt{None} by default which means that all quantities per degree
+of freedom are dumped into the output.
+You can pick only a few entries though via
 
 \begin{code}
-def add_actions_to_plot_solution(self, step, output_path):
-  step.add_action_set( peano4.toolbox.blockstructured.PlotPatchesInPeanoBlockFormat( 
-    filename=output_path + "solution-" + self._name, 
-    ...
+my_solver.select_dofs_to_print = [4,5,8]
 \end{code}
 
 
