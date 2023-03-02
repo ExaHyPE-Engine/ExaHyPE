@@ -2657,7 +2657,7 @@ through the Python API.
 
 \section{Postprocessing}
 
-\subsection{IO}
+\subsection{Visualisation}
 
 \ExaHyPE\ relies on \Peano's standard output routines to write file dumps. 
 As the files can be rather large, the simulation configuration allows you to
@@ -2679,21 +2679,6 @@ The coarser levels hence hold garbage.
 I therefore strongly recommend that you always run the render script with the
 option \texttt{-filter-fine-grid}.
 This makes the script throw away all coarser resolutions.
-
-
-\paragraph{Reduce output size}
-
-By default, \ExaHyPE\ maps each Finite Volumne and each DG quadrature point onto
-a vertex in the output file. 
-This can result in large meshes.
-\Peano's render script provides a filter such that you see only the patch or
-cell average.
-
-
-Further to that, consult the documentation of your project's
-\texttt{set\_global\_simulation\_parameters}. 
-You can spatially filter right within \ExaHyPE, i.e.~ask the code that only
-subfragments of the overall mesh are dumped into the file in the first place.
 
 
 \paragraph{Finite Volumes}
@@ -2727,6 +2712,54 @@ anymore.
 Alternatively, 
 you can averaging over cells and display only the average.
 Consult the script's help.
+
+
+\subsection{Reduce output size}
+%
+%
+%
+By default, \ExaHyPE\ maps each Finite Volume and each DG quadrature point onto
+a vertex in the output file, i.e.~it maps the compute mesh onto an unstructured
+(visualisation) mesh.
+This can result in large data dumps.
+\Peano's render script provides a filter such that you see only the patch or
+cell average.
+However, this is a postprocessing step.
+Many users instead want to restrict the memory footprint a priori.
+
+
+\paragraph{Dump frequency}.
+%
+%
+An obvious strategy to bring the memory footprint down is to print less often.
+For this, you reduce the plot frequency in
+\texttt{set\_global\_simulation\_parameters} or you make the code dump the first
+snapshot later.
+
+
+\paragraph{Cut out part of the computational domain}.
+%
+%
+Further to that, consult the documentation of your project's
+\texttt{add\_plot\_filter}. 
+You can spatially filter right within \ExaHyPE, i.e.~ask the code that only
+subfragments of the overall mesh are dumped into the file in the first place.
+
+
+\paragraph{Tailor output}.
+%
+%
+The most sophisticated variant tailors the actual file writer per solver to the
+needs of the code.
+Each solver has a function
+
+\begin{code}
+def add_actions_to_plot_solution(self, step, output_path):
+  step.add_action_set( peano4.toolbox.blockstructured.PlotPatchesInPeanoBlockFormat( 
+    filename=output_path + "solution-" + self._name, 
+    ...
+\end{code}
+
 
 
 \subsection{Tracers}

@@ -223,6 +223,7 @@ class FV(object):
     self._solver_template_file_class_name = None
 
     self._plot_description = ""
+    self.select_dofs_to_print = None
     
     self._action_set_initial_conditions                       = None
     self._action_set_initial_conditions_for_grid_construction = None
@@ -763,7 +764,8 @@ The finest mesh width of """ + str(self.get_finest_volume_size(domain_size)) + "
 #include "../repositories/SolverRepository.h"
 """,
       precision="PlotterPrecision",
-      time_stamp_evaluation="0.5*(repositories::getMinTimeStamp()+repositories::getMaxTimeStamp())"
+      time_stamp_evaluation="0.5*(repositories::getMinTimeStamp()+repositories::getMaxTimeStamp())",
+      select_dofs = self.select_dofs_to_print
     ))
 
     if self._plot_grid_properties:    

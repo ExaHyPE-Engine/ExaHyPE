@@ -29,7 +29,10 @@ class PlotPatchesInPeanoBlockFormat(ActionSet):
                metadata = "", 
                mapping = [], 
                guard="true", 
-               additional_includes="", precision=3):
+               additional_includes="", 
+               precision=3,
+               select_dofs = None
+               ):
     """
     
       plot_cell_data: Boolean
@@ -42,6 +45,9 @@ class PlotPatchesInPeanoBlockFormat(ActionSet):
       mapping: Series of d-tuples which describe how to distort quadrature/sampling
         points within a reference cube/square. Can be empty alternatively.
          
+      select_dofs: [Int] or None
+        You can make the plotter only plot some of the dofs of interest
+           
     """
     self._plot_cell_data           = plot_cell_data
     
@@ -51,16 +57,17 @@ class PlotPatchesInPeanoBlockFormat(ActionSet):
     
     self.additional_includes       = additional_includes
 
-    dofs_per_axis = 0    
-    #if plot_cell_data:
     dofs_per_axis = patch.dim[0]
-    #else:
-    #  dofs_per_axis = patch.dim[0]-1
-
       
     self.d[ "DOFS_PER_AXIS" ]      = str(dofs_per_axis)
-      
-    self.d[ "UNKNOWNS" ]           = str(patch.no_of_unknowns)
+
+    if select_dofs==None:     
+      self.d[ "UNKNOWNS" ]         = str(patch.no_of_unknowns)
+    else:
+      self.d[ "UNKNOWNS" ]         = str(len(select_dofs))
+
+    self.d[ "SELECT_DOFS" ]        = select_dofs
+    
     self.d[ "NAME" ]               = dataset_name
     self.d[ "DESCRIPTION" ]        = description
     self.d[ "METADATA" ]           = metadata
