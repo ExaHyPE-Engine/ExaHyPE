@@ -167,7 +167,7 @@ namespace exahype2 {
          * Specialisation without the gather.
          */
         template <>
-        static double reduceMaxEigenvalue_LoopBody(
+        double reduceMaxEigenvalue_LoopBody(
           const double* __restrict__                   QOut,
           const exahype2::enumerator::AoSLexicographicEnumerator&                    QOutEnumerator,
           exahype2::fd::MaxEigenvalue                  maxEigenvalue,

@@ -1,0 +1,189 @@
+# This file is part of the ExaHyPE2 project. For conditions of distribution and 
+# use, please see the copyright notice at www.peano-framework.org
+
+from .AbstractAderDGActionSet import AbstractAderDGActionSet
+
+#import peano4
+import peano4.solversteps
+import jinja2
+
+class Correction_kernelgenerator(AbstractAderDGActionSet):
+  """
+  
+  The linear combination of the Runge Kutta trials has to be projected onto
+  the faces, so we can then solve the Riemann problems. So the projection 
+  happens in one grid sweep, the corresponding Riemann solve in the next one.
+  
+  
+  """
+  
+  TemplateProject = """
+  if ({{PREDICATE}}) {
+  
+    const double timeStamp = fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStamp();
+  
+    // needs to declare and define timeStepSize
+    {{COMPUTE_TIME_STEP_SIZE}}
+    
+    
+    const int Order = {{ORDER}};
+    const int NumberOfVariables = {{NUMBER_OF_UNKNOWNS}};
+    const int NumberOfParameters = {{NUMBER_OF_AUXILIARY_VARIABLES}};
+    
+    #if Dimensions==2
+    constexpr int spaceBasisSize     = (Order+1)*(Order+1);
+    constexpr int spaceFaceSize      = (Order+1);
+    #else
+    constexpr int spaceBasisSize     = (Order+1)*(Order+1)*(Order+1);
+    constexpr int spaceFaceSize      = (Order+1)*(Order+1);
+    #endif
+    
+    {{SOLUTION_STORAGE_PRECISION}}* luh = fineGridCell{{UNKNOWN_IDENTIFIER}}.value;
+    {{CORRECTOR_COMPUTATION_PRECISION}} lduh[generated::kernels::AderDG::{{LINEARITY}}::getUpdateSize()]{0.0};
+
+    const int basisElementsByFace = generated::kernels::AderDG::{{LINEARITY}}::getBndFaceSize();
+    const int fluxElementsByFace  = generated::kernels::AderDG::{{LINEARITY}}::getBndFluxSize();
+    
+    {{CORRECTOR_COMPUTATION_PRECISION}} FL[fluxElementsByFace];
+    {{CORRECTOR_COMPUTATION_PRECISION}} FR[fluxElementsByFace];
+    
+#if Dimensions==2
+    double cellCentre[Dimensions] = {marker.x()[0], marker.x()[1]};
+    double cellSize[Dimensions]   = {marker.h()[0], marker.h()[1]};
+#else
+    double cellCentre[Dimensions] = {marker.x()[0], marker.x()[1], marker.x()[2]};  
+    double cellSize[Dimensions]   = {marker.h()[0], marker.h()[1], marker.h()[2]};
+#endif
+    
+    /*
+    2d: 0,1,2,3 -> 0,2,1,3
+    3d: 0,1,2,3,4,5 -> 0,3,1,4,2,5
+    */
+    
+    for(int d=0; d<Dimensions; d++){
+    
+      //negative face
+      {{PREDICTOR_STORAGE_PRECISION}}* QL = fineGridFaces{{UNKNOWN_IDENTIFIER}}Estimates(d).value;
+      {{PREDICTOR_STORAGE_PRECISION}}* QR = fineGridFaces{{UNKNOWN_IDENTIFIER}}Estimates(d).value+basisElementsByFace;
+
+      /*
+      **  Data from the face is copied into a buffer because operations are directly performed on this
+      **  by the kernels and we want the faces to remain unmodified for the neighbour.
+      **  The solution elements are only accessed but not used as buffers and therefore no copying is needed.
+      */
+      std::copy_n(fineGridFaces{{UNKNOWN_IDENTIFIER}}FluxEstimates(d).value, fluxElementsByFace, FL);
+      std::copy_n(fineGridFaces{{UNKNOWN_IDENTIFIER}}FluxEstimates(d).value +fluxElementsByFace, fluxElementsByFace, FR);
+      
+      const double inverseDxDirection = 1/marker.h()[d];      
+      tarch::la::Vector<Dimensions,double> faceCentre = marker.x();
+      faceCentre[d] -= 0.5*marker.h()[d];
+
+      generated::kernels::AderDG::{{LINEARITY}}::riemannSolver<{{PREDICTOR_STORAGE_PRECISION}}, {{CORRECTOR_COMPUTATION_PRECISION}}>(
+        repositories::{{SOLVER_INSTANCE}},
+        FL,
+        FR,
+        QL,
+        QR,
+        timeStamp,
+        timeStepSize,
+        faceCentre,
+        marker.h(),
+        d //direction
+      );
+
+      generated::kernels::AderDG::{{LINEARITY}}::faceIntegral<{{CORRECTOR_COMPUTATION_PRECISION}}>(
+        lduh,
+        FR,
+        d, //direction
+        0, //orientation
+        inverseDxDirection
+      );
+
+
+      //positive face
+      QL = fineGridFaces{{UNKNOWN_IDENTIFIER}}Estimates(d+Dimensions).value;
+      QR = fineGridFaces{{UNKNOWN_IDENTIFIER}}Estimates(d+Dimensions).value+basisElementsByFace;
+      std::copy_n(fineGridFaces{{UNKNOWN_IDENTIFIER}}FluxEstimates(d+Dimensions).value, fluxElementsByFace, FL);
+      std::copy_n(fineGridFaces{{UNKNOWN_IDENTIFIER}}FluxEstimates(d+Dimensions).value +fluxElementsByFace, fluxElementsByFace, FR);
+
+      faceCentre[d] += marker.h()[d];
+      
+      generated::kernels::AderDG::{{LINEARITY}}::riemannSolver<{{PREDICTOR_STORAGE_PRECISION}}, {{CORRECTOR_COMPUTATION_PRECISION}}>(
+        repositories::{{SOLVER_INSTANCE}},
+        FL,
+        FR,
+        QL,
+        QR,
+        timeStamp,
+        timeStepSize,
+        faceCentre,
+        marker.h(),
+        d //direction
+      );
+
+      generated::kernels::AderDG::{{LINEARITY}}::faceIntegral<{{CORRECTOR_COMPUTATION_PRECISION}}>(
+        lduh,
+        FL,
+        d, //direction
+        1, //orientation
+        inverseDxDirection
+      );
+
+      
+    }// for d    
+    
+
+    generated::kernels::AderDG::{{LINEARITY}}::solutionUpdate( 
+      luh,
+      luh, 
+      lduh, 
+      timeStepSize
+    );
+
+
+    {{COMPUTE_NEW_TIME_STEP_SIZE}}
+  
+    fineGridCell{{SOLVER_NAME}}CellLabel.setTimeStamp(timeStamp+timeStepSize);
+    fineGridCell{{SOLVER_NAME}}CellLabel.setTimeStepSize(newTimeStepSize);
+    fineGridCell{{SOLVER_NAME}}CellLabel.setHasUpdated(true);
+      
+    repositories::{{SOLVER_INSTANCE}}.update(newTimeStepSize, timeStamp+timeStepSize, marker.h()(0) );
+   
+  }
+"""
+  
+  def __init__(self,solver,guard):
+    """
+    
+    guard_project: String (C++ code)
+      Predicate which controls if the solution is actually projected
+      
+    guard_safe_old_time_step: String (C++ code)
+      Predicate which controls if the projection should be copied into
+      the old solution and the time step should also be moved over
+    
+    """
+    super(Correction_kernelgenerator,self).__init__(solver)
+    self.guard            = guard
+    
+
+  def get_body_of_operation(self,operation_name):
+    result = ""
+    if operation_name==peano4.solversteps.ActionSet.OPERATION_TOUCH_CELL_FIRST_TIME:
+      d = {}
+      self._solver._init_dictionary_with_default_parameters(d)
+      self._solver.add_entries_to_text_replacement_dictionary(d)
+      d[ "PREDICATE" ]                 = self.guard
+      result = jinja2.Template(self.TemplateProject).render(**d)
+      pass 
+    return result
+
+
+  def get_action_set_name(self):
+    return __name__.replace(".py", "").replace(".", "_")
+
+  def get_includes(self):
+    linearity = ( "linear" if self._solver._is_linear else "nonlinear" )
+    return super(Correction_kernelgenerator,self).get_includes() + """
+#include "../generated/kernels/aderdg/""" + linearity + """/Kernels.h"
+      """

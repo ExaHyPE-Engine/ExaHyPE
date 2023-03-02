@@ -124,7 +124,8 @@ void ::examples::exahype2::swe::swe::nonconservativeProduct(
   const tarch::la::Vector<Dimensions,double>&  faceCentre,
   const tarch::la::Vector<Dimensions,double>&  volumeH,
   double                                       t,
-  int                                          normal,
+  double 									   dt,
+  int                                          normal,  
   double * __restrict__ BgradQ // BgradQ[3]
 )  {
 	  double g = 9.81;

@@ -765,9 +765,40 @@ if test "$toolbox_exahype" != false; then
   LDFLAGS_PEANO_ASSERTS+=" -L$srcdir_full_path/src/exahype2 "
   LDFLAGS_PEANO_TRACE+="   -L$srcdir_full_path/src/exahype2 "
   LDFLAGS_PEANO_DEBUG+="   -L$srcdir_full_path/src/exahype2 "
+
+  #Libxsmm
+  echo "Checking whether libxsmm needs to be installed or built"
+  if @<:@ ! -d Submodules/libxsmm @:>@; then
+    mkdir Submodules/libxsmm
+    echo "Created libxsmm directory in Submodules"
+  fi
+  if @<:@ ! -e Submodules/libxsmm/.git @:>@; then
+    echo "Initialize libxsmm submodule"
+    git submodule update --init Submodules/libxsmm
+    #Clean documentation to save space
+    cd Submodules/libxsmm
+    rm -rf samples/ #over 100M of not needed stuff
+    rm -rf documentation/ #around 10M of documentation
+    cd ../..
+  fi
+  
+  # build libxsmm
+  if @<:@ ! -d Submodules/libxsmm/bin @:>@ || @<:@ ! -e Submodules/libxsmm/bin/libxsmm_gemm_generator @:>@; then
+    REBUILD_LIBXSMM=true
+  fi
+  if @<:@ "$REBUILD_LIBXSMM" = true @:>@; then
+    echo "Build libxsmm gemm generator"
+    cd Submodules/libxsmm
+    git restore samples
+    make realclean --silent
+    make generator --silent
+    rm -rf samples
+    cd ../..
+  fi
+  echo "Finished building libxsmm generator"
+
+
 fi
-
-
 
 
 #
