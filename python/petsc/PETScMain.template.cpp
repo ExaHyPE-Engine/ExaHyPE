@@ -113,9 +113,9 @@ bool selectNextAlgorithmicStep() {
           continueToSolve = false;
         }
         break;
-      case repositories::StepRepository::Steps::CreateGrid:
+      case repositories::StepRepository::Steps::Plot:
       case repositories::StepRepository::Steps::Undef:
-        assertion(false);
+         assertion(false);
         break;
     }
   }
