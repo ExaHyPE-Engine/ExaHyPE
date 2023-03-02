@@ -1,12 +1,12 @@
 # This file is part of the ExaHyPE2 project. For conditions of distribution and 
 # use, please see the copyright notice at www.peano-framework.org
-from exahype2.solvers.rkfd.OneSweepPerRungeKuttaStep import OneSweepPerRungeKuttaStep
+from exahype2.solvers.rkfd.SeparateSweeps import SeparateSweeps
 from exahype2.solvers.rkfd.PDETerms    import PDETerms
 
 
 import jinja2
 
-from .kernels import create_compute_Riemann_kernel_for_FD4
+from .kernels import create_compute_kernel_for_FD4
 
 from exahype2.solvers.rkfd.kernels import create_abstract_solver_declarations
 from exahype2.solvers.rkfd.kernels import create_abstract_solver_definitions
@@ -14,7 +14,7 @@ from exahype2.solvers.rkfd.kernels import create_solver_declarations
 from exahype2.solvers.rkfd.kernels import create_solver_definitions
 
 from exahype2.solvers.rkfd.kernels import SolverVariant
-from exahype2.solvers.rkfd.kernels import RiemannKernelVariant
+from exahype2.solvers.rkfd.kernels import KernelVariant
 
 from exahype2.solvers.rkfd.FixedTimeSteppingCodeSnippets import FixedTimeSteppingCodeSnippets
 
@@ -22,7 +22,7 @@ from .amr import switch_to_FD4_tensor_product_interpolation
 from .amr import switch_to_FD4_tensor_product_restriction
 
 
-class GlobalFixedTimeStep( OneSweepPerRungeKuttaStep ):
+class GlobalFixedTimeStep( SeparateSweeps ):
   def __init__(self, 
     name, patch_size, rk_order, unknowns, auxiliary_variables, min_meshcell_h, max_meshcell_h, normalised_time_step_size,
     flux=PDETerms.User_Defined_Implementation, 
@@ -102,12 +102,14 @@ class GlobalFixedTimeStep( OneSweepPerRungeKuttaStep ):
 
     if not                  KOSigma==None:  self._KO_Sigma                                  = KOSigma
 
-    self._compute_kernel_call = create_compute_Riemann_kernel_for_FD4(
-      self._flux_implementation, self._ncp_implementation, self._source_term_implementation, 
-      compute_max_eigenvalue_of_next_time_step=False,
-      solver_variant = SolverVariant.WithVirtualFunctions,
-      riemann_kernel_variant = RiemannKernelVariant.PatchWiseAoSHeap,
-      KOSigma=self._KO_Sigma
+    self._compute_kernel_call = create_compute_kernel_for_FD4(
+      self._flux_implementation, 
+      self._ncp_implementation, 
+      self._source_term_implementation, 
+      compute_max_eigenvalue_of_next_time_step = False,
+      solver_variant                           = SolverVariant.WithVirtualFunctions,
+      kernel_variant                           = KernelVariant.PatchWiseAoSHeap,
+      KOSigma                                  = self._KO_Sigma
     )
 
     solver_code_snippets = FixedTimeSteppingCodeSnippets(self._normalised_time_step_size,False)

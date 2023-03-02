@@ -1166,14 +1166,11 @@ void peano4::grid::Spacetree::evaluateGridControlEvents(
     if (refine) {
       bool haveTriggeredRefinementForAtLeastOneVertex = false;
       dfor2(i)
-        tarch::la::Vector<Dimensions,double> x = state.getX() + tarch::la::multiplyComponents( tarch::la::convertScalar<double>(i), state.getH() );
-
         if (
           isVertexAdjacentToLocalSpacetree( fineGridVertices[iScalar], true, true )
           and
           fineGridVertices[iScalar].getState()==GridVertex::State::Unrefined
         ) {
-          logDebug( "evaluateGridControlEvents(...)", "refine vertex " << fineGridVertices[iScalar].toString() << " at " << x );
           fineGridVertices[iScalar].setState( GridVertex::State::RefinementTriggered );
           haveTriggeredRefinementForAtLeastOneVertex = true;
         }

@@ -118,7 +118,7 @@ class peano4::stacks::STDVectorStack {
 
 
     /**
-     * One is not allowed to copy a stack but it has to be empty.
+     * One is allowed to copy a stack but it has to be empty.
      */
     STDVectorStack&  operator=( const STDVectorStack<T>& stack ) {
       assertionEquals( stack._currentElement, 0 );
@@ -171,7 +171,13 @@ class peano4::stacks::STDVectorStack {
           return _size;
         }
 
-        T get(int index) {
+        const T& get(int index) const {
+          assertion2( index>=0, index, _size );
+          assertion2( index<_size, index, _size );
+          return _stack->_data[_baseElement+index];
+        }
+
+        T& get(int index) {
           assertion2( index>=0, index, _size );
           assertion2( index<_size, index, _size );
           return _stack->_data[_baseElement+index];
@@ -198,7 +204,7 @@ class peano4::stacks::STDVectorStack {
          */
         PushBlockStackView(int size, int base, peano4::stacks::STDVectorStack<T>* stack):
           _size(size),
-		  _baseElement(base),
+          _baseElement(base),
           _stack(stack) {
         }
 
@@ -210,7 +216,15 @@ class peano4::stacks::STDVectorStack {
           return _size;
         }
 
+
         /**
+         * Set an entry
+         *
+         * But in Peano's context, we only need the move semantics logically,
+         * as we only migrate stuff over stacks. Therefore, I tried to play
+         * around with move semantics, but this always broke the code. So I
+         * thought I'd better stop doing this and use plain old copies here.
+         *
          * @return Pointer to element set
          */
         T* set(int index, const T& value) {
@@ -220,19 +234,20 @@ class peano4::stacks::STDVectorStack {
           return &(_stack->_data[_baseElement+index]);
         }
 
+
+        const T& get(int index) const {
+          assertion2( index>=0, index, _size );
+          assertion2( index<_size, index, _size );
+          return _stack->_data[_baseElement+index];
+        }
+
+
         T& get(int index) {
           assertion2( index>=0, index, _size );
           assertion2( index<_size, index, _size );
           return _stack->_data[_baseElement+index];
         }
 
-        #if PeanoDebug>=1
-        T get(int index) const {
-          assertion2( index>=0, index, _size );
-          assertion2( index<_size, index, _size );
-          return _stack->_data[_baseElement+index];
-        }
-        #endif
 
         std::string toString() const {
           std::ostringstream msg;
@@ -243,13 +258,30 @@ class peano4::stacks::STDVectorStack {
         }
     };
 
+
     /**
      * Pops element from a stack.
+     *
+     * I have played around with an implementation of this routine via moves,
+     * i.e. as
+     *
+     * <pre>
+    T pop() {
+      assertion1(_currentElement>0,_currentElement);
+      _currentElement--;
+      return std::move( _data[_currentElement] );
+    }
+       </pre>
+     *
+     * I put the move into this routine to highlight that we are actually
+     * moving stuff out of the container. However, this move is not required
+     * and, according to the C++ standard, degenerates to the identify here. I'm
+     * also not sure if it preserved the semantics.
      */
     T pop() {
       assertion1(_currentElement>0,_currentElement);
       _currentElement--;
-      return _data[_currentElement];
+      return std::move( _data[_currentElement] );
     }
 
 
@@ -264,6 +296,19 @@ class peano4::stacks::STDVectorStack {
       return _data[_currentElement-1-shift];
     }
 
+
+    /**
+     * Get top element or shiftth top element. We start to count with
+     * 0, i.e. a shift of 0 (default) really returns the top element.
+     * A shift of 3 returns the fourth element from the stack
+     */
+    const T& top(int shift=0) const {
+      assertion1(shift>=0,shift);
+      assertion2(_currentElement>shift, _currentElement, shift);
+      return _data[_currentElement-1-shift];
+    }
+
+
     /**
      * Pushes element to a stack.
      *
@@ -273,13 +318,14 @@ class peano4::stacks::STDVectorStack {
       assertion( _currentElement <= static_cast<int>(_data.size()) );
       if (_currentElement >= static_cast<int>(_data.size()) ) {
         assertion(_currentElement - static_cast<int>(_data.size()) <= 1 );
-        _data.push_back(element);
+        _data.push_back( element );
       }
       else {
         _data[_currentElement] = element;
       }
       _currentElement++;
     }
+
 
     /**
      * This operation grabs numberOfElements from the input stack en block and
@@ -295,6 +341,7 @@ class peano4::stacks::STDVectorStack {
       PopBlockStackView result(numberOfElements, _currentElement, this);
       return result;
     }
+
 
     /**
      * Push a block on the output stack
@@ -335,6 +382,7 @@ class peano4::stacks::STDVectorStack {
       _currentElement = 0;
     }
 
+
     /**
      * Always pairs up with a finish... call. When we trigger the send, the
      * code still might insert additional elements, i.e. starting does not
@@ -363,6 +411,7 @@ class peano4::stacks::STDVectorStack {
       }
       #endif
     }
+
 
     /**
      * @see startSend()
@@ -441,6 +490,7 @@ class peano4::stacks::STDVectorStack {
       #endif
     }
 
+
     /**
      * I need this one to find out whether I'm waiting for data.
      *
@@ -450,6 +500,7 @@ class peano4::stacks::STDVectorStack {
     int sendingOrReceiving() const {
       return _ioMode==IOMode::None ? -1 : _ioRank;
     }
+
 
     /**
      * Reversing a stream is something I need extremely rarely. The biggest application

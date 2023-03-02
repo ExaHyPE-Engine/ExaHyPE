@@ -40,6 +40,8 @@ ExaHyPE2Sources = \
   fd/PatchUtils.cpp \
   fd/LoopBody.cpp \
   fd/fd4/FD4_patchwise_functors.cpp \
+  fd/tests/SommerfeldBCTest.cpp\
+  fd/fd4/LoopBody.cpp \
   fv/BoundaryConditions.cpp \
   fv/PatchUtils.cpp \
   fv/PatchAccess.cpp \

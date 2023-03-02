@@ -352,7 +352,7 @@ void applications::exahype2::ccz4::Psi4Calc(double* Psi4, const double* const Q,
     const double traceK = Q[53];
     const double dtraceK[3] = {gradQin[53][0], gradQin[53][1], gradQin[53][2]};
 
-    const double phi = std::exp(std::fmax(-20., std::fmin(20.,Q[54])));
+    const double phi = std::fmax(1e-2,Q[54]); ;
     const double phi2 = phi*phi;
     const double PP[3] = {Q[55], Q[56], Q[57]};
 
@@ -418,7 +418,7 @@ void applications::exahype2::ccz4::Psi4Calc(double* Psi4, const double* const Q,
     for (int j = 0; j < 3; j++)
     for (int i = 0; i < 3; i++)
     for (int k = 0; k < 3; k++)
-    for (int l = 0; l < 3; l++) Christoffel[i][j][k]  += g_contr[k][l] * ( DD[i][j][l] + DD[j][i][l] - DD[l][i][j] ) - g_contr[k][l] * ( g_cov[j][l] * PP[i] + g_cov[i][l] * PP[j] - g_cov[i][j] * PP[l] );
+    for (int l = 0; l < 3; l++) Christoffel[i][j][k]  += g_contr[k][l] * ( DD[i][j][l] + DD[j][i][l] - DD[l][i][j] ) - g_contr[k][l]/phi * ( g_cov[j][l] * PP[i] + g_cov[i][l] * PP[j] - g_cov[i][j] * PP[l] );
 
     double dChristoffel[3][3][3][3] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
 
@@ -428,12 +428,13 @@ void applications::exahype2::ccz4::Psi4Calc(double* Psi4, const double* const Q,
     for (int k = 0; k < 3; k++)
     for (int l = 0; l < 3; l++)
     {
-        dChristoffel[k][i][j][m] += 0.5*g_contr[m][l] * (
+        dChristoffel[k][i][j][m] += 0.5*g_contr[m][l] * ( //npc part
             dDD[k][i][j][l] + dDD[i][k][j][l] + dDD[k][j][i][l] + dDD[j][k][i][l] - dDD[k][l][i][j] - dDD[l][k][i][j]
-            - g_cov[j][l]*(dPP[k][i] + dPP[i][k]) - g_cov[i][l]*(dPP[k][j]+dPP[j][k]) +  g_cov[i][j]*(dPP[k][l]+dPP[l][k]) )
-            +dgup[k][m][l]*(DD[i][j][l]+DD[j][i][l]-DD[l][i][j])
-            -dgup[k][m][l]*(g_cov[j][l]*PP[i]+g_cov[i][l]*PP[j]-g_cov[i][j]*PP[l])
-            -2*g_contr[m][l]*(DD[k][j][l]*PP[i]+DD[k][i][l]*PP[j]-DD[k][i][j]*PP[l]);
+            - g_cov[j][l]*(dPP[k][i] + dPP[i][k])/phi - g_cov[i][l]*(dPP[k][j]+dPP[j][k])/phi +  g_cov[i][j]*(dPP[k][l]+dPP[l][k])/phi )
+            +dgup[k][m][l]*(DD[i][j][l]+DD[j][i][l]-DD[l][i][j])  //src part
+            -dgup[k][m][l]*(g_cov[j][l]*PP[i]+g_cov[i][l]*PP[j]-g_cov[i][j]*PP[l])/phi
+            -2*g_contr[m][l]*(DD[k][j][l]*PP[i]+DD[k][i][l]*PP[j]-DD[k][i][j]*PP[l])/phi
+            +g_contr[m][l]*(g_cov[j][l]*PP[i]*PP[k]+g_cov[i][l]*PP[j]*PP[k]-g_cov[i][j]*PP[k]*PP[l])/phi2;
     }
 
     double Riemann[3][3][3][3] = {0};
@@ -455,7 +456,7 @@ void applications::exahype2::ccz4::Psi4Calc(double* Psi4, const double* const Q,
     double dKex[3][3][3]   = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};  //derivative  \partial_k K_ij
     for (int j = 0; j < 3; j++)
     for (int i = 0; i < 3; i++)
-    for (int k = 0; k < 3; k++) dKex[k][i][j]  = (1.0/phi2)*(dAex[k][i][j]+(1./3)*g_cov[i][j]*dtraceK[k]+(2./3)*traceK*DD[k][i][j])-2*Kex[i][j]*PP[k];
+    for (int k = 0; k < 3; k++) dKex[k][i][j]  = (1.0/phi2)*(dAex[k][i][j]+(1./3)*g_cov[i][j]*dtraceK[k]+(2./3)*traceK*DD[k][i][j])-2*Kex[i][j]*PP[k]/phi;
     
     double Cov_dKex[3][3][3]   = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};  //covariant derivative \nabla_i K_jk 
     for (int j = 0; j < 3; j++)
@@ -470,6 +471,7 @@ void applications::exahype2::ccz4::Psi4Calc(double* Psi4, const double* const Q,
 	eps_lc_u[2][1][0] =-1/pow(detgd,0.5); eps_lc_u[0][2][1] =-1/pow(detgd,0.5); eps_lc_u[1][0][2] =-1/pow(detgd,0.5);
 	
 	//calculate the orthonormal basis
+    //mainly follow the paper: https://arxiv.org/pdf/gr-qc/0610128v1.pdf
 	if ((coor[0]*coor[0]+coor[1]*coor[1])<1e-10) {coor[0]+=1e-10;}
 	double v_vec[3]={coor[0], coor[1], coor[2]};//r-direction
 	double u_vec[3]={-coor[2], coor[1], 0.0}; //phi-direction
@@ -505,6 +507,8 @@ void applications::exahype2::ccz4::Psi4Calc(double* Psi4, const double* const Q,
 	for (int a = 0; a < 3; a++) u_vec[a] = u_vec[a] / pow(dotp1,0.5);
 	
 	//EB part of Weyl
+    //reference: https://academic.oup.com/book/9640/chapter/156750056
+    //8.3.15 and 8.3.16
 	double elec[3][3] = {0,0,0,0,0,0,0,0,0};
 	double mag[3][3] = {0,0,0,0,0,0,0,0,0};
     for (int i = 0; i < 3; i++)
@@ -528,16 +532,19 @@ void applications::exahype2::ccz4::Psi4Calc(double* Psi4, const double* const Q,
 	}
 	for (int i = 0; i < 3; i++)
     for (int j = 0; j < 3; j++){
-		elec[i][j] -= elec[i][j] - g_cov[i][j]*electr / (3*phi2);
-		mag[i][j]  -= mag[i][j]  - g_cov[i][j]*magtr  / (3*phi2);
+		elec[i][j] = elec[i][j] - g_cov[i][j]*electr / (3*phi2);
+		mag[i][j]  = mag[i][j]  - g_cov[i][j]*magtr  / (3*phi2);
 	}
 
+    //use 8.6.17 and 8.6.18
+    //notice we use \bar{m}^i={1 \over \sqrt{2} }(w^i- i u^i)
+    Psi4[0]=0.0; Psi4[1]=0.0;
 	for (int i = 0; i < 3; i++)
     for (int j = 0; j < 3; j++){
     	//Real part for Psi4
 		Psi4[0] += 0.5*elec[i][j]*(w_vec[i]*w_vec[j]-u_vec[i]*u_vec[j])-0.5*mag[i][j]*(u_vec[i]*w_vec[j]+u_vec[j]*w_vec[i]);
 		//imaginary part for Psi4
-		Psi4[1] += -0.5*elec[i][j]*(u_vec[i]*w_vec[j]+u_vec[j]*w_vec[j])-0.5*mag[i][j]*(w_vec[i]*w_vec[j]-u_vec[i]*u_vec[i]);
+		Psi4[1] += -0.5*elec[i][j]*(u_vec[i]*w_vec[j]+u_vec[j]*w_vec[i])-0.5*mag[i][j]*(w_vec[i]*w_vec[j]-u_vec[i]*u_vec[j]);
 	}
 	
 }

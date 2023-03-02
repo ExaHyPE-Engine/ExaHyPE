@@ -37,16 +37,31 @@ class applications::exahype2::ccz4::FiniteVolumeCCZ4: public AbstractFiniteVolum
     /**
      * Refinement criterion
      *
-     * ExaHypE2 is guided by a maximum and minimum mesh (patch) size.
-     * All (dynamic) AMR is constrained by these values, i.e. if your
-     * mesh is coarser than the maximum mesh size, ExaHyPE 2 will
-     * automatically refine. If you try to refine further than the
-     * minimum mesh size, ExaHyPE 2 will ignore any refinement.
      *
-     * Consequently, you are fine if you work with a regular mesh:
-     * You set the maximum mesh size, and you leave everything else
-     * to Peano 4/ExaHyPE 2. If you want to have an adaptive mesh,
-     * use this routine to implement the refinement pattern.
+     * ## Single black hole, low refinement (CCZ4ReSwi==2)
+     *
+     *
+     * ## Single black hole (CCZ4ReSwi==6)
+     *
+     * Single black hole setup with two refinement levels such that the finest
+     * volume is the same size as it is in the regular grid tests. We use two
+     * level of refinement which arrange around the area of interest. Within
+     * the innermost radius of 3.5, we enforce a mesh size of 0.04, while we
+     * have a compute cell size of at least 0.15 within the radius of 5. For
+     * everything futher away than 5 from the centre, we stick to the maximum
+     * mesh size.
+     *
+     * We use the setup with
+     *
+     *         python3 ccz4.py -impl fd4-rk1-adaptive -s two-punctures -maxh 0.4 -minh 0.04 -ps 6 -plt 0.5 -et 0.5 -exn test --domain_r 9.0 --ReSwi 7 -cfl 0.1 -outdir ./ --KOSigma 8.0
+     *
+     * in standard benchmarks.
+     *
+     * Alternative settings would have been
+     *
+     *        double Radius[NumberOfRefinementLayers] = {5.0, 3.0};
+     *        double MaxH[NumberOfRefinementLayers]   = {0.3, 0.15};
+     *
      *
      * @param Q This is the (current) solution. The data is not set
      *  to a valid value throughout grid construction. That is: If
@@ -159,7 +174,7 @@ class applications::exahype2::ccz4::FiniteVolumeCCZ4: public AbstractFiniteVolum
        double                                       t,
        double                                       dt,
        double * __restrict__ S,
-       Offloadable
+       ::exahype2::Solver::Offloadable
      ) {
       memset(S, 0, NumberOfUnknowns*sizeof(double));
       source(S,Q, CCZ4LapseType, CCZ4ds, CCZ4c, CCZ4e, CCZ4f, CCZ4bs, CCZ4sk, CCZ4xi, CCZ4itau, CCZ4eta, CCZ4k1, CCZ4k2, CCZ4k3);
@@ -195,7 +210,7 @@ class applications::exahype2::ccz4::FiniteVolumeCCZ4: public AbstractFiniteVolum
       double                                       t,
       double                                       dt,
       int                                          normal,
-      Offloadable
+      ::exahype2::Solver::Offloadable
     ) {
       #if defined(CCZ4EINSTEIN)
       const double qmin = std::min({Q[0],Q[3],Q[5]});
@@ -204,19 +219,19 @@ class applications::exahype2::ccz4::FiniteVolumeCCZ4: public AbstractFiniteVolum
       const double alpha = 1.0;
       #endif
 
-  constexpr double sqrtwo = 1.4142135623730951;
-  // NOTE parameters are stored in Constants.h
-  const double tempA = alpha * std::max({sqrtwo, CCZ4e, CCZ4ds, CCZ4GLMc/alpha, CCZ4GLMd/alpha});
-  const double tempB = Q[17+normal];//DOT_PRODUCT(Q(18:20),nv(:))
-  double tem = std::max({1.0, std::abs(-tempA-tempB), std::abs(tempA-tempB)});
-  bool flag = false;
-  //for(int i=0; i<(NumberOfUnknowns-1); i++){
-  //  if ( std::abs(Q[i]) > 2.0) { flag = true; break; }
-  //}
-  //return flag? 2*tem: tem;
-  return tem;
-   //return examples::exahype2::ccz4::FiniteVolumeCCZ4::maxEigenvalue(Q, faceCentre, volumeH, t , normal);
-}
+      constexpr double sqrtwo = 1.4142135623730951;
+      // NOTE parameters are stored in Constants.h
+      const double tempA = alpha * std::max({sqrtwo, CCZ4e, CCZ4ds, CCZ4GLMc/alpha, CCZ4GLMd/alpha});
+      const double tempB = Q[17+normal];//DOT_PRODUCT(Q(18:20),nv(:))
+      double tem = std::max({1.0, std::abs(-tempA-tempB), std::abs(tempA-tempB)});
+      bool flag = false;
+      //for(int i=0; i<(NumberOfUnknowns-1); i++){
+      //  if ( std::abs(Q[i]) > 2.0) { flag = true; break; }
+      //}
+      //return flag? 2*tem: tem;
+      return tem;
+       //return examples::exahype2::ccz4::FiniteVolumeCCZ4::maxEigenvalue(Q, faceCentre, volumeH, t , normal);
+    }
 
     #if defined(GPUOffloadingOMP)
     #pragma omp end declare target
@@ -254,7 +269,7 @@ class applications::exahype2::ccz4::FiniteVolumeCCZ4: public AbstractFiniteVolum
       double                                       dt,
       int                                          normal,
       double * __restrict__                        BgradQ,     // BgradQ[5]
-      Offloadable
+      ::exahype2::Solver::Offloadable
     );
     #if defined(GPUOffloadingOMP)
     #pragma omp end declare target

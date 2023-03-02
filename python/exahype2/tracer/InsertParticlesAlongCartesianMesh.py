@@ -35,11 +35,15 @@ class InsertParticlesAlongCartesianMesh(peano4.toolbox.particles.InsertParticles
                computational_domain_offset,
                """
       particle->setNumber(0,_spacetreeId);
-      particle->setNumber(1,_particleNumberOnThisTree);
+      particle->setNumber(1,_particleNumberOnThisTree);      
       _particleNumberOnThisTree++;
+      
+      logInfo( "touchVertexFirstTime(...)", "insert particle " << particle->toString() << " into " << marker.toString() );
       """, # initialisation_call,
                noise,
-               additional_includes,
+               additional_includes + """  
+#include "Constants.h"
+""",
                guard
                )
 
@@ -49,15 +53,16 @@ class InsertParticlesAlongCartesianMesh(peano4.toolbox.particles.InsertParticles
 
 
   def get_constructor_body(self):
-    return """
+     return super( InsertParticlesAlongCartesianMesh ).get_constructor_body() + """
   _particleNumberOnThisTree = 0;
   _spacetreeId              = treeNumber;
 """
 
 
   def get_attributes(self):
-     return """
+     return super( InsertParticlesAlongCartesianMesh ).get_attributes() + """
   int _particleNumberOnThisTree;
   int _spacetreeId;
 """
+
 

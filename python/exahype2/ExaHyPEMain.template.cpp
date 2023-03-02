@@ -260,7 +260,7 @@ void step() {
   #endif
   logInfo( "step()", "run " << repositories::StepRepository::toString(stepName) );
 
-  tarch::timing::Watch  watch( "::", "step()", false );
+  static tarch::timing::Watch  watch( "::", "step()", false );
 
   static int creepingNumberOfLocalCells = 0;
 
@@ -272,6 +272,7 @@ void step() {
         repositories::startGridConstructionStep();
 
         observers::CreateGridButPostponeRefinement  observer;
+        watch.start();
         peano4::parallel::SpacetreeSet::getInstance().traverse(observer);
         watch.stop();
         gridConstructionMeasurement.setValue( watch.getCalendarTime() );
@@ -286,6 +287,7 @@ void step() {
         repositories::startGridConstructionStep();
         
         observers::CreateGrid  observer;
+        watch.start();
         peano4::parallel::SpacetreeSet::getInstance().traverse(observer);
         watch.stop();
         gridConstructionMeasurement.setValue( watch.getCalendarTime() );
@@ -326,6 +328,7 @@ void step() {
         repositories::startGridConstructionStep();
 
         observers::CreateGridButPostponeRefinement  observer;
+        watch.start();
         peano4::parallel::SpacetreeSet::getInstance().traverse(observer);
         watch.stop();
         gridConstructionMeasurement.setValue( watch.getCalendarTime() );
@@ -357,6 +360,7 @@ void step() {
         repositories::startGridInitialisationStep();
         
         observers::InitGrid  observer;
+        watch.start();
         peano4::parallel::SpacetreeSet::getInstance().traverse(observer);
         watch.stop();
         gridConstructionMeasurement.setValue( watch.getCalendarTime() );
@@ -376,6 +380,7 @@ void step() {
         repositories::startPlottingStep( minTimeStamp, maxTimeStamp, minTimeStepSize, maxTimeStepSize );
 
         observers::PlotSolution  observer;
+        watch.start();
         peano4::parallel::SpacetreeSet::getInstance().traverse(observer);
         watch.stop();
         plotMeasurement.setValue( watch.getCalendarTime() );
@@ -402,6 +407,7 @@ void step() {
         repositories::startTimeStep( minTimeStamp, maxTimeStamp, minTimeStepSize, maxTimeStepSize );
         
         observers::TimeStep  observer;
+        watch.start();
         peano4::parallel::SpacetreeSet::getInstance().traverse(observer);
         watch.stop();
         timeStepMeasurement.setValue( watch.getCalendarTime() );

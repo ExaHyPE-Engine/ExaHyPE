@@ -1565,6 +1565,7 @@ The discussion around Finite Volume solvers for example can be found on page
 
 
 \subsection{GPU support}
+\label{section:exahype:gpu-support}
 
 \begin{definition}
  \ExaHyPE\ uses GPUs in a classic \emph{offloading, accelerator style}.
@@ -1749,10 +1750,7 @@ virtual bool patchCanUseStatelessPDETerms(
 \end{remark}
 
 
-\section{Finite Volume extensions}
-
-
-\subsection{Boundary conditions}
+\section{Boundary conditions}
 
 
 Boundary conditions often are tricky to implement and solely up to the user. 
@@ -1793,11 +1791,13 @@ Boundary conditions in general are realised via their own callback called
 When you run the Python toolkit, you get an empty implementation of this routine
 that you can befill.
 The routine is called per outer volume (Figure
-\ref{figure:exahype:boundary-conditions}).
+\ref{figure:exahype:boundary-conditions}) or per degree of freedom in the
+Discontinuous Galerkin schemes.
 
 
+\subsection{Boundary conditions on unit box for Finite Volume schemes}
 
-\paragraph{Dirichlet boundary conditions}.
+\paragraph{Dirichlet boundary conditions}
 %
 %
 %
@@ -1806,7 +1806,7 @@ Dirichlet boundary conditions
   Q(x) | _{\partial \Omega } = f(x,t)
 \]
 are close to trivial to implement. 
-You set  outer values due to
+You set  outer values of the halo layer due to
 
 \begin{code}
 void ...::MySolver::boundaryConditions(
@@ -1840,8 +1840,10 @@ such that the eigenvalue term along the boundary face has the correct
 (imposed) value too.
 
 
-\paragraph{Neumann boundary conditions (Finite Volumes)}
-
+\paragraph{Neumann boundary conditions}
+%
+%
+%
 As we can read the volume values inside the domain prior to a time step
 and modify those outside of the domain, it is straightforward to implement
 homogeneous Neumann conditions.
@@ -1868,8 +1870,10 @@ non-homogeneous conditions as well.
 
 
 
-\paragraph{Inflow/outflow boundary conditions}
-
+\paragraph{Inflow/outflow conditions}
+%
+%
+%
 Inflow or outflow boundary conditions are conceptually close to Neumann
 conditions. 
 Often, it is however reasonable to supplement them with some limiter, i.e.~if
@@ -1889,20 +1893,21 @@ Yet, increasing the domain size usually helps in such a case.
 
 
 
+\subsection{More complex boundaries}
 
-\paragraph{Extrapolating boundary data (Finite Volumes)}
-
-
-
+\paragraph{Extrapolating boundary data}
+%
+%
+%
 It is more complicated to realise boundary conditions that extrapolate
 data into the outside.
 Such boundary conditions read as
 \[
   Q(x) | _{\partial \Omega } = \lim _{x \mapsto \partial \Omega}
-  f(Q(x,t),\nabla f(Q(x,t))
+  Bnd(Q(x,t),\nabla f(Q(x,t))
   \ \text{or} \
   \left( \nabla Q(x), n \right) | _{\partial \Omega } = \lim _{x \mapsto
-  \partial \Omega} f(Q(x,t),\nabla f(Q(x,t)).
+  \partial \Omega} Bnd(Q(x,t),\nabla f(Q(x,t)).
 \]
 It is obviously trivial to extrapolate the solution value within the domain to
 the boundary volumes (dark red to blue value in Figure
@@ -1964,8 +1969,10 @@ my_solver.preprocess_reconstructed_patch_kernel = """
 
 
 
-\paragraph{Boundary-aligned geometries}
-
+\paragraph{Boundary-aligned non-cubic geometries}
+%
+%
+%
 \ExaHyPE's mesh is topologically Cartesian.
 That does not mean that you have to work in a Cartesian world.
 You can distort, squeeze, rotate the mesh locally as long as your mesh topology
@@ -1978,13 +1985,91 @@ Obviously, the actual boundary condition implementations then have to be adopted
 accordingly, too.
 
 
+\paragraph{Distinguishing different boundary types}
+%
+%
+%
+Some solvers require different boundary conditions in different areas. 
+We distinguish two different paradigms to realise this:
+\begin{enumerate}
+  \item compute boundary type on-the-fly;
+  \item map boundary type onto marker.
+\end{enumerate} 
+
+
+\noindent
+Each boundary condition callback is supplemented with spatial data (aka
+geometry) and time step.
+These two ingredients allow you to compute the boundary type \emph{on the fly}: 
+Whenever the boundary data routine is invoked, you read out the coordinate of
+the boundary face, and then you decide which boundary condition to apply.
+After all, the realisation of the boundary is totally up to you in the call
+back, i.e.~you can have multiple ifs or a case distinction via a switch.
+
+
+If these case distinctions are something you want to avoid---as the geometry
+checks are too expensive or for other reasons---you can introduce a
+\emph{boundary marker}.
+\ExaHyPE\ does not have genuine markers, but it does have material parameters.
+Add an additional material parameter in your solver setup, and initialise this
+parameter with an integer constant which represents your boundary type. 
+When the actual boundary routine is invoked, the inner degree of freedom will
+contain this material parameter, i.e.~you can read it out and make your boundary
+realisation depend upon its value.
+
+
+\subsection{A complete swap out of boundary conditions}
+
+So far, all boundary conditions have relies on a call-back principle: The user
+supplements an implementation of the (point-wise) boundary data behaviour, and
+there is some generic kernel which runs over the boundary and calls this
+implementation.
+This means, \ExaHyPE\ has to anticipate what kind of information the user might
+need when they implement their boundary data.
+
+\begin{remark}
+ The current interface for boundary conditions is more or less tailored towards
+ stationary boundary data. As soon as you need some time-dependent behaviour on
+ the boundary such as ODEs (Sommerfeld boundary conditions, e.g.), you might be
+ well-advised to swap out the whole boundary implementation.
+\end{remark}
+
+
+\noindent
+Every \ExaHyPE\ solver has an attribute \texttt{\_action\_set\_handle\_boundary}.
+This is the action set that we invoke to handle the boundary. 
+It has an attribute \texttt{TemplateHandleBoundary\_KernelCalls} which is a
+string in jinja2 format.
+It is used to actually generate the kernel call.
+By default, it invokes the \texttt{applyBoundaryConditions} function of your
+solver. 
+You can redirect this call:
+
+
+\begin{code}
+  thesolver._action_set_handle_boundary.TemplateHandleBoundary_KernelCalls = """
+::exahype2::fd::myFancyBCs( ... );
+""" 
+\end{code}
+
+
+\noindent
+The start of the attribute with an underscore emphasises that I usually do not
+expect users to alter the action set.
+This is for experienced users.
+Most of them will create their own subclass of the solver.
+In this case, an attribute with an underscore make sense.
+
+
+\ExaHyPE\ comes along with a limited set of pre-manufactured boundary
+conditions. 
+What is available in which content depends strongly on the solver type used.
+Consult the documentation of the \texttt{HandleBoundary.h} file of your solver
+type.
 
 
 
-
-
-
-\subsection{Interpolation and restriction schemes}
+\section{Interpolation and restriction schemes for Finite Volumes}
 \label{section:exahype:finite-volumes:interpolation-schemes}
 
 If you employ adaptive mesh refinement, you have to project coarser resolutions
@@ -2710,6 +2795,150 @@ toolboxes as well.
 Some of them (compare the discussion above about the tracing API) offer more
 postprocessing scripts that you can use straightaway to visualise the code
 behaviour and outcomes.
+
+
+\section{Performance optimisation}
+
+This section discusses some \ExaHyPE-specific performance optimisation steps.
+Any performance optimisation should obviously be guided by rigorous performance
+analysis, i.e.~trial-and-error performance optimisation is unlikely to yield
+a lower runtime.
+
+\begin{remark}
+  If you plan to run any performance analysis
+  with the Intel tools, I recommend you switch
+  to the respective toolchain and logging
+  before you continue (cmp.~Section~\ref{section:logging:logger:ITAC}).
+  
+  After that, add all tracing libraries to the blacklist besides your project's
+  repositories. This way, you will get a coarse breakdown of program phases.
+  After that, you might enable additional tracing as you dig deeper into your
+  code's performance. 
+  If your project is in the directory \texttt{applications::exahype2::ccz4}, an
+  initial log filter file could look as follows:
+  
+  \begin{bash}
+trace  tarch                               -1     black always-on
+trace  peano4                              -1     black always-on
+trace  exahype2                            -1     black always-on
+trace  toolbox                             -1     black always-on
+trace  applications::exahype2::ccz4 -1  black always-on
+trace  applications::exahype2::ccz4::repositories -1  white always-on
+  \end{bash}
+\end{remark}
+
+
+\begin{itemize}
+  \item {\bf The code is extremely bandwidth-bound and seems to move data
+    forth and back all the time}. Most \ExaHyPE\ solvers store their data on  
+    (call) stacks to localise all memory accesses. This implies that they move
+    their data around a lot. You can alter this behaviour by switching to a
+    heap-based memory administration. Consult the documentation of the solver of
+    interest, but the ``fix'' always looks similar to 
+    \begin{code}
+self._patch.generator = peano4.datamodel.PatchToDoubleArrayOnHeap(self._patch,"double")
+    \end{code}, i.e.~you have to swap how a patch is mapped onto a C++
+    implementation.
+    Most solvers provide a routine
+    \begin{code}
+my_solver.switch_to_heap_storage(True, True)
+    \end{code} which does the switch for you. Please around with different
+    \texttt{True}, \texttt{False} combinations.
+    See also next section on
+    AVX/alignment.
+  \item {\bf I do not profit from more cores}. There can be many reasons for
+  this, but I recommend to check a few things first:
+  \begin{enumerate}
+    \item Is your problem big enough per rank or are you maybe using too many
+    nodes/MPI ranks? If so, you should either accept that your problem is simply
+    too small for this number of nodes or jump down to next item. Read through
+    the other suggestions first, though.
+    \item Does the code spawn enough subtrees per node? If not, you might artificially restrict the number of trees
+    per node in your load balancing, i.e.~set a maximum number of trees.
+    Increase the number of trees per rank!
+    \item Have you already switched from a naive solver to one with enclave
+    tasking? Almost all of \ExaHyPE's solvers are offered as version with
+    enclave tasking which means that they employ domain decomposition plus
+    tasking on top.
+    \begin{remark}
+Enclave tasking often makes your code {\bf slower} initially. Ensure you use the
+heap storage (see remarks above) and then consider to switch the compute kernels
+(see remarks below).
+    \end{remark}
+  \end{enumerate}
+  \item {\bf Enclave tasking is very slow}. This is a meta-question, i.e.~you
+    have to run through a series of checks:
+    \begin{enumerate}
+      \item Switch to the heap data structure (see remark above).
+      \item 
+    \end{enumerate} 
+  \item {\bf I cannot use more trees per rank, and enclave tasking doesn't make
+    my code faster either}. This phenomenon often goes hand in hand with a lack
+    of enclave tasks: The problem is simply too small to find enough tasks.
+    There are a few tasks, but as tasks can only run on one single core, the
+    code struggles to keep all cores busy.
+    Check if you can work with more regular grids. They usually help you
+      to generate more tasks. So avoid steep AMR changes.
+  \item {\bf I use enclave tasking and have more trees per node than
+  cores (or can't get more trees), but still the code does not use all
+  the compute resources}. Switch the compute kernel.
+  For the FD4 scheme and OpenMP, we provide for example compute kernels which theoretically can spread out over the
+      whole node. The kernel is slower than the default version on one core, but
+      it can use further cores and thus eventually becomes faster. Usually, you
+      have to follow a few steps to enable this alternative kernel:
+      \begin{enumerate}
+        \item Switch to an enclave solver.
+        \item Instruct the enclave solver that there it can use stateless PDE
+        terms. For this, pass the constructor the argument
+        \texttt{pde\_terms\_without\_state=True}.
+        \item Ensure that the routine \texttt{patchCanUseStatelessPDETerms}
+        return true most of the time (this is the default).
+        \item Make the solver use a solver on the CPU which uses the batched
+        taskgraph realisation.
+        Most \ExaHyPE\ solver have an attribute similar to \newline
+        \texttt{self.\_fused\_compute\_kernel\_call\_cpu} which is initialised
+        with some default kernel call. Browse through your code and alter it
+        such that it uses
+\begin{code}
+solver_variant                           = SolverVariant.Multicore,
+kernel_variant                           = KernelVariant.BatchedAoSHeap,
+\end{code}
+        and a batched solver variant (patch-wise or similar makes limited
+        sense). Usually, the kernels are constructed in \texttt{set\_implementation}, so 
+        it might make sense to plug into this one (overwrite it, call the 
+        supertype's implementation, and then switch the kernel).
+    \end{enumerate} 
+  \item {\bf The multithreading is very imbalanced, i.e.~I see a lot of trees
+  per rank, but this does not materialise in higher speed}.
+  The phenomenon typically goes hand in hand with high Spin Times (in VTune,
+  e.g.). Operations like \texttt{\_\_kmp\_fork\_barrier} appear high up in the list of the most expensive routine. There are different things to check:
+  \begin{enumerate}
+    \item Does the code yield subtrees which are extremely ill-balanced? In this
+    case, you might might want to reduce the number of ranks per tree. \ExaHyPE\
+    reports how big the trees are via
+    \begin{bash}
+rank:1  toolbox::loadbalancing::dumpStatistics()    info    2 tree(s): \
+  (#1:13/716)(#3:14/715) total=27/1431 (local/remote)
+    \end{bash}
+    In this case, we have only two trees and they are of almost the
+    same size (13 vs.~14). But if these numbers differ dramatically,
+    you might want to reduce the number of trees.
+    \item Does the code use enclave tasks but does not yield many tasks? In this
+    case, try a more regular mesh, i.e.~artificially refine to avoid steep
+    resolution changes.
+    \item Does the code use enclave tasks and yield many tasks? In this case,
+    you might have encountered a scheduler flaw. Change the multicore scheduler
+    on the command line.
+  \end{enumerate}
+  \item {\bf The code seems to fail to use aligned data}. See general remarks
+  in documentation of \texttt{tarch::allocateMemory()} and
+  \texttt{tarch::MemoryLocation}.
+  \item {\bf The PDE term routines (sources, ncp, fluxes, eigenvalues,
+  \ldots) are extremely expensive}. In principle, that's what you want to see.
+  If this is the case, then you should next follow the recommendations for GPU
+  parallelisation (cmp.~\ref{section:exahype:gpu-support}). These focus on GPU
+  efficiency, but the optimisations also pay off significantly for CPUs.
+\end{itemize}
 
 
 

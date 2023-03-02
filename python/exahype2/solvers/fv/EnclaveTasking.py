@@ -77,7 +77,7 @@ class UpdateCell(ReconstructPatchAndApplyFunctor):
       # todo hier muessen beide rein, denn ich muss ja interpolieren -> machen die anderen Codes dann
       patch_overlap = solver._patch_overlap_new,
       functor_implementation = self.TemplateUpdateCell.render(**d),
-      reconstructed_array_memory_location = peano4.toolbox.blockstructured.ReconstructedArrayMemoryLocation.HeapThroughTarchWithoutDelete,
+      reconstructed_array_memory_location = peano4.toolbox.blockstructured.ReconstructedArrayMemoryLocation.ManagedSharedAcceleratorDeviceMemoryThroughTarchWithoutDelete,
       # todo Dokumentieren, dass net willBeRefined(), weil wir ja das brauchen wenn wir runtergehen
       guard  = "not marker.hasBeenRefined() and (" + \
       "repositories::" + solver.get_name_of_global_instance() + ".getSolverState()==" + solver._name + "::SolverState::Primary or " + \
@@ -478,6 +478,7 @@ class EnclaveTasking( FV ):
     # Some includes might logically belong into the action sets, but now they are 
     # 'outsourced' into the enclave task. So we manually add it here.
     implementationDictionary[ "SOLVER_INCLUDES" ] += self.user_solver_includes
+    implementationDictionary[ "SOLVER_INCLUDES" ] += self.user_action_set_includes
 
     task_name = self._enclave_task_name()
     generated_solver_files = peano4.output.Jinja2TemplatedHeaderImplementationFilePair(
