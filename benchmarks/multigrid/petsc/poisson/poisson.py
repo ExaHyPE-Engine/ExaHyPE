@@ -33,7 +33,7 @@ project = petsc.Project(project_name = "Poisson",
                         ) 
                         
                         
-solver = petsc.solvers.CollocatedLowOrderDiscretisation(1)
+solver = petsc.solvers.CollocatedLowOrderDiscretisation("Poisson", 1)
 
 project.add_solver( solver )
                         

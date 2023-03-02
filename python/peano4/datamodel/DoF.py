@@ -132,7 +132,7 @@ class DoF(object):
     elif self.association==DoFAssociation.Face:
       result += "peano4::datamanagement::FaceEnumerator<"
     else:
-      assert False
+      assert False, "association was {}".format( self.association )
     result += self.get_full_qualified_type()
     result += ">"
     return result

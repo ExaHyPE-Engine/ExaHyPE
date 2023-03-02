@@ -199,8 +199,37 @@ This yet has to be written.
 
     return self._project
 
+
   def add_solver( self, solver ):
-  
+    """
+    
+    Takes the solver and runs through the individual steps of the algorithm.
+    Per step, it tells the solver to inject its particular stuff to the 
+    underlying observers.
+    
+    """  
+    print( "---------------------------------------")
+    print( "Create data for solver " +solver._name  )
+    print( "---------------------------------------")
+    print( str(solver) )
+      
+    solver.add_to_Peano4_datamodel( self._project.datamodel, verbose=False )
+    
+    solver.add_use_statements(self.algorithm_step_create_grid)
+    solver.add_use_statements(self.algorithm_step_enumerate)
+    solver.add_use_statements(self._algorithm_step_init)
+    solver.add_use_statements(self.algorithm_step_assemble)
+    solver.add_use_statements(self.algorithm_step_map_solution_onto_mesh)
+    solver.add_use_statements(self.algorithm_step_plot)
+
+    solver.add_to_create_grid           (self.algorithm_step_create_grid)
+    solver.add_to_enumerate             (self.algorithm_step_enumerate)
+    solver.add_to_init                  (self._algorithm_step_init)
+    solver.add_to_assemble              (self.algorithm_step_assemble)
+    solver.add_to_map_solution_onto_mesh(self.algorithm_step_map_solution_onto_mesh)
+    solver.add_to_plot                  (self.algorithm_step_plot)
+
+    #self._project.solversteps.add_step(self._algorithm_step_solve)
     pass
 
 
